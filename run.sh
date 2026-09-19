@@ -6,6 +6,7 @@
 # Uso:
 #   ./run.sh                   abre a INTERFACE (as dez abas em HTML)
 #   ./run.sh --gui             idem
+#   ./run.sh --tray            sobe o ícone da bandeja (o menu do produto)
 #   ./run.sh --smoke           boot curto com FakeController USB (2s)
 #   ./run.sh --smoke --bt      boot curto com FakeController BT  (2s)
 #   ./run.sh --daemon          roda daemon em primeiro plano (hardware real)
@@ -39,6 +40,7 @@ fi
 for arg in "$@"; do
     case "$arg" in
         --gui)    MODE="gui" ;;
+        --tray)   MODE="tray" ;;
         --smoke)  MODE="smoke" ;;
         --daemon) MODE="daemon" ;;
         --fake)   MODE="daemon"; FAKE=1 ;;
@@ -65,6 +67,21 @@ if [[ -n "${GDK_PIXBUF_MODULE_FILE:-}" && -r "${GDK_PIXBUF_MODULE_FILE}" ]]; the
        && [[ "${SNAP:-}" != /snap/* ]]; then
         unset GDK_PIXBUF_MODULE_FILE
     fi
+fi
+
+# O TRAY É O CAMINHO DA BANDEJA — 19/09/2026, decisão dela: *"desabilitamos o
+# applet pela complexidade. o tray faz o mesmo mas melhor."*
+#
+# Ele passa por AQUI, e não pelo console script direto, pela mesma razão que a
+# interface passa: a venv desta árvore e a limpeza do `GDK_PIXBUF_MODULE_FILE`
+# acontecem acima, antes de o Python subir. Um tray lançado de um terminal
+# empacotado morria no primeiro ícone SVG.
+#
+# Sem XWayland: o menu do `AppIndicator3` é desenhado pelo HOSPEDEIRO da
+# bandeja (o `cosmic-applet-status-area`), não por este processo — o defeito do
+# popup que criou o `GDK_BACKEND=x11` nunca alcançou este caminho.
+if [[ "$MODE" == "tray" ]]; then
+    exec python3 -m hefesto_dualsense4unix.cli.app tray ${EXTRA[@]+"${EXTRA[@]}"}
 fi
 
 if [[ "$MODE" == "gui" ]]; then

@@ -110,6 +110,10 @@ set -euo pipefail
 
 readonly APP_ID="hefesto-dualsense4unix"
 readonly DESKTOP_TARGET="${HOME}/.local/share/applications/${APP_ID}.desktop"
+# O AUTOSTART DO TRAY (19/09/2026). Sem esta linha o ícone da bandeja voltaria
+# a subir em toda sessão depois de o produto ter sido desinstalado — e o
+# `Exec=` apontaria para uma árvore que pode nem existir mais.
+readonly AUTOSTART_TARGET="${HOME}/.config/autostart/${APP_ID}-tray.desktop"
 readonly ICON_TARGET="${HOME}/.local/share/icons/hicolor/256x256/apps/${APP_ID}.png"
 readonly LAUNCHER="${HOME}/.local/bin/hefesto-dualsense4unix-gui"
 readonly BIN_SYMLINK="${HOME}/.local/bin/hefesto-dualsense4unix"
@@ -435,8 +439,8 @@ if [[ -e /usr/share/applications/dsx-dualsense.desktop ]]; then
     sudo rm -f /usr/share/applications/dsx-dualsense.desktop 2>/dev/null || true
 fi
 
-for path in "${DESKTOP_TARGET}" "${ICON_TARGET}" "${LAUNCHER}" "${BIN_SYMLINK}" \
-            "${CHAVE_BIN}"; do
+for path in "${DESKTOP_TARGET}" "${AUTOSTART_TARGET}" "${ICON_TARGET}" \
+            "${LAUNCHER}" "${BIN_SYMLINK}" "${CHAVE_BIN}"; do
     if [[ -e "${path}" ]]; then
         log "removendo ${path}"
         rm -f "${path}"

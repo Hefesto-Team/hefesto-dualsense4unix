@@ -1,0 +1,33 @@
+[Desktop Entry]
+# O ÍCONE DA BANDEJA — e, desde 19/09/2026, o ÚNICO caminho de barra do
+# produto. Decisão dela: *"desabilitamos o applet pela complexidade. o tray faz
+# o mesmo mas melhor."*
+#
+# POR QUE ELE PRECISA DESTE ARQUIVO: o applet COSMIC era carregado pelo
+# `cosmic-panel` como plugin, e subia (quando subia) junto com a sessão. O tray
+# não tem esse carona — ele é um processo comum. Sem um autostart, tirar o
+# applet deixaria a barra dela VAZIA, que é o oposto do que ela pediu.
+#
+# O `.desktop` do MENU (`hefesto-dualsense4unix.desktop`) abre a JANELA; este
+# abre o ÍCONE. São dois arquivos porque são duas coisas: o primeiro ela clica,
+# o segundo a sessão sobe sozinha.
+#
+# @RAIZ@ é substituído pelo caminho da árvore por quem instala (`install.sh`).
+# O arquivo versionado NÃO carrega caminho de máquina.
+Type=Application
+Name=Hefesto (bandeja)
+# O `X-GNOME-Autostart-Delay` não é frescura: o tray precisa do hospedeiro da
+# bandeja de pé para se registrar. No COSMIC quem serve o
+# `org.kde.StatusNotifierWatcher` é o `cosmic-applet-status-area`, que nasce
+# com o painel. Um tray que corre antes dele não acha ninguém e o ícone some.
+Comment=O menu do Hefesto na barra do sistema
+Exec=@RAIZ@/run.sh --tray
+Icon=hefesto-dualsense4unix
+Categories=Settings;HardwareSettings;
+Terminal=false
+StartupNotify=false
+X-GNOME-Autostart-enabled=true
+X-GNOME-Autostart-Delay=5
+# Mesma declaração do `.desktop` do menu: enquanto o `Exec=` for caminho de
+# árvore, este arquivo não entra em .deb/.rpm/Arch/Nix.
+X-HefestoNaoEmpacotado=true
