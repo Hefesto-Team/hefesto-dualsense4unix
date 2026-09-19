@@ -2277,7 +2277,7 @@ def _nenhum_registro_de_identidade_atravessa() -> Iterator[None]:
 #
 # O PORQUÊ, MEDIDO em 10/08/2026 contra os 8589 testes coletados (o diagnóstico
 # inteiro está na seção 2 do índice
-# `docs/process/sprints/2026-08-10-INDICE-o-mapa-que-vira-portao.md`):
+# `docs/process/sprints/arquivados/2026-08-10-INDICE-o-mapa-que-vira-portao.md`):
 #
 #   testes que MENCIONAM transporte ................... 718 (9,7%)
 #   testes que tocam o envelope no nível de BYTE ......  93 (1,1%)

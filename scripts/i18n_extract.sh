@@ -63,7 +63,7 @@ if [[ ! -f "$GLADE" ]] && [[ "$SEM_A_JANELA" -eq 0 ]]; then
 ERRO: $GLADE não existe, e ele era a fonte de 317 das 413 frases deste catálogo.
 
 A janela GTK FOI APOSENTADA em 06/09/2026 (D-0609-GTK-LEVA-INTEIRA:
-docs/process/sprints/2026-09-06-GTK-3-os-sessenta-e-dois-testes-e-a-remocao.md)
+docs/process/sprints/arquivados/2026-09-06-GTK-3-os-sessenta-e-dois-testes-e-a-remocao.md)
 e o arquivo não volta. Este rc=1 é permanente e é de propósito: quem gerar o
 catálogo daqui em diante decide, POR ESCRITO, aceitar um catálogo 72% menor.
 As frases da interface NOVA moram em src/hefesto_dualsense4unix/interface/

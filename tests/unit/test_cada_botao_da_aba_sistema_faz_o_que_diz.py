@@ -2,7 +2,7 @@
 """CADA BOTÃO DA ABA SISTEMA FAZ O QUE DIZ — SISTEMA-BOTOES-01, 13/09/2026.
 
 A palavra dela está no índice da leva
-(`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`): *«não sei
+(`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`): *«não sei
 se nossos botões da aba sistema fazem o que deveriam fazer de fato e se
 funcionam»*. O estudo mediu os catorze gestos e achou metade deles em parte:
 armavam sem a pergunta que o `title` promete, piscavam verde sobre um clique que

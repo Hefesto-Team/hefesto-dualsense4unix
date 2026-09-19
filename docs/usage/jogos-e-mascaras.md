@@ -94,20 +94,20 @@ um Xbox 360. Hoje a exceção pula só a disputa pelo controle; o que o jogo
 > de cena** — e era isso que derrubava o jogador 2, com o
 > `coop_derrubado_pela_excecao_steam_input` aparecendo vinte vezes num dia. Em
 > 09/08, por decisão dela, a
-> [ESCONDER-EM-VEZ-DE-SAIR-01](../process/sprints/2026-08-09-ESCONDER-EM-VEZ-DE-SAIR-01-o-duplicado-cura-pelo-outro-lado.md)
+> [ESCONDER-EM-VEZ-DE-SAIR-01](../process/sprints/arquivados/2026-08-09-ESCONDER-EM-VEZ-DE-SAIR-01-o-duplicado-cura-pelo-outro-lado.md)
 > inverteu o mecanismo: **esconde-se o físico, e o produto FICA**. O duplicado
 > se cura pelos dois lados, e este é o lado que não custa o co-op.
 >
 > A frase antiga — *"nesse jogo vale só o controle 1, sem co-op"* — sobreviveu
 > nesta página por dois dias depois de a cura entrar. Foi achada na varredura de
 > 11/08 e é a razão de o índice daquele dia se chamar
-> [duas verdades no mesmo repositório](../process/sprints/2026-08-11-INDICE-duas-verdades-no-mesmo-repositorio.md).
+> [duas verdades no mesmo repositório](../process/sprints/arquivados/2026-08-11-INDICE-duas-verdades-no-mesmo-repositorio.md).
 >
 > **E um jogo com suporte nativo de verdade nunca precisou da lista:** o
 > Sackboy foi medido no mesmo dia, fora dela, e funcionou completo. (Havia aqui
 > um *"critério de quando marcar"* — quais jogos marcar. Saiu em 28/08: desde
 > 09/08 não há jogo que precise ser marcado para curar o dobrado.) Registro em
-> [CONTROLE-SONY-MEDIDO-01](../process/sprints/2026-08-06-CONTROLE-SONY-MEDIDO-01-o-experimento-que-decide-metade-da-doutrina.md).
+> [CONTROLE-SONY-MEDIDO-01](../process/sprints/arquivados/2026-08-06-CONTROLE-SONY-MEDIDO-01-o-experimento-que-decide-metade-da-doutrina.md).
 
 Para desfazer, a caixinha está na aba **Perfis** desde 07/08/2026: abra o perfil
 daquele jogo, com **"Jogo da Steam"** escolhido e o número do jogo preenchido, e
@@ -153,7 +153,7 @@ Casos medidos nesta máquina: **Sackboy: A Big Adventure**, **Pragmata**,
 > mentir sobre o que ele pediu. **Um jogo desta lista na lista de exceções não
 > ganha nada** — e, desde 09/08/2026, também não perde nada: a exceção só troca
 > qual controle o jogo enxerga, e o jogador 2 fica. Registro em
-> [CONTROLE-SONY-MEDIDO-01](../process/sprints/2026-08-06-CONTROLE-SONY-MEDIDO-01-o-experimento-que-decide-metade-da-doutrina.md).
+> [CONTROLE-SONY-MEDIDO-01](../process/sprints/arquivados/2026-08-06-CONTROLE-SONY-MEDIDO-01-o-experimento-que-decide-metade-da-doutrina.md).
 >
 > **Uma contradição desta página, anotada e não resolvida:** o **Pragmata** está
 > nesta seção *e* na lista de exceções do produto. Só um dos dois lugares pode
@@ -178,7 +178,7 @@ inteiro**.
 **Use `window_class`.** É o único campo que casa nos dois mundos, e é por ele
 que **todos** os perfis que o Hefesto já elegeu sozinho nesta máquina foram
 identificados — medido em 30 dias de journal em 10/08/2026
-([PERFIL-MUDO-01](../process/sprints/2026-08-10-PERFIL-MUDO-01-o-perfil-do-jogo-que-nao-entrou.md)).
+([PERFIL-MUDO-01](../process/sprints/arquivados/2026-08-10-PERFIL-MUDO-01-o-perfil-do-jogo-que-nao-entrou.md)).
 
 **Por que o `process_name` não casa em Wayland puro, medido:** o campo é
 comparado com o nome do executável da janela em foco, e os dois backends de

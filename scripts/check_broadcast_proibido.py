@@ -10,7 +10,7 @@ ABAS-06 (25/07) curou o broadcast na tela; o F4 (23/08) curou os três helpers
 do backend (`_for_each`/`_for_each_com_key`/`_for_each_led`); e o MESMO
 formato — "alvo escolhido, escrita em TODOS mesmo assim" — voltou por DUAS
 portas diferentes, na MESMA árvore (ver
-`docs/process/sprints/2026-08-24-ONDA0-Z3-BROADCAST-PROIBIDO-01-o-pulso-do-jogador-2-na-mao-dos-outros.md`,
+`docs/process/sprints/arquivados/2026-08-24-ONDA0-Z3-BROADCAST-PROIBIDO-01-o-pulso-do-jogador-2-na-mao-dos-outros.md`,
 §2.1): `daemon/ipc_handlers.py::_registrar_em_todos` (§2.1(b), a Regra 1
 abaixo) e `daemon/subsystems/gamepad.py::apply_game_rumble` (§2.1(d), a
 Regra 2). Sem portão, a quinta porta é só questão de tempo.

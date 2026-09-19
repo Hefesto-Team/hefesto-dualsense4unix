@@ -1,7 +1,7 @@
 """PALAVRA-01 — a janela fala a língua de quem joga.
 
 Três portões, um por queixa medida na sprint
-``docs/process/sprints/2026-07-27-PALAVRA-01-a-janela-fala-a-lingua-de-quem-joga.md``:
+``docs/process/sprints/arquivados/2026-07-27-PALAVRA-01-a-janela-fala-a-lingua-de-quem-joga.md``:
 
 1. **Capitalização.** Os textos de estado que ela lê no meio de uma frase
    ("ligado", "desligado (suprimido)", "daemon offline") começavam em

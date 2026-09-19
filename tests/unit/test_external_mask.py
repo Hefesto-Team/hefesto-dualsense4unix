@@ -2,7 +2,7 @@
 
 *"Como este controle deve aparecer nos jogos?"* — a escolha é do plástico, não
 da configuração de jogo (sprint
-``docs/process/sprints/2026-07-25-MASCARA-01-como-este-controle-aparece-nos-jogos.md``).
+``docs/process/sprints/arquivados/2026-07-25-MASCARA-01-como-este-controle-aparece-nos-jogos.md``).
 
 Esta bateria vigia as quatro propriedades que a reavaliação de 07/08/2026 pôs no
 lugar do *"bump de esquema"* que a sprint original pedia:

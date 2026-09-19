@@ -1,7 +1,7 @@
 """SINAL-DE-JOGO-01/E4 — o jogo VIVO é evidência, e a árvore da Steam não é.
 
 A sprint
-`docs/process/sprints/2026-07-31-SINAL-DE-JOGO-01-o-daemon-desiste-do-jogo-antes-do-jogo-acabar.md`
+`docs/process/sprints/arquivados/2026-07-31-SINAL-DE-JOGO-01-o-daemon-desiste-do-jogo-antes-do-jogo-acabar.md`
 mediu que a autoridade de exibição vivia pendurada em evidências que dependem
 todas de o detector de janela enxergar (nº 1 e nº 2) ou de o jogo ter passado
 pelo wrapper (nº 3) — e o jogo dela **não passa pelo wrapper**. Pior: a

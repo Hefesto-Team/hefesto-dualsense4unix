@@ -9,7 +9,7 @@ que três nunca foram olhadas por sprint nenhuma:
   - a janela compacta (``src/hefesto_dualsense4unix/app/compact_window.py``).
 
 O custo de nunca terem sido comparadas está medido na
-``docs/process/sprints/2026-07-31-RADAR-01-as-tres-superficies-que-ninguem-nunca-olhou.md``:
+``docs/process/sprints/arquivados/2026-07-31-RADAR-01-as-tres-superficies-que-ninguem-nunca-olhou.md``:
 uma renomeação entra na janela, não entra nas outras três, e elas passam a
 contradizê-la em silêncio na frente de quem usa. Este arquivo é a regra
 executável que a E4 daquela sprint pediu.

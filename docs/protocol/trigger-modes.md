@@ -26,7 +26,7 @@
 >
 > **Consequência a confirmar:** `rigid()`, `simple_rigid()` e `feedback()`
 > mandariam OFF. A medição está na sprint
-> [TRIGGER-CANON-01](../process/sprints/2026-08-01-TRIGGER-CANON-01-os-modos-de-gatilho-contra-a-enum-da-sony.md).
+> [TRIGGER-CANON-01](../process/sprints/arquivados/2026-08-01-TRIGGER-CANON-01-os-modos-de-gatilho-contra-a-enum-da-sony.md).
 >
 > O texto abaixo fica como registro do que se acreditava. Pela regra da casa
 > (`CLAUDE.md`, "As regras desta casa"), **fato errado se substitui e decisão

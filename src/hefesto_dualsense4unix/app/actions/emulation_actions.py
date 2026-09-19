@@ -462,7 +462,7 @@ def markup_status_steam_input(
         # só se está escrito no arquivo* — e a linha narrava o `efetiva` depois
         # de um travessão. NOTA DATADA, 13/09/2026 (FRASES-E-DICAS-03): a ordem
         # dela no índice da terceira lista
-        # (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`)
+        # (`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`)
         # deixa na tela só estado, e a mais nova vence. A contagem fica porque a
         # aba 07 não mostra a lista das exceções em outro lugar. E o `efetiva`
         # SAIU DA ASSINATURA no mesmo dia (RESTOS-DA-ONDA-DOIS-01): nada vivo o

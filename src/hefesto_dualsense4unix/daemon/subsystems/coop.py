@@ -407,7 +407,7 @@ class CoopManager:
         """Um item por JOGADOR: QUAL controle físico alimenta QUAL vpad.
 
         QUEM-É-QUEM-01, entrega **E1** (sprint
-        `docs/process/sprints/2026-08-15-QUEM-E-QUEM-01-o-estado-publicado-nao-diz-qual-vpad-e-de-qual-controle.md`).
+        `docs/process/sprints/arquivados/2026-08-15-QUEM-E-QUEM-01-o-estado-publicado-nao-diz-qual-vpad-e-de-qual-controle.md`).
         Até aqui o estado publicado dizia `coop.players: 4` — um NÚMERO. A
         pergunta dela às 04:05 de 15/08/2026 — *"o vpad e o físico correspondem
         ao mesmo?"* — **não pôde ser lida do estado publicado**: foi paga

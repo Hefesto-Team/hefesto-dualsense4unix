@@ -26,7 +26,7 @@ capturados no fio em 22/08 trazem **zero** ``RELEASE_LEDS``. Quem estava
 incoerente era este texto — que prometia como remédio de rotina o que a
 medição derrubou (ver ``core/backend_pydualsense.py``, o bloco do
 LIGHTBAR-BT-CULPADO-01, e o F9 do
-``docs/process/sprints/2026-08-22-LUZ-CEGA-01-a-barra-apagada-e-o-exame-que-nao-olha-o-radio.md``).
+``docs/process/sprints/arquivados/2026-08-22-LUZ-CEGA-01-a-barra-apagada-e-o-exame-que-nao-olha-o-radio.md``).
 
 LAYOUT (validado contra o binário do hid-playstation DESTA máquina, por
 desmontagem — estudo 2026-07-18): ``[0]=0x31``, ``[1]=seq<<4`` (nibble alto;

@@ -1,7 +1,7 @@
 """Formato do efeito de gatilho próprio — o dado e a origem não se separam.
 
 Entrega da sprint CR-02
-(``docs/process/sprints/2026-07-25-CR-02-formato-e-proveniencia.md``), sob o
+(``docs/process/sprints/arquivados/2026-07-25-CR-02-formato-e-proveniencia.md``), sob o
 processo de sala limpa de ``docs/process/CLEAN-ROOM.md``.
 
 A regra R3 diz: *"Todo valor entra no projeto com o registro de como nasceu

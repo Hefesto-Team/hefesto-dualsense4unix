@@ -1,7 +1,7 @@
 """GATILHO-PALAVRA-01/E2: o portão que faltava nos rótulos dos gatilhos.
 
 Nada na suíte cobrava as duas regras medidas na sprint
-`docs/process/sprints/2026-07-29-GATILHO-PALAVRA-01-os-dezenove-modos-em-portugues.md`,
+`docs/process/sprints/arquivados/2026-07-29-GATILHO-PALAVRA-01-os-dezenove-modos-em-portugues.md`,
 e por isso as duas já estavam violadas em produção — "Feedback" era rótulo de
 tela e "Personalizado (avançado)" já quebrava a linha no piso da janela.
 

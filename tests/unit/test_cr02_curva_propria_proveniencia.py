@@ -1,7 +1,7 @@
 """CR-02: o formato do efeito próprio RECUSA valor sem proveniência.
 
 Portão da sprint
-`docs/process/sprints/2026-07-25-CR-02-formato-e-proveniencia.md`, sob a regra
+`docs/process/sprints/arquivados/2026-07-25-CR-02-formato-e-proveniencia.md`, sob a regra
 R3 do `docs/process/CLEAN-ROOM.md`: *"Todo valor entra no projeto com o registro
 de como nasceu (...). Valor sem proveniência não entra."*
 

@@ -2,7 +2,7 @@
 """FRASES-E-DICAS-02 — nenhuma frase de aviso chega à tela nas abas 02, 03, 07 e 08.
 
 A PALAVRA DELA, 13/09/2026, no índice da terceira lista
-(`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`): ela colou
+(`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`): ela colou
 a frase da Steam e escreveu *"esse tipo de info segue aparecendo nas abas"*. A
 regra da sprint: frase de aviso não chega à tela em forma nenhuma — recado,
 faixa, caixa, dica flutuante, `title`. Ficam o ESTADO e a AJUDA (o `?`).

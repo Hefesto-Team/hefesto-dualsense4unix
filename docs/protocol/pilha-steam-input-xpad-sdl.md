@@ -251,7 +251,7 @@ Uma linha da tabela de aparelhos importa fora do driver:
 ### 2.1 O fato, já medido nesta casa
 
 Registrado na
-[TRES-CONTROLES-01](../process/sprints/2026-08-10-TRES-CONTROLES-01-o-espelho-do-espelho-no-pragmata.md),
+[TRES-CONTROLES-01](../process/sprints/arquivados/2026-08-10-TRES-CONTROLES-01-o-espelho-do-espelho-no-pragmata.md),
 **MEDIDO** no `/dev/input` dela com o jogo aberto, um controle físico na mão e
 quatro aparelhos na lista:
 
@@ -691,7 +691,7 @@ por appid, `#` comenta. Três leitores, e cada um faz uma coisa diferente:
 **O que ela NÃO muda mais, e isto é decisão dela, datada.** Até 09/08 a marca
 tinha um ramo próprio no arquivo de envs: o jogo marcado recebia um ambiente
 diferente (sem dedup) e o vpad era **suspenso**. A decisão de
-[ESCONDER-EM-VEZ-DE-SAIR-01](../process/sprints/2026-08-09-ESCONDER-EM-VEZ-DE-SAIR-01-o-duplicado-cura-pelo-outro-lado.md)
+[ESCONDER-EM-VEZ-DE-SAIR-01](../process/sprints/arquivados/2026-08-09-ESCONDER-EM-VEZ-DE-SAIR-01-o-duplicado-cura-pelo-outro-lado.md)
 matou esse ramo: hoje **o jogo marcado recebe exatamente a mesma env de
 qualquer outro jogo**, e o vpad continua de pé para não derrubar o jogador 2 do
 co-op junto.
@@ -798,7 +798,7 @@ real. Isso torna a hipótese plausível; **não** a prova aqui.
 ## 5-bis. Os sensores do vpad por versão de SDL — o zero que era da biblioteca
 
 **Acrescentada em 13/09/2026** pela
-[SENSORES-NO-JOGO-02](../process/sprints/2026-09-13-SENSORES-NO-JOGO-02-o-giroscopio-que-o-jogo-nao-ve-em-modo-virtual.md).
+[SENSORES-NO-JOGO-02](../process/sprints/arquivados/2026-09-13-SENSORES-NO-JOGO-02-o-giroscopio-que-o-jogo-nao-ve-em-modo-virtual.md).
 É a armadilha da 0.2 pela segunda vez: a bancada de 10/09 mediu o giroscópio do
 vpad contra a `libSDL2` do sistema e concluiu que o jogo recebia zero em Modo
 Virtual. As bibliotecas que os jogos da Steam carregam entregam.
@@ -1176,7 +1176,7 @@ outra coisa que não o produto"*. **GRAU: MEDIDO AQUI** para a divergência;
 **ESTE DEFEITO ESTÁ ABERTO E SEM CAUSA PROVADA.** Cinco suspeitos já caíram
 (a regressão nossa, o wrapper, a máscara, a caixinha do Steam Input, o dongle);
 o registro canônico é a
-[ESTADO-DA-NOITE-01](../process/sprints/2026-08-10-ESTADO-DA-NOITE-01-o-que-ela-achou-com-o-controle-na-mao.md),
+[ESTADO-DA-NOITE-01](../process/sprints/arquivados/2026-08-10-ESTADO-DA-NOITE-01-o-que-ela-achou-com-o-controle-na-mao.md),
 §6, e o método de bancada é o
 [METODO-DE-ISOLAMENTO](../process/METODO-DE-ISOLAMENTO.md).
 
@@ -1602,15 +1602,15 @@ em devolver.
 - [a canônica dos externos](externos-referencia-canonica.md) — Pro e 8BitDo, e o
   irmão medido da divergência de taxas
 - [paridade Bluetooth × cabo](paridade-bluetooth-versus-cabo.md) — o transporte
-- [TRES-CONTROLES-01](../process/sprints/2026-08-10-TRES-CONTROLES-01-o-espelho-do-espelho-no-pragmata.md)
+- [TRES-CONTROLES-01](../process/sprints/arquivados/2026-08-10-TRES-CONTROLES-01-o-espelho-do-espelho-no-pragmata.md)
   — a medição do `/dev/input` com quatro nós
-- [ESCONDER-EM-VEZ-DE-SAIR-01](../process/sprints/2026-08-09-ESCONDER-EM-VEZ-DE-SAIR-01-o-duplicado-cura-pelo-outro-lado.md)
+- [ESCONDER-EM-VEZ-DE-SAIR-01](../process/sprints/arquivados/2026-08-09-ESCONDER-EM-VEZ-DE-SAIR-01-o-duplicado-cura-pelo-outro-lado.md)
   — a decisão dela que reabriu a conta pelo outro lado
-- [WRAPPER-EM-TODOS-01](../process/sprints/2026-08-03-WRAPPER-EM-TODOS-01-a-invariante-duplicado-melhor-que-zero-com-quatro.md)
+- [WRAPPER-EM-TODOS-01](../process/sprints/arquivados/2026-08-03-WRAPPER-EM-TODOS-01-a-invariante-duplicado-melhor-que-zero-com-quatro.md)
   — a cobertura, e por que o `IGNORE` só sai com um vpad por físico
-- [LUGAR-À-MESA-01](../process/sprints/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md)
+- [LUGAR-À-MESA-01](../process/sprints/arquivados/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md)
   — a cobertura POR PAR, que ainda não existe
-- [ESTADO-DA-NOITE-01](../process/sprints/2026-08-10-ESTADO-DA-NOITE-01-o-que-ela-achou-com-o-controle-na-mao.md)
+- [ESTADO-DA-NOITE-01](../process/sprints/arquivados/2026-08-10-ESTADO-DA-NOITE-01-o-que-ela-achou-com-o-controle-na-mao.md)
   — o defeito do rumble, e os cinco suspeitos caídos
 - [METODO-DE-ISOLAMENTO](../process/METODO-DE-ISOLAMENTO.md) — como se ensaia um
   bit de cada vez

@@ -135,7 +135,7 @@ def test_os_enderecos_novos_existem_na_bancada() -> None:
             f"produto não tem onde escrever, e a tela volta ao desenho")
     # A DICA DA CONFISSÃO SAIU EM 13/09/2026 — FRASES-E-DICAS-02. A abertura
     # dela confessava numa dica flutuante o que o desenho não conferiu, e a ordem
-    # dela de 13/09 (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`)
+    # dela de 13/09 (`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`)
     # a tira da tela. Fica a contagem.
     assert 'data-campo="confissao-dica"' not in html, (
         "a dica da confissão voltou à bancada da 08")

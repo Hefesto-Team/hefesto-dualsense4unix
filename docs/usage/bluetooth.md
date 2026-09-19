@@ -132,7 +132,7 @@ Bluetooth ao mesmo tempo**, um por jogador.
 > **"jogadores ativos: 1"** e `controller list` mostrou **um** controle. O co-op
 > só conta DualSense; o externo entra na fila e recebe luz, e nada mais. Medição
 > inteira na
-> [LUGAR-À-MESA-01](../process/sprints/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md).
+> [LUGAR-À-MESA-01](../process/sprints/arquivados/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md).
 
 Duas pegadinhas: o **MAC muda com o modo** (são dois pareamentos distintos, e o
 hefesto registra os dois como controles diferentes — use "Reconciliar jogadores"

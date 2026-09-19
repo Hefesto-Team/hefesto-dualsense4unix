@@ -11,7 +11,7 @@ se separam.
 > sem a bancada de medir não há efeitos da casa, e sem eles não há o que devolver ao
 > ecossistema. O Hefesto vive com o catálogo de efeitos que já tem. Para onde foram
 > as três, veja
-> [o manifesto do corte](../process/sprints/2026-08-29-O-CORTE-DO-CLEAN-ROOM-o-que-saiu-e-por-que.md).
+> [o manifesto do corte](../process/sprints/arquivados/2026-08-29-O-CORTE-DO-CLEAN-ROOM-o-que-saiu-e-por-que.md).
 >
 > **O arquivo fica, e não é por respeito ao passado.** Ele é a entrega da regra **R3**
 > do [processo de sala limpa](../process/CLEAN-ROOM.md) — *o dado e a origem nunca se
@@ -22,7 +22,7 @@ se separam.
 > tabela honesta já está de pé.
 
 **Atualização de 2026-07-31 — o formato já existe, e ele recusa.** A
-[CR-02](../process/sprints/2026-07-25-CR-02-formato-e-proveniencia.md) foi
+[CR-02](../process/sprints/arquivados/2026-07-25-CR-02-formato-e-proveniencia.md) foi
 entregue: `profiles/curva_propria.py` define `CurvaPropria`, e um efeito com
 `medido_por`, `controle` ou `nota` vazios **não instancia** — levanta erro, não
 aviso. A tabela da seção "Efeitos" sai da função `gerar_tabela_markdown`, a

@@ -139,7 +139,7 @@ TIQUE_MS = 100
 #:
 #: O sucesso deixou de ser depositado na TELA-CALADA-01 (*"em todas as abas da
 #: interface"*). A recusa saiu nesta sprint, pela palavra dela no índice da leva
-#: (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha 19,
+#: (`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha 19,
 #: com a foto da caixa laranja que a recusa do `player` da aba 04 pousava no
 #: cartão): frase de aviso não chega à tela em forma nenhuma. O clique recusado
 #: responde pela piscada de recusa no botão (`MS_DA_PISCADA`), e a frase fica no
@@ -3455,7 +3455,7 @@ class Piloto:
         primeiro.
 
         A METADE "VAI PARA A TELA" CADUCOU pela palavra dela no índice da leva
-        (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha
+        (`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha
         19): a caixa laranja da foto era esta recusa, pousada pelo `player` da
         aba 04. **A metade "o clique não responde calado" continua valendo**, e
         quem a cumpre agora é o pouso: o `finally` de `_gesto` manda

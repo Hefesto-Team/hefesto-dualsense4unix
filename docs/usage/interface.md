@@ -745,10 +745,10 @@ pergunta nenhuma — só a marca no rodapé.
 
 > **Redação provisória.** A frase da marca e os três botões acima são texto novo
 > de tela: estão no produto na redação de trabalho e **esperam o olho dela**
-> ([PROVA-DE-TELA-01](../process/sprints/2026-07-27-PROVA-DE-TELA-01-dez-minutos-de-olho-antes-de-qualquer-leva.md)).
+> ([PROVA-DE-TELA-01](../process/sprints/arquivados/2026-07-27-PROVA-DE-TELA-01-dez-minutos-de-olho-antes-de-qualquer-leva.md)).
 > Se o que você lê na janela não bater com o que está aqui, a janela é que está
 > certa. O ramo de **sucesso** do "Aplicar e fechar" está sob conferência na
-> [CONFIGURAÇÕES-FECHA-01](../process/sprints/2026-08-24-CONFIGURACOES-FECHA-01-o-aplicar-que-nao-responde-e-o-campo-que-apaga-o-arquivo.md)
+> [CONFIGURAÇÕES-FECHA-01](../process/sprints/arquivados/2026-08-24-CONFIGURACOES-FECHA-01-o-aplicar-que-nao-responde-e-o-campo-que-apaga-o-arquivo.md)
 > — a linha da tabela acima descreve o que ele deve fazer.
 
 > **A fita "Ajustes vão para:" fica inerte nesta aba**, apenas esmaecida. Hub,

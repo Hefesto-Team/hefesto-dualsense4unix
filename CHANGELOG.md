@@ -229,7 +229,7 @@ transforma a hipótese mais antiga da cor do plástico em fato.
 
 > **Redação PROVISÓRIA.** As frases novas de tela desta leva — a marca do rodapé
 > e os três botões do diálogo de fechamento — são classe estrutural e **esperam o
-> olho dela** ([PROVA-DE-TELA-01](docs/process/sprints/2026-07-27-PROVA-DE-TELA-01-dez-minutos-de-olho-antes-de-qualquer-leva.md)).
+> olho dela** ([PROVA-DE-TELA-01](docs/process/sprints/arquivados/2026-07-27-PROVA-DE-TELA-01-dez-minutos-de-olho-antes-de-qualquer-leva.md)).
 > O que está no código hoje é a redação de trabalho, não a definitiva.
 
 #### Adicionado
@@ -323,7 +323,7 @@ na gravação.** Antes, um único `ambiente` fora do catálogo levava junto mesa
 controles e orçamento. O estrago agora para no campo ruim, e os bytes recusados
 vão para `maquina.json.invalido`. **A leitura continua tudo-ou-nada** e está
 aberta: ver
-[CONFIGURAÇÕES-FECHA-01](docs/process/sprints/2026-08-24-CONFIGURACOES-FECHA-01-o-aplicar-que-nao-responde-e-o-campo-que-apaga-o-arquivo.md).
+[CONFIGURAÇÕES-FECHA-01](docs/process/sprints/arquivados/2026-08-24-CONFIGURACOES-FECHA-01-o-aplicar-que-nao-responde-e-o-campo-que-apaga-o-arquivo.md).
 
 **A cor do plástico por rádio NÃO funciona, e a causa é o firmware do
 controle.** *(NOTA DATADA — 29/08/2026: esta conclusão foi REFUTADA em
@@ -535,7 +535,7 @@ Falta frametime dentro do jogo, e isso precisa da tela dela.
 todos numa versão só.
 
 O diagnóstico inteiro, elo por elo, está em
-`docs/process/sprints/2026-08-22-ELO-MUDO-01-o-ok-que-nao-sabe-dizer-nao.md`.
+`docs/process/sprints/arquivados/2026-08-22-ELO-MUDO-01-o-ok-que-nao-sabe-dizer-nao.md`.
 
 ### Instrumentos que a mesma madrugada endureceu
 
@@ -826,7 +826,7 @@ silêncio gravou a ponte do Big Walk sozinho; o daemon recusou vibração em Mod
 Nativo com a frase certa; e o giroscópio foi medido antes e depois da cura. O
 que segue sem prova de plástico: as cinco cores da piscada, e o carimbo depois
 de um gesto (o Duskfade fechou aos 95 s, e a regra pede 180). O roteiro de validação está em
-[`docs/process/sprints/2026-08-19-PROVA-NO-PLASTICO-01-o-roteiro-de-quarenta-minutos-com-o-controle-na-mao.md`](docs/process/sprints/2026-08-19-PROVA-NO-PLASTICO-01-o-roteiro-de-quarenta-minutos-com-o-controle-na-mao.md).
+[`docs/process/sprints/arquivados/2026-08-19-PROVA-NO-PLASTICO-01-o-roteiro-de-quarenta-minutos-com-o-controle-na-mao.md`](docs/process/sprints/arquivados/2026-08-19-PROVA-NO-PLASTICO-01-o-roteiro-de-quarenta-minutos-com-o-controle-na-mao.md).
 
 ### A leva de 20/08 — o censo das nove abas, e a régua que faltava
 
@@ -1007,7 +1007,7 @@ para a partida; a sobreposição de dois gamepads virtuais é necessária e **n�
 suficiente, porque metade de cada ponte é variável de ambiente congelada no
 lançamento; e a cadeia causal entre o Proton trocado e o microfone continua sem
 prova. Tudo em
-[`docs/process/sprints/2026-08-19-TRES-PORTOES-01-nao-anda-nem-o-microfone.md`](docs/process/sprints/2026-08-19-TRES-PORTOES-01-nao-anda-nem-o-microfone.md).
+[`docs/process/sprints/arquivados/2026-08-19-TRES-PORTOES-01-nao-anda-nem-o-microfone.md`](docs/process/sprints/arquivados/2026-08-19-TRES-PORTOES-01-nao-anda-nem-o-microfone.md).
 
 ## [0.9.4.3] — 2026-08-18
 
@@ -2900,7 +2900,7 @@ sem caixa de validação** — não havia como reprová-las item por item.
 
 **O que sobrevive dela volta pela porta certa**, com caixa escrita antes do
 código. A regra de método que este episódio deixou está em
-`docs/process/sprints/2026-07-26-INDICE-o-que-falta.md`: mudança que a pessoa vê
+`docs/process/sprints/arquivados/2026-07-26-INDICE-o-que-falta.md`: mudança que a pessoa vê
 na tela não entra sem caixa escrita **antes**. Um pedido que não está escrito é
 um pedido que a próxima leva vai extrapolar de novo.
 

@@ -28,7 +28,7 @@ vpad. O que a torna suportável é que ninguém repinta quem não mudou —
 ``apply_controller_mascaras`` escreve peça a peça e :func:`vpad_ficou_para_tras`
 compara antes de derrubar, então um perfil que repete a máscara de um jogador
 não o faz sumir. A sprint que fechou a porta velha é
-``docs/process/sprints/2026-07-25-MASCARA-01-como-este-controle-aparece-nos-jogos.md``
+``docs/process/sprints/arquivados/2026-07-25-MASCARA-01-como-este-controle-aparece-nos-jogos.md``
 (seção *"Onde a máscara mora"*), e o que valia lá vale só até esta nota.
 
 **O QUE ESTE REGISTRO É AGORA: um CACHE do perfil ativo, não o dono.** Ele

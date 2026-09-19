@@ -1,7 +1,7 @@
 """SINAL-DE-JOGO-01 — a evidência nº 2 do sinal de jogo volta a existir.
 
 A sprint
-`docs/process/sprints/2026-07-31-SINAL-DE-JOGO-01-o-daemon-desiste-do-jogo-antes-do-jogo-acabar.md`
+`docs/process/sprints/arquivados/2026-07-31-SINAL-DE-JOGO-01-o-daemon-desiste-do-jogo-antes-do-jogo-acabar.md`
 mediu que, na máquina dela, a autoridade de exibição fica pendurada numa
 evidência só — a janela. A evidência nº 3 (marcador do wrapper) está
 ESTRUTURALMENTE ausente, porque o jogo dela não passa pelo wrapper; e a

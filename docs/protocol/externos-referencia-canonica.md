@@ -951,7 +951,7 @@ independentes, 17 dias entre elas:
 - **25/07** — os bonds do BlueZ nesta bancada, dois endereços que só diferem no
   fim, um em modo Switch e outro em `054c:05c4`. Registrado em
   [`docs/usage/troubleshooting-8bitdo.md`](../usage/troubleshooting-8bitdo.md) e
-  na [IDENT-01](../process/sprints/2026-07-25-IDENT-01-um-controle-duas-identidades.md),
+  na [IDENT-01](../process/sprints/arquivados/2026-07-25-IDENT-01-um-controle-duas-identidades.md),
   que é quem mediu;
 - **11/08** — o `REQ_DEV_INFO` pelo cabo devolveu, para o modo Switch, **o mesmo
   endereço** que o log daquele dia registrara para aquele modo, sem parear nada.
@@ -1210,7 +1210,7 @@ dia. O desenvolvimento está em 5.3.
 
 **Onde ela já estava respondida, e é a lição que custa.** A medição de 25/07
 está em [`docs/usage/troubleshooting-8bitdo.md`](../usage/troubleshooting-8bitdo.md)
-e na [IDENT-01](../process/sprints/2026-07-25-IDENT-01-um-controle-duas-identidades.md)
+e na [IDENT-01](../process/sprints/arquivados/2026-07-25-IDENT-01-um-controle-duas-identidades.md)
 **desde 25/07** — duas semanas antes de esta página abrir a pergunta. Esta
 página perguntou o que a casa já sabia, em outra página da mesma árvore. Fica
 registrado: **antes de abrir item de medição, procurar a resposta no

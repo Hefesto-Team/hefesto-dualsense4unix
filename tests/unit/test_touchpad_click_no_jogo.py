@@ -1,7 +1,7 @@
 """O CLIQUE do touchpad chega ao jogo (TOUCH-CLICK-01 / SENSOR-VIVO-01 E4).
 
 O diagnóstico que originou estes testes está em
-`docs/process/sprints/2026-07-29-SENSOR-VIVO-01-touchpad-giroscopio-microfone-e-som-dentro-do-jogo.md`,
+`docs/process/sprints/arquivados/2026-07-29-SENSOR-VIVO-01-touchpad-giroscopio-microfone-e-som-dentro-do-jogo.md`,
 seção 2, e foi medido ao vivo: o dedo chega ao jogo (viaja na janela de motion
 espelhada, bytes 15..39) e o CLIQUE não. O clique é um bit de botão em
 `payload[9]` — fora da janela — e o conjunto de botões que o caminho do jogo

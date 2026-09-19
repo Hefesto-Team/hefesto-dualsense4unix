@@ -10,7 +10,7 @@ A DECISÃO DELA QUE ABRIU ESTA ABA, e ela CADUCOU outra, de um dia antes:
     funcional disso no gtk. a estrutura sim, validar de fato eu poderia
     somente juntos com ele."*   <!-- noqa-acento: citação literal dela -->
 
-A `F` é esta aba (`docs/process/sprints/2026-09-02-ROTA-F-a-aba-lancadores.md`).
+A `F` é esta aba (`docs/process/sprints/arquivados/2026-09-02-ROTA-F-a-aba-lancadores.md`).
 A segunda decisão vale, e ela traz a razão: **o GTK tem o mapa funcional** —
 `sentinela_do_wrapper`, `prontuario_dos_jogos`, `carona_do_wrapper` e
 `launch_wrapper_dialog` já sabiam responder o que esta tela pergunta. A primeira

@@ -3,7 +3,7 @@ rearmado pelos DOIS instaladores.
 
 A regra é da casa e já foi paga uma vez, em `9c944a8` (*"o ciclo uninstall+install
 desligava SEIS curas de módulo em silêncio"*). A
-[ARVORE-DIVERGENTE-01](../../docs/process/sprints/2026-07-30-ARVORE-DIVERGENTE-01-o-que-esta-na-main-e-nao-roda.md)
+[ARVORE-DIVERGENTE-01](../../docs/process/sprints/arquivados/2026-07-30-ARVORE-DIVERGENTE-01-o-que-esta-na-main-e-nao-roda.md)
 recontou a lista em 30/07 e achou **quatro órfãos** — params que o
 `uninstall.sh` zerava e o `install.sh` nunca rearmava. Aqueles quatro foram
 curados.

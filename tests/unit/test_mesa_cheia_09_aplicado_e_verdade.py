@@ -198,7 +198,7 @@ class TestConserto13OQueDizEscreveuSemByteNenhum:
     """MORDIDA NOVA — os dois estados em que "escreveu" mentia.
 
     O Modo Nativo é a TERCEIRA condição da tabela de mentiras da sprint
-    (`docs/process/sprints/2026-08-13-MESA-CHEIA-09-aplicado-sem-byte-nenhum.md`,
+    (`docs/process/sprints/arquivados/2026-08-13-MESA-CHEIA-09-aplicado-sem-byte-nenhum.md`,
     §1). A primeira leva matou as duas primeiras e deu afirmação POSITIVA a
     esta: `apply_output_for` lia `muted` e não o usava no retorno.
     """

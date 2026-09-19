@@ -1,7 +1,7 @@
 """ESCONDER-EM-VEZ-DE-SAIR-01 — a marca esconde o FÍSICO e deixa o co-op vivo.
 
 Decisão dela, 09/08/2026, no desenho
-`docs/process/sprints/2026-08-09-ESCONDER-EM-VEZ-DE-SAIR-01-o-duplicado-cura-pelo-outro-lado.md`:
+`docs/process/sprints/arquivados/2026-08-09-ESCONDER-EM-VEZ-DE-SAIR-01-o-duplicado-cura-pelo-outro-lado.md`:
 
     "a allowlist do Steam Input NÃO tira o Hefesto da frente."
 

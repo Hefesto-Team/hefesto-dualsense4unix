@@ -589,7 +589,7 @@ def test_a_razao_do_nascimento_nao_chega_a_dica() -> None:
 
     CONTRATO QUE MUDOU: até esta data a condenação escrevia a razão depois do
     que o botão faz. A ordem dela de 13/09
-    (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`) tira da
+    (`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`) tira da
     tela frase de aviso em toda forma, `title` incluído: a dica fica com o que o
     botão faz, e o carimbo `nascimento` fica no `state_full`, para o diagnóstico.
 

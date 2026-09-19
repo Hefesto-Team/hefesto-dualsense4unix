@@ -365,7 +365,7 @@ inventar nome. Ver [`jogos-e-mascaras.md`](jogos-e-mascaras.md).
   > só dos DualSense descobertos; controle de outra marca aparece em
   > `controller list --external`, recebe número e luz, e **não entra nessa
   > conta**. Medição inteira na
-  > [LUGAR-À-MESA-01](../process/sprints/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md).
+  > [LUGAR-À-MESA-01](../process/sprints/arquivados/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md).
 - `hefesto-dualsense4unix controller list|target` — mira as ações de output num
   controle específico. `target <n|all>` recebe o número da listagem (ou `all`,
   broadcast); `list` aceita `--json` (scripts) e `--external`, que junta o

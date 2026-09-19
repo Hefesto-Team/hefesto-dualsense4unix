@@ -3,7 +3,7 @@
 
 Executa Z6-04 (docs/process/sprints/2026-08-24-ONDA0-Z6-COMUNHAO-COM-O-SPECS-01…
 .md), a Peça 3 do contrato desenhado na
-docs/process/sprints/2026-08-24-PAREAMENTO-01-a-medicao-nova-tem-de-chegar-sozinha-na-tela.md.
+docs/process/sprints/arquivados/2026-08-24-PAREAMENTO-01-a-medicao-nova-tem-de-chegar-sozinha-na-tela.md.
 
 A DESCOBERTA DO DESENHO: "A TELA AFIRMA ALÉM DO MAPA" E "O MAPA MUDOU E
 DEIXOU A TELA PARA TRÁS" SÃO A MESMA COMPARAÇÃO

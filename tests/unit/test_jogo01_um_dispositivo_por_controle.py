@@ -47,7 +47,7 @@ fica. O que isso muda neste arquivo, teste a teste:
 - **a env própria do appid marcado morreu inteira** — ver `TestEnvDaAllowlist`.
 
 A borda de hoje está em `test_esconder_em_vez_de_sair_01.py`; o desenho, em
-`docs/process/sprints/2026-08-09-ESCONDER-EM-VEZ-DE-SAIR-01-o-duplicado-cura-pelo-outro-lado.md`.
+`docs/process/sprints/arquivados/2026-08-09-ESCONDER-EM-VEZ-DE-SAIR-01-o-duplicado-cura-pelo-outro-lado.md`.
 """
 
 from __future__ import annotations
