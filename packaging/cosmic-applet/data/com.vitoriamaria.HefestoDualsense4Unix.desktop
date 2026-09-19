@@ -9,9 +9,27 @@ Exec=hefesto-dualsense4unix-applet
 Icon=com.vitoriamaria.HefestoDualsense4Unix-symbolic
 Terminal=false
 NoDisplay=true
-Categories=COSMIC;
+Categories=X-COSMIC;Settings;HardwareSettings;
 Keywords=COSMIC;Applet;DualSense;Gamepad;Hefesto;PS5;
 Keywords[pt_BR]=COSMIC;Miniaplicativo;DualSense;Gamepad;Hefesto;PS5;
 StartupNotify=true
 X-CosmicApplet=true
 X-HostWaylandDisplay=true
+
+# `Categories=X-COSMIC;Settings;HardwareSettings;` — 19/09/2026,
+# `DESKTOP-CATEGORIA-01`. Três fatos medidos, para ninguém "corrigir de volta":
+#
+# 1. A DESCOBERTA DO APPLET NÃO PASSA POR AQUI. O `cosmic-settings` acha um
+#    applet pela chave `X-CosmicApplet` (logo abaixo); `Categories` não é lido
+#    por ninguém nesta plataforma. Trocar este valor não tira o Hefesto da
+#    lista de Miniaplicativos.
+# 2. OS 17 APPLETS DO SYSTEM76 USAM `COSMIC;` E OS 17 REPROVAM o
+#    `desktop-file-validate` — o token não é registrado, e o spec manda que
+#    extensão comece com `X-`. Estar divergente deles é escolha de higiene.
+# 3. O VALOR QUE A SPRINT PROPUNHA (`X-COSMIC;Utility;Settings;`) TEM `rc=0` E
+#    NÃO É LIMPO: ele emite `hint: contains more than one main category`.
+#    Medido em 19/09. Uma régua que olhasse o `rc` ficaria VERDE sobre ele —
+#    é por isso que a régua desta casa afirma sobre a SAÍDA.
+#
+# Este arquivo é a ÚNICA fonte do valor: o `justfile:22` o copia byte a byte
+# para `/usr/share/applications`, e o `install.sh` só chama `just install`.
