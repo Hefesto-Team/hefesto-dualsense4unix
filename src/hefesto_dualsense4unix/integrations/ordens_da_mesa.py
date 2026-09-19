@@ -502,6 +502,8 @@ def radio_largo_no_mesmo_hub(leitura: Leitura) -> Ordem | None:
         acao=_acao(f"Mova {nome}", len(livres), destino),
         o_que_eu_vi=Linha(
             texto=(
+                # «que você ainda não identificou» saiu do nome em 19/09
+                # (`_nome_do_aparelho`), e não daqui: é lá que a frase nasce.
                 f"{_com_maiuscula(nome)} negocia "
                 f"{_velocidade(alvo.velocidade_mbps)} no mesmo hub que "
                 + _plural(
@@ -623,10 +625,17 @@ def dongle_atras_de_hub(leitura: Leitura) -> Ordem | None:
                     "adaptador Bluetooth chega",
                     "adaptadores Bluetooth chegam",
                 )
-                + " ao computador por dentro de um hub, e há "
+                # RESUMIDO EM 19/09/2026 — ordem dela: *"resume mais pra ter
+                # uma linha só"*. Era *"…chegam ao computador por dentro de um
+                # hub, e há N entradas livres no próprio computador."*: 121
+                # caracteres, que quebravam em duas linhas mesmo com a coluna
+                # alargada. O que saiu — «ao computador», «no próprio
+                # computador» — é a mesma informação dita duas vezes: a ordem
+                # de serviço ao lado já nomeia a entrada de destino.
+                + " passam por um hub, e sobram "
                 f"{len(livres)} "
-                f"{_plural(len(livres), 'entrada livre', 'entradas livres')} "
-                "no próprio computador."
+                f"{_plural(len(livres), 'entrada livre', 'entradas livres')}"
+                "."
             ),
             selo=MEDIDO_AQUI,
         ),
@@ -1080,6 +1089,13 @@ def _irradia(leitura: Leitura, numero: str) -> bool:
     return False
 
 
+#: COMO A FRASE CHAMA O APARELHO QUE NINGUÉM NOMEOU — e ela tem dono desde
+#: 19/09/2026, porque uma régua a digitava e reprovou o encurtamento em vez do
+#: defeito (é a forma que esta casa já nomeou onze vezes: *a régua digita o que
+#: devia LER*). Quem a mudar de novo mexe aqui, e a régua vem junto de graça.
+SEM_NOME = "um aparelho sem nome"
+
+
 def _nome_do_aparelho(leitura: Leitura, aparelho: Aparelho) -> str:
     """Como a ordem chama o aparelho — pelo que ELA declarou, ou pela ausência.
 
@@ -1088,7 +1104,12 @@ def _nome_do_aparelho(leitura: Leitura, aparelho: Aparelho) -> str:
     o que o fabricante escreveu e a tela afirmar o que a máquina sabe.
     """
     nome = leitura.nomes_declarados.get(f"{aparelho.vid}:{aparelho.pid}", "").strip()
-    return nome or "um aparelho que você ainda não identificou"
+    # ENCURTADO EM 19/09/2026 — ordem dela: *"resume mais pra ter uma linha
+    # só"*. Era *"um aparelho que você ainda não identificou"* (41 caracteres);
+    # o «ainda» e o «você» eram a mesma cortesia dita duas vezes, e o que a
+    # frase precisa dizer é que o aparelho não tem nome. O convite a nomeá-lo
+    # continua onde sempre esteve: na coluna «O que é» do Rádio e Adaptadores.
+    return nome or SEM_NOME
 
 
 def _com_maiuscula(texto: str) -> str:

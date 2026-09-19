@@ -757,6 +757,41 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .lado-d{padding-left:16px;border-left:1px solid var(--border-sutil)}
   .pilha{display:flex;flex-direction:column;gap:8px}
 
+  /* ---- O CHECK-UP FICA COM A PARTE MAIOR, E COM TUDO QUANDO NÃO HÁ ORDEM ----
+     CHECKUP-VAO-01, decisão dela de 19/09/2026:
+
+       *"falta deixarmos a área sempre disponível pra ocupar o espaço vazio do
+       checkup mesmo sem mostrar nada"*  ·  *"aumenta a largura aqui"*
+
+     A metade exata servia quando as duas colunas tinham dono. Medido na foto
+     dela: com UMA ordem de serviço, o achado mais longo do exame tem 121
+     caracteres e quebra em duas linhas a 690 px — e do outro lado sobra
+     moldura vazia. Das três saídas possíveis ela escolheu a que ninguém tinha
+     proposto: a largura volta para quem tem o que mostrar.
+
+     SÃO DUAS REGRAS, e a segunda é a que ela pediu por escrito:
+
+     1. com ordem de serviço, o exame fica com 63% (`1.7fr 1fr`) — o texto de
+        121 caracteres passa a caber numa linha só;
+     2. SEM ordem de serviço, o exame fica com a largura inteira e a coluna da
+        direita sai da conta.
+
+     `:has()` E NÃO UM `if` NO GERADOR: quem esvazia a coluna é o tique
+     (`data-hef-alvo="html"` no `.col-ordem`), e o gerador não está lá na hora.
+     Esta folha já usa `:has()` em `.quadro:has(> input.abre)` — o WebKitGTK
+     desta casa o entende, e é medido.
+
+     O ESCOPO É `:has(.col-exame)` porque `.duas-colunas` é gramática comum a
+     três abas: alargar todas mudaria a Navegação e a Gatilhos, que ninguém
+     mediu e ninguém pediu. */
+  .duas-colunas:has(.col-exame){grid-template-columns:1.7fr 1fr}
+  .duas-colunas:has(.col-exame):has(.col-ordem:empty){grid-template-columns:1fr}
+  .duas-colunas:has(.col-exame):has(.col-ordem:empty) > .lado-d{display:none}
+  /* O vão de 17px existe para separar da coluna da direita. Sem ela, é margem
+     morta que encolhe a linha do achado — que é exatamente o que esta cura
+     veio devolver. */
+  .duas-colunas:has(.col-exame):has(.col-ordem:empty) > .lado-e{padding-right:0}
+
   /* AS DUAS FILEIRAS DE BOTÕES VIRARAM UMA SÓ, com os quatro, e ela mora FORA
      das colunas — ordem escrita por ela em 28/08: *"Examinar de novo. / Já Movi
      - Reexaminar. / Ignorar / Ver Ordens ignoradas."* Com um botão em cada

@@ -210,8 +210,8 @@ def energia_do_radio(
             rotulo=ROTULO_ENERGIA_DO_RADIO,
             estado=ESTADO_ATENCAO,
             porque=(
-                "A regra está no lugar, mas o adaptador ainda está com o "
-                "ajuste antigo: ela só passa a valer no próximo encaixe."
+                "A regra está no lugar, mas o adaptador só a recebe no "
+                "próximo encaixe."
             ),
             cura=(
                 "Desencaixe e encaixe o adaptador Bluetooth de novo, ou "
@@ -223,8 +223,8 @@ def energia_do_radio(
         rotulo=ROTULO_ENERGIA_DO_RADIO,
         estado=ESTADO_ATENCAO,
         porque=(
-            "O sistema pode desligar o adaptador Bluetooth para poupar "
-            "energia, e aí o controle cai sozinho no meio do jogo."
+            "O sistema pode desligar o adaptador para poupar energia, e "
+            "o controle cai no meio do jogo."
         ),
         cura="Rode a instalação do Hefesto de novo: a regra entra por padrão.",
     )
@@ -268,8 +268,7 @@ def energia_das_portas(
             rotulo=ROTULO_ENERGIA_DAS_PORTAS,
             estado=ESTADO_CERTO,
             porque=(
-                f"Conferido agora: nenhuma das {total} portas USB está em "
-                "economia de energia."
+                f"Nenhuma das {total} portas USB está em economia de energia."
             ),
         )
     return Item(
@@ -277,8 +276,8 @@ def energia_das_portas(
         rotulo=ROTULO_ENERGIA_DAS_PORTAS,
         estado=ESTADO_ATENCAO,
         porque=(
-            f"{dormindo} das {total} portas USB podem entrar em economia de "
-            "energia, e o que estiver nelas cai sem aviso."
+            f"{dormindo} das {total} portas USB podem dormir, e o que "
+            "estiver nelas cai sem aviso."
         ),
         cura="Rode a instalação do Hefesto de novo: a regra entra por padrão.",
     )
@@ -320,8 +319,7 @@ def suporte_ao_controle(
         rotulo=ROTULO_SUPORTE_AO_CONTROLE,
         estado=ESTADO_ATENCAO,
         porque=(
-            "A parte do sistema que fala com o DualSense não está carregada: "
-            "a cor da luz e o número do jogador podem não funcionar."
+            "A parte do sistema que fala com o DualSense não está carregada."
         ),
         cura="Reinicie o computador; se continuar, o kernel pode ser antigo demais.",
     )
@@ -430,9 +428,8 @@ def pareamentos(
             rotulo=ROTULO_PAREAMENTOS,
             estado=ESTADO_PROBLEMA,
             porque=(
-                f"{pela_metade} pareamento(s) pela metade: o sistema lembra do "
-                "controle, mas não guardou a chave — ele cai logo depois de "
-                "conectar."
+                f"{pela_metade} pareamento(s) pela metade: o controle cai "
+                "logo depois de conectar."
             ),
             cura=(
                 "No Bluetooth do sistema, remova esse controle e pareie de "
@@ -451,7 +448,7 @@ def pareamentos(
         rotulo=ROTULO_PAREAMENTOS,
         estado=ESTADO_CERTO,
         porque=(
-            f"Conferido agora: nenhum dos {len(caminhos)} pareamentos está "
+            f"Nenhum dos {len(caminhos)} pareamentos está "
             "pela metade."
         ),
     )
@@ -534,8 +531,8 @@ def vizinhanca_das_portas(
         rotulo=ROTULO_VIZINHANCA,
         estado=ESTADO_ATENCAO,
         porque=(
-            f"{len(apertadas)} par(es) de aparelhos em portas coladas: rádio "
-            "ao lado de rádio é a vizinhança que mais atrapalha o controle."
+            f"{len(apertadas)} par(es) em portas coladas: rádio ao lado de "
+            "rádio atrapalha o controle."
         ),
         cura=cura,
     )
