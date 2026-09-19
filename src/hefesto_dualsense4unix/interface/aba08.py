@@ -853,7 +853,24 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      Agora o texto ocupa o que precisa, o `?` vem logo depois dele, e o
      `margin-left:auto` do ignorar é o que abre o vão até a borda: uma regra, e o
      espaço vazio passa a separar em vez de agrupar. */
-  .exame .txt{flex:0 1 auto;min-width:0}
+  /* E O `?` PRECISOU ENTRAR NO TEXTO PARA CONTINUAR ENCOSTANDO NELE —
+     19/09/2026, achado dela: *"aqui a interrogação do tooltip tá bugada"*.
+
+     A decisão de 01/09 acima continua valendo; o que mudou foi o texto. Como
+     IRMÃO do `.txt` num flex, o `?` vem depois da CAIXA dele — e a caixa de um
+     texto que quebra tem a largura da linha MAIS LONGA, não da última. Medido
+     na foto dela, com a janela larga e a frase em duas linhas: a última dizia
+     «próprio computador.» e o `?` boiava **190 px** adiante, no vazio ao lado.
+     Com cinco achados, cinco posições diferentes — enquanto o `⊘`, que tem
+     `margin-left:auto`, ficava na coluna. Era essa discordância que se via.
+
+     Agora os dois moram num `.dito`, e lá dentro o `?` é INLINE: ele segue a
+     última palavra, quebre o texto onde quebrar. O `.txt` continua sendo o
+     `data-campo` que o produto repinta — envolver, e não aninhar, é o que
+     impede o tique de apagar o `?` junto com a frase. */
+  .exame .dito{flex:0 1 auto;min-width:0}
+  .exame .txt{min-width:0}
+  .exame .dito .ajuda{display:inline-block;vertical-align:middle;margin-left:6px}
   .exame .ignora{margin-left:auto}
 
   /* ---- A ORDEM CALADA FICA NA LISTA, EM CINZA — 08-Q5 dela, 06/09/2026 ----
@@ -1933,8 +1950,7 @@ def exame(estado, txt, dica, linha=0):
     return f'''          <div class="exame" data-campo="exame-calada" data-hef-alvo="classe" data-hef-classe="apagada" data-hef-quando="sim">
             {interruptores}
             <span class="selo {classe}" data-campo="selo-estado" data-hef-alvo="classe" data-hef-classe="grave" data-hef-quando="problema"><span data-campo="selo">{palavra}</span></span>
-            <span class="txt" data-campo="achado">{txt}</span>
-            <span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html">{dica}</span></span>
+            <span class="dito"><span class="txt" data-campo="achado">{txt}</span><span class="ajuda">?<span class="dica" data-campo="achado-explica" data-hef-alvo="html">{dica}</span></span></span>
             <button class="ignora" data-gesto="ignorar" data-v="{linha}" data-campo="ignorar-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="{_pacote08.DICA_DO_IGNORAR}">⊘</button>
           </div>'''
 
