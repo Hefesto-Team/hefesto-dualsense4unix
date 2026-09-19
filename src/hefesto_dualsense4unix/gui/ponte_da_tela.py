@@ -631,17 +631,48 @@ class JanelaDaAba:
         self.janela.show_all()
         self.view.load_uri(arquivo.as_uri())
 
+    #: O ATRASO DO REDESENHO, em milissegundos — BARRA-MAXIMIZADA-01, 2ª volta.
+    #: **A primeira cura pedia o redesenho DENTRO do `window-state-event`, e não
+    #: bastou** (medido por ela em 19/09/2026, 03:07: maximizada, um botão só,
+    #: com 175 px de barra vazia à direita dele e um fragmento do segundo).
+    #: A razão é de ORDEM: o evento chega quando o GTK marca o estado, e a
+    #: geometria nova do compositor ainda não foi aplicada — o redesenho de lá
+    #: repinta a decoração para a largura VELHA, que é o defeito original.
+    #: Uma volta do laço principal depois, a janela já tem o tamanho de verdade.
+    ATRASO_DO_REDESENHO_MS = 60
+
     def _a_barra_se_refaz(self, _janela: Any, _evento: Any) -> bool:
-        """Refaz o ciclo de layout quando o estado da janela muda.
+        """Agenda o redesenho da decoração para DEPOIS da geometria nova.
 
         BARRA-MAXIMIZADA-01. Ver a razão inteira onde este método é ligado.
         Devolve `False` para o GTK seguir entregando o evento a quem mais o
         escute — um `True` aqui engoliria a notificação de maximizar para o
         resto da janela.
         """
+        GLib.timeout_add(self.ATRASO_DO_REDESENHO_MS, self._repintar_a_decoracao)
+        return False
+
+    def _repintar_a_decoracao(self) -> bool:
+        """O gesto que o screenshot dela fazia de graça.
+
+        SÃO DOIS PASSOS E OS DOIS PRECISAM EXISTIR:
+
+        * `queue_resize` na barra refaz o LAYOUT dela — é o que reposiciona os
+          três botões para a largura nova;
+        * `invalidate_rect(None, True)` na `GdkWindow` marca a superfície
+          INTEIRA como suja, filhos inclusive. É o mais perto que se chega, de
+          dentro do processo, do que o portal de captura faz: obrigar o
+          compositor a recompor em vez de reaproveitar o que já está na tela.
+
+        `False` para o timeout não se repetir: é um gesto por mudança de estado.
+        """
         barra = self.janela.get_titlebar()
         if barra is not None:
             barra.queue_resize()
+        gdk = self.janela.get_window()
+        if gdk is not None:
+            gdk.invalidate_rect(None, True)
+        self.janela.queue_draw()
         return False
 
     # -- a guarda de carga -------------------------------------------------
