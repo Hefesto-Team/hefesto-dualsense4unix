@@ -153,7 +153,7 @@ def test_todo_selo_novo_esta_na_escada_da_gravidade(
     a coluna mostra `AVISOS_NA_COLUNA` de cada vez. Um selo nomeado neste
     arquivo e ausente da escada nasce condenado ao `+N`.
 
-    **O EXAME DA MÁQUINA FICA DE FORA, e esta régua media a máquina até
+    **O EXAME DA MÁQUINA FICA DE FORA, e esta régua lia a máquina até
     18/09/2026.** Os achados de `a08_conexoes._exame` ficam fora da escada POR
     CONTRATO — o comentário de `ORDEM_DA_GRAVIDADE` diz *"O QUE NÃO ESTÁ AQUI
     VAI DEPOIS (...) são os achados do exame da mesa, que já vêm ordenados pelo
