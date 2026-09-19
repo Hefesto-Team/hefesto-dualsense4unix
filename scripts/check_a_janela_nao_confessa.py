@@ -127,6 +127,11 @@ _CAMINHOS_MORTOS: list[tuple[str, str]] = []
 #: Os arquivos que escrevem o que aparece FORA da página, no produto que o
 #: lançador dela abre. Cada um com a razão de estar aqui — uma lista de
 #: caminhos sem razão envelhece e ninguém sabe se um que falta é esquecimento.
+#: **A `compact_window.py` SAIU DESTA LISTA — 19/09/2026, `ORFAOS-DA-MIGRACAO-01`.**
+#: Ela foi para `arquivados/src/app/`, e este portão era uma das duas bocas que
+#: a mantinham artificialmente viva. A sprint escreve a regra que isso deixa:
+#: *quem CHAMA para trabalhar conta como vida; quem MEDE não* — vigia de
+#: defunto é uso aparente, e foi por ele que o censo de 17/09 a contou viva.
 A_MOLDURA: dict[str, str] = {
     "interface/hefesto_vivo.py":
         "o piloto único, e é o que o lançador abre — quem passa `titulo` e "
@@ -136,8 +141,6 @@ A_MOLDURA: dict[str, str] = {
         "`Gtk.Window(title=…)` da janela oculta",
     "app/tray.py":
         "o ícone da bandeja — o nome que o sistema mostra fora da janela",
-    "app/compact_window.py":
-        "a janela compacta, que também chama `set_title`",
     "utils/identidade.py":
         "o dono único de como o produto se chama (`nome`, `nome_longo`), lido "
         "pelo `.desktop`, pelo `--version` e pela bandeja",

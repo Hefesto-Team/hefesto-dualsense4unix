@@ -517,12 +517,11 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "de instalação; em produção o caminho é derivado do pacote. Não abre "
         "feature nenhuma. MEDIDO em 12/08/2026."
     ),
-    "HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW": (
-        "Abre a janela compacta, que app/app.py:1224 declara não aparecer por "
-        "padrão. É superfície experimental de desenho, não escolha publicada — "
-        "quando ela virar escolha, sai daqui e vira promessa. MEDIDO em "
-        "12/08/2026."
-    ),
+    # A CHAVE `…_COMPACT_WINDOW` SAIU EM 19/09/2026, com o arquivo que a
+    # lia (`arquivados/src/app/compact_window.py`). A régua acima é que
+    # mandou: *"estas chaves estão classificadas e `src/` não as lê mais"*.
+    # A classificação é do que EXISTE — e a razão de ela ter existido está
+    # no `arquivados/LEIA-PRIMEIRO.md`, com a medição das três fontes.
     "HEFESTO_DUALSENSE4UNIX_FAKE": (
         "Sobe o daemon com controle de mentira (daemon/main.py:18 e :113). É a "
         "chave que permite a suíte inteira rodar sem aparelho na mesa. Ligá-la "
@@ -1180,14 +1179,13 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "19 modos de gatilho. Evidência: `grep -rn triggers_actions "
         "src/hefesto_dualsense4unix/interface/`."
     ),
-    "app/compact_window.py::CompactWindow": (
-        "06/09/2026 — LÁPIDE. A janela COMPACTA nascia por "
-        "`HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW`, e quem a abria era o "
-        "`app/app.py`. O próprio docstring do módulo já dizia que ela é "
-        "*\"superfície experimental de desenho, não escolha publicada\"* — está "
-        "escrito na entrada dessa chave em `_VARIAVEIS_DE_AMBIENTE`, aqui "
-        "mesmo, desde 12/08/2026."
-    ),
+    # A LÁPIDE DA `CompactWindow` SAIU DAQUI EM 19/09/2026, e ela não foi
+    # apagada: o ARQUIVO inteiro foi para `arquivados/src/app/`, pela
+    # `ORFAOS-DA-MIGRACAO-01`, e a razão dela está escrita lá com a medição
+    # das três fontes. Uma lápide para um arquivo que saiu do caminho é o
+    # próprio defeito que esta sprint nomeia — *vigia de defunto conta como
+    # uso e não é uso*. Se a `compact_window.py` voltar para `src/`, a lápide
+    # volta com ela.
     "app/gui_dialogs.py::presentar_dialogos_em_curso": (
         "06/09/2026 — LÁPIDE. Ela trazia para a frente os diálogos abertos "
         "quando a JANELA era reapresentada, e o único chamador era o "

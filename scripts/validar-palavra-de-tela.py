@@ -512,13 +512,12 @@ def conferir_html(raiz: Path = PAGINAS) -> list[str]:
 #: aquele botão não toca no `uinput` — o ponteiro estava errado no ALVO, não só
 #: no nome. As frases agora dão o gesto de atualizar esta instalação, que é o
 #: que a aba Emulação já dizia para a mesma condição.
+#: **A DÍVIDA «Daemon offline» SAIU — 19/09/2026.** Ela morava em
+#: `app/compact_window.py`, que foi para `arquivados/` pela
+#: `ORFAOS-DA-MIGRACAO-01`. A régua avisava com todas as letras que a entrada
+#: tinha de sair (*"a frase foi trocada, e é uma boa notícia"*), e aqui a
+#: frase não foi trocada: o arquivo inteiro saiu do caminho.
 DIVIDA_DA_PALAVRA_01_PY: dict[str, str] = {
-    "Daemon offline": (
-        "23/08/2026 — `app/compact_window.py`, o rótulo de estado da janela "
-        "compacta. Vira `O Hefesto está desligado`. Jargão puro: a janela "
-        "compacta é a que fica na tela durante o jogo, e é a última onde a "
-        "palavra `daemon` deveria aparecer."
-    ),
     "ERRO ao aplicar perfil (daemon offline?).": (
         "23/08/2026 — `app/actions/footer_actions.py`, o aviso de falha ao "
         "aplicar perfil. Vira `Não consegui aplicar o perfil — o Hefesto pode "
