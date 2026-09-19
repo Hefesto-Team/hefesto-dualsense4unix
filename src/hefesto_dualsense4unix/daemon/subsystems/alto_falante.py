@@ -899,7 +899,25 @@ class AltoFalanteSubsystem:
                 # o device KS. Troca-se a âncora — mas nunca com o jogo tocando
                 # no nó, que morreria no meio da partida; a troca espera a
                 # próxima volta sem stream.
-                if uniq in self._pontes and self._modo_da_ponte.get(uniq) == "haptica":
+                #
+                # QUEM DIZ SE O JOGO TOCA É O SERVIDOR, AGORA. O modo da ponte
+                # é o da volta ANTERIOR e não basta sozinho: o jogo que abre o
+                # nó nesta mesma volta, a fonte da háptica que não subiu (a
+                # ponte fica no som com o jogo tocando) e o controle sem ponte
+                # (hidraw que não abre, sem libopus) derrubavam o nó com o
+                # jogo aberto. E servidor mudo não é "ninguém toca": na
+                # dúvida, o nó fica (`na_duvida=True`).
+                #
+                # LIMITE CONHECIDO: entre o jogo ENUMERAR o endpoint — é aí que
+                # ele guarda o ContainerId que sobe do `sysfs.path` — e abrir o
+                # primeiro stream, ainda não há sink-input. Se o aparelho da
+                # âncora sair nessa janela, o nó troca e o jogo fica com um
+                # ContainerId que não casa mais. A janela é estreita; se a
+                # bancada mostrar o caso, a guarda passa a ser "nenhum
+                # processo Wine/Proton vivo".
+                if (
+                    uniq in self._pontes and self._modo_da_ponte.get(uniq) == "haptica"
+                ) or sink_esta_tocando(atual.nome, na_duvida=True):
                     continue
                 self._endpoints.pop(uniq, None)
                 atual.parar()
