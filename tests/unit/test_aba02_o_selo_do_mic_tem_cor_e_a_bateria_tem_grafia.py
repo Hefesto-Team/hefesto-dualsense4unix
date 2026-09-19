@@ -109,10 +109,16 @@ def test_o_selo_tem_tres_alvos() -> None:
     assert selos, "não achei um `.selo-ativo` na bancada da aba Controles"
 
     for selo in selos:
-        enderecos = selo.count('data-campo="mic-selo"')
+        # O CAMPO É LIDO DO PRÓPRIO SELO, e não digitado — 19/09/2026. Desde que
+        # o alto-falante ganhou o selo dele (`alto-canal`, a mesma peça com o
+        # glifo do alto-falante), cravar `mic-selo` aqui mediu UM dos dois e
+        # reprovava o outro por existir. A régua vale para TODO selo da página.
+        campo = re.search(r'data-campo="([^"]+)"', selo)
+        assert campo, f"selo sem endereço nenhum: {selo[:160]}"
+        enderecos = selo.count(f'data-campo="{campo.group(1)}"')
         assert enderecos == 3, (
-            f"o selo tem {enderecos} endereço(s) e precisa de 3 — a cor, o "
-            f"risco e a palavra. Achado: {selo[:160]}"
+            f"o selo de `{campo.group(1)}` tem {enderecos} endereço(s) e precisa "
+            f"de 3 — a cor, o risco e a palavra. Achado: {selo[:160]}"
         )
         # A COR: o próprio selo acende a classe `on`.
         assert 'data-hef-alvo="classe" data-hef-classe="on"' in selo, (
@@ -124,11 +130,26 @@ def test_o_selo_tem_tres_alvos() -> None:
             "o selo perdeu o alvo do RISCO. Ela escolheu 'Cor + ícone' de "
             "propósito, para quem não distingue cor."
         )
-        # A PALAVRA: o alvo PADRÃO, que é o texto — logo, sem `data-hef-alvo`.
+        # A PALAVRA: um alvo que ESCREVE. São dois, e a régua aceita os dois
+        # desde 19/09/2026 — antes ela exigia a ausência de `data-hef-alvo`, o
+        # que é o alvo padrão (texto) e serve ao selo do microfone, que sempre
+        # tem uma das três palavras a dizer.
+        #
+        # O SELO DO ALTO-FALANTE PRECISA DE `html`, e não é gosto: ele pode não
+        # ter o que dizer (o rádio sem placa de som), e o "não há" viaja como
+        # `<i class="nada">` — um ELEMENTO. Com o alvo de texto, `escrever()`
+        # trocaria o vazio por travessão e deixaria um `—` solto no rótulo.
+        #
+        # O QUE A RÉGUA GUARDA CONTINUA O MESMO: que a palavra não caia num alvo
+        # que NÃO escreve texto (classe, largura, cor, valor) e congele no que o
+        # gerador desenhou.
         palavra = re.search(r'<span class="selo-palavra"([^>]*)>', selo)
         assert palavra is not None, "o selo perdeu o `<span>` da palavra"
-        assert "data-hef-alvo" not in palavra.group(1), (
-            "o `<span>` da palavra ganhou um alvo — ele tem de ficar no alvo "
+        alvo = re.search(r'data-hef-alvo="([^"]*)"', palavra.group(1))
+        nome_do_alvo = alvo.group(1) if alvo else ""
+        assert alvo is None or alvo.group(1) == "html", (
+            f"o `<span>` da palavra caiu no alvo `{nome_do_alvo}`, "
+            "que não escreve texto — ele tem de ficar no alvo "
             "PADRÃO (o texto), senão a palavra para de ser escrita."
         )
 

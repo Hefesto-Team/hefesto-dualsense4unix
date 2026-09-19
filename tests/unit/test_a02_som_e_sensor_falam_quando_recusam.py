@@ -37,6 +37,7 @@ AS MORDIDAS DESTE ARQUIVO
 from __future__ import annotations
 
 import pathlib
+import re
 import sys
 from typing import Any
 
@@ -300,7 +301,15 @@ class TestOsQuatroBotoesDeSensor:
             "há interruptor de sensor sem endereço de ESTADO — o botão volta a "
             "acender por desenho, e fica aceso sobre um sensor desligado"
         )
-        assert doc.count('data-hef-quando="DESLIGADO"') == endereços, (
+        # SÓ OS SENSORES, e não a página inteira — 19/09/2026. `DESLIGADO` é a
+        # palavra da CASA para "não está no ar", e desde que o selo do
+        # alto-falante passou a falar a mesma língua (ordem dela) a contagem
+        # global mediu dois blocos e reprovou por soma. A conta é sobre os
+        # elementos que têm `data-sensor=`, que é do que esta régua trata.
+        dos_sensores = sum(
+            1 for tag in re.findall(r"<[^>]*data-sensor=\"[^>]*>", doc)
+            if 'data-hef-quando="DESLIGADO"' in tag)
+        assert dos_sensores == endereços, (
             "o endereço de estado perdeu o valor que o apaga: sem "
             "`data-hef-quando`, o alvo `classe` vira booleano e o botão acende "
             "com QUALQUER valor pintado, travessão inclusive"
@@ -553,7 +562,9 @@ class TestOAltoFalanteMostraOMudo:
         """
         doc = (RAIZ / "mockup/02-controles.html").read_text(encoding="utf-8")
         assert doc.count('data-campo="alto-mudo"') >= 1
-        assert doc.count('data-hef-quando="MUDO"') >= 1, (
+        import mesa_viva
+
+        assert doc.count(f'data-hef-quando="{mesa_viva.DESLIGADO}"') >= 1, (
             "o ♪ perdeu o valor que o acende — ele volta a acender por desenho"
         )
 
@@ -574,7 +585,7 @@ class TestOAltoFalanteMostraOMudo:
         # A CONTA, com o dono que a escreve. Ela é a MESMA do selo do microfone
         # — `mesa_viva.selo_do_mic` —, e é isso que impede uma segunda gramática
         # para o mesmo par de palavras a dois blocos de distância na mesma tela.
-        assert mesa_viva.selo_do_mic(True, True) == "MUDO"
+        assert mesa_viva.selo_do_mic(True, True) == mesa_viva.DESLIGADO
         assert mesa_viva.selo_do_mic(False, True) == "ATIVO"
         assert mesa_viva.selo_do_mic(False, False) == mesa_viva.SEM_LEITOR
 
@@ -593,7 +604,7 @@ class TestOAltoFalanteMostraOMudo:
             assert cards, "o pacote não montou card nenhum — régua cega"
             return next(iter(cards.values())).get("alto-mudo", "AUSENTE")
 
-        assert _campo({"volume": 102, "muted": True}) == "MUDO"
+        assert _campo({"volume": 102, "muted": True}) == mesa_viva.DESLIGADO
         assert _campo({"volume": 102, "muted": False}) == "ATIVO"
         # Volume conhecido e mudo DESCONHECIDO: `not None` é `True`, e um
         # `bool()` cru aqui pintaria ATIVO sobre o que ninguém leu.

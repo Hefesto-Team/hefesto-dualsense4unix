@@ -1726,13 +1726,26 @@
      `tests/unit/test_o_chip_do_alto_falante_tem_a_cara_do_chip_do_microfone.py`
      lê os três nomes de classe da MARCAÇÃO e cobra que a declaração que os
      veste seja a mesma. */
-  .selo-ativo,.rot .selo-som,.rot .canal{font-size:9.5px;
+  .selo-ativo,.rot .selo-som{font-size:9.5px;
               font-family:'JetBrains Mono',monospace;padding:1px 6px;
               border-radius:3px;font-weight:600;line-height:1.5}
   .selo-ativo{background:var(--border-forte);color:var(--texto-suave);
               display:inline-flex;align-items:center;gap:3px;
               vertical-align:middle}
   .selo-ativo.on{background:var(--green);color:var(--app-bg)}
+  /* O SELO DENTRO DE UM RÓTULO — 19/09/2026, e o ajuste é de ALINHAMENTO, não
+     de cara. O selo do microfone mora num `.rot-linha` flex, onde o
+     `vertical-align:middle` resolve; o do alto-falante mora no `.rot`, que é
+     caixa INLINE — ali o `middle` empurra a linha para baixo e a caixa do card
+     cresce. O `1px` é o mesmo que o alarme (`.rot .selo-som`) já usa neste
+     mesmo rótulo desde 16/08, e por isso o custo de altura continua ZERO.
+
+     E ELE SOME SOZINHO quando não há o que dizer — o caso do rádio sem placa
+     de som. São os mesmos três jeitos do chip que ele substituiu: o marcador
+     `.nada` que o pacote manda em todo tique, o valor vazio e o `:empty`. */
+  .rot .selo-ativo.no-rotulo{vertical-align:1px;margin-left:5px}
+  .rot .selo-ativo.no-rotulo:has(.nada){display:none}
+  .rot .selo-ativo.no-rotulo:has(.selo-palavra:empty){display:none}
   /* O ÍCONE E O RISCO — a segunda metade da escolha dela, para quem não
      distingue cor. O risco é um `::after` do PRÓPRIO glifo, e não do selo: ele
      tem de cruzar o microfone, não a palavra. */
@@ -1878,12 +1891,10 @@
      `.nada` que o pacote manda em TODO tique, a dica vazia, e o `:empty`. O
      marcador é preciso porque `escrever()` troca valor vazio por travessão —
      sem ele, "não há canal a descrever" vira um `—` solto no rótulo. */
-  .rot .canal{background:var(--border-forte);color:var(--texto-suave);
-    vertical-align:1px;margin-left:5px}
   .rot .selo-som{background:var(--orange);color:var(--app-bg);
     vertical-align:1px;margin-left:3px}
-  .rot .canal:has(.nada),.rot .selo-som:has(.nada){display:none}
-  .rot .canal:empty,.rot .selo-som:empty{display:none}
+  .rot .selo-som:has(.nada){display:none}
+  .rot .selo-som:empty{display:none}
 
   /* ---------- A GUARDA SEM ENDEREÇO (linha 57 da paridade) ----------
      SEM MAC, TODO COMANDO DE SOM DESTE CARD CAI NO CONTROLE PRIMÁRIO — outro
@@ -2199,7 +2210,7 @@
      botão que o produto vai recusar não pode aparecer verde — conferido na
      foto, não na conta. */
   .mudo-i[data-som="ATIVO"]{border-color:var(--green);color:var(--green)}
-  .mudo-i[data-som="MUDO"]{border-color:var(--orange);color:var(--orange);
+  .mudo-i[data-som="DESLIGADO"]{border-color:var(--orange);color:var(--orange);
     background:rgba(255,184,108,.1)}
   /* ---------- O 🎙 EM TRÊS ESTADOS — pedido dela, 10/09/2026 ----------
      *"ele aceso (vai indicar que agora tá gravando audio), ele captando audio
@@ -2523,7 +2534,7 @@
                O `title` DO `.leia` FICA: ele diz de onde vem a máscara, que é
                o que o controle faz, e não um aviso sobre ele. -->
           <span class="leia" title="O que o jogo vê deste controle. Para trocar, vá à aba Jogar."><b data-campo="mascara">DualSense</b></span><span class="div so-fechado">·</span>
-          <span class="leia so-fechado" title="Capturando: o som que entra por este controle chega ao PC.">Microfone <span class="selo-ativo on" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="MUDO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">ATIVO</span></span></span>
+          <span class="leia so-fechado" title="Capturando: o som que entra por este controle chega ao PC.">Microfone <span class="selo-ativo on" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">ATIVO</span></span></span>
           <!-- O GIROSCÓPIO NO JOGO — "fluindo para o jogo (~N Hz)".
                CONTROLES-VERDADE-01, 06/09/2026. O número que responde *"o
                giroscópio está chegando ao jogo AGORA?"* não existia deste lado:
@@ -2726,7 +2737,7 @@
   <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
 </svg></span>
-            <span class="gb plast" data-glifo="r2" data-campo="glifo-r2" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R2</title>
+            <span class="gb" data-glifo="r2" data-campo="glifo-r2" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R2</title>
 
   <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="9" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text>
@@ -2777,7 +2788,7 @@
                  botão que desfaz algo que não acontece é um botão que ensina errado.
                  O método continua no daemon, para quem precisar dele. -->
             <div class="rot rot-linha">Microfone
-              <span class="selo-ativo on" style="margin-left:5px" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="MUDO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">ATIVO</span></span>
+              <span class="selo-ativo on" style="margin-left:5px" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">ATIVO</span></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> cala o
                 microfone e apaga a luz vermelha do controle.<br><br>
@@ -2850,7 +2861,7 @@
           <div class="moldura" style="margin-top:9px" data-bloco="alto-falante"
                data-campo="alto-apagado" data-hef-alvo="atributo" data-hef-atributo="data-apagado">
             <div class="rot">Alto-falante
-              <span class="canal" data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span data-campo="alto-canal" data-hef-alvo="html">acordado</span></span>
+              <span data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span class="selo-ativo no-rotulo on" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="alto-canal" data-hef-alvo="html">ATIVO</span></span></span>
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 <b>Sons do jogo</b>: só o áudio do jogo, no alto-falante do controle.
@@ -3022,7 +3033,7 @@
                O `title` DO `.leia` FICA: ele diz de onde vem a máscara, que é
                o que o controle faz, e não um aviso sobre ele. -->
           <span class="leia" title="O que o jogo vê deste controle. Para trocar, vá à aba Jogar."><b data-campo="mascara">Xbox 360</b></span><span class="div so-fechado">·</span>
-          <span class="leia so-fechado" title="Microfone calado: a luz vermelha do controle está apagada.">Microfone <span class="selo-ativo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo cortado" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="MUDO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">MUDO</span></span></span>
+          <span class="leia so-fechado" title="Microfone calado: a luz vermelha do controle está apagada.">Microfone <span class="selo-ativo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo cortado" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">DESLIGADO</span></span></span>
           <!-- O GIROSCÓPIO NO JOGO — "fluindo para o jogo (~N Hz)".
                CONTROLES-VERDADE-01, 06/09/2026. O número que responde *"o
                giroscópio está chegando ao jogo AGORA?"* não existia deste lado:
@@ -3175,7 +3186,7 @@
         <div>
           <div class="moldura">
             <div class="glifos">
-            <span class="gb plast" data-glifo="cross" data-campo="glifo-cross" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
+            <span class="gb" data-glifo="cross" data-campo="glifo-cross" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
 
   <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -3218,14 +3229,14 @@
   <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="9" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R1</text>
 </svg></span>
-            <span class="gb plast" data-glifo="l2" data-campo="glifo-l2" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
+            <span class="gb" data-glifo="l2" data-campo="glifo-l2" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
 
   <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="10" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text>
   <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
 </svg></span>
-            <span class="gb plast" data-glifo="r2" data-campo="glifo-r2" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R2</title>
+            <span class="gb" data-glifo="r2" data-campo="glifo-r2" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R2</title>
 
   <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="9" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text>
@@ -3276,7 +3287,7 @@
                  botão que desfaz algo que não acontece é um botão que ensina errado.
                  O método continua no daemon, para quem precisar dele. -->
             <div class="rot rot-linha">Microfone
-              <span class="selo-ativo" style="margin-left:5px" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo cortado" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="MUDO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">MUDO</span></span>
+              <span class="selo-ativo" style="margin-left:5px" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo cortado" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">DESLIGADO</span></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> cala o
                 microfone e apaga a luz vermelha do controle.<br><br>
@@ -3349,7 +3360,7 @@
           <div class="moldura" style="margin-top:9px" data-bloco="alto-falante"
                data-campo="alto-apagado" data-hef-alvo="atributo" data-hef-atributo="data-apagado">
             <div class="rot">Alto-falante
-              <span class="canal" data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span data-campo="alto-canal" data-hef-alvo="html"><i class="nada"></i></span></span>
+              <span data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span class="selo-ativo no-rotulo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="alto-canal" data-hef-alvo="html"><i class="nada"></i></span></span></span>
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 <b>Sons do jogo</b>: só o áudio do jogo, no alto-falante do controle.
@@ -3521,7 +3532,7 @@
                O `title` DO `.leia` FICA: ele diz de onde vem a máscara, que é
                o que o controle faz, e não um aviso sobre ele. -->
           <span class="leia" title="O que o jogo vê deste controle. Para trocar, vá à aba Jogar."><b data-campo="mascara">—</b></span><span class="div so-fechado">·</span>
-          <span class="leia so-fechado" title="Capturando: o som que entra por este controle chega ao PC.">Microfone <span class="selo-ativo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="MUDO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">—</span></span></span>
+          <span class="leia so-fechado" title="Capturando: o som que entra por este controle chega ao PC.">Microfone <span class="selo-ativo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">—</span></span></span>
           <!-- O GIROSCÓPIO NO JOGO — "fluindo para o jogo (~N Hz)".
                CONTROLES-VERDADE-01, 06/09/2026. O número que responde *"o
                giroscópio está chegando ao jogo AGORA?"* não existia deste lado:
@@ -3674,7 +3685,7 @@
         <div>
           <div class="moldura">
             <div class="glifos">
-            <span class="gb plast" data-glifo="cross" data-campo="glifo-cross" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
+            <span class="gb" data-glifo="cross" data-campo="glifo-cross" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
 
   <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -3717,14 +3728,14 @@
   <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="9" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R1</text>
 </svg></span>
-            <span class="gb plast" data-glifo="l2" data-campo="glifo-l2" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
+            <span class="gb" data-glifo="l2" data-campo="glifo-l2" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
 
   <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="10" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text>
   <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
 </svg></span>
-            <span class="gb plast" data-glifo="r2" data-campo="glifo-r2" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R2</title>
+            <span class="gb" data-glifo="r2" data-campo="glifo-r2" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R2</title>
 
   <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="9" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text>
@@ -3775,7 +3786,7 @@
                  botão que desfaz algo que não acontece é um botão que ensina errado.
                  O método continua no daemon, para quem precisar dele. -->
             <div class="rot rot-linha">Microfone
-              <span class="selo-ativo" style="margin-left:5px" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="MUDO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">—</span></span>
+              <span class="selo-ativo" style="margin-left:5px" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">—</span></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> cala o
                 microfone e apaga a luz vermelha do controle.<br><br>
@@ -3848,7 +3859,7 @@
           <div class="moldura" style="margin-top:9px" data-bloco="alto-falante"
                data-campo="alto-apagado" data-hef-alvo="atributo" data-hef-atributo="data-apagado">
             <div class="rot">Alto-falante
-              <span class="canal" data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span data-campo="alto-canal" data-hef-alvo="html"><i class="nada"></i></span></span>
+              <span data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span class="selo-ativo no-rotulo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="alto-canal" data-hef-alvo="html"><i class="nada"></i></span></span></span>
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 <b>Sons do jogo</b>: só o áudio do jogo, no alto-falante do controle.
@@ -4020,7 +4031,7 @@
                O `title` DO `.leia` FICA: ele diz de onde vem a máscara, que é
                o que o controle faz, e não um aviso sobre ele. -->
           <span class="leia" title="O que o jogo vê deste controle. Para trocar, vá à aba Jogar."><b data-campo="mascara">—</b></span><span class="div so-fechado">·</span>
-          <span class="leia so-fechado" title="Microfone calado: a luz vermelha do controle está apagada.">Microfone <span class="selo-ativo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="MUDO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">—</span></span></span>
+          <span class="leia so-fechado" title="Microfone calado: a luz vermelha do controle está apagada.">Microfone <span class="selo-ativo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">—</span></span></span>
           <!-- O GIROSCÓPIO NO JOGO — "fluindo para o jogo (~N Hz)".
                CONTROLES-VERDADE-01, 06/09/2026. O número que responde *"o
                giroscópio está chegando ao jogo AGORA?"* não existia deste lado:
@@ -4173,7 +4184,7 @@
         <div>
           <div class="moldura">
             <div class="glifos">
-            <span class="gb plast" data-glifo="cross" data-campo="glifo-cross" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
+            <span class="gb" data-glifo="cross" data-campo="glifo-cross" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
 
   <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -4216,14 +4227,14 @@
   <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="9" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R1</text>
 </svg></span>
-            <span class="gb plast" data-glifo="l2" data-campo="glifo-l2" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
+            <span class="gb" data-glifo="l2" data-campo="glifo-l2" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>L2</title>
 
   <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="10" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text>
   <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
 </svg></span>
-            <span class="gb plast" data-glifo="r2" data-campo="glifo-r2" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R2</title>
+            <span class="gb" data-glifo="r2" data-campo="glifo-r2" data-hef-alvo="classe"><svg class="gl" width="38" height="38" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>R2</title>
 
   <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="9" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text>
@@ -4274,7 +4285,7 @@
                  botão que desfaz algo que não acontece é um botão que ensina errado.
                  O método continua no daemon, para quem precisar dele. -->
             <div class="rot rot-linha">Microfone
-              <span class="selo-ativo" style="margin-left:5px" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="MUDO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">—</span></span>
+              <span class="selo-ativo" style="margin-left:5px" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">—</span></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> cala o
                 microfone e apaga a luz vermelha do controle.<br><br>
@@ -4347,7 +4358,7 @@
           <div class="moldura" style="margin-top:9px" data-bloco="alto-falante"
                data-campo="alto-apagado" data-hef-alvo="atributo" data-hef-atributo="data-apagado">
             <div class="rot">Alto-falante
-              <span class="canal" data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span data-campo="alto-canal" data-hef-alvo="html">acordado</span></span>
+              <span data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span class="selo-ativo no-rotulo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="alto-canal" data-hef-alvo="html">ATIVO</span></span></span>
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 <b>Sons do jogo</b>: só o áudio do jogo, no alto-falante do controle.

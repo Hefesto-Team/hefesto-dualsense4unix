@@ -570,8 +570,50 @@ def selo_do_mic(mudo: bool, sabemos: bool) -> str:
     anunciando que está capturando, na frente de quatro pessoas.
     """
     if not sabemos:
-        return "—"
-    return "MUDO" if mudo else "ATIVO"
+        return SEM_LEITOR
+    return DESLIGADO if mudo else ATIVO
+
+
+#: A LÍNGUA DOS DOIS SELOS DO SOM, e ela é uma só por ordem dela — 19/09/2026.
+#: A pergunta dela, sobre o par que o alto-falante usava (`acordado`/`dormindo`):
+#: *"Ativo e Desligado pros dois não seria melhor que dormindo?"*
+#: <!-- noqa-acento: citação literal dela -->
+#:
+#: O QUE ISSO SUBSTITUIU, e por que é melhor: o microfone dizia `MUDO` e o
+#: alto-falante dizia `dormindo` — duas palavras, duas grafias e dois conceitos
+#: para a mesma pergunta de quem olha (*"sai som por aqui agora?"*). `dormindo`
+#: ainda era pior: descreve o SERVIDOR DE SOM suspender um nó, que é vocabulário
+#: de dentro, e ela já baniu esse tipo de palavra da tela.
+#:
+#: A RAZÃO NÃO SE PERDE, MUDA DE LUGAR: ela sai da palavra e vai para a dica
+#: (`dica_do_canal`), que é onde esta casa põe o porquê desde 13/09.
+ATIVO = "ATIVO"
+DESLIGADO = "DESLIGADO"
+
+
+def selo_do_alto_falante(mudo: bool, dormindo: bool, sabemos: bool) -> str:
+    """O selo do alto-falante: `ATIVO`, `DESLIGADO`, ou `—` quando não se leu.
+
+    **É A MESMA PERGUNTA QUE O SELO DO MICROFONE RESPONDE**, e por isso fala a
+    mesma língua: *sai som por aqui agora?* Ele nasceu em 19/09/2026 da ordem
+    dela — *"esse auto falante que tá com o acordado ali (…) consegue colocar o
+    mesmo ativado lá de cima? vai ter o mesmo efeito"*
+    <!-- noqa-acento: citação literal dela --> — e substituiu o chip cinza que
+    dizia `acordado`.
+
+    DOIS FATOS, UMA PALAVRA, e é isso que o chip velho não fazia: o som não sai
+    quando ela CALOU o alto-falante **ou** quando o canal está dormindo no
+    servidor de som. O chip velho só contava o segundo, ao lado de um botão `♪`
+    que só contava o primeiro — duas leituras parciais, no mesmo bloco, que
+    podiam se contradizer na cara dela.
+
+    `sabemos` É O TERCEIRO ESTADO, pela mesma razão do microfone: sem leitura do
+    bloco de áudio, pintar `ATIVO` é o controle que acabou de cair anunciando
+    que está tocando.
+    """
+    if not sabemos:
+        return SEM_LEITOR
+    return DESLIGADO if (mudo or dormindo) else ATIVO
 
 
 #: As palavras dos TRÊS estados do botão 🎙 — MIC-NA-TELA-01, 10/09/2026.

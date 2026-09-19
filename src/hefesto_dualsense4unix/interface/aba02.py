@@ -58,7 +58,6 @@ from pacotes.a02_controles import (DICA_ALTO_SEM_POSSE,
 # a palavra do canal aqui seria a segunda gramática do mesmo fato — e ela
 # divergiria em silêncio no dia em que o dono (`audio_saida.estado_do_canal`)
 # trocasse de palavra, porque um texto que não casa não dá erro nenhum.
-from pacotes.a02_controles import sufixo_do_canal as _sufixo_do_canal
 # A GEOMETRIA DO PONTINHO TAMBÉM É DO PACOTE, e pela mesma razão do
 # `ROTULO_DO_CLIQUE`: a folha que o produto escreve a cada tique
 # (`a02_controles.folha_das_posicoes`) e a folha que este gerador escreve uma
@@ -854,13 +853,26 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      `tests/unit/test_o_chip_do_alto_falante_tem_a_cara_do_chip_do_microfone.py`
      lê os três nomes de classe da MARCAÇÃO e cobra que a declaração que os
      veste seja a mesma. */
-  .selo-ativo,.rot .selo-som,.rot .canal{font-size:9.5px;
+  .selo-ativo,.rot .selo-som{font-size:9.5px;
               font-family:'JetBrains Mono',monospace;padding:1px 6px;
               border-radius:3px;font-weight:600;line-height:1.5}
   .selo-ativo{background:var(--border-forte);color:var(--texto-suave);
               display:inline-flex;align-items:center;gap:3px;
               vertical-align:middle}
   .selo-ativo.on{background:var(--green);color:var(--app-bg)}
+  /* O SELO DENTRO DE UM RÓTULO — 19/09/2026, e o ajuste é de ALINHAMENTO, não
+     de cara. O selo do microfone mora num `.rot-linha` flex, onde o
+     `vertical-align:middle` resolve; o do alto-falante mora no `.rot`, que é
+     caixa INLINE — ali o `middle` empurra a linha para baixo e a caixa do card
+     cresce. O `1px` é o mesmo que o alarme (`.rot .selo-som`) já usa neste
+     mesmo rótulo desde 16/08, e por isso o custo de altura continua ZERO.
+
+     E ELE SOME SOZINHO quando não há o que dizer — o caso do rádio sem placa
+     de som. São os mesmos três jeitos do chip que ele substituiu: o marcador
+     `.nada` que o pacote manda em todo tique, o valor vazio e o `:empty`. */
+  .rot .selo-ativo.no-rotulo{vertical-align:1px;margin-left:5px}
+  .rot .selo-ativo.no-rotulo:has(.nada){display:none}
+  .rot .selo-ativo.no-rotulo:has(.selo-palavra:empty){display:none}
   /* O ÍCONE E O RISCO — a segunda metade da escolha dela, para quem não
      distingue cor. O risco é um `::after` do PRÓPRIO glifo, e não do selo: ele
      tem de cruzar o microfone, não a palavra. */
@@ -1006,12 +1018,10 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      `.nada` que o pacote manda em TODO tique, a dica vazia, e o `:empty`. O
      marcador é preciso porque `escrever()` troca valor vazio por travessão —
      sem ele, "não há canal a descrever" vira um `—` solto no rótulo. */
-  .rot .canal{background:var(--border-forte);color:var(--texto-suave);
-    vertical-align:1px;margin-left:5px}
   .rot .selo-som{background:var(--orange);color:var(--app-bg);
     vertical-align:1px;margin-left:3px}
-  .rot .canal:has(.nada),.rot .selo-som:has(.nada){display:none}
-  .rot .canal:empty,.rot .selo-som:empty{display:none}
+  .rot .selo-som:has(.nada){display:none}
+  .rot .selo-som:empty{display:none}
 
   /* ---------- A GUARDA SEM ENDEREÇO (linha 57 da paridade) ----------
      SEM MAC, TODO COMANDO DE SOM DESTE CARD CAI NO CONTROLE PRIMÁRIO — outro
@@ -1257,7 +1267,28 @@ GL16 = [("cross","✕"),("circle","○"),("square","□"),("triangle","△"),
         ("l1","L1"),("r1","R1"),("l2","L2"),("r2","R2"),
         ("share","<"),("options","≡"),("ps","PS"),("touchpad","···")]
 
-NA_COR_DA_PECA = {"cross", "l2", "r2"}   # os que o original pinta na cor do plástico
+# A COR DA PEÇA SAIU DO CARD VIVO — 19/09/2026, e a queixa dela nomeia o defeito:
+# *"o botão r2 fica sempre pressionado isso pra todos os controles"*. Aqui havia
+# `NA_COR_DA_PECA = {"cross", "l2", "r2"}` — as três peças que o desenho original
+# pinta na cor do plástico —, e a `grade()` dava a elas a classe `plast` quando
+# nasciam apagadas.
+#
+# O QUE FAZ DISSO UM DEFEITO É A PONTE, não a cor: o piloto só acende e apaga a
+# classe `on` (`hefesto_vivo.BOOTSTRAP`, ramo `classe`: `el.dataset.hefClasse ||
+# 'on'`). Nenhum dado desliga `plast`, então a peça que nasceu com ela fica
+# pintada para sempre — e o `--plastico` do Cosmic Red dela é rosa, a mesma cor
+# do `.gb.on`. A tela afirmava R2 apertado com o controle parado na mesa, nos
+# quatro cards; nos lugares P2-P4, que nascem sem nada apertado, eram TRÊS peças.
+#
+# É A SEGUNDA METADE DE UMA CURA DE 03/09/2026. A seção abaixo, em `grade()`, já
+# mede exatamente este defeito para a classe `on` — *"os dezesseis glifos ficam
+# com a classe `on` que ESTA função escreveu (…) A tela afirmava três botões
+# apertados para sempre"* —, e a cura de lá deu `data-campo` aos glifos para o
+# dado poder apagar. `plast` ficou de fora e repetiu o defeito por dezesseis dias.
+#
+# A REGRA QUE ISSO DEIXA: **num card VIVO, o desenho não pinta estado que o dado
+# não possa apagar.** O que a tela afirma do aparelho vem do aparelho.
+# A régua é `tests/unit/test_o_card_vivo_nao_nasce_com_estado_que_o_dado_nao_apaga.py`.
 
 # A TAXA DO GIROSCÓPIO É DO TRANSPORTE, e vinha DIGITADA — "~194 Hz", igual nos
 # dois cards, cabo e rádio. A canônica
@@ -1317,7 +1348,7 @@ def num(v):
 
 def grade(apertados):
     def um(n):
-        c = " on" if n in apertados else (" plast" if n in NA_COR_DA_PECA else "")
+        c = " on" if n in apertados else ""
         # SEM `title=` AQUI. O nome da peça sai do `<title>` que o `glifo()`
         # escreve DENTRO do <svg>, derivado de `pecas-do-dualsense.csv`. Um
         # `title=` neste span era a segunda verdade: o span mede 42x46 e o svg
@@ -1773,6 +1804,11 @@ def resumo_fechado(mic_mudo):
 #: `data-hef-quando` deixa de casar e a cor para de seguir o estado, sem barulho.
 SELO_ATIVO = mesa_viva.selo_do_mic(False, True)
 SELO_MUDO = mesa_viva.selo_do_mic(True, True)
+#: AS DUAS PALAVRAS DO SELO DO ALTO-FALANTE, e elas saem do DONO pela mesma
+#: razão que as do microfone: digitá-las aqui seria a segunda gramática para o
+#: mesmo par, na mesma tela, a dois blocos de distância.
+SELO_SOM_ATIVO = mesa_viva.selo_do_alto_falante(False, False, True)
+SELO_SOM_DESLIGADO = mesa_viva.selo_do_alto_falante(True, False, True)
 
 #: O ATRIBUTO DOS TRÊS ESTADOS DO 🎙 — MIC-NA-TELA-01, 10/09/2026. Atributo e
 #: não classe, pela mesma razão do `data-som` do ♪: o dono do valor é o
@@ -1893,6 +1929,18 @@ MIC_SVG = ('<svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true"'
            ' stroke-width="2" stroke-linecap="round"/>'
            '<path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2"'
            ' stroke-linecap="round"/></svg>')
+
+
+#: O GLIFO DO ALTO-FALANTE — o par do `MIC_SVG`, e ele existe pela mesma razão
+#: que o do microfone: *"Cor + ícone. Redundante de propósito — quem lê rápido
+#: pega pela cor, quem não distingue cor pega pelo risco."* (ela, 03/09/2026).
+#: O risco é o MESMO `::after` da `.mic-glifo`, que cruza o glifo e não a
+#: palavra — por isso este SVG cabe na mesma caixa de 9x9.
+ALTO_SVG = ('<svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true"'
+            ' focusable="false">'
+            '<path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/>'
+            '<path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor"'
+            ' stroke-width="2" stroke-linecap="round"/></svg>')
 
 
 def selo_do_microfone(mic_mudo, *, estilo=""):
@@ -2093,10 +2141,37 @@ def sufixo_do_canal(c):
     o bloco acima. O que este arquivo decide é a CENA: qual controle aparece
     com canal lido no desenho parado.
     """
-    sono = "acordado" if c.get("transporte") == "usb" else ""
-    return ('<span class="canal" data-campo="alto-canal-porque" data-hef-alvo="atributo"'
-            ' data-hef-atributo="title"><span data-campo="alto-canal"'
-            f' data-hef-alvo="html">{_sufixo_do_canal(sono) or NADA_A_DIZER}</span></span>')
+    # A CENA: no cabo o canal está acordado e o som sai; é o único estado que o
+    # desenho parado pode afirmar. Sem placa de som — o caso do rádio — não há o
+    # que dizer, e o `.nada` faz a pílula sumir inteira.
+    lido = c.get("transporte") == "usb"
+    desligado = False
+    palavra = (mesa_viva.selo_do_alto_falante(False, False, True) if lido
+               else NADA_A_DIZER)
+    # A RAZÃO MORA NO INVÓLUCRO, e ele não é enfeite: a palavra do selo diz o
+    # ESTADO (`ATIVO`/`DESLIGADO`) e a dica diz POR QUÊ — que é onde esta casa
+    # põe o porquê desde 13/09. O ramo `classe` do piloto até escreve um
+    # atributo junto, mas só `true`/`false`; um `title` com frase precisa do
+    # alvo `atributo` num elemento próprio, que é exatamente o que o chip que
+    # este selo substituiu já fazia.
+    return ('<span data-campo="alto-canal-porque" data-hef-alvo="atributo"'
+            ' data-hef-atributo="title"><span class="selo-ativo no-rotulo'
+            f'{"" if desligado or not lido else " on"}"'
+            ' data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="on"'
+            f' data-hef-quando="{SELO_SOM_ATIVO}"'
+            '><span class="mic-glifo"'
+            ' data-campo="alto-canal" data-hef-alvo="classe"'
+            f' data-hef-classe="cortado" data-hef-quando="{SELO_SOM_DESLIGADO}"'
+            f'>{ALTO_SVG}</span><span class="selo-palavra" data-campo="alto-canal"'
+            # O ALVO `html` E NÃO O TEXTO IMPLÍCITO DO SELO DO MICROFONE, e a
+            # diferença é o MARCADOR: este selo pode não ter o que dizer (o
+            # rádio sem placa de som), e o "não há" viaja como `<i class="nada">`
+            # — um ELEMENTO. Com o alvo de texto, `escrever()` trocaria o vazio
+            # por travessão e deixaria um `—` solto no rótulo; e a guarda do
+            # lugar vazio, que casa só a FOLHA (`[^<]*`), sairia da conta sem
+            # aviso. O microfone não precisa disto: ele sempre tem uma das três
+            # palavras a dizer.
+            f' data-hef-alvo="html">{palavra}</span></span></span>')
 
 
 def ponto_de_interrogacao(campo, razao=""):

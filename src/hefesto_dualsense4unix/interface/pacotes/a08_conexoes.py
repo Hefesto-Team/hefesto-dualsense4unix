@@ -4611,7 +4611,7 @@ def teto_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # `mic-existe` se protegeu de um rótulo traduzido.
     policy = _tela.politica_do_rotulo(escolha)
 
-    nome = str((ctx.state or {}).get("active_profile") or "").strip()
+    nome = perfil.nome_do_ativo(ctx.state).strip()
     if not nome:
         raise RuntimeError(
             "não há perfil ativo agora, e a força da vibração de um controle é "

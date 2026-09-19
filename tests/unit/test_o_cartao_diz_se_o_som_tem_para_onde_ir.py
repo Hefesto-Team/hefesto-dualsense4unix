@@ -260,31 +260,68 @@ class TestOsSelos:
         assert mod.selo_do_som(None, "") == ""
 
 
-class TestOSufixoDoCanal:
+class TestOSeloDoAltoFalante:
+    """O selo do rótulo — `sufixo_do_canal` morreu aqui em 19/09/2026.
+
+    A PEÇA QUE ESTA CLASSE MEDIA devolvia a palavra do daemon
+    (`acordado`/`dormindo`) para um chip cinza. Por ordem dela o chip virou o
+    SELO do alto-falante, com a mesma cara e a mesma língua do selo do
+    microfone: *"Ativo e Desligado pros dois não seria melhor que dormindo?"*
+    <!-- noqa-acento: citação literal dela -->
+
+    AS DUAS REGRAS QUE ELA GUARDAVA CONTINUAM, e por isso a classe fica em vez
+    de sair: a palavra não se digita (vem do dono), e a AUSÊNCIA de leitura não
+    vira afirmação.
+    """
+
     def test_os_dois_estados_entram_no_rotulo(self) -> None:
-        """A palavra é a do dono, INTEIRA e sozinha — sem separador colado.
+        """As duas palavras saem do dono, e são DIFERENTES entre si.
 
-        **O `·` SAIU EM 17/09/2026**, quando o sufixo virou chip por ordem dela:
-        um separador dentro de uma pílula lê como sujeira, porque a pílula já é
-        a separação. Ver `test_o_chip_do_alto_falante_tem_a_cara_do_chip_do_...`.
-
-        MORDE: devolva o `·` ao valor e o chip volta a dizer `· ACORDADO`.
+        MORDE: faça `selo_do_alto_falante` devolver a mesma palavra nos dois.
         """
-        assert mod.sufixo_do_canal(audio_saida.CANAL_ACORDADO) == (
-            audio_saida.CANAL_ACORDADO)
-        assert mod.sufixo_do_canal(audio_saida.CANAL_DORMINDO) == (
-            audio_saida.CANAL_DORMINDO)
+        import mesa_viva
+
+        assert mesa_viva.selo_do_alto_falante(False, False, True) == mesa_viva.ATIVO
+        assert mesa_viva.selo_do_alto_falante(True, False, True) == mesa_viva.DESLIGADO
+        assert mesa_viva.ATIVO != mesa_viva.DESLIGADO
+
+    def test_o_canal_dormindo_desliga_o_selo(self) -> None:
+        """Os DOIS fatos entram na mesma palavra — é o que o chip não fazia.
+
+        O som não sai quando ela CALOU o alto-falante **ou** quando o canal está
+        dormindo. O chip velho só contava o segundo, ao lado de um botão `♪` que
+        só contava o primeiro: duas leituras parciais, no mesmo bloco, que podiam
+        se contradizer na cara dela.
+
+        MORDE: tire o `or dormindo` de `selo_do_alto_falante` e o canal dormindo
+        volta a aparecer como ATIVO ao lado de um alto-falante mudo.
+        """
+        import mesa_viva
+
+        assert mesa_viva.selo_do_alto_falante(False, True, True) == mesa_viva.DESLIGADO
 
     def test_sem_leitura_o_rotulo_nao_afirma_nada(self) -> None:
-        """`""` é NÃO SEI, e não "acordado".
+        """`sabemos=False` é NÃO SEI, e não "está tocando".
 
-        Sem placa de som — o caso do rádio, medido em 15/08/2026 — escrever
-        "acordado" a partir de ausência prometeria que o som sai inteiro num
-        controle que não tem por onde tocá-lo.
+        Sem placa de som — o caso do rádio, medido em 15/08/2026 — afirmar que o
+        som sai prometeria o que o controle não tem por onde fazer. É a mesma
+        regra do terceiro estado do selo do microfone.
 
-        MORDE: faça `sufixo_do_canal` cair no acordado por padrão.
+        MORDE: faça `selo_do_alto_falante` cair no ATIVO por padrão.
         """
-        assert mod.sufixo_do_canal("") == ""
+        import mesa_viva
+
+        assert mesa_viva.selo_do_alto_falante(False, False, False) == mesa_viva.SEM_LEITOR
+        assert mesa_viva.selo_do_alto_falante(True, True, False) == mesa_viva.SEM_LEITOR
+
+    def test_o_cartao_cala_quando_o_canal_nao_foi_lido(self, sono_lido) -> None:
+        """E no CARTÃO a ausência vira o marcador, não uma palavra.
+
+        MORDE: faça o campo `alto-canal` chamar o dono mesmo com o canal sem
+        leitura, e o rótulo do rádio passa a exibir um selo.
+        """
+        sono_lido("", False)
+        assert _card(_entrada())["alto-canal"] == mod.NADA_A_DIZER
 
 
 class TestADicaDoCanal:
@@ -431,7 +468,14 @@ class TestOsSelosNoCartao:
         sono_lido(audio_saida.CANAL_DORMINDO, False)
         card = _card(_entrada())
         assert card["alto-selo"] == TEXTO_SELO_CANAL_DORMINDO
-        assert card["alto-canal"] == audio_saida.CANAL_DORMINDO
+        # A PALAVRA MUDOU DE DONO EM 19/09/2026, por ordem dela: o chip que
+        # repetia a palavra do daemon (`dormindo`) virou SELO e fala a língua do
+        # microfone. O `dormindo` não some do produto — ele continua sendo o que
+        # `audio_saida.estado_do_canal` responde, e é o que a DICA carrega,
+        # medido duas linhas abaixo.
+        import mesa_viva
+
+        assert card["alto-canal"] == mesa_viva.DESLIGADO
         # O TERCEIRO CAMPO É O RÓTULO DO ESTADO desde 13/09/2026 — ver
         # `TestADicaDoCanal`. A regra do sono fora do lugar não chega à dica.
         assert card["alto-canal-porque"] == mod.dica_do_canal(
@@ -586,23 +630,23 @@ class TestODesenho:
         assert TEXTO_SELO_SAIDA_MUDA not in doc
         assert TEXTO_SELO_CANAL_DORMINDO not in doc
 
-    def test_o_cabo_mostra_acordado_e_o_radio_nao_mostra_nada(self) -> None:
+    def test_o_cabo_mostra_ativo_e_o_radio_nao_mostra_nada(self) -> None:
         """A cena é o caso normal, e o rádio não finge ter placa de som.
 
-        Um desenho em que o controle do RÁDIO dissesse "acordado" ensinaria de
-        volta a mentira que `sufixo_do_canal("")` existe para não contar.
+        Um desenho em que o controle do RÁDIO dissesse que o som sai ensinaria
+        de volta a mentira que o `""` do canal existe para não contar.
 
-        MORDE: faça `aba02.sufixo_do_canal` responder acordado para todos.
+        MORDE: faça `aba02.sufixo_do_canal` responder ATIVO para todos.
         """
         from monta import MESA as MESA_DO_DESENHO
 
         import aba02
+        import mesa_viva
 
         no_cabo = [c for c in MESA_DO_DESENHO if c.get("transporte") == "usb"]
         no_radio = [c for c in MESA_DO_DESENHO if c.get("transporte") == "bt"]
         assert no_cabo and no_radio, "a cena precisa dos dois transportes"
-        assert all(audio_saida.CANAL_ACORDADO in aba02.sufixo_do_canal(c)
-                   for c in no_cabo)
+        assert all(mesa_viva.ATIVO in aba02.sufixo_do_canal(c) for c in no_cabo)
         assert all(mod.NADA_A_DIZER in aba02.sufixo_do_canal(c) for c in no_radio)
 
     def test_a_palavra_do_sufixo_vem_do_produto(self) -> None:
@@ -613,7 +657,10 @@ class TestODesenho:
         """
         fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/aba02.py").read_text(
             encoding="utf-8")
-        assert "_sufixo_do_canal(sono)" in fonte
+        assert "mesa_viva.selo_do_alto_falante(" in fonte, (
+            "o gerador voltou a digitar a palavra do selo em vez de perguntar "
+            "ao dono (`mesa_viva.selo_do_alto_falante`) — a cena e a tela viva "
+            "vão divergir CALADAS na primeira troca de palavra")
 
     def test_a_guarda_nao_alcanca_a_moldura_do_led(self) -> None:
         """A moldura do LED tem `title` FIXO — um `.moldura[title]` solto a apaga.
@@ -632,8 +679,14 @@ class TestODesenho:
     def test_o_sufixo_e_o_selo_somem_com_o_marcador(self) -> None:
         """As três regras da folha: o marcador, a dica vazia e o `:empty`."""
         doc = _bancada()
-        assert ".rot .canal:has(.nada),.rot .selo-som:has(.nada){display:none}" in doc
-        assert ".rot .canal:empty,.rot .selo-som:empty{display:none}" in doc
+        # SÃO DOIS BLOCOS DESDE 19/09/2026: o alarme (`.selo-som`) guardou os
+        # seletores dele, e o chip do canal virou selo — com as mesmas três
+        # regras, sob o nome novo. O que a régua guarda é o COMPORTAMENTO: nem
+        # um nem outro deixa vão no rótulo quando não há o que dizer.
+        assert ".rot .selo-som:has(.nada){display:none}" in doc
+        assert ".rot .selo-som:empty{display:none}" in doc
+        assert ".rot .selo-ativo.no-rotulo:has(.nada){display:none}" in doc
+        assert ".rot .selo-ativo.no-rotulo:has(.selo-palavra:empty){display:none}" in doc
 
     def test_o_nome_do_cartao_veste_a_dica_e_nasce_sem_ela(self) -> None:
         """O par físico↔virtual é do serviço; o desenho não o crava."""
