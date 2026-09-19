@@ -207,7 +207,7 @@ def tui() -> None:
 
 @app.command()
 def tray() -> None:
-    """Abre o tray icon GTK3 (requer pip install com extra tray)."""
+    """Abre o ícone do Hefesto na bandeja do sistema — o menu do produto."""
     from hefesto_dualsense4unix.cli.cmd_tray import tray_cmd
 
     tray_cmd()

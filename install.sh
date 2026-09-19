@@ -138,13 +138,14 @@
 #   --no-hotplug-gui      pula a cópia da unit hotplug-gui.
 #   --enable-autostart    habilita auto-start do daemon no boot (pula prompt).
 #   --enable-hotplug-gui  habilita GUI auto-abrir ao plugar DualSense (pula prompt).
-#   --enable-cosmic-applet  força compilar+instalar o applet COSMIC nativo
-#                         (Rust) mesmo fora do COSMIC. Em COSMIC o applet já é
-#                         DEFAULT-ON (a 1a build do libcosmic e longa, >10 min;
-#                         requer cargo+just — se ausentes, o install NÃO falha,
-#                         só avisa como instalar).
-#   --no-cosmic-applet    OPT-OUT do applet COSMIC (não compila nem instala; um
-#                         applet já instalado é preservado — remova via uninstall).
+#   --enable-cosmic-applet  compila+instala o applet COSMIC nativo (Rust).
+#                         APOSENTADO em 19/09/2026 por ordem dela — o tray faz
+#                         o mesmo, aparece sozinho e tem menu mais rico. Sem
+#                         esta flag o applet NÃO é instalado em máquina alguma.
+#                         (a 1a build do libcosmic e longa, >10 min; requer
+#                         cargo+just — se ausentes, o install NÃO falha.)
+#   --no-cosmic-applet    aceita e não faz nada: o default já é não instalar.
+#                         Fica para não quebrar quem a tenha num script.
 #   --no-dev              cria o venv SEM o extra [dev] (ruff/mypy/pytest). Por
 #                         DEFAULT o venv já vem com os dev tools (gate local).
 #                         Use em CI/máquina enxuta que só precisa rodar o app.
@@ -2951,6 +2952,31 @@ command -v gtk-update-icon-cache >/dev/null 2>&1 \
 command -v update-desktop-database >/dev/null 2>&1 \
     && update-desktop-database -q "$(dirname "${DESKTOP_TARGET}")" 2>/dev/null || true
 
+# ---------------------------------------------------------------------------
+# O AUTOSTART DO TRAY — 19/09/2026
+# ---------------------------------------------------------------------------
+# Decisão dela: *"desabilitamos o applet pela complexidade. o tray faz o mesmo
+# mas melhor."* O applet COSMIC era um plugin do `cosmic-panel` e subia com a
+# sessão; o tray é um processo comum e NÃO tem esse carona. Sem este arquivo,
+# tirar o applet deixaria a barra dela vazia — o oposto do pedido.
+#
+# Por que `~/.config/autostart/` e não uma unit de usuário: a unit sobe antes
+# do painel gráfico existir, e um tray que corre antes do hospedeiro da bandeja
+# não acha ninguém e o ícone some. O `.desktop` de autostart é lido pela SESSÃO
+# gráfica, já com o painel de pé, e ainda respeita o `Delay` declarado.
+_AUTOSTART_DIR="${HOME}/.config/autostart"
+_AUTOSTART_TARGET="${_AUTOSTART_DIR}/${APP_ID}-tray.desktop"
+_AUTOSTART_FONTE="${ROOT_DIR}/packaging/${APP_ID}-tray.desktop"
+if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    _faria "escrever o autostart do tray em ${_AUTOSTART_TARGET}"
+elif [[ -r "${_AUTOSTART_FONTE}" ]]; then
+    mkdir -p "${_AUTOSTART_DIR}"
+    sed -e "s|@RAIZ@|${ROOT_DIR}|g" "${_AUTOSTART_FONTE}" > "${_AUTOSTART_TARGET}"
+    printf '      autostart do tray: %s\n' "${_AUTOSTART_TARGET}"
+else
+    warn "packaging/${APP_ID}-tray.desktop ausente — o tray não subirá sozinho"
+fi
+
 mkdir -p "${BIN_DIR}"
 cat > "${LAUNCHER}" <<LAUNCH
 #!/usr/bin/env bash
@@ -3500,16 +3526,44 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 9. Applet COSMIC nativo (Rust + libcosmic) — DEFAULT-ON em COSMIC
+# 9. Applet COSMIC nativo (Rust + libcosmic) — APOSENTADO, opt-in explícito
 # ---------------------------------------------------------------------------
-# BUG-INSTALL-APPLET-OPT-IN-SKIPPED-01: o applet era opt-in (--enable-cosmic-
-# applet), então um ./install.sh normal PULAVA — e quem já tinha o applet o
-# perdia/deixava stale num ciclo uninstall+install. Agora é DEFAULT-ON: instala
-# quando faz sentido (em COSMIC, ou se já está instalado, ou se forçado por
-# --enable-cosmic-applet). Opt-out via --no-cosmic-applet. A build exige
-# cargo+just; se ausentes, NÃO falha o install (só avisa como instalar Rust).
+# APOSENTADO EM 19/09/2026, POR ORDEM DELA: *"desabilitamos o applet pela
+# complexidade. o tray faz o mesmo mas melhor."*
+#
+# E ela o disse sobre o PRÓPRIO trabalho: o applet foi ideia dela, escrito por
+# ela no início do projeto; o tray nasceu depois, nesta casa, como reescrita
+# por cima. A avaliação de que o segundo ficou melhor é dela — e vem com o
+# preço de admiti-lo, com todas as letras, na mensagem em que mandou aposentar
+# o primeiro. Fica registrado porque é decisão medida, não preferência.
+#
+# O QUE O APPLET COBRAVA, medido: um binário Rust de 23 MB, uma build de
+# libcosmic que passa de 10 minutos, `cargo`+`just` e sete `-dev` de sistema, e
+# um `sudo` para copiar em `/usr/local`. E ele ainda não aparecia sozinho: o
+# `cosmic-panel` só carrega o plugin se ele estiver na lista de Miniaplicativos,
+# uma configuração que este script NUNCA escreveu. Instalava-se um binário de
+# 23 MB para uma barra que continuava vazia.
+#
+# O QUE ENTRA NO LUGAR: o tray SNI (`app/tray.py`, subido por
+# `cli/cmd_tray.py`), com autostart escrito no passo 4. Ele aparece sem
+# configuração nenhuma, funciona fora do COSMIC, e o menu dele é mais rico —
+# «Abrir painel», a lista de perfis e o estado, todos falando com o daemon.
+#
+# E A PREMISSA QUE O ADIAVA CAIU JUNTO: este projeto dizia que em Pop!_OS
+# COSMIC *"o `org.kde.StatusNotifierWatcher` que o libayatana usa não existe"*.
+# Medido em 19/09, ele existe, servido pelo `cosmic-applet-status-area`
+# (PID vivo na sessão dela, junto com o `com.system76.Cosmic…Watcher`).
+#
+# O CÓDIGO FICA, e a flag também: `--enable-cosmic-applet` continua compilando
+# e instalando para quem quiser. O que mudou é o DEFAULT — de "instala em
+# COSMIC, ou se já estiver instalado" para "só quando pedido".
+#
+# BUG-INSTALL-APPLET-OPT-IN-SKIPPED-01 (o bug que fez o applet virar
+# default-on) FICA REGISTRADO e caduco: ele descrevia a perda do applet num
+# ciclo uninstall+install, e hoje não há o que perder. A `--no-cosmic-applet`
+# vira apelido de nada e segue aceita, para não quebrar quem a tenha no script.
 readonly APPLET_BIN="/usr/local/bin/hefesto-dualsense4unix-applet"
-step "9/11" "applet COSMIC nativo (padrão em COSMIC; --no-cosmic-applet desativa)"
+step "9/11" "applet COSMIC (APOSENTADO — o tray o substitui; --enable-cosmic-applet força)"
 install_cosmic_applet() {
     local applet_dir="${ROOT_DIR}/packaging/cosmic-applet"
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
@@ -3544,14 +3598,24 @@ install_cosmic_applet() {
 }
 _applet_installed=0
 [[ -e "${APPLET_BIN}" ]] && _applet_installed=1
-if [[ "${DISABLE_COSMIC_APPLET}" -eq 1 ]]; then
-    printf '      pulado (--no-cosmic-applet)\n'
-    [[ "${_applet_installed}" -eq 1 ]] \
-        && printf '      (applet já instalado foi preservado — remova via ./uninstall.sh)\n'
-elif [[ "${ENABLE_COSMIC_APPLET}" -eq 1 || "${DESKTOP_IS_COSMIC}" -eq 1 || "${_applet_installed}" -eq 1 ]]; then
+# A CONDIÇÃO PERDEU DOIS BRAÇOS EM 19/09/2026, e é isso que aposenta o applet:
+# `DESKTOP_IS_COSMIC` (instalava na máquina dela toda vez) e `_applet_installed`
+# (uma vez instalado, reinstalava para sempre — inclusive depois de ela mandar
+# parar). Sobra a flag, que é o único jeito de pedir.
+if [[ "${ENABLE_COSMIC_APPLET}" -eq 1 ]]; then
     install_cosmic_applet
+elif [[ "${DISABLE_COSMIC_APPLET}" -eq 1 ]]; then
+    printf '      pulado (--no-cosmic-applet — e o default já é este)\n'
 else
-    printf '      fora do COSMIC e não instalado — pulado (force: ./install.sh --enable-cosmic-applet)\n'
+    printf '      aposentado — o tray faz o mesmo (force: ./install.sh --enable-cosmic-applet)\n'
+fi
+# UM APPLET JÁ INSTALADO NÃO É APAGADO AQUI, e a razão é a mesma de sempre: o
+# install não desfaz o que não instalou nesta corrida. Mas ele DIZ, porque o
+# binário parado não se anuncia — e dois ícones na barra seriam lidos como
+# defeito novo.
+if [[ "${_applet_installed}" -eq 1 && "${ENABLE_COSMIC_APPLET}" -eq 0 ]]; then
+    printf '      há um applet instalado de antes (%s)\n' "${APPLET_BIN}"
+    printf '      para removê-lo: ./uninstall.sh  (ou sudo rm dele e dos ícones)\n'
 fi
 
 # ---------------------------------------------------------------------------
