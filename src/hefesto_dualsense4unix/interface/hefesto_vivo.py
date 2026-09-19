@@ -1230,6 +1230,78 @@ BOOTSTRAP = r"""
       alvo.__hefBloco = html;
       n += 1;
     }
+    // 0b. O MOLDE QUE CLONA — 19/09/2026, decisão dela: *a lista rola, sem teto*.
+    //
+    // O QUE ISTO CURA, e são DUAS pontas do mesmo defeito, as duas medidas no
+    // Check-up da aba Conexões em 19/09 com o Chrome dirigindo a página
+    // PUBLICADA:
+    //
+    //   * a lista que SOBRA some. O desenho tinha cinco blocos e o exame da
+    //     bancada dela devolve sete: dois achados sumiam, e a tira ficava com
+    //     cinco CERTO — a tela dizendo "está tudo bem" com dois achados
+    //     abertos escondidos no fim;
+    //   * a lista que FALTA mente. Com três achados (medido numa máquina sem a
+    //     bancada dela), os dois blocos que sobravam ficavam com o travessão de
+    //     `escrever(el, '')` — a tela INVENTANDO duas linhas.
+    //
+    // UM TETO MAIOR NÃO RESOLVERIA, e é por isso que a peça é esta: as
+    // conferências do exame devolvem LISTAS (`a08_conexoes._conferencias`), uma
+    // porta problemática por item. O número de achados não tem máximo, e todo
+    // número cravado no desenho seria o mesmo defeito com outra data.
+    //
+    // O CONTRATO É DE DUAS LINHAS no HTML: a caixa diz o SELETOR do bloco que
+    // se repete (`data-hef-molde`) e a CHAVE da lista que manda na contagem
+    // (`data-hef-molde-conta`). O bloco original mais à frente é o molde.
+    //
+    // OS CLONES SE MARCAM (`data-hef-clone`), e é o que torna isto idempotente:
+    // sem a marca, o tique seguinte leria os clones como originais e a lista
+    // dobraria de tamanho a cada volta. Com ela, o piloto sabe o que ele mesmo
+    // pôs e converge para o número certo — clona o que falta, remove o que
+    // sobra, esconde o original excedente.
+    //
+    // ESCONDER O EXCEDENTE E NÃO REMOVÊ-LO: os originais são o DESENHO, e são
+    // eles que o mockup mostra. Removê-los deixaria a aba sem molde no dia em
+    // que a lista voltasse a crescer.
+    for(const caixa of document.querySelectorAll('[data-hef-molde]')){
+      const seletor = caixa.dataset.hefMolde;
+      const chave = caixa.dataset.hefMoldeConta;
+      const lista = (p.mesa || {})[chave];
+      if(!seletor || !chave || !Array.isArray(lista)) continue;
+      const todos = Array.from(caixa.querySelectorAll(seletor));
+      const originais = todos.filter(function(el){ return !el.hasAttribute('data-hef-clone'); });
+      if(!originais.length) continue;
+      const clones = todos.filter(function(el){ return el.hasAttribute('data-hef-clone'); });
+      const querido = lista.length;
+      const molde = originais[originais.length - 1];
+      while(originais.length + clones.length > Math.max(querido, originais.length)){
+        const fora = clones.pop();
+        if(fora && fora.parentNode) fora.parentNode.removeChild(fora);
+        n += 1;
+      }
+      let cauda = clones.length ? clones[clones.length - 1] : molde;
+      while(originais.length + clones.length < querido){
+        const copia = molde.cloneNode(true);
+        copia.setAttribute('data-hef-clone', '1');
+        // O `__hefBloco` é memória de PINTURA e viaja no clone como lixo: o
+        // laço dos blocos compararia o HTML novo com o do molde e pularia a
+        // escrita. `cloneNode` não copia propriedades de objeto, mas o
+        // `dataset` e os atributos sim — e é só o atributo que interessa aqui.
+        if(cauda.parentNode) cauda.parentNode.insertBefore(copia, cauda.nextSibling);
+        clones.push(copia);
+        cauda = copia;
+        n += 1;
+      }
+      // E O EXCEDENTE SOME. A classe é da FOLHA DA CASA
+      // (`folha_da_casa.FOLHA_DA_CASA`), porque é peça do piloto e não do tema:
+      // ela vale nas dez páginas e não depende de nenhuma aba declará-la.
+      Array.from(caixa.querySelectorAll(seletor)).forEach(function(el, i){
+        const sobra = i >= querido;
+        if(el.classList.contains('hef-sem-item') !== sobra){
+          el.classList.toggle('hef-sem-item', sobra);
+          n += 1;
+        }
+      });
+    }
     // 1. OS CAMPOS DA MESA — soltos no documento, valem para a página toda.
     for(const [k, v] of Object.entries(p.mesa || {})){
       const alvos = achar(document, k);
