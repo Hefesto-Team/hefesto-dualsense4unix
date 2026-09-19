@@ -122,8 +122,22 @@ import re
 #:
 #: DUAS CLASSES E NÃO UMA COM MODIFICADOR: o pouso acende uma e apaga a outra
 #: (`hefesto_vivo.BOOTSTRAP`, `voltouDoVoo`), e a régua lê QUAL acendeu.
+#: ``.hef-sem-item`` É O BLOCO DO DESENHO QUE HOJE NÃO TEM ITEM — 19/09/2026,
+#: a peça do MOLDE (`hefesto_vivo.BOOTSTRAP`, `data-hef-molde`). Quando a lista
+#: do produto é menor que o número de blocos que o gerador emitiu, os que
+#: sobram recebem esta classe em vez do travessão de `escrever(el, '')`.
+#:
+#: **MEDIDO ANTES DE EXISTIR:** com três achados na lista do Check-up e cinco
+#: blocos no desenho, a página publicada mostrava `—` em duas linhas — a tela
+#: inventando achados numa máquina sem a bancada dela. Ver a `08-conexoes`.
+#:
+#: ELA MORA AQUI E NÃO NA ABA porque é peça do PILOTO: quem a acende é o
+#: bootstrap, nas dez páginas, e uma classe que o piloto acende sem a folha
+#: correspondente é uma classe que não faz nada — o defeito que esta casa
+#: chama de *acender luz sem lâmpada*.
 FOLHA_DA_CASA = (
     ".nota{display:none !important}"
+    ".hef-sem-item{display:none !important}"
     "select{appearance:none;-webkit-appearance:none}"
     ".hef-em-voo{opacity:.6 !important;cursor:progress !important}"
     ".hef-deu-certo{border-color:var(--green,#50fa7b) !important;"

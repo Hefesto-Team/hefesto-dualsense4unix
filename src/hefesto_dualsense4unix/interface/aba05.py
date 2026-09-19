@@ -1694,12 +1694,12 @@ def _coluna(c, e=None, conectado=None):
     #    tela continuava mostrando `0 /255` e `60 /255` do desenho com o daemon
     #    dizendo `—`.
     # 2. O DONO DO CLIQUE. O ouvinte sobe com
-    #    `closest` pela lista de assentos (`hefesto_vivo.py:1474`) e lê
+    #    `closest` pela lista de assentos (`hefesto_vivo.py:1546`) e lê
     #    `dataset.controle || dataset.uniq`. Achava este `<div>` e lia `""`, de
     #    modo que "Testar" e "Parar" chegavam ao pacote sem controle nenhum e
     #    RECUSAVAM SEMPRE — para ela, com o rato de verdade. A régua unitária
     #    passava porque injeta o `uniq` à mão: verde sobre dois botões mortos.
-    # 3. O LUGAR QUE ESVAZIA. `hefesto_vivo.py:1233` marca os lugares sem
+    # 3. O LUGAR QUE ESVAZIA. `hefesto_vivo.py:1305` marca os lugares sem
     #    controle por `[data-controle="pN"]`. Sem o atributo, um controle só na
     #    mesa deixava a coluna do P2 com os números do desenho — a sétima
     #    aparição do defeito que o pintor já sabia curar.

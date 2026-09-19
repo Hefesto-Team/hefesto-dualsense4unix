@@ -1220,6 +1220,14 @@ def _card_da_ordem(ordem: Any) -> str:
 #: importa este pacote (`_pacote08`) e emite os blocos por estes mesmos números;
 #: um teto digitado no gerador e outro no pacote divergiria no dia em que a
 #: coluna crescesse, e o `+N` passaria a contar o que cabe em vez do que sobra.
+#:
+#: **O PRIMEIRO DEIXOU DE SER TETO — 19/09/2026.** Ele continua valendo como o
+#: número de blocos que o DESENHO emite (e o `_exigir` do gerador continua
+#: exigindo que os dois números batam), mas não é mais o que CABE na tela: o
+#: piloto clona o molde da linha e a coluna rola. A decisão é dela, e a razão
+#: é estrutural — as conferências devolvem LISTAS, uma porta problemática por
+#: item, e o exame não tem máximo. Todo número cravado aqui como teto seria o
+#: mesmo defeito com outra data.
 TETO_DO_EXAME = 5
 TETO_DE_VIZINHOS = 4
 
@@ -1321,8 +1329,20 @@ def _o_que_nao_coube(itens: list[Any], vizinhos: list[Any]) -> dict[str, str]:
     """
     nada = _monta().NADA_A_DIZER
     return {
-        "exame-mais": _sobraram(len(itens), TETO_DO_EXAME,
-                                "achado", "achados") or nada,
+        # O `+N` DO EXAME CALOU — 19/09/2026, e a decisão 08-Q7 não caiu: ela
+        # foi ATENDIDA melhor. A frase dela era *"Quando sobra, a lista ganha
+        # uma última linha curta"*, e desde hoje a lista NÃO SOBRA: o piloto
+        # clona o molde da linha (`hefesto_vivo.BOOTSTRAP`, `data-hef-molde`) e
+        # todo achado aparece — palavra dela, 19/09: *a lista rola, sem teto*.
+        #
+        # A CHAVE CONTINUA INDO EM TODO TIQUE, e é obrigatório: pará-la
+        # deixaria na tela o `+N` do tique anterior se algum dia ela voltasse a
+        # falar. É a mesma razão do `exame-calada`, escrita logo acima.
+        #
+        # `_sobraram` NÃO MORREU — os vizinhos continuam com teto (o desenho
+        # tem quatro entradas e a fileira não rola), e é ele quem diz. O que
+        # esta linha guarda é a metade do exame.
+        "exame-mais": nada,
         "vizinho-mais": _sobraram(len(vizinhos), TETO_DE_VIZINHOS,
                                   "rádio vizinho", "rádios vizinhos") or nada,
     }

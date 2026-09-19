@@ -1233,12 +1233,29 @@
      três abas: alargar todas mudaria a Navegação e a Gatilhos, que ninguém
      mediu e ninguém pediu. */
   .duas-colunas:has(.col-exame){grid-template-columns:1.7fr 1fr}
+  /* DOIS SELETORES E NÃO UM — 19/09/2026, e o segundo é a cura de um `:empty`
+     que NUNCA DISPAROU na máquina dela.
+
+     `:empty` não casa um elemento que tem filho, e a coluna sem card não fica
+     vazia: `_html_da_ordem` devolve `monta.NADA_A_DIZER`, que é
+     `<i class="nada"></i>` — e ele vai ali de propósito, porque o `escrever()`
+     do piloto troca `''` por travessão antes de olhar o alvo. A coluna ficava
+     com um filho invisível, o `:empty` falhava, e a largura nunca voltava.
+
+     ELA FOTOGRAFOU O DEFEITO em 19/09, com a cura já instalada: oito achados à
+     esquerda e a metade direita do quadro em branco — *"tá vazio aqui ainda"*.
+     É o caso NORMAL desta bancada: as ordens dela (`dongle_atras_de_hub`,
+     `teclado_so_no_hub`) não têm DESTINO, e sem destino não há de→para a
+     desenhar. O `:empty` cobria só a coluna que o produto zera. */
   .duas-colunas:has(.col-exame):has(.col-ordem:empty){grid-template-columns:1fr}
+  .duas-colunas:has(.col-exame):has(.col-ordem > .nada:only-child){grid-template-columns:1fr}
   .duas-colunas:has(.col-exame):has(.col-ordem:empty) > .lado-d{display:none}
+  .duas-colunas:has(.col-exame):has(.col-ordem > .nada:only-child) > .lado-d{display:none}
   /* O vão de 17px existe para separar da coluna da direita. Sem ela, é margem
      morta que encolhe a linha do achado — que é exatamente o que esta cura
      veio devolver. */
   .duas-colunas:has(.col-exame):has(.col-ordem:empty) > .lado-e{padding-right:0}
+  .duas-colunas:has(.col-exame):has(.col-ordem > .nada:only-child) > .lado-e{padding-right:0}
 
   /* AS DUAS FILEIRAS DE BOTÕES VIRARAM UMA SÓ, com os quatro, e ela mora FORA
      das colunas — ordem escrita por ela em 28/08: *"Examinar de novo. / Já Movi
@@ -1250,8 +1267,39 @@
      então juntá-las devolve os mesmos px — medido, 205 antes e 205 depois.
      O que sobrou nas colunas é só o que reparte a SOBRA de altura entre os itens
      de cada uma, para as duas terminarem juntas sem `space-between`. */
-  .col-exame{flex:1;display:flex;flex-direction:column}
-  .col-exame .exame{flex:1 0 auto}
+  /* A ROLAGEM DA COLUNA — 19/09/2026, decisão dela: *"A lista rola, sem teto —
+     todo achado aparece; a coluna ganha rolagem quando passar da altura."*
+
+     O TETO É A TELA, E O NÚMERO SAIU DE MEDIÇÃO, não de escolha. Com a aba
+     PUBLICADA dirigida por Chrome a 1180x780, cada linha do exame mede 20px
+     firmes e a coluna cresce linearmente:
+
+         5 achados  → 122px, última linha em y=307
+        16 achados  → 342px, última linha em y=527
+
+     A aba tem folga: com DEZESSEIS achados nada é cortado, e a bancada dela
+     devolve SETE. Cravar um `max-height` em px faria a coluna rolar por uma
+     linha num quadro que ainda tinha 250px de sobra — rolagem dentro de tela
+     vazia é pior que crescer.
+
+     `60vh` É A REDE, e ela responde à pergunta que ELA fez em 19/09 olhando a
+     barra: *"será que minha resolução de tela impactando aqui em algo?"*. Numa
+     janela grande a coluna nunca chega lá e cresce livre; numa pequena ela
+     rola em vez de empurrar o resto da aba para fora. O teto acompanha a tela
+     de quem está usando, que é o único jeito de um número servir às duas.
+
+     `min-height:0` é o que autoriza um filho de flex a encolher abaixo do
+     conteúdo — sem ele o `overflow` nunca chega a valer. `auto` e não `scroll`:
+     a barra só nasce no dia em que sobra. */
+  .col-exame{flex:1;display:flex;flex-direction:column;min-height:0;
+              max-height:60vh;overflow-y:auto}
+  /* `flex:1 0 auto` reparte a SOBRA de altura entre as linhas; com a coluna
+     rolando ele passaria a esticar cada linha e a rolagem nunca chegaria. O
+     `0 0 auto` mantém cada linha do tamanho dela e deixa a sobra para o fim. */
+  .col-exame .exame{flex:0 0 auto}
+  .col-exame:not(:hover)::-webkit-scrollbar{width:0}
+  .col-exame::-webkit-scrollbar{width:6px}
+  .col-exame::-webkit-scrollbar-thumb{background:var(--comment);border-radius:3px}
   .lado-d .col-ordem{flex:1;display:flex;flex-direction:column}
   .lado-d .col-ordem > .ordem{flex:1;display:flex;flex-direction:column}
   /* 11px, e o número é MEDIDO, não escolhido: com os botões dentro das colunas o
@@ -2713,7 +2761,15 @@
         <div class="duas-colunas">
 
           <div class="lado-e">
-            <div class="col-exame">
+            <!-- O MOLDE QUE CLONA — 19/09/2026, decisão dela: *a lista rola,
+                 sem teto*. As duas linhas abaixo são o contrato inteiro: o
+                 seletor do bloco que se repete e a chave da lista que manda
+                 na contagem. Quem clona é o piloto (`hefesto_vivo.BOOTSTRAP`,
+                 `data-hef-molde`), e a razão de a peça morar LÁ e não aqui é
+                 que o exame não tem máximo: as conferências devolvem listas,
+                 uma porta problemática por item. O desenho continua com cinco
+                 blocos porque cinco é o que o MOCKUP mostra. -->
+            <div class="col-exame" data-hef-molde=".exame" data-hef-molde-conta="achado">
           <div class="exame" data-campo="exame-calada" data-hef-alvo="classe" data-hef-classe="apagada" data-hef-quando="sim">
             <i class="est est-ok on" data-campo="selo-certo" data-hef-alvo="classe" data-hef-quando="certo"></i><i class="est est-warn" data-campo="selo-atencao" data-hef-alvo="classe" data-hef-quando="atencao"></i><i class="est est-info" data-campo="selo-nao-sei" data-hef-alvo="classe" data-hef-quando="nao_sei"></i>
             <span class="selo ok" data-campo="selo-estado" data-hef-alvo="classe" data-hef-classe="grave" data-hef-quando="problema"><span data-campo="selo">CERTO</span></span>
