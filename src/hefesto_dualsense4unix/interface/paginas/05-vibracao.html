@@ -190,6 +190,32 @@
      e o dia em que passar a janela continua do mesmo tamanho. */
   .janela{
     width:min(100%,1600px); height:var(--alt-janela); max-width:100%; background:var(--app-bg);
+    /* A JANELA NÃO PASSA DA TELA — 19/09/2026, e o defeito é dela: os quatro
+       botões do rodapé cortados ao meio pela borda de baixo, com a janela
+       ladrilhada.  <!-- noqa-acento -->
+
+       O NÚMERO É EXATO: a altura é `clamp(--piso-da-vista, 100dvh − recuo×2,
+       --teto-da-vista)`, e o piso de 777 mais os dois recuos de 16 dão **809**.
+       Acima disso a janela encolhe junto e nada se perde; ABAIXO ela TRAVA em
+       777 e passa da viewport — 19 px fora a 790, 49 a 760, 109 a 700. O que
+       sai é justamente o fim da janela, onde mora o `.rodape`.
+
+       O `max-height` É A CURA INTEIRA porque o mecanismo já existe: `.miolo` é
+       `flex:1; min-height:0; overflow-y:auto` e rola por dentro, e o `.rodape`
+       é irmão dele, colado no fim. Limitar a janela faz o miolo absorver a
+       diferença — o rodapé deixa de sair, e nenhuma altura de conteúdo muda.
+
+       O PISO NÃO SE MEXE: ele existe para o conteúdo não se espremer (foi o que
+       curou a aba Navegação), e continua mandando na altura do MIOLO. O que ele
+       não pode mais fazer é empurrar o rodapé para fora da tela.
+
+       E POR QUE O PISO PEDIDO EM CÓDIGO NÃO BASTA, medido em 13/09/2026:
+       *"o COSMIC que ladrilha não o lê"*. Quando ela
+       ladrilha, a janela recebe menos altura que o piso — e a tela tem de
+       aguentar, porque o gesto é dela e não vai ser revogado.
+
+       A RÉGUA É `tests/unit/test_a_janela_nunca_passa_da_tela.py`. */
+    max-height:calc(100dvh - var(--recuo-do-corpo) * 2);
     display:flex; flex-direction:column;
     border:1px solid var(--linha); border-radius:10px; overflow:hidden;
     box-shadow:0 18px 50px rgba(0,0,0,.45);
@@ -1321,6 +1347,28 @@
   .vib .seg{display:grid;grid-template-columns:1fr 1fr;gap:7px}
   .vib .seg button:last-child{grid-column:1 / -1}
   .vib .seg button{min-width:0;padding:0 8px;font-size:12px}
+
+  /* O DEGRAU HERDADO TEM CARA PRÓPRIA — VIBRA-ACESA-01, 17/09/2026.
+
+     A coluna que NÃO tem ajuste próprio herda a força geral, e até hoje isso
+     aparecia como NADA: o pacote emitia `degrau=""`, o alvo `classe` apagava os
+     três, e ela leu o resultado como defeito — *"o botão não tá ativo"*, com a
+     coluna ao lado marcando 150%.
+
+     A decisão [05] dela (04/09) mandava o herdado acender na LINHA DE MESA, e a
+     linha de mesa foi apagada em 05/09 pela decisão dela de não ter mesa em
+     nada da interface. O herdado ficou sem lugar. Aqui ele ganha o lugar que
+     sobrou, que é o botão: ACESO, porque é a força que a mão dela sente, e
+     DIFERENTE do escolhido, porque procedência é informação — foi exatamente
+     isso que a decisão [05] pediu, e só o endereço dela é que mudou.
+
+     A MARCA É O TRAÇO, NÃO A COR: o preenchimento de `.seg button.on` continua
+     dizendo "ligado" e a borda tracejada diz "veio de fora". Trocar a cor faria
+     o olho ler outro ESTADO; trocar o traço faz ele ler a mesma força com outra
+     origem. E o peso volta ao normal — negrito é o que ela escolheu para esta
+     coluna. */
+  .vib .seg.herdado button.on{background:transparent;border-style:dashed;
+                              font-weight:500}
 
   /* AS TRÊS BARRAS DE UM CONTROLE NA MESMA GRADE — a Força e os dois motores.
      Quatro colunas fixas: interruptor · trilho · número · sufixo. A da Força não
@@ -2515,7 +2563,8 @@
 </svg></div>
             <div class="rot-ctrl" data-hef="identidade">P1 <span class="pt">•</span> Cosmic Red
               <span class="pt">•</span> USB</div>
-            <div class="seg"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="on" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
+            <div class="seg" data-campo="degrau-herdado" data-hef-alvo="classe"
+                 data-hef-classe="herdado"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="on" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
             <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="150" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Quanto da vibração chega a este controle — 0 a 200%. Grava na hora, só para ele."><span class="num" data-campo="mult">150%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
             <div class="motor mult" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado on" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
@@ -2856,7 +2905,8 @@
 </svg></div>
             <div class="rot-ctrl" data-hef="identidade">P2 <span class="pt">•</span> Starlight Blue
               <span class="pt">•</span> BT</div>
-            <div class="seg"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
+            <div class="seg" data-campo="degrau-herdado" data-hef-alvo="classe"
+                 data-hef-classe="herdado"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
             <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="100" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Quanto da vibração chega a este controle — 0 a 200%. Grava na hora, só para ele."><span class="num" data-campo="mult">100%</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
             <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
@@ -3196,7 +3246,8 @@
     </g>
 </svg></div>
             <div class="rot-ctrl" data-hef="identidade">P3 <span class="pt">•</span> Desconectado</div>
-            <div class="seg"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
+            <div class="seg" data-campo="degrau-herdado" data-hef-alvo="classe"
+                 data-hef-classe="herdado"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
             <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="0" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Quanto da vibração chega a este controle — 0 a 200%. Grava na hora, só para ele."><span class="num" data-campo="mult">—</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
             <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
@@ -3536,7 +3587,8 @@
     </g>
 </svg></div>
             <div class="rot-ctrl" data-hef="identidade">P4 <span class="pt">•</span> Desconectado</div>
-            <div class="seg"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
+            <div class="seg" data-campo="degrau-herdado" data-hef-alvo="classe"
+                 data-hef-classe="herdado"><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="economia" data-papel="forca" data-forca="economia">Economia</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="balanceado" data-papel="forca" data-forca="balanceado">Balanceado</button><button class="" data-campo="degrau" data-hef-alvo="classe" data-hef-quando="max" data-papel="forca" data-forca="max">Máximo</button></div>
             <div class="motor mult"><span></span><input class="trilho arrasta" type="range" min="0" max="200" step="10" value="0" data-papel="intensidade" data-campo="mult-pos" data-hef-alvo="valor" title="Quanto da vibração chega a este controle — 0 a 200%. Grava na hora, só para ele."><span class="num" data-campo="mult">—</span><span class="teto mx" data-campo="mult-teto" data-hef-alvo="classe">Máx</span></div>
             <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
