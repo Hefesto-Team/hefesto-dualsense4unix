@@ -1186,6 +1186,19 @@ _NAO_E_PROMESSA: dict[str, str] = {
     # próprio defeito que esta sprint nomeia — *vigia de defunto conta como
     # uso e não é uso*. Se a `compact_window.py` voltar para `src/`, a lápide
     # volta com ela.
+    "integrations/tray.py::TrayController": (
+        "19/09/2026 — LÁPIDE, e ela é o efeito direto da `TRAY-ORFAO-01`. Este "
+        "era o tray POBRE: clicar no ícone abria a TUI no terminal, a lista de "
+        "perfis não marcava o ativo, e a linha de estado era remontada aqui em "
+        "vez de vir do dono. O `cli/cmd_tray.py` passou a subir o "
+        "`app.tray.AppTray`, que tem «Abrir painel», o submenu com o ativo "
+        "marcado e `N controles` de `daemon.state_full` — medido na máquina "
+        "dela no mesmo dia, com o daemon vivo. Decisão dela: *\"o tray faz o "
+        "mesmo mas melhor\"*. "
+        "`probe_gi_availability`, do MESMO arquivo, continua vivo e é chamado "
+        "pelo `app/tray.py:38` — por isso a classe ganha lápide em vez de o "
+        "arquivo ir para `arquivados/`."
+    ),
     "app/gui_dialogs.py::presentar_dialogos_em_curso": (
         "06/09/2026 — LÁPIDE. Ela trazia para a frente os diálogos abertos "
         "quando a JANELA era reapresentada, e o único chamador era o "
@@ -1200,13 +1213,16 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`app/theme.escalar_css` continua sendo chamado pelas réguas de "
         "geometria. O que morreu foi a janela onde a folha era pendurada."
     ),
-    "app/tray.py::AppTray": (
-        "06/09/2026 — LÁPIDE. A bandeja era construída pelo `app/app.py` e "
-        "apresentava a JANELA no clique. `TRAY_ICON_NAME` do mesmo módulo "
-        "continua sendo contrato de empacotamento e tem portão próprio "
-        "(`scripts/check_packaging_parity.sh`, seção do ícone). A interface "
-        "nova não tem bandeja hoje — e isso é linha de fila, não resto."
-    ),
+    # A LÁPIDE DO `AppTray` SAIU EM 19/09/2026, e quem mandou foi ESTE PORTÃO:
+    # *"a cura chegou e a lápide ficou — é assim que um registro honesto vira
+    # mentira"*. Ela dizia, em 06/09, que *"a interface nova não tem bandeja
+    # hoje — e isso é linha de fila, não resto"*. A linha da fila era a
+    # `TRAY-ORFAO-01`, e ela fechou: `cli/cmd_tray.py` sobe o `AppTray`, e o
+    # ícone foi visto na bandeja dela (4 ícones sem ele, 5 com ele).
+    #
+    # O QUE A LÁPIDE ACERTOU FICA REGISTRADO: `TRAY_ICON_NAME` continua sendo
+    # contrato de empacotamento, com portão próprio em
+    # `scripts/check_packaging_parity.sh`.
     "interface/monta.py::svg": (
         "06/09/2026 — FERRAMENTA DE GERAÇÃO, e a entrada nasce de uma medição "
         "que corrigiu a premissa: ela parecia alcançada, e o que a alcançava era "
