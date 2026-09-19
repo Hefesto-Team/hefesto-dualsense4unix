@@ -134,7 +134,12 @@ def test_r1_nao_chuta_wifi() -> None:
     assert "wi-fi" not in todo_o_texto
     assert "wifi" not in todo_o_texto
     assert "802.11" not in todo_o_texto
-    assert "você ainda não identificou" in todo_o_texto
+    # LIDO DO DONO, e não digitado — 19/09/2026. Esta linha dizia
+    # `"você ainda não identificou"` e reprovou quando a frase encurtou por
+    # ordem dela (*"resume mais pra ter uma linha só"*): a régua olhava o mundo
+    # de ontem. O que ela precisa provar é que o aparelho SEM NOME é chamado
+    # pelo nome-de-ninguém do produto, qualquer que seja a redação.
+    assert ordens.SEM_NOME.lower() in todo_o_texto
 
 
 def test_r1_chama_pelo_nome_que_ela_declarou() -> None:
