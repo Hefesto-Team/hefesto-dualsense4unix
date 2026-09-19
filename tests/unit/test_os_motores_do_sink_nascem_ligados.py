@@ -173,7 +173,7 @@ def test_o_endpoint_liga_os_motores_ao_publicar() -> None:
 
 LISTA_CURTA = (
     "202\talsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
-    "Controller_HEFESTOe64203-00.HiFi__Speaker__sink\tPipeWire\t"
+    "Controller_HEFESTO000001-00.HiFi__Speaker__sink\tPipeWire\t"
     "float32le 4ch 48000Hz\tSUSPENDED\n"
     "104195\talsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
     "Controller-00.HiFi__Speaker__sink\tPipeWire\ts16le 4ch 48000Hz\tRUNNING\n"
@@ -209,6 +209,8 @@ def test_o_nome_do_sink_de_som_nao_serve_para_isto() -> None:
 
     Sem esta linha, a próxima pessoa repete a volta que eu já paguei.
     """
-    de_som = bt.nome_do_sink("444648e64203")
-    assert de_som == "hefesto_som_e64203"
+    # FAIXA SINTÉTICA, e não o `uniq` dela: o portão `mac-por-oui` reprova
+    # endereço de hardware real em arquivo versionado, e reprovou esta linha.
+    de_som = bt.nome_do_sink("aabbcc000001")
+    assert de_som == "hefesto_som_000001"
     assert de_som not in bt.sinks_com_motores(lambda _c: LISTA_CURTA)
