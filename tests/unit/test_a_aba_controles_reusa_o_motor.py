@@ -197,7 +197,9 @@ def test_o_mudo_vence_a_porcentagem(pac, a02):
     aqui, porque a palavra some.
     """
     d = _card(pac, a02, {**BASE, "speaker": {"volume": VOLUME_VIVO, "muted": True}})
-    assert d["alto-mudo"] == "MUDO"
+    import mesa_viva
+
+    assert d["alto-mudo"] == mesa_viva.DESLIGADO
     aceso = _card(pac, a02, {**BASE, "speaker": {"volume": VOLUME_VIVO, "muted": False}})
     assert aceso["alto-mudo"] == "ATIVO", (
         "sem o par, a régua passaria com um campo que diz MUDO para sempre")

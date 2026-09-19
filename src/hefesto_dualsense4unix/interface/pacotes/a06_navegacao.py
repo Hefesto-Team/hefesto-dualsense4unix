@@ -2121,7 +2121,7 @@ def _guardar_no_perfil(ctx: Contexto, **campos: Any) -> str:
     É mais forte que o `_so_abriu_o_seletor` da aba 04, porque também cobre o
     caso de ela arrastar a barra e voltar ao valor de origem.
     """
-    nome = str((ctx.state or {}).get("active_profile") or "").strip()
+    nome = perfil.nome_do_ativo(ctx.state).strip()
     if not nome:
         return ("mudei agora, mas não guardei: não há perfil ativo. "
                 "Escolha um na aba Perfis.")
@@ -3167,7 +3167,7 @@ def _perfil_ativo_ou_recusa(ctx: Contexto) -> str:
     OS ATALHOS SÃO DO PERFIL, não da máquina (`profiles/schema.py`), e essa é a
     frase que a recusa precisa carregar: sem ela, "não deu" vira mistério.
     """
-    nome = str((ctx.state or {}).get("active_profile") or "").strip()
+    nome = perfil.nome_do_ativo(ctx.state).strip()
     if not nome:
         raise RuntimeError(
             "não há perfil ativo agora, e o que cada botão faz é do perfil — não "

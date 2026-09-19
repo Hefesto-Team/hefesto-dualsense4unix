@@ -2389,7 +2389,7 @@ def _guardar_a_cor_no_perfil(ctx: Contexto, uniq: str,
     perfil malformado, e aí a cor sumiria do arquivo em silêncio, que é o
     defeito que esta função nasceu para matar.
     """
-    nome = str(ctx.state.get("active_profile") or "").strip()
+    nome = perfil.nome_do_ativo(ctx.state).strip()
     if not nome:
         return
     dele = next((c for c in ctx.conectados
@@ -2902,7 +2902,7 @@ def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
         return None
     pct = _pct_pedido(o)
 
-    nome = str(ctx.state.get("active_profile") or "").strip()
+    nome = perfil.nome_do_ativo(ctx.state).strip()
     if not nome:
         raise RuntimeError(
             "não há perfil ativo agora, e o brilho da barra é do perfil — não "
@@ -3148,7 +3148,7 @@ def auto_cores(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
     if _so_abriu_o_seletor(o):
         return None
 
-    nome = str(ctx.state.get("active_profile") or "").strip()
+    nome = perfil.nome_do_ativo(ctx.state).strip()
     if not nome:
         raise RuntimeError(
             "não há perfil ativo agora, e as cores automáticas são do perfil — "

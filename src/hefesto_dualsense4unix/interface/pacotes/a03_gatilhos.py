@@ -1922,7 +1922,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # AS DUAS PODAS DO RASCUNHO, e elas rodam ANTES de qualquer leitura dele:
     # trocar de perfil e sair da mesa desfazem o que foi aplicado, porque o
     # daemon reaplica o perfil nos dois casos. Ver a seção do rascunho.
-    _o_rascunho_e_deste_perfil(str(ctx.state.get("active_profile") or ""))
+    _o_rascunho_e_deste_perfil(perfil.nome_do_ativo(ctx.state))
     _o_rascunho_e_de_quem_esta_na_mesa(
         {_chave_do_rascunho(str(c.get("uniq") or ""), "")[0] for c in ctx.conectados})
 
@@ -2561,7 +2561,7 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     if ok and _chegou_ao_aparelho(corpo):
         for quem in (lembrar_em if lembrar_em is not None else [uniq]):
             _lembrar_o_aplicado(
-                str((ctx.state if ctx else {}).get("active_profile") or ""),
+                perfil.nome_do_ativo(ctx.state if ctx else None),
                 quem, lado, {"mode": modo_, "params": params})
         if guardar:
             nao_guardou = _guardar_no_perfil(ctx, p, uniq, lado,
@@ -2634,7 +2634,7 @@ def _guardar_no_perfil(ctx: Contexto | None, p: Any, uniq: str, disco: str,
     `perfil.gravar_e_reaplicar`. A razão está medida lá: reaplicar o perfil
     inteiro acende de volta a barra de luz que ela desligou noutra aba.
     """
-    nome = str((getattr(ctx, "state", None) or {}).get("active_profile") or "").strip()
+    nome = perfil.nome_do_ativo(getattr(ctx, "state", None)).strip()
     if not nome:
         return ""
     try:
@@ -3262,7 +3262,7 @@ def em_todos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
                 f"{_assunto(disco, str(cfg['mode']))} — "
                 f"{_na_lingua_da_tela(motivo, str(cfg['mode'])) or 'o daemon não aplicou'}")
 
-    nome = str((getattr(ctx, "state", None) or {}).get("active_profile") or "").strip()
+    nome = perfil.nome_do_ativo(getattr(ctx, "state", None)).strip()
     if not nome:
         # O EFEITO FOI PARA OS CONTROLES E NÃO HÁ ONDE GUARDÁ-LO. Não é recusa —
         # ela está sentindo o gatilho na mão —, mas é NOTÍCIA, e das caras: sem
@@ -3404,7 +3404,7 @@ def guardar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     if apelido:
         _salvar_o_meu(apelido, dos_lados)
 
-    nome = str((ctx.state or {}).get("active_profile") or "").strip()
+    nome = perfil.nome_do_ativo(ctx.state).strip()
     if not nome:
         if apelido:
             # SALVOU O EFEITO E NÃO HAVIA PERFIL. Não é erro: a biblioteca dela

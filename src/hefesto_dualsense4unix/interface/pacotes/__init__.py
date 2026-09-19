@@ -935,7 +935,14 @@ def molde_do_lugar(
         # PÁGINA SEM LUGAR DE CONTROLE não tem molde a fazer — e rodar a pintura
         # dela de novo NÃO É INÓCUO. Ver `lugares_da_pagina`.
         return {}
-    chave = (pagina, str(ctx.state.get("active_profile")))
+    # O NOME SE PERGUNTA AO DONO, e aqui ele é CHAVE DE CACHE — 19/09/2026.
+    # Com o `ctx.state.get("active_profile")` cru a chave era `None` em toda
+    # volta na máquina dela (o daemon não publica o perfil de janela), e
+    # trocar de perfil NÃO invalidava o molde: a página seguia com o molde
+    # do perfil anterior. Ver `perfil.nome_do_ativo`.
+    from hefesto_dualsense4unix.interface.pacotes import perfil as _perfil_
+
+    chave = (pagina, _perfil_.nome_do_ativo(ctx.state))
     lembrado = _MOLDE.get(chave)
     if lembrado is not None:
         return dict(lembrado)

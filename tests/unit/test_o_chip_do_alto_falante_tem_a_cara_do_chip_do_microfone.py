@@ -84,7 +84,12 @@ PAGINA = "02-controles.html"  # (noqa-acento) nome de arquivo
 #: de endereço desta casa — o mesmo que o piloto usa para achar o elemento —, e
 #: é por ele que se chega à classe SEM escrever a classe.
 CAMPO_DO_CHIP_DO_MIC = "mic-selo"
-CAMPO_DO_CHIP_DO_CANAL = "alto-canal-porque"
+#: O CHIP DO CANAL VIROU SELO EM 19/09/2026, por ordem dela, e o endereço que
+#: carrega a CARA mudou junto: era o `alto-canal-porque` (o invólucro que
+#: também levava o `title`), e agora é o `alto-canal` — a pílula em si, a mesma
+#: peça `.selo-ativo` do microfone, com o glifo do alto-falante. O invólucro
+#: continua existindo e continua levando a dica; o que ele não tem mais é cara.
+CAMPO_DO_CHIP_DO_CANAL = "alto-canal"
 CAMPO_DO_ALARME = "alto-selo"
 
 #: A COR É O QUE SEPARA OS ESTADOS, e por isso ela não entra na conta do que os
@@ -112,6 +117,27 @@ def _paginas() -> list[pathlib.Path]:
 
 def _doc(caminho: pathlib.Path) -> str:
     return caminho.read_text(encoding="utf-8")
+
+
+def _pilulas(doc: str, classe: str) -> list[str]:
+    """Cada pílula daquela classe, INTEIRA — conta profundidade de `<span>`.
+
+    Um regex preguiçoso pararia no primeiro `</span>`, e um com número fixo de
+    fechos mede a FORMA de hoje: a pílula tem três `<span>` aninhados desde
+    19/09/2026 (a cor, o risco e a palavra) e tinha dois antes. Contar
+    profundidade é o que faz esta régua sobreviver ao próximo ajuste de
+    marcação — é o mesmo jeito do `_selos` em
+    `test_aba02_o_selo_do_mic_tem_cor_e_a_bateria_tem_grafia.py`.
+    """
+    fora: list[str] = []
+    for abre in re.finditer(rf'<span class="{re.escape(classe)}[^"]*"', doc):
+        nivel = 0
+        for marca in re.finditer(r"<span\b|</span>", doc[abre.start():]):
+            nivel += 1 if marca.group(0) == "<span" else -1
+            if nivel == 0:
+                fora.append(doc[abre.start():abre.start() + marca.end()])
+                break
+    return fora
 
 
 def _classe_do_campo(doc: str, campo: str) -> str:
@@ -367,9 +393,12 @@ class TestOChipVazio:
 
         # E O MARCADOR TEM DE ESTAR LÁ, senão a regra acima guarda um caso que
         # a página não produz.
-        com_marcador = re.findall(
-            rf'<span class="{re.escape(canal)}"[^>]*>(.*?)</span></span>',
-            pagina)
+        # A PÍLULA TEM TRÊS `<span>` DESDE 19/09/2026 (a cor, o risco e a
+        # palavra), e o marcador mora no MAIS INTERNO. Um regex que casasse um
+        # número fixo de fechos mediria a forma, não o fato; este lê cada
+        # pílula inteira, contando profundidade — o mesmo jeito que o `_selos`
+        # da régua irmã usa.
+        com_marcador = _pilulas(pagina, canal)
         assert any(f'class="{marcador}"' in c for c in com_marcador), (
             "nenhum chip do canal carrega o marcador na página — a cena "
             "perdeu o controle por rádio, e a regra de esconder deixou de "
@@ -391,16 +420,18 @@ class TestOSeparador:
 
         MORDE: devolva o `·` ao valor do dono.
         """
-        assert (a02_controles.sufixo_do_canal(audio_saida.CANAL_ACORDADO)
-                == audio_saida.CANAL_ACORDADO)
+        # O DONO MUDOU EM 19/09/2026: era `a02_controles.sufixo_do_canal`, que
+        # repetia a palavra do daemon (`acordado`/`dormindo`); agora é
+        # `mesa_viva.selo_do_alto_falante`, que fala a língua do selo do
+        # microfone por ordem dela. A REGRA É A MESMA: só a palavra do dono
+        # entra na pílula, inteira e sozinha.
+        palavras = (mesa_viva.ATIVO, mesa_viva.DESLIGADO, mesa_viva.SEM_LEITOR)
+        assert mesa_viva.selo_do_alto_falante(False, False, True) == mesa_viva.ATIVO
         canal = _classe_do_campo(pagina, CAMPO_DO_CHIP_DO_CANAL)
-        escritos = re.findall(
-            rf'<span class="{re.escape(canal)}"[^>]*>(.*?)</span></span>',
-            pagina)
+        escritos = _pilulas(pagina, canal)
         assert escritos, "o chip do canal sumiu da página"
         for pedaco in escritos:
             visivel = re.sub(r"<[^>]*>", "", pedaco).strip()
-            assert visivel in ("", audio_saida.CANAL_ACORDADO,
-                               audio_saida.CANAL_DORMINDO), (
+            assert visivel in ("", *palavras), (
                 f"o chip do canal diz {visivel!r} — só a palavra do dono entra "
                 f"na pílula, sem separador e sem enfeite")

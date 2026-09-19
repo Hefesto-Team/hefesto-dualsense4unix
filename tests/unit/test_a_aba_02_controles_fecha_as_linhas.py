@@ -810,12 +810,17 @@ O_SOM_EM_TRES_ESTADOS = r"""
     return c;
   };
   const borda = () => getComputedStyle(botao).borderTopColor;
+  // AS TRÊS PALAVRAS SÃO AS DO DONO (`mesa_viva.ATIVO`/`DESLIGADO` e o
+  // travessão de `SEM_LEITOR`). Elas estão digitadas aqui porque este trecho é
+  // JAVASCRIPT que roda no navegador, longe do import do Python — e é por isso
+  // que a asserção lá embaixo lê `mesa_viva`: se o dono mudar a palavra de
+  // novo, a régua reprova com a divergência na cara, em vez de medir nada.
   const tique = v => {
     window.__hef.pintar({colunas: {p1: {'alto-mudo': v}}});
     return {valor: v, som: botao.getAttribute('data-som'), borda: borda()};
   };
 
-  const por_tique = ['—', 'ATIVO', 'MUDO', 'ATIVO', '—'].map(tique);
+  const por_tique = ['—', 'ATIVO', 'DESLIGADO', 'ATIVO', '—'].map(tique);
 
   // O CINZA DA RAZÃO CONTRA O VERDE DO ATIVO: o produto escreve as duas coisas
   // pelos seus caminhos — o `data-porque` da LINHA e o `data-som` do botão —,
@@ -894,14 +899,19 @@ def test_o_som_do_alto_falante_pinta_os_dois_estados_e_o_neutro(
     regere a bancada, e a segunda asserção reprova dizendo que os dois estados
     do ♪ pintam a mesma cor.
     """
+    # AS PALAVRAS VÊM DO DONO — 19/09/2026. Digitá-las aqui foi o que fez esta
+    # régua reprovar quando ela mandou o alto-falante e o microfone falarem a
+    # mesma língua: o CSS do gerador já lê `mesa_viva`, e o teste não lia.
+    import mesa_viva
+
     por_valor = {t["valor"]: t for t in som["por_tique"]}
-    assert por_valor["ATIVO"]["borda"] == som["verde"], (
-        f"o ♪ ATIVO não pintou o `--green` da própria página "
-        f"({por_valor['ATIVO']['borda']} ≠ {som['verde']})")
-    assert por_valor["MUDO"]["borda"] == som["ambar"], (
-        f"o ♪ MUDO não pintou o `--orange` da própria página "
-        f"({por_valor['MUDO']['borda']} ≠ {som['ambar']})")
-    assert por_valor["ATIVO"]["borda"] != por_valor["MUDO"]["borda"], (
+    assert por_valor[mesa_viva.ATIVO]["borda"] == som["verde"], (
+        f"o ♪ {mesa_viva.ATIVO} não pintou o `--green` da própria página "
+        f"({por_valor[mesa_viva.ATIVO]['borda']} ≠ {som['verde']})")
+    assert por_valor[mesa_viva.DESLIGADO]["borda"] == som["ambar"], (
+        f"o ♪ {mesa_viva.DESLIGADO} não pintou o `--orange` da própria página "
+        f"({por_valor[mesa_viva.DESLIGADO]['borda']} ≠ {som['ambar']})")
+    assert por_valor[mesa_viva.ATIVO]["borda"] != por_valor[mesa_viva.DESLIGADO]["borda"], (
         "os dois estados do ♪ pintam a MESMA cor — a tela voltou a não "
         "distinguir o alto-falante que toca do que está calado")
     # O TERCEIRO ESTADO NÃO SE DESENHA: o travessão APAGA o atributo, e o botão
@@ -914,7 +924,7 @@ def test_o_som_do_alto_falante_pinta_os_dois_estados_e_o_neutro(
         "o ♪ sem leitura pintou uma das duas cores de estado")
     # E O `--red` SAIU: um alto-falante calado por escolha dela não é falha.
     assert som["vermelho"] not in (por_valor["ATIVO"]["borda"],
-                                   por_valor["MUDO"]["borda"],
+                                   por_valor[mesa_viva.DESLIGADO]["borda"],
                                    por_valor["—"]["borda"]), (
         "o ♪ voltou a pintar a cor da falha sobre um estado que ela escolheu")
     assert not som["on_na_folha"], (

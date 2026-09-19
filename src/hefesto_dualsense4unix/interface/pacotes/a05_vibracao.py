@@ -1925,7 +1925,7 @@ def _gravar_a_forca(ctx: Contexto, p: Any, uniq: str, policy: str | None,
     """
     from hefesto_dualsense4unix.app.draft_config import DraftConfig, RumbleDraft
 
-    nome = str((getattr(ctx, "state", None) or {}).get("active_profile") or "").strip()
+    nome = _perfil.nome_do_ativo(getattr(ctx, "state", None)).strip()
     if not nome:
         raise RuntimeError(
             "não há perfil ativo agora, e a força da vibração de um controle é "

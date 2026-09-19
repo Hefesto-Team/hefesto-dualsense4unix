@@ -99,7 +99,7 @@ def test_mic_led_set_esta_registrado_no_dispatcher() -> None:
 
 
 def test_o_selo_pinta_desconhecido_quando_o_state_full_nao_traz_audio() -> None:
-    """CURA A ARRANCAR: voltar `"MUDO" if mudo else "ATIVO"` sem o `sabemos`.
+    """CURA A ARRANCAR: voltar `DESLIGADO if mudo else ATIVO` sem o `sabemos`.
 
     Pinta ATIVO sobre um controle que acabou de cair — e, com a inversão, o
     plástico dele estaria dizendo "estou no ar".
@@ -201,7 +201,7 @@ def test_o_selo_do_mic_tem_tres_estados_e_um_dono_so() -> None:
     )
     assert mesa_viva.selo_do_mic(True, False) == "—"
     assert mesa_viva.selo_do_mic(False, True) == "ATIVO"
-    assert mesa_viva.selo_do_mic(True, True) == "MUDO"
+    assert mesa_viva.selo_do_mic(True, True) == mesa_viva.DESLIGADO
 
 
 def test_os_dois_pintores_chamam_o_mesmo_dono_do_selo() -> None:

@@ -1925,27 +1925,17 @@ def selo_do_som(saida_muda: bool | None, sono: str) -> str:
     return ""
 
 
-def sufixo_do_canal(sono: str) -> str:
-    """A palavra do canal para o rótulo da moldura — `""` quando não há leitura.
-
-    A PALAVRA NÃO SE DIGITA: ela é a que `audio_saida.estado_do_canal` devolveu,
-    e é a mesma que a moldura da GTK escreve.
-
-    **O `·` SAIU EM 17/09/2026, e a razão é de forma.** Ele era o separador que
-    o rótulo do card usa entre nome e valor, e fazia sentido enquanto o sufixo
-    era TEXTO solto ao lado do nome da moldura. Por ordem dela, o sufixo passou
-    a ser um CHIP — a mesma pílula do selo do microfone —, e um separador colado
-    dentro de uma pílula lê como sujeira: a pílula já é a separação. O `·`
-    continua onde sempre esteve nos rótulos que são texto; o que ele não é mais
-    é parte do VALOR deste campo. Esta função tem um consumidor só, a tela nova;
-    a moldura da GTK usa as constantes próprias dela
-    (`controller_card.SUFIXO_CANAL_*`) e não passa por aqui.
-
-    `""` É "NÃO SEI", E NÃO "ACORDADO". Sem placa de som — o caso do rádio — a
-    tela não tem o que afirmar, e escrever "acordado" a partir de ausência seria
-    prometer que o som sai inteiro num controle que não tem por onde tocá-lo.
-    """
-    return sono
+# `sufixo_do_canal` MORREU AQUI — 19/09/2026, e é a segunda morte da mesma peça.
+# Ela devolvia a palavra do canal (`acordado`/`dormindo`) para um chip cinza no
+# rótulo da moldura. Por ordem dela, o chip virou SELO e passou a falar a língua
+# do microfone: *"Ativo e Desligado pros dois não seria melhor que dormindo?"*
+# <!-- noqa-acento: citação literal dela --> Quem responde agora é
+# `mesa_viva.selo_do_alto_falante`, que junta os DOIS fatos (o mudo e o sono)
+# numa palavra só — ver o campo `alto-canal` lá embaixo.
+#
+# A PALAVRA DO DAEMON NÃO SUMIU, mudou de leitor: `audio_saida.estado_do_canal`
+# continua dizendo `acordado`/`dormindo`, e `dica_do_canal` (abaixo) a leva para
+# a DICA, que é onde esta casa põe o porquê desde 13/09.
 
 
 def dica_do_canal(sono: str) -> str:
@@ -2937,7 +2927,27 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # do sink), e os três são LEITURA: nenhum deles oferece botão.
                 "alto-selo": (selo_do_som(saida_muda_do_entry(c), sono_do_canal(uniq))
                               or NADA_A_DIZER),
-                "alto-canal": sufixo_do_canal(sono_do_canal(uniq)) or NADA_A_DIZER,
+                # O SELO DO ALTO-FALANTE — 19/09/2026, e ele substituiu o chip
+                # que dizia `acordado`. A palavra é a do DONO
+                # (`mesa_viva.selo_do_alto_falante`), a mesma língua do selo do
+                # microfone, por ordem dela: *"Ativo e Desligado pros dois não
+                # seria melhor que dormindo?"*  <!-- noqa-acento: dela -->
+                #
+                # OS DOIS FATOS ENTRAM JUNTOS, e é o que o chip velho não fazia:
+                # o som não sai quando ela CALOU o alto-falante (o `muted` do
+                # sink, o mesmo que o botão `♪` lê) **ou** quando o canal está
+                # dormindo. Contar só o segundo, ao lado de um botão que conta
+                # só o primeiro, deixava as duas leituras se contradizerem no
+                # mesmo bloco.
+                #
+                # `sabemos` É O PAR DE `sono_do_canal`, e não do sink: sem
+                # leitura do canal não há o que afirmar — é o caso do rádio sem
+                # placa de som, e `""` faz a pílula sumir inteira pela folha.
+                "alto-canal": (mesa_viva.selo_do_alto_falante(
+                    bool(sp_lido and sp_lido[1]),
+                    sono_do_canal(uniq) == audio_saida.CANAL_DORMINDO,
+                    bool(sono_do_canal(uniq)),
+                ) if sono_do_canal(uniq) else NADA_A_DIZER),
                 "alto-canal-porque": dica_do_canal(sono_do_canal(uniq)) or NADA_A_DIZER,
             }),
         }
@@ -3476,7 +3486,7 @@ def _lembrar_do_som(
 
     if not mic and not speaker:
         return
-    nome = str((getattr(ctx, "state", None) or {}).get("active_profile") or "").strip()
+    nome = _perfil.nome_do_ativo(getattr(ctx, "state", None)).strip()
     if not nome:
         # SEM PERFIL ATIVO NÃO HÁ ONDE GUARDAR, e a saída é CALADA de propósito
         # — ver `_PERFIL_E_ESTADO_NAO_E_AVISO`. Na máquina dela o daemon SEMPRE
