@@ -206,25 +206,17 @@ steam_game_running() {
 # de dentro do terminal da pessoa, e a Steam que ele reabre herdava a venv, o
 # conda ou o pyenv ativo ali — e todo jogo da sessão com ela, porque o `proton`
 # é script Python (`#!/usr/bin/env python3`). A lista é a do dono,
-# `integrations/ambiente_do_jogo.py`; o corpo é o mesmo do
+# `integrations/ambiente_do_jogo.py`; as duas funções são as mesmas do
 # `assets/hefesto-launch.sh`, e a régua
-# `test_ambiente_do_jogo_01_o_terminal_nao_vai_junto.py` confere os três.
+# `test_ambiente_do_jogo_01_o_terminal_nao_vai_junto.py` confere os três. O
+# SYSTEM_PATH sai podado junto com o PATH: a Steam Linux Runtime o devolve ao
+# PATH antes do `proton` (o porquê está no gancho).
 # Chame SEMPRE dentro de um subshell `( ... )`: o `unset` vale para o resto do
 # processo, e o resto deste roteiro não tem por que perder o ambiente.
-limpar_ambiente_do_interpretador() {
-    la_bin_venv=""
-    la_bin_conda=""
-    la_base="${VIRTUAL_ENV:-}"
-    la_base="${la_base%/}"
-    [ -n "$la_base" ] && la_bin_venv="$la_base/bin"
-    la_base="${CONDA_PREFIX:-}"
-    la_base="${la_base%/}"
-    [ -n "$la_base" ] && la_bin_conda="$la_base/bin"
-    unset VIRTUAL_ENV CONDA_PREFIX CONDA_DEFAULT_ENV CONDA_SHLVL PYTHONHOME PYTHONPATH PYENV_VERSION
-    [ -n "$la_bin_venv$la_bin_conda" ] || return 0
-    [ -n "${PATH:-}" ] || return 0
-    la_resto="$PATH:"
+podar_bins_do_interpretador() {
     la_novo=""
+    [ -n "$1" ] || return 0
+    la_resto="$1:"
     la_primeiro=1
     while [ -n "$la_resto" ]; do
         la_dir="${la_resto%%:*}"
@@ -241,7 +233,24 @@ limpar_ambiente_do_interpretador() {
             la_novo="$la_novo:$la_dir"
         fi
     done
+    return 0
+}
+
+limpar_ambiente_do_interpretador() {
+    la_bin_venv=""
+    la_bin_conda=""
+    la_base="${VIRTUAL_ENV:-}"
+    la_base="${la_base%/}"
+    [ -n "$la_base" ] && la_bin_venv="$la_base/bin"
+    la_base="${CONDA_PREFIX:-}"
+    la_base="${la_base%/}"
+    [ -n "$la_base" ] && la_bin_conda="$la_base/bin"
+    unset VIRTUAL_ENV CONDA_PREFIX CONDA_DEFAULT_ENV CONDA_SHLVL PYTHONHOME PYTHONPATH PYENV_VERSION
+    [ -n "$la_bin_venv$la_bin_conda" ] || return 0
+    podar_bins_do_interpretador "${PATH:-}"
     [ -n "$la_novo" ] && PATH="$la_novo"
+    podar_bins_do_interpretador "${SYSTEM_PATH:-}"
+    [ -n "$la_novo" ] && export SYSTEM_PATH="$la_novo"
     return 0
 }
 

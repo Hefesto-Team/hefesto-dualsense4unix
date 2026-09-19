@@ -479,36 +479,34 @@ curar_audio_ks() {
 # AMBIENTE-DO-JOGO-01 (18/09/2026) — o interpretador de quem abriu a Steam.
 #
 # Uma Steam aberta de um terminal com venv, conda ou pyenv ativo passa esse
-# ambiente a todo jogo: medido em 17/09 no `environ` do PRAGMATA, com a venv na
-# frente do PATH. O `proton` é script Python (`#!/usr/bin/env python3`), e
-# quem o roda passa a ser o python3 que o terminal escolheu. O produto já
-# reabre a Steam limpa; esta é a ponta que cobre a Steam que a PESSOA abriu de
-# um terminal, porque todo jogo passa por aqui.
+# ambiente a todo jogo: medido em 17/09 no `environ` do PRAGMATA, com a venv
+# na frente do SYSTEM_PATH. O `proton` é script Python
+# (`#!/usr/bin/env python3`), e quem o roda passa a ser o python3 que o
+# terminal escolheu. O produto já reabre a Steam limpa; esta é a ponta que
+# cobre a Steam que a PESSOA abriu de um terminal, porque todo jogo passa por
+# aqui.
+#
+# Podar só o PATH não chega ao `proton`, e o portador medido diz por quê: o
+# `steam.sh` guarda o PATH com que a Steam subiu (`export SYSTEM_PATH="$PATH"`),
+# e o jogo Proton roda dentro da Steam Linux Runtime, cujo
+# `pressure-vessel-unruntime` faz `export PATH="$SYSTEM_PATH"` DEPOIS deste
+# gancho e antes do `proton`. As duas listas de busca saem podadas.
 #
 # A lista é a do dono, `integrations/ambiente_do_jogo.py`, e a régua
-# `test_ambiente_do_jogo_01_o_terminal_nao_vai_junto.py` confere as duas. Só o
-# ambiente do exec muda: os ajudantes acima já limpam o que lhes importa. O que
-# a pessoa escreve na Opção de Inicialização vem em "$@", DEPOIS disto, e o
-# env(1) o aplica por cima — uma PYTHONPATH escrita por ela sobrevive.
+# `test_ambiente_do_jogo_01_o_terminal_nao_vai_junto.py` confere as duas: os
+# nomes, e a borda caso a caso contra o dono. Só o ambiente do exec muda: os
+# ajudantes acima já limpam o que lhes importa. O que a pessoa escreve na
+# Opção de Inicialização vem em "$@", DEPOIS disto, e o env(1) o aplica por
+# cima — uma PYTHONPATH escrita por ela sobrevive.
 #
 # SÓ SHELL PURO, pelo mesmo motivo de `dualsense_no_cabo`: sem `sed` nem `tr`,
-# e o PATH se parte por expansão de parâmetro, sem glob. Uma entrada vazia do
-# PATH fica onde estava; e se tirar os `bin/` o deixasse vazio, ele fica como
-# veio (uma Steam sem PATH não abre o jogo).
-limpar_ambiente_do_interpretador() {
-    la_bin_venv=""
-    la_bin_conda=""
-    la_base="${VIRTUAL_ENV:-}"
-    la_base="${la_base%/}"
-    [ -n "$la_base" ] && la_bin_venv="$la_base/bin"
-    la_base="${CONDA_PREFIX:-}"
-    la_base="${la_base%/}"
-    [ -n "$la_base" ] && la_bin_conda="$la_base/bin"
-    unset VIRTUAL_ENV CONDA_PREFIX CONDA_DEFAULT_ENV CONDA_SHLVL PYTHONHOME PYTHONPATH PYENV_VERSION
-    [ -n "$la_bin_venv$la_bin_conda" ] || return 0
-    [ -n "${PATH:-}" ] || return 0
-    la_resto="$PATH:"
+# e a lista se parte por expansão de parâmetro, sem glob. A poda devolve em
+# `la_novo`. Uma entrada vazia fica onde estava; e se tirar os `bin/` deixasse
+# a lista vazia, ela fica como veio (sem PATH não se acha nem o `sh` do jogo).
+podar_bins_do_interpretador() {
     la_novo=""
+    [ -n "$1" ] || return 0
+    la_resto="$1:"
     la_primeiro=1
     while [ -n "$la_resto" ]; do
         la_dir="${la_resto%%:*}"
@@ -525,7 +523,24 @@ limpar_ambiente_do_interpretador() {
             la_novo="$la_novo:$la_dir"
         fi
     done
+    return 0
+}
+
+limpar_ambiente_do_interpretador() {
+    la_bin_venv=""
+    la_bin_conda=""
+    la_base="${VIRTUAL_ENV:-}"
+    la_base="${la_base%/}"
+    [ -n "$la_base" ] && la_bin_venv="$la_base/bin"
+    la_base="${CONDA_PREFIX:-}"
+    la_base="${la_base%/}"
+    [ -n "$la_base" ] && la_bin_conda="$la_base/bin"
+    unset VIRTUAL_ENV CONDA_PREFIX CONDA_DEFAULT_ENV CONDA_SHLVL PYTHONHOME PYTHONPATH PYENV_VERSION
+    [ -n "$la_bin_venv$la_bin_conda" ] || return 0
+    podar_bins_do_interpretador "${PATH:-}"
     [ -n "$la_novo" ] && PATH="$la_novo"
+    podar_bins_do_interpretador "${SYSTEM_PATH:-}"
+    [ -n "$la_novo" ] && export SYSTEM_PATH="$la_novo"
     return 0
 }
 
