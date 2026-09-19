@@ -782,6 +782,10 @@ _DEPS_DE_SISTEMA=(
     # `libasound2-data`: numa instalação sem recomendações ele falta, o
     # roteiro só avisa, e a vibração pelo cabo sumia calada. A checagem é o
     # próprio arquivo — é ele, e não o nome do pacote, que o ALSA procura.
+    # Este censo só roda no fluxo nativo; os pacotes (`debian/control`, o
+    # `.spec` e o `PKGBUILD`) declaram o mesmo nome como dependência fraca, e
+    # a régua deles lê o nome daqui, do `_pkg_nome`. O GANCHO, porém, só este
+    # instalador grava (em todo formato): o pacote sozinho não o leva.
     "alsa-ucm|importante|arquivo:/usr/share/alsa/ucm2/ucm.conf|a vibração dos jogos da Sony pelo DualSense no cabo não chega: sem o UCM do sistema a placa do controle não abre pelo perfil HiFi"
     # MIGRACAO-BLUEZ-DEPRECIADOS-01 (19/08/2026): a régua pedia SÓ o
     # `bluetoothctl`, e desde a migração o produto também chama o `btmgmt`

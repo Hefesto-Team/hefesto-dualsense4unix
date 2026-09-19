@@ -190,7 +190,8 @@ registrar_audio_ks() {
     # Formato (chave=valor, uma por linha; lido pelo `doctor.sh`):
     #   appid=<SteamAppId, só dígitos>   epoch=<unix epoch do lançamento>
     #   rc=<saída do curador>            tentativas=<quantas vezes rodou>
-    #   motivo=ok | ocupado | erro | sem-registro | desligado | sem-curador
+    #   motivo=ok | removido | ocupado | erro | sem-registro | desligado
+    #          | sem-curador | sem-python
     #
     # Mesma disciplina do `record_last_run`: best-effort ABSOLUTO, e tmp+mv
     # para o leitor nunca pegar metade. O tmp leva o PID porque dois jogos
@@ -485,6 +486,16 @@ dualsense_com_endpoint() {
 curar_audio_ks() {
     prefixo="${STEAM_COMPAT_DATA_PATH:-}"
     [ -n "$prefixo" ] || return 0
+    # Sem python3 no PATH do lançamento, NADA da vibração anda: o gate de vida
+    # do `decide_envs` não chegou a perguntar ao daemon (a opção nunca vem
+    # ligada) e o curador é python. Antes o rastro dizia `desligado`, que
+    # aponta para o controle e não para a máquina — e, com um bloco nosso a
+    # limpar, não dizia nada, e o doctor lia o lançamento anterior como se
+    # fosse este.
+    if ! command -v python3 >/dev/null 2>&1; then
+        registrar_audio_ks 0 sem-python 0
+        return 0
+    fi
     reg="$prefixo/pfx/system.reg"
     case "$hefesto_envs" in
         *PROTON_ENABLE_MHWILDS_USB_AUDIO=1*) ks_modo="" ;;
@@ -511,7 +522,6 @@ curar_audio_ks() {
         registrar_audio_ks 0 sem-curador 0
         return 0
     fi
-    command -v python3 >/dev/null 2>&1 || return 0
     if command -v timeout >/dev/null 2>&1; then
         ks_run="timeout 10"
     else
@@ -535,8 +545,11 @@ curar_audio_ks() {
         sleep "${HEFESTO_KS_ESPERA_SECS:-1}" 2>/dev/null || break
         ks_tentativas=$((ks_tentativas + 1))
     done
+    # Com `--remover`, o 0 é o device RETIRADO — a opção veio desligada, sem
+    # DualSense com endpoint. Dizer `ok` ali fazia o doctor dar verde ao
+    # contrário do que aconteceu.
     case "$ks_rc" in
-        0) ks_motivo="ok" ;;
+        0) if [ -n "$ks_modo" ]; then ks_motivo="removido"; else ks_motivo="ok"; fi ;;
         3) ks_motivo="ocupado" ;;
         *) ks_motivo="erro" ;;
     esac

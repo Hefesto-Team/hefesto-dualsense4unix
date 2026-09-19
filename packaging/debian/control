@@ -10,7 +10,8 @@ Depends: python3 (>= 3.10), python3-venv,
          libhidapi-hidraw0, libnotify-bin,
          libopus0,
          librsvg2-common
-Recommends: ydotool | wlrctl, dkms, pulseaudio-utils, wvkbd | onboard
+Recommends: ydotool | wlrctl, dkms, pulseaudio-utils, wvkbd | onboard,
+            alsa-ucm-conf
 Maintainer: Hefesto - DualSense4Unix Project <noreply@example.com>
 Description: Gerenciador DualSense para Linux
  Hefesto - DualSense4Unix e um daemon user-level que habilita os gatilhos
@@ -74,3 +75,10 @@ Description: Gerenciador DualSense para Linux
  XWayland e as teclas so chegam a clientes XWayland — abre e nao
  digita. Em sessao X11 o onboard e o certo, e o scripts/install_osk.sh
  do instalador nativo escolhe pela sessao viva.
+ .
+ alsa-ucm-conf (18/09/2026) é o UCM do sistema: o ucm.conf dele é quem
+ lê o gancho do DualSense no cabo que o install.sh grava, e sem ele a
+ vibração dos jogos da Sony pelo cabo não chega. Recommends, e não
+ Depends, pelo mesmo critério do censo do install.sh (importante, não
+ obrigatória): no apt ele já vinha como Recommends do libasound2-data,
+ e numa instalação sem recomendações faltava sem ninguém ter pedido.

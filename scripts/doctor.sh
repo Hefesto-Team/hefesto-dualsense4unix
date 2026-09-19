@@ -1520,7 +1520,7 @@ check_ucm_do_dualsense() {
     fi
     if [[ ! -f "${raiz}/ucm.conf" ]]; then
         if [[ "${#placas_no_cabo[@]}" -gt 0 ]]; then
-            warn "DualSense no cabo e sem ${raiz}/ucm.conf — sem o UCM do sistema (o pacote alsa-ucm-conf; no Fedora, alsa-ucm) a placa do controle não abre pelo perfil e a vibração dos jogos da Sony não chega pelo cabo. Instale o pacote e rode: bash scripts/install_ucm_dualsense.sh (ou scripts/doctor.sh --fix)"
+            warn "DualSense no cabo e sem ${raiz}/ucm.conf — sem o UCM do sistema (o pacote alsa-ucm-conf; no Fedora, alsa-ucm) a placa do controle não abre pelo perfil e a vibração dos jogos da Sony não chega pelo cabo. Depois de instalar o pacote, rode scripts/doctor.sh --fix (ou bash scripts/install_ucm_dualsense.sh)"
         else
             info "sem ${raiz}/ucm.conf — esta distro não usa UCM; perfil do DualSense não conferido"
         fi
@@ -2079,6 +2079,14 @@ check_copias_do_wrapper() {
 #   ocupado      -> WARN. O wineserver daquele prefixo continuou vivo mesmo
 #                   depois da espera do wrapper (até cinco segundos).
 #   erro         -> WARN, com o código de saída.
+#   sem-curador  -> WARN. O install não materializou o `hefesto-audio-ks`.
+#   sem-python   -> WARN. Sem python3 no PATH do lançamento, o wrapper não
+#                   fala com o daemon (a opção nunca vem ligada) e o curador
+#                   não roda — é a máquina, e não o controle.
+#   desligado    -> INFO. A opção veio desligada e não havia bloco nosso.
+#   removido     -> INFO, com a frase do `desligado`: a opção veio desligada
+#                   e o device de um lançamento anterior SAIU do prefixo. O
+#                   rastro dizia `ok`, e o doctor dava verde ao contrário.
 check_ultimo_device_ks() {
     local arq="${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix/launch_env/audio_ks_ultimo"
     if [[ ! -f "${arq}" ]]; then
@@ -2119,8 +2127,12 @@ check_ultimo_device_ks() {
             warn "o curador do device KS falhou no último lançamento (${jogo}${quando}, código ${rc:-?}) — a vibração dos jogos da Sony pode não chegar; rode à mão para ver o erro: python3 ${HOME}/.local/share/hefesto-dualsense4unix/bin/hefesto-audio-ks --prefixo <compatdata do jogo>" ;;
         sem-curador)
             warn "o último lançamento (${jogo}${quando}) não achou o curador do device KS — $(conselho_de_instalacao)" ;;
+        sem-python)
+            warn "o último lançamento pelo Proton (${jogo}${quando}) não achou python3 no PATH — sem ele o lançamento não fala com o daemon e a vibração dos jogos da Sony não chega" ;;
         desligado)
             info "último lançamento pelo Proton (${jogo}${quando}) sem a opção da vibração: sem DualSense com endpoint de som, ou com o daemon fora do ar" ;;
+        removido)
+            info "último lançamento pelo Proton (${jogo}${quando}) sem a opção da vibração: sem DualSense com endpoint de som, ou com o daemon fora do ar — o device KS de um lançamento anterior saiu do prefixo" ;;
         *)
             info "rastro do device KS ilegível em ${arq}" ;;
     esac
@@ -6369,6 +6381,40 @@ fix_fila_sem_fixture() {
     fi
 }
 
+# HAPTICA-NATIVA-01 — o gancho UCM do DualSense no cabo (INSTALL-UNIVERSAL,
+# 18/09/2026). Sai um gancho por controlador USB PRESENTE na hora; um
+# controlador que chega depois (uma dock, uma placa USB) ficava sem, e o doctor
+# só acusava. O roteiro é idempotente e pede sudo por dentro.
+#
+# O VEREDITO VEM DA RESPOSTA, não do código de saída — mesmo furo que o
+# `fix_fila_sem_fixture` fechou. O roteiro sai 0 também quando NÃO grava: sem
+# `ucm.conf`, com um `ucm.conf` que não lê `conf.d/`, com o /usr só de leitura
+# e sem controlador que caiba no corte. Com a saída em /dev/null, o `--fix`
+# dizia "[ OK ] conferido" justamente nesses quatro casos. Só a linha
+# "N gancho(s) em …" prova que o gancho está no disco; sem ela, a última linha
+# da resposta diz o porquê. HEFESTO_RAIZ_UCM (a mesma do
+# `check_ucm_do_dualsense`) e HEFESTO_SYSFS existem para os testes.
+#
+# O caminho do roteiro vai POR EXTENSO na guarda e na chamada, e não numa
+# variável: o portão do irmão sem carona (`check_packaging_parity.sh`) lê o
+# nome literal, e o que não está escrito ele não vê.
+fix_ucm_do_dualsense() {
+    [[ -f "${ROOT_DIR}/scripts/install_ucm_dualsense.sh" ]] || return 0
+    local saida fecho rc=0
+    saida="$(bash "${ROOT_DIR}/scripts/install_ucm_dualsense.sh" \
+        --raiz-ucm "${HEFESTO_RAIZ_UCM:-/usr/share/alsa/ucm2}" \
+        --sysfs "${HEFESTO_SYSFS:-/sys}" 2>&1)" || rc=$?
+    fecho="${saida##*$'\n'}"
+    fecho="${fecho#\[ucm\] }"
+    if [[ "${rc}" -ne 0 ]]; then
+        warn "install_ucm_dualsense.sh falhou (código ${rc}): ${fecho:-sem resposta} — rode: bash scripts/install_ucm_dualsense.sh"
+    elif [[ $'\n'"${saida}" == *$'\n'"[ucm] "[0-9]*" gancho(s) em "* ]]; then
+        pass "perfil UCM do DualSense conferido (um gancho por controlador USB)"
+    else
+        info "perfil UCM do DualSense não gravado: ${fecho:-o install_ucm_dualsense.sh não respondeu}"
+    fi
+}
+
 apply_fixes() {
     hdr "aplicando correções (--fix)"
     local _udev_dono=""
@@ -6384,20 +6430,11 @@ apply_fixes() {
     else
         warn "sudo ausente — não reapliquei udev"
     fi
-    # HAPTICA-NATIVA-01 — o gancho UCM do DualSense no cabo (INSTALL-UNIVERSAL,
-    # 18/09/2026). Sai um gancho por controlador USB PRESENTE na hora; um
-    # controlador que chega depois (uma dock, uma placa USB) ficava sem, e o
-    # doctor só acusava. ANTES do fix do WirePlumber logo abaixo, de propósito:
-    # o `--install` dele reinicia o WirePlumber, e é esse restart que reabre a
-    # placa pelo gancho — outro `systemctl` aqui seria o mesmo gesto duas vezes.
-    # O roteiro é idempotente e pede sudo por dentro.
-    if [[ -f "${ROOT_DIR}/scripts/install_ucm_dualsense.sh" ]]; then
-        if bash "${ROOT_DIR}/scripts/install_ucm_dualsense.sh" >/dev/null 2>&1; then
-            pass "perfil UCM do DualSense conferido (um gancho por controlador USB)"
-        else
-            warn "install_ucm_dualsense.sh falhou — rode: bash scripts/install_ucm_dualsense.sh"
-        fi
-    fi
+    # O gancho UCM do DualSense no cabo ANTES do fix do WirePlumber logo
+    # abaixo, de propósito: o `--install` dele reinicia o WirePlumber, e é esse
+    # restart que reabre a placa pelo gancho — outro `systemctl` aqui seria o
+    # mesmo gesto duas vezes.
+    fix_ucm_do_dualsense
     if bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --install >/dev/null 2>&1; then
         pass "fix de áudio do WirePlumber aplicado"
     else

@@ -13,6 +13,9 @@ cético do INSTALL-UNIVERSAL:
    abria sem vibração. Agora o wrapper espera, até cinco tentativas a mais.
 2. **a falha era calada** — nem o doctor nem o daemon olhavam o curador. O
    wrapper deixa `launch_env/audio_ks_ultimo`, e o `check_ultimo_device_ks` lê.
+   Todo caminho deixa o SEU motivo: o install incompleto (`sem-curador`), a
+   máquina sem `python3` (`sem-python`, que antes saía sem rastro ou como
+   `desligado`) e o device que SAIU (`removido`, que antes se dizia `ok`).
 3. **a cópia em bin/ envelhece** — um `git pull` sem reinstalar deixa as três
    cópias velhas. O `check_copias_do_wrapper` compara com o checkout.
 
@@ -28,10 +31,14 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+import pytest
+
+from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
 from tests.unit.test_haptica_nativa_01_o_device_ks_que_o_jogo_procura import (
     _ENV_LIGADO,
     _MODULO,
     _WRAPPER,
+    PADRAO,
     _DaemonQueResponde,
     _path_minimo,
     _prefixo,
@@ -65,21 +72,26 @@ def _lancar(
     registro: str | None,
     curador: str | None = None,
     extra: dict[str, str] | None = None,
+    sem_curador: bool = False,
+    sem_python: bool = False,
 ) -> tuple[subprocess.CompletedProcess[str], Path, Path]:
     """Roda o wrapper DE VERDADE; devolve (o processo, o compatdata, o rastro).
 
     `registro=None` é o prefixo que ainda não existe: a primeira sessão de todo
     jogo novo, em que o proton cria o `system.reg` DEPOIS do wrapper.
+    `sem_curador` é o install incompleto (o `hefesto-audio-ks` não foi
+    materializado); `sem_python` é o PATH do lançamento sem `python3`.
     """
     home = tmp_path / "home"
     binario = home / ".local" / "share" / "hefesto-dualsense4unix" / "bin"
     binario.mkdir(parents=True)
     alvo = binario / "hefesto-audio-ks"
-    if curador is None:
-        alvo.write_bytes(_MODULO.read_bytes())
-    else:
-        alvo.write_text(curador, encoding="utf-8")
-    alvo.chmod(0o755)
+    if not sem_curador:
+        if curador is None:
+            alvo.write_bytes(_MODULO.read_bytes())
+        else:
+            alvo.write_text(curador, encoding="utf-8")
+        alvo.chmod(0o755)
     estado = tmp_path / "estado"
     pasta = estado / "hefesto-dualsense4unix" / "launch_env"
     pasta.mkdir(parents=True)
@@ -95,6 +107,8 @@ def _lancar(
     sono = shutil.which("sleep")
     assert sono is not None
     (caminho / "sleep").symlink_to(sono)
+    if sem_python:
+        (caminho / "python3").unlink()
     runtime = Path(tempfile.mkdtemp(prefix="hefks-"))  # AF_UNIX: caminho curto
     (runtime / "hefesto-dualsense4unix").mkdir()
     daemon = _DaemonQueResponde(runtime / "hefesto-dualsense4unix" / "hefesto-dualsense4unix.sock")
@@ -245,6 +259,58 @@ def test_o_curador_de_verdade_grava_e_o_rastro_diz_ok(tmp_path: Path) -> None:
     assert "HEFESTOKS" in (compat / "pfx" / "system.reg").read_text(encoding="utf-8")
 
 
+def test_sem_o_curador_o_jogo_abre_e_o_rastro_diz(tmp_path: Path) -> None:
+    """A máquina com o install incompleto — a razão de esta leva existir.
+
+    A MORDIDA: tire o `registrar_audio_ks 0 sem-curador 0` e o rastro não
+    nasce; o doctor passa a dizer "nenhum lançamento" sobre um que houve.
+    """
+    feito, compat, arquivo = _lancar(
+        tmp_path, env_do_daemon=_ENV_LIGADO, registro=_registro(), sem_curador=True
+    )
+    assert feito.returncode == 0, feito.stderr
+    assert "o jogo abriu" in feito.stdout
+    assert _rastro(arquivo)["motivo"] == "sem-curador"
+    assert "HEFESTOKS" not in (compat / "pfx" / "system.reg").read_text(encoding="utf-8")
+
+
+def _nosso() -> str:
+    """O bloco que um lançamento anterior gravou — o que o `--remover` tira."""
+    return "\n".join(ks.blocos_do_controle(PADRAO, [bytes(8)], 1))
+
+
+def test_sem_a_opcao_o_device_de_antes_sai_e_o_rastro_diz_removido(tmp_path: Path) -> None:
+    """A MORDIDA: com o `--remover`, o 0 do curador virava `ok` — e o doctor
+    dava "[ OK ] device KS conferido" sobre o device que acabara de SAIR.
+    """
+    feito, compat, arquivo = _lancar(
+        tmp_path,
+        env_do_daemon="PROTON_ENABLE_MHWILDS_USB_AUDIO=0\n",
+        registro=_registro(_nosso()),
+    )
+    assert feito.returncode == 0, feito.stderr
+    rastro = _rastro(arquivo)
+    assert (rastro["motivo"], rastro["rc"]) == ("removido", "0"), rastro
+    assert "HEFESTOKS" not in (compat / "pfx" / "system.reg").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("com_bloco_nosso", [False, True], ids=["limpo", "com-bloco-de-antes"])
+def test_sem_python3_o_jogo_abre_e_o_rastro_diz(tmp_path: Path, com_bloco_nosso: bool) -> None:
+    """Sem `python3` no PATH do lançamento: rastro que aponta a MÁQUINA.
+
+    As duas mordidas, uma por caso: com um bloco nosso a limpar, o wrapper
+    saía sem rastro nenhum (o doctor lia o lançamento anterior como se fosse
+    este); sem bloco, dizia `desligado`, que aponta para o controle.
+    """
+    registro = _registro(_nosso()) if com_bloco_nosso else _registro()
+    feito, _, arquivo = _lancar(
+        tmp_path, env_do_daemon=_ENV_LIGADO, registro=registro, sem_python=True
+    )
+    assert feito.returncode == 0, feito.stderr
+    assert "o jogo abriu" in feito.stdout
+    assert _rastro(arquivo)["motivo"] == "sem-python"
+
+
 def test_jogo_nativo_nao_deixa_rastro(tmp_path: Path) -> None:
     """Sem `STEAM_COMPAT_DATA_PATH` não há prefixo, e não há o que dizer."""
     feito, _, arquivo = _lancar(
@@ -313,6 +379,38 @@ def test_doctor_ok_passa(tmp_path: Path) -> None:
     _rastro_no_disco(tmp_path, "ok")
     saida = _doctor("check_ultimo_device_ks", tmp_path)
     assert "[ OK ] device KS do DualSense conferido" in saida
+
+
+def test_doctor_sem_curador_e_aviso_com_o_gesto(tmp_path: Path) -> None:
+    """A MORDIDA: rebaixe o `sem-curador` a `info` e esta régua reprova."""
+    _rastro_no_disco(tmp_path, "sem-curador")
+    saida = _doctor("check_ultimo_device_ks", tmp_path)
+    assert "[WARN] o último lançamento" in saida
+    assert "não achou o curador do device KS" in saida
+    assert "rode ./install.sh" in saida
+
+
+def test_doctor_sem_python_e_aviso(tmp_path: Path) -> None:
+    _rastro_no_disco(tmp_path, "sem-python")
+    saida = _doctor("check_ultimo_device_ks", tmp_path)
+    assert "[WARN] o último lançamento pelo Proton" in saida
+    assert "não achou python3" in saida
+
+
+def test_doctor_desligado_e_informacao(tmp_path: Path) -> None:
+    _rastro_no_disco(tmp_path, "desligado")
+    saida = _doctor("check_ultimo_device_ks", tmp_path)
+    assert "[WARN]" not in saida and "[ OK ]" not in saida
+    assert "sem a opção da vibração" in saida
+
+
+def test_doctor_removido_e_informacao_e_nao_verde(tmp_path: Path) -> None:
+    """O device que SAIU não é "conferido": a frase do `desligado`, e o porquê."""
+    _rastro_no_disco(tmp_path, "removido")
+    saida = _doctor("check_ultimo_device_ks", tmp_path)
+    assert "[WARN]" not in saida and "[ OK ]" not in saida
+    assert "sem a opção da vibração" in saida
+    assert "saiu do prefixo" in saida
 
 
 def test_doctor_sem_rastro_nao_inventa(tmp_path: Path) -> None:

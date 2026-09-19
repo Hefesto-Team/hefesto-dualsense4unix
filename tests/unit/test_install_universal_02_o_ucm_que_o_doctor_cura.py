@@ -6,13 +6,18 @@ que só nasce com a placa do controle aberta por UCM. O gancho do produto
 buracos que só apareciam fora da bancada dela, e cada régua abaixo morde um:
 
 1. o `alsa-ucm-conf` não era declarado no censo do install — no apt ele chega
-   como `Recommends`, e numa instalação sem recomendações simplesmente falta;
+   como `Recommends`, e numa instalação sem recomendações simplesmente falta —,
+   nem nos pacotes (`debian/control`, `.spec`, `PKGBUILD`), que o censo não vê;
 2. o doctor dizia "esta distro não usa UCM" (informação) com um DualSense
    plugado e sem o `ucm.conf` — a vibração sumia como se fosse escolha;
 3. o `doctor --fix` não refazia o gancho, e um controlador USB que chega depois
    do install (uma dock) ficava sem ele para sempre;
 4. numa distro imutável o `/usr` é só de leitura, e o install mandava rodar de
-   novo um roteiro que ali nunca vai funcionar.
+   novo um roteiro que ali nunca vai funcionar;
+5. o `doctor --fix` jogava a resposta do roteiro fora e lia só o código de
+   saída — e o roteiro sai 0 também quando NÃO grava (sem `ucm.conf`, com o
+   `/usr` só de leitura…). O `--fix` dizia "[ OK ] conferido" exatamente nos
+   casos que esta leva quer expor.
 
 **FORA DAQUI, e declarado:** o `Syntax 6` do `assets/ucm/DualSense-gancho.conf`.
 O cético mediu que o `Syntax 6` pede libasound >= 1.2.7 e que o gancho só usa
@@ -30,10 +35,12 @@ from pathlib import Path
 
 from tests.unit.test_haptica_nativa_01_o_ucm_do_dualsense import (
     NOME_MEDIDO,
+    _arvore_ucm,
     _cards,
     _ganchos,
     _mesa,
     _rodar,
+    _sysfs,
 )
 from tests.unit.test_install_garante_deps_em_qualquer_familia import (
     PRELUDO_DRIVER,
@@ -71,6 +78,8 @@ def test_sem_ucm_conf_com_dualsense_no_cabo_e_aviso(tmp_path: Path) -> None:
     assert "[WARN] DualSense no cabo e sem" in saida
     assert "alsa-ucm-conf" in saida
     assert "esta distro não usa UCM" not in saida
+    # O `--fix` não instala pacote: o conselho diz a ordem dos dois gestos.
+    assert "Depois de instalar o pacote, rode scripts/doctor.sh --fix" in saida
 
 
 def test_sem_ucm_conf_e_sem_dualsense_continua_informacao(tmp_path: Path) -> None:
@@ -97,17 +106,123 @@ def test_o_fix_refaz_o_gancho_antes_de_reiniciar_o_wireplumber() -> None:
     chamada, ou ponha-a depois, e esta régua reprova.
     """
     corpo = _corpo("apply_fixes")
-    ucm = corpo.find('bash "${ROOT_DIR}/scripts/install_ucm_dualsense.sh"')
+    ucm = corpo.find("\n    fix_ucm_do_dualsense\n")
     wireplumber = corpo.find("fix_wireplumber_default_source.sh\" --install")
-    assert ucm >= 0, "o --fix não chama o install_ucm_dualsense.sh"
+    assert ucm >= 0, "o --fix não chama o fix_ucm_do_dualsense"
     assert wireplumber >= 0
     assert ucm < wireplumber, "o gancho tem de estar no disco antes do restart do WirePlumber"
+    assert 'bash "${ROOT_DIR}/scripts/install_ucm_dualsense.sh"' in _corpo("fix_ucm_do_dualsense")
 
 
-def test_o_fix_guarda_a_existencia_do_roteiro() -> None:
-    """Pacote que leva o doctor sem o roteiro não pode virar "falhou" mudo."""
-    corpo = _corpo("apply_fixes")
-    assert '[[ -f "${ROOT_DIR}/scripts/install_ucm_dualsense.sh" ]]' in corpo
+def _sem_sudo(tmp_path: Path) -> Path:
+    """Um `sudo` que recusa, na FRENTE do PATH: régua nenhuma daqui pede senha.
+
+    As árvores UCM de mentira moram no tmp, que é gravável — o roteiro nem
+    chega a chamar o `sudo`. Este dublê é a trava para o dia em que chegar.
+    """
+    binario = tmp_path / "bin-sem-sudo"
+    binario.mkdir(exist_ok=True)
+    falso = binario / "sudo"
+    falso.write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+    falso.chmod(0o755)
+    return binario
+
+
+def _fix_ucm(
+    tmp_path: Path, ucm: Path, sysfs: Path, *, caminho: str | None = None, doctor: Path = DOCTOR
+) -> str:
+    """Roda o `fix_ucm_do_dualsense` do doctor sobre a árvore e o sysfs de mentira."""
+    base = caminho or os.environ.get("PATH", "/usr/bin:/bin")
+    r = subprocess.run(
+        ["bash", "-c", f'source "{doctor}"; fix_ucm_do_dualsense'],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+        env={
+            "PATH": f"{_sem_sudo(tmp_path)}:{base}",
+            "HOME": str(tmp_path / "home"),
+            "HEFESTO_RAIZ_UCM": str(ucm),
+            "HEFESTO_SYSFS": str(sysfs),
+        },
+    )
+    return r.stdout + r.stderr
+
+
+def test_o_fix_sem_ucm_conf_nao_diz_ok(tmp_path: Path) -> None:
+    """A MORDIDA do furo 5: o roteiro sai 0 sem gravar, e o `--fix` dizia OK.
+
+    Volte a ler só o código de saída (ou a saída para /dev/null) e esta régua
+    reprova — é a máquina sem `alsa-ucm-conf`, exatamente a que a leva expõe.
+    """
+    sysfs, _ = _mesa(tmp_path)
+    saida = _fix_ucm(tmp_path, tmp_path / "sem-ucm", sysfs)
+    assert "[ OK ]" not in saida, saida
+    assert "[WARN]" not in saida, "a falta do pacote é o check que acusa, com o DualSense no cabo"
+    assert "perfil UCM do DualSense não gravado" in saida
+    assert "ucm.conf ausente" in saida
+
+
+def test_o_fix_com_usr_so_de_leitura_nao_diz_ok(tmp_path: Path) -> None:
+    sysfs, ucm = _mesa(tmp_path)
+    saida = _fix_ucm(
+        tmp_path, ucm, sysfs, caminho=_findmnt_de_mentira(tmp_path, "ro,relatime")
+    )
+    assert "[ OK ]" not in saida, saida
+    assert "só de leitura" in saida
+    assert _ganchos(ucm) == {"Alheio de outra placa.conf"}
+
+
+def test_o_fix_com_ucm_conf_que_nao_le_conf_d_nao_diz_ok(tmp_path: Path) -> None:
+    sysfs, _ = _mesa(tmp_path)
+    outra = tmp_path / "outra"
+    outra.mkdir()
+    ucm = _arvore_ucm(outra, com_confd=False)
+    saida = _fix_ucm(tmp_path, ucm, sysfs)
+    assert "[ OK ]" not in saida, saida
+    assert "não procura conf.d/" in saida
+
+
+def test_o_fix_sem_controlador_que_caiba_no_corte_nao_diz_ok(tmp_path: Path) -> None:
+    """Só um controlador de nome curto: o roteiro avisa, não grava, e sai 0."""
+    _, ucm = _mesa(tmp_path)
+    curto = _sysfs(tmp_path / "curto", {"platform/abc": ["usb7"]})
+    saida = _fix_ucm(tmp_path, ucm, curto)
+    assert "[ OK ]" not in saida, saida
+    assert "nenhum controlador USB" in saida
+    assert _ganchos(ucm) == {"Alheio de outra placa.conf"}
+
+
+def test_o_fix_que_grava_diz_ok(tmp_path: Path) -> None:
+    """O lado de cá da régua: com o gancho no disco, o OK de sempre."""
+    sysfs, ucm = _mesa(tmp_path)
+    saida = _fix_ucm(tmp_path, ucm, sysfs)
+    assert "[ OK ] perfil UCM do DualSense conferido" in saida, saida
+    assert len(_ganchos(ucm)) > 1
+
+
+def test_o_fix_que_falha_e_aviso_com_o_motivo(tmp_path: Path) -> None:
+    """O `install -D` que não consegue gravar: aviso com o código, não OK mudo."""
+    sysfs, ucm = _mesa(tmp_path)
+    (ucm / "USB-Audio").write_text("um arquivo onde devia haver pasta\n", encoding="utf-8")
+    saida = _fix_ucm(tmp_path, ucm, sysfs)
+    assert "[ OK ]" not in saida, saida
+    assert "[WARN] install_ucm_dualsense.sh falhou (código" in saida
+
+
+def test_o_fix_sem_o_roteiro_fica_calado(tmp_path: Path) -> None:
+    """Pacote que leva o doctor sem o roteiro não pode virar "falhou" mudo.
+
+    O `ROOT_DIR` é `readonly` e nasce do lugar do próprio doctor: a cópia
+    solitária numa pasta `scripts/` sem o irmão é o layout desse pacote.
+    """
+    sysfs, ucm = _mesa(tmp_path)
+    sozinho = tmp_path / "pacote" / "scripts" / "doctor.sh"
+    sozinho.parent.mkdir(parents=True)
+    shutil.copy2(DOCTOR, sozinho)
+    saida = _fix_ucm(tmp_path, ucm, sysfs, doctor=sozinho)
+    assert saida == ""
+    assert _ganchos(ucm) == {"Alheio de outra placa.conf"}
 
 
 # -------------------------------------------------- 1. o censo do install
@@ -125,6 +240,49 @@ def test_o_nome_do_pacote_nas_tres_familias() -> None:
     for familia, nome in esperado.items():
         proc = _roda(f"_pkg_nome alsa-ucm {familia}")
         assert proc.stdout.strip() == nome, (familia, proc.stdout, proc.stderr)
+
+
+def _nome_no_censo(familia: str) -> str:
+    """O nome do pacote pela boca do DONO, o `_pkg_nome` do install.sh."""
+    proc = _roda(f"_pkg_nome alsa-ucm {familia}")
+    nome = proc.stdout.strip()
+    assert nome, (familia, proc.stderr)
+    return nome
+
+
+def _campo_debian(nome: str) -> str:
+    """Um campo do `debian/control` com as linhas de continuação juntadas."""
+    texto = (RAIZ / "packaging" / "debian" / "control").read_text(encoding="utf-8")
+    m = re.search(rf"^{nome}:(.*(?:\n[ \t].*)*)", texto, re.MULTILINE)
+    assert m is not None, f"o campo {nome} sumiu do debian/control"
+    return " ".join(m.group(1).split())
+
+
+def test_os_pacotes_declaram_o_ucm_do_sistema_com_o_nome_do_censo() -> None:
+    """O censo só roda no fluxo nativo: o `.deb`, o `.rpm` e o `PKGBUILD` não
+    passavam por ele e não declaravam o UCM. O nome vem do `_pkg_nome`, e não
+    digitado aqui — se a tabela mudar, os pacotes têm de mudar junto.
+
+    A MORDIDA: tire o `alsa-ucm-conf` do `Recommends:` do `debian/control` (ou
+    o `Recommends: alsa-ucm` do `.spec`, ou a linha do `optdepends` do
+    `PKGBUILD`) e esta régua reprova, nomeando o formato.
+    """
+    faltam = []
+    apt = _nome_no_censo("apt")
+    recomendados = [p.strip() for p in _campo_debian("Recommends").split(",")]
+    if not any(apt in (alt.strip() for alt in r.split("|")) for r in recomendados):
+        faltam.append(f"packaging/debian/control (Recommends: {apt})")
+    spec = (RAIZ / "packaging" / "fedora" / "hefesto-dualsense4unix.spec").read_text(
+        encoding="utf-8"
+    )
+    dnf = _nome_no_censo("dnf")
+    if not re.search(rf"^Recommends:\s+{re.escape(dnf)}\s*$", spec, re.MULTILINE):
+        faltam.append(f"packaging/fedora/hefesto-dualsense4unix.spec (Recommends: {dnf})")
+    pkgbuild = (RAIZ / "packaging" / "arch" / "PKGBUILD").read_text(encoding="utf-8")
+    pacman = _nome_no_censo("pacman")
+    if not re.search(rf"^\s*'{re.escape(pacman)}:", pkgbuild, re.MULTILINE):
+        faltam.append(f"packaging/arch/PKGBUILD (optdepends: {pacman})")
+    assert not faltam, "o UCM do sistema não declarado em: " + "; ".join(faltam)
 
 
 def test_a_checagem_por_arquivo_responde_pelo_efeito(tmp_path: Path) -> None:
