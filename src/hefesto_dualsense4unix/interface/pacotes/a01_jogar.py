@@ -21,7 +21,7 @@ import html
 import sys
 from typing import Any
 
-from . import Contexto, jogador_de, registrar
+from . import TRAVESSAO, Contexto, jogador_de, registrar
 
 #: O ENDEREÇO DA RESSALVA DO CADEADO — 07/09/2026, achado pela conferência desta
 #: leva.
@@ -426,26 +426,45 @@ CADEADO_DICA = (
 CADEADO_RECUSA = "O Hefesto está desligado: a trava não foi aplicada."
 
 
+#: AS TRÊS PALAVRAS DO INTERRUPTOR — e o dono delas é a aba Controles.
+#:
+#: `a02_controles._selo_do_sensor` emite exatamente estas para os botões do
+#: Giroscópio e do Acelerômetro, e o desenho lê a do meio em
+#: `data-hef-quando="DESLIGADO"`. **Não se importa a função** — importá-la
+#: acoplaria dois pacotes de aba por uma constante de três palavras —, mas a
+#: LÍNGUA é uma só, e é por isso que ela está nomeada aqui em vez de digitada
+#: dentro do `return`. Duas palavras para o mesmo "ligado" seria a segunda
+#: verdade que esta casa mata.
+CADEADO_LIGADO = "LIGADO"
+CADEADO_DESLIGADO = "DESLIGADO"
+
+
 def _cadeado(state: dict[str, Any]) -> str:
-    """``"sim"`` com o cadeado ligado, ``""`` quando não — na língua do `marcado`.
+    """``LIGADO`` · ``DESLIGADO`` · travessão — as três respostas da trava.
 
-    O ALVO É O DÉCIMO (`hefesto_vivo`, `data-hef-alvo="marcado"`), e a língua
-    dele é a MESMA do alvo `classe` booleano: ``sim`` liga, e vazio, travessão
-    ou qualquer outra palavra DESLIGAM. Uma segunda palavra para o mesmo
-    "ligado" seria a terceira maneira de dizer a mesma coisa.
+    **A LÍNGUA MUDOU EM 19/09/2026, com a caixa** (`TRAVA-PILULA-01`, pedido
+    dela). Até aqui isto devolvia ``"sim"``/``""`` para o alvo `marcado`, o
+    décimo da ponte e o único que escreve `el.checked`. A trava virou
+    `<button class="cadeado">` com a gramática do `.sw` da aba Controles, e o
+    alvo passou a ser `classe` + `data-hef-quando="DESLIGADO"`.
 
-    **SEM DAEMON A CAIXA DESMARCA, e isso é escolha declarada.** Um checkbox tem
-    dois estados e o produto tem três — a aba inteira já resolve isso do mesmo
-    jeito (`_estado_da_tela` devolve `""` e o interruptor apaga as duas
-    posições). Marcar sobre um estado que ninguém leu seria a tela afirmando uma
-    escolha dela que ela não fez; o inverso apenas mostra o padrão do produto,
-    que é destravado.
+    **O TERCEIRO ESTADO DEIXOU DE SER MENTIRA, e é o que a troca ganha de
+    graça.** Um checkbox tem DOIS estados e o produto tem três; a nota que
+    morava aqui declarava o remendo: *"sem daemon a caixa desmarca"* — a tela
+    mostrava DESTRAVADO sobre um estado que ninguém tinha lido. A pílula
+    responde as três: acesa, apagada, ou nenhuma das duas quando o travessão
+    chega e classe nenhuma casa.
 
     SÓ O ``True`` LITERAL LIGA, a mesma disciplina do `wrapper_used` e do
-    `texto_da_pausa`: chave ausente (daemon antigo) ou valor de outro tipo não
-    marcam a caixa.
+    `texto_da_pausa`: chave ausente (daemon antigo) ou valor de outro tipo
+    **não** acendem — caem no travessão, que é o "não sei" honesto.
     """
-    return "sim" if state.get("autoswitch_locked") is True else ""
+    lido = state.get("autoswitch_locked")
+    if lido is True:
+        return CADEADO_LIGADO
+    if lido is False:
+        return CADEADO_DESLIGADO
+    return TRAVESSAO
 
 
 #: A PALAVRA DO MARCADOR — **é a da janela GTK**, e não uma escolha minha:
@@ -2656,9 +2675,20 @@ def cadeado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     daemon não tem como produzir, e escrevê-lo seria inventar um desfecho para
     poder tratá-lo.
     """
-    if str(o.get("evento") or "change") != "change":
+    # O EVENTO É `click` DESDE 19/09/2026, e a troca é obrigatória, não
+    # cosmética: um `<button>` NÃO emite `change` — só `<input>`, `<select>` e
+    # `<textarea>` emitem. Deixar o filtro em `change` faria este gesto voltar
+    # cedo em TODO clique, e a trava viraria enfeite: a tela pisca e o disco
+    # não muda, que é a queixa dela em estado puro.
+    #
+    # E A DUPLA ENTREGA QUE O `change` FILTRAVA SUMIU COM A CAIXA: o ouvinte
+    # único do piloto está em `click` e em `change`, e um checkbox disparava os
+    # dois. Um botão dispara UM. O filtro fica porque a régua dos botões monta
+    # o recado à mão e pode mandar outro evento — mas o que ele protege agora é
+    # o contrato, não um defeito vivo.
+    if str(o.get("evento") or "click") != "click":
         return
-    pedido = _cadeado(ctx.state) != "sim"
+    pedido = _cadeado(ctx.state) != CADEADO_LIGADO
     if p.autoswitch_lock_set(locked=pedido) is None:
         raise RuntimeError(CADEADO_RECUSA)
 
@@ -2947,6 +2977,6 @@ PROVAS = [
     # no-op). O `ctx` da régua tem `autoswitch_locked` ausente, logo o cadeado
     # está DESTRAVADO e o clique pede `True`.
     {"pagina": PAGINA,  # (noqa-acento) chave do contrato
-     "gesto": "cadeado", "clique": {"evento": "change"},
+     "gesto": "cadeado", "clique": {"evento": "click"},
      "chama": [("autoswitch_lock_set", [], {"locked": True})]},
 ]
