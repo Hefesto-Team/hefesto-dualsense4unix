@@ -600,10 +600,49 @@ class JanelaDaAba:
             if subtitulo:
                 barra.set_subtitle(subtitulo)
             self.janela.set_titlebar(barra)
+            # A BARRA QUE NASCE MEIA — 19/09/2026, e quem achou foi ela:
+            # *"quando eu abro e antes de printar ela tá bugada (…) mas depois
+            # do print arruma automaticamente"*  <!-- noqa-acento: dela -->
+            #
+            # O SINTOMA: maximizada, a barra mostra UM botão (o de minimizar) no
+            # lugar dos três. Fotografado por ela em 19/09 às 02:31; às 02:32,
+            # depois de um screenshot, os três estão lá.
+            #
+            # O QUE A MEDIÇÃO DESCARTOU, e é o que faz esta cura ser de PINTURA
+            # e não de layout: a árvore de widgets responde CERTO em todos os
+            # instantes medidos (50, 150, 400, 1000, 2500 e 6000 ms), com a
+            # maximização vindo antes OU depois do `show_all()` — três botões,
+            # visíveis, nas posições certas, e a barra acompanhando a largura da
+            # janela (1142 → 1920). O GTK entrega três; a tela mostra um.
+            #
+            # POR QUE O PRINT CURA: o portal de captura faz o compositor
+            # RECOMPOR a cena inteira. É de graça o que esta linha passa a pedir
+            # de propósito quando o estado da janela muda — o mesmo gesto, sem
+            # depender de ela fotografar a própria tela para poder fechar a
+            # janela.
+            #
+            # `queue_resize` E NÃO `queue_draw`: o que chega torto é a
+            # GEOMETRIA da decoração, não a cor dela. Um `draw` repinta o que o
+            # layout já decidiu; o `resize` refaz o ciclo e comita a superfície
+            # nova.
+            self.janela.connect("window-state-event", self._a_barra_se_refaz)
             self.janela.connect("destroy", Gtk.main_quit)
         self.janela.add(self.view)
         self.janela.show_all()
         self.view.load_uri(arquivo.as_uri())
+
+    def _a_barra_se_refaz(self, _janela: Any, _evento: Any) -> bool:
+        """Refaz o ciclo de layout quando o estado da janela muda.
+
+        BARRA-MAXIMIZADA-01. Ver a razão inteira onde este método é ligado.
+        Devolve `False` para o GTK seguir entregando o evento a quem mais o
+        escute — um `True` aqui engoliria a notificação de maximizar para o
+        resto da janela.
+        """
+        barra = self.janela.get_titlebar()
+        if barra is not None:
+            barra.queue_resize()
+        return False
 
     # -- a guarda de carga -------------------------------------------------
     def _carregou(self, _view: Any, evento: Any) -> None:
