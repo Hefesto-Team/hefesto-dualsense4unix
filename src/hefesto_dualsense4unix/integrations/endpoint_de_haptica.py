@@ -96,6 +96,25 @@ MAX_NOME = 127
 #: para a pessoa escolher. Mesma razão e mesmo valor do nó do alto-falante.
 PRIORIDADE_DA_SESSAO = 0
 
+#: OS CANAIS TRASEIROS SÃO OS MOTORES, e eles precisam ser LIGADOS de propósito
+#: — medido na máquina dela em 19/09/2026, e o achado foi dela: *"é defeito não
+#: era pra tá assim eu acho"*.  <!-- noqa-acento: citação literal dela -->
+#:
+#: O `load-module` abaixo não dizia NADA sobre volume, e o endpoint nascia com
+#: os canais 3-4 em **0%, menos infinito dB** enquanto os 1-2 ficavam em 100%. Os 3-4 são
+#: a vibração (a háptica do DualSense viaja como áudio nos traseiros); em zero,
+#: o jogo escreve no nada.
+#:
+#: É A MESMA CLASSE DE DEFEITO QUE ESTA CASA JÁ PAGOU: *não escrever não é o
+#: lado neutro*. Omitir um byte do report calou o alto-falante por um mês; aqui
+#: omitir o volume calou os motores — e em QUALQUER computador, porque o valor
+#: vem do servidor de som, não do nosso código.
+#:
+#: SÓ OS TRASEIROS, e os da frente ficam como estão: os 1-2 são o alto-falante
+#: do controle, que tem volume próprio no produto (`speaker.volume`, por HID).
+#: Cravar 100% neles aqui atropelaria a escolha dela do outro lado.
+VOLUME_DOS_MOTORES = "100%"
+
 _MODULO_NULL_SINK = "module-null-sink"
 
 
@@ -330,6 +349,31 @@ def endpoints_de_pe(
     return de_pe
 
 
+def _volume_da_frente(saida_do_pactl: str, nome_do_sink: str) -> tuple[str, str]:
+    """Os dois volumes da FRENTE deste sink, na forma que o `pactl` aceita.
+
+    Devolve ``("100%", "100%")`` quando não dá para saber — é o valor com que o
+    null-sink nasce, então não muda nada em quem já estava certo.
+    """
+    dentro = False
+    for linha in saida_do_pactl.splitlines():
+        crua = linha.strip()
+        if crua.startswith("Name:"):
+            dentro = crua.split(":", 1)[1].strip() == nome_do_sink
+            continue
+        if dentro and crua.startswith("Volume:"):
+            partes = [p.strip() for p in crua.split(":", 1)[1].split(",")]
+            lidos = []
+            for p in partes[:2]:
+                achado = [t for t in p.split("/") if t.strip().endswith("%")]
+                if achado:
+                    lidos.append(achado[0].strip())
+            if len(lidos) == 2:
+                return (lidos[0], lidos[1])
+            return ("100%", "100%")
+    return ("100%", "100%")
+
+
 def varrer_endpoints_orfaos(
     vivos: Iterable[str],
     runner: Callable[[list[str]], str | None] | None = None,
@@ -464,6 +508,7 @@ class EndpointDeHaptica:
             logger.warning("haptica_endpoint_nao_subiu", uniq=self.uniq)
             return False
         self._module_id = linhas[-1]
+        self._ligar_os_motores()
         logger.info(
             "haptica_endpoint_publicado",
             uniq=self.uniq,
@@ -471,6 +516,35 @@ class EndpointDeHaptica:
             ancora=self.ancora.syspath,
         )
         return True
+
+    def _ligar_os_motores(self) -> None:
+        """Põe os canais traseiros em :data:`VOLUME_DOS_MOTORES`, preservando a frente.
+
+        **LÊ ANTES DE ESCREVER.** `pactl set-sink-volume` com quatro valores
+        define os QUATRO, e os dois da frente são o alto-falante do controle —
+        cravá-los aqui atropelaria o volume que ela escolheu por HID. Então a
+        frente volta com o valor que estava, e só os traseiros mudam.
+
+        **NUNCA LEVANTA.** O endpoint já está de pé quando esta função roda; um
+        `pactl` que falhou não pode desfazer a publicação. O pior caso é o que
+        já acontecia antes desta cura — motores em zero — e ele fica no log.
+        """
+        atual = self.runner(["pactl", "list", "sinks"]) or ""
+        frente = _volume_da_frente(atual, self.nome)
+        try:
+            self.runner([
+                "pactl", "set-sink-volume", self.nome,
+                frente[0], frente[1], VOLUME_DOS_MOTORES, VOLUME_DOS_MOTORES,
+            ])
+        except Exception as exc:  # pragma: no cover — pactl é o mundo de fora
+            logger.warning("haptica_motores_sem_volume", uniq=self.uniq, err=str(exc))
+            return
+        logger.info(
+            "haptica_motores_ligados",
+            uniq=self.uniq,
+            frente=list(frente),
+            motores=VOLUME_DOS_MOTORES,
+        )
 
     def parar(self) -> None:
         """Derruba o nó. Silencioso quando ele já não está de pé."""
