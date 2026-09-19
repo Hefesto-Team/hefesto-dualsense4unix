@@ -6,11 +6,11 @@ Description=Hefesto — devolve a configuração que a Steam reescreve (Steam In
 [Service]
 Type=oneshot
 # __SCRIPT__, __SENTINELA__ e __PROTON_PIN__ são substituídos pelo install.sh com o
-# caminho absoluto do repo.
+# caminho absoluto do repo; cada opt-out do install apaga só a SUA linha.
 #
 # 1) Steam Input: --apply-quiet NUNCA fecha a Steam: se ela estiver viva, adia.
-#    A reescrita só acontece quando a Steam já saiu (que é justamente quando
-#    ela grava o vdf).
+#    A reescrita só acontece quando a Steam já saiu (que é quando ela grava o
+#    vdf). Com `--keep-steam-input` o install apaga esta linha (18/09/2026).
 ExecStart=/usr/bin/env bash __SCRIPT__ --apply-quiet
 #
 # 2) O wrapper hefesto-launch, na carona do MESMO gatilho (CARONA-NO-GUARD-01,

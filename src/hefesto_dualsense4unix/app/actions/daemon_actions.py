@@ -718,7 +718,7 @@ def interpretar_guarda_do_steam_input(saida: object) -> tuple[str, str] | None:
     disparo, não há rede de segurança.
 
     `None` também quando não dá para medir (sem `systemctl`, sem sessão), quando
-    a unidade não existe (`install.sh --keep-steam-input`) e quando ela está
+    a unidade não existe (máquina que ainda não passou pelo install) e quando ela está
     DESABILITADA — escolha não é achado. `docs/usage/troubleshooting-8bitdo.md`
     ensina `systemctl --user disable --now` nas duas unidades do vigia para
     segurar o gyro do 8BitDo; sem esta guarda o cartão passaria a resmungar

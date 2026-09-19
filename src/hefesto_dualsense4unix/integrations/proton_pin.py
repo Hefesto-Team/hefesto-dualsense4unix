@@ -127,6 +127,11 @@ RC_SEM_REDE_E_SEM_CACHE = 2
 RC_ADIADO = 4
 RC_EXTRACAO_FALHOU = 5
 RC_CONF_ILEGIVEL = 6
+#: A Steam desta máquina mora numa caixa (Flatpak/Snap): nada foi baixado,
+#: porque o Proton extraído no host nunca serviria lá dentro. Até 18/09/2026
+#: isto saía como o `4`, e o install prometia ao lado que *"o vigia extrai do
+#: cache e trava sozinho"* — sobre um cache que ninguém encheu.
+RC_STEAM_NA_CAIXA = 7
 
 #: A EXCEÇÃO NOMEADA ao pino — gêmea do `jogos_sem_wrapper.txt` (mesmo formato:
 #: um appid por linha, `#` comenta). O `--lock --todos` e o `--manter` do vigia
@@ -464,12 +469,28 @@ def _read_manifest_sha256(name: str, compat_dir: Path) -> str | None:
     return sha if isinstance(sha, str) else None
 
 
-def _conferir_nomes_do_tar(tar: tarfile.TarFile) -> None:
-    """Recusa membro com nome absoluto, com `..` ou que seja nó de dispositivo.
+def _escapa_da_raiz(caminho: str) -> bool:
+    """True se `caminho`, relativo à raiz da extração, sai dela (ou é absoluto)."""
+    if caminho.startswith("/"):
+        return True
+    normal = os.path.normpath(caminho)
+    return normal == ".." or normal.startswith("../")
 
-    É a parte do filtro "tar" que importa aqui, para o python que não tem
-    filtro nenhum. Levanta `tarfile.TarError`, que o ensure traduz em
-    ``extracao_falhou`` — nunca em checksum.
+
+def _conferir_nomes_do_tar(tar: tarfile.TarFile) -> None:
+    """Recusa o que o filtro "tar" recusaria, para o python que não tem filtro.
+
+    O nome absoluto ou com `..`, o nó de dispositivo — e, desde 18/09/2026, o
+    LINK que aponta para fora do destino, que é a outra metade do filtro: o
+    nome do membro pode ser inocente e o alvo do link, não.
+
+    O alvo do link simbólico se mede a partir da PASTA dele, e não pela
+    presença de `..`: o GE-Proton tem links internos legítimos que sobem cinco
+    níveis (o `start.exe` do `default_pfx` cai dentro de `files/lib/wine/`), e
+    recusar todo `..` quebraria a extração justamente no python antigo.
+
+    Levanta `tarfile.TarError`, que o ensure traduz em ``extracao_falhou`` —
+    nunca em checksum.
     """
     for membro in tar.getmembers():
         nome = membro.name
@@ -477,6 +498,17 @@ def _conferir_nomes_do_tar(tar: tarfile.TarFile) -> None:
             raise tarfile.TarError(f"membro fora do destino no tarball: {nome!r}")
         if membro.isdev():
             raise tarfile.TarError(f"nó de dispositivo no tarball: {nome!r}")
+        if membro.issym():
+            alvo = os.path.join(os.path.dirname(nome), membro.linkname)
+        elif membro.islnk():
+            alvo = membro.linkname  # o alvo do link físico é outro membro
+        else:
+            continue
+        if _escapa_da_raiz(alvo):
+            raise tarfile.TarError(
+                f"link que aponta para fora do destino no tarball: "
+                f"{nome!r} -> {membro.linkname!r}"
+            )
 
 
 def _extract_verified_tarball(
@@ -1209,8 +1241,20 @@ def lock_games_to_pinned_proton(
     todos: bool = False,
     excluir: Collection[str] = (),
     sem_entrada_de: Callable[[Sequence[str]], Collection[str]] | None = None,
+    compat_dir: Path | None = None,
 ) -> dict[str, object]:
     """Trava global + appids no pin, com gate de Steam fechada e registro.
+
+    ``compat_dir`` é onde o pino tem de EXISTIR para a trava valer — 18/09/2026,
+    INSTALL-UNIVERSAL. Travar num Proton que não está em `compatibilitytools.d`
+    aponta o default global e cada jogo Windows para uma ferramenta que não
+    existe, e a Steam deixa de abrir todos eles. Com ele, a trava RECUSA
+    (``reason="pino_ausente"``) antes do portão da Steam, e o `config.vdf`
+    fica intacto. Todo chamador do PRODUTO o passa (`lock_proton_for_all_games`,
+    `--lock`, `--manter`), e uma régua reprova o chamador novo que não passar;
+    ``None`` fica para quem mede o miolo do lock sem uma Steam montada. O
+    ``dry_run`` não pergunta, pela mesma razão por que pula o portão da Steam:
+    ele diz o que MUDARIA no arquivo, e não escreve nada.
 
     ``excluir`` é a exceção nomeada (`jogos_fora_do_pino.txt`), e
     ``sem_entrada_de`` recebe os appids que AINDA NÃO têm entrada e devolve os
@@ -1247,25 +1291,52 @@ def lock_games_to_pinned_proton(
     if not vdf.is_file():
         result["reason"] = "config_vdf_ausente"
         return result
+    if (
+        compat_dir is not None
+        and not dry_run
+        and not pinned_proton_installed(tool_name, compat_dir)
+    ):
+        result["status"] = "recusado"
+        result["reason"] = "pino_ausente"
+        result["pino"] = str(compat_dir / tool_name)
+        return result
     if not dry_run:
         refusal = _steam_gate()
         if refusal is not None:
             result["status"] = "recusado"
             result["reason"] = refusal
             return result
-    with _uma_trava_por_vez(state, ativa=not dry_run):
-        return _lock_dentro_da_trava(
-            vdf=vdf,
-            state=state,
-            result=result,
-            tool_name=tool_name,
-            appids=appids,
-            dry_run=dry_run,
-            migrar_de=migrar_de,
-            todos=todos,
-            excluir=excluir,
-            sem_entrada_de=sem_entrada_de,
-        )
+    try:
+        with _uma_trava_por_vez(state, ativa=not dry_run):
+            return _lock_dentro_da_trava(
+                vdf=vdf,
+                state=state,
+                result=result,
+                tool_name=tool_name,
+                appids=appids,
+                dry_run=dry_run,
+                migrar_de=migrar_de,
+                todos=todos,
+                excluir=excluir,
+                sem_entrada_de=sem_entrada_de,
+            )
+    except _TravaOcupadaError:
+        result["status"] = "recusado"
+        result["reason"] = "outra_trava_em_curso"
+        return result
+
+
+#: Quanto uma trava espera a outra, em segundos — 18/09/2026. O corpo do lock
+#: leva menos de um segundo (ler, decidir, gravar). Quem segura a trava por mais
+#: que isto está preso, e esperar para sempre prenderia junto quem espera: o
+#: vigia é um oneshot sem prazo (o `.timer` e o `.path` não o disparam de novo
+#: enquanto ele não sai, e com ele param o Steam Input e a sentinela), e o
+#: install ficaria parado no 11c com a Steam fechada.
+_PACIENCIA_DA_TRAVA_S = 30.0
+
+
+class _TravaOcupadaError(Exception):
+    """Outro processo segurou a trava do `config.vdf` além da paciência."""
 
 
 @contextlib.contextmanager
@@ -1278,6 +1349,10 @@ def _uma_trava_por_vez(state: Path, *, ativa: bool) -> Iterator[None]:
     processos escrevendo o mesmo `config.vdf.hefesto-tmp` ao mesmo tempo
     podiam trocar o arquivo da Steam por um meio escrito. A trava fica ao lado
     do registro, que é arquivo nosso. Sem `fcntl` (fora do Linux), segue sem.
+
+    A ESPERA TEM PRAZO (:data:`_PACIENCIA_DA_TRAVA_S`): passado dele, levanta
+    :class:`_TravaOcupadaError`, e quem chama devolve ``recusado`` — o mesmo
+    desfecho da Steam aberta, que o vigia tenta de novo na próxima volta.
     """
     if not ativa:
         yield
@@ -1295,7 +1370,15 @@ def _uma_trava_por_vez(state: Path, *, ativa: bool) -> Iterator[None]:
         yield
         return
     try:
-        fcntl.flock(fd, fcntl.LOCK_EX)
+        prazo = time.monotonic() + _PACIENCIA_DA_TRAVA_S
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if time.monotonic() >= prazo:
+                    raise _TravaOcupadaError(str(alvo)) from None
+                time.sleep(0.05)
         yield
     finally:
         with contextlib.suppress(OSError):
@@ -1483,8 +1566,15 @@ def lock_proton_for_all_games(
     dry_run: bool = False,
     migrar_de: Sequence[str] = (),
     todos: bool = False,
+    compat_dir: Path | None = None,
 ) -> dict[str, object]:
     """Conveniência ZERO-ARG do botão "Travar Proton validado" da GUI (PLAT-01).
+
+    SEM O PINO INSTALADO, RECUSA — 18/09/2026. ``compat_dir`` (padrão: o
+    `compatibilitytools.d` da Steam nativa) é repassado ao lock, que devolve
+    ``recusado``/``pino_ausente`` em vez de apontar os jogos para um Proton
+    que não existe. É aqui, e não em cada botão, para que o da aba Sistema e o
+    worker da GTK herdem a guarda sem frase nova de tela.
 
     ``todos`` É REPASSADO — 18/09/2026. Até aqui esta função nem tinha o
     parâmetro, e o botão que o install manda usar quando a trava é adiada
@@ -1521,6 +1611,7 @@ def lock_proton_for_all_games(
         todos=todos,
         excluir=ler_jogos_fora_do_pino(fora_do_pino_path(home)),
         sem_entrada_de=lambda faltam: jogos_sem_entrada_nova(faltam, home=home),
+        compat_dir=compat_dir if compat_dir is not None else default_compat_dir(home),
     )
     changes = result.get("changes")
     if isinstance(changes, dict):
@@ -1616,27 +1707,32 @@ def unlock_games_from_pinned_proton(
             result["status"] = "recusado"
             result["reason"] = refusal
             return result
-    with _uma_trava_por_vez(state, ativa=not dry_run):
-        try:
-            original = vdf.read_text(encoding="utf-8")
-            new_text, reverted = remove_compat_tool_mapping(
-                original, tool_name=tool_name, changes=changes
-            )
-        except OSError as exc:
-            result["reason"] = str(exc)
-            return result
-        result["reverted"] = reverted
-        if dry_run:
-            result["status"] = "unlocked"
-            result["reason"] = "dry_run"
-            return result
-        try:
-            if reverted:
-                result["backup"] = str(_write_vdf_with_backup(vdf, new_text))
-            state.unlink(missing_ok=True)
-        except OSError as exc:
-            result["reason"] = str(exc)
-            return result
+    try:
+        with _uma_trava_por_vez(state, ativa=not dry_run):
+            try:
+                original = vdf.read_text(encoding="utf-8")
+                new_text, reverted = remove_compat_tool_mapping(
+                    original, tool_name=tool_name, changes=changes
+                )
+            except OSError as exc:
+                result["reason"] = str(exc)
+                return result
+            result["reverted"] = reverted
+            if dry_run:
+                result["status"] = "unlocked"
+                result["reason"] = "dry_run"
+                return result
+            try:
+                if reverted:
+                    result["backup"] = str(_write_vdf_with_backup(vdf, new_text))
+                state.unlink(missing_ok=True)
+            except OSError as exc:
+                result["reason"] = str(exc)
+                return result
+    except _TravaOcupadaError:
+        result["status"] = "recusado"
+        result["reason"] = "outra_trava_em_curso"
+        return result
     if not dry_run:
         # O arquivo da trava sai junto com o registro: o uninstall é simétrico.
         with contextlib.suppress(OSError):
@@ -1777,8 +1873,17 @@ def _ler_vdf_binario(
         elif tipo in (0x07, 0x0A):
             valor, pos = None, pos + 8
         elif tipo == 0x05:
+            # A string LARGA (UTF-16) termina em dois zeros. O laço era
+            # `while buf[fim:fim + 2] != b"\0\0"`, e numa entrada sem esse fim
+            # ele não parava nunca: além do fim do buffer a fatia é `b""`, que
+            # nunca é igual a dois zeros (18/09/2026). O vigia roda isto DENTRO
+            # da trava do `config.vdf`, e ficava preso para sempre com ela.
             fim = pos
-            while buf[fim:fim + 2] != b"\0\0":
+            while True:
+                if fim + 2 > len(buf):
+                    raise ValueError("string larga sem fim no appinfo.vdf")
+                if buf[fim:fim + 2] == b"\0\0":
+                    break
                 fim += 2
             valor = buf[pos:fim].decode("utf-16-le", "replace")
             pos = fim + 2
@@ -2037,7 +2142,7 @@ def _cmd_ensure(args: argparse.Namespace) -> int:
                     f"[proton-pin] {conf['name']}: adiado ({motivo}) — nada "
                     "baixado: o Proton extraído no host não serve dentro da caixa"
                 )
-                return RC_ADIADO
+                return RC_STEAM_NA_CAIXA
             result = adiantar_para_o_cache(
                 conf, cache_dir=cache, downloader=downloader
             )
@@ -2049,7 +2154,7 @@ def _cmd_ensure(args: argparse.Namespace) -> int:
                 f"[proton-pin] pino adiado até a Steam nativa existir ({motivo}): "
                 "o tarball conferido ficou no cache, nada foi extraído e nada "
                 "foi criado na pasta da Steam. Quando ela existir, o vigia da "
-                "Steam (ou o próximo ./install.sh) extrai e trava, sem rede."
+                "Steam (ou o próximo install) extrai e trava, sem rede."
             )
             return RC_ADIADO
         compat = raiz / "compatibilitytools.d"
@@ -2075,6 +2180,11 @@ def _cmd_manter(args: argparse.Namespace) -> int:
     nunca abre nem fecha a Steam (o portão do lock ADIA com ela ou um jogo
     abertos, rc 3), e respeita o `jogos_fora_do_pino.txt`. Sem Steam nativa,
     não há o que manter: sai 0.
+
+    A EXTRAÇÃO TAMBÉM ESPERA A STEAM FECHAR (18/09/2026). Ela vinha antes do
+    portão, e o `.timer` de meia hora podia descompactar ~1,5 GB no meio de uma
+    partida. Com a Steam aberta a trava adiaria de qualquer jeito, então
+    extrair agora não adianta nada: as duas acontecem juntas na saída dela.
     """
     conf = _conf_ou_rc(args)
     if isinstance(conf, int):
@@ -2085,8 +2195,15 @@ def _cmd_manter(args: argparse.Namespace) -> int:
         print(f"[proton-pin] manter: nada a fazer — {motivo}")
         return 0
     name = conf["name"]
-    compat = raiz / "compatibilitytools.d"
+    compat = args.compat_dir if args.compat_dir else raiz / "compatibilitytools.d"
     if not pinned_proton_installed(name, compat):
+        recusa = _steam_gate()
+        if recusa is not None:
+            print(
+                f"[proton-pin] manter: {name} ainda não está em {compat}, e a "
+                f"extração espera a Steam fechar ({recusa})"
+            )
+            return 3
         cache = args.cache_dir if args.cache_dir else default_cache_dir()
         result = ensure_pinned_proton(
             conf, compat_dir=compat, cache_dir=cache, downloader=None
@@ -2110,6 +2227,7 @@ def _cmd_manter(args: argparse.Namespace) -> int:
             todos=True,
             excluir=ler_jogos_fora_do_pino(),
             sem_entrada_de=jogos_sem_entrada_nova,
+            compat_dir=compat,
         ),
         mirados=len(appids),
         prefixo="manter",
@@ -2133,6 +2251,9 @@ def _cmd_lock(args: argparse.Namespace) -> int:
         # explícito é a escolha de quem chamou, e ali a classe não se infere.
         excluir=ler_jogos_fora_do_pino(),
         sem_entrada_de=None if explicitos else jogos_sem_entrada_nova,
+        # Sem o pino, o `--lock` recusa (rc 4) — o install só chega aqui com
+        # ele pronto, mas quem roda a linha à mão, não.
+        compat_dir=args.compat_dir if args.compat_dir else default_compat_dir(),
     )
     return _travar_e_contar(result, mirados=len(appids), prefixo="lock")
 
@@ -2166,11 +2287,28 @@ def _travar_e_contar(
         + f" — {resumo}{alvo}"
         + f" em {result['vdf']}"
     )
-    if result["status"] == "recusado":
+    if result["reason"] == "pino_ausente":
+        # 18/09/2026: travar aqui apontaria cada jogo para uma ferramenta que
+        # não existe. É espera, não falha — o mesmo `4` do adiamento.
         print(
-            "[proton-pin] feche a Steam (e o jogo) e rode de novo — editar o "
-            "config.vdf com ela viva perderia a edição."
+            f"[proton-pin] o Proton pinado não está instalado ({result.get('pino')}) "
+            "— nada foi travado: apontar os jogos para uma ferramenta que não "
+            "existe impediria cada um de abrir. Instale-o antes (--ensure, ou "
+            "o install); o vigia da Steam trava sozinho quando ele estiver lá."
         )
+        return RC_ADIADO
+    if result["status"] == "recusado":
+        if result["reason"] == "outra_trava_em_curso":
+            print(
+                "[proton-pin] outro processo do Hefesto está editando o "
+                "config.vdf agora (o vigia da Steam, o install ou o botão) — "
+                "nada foi travado; rode de novo em seguida."
+            )
+        else:
+            print(
+                "[proton-pin] feche a Steam (e o jogo) e rode de novo — editar o "
+                "config.vdf com ela viva perderia a edição."
+            )
         return 3
     if result["reason"] == "config_vdf_ausente":
         # Steam instalada que nunca entrou numa conta: não há falha, há espera.
@@ -2222,6 +2360,11 @@ def _cmd_unlock(args: argparse.Namespace) -> int:
         + f" — {result['reverted']} entradas revertidas"
     )
     if result["status"] == "recusado":
+        if result["reason"] == "outra_trava_em_curso":
+            print(
+                "[proton-pin] outro processo do Hefesto está editando o "
+                "config.vdf agora — nada foi revertido; rode de novo em seguida."
+            )
         return 3
     return 0 if result["status"] in ("unlocked", "noop") else 1
 

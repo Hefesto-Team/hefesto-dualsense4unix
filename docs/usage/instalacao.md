@@ -161,8 +161,8 @@ systemctl --user disable --now hefesto-steam-input-guard.path \
                                hefesto-steam-input-guard.timer
 ```
 
-`install.sh --keep-steam-input` pula o passo inteiro, vigia incluído; o
-`uninstall.sh` remove e desabilita as três.
+`install.sh --keep-steam-input` pula só o PSSupport: o vigia é instalado sem a
+linha dele (repõe o atalho e o Proton pinado); o `uninstall.sh` remove as três.
 
 Quatro curas de Bluetooth entram **por padrão** e merecem nome, porque mexem em
 serviço de sistema:

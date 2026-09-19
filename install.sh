@@ -3747,8 +3747,10 @@ fi
 # no cache, e o vigia da Steam (`--manter`) extrai e trava quando ela existir.
 #
 # Um significado por código (`proton_pin.RC_*`): 1 checksum, 2 sem rede e sem
-# cache, 4 adiado, 5 extração falhou (disco), 6 conf ilegível. Até aqui o 1
-# cobria também o traceback de um disco cheio, e a tela dizia "checksum".
+# cache, 4 adiado com o tarball no cache, 5 extração falhou (disco), 6 conf
+# ilegível, 7 Steam na Flatpak/Snap (nada baixado). Até aqui o 1 cobria também
+# o traceback de um disco cheio, e a tela dizia "checksum"; e o 4 cobria também
+# a caixa, com a promessa do vigia extraindo de um cache que ninguém encheu.
 step "11a" "Proton pinado: baixar e conferir a versão validada (antes de fechar a Steam)"
 PROTON_PIN_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/proton_pin.py"
 _pp_pronto=0
@@ -3802,6 +3804,9 @@ else
         5)
             warn "o Proton bateu com o SHA256 e a EXTRAÇÃO falhou — veja o espaço livre em disco e rode: python3 ${PROTON_PIN_PY} --ensure"
             ;;
+        7)
+            warn "pino do Proton ADIADO: a Steam desta máquina é Flatpak/Snap, e o Proton extraído aqui fora não serve dentro da caixa dela — nada foi baixado (o motivo está na linha acima)"
+            ;;
         *)
             warn "garantia da versão pinada falhou (rc=${_pp_rc}) — rode: python3 ${PROTON_PIN_PY} --ensure"
             ;;
@@ -3820,6 +3825,14 @@ fi
 # nunca aconteciam, e nada tentava de novo. Numa reinstalação havia ainda a
 # corrida da Steam subindo enquanto o lock passava pelo portão.
 #
+# O VIGIA DA STEAM ESTACIONA ANTES, e volta no 11d (18/09/2026). Ele dispara
+# quando a Steam sai (o `.path`) e ao ser ligado (o `.timer`, que "dispara na
+# hora"), e escreve os MESMOS arquivos que o 11, o 11b, o 11b-bis, o 11b-ter e
+# o 11c escrevem — o `localconfig.vdf` pelo mesmo `.hefesto-tmp`, sem trava.
+# Com os dois rodando juntos, um perdia a edição do outro. Por isso ele para
+# aqui, o passo 11 o habilita sem `--now`, e ele volta no fim — ou no `trap`,
+# se o install morrer no meio.
+#
 # Agora ela fecha aqui, uma vez, e reabre no 11d, uma vez — só se estava
 # aberta. Os `--stop-steam` do 11b e do 11b-bis continuam na linha: com a
 # Steam já fechada eles não fecham nem reabrem nada, e se esta janela não
@@ -3833,7 +3846,20 @@ _reabrir_a_steam_se_o_install_fechou() {
     _steam_fechada_pelo_install=0
     python3 "${LAUNCH_MIGRATE_PY}" --reabrir-steam >/dev/null 2>&1 || true
 }
+_vigia_parado_pelo_install=0
+_religar_o_vigia_se_o_install_parou() {
+    [[ "${_vigia_parado_pelo_install:-0}" -eq 1 ]] || return 0
+    _vigia_parado_pelo_install=0
+    systemctl --user start hefesto-steam-input-guard.path hefesto-steam-input-guard.timer >/dev/null 2>&1 || true
+}
+if [[ "${DRY_RUN:-0}" -ne 1 ]]; then
+    systemctl --user stop hefesto-steam-input-guard.path hefesto-steam-input-guard.timer >/dev/null 2>&1 || true
+    _vigia_parado_pelo_install=1
+    # Morrer entre aqui e o 11d não pode deixar a pessoa sem Steam nem sem vigia.
+    trap '_cleanup_sudo_keepalive; _reabrir_a_steam_se_o_install_fechou; _religar_o_vigia_se_o_install_parou' EXIT
+fi
 if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    _faria "parar o vigia da Steam durante os passos 11 a 11c (ele escreve os mesmos arquivos) e religá-lo no fim"
     _faria "FECHAR a Steam, se ela estiver aberta, UMA vez para os passos 11 a 11c (ela regrava os arquivos ao sair, e com ela viva as edições seriam engolidas), e reabri-la no fim. Com um JOGO aberto, nada é fechado e esses passos adiam."
 elif [[ -f "${LAUNCH_MIGRATE_PY}" ]] && command -v python3 >/dev/null 2>&1; then
     printf '      se a Steam estiver aberta, ela fecha agora UMA vez e reabre no fim\n'
@@ -3844,8 +3870,6 @@ elif [[ -f "${LAUNCH_MIGRATE_PY}" ]] && command -v python3 >/dev/null 2>&1; then
     case "${_fs_rc}" in
         0)
             _steam_fechada_pelo_install=1
-            # Morrer entre aqui e o 11d não pode deixar a pessoa sem Steam.
-            trap '_cleanup_sudo_keepalive; _reabrir_a_steam_se_o_install_fechou' EXIT
             ;;
         4)
             :
@@ -3881,7 +3905,6 @@ elif [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     _faria "guardar um backup .bak.steam-input-<carimbo> AO LADO de cada vdf tocado, ANTES de escrever (e só quando há mudança de verdade)"
     _faria "  (para desfazer: bash scripts/disable_steam_input.sh --restore)"
     _faria "  (para ver o estado de hoje sem mudar nada: bash scripts/disable_steam_input.sh --status)"
-    _faria "instalar o vigia do vdf em ${HOME}/.config/systemd/user/hefesto-steam-input-guard.{path,timer,service} e habilitá-lo (repõe o que a Steam reescrever ao sair)"
 elif [[ ! -x "${ROOT_DIR}/scripts/disable_steam_input.sh" ]]; then
     warn "scripts/disable_steam_input.sh ausente ou não-executável — pulado"
 else
@@ -3891,7 +3914,20 @@ else
     else
         warn "disable_steam_input.sh falhou — rode: bash scripts/disable_steam_input.sh --apply"
     fi
+fi
 
+# O VIGIA SAIU DO OPT-OUT DO PSSUPPORT — 18/09/2026. Ele morava dentro do `else`
+# acima, e o `--keep-steam-input` (que é opt-out SÓ do PSSupport) levava junto
+# os outros dois passos dele: o atalho de inicialização e o Proton pinado. Na
+# máquina que instalou antes de existir Steam, o pino ficava no cache para
+# sempre, porque só o `--manter` do vigia o extrai sem o install. Agora ele é
+# instalado sempre; cada opt-out tira só a SUA linha da unidade.
+if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    _faria "instalar o vigia do vdf em ${HOME}/.config/systemd/user/hefesto-steam-input-guard.{path,timer,service} e habilitá-lo (repõe o que a Steam reescrever ao sair)"
+    if [[ "${KEEP_STEAM_INPUT}" -eq 1 ]]; then
+        _faria "  (com --keep-steam-input, sem a linha que desliga o Steam Input: ele repõe só o atalho de inicialização e o Proton pinado)"
+    fi
+else
     # Guard: path unit + timer que desfazem o que a Steam reescreve no vdf
     # (update/saída). FEAT-STEAM-INPUT-SELF-HEAL-01 (Steam Input OFF) e
     # CARONA-NO-GUARD-01 (o wrapper hefesto-launch, na carona do mesmo gatilho:
@@ -3931,14 +3967,20 @@ else
     # repõe o pino do cache e trava todo jogo quando a Steam sai. Com
     # `--no-proton-pin` a linha dele SAI da unidade — a pessoa disse não, e o
     # vigia não pode desdizer a cada meia hora.
-    _guard_sem_pino=()
+    _guard_linhas_que_saem=()
     if [[ "${NO_PROTON_PIN}" -eq 1 ]]; then
-        _guard_sem_pino=(-e '/^ExecStart=.*__PROTON_PIN__/d')
+        _guard_linhas_que_saem=(-e '/^ExecStart=.*__PROTON_PIN__/d')
+    fi
+    # O mesmo para o `--keep-steam-input`: sai só a linha que desliga o Steam
+    # Input. E sai também quando o script dela falta, porque a linha não tem o
+    # `-` na frente: falhando, ela derrubaria os passos que vêm depois.
+    if [[ "${KEEP_STEAM_INPUT}" -eq 1 || ! -x "${ROOT_DIR}/scripts/disable_steam_input.sh" ]]; then
+        _guard_linhas_que_saem+=(-e '/^ExecStart=.*__SCRIPT__/d')
     fi
     _guard_tmp="$(mktemp)"
     # A forma `${a[@]+…}` e não `"${a[@]}"`: com `set -u`, o bash anterior ao
     # 4.4 trata o vetor VAZIO como variável não definida e mataria o install.
-    if sed ${_guard_sem_pino[@]+"${_guard_sem_pino[@]}"} \
+    if sed ${_guard_linhas_que_saem[@]+"${_guard_linhas_que_saem[@]}"} \
         -e "s#__SCRIPT__#${ROOT_DIR}/scripts/disable_steam_input.sh#g" \
         -e "s#__SENTINELA__#${SENTINELA_PY}#g" \
         -e "s#__PROTON_PIN__#${PROTON_PIN_PY}#g" \
@@ -3953,10 +3995,12 @@ else
     if [[ "${_guard_ok}" -eq 0 ]]; then
         warn "vigia do Steam Input NÃO instalado (asset ausente em assets/) — o que a Steam reescrever ao sair não será reposto sozinho"
     fi
-    unset _guard_ok _guard_tmp _guard_sem_pino
+    unset _guard_ok _guard_tmp _guard_linhas_que_saem
+    # `enable` SEM `--now`: ligado agora, o `.timer` dispararia na hora, no meio
+    # dos passos que editam os mesmos arquivos. Ele liga no fim (11d).
     if systemctl --user daemon-reload 2>/dev/null \
-       && systemctl --user enable --now hefesto-steam-input-guard.path hefesto-steam-input-guard.timer 2>/dev/null; then
-        printf '      guard do Steam Input + wrapper habilitado (path + timer 30min)\n'
+       && systemctl --user enable hefesto-steam-input-guard.path hefesto-steam-input-guard.timer 2>/dev/null; then
+        printf '      guard do Steam Input + wrapper habilitado (path + timer 30min; liga no fim do install)\n'
     else
         warn "não consegui habilitar o guard --user (sessão systemd ausente?) — será pego no próximo login"
     fi
@@ -4205,8 +4249,10 @@ fi
 if [[ "${_steam_fechada_pelo_install}" -eq 1 ]]; then
     step "11d" "Steam: reabrir (ela estava aberta quando o install começou)"
     _reabrir_a_steam_se_o_install_fechou
-    trap _cleanup_sudo_keepalive EXIT
 fi
+# E o vigia, que o 11a-bis estacionou, volta a vigiar — com ou sem Steam.
+_religar_o_vigia_se_o_install_parou
+trap _cleanup_sudo_keepalive EXIT
 
 # ---------------------------------------------------------------------------
 # Conferência final: o doctor

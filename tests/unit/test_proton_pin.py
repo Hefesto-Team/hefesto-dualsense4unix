@@ -548,6 +548,12 @@ def test_lock_proton_for_all_games_zero_arg_traduz_o_contrato_da_gui(
     # versão Windows, rodou. Sem esta pasta a régua mediria um jogo que pode
     # ser nativo do Linux, e o lock certo é não criar entrada para ele.
     (steamapps / "compatdata" / "1599660").mkdir(parents=True)
+    # O PINO INSTALADO (18/09/2026): sem ele a trava recusa (`pino_ausente`),
+    # e esta régua mede o caminho em que ele está lá.
+    pino = tmp_path / ".steam/steam/compatibilitytools.d" / PIN_NAME
+    pino.mkdir(parents=True)
+    (pino / "proton").write_text("#!/bin/sh\n", encoding="utf-8")
+    (pino / "version").write_text(f"1 {PIN_NAME}\n", encoding="utf-8")
     vdf = tmp_path / "config.vdf"
     vdf.write_text(_config_vdf(None), encoding="utf-8")
     state = tmp_path / "state" / "proton-pin-lock.json"

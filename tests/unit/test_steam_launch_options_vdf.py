@@ -545,8 +545,11 @@ def test_install_migra_fora_do_bloco_do_steam_input():
     # também o wrapper, CARONA-NO-GUARD-01) e este teste reprovou sem que nada
     # de estrutural tivesse mudado — mensagem de tela é para ser reescrita, e
     # um teste que a trava como âncora cobra pedágio por melhorar texto.
+    #
+    # 18/09/2026: a habilitação perdeu o `--now` (o vigia liga no fim do
+    # install, para não correr junto dos passos que editam os mesmos arquivos).
     pos_fim_bloco_steam_input = texto.index(
-        "systemctl --user enable --now hefesto-steam-input-guard"
+        "systemctl --user enable hefesto-steam-input-guard"
     )
     pos_migrate = texto.index("--migrate --stop-steam")
     assert pos_migrate > pos_fim_bloco_steam_input
