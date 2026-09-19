@@ -288,20 +288,45 @@ class TestOJogoSeguinteNaoHerdaOCanal:
         )
         assert len(_bancada) == 2, "o segundo start tinha de RECRIAR o vpad"
 
-    def test_a_escolha_global_dela_continua_valendo_para_quem_nao_opina(self) -> None:
-        """O outro lado, e ele não pode cair junto com o vazamento.
+    def test_quem_nao_opina_nasce_dualsense_mesmo_com_o_global_dizendo_xbox(
+        self,
+    ) -> None:
+        """Um start sem opinião nasce DualSense — e não herda de lugar nenhum.
 
-        `gamepad_caminho.flag` é a escolha dela e o boot a relê. Um jogo sem
-        opinião herda DELA — o que não pode é herdar do jogo anterior. Sem esta
-        régua, a cura poderia virar *"ninguém herda nada"*, e o chip de modo
-        dela deixaria de valer no boot seguinte sem ninguém notar.
+        CAMINHO-CONTAGIO-01, ponto 2 do escopo de 19/09/2026, e é a prova de
+        pronto que a sprint escreve: *"perfil sem `mode` sobe em `uhid` com a
+        máscara `dualsense`, mesmo com o arquivo global dizendo `xbox`"*.
+
+        NOTA DATADA — 19/09/2026, E ELA CADUCA UMA RÉGUA DE 17/09. Este teste
+        chamava-se `test_a_escolha_global_dela_continua_valendo_para_quem_nao_opina`
+        e exigia o CONTRÁRIO: com o global em `xbox`, um jogo sem opinião tinha
+        de subir em `uinput`. Era certo enquanto a herança fosse a cura — a
+        O-CAMINHO-NAO-VAZA-01 mudou a FONTE da herança e o vazamento voltou por
+        outra porta, porque o arquivo global é escrito por TODO gesto manual.
+
+        A decisão dela, ao ver a causa:
+
+            *"sim tudo dualsense, tudo ligado mascara dualsense por default mas
+            esse vazamento me preocupa"*  <!-- noqa-acento: citação literal dela -->
+
+        Enquanto um start sem opinião herdar de QUALQUER lugar, existe um lugar
+        a envenenar. O caminho DualSense é o que tem todas as features, e é o
+        default que a ordem dela de 17/09 já pedia.
+
+        O `gamepad_caminho_global` continua existindo e continua sendo escrito
+        — é o que a tela mostra como escolha dela. O que mudou é que ninguém
+        NASCE dele, e é isso que esta régua mede.
         """
         daemon = _daemon(escolha_dela="xbox")
 
         _o_jogo_que_nao_opina(daemon)
 
-        assert daemon._gamepad_device.backend == "uinput"
-        assert daemon._gamepad_device.caminho == "xbox"
+        assert daemon._gamepad_device.backend == "uhid"
+        assert daemon._gamepad_device.caminho == "dualsense"
+        # E a escolha dela NÃO foi apagada pelo caminho — ela continua no slot,
+        # para a tela ter o que mostrar. Quem a devolve ao default é o boot
+        # (`lifecycle._a_escolha_dela_sem_o_vazamento`), uma vez só.
+        assert daemon.config.gamepad_caminho_global == "xbox"
 
     def test_a_mordida_a_heranca_pelo_slot_da_sessao_devolve_o_defeito(
         self, monkeypatch: pytest.MonkeyPatch

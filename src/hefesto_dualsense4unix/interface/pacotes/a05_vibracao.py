@@ -509,7 +509,7 @@ def _pct_da_coluna(policy: str, custom: Any) -> dict[str, str]:
     mesma tela, promete o contrário: *"Economia 30% · Balanceado 100% · Máximo
     150%"*.
 
-    O PRODUTO JÁ SABIA, por escrito: `daemon/lifecycle.py:3459-3468` conta que
+    O PRODUTO JÁ SABIA, por escrito: `daemon/lifecycle.py:3506-3515` conta que
     `_last_auto_mult` fica **preso no default 0.7** em passthrough ocioso e que,
     ao vivo, `policy=max` com `rumble_mult_applied=0.7` *"parecia atenuação real
     do rumble do jogo"*. A aba publicava exatamente essa aparência.
