@@ -159,3 +159,56 @@ def test_o_endpoint_liga_os_motores_ao_publicar() -> None:
         "em que os canais 3-4 nasciam em 0% e o jogo escrevia no nada"
     )
     assert escritas[0][-2:] == [eh.VOLUME_DOS_MOTORES, eh.VOLUME_DOS_MOTORES]
+
+
+# ---------------------------------------------------------------------------
+# A VARREDURA — e ela nasceu de um erro meu, medido no aparelho
+# ---------------------------------------------------------------------------
+#
+# A primeira volta desta cura chamou `nome_do_sink(uniq)`, que devolve
+# `hefesto_som_<uniq>`: o null-sink de SOM por rádio, de DOIS canais. A cura
+# rodou no ciclo, não achou motor nenhum e devolveu `False` — e os volumes na
+# máquina dela ficaram exatamente como estavam. Instalei, medi, e não mudou
+# nada. O NOME DO SINK QUE TEM MOTORES NÃO SE DERIVA DO `uniq`.
+
+LISTA_CURTA = (
+    "202\talsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
+    "Controller_HEFESTOe64203-00.HiFi__Speaker__sink\tPipeWire\t"
+    "float32le 4ch 48000Hz\tSUSPENDED\n"
+    "104195\talsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
+    "Controller-00.HiFi__Speaker__sink\tPipeWire\ts16le 4ch 48000Hz\tRUNNING\n"
+    "104104\thefesto_som_e64203\tPipeWire\ts16le 2ch 48000Hz\tIDLE\n"
+    "55\talsa_output.pci-0000_0a_00.1.hdmi-stereo\tPipeWire\t"
+    "s16le 2ch 48000Hz\tSUSPENDED\n"
+)
+
+
+def test_a_varredura_acha_os_dois_sinks_de_quatro_canais() -> None:
+    """Os dois que têm motor, e nenhum dos que não têm."""
+    achados = bt.sinks_com_motores(lambda _c: LISTA_CURTA)
+    assert len(achados) == 2
+    assert all("4ch" not in a for a in achados)
+    assert any("HEFESTO" in a for a in achados), "o endpoint do produto ficou de fora"
+    assert any("Controller-00" in a for a in achados), "o sink do CABO ficou de fora"
+
+
+def test_a_varredura_ignora_o_estereo_e_o_que_nao_e_dualsense() -> None:
+    """`hefesto_som_*` tem 2 canais e o HDMI não é controle — nenhum entra."""
+    achados = bt.sinks_com_motores(lambda _c: LISTA_CURTA)
+    assert not any("hefesto_som" in a for a in achados)
+    assert not any("hdmi" in a for a in achados)
+
+
+def test_servidor_mudo_devolve_lista_vazia() -> None:
+    assert bt.sinks_com_motores(lambda _c: None) == []
+    assert bt.sinks_com_motores(lambda _c: "") == []
+
+
+def test_o_nome_do_sink_de_som_nao_serve_para_isto() -> None:
+    """A régua do erro: `nome_do_sink` é de SOM, e som não tem motor.
+
+    Sem esta linha, a próxima pessoa repete a volta que eu já paguei.
+    """
+    de_som = bt.nome_do_sink("444648e64203")
+    assert de_som == "hefesto_som_e64203"
+    assert de_som not in bt.sinks_com_motores(lambda _c: LISTA_CURTA)

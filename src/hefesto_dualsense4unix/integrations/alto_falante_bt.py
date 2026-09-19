@@ -2516,6 +2516,44 @@ def garantir_motores_audiveis(
     return True
 
 
+def sinks_com_motores(runner: Callable[[list[str]], str | None] | None = None
+                      ) -> list[str]:
+    """Os sinks de QUATRO canais do DualSense que estão no servidor de som.
+
+    HAPTICA-CABO-VOLUME-01, 19/09/2026 — e esta varredura existe porque a
+    primeira volta da cura chamou `nome_do_sink(uniq)`, que devolve
+    ``hefesto_som_<uniq>``: o null-sink de SOM por rádio, de DOIS canais. Ele
+    não tem motor nenhum, e a cura não mexeu em nada. **O nome do sink que tem
+    motores não é derivável do `uniq`** — são dois, de origens diferentes:
+
+    ===================================  ==========================================
+    sink                                 quem o cria
+    ===================================  ==========================================
+    ``alsa_output.usb-Sony_…-00…sink``   o ALSA, quando o controle chega pelo CABO
+    ``alsa_output.usb-…HEFESTO…-00…``    o produto (`EndpointDeHaptica`), para o Wine
+    ===================================  ==========================================
+
+    Perguntar ao SERVIDOR quais têm quatro canais alcança os dois sem adivinhar
+    nome, e é a regra desta casa: *quando um valor tem dono, a régua pergunta ao
+    dono*.
+    """
+    correr: Any = runner or rodar_pactl
+    saida = correr(["pactl", "list", "short", "sinks"])
+    if not saida:
+        return []
+    achados = []
+    for linha in saida.splitlines():
+        campos = linha.split("\t")
+        if len(campos) < 5:
+            continue
+        nome, formato = campos[1], campos[3]
+        if "4ch" not in formato:
+            continue
+        if "Sony" in nome or "DualSense" in nome or "HEFESTO" in nome:
+            achados.append(nome)
+    return achados
+
+
 def sinks_que_tocam(
     nomes: Iterable[str],
     runner: Callable[[list[str]], str | None] | None = None,
