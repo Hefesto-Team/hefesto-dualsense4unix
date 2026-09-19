@@ -2179,7 +2179,7 @@ def _numeros_sem_vpad(
     vpad por jogador* (``_spawn_player``), e pôr-se no meio é exatamente o que a
     Conexão Nativa dispensa — abrir aquele gate **desfaria o modo que ela
     pediu**, pela mesma razão que já mantém a exceção de
-    ``lifecycle.py:1888-1889``. Ou o jogo conta os dois físicos sozinho, ou
+    ``lifecycle.py:1900-1901``. Ou o jogo conta os dois físicos sozinho, ou
     alguém tem de estar no meio (o Caminho D, que é oferta e continua sem a
     palavra dela). A régua que trava isto é
     ``tests/unit/test_o_coop_vive_na_conexao_nativa.py``.
