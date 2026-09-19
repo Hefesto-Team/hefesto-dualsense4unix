@@ -3,8 +3,8 @@
 #
 # Verifica daemon, serviço, socket IPC, regras udev (incluindo a consistência do
 # nome de unit do hotplug), uinput, a gravabilidade do nó de LED do DualSense
-# físico (cor por-controle via sysfs, regra 77), applet COSMIC (.desktop + ícone
-# resolvível), o detector de janela do autoswitch (perfil-por-jogo) e os perfis
+# físico (cor por-controle via sysfs, regra 77), a bandeja do sistema (o
+# autostart do tray, o hospedeiro SNI e o processo), o detector de janela do autoswitch (perfil-por-jogo) e os perfis
 # INALCANÇÁVEIS por ele (sem critério de janela: nunca ativam sozinhos), o sequestro
 # do microfone pelo WirePlumber e o alcance do controle; a autoridade de
 # exibição do co-op (NUMA-05: quem manda em lightbar/numeração agora — jogo,
@@ -981,59 +981,67 @@ check_usb_storm_config_conflict() {
     fi
 }
 
-check_applet() {
-    if [[ ! -e "${APPLET_DESKTOP}" ]]; then
-        warn "applet COSMIC não instalado (.desktop ausente) — opcional: $(conselho_de_instalacao --enable-cosmic-applet)"
-        return
-    fi
-    if grep -q '^X-CosmicApplet=true' "${APPLET_DESKTOP}"; then
-        pass "applet .desktop com X-CosmicApplet=true"
-    else
-        fail "applet .desktop sem X-CosmicApplet=true"
-    fi
-    if grep -q '^X-HostWaylandDisplay=true' "${APPLET_DESKTOP}"; then
-        pass "applet .desktop com X-HostWaylandDisplay=true"
-    else
-        warn "applet .desktop sem X-HostWaylandDisplay=true — recomendado p/ falar com o sistema (reinstale o applet)"
-    fi
-    local icon
-    icon="$(sed -n 's/^Icon=//p' "${APPLET_DESKTOP}" | head -1)"
-    if [[ -n "${icon}" ]] && ls /usr/share/icons/hicolor/*/apps/"${icon}".* >/dev/null 2>&1; then
-        pass "ícone do applet resolvível (${icon})"
-    else
-        fail "ícone do applet NÃO resolvível (Icon=${icon}) — falta o arquivo correspondente"
-    fi
-    if [[ -e "/usr/share/icons/hicolor/256x256/apps/com.vitoriamaria.HefestoDualsense4Unix.png" ]]; then
-        pass "ícone PNG 256x256 do applet presente"
-    else
-        warn "ícone PNG 256x256 do applet ausente — a lista de Miniaplicativos pode não mostrar o ícone colorido"
-    fi
-    # O VALIDADOR DECIDE PELA SAÍDA, NÃO PELO `rc` — 19/09/2026,
-    # `DESKTOP-CATEGORIA-01`, e a diferença tem número: com
-    # `Categories=X-COSMIC;Utility;Settings;` o `rc` é **0** e o validador
-    # ainda emite `hint: contains more than one main category`. A versão
-    # anterior deste bloco mandava a saída para `/dev/null` e decidia pelo
-    # `rc` — ela diria `pass` sobre esse arquivo.
-    #
-    # É a assinatura que esta casa persegue há um mês: *régua verde sobre
-    # defeito vivo*. E o `info "emitiu avisos"` do ramo de erro era a outra
-    # metade do mesmo defeito — ele dizia QUE havia aviso e nunca QUAL, então
-    # ninguém tinha como agir sem rodar o comando à mão.
-    if command -v desktop-file-validate >/dev/null 2>&1; then
-        local saida_do_validador
-        saida_do_validador="$(desktop-file-validate "${APPLET_DESKTOP}" 2>&1 || true)"
-        if [[ -z "${saida_do_validador}" ]]; then
-            pass "desktop-file-validate sem erros nem avisos"
+# A BANDEJA DO PRODUTO É O TRAY — 19/09/2026, ordem dela: *"desabilitamos o
+# applet pela complexidade. o tray faz o mesmo mas melhor."*
+#
+# Esta função auditava a saúde do applet COSMIC: `X-CosmicApplet`,
+# `X-HostWaylandDisplay`, o ícone, o validador. Auditar a saúde de um
+# componente aposentado é a definição de *medir outra coisa que não o
+# produto* — e pior, havia um `fail` armado ali, que passaria a derrubar o
+# diagnóstico de quem ainda tivesse o binário velho parado no disco.
+#
+# O QUE ELA MEDE AGORA é a corrente que leva o menu à barra dela:
+#   1. o autostart existe? (sem ele o tray não sobe no login)
+#   2. o hospedeiro da bandeja existe? (sem ele o ícone não tem onde aparecer)
+#   3. o tray está de pé?
+# E, só então, o applet — como RESTO a remover, não como produto a auditar.
+check_bandeja() {
+    local autostart="${HOME}/.config/autostart/hefesto-dualsense4unix-tray.desktop"
+    if [[ -r "${autostart}" ]]; then
+        local exec_do_autostart
+        exec_do_autostart="$(sed -n 's/^Exec=//p' "${autostart}" | head -1)"
+        if [[ "${exec_do_autostart}" == *--tray* ]]; then
+            pass "autostart do tray instalado (${exec_do_autostart})"
         else
-            # UMA LINHA POR ACHADO, com o caminho podado: o que sobra é
-            # `error: …` ou `hint: …`, que é o que a pessoa precisa ler.
-            while IFS= read -r linha_do_validador; do
-                [[ -n "${linha_do_validador}" ]] || continue
-                warn "applet .desktop — ${linha_do_validador#"${APPLET_DESKTOP}": }"
-            done <<<"${saida_do_validador}"
+            # Um autostart que NÃO pede o tray abriria a JANELA a cada login,
+            # na frente dela. É `fail` de propósito.
+            fail "o autostart existe mas não pede o tray (Exec=${exec_do_autostart}) — reinstale"
         fi
+    else
+        warn "autostart do tray ausente — o ícone não sobe no login. Para instalar: $(conselho_de_instalacao)"
+    fi
+
+    # O HOSPEDEIRO DA BANDEJA. Este projeto afirmou por um mês que em Pop!_OS
+    # COSMIC *"o org.kde.StatusNotifierWatcher que o libayatana usa não
+    # existe"* — e foi essa premissa que fez nascer uma janela compacta
+    # surrogate, hoje removida. Medido em 19/09/2026: ele EXISTE, servido pelo
+    # `cosmic-applet-status-area`. Aqui a afirmacao vira medicao, e a maquina
+    # de quem le responde por si.
+    local dono_do_watcher=""
+    if command -v busctl >/dev/null 2>&1; then
+        dono_do_watcher="$(busctl --user status org.kde.StatusNotifierWatcher 2>/dev/null \
+            | sed -n 's/^Comm=//p' | head -1)"
+    fi
+    if [[ -n "${dono_do_watcher}" ]]; then
+        pass "hospedeiro da bandeja de pé (org.kde.StatusNotifierWatcher: ${dono_do_watcher})"
+    else
+        warn "nenhum org.kde.StatusNotifierWatcher no barramento — o ícone do tray não tem onde aparecer. No COSMIC, acrescente «Área de status» em Config. > Paineis > Miniaplicativos"
+    fi
+
+    if pgrep -f 'cli.app tray|hefesto-dualsense4unix tray' >/dev/null 2>&1; then
+        pass "tray de pé"
+    else
+        info "tray não está rodando — ele sobe no próximo login, ou agora com: ./run.sh --tray"
+    fi
+
+    # O APPLET, COMO RESTO. Ele não é mais instalado por default (install.sh,
+    # passo 9), e um binário parado não se anuncia sozinho: sem esta linha ela
+    # veria dois ícones na barra um dia e leria como defeito novo.
+    if [[ -e "${APPLET_DESKTOP}" || -e "/usr/local/bin/hefesto-dualsense4unix-applet" ]]; then
+        info "há um applet COSMIC instalado de antes — ele foi APOSENTADO em 19/09/2026 e o tray o substitui. Para removê-lo: ./uninstall.sh"
     fi
 }
+
 
 # BUG-WIREPLUMBER-FIX-FALSE-SUCCESS-01 / ADR-019: checa o microfone ATIVO
 # (pactl get-default-source; fallback ao '*' do wpctl), não o `configured`.
@@ -6731,8 +6739,8 @@ main() {
     check_bt_sdp_cache_envenenado
     check_bt_paired_sem_bonded
     check_exame_da_mesa
-    hdr "applet COSMIC"
-    check_applet
+    hdr "a bandeja do sistema (tray)"
+    check_bandeja
     hdr "detector de janela (autoswitch / perfil-por-jogo)"
     check_window_detect
     check_perfis_inalcancaveis

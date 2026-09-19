@@ -148,3 +148,61 @@ def test_o_applet_ja_instalado_e_anunciado_e_nao_apagado() -> None:
         "o passo 9 apagando arquivo: o install não desfaz o que não instalou "
         f"nesta corrida. A remoção é do ./uninstall.sh.\n{executa}"
     )
+
+
+# ---------------------------------------------------------------------------
+# O DOCTOR MEDE A BANDEJA, e não a saúde de um componente aposentado
+# ---------------------------------------------------------------------------
+# O `check_applet` auditava o `.desktop` do applet COSMIC — com um `fail`
+# armado. Depois de 19/09 isso derrubaria o diagnóstico de quem tivesse o
+# binário velho parado no disco, por um componente que ninguém deve usar.
+#
+# Medido na máquina dela em 19/09: o diagnóstico caiu de 9 avisos para 7, e os
+# dois que saíram eram exatamente as duas linhas do validador sobre o
+# `Categories=COSMIC;` do applet instalado em 16h30.
+
+DOCTOR = RAIZ / "scripts" / "doctor.sh"
+
+
+def test_o_doctor_mede_a_bandeja_e_nao_audita_o_applet() -> None:
+    texto = DOCTOR.read_text(encoding="utf-8")
+    assert "check_bandeja()" in texto, "a função check_bandeja não existe"
+    chamadas = [
+        linha
+        for linha in texto.splitlines()
+        if "check_applet" in linha and not linha.lstrip().startswith("#")
+    ]
+    assert not chamadas, (
+        "check_applet ainda é chamado — ele audita um componente aposentado, "
+        f"e tinha um `fail` armado:\n{chamadas}"
+    )
+
+
+def test_o_check_da_bandeja_mede_os_tres_elos() -> None:
+    texto = DOCTOR.read_text(encoding="utf-8")
+    corpo = texto.split("check_bandeja() {", 1)[-1].split("\n}\n", 1)[0]
+    for agulha, porque in (
+        (
+            "autostart/hefesto-dualsense4unix-tray.desktop",
+            "sem o autostart o ícone não sobe no login",
+        ),
+        (
+            "org.kde.StatusNotifierWatcher",
+            "sem o hospedeiro o ícone não tem onde aparecer",
+        ),
+        ("pgrep", "e o terceiro elo é o processo estar de pé"),
+    ):
+        assert agulha in corpo, f"check_bandeja não mede {agulha!r}: {porque}"
+
+
+def test_o_applet_parado_e_recado_e_nunca_falha() -> None:
+    texto = DOCTOR.read_text(encoding="utf-8")
+    corpo = texto.split("check_bandeja() {", 1)[-1].split("\n}\n", 1)[0]
+    trecho = corpo.split("APPLET_DESKTOP", 1)[-1]
+    assert "fail " not in trecho, (
+        "um applet aposentado parado no disco não pode derrubar o diagnóstico "
+        "dela — o recado é `info`, com a linha para remover."
+    )
+    assert "./uninstall.sh" in trecho, (
+        "o recado tem de dizer COMO remover; binário parado não se anuncia."
+    )
