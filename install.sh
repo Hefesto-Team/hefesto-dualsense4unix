@@ -2861,14 +2861,31 @@ if [[ "${DESKTOP_IS_COSMIC}" -eq 1 ]]; then
             "$(command -v wlrctl)"
     fi
 
-    # Caminho 2: XWayland (fallback, complementar). Se usuário passou
-    # --force-xwayland via CLI, pula o prompt.
-    if [[ "${FORCE_XWAYLAND}" -eq 0 ]]; then
-        printf '\n      Caminho alternativo: rodar a GUI sob XWayland. Cobre so\n'
-        printf '      janelas XWayland (Steam, Proton), mas não precisa wlrctl.\n\n'
-        ask_yn "ativar GDK_BACKEND=x11 no atalho (recomendado como complemento)?" \
-            "${AUTO_YES}" "y"
-        [[ "${REPLY,,}" =~ ^y ]] && FORCE_XWAYLAND=1
+    # Caminho 2: XWayland. **DEIXOU DE SER O DEFAULT EM 19/09/2026**, por
+    # ordem dela, e a razão de ele ter existido morreu antes disso.
+    #
+    # ELE NASCEU PARA A JANELA GTK: `run.sh:80-86` forçava `GDK_BACKEND=x11`
+    # porque *"os popups de GtkMenu quebram no Wayland nativo"*. A janela GTK
+    # saiu do disco em 06/09 (`D-0609-GTK-LEVA-INTEIRA`), e a interface nova
+    # **não tem `GtkMenu`**: as dicas são elementos da PÁGINA
+    # (`interface/topo.html`, a `.dica`) e o `<select>` usa `appearance:none` —
+    # as duas curas nasceram justamente para não depender do popup do
+    # compositor.
+    #
+    # E O XWAYLAND COBRA: sob ele o GTK3 **não lê o tema do portal**
+    # (`app/theme.py:327`), e foi assim que o tema dela se perdeu — o defeito
+    # ficou registrado nas quinze queixas de 04/09.
+    #
+    # MEDIDO EM WAYLAND NATIVO NA MÁQUINA DELA, 19/09, com a interface real:
+    #
+    #     backend : GdkWaylandDisplay   ·  página carregou: True  ·  erro: None
+    #     barra   : 3 botões            ·  dicas na página: sim
+    #
+    # A FLAG `--force-xwayland` FICA como escape declarado: quem precisar dela
+    # (uma sessão sem Wayland, um compositor que não desenhe bem o WebKit)
+    # continua tendo o caminho, e agora por escolha, não por default.
+    if [[ "${FORCE_XWAYLAND}" -eq 1 ]]; then
+        printf '\n      XWayland pedido por --force-xwayland (o default é Wayland nativo).\n'
     fi
 fi
 
@@ -2882,9 +2899,15 @@ fi
 # Aqui havia `Exec=${ROOT_DIR}/run.sh` quando o `run.sh` abria a janela GTK
 # velha. O motor GTK não sumiu (os 74 handlers de `app/actions/` são o que a
 # interface nova chama); o que mudou foi o LANÇADOR.
+# O `.desktop` E O LANÇADOR DO TRAY PRECISAM DIZER A MESMA COISA — 19/09/2026.
+# Até aqui o `.desktop` do menu dela abria com `GDK_BACKEND=x11` e o
+# `~/.local/bin/hefesto-dualsense4unix-gui` (que o «Abrir painel» do tray usa)
+# NÃO: dois caminhos para a MESMA janela, com backends diferentes. Um deles
+# perdia o tema do portal e o outro não, e ninguém tinha como saber qual janela
+# estava vendo. Com o XWayland fora do default, os dois passam a ser iguais.
 if [[ "${FORCE_XWAYLAND}" -eq 1 ]]; then
     _EXEC_LINE="env GDK_BACKEND=x11 ${ROOT_DIR}/interface.sh"
-    printf '      .desktop com GDK_BACKEND=x11 (fallback XWayland)\n'
+    printf '      .desktop com GDK_BACKEND=x11 (--force-xwayland)\n'
 else
     _EXEC_LINE="${ROOT_DIR}/interface.sh"
 fi

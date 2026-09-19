@@ -68,20 +68,37 @@ if [[ -n "${GDK_PIXBUF_MODULE_FILE:-}" && -r "${GDK_PIXBUF_MODULE_FILE}" ]]; the
 fi
 
 if [[ "$MODE" == "gui" ]]; then
-    # XWayland no COSMIC: popups de GtkMenu/GtkComboBox quebram no cosmic-comp
-    # Wayland nativo (fundo claro, mal-posicionados, grab quebrado / "segurar
-    # o clique"). ATÉ 06/09/2026 `app/main.py` também fazia isto, em Python e
-    # com critério fino (conferia se havia X VIVO); ele saiu com a janela GTK
-    # (`GTK-3`, `D-0609-GTK-LEVA-INTEIRA`) e a versão fina mudou de casa para
-    # `app/arranque.forcar_xwayland_no_cosmic`, que HOJE NINGUÉM CHAMA. Ou seja:
-    # este bloco deixou de ser a garantia grossa de um caminho e passou a ser a
-    # ÚNICA cura. Fechar essa distância é trabalho de `scripts/abrir_interface.py`.
-    # Aqui garante o caminho dev/launcher/.desktop antes do Python subir. A sessão COSMIC do Pop!_OS
-    # exporta GDK_BACKEND=wayland,x11 (prefere wayland) — sobrescrevemos para
-    # x11. Opt-out: HEFESTO_DUALSENSE4UNIX_NO_XWAYLAND=1.
-    if [[ "${HEFESTO_DUALSENSE4UNIX_NO_XWAYLAND:-}" != "1" ]] \
-       && [[ "${GDK_BACKEND:-}" != "x11" ]] \
-       && [[ "${XDG_CURRENT_DESKTOP:-}${XDG_SESSION_DESKTOP:-}" == *[Cc][Oo][Ss][Mm][Ii][Cc]* ]]; then
+    # O XWAYLAND DEIXOU DE SER O DEFAULT — 19/09/2026, ordem dela: *"o certo é
+    # tirar dos dois. Faça"*. A hipótese que abriu isto é dela: *"quando eu
+    # criei o app em gtk eu fiz no gnome (…) nunca pensei que o problema disso
+    # tudo poderia ser que não fiz pensando no cosmic"*.
+    #
+    # A RAZÃO DELE MORREU COM A JANELA GTK. Este bloco nasceu porque *"popups
+    # de GtkMenu/GtkComboBox quebram no cosmic-comp Wayland nativo (fundo
+    # claro, mal-posicionados, grab quebrado)"*. A janela GTK saiu do disco em
+    # 06/09 (`D-0609-GTK-LEVA-INTEIRA`), e a interface nova **não tem
+    # `GtkMenu` nem `GtkComboBox`**: as dicas são elementos da PÁGINA
+    # (`interface/topo.html`, a `.dica`) e o `<select>` usa `appearance:none`.
+    # As duas curas nasceram justamente para não depender do popup do
+    # compositor — a de 04/09 está fotografada por ela.
+    #
+    # E ELE COBRAVA UM PREÇO: sob XWayland o GTK3 **não lê o tema do portal**
+    # (`app/theme.py:327`). O tema dela se perdia por causa desta linha, e isso
+    # está nas quinze queixas de 04/09 — *fugíamos de um popup claro e
+    # perdíamos o tema inteiro*.
+    #
+    # MEDIDO NA MÁQUINA DELA EM 19/09, com a interface REAL em Wayland nativo:
+    #
+    #     backend : GdkWaylandDisplay   ·  página carregou: True  ·  erro: None
+    #     barra   : 3 botões            ·  dicas na página: sim
+    #
+    # O OPT-IN FICA, e agora é ele que se declara: `HEFESTO_DUALSENSE4UNIX_
+    # XWAYLAND=1`, ou o `--force-xwayland` do `install.sh` (que grava
+    # `GDK_BACKEND=x11` no `.desktop`, e a guarda abaixo o respeita). O antigo
+    # `…_NO_XWAYLAND=1` deixa de ter efeito porque virou o comportamento
+    # padrão — quem o tiver exportado continua tendo o que pediu.
+    if [[ "${HEFESTO_DUALSENSE4UNIX_XWAYLAND:-}" == "1" ]] \
+       && [[ "${GDK_BACKEND:-}" != "x11" ]]; then
         export GDK_BACKEND=x11
     fi
     # A INTERFACE QUE ABRE É A HTML — 01/09/2026, ordem dela: *"tudo tem que
