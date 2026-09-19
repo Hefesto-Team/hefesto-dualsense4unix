@@ -215,6 +215,65 @@ def test_r3_nao_acusa_dongle_de_dongle() -> None:
     assert "hub" in texto
 
 
+def test_r3_diz_uma_frase_de_portugues_inteira() -> None:
+    """A frase MONTADA, palavra por palavra — e ela nasceu de um defeito meu.
+
+    **ELA LEU O DEFEITO NA TELA**, na foto de 19/09/2026 às 15h23: *"2 de 3
+    adaptadores Bluetooth **chegam passam** por um hub"*. O verbo saiu dobrado
+    no mesmo commit que encurtou a frase por ordem dela (*"resume mais pra ter
+    uma linha só"*): o `_plural` já trazia o verbo conjugado e o sufixo trouxe
+    outro.
+
+    **POR QUE NENHUMA RÉGUA PEGOU, e é a lição que esta função guarda:** a
+    régua do comprimento contava caracteres do FONTE
+    (`test_o_checkup_devolve_a_largura...frases_do_exame`, por `regex` sobre o
+    `porque=`), e o `_plural` só resolve em tempo de execução. *Uma régua de
+    tamanho não é uma régua de língua* — e encurtar frase é mexer em gramática.
+
+    Por isso esta afirma a frase INTEIRA, nas duas formas de plural, montada
+    pelo produto. Um `in` de pedaço deixaria o verbo dobrado passar de novo.
+    """
+    # AS DUAS FORMAS, e as duas importam: o singular é o ramo que a bancada
+    # dela nunca exercita (ela tem três adaptadores), e é justamente onde um
+    # plural errado moraria sem ninguém ver.
+    for quantos, esperada in (
+        (3, "2 de 3 adaptadores Bluetooth passam por um hub, e sobram "),
+        (1, "1 de 1 adaptador Bluetooth passa por um hub, e sobram "),
+    ):
+        frase = (
+            f"{quantos - 1 or 1} de {quantos} "
+            + ordens._plural(quantos, "adaptador Bluetooth passa",
+                             "adaptadores Bluetooth passam")
+            + " por um hub, e sobram "
+        )
+        assert frase == esperada, (
+            f"a frase do R3 saiu {frase!r} e devia ser {esperada!r}. O verbo "
+            f"mora num lugar só — o `_plural` conjuga e o sufixo começa na "
+            f"preposição. Foi assim que «chegam passam» chegou à tela dela.")
+
+
+def test_r3_nao_tem_verbo_dobrado_na_frase_que_vai_para_a_tela() -> None:
+    """A MORDIDA de verdade: a ordem montada pelo produto, sem verbo repetido.
+
+    A anterior mede o molde; esta mede a SAÍDA — `ordens.dongle_atras_de_hub`
+    com a bancada de mentira, que é o que o `porque` publica como `achado` na
+    aba Conexões (`a08_conexoes.py`, `"achado"`).
+    """
+    ordem = ordens.dongle_atras_de_hub(leitura())
+    assert ordem is not None
+    texto = " ".join(linha.texto for linha in ordem.linhas)
+    # OS QUATRO VERBOS QUE PODEM DOBRAR — os dois que a frase já teve e as duas
+    # conjugações de cada um. Duas formas verbais coladas é o defeito, não a
+    # palavra: `chega passa`, `chegam passam` e as trocas entre elas.
+    for a in ("chega", "chegam"):
+        for b in ("passa", "passam"):
+            assert f"{a} {b}" not in texto, (
+                f"a frase do R3 tem «{a} {b}» — dois verbos colados, que é o "
+                f"defeito que ela leu na tela em 19/09: {texto!r}")
+    assert "passa" in texto or "passam" in texto, (
+        f"a frase do R3 perdeu o verbo inteiro: {texto!r}")
+
+
 def test_r3_calada_sem_buraco_livre() -> None:
     """Sem entrada livre, a ordem nasce SEM AÇÃO — e diz por quê.
 

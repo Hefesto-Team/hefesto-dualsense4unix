@@ -622,8 +622,8 @@ def dongle_atras_de_hub(leitura: Leitura) -> Ordem | None:
                 f"{len(atras)} de {total} "
                 + _plural(
                     total,
-                    "adaptador Bluetooth chega",
-                    "adaptadores Bluetooth chegam",
+                    "adaptador Bluetooth passa",
+                    "adaptadores Bluetooth passam",
                 )
                 # RESUMIDO EM 19/09/2026 — ordem dela: *"resume mais pra ter
                 # uma linha só"*. Era *"…chegam ao computador por dentro de um
@@ -632,7 +632,19 @@ def dongle_atras_de_hub(leitura: Leitura) -> Ordem | None:
                 # alargada. O que saiu — «ao computador», «no próprio
                 # computador» — é a mesma informação dita duas vezes: a ordem
                 # de serviço ao lado já nomeia a entrada de destino.
-                + " passam por um hub, e sobram "
+                #
+                # O VERBO SAIU DOBRADO NESSE MESMO CORTE, e ela leu o defeito
+                # na tela: *"2 de 3 adaptadores Bluetooth CHEGAM PASSAM por um
+                # hub"* (foto de 19/09, 15h23). O `_plural` já trazia o verbo
+                # conjugado — «chega»/«chegam» — e o sufixo trouxe outro. A
+                # cura é o verbo morar num lugar só: o `_plural` conjuga
+                # «passa»/«passam» e o sufixo começa na preposição.
+                #
+                # A LIÇÃO, e ela é a de sempre nesta casa: **encurtar frase é
+                # mexer em gramática**, e a régua do comprimento não
+                # lia a frase MONTADA — ela contava caracteres do fonte. Uma
+                # régua de tamanho não é uma régua de língua.
+                + " por um hub, e sobram "
                 f"{len(livres)} "
                 f"{_plural(len(livres), 'entrada livre', 'entradas livres')}"
                 "."
