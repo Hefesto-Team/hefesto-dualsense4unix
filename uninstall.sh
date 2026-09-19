@@ -15,6 +15,11 @@
 #                        (kernelstub/grub) via scripts/install_usb_quirk.sh --remove.
 #                        Por default NÃO remove: cmdline é sensível e pode ser
 #                        mantido por toolchain externa do usuário (ex.: Aurora).
+#   --so-o-applet        remove SÓ o applet COSMIC aposentado (binário, .desktop
+#                        e ícones) e SAI. Não toca em daemon, udev, Steam,
+#                        config nem perfis. O applet saiu do instalador em
+#                        19/09/2026 por ordem dela — o tray faz o mesmo, e esta
+#                        flag existe para o resto não custar um wipe inteiro.
 #   --purge-config       APAGA a config do usuário (com backup antes). Default: preserva.
 #   --keep-config        preserva a config (default; mantido por retrocompatibilidade).
 #   --keep-steam-input   PRESERVA Steam Input PSSupport (default: desliga em TODOS os
@@ -167,6 +172,14 @@ readonly VENV_HEFESTO="${ROOT_DIR}/.venv/bin/hefesto-dualsense4unix"
 REMOVE_UDEV=1
 REMOVE_USB_QUIRK=0       # cmdline é sensível: só remove com --remove-usb-quirk explícito
 KEEP_CONFIG=1            # preserva config por padrão (perfis do user) — apagar exige --purge-config
+# A FLAG DO APPLET APOSENTADO — 19/09/2026, pedido dela depois de o passo 9
+# do install passar a apenas ANUNCIAR o binário parado: *"Cria a flag"*.
+#
+# Sem ela, tirar 23 MB de applet exigia o uninstall INTEIRO — que para o
+# daemon, apaga as regras udev, desliga o Steam Input e derruba o DKMS, para
+# remover um arquivo que nem é mais instalado. Pagar o preço do wipe por um
+# resto é o que faz a pessoa deixar o resto lá.
+SO_O_APPLET=0
 KEEP_STEAM_INPUT=0       # desliga Steam Input PSSupport por default (FEAT-DISABLE-STEAM-INPUT-PSSUPPORT-01)
 # BLUEZ-PADRAO-INVERTIDO-01 (02/08/2026) — decisão DELA, e ela tem razão:
 # *"o uninstall deveria desfazer o negócio e deixar o bluez certo, não? e caso
@@ -212,6 +225,10 @@ Opções:
   --keep-udev           preserva as regras udev + modules-load
   --remove-usb-quirk    remove também o quirk da cmdline (sensível; exige reboot)
   --purge-config        APAGA config e perfis (destrutivo; o padrão é preservar)
+  --so-o-applet         remove SÓ o applet COSMIC aposentado (binário, .desktop
+                        e ícones) e sai. Não toca em daemon, udev, Steam nem
+                        config. O applet saiu do instalador em 19/09/2026 —
+                        o tray faz o mesmo.
   --keep-config         preserva config e perfis (padrão)
   --keep-steam-input    não mexe no PSSupport do Steam Input
   --restore-bluez       DEVOLVE o BlueZ original da distro (o padrão PRESERVA o
@@ -230,6 +247,7 @@ for arg in "$@"; do
         --keep-udev)         REMOVE_UDEV=0 ;;
         --udev)              REMOVE_UDEV=1 ;;  # deprecated: já é default; mantido p/ compat
         --remove-usb-quirk)  REMOVE_USB_QUIRK=1 ;;
+        --so-o-applet)       SO_O_APPLET=1 ;;
         --purge-config)      KEEP_CONFIG=0 ;;
         --keep-config)       KEEP_CONFIG=1 ;;
         --keep-steam-input)  KEEP_STEAM_INPUT=1 ;;
@@ -356,6 +374,47 @@ command -v dkms >/dev/null 2>&1 \
     && dkms status hefesto-rtw88-usb 2>/dev/null | grep -q . \
     && _NEEDS_SUDO=1
 [[ -e /etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf ]] && _NEEDS_SUDO=1
+remover_o_applet() {
+    if [[ ! -e "${APPLET_BIN}" && ! -e "${APPLET_DESKTOP}" && ! -e "${APPLET_ICON}" \
+          && ! -e "${APPLET_ICON_SYMB}" && ! -e "${APPLET_ICON_PNG}" ]]; then
+        log "applet COSMIC: nada a remover (nenhum dos cinco arquivos existe)"
+        return 0
+    fi
+    log "removendo applet COSMIC (sudo): binário + .desktop + ícones"
+    sudo rm -f "${APPLET_BIN}" "${APPLET_DESKTOP}" "${APPLET_ICON}" "${APPLET_ICON_SYMB}" "${APPLET_ICON_PNG}" 2>/dev/null || true
+    sudo gtk-update-icon-cache -q -f /usr/share/icons/hicolor 2>/dev/null || true
+    sudo update-desktop-database -q /usr/share/applications 2>/dev/null || true
+    # O `cosmic-panel` só relê a lista de applets ao reiniciar — sem isso o
+    # applet fica fantasma na lista de Miniaplicativos mesmo depois de os
+    # arquivos saírem.
+    #
+    # MAS SÓ SE ELE ESTIVER NA LISTA — 19/09/2026. Derrubar o painel de quem
+    # está usando a máquina é caro, e aqui era feito CEGO: bastava o binário
+    # existir. Na máquina dela o applet nunca esteve na lista (o `install.sh`
+    # nunca escreveu essa configuração), então não há fantasma a limpar e o
+    # painel não tem por que piscar.
+    local esta_na_lista=0
+    local lista
+    for lista in "${HOME}"/.config/cosmic/com.system76.CosmicPanel.*/v1/plugins_*; do
+        [[ -r "${lista}" ]] || continue
+        grep -qF 'com.vitoriamaria.HefestoDualsense4Unix' "${lista}" && esta_na_lista=1
+    done
+    if [[ "${esta_na_lista}" -eq 1 ]]; then
+        log "o applet estava na lista de Miniaplicativos — recarregando o painel"
+        command -v killall >/dev/null 2>&1 && killall cosmic-panel 2>/dev/null || true
+    fi
+}
+
+# --so-o-applet: REMOVE O RESTO E SAI. Tem de vir aqui — antes de o daemon
+# parar, antes de os processos morrerem, antes de qualquer arquivo dela sair do
+# disco. Um early-exit que acontecesse mais abaixo teria feito metade do wipe.
+if [[ "${SO_O_APPLET}" -eq 1 ]]; then
+    log "--so-o-applet: removendo apenas o applet COSMIC aposentado"
+    remover_o_applet
+    log "pronto. Nada mais foi tocado: daemon, udev, Steam, config e perfis seguem."
+    exit 0
+fi
+
 acquire_sudo
 
 log "parando daemon hefesto-dualsense4unix (se ativo)"
@@ -482,17 +541,8 @@ if [[ -r "${ROOT_DIR}/scripts/install_fonts.sh" ]]; then
     bash "${ROOT_DIR}/scripts/install_fonts.sh" --remove || true
 fi
 
-# Applet COSMIC nativo (Rust): instalado em /usr/local + /usr/share via sudo
-# por packaging/cosmic-applet. Remove só se existir (evita pedir sudo à toa).
-if [[ -e "${APPLET_BIN}" || -e "${APPLET_DESKTOP}" || -e "${APPLET_ICON}" || -e "${APPLET_ICON_SYMB}" || -e "${APPLET_ICON_PNG}" ]]; then
-    log "removendo applet COSMIC (sudo): binário + .desktop + ícones"
-    sudo rm -f "${APPLET_BIN}" "${APPLET_DESKTOP}" "${APPLET_ICON}" "${APPLET_ICON_SYMB}" "${APPLET_ICON_PNG}" 2>/dev/null || true
-    sudo gtk-update-icon-cache -q -f /usr/share/icons/hicolor 2>/dev/null || true
-    sudo update-desktop-database -q /usr/share/applications 2>/dev/null || true
-    # cosmic-panel só relê a lista de applets ao reiniciar — sem isso o applet
-    # fica fantasma na lista de Miniaplicativos mesmo após remover os arquivos.
-    command -v killall >/dev/null 2>&1 && killall cosmic-panel 2>/dev/null || true
-fi
+
+remover_o_applet
 
 # Drop-in do WirePlumber (fix de microfone). Remove só o nosso arquivo, nunca
 # o diretório wireplumber.conf.d/ (outros apps/usuário podem ter configs lá).

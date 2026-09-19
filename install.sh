@@ -3615,7 +3615,7 @@ fi
 # defeito novo.
 if [[ "${_applet_installed}" -eq 1 && "${ENABLE_COSMIC_APPLET}" -eq 0 ]]; then
     printf '      há um applet instalado de antes (%s)\n' "${APPLET_BIN}"
-    printf '      para removê-lo: ./uninstall.sh  (ou sudo rm dele e dos ícones)\n'
+    printf '      para removê-lo SEM tocar em mais nada: ./uninstall.sh --so-o-applet\n'
 fi
 
 # ---------------------------------------------------------------------------
