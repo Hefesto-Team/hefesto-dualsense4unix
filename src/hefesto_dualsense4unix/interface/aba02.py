@@ -1175,7 +1175,21 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      plástico — as duas informações ficavam indistinguíveis no card azul. */
   .glifos{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;justify-items:stretch}
   .gb{width:100%;height:100%;min-height:46px;display:flex;align-items:center;
-      justify-content:center;color:var(--texto-suave)}
+      justify-content:center;color:var(--texto-suave);min-width:0}
+  /* O GLIFO ENCOLHE COM A COLUNA — 19/09/2026, pedido dela: *"queria que os
+     svgs da aba controles ficassem menores a medida que a largura da página
+     horizontal diminua pra comportar ali"*. <!-- noqa-acento: dela -->
+
+     O `glifo()` emite `width="38" height="38"` no `<svg>`, e a grade é
+     `repeat(4,1fr)`: as colunas encolhem, o desenho não. Na foto dela, com a
+     janela estreitada, o triângulo e o R2 saíam CORTADOS pela borda direita do
+     quadro — quatro glifos de 38px mais os vãos não cabiam em menos de 190px.
+
+     CSS VENCE ATRIBUTO DE APRESENTAÇÃO no SVG, então não é preciso tocar o
+     emissor (que é `pecas-do-dualsense.csv` + `glifo()`, com portão próprio).
+     O `max-width` guarda o tamanho aprovado: a peça nunca fica MAIOR que os 38
+     do desenho, só menor quando o espaço obriga. */
+  .gb svg{width:100%;height:auto;max-width:38px;max-height:38px}
   .gb.plast{color:var(--plastico)}
   .gb.on{color:var(--pink);filter:drop-shadow(0 0 6px rgba(255,121,198,.55))}
   /* O QUE FICA NO TOPO DO QUADRO É O GESTO DE MESA, E SÓ ELE.
