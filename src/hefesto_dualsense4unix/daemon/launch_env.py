@@ -239,7 +239,7 @@ def compor_lista_vidpid(pares: Iterable[tuple[int, int]], *, maiusculas: bool) -
     ----------------------------------------------------
 
     Ela recebe um SEGUNDO par quando existir a `E4` da LUGAR-À-MESA-01
-    (`docs/process/sprints/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md`),
+    (`docs/process/sprints/arquivados/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md`),
     que é a **cobertura POR PAR**: *"o par só sai no `IGNORE` se TODO aparelho
     daquele par na mesa tiver vpad vivo"*. E a `E4` vem depois da `E3` (a
     adoção dos externos), que ela adiou até a máscara existir.

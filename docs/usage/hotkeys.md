@@ -219,7 +219,7 @@ controle: o `PS + R3` trocou a ponte dentro do Duskfade na primeira tentativa
 (`gestos=1`, de `dualsense` para `xbox`) e o jogo passou a andar. O que segue
 **sem prova de plástico são as cinco cores da piscada** — nenhuma delas foi
 conferida com o olho dela. O roteiro está em
-[PROVA-NO-PLASTICO-01](../process/sprints/2026-08-19-PROVA-NO-PLASTICO-01-o-roteiro-de-quarenta-minutos-com-o-controle-na-mao.md).
+[PROVA-NO-PLASTICO-01](../process/sprints/arquivados/2026-08-19-PROVA-NO-PLASTICO-01-o-roteiro-de-quarenta-minutos-com-o-controle-na-mao.md).
 
 ## Próxima máscara — combo PS + L3
 

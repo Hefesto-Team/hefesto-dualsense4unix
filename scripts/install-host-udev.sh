@@ -376,7 +376,7 @@ _build_install_cmd() {
         cmd+="printf '1' > /sys/module/hid_nintendo/parameters/skip_tx_on_rate_exceeded 2>/dev/null || true; "
         # PARIDADE-QUENTE-01 (07/08/2026) — a simetria da AUTO-01.7 tinha sido
         # paga em UM sentido só. O achado de 25/07
-        # (docs/process/sprints/2026-07-25-AUTO-01-um-clique-em-vez-de-dez.md:114)
+        # (docs/process/sprints/arquivados/2026-07-25-AUTO-01-um-clique-em-vez-de-dez.md:114)
         # dizia que ERA ESTE script que escrevia os params a quente e o
         # install.sh não; a cura veio, o install.sh alcançou — e os TRÊS params
         # do patch 0003 (clone USB 057E:2009) nasceram depois, só no

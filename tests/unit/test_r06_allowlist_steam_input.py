@@ -45,7 +45,7 @@ O que NÃO caducou, e por isso segue intacto abaixo: a leitura do
 `steam_input_apps.txt` e a decisão de sessão (`TestAllowlistNoArquivo` e
 `TestSessaoDaExcecao`). QUANDO a marca vale continua sendo exatamente o que o
 R-06 estabeleceu; só mudou O QUE ela faz. O desenho inteiro está em
-`docs/process/sprints/2026-08-09-ESCONDER-EM-VEZ-DE-SAIR-01-o-duplicado-cura-pelo-outro-lado.md`
+`docs/process/sprints/arquivados/2026-08-09-ESCONDER-EM-VEZ-DE-SAIR-01-o-duplicado-cura-pelo-outro-lado.md`
 e o outro lado da cura em `test_esconder_em_vez_de_sair_01.py`.
 """
 

@@ -2,7 +2,7 @@
 
 Executa Z6-03 (docs/process/sprints/2026-08-24-ONDA0-Z6-COMUNHAO-COM-O-SPECS-01…
 .md), a Peça 2 do contrato desenhado na
-docs/process/sprints/2026-08-24-PAREAMENTO-01-a-medicao-nova-tem-de-chegar-sozinha-na-tela.md.
+docs/process/sprints/arquivados/2026-08-24-PAREAMENTO-01-a-medicao-nova-tem-de-chegar-sozinha-na-tela.md.
 
 Escrito à mão — este módulo NÃO é gerado. É o único lugar onde uma frase de
 tela declara "estou falando da chave X, do lado Y, e afirmo Z" — o endereço

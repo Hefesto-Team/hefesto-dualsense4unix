@@ -4,7 +4,7 @@
 **O CONTRATO MUDOU EM 13/09/2026** (FRASES-E-DICAS-01), e esta régua mudou junto
 em vez de ser apagada: o roteiro no tempo é o mesmo, e as perguntas viraram o
 avesso. A palavra dela está no índice da leva
-(`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha 19):
+(`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha 19):
 a caixa laranja da foto era uma recusa pousada no cartão, e ela mandou esse tipo
 de frase parar de aparecer. O clique recusado responde pela piscada de recusa
 no botão (`test_a_recusa_pisca_no_botao`), e a frase vai ao diário da janela.

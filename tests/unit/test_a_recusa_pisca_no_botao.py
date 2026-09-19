@@ -2,7 +2,7 @@
 """A RECUSA PISCA NO BOTÃO, E A FRASE NÃO CHEGA À TELA — FRASES-E-DICAS-01, 13/09/2026.
 
 A palavra dela está no índice da leva
-(`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha 19):
+(`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha 19):
 com a foto da aba Gatilhos e a caixa laranja *«Esse número é maior do que a
 quantidade de controles ligados»*, ela mandou que esse tipo de frase parasse de
 aparecer. A caixa era a recusa do gesto `player` da aba 04 — um número `.fora`

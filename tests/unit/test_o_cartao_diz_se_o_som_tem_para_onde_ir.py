@@ -331,7 +331,7 @@ class TestADicaDoCanal:
     frase do dono (`controller_card.DICA_CANAL_*`) com a da regra do sono — «é o
     padrão» ou «a regra … NÃO está instalada … Rode o install.sh» — e o estudo
     a mediu na tela com «SUSPENSO no PipeWire». A ordem dela de 13/09
-    (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`) tira da
+    (`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`) tira da
     tela o que avisa ou instrui sobre um estado: fica o estado.
     """
 

@@ -8,7 +8,7 @@ da aba Perfis**: transformar os ``Profile`` do disco, o perfil ativo e a mesa de
 controles no pacote que a página recebe em UMA chamada por tique.
 
 O destino do módulo estava decidido por escrito antes desta leva:
-``docs/process/sprints/2026-08-29-MIGRA-PERFIS-03-a-lista-de-perfis-chega-viva.md``
+``docs/process/sprints/arquivados/2026-08-29-MIGRA-PERFIS-03-a-lista-de-perfis-chega-viva.md``
 declara ``posse: src/hefesto_dualsense4unix/app/actions/perfis_web.py``, e as
 sprints 04, 05 e 06 escrevem no mesmo arquivo. Escrever noutro lugar criaria o
 segundo dono no dia em que aquelas sprints rodassem.

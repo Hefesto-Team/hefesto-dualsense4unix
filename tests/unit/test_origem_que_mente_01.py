@@ -29,7 +29,7 @@ antigo, e a assimetria é escolhida:
   partida**.
 
 O caso inteiro está em
-`docs/process/sprints/2026-08-08-JOGADOR-3-FANTASMA-01-a-cura-certa-no-momento-errado.md`.
+`docs/process/sprints/arquivados/2026-08-08-JOGADOR-3-FANTASMA-01-a-cura-certa-no-momento-errado.md`.
 """
 
 from __future__ import annotations

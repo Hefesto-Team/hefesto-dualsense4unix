@@ -65,7 +65,7 @@ grep -c "    def " src/hefesto_dualsense4unix/app/actions/ALVO.py   # não
 públicas de módulo, zero método**.
 
 **O que cada aba deveria estar chamando e não chama está medido em
-`docs/process/sprints/2026-09-02-ROTA-B1-o-inventario-do-motor.md`. Leia antes
+`docs/process/sprints/arquivados/2026-09-02-ROTA-B1-o-inventario-do-motor.md`. Leia antes
 de escrever uma função** — o motor oferece 314 funções que atravessam para HTML,
 e a tela nova chama treze.
 

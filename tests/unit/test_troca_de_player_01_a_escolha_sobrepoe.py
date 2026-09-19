@@ -47,7 +47,7 @@ A MORDIDA
 ---------
 Cada teste diz, na docstring, com QUE cura arrancada ele reprova. Os números
 das duas pontas estão no documento da sprint
-(``docs/process/sprints/2026-08-29-TROCA-DE-PLAYER-01-a-secao-que-da-o-numero.md``).
+(``docs/process/sprints/arquivados/2026-08-29-TROCA-DE-PLAYER-01-a-secao-que-da-o-numero.md``).
 
 Herméticos: ``config_dir`` em tmp, âncora fixa, relógio injetado, e MACs
 sempre na faixa forjada ``aa:bb:cc:*`` com os octetos 4 e 5 zerados (máscara

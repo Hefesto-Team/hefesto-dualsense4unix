@@ -125,7 +125,7 @@ Nintendo Pro   e0:f6:b5:...   event2     -    slot 3   (Switch por BT, driver ni
 > página já diz na abertura — o 8BitDo entra na lista de **externos** e **nunca é
 > adotado**; o `slot` que ele recebe serve à luz e à ordem, não à contagem de
 > jogadores. Medição inteira na
-> [LUGAR-À-MESA-01](../process/sprints/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md).
+> [LUGAR-À-MESA-01](../process/sprints/arquivados/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md).
 
 ###  O MAC MUDA com o modo — e isso tem consequência
 

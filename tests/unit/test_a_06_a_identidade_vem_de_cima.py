@@ -8,7 +8,8 @@ A LEI É DELA, 03/09/2026:
     temos o mapa pra servir como variável de identificação"
 
 (A frase elidida — *"Cada feature faz referência ao controle conectado"* — está
-inteira em `docs/process/sprints/2026-09-03-IDENTIDADE-VEM-DE-CIMA-01-a-fita-manda-nas-dez-abas.md`.
+inteira em `docs/process/sprints/arquivados/`, na
+`2026-09-03-IDENTIDADE-VEM-DE-CIMA-01-a-fita-manda-nas-dez-abas.md`.
 Ela sai daqui porque a palavra dela vem sem o acento e o portão `acentuacao`
 varre este arquivo; a elisão é honesta e a fonte fica apontada.)
 

@@ -1075,7 +1075,7 @@ class ExternalLedSync:
        **Quem for contar repinturas em qualquer janela do journal precisa ler
        isto antes:** o número não mede disputa de LED. A medição, e a correção
        de uma linha que devolveria o nome ao log (S3), estão em
-       ``docs/process/sprints/2026-08-07-A-LUZ-QUE-CUROU-01-calar-parou-o-bombardeio-e-voltar-tem-preco.md``,
+       ``docs/process/sprints/arquivados/2026-08-07-A-LUZ-QUE-CUROU-01-calar-parou-o-bombardeio-e-voltar-tem-preco.md``,
        seções 2.1 a 2.3 e 6. GRAU: MEDIDO.
     """
 

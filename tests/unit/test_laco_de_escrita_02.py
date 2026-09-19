@@ -1,6 +1,6 @@
 """LACO-DE-ESCRITA-02 — os dois defeitos do laço de saída, achados por leitura
 de código em 15/08/2026 e descritos em
-`docs/process/sprints/2026-08-15-O-LACO-DE-ESCRITA-01-o-suspeito-que-sobrou.md`.
+`docs/process/sprints/arquivados/2026-08-15-O-LACO-DE-ESCRITA-01-o-suspeito-que-sobrou.md`.
 
 **Defeito A — o contador de sequência do rádio sem lock.** `writeReport` fazia um
 *read-modify-write* de `_bt_seq` sem exclusão mútua, e há mais de uma thread

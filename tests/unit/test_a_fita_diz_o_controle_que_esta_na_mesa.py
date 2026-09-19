@@ -265,7 +265,7 @@ def test_o_chip_sem_cor_diz_o_nome_ou_nada() -> None:
     INVERTEU EM 13/09/2026 — FRASES-E-DICAS-02. Até aqui este teste exigia que o
     chip sem cor dissesse no `title` que a cor do plástico não tinha sido lida.
     A ordem dela de 13/09
-    (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`) tira da
+    (`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`) tira da
     tela a confissão sobre um estado nosso, e a dica flutuante é tela. Continua
     valendo a metade de antes: sem cor, a dica não promete a borda do plástico.
 

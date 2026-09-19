@@ -169,7 +169,7 @@ def test_a_dica_acompanha_a_cor(a03):
 
     # A SEGUNDA AUSÊNCIA PAROU DE SE EXPLICAR — FRASES-E-DICAS-02, 13/09/2026.
     # Até aqui a dica de quem ninguém leu tinha de dizer "lida". A ordem dela de
-    # 13/09 (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`)
+    # 13/09 (`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`)
     # tira da tela a confissão sobre um estado nosso. As duas ausências seguem
     # separadas: a do acabamento diz o que o modelo É; a não lida diz o nome, ou
     # nada.

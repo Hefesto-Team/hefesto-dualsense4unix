@@ -239,7 +239,7 @@ def frase_nao_voltou(segundos: int) -> str:
 # (SINAL-NO-NASCIMENTO-01/E2): a linha que dizia, debaixo do «A luz não
 # acende», por que a cura era oferecida a ESTA conexão — e, desde 04/09, o
 # anexo da dica do mesmo botão na aba 08. A ordem dela de 13/09
-# (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`) tira da
+# (`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`) tira da
 # tela a frase que avisa sobre um estado, `title` incluído. Quem ainda a lia,
 # medido antes de apagar: a dica da 08 e o `_BlocoDaLuz` desta seção, que é da
 # janela GTK (fora do produto desde 06/09, `D-0609-GTK-LEVA-INTEIRA`).

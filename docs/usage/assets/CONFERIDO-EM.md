@@ -21,7 +21,7 @@ lá embaixo que o citam ficam como estão: são registro do que se mediu no dia,
 e esta casa não apaga registro.)
 Se as imagens mudarem, commite-as —
 e a mudança de desenho é palavra dela, não de quem tirou a foto
-([PROVA-DE-TELA-01](../../process/sprints/2026-07-27-PROVA-DE-TELA-01-dez-minutos-de-olho-antes-de-qualquer-leva.md)).
+([PROVA-DE-TELA-01](../../process/sprints/arquivados/2026-07-27-PROVA-DE-TELA-01-dez-minutos-de-olho-antes-de-qualquer-leva.md)).
 Se **não** mudarem, acrescente uma linha aqui embaixo e commite este arquivo: o
 portão volta ao verde e fica escrito quem conferiu, quando, e contra qual commit.
 

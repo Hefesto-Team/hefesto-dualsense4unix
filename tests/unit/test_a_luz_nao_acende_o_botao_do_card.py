@@ -314,7 +314,7 @@ class TestNenhumaFraseLeALampada:
 # `TestARazaoSoFalaQuandoCONDENA`: a razão que o card mostrava debaixo do botão
 # só falava quando o daemon condenava a conexão (sem carimbo, `limpa` e
 # `nao_sei` calavam). A ordem dela de 13/09
-# (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`) tirou a
+# (`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`) tirou a
 # razão da tela, e `frase_do_nascimento` saiu do dono sem leitor vivo: a janela
 # GTK saiu em 06/09 (`D-0609-GTK-LEVA-INTEIRA`). As três regras do silêncio
 # ficam escritas na nota de `secao_controles.py`, no lugar da função. O que este

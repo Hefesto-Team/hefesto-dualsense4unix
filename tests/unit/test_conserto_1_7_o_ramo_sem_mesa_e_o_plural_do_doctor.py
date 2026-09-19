@@ -31,7 +31,7 @@ cético arrancou a cura inteira do shell (o ramo que nomeia, a variável e o
 `sed` que a extrai, deixando só o `print` do trecho python) e 722 testes
 seguiram verdes, esse inclusive. É o anti-padrão que esta casa condenou POR
 ESCRITO para ESTA MESMA flag, em
-`docs/process/sprints/2026-07-31-TESTE-HONESTO-01-os-297-verdes-que-nao-medem-interface.md`
+`docs/process/sprints/arquivados/2026-07-31-TESTE-HONESTO-01-os-297-verdes-que-nao-medem-interface.md`
 (linhas 155-161). Aqui o doctor é EXECUTADO: a função `check_dedup_ipc` sai do
 `scripts/doctor.sh` por `awk` e roda contra um socket UNIX de mentira que fala
 JSON-RPC — o mesmo desenho de `tests/unit/test_doctor_justworks_comportamento.py`.

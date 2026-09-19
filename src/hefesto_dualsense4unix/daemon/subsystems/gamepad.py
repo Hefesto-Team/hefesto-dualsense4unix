@@ -43,7 +43,7 @@ Política:
     mas **fora do caminho da exceção** — ver `suspend_vpads_for_steam_input`.
   - **A exceção mexe na ENTRADA, e só nela** (NOTA DATADA, 07/08/2026): a casa
     dizia *"o Hefesto sai da frente"*, e a medição dela de 06/08
-    (`docs/process/sprints/2026-08-06-CONTROLE-SONY-MEDIDO-01-o-experimento-que-decide-metade-da-doutrina.md`,
+    (`docs/process/sprints/arquivados/2026-08-06-CONTROLE-SONY-MEDIDO-01-o-experimento-que-decide-metade-da-doutrina.md`,
     seção *A INVERSÃO*, grau MEDIDO) mostrou que a frase é meia verdade.
     **Nenhum caminho fecha o handle de saída**: os chamadores de
     `steam_input_excecao_ativa` estão todos NESTE arquivo, nenhum em `core/`, e

@@ -1,7 +1,7 @@
 """O gerador de fatos de tela (Z6-02) morde nos dois sentidos.
 
 Executa a mordida de
-docs/process/sprints/2026-08-24-ONDA0-Z6-COMUNHAO-COM-O-SPECS-01-a-medicao-chega-a-tela-por-alguem-lembrar.md
+docs/process/sprints/arquivados/2026-08-24-ONDA0-Z6-COMUNHAO-COM-O-SPECS-01-a-medicao-chega-a-tela-por-alguem-lembrar.md
 (Z6-02): "(1) Editar uma célula do CSV sem regerar → `--check` reprova com
 diff. (2) Pôr coluna de texto livre na *allowlist* → o teste da fronteira
 reprova."

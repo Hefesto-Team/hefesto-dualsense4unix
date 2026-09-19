@@ -2,7 +2,7 @@
 """Censo do mapa de canais: reprova a AUSÊNCIA de rede em volta do que o mapa afirma.
 
 É a CAMADA 0 do portão desenhado em
-docs/process/sprints/2026-08-10-INDICE-o-mapa-que-vira-portao.md (seções 4 e 6,
+docs/process/sprints/arquivados/2026-08-10-INDICE-o-mapa-que-vira-portao.md (seções 4 e 6,
 sprint PARIDADE-PORTAO-01). Roda no CI, sem hardware, e responde uma pergunta
 só: **o que este mapa afirma tem teste que morda?**
 

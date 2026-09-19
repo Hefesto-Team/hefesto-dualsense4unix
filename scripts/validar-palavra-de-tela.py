@@ -2,7 +2,7 @@
 """Portão da palavra de tela: a tela fala a língua de quem joga.
 
 PALAVRA-01 / E5, seção "E5. Um gate, para não voltar" de
-`docs/process/sprints/2026-07-27-PALAVRA-01-a-janela-fala-a-lingua-de-quem-joga.md`.
+`docs/process/sprints/arquivados/2026-07-27-PALAVRA-01-a-janela-fala-a-lingua-de-quem-joga.md`.
 A sprint pede um portão que reprove quando:
 
 - um rótulo visível contém termo da lista de jargão banido — regra dos DOIS

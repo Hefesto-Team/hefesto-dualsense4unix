@@ -36,7 +36,7 @@ três secundários porque o co-op os promoveu na ordem 4º/2º/3º da fila
 quarto em 4 e o segundo em 2.
 
 A verdade única é a FILA DE CHEGADA, por decisão dela
-(`docs/process/sprints/2026-08-14-INDICE-a-cor-do-controle-e-o-som-de-cada-jogador.md`:
+(`docs/process/sprints/arquivados/2026-08-14-INDICE-a-cor-do-controle-e-o-som-de-cada-jogador.md`:
 *"a ordem deve ser por ordem de conexão daquele momento"*, e essa ordem
 prevalece). A cura foi tirar o número publicado do `player_index` e pô-lo em
 `CoopManager.numeros_de_jogador()` — a MESMA função que escolhe o desenho.

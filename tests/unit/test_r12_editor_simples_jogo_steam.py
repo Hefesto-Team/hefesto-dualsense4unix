@@ -173,7 +173,7 @@ class TestColunaQuandoUsar:
 #   - a ordem de prioridades (gênero 55-70 < jogo 80) e o porquê dela estão em
 #     `profiles/loader.py`, na nota de `PRIORIDADE_DO_PERFIL_DE_JOGO`;
 #   - a decisão do MODO-01 sobre a prioridade do co-op está na sprint
-#     `docs/process/sprints/2026-07-25-MODO-01-o-modo-jogo-liga-sozinho.md`.
+#     `docs/process/sprints/arquivados/2026-07-25-MODO-01-o-modo-jogo-liga-sozinho.md`.
 #
 # As duas migrações que dependiam deste asset foram APOSENTADAS no mesmo
 # commit, e não caladas: `profiles/loader.py` relata

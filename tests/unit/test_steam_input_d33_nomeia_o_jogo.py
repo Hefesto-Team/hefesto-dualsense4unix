@@ -254,7 +254,7 @@ class TestLinhaDaAbaEmulacao:
         Até aqui ela nomeava cada jogo com o appid e seguia com a frase do
         próximo ciclo. Esta função só alimenta o cartão da Steam na aba
         Lançadores — a janela GTK saiu (`D-0609-GTK-LEVA-INTEIRA`) —, e a ordem
-        dela de 13/09 (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`)
+        dela de 13/09 (`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`)
         quer ali rótulo curto de estado: a régua é
         `test_o_cartao_da_steam_nao_narra._e_rotulo_de_estado`, e o nome com o
         appid não cabe nela. A palavra "conflito" continua fora.
@@ -297,7 +297,7 @@ class TestLinhaDaAbaEmulacao:
         CONTRATO QUE MUDOU: até esta data o sufixo seguia com um travessão e o
         estado da exceção narrado («controle liberado agora», «só valendo
         durante o jogo», «sem controle físico visível»). A ordem dela de 13/09
-        (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`)
+        (`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`)
         deixa na tela só estado. A contagem fica: a aba 07 não mostra a lista
         das exceções em outro lugar.
 

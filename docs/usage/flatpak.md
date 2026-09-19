@@ -172,7 +172,7 @@ ao autostart do ambiente gráfico.
 > **Medido em 07/08/2026:** dos 18 módulos de
 > `src/hefesto_dualsense4unix/app/actions/`, **15** não importam a função de
 > tradução e carregam 561 literais acentuados em português. Motivo e registro em
-> `docs/process/sprints/2026-08-07-LINGUA-DO-PRODUTO-01-o-convite-a-traduzir-era-falso.md`.
+> `docs/process/sprints/arquivados/2026-08-07-LINGUA-DO-PRODUTO-01-o-convite-a-traduzir-era-falso.md`.
 >
 > **Nota datada — 08/08/2026:** são **19** módulos desde a `RELANCAR-01`, que
 > acrescentou `relancar.py`. Ele **não** importa a função de tradução, então a

@@ -97,7 +97,7 @@ def cena():
 # ganho da ordem, e com eles saem o `?` do card (onde a marca de procedência
 # morava) e o cartão de cura, que era «O que fazer: …» visível sem clique. A
 # base é a ordem dela de 13/09 no índice da terceira lista
-# (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, §0 item
+# (`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, §0 item
 # 4: «Tirar e enxugar pode»). A cura e as frases da ordem continuam no `?` da
 # linha do exame (`_dica_da_linha`). As réguas de antes mediam o que saiu; esta
 # mede que não volta.

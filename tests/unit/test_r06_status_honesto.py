@@ -139,7 +139,7 @@ class TestStatusDaAba:
     # NOTA DATADA — 13/09/2026 (FRASES-E-DICAS-03). Os três casos abaixo
     # cobravam o estado da exceção NARRADO na linha, depois de um travessão. A
     # ordem dela de 13/09, no índice da terceira lista
-    # (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`),
+    # (`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`),
     # deixa na tela só estado: a linha conta as exceções e cala o resto.
     #
     # NOTA DATADA — 13/09/2026 (RESTOS-DA-ONDA-DOIS-01). Eles cobravam também

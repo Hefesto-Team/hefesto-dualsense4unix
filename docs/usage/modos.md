@@ -109,7 +109,7 @@ físico e espelhado no virtual, para o jogo receber a mira por movimento.
 >
 > **A vibração é a exceção, e nela você vence:** com uma vibração fixada por
 > você, o Hefesto **ignora** a do jogo. Registro em
-> [CONTROLE-SONY-MEDIDO-01](../process/sprints/2026-08-06-CONTROLE-SONY-MEDIDO-01-o-experimento-que-decide-metade-da-doutrina.md).
+> [CONTROLE-SONY-MEDIDO-01](../process/sprints/arquivados/2026-08-06-CONTROLE-SONY-MEDIDO-01-o-experimento-que-decide-metade-da-doutrina.md).
 
 A **intensidade** da aba Rumble vale para as duas vibrações, e não só para a do
 jogo — este texto dizia que ela só valia sem vibração fixada, e o rodapé da
@@ -235,7 +235,7 @@ jogadores e recebem número de LED próprio, acima da faixa reservada aos DualSe
 >
 > **GRAU: SEM PROVA** — que o jogo veja os três como jogador 1; é o relato dela,
 > e o caminho até o jogo não foi instrumentado. A cura são as entregas E3 e E4 da
-> [LUGAR-À-MESA-01](../process/sprints/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md),
+> [LUGAR-À-MESA-01](../process/sprints/arquivados/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md),
 > autorizadas por ela em 07/08/2026 **só depois da MÁSCARA-01**.
 
 Uma função continua sendo exclusiva do jogador 1: o **botão de microfone**. Ele é

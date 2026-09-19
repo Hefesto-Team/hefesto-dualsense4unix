@@ -1006,7 +1006,7 @@ def _cor_do_plastico(slug: str) -> str:
 # número `.fora` a repetia, então a mesma frase de recusa chegava à tela por duas
 # portas: a dica flutuante, e a caixa laranja que o piloto pousava no cartão
 # quando o clique recusava — a da foto que está no índice da leva
-# (`docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha 19).
+# (`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha 19).
 # A dica passou a dizer só o número, e o cinza `.fora` diz o resto: ele já é o
 # vocabulário do estado (a §D da sprint, que cita o comentário do desenho da aba
 # 04 sobre o `.fora`). A frase CONTINUA sendo a recusa, com o dono de sempre na

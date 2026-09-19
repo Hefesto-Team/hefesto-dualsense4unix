@@ -1362,7 +1362,7 @@ def _html_da_ordem(vivos: list[Any] | None = None) -> str:
 
     O cartão da ordem e o de cura eram instrução e confissão sobre um estado,
     visíveis sem clique, e a ordem dela de 13/09 tira isso da tela
-    (`sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`). Nada se perdeu: o
+    (`sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`). Nada se perdeu: o
     `?` de cada linha do exame à esquerda traz *Por que importa · Ganho
     esperado · O que fazer* (:func:`_dica_da_linha`). O que fica é ESTADO: o
     de→para quando a ordem tem destino, com o `+N` das ordens que não couberam,
@@ -2285,7 +2285,7 @@ def dica_da_luz(via: str) -> str:
     que `trava_da_luz` já respondeu — a mesma junção que
     `secao_controles._BlocoDaLuz` faz do lado da janela GTK. A ordem
     de 13/09 que tirou o aviso e a razão está no índice da terceira lista,
-    `docs/process/sprints/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`.
+    `docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`.
     """
     perfil._com_o_src()
     from hefesto_dualsense4unix.app.actions.config.secao_controles import (
