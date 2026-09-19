@@ -2421,26 +2421,63 @@ def sink_esta_tocando(
     """
     if not nome:
         return False
+    tocando = sinks_que_tocam([nome], runner, na_duvida=None)
+    if tocando is None:
+        return na_duvida
+    return nome in tocando
+
+
+def sinks_que_tocam(
+    nomes: Iterable[str],
+    runner: Callable[[list[str]], str | None] | None = None,
+    *,
+    na_duvida: set[str] | None = None,
+) -> set[str] | None:
+    """Quais destes sinks têm stream tocando AGORA — **numa passada só**.
+
+    HAPTICA-RADIO-INICIO-01, 19/09/2026. Esta é a forma plural de
+    :func:`sink_esta_tocando`, e ela existe por um número: cada resposta custa
+    DOIS `pactl` (`list short sinks` e `list short sink-inputs`), medidos em
+    2,9 ms e 2,6 ms nesta máquina. Perguntando um por um, a volta de quatro
+    controles gasta OITO subprocessos; perguntando de uma vez, gasta DOIS — o
+    custo deixa de crescer com o número de controles na mesa.
+
+    É isso que torna o vigia de modo possível sem multiplicar as chamadas ao
+    servidor de som, que é a ressalva escrita na sprint.
+
+    ``None`` = **não se sabe** (prazo estourado, `pactl` que falhou), e é
+    diferente de conjunto vazio, que é o servidor respondendo *"ninguém toca"*.
+    Quem chama decide o que fazer com a dúvida — `sink_esta_tocando` devolve o
+    ``na_duvida`` dele, e o vigia do modo NÃO MEXE em ponte nenhuma.
+    """
+    alvos = {n for n in nomes if n}
+    if not alvos:
+        return set()
     correr: Any = runner or rodar_pactl
     sinks = correr(["pactl", "list", "short", "sinks"])
     if sinks is None:
         return na_duvida
-    indice = ""
+    #: índice do sink -> nome, só para os alvos. A coluna 2 de `sink-inputs` é
+    #: o índice do sink, o mesmo da coluna 1 de `sinks` — no `pipewire-pulse`
+    #: e no PulseAudio.
+    por_indice: dict[str, str] = {}
     for linha in sinks.splitlines():
         campos = linha.split("\t")
-        if len(campos) > 1 and campos[1] == nome:
-            indice = campos[0].strip()
-            break
-    if not indice:
-        return False
+        if len(campos) > 1 and campos[1] in alvos:
+            por_indice[campos[0].strip()] = campos[1]
+    if not por_indice:
+        return set()
     entradas = correr(["pactl", "list", "short", "sink-inputs"])
     if entradas is None:
         return na_duvida
+    tocando: set[str] = set()
     for linha in entradas.splitlines():
         campos = linha.split("\t")
-        if len(campos) > 1 and campos[1].strip() == indice:
-            return True
-    return False
+        if len(campos) > 1:
+            alvo = por_indice.get(campos[1].strip())
+            if alvo is not None:
+                tocando.add(alvo)
+    return tocando
 
 
 def fonte_do_monitor_do_no(

@@ -114,6 +114,26 @@ logger = get_logger(__name__)
 #: *"apareceu/sumiu controle?"*. O mesmo número da metade de entrada.
 RECONCILIA_S = 5.0
 
+#: Cadência do VIGIA DO MODO — HAPTICA-RADIO-INICIO-01, 19/09/2026.
+#:
+#: O QUE ELE CURA, medido com três DualSense no rádio em 18/09: a vibração do
+#: jogo começou **2, 4 e 5 s** depois de o jogo começar a tocar. A causa estava
+#: escrita no próprio laço — a troca para o modo háptica só acontece quando
+#: `sink_esta_tocando` responde sim, e a pergunta era feita **uma vez por
+#: volta**, a cada :data:`RECONCILIA_S`. Um pulso de 1,5 s podia nunca vibrar.
+#:
+#: E ELE NÃO MULTIPLICA AS CHAMADAS AO SERVIDOR DE SOM, que é a ressalva
+#: escrita na sprint. O vigia usa `sinks_que_tocam`, que responde por TODOS os
+#: endpoints numa passada de dois `pactl` (2,9 ms + 2,6 ms, medidos nesta
+#: máquina). Com quatro controles, a volta inteira gasta OITO subprocessos e o
+#: vigia gasta DOIS — 5,5 ms a cada 0,4 s é 1,4% de um núcleo, e o custo deixa
+#: de crescer com o número de controles.
+#:
+#: 0,4 s e não menos: a prova de pronto da sprint é *"a vibração ligando em
+#: menos de 0,5 s"*, e o vigia tem de caber dentro dela com folga para a
+#: passada do `pactl`.
+VIGIA_DO_MODO_S = 0.4
+
 #: Os doze dígitos hex de um MAC. Um ``uniq`` que não os tenha não é endereço,
 #: e `norm_mac` só FILTRA hex — sem esta trava, `"a"` viraria uma chave válida
 #: e casaria com qualquer coisa. Mesma régua da metade de entrada.
@@ -1142,8 +1162,63 @@ class AltoFalanteSubsystem:
                 self._reconciliar(gerenciador)
             except Exception as exc:  # nunca derruba a thread
                 logger.debug("som_reconciliacao_falhou", err=str(exc))
-            if self._parar.wait(RECONCILIA_S) or gerenciador.dormir(0.0):
+            if self._esperar_de_olho_no_modo(gerenciador):
                 return
+
+    def _esperar_de_olho_no_modo(self, gerenciador: Any) -> bool:
+        """Espera até a próxima volta, mas volta CEDO se o modo mudou. True = parar.
+
+        HAPTICA-RADIO-INICIO-01, 19/09/2026.
+
+        **NÃO DUPLICA A DECISÃO.** Quem troca de modo continua sendo
+        `_reconciliar` — descer e subir a ponte é ato de um escritor só, e ter
+        dois lugares mexendo no fio é o defeito que o «escritor é UM SÓ» desta
+        casa existe para impedir. O vigia só responde *"vale a pena reconciliar
+        agora?"*, e encurta a espera quando vale.
+
+        **NA DÚVIDA, NÃO MEXE.** `sinks_que_tocam` devolve ``None`` quando o
+        servidor de som não respondeu, e aí a espera segue como antes — um
+        `pactl` que falhou não pode derrubar a ponte de um jogo aberto, que é a
+        decisão dela de 08/09.
+        """
+        fatias = max(1, int(RECONCILIA_S / VIGIA_DO_MODO_S))
+        for _ in range(fatias):
+            if self._parar.wait(VIGIA_DO_MODO_S) or gerenciador.dormir(0.0):
+                return True
+            if self._o_modo_de_alguem_mudou():
+                return False
+        return False
+
+    def _o_modo_de_alguem_mudou(self) -> bool:
+        """Algum endpoint passou a tocar (ou parou) desde a última volta?
+
+        Uma passada de `pactl` para todos os endpoints — ver
+        :data:`VIGIA_DO_MODO_S`. Sem endpoint não há o que vigiar, e a pergunta
+        nem é feita.
+        """
+        nomes = {uniq: ep.nome for uniq, ep in self._endpoints.items() if ep.nome}
+        if not nomes:
+            return False
+        try:
+            # Import local pela mesma razão do `_reconciliar`: o módulo de som
+            # puxa o PipeWire, e a importação no topo arrastaria isso para todo
+            # processo que só quer o subsystem.
+            from hefesto_dualsense4unix.integrations.alto_falante_bt import (
+                sinks_que_tocam,
+            )
+
+            tocando = sinks_que_tocam(nomes.values())
+        except Exception as exc:  # nunca derruba a thread do som
+            logger.debug("vigia_do_modo_falhou", err=str(exc))
+            return False
+        if tocando is None:
+            return False  # servidor mudo não é "ninguém toca"
+        for uniq, nome in nomes.items():
+            agora = "haptica" if nome in tocando else "som"
+            if self._modo_da_ponte.get(uniq, "som") != agora:
+                logger.info("vigia_do_modo_acordou_a_volta", uniq=uniq, modo=agora)
+                return True
+        return False
 
     def _reconciliar(self, gerenciador: Any) -> None:
         """Uma varredura: quem está na lista ganha nó, quem saiu perde.
@@ -1165,6 +1240,7 @@ class AltoFalanteSubsystem:
 
 __all__ = [
     "RECONCILIA_S",
+    "VIGIA_DO_MODO_S",
     "AltoFalanteSubsystem",
     "ControleNaLista",
     "GerenciadorDeNosDeSom",
