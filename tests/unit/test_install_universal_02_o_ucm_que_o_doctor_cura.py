@@ -161,6 +161,9 @@ def test_o_fix_sem_ucm_conf_nao_diz_ok(tmp_path: Path) -> None:
     assert "[WARN]" not in saida, "a falta do pacote é o check que acusa, com o DualSense no cabo"
     assert "perfil UCM do DualSense não gravado" in saida
     assert "ucm.conf ausente" in saida
+    # O `[ucm] aviso:` do roteiro sai inteiro: dentro da linha do doctor ele
+    # dizia "não gravado: aviso: …". MORDIDA: tire o `${fecho#aviso: }`.
+    assert "aviso:" not in saida, saida
 
 
 def test_o_fix_com_usr_so_de_leitura_nao_diz_ok(tmp_path: Path) -> None:

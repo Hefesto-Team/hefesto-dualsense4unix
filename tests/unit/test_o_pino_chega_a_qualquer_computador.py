@@ -643,6 +643,53 @@ class TestOVigiaTravaSozinho:
         os_dois = _execs("/^ExecStart=.*__SCRIPT__/d", "/^ExecStart=.*__PROTON_PIN__/d")
         assert len(os_dois) == 1 and "__SENTINELA__" in os_dois[0], os_dois
 
+    @pytest.mark.parametrize(
+        ("keep", "no_pin", "esperado"),
+        [(0, 0, 3), (1, 0, 2), (0, 1, 2), (1, 1, 1)],
+        ids=["padrao", "keep-steam-input", "no-proton-pin", "os-dois"],
+    )
+    def test_o_trecho_do_install_renderiza_a_unidade_de_cada_escolha(
+        self, tmp_path: Path, keep: int, no_pin: int, esperado: int
+    ) -> None:
+        """Roda em bash o TRECHO REAL do install, de `_guard_linhas_que_saem=()`
+        ao `rm` do temporário, e conta os `ExecStart` da unidade que sai.
+
+        Com o vigia fora do `else` do opt-out, a segurança de quem usa
+        `--keep-steam-input` passou a depender de um condicional — antes vinha
+        da estrutura: a unidade nem era instalada. As réguas vizinhas só
+        conferem que a expressão `sed` EXISTE no install. MORDIDA, nos dois
+        sentidos: troque o condicional do `__SCRIPT__/d` por `[[ 0 -eq 1 ]]`
+        (o vigia desliga o Steam Input de quem disse não, a cada meia hora) e
+        por `true` (toda instalação padrão perde o self-heal do Steam Input).
+        """
+        inicio = INSTALL.index("    _guard_linhas_que_saem=()\n")
+        fim = INSTALL.index('    rm -f "${_guard_tmp}"\n', inicio)
+        trecho = INSTALL[inicio:fim] + '    rm -f "${_guard_tmp}"\n'
+        unidades = tmp_path / "unidades"
+        roteiro = tmp_path / "trecho.sh"
+        roteiro.write_text(
+            "set -euo pipefail\n"
+            "warn() { printf 'WARN %s\\n' \"$*\"; }\n"
+            "_guard_ok=1\n" + trecho, encoding="utf-8")
+        r = subprocess.run(
+            ["bash", str(roteiro)], capture_output=True, text=True, timeout=30,
+            check=False, cwd=tmp_path,
+            env={"PATH": "/usr/bin:/bin", "ROOT_DIR": str(RAIZ),
+                 "USER_UNIT_DIR": str(unidades),
+                 "SENTINELA_PY": "/x/sentinela_do_wrapper.py",
+                 "PROTON_PIN_PY": "/x/proton_pin.py",
+                 "KEEP_STEAM_INPUT": str(keep), "NO_PROTON_PIN": str(no_pin)},
+        )
+        assert r.returncode == 0, r.stdout + r.stderr
+
+        unidade = (unidades / "hefesto-steam-input-guard.service").read_text(encoding="utf-8")
+        execs = [ln for ln in unidade.splitlines() if ln.startswith("ExecStart=")]
+        assert len(execs) == esperado, execs
+        assert any("disable_steam_input.sh" in e for e in execs) is (keep == 0), execs
+        assert any("proton_pin.py --manter" in e for e in execs) is (no_pin == 0), execs
+        assert any("sentinela_do_wrapper.py" in e for e in execs), execs
+        assert not any(re.search(r"__[A-Z_]+__", e) for e in execs), execs
+
     def test_o_vigia_nao_mora_dentro_do_opt_out_do_pssupport(self) -> None:
         """Com o vigia dentro do `else` do `--keep-steam-input`, a máquina que
         instalou antes de existir Steam nunca extraía o pino do cache.
@@ -669,6 +716,23 @@ class TestOVigiaTravaSozinho:
 
         assert rc == 3
         assert not pp.pinned_proton_installed(PINO, raiz / "compatibilitytools.d")
+
+    def test_sem_cache_o_manter_nao_manda_fechar_a_steam(
+        self, lar: Path, download_local: dict, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Sem tarball no cache, o `--fix` mandava fechar a Steam (rc 3) e, na
+        volta, dizia que o tarball não estava lá (rc 2): o conselho chegava em
+        dois saltos. MORDIDA: devolva o `_steam_gate()` para antes da conferência
+        do cache no `--manter`."""
+        _steam_de_verdade(lar)
+        monkeypatch.setattr(pp, "steam_running", lambda: True)
+
+        rc = pp.main(["--manter", "--conf", str(download_local["conf"]),
+                      "--cache-dir", str(lar / "cache-vazio"),
+                      "--state", str(lar / "estado.json")])
+
+        assert rc == pp.RC_SEM_REDE_E_SEM_CACHE
+        assert download_local["baixou"] == 0, "o vigia foi à rede"
 
     def test_o_manter_repoe_do_cache_e_trava_todo_jogo(
         self, lar: Path, download_local: dict
@@ -1019,6 +1083,34 @@ class TestODoctorVeOQueAntesCalava:
         linha = next(ln for ln in saida.splitlines() if "default global da Steam" in ln)
         assert ("doctor.sh --fix" in linha) is com_pino, linha
 
+    @pytest.mark.parametrize(
+        "disse_nao", [True, False], ids=["vigia-sem-o-pino", "vigia-com-o-pino"])
+    def test_com_o_rastro_do_nao_o_conselho_e_reinstalar(
+        self, tmp_path: Path, disse_nao: bool
+    ) -> None:
+        """O conselho e o `--fix` leem o MESMO rastro. Com o pino instalado e a
+        unidade do vigia sem a linha do `--manter`, o `--fix` recusa — e o
+        conselho mandava rodá-lo: a pessoa só chegava à cura no segundo salto.
+        MORDIDA: `_gesto_da_trava_do_pino` sem perguntar ao
+        `_o_vigia_recusou_o_pino`."""
+        casa = tmp_path / "casa"
+        raiz = _steam_de_verdade(casa)
+        (raiz / "config" / "config.vdf").write_text(
+            _config_vdf({"0": "proton_11"}), encoding="utf-8")
+        _pino_na(raiz, pp._load_conf(None)["name"])
+        unidade = casa / ".config/systemd/user/hefesto-steam-input-guard.service"
+        unidade.parent.mkdir(parents=True)
+        unidade.write_text("".join(
+            ln for ln in SERVICO.read_text(encoding="utf-8").splitlines(keepends=True)
+            if not (disse_nao and ln.startswith("ExecStart=") and "__PROTON_PIN__" in ln)
+        ), encoding="utf-8")
+
+        saida = _doctor("check_proton_pin", casa)
+
+        linha = next(ln for ln in saida.splitlines() if "default global da Steam" in ln)
+        assert ("doctor.sh --fix" in linha) is not disse_nao, linha
+        assert ("instalado sem o passo do pino" in linha) is disse_nao, linha
+
     def test_sem_steam_o_fix_do_pino_cala(self, tmp_path: Path) -> None:
         casa = tmp_path / "casa"
         casa.mkdir()
@@ -1095,6 +1187,7 @@ class TestSemOPinoNadaSeTrava:
         `compat_dir=` de `lock_proton_for_all_games`."""
         from hefesto_dualsense4unix.app.actions.daemon_actions import (
             format_proton_lock_result,
+            frase_sem_o_proton_pinado,
         )
 
         vdf = steam_sem_pino / "config" / "config.vdf"
@@ -1107,8 +1200,10 @@ class TestSemOPinoNadaSeTrava:
 
         assert (r["status"], r["reason"]) == ("recusado", "pino_ausente"), r
         assert vdf.read_bytes() == antes
-        # Sem frase nova de tela: a recusa sem motivo mapeado, que já existe.
-        assert format_proton_lock_result(r).startswith("NÃO travei nada")
+        # A frase que já existe para o pino ausente — não a recusa sem motivo,
+        # que diz "a Steam recusou" sobre uma causa que não é a Steam.
+        # MORDIDA: tire o ramo `pino_ausente` de `_frase_de_recusa_do_proton`.
+        assert format_proton_lock_result(r) == frase_sem_o_proton_pinado()
 
     def test_o_vigia_sem_cache_nao_toca_no_arquivo(
         self, lar: Path, steam_sem_pino: Path, download_local: dict
@@ -1261,3 +1356,18 @@ class TestUmaTravaPorVez:
         assert (resultado.get("status"), resultado.get("reason")) == (
             "recusado", "outra_trava_em_curso"), resultado
         assert vdf.read_text(encoding="utf-8") == antes
+
+    def test_a_tela_diz_que_era_outra_trava_e_nao_a_steam(self) -> None:
+        """A recusa do flock caía na frase sem motivo, "a Steam recusou a
+        mudança" — e a Steam nem foi perguntada. MORDIDA: tire a entrada
+        `outra_trava_em_curso` de `_RECUSAS_DO_PROTON`."""
+        from hefesto_dualsense4unix.app.actions.daemon_actions import (
+            format_proton_lock_result,
+        )
+
+        frase = format_proton_lock_result({
+            "locked": 0, "skipped": 0, "errors": 0, "status": "recusado",
+            "reason": "outra_trava_em_curso", "tool": PINO, "detail": {}})
+
+        assert frase.startswith("NÃO travei nada"), frase
+        assert "Steam recusou" not in frase and "outro processo do Hefesto" in frase, frase

@@ -143,9 +143,11 @@ def pin(monkeypatch, tmp_path):
     conf = tmp_path / "proton-pin.conf"
     conf.write_text("# conf de prova\n", encoding="utf-8")
     estado: dict[str, Any] = {"steam": False, "conf": lambda: conf, "travou": [],
-                              "com": []}
+                              "com": [], "pino": True}
     monkeypatch.setattr(proton_pin, "default_pin_conf_path",
                         lambda: estado["conf"]())
+    monkeypatch.setattr(proton_pin, "pino_instalado_nesta_maquina",
+                        lambda: estado["pino"])
     monkeypatch.setattr(proton_pin, "steam_running", lambda: estado["steam"])
     monkeypatch.setattr(proton_pin, "lock_proton_for_all_games",
                         lambda *a, **k: (estado["travou"].append(a),
@@ -347,6 +349,24 @@ def test_o_proton_com_a_steam_aberta_recusa_no_clique_1(a09, ctx, pin):
 
     assert a09._armado_agora() == "", "a Steam aberta deixou o botão armado"
     assert a09._PAINEL[0] is None, "a recusa escreveu no painel"
+    assert pin["travou"] == []
+
+
+def test_o_proton_sem_o_pino_no_disco_recusa_no_clique_1_com_a_frase_dele(a09, ctx, pin):
+    """O `proton-pin.conf` presente e o Proton pinado ausente — o install sem
+    rede, ou feito antes de existir Steam (INSTALL-UNIVERSAL, 18/09/2026). O
+    botão armava, e no clique 2 a tela dizia "a Steam recusou a mudança": uma
+    causa falsa.
+
+    MORDIDA: tire a pergunta ao `pino_instalado_nesta_maquina` de
+    `_porque_o_proton_nao_trava`.
+    """
+    pin["pino"] = False
+    with pytest.raises(RuntimeError) as recusa:
+        a09.refazer_proton(ctx, _clique(a09._rotulo_do_desenho("refazer-proton")), None)
+
+    assert str(recusa.value) == a09._daemon.frase_sem_o_proton_pinado()
+    assert a09._armado_agora() == "", "o pino ausente deixou o botão armado"
     assert pin["travou"] == []
 
 
@@ -596,6 +616,7 @@ def na_tela(tmp_path_factory) -> dict:
 
     dubles: dict[tuple[Any, str], Any] = {
         (proton_pin, "default_pin_conf_path"): lambda: conf,
+        (proton_pin, "pino_instalado_nesta_maquina"): lambda: True,
         (proton_pin, "steam_running"): lambda: steam["aberta"],
         (proton_pin, "lock_proton_for_all_games"): lambda *a, **k: travou.append(a) or {},
         (slo, "with_steam_closed"): janela_da_steam,

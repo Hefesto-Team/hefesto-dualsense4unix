@@ -458,6 +458,16 @@ def pinned_proton_installed(name: str, compat_dir: Path) -> bool:
     return (root / "proton").is_file() and (root / "version").is_file()
 
 
+def pino_instalado_nesta_maquina(home: Path | None = None) -> bool:
+    """O Proton do `proton-pin.conf` está na Steam nativa desta máquina?
+
+    A mesma pergunta que :func:`lock_proton_for_all_games` faz antes de
+    travar, para o botão perguntar ANTES de armar (18/09/2026). Sem
+    `proton-pin.conf` legível, `_load_conf` levanta.
+    """
+    return pinned_proton_installed(_load_conf(None)["name"], default_compat_dir(home))
+
+
 def _read_manifest_sha256(name: str, compat_dir: Path) -> str | None:
     """sha256 registrado no nosso manifesto dentro do dir extraído (ou None)."""
     manifest = compat_dir / name / MANIFEST_BASENAME
@@ -478,11 +488,18 @@ def _escapa_da_raiz(caminho: str) -> bool:
 
 
 def _conferir_nomes_do_tar(tar: tarfile.TarFile) -> None:
-    """Recusa o que o filtro "tar" recusaria, para o python que não tem filtro.
+    """A parte LEXICAL do filtro "tar", para o python que não tem filtro.
 
     O nome absoluto ou com `..`, o nó de dispositivo — e, desde 18/09/2026, o
     LINK que aponta para fora do destino, que é a outra metade do filtro: o
     nome do membro pode ser inocente e o alvo do link, não.
+
+    O QUE ELA NÃO PEGA, medido em 18/09/2026: uma CADEIA de links, em que o
+    caminho de um passa por outro (`P/l1 -> ..`, `P/l2 -> l1/..`, e um membro
+    escrito em `P/l2/…`). Cada alvo, lido sozinho, fica dentro; o filtro de
+    verdade resolve o disco e recusa. A conferência daqui não resolve nada.
+    Ela só vale porque o tarball chegou até aqui pelo SHA256 fixado no
+    `proton-pin.conf` — é defesa em profundidade, não a primeira muralha.
 
     O alvo do link simbólico se mede a partir da PASTA dele, e não pela
     presença de `..`: o GE-Proton tem links internos legítimos que sobem cinco
@@ -2197,6 +2214,18 @@ def _cmd_manter(args: argparse.Namespace) -> int:
     name = conf["name"]
     compat = args.compat_dir if args.compat_dir else raiz / "compatibilitytools.d"
     if not pinned_proton_installed(name, compat):
+        cache = args.cache_dir if args.cache_dir else default_cache_dir()
+        # SEM TARBALL NO CACHE, NÃO HÁ O QUE EXTRAIR — 18/09/2026. O portão
+        # vinha antes, e com a Steam aberta o `--fix` mandava fechá-la para, na
+        # volta, ouvir que o tarball não estava no cache: o conselho chegava em
+        # dois saltos, sobre uma extração que nunca ia acontecer. Aqui só se
+        # olha se o arquivo EXISTE; o SHA256 continua sendo conferido pelo
+        # ensure, depois do portão.
+        if not (cache / f"{name}.tar.gz").is_file():
+            print(f"[proton-pin] manter: {name} ainda não está em {compat}, e o "
+                  f"tarball não está no cache ({cache})")
+            return _rc_do_ensure(EnsureResult(
+                "unavailable", "sem cache local e sem downloader (offline?)"))
         recusa = _steam_gate()
         if recusa is not None:
             print(
@@ -2204,7 +2233,6 @@ def _cmd_manter(args: argparse.Namespace) -> int:
                 f"extração espera a Steam fechar ({recusa})"
             )
             return 3
-        cache = args.cache_dir if args.cache_dir else default_cache_dir()
         result = ensure_pinned_proton(
             conf, compat_dir=compat, cache_dir=cache, downloader=None
         )
