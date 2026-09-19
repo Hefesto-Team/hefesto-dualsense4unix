@@ -395,6 +395,8 @@ def test_doctor_sem_python_e_aviso(tmp_path: Path) -> None:
     saida = _doctor("check_ultimo_device_ks", tmp_path)
     assert "[WARN] o último lançamento pelo Proton" in saida
     assert "não achou python3" in saida
+    # O aviso diz o gesto: é a máquina, e não o controle.
+    assert "instale o python3" in saida and "abra o jogo de novo" in saida
 
 
 def test_doctor_desligado_e_informacao(tmp_path: Path) -> None:

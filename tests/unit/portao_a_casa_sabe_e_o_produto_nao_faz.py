@@ -661,7 +661,7 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
     ),
     "HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED": (
         "Declara que ela QUER o DualSense como microfone padrão do sistema "
-        "(core/system_check.py:54), e com isso cala o alarme do doctor. É "
+        "(core/system_check.py:136), e com isso cala o alarme do doctor. É "
         "escolha dela por definição. MEDIDO em 12/08/2026: sem mão."
     ),
     "HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION": (

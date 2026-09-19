@@ -2979,9 +2979,13 @@ def _porque_o_proton_nao_trava(pin: Any, travar: Any) -> str | None:
     (`daemon_actions._proton_lock_worker`). Sem `proton-pin.conf` o motor
     levanta (`proton_pin._load_conf`), e isso é a mesma falta que o motor
     ausente: esta instalação não tem o Proton pinado.
+
+    O PINO FORA DO DISCO TAMBÉM RECUSA NO CLIQUE 1 — 18/09/2026. Com o
+    `proton-pin.conf` presente e o Proton pinado ausente (install sem rede, ou
+    feito antes de existir Steam), o motor recusa no clique 2 com
+    ``pino_ausente``; perguntar aqui poupa o clique que arma à toa.
     """
-    sem_o_pin = ("Esta instalação ainda não tem o Proton pinado — "
-                 f"{_daemon.como_atualizar_esta_instalacao()}.")
+    sem_o_pin = _daemon.frase_sem_o_proton_pinado()
     if travar is None:
         return sem_o_pin
     onde_mora = getattr(pin, "default_pin_conf_path", None)
@@ -2990,6 +2994,13 @@ def _porque_o_proton_nao_trava(pin: Any, travar: Any) -> str | None:
     except Exception:
         conf = None
     if conf is None or not Path(conf).is_file():
+        return sem_o_pin
+    no_disco = getattr(pin, "pino_instalado_nesta_maquina", None)
+    try:
+        instalado = no_disco() if no_disco is not None else True
+    except Exception:
+        instalado = False
+    if not instalado:
         return sem_o_pin
     steam_viva = getattr(pin, "steam_running", None)
     if steam_viva is None:

@@ -573,6 +573,19 @@ def como_atualizar_esta_instalacao() -> str:
     return gesto_de_atualizar(e_checkout=esta_instalacao_e_um_checkout())
 
 
+def frase_sem_o_proton_pinado() -> str:
+    """A frase de quando o Proton pinado não está nesta máquina.
+
+    Dona única desde 18/09/2026: o worker, a recusa ``pino_ausente`` e a aba
+    Sistema diziam o mesmo texto em três cópias, e a recusa nova caía na
+    frase sem motivo ("a Steam recusou") — uma causa falsa.
+    """
+    return (
+        "Esta instalação ainda não tem o Proton pinado — "
+        f"{como_atualizar_esta_instalacao()}."
+    )
+
+
 def format_steam_ready_result(
     *,
     janela: object,
@@ -992,11 +1005,21 @@ _RECUSAS_DO_PROTON: dict[str, str] = {
         "NÃO travei nada — a Steam continuou aberta. Feche a Steam e clique "
         "de novo."
     ),
+    "outra_trava_em_curso": (
+        "NÃO travei nada — outro processo do Hefesto estava mexendo na "
+        "configuração da Steam (o vigia da Steam ou o instalador). Clique de "
+        "novo em seguida."
+    ),
 }
-# Deliberadamente DOIS, não três: `config_vdf_ausente` também é um `reason` do
-# `lock_games_to_pinned_proton`, mas volta com `status="erro"` (não
-# `"recusado"`) e por isso nunca chega aqui. Uma terceira entrada seria a
-# família F2 — linha que ninguém alcança — no meio da cura de uma F1.
+# `config_vdf_ausente` também é um `reason` do `lock_games_to_pinned_proton`,
+# mas volta com `status="erro"` (não `"recusado"`) e por isso nunca chega
+# aqui. Uma entrada para ele seria a família F2 — linha que ninguém alcança.
+#
+# `outra_trava_em_curso` e `pino_ausente` CHEGAM, desde 18/09/2026 (o flock
+# do `config.vdf` e a guarda do pino, INSTALL-UNIVERSAL), e caíam na frase sem
+# motivo — que diz "a Steam recusou" sobre duas causas que não são a Steam. O
+# `pino_ausente` não mora no dicionário porque a frase dele já existe e depende
+# da instalação: é a do `_proton_lock_worker` quando falta o motor.
 
 #: A frase de recusa quando o motivo não está no mapa acima. Ela diz o que
 #: aconteceu (não travou) SEM inventar a causa — "não sei por quê" dito é
@@ -1030,6 +1053,8 @@ def _frase_de_recusa_do_proton(result: dict[str, object]) -> str | None:
     if result.get("status") != "recusado":
         return None
     motivo = result.get("reason")
+    if motivo == "pino_ausente":
+        return frase_sem_o_proton_pinado()
     if isinstance(motivo, str) and motivo in _RECUSAS_DO_PROTON:
         return _RECUSAS_DO_PROTON[motivo]
     return _RECUSA_DO_PROTON_SEM_MOTIVO
@@ -1914,11 +1939,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
                     pp = None
                 lock_fn = getattr(pp, "lock_proton_for_all_games", None)
                 if lock_fn is None:
-                    GLib.idle_add(
-                        self._toast_daemon,
-                        "Esta instalação ainda não tem o Proton pinado — "
-                        f"{como_atualizar_esta_instalacao()}.",
-                    )
+                    GLib.idle_add(self._toast_daemon, frase_sem_o_proton_pinado())
                     return
                 steam_running = getattr(pp, "steam_running", None)
                 if steam_running is None:

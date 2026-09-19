@@ -2129,7 +2129,7 @@ check_ultimo_device_ks() {
         sem-curador)
             warn "o último lançamento (${jogo}${quando}) não achou o curador do device KS — $(conselho_de_instalacao)" ;;
         sem-python)
-            warn "o último lançamento pelo Proton (${jogo}${quando}) não achou python3 no PATH — sem ele o lançamento não fala com o daemon e a vibração dos jogos da Sony não chega" ;;
+            warn "o último lançamento pelo Proton (${jogo}${quando}) não achou python3 no PATH — sem ele o lançamento não fala com o daemon e a vibração dos jogos da Sony não chega; instale o python3 pelo gerenciador de pacotes da sua distribuição e abra o jogo de novo" ;;
         desligado)
             info "último lançamento pelo Proton (${jogo}${quando}) sem a opção da vibração: sem DualSense com endpoint de som, ou com o daemon fora do ar" ;;
         removido)
@@ -6477,6 +6477,7 @@ fix_ucm_do_dualsense() {
         --sysfs "${HEFESTO_SYSFS:-/sys}" 2>&1)" || rc=$?
     fecho="${saida##*$'\n'}"
     fecho="${fecho#\[ucm\] }"
+    fecho="${fecho#aviso: }"
     if [[ "${rc}" -ne 0 ]]; then
         warn "install_ucm_dualsense.sh falhou (código ${rc}): ${fecho:-sem resposta} — rode: bash scripts/install_ucm_dualsense.sh"
     elif [[ $'\n'"${saida}" == *$'\n'"[ucm] "[0-9]*" gancho(s) em "* ]]; then
@@ -6486,15 +6487,31 @@ fix_ucm_do_dualsense() {
     fi
 }
 
+# O rastro de quem disse não ao pino — 18/09/2026. O `--no-proton-pin` do
+# install tira a linha do `--manter` da unidade do vigia; um install anterior a
+# 18/09 deixa a mesma unidade sem ela. Sai 0 quando a unidade EXISTE e não tem
+# a linha. Sem unidade não há rastro, e o `--fix` trava.
+#
+# UM PREDICADO SÓ, para o conselho e para o gesto: o `_gesto_da_trava_do_pino`
+# mandava rodar o `--fix`, e o `fix_proton_pinado` lia o rastro e recusava — o
+# conselho não curava, e a pessoa só chegava à cura no segundo salto.
+_o_vigia_recusou_o_pino() {
+    local unidade="${HOME}/.config/systemd/user/hefesto-steam-input-guard.service"
+    [[ -f "${unidade}" ]] && ! grep -qE '^ExecStart=.*--manter' "${unidade}" 2>/dev/null
+}
+
 # O gesto que o `check_proton_pin` aconselha para a trava — 18/09/2026. Com o
-# pino instalado, é o `--fix`. Sem ele, o `--fix` não tem em que travar, e o
-# conselho mandava a pessoa rodar um gesto que não cura: o gesto é o do aviso
-# de "Proton pinado AUSENTE", logo acima na mesma saída.
+# pino instalado, é o `--fix`, a não ser que o vigia tenha sido instalado sem o
+# passo do pino: aí o `--fix` recusa, e o gesto é reinstalar. Sem o pino, o
+# `--fix` não tem em que travar: o gesto é o do aviso de "Proton pinado
+# AUSENTE", logo acima na mesma saída.
 _gesto_da_trava_do_pino() {
-    if [[ "${1:-0}" == "1" ]]; then
-        printf '%s' "rode: scripts/doctor.sh --fix (trava com a Steam fechada; o vigia da Steam também trava sozinho quando ela sai)"
-    else
+    if [[ "${1:-0}" != "1" ]]; then
         printf '%s' "a trava espera o Proton pinado ficar instalado (ver o aviso de AUSENTE acima)"
+    elif _o_vigia_recusou_o_pino; then
+        printf '%s' "o vigia da Steam foi instalado sem o passo do pino (--no-proton-pin, ou um instalador anterior a 18/09/2026); para travar, $(conselho_de_instalacao)"
+    else
+        printf '%s' "rode: scripts/doctor.sh --fix (trava com a Steam fechada; o vigia da Steam também trava sozinho quando ela sai)"
     fi
 }
 
@@ -6510,8 +6527,8 @@ _gesto_da_trava_do_pino() {
 # nunca fecha nada. Sem Steam nativa com `config.vdf`, o passo cala.
 #
 # QUEM DISSE NÃO AO PINO FICA SEM ELE. O `--no-proton-pin` do install tira a
-# linha do `--manter` da unidade do vigia, e é esse o rastro que se lê aqui: a
-# unidade existe e não tem a linha. Um install anterior a 18/09/2026 deixa o
+# linha do `--manter` da unidade do vigia, e é esse o rastro que se lê aqui
+# (`_o_vigia_recusou_o_pino`). Um install anterior a 18/09/2026 deixa o
 # mesmo rastro, e aí o `--fix` também não trava — a frase diz os dois casos.
 fix_proton_pinado() {
     local py="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/proton_pin.py"
@@ -6521,8 +6538,7 @@ fix_proton_pinado() {
           && ! -f "${HOME}/.local/share/Steam/config/config.vdf" ]]; then
         return 0
     fi
-    local unidade="${HOME}/.config/systemd/user/hefesto-steam-input-guard.service"
-    if [[ -f "${unidade}" ]] && ! grep -qE '^ExecStart=.*--manter' "${unidade}" 2>/dev/null; then
+    if _o_vigia_recusou_o_pino; then
         info "Proton pinado: o vigia da Steam desta máquina foi instalado sem o passo do pino (--no-proton-pin, ou um instalador anterior a 18/09/2026) — o --fix não trava por cima disso; para travar, $(conselho_de_instalacao)"
         return 0
     fi
