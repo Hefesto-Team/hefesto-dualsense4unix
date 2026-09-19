@@ -1008,11 +1008,29 @@ check_applet() {
     else
         warn "ícone PNG 256x256 do applet ausente — a lista de Miniaplicativos pode não mostrar o ícone colorido"
     fi
+    # O VALIDADOR DECIDE PELA SAÍDA, NÃO PELO `rc` — 19/09/2026,
+    # `DESKTOP-CATEGORIA-01`, e a diferença tem número: com
+    # `Categories=X-COSMIC;Utility;Settings;` o `rc` é **0** e o validador
+    # ainda emite `hint: contains more than one main category`. A versão
+    # anterior deste bloco mandava a saída para `/dev/null` e decidia pelo
+    # `rc` — ela diria `pass` sobre esse arquivo.
+    #
+    # É a assinatura que esta casa persegue há um mês: *régua verde sobre
+    # defeito vivo*. E o `info "emitiu avisos"` do ramo de erro era a outra
+    # metade do mesmo defeito — ele dizia QUE havia aviso e nunca QUAL, então
+    # ninguém tinha como agir sem rodar o comando à mão.
     if command -v desktop-file-validate >/dev/null 2>&1; then
-        if desktop-file-validate "${APPLET_DESKTOP}" >/dev/null 2>&1; then
-            pass "desktop-file-validate sem erros"
+        local saida_do_validador
+        saida_do_validador="$(desktop-file-validate "${APPLET_DESKTOP}" 2>&1 || true)"
+        if [[ -z "${saida_do_validador}" ]]; then
+            pass "desktop-file-validate sem erros nem avisos"
         else
-            info "desktop-file-validate emitiu avisos (não-fatal)"
+            # UMA LINHA POR ACHADO, com o caminho podado: o que sobra é
+            # `error: …` ou `hint: …`, que é o que a pessoa precisa ler.
+            while IFS= read -r linha_do_validador; do
+                [[ -n "${linha_do_validador}" ]] || continue
+                warn "applet .desktop — ${linha_do_validador#"${APPLET_DESKTOP}": }"
+            done <<<"${saida_do_validador}"
         fi
     fi
 }
@@ -4124,7 +4142,7 @@ check_bt_paired_sem_bonded() {
     [[ "${achou}" -eq 0 ]] && pass "nenhum device BT com bond meio-salvo (Paired sem Bonded)"
 }
 
-# CONFIG-09 (22/08/2026): a MESMA leitura que a aba Configurações mostra.
+# CONFIG-09 (22/08/2026): a MESMA leitura que a aba Conexões mostra (seção Check-up).
 #
 # Por que uma linha a mais, se as cinco conferências do exame já têm linha
 # própria aqui em cima (btusb autosuspend, energia dos devices USB,
@@ -4151,40 +4169,81 @@ check_exame_da_mesa() {
         return
     fi
     local resumo
+    # O ACHADO, E NÃO A ETIQUETA — 19/09/2026, `EXAME-DA-MESA-03`.
+    #
+    # Até aqui este bloco juntava `i["rotulo"]`, e TODA ordem de serviço nasce
+    # com o mesmo rótulo constante (`ordens_da_mesa.ROTULO_DA_ORDEM`,
+    # "Mudança recomendada"). Três ordens abertas viravam
+    # `"Mudança recomendada; Mudança recomendada; Mudança recomendada"` —
+    # o terminal dizendo três vezes a mesma palavra e nenhum endereço.
+    #
+    # **PROVADO POR MORDIDA:** trocar o `porque` de uma ordem deixava esta
+    # linha BYTE-IDÊNTICA. O instrumento não lia o achado.
+    #
+    # A TELA JÁ TINHA SIDO CURADA EM 02/09 (a aba publica `porque` como
+    # `achado`), e o doctor é o SEGUNDO CHAMADOR que aquela cura não cobriu —
+    # a assinatura desta casa: *quando a cura conhece a causa, ela cobre TODOS
+    # os chamadores*.
+    #
+    # O FORMATO É O DO DONO (`exame_da_mesa._imprimir_relatorio`): uma linha
+    # por item, com TAB entre os campos. O `veredito` continua saindo do
+    # módulo — nada é recalculado aqui, que é a cicatriz do `6c86e295`.
     resumo="$("${py}" "${arquivo}" --censo 2>/dev/null | "${py}" -c '
 import json
 import sys
 
 d = json.load(sys.stdin)
 itens = d.get("itens") or []
-def rot(estado):
-    return "; ".join(i["rotulo"] for i in itens if i["estado"] == estado)
 print("veredito=" + str(d.get("veredito") or ""))
-print("problema=" + rot("problema"))
-print("atencao=" + rot("atencao"))  # (noqa-acento): chaves do JSON
-print("naosei=" + rot("nao_sei"))
+for i in itens:
+    estado = str(i.get("estado") or "")
+    if estado == "certo":
+        continue
+    rotulo = str(i.get("rotulo") or "").strip()
+    porque = str(i.get("porque") or "").strip()
+    # O RÓTULO FICA NA FRENTE quando ele acrescenta — ele nomeia a CLASSE do
+    # achado. Quando o `porque` está vazio (nunca visto, mas o dono permite),
+    # o rótulo sozinho ainda é melhor que uma linha muda.
+    texto = (rotulo + ": " + porque) if (rotulo and porque) else (porque or rotulo)
+    if texto:
+        print("item\t" + estado + "\t" + texto)
 ' 2>/dev/null)"
     if [[ -z "${resumo}" ]]; then
         info "exame da mesa indisponível — rode: ${py} ${arquivo} --relatorio"
         return
     fi
-    local veredito problema alerta naosei
+    local veredito
     veredito="$(sed -n 's/^veredito=//p' <<<"${resumo}")"
-    problema="$(sed -n 's/^problema=//p' <<<"${resumo}")"
-    alerta="$(sed -n 's/^atencao=//p' <<<"${resumo}")"  # (noqa-acento): chave do JSON
-    naosei="$(sed -n 's/^naosei=//p' <<<"${resumo}")"
 
     # O veredito NÃO é recalculado aqui. Ele sai de `exame_da_mesa.veredito()`,
     # que é a resposta escrita ao `6c86e295` — um segundo lugar decidindo a cor
     # do topo é exatamente como o verde volta a conviver com o vermelho.
-    if [[ -n "${problema}" ]]; then
-        fail "exame da mesa: ${problema} — é o que a aba Configurações mostra em vermelho, com a cura sem senha"
-    elif [[ -n "${alerta}" ]]; then
-        warn "exame da mesa: ${alerta} — dá para jogar, mas vale o ajuste (aba Configurações)"
-    elif [[ "${veredito}" == "certo" ]]; then
-        pass "exame da mesa: as cinco conferências da aba Configurações passaram"
-    else
-        info "exame da mesa: nem tudo deu para conferir sem senha (${naosei:-?})"
+    #
+    # E O ENDEREÇO NA TELA É A ABA **CONEXÕES**, seção Check-up. Estas linhas
+    # diziam "aba Configurações", que NÃO EXISTE em lugar nenhum do produto —
+    # nem entre as dez abas, nem nos mockups. Quem lesse o terminal procuraria
+    # uma aba que não está lá.
+    local achou_algum=0
+    while IFS=$'\t' read -r marca estado texto; do
+        [[ "${marca}" == "item" ]] || continue
+        [[ -n "${texto}" ]] || continue
+        achou_algum=1
+        case "${estado}" in
+            problema)
+                fail "exame da mesa: ${texto} (aba Conexões, seção Check-up)" ;;
+            atencao)  # (noqa-acento): valor do JSON, ASCII por contrato
+                warn "exame da mesa: ${texto} (aba Conexões, seção Check-up)" ;;
+            *)
+                info "exame da mesa: ${texto} (aba Conexões, seção Check-up)" ;;
+        esac
+    done <<<"${resumo}"
+
+    if [[ "${achou_algum}" -eq 0 ]]; then
+        if [[ "${veredito}" == "certo" ]]; then
+            pass "exame da mesa: as conferências da aba Conexões passaram"
+        else
+            info "exame da mesa: nem tudo deu para conferir sem senha"
+        fi
     fi
 }
 

@@ -5,7 +5,7 @@ de diagnóstico (o número medido está no documento da sprint, que envelhece
 sozinho e não obriga esta página a envelhecer junto). O
 problema nunca foi a medição: é que ela só existe para quem abre terminal, que
 é a minoria de quem usa o produto. Esta é a mesma leitura, num formato que a
-aba Configurações consegue mostrar em cinco linhas.
+aba Conexões mostra na seção Check-up — uma linha por achado, sem teto.
 
 POR QUE UM MÓDULO PYTHON, E NÃO UM `doctor.sh --json`. O doctor NÃO viaja nos
 pacotes: o `install.sh:3064-3076` só copia o `storm_watch.sh`, a spec do Fedora
