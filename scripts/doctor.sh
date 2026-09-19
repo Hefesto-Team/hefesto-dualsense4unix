@@ -4411,7 +4411,7 @@ PY
     if [[ "${glob}" == "1" && "${off:-0}" -eq 0 ]]; then
         pass "todos os jogos travados no Proton pinado (default global + por jogo)"
     else
-        [[ "${glob}" != "1" ]] && warn "default global da Steam NÃO aponta pro Proton pinado — rode: scripts/doctor.sh --fix (trava com a Steam fechada; o vigia da Steam também trava sozinho quando ela sai); ou, para refazer tudo, $(conselho_de_instalacao)"
+        [[ "${glob}" != "1" ]] && warn "default global da Steam NÃO aponta pro Proton pinado — $(_gesto_da_trava_do_pino "${present}"); ou, para refazer tudo, $(conselho_de_instalacao)"
         # FATO QUE CAIU, SUBSTITUÍDO — 18/09/2026. Aqui se dizia *"fora do
         # Proton pinado por ESCOLHA SUA (…) Não há o que consertar"* sobre todo
         # jogo com `preservado` no registro. A ordem dela de 17/09 revogou essa
@@ -4420,9 +4420,9 @@ PY
         # prova: a exceção que ela NOMEOU, e a ferramenta que não é Proton.
         [[ -n "${nomeados}" ]] && info "fora do Proton pinado por exceção que você nomeou em ${arquivo_nomeados:-jogos_fora_do_pino.txt}: ${nomeados} — o install, o vigia da Steam e o botão não tocam nestes; para devolver um: python3 ${py} --de-volta-ao-pino APPID"
         [[ -n "${nativos}" ]] && info "rodando por uma ferramenta que não é Proton, a escolha de rodar nativo, que o produto não troca: ${nativos} — o pino existe por causa do Wine, e estes não passam por ele"
-        [[ -n "${fora}" ]] && warn "jogo(s) fora do Proton pinado, em outro Proton: ${fora} — a ordem de 17/09/2026 é todo jogo que roda por Proton no pino, e um upgrade de Proton pode trazer de volta o controle duplicado neles; rode: scripts/doctor.sh --fix (trava com a Steam fechada; o vigia da Steam também trava sozinho quando ela sai). Para deixar um de fora: python3 ${py} --fora-do-pino APPID"
+        [[ -n "${fora}" ]] && warn "jogo(s) fora do Proton pinado, em outro Proton: ${fora} — a ordem de 17/09/2026 é todo jogo que roda por Proton no pino, e um upgrade de Proton pode trazer de volta o controle duplicado neles; $(_gesto_da_trava_do_pino "${present}"). Para deixar um de fora: python3 ${py} --fora-do-pino APPID"
         if [[ "${off:-0}" -gt 0 && -z "${nomeados}" && -z "${nativos}" && -z "${fora}" ]]; then
-            warn "${off} jogo(s) fora do Proton pinado — um upgrade de Proton pode reintroduzir o controle duplicado nesses jogos; rode: scripts/doctor.sh --fix"
+            warn "${off} jogo(s) fora do Proton pinado — um upgrade de Proton pode reintroduzir o controle duplicado nesses jogos; $(_gesto_da_trava_do_pino "${present}")"
         fi
     fi
     if [[ -n "${leaky}" ]]; then
@@ -6486,13 +6486,33 @@ fix_ucm_do_dualsense() {
     fi
 }
 
+# O gesto que o `check_proton_pin` aconselha para a trava — 18/09/2026. Com o
+# pino instalado, é o `--fix`. Sem ele, o `--fix` não tem em que travar, e o
+# conselho mandava a pessoa rodar um gesto que não cura: o gesto é o do aviso
+# de "Proton pinado AUSENTE", logo acima na mesma saída.
+_gesto_da_trava_do_pino() {
+    if [[ "${1:-0}" == "1" ]]; then
+        printf '%s' "rode: scripts/doctor.sh --fix (trava com a Steam fechada; o vigia da Steam também trava sozinho quando ela sai)"
+    else
+        printf '%s' "a trava espera o Proton pinado ficar instalado (ver o aviso de AUSENTE acima)"
+    fi
+}
+
 # A trava do Proton pinado, pela linha que o próprio doctor aconselha — 18/09.
 #
 # O check dizia "Não há o que consertar" sobre o jogo fora do pino, e o `--fix`
-# não tinha o que fazer por ele. Agora é o mesmo `--lock --todos` do install,
-# com o mesmo portão: com a Steam ou um jogo abertos ele ADIA (rc 3) e nunca
-# fecha nada — quem fecha a Steam é o install, que pergunta antes. Sem Steam
-# nativa com `config.vdf`, não há onde travar e o passo cala.
+# não tinha o que fazer por ele. Agora ele roda o MESMO passo do vigia da
+# Steam, o `--manter`, e não o `--lock --todos`: o `--manter` repõe o pino do
+# cache sem rede e só trava com ele instalado. O `--lock --todos` daqui, numa
+# máquina sem o pino (install sem rede, ou feito antes de existir Steam),
+# apontava cada jogo para uma ferramenta que não existe — e o doctor dizia
+# PASS. O portão é o mesmo: com a Steam ou um jogo abertos ele ADIA (rc 3) e
+# nunca fecha nada. Sem Steam nativa com `config.vdf`, o passo cala.
+#
+# QUEM DISSE NÃO AO PINO FICA SEM ELE. O `--no-proton-pin` do install tira a
+# linha do `--manter` da unidade do vigia, e é esse o rastro que se lê aqui: a
+# unidade existe e não tem a linha. Um install anterior a 18/09/2026 deixa o
+# mesmo rastro, e aí o `--fix` também não trava — a frase diz os dois casos.
 fix_proton_pinado() {
     local py="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/proton_pin.py"
     [[ -f "${py}" && -f "${ROOT_DIR}/assets/proton-pin.conf" ]] || return 0
@@ -6501,12 +6521,19 @@ fix_proton_pinado() {
           && ! -f "${HOME}/.local/share/Steam/config/config.vdf" ]]; then
         return 0
     fi
+    local unidade="${HOME}/.config/systemd/user/hefesto-steam-input-guard.service"
+    if [[ -f "${unidade}" ]] && ! grep -qE '^ExecStart=.*--manter' "${unidade}" 2>/dev/null; then
+        info "Proton pinado: o vigia da Steam desta máquina foi instalado sem o passo do pino (--no-proton-pin, ou um instalador anterior a 18/09/2026) — o --fix não trava por cima disso; para travar, $(conselho_de_instalacao)"
+        return 0
+    fi
     local rc=0
-    python3 "${py}" --lock --todos >/dev/null 2>&1 || rc=$?
+    python3 "${py}" --manter >/dev/null 2>&1 || rc=$?
     case "${rc}" in
-        0) pass "jogos travados no Proton pinado (--lock --todos)" ;;
+        0) pass "Proton pinado conferido e jogos travados nele (--manter)" ;;
+        2) warn "trava do Proton pinado ESPERA o pino: ele não está instalado e o tarball não está no cache (o --fix não baixa nada) — $(conselho_de_instalacao)" ;;
         3) warn "trava do Proton pinado ADIADA — a Steam (ou um jogo) está aberta; feche e rode de novo: scripts/doctor.sh --fix" ;;
-        *) warn "trava do Proton pinado falhou (rc=${rc}) — rode: python3 ${py} --lock --todos" ;;
+        5) warn "o Proton pinado bateu com o SHA256 e a EXTRAÇÃO falhou — veja o espaço livre em disco e rode de novo: scripts/doctor.sh --fix" ;;
+        *) warn "trava do Proton pinado falhou (rc=${rc}) — rode: python3 ${py} --manter" ;;
     esac
 }
 

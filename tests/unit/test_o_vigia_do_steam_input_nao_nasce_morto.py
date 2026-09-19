@@ -330,7 +330,7 @@ class TestARegraDoAchado:
         [
             ("vigia vivo (monotônico)", SHOW_VIVO),
             ("vigia vivo (calendário)", SHOW_VIVO_CALENDARIO),
-            ("vigia não instalado (--keep-steam-input)", SHOW_AUSENTE),
+            ("vigia não instalado", SHOW_AUSENTE),
             ("vigia desabilitado de propósito", SHOW_DESLIGADO_DE_PROPOSITO),
             ("sem systemctl", ""),
             ("sem saída", None),

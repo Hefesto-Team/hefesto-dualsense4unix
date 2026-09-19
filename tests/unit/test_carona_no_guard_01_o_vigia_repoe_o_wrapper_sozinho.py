@@ -135,9 +135,9 @@ class TestOInstallRenderizaOsDois:
     def test_a_cura_entra_sem_flag(self, instalador: str) -> None:
         """Regra dela, 08/08: nada à mão, nada opt-in.
 
-        O único jeito de o guard NÃO ser instalado é o `--keep-steam-input`, que
-        já existia e é a escolha dela de manter o Steam Input — não uma opção
-        nova que este trabalho tenha criado.
+        Nenhum opt-out tira o guard inteiro: desde 18/09/2026 o
+        `--keep-steam-input` (a escolha de manter o Steam Input) apaga só a
+        linha do Steam Input da unidade, e o atalho continua sendo reposto.
         """
         pedaco = instalador.split("SENTINELA_PY=", 1)[1][:400]
         assert "--enable" not in pedaco
