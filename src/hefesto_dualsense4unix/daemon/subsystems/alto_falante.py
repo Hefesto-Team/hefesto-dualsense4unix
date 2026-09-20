@@ -323,6 +323,83 @@ class GerenciadorDeNosDeSom:
             return False
         return True
 
+    # -----------------------------------------------------------------
+    # O-NOME-DO-SOM-RENOMEIA-JUNTO-01 (20/09/2026) — o rótulo segue o assento
+    # -----------------------------------------------------------------
+
+    def _o_rotulo_envelheceu(self, uniq: str, no: Any) -> bool:
+        """O nome que este nó VIVO carrega ficou para trás do assento de agora?
+
+        A medição que originou isto está em
+        :func:`~integrations.dualsense_bt_audio.rotulo_envelheceu`, e o resumo
+        é: ela mandou som para «Alto-falante do Controle 3» e ouviu no Player
+        1. O rótulo é a fotografia do assento de quando o nó nasceu, e um
+        controle que entra na mesa empurra o assento de OUTRO sem que o nó do
+        outro renasça.
+
+        **TRÊS RECUSAS, e cada uma é um jeito de a cura virar defeito maior:**
+
+        * **nó sem rótulo legível não se toca.** Um nó cujo campo do rótulo
+          texto é um nó de que não sabemos o nome — e *"não sei"* nunca
+          autoriza derrubar o que está de pé. É também o que mantém as fábricas
+          injetadas da suíte fora deste caminho;
+        * **perder o número nunca conta** — a regra mora em
+          :func:`rotulo_envelheceu`, e sem ela a varredura republicaria o nó de
+          cinco em cinco segundos toda vez que o numerador piscasse;
+        * **nunca por cima de quem está TOCANDO.** Renomear é republicar (não há
+          ``update-sink-proplist`` no ``pactl`` do PipeWire — medido), e
+          republicar tira o dispositivo debaixo do jogo. ``estado()`` que não
+          responda vale como *"pode estar tocando"*, pela mesma razão escrita em
+          :meth:`~integrations.alto_falante_bt.SinkVirtualPipeWire.estado`:
+          *"não sei" não é "ninguém está tocando"*.
+        """
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import (
+            descricao_do_alto_falante,
+        )
+        from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
+            rotulo_envelheceu,
+        )
+
+        no_ar = getattr(no, "descricao", None)  # (noqa-acento) nome de atributo
+        if not isinstance(no_ar, str) or not no_ar:
+            return False
+        try:
+            de_agora = descricao_do_alto_falante(uniq)
+        except Exception:  # nunca derruba a varredura
+            logger.debug("som_rotulo_de_agora_ilegivel", uniq=uniq, exc_info=True)
+            return False
+        if not rotulo_envelheceu(no_ar, de_agora):
+            return False
+        if self._esta_tocando(no):
+            logger.info(
+                "som_rotulo_velho_espera_o_silencio",
+                uniq=uniq,
+                no_ar=no_ar,
+                de_agora=de_agora,
+            )
+            return False
+        logger.info(
+            "som_rotulo_envelheceu", uniq=uniq, no_ar=no_ar, de_agora=de_agora
+        )
+        return True
+
+    def _esta_tocando(self, no: Any) -> bool:
+        """Alguém está mandando som para este nó AGORA — ou não dá para saber.
+
+        As duas respostas somam de propósito: quem chama isto decide se
+        DERRUBA o nó, e o lado seguro de *"não sei"* é não derrubar.
+        """
+        estado = getattr(no, "estado", None)
+        if not callable(estado):
+            return False
+        try:
+            atual = estado()
+        except Exception:  # pragma: no cover - defensivo
+            return True
+        if atual is None:
+            return True
+        return str(atual).strip().upper() == "RUNNING"
+
     def _ponte_do_radio(self, uniq: str) -> Any:
         """O callable que diz se a ponte DESTE controle está no ar — ou `None`.
 
@@ -393,6 +470,14 @@ class GerenciadorDeNosDeSom:
                 self._derrubar(uniq)
         for uniq in alvos:
             transporte = vistos[uniq] or TRANSPORTE_CABO
+            # **E O RÓTULO VELHO DERRUBA O NÓ — O-NOME-DO-SOM-RENOMEIA-JUNTO-01,
+            # 20/09/2026.** Não há renomear no lugar (o `pactl` do PipeWire não
+            # tem `update-sink-proplist` — medido), então o nó RENASCE com o
+            # nome de agora pelo caminho que já existe logo abaixo. As três
+            # recusas que impedem isto de virar um nó piscando estão em
+            # `_o_rotulo_envelheceu`.
+            if uniq in self._nos and self._o_rotulo_envelheceu(uniq, self._nos[uniq]):
+                self._derrubar(uniq)
             if uniq in self._nos:
                 # **NÃO É MAIS UM `continue` SECO — SOM-JUNTO-01, 17/09/2026.**
                 # Esta linha fechava a porta antes de perguntar qualquer coisa,
