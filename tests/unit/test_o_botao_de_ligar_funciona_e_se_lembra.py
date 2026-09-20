@@ -298,9 +298,16 @@ def test_o_algarismo_do_circulo_e_derivado_da_escada(
 
     antes = {c.chave: c.algarismo for c in painel.CHIPS_DA_ESCADA}
     assert antes["dualsense"] == "1", "a DualSense é o primeiro degrau da ESCADA"
-    # QUEM NÃO É DEGRAU LEVA TRAÇO, NUNCA UM NÚMERO: um algarismo ali diria que
-    # o PS+R3 para naquele modo, e ele não para.
-    assert antes["pointclick"] == painel.SEM_ALGARISMO
+    # QUEM NÃO É DEGRAU LEVA TRAÇO, NUNCA UM NÚMERO: um algarismo ali diria em
+    # que posição a escada AUTOMÁTICA tenta aquele modo, e ela não tenta.
+    #
+    # ERA O `pointclick` QUEM PROVAVA ISTO, e ele saiu — POINT-AND-CLICK-01,
+    # 17/09/2026: a linha não estava na tela desde 31/08. Quem prova agora é a
+    # Navegação, que é o caso REAL de `KIND_DESKTOP` sem degrau na ESCADA.
+    # FATO SUBSTITUÍDO no comentário acima: dizia-se que o traço significava
+    # "o PS + R3 não para naquele modo". O PS + R3 PARA na Navegação desde
+    # 13/09 (`hotkey.CICLO_DE_PONTES`) — a escada e o ciclo do gesto são dois
+    # objetos, e confundi-los foi o defeito que aquela sprint mediu.
     assert antes["navegacao"] == painel.SEM_ALGARISMO
 
     monkeypatch.setattr(ponte_escada, "ESCADA", tuple(reversed(ponte_escada.ESCADA)))
@@ -308,7 +315,7 @@ def test_o_algarismo_do_circulo_e_derivado_da_escada(
     assert depois != antes, "o algarismo não seguiu a ESCADA — ele está digitado"
     assert depois["dualsense"] == "4" and depois["steam"] == "1"
     # O traço não é número: invertida ou não, quem não é degrau continua sem ordem.
-    assert depois["pointclick"] == painel.SEM_ALGARISMO
+    assert depois["navegacao"] == painel.SEM_ALGARISMO
 
 
 def test_a_escada_nao_deve_mais_nada_a_tela(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -337,22 +344,35 @@ def test_a_escada_nao_deve_mais_nada_a_tela(monkeypatch: pytest.MonkeyPatch) -> 
 def test_sem_degrau_e_sem_dono_sao_perguntas_diferentes() -> None:
     """A Navegação separa as duas, e pintar uma pela outra mente na tela.
 
-    * ``chips_sem_degrau()`` = o **PS + R3** não para aqui. Hoje: a Navegação.
-    * ``chips_sem_dono()``   = **ninguém atende**. Hoje: o Point And Click.
+    * ``chips_sem_degrau()`` = a ``ESCADA`` automática não tem este degrau.
+      Hoje: a Navegação.
+    * ``chips_sem_dono()``   = **ninguém atende**. Hoje: ``()``.
 
     A Navegação está na primeira e não na segunda, e é por isso que a segunda
     teve de nascer: marcá-la como órfã seria a tela dizendo "não dá" sobre
     ``apply_mode('desktop')``, que funciona hoje.
+
+    DUAS SUBSTITUIÇÕES DE FATO — POINT-AND-CLICK-01, 17/09/2026:
+
+    * ``chips_sem_dono()`` devolvia ``["pointclick"]`` sobre uma linha que a
+      tela não mostra desde 31/08. A régua existe para marcar um botão inerte
+      **na tela**; medindo a TABELA, ela respondia sobre outra coisa que não o
+      produto. A linha saiu e a resposta é ``()``;
+    * ``chips_sem_degrau()`` não é "o PS + R3 não para aqui". Ele PARA na
+      Navegação desde 13/09 (``hotkey.CICLO_DE_PONTES``, e desde 17/09 pela
+      mesma porta do clique). O que ela mede é a ``ESCADA``, que é outro objeto.
     """
     assert [c.chave for c in painel.chips_sem_degrau()] == ["navegacao"]
-    assert [c.chave for c in painel.chips_sem_dono()] == ["pointclick"]
+    assert [c.chave for c in painel.chips_sem_dono()] == []
 
     navegacao = next(c for c in painel.CHIPS_DA_ESCADA if c.chave == "navegacao")
     assert navegacao.modo in painel.ESCRITOR_DOS_MODOS, (
         "a Navegação TEM escritor — é o que a tira de chips_sem_dono"
     )
-    pointclick = next(c for c in painel.CHIPS_DA_ESCADA if c.chave == "pointclick")
-    assert pointclick.ponte is None and pointclick.modo is None
+    assert "pointclick" not in {c.chave for c in painel.CHIPS_DA_ESCADA}, (
+        "a linha fantasma voltou à tabela. Ela não tem `data-degrau` na página "
+        "publicada, e o gerador (`aba01.py`) tem trava contra o quinto chip."
+    )
 
 
 # ---------------------------------------------------------------------------

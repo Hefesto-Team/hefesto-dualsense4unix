@@ -34,6 +34,11 @@ _EQUIVALENTE_RUST = {
     "native.mode.set": "set_native_mode",
     "gamepad.emulation.set": "set_gamepad_emulation",
     "mouse.emulation.restore": "restore_mouse",
+    # POINT-AND-CLICK-01 (17/09/2026): o terceiro passo do modo desktop trocou
+    # de FONTE nos dois lados juntos — da flag de sessão da máquina para o
+    # perfil ATIVO. Esta linha é o que impede o applet de ficar para trás, que
+    # é exatamente a forma da divergência que esta régua existe para pegar.
+    "desktop.arranjo.apply": "apply_desktop_arranjo",
 }
 
 

@@ -144,6 +144,21 @@ TETOS = {
     "gamepad.emulation.set": 2.0, "native.mode.set": 2.0,
     "mouse.emulation.set": 2.0, "keyboard.emulation.set": 2.0,
     "mouse.emulation.restore": 2.0, "daemon.emulation.suppress": 2.0,
+    # POINT-AND-CLICK-01 (17/09/2026): o terceiro passo da entrada no modo
+    # Navegação. **3,0 s — a família do `profile.switch`, e não a do
+    # `mouse.emulation.restore` de 2,0 s logo acima.** A razão é o que ele faz
+    # a mais: abre um `.json` de perfil do disco, resolve
+    # `key_bindings`/`button_actions` e pode CRIAR o device de teclado além do
+    # de mouse.
+    #
+    # O QUE FOI MEDIDO, e o que NÃO foi: a parte em processo custa **0,7 ms**
+    # com os devices dublados (`test_o_point_and_click_ativa_o_que_a_navegacao_
+    # gravou`, 17/09/2026) — ou seja, a decisão inteira é de graça e o teto
+    # paga o uinput e a viagem de IPC, exatamente como os 2,0 s do
+    # `MODE_IPC_TIMEOUT_S` pagam. O custo com uinput REAL não foi medido aqui,
+    # e por isso o teto é o do vizinho que abre perfil, nunca um número menor
+    # justificado pelos 0,7 ms.
+    "desktop.arranjo.apply": 3.0,
     "profile.switch": 3.0, "profile.apply_draft": 3.0,
     "coop.set": 2.0, "coop.sync": 2.0, "identity.renumber": 2.0,
     # A MÁSCARA GRAVA EM DISCO E PODE RECRIAR O VPAD — mesma família do

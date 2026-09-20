@@ -122,16 +122,21 @@ def test_plano_do_gamepad_sai_do_nativo_antes_de_ligar_o_vpad() -> None:
     ]
 
 
-def test_plano_do_desktop_desliga_nativo_e_gamepad_e_liga_o_mouse() -> None:
+def test_plano_do_desktop_desliga_nativo_e_gamepad_e_carrega_o_perfil() -> None:
     """HARM-06: "Controlar o PC" é um modo, não só o desligar dos outros dois.
 
-    O restore vem por último: ligar o mouse antes de o gamepad sair faria a
-    exclusão mútua do daemon derrubar o mouse recém-ligado.
+    O terceiro passo vem por último: ligar o mouse antes de o gamepad sair faria
+    a exclusão mútua do daemon derrubar o mouse recém-ligado.
+
+    POINT-AND-CLICK-01 (17/09/2026): ele trocou de FONTE e não de posição. Era
+    `mouse.emulation.restore`, que lê a flag de sessão da máquina; é
+    `desktop.arranjo.apply`, que lê o PERFIL ATIVO — mouse, teclas, botões,
+    `teclado_emulado` e a queda da supressão.
     """
     assert mode_transition.plan_mode_transition("desktop") == [
         ("native.mode.set", {"enabled": False, "origin": "manual"}),
         ("gamepad.emulation.set", {"enabled": False, "origin": "manual"}),
-        ("mouse.emulation.restore", {}),
+        ("desktop.arranjo.apply", {"origin": "manual"}),
     ]
 
 
@@ -250,7 +255,7 @@ def test_emulacao_desligado_tambem_sai_do_nativo(ipc: list[Call]) -> None:
     assert _methods(ipc) == [
         ("native.mode.set", {"enabled": False, "origin": "manual"}),
         ("gamepad.emulation.set", {"enabled": False, "origin": "manual"}),
-        ("mouse.emulation.restore", {}),
+        ("desktop.arranjo.apply", {"origin": "manual"}),
     ]
 
 

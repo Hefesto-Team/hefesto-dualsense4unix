@@ -122,7 +122,13 @@ ISENTOS: dict[str, str] = {
         "Onda 10 (Navegação), e ligar o fio sem a palavra dela sobre a "
         "frase de tela seria escolher em silêncio (regra da casa). Este "
         "isento sai no dia em que o widget nascer — aí ele vira caso de "
-        "ida e volta aqui, não isenção."
+        "ida e volta aqui, não isenção. "
+        "METADE DISTO CADUCOU em 17/09/2026 (POINT-AND-CLICK-01), e a "
+        "distinção importa: quem LÊ o campo já existe — "
+        "`Daemon.aplicar_o_arranjo_do_desktop` chama "
+        "`schema.resolver_teclado_emulado` ao entrar no modo Navegação. O que "
+        "continua sem existir, e é o que esta isenção mede, é o MIXIN que "
+        "escreve o campo no rascunho do perfil."
     ),
 }
 

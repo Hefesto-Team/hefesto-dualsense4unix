@@ -924,22 +924,29 @@ def test_a_cena_da_coluna_atencao_continua_com_um_aviso() -> None:
 # ---------------------------------------------------------------------------
 # 4. O FATO CADUCO — a folga de tempo que já tinha sido curada
 # ---------------------------------------------------------------------------
-def test_os_cinco_metodos_desta_aba_tem_a_folga_do_produto() -> None:
+def test_os_metodos_da_troca_de_modo_tem_a_folga_do_produto() -> None:
     """`ACHADO_DO_TIMEOUT` afirmava 250 ms; `ponte.TETOS` já dava 2,0 s.
 
     Quem lesse o texto antigo iria construir uma cura já construída. Esta régua
-    tranca o fato dos dois lados: a tabela tem os cinco, e com o valor que o
+    tranca o fato dos dois lados: a tabela tem todos, e com o valor que o
     produto declara — se `mode_transition.MODE_IPC_TIMEOUT_S` mudar, ela avisa.
     """
     from hefesto_dualsense4unix.app.actions.mode_transition import MODE_IPC_TIMEOUT_S
     from pacotes import ponte
 
-    # OS CINCO DA TROCA DE MODO, e não `METODOS` inteiro — 04/09/2026. O
+    # OS DA TROCA DE MODO, e não `METODOS` inteiro — 04/09/2026. O
     # `gamepad.mask.set` entrou em `METODOS` junto com a cura da chamada dele, e
     # ele NÃO é troca de modo: não cria uinput e não faz grab, que é o que os
     # 2,0 s pagam. Ele cai nos 250 ms do bridge, e a dívida está declarada no
     # próprio `a01_jogar.METODOS` — a linha que a fecha é de `pacotes/ponte.py`.
     # Cobrar os 2,0 s dele aqui mandaria consertar no lugar errado.
+    #
+    # ERAM CINCO E SÃO QUATRO — 17/09/2026, POINT-AND-CLICK-01. O
+    # `mouse.emulation.restore` saiu do conjunto porque saiu do PLANO, e o passo
+    # que o substituiu (`desktop.arranjo.apply`) fica de fora daqui pela MESMA
+    # razão do `gamepad.mask.set`, com o sinal trocado: ele abre um `.json` de
+    # perfil do disco e tem teto PRÓPRIO de 3,0 s, a família do `profile.switch`.
+    # O bloco abaixo é o que impede esse "de fora" de virar teto esquecido.
     for metodo in aba.METODOS_DA_TROCA_DE_MODO:
         assert ponte.teto(metodo) == MODE_IPC_TIMEOUT_S, (
             f"{metodo} espera {ponte.teto(metodo)}s e o produto declara "
@@ -947,3 +954,26 @@ def test_os_cinco_metodos_desta_aba_tem_a_folga_do_produto() -> None:
     assert "TETOS" in aba.ACHADO_DO_TIMEOUT and "2,0 s" in aba.ACHADO_DO_TIMEOUT, (
         f"o fato caduco voltou — o texto precisa nomear a tabela que já dá a "
         f"folga: {aba.ACHADO_DO_TIMEOUT!r}")
+
+
+def test_o_arranjo_do_desktop_tem_teto_proprio_e_maior() -> None:
+    """O passo que abre perfil não pode cair nos 250 ms do bridge.
+
+    Ele está FORA de `METODOS_DA_TROCA_DE_MODO`, e sem esta régua esse "fora"
+    seria um teto esquecido: `ponte.teto()` devolve o default de 250 ms para
+    todo método ausente da tabela, em silêncio. É o mesmo furo que o
+    `gamepad.mask.set` deixou aberto até 04/09.
+    """
+    from hefesto_dualsense4unix.app.actions.mode_transition import MODE_IPC_TIMEOUT_S
+    from pacotes import ponte
+
+    assert "desktop.arranjo.apply" in aba.METODOS, (
+        "o arranjo do desktop saiu da declaração desta aba — e é o terceiro "
+        "passo do modo Navegação."
+    )
+    teto = ponte.teto("desktop.arranjo.apply")
+    assert teto > MODE_IPC_TIMEOUT_S, (
+        f"o arranjo tem teto de {teto}s contra os {MODE_IPC_TIMEOUT_S}s da "
+        "troca de modo. Ele faz MAIS: abre um perfil do disco além de falar "
+        "com os devices."
+    )

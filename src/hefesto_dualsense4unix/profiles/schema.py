@@ -1173,7 +1173,7 @@ class ControllerMicOverride(BaseModel):
     ----------------------------------------------
     - ``button_toggles_system``. O interruptor é UM por máquina:
       ``hotkey.mic_button_loop`` lê ``daemon.config.mic_button_toggles_system``
-      (``daemon/subsystems/hotkey.py:1243``) e não consulta ``uniq`` nenhum.
+      (``daemon/subsystems/hotkey.py:1258``) e não consulta ``uniq`` nenhum.
       Guardá-lo por peça faria quatro controles gravarem quatro opiniões sobre
       um interruptor só.
 
@@ -1618,13 +1618,18 @@ class Profile(BaseModel):
     # desta classe: None = sem opinião (a ativação NÃO mexe na flag; ela
     # continua mandando). Preenchido = a ativação IMPÕE este valor, e vence a
     # flag (a precedência mora em
-    # ``hefesto_dualsense4unix.profiles.schema.resolver_teclado_emulado`` —
-    # pura, testada, e ainda NÃO chamada por nenhum caminho de ativação real:
-    # a T14 entrega o campo e a régua, não o fio. Quem liga o fio (o widget na
-    # Onda 9/Emulação e Onda 10/Navegação, e a chamada em
-    # ``daemon/lifecycle.py`` na ativação) é de outra frente — ligar aqui,
-    # sem a palavra dela sobre a frase de tela, seria "escolher em silêncio"
-    # (regra da casa, COMO-EXECUTAR-UMA-SPRINT.md §8).
+    # ``hefesto_dualsense4unix.profiles.schema.resolver_teclado_emulado``).
+    #
+    # O FIO FOI LIGADO EM 17/09/2026 — POINT-AND-CLICK-01, e a frase caduca
+    # saiu: aqui se dizia que a precedência era *"pura, testada, e ainda NÃO
+    # chamada por nenhum caminho de ativação real"*. Por 24 dias foi verdade —
+    # a T14 entregou o campo e a régua, não o fio. Quem a chama é
+    # ``Daemon.aplicar_o_arranjo_do_desktop``, o terceiro passo da entrada no
+    # modo Navegação, e é o lugar certo: é o único ponto do produto em que o
+    # teclado emulado tem contexto. Ele NÃO persiste o valor resolvido
+    # (``persist=False``) — gravá-lo faria a opinião do PERFIL virar a
+    # preferência GLOBAL, e esta precedência deixaria de existir na ativação
+    # seguinte.
     teclado_emulado: bool | None = None
     # MIC-EXPOSE-01: comportamento do botão de mic por perfil. None = sem
     # opinião (ativar o perfil não mexe no `mic_button_toggles_system`).

@@ -151,9 +151,10 @@ DONOS_DOS_GESTOS = {
     "são o mesmo conjunto — não sobra botão sem dono nem modo sem lugar.",
     "degrau": "integrations/ponte_escada + ponte_tentativa — a escada existe e "
     "SOBE sozinha, mas ninguém a fixa pela tela: não há método de IPC que diga "
-    "'use este degrau'. Dos cinco chips, um não tem dono NENHUM (Point And "
-    "Click, `painel.chips_sem_dono`) e a Navegação tem escritor sem ser degrau "
-    "(`painel.chips_sem_degrau`). MIGRA-JOGAR-07, pergunta dela.",
+    "'use este degrau'. Dos QUATRO chips, nenhum está sem dono desde 17/09/2026 "
+    "(`painel.chips_sem_dono` devolve `()`); a Navegação tem escritor sem ser "
+    "degrau da escada (`painel.chips_sem_degrau`), e o PS + R3 para nela pelo "
+    "`hotkey.CICLO_DE_PONTES`, que é outro objeto. MIGRA-JOGAR-07.",
     "mascara": "gamepad.emulation.set (daemon/ipc_handlers.py) pela ponte "
     "app/ipc_bridge — MAS ele NÃO aceita `uniq`: a máscara viva é uma só para a "
     "mesa toda, e esta tela mostra três chips POR CONTROLE (MIGRA-JOGAR-10). O "
@@ -703,12 +704,15 @@ class Janela:
         `el.click()` percorre o MESMO caminho de eventos do clique do rato —
         clicar por coordenada é a armadilha que esta casa já pagou duas vezes.
 
-        A ORDEM É A MORDIDA. O **Point And Click** é clicado PRIMEIRO, e ele tem
-        de produzir ZERO gestos: é o único chip que não tem dono nenhum
-        (`painel.chips_sem_dono`), e a pintura o marcou inerte. Uma régua que só
-        clicasse os cinco em qualquer ordem não distinguiria "sem dono" de "sem
-        ouvinte" — que é o defeito que deu verde sobre dois botões mortos em
-        29/08.
+        FATO SUBSTITUÍDO — POINT-AND-CLICK-01, 17/09/2026. Aqui se lia *"o Point
+        And Click é clicado PRIMEIRO, e ele tem de produzir ZERO gestos"*, e a
+        frase contradizia o roteiro trinta linhas abaixo, que explica que o
+        endereço não existe mais e que clicá-lo levantaria `TypeError` dentro do
+        WebKit. **O aviso tinha virado o defeito que descrevia.** O chip saiu do
+        desenho em 31/08 e a linha fantasma saiu de `painel.CHIPS_DA_ESCADA` em
+        17/09: `chips_sem_dono()` devolve `()` e não há chip inerte a clicar.
+        A lição que o roteiro guarda continua valendo, e é a de 29/08: régua que
+        não clica o botão novo dá verde sobre botão morto.
 
         OS DOIS ENDEREÇOS QUE ESTE ROTEIRO PERDEU, e por quê: `[data-degrau=
         "desktop"]` e `[data-modo="desligado"]` deixaram de existir no desenho
@@ -939,13 +943,17 @@ class Janela:
             # escritor (`apply_mode('desktop')`) e funciona hoje — marcá-la
             # inerte seria a tela dizendo "não dá" sobre um botão que dá. Quem
             # responde pela marca é `chips_sem_dono()`: sem degrau na ESCADA E
-            # sem modo no produto. Hoje devolve um só, o Point And Click.
+            # sem modo no produto. **Hoje devolve `()`** — POINT-AND-CLICK-01,
+            # 17/09/2026: o único item era o Point And Click, uma linha que a
+            # tela não mostrava desde 31/08. O dicionário nasce VAZIO, e é o
+            # estado certo; a frase abaixo fica escrita para a próxima fileira
+            # que precisar dela.
             "degraus_travados": {
                 c.chave: (
                     f"“{c.rotulo}” ainda não tem quem o atenda no Hefesto: não é "
                     "degrau da escada (integrations/ponte_escada.ESCADA) nem modo "
                     "do produto (mode_transition.MODES). Está na tela por decisão "
-                    "dela, de 31/08, e marcado por isto."
+                    "dela, e marcado por isto."
                 )
                 for c in painel.chips_sem_dono()
             },
