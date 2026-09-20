@@ -5,7 +5,7 @@ devolve um device com o MESMO `ContainerId` do endpoint de áudio do controle
 (medido no trace de 17/09/2026). O GE-Proton exclui o DualSense desse device; o
 `audio_ks_dualsense` o grava no `system.reg` a cada lançamento.
 
-Morde em sete alturas:
+Morde em oito alturas:
 
 1. **a conta** — o `ContainerId` do `winepulse`, byte a byte;
 2. **o dono manda** — o Data4 que o próprio prefixo já registrou vence o palpite;
@@ -14,7 +14,10 @@ Morde em sete alturas:
    reordenar o arquivo; nenhum bloco alheio some;
 5. **replug e zero controles** — o device velho sai, não acumula;
 6. **N controles** — um device por controle no cabo;
-7. **prefixo ocupado** — com o `wineserver` DAQUELE prefixo vivo, não escreve.
+7. **prefixo ocupado** — com o `wineserver` DAQUELE prefixo vivo, não escreve;
+8. **D1, as duas opções do Proton** — elas nascem em TODA variante do
+   `compose_env`, que é quem o daemon materializa (a seção do fim explica o
+   buraco que essa altura fechou, e o que ele deixava passar verde).
 
 Tudo em sysfs e registro sintéticos: a suíte nunca lê o controle dela, e os
 seriais das instâncias do winebus estão na faixa sintética `aa:bb:cc`.
@@ -723,3 +726,67 @@ def test_a_sonda_pergunta_em_c_e_sem_o_loader_da_steam(tmp_path: Path) -> None:
         eco="${PROTON_ENABLE_MHWILDS_USB_AUDIO:-ausente}|${LD_LIBRARY_PATH:-}|${LD_PRELOAD:-}",
     )
     assert visto == f"1|{loader}|{preload}"
+
+
+# ------------------------------------------ D1: as duas nascem em TODA variante
+#
+# O BURACO QUE ESTA SEÇÃO FECHA, medido em 20/09/2026: arrancadas as duas linhas
+# de `compose_env` que ligam a háptica — as que fizeram o PRAGMATA vibrar na mão
+# dela —, 312 testes desta área e os 42 portões da camada rápida continuaram
+# VERDES. Todo teste do arquivo acima entrega ao wrapper um `env_do_daemon`
+# escrito à mão, então mede o WRAPPER; ninguém perguntava ao `compose_env`, que
+# é quem decide o que o daemon materializa. A `SDL_ACCELEROMETER_AS_JOYSTICK`
+# tem essa régua desde a SENSORES-NO-JOGO-02; estas duas nasceram sem.
+#
+# A MATRIZ NÃO É DIGITADA. Ela sai do produto cartesiano dos argumentos que
+# `compose_env` distingue, e é essa a diferença que importa: uma tabela de
+# variantes escrita à mão tem um segundo dono e envelhece calada — é assim que
+# um `if` novo passa por baixo de uma régua que continua verde.
+
+_LIGADAS_SEMPRE = (
+    "PROTON_KEEP_SONY_AUDIO_ENDPOINT_VISIBLE",
+    "PROTON_ENABLE_MHWILDS_USB_AUDIO",
+)
+
+
+def _toda_variante_do_compose_env() -> list[dict[str, object]]:
+    """Todo estado que `compose_env` sabe distinguir, montado do produto."""
+    variantes: list[dict[str, object]] = []
+    for native_mode in (True, False):
+        for emulation_enabled in (True, False):
+            for flavor in ("dualsense", "xbox", "nintendo"):
+                for backends in ([], ["uhid"], ["uinput"], ["uhid", "uinput"]):
+                    for fisicos in (0, 1, 2):
+                        variantes.append(
+                            {
+                                "native_mode": native_mode,
+                                "emulation_enabled": emulation_enabled,
+                                "flavor": flavor,
+                                "backends": list(backends),
+                                "fisicos": fisicos,
+                            }
+                        )
+    return variantes
+
+
+def test_as_duas_opcoes_da_haptica_nascem_em_toda_variante() -> None:
+    """D1: elas entram com «1» em todo estado, como o preload. Sem `if`."""
+    from hefesto_dualsense4unix.daemon.launch_env import compose_env
+
+    variantes = _toda_variante_do_compose_env()
+    assert len(variantes) == 144, "a matriz encolheu — alguém mexeu no produto"
+    for estado in variantes:
+        env = compose_env(**estado)  # type: ignore[arg-type]
+        for nome in _LIGADAS_SEMPRE:
+            assert env.get(nome) == "1", (
+                f"a variante {estado} saiu sem {nome}=1 — o jogo da Sony abre "
+                "sem o endpoint de 4 canais e a vibração não chega à mão dela"
+            )
+
+
+def test_as_duas_opcoes_da_haptica_moram_na_allowlist() -> None:
+    """Emitidas e não declaradas, o wrapper as descartaria sem dizer nada."""
+    from hefesto_dualsense4unix.daemon.launch_env import ENV_ALLOWLIST
+
+    for nome in _LIGADAS_SEMPRE:
+        assert nome in ENV_ALLOWLIST, nome
