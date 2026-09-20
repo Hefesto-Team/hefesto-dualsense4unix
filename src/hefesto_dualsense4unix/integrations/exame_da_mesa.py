@@ -38,6 +38,7 @@ e as duas coisas acabariam num PNG versionado pelo caminho do retrato das abas.
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import re
 import shutil
@@ -743,6 +744,413 @@ def censo(itens: Sequence[Item] | None = None) -> dict[str, object]:
 
 
 # ---------------------------------------------------------------------------
+# O ENDEREÇO DO -71 — STORM-USB-01 (20/09/2026).
+#
+# O QUE FALTAVA, e não era medição: o `kernel-watch` já grava a porta em cada
+# linha `[USB-71]` desde que nasceu, e o `check_kernel_watch`
+# (`scripts/doctor.sh:3808`) só CONTAVA — *"33 vez(es) nos últimos 7 dias"*, sem
+# dizer onde. Quem lê isso não tem o que fazer com o número: -71 é `EPROTO`, e a
+# porta é a única coisa que separa "o cabo daquele controle" de "aquele hub".
+#
+# O que EXISTIA e não bastava: `check_usb_dropout` (`scripts/doctor.sh:6583`)
+# correlaciona, mas só sobre `journalctl -b -k` — o BOOT ATUAL. A queda de
+# terça-feira não está lá, e é justamente a que a pessoa quer explicar. O
+# `kernel-watch` guarda meses; era o log dele que ninguém cruzava com o `/sys`.
+#
+# AS CINCO FORMAS DA LINHA, medidas no `kernel.log` desta casa (164 eventos,
+# 08/08 a 18/09). O parser cobre as cinco, e as três últimas são o arranjo
+# DIFÍCIL — um parser que só pegasse `usb 3-4:` daria verde sobre 40% do log:
+#
+#     usb 3-4.1.3: device descriptor read/all, error -71   -> 3-4.1.3
+#     usbhid 3-4.1.3:1.3: can't add hid device: -71        -> 3-4.1.3  (interface)
+#     uvcvideo 1-6:1.0: UVC non compliance ... error -71   -> 1-6      (outro driver)
+#     usb usb3-port4: unable to enumerate USB device       -> 3-4      (porta do hub-RAIZ)
+#     usb 3-1.1-port3: unable to enumerate USB device      -> 3-1.1.3  (porta de hub)
+#
+# As duas últimas são a mais informativa das cinco: o aparelho NUNCA enumerou,
+# então ele não tem endereço próprio — o kernel nomeia a PORTA FÍSICA, e é dela
+# que o número do degrau sai. Prova cruzada nesta bancada: `usb usb1-port6` em
+# 24/08 e `uvcvideo 1-6:1.0` no MESMO dia, o mesmo aparelho pelos dois nomes.
+#
+# E A PERGUNTA 1 DA SPRINT — *"é a porta, o cabo ou o hub?"* — a topologia
+# responde: um hub que está no caminho de DUAS OU MAIS portas que deram -71 é o
+# fator comum, e :func:`storm_por_porta` o nomeia. Uma porta só nunca acusa o
+# hub dela: isso seria trocar a causa pelo endereço.
+# ---------------------------------------------------------------------------
+
+#: A tag que o `storm_watch.sh:classify` põe na linha do storm.
+TAG_DO_STORM = "[USB-71]"
+
+#: Onde o kernel lista os nós USB. Mesmo caminho de :func:`energia_das_portas`.
+RAIZ_USB = Path("/sys/bus/usb/devices")
+
+#: `bDeviceClass` de hub. Mesmo valor de `integrations/mesa_de_radio._CLASSE_HUB`,
+#: repetido e não importado pela mesma razão daquele arquivo: este módulo é
+#: carregado pelo `python3` do sistema e não pode arrastar o pacote inteiro.
+CLASSE_DE_HUB = "09"
+
+#: `<driver> <alvo>: <mensagem>` — a forma de TODA linha do kernel sobre USB.
+#: O `\S+?` é preguiçoso de propósito: em `usbhid 3-4.1.3:1.3: can't add…` ele
+#: precisa engolir o `:1.3` para achar o `: ` que separa a mensagem.
+_MENSAGEM_DO_KERNEL = re.compile(r"^\s*(?P<driver>\S+)\s+(?P<alvo>\S+?):\s")
+
+#: `usb3-port4` — porta do hub-RAIZ do barramento 3. Vira o nó `3-4`.
+_PORTA_DE_HUB_RAIZ = re.compile(r"^usb(?P<bus>\d+)-port(?P<degrau>\d+)$")
+
+#: `3-1.1-port3` — porta 3 do hub que está em `3-1.1`. Vira o nó `3-1.1.3`.
+_PORTA_DE_HUB = re.compile(r"^(?P<hub>\d+-\d+(?:\.\d+)*)-port(?P<degrau>\d+)$")
+
+#: `3-4.1.3:1.3` — INTERFACE de um nó. O aparelho é o nó, sem o `:1.3`.
+_INTERFACE_USB = re.compile(r"^(?P<no>\d+-\d+(?:\.\d+)*):\d+\.\d+$")
+
+#: `3-4.1.3` — o nó do dispositivo, que é o que o `/sys/bus/usb/devices` lista.
+_NO_USB = re.compile(r"^\d+-\d+(?:\.\d+)*$")
+
+
+def porta_do_evento(mensagem: str) -> str:
+    """A porta USB de uma mensagem do kernel — ``""`` quando não dá para dizer.
+
+    Recebe o que sobra da linha do `kernel-watch` DEPOIS da tag, e devolve o nó
+    USB no formato do `/sys/bus/usb/devices` (``3-4.1.3``).
+
+    ``""`` é resposta, não falha: o dia em que o kernel inventar uma sexta
+    forma, esta função devolve vazio e :func:`storm_por_porta` CONTA o evento
+    como "sem endereço". Descartá-lo em silêncio faria a soma das portas ficar
+    menor que o total e ninguém veria — é o F3 desta casa (*ausência é
+    resposta*) escrito em código.
+    """
+    achado = _MENSAGEM_DO_KERNEL.match(mensagem)
+    if achado is None:
+        return ""
+    alvo = achado.group("alvo")
+    # A ORDEM IMPORTA: `3-1.1-port3` também casaria com nada depois, mas
+    # `usb3-port4` precisa ser testado antes de `_NO_USB` não o reconhecer.
+    de_raiz = _PORTA_DE_HUB_RAIZ.match(alvo)
+    if de_raiz is not None:
+        return f"{de_raiz.group('bus')}-{de_raiz.group('degrau')}"
+    de_hub = _PORTA_DE_HUB.match(alvo)
+    if de_hub is not None:
+        return f"{de_hub.group('hub')}.{de_hub.group('degrau')}"
+    interface = _INTERFACE_USB.match(alvo)
+    if interface is not None:
+        return interface.group("no")
+    if _NO_USB.match(alvo) is not None:
+        return alvo
+    return ""
+
+
+def cadeia_da_porta(porta: str) -> tuple[str, ...]:
+    """Os nós do caminho até a porta, do mais raso ao mais fundo.
+
+    ``"3-4.1.3"`` → ``("3-4", "3-4.1", "3-4.1.3")``. O último é o aparelho; os
+    de antes são os hubs por onde o sinal passou.
+
+    Função de texto puro: ela não olha o ``/sys``. É o que permite nomear o
+    caminho de uma porta que já não existe — o caso normal de um -71 de três
+    dias atrás, em que o aparelho caiu e não voltou.
+    """
+    if _NO_USB.match(porta) is None:
+        return ()
+    bus, _, resto = porta.partition("-")
+    degraus = resto.split(".")
+    caminho: list[str] = [f"{bus}-{degraus[0]}"]
+    for degrau in degraus[1:]:
+        caminho.append(f"{caminho[-1]}.{degrau}")
+    return tuple(caminho)
+
+
+@dataclass(frozen=True)
+class Aparelho:
+    """Quem está numa porta USB AGORA — ou a confissão de que não está ninguém.
+
+    ``presente`` distingue as duas ausências que um leitor apressado colapsa:
+    "a porta está vazia" (o aparelho caiu, e o -71 é exatamente o motivo) de
+    "não consegui ler". As duas viram a mesma frase de tela, mas nenhuma delas
+    vira *"não havia aparelho nenhum"* — porque o evento prova que havia.
+    """
+
+    porta: str
+    presente: bool = False
+    vid: str = ""
+    pid: str = ""
+    nome: str = ""
+    e_hub: bool = False
+
+    @property
+    def identidade(self) -> str:
+        """Como o aparelho se chama numa frase — no tempo verbal do PRESENTE.
+
+        **Esta leitura é de AGORA, e a frase tem de dizer isso.** O -71 pode ser
+        de seis dias atrás; o ``/sys`` só sabe quem está encaixado neste
+        instante. Escrever *"o TP-Link deu -71"* seria a mesma classe de defeito
+        que ela pegou em 03/09 e que o
+        `tests/unit/test_o_doctor_diz_quando_foi.py` cobra: um passado contado
+        no presente. Quem monta a frase põe o "AGORA" na frente
+        (:attr:`PortaDoStorm.porque`), e a ausência é dita como ausência.
+        """
+        if not self.presente:
+            # A FRASE SERVE ÀS DUAS POSIÇÕES — a porta do evento e os hubs do
+            # caminho. Dizer aqui "o aparelho que deu -71 não voltou" seria
+            # certo para a primeira e FALSO para a segunda: o hub intermediário
+            # não deu -71 nenhum, ele só estava no meio.
+            return "nada encaixado — e o /sys não guarda quem já esteve aqui"
+        nome = self.nome or "aparelho que não publica nome"
+        if self.vid and self.pid:
+            return f"{nome} ({self.vid}:{self.pid})"
+        return nome
+
+    def como_dicionario(self) -> dict[str, object]:
+        return {
+            "porta": self.porta,
+            "presente": self.presente,
+            "vid": self.vid,
+            "pid": self.pid,
+            "nome": self.nome,
+            "e_hub": self.e_hub,
+            "identidade": self.identidade,
+        }
+
+
+def aparelho_da_porta(porta: str, *, raiz_usb: Path = RAIZ_USB) -> Aparelho:
+    """Lê no ``/sys`` quem está encaixado nesta porta. Somente leitura.
+
+    Porta ausente devolve ``presente=False`` e os campos vazios — e isso É a
+    resposta para a maioria dos -71 antigos, porque a porta que derrubou o
+    aparelho costuma ser a que ficou vazia.
+
+    Uma porta que EXISTE mas não deixa ler o ``idVendor`` continua
+    ``presente=True``, com identidade degradada. O contrário — chamar de vazia
+    o que só é ilegível — seria inventar um fato sobre a mesa de quem lê.
+    """
+    no = raiz_usb / porta
+    try:
+        presente = no.is_dir()
+    except OSError:
+        presente = False
+    if not presente:
+        return Aparelho(porta=porta)
+    return Aparelho(
+        porta=porta,
+        presente=True,
+        vid=(_texto_de(no / "idVendor") or ""),
+        pid=(_texto_de(no / "idProduct") or ""),
+        nome=(_texto_de(no / "product") or ""),
+        e_hub=(_texto_de(no / "bDeviceClass") or "") == CLASSE_DE_HUB,
+    )
+
+
+@dataclass(frozen=True)
+class PortaDoStorm:
+    """Uma porta que deu -71 na janela, com quantos, quando e o que há nela."""
+
+    porta: str
+    quantos: int
+    ultimo: str
+    aparelho: Aparelho
+    hubs: tuple[Aparelho, ...] = ()
+
+    @property
+    def porque(self) -> str:
+        """A MEDIÇÃO em uma frase — o mesmo contrato do ``porque`` de `Item`.
+
+        DOIS TEMPOS VERBAIS NUMA LINHA SÓ, e eles não se misturam: a contagem e
+        a data são do PASSADO (saem do log); quem está na porta é do PRESENTE
+        (sai do ``/sys`` neste instante). O "AGORA" existe para que ninguém leia
+        *"o TP-Link deu -71 vinte e sete vezes"* — o que a medição sustenta é
+        *"esta porta deu -71 vinte e sete vezes, e hoje há um TP-Link nela"*.
+        """
+        quando = f"{self.ultimo[8:10]}/{self.ultimo[5:7]}" if self.ultimo else "?"
+        eventos = "1 evento" if self.quantos == 1 else f"{self.quantos} eventos"
+        if self.hubs:
+            caminho = ", depois ".join(
+                f"{hub.porta} ({hub.identidade})" for hub in self.hubs
+            )
+            quantos_hubs = "1 hub" if len(self.hubs) == 1 else f"{len(self.hubs)} hubs"
+            onde = f"atrás de {quantos_hubs}: {caminho}"
+        else:
+            onde = "direto numa entrada do próprio computador, sem hub no caminho"
+        return (
+            f"{self.porta} — {eventos}, o último em {quando}; nesta porta "
+            f"AGORA: {self.aparelho.identidade}; {onde}"
+        )
+
+    def como_dicionario(self) -> dict[str, object]:
+        return {
+            "porta": self.porta,
+            "quantos": self.quantos,
+            "ultimo": self.ultimo,  # (noqa-acento): chave de máquina, ASCII por contrato
+            "aparelho": self.aparelho.como_dicionario(),
+            "hubs": [hub.como_dicionario() for hub in self.hubs],
+            "porque": self.porque,
+        }
+
+
+@dataclass(frozen=True)
+class HubEmComum:
+    """Um hub no caminho de DUAS OU MAIS portas que deram -71 na janela."""
+
+    hub: Aparelho
+    portas: tuple[str, ...]
+
+    @property
+    def porque(self) -> str:
+        return (
+            f"o hub em {self.hub.porta} está no caminho de "
+            f"{len(self.portas)} portas que deram -71 "
+            f"({', '.join(self.portas)}) — é o fator comum que a topologia "
+            f"aponta; nesta porta AGORA: {self.hub.identidade}"
+        )
+
+    def como_dicionario(self) -> dict[str, object]:
+        return {
+            "hub": self.hub.como_dicionario(),
+            "portas": list(self.portas),
+            "porque": self.porque,
+        }
+
+
+@dataclass(frozen=True)
+class LaudoDoStorm:
+    """O -71 da janela com endereço — o que o doctor passa a dizer.
+
+    ``sem_endereco`` não é sobra: é a parte do total que este módulo NÃO soube
+    endereçar, publicada para que a soma das portas possa ser conferida contra
+    o número que o `check_kernel_watch` já imprime. Sem ela, um parser que
+    deixasse de reconhecer uma forma do kernel ficaria verde para sempre.
+    """
+
+    dias: int = 7
+    portas: tuple[PortaDoStorm, ...] = ()
+    hubs_em_comum: tuple[HubEmComum, ...] = ()
+    sem_endereco: int = 0
+    porque_nao: str = ""
+
+    @property
+    def total(self) -> int:
+        return sum(p.quantos for p in self.portas) + self.sem_endereco
+
+    def como_dicionario(self) -> dict[str, object]:
+        return {
+            "dias": self.dias,
+            "total": self.total,
+            "sem_endereco": self.sem_endereco,
+            "porque_nao": self.porque_nao,
+            "portas": [p.como_dicionario() for p in self.portas],
+            "hubs_em_comum": [h.como_dicionario() for h in self.hubs_em_comum],
+        }
+
+
+def storm_por_porta(
+    *,
+    linhas: Sequence[str] | None = None,
+    log: Path | None = None,
+    dias: int = 7,
+    hoje: datetime.date | None = None,
+    raiz_usb: Path = RAIZ_USB,
+) -> LaudoDoStorm:
+    """Cada -71 da janela com a PORTA e o APARELHO — a entrega da STORM-USB-01.
+
+    A janela é a mesma do `check_kernel_watch` e pelo mesmo cálculo: data ISO
+    comparada como TEXTO contra ``hoje - dias``, sem aritmética por linha. Se
+    as duas divergirem, o doctor contaria 33 e endereçaria 31, e a diferença
+    apareceria em ``sem_endereco`` — que é onde ela tem de aparecer.
+
+    ``linhas`` existe para a régua; ``log`` é o caminho real. Sem nenhum dos
+    dois e sem o arquivo, ``porque_nao`` diz por que não houve medição — nunca
+    uma lista vazia, que se leria como "nenhum -71".
+    """
+    if linhas is None:
+        if log is None:
+            return LaudoDoStorm(dias=dias, porque_nao="nenhum log do kernel-watch informado")
+        try:
+            linhas = log.read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError:
+            return LaudoDoStorm(
+                dias=dias,
+                porque_nao=f"não deu para ler {log}",
+            )
+    corte = ((hoje or datetime.date.today()) - datetime.timedelta(days=dias)).isoformat()
+
+    quantos: dict[str, int] = {}
+    ultimo: dict[str, str] = {}
+    sem_endereco = 0
+    for linha in linhas:
+        if TAG_DO_STORM not in linha:
+            continue
+        data = linha[:10]
+        if len(data) < 10 or data < corte:
+            continue
+        _, _, mensagem = linha.partition(TAG_DO_STORM)
+        porta = porta_do_evento(mensagem.strip())
+        if not porta:
+            sem_endereco += 1
+            continue
+        quantos[porta] = quantos.get(porta, 0) + 1
+        if data > ultimo.get(porta, ""):
+            ultimo[porta] = data
+
+    conhecidos: dict[str, Aparelho] = {}
+
+    def _aparelho(porta: str) -> Aparelho:
+        if porta not in conhecidos:
+            conhecidos[porta] = aparelho_da_porta(porta, raiz_usb=raiz_usb)
+        return conhecidos[porta]
+
+    portas: list[PortaDoStorm] = []
+    for porta in quantos:
+        caminho = cadeia_da_porta(porta)
+        portas.append(
+            PortaDoStorm(
+                porta=porta,
+                quantos=quantos[porta],
+                ultimo=ultimo[porta],
+                aparelho=_aparelho(porta),
+                hubs=tuple(_aparelho(degrau) for degrau in caminho[:-1]),
+            )
+        )
+    # Mais eventos primeiro; empate desempatado pelo nome, para a saída do
+    # doctor não dançar entre duas execuções sobre o mesmo log.
+    portas.sort(key=lambda p: (-p.quantos, p.porta))
+
+    # O FATOR COMUM. Só conta hub que está no caminho de DUAS portas distintas:
+    # com uma só, acusar o hub seria trocar a causa pelo endereço — o aparelho
+    # daquela porta explica o evento igualmente bem, e é o suspeito mais barato.
+    sob_o_hub: dict[str, list[str]] = {}
+    for p in portas:
+        for degrau in cadeia_da_porta(p.porta)[:-1]:
+            sob_o_hub.setdefault(degrau, []).append(p.porta)
+    hubs_em_comum = tuple(
+        HubEmComum(hub=_aparelho(degrau), portas=tuple(sorted(abaixo)))
+        for degrau, abaixo in sorted(sob_o_hub.items())
+        if len(abaixo) >= 2
+    )
+    return LaudoDoStorm(
+        dias=dias,
+        portas=tuple(portas),
+        hubs_em_comum=hubs_em_comum,
+        sem_endereco=sem_endereco,
+    )
+
+
+def log_do_kernel_watch(lar: Path | None = None) -> Path | None:
+    """O `kernel.log`, ou o `storm.log` antigo, ou ``None`` se não há nenhum.
+
+    A mesma escada de `scripts/doctor.sh:3820-3821`, portada para que a régua
+    não precise adivinhar o caminho — e para que o dia em que o nome mudar
+    mexa em um lugar só.
+    """
+    raiz = (lar or Path.home()) / ".local/state/hefesto-dualsense4unix"
+    for nome in ("kernel.log", "storm.log"):
+        caminho = raiz / nome
+        try:
+            if caminho.is_file():
+                return caminho
+        except OSError:
+            continue
+    return None
+
+
+# ---------------------------------------------------------------------------
 # CLI — o mesmo par `--censo` / `--relatorio` do `sentinela_do_wrapper.py:560`.
 # ---------------------------------------------------------------------------
 
@@ -800,8 +1208,40 @@ def main(argv: list[str] | None = None) -> int:
         "--relatorio", action="store_true", help="relatório legível (default)"
     )
     grupo.add_argument("--censo", action="store_true", help="o exame em JSON")
+    # STORM-USB-01: um modo À PARTE, e não uma sexta linha do exame. O exame é
+    # o espelho da seção Check-up da aba Conexões, e acrescentar linha lá muda
+    # a TELA — que só fecha com o olho dela. O endereço do -71 é leitura de
+    # terminal, então entra por onde o terminal pergunta.
+    grupo.add_argument(
+        "--storm-usb",
+        action="store_true",
+        help="o -71 dos últimos dias com a porta, o aparelho e o hub, em JSON",
+    )
+    parser.add_argument(
+        "--log", help="o kernel.log a ler (default: o do kernel-watch desta conta)"
+    )
+    parser.add_argument(
+        "--dias", type=int, default=7, help="a janela do --storm-usb, em dias (7)"
+    )
+    parser.add_argument(
+        "--raiz-usb",
+        default=str(RAIZ_USB),
+        help=(
+            "onde o /sys lista os nós USB. Trocá-lo permite endereçar o -71 "
+            "contra um retrato de /sys de OUTRA máquina — é por aqui que a "
+            "régua injeta uma bancada e o suporte lê a topologia de quem pediu "
+            "ajuda, sem ter a máquina na mão"
+        ),
+    )
     args = parser.parse_args(argv)
 
+    if args.storm_usb:
+        caminho = Path(args.log) if args.log else log_do_kernel_watch()
+        laudo = storm_por_porta(
+            log=caminho, dias=args.dias, raiz_usb=Path(args.raiz_usb)
+        )
+        print(json.dumps(laudo.como_dicionario(), ensure_ascii=False))
+        return 0
     if args.censo:
         print(json.dumps(censo(), ensure_ascii=False))
         return 0

@@ -52,8 +52,16 @@ _PREAMBULO = textwrap.dedent(
     pass() { :; }
     conselho_de_instalacao() { :; }
     so_no_checkout() { :; }
+    _o_endereco_do_storm() { :; }
     """
 )
+
+#: O ENDEREÇO DO -71 É DE OUTRA RÉGUA — STORM-USB-01, 20/09/2026. O bloco passou
+#: a chamar `_o_endereco_do_storm`, que cruza o log com a topologia do `/sys`.
+#: Aqui ele é dublê mudo de propósito: o que ESTE arquivo mede é o TEMPO VERBAL
+#: (o que vira aviso e o que vira histórico), e deixar a chamada real entrar
+#: faria a régua da janela depender da topologia da máquina que a roda. Quem
+#: cobra o endereço é `tests/unit/test_o_doctor_diz_a_porta_do_storm.py`.
 
 
 def _bloco_do_kernel_watch() -> str:
