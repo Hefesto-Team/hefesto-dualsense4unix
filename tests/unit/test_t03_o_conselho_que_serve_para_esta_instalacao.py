@@ -117,16 +117,18 @@ class TestNenhumaFraseDaTelaMandaAoLugarInexistente:
           cuja hipótese (`enable --now` não re-arma) ainda **não foi medida**.
           Trocar o texto sem o veredito seria prometer um gesto que ninguém
           verificou;
-        * as duas frases de PRIMEIRA instalação ("Rode o instalador uma vez")
-          — o caso ali não é atualizar, e a redação alternativa é texto novo
-          de tela, que é dela.
+        **AS DUAS FRASES DE PRIMEIRA INSTALAÇÃO SAÍRAM DA LISTA — 20/09/2026**
+        (O-INSTALADOR-SEM-A-BARRA-01). Esta isenção dizia que a redação
+        alternativa seria texto novo de tela, e que isso é dela. A cura não
+        redigiu nada: a oração do diagnóstico ficou palavra por palavra, e só
+        o conselho impossível ("Rode o instalador (install.sh) uma vez")
+        passou a vir do DONO — `como_atualizar_esta_instalacao()`, que já
+        redige as outras oito frases deste mesmo arquivo. O que caducou é a
+        isenção, não a regra que a motivou.
         """
         caminho = Path(da.__file__)
         fonte = caminho.read_text(encoding="utf-8")
-        isentas = (
-            "Conserto: rode `bash install.sh` de novo (sem sudo).",
-            "instalador (install.sh) uma vez.",
-        )
+        isentas = ("Conserto: rode `bash install.sh` de novo (sem sudo).",)
 
         # Docstring EXPLICA; código PINTA NA TELA. Só o segundo interessa —
         # e a diferença entre os dois não se descobre por indentação, se

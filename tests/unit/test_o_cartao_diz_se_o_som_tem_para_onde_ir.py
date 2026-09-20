@@ -72,7 +72,7 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
     DICA_CANAL_ACORDADO,
     DICA_CANAL_DORMINDO,
     DICA_CANAL_E_PADRAO,
-    DICA_CANAL_SEM_A_REGRA,
+    dica_canal_sem_a_regra,
     DICA_TITULO_SEM_VPAD,
     SUFIXO_CANAL_ACORDADO,
     SUFIXO_CANAL_DORMINDO,
@@ -345,7 +345,7 @@ class TestADicaDoCanal:
         dita = mod.dica_do_canal(sono)
         assert sono in dita
         for frase in (DICA_CANAL_ACORDADO, DICA_CANAL_DORMINDO,
-                      DICA_CANAL_E_PADRAO, DICA_CANAL_SEM_A_REGRA):
+                      DICA_CANAL_E_PADRAO, dica_canal_sem_a_regra()):
             assert frase not in dita, f"a dica do canal voltou a narrar: {dita!r}"
         assert "PipeWire" not in dita and "medido" not in dita
 
@@ -480,7 +480,7 @@ class TestOsSelosNoCartao:
         # `TestADicaDoCanal`. A regra do sono fora do lugar não chega à dica.
         assert card["alto-canal-porque"] == mod.dica_do_canal(
             audio_saida.CANAL_DORMINDO)
-        assert DICA_CANAL_SEM_A_REGRA not in card["alto-canal-porque"]
+        assert dica_canal_sem_a_regra() not in card["alto-canal-porque"]
 
     def test_a_saida_muda_acende_pelo_payload(self, sono_lido) -> None:
         """A camada 1 chega pelo `speaker.saida_muda`, lida pelo dono."""
