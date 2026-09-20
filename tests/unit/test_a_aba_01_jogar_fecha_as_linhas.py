@@ -37,7 +37,7 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
 
 import monta
 from hefesto_dualsense4unix.interface import onde
-from pacotes import Contexto
+from pacotes import TRAVESSAO, Contexto
 from pacotes import a01_jogar as aba
 
 #: O estado de um daemon vivo, no modo jogo — o mesmo esqueleto que as outras
@@ -189,31 +189,47 @@ def test_a_pagina_tem_os_dois_elementos_do_esmaecido() -> None:
 # [03] O CADEADO DA TROCA AUTOMÁTICA
 # ---------------------------------------------------------------------------
 def test_o_cadeado_diz_o_que_o_daemon_guardou() -> None:
-    """A caixa mostra o estado do daemon, não o último clique.
+    """A trava mostra o estado do daemon, não o último clique.
+
+    A LÍNGUA MUDOU EM 19/09/2026 (`TRAVA-PILULA-01`) e esta régua foi atrás: até
+    ali ela media ``"sim"``/``""``, o par do alvo `marcado`. A trava virou
+    `<button class="cadeado">` com o alvo `classe`, e as palavras passaram a ser
+    as TRÊS do interruptor, cujo dono é o próprio pacote — por isso elas são
+    LIDAS daqui, e não digitadas.
 
     A MORDIDA: troque `state.get("autoswitch_locked") is True` por `False` e
-    esta régua reprova nas duas direções — a caixa marcada com o cadeado solto,
-    e solta com ele preso.
+    esta régua reprova nas duas direções — a trava acesa com o perfil solto, e
+    apagada com ele preso.
     """
-    assert aba._cadeado({**VIVO, "autoswitch_locked": True}) == "sim"
-    assert aba._cadeado({**VIVO, "autoswitch_locked": False}) == ""
+    assert aba._cadeado({**VIVO, "autoswitch_locked": True}) == aba.CADEADO_LIGADO
+    assert (aba._cadeado({**VIVO, "autoswitch_locked": False})
+            == aba.CADEADO_DESLIGADO)
+    assert aba.CADEADO_LIGADO != aba.CADEADO_DESLIGADO, (
+        "as duas palavras do interruptor ficaram iguais — a pílula não teria "
+        "como dizer travado de destravado")
 
 
 def test_sem_daemon_a_caixa_nao_afirma_uma_escolha_dela() -> None:
-    """Sem estado, a caixa DESMARCA — e a escolha está declarada.
+    """Sem estado, a trava fica no TRAVESSÃO — nem acesa, nem apagada.
 
-    Um checkbox tem dois estados e o produto tem três. A aba inteira já resolve
-    isso do mesmo jeito (`_estado_da_tela` devolve `""` e o interruptor apaga as
-    duas posições): sem daemon não se afirma nada. Marcar sobre um estado que
-    ninguém leu diria que ELA ligou o cadeado.
+    **O TERCEIRO ESTADO DEIXOU DE SER MENTIRA EM 19/09**, e é a metade que a
+    pílula ganhou sobre a caixa: um checkbox tem dois estados e o produto tem
+    três. Até ali isto devolvia `""`, que o alvo `marcado` pintava como
+    DESMARCADO — a tela dizia *destravado* sobre um estado que ninguém leu. O
+    travessão não casa com o `data-hef-quando`, logo classe nenhuma acende, e a
+    tela não afirma nada. É o mesmo "não sei" do resto da aba.
 
     E SÓ O ``True`` LITERAL LIGA — a mesma disciplina do `wrapper_used`: um
-    daemon antigo, sem a chave, não pode acender a caixa.
+    daemon antigo, sem a chave, não pode acender a trava.
     """
-    assert aba._cadeado({}) == ""
-    assert aba._cadeado({**VIVO}) == "", "daemon sem a chave marcou a caixa"
-    assert aba._cadeado({**VIVO, "autoswitch_locked": "sim"}) == "", (
+    assert aba._cadeado({}) == TRAVESSAO
+    assert aba._cadeado({**VIVO}) == TRAVESSAO, "daemon sem a chave acendeu a trava"
+    assert aba._cadeado({**VIVO, "autoswitch_locked": "sim"}) == TRAVESSAO, (
         "uma string ligou o cadeado — só o `True` literal pode")
+    assert TRAVESSAO not in (aba.CADEADO_LIGADO, aba.CADEADO_DESLIGADO), (
+        "o travessão virou uma das duas palavras do interruptor — o 'não sei' "
+        "passaria a acender ou a apagar a pílula, que é a afirmação que ele "
+        "existe para não fazer")
 
 
 #: O SENTINELA DO DUBLÊ: *responda o que o serviço responderia*.
@@ -287,34 +303,46 @@ def test_o_cadeado_manda_o_valor_absoluto_e_nunca_um_toggle() -> None:
 
 
 def test_um_clique_grava_uma_vez_so_no_disco_dela() -> None:
-    """`click` e `change` chegam os dois; só um pode virar escrita.
+    """O ouvinte do piloto está em dois eventos; só um pode virar escrita.
 
     `autoswitch.lock` chama `save_autoswitch_locked` (`ipc_handlers.py:2536`) —
-    é disco dela. Duas entregas do mesmo clique seriam duas gravações e duas
+    é disco dela. Duas entregas do mesmo gesto seriam duas gravações e duas
     linhas de log para um ato só.
 
-    O `change` É O ESCOLHIDO porque é o único que só dispara quando a caixa de
-    fato MUDOU: clique no rótulo, tecla de espaço e o `el.click()` sintético da
-    régua passam pelos três caminhos e todos produzem `change`.
+    **A RÉGUA TROCOU DE LADO EM 19/09/2026, e o que ela mede não mudou.** Até
+    ali o escolhido era o `change`, e a razão estava certa PARA UMA CAIXA: um
+    `<input type="checkbox">` dispara `click` **e** `change`, e o `change` era o
+    único que só saía quando a caixa de fato mudava. A trava virou
+    `<button class="cadeado">` (`TRAVA-PILULA-01`) e **um `<button>` não emite
+    `change`** — deixar o filtro lá faria o gesto voltar cedo em todo clique: a
+    tela pisca e o disco não muda. O produto trocou o filtro para `click`, com a
+    razão escrita ao lado; aqui o `change` passa a ser o lado que NÃO grava.
 
-    A MORDIDA: apague a linha `if str(o.get("evento") …) != "change": return` e
-    esta régua reprova dizendo que o `click` também gravou.
+    Quem prova no motor que a trava emite `click` e nunca `change` é a
+    `test_o_clique_no_rotulo_chega_ao_dono_do_gesto`
+    (`tests/unit/test_o_cadeado_mora_no_canto_do_bloco.py`).
+
+    A MORDIDA: apague a linha `if str(o.get("evento") …) != "click": return` e
+    esta régua reprova dizendo que o `change` também gravou.
     """
     p = _PonteDeMentira()
     ctx = _ctx([], autoswitch_locked=False)
-    aba.cadeado(ctx, {"evento": "click"}, p)
+    aba.cadeado(ctx, {"evento": "change"}, p)
     assert p.chamadas == [], (
-        "o `click` gravou: um clique na caixa grava DUAS vezes no disco dela")
+        "o `change` gravou: um gesto na trava grava DUAS vezes no disco dela se "
+        "a caixa voltar, e o filtro é a única coisa entre ela e as duas")
 
     aba.cadeado(ctx, {"evento": "click"}, p)
-    assert len(p.chamadas) == 1, "o `change` não gravou"
+    assert len(p.chamadas) == 1, (
+        "o `click` NÃO gravou — e é o único evento que um `<button>` emite. O "
+        "filtro ficou no `change`, e a trava virou enfeite")
 
     # E UM RECADO SEM `evento` CONTINUA VALENDO: a régua dos botões monta o
     # clique à mão, e um gesto que só funcionasse com a chave presente estaria
     # medindo o instrumento, não o produto.
     aba.cadeado(ctx, {}, p)
     assert len(p.chamadas) == 2, (
-        "um clique sem `evento` foi engolido — o padrão tem de ser `change`")
+        "um clique sem `evento` foi engolido — o padrão tem de ser `click`")
 
 
 def test_o_cadeado_confirma_em_verde() -> None:
@@ -407,16 +435,28 @@ def test_a_palavra_do_cadeado_e_a_que_ela_ja_leu() -> None:
 def test_o_cadeado_esta_na_pagina_com_os_dois_lados() -> None:
     """Endereço de pintura E endereço de clique — um sem o outro é meio botão.
 
-    Sem o `data-campo`, a caixa deixa mudar e não mostra o que o daemon
-    guardou; sem o `data-gesto`, ela muda de marca e não muda nada no produto —
+    Sem o `data-campo`, a trava deixa mudar e não mostra o que o daemon
+    guardou; sem o `data-gesto`, ela muda de cor e não muda nada no produto —
     que é o defeito que o `BOTOES_SEM_DONO` desta aba existe para nomear.
+
+    **O ALVO É `classe` DESDE 19/09** (`TRAVA-PILULA-01`): a trava virou
+    `<button>`, e o alvo `marcado` — o único que escreve `el.checked` — deixou
+    de ter onde escrever. A palavra do `data-hef-quando` sai do DONO
+    (`aba.CADEADO_LIGADO`), nunca digitada aqui: no dia em que a língua do
+    interruptor mudar de novo, esta régua vai junto sozinha.
 
     A MORDIDA: tire um dos dois do gerador e ele REPROVA antes desta régua
     (`aba01._conferir` §11).
     """
     doc = _pagina()
 
-    assert doc.count('data-campo="cadeado" data-hef-alvo="marcado"') == 1
+    assert doc.count('data-campo="cadeado" data-hef-alvo="classe"') == 1
+    assert doc.count('data-hef-classe="ligada" '
+                     f'data-hef-quando="{aba.CADEADO_LIGADO}"') == 1, (
+        "a pílula da trava perdeu a classe ou a palavra que a acende. Sem a "
+        "classe o piloto acende `on`, que folha nenhuma pinta; sem o `quando` o "
+        "alvo `classe` vira BOOLEANO e a trava acende também no DESLIGADO e no "
+        "travessão")
     assert doc.count('data-gesto="cadeado"') == 1
     assert aba.CADEADO_ROTULO in doc, "o rótulo do cadeado não está na tela"
     assert aba.CADEADO_DICA in doc, "o cadeado está sem a razão na dica"
@@ -475,7 +515,7 @@ def test_o_cadeado_continua_na_tela_com_o_hefesto_desligado() -> None:
 
     O quadro **Modo** tem duas seções que se trocam com o interruptor
     (`.so-ligado` e `.so-desligado`), e a troca automática de PERFIL vale nas
-    duas. Uma caixa aninhada dentro de uma delas sumiria na outra posição — e
+    duas. Uma trava aninhada dentro de uma delas sumiria na outra posição — e
     sumiria em SILÊNCIO: nenhuma contagem de `data-campo` vê isso, porque o
     endereço continua no arquivo.
 
@@ -483,7 +523,13 @@ def test_o_cadeado_continua_na_tela_com_o_hefesto_desligado() -> None:
     navegador responde por ela: a régua pergunta ao `getComputedStyle` nas DUAS
     posições do interruptor.
 
-    A MORDIDA: mova o `<label class="cadeado">` para dentro do
+    **O SELETOR PERDEU A TAG EM 19/09** (`TRAVA-PILULA-01`): ele dizia
+    `label.cadeado`, e a trava virou `<button class="cadeado">`. Um seletor com
+    a tag velha casa ZERO elemento, e a régua passou a reprovar pela guarda de
+    vácuo logo abaixo — que é exatamente o que ela existe para fazer. A classe
+    é o endereço; a tag, não.
+
+    A MORDIDA: mova o `<button class="cadeado">` para dentro do
     `<div class="hef-modo so-ligado">`, gere de novo e esta régua reprova na
     posição Desligado.
     """
@@ -498,7 +544,7 @@ def test_o_cadeado_continua_na_tela_com_o_hefesto_desligado() -> None:
         pg.wait_for_load_state("load")
         medido = pg.evaluate("""(() => {
           const ler = () => {
-            const c = document.querySelector('label.cadeado');
+            const c = document.querySelector('.cadeado');
             const l = document.querySelector('.hef-modo.so-ligado');
             const d = document.querySelector('.hef-modo.so-desligado');
             if(!c || !l || !d) return null;
@@ -753,7 +799,11 @@ def test_o_servico_calado_diz_e_para_de_afirmar() -> None:
     # E NADA MAIS É AFIRMADO: as outras respostas da aba continuam mudas.
     assert fora["hef-posicao"] == "", "o interruptor acendeu sem estado"
     assert fora["modo-aceso"] == "", "um chip da fileira acendeu sem estado"
-    assert fora["cadeado"] == "", "o cadeado afirmou uma escolha dela"
+    # O CADEADO FICA NO TRAVESSÃO desde 19/09 (`TRAVA-PILULA-01`): a trava virou
+    # pílula, e com o alvo `classe` o "não sei" é um valor que não casa com o
+    # `data-hef-quando` de ninguém. Vazio aqui seria a mesma coisa — mas o dono
+    # devolve o travessão, e a régua pergunta ao dono.
+    assert fora["cadeado"] == TRAVESSAO, "o cadeado afirmou uma escolha dela"
     assert fora["mesa-frase"] == "", (
         "a frase da mesa vazia apareceu — 'nenhum controle na mesa' sobre um "
         "tique sem resposta é a tela afirmando o que não leu")
