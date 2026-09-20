@@ -23,7 +23,7 @@ A/B na bancada, mesmo roteiro, só a linha `Persistent=true` de diferença:
 """
 from __future__ import annotations
 
-from tests.conftest import exigir_gi_real
+from tests.conftest import exigir_gi_real, olhar_insumo
 
 # `daemon_actions` importa `gi`; sem `gi` real este arquivo ficaria verde contra
 # um stub e não mediria a fiação do cartão.
@@ -161,15 +161,39 @@ class TestAUnidadeConsertada:
 
     def test_as_unidades_nao_apontam_para_sprint_fantasma(self) -> None:
         """E8: as três unidades citavam `FEAT-STEAM-INPUT-SELF-HEAL-01.md`, que
-        nunca existiu. Referência de unidade tem de abrir."""
+        nunca existiu. Referência de unidade tem de abrir.
+
+        O ALVO DE HOJE MORA FORA DO GIT (INSUMO-FORA-DO-GIT-01, 20/09/2026): as
+        quatro linhas `# doc:` apontam para `docs/process/sprints/arquivados/`,
+        que é `.gitignore:178` e não viaja para o clone limpo do `release.yml`.
+        Lá esta régua reprovava por AMBIENTE e derrubava a esteira dos pacotes.
+
+        **A dispensa é POR ALVO, não pelo teste inteiro**, e é essa a diferença
+        que importa: o dia em que uma unidade citar um documento VERSIONADO que
+        sumiu, este teste continua reprovando no claro. Dispensar o teste todo
+        com um marcador teria calado esse caso junto.
+        """
+        conferidos = 0
+        dispensados: list[str] = []
         for unidade in UNIDADES_DO_VIGIA:
             for linha in unidade.read_text(encoding="utf-8").splitlines():
                 if not linha.startswith("# doc:"):
                     continue
-                alvo = RAIZ / linha.split(":", 1)[1].strip()
-                assert alvo.is_file(), (
-                    f"{unidade.name} aponta para {alvo.name}, que não existe"
+                relativo = linha.split(":", 1)[1].strip()
+                insumo = olhar_insumo(relativo)
+                if insumo.nao_viaja:
+                    dispensados.append(f"{unidade.name} -> {insumo.razao}")
+                    continue
+                conferidos += 1
+                assert (RAIZ / relativo).is_file(), (
+                    f"{unidade.name} aponta para {Path(relativo).name}, que não existe"
                 )
+
+        if conferidos == 0:
+            pytest.skip(
+                "nenhum `# doc:` das três unidades veio para esta árvore: "
+                + "; ".join(dispensados)
+            )
 
 
 # ---------------------------------------------------------------------------
