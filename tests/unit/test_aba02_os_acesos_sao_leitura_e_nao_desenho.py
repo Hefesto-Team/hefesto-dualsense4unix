@@ -271,19 +271,40 @@ def test_os_quatro_botoes_dizem_quem_sao_no_desenho(a02, onde):
 
 
 def test_o_endereco_do_aceso_nao_mora_no_container(a02):
-    """`data-campo` no `<span>` que envolve os botões APAGA os dois.
+    """Endereço de TEXTO no `<span>` que envolve os botões APAGA os dois.
 
     Medido no Chrome em 01/09/2026 sobre a página publicada: `[data-mic-modo]`
     caiu de 4 para 0. O `escrever` do piloto faz `el.textContent = t` no alvo
     padrão, e o container inteiro vira uma palavra.
+
+    **ELA MEDIA A FORMA E NÃO O ATO — corrigida em 20/09/2026.** A redação
+    anterior proibia QUALQUER `data-campo` no container, e reprovou a decisão
+    dela do mesmo dia (*"Fica os dois botões. Mas no rádio o botão fica cinza
+    sem ser ativado"*), que endereça o container com
+    `data-hef-alvo="classe"` — de propósito, porque a razão de o «Nativo» ficar
+    cinza é do conjunto, não de um botão.
+
+    O defeito de 01/09 **não é o endereço; é o ALVO**. O piloto resolve
+    `const alvo = el.dataset.hefAlvo || 'texto'`
+    (`interface/hefesto_vivo.py:419`), e só o ramo padrão chama `textContent`
+    (`:915`). Um container com alvo declarado nunca passa por ali.
+
+    Então a régua passa a proibir o que de fato apaga: endereço no container
+    **sem** `data-hef-alvo`, ou com ele em `texto`.
+
+    MORDIDA: tirar o `data-hef-alvo="classe"` do container da `.mic-modo`.
     """
     doc = PUBLICADO.read_text(encoding="utf-8")
-    for container in re.findall(r'<span class="rota mic-modo"[^>]*>', doc):
-        assert "data-campo" not in container, (
-            "o endereço voltou para o container — ele troca os dois botões por "
-            "um travessão")
-    for div in re.findall(r'<div class="rota">', doc):
-        assert "data-campo" not in div
+    padroes = (r'<span class="rota mic-modo"[^>]*>', r'<div class="rota"[^>]*>')
+    for padrao in padroes:
+        for container in re.findall(padrao, doc):
+            if "data-campo" not in container:
+                continue
+            m = re.search(r'data-hef-alvo="([^"]*)"', container)
+            alvo = m.group(1) if m else "texto"
+            assert alvo != "texto", (
+                "o endereço voltou para o container COM ALVO DE TEXTO — ele "
+                f"troca os dois botões por um travessão: {container}")
 
 
 def test_o_pacote_emite_os_dois_acesos_para_a_pagina_publicada(a02, monkeypatch):
