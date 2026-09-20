@@ -317,3 +317,183 @@ cat {registro}
         assert "input:iec958-stereo" in saida, (
             f"e tem de mirar o perfil disponivel; chamadas={saida!r}"
         )
+
+
+#: As fixtures GRAVADAS da máquina, com o controle no cabo, em 20/09/2026.
+#: **A régua LÊ, nunca digita.** Havia prova viva de que isso importa: a linha
+#: `iec958-stereo-input: Digital Input (S/PDIF) (…, availability unknown)` que
+#: `test_o_microfone_padrao_no_cabo.py` digitava à mão já divergia do vivo — e
+#: divergia calada. Fixture digitada envelhece sem avisar ninguém.
+FIXTURES_MIC_CABO = REPO_ROOT / "tests" / "fixtures" / "mic-cabo"
+
+
+@pytest.mark.skipif(not DOCTOR.exists(), reason="scripts/doctor.sh ausente")
+@pytest.mark.skipif(
+    not FIXTURES_MIC_CABO.is_dir(), reason="tests/fixtures/mic-cabo ausente"
+)
+class TestAPortaDeCapturaAlcancaOGanho:
+    """MIC-CABO-SPDIF-01 — a PORTA, que a camada 2 nunca olhou.
+
+    O `_dualsense_perfil_status` decide no nível do PERFIL e está certo no que
+    faz. Mas ele não distingue uma porta que liga o elemento de ganho de
+    captura de uma que não liga — e era esse o defeito medido em 17 e
+    20/09/2026, invisível aos sessenta portões desta casa.
+
+    O QUE ESTÁ FORA DE ALCANCE: o `Headset Capture Volume` do DualSense
+    (0…+48 dB), lido em repouso a 100% / +48,00 dB. Nenhuma porta que o
+    PipeWire ativou até hoje o liga — nem a `iec958-stereo-input` da distro em
+    17/09, nem a `[In] Mic` do UCM DESTA CASA em 20/09.
+
+    **O FURO, declarado:** esta régua mede o TEXTO de três leituras, não o
+    aparelho. Ela prova que o elemento existe e está fora do caminho do
+    PipeWire; **não** prova que ele afeta a captura. Quem ler o verde daqui
+    como «o microfone está bom» leu errado.
+    """
+
+    def _decide(self, sources: str, scontents: str, porta: str) -> tuple[str, str, str]:
+        """Roda o decisor puro do doctor com três ARQUIVOS de fixture."""
+        script = (
+            f'source "{DOCTOR}" >/dev/null 2>&1 || true\n'
+            f"_dualsense_porta_de_captura_status"
+            f' "{FIXTURES_MIC_CABO / sources}"'
+            f' "{FIXTURES_MIC_CABO / scontents}"'
+            f' "{FIXTURES_MIC_CABO / porta}"\n'
+        )
+        proc = subprocess.run(
+            [BASH, "-c", script],
+            capture_output=True,
+            text=True,
+            env={"PATH": "/usr/bin:/bin", "HOME": "/nonexistent", "LC_ALL": "C"},
+            check=False,
+        )
+        linha = proc.stdout.strip()
+        if not linha:
+            return ("", "", "")
+        partes = linha.split("\t")
+        while len(partes) < 3:
+            partes.append("")
+        return (partes[0], partes[1], partes[2])
+
+    def test_o_estado_de_hoje_reprova(self) -> None:
+        """O defeito vivo: a porta do UCM desta casa não liga o `Headset`."""
+        porta, elemento, fora = self._decide(
+            "sources-cabo-2026-09-20.txt",
+            "scontents-dualsense-2026-09-20.txt",
+            "porta-ucm-mic-2026-09-20.txt",
+        )
+        assert porta == "[In] Mic", (
+            f"a porta ativa tem de sair da fixture; saiu {porta!r}"
+        )
+        assert elemento == "Headset", (
+            f"o elemento de ganho de captura da placa é o `Headset`; saiu {elemento!r}"
+        )
+        assert fora == "sim", (
+            "a placa TEM `Headset Capture Volume` e a porta ativa não o liga — "
+            "o ganho está fora do alcance do PipeWire, da tela e dela"
+        )
+
+    def test_a_porta_de_17_09_reprovava_pelo_mesmo_motivo(self) -> None:
+        """Dois donos diferentes, o mesmo estado — e o decisor não olha o nome.
+
+        Em 17/09 a porta era a `iec958-stereo-input` do alsa-card-profile da
+        distro; em 20/09 é a `[In] Mic` do UCM desta casa. O `.conf` daquela
+        tem um `[Element PCM Capture Source]` e nenhum `volume = merge`, então
+        ela também não liga ganho nenhum.
+        """
+        _, elemento, fora = self._decide(
+            "sources-cabo-2026-09-20.txt",
+            "scontents-dualsense-2026-09-20.txt",
+            "porta-acp-iec958-stereo-input.conf",
+        )
+        assert (elemento, fora) == ("Headset", "sim")
+
+    # --- AS TRÊS MORDIDAS -------------------------------------------------
+
+    def test_mordida_2_placa_sem_elemento_de_captura_da_verde(self) -> None:
+        """A mordida que mais importa das três.
+
+        Se a régua reprovasse por achar o nome da porta na string, ela
+        reprovaria também aqui — numa placa que não tem NADA a ligar. Reprovar
+        aí é inventar defeito, e foi por essa porta que voltaria a «cura» de
+        26/07 que emudeceu o microfone de quem a rodou (source sem porta de
+        captura, 327.680 bytes de silêncio digital).
+
+        A fixture é GRAVADA: a placa 0 desta máquina é HDMI e não tem captura.
+        """
+        _, elemento, fora = self._decide(
+            "sources-cabo-2026-09-20.txt",
+            "scontents-sem-captura-2026-09-20.txt",
+            "porta-ucm-mic-2026-09-20.txt",
+        )
+        assert elemento == "", (
+            f"placa sem elemento de captura não tem ganho a ligar; saiu {elemento!r}"
+        )
+        assert fora == "não", (
+            "sem elemento na placa não há nada fora de alcance — reprovar aqui "
+            "seria a régua medindo o NOME da porta, não o alcance"
+        )
+
+    def test_mordida_3_porta_que_liga_o_ganho_da_verde(self) -> None:
+        """Mesma placa, porta diferente: o veredito tem de virar.
+
+        A `analog-input-headset-mic.conf` traz `[Element Headset]` com
+        `volume = merge` — ela LIGA o elemento. Se aqui desse vermelho, o
+        decisor estaria preso ao texto do nome e não ao que o nome liga.
+        """
+        _, elemento, fora = self._decide(
+            "sources-cabo-2026-09-20.txt",
+            "scontents-dualsense-2026-09-20.txt",
+            "porta-acp-analog-input-headset-mic.conf",
+        )
+        assert elemento == "Headset"
+        assert fora == "não", (
+            "esta porta declara `volume = merge` sobre o `Headset`: o ganho "
+            "está no caminho do PipeWire e não há o que reprovar"
+        )
+
+    def test_desligar_elemento_nao_conta_como_ligar(self) -> None:
+        """Desligar um elemento não é ligá-lo, e confundir os dois daria verde sobre o defeito.
+
+        A `analog-input-headset-mic.conf` traz oito `[Element …]` cujo volume é
+        declarado DESLIGADO (Front Mic, Internal Mic, Rear Mic…). Uma régua que
+        casasse a chave `volume` sem olhar o valor daria verde para QUALQUER
+        porta que apenas desligue elementos — inclusive uma que não ligue
+        nenhum.
+        """
+        conf = FIXTURES_MIC_CABO / "porta-acp-analog-input-headset-mic.conf"
+        texto = conf.read_text(encoding="utf-8")
+        desligado = "volume = " + "off"
+        assert desligado in texto, (
+            "a fixture precisa CONTER o caso que a régua tem de recusar, senão "
+            "este teste não mede nada"
+        )
+        so_desligados = "\n".join(
+            ln for ln in texto.splitlines() if "volume = merge" not in ln
+        )
+        alvo = FIXTURES_MIC_CABO / "porta-so-com-volume-desligado.conf"
+        alvo.write_text(so_desligados, encoding="utf-8")
+        try:
+            _, _, fora = self._decide(
+                "sources-cabo-2026-09-20.txt",
+                "scontents-dualsense-2026-09-20.txt",
+                alvo.name,
+            )
+        finally:
+            with contextlib.suppress(OSError):
+                alvo.unlink()
+        assert fora == "sim", (
+            "sem um único `volume = merge`, a porta não liga ganho nenhum — "
+            "elemento desligado não pode contar como elemento ligado"
+        )
+
+    def test_sem_dualsense_o_decisor_cala(self) -> None:
+        """Sem source do DualSense não há veredito — e silêncio não é verde.
+
+        Quem chamar isto tem de distinguir «não há controle no cabo» de «está
+        tudo bem», e por isso a saída é VAZIA, não uma linha com `não`.
+        """
+        assert self._decide(
+            "porta-ucm-mic-2026-09-20.txt",  # um arquivo sem nenhuma source
+            "scontents-dualsense-2026-09-20.txt",
+            "porta-ucm-mic-2026-09-20.txt",
+        ) == ("", "", "")
