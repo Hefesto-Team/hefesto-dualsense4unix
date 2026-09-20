@@ -1,5 +1,5 @@
 [Unit]
-# doc: docs/process/sprints/2026-07-26-STEAM-INPUT-01-ela-nunca-mais-precisa-decidir.md
+# doc: docs/process/sprints/arquivados/2026-07-26-STEAM-INPUT-01-ela-nunca-mais-precisa-decidir.md
 Description=Hefesto — rede de segurança: reaplica Steam Input OFF periodicamente
 
 [Timer]
