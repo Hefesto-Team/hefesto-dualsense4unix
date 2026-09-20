@@ -70,9 +70,18 @@ import ast
 import re
 import subprocess
 import sys
-import tomllib
 from html.parser import HTMLParser
 from pathlib import Path
+
+try:
+    import tomllib  # stdlib do Python 3.11+
+except ImportError:  # pragma: no cover — 3.10, que o pyproject ainda declara
+    # `requires-python = ">=3.10"`, e o `lint-test` do CI roda `pytest
+    # tests/unit` nas TRÊS versões. Um `import tomllib` pelado morre na
+    # COLETA do arquivo de mordidas na perna 3.10 — não como teste vermelho,
+    # como módulo que some. O irmão `check_version_consistency.py:58-61` já
+    # tinha esta cura, e cobrir um chamador deixa o próximo remedindo.
+    import tomli as tomllib  # type: ignore[no-redef]
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
