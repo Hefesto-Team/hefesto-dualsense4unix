@@ -638,6 +638,10 @@ class _ContaDeSlots:
         self._host = host
         self._controles: list[dict[str, Any]] = []
         self._com_ponte_de_mic: tuple[str, ...] = ()
+        #: Os adaptadores em modo de busca na última resposta do daemon. Vazio é
+        #: o padrão seguro: ele devolve a escolha de destino ao critério de
+        #: sempre, que é como a seção escolhia antes da RESERVA-DO-RADIO-01.
+        self._varrendo: frozenset[str] = frozenset()
         self._respondeu: bool | None = None
         self._pedido_em_voo = False
         self.caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
@@ -692,8 +696,51 @@ class _ContaDeSlots:
                 timeout_s=STATE_IPC_TIMEOUT_S,
             )
 
+    def _ler_a_varredura(self) -> None:
+        """Quem está varrendo — UMA leitura por resposta do daemon, não por pintura.
+
+        RESERVA-DO-RADIO-01. Mandar um controle para um adaptador em modo de
+        busca é mandá-lo para onde se mede de 32,5% a 43,4% de queda de pacotes
+        (19/09/2026), e até 20/09 nada no produto sabia disso.
+
+        **Ela mora aqui, e não em `_planos`, por medida.** A leitura custou 8,4
+        ms de mediana contra o BlueZ vivo desta bancada; `_planos` é chamado por
+        `falas`, que é chamado por `_desenhar`, e pôr rádio no caminho do desenho
+        é a forma exata do travamento de 15/09/2026. Aqui ela corre uma vez por
+        resposta do daemon, com a `varredura_recente` segurando o resto.
+
+        **Quem injeta leitor não quer que este bloco fale com a máquina.** É a
+        mesma doutrina de `_desempenho_leitor` e `_mesa_leitor`: a suíte e o
+        retrato alimentam a seção justamente para ela não abrir IPC nem
+        subprocesso. Sem esta guarda, cada teste desta seção abriria sete
+        processos contra o `bluetoothd` DELA — a suíte medindo a máquina de quem
+        a roda, que é o defeito que `_desempenho_sysfs` já existe para matar.
+        """
+        leitor = getattr(self._host, "_desempenho_varredura", None)
+        if leitor is not None:
+            self._varrendo = frozenset()
+            with contextlib.suppress(Exception):
+                self._varrendo = frozenset(leitor() or ())
+            return
+        if (
+            getattr(self._host, "_desempenho_leitor", None) is not None
+            or getattr(self._host, "_mesa_leitor", None) is not None
+        ):
+            self._varrendo = frozenset()
+            return
+        self._varrendo = frozenset()
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.integrations import varredura_do_radio
+
+            # `varrendo` vazio cobre os dois casos, e é de propósito: leitura que
+            # não deu chega vazia, e "não sei" nunca vira penalidade contra um
+            # adaptador. Quem precisa distinguir é o `doctor`, que pergunta
+            # direto ao BlueZ.
+            self._varrendo = varredura_do_radio.varredura_recente().varrendo
+
     def _aplicar_estado(self, estado: dict[str, Any] | None) -> None:
         """Guarda os controles e os `uniq` com a ponte DE PÉ, e redesenha."""
+        self._ler_a_varredura()
         controles = (estado or {}).get("controllers")
         self._controles = (
             [c for c in controles if isinstance(c, dict)]
@@ -836,7 +883,9 @@ class _ContaDeSlots:
             linhas.append(plano_de_radio.linha_do_cabe_mais_um(plano))
             maior = max(maior, plano.agora.controles)
 
-        ordem = plano_de_radio.ordem_de_redistribuicao(planos)
+        ordem = plano_de_radio.ordem_de_redistribuicao(
+            planos, varrendo=self._varrendo
+        )
         if ordem is not None:
             linhas.append(
                 f'1 mudança recomendada: mova um controle do "{ordem.origem_na_tela}" '

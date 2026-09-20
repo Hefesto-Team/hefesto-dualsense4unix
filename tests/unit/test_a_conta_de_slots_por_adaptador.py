@@ -737,3 +737,119 @@ def test_o_preco_do_microfone_esta_na_tela_em_todos_os_estados() -> None:
         conta = _montar(_Host(estado))
         falas = " ".join(conta.falas())
         assert "260,4" in falas and "276,7" in falas
+
+
+# ---------------------------------------------------------------------------
+# 9. A varredura chega à ordem de serviço — RESERVA-DO-RADIO-01 (20/09/2026)
+# ---------------------------------------------------------------------------
+#
+# AS DUAS MORDIDAS DESTE BLOCO, arrancadas e conferidas em 20/09/2026:
+#
+# 7. **Não passar `varrendo=` para `ordem_de_redistribuicao`** em `falas`
+#    (deixar a chamada como era): reprova
+#    `test_a_secao_manda_o_destino_que_varre_para_o_fim_da_fila` — a seção volta
+#    a mandar a pessoa mover um controle para dentro da busca, que é onde se
+#    mede de 32,5% a 43,4% de queda de pacotes. É a
+#    `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` na forma que esta casa mais paga: o
+#    leitor de pé e o último palmo faltando.
+# 8. **Arrancar a guarda de `_ler_a_varredura`** (o `_desempenho_leitor` /
+#    `_mesa_leitor` que impede a leitura real): reprova
+#    `test_quem_injeta_leitor_nao_faz_a_secao_falar_com_o_barramento` — cada
+#    teste desta seção passaria a abrir sete processos contra o `bluetoothd`
+#    DELA, e a suíte mediria a máquina de quem a roda.
+
+#: O terceiro adaptador da mesa de mentira deste bloco, e os dois controles que
+#: o povoam. Faixa sintética da casa, como os de cima.
+HUB_C = "e8:47:3a:00:00:21"
+P7 = "aa:bb:cc:00:00:77"
+P8 = "aa:bb:cc:00:00:88"
+
+
+def _mesa_de_cinco_mais_dois_destinos(varrendo: Any) -> Any:
+    """A seção montada com cinco apertando o HUB_A e dois destinos que cabem.
+
+    O destino mais folgado é o `HUB_B` (um controle); o `HUB_C` tem dois. Pelo
+    critério de sempre o `HUB_B` ganha — e é ele que a régua põe varrendo. Montar
+    o contrário daria um nó verde sobre nada.
+    """
+    host = _Host(
+        {
+            "controllers": [
+                _controle(P1, 1),
+                _controle(P2, 2),
+                _controle(P3, 3),
+                _controle(P4, 4),
+                _controle(P5, 5),
+                _controle(P6, 6),
+                _controle(P7, 7),
+                _controle(P8, 8),
+            ],
+            "bt_mic": {"uniqs": [_sem_dois_pontos(p) for p in (P1, P2, P3, P4, P5)]},
+        },
+        sysfs=_bancada(
+            {
+                P1: HUB_A,
+                P2: HUB_A,
+                P3: HUB_A,
+                P4: HUB_A,
+                P5: HUB_A,
+                P6: HUB_B,
+                P7: HUB_C,
+                P8: HUB_C,
+            }
+        ),
+        dongles=(
+            _Dongle(HUB_A, "Hub 9"),
+            _Dongle(HUB_B, "Hub 15"),
+            _Dongle(HUB_C, "Hub 21"),
+        ),
+    )
+    host._desempenho_varredura = lambda: varrendo
+    return _montar(host)
+
+
+def test_a_secao_manda_o_destino_que_varre_para_o_fim_da_fila() -> None:
+    """MORDIDA 7. A leitura chega à FRASE que ela lê, não para no motor.
+
+    Sem a varredura a seção manda para o "Hub 15", que é o mais folgado e é o
+    que está em modo de busca. Com ela, manda para o "Hub 21".
+    """
+    sem = " ".join(_mesa_de_cinco_mais_dois_destinos(()).falas())
+    assert 'para o "Hub 15"' in sem, (
+        "o cenário só morde se, SEM a leitura, a seção mandasse para o "
+        "adaptador que varre"
+    )
+
+    com = " ".join(_mesa_de_cinco_mais_dois_destinos((HUB_B,)).falas())
+    assert 'para o "Hub 21"' in com, (
+        "a seção continua mandando o controle para dentro da busca — o leitor "
+        "está de pé e o último palmo não foi fiado"
+    )
+    assert 'para o "Hub 15"' not in com
+
+
+def test_quem_injeta_leitor_nao_faz_a_secao_falar_com_o_barramento(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """MORDIDA 8. A suíte e o retrato não abrem subprocesso contra o BlueZ dela.
+
+    `_desempenho_leitor` já significa *"eu te alimento, não fale com a
+    máquina"*. Sem a guarda, cada montagem desta seção perguntaria ao
+    `bluetoothd` vivo — a suíte medindo a bancada de quem a roda, que é o
+    defeito que `_desempenho_sysfs` existe para matar.
+    """
+    from hefesto_dualsense4unix.integrations import varredura_do_radio
+
+    chamadas: list[int] = []
+
+    def nao_pode(**_kwargs: Any) -> Any:
+        chamadas.append(1)
+        return varredura_do_radio.Varredura()
+
+    monkeypatch.setattr(varredura_do_radio, "varredura_recente", nao_pode)
+    _montar(_Host({"controllers": [_controle(P1, 1)]}, sysfs=_bancada({P1: HUB_A})))
+
+    assert not chamadas, (
+        "a seção perguntou ao barramento mesmo com `_desempenho_leitor` "
+        "injetado — a suíte inteira passaria a falar com o BlueZ dela"
+    )

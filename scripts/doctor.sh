@@ -3720,12 +3720,34 @@ check_bt_radio() {
     # nesta bancada de três adaptadores, hci1 e hci2 hospedam quatro dos cinco
     # controles e nenhum deles era olhado. Numa máquina com um adaptador só que
     # tenha enumerado como hci1, o aviso era no-op MUDO.
+    #
+    # RESERVA-DO-RADIO-01 (20/09/2026): o aviso já estava no lugar certo e
+    # dizia só o ESTADO — "a busca rouba banda do rádio". Quanto? Ninguém
+    # sabia, e um aviso sem tamanho se lê como zelo e se ignora. Agora ele diz
+    # o CUSTO MEDIDO: duas corridas de 19/09 com um DualSense no rádio do
+    # adaptador que varria derrubaram 32,5% e 43,4% dos pacotes, medidos pelo
+    # evdev de MOVIMENTO (a IMU publica ~500 pacotes/s com o controle parado).
+    # As três corridas CRUZADAS — varrendo num adaptador, medindo em outro —
+    # deram ruído (+5,1%, -4,2%, -3,5%), e é por isso que este aviso é por
+    # adaptador e não pela mesa.
+    #
+    # O DONO DESSES DOIS NÚMEROS é
+    # `src/hefesto_dualsense4unix/integrations/varredura_do_radio.py`
+    # (QUEDA_MINIMA_MEDIDA / QUEDA_MAXIMA_MEDIDA), e
+    # `tests/unit/test_a_varredura_do_radio_se_le_e_custa.py` reprova se esta
+    # frase divergir dele. Dois donos do mesmo número divergem na primeira
+    # remedição.
+    #
+    # E A CAUDA É PARTE DO AVISO: medido em 20/09, o adaptador continuou
+    # varrendo por 21 SEGUNDOS depois de a janela fechar. "Já fechei" não é
+    # "já parou", e sem esta linha a pessoa fecha a tela, testa na hora e
+    # conclui que o aviso mente.
     if [[ "${gamepad_conectado}" -eq 1 ]]; then
         while IFS= read -r adp; do
             [[ -z "${adp}" ]] && continue
             disc="$(_dbus_bt_prop "${adp}" org.bluez.Adapter1 Discovering)"
             if [[ "${disc}" == "true" ]]; then
-                warn "adaptador ${adp##*/} em modo de busca (Discovering: yes) com controle BT conectado nele — feche a tela de Bluetooth (cosmic-settings) enquanto joga; a busca rouba banda do rádio"
+                warn "adaptador ${adp##*/} em modo de busca (Discovering: yes) com controle BT conectado nele — MEDIDO: a busca derruba de 32,5% a 43,4% dos pacotes do controle que está NESTE adaptador (19/09/2026, duas corridas). Feche a tela de Bluetooth do cosmic-settings (a busca é do adaptador em que você ENTROU, não da lista) e espere ~21 s: ela continua varrendo depois de a janela fechar"
             fi
         done <<<"$(printf '%s' "${adps_com_controle}" | sort -u)"
     fi

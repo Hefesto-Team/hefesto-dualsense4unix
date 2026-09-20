@@ -406,8 +406,36 @@ def cabe_mais_um(ocupacao: Ocupacao, *, com_mic: bool) -> tuple[bool, Ocupacao]:
 
 def ordem_de_redistribuicao(
     planos: Mapping[str, PlanoDoAdaptador],
+    *,
+    varrendo: Iterable[str] | None = None,
 ) -> Redistribuicao | None:
     """A ordem de serviço, ou ``None`` quando não há para onde mover.
+
+    **Esta é a régua AUTORITATIVA do arranjo, por decisão dela de 20/09/2026**
+    (``D-A-REGUA-DO-ARRANJO-SE-DECIDE-COM-A-DIVERGENCIA-NA-MAO``). Havia duas
+    funções respondendo *"qual controle move para qual adaptador"*, e elas
+    divergiam; a palavra dela foi *"O motor (o que manda mover)"*. O
+    ``arranjo_da_mesa.plano_dos_controles`` **aconselha**; quem emite ordem de
+    serviço é esta função, e é aqui que filtro novo nasce. Uma régua só, uma
+    grafia só.
+
+    ``varrendo`` são os **endereços** dos adaptadores em modo de busca agora
+    (:func:`varredura_do_radio.quem_esta_varrendo`). Eles vão para o FIM da fila
+    de destinos — e a palavra é *fim*, não *fora*:
+
+    * **excluir mataria a máquina de um adaptador só.** Com um adaptador, o
+      único destino possível é o que varre; tirá-lo da lista faria o produto
+      calar exatamente onde a perda é maior, e calar não é conselho;
+    * mandar um controle PARA um adaptador que varre é mandá-lo para onde se
+      mede de 32,5% a 43,4% de queda de pacotes (19/09/2026). Se houver outro
+      destino que caiba, ele ganha — e se não houver, o que varre continua
+      valendo, porque a fila dele é menor do que a da origem apertada.
+
+    ``None`` é *"não perguntei"*, e é o padrão: sem a leitura, esta função
+    escolhe exatamente como escolhia antes de 20/09. **"Não sei" nunca vira
+    penalidade** — penalizar por ignorância moveria controle por palpite, e a
+    :class:`varredura_do_radio.Varredura` que não sabe chega aqui vazia de
+    propósito.
 
     Ela só nasce com as DUAS condições juntas:
 
@@ -445,9 +473,16 @@ def ordem_de_redistribuicao(
     origem = apertados[0]
 
     move_com_mic = origem.agora.com_microfone > 0
+    # Os endereços chegam como o `HID_PHYS` os publica; normalizar os dois lados
+    # é o que faz `AA:BB:...` do BlueZ casar com `aa:bb:...` do uevent. Sem isto
+    # o filtro nunca casaria — e um filtro que não casa é um filtro que não
+    # filtra, verde e mudo.
+    em_busca = {_hex(e) for e in (varrendo or ()) if _hex(e)}
     candidatos = sorted(
         (p for p in reais.values() if p.endereco != origem.endereco),
-        key=lambda p: p.agora.fracao_total,
+        # `False < True`: quem varre desce para o fim da fila, e continua NA
+        # fila. Ver a docstring — excluir mataria a máquina de um adaptador só.
+        key=lambda p: (_hex(p.endereco) in em_busca, p.agora.fracao_total),
     )
     for destino in candidatos:
         cabe, destino_depois = cabe_mais_um(destino.agora, com_mic=move_com_mic)
