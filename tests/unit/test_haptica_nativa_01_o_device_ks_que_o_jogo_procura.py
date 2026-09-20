@@ -822,12 +822,12 @@ def test_as_duas_opcoes_da_haptica_moram_na_allowlist() -> None:
 _RAIZ_DO_PROJETO = Path(__file__).resolve().parents[2]
 
 
-def _um_valor(caminho: str, padrao: str, texto: str | None = None) -> str:
-    """O único valor entre aspas que `padrao` captura. Dois casamentos reprovam."""
+def _um_valor(caminho: str, agulha: str, texto: str | None = None) -> str:
+    """O único valor entre aspas que `agulha` captura. Dois casamentos reprovam."""
     if texto is None:
         texto = (_RAIZ_DO_PROJETO / caminho).read_text(encoding="utf-8")
-    achados = re.findall(padrao, texto, re.MULTILINE)
-    assert len(achados) == 1, f"{caminho}: «{padrao}» casou {len(achados)} vezes"
+    achados = re.findall(agulha, texto, re.MULTILINE)
+    assert len(achados) == 1, f"{caminho}: «{agulha}» casou {len(achados)} vezes"
     return achados[0]
 
 
