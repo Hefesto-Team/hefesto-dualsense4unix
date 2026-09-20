@@ -17,6 +17,13 @@ ASSETS="$HERE/assets"
 # FEAT-DSX-DEFINITIVE-FIX-01 §7.5.
 DISABLE_USB_AUDIO=0
 
+# O-NO-NASCE-FECHADO-01 (decisão dela, 20/09/2026): o `70-ps5-controller.rules`
+# versionado FECHA o nó do DualSense físico (`TAG-="uaccess"`, 0600 root) e o
+# broker o abre sob pedido. É o DEFAULT, por ordem dela. `--no-fechar-o-no`
+# instala uma cópia com as duas linhas 0ce6 reabertas — para quem precise do nó
+# aberto para ferramenta de terceiro, ou para reverter sem editar asset.
+ABRIR_O_NO=0
+
 # Mesmo padrão do uninstall.sh e do purge.sh: `--help` sai 0 e argumento
 # desconhecido ABORTA com 2 sem escrever nada em /etc. Aqui o pior caso é
 # inócuo (o script só reaplica regras), mas dois padrões de parser na mesma
@@ -31,6 +38,12 @@ sudo. Idempotente: reexecutar é seguro.
 Opções:
   --disable-usb-audio   instala também a regra 75 (opt-in): desliga o áudio USB
                         do DualSense inteiro — sem microfone NEM fone do jack
+  --no-fechar-o-no      OPT-OUT: o hidraw do DualSense físico volta a nascer
+                        ABERTO para a sessão. Por default ele nasce 0600 root e
+                        quem o abre é o broker, sob pedido — é o que impede a
+                        Steam de pegá-lo no instante da conexão pelo rádio. Se
+                        usar aqui, use também no ./install.sh: o broker precisa
+                        ser renderizado sabendo disso
   --help, -h            mostra esta ajuda e sai
 
 Nada é instalado enquanto esta ajuda estiver sendo exibida.
@@ -40,6 +53,7 @@ FIM
 for arg in "$@"; do
     case "$arg" in
         --disable-usb-audio) DISABLE_USB_AUDIO=1 ;;
+        --no-fechar-o-no)    ABRIR_O_NO=1 ;;
         --help|-h)           uso; exit 0 ;;
         *)
             echo "argumento desconhecido: $arg" >&2
@@ -96,7 +110,26 @@ else
 fi
 
 echo "[1/3] copiando udev rules para /etc/udev/rules.d/..."
-sudo install -Dm644 "$ASSETS/70-ps5-controller.rules"             /etc/udev/rules.d/70-ps5-controller.rules
+if [[ "$ABRIR_O_NO" -eq 1 ]]; then
+    # Reabre SÓ as duas linhas do DualSense standard (0ce6). As do Edge (0df2)
+    # e a do vpad nunca fecharam — ver o cabeçalho do asset.
+    _regra_aberta="$(mktemp)"
+    sed -e 's/MODE="0600", OWNER="root", GROUP="root", TAG-="uaccess"/MODE="0660", TAG+="uaccess"/' \
+        "$ASSETS/70-ps5-controller.rules" > "$_regra_aberta"
+    # O grep IGNORA comentário: o cabeçalho do asset CITA `TAG-="uaccess"` ao
+    # explicar como reverter, e uma guarda que lesse a prosa reprovaria sempre.
+    if grep -v '^[[:space:]]*#' "$_regra_aberta" | grep -q 'TAG-="uaccess"'; then
+        rm -f "$_regra_aberta"
+        echo "ERRO: --no-fechar-o-no não conseguiu reabrir todas as linhas do asset." >&2
+        echo "nada foi instalado. Confira assets/70-ps5-controller.rules." >&2
+        exit 1
+    fi
+    sudo install -Dm644 "$_regra_aberta"                          /etc/udev/rules.d/70-ps5-controller.rules
+    rm -f "$_regra_aberta"
+    echo "  AVISO: --no-fechar-o-no — o hidraw do DualSense nasce ABERTO; a Steam pode pegá-lo antes do broker"
+else
+    sudo install -Dm644 "$ASSETS/70-ps5-controller.rules"         /etc/udev/rules.d/70-ps5-controller.rules
+fi
 sudo install -Dm644 "$ASSETS/71-uinput.rules"                     /etc/udev/rules.d/71-uinput.rules
 # 71-uhid: /dev/uhid acessível ao usuário — o gamepad virtual vira um DualSense de
 # verdade (hidraw + lightbar + LEDs + sensores), o que faz a vibração funcionar

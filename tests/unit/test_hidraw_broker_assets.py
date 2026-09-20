@@ -156,14 +156,29 @@ class TestServiceHardening:
         assert d["Type"] == ["notify"]
         assert d["Requires"] == ["hefesto-hidraw-broker.socket"]
         assert d["ExecStart"] == ["/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker"]
-        # Baseline limpo + belt final: os DOIS lados do restore-all.
+        # NOTA DATADA — 20/09/2026 (O-NO-NASCE-FECHADO-01). Esta régua exigia
+        # `--restore-all-and-exit` nos DOIS lados, e estava certa enquanto
+        # «exposto» era o estado natural do nó. Deixou de ser: com a regra
+        # udev da cura o nó nasce `0600 root`, e um restore-all no ExecStartPre
+        # DESFARIA a cura a cada start/restart do broker, para todo controle
+        # conectado naquele instante. Os dois lados passaram a ser
+        # ASSIMÉTRICOS de propósito, e cada um guarda uma coisa diferente:
+        #   - start  → `--fechar-tudo-e-sair`: reconcilia o que a udev não
+        #     alcançou (o controle que já estava conectado). Sem a cura
+        #     instalada ele cai sozinho no comportamento histórico.
+        #   - stop   → `--restore-all-and-exit`: o PISO DE RECUPERAÇÃO. Broker
+        #     fora do ar é broker que deixou de ser a porta, e um nó 0600 sem
+        #     porta só volta com sudo.
         assert d["ExecStartPre"] == [
-            "/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker --restore-all-and-exit"
+            "/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker --fechar-tudo-e-sair"
         ]
         assert d["ExecStopPost"] == [
             "/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker --restore-all-and-exit"
         ]
-        assert d["Environment"] == ["HEFESTO_BROKER_ALLOWED_UID=__SESSION_UID__"]
+        assert d["Environment"] == [
+            "HEFESTO_BROKER_ALLOWED_UID=__SESSION_UID__",
+            "HEFESTO_BROKER_NO_NASCE_FECHADO=__NO_NASCE_FECHADO__",
+        ]
         assert d["Restart"] == ["on-failure"]
 
     def test_header_de_posse_para_o_uninstall(
