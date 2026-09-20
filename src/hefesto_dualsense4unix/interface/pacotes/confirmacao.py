@@ -29,6 +29,10 @@ casa:
 Então o par virou público aqui e a ``a07`` passou a importar daqui — zero
 mudança de comportamento: são as MESMAS funções, com o MESMO ``_ARMADO``.
 
+**E O ALCANCE DISSO É O DOS CHAMADORES DESTE MÓDULO, não o da casa** — ver
+:data:`_ARMADO`. A aba 09 fecha a Steam dela com relógio próprio, e a dívida
+está nomeada com régua em vez de escondida.
+
 **HOJE ELE TEM UM CHAMADOR SÓ, e a razão está medida.** A aba 01 acabou NÃO
 pedindo consentimento: o botão da 07 é redesenhado a cada tique
 (``_botao_armavel``) e TROCA de rótulo para «Fechar e continuar»; o chip da 01 é
@@ -87,10 +91,19 @@ FORA_DO_PRAZO = "Passou do tempo e não fechei nada. Clique de novo para começa
 #: e confirmar em "Deixar tudo pronto" rodaria o segundo com o sim dado ao
 #: primeiro. **O consentimento é do ATO, nunca da aba.**
 #:
-#: E ELE PASSOU A SER O ÚNICO DA CASA — 20/09. Um dicionário POR ABA seria um
-#: relógio por aba sobre a MESMA Steam, e dois consentimentos pendurados ao
-#: mesmo tempo: a segunda confirmação não teria como dizer a qual responde.
-#: Aqui, armar um desarma o outro, venha de onde vier.
+#: E ELE É ÚNICO ENTRE QUEM PASSA POR AQUI — 20/09. Armar um desarma o outro
+#: **entre os chamadores deste módulo**: hoje, os três botões da aba 07.
+#:
+#: FATO SUBSTITUÍDO NO MESMO DIA, pela conferência: esta linha dizia *"ele
+#: passou a ser o ÚNICO DA CASA (…) armar um desarma o outro, venha de onde
+#: vier"*, e a segunda metade é falsa. ``a09_sistema`` tem ``_ARMADO`` PRÓPRIO,
+#: e o gesto ``aplicar-aos-jogos`` de lá chama
+#: ``steam_launch_options.with_steam_closed`` — MEDIDO: armar a 07 e a 09 deixa
+#: OS DOIS pendurados ao mesmo tempo. A dívida é anterior a este módulo (curá-la
+#: é reescrever o ``_confirmado`` da 09, que tem ``antes_de_armar`` e não cabe
+#: nesta conta), e está NOMEADA em
+#: ``test_steam_input_01_o_chip_que_acende_por_jogo.RELOGIO_PROPRIO_DECLARADO``,
+#: com uma régua que reprova a TERCEIRA aba que inventar a sua.
 _ARMADO: dict[str, float] = {}
 
 
