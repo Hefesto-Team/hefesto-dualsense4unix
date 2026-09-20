@@ -18,7 +18,8 @@ A lista do Hefesto passa a valer nos dois sentidos, e este arquivo trava:
    `"0"`, o da lista em `"2"`, o sem configuração sem chave — o vdf relido
    pelo parser antes e depois, e um perfil de jogo byte a byte idêntico;
 4. o vigia de verdade (bash), no mesmo instante em que ele já chama o
-   `--ligar`, sem que nome de configset vá à saída.
+   `--ligar`, sem que nome de configset vá à saída — nos DOIS caminhos: com a
+   mesa livre, e com um jogo aberto, quando a ponte adia sem escrever.
 
 Nenhum id de aparelho entra aqui: o configset "com nome de aparelho" deste
 arquivo é um rótulo inventado.
@@ -369,11 +370,79 @@ class TestOLarDeMentira:
 _BASH = shutil.which("bash") or "/bin/bash"
 _GUARDA = Path(__file__).resolve().parents[2] / "scripts" / "disable_steam_input.sh"
 
+#: O módulo que o vigia chama por `python3 "${PONTE_PY}"`. O default do roteiro
+#: aponta para cá, e é contra este caminho que o desvio abaixo se confere.
+_PONTE_REAL = (
+    Path(__file__).resolve().parents[2]
+    / "src" / "hefesto_dualsense4unix" / "integrations" / "steam_input_ponte.py"
+)
+
+#: O `PONTE_PY` que este arquivo põe no lugar do default. Ele chama o `main`
+#: REAL do produto — a única coisa que ele tira do caminho é a pergunta cuja
+#: resposta estava vindo da MÁQUINA de quem roda a suíte.
+_MOLDE_DA_PONTE = '''"""Chama o `main` REAL da ponte, com a máquina fora da conta.
+
+Gerado por `tests/unit/test_o_steam_input_por_jogo_segue_a_lista.py`.
+"""
+import inspect
+import sys
+
+sys.path.insert(0, {pasta!r})
+
+import steam_input_ponte as ponte
+
+
+def _jogo_aberto() -> bool:
+    return {jogo!r}
+
+
+_real = inspect.signature(ponte.steam_game_running)
+_dele = inspect.signature(_jogo_aberto)
+if list(_real.parameters) != list(_dele.parameters):
+    raise SystemExit(
+        "o dublê divergiu do produto: steam_game_running mudou de parâmetros"
+    )
+if _real.return_annotation not in (bool, "bool"):
+    raise SystemExit(
+        "o dublê divergiu do produto: steam_game_running não devolve mais bool"
+    )
+
+ponte.steam_game_running = _jogo_aberto
+
+raise SystemExit(ponte.main(sys.argv[1:]))
+'''
+
+
+def _ponte_com_a_maquina_declarada(tmp_path: Path, *, jogo_aberto: bool) -> Path:
+    """Um `PONTE_PY` que responde "há jogo aberto?" pela régua, e não pela máquina.
+
+    **A causa, medida em 20/09/2026.** O `pgrep` de mentira daqui já era dono de
+    `steam_running` — ela ainda forka `pgrep`. A irmã `steam_game_running`
+    DEIXOU DE FORKAR em 12/08/2026 (PERF-PROC-SCAN-01) e passou a varrer
+    `/proc` por conta própria: dentro do subprocesso que o vigia lança, ela
+    respondia pela máquina de quem roda a suíte. Com um jogo da Steam aberto
+    ali, os dois sentidos da ponte adiavam (`adiado_jogo_aberto`) e o vdf de
+    mentira ficava sem os `"0"` — o produto certo, a régua medindo outra coisa.
+
+    O dublê é conferido contra o real ANTES de entrar (mesma assinatura): dublê
+    mais frouxo que o produto envenena o vizinho por ordem de teste.
+    """
+    arquivo = tmp_path / f"ponte_com_jogo_{'aberto' if jogo_aberto else 'fechado'}.py"
+    arquivo.write_text(
+        _MOLDE_DA_PONTE.format(pasta=str(_PONTE_REAL.parent), jogo=jogo_aberto),
+        encoding="utf-8",
+    )
+    return arquivo
+
 
 def _rodar_o_vigia(
-    tmp_path: Path, lar: dict[str, Path], *args: str
+    tmp_path: Path, lar: dict[str, Path], *args: str, jogo_aberto: bool
 ) -> subprocess.CompletedProcess[str]:
-    """bash de verdade, HOME no lar de mentira, `pgrep`/`steam`/`sleep` stubados."""
+    """bash de verdade, HOME no lar de mentira, `pgrep`/`steam`/`sleep` stubados.
+
+    `jogo_aberto` não tem valor padrão de propósito: quem chama declara o estado
+    que mede, em vez de herdá-lo da máquina.
+    """
     stubs = tmp_path / "stubs"
     stubs.mkdir(exist_ok=True)
     for nome, corpo in (("pgrep", "exit 1"), ("steam", "exit 0"), ("sleep", "exit 0")):
@@ -384,10 +453,29 @@ def _rodar_o_vigia(
     env["HOME"] = str(lar["home"])
     env["XDG_CONFIG_HOME"] = str(lar["home"] / ".config")
     env["PATH"] = f"{stubs}:/usr/bin:/bin"
+    env["PONTE_PY"] = str(_ponte_com_a_maquina_declarada(tmp_path, jogo_aberto=jogo_aberto))
     return subprocess.run(
         [_BASH, str(_GUARDA), *args],
         capture_output=True, text=True, check=False, env=env, timeout=120,
     )
+
+
+def test_o_default_do_ponte_py_no_vigia_aponta_para_o_modulo_de_verdade() -> None:
+    """O desvio por `PONTE_PY` não pode esconder um default quebrado.
+
+    O vigia desiste CALADO quando o arquivo não existe (`[[ ! -f ]] && return 0`),
+    e os dois testes abaixo passariam do mesmo jeito com o default apontando para
+    o nada. Esta é a linha que os impede de mentir por omissão.
+    """
+    linha = next(
+        linha
+        for linha in _GUARDA.read_text(encoding="utf-8").splitlines()
+        if linha.startswith("PONTE_PY=")
+    )
+    dentro = linha.split(":-", 1)[1].rstrip('}"')
+    alvo = Path(dentro.replace("${_SCRIPT_DIR}", str(_GUARDA.parent)))
+    assert alvo.resolve() == _PONTE_REAL.resolve()
+    assert _PONTE_REAL.is_file()
 
 
 def test_o_vigia_desliga_o_de_fora_no_mesmo_instante_do_ligar(tmp_path: Path) -> None:
@@ -397,7 +485,7 @@ def test_o_vigia_desliga_o_de_fora_no_mesmo_instante_do_ligar(tmp_path: Path) ->
     perfil_antes = lar["perfil"].read_bytes()
     foto_antes = _fotografia(lar["home"])
 
-    proc = _rodar_o_vigia(tmp_path, lar, "--apply-quiet")
+    proc = _rodar_o_vigia(tmp_path, lar, "--apply-quiet", jogo_aberto=False)
 
     saida = proc.stdout + proc.stderr
     assert proc.returncode == 0, saida
@@ -413,3 +501,41 @@ def test_o_vigia_desliga_o_de_fora_no_mesmo_instante_do_ligar(tmp_path: Path) ->
     assert "aparelho-de-mentira" not in saida
     assert "configset_" not in saida
     assert proc.stdout.rstrip().splitlines()[-1].startswith("[steam-input] resultado=")
+
+
+def test_o_vigia_adia_os_dois_sentidos_com_um_jogo_aberto(tmp_path: Path) -> None:
+    """O IRMÃO que faltava: o caminho do adiamento, medido de propósito.
+
+    Fechar a Steam com um jogo aberto MATA o jogo, e por isso a ponte adia os
+    dois sentidos em vez de escrever. Até 20/09/2026 ninguém mediu este
+    caminho: ele só acontecia por ACIDENTE, na máquina de quem rodasse a suíte
+    com um jogo aberto — e ali ele derrubava o teste acima, que é o irmão que
+    mede o caminho da escrita.
+
+    A MORDIDA: troque para `jogo_aberto=False` e as duas linhas de
+    `adiado_jogo_aberto` somem, porque a ponte escreve.
+    """
+    lar = _montar_lar(tmp_path)
+    perfil_antes = lar["perfil"].read_bytes()
+
+    proc = _rodar_o_vigia(tmp_path, lar, "--apply-quiet", jogo_aberto=True)
+
+    saida = proc.stdout + proc.stderr
+    assert proc.returncode == 0, saida
+    assert f"[steam-input-ponte] resultado={ponte.PONTE_ADIADA_JOGO}" in proc.stdout
+    assert (
+        f"[steam-input-fora-da-lista] resultado={ponte.PONTE_ADIADA_JOGO}" in proc.stdout
+    )
+
+    # O QUE A PONTE NÃO FEZ, e é o adiamento inteiro. O `--apply-quiet` tem
+    # DOIS trabalhos, e só um deles é a ponte: a `awk` do próprio guarda troca
+    # a chave que JÁ EXISTE fora da lista (o `"2"` do segundo jogo cai para
+    # `"0"`) e continua rodando com o jogo aberto, porque ela não fecha a Steam.
+    # A ponte é quem ESCREVE chave nova — e é ela que adia.
+    depois = _valores(lar["vdf"].read_text(encoding="utf-8"))
+    assert _FORA[0] not in depois, saida     # a chave continua sem existir
+    assert _FORA[2] not in depois, saida     # (na árvore canônica, idem)
+    assert depois[_NA_LISTA] == "0", saida   # a exceção dela segue inerte
+    assert lar["perfil"].read_bytes() == perfil_antes
+    assert "aparelho-de-mentira" not in saida
+    assert "configset_" not in saida
