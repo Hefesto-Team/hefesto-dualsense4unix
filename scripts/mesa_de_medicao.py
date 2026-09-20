@@ -662,11 +662,46 @@ def enxuga_os_passos(
     return fora
 
 
+#: ONDE UMA SPRINT FECHADA VAI PARAR. O arquivamento é rotina desta casa — as
+#: 732 fechadas saíram da pasta que a IA lê —, e ele NÃO pode apagar o gesto.
+_ARQUIVADOS = "arquivados"
+
+
+def _o_dono_do_gesto(relativo: str) -> pathlib.Path | None:
+    """O arquivo dono, na pasta viva OU na dos arquivados.
+
+    ARQUIVAR A SPRINT NÃO PODE APAGAR O GESTO DE 199 TESTES. Medido em
+    20/09/2026: os dois donos foram para `sprints/arquivados/` quando as
+    fechadas saíram da pasta que a IA lê, e este motor passou a devolver `{}`
+    — calado. As 199 células caíram no fallback da procedência, que é
+    literalmente o defeito que ela apontou na linha 10 (*"sinceramente não
+    entendi o que diabos é pra fazer aqui"*), voltando inteiro seis dias
+    depois. Sete réguas ficaram vermelhas e nenhuma dizia o porquê.
+    """
+    alvo = RAIZ / relativo
+    if alvo.exists():
+        return alvo
+    p = pathlib.Path(relativo)
+    guardado = RAIZ / p.parent / _ARQUIVADOS / p.name
+    return guardado if guardado.exists() else None
+
+
 def _gesto_do_arquivo(relativo: str, marca: str,
                       ident: Any) -> dict[str, list[tuple[str, str]]]:
     """O motor dos dois: mesma forma de seção, chaves diferentes."""
-    alvo = RAIZ / relativo
-    if not alvo.exists():
+    alvo = _o_dono_do_gesto(relativo)
+    if alvo is None:
+        # A PASTA INTEIRA PODE NÃO ESTAR AQUI, e aí não é defeito:
+        # `docs/process` é `.gitignore`, logo um clone limpo não a tem e a
+        # mesa tem de subir assim mesmo. O que É defeito é a pasta estar no
+        # disco e o dono ter sumido DELA — aí alguém o moveu, e devolver `{}`
+        # aqui faria o gesto morrer calado. Instrumento que sabe do próprio
+        # risco RESOLVE; este levanta.
+        if (RAIZ / pathlib.Path(relativo).parent).is_dir():
+            raise FileNotFoundError(
+                f"o dono do gesto sumiu: {relativo} — não está na pasta nem "
+                f"em {_ARQUIVADOS}/. Sem ele os testes caem na procedência "
+                f"(canal, report, offset) e param de dizer o que fazer.")
         return {}
     fora: dict[str, list[tuple[str, str]]] = {}
     atual = ""

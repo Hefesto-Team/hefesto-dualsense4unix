@@ -1331,7 +1331,9 @@ def test_as_21_trazem_o_gesto_e_ele_vem_do_arquivo_dono() -> None:
     fonte = pathlib.Path(med.__file__).read_text(encoding="utf-8")
     assert "como_das_21()" in fonte, "a mesa deixou de ler o dono do gesto"
     assert med._O_COMO_DAS_21.endswith(".md")
-    assert (med.RAIZ / med._O_COMO_DAS_21).exists(), (
+    # PELO DONO, NÃO PELO CAMINHO: arquivar a sprint move o arquivo para
+    # `arquivados/` e não apaga o gesto — ver o irmão em `_o_dono_do_gesto`.
+    assert med._o_dono_do_gesto(med._O_COMO_DAS_21) is not None, (
         f"o arquivo do gesto sumiu: {med._O_COMO_DAS_21}")
 
 
@@ -1418,8 +1420,13 @@ def test_o_acervo_do_mapa_tambem_tem_gesto() -> None:
     # faria a aceitação dela e o acervo mudarem juntos, e eles não mudam pelas
     # mesmas razões.
     assert med._O_COMO_DAS_21 != med._O_COMO_DO_MAPA
+    # E A RÉGUA PERGUNTA AO DONO, em vez de digitar o caminho. Ela digitava
+    # `(med.RAIZ / caminho).exists()` até 20/09/2026, e por isso ficou
+    # VERMELHA quando as sprints fechadas foram para `arquivados/` — medindo o
+    # mundo de ontem enquanto o gesto continuava no disco, dois diretórios
+    # adiante. Quem sabe onde o dono mora é `_o_dono_do_gesto`.
     for caminho in (med._O_COMO_DAS_21, med._O_COMO_DO_MAPA):
-        assert (med.RAIZ / caminho).exists(), caminho
+        assert med._o_dono_do_gesto(caminho) is not None, caminho
 
     # E NENHUM GESTO DO MAPA CAI NA CÉLULA DE OUTRA: o endereço é a chave mais
     # o lado, e trocar um por outro mandaria ela testar o cabo lendo o rádio.
@@ -1519,3 +1526,58 @@ def test_o_daemon_vivo_nao_e_mais_pobre_que_o_kernel(monkeypatch) -> None:
     # E O RÁDIO, que é a outra metade da bancada dela.
     daemon["controllers"][0]["transport"] = "bt"
     assert med.quem_esta_na_mesa()["postos"]["P1"]["transporte"] == "rádio"
+
+
+# ---------------------------------------------------------------------------
+# ARQUIVAR A SPRINT NÃO PODE APAGAR O GESTO — 20/09/2026
+# ---------------------------------------------------------------------------
+def test_o_dono_do_gesto_sobrevive_ao_arquivamento(tmp_path, monkeypatch) -> None:
+    """O arquivamento é rotina desta casa, e por isso é uma ARMADILHA.
+
+    Medido em 20/09/2026: os dois donos do gesto foram para
+    `sprints/arquivados/` quando as fechadas saíram da pasta que a IA lê, e
+    `_gesto_do_arquivo` passou a devolver `{}` — CALADO. As 199 células caíram
+    no fallback da procedência (canal, report, offset), que é literalmente o
+    defeito que ela apontou na linha 10 (*"sinceramente não entendi o que
+    diabos é pra fazer aqui"*), voltando inteiro seis dias depois. Sete réguas
+    ficaram vermelhas e nenhuma sabia dizer por quê.
+    """
+    sprints = tmp_path / "docs" / "process" / "sprints"
+    (sprints / "arquivados").mkdir(parents=True)
+    monkeypatch.setattr(med, "RAIZ", tmp_path)
+    relativo = "docs/process/sprints/UMA-SPRINT.md"
+
+    # 1 · NA PASTA VIVA — o caso de sempre.
+    viva = sprints / "UMA-SPRINT.md"
+    viva.write_text("conteúdo", encoding="utf-8")
+    assert med._o_dono_do_gesto(relativo) == viva
+
+    # 2 · ARQUIVADA — o caso que quebrou. O gesto continua no disco.
+    viva.rename(sprints / "arquivados" / "UMA-SPRINT.md")
+    achado = med._o_dono_do_gesto(relativo)
+    assert achado is not None, (
+        "arquivar a sprint apagou o gesto de 199 testes — o motor voltou a "
+        "devolver {} calado, e o COMO vira a procedência repetida")
+    assert achado.parent.name == "arquivados", achado
+
+    # 3 · SUMIU DE VERDADE, com a pasta no disco — aí é defeito, e ele GRITA.
+    #     Devolver {} aqui é o que escondeu o estrago por seis dias.
+    achado.unlink()
+    assert med._o_dono_do_gesto(relativo) is None
+    with pytest.raises(FileNotFoundError, match="o dono do gesto sumiu"):
+        med._gesto_do_arquivo(relativo, r"##\s+(\S+)", lambda m: m.group(1))
+
+
+def test_sem_a_pasta_process_a_mesa_sobe_assim_mesmo(tmp_path, monkeypatch) -> None:
+    """Um clone limpo NÃO tem `docs/process` — ela é `.gitignore`.
+
+    A metade de cima desta cura levanta quando o dono some; esta prova que ela
+    não levanta quando a pasta INTEIRA não está aqui, que é o estado de toda
+    máquina que clonou o repositório. Confundir as duas quebraria a mesa em
+    todo clone limpo — e essa é a família que já derrubou o `release.yml`.
+    """
+    monkeypatch.setattr(med, "RAIZ", tmp_path)
+    assert not (tmp_path / "docs" / "process").exists()
+    assert med._gesto_do_arquivo(
+        "docs/process/sprints/QUALQUER.md", r"##\s+(\S+)",
+        lambda m: m.group(1)) == {}
