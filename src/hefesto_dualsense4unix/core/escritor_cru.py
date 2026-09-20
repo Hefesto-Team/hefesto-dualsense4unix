@@ -138,6 +138,23 @@ def invalidar_pids_da_steam() -> None:
     _ultima_foto_de_pids = None
 
 
+def processo_vivo(pid: int) -> bool:
+    """Ainda existe processo com este PID?
+
+    ESCRITOR-CRU-03 (19/09/2026) — é o que separa a foto do presente, e é
+    barato de propósito: UM `stat` em ``/proc/<pid>``, sem `pgrep`, sem
+    subprocesso e sem varrer diretório. É o que torna pagável conferir a foto
+    no tique de 1 s da GUI, que é onde `_lightbar_disputada` é lido.
+
+    Não conseguir olhar devolve ``True``: falha de leitura não é prova de
+    morte, e a disciplina desta casa é não mudar a resposta por falta de dado.
+    """
+    try:
+        return os.path.exists(f"/proc/{int(pid)}")
+    except Exception:  # pragma: no cover - `int()` de lixo, `/proc` ausente
+        return True
+
+
 def _comm_de_pid(pid: str | int) -> str:
     """``comm`` de um pid — o nome de processo que o ``pgrep -x`` compara.
 
@@ -461,6 +478,58 @@ class Veredito:
         """True se ao menos um nó da mesa está segurado."""
         return bool(self.nos_segurados)
 
+    # --- a foto conferida contra o presente (ESCRITOR-CRU-03) -------------
+
+    def pids_vivos(
+        self, no: str | None, *, vivo: Callable[[int], bool] | None = None
+    ) -> tuple[int, ...]:
+        """Dos PIDs que a foto guarda para este nó, os que AINDA EXISTEM."""
+        olhar = processo_vivo if vivo is None else vivo
+        return tuple(p for p in self.pids(no) if olhar(p))
+
+    def segurado_de_fato(
+        self, no: str | None, *, vivo: Callable[[int], bool] | None = None
+    ) -> bool:
+        """True se alguém **que ainda existe** segura este nó.
+
+        ESCRITOR-CRU-03 (19/09/2026) — a diferença entre LEMBRAR e MEDIR.
+
+        `segurado` acima responde sobre a FOTO, e a foto é tirada no tique de
+        30 s do `reconnect_loop`. Entre dois tiques ela é a única coisa que a
+        aba Status tem — e ela conta o passado no presente. Medido em 19/09: a
+        Steam levou SIGTERM, `pgrep` devolveu zero, e sete segundos depois o
+        `daemon.state_full` ainda publicava ``lightbar_disputada: True``. O
+        aviso na tela dela nomeia um processo que não existe mais.
+
+        E há um caminho em que a foto **nunca** é corrigida: o
+        `vigiar_escritor_cru` é no-op TOTAL em Modo Nativo (nem sonda) e
+        desiste quando nenhum nó está mapeado. Nesses estados ninguém zera o
+        que a última foto disse — ela vale para sempre.
+
+        A cura não é sondar mais: um `pgrep` por segundo é justamente o preço
+        que o `_lightbar_disputada` se recusa a pagar. É conferir o que a foto
+        já guarda — **os PIDs**. Um `os.path.exists('/proc/<pid>')` por PID
+        lembrado custa um `stat`, e a foto tem um punhado deles.
+
+        **Só pode ir de True para False, nunca o contrário**: um nó que a sonda
+        viu livre continua livre, e nenhum aviso novo nasce daqui.
+
+        Ressalva honesta, porque a régua não pode prometer o que não entrega:
+        um PID reciclado por outro processo lê-se como vivo, e um processo vivo
+        que já fechou o `fd` também. Nos dois casos a resposta é a de hoje — o
+        erro fica do lado seguro, que é o de não mudar nada — e o tique de 30 s
+        corrige. O que some é a mentira barata: o processo MORTO.
+        """
+        return bool(self.pids_vivos(no, vivo=vivo))
+
+    def nos_segurados_de_fato(
+        self, *, vivo: Callable[[int], bool] | None = None
+    ) -> tuple[str, ...]:
+        """Os nós segurados por quem ainda existe — o `nos_segurados` medido."""
+        return tuple(
+            sorted(n for n in self.por_no if self.segurado_de_fato(n, vivo=vivo))
+        )
+
 
 #: A sonda, em forma de tipo — é o que torna o sentinela exercitável sem
 #: ``/proc``, sem Steam e sem hardware.
@@ -596,4 +665,5 @@ __all__ = [
     "holders_de_hidraw_de_qualquer_um",
     "invalidar_pids_da_steam",
     "pids_da_steam",
+    "processo_vivo",
 ]

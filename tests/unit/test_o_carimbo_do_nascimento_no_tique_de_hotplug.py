@@ -27,6 +27,7 @@ endereço real entra em arquivo versionado, e há portão que reprova.
 from __future__ import annotations
 
 import asyncio
+import os
 from typing import Any
 
 import pytest
@@ -355,8 +356,12 @@ class _DaemonFalso:
         self.controller = _ControllerFalso(
             segura if segura is not None else _MAPA_DA_BANCADA
         )
+        # ESCRITOR-CRU-03 (19/09/2026): o PID da sonda tem de estar VIVO. A
+        # segunda régua do carimbo (`_nos_segurados_agora`) confere a foto
+        # contra `/proc` em vez de lembrá-la, e um PID inventado era condenação
+        # nascida de dublê — o mesmo defeito que a cura veio curar, ao avesso.
         self._sentinela_de_escritor_cru = SentinelaDeEscritorCru(
-            sonda=lambda _alvos: {no: [600105] for no in nos}
+            sonda=lambda _alvos: {no: [os.getpid()] for no in nos}
         )
         if nos:
             self._sentinela_de_escritor_cru.sondar(nos, 0.0, forcar=True)
