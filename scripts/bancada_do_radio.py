@@ -99,34 +99,46 @@ def _tiques() -> int:
     return int((r.get("counters") or {}).get("poll.tick", 0))
 
 
-def _evdev_de_movimento() -> str | None:
-    """O nó de MOVIMENTO do DualSense — o fio que a varredura pode estreitar.
+def _evdev_de_movimento(uniq: str | None = None) -> str | None:
+    """O nó de MOVIMENTO de um controle — o fio que a varredura pode estreitar.
 
-    POR QUE O `poll.tick` DO DAEMON NÃO SERVE, e isto foi medido em 19/09: a
-    taxa dele é a MESMA com o controle no rádio (54,8/s) e no cabo (57,4/s).
-    Ele conta as voltas do laço do daemon, que rodam pelo relógio — não os
-    pacotes que chegam do controle. Um instrumento assim responde sobre o
-    daemon, nunca sobre o rádio, e daria «sem dano» em qualquer cenário.
+    CASA PELO `uniq`, E NUNCA PELA ORDEM — 19/09/2026, e isto custou uma
+    medição inteira. A primeira versão pegava "o nó de maior número", e na
+    mesa de quatro isso escolheu o `A0:FA:9C` enquanto o adaptador sob medição era o do
+    `14:3A:9A`. O número saiu (184 pacotes/s) e parecia uma resposta.
 
-    POR QUE O NÓ DE MOVIMENTO, e não o dos botões: a IMU publica ~514
-    pacotes/s com o controle PARADO em cima da mesa — o ruído do giroscópio
-    basta. O nó dos botões fica em 0/s enquanto ninguém aperta nada, e mediria
-    o silêncio.
+    É a regra que esta casa já tinha escrito para o som: *propriedade de
+    posse, nunca o rótulo nem a posição*. Aqui a posse é o `uniq` do device.
+
+    O QUE SE MEDE É O NÓ VIRTUAL, e isso é de propósito: o produto ESCONDE o
+    hidraw físico do controle no rádio (é o que o `hide` faz) e publica um
+    `uhid` no lugar. O virtual só emite quando o físico entrega, então ele
+    mede a ponta que o JOGO vê — que é a que importa.
+
+    POR QUE O NÓ DE MOVIMENTO, e não o dos botões: a IMU publica ~500
+    pacotes/s com o controle PARADO em cima da mesa. O nó dos botões fica em
+    0/s enquanto ninguém aperta nada, e mediria o silêncio.
     """
-    candidatos = []
+    achados: list[tuple[int, str]] = []
     for no in sorted(Path("/dev/input").glob("event*")):
-        nome_f = Path(f"/sys/class/input/{no.name}/device/name")
+        base = Path(f"/sys/class/input/{no.name}")
         try:
-            nome = nome_f.read_text(encoding="utf-8").strip()
+            nome = (base / "device/name").read_text(encoding="utf-8").strip()
         except OSError:
             continue
-        if "DualSense" in nome and "Motion Sensors" in nome:
-            candidatos.append(str(no))
-    if not candidatos:
+        if "DualSense" not in nome or "Motion Sensors" not in nome:
+            continue
+        if uniq:
+            try:
+                seu = (base / "device/uniq").read_text(encoding="utf-8").strip()
+            except OSError:
+                continue
+            if seu.upper() != uniq.upper():
+                continue
+        achados.append((int(no.name[5:]), str(no)))
+    if not achados:
         return None
-    # O maior número é o mais recente — e o do RÁDIO costuma nascer depois do
-    # nó do cabo, que fica no disco desde o boot.
-    return sorted(candidatos, key=lambda c: int(c.rsplit("event", 1)[-1]))[-1]
+    return sorted(achados)[-1][1]
 
 
 def _taxa_no_fio(caminho: str, segundos: float) -> float:
@@ -299,11 +311,29 @@ def etapa_dano(alvo: str, segundos: float = 8.0, cruzado: bool = False) -> int:
         print(f"\n  {len(no_alvo)} controle(s) no rádio de {alvo}: "
               + ", ".join(_mascarar(m) for m in no_alvo))
 
-    fio = _evdev_de_movimento()
+    # O NÓ É O DO CONTROLE QUE ESTÁ EM JOGO, casado pelo `uniq`. No cruzado,
+    # o controle mora em OUTRO adaptador — é ele quem se mede.
+    alvos = no_alvo or [
+        mac
+        for hci, mac in _devices()
+        if hci in outros
+        and _prop(f"/org/bluez/{hci}/dev_{mac.replace(':', '_')}",
+                  "org.bluez.Device1", "Connected") == "true"
+    ]
+    fio = None
+    quem = None
+    for candidato in alvos:
+        fio = _evdev_de_movimento(candidato)
+        if fio:
+            quem = candidato
+            break
     if not fio:
-        print("\n  não achei o nó de MOVIMENTO de nenhum DualSense.")
-        print("  Sem ele não há o que medir: é o fio em que os pacotes chegam.\n")
+        print("\n  não achei o nó de MOVIMENTO do controle que eu ia medir.")
+        print(f"  Candidatos: {', '.join(_mascarar(m) for m in alvos) or '(nenhum)'}")
+        print("  Sem o nó CERTO não há o que medir — e medir o nó de outro")
+        print("  controle devolve um número que parece resposta e não é.\n")
         return 8
+    print(f"  medindo o controle {_mascarar(quem)}")
 
     print(f"\n  DANO DA VARREDURA em {alvo} ({_mascarar(endereco)})")
     print(f"  instrumento: {fio} (pacotes do controle, não tiques do daemon)")
