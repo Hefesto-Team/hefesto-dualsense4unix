@@ -1894,15 +1894,43 @@ _dualsense_porta_de_captura_status() {
         tem && /Capture channels:/ && nome != "" { print nome; exit }
     ' "${2:-/dev/null}")"
 
-    # A porta liga um ganho de captura? Os dois dialetos, e o teste é o mesmo
-    # em ambos: existe uma ligação de VOLUME declarada.
-    #   UCM  ..... `CaptureVolume` ou `CaptureMixerElem` no `SectionDevice`.
-    #   ACP  ..... um `[Element …]` com `volume = merge` (ou um valor). O
-    #              `volume = off` NÃO conta: ele existe justamente para SILENCIAR
-    #              o elemento, e contá-lo daria verde sobre o defeito.
-    if [[ -r "${3:-}" ]] && grep -qE \
-        '^[[:space:]]*(CaptureVolume|CaptureMixerElem)[[:space:]]|^[[:space:]]*volume[[:space:]]*=[[:space:]]*(merge|zero|-?[0-9])' \
-        "${3}"; then
+    # A porta liga o ganho DESTE elemento? Os dois dialetos, e a pergunta é a
+    # mesma nos dois: há ligação de VOLUME declarada **para o elemento que o
+    # `scontents` achou** — não para um elemento qualquer do arquivo.
+    #
+    #   ACP  ..... `volume = merge` DENTRO do `[Element <elemento>]`. **Só o
+    #              `merge`**, e quem decide isso é a documentação da distro, no
+    #              disco desta máquina:
+    #              `/usr/share/alsa-card-profile/mixer/paths/analog-output.conf.common`
+    #              linhas 103-107 listam os cinco valores aceitos e dizem o que
+    #              cada um faz — só o `merge` junta o elemento ao deslizante do
+    #              dispositivo. O que põe no mínimo, o que crava 0 dB e o que
+    #              crava um passo PRENDEM o elemento num valor fixo, que é
+    #              palavra por palavra o defeito que este decisor existe para
+    #              acusar. Contar qualquer um dos três daria verde sobre ele.
+    #   UCM  ..... `CaptureVolume`/`CaptureMixerElem` cujo valor NOMEIE o
+    #              elemento. O recorte de `$3` já é o `SectionDevice` da porta
+    #              ativa, mas um dispositivo pode ligar OUTRO elemento da mesma
+    #              placa — e ligar outro deixa este de fora do mesmo jeito.
+    #
+    # AMARRAR AO ELEMENTO É METADE DA RÉGUA: sem isso, uma porta que liga o
+    # `[Element Speaker]` e não menciona o elemento de captura em lugar nenhum
+    # seria declarada «alcança o ganho», que é verde sobre o defeito.
+    if [[ -r "${3:-}" ]] && [[ -n "${elemento}" ]] && awk -v alvo="${elemento}" '
+        /^[[:space:]]*(CaptureVolume|CaptureMixerElem)[[:space:]]/ {
+            if (index($0, alvo) > 0) { ligou = 1 }
+            next
+        }
+        /^[[:space:]]*\[/ {
+            secao = $0
+            sub(/^[[:space:]]*/, "", secao)
+            sub(/[[:space:]]*$/, "", secao)
+            dentro = (secao == "[Element " alvo "]" || index(secao, "[Element " alvo ",") == 1)
+            next
+        }
+        dentro && /^[[:space:]]*volume[[:space:]]*=[[:space:]]*merge[[:space:]]*$/ { ligou = 1 }
+        END { exit(ligou ? 0 : 1) }
+    ' "${3}"; then
         liga="sim"
     fi
 

@@ -133,22 +133,57 @@ class TestOQueOAparelhoDeclara:
     ) -> None:
         """Por que o `amixer` mostra `Mono: Capture` e não há balanço L/R.
 
-        A Feature Unit que nasce do terminal de captura tem o primeiro byte de
-        `bmaControls` (o *master*) com mute+volume, e zero nos bytes por canal.
-        É essa unidade que carrega o `Headset Capture Volume`, 0…+48 dB.
+        A Feature Unit que nasce do terminal de captura declara **dois** bytes
+        de `bmaControls`: o *master*, com mute+volume, e UM byte por canal, que
+        é zero. É essa unidade que carrega o `Headset Capture Volume`,
+        0…+48 dB.
 
-        MORDIDA: troque a unidade lida (a de fonte 4) pela de fonte 1 — o
+        **DOIS, e não três** — o terminal tem dois canais, e o padrão pediria
+        um byte por canal além do master. O aparelho declara um só
+        (`bLength=9`, `bmaControls=03 00`), e é o que ele declara que o host
+        lê. Medido no descritor gravado, 20/09/2026.
+
+        MORDIDA 1: troque a unidade lida (a de fonte 4) pela de fonte 1 — o
         `bmaControls` tem cinco bytes em vez de dois e o teste reprova. As duas
         Feature Units existem e são de coisas diferentes.
+
+        MORDIDA 2: acrescente um `0x00` ao fim do `bmaControls` desta unidade.
+        Sem a conta do COMPRIMENTO, um byte a mais de valor zero passa
+        despercebido — e foi exatamente assim que a transcrição do descritor
+        ganhou o `iFeature` como se fosse controle de canal.
         """
         ganhos = [u for u in unidades.values() if u["tipo"] == "ganho"]
         do_mic = [u for u in ganhos if u["fonte"] == 4]
         assert len(do_mic) == 1, f"uma Feature Unit alimentada pelo 0x0402; achei {ganhos!r}"
         controles = do_mic[0]["controles"]
+        assert len(controles) == 2, (
+            "o aparelho declara master + UM byte de canal; um byte a mais "
+            f"significa que o `iFeature` entrou junto. Veio {controles!r}"
+        )
         assert controles[0] == 0x03, "master com mute+volume"
         assert set(controles[1:]) == {0x00}, (
-            "os bytes POR CANAL são zero — por isso não há balanço L/R a ajustar"
+            "o byte POR CANAL é zero — por isso não há balanço L/R a ajustar"
         )
+
+    def test_a_feature_unit_da_saida_nao_se_confunde_com_a_do_microfone(
+        self, unidades: dict[int, dict]
+    ) -> None:
+        """As duas existem, e a do alto-falante é a de CINCO bytes.
+
+        `bLength=12`, `bmaControls=03 00 00 00 00` — master mais quatro canais,
+        que são os quatro da saída (FL|FR e os dois motores da háptica). Ela
+        fica aqui escrita com o comprimento porque a transcrição de 17/09
+        contava seis: o último byte é o `iFeature`, e não controla canal nenhum.
+        """
+        da_saida = [
+            u for u in unidades.values()
+            if u["tipo"] == "ganho" and u["fonte"] == 1
+        ]
+        assert len(da_saida) == 1
+        controles = da_saida[0]["controles"]
+        assert len(controles) == 5, f"master + quatro canais; veio {controles!r}"
+        assert controles[0] == 0x03
+        assert set(controles[1:]) == {0x00}
 
 
 class TestOInstrumentoNaoInventa:
