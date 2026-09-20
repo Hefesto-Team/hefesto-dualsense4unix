@@ -4150,6 +4150,60 @@ check_bt_paired_sem_bonded() {
     [[ "${achou}" -eq 0 ]] && pass "nenhum device BT com bond meio-salvo (Paired sem Bonded)"
 }
 
+# BOND-DOBRADO-01 (19/09/2026) — o mesmo controle com chave em DOIS adaptadores.
+#
+# ACHADO NA MESA DELA, e ninguém via: quatro DualSense, SEIS bonds. Dois
+# controles com chave de pareamento em dois adaptadores ao mesmo tempo — uma
+# migração feita pela metade, em que o bond do adaptador de ORIGEM ficou.
+# O `§6.3` do `GUIA-RADIO-DA-SALA` manda apagá-lo justamente para isso.
+#
+# POR QUE É DEFEITO, e não sujeira: o DualSense guarda UM host de cada vez.
+# Com bond vivo em dois adaptadores o host tem duas verdades e o controle tem
+# uma — na reconexão o adaptador "errado" pode ganhar a corrida, e a fita de
+# ocupação conta o mesmo controle duas vezes.
+#
+# E O SALVA-VIDAS PIORA: por 24 h depois de uma migração, um crash do
+# `bluetoothd` DEVOLVE o bond e o cache velhos ao adaptador de origem
+# (`bt_bonds_autorestore.sh:95-98`) — ele não distingue "perdi por crash" de
+# "removi de propósito".
+#
+# ELE SÓ ACUSA. Apagar bond é destruir pareamento, e QUAL dos dois fica depende
+# de onde ela quer o controle sentado — é escolha dela, não deste script.
+_bond_dobrado_por_controle() {
+    # Imprime `<MAC> <hciA> <hciB> …` para cada controle sob mais de um
+    # adaptador. A chave é o endereço do CONTROLE, e o valor, os adaptadores.
+    local paths p mac hci
+    paths="$(_dbus_bt_device_paths)"
+    [[ -z "${paths}" ]] && return 0
+    while IFS= read -r p; do
+        [[ -z "${p}" ]] && continue
+        # /org/bluez/hci1/dev_AA_BB_CC_DD_EE_FF → "hci1 AA:BB:CC:DD:EE:FF"
+        hci="${p#/org/bluez/}"; hci="${hci%%/*}"
+        mac="${p##*/dev_}"; mac="${mac//_/:}"
+        [[ -z "${mac}" || -z "${hci}" ]] && continue
+        printf '%s\t%s\n' "${mac}" "${hci}"
+    done <<<"${paths}" | sort -u | awk -F'\t' '
+        { onde[$1] = onde[$1] " " $2; n[$1]++ }
+        END { for (m in n) if (n[m] > 1) print m onde[m] }
+    '
+}
+
+check_bond_dobrado() {
+    command -v busctl >/dev/null 2>&1 || { info "busctl ausente — pulo o check de bond dobrado"; return; }
+    local linha mac adps achou=0
+    while IFS= read -r linha; do
+        [[ -z "${linha}" ]] && continue
+        achou=1
+        mac="${linha%% *}"
+        adps="${linha#* }"
+        # O RECADO DIZ O GESTO — regra desta casa: quem acusa diz o comando.
+        # `esquecer` da ponte apaga o bond E o cache SDP na mesma execução; o
+        # cache sozinho envenena o pareamento seguinte (SDP-CACHE-01).
+        warn "o controle ${mac} tem chave de pareamento em MAIS DE UM adaptador (${adps# }) — migração feita pela metade: o bond do adaptador de ORIGEM ficou. Na reconexão o adaptador errado pode ganhar a corrida, e a conta de ocupação do rádio soma o mesmo controle duas vezes. Escolha em QUAL ele deve ficar e apague o outro: sudo /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh esquecer <adaptador-que-sai> ${mac}"
+    done < <(_bond_dobrado_por_controle)
+    [[ "${achou}" -eq 0 ]] && pass "nenhum controle com bond em mais de um adaptador"
+}
+
 # CONFIG-09 (22/08/2026): a MESMA leitura que a aba Conexões mostra (seção Check-up).
 #
 # Por que uma linha a mais, se as cinco conferências do exame já têm linha
@@ -6738,6 +6792,7 @@ main() {
     check_bt_connected_sem_hidraw
     check_bt_sdp_cache_envenenado
     check_bt_paired_sem_bonded
+    check_bond_dobrado
     check_exame_da_mesa
     hdr "a bandeja do sistema (tray)"
     check_bandeja
