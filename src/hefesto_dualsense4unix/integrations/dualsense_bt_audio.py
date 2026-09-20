@@ -1615,7 +1615,11 @@ class PonteMicBluetooth:
     # (`citacoes-de-linha`).
 
     def renomear_a_source(self) -> bool:
-        """O nó deste controle passa a dizer o assento de AGORA. True = mexeu.
+        """O nó deste controle passa a dizer o assento de AGORA.
+
+        ``True`` só quando o rótulo de agora ficou NO AR. A volta com o rótulo
+        velho e o canal que sumiu devolvem ``False``, e os dois trocam a
+        referência assim mesmo — ver o corpo.
 
         **É A PONTE QUEM FAZ, e não o supervisor**, porque é ela quem guarda a
         referência: renomear é republicar (não há ``update-source-proplist`` no
@@ -1626,7 +1630,16 @@ class PonteMicBluetooth:
 
         **E SÓ O QUE ESTA PONTE ABRIU** (``_canal_e_nosso``), pela mesma razão
         de :meth:`_fechar_a_source`: um canal que já estava no ar quando ela
-        subiu é de outro dono, e é o outro dono quem o renomeia.
+        subiu é de outro dono.
+
+        **E O OUTRO DONO EXISTE — CORREÇÃO DE 20/09/2026.** Esta linha dizia
+        *"e é o outro dono quem o renomeia"* como se houvesse sempre um, e o
+        conferente mostrou que não havia: o canal de rádio com
+        ``_canal_e_nosso=False`` não tinha renomeador NENHUM, e o
+        ``hefesto_mic_13ebab`` dela — no ar sem número no rótulo, com o assento
+        2 — era dessa família. O dono agora é nomeado e único:
+        ``BtMicSubsystem._renomear_os_canais_velhos`` varre todo canal de pé
+        que nenhuma ponte reclame por :attr:`uniq_do_canal_proprio`.
 
         A medição que originou isto — três dos quatro «Microfone do Controle N»
         dela apontando para o jogador errado — está em
@@ -1647,13 +1660,47 @@ class PonteMicBluetooth:
             logger.warning("bt_mic_canal_nao_renomeou", no=self.no.caminho, exc_info=True)
             return False
         if novo is None:
+            # **NEM A VOLTA SUBIU, E ESTA PONTE NÃO PODE FINGIR QUE TEM CANAL.**
+            # A referência que ela guarda está PARADA — o `fechar` de dentro do
+            # `renomear` já aconteceu —, e continuar escrevendo PCM nela é o
+            # microfone mudo com tudo aparentemente de pé. Soltando-a aqui, o
+            # `escrever` cai no nó de sempre e a varredura seguinte reabre o
+            # canal pelo caminho de nascimento.
+            logger.warning("bt_mic_canal_sumiu_ao_renomear", no=self.no.caminho)
+            self._source = None
+            self._canal_e_nosso = False
             return False
+        # SÓ A REFERÊNCIA TROCA. `_canal_e_nosso` já é `True` — a guarda lá em
+        # cima exigiu isso para chegar aqui —, e reescrevê-lo seria uma linha
+        # que nenhuma mordida alcança.
         self._source = novo
-        self._canal_e_nosso = True
+        do_novo = getattr(novo, "descricao", "")  # (noqa-acento) nome de atributo
+        if str(do_novo or "") != de_agora:
+            # A VOLTA subiu com o rótulo velho. A troca de referência vale
+            # igual — o objeto é outro —, mas renomear não aconteceu.
+            logger.warning(
+                "bt_mic_canal_voltou_com_o_rotulo_velho", no=self.no.caminho
+            )
+            return False
         logger.info(
             "bt_mic_canal_renomeado", no=self.no.caminho, de_agora=de_agora
         )
         return True
+
+    @property
+    def uniq_do_canal_proprio(self) -> str:
+        """O `uniq` cujo canal ESTA ponte abriu — `""` quando o canal é de outro.
+
+        **É POR ISTO QUE O SUPERVISOR SABE O QUE NÃO PODE TOCAR.** Ele varre
+        todo canal de pé para renomear o que envelheceu, e republicar por fora
+        o canal de uma ponte a deixaria escrevendo num nó morto — o defeito
+        que :meth:`renomear_a_source` existe para não cometer. Sem esta
+        resposta, o supervisor teria de ler `_canal_e_nosso` pelas costas da
+        ponte, que é a mesma coisa escrita duas vezes.
+        """
+        if self._source is None or not self._canal_e_nosso:
+            return ""
+        return str(getattr(self.no, "uniq", "") or "")
 
 
 def _com(stats: EstatisticaMic, **campos: Any) -> EstatisticaMic:

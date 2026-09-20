@@ -662,7 +662,9 @@ def renomear(
     lancar: Any = None,
     rodar: Any = None,
 ) -> SourceVirtualPipeWire | None:
-    """O canal deste controle RENASCE com o rótulo de agora. `None` = nada feito.
+    """O canal deste controle RENASCE com o rótulo de agora.
+
+    Devolve o canal que está DE PÉ agora — `None` = não há canal de pé.
 
     **O GÊMEO DO ALTO-FALANTE, e ele mentia PIOR** — medido na mesa dela em
     20/09/2026, com os quatro DualSense de pé e o daemon respondendo
@@ -684,8 +686,8 @@ def renomear(
     é a única memória de quem abriu o quê; um canal republicado por quem não o
     abriu deixaria o dono anunciando de pé um objeto morto — é a mesma razão
     pela qual :meth:`PonteMicBluetooth._fechar_a_source` só fecha o que ela
-    abriu. Por isso isto **devolve a source nova**: quem guardava a velha troca
-    a referência na mesma linha.
+    abriu. Por isso isto **devolve a source que ficou de pé**: quem guardava a
+    velha troca a referência na mesma linha.
 
     **O ALIMENTADOR VOLTA PELA MESMA FONTE.** Ela é lida de
     :data:`_FONTE_PEDIDA`, não perguntada de novo a ``escolher_fonte`` — depois
@@ -693,23 +695,64 @@ def renomear(
     e reabrir por essa resposta poria o ``parec`` a ler o nó que ele mesmo
     enche. E não de :data:`_ALIMENTANDO`, pela razão escrita lá: o canal do
     cabo cujo ``parec`` não subiu renasceria MUDO.
+
+    **O QUE O RETORNO QUER DIZER, e é UMA regra só:** é o canal que está DE PÉ
+    agora para este ``uniq``. ``None`` quer dizer **não há canal de pé** — e
+    nunca *"não fiz nada"*. Quem chama guarda a referência devolvida, sempre:
+    o mesmo objeto quando o rótulo já estava certo, o objeto novo quando ele
+    renasceu, o da VOLTA quando o renascimento não subiu, e ``None`` quando
+    nem a volta subiu.
+
+    A regra anterior — ``None`` = *"nada feito"* — foi medida pelo conferente
+    em 20/09/2026 e é um defeito silencioso: ela obriga o dono a ficar com a
+    referência que tinha, e a referência que ele tinha estava PARADA (o
+    ``fechar`` abaixo já aconteceu). A ponte seguiria escrevendo PCM num nó
+    morto — *"o microfone mudo com tudo aparentemente de pé"*.
+
+    **E HÁ VOLTA.** Renomear é fechar e abrir, e entre os dois há uma janela em
+    que o canal não existe. Se o ``abrir`` com o rótulo de agora não subir, o
+    canal é reerguido com o rótulo que estava NO AR — desfazer, e não repetir
+    o ato que acabou de falhar. Um rótulo velho é melhor que microfone nenhum.
     """
     with _TRANCA:
         ja = _DE_PE.get(uniq)
         fonte = _FONTE_PEDIDA.get(uniq) or None
     if ja is None:
         return None
-    no_ar = getattr(ja, "descricao", "")  # (noqa-acento) nome de atributo
-    if not rotulo_envelheceu(str(no_ar or ""), descricao):
-        return None
+    no_ar = str(getattr(ja, "descricao", "") or "")  # (noqa-acento) nome de atributo
+    if not rotulo_envelheceu(no_ar, descricao):
+        return ja
     logger.info(
         "canal_do_mic_rotulo_envelheceu",
         extra={"uniq": uniq, "de_agora": descricao},
     )
     fechar(uniq)
-    return abrir(
+    novo = abrir(
         uniq, descricao, fonte=fonte, fabrica=fabrica, lancar=lancar, rodar=rodar
     )
+    if novo is not None:
+        return novo
+    logger.warning(
+        "canal_do_mic_nao_renasceu", extra={"uniq": uniq, "no_ar": no_ar}
+    )
+    de_volta = abrir(
+        uniq, no_ar, fonte=fonte, fabrica=fabrica, lancar=lancar, rodar=rodar
+    )
+    if de_volta is None:
+        logger.warning("canal_do_mic_sumiu_ao_renomear", extra={"uniq": uniq})
+    return de_volta
+
+
+def canal_de_pe(uniq: str) -> SourceVirtualPipeWire | None:
+    """O canal DESTE controle que está de pé — `None` quando não há.
+
+    Irmã de :func:`de_pe`, e a diferença decide quem pode chamar
+    :func:`renomear`: aquela devolve NOMES, e o nome de um canal **não muda**
+    quando ele é republicado. Comparar nome com nome depois de renomear
+    responde *"nada mudou"* sobre um nó que acabou de renascer.
+    """
+    with _TRANCA:
+        return _DE_PE.get(uniq)
 
 
 def fechar(uniq: str) -> bool:

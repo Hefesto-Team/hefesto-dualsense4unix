@@ -208,13 +208,25 @@ class _SinkEspiao:
         return "IDLE"
 
 
-def _mesa(monkeypatch: pytest.MonkeyPatch, sink: Any = _SinkEspiao) -> None:
-    """Põe a fábrica de nós e a rota sob dublê. Nenhum `pactl` sai daqui."""
+def _mesa(
+    monkeypatch: pytest.MonkeyPatch,
+    sink: Any = _SinkEspiao,
+    *,
+    rota: Any = None,
+) -> None:
+    """Põe a fábrica de nós e a rota sob dublê. Nenhum `pactl` sai daqui.
+
+    **`rota` É UMA PORTA QUE TEM DE FICAR ABERTA, e fechá-la foi o achado do
+    conferente em 20/09/2026.** Este dublê fixava `rota_do_no` sempre boa, e
+    com ela sempre boa a régua nunca alcançava o caminho em que o nó é
+    derrubado e o renascimento é recusado — que é o caminho em que o nó SOME da
+    mesa dela. Ver `test_o_no_nao_some_quando_a_rota_nao_resolve`.
+    """
     monkeypatch.setattr(som, "SinkVirtualPipeWire", sink)
     monkeypatch.setattr(
         som,
         "rota_do_no",
-        lambda u, t, mesa, **kw: som.RotaDoNo(True, sink=f"alsa_output.{u}"),
+        rota or (lambda u, t, mesa, **kw: som.RotaDoNo(True, sink=f"alsa_output.{u}")),
     )
 
 
@@ -456,7 +468,10 @@ def test_o_canal_certo_nao_e_republicado(
     do controle que não mudou de assento cai na varredura seguinte.
     """
     antes = _abrir(_P2, "Microfone do Controle 2")
-    assert canal.renomear(_P2, mic.descricao_do_microfone(_P2)) is None
+    # O RETORNO É O CANAL DE PÉ, sempre — e aqui ele é o MESMO objeto, que é
+    # como quem chama sabe que nada mudou sem ter de adivinhar o que `None`
+    # queria dizer. Ver o contrato em `canal_do_microfone.renomear`.
+    assert canal.renomear(_P2, mic.descricao_do_microfone(_P2)) is antes
     assert canal._DE_PE[_P2] is antes
     assert antes.parada is False
 
@@ -494,11 +509,21 @@ def test_a_fonte_do_cabo_volta_com_o_canal(
 
 
 class _PonteFalsa:
-    """Uma ponte de rádio de mentira — só o que o supervisor pergunta a ela."""
+    """Uma ponte de rádio de mentira — só o que o supervisor pergunta a ela.
+
+    **ELA NÃO MEDE O QUE A PONTE FAZ, e isso é deliberado:** aqui só se mede a
+    DELEGAÇÃO. O caminho de dentro de `renomear_a_source` tem régua própria na
+    seção 6, escrita depois que o conferente mostrou que este dublê dava verde
+    sobre a troca de referência arrancada.
+    """
 
     def __init__(self, uniq: str) -> None:
         self.no = mic.NoDualSenseBT(caminho="/dev/hidraw9", uniq=uniq, produto=0x0CE6)
         self.chamada = 0
+
+    @property
+    def uniq_do_canal_proprio(self) -> str:
+        return str(self.no.uniq)
 
     def renomear_a_source(self) -> bool:
         self.chamada += 1
@@ -511,9 +536,9 @@ def test_o_supervisor_delega_o_canal_do_radio_a_ponte(
     """A ponte guarda a referência viva; republicar por fora a deixa escrevendo
     num nó morto — o microfone mudo com tudo aparentemente de pé.
 
-    MORDIDA: faça `_renomear_os_canais_velhos` chamar
-    `canal_do_microfone.renomear` para TODO `uniq` de pé, inclusive os das
-    pontes, e a chamada à ponte some — junto com a troca de referência dela.
+    MORDIDA: tire o `- das_pontes` da varredura de `_renomear_os_canais_velhos`
+    e o supervisor republica o canal da ponte pelas costas dela — a última
+    asserção cai, com o rótulo mudado e a source do dono PARADA.
     """
     from hefesto_dualsense4unix.daemon.subsystems.bt_mic import BtMicSubsystem
 
@@ -526,23 +551,467 @@ def test_o_supervisor_delega_o_canal_do_radio_a_ponte(
     sub._gerenciador = _GerenciadorFalso(do_radio)
     _abrir(_P3, "Microfone do Controle 1")
     sub._canais_do_cabo[_P3] = canal.nome_do_canal(_P3)
+    # O canal da PONTE também está de pé, e com o rótulo velho: é ele que o
+    # supervisor não pode tocar.
+    da_ponte = _abrir(_P1, "Microfone do Controle 3")
 
     renomeados = sub._renomear_os_canais_velhos()
 
     assert do_radio.chamada == 1
     assert _P3 in renomeados
     assert canal._DE_PE[_P3].descricao == "Microfone do Controle 3"
+    # O SUPERVISOR NÃO ENCOSTOU NO CANAL DA PONTE.
+    assert canal.canal_de_pe(_P1) is da_ponte
+    assert da_ponte.descricao == "Microfone do Controle 3"
+    assert da_ponte.parada is False
 
 
-def test_a_ponte_so_renomeia_o_canal_que_ela_abriu(numerador: dict[str, int]) -> None:
+def test_a_ponte_so_renomeia_o_canal_que_ela_abriu(
+    canal_limpo: None, numerador: dict[str, int]
+) -> None:
     """Um canal que já estava no ar tem outro dono — e é ele quem o renomeia.
 
-    MORDIDA: tire o `not self._canal_e_nosso` da recusa e a ponte republica o
-    canal do cabo pelas costas do supervisor, que continua anunciando de pé um
-    objeto morto.
+    **ESTE TESTE ERA INSTRUMENTO FALSO ATÉ 20/09/2026**, e a docstring dele
+    anunciava a mordida que ele não sofria: ele nunca punha o canal em
+    `_DE_PE`, então `renomear` devolvia `None` **pelo motivo errado** — "não há
+    canal de pé", e não a recusa da ponte. Com a guarda arrancada ele
+    continuava verde. Em produção o canal ESTÁ de pé, e é isso que o
+    `_abrir` abaixo reproduz.
+
+    MORDIDA: tire o `not self._canal_e_nosso` da recusa de
+    `renomear_a_source` e as três últimas asserções caem — a ponte republica o
+    canal do outro dono, que continua anunciando de pé um objeto morto.
     """
+    # Quem abriu foi OUTRO (o supervisor, pelo cabo). A ponte sobe depois.
+    do_outro = _abrir(_P1, "Microfone do Controle 3")
     no = mic.NoDualSenseBT(caminho="/dev/hidraw9", uniq=_P1, produto=0x0CE6)
-    source = _SourceEspia(nome=canal.nome_do_canal(_P1), descricao="Microfone do Controle 3")
-    ponte = mic.PonteMicBluetooth(no, source=source)
+    ponte = mic.PonteMicBluetooth(no)
+    # A POSSE É LIDA DO CAMINHO DE PRODUÇÃO, não digitada: é o
+    # `_abrir_o_canal_por_controle` que decide, e ele vê o canal já de pé.
+    ponte._source = ponte._abrir_o_canal_por_controle("Microfone do Controle 3")
+    assert ponte._source is do_outro
+    assert ponte.uniq_do_canal_proprio == ""
+
     assert ponte.renomear_a_source() is False
-    assert source.descricao == "Microfone do Controle 3"
+    assert canal.canal_de_pe(_P1) is do_outro
+    assert do_outro.descricao == "Microfone do Controle 3"
+    assert do_outro.parada is False
+
+
+# ---------------------------------------------------------------------------
+# 5. O NÓ NÃO PODE SUMIR PARA TROCAR DE NOME
+#
+# **OS TESTES DESTA SEÇÃO NASCERAM DE UM CONFERENTE — 20/09/2026.** Ele
+# arrancou nove formas do produto, uma por vez; seis reprovaram e TRÊS ficaram
+# verdes. As três passavam porque a régua não abria a porta em que o
+# renascimento FALHA: o dublê fixava a rota sempre boa e o canal sempre subindo.
+#
+# **O que ele mediu:** `set(ger.nos)` VAZIO onde havia dois. O alto-falante
+# derrubava o nó e só então tentava construir, e a guarda «SEM ROTA, SEM NÓ»
+# recusava o renascimento — o nó sumia da mesa dela por causa do NOME. No
+# microfone era o mesmo: `fechar` e só então `abrir`.
+#
+# A regra que estes testes guardam: **um rótulo velho é melhor que nó nenhum.**
+# ---------------------------------------------------------------------------
+
+
+def _sink_que_recusa(pares: set[tuple[str, Any]]) -> Any:
+    """Um `_SinkEspiao` que se recusa a subir com certos `(uniq, rótulo)`.
+
+    O par, e não só o rótulo: na troca de 20/09 os dois nomes andam ENTRE SI, e
+    um dublê que recusasse por texto recusaria também o rótulo velho do outro —
+    o que esconderia justamente a diferença entre desfazer e repetir.
+    """
+
+    class _Recusa(_SinkEspiao):
+        def iniciar(self) -> bool:
+            return (self.uniq, self.descricao) not in pares
+
+    return _Recusa
+
+
+def test_o_no_nao_some_quando_a_rota_nao_resolve(
+    monkeypatch: pytest.MonkeyPatch, numerador: dict[str, int]
+) -> None:
+    """A rota some por uma varredura e o nó FICA — com o nome velho.
+
+    É o caso que o conferente mediu: a placa USB do cabo sumindo por um
+    instante, ou a ponte do rádio ainda não de pé. O nome desatualizado é uma
+    queixa; o nó sumir é a queda do som, e um jogo que escolheu «Alto-falante
+    do Controle 3» perde o dispositivo debaixo de si.
+
+    MORDIDA: troque o `_republicar` de `reconciliar` por `_derrubar` (que é
+    como a cura nasceu) e os dois nós SOMEM — `set(ger.nos)` fica com dois.
+    """
+    _mesa(monkeypatch)
+    ger = GerenciadorDeNosDeSom()
+    ger.reconciliar(_controles())
+    antes = dict(ger.nos)
+
+    _mesa(
+        monkeypatch,
+        rota=lambda u, t, mesa, **kw: som.RotaDoNo(False, motivo="sem placa"),
+    )
+    numerador[_P3], numerador[_P1] = 1, 3
+    ger.reconciliar(_controles())
+
+    assert set(ger.nos) == set(_ASSENTOS_DE_AGORA), (
+        "um nó SUMIU da mesa dela para trocar de nome"
+    )
+    assert all(ger.nos[u] is antes[u] for u in antes)
+    assert all(not no.parado for no in antes.values())
+    # E o rótulo velho continua no ar, esperando a próxima varredura.
+    assert _rotulos(ger)[_P3] == "Alto-falante do Controle 3"
+    assert _rotulos(ger)[_P1] == "Alto-falante do Controle 1"
+
+
+def test_o_no_volta_com_o_rotulo_velho_quando_o_renascimento_nao_sobe(
+    monkeypatch: pytest.MonkeyPatch, numerador: dict[str, int]
+) -> None:
+    """O nó novo não sobe — e a VOLTA reergue o nó com o rótulo que estava no ar.
+
+    Aqui o `_derrubar` já aconteceu (a rota resolvia), então não há como não
+    tocar no nó. O que resta é desfazer, e desfazer é voltar ao rótulo VELHO —
+    repetir o ato que acabou de falhar não é desfazer.
+
+    MORDIDA 1: tire o bloco da volta (`de_volta = self._erguer(...)`) e os dois
+    nós somem.
+    MORDIDA 2: deixe a volta sem o `descricao=` (isto é, reerguendo com o
+    rótulo de AGORA) e ela falha pelo mesmo motivo que o renascimento falhou —
+    os dois nós somem de novo.
+    """
+    _mesa(monkeypatch)
+    ger = GerenciadorDeNosDeSom()
+    ger.reconciliar(_controles())
+    antes = dict(ger.nos)
+
+    # O servidor passa a recusar exatamente os DOIS rótulos novos.
+    _mesa(
+        monkeypatch,
+        sink=_sink_que_recusa(
+            {
+                (_P3, "Alto-falante do Controle 1"),
+                (_P1, "Alto-falante do Controle 3"),
+            }
+        ),
+    )
+    numerador[_P3], numerador[_P1] = 1, 3
+    ger.reconciliar(_controles())
+
+    assert set(ger.nos) == set(_ASSENTOS_DE_AGORA), (
+        "um nó SUMIU da mesa dela para trocar de nome"
+    )
+    # O objeto é outro — o velho foi parado —, mas o RÓTULO é o de antes.
+    assert ger.nos[_P3] is not antes[_P3]
+    assert antes[_P3].parado is True
+    assert _rotulos(ger)[_P3] == "Alto-falante do Controle 3"
+    assert _rotulos(ger)[_P1] == "Alto-falante do Controle 1"
+    # E quem não mudou de assento não foi tocado.
+    assert ger.nos[_P2] is antes[_P2]
+
+
+def test_o_canal_volta_com_o_rotulo_velho_quando_o_renascimento_nao_sobe(
+    canal_limpo: None, numerador: dict[str, int], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O gêmeo do teste acima: `fechar` e o `abrir` seguinte recusa.
+
+    Sem a volta o microfone dela SOME do servidor — e o supervisor continua
+    anunciando o canal de pé na tabela dele, que é o pior dos dois mundos.
+
+    MORDIDA: tire o `de_volta = abrir(uniq, no_ar, ...)` de
+    `canal_do_microfone.renomear` e `canal_de_pe` devolve `None`.
+    """
+    _abrir(_P3, "Microfone do Controle 1")
+
+    class _RecusaONomeNovo(_SourceEspia):
+        def iniciar(self) -> bool:
+            return self.descricao != "Microfone do Controle 3"
+
+    monkeypatch.setattr(canal, "SourceVirtualPipeWire", _RecusaONomeNovo)
+    de_pe = canal.renomear(_P3, mic.descricao_do_microfone(_P3))
+
+    assert de_pe is not None, "o microfone dela SUMIU para trocar de nome"
+    assert de_pe.descricao == "Microfone do Controle 1"
+    assert canal.canal_de_pe(_P3) is de_pe
+
+
+def test_o_canal_que_nem_a_volta_ergue_devolve_none(
+    canal_limpo: None, numerador: dict[str, int], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Nem a volta sobe — e o retorno diz isso, em vez do objeto morto.
+
+    É o contrato inteiro: `None` = **não há canal de pé**. Quem guardava a
+    referência tem de soltá-la, e é o que a ponte e o supervisor fazem.
+
+    MORDIDA: faça `renomear` devolver `ja` (a source velha) neste caminho e a
+    segunda asserção cai — quem chama guardaria um objeto PARADO.
+    """
+    velha = _abrir(_P3, "Microfone do Controle 1")
+
+    class _NuncaSobe(_SourceEspia):
+        def iniciar(self) -> bool:
+            return False
+
+    monkeypatch.setattr(canal, "SourceVirtualPipeWire", _NuncaSobe)
+    assert canal.renomear(_P3, mic.descricao_do_microfone(_P3)) is None
+    assert canal.canal_de_pe(_P3) is None
+    assert velha.parada is True
+
+
+# ---------------------------------------------------------------------------
+# 6. O CAMINHO FELIZ DA PONTE — a troca de REFERÊNCIA, sem régua nenhuma
+# ---------------------------------------------------------------------------
+
+
+def _ponte_com_canal_proprio(uniq: str, descricao: str) -> Any:
+    """Uma `PonteMicBluetooth` de verdade com o canal aberto por ELA.
+
+    **O canal nasce pelo caminho de produção** (`_abrir_o_canal_por_controle`),
+    e não por um `_canal_e_nosso = True` digitado no teste: é esse método que
+    decide a posse, e digitá-la aqui mediria a digitação.
+    """
+    no = mic.NoDualSenseBT(caminho="/dev/hidraw9", uniq=uniq, produto=0x0CE6)
+    ponte = mic.PonteMicBluetooth(no)
+    ponte._source = ponte._abrir_o_canal_por_controle(descricao)
+    return ponte
+
+
+def test_a_ponte_troca_a_referencia_para_o_canal_que_renasceu(
+    canal_limpo: None, numerador: dict[str, int]
+) -> None:
+    """O CAMINHO FELIZ DA PONTE, e ele estava sem régua nenhuma.
+
+    O `_PonteFalsa` da seção 4 só CONTA chamadas e nunca roda o método real —
+    então arrancar `self._source = novo` deixava tudo verde, e a ponte
+    escreveria PCM num nó morto: *"o microfone mudo com tudo aparentemente de
+    pé"*, palavra da própria docstring.
+
+    MORDIDA: tire `self._source = novo` de `renomear_a_source` e a asserção da
+    referência cai — a ponte fica apontando para a source PARADA.
+    """
+    ponte = _ponte_com_canal_proprio(_P1, "Microfone do Controle 3")
+    velha = ponte._source
+    assert velha is not None
+    assert ponte.uniq_do_canal_proprio == _P1  # o canal é DELA
+
+    assert ponte.renomear_a_source() is True
+
+    novo = canal.canal_de_pe(_P1)
+    assert novo is not None
+    assert novo is not velha
+    assert novo.descricao == "Microfone do Controle 1"
+    assert velha.parada is True
+    # A LINHA QUE O CONFERENTE ARRANCOU:
+    assert ponte._source is novo
+
+
+def test_a_ponte_solta_a_referencia_quando_o_canal_some(
+    canal_limpo: None, numerador: dict[str, int], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Nem a volta subiu: a ponte não pode continuar anunciando um objeto morto.
+
+    MORDIDA: devolva `False` sem zerar `self._source` e a ponte segue de posse
+    de uma source PARADA — e o `escrever` dela entrega PCM a um nó que não
+    existe mais, sem erro nenhum.
+    """
+    ponte = _ponte_com_canal_proprio(_P1, "Microfone do Controle 3")
+    velha = ponte._source
+
+    class _NuncaSobe(_SourceEspia):
+        def iniciar(self) -> bool:
+            return False
+
+    monkeypatch.setattr(canal, "SourceVirtualPipeWire", _NuncaSobe)
+    assert ponte.renomear_a_source() is False
+    assert ponte._source is None
+    assert ponte.uniq_do_canal_proprio == ""
+    assert velha.parada is True
+
+
+def test_a_ponte_fica_com_o_canal_que_voltou_com_o_rotulo_velho(
+    canal_limpo: None, numerador: dict[str, int], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A volta trocou o OBJETO sem trocar o nome — e a ponte tem de saber disso.
+
+    `False` porque renomear não aconteceu; a referência troca assim mesmo,
+    porque a que ela tinha está parada.
+
+    MORDIDA: devolva `True` quando o rótulo voltou velho e o supervisor
+    reportaria um renomeado que não houve.
+    """
+    ponte = _ponte_com_canal_proprio(_P1, "Microfone do Controle 3")
+    velha = ponte._source
+
+    class _RecusaONomeNovo(_SourceEspia):
+        def iniciar(self) -> bool:
+            return self.descricao != "Microfone do Controle 1"
+
+    monkeypatch.setattr(canal, "SourceVirtualPipeWire", _RecusaONomeNovo)
+    assert ponte.renomear_a_source() is False
+    assert ponte._source is not None
+    assert ponte._source is not velha
+    assert ponte._source.descricao == "Microfone do Controle 3"
+    assert ponte._source is canal.canal_de_pe(_P1)
+
+
+# ---------------------------------------------------------------------------
+# 7. A FIAÇÃO — o laço do daemon, e o canal que não tinha dono
+#
+# **ISTO TAMBÉM É DO CONFERENTE DE 20/09/2026.** Ele arrancou
+# `self._renomear_os_canais_velhos()` do `_loop` de `BtMicSubsystem` — a ÚNICA
+# linha que liga a metade do microfone ao daemon — e os quinze testes ficaram
+# VERDES. Com ela fora, **nenhum** «Microfone do Controle N» renomeia na
+# máquina dela, que é o defeito inteiro desta sprint. O único teste do método o
+# chamava DIRETO, nunca pelo laço. A metade do alto-falante não tinha esse
+# buraco porque o gancho dela mora DENTRO de `reconciliar`.
+# ---------------------------------------------------------------------------
+
+
+class _BackendDeMesa:
+    """O `describe_controllers()` do backend, com os controles que a tela mostra.
+
+    É por ele que `uniqs_na_mesa` enxerga o controle do CABO — sem isso o laço
+    trataria *"não está no rádio"* como *"saiu da mesa"* e apagaria o pedido
+    dela, que é um defeito de 09/09 já curado e com régua própria.
+    """
+
+    def __init__(self, *uniqs: str) -> None:
+        self._uniqs = uniqs
+
+    def describe_controllers(self) -> list[dict[str, Any]]:
+        return [{"uniq": u, "connected": True} for u in self._uniqs]
+
+
+class _GerenciadorSemPonte:
+    """O gerenciador de pontes do rádio, vazio: esta régua mede o CABO."""
+
+    def __init__(self) -> None:
+        self.pontes: dict[str, Any] = {}
+
+    def reconciliar(self, alvos: list[Any]) -> None:
+        del alvos
+
+    def dormir(self, segundos: float) -> bool:
+        del segundos
+        return True
+
+    def parar(self) -> None:
+        return None
+
+
+def _uma_volta_do_laco(
+    sub: Any, monkeypatch: pytest.MonkeyPatch, supervisor: Any
+) -> list[str]:
+    """Roda UMA volta de `BtMicSubsystem._loop` e devolve o que ele engoliu.
+
+    **O laço engole toda exceção** (`except Exception` com `logger.debug`), e
+    é por isso que a lista devolvida é asserida: sem ela, um erro a meio
+    caminho faria a régua reprovar dizendo *"o rótulo não mudou"* — a mesma
+    frase do defeito, apontando para outra coisa.
+    """
+    engolidas: list[str] = []
+    debug_de_verdade = supervisor.logger.debug
+
+    def _espiar(evento: str, **campos: Any) -> Any:
+        if evento == "bt_mic_reconciliacao_falhou":
+            engolidas.append(str(campos))
+        return debug_de_verdade(evento, **campos)
+
+    monkeypatch.setattr(supervisor.logger, "debug", _espiar)
+    monkeypatch.setattr(sub, "_dormir", lambda gerenciador: True)
+    sub._loop()
+    return engolidas
+
+
+def test_o_laco_do_daemon_renomeia_os_canais_velhos(
+    canal_limpo: None, numerador: dict[str, int], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A FIAÇÃO, e é o que o conferente arrancou sem a régua piscar.
+
+    Aqui não se chama `_renomear_os_canais_velhos`: roda-se o LAÇO, que é o que
+    corre na máquina dela de `RECONCILIA_S` em `RECONCILIA_S`. Um método que só
+    é chamado pelo teste é um método que o daemon não chama.
+
+    MORDIDA: tire `self._renomear_os_canais_velhos()` de `BtMicSubsystem._loop`
+    e a última asserção cai — o rótulo fica em «Microfone do Controle 1» com o
+    assento 3, que é o estado que ela tinha na mesa.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import bt_mic as supervisor
+
+    sub = supervisor.BtMicSubsystem(registro=supervisor.RegistroDePedidosDeCanal())
+    sub._gerenciador = _GerenciadorSemPonte()
+    sub._backend = _BackendDeMesa(_P3)
+    # Nenhum controle no RÁDIO: o `_P3` está no fio, que é o caminho do canal
+    # com supervisor.
+    monkeypatch.setattr(mic, "nos_dualsense_bluetooth", lambda: [])
+    assert sub._registro.pedir(_P3) is True
+
+    _abrir(_P3, "Microfone do Controle 1")
+    sub._canais_do_cabo[_P3] = canal.nome_do_canal(_P3)
+
+    engolidas = _uma_volta_do_laco(sub, monkeypatch, supervisor)
+
+    assert engolidas == [], f"o laço engoliu uma exceção: {engolidas}"
+    de_pe = canal.canal_de_pe(_P3)
+    assert de_pe is not None
+    assert de_pe.descricao == "Microfone do Controle 3"
+
+
+def test_o_canal_sem_dono_ainda_tem_quem_o_renomeie(
+    canal_limpo: None, numerador: dict[str, int]
+) -> None:
+    """O canal que NENHUMA ponte reclama — e que não tinha renomeador nenhum.
+
+    **O MENOR QUE ERA DELA, e o conferente o nomeou em 20/09/2026.** A
+    docstring de `renomear_a_source` dizia *"é o outro dono quem o renomeia"*,
+    e o outro dono não existia: um canal de rádio com `_canal_e_nosso=False`
+    que também não estivesse em `_canais_do_cabo` não era varrido por ninguém.
+    O `hefesto_mic_13ebab` dela, no ar **sem número no rótulo** com o assento
+    2, era dessa família.
+
+    MORDIDA: faça a varredura de `_renomear_os_canais_velhos` percorrer
+    `self._canais_do_cabo` (que é como ela nasceu) em vez de `de_pe()` e este
+    canal fica com o rótulo sem número para sempre.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.bt_mic import BtMicSubsystem
+
+    sub = BtMicSubsystem()
+    sub._gerenciador = _GerenciadorSemPonte()
+    # De pé, sem número, e SEM dono: não está em `_canais_do_cabo` nem há
+    # ponte que o reclame.
+    _abrir(_P2, "Microfone do Controle")
+    assert sub._canais_do_cabo == {}
+
+    assert sub._renomear_os_canais_velhos() == [_P2]
+    de_pe = canal.canal_de_pe(_P2)
+    assert de_pe is not None
+    assert de_pe.descricao == "Microfone do Controle 2"
+
+
+def test_o_supervisor_solta_o_canal_do_cabo_que_sumiu(
+    canal_limpo: None, numerador: dict[str, int], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Nem a volta subiu: a tabela do supervisor não pode dizer que ele está de pé.
+
+    `_reconciliar_o_cabo` só abre o que FALTA (`faltam = querem - _canais_do_cabo`),
+    então um `uniq` que ficou na tabela com o canal morto nunca mais é reaberto
+    — o microfone dela some em silêncio até o daemon reiniciar.
+
+    MORDIDA: tire o `self._canais_do_cabo.pop(uniq, None)` do caminho do
+    `depois is None` e a última asserção cai.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.bt_mic import BtMicSubsystem
+
+    sub = BtMicSubsystem()
+    sub._gerenciador = _GerenciadorSemPonte()
+    _abrir(_P3, "Microfone do Controle 1")
+    sub._canais_do_cabo[_P3] = canal.nome_do_canal(_P3)
+
+    class _NuncaSobe(_SourceEspia):
+        def iniciar(self) -> bool:
+            return False
+
+    monkeypatch.setattr(canal, "SourceVirtualPipeWire", _NuncaSobe)
+    assert sub._renomear_os_canais_velhos() == []
+    assert canal.canal_de_pe(_P3) is None
+    assert _P3 not in sub._canais_do_cabo

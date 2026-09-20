@@ -1310,6 +1310,17 @@ class BtMicSubsystem:
         por fora a deixaria escrevendo num nó morto — o microfone mudo com tudo
         aparentemente de pé, que é o pior sintoma que esta casa conhece.
 
+        **E O RESTO É DESTE SUPERVISOR — CORREÇÃO DE 20/09/2026.** A primeira
+        versão disto varria só ``self._canais_do_cabo``, e o conferente achou a
+        família que ficava de fora: um canal que já estava no ar quando a ponte
+        subiu tem ``_canal_e_nosso=False``, a ponte recusa renomeá-lo, e o
+        supervisor não o conhecia — **não havia dono nenhum**. O
+        ``hefesto_mic_13ebab`` dela, no ar sem número no rótulo com o assento 2,
+        era desse caso. A varredura agora é por EXCLUSÃO: todo canal de pé
+        (:func:`~integrations.canal_do_microfone.de_pe`) menos os que as pontes
+        reclamam por ``uniq_do_canal_proprio``. Assim não há como uma família
+        nova nascer sem renomeador — ela cai aqui por padrão.
+
         Devolve os ``uniq`` renomeados, para a régua. Nunca levanta: quem chama
         é o laço do daemon.
         """
@@ -1319,6 +1330,7 @@ class BtMicSubsystem:
         )
 
         renomeados: list[str] = []
+        das_pontes: set[str] = set()
         gerenciador = self._gerenciador
         try:
             pontes = gerenciador.pontes if gerenciador is not None else None
@@ -1331,19 +1343,40 @@ class BtMicSubsystem:
                 if not callable(renomear):
                     continue
                 try:
-                    if renomear():
-                        renomeados.append(
-                            norm_mac(str(getattr(getattr(ponte, "no", None), "uniq", "")))
-                            or ""
-                        )
+                    mexeu = bool(renomear())
                 except Exception:  # pragma: no cover - defensivo
                     logger.debug("bt_mic_ponte_nao_renomeou", exc_info=True)
-        for uniq in list(self._canais_do_cabo):
+                    continue
+                # DEPOIS do renomear, e a ordem importa: uma ponte que perdeu o
+                # canal solta a posse na mesma chamada, e o canal que ela soltou
+                # tem de cair na varredura de baixo em vez de ficar sem dono.
+                proprio = (
+                    norm_mac(str(getattr(ponte, "uniq_do_canal_proprio", "") or "")) or ""
+                )
+                if proprio:
+                    das_pontes.add(proprio)
+                if mexeu and proprio:
+                    renomeados.append(proprio)
+        for uniq in sorted(set(canal_do_microfone.de_pe()) - das_pontes):
             try:
-                if canal_do_microfone.renomear(uniq, descricao_do_microfone(uniq)):
-                    renomeados.append(uniq)
+                antes = canal_do_microfone.canal_de_pe(uniq)
+                no_ar = getattr(antes, "descricao", "")  # (noqa-acento) atributo
+                no_ar = str(no_ar or "")
+                depois = canal_do_microfone.renomear(uniq, descricao_do_microfone(uniq))
             except Exception:  # pragma: no cover - defensivo
                 logger.debug("bt_mic_canal_do_cabo_nao_renomeou", uniq=uniq, exc_info=True)
+                continue
+            if depois is None:
+                # NEM A VOLTA SUBIU. A tabela deste supervisor anunciaria de pé
+                # um nó que não existe, e `_reconciliar_o_cabo` nunca o
+                # reabriria — ele só abre o que FALTA. Soltar a posse é o que
+                # devolve o canal à varredura seguinte.
+                logger.warning("bt_mic_canal_sumiu_ao_renomear", uniq=uniq)
+                self._canais_do_cabo.pop(uniq, None)
+                continue
+            agora = getattr(depois, "descricao", "")  # (noqa-acento) atributo
+            if str(agora or "") != no_ar:
+                renomeados.append(uniq)
         return [u for u in renomeados if u]
 
     def _nomes_de_pe(self) -> frozenset[str]:
