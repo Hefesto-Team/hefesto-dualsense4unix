@@ -42,9 +42,17 @@ A ressalva dela fecha a questão, e é sobre PRODUTO:
     *"aí é foda pq a ideia não é termos nada focado pro meu caso apenas, mas
     como produto que possa funcionar com outra pessoa."*  (noqa-acento: dela)
 
-O rótulo é prosa em português: muda com tradução, muda quando o assento anda, e
-some se alguém renomear o nó à mão. A âncora é o que o daemon ESCREVE e não muda
-de forma — o NOME de dentro do nó, que carrega o endereço do controle:
+O rótulo é prosa em português: muda com tradução, e some se alguém renomear o nó
+à mão. **FATO SUBSTITUÍDO — 20/09/2026:** esta frase também dizia *"muda quando
+o assento anda"*, e era falso no sentido que importa. Ela ouviu, em teste cego,
+o «Alto-falante do Controle 3» sair no Player 1: o rótulo é a fotografia do
+assento de quando o nó NASCEU, e até aquele dia ninguém o reescrevia quando o
+assento andava. **Hoje ele acompanha** — por `rotulo_envelheceu`, na varredura,
+republicando o nó —, e mesmo assim ele espera o silêncio do nó para mudar, então
+existe janela em que ele está atrasado. Ler prosa continua sendo o erro.
+
+A âncora é o que o daemon ESCREVE e não muda de forma — o NOME de dentro do nó,
+que carrega o endereço do controle:
 
     `alto_falante_bt.nome_do_sink(uniq)`      → `hefesto_som_<hex6>`
     `canal_do_microfone.nome_do_canal(uniq)`  → `hefesto_mic_<hex6>`

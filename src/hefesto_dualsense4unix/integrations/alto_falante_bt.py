@@ -3374,6 +3374,16 @@ def descricao_do_alto_falante(uniq: str) -> str:
     **Sem número não se inventa número.** Uma lista com dois «Alto-falante do
     Controle 1» mente sobre qual é qual; uma com dois «Alto-falante do
     Controle» só diz que o assento ainda não é sabido.
+
+    **ISTO RESPONDE «AGORA», E O NÓ GUARDA «QUANDO NASCEU»** — e confundir as
+    duas coisas foi o defeito que ela ouviu em 20/09/2026, em teste cego: o
+    «Alto-falante do Controle 3» saía no Player 1. O ``device.description`` de
+    um ``module-null-sink`` é fixado no ``load-module`` e **não se reescreve**
+    (não há ``update-sink-proplist`` no ``pactl`` do PipeWire — medido). Quem
+    mantém o rótulo do nó VIVO igual ao que esta função responde é
+    ``daemon/subsystems/alto_falante.GerenciadorDeNosDeSom._o_rotulo_envelheceu``,
+    que republica o nó; a regra de quando isso vale está em
+    ``dualsense_bt_audio.rotulo_envelheceu``.
     """
     from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
         numero_do_assento,

@@ -1047,6 +1047,11 @@ class BtMicSubsystem:
                 # `reconciliar`, o canal que ele derrubou já saiu da tabela do
                 # dono, e o que ficou no servidor sem ninguém escrevendo é lixo.
                 self._varrer_os_orfaos(nos)
+                # E O RÓTULO VELHO POR ÚLTIMO — O-NOME-DO-SOM-RENOMEIA-JUNTO-01.
+                # Depois do varredor de propósito: renomear é REPUBLICAR sob o
+                # mesmo nome, e um canal em pleno renascimento é exatamente o
+                # que o varredor leria como órfão.
+                self._renomear_os_canais_velhos()
             except Exception as exc:  # nunca derruba a thread
                 logger.debug("bt_mic_reconciliacao_falhou", err=str(exc))
             if self._dormir(gerenciador):
@@ -1286,6 +1291,60 @@ class BtMicSubsystem:
             | (do_radio - {""})
         ) - uniqs_negados(self._config)
         return list(varredor.varrer(querem=querem, de_pe=self._nomes_de_pe()))
+
+    # -- O-NOME-DO-SOM-RENOMEIA-JUNTO-01 (20/09/2026) ---------------------
+
+    def _renomear_os_canais_velhos(self) -> list[str]:
+        """Os «Microfone do Controle N» passam a dizer o assento de AGORA.
+
+        **O GÊMEO DO ALTO-FALANTE, e ele mentia PIOR** — medido na mesa dela em
+        20/09/2026, com o daemon respondendo ``2, 4, 3, 1`` para os quatro
+        ``uniq``: três dos quatro rótulos estavam errados, e um deles não tinha
+        número nenhum. A causa é uma só e está escrita uma vez só, em
+        :func:`~integrations.dualsense_bt_audio.rotulo_envelheceu` — o rótulo é
+        a fotografia do assento de quando o nó nasceu.
+
+        **CADA DONO RENOMEIA O QUE É DELE, e isto não é cerimônia:** o canal do
+        cabo é deste supervisor e o do rádio é da ponte, que guarda a
+        referência viva para onde o PCM entra. Republicar o canal de uma ponte
+        por fora a deixaria escrevendo num nó morto — o microfone mudo com tudo
+        aparentemente de pé, que é o pior sintoma que esta casa conhece.
+
+        Devolve os ``uniq`` renomeados, para a régua. Nunca levanta: quem chama
+        é o laço do daemon.
+        """
+        from hefesto_dualsense4unix.integrations import canal_do_microfone
+        from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
+            descricao_do_microfone,
+        )
+
+        renomeados: list[str] = []
+        gerenciador = self._gerenciador
+        try:
+            pontes = gerenciador.pontes if gerenciador is not None else None
+        except Exception:  # pragma: no cover - defensivo
+            logger.debug("bt_mic_pontes_ilegiveis", exc_info=True)
+            pontes = None
+        if isinstance(pontes, dict):
+            for ponte in pontes.values():
+                renomear = getattr(ponte, "renomear_a_source", None)
+                if not callable(renomear):
+                    continue
+                try:
+                    if renomear():
+                        renomeados.append(
+                            norm_mac(str(getattr(getattr(ponte, "no", None), "uniq", "")))
+                            or ""
+                        )
+                except Exception:  # pragma: no cover - defensivo
+                    logger.debug("bt_mic_ponte_nao_renomeou", exc_info=True)
+        for uniq in list(self._canais_do_cabo):
+            try:
+                if canal_do_microfone.renomear(uniq, descricao_do_microfone(uniq)):
+                    renomeados.append(uniq)
+            except Exception:  # pragma: no cover - defensivo
+                logger.debug("bt_mic_canal_do_cabo_nao_renomeou", uniq=uniq, exc_info=True)
+        return [u for u in renomeados if u]
 
     def _nomes_de_pe(self) -> frozenset[str]:
         """Os nós que ESTE processo segura agora — nunca são órfãos.

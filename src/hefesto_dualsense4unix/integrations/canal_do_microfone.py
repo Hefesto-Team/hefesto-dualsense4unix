@@ -157,6 +157,7 @@ from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
     MIC_TAXA_HZ,
     PRIORIDADE_SESSAO_DA_PONTE,
     SourceVirtualPipeWire,
+    rotulo_envelheceu,
 )
 from hefesto_dualsense4unix.integrations.filho_de_som import (
     derrubar_leitor_de_pipe,
@@ -572,6 +573,18 @@ _DE_PE: dict[str, SourceVirtualPipeWire] = {}
 #: canal pode existir sem alimentador (o do rádio, que a MIC-VIRTUAL-02 enche
 #: por `escrever`), e um alimentador nunca existe sem canal.
 _ALIMENTANDO: dict[str, _Alimentador] = {}
+
+#: De onde o áudio daquele canal VEM, como quem o abriu pediu — tabela própria,
+#: e não um campo de :data:`_ALIMENTANDO`.
+#:
+#: **A diferença decide um defeito silencioso** (O-NOME-DO-SOM-RENOMEIA-JUNTO-01,
+#: 20/09/2026): o alimentador só entra em `_ALIMENTANDO` quando SOBE, e o canal
+#: sobe mesmo quando ele não sobe (`parec` ausente, nó ALSA ocupado) — é decisão
+#: escrita em :func:`abrir`. Reabrir o canal lendo a fonte da tabela do
+#: alimentador devolveria `None` justamente nesse caso, e o canal do CABO
+#: renasceria mudo, sem erro nenhum. ``""`` é o caminho do rádio, que não tem
+#: fonte a ler.
+_FONTE_PEDIDA: dict[str, str] = {}
 _TRANCA = threading.Lock()
 
 
@@ -628,6 +641,7 @@ def abrir(
             logger.warning("canal_do_mic_nao_subiu", exc_info=True)
             return None
         _DE_PE[uniq] = source
+        _FONTE_PEDIDA[uniq] = str(fonte or "")
         if not desmutar(nome, rodar=rodar):
             # Não derruba o canal: o nó existe e alguém pode desmutá-lo à mão.
             # Mas fica no log, porque o sintoma do mudo é indistinguível de
@@ -638,6 +652,64 @@ def abrir(
             if alimentador.iniciar():
                 _ALIMENTANDO[uniq] = alimentador
         return source
+
+
+def renomear(
+    uniq: str,
+    descricao: str,
+    *,
+    fabrica: Any = None,
+    lancar: Any = None,
+    rodar: Any = None,
+) -> SourceVirtualPipeWire | None:
+    """O canal deste controle RENASCE com o rótulo de agora. `None` = nada feito.
+
+    **O GÊMEO DO ALTO-FALANTE, e ele mentia PIOR** — medido na mesa dela em
+    20/09/2026, com os quatro DualSense de pé e o daemon respondendo
+    ``2, 4, 3, 1``::
+
+        hefesto_mic_13ebab → «Microfone do Controle»    (sem número nenhum)
+        hefesto_mic_c311f0 → «Microfone do Controle 2»  (o Player é 4)
+        hefesto_mic_4846d8 → «Microfone do Controle 1»  (o Player é 3)
+        hefesto_mic_e64203 → «Microfone do Controle 3»  (o Player é 1)
+
+    Três dos quatro errados, contra dois de quatro do lado da saída. A causa é
+    a mesma e está escrita uma vez só, em
+    :func:`~integrations.dualsense_bt_audio.rotulo_envelheceu`: o rótulo é a
+    fotografia do assento de quando o nó nasceu, e **não há renomear no lugar**
+    — o ``device.description`` de um ``module-pipe-source`` é fixado no
+    ``load-module``. Renomear é republicar.
+
+    **QUEM CHAMA É O DONO DO CANAL, e nunca um terceiro.** A tabela ``_DE_PE``
+    é a única memória de quem abriu o quê; um canal republicado por quem não o
+    abriu deixaria o dono anunciando de pé um objeto morto — é a mesma razão
+    pela qual :meth:`PonteMicBluetooth._fechar_a_source` só fecha o que ela
+    abriu. Por isso isto **devolve a source nova**: quem guardava a velha troca
+    a referência na mesma linha.
+
+    **O ALIMENTADOR VOLTA PELA MESMA FONTE.** Ela é lida de
+    :data:`_FONTE_PEDIDA`, não perguntada de novo a ``escolher_fonte`` — depois
+    que o canal está no ar aquela função responde o PRÓPRIO canal (a regra 0),
+    e reabrir por essa resposta poria o ``parec`` a ler o nó que ele mesmo
+    enche. E não de :data:`_ALIMENTANDO`, pela razão escrita lá: o canal do
+    cabo cujo ``parec`` não subiu renasceria MUDO.
+    """
+    with _TRANCA:
+        ja = _DE_PE.get(uniq)
+        fonte = _FONTE_PEDIDA.get(uniq) or None
+    if ja is None:
+        return None
+    no_ar = getattr(ja, "descricao", "")  # (noqa-acento) nome de atributo
+    if not rotulo_envelheceu(str(no_ar or ""), descricao):
+        return None
+    logger.info(
+        "canal_do_mic_rotulo_envelheceu",
+        extra={"uniq": uniq, "de_agora": descricao},
+    )
+    fechar(uniq)
+    return abrir(
+        uniq, descricao, fonte=fonte, fabrica=fabrica, lancar=lancar, rodar=rodar
+    )
 
 
 def fechar(uniq: str) -> bool:
@@ -656,6 +728,7 @@ def fechar(uniq: str) -> bool:
     with _TRANCA:
         source = _DE_PE.pop(uniq, None)
         alimentador = _ALIMENTANDO.pop(uniq, None)
+        _FONTE_PEDIDA.pop(uniq, None)
     if alimentador is not None:
         try:
             alimentador.parar()
