@@ -36,6 +36,24 @@ DIFÍCIL — um parser que só reconhecesse ``usb 3-4:`` daria verde sobre 40% d
   aparelho que não está lá.
 * :func:`test_a_janela_corta_o_que_e_velho` — tire o corte e ela reprova.
 
+CINCO MORDIDAS QUE NÃO MORDIAM, achadas pela conferência de 20/09 e curadas
+aqui. Todas na mesma dobra: **a frase do laudo estava coberta em pedaços, e o
+pedaço de fora era o que a mesa dela imprime mais**:
+
+* :func:`test_a_porta_de_raiz_diz_que_nao_ha_hub_no_caminho` — a bancada das
+  réguas só tinha o arranjo FUNDO (``3-4.1.3``, atrás de dois hubs). O ramo
+  sem hub — 27 dos 33 eventos da janela de 20/09 — passava com o texto
+  arrancado.
+* :func:`test_a_frase_diz_o_dia_antes_do_mes` — as réguas conferiam o campo
+  ISO de máquina e nunca a data DENTRO da frase; inverter dia e mês passava.
+* :func:`test_o_ultimo_e_o_mais_recente_e_nao_a_ultima_linha` — todas as
+  linhas de teste já vinham em ordem crescente, então a guarda do máximo
+  passava com a cura arrancada.
+* :func:`test_o_empate_se_desfaz_pelo_nome_da_porta` — a régua da ordem
+  PROMETIA o desempate no docstring e cobria só o ramo da contagem.
+* :func:`test_a_cadeia_recusa_o_que_nao_e_porta` — a guarda de
+  :func:`cadeia_da_porta` não tinha chamador com entrada inválida.
+
 A RAIZ DO ``/sys`` ENTRA POR ARGUMENTO em todos eles: nenhum teste aqui olha a
 máquina de quem roda a suíte, e é por isso que o resultado não muda quando o
 DualSense dela sai da mesa.
@@ -159,6 +177,19 @@ def test_a_porta_de_raiz_nao_tem_hub_no_caminho() -> None:
     assert cadeia_da_porta("1-4") == ("1-4",)
 
 
+def test_a_cadeia_recusa_o_que_nao_e_porta() -> None:
+    """Texto que não é endereço USB devolve ``()`` — nunca um caminho inventado.
+
+    A MORDIDA: arranque a guarda ``_NO_USB`` de :func:`cadeia_da_porta` e esta
+    régua reprova, com ``""`` virando o caminho ``("-",)``. Nenhuma régua a
+    alcançava: todas chamavam a função com porta válida, e a guarda que impede
+    o laudo de acusar um hub chamado ``-`` passava com a cura arrancada.
+    """
+    assert cadeia_da_porta("") == ()
+    assert cadeia_da_porta("usb3-port4") == ()
+    assert cadeia_da_porta("0000:00:14.0") == ()
+
+
 def test_a_cadeia_nao_le_o_sys() -> None:
     """Ela é texto puro, e é isso que a faz servir a porta que já não existe.
 
@@ -225,6 +256,12 @@ def _bancada(tmp_path: Path) -> Path:
     _no(raiz, "3-4.1", vid="05e3", pid="0610", nome="USB2.1 Hub", classe="09")
     _no(raiz, "3-4.1.3", vid="054c", pid="0ce6", nome="DualSense", classe="00")
     _no(raiz, "3-4.4", vid="2357", pid="0604", nome="UB500", classe="e0")
+    # A PORTA DE RAIZ ESTAVA FALTANDO AQUI, e ela não é um caso de borda: no
+    # `kernel.log` desta casa, 27 dos 33 eventos da janela de 20/09 são em
+    # `1-4` — uma entrada do próprio computador, sem hub nenhum no caminho. A
+    # bancada só tinha o arranjo FUNDO (3-4.1.3, atrás de dois hubs), e o ramo
+    # que a máquina dela imprime vinte e sete vezes não tinha régua.
+    _no(raiz, "1-4", vid="2357", pid="0604", nome="TP-Link BT", classe="e0")
     return raiz
 
 
@@ -326,6 +363,110 @@ def test_o_que_nao_se_enderecou_e_contado(tmp_path: Path) -> None:
     assert laudo.total == 3, "o total tem de fechar com o que o doctor conta"
 
 
+def test_a_porta_de_raiz_diz_que_nao_ha_hub_no_caminho(tmp_path: Path) -> None:
+    """O ramo SEM hub — 27 dos 33 eventos desta casa — também tem de sair certo.
+
+    A MORDIDA: apague o texto do ``else`` de :attr:`PortaDoStorm.porque` (o
+    *"direto numa entrada do próprio computador"*) e esta régua reprova.
+
+    Ela nasceu de uma mordida que NÃO mordeu: a bancada das réguas só tinha o
+    arranjo fundo (``3-4.1.3``, atrás de dois hubs), e o ramo que a mesa dela
+    imprime vinte e sete vezes passava com o texto arrancado. *A régua cobria
+    o arranjo difícil e deixava o comum de fora* — a forma inversa do defeito
+    de sempre, e igualmente cega.
+    """
+    laudo = storm_por_porta(
+        linhas=[_linha("2026-09-16", "usb 1-4: device descriptor read/all, error -71")],
+        dias=7,
+        hoje=HOJE,
+        raiz_usb=_bancada(tmp_path),
+    )
+    porta = laudo.portas[0]
+    assert porta.hubs == ()
+    assert "direto numa entrada do próprio computador" in porta.porque
+    assert "atrás de" not in porta.porque
+    assert "TP-Link BT (2357:0604)" in porta.porque
+
+
+def test_a_frase_diz_o_dia_antes_do_mes(tmp_path: Path) -> None:
+    """``2026-09-07`` sai como ``07/09`` — dia/mês, a ordem desta casa.
+
+    A MORDIDA: troque a fatia ``[8:10]`` pela ``[5:7]`` do carimbo ISO, na
+    :attr:`PortaDoStorm.porque` e esta régua reprova. Nenhuma outra a pegava:
+    as réguas conferiam o campo ISO de máquina e nunca a DATA DENTRO DA
+    FRASE, que é a única coisa que uma pessoa lê.
+
+    A data escolhida tem os dois números válidos como dia E como mês de
+    propósito: invertida, ``07/09`` vira ``09/07`` e continua parecendo uma
+    data — manda procurar a queda de 9 de julho, que não houve. Com ``16/09``
+    a troca daria ``09/16``, visivelmente quebrado, e a régua morderia por
+    sorte em vez de por desenho.
+    """
+    laudo = storm_por_porta(
+        linhas=[_linha("2026-09-07", "usb 1-4: device descriptor read/all, error -71")],
+        dias=15,
+        hoje=HOJE,
+        raiz_usb=_bancada(tmp_path),
+    )
+    assert "o último em 07/09" in laudo.portas[0].porque
+
+
+def test_um_evento_so_nao_vira_eventos(tmp_path: Path) -> None:
+    """"1 evento" no singular, "2 eventos" no plural — e as duas medidas.
+
+    A MORDIDA: troque o condicional do plural por um texto fixo e esta régua
+    reprova. Sozinha ela seria cosmética; junto com as outras deste bloco ela
+    fecha a frase INTEIRA do laudo, que é a entrega da sprint e estava coberta
+    só em pedaços.
+    """
+    # UMA bancada só: `_bancada` CRIA os nós, e chamá-la duas vezes na mesma
+    # `tmp_path` estoura em `mkdir`. A régua mede a frase, não o /sys.
+    bancada = _bancada(tmp_path)
+    uma = storm_por_porta(
+        linhas=[_linha("2026-09-16", "usb 1-4: device descriptor read/all, error -71")],
+        dias=7,
+        hoje=HOJE,
+        raiz_usb=bancada,
+    )
+    assert "1 evento," in uma.portas[0].porque
+    duas = storm_por_porta(
+        linhas=[
+            _linha("2026-09-16", "usb 1-4: device descriptor read/all, error -71"),
+            _linha("2026-09-16", "usb 1-4: device not accepting address 12, error -71"),
+        ],
+        dias=7,
+        hoje=HOJE,
+        raiz_usb=bancada,
+    )
+    assert "2 eventos," in duas.portas[0].porque
+
+
+def test_o_ultimo_e_o_mais_recente_e_nao_a_ultima_linha(tmp_path: Path) -> None:
+    """Com o log fora de ordem, o carimbo do evento mais NOVO não regride.
+
+    A MORDIDA: troque o ``if data > ultimo.get(porta, "")`` por uma atribuição
+    seca e esta régua reprova — a frase passaria a anunciar a queda de 14/09
+    como a última, escondendo a de 17/09.
+
+    E o log FICA fora de ordem de verdade: o `storm_watch.sh` escreve com dois
+    produtores no mesmo arquivo (o `journalctl -f` e o `bt_delta_loop &`), a
+    unit re-tenta e recomeça o `journalctl`, e o relógio da máquina pode andar
+    para trás num acerto de NTP. A guarda existia e nenhuma régua a segurava:
+    todas as linhas dos testes já vinham em ordem crescente.
+    """
+    laudo = storm_por_porta(
+        linhas=[
+            _linha("2026-09-17", "usb 1-4: device descriptor read/all, error -71"),
+            _linha("2026-09-14", "usb 1-4: device not accepting address 12, error -71"),
+        ],
+        dias=7,
+        hoje=HOJE,
+        raiz_usb=_bancada(tmp_path),
+    )
+    assert laudo.portas[0].ultimo == "2026-09-17"
+    assert "o último em 17/09" in laudo.portas[0].porque
+
+
 def test_o_hub_em_comum_e_nomeado(tmp_path: Path) -> None:
     """Duas portas que deram -71 sob o MESMO hub: o hub é o fator comum.
 
@@ -375,6 +516,30 @@ def test_as_portas_saem_da_mais_ruidosa_para_a_menos(tmp_path: Path) -> None:
             _linha("2026-09-16", "usb 3-4.4: device descriptor read/64, error -71"),
             _linha("2026-09-16", "usb 3-4.1.3: can't read configurations, error -71"),
             _linha("2026-09-17", "usb 3-4.1.3: can't read configurations, error -71"),
+        ],
+        dias=7,
+        hoje=HOJE,
+        raiz_usb=_bancada(tmp_path),
+    )
+    assert [p.porta for p in laudo.portas] == ["3-4.1.3", "3-4.4"]
+
+
+def test_o_empate_se_desfaz_pelo_nome_da_porta(tmp_path: Path) -> None:
+    """Duas portas com a MESMA contagem saem em ordem alfabética, sempre.
+
+    A MORDIDA: tire o ``p.porta`` da chave do ``sort`` e esta régua reprova.
+
+    A régua irmã (:func:`test_as_portas_saem_da_mais_ruidosa_para_a_menos`)
+    PROMETIA isto no docstring — *"empate pelo nome da porta"* — e cobria só o
+    ramo do ``-quantos``: as duas portas dela tinham contagens diferentes, e
+    arrancar o desempate a deixava verde. Aqui as duas empatam em 1, e entram
+    no log na ordem CONTRÁRIA à alfabética, para que a ordem de inserção do
+    dicionário não possa ser confundida com ordenação.
+    """
+    laudo = storm_por_porta(
+        linhas=[
+            _linha("2026-09-16", "usb 3-4.4: device descriptor read/64, error -71"),
+            _linha("2026-09-16", "usb 3-4.1.3: can't read configurations, error -71"),
         ],
         dias=7,
         hoje=HOJE,

@@ -37,6 +37,11 @@ AS MORDIDAS:
 * :func:`test_o_evento_sem_endereco_chega_ao_terminal` — engula o
   `sem_endereco` no trecho Python do doctor e ela reprova: a soma das portas
   ficaria menor que o total sem ninguém ver.
+* :func:`test_a_janela_do_doctor_e_a_do_modulo_sao_uma_so` — fixe o
+  ``--dias`` em 7 e ela reprova. **Achada pela conferência de 20/09**: era a
+  mesma cegueira do `sem_endereco` entrando pela porta de trás — duas janelas
+  diferentes deixam a soma dos endereços menor que a contagem com
+  ``sem_endereco`` igual a zero, e nenhuma régua acusava.
 
 **DUAS MORDIDAS DESTE ARQUIVO NÃO MORDERAM NA PRIMEIRA TENTATIVA**, e as duas
 estão corrigidas acima em vez de escondidas. Elas custaram também uma
@@ -165,6 +170,11 @@ def test_o_doctor_diz_a_porta_e_o_aparelho() -> None:
     )
     assert "3-4.1.3" in saida, f"o doctor não disse a porta:\n{saida}"
     assert "DualSense (054c:0ce6)" in saida, f"o doctor não disse o aparelho:\n{saida}"
+    # O PREFIXO, FIXADO AQUI DE PROPÓSITO: quem o vigiava era
+    # `test_log_limpo_nao_ganha_bloco_de_endereco`, e só pela AUSÊNCIA. Mudar o
+    # texto do `porta)` deixava as duas verdes — a régua do log limpo passaria a
+    # afirmar a ausência de uma frase que já não existe em lugar nenhum.
+    assert "-71 em 3-4.1.3" in saida, f"o prefixo do bloco mudou:\n{saida}"
 
 
 def test_o_doctor_diz_o_hub_no_caminho() -> None:
@@ -251,6 +261,32 @@ def test_evento_velho_nao_ganha_endereco() -> None:
     )
     assert "histórico" in saida, saida
     assert "3-4.1.3" not in saida, f"endereçou um evento de 30 dias atrás:\n{saida}"
+
+
+def test_a_janela_do_doctor_e_a_do_modulo_sao_uma_so() -> None:
+    """O `--dias` que o doctor passa é o `HEFESTO_DOCTOR_JANELA_DIAS` que ele conta.
+
+    A MORDIDA: troque o ``--dias "${dias}"`` por um ``7`` fixo e esta régua
+    reprova — com a janela em 30 o WARN continuaria dizendo *"1 vez(es) nos
+    últimos 30 dias"* e o bloco de endereços viria VAZIO, que o doctor lê como
+    "o módulo não respondeu".
+
+    E O `sem_endereco` NÃO PEGARIA ISSO, que é o ponto: ele mede o que o
+    módulo não soube LER dentro da janela DELE. Duas janelas diferentes fazem
+    a soma dos endereços ficar menor que a contagem com `sem_endereco` igual a
+    zero — exatamente a cegueira que o `sem_endereco` foi escrito para
+    impedir, entrando pela porta de trás.
+    """
+    saida = _rodar(
+        [
+            "# 2026-07-20 kernel-watch iniciado",
+            _linha(20, "usbhid 3-4.1.3:1.3: can't add hid device: -71"),
+        ],
+        janela=30,
+    )
+    assert "nos últimos 30 dias" in saida, saida
+    assert "-71 em 3-4.1.3" in saida, f"a janela do módulo não é a do doctor:\n{saida}"
+    assert "não respondeu" not in saida, saida
 
 
 def test_sem_python_do_produto_o_doctor_diz_que_nao_sabe() -> None:
