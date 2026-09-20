@@ -143,7 +143,7 @@ class ConexoesSubsystem:
         # A forma sem acento entra de propósito: quem digita a chave à mão no
         # terminal raramente acentua, e recusar por isso seria um interruptor
         # que não desliga.
-        return bruto.strip().lower() not in {"0", "false", "no", "nao", "não"}  # (noqa-acento)
+        return bruto.strip().lower() not in {"0", "false", "no", "nao", "não"}  # (noqa-acento): aceita a digitação sem acento de quem escreve no terminal
 
     async def start(self, ctx: DaemonContext) -> None:
         """Sobe a thread do vigia. Idempotente."""

@@ -85,6 +85,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalacao
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -409,14 +410,15 @@ class PontePrivilegiada:
         if not Path(self.caminho).exists():
             motivos.append(
                 "a ponte privilegiada não está instalada "
-                f"({self.caminho}) — rode o install.sh"
+                f"({self.caminho}) — {como_atualizar_esta_instalacao()}"
             )
         if shutil.which("sudo") is None:
             motivos.append("o 'sudo' não está nesta máquina")
         elif not self._sudo_sem_senha():
             motivos.append(
                 "o sudo sem senha para a ponte não está no lugar "
-                "(/etc/sudoers.d/49-hefesto-bt-ponte) — rode o install.sh"
+                f"(/etc/sudoers.d/49-hefesto-bt-ponte) — "
+                f"{como_atualizar_esta_instalacao()}"
             )
         return motivos
 
