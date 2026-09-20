@@ -32,3 +32,9 @@ derivado do endereço do controle, e endereço não entra em arquivo versionado.
 saiu», todos com `LC_ALL=C` — sem ele o `pactl` traduz e o leitor fica cego.
 Regravar é a resposta certa quando o mundo muda; **editar à mão é o defeito que
 esta pasta existe para matar.**
+
+**E UMA DIFERENÇA QUE NÃO É SUA, para você não a caçar:** o `pre-commit` desta
+casa tira o espaço no fim da linha. O `pactl` emite exatamente uma linha assim
+por bloco de source (`Flags: … LATENCY `), então um `diff` entre a gravação
+crua e o que está aqui acusa **essa** linha, e só ela. Não é o mundo que mudou;
+é o gancho. Nenhum parser desta pasta lê esse espaço.
