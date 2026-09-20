@@ -340,6 +340,68 @@ def _por_numero_de_identidade(conectados: list[dict[str, Any]]) -> list[dict[str
     return sorted(conectados, key=chave)
 
 
+def _quantos_lugares() -> int:
+    """Quantos cartões o desenho tem. O dono é `pacotes.TODOS_OS_LUGARES`.
+
+    Import LAZY, e não por preguiça: `pacotes/__init__` importa as dez abas no
+    fim do arquivo, e várias delas leem ESTE módulo. Ao nível de módulo o
+    import fecharia um ciclo; aqui ele roda quando a mesa já existe.
+
+    Digitar `4` seria a segunda verdade sobre quantos lugares a tela tem — e o
+    dia em que ela pedir um quinto cartão, a régua daqui mentiria calada.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import TODOS_OS_LUGARES
+
+    return len(TODOS_OS_LUGARES)
+
+
+def _lugares_da_mesa(numeros: list[int]) -> list[str]:
+    """O `pref` de cada um — e ele SEGUE O NÚMERO, não a ordem da lista.
+
+    APARELHO-NAO-SE-CONTRADIZ-01, PARTE 2. Decisão dela, 20/09/2026:
+    **«Curar — renomear junto com mover»**.
+
+    **O QUE FOI MEDIDO**, lido pela ponte JS no WebKit vivo, a 400 ms, com o
+    daemon e os quatro controles na mesa dela:
+
+    ======================  =================================  ================
+    ..                      ``23:56:17.998``                   ``23:56:19.604``
+    ======================  =================================  ================
+    cartão ``p3``           **«Player 4»** Galactic Purple     «Player 3» …
+    chip da fita            **«P4 • Galactic Purple»**         «P3 • …»
+    ======================  =================================  ================
+
+    Por **1,6 segundo** o endereço do cartão e o texto dentro dele se
+    contradiziam — medido duas vezes na mesma noite, 1,60 s e 1,61 s. A tela
+    REPOSICIONAVA antes de RENOMEAR, e o vão era interno a ela: a mesma
+    leitura do daemon dava as duas respostas.
+
+    **A CAUSA, e ela é de forma.** O ``pref`` era a POSIÇÃO na lista — ela
+    compacta no instante em que alguém sai — e o ``jogador`` é o
+    ``player_slot``, que é do daemon e leva um batimento para se refazer. Dois
+    donos para o mesmo fato, em cadências diferentes.
+
+    **A CURA É A POSIÇÃO CEDER, e não o número.** Quem manda no número é o
+    daemon (``actions/base.numero_do_controle``, fonte única desde a COR-01):
+    deixar a tela compactar o número por conta própria seria duas verdades
+    sobre qual é o Player 3 — o defeito que aquela função existe para matar. O
+    cartão fica onde está até o daemon renomear, e aí ele move e renomeia no
+    mesmo tique. É literalmente a decisão dela.
+
+    **DOIS CASOS CAEM FORA, e os dois voltam à contagem por posição:** número
+    acima do último cartão (um externo na mesa empurra os DualSense para
+    cima — ver ``_external_present_ranks_locked``) e número repetido (só
+    possível por daemon velho, sem ``player_slot``, em que
+    ``numero_do_controle`` cai na posição). Em qualquer dos dois a mesa inteira
+    volta a contar 1..N, que é o comportamento anterior a esta sprint.
+    """
+    teto = _quantos_lugares()
+    cabem = all(1 <= n <= teto for n in numeros)
+    if cabem and len(set(numeros)) == len(numeros):
+        return [f"p{n}" for n in numeros]
+    return [f"p{posicao}" for posicao, _ in enumerate(numeros, start=1)]
+
+
 def mesa_do_estado(
     state: dict[str, Any],
     cores: dict[str, Any],
@@ -350,8 +412,16 @@ def mesa_do_estado(
 
     O item ganha DOIS campos que a `monta.MESA` fixa não tem: `uniq` (a chave
     estável do card, que vira `data-controle`) e `transporte` (o cru do IPC, que
-    o mapa de canais consome). O `pref` continua sendo a POSIÇÃO — é ele que
-    nomeia o rádio do acordeão —, e `jogador` continua sendo a IDENTIDADE.
+    o mapa de canais consome).
+
+    **O `pref` SEGUE O NÚMERO desde 20/09/2026** — APARELHO-NAO-SE-CONTRADIZ-01,
+    PARTE 2, decisão dela: *«Curar — renomear junto com mover»*. Ele era a
+    POSIÇÃO na lista, e era essa a contradição: a posição compactava na hora e o
+    número esperava o daemon, então o cartão `p3` dizia «Player 4» por 1,6 s. A
+    regra e os dois casos em que ela cede estão em :func:`_lugares_da_mesa`.
+
+    `jogador` continua sendo a IDENTIDADE, e continua vindo do daemon — é a
+    fonte única (`actions/base.numero_do_controle`), e nada aqui a substitui.
     """
     conectados = _por_numero_de_identidade(controles_conectados(state))
     emulacao = state.get("gamepad_emulation") or {}
@@ -367,6 +437,8 @@ def mesa_do_estado(
     # como o que vale para quem não escolheu, que é a herança do registro.
     por_aparelho = emulacao.get("por_aparelho") or {}
 
+    numeros = [numero_do_controle(entrada) for entrada in conectados]
+    prefs = _lugares_da_mesa(numeros)
     fora: list[dict[str, Any]] = []
     for posicao, entrada in enumerate(conectados, start=1):
         uniq = str(entrada.get("uniq") or "")
@@ -378,9 +450,9 @@ def mesa_do_estado(
             nome = nome or getattr(cor, "nome", COR_DESCONHECIDA)
         fora.append(
             {
-                "pref": f"p{posicao}",
+                "pref": prefs[posicao - 1],
                 "uniq": uniq,
-                "jogador": numero_do_controle(entrada),
+                "jogador": numeros[posicao - 1],
                 "cor": slug,
                 "nome": nome,
                 # O TRAVESSÃO NÃO É "BT" — corrigido em 05/09/2026. Este

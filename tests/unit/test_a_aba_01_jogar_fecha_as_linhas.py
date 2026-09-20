@@ -191,8 +191,9 @@ def test_a_pagina_tem_os_dois_elementos_do_esmaecido() -> None:
 def test_o_cadeado_diz_o_que_o_daemon_guardou() -> None:
     """A trava mostra o estado do daemon, não o último clique.
 
-    A LÍNGUA MUDOU EM 19/09/2026 (`TRAVA-PILULA-01`) e esta régua foi atrás: até
-    ali ela media ``"sim"``/``""``, o par do alvo `marcado`. A trava virou
+    A LÍNGUA MUDOU EM 19/09/2026 (`TRAVA-PILULA-01`) e esta régua foi atrás:
+    até ali ela media ``"sim"``/``""``,  (noqa-acento: verbo medir, imperfeito)
+    o par do alvo `marcado`. A trava virou
     `<button class="cadeado">` com o alvo `classe`, e as palavras passaram a ser
     as TRÊS do interruptor, cujo dono é o próprio pacote — por isso elas são
     LIDAS daqui, e não digitadas.
