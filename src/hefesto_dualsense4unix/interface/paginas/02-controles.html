@@ -1573,8 +1573,13 @@
   .moldura > .sticks .stick{flex:0 0 auto;align-self:center}
   .moldura > .sticks .xy{margin-top:0}
   .moldura > .glifos{height:100%;align-content:space-between}
-  /* moldura SÓ onde o original põe */
-  .moldura{border:1px solid var(--border-forte);border-radius:6px;background:var(--app-bg);padding:7px 9px}
+  /* moldura SÓ onde o original põe.
+     O RESPIRO DE CIMA E DE BAIXO FOI DE 7 PARA 3 — 20/09/2026. É a economia que
+     pesa mais em todo o cartão, porque ela se repete em CADA moldura de CADA
+     coluna: 8px por moldura, e a coluna do som tem duas. O respiro LATERAL fica
+     nos 9 — ele é o que separa o texto da borda, e cortá-lo encostaria os
+     rótulos no traço. */
+  .moldura{border:1px solid var(--border-forte);border-radius:6px;background:var(--app-bg);padding:3px 9px}
   /* O RÓTULO DE LINHA TEM UMA COR SÓ NAS DEZ ABAS — 30/08/2026.
      Eu curei `.sec-rot` e assumi que era A classe de rótulo. São CINCO —
      `.sec-rot`, `.linha-rot`, `.rot`, `.stick-rot` e o `<th>` das tabelas — e ela
@@ -1795,9 +1800,14 @@
      `--prova-gesto` dava verde porque nunca os tocava.
      `font-family:inherit` é o preço de virar botão: sem ele o navegador põe a
      fonte dele e o glifo encolhe. */
-  .mudo-i{width:22px;height:22px;flex:0 0 22px;border-radius:5px;cursor:pointer;
+  /* 16px E NÃO 22 — 20/09/2026. Ele é o botão mais alto da linha de volume, e
+     por isso é ELE que dita a altura dela: o trilho tem 4px e o número, 13. Os
+     6px que saem daqui saem do cartão duas vezes, uma por moldura de som.
+     O `line-height` desce junto (14 = 16 menos as duas bordas de 1px), senão o
+     glifo desencosta do meio e o ♪ nasce colado na borda de baixo. */
+  .mudo-i{width:16px;height:16px;flex:0 0 16px;border-radius:5px;cursor:pointer;
           border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);
-          font-size:10px;line-height:20px;text-align:center;padding:0;font-family:inherit}
+          font-size:10px;line-height:14px;text-align:center;padding:0;font-family:inherit}
   /* AS DUAS CORES DO ♪ NÃO MORAM AQUI, e a razão é que elas PERGUNTAM A PALAVRA
      ao dono: os seletores casam o que `mesa_viva.selo_do_mic` devolve, e um
      seletor com a palavra digitada à mão para de casar CALADO no dia em que o
@@ -2017,13 +2027,16 @@
      164px e a linha do rótulo pedia 292 numa moldura de 242: os 50px de
      diferença eram o "Nativo" e metade do "Desativado" pintados fora da caixa,
      por cima do bloco dos sensores. Aqui a fileira mede 150 e cabe com folga. */
-  /* O `.mic-modo` HERDA A `.rota` INTEIRA e não acrescenta nada — 31/08/2026,
-     quando ela mandou os dois descerem *"igual o Sons do Jogo e Todo o som do
-     PC"*. O seletor fica no HTML (`class="rota mic-modo"`) para dizer QUAL
-     fileira é esta, mas de estilo ele não tem UMA linha própria: dois blocos
-     que fazem o mesmo gesto na mesma coluna têm de ser o mesmo botão, e uma
-     regra a mais aqui é como as duas alturas voltam.
-     As 5 linhas de pastilha de 17px que moravam aqui saíram junto. */
+  /* O `.mic-modo` HERDAVA A `.rota` INTEIRA — 31/08/2026, quando ela mandou os
+     dois descerem *"igual o Sons do Jogo e Todo o som do PC"*. **DEIXOU DE
+     HERDAR EM 20/09/2026**, e o fato que mudou está medido: os nomes que ela
+     escreveu para a saída de som empilharam aquela fileira, e esta continua
+     deitada. As duas regras que isso custou moram no bloco `.rota` abaixo,
+     declaradas ali com a razão — não aqui, para não haver dois lugares
+     dizendo a altura do mesmo botão.
+     O seletor continua no HTML (`class="rota mic-modo"`) para dizer QUAL
+     fileira é esta. As 5 linhas de pastilha de 17px que moravam aqui saíram em
+     31/08 e não voltaram. */
   /* O `data-campo` DO CONTAINER SAIU DAQUI EM 01/09/2026, e ele APAGAVA os dois
      botões. (O nome dele não se escreve por extenso nesta linha: a régua do
      casamento acha `data-campo` por expressão regular e NÃO tira comentário,
@@ -2037,16 +2050,17 @@
      antes 4, depois 0, nos dois valores que o pacote emitia (`''` e
      `'sem posse'`). Endereço de pintura só pode morar em FOLHA — um container
      endereçado é um container que some. */
-  /* 30px, E NÃO OS 36 DE `--h-escolha` — 31/08/2026, e o número é o preço do
-     pedido dela. Até hoje a coluna do som tinha UMA fileira de escolha (a rota
-     do alto-falante); com os modos do microfone descendo *"igual o Sons do Jogo"*
-     ela passou a ter DUAS, e a coluna foi de 236 para 269px. O card foi junto,
-     de 308 para 341, contra os 328 que a caixa reserva: 13px a mais, e o P4
-     saindo da tela.
-     Medido: 6px por fileira em duas fileiras, mais 1px de margem em cada, dão
-     os 14 que faltavam. Não é altura inventada — é a mesma faixa do chip da
-     fita (28 a 30px) que esta aba já usa no `.mascara .chip`, e as duas
-     fileiras continuam IGUAIS entre si, que é o que ela pediu. */
+  /* ERAM 30px NAS DUAS FILEIRAS, E NÃO OS 36 DE `--h-escolha` — 31/08/2026, e o
+     número era o preço do pedido dela. Até ali a coluna do som tinha UMA
+     fileira de escolha (a saída do alto-falante); com os modos do microfone
+     descendo *"igual o Sons do Jogo"* ela passou a ter DUAS, e a coluna foi de
+     236 para 269px. O card foi junto, de 308 para 341, contra os 328 que a
+     caixa reserva: 13px a mais, e o P4 saindo da tela.
+     **OS 30 CAÍRAM EM 20/09/2026** — 17 na fileira da saída de som (três
+     empilhados) e 19 nesta —, e o que trocou foi o fato: os rótulos que ela
+     escreveu não cabem deitados. As duas fileiras deixaram de ser IGUAIS entre
+     si porque deixaram de ter a mesma forma; o que continua igual é a
+     gramática (escolha exclusiva, um aceso). */
   /* A FILEIRA QUEBRA EM VEZ DE CORTAR — decisão dela, 12/09/2026, opção (b) de
      três. O que ela comprou está medido: com `flex:1` e `white-space:nowrap` os
      botões NÃO encolhem abaixo do próprio rótulo, então a fileira transborda a
@@ -2063,10 +2077,67 @@
      uma segunda linha e o card cresce 35px (30 do botão + 5 do vão). Na largura
      do desenho — e na janela dela, que é 1918 — nada quebra e nada muda: a
      conta de `ALTURA_DO_CARD` continua valendo porque ela é medida ali. */
-  .rota{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
-  .rota button{flex:1;height:30px;border-radius:5px;font-size:10.5px;white-space:nowrap;font-family:inherit;
+  /* A FILEIRA DA SAÍDA DE SOM EMPILHA — 20/09/2026, e o preço foi medido e pago.
+     Os nomes que ela escreveu (*"Efeitos do Jogo, Efeitos do Jogo e Áudio da TV
+     no Controle, Tudo na TV e Nada no Controle"*) não cabem lado a lado: a
+     fileira vive na coluna do Microfone, que mede 278px na janela do produto, e
+     o do meio sozinho pede mais que isso. Lado a lado eles quebrariam em duas
+     linhas de tamanhos diferentes, que é o transbordo que a decisão de 12/09
+     comprou para não cortar rótulo.
+
+     TRÊS LINHAS CUSTAM `3*altura + 2*gap`, e é daí que saem os 70px de um
+     empilhamento ingênuo (3x30 + 2x5 = 100, contra os 30 de uma linha só). É
+     daí que eles voltam: com 17px e vão de 2, a fileira mede 55 — 25 a mais, e
+     não 70. O resto do orçamento veio das outras quatro alturas desta folha
+     (`.mic-modo`, `.mudo-i`, `.sensores-peca .sw` e o respiro da `.moldura`),
+     cada uma com a razão no seu bloco. O cartão ENCOLHEU: a régua
+     `scripts/check_a_altura_do_cartao.py` mede o renderizado contra
+     `aba02.PARA_O_CARD` e reprova quem o fizer crescer.
+
+     O `flex-wrap` SAIU com a coluna: numa direção de coluna ele quebraria em
+     COLUNAS, que é o oposto do que a decisão de 12/09 pediu. O que protege o
+     rótulo agora é a própria linha inteira — cada botão tem a largura da
+     coluna. */
+  .rota{display:flex;flex-direction:column;gap:2px;margin-top:5px}
+  .rota button{flex:0 0 auto;height:17px;border-radius:5px;font-size:10.5px;white-space:nowrap;font-family:inherit;
     border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);cursor:pointer}
   .rota button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
+  /* O MODO DO MICROFONE CONTINUA DEITADO, e agora precisa dizê-lo — 20/09/2026.
+     Enquanto as duas fileiras eram a mesma, o `.mic-modo` não tinha uma linha
+     própria de estilo, e o bloco de comentário mais acima registra por quê. A
+     fileira da saída de som empilhou; esta não pode empilhar junto, porque são
+     DOIS rótulos curtos que cabem deitados e uma segunda coluna de três linhas
+     na mesma moldura estouraria o orçamento do cartão.
+     São 19px e não os 17 da vizinha porque este par divide a linha com o nome
+     do bloco, e abaixo de 19 o texto do «Virtual» encosta na borda. */
+  .rota.mic-modo{flex-direction:row;flex-wrap:wrap;gap:5px}
+  .rota.mic-modo button{flex:1;height:19px}
+  /* O «NATIVO» FORA DE ALCANCE — 20/09/2026, decisão dela, verbatim: *"Fica os
+     dois botões. Mas no rádio o botão fica cinza sem ser ativado"*.
+
+     POR QUE SUMIR SERIA PIOR, e é a razão que ela comprou: um botão que SOME
+     não ensina nada; um botão cinza diz *"isto existe, e aqui não dá"* — e
+     quem plugar o cabo vê a MESMA tela ganhar a opção, sem ter de descobrir
+     que ela existia. A tela é a mesma nos dois transportes; o que muda é o que
+     está ao alcance.
+
+     A CARA É A DA PEÇA DAS DEZ (`monta.botao_cinza` → `.seg button.apagado`),
+     letra por letra, e é de propósito: um segundo cinza nesta casa seria um
+     segundo vocabulário para o mesmo fato.
+
+     E O ENDEREÇO MORA NO CONTAINER, que é o oposto do que o bloco `.mic-modo`
+     mais acima proíbe — a exceção é real e é de alvo, não de descuido. O que
+     apagava os dois botões em 01/09 era o alvo `texto`, que faz
+     `el.textContent = t`; este é `classe`, que só liga e desliga um nome
+     (`hefesto_vivo.escrever`, ramo `classe`, que retorna antes de tocar em
+     conteúdo). O botão não pode carregá-lo porque `data-hef-alvo` é UM por
+     elemento e o dele já é o `on` do par — está escrito no próprio piloto.
+     UM CAMPO SÓ alimenta o cinza e a razão do `?`, como na peça das dez: com
+     dois, seria possível pintar cinza sem razão, ou razão sem cinza. */
+  .mic-modo.sem-nativo button[data-mic-modo="nativo"],
+  .mic-modo.sem-nativo button[data-mic-modo="nativo"]:hover{
+    border-color:var(--border-sutil);background:var(--panel);
+    color:var(--texto-mudo);font-weight:400;cursor:not-allowed}
   /* os 16 glifos: grandes, SOLTOS (sem caixa) e coloridos por identidade.
      UMA REGRA PARA OS QUATRO: `plast` é a cor do plástico (a variável do card) e
      `on` é a cor de "acendeu agora". Antes havia um par de regras por modelo
@@ -2119,7 +2190,12 @@
   .sensores-peca{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;
                  gap:8px;margin-left:auto}
   .sensores-peca .sw{
-    height:26px;border-radius:6px;font-size:10.5px;font-family:inherit;cursor:pointer;
+    /* 17px E NÃO 26 — 20/09/2026. A pastilha continua cabendo nos 30px de
+       dentro da linha fechada, e o que ela devolve é altura na coluna dos
+       sensores, que é uma das que disputam a altura do cartão. O parágrafo
+       acima diz por que 34 não cabe; 17 cabe com folga, e é a régua
+       `check_a_altura_do_cartao.py` que agora guarda o orçamento inteiro. */
+    height:17px;border-radius:6px;font-size:10.5px;font-family:inherit;cursor:pointer;
 
     border:1px solid var(--green);background:rgba(80,250,123,.09);color:var(--green);
     display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;
@@ -2894,11 +2970,16 @@
                    nome com os interruptores de sensor da mesma aba.
                    E O CONTAINER PERDEU O `data-campo` — ver o comentário no
                    CSS: endereçá-lo trocava os dois botões por um travessão. -->
-              <span class="rota mic-modo">
+              <!-- O «NATIVO» FICA CINZA ONDE ELE NÃO ALCANÇA — 20/09/2026,
+                   decisão dela: *"Fica os dois botões. Mas no rádio o botão
+                   fica cinza sem ser ativado"*. A razão vai no `?` ao lado, e
+                   o porquê de o endereço morar no CONTAINER (e não no botão)
+                   está no bloco `.mic-modo` do CSS. -->
+              <span class="rota mic-modo" data-campo="mic-nativo-fora" data-hef-alvo="classe" data-hef-classe="sem-nativo">
                 <button class="on" data-gesto="mic-modo" data-mic-modo="virtual" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="virtual"
                   title="O microfone deste controle passa pelo Hefesto: pelo rádio, é assim que ele ganha um canal só dele. Quem o põe no ar é o 🎙 acima.">Virtual</button>
                 <button class="" data-gesto="mic-modo" data-mic-modo="nativo" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="nativo"
-                  title="O microfone deste controle entra sozinho, sem o Hefesto no meio. É o que vale quando ninguém escolhe nada.">Nativo</button>
+                  title="O microfone deste controle entra sozinho, sem o Hefesto no meio. É o que vale quando ninguém escolhe nada.">Nativo</button><span class="ajuda porque">?<span class="dica" data-campo="mic-nativo-fora" data-hef-alvo="html"><i class="nada"></i></span></span>
               </span>
             <!-- QUEM ESTÁ TE OUVINDO — 19/09/2026, decisão dela na
                  `A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01`, e ela escolheu as DUAS
@@ -2937,8 +3018,8 @@
               <span data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span class="selo-ativo no-rotulo on" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="alto-canal" data-hef-alvo="html">ATIVO</span></span></span>
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>Sons do jogo</b>: só o áudio do jogo, no alto-falante do controle.
-                <b>No controle e na TV</b>: o som do PC sai nos dois.
+                <b>Efeitos do Jogo</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
+                <b>Efeitos do Jogo e Áudio da TV no Controle</b>: tudo o que a máquina toca cai aqui também, e continua saindo na TV.
                 <b>Só no controle</b>: o som do PC sai aqui, e a TV cala.
               </span></span>
             </div>
@@ -2962,8 +3043,8 @@
                  um par novo abaixo seria a segunda gramática que o gerador já
                  recusou uma vez. -->
             <div class="rota">
-              <button class="on" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Sons do jogo</button>
-              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo na TV. Serve para jogar acompanhado: cada um ouve no próprio controle.">No controle e na TV</button>
+              <button class="on" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Efeitos do Jogo</button>
+              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo na TV. Serve para jogar acompanhado: cada um ouve no próprio controle.">Efeitos do Jogo e Áudio da TV no Controle</button>
               <button class="" data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc">Só no controle</button>
             </div>
             <!-- A RESSALVA DA ROTA — a peça da ONDA0-F (D-02), e o texto é do
@@ -3426,11 +3507,16 @@
                    nome com os interruptores de sensor da mesma aba.
                    E O CONTAINER PERDEU O `data-campo` — ver o comentário no
                    CSS: endereçá-lo trocava os dois botões por um travessão. -->
-              <span class="rota mic-modo">
+              <!-- O «NATIVO» FICA CINZA ONDE ELE NÃO ALCANÇA — 20/09/2026,
+                   decisão dela: *"Fica os dois botões. Mas no rádio o botão
+                   fica cinza sem ser ativado"*. A razão vai no `?` ao lado, e
+                   o porquê de o endereço morar no CONTAINER (e não no botão)
+                   está no bloco `.mic-modo` do CSS. -->
+              <span class="rota mic-modo" data-campo="mic-nativo-fora" data-hef-alvo="classe" data-hef-classe="sem-nativo">
                 <button class="" data-gesto="mic-modo" data-mic-modo="virtual" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="virtual"
                   title="O microfone deste controle passa pelo Hefesto: pelo rádio, é assim que ele ganha um canal só dele. Quem o põe no ar é o 🎙 acima.">Virtual</button>
                 <button class="" data-gesto="mic-modo" data-mic-modo="nativo" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="nativo"
-                  title="O microfone deste controle entra sozinho, sem o Hefesto no meio. É o que vale quando ninguém escolhe nada.">Nativo</button>
+                  title="O microfone deste controle entra sozinho, sem o Hefesto no meio. É o que vale quando ninguém escolhe nada.">Nativo</button><span class="ajuda porque">?<span class="dica" data-campo="mic-nativo-fora" data-hef-alvo="html"><i class="nada"></i></span></span>
               </span>
             <!-- QUEM ESTÁ TE OUVINDO — 19/09/2026, decisão dela na
                  `A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01`, e ela escolheu as DUAS
@@ -3469,8 +3555,8 @@
               <span data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span class="selo-ativo no-rotulo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="alto-canal" data-hef-alvo="html"><i class="nada"></i></span></span></span>
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>Sons do jogo</b>: só o áudio do jogo, no alto-falante do controle.
-                <b>No controle e na TV</b>: o som do PC sai nos dois.
+                <b>Efeitos do Jogo</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
+                <b>Efeitos do Jogo e Áudio da TV no Controle</b>: tudo o que a máquina toca cai aqui também, e continua saindo na TV.
                 <b>Só no controle</b>: o som do PC sai aqui, e a TV cala.
               </span></span>
             </div>
@@ -3494,8 +3580,8 @@
                  um par novo abaixo seria a segunda gramática que o gerador já
                  recusou uma vez. -->
             <div class="rota">
-              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Sons do jogo</button>
-              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo na TV. Serve para jogar acompanhado: cada um ouve no próprio controle.">No controle e na TV</button>
+              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Efeitos do Jogo</button>
+              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo na TV. Serve para jogar acompanhado: cada um ouve no próprio controle.">Efeitos do Jogo e Áudio da TV no Controle</button>
               <button class="on" data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc">Só no controle</button>
             </div>
             <!-- A RESSALVA DA ROTA — a peça da ONDA0-F (D-02), e o texto é do
@@ -3958,11 +4044,16 @@
                    nome com os interruptores de sensor da mesma aba.
                    E O CONTAINER PERDEU O `data-campo` — ver o comentário no
                    CSS: endereçá-lo trocava os dois botões por um travessão. -->
-              <span class="rota mic-modo">
+              <!-- O «NATIVO» FICA CINZA ONDE ELE NÃO ALCANÇA — 20/09/2026,
+                   decisão dela: *"Fica os dois botões. Mas no rádio o botão
+                   fica cinza sem ser ativado"*. A razão vai no `?` ao lado, e
+                   o porquê de o endereço morar no CONTAINER (e não no botão)
+                   está no bloco `.mic-modo` do CSS. -->
+              <span class="rota mic-modo" data-campo="mic-nativo-fora" data-hef-alvo="classe" data-hef-classe="sem-nativo">
                 <button class="" data-gesto="mic-modo" data-mic-modo="virtual" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="virtual"
                   title="O microfone deste controle passa pelo Hefesto: pelo rádio, é assim que ele ganha um canal só dele. Quem o põe no ar é o 🎙 acima.">Virtual</button>
                 <button class="" data-gesto="mic-modo" data-mic-modo="nativo" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="nativo"
-                  title="O microfone deste controle entra sozinho, sem o Hefesto no meio. É o que vale quando ninguém escolhe nada.">Nativo</button>
+                  title="O microfone deste controle entra sozinho, sem o Hefesto no meio. É o que vale quando ninguém escolhe nada.">Nativo</button><span class="ajuda porque">?<span class="dica" data-campo="mic-nativo-fora" data-hef-alvo="html"><i class="nada"></i></span></span>
               </span>
             <!-- QUEM ESTÁ TE OUVINDO — 19/09/2026, decisão dela na
                  `A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01`, e ela escolheu as DUAS
@@ -4001,8 +4092,8 @@
               <span data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span class="selo-ativo no-rotulo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="alto-canal" data-hef-alvo="html"><i class="nada"></i></span></span></span>
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>Sons do jogo</b>: só o áudio do jogo, no alto-falante do controle.
-                <b>No controle e na TV</b>: o som do PC sai nos dois.
+                <b>Efeitos do Jogo</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
+                <b>Efeitos do Jogo e Áudio da TV no Controle</b>: tudo o que a máquina toca cai aqui também, e continua saindo na TV.
                 <b>Só no controle</b>: o som do PC sai aqui, e a TV cala.
               </span></span>
             </div>
@@ -4026,8 +4117,8 @@
                  um par novo abaixo seria a segunda gramática que o gerador já
                  recusou uma vez. -->
             <div class="rota">
-              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Sons do jogo</button>
-              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo na TV. Serve para jogar acompanhado: cada um ouve no próprio controle.">No controle e na TV</button>
+              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Efeitos do Jogo</button>
+              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo na TV. Serve para jogar acompanhado: cada um ouve no próprio controle.">Efeitos do Jogo e Áudio da TV no Controle</button>
               <button class="" data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc">Só no controle</button>
             </div>
             <!-- A RESSALVA DA ROTA — a peça da ONDA0-F (D-02), e o texto é do
@@ -4490,11 +4581,16 @@
                    nome com os interruptores de sensor da mesma aba.
                    E O CONTAINER PERDEU O `data-campo` — ver o comentário no
                    CSS: endereçá-lo trocava os dois botões por um travessão. -->
-              <span class="rota mic-modo">
+              <!-- O «NATIVO» FICA CINZA ONDE ELE NÃO ALCANÇA — 20/09/2026,
+                   decisão dela: *"Fica os dois botões. Mas no rádio o botão
+                   fica cinza sem ser ativado"*. A razão vai no `?` ao lado, e
+                   o porquê de o endereço morar no CONTAINER (e não no botão)
+                   está no bloco `.mic-modo` do CSS. -->
+              <span class="rota mic-modo" data-campo="mic-nativo-fora" data-hef-alvo="classe" data-hef-classe="sem-nativo">
                 <button class="" data-gesto="mic-modo" data-mic-modo="virtual" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="virtual"
                   title="O microfone deste controle passa pelo Hefesto: pelo rádio, é assim que ele ganha um canal só dele. Quem o põe no ar é o 🎙 acima.">Virtual</button>
                 <button class="" data-gesto="mic-modo" data-mic-modo="nativo" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="nativo"
-                  title="O microfone deste controle entra sozinho, sem o Hefesto no meio. É o que vale quando ninguém escolhe nada.">Nativo</button>
+                  title="O microfone deste controle entra sozinho, sem o Hefesto no meio. É o que vale quando ninguém escolhe nada.">Nativo</button><span class="ajuda porque">?<span class="dica" data-campo="mic-nativo-fora" data-hef-alvo="html"><i class="nada"></i></span></span>
               </span>
             <!-- QUEM ESTÁ TE OUVINDO — 19/09/2026, decisão dela na
                  `A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01`, e ela escolheu as DUAS
@@ -4533,8 +4629,8 @@
               <span data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span class="selo-ativo no-rotulo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="alto-canal" data-hef-alvo="html">ATIVO</span></span></span>
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>Sons do jogo</b>: só o áudio do jogo, no alto-falante do controle.
-                <b>No controle e na TV</b>: o som do PC sai nos dois.
+                <b>Efeitos do Jogo</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
+                <b>Efeitos do Jogo e Áudio da TV no Controle</b>: tudo o que a máquina toca cai aqui também, e continua saindo na TV.
                 <b>Só no controle</b>: o som do PC sai aqui, e a TV cala.
               </span></span>
             </div>
@@ -4558,8 +4654,8 @@
                  um par novo abaixo seria a segunda gramática que o gerador já
                  recusou uma vez. -->
             <div class="rota">
-              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Sons do jogo</button>
-              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo na TV. Serve para jogar acompanhado: cada um ouve no próprio controle.">No controle e na TV</button>
+              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Efeitos do Jogo</button>
+              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo na TV. Serve para jogar acompanhado: cada um ouve no próprio controle.">Efeitos do Jogo e Áudio da TV no Controle</button>
               <button class="" data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc">Só no controle</button>
             </div>
             <!-- A RESSALVA DA ROTA — a peça da ONDA0-F (D-02), e o texto é do
@@ -4712,9 +4808,16 @@
 
 <!-- ================= LEGENDA DO MOCKUP ================= -->
 <div class="nota">
+  <h2>O que mudou em 20/09</h2>
+  <ul>
+    <li><b>Os dois primeiros botões do alto-falante têm os nomes que você escreveu</b> — <b>Efeitos do Jogo</b> e <b>Efeitos do Jogo e Áudio da TV no Controle</b>. Você derrubou o enunciado anterior e o que você derrubou era conceito, não palavra: <i>"não gosto do termo jogo pra se referir ao canal especifico pro sfx do controle, pq hdmi tecnicamente é jogo que manda pra lá também"</i>. Os dois não são duas fontes — são dois modos do <b>mesmo</b> alto-falante: um deixa entrar só o que o jogo endereçar a este controle, o outro derrama tudo o que a máquina toca, sem tirar o som da TV.</li>
+    <li><b>A fileira empilhou, e o cartão não cresceu por isso.</b> Os nomes não cabem lado a lado na coluna onde ela vive, então os três botões passaram a ficar um sobre o outro — e os pixels que isso custaria voltaram das alturas vizinhas (o par do microfone, o botão de calar, os dois dos sensores e o respiro das molduras). O cartão ficou <b>mais baixo</b> do que era, e agora existe uma régua que reprova qualquer mudança futura que o faça crescer.</li>
+    <li class="foi"><b>O terceiro botão ainda se chama <code>Só no controle</code>, e está esperando você.</b> O nome que você escreveu para ele foi <i>"Tudo na TV e Nada no Controle"</i>, e este botão faz o oposto: ele traz o som do PC para o alto-falante deste controle e <b>cala a televisão</b>. Pôr o nome novo sem trocar o ato seria a mentira que esta tela existe para não contar; trocar o ato por conta própria apagaria uma escolha sua que está de pé desde 04/09. Diga qual das duas vale e ele muda no mesmo dia.</li>
+  </ul>
+
   <h2>O que mudou em 11/09</h2>
   <ul>
-    <li><b>Os três botões do alto-falante passaram a dizer DE ONDE O SOM SAI</b> — decisão sua, depois da sua pergunta: <i>"Tem diferença real entre todo o som do PC e Ouvir Juntos?"</i> Tem, e era a única coisa que os separava: um deixa a TV tocando, o outro a cala. Nenhum dos dois nomes dizia isso, e você leu um pelo outro. Agora a fileira é <b>Sons do jogo</b> · <b>No controle e na TV</b> · <b>Só no controle</b>. O que o botão faz não mudou: o byte do firmware e a saída padrão do sistema são os mesmos de ontem.</li>
+    <li class="foi"><b>Os três botões do alto-falante passaram a dizer DE ONDE O SOM SAI</b> — decisão sua, depois da sua pergunta: <i>"Tem diferença real entre todo o som do PC e Ouvir Juntos?"</i> Tem, e era a única coisa que os separava: um deixa a TV tocando, o outro a cala. Nenhum dos dois nomes dizia isso, e você leu um pelo outro. Os dois primeiros nomes daquele dia saíram em 20/09, com as palavras que você escreveu; o ato de cada botão não mudou em nenhuma das duas vezes.</li>
   </ul>
 
   <h2>O que mudou em 31/08</h2>
