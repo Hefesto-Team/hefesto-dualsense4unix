@@ -23,7 +23,7 @@ A PÁGINA É A DA BANCADA, e isto é deliberado: o piloto abre o PUBLICADO
 (`hefesto_vivo._ir`), e o publicado só recebe endereço pelo
 ``check_o_desenho_aprovado.py --publicar-enderecos``, que é ato de quem
 coordena. Medir o publicado hoje daria **verde sobre a página congelada** — a
-armadilha mais cara do `docs/process/COMO-OLHAR-A-TELA.md`. O desvio é uma cópia
+armadilha mais cara do `docs/method/COMO-OLHAR-A-TELA.md`. O desvio é uma cópia
 num diretório temporário; a bancada dela não é tocada.
 
 OS TRÊS DESFECHOS QUE ELE SABE SEPARAR, e a diferença é o ponto inteiro:

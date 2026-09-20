@@ -219,7 +219,7 @@ O_INSTRUMENTO = "scripts/regua_de_tela.py"
 #: FORA DO REPOSITÓRIO desde 15/09/2026 (ordem dela): quem tem o arquivo o
 #: segue por este nome; quem não tem lê a própria docstring deste módulo,
 #: que é autossuficiente. Por isso todo uso daqui é CONDICIONAL.
-O_MANUAL = "docs/process/2026-08-29-A-REGUA-DE-TELA-como-se-prova-a-interface.md"
+O_MANUAL = "docs/method/2026-08-29-A-REGUA-DE-TELA-como-se-prova-a-interface.md"
 
 #: O `git` responde por esta árvore vazia quando ainda não há `HEAD`.
 ARVORE_VAZIA = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"

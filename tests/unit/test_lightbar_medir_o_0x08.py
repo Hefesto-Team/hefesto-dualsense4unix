@@ -16,7 +16,7 @@ CORREÇÃO DATADA (11/08/2026), porque o item 3 tinha uma cauda FALSA
 ==================================================================
 Colada ao item 3 lia-se aqui "e sem 0x08 nenhum a barra ficou morta por 5 dias
 e 20 adoções". Ela **nunca foi medição**: era uma frase que só existia em
-docstring — a armadilha `A-12` de `docs/process/METODO-DE-ISOLAMENTO.md`, *"o
+docstring — a armadilha `A-12` de `docs/method/METODO-DE-ISOLAMENTO.md`, *"o
 caderno envelhecer sem que ninguém note"*. A escavação do journal, em 11/08,
 achou a barra **ACESA** no rádio dentro daqueles cinco dias, quatro vezes
 (08/08 16:39, 08/08 21:35, 08/08 23:48 e 11/08 11:40 — ensaios

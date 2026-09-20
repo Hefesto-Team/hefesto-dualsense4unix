@@ -46,7 +46,7 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 #: A página que o PRODUTO renderiza — não a bancada. Uma régua que medisse o
 #: `mockup/` daria verde sobre um endereço que a tela dela não tem, e é a
-#: armadilha que o `docs/process/COMO-OLHAR-A-TELA.md` chama de "régua que
+#: armadilha que o `docs/method/COMO-OLHAR-A-TELA.md` chama de "régua que
 #: pergunta no lugar errado".
 PAGINA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/09-sistema.html"
 

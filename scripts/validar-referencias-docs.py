@@ -1032,6 +1032,23 @@ def varrer_documento(
             leniente = "/" in referencia or veio_de_crase or referencia in raiz_nomes
             if leniente and (referencia in sufixos or referencia in declarados_aqui):
                 continue
+            # FORA DO GIT, MEDIDO NO CAMINHO RESOLVIDO — 20/09/2026.
+            #
+            # `candidatos_da_linha` já pergunta a `fora_do_git()`, mas
+            # pergunta sobre o TEXTO CRU, e o texto cru de um link que sobe é
+            # `../process/…`, que não começa com `docs/process/`. A isenção
+            # existia e não alcançava a forma mais comum de citá-la dentro de
+            # `docs/`. Na árvore dela isso nunca apareceu — o arquivo está no
+            # disco, o link resolve, e ninguém reprova; num CLONE LIMPO, onde
+            # a pasta não existe, as 12 citações de `docs/usage/` viravam
+            # referência morta e derrubavam o portão inteiro.
+            #
+            # A decisão de isentar é de 15/09 e continua a mesma; o que muda
+            # é a régua enxergar a citação depois de resolvida, que é a única
+            # forma em que `../process/x.md` e `docs/process/x.md` são a
+            # mesma afirmação.
+            if relativo is not None and fora_do_git(relativo) is not None:
+                continue
             achados.append(Achado(relativo_doc, numero, referencia, REGRA_ARQUIVO))
 
         if cobra_env:

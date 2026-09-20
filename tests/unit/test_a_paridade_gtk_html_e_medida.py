@@ -37,7 +37,7 @@ import pytest
 RAIZ = Path(__file__).resolve().parents[2]
 REGUA = RAIZ / "scripts" / "check_paridade_gtk_html.py"
 CSV = RAIZ / "docs" / "data" / "paridade-gtk-html.csv"
-DOC = RAIZ / "docs" / "process" / "2026-09-03-O-TERCEIRO-NUMERO-a-paridade-com-a-gtk.md"
+DOC = RAIZ / "docs" / "method" / "2026-09-03-O-TERCEIRO-NUMERO-a-paridade-com-a-gtk.md"
 
 
 def _modulo():

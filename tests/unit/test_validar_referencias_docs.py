@@ -313,12 +313,21 @@ def test_link_que_sobe_para_arquivo_inexistente_reprova(repo_falso: Path) -> Non
     Este é o teste que, arrancada a cura (devolvido o `".."` à linha de
     filtros de `candidatos_da_linha`), volta a passar com saída 0 -- que é
     exatamente o defeito medido na árvore real.
+
+    O ALVO DO EXEMPLO MUDOU EM 20/09/2026, e a régua não afrouxou. Ele subia
+    para `../process/`, que é `FORA_DO_GIT` desde 15/09 -- a pasta não viaja
+    no clone, e citação a ela não se confere. Este teste passava porque a
+    isenção era medida no TEXTO CRU e `../process/` não começa com
+    `docs/process/`; ou seja, ele media  (noqa-acento: verbo medir, imperfeito)
+    um buraco da isenção, não a cegueira
+    ao caminho que sobe. Com a isenção passando a valer no caminho RESOLVIDO,
+    o exemplo tinha de mudar de pasta para continuar medindo o que promete.
     """
     _com_sprint(repo_falso)
     escrever_doc(
         repo_falso,
         "modos.md",
-        "> Ver [LUGAR-À-MESA-01](../process/sprints/2026-08-06-NUNCA-EXISTIU-99.md).\n",
+        "> Ver [a decisão](../adr/2026-08-06-NUNCA-EXISTIU-99.md).\n",
     )
     proc = rodar("--root", str(repo_falso), "--all")
 
@@ -329,6 +338,32 @@ def test_link_que_sobe_para_arquivo_inexistente_reprova(repo_falso: Path) -> Non
     )
     assert "2026-08-06-NUNCA-EXISTIU-99.md" in proc.stdout
     assert "modos.md:1" in proc.stdout
+
+
+def test_link_que_sobe_para_o_processo_e_isento(repo_falso: Path) -> None:
+    """E a outra metade, que é a cura de 20/09/2026.
+
+    `docs/process/` é `FORA_DO_GIT` desde 15/09: o arquivo existe no disco
+    dela e não viaja no git, e a citação continua certa. A isenção era medida
+    no texto cru, e o texto cru de um link escrito de dentro de `docs/` é
+    `../process/…` -- que não casava. Na árvore DELA isso nunca apareceu,
+    porque o arquivo está lá e o link resolve; num clone limpo, as 12
+    citações de `docs/usage/` viravam referência morta e derrubavam o portão
+    inteiro. A régua media a máquina, não o documento.  (noqa-acento: verbo medir, imperfeito)
+    """
+    escrever_doc(
+        repo_falso,
+        "modos.md",
+        "> Ver [a sprint](../process/sprints/2026-08-06-NAO-VIAJA-NO-GIT.md).\n",
+    )
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 0, (
+        "a citação a `docs/process/` escrita como `../process/` foi cobrada "
+        "como referência morta -- a isenção de 15/09 não alcançou a forma "
+        "relativa, e o portão cai em todo clone limpo.\n"
+        f"saída: {proc.stdout}{proc.stderr}"
+    )
 
 
 def test_link_que_sobe_para_arquivo_existente_passa(repo_falso: Path) -> None:

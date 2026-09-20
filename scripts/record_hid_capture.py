@@ -29,7 +29,7 @@ O DAEMON TEM DE ESTAR PARADO — 11/08/2026
 Este gravador abre um `PyDualSenseController` **próprio**. Com o daemon vivo,
 são dois donos disputando o mesmo hidraw, e a captura sai contaminada sem
 nenhum erro na tela: é a terceira armadilha nomeada em
-`docs/process/COMO-OLHAR-A-TELA.md` — o instrumento brigando com o produto,
+`docs/method/COMO-OLHAR-A-TELA.md` — o instrumento brigando com o produto,
 que já fez `test trigger --raw` imprimir "aplicado" sem ter aplicado.
 
 Por isso o gravador agora RECUSA rodar com o daemon de pé, e diz o comando de

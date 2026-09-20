@@ -152,7 +152,7 @@ O_QUE_ELE_NAO_FAZ = (
 #: FORA DO REPOSITÓRIO desde 15/09/2026 (ordem dela): quem tem o arquivo o
 #: segue por este nome; quem não tem lê a própria docstring deste módulo,
 #: que é autossuficiente. Por isso todo uso daqui é CONDICIONAL.
-O_MANUAL = "docs/process/2026-08-29-A-REGUA-DE-TELA-como-se-prova-a-interface.md"
+O_MANUAL = "docs/method/2026-08-29-A-REGUA-DE-TELA-como-se-prova-a-interface.md"
 
 
 # ---------------------------------------------------------------------------

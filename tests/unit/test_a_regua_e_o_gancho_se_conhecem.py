@@ -7,7 +7,7 @@ cada um só serve se souber dos outros dois:
   dentro. É com ela que se escreve régua nova sobre a interface do produto.
 * ``scripts/check_regua_de_tela.py`` — o PORTÃO do ``pre-commit``, que pergunta
   pela régua quando o commit mexe na tela.
-* ``docs/process/2026-08-29-A-REGUA-DE-TELA-como-se-prova-a-interface.md`` — o
+* ``docs/method/2026-08-29-A-REGUA-DE-TELA-como-se-prova-a-interface.md`` — o
   MANUAL, que é o que o portão manda ler.
 
 O elo é frágil por natureza: são três caminhos escritos à mão, em três arquivos
