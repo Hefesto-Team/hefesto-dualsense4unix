@@ -59,6 +59,9 @@ LEITORES_DE_PROCESSO: dict[str, str] = {
         "a régua da colisão entre sprints abertas; ela mede posse de arquivo "
         "ENTRE SPRINTS, e sprint é processo. Os dois alvos dela são "
         "ignorados, e ela já se desliga com a razão escrita quando faltam",
+    "scripts/check_colisao_de_sprints.py":
+        "o portão da colisão de posse ENTRE SPRINTS — o que ele cruza são as "
+        "sprints, que são processo. Sem a pasta ele não tem o que cruzar",
     "scripts/apontar-o-dado-que-saiu-do-processo.py":
         "o ponteiro que fica no lugar antigo; ele existe justamente porque a "
         "pasta não viaja",

@@ -105,6 +105,11 @@ EXCECOES: dict[str, str] = {
         "fd-injection — pede ao BROKER pelo cmd `open`/SCM_RIGHTS, em "
         "check_hidraw_broker, e declara a porta na tela."
     ),
+    "regra_do_no_aberta.sh": (
+        "escreve por `sed` a variante ABERTA do 70-ps5-controller.rules, para "
+        "quem instala a regra sem o broker. A menção a /dev/hidraw está no "
+        "comentário que explica as duas metades da cura. Não abre nó."
+    ),
     "disable_steam_input.sh": (
         "edita arquivos .vdf da Steam; as menções a hidraw descrevem o que a "
         "STEAM faz com o nó, não o que este script faz. Não abre nó."
