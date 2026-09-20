@@ -63,7 +63,12 @@ Uso::
     scripts/mover-sprints-fechadas.py --mover    # move o que passou na trava
     scripts/mover-sprints-fechadas.py --testes   # mede `tests/`, nunca move
     scripts/mover-sprints-fechadas.py --raiz DIR # outra árvore (bancada)
-    scripts/mover-sprints-fechadas.py --exigir   # rc=1 se alguma pode descer
+    scripts/mover-sprints-fechadas.py --exigir   # a forma de PORTÃO
+
+`--exigir` é o que o `portoes.sh` roda, e ele reprova **só o que tem
+conserto**: a fechada LIVRE, que um `--mover` derruba. A presa por citação sai
+nomeada e não reprova — segurá-la é o trabalho da trava, e puni-la seria um
+vermelho sem conserto. Sem a pasta no disco ele diz NÃO MEDIDO, nunca «OK».
 
 `--seco` existe e é o padrão: escrever o nome dele não muda nada, e é assim
 que se pede o relatório sem medo em qualquer dúvida.
@@ -594,6 +599,28 @@ def mede_os_testes(raiz: Path) -> tuple[list[TesteMedido], dict[str, list[str]]]
 
 
 # ---------------------------------------------------------------------------
+# A SEPARAÇÃO — um dono só, porque dois chamadores a fazem
+# ---------------------------------------------------------------------------
+
+def separa_presas_e_livres(
+    fechadas: list[Sprint], citacoes: dict[str, list[Citacao]],
+) -> tuple[list[Sprint], list[Sprint]]:
+    """(as que a citação por caminho segura, as que podem descer agora).
+
+    Ela vive fora dos dois chamadores de propósito. `--seco` e `--exigir`
+    precisam da MESMA fronteira, e duas cópias dela é a forma de defeito que
+    esta casa nomeia desde o `validar-caducos.py`: duas listas para a mesma
+    coisa divergem, e a que reprova diverge calada.
+    """
+    presas: list[Sprint] = []
+    livres: list[Sprint] = []
+    for sprint in fechadas:
+        travam = [c for c in citacoes[sprint.arquivo.name] if c.classe == "caminho"]
+        (presas if travam else livres).append(sprint)
+    return presas, livres
+
+
+# ---------------------------------------------------------------------------
 # A fala
 # ---------------------------------------------------------------------------
 
@@ -618,11 +645,7 @@ def _relata(raiz: Path, mover_de_verdade: bool) -> int:
         return 0
 
     citacoes = quem_cita(raiz, [s.arquivo.name for s in fechadas])
-    presas: list[Sprint] = []
-    livres: list[Sprint] = []
-    for sprint in fechadas:
-        travam = [c for c in citacoes[sprint.arquivo.name] if c.classe == "caminho"]
-        (presas if travam else livres).append(sprint)
+    presas, livres = separa_presas_e_livres(fechadas, citacoes)
 
     print()
     print(f"PRESAS pela citação: {len(presas)}")
@@ -690,6 +713,69 @@ def _relata_testes(raiz: Path) -> int:
     return 0
 
 
+# ---------------------------------------------------------------------------
+# `--exigir` — a forma de PORTÃO, e ela só reprova o que tem conserto
+# ---------------------------------------------------------------------------
+
+def _exige(raiz: Path) -> int:
+    """rc=1 só quando há sprint fechada que PODE descer agora.
+
+    OS DOIS DEFEITOS QUE ESTA FUNÇÃO SUBSTITUI, medidos em 20/09/2026 na
+    árvore viva, contra a versão que ela troca:
+
+    1. **Verde sobre nada.** Sem `docs/process/` no disco — e um clone limpo
+       nunca a tem, porque ela é `.gitignore:178` — a versão anterior imprimia
+       *"OK: nenhuma sprint fechada na pasta viva"* e devolvia 0. Afirmava
+       sobre 46 sprints que não tinha lido. *Ausência de pasta é ausência de
+       medição*, e um portão que confunde as duas é a família que esta casa
+       mais caçou em 2026: o instrumento respondendo sobre outra coisa.
+
+    2. **Vermelho eterno sobre quem está certo.** Ela reprovava as 21 fechadas
+       da pasta viva; **13 delas estão presas por citação de caminho**, e a
+       trava as segura DE PROPÓSITO — soltá-las quebraria o `SPRINT_ORDER.md`
+       e o comentário de `luz_do_mic.py`. Um portão que reprova o estado certo
+       não tem conserto, e portão sem conserto é portão que se desliga.
+
+    O que sobra é o que tem dono: as LIVRES. Quem vê este vermelho roda
+    `--mover` e ele apaga. As presas saem nomeadas e não reprovam — o reaponte
+    delas é ato humano, e `referencias-docs` já diz o endereço.
+    """
+    pasta = raiz / SUBPASTA_DAS_SPRINTS
+    if not pasta.is_dir():
+        print(f"NÃO MEDIDO: não há {SUBPASTA_DAS_SPRINTS}/ nesta árvore.")
+        print("  A pasta é .gitignore:178 e não viaja pelo git, então um clone")
+        print("  limpo não a tem. Isto NÃO é 'nenhuma sprint fechada' — é")
+        print("  ausência de dado, e dizer 'OK' aqui seria verde sobre nada.")
+        return 0
+
+    fechadas = [s for s in sprints_da_pasta_viva(raiz) if s.estado in FECHADOS]
+    if not fechadas:
+        print("OK: nenhuma sprint fechada na pasta viva.")
+        return 0
+
+    citacoes = quem_cita(raiz, [s.arquivo.name for s in fechadas])
+    presas, livres = separa_presas_e_livres(fechadas, citacoes)
+
+    if presas:
+        print(f"presas pela citação, e FICAM: {len(presas)}")
+        for sprint in presas:
+            print(f"  {sprint.relativo}  [{sprint.estado}]")
+        print("  Elas não reprovam: o reaponte é ato humano, e")
+        print("  scripts/validar-referencias-docs.py diz o endereço de cada uma.")
+        print()
+
+    if not livres:
+        print(f"OK: {len(fechadas)} fechada(s) na pasta viva, todas presas "
+              "por citação de caminho. Nada pode descer sem reaponte.")
+        return 0
+
+    print(f"{len(livres)} sprint(s) fechada(s) podem descer AGORA:")
+    for sprint in livres:
+        print(f"  {sprint.relativo}  [{sprint.estado}]")
+    print("Rode scripts/mover-sprints-fechadas.py --mover para descê-las.")
+    return 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Move para arquivados/ a sprint que o frontmatter diz "
@@ -701,7 +787,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--testes", action="store_true",
                         help="mede tests/ nas duas leituras. Nunca move.")
     parser.add_argument("--exigir", action="store_true",
-                        help="rc=1 se alguma fechada ainda está na pasta viva")
+                        help="rc=1 se alguma fechada PODE descer agora "
+                             "(a presa por citação não reprova)")
     parser.add_argument("--raiz", type=Path, default=RAIZ_PADRAO,
                         help="outra árvore (bancada de teste)")
     args = parser.parse_args(argv)
@@ -711,15 +798,7 @@ def main(argv: list[str] | None = None) -> int:
         return _relata_testes(raiz)
 
     if args.exigir:
-        fechadas = [s for s in sprints_da_pasta_viva(raiz) if s.estado in FECHADOS]
-        if fechadas:
-            print(f"{len(fechadas)} sprint(s) fechada(s) fora da gaveta:")
-            for sprint in fechadas:
-                print(f"  {sprint.relativo}  [{sprint.estado}]")
-            print("Rode scripts/mover-sprints-fechadas.py para ver quem trava.")
-            return 1
-        print("OK: nenhuma sprint fechada na pasta viva.")
-        return 0
+        return _exige(raiz)
 
     return _relata(raiz, mover_de_verdade=args.mover and not args.seco)
 

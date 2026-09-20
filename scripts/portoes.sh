@@ -49,10 +49,12 @@ RAIZ="$(git rev-parse --show-toplevel 2>/dev/null || dirname "$(dirname "$(readl
 # a camada rápida existe: `validar-acentuacao.py --all` sozinho custa 38 s e o
 # `shellcheck` sobre o `install.sh` de 219 KB custa 11,4 s -- os dois juntos são
 # oito vezes a camada rápida inteira, que fechava em 5,3 s com QUINZE portões.
-# CONTAGEM CORRIGIDA em 29/08/2026 — o tempo é de 25/08 e fica com a data dele;
-# a contagem envelheceu e virava número errado: hoje a tabela tem 21 `rapido` e
-# 7 `completo` (28 no `portoes.sh` sem argumento), mais 1 `suite`. Quem mexer
-# aqui conta de novo: `grep -cE '^rapido\|' scripts/portoes.sh`.
+# O tempo é de 25/08 e fica com a data dele; a CONTAGEM envelhece sozinha e por
+# isso já virou número errado duas vezes — dizia 21 `rapido` e 7 `completo`
+# enquanto a tabela tinha o dobro. Medida em 20/09/2026: **44 `rapido` e 17
+# `completo`** (61 no `portoes.sh` sem argumento), mais 1 `suite`. Quem mexer
+# aqui conta de novo, e o comando é o dono da resposta:
+#   grep -cE '^rapido\|' scripts/portoes.sh ; grep -cE '^completo\|' scripts/portoes.sh
 # ---------------------------------------------------------------------------
 _LISTA() {
   cat <<'TABELA'
@@ -273,6 +275,29 @@ rapido|cor-vem-do-aparelho|py|scripts/check_a_cor_vem_do_aparelho.py
 # O `colisao-de-sprints` SAIU EM 15/09/2026 pela mesma razão do
 # `saida-de-agente`: ele lia `docs/process/sprints/` para achar duas sprints
 # disputando o mesmo arquivo, e a pasta saiu do repositório.
+#
+# A NARRATIVA PARA DE CRESCER SOZINHA — 20/09/2026, PODA-DO-DATADO-01, e a
+# ordem dela é de 17/09, repetida em 20/09: *"temos que ter um hook pra pegar o
+# frontmatter tudo que tiver concluido e mover pro arquivo automaticamente
+# não?"*  <!-- noqa-acento: citação literal dela -->
+#
+# ELE LÊ `docs/process/sprints/`, E ISSO É O QUE DERRUBOU O `colisao-de-sprints`
+# ACIMA — a diferença está escrita, não suposta: sem a pasta no disco este
+# portão imprime NÃO MEDIDO e devolve 0, em vez de afirmar sobre o que não leu.
+# Medido em 20/09 numa árvore só com o que o git carrega: `rc=0`, "NÃO MEDIDO".
+#
+# ELE NÃO MOVE NADA. `--exigir` é leitura pura; quem move é a pessoa que vê o
+# vermelho e roda `--mover`. Portão que reescreve artefato não roda em árvore
+# de agente — é a mesma razão que mantém o `i18n_compile.sh` fora daqui.
+#
+# E ELE REPROVA SÓ O QUE TEM CONSERTO: a sprint fechada LIVRE. A presa por
+# citação de caminho sai nomeada e NÃO reprova, porque segurá-la é o trabalho
+# da trava — na árvore de 20/09 eram 13 de 21, e reprová-las seria um vermelho
+# que ninguém pode apagar. Portão sem conserto é portão que se desliga.
+#
+# Custo medido nesta árvore, com a pasta cheia: 0,40 s (a varredura de citação
+# é uma passada só, com pré-filtro literal). Cabe na camada rápida.
+rapido|sprints-fechadas|py|scripts/mover-sprints-fechadas.py --exigir
 rapido|icones|bash|scripts/gerar_icones.sh --check
 rapido|packaging-parity|bash|scripts/check_packaging_parity.sh
 rapido|glifos|py|scripts/validar-glifos.py --all
@@ -346,6 +371,7 @@ _DIVERGENCIAS() {
   cat <<'DIV'
 FORA-DO-LOCAL|scripts/ci/instalar_como_usuaria.sh|ensaio de instalação em máquina descartável; rodar na máquina dela mexeria no sistema vivo.
 FORA-DO-LOCAL|scripts/i18n_compile.sh|regenera os .mo, que são artefato compartilhado, e não tem forma --check. Portão que reescreve artefato não roda na árvore de agente.
+FORA-DO-CI|scripts/mover-sprints-fechadas.py|mede docs/process/sprints/, que é .gitignore:178 e não viaja pelo git. No CI a pasta nunca existe, então o portão só saberia dizer NÃO MEDIDO — um job que não pode reprovar ensina a não acreditar na esteira. Localmente ele mede 46 sprints; medido em 20/09.
 FORA-DO-LOCAL|pre-commit|DECISÃO EM ABERTO, e não é minha: ou o framework entra no install.sh sem flag, ou os dez portões do .pre-commit-config.yaml migram para o gancho e o .yaml some (INFRA-DE-EXECUCAO-01, I14 e §9.4). Enquanto não decidido, o CI é o único que o roda -- e esta linha declara isso em vez de fingir que não existe. Medido: `which pre-commit` -> not found nesta máquina.
 DIV
 }
