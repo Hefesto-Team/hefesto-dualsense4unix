@@ -304,10 +304,44 @@ class TestAConferenciaDepoisDeSubir:
 
     def test_o_rotulo_carrega_a_peca(self) -> None:
         """Dois controles, dois rótulos — senão a conferência é a do vizinho."""
-        a = afb.rotulo_do_gravador("hefesto_som_e64203")
-        b = afb.rotulo_do_gravador("hefesto_som_4846d8")
+        a = afb.rotulo_do_gravador(uniq="aa:bb:cc:e6:42:03")
+        b = afb.rotulo_do_gravador(uniq="aa:bb:cc:48:46:d8")
         assert a != b, "o rótulo não distingue as peças"
         assert a.startswith("hefesto-ponte-")
+
+    def test_a_mesa_de_quatro_em_dois_papeis_da_oito_rotulos(self) -> None:
+        """**A RÉGUA ANTERIOR MEDIA O ARRANJO FÁCIL, e passou sobre o defeito.**
+
+        Ela conferia dois nomes de SOM (`hefesto_som_<hex6>`) e nada mais. Os
+        nomes da HÁPTICA nunca passaram por aqui — e eram justamente os que
+        colidiam: o endpoint termina em `...HiFi__Speaker__sink`, o antigo
+        `rsplit("_", 1)[-1]` devolvia `sink`, e os TRÊS controles do rádio
+        publicavam `hefesto-ponte-sink`.
+
+        O preço foi medido no aparelho em 20/09/2026, com o PRAGMATA aberto:
+        a conferência matou o gravador certo de dois controles **270 vezes
+        cada** em 4 min 37 s, e a mão dela leu como *"só mandou pro player 3"*.
+
+        MORDIDA: devolver o rótulo a partir do nome do nó em vez do `uniq`.
+        """
+        uniqs = ["aa:bb:cc:e6:42:03", "aa:bb:cc:13:eb:ab",
+                 "aa:bb:cc:48:46:d8", "aa:bb:cc:c3:11:f0"]
+        rotulos = [afb.rotulo_do_gravador(uniq=u, papel=papel)
+                   for u in uniqs for papel in ("som", "haptica")]
+        assert len(set(rotulos)) == 8, (
+            f"oito gravadores, {len(set(rotulos))} nome(s): {sorted(set(rotulos))}"
+        )
+
+    def test_sem_uniq_o_rotulo_e_vazio_e_nao_generico(self) -> None:
+        """Ausência é resposta: sem identidade, NENHUM nome.
+
+        Devolver um nome genérico recriaria a colisão que a cura mata — e o
+        chamador trata o vazio recusando-se a subir gravador.
+
+        MORDIDA: devolver `"hefesto-ponte-"` quando a marca vem vazia.
+        """
+        assert afb.rotulo_do_gravador(uniq="") == ""
+        assert afb.rotulo_do_gravador(uniq="", papel="haptica") == ''
 
 
 class TestACuraEstaLIGADA:

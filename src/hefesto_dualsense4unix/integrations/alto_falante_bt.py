@@ -1553,8 +1553,31 @@ def o_servidor_e_o_pipewire(
     return False
 
 
-def rotulo_do_gravador(id_do_no: str) -> str:
-    """O nome que damos ao NOSSO nó de gravação. Único por controle.
+def rotulo_do_gravador(*, uniq: str, papel: str = "som") -> str:
+    """O nome que damos ao NOSSO nó de gravação. Único por controle E POR PAPEL.
+
+    **O `id_do_no` SAIU DA ASSINATURA em 20/09/2026, e ele era o defeito.**
+    A redação anterior recebia o nome do nó e fazia
+    ``id_do_no.rsplit("_", 1)[-1]`` — regra escrita quando o único nome que
+    passava por aqui era ``hefesto_som_<hex6>``, onde o último pedaço É o
+    hex6. Dois dias depois a ponte da háptica começou a mandar pela mesma
+    porta o nome do ENDPOINT, que termina em ``...HiFi__Speaker__sink``: o
+    último pedaço virou literalmente ``sink``, e os três controles do rádio
+    passaram a publicar o MESMO ``node.name`` — ``hefesto-ponte-sink``.
+
+    O preço foi medido no aparelho, com o PRAGMATA aberto e a mesa de quatro:
+    a conferência desta mesma casa junta todo nó com aquele nome, devolve o
+    Link do mais velho, vê "nó errado" e mata o gravador certo. Em 4 min 37 s,
+    **270 execuções por controle** — e só o primeiro a subir vibrou, porque no
+    instante em que ELE foi conferido ainda não havia Link e a resposta foi
+    "não sei", que passa. A mão dela leu isso como *"só mandou pro player 3"*.
+
+    **Por isso o dono agora é o `uniq`, e não o texto do nome.** É a regra
+    desta casa — *quando um valor tem dono, pergunte ao dono* —, e a mesma
+    que o `casar-no-com-controle-por-rotulo-e-cura-errada` já cobrava. O
+    ``papel`` separa os dois gravadores do MESMO controle: a ponte do rádio
+    sobe um para o som e outro para a háptica, e sem ele os dois colidiriam
+    pelo mesmo caminho que acabou de custar a vibração de dois controles.
 
     SOM-ECO-02 — ele existe para a conferência ter por onde pegar. O PipeWire
     **não expõe o PID** do processo (medido: `application.process.id` vem
@@ -1568,8 +1591,17 @@ def rotulo_do_gravador(id_do_no: str) -> str:
     peça, que o `pw-dump` devolve em `node.name`. Medido nos dois gravadores —
     `pw-record -P node.name=…` e `parec --client-name=…` publicam o mesmo nome.
     """
-    sufixo = id_do_no.rsplit("_", 1)[-1] if "_" in id_do_no else id_do_no
-    return f"hefesto-ponte-{sufixo}"
+    from hefesto_dualsense4unix.integrations.endpoint_de_haptica import (
+        marca_do_controle,
+    )
+
+    marca = marca_do_controle(uniq)
+    # AUSÊNCIA É RESPOSTA: sem `uniq` não há identidade, e devolver um nome
+    # genérico recriaria a colisão que esta função existe para matar. O
+    # chamador trata o vazio como "não subo gravador".
+    if not marca:
+        return ""
+    return f"hefesto-ponte-{marca}-{papel}"
 
 
 def argv_do_gravador(
@@ -2611,6 +2643,8 @@ def sinks_que_tocam(
 def fonte_do_monitor_do_no(
     id_do_no: str,
     *,
+    uniq: str,
+    papel: str = "som",
     abrir: Callable[[list[str]], Any] | None = None,
     taxa: int = TAXA_DO_ENCODER,
     canais: int = CANAIS_DO_ENCODER,
@@ -2639,7 +2673,9 @@ def fonte_do_monitor_do_no(
 
     if not id_do_no:
         return None, None, "o controle não tem nó de som publicado"
-    rotulo = rotulo_do_gravador(id_do_no)
+    rotulo = rotulo_do_gravador(uniq=uniq, papel=papel)
+    if not rotulo:
+        return None, None, "sem `uniq` não há rótulo único para o gravador"
     argv = argv_do_gravador(f"{id_do_no}.monitor", rotulo=rotulo, taxa=taxa, canais=canais)
     if not argv:
         return None, None, "nem `pw-record` nem `parec` nesta máquina"
