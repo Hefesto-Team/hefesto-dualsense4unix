@@ -1355,14 +1355,19 @@ def _ganho_do_scontents(texto: str) -> tuple[int, float] | None:
 def _ler_o_ganho(na_mesa: tuple[str, ...]) -> dict[str, tuple[int, float] | None]:
     """`{uniq: (por cento, dB) | None}` da mesa. BLOQUEANTE — roda comando.
 
-    TODO controle da mesa sai com chave: a tupla quando há elemento de ganho, e
-    `None` quando a resposta é *não há onde esse ganho exista* — o do rádio, que
-    é nó da nossa ponte e não tem placa ALSA (medido em 15/08: a placa segue o
-    transporte), e a máquina sem `amixer`.
+    SÃO TRÊS RESPOSTAS, e a CHAVE é a terceira: a tupla quando há elemento de
+    ganho; `None` quando *perguntei e não há onde esse ganho exista* — o do
+    rádio, que é nó da nossa ponte e não tem placa ALSA (medido em 15/08: a
+    placa segue o transporte), e a máquina sem `amixer`; e a chave **AUSENTE**
+    quando a resposta é *não sei* — o `pactl` mudo, o censo de USB que não
+    montou, a primeira volta que ainda não deu.
 
     **ESCREVER `None` É O PONTO**, e não um detalhe de implementação: sem ele a
     aba não distingue *"ainda não perguntei"* de *"perguntei e não há"*, e o
-    cinza do trilho acenderia nos dois segundos da primeira volta.
+    cinza do trilho acenderia nos dois segundos da primeira volta. **E NÃO
+    ESCREVER NADA É O OUTRO PONTO:** com o servidor de som mudo, escrever
+    `None` acenderia o cinza com a razão *«ligue o cabo»* sobre uma ignorância
+    nossa — dizer "não há" quando a verdade é "não consegui perguntar".
 
     A PERGUNTA NÃO É AO `canal_fonte` DO DAEMON, e a primeira redação desta
     função era — **medido na mesa dela em 20/09/2026, com um DualSense no FIO e
@@ -1387,15 +1392,19 @@ def _ler_o_ganho(na_mesa: tuple[str, ...]) -> dict[str, tuple[int, float] | None
     mesa = [u for u in na_mesa if u]
     if not mesa:
         return {}
-    fora: dict[str, tuple[int, float] | None] = {u: None for u in mesa}
+    fora: dict[str, tuple[int, float] | None] = {}
     alvos: dict[str, str] = {}
     for uniq in mesa:
         try:
             no = eleicao_de_microfone.fonte_nativa_do_controle(uniq, mesa)
         except Exception:
-            # Uma leitura que falha não apaga as outras e NÃO vira "não há" —
-            # a mesma regra de `_ler_o_nativo` logo acima.
+            no = None
+        if no is None:
+            # NÃO SEI: o `pactl` não respondeu, ou o censo de USB não montou.
+            # A chave fica de FORA — uma leitura que falha não apaga as outras
+            # e não vira "não há", a mesma regra de `_ler_o_nativo` logo acima.
             continue
+        fora[uniq] = None
         if no:
             alvos[uniq] = no
     if not alvos:
