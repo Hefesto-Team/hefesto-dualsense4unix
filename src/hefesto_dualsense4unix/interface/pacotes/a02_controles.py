@@ -3149,7 +3149,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 #   🎙  data-mudo="microfone"      `mic.set`      (ipc_handlers.py:4830)
 #   ♪   data-mudo="alto-falante"   `speaker.set`  (ipc_handlers.py:5957)
 #   Sons do jogo  data-rota="jogo" `speaker.set`  com `rota`, o mesmo :4589
-#   Virtual / Nativo  data-mic-modo  `machine.declare` (ipc_handlers.py:6992)
+#   Virtual / Nativo  data-mic-modo  `machine.declare` (ipc_handlers.py:7098)
 #
 # O "VIRTUAL / NATIVO" GANHOU DONO EM 01/09/2026, E A AFIRMAÇÃO ANTERIOR CAIU.
 # Aqui estava escrito, e é uma frase minha, da primeira leva:
