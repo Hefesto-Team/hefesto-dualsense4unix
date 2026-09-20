@@ -289,13 +289,116 @@ def largada(fn: Callable[[Any], None]) -> Callable[[Any], None]:
     return fn
 
 
+#: QUEM ESQUECE O CONTROLE QUE SAIU DA MESA — CACHE-SEM-PODA-01, 20/09/2026.
+#:
+#: A QUEIXA DELA, 19/09/2026: *"noto que existe alguma espécie de cachê que
+#: demora a ser apagado. Principalmente quando desconectamos controles e
+#: afins."* <!-- noqa-acento: citação literal dela -->
+#:
+#: **O DAEMON SABE NA HORA; A INTERFACE ESPERAVA O RELÓGIO.** Todo cache desta
+#: interface expirava por TEMPO e nenhum escutava a saída de um controle: o som
+#: da 02 a cada 2 s, a biblioteca da 07 a cada 20 s, o prontuário da 09 a cada
+#: 300 s. Na mesma tela, ao mesmo tempo, um bloco já tinha esquecido o controle
+#: e o outro ainda o mostrava — e é isso que se lê como *"cache que demora a ser
+#: apagado"*.
+#:
+#: **E O RELÓGIO ERA MAIS LENTO DO QUE O NÚMERO DIZIA.** Medido nesta árvore em
+#: 20/09/2026, com o cache da 02 preenchido por injeção e a mesa esvaziando:
+#:
+#:     logo depois de sair   sono 'acordado' · sink 'sink-de-mentira'
+#:     300 s depois          sono 'acordado' · sink 'sink-de-mentira'
+#:
+#: Os 2 s só valem enquanto SOBRA alguém na mesa: `a02_controles._camada_1`
+#: começa com `if not na_mesa: return`, então com a mesa vazia a thread de
+#: renovação **nunca roda** e a entrada do que saiu fica para sempre — servida
+#: de novo, velha, no instante em que ele volta (o `uniq` é o MAC, e volta igual).
+#:
+#: **UM PONTO SÓ, E A RAZÃO É A DA SPRINT:** *"o que não pode é cada aba
+#: inventar a própria poda — seriam seis versões da mesma regra, que é o defeito
+#: que esta casa mais paga"*. Aqui a aba declara o que esquecer e o despachante
+#: decide QUANDO, do mesmo jeito que `CORACOES` e `LARGADAS` já fazem.
+PODAS: list[Callable[[frozenset[str]], None]] = []
+
+#: Quem estava na mesa no tique ANTERIOR. Lista de um elemento porque o que se
+#: troca é o conteúdo, nunca o nome — o mesmo arranjo do `_CAMADA_1_QUANDO`.
+#:
+#: Ela nasce vazia, e por isso o primeiro tique nunca poda: `frozenset() - agora`
+#: é vazio. Uma janela que abre com a mesa cheia não é um controle saindo.
+_NA_MESA_ANTES: list[frozenset[str]] = [frozenset()]
+
+
+def poda(fn: Callable[[frozenset[str]], None]) -> Callable[[frozenset[str]], None]:
+    """Registra quem esquece um controle que saiu. Recebe quem FICOU.
+
+    A aba recebe o conjunto de `uniq` que ainda está na mesa — e não a lista de
+    quem saiu — de propósito: o que ela tem de fazer é *"esqueça tudo o que não
+    está nesta lista"*, que é uma regra que não erra por omissão. Com a lista de
+    quem saiu, uma entrada que envelheceu sem hotplug nenhum ficaria para
+    sempre, porque ninguém a nomearia.
+    """
+    PODAS.append(fn)
+    return fn
+
+
+def na_mesa_agora(ctx: Contexto) -> frozenset[str]:
+    """Os `uniq` que estão de fato aqui, neste tique.
+
+    `conectados` e não `mesa`: a mesa é a BANCADA, com os lugares vazios
+    incluídos, e um lugar vazio não é um controle. É a mesma distinção que o
+    campo `conectados` do `Contexto` já carrega escrita.
+    """
+    return frozenset(str(c.get("uniq") or "") for c in ctx.conectados
+                     if c.get("uniq"))
+
+
+def podar_o_que_saiu(ctx: Contexto) -> frozenset[str]:
+    """Quem saiu da mesa desde o tique anterior — e já esquecido por todos.
+
+    **Nunca levanta**, pela mesma razão de `bater_os_coracoes`: ela roda DENTRO
+    do tique, e um tique que levanta para de pintar a aba inteira.
+
+    **A PODA SÓ ACONTECE QUANDO ALGUÉM SAI**, e não a cada tique: varrer seis
+    caches dez vezes por segundo para não achar nada é trabalho por nada, e o
+    evento que a queixa dela nomeia é raro — é a mão dela tirando o cabo.
+
+    ELA NÃO PODA QUEM CHEGA. Um controle que entra não deixa lixo em cache
+    nenhum; o que ele encontra é a própria entrada, da sessão anterior dele, e
+    quem a tirou foi a poda da SAÍDA. Curar na chegada seria curar tarde: entre
+    a saída e a volta a tela já teria mostrado o dado velho.
+    """
+    agora = na_mesa_agora(ctx)
+    antes, _NA_MESA_ANTES[0] = _NA_MESA_ANTES[0], agora
+    saiu = antes - agora
+    if not saiu:
+        return frozenset()
+    for esquecer in PODAS:
+        try:
+            esquecer(agora)
+        except Exception as erro:  # o tique não morre por isto
+            print(f"[poda] {esquecer.__name__}: {erro}", file=sys.stderr)
+    return saiu
+
+
 def bater_os_coracoes(ctx: Contexto, p: Any) -> None:
-    """Um batimento de cada aba que segura algo. **Nunca levanta.**
+    """O que o despachante faz a cada tique: PODAR o que saiu e BATER os corações.
 
     Ele roda DENTRO do tique, e um tique que levanta para de pintar a aba
     inteira — trocar um jogo sem vibração por uma tela congelada seria o pior
     dos dois negócios. O que der errado vai ao diário da janela.
+
+    **A PODA VEM ANTES DO BATIMENTO, E ANTES DA PINTURA** — CACHE-SEM-PODA-01.
+    O piloto chama esta função e, logo depois, `pacote_da_pagina()`: esquecer
+    aqui é o que faz a aba pintar o tique com o cache já limpo, que é a prova de
+    pronto da sprint (*"em menos de um tique"*, e não em 2, 20 ou 300 segundos).
+
+    **POR QUE A PODA MORA AQUI E NÃO EM `pacote_da_pagina`**, e a razão é
+    medida: aquela função tem trinta chamadores nas réguas, cada um montando um
+    `Contexto` à mão. Uma poda ali faria a régua de uma aba apagar o cache que a
+    régua da irmã acabou de injetar — contaminação por ORDEM DE TESTE, que esta
+    casa já pagou com o dublê do co-op em 04/09/2026. Esta função tem **um
+    chamador só**, e ele é o tique.
     """
+    podar_o_que_saiu(ctx)
     for bate in CORACOES:
         try:
             bate(ctx, p)
@@ -615,6 +718,20 @@ _LUGAR_DE_MENTIRA: dict[str, Any] = {
 #: porque a Gatilhos nomeia os ajustes do PERFIL (`aj-nome-e-0`…): trocar de
 #: perfil com a mesa vazia troca os campos que o lugar tem, e um cache só por
 #: página serviria o molde do perfil anterior.
+#:
+#: ELE NÃO ENTRA NA PODA DE `PODAS`, E FOI MEDIDO — CACHE-SEM-PODA-01,
+#: 20/09/2026. A sprint o listou como suspeito por não ser chaveado por
+#: controle; ele não é chaveado por controle porque **não guarda nenhum**. São
+#: duas razões independentes, as duas no código logo abaixo:
+#:
+#: * `molde_do_lugar` começa com `if ctx.conectados: return {}` — ele só existe
+#:   quando a mesa está VAZIA, que é depois de o último ter saído;
+#: * o valor é `dict.fromkeys(…, TRAVESSAO)`: só os NOMES dos campos sobrevivem,
+#:   e todos valem travessão. O `_CONTROLE_DE_MENTIRA` com que ele é montado é
+#:   sintético (`aa:bb:cc:…`) e os valores dele são jogados fora.
+#:
+#: Um controle que sai não tem entrada aqui para levar consigo. Podá-lo custaria
+#: uma pintura fantasma inteira por hotplug para chegar ao mesmo dicionário.
 _MOLDE: dict[tuple[str, str], dict[str, str]] = {}
 
 #: O que a tela escreve onde não há dado. TEXTO DE TELA É DELA, e este não é

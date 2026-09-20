@@ -140,6 +140,7 @@ from . import (
     NOME_SEM_LEITURA,
     Contexto,
     identidade_de,
+    poda,
     registrar,
 )
 
@@ -1173,6 +1174,21 @@ _CAMADA_1: dict[str, Any] = {}
 _CAMADA_1_QUANDO = [0.0]
 _CAMADA_1_EM_VOO = [False]
 
+#: DE QUE MESA É A LEITURA QUE ESTÁ NO AR — CACHE-SEM-PODA-01, 20/09/2026.
+#:
+#: A poda sozinha não bastava, e a razão é uma CORRIDA, não um esquecimento: a
+#: thread de `renovar` leva a mesa CONGELADA do instante em que foi disparada, e
+#: publica com um `clear()` + `update()` do dicionário inteiro. Se o controle
+#: sair enquanto ela está lendo, a poda tira a entrada dele e a thread — que
+#: ainda está perguntando ao `pactl` sobre ele — **a repõe ao pousar**. A cura
+#: duraria o que dura um `pactl`, e voltaria sozinha.
+#:
+#: Quem sobe o número é :func:`_esquecer_o_som_de_quem_saiu`; quem o confere é o
+#: `renovar`, no último instante antes de publicar. Leitura de uma mesa que não
+#: existe mais é descartada inteira — não há metade dela que valha, porque o
+#: `clear()` é do dicionário todo.
+_CAMADA_1_SELO = [0]
+
 
 def _ler_a_camada_1(entradas: tuple[tuple[str, int | None], ...],
                     na_mesa: tuple[str, ...]) -> dict[str, Any]:
@@ -1332,6 +1348,9 @@ def _camada_1(entradas: tuple[tuple[str, int | None], ...],
     # para evitar. O `_CAMADA_1_EM_VOO` já impede a segunda; isto impede que a
     # primeira volte a ser "devida" antes de a próxima janela abrir.
     _CAMADA_1_QUANDO[0] = agora
+    # DE QUE MESA É ESTA LEITURA. Ver `_CAMADA_1_SELO`: ela é lida AQUI, com
+    # a mesa que a thread vai carregar, e conferida lá embaixo antes de publicar.
+    selo = _CAMADA_1_SELO[0]
 
     def renovar() -> None:
         try:
@@ -1350,6 +1369,13 @@ def _camada_1(entradas: tuple[tuple[str, int | None], ...],
             # família de pergunta é o defeito que a `_camada_1` existe para não
             # cometer.
             nativo = _ler_o_nativo(na_mesa)
+            # A MESA MUDOU ENQUANTO EU LIA? Então esta leitura inteira é de um
+            # mundo que não existe mais, e publicá-la DESFARIA a poda — ver
+            # `_CAMADA_1_SELO`. O `finally` continua destravando o voo, e o
+            # tique seguinte dispara a leitura da mesa de agora, porque a poda
+            # zerou o relógio.
+            if _CAMADA_1_SELO[0] != selo:
+                return
             _CAMADA_1.clear()
             _CAMADA_1.update(novo)
             _SONO.clear()
@@ -1363,6 +1389,54 @@ def _camada_1(entradas: tuple[tuple[str, int | None], ...],
     threading.Thread(target=renovar, name="hefesto-rota-camada-1",
                      daemon=True).start()
     return _CAMADA_1
+
+
+#: AS TRÊS LEITURAS QUE SÃO POR CONTROLE. Elas estão aqui numa tupla, e não
+#: digitadas dentro da poda, porque quem acrescentar a QUARTA leitura por `uniq`
+#: a esta thread acrescenta um dicionário — e um dicionário que a poda não
+#: conhece é o defeito desta sprint renascendo calado. Esta linha é o lugar em
+#: que a quarta se declara.
+_POR_CONTROLE: tuple[dict[str, Any], ...] = (_CAMADA_1, _SONO, _MIC_NATIVO)
+
+
+@poda
+def _esquecer_o_som_de_quem_saiu(na_mesa: frozenset[str]) -> None:
+    """Tira das três leituras por controle tudo o que não está mais na mesa.
+
+    CACHE-SEM-PODA-01, 20/09/2026 — a queixa dela é *"existe alguma espécie de
+    cachê que demora a ser apagado. Principalmente quando desconectamos
+    controles"*. <!-- noqa-acento: citação literal dela -->
+
+    **O NÚMERO DA SPRINT ERA OTIMISTA, E ESTA FUNÇÃO É A CURA DO NÚMERO REAL.**
+    A tabela dela dá 2 s de vida a este cache; medido nesta árvore em
+    20/09/2026, com a mesa esvaziando, ele é **infinito**: :func:`_camada_1`
+    começa com `if not na_mesa: return _CAMADA_1`, então sem ninguém na mesa a
+    thread de renovação nunca roda e o `clear()`/`update()` dela nunca acontece.
+
+        logo depois de sair   sono 'acordado' · sink 'sink-de-mentira'
+        300 s depois          sono 'acordado' · sink 'sink-de-mentira'
+
+    **ONDE ISSO CHEGA NA TELA DELA, e não é no cartão do que saiu:** a aba só
+    percorre `ctx.conectados`, então o que saiu não tem cartão. Quem paga é o
+    controle que VOLTA — o `uniq` é o MAC e volta igual, e `sink_do_cache`,
+    `sono_do_canal` e `_MIC_NATIVO` respondem com a leitura da sessão ANTERIOR
+    dele: o sink que o PipeWire já destruiu, o sono de antes, o microfone nativo
+    que ainda não subiu.
+
+    **O RELÓGIO ZERA JUNTO**, e sem isso a cura ficaria pela metade: com
+    `_CAMADA_1_QUANDO` intacto, o controle que volta dentro dos 2 s encontra o
+    cache vazio (bom) e a thread *não devida* (ruim) — a aba cairia no byte por
+    mais dois segundos. Zerado, o primeiro tique com alguém na mesa já dispara a
+    releitura. `_camada_1` trata `0.0` como *"nunca li"*, que é o que passou a
+    ser verdade.
+    """
+    for cache in _POR_CONTROLE:
+        for uniq in [u for u in cache if u not in na_mesa]:
+            cache.pop(uniq, None)
+    _CAMADA_1_QUANDO[0] = 0.0
+    # A LEITURA QUE ESTÁ NO AR FICA VELHA AQUI, e não quando ela pousar: ela
+    # partiu com a mesa de antes. Ver `_CAMADA_1_SELO`.
+    _CAMADA_1_SELO[0] += 1
 
 
 # ---------------------------------------------------------------------------
@@ -2823,7 +2897,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # A BARRA VAI A ZERO QUANDO NÃO SE SABE, e é o mesmo desfecho
                 # que a `bateria-barra` já tem duas dúzias de linhas acima, pela
                 # mesma razão: `largura` é um dos ALVOS_QUE_O_TRAVESSAO_NAO_
-                # ATENDE (`pacotes/__init__.py:391`) — `width: "—%"` o CSSOM
+                # ATENDE (`pacotes/__init__.py:796`) — `width: "—%"` o CSSOM
                 # recusa e o contador de pintura soma +1 por tique para sempre.
                 # Deixá-la na largura do desenho seria a tela afirmando um
                 # volume que ninguém mediu; o número ao lado diz `—`, que é o
