@@ -10,7 +10,7 @@ número mais bonito do que a realidade. As três medições da sprint viram um
 portão depois, e um portão que nasce sobre um piso inflado é pior do que
 portão nenhum — ele fecha a sprint sobre um defeito vivo.
 
-**OITO MORDIDAS**, e cada uma arranca uma parte diferente do instrumento:
+**AS MORDIDAS**, e cada uma arranca uma parte diferente do instrumento:
 
 1. o furo — a citação no cabeçalho do módulo não é régua;
 2. a herança por prefixo — ``D-A-ABA-LANCADORES`` dentro de
@@ -25,6 +25,20 @@ portão nenhum — ele fecha a sprint sobre um defeito vivo.
    arquivo cita ``D-COSTURA-BLUEZ`` e ``D-GESTO-DO-MAPA`` dentro de funções
    ``test_*``, e antes da cura o piso subiu de 29 para 31 sem que uma linha do
    produto mudasse.
+
+**AS TRÊS QUE A CONFERÊNCIA ACRESCENTOU — 20/09/2026**, e as três estavam
+verdes com a cura arrancada:
+
+10. **a catraca vazia** — ``COM_REGUA_EM_20260920`` podia ser esvaziada
+    inteira e as quinze réguas acima ficavam VERDES, porque a que fala do
+    piso substitui a constante antes de medir. Gutar a catraca era grátis;
+11. **o chamador que ficou de fora** — ``_e_o_proprio_instrumento`` tem dois
+    chamadores e só o de ``tests/`` tinha régua. Sem a autoexclusão em
+    ``citadas_fora_de_tests``, o instrumento voltava a se contar e as 62
+    «citadas em qualquer lugar» viravam 63;
+12. **o laudo que estourava** — o comando sem bandeira, que é o primeiro que
+    alguém roda, dava ``ZeroDivisionError`` no CSV sem a coluna ``estado``.
+    A conferência da forma estava só no ``--check``.
 """
 from __future__ import annotations
 
@@ -34,6 +48,19 @@ import pathlib
 import textwrap
 
 import pytest
+
+# O TESTEMUNHO INDEPENDENTE DA CATRACA, e ele mora AQUI de propósito.
+#
+# `COM_REGUA_EM_20260920` é a catraca do instrumento, e até 20/09/2026 régua
+# nenhuma olhava para o conteúdo dela: esvaziar as 29 linhas deixava as quinze
+# mordidas VERDES, porque a única que fala do piso SUBSTITUI a constante antes
+# de medir. Uma catraca só é catraca se houver uma segunda voz dizendo de que
+# altura ela caiu — e esta é a segunda voz.
+#
+# O número tem dono e data: é a MEDIÇÃO de 20/09/2026, não uma opinião. Se uma
+# decisão do piso caducar, `piso_que_sumiu_do_csv` manda tirá-la da constante —
+# e este número desce junto, no MESMO commit, com a razão escrita.
+PISO_MEDIDO_EM_20260920 = 29
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INSTRUMENTO = RAIZ / "scripts" / "medir_decisoes_sem_prova.py"
@@ -534,6 +561,135 @@ def test_o_instrumento_nao_compra_a_propria_regua_como_prova(mi, tmp_path):
         "o arquivo que mede o instrumento contou como régua de uma decisão")
     assert "D-OUTRA" in dentro, (
         "a exclusão não pode engolir régua de verdade junto")
+
+
+# ---------------------------------------------------------------------------
+# 9 — A CATRACA VAZIA, e ela é um defeito ACHADO PELA CONFERÊNCIA — 20/09/2026.
+# ---------------------------------------------------------------------------
+def test_o_piso_nao_pode_ser_esvaziado_em_silencio(mi):
+    """O piso é a catraca inteira, e até aqui NINGUÉM olhava para ele.
+
+    **O DEFEITO, medido:** ``COM_REGUA_EM_20260920`` podia ser esvaziada — as
+    29 linhas apagadas de uma vez — e as quinze réguas deste arquivo ficavam
+    VERDES. A razão é de forma:
+    ``test_decisao_do_piso_que_perde_a_regua_sai_nominal`` **substitui** a
+    constante por ``("D-FICA", "D-SUMIU")`` antes de medir, então ela prova o
+    mecanismo e nunca toca no conteúdo real. Gutar a catraca era grátis, e
+    depois de gutada apagar a régua de qualquer decisão dela volta a ser
+    verde — que é o estado em que esta casa esteve entre 25/08 e 17/09.
+
+    O QUE A MORDIDA ARRANCA: esvazie ``COM_REGUA_EM_20260920``, ou tire dela
+    UMA linha, e esta régua reprova. Nenhuma outra reprovava.
+
+    **O LIMITE, dito em voz alta:** uma régua não fecha o caso de quem apaga a
+    régua E a linha do piso no MESMO commit — para isso ela precisaria de uma
+    segunda cópia da lista, e lista com dois donos é o defeito que esta casa
+    já pagou. O que ela faz é obrigar a queda a ser DELIBERADA: o número mora
+    aqui, com a data, e quem baixa o piso baixa este número e escreve por quê.
+    """
+    piso = mi.COM_REGUA_EM_20260920
+    assert piso, (
+        "a catraca foi esvaziada: com o piso vazio, apagar a régua de "
+        "qualquer decisão dela volta a ser VERDE")
+
+    # Contado por CONJUNTO, e a diferença não é estética: a primeira versão
+    # desta régua usava `len(piso)`, e uma linha repetida mantinha a conta de
+    # pé com uma decisão a menos coberta. Medido na própria conferência.
+    assert len(set(piso)) == len(piso), (
+        f"o piso tem nome repetido: {sorted(n for n in set(piso) if piso.count(n) > 1)}"
+        f" — repetição segura a contagem e não cobre decisão nenhuma")
+    assert len(set(piso)) >= PISO_MEDIDO_EM_20260920, (
+        f"o piso encolheu de {PISO_MEDIDO_EM_20260920} para {len(set(piso))} "
+        f"sem que este número descesse junto. Piso que encolhe calado não é "
+        f"catraca: ele isenta a próxima régua apagada")
+
+    assert "D-AUDIO-E-GIRO-NASCEM-LIGADOS" in piso, (
+        "a decisão que ORIGINOU esta sprint saiu do piso — ela ficou 23 dias "
+        "«decidida» com o microfone mudo, e é a última que pode perder a "
+        "catraca")
+
+    # E nenhum nome de mentira: todo id do piso tem de estar medido HOJE.
+    # Isto não é tautologia — o esperado sai de `tests/`, varrido por AST, e a
+    # constante é uma lista escrita à mão que pode divergir dele.
+    medida = mi.medir()
+    fantasmas = sorted(set(piso) - set(medida["com_regua_dentro_de_teste"]))
+    assert not fantasmas, (
+        f"o piso cita decisão que régua nenhuma mede hoje: {fantasmas}")
+
+
+def test_o_instrumento_tambem_nao_se_conta_fora_de_tests(mi, tmp_path):
+    """O CHAMADOR QUE FICOU DE FORA — achado pela conferência, 20/09/2026.
+
+    ``_e_o_proprio_instrumento`` tem DOIS chamadores:
+    :func:`onde_cada_id_aparece`, que varre ``tests/``, e
+    :func:`citadas_fora_de_tests`, que varre ``scripts/`` e ``src/``. Só o
+    primeiro tinha régua. Arrancar a autoexclusão do SEGUNDO deixava as quinze
+    verdes — e o instrumento voltava a se contar: as 62 «citadas em qualquer
+    lugar» viravam 63, e ``D-A-ABA-LANCADORES``,
+    ``D-A-MASCARA-POR-CONTROLE-VALE-NO-APLICAR``, ``D-COSTURA-BLUEZ`` e
+    ``D-GESTO-DO-MAPA`` passavam a contar como citadas só porque a PROSA deste
+    instrumento as nomeia ao explicar o próprio funcionamento.
+
+    O QUE A MORDIDA ARRANCA: tire ``if _e_o_proprio_instrumento(fonte)`` de
+    ``citadas_fora_de_tests`` e esta régua reprova — pelo arranjo sintético e
+    pelo real.
+    """
+    # SINTÉTICO: um `scripts/` de mentira, com os dois arranjos lado a lado.
+    scripts = tmp_path / "scripts"
+    scripts.mkdir(parents=True, exist_ok=True)
+    (scripts / "fala_do_instrumento.py").write_text(
+        '"""Roda o medir_decisoes_sem_prova e confere a D-DO-INSTRUMENTO."""\n',
+        encoding="utf-8")
+    (scripts / "codigo_de_verdade.py").write_text(
+        "# nasceu da D-DE-VERDADE, e a implementa\n", encoding="utf-8")
+
+    fora = mi.citadas_fora_de_tests(["D-DO-INSTRUMENTO", "D-DE-VERDADE"],
+                                    tmp_path)
+    assert "D-DO-INSTRUMENTO" not in fora, (
+        "o arquivo que fala do instrumento contou como citação de uma decisão")
+    assert "D-DE-VERDADE" in fora, (
+        "a exclusão engoliu script de verdade junto — ela é derivada do NOME "
+        "do módulo, e não pode virar uma peneira")
+
+    # REAL: o arquivo do instrumento não pode ser prova de decisão nenhuma.
+    linhas = mi._linhas()
+    ids = [ln["id"] for ln in linhas if ln.get("estado") == "decidida"]
+    onde = mi.citadas_fora_de_tests(ids, RAIZ)
+    culpados = sorted(i for i, caminhos in onde.items()
+                      if any("medir_decisoes_sem_prova" in c for c in caminhos))
+    assert not culpados, (
+        f"o próprio instrumento aparece como prova de {len(culpados)} "
+        f"decisão(ões): {culpados}")
+
+
+def test_o_laudo_sem_bandeira_recusa_csv_de_forma_errada(mi, tmp_path, capsys):
+    """Traceback não é resposta — achado pela conferência, 20/09/2026.
+
+    O ``--check`` conferia a forma do CSV antes de contar; o laudo seco, que é
+    o comando que uma pessoa roda PRIMEIRO, não conferia. Num CSV sem a coluna
+    ``estado`` ele estourava ``ZeroDivisionError`` na conta da porcentagem —
+    no caso exato de que a própria seção «O CHÃO» do instrumento fala.
+
+    O QUE A MORDIDA ARRANCA: devolva a conferência de ``problemas_de_forma``
+    para depois do ``if not args.check`` e esta régua reprova com o estouro.
+    """
+    alvo = _csv_de_mentira(
+        tmp_path / "sem_estado.csv",
+        [{"id": "D-QUALQUER", "titulo": "t"}],
+        colunas=("id", "titulo", "onde_mora", "decidida_em"),
+    )
+    mi.CSV_DAS_DECISOES = alvo
+    mi.RAIZ = tmp_path
+    try:
+        assert mi.main([]) == 1, (
+            "o laudo seco contou sobre um CSV que já não sabe ler")
+    finally:
+        mi.CSV_DAS_DECISOES = RAIZ / "docs" / "data" / "decisoes-dela.csv"
+        mi.RAIZ = RAIZ
+    saida = capsys.readouterr().out
+    assert "VERMELHO" in saida and "estado" in saida
+    assert "MEDIÇÃO 1" not in saida, (
+        "imprimiu o laudo assim mesmo — número sobre chão que cedeu")
 
 
 def test_a_medicao_de_hoje_bate_com_o_csv_de_hoje(mi):
