@@ -18,6 +18,7 @@ ser lido. Tudo roda num sysfs e numa árvore UCM de mentira.
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -294,3 +295,43 @@ def test_o_doctor_roda_a_checagem() -> None:
     corpo = texto[texto.index("\nmain() {") :]
     corpo = corpo[: corpo.index("\n}\n")]
     assert "\n    check_ucm_do_dualsense\n" in corpo
+
+
+# ---------------------- o passo do UCM é anunciado em DOIS fluxos do install
+#
+# A MORDIDA QUE REVELOU, na conferência de 20/09/2026: apagada a linha
+# `install_ucm_dualsense_host` do fluxo NATIVO — o que ela usa —, os 108 testes
+# do UCM e do doctor, os 42 portões da camada rápida e os dois portões mais
+# pesados da camada completa (`casa-sabe` e `citacoes-no-codigo`, 3min27) todos
+# seguiram VERDES. Teste nenhum desta casa citava a função. O install anunciaria
+# o passo na tela, não gravaria gancho nenhum, e numa máquina nova a vibração
+# pelo cabo morreria sem uma linha vermelha.
+#
+# Nem o passo nem a chamada são digitados: os dois saem do `install.sh`, e o
+# que se cobra é que cada anúncio tenha a sua chamada logo abaixo, no mesmo
+# recuo.
+
+_PASSO_DO_UCM = r'^[ \t]*step "(?P<passo>[^"]+)" "[^"]*perfil UCM do DualSense[^"]*"$'
+
+_PASSO_COM_CHAMADA = re.compile(
+    r'^(?P<recuo>[ \t]*)step "(?P<passo>[^"]+)" "[^"]*perfil UCM do DualSense[^"]*"\n'
+    r"(?P=recuo)install_ucm_dualsense_host$",
+    re.MULTILINE,
+)
+
+
+def test_todo_passo_do_ucm_no_install_tem_a_chamada_logo_abaixo() -> None:
+    """Anunciar o passo e não chamar a função é o install mentindo em verde."""
+    texto = (RAIZ / "install.sh").read_text(encoding="utf-8")
+    anunciados = re.findall(_PASSO_DO_UCM, texto, re.MULTILINE)
+    assert len(anunciados) == 2, (
+        f"o install anuncia o passo do UCM {len(anunciados)} vez(es) "
+        f"({anunciados}) — são DOIS fluxos, o nativo e o dos demais formatos, "
+        "e a vibração pelo cabo depende do gancho nos dois"
+    )
+    chamados = [achado.group("passo") for achado in _PASSO_COM_CHAMADA.finditer(texto)]
+    mudos = sorted(set(anunciados) - set(chamados))
+    assert not mudos, (
+        f"passo do UCM anunciado e não chamado: {mudos} — o install diria que "
+        "instalou o perfil e não gravaria gancho nenhum"
+    )
