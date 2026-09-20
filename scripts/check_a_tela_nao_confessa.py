@@ -169,6 +169,20 @@ FATOS: dict[str, str] = {
     "a leitura ainda não chegou":
         "o sujeito é A LEITURA do aparelho. Estado de agora: o traço diz que o "
         "dado não veio ainda, não que não venha — 07/09/2026",
+    "a Steam ainda não mudou de lado para ele":
+        "o sujeito é A STEAM. Estado de agora, e MEDIDO: depois de escrever, o "
+        "gesto do chip «Steam Input» RELÊ o `localconfig.vdf` e diz o que "
+        "ficou lá. A causa comum é aquele jogo não existir naquele arquivo — a "
+        "Steam só o escreve depois de o jogo ter aberto uma vez por ela —, e "
+        "por isso a frase termina no que ELA faz a seguir. Calar seria pior: "
+        "cantar «ligado» sobre um arquivo que não mudou é o `excecao_inerte` "
+        "que a PONTE-STEAM-INPUT-01 existiu para matar — STEAM-INPUT-01, "
+        "20/09/2026",
+    # A IRMÃ DELA — `a01_jogar.STEAM_INPUT_SAIU_MAS_CONTINUA`, *"Tirei este jogo
+    # da lista, mas a Steam continua no comando dele"* — NÃO precisa de linha
+    # aqui: a `FORMA` não a lê como confissão, e declará-la foi tentado e
+    # REPROVOU na direção B (*"uma declaração que sobrevive à frase envelhece
+    # calada"*). Fica o registro para a próxima pessoa não repetir a tentativa.
     # TRÊS DECLARAÇÕES SAÍRAM DAQUI EM 11/09/2026, e nenhuma porque estivesse
     # errada: as três frases deixaram a tela por aprovação dela, e foi esta
     # régua que cobrou as três retiradas — ela confere nos DOIS sentidos, e
@@ -722,6 +736,14 @@ SEM_LETRA: dict[str, str] = {
         "idem, no campo do jogo",
     "a01_jogar.py:mascara_do_controle ← motivo":
         "a recusa do `gamepad.mask.set`, palavra por palavra do daemon",
+    "a01_jogar.py:_reconciliar_o_vdf ← str(resultado[1].frase())":
+        "`integrations/steam_input_ponte.Estado.frase()`, devolvida inteira "
+        "pelo `garantir_ponte` — ela NOMEIA o jogo em vez de contar e termina "
+        "em «Ligo assim que a Steam fechar (com ela viva a edição é engolida "
+        "na saída dela)». O sujeito é A STEAM, e a frase diz um estado de "
+        "agora que o guarda do vdf desfaz sozinho quando ela sai. Redigitá-la "
+        "no pacote seria a segunda cópia de um texto que tem dono — "
+        "STEAM-INPUT-01, 20/09/2026",
     "a02_controles.py:mudo ← frase":
         "a recusa do `mic.set`, montada pelo motor do microfone",
     "a02_controles.py:rota ← desfecho.motivo":
