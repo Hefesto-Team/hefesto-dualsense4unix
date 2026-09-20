@@ -2603,6 +2603,10 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> cala o
                 microfone e apaga a luz vermelha do controle.<br><br>
+                A luz <b>acesa</b> quer dizer que o microfone está ligado —
+                não que alguém esteja ouvindo. Ela <b>pisca</b> quando um
+                programa está gravando e entra som; a linha abaixo diz qual.
+                <br><br>
                 Os <b>dois botões abaixo</b> dizem por onde esse som chega ao PC.
               </span></span>
               <!-- O MODO DO MICROFONE — pedido dela, 30/08: *"tá faltando o Modo do
@@ -2667,6 +2671,35 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                 <button class="{'on' if mic_modo == 'nativo' else ''}" data-gesto="mic-modo" data-mic-modo="nativo" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="nativo"
                   title="{DICA_MIC_NATIVO}">Nativo</button>
               </span>
+            <!-- QUEM ESTÁ TE OUVINDO — 19/09/2026, decisão dela na
+                 `A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01`, e ela escolheu as DUAS
+                 metades: a luz do controle passa a espelhar o BOTÃO, e a aba
+                 passa a dizer QUEM ouve, por escrito.
+
+                 O DEFEITO QUE ISTO CURA É DE LEITURA, e custou o microfone
+                 dela: com o mic LIGADO e nenhum app gravando, a luz apagada
+                 lhe disse "desligado", e o primeiro clique DESLIGOU o que já
+                 estava no ar. Com a luz acesa nos dois casos, alguém tem de
+                 dizer a diferença — é esta linha.
+
+                 É UMA `monta.ressalva` E NÃO UMA LINHA FIXA: ela some
+                 sozinha quando não há o que dizer (`:has(.nada)`), e a coluna
+                 do som é uma das DUAS que mandam na altura do card.
+
+                 MEDIDO no Chrome headless sobre esta página, na janela do
+                 produto (1180px), em 19/09/2026 — e a pergunta era uma só,
+                 *"o quadro passa a rolar por dentro?"*:
+
+                     card aberto   329,6 -> 351,9 px com a linha escrita
+                     .quadro-corpo sem rolagem NOS DOIS (scroll == client)
+                     a linha       17,3 px, UMA linha, na coluna de 281 px
+
+                 A frase mais longa que o dono emite ainda cabe numa linha, e
+                 é ele quem garante isso: acima de
+                 `mesa_viva.LIMITE_DA_LINHA_DE_QUEM_OUVE` ela troca os nomes
+                 pela contagem. Duas linhas aqui fazem o quadro rolar e o P4
+                 sair da tela, que já aconteceu nesta aba em 30/08. -->
+            {monta_ressalva("mic-ressalva")}
 
           </div>
           <div class="moldura" style="margin-top:9px" data-bloco="alto-falante"

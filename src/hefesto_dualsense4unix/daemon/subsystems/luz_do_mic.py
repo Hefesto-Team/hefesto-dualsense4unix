@@ -6,12 +6,25 @@ LUZ-DO-MIC-01, PEÇA C (03/09/2026). Este módulo é o único que ESCREVE no
 **O CONTRATO, e ele é decisão dela** (`docs/process/sprints/
 2026-09-02-LUZ-DO-MIC-01-a-luz-diz-quem-te-escuta.md` §1)::
 
-    apagado (0)      = MUDO, ou ninguém ouvindo.  OS DOIS SÃO A MESMA LUZ.
-    aceso fixo (1)   = algum app está com o microfone deste controle aberto
-    piscando (2)     = e está entrando som AGORA
-    pisca lento (3)  = está entrando som, E a bateria deste controle < 30%
+    apagado (0)      = MUDO. É a ÚNICA coisa que apaga esta luz.
+    aceso fixo (1)   = o microfone está LIGADO — haja ou não app ouvindo
+    piscando (2)     = algum app de fora tem o microfone aberto E entra som AGORA
+    pisca lento (3)  = idem, E a bateria deste controle < 30%
 
 A precedência está em `decidir`, e ela é a §1.1 escrita em código.
+
+**O `0` DEIXOU DE SER DUAS COISAS — 19/09/2026, decisão dela**
+(`docs/process/sprints/2026-09-19-A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01.md`). O
+contrato de 02/09 dizia *"apagado = MUDO, ou ninguém ouvindo — OS DOIS SÃO A
+MESMA LUZ"*, e foi isso que custou a noite dela: com o microfone LIGADO e
+ninguém gravando, a luz apagada lhe disse *"desligado"*, ela apertou o botão
+para ligar e **desligou** — o vigia mediu `mudo=False canal_ativo=True` antes
+do primeiro clique.
+
+Perguntada com quatro opções, ela escolheu *«Espelhar o botão E consertar a
+tela»*: a luz passa a responder ao BOTÃO, na hora, sem depender de app nenhum
+estar aberto, e o *"alguém te ouve"* não some — vira o PISCANDO, e ganha texto
+na aba Controle (`interface/pacotes/a02_controles.py`, campo `mic-ressalva`).
 
 **A LUZ INVERTE O KERNEL, e isso é o ponto inteiro.** O `hid-playstation`
 escreve `mute_button_led = ds->mic_muted` (`hid-playstation.c:1538-1540`): para
@@ -92,8 +105,8 @@ o que está no ar             o que a luz faz
 ===========================  ===========================================
 nem A nem B                  apaga quando ela está MUDA; no resto,
                              devolve a posse ao kernel (não inventa)
-A sem B                      0 / 1 completos — acende quando um app tem
-                             o microfone aberto, sem distinguir o `2`
+A sem B                      0 / 1 completos — acende com o microfone
+                             ligado, sem distinguir o `2`
 A e B                        os quatro estados
 ===========================  ===========================================
 
@@ -176,6 +189,50 @@ def _lembrar_o_estado(uniq: str, alvo: int | None) -> None:
     else:
         _DECIDIDO[chave] = int(alvo)
 
+
+#: QUEM OUVE CADA CONTROLE, para quem ESCREVE — 19/09/2026, a outra metade da
+#: decisão dela. A luz do plástico passou a espelhar o botão, e com isso ela
+#: deixou de conseguir dizer *"tem alguém te ouvindo"* sozinha: o `1` cobre os
+#: dois casos. A aba Controle é quem passa a dizer QUEM, por escrito.
+#:
+#: **É A MESMA DISCIPLINA DO `_DECIDIDO`**: a PEÇA A já foi perguntada neste
+#: tique, e publicar a resposta que o laço JÁ TEM custa um `dict`. Perguntar de
+#: novo do lado do IPC seriam dois `pactl` por tique de tela, e duas respostas
+#: que divergem no primeiro segundo em que uma delas chega atrasada.
+#:
+#: `None` some daqui — *"não perguntei"* é a ausência da chave, e a lista vazia
+#: (`[]`) é a resposta *"medi, e ninguém te ouve"*, que é a que vira frase.
+_OUVINTES: dict[str, list[str]] = {}
+
+
+def quem_ouve_este_mic(uniq: str) -> list[str] | None:
+    """Os apps de FORA que têm o microfone deste controle aberto.
+
+    `None` = ninguém perguntou ainda (ou a PEÇA A não respondeu); `[]` =
+    perguntamos e não há ninguém. A distinção é a mesma de `decidir`, e ela é
+    o que separa *"ninguém está te ouvindo"* de *"não sei dizer"* na tela.
+
+    **APPS DE FORA, e o "de fora" é o contrato.** A lista é a que
+    `quem_ouve_agora` devolve, já sem os gravadores do próprio Hefesto
+    (`e_stream_do_hefesto`, regra 3): o medidor de nível da aba Controle grava
+    o mesmo canal o tempo todo, e contá-lo faria a tela dizer que alguém a
+    ouve porque ela está aberta.
+
+    Leitura barata (um `dict`), pensada para o `state_full`.
+    """
+    return _OUVINTES.get(str(uniq or ""))
+
+
+def _lembrar_quem_ouve(uniq: str, ouvintes: list[str] | None) -> None:
+    """Guarda (ou esquece) quem ouve este controle."""
+    chave = str(uniq or "")
+    if not chave:
+        return
+    if ouvintes is None:
+        _OUVINTES.pop(chave, None)
+    else:
+        _OUVINTES[chave] = [str(x) for x in ouvintes]
+
 #: Cadência da DECISÃO. O `2` é atividade de voz, que muda em ~100 ms; a 1 Hz a
 #: luz acompanharia o parágrafo e não a fala. A 4 Hz nada disto custa: as
 #: leituras deste tique (mudo e bateria) são `getattr` sobre o que a thread de
@@ -251,8 +308,29 @@ def decidir(
         mudo no firmware                         -> 0
         captando + bateria < 30%                 -> 3
         captando                                 -> 2
-        algum app com o microfone aberto         -> 1
-        resto                                    -> 0
+        ninguém ouvindo, e o microfone ligado    -> 1
+        resto                                    -> 1
+
+    **A LINHA DE BAIXO MUDOU EM 19/09/2026, E É DECISÃO DELA.** Ela era
+    `não ouvintes -> 0`, e a sprint
+    `2026-09-19-A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01` mediu o preço: com o
+    microfone LIGADO e nenhum app gravando — o arranjo exato da mesa dela
+    naquela noite —, o journal só tinha `luz_do_mic_escrita estado=0`, a luz
+    apagada lhe disse *"desligado"*, e o primeiro clique dela **desligou** o
+    microfone que já estava no ar.
+
+    Hoje **quem apaga é só o `mudo is True`**. A luz espelha o BOTÃO: o *"tem
+    alguém te ouvindo"* não se perdeu, ele é o `2` (e a aba Controle passou a
+    dizer QUEM, por escrito, no campo `mic-ressalva`).
+
+    **E O FILTRO ANTI-AUTO-REFERÊNCIA CONTINUA CERTO.** A regra 3 de
+    `e_stream_do_hefesto` exclui de `ouvintes` todo gravador cujo
+    `application.name` contenha `hefesto` — e é por isso que a lista vem vazia
+    na mesa dela: o único gravador do canal é o `hefesto-canal-do-microfone`,
+    o medidor de nível da própria aba Controle. Contá-lo faria a luz **acender
+    sozinha porque a tela está aberta**, e o `2` passaria a dizer *"a aba está
+    medindo"* em vez de *"alguém te ouve"*. A causa do defeito não era o
+    filtro: era o `0` querer dizer duas coisas.
 
     **O `None` é um valor de primeira classe, e não um buraco.** Ele sai em
     duas situações, e as duas são honestas:
@@ -263,7 +341,9 @@ def decidir(
     * `ouvintes is None` — a PEÇA A não existe, não achou o `pactl`, ou não
       conseguiu ler o grafo. *"Não perguntei a ninguém"* não é *"ninguém
       ouve"*: a lista VAZIA (`[]`) é que significa ninguém, e ela acende o
-      `0` com todas as letras.
+      `1` com todas as letras. **Os dois continuam separados**, e a mudança de
+      19/09 não os junta: o que mudou foi o VALOR da lista vazia, de `0` para
+      `1`; `None` continua sendo *"não escreva"*.
 
     **`mudo` vence tudo**, inclusive a ausência da PEÇA A — é por isso que a
     degradação sem A e sem B ainda entrega alguma coisa: a luz apaga quando ela
@@ -281,7 +361,9 @@ def decidir(
     if ouvintes is None:
         return None
     if not ouvintes:
-        return APAGADA
+        # ACESA, E ERA APAGADA — a mudança de 19/09/2026. Ver a docstring: o
+        # `0` deixou de querer dizer duas coisas, e quem apaga é só o `mudo`.
+        return ACESA
     if captando is True:
         if bateria_pct is not None and bateria_pct < LIMIAR_DE_BATERIA_PCT:
             return PISCANDO_LENTO
@@ -716,6 +798,7 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
             ]:
                 escrito.pop(uniq, None)
                 _lembrar_o_estado(uniq, None)
+                _lembrar_quem_ouve(uniq, None)
                 posse.discard(uniq)
                 sem_resposta_desde.pop(uniq, None)
 
@@ -743,6 +826,8 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                 if ouvintes_por_uniq is not None:
                     bruto = ouvintes_por_uniq.get(uniq)
                     ouvintes = list(bruto) if isinstance(bruto, (list, tuple)) else None
+                # A TELA LÊ DAQUI, e não pergunta de novo — ver `_OUVINTES`.
+                _lembrar_quem_ouve(uniq, ouvintes)
                 captando = None
                 if captando_por_uniq is not None:
                     bruto_b = captando_por_uniq.get(uniq)
