@@ -212,14 +212,18 @@ class TestPasso7aContratoDeTexto:
 
     def test_cabecalho_nao_mente_mais_sobre_o_default(self) -> None:
         # POR SÍMBOLO, NUNCA POR ARITMÉTICA (20/09/2026). Esta linha dizia
-        # `[:200]`, e medido commit a commit a frase vivia na linha 200 exata
-        # desde 19/09: a documentação da flag `--no-fechar-o-no` somou nove
-        # linhas ao cabeçalho e a empurrou para a 209. A frase nunca saiu do
-        # cabeçalho — a régua é que media um número mágico. O cabeçalho tem
-        # fim objetivo: a primeira linha que não começa por `#`.
+        # `[:200]`, e commit a commit a frase vivia na linha 200 exata desde
+        # 19/09: a documentação da flag `--no-fechar-o-no` somou nove linhas ao
+        # cabeçalho e a empurrou para a 209. A frase nunca saiu do cabeçalho —
+        # o que olhava um número mágico era a régua. O cabeçalho tem fim
+        # objetivo: a primeira linha que não começa por `#`.
         linhas = INSTALL.splitlines()
         fim = next(
-            (i for i, l in enumerate(linhas[1:], 1) if l.strip() and not l.startswith("#")),
+            (
+                i
+                for i, texto in enumerate(linhas[1:], 1)
+                if texto.strip() and not texto.startswith("#")
+            ),
             len(linhas),
         )
         cabecalho = "\n".join(linhas[:fim])
