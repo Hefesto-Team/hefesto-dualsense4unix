@@ -1372,7 +1372,7 @@ def _mirar(ctx: Contexto, o: dict[str, Any], p: Any) -> str:
     ISTO NÃO É ENFEITE: é a única forma de o botão da coluna falar com AQUELE
     controle, porque `rumble.set` e `rumble.stop` não têm parâmetro de endereço
     (ver o bloco no topo desta seção). O `rumble.stop` mira no mesmo lugar —
-    `ipc_handlers.py:5028` lê `uniq_do_alvo_de_output` antes de zerar.
+    `ipc_handlers.py:5286` lê `uniq_do_alvo_de_output` antes de zerar.
 
     É o MESMO par de passos da janela estável, só que sem seletor: lá o chip
     manda `controller.target.set` (`app/actions/status_actions.py:2452`) e a

@@ -4197,11 +4197,28 @@ class IpcHandlersMixin:
             # sei"*, como nas três acima.
             from hefesto_dualsense4unix.daemon.subsystems.luz_do_mic import (
                 estado_da_luz_do_mic,
+                quem_ouve_este_mic,
             )
 
             luz = estado_da_luz_do_mic(str(uniq or ""))
             if luz is not None:
                 status["luz_do_mic"] = int(luz)
+            # E QUEM OUVE VAI JUNTO — 19/09/2026, a outra metade da decisão
+            # dela na A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01. A luz passou a espelhar
+            # o BOTÃO, então ela sozinha não distingue mais *"ligado"* de
+            # *"ligado e alguém te ouvindo"*: quem diz QUEM, por escrito, é a
+            # aba Controle (`a02_controles`, campo `mic-ressalva`).
+            #
+            # A LISTA JÁ ESTÁ MEDIDA, e este é o ponto: o laço da luz pergunta
+            # à PEÇA A a 1 Hz e guarda. Perguntar de novo aqui seriam dois
+            # `pactl` por tique de tela, dentro do laço que serve o IPC.
+            #
+            # A chave só aparece quando alguém perguntou — ausência é *"não
+            # sei"*, e a lista VAZIA é *"medi, e não há ninguém"*. Os dois
+            # viram frases diferentes na tela.
+            ouvintes = quem_ouve_este_mic(str(uniq or ""))
+            if ouvintes is not None:
+                status["ouvintes_do_mic"] = list(ouvintes)
             entry["audio"] = status
 
         speaker: Any = None
