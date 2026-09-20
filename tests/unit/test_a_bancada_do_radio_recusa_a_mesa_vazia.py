@@ -108,9 +108,11 @@ def test_a_mesa_vazia_recusa_com_codigo_proprio() -> None:
     """
     corpo = CONDUTOR.read_text(encoding="utf-8")
     trecho = corpo.split("def etapa_dano", 1)[-1].split("\ndef ", 1)[0]
-    bloco = trecho.split("if not no_alvo:", 1)
+    # A guarda é a PRIMEIRA das duas ocorrências de `if not no_alvo` — a
+    # segunda é o ramo da medição cruzada, que vem depois e é outra coisa.
+    bloco = trecho.split("if not no_alvo and not cruzado:", 1)
     assert len(bloco) == 2, "a guarda da mesa vazia sumiu"
-    corpo_da_guarda = bloco[1].split("print(f\"\\n  {len(no_alvo)}", 1)[0]
+    corpo_da_guarda = bloco[1].split("if not no_alvo:", 1)[0]
     assert "return 4" in corpo_da_guarda, (
         "a guarda da mesa vazia não devolve código próprio — quem encadeia "
         "etapas não distingue «sem dano» de «sem alvo»"
