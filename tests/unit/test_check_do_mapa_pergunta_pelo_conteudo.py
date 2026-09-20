@@ -99,7 +99,8 @@ def arvore(tmp_path: Path) -> Path:
     # grita, que é o comportamento certo — foi assim que este teste avisou.
     # `carimbo_da_casa.py` entrou em 25/08/2026, pelo MESMO caminho da paleta:
     # os quatro instrumentos HTML passaram a dividir um rodapé de procedência
-    # (commit, branch, data, sujeira da árvore), e sem ele a cópia do gerador
+    # (commit, branch e data — a contagem de arquivos sujos saiu em 20/09/2026,
+    # porque mudava o TAMANHO do arquivo gerado), e sem ele a cópia do gerador
     # morre com `ModuleNotFoundError` na árvore de teste. O aviso veio deste
     # teste, como o comentário acima previa que viria.
     for script in (

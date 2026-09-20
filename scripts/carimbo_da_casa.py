@@ -22,6 +22,40 @@ Quem lê daqui:
 local; se o ``git`` não responder, ele diz ``?`` em vez de inventar — ausência
 de medição é declarada, nunca preenchida.
 
+O CARIMBO NÃO CARREGA O ESTADO DA ÁRVORE DE QUEM GEROU — 20/09/2026
+===================================================================
+De 25/08 a 20/09/2026 ele trouxe a contagem de arquivos com mudança não
+commitada. Essa frase **muda de comprimento com a contagem**, e o tamanho da
+página passava a depender de como estava a mesa de quem apertou o botão: o
+``docs/data/LEIA-PRIMEIRO.md`` publicava 2.280.044 bytes para o
+``html/specs.html`` enquanto o disco dizia 2.280.091, sem que uma vírgula do
+dado tivesse mudado. A medição inteira está em ``procedencia()``, e quem trava
+isto é ``tests/unit/test_o_carimbo_nao_muda_o_tamanho.py``.
+
+**O NOME DA BRANCH SAIU JUNTO, E A MEDIÇÃO É DA MESMA TARDE.** A sprint
+mandou tirar só a contagem de sujos e escreveu *"o commit e a branch FICAM:
+eles dizem de que fonte o arquivo saiu, e o hash tem comprimento fixo"* — a
+razão é sobre o HASH, e a branch veio junto na mesma frase. O nome da branch
+**não** tem largura fixa, e a primeira leva que curou a contagem provou isso
+nela mesma: regerada na worktree ``worktree-wf_7917c453-7ab-2``, a
+``html/index.html`` ficou **92 bytes** maior que em ``dev``, a
+``html/painel.html`` 46, a ``html/specs.html`` e a ``html/frases-de-tela.html``
+23 cada — e o ``docs/data/LEIA-PRIMEIRO.md`` passou a publicar **2.280.067**
+onde ``dev`` mede 2.280.044, que era o número que o documento já trazia certo.
+
+A branch também não é FONTE: a página nasce de um commit e é publicada em
+``dev``; dizer que ela saiu de ``worktree-wf_7917c453-7ab-2`` é declarar a mesa
+de quem passou por ali, que é exatamente o que a sprint mandou tirar. O commit
+identifica a fonte sozinho, e quem lê o rodapé do índice continua vendo as
+páginas irmãs concordarem ou discordarem POR COMMIT
+(``scripts/gerar-indice-html.py::_concordancia``), que é a razão de o carimbo
+existir.
+
+A própria sprint fecha o argumento sem precisar de mais nada: ela escreveu que,
+*"se a casa quiser manter a contagem, então o ``LEIA-PRIMEIRO`` não pode
+publicar o TAMANHO desse arquivo"*. A casa manteve o tamanho publicado. Logo
+nada de largura variável cabe no carimbo — nem a contagem, nem a branch.
+
 O CARIMBO NÃO ENTRA NO ``--check``, E ISSO É DE PROPÓSITO
 =========================================================
 O commit e a hora mudam a cada geração. Se o comparador de conteúdo os visse,
@@ -60,18 +94,28 @@ def _git(*args: str, raiz: Path = RAIZ) -> str:
 
 
 def procedencia(raiz: Path = RAIZ) -> dict[str, str]:
-    """Commit, branch e sujeira da árvore — o que o carimbo declara.
+    """O commit — a única coisa que o carimbo declara sobre a FONTE da página.
 
-    ``sujos`` conta arquivos com mudança não commitada. Ele existe porque o
-    commit sozinho MENTE numa árvore suja: a página pode ter sido gerada de um
-    dado que ainda não está em commit nenhum.
+    A CONTAGEM DE ARQUIVOS SUJOS SAIU EM 20/09/2026, E O QUE ELA CUSTOU ESTÁ
+    MEDIDO. A chave ``sujos`` virava ``· árvore com N mudança(s) não
+    commitada(s)`` dentro do arquivo gerado, e essa frase muda de comprimento
+    com N — «2» e «13» não ocupam o mesmo espaço, e ela some inteira quando a
+    árvore está limpa. Medido num repositório de brinquedo, com o mesmo commit,
+    a mesma branch e o mesmo gerador, variando só a sujeira: **0 sujos davam um
+    carimbo de 223 bytes, 2 davam 270 e 13 davam 271.**
+
+    Os 47 bytes entre a árvore limpa e a suja são exatamente o que separava o
+    ``bytes:html/specs.html`` publicado no ``docs/data/LEIA-PRIMEIRO.md``
+    (2.280.044) do tamanho do arquivo em disco (2.280.091): o ``git status`` de
+    quem gerou virava bytes do produto, e o número publicado caducava sem que o
+    dado tivesse mudado.
+
+    O argumento de quem a pôs ali — *"o commit sozinho MENTE numa árvore
+    suja"* — continua verdadeiro, e continua respondido: quem pergunta se a
+    página está em dia usa o ``--check`` de cada gerador, que regenera em
+    memória e compara CONTEÚDO. Essa resposta não custa um byte do artefato.
     """
-    sujos = [ln for ln in _git("status", "--porcelain", raiz=raiz).splitlines() if ln.strip()]
-    return {
-        "commit": _git("rev-parse", "--short", "HEAD", raiz=raiz) or "?",
-        "branch": _git("rev-parse", "--abbrev-ref", "HEAD", raiz=raiz) or "?",
-        "sujos": str(len(sujos)),
-    }
+    return {"commit": _git("rev-parse", "--short", "HEAD", raiz=raiz) or "?"}
 
 
 def agora() -> str:
@@ -85,18 +129,25 @@ def carimbo(gerador: str, *, indice: bool = True, raiz: Path = RAIZ) -> str:
     ``gerador`` é o caminho do script que escreveu a página, para quem olhar o
     rodapé saber onde ficar reclamando. ``indice=False`` no próprio
     ``index.html``, que não precisa de um link para si mesmo.
+
+    O QUE ESTA LINHA NÃO PODE CARREGAR: nada de LARGURA VARIÁVEL, porque o
+    ``docs/data/LEIA-PRIMEIRO.md`` publica o TAMANHO de ``html/specs.html`` e há
+    portão que confere esse número. O commit e a hora mudam a cada geração, mas
+    não mudam de comprimento, e ``sem_carimbo()`` os tira antes de qualquer
+    comparação de conteúdo. Já caíram daqui duas coisas que mudavam:
+
+      - a contagem de arquivos sujos (20/09/2026, ver ``procedencia()``);
+      - o nome da branch (20/09/2026, ver o topo do módulo) — 23 bytes em
+        ``html/specs.html`` e 92 em ``html/index.html`` entre ``dev`` e uma
+        worktree de agente.
+
+    Ambas descreviam a MESA de quem apertou o botão, não a fonte da página.
     """
     p = procedencia(raiz)
-    sujeira = (
-        ""
-        if p["sujos"] == "0"
-        else f" · árvore com {escape(p['sujos'])} mudança(s) não commitada(s)"
-    )
     volta = ' · <a href="index.html">índice dos instrumentos</a>' if indice else ""
     return (
         f'<p class="carimbo" {MARCA}="1">gerado em {escape(agora())} · '
-        f'commit <code>{escape(p["commit"])}</code> na branch '
-        f'<code>{escape(p["branch"])}</code>{sujeira} · por '
+        f'commit <code>{escape(p["commit"])}</code> · por '
         f'<code>{escape(gerador)}</code>{volta}</p>'
     )
 
