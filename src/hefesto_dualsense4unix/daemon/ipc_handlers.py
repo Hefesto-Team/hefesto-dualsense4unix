@@ -4294,10 +4294,21 @@ class IpcHandlersMixin:
         aceso. Enquanto houver escritor cru, o que a tela pode afirmar é *"esta
         é a cor que o Hefesto pediu"*, e é isso que este booleano diz à GUI.
 
-        Leitura PURA: sai da foto que o sentinela do daemon já tirou (o tique
-        de 30 s do `reconnect_loop`). O status é consultado a cada segundo pela
-        GUI — sondar `/proc` aqui seria um `pgrep` por segundo, e o defeito que
-        essa sonda existe para curar não vale esse preço.
+        Sai da foto que o sentinela do daemon já tirou (o tique de 30 s do
+        `reconnect_loop`). O status é consultado a cada segundo pela GUI —
+        SONDAR `/proc` aqui seria um `pgrep` por segundo, e o defeito que essa
+        sonda existe para curar não vale esse preço.
+
+        **ESCRITOR-CRU-03 (19/09/2026): a foto é CONFERIDA, não repetida.** Ela
+        era devolvida crua, e então este campo contava o passado no presente:
+        medido em 19/09, a Steam levou SIGTERM, `pgrep` devolveu zero, e sete
+        segundos depois o `state_full` ainda dizia ``True``. Pior, há estados
+        em que ninguém zera a foto NUNCA — em Modo Nativo o vigia não sonda, e
+        sem nó mapeado ele desiste antes.
+
+        `segurado_de_fato` não sonda: ele confere se os PIDs que a foto já
+        guarda ainda EXISTEM, a um `stat` em `/proc/<pid>` cada. É a diferença
+        entre medir e lembrar, e só pode apagar um aviso — nunca acender um.
 
         ``False`` também é a resposta quando NADA foi sondado ainda. É
         deliberado e é a disciplina desta casa: ausência de sonda não é prova
@@ -4315,7 +4326,7 @@ class IpcHandlersMixin:
         # nascido de um dublê de teste seria a pior estreia possível.
         if not isinstance(sentinela, _escritor_cru.SentinelaDeEscritorCru):
             return False
-        return bool(sentinela.veredito.segurado(no))
+        return bool(sentinela.veredito.segurado_de_fato(no))
 
     def _nascimento_para(self, uniq: str | None) -> dict[str, Any] | None:
         """Como a conexão DESTE controle nasceu; ``None`` = **não carimbei**.
