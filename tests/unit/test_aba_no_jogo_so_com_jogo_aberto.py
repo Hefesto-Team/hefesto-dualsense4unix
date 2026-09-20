@@ -234,16 +234,20 @@ class _DaemonDeLaco(_DaemonDeSonda):
         self._restantes -= 1
         return self._restantes < 0
 
+    # OS STUBS NÃO SÃO DECORAÇÃO — são os seis métodos que o `_poll_loop` de
+    # PRODUÇÃO chama antes do gate de conexão. Apagar um derruba os dois testes
+    # do laço aqui embaixo com `AttributeError`, e acrescentar uma chamada nova
+    # ao laço sem o irmão aqui derruba os mesmos dois — foi o que `cacd786cb`
+    # (O-NO-NASCE-FECHADO-01, 20/09/2026) fez com o
+    # `_reconciliar_exposicao_do_modo_nativo`, três arquivos longe da causa.
+    # Quem guarda esta lista sincronizada é
+    # `test_o_duble_do_poll_loop_acompanha_o_produto.py`, que lê o laço por AST
+    # e reprova NOMEANDO o método que falta.
     def _sync_identity_registry(self) -> None: ...
     def aplicar_gamepad_para_multiplos_controles(self) -> None: ...
     def _amostrar_bateria(self, _agora: float) -> None: ...
     def _schedule_external_tick(self) -> None: ...
     def _drenar_modo_pendente(self) -> None: ...
-    # O `_poll_loop` ganhou esta chamada em `cacd786cb` (O-NO-NASCE-FECHADO-01,
-    # 20/09/2026) e o dublê não ganhou o irmão: dois testes desta bancada caíram
-    # com `AttributeError`, três arquivos longe da causa. Ver
-    # `test_o_duble_do_poll_loop_acompanha_o_produto.py`, a régua que impede a
-    # próxima vez lendo o laço de produção por AST.
     def _reconciliar_exposicao_do_modo_nativo(self, **_k: object) -> None: ...
     async def _sync_game_signal(self) -> None: ...
 
