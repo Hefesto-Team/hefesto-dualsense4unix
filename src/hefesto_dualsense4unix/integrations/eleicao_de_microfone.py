@@ -803,12 +803,13 @@ class EleitorDeMicrofone:
     def devolver_o_microfone(self) -> ResultadoDaEleicao:
         """O controle eleito saiu do ar: elege a melhor fonte que NÃO é ele.
 
-        **QUEM CHAMA, MEDIDO (02/09/2026):** um só — o ramo do botão do
-        microfone em `daemon/subsystems/hotkey._eleger_ou_devolver`, quando o
-        ELEITO vai a mudo. Este docstring dizia *"quando o controle eleito
+        **QUEM CHAMA, MEDIDO (20/09/2026):** DOIS. O ramo do botão do microfone
+        em `daemon/subsystems/hotkey._eleger_ou_devolver`, quando o ELEITO vai
+        a mudo; e `daemon/subsystems/bt_mic._devolver_a_fonte_padrao`, quando
+        um nó nosso MORRE e a fonte padrão fica num monitor, num fantasma ou em
+        nada (SOM-PAINEL-01). Este docstring dizia *"quando o controle eleito
         passa a MUDO, cai do rádio/cabo, ou a ponte de microfone dele cai"*, e
-        as duas últimas eram falsas: `grep -rn "devolver_o_microfone" src/`
-        devolve esta definição e aquela única chamada, e as TRÊS escritas de
+        as duas últimas eram falsas na época: as TRÊS escritas de
         `self.eleito` neste módulo saem da MESMA releitura do ATIVO — duas em
         `eleger_por_uniq` (anota o dono quando o ativo relido é o canal dele;
         SOLTA o dono anterior quando o ativo relido prova que o canal deixou de
@@ -818,19 +819,27 @@ class EleitorDeMicrofone:
         e antes disso a condição daqui era `resultado.ok`, que confundia os
         três desfechos de recusa, até a auditoria da manhã separar o
         `eleicao_mic_nao_pegou`.)
-        **Não há gancho de hotplug-out**, e a posse fica de pé quando o
-        controle cai. Enquanto ela ficar, quem publica o estado tem de dizer
-        que o dono saiu da mesa em vez de nomeá-lo — é o `eleito_na_mesa` de
+        **O GANCHO DE HOTPLUG-OUT EXISTE DESDE 20/09/2026** (SOM-PAINEL-01), e
+        a linha aqui dizia o contrário: *"não há gancho de hotplug-out"*. Quem
+        o segura é o laço do `bt_mic`, que compara os nós que este processo
+        segurava na volta anterior com os de agora — o que sumiu MORREU, e é
+        aí que a pergunta é feita. A posse, essa, continua de pé quando o
+        controle cai: quem publica o estado tem de dizer que o dono saiu da
+        mesa em vez de nomeá-lo — é o `eleito_na_mesa` de
         `daemon/subsystems/recado_do_microfone.publicar`, que é remendo do
         RELATO e não cura da posse.
 
-        POR QUE ISTO NÃO É OPCIONAL. Hoje **ninguém devolve o microfone**: não
-        há em `src/` observador da fonte padrão, restaurador, nem memória do que
-        era antes — a única limpeza é o `remove_configured_dualsense` do shell,
-        que só roda em gestos humanos. Sem este caminho, o desfecho padrão de
-        ela desconectar o controle é o `.monitor` do sink ou o `auto_null`:
-        *"ela desconecta o controle e o sistema passa a gravar o áudio de
-        saída"*, que é FONTE-PADRÃO-01/MONITOR-QUE-VENCE-01 inteiro.
+        POR QUE ISTO NÃO É OPCIONAL. Sem este caminho, o desfecho padrão de ela
+        desconectar o controle é o `.monitor` do sink ou o `auto_null`: *"ela
+        desconecta o controle e o sistema passa a gravar o áudio de saída"*,
+        que é FONTE-PADRÃO-01/MONITOR-QUE-VENCE-01 inteiro. O parágrafo aqui
+        dizia também que não havia *"observador da fonte padrão, restaurador,
+        nem memória do que era antes"* — a memória é o
+        :meth:`guardar_anterior` deste módulo, e o observador nasceu no
+        `bt_mic`. **O que ainda NÃO existe é o uso da memória:** este método
+        escolhe por :func:`melhor_fonte_elegivel`, não por `self.anterior`.
+        Numa máquina com um microfone real só dá no mesmo; com dois, a volta
+        pode não ser para o que ela usava.
 
         **RESPOSTA VAZIA NÃO VIRA `.monitor`.** Quando não há fonte que se
         sustente — o estado desta bancada hoje, com a webcam fora e as três

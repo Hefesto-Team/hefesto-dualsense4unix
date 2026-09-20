@@ -184,7 +184,10 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import os
+import shutil
+import subprocess
 import threading
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
@@ -486,6 +489,175 @@ def uniqs_pedidos(config: DaemonConfig | Any) -> frozenset[str]:
     return frozenset(norm_mac(str(u)) or "" for u in pedidos) - {""}
 
 
+# ---------------------------------------------------------------------------
+# SOM-PAINEL-01 — o nó que morre deixa um MONITOR de herança (20/09/2026)
+# ---------------------------------------------------------------------------
+#
+# A queixa dela, de 16/09, com o DualSense no rádio: *"o canal de som não
+# mostra os canais de entrada e saída"* — e o jogo que não a ouvia. Medido: com
+# o controle na mesa a fonte padrão era o canal dele; sem o controle, ela era o
+# monitor de uma saída digital. Um monitor é a saída relida, não uma entrada:
+# quem pedir a fonte padrão grava o som que SAI, e o medidor mostra sinal — a
+# falha que se disfarça de sucesso.
+#
+# O DEFEITO NÃO É NOVO, e é isso que o torna caro: o `doctor.sh` tem a
+# FONTE-PADRAO-01 desde 29/07/2026, com a causa escrita. O que faltava é quem
+# fecha o buraco A CADA CICLO de o nó nascer e morrer — e o ciclo é DESTE
+# arquivo: o `_loop` abre o canal, a ponte o publica, o varredor de órfãos e a
+# saída do controle o derrubam.
+#
+# E O BURACO É NOSSO, não do painel do COSMIC: nós criamos a fonte, nós a
+# destruímos, e até aqui não devolvíamos a eleição a NADA. O produto é de
+# acessibilidade — quem usa o microfone do DualSense como único microfone (o
+# caso dela) fica, depois de desligar o controle, com a máquina inteira sem
+# microfone padrão, sem aviso e sem relação óbvia com o Hefesto.
+#
+# O QUE EXISTIA E NÃO BASTAVA, medido em 20/09/2026:
+#
+#   `integrations.eleicao_de_microfone.EleitorDeMicrofone.devolver_o_microfone`
+#   é a porta certa e já estava escrita — e o único que a abria era o BOTÃO do
+#   microfone (`daemon/subsystems/hotkey._eleger_ou_devolver`). A própria
+#   docstring dela dizia, com todas as letras, *"não há gancho de
+#   hotplug-out"*. O laço que percebe o controle sair
+#   (`hotkey._conferir_quem_saiu_do_ar`) apaga a luz e esquece a palavra, e
+#   **não toca a fonte padrão**. A porta existia; ninguém a abria na MORTE.
+#
+# O DESTINO (a saída) não precisa de guarda, e isto foi medido, não suposto: a
+# `priority.session` do nó de som é BAIXA de propósito (decisão dela,
+# `D-0609-O-NO-DE-SOM-VIVE-COM-O-CONTROLE`, em `integrations/alto_falante_bt`),
+# o nó do controle nunca vira a saída padrão sozinho, e o único
+# `pactl set-default-sink` do produto é o gesto dela na aba
+# (`app/audio_saida`). Nó que nunca toma o destino não deixa buraco ao morrer.
+
+
+#: O que o PipeWire devolve quando NÃO há escolha que signifique alguma coisa:
+#: o nó de escassez e as referências indiretas. Mesma régua de
+#: `integrations.eleicao_de_microfone.fonte_ativa`, aplicada aqui ao nome CRU
+#: porque este caminho precisa distinguir *vazio* de *monitor* — e aquela
+#: função, de propósito, devolve `None` para os dois.
+_NADA_DO_PIPEWIRE = ("auto_null", "@")
+
+#: O sufixo que faz de um nó um MONITOR. No PipeWire ele é do NÓ, não uma
+#: heurística de nome — é a mesma régua que `scripts/doctor.sh` usa para
+#: classificar a fonte padrão nas três palavras.
+_SUFIXO_DE_MONITOR = ".monitor"
+
+#: Quanto se espera pelo `pactl` deste caminho. O mesmo orçamento curto do
+#: resto da casa: servidor que não atende é ausência, e ausência é resposta.
+_TIMEOUT_DO_PACTL_S = 3.0
+
+#: Os cinco desfechos de :func:`a_heranca_do_no_morto`. `nenhum` é o caso bom.
+BURACO_NENHUM = "nenhum"
+BURACO_MONITOR = "monitor"
+BURACO_FANTASMA = "fantasma"
+BURACO_VAZIO = "vazio"
+BURACO_NAO_SEI = "nao_sei"
+
+
+@dataclass(frozen=True)
+class HerancaDoNoMorto:
+    """O veredicto sobre a fonte padrão DEPOIS de um nó nosso morrer.
+
+    `eleito` é o nome que FICOU no lugar — e ele existe para a régua e para o
+    journal poderem NOMEÁ-LO. Uma denúncia que não diz qual nó herdou a
+    eleição obriga a próxima pessoa a remedir o que já foi medido.
+    """
+
+    buraco: str
+    eleito: str | None
+    motivo: str
+
+    @property
+    def aberto(self) -> bool:
+        """Há o que devolver? `nao_sei` NUNCA conta como buraco."""
+        return self.buraco in (BURACO_MONITOR, BURACO_FANTASMA, BURACO_VAZIO)
+
+
+def a_heranca_do_no_morto(
+    bruto: str | None, *, morreram: frozenset[str]
+) -> HerancaDoNoMorto:
+    """Classifica a fonte padrão de agora. Função PURA — não lê nada.
+
+    `bruto` é o nome CRU de `pactl get-default-source`: `None` quando não deu
+    para perguntar, `""` quando a resposta foi vazia. A diferença entre os dois
+    é a regra desta casa — *"não sei" nunca vira "saiu"* —, e sem ela um
+    `pactl` que estoura o prazo viraria uma devolução disparada às cegas.
+
+    `morreram` são os nomes dos nós que ESTE processo segurava e não segura
+    mais. Uma escolha apontada para um deles é FANTASMA: o
+    `default.configured.audio.source` do WirePlumber continua pedindo um nó que
+    não existe, e é por aí que a eleição automática entra e o monitor vence (a
+    causa está escrita em `scripts/doctor.sh`, FONTE-PADRAO-01).
+    """
+    if bruto is None:
+        return HerancaDoNoMorto(
+            BURACO_NAO_SEI, None, "não deu para ler a fonte padrão — não mexo às cegas"
+        )
+    nome = bruto.strip()
+    if not nome:
+        return HerancaDoNoMorto(
+            BURACO_VAZIO, None, "a máquina ficou sem fonte padrão depois de o nó morrer"
+        )
+    baixa = nome.lower()
+    if baixa.startswith(_NADA_DO_PIPEWIRE):
+        return HerancaDoNoMorto(
+            BURACO_VAZIO, nome, f"{nome} não é microfone nenhum — é o nó de escassez"
+        )
+    if baixa.endswith(_SUFIXO_DE_MONITOR):
+        return HerancaDoNoMorto(
+            BURACO_MONITOR,
+            nome,
+            f"{nome} é um MONITOR: quem gravar pela fonte padrão capta o som "
+            "que SAI, e o medidor mostra sinal",
+        )
+    if nome in morreram:
+        return HerancaDoNoMorto(
+            BURACO_FANTASMA, nome, f"{nome} morreu e a escolha gravada ainda o pede"
+        )
+    return HerancaDoNoMorto(BURACO_NENHUM, nome, "")
+
+
+def fonte_padrao_crua(rodar: Any = None) -> str | None:
+    """`pactl get-default-source` CRU — o nome, `""` ou `None`.
+
+    **Por que um leitor aqui, e por que ele não é uma segunda régua.** Quem
+    classifica é :func:`a_heranca_do_no_morto`, que é pura; isto só busca o
+    dado. `eleicao_de_microfone.fonte_ativa` não serve para este caminho
+    porque ela devolve `None` tanto para o monitor quanto para o vazio — e a
+    sprint inteira depende de separar os dois: vazio é o desfecho CERTO quando
+    não há microfone real; monitor é o defeito.
+
+    `LC_ALL=C` obrigatório: sem ele o `pactl` desta casa traduz, e o leitor
+    fica cego sobre aparelho de pé. Nunca levanta — ausência é resposta.
+    """
+    if rodar is not None:
+        try:
+            resposta = rodar()
+        except Exception:  # best-effort: o dublê não derruba o laço
+            logger.debug("bt_mic_fonte_padrao_dublada_falhou", exc_info=True)
+            return None
+        # O dublê é `Any`, e o que sai daqui tem contrato. Um dublê que
+        # devolva outra coisa vale como ausência, que é o lado seguro.
+        return resposta if resposta is None or isinstance(resposta, str) else None
+    exe = shutil.which("pactl")
+    if exe is None:
+        return None
+    try:
+        proc = subprocess.run(  # argv fixo, sem shell
+            [exe, "get-default-source"],
+            capture_output=True,
+            text=True,
+            timeout=_TIMEOUT_DO_PACTL_S,
+            env={**os.environ, "LC_ALL": "C"},
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    return (proc.stdout or "").strip()
+
+
 class BtMicSubsystem:
     """Mantém o canal de captura de cada DualSense cujo canal alguém procura."""
 
@@ -549,6 +721,19 @@ class BtMicSubsystem:
         #: derrubar o do vizinho pelas costas do dono é o defeito que
         #: `PonteMicBluetooth._fechar_a_source` já nomeia do outro lado.
         self._canais_do_cabo: dict[str, str] = {}
+        #: Os NOMES de nó que este processo segurava no fim da volta anterior —
+        #: SOM-PAINEL-01. O que sumir daqui para a volta de agora é o nó que
+        #: MORREU, e é ele que abre o buraco da fonte padrão.
+        #:
+        #: Nasce VAZIO, e isso já é a guarda da partida: `vazio - qualquer
+        #: coisa` é vazio, então a primeira volta não acusa óbito nenhum. O
+        #: daemon que sobe com o servidor já apontado para um monitor não
+        #: dispara devolução — aquele monitor não foi nó nosso que caiu, e
+        #: mexer nele seria tirar da pessoa uma escolha que não é nossa.
+        #: (Uma sentinela `None` para "ainda não houve volta" foi escrita
+        #: aqui e ARRANCADA na mordida de 20/09: ela não mudava desfecho
+        #: nenhum, e a justificativa que a acompanhava era falsa.)
+        self._de_pe_antes: frozenset[str] = frozenset()
 
     # -- contrato Subsystem ----------------------------------------------
 
@@ -1052,6 +1237,12 @@ class BtMicSubsystem:
                 # mesmo nome, e um canal em pleno renascimento é exatamente o
                 # que o varredor leria como órfão.
                 self._renomear_os_canais_velhos()
+                # E A FONTE PADRÃO POR ÚLTIMO — SOM-PAINEL-01. Depois do
+                # renomeador de propósito: renomear é REPUBLICAR sob o mesmo
+                # nome, e um canal em pleno renascimento seria lido aqui como
+                # nó MORTO. Comparado com a volta anterior no MESMO ponto do
+                # ciclo, quem sumiu sumiu de verdade.
+                self._devolver_a_fonte_padrao()
             except Exception as exc:  # nunca derruba a thread
                 logger.debug("bt_mic_reconciliacao_falhou", err=str(exc))
             if self._dormir(gerenciador):
@@ -1403,6 +1594,101 @@ class BtMicSubsystem:
                     nomes.add(nome)
         return frozenset(nomes)
 
+    # -- SOM-PAINEL-01: a fonte padrão depois da morte --------------------
+
+    def _eleitor_da_sessao(self) -> Any:
+        """O `EleitorDeMicrofone` DESTA sessão do daemon — ou `None`.
+
+        **UMA PORTA SÓ, e é por isso que este método importa de `hotkey`.** O
+        eleitor guarda a fonte padrão de antes da primeira eleição
+        (`guardar_anterior`) e de quem é o canal da mesa agora. Um segundo
+        eleitor criado aqui teria memória própria e os dois se contradiriam: a
+        luz do plástico diria uma coisa e a fonte padrão, outra. O
+        `hotkey._eleitor` é o dono dessa instância — ele a pendura no daemon e
+        a reusa —, então perguntar a ele é o que garante que só existe uma.
+
+        Sem daemon (teste que constrói o subsystem solto) não há sessão, e a
+        resposta é `None`: não se elege nada a partir do nada.
+        """
+        daemon = self._daemon
+        if daemon is None:
+            return None
+        try:
+            from hefesto_dualsense4unix.daemon.subsystems.hotkey import _eleitor
+
+            return _eleitor(daemon)
+        except Exception:  # best-effort: o laço nunca cai por causa disto
+            logger.debug("bt_mic_eleitor_da_sessao_ilegivel", exc_info=True)
+            return None
+
+    def _devolver_a_fonte_padrao(
+        self, *, ler: Any = None, eleitor: Any = None
+    ) -> HerancaDoNoMorto | None:
+        """Fecha o buraco que o nó MORTO deixa na fonte padrão do sistema.
+
+        O gatilho é a MORTE, e não o relógio: compara os nomes que este
+        processo segurava no fim da volta anterior com os de agora. Sem óbito
+        não há pergunta, e o `pactl` não é chamado — um laço que interrogasse o
+        servidor a cada cinco segundos pagaria o preço de um defeito que só
+        existe no instante em que o nó cai.
+
+        **A ESCOLHA NÃO É DAQUI.** Quem elege é o eleitor da sessão, com as
+        réguas dele: a fonte tem de se sustentar, a escrita é conferida pela
+        RELEITURA do ativo (ADR-019), e `melhor_fonte_elegivel` nunca devolve
+        um `.monitor`. Este método não digita nome de alvo nenhum — é o que
+        impede um caminho nosso de terminar num monitor.
+
+        **E QUANDO NÃO HÁ PARA ONDE VOLTAR, a recusa vira frase.** Foi o caso
+        medido nesta bancada: o único microfone dela é o do DualSense, e com o
+        controle fora da mesa não sobra fonte de captura com porta usável. Aí o
+        eleitor recusa, nada é escrito, e o que fica no journal é o NOME do nó
+        que herdou a eleição — porque uma denúncia sem o nome obriga a próxima
+        pessoa a remedir o que já foi medido.
+
+        Devolve o veredicto (`None` quando não houve óbito), para a régua.
+        """
+        de_pe = self._nomes_de_pe()
+        antes = self._de_pe_antes
+        self._de_pe_antes = de_pe
+        morreram = antes - de_pe
+        if not morreram:
+            return None
+        heranca = a_heranca_do_no_morto(fonte_padrao_crua(ler), morreram=morreram)
+        if not heranca.aberto:
+            logger.debug(
+                "bt_mic_heranca_sem_buraco",
+                buraco=heranca.buraco,
+                eleito=heranca.eleito,
+                morreram=sorted(morreram),
+            )
+            return heranca
+        dono = eleitor if eleitor is not None else self._eleitor_da_sessao()
+        if dono is None:
+            logger.warning(
+                "bt_mic_heranca_sem_eleitor",
+                buraco=heranca.buraco,
+                eleito=heranca.eleito,
+                morreram=sorted(morreram),
+                motivo=heranca.motivo,
+            )
+            return heranca
+        resultado: Any = None
+        try:
+            resultado = dono.devolver_o_microfone()
+        except Exception:  # best-effort: a devolução nunca derruba o laço
+            logger.warning("bt_mic_heranca_devolucao_falhou", exc_info=True)
+        logger.warning(
+            "bt_mic_heranca_do_no_morto",
+            buraco=heranca.buraco,
+            eleito=heranca.eleito,
+            morreram=sorted(morreram),
+            motivo=heranca.motivo,
+            curado=bool(getattr(resultado, "ok", False)),
+            alvo=getattr(resultado, "alvo", None),
+            recusa=getattr(resultado, "motivo", ""),
+        )
+        return heranca
+
 
 class VarredorDeCanaisOrfaos:
     """Derruba o `module-pipe-source` desta casa que ficou no servidor sem dono.
@@ -1502,12 +1788,20 @@ class VarredorDeCanaisOrfaos:
 
 
 __all__ = [
+    "BURACO_FANTASMA",
+    "BURACO_MONITOR",
+    "BURACO_NAO_SEI",
+    "BURACO_NENHUM",
+    "BURACO_VAZIO",
     "ENV_HABILITA",
     "PEDIDOS",
     "RECONCILIA_S",
     "BtMicSubsystem",
+    "HerancaDoNoMorto",
     "RegistroDePedidosDeCanal",
     "VarredorDeCanaisOrfaos",
+    "a_heranca_do_no_morto",
+    "fonte_padrao_crua",
     "habilitado_por_env",
     "uniqs_declarados",
     "uniqs_negados",
