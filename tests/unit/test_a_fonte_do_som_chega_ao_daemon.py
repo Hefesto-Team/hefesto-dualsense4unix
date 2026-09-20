@@ -264,3 +264,106 @@ def test_um_daemon_sem_o_subsystem_responde_em_vez_de_quebrar() -> None:
     corpo = _pedir(h, uniq=P1, fonte=FONTE_MIX)
 
     assert corpo["status"] == "sem_controle" and "fonte" not in corpo
+
+
+# ---------------------------------------------------------------------------
+# A ORDEM DAS DUAS METADES — o comentário afirmava, e faltava a régua
+# ---------------------------------------------------------------------------
+#
+# `_handle_speaker_set` põe a `fonte` ANTES do bloco de volume, e diz por quê
+# por extenso: *"ela vem antes do bloco de volume para que uma recusa de posse
+# não deixe a escolha da camada 1 pelo caminho"*. Medido em 20/09/2026,
+# movendo a recusa da SOM-02 para cima da `fonte`: **161 réguas verdes**. A
+# afirmação estava no arquivo e não estava em régua nenhuma — que é a forma de
+# comentário que esta casa já viu envelhecer sozinho.
+
+
+class _SemVolumeConhecido(_Backend):
+    """O controle que nunca recebeu um `speaker.set` de volume.
+
+    `speaker_state_for` devolvendo `None` é a resposta HONESTA do produto até
+    a primeira escrita: o registrador de volume não tem caminho de leitura, e
+    publicar um número ali seria inventá-lo (AUDIO-OWNER-01).
+    """
+
+    def speaker_state_for(self, uniq: Any) -> dict[str, Any] | None:
+        return None
+
+
+def test_a_recusa_da_posse_nao_leva_a_escolha_da_camada_1_junto(
+    sub: AltoFalanteSubsystem,
+) -> None:
+    """Ela escolhe a fonte e o mudo no mesmo clique; o mudo é recusado.
+
+    A recusa é a armadilha 2 da SOM-02, e ela é CERTA: mudo como primeira
+    escrita tranca o alto-falante em zero e o próprio mudo não o solta. O que
+    não pode acontecer é a camada 1 morrer junto — são dois pedidos
+    independentes no mesmo payload, como a `rota` e o `volume` já eram.
+
+    MORDIDA: mova a guarda do `sem_volume_conhecido` para antes do bloco da
+    `fonte`. O `ValueError` continua igual, a mensagem continua igual, e a
+    escolha dela some no caminho sem uma palavra.
+    """
+    h = _Handlers(sub)
+    h.controller = _SemVolumeConhecido()  # type: ignore[assignment]
+
+    with pytest.raises(ValueError, match="sem volume conhecido"):
+        _pedir(h, uniq=P1, fonte=FONTE_MIX, muted=True)
+
+    assert sub.fonte_escolhida(P1) == FONTE_MIX, (
+        "a recusa da posse do volume levou a escolha da camada 1 junto")
+    assert h.controller.escritas == [], (
+        f"o pedido recusado escreveu no aparelho assim mesmo: "
+        f"{h.controller.escritas}")
+
+
+def test_o_byte_recusado_tambem_nao_leva_a_fonte(
+    sub: AltoFalanteSubsystem,
+) -> None:
+    """O firmware diz não; o nó continua ouvindo o que ela escolheu.
+
+    A camada 2 pode recusar por mil razões que não são dela — controle que
+    caiu, backend sem suporte, posse não assumida. Fazer a camada 1 depender
+    disso é atar o PipeWire ao hidraw, que é a separação que esta fileira
+    inteira existe para manter.
+
+    MORDIDA: devolva antes do bloco do backend quando `ok` for falso, sem pôr
+    `fonte` no corpo.
+    """
+
+    class _Recusa(_Backend):
+        def set_speaker_volume(self, volume: Any, **k: Any) -> bool:
+            self.escritas.append({"volume": volume, **k})
+            return False
+
+    h = _Handlers(sub)
+    h.controller = _Recusa()  # type: ignore[assignment]
+
+    corpo = _pedir(h, uniq=P1, fonte=FONTE_MIX, volume=102, rota=3)
+
+    assert corpo["status"] == "sem_controle", "a cena não reproduz a recusa"
+    assert corpo["fonte"] == FONTE_MIX, (
+        f"a resposta escondeu a camada 1 que ficou valendo: {corpo}")
+    assert sub.fonte_escolhida(P1) == FONTE_MIX
+
+
+def test_um_valor_de_fonte_recusado_para_antes_de_tocar_o_aparelho(
+    sub: AltoFalanteSubsystem,
+) -> None:
+    """A validação da `fonte` é ANTES de qualquer escrita, e não depois.
+
+    Um payload com a fonte errada e um volume certo não pode deixar o volume
+    aplicado e a chamada em erro: quem lê o `ValueError` conclui que nada
+    aconteceu.
+
+    MORDIDA: mova a conferência de `fonte` para junto de `_speaker_fonte`,
+    depois das outras validações.
+    """
+    h = _Handlers(sub)
+
+    with pytest.raises(ValueError, match="'fonte' precisa ser"):
+        _pedir(h, uniq=P1, fonte="hdmi", volume=102)
+
+    assert h.controller.escritas == [], (
+        f"o volume foi aplicado sob um pedido que o handler recusou: "
+        f"{h.controller.escritas}")
