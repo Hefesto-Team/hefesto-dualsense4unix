@@ -781,6 +781,9 @@ class Daemon:
     # SEM opt-in, ao contrário do `bt_mic`: um alto-falante não escuta, e a
     # privacidade não entra nesta conta. Ver `_start_alto_falante`.
     _alto_falante_subsystem: Any = None
+    # CONEXAO-ZUMBI-01: ConexoesSubsystem (o vigia do link que conecta e não
+    # vira controle) ou None. LIGADO por default — ver `_start_conexoes`.
+    _conexoes_subsystem: Any = None
     # BUG-DAEMON-NO-DEVICE-FATAL-01 — task de probe de conexão em background
     # (substitui connect_with_retry bloqueante no boot). Cancelada em shutdown.
     _reconnect_task: asyncio.Task[Any] | None = None
@@ -1095,6 +1098,13 @@ class Daemon:
             # na ordem inversa o som cai antes do IPC — o mesmo motivo do
             # `bt_mic`, do outro lado do áudio.
             await self._safe_start("alto_falante", self._start_alto_falante)
+            # CONEXAO-ZUMBI-01: o vigia do link que conecta e NÃO vira
+            # controle. Sobe depois do som porque não depende de nada do
+            # daemon — lê o sysfs e o BlueZ por conta própria — e porque, na
+            # ordem inversa, cai antes do IPC: o último a olhar a mesa não pode
+            # ser o primeiro a acordar num daemon que já está se desmontando.
+            # O nome do subsystem é ASCII, como o dos irmãos.
+            await self._safe_start("conexoes", self._start_conexoes)  # (noqa-acento)
             await self._safe_start("plugins", self._start_plugins)
             # FEAT-METRICS-01: sobe o servidor de métricas Prometheus (gate
             # interno respeita metrics_enabled). Antes nunca era iniciado —
@@ -4099,6 +4109,47 @@ class Daemon:
         if self._alto_falante_subsystem is not None:
             subsystem = self._alto_falante_subsystem
             self._alto_falante_subsystem = None
+            await subsystem.stop()
+
+    async def _start_conexoes(self) -> None:
+        """Sobe o vigia das conexões de rádio (CONEXAO-ZUMBI-01).
+
+        LIGADO POR DEFAULT, e isso é a ordem dela de 18/09/2026: *"o produto
+        precisa ser inteligente pra evitar problemas como esse"*. O gate mora
+        dentro do subsystem (`is_enabled`), e só a variável de ambiente
+        `HEFESTO_DUALSENSE4UNIX_CONEXAO_ZUMBI=0` o desliga.
+
+        Espelha `_start_alto_falante`: um erro aqui vira
+        `_failed_subsystems` deste vigia pelo `_safe_start` do chamador, e o
+        boot segue. Um vigia que não sobe não pode derrubar a mesa.
+        """
+        from hefesto_dualsense4unix.daemon.context import DaemonContext
+        from hefesto_dualsense4unix.daemon.subsystems.conexoes import (
+            ConexoesSubsystem,
+        )
+
+        vigia = ConexoesSubsystem()
+        if not vigia.is_enabled(self.config):
+            return
+        ctx = DaemonContext(
+            controller=self.controller,
+            bus=self.bus,
+            store=self.store,
+            config=self.config,
+            executor=self._executor,
+        )
+        await vigia.start(ctx)
+        self._conexoes_subsystem = vigia
+
+    async def _stop_conexoes(self) -> None:
+        """Para o vigia das conexões. Idempotente.
+
+        Sem isto a thread do vigia continua olhando a mesa — e chamando `sudo`
+        — depois de o daemon ter morrido.
+        """
+        if self._conexoes_subsystem is not None:
+            subsystem = self._conexoes_subsystem
+            self._conexoes_subsystem = None
             await subsystem.stop()
 
     async def _stop_bt_mic(self) -> None:

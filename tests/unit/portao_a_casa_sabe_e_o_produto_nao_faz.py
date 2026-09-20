@@ -639,6 +639,18 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
 #: querer. Cada um precisa de UMA porta que o ligue — ou de uma lacuna
 #: declarada em ``_SEM_MAO_HOJE``.
 _PROMESSA_DE_AMBIENTE: dict[str, str] = {
+    "HEFESTO_DUALSENSE4UNIX_CONEXAO_ZUMBI": (
+        "A chave que DESLIGA o vigia das conexões de rádio "
+        "(daemon/subsystems/conexoes.py). É promessa dela, de 18/09/2026: "
+        "«o produto precisa ser inteligente pra evitar problemas como esse» "
+        "— o link que conecta e não vira controle deixa o DualSense no "
+        "padrão de fábrica, barra azul e jogador 1. Por isso ela nasce "
+        "LIGADA e a chave só serve para desligar: `is_enabled` devolve True "
+        "quando a variável não existe, e o `_safe_start` do `run()` sobe o "
+        "vigia. MEDIDO em 20/09/2026: ausente do ambiente = ligada, e o "
+        "vigia leu a mesa dela (três links em dois adaptadores, quatro "
+        "controles com hidraw) acusando ZERO zumbis."
+    ),
     "HEFESTO_BROKER_ALLOWED_UID": (
         "Qual UID pode falar com o broker de hidraw (broker/hidraw_broker.py:76). "
         "É promessa de sistema: sem ela o broker não serve a sessão dela. "
@@ -714,6 +726,20 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
 #: próprio não é uma promessa sem caminho. Companheiro que apodrecer derruba a
 #: env junto.
 _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
+    "HEFESTO_DUALSENSE4UNIX_CONEXAO_ZUMBI": (
+        "daemon/subsystems/conexoes.py::ConexoesSubsystem",
+        "A MÃO É O DEFAULT, e por isso não há porta que LIGUE esta chave: "
+        "o vigia das conexões nasce de pé. `ConexoesSubsystem.is_enabled` "
+        "devolve True quando a variável não existe no ambiente, e o "
+        "`_safe_start` do `Daemon.run()` o sobe — a classe está no "
+        "`SUBSYSTEM_REGISTRY` e tem chamador em produção. A env só serve "
+        "para DESLIGAR, e uma chave que só desliga não pode exigir quem a "
+        "ligue: procurar por ela em `assets/` ou no `install.sh` seria "
+        "medir a ausência de um `Environment=` que, se existisse, mataria a "
+        "feature. Decisão dela, 18/09/2026: «o produto precisa ser "
+        "inteligente pra evitar problemas como esse» — nada que nasça "
+        "desligado cura o controle que conecta e não vira controle.",
+    ),
     "HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION": (
         "utils/session.py::save_keyboard_emulation",
         "MEDIDO em 12/08/2026: a env é o degrau do MEIO de uma precedência de "
@@ -1254,6 +1280,18 @@ _NAO_E_PROMESSA: dict[str, str] = {
 #: No dia em que o caminho nascer, a entrada deixa de bater com a árvore e
 #: ``test_a_lista_de_lacunas_nao_envelhece_calada`` cobra que ela seja apagada.
 _SEM_CAMINHO_HOJE: dict[str, str] = {
+    "daemon/subsystems/conexoes.py::ler_o_diario":
+        "A boca do DIZER da CONEXAO-ZUMBI-01. O vigia GRAVA o que aconteceu "
+        "(`_gravar_o_diario`, chamado a cada volta), e esta é a leitura do "
+        "outro lado — a que a aba Conexões usa para mostrar o recado com o "
+        "gesto, em vez de uma recusa seca. ONDE O CAMINHO SE PERDE: a aba "
+        "(`interface/pacotes/a08_conexoes.py`) está FORA da posse desta "
+        "sprint, cuja posse são três arquivos — `scripts/"
+        "bt_ponte_privilegiada.sh`, `integrations/conexao_zumbi.py` e este "
+        "subsystem. O QUE O FECHARIA: uma linha na aba que chame esta "
+        "função e pinte o `diario` do arquivo, que é a terceira camada da "
+        "sprint (VER, CURAR, DIZER). O dado já está no disco desde "
+        "18/09/2026; falta quem o leia na tela.",
     "integrations/haptica_bt.py::bloco_de_silencio":
         "Irmã da entrada acima, mesma sprint e mesma lacuna: o bloco zerado é "
         "o que a ponte manda quando o jogo cala, e é a MORDIDA da bancada — "

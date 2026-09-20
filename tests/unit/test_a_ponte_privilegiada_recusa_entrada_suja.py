@@ -246,6 +246,11 @@ def test_mac_sujo_e_recusado(arvore: Path, sujo: str) -> None:
         ("descobrir", sujo, "5"),
         ("parear", sujo, CONTROLE),
         ("parear", ADAPTADOR, sujo),
+        # CONEXAO-ZUMBI-01: o verbo que derruba um link. Ele é o mais perigoso
+        # da lista para receber MAC sujo — não apaga arquivo, mas CORTA o rádio
+        # de alguém, e do outro lado do sudo.
+        ("desconectar", sujo, CONTROLE),
+        ("desconectar", ADAPTADOR, sujo),
         ("renomear", sujo),
     ):
         resultado = _rodar(arvore, *args, entrada="Rack 1\n")
@@ -340,6 +345,8 @@ def test_argumento_a_mais_e_recusado(arvore: Path) -> None:
         ("esquecer", ADAPTADOR, CONTROLE, "extra"),
         ("descobrir", ADAPTADOR),
         ("parear", ADAPTADOR),
+        ("desconectar", ADAPTADOR),
+        ("desconectar", ADAPTADOR, CONTROLE, "extra"),
         ("regra-sudo",),
     ):
         resultado = _rodar(arvore, *tentativa)
@@ -389,14 +396,16 @@ def test_a_raiz_de_teste_nao_fala_com_o_barramento_real(arvore: Path) -> None:
     """Com raiz desviada, os verbos que MEXEM no adaptador ficam inertes.
 
     A suíte roda estes scripts de verdade, na máquina dela, com quatro DualSense
-    e um Pro no rádio. `renomear`, `descobrir` e `parear` mexem no adaptador —
-    bastaria um MAC de teste coincidir com um adaptador vivo para um portão
-    derrubar a mesa dela no meio de uma partida.
+    e um Pro no rádio. `renomear`, `descobrir`, `parear` e `desconectar` mexem
+    no adaptador — bastaria um MAC de teste coincidir com um adaptador vivo
+    para um portão derrubar a mesa dela no meio de uma partida. E o
+    `desconectar` (CONEXAO-ZUMBI-01) é o que mais dói: ele CORTA um link.
     """
     for args in (
         ("renomear", ADAPTADOR),
         ("descobrir", ADAPTADOR, "1"),
         ("parear", ADAPTADOR, CONTROLE),
+        ("desconectar", ADAPTADOR, CONTROLE),
     ):
         resultado = _rodar(arvore, *args, entrada="Rack 1\n")
         assert resultado.returncode == 1, f"{args}: rc={resultado.returncode}"
