@@ -207,7 +207,13 @@ TTL_S = 20.0
 #: Quanto tempo o "posso fechar a Steam?" fica ARMADO depois do primeiro
 #: clique. Ver :func:`fechar_a_steam_e_repor` — é o consentimento que
 #: `with_steam_closed` EXIGE de quem a chama, na forma que uma página tem.
-SEGUNDOS_PARA_CONFIRMAR = 20.0
+#:
+#: O DONO MUDOU DE CASA em 20/09/2026: o número mora em
+#: `pacotes/confirmacao.SEGUNDOS_PARA_CONFIRMAR`, e esta aba o REEXPORTA junto
+#: com o resto do consentimento (ver o bloco de import mais abaixo). O nome
+#: continua aqui porque `a09_sistema.segundos_para_confirmar()` o lê por este
+#: endereço, e `test_a_09_sistema_confirma_em_dois_cliques` trava as duas
+#: pontas — trocar o endereço agora seria mexer numa aba que não é desta posse.
 
 #: O `abrir-lancador` SAIU DAQUI em 03/09/2026 — decisão 17 dela, e o motivo
 #: escrito nesta linha era a pergunta errada: *"o daemon não tem método para
@@ -985,99 +991,41 @@ CONFIRMA_A_STEAM = "Fechar e continuar"
 #: CARONA (`perfil.com_a_carona`, que o Salvar e o Aplicar já chamam), e quem a
 #: constrói é a LANCADOR-CARONA-01.
 
-#: QUAL GESTO ESTÁ ARMADO E ATÉ QUANDO (`time.monotonic`). Vazio = nenhum.
+#: O CONSENTIMENTO DE DOIS TEMPOS MUDOU DE CASA — STEAM-INPUT-01, 20/09/2026.
 #:
-#: ERA UM FLOAT SÓ, e virou dicionário em 06/09/2026 com a `STEAM-INPUT-01`:
-#: passaram a existir TRÊS botões que fecham a Steam nesta aba, e um relógio
-#: único faria o consentimento de um valer para o outro — clicar em "Posso
-#: fechar a Steam?" e confirmar em "Deixar tudo pronto" rodaria o segundo com o
-#: sim dado ao primeiro. **O consentimento é do ATO, nunca da aba.**
+#: Aqui moravam `_ARMADO`, `_armado_agora`, `_armar`, `_desarmar`, `_confirmo` e
+#: `_este_clique_confirma`, privados desta aba — e privado bastava enquanto UMA
+#: aba fechava a Steam. O chip «Steam Input» da aba Jogar nasceu precisando do
+#: mesmo mecanismo, e as duas saídas erradas estavam nomeadas: importar o
+#: símbolo PRIVADO daqui, ou reescrever a conta lá. A terceira cópia é sempre a
+#: mais frouxa, e é o que o docstring de `este_clique_confirma` já dizia.
 #:
-#: UM POR VEZ, e é de propósito: armar um DESARMA o outro. Dois consentimentos
-#: pendurados ao mesmo tempo é tela guardando duas promessas dela sobre a mesma
-#: Steam, e a segunda confirmação não teria como dizer a qual respondia.
-_ARMADO: dict[str, float] = {}
-
-
-def _armado_agora() -> str:
-    """O gesto armado NESTE instante, ou `""` — e ele desarma sozinho no tempo.
-
-    O relógio é LIDO aqui, e não guardado num `bool`: um `bool` armado por um
-    clique que ninguém confirmou continuaria armado depois de a janela passar,
-    e o segundo clique de dez minutos depois valeria como consentimento. É a
-    mesma conta que `a09_sistema._armado_agora` faz, com o mesmo dono do
-    número (:data:`SEGUNDOS_PARA_CONFIRMAR`).
-    """
-    for nome, ate in list(_ARMADO.items()):
-        if time.monotonic() >= ate:
-            del _ARMADO[nome]
-    return next(iter(_ARMADO), "")
-
-
-def _armar(nome: str) -> None:
-    """Arma UM gesto e desarma o que estivesse — ver :data:`_ARMADO`."""
-    _ARMADO.clear()
-    _ARMADO[nome] = time.monotonic() + SEGUNDOS_PARA_CONFIRMAR
-
-
-def _desarmar(nome: str = "") -> None:
-    """Desarma um gesto (ou todos, sem nome)."""
-    if nome:
-        _ARMADO.pop(nome, None)
-    else:
-        _ARMADO.clear()
-
-
-def _confirmo(nome: str) -> str:
-    """O `data-v` que **só existe no botão já armado** daquele gesto.
-
-    ELE É POR GESTO, e é o primeiro dos dois guardas: um `"steam:confirmo"`
-    único faria o botão armado de um ato confirmar o outro, que é justamente o
-    que :data:`_ARMADO` deixou de permitir do lado do relógio.
-    """
-    return f"{nome}:confirmo"
-
+#: **E A ABA JOGAR NÃO O USA — medido, e está em `a01_jogar._reconciliar_o_vdf`.**
+#: O botão desta aba é REDESENHADO a cada tique (`_botao_armavel`) e troca de
+#: rótulo para «Fechar e continuar»; o chip da 01 é um `<span>` estático, sem
+#: rótulo para trocar e sem `data-v` para carregar. A extração fica porque o
+#: dono passou a ser único e público — a próxima aba que precisar não vai ter
+#: de inventá-lo, e `test_steam_input_01_o_chip_que_acende_por_jogo` reprova a
+#: cópia no dia em que ela nascer.
+#:
+#: **ZERO MUDANÇA DE COMPORTAMENTO:** são as MESMAS funções e o MESMO `_ARMADO`
+#: — as linhas abaixo dão a elas o nome privado que esta aba e as réguas dela já
+#: usam. Um `_ARMADO` por aba seria DOIS relógios sobre a mesma Steam.
+# A REEXPORTAÇÃO É EXPLÍCITA (`X as X`), e não é estilo: o `mypy` em modo
+# `strict` recusa ler um nome importado como parte da interface do módulo
+# sem ela, e `a09_sistema` lê `a07_lancadores.SEGUNDOS_PARA_CONFIRMAR`.
+from .confirmacao import (  # noqa: E402
+    SEGUNDOS_PARA_CONFIRMAR as SEGUNDOS_PARA_CONFIRMAR,
+)
+from .confirmacao import armado_agora as _armado_agora  # noqa: E402
+from .confirmacao import armar as _armar  # noqa: E402,F401
+from .confirmacao import confirmo as _confirmo  # noqa: E402
+from .confirmacao import desarmar as _desarmar  # noqa: E402,F401
+from .confirmacao import este_clique_confirma as _este_clique_confirma  # noqa: E402
 
 #: O `data-v` do "Posso fechar a Steam?" já armado. ERA `"steam:confirmo"`
 #: cravado, e virou derivado em 06/09/2026 pela razão de :func:`_confirmo`.
 CONFIRMO = _confirmo(FECHAR)
-
-
-def _este_clique_confirma(nome: str, o: dict[str, Any]) -> bool:
-    """Este clique é a CONFIRMAÇÃO? Quando não é, ARMA o botão e devolve `False`.
-
-    OS DOIS GUARDAS SÃO INDEPENDENTES DE PROPÓSITO, e a razão está escrita em
-    :func:`fechar_a_steam_e_repor`, que os inventou:
-
-    1. o clique tem de trazer `_confirmo(nome)` no `data-v` — um valor que
-       **só existe no cartão já armado**, escrito por :func:`_botao_armavel`;
-    2. e tem de chegar dentro de :data:`SEGUNDOS_PARA_CONFIRMAR`.
-
-    O PRIMEIRO É O QUE SEGURA A RÉGUA AUTOMÁTICA: a `--prova-gesto` clica o que
-    o DOM tinha, e o DOM tinha a pergunta. Um guarda só bastaria hoje; dois é o
-    que sobrevive a uma régua que releia o DOM entre cliques.
-
-    FORA DO PRAZO ELE LEVANTA, em vez de agir ou de rearmar calado: a frase vai
-    para a tela pelo caminho do `RuntimeError`, e o tique seguinte repõe a
-    pergunta. Rearmar calado deixaria a tela dizendo "Fechar e continuar" sobre
-    um consentimento que já tinha vencido.
-
-    EXTRAÍDO EM 06/09/2026, e não é arrumação: o `fechar_a_steam_e_repor`
-    guardava esta conta dentro de si, e os dois botões novos do Steam Input
-    precisam da MESMA. Três cópias do consentimento que fecha a Steam dela é
-    exatamente onde uma delas ficaria mais frouxa que as outras.
-    """
-    if str(o.get("v") or "").strip() != _confirmo(nome):
-        _armar(nome)
-        return False
-    armado = _armado_agora() == nome
-    _desarmar(nome)
-    if not armado:
-        # O NÚMERO DE SEGUNDOS NÃO MUDA O QUE ELA FAZ — A2-056, 11/09/2026.
-        # 96 → 63.
-        raise RuntimeError(
-            "Passou do tempo e não fechei nada. Clique de novo para começar.")
-    return True
 
 
 # ---------------------------------------------------------------------------
