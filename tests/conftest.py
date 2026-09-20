@@ -3284,3 +3284,206 @@ def _recuo_do_pactl_zerado() -> Iterator[None]:
         yield
     finally:
         dualsense_bt_audio.PACTL.zerar()
+
+
+# ---------------------------------------------------------------------------
+# INSUMO-FORA-DO-GIT-01 (20/09/2026) — a régua é versionada, o insumo dela não
+# ---------------------------------------------------------------------------
+#
+# MEDIDO, e é o que derruba a esteira dos pacotes: `docs/process/` é
+# `.gitignore:178` por decisão dela, e o bloco `.gitignore:189-195` tirou do
+# repositório o despacho e a costura de leva — `check_colisao_de_sprints.py`
+# entre eles. O `release.yml` roda `pytest tests/unit` num CLONE LIMPO, onde
+# nada disso existe: as réguas versionadas cujo insumo saiu junto reprovam por
+# AMBIENTE, e a esteira que gera os pacotes para outros computadores cai aí.
+#
+# Reprovar por ambiente é pior do que parecer: lê-se como regressão. Três vezes
+# nesta casa um laudo de agente acusou "regressão" sobre uma árvore recém-criada
+# a que ninguém tinha copiado os ignorados.
+#
+# A CURA É UM MARCADOR SÓ, e não cento e vinte e nove `if`s espalhados. Duas
+# portas para a mesma lógica, porque há dois momentos em que a ausência mata:
+#
+#   `@pytest.mark.insumo_fora_do_git("docs/process/sprints")`
+#       no teste, na classe ou em `pytestmark`. O gancho abaixo converte em
+#       `skip` COM A RAZÃO na coleta.
+#   `exigir_insumo_fora_do_git("scripts/check_colisao_de_sprints.py")`
+#       no CORPO do módulo, para quem importa o insumo no nível de módulo: ali
+#       a exceção sobe na COLETA, pytest devolve `Interrupted: 1 error during
+#       collection`, o LOTE INTEIRO morre — e `no tests ran` lê-se como limpo.
+#
+# AS DUAS REGRAS QUE ESTE BLOCO NÃO NEGOCIA:
+#
+#   1. **Pulo calado é verde sobre nada.** A razão nomeia CADA caminho que
+#      faltou e a linha do `.gitignore` que o exclui. Marcador sem caminho
+#      nenhum é recusado com `UsageError`, alto, na coleta.
+#   2. **Ausência que o git não explica NÃO pula — reprova.** Se o caminho
+#      sumiu e nenhuma linha do `.gitignore` o cobre, isso é defeito, não
+#      ambiente, e esconder defeito atrás de `skip` é exatamente o verde sobre
+#      nada que esta casa passa o dia caçando. `motivo_do_pulo` devolve `None`
+#      nesse caso e o teste reprova no claro.
+#
+# E a linha do `.gitignore` TEM DONO: ela é lida do arquivo, nunca digitada.
+# Digitar `178` aqui faria esta mensagem envelhecer calada na primeira vez que
+# alguém acrescentasse uma linha acima.
+_MARCA_DO_INSUMO = "insumo_fora_do_git"
+
+#: `.gitignore` lido uma vez por árvore — o gancho passa por cada item coletado.
+_GITIGNORE_POR_RAIZ: dict[str, list[tuple[int, str, bool, bool]]] = {}
+
+
+@dataclass(frozen=True)
+class InsumoDeclarado:
+    """Um caminho que uma régua versionada lê, olhado nesta árvore."""
+
+    relativo: str
+    existe: bool
+    #: A linha do `.gitignore` que exclui o caminho (`.gitignore:178`), quando
+    #: existe. `None` quer dizer que o git NÃO explica a ausência.
+    regra: str | None
+
+    @property
+    def nao_viaja(self) -> bool:
+        """Ausente **e** explicado pelo `.gitignore` — o único caso que pula."""
+        return not self.existe and self.regra is not None
+
+    @property
+    def razao(self) -> str:
+        return f"`{self.relativo}` (excluído por `{self.regra}`)"
+
+
+def _padroes_do_gitignore(raiz: Path) -> list[tuple[int, str, bool, bool]]:
+    """`(número da linha, padrão, negado, só-pasta)`, na ordem do arquivo."""
+    chave = str(raiz)
+    lido = _GITIGNORE_POR_RAIZ.get(chave)
+    if lido is not None:
+        return lido
+
+    padroes: list[tuple[int, str, bool, bool]] = []
+    arquivo = raiz / ".gitignore"
+    if arquivo.is_file():
+        texto = arquivo.read_text(encoding="utf-8", errors="replace")
+        for numero, bruta in enumerate(texto.splitlines(), start=1):
+            linha = bruta.strip()
+            if not linha or linha.startswith("#"):
+                continue
+            negado = linha.startswith("!")
+            if negado:
+                linha = linha[1:]
+            so_pasta = linha.endswith("/")
+            padroes.append((numero, linha.strip("/"), negado, so_pasta))
+    _GITIGNORE_POR_RAIZ[chave] = padroes
+    return padroes
+
+
+def _regra_que_exclui(raiz: Path, relativo: str) -> str | None:
+    """A linha do `.gitignore` que exclui `relativo`, ou `None`.
+
+    Segue as duas regras do git que esta casa usa de fato: um padrão com barra
+    é ancorado na raiz, um padrão sem barra casa com qualquer componente, e
+    **a última linha que casa manda** (por isso um `!` posterior des-ignora).
+
+    Um padrão só-pasta (`docs/process/`) casa também com o caminho declarado em
+    si, e não só com os ancestrais dele: o caminho que se está olhando NÃO
+    EXISTE — é essa a pergunta —, então não há no disco a quem perguntar se ele
+    é pasta. Ser permissivo aqui é o lado seguro: o outro lado esconderia o
+    caminho por trás de uma reprovação por ambiente.
+    """
+    alvo = relativo.strip("/")
+    if not alvo:
+        return None
+    partes = alvo.split("/")
+    candidatos = ["/".join(partes[: i + 1]) for i in range(len(partes))]
+
+    vencedora: str | None = None
+    for numero, padrao, negado, _so_pasta in _padroes_do_gitignore(raiz):
+        ancorado = "/" in padrao
+        casou = False
+        for candidato in candidatos:
+            if ancorado:
+                casou = fnmatch.fnmatch(candidato, padrao)
+            else:
+                casou = fnmatch.fnmatch(candidato.rsplit("/", 1)[-1], padrao)
+            if casou:
+                break
+        if casou:
+            vencedora = None if negado else f".gitignore:{numero}"
+    return vencedora
+
+
+def olhar_insumo(relativo: str, raiz: Path | None = None) -> InsumoDeclarado:
+    """Olha UM caminho nesta árvore: ele veio, e — se não veio — por quê."""
+    raiz_real = _RAIZ_DESTA_ARVORE if raiz is None else Path(raiz)
+    caminho = raiz_real / relativo
+    existe = caminho.exists()
+    return InsumoDeclarado(
+        relativo=relativo,
+        existe=existe,
+        regra=None if existe else _regra_que_exclui(raiz_real, relativo),
+    )
+
+
+def motivo_do_pulo(*relativos: str, raiz: Path | None = None) -> str | None:
+    """A razão de pular, ou `None` quando não há razão para pular.
+
+    `None` sai em DOIS casos, e a diferença entre eles é a espinha deste bloco:
+    quando está tudo no lugar (a régua roda), e quando falta algo que o git
+    **não** explica (a régua roda e reprova no claro, como tem de reprovar).
+    """
+    if not relativos:
+        raise ValueError(
+            "INSUMO-FORA-DO-GIT-01: marcador sem caminho nenhum é pulo calado — "
+            "declare o que a régua lê."
+        )
+    olhados = [olhar_insumo(relativo, raiz=raiz) for relativo in relativos]
+    ausentes = [insumo for insumo in olhados if not insumo.existe]
+    if not ausentes:
+        return None
+    if any(insumo.regra is None for insumo in ausentes):
+        return None
+    return (
+        "INSUMO-FORA-DO-GIT-01: esta régua é versionada e o insumo dela não é. "
+        "Não veio para esta árvore: "
+        + "; ".join(insumo.razao for insumo in ausentes)
+        + " — num clone limpo (o `release.yml`) a ausência é esperada; numa "
+        "árvore de agente, copie-os da árvore de quem despacha antes de medir."
+    )
+
+
+def exigir_insumo_fora_do_git(*relativos: str, raiz: Path | None = None) -> None:
+    """Pula o MÓDULO INTEIRO com a razão, quando o insumo não veio.
+
+    Para quem lê o insumo no corpo do módulo — `exec_module`, `read_text` no
+    nível de import. Ali o `skip` de item chega tarde: a exceção sobe na coleta
+    e derruba o lote inteiro.
+    """
+    motivo = motivo_do_pulo(*relativos, raiz=raiz)
+    if motivo is not None:
+        pytest.skip(motivo, allow_module_level=True)
+
+
+def pytest_configure(config: Any) -> None:
+    """Registra o marcador — sem isto ele vira aviso e morre sob `--strict-markers`."""
+    config.addinivalue_line(
+        "markers",
+        f"{_MARCA_DO_INSUMO}(*relativos): a régua lê insumo que o git não "
+        "carrega (`docs/process/`, o despacho de leva); pula COM A RAZÃO "
+        "quando ele não veio, e só quando o `.gitignore` explica a ausência.",
+    )
+
+
+def pytest_collection_modifyitems(config: Any, items: list[Any]) -> None:
+    """Converte o marcador em `skip` com a razão, na coleta."""
+    for item in items:
+        marcas = list(item.iter_markers(name=_MARCA_DO_INSUMO))
+        if not marcas:
+            continue
+        relativos = [str(alvo) for marca in marcas for alvo in marca.args]
+        if not relativos:
+            raise pytest.UsageError(
+                f"{item.nodeid}: `{_MARCA_DO_INSUMO}` sem caminho nenhum é pulo "
+                "calado — declare o que a régua lê."
+            )
+        motivo = motivo_do_pulo(*relativos)
+        if motivo is not None:
+            item.add_marker(pytest.mark.skip(reason=motivo))
