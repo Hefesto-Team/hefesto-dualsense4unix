@@ -10,6 +10,12 @@ projeto) roda como root isolado/hardened e, a pedido do daemon:
     `chmod 0600`  `chmod 0660` + ACL `u:<uid>:rw`) — o jogo não consegue mais
     `open(2)`, em QUALQUER backend (SDL, winebus-hidraw, libScePad, HIDAPI).
     O fd JÁ ABERTO do daemon sobrevive: permissão só é checada no open(2).
+  - `expose`/`unexpose` (O-NO-NASCE-FECHADO-01, 2026-09-20): a lease
+    INVERTIDA. Com o `assets/70-ps5-controller.rules` da cura, o nó do físico
+    NASCE `0600 root` (`TAG-="uaccess"`) e o broker é quem o abre — enquanto
+    alguém pedir. É para quem só sabe `open(path)` e não pode receber fd: o
+    `hidapi.Device(path=...)` do handle de controle do daemon, e o JOGO no
+    Modo Nativo. Mesmo refcount, mesmo EOF e mesmo fail-safe do `hide`.
   - `open` (NOVO, desenho 2026-07-20): valida o nó, abre O_RDWR|O_CLOEXEC como
     root e devolve o fd via SCM_RIGHTS na MESMA conexão — o motion reader do
     daemon NUNCA reabre por caminho, então o hide deixa de ter qualquer
@@ -74,6 +80,15 @@ from typing import Any
 DEFAULT_SOCKET_PATH = "/run/hefesto-hidraw-broker/broker.sock"
 #: Env com o uid autorizado (renderizado pelo install a partir de SUDO_UID).
 ALLOWED_UID_ENV = "HEFESTO_BROKER_ALLOWED_UID"
+#: O-NO-NASCE-FECHADO-01 (20/09/2026) — "1" quando o `assets/70-ps5-controller.
+#: rules` instalado FECHA o nó do DualSense físico (`TAG-="uaccess"`, 0600
+#: root). Renderizada pelo install na unit, e é ela que acopla as duas metades
+#: da cura: a udev decide o estado de NASCIMENTO, e este env conta ao broker
+#: qual é o estado de REPOUSO para onde `restore`/EOF devolvem o nó. Sem o
+#: acoplamento a cura teria dois donos que podem discordar — e o desfecho de
+#: discordarem é um nó fechado que ninguém reabre, ou um `restore` de ungrab
+#: reabrindo justo o que a regra fechou (a janela que a Steam usa).
+NO_NASCE_FECHADO_ENV = "HEFESTO_BROKER_NO_NASCE_FECHADO"
 #: Linha de protocolo maior que isto é rejeitada (`reject_oversize`).
 MAX_LINE_BYTES = 4096
 
@@ -503,6 +518,22 @@ class _HiddenNode:
     refcount: int = 1
 
 
+@dataclass
+class _ExpostoNode:
+    """Um nó mantido ABERTO a pedido: a lease INVERTIDA do `cmd expose`.
+
+    O-NO-NASCE-FECHADO-01. O `hide` tem lease desde a Onda S porque "escondido"
+    era o estado excepcional; com o nó nascendo `0600 root` o excepcional passa
+    a ser o contrário, e "aberto" precisa da MESMA contabilidade: refcount por
+    nó, conjunto por conexão, e EOF que devolve o nó ao repouso. Sem isso, um
+    `expose` seria one-shot e nada re-fecharia — sair do Modo Nativo deixaria
+    o nó aberto e a Steam voltaria a pegá-lo no próximo replug.
+    """
+
+    uid: int
+    refcount: int = 1
+
+
 class BrokerState:
     """Protocolo + contabilidade de lease. Puro (fs injetável) e testável.
 
@@ -530,8 +561,14 @@ class BrokerState:
         sys_class_bluetooth: str = "/sys/class/bluetooth",
         log: Callable[..., None] = _log,
         sleep_fn: Callable[[float], None] = time.sleep,
+        no_nasce_fechado: bool = False,
     ) -> None:
         self.allowed_uid = allowed_uid
+        #: O-NO-NASCE-FECHADO-01: o nó do físico nasce `0600 root` pela regra
+        #: udev instalada? Só quem instalou sabe, e é o install que renderiza
+        #: `NO_NASCE_FECHADO_ENV` na unit. False = mundo histórico (o udev dá
+        #: `uaccess` e o repouso é ABERTO); True = o repouso é FECHADO.
+        self.no_nasce_fechado = bool(no_nasce_fechado)
         self._ops = ops if ops is not None else FsAclOps(sys_class_hidraw=sys_class_hidraw)
         self._validator = validator
         self._dev_root = dev_root
@@ -541,6 +578,10 @@ class BrokerState:
         self._sleep = sleep_fn
         self.hidden: dict[str, _HiddenNode] = {}
         self.by_conn: dict[int, set[str]] = {}
+        #: A lease INVERTIDA (`cmd expose`): refcount global por nó e, por
+        #: conexão, o conjunto que AQUELA conexão mandou manter aberto.
+        self.expostos: dict[str, _ExpostoNode] = {}
+        self.expostos_by_conn: dict[int, set[str]] = {}
 
     # -- validação -------------------------------------------------------
 
@@ -577,7 +618,20 @@ class BrokerState:
         if cmd == "ping":
             return ({"ok": True, "cmd": "ping", "peer_uid": peer_uid}, None)
         if cmd == "status":
-            return ({"ok": True, "cmd": "status", "hidden": sorted(self.hidden)}, None)
+            return (
+                {
+                    "ok": True,
+                    "cmd": "status",
+                    "hidden": sorted(self.hidden),
+                    "expostos": sorted(self.expostos),
+                    "no_nasce_fechado": self.no_nasce_fechado,
+                },
+                None,
+            )
+        if cmd == "expose":
+            return (self._cmd_expose(conn_id, peer_uid, request.get("node")), None)
+        if cmd == "unexpose":
+            return (self._cmd_unexpose(conn_id, request.get("node")), None)
         if cmd == "hide":
             return (self._cmd_hide(conn_id, peer_uid, request.get("node")), None)
         if cmd == "restore":
@@ -595,6 +649,130 @@ class BrokerState:
             None,
         )
 
+    def _cmd_expose(self, conn_id: int, peer_uid: int, node: object) -> dict[str, object]:
+        """«Mantenha este nó ABERTO enquanto eu viver» — o abrir sob pedido.
+
+        O-NO-NASCE-FECHADO-01, item 2 da decisão dela de 20/09/2026. Com o nó
+        do físico nascendo `0600 root`, quem precisa abri-lo POR CAMINHO — o
+        `hidapi.Device(path=...)` do handle de controle do daemon, e o JOGO no
+        Modo Nativo, que é processo de terceiro e só sabe `open(path)` — não
+        tem como receber um fd por SCM_RIGHTS. Para esses, a única cura
+        possível é o broker PÔR A ACL DE VOLTA enquanto o pedido durar.
+
+        A mecânica de fs já existia inteira (`FsAclOps.restore` grava
+        `chmod 0660` + `system.posix_acl_access` do uid por conta própria, sem
+        depender do udev devolver nada). O que faltava era a CONTABILIDADE: sem
+        lease, expor é one-shot e ninguém re-fecha.
+        """
+        raw = node if isinstance(node, str) else None
+        if canonical_hidraw_base(raw, dev_root=self._dev_root) is None:
+            return {"ok": False, "cmd": "expose", "node": raw, "error": "reject_bad_path"}
+        assert raw is not None  # narrow p/ mypy: canonical exige str
+        base = self._validate(raw)
+        if base is None:
+            return {
+                "ok": False,
+                "cmd": "expose",
+                "node": raw,
+                "error": "reject_not_physical_dualsense",
+            }
+        canon = f"{self._dev_root}/{base}"
+        # Lição 2, espelhada: SEMPRE toca o fs. Um nó recriado com o mesmo
+        # `hidrawN` nasceu FECHADO pela regra udev, e o estado em memória não
+        # é prova de nada.
+        resposta = self._fs_restore(canon, base, peer_uid)
+        resposta["cmd"] = "expose"
+        if not resposta.get("ok"):
+            return resposta
+        if resposta.get("state") == "gone":
+            # Nó sumiu: não há o que rastrear (o replug refaz o pedido).
+            return resposta
+        held = self.expostos_by_conn.setdefault(conn_id, set())
+        entry = self.expostos.get(canon)
+        if entry is None:
+            self.expostos[canon] = _ExpostoNode(uid=peer_uid)
+            self._log("node_exposto", node=canon, conn=conn_id, uid=peer_uid)
+        elif canon not in held:
+            if self._exposicao_holders(canon) > 0:
+                entry.refcount += 1
+            else:
+                # Órfão (a lease que pediu morreu com o fs falho): adota SEM
+                # somar — o baseline fantasma nunca seria descontado. Mesma
+                # aritmética do `hide`, e pela mesma razão.
+                entry.refcount = 1
+                entry.uid = peer_uid
+                self._log("exposto_orfao_adotado", node=canon, conn=conn_id, uid=peer_uid)
+        held.add(canon)
+        return resposta
+
+    def _cmd_unexpose(self, conn_id: int, node: object) -> dict[str, object]:
+        """Solta a lease de exposição e devolve o nó ao REPOUSO.
+
+        Repouso é o estado de nascimento do nó: fechado quando a regra udev da
+        cura está instalada (`no_nasce_fechado`), aberto no mundo histórico.
+        """
+        raw = node if isinstance(node, str) else None
+        base = canonical_hidraw_base(raw, dev_root=self._dev_root)
+        if base is None:
+            return {"ok": False, "cmd": "unexpose", "node": raw, "error": "reject_bad_path"}
+        canon = f"{self._dev_root}/{base}"
+        held = self.expostos_by_conn.get(conn_id, set())
+        entry = self.expostos.get(canon)
+        if canon in held:
+            held.discard(canon)
+            if entry is not None and entry.refcount > 1:
+                entry.refcount -= 1  # outra lease viva ainda quer o nó aberto
+                return {"ok": True, "cmd": "unexpose", "node": canon, "state": "exposed"}
+            self.expostos.pop(canon, None)
+        elif entry is not None and self._exposicao_holders(canon) > 0:
+            return {"ok": True, "cmd": "unexpose", "node": canon, "state": "exposed"}
+        else:
+            self.expostos.pop(canon, None)
+        return self._repouso(canon, base, cmd="unexpose")
+
+    def _exposicao_holders(self, canon: str) -> int:
+        """Nº de conexões VIVAS cuja lease de EXPOSIÇÃO segura `canon`."""
+        return sum(1 for held in self.expostos_by_conn.values() if canon in held)
+
+    def _repouso(self, canon: str, base: str, *, cmd: str) -> dict[str, object]:
+        """Devolve o nó ao estado de REPOUSO e responde o que ficou.
+
+        Três destinos, nesta ordem, e a ordem é a decisão dela («o Hefesto tem
+        que ter prioridade em tudo»):
+
+        1. alguma lease de EXPOSIÇÃO viva ⇒ aberto (alguém ainda precisa dele);
+        2. alguma lease de HIDE viva ⇒ fechado (o grab do daemon manda);
+        3. senão ⇒ o estado de NASCIMENTO: fechado com a regra udev da cura
+           instalada, aberto sem ela.
+
+        O ramo 3 é o que impede o defeito que a cura existe para matar: com o
+        nó nascendo fechado, um `restore` de ungrab que ABRISSE o nó recriaria
+        a janela em que a Steam o pega — e ele o faria por ACIDENTE, pelo ramo
+        «não rastreado», não por desenho.
+        """
+        if self._exposicao_holders(canon) > 0:
+            return {"ok": True, "cmd": cmd, "node": canon, "state": "exposed"}
+        if self._lease_holders(canon) > 0:
+            return self._fs_fechar(canon, base, cmd=cmd)
+        if not self.no_nasce_fechado:
+            resposta = self._fs_restore(canon, base, self.allowed_uid)
+            resposta["cmd"] = cmd
+            return resposta
+        return self._fs_fechar(canon, base, cmd=cmd)
+
+    def _fs_fechar(self, canon: str, base: str, *, cmd: str) -> dict[str, object]:
+        """`hide` de fs sem mexer em lease: põe o nó de volta em `0600 root`."""
+        try:
+            self._ops.hide(canon, base)
+        except FileNotFoundError:
+            self._log("fechar_node_gone", node=canon)
+            return {"ok": True, "cmd": cmd, "node": canon, "state": "gone"}
+        except OSError as exc:
+            self._log("fechar_failed", node=canon, err=str(exc))
+            return {"ok": False, "cmd": cmd, "node": canon, "error": "fechar_failed"}
+        self._log("node_em_repouso_fechado", node=canon)
+        return {"ok": True, "cmd": cmd, "node": canon, "state": "fechado"}
+
     def _cmd_hide(self, conn_id: int, peer_uid: int, node: object) -> dict[str, object]:
         raw = node if isinstance(node, str) else None
         if canonical_hidraw_base(raw, dev_root=self._dev_root) is None:
@@ -611,6 +789,21 @@ class BrokerState:
         canon = f"{self._dev_root}/{base}"
         held = self.by_conn.setdefault(conn_id, set())
         entry = self.hidden.get(canon)
+        if self._exposicao_holders(canon) > 0:
+            # O-NO-NASCE-FECHADO-01: um pedido EXPLÍCITO de exposição (o Modo
+            # Nativo, o open por caminho do handle de controle) vence um hide
+            # implícito. A lease do hide é registrada assim mesmo, para que o
+            # `unexpose` do último pedido encontre o nó e o feche — o que
+            # deixa de fora só o fs, que seria fechar a porta debaixo de quem
+            # está entrando por ela. O gate de gamepad.py já evita o caso pelo
+            # Modo Nativo; isto é o cinto, e ele mora onde a verdade está.
+            if entry is None:
+                self.hidden[canon] = _HiddenNode(uid=peer_uid, refcount=1)
+            elif canon not in held and self._lease_holders(canon) > 0:
+                entry.refcount += 1
+            held.add(canon)
+            self._log("hide_adiado_por_exposicao", node=canon, conn=conn_id)
+            return {"ok": True, "cmd": "hide", "node": canon, "state": "exposed"}
         try:
             # Lição 2: SEMPRE toca o fs (idempotente e barato) — nó recriado
             # com o mesmo hidrawN renasceu exposto e o estado em memória não
@@ -656,12 +849,13 @@ class BrokerState:
                 entry.refcount -= 1  # outra lease viva segura o nó
                 held.discard(canon)
                 return {"ok": True, "cmd": "restore", "node": canon, "state": "hidden"}
-            uid = entry.uid if entry is not None else self.allowed_uid
-            response = self._fs_restore(canon, base, uid)
+            held.discard(canon)  # a lease sai ANTES do repouso ser decidido
+            response = self._repouso(canon, base, cmd="restore")
             if response.get("ok"):
-                # Lição 2: só destrackear DEPOIS do fs OK (exposed OU gone).
-                held.discard(canon)
+                # Lição 2: só destrackear DEPOIS do fs OK (exposed/fechado/gone).
                 self.hidden.pop(canon, None)
+            else:
+                held.add(canon)  # fs falhou: o nó SEGUE na lease e rastreado
             return response
         if entry is not None:
             if self._lease_holders(canon) > 0:
@@ -670,13 +864,20 @@ class BrokerState:
             # Achado Onda S #3: órfão sem lease viva — o restore explícito TEM
             # de tocar o fs (antes respondia "hidden" para sempre; só o
             # reinício do serviço curava um nó 0600 órfão).
-            response = self._fs_restore(canon, base, entry.uid)
+            response = self._repouso(canon, base, cmd="restore")
             if response.get("ok"):
                 self.hidden.pop(canon, None)
                 self._log("orphan_restored", node=canon, conn=conn_id)
             return response
-        # Não rastreado: restore best-effort (idempotente), mas SÓ em nó que
+        # Não rastreado: repouso best-effort (idempotente), mas SÓ em nó que
         # valida como físico — nunca mexe em hidraw alheio (teclado etc.).
+        #
+        # O-NO-NASCE-FECHADO-01: é POR AQUI que o `restore` do ungrab
+        # (`gamepad.py::_broker_sync_grab`) passa quando ninguém escondeu o nó
+        # — e, no mundo em que o nó nasce fechado, ABRIR aqui recriaria a
+        # janela que a Steam usa. O repouso decide: com a regra da cura
+        # instalada e sem lease de exposição, este caminho FECHA. Quem precisa
+        # do físico aberto passa a dizê-lo com `expose`, por desenho.
         if self._validate(canon) is None:
             return {
                 "ok": False,
@@ -684,7 +885,7 @@ class BrokerState:
                 "node": canon,
                 "error": "reject_not_physical_dualsense",
             }
-        return self._fs_restore(canon, base, self.allowed_uid)
+        return self._repouso(canon, base, cmd="restore")
 
     def _cmd_restore_all(self, conn_id: int) -> dict[str, object]:
         # Lição 3: itera TODOS os nós SEMPRE — falha em um vira log + nó
@@ -693,7 +894,7 @@ class BrokerState:
         failed: list[str] = []
         for canon in sorted(self.by_conn.get(conn_id, set())):
             response = self._cmd_restore(conn_id, canon)
-            if response.get("ok") and response.get("state") in ("exposed", "gone"):
+            if response.get("ok") and response.get("state") in ("exposed", "fechado", "gone"):
                 restored.append(canon)
             elif not response.get("ok"):
                 failed.append(canon)
@@ -777,14 +978,33 @@ class BrokerState:
     # -- lease (fail-safe) -------------------------------------------------
 
     def on_conn_closed(self, conn_id: int) -> list[str]:
-        """EOF da lease: restaura tudo que AQUELA conexão escondeu.
+        """EOF da lease: devolve ao REPOUSO tudo que AQUELA conexão mexeu.
 
         Lição 3: falha num nó não derruba o loop — o falho fica rastreado em
         `hidden` (sem lease) e os belts cobrem (restore_all do shutdown,
         ExecStopPost, baseline do próximo start).
+
+        O-NO-NASCE-FECHADO-01: são DUAS leases agora, e as duas morrem aqui —
+        o que a conexão escondeu e o que ela mandou manter ABERTO. O destino
+        de cada nó é o `_repouso`, não mais o restore incondicional: no mundo
+        em que o nó nasce fechado, abrir tudo no EOF seria entregar o físico à
+        Steam exatamente no instante em que o daemon morreu.
         """
         restored: list[str] = []
         failed: list[str] = []
+        # O-NO-NASCE-FECHADO-01: as exposições saem PRIMEIRO. Elas são o que
+        # segura o nó aberto; soltá-las antes faz o `_repouso` do laço de
+        # baixo (e o dos nós que esta conexão só expôs) enxergar a contagem
+        # já correta, em vez de deixar aberto quem ninguém mais quer.
+        expostos_da_conn = sorted(self.expostos_by_conn.pop(conn_id, set()))
+        for canon in expostos_da_conn:
+            entry_exp = self.expostos.get(canon)
+            if entry_exp is None:
+                continue
+            if entry_exp.refcount > 1:  # outra lease viva quer o nó aberto
+                entry_exp.refcount -= 1
+                continue
+            del self.expostos[canon]
         for canon in sorted(self.by_conn.get(conn_id, set())):
             entry = self.hidden.get(canon)
             if entry is None:
@@ -792,12 +1012,25 @@ class BrokerState:
             if entry.refcount > 1:  # outra lease viva segura o nó
                 entry.refcount -= 1
                 continue
-            response = self._fs_restore(canon, canon.rsplit("/", 1)[-1], entry.uid)
+            base_do_no = canon.rsplit("/", 1)[-1]
+            self.by_conn.get(conn_id, set()).discard(canon)
+            response = self._repouso(canon, base_do_no, cmd="restore")
             if response.get("ok"):
                 del self.hidden[canon]
                 restored.append(canon)
             else:
                 failed.append(canon)  # rastreado; belts cobrem
+        # Os nós que esta conexão só EXPÔS (nunca escondeu) também têm de
+        # voltar ao repouso — senão o Modo Nativo de um daemon que morreu
+        # deixaria o físico aberto para a Steam pegar no próximo replug.
+        for canon in expostos_da_conn:
+            if canon in self.expostos or canon in self.hidden:
+                continue
+            resposta = self._repouso(canon, canon.rsplit("/", 1)[-1], cmd="unexpose")
+            if resposta.get("ok"):
+                restored.append(canon)
+            else:
+                failed.append(canon)
         self.by_conn.pop(conn_id, None)
         if restored:
             self._log("lease_closed_restored", conn=conn_id, nodes=",".join(restored))
@@ -806,7 +1039,14 @@ class BrokerState:
         return restored
 
     def restore_everything(self) -> list[str]:
-        """Belt do shutdown do broker: restaura TODO nó ainda escondido."""
+        """Belt do shutdown do broker: restaura TODO nó ainda escondido.
+
+        Este belt ABRE, e abre mesmo com a cura do nó fechado instalada — de
+        propósito, e é a única exceção ao repouso. Quando o broker está indo
+        embora, ele deixa de ser a porta: um nó `0600 root` sem broker de pé é
+        um controle que só volta com `sudo`, e isto é um app de acessibilidade.
+        O ExecStartPre do serviço re-fecha no próximo start.
+        """
         restored: list[str] = []
         for canon, entry in sorted(self.hidden.items()):
             response = self._fs_restore(canon, canon.rsplit("/", 1)[-1], entry.uid)
@@ -814,6 +1054,8 @@ class BrokerState:
                 del self.hidden[canon]
                 restored.append(canon)
         self.by_conn.clear()
+        self.expostos.clear()
+        self.expostos_by_conn.clear()
         return restored
 
 
@@ -876,8 +1118,17 @@ def restore_all_physical(
 ) -> list[str]:
     """Varre /sys/class/hidraw e restaura físicos não-expostos (baseline limpo).
 
-    Usado por `--restore-all-and-exit` (ExecStartPre/ExecStopPost): nunca herda
-    um físico escondido órfão de uma vida anterior. Idempotente e best-effort.
+    Usado por `--restore-all-and-exit` (ExecStopPost, e o ExecStartPre do
+    mundo SEM a cura do nó fechado): nunca herda um físico escondido órfão de
+    uma vida anterior. Idempotente e best-effort.
+
+    O-NO-NASCE-FECHADO-01, e é a colisão que a sprint não previu: com o nó
+    nascendo `0600 root`, chamar ISTO no start do broker DESFARIA a cura para
+    todo controle conectado naquele instante. O «baseline limpo» foi escrito
+    quando «exposto» era o estado natural do nó — deixou de ser, e o
+    ExecStartPre passou a chamar `--fechar-tudo-e-sair`
+    (`fechar_todo_fisico`), que é o baseline do mundo novo. Esta função fica
+    como está, e continua sendo o piso de recuperação do ExecStopPost.
     """
     fs_ops = ops if ops is not None else FsAclOps(sys_class_hidraw=sys_class_hidraw)
     restored: list[str] = []
@@ -909,6 +1160,60 @@ def restore_all_physical(
         restored.append(node)
         log("baseline_restored", node=node, uid=uid)
     return restored
+
+
+def fechar_todo_fisico(
+    *,
+    uid: int,
+    ops: Any | None = None,
+    dev_root: str = "/dev",
+    sys_class_hidraw: str = "/sys/class/hidraw",
+    sys_class_bluetooth: str = "/sys/class/bluetooth",
+    validator: Callable[[str], str | None] | None = None,
+    log: Callable[..., None] = _log,
+) -> list[str]:
+    """Varre /sys/class/hidraw e FECHA (`0600 root`) todo físico ainda exposto.
+
+    O-NO-NASCE-FECHADO-01 — o baseline do `ExecStartPre` no mundo em que o nó
+    nasce fechado. Reconcilia o que a regra udev não alcançou: o controle que
+    já estava conectado quando a cura foi instalada, e o nó que ficou aberto
+    por uma lease de exposição que morreu com o broker anterior. É a tradução,
+    em varredura, de «o Hefesto tem prioridade em tudo».
+
+    Espelho exato do `restore_all_physical` (mesma varredura, mesmo validador,
+    mesmo critério de exposição), com o sinal trocado. Idempotente e
+    best-effort: falha num nó nunca aborta o laço.
+    """
+    fs_ops = ops if ops is not None else FsAclOps(sys_class_hidraw=sys_class_hidraw)
+    fechados: list[str] = []
+    try:
+        entries = sorted(os.listdir(sys_class_hidraw))
+    except OSError:
+        return fechados
+    for base in entries:
+        node = f"{dev_root}/{base}"
+        valid = (
+            validator(node)
+            if validator is not None
+            else validate_physical_node(
+                node,
+                dev_root=dev_root,
+                sys_class_hidraw=sys_class_hidraw,
+                sys_class_bluetooth=sys_class_bluetooth,
+            )
+        )
+        if valid is None:
+            continue
+        if not fs_ops.is_exposed_to(node, uid):
+            continue
+        try:
+            fs_ops.hide(node, base)
+        except OSError as exc:
+            log("baseline_fechar_failed", node=node, err=str(exc))
+            continue
+        fechados.append(node)
+        log("baseline_fechado", node=node)
+    return fechados
 
 
 # ---------------------------------------------------------------------------
@@ -1144,6 +1449,17 @@ def main(argv: list[str] | None = None) -> int:
         help="restaura todo DualSense físico não-exposto e sai (baseline/stop)",
     )
     parser.add_argument(
+        "--fechar-tudo-e-sair",
+        action="store_true",
+        help=(
+            "baseline do ExecStartPre com a cura O-NO-NASCE-FECHADO-01: fecha "
+            "(0600 root) todo DualSense físico ainda exposto e sai. SEM a cura "
+            f"instalada ({NO_NASCE_FECHADO_ENV} != 1) cai no comportamento "
+            "histórico de --restore-all-and-exit, para que a MESMA unit sirva "
+            "às duas máquinas sem branch no systemd"
+        ),
+    )
+    parser.add_argument(
         "--allowed-uid",
         type=int,
         default=None,
@@ -1168,8 +1484,9 @@ def main(argv: list[str] | None = None) -> int:
     allowed_uid: int | None = None
     if uid_raw is not None and uid_raw.isdigit():
         allowed_uid = int(uid_raw)
+    no_nasce_fechado = os.environ.get(NO_NASCE_FECHADO_ENV, "").strip() == "1"
 
-    if args.restore_all_and_exit:
+    if args.restore_all_and_exit or args.fechar_tudo_e_sair:
         # S-3 (auditoria 21/07): o belt aceita uid de 3 fontes, nesta ordem —
         # env (ExecStartPre/ExecStopPost da unit), --allowed-uid (caller
         # explícito) e parse da unit instalada (uninstall/prerm/postrm chamam
@@ -1187,6 +1504,10 @@ def main(argv: list[str] | None = None) -> int:
         if allowed_uid == 0:
             _log("allowed_uid_root_recusado", env=ALLOWED_UID_ENV)
             return 1
+        if args.fechar_tudo_e_sair and no_nasce_fechado:
+            fechados = fechar_todo_fisico(uid=allowed_uid)
+            _log("fechar_tudo_done", count=len(fechados))
+            return 0
         restored = restore_all_physical(uid=allowed_uid)
         _log("restore_all_done", count=len(restored))
         return 0
@@ -1202,15 +1523,20 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     # Baseline em processo também (idempotente; ExecStartPre já cobriu, mas
-    # execução manual/debug fica igualmente segura).
-    restore_all_physical(uid=allowed_uid)
+    # execução manual/debug fica igualmente segura). A DIREÇÃO segue a cura:
+    # com o nó nascendo fechado, abrir tudo aqui seria desfazê-la em todo
+    # start/restart do broker — a colisão medida em 20/09/2026.
+    if no_nasce_fechado:
+        fechar_todo_fisico(uid=allowed_uid)
+    else:
+        restore_all_physical(uid=allowed_uid)
 
     listen = _sd_listen_socket()
     if listen is None:
         listen = _manual_listen_socket(args.socket_path)
         _log("listening_manual", path=args.socket_path)
 
-    state = BrokerState(allowed_uid=allowed_uid)
+    state = BrokerState(allowed_uid=allowed_uid, no_nasce_fechado=no_nasce_fechado)
     broker = Broker(state, listen)
 
     def _stop(_signum: int, _frame: object) -> None:
@@ -1220,7 +1546,7 @@ def main(argv: list[str] | None = None) -> int:
     signal.signal(signal.SIGINT, _stop)
 
     _sd_notify("READY=1")
-    _log("ready", allowed_uid=allowed_uid)
+    _log("ready", allowed_uid=allowed_uid, no_nasce_fechado=no_nasce_fechado)
     broker.run()
     return 0
 
