@@ -1238,7 +1238,9 @@ class AltoFalanteSubsystem:
                 logger.info("som_ponte_troca_de_modo", uniq=uniq, modo=modo)
             if not caminho:
                 continue
-            fonte, gravador, motivo = fonte_do_monitor_do_no(nome_do_sink(uniq))
+            fonte, gravador, motivo = fonte_do_monitor_do_no(
+                nome_do_sink(uniq), uniq=uniq, papel="som"
+            )
             if fonte is None:
                 # Sem fonte não há ponte, e sem ponte ninguém derrubaria o
                 # processo que subiu: ele é colhido aqui mesmo.
@@ -1262,8 +1264,16 @@ class AltoFalanteSubsystem:
             fonte_h: Any = None
             gravador_h: Any = None
             if modo == "haptica" and endpoint is not None:
+                # O `papel` É O QUE SEPARA OS DOIS GRAVADORES DESTE MESMO
+                # CONTROLE — 20/09/2026. Sem ele, o do som e o da háptica
+                # disputariam um nome só; e sem o `uniq`, os TRÊS controles do
+                # rádio disputavam o nome `hefesto-ponte-sink`, que foi o que
+                # deixou dois deles sem vibrar no PRAGMATA.
                 fonte_h, gravador_h, motivo_h = fonte_do_monitor_do_no(
-                    endpoint.nome, canais=CANAIS_DA_HAPTICA
+                    endpoint.nome,
+                    uniq=uniq,
+                    papel="haptica",
+                    canais=CANAIS_DA_HAPTICA,
                 )
                 if fonte_h is None:
                     if gravador_h is not None:
