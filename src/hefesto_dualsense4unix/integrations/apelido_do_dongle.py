@@ -146,7 +146,8 @@ PREFIXO_NINTENDO = "Nintendo"
 TETO_DE_BYTES = 247
 
 #: Teto de espera de cada `busctl`, em segundos. Mesmo número de
-#: ``integrations/exame_da_mesa.py:72`` — um `busctl` pendurado seguraria o
+#: ``integrations/exame_da_mesa.py:92`` (`ESPERA_DO_BUSCTL_S`) — um `busctl`
+#: pendurado seguraria o
 #: worker e a janela pareceria travada.
 ESPERA_DO_BUSCTL_S = 5.0
 
@@ -678,7 +679,7 @@ def _busctl(argumentos: Sequence[str]) -> str | None:
 
     Ausência da ferramenta, erro e teto de tempo colapsam em ``None``: para
     quem chama os três significam "não deu para falar com o BlueZ". Molde de
-    ``integrations/exame_da_mesa.py:289``, com uma diferença: as leituras
+    ``integrations/exame_da_mesa.py:329`` (`_busctl`), com uma diferença: as leituras
     pedem ``--json=short``, porque o valor que interessa aqui é um nome com
     espaço e acento (ver :func:`_desembrulhar`).
 
