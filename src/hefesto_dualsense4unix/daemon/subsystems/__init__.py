@@ -48,6 +48,16 @@ A receita completa das TRÊS pontas foi cumprida: a lista aqui,
 `_safe_start("alto_falante", …)` no `run()` de `lifecycle.py` e o
 `_stop_alto_falante` no `shutdown()` de `connection.py`.
 
+`ConexoesSubsystem` ENTROU EM 18/09/2026 — CONEXAO-ZUMBI-01
+------------------------------------------------------------
+Ele vigia o link que conecta e **não vira controle**: ACL de pé, nenhum
+`hidraw` e nenhum objeto no BlueZ — o controle parado no padrão de fábrica,
+barra azul e jogador 1, que foi o que ela viu com dois DualSense ligados. A
+receita completa das TRÊS pontas foi cumprida: a lista aqui,
+o `_safe_start` deste vigia no `run()` de `lifecycle.py` e o `_stop_conexoes`
+no `shutdown()` de `connection.py` — sem a terceira, a thread continuaria
+olhando a mesa e chamando `sudo` com o daemon já morto.
+
 POR QUE `HotkeySubsystem` NÃO ESTÁ NA LISTA — e não é esquecimento:
 
 * `HotkeySubsystem` (`hotkey.py:3214`) é uma **lápide, não um órfão**: os dois
@@ -64,6 +74,7 @@ from hefesto_dualsense4unix.daemon.subsystems.alto_falante import (
 from hefesto_dualsense4unix.daemon.subsystems.autoswitch import AutoswitchSubsystem
 from hefesto_dualsense4unix.daemon.subsystems.base import Subsystem
 from hefesto_dualsense4unix.daemon.subsystems.bt_mic import BtMicSubsystem
+from hefesto_dualsense4unix.daemon.subsystems.conexoes import ConexoesSubsystem
 from hefesto_dualsense4unix.daemon.subsystems.gamepad import GamepadSubsystem
 from hefesto_dualsense4unix.daemon.subsystems.ipc import IpcSubsystem
 from hefesto_dualsense4unix.daemon.subsystems.metrics import MetricsSubsystem
@@ -91,6 +102,7 @@ SUBSYSTEM_REGISTRY: list[type[Subsystem]] = [
     RumbleSubsystem,
     BtMicSubsystem,
     AltoFalanteSubsystem,
+    ConexoesSubsystem,
     PluginsSubsystem,
     MetricsSubsystem,
 ]
@@ -100,6 +112,7 @@ __all__ = [
     "AltoFalanteSubsystem",
     "AutoswitchSubsystem",
     "BtMicSubsystem",
+    "ConexoesSubsystem",
     "GamepadSubsystem",
     "IpcSubsystem",
     "MetricsSubsystem",
