@@ -1475,6 +1475,44 @@ _INTERRUPTOR = "\n".join(
 # continua no esqueleto — ela é de lá, e tirá-la é mexer em arquivo de outro dono.
 
 
+#: O CAMPO EXCLUSIVO DO STEAM INPUT. Ele existe como constante porque TRÊS
+#: lugares precisam concordar: este gerador, o `pacotes/a01_jogar.DA_PAGINA` e o
+#: emissor (`_estado_da_tela`). Um endereço digitado em três arquivos é um typo
+#: à espera de virar linha que nunca pinta, calada.
+CAMPO_DO_STEAM_INPUT = "steam-input-aceso"
+
+#: O campo que os OUTROS chips compartilham — um por vez, por construção.
+CAMPO_DO_MODO = "modo-aceso"
+
+
+def _campo_do_chip(m):
+    """Por qual endereço este chip recebe o "estou aceso".
+
+    **OS CHIPS DE CAMINHO PARTILHAM UM; O STEAM INPUT TEM O DELE** —
+    STEAM-INPUT-01, 20/09/2026.
+
+    Até aqui os quatro carregavam ``modo-aceso``, e o comentário de baixo dizia
+    por quê: *"Um segundo clique não pode deixar dois acesos porque não há
+    caminho em que duas chaves casem."* Isso valia enquanto os quatro eram
+    exclusivos entre si — um CAMINHO (`dualsense`, `xbox`) ou um MODO
+    (`navegacao`) de cada vez.
+
+    O Steam Input não é exclusivo de nenhum deles: o degrau 4 da
+    `ponte_escada.ESCADA` é ``Ponte(gamepad, dualsense, steam_input=True)`` e
+    tem ``recria_vpad=False`` — ele senta EM CIMA do caminho DualSense. Logo
+    «Sony DualSense» e «Steam Input» passam a poder estar acesos ao mesmo
+    tempo, e num campo compartilhado o valor de um APAGARIA o outro: o piloto
+    escreve o mesmo valor em todo elemento do endereço, e cada um acende só se
+    casar o `data-hef-quando`.
+
+    **CUSTO ZERO DE PIXEL, e foi o que decidiu.** `data-campo` está em
+    `scripts/check_o_desenho_aprovado.INVISIVEIS`, e a classe acesa continua
+    sendo a MESMA ``on``. A alternativa — uma marca visual distinta para o Steam
+    Input — exige CSS novo e `--publicar 01`, que é ato dela (§7 D-2).
+    """
+    return (CAMPO_DO_STEAM_INPUT if m["chave"] == "steam" else CAMPO_DO_MODO)
+
+
 def _chip_do_modo(m):
     """Um dos cinco chips de dentro do Hefesto ligado.
 
@@ -1499,12 +1537,15 @@ def _chip_do_modo(m):
     conta como invisível (`check_o_desenho_aprovado.INVISIVEIS`), então marcar
     os chips não move um pixel nem reprova a régua do mockup.
 
-    **E MARCAR NÃO É LIGAR.** O ``modo-steam`` sai daqui marcado e **não tem
-    `@gesto`** em `pacotes/a01_jogar.py`: não há IPC que ligue o Steam Input
-    (ver a lista de `pacotes/daemon.metodos()`), e o degrau dele custa fechar a
-    Steam e reabrir o jogo (`ponte_escada`, § *OS DOIS TRAMOS*). Marcado, o
-    piloto recusa **dizendo o nome**; sem marca, o clique sumiria calado — e
-    calado é o que faz quem clicou concluir que funcionou.
+    **MARCAR NÃO ERA LIGAR, E AGORA É — STEAM-INPUT-01, 20/09/2026.** Aqui se
+    dizia que o ``modo-steam`` saía marcado e **sem `@gesto`**, porque *"não há
+    IPC que ligue o Steam Input"*. A premissa era verdadeira e a conclusão era
+    falsa: o Steam Input não passa por IPC nenhum — é um arquivo da Steam, e o
+    produto sabe escrevê-lo desde 19/08/2026. O gesto existe
+    (`pacotes/a01_jogar.modo_steam`); o que ele guarda da frase antiga é a
+    pergunta, porque ligar continua exigindo a Steam fechada.
+
+    **E O CAMPO DELE NÃO É O `modo-aceso`** — ver :func:`_campo_do_chip`.
     """
     classe = ("degrau"
               + (" on" if m["chave"] == MODO_ACESO else "")
@@ -1525,7 +1566,8 @@ def _chip_do_modo(m):
     # logo o chip vivo é **Navegação**, e a tela mostrava **Sony DualSense**.
     return (f'            <span class="{classe}" data-degrau="{m["chave"]}"'
             f' data-gesto="modo-{m["chave"]}"{modo}\n'
-            f'                  data-campo="modo-aceso" data-hef-alvo="classe"'
+            f'                  data-campo="{_campo_do_chip(m)}"'
+            f' data-hef-alvo="classe"'
             f' data-hef-quando="{m["chave"]}"\n'
             f'                  title="{m["dica"]}">{m["rot"]}</span>')
 
@@ -2396,9 +2438,32 @@ def _conferir(doc):
     #    continuavam mudos ao clique e cegos à pintura. A decisão dela é *"uma
     #    máscara por controle (…) se isso não ocorre com os 4 controles em cada
     #    aba, então temos que construir isso e garantir isso"*.
+    #    E O NÚMERO DE CADA UM SAI DO `MODOS`, NÃO DE UM LITERAL —
+    #    STEAM-INPUT-01, 20/09/2026. O `modo-aceso` deixou de cobrir os quatro
+    #    chips: o Steam Input ganhou campo próprio, porque ele NÃO é exclusivo
+    #    dos outros (ver `_campo_do_chip`). Escrever `len(MODOS) - 1` aqui
+    #    seria uma aritmética que envelhece no dia em que um quinto chip
+    #    nascer; a conta pergunta ao mesmo `_campo_do_chip` que gera a página,
+    #    e um chip novo entra na régua sozinho.
+    _por_campo = collections.Counter(_campo_do_chip(m) for m in MODOS)
+    #    E A CONTA MORDE ANTES DE CONTAR. Uma régua que deriva o número da
+    #    MESMA função que gera a página passa com qualquer resposta: se
+    #    `_campo_do_chip` voltasse a devolver `modo-aceso` para todos, o
+    #    esperado do Steam Input viraria ZERO e a linha ficaria verde sobre o
+    #    defeito. É a trava-que-se-mede-contra-a-própria-saída, de 07/09. Esta
+    #    linha crava o único número que NÃO sai da função medida.
+    exigir(_por_campo[CAMPO_DO_STEAM_INPUT] == 1,
+           f"o chip do Steam Input não tem campo próprio: esperava 1 chip em "
+           f"`{CAMPO_DO_STEAM_INPUT}`, a tabela dá "
+           f"{_por_campo[CAMPO_DO_STEAM_INPUT]}. Partilhando o "
+           f"`{CAMPO_DO_MODO}`, acender o Steam Input APAGA o «Sony "
+           f"DualSense» — e os dois são verdade ao mesmo tempo")
     for campo, quantos, oque in (
         ("hef-posicao", len(INTERRUPTOR), "as posições do interruptor"),
-        ("modo-aceso", len(MODOS), "os chips da fileira de modos"),
+        (CAMPO_DO_MODO, _por_campo[CAMPO_DO_MODO],
+         "os chips de CAMINHO da fileira de modos"),
+        (CAMPO_DO_STEAM_INPUT, _por_campo[CAMPO_DO_STEAM_INPUT],
+         "o chip do Steam Input, que tem campo próprio"),
         ("mascara-cartao", len(MASCARAS) * len(MESA),
          "os chips de máscara dos QUATRO lugares da mesa"),
     ):

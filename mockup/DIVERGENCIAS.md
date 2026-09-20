@@ -57,3 +57,28 @@ seção daqui**: a aba deixou de estar em trabalho.
   novo diz isso; se ela escolher «Point And Click» ou «Navegação (Point and
   click)», este parágrafo é reescrito junto com o `rotulo`. Publicar antes da
   palavra dela custaria a mesma edição duas vezes.
+
+- **20/09/2026** — o chip **Steam Input** ganhou **endereço próprio de estado**.
+  É a `2026-09-17-STEAM-INPUT-01`, e a mudança **não move um pixel**: o
+  `data-campo` do chip passou de `modo-aceso` para `steam-input-aceso`, com o
+  mesmo `data-hef-alvo="classe"` e a mesma classe `on`. Os três atributos estão
+  em `scripts/check_o_desenho_aprovado.INVISIVEIS`.
+
+  **POR QUE ELE PRECISOU SAIR DO CAMPO COMPARTILHADO:** o Steam Input não é
+  exclusivo dos outros chips. O degrau 4 da `ponte_escada.ESCADA` é
+  `Ponte(gamepad, dualsense, steam_input=True)` e tem `recria_vpad=False` — ele
+  senta **em cima** do caminho DualSense em vez de substituí-lo. «Sony
+  DualSense» e «Steam Input» são verdade ao mesmo tempo, e num campo só o piloto
+  escreve o mesmo valor em todos: acender um **apagaria** o outro.
+
+  **O QUE ELA VÊ HOJE, até publicar:** o **clique já funciona** — o
+  `data-gesto="modo-steam"` está na página publicada desde 31/08, e o gesto
+  nasceu nesta leva. Clicar liga o Steam Input **daquele jogo** e o recado
+  aparece. O que espera por ela é só o **acender**: na página publicada o chip
+  continua ouvindo o `modo-aceso`, e o produto não manda o valor `steam` por
+  esse endereço — então ele fica apagado mesmo com a ponte de pé. Nada pisca
+  errado, nada some, nenhum clique morre calado.
+
+  **Fecha com** `scripts/check_o_desenho_aprovado.py --publicar 01`, junto com a
+  legenda do item acima. Enquanto as duas coisas esperarem o mesmo OK, publicar
+  uma custaria a mesma conferência duas vezes.

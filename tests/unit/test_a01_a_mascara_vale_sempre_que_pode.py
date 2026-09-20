@@ -303,4 +303,20 @@ def test_a_mascara_nao_consta_mais_como_botao_sem_dono() -> None:
     assert "mascara" not in aba.BOTOES_SEM_DONO, (
         "o `mascara` voltou aos BOTOES_SEM_DONO — e ele tem dono: "
         "`gamepad.mask.set` recebe `uniq` desde 03/09/2026")
-    assert aba.BOTOES_SEM_DONO.keys() == {"modo-steam"}
+    # O `modo-steam` SAIU — STEAM-INPUT-01, 20/09/2026. A régua mediu a lista de
+    # ontem: ela exigia `{"modo-steam"}`, e o chip ganhou `@gesto`
+    # (`a01_jogar.modo_steam`) na mesma leva. O que ela cobra agora é a REGRA,
+    # não a lista: **um botão listado como sem dono não pode ter gesto
+    # registrado.** Assim ela alcança o chip que nascer amanhã, em vez de
+    # envelhecer junto com o nome de hoje.
+    from hefesto_dualsense4unix.interface import pacotes
+
+    mentem = sorted(
+        nome for nome in aba.BOTOES_SEM_DONO
+        if ("01-jogar.html", nome) in pacotes.GESTOS
+    )
+    assert not mentem, (
+        f"botão(ões) listado(s) em BOTOES_SEM_DONO com `@gesto` registrado: "
+        f"{mentem}. A lista manda a próxima pessoa construir o que já está "
+        f"construído — foi o que o `mascara` fez em 03/09 e o `modo-steam` "
+        f"em 20/09")
