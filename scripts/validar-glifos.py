@@ -171,6 +171,36 @@ BLOCOS_PRESERVADOS_ADR_011: tuple[tuple[int, int, str], ...] = (
     (0x25A0, 0x25FF, "Geometric Shapes"),
 )
 
+#: AS EXCEÇÕES DELA — 20/09/2026, e o desenho é o que as torna seguras.
+#:
+#: Ela mandou abrir o portão para os glifos que a fileira de saída de som
+#: precisa: *"altera o hook do sistema para adicionar essas exceções que vc
+#: sugerir"*.
+#:
+#: **É uma LISTA NOMEADA, nunca uma faixa**, e a razão é o próprio ADR-011:
+#: abrir a faixa `U+1F300–U+1FAFF` devolveria o buraco que ele fechou, e o
+#: portão voltaria a ser uma opinião. Aqui cada codepoint entra sozinho, com o
+#: papel que ela lhe deu escrito ao lado — o que também responde à próxima
+#: pessoa que perguntar *"posso usar mais um?"*: pode, se ela nomear.
+#:
+#: **O que NÃO muda:** todo o resto de `Emoji_Presentation` continua reprovado,
+#: e o VARIATION SELECTOR-16 continua reprovado mesmo SOBRE um destes — porque
+#: quem escreve `U+FE0F` está forçando a forma colorida num caractere que já
+#: tem a sua, e isso é a decoração que o ADR-011 recusa.
+EXCECOES_DELA: dict[int, str] = {
+    0x1F3AE: "o som do JOGO, na fileira de saída do cartão do controle",
+    0x1F4FA: "a TV, na fileira de saída do cartão do controle",
+    0x1F50A: "o alto-falante do controle, na fileira de saída",
+    0x1F3A7: "o fone, na fileira de saída",
+}
+
+
+def excecao_dela(cp: int) -> tuple[bool, str]:
+    """True se ``cp`` é uma das exceções que ela nomeou, com o papel dele."""
+    papel = EXCECOES_DELA.get(cp)
+    return (papel is not None), (papel or "")
+
+
 # VARIATION SELECTOR-16: não desenha nada sozinho, só força a forma emoji do
 # caractere anterior. Quem escreve isso quer emoji, então o portão reprova o
 # próprio seletor -- e ele não mora em nenhum dos quatro blocos preservados,
@@ -208,8 +238,18 @@ def e_proibido(cp: int) -> bool:
     # provar que ela morde.
     if preservado_pelo_adr_011(cp)[0]:
         return False
+    # O SELETOR VEM ANTES DA EXCEÇÃO DELA, e a ordem é a regra: `🎮` passa,
+    # `🎮\ufe0f` não. Quem escreve o seletor está forçando a forma colorida
+    # sobre um caractere que já tem a sua — é a decoração que o ADR-011 recusa,
+    # e a exceção dela é para o SÍMBOLO, não para o realce dele.
     if cp == VARIATION_SELECTOR_16:
         return True
+    # CLAUSULA-EXCECAO-DELA: só os codepoints que ela nomeou, um a um. Arrancar
+    # esta linha faz o portão reprovar a fileira de saída de som que ela pediu
+    # em 20/09; trocá-la por uma FAIXA devolve o buraco que o ADR-011 fechou.
+    # `tests/unit/test_validar_glifos.py` arranca as duas de propósito.
+    if excecao_dela(cp)[0]:
+        return False
     return tem_apresentacao_emoji(cp)
 
 

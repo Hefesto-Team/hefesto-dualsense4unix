@@ -398,3 +398,89 @@ def test_repositorio_inteiro_limpo() -> None:
         "emoji proibido no repositório:\n" + "\n".join(str(it) for it in itens)
     )
     assert res.returncode == 0, res.stdout + res.stderr
+
+
+# ---------------------------------------------------------------------------
+# AS EXCEÇÕES DELA — 20/09/2026
+# ---------------------------------------------------------------------------
+def _portao():
+    """O módulo do portão, carregado do arquivo — ele tem hífen no nome.
+
+    O resto deste arquivo fala com o portão por SUBPROCESSO, que é o certo para
+    medir a saída e o código de retorno. Estas réguas perguntam ao critério em
+    si (`e_proibido`, `EXCECOES_DELA`), e para isso o módulo tem de entrar no
+    processo. `validar-glifos` não é nome de módulo importável, daí o carregador.
+    """
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_vg_excecoes", SCRIPT)
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+class TestAsExcecoesDelaSaoUmaListaNaoUmaFaixa:
+    """Ela abriu o portão para a fileira de saída de som, e só para ela.
+
+    *"altera o hook do sistema para adicionar essas exceções que vc sugerir"* —
+    20/09/2026. O perigo não é abrir: é abrir DEMAIS. Uma faixa
+    ``U+1F300 a U+1FAFF`` devolveria exatamente o buraco que o ADR-011 fechou
+    depois de um diff strippar ``U+25CF`` e zerar a barra de bateria da TUI.
+    """
+
+    def test_as_quatro_que_ela_nomeou_passam(self) -> None:
+        vg = _portao()
+        assert vg.EXCECOES_DELA, "a lista nasceu vazia"
+        for cp, papel in vg.EXCECOES_DELA.items():
+            assert not vg.e_proibido(cp), f"U+{cp:05X} ({papel}) devia passar"
+            assert papel.strip(), (
+                f"U+{cp:05X} entrou sem o papel escrito — e o papel é o que "
+                f"responde à próxima pessoa que quiser acrescentar mais um")
+
+    def test_o_resto_do_emoji_continua_reprovado(self) -> None:
+        """A exceção não pode virar a porta aberta.
+
+        Os quatro escolhidos são de APARELHO — o jogo, a TV, o alto-falante, o
+        fone. O que o ADR-011 recusa é a decoração cultural, e ela continua
+        fora: o ``PARTY POPPER`` e o ``HEAVY CHECK MARK`` são os exemplos que o
+        próprio ADR nomeia.
+        """
+        vg = _portao()
+        for cp in (0x1F389, 0x2705, 0x274C, 0x1F4BB, 0x1F600, 0x1F44D):
+            assert vg.e_proibido(cp), f"U+{cp:05X} passou e não devia"
+
+    def test_o_seletor_de_variacao_continua_reprovado(self) -> None:
+        """A exceção é para o SÍMBOLO, não para o realce dele.
+
+        Quem escreve ``U+FE0F`` força a forma colorida sobre um caractere que
+        já tem a sua. Se o seletor entrasse de carona numa exceção, a faixa
+        estaria aberta por outro caminho.
+        """
+        vg = _portao()
+        assert vg.e_proibido(vg.VARIATION_SELECTOR_16)
+
+    def test_a_excecao_e_uma_lista_e_nao_uma_faixa(self) -> None:
+        """A FORMA do dado é a trava.
+
+        Um ``dict`` de codepoints só cresce quando alguém escreve um número E o
+        papel dele. Uma tupla de faixas cresceria com dois números e levaria
+        centenas de codepoints junto, calada — que é como esta casa perde
+        portão.
+        """
+        vg = _portao()
+        assert isinstance(vg.EXCECOES_DELA, dict)
+        assert all(isinstance(k, int) for k in vg.EXCECOES_DELA)
+        assert len(vg.EXCECOES_DELA) < 24, (
+            "a lista passou de duas dezenas — se ela cresceu tanto, a pergunta "
+            "não é qual acrescentar, é se o ADR-011 ainda descreve o produto")
+
+    def test_a_preservacao_do_adr_011_continua_vencendo(self) -> None:
+        """O que já era preservado não pode ter sido atropelado pela exceção.
+
+        ``U+25FD`` e ``U+25FE`` são ``Emoji_Presentation`` E moram em Geometric
+        Shapes. Eles passavam pela cláusula do ADR-011, e a exceção nova entrou
+        DEPOIS dela — se a ordem tivesse sido trocada, estes dois cairiam.
+        """
+        vg = _portao()
+        for cp in (0x25FD, 0x25FE, 0x25CF, 0x25CB, 0x25AE, 0x25AF, 0x25D0):
+            assert not vg.e_proibido(cp), f"U+{cp:05X} caiu — a ordem mudou"
