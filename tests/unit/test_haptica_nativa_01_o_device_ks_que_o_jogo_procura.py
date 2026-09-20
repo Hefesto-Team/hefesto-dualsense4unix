@@ -790,3 +790,95 @@ def test_as_duas_opcoes_da_haptica_moram_na_allowlist() -> None:
 
     for nome in _LIGADAS_SEMPRE:
         assert nome in ENV_ALLOWLIST, nome
+
+
+# ------------------------------- o curador tem QUATRO donos, e eles têm de bater
+#
+# O SEGUNDO BURACO DE 20/09/2026, medido do mesmo jeito: trocado o nome do alvo
+# em `install.sh` (`bin/hefesto-audio-ks` → `bin/hefesto-audio-ks-MORDIDA`), os
+# 52 testes desta área e os 42 portões da camada rápida seguiram VERDES. O
+# install passaria a materializar o curador com um nome que o wrapper não
+# procura, e a háptica morreria calada: o `curar_audio_ks` cai em
+# `sem-curador`, que é um rastro, não um erro, e o jogo abre normalmente — sem
+# vibrar.
+#
+# O caminho do curador está escrito em QUATRO lugares, e nenhum perguntava aos
+# outros:
+#
+#   `install.sh`                AUDIO_KS_TARGET — quem escreve o arquivo;
+#   `uninstall.sh`              AUDIO_KS_TARGET — quem o apaga;
+#   `assets/hefesto-launch.sh`  `curador=` — quem o executa no lançamento;
+#   `scripts/doctor.sh`         a linha do `check_copias_do_wrapper` — quem avisa.
+#
+# É a mesma forma do defeito que fez nascer o `scripts/portoes.sh`: uma lista
+# em dois lugares é duas listas, e elas divergem. Aqui a régua LÊ os quatro
+# fontes e exige que digam a mesma coisa — nenhum caminho é digitado nela.
+#
+# E O EXTRATOR TAMBÉM É UMA RÉGUA: `curador=` aparece DUAS vezes no wrapper (a
+# de cima é a do `hefesto-camadas`), então ele lê de dentro do corpo do
+# `curar_audio_ks`. Um `re.search` solto teria medido o vizinho e dado verde
+# sobre o arquivo errado.
+
+_RAIZ_DO_PROJETO = Path(__file__).resolve().parents[2]
+
+
+def _um_valor(caminho: str, padrao: str, texto: str | None = None) -> str:
+    """O único valor entre aspas que `padrao` captura. Dois casamentos reprovam."""
+    if texto is None:
+        texto = (_RAIZ_DO_PROJETO / caminho).read_text(encoding="utf-8")
+    achados = re.findall(padrao, texto, re.MULTILINE)
+    assert len(achados) == 1, f"{caminho}: «{padrao}» casou {len(achados)} vezes"
+    return achados[0]
+
+
+def _corpo_da_funcao(caminho: str, nome: str) -> str:
+    """O corpo de uma função de shell, do `{` da abertura ao `}` da coluna 0."""
+    texto = (_RAIZ_DO_PROJETO / caminho).read_text(encoding="utf-8")
+    assert f"\n{nome}() {{\n" in texto, f"{caminho}: sem a função {nome}"
+    return texto.split(f"\n{nome}() {{\n", 1)[1].split("\n}\n", 1)[0]
+
+
+def _mesma_forma(caminho: str) -> str:
+    """`${HOME}` e `$HOME` são o mesmo endereço escrito de dois jeitos."""
+    return caminho.replace("${HOME}", "$HOME")
+
+
+_ALVO_DO_INSTALL = r'^readonly AUDIO_KS_TARGET="([^"]+)"'
+
+
+def test_os_quatro_donos_do_curador_dizem_o_mesmo_caminho() -> None:
+    """Trocar o nome em um só deixaria a háptica morrer sem uma linha vermelha."""
+    caminhos = {
+        "install.sh": _um_valor("install.sh", _ALVO_DO_INSTALL),
+        "uninstall.sh": _um_valor("uninstall.sh", _ALVO_DO_INSTALL),
+        "hefesto-launch.sh": _um_valor(
+            "assets/hefesto-launch.sh",
+            r'^\s*curador="([^"]+)"',
+            _corpo_da_funcao("assets/hefesto-launch.sh", "curar_audio_ks"),
+        ),
+    }
+    vistos = {dono: _mesma_forma(valor) for dono, valor in caminhos.items()}
+    assert len(set(vistos.values())) == 1, (
+        "os donos do curador do device KS divergiram — o install grava num "
+        f"nome que o wrapper não procura: {vistos}"
+    )
+
+
+def test_o_doctor_vigia_o_curador_no_mesmo_lugar_e_pela_mesma_fonte() -> None:
+    """A voz que avisa tem de olhar o arquivo que o install escreve."""
+    alvo = _mesma_forma(_um_valor("install.sh", _ALVO_DO_INSTALL))
+    pasta = _mesma_forma(_um_valor("scripts/doctor.sh", r'^\s*local bin="([^"]+)"'))
+    nome, fonte = _um_valor(
+        "scripts/doctor.sh",
+        r'"([^"|]+)\|([^"|]+)\|[^"]*a vibração dos jogos da Sony',
+    )
+    assert f"{pasta}/{nome}" == alvo, (
+        f"o doctor olha «{pasta}/{nome}» e o install escreve «{alvo}»"
+    )
+    do_install = _um_valor(
+        "install.sh", r'^readonly AUDIO_KS_SRC="\$\{ROOT_DIR\}/([^"]+)"'
+    )
+    assert fonte == do_install, (
+        f"o doctor compara contra «{fonte}» e o install copia de «{do_install}»"
+    )
+    assert (_RAIZ_DO_PROJETO / fonte).is_file(), fonte
