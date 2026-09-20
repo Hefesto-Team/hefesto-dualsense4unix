@@ -62,9 +62,15 @@ def _censo(*porques: str) -> dict:
 
     O rótulo repetido é o ponto: é assim que o exame real devolve as ordens, e
     é o que fazia o doctor dizer a mesma palavra N vezes.
+
+    OS DOIS ESCAPES DE ACENTO ABAIXO são a MESMA razão, e ela é a terceira
+    classe do `test_todo_escape_de_acento_presta_contas`: o valor do
+    `veredito` e o do `estado` são literais do JSON que o exame põe no fio,
+    ASCII dos dois lados. Acentuá-los aqui faria a fixture parar de casar com
+    o produto — o dublê ficaria mais bonito e mais pobre que o que se mede.
     """
     return {"veredito": "atencao",  # (noqa-acento): valor do JSON, ASCII
-            "itens": [{"chave": f"r{i}", "estado": "atencao",  # (noqa-acento)
+            "itens": [{"chave": f"r{i}", "estado": "atencao",  # (noqa-acento): valor do JSON
                        "rotulo": "Mudança recomendada", "porque": p}
                       for i, p in enumerate(porques)]}
 
