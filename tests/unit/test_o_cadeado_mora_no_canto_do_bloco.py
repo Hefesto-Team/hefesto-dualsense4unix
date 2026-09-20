@@ -33,11 +33,11 @@ A LÍNGUA MUDOU EM 19/09/2026 E ESTA RÉGUA FOI ATRÁS (`TRAVA-PILULA-01`)
 A trava era `<label class="cadeado">` com um `<input type="checkbox">` dentro, e
 virou `<button class="cadeado">` com a gramática do `.sw` da aba Controles — a
 razão está escrita no dono, em `a01_jogar._cadeado`: *"um checkbox tem DOIS
-estados e o produto tem três"*. O que esta régua media deixou de existir, e cada
+estados e o produto tem três"*. O que esta régua mediu deixou de existir, e cada
 medida foi reapontada para o que existe HOJE:
 
 ===========================  =======================  ==========================
-o que ela media               o que virou              por quê
+o que ela mediu               o que virou              por quê
 ===========================  =======================  ==========================
 `cad.querySelector(input)`    o próprio `.cadeado`     não há mais `<input>`
 `caixa.dataset.hefAlvo`       `classe` (era `marcado`) o alvo trocou com a tag
