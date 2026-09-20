@@ -32,14 +32,29 @@ página passava a depender de como estava a mesa de quem apertou o botão: o
 dado tivesse mudado. A medição inteira está em ``procedencia()``, e quem trava
 isto é ``tests/unit/test_o_carimbo_nao_muda_o_tamanho.py``.
 
-**O QUE SOBRA, DECLARADO:** commit e branch ficaram, por decisão dela — o hash
-curto tem largura fixa, **o nome da branch não**. Medido em 20/09/2026: as
-quatro páginas regeradas numa worktree de agente
-(``worktree-wf_7917c453-7ab-2``) ficam **23 bytes** maiores que as mesmas
-páginas geradas em ``dev``. Quem regerar as quatro numa branch que não é a de
-publicação precisa regerá-las de novo em ``dev`` e rodar
-``check_paridade_transporte.py --leia-primeiro --escrever``, senão o produto
-publica o nome da mesa de quem passou por ali.
+**O NOME DA BRANCH SAIU JUNTO, E A MEDIÇÃO É DA MESMA TARDE.** A sprint
+mandou tirar só a contagem de sujos e escreveu *"o commit e a branch FICAM:
+eles dizem de que fonte o arquivo saiu, e o hash tem comprimento fixo"* — a
+razão é sobre o HASH, e a branch veio junto na mesma frase. O nome da branch
+**não** tem largura fixa, e a primeira leva que curou a contagem provou isso
+nela mesma: regerada na worktree ``worktree-wf_7917c453-7ab-2``, a
+``html/index.html`` ficou **92 bytes** maior que em ``dev``, a
+``html/painel.html`` 46, a ``html/specs.html`` e a ``html/frases-de-tela.html``
+23 cada — e o ``docs/data/LEIA-PRIMEIRO.md`` passou a publicar **2.280.067**
+onde ``dev`` mede 2.280.044, que era o número que o documento já trazia certo.
+
+A branch também não é FONTE: a página nasce de um commit e é publicada em
+``dev``; dizer que ela saiu de ``worktree-wf_7917c453-7ab-2`` é declarar a mesa
+de quem passou por ali, que é exatamente o que a sprint mandou tirar. O commit
+identifica a fonte sozinho, e quem lê o rodapé do índice continua vendo as
+páginas irmãs concordarem ou discordarem POR COMMIT
+(``scripts/gerar-indice-html.py::_concordancia``), que é a razão de o carimbo
+existir.
+
+A própria sprint fecha o argumento sem precisar de mais nada: ela escreveu que,
+*"se a casa quiser manter a contagem, então o ``LEIA-PRIMEIRO`` não pode
+publicar o TAMANHO desse arquivo"*. A casa manteve o tamanho publicado. Logo
+nada de largura variável cabe no carimbo — nem a contagem, nem a branch.
 
 O CARIMBO NÃO ENTRA NO ``--check``, E ISSO É DE PROPÓSITO
 =========================================================
@@ -79,7 +94,7 @@ def _git(*args: str, raiz: Path = RAIZ) -> str:
 
 
 def procedencia(raiz: Path = RAIZ) -> dict[str, str]:
-    """Commit e branch — o que o carimbo declara sobre a FONTE da página.
+    """O commit — a única coisa que o carimbo declara sobre a FONTE da página.
 
     A CONTAGEM DE ARQUIVOS SUJOS SAIU EM 20/09/2026, E O QUE ELA CUSTOU ESTÁ
     MEDIDO. A chave ``sujos`` virava ``· árvore com N mudança(s) não
@@ -100,10 +115,7 @@ def procedencia(raiz: Path = RAIZ) -> dict[str, str]:
     página está em dia usa o ``--check`` de cada gerador, que regenera em
     memória e compara CONTEÚDO. Essa resposta não custa um byte do artefato.
     """
-    return {
-        "commit": _git("rev-parse", "--short", "HEAD", raiz=raiz) or "?",
-        "branch": _git("rev-parse", "--abbrev-ref", "HEAD", raiz=raiz) or "?",
-    }
+    return {"commit": _git("rev-parse", "--short", "HEAD", raiz=raiz) or "?"}
 
 
 def agora() -> str:
@@ -118,18 +130,24 @@ def carimbo(gerador: str, *, indice: bool = True, raiz: Path = RAIZ) -> str:
     rodapé saber onde ficar reclamando. ``indice=False`` no próprio
     ``index.html``, que não precisa de um link para si mesmo.
 
-    O QUE ESTA LINHA NÃO PODE CARREGAR: nada que mude com o ESTADO da árvore de
-    quem gerou. Commit e hora mudam a cada geração, mas dizem de que FONTE a
-    página saiu, e ``sem_carimbo()`` os tira antes de qualquer comparação de
-    conteúdo. A sujeira da árvore não é fonte de nada — é a mesa de quem passou
-    por ali —, e entrava nos bytes do produto (ver ``procedencia()``).
+    O QUE ESTA LINHA NÃO PODE CARREGAR: nada de LARGURA VARIÁVEL, porque o
+    ``docs/data/LEIA-PRIMEIRO.md`` publica o TAMANHO de ``html/specs.html`` e há
+    portão que confere esse número. O commit e a hora mudam a cada geração, mas
+    não mudam de comprimento, e ``sem_carimbo()`` os tira antes de qualquer
+    comparação de conteúdo. Já caíram daqui duas coisas que mudavam:
+
+      - a contagem de arquivos sujos (20/09/2026, ver ``procedencia()``);
+      - o nome da branch (20/09/2026, ver o topo do módulo) — 23 bytes em
+        ``html/specs.html`` e 92 em ``html/index.html`` entre ``dev`` e uma
+        worktree de agente.
+
+    Ambas descreviam a MESA de quem apertou o botão, não a fonte da página.
     """
     p = procedencia(raiz)
     volta = ' · <a href="index.html">índice dos instrumentos</a>' if indice else ""
     return (
         f'<p class="carimbo" {MARCA}="1">gerado em {escape(agora())} · '
-        f'commit <code>{escape(p["commit"])}</code> na branch '
-        f'<code>{escape(p["branch"])}</code> · por '
+        f'commit <code>{escape(p["commit"])}</code> · por '
         f'<code>{escape(gerador)}</code>{volta}</p>'
     )
 
