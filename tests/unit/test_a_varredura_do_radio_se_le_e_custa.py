@@ -60,12 +60,32 @@ E AS TRÊS QUE SOBRAM
    `tests/unit/test_a_conta_de_slots_por_adaptador.py`, bloco 9: a seção
    passando a varredura ao motor, e a guarda que impede a suíte de abrir
    sete processos contra o `bluetoothd` DELA.
+
+AS DUAS QUE A CONFERÊNCIA ADVERSARIAL ACRESCENTOU (20/09/2026)
+---------------------------------------------------------------
+As nove acima foram arrancadas uma a uma e as nove reprovaram. O que elas não
+cobriam apareceu ao pôr um `busctl` que NÃO RESPONDE na frente do `PATH` — o
+barramento travado, que é o caso que a lembrança de 3 s não alcança:
+
+10. **Arrancar o `ORCAMENTO_DA_LEITURA`** (devolver o padrão de 5,0 s a
+    `_rodar`): reprova `test_o_barramento_travado_nao_segura_a_thread_do_desenho`.
+    MEDIDO: com três adaptadores e o `busctl` travado a leitura segurava a
+    thread por **15,1 s** — e quem a chama é `_aplicar_estado`, que o
+    `ipc_bridge.call_async` reposta por `GLib.idle_add`, ou seja, a thread do
+    DESENHO. A lembrança segurava a frequência e não a duração: é o travamento
+    de 15/09/2026 escrito de novo, com o rádio no caminho da pintura.
+11. **Arrancar o `MESA_TODA_MUDA`**: reprova
+    `test_a_mesa_toda_muda_nao_e_uma_mesa_parada`. Com o barramento travado a
+    leitura voltava com `sei=True` e `varrendo` vazio — o `set()` ambíguo que
+    este módulo existe para matar, entrando pela porta dos fundos: ninguém foi
+    ouvido, e a resposta dizia "ninguém varre".
 """
 
 from __future__ import annotations
 
 import os
 import shutil
+import time
 from pathlib import Path
 from typing import Any
 
@@ -720,3 +740,125 @@ def test_o_leitor_nao_levanta_quando_o_busctl_explode(
     leitura = varredura_do_radio.quem_esta_varrendo()
     assert not leitura.sei
     assert leitura.varrendo == frozenset()
+
+
+# ---------------------------------------------------------------------------
+# 7. O BARRAMENTO TRAVADO — a conferência adversarial de 20/09/2026
+# ---------------------------------------------------------------------------
+
+
+def _busctl_que_trava(tmp_path: Path, quantos: int) -> Path:
+    """Um `busctl` que LISTA a mesa e depois não responde mais nada.
+
+    É a forma exata de um `bluetoothd` pendurado: o barramento aceita a
+    chamada e nunca devolve. O `tree` responde de propósito — um `tree` mudo
+    cairia no `SEM_BLUEZ` logo na porta e o cenário não chegaria a morder.
+    """
+    raiz = tmp_path / "barramento-travado"
+    (raiz / "bin").mkdir(parents=True)
+    nos = "".join(f"/org/bluez/hci{i}\n" for i in range(quantos))
+    alvo = raiz / "bin" / "busctl"
+    alvo.write_text(
+        "#!/usr/bin/env bash\n"
+        'case "${1:-}" in\n'
+        f"  tree) printf '/org/bluez\\n{nos}'; exit 0 ;;\n"
+        "  get-property) sleep 600 ;;\n"
+        "esac\n"
+        "exit 1\n",
+        encoding="utf-8",
+    )
+    alvo.chmod(0o755)
+    return raiz
+
+
+def test_o_barramento_travado_nao_segura_a_thread_do_desenho(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """MORDIDA 10. O orçamento da leitura, e ele é a thread do DESENHO que paga.
+
+    `varredura_recente` é chamada de `_ContaDeSlots._aplicar_estado`, que o
+    `ipc_bridge.call_async` reposta por `GLib.idle_add` — thread principal do
+    GTK, a mesma que pinta. MEDIDO em 20/09/2026 com este mesmo cenário e o
+    padrão de 5,0 s por pergunta: **15,1 s de janela presa**, três adaptadores,
+    uma pergunta travada em cada.
+
+    A lembrança de 3 s não alcança isso: ela segura quantas vezes se pergunta,
+    não quanto tempo cada pergunta dura.
+
+    TRÊS adaptadores de propósito — é a mesa dela, e é onde o defeito é maior.
+    Com um só, um padrão de 5 s daria 5 s e o mesmo limite pegaria; com três,
+    o arranjo difícil mostra que o corte é do ORÇAMENTO INTEIRO e não de uma
+    pergunta.
+    """
+    raiz = _busctl_que_trava(tmp_path, 3)
+    monkeypatch.setenv("PATH", f"{raiz / 'bin'}{os.pathsep}{os.environ.get('PATH', '')}")
+
+    inicio = time.monotonic()
+    leitura = varredura_do_radio.quem_esta_varrendo()
+    custou = time.monotonic() - inicio
+
+    assert custou < 2.0, (
+        f"o barramento travado segurou a thread do desenho por {custou:.1f} s "
+        f"— o orçamento é de {varredura_do_radio.ORCAMENTO_DA_LEITURA} s"
+    )
+    assert not leitura.sei, "leitura interrompida não pode dizer «ninguém varre»"
+    assert leitura.motivo == varredura_do_radio.SEM_RESPOSTA_A_TEMPO
+    assert leitura.varrendo == frozenset()
+
+
+def test_o_orcamento_nao_corta_barramento_que_responde(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """O contrapeso da 10: um corte que corta sempre não mede nada.
+
+    Sem este nó, um `quem_esta_varrendo` que devolvesse
+    `SEM_RESPOSTA_A_TEMPO` para tudo passaria na régua acima — e o produto
+    ficaria cego para a busca que a pessoa abriu.
+    """
+    _ligar_o_barramento(
+        monkeypatch,
+        tmp_path,
+        {
+            "hci7": (bm.ADAPTADOR_QUE_VARRE, "true"),
+            "hci8": (bm.ADAPTADOR_PARADO, "false"),
+            "hci9": (bm.ADAPTADOR_FOLGADO, "false"),
+        },
+    )
+    leitura = varredura_do_radio.quem_esta_varrendo()
+
+    assert leitura.sei, leitura.motivo
+    assert leitura.completa
+    assert leitura.varrendo == frozenset({bm.ADAPTADOR_QUE_VARRE})
+
+
+def test_a_mesa_toda_muda_nao_e_uma_mesa_parada(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """MORDIDA 11. Ninguém foi ouvido — e isso não é «ninguém está varrendo».
+
+    O ARRANJO DIFÍCIL, e é o que a régua do adaptador mudo não alcança: lá UM
+    adaptador cala e o outro responde, então a leitura sabe alguma coisa. Aqui a
+    mesa INTEIRA cala, e a resposta antiga voltava com `sei=True` e `varrendo`
+    vazio — que é o `set()` querendo dizer as duas coisas opostas, o defeito que
+    este módulo inteiro existe para matar.
+
+    O único leitor do produto (`_ContaDeSlots._ler_a_varredura`) pega só
+    `varrendo`; se `sei` não confessar sozinho, ninguém confessa.
+    """
+    _ligar_o_barramento(
+        monkeypatch,
+        tmp_path,
+        {
+            "hci7": (bm.ADAPTADOR_QUE_VARRE, None),
+            "hci8": (bm.ADAPTADOR_PARADO, None),
+        },
+    )
+    leitura = varredura_do_radio.quem_esta_varrendo()
+
+    assert not leitura.sei, (
+        "a mesa inteira calou e a leitura respondeu «sei» — «não ouvi ninguém» "
+        "está sendo lido como «ninguém varre»"
+    )
+    assert leitura.motivo == varredura_do_radio.MESA_TODA_MUDA
+    assert leitura.varrendo == frozenset()
+    assert leitura.mudos == frozenset({"hci7", "hci8"})
