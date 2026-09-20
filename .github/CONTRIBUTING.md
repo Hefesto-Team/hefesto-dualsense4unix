@@ -181,35 +181,44 @@ língua em que o produto está escrito, e é assim que ele é entregue.
 
 Até esta data, esta página trazia uma receita completa de como um voluntário
 acrescentaria o francês ou o espanhol. **O convite era falso**, e o motivo é
-medido: dos **18** módulos de
-`src/hefesto_dualsense4unix/app/actions/` — que são os que escrevem o texto vivo
-das abas, o que a janela diz enquanto roda —, **15** não importam a função de
-tradução e carregam, juntos, **561** literais com acentuação portuguesa. Quem
-traduzisse os catálogos inteiros veria o esqueleto fixo mudar de idioma e o
-recado da janela continuar em português.
+medido — os módulos que escrevem o texto vivo das abas não passam pela função
+de tradução, então quem traduzisse os catálogos veria mudar o esqueleto fixo e
+não o que a janela diz enquanto roda.
 
-**Grau: MEDIDO** em 07/08/2026, por leitura de AST dos 18 arquivos (**19**
-desde 08/08, com o `relancar.py` da `RELANCAR-01`; **20** desde 16/08, com o
-`carona_do_wrapper.py` da `CARONA-DO-WRAPPER-01` — a proporção era **17 de
-20**; **29** desde 22/08, quando a aba Configurações virou o pacote
-`app/actions/config/` e o censo passou a contar subpasta — o pacote **importa**
-a função de tradução e leva a proporção a **17 de 29**; **30** desde 24/08, com
-o `ambiente_na_tela.py` da `ONDA0-Z7`, que **não** importa e leva a proporção a
-**19 de 31**; **34** desde 30/08, com `perfis_web.py` e o pacote `jogar/`, que
-**não** importam — e o numerador passou a contar subpasta, como o denominador já
-contava desde 22/08, o que revelou mais cinco módulos: a proporção honesta é
-**25 de 34**): conta-se quem importa `_` de
-`hefesto_dualsense4unix.utils.i18n` (ou `gettext`) e quem tem literal com
-caractere acentuado. Importam `footer_actions.py`, `lightbar_actions.py`,
-`status_actions.py` e seis dos nove arquivos do pacote `config/`. O portão que
-guarda esta decisão refaz essa mesma contagem a cada rodada — ver abaixo.
+**A contagem abaixo é GERADA, e não digitada.** Ela já saiu de seis jeitos
+diferentes conforme a pasta crescia (18, 19, 20, 29, 31, 34), recontada à mão a
+cada leva — e *um número que já saiu de seis jeitos não é fato, é opinião com
+cara de dado*. Desde 20/09/2026 quem a escreve é
+`scripts/check_o_projeto_e_traduzivel.py --publicar`, e há portão que reprova se
+o documento divergir do AST.
+
+<!-- CONTAGEM-GERADA — não edite à mão: scripts/check_o_projeto_e_traduzivel.py --publicar -->
+Dos **34** arquivos `.py` de `src/hefesto_dualsense4unix/app/actions/`
+— os que escrevem o texto vivo das abas —, **19** escrevem prosa com
+acentuação portuguesa fora da função de tradução, e **9** importam essa
+função. Quem traduzisse os catálogos inteiros veria o esqueleto fixo mudar
+de idioma e o recado da janela continuar em português.
+
+Critério, lido do AST e não de um grep: importa `_` de `hefesto_dualsense4unix.utils.i18n`
+ou `gettext`; tem literal com caractere acentuado fora de docstring.
+<!-- /CONTAGEM-GERADA -->
+
+O portão que guarda esta decisão refaz a contagem a cada rodada — ver abaixo.
 
 ### O encanamento de i18n continua vivo, e de propósito
 
 Nada de i18n foi removido: `po/en.po`, `po/pt_BR.po`, `scripts/i18n_extract.sh`,
-`scripts/i18n_compile.sh`, `src/hefesto_dualsense4unix/utils/i18n.py` e os 308
-`translatable="yes"` de `gui/main.glade` continuam onde estavam, funcionando. O
-encanamento está **correto**; o que não existe é o texto passando por ele.
+`scripts/i18n_compile.sh` e `src/hefesto_dualsense4unix/utils/i18n.py` continuam
+onde estavam. O encanamento está **correto**; o que não existe é o texto
+passando por ele.
+
+**FATO SUBSTITUÍDO — 20/09/2026.** Esta linha citava «os 308
+`translatable="yes"` de `gui/main.glade`» entre o que continua funcionando. O
+XML da janela GTK saiu do disco em 06/09/2026 (`D-0609-GTK-LEVA-INTEIRA`), e
+com ele o caminho padrão do extrator: das 413 `msgid` do catálogo, 317 citam
+esse arquivo ausente e 352 (85,2%) não alcançam tela nenhuma. Quem for ligar o
+encanamento liga-o à interface de hoje, e pede o catálogo menor por escrito
+(`scripts/i18n_extract.sh --sem-a-janela`).
 
 Removê-lo para "ficar coerente" seria destruir trabalho bom para provar um
 ponto — e é exatamente o que esta casa não faz. Quem for mexer em i18n mexe
