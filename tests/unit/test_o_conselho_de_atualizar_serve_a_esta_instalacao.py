@@ -35,6 +35,15 @@ escreviam o nome SEM ela — onde a régua não alcançava:
 **A ORDEM IMPORTOU:** alargar a régua ANTES de trocar as sete deixaria a suíte
 vermelha em sete pontos de uma vez. As sete foram primeiro; a régua depois.
 
+**QUATRO DAS SETE SAÍRAM DESTA FAMÍLIA — A-LIBOPUS-TEM-NOME-EM-CADA-CASA-01
+(20/09/2026).** As quatro linhas da libopus acima (as duas de
+`alto_falante_bt.py` e as duas de `dualsense_bt_audio.py`) davam o gesto de
+ATUALIZAR o Hefesto para instalar uma BIBLIOTECA — e `pacman -Syu` não
+instala a libopus. Elas passaram a chamar `storm_doctor.gesto_de_instalar`,
+cujo nome de pacote é lido do dono (`install.sh`), e o que esta régua cobra
+delas inverteu-se: o conselho de atualizar não pode VOLTAR para dentro delas.
+A proibição do nome do instalador segue valendo para as onze.
+
 A `DICA_CANAL_SEM_A_REGRA` do `controller_card` **virou função** nessa troca
 (`dica_canal_sem_a_regra()`): congelada no import, ela responderia pela
 instalação de quem importou, e o par de comportamento não teria como mordê-la
@@ -562,30 +571,57 @@ class TestAsOnzeFrasesObedecemAInstalacao:
             (dualsense_bt_audio, "_LIB_OPUS"),
         )
 
-    def test_a_recusa_da_libopus(
+    @staticmethod
+    def _gestos_de_instalar() -> set[str]:
+        """O que o DONO do nome manda fazer nesta instalação, agora.
+
+        Perguntado ao `storm_doctor`, nunca digitado: o nome do pacote muda
+        com a distribuição, e uma régua que o digita é mais uma cópia do dado.
+        """
+        return {
+            storm_doctor.gesto_de_instalar(chave)
+            for chave in storm_doctor.PACOTE_POR_FORMATO
+        }
+
+    def test_a_recusa_da_libopus_manda_instalar_e_nao_atualizar(
         self,
         sem_checkout: None,
         monkeypatch: pytest.MonkeyPatch,
         os_dois_de_som: tuple[tuple[Any, str], ...],
     ) -> None:
+        """A-LIBOPUS-TEM-NOME-EM-CADA-CASA-01 (20/09/2026): estas duas saíram.
+
+        Elas davam o gesto de ATUALIZAR o Hefesto para instalar uma
+        biblioteca — e `pacman -Syu` não instala a libopus. Hoje chamam
+        `storm_doctor.gesto_de_instalar`; quem mede o NOME do pacote é
+        `tests/unit/test_o_nome_do_pacote_tem_um_dono_so.py`.
+
+        O que esta régua guarda continua sendo o desta casa: o conselho de
+        atualizar não pode voltar para dentro delas.
+        """
+        gestos = self._gestos_de_instalar()
         for modulo, handle in os_dois_de_som:
             frase = self._recusa_da_libopus(monkeypatch, modulo, handle)
 
             assert "libopus não encontrada" in frase, frase
             assert "install.sh" not in frase, frase
-            assert repo_files.FRASE_DE_ATUALIZAR[False] in frase, frase
+            assert repo_files.FRASE_DE_ATUALIZAR[False] not in frase, frase
+            assert any(gesto in frase for gesto in gestos), frase
 
-    def test_a_recusa_da_libopus_no_checkout_nao_mudou(
+    def test_a_recusa_da_libopus_no_checkout_tambem_manda_instalar(
         self,
         com_checkout: None,
         monkeypatch: pytest.MonkeyPatch,
         os_dois_de_som: tuple[tuple[Any, str], ...],
     ) -> None:
-        """A cura não podia piorar o caso que já funcionava."""
+        """No checkout também: `./install.sh` atualiza o Hefesto, não a libopus."""
+        gestos = self._gestos_de_instalar()
         for modulo, handle in os_dois_de_som:
             frase = self._recusa_da_libopus(monkeypatch, modulo, handle)
 
-            assert "./install.sh" in frase, frase
+            assert "install.sh" not in frase, frase
+            assert repo_files.FRASE_DE_ATUALIZAR[True] not in frase, frase
+            assert any(gesto in frase for gesto in gestos), frase
 
     @staticmethod
     def _laudos_sem_a_libopus() -> tuple[str, str]:
@@ -606,16 +642,24 @@ class TestAsOnzeFrasesObedecemAInstalacao:
             next(f for f in ponte.impedimentos if "libopus" in f),
         )
 
-    def test_os_laudos_sem_a_libopus(self, sem_checkout: None) -> None:
+    def test_os_laudos_sem_a_libopus_mandam_instalar(self, sem_checkout: None) -> None:
+        """Os dois laudos seguiram as duas recusas: instalam, não atualizam."""
+        gestos = self._gestos_de_instalar()
         for laudo in self._laudos_sem_a_libopus():
             assert "libopus ausente" in laudo, laudo
             assert "install.sh" not in laudo, laudo
-            assert repo_files.FRASE_DE_ATUALIZAR[False] in laudo, laudo
+            assert repo_files.FRASE_DE_ATUALIZAR[False] not in laudo, laudo
+            assert any(gesto in laudo for gesto in gestos), laudo
 
-    def test_os_laudos_no_checkout_nao_mudaram(self, com_checkout: None) -> None:
-        """A cura não podia piorar o caso que já funcionava."""
+    def test_os_laudos_no_checkout_tambem_mandam_instalar(
+        self, com_checkout: None
+    ) -> None:
+        """Quem TEM o instalador ao lado também precisa da biblioteca."""
+        gestos = self._gestos_de_instalar()
         for laudo in self._laudos_sem_a_libopus():
-            assert "./install.sh" in laudo, laudo
+            assert "install.sh" not in laudo, laudo
+            assert repo_files.FRASE_DE_ATUALIZAR[True] not in laudo, laudo
+            assert any(gesto in laudo for gesto in gestos), laudo
 
 
 class TestOConselhoNaoTemDUASREDACOES:

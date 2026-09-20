@@ -122,8 +122,8 @@ from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
     OpusIndisponivelError,
 )
 from hefesto_dualsense4unix.integrations.fontes_de_captura import so_hex
+from hefesto_dualsense4unix.integrations.storm_doctor import gesto_de_instalar
 from hefesto_dualsense4unix.utils.logging_config import get_logger
-from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalacao
 
 logger = get_logger(__name__)
 
@@ -300,8 +300,7 @@ def _carregar_libopus_encoder() -> ctypes.CDLL:
                 continue
         if lib is None:
             raise OpusIndisponivelError(
-                "libopus não encontrada (instale libopus0 — "
-                f"{como_atualizar_esta_instalacao()})"
+                f"libopus não encontrada ({gesto_de_instalar('opus')})"
             )
         lib.opus_encoder_create.restype = ctypes.c_void_p
         lib.opus_encoder_create.argtypes = [
@@ -2211,8 +2210,7 @@ class Diagnostico:
         if not self.libopus:
             faltas.append(
                 "libopus ausente — o nó sobe, mas nada pode ser codificado "
-                "para o rádio (instale libopus0 — "
-                f"{como_atualizar_esta_instalacao()})"
+                f"para o rádio ({gesto_de_instalar('opus')})"
             )
         if self.pactl and not self.loopback:
             faltas.append(
