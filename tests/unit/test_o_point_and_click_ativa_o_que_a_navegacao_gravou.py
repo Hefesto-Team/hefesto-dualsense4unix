@@ -41,7 +41,7 @@ import json
 import sys
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import pytest
 
@@ -106,8 +106,13 @@ class _DaemonQueAnota(Daemon):
         speed: int | None = None,
         scroll_speed: int | None = None,
         *,
-        origin: str = "manual",
+        origin: Literal["manual", "profile"],
     ) -> bool:
+        # SEM DEFAULT em `origin`, porque o produto também não tem. Medido em
+        # 17/09/2026 com `inspect.signature`: o dublê nascera com
+        # `origin: str = "manual"`, e um chamador que ESQUECESSE a origem
+        # estouraria no daemon real e passaria aqui. *Dublê mais frouxo que o
+        # produto é como a máscara nunca gravou um byte.*
         self.recebeu.append(
             ("set_mouse_emulation", (enabled, speed, scroll_speed), {"origin": origin})
         )
@@ -126,8 +131,15 @@ class _DaemonQueAnota(Daemon):
         )
         return True
 
-    def set_emulation_suppressed(self, value: bool | None = None) -> bool:
-        self.recebeu.append(("set_emulation_suppressed", (value,), {}))
+    def set_emulation_suppressed(
+        self,
+        value: bool | None = None,
+        *,
+        origin: Literal["manual", "profile"] = "manual",
+    ) -> bool:
+        self.recebeu.append(
+            ("set_emulation_suppressed", (value,), {"origin": origin})
+        )
         return bool(value)
 
     # --- as perguntas que a régua faz ao que foi recebido -------------------
