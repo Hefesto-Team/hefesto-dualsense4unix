@@ -600,6 +600,17 @@ class ControllerIdentityRegistry:
         #: NUM-01: passou a governar também a EXIBIÇÃO — é este conjunto que
         #: decide quem conta para a contagem 1..N.
         self._connected: set[str] = set()
+        #: APARELHO-NAO-SE-CONTRADIZ-01 (20/09/2026) — o número que o APARELHO
+        #: pode mostrar agora, que não é o mesmo que a mesa já sabe.
+        #:
+        #: Decisão dela, verbatim: *"As lâmpadas esperam a cor"*, e a razão é
+        #: do produto: **o aparelho nunca se contradiz consigo mesmo.**
+        #: Custo aceito por ela: meio minuto com o número velho depois de
+        #: alguém sair.
+        #:
+        #: Ver :meth:`_numeros_das_lampadas_locked` para o mecanismo e
+        #: :meth:`liberar_as_lampadas` para quem o solta.
+        self._lampadas: dict[str, int] = {}
         #: mapa mudou desde o último save (o sync persiste no tick lento).
         self._dirty = False
         self._loaded = False
@@ -1184,10 +1195,106 @@ class ControllerIdentityRegistry:
         A forma honesta de perguntar "quem acende o quê nesta mesa": uma
         leitura, uma mesa, e a garantia de que nenhum número se repete. Quem
         pergunta por UM controle chama ``numero_da_lampada``.
+
+        **É A MESA DE AGORA, e é ela que a TELA lê** — por isso a tela continua
+        se refazendo em 0,2 s depois que alguém sai. O que o APARELHO pode
+        mostrar é outra pergunta, e tem outro dono
+        (:meth:`_numeros_das_lampadas_locked`).
         """
         with self._lock:
             self._avaliar_mesa_locked()
             return self._numeros_da_mesa_locked()
+
+    def _numeros_das_lampadas_locked(self) -> dict[str, int]:
+        """O número que cada presente pode MOSTRAR NO APARELHO (sob ``_lock``).
+
+        APARELHO-NAO-SE-CONTRADIZ-01, decisão dela de 20/09/2026, verbatim:
+        *"As lâmpadas esperam a cor"*.
+
+        **O QUE FOI MEDIDO, e é a razão desta função existir.** Ela desligou o
+        P3 e olhou o P4, com os quatro DualSense na mesa::
+
+            23:56:17.747  controller_disconnected
+                  ~4 s    as LÂMPADAS do aparelho mudam para três
+            23:56:47.765  numeracao_da_mesa_mudou arma o gatilho
+            23:56:49.284  gatilho_da_cor_escrito: rosa → verde
+
+        Por **27 segundos** o mesmo controle mostrava três lâmpadas de Player 3
+        e a barra do Player 4. A palavra dela, confirmando a predição: *"Rosa e
+        só verde meio minuto depois"*.
+
+        A assimetria não era de desenho: as lâmpadas saem por rotas que não
+        esperam nada (o `set_players` do sysfs, o `0x31` só com o número do
+        co-op), e a cor por rádio só chega pelo report que o gatilho escreve.
+        **A cura é anterior às rotas**: os dois campos da camada automática
+        saem do MESMO número, e esse número é este — o que já foi LIBERADO.
+
+        **QUEM ESTREIA NÃO ESPERA.** Uma key sem linha congelada é um controle
+        que acabou de chegar: ele não tem número velho para contradizer, então
+        recebe o de agora na hora (é a D1 de sempre — *"a cor nasce certa no
+        tique do hotplug"*). O que espera é só a MUDANÇA.
+
+        **E A ESTREIA NUNCA SENTA NO COLO DE NINGUÉM.** Se o número de agora do
+        que estreia já está congelado com OUTRO, ele fica sem opinião (ausente
+        da tabela) até a liberação. Esta guarda não é zelo: sem ela, o caminho
+        *"o P3 sai, o P5 chega antes do gatilho"* poria dois controles no mesmo
+        jogador — que é exatamente o defeito de 27/08/2026 que a
+        ``numero_da_lampada`` existe para ter matado. Congelar nunca pode
+        ressuscitar uma colisão.
+
+        **ESTA LEITURA NÃO CONGELA NADA**, e é o ponto de desenho desta cura.
+        A única coisa que ela escreve em ``self._lampadas`` é a PODA de quem
+        saiu da mesa; quem põe número ali é só :meth:`liberar_as_lampadas`. Uma
+        leitura que congelasse gravaria o número da mesa PELA METADE — o lote
+        que o ``_assentar_mesa_locked`` e a MESA-NO-MEIO-DO-LOTE-01 vieram
+        curar —, e ele ficaria preso até a liberação seguinte. Com a tabela
+        vazia (daemon recém-subido, registro de teste, dublê sem gatilho) a
+        resposta é a mesa de agora, byte a byte como antes desta sprint.
+
+        E quem saiu da mesa some daqui junto: a tabela nunca guarda ausente,
+        pela mesma razão que ``numero_da_lampada`` devolve ``None`` para ele.
+        """
+        agora = self._numeros_da_mesa_locked()
+        for key in [k for k in self._lampadas if k not in agora]:
+            del self._lampadas[key]
+        if not self._lampadas:
+            return agora
+        fora = dict(self._lampadas)
+        tomados = set(fora.values())
+        for key, numero in agora.items():
+            if key in fora or numero in tomados:
+                continue
+            fora[key] = numero
+            tomados.add(numero)
+        return fora
+
+    def liberar_as_lampadas(self) -> bool:
+        """Solta o número novo para o APARELHO. Devolve se algo se mexeu.
+
+        APARELHO-NAO-SE-CONTRADIZ-01. É o instante em que a cor e as lâmpadas
+        se refazem JUNTAS, e por isso quem chama é UM só: a tarefa do gatilho
+        da lightbar (``daemon/connection.registrar_gatilho_da_lightbar``),
+        imediatamente ANTES de resolver o que vai no report. Assim o mesmo
+        report leva o número novo e a cor nova.
+
+        **Chamar de outro lugar reabre o defeito**, e por um caminho que régua
+        nenhuma veria: liberar no momento de ARMAR o gatilho (e não no de
+        escrever) devolveria 1,5 s de contradição — o debounce da rajada —,
+        que é exatamente o vão que esta sprint veio fechar, só que menor.
+
+        Best-effort por construção: não escreve hardware nem disco, só move a
+        tabela de memória. Quem não a chama nunca vê número mudar no aparelho
+        depois da estreia, e é por isso que ela é chamada pelo gatilho, que
+        toda conexão e toda renumeração já armam.
+        """
+        with self._lock:
+            self._avaliar_mesa_locked()
+            agora = self._numeros_da_mesa_locked()
+            if agora == self._lampadas:
+                return False
+            self._lampadas = dict(agora)
+        logger.info("lampadas_liberadas", numeros=dict(agora))
+        return True
 
     def numero_da_lampada(
         self,
@@ -1225,6 +1332,18 @@ class ControllerIdentityRegistry:
 
         ``autoridade_de_presenca`` é repassado ao ``slot_for`` sem tradução —
         é o provider de cor que o desliga (QUATRO-NA-MESA-01, defeito 1).
+
+        **A RESPOSTA É A DO APARELHO, e não a da mesa — 20/09/2026.** O nome
+        desta função sempre foi o da LÂMPADA, e desde a
+        APARELHO-NAO-SE-CONTRADIZ-01 ele é literal: sai de
+        :meth:`_numeros_das_lampadas_locked`, a tabela que só avança quando a
+        cor avança. Quem quer a mesa de AGORA — a TELA — chama
+        :meth:`numeros_da_mesa`, que não espera nada.
+
+        **E ELA GOVERNA OS DOIS CAMPOS DA CAMADA AUTOMÁTICA**, a cor e o
+        número (``make_auto_output_provider``), porque é isso que impede a
+        contradição: fossem dois números, a cura seria uma corrida entre duas
+        rotas de escrita — que é justamente o defeito medido.
         """
         if assign:
             self.slot_for(uniq, autoridade_de_presenca=autoridade_de_presenca)
@@ -1235,7 +1354,7 @@ class ControllerIdentityRegistry:
             return None
         with self._lock:
             self._avaliar_mesa_locked()
-            return self._numeros_da_mesa_locked().get(key)
+            return self._numeros_das_lampadas_locked().get(key)
 
     def _posicao_locked(self, key: str) -> int | None:
         """Colocação de ``key`` entre os PRESENTES (já sob ``self._lock``).
@@ -1853,6 +1972,12 @@ def make_auto_output_provider(
         # o segundo escritor de `_connected` que a sprint mediu, e ela é uma
         # LEITURA a 10 Hz (a aba Status). Quem sabe quem está na mesa é o
         # tique de 2 s, e só ele.
+        #
+        # APARELHO-NAO-SE-CONTRADIZ-01 (20/09/2026): `numero_da_lampada` passou
+        # a responder pela tabela LIBERADA, e é de propósito que ela alimente
+        # os DOIS campos abaixo. A cor e o número deste controle saem do mesmo
+        # `slot`, então não há caminho no código em que um avance sem o outro —
+        # que é a decisão dela: *"As lâmpadas esperam a cor"*.
         slot = registry.numero_da_lampada(uniq, autoridade_de_presenca=False)
         if slot is None:
             return None

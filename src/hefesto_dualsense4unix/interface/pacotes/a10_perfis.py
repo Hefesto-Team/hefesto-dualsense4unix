@@ -1075,7 +1075,7 @@ def _mesa_com_rotulo(mesa: list[dict[str, Any]]) -> list[dict[str, Any]]:
     `_linhas_da_guarda` lê `controle.get("rotulo")` (`perfis_web.py:588`).
     **`mesa_do_estado` não devolve nenhum dos dois** — os campos dela são
     `pref`, `uniq`, `jogador`, `cor`, `nome`, `via`, `transporte`, `alvo`,
-    `mascara` (`mesa_viva.py:340-352`). Medido: `guarda.nome` saía `["", ""]`
+    `mascara` (`mesa_viva.py:405-417`). Medido: `guarda.nome` saía `["", ""]`
     para os DOIS controles da mesa dela, e a tabela ficava sem nome nenhum.
 
     FATO ERRADO, SUBSTITUÍDO — 11/09/2026. Aqui estava escrito *"QUEM JÁ FAZIA
