@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import os
 import re
-from typing import Any, Literal
+from typing import Any, Literal, NamedTuple
 
 from pydantic import (
     BaseModel,
@@ -281,11 +281,59 @@ class TriggerConfig(BaseModel):
         return bool(self.params) and isinstance(self.params[0], list)
 
 
+#: O modo com que os DOIS gatilhos NASCEM, e os parâmetros dele — NASCE-LIGADO-01
+#: (20/09/2026). Decisão dela, 16/09/2026: *"os gatilhos deveriam vir como
+#: rigidos e os controles com tudo ativado por default"*  # (noqa-acento) dela
+#: Reforçada em 17/09: *"os jogos e perfis tem que iniciar com todas as
+#: features ativadas por default."*
+#:
+#: **POR QUE AQUI, E NÃO NUMA DAS OUTRAS DUAS CAMADAS.** Um valor pode nascer no
+#: default do esquema, na ADOÇÃO do controle (o aparelho recebe o byte na
+#: chegada) ou na TELA (o botão acende o herdado). Medido em 20/09/2026, para
+#: este campo só a primeira funciona:
+#:
+#: * na ADOÇÃO não sobrevive — ``manager.apply_profile`` manda
+#:   ``build_from_name(profile.triggers.left.mode, …)`` em TODA ativação, e com o
+#:   nascimento em ``Off`` a primeira troca de janela desfaz o que a adoção
+#:   escreveu. É a diferença para a rota do som, cujo campo de perfil nasce
+#:   ``None`` e por isso não pisa em nada;
+#: * na TELA não muda o aparelho: o gatilho continuaria solto na mão dela.
+#:
+#: **O QUE MUDA NO DISCO, e é o alcance inteiro.** ``save_profile`` grava a seção
+#: ``triggers`` DENSA em todo perfil salvo, então perfil que ela configurou
+#: carrega a escolha dela no arquivo e **não muda**. Quem herda este nascimento é
+#: exatamente o perfil *"sem config alterada"* da frase dela: os perfis de jogo
+#: enxutos (``loader.CHAVES_DO_PERFIL_DE_JOGO`` — nome, ``match`` e prioridade) e
+#: todo perfil novo.
+#:
+#: **OS PARÂMETROS SÃO DIGITADOS, e o portão é que os mantém honestos.** O dono
+#: dos valores de fábrica do ``Rigid`` é a tela — ``app/actions/trigger_specs``,
+#: ``_pos(5)`` e ``_force(0, 255, 200)`` —, e ``profiles/`` não importa ``app/``
+#: (nenhum módulo de ``profiles/`` ou ``core/`` o faz, e este é o mais baixo da
+#: pilha). Mesma saída do ``MascaraDeGamepad`` logo acima: digita-se aqui e
+#: ``tests/unit/test_nasce_ligado_01_nenhuma_feature_nasce_muda.py`` compara com
+#: o dono NOS DOIS SENTIDOS, para que divergir de lá também reprove.
+#:
+#: NÃO dá para deixar ``params`` vazio: ``core.trigger_effects.rigid`` exige
+#: ``position`` e ``force`` sem default, e ``TriggerConfig(mode="Rigid")`` só
+#: estouraria mais tarde, no ``apply()``, longe daqui.
+MODO_DE_NASCIMENTO_DO_GATILHO = "Rigid"
+PARAMS_DE_NASCIMENTO_DO_GATILHO: list[int] = [5, 200]
+
+
+def _gatilho_de_nascimento() -> TriggerConfig:
+    """O gatilho com que um perfil sem opinião nasce. Um lugar só, dois lados."""
+    return TriggerConfig(
+        mode=MODO_DE_NASCIMENTO_DO_GATILHO,
+        params=list(PARAMS_DE_NASCIMENTO_DO_GATILHO),
+    )
+
+
 class TriggersConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    left: TriggerConfig = Field(default_factory=lambda: TriggerConfig(mode="Off"))
-    right: TriggerConfig = Field(default_factory=lambda: TriggerConfig(mode="Off"))
+    left: TriggerConfig = Field(default_factory=_gatilho_de_nascimento)
+    right: TriggerConfig = Field(default_factory=_gatilho_de_nascimento)
 
 
 class LedsConfig(BaseModel):
@@ -2088,10 +2136,432 @@ def resolver_teclado_emulado(profile: Profile | None, flag_global: bool) -> bool
     return profile.teclado_emulado
 
 
+# ---------------------------------------------------------------------------
+# NASCE-LIGADO-01 — de onde vem o valor de cada campo quando o perfil CALA
+# ---------------------------------------------------------------------------
+#
+# Ordem dela, 17/09/2026: *"os jogos e perfis tem que iniciar com todas as
+# features ativadas por default."* A sprint que esta tabela atende pedia a
+# triagem antes de qualquer cura, e a razão é estrutural: "ligar tudo" aplicado
+# sem triagem QUEBRA o contrato do override por controle, onde `None` quer dizer
+# *"usa o global"* e não *"desligado"*.
+#
+# A TRIAGEM DESMENTIU O PRÓPRIO ENUNCIADO DA SPRINT, e é o achado do dia. Ela
+# listava 13 de 14 features nascendo mudas, lendo só o `default` do pydantic. O
+# canal certo é o LEITOR, e perguntando a ele:
+#
+#     vibração     `DaemonConfig.rumble_policy` já nasce "balanceado"
+#     giro/accel   `virtual_motion.EstadoDosSensores` nasce (True, True)
+#     microfone    `plano_de_radio.microfone_nasce_ligado()` devolve True
+#     teclado      `DaemonConfig.keyboard_emulation_enabled` nasce True
+#     LED          `auto_player_colors=True` acende cor e número por slot
+#     máscara      `DaemonConfig.gamepad_flavor` nasce "dualsense"
+#
+# Dessas, só uma nasce muda DE VERDADE (os gatilhos), e ela é a única que esta
+# leva mexeu. `None` no esquema não é evidência de feature desligada: é evidência
+# de que a pergunta foi feita ao arquivo errado.
+#
+# COMO SE USA: todo campo de todo modelo deste arquivo tem uma linha aqui, e o
+# portão `tests/unit/test_nasce_ligado_01_nenhuma_feature_nasce_muda.py` percorre
+# os modelos por INTROSPECÇÃO — campo sem linha reprova nomeando o campo. É o que
+# impede a tabela de proteger só os de hoje e não o próximo.
+
+#: Pilha (a): o vazio é contrato — herança, critério ignorado, sentinela de
+#: união, procedência gravada, ou parâmetro cujo piso já garante que ele nunca
+#: nasça mudo. Não é feature da tela, e a ordem dela não o alcança.
+E_CONTRATO = "contrato"
+
+#: Pilha (a) por construção: o campo não tem default. Quem constrói o objeto é
+#: obrigado a dizer, e o nascimento é decidido por quem o constrói.
+E_OBRIGATORIO = "obrigatório"
+
+#: Pilha (a) por construção: o campo é uma SEÇÃO que nasce inteira. O conteúdo
+#: tem linhas próprias nesta tabela, no modelo dele.
+E_SECAO = "seção"
+
+#: Pilha (b): o default DESTE arquivo é a opinião. O portão exige que o valor de
+#: nascimento não seja o mudo daquele campo.
+NASCE_NO_ESQUEMA = "no-esquema"
+
+#: Pilha (b): o `None` daqui já significa LIGADO para quem lê. O `dono` é o
+#: endereço de quem garante isso, e o portão o resolve.
+NASCE_NO_LEITOR = "no-leitor"
+
+#: Pilha (b): o aparelho recebe o valor na CHEGADA do controle, e o perfil
+#: calado herda esse nascimento em vez do default do firmware.
+NASCE_NA_ADOCAO = "na-adoção"
+
+#: Pilha (b): feature muda, e o valor é DELA. `falta` diz o que falta decidir.
+#: A sprint é explícita: *"Os demais — LED, sensores, mouse, teclado — não têm
+#: valor decidido e não se inventa aqui."*
+AGUARDA_A_PALAVRA_DELA = "aguarda-a-palavra-dela"
+
+#: As quatro formas da pilha (b) — as que a ordem dela alcança.
+PILHA_DAS_FEATURES = frozenset(
+    {NASCE_NO_ESQUEMA, NASCE_NO_LEITOR, NASCE_NA_ADOCAO, AGUARDA_A_PALAVRA_DELA}
+)
+
+
+class Nascimento(NamedTuple):
+    """De onde vem o valor de um campo quando ninguém opinou.
+
+    `razao` é obrigatória e o portão a exige: a sprint pede *"a razão escrita em
+    cada um"*, e um campo classificado sem razão é a classificação sem a
+    triagem. `dono` é o endereço `módulo:símbolo` de quem garante o nascimento
+    — obrigatório em `NASCE_NO_LEITOR` e `NASCE_NA_ADOCAO`, e o portão o
+    resolve por import, porque endereço que ninguém abre envelhece calado.
+    """
+
+    onde: str
+    razao: str
+    dono: str = ""
+    falta: str = ""
+
+
+NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
+    # -- o casamento: vazio é critério IGNORADO, nunca feature ------------
+    "MatchAny.type": Nascimento(
+        E_CONTRATO, "Discriminador da união; é o NOME do sentinel, não um valor."
+    ),
+    "MatchManual.type": Nascimento(
+        E_CONTRATO, "Discriminador da união; ver `MatchAny.type`."
+    ),
+    "MatchCriteria.type": Nascimento(
+        E_CONTRATO, "Discriminador da união; ver `MatchAny.type`."
+    ),
+    "MatchCriteria.window_class": Nascimento(
+        E_CONTRATO,
+        "Lista vazia é critério IGNORADO em `matches`. Semear uma classe de "
+        "fábrica faria todo perfil casar com a janela errada.",
+    ),
+    "MatchCriteria.window_title_regex": Nascimento(
+        E_CONTRATO,
+        "`None` é critério ignorado. Um regex de fábrica casaria com título "
+        "nenhum ou com todos, e as duas coisas são piores que não perguntar.",
+    ),
+    "MatchCriteria.process_name": Nascimento(
+        E_CONTRATO, "Mesma regra do `window_class`: lista vazia não é condição."
+    ),
+    # -- os gatilhos: a ÚNICA feature que nascia muda de verdade -----------
+    "TriggerConfig.mode": Nascimento(
+        E_OBRIGATORIO,
+        "Quem constrói um gatilho diz qual é o modo. O nascimento é decidido "
+        "no pai, `TriggersConfig.left`/`right`.",
+    ),
+    "TriggerConfig.params": Nascimento(
+        E_CONTRATO,
+        "Vazio não é 'desligado': é 'este modo não pede parâmetro' (`Off`, "
+        "`Pulse`). Modo que pede e não recebe estoura em `build_from_name`, "
+        "que é a borda certa.",
+    ),
+    "TriggersConfig.left": Nascimento(
+        NASCE_NO_ESQUEMA,
+        "NASCE RÍGIDO desde 20/09/2026 — a decisão dela de 16/09 e a única "
+        "das catorze que nascia muda de verdade. A razão da camada está em "
+        "`MODO_DE_NASCIMENTO_DO_GATILHO`.",
+    ),
+    "TriggersConfig.right": Nascimento(
+        NASCE_NO_ESQUEMA, "Ver `TriggersConfig.left`; os dois lados, sempre juntos."
+    ),
+    # -- as luzes ---------------------------------------------------------
+    "LedsConfig.lightbar": Nascimento(
+        NASCE_NO_LEITOR,
+        "`(0, 0, 0)` é a cor do BROADCAST, e ela só vale com "
+        "`auto_player_colors=False`. De fábrica a cor de cada peça sai da "
+        "paleta por slot, então a barra nasce ACESA.",
+        dono="hefesto_dualsense4unix.core.led_control:cores_sem_colisao",
+    ),
+    "LedsConfig.player_leds": Nascimento(
+        NASCE_NO_LEITOR,
+        "Cinco `False` é a lista do broadcast. Com as cores automáticas "
+        "ligadas quem acende o LED do número é a COR-03 (D7), por slot.",
+        dono="hefesto_dualsense4unix.core.led_control:cores_sem_colisao",
+    ),
+    "LedsConfig.lightbar_brightness": Nascimento(
+        NASCE_NO_ESQUEMA, "1.0 é o topo da escala: a barra nasce no brilho máximo."
+    ),
+    "LedsConfig.auto_player_colors": Nascimento(
+        NASCE_NO_ESQUEMA,
+        "`True` desde a COR-03. É ele que faz a barra e o LED do número "
+        "nascerem acesos — os dois campos acima dependem deste.",
+    ),
+    "LedsConfig.lightbar_para_o_numero": Nascimento(
+        E_CONTRATO,
+        "É a PROCEDÊNCIA de uma cor gravada (para qual número ela foi "
+        "escolhida), não uma feature. `None` = sem procedência, tratado como "
+        "LEGADO pelo resolvedor.",
+    ),
+    # -- a vibração: já nasce balanceada, e é no LEITOR --------------------
+    "RumbleConfig.passthrough": Nascimento(
+        NASCE_NO_ESQUEMA, "`True`: a vibração que o jogo manda passa para o motor."
+    ),
+    "RumbleConfig.policy": Nascimento(
+        NASCE_NO_LEITOR,
+        "A VIBRAÇÃO JÁ NASCE BALANCEADA, e não é aqui. Medido em 20/09/2026: "
+        "`DaemonConfig.rumble_policy` nasce `\"balanceado\"`, e `policy=None` "
+        "é o perfil dizendo 'não mexo' — a política global segue valendo. "
+        "ENCHER este default teria PREÇO medido: `apply_profile_rumble_policy` "
+        "passaria a IMPOR balanceado em toda ativação, e a escolha manual dela "
+        "(`rumble.policy_set`) seria desfeita na primeira troca de janela "
+        "depois dos 30 s da trava. O que falta é a TELA mostrar o herdado, e "
+        "isso é a VIBRA-ACESA-01.",
+        dono="hefesto_dualsense4unix.daemon.lifecycle:DaemonConfig",
+    ),
+    "RumbleConfig.custom_mult": Nascimento(
+        E_CONTRATO,
+        "Só vale com `policy='custom'`; o validador do modelo recusa fora "
+        "disso. Não é feature, é coerência de um par.",
+    ),
+    # -- mouse e teclado: a assimetria medida ------------------------------
+    "ProfileMouseConfig.enabled": Nascimento(
+        E_OBRIGATORIO, "Não existe seção de mouse sem opinião: quem a escreve diz."
+    ),
+    "ProfileMouseConfig.speed": Nascimento(
+        E_CONTRATO,
+        "Parâmetro da seção, não a feature — quem liga é o `enabled`. O "
+        "`ge=1` do campo garante que nenhum nascimento seja mudo: a faixa "
+        "1-12 do daemon não tem 'desligado'.",
+    ),
+    "ProfileMouseConfig.scroll_speed": Nascimento(
+        E_CONTRATO, "Ver `ProfileMouseConfig.speed`; faixa 1-5, mesmo piso."
+    ),
+    # -- o microfone: a inversão de 18/09 já está de pé --------------------
+    "ProfileMicConfig.button_toggles_system": Nascimento(
+        E_OBRIGATORIO, "Quem escreve a seção diz. O global nasce `True` no daemon."
+    ),
+    "ProfileMicConfig.volume": Nascimento(
+        AGUARDA_A_PALAVRA_DELA,
+        "O ganho de captura não tem degrau de nascimento: a SOM-SEMPRE-01 pôs "
+        "o ALTO-FALANTE em 100% na adoção e deixou o microfone de fora, "
+        "escrito com todas as letras (*'o microfone continua SEM DONO'*).",
+        falta="qual é o ganho de captura de fábrica, e se ele se escreve na adoção",
+    ),
+    "ProfileMicConfig.muted": Nascimento(
+        NASCE_NO_LEITOR,
+        "O microfone NASCE NO AR desde 17/09/2026, e `None` herda isso — só "
+        "`true` gravado no disco cala. A inversão é ordem dela (18/09): todo "
+        "controle nasce com tudo, e o silêncio dela vence porque é explícito.",
+        dono="hefesto_dualsense4unix.integrations.plano_de_radio:microfone_nasce_ligado",
+    ),
+    # -- o alto-falante: o modelo que a sprint mandou copiar ---------------
+    "ProfileSpeakerConfig.volume": Nascimento(
+        E_OBRIGATORIO,
+        "Obrigatório por medição (SOM-02, armadilhas 1 e 2): seção sem volume "
+        "tranca o alto-falante em zero, e nem o próprio mudo o solta.",
+    ),
+    "ProfileSpeakerConfig.muted": Nascimento(
+        NASCE_NO_ESQUEMA, "`False`: o alto-falante nasce com voz. Não se mexe."
+    ),
+    "ProfileSpeakerConfig.rota": Nascimento(
+        NASCE_NA_ADOCAO,
+        "SOM-ROTA-02 (16/09): não escrever a rota NÃO é o lado neutro — o "
+        "firmware cai no fone vazio. O controle passou a nascer em "
+        "`ROTA_PADRAO_DO_SOM` na adoção, e o perfil calado herda isso.",
+        dono="hefesto_dualsense4unix.core.backend_pydualsense:ROTA_PADRAO_DO_SOM",
+    ),
+    "ProfileSpeakerConfig.fonte": Nascimento(
+        NASCE_NO_LEITOR,
+        "O MODELO DESTA TABELA: `None` cai no padrão da casa, `sfx`, por "
+        "decisão dela de 08/09 (D-0809-NO-CABO-O-PADRAO-DO-SOM-E-SFX). Com "
+        "`mix` de fábrica o controle viraria a saída de todo o som do PC "
+        "sozinho — a justificativa está escrita ao lado do campo.",
+        dono="hefesto_dualsense4unix.integrations.alto_falante_bt:FONTE_SFX",
+    ),
+    # -- o modo e o caminho ------------------------------------------------
+    "ProfileModeConfig.kind": Nascimento(
+        E_OBRIGATORIO, "Não existe seção de modo sem dizer qual modo."
+    ),
+    "ProfileModeConfig.gamepad_flavor": Nascimento(
+        NASCE_NO_LEITOR,
+        "`None` é o degrau 2 vazio: a máscara efetiva cai no "
+        "`DaemonConfig.gamepad_flavor`, que nasce `dualsense`. O controle "
+        "nunca fica SEM máscara.",
+        dono="hefesto_dualsense4unix.daemon.subsystems.external_mask:mascara_efetiva",
+    ),
+    "ProfileModeConfig.caminho": Nascimento(
+        NASCE_NO_LEITOR,
+        "`None` = ninguém escolheu, e o caminho sai da máscara. A ordem de "
+        "HERANÇA entre perfis tem defeito medido (perfil sem `caminho` herda "
+        "o do jogo anterior) e o dono é o resolvedor, não este campo.",
+        dono="hefesto_dualsense4unix.integrations.virtual_pad:caminho_resolvido",
+    ),
+    # -- a ponte: registro do que foi medido, não pedido --------------------
+    "PonteConfirmada.kind": Nascimento(
+        E_OBRIGATORIO, "Registro de uma confirmação; sem o modo não há o que registrar."
+    ),
+    "PonteConfirmada.gamepad_flavor": Nascimento(
+        E_CONTRATO, "O que foi confirmado, não o que se pede. `None` = não se aplica."
+    ),
+    "PonteConfirmada.steam_input": Nascimento(
+        E_CONTRATO, "`False` = não havia Steam Input quando confirmei. É fato, não pedido."
+    ),
+    "PonteConfirmada.confirmada_em": Nascimento(
+        E_CONTRATO, "Carimbo de tempo da confirmação."
+    ),
+    "PonteConfirmada.confirmada_por": Nascimento(
+        E_CONTRATO, "Procedência da confirmação (gesto, silêncio, escolha dela)."
+    ),
+    # -- os overrides por controle: `None` = usa o global -------------------
+    "ControllerRumbleOverride.policy": Nascimento(
+        E_CONTRATO, "Override por peça: `None` = esta peça usa a seção global do perfil."
+    ),
+    "ControllerRumbleOverride.custom_mult": Nascimento(
+        E_CONTRATO, "Ver `ControllerRumbleOverride.policy`."
+    ),
+    "ControllerRumbleOverride.motor_forte_pct": Nascimento(
+        E_CONTRATO, "Ver `ControllerRumbleOverride.policy`."
+    ),
+    "ControllerRumbleOverride.motor_fraco_pct": Nascimento(
+        E_CONTRATO, "Ver `ControllerRumbleOverride.policy`."
+    ),
+    "ControllerMicOverride.muted": Nascimento(
+        E_CONTRATO,
+        "Override por peça. O nascimento do microfone é global e já é NO AR — "
+        "ver `ProfileMicConfig.muted`.",
+    ),
+    "ControllerMicOverride.volume": Nascimento(
+        E_CONTRATO, "Override por peça; ver `ControllerMicOverride.muted`."
+    ),
+    "ControllerSensoresOverride.giroscopio": Nascimento(
+        NASCE_NO_LEITOR,
+        "Aqui `None` NÃO é 'usa o global': é LIGADO, por "
+        "D-AUDIO-E-GIRO-NASCEM-LIGADOS (25/08). Ausência de registro devolve "
+        "os dois sensores de pé, e é o registro que o caminho quente consulta.",
+        dono="hefesto_dualsense4unix.core.virtual_motion:EstadoDosSensores",
+    ),
+    "ControllerSensoresOverride.acelerometro": Nascimento(
+        NASCE_NO_LEITOR,
+        "Ver `ControllerSensoresOverride.giroscopio` — o *'ambos'* dela, cada "
+        "um por si.",
+        dono="hefesto_dualsense4unix.core.virtual_motion:EstadoDosSensores",
+    ),
+    "ControllerOverrides.leds": Nascimento(
+        E_CONTRATO, "Seção ausente = esta peça herda a global do perfil (PERFIL-01)."
+    ),
+    "ControllerOverrides.triggers": Nascimento(
+        E_CONTRATO, "Ver `ControllerOverrides.leds`."
+    ),
+    "ControllerOverrides.rumble": Nascimento(
+        E_CONTRATO, "Ver `ControllerOverrides.leds`."
+    ),
+    "ControllerOverrides.speaker": Nascimento(
+        E_CONTRATO, "Ver `ControllerOverrides.leds`."
+    ),
+    "ControllerOverrides.mic": Nascimento(E_CONTRATO, "Ver `ControllerOverrides.leds`."),
+    "ControllerOverrides.sensores": Nascimento(
+        E_CONTRATO, "Ver `ControllerOverrides.leds`."
+    ),
+    "ControllerOverrides.mascara": Nascimento(
+        NASCE_NO_LEITOR,
+        "A EXCEÇÃO nomeada desta classe: `None` = *'volte ao padrão'* "
+        "(decisão dela, 09/09), e o padrão é `dualsense`. O controle não "
+        "declarado perde a máscara própria em vez de mantê-la.",
+        dono="hefesto_dualsense4unix.daemon.subsystems.external_mask:mascara_efetiva",
+    ),
+    # -- o perfil --------------------------------------------------------
+    "Profile.name": Nascimento(E_OBRIGATORIO, "Não há perfil sem nome."),
+    "Profile.version": Nascimento(
+        E_CONTRATO, "`1` é o único valor que o `Literal` aceita."
+    ),
+    "Profile.match": Nascimento(E_OBRIGATORIO, "Não há perfil sem regra de casamento."),
+    "Profile.priority": Nascimento(
+        E_CONTRATO,
+        "`0` é o piso da faixa e significa 'não disputa'. Um número de fábrica "
+        "faria todo perfil novo ganhar de um dela sem ela ter pedido.",
+    ),
+    "Profile.triggers": Nascimento(
+        E_SECAO, "A seção nasce inteira; quem decide os dois lados é `TriggersConfig`."
+    ),
+    "Profile.leds": Nascimento(
+        E_SECAO, "A seção nasce inteira; quem decide é `LedsConfig`."
+    ),
+    "Profile.rumble": Nascimento(
+        E_SECAO, "A seção nasce inteira; quem decide é `RumbleConfig`."
+    ),
+    "Profile.key_bindings": Nascimento(
+        NASCE_NO_LEITOR,
+        "`None` HERDA o mapa de fábrica inteiro — quem silencia o teclado é "
+        "`{}`, que não é `None`. O contrato já distingue os dois.",
+        dono="hefesto_dualsense4unix.core.keyboard_mappings:DEFAULT_BUTTON_BINDINGS",
+    ),
+    "Profile.button_actions": Nascimento(
+        NASCE_NO_LEITOR,
+        "`None` herda o de fábrica INTEIRO, derivado dos mapas do produto. "
+        "Nenhum botão da tela nasce sem ação.",
+        dono="hefesto_dualsense4unix.core.acoes_de_botao:padrao",  # (noqa-acento) símbolo real
+    ),
+    "Profile.remapeamento": Nascimento(
+        NASCE_NO_LEITOR,
+        "`None` = todos os botões passam intactos, que é o estado ÍNTEGRO da "
+        "feature. Trocar botão de fábrica seria o oposto do pedido dela.",
+        dono="hefesto_dualsense4unix.core.remapeamento_de_botao:resolver",
+    ),
+    "Profile.mouse": Nascimento(
+        AGUARDA_A_PALAVRA_DELA,
+        "A ÚNICA assimetria que sobra depois da triagem: o teclado emulado "
+        "nasce LIGADO no daemon e o mouse nasce DESLIGADO "
+        "(`mouse_emulation_enabled=False`), os dois interruptores vizinhos na "
+        "mesma aba. Ligar o ponteiro por padrão muda o desktop dela.",
+        falta="se a emulação de mouse entra no 'tudo ativado' ou fica no gesto dela",
+    ),
+    "Profile.teclado_emulado": Nascimento(
+        NASCE_NO_LEITOR,
+        "`None` = a flag global manda, e ela nasce `True`. O teclado emulado "
+        "já nasce ligado.",
+        dono="hefesto_dualsense4unix.daemon.lifecycle:DaemonConfig",
+    ),
+    "Profile.mic": Nascimento(
+        NASCE_NO_LEITOR,
+        "Seção ausente não cala ninguém: o microfone nasce no ar na chegada "
+        "do controle. Ver `ProfileMicConfig.muted`.",
+        dono="hefesto_dualsense4unix.integrations.plano_de_radio:microfone_nasce_ligado",
+    ),
+    "Profile.speaker": Nascimento(
+        NASCE_NA_ADOCAO,
+        "Seção ausente não toma a posse dos bytes — e não precisa: a adoção "
+        "escreve volume e rota. Ver `ProfileSpeakerConfig.rota`.",
+        dono="hefesto_dualsense4unix.core.backend_pydualsense:ROTA_PADRAO_DO_SOM",
+    ),
+    "Profile.mode": Nascimento(
+        NASCE_NO_LEITOR,
+        "Seção ausente = o modo vigente segue; a máscara e o caminho têm "
+        "resolvedores próprios com padrão de fábrica.",
+        dono="hefesto_dualsense4unix.daemon.subsystems.external_mask:mascara_efetiva",
+    ),
+    "Profile.suppress_desktop_emulation": Nascimento(
+        NASCE_NO_ESQUEMA,
+        "`False` é o estado LIGADO desta linha: o perfil NÃO suprime a "
+        "emulação de desktop. O mudo aqui é `True`, e é por isso que o portão "
+        "guarda o mudo de cada campo em vez de recusar `False` em bloco.",
+    ),
+    "Profile.controllers": Nascimento(
+        E_CONTRATO,
+        "`None` = perfil v1 puro, sem opinião por peça. Semear o mapa "
+        "gravaria o MAC de aparelhos que a pessoa nem tem.",
+    ),
+    "Profile.ponte": Nascimento(
+        E_CONTRATO,
+        "`None` = **ainda não sei**, e é a distinção entre 'nunca tentei' e "
+        "'tentei e funciona' que faz a escada de pontes parar.",
+    ),
+}
+
+
 __all__ = [
+    "AGUARDA_A_PALAVRA_DELA",
     "CONFIRMADA_POR_ESCOLHA",
     "CONFIRMADA_POR_GESTO",
     "CONFIRMADA_POR_SILENCIO",
+    "E_CONTRATO",
+    "E_OBRIGATORIO",
+    "E_SECAO",
+    "MODO_DE_NASCIMENTO_DO_GATILHO",
+    "NASCE_NA_ADOCAO",
+    "NASCE_NO_ESQUEMA",
+    "NASCE_NO_LEITOR",
+    "NASCIMENTO_DOS_CAMPOS",
+    "PARAMS_DE_NASCIMENTO_DO_GATILHO",
+    "PILHA_DAS_FEATURES",
     "PRIORIDADE_MAXIMA",
     "PRIORIDADE_MINIMA",
     "ControllerMicOverride",
@@ -2103,6 +2573,7 @@ __all__ = [
     "MatchAny",
     "MatchCriteria",
     "MatchManual",
+    "Nascimento",
     "PonteConfirmada",
     "Profile",
     "ProfileMicConfig",

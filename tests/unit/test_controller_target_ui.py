@@ -255,17 +255,26 @@ def test_with_controller_leds_grava_so_no_override() -> None:
 
 
 def test_with_controller_triggers_merge_por_secao() -> None:
-    """Override só de gatilhos: leds do alvo continuam herdando o global."""
+    """Override só de gatilhos: leds do alvo continuam herdando o global.
+
+    NASCE-LIGADO-01 (20/09/2026): o lado que ela NÃO tocou nasce com o
+    nascimento do esquema, que deixou de ser `Off`. Duas coisas mudaram aqui,
+    e as duas são para a régua continuar mordendo:
+
+    * o modo editado passou a ser `Pulse`, porque `Rigid` virou o fundo — uma
+      edição do mesmo valor que já estava lá não prova override nenhum;
+    * o lado intocado é comparado com o que foi LIDO ANTES da edição, em vez
+      de um modo digitado. Digitar o modo é o que fez esta linha envelhecer.
+    """
     draft = DraftConfig.from_profile(_perfil_base())
     trigs = draft.effective_triggers_for(UNIQ_2)
+    lado_intocado_antes = trigs.left
     novo = draft.with_controller_triggers(
         UNIQ_2,
-        trigs.model_copy(
-            update={"right": TriggerDraft(mode="Rigid", params=(5, 200))}
-        ),
+        trigs.model_copy(update={"right": TriggerDraft(mode="Pulse", params=())}),
     )
-    assert novo.effective_triggers_for(UNIQ_2).right.mode == "Rigid"
-    assert novo.effective_triggers_for(UNIQ_2).left.mode == "Off"  # semeado
+    assert novo.effective_triggers_for(UNIQ_2).right.mode == "Pulse"
+    assert novo.effective_triggers_for(UNIQ_2).left == lado_intocado_antes
     # A seção leds do override ficou SEM opinião → exibe o global.
     assert novo.effective_leds_for(UNIQ_2).lightbar_rgb == (129, 61, 156)
     override = novo.controller_override(UNIQ_2)
@@ -392,17 +401,23 @@ def test_triggers_com_alvo_gravam_no_override() -> None:
     class _FakeModeCombo:
         @staticmethod
         def get_active_id() -> str:
-            return "Rigid"
+            # NASCE-LIGADO-01: `Pulse` e não `Rigid`, porque `Rigid` virou o
+            # NASCIMENTO dos dois lados — escolher na tela o mesmo valor que
+            # já estava lá não prova que a escrita caiu no override.
+            return "Pulse"
 
     host = _Host(DraftConfig.from_profile(_perfil_base()), UNIQ_2)
+    global_antes = host.draft.triggers.right
+    outro_controle_antes = host.draft.effective_triggers_for(UNIQ_1).right
     host._trigger_mode = {"right": _FakeModeCombo()}
     host._trigger_param_widgets = {"right": {}}  # sliders ausentes → defaults
     host._persist_params_to_draft("right")
 
     efetivo = host.draft.effective_triggers_for(UNIQ_2)
-    assert efetivo.right.mode == "Rigid"
-    assert host.draft.triggers.right.mode == "Off"  # global intacto
-    assert host.draft.effective_triggers_for(UNIQ_1).right.mode == "Off"
+    assert efetivo.right.mode == "Pulse"
+    # Intactos: medidos contra o que foi lido ANTES, não contra modo digitado.
+    assert host.draft.triggers.right == global_antes
+    assert host.draft.effective_triggers_for(UNIQ_1).right == outro_controle_antes
 
 
 def test_refresh_lightbar_exibe_o_efetivo_do_alvo() -> None:

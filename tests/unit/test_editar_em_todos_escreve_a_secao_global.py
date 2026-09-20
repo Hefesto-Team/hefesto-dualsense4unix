@@ -87,10 +87,17 @@ UNIQ_3 = "e8:47:3a:00:00:07"
 CHAVE_1, CHAVE_2 = "aabbcc000001", "aabbcc000002"
 
 PERFIL = "Em todos"
-#: O modo da prova e o lado dela. `Rigid` porque é o mais simples dos 19 e o que
-#: as outras réguas desta aba já usam — trocar de modo aqui só trocaria o
-#: assunto sem trocar o que se mede.
-MODO = "Rigid"
+#: O modo da prova. Ele TEM de ser diferente do NASCIMENTO do gatilho, e desde
+#: a NASCE-LIGADO-01 (20/09/2026) o nascimento é `Rigid` — que era o valor
+#: escrito aqui.
+#:
+#: A razão é medida, e ela não é de estética: `_com_os_gatilhos_de_todos`
+#: devolve `None` quando nada mudou, de propósito (*"regravar um perfil
+#: idêntico troca a data do arquivo e faz o daemon reaplicá-lo"*). Com o modo
+#: do nascimento, o clique desta régua não escrevia nada, e ela passava a medir um gesto
+#: que o produto, com razão, recusa a fazer. `test_o_modo_da_prova_difere_do_
+#: nascimento` trava isso para o dia em que o nascimento mudar de novo.
+MODO = "Pulse"
 
 
 class PonteDeMentira:
@@ -238,14 +245,35 @@ def test_o_em_todos_escreve_a_secao_global_do_perfil(pac, disco) -> None:
         f"aparelho sem override herda.")
 
 
+def test_o_modo_da_prova_difere_do_nascimento(pac) -> None:
+    """A premissa desta régua, travada: clicar o nascimento não escreve nada.
+
+    NASCE-LIGADO-01 (20/09/2026). Sem este caso, o dia em que o nascimento do
+    gatilho virar `MODO` faz as outras voltarem a medir um clique que o
+    produto ignora — e elas reprovam longe daqui, sem dizer por quê.
+    """
+    from hefesto_dualsense4unix.profiles.schema import TriggersConfig
+
+    nascimento = TriggersConfig()
+    assert nascimento.left.mode != MODO, (
+        f"o modo da prova ({MODO!r}) virou o nascimento do gatilho. O gesto "
+        "'Em todos' não regrava perfil idêntico, então o clique desta régua "
+        "pararia de escrever — escolha outro modo e refaça o comentário do "
+        "`MODO`.")
+
+
 def test_o_lado_que_ela_nao_tocou_nao_entra_no_global(pac, disco) -> None:
     """Clicar com só o L2 escolhido não pode escrever opinião sobre o R2."""
     _, gravados, por = disco
     por(_profile())
+    # O lado intocado é lido ANTES do clique, e não digitado: era `"Off"` até
+    # a NASCE-LIGADO-01 mudar o nascimento, e uma régua que digita o default
+    # de ontem reprova a mudança em vez do defeito.
+    direito_antes = _profile().triggers.right
 
     _gesto(pac)(_ctx(pac), _clique("e"), PonteDeMentira())
 
-    assert gravados[0].triggers.right.mode == "Off", (
+    assert gravados[0].triggers.right == direito_antes, (
         "o clique no L2 escreveu um efeito no gatilho direito de TODO MUNDO — "
         "o alcance deste botão é a mesa, e por isso um lado a mais aqui custa "
         "quatro aparelhos.")

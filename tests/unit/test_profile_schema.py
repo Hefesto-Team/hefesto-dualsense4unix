@@ -117,10 +117,28 @@ class TestTriggerConfig:
 
 class TestProfile:
     def test_construcao_minima(self):
+        """NOTA DATADA — 20/09/2026, NASCE-LIGADO-01.
+
+        Esta linha exigia `mode == "Off"` desde o nascimento do esquema. O que
+        caducou não é a régua: é o valor. Ordem dela, 16/09/2026 — *"os
+        gatilhos deveriam vir como rigidos"*  # noqa-acento: dela — e 17/09:
+        *"os jogos e perfis tem que iniciar com todas as features ativadas por
+        default."*
+
+        A afirmação passou a ser sobre o APARELHO, e não sobre a palavra: um
+        `Rigid` que construísse o mesmo efeito de `off()` já aconteceu nesta
+        casa (TRIGGER-CANON-01) e passaria por um `== "Rigid"` digitado.
+        """
+        from hefesto_dualsense4unix.core.trigger_effects import build_from_name, off
+
         p = Profile(name="test", match=MatchAny())
         assert p.version == 1
         assert p.priority == 0
-        assert p.triggers.left.mode == "Off"
+        for lado in ("left", "right"):
+            cfg = getattr(p.triggers, lado)
+            assert build_from_name(cfg.mode, cfg.params) != off(), (
+                f"o perfil mínimo nasce com o gatilho {lado} sem resistência."
+            )
 
     def test_name_vazio_rejeita(self):
         with pytest.raises(ValidationError):

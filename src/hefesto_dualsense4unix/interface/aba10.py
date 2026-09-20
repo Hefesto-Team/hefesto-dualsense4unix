@@ -79,8 +79,8 @@ from hefesto_dualsense4unix.profiles.simple_match import (  # noqa: E402
 # O QUE O PERFIL GUARDA DE CADA CONTROLE — e isto NÃO é escolha de desenho.
 #
 # `Profile.controllers` é um mapa `{ID da peça: ControllerOverrides}`
-# (`profiles/schema.py:1008`), e a classe tem QUATRO campos HOJE
-# (`profiles/schema.py:961-964`):
+# (`profiles/schema.py:1056`), e a classe tem QUATRO campos HOJE
+# (`profiles/schema.py:1009-1012`):
 #
 #     leds  ·  triggers  ·  rumble  ·  speaker
 #
@@ -215,7 +215,7 @@ GUARDA = {
 }
 
 # O ID DA PEÇA é o endereço de rádio normalizado — a MESMA chave que o
-# `_validate_controllers_keys` aceita e canoniza (`profiles/schema.py:1769`), e
+# `_validate_controllers_keys` aceita e canoniza (`profiles/schema.py:1817`), e
 # a mesma que a dica do "Perfil ativo" promete no esqueleto: *"pelo ID da peça —
 # amanhã, em outra porta ou no rádio, ele traz de volta o que você deixou hoje"*.
 # A promessa é verdadeira porque o endereço é ESTÁVEL entre USB e BT no

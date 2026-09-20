@@ -3717,10 +3717,19 @@ PROVAS = [
     # E o `_GUARDOU` vem junto: sem a segunda metade, o efeito iria aos
     # aparelhos e a seção global — a que o terceiro controle herda — ficaria com
     # a de ontem.
+    #
+    # O MODO AQUI É `Pulse`, E NÃO `Rigid` — NASCE-LIGADO-01 (20/09/2026). O
+    # gatilho passou a NASCER rígido (`schema.MODO_DE_NASCIMENTO_DO_GATILHO`), e
+    # `_com_os_gatilhos_de_todos` devolve `None` quando nada muda, de propósito:
+    # regravar perfil idêntico troca a data do arquivo e faz o daemon
+    # reaplicá-lo. Com `Rigid`, o `_GUARDOU` desta prova deixava de acontecer —
+    # a régua reprovava a mudança de nascimento em vez de um defeito. Só esta
+    # linha troca: as outras provas do arquivo escrevem POR CONTROLE, e ali o
+    # override nasce do gesto, não do esquema.
     {"pagina": PAGINA,  # (noqa-acento) chave do contrato
      "gesto": GESTO_DE_TODOS,
-     "clique": {"forma": _forma_de_prova("e", "Rigid")},
-     "chama": [("trigger_set_detalhado", ["left", "Rigid", _padroes("Rigid")],
+     "clique": {"forma": _forma_de_prova("e", "Pulse")},
+     "chama": [("trigger_set_detalhado", ["left", "Pulse", _padroes("Pulse")],
                 {"uniq": ""}), _GUARDOU]},
 ]
 

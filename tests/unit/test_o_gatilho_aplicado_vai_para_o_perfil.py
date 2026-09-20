@@ -286,13 +286,25 @@ def test_o_segundo_lado_soma_e_nao_substitui(pac, disco) -> None:
 
 
 def test_a_secao_global_do_perfil_fica_intacta(pac, disco) -> None:
-    """A aba tem uma coluna POR CONTROLE: gravar no global mudaria o vizinho."""
+    """A aba tem uma coluna POR CONTROLE: gravar no global mudaria o vizinho.
+
+    NASCE-LIGADO-01 (20/09/2026), e são DUAS trocas pela mesma razão. O
+    gatilho passou a nascer `Rigid`, então:
+
+    * o clique escolhe `Pulse` — clicar o próprio nascimento deixaria esta
+      régua cega, porque um global escrito por engano teria o mesmo valor do
+      global intacto e nada distinguiria os dois;
+    * o "intacto" é o NASCIMENTO lido do esquema, e não um `"Off"` digitado.
+      O perfil desta montagem nunca declarou a seção, então é isso que ele tem.
+    """
+    from hefesto_dualsense4unix.profiles.schema import TriggersConfig
+
     _, gravados = disco
     _gesto(pac, "modo")(_ctx(pac),
-                        {"uniq": UNIQ, "lado": "e", "valor": "Rigid"},
+                        {"uniq": UNIQ, "lado": "e", "valor": "Pulse"},
                         PonteDeMentira())
 
-    assert gravados[0].triggers.left.mode == "Off", (
+    assert gravados[0].triggers.left == TriggersConfig().left, (
         "o clique mexeu na seção GLOBAL do perfil — o gatilho do P1 mudaria "
         "quando ela clicasse na coluna do P2")
 

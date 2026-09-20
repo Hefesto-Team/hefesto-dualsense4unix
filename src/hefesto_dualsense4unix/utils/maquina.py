@@ -692,7 +692,7 @@ class OrcamentoDeclarado(BaseModel):
     """O teto da mesa inteira — as abas seguem mandando, só não passam daqui.
 
     A chave é ``max``, nunca o rótulo ``"Máximo"``: o valor é o mesmo de
-    ``profiles/schema.py:336``, e o rótulo de tela sai de ``_POLICY_LABEL``
+    ``profiles/schema.py:384``, e o rótulo de tela sai de ``_POLICY_LABEL``
     (``app/actions/rumble_actions.py:89-94``). Gravar o rótulo faria o
     ``extra="forbid"`` recusar o DOCUMENTO INTEIRO, e o sintoma na tela seria
     "não consegui gravar", não "valor inválido".

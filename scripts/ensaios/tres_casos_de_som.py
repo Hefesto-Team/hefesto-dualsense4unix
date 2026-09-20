@@ -54,7 +54,7 @@ Por isso este instrumento toma a posse ANTES de tocar qualquer coisa, e oferece
 
 A ROTA, e o que ainda falta dela
 ---------------------------------
-`common[7]` bits 4-5, e a tabela é de `profiles/schema.py:437-441`:
+`common[7]` bits 4-5, e a tabela é de `profiles/schema.py:485-489`:
 
   0  estéreo -> fone
   1  L -> fone, mono

@@ -3173,7 +3173,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 #                               `sensor.*`, `gyro.*` nem `motion.*`). O
 #                               `sensor_hub` só LÊ — as suas 15 funções são
 #                               `leitura`, `reconciliar`, `_abrir_*`, e nenhuma
-#                               liga ou desliga nada. `profiles/schema.py:902`
+#                               liga ou desliga nada. `profiles/schema.py:950`
 #                               diz que os dois estão "FORA POR AUSÊNCIA, NÃO
 #                               POR DECISÃO", com dona declarada
 #                               (`ONDA-CONTROLES-07`, que traria a
@@ -3964,7 +3964,7 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     (`controller_card.py:4273`).
 
     "TODO O SOM DO PC" SÃO DUAS CAMADAS, E A SEGUNDA NÃO É IPC. O
-    `profiles/schema.py:523` já escreve o limite com todas as letras:
+    `profiles/schema.py:571` já escreve o limite com todas as letras:
 
         LIMITE DECLARADO: a rota é a CAMADA 2 (o firmware). O estado "Todo o
         som do PC" da janela também mexe na CAMADA 1 (o *default sink* do
