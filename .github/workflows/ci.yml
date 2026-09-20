@@ -47,6 +47,13 @@ jobs:
       # zona. Duas réguas independentes — a leitura dos CSV e a pintura no
       # Chrome —, porque a primeira é cega para style inline, que vence folha.
       - run: python3 scripts/check_cores_do_dualsense.py
+      # O TERCEIRO DA FAMÍLIA DO CHROME — 20/09/2026. Os dois de cima perguntam
+      # ao navegador sobre o DESENHO do controle; este pergunta sobre a CAIXA: o
+      # cartão da aba 02 cabe no orçamento que `aba02.PARA_O_CARD` declara, e
+      # nenhum rótulo dele sai cortado. Ele nasceu porque a fileira da saída de
+      # som empilhou para caber nos nomes que ela escreveu, e o preço daquele
+      # empilhamento tinha de virar trava em vez de aparecer na tela dela.
+      - run: python3 scripts/check_a_altura_do_cartao.py
       - run: python3 scripts/check_regua_de_tela.py
       # PORTAO-DE-ENDERECO-01 (25/08/2026): o irmão acima procura nomes de
       # fornecedor e frases de autoria; ele NUNCA olhou um endereço de rádio,
