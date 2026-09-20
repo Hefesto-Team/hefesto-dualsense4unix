@@ -35,6 +35,7 @@ O QUE A RÉGUA COBRA, e cada item é uma forma de a cura morrer calada:
 """
 from __future__ import annotations
 
+import collections
 import pathlib
 import sys
 from typing import Any
@@ -844,9 +845,24 @@ def test_a_pagina_publica_os_enderecos_na_quantidade_certa(publicado: bool) -> N
                     "pixel mudou. Fecha com: scripts/check_o_desenho_aprovado.py "
                     "--publicar-enderecos 01")
     corpo = onde.pagina("01-jogar.html", publicado=publicado).read_text(encoding="utf-8")
+    # O `modo-aceso` DEIXOU DE COBRIR OS QUATRO CHIPS — STEAM-INPUT-01,
+    # 20/09/2026. Esta linha dizia `len(aba01.MODOS)`, e a conta caiu junto com
+    # a premissa: o chip «Steam Input» ganhou campo próprio porque ele NÃO é
+    # exclusivo dos outros — «Sony DualSense» e «Steam Input» são verdade ao
+    # mesmo tempo (o degrau 4 da `ESCADA` tem `recria_vpad=False`), e num campo
+    # compartilhado acender um APAGA o outro.
+    #
+    # A CONTA PERGUNTA AO GERADOR, e o número não é digitado aqui: quem diz de
+    # qual campo é cada chip é `aba01._campo_do_chip`, o mesmo que escreve a
+    # página. Um quinto chip entra nesta régua sozinho. E a tautologia que isso
+    # abriria (derivar o esperado da função medida) está fechada do outro lado,
+    # no `conferir()` do próprio `aba01.py`, que CRAVA o único número que não
+    # sai dela: o Steam Input tem UM endereço próprio.
+    por_campo = collections.Counter(aba01._campo_do_chip(m) for m in aba01.MODOS)
     esperado = {
         "hef-posicao": len(aba01.INTERRUPTOR),
-        "modo-aceso": len(aba01.MODOS),
+        "modo-aceso": por_campo["modo-aceso"],
+        "steam-input-aceso": por_campo["steam-input-aceso"],
         # OS QUATRO LUGARES, e não só os conectados — decisão dela de 03/09:
         # *"É uma máscara por controle. (…) Se isso não ocorre com os 4
         # controles em cada aba, então temos que construir isso e garantir

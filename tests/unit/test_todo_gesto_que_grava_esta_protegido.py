@@ -118,6 +118,18 @@ ESCREVEM = {
     "remove_dismissed_appid",      # idem, na volta
     "reparar_ou_adiar",            # REESCREVE a linha de lançamento no vdf da Steam
     "add_appid_to_steam_input_allowlist",  # marca um jogo dela como exceção
+    # AS TRÊS DO STEAM INPUT POR JOGO — STEAM-INPUT-01, 20/09/2026, e a
+    # primeira é a mais destrutiva desta lista inteira: `garantir_ponte`
+    # REESCREVE o `localconfig.vdf` da Steam dela (com backup e escrita atômica,
+    # mas reescreve), e `garantir_fora_da_lista_desligado` faz o mesmo pelo
+    # avesso. Até hoje nenhum gesto as alcançava, e por isso os nomes não
+    # estavam aqui; o chip «Steam Input» da aba Jogar alcança as três.
+    #
+    # ELAS ENTRAM PORQUE HÁ CHAMADOR, e é o contrato desta lista: *"um nome aqui
+    # sem chamador nenhum não protege coisa alguma e não acusa coisa alguma"*.
+    "remove_appid_from_steam_input_allowlist",  # tira o jogo da lista dela
+    "garantir_ponte",                    # escreve `UseSteamControllerConfig=2`
+    "garantir_fora_da_lista_desligado",  # escreve `0` no vdf da Steam dela
     "apply_wrapper_to_all_games",  # a linha de lançamento de TODOS os jogos dela
     "with_steam_closed",           # FECHA a Steam dela (escala para `pkill -KILL`)
     # E MAIS QUATRO, que apareceram ao declarar `grava=` gesto a gesto. A
