@@ -1018,18 +1018,60 @@ def microfone_nativo_no_ar(uniq: str, conectados: list[str]) -> bool | None:
     botão que ficasse cinza por servidor de som mudo apagaria uma escolha dela
     sem nenhum fato por trás.
     """
+    return _a_nativa_deste(uniq, conectados)[0]
+
+
+def fonte_nativa_do_controle(uniq: str, conectados: list[str]) -> str | None:
+    """O NOME do nó de captura nativo deste controle agora. TRÊS respostas.
+
+    O-GANHO-DO-MIC-TEM-DONO-01, 20/09/2026 — e ela nasce porque perguntar
+    *"qual nó é o microfone deste controle"* ao daemon dá a resposta ERRADA
+    para esta pergunta: o ``canal_fonte`` do ``state_full`` é o nó que o
+    produto ELEGEU, e a regra 0 de :func:`escolher_fonte` faz dele o nosso
+    ``hefesto_mic_<hex6>`` — **inclusive no cabo**. Medido na mesa dela em
+    20/09, com um DualSense no fio e três no ar: os QUATRO responderam
+    ``hefesto_mic_…``, e nenhum deles tem placa ALSA.
+
+    Quem tem placa ALSA é a fonte NATIVA, e é ela que este nome devolve.
+
+    **AS TRÊS SÃO TRÊS COISAS**, com a mesma disciplina da irmã acima — e
+    colapsar as duas primeiras é o defeito que ela existe para não cometer:
+
+    * o NOME — há nó nativo, e é este;
+    * ``""`` — o ``pactl`` respondeu e não há nó nativo para este controle (o
+      rádio, que não publica placa nenhuma);
+    * ``None`` — **não sei**: o ``pactl`` não respondeu, ou o censo de USB não
+      pôde ser montado. Quem recebe isto não pode dizer *"não há"* na tela.
+
+    A irmã :func:`microfone_nativo_no_ar` divide o mesmo corpo
+    (:func:`_a_nativa_deste`): duas implementações da mesma busca é como esta
+    casa fabrica divergência silenciosa.
+    """
+    ha, no = _a_nativa_deste(uniq, conectados)
+    return None if ha is None else no
+
+
+def _a_nativa_deste(uniq: str, conectados: list[str]) -> tuple[bool | None, str]:
+    """``(há nativa?, nome)`` — o corpo único das duas perguntas acima.
+
+    O nome sai ``""`` sempre que o primeiro elemento não for ``True``: sem nó
+    não há nome, e devolver um nome com ``None`` ao lado deixaria quem lê só o
+    segundo achar que a resposta é *"não há"* quando ela é *"não sei"*.
+    """
     rc, saida = _rodar(["pactl", "list", "sources", "short"])
     if rc != 0:
-        return None
+        return (None, "")
     nativas = fontes_nativas(saida)
     if not nativas:
-        return False
-    if escolher_fonte(nativas, uniq, [], None) is not None:
-        return True
+        return (False, "")
+    no = escolher_fonte(nativas, uniq, [], None)
+    if no is not None:
+        return (True, no)
     usb = casamento_usb_agora(list(conectados))
     if usb is None:
-        return None
-    return escolher_fonte(nativas, uniq, list(conectados), usb) is not None
+        return (None, "")
+    no = escolher_fonte(nativas, uniq, list(conectados), usb)
+    return (no is not None, no or "")
 
 
 def casamento_usb_agora(uniqs: list[str]) -> CasamentoUSB | None:
