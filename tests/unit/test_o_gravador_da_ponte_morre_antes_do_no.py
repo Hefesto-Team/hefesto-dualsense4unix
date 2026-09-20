@@ -230,7 +230,7 @@ def _ponte(
 ) -> tuple[af.PonteDeSomPorRadio, subprocess.Popen[bytes]]:
     """Uma ponte de verdade, com o gravador vindo pela porta REAL de lançamento."""
     fonte, proc, motivo = af.fonte_do_monitor_do_no(
-        af.nome_do_sink(P1), abrir=_lancador(codigo, abertos)
+        af.nome_do_sink(P1), uniq=P1, abrir=_lancador(codigo, abertos)
     )
     assert fonte is not None and proc is not None, motivo
     ponte = af.PonteDeSomPorRadio(
@@ -420,7 +420,9 @@ import sys, time
 sys.path.insert(0, {raiz!r} + "/src")
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 af.argv_do_gravador = lambda fonte, **kw: {argv!r}
-fonte, proc, motivo = af.fonte_do_monitor_do_no("hefesto_som_000001")
+fonte, proc, motivo = af.fonte_do_monitor_do_no(
+    "hefesto_som_000001", uniq="aa:bb:cc:00:00:01"
+)
 print(proc.pid if proc is not None else 0, flush=True)
 time.sleep(300)
 """
@@ -744,8 +746,15 @@ def test_a_ponte_que_nao_sobe_colhe_o_gravador(
     """
     real = af.fonte_do_monitor_do_no
 
-    def _com_o_duble(id_do_no: str, **_kw: Any) -> tuple[Any, Any, str]:
-        resposta = real(id_do_no, abrir=_lancador(DUBLE_PW_RECORD, dubles))
+    def _com_o_duble(id_do_no: str, **kw: Any) -> tuple[Any, Any, str]:
+        # OS KWARGS SÃO REPASSADOS, e engoli-los já custou uma corrida da suíte
+        # em 20/09/2026: quando a `O-ROTULO-QUE-COLIDE-01` tornou o `uniq`
+        # obrigatório, este dublê ficou MAIS POBRE que a função real e o
+        # `TypeError` se leu como regressão do produto. Um dublê que descarta
+        # o que o produto exige não substitui o produto — é a família do
+        # `duble-por-new-fica-mais-pobre-que-o-produto`.
+        kw.pop("abrir", None)
+        resposta = real(id_do_no, abrir=_lancador(DUBLE_PW_RECORD, dubles), **kw)
         # Preso ANTES de a ponte recusar: um dublê ainda nascendo morreria no
         # TERM de qualquer `descer`, e a régua passaria com a cura arrancada.
         _esperar_o_cano_encher(resposta[1].pid)
@@ -779,7 +788,8 @@ def test_o_gravador_sem_stdout_e_colhido_antes_de_voltar(
     processo fica vivo.
     """
     fonte, proc, motivo = af.fonte_do_monitor_do_no(
-        af.nome_do_sink(P1), abrir=_lancador(DUBLE_OCIOSO, dubles, sem_saida=True)
+        af.nome_do_sink(P1), uniq=P1,
+        abrir=_lancador(DUBLE_OCIOSO, dubles, sem_saida=True)
     )
 
     assert len(dubles) == 1, "o gravador nem foi lançado — a régua não mede nada"
