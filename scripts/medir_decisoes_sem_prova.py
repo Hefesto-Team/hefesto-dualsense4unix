@@ -74,19 +74,29 @@ Duas tentativas de derivar a resposta do próprio CSV, e as duas caíram:
 
 1. **Por território** — «a decisão nomeia caminho de código?». Cai porque
    ``onde_mora`` guarda **onde a decisão foi registrada**, não onde ela vive no
-   produto: 98 decisões citam só ``docs/``, e entre elas está a própria
+   produto: **115 das 237** têm um ``onde_mora`` que cita ``docs/`` e nenhum
+   de ``src/``, ``tests/`` ou ``scripts/`` — e entre elas está a própria
    ``D-AUDIO-E-GIRO-NASCEM-LIGADOS``, que é a decisão mais de produto do
    arquivo. Território não separa nada.
+
+   (NÚMERO SUBSTITUÍDO NA CONFERÊNCIA DE 20/09/2026: dizia 98, e nenhuma
+   leitura do CSV devolve 98. Vale a regra da casa — número que ninguém
+   consegue re-derivar sai, e o que fica vem com a derivação ao lado.)
 2. **Por vocabulário** — duas listas de palavras, uma de processo (sprint,
    onda, release, agente, commit…) e uma de produto (aba, botão, daemon,
    microfone…). Medido: 102 só-produto, 11 só-processo, 4 com nenhum dos dois
    e **120 com os dois** — 50,6% indecidíveis, e o maior balde do arquivo.
 3. **A escrituração envenena o assunto.** A primeira versão desta lista trazia
-   `delegação` e `prioridade`. Elas não falam do que a decisão É: o campo
-   ``escolha`` de 36 linhas começa com «DECIDIDA POR DELEGAÇÃO (25/08,
-   madrugada, …)», que é quem decidiu. Com elas dentro, a redação de duas
-   perguntas da aba Configurações era classificada de PROCESSO. As palavras
-   saíram — a raiz, não o caso.
+   `delegação` e `prioridade`. Elas não falam do que a decisão É: **86 linhas**
+   do CSV trazem «POR DELEGAÇÃO» no campo ``escolha``, que é quem decidiu e não
+   sobre o quê. O estrago tem tamanho medido: com as duas palavras dentro,
+   **16 decisões** caíam no balde «processo» sem que nenhuma outra palavra de
+   processo aparecesse nelas — a escrituração era o único motivo. Entre elas, a
+   redação de duas perguntas da aba Configurações. As palavras saíram — a raiz,
+   não o caso.
+
+   (NÚMERO SUBSTITUÍDO NA CONFERÊNCIA DE 20/09/2026: dizia «36 linhas», e a
+   leitura do CSV devolve 86. E o número que decide não era esse: é o 16.)
 
 E, com as três quedas contadas, **o classificador ainda erra 2 em 29** contra
 o único chão firme que existe: as decisões que têm régua dentro de um
@@ -584,10 +594,12 @@ def main(argv=None) -> int:
         print(json.dumps(m, ensure_ascii=False, indent=2, sort_keys=True))
         return 0
 
-    if not args.check:
-        _laudo(m, args.nominal)
-        return 0
-
+    # A FORMA SE CONFERE ANTES DE QUALQUER SAÍDA, e não só no `--check`.
+    # ACHADO EM 20/09/2026, pela conferência: o laudo sem bandeira nenhuma —
+    # o comando que uma pessoa roda PRIMEIRO — estourava `ZeroDivisionError`
+    # num CSV sem a coluna `estado`, que é exatamente o caso de que esta
+    # seção fala. Traceback não é resposta: a resposta é dizer que a contagem
+    # não foi feita, e por quê.
     if m["problemas_de_forma"]:
         print("VERMELHO: o CSV mudou de forma por baixo da medição:")
         for p in m["problemas_de_forma"]:
@@ -597,6 +609,10 @@ def main(argv=None) -> int:
               "devolver zero em silêncio, e zero lê-se como «nenhuma decisão "
               "sem prova» — o contrário do que esta sprint mediu.")
         return 1
+
+    if not args.check:
+        _laudo(m, args.nominal)
+        return 0
 
     if m["piso_que_sumiu_do_csv"]:
         print(f"VERMELHO: {len(m['piso_que_sumiu_do_csv'])} decisão(ões) do "
