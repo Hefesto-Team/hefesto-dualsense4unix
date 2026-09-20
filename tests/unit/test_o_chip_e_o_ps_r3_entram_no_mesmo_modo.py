@@ -26,7 +26,7 @@ o HARM-01 curou.
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from hefesto_dualsense4unix.app.actions.mode_transition import (
     MODE_DESKTOP,
@@ -51,9 +51,13 @@ class _DaemonDoGesto:
         enabled: bool,
         flavor: str | None = None,
         *,
-        origin: str = "manual",
+        origin: Literal["manual", "profile"],
         caminho: str | None = None,
     ) -> bool:
+        # SEM DEFAULT em `origin`, como no `DaemonProtocol`. O protocolo exige o
+        # parâmetro justamente para ninguém trocar de ponte "por engano" no meio
+        # da partida: um dublê com default aceitaria a chamada que o daemon real
+        # recusa, e a régua daria verde sobre uma ponte que não subiu.
         self.recebeu.append(
             ("gamepad", {"enabled": enabled, "origin": origin, "caminho": caminho})
         )
