@@ -4,7 +4,7 @@ Defeito medido em 11/08/2026: `scripts/record_hid_capture.py` abre um
 `PyDualSenseController` **próprio** e não perguntava nada a ninguém. Com o
 daemon vivo são dois donos do mesmo hidraw, e a captura sai contaminada **sem
 erro na tela** — a terceira armadilha nomeada em
-`docs/process/COMO-OLHAR-A-TELA.md`, a mesma que fez `test trigger --raw`
+`docs/method/COMO-OLHAR-A-TELA.md`, a mesma que fez `test trigger --raw`
 imprimir "aplicado" sem ter aplicado.
 
 Isto importa agora porque a captura de Bluetooth (`hid_capture_bt.bin`, que o

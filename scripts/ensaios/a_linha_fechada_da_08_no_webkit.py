@@ -12,7 +12,7 @@ O ENSAIO LÊ A **BANCADA**, e não a página publicada. É de propósito e está
 declarado: os endereços desta leva nasceram em ``mockup/08-conexoes.html`` e só
 alcançam a tela dela depois do ``--publicar``, que é ato de quem coordena.
 Apontar para o publicado daria **não-achado convincente** — a armadilha mais
-cara do ``docs/process/COMO-OLHAR-A-TELA.md``. O desvio é de PROCESSO
+cara do ``docs/method/COMO-OLHAR-A-TELA.md``. O desvio é de PROCESSO
 (``onde.PUBLICADO`` desta execução), nunca de disco: nenhum arquivo é copiado.
 
 O QUE ELE MEDE, com o daemon VIVO e a mesa como ela estiver:

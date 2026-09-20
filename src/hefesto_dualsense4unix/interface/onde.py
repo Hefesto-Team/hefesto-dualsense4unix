@@ -103,7 +103,7 @@ def pagina(nome: str, publicado: bool = False) -> pathlib.Path:
     BANCADA de propósito: todo instrumento desta casa existe para medir o
     desenho de HOJE, e apontá-lo para o publicado o faria dar **verde sobre a
     página congelada** — que é a armadilha mais cara do
-    `docs/process/COMO-OLHAR-A-TELA.md` (*"régua que pergunta no lugar errado
+    `docs/method/COMO-OLHAR-A-TELA.md` (*"régua que pergunta no lugar errado
     produz não-achado convincente"*), e ela reincidiu quatro vezes só em 31/08.
     """
     return (PUBLICADO if publicado else saida()) / nome

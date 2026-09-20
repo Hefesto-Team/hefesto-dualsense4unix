@@ -775,7 +775,7 @@ de valores repetidos que afetaria o nó de gamepad):
 
 Leitura de evdev é passiva: não abre `hidraw`, não escreve nada, não disputa
 com o daemon. É exatamente o cuidado que a armadilha 3 do
-[COMO-OLHAR-A-TELA.md](../process/COMO-OLHAR-A-TELA.md) manda ter.
+[COMO-OLHAR-A-TELA.md](../method/COMO-OLHAR-A-TELA.md) manda ter.
 
 ### O que o driver impõe: nada
 

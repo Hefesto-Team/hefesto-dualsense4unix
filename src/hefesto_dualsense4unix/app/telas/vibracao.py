@@ -437,8 +437,9 @@ INFO = "info"
 #: **O QUE ISTO CUSTA, MEDIDO, e a decisão que sobra para ela.** Esta era a
 #: única coisa na tela que dizia que o JOGO pediu vibração e com que força — o
 #: instrumento que separa *"o motor não tremeu"* de *"o jogo não pediu nada"*.
-#: Nove testes da bancada de 07/09 (``docs/process/sprints/2026-09-07-O-COMO-DO-
-#: MAPA``) a citam; seis deles a usam como confirmação ao lado das mãos e do
+#: Nove testes da bancada de 07/09 a citam — o gesto dos nove está em
+#: ``docs/method/2026-09-07-O-COMO-DO-MAPA-o-gesto-das-178-celulas.md``;
+#: seis deles a usam como confirmação ao lado das mãos e do
 #: desenho que acende em laranja, e TRÊS ficam sem instrumento:
 #: ``vibracao.rumble.ff @ cabo`` e ``@ rádio`` (o passo *"confira que ela NÃO
 #: diz que falta gamepad virtual"*) e ``vibracao.rumble.habilitar @ cabo`` (o

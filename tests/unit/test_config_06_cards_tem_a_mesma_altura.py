@@ -122,7 +122,7 @@ def _grade_montada(dados: list[DadosDoControle]) -> tuple[Any, list[Any]]:
 
     `Gtk.OffscreenWindow` e não `Gtk.Window`: sob Xvfb não há gerenciador de
     janelas, e uma `Gtk.Window` fica 1x1 para sempre — a armadilha está escrita
-    em `docs/process/COMO-OLHAR-A-TELA.md` e já custou caro duas vezes.
+    em `docs/method/COMO-OLHAR-A-TELA.md` e já custou caro duas vezes.
     """
     grade = Gtk.Grid()
     grade.set_column_spacing(_ESPACAMENTO)

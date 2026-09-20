@@ -35,7 +35,7 @@ POR QUE ``Gtk.OffscreenWindow``, E NUNCA ``Gtk.Window``
 
 Sob Xvfb não há gerenciador de janelas, e uma ``Gtk.Window`` fica 1x1 para
 sempre: os filhos nunca ganham tamanho e o teste passa a medir o servidor X em
-vez do produto. É a armadilha nº 2 de `docs/process/COMO-OLHAR-A-TELA.md`.
+vez do produto. É a armadilha nº 2 de `docs/method/COMO-OLHAR-A-TELA.md`.
 
 A BANCADA NÃO É ESTA MÁQUINA
 ------------------------------

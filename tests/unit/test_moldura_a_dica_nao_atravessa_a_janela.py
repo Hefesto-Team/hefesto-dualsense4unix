@@ -19,7 +19,7 @@ Duas armadilhas de medição já pagas nesta casa, e as duas valem aqui:
 
 * **`Gtk.OffscreenWindow`, nunca `Gtk.Window`** — sob Xvfb não há gerenciador
   de janelas e uma `Gtk.Window` fica 1x1 para sempre
-  (`docs/process/COMO-OLHAR-A-TELA.md`).
+  (`docs/method/COMO-OLHAR-A-TELA.md`).
 * **A escala de fonte da casa muda os números.** Sem aplicar o tema pelos dois
   canais de `app.theme.apply_theme`, a medida sai nos 13,33px padrão do Pango e
   não nos da tela dela: os mesmos onze rótulos medem 635px no padrão e 919px na
