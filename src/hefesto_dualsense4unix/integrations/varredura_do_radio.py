@@ -80,10 +80,12 @@ from hefesto_dualsense4unix.integrations.conexao_zumbi import mac_limpo
 QUEDA_MINIMA_MEDIDA = 32.5
 QUEDA_MAXIMA_MEDIDA = 43.4
 
-#: As três corridas CRUZADAS — varrendo num adaptador, medindo em outro — deram
-#: +5,1%, -4,2% e -3,5%: ruído, e duas delas para o lado positivo. É o ORÁCULO
-#: do par acima, e o que autoriza o motor a mexer só no adaptador que varre.
-CORRIDAS_CRUZADAS_SEM_SINAL = 3
+# O ORÁCULO do par acima são as três corridas CRUZADAS — varrendo num adaptador,
+# medindo em outro —, que deram +5,1%, -4,2% e -3,5%: ruído, e duas delas para o
+# lado positivo. É o que autoriza o motor a mexer só no adaptador que varre, e
+# ele está escrito por extenso no `scripts/doctor.sh`, que é quem o diz a ela.
+# Aqui ele foi uma constante que chamador nenhum lia — a segunda grafia do mesmo
+# fato, podada em 20/09/2026 na conferência.
 
 #: ``/org/bluez/hciN`` e nada mais. Os nós de DEVICE (``.../dev_AA_BB_...``)
 #: ficam de fora pela forma: eles não têm ``org.bluez.Adapter1``.
@@ -104,6 +106,39 @@ SEM_BUSCTL = "não há `busctl` nesta máquina — não consigo perguntar ao Blu
 #: serviço não respondeu. Nenhuma dessas é "nenhum adaptador varre".
 SEM_BLUEZ = "o `org.bluez` não respondeu no barramento — não sei quem varre"
 
+#: A árvore respondeu e NENHUM adaptador dela respondeu ao ``Discovering``.
+#: Medido em 20/09/2026 com um ``busctl`` travado: sem esta linha a leitura
+#: voltava com ``sei=True`` e ``varrendo`` vazio — ou seja, dizendo "ninguém
+#: está varrendo" sobre uma mesa em que ninguém foi ouvido. É o `set()` ambíguo
+#: que este módulo inteiro existe para matar, entrando pela porta dos fundos.
+MESA_TODA_MUDA = "nenhum adaptador respondeu ao `Discovering` — não sei quem varre"
+
+#: O orçamento estourou no meio da leitura: parte da mesa não foi ouvida, e uma
+#: leitura interrompida não pode dizer "ninguém varre".
+SEM_RESPOSTA_A_TEMPO = (
+    "o `org.bluez` não respondeu dentro do orçamento — não sei quem varre"
+)
+
+#: QUANTO A LEITURA INTEIRA PODE CUSTAR, em segundos — e quem paga é a thread
+#: do GTK. :func:`varredura_recente` é chamada de ``_aplicar_estado``, que o
+#: ``ipc_bridge.call_async`` reposta por ``GLib.idle_add``: ela corre na thread
+#: do desenho, e o que ela segurar a janela inteira segura junto.
+#:
+#: **MEDIDO em 20/09/2026, com um `busctl` que não responde: 15,1 s.** Três
+#: adaptadores, uma pergunta travada por adaptador, cada uma esperando os 5 s
+#: de :func:`_rodar`. É o travamento de 15/09/2026 escrito de novo, com a
+#: lembrança segurando só a FREQUÊNCIA e não a DURAÇÃO.
+#:
+#: Meio segundo é SESSENTA vezes a leitura inteira medida contra o BlueZ vivo
+#: desta bancada (8,2 ms de mediana, 8,7 ms no pior caso, sete subprocessos):
+#: barramento são não chega perto dele, e barramento travado não passa dele.
+ORCAMENTO_DA_LEITURA = 0.5
+
+#: O que uma pergunta recebe quando o orçamento já acabou. Não é zero porque
+#: ``subprocess.run(timeout=0)`` mata antes de o processo nascer, e o que se
+#: quer aqui é a recusa rápida, não a exceção.
+_MINIMO_POR_PERGUNTA = 0.02
+
 
 @dataclass(frozen=True)
 class Varredura:
@@ -122,7 +157,9 @@ class Varredura:
     da resposta que não existe.
 
     ``motivo`` vazio é o único estado em que "não está em ``varrendo``" pode ser
-    lido como "não está varrendo".
+    lido como "não está varrendo" — e é por isso que a mesa INTEIRA muda também
+    preenche ``motivo`` (:data:`MESA_TODA_MUDA`): ela é uma leitura que não
+    ouviu ninguém, e sem essa linha ela voltava dizendo "ninguém varre".
     """
 
     varrendo: frozenset[str] = field(default_factory=frozenset)
@@ -140,8 +177,13 @@ class Varredura:
         return self.sei and not self.mudos
 
 
-def _rodar(args: Sequence[str], *, segundos: float = 5.0) -> str:
+def _rodar(args: Sequence[str], *, segundos: float) -> str:
     """Executa e devolve o stdout, ou ``""``. Nunca levanta.
+
+    ``segundos`` é obrigatório de propósito: este era um padrão de 5,0 s que
+    ninguém passava, e três dele em fila seguraram a thread do desenho por
+    15,1 s (medido em 20/09/2026, `busctl` travado). Quem chama tem de dizer
+    quanto do :data:`ORCAMENTO_DA_LEITURA` esta pergunta pode gastar.
 
     ``LC_ALL=C`` não é zelo. O ``pactl`` desta casa já cegou um leitor duas
     vezes por traduzir a própria saída, e um leitor cego responde *"não há"*
@@ -164,43 +206,46 @@ def _rodar(args: Sequence[str], *, segundos: float = 5.0) -> str:
     return saida.stdout or ""
 
 
-def _propriedade(
-    correr: Callable[[Sequence[str]], str], caminho: str, nome: str
-) -> str:
+def _resta(fim: float) -> float:
+    """O que sobra do orçamento para a próxima pergunta, nunca menos do que o mínimo."""
+    return max(_MINIMO_POR_PERGUNTA, fim - time.monotonic())
+
+
+def _propriedade(caminho: str, nome: str, *, ate: float) -> str:
     """Uma propriedade do ``org.bluez.Adapter1``, crua. ``""`` quando não deu."""
-    bruto = correr(
-        ["busctl", "get-property", "org.bluez", caminho, "org.bluez.Adapter1", nome]
+    bruto = _rodar(
+        ["busctl", "get-property", "org.bluez", caminho, "org.bluez.Adapter1", nome],
+        segundos=_resta(ate),
     )
     return str(bruto).strip()
 
 
-def quem_esta_varrendo(*, executor: object = None) -> Varredura:
+def quem_esta_varrendo(*, orcamento: float = ORCAMENTO_DA_LEITURA) -> Varredura:
     """Os adaptadores com ``Discovering=true``, por endereço — ou "não sei".
 
-    Três leituras encadeadas, e cada degrau que falha tem resposta PRÓPRIA:
+    Quatro degraus, e cada um que falha tem resposta PRÓPRIA:
 
     1. ``busctl`` existe? Não → :data:`SEM_BUSCTL`;
     2. ``busctl tree org.bluez`` lista adaptadores? Nada → :data:`SEM_BLUEZ`;
     3. por adaptador, ``Discovering`` e ``Address``. O que não responder entra
-       em :attr:`Varredura.mudos`, não em "não varre".
+       em :attr:`Varredura.mudos`, não em "não varre". Se NENHUM responder, a
+       leitura inteira é :data:`MESA_TODA_MUDA` — não ouvir ninguém não é ouvir
+       "ninguém";
+    4. o ``orcamento`` estourou no meio? → :data:`SEM_RESPOSTA_A_TEMPO`, com o
+       que já se soube. Quem chama é a thread do desenho, e ela não pode ficar
+       presa num barramento travado: ver :data:`ORCAMENTO_DA_LEITURA`.
 
     **O endereço é obrigatório para entrar em ``varrendo``.** Um adaptador que
     diz ``Discovering=true`` e não diz ``Address`` é um adaptador que eu não sei
     casar com plano nenhum: ele vai para ``mudos``. Pôr ``hciN`` ali no lugar
     faria o motor comparar maçã com laranja e nunca casar — um filtro que não
     casa é um filtro que não filtra, e ninguém veria.
-
-    ``executor`` existe para a régua: sem ele, esta função abre subprocesso de
-    verdade. Note que o degrau 1 (``shutil.which``) só vale para o caminho real
-    — quem injeta executor já declarou que sabe responder.
     """
-    correr: Callable[[Sequence[str]], str] = (
-        executor if callable(executor) else _rodar
-    )
-    if executor is None and shutil.which("busctl") is None:
+    if shutil.which("busctl") is None:
         return Varredura(motivo=SEM_BUSCTL)
 
-    arvore = str(correr(["busctl", "tree", "org.bluez", "--list"]))
+    ate = time.monotonic() + orcamento
+    arvore = _rodar(["busctl", "tree", "org.bluez", "--list"], segundos=_resta(ate))
     adaptadores = [
         (achado.group(1), linha)
         for linha in (bruta.strip() for bruta in arvore.splitlines())
@@ -215,20 +260,38 @@ def quem_esta_varrendo(*, executor: object = None) -> Varredura:
 
     varrendo: set[str] = set()
     mudos: set[str] = set()
+    ouvidos = 0
+    estourou = False
     for hci, caminho in adaptadores:
-        estado = _BOOLEANO.match(_propriedade(correr, caminho, "Discovering"))
+        if time.monotonic() >= ate:
+            estourou = True
+            mudos.add(hci)
+            continue
+        estado = _BOOLEANO.match(_propriedade(caminho, "Discovering", ate=ate))
         if estado is None:
             mudos.add(hci)
             continue
+        ouvidos += 1
         if estado.group(1) != "true":
             continue
-        escrito = _TEXTO.match(_propriedade(correr, caminho, "Address"))
+        escrito = _TEXTO.match(_propriedade(caminho, "Address", ate=ate))
         endereco = mac_limpo(escrito.group(1)) if escrito is not None else None
         if endereco is None:
             mudos.add(hci)
             continue
         varrendo.add(endereco)
-    return Varredura(varrendo=frozenset(varrendo), mudos=frozenset(mudos))
+    if estourou:
+        motivo = SEM_RESPOSTA_A_TEMPO
+    elif ouvidos == 0:
+        # A mesa inteira muda. `mudos` já diria isso a quem olhasse, mas o
+        # contrato deste módulo é que `sei` responda sozinho — e o único leitor
+        # do produto pega só `varrendo`.
+        motivo = MESA_TODA_MUDA
+    else:
+        motivo = ""
+    return Varredura(
+        varrendo=frozenset(varrendo), mudos=frozenset(mudos), motivo=motivo
+    )
 
 
 #: Por quanto tempo uma leitura serve. **Medido em 20/09/2026 contra o BlueZ
@@ -249,7 +312,6 @@ _LEMBRANCA: tuple[float, Varredura] | None = None
 
 def varredura_recente(
     *,
-    executor: object = None,
     validade: float = SEGUNDOS_DE_VALIDADE,
     relogio: Callable[[], float] = time.monotonic,
 ) -> Varredura:
@@ -259,6 +321,11 @@ def varredura_recente(
     três adaptadores; repeti-la a cada pintura seria pôr o rádio no caminho do
     desenho, que é a forma exata do defeito de 15/09/2026.
 
+    **A lembrança segura a FREQUÊNCIA; quem segura a DURAÇÃO é o
+    :data:`ORCAMENTO_DA_LEITURA`.** Sem ele, uma leitura a cada 3 s ainda podia
+    prender a thread do desenho por 15,1 s — medido em 20/09/2026 —, e é a
+    conta das duas juntas que torna esta chamada segura na thread do GTK.
+
     O relógio é o ``monotonic``, nunca o de parede: mudança de fuso ou ajuste de
     NTP não pode congelar nem invalidar a lembrança.
     """
@@ -267,19 +334,21 @@ def varredura_recente(
     lembranca = _LEMBRANCA
     if lembranca is not None and 0.0 <= agora - lembranca[0] < validade:
         return lembranca[1]
-    leitura = quem_esta_varrendo(executor=executor)
+    leitura = quem_esta_varrendo()
     _LEMBRANCA = (agora, leitura)
     return leitura
 
 
 
 __all__ = [
-    "CORRIDAS_CRUZADAS_SEM_SINAL",
+    "MESA_TODA_MUDA",
+    "ORCAMENTO_DA_LEITURA",
     "QUEDA_MAXIMA_MEDIDA",
     "QUEDA_MINIMA_MEDIDA",
     "SEGUNDOS_DE_VALIDADE",
     "SEM_BLUEZ",
     "SEM_BUSCTL",
+    "SEM_RESPOSTA_A_TEMPO",
     "Varredura",
     "quem_esta_varrendo",
     "varredura_recente",
