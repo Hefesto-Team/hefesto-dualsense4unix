@@ -116,6 +116,16 @@ class Ponte:
         """
         return [p for p in self.so("speaker_set") if "rota" in p]
 
+    def com_fonte(self) -> list[dict[str, Any]]:
+        """Os `speaker.set` que escolhem a CAMADA 1, e só eles.
+
+        O irmão acima guarda o firmware; este guarda o nó. A separação é o
+        contrato inteiro desta fileira — a `rota` diz por onde o PLÁSTICO toca
+        o que saiu do nó, a `fonte` diz o que ENTRA nele —, e uma régua que
+        contasse `speaker_set` sem olhar o campo mediria as duas como uma.
+        """
+        return [p for p in self.so("speaker_set") if "fonte" in p]
+
 
 @pytest.fixture(autouse=True)
 def _o_cache_da_camada_1_comeca_vazio() -> Any:
@@ -479,7 +489,112 @@ class TestSairDoTodoOSomDoPC:
 
 
 # ===========================================================================
-# 4. A tabela dos botões — todo gesto de som da página tem dono, e é do dono
+# 4. A ENTREGA DO GESTO — o clique DIZ a camada 1 ao daemon, e diz qual
+# ===========================================================================
+
+
+class TestOGestoEntregaAFonte:
+    """O que o botão MANDA, e não só o que ele grava — 20/09/2026.
+
+    **A LACUNA QUE ESTA CLASSE FECHA, e ela foi achada arrancando:** o gesto
+    ganhou `_dizer_a_fonte_ao_daemon` na `O-BOTAO-ENTREGA-O-QUE-PROMETE-01`, e
+    **trocar o `mix` pelo `sfx` nas duas chamadas não reprovava uma régua
+    sequer** — 150 verdes com a fonte invertida. As irmãs mediam o PERFIL (o
+    disco) e o BYTE (o firmware); ninguém perguntava qual camada 1 saiu pelo
+    IPC.
+
+    Consequência para quem joga, com a inversão de pé: ela clica «Efeitos do
+    Jogo e Áudio da TV no Controle», o perfil grava `mix`, o nó vivo recebe
+    `sfx` — e o som do PC **não** cai no controle. É o defeito de 04:30 de
+    volta, agora com o campo certo no disco, que é a forma dele que engana
+    mais.
+    """
+
+    def test_o_botao_do_meio_diz_mix_ao_daemon(
+        self, casa: pathlib.Path, sem_maquina_dela: dict[str, list[Any]]
+    ) -> None:
+        """MORDIDA: troque o `"mix"` do ramo do «junto» por `"sfx"`.
+
+        O perfil continua certo e a tela continua acendendo o botão do meio —
+        o que muda é o nó, que é onde o som acontece.
+        """
+        p = Ponte()
+        _gesto("rota")(_ctx(_dele(P1), _dele(P2)), {"uniq": P1, "rota": "junto"}, p)
+
+        pedidos = p.com_fonte()
+        assert pedidos, (
+            f"o «Efeitos do Jogo e Áudio da TV no Controle» não disse a camada "
+            f"1 ao daemon — só o perfil soube: {p.nomes}")
+        assert [q["fonte"] for q in pedidos] == ["mix"], (
+            f"o botão do meio mandou outra fonte ao nó: {pedidos}")
+        assert all(q.get("uniq") == P1 for q in pedidos), (
+            f"a camada 1 de um controle foi parar noutro: {pedidos}")
+
+    def test_sair_do_botao_do_meio_diz_sfx_ao_daemon(
+        self, casa: pathlib.Path, sem_maquina_dela: dict[str, list[Any]]
+    ) -> None:
+        """MORDIDA: troque o `"sfx"` do ramo de saída por `"mix"`.
+
+        Os três botões são UM estado. Um `mix` esquecido no nó vivo faz o
+        controle continuar ouvindo a máquina inteira com a tela dizendo
+        «Efeitos do Jogo» — e ela não teria botão nenhum que o desligasse,
+        porque o que desliga é justamente este.
+        """
+        p = Ponte()
+        _gesto("rota")(_ctx(_dele(P1, fonte="mix"), _dele(P2)),
+                       {"uniq": P1, "rota": "jogo"}, p)
+
+        pedidos = p.com_fonte()
+        assert pedidos, (
+            f"sair do botão do meio não devolveu a camada 1 ao daemon: {p.nomes}")
+        assert [q["fonte"] for q in pedidos] == ["sfx"], (
+            f"a saída do «junto» mandou outra fonte ao nó: {pedidos}")
+        assert all(q.get("uniq") == P1 for q in pedidos), (
+            f"a camada 1 de um controle foi parar noutro: {pedidos}")
+
+    def test_quem_ja_estava_em_sfx_nao_reescreve_a_camada_1(
+        self, casa: pathlib.Path, sem_maquina_dela: dict[str, list[Any]]
+    ) -> None:
+        """MORDIDA: tire a guarda `== "mix"` e diga `sfx` em todo clique.
+
+        O nó de som é POR CONTROLE e vive sempre
+        (`D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-SEMPRE`): reescrever a mesma
+        escolha a cada clique é mandar o dono reafinar um nó que ninguém
+        mudou, e a casa já pagou por leitura a cada tique uma vez.
+        """
+        p = Ponte()
+        _gesto("rota")(_ctx(_dele(P1, fonte="sfx")), {"uniq": P1, "rota": "jogo"}, p)
+
+        assert not p.com_fonte(), (
+            f"reescreveu a camada 1 sem ninguém a ter mudado: {p.com_fonte()}")
+
+    def test_a_camada_1_e_a_2_nao_viajam_no_mesmo_pedido(
+        self, casa: pathlib.Path, sem_maquina_dela: dict[str, list[Any]]
+    ) -> None:
+        """Um `speaker.set` leva a `fonte` OU o byte — nunca os dois.
+
+        MORDIDA: junte as duas metades num `speaker_set(uniq=…, rota=…,
+        fonte=…)` só. O handler trata as duas como pedidos independentes de
+        propósito, e um pedido misto faz a recusa da posse do volume levar a
+        escolha da camada 1 junto — que é exatamente o que a
+        `TestAOrdemNoHandler` da régua do daemon existe para impedir.
+        """
+        from pacotes import a02_controles as a02
+
+        p = Ponte()
+        _gesto("rota")(_ctx(_dele(P1, rota=a02.ROTA_DO_CANAL[a02.CANAL_TODO_O_PC])),
+                       {"uniq": P1, "rota": "junto"}, p)
+
+        assert p.com_fonte() and p.com_byte_de_rota(), (
+            "a cena não reproduz o clique que manda as DUAS camadas")
+        misturados = [q for q in p.so("speaker_set") if "fonte" in q and "rota" in q]
+        assert not misturados, (
+            f"a camada 1 e o byte do firmware viajaram no mesmo pedido: "
+            f"{misturados}")
+
+
+# ===========================================================================
+# 5. A tabela dos botões — todo gesto de som da página tem dono, e é do dono
 # ===========================================================================
 
 
