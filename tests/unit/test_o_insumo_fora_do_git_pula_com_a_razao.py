@@ -180,11 +180,19 @@ def test_um_ausente_sem_regra_contamina_o_lote_inteiro(tmp_path: Path) -> None:
 
 
 def test_o_negado_do_gitignore_desfaz_a_dispensa(tmp_path: Path) -> None:
-    """`!` posterior des-ignora, e então a ausência volta a ser defeito.
+    """`!` posterior tira a dispensa, e então a ausência volta a ser defeito.
 
-    O git resolve pela ÚLTIMA linha que casa. Uma leitura que parasse na
-    primeira dispensaria um caminho que o repositório decidiu voltar a
-    carregar — e a régua dele morreria calada.
+    MORDIDA: parar na PRIMEIRA linha que casa. A última é que manda, e uma
+    leitura que parasse na primeira dispensaria um caminho que o repositório
+    decidiu voltar a carregar — a régua dele morreria calada.
+
+    E AQUI A LEITURA É MAIS ESTRITA QUE O GIT DE PROPÓSITO (fato medido em
+    20/09/2026 com `git check-ignore -v`, porque o docstring anterior afirmava
+    o contrário): o git NÃO deixa um `!` re-incluir o que mora sob uma pasta
+    excluída, então ele ainda diria `.gitignore:1` para `docs/process/sprints`
+    no arranjo abaixo. A divergência é para o lado que não esconde nada —
+    `None` não pula e o teste reprova no claro. O outro lado seria uma dispensa
+    a mais, e é dispensa a mais que este arquivo passa o tempo todo recusando.
     """
     raiz = _arvore_de_mentira(tmp_path, "docs/process/\n!docs/process/sprints\n")
 
@@ -391,6 +399,163 @@ def test_o_gancho_recusa_o_marcador_sem_caminho() -> None:
         ),
         encoding="utf-8",
     )
+    try:
+        processo = _rodar_pytest_sobre(modulo)
+    finally:
+        modulo.unlink(missing_ok=True)
+
+    saida = processo.stdout + processo.stderr
+    assert processo.returncode != 0, saida[-3000:]
+    assert "pulo calado" in saida, saida[-3000:]
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 5. A OUTRA PORTA — `exigir_insumo_fora_do_git`, medida de ponta a ponta
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# ACHADO PELO CONFERENTE, 20/09/2026, e é o arranjo DIFÍCIL que faltava.
+#
+# O marcador tem DUAS portas e só uma estava medida. As treze réguas acima
+# atravessam `pytest.mark.insumo_fora_do_git`; NENHUMA atravessava
+# `exigir_insumo_fora_do_git`, que é justamente a porta que existe por causa do
+# pior sintoma desta casa — a exceção que sobe na COLETA, derruba o lote
+# inteiro, e devolve `no tests ran`, que se lê como limpo.
+#
+# MEDIDO: com a porta do módulo arrancada, as treze continuaram VERDES.
+#
+#   `pytest.skip(motivo)` sem `allow_module_level=True` .... 13 verdes, 0 reprovaram
+#   `exigir_insumo_fora_do_git` virando `return None` ...... 13 verdes, 0 reprovaram
+#
+# E as duas trazem de volta o defeito inteiro da sprint, palavra por palavra:
+# `tests/unit/test_portao_a_colisao_de_sprints_morde.py` passa a devolver
+# `ERROR` + `Interrupted: 1 error during collection` numa árvore onde
+# `scripts/check_colisao_de_sprints.py` não veio — que é toda árvore de agente
+# e todo clone limpo.
+#
+# As três réguas abaixo fecham isso, e cada uma mede por pytest de subprocesso
+# sobre um módulo de mentira nascido DENTRO de `tests/unit/`: é a única forma
+# de o `tests/conftest.py` de verdade entrar na conta.
+
+#: Módulo que LÊ o insumo no corpo, como o chamador real faz. Se a porta não
+#: pular, o `read_text` levanta na COLETA — o defeito que a sprint veio curar.
+_TEMPLATE_DA_PORTA_DO_MODULO = '''\
+"""Módulo de mentira do INSUMO-FORA-DO-GIT-01 — apagado no `finally`."""
+
+from pathlib import Path
+
+from tests.conftest import exigir_insumo_fora_do_git
+
+exigir_insumo_fora_do_git({alvos})
+
+# Só se chega aqui quando a porta do módulo NÃO pulou.
+Path(__file__).resolve().parents[2].joinpath({primeiro}).read_text(encoding="utf-8")
+
+
+def test_de_mentira():
+    assert False, "este teste nunca deveria RODAR quando o insumo é dispensado"
+'''
+
+#: O mesmo sem a leitura, para quando o que se mede é o teste RODANDO.
+_TEMPLATE_DA_PORTA_SEM_LEITURA = '''\
+"""Módulo de mentira do INSUMO-FORA-DO-GIT-01 — apagado no `finally`."""
+
+from tests.conftest import exigir_insumo_fora_do_git
+
+exigir_insumo_fora_do_git({alvos})
+
+
+def test_de_mentira():
+    assert False, "este teste tem de RODAR e reprovar quando não há dispensa"
+'''
+
+
+def _modulo_da_porta(template: str, *alvos: str) -> Path:
+    nome = f"test_zz_porta_do_modulo_{uuid.uuid4().hex[:8]}.py"
+    caminho = RAIZ / "tests" / "unit" / nome
+    caminho.write_text(
+        template.format(
+            alvos=", ".join(repr(a) for a in alvos),
+            primeiro=repr(alvos[0]) if alvos else "''",
+        ),
+        encoding="utf-8",
+    )
+    return caminho
+
+
+def test_a_porta_do_modulo_pula_o_lote_com_a_razao() -> None:
+    """MORDIDA: `pytest.skip(motivo)` sem `allow_module_level=True`.
+
+    Esta é a porta que existe por causa da COLETA, e é o sintoma mais caro
+    desta casa: sem o pulo de módulo o `read_text` do corpo levanta, pytest
+    devolve `Interrupted: 1 error during collection`, o lote inteiro morre e
+    `no tests ran` lê-se como limpo.
+
+    O que a mordida arranca: com `allow_module_level` fora, o próprio
+    `pytest.skip` vira `Failed: Using pytest.skip outside of a test is not
+    allowed` — colheita interrompida, e esta régua reprova. Arrancada, vista
+    reprovar, devolvida.
+
+    O alvo é um arquivo que NUNCA existe debaixo de `docs/process/`, que é
+    ignorado: o resultado é o mesmo na árvore dela e no clone limpo, e a régua
+    não mede a máquina.
+    """
+    modulo = _modulo_da_porta(
+        _TEMPLATE_DA_PORTA_DO_MODULO,
+        f"docs/process/NAO-EXISTE-{uuid.uuid4().hex}.md",
+    )
+    try:
+        processo = _rodar_pytest_sobre(modulo)
+    finally:
+        modulo.unlink(missing_ok=True)
+
+    saida = processo.stdout + processo.stderr
+    assert "error during collection" not in saida, (
+        "a porta do módulo deixou a exceção subir na COLETA — é o lote inteiro "
+        "morrendo, e `no tests ran` lê-se como limpo:\n" + saida[-3000:]
+    )
+    assert "1 skipped" in saida, saida[-3000:]
+    assert "INSUMO-FORA-DO-GIT-01" in saida, (
+        "pulou, mas não disse por quê — pulo calado é verde sobre nada:\n"
+        + saida[-3000:]
+    )
+    assert ".gitignore:" in saida, saida[-3000:]
+
+
+def test_a_porta_do_modulo_nao_pula_o_que_o_gitignore_nao_explica() -> None:
+    """MORDIDA: `exigir_insumo_fora_do_git` virando `return None`, e a mordida 3.
+
+    O arranjo DIFÍCIL atravessando a porta do módulo: caminho ausente que
+    nenhuma linha do `.gitignore` cobre. O módulo tem de ser COLETADO e o teste
+    de mentira tem de RODAR e reprovar. Uma porta que pulasse por ausência
+    apagaria o lote de toda régua cujo arquivo VERSIONADO alguém deletasse — e
+    apagaria calada, porque `skipped` não acende luz nenhuma.
+    """
+    modulo = _modulo_da_porta(
+        _TEMPLATE_DA_PORTA_SEM_LEITURA,
+        f"docs/usage/NAO-EXISTE-{uuid.uuid4().hex}.md",
+    )
+    try:
+        processo = _rodar_pytest_sobre(modulo)
+    finally:
+        modulo.unlink(missing_ok=True)
+
+    saida = processo.stdout + processo.stderr
+    assert "1 failed" in saida, (
+        "a porta do módulo dispensou uma ausência que o git não explica:\n"
+        + saida[-3000:]
+    )
+
+
+def test_a_porta_do_modulo_recusa_a_chamada_sem_caminho() -> None:
+    """MORDIDA 6, do lado da porta do módulo: aceitar a chamada sem argumento.
+
+    `exigir_insumo_fora_do_git()` sem caminho nenhum não tem o que olhar, logo
+    nunca pularia — e passaria a vida parecendo uma guarda. A recusa é o
+    `ValueError` de `motivo_do_pulo`, que aqui sobe na coleta com a razão
+    escrita. Arrancado (`return None` no lugar do `raise`), o módulo de mentira
+    passou a ser coletado e esta régua reprovou; devolvido.
+    """
+    modulo = _modulo_da_porta(_TEMPLATE_DA_PORTA_SEM_LEITURA)
     try:
         processo = _rodar_pytest_sobre(modulo)
     finally:

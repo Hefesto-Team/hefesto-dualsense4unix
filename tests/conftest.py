@@ -3380,8 +3380,17 @@ def _regra_que_exclui(raiz: Path, relativo: str) -> str | None:
     """A linha do `.gitignore` que exclui `relativo`, ou `None`.
 
     Segue as duas regras do git que esta casa usa de fato: um padrão com barra
-    é ancorado na raiz, um padrão sem barra casa com qualquer componente, e
-    **a última linha que casa manda** (por isso um `!` posterior des-ignora).
+    é ancorado na raiz e um padrão sem barra casa com qualquer componente. A
+    última linha que casa manda, e por isso um `!` posterior tira a dispensa.
+
+    ONDE ISTO É MAIS ESTRITO QUE O GIT, de propósito (medido em 20/09/2026, com
+    `git check-ignore -v` num repositório de mentira): o git **não** deixa um
+    `!` re-incluir o que mora sob uma pasta já excluída — com
+    `docs/process/` e `!docs/process/sprints`, o git continua dizendo
+    `.gitignore:1` para `docs/process/sprints`, e esta leitura diz `None`.
+    A divergência é para o lado que não esconde nada: `None` NÃO pula, e o
+    teste reprova no claro. O lado oposto seria uma dispensa a mais, e dispensa
+    a mais é o verde sobre nada que este bloco existe para impedir.
 
     Um padrão só-pasta (`docs/process/`) casa também com o caminho declarado em
     si, e não só com os ancestrais dele: o caminho que se está olhando NÃO
