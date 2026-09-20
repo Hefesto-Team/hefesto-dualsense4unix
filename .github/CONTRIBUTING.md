@@ -208,9 +208,17 @@ O portão que guarda esta decisão refaz a contagem a cada rodada — ver abaixo
 ### O encanamento de i18n continua vivo, e de propósito
 
 Nada de i18n foi removido: `po/en.po`, `po/pt_BR.po`, `scripts/i18n_extract.sh`,
-`scripts/i18n_compile.sh`, `src/hefesto_dualsense4unix/utils/i18n.py` e os 308
-`translatable="yes"` de `gui/main.glade` continuam onde estavam, funcionando. O
-encanamento está **correto**; o que não existe é o texto passando por ele.
+`scripts/i18n_compile.sh` e `src/hefesto_dualsense4unix/utils/i18n.py` continuam
+onde estavam. O encanamento está **correto**; o que não existe é o texto
+passando por ele.
+
+**FATO SUBSTITUÍDO — 20/09/2026.** Esta linha citava «os 308
+`translatable="yes"` de `gui/main.glade`» entre o que continua funcionando. O
+XML da janela GTK saiu do disco em 06/09/2026 (`D-0609-GTK-LEVA-INTEIRA`), e
+com ele o caminho padrão do extrator: das 413 `msgid` do catálogo, 317 citam
+esse arquivo ausente e 352 (85,2%) não alcançam tela nenhuma. Quem for ligar o
+encanamento liga-o à interface de hoje, e pede o catálogo menor por escrito
+(`scripts/i18n_extract.sh --sem-a-janela`).
 
 Removê-lo para "ficar coerente" seria destruir trabalho bom para provar um
 ponto — e é exatamente o que esta casa não faz. Quem for mexer em i18n mexe
