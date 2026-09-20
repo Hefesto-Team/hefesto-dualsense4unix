@@ -6154,12 +6154,18 @@ class IpcHandlersMixin:
         """
         sub = getattr(self.daemon, "_alto_falante_subsystem", None)
         escolher = getattr(sub, "escolher_a_fonte", None)
-        if not uniq or not callable(escolher):
+        # O `valendo` sai do MESMO `getattr` defensivo do `escolher`, e não de
+        # `sub.fonte_escolhida`: o subsystem é `Any | None` para o mypy, e ler o
+        # atributo direto é a chamada em `None` que a guarda logo abaixo existe
+        # para impedir. Duas leituras com disciplinas diferentes no mesmo bloco
+        # é como um `None` atravessa a guarda do irmão.
+        valendo = getattr(sub, "fonte_escolhida", None)
+        if not uniq or not callable(escolher) or not callable(valendo):
             return None
         try:
             if not escolher(uniq, fonte):
                 return None
-            return str(sub.fonte_escolhida(uniq))
+            return str(valendo(uniq))
         except Exception:  # pragma: no cover - defensivo
             logger.debug("som_fonte_nao_escolhida", uniq=uniq, exc_info=True)
             return None
