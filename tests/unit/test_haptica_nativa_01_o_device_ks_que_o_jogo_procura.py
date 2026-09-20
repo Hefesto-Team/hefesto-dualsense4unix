@@ -882,3 +882,73 @@ def test_o_doctor_vigia_o_curador_no_mesmo_lugar_e_pela_mesma_fonte() -> None:
         f"o doctor compara contra «{fonte}» e o install copia de «{do_install}»"
     )
     assert (_RAIZ_DO_PROJETO / fonte).is_file(), fonte
+
+
+# ------------------------- a conferência de 20/09/2026: o que ainda passava
+#
+# As três réguas acima mordem tudo o que existe HOJE — medido arrancando cada
+# uma das duas opções, trocando o VALOR de «1» para «0», pondo uma delas sob um
+# `if` de variante e renomeando o caminho do curador em cada um dos seus donos,
+# um por vez. As duas abaixo fecham o que sobrou, e cada uma nasce de uma
+# mordida que ficou VERDE.
+
+
+def test_a_matriz_conhece_todo_argumento_do_compose_env() -> None:
+    """A matriz só vale enquanto souber de TODO eixo que o produto distingue.
+
+    A MORDIDA QUE REVELOU, 20/09/2026: acrescentado a `compose_env` um sexto
+    argumento, com as duas opções puladas quando ele vem ligado, os 1.075
+    testes que leem o wrapper e os 42 portões da camada rápida seguiram
+    VERDES. A matriz nunca passa o eixo novo, então nunca visita o ramo que
+    desliga a vibração — que é, palavra por palavra, o defeito que a régua de
+    cima diz impedir. Os eixos ali SÃO digitados; a assinatura é o dono.
+    Pergunta-se a ela.
+    """
+    import inspect
+
+    from hefesto_dualsense4unix.daemon.launch_env import compose_env
+
+    argumentos = set(inspect.signature(compose_env).parameters)
+    eixos = set(_toda_variante_do_compose_env()[0])
+    assert argumentos == eixos, (
+        "a matriz da háptica e a assinatura de `compose_env` divergiram — só na "
+        f"assinatura: {sorted(argumentos - eixos)}; só na matriz: "
+        f"{sorted(eixos - argumentos)}. Um eixo que a matriz não visita é um "
+        "ramo em que a vibração pode sair sem ninguém ver"
+    )
+
+
+def test_o_curador_entra_executavel_porque_o_wrapper_exige_isso() -> None:
+    """O install grava o curador; o wrapper só o roda se ele puder ser executado.
+
+    A MORDIDA QUE REVELOU, 20/09/2026: trocado `install -Dm755` por `-Dm644` no
+    `install.sh`, os 1.075 testes que leem o wrapper e os 42 portões da camada
+    rápida seguiram VERDES. Medido no wrapper DE VERDADE, com o curador em
+    0644: o jogo abre (rc=0), o rastro diz `sem-curador` — que é rastro, não
+    erro — e o `system.reg` do prefixo não recebe o device. A mesma morte
+    calada do caminho renomeado, pela outra metade do mesmo contrato.
+
+    O irmão `hefesto-camadas` já tinha a régua do bit (um teste que RODA o
+    bloco do install e cobra `os.access(..., os.X_OK)`); a do device KS nasceu
+    sem, e o dublê do lançamento dava o bit a si mesmo.
+
+    O número não é digitado aqui: a EXIGÊNCIA é lida do wrapper, e o modo é
+    lido do install.
+    """
+    corpo = _corpo_da_funcao("assets/hefesto-launch.sh", "curar_audio_ks")
+    assert '-x "$curador"' in corpo, (
+        "o wrapper deixou de exigir o bit de execução — esta régua mede a "
+        "exigência dele, e ela sumiu"
+    )
+    for fonte, alvo in (
+        ("AUDIO_KS_SRC", "AUDIO_KS_TARGET"),
+        ("CAMADAS_SRC", "CAMADAS_TARGET"),
+    ):
+        modo = _um_valor(
+            "install.sh",
+            rf'^\s*install -Dm(\d+) "\$\{{{fonte}\}}" "\$\{{{alvo}\}}"',
+        )
+        assert int(modo, 8) & 0o100, (
+            f"o install grava o curador de {alvo} com modo {modo} — sem o bit "
+            "de execução o wrapper o pula em silêncio e o jogo abre sem vibrar"
+        )
