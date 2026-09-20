@@ -1817,6 +1817,134 @@ _dualsense_perfil_status() {
     ' "${1:--}"
 }
 
+# --- MIC-CABO-SPDIF-01: a PORTA de captura, que a camada 2 não olha ---------
+#
+# O `_dualsense_perfil_status` acima decide no nível do PERFIL e está certo no
+# que faz. Mas ele NUNCA olha a PORTA, e por isso não distingue uma porta que
+# liga o elemento de ganho de captura de uma que não liga — que é o defeito
+# medido em 17 e 20/09/2026 e que era invisível a todos os portões desta casa.
+#
+# O QUE ESTÁ FORA DE ALCANCE, e o número é do aparelho: o `Headset Capture
+# Volume` do DualSense (Feature Unit 5 do descritor UAC, faixa 0…12288 =
+# 0…+48 dB) foi lido em repouso a 100% / +48,00 dB. Nenhuma porta que o
+# PipeWire ativou até hoje liga esse elemento, então o ganho não tem dono: nem
+# o produto, nem a tela, nem ela.
+#
+# DOIS DONOS DIFERENTES PRODUZIRAM O MESMO ESTADO, e o segundo é NOSSO:
+#   17/09 — a porta era `iec958-stereo-input`, do alsa-card-profile da distro,
+#           cujo .conf tem um `[Element PCM Capture Source]` e NENHUM
+#           `volume = merge`.
+#   20/09 — com o UCM desta casa instalado (HAPTICA-NATIVA-01), a porta passou
+#           a ser `[In] Mic`, do nosso `assets/ucm/DualSense-HiFi.conf`, cujo
+#           `SectionDevice."Mic"` declara só `CapturePCM` e `CapturePriority`.
+#           Sem `CaptureVolume`/`CaptureMixerElem`, o elemento continua fora.
+# Trocar isso é mudança no SISTEMA dela e depende do par controlado do ganho
+# (`scripts/ensaios/o_caminho_do_mic_no_cabo.py --ganho-plano`). Por isso este
+# decisor DIZ, e não conserta.
+#
+# O DESENHO QUE CAIU, e fica escrito para ninguém refazê-lo: a sprint pedia os
+# três textos `pactl list cards`, `pactl list sources` e `amixer scontents`.
+# MEDIDO nesta bancada: **nenhuma saída do pactl distingue uma porta que liga
+# elemento de captura de uma que não liga.** `Flags: HARDWARE` aparece até em
+# monitor de sink puro, e `Base Volume: 100% / 0.00 dB` aparece igual na entrada
+# de bordo, cujo elemento `Capture` está a +30,00 dB. Um decisor feito só de
+# pactl responderia sobre outra coisa. Então o terceiro texto aqui é o que
+# REALMENTE decide: a DEFINIÇÃO da porta ativa.
+#
+# PURA: três ARQUIVOS, nenhuma chamada a comando, nenhuma escrita.
+#   $1 = `LC_ALL=C pactl list sources`
+#   $2 = `LC_ALL=C amixer -c <N> scontents`
+#   $3 = a definição da porta ATIVA (o `SectionDevice` do UCM, ou o
+#        `paths/<porta>.conf` do alsa-card-profile)
+# Imprime `porta_ativa<TAB>elemento_de_ganho<TAB>ganho_fora_de_alcance`.
+# Silêncio total = não há source de captura do DualSense, e aí não há veredito.
+_dualsense_porta_de_captura_status() {
+    local porta elemento liga="não" fora="não"
+
+    # A porta ATIVA da source de captura do DualSense. Só `alsa_input.*`: o
+    # `.monitor` do sink também casa a marca no nome e é o loopback da SAÍDA.
+    porta="$(awk '
+        /^Source #/ { alvo = 0 }
+        /^[[:space:]]+Name: / {
+            nome = substr($0, index($0, ": ") + 2)
+            alvo = (tolower(nome) ~ /^alsa_input\..*dualsense/)
+            next
+        }
+        alvo && /^[[:space:]]+Active Port: / {
+            print substr($0, index($0, ": ") + 2)
+            exit
+        }
+    ' "${1:-/dev/null}")"
+    [[ -n "${porta}" ]] || return 0
+
+    # O elemento de ganho de CAPTURA que a placa tem para ligar. `cvolume` é a
+    # capacidade de volume de captura no vocabulário do `amixer scontents`;
+    # sem ela o elemento não é um ganho e não há nada fora de alcance.
+    # A aspa simples vai por `-v`: escapá-la dentro do programa awk exigiria
+    # `\x27`, que é extensão e esta casa roda mawk.
+    elemento="$(awk -v aspa="'" '
+        index($0, "Simple mixer control ") == 1 {
+            nome = substr($0, index($0, aspa) + 1)
+            corte = index(nome, aspa)
+            if (corte > 1) { nome = substr(nome, 1, corte - 1) } else { nome = "" }
+            tem = 0
+            next
+        }
+        /Capabilities:/ && /cvolume/ { tem = 1 }
+        tem && /Capture channels:/ && nome != "" { print nome; exit }
+    ' "${2:-/dev/null}")"
+
+    # A porta liga um ganho de captura? Os dois dialetos, e o teste é o mesmo
+    # em ambos: existe uma ligação de VOLUME declarada.
+    #   UCM  ..... `CaptureVolume` ou `CaptureMixerElem` no `SectionDevice`.
+    #   ACP  ..... um `[Element …]` com `volume = merge` (ou um valor). O
+    #              `volume = off` NÃO conta: ele existe justamente para SILENCIAR
+    #              o elemento, e contá-lo daria verde sobre o defeito.
+    if [[ -r "${3:-}" ]] && grep -qE \
+        '^[[:space:]]*(CaptureVolume|CaptureMixerElem)[[:space:]]|^[[:space:]]*volume[[:space:]]*=[[:space:]]*(merge|zero|-?[0-9])' \
+        "${3}"; then
+        liga="sim"
+    fi
+
+    # Reprova SÓ no cruzamento: a porta não liga E a placa tem o que ligar.
+    # Sem elemento na placa não há nada fora de alcance, e reprovar aí seria
+    # inventar defeito — foi por essa porta que voltou, em 26/07, a "cura" que
+    # emudeceu o microfone de quem a rodou.
+    if [[ -n "${elemento}" && "${liga}" == "não" ]]; then
+        fora="sim"
+    fi
+    printf '%s\t%s\t%s\n' "${porta}" "${elemento}" "${fora}"
+}
+
+# A DEFINIÇÃO da porta `$1` no disco: o `SectionDevice` do UCM quando o nome
+# vem do UCM (`[In] Mic`), ou o `paths/<porta>.conf` do alsa-card-profile.
+# Grava num arquivo temporário e imprime o caminho — é a única parte IMPURA
+# desta dupla, e existe para o decisor acima continuar puro.
+_definicao_da_porta_de_captura() {
+    local porta="$1" saida="$2"
+    local raiz_ucm="${HEFESTO_RAIZ_UCM:-/usr/share/alsa/ucm2}"
+    local raiz_acp="${HEFESTO_RAIZ_ACP:-/usr/share/alsa-card-profile/mixer/paths}"
+    : > "${saida}"
+    case "${porta}" in
+        "[In] "*|"[Out] "*)
+            # Nome de porta do UCM: `[In] Mic` → o `SectionDevice."Mic"`.
+            local dispositivo="${porta#*] }"
+            local verbo
+            verbo="$(find "${raiz_ucm}" -name 'DualSense-HiFi.conf' -print -quit 2>/dev/null)"
+            [[ -r "${verbo}" ]] || return 0
+            awk -v alvo="SectionDevice.\"${dispositivo}\"" '
+                index($0, alvo) == 1 { dentro = 1 }
+                dentro { print }
+                dentro && /^}/ { exit }
+            ' "${verbo}" > "${saida}"
+            ;;
+        *)
+            [[ -r "${raiz_acp}/${porta}.conf" ]] || return 0
+            cat "${raiz_acp}/${porta}.conf" > "${saida}"
+            ;;
+    esac
+}
+
 # PURA: 0 quando a source de nome `$1` tem PORTA ATIVA no texto de
 # `LC_ALL=C pactl list sources` lido de `$2` (arquivo) ou do stdin.
 #
@@ -1917,6 +2045,58 @@ check_mic_perfil_sem_sinal() {
     fail "a entrada do DualSense não tem porta de captura (camada 2): ${ativo} — rode: scripts/doctor.sh --fix"
     info "  sem porta a source abre o fluxo e entrega zeros (medido: 327.680 bytes de silêncio digital)"
     info "  cura: pactl set-card-profile ${card} \"${alvo}\""
+}
+
+# MIC-CABO-SPDIF-01 — o ganho de captura que a porta ativa não liga.
+#
+# É WARN, e nunca FAIL, de propósito: o estado que ele descreve é o de sempre —
+# nasceu com o produto e não é regressão de ninguém —, e a cura é mudança no
+# SISTEMA dela que depende de uma medição com a orelha dela. Um FAIL aqui
+# reprovaria toda instalação por um ponto que só ela pode fechar.
+#
+# E O VERDE DAQUI NÃO DIZ QUE O MICROFONE ESTÁ BOM. Ele responde sobre a
+# configuração do PipeWire, não sobre o som: prova que o elemento existe e está
+# (ou não) no caminho, nunca que o ganho melhora ou piora a captura. Quem ler
+# de outro jeito leu errado, e por isso a frase está na própria linha.
+check_mic_ganho_de_captura() {
+    command -v pactl >/dev/null 2>&1 || { info "pactl ausente — não checo o ganho de captura do DualSense"; return; }
+    command -v amixer >/dev/null 2>&1 || { info "amixer ausente — não checo o ganho de captura do DualSense"; return; }
+    local indice
+    indice="$(awk 'tolower($0) ~ /dualsense/ { print $1; exit }' \
+        "${HEFESTO_PROC_CARDS:-/proc/asound/cards}" 2>/dev/null)"
+    if [[ -z "${indice}" ]]; then
+        info "nenhum DualSense no cabo — ganho de captura não conferido"
+        return
+    fi
+    local tmp porta elemento fora
+    tmp="$(mktemp -d)" || return
+    LC_ALL=C pactl list sources > "${tmp}/sources" 2>/dev/null || true
+    LC_ALL=C amixer -c "${indice}" scontents > "${tmp}/scontents" 2>/dev/null || true
+    porta="$(awk '
+        /^Source #/ { alvo = 0 }
+        /^[[:space:]]+Name: / {
+            nome = substr($0, index($0, ": ") + 2)
+            alvo = (tolower(nome) ~ /^alsa_input\..*dualsense/)
+            next
+        }
+        alvo && /^[[:space:]]+Active Port: / { print substr($0, index($0, ": ") + 2); exit }
+    ' "${tmp}/sources")"
+    _definicao_da_porta_de_captura "${porta}" "${tmp}/porta"
+    local linha
+    linha="$(_dualsense_porta_de_captura_status "${tmp}/sources" "${tmp}/scontents" "${tmp}/porta")"
+    rm -rf "${tmp}"
+    if [[ -z "${linha}" ]]; then
+        info "sem source de captura do DualSense agora — ganho de captura não conferido"
+        return
+    fi
+    IFS=$'\t' read -r porta elemento fora <<< "${linha}"
+    if [[ "${fora}" == "sim" ]]; then
+        warn "a porta de captura do DualSense (${porta}) não liga o elemento '${elemento}' — o ganho de captura fica fora do alcance do PipeWire, da tela e dela. Isto é sobre a CONFIGURAÇÃO do som, não sobre a qualidade do áudio"
+        info "  quem define a porta hoje é o UCM desta casa (assets/ucm/DualSense-HiFi.conf); ligá-lo muda o SISTEMA dela e é decisão dela"
+        info "  mede antes: scripts/ensaios/o_caminho_do_mic_no_cabo.py --ganho-plano"
+        return
+    fi
+    pass "a porta de captura do DualSense (${porta}) alcança o ganho de hardware${elemento:+ ('${elemento}')} — e isto NÃO é um veredito sobre a qualidade do áudio"
 }
 
 # Cura das camadas 1 e 2. Chamada pelo --fix (junto das demais) e pelo --fix-mic
@@ -6809,6 +6989,7 @@ main() {
     check_audio_sink_muted
     check_mic_mute_persistido
     check_mic_perfil_sem_sinal
+    check_mic_ganho_de_captura
     hdr "Steam Input"
     check_steam_input
     check_steam_input_allowlist

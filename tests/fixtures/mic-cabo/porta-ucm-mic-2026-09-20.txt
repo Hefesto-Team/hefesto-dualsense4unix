@@ -1,0 +1,8 @@
+SectionDevice."Mic" {
+	Comment "Controller microphone"
+
+	Value {
+		CapturePCM "hw:${CardId},0"
+		CapturePriority 100
+	}
+}
