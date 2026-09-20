@@ -93,9 +93,12 @@ INSTRUMENTOS = (
 #: Como se lê o carimbo de uma página irmã. A marca vem do dono único
 #: (`carimbo_da_casa.MARCA`), então mudar o formato lá não deixa este regex
 #: para trás em silêncio: sem casar, o cartão diz "carimbo não encontrado".
+#:
+#: O NOME DA BRANCH SAIU do carimbo em 20/09/2026 — ele tem largura variável e
+#: entrava nos bytes das quatro páginas (ver `scripts/carimbo_da_casa.py`).
+#: Este regex era o único leitor dele.
 CARIMBO_NA_PAGINA = re.compile(
     r"gerado em ([^<·]+?)\s*·\s*commit <code>([^<]*)</code>"
-    r"\s*na branch <code>([^<]*)</code>"
 )
 
 ESTILO = """
@@ -150,18 +153,17 @@ def le_carimbo(caminho: Path) -> dict[str, str]:
     preenchida com um valor plausível.
     """
     if not caminho.is_file():
-        return {"existe": "", "quando": "", "commit": "", "branch": "", "kb": ""}
+        return {"existe": "", "quando": "", "commit": "", "kb": ""}
     texto = caminho.read_text(encoding="utf-8", errors="replace")
     kb = f"{caminho.stat().st_size / 1024:.0f} KB"
     linha = next((ln for ln in texto.splitlines() if MARCA in ln), "")
     achado = CARIMBO_NA_PAGINA.search(linha)
     if not achado:
-        return {"existe": "sim", "quando": "", "commit": "", "branch": "", "kb": kb}
+        return {"existe": "sim", "quando": "", "commit": "", "kb": kb}
     return {
         "existe": "sim",
         "quando": achado.group(1).strip(),
         "commit": achado.group(2).strip(),
-        "branch": achado.group(3).strip(),
         "kb": kb,
     }
 
@@ -181,10 +183,9 @@ def _cartao(inst: dict[str, str], selo: dict[str, str]) -> str:
         titulo = f'<h2><a href="{escape(nome)}">{escape(inst["titulo"])}</a></h2>'
         quando = escape(selo["quando"]) if selo["quando"] else "carimbo não encontrado"
         commit = escape(selo["commit"]) if selo["commit"] else "?"
-        branch = escape(selo["branch"]) if selo["branch"] else "?"
         ficha = (
             f'<li><b>arquivo</b> {escape(nome)} · {escape(selo["kb"])}</li>'
-            f"<li><b>gerado em</b> {quando} · commit {commit} na branch {branch}</li>"
+            f"<li><b>gerado em</b> {quando} · commit {commit}</li>"
             f'<li><b>gerador</b> python3 {escape(inst["gerador"])}</li>'
             f'<li><b>fonte</b> {escape(inst["fonte"])}</li>'
         )

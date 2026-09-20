@@ -288,8 +288,11 @@ def estado_do_git() -> dict:
             return ""
 
     sujos = [ln for ln in git("status", "--porcelain").splitlines() if ln.strip()]
+    # O NOME DA BRANCH SAIU EM 20/09/2026, junto com o do carimbo da casa: ele
+    # tem largura variável e nomeava a worktree de quem gerou dentro de uma
+    # página publicada. Aqui ele nunca foi fonte de nada — o `head` responde a
+    # mesma pergunta com largura fixa.
     return {
-        "branch": git("rev-parse", "--abbrev-ref", "HEAD") or "?",
         "head": git("rev-parse", "--short", "HEAD") or "?",
         "assunto": git("log", "-1", "--format=%s"),
         "sujos": len(sujos),
@@ -696,7 +699,7 @@ def monta(rapido: dict, cache: dict) -> str:
 <body>
 <div class="envelope">
 
-  <p class="selo">gerado em {agora} · branch {escape(git['branch'])} · {escape(git['head'])}</p>
+  <p class="selo">gerado em {agora} · {escape(git['head'])}</p>
   <h1><b>Hefesto</b> · painel do projeto</h1>
   <p class="lede">O irmão do <a href="specs.html">mapa de canais</a>. Aquele responde
      <em>o que o aparelho entende</em>; este responde <em>onde o projeto está</em>.

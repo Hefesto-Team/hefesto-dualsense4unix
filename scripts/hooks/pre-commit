@@ -54,7 +54,8 @@
 #
 # Duas exceções, as duas por medição:
 #   - o PAINEL não é conferido, é regerado sempre. Uma das fontes dele é o
-#     estado do `git` (HEAD, branch, assunto, sujos), que mudou em 100% dos
+#     estado do `git` (HEAD, assunto, sujos — a branch saiu em 20/09/2026, ver
+#     `scripts/carimbo_da_casa.py`), que mudou em 100% dos
 #     commits — conferir primeiro pagaria 0,35 s para descobrir o que já se
 #     sabe. É o comportamento que este gancho já tinha.
 #   - o ÍNDICE é regerado sempre que alguma página foi reescrita, e por último.
