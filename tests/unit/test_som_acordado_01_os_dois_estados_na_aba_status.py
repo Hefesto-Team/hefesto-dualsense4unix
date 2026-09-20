@@ -90,7 +90,7 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
     DICA_CANAL_ACORDADO,
     DICA_CANAL_DORMINDO,
     DICA_CANAL_E_PADRAO,
-    DICA_CANAL_SEM_A_REGRA,
+    dica_canal_sem_a_regra,
     DICA_SPEAKER_POSSE_NOSSA,
     SUFIXO_CANAL_ACORDADO,
     SUFIXO_CANAL_DORMINDO,
@@ -546,13 +546,13 @@ def test_a_dica_do_bloco_diz_que_e_o_padrao_so_com_a_regra_no_lugar() -> None:
 
     sem_regra = _card(speaker=POSSE_100, canal=CANAL_ACORDADO, regra=False)
     dica_sem = sem_regra._speaker_box.get_tooltip_text()
-    assert DICA_CANAL_SEM_A_REGRA in dica_sem
+    assert dica_canal_sem_a_regra() in dica_sem
     assert DICA_CANAL_E_PADRAO not in dica_sem
 
     nao_perguntou = _card(speaker=POSSE_100, canal=CANAL_ACORDADO, regra=None)
     dica_nada = nao_perguntou._speaker_box.get_tooltip_text()
     assert DICA_CANAL_E_PADRAO not in dica_nada
-    assert DICA_CANAL_SEM_A_REGRA not in dica_nada
+    assert dica_canal_sem_a_regra() not in dica_nada
     assert DICA_CANAL_ACORDADO in dica_nada, "o estado é lido; só o padrão não é"
 
 

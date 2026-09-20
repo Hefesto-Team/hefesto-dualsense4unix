@@ -1456,7 +1456,7 @@ def estado_do_sono(home: str | None = None) -> str:
     :func:`estados_dos_sinks`), ``status_actions.py``:1038 lê a regra na MESMA
     worker, :1249 entrega os dois ao card por ``definir_estado_do_canal``, e
     ``controller_card.py``:4216-4224 escreve as frases — inclusive a
-    ``DICA_CANAL_SEM_A_REGRA``, que é a cura arrancada sendo denunciada.
+    ``dica_canal_sem_a_regra()``, que é a cura arrancada sendo denunciada.
 
     Por isso ela **não deve ganhar chamador na janela**: seria um segundo
     leitor de PipeWire aqui dentro (`controller_card.py`:4044-4049 escreve por que

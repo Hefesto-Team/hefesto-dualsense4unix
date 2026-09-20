@@ -111,7 +111,7 @@ def _ancoras() -> dict[str, str]:
         "o canal dormindo": str(cc.DICA_CANAL_DORMINDO),
         "o canal acordado": str(cc.DICA_CANAL_ACORDADO),
         "o canal é o padrão": str(cc.DICA_CANAL_E_PADRAO),
-        "a regra que falta": str(cc.DICA_CANAL_SEM_A_REGRA),
+        "a regra que falta": str(cc.dica_canal_sem_a_regra()),
         SO_NA_08: str(PREFIXO_DA_CURA).strip(),
     }
 
