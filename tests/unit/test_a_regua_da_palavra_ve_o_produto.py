@@ -31,6 +31,7 @@ e a palavra voltaria pela bancada sem nada reprovar.
 from __future__ import annotations
 
 import ast
+import re
 from pathlib import Path
 
 import pytest
@@ -76,6 +77,31 @@ def _paginas(pasta: Path) -> list[Path]:
 # ---------------------------------------------------------------------------
 # 1. O DONO DA FOLHA — e a régua perguntando a ele
 # ---------------------------------------------------------------------------
+def _regras_da_folha(folha: str) -> list[tuple[str, str]]:
+    """A folha partida em `(seletor, declarações)`, por uma leitura PRÓPRIA.
+
+    ELA É DE PROPÓSITO OUTRA que a do produto. Reusar o `_REGRA` de
+    `folha_da_casa` mediria a função contra ela mesma — *a trava que se mede
+    contra a própria saída*, que esta casa já pagou uma vez, com uma régua que
+    passava enquanto o CSV perdia 50 colunas.
+    """
+    fora: list[tuple[str, str]] = []
+    for pedaco in folha.split("}"):
+        if "{" not in pedaco:
+            continue
+        seletor, _, declaracoes = pedaco.partition("{")
+        fora.append((seletor.strip(), declaracoes))
+    return fora
+
+
+#: `display:none`, com ou sem `!important`, com ou sem espaço em volta do `:`.
+#: A PROPRIEDADE É LIDA, nunca procurada por substring — ver a armadilha do
+#: `appearance:none` no docstring abaixo.
+_ESCONDE = re.compile(
+    r"(?:^|;)\s*display\s*:\s*none\s*(?:!important)?\s*(?:;|$)", re.IGNORECASE
+)
+
+
 def test_a_folha_diz_o_que_esconde_e_a_regua_le_dela() -> None:
     """`.nota` não se digita na régua: ele sai da folha do produto.
 
@@ -83,9 +109,55 @@ def test_a_folha_diz_o_que_esconde_e_a_regua_le_dela() -> None:
     a palavra `none` e não esconde nada. Um `"none" in regra` — ou um
     `"display:none" in folha`, que erra no outro sentido com um espaço no meio
     — daria a lista errada, e a régua apagaria os 117 `<select>` das dez abas.
+
+    A LISTA DEIXOU DE SER DIGITADA AQUI — 20/09/2026. Estas duas linhas
+    cravavam `== (".nota",)`, e em 19/09 a folha ganhou uma segunda regra de
+    esconder: `.hef-sem-item{display:none !important}`, o bloco do desenho que
+    hoje não tem item (a peça do MOLDE, `hefesto_vivo.BOOTSTRAP`). A régua
+    reprovou a DECISÃO em vez do defeito — e o próprio módulo já avisava, no
+    docstring, que ia acontecer: *"quem acrescentar uma regra aqui acrescenta
+    junto o que ela esconde (…) uma segunda regra de esconder passa a valer
+    para a régua sozinha"*. O aviso estava escrito e a régua não o honrava.
+
+    O QUE ELA COBRA AGORA É O CONTRATO, não o conteúdo — as três coisas que a
+    cura de 06/09 prometeu, e nenhuma delas envelhece quando a folha cresce:
+
+    * `.nota` está na lista (é a regra que a sprint inteira nasceu para ver);
+    * `select` NÃO está (a armadilha do `appearance:none`);
+    * a lista é EXATAMENTE o que a folha esconde — medido por uma segunda
+      leitura, independente da do produto.
     """
-    assert seletores_escondidos() == (".nota",)
-    assert seletores_escondidos(FOLHA_DA_CASA) == (".nota",)
+    escondidos = seletores_escondidos()
+    assert escondidos == seletores_escondidos(FOLHA_DA_CASA), (
+        "a folha padrão e a mesma folha passada à mão deram listas diferentes "
+        "— o valor que a régua lê não é o que o piloto põe na tela."
+    )
+
+    # O ÂNCORA. Sem ele as duas leituras podem quebrar juntas e a igualdade
+    # abaixo daria verde sobre uma lista vazia — que é o defeito de origem, de
+    # volta: o `--palavra mesa --publicado` contando as 34 que o produto esconde.
+    assert ".nota" in escondidos, (
+        "`.nota` saiu da lista de esconder — a leitura do PRODUTO volta a "
+        f"contar o bilhete de projeto. A folha diz: {escondidos}"
+    )
+    # A ARMADILHA, pelo nome. `select{appearance:none}` não esconde nada.
+    assert "select" not in escondidos, (
+        "a régua caiu no `appearance:none` e vai apagar os 117 `<select>` das "
+        "dez abas da leitura do produto."
+    )
+
+    # E A LISTA INTEIRA, perguntada à folha em vez de digitada.
+    esconde_de_verdade = tuple(
+        seletor
+        for seletor, declaracoes in _regras_da_folha(FOLHA_DA_CASA)
+        if _ESCONDE.search(declaracoes)
+    )
+    assert escondidos == esconde_de_verdade, (
+        "a lista de esconder não bate com o que a folha declara:\n"
+        f"  a função devolve: {escondidos}\n"
+        f"  a folha esconde:  {esconde_de_verdade}"
+    )
+
     assert "appearance" in FOLHA_DA_CASA, (
         "a folha perdeu a cura do `<select>` — esta régua mede a lista de "
         "esconder e a armadilha dela é justamente o `appearance:none`."
