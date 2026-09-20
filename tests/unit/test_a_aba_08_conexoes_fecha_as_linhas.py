@@ -761,7 +761,7 @@ def test_cada_mais_n_conta_a_propria_lista(pacote) -> None:
 
     Esta régua ficou medindo o teto que ela mandou tirar, e reprovou por um dia
     inteiro com o produto fazendo exatamente o que ela pediu. É o padrão que
-    esta casa já nomeou: *a régua media o mundo de ontem*.  # (noqa-acento: verbo medir, imperfeito)
+    esta casa já nomeou: *a régua media o mundo de ontem*.  (noqa-acento: verbo medir, imperfeito)
 
     MORDE, e continua mordendo o que importa: faça o `+N` dos vizinhos contar a
     lista do exame e a asserção troca de número. E se alguém devolver o teto do

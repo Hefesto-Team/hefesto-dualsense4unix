@@ -21,4 +21,15 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## 02-controles.html
+- **20/09/2026** — o «Nativo» do microfone nasce CINZA onde o aparelho não o
+  alcança, com a razão no `?` ao lado. É a PARTE 3 da
+  `2026-09-20-O-APARELHO-NAO-SE-CONTRADIZ-01`, e a decisão é dela, verbatim:
+  *"Fica os dois botões. Mas no rádio o botão fica cinza sem ser ativado"*.
+
+  **O QUE ESPERA O OLHO DELA:** a fileira do modo do microfone ganhou o `?` ao
+  lado do «Nativo» — mais nada muda de tamanho (o card continua em 328 px, e a
+  altura foi medida no próprio gerador). O produto já sabe apagar o botão e já
+  recusa o clique com a mesma frase; enquanto a aba não for publicada, o pacote
+  NÃO emite o campo (`a02_controles.A_PAGINA_APAGA_O_NATIVO`), então a tela que
+  ela usa hoje continua idêntica.

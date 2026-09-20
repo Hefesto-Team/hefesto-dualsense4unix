@@ -944,6 +944,26 @@ def registrar_gatilho_da_lightbar(daemon: DaemonProtocol) -> None:
     """
 
     def _reafirmar() -> object:
+        # AS LÂMPADAS ESPERAM A COR, E É AQUI QUE ELAS SÃO SOLTAS —
+        # APARELHO-NAO-SE-CONTRADIZ-01, decisão dela de 20/09/2026, verbatim:
+        # *"As lâmpadas esperam a cor"*, porque **o aparelho nunca se
+        # contradiz consigo mesmo**.
+        #
+        # ANTES de resolver, e não ao ARMAR: o gatilho arma e só escreve
+        # `ATRASO_APOS_A_ULTIMA_CONEXAO_S` depois (1,5 s, o silêncio da
+        # rajada). Liberar no armar devolveria esse 1,5 s de contradição — o
+        # mesmo defeito, menor, e nenhuma régua da casa o veria.
+        #
+        # Por que aqui e não dentro do backend: o número é do REGISTRO DE
+        # IDENTIDADE, e a única coisa que o daemon sabe fazer no mesmo instante
+        # dos dois escritores abaixo é isto — soltar a tabela e então deixar o
+        # merge de cinco camadas resolver cor e número já novos, juntos.
+        with contextlib.suppress(Exception):
+            soltar = getattr(
+                getattr(daemon, "identity_registry", None), "liberar_as_lampadas", None
+            )
+            if callable(soltar):
+                soltar()
         # OS DOIS TRANSPORTES, e são DOIS escritores por necessidade: o rádio
         # só aceita o report cru do 0x31, o cabo é pintado pela classe LED do
         # kernel. Até 07/09/2026 o gatilho chamava só o primeiro, e o do cabo

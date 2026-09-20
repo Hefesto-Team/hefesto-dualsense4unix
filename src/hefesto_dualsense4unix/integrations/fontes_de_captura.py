@@ -163,6 +163,41 @@ def fontes_dualsense(saida_pactl: str) -> list[str]:
     return out
 
 
+def fontes_nativas(saida_pactl: str) -> list[str]:
+    """As sources de DualSense que o HEFESTO **não** publicou. NATIVO-DO-MIC-01.
+
+    APARELHO-NAO-SE-CONTRADIZ-01, PARTE 3 (20/09/2026). O «Nativo» do microfone
+    promete *"o microfone entra como o kernel o expõe, sem o Hefesto no meio"* —
+    então a pergunta que decide se ele está ao alcance é literal: **existe uma
+    fonte deste controle que não seja nossa?**
+
+    **O QUE FOI MEDIDO, com os controles dela na mesa.** No RÁDIO só existem as
+    nossas — ``hefesto_mic_13ebab``, ``_c311f0``, ``_4846d8`` — e nenhuma fonte
+    do kernel. No CABO existem AS DUAS: a
+    ``alsa_input.usb-Sony_…_DualSense_Wireless_Controller-00.HiFi__Mic__source``
+    que o UCM publica (sem ``HEFESTO`` no nome) e a nossa ao lado.
+
+    **A PERGUNTA É AO APARELHO, NÃO AO TRANSPORTE**, e a distinção é a trava
+    desta cura. Pelo rádio o BlueZ registra dois UUIDs para o DualSense — HID
+    (``0x1124``) e PnP (``0x1200``) — e nenhum A2DP ou HFP: o microfone viaja
+    dentro dos reports HID e o kernel não tem como saber que aqueles bytes são
+    som. Se um dia o BlueZ passar a registrar um perfil de áudio, a fonte
+    nativa aparece nesta lista e o botão volta ao alcance **sem que ninguém
+    toque numa linha** — que é o oposto de digitar «rádio → cinza».
+
+    Filtra pelos DOIS prefixos nossos (:data:`PREFIXO_SOURCE_PONTE_BT` e
+    :data:`PREFIXO_SOURCE_CANAL_DO_MIC`) em vez de por marcador, porque é o
+    nome que temos DONO para afirmar: o da ponte de rádio carrega a palavra
+    ``dualsense`` dentro e passaria por qualquer teste de marcador.
+    """
+    nossos = (PREFIXO_SOURCE_PONTE_BT, PREFIXO_SOURCE_CANAL_DO_MIC)
+    return [
+        nome
+        for nome in fontes_dualsense(saida_pactl)
+        if not nome.lower().startswith(nossos)
+    ]
+
+
 def sinks_dualsense(saida_pactl: str) -> list[str]:
     """Nomes dos sinks de SAÍDA de DualSense em `pactl list sinks short`.
 
