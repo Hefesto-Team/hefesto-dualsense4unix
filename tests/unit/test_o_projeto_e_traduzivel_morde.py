@@ -596,3 +596,268 @@ def test_a_contagem_do_contribuindo_reprova_quando_o_documento_envelhece(
     (sem_bloco / ".github").mkdir(parents=True)
     (sem_bloco / chk.CONTRIBUINDO).write_text("sem bloco nenhum\n", encoding="utf-8")
     assert chk.conferir_contribuindo(sem_bloco, publicar=False) == 1
+
+
+# ---------------------------------------------------------------------------
+# AS MORDIDAS QUE FALTAVAM — achadas por MUTAÇÃO em 20/09/2026
+# ---------------------------------------------------------------------------
+# A conferência adversarial arrancou uma cura de cada vez do motor e das três
+# medidas e rodou os 21 casos acima. DEZESSEIS mutantes sobreviveram: a cura
+# saiu e a suíte continuou verde. A assinatura dos piores é a que esta casa já
+# nomeou — *a régua mede o arranjo fácil e não o difícil*:
+#
+#   * a mordida do vazio conferia o rc da execução INTEIRA e a palavra
+#     IMPOSSIVEL em qualquer lugar da saída. Arrancado o `universo <= 0` do
+#     motor, a `fronteira-de-lingua` — a única das três sem peneira fina —
+#     virava PENDENTE e PASSAVA, enquanto as outras duas seguravam o vermelho
+#     pela peneira dos geradores. O teste passava pelo motivo errado.
+#   * a mordida do arquivo fora de zona roda em `tmp_path`, que não é árvore de
+#     git: `git ls-files` falha e o censo cai na varredura de disco. O caminho
+#     que o portão executa de verdade — `--cached --others --exclude-standard`,
+#     que é o que faz o arquivo novo reprovar ANTES do `git add` — nunca era
+#     exercitado.
+#   * a régua que diz «toda regra tem razão» lia a tabela de HOJE, não a guarda
+#     que obriga a próxima. Arrancada a guarda, ela seguia verde.
+#
+# Cada teste abaixo mata pelo menos um desses mutantes.
+
+
+def _repo_de_git(raiz: Path) -> None:
+    """Faz da miniatura uma árvore de git com tudo no índice, menos o que vier.
+
+    É o que separa o caminho de verdade do caminho de emergência: dentro de um
+    repositório o censo pergunta ao git, e é só aí que `--others` tem efeito.
+    """
+    subprocess.run(["git", "init"], cwd=raiz, check=True, capture_output=True)
+    for arquivo in sorted(raiz.rglob("*")):
+        if arquivo.is_file() and ".git" not in arquivo.parts:
+            subprocess.run(
+                ["git", "add", "--", arquivo.relative_to(raiz).as_posix()],
+                cwd=raiz,
+                check=True,
+                capture_output=True,
+            )
+
+
+def test_mordida_4_a_peneira_do_vazio_vale_medida_a_medida(tmp_path: Path) -> None:
+    """O QUE A MORDIDA ARRANCA: o `universo <= 0` do motor, e por medida.
+
+    Conferir só o rc da execução inteira deixa uma medida passar escondida
+    atrás do vermelho das outras — e a que passava era justamente a
+    `fronteira-de-lingua`, a única sem peneira fina. Numa pasta vazia nenhuma
+    das três pode ter medido: as TRÊS são IMPOSSIVEL, e nenhuma é PENDENTE.
+    """
+    vazia = tmp_path / "vazia"
+    vazia.mkdir()
+    estados = {v.medida.nome: v.estado for v in chk.montar(vazia).comparar()}
+    assert set(estados) == {m.nome for m in chk.MEDIDAS}, estados
+    assert estados == {nome: catraca.IMPOSSIVEL for nome in estados}, (
+        "numa pasta vazia, medida que diz qualquer coisa que não IMPOSSIVEL "
+        f"está passando sobre o vazio: {estados}"
+    )
+
+
+def test_mordida_4_pagina_sem_gerador_nenhum_e_impossivel(tmp_path: Path) -> None:
+    """O QUE A MORDIDA ARRANCA: a queixa de «nenhum gerador de aba».
+
+    É o defeito que esta casa mediu com outro nome — *as pastas mudaram de nome
+    e as réguas não foram junto*. Sem o dono a quem perguntar quantas abas
+    existem, o censo mede o que sobrou e chama de melhora.
+    """
+    raiz = _arvore(tmp_path)
+    _motor(raiz).aceitar(None, "piso da mordida")
+    for gerador in (raiz / chk.GERADORES).glob("aba[0-9][0-9].py"):
+        gerador.unlink()
+
+    v = {x.medida.nome: x for x in _motor(raiz).comparar()}["prosa-publicada"]
+    assert v.estado == catraca.IMPOSSIVEL, v.estado
+    assert "gerador" in " ".join(v.queixas), v.queixas
+
+
+def test_mordida_2_o_arquivo_novo_reprova_antes_do_git_add(tmp_path: Path) -> None:
+    """O QUE A MORDIDA ARRANCA: o `--others` do `git ls-files`.
+
+    A mordida 2 lá em cima roda fora de um repositório e mede a varredura de
+    disco — o caminho de emergência. Aqui a miniatura é um repositório de
+    verdade, o arquivo novo NÃO passa por `git add`, e a fronteira tem de
+    reprovar assim mesmo. Sem `--others` o censo só vê o índice, o arquivo fica
+    invisível até alguém lembrar de adicioná-lo, e a catraca chega tarde.
+    """
+    raiz = _arvore(tmp_path)
+    _repo_de_git(raiz)
+    _motor(raiz).aceitar(["fronteira-de-lingua"], "piso da mordida")
+    assert _estados(raiz)["fronteira-de-lingua"] == catraca.VERDE
+
+    (raiz / "traducoes").mkdir()
+    (raiz / "traducoes" / "uma-pagina-nova.md").write_text("prosa\n", encoding="utf-8")
+    indice = subprocess.run(
+        ["git", "ls-files", "--cached"], cwd=raiz, capture_output=True, text=True
+    ).stdout
+    assert "traducoes/uma-pagina-nova.md" not in indice, (
+        "a mordida perdeu o sentido: o arquivo entrou no índice e deixou de "
+        "ser o caso difícil"
+    )
+
+    v = _motor(raiz).comparar(["fronteira-de-lingua"])[0]
+    assert v.estado == catraca.VERMELHO, v.estado
+    assert any("traducoes/uma-pagina-nova.md" in linha for linha in v.entrou), v.entrou
+
+
+def test_a_tabela_de_zonas_recusa_regra_sem_razao_e_zona_desconhecida(
+    tmp_path: Path,
+) -> None:
+    """O QUE A MORDIDA ARRANCA: as duas guardas de `carregar_zonas`.
+
+    A régua vizinha lê a tabela de HOJE e diz que toda regra tem razão e zona
+    válida — o que é verdade hoje e continuaria verde com as guardas
+    arrancadas. Quem cobra da PRÓXIMA regra é a guarda, e é ela que se mede
+    aqui.
+    """
+    raiz = tmp_path / "t"
+    (raiz / "docs" / "data").mkdir(parents=True)
+    alvo = raiz / chk.ZONAS
+
+    alvo.write_text(
+        '[[regra]]\ncaminho = "src/**"\nzona = "CODIGO"\nrazao = "   "\n',
+        encoding="utf-8",
+    )
+    with pytest.raises(SystemExit):
+        chk.carregar_zonas(raiz)
+
+    alvo.write_text(
+        '[[regra]]\ncaminho = "src/**"\nzona = "TALVEZ"\nrazao = "uma razão"\n',
+        encoding="utf-8",
+    )
+    with pytest.raises(SystemExit):
+        chk.carregar_zonas(raiz)
+
+
+def test_a_prosa_publicada_conta_o_comentario_de_html_tambem(tmp_path: Path) -> None:
+    """O QUE A MORDIDA ARRANCA: a contagem do comentário de HTML.
+
+    Medido nas dez páginas de verdade em 20/09/2026: 214.627 dos 1.097.724
+    bytes são comentário de HTML, e não de CSS. Uma medida que contasse só o
+    CSS veria o piso CAIR — e piso que cai passa —, e a partir daí 214 KB de
+    comentário de HTML entrariam de graça.
+    """
+    raiz = _arvore(tmp_path)
+    antes = chk.censo_da_prosa(raiz).numero
+    recheio = "<!--" + "r" * 512 + "-->"
+    pagina = raiz / chk.PAGINAS / "01-aba.html"
+    pagina.write_text(
+        pagina.read_text(encoding="utf-8").replace("</body>", recheio + "\n</body>"),
+        encoding="utf-8",
+    )
+    depois = chk.censo_da_prosa(raiz).numero
+    assert antes is not None and depois is not None
+    assert depois == antes + len(recheio.encode("utf-8")), (antes, depois)
+
+
+def test_a_medida_da_tela_conta_o_atributo_e_nao_so_a_frase(tmp_path: Path) -> None:
+    """O QUE A MORDIDA ARRANCA: a lista de atributos de tela.
+
+    O atributo é o que o leitor de tela pronuncia, e nenhuma foto o revela —
+    são 239 dos 3.304 do censo bruto de hoje. A régua da frase não o alcança:
+    arrancada a lista, o número não se mexe quando um `title` novo entra.
+    """
+    raiz = _arvore(tmp_path)
+    zonas = raiz / chk.ZONAS
+    zonas.write_text(
+        zonas.read_text(encoding="utf-8")
+        + '\n[endereco_de_traducao]\natributo = "data-i18n"\n',
+        encoding="utf-8",
+    )
+    antes = chk.censo_da_tela(raiz).numero
+    pagina = raiz / chk.PAGINAS / "01-aba.html"
+    pagina.write_text(
+        pagina.read_text(encoding="utf-8").replace(
+            "<h1>", '<h1 title="uma dica que o leitor de tela pronuncia">'
+        ),
+        encoding="utf-8",
+    )
+    depois = chk.censo_da_tela(raiz).numero
+    assert antes is not None and depois is not None
+    assert depois == antes + 1, (antes, depois)
+
+
+def test_a_medida_da_tela_nao_conta_o_que_mora_em_script_ou_style(
+    tmp_path: Path,
+) -> None:
+    """O QUE A MORDIDA ARRANCA: a lista de nós mudos.
+
+    Sem ela o corpo do `<script>` e a folha de estilo viram «frase de tela», e
+    a conta que se entrega ao tradutor passa a incluir código. O censo bruto de
+    hoje — 3.065 frases — cresceria por engano, e o retrato do custo mentiria.
+    """
+    raiz = _arvore(tmp_path)
+    leitor = chk._LeitorDeTela(None)
+    leitor.feed((raiz / chk.PAGINAS / "01-aba.html").read_text(encoding="utf-8"))
+    juntas = " | ".join(sorted(leitor.frases_sem))
+    assert "A aba de mentira" in juntas, juntas
+    assert "comentário de JS" not in juntas, juntas
+    assert "body {" not in juntas, juntas
+
+
+def test_a_medida_que_para_de_medir_com_piso_numerico_reprova(tmp_path: Path) -> None:
+    """O QUE A MORDIDA ARRANCA: o vermelho de «piso sobre o que não se mede».
+
+    A casa já mede o sentido fácil — a medida PENDENTE que acorda. O sentido
+    difícil é o contrário: a medida com piso NUMÉRICO que perde o dado de que
+    depende. Sem esta guarda, apagar `zonas-de-lingua.toml` deixa a fronteira
+    pendente e calada, e a régua que a substituísse por «zero fora de zona»
+    ficaria verde para sempre.
+    """
+    raiz = _arvore(tmp_path)
+    _motor(raiz).aceitar(["fronteira-de-lingua"], "piso numérico de partida")
+    assert _estados(raiz)["fronteira-de-lingua"] == catraca.VERDE
+
+    (raiz / chk.ZONAS).unlink()
+    v = _motor(raiz).comparar(["fronteira-de-lingua"])[0]
+    assert v.estado == catraca.VERMELHO, v.estado
+    assert "piso falso" in " ".join(v.queixas), v.queixas
+
+
+def test_catraca_sem_piso_reprova_em_vez_de_passar(tmp_path: Path) -> None:
+    """O QUE A MORDIDA ARRANCA: o estado SEM-PISO.
+
+    Catraca sem piso não trava nada, e o silêncio dela se lê como verde: é a
+    forma mais barata de desligar o portão — basta apagar uma chave do caderno.
+    """
+    raiz = _arvore(tmp_path)
+    vereditos = {v.medida.nome: v for v in _motor(raiz).comparar()}
+    v = vereditos["prosa-publicada"]
+    assert v.estado == catraca.SEM_PISO, v.estado
+    assert not v.passa
+
+
+def test_o_portao_soma_a_conferencia_do_contribuindo_no_proprio_rc(
+    tmp_path: Path,
+) -> None:
+    """O QUE A MORDIDA ARRANCA: a costura da conferência ao rc do portão.
+
+    A régua vizinha chama `conferir_contribuindo` DIRETO e prova que ela sabe
+    reprovar. Quem executa é o portão, e o portão soma o rc dela ao das três
+    medidas: cortada essa soma, o documento envelhece com as três medidas
+    verdes e ninguém vê.
+    """
+    raiz = _arvore(tmp_path)
+    (raiz / chk.ACOES / "dois.py").write_text('Y = "outra ação"\n', encoding="utf-8")
+    assert _rodar(raiz, "--aceitar").returncode == 0
+
+    resultado = _rodar(raiz)
+    assert resultado.returncode == 1, resultado.stdout + resultado.stderr
+    assert "não é a de hoje" in resultado.stdout + resultado.stderr
+
+
+def test_forcar_piso_recusa_universo_vazio(tmp_path: Path) -> None:
+    """O QUE A MORDIDA ARRANCA: a recusa de SUBIR piso sobre o vazio.
+
+    A recusa do `--aceitar` já é medida; a do `--forcar-piso` não era, e é o
+    mesmo defeito no outro chamador — *cobrir um deixa a próxima pessoa
+    remedindo o mesmo*. Subir piso sobre universo vazio grava o silêncio como
+    fato, com razão escrita por cima.
+    """
+    vazia = tmp_path / "vazia"
+    vazia.mkdir()
+    with pytest.raises(catraca.CatracaTorta):
+        _motor(vazia).forcar_piso("prosa-publicada", "uma razão qualquer")
