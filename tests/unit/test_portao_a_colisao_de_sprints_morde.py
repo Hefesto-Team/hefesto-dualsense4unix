@@ -34,36 +34,31 @@ from pathlib import Path
 
 import pytest
 
+from tests.conftest import exigir_insumo_fora_do_git
+
 RAIZ = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ / "scripts" / "check_colisao_de_sprints.py"
 SPRINTS = RAIZ / "docs" / "process" / "sprints"
 
 # ESTA RÉGUA É VERSIONADA E OS DOIS ALVOS DELA NÃO SÃO (20/09/2026).
 #
-# `scripts/check_colisao_de_sprints.py` é `.gitignore:194` e `docs/process/` é
-# `.gitignore:178` — o despacho e a costura de leva saíram do repositório, e as
-# réguas cujo insumo saiu junto ficaram. Logo, num clone limpo ou numa árvore
-# de agente recém-criada, o `exec_module` abaixo levantava `FileNotFoundError`
-# **na COLETA**, e pytest devolvia `Interrupted: 1 error during collection`:
-# o LOTE INTEIRO morria, e `no tests ran` lê-se como limpo. É a mesma família
-# do `release.yml` que cai no clone limpo porque 129 réguas leem `docs/process`.
+# `scripts/check_colisao_de_sprints.py` e `docs/process/` saíram do repositório
+# com o despacho e a costura de leva, e as réguas cujo insumo saiu junto
+# ficaram. Logo, num clone limpo ou numa árvore de agente recém-criada, o
+# `exec_module` abaixo levantava `FileNotFoundError` **na COLETA**, e pytest
+# devolvia `Interrupted: 1 error during collection`: o LOTE INTEIRO morria, e
+# `no tests ran` lê-se como limpo. É a mesma família do `release.yml` que cai
+# no clone limpo — e por isso a guarda saiu daqui e virou UM marcador só, no
+# `tests/conftest.py` (INSUMO-FORA-DO-GIT-01).
 #
-# O `skip` de módulo não é afrouxamento: onde o alvo EXISTE nada muda, e onde
-# ele não existe a régua passa a dizer por quê, em vez de derrubar o lote
-# calada. Quem quiser o portão de volta copia os dois ignorados para a árvore —
-# é o que o CLAUDE.md manda fazer antes de medir.
-if not SCRIPT.exists() or not SPRINTS.is_dir():
-    _faltam = [
-        str(alvo.relative_to(RAIZ))
-        for alvo, ok in ((SCRIPT, SCRIPT.exists()), (SPRINTS, SPRINTS.is_dir()))
-        if not ok
-    ]
-    pytest.skip(
-        "o insumo desta régua é IGNORADO pelo git e não veio para esta árvore: "
-        + ", ".join(_faltam)
-        + " — copie-os da árvore de quem despacha antes de medir.",
-        allow_module_level=True,
-    )
+# O que o marcador acrescenta ao `if` que estava escrito aqui à mão: ele lê a
+# linha do `.gitignore` do ARQUIVO em vez de a citar de cor, e recusa pular
+# quando a ausência não está explicada lá — sumiço sem regra é defeito, e
+# defeito não se esconde atrás de `skip`.
+exigir_insumo_fora_do_git(
+    "scripts/check_colisao_de_sprints.py",
+    "docs/process/sprints",
+)
 
 _spec = importlib.util.spec_from_file_location("_colisao", SCRIPT)
 assert _spec and _spec.loader
