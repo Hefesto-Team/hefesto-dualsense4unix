@@ -92,6 +92,7 @@ from . import (
     identidade_de,
     jogador_de,
     perfil,
+    poda,
     registrar,
 )
 
@@ -1084,6 +1085,13 @@ def _status_do_daemon(state: dict[str, Any] | None) -> str:
 #: A releitura está em voo? Ver :func:`_faixa_lenta`.
 _LENTO_EM_VOO: list[bool] = [False]
 
+#: DE QUE MESA É A RELEITURA QUE ESTÁ NO AR — CACHE-SEM-PODA-01, 20/09/2026.
+#: A mesma corrida que o `_CAMADA_1_SELO` da `a02_controles` nomeia: a thread
+#: de `_guardar_a_faixa_lenta` leva a mesa congelada do disparo e, ao pousar,
+#: escreve `_LENTO["valor"]` por cima do que a poda acabou de limpar. Sem este
+#: número a cura duraria o que dura um `systemctl status` — e voltaria sozinha.
+_LENTO_SELO: list[int] = [0]
+
 
 def _ler_a_faixa_lenta(state: dict[str, Any] | None,
                        pode_perguntar: bool = True,
@@ -1095,12 +1103,28 @@ def _ler_a_faixa_lenta(state: dict[str, Any] | None,
 
 
 def _guardar_a_faixa_lenta(state: dict[str, Any] | None,
-                           mesa: list[dict[str, Any]] | None = None) -> None:
-    """A releitura, fora do laço do GTK. O `finally` é o que destrava o voo."""
+                           mesa: list[dict[str, Any]] | None = None,
+                           selo: int | None = None) -> None:
+    """A releitura, fora do laço do GTK. O `finally` é o que destrava o voo.
+
+    `selo` É DE QUE MESA ESTA LEITURA PARTIU — ver :data:`_LENTO_SELO`.
+    Se a mesa mudou enquanto ela lia, o que vem nas mãos dela descreve um mundo
+    que não existe mais, e **escrevê-lo desfaria a poda**. `None` é *"ninguém
+    disse"*, e aí não há o que conferir: é como as réguas a chamam direto.
+    """
     try:
-        _LENTO["valor"] = _ler_a_faixa_lenta(state, mesa=mesa)
+        valor = _ler_a_faixa_lenta(state, mesa=mesa)
+        if selo is None or selo == _LENTO_SELO[0]:
+            _LENTO["valor"] = valor
     finally:
-        _LENTO["quando"] = time.monotonic()
+        # O CARIMBO SÓ VAI SE HOUVER VALOR, e isto fecha um buraco que a poda
+        # abriria de par em par: com `_LENTO` vazio e a leitura levantando, o
+        # `quando` sozinho deixava o dicionário NÃO-VAZIO e sem `valor` — e
+        # `_faixa_lenta`, que decide pelo `if not _LENTO`, ia direto ao
+        # `_LENTO["valor"]` e levantava `KeyError`. A aba parava de pintar
+        # inteira. Sem valor, o dicionário fica vazio e a próxima pintura relê.
+        if "valor" in _LENTO and (selo is None or selo == _LENTO_SELO[0]):
+            _LENTO["quando"] = time.monotonic()
         _LENTO_EM_VOO[0] = False
 
 
@@ -1152,9 +1176,44 @@ def _faixa_lenta(state: dict[str, Any] | None,
         return _LENTO["valor"]  # type: ignore[no-any-return]
     if agora - float(_LENTO["quando"]) >= LENTO_S and not _LENTO_EM_VOO[0]:
         _LENTO_EM_VOO[0] = True
-        threading.Thread(target=_guardar_a_faixa_lenta, args=(state, mesa),
+        threading.Thread(target=_guardar_a_faixa_lenta,
+                         args=(state, mesa, _LENTO_SELO[0]),
                          daemon=True).start()
     return _LENTO["valor"]  # type: ignore[no-any-return]
+
+
+@poda
+def _esquecer_a_mesa_de_antes(na_mesa: frozenset[str]) -> None:
+    """Um controle saiu: a faixa lenta inteira é de antes dele sair.
+
+    CACHE-SEM-PODA-01, 20/09/2026. Esta aba não tem cache POR controle — tem um
+    cache que foi MONTADO com a mesa, e a diferença decide a cura. O que envelhece
+    aqui é o painel «Detalhes técnicos»: :func:`_repouso_do_painel` escreve uma
+    linha de :data:`ROTULO_DA_IDENTIDADE` por controle de pé, e essas linhas
+    ficam dentro de `_LENTO["valor"]` por :data:`LENTO_S`. Com o controle já
+    fora da mesa, o painel continuava nomeando-o — a mesma tela dizendo as duas
+    coisas, que é a queixa dela em uma frase.
+    <!-- noqa-acento: `ROTULO_DA_IDENTIDADE` é o nome do dado, não texto de tela -->
+
+    **`na_mesa` NÃO É LIDO, E É DE PROPÓSITO.** Não há entrada por `uniq` a
+    escolher: o valor é uma tupla de cinco leituras, e uma delas nomeia todo
+    mundo. Esvaziar é a poda INTEIRA — e `_LENTO.clear()` é a porta que este
+    arquivo já usa nos gestos que mudam o mundo (o `Atualizar`, o
+    `refazer-proton`), não uma segunda.
+
+    **O PREÇO ESTÁ MEDIDO E É ACEITÁVEL:** a pintura seguinte relê na hora, o
+    que custa os 18 ms da primeira leitura (o número está em :func:`_faixa_lenta`)
+    num orçamento de 100 ms. Ele se paga uma vez por hotplug, que é a mão dela
+    tirando um cabo — e não dez vezes por segundo.
+
+    **O `_PRONTUARIO` NÃO ENTRA**, e a sprint já dizia por quê: ele compara os
+    manifestos da Steam com os perfis do disco. Nenhum controle, nenhum `uniq`,
+    nenhum transporte — os 300 segundos dele não têm o que esquecer quando um
+    controle sai.
+    """
+    _LENTO.clear()
+    # A RELEITURA QUE ESTÁ NO AR FICA VELHA AQUI. Ver `_LENTO_SELO`.
+    _LENTO_SELO[0] += 1
 
 
 def _leitura(ctx: Contexto) -> Any:

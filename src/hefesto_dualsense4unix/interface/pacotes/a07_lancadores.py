@@ -183,6 +183,25 @@ _LOG = logging.getLogger(__name__)
 #: a linha de inicialização só muda quando a Steam a regrava (ao sair) ou quando
 #: ela clica em Consertar — e o gesto invalida o cache na hora, então o TTL não
 #: precisa ser curto para a tela parecer viva.
+#:
+#: **ESTES 20 s NÃO ENTRAM NA PODA POR HOTPLUG, E FOI MEDIDO** —
+#: CACHE-SEM-PODA-01, 20/09/2026. A sprint listou este cache entre os seis que
+#: *"não escutam a saída de um controle"*; a medição diz que ele não tem o que
+#: escutar. Com a vigia CONGELADA de propósito e a mesma `Leitura` servindo as
+#: duas pinturas, o canário do controle (nome e `uniq`) não aparece em nenhuma:
+#:
+#:     mesa cheia   o pacote nomeia o controle? não · traz o `uniq`? não
+#:     mesa vazia   sobrou o nome? não · sobrou o `uniq`? não
+#:     o que muda entre as duas pinturas: só `blocos[".fita"]`
+#:
+#: E a fita é o contrário de um cache: :func:`pacote` a monta de `ctx.mesa` a
+#: cada tique. O que este arquivo guarda são fatos do JOGO EM DISCO — é o que o
+#: docstring de :func:`pacote` já dizia com todas as letras. **Uma poda aqui
+#: releria 38 ms de disco por hotplug para chegar à mesma `Leitura`.**
+#:
+#: Quem tranca a afirmação é `test_a_biblioteca_dos_lancadores_nao_guarda_controle`
+#: — se um dia a `Leitura` ganhar um campo por `uniq`, o canário reaparece na
+#: segunda pintura e a régua reprova nomeando.
 TTL_S = 20.0
 
 #: Quanto tempo o "posso fechar a Steam?" fica ARMADO depois do primeiro
@@ -1437,7 +1456,7 @@ def _chip(controle: dict[str, Any]) -> str:
     A PALAVRA DO TRANSPORTE É DA FUNÇÃO DONA — ONDA4-S10, 06/09/2026, decisão
     dela (D-05). O chip lia a `via` da mesa, que é a **sigla de máquina**
     (`USB`/`BT`); quem joga tem um cabo e tem um controle sem fio, e é isso que
-    o chip passa a dizer. O import é TARDIO porque `pacotes/__init__.py:889`
+    o chip passa a dizer. O import é TARDIO porque `pacotes/__init__.py:31-32`
     declara por escrito que GTK no topo deste módulo é o que se evita aqui.
     """
     from hefesto_dualsense4unix.app.actions.home_actions import palavra_do_transporte
