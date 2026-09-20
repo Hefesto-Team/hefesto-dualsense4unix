@@ -22,6 +22,25 @@ Quem lê daqui:
 local; se o ``git`` não responder, ele diz ``?`` em vez de inventar — ausência
 de medição é declarada, nunca preenchida.
 
+O CARIMBO NÃO CARREGA O ESTADO DA ÁRVORE DE QUEM GEROU — 20/09/2026
+===================================================================
+De 25/08 a 20/09/2026 ele trouxe a contagem de arquivos com mudança não
+commitada. Essa frase **muda de comprimento com a contagem**, e o tamanho da
+página passava a depender de como estava a mesa de quem apertou o botão: o
+``docs/data/LEIA-PRIMEIRO.md`` publicava 2.280.044 bytes para o
+``html/specs.html`` enquanto o disco dizia 2.280.091, sem que uma vírgula do
+dado tivesse mudado. A medição inteira está em ``procedencia()``, e quem trava
+isto é ``tests/unit/test_o_carimbo_nao_muda_o_tamanho.py``.
+
+**O QUE SOBRA, DECLARADO:** commit e branch ficaram, por decisão dela — o hash
+curto tem largura fixa, **o nome da branch não**. Medido em 20/09/2026: as
+quatro páginas regeradas numa worktree de agente
+(``worktree-wf_7917c453-7ab-2``) ficam **23 bytes** maiores que as mesmas
+páginas geradas em ``dev``. Quem regerar as quatro numa branch que não é a de
+publicação precisa regerá-las de novo em ``dev`` e rodar
+``check_paridade_transporte.py --leia-primeiro --escrever``, senão o produto
+publica o nome da mesa de quem passou por ali.
+
 O CARIMBO NÃO ENTRA NO ``--check``, E ISSO É DE PROPÓSITO
 =========================================================
 O commit e a hora mudam a cada geração. Se o comparador de conteúdo os visse,
@@ -60,17 +79,30 @@ def _git(*args: str, raiz: Path = RAIZ) -> str:
 
 
 def procedencia(raiz: Path = RAIZ) -> dict[str, str]:
-    """Commit, branch e sujeira da árvore — o que o carimbo declara.
+    """Commit e branch — o que o carimbo declara sobre a FONTE da página.
 
-    ``sujos`` conta arquivos com mudança não commitada. Ele existe porque o
-    commit sozinho MENTE numa árvore suja: a página pode ter sido gerada de um
-    dado que ainda não está em commit nenhum.
+    A CONTAGEM DE ARQUIVOS SUJOS SAIU EM 20/09/2026, E O QUE ELA CUSTOU ESTÁ
+    MEDIDO. A chave ``sujos`` virava ``· árvore com N mudança(s) não
+    commitada(s)`` dentro do arquivo gerado, e essa frase muda de comprimento
+    com N — «2» e «13» não ocupam o mesmo espaço, e ela some inteira quando a
+    árvore está limpa. Medido num repositório de brinquedo, com o mesmo commit,
+    a mesma branch e o mesmo gerador, variando só a sujeira: **0 sujos davam um
+    carimbo de 223 bytes, 2 davam 270 e 13 davam 271.**
+
+    Os 47 bytes entre a árvore limpa e a suja são exatamente o que separava o
+    ``bytes:html/specs.html`` publicado no ``docs/data/LEIA-PRIMEIRO.md``
+    (2.280.044) do tamanho do arquivo em disco (2.280.091): o ``git status`` de
+    quem gerou virava bytes do produto, e o número publicado caducava sem que o
+    dado tivesse mudado.
+
+    O argumento de quem a pôs ali — *"o commit sozinho MENTE numa árvore
+    suja"* — continua verdadeiro, e continua respondido: quem pergunta se a
+    página está em dia usa o ``--check`` de cada gerador, que regenera em
+    memória e compara CONTEÚDO. Essa resposta não custa um byte do artefato.
     """
-    sujos = [ln for ln in _git("status", "--porcelain", raiz=raiz).splitlines() if ln.strip()]
     return {
         "commit": _git("rev-parse", "--short", "HEAD", raiz=raiz) or "?",
         "branch": _git("rev-parse", "--abbrev-ref", "HEAD", raiz=raiz) or "?",
-        "sujos": str(len(sujos)),
     }
 
 
@@ -85,18 +117,19 @@ def carimbo(gerador: str, *, indice: bool = True, raiz: Path = RAIZ) -> str:
     ``gerador`` é o caminho do script que escreveu a página, para quem olhar o
     rodapé saber onde ficar reclamando. ``indice=False`` no próprio
     ``index.html``, que não precisa de um link para si mesmo.
+
+    O QUE ESTA LINHA NÃO PODE CARREGAR: nada que mude com o ESTADO da árvore de
+    quem gerou. Commit e hora mudam a cada geração, mas dizem de que FONTE a
+    página saiu, e ``sem_carimbo()`` os tira antes de qualquer comparação de
+    conteúdo. A sujeira da árvore não é fonte de nada — é a mesa de quem passou
+    por ali —, e entrava nos bytes do produto (ver ``procedencia()``).
     """
     p = procedencia(raiz)
-    sujeira = (
-        ""
-        if p["sujos"] == "0"
-        else f" · árvore com {escape(p['sujos'])} mudança(s) não commitada(s)"
-    )
     volta = ' · <a href="index.html">índice dos instrumentos</a>' if indice else ""
     return (
         f'<p class="carimbo" {MARCA}="1">gerado em {escape(agora())} · '
         f'commit <code>{escape(p["commit"])}</code> na branch '
-        f'<code>{escape(p["branch"])}</code>{sujeira} · por '
+        f'<code>{escape(p["branch"])}</code> · por '
         f'<code>{escape(gerador)}</code>{volta}</p>'
     )
 
