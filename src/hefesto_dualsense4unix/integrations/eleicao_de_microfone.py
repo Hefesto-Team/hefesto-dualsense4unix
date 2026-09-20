@@ -1021,8 +1021,8 @@ def microfone_nativo_no_ar(uniq: str, conectados: list[str]) -> bool | None:
     return _a_nativa_deste(uniq, conectados)[0]
 
 
-def fonte_nativa_do_controle(uniq: str, conectados: list[str]) -> str:
-    """O NOME do nó de captura nativo deste controle agora, ou ``""``.
+def fonte_nativa_do_controle(uniq: str, conectados: list[str]) -> str | None:
+    """O NOME do nó de captura nativo deste controle agora. TRÊS respostas.
 
     O-GANHO-DO-MIC-TEM-DONO-01, 20/09/2026 — e ela nasce porque perguntar
     *"qual nó é o microfone deste controle"* ao daemon dá a resposta ERRADA
@@ -1034,12 +1034,21 @@ def fonte_nativa_do_controle(uniq: str, conectados: list[str]) -> str:
 
     Quem tem placa ALSA é a fonte NATIVA, e é ela que este nome devolve.
 
-    ``""`` NÃO SEPARA *não há* de *não sei*, de propósito: quem precisa dos
-    três estados pergunta a :func:`microfone_nativo_no_ar`, que é a irmã e
-    divide o mesmo corpo (:func:`_a_nativa_deste`). Duas implementações da
-    mesma busca é como esta casa fabrica divergência silenciosa.
+    **AS TRÊS SÃO TRÊS COISAS**, com a mesma disciplina da irmã acima — e
+    colapsar as duas primeiras é o defeito que ela existe para não cometer:
+
+    * o NOME — há nó nativo, e é este;
+    * ``""`` — o ``pactl`` respondeu e não há nó nativo para este controle (o
+      rádio, que não publica placa nenhuma);
+    * ``None`` — **não sei**: o ``pactl`` não respondeu, ou o censo de USB não
+      pôde ser montado. Quem recebe isto não pode dizer *"não há"* na tela.
+
+    A irmã :func:`microfone_nativo_no_ar` divide o mesmo corpo
+    (:func:`_a_nativa_deste`): duas implementações da mesma busca é como esta
+    casa fabrica divergência silenciosa.
     """
-    return _a_nativa_deste(uniq, conectados)[1]
+    ha, no = _a_nativa_deste(uniq, conectados)
+    return None if ha is None else no
 
 
 def _a_nativa_deste(uniq: str, conectados: list[str]) -> tuple[bool | None, str]:

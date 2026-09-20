@@ -538,6 +538,49 @@ class TestODonoDoNumeroPerguntaAoAparelho:
             "mesa vazia é mesa vazia — não há sobre o que responder"
         )
 
+    def test_o_servidor_de_som_mudo_nao_acende_o_cinza(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """`pactl` calado é *não sei*, e "não sei" fica de FORA do dicionário.
+
+        **O TERCEIRO ESTADO É O QUE SE PERDE PRIMEIRO.** O cinza do trilho
+        carrega uma razão que AFIRMA — *"pelo rádio o microfone chega como som
+        já digitalizado… Ligue o cabo e ele acende"*. Acendê-lo porque o
+        servidor de som não respondeu é dizer «não há» quando a verdade é «não
+        consegui perguntar», e quem está com o cabo na mão lê uma ordem para
+        ligar o cabo.
+
+        **O QUE A MORDIDA ARRANCA:** faça `_ler_o_ganho` escrever
+        `fora[uniq] = None` também quando `fonte_nativa_do_controle` devolve
+        `None` (ou faça essa função colapsar `None` em `""`) e este teste
+        reprova — a chave aparece, `ganho_fora_de_alcance` acende o cinza, e a
+        razão passa a mandar ligar um cabo sobre uma ignorância nossa.
+        """
+        from hefesto_dualsense4unix.integrations import eleicao_de_microfone
+        from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
+
+        mudo = ("aa:bb:cc:00:00:05", "aa:bb:cc:00:00:06")
+        # O `_rodar` da eleição devolve `(127, "")` quando o `pactl` não está
+        # lá — é o mesmo desfecho de um servidor de som que não responde.
+        monkeypatch.setattr(eleicao_de_microfone, "_rodar",
+                            lambda argv: (127, ""))
+        lido = a02._ler_o_ganho(mudo)
+        assert lido == {}, (
+            f"com o `pactl` mudo nenhuma chave pode sair; saiu {lido!r} — e "
+            "cada chave dessas acende o cinza com a razão do cabo"
+        )
+        # E a tela, com o dicionário assim, não apaga nada.
+        guardado = dict(a02._GANHO)
+        try:
+            a02._GANHO.clear()
+            a02._GANHO.update(lido)
+            assert a02.ganho_fora_de_alcance(mudo[0]) == "", (
+                "o cinza acendeu sobre «não sei»"
+            )
+        finally:
+            a02._GANHO.clear()
+            a02._GANHO.update(guardado)
+
     def test_o_ganho_do_cabo_nao_morre_no_no_da_nossa_ponte(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
