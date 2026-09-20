@@ -85,8 +85,8 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalacao
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalacao
 
 logger = get_logger(__name__)
 
