@@ -73,10 +73,19 @@ def test_cada_jogo_da_biblioteca_ganha_um_perfil(tmp_path: Path) -> None:
 def test_o_perfil_nasce_com_nome_appid_e_prioridade_e_nada_mais(
     tmp_path: Path,
 ) -> None:
-    """Nome do jogo, `match` pelo appid, prioridade 80 — e SEM opinião no resto.
+    """Nome do jogo, `match` pelo appid, prioridade 80 — e NADA MAIS NO ARQUIVO.
 
-    "Um perfil semeado que já venha com cor e gatilho decididos seria o produto
-    escolhendo por ela": o fluxo dela é ativar e sair mexendo nas abas.
+    NOTA DATADA — 20/09/2026, NASCE-LIGADO-01. A frase que abria esta docstring
+    caducou por decisão dela, e fica registrada porque foi medida:
+
+        *"Um perfil semeado que já venha com cor e gatilho decididos seria o
+        produto escolhendo por ela"*
+
+    Ela decidiu o contrário em 17/09: *"os jogos e perfis tem que iniciar com
+    todas as features ativadas por default."* O que continua valendo é a metade
+    do ARQUIVO — o JSON semeado segue com três chaves, e é isso que o
+    `list(dados)` abaixo trava. O que mudou é o que essas três chaves
+    SIGNIFICAM ao carregar: o gatilho ausente deixou de ser `Off`.
     """
     destino = tmp_path / "perfis"
 
@@ -98,15 +107,20 @@ def test_o_perfil_nasce_com_nome_appid_e_prioridade_e_nada_mais(
     # nenhuma escolha dela parecer configurado.
     assert list(dados) == list(loader.CHAVES_DO_PERFIL_DE_JOGO), dados
 
-    # E o que o produto CARREGA continua sendo o default do esquema, chave a
+    # E o que o produto CARREGA continua sendo o NASCIMENTO do esquema, chave a
     # chave: enxugar o arquivo não mudou o comportamento de nada.
-    from hefesto_dualsense4unix.profiles.schema import Profile
+    #
+    # NASCE-LIGADO-01 (20/09): os dois gatilhos pararam de ser digitados aqui.
+    # O que este caso tem de provar é que o arquivo enxuto carrega IGUAL a um
+    # perfil que nunca foi enxugado — a comparação é contra o esquema, e não
+    # contra o valor de ontem. Digitá-lo foi o que fez esta linha reprovar a
+    # decisão dela em vez de um defeito.
+    from hefesto_dualsense4unix.profiles.schema import Profile, TriggersConfig
 
     perfil = Profile.model_validate(dados)
     assert perfil.leds.lightbar == (0, 0, 0)
     assert perfil.leds.auto_player_colors is True
-    assert perfil.triggers.left.mode == "Off"
-    assert perfil.triggers.right.mode == "Off"
+    assert perfil.triggers == TriggersConfig()
     assert perfil.suppress_desktop_emulation is False
     assert perfil.mode is None
     assert perfil.mic is None

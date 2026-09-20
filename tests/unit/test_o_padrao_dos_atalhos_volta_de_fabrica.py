@@ -14,7 +14,7 @@ AS TRÊS COISAS QUE ELA COBRA, e cada uma é um jeito diferente de o botão ment
 
 1. **`None`, e nunca `{}`.** O esquema define os dois: `None` é *"herda
    `DEFAULT_BUTTON_BINDINGS`"* e `{}` é *"desativa todos os bindings"*
-   (`profiles/schema.py:985-987`). Gravar `{}` devolveria um controle MUDO com o
+   (`profiles/schema.py:1033-1035`). Gravar `{}` devolveria um controle MUDO com o
    botão dizendo "de fábrica" — o pior tipo de acerto aparente.
 2. **Reaplicar.** Gravar sem `profile.switch` deixa a tela dizendo uma coisa e o
    aparelho fazendo outra até a próxima troca de perfil.
@@ -128,7 +128,7 @@ def test_grava_none_e_nunca_dicionario_vazio(pac, gesto, disco) -> None:
     assert gravados[0].key_bindings is None, (
         f"gravou {gravados[0].key_bindings!r}. `None` herda o "
         f"`DEFAULT_BUTTON_BINDINGS`; `{{}}` DESLIGA todos os bindings "
-        f"(`profiles/schema.py:985-987`) — o segundo devolveria um controle "
+        f"(`profiles/schema.py:1033-1035`) — o segundo devolveria um controle "
         f"mudo com o botão dizendo 'de fábrica'.")
     assert gravados[0].name == "Mortal Kombat", "gravou por cima de outro perfil"
     assert gravados[0].button_actions is None, (

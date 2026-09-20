@@ -839,19 +839,32 @@ def enxugar_perfis_de_jogo(dest_dir: Path | None = None) -> list[str]:
     29/08 com um `match` — nenhum tem a seção por controle do sistema novo,
     nenhum foi tocado desde que nasceu (mesma data, mesmo minuto).
 
-    **Nada muda de comportamento.** O que sai são as três seções que o arquivo
-    repetia do DEFAULT DO ESQUEMA (`triggers` Off/Off, `leds` com
-    `auto_player_colors`, `rumble` passthrough, mais `version` e
+    **Nada muda de comportamento QUANDO ELE RODA.** O que sai são as três
+    seções que o arquivo repetia do DEFAULT DO ESQUEMA (`leds` com
+    `auto_player_colors`, `rumble` passthrough, os gatilhos, mais `version` e
     `suppress_desktop_emulation`): carregar o arquivo enxuto devolve um
     `Profile` idêntico ao de antes — é o que
     `test_os_generos_nao_sao_perfis` mede, chave a chave.
 
-    O QUE SEÇÃO AUSENTE SIGNIFICA HOJE, e é medição obrigatória desta sprint:
-    o **default do esquema**, NÃO o que o `Personalizado` diz. A decisão D1
-    dela (*"o perfil grava o que ela tocou"*) pede o segundo, e o `schema.py`
-    não faz isso — é `profiles/schema.py`, que não é da posse desta sprint, e
-    está RELATADO na entrega. Aqui a diferença é inócua por construção: o
-    arquivo já continha exatamente o default do esquema.
+    O QUE SEÇÃO AUSENTE SIGNIFICA HOJE: o **NASCIMENTO do esquema**, NÃO o que
+    o `Personalizado` diz. A decisão D1 dela (*"o perfil grava o que ela
+    tocou"*) pede o segundo, e o `schema.py` não faz isso.
+
+    **O QUE A NASCE-LIGADO-01 MUDOU AQUI — 20/09/2026, e é medição, não
+    estética.** Esta docstring dizia *"`triggers` Off/Off"* e *"o arquivo já
+    continha exatamente o default do esquema"*. Os gatilhos passaram a NASCER
+    rígidos, então o molde reconstruído por `_e_perfil_de_jogo_intocado` traz
+    `Rigid` — e um arquivo antigo com `"triggers"` gravado em `Off` por
+    extenso deixa de casar com o molde e **não é mais enxugado**. O efeito é o
+    contrato desta função funcionando: um arquivo que DIZ `Off` está dizendo
+    algo, e quem diz não é tocado.
+
+    O alcance é estreito e está medido: na máquina dela o marker já existe
+    (rodou em 06/09), e a semeadura parou de escrever as cinco chaves na mesma
+    data. Sobra a máquina que instalou ANTES de 06/09 e só agora recebe este
+    código — lá os perfis de jogo daquela época ficam com o `Off` que têm, em
+    vez de herdar o nascimento novo. Quem quiser reconciliá-los reconcilia por
+    decisão dela, não por efeito colateral de uma migração one-shot.
 
     Um perfil com QUALQUER campo diferente do molde não é tocado. Idempotente
     por marker próprio. Best-effort: falha loga e segue.

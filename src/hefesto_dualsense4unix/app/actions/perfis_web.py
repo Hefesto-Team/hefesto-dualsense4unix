@@ -386,7 +386,7 @@ def _id_visivel(uniq: str) -> str:
 
     A chave do dado continua sendo o ``uniq`` cru — é ela que vai no
     ``data-hef-uniq``, porque é a chave de ``Profile.controllers``
-    (``profiles/schema.py:1063``, canonizada em ``:1139``). Endereço que não é a
+    (``profiles/schema.py:1111``, canonizada em ``:1139``). Endereço que não é a
     chave do dado obriga a inventar uma tradução, e a tradução é onde nasce a
     segunda verdade.
     """
@@ -457,7 +457,7 @@ def _pacote_do_editor(profile: Any) -> dict[str, Any]:
     match = getattr(profile, "match", None)
     # A LARGURA DO TRILHO SAI DE `PRIORIDADE_MAXIMA`, e não de 100. O mockup
     # desenha `width:90%` para a prioridade 90, o que só fecha se o teto fosse
-    # 100 — e o teto do produto é 200 (`profiles/schema.py:1509`, com portão
+    # 100 — e o teto do produto é 200 (`profiles/schema.py:1557`, com portão
     # próprio: `test_teto_da_prioridade_tem_uma_fonte_so.py`). Pintar 90% seria
     # a tela dizendo "quase no máximo" sobre um perfil que está na metade.
     if PRIORIDADE_MAXIMA <= 0:  # pragma: no cover — defesa contra teto zerado

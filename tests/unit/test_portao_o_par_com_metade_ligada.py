@@ -878,7 +878,7 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     #   a06_navegacao.py:626  `core/acoes_de_botao.py:285`  -> `:338` (`resolver`)
     #   a06_navegacao.py:1161 `profiles/manager.py:570`     -> `:617`
     #   a06_navegacao.py:1175 `profiles/manager.py:614`     -> `:673`
-    #   profiles/schema.py:997 `daemon/subsystems/hotkey.py:1004` -> `:1234`
+    #   profiles/schema.py:1045 `daemon/subsystems/hotkey.py:1004` -> `:1234`
     #
     # As outras QUATRO que a mesma sprint deslocou não estão aqui porque foram
     # CORRIGIDAS no lugar (`core/rumble.py`, `a02_controles.py` e duas em

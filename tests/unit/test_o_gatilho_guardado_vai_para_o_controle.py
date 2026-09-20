@@ -103,17 +103,26 @@ def _forma(**extra: str) -> dict[str, str]:
 
 
 def test_grava_no_override_do_controle_e_nao_no_global(pac, gesto, disco) -> None:
+    """NASCE-LIGADO-01 (20/09/2026): o guardado é `Pulse` e o intacto é o nascimento.
+
+    `Rigid` virou o NASCIMENTO dos dois lados, e com ele um global escrito por
+    engano ficaria idêntico ao global intacto — a régua daria verde sobre o
+    defeito que existe para pegar. O que se guarda tem de diferir do que se
+    herda, e o "intacto" é lido do esquema em vez de digitado.
+    """
+    from hefesto_dualsense4unix.profiles.schema import TriggersConfig
+
     _estado, gravados = disco
     p = PonteDeMentira()
 
-    gesto(_ctx(pac), {"uniq": UNIQ, "forma": _forma()}, p)
+    gesto(_ctx(pac), {"uniq": UNIQ, "forma": _forma(**{"modo-chave-e": "Pulse"})}, p)
 
     assert len(gravados) == 1, f"gravou {len(gravados)} vez(es)"
     prof = gravados[0]
     assert CHAVE in (prof.controllers or {}), (
         f"o override do controle não foi criado; controllers={prof.controllers!r}")
-    assert prof.controllers[CHAVE].triggers.left.mode == "Rigid"
-    assert prof.triggers.left.mode == "Off", (
+    assert prof.controllers[CHAVE].triggers.left.mode == "Pulse"
+    assert prof.triggers.left == TriggersConfig().left, (
         "o Guardar mexeu na seção GLOBAL do perfil. A aba mostra uma coluna POR "
         "CONTROLE — gravar no global faria o Guardar do P2 mudar o gatilho do P1.")
 

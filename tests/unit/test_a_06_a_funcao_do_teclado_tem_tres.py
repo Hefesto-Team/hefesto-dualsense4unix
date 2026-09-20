@@ -9,7 +9,7 @@ O FATO QUE ESTA RÉGUA DERRUBA, e ele estava escrito no pacote E no enunciado do
 trabalho: *"'Só fora do jogo' não existe do outro lado"* e *"'Só dentro do jogo'
 já existe, e é o `suppress_desktop_emulation`"*. **Os dois estão invertidos.**
 
-    `Profile.suppress_desktop_emulation` (`profiles/schema.py:1036`)
+    `Profile.suppress_desktop_emulation` (`profiles/schema.py:1084`)
         "True = ativar o perfil suprime a emulação de mouse/teclado no desktop
          (jogos de GAMEPAD que leem o controle cru)"
 
