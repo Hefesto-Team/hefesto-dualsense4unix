@@ -1496,6 +1496,15 @@ async def shutdown(daemon: DaemonProtocol) -> None:
     ):
         with contextlib.suppress(Exception):
             await parar_som()
+    # CONEXAO-ZUMBI-01: o vigia das conexões cai junto, e é a TERCEIRA ponta da
+    # receita que o `subsystems/__init__.py` descreve. Sem esta linha a thread
+    # continuaria olhando a mesa — e chamando `sudo` — com o daemon já morto.
+    parar_conexoes = getattr(daemon, "_stop_conexoes", None)
+    if getattr(daemon, "_conexoes_subsystem", None) is not None and callable(
+        parar_conexoes
+    ):
+        with contextlib.suppress(Exception):
+            await parar_conexoes()
     # Plugins: stop antes dos outros subsystems (on_unload pode usar controller).
     if daemon._plugins_subsystem is not None:
         with contextlib.suppress(Exception):

@@ -76,6 +76,7 @@
 #   esquecer   <MAC_ADAPTADOR> <MAC_CTRL>  remove o bond E o cache SDP
 #   descobrir  <MAC_ADAPTADOR> <SEG>     janela de busca (BLOQUEIA <SEG>)
 #   parear     <MAC_ADAPTADOR> <MAC_CTRL>  Pair() + Trusted=true
+#   desconectar <MAC_ADAPTADOR> <MAC_CTRL> derruba o LINK (o controle zumbi)
 #   regra-sudo <USUARIA>                 imprime o /etc/sudoers.d (não instala)
 #
 # SAÍDA: dado em TSV no stdout, uma linha por item; erro no stderr.
@@ -148,6 +149,7 @@ uso: bt_ponte_privilegiada.sh <verbo> [argumentos]
   esquecer   <MAC_ADAPTADOR> <MAC_CONTROLE>
   descobrir  <MAC_ADAPTADOR> <SEGUNDOS>
   parear     <MAC_ADAPTADOR> <MAC_CONTROLE>
+  desconectar <MAC_ADAPTADOR> <MAC_CONTROLE>
   regra-sudo <USUARIA>
 
   --dry-run como PRIMEIRO argumento: não muda nada, imprime o que faria.
@@ -304,7 +306,7 @@ verbo_adaptadores() {
             | grep -oE '^/org/bluez/hci[0-9]+$' | sort -u || true)"
     fi
     [[ "${achou}" -eq 1 ]] && return 0
-    #: Degrau de baixo: sysfs é kernel puro, não precisa de pacote nem de
+    #: Degrau do meio: sysfs é kernel puro, não precisa de pacote nem de
     #: privilégio, e responde mesmo com o bluetoothd fora do ar. Sem D-Bus não
     #: existe Alias — a coluna sai vazia, que é honesto.
     for caminho in "${HEFESTO_SYSFS_BLUETOOTH:-/sys/class/bluetooth}"/hci*; do
@@ -314,7 +316,21 @@ verbo_adaptadores() {
         endereco="$(cat "${caminho}/address" 2>/dev/null || true)"
         [[ -n "${endereco}" ]] || continue
         printf '%s\t\t%s\t%s\n' "${endereco^^}" "desconhecido" "${hci}"
+        achou=1
     done
+    [[ "${achou}" -eq 1 ]] && return 0
+    #: DEGRAU DE BAIXO, E ELE NÃO É REDUNDANTE — o do meio NÃO RESPONDE NESTE
+    #: KERNEL. Medido em 20/09/2026, kernel 7.1.5: `/sys/class/bluetooth/hci0/`
+    #: tem `device`, `power`, `reset`, `rfkill0`, `subsystem` e `uevent`, e
+    #: **nenhum `address`**. Sem este degrau, uma máquina sem D-Bus responderia
+    #: "nenhum adaptador" com três dongles plugados.
+    if command -v hcitool >/dev/null 2>&1; then
+        while read -r hci endereco; do
+            [[ "${hci}" =~ ^hci[0-9]+$ ]] || continue
+            [[ "${endereco}" =~ ${_MAC_FORMA} ]] || continue
+            printf '%s\t\t%s\t%s\n' "${endereco^^}" "desconhecido" "${hci}"
+        done <<<"$(LC_ALL=C hcitool dev 2>/dev/null | tail -n +2 || true)"
+    fi
     return 0
 }
 
@@ -463,6 +479,58 @@ verbo_parear() {
     return 0
 }
 
+#: CONEXAO-ZUMBI-01 (18/09/2026) — derruba o LINK de um controle que conectou e
+#: NÃO virou controle. O caso, medido na mesa dela às 11h55: ACL de pé, nenhum
+#: `hidraw`, nenhum nó de LED, nenhuma bateria — e o controle parado no padrão
+#: de fábrica, barra azul e jogador 1. Derrubar o link faz o controle procurar
+#: de novo, e achar o adaptador onde o bond dele está.
+#:
+#: O ALVO É O LINK, NÃO O DEVICE — e é por isso que o `Disconnect()` do
+#: `org.bluez.Device1` NÃO serve aqui: o zumbi não tem objeto no BlueZ para
+#: receber a chamada. É exatamente o que o distingue do "conectado sem hidraw"
+#: que o `doctor.sh` já pega (`check_bt_connected_sem_hidraw`), cuja cura é
+#: outra (o cache SDP) e cujo device o BlueZ conhece.
+#:
+#: A ESCADA, E A ORDEM É POR MEDIÇÃO:
+#:   1. `hcitool dc` — o único caminho MEDIDO (derrubou o zumbi de 18/09). Foi
+#:      DEPRECIADO pelo BlueZ, então a ausência dele é caso normal, não bug;
+#:   2. `btmgmt disconnect` — a mgmt API, que é a ferramenta que a upstream
+#:      indica, e que também fala com a camada de link (não depende de objeto
+#:      no bluetoothd). Plano B porque esta casa ainda NÃO a mediu neste gesto.
+#: Sem nenhum dos dois, o verbo FALHA COM MOTIVO — ausência é resposta, nunca
+#: ação às cegas.
+verbo_desconectar() {
+    local adaptador="$1" controle="$2" hci indice
+    hci="$(_hci_do_mac "${adaptador}" || true)"
+    [[ -n "${hci}" ]] || { _erro "adaptador ${adaptador} não está na mesa (plugado e ligado?)"; exit 1; }
+    #: O `-i`/`--index` NÃO é zelo: o rádio é POR ADAPTADOR, e `hcitool dc` sem
+    #: `-i` cai no primeiro adaptador que o kernel rotear. Numa malha de três
+    #: dongles isso derrubaria o link de OUTRO adaptador — quem estava jogando.
+    indice="${hci#hci}"
+    if _seco; then
+        _dizer_seco "hcitool -i ${hci} dc ${controle}   (plano B: btmgmt --index ${indice} disconnect ${controle})"
+        return 0
+    fi
+    if command -v hcitool >/dev/null 2>&1; then
+        if timeout 10 hcitool -i "${hci}" dc "${controle}" >/dev/null 2>&1; then
+            _registrar "link de ${controle} derrubado em ${adaptador} (${hci}) por hcitool dc"
+            return 0
+        fi
+    fi
+    if command -v btmgmt >/dev/null 2>&1; then
+        if timeout 10 btmgmt --index "${indice}" disconnect "${controle}" >/dev/null 2>&1; then
+            _registrar "link de ${controle} derrubado em ${adaptador} (${hci}) por btmgmt disconnect"
+            return 0
+        fi
+    fi
+    if ! command -v hcitool >/dev/null 2>&1 && ! command -v btmgmt >/dev/null 2>&1; then
+        _erro "não há como derrubar o link de ${controle}: nem 'hcitool' (depreciado pelo BlueZ, pacote bluez-deprecated / bluez-deprecated-tools) nem 'btmgmt' estão nesta máquina"
+        exit 1
+    fi
+    _erro "não consegui derrubar o link de ${controle} em ${adaptador} (${hci}) — o link ainda estava de pé quando tentei?"
+    exit 1
+}
+
 #: DONO ÚNICO da regra do sudoers. O `install.sh` só canaliza a saída daqui
 #: para o `visudo -c`. Verbo novo no `case` lá embaixo tem de aparecer aqui, ou
 #: a janela não consegue chamá-lo — que é o sentido certo da falha.
@@ -491,6 +559,7 @@ Cmnd_Alias HEFESTO_BT_PONTE = \\
     ${ALVO_INSTALADO} renomear ${m}, \\
     ${ALVO_INSTALADO} esquecer ${m} ${m}, \\
     ${ALVO_INSTALADO} parear ${m} ${m}, \\
+    ${ALVO_INSTALADO} desconectar ${m} ${m}, \\
     ${ALVO_INSTALADO} descobrir ${m} [0-9], \\
     ${ALVO_INSTALADO} descobrir ${m} [0-9][0-9], \\
     ${ALVO_INSTALADO} descobrir ${m} [0-9][0-9][0-9]
@@ -542,6 +611,12 @@ case "${VERBO}" in
         _mac "${1}" 'MAC do adaptador'; ARG_ADAPTADOR="${VALIDADO}"
         _mac "${2}" 'MAC do controle';  ARG_CONTROLE="${VALIDADO}"
         verbo_parear "${ARG_ADAPTADOR}" "${ARG_CONTROLE}"
+        ;;
+    desconectar)
+        [[ $# -eq 2 ]] || _recusar "desconectar recebe exatamente 2 argumentos (MAC do adaptador, MAC do controle)"
+        _mac "${1}" 'MAC do adaptador'; ARG_ADAPTADOR="${VALIDADO}"
+        _mac "${2}" 'MAC do controle';  ARG_CONTROLE="${VALIDADO}"
+        verbo_desconectar "${ARG_ADAPTADOR}" "${ARG_CONTROLE}"
         ;;
     regra-sudo)
         [[ $# -eq 1 ]] || _recusar "regra-sudo recebe exatamente 1 argumento (nome da usuária)"
