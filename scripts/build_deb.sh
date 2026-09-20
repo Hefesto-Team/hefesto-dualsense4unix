@@ -182,6 +182,19 @@ UDEV_RULES_GLOBS=(
 for rules_file in "${UDEV_RULES_GLOBS[@]}"; do
     [ -f "$rules_file" ] && cp "$rules_file" "${STAGING}/usr/lib/udev/rules.d/"
 done
+# O-NO-NASCE-FECHADO-01 (auditoria de 20/09/2026, bloqueante 3). O laço acima
+# acabou de copiar a 70 FECHADA para o diretório VIVO — e o .deb NÃO instala o
+# broker (o `postinst` roda sem sessão e não pode renderizar o uid; quem
+# instala o broker é o `install-host-udev.sh`, DEPOIS, à mão). Um `apt install`
+# que fecha o nó sem pôr ninguém para abri-lo entrega um DualSense
+# INUTILIZÁVEL, e o produto é para qualquer usuário (ordem dela, 11/09/2026).
+#
+# Então o diretório VIVO leva a variante ABERTA, sobrescrevendo o que o laço
+# copiou. O ESPELHO de /usr/share (mais abaixo) continua com o asset FECHADO
+# de propósito: ele não é lido pelo udev — é a FONTE do helper, que grava em
+# /etc/udev/rules.d/ (que vence /usr/lib) quando o broker entra junto.
+bash scripts/regra_do_no_aberta.sh assets/70-ps5-controller.rules \
+    "${STAGING}/usr/lib/udev/rules.d/70-ps5-controller.rules"
 
 # v3.3.1: bundla install-host-udev.sh em /usr/share para re-aplicar regras
 # manualmente fora do apt install (ex: usuário renomeou /etc/udev/rules.d/
@@ -192,6 +205,12 @@ echo "Copiando helper install-host-udev.sh ..."
 mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/scripts"
 install -Dm755 scripts/install-host-udev.sh \
     "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh"
+# O-NO-NASCE-FECHADO-01: o helper acima decide, em tempo de execução, se a 70
+# vai FECHADA (quando ele consegue instalar o broker junto) ou ABERTA (quando
+# não consegue) — e quem gera a variante aberta é este script. Sem ele
+# bundlado, o helper cai no fail-safe e não instala a 70 nenhuma.
+install -Dm755 scripts/regra_do_no_aberta.sh \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/regra_do_no_aberta.sh"
 # Cura de raiz do storm: o usuário do .deb precisa poder consultar/reverter
 # (`--status` / `--remove`) sem o repo. O script resolve o .conf em /usr/share.
 install -Dm755 scripts/install_snd_quirk.sh \
