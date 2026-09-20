@@ -49,27 +49,60 @@ CAMPOS = (
 
 #: (faixa citada, âncora que TEM de estar dentro dela).
 #:
-#: Cada par foi conferido contra o fonte em 02/09/2026. As duas últimas linhas
-#: são as que NÃO derivaram — estão acima do ponto de inserção da onda — e estão
-#: aqui de propósito: a cura fácil seria somar 59 a tudo, e somar nelas
-#: QUEBRARIA duas referências que estavam certas.
+#: Cada par foi conferido contra o fonte em 02/09/2026 e REMEDIDO em 20/09/2026.
+#: O `:441-454` é o que NÃO derivou em nenhuma das ondas — está acima de todo
+#: ponto de inserção — e fica aqui de propósito: a cura fácil seria somar a
+#: deriva a tudo, e somar nele QUEBRARIA uma referência que estava certa.
+#:
+#: A REMEDIÇÃO DE 20/09/2026, e a deriva tem QUATRO tamanhos. A
+#: ESCRITA-QUE-NÃO-MEDE-01 (`982e3fbca`, 19/09) somou 82 linhas ao
+#: `backend_pydualsense.py`, mas não de uma vez: `_escrever_led_do_mic` ficou
+#: onde estava, cinco faixas desceram 35, o `should_reclaim_on_wake` desceu 70
+#: e as três do fim desceram 82. Cada par foi reapontado pela ÂNCORA, com
+#: `difflib` contra o fonte de antes — nunca por aritmética.
+#:
+#: E UM PAR MUDOU DE FORMA, não só de lugar: aquela onda partiu a escrita em
+#: duas. O `self.device.write` saiu do bloco que carimba o `seq` do rádio e foi
+#: morar em `_escrever_conferindo`, que existe para DEVOLVER quantos bytes o
+#: fio aceitou. A faixa nova (`:1882-1913`) cobre os dois de propósito, porque
+#: é isso que a prosa do mapa promete — "o `seq` do handle carimbado e o CRC
+#: refeito no próprio write". Encolhê-la para o bloco do `seq` faria a âncora
+#: cair; encolhê-la para o `_escrever_conferindo` apontaria para um método que
+#: não carimba `seq` nenhum.
 ANCORAS: tuple[tuple[str, str], ...] = (
-    (":1679-1680", "VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE"),
-    (":1722-1728", "common[8] = int(mic_led) & 0xFF"),
-    (":1490-1517", "def set_microphone_led"),
-    (":4870", "def set_mic_led"),
-    (":4877-4878", "report[11] no rádio"),
-    (":4879-4883", "CORRIGIDO em 15/08/2026"),
-    (":1787-1788", "build_bt_report"),
-    (":1849-1856", "self.device.write"),
-    (":3286-3299", "should_reclaim_on_wake"),
+    (":1714-1715", "VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE"),
+    (":1757-1763", "common[8] = int(mic_led) & 0xFF"),
+    (":1525-1552", "def set_microphone_led"),
+    (":4952", "def set_mic_led"),
+    (":4959-4960", "report[11] no rádio"),
+    (":4961-4965", "CORRIGIDO em 15/08/2026"),
+    (":1822-1823", "build_bt_report"),
+    (":1882-1913", "self.device.write"),
+    (":3356-3369", "should_reclaim_on_wake"),
     (":441-454", "def _escrever_led_do_mic"),
-    (":933", "_audio_status"),
+    (":968", "_audio_status"),
 )
 
 #: Os endereços que a auditoria aposentou. Se um deles voltar à célula, ou a
 #: deriva voltou, ou alguém somou 59 no lugar errado.
 APOSENTADOS = (
+    # AS ONZE DE BAIXO SE APOSENTARAM EM 20/09/2026, pela
+    # ESCRITA-QUE-NÃO-MEDE-01: o `self.device.write` ganhou um dono que mede
+    # (`_escrever_conferindo`), e o arquivo cresceu 82 linhas em três degraus
+    # diferentes. O `:1460-1461` nunca esteve em `ANCORAS` — ele vive só na
+    # prosa do mapa, e derivou junto (+35). Entra aqui porque a régua que
+    # impede a volta é esta, e meia correção deixa as duas versões vivas.
+    ":1849-1856",
+    ":4879-4883",
+    ":4877-4878",
+    ":3286-3299",
+    ":1787-1788",
+    ":1722-1728",
+    ":1679-1680",
+    ":1490-1517",
+    ":1460-1461",
+    ":4870",
+    ":933",
     # AS DEZ DE BAIXO SE APOSENTARAM EM 17/09/2026, pela
     # BATERIA-QUE-PULA-01: a guarda `eh_report_de_estado` e o par
     # `_consumir_report`/`_recusar_report` entraram no meio do arquivo.
