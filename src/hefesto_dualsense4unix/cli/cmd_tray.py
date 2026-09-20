@@ -53,6 +53,8 @@ from typing import Any
 import typer
 from rich.console import Console
 
+from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalacao
+
 console = Console()
 
 #: O LANÇADOR QUE O `install.sh` ESCREVE, e é o mesmo que o atalho do menu
@@ -96,9 +98,16 @@ def _abrir_o_painel() -> None:
             start_new_session=True,
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except FileNotFoundError:
+        # BG-INSTALL-01 (20/09/2026): esta frase nasceu com o tray, em
+        # 19/09, escrita de dentro de um checkout — e cravava o instalador.
+        # Em cinco dos seis formatos deste produto (`.deb`, `.rpm`, Arch, Nix
+        # e o pip) o arquivo não está na máquina de quem está lendo, e o
+        # conselho vira impossível. Quem sabe o gesto desta instalação é o
+        # `utils/repo_files`, que responde pelo formato REAL dela.
         console.print(
             f"[yellow]não achei `{LANCADOR_DO_PAINEL}` no PATH[/] — "
-            f"rode `./install.sh` para criar o lançador")
+            f"o lançador do painel não veio nesta instalação; "
+            f"{como_atualizar_esta_instalacao()}.")
 
 
 def _listar_perfis() -> list[dict[str, Any]]:
