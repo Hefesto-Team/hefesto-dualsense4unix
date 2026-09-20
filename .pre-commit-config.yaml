@@ -181,3 +181,18 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      # A CATRACA DA TRADUÇÃO — TRADUZIR-O-PROJETO-01 (20/09/2026). A ordem
+      # dela: *"Um Hook que vá facilitando isso seria maravilhoso. Pois   # noqa-acento: citação literal dela
+      # organicamente deixaríamos fácil pra gente e pro outro"*.   # noqa-acento: citação literal dela
+      #
+      # `pass_filenames: false` e `always_run: true` pela mesma razão dos
+      # outros três: a pergunta é sobre a ÁRVORE INTEIRA — quantos arquivos
+      # caem fora de zona, quantos bytes de comentário as dez páginas
+      # publicam —, e filtrar pelo que está staged deixaria o número subir
+      # pelo arquivo que ninguém tocou neste commit.
+      - id: projeto-traduzivel
+        name: a catraca da tradução (zona, endereço de tela, prosa publicada)
+        entry: python3 scripts/check_o_projeto_e_traduzivel.py
+        language: system
+        pass_filenames: false
+        always_run: true
