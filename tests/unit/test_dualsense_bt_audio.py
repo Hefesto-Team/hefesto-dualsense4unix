@@ -693,6 +693,14 @@ def test_diagnostico_sem_controle_nao_esta_pronto() -> None:
 
 
 def test_diagnostico_sem_libopus_diz_o_que_instalar() -> None:
+    """O laudo manda INSTALAR, e o nome do pacote vem do dono.
+
+    A-LIBOPUS-TEM-NOME-EM-CADA-CASA-01 (20/09/2026): esta linha DIGITAVA o
+    nome que só o Debian usa — a terceira cópia do mesmo dado. Num Arch ela
+    dava verde sobre uma frase que mandava instalar o que não existe lá.
+    """
+    from hefesto_dualsense4unix.integrations import storm_doctor
+
     d = bt.Diagnostico(
         controles=[_no("/dev/hidraw6")],
         libopus=None,
@@ -701,7 +709,11 @@ def test_diagnostico_sem_libopus_diz_o_que_instalar() -> None:
         broker=True,
     )
     assert d.pronto is False
-    assert any("libopus0" in i for i in d.impedimentos)
+    gestos = {
+        storm_doctor.gesto_de_instalar(chave)
+        for chave in storm_doctor.PACOTE_POR_FORMATO
+    }
+    assert any(any(gesto in linha for gesto in gestos) for linha in d.impedimentos)
 
 
 def test_diagnostico_completo_esta_pronto() -> None:
