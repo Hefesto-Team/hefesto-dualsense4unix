@@ -141,6 +141,71 @@ def montar(tmp_path: Path) -> Path:
     return raiz
 
 
+#: Faixa sintética para os ADAPTADORES de mentira. Separada da dos aparelhos
+#: pela mesma razão: nada aqui pode casar com adaptador vivo da mesa dela.
+ADAPTADOR_QUE_VARRE = "aa:bb:cc:00:00:a1"
+ADAPTADOR_PARADO = "aa:bb:cc:00:00:a2"
+ADAPTADOR_FOLGADO = "aa:bb:cc:00:00:a3"
+
+
+def montar_adaptadores(
+    tmp_path: Path,
+    adaptadores: dict[str, tuple[str | None, str | None]],
+) -> Path:
+    """Um BlueZ de mentira feito só de ADAPTADORES, para a leitura de varredura.
+
+    ``adaptadores`` é ``{hciN: (endereço ou None, "true"/"false" ou None)}``.
+    ``None`` em qualquer das duas posições significa **a propriedade não
+    responde** — adaptador em ``down``, ``rfkill``, ou que sumiu entre a árvore
+    e a pergunta. É o arranjo difícil, e é o que separa "não varre" de "não
+    sei".
+
+    O endereço é gravado em MAIÚSCULAS porque é assim que o ``busctl`` devolve
+    o ``Address`` (medido na mesa dela em 20/09/2026: ``s "AC:A7:F1:…"``),
+    enquanto o ``HID_PHYS`` do uevent — a chave dos planos — vem minúsculo.
+    Gravar aqui já normalizado esconderia exatamente o casamento que a régua
+    precisa medir.
+
+    Reusa o ``busctl`` de :data:`_BUSCTL`, que é o mesmo que a ponte usa.
+    Escrever um segundo deixaria duas verdades sobre o mesmo barramento.
+    """
+    raiz = tmp_path / "barramento-de-adaptadores"
+    (raiz / "bin").mkdir(parents=True)
+    (raiz / "props").mkdir(parents=True)
+    alvo = raiz / "bin" / "busctl"
+    alvo.write_text(_BUSCTL, encoding="utf-8")
+    alvo.chmod(0o755)
+
+    caminhos = [f"/org/bluez/{hci}" for hci in adaptadores]
+    #: A árvore de verdade traz o nó raiz e os aparelhos junto com os
+    #: adaptadores; pôr os dois aqui é o que prova que o leitor peneira por
+    #: FORMA e não confia na ordem das linhas.
+    linhas = ["/org/bluez", *caminhos, caminho_do(CONTROLE)]
+    (raiz / "tree").write_text("\n".join(linhas) + "\n", encoding="utf-8")
+
+    for hci, (endereco, varrendo) in adaptadores.items():
+        caminho = f"/org/bluez/{hci}"
+        if varrendo is not None:
+            _prop(raiz, caminho, "Discovering", f"b {varrendo}")
+        if endereco is not None:
+            _prop(raiz, caminho, "Address", f's "{endereco.upper()}"')
+    return raiz
+
+
+def ambiente_de_leitura(raiz: Path) -> dict[str, str]:
+    """As variáveis que fazem um `busctl` chamado por NOME cair nesta pasta.
+
+    O leitor de varredura não passa pela ponte: ele abre ``busctl`` direto, e é
+    o ``PATH`` que decide qual. Pôr esta pasta na frente é o que deixa a régua
+    exercitar o subprocesso, o parsing e a peneira de verdade — em vez de um
+    dublê de função, que seria mais frouxo que o produto.
+    """
+    return {
+        "PATH": f"{raiz / 'bin'}{os.pathsep}{os.environ.get('PATH', '')}",
+        "BUSCTL_FALSO_RAIZ": str(raiz),
+    }
+
+
 def ambiente(raiz: Path) -> dict[str, str]:
     """O ambiente que faz a ponte falar com este barramento, e só com ele."""
     env = dict(os.environ)
