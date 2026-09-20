@@ -327,6 +327,23 @@ rapido|maiuscula-decorativa-morde|pytest|tests/unit/test_portao_a_maiuscula_deco
 # `scripts/aplicar_a_grafia_do_nome.sh`.
 rapido|grafia-do-nome|py|scripts/check_a_grafia_do_nome.py
 rapido|grafia-do-nome-morde|pytest|tests/unit/test_portao_a_grafia_do_nome_morde.py
+# A CATRACA DA TRADUÇÃO — TRADUZIR-O-PROJETO-01, 20/09/2026, e a ordem é dela:
+# *"Um Hook que vá facilitando isso seria maravilhoso. Pois organicamente   # noqa-acento: citação literal dela
+# deixaríamos fácil pra gente e pro outro"*.  # noqa-acento: citação literal dela
+# Ele não traduz nada e não pede mutirão: impede TRÊS números de subirem, e
+# cobra só de quem escreve a linha nova. (1) arquivo que nenhuma regra de
+# `docs/data/zonas-de-lingua.toml` alcança, piso ZERO; (2) unidade de texto de
+# tela sem endereço de tradução, hoje PENDENTE -- não existe forma de endereço
+# neste projeto, e um contador nessas condições devolveria zero, que se lê como
+# verde; (3) bytes de comentário dentro das dez páginas publicadas, medidos com
+# parser e não com regex.
+# PENDENTE NÃO É VERDE, e o portão diz isso em voz alta: a medida da tela acorda
+# sozinha no dia em que a I18N-DA-TELA-NOVA-01 definir a forma do endereço, e
+# reprova pedindo o piso novo -- instrumento que sabe do próprio risco RESOLVE.
+# Camada RÁPIDA: 643 ms medidos nesta árvore, lendo as dez páginas, a tabela de
+# zonas, os 2.471 caminhos versionados e o AST de `app/actions/`.
+rapido|projeto-traduzivel|py|scripts/check_o_projeto_e_traduzivel.py
+rapido|projeto-traduzivel-morde|pytest|tests/unit/test_o_projeto_e_traduzivel_morde.py
 rapido|ruff|bin|ruff check src/ tests/
 completo|shellcheck|bin|shellcheck -S error scripts/*.sh scripts/ci/*.sh install.sh uninstall.sh
 completo|referencias-docs|py|scripts/validar-referencias-docs.py --all

@@ -1,0 +1,328 @@
+# zonas-de-lingua.toml — A FRONTEIRA DA TRADUÇÃO, POR REGRA.
+#
+# TRADUZIR-O-PROJETO-01, 20/09/2026. Todo arquivo de texto deste repositório
+# resolve para UMA de quatro zonas, e a zona diz se ele se traduz:
+#
+#   TELA      o que a pessoa que USA lê.                          traduz
+#   ENSINA    o que a pessoa de FORA lê para aprender.            decisão dela
+#   REGISTRA  o que se guarda e não se corrige.                   não traduz
+#   CODIGO    símbolo, endereço, teste, script, artefato.         não traduz
+#
+# POR QUE REGRA, E NÃO LISTA DE ARQUIVO
+# --------------------------------------
+# Lista de arquivo envelhece a cada arquivo novo, e esta casa já pagou por
+# isso: `docs/data/frases-de-tela-25-08.json` é uma enumeração congelada num
+# mundo que acabou — ela cita a ordem das abas "medida do main.glade", e o
+# main.glade saiu do disco em 06/09/2026. Régua LÊ, nunca DIGITA o que devia
+# ler do fonte, e uma regra de caminho é a forma mais fraca de leitura que
+# ainda é leitura.
+#
+# Custo para quem escreve: UMA linha aqui, uma vez por padrão novo de caminho —
+# não por arquivo. É o "organicamente" que ela pediu.
+#
+# NÃO HÁ REGRA PEGA-TUDO, E ISSO É O PONTO. Arquivo que não casa nenhuma regra
+# REPROVA, pedindo uma regra. Aceitar o não-classificado como CODIGO por
+# omissão faria a próxima pessoa nunca mais declarar zona nenhuma, e a
+# fronteira deixaria de existir sem ninguém decidir isso.
+#
+# O FURO DESTA MEDIDA, DECLARADO: a zona responde sobre ONDE O ARQUIVO MORA,
+# não sobre COM QUEM ELE FALA. O `install.sh` fala português com quem instala e
+# cai em CODIGO; o `doctor` também. Medir quantas dessas frases chegam ao
+# terminal de quem instala — por leitura do fonte, nunca por execução — é
+# trabalho declarado na TRADUZIR-O-PROJETO-01 e não foi feito aqui.
+#
+# A ORDEM IMPORTA: vence a PRIMEIRA regra que casa. Por isso o específico vem
+# antes do geral, e o geral de cada pasta vem no fim do bloco dela.
+#
+# Sintaxe do padrão: glob sobre o caminho relativo à raiz, com `*` que não
+# atravessa `/` e `**` que atravessa.
+
+# ---------------------------------------------------------------------------
+# A FORMA DO ENDEREÇO DE TRADUÇÃO — quem preenche é a I18N-DA-TELA-NOVA-01
+# ---------------------------------------------------------------------------
+# A catraca da tela conta "unidade de texto SEM endereço de tradução". Para
+# contar isso é preciso saber o que é TER endereço — e a forma do endereço
+# (`_()` no gerador, `data-i18n="chave"` no HTML, catálogo por chave, ou outra
+# coisa) é decisão da I18N-DA-TELA-NOVA-01, não desta tabela.
+#
+# ENQUANTO ESTA SEÇÃO NÃO EXISTIR COM `atributo` OU `chamada`, a medida da tela
+# se declara INDISPONÍVEL e o piso dela fica em PENDENTE. Ela não devolve zero:
+# zero se lê como verde, e verde sobre uma medida desligada é o defeito que
+# esta casa mediu em quatro instrumentos diferentes.
+#
+# Quem definir a forma acrescenta a seção abaixo, e a catraca passa a medir
+# sozinha — sem que ninguém edite uma linha de Python:
+#
+#     [endereco_de_traducao]
+#     atributo = "data-i18n"         # o atributo que marca o nó endereçado
+#     chamada  = "_"                 # a função que marca o literal endereçado
+#     definido_em = "I18N-DA-TELA-NOVA-01, DD/MM/AAAA"
+#
+# A seção está AUSENTE de propósito. Ausência é resposta: hoje não há forma de
+# endereço neste projeto, e dizer "zero frases sem endereço" seria mentira.
+
+# ---------------------------------------------------------------------------
+# TELA — o que a pessoa que usa lê
+# ---------------------------------------------------------------------------
+[[regra]]
+caminho = "src/hefesto_dualsense4unix/interface/paginas/**"
+zona = "TELA"
+razao = "as dez abas publicadas: é o HTML que o WebKit2.WebView renderiza."
+
+[[regra]]
+caminho = "src/hefesto_dualsense4unix/interface/pacotes/**"
+zona = "TELA"
+razao = "os pacotes escrevem texto na tela em tempo de execução."
+
+[[regra]]
+caminho = "src/hefesto_dualsense4unix/interface/aba*.py"
+zona = "TELA"
+razao = "os geradores das dez abas: a frase nasce aqui e vai para o HTML."
+
+[[regra]]
+caminho = "src/hefesto_dualsense4unix/interface/frases_que_ela_baniu.py"
+zona = "TELA"
+razao = "a lista de palavras que a tela não diz é parte do texto da tela."
+
+[[regra]]
+caminho = "mockup/**/*.html"
+zona = "TELA"
+razao = "o desenho que ela aprovou; a direção é mockup/ -> produto."
+
+[[regra]]
+caminho = "**/*.desktop"
+zona = "TELA"
+razao = """o lançador mostra Name e Comment na dock ANTES de a janela existir.
+A régua que parasse na borda do <body> não alcançaria isto, e a tela dela não
+para no <body> — foi assim que a frase banida apareceu na dica do .desktop."""
+
+[[regra]]
+caminho = "**/*.metainfo.xml"
+zona = "TELA"
+razao = "a loja de aplicativos mostra este texto a quem nunca abriu o produto."
+
+# ---------------------------------------------------------------------------
+# ENSINA — o que a pessoa de fora lê para aprender
+# ---------------------------------------------------------------------------
+[[regra]]
+caminho = "README.md"
+zona = "ENSINA"
+razao = "a porta de entrada de quem chega de fora."
+
+[[regra]]
+caminho = "GUIA-RADIO-DA-SALA.md"
+zona = "ENSINA"
+razao = "guia de uso, escrito para quem vai repetir o procedimento."
+
+[[regra]]
+caminho = ".github/**"
+zona = "ENSINA"
+razao = "CONTRIBUTING, modelos de issue e de PR: fala com quem contribui."
+
+[[regra]]
+caminho = "docs/usage/**"
+zona = "ENSINA"
+razao = "o manual de uso."
+
+[[regra]]
+caminho = "docs/adr/**"
+zona = "ENSINA"
+razao = "as decisões de arquitetura, lidas por quem for mexer."
+
+[[regra]]
+caminho = "docs/protocol/**"
+zona = "ENSINA"
+razao = "a referência do protocolo: é o que se consulta antes de acreditar."
+
+[[regra]]
+caminho = "docs/method/**"
+zona = "ENSINA"
+razao = "o método da casa, escrito para a próxima pessoa."
+
+[[regra]]
+caminho = "docs/data/**"
+zona = "ENSINA"
+razao = """as planilhas com dono — mapa de canais, paridade, donos de
+comportamento. São dado que ENSINA: as páginas publicadas saem delas."""
+
+[[regra]]
+caminho = "docs/*.md"
+zona = "ENSINA"
+razao = "o glossário da casa e o que mais vier à raiz de docs/ como prosa."
+
+[[regra]]
+caminho = "html/**"
+zona = "ENSINA"
+razao = """as páginas geradas que se LEEM para entender o projeto (specs, mapa,
+painel). Não são o produto: o produto renderiza interface/paginas/."""
+
+[[regra]]
+caminho = "mockup/*.md"
+zona = "ENSINA"
+razao = "LEIA-PRIMEIRO e DIVERGENCIAS explicam as duas pastas a quem chega."
+
+[[regra]]
+caminho = "packaging/**/README.md"
+zona = "ENSINA"
+razao = "como empacotar para cada distribuição."
+
+[[regra]]
+caminho = "examples/**"
+zona = "ENSINA"
+razao = "exemplo existe para ser lido e copiado por quem integra."
+
+[[regra]]
+caminho = "assets/**/LEIA-PRIMEIRO.md"
+zona = "ENSINA"
+razao = "a folha que explica a pasta de dado a quem for mexer nela."
+
+# ---------------------------------------------------------------------------
+# REGISTRA — o que se guarda e não se corrige
+# ---------------------------------------------------------------------------
+[[regra]]
+caminho = "docs/process/**"
+zona = "REGISTRA"
+razao = """3,2 milhões de palavras de registro histórico, 16,9 vezes o que
+ENSINA. Não é versionado (.gitignore), e mesmo assim a regra fica escrita: é a
+primeira coisa que um mutirão bem intencionado traduziria."""
+
+[[regra]]
+caminho = "docs/history/**"
+zona = "REGISTRA"
+razao = "história do projeto; não se reescreve para ficar coerente."
+
+[[regra]]
+caminho = "docs/research/**"
+zona = "REGISTRA"
+razao = "material de pesquisa bruto, guardado como veio."
+
+[[regra]]
+caminho = "docs/*.txt"
+zona = "REGISTRA"
+razao = "listas herdadas (etiquetas pré-1.0), guardadas como estavam."
+
+[[regra]]
+caminho = "CHANGELOG.md"
+zona = "REGISTRA"
+razao = "é história de versão; corrigir o passado apagaria o que aconteceu."
+
+[[regra]]
+caminho = "arquivados/**"
+zona = "REGISTRA"
+razao = "o que saiu do produto e ficou guardado com a razão."
+
+[[regra]]
+caminho = "captures/**"
+zona = "REGISTRA"
+razao = "capturas de HID: prova bruta, e prova não se edita."
+
+[[regra]]
+caminho = "LICENSE"
+zona = "REGISTRA"
+razao = "texto legal: traduzir licença sem advogado é criar outra licença."
+
+[[regra]]
+caminho = "NOTICE"
+zona = "REGISTRA"
+razao = "idem LICENSE."
+
+[[regra]]
+caminho = "LICENSES/**"
+zona = "REGISTRA"
+razao = "idem LICENSE."
+
+# ---------------------------------------------------------------------------
+# CODIGO — símbolo, endereço, teste, script, artefato
+# ---------------------------------------------------------------------------
+[[regra]]
+caminho = "po/**"
+zona = "CODIGO"
+razao = """o catálogo é o DESTINO da tradução, não o corpo a traduzir. Traduzir
+o .po é o ato; contá-lo como texto a traduzir contaria o trabalho duas vezes."""
+
+[[regra]]
+caminho = "**/locale/**"
+zona = "CODIGO"
+razao = "os .mo compilados são artefato gerado do catálogo."
+
+[[regra]]
+caminho = "tests/**"
+zona = "CODIGO"
+razao = """13.668 frases em português, 3,3 vezes a prosa do produto inteiro. É
+saudável — nesta casa o teste explica por que morde —, mas um extrator que
+varra **/*.py pega tests/ PRIMEIRO, e o tradutor receberia a suíte antes do
+produto. A fronteira tem de dizer isto por escrito e por regra."""
+
+[[regra]]
+caminho = "scripts/**"
+zona = "CODIGO"
+razao = """portões e ferramentas da casa: 138 arquivos que não viajam para quem
+usa. FURO DECLARADO: parte deles fala com quem INSTALA, e a zona por caminho
+não vê isso. Medir antes de mudar."""
+
+[[regra]]
+caminho = "src/**"
+zona = "CODIGO"
+razao = """o produto por dentro. O que dele é TELA já casou acima; o resto é
+símbolo, e nome de símbolo não se traduz."""
+
+[[regra]]
+caminho = "packaging/**"
+zona = "CODIGO"
+razao = "receitas de empacotamento e o applet Rust; contrato, não prosa."
+
+[[regra]]
+caminho = "flatpak/**"
+zona = "CODIGO"
+razao = "manifesto de empacotamento."
+
+[[regra]]
+caminho = "assets/**"
+zona = "CODIGO"
+razao = """regras de udev, units, módulos DKMS, ícones e as folhas de dado de
+estilo de jogo. O que deles aparece na tela é lido pelo produto, não copiado."""
+
+[[regra]]
+caminho = "*.py"
+zona = "CODIGO"
+razao = "script na raiz da árvore (bancada.py)."
+
+[[regra]]
+caminho = "*.sh"
+zona = "CODIGO"
+razao = "os lançadores e o install na raiz da árvore."
+
+[[regra]]
+caminho = "*.toml"
+zona = "CODIGO"
+razao = "configuração de projeto."
+
+[[regra]]
+caminho = "*.nix"
+zona = "CODIGO"
+razao = "receita de ambiente."
+
+[[regra]]
+caminho = "*.yaml"
+zona = "CODIGO"
+razao = "configuração na raiz (pre-commit)."
+
+[[regra]]
+caminho = "*.txt"
+zona = "CODIGO"
+razao = "requirements na raiz."
+
+[[regra]]
+caminho = ".git*"
+zona = "CODIGO"
+razao = "configuração do próprio git (.gitignore, .gitattributes)."
+
+[[regra]]
+caminho = ".mailmap"
+zona = "CODIGO"
+razao = "mapa de autoria do git."
+
+[[regra]]
+caminho = ".code-review-graphignore"
+zona = "CODIGO"
+razao = "configuração de ferramenta de leitura de código."
