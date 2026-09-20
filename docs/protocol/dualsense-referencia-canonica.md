@@ -1069,6 +1069,61 @@ bit.
   quadros de 10 ms de 71 bytes**, dentro do report `0x31` com o bit1 do byte 1
   ligado. Este projeto já implementa a leitura.
 
+### 3.1 O caminho de áudio pelo CABO, lido no descritor USB — 20/09/2026
+
+**Grau: ALTA** (lido em `/sys/bus/usb/devices/<X>/descriptors`, 245 bytes, sem
+servidor de som; o instrumento é
+`scripts/ensaios/o_caminho_do_mic_no_cabo.py --descritor` e a gravação está em
+`tests/fixtures/mic-cabo/`).
+
+Pelo cabo o DualSense é uma placa **USB Audio Class 1** (`bcdADC=0x0100`):
+
+| | |
+| --- | --- |
+| terminal de **captura** | `0x0402` — **«Headset»**, 2 canais, `wChannelConfig=0x0003` (FL\|FR) |
+| ganho da captura | Feature Unit 5, `bmaControls[master]=0x03`; por canal, zero — por isso o `amixer` mostra `Mono: Capture` e não há balanço L/R |
+| endpoint de captura | `0x82`, isócrono **assíncrono**, 2 × S16_LE × 48 kHz |
+| terminal de **saída** | `0x0101` (USB Streaming) → Speaker `0x0301`, **4 canais** `0x0033` (FL\|FR\|RL\|RR) — os canais 3-4 são a háptica |
+| driver | `snd-usb-audio`, por casamento de **classe**. Nenhuma linha de `hid-playstation` no caminho do microfone pelo cabo. |
+
+**«S/PDIF» é rótulo do host, e não custa um byte.** Os dois códigos que
+declarariam digital — `0x0602` («Digital audio interface») e `0x0605` («S/PDIF
+interface») — **não aparecem no descritor**. A porta
+`iec958-stereo-input` que o PipeWire mostrava até 17/09/2026 vinha do
+`alsa-card-profile` da distro, e `iec958:CARD=…` resolve, pelo
+`USB-Audio.conf` do `alsa-lib`, para `type hw` / `device 0` — **o mesmo e único
+PCM da placa** (`/proc/asound/pcm` traz uma linha só). Não há dois caminhos de
+captura a escolher.
+
+**O que o nome custa, e custa:** a porta ativa não liga elemento de mixer de
+captura nenhum, então o `Headset Capture Volume` (0…12288 = **0…+48 dB**) fica
+fora do alcance do PipeWire — e, portanto, do produto e da tela. Lido em
+repouso em 17/09 e de novo em 20/09/2026: **100% / +48,00 dB**, o topo da faixa.
+Quem decide é a definição da porta ativa, e desde o UCM desta casa
+(`assets/ucm/DualSense-HiFi.conf`) **o dono dessa definição somos nós**: o
+`SectionDevice."Mic"` declara `CapturePCM` e `CapturePriority`, e nenhum
+`CaptureVolume`/`CaptureMixerElem`. Quem vigia é
+`_dualsense_porta_de_captura_status` em `scripts/doctor.sh`.
+
+**FATO SUBSTITUÍDO:** a MIC-USB-01 (25/07/2026) mediu esse elemento em **31%**,
+e o ensaio do cabo carregava os 31% como hipótese mais forte. O número caiu, e a
+hipótese virou do avesso: não falta ganho — **sobra ganho, e ele não tem dono.**
+Se esses +48 dB pioram o som depende de o ganho ser analógico ou digital, e isso
+**não foi medido**: só o par controlado do `--ganho` separa, ele escreve no
+mixer, e o valor final é decisão dela.
+
+**O `ctlerr=1` de `/proc/asound/cardN/usbmixer` NÃO é contador de erro.** Ele é
+o `ignore_ctl_error` do mixer, e nesta máquina vem do quirk **desta casa**:
+`/etc/modprobe.d/hefesto-dualsense-storm.conf` (`SPRINT-GAME-RUMBLE-01`) define
+`quirk_flags=054c:0ce6:ignore_ctl_error|ctl_msg_delay_1m`, enquanto o parâmetro
+global `ignore_ctl_error` continua em `N`. Ler `ctlerr=1` como «uma requisição
+de controle falhou» é ler outra coisa que não o produto.
+
+**Detecção de jack pelo cabo:** `Headphone Jack` e `Headset Mic Jack` existem
+como controles ALSA, mas em `iface=CARD`, não `MIXER` — `amixer -c N cget
+name='Headset Mic Jack'` **falha** com «Cannot find the given element». O
+comando que lê é `amixer -c N contents` (ou `cget numid=<n>`).
+
 ---
 
 ## 4. Gatilhos adaptativos — a seção que corrige esta árvore
