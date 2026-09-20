@@ -2000,7 +2000,7 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     teclado comparam `old` com `new` (`daemon/lifecycle.py:1353` e `:1361`) e
     **nunca disparam** — o registro sai com `keys_changed=[]` (`:1366-1370`).
     Duas coisas acontecem, e são estas: `lifecycle.py:1351-1352` derruba e sobe
-    o leitor dos atalhos do controle, e `ipc_handlers.py:5531` reescreve os
+    o leitor dos atalhos do controle, e `ipc_handlers.py:5932` reescreve os
     arquivos de ambiente que a Steam usa. **A dica da aba diz essas duas**
     (`interface/aba09.py`, da `ONDA5-09-01`), e esta é a medição que a sustenta.
 
@@ -2119,7 +2119,7 @@ def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `ipc_bridge`. Não é uma segunda porta para o disco.
 
     E ELE PEGA NA HORA, sem reiniciar nada: o `_handle_machine_declare`
-    (`daemon/ipc_handlers.py:6986`) relê o `maquina.json` e **rebinda**
+    (`daemon/ipc_handlers.py:7003`) relê o `maquina.json` e **rebinda**
     `daemon._maquina`; o `_orcamento_declarado` (`core/rumble.py:167`) lê a
     fonte a cada pedido de vibração, e não uma cópia do boot. Está escrito lá
     com todas as letras: *"uma cópia feita no boot ficaria velha exatamente no

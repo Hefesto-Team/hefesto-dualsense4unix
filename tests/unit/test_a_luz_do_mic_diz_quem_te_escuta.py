@@ -278,9 +278,10 @@ async def _rodar(
         (False, ["chrome"], False, 10, mod.ACESA),
         # bateria baixa SEM captação não acende nada além do 1
         (False, ["chrome"], None, 4, mod.ACESA),
-        # resto -> 1: microfone LIGADO e ninguém de fora ouvindo é o caso
-        # NORMAL, não a exceção. A lista vazia deixou de apagar em 19/09/2026
-        # (A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01) — ver `decidir`.
+        # MEDI, E NINGUÉM TE OUVE -> 1, E ERA 0 (19/09/2026, decisão dela).
+        # Este é o arranjo da mesa dela naquela noite — microfone ligado,
+        # nenhum app gravando — e o `0` daqui lhe disse "desligado": ela
+        # apertou o botão para ligar e desligou o que já estava no ar.
         (False, [], False, 90, mod.ACESA),
         (False, [], None, None, mod.ACESA),
     ],
@@ -326,64 +327,14 @@ def test_nao_sei_nao_e_zero(mudo: bool | None, ouvintes: list[str] | None) -> No
 def test_a_lista_vazia_e_uma_resposta_e_a_ausencia_nao_e() -> None:
     """`[]` (medi, ninguém ouve) e `None` (não medi) NÃO podem coincidir.
 
-    O QUE MUDOU EM 19/09/2026, e por que o teste continua o mesmo: a lista
-    vazia deixou de valer `APAGADA` e passou a valer `ACESA`
-    (A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01). O que este teste mede não era o VALOR —
-    era que os dois casos não colapsam num só. Isso continua sendo verdade, e
-    a régua continua mordendo se alguém fizer `ouvintes or []` no caminho.
+    O VALOR DA VAZIA MUDOU EM 19/09/2026 — de `APAGADA` para `ACESA` —, e a
+    separação que este teste guarda não: `[]` continua sendo uma RESPOSTA, que
+    se escreve no aparelho, e `None` continua sendo *"não escreva"*.
     """
     vazia = mod.decidir(mudo=False, ouvintes=[], captando=None, bateria_pct=None)
     ausente = mod.decidir(mudo=False, ouvintes=None, captando=None, bateria_pct=None)
     assert vazia == mod.ACESA
     assert ausente is None
-    assert vazia != ausente
-
-
-def test_o_microfone_ligado_sem_ninguem_de_fora_ACENDE() -> None:
-    """O ARRANJO DA MESA DELA, 19/09/2026 — e a régua que faltava.
-
-    Ela tinha quatro DualSense no rádio, o microfone LIGADO, a aba Controles
-    mostrando o nível, e NENHUM app externo gravando. `quem_ouve_agora`
-    devolvia `[]` porque o único gravador do canal é o medidor da própria aba,
-    que `e_stream_do_hefesto` exclui de propósito.
-
-    Nesse arranjo o decisor escrevia `estado=0` — três vezes no journal
-    daquela noite — e a luz do controle **nunca acendia**. Ela apertou o botão
-    esperando resposta, viu apagado, e o primeiro clique DESLIGOU o microfone.
-
-    A MORDIDA: devolva `APAGADA` ao ramo `not ouvintes` em `decidir` e este
-    teste reprova. É o único que reprova por esse motivo, e é de propósito —
-    ele é o arranjo exato que ela tinha na mão.
-    """
-    assert mod.decidir(
-        mudo=False, ouvintes=[], captando=None, bateria_pct=None
-    ) == mod.ACESA, (
-        "microfone ligado e ninguém de fora ouvindo tem de ACENDER a luz. "
-        "Esse é o caso NORMAL de um microfone ligado, não a exceção — e "
-        "apagar aqui é o defeito que ela mediu em 19/09/2026."
-    )
-
-
-def test_so_o_mudo_do_firmware_apaga() -> None:
-    """Depois da decisão dela, `mudo is True` é o ÚNICO ramo que devolve 0.
-
-    A MORDIDA: qualquer ramo novo que devolva `APAGADA` sem o mudo do firmware
-    faz este teste reprovar, nomeando o arranjo. É a trava contra a volta do
-    defeito por outro caminho.
-    """
-    apagados = [
-        (m, o, c, b)
-        for m in (True, False, None)
-        for o in (None, [], ["a"], ["a", "b"])
-        for c in (True, False, None)
-        for b in (None, 0, 29, 30, 100)
-        if mod.decidir(mudo=m, ouvintes=o, captando=c, bateria_pct=b) == mod.APAGADA
-    ]
-    assert apagados, "nenhum arranjo apaga — o mudo do firmware parou de valer"
-    assert all(m is True for m, _o, _c, _b in apagados), (
-        "há arranjo que APAGA a luz sem o microfone estar mudo no firmware: "
-        + repr([a for a in apagados if a[0] is not True][:4])
-    )
 
 
 def test_o_produto_nao_inventa_um_quinto_estado() -> None:
@@ -396,6 +347,87 @@ def test_o_produto_nao_inventa_um_quinto_estado() -> None:
         for b in (None, 0, 29, 30, 100)
     }
     assert saidas <= {None, 0, 1, 2, 3}
+
+
+# ---------------------------------------------------------------------------
+# 1.b A MESA DELA NA NOITE DE 19/09 — mic ligado, NINGUÉM gravando
+#
+# É o arranjo exato que a `A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01` mediu, e a mordida
+# destes três é a mesma: devolver `APAGADA` ao ramo `not ouvintes` em
+# `decidir` faz os três reprovarem.
+# ---------------------------------------------------------------------------
+
+
+def test_com_o_mic_ligado_e_ninguem_gravando_a_luz_acende() -> None:
+    """A decisão dela de 19/09, na menor forma possível.
+
+    O QUE ESTE TESTE GUARDA não é um número: é que a luz do plástico responda
+    ao BOTÃO. Com o `0` de antes, a luz apagada dizia *"desligado"* sobre um
+    microfone no ar — e ela apertou o botão para ligar, desligando o que já
+    estava captando. O vigia mediu `mudo=False canal_ativo=True` antes do
+    primeiro clique dela.
+    """
+    assert mod.decidir(
+        mudo=False, ouvintes=[], captando=False, bateria_pct=100
+    ) == mod.ACESA
+
+
+def test_so_o_mudo_apaga_a_luz() -> None:
+    """Varredura: nenhuma combinação SEM `mudo is True` devolve `APAGADA`.
+
+    A régua de cima prova UM ponto; esta prova a REGRA, e é ela que pega uma
+    cura parcial — um `if not ouvintes: return APAGADA` que volte escondido
+    atrás de outra condição (bateria zero, captando `False`, lista de um item)
+    continua sendo pego aqui.
+    """
+    acesos = {
+        (o_n, c, b): mod.decidir(
+            mudo=False, ouvintes=o, captando=c, bateria_pct=b
+        )
+        for o_n, o in (("vazia", []), ("um", ["chrome"]), ("dois", ["a", "b"]))
+        for c in (True, False, None)
+        for b in (None, 0, 29, 30, 100)
+    }
+    apagados = [k for k, v in acesos.items() if v == mod.APAGADA]
+    # A MENSAGEM NÃO PODE ESTOURAR: as chaves têm `None` dentro, e `sorted`
+    # sobre tuplas com `None` levanta `TypeError` — a régua reprovaria por
+    # um erro que esconde o que ela mediu. Medido ao arrancar a cura.
+    assert not apagados, (
+        f"com o microfone LIGADO, estes arranjos ainda apagam a luz: "
+        f"{[repr(k) for k in apagados]}"
+    )
+    # E o mudo continua apagando — senão a régua acima passaria sobre uma
+    # função que devolve `ACESA` para tudo.
+    assert mod.decidir(
+        mudo=True, ouvintes=["chrome"], captando=True, bateria_pct=5
+    ) == mod.APAGADA
+
+
+@pytest.mark.asyncio
+async def test_o_laco_acende_na_mesa_dela_e_publica_a_sala_vazia(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O laço inteiro, no arranjo dela — e o journal tinha `estado=0`.
+
+    É a régua de ponta a ponta: não basta `decidir` devolver `1`, o laço tem
+    de ESCREVER `1` no aparelho. E no mesmo tique ele publica a lista de
+    ouvintes para a tela, que é a outra metade da decisão dela — sem ela, a
+    aba não tem como dizer *"ninguém está te ouvindo"*.
+    """
+    mod._OUVINTES.clear()
+    controle = _Controle(uniqs=[UM], mudo={UM: False}, bateria={UM: 100})
+    _pecas(monkeypatch, ouvintes=lambda _u: {UM: []}, captando=lambda _u: {UM: False})
+
+    em_voo = await _rodar(_Daemon(controle), voltas=60)
+
+    escritas = [v for u, v in em_voo if u == UM and v is not None]
+    assert escritas == [mod.ACESA], (
+        f"a luz do microfone dela devia ACENDER e ficar; o laço escreveu "
+        f"{escritas}"
+    )
+    assert mod.estado_da_luz_do_mic(UM) == mod.ACESA
+    # `[]` e não `None`: *"perguntei, e não há ninguém"* é o que vira frase.
+    assert mod.quem_ouve_este_mic(UM) == []
 
 
 # ---------------------------------------------------------------------------
@@ -480,21 +512,19 @@ async def test_cada_virada_de_estado_vale_uma_escrita_e_so_uma(
 
     em_voo = await _rodar(daemon, voltas=320, entre=virar)
 
+    # SÃO QUATRO, E ERAM CINCO — 19/09/2026, e a que sumiu é consequência
+    # DIRETA da decisão dela, não descuido: com o microfone ligado a luz já
+    # nasce ACESA, então *"um app abriu o microfone"* deixou de ser uma
+    # virada de estado. Ela não se perdeu — reaparece no `2`, quando entra
+    # som, e a aba Controle passou a dizer QUEM abriu, por escrito
+    # (`mesa_viva.frase_de_quem_te_ouve`). O laço escreve só na MUDANÇA.
     escritas_do_laco = [v for _u, v in em_voo if v is not None]
-    # A PRIMEIRA VIRADA SUMIU, e não é regressão: desde 19/09/2026 o microfone
-    # ligado sem ouvinte de fora já NASCE em `ACESA`, então o `chrome` abrindo
-    # não muda estado nenhum e não vale escrita. O que este teste mede — uma
-    # escrita por virada, nunca duas — continua intacto: são quatro estados
-    # distintos em sequência e quatro escritas.
     assert escritas_do_laco == [
-        mod.ACESA,  # o microfone está ligado (ninguém de fora precisa ouvir)
-        mod.PISCANDO,  # entrou som
+        mod.ACESA,  # o microfone está ligado — com ou sem alguém ouvindo
+        mod.PISCANDO,  # entrou som, e há um app de fora com o canal aberto
         mod.PISCANDO_LENTO,  # a bateria caiu abaixo de 30%
         mod.APAGADA,  # ela apertou o botão e ficou muda
     ]
-    assert len(escritas_do_laco) == len(set(escritas_do_laco)), (
-        "houve estado repetido na sequência: alguma virada valeu duas escritas"
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -983,9 +1013,8 @@ async def test_o_medidor_so_segue_quem_tem_ouvinte(
 
     escritos = {u: v for u, v in em_voo if v is not None}
     assert escritos.get(UM) == mod.PISCANDO
-    # OUTRO acende (o microfone dele está ligado) SEM ter sido medido — e é
-    # justamente isso que prova a economia: o `2` continua vivendo dentro do
-    # `1`, então quem ninguém ouve nunca precisa de um `parec` para decidir.
+    # ACESA, E ERA APAGADA: o OUTRO não está mudo, e desde 19/09 só o mudo
+    # apaga. Ele continua FORA do medidor, que é o que este teste guarda.
     assert escritos.get(OUTRO) == mod.ACESA
 
 

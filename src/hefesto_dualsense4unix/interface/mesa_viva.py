@@ -658,6 +658,69 @@ def estado_do_botao_do_mic(luz: object) -> str:
     return BOTAO_MIC_GRAVANDO if luz == _LUZ_ACESA else ""
 
 
+#: A FRASE DE QUEM TE OUVE — 19/09/2026, a outra metade da decisão dela na
+#: `A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01`. A luz do plástico passou a espelhar o
+#: BOTÃO (mudo apaga, ligado acende), e com isso ela deixou de distinguir
+#: sozinha *"ligado"* de *"ligado e alguém te ouvindo"*. A aba Controle é quem
+#: passa a dizer QUEM, por escrito, e esta é a única cópia dessas palavras.
+NINGUEM_TE_OUVE = "Ninguém está te ouvindo ainda."
+
+#: Quantos caracteres cabem em UMA linha da `.ressalva` do bloco do microfone,
+#: e o número é MEDIDO — Chrome headless sobre `mockup/02-controles.html` na
+#: janela do produto (1180px), 19/09/2026:
+#:
+#:     coluna do som            281,0 px de largura
+#:     uma linha da .ressalva    17,3 px (11,5px x 1,5 + 5 de margem)
+#:     card aberto              329,6 -> 351,9 px com a linha escrita
+#:     .quadro-corpo            sem rolagem (scrollHeight == clientHeight)
+#:
+#: **A SEGUNDA LINHA É QUE NÃO CABE.** A coluna do som é uma das duas que
+#: MANDAM na altura do card, e um bloco que dobra de linha já tirou o P4 da
+#: tela dela em 30/08. Acima deste limite a frase troca os NOMES pela
+#: CONTAGEM, que cabe sempre — e a contagem continua verdadeira.
+LIMITE_DA_LINHA_DE_QUEM_OUVE = 46
+
+
+def frase_de_quem_te_ouve(ouvintes: object) -> str:
+    """Quem está com o microfone deste controle aberto, em uma linha.
+
+    `""` quando não se sabe (ninguém perguntou, ou o daemon é velho e não
+    publica a chave) — e `""` faz a `.ressalva` sumir sem cobrar um pixel, que
+    é o contrato da D-02 dela: *"linha fixa só quando HÁ ressalva"*.
+
+    **A LISTA VAZIA NÃO É AUSÊNCIA**, e é justamente ela que vira a frase mais
+    importante: *"medi, e ninguém te ouve"*. Foi esse estado — o microfone
+    LIGADO com nenhum app gravando — que apagava a luz do controle até 19/09 e
+    fez ela desligar o próprio microfone achando que o ligava. A luz agora
+    acende; esta linha é quem explica que acesa não quer dizer *"alguém te
+    escuta"*.
+
+    **QUEM CONTA SÃO OS APPS DE FORA.** O daemon já entrega a lista sem os
+    gravadores do próprio Hefesto (`integrations.quem_ouve_o_microfone.
+    e_stream_do_hefesto`, regra 3) — o medidor de nível desta mesma aba grava
+    o canal o tempo todo, e contá-lo faria a tela dizer que alguém te ouve
+    porque a tela está aberta.
+
+    **ACIMA DE `LIMITE_DA_LINHA_DE_QUEM_OUVE` A FRASE CONTA em vez de nomear.**
+    Um nome de app longo (ou três nomes) quebraria a `.ressalva` em duas
+    linhas, e a segunda linha não cabe no card — ver a constante.
+    """
+    if not isinstance(ouvintes, (list, tuple)):
+        return ""
+    nomes = [t for t in (str(x).strip() for x in ouvintes) if t]
+    if not nomes:
+        return NINGUEM_TE_OUVE
+    if len(nomes) == 1:
+        frase = f"{nomes[0]} está te ouvindo."
+    else:
+        frase = f"{' e '.join((', '.join(nomes[:-1]), nomes[-1]))} estão te ouvindo."
+    if len(frase) <= LIMITE_DA_LINHA_DE_QUEM_OUVE:
+        return frase
+    if len(nomes) == 1:
+        return "Um programa está te ouvindo."
+    return f"{len(nomes)} programas estão te ouvindo."
+
+
 def estado_do_card(
     entrada: dict[str, Any],
     *,
