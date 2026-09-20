@@ -762,8 +762,16 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 >
 > | campo | onde é escrito | grau |
 > |---|---|---|
-> | volume, `common[5]` | o laço dos quatro bytes de áudio — `_AUDIO_COMMON_OFFSETS` em `core/backend_pydualsense.py:322-324` | **ALTA** — lido no código |
-> | pré-amp, `common[37]` | `core/backend_pydualsense.py:1740-1747`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1744-1746`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:197` | **ALTA** — lido no código |
+> | volume, `common[5]` | o laço dos quatro bytes de áudio — `_AUDIO_COMMON_OFFSETS` em `core/backend_pydualsense.py:323-325` | **ALTA** — lido no código |
+> | pré-amp, `common[37]` | `core/backend_pydualsense.py:1741-1748`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1744-1746`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:197` | **ALTA** — lido no código |
+<!-- ENDEREÇOS REAPONTADOS em 20/09/2026: a O-NO-NASCE-FECHADO-01 acrescentou a
+     exposição do nó sob pedido ao `backend_pydualsense.py` e ao `lifecycle.py`
+     (o `hidapi` não aceita fd, e com o nó nascendo `0600 root` o handle de
+     controle precisa do nó exposto DURANTE o open), e as citações desceram.
+     As AFIRMAÇÕES não mudaram — só onde elas abrem. O mapa do reaponte foi o
+     diff HEAD->árvore linha a linha, e o oráculo foi o próprio
+     `scripts/validar-citacoes-de-linha.py --all`: 3285 citações conferidas
+     antes e depois, o mesmo número, zero podre. -->
 <!-- ENDEREÇOS REAPONTADOS em 09/09/2026: a MIC-VOLUME-02 acrescentou a régua
      `byte_do_volume_do_microfone` e os dois métodos de posse do `common[6]` ao
      `backend_pydualsense.py`, e as citações de áudio desceram ~57 linhas. As
@@ -780,7 +788,7 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
      `backend_pydualsense.py`, e as três citações de áudio desceram ~21 linhas.
      As AFIRMAÇÕES não mudaram — só onde elas abrem. -->
 
-> | rota, `common[7]` bits 4-5 | `core/backend_pydualsense.py:457-487` (`_byte_da_rota`) | **MEDIDO** — com a orelha dela em 02/08, rota 3 audível, rota 0 sem fone inaudível |
+> | rota, `common[7]` bits 4-5 | `core/backend_pydualsense.py:458-488` (`_byte_da_rota`) | **MEDIDO** — com a orelha dela em 02/08, rota 3 audível, rota 0 sem fone inaudível |
 >
 > *(Os endereços das duas primeiras linhas foram REAPONTADOS em 13/08/2026: eles
 > apontavam para `:780-782`, `:783-790`/`:789` e `:2695`, que a refatoração do
@@ -1478,10 +1486,10 @@ começa pela esquerda ou pela direita?"* não muda nenhuma das cinco, e por isso
 >
 > - **fora de supressão (cabo):** o `flag2` sai com setup **e** brilho
 >   ligados em TODO report, e o `common[41]` vai sempre zero
->   (`core/backend_pydualsense.py:871`) — escolha deliberada, travada por
+>   (`core/backend_pydualsense.py:872`) — escolha deliberada, travada por
 >   teste;
 > - **sob supressão (rádio):** o bit de setup é **explicitamente limpo**
->   (`core/backend_pydualsense.py:825-830`), porque reengatá-lo em regime
+>   (`core/backend_pydualsense.py:826-831`), porque reengatá-lo em regime
 >   trava a exibição no firmware — é a `LIGHTBAR-BT-KEEPALIVE-01`.
 >
 > E o perigo registrado, que esta página não carregava: a

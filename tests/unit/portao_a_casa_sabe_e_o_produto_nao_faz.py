@@ -646,6 +646,18 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
         "assets/systemd/hefesto-hidraw-broker.service:37, com o UID substituído "
         "pelo instalador."
     ),
+    "HEFESTO_BROKER_NO_NASCE_FECHADO": (
+        "Se o nó hidraw do DualSense físico NASCE FECHADO — `0600 root`, pela "
+        "regra `assets/70-ps5-controller.rules` da cura O-NO-NASCE-FECHADO-01 "
+        "(broker/hidraw_broker.py:91). É promessa dela, decidida em "
+        "20/09/2026: «o Hefesto tem que ter prioridade em tudo e isso deveria "
+        "estar no install por default». Ela acopla as duas metades da cura — "
+        "a udev decide o NASCIMENTO do nó, e esta env conta ao broker qual é o "
+        "REPOUSO para onde ele devolve o nó no restore/EOF. "
+        "MEDIDO em 20/09/2026: LIGADA, por `Environment=` em "
+        "assets/systemd/hefesto-hidraw-broker.service:44, com o valor "
+        "renderizado pelo instalador (1 por default; 0 com `--no-fechar-o-no`)."
+    ),
     "HEFESTO_DUALSENSE4UNIX_BT_MIC": (
         "Liga o microfone por Bluetooth para TODOS os controles "
         "(daemon/subsystems/bt_mic.py::habilitado_por_env). É feature dela. "
