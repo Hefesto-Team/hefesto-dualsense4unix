@@ -150,7 +150,18 @@ def test_o_case_tem_os_verbos_que_o_cabecalho_promete() -> None:
     lista digitada deste arquivo, e existe só para provar que a leitura funciona.
     """
     verbos = _verbos_do_case()
-    assert {"adaptadores", "bonds", "renomear", "esquecer", "descobrir", "parear"} <= verbos
+    assert {
+        "adaptadores",
+        "bonds",
+        "renomear",
+        "esquecer",
+        "descobrir",
+        "parear",
+        # CONEXAO-ZUMBI-01 (18/09/2026): derruba o link do controle que
+        # conectou e não virou controle. Entra aqui porque um verbo que a
+        # janela não alcança é um botão que pede senha.
+        "desconectar",
+    } <= verbos
 
 
 def test_todo_verbo_que_muda_algo_esta_na_regra_do_sudoers() -> None:
@@ -188,7 +199,7 @@ def test_a_regra_so_aceita_mac_com_forma_de_mac() -> None:
     regra = _regra()
     for verbo in ("bonds", "renomear"):
         assert re.search(rf"{re.escape(ALVO)} {verbo} {forma},", regra), verbo
-    for verbo in ("esquecer", "parear"):
+    for verbo in ("esquecer", "parear", "desconectar"):
         assert re.search(rf"{re.escape(ALVO)} {verbo} {forma} {forma},", regra), verbo
 
 
