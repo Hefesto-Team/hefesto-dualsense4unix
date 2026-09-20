@@ -192,10 +192,10 @@ def test_o_cadeado_diz_o_que_o_daemon_guardou() -> None:
     """A trava mostra o estado do daemon, não o último clique.
 
     A LÍNGUA MUDOU EM 19/09/2026 (`TRAVA-PILULA-01`) e esta régua foi atrás: até
-    ali ela media ``"sim"``/``""``, o par do alvo `marcado`. A trava virou  # (noqa-acento: verbo medir, imperfeito)
-    `<button class="cadeado">` com o alvo `classe`, e as palavras passaram a ser
-    as TRÊS do interruptor, cujo dono é o próprio pacote — por isso elas são
-    LIDAS daqui, e não digitadas.
+    ali ela media ``"sim"``/``""``, o par do alvo  # (noqa-acento: verbo medir)
+    `marcado`. A trava virou `<button class="cadeado">` com o alvo `classe`, e
+    as palavras passaram a ser as TRÊS do interruptor, cujo dono é o próprio
+    pacote — por isso elas são LIDAS daqui, e não digitadas.
 
     A MORDIDA: troque `state.get("autoswitch_locked") is True` por `False` e
     esta régua reprova nas duas direções — a trava acesa com o perfil solto, e
