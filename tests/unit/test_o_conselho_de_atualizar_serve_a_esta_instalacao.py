@@ -12,6 +12,12 @@ continuaram mandando rodar o instalador:
 | `app/actions/mouse_actions.py:605` | quem abre a aba Mouse sem o módulo `uinput` |
 | `integrations/storm_doctor.py:334` | o laudo do travamento do USB, em toda instalação |
 
+**E EM 20/09/2026 NASCEU A QUARTA** — `cli/cmd_tray.py:100`, o «Abrir painel»
+quando o lançador não está no PATH. Ela veio com o tray de 19/09
+(`TRAY-ORFAO-01`), escrita de dentro de um checkout, e a varredura abaixo a
+pegou no dia seguinte: *régua nova não impede frase nova, só encurta o tempo
+entre escrevê-la e vê-la*. Ela ganhou o par de comportamento das outras três.
+
 `./install.sh` só existe para quem clonou o repositório. Em cinco dos seis
 formatos em que este produto é instalado — Flatpak, AppImage, Arch, Fedora,
 Nix — o arquivo **não está na máquina**, e é justamente nesses formatos que a
@@ -23,12 +29,12 @@ faltam.
 `integrations/storm_doctor.py` precisa delas e `integrations/` não pode
 importar de `app/` — seria inverter a camada.
 
-**Como ela morde.** Devolvendo qualquer uma das três frases ao literal:
+**Como ela morde.** Devolvendo qualquer uma das quatro frases ao literal:
 
 * `test_fora_do_checkout_ninguem_manda_rodar_install_sh` varre `src/` inteiro
   pela árvore sintática e reprova com `arquivo:linha` e o texto;
-* `TestAsTresFrasesObedecemAInstalacao` monta uma instalação SEM `install.sh`
-  no disco e cobra as três de verdade — é a mordida de comportamento, e ela
+* `TestAsQuatroFrasesObedecemAInstalacao` monta uma instalação SEM `install.sh`
+  no disco e cobra as quatro de verdade — é a mordida de comportamento, e ela
   pega o que a varredura de texto não pega: uma frase que só mudou de lugar,
   ou um ajudante que passou a responder sempre a mesma coisa. Cada uma tem o
   par no checkout, porque **a cura não podia piorar o caso que já
@@ -38,10 +44,12 @@ importar de `app/` — seria inverter a camada.
 from __future__ import annotations
 
 import ast
+import io
 import sys
 from pathlib import Path
 
 import pytest
+from rich.console import Console
 
 from hefesto_dualsense4unix.app.actions import emulation_actions, mouse_actions
 from hefesto_dualsense4unix.integrations import storm_doctor
@@ -140,7 +148,7 @@ class TestNenhumaFraseDeTelaCravaOInstalador:
         assert _frases_com_install_sh(falso) == [(3, "rode ./install.sh")]
 
 
-class TestAsTresFrasesObedecemAInstalacao:
+class TestAsQuatroFrasesObedecemAInstalacao:
     """A mordida de comportamento: uma instalação SEM `install.sh` no disco.
 
     Não é presunção sobre o formato — é o mesmo diretório respondendo
@@ -257,6 +265,47 @@ class TestAsTresFrasesObedecemAInstalacao:
         laudo = self._laudo_do_quirk(tmp_path)
 
         assert "./install.sh" in laudo, laudo
+
+    # --- o «Abrir painel» do tray ------------------------------------------
+
+    @staticmethod
+    def _frase_do_tray(monkeypatch: pytest.MonkeyPatch) -> str:
+        """O ramo "o lançador não está no PATH" do «Abrir painel».
+
+        O `Popen` de mentira levanta `FileNotFoundError` sem chamar processo
+        nenhum — nenhuma janela nasce na tela de ninguém. E o `Console`
+        próprio, largo, existe porque o `rich` quebra linha na largura do
+        terminal: medir a saída do console herdado seria medir a LARGURA da
+        máquina que roda a suíte, não o texto que a pessoa lê.
+        """
+        from hefesto_dualsense4unix.cli import cmd_tray
+
+        def _sem_lancador(*_args: object, **_kwargs: object) -> None:
+            raise FileNotFoundError(cmd_tray.LANCADOR_DO_PAINEL)
+
+        monkeypatch.setattr(cmd_tray.subprocess, "Popen", _sem_lancador)
+        tinta = io.StringIO()
+        monkeypatch.setattr(cmd_tray, "console", Console(file=tinta, width=400))
+
+        cmd_tray._abrir_o_painel()
+        return tinta.getvalue()
+
+    def test_o_tray_sem_o_lancador_no_path(
+        self, sem_checkout: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        frase = self._frase_do_tray(monkeypatch)
+
+        assert "não achei" in frase, frase
+        assert "install.sh" not in frase, frase
+        assert repo_files.FRASE_DE_ATUALIZAR[False] in frase, frase
+
+    def test_o_tray_no_checkout_nao_mudou(
+        self, com_checkout: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A cura não podia piorar o caso que já funcionava."""
+        frase = self._frase_do_tray(monkeypatch)
+
+        assert "./install.sh" in frase, frase
 
 
 class TestOConselhoNaoTemDUASREDACOES:
