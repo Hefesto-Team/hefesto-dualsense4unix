@@ -1107,6 +1107,11 @@ class Daemon:
             # VPAD-02, respawn de coop) e o vpad herda calibração canônica
             # (drift do gyro). Mesmo gate de backend real dos wirings acima.
             self._wire_feature_opener()
+            # O-NO-NASCE-FECHADO-01: a fábrica de exposição do nó, e ela tem
+            # de vir ANTES do connect abaixo — é o primeiro `_open_one` que
+            # precisa dela. Com a regra udev da cura e sem este wiring, o
+            # `hidapi.Device(path=…)` volta EACCES para TODOS os controles.
+            self._wire_exposicao_do_no()
             # BUG-DAEMON-NO-DEVICE-FATAL-01: tentativa inicial best-effort.
             # No caminho real, se o controle estiver ausente, o backend
             # PyDualSenseController.connect() trata "No device detected" em
@@ -1320,6 +1325,11 @@ class Daemon:
             self._native_mode = True
             self.store.set_native_mode_active(True, origin=origin)
             save_native_mode(True, emu_stash=self._native_emu_stash)
+            # O-NO-NASCE-FECHADO-01: o pedido de exposição vai ANTES do
+            # release. O release desce até o `restore` do ungrab, e com o nó
+            # nascendo fechado esse caminho FECHA — pedir depois seria abrir,
+            # fechar e deixar o jogo achar a porta trancada.
+            self._exposicao_do_modo_nativo(True)
             self._release_controller_to_game()
         else:
             self._native_mode = False
@@ -1341,6 +1351,11 @@ class Daemon:
             if reapply or restore_stash:
                 self._restore_emulation_from_stash()
             self._native_emu_stash = {}
+            # O-NO-NASCE-FECHADO-01: solta a exposição DEPOIS de o grab
+            # voltar. Soltar antes deixaria uma fresta entre o nó fechar e o
+            # daemon reassumir — curta, mas é exatamente o tipo de janela que
+            # esta cura existe para não ter.
+            self._exposicao_do_modo_nativo(False)
         if origin == "manual":
             self._mode_from_profile = None
         # DEDUP-04: o Modo Nativo muda o conteúdo das envs de launch
@@ -4495,6 +4510,82 @@ class Daemon:
             logger.info("feature_opener_wired")
         except Exception as exc:
             logger.warning("feature_opener_wire_failed", err=str(exc))
+
+    def _wire_exposicao_do_no(self) -> None:
+        """O-NO-NASCE-FECHADO-01: injeta a fábrica de exposição no backend.
+
+        Sem ela, com a regra udev da cura instalada, o `hidapi.Device(path=…)`
+        do handle de controle volta `EACCES` para TODOS os controles — é o
+        único bloqueador real da cura, e a casa já escreveu isso em
+        `daemon/connection.py`. Mesmo molde do `_wire_feature_opener`: gate
+        por `hasattr` (FakeController fica de fora) e best-effort.
+        """
+        if not hasattr(self.controller, "set_exposicao_do_no"):
+            return
+        try:
+            from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+                make_exposicao_factory,
+            )
+
+            self.controller.set_exposicao_do_no(make_exposicao_factory(self))
+            logger.info("exposicao_do_no_wired")
+        except Exception as exc:
+            logger.warning("exposicao_do_no_wire_failed", err=str(exc))
+
+    def _exposicao_do_modo_nativo(self, ligar: bool) -> None:
+        """Abre (ou solta) o físico para o JOGO enquanto o Modo Nativo dura.
+
+        O-NO-NASCE-FECHADO-01, item 2 do que faltava. No Modo Nativo quem abre
+        o `/dev/hidraw` do físico é o JOGO, por caminho e com o uid dela —
+        pelo SDL/HIDAPI dele ou pelo winebus do Proton, que dá hidraw à
+        família Sony por default. São processos de TERCEIRO: não há fd a
+        passar, não há wrapper a instrumentar, e o `hefesto-launch.sh` só
+        repassa env. Com o nó nascendo fechado, a única cura possível é o
+        broker pôr a ACL de volta enquanto o modo estiver ligado.
+
+        Até 20/09/2026 essa exposição vinha DE CARONA: `set_gamepad_emulation
+        (False)` descia até o `restore` do ungrab, que caía no ramo «não
+        rastreado» do broker. Funcionava por acidente, não por desenho — e com
+        o nó fechado aquele ramo passa a FECHAR, que é o certo. Aqui está o
+        pedido explícito que o substitui.
+
+        Best-effort integral: broker ausente ⇒ nada acontece e o modo segue
+        (numa máquina sem a cura, o nó já está aberto).
+        """
+        with contextlib.suppress(Exception):
+            nos_fn = getattr(self.controller, "nos_hidraw_por_uniq", None)
+            if not callable(nos_fn):
+                return
+            nos = nos_fn()
+            if not nos:
+                return
+            from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+                broker_call_nonblocking,
+                broker_client_for,
+            )
+
+            client = broker_client_for(self)
+
+            def _pedido(alvo: str) -> Any:
+                """Fecha sobre `alvo` de VERDADE — a lambda no laço não fecha.
+
+                Uma `lambda: client.expor(no)` dentro do `for` lê o `no` da
+                ÚLTIMA volta quando o executor a chama: os quatro controles
+                virariam quatro pedidos para o mesmo nó. O truque do argumento
+                com default resolveria, mas é o mesmo defeito escrito de um
+                jeito que o mypy não consegue inferir; a fábrica resolve os
+                dois.
+                """
+                if ligar:
+                    return lambda: client.expor(alvo)
+                return lambda: client.desexpor(alvo)
+
+            for no in sorted(set(nos.values())):
+                if not isinstance(no, str) or not no.startswith("/dev/hidraw"):
+                    continue
+                # Achados Onda S #6/#10: I/O de socket nunca na thread do
+                # event loop — `set_native_mode` roda nela.
+                broker_call_nonblocking(self, _pedido(no))
 
     def _any_game_session_open(self) -> bool:
         """Agregado `game_open` de TODOS os vpads (P1 + co-op, NUMA-01).
