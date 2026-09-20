@@ -81,11 +81,23 @@ PAGINA_04 = "04-iluminacao.html"
 PAGINA_06 = "06-navegacao.html"  # (noqa-acento) nome de arquivo
 
 #: OS QUATRO BOTÕES QUE RECUSAM: página, gesto e o seletor do botão do produto.
+#:
+#: O SELETOR DA 01 NÃO DIZ A TAG, e a razão é de 20/09/2026: ele dizia
+#: `input[data-gesto="cadeado"]`, e em 19/09 o cadeado virou `<button>`
+#: (`3bf938e46`, a trava do perfil virando a pílula do Giroscópio). Três réguas
+#: deste arquivo reprovaram com «NAO ACHEI» sobre um cadeado que estava na
+#: tela — e o mesmo seletor derrubou outras dez em
+#: `test_a_aba_01_jogar_fecha_as_linhas.py`, curadas em `c2e081e4b`.
+#:
+#: A cura não é trocar `input` por `button`: é PARAR DE DIZER a tag. O endereço
+#: do elemento é o `data-gesto`, que é contrato com o gerador; a tag é decisão
+#: de desenho e pode mudar de novo amanhã — e mudou, do `<input>` de 06/09 para
+#: o `<button>` de 19/09, sem nada de errado com o produto nas duas vezes.
 BOTOES = {
     "04": (PAGINA_04, "player",
            '[data-controle="p1"] .players button.fora[data-player="2"]'),
     "02": (PAGINA_02, "mudo", '[data-controle="p1"] [data-mudo="microfone"]'),
-    "01": (PAGINA_01, "cadeado", 'input[data-gesto="cadeado"]'),
+    "01": (PAGINA_01, "cadeado", '[data-gesto="cadeado"]'),
     "06": (PAGINA_06, "guardar-remapeamento",
            '#remapeamento [data-gesto="guardar-remapeamento"]'),
 }
@@ -647,7 +659,28 @@ def test_a_folha_veste_a_recusa_sem_esconder_nada() -> None:
     assert regra.count("!important") >= 2, (
         f"a regra da recusa perdeu o `!important` — as páginas declaram "
         f"`border-color` e a folha de usuário perderia: {regra}")
-    assert seletores_escondidos(FOLHA_DA_CASA) == (".nota",)
+
+    # A TRAVA DE CRESCIMENTO DO QUE A FOLHA ESCONDE. O nome do teste é
+    # «sem esconder nada» e é sobre a `.hef-recusou`: a piscada usa `outline`
+    # justamente para NÃO ocupar espaço nem apagar linha. Esta lista existe
+    # para que uma regra de `display:none` nova não entre de carona na folha
+    # da casa — ela apagaria texto que a régua da palavra ainda conta.
+    #
+    # ERA SÓ `.nota`, E SÃO DUAS DESDE 19/09/2026. A `.hef-sem-item` nasceu na
+    # `120fcc4e6` ("a lista rola sem teto, e a tela para de inventar achado"):
+    # é a peça do MOLDE (`hefesto_vivo.BOOTSTRAP`, `data-hef-molde`) que apaga
+    # o bloco que o gerador emitiu e o produto não preencheu. O comentário dela
+    # na `folha_da_casa.py:125` traz a medição que a justifica — com três
+    # achados no Check-up e cinco blocos no desenho, a página publicada
+    # mostrava `—` em duas linhas, *a tela inventando achado numa máquina sem
+    # a bancada dela*.
+    #
+    # Ela esconder É a cura, então entra na lista em vez de derrubá-la; o que
+    # a lista continua proibindo é a TERCEIRA entrar calada.
+    assert seletores_escondidos(FOLHA_DA_CASA) == (".nota", ".hef-sem-item"), (
+        "a folha da casa mudou o que APAGA da tela. Se a regra nova é cura, "
+        "escreva a razão aqui e acrescente o seletor; se ela entrou de carona, "
+        "a régua da palavra vai parar de contar texto que a pessoa não lê.")
 
 
 class _PilotoQueAnota:

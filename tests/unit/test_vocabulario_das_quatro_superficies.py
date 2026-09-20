@@ -8,6 +8,26 @@ que três nunca foram olhadas por sprint nenhuma:
   - a bandeja      (``src/hefesto_dualsense4unix/app/tray.py``);
   - a janela compacta (``src/hefesto_dualsense4unix/app/compact_window.py``).
 
+E SÃO TRÊS DESDE 19/09/2026 — a janela compacta SAIU
+-----------------------------------------------------
+``app/compact_window.py`` foi removido pela ORFAOS-DA-MIGRACAO-01
+(``6a2ee8fe2``, *"a janela compacta sai do caminho, e os três vigias dela
+caem"*): 340 linhas, 23 usos de GTK, **zero imports no produto** — a janela
+320x90 que era surrogate do tray e ficou sem dono quando a janela GTK saiu em
+06/09. As três fontes do censo de órfãos concordaram, inclusive a terceira, que
+despejou o ``sys.modules`` de uma sessão real do piloto.
+
+O nome do arquivo continua dizendo QUATRO, e é de propósito: ele nomeia a
+auditoria de 31/07 que o originou, e cinco lugares desta casa o citam por esse
+nome. O que mudou é o mundo que ele mede, e está escrito em cada ponto onde a
+quarta superfície saiu — o ``_COMPACTA``, o ``_SUPERFICIES_SECUNDARIAS`` e a
+linha ``("COMPACTA", "Daemon offline")`` do livro de divergências.
+
+A REGRA QUE A REMOÇÃO DEIXOU, e ela é da própria ORFAOS-DA-MIGRACAO-01:
+*quem CHAMA para trabalhar conta como vida; quem MEDE não.* Eram os três
+vigias — este entre eles — que mantinham a ``compact_window`` viva em qualquer
+censo de grafo.
+
 O custo de nunca terem sido comparadas está medido na
 ``docs/process/sprints/arquivados/2026-07-31-RADAR-01-as-tres-superficies-que-ninguem-nunca-olhou.md``:
 uma renomeação entra na janela, não entra nas outras três, e elas passam a
@@ -95,15 +115,20 @@ _JANELA_EMULACAO = (
 _APPLET = _RAIZ / "packaging" / "cosmic-applet" / "src" / "app.rs"
 #: A bandeja GTK.
 _BANDEJA = _RAIZ / "src" / "hefesto_dualsense4unix" / "app" / "tray.py"
-#: A janela compacta (opt-in, desligada por default).
-_COMPACTA = _RAIZ / "src" / "hefesto_dualsense4unix" / "app" / "compact_window.py"
 
-#: As três superfícies que NÃO são a janela. A janela é a dona das frases; são
-#: estas que não podem contradizê-la.
+#: A JANELA COMPACTA NÃO TEM MAIS ENDEREÇO — 19/09/2026, ORFAOS-DA-MIGRACAO-01
+#: (``6a2ee8fe2``). Aqui morava
+#: ``_COMPACTA = _RAIZ / "src" / … / "app" / "compact_window.py"``, e o arquivo
+#: saiu do disco. Esta régua o lia como TEXTO (``read_text``), então a remoção
+#: não deu ``ImportError``: deu ``FileNotFoundError`` em dois testes, com o
+#: produto intacto. Ler fonte como texto é a técnica desta casa e continua
+#: certa — o preço dela é este, e é barato: o erro nomeia o arquivo.
+
+#: As superfícies que NÃO são a janela. A janela é a dona das frases; são estas
+#: que não podem contradizê-la. **Eram três e são DUAS** desde 19/09/2026.
 _SUPERFICIES_SECUNDARIAS = {
     "APPLET": _APPLET,
     "BANDEJA": _BANDEJA,
-    "COMPACTA": _COMPACTA,
 }
 
 
@@ -305,14 +330,24 @@ def test_o_livro_da_ordem_das_mascaras_esta_exato() -> None:
 # Conceito 3 — a marca do item ativo numa lista
 # ---------------------------------------------------------------------------
 
-def test_a_marca_do_item_ativo_e_a_mesma_nas_tres_superficies_que_listam() -> None:
-    """``"> "`` na bandeja, na janela compacta e no applet.
+def test_a_marca_do_item_ativo_e_a_mesma_nas_duas_superficies_que_listam() -> None:
+    """``"> "`` na bandeja e no applet.
 
-    A marca é ASCII de propósito nas três (o comentário da ``compact_window``
-    diz: *"ASCII marker para não conflitar com sanitizer global"*), e o
-    higienizador de glifos desta casa já comeu marca de item ativo antes — foi
-    o que deixou o modo ativo do applet sem marca nenhuma, registrado no
-    comentário do próprio ``mode_block``.
+    A marca é ASCII de propósito nas duas, e o higienizador de glifos desta
+    casa já comeu marca de item ativo antes — foi o que deixou o modo ativo do
+    applet sem marca nenhuma, registrado no comentário do próprio
+    ``mode_block``.
+
+    ERAM TRÊS — 19/09/2026. A terceira perna lia a ``compact_window.py``, que
+    saiu na ORFAOS-DA-MIGRACAO-01 (``6a2ee8fe2``), e era ELA que trazia por
+    escrito a razão de a marca ser ASCII: *"ASCII marker para não conflitar
+    com sanitizer global"*. A razão vem para cá porque o arquivo que a
+    guardava não existe mais — apagar a perna sem trazer a razão junto
+    deixaria a regra sem porquê, que é como uma trava vira superstição.
+
+    E a perna caiu SEM AFROUXAR NADA: ela comparava a compacta com a bandeja,
+    e a bandeja continua sendo a dona — as duas asserções que sobram são as
+    mesmas de antes, medidas contra o mesmo ``ACTIVE_MARKER``.
     """
     bandeja = re.search(
         r'^ACTIVE_MARKER\s*=\s*"([^"]*)"', _BANDEJA.read_text(encoding="utf-8"), re.MULTILINE
@@ -320,13 +355,6 @@ def test_a_marca_do_item_ativo_e_a_mesma_nas_tres_superficies_que_listam() -> No
     assert bandeja is not None, "tray.ACTIVE_MARKER sumiu — esta regra perdeu o dono"
     marca = bandeja.group(1)
     assert marca == "> ", f"a bandeja mudou a marca do item ativo para {marca!r}"
-
-    compacta = re.search(r'f"([^"{}]*)\{name\}"', _COMPACTA.read_text(encoding="utf-8"))
-    assert compacta is not None, "a janela compacta perdeu o rótulo marcado do perfil ativo"
-    assert compacta.group(1) == marca, (
-        f"a janela compacta marca o item ativo com {compacta.group(1)!r} e a "
-        f"bandeja com {marca!r}"
-    )
 
     no_applet = set(
         re.findall(r'if is_active \{\s*"([^"]*)"', _APPLET.read_text(encoding="utf-8"))
@@ -363,16 +391,23 @@ _FRASE_DONA_DO_DESLIGADO = "O Hefesto está desligado"
 #: a CLI diz `daemon offline` de propósito, para quem digitou um comando.
 _JARGAO_DE_DAEMON = ("daemon offline", "daemon desconectado")
 
-#: Inventário MEDIDO em 01/08/2026 nas três superfícies secundárias, por
-#: ``(superfície, frase)``. São exatamente as três que a RADAR-01 mediu em
-#: 31/07 e que a E1 e a E3 daquela sprint decidem — nenhuma foi consertada
-#: aqui, porque consertar exige tocar código de produto e o olho dela no
-#: painel. A lista existe para que a QUARTA não entre calada.
+#: Inventário MEDIDO em 01/08/2026 nas superfícies secundárias, por
+#: ``(superfície, frase)``. Eram as três que a RADAR-01 mediu em 31/07 e que a
+#: E1 e a E3 daquela sprint decidem — nenhuma foi consertada aqui, porque
+#: consertar exige tocar código de produto e o olho dela no painel. A lista
+#: existe para que uma frase NOVA não entre calada.
+#:
+#: E UMA SAIU — 19/09/2026, ``("COMPACTA", "Daemon offline")``. Ela não foi
+#: consertada: a SUPERFÍCIE inteira saiu, com o arquivo
+#: (``6a2ee8fe2``, ORFAOS-DA-MIGRACAO-01). A distinção importa e fica escrita,
+#: porque o teste abaixo trata as duas como a mesma coisa — e para a E3 da
+#: RADAR-01 elas NÃO são: um rótulo curado prova que alguém decidiu a frase;
+#: um rótulo que sumiu junto com a tela não prova decisão nenhuma. A E3 ficou
+#: menor, não resolvida, e o que resta dela são as duas do applet.
 _JARGAO_REGISTRADO_EM_01_08 = sorted(
     [
         ("APPLET", "Daemon desconectado"),
         ("APPLET", "Indisponível (daemon offline)"),
-        ("COMPACTA", "Daemon offline"),
     ]
 )
 
