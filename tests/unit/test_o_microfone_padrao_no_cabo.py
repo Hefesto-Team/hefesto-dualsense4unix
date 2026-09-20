@@ -75,6 +75,74 @@ DS_SAIDA = (
 )
 WEBCAM = "alsa_input.usb-046d_HD_Pro_Webcam_C920-02.analog-stereo"
 ONBOARD = "alsa_input.pci-0000_0c_00.4.analog-stereo"
+
+#: MIC-CABO-SPDIF-01, 20/09/2026 — A PORTA DO CENÁRIO «desconhecida» SAI DA
+#: MÁQUINA, e não da memória de quem escreveu o dublê.
+#:
+#: Aqui estava digitada à mão a linha
+#: `iec958-stereo-input: Digital Input (S/PDIF) (type: SPDIF, priority: 0,
+#: availability unknown)`. Ela já divergia do vivo quando foi conferida, e
+#: divergia CALADA — que é o defeito de toda fixture digitada. Em 20/09 ela
+#: divergia duas vezes: com o UCM desta casa instalado (HAPTICA-NATIVA-01), a
+#: porta de captura do DualSense no cabo nem se chama mais assim.
+#:
+#: O cenário continua sendo o mesmo — uma porta cuja disponibilidade o ALSA não
+#: declara —, e é isso que `test_a_fixture_da_porta_desconhecida_e_gravada`
+#: trava: se a gravação deixar de dizer `availability unknown`, o teste acusa,
+#: em vez de o dublê passar a medir outro cenário em silêncio.
+_FIXTURES_MIC_CABO = RAIZ / "tests" / "fixtures" / "mic-cabo"
+_SOURCES_GRAVADA = _FIXTURES_MIC_CABO / "sources-cabo-2026-09-20.txt"
+
+
+def _primeira_porta_e_ativa(texto: str) -> tuple[str, str]:
+    """`(linha da porta, nome da porta ativa)` da PRIMEIRA source do texto.
+
+    Para na primeira `Active Port:`, e desiste se uma segunda source começar
+    antes dela. A leitura anterior varria o texto inteiro e guardava a PRIMEIRA
+    porta listada com a ÚLTIMA porta ativa — que num texto de mais de uma
+    source são de blocos diferentes, e o dublê passaria a descrever uma máquina
+    que não existe. Hoje a gravação tem uma source só; a régua não pode
+    depender disso.
+    """
+    porta = ""
+    dentro = False
+    cabecalhos = nomes = 0
+    for linha in texto.splitlines():
+        nua = linha.strip()
+        # Uma source começa com `Source #N` (saída completa) ou, num recorte de
+        # um bloco só como o desta gravação, com a própria linha `Name:`. As
+        # duas contam separado: no formato completo, as duas aparecem na MESMA
+        # source, e somá-las faria a leitura parar na primeira delas.
+        if nua.startswith("Source #"):
+            cabecalhos += 1
+            if cabecalhos > 1:
+                break  # a primeira source acabou sem porta ativa
+            continue
+        if nua.startswith("Name:"):
+            nomes += 1
+            if nomes > 1:
+                break
+            continue
+        if nua == "Ports:":
+            dentro = True
+            continue
+        if nua.startswith("Active Port:"):
+            return (porta, nua.split(":", 1)[1].strip())
+        if dentro and nua:
+            porta = porta or nua
+    return (porta, "")
+
+
+def _porta_desconhecida_gravada() -> tuple[str, str]:
+    """A dupla lida da gravação de 20/09/2026, ou dois vazios se ela sumiu."""
+    if not _SOURCES_GRAVADA.is_file():
+        return ("", "")
+    return _primeira_porta_e_ativa(
+        _SOURCES_GRAVADA.read_text(encoding="utf-8")
+    )
+
+
+PORTA_DESCONHECIDA, ATIVA_DESCONHECIDA = _porta_desconhecida_gravada()
 #: Os nós virtuais da casa, na máscara (octetos 4 e 5 zerados).
 SOM = "hefesto_som_000003"
 MIC = "hefesto_mic_000003"
@@ -111,6 +179,10 @@ WEBCAM="@WEBCAM@"
 ONBOARD="@ONBOARD@"
 SOM="@SOM@"
 MIC="@MIC@"
+# A porta do cenário «desconhecida», GRAVADA da máquina — ver o cabeçalho do
+# módulo de teste. O dublê imprime o que leu, nunca o que alguém lembrou.
+PORTA_DESCONHECIDA="@PORTA_DESCONHECIDA@"
+ATIVA_DESCONHECIDA="@ATIVA_DESCONHECIDA@"
 
 _le() {
     local v=""
@@ -234,8 +306,8 @@ _longa() {
                 printf '\tActive Port: analog-input-front-mic\n' ;;
             Source:desconhecida)
                 printf '\tPorts:\n'
-                printf '\t\tiec958-stereo-input: Digital Input (S/PDIF) (type: SPDIF, priority: 0, availability unknown)\n'
-                printf '\tActive Port: iec958-stereo-input\n' ;;
+                printf '\t\t%s\n' "${PORTA_DESCONHECIDA}"
+                printf '\tActive Port: %s\n' "${ATIVA_DESCONHECIDA}" ;;
             Source:disponivel)
                 printf '\tPorts:\n'
                 printf '\t\tanalog-input-mic: Microphone (type: Mic, priority: 8700, available)\n'
@@ -434,6 +506,8 @@ def montar_bancada(
         "@ONBOARD@": ONBOARD,
         "@SOM@": SOM,
         "@MIC@": MIC,
+        "@PORTA_DESCONHECIDA@": PORTA_DESCONHECIDA,
+        "@ATIVA_DESCONHECIDA@": ATIVA_DESCONHECIDA,
     }.items():
         sim_sh = sim_sh.replace(chave, valor)
     (dubles / "_sim.sh").write_text(sim_sh, encoding="utf-8")
@@ -760,3 +834,71 @@ def test_r7_a_pilha_sai_do_passo_como_entrou(tmp_path: Path, cenario: str) -> No
     """
     bancada, _res = _passo(tmp_path, cenario)
     assert bancada.pilha() == PILHA_DE_ANTES, bancada.argv()
+
+
+# ---------------------------------------------------------------------------
+# MIC-CABO-SPDIF-01 — a guarda da fixture GRAVADA
+# ---------------------------------------------------------------------------
+
+
+def test_a_fixture_da_porta_desconhecida_e_gravada() -> None:
+    """A porta do cenário «desconhecida» tem de vir do disco e valer o cenário.
+
+    Duas coisas, e as duas já falharam nesta casa de jeitos diferentes:
+
+    1. **Ela existe.** Se a gravação sumir, o dublê imprimiria uma linha vazia e
+       o cenário viraria «source sem porta» — que é OUTRO cenário, e daria verde
+       ou vermelho pelo motivo errado, calado.
+    2. **Ela ainda significa «disponibilidade desconhecida».** É o que o nome do
+       cenário promete. Se um `pactl` novo passar a declarar a porta, esta linha
+       acusa, em vez de sete réguas medirem outra coisa sem ninguém notar.
+    """
+    assert _SOURCES_GRAVADA.is_file(), (
+        f"a gravação de 20/09/2026 sumiu de {_SOURCES_GRAVADA} — sem ela o "
+        "dublê imprime porta vazia e o cenário troca de significado"
+    )
+    assert PORTA_DESCONHECIDA, "a gravação não tem linha de porta"
+    assert ATIVA_DESCONHECIDA, "a gravação não tem `Active Port:`"
+    assert "availability unknown" in PORTA_DESCONHECIDA, (
+        "o cenário se chama «desconhecida»: a porta gravada precisa dizer "
+        f"`availability unknown`. Ela diz: {PORTA_DESCONHECIDA!r}"
+    )
+    assert ATIVA_DESCONHECIDA in PORTA_DESCONHECIDA, (
+        "a porta ATIVA tem de ser a porta listada — se divergirem, o dublê "
+        "descreve uma máquina que não existe"
+    )
+
+
+def test_a_leitura_da_porta_para_na_primeira_source() -> None:
+    """A dupla tem de sair do MESMO bloco, e a gravação de hoje não prova isso.
+
+    Ela tem uma source só, então uma leitura que varresse o arquivo inteiro
+    daria o mesmo resultado — e passaria verde guardando a primeira porta de um
+    bloco com a última `Active Port:` de outro. Aqui vão duas sources nas duas
+    formas que o `pactl` emite (com e sem o cabeçalho `Source #`), e o que se
+    cobra é que a segunda não contamine a primeira.
+    """
+    com_cabecalho = (
+        "Source #1\n"
+        "\tName: alsa_input.primeira\n"
+        "\tPorts:\n"
+        "\t\tporta-da-primeira: Primeira (availability unknown)\n"
+        "\tActive Port: porta-da-primeira\n"
+        "Source #2\n"
+        "\tName: alsa_input.segunda\n"
+        "\tPorts:\n"
+        "\t\tporta-da-segunda: Segunda (available)\n"
+        "\tActive Port: porta-da-segunda\n"
+    )
+    porta, ativa = _primeira_porta_e_ativa(com_cabecalho)
+    assert ativa == "porta-da-primeira", f"veio {ativa!r}"
+    assert porta.startswith("porta-da-primeira:"), f"veio {porta!r}"
+
+    sem_cabecalho = com_cabecalho.replace("Source #1\n", "").replace(
+        "Source #2\n", ""
+    )
+    porta, ativa = _primeira_porta_e_ativa(sem_cabecalho)
+    assert (ativa, porta.startswith("porta-da-primeira:")) == (
+        "porta-da-primeira",
+        True,
+    ), f"veio porta={porta!r} ativa={ativa!r}"
