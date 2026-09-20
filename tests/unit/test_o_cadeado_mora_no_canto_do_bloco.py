@@ -24,15 +24,38 @@ feita ao motor: *onde esta caixa está desenhada, em pixels, dentro do bloco?*
 O GESTO NÃO PODE MUDAR, e é metade desta régua
 -----------------------------------------------
 Mudança de POSIÇÃO que muda comportamento é mudança escondida. Por isso os casos
-vêm em par: um mede onde a caixa está, o outro mede que o `data-gesto`, o
+vêm em par: um mede onde a trava está, o outro mede que o `data-gesto`, o
 `data-campo`, o alvo de pintura e a dica continuam os mesmos — e que ela nasce
-DESMARCADA, porque marcá-la no desenho afirmaria uma escolha dela que ela não
-fez.
+APAGADA, porque acendê-la no desenho afirmaria uma escolha dela que ela não fez.
+
+A LÍNGUA MUDOU EM 19/09/2026 E ESTA RÉGUA FOI ATRÁS (`TRAVA-PILULA-01`)
+-----------------------------------------------------------------------
+A trava era `<label class="cadeado">` com um `<input type="checkbox">` dentro, e
+virou `<button class="cadeado">` com a gramática do `.sw` da aba Controles — a
+razão está escrita no dono, em `a01_jogar._cadeado`: *"um checkbox tem DOIS
+estados e o produto tem três"*. O que esta régua media deixou de existir, e cada
+medida foi reapontada para o que existe HOJE:
+
+===========================  =======================  ==========================
+o que ela media               o que virou              por quê
+===========================  =======================  ==========================
+`cad.querySelector(input)`    o próprio `.cadeado`     não há mais `<input>`
+`caixa.dataset.hefAlvo`       `classe` (era `marcado`) o alvo trocou com a tag
+`caixa.checked`               a classe `ligada`        a pílula acende, não marca
+`input`/`label` associados    `closest('[data-gesto]')` é como o piloto resolve
+`lineHeight` do rótulo        as caixas de um `Range`  `normal` num botão é `NaN`
+===========================  =======================  ==========================
+
+**O `NaN` ERA UM VERDE DISFARÇADO DE VERMELHO, e vale anotar:**
+`parseFloat('normal')` é `NaN`, e `NaN == 1` é falso — a régua reprovava. Se a
+comparação fosse `!= 2` ela teria PASSADO sobre uma medida que não existe. Medir
+quebra de linha pelas caixas de um `Range` sobre o nó de texto responde a
+pergunta de verdade, e em qualquer `display`.
 
 A MORDIDA
 ---------
-Mova o `<label class="cadeado">` de volta para depois das duas seções
-`hef-modo`, regere e publique. Caem os casos de posição — a caixa aparece abaixo
+Mova o `<button class="cadeado">` de volta para depois das duas seções
+`hef-modo`, regere e publique. Caem os casos de posição — a trava aparece abaixo
 do título e à esquerda —, e os de gesto continuam passando, que é justamente o
 que prova que eles medem coisas diferentes.
 """
@@ -66,7 +89,15 @@ O_QUE_O_MOTOR_DESENHA = """() => {
   const cx = cad.getBoundingClientRect();
   const bx = bloco.getBoundingClientRect();
   const tx = titulo.getBoundingClientRect();
-  const caixa = cad.querySelector('input[type=checkbox]');
+  // QUEM RECEBE O CLIQUE é quem o piloto acha com `closest`, e não um filho:
+  // desde 19/09 o `data-gesto` mora no PRÓPRIO `<button class="cadeado">`.
+  const dono = cad.closest('[data-gesto]');
+  // A QUEBRA DE LINHA, medida pelas caixas que o nó de TEXTO ocupa. O
+  // `lineHeight` de um `<button>` é `normal`, e `parseFloat('normal')` é `NaN`.
+  const texto = [...cad.childNodes].find(
+    n => n.nodeType === 3 && n.textContent.trim());
+  const range = document.createRange();
+  if (texto) range.selectNodeContents(texto);
   return {
     // ONDE ELE ESTÁ
     na_linha_do_titulo: topo !== null,
@@ -83,16 +114,39 @@ O_QUE_O_MOTOR_DESENHA = """() => {
     altura_do_cadeado: Math.round(cx.height),
     altura_do_titulo: Math.round(tx.height),
     altura_do_topo: topo ? Math.round(topo.getBoundingClientRect().height) : null,
-    linhas_de_texto: Math.round(cx.height / parseFloat(getComputedStyle(cad).lineHeight)),
+    linhas_de_texto: texto ? range.getClientRects().length : null,
     // O GESTO — a metade que a mudança de posição não pode ter mexido
-    gesto: cad.querySelector('[data-gesto]')
-      ? cad.querySelector('[data-gesto]').dataset.gesto : null,
-    campo: caixa ? caixa.dataset.campo : null,
-    alvo: caixa ? caixa.dataset.hefAlvo : null,
-    marcado_de_nascenca: caixa ? caixa.checked : null,
+    gesto: dono ? dono.dataset.gesto : null,
+    o_dono_do_gesto_e_o_proprio: dono === cad,
+    campo: cad.dataset.campo || null,
+    alvo: cad.dataset.hefAlvo || null,
+    classe_que_acende: cad.dataset.hefClasse || null,
+    acende_quando: cad.dataset.hefQuando || null,
+    aceso_de_nascenca: cad.classList.contains(cad.dataset.hefClasse || 'on'),
     tem_dica: (cad.getAttribute('title') || '').length > 0,
     rotulo: (cad.textContent || '').trim(),
   };
+}"""
+
+#: O ESPIÃO DO CLIQUE — ele usa **o mesmo `closest` do piloto**, e de propósito:
+#: a régua não pode ter uma segunda maneira de achar o dono do gesto, senão
+#: passa a medir a si mesma em vez do caminho que o produto percorre.
+O_CAMINHO_DO_CLIQUE = """() => {
+  window.__recados = [];
+  const ouvir = (ev) => {
+    const alvo = ev.target.closest('[data-gesto]');
+    window.__recados.push({
+      tipo: ev.type,
+      gesto: alvo ? alvo.dataset.gesto : null,
+      // `false` quer dizer que o clique caiu num FILHO, e que só o `closest` o
+      // levou ao dono — é o que o pontinho tem de provar.
+      no_proprio_cadeado: ev.target.classList.contains('cadeado'),
+    });
+  };
+  document.addEventListener('click', ouvir, true);
+  document.addEventListener('change', ouvir, true);
+  const cx = document.querySelector('.cadeado').getBoundingClientRect();
+  return {largura: cx.width, altura: cx.height};
 }"""
 
 
@@ -166,6 +220,10 @@ def test_o_cadeado_nao_empurrou_a_linha_do_titulo(medido: dict) -> None:
     desceram 2px**. O `.quadro-topo` é `align-items:center`, então a altura dele
     é a do filho mais alto: qualquer coisa mais alta que o título move o bloco
     inteiro, e as abas vizinhas não.
+
+    A QUEBRA DE LINHA SE MEDE NO NÓ DE TEXTO, pelas caixas de um `Range` — a
+    conta velha (`altura ÷ lineHeight`) devolvia `NaN` desde que a trava virou
+    `<button>`, porque o `lineHeight` de um botão é `normal`.
     """
     assert medido["altura_do_cadeado"] <= medido["altura_do_titulo"], (
         f"o cadeado ({medido['altura_do_cadeado']}px) é mais alto que o título "
@@ -195,19 +253,41 @@ def test_o_gesto_do_cadeado_atravessou_a_mudanca(medido: dict) -> None:
     """Mudou o LUGAR e mais nada: o endereço do clique e o da pintura são os mesmos.
 
     OS DOIS LADOS, e são o par de sempre: `data-campo` é por onde a verdade
-    CHEGA (o alvo `marcado` é o único que escreve `el.checked`) e `data-gesto` é
-    por onde o dedo dela SAI. Um sem o outro é uma caixa que mostra e não deixa
-    mudar, ou que deixa mudar e não mostra o que o daemon guardou.
+    CHEGA e `data-gesto` é por onde o dedo dela SAI. Um sem o outro é uma trava
+    que mostra e não deixa mudar, ou que deixa mudar e não mostra o que o daemon
+    guardou.
+
+    E O ALVO É `classe` DESDE 19/09, com as DUAS metades que ele exige: sem o
+    `data-hef-classe` o piloto acende `on`, que folha nenhuma pinta; sem o
+    `data-hef-quando` o alvo vira BOOLEANO (`hefesto_vivo`: *"sem
+    `data-hef-quando` o alvo é booleano"*) e a pílula acenderia com `DESLIGADO`
+    e com o travessão, que é a tela afirmando o contrário do que leu. Por isso
+    as três se medem juntas — e a palavra do `quando` sai do DONO
+    (`a01_jogar.CADEADO_LIGADO`), nunca digitada aqui.
     """
+    from hefesto_dualsense4unix.interface.pacotes.a01_jogar import CADEADO_LIGADO
+
     assert medido["gesto"] == "cadeado", (
-        f"o endereço do clique virou {medido['gesto']!r} — a caixa mudaria de "
-        f"marca e não mudaria nada no produto")
+        f"o endereço do clique virou {medido['gesto']!r} — a trava mudaria de "
+        f"cor e não mudaria nada no produto")
+    assert medido["o_dono_do_gesto_e_o_proprio"], (
+        "o `data-gesto` saiu do `.cadeado` e foi parar num ancestral: o piloto "
+        "acharia o elemento errado com o `closest`, e a piscada verde do recibo "
+        "acenderia em cima de outra coisa")
     assert medido["campo"] == "cadeado", (
-        f"o endereço da pintura virou {medido['campo']!r} — a caixa deixaria de "
+        f"o endereço da pintura virou {medido['campo']!r} — a trava deixaria de "
         f"dizer o que o daemon guardou")
-    assert medido["alvo"] == "marcado", (
-        f"o alvo de pintura virou {medido['alvo']!r}; só `marcado` escreve "
-        f"`el.checked`, e os outros nove poriam a string 'on' no `value`")
+    assert medido["alvo"] == "classe", (
+        f"o alvo de pintura virou {medido['alvo']!r}; a trava é uma pílula "
+        f"desde 19/09, e quem acende pílula é o alvo `classe`")
+    assert medido["classe_que_acende"] == "ligada", (
+        f"a classe da pintura virou {medido['classe_que_acende']!r}; sem ela o "
+        f"piloto acende `on`, e a folha desta aba pinta `.cadeado.ligada`")
+    assert medido["acende_quando"] == CADEADO_LIGADO, (
+        f"a pílula acende com {medido['acende_quando']!r} e o dono emite "
+        f"{CADEADO_LIGADO!r}. Vazio é pior: o alvo `classe` sem "
+        f"`data-hef-quando` é BOOLEANO, e a trava acenderia também com "
+        f"`DESLIGADO` e com o travessão")
 
 
 def test_a_palavra_e_a_da_janela_antiga(medido: dict) -> None:
@@ -225,28 +305,45 @@ def test_a_palavra_e_a_da_janela_antiga(medido: dict) -> None:
     assert medido["tem_dica"], "o cadeado ficou sem a razão na dica"
 
 
-def test_o_cadeado_nasce_desmarcado(medido: dict) -> None:
-    """Destravado é o padrão do produto; marcá-lo afirmaria uma escolha dela."""
-    assert medido["marcado_de_nascenca"] is False, (
-        "o cadeado nasce marcado — o desenho afirmaria uma escolha que ela não fez")
+def test_o_cadeado_nasce_apagado(medido: dict) -> None:
+    """Destravado é o padrão do produto; acendê-lo afirmaria uma escolha dela.
+
+    A PÍLULA NASCE SEM A CLASSE, que é o `el.checked === false` desta língua:
+    quem acende é o piloto, a partir do `autoswitch_locked` do daemon. Um
+    desenho que já trouxesse `class="cadeado ligada"` diria TRAVADO antes de
+    qualquer tique — e continuaria dizendo sobre um estado que ninguém leu, que
+    é o terceiro estado que a pílula nasceu para não mentir.
+    """
+    assert medido["aceso_de_nascenca"] is False, (
+        "o cadeado nasce aceso — o desenho afirmaria uma escolha que ela não fez")
 
 
-def test_o_cadeado_responde_ao_clique_no_rotulo() -> None:
-    """CLICAR NO TEXTO marca a caixa — e é a metade que a foto não prova.
+def test_o_clique_no_rotulo_chega_ao_dono_do_gesto() -> None:
+    """CLICAR NO TEXTO e no pontinho chega ao `data-gesto` — e em `click`.
 
     Um botão que se move e nunca se clica não está entregue. O que este caso
-    guarda é a associação `<label>`/`<input>`: ela é o que faz o texto inteiro
-    ser área de clique, e é frágil justamente numa mudança de lugar — basta o
-    `<input>` sair de dentro do `<label>` para o rótulo virar enfeite, sem
-    nenhum sinal na tela e sem quebrar nenhum dos casos de geometria acima.
+    guardava era a associação `<label>`/`<input>`, e ela morreu com a caixa em
+    19/09: o que faz o texto inteiro ser área de clique agora é o próprio
+    `<button>`, e o que leva o clique do `<span class="p">` até o dono é o
+    `ev.target.closest('[data-gesto]')` do piloto (`hefesto_vivo`, o ouvinte
+    único). É esse caminho que se mede aqui, com o mesmo `closest`.
 
-    O CLIQUE É NO RÓTULO, não na caixinha: clicar na caixinha funcionaria mesmo
-    com a associação quebrada, e a régua daria verde sobre o defeito. A caixinha
-    tem 13px; o rótulo tem o texto inteiro, e é onde o dedo dela cai.
+    E A METADE NOVA É O NOME DO EVENTO, que é o que custou caro: **um
+    `<button>` NÃO emite `change`** — só `<input>`, `<select>` e `<textarea>`.
+    O `a01_jogar.cadeado` filtra por `click` por causa disso, e deixá-lo em
+    `change` faria o gesto voltar cedo em TODO clique: a tela pisca verde e o
+    disco não muda. Esta régua reprova nos DOIS sentidos — se o `change`
+    voltasse a sair da trava, o produto teria dois eventos por gesto de novo.
 
-    A PÁGINA ESTÁTICA NÃO TEM PILOTO, e por isso o que se mede aqui é a resposta
-    do MOTOR — o estado da caixa antes e depois. Quem prova que o gesto chega ao
-    daemon é a régua do endereço, logo acima: as duas juntas cobrem o caminho.
+    A PÁGINA ESTÁTICA NÃO TEM PILOTO, e por isso o que se mede é o caminho do
+    evento no MOTOR, não o efeito. Quem prova que o gesto chega ao daemon é a
+    régua do endereço, logo acima: as duas juntas cobrem o caminho.
+
+    A MORDIDA: tire o `data-gesto` do `<button>` e ponha num `<div>` em volta —
+    os dois cliques passam a chegar com o gesto certo pelo `closest`, e é o
+    `o_dono_do_gesto_e_o_proprio` da régua de cima que reprova. Troque o
+    `<button>` por um `<input type="checkbox">` e é AQUI que reprova, com um
+    `change` na lista.
     """
     if not CHROME.exists():
         pytest.skip("sem o Chrome do sistema — a régua não tem motor")
@@ -258,18 +355,36 @@ def test_o_cadeado_responde_ao_clique_no_rotulo() -> None:
             pg = nav.new_page(viewport={"width": 1600, "height": 900})
             pg.goto(JOGAR.as_uri())
             pg.wait_for_load_state("networkidle")
-            antes = pg.eval_on_selector(".cadeado input", "e => e.checked")
-            # o clique no TEXTO, pelo centro do <span> do rótulo
-            pg.click(".cadeado span")
-            depois = pg.eval_on_selector(".cadeado input", "e => e.checked")
-            pg.click(".cadeado span")
-            de_volta = pg.eval_on_selector(".cadeado input", "e => e.checked")
+            caixa = pg.evaluate(O_CAMINHO_DO_CLIQUE)
+            # O CLIQUE NO TEXTO, encostado na borda direita da pílula — é lá que
+            # o rótulo está, e é onde o dedo dela cai. Clicar no centro poderia
+            # acertar o pontinho, que é o outro caso, logo abaixo.
+            pg.click(".cadeado", position={"x": caixa["largura"] - 6,
+                                           "y": caixa["altura"] / 2})
+            # E O CLIQUE NO PONTINHO, que é o filho: sem o `closest` ele chegaria
+            # ao piloto como um clique em nada. O teto é de 3s e não o padrão de
+            # 30s de propósito: um pontinho que sumiu ou ficou invisível é
+            # defeito, e defeito tem de reprovar depressa.
+            pg.click(".cadeado .p", timeout=3000)
+            recados = pg.evaluate("() => window.__recados")
         finally:
             nav.close()
 
-    assert antes is False, f"a caixa não nasceu desmarcada: {antes}"
-    assert depois is True, (
-        "clicar no RÓTULO do cadeado não marcou a caixa — o `<input>` saiu de "
-        "dentro do `<label>` e o texto virou enfeite")
-    assert de_volta is False, (
-        "o segundo clique não desmarcou — a caixa responde uma vez só")
+    assert len(recados) == 2, (
+        f"a régua esperava dois eventos (o texto e o pontinho) e viu "
+        f"{len(recados)}: {recados!r}")
+    assert [r["gesto"] for r in recados] == ["cadeado", "cadeado"], (
+        f"um dos cliques não chegou ao dono do gesto: {recados!r}. O clique no "
+        f"pontinho depende do `closest`; o do texto, de o `data-gesto` estar no "
+        f"elemento que recebe o clique")
+    assert [r["tipo"] for r in recados] == ["click", "click"], (
+        f"a trava emitiu {[r['tipo'] for r in recados]!r}. O gesto "
+        f"`a01_jogar.cadeado` filtra por `click` porque um `<button>` não emite "
+        f"`change` — um `change` aqui quer dizer que a caixa voltou, e com ela "
+        f"a dupla entrega do mesmo gesto")
+    assert [r["no_proprio_cadeado"] for r in recados] == [True, False], (
+        f"a régua está medindo a si mesma: {recados!r}. O primeiro clique tem "
+        f"de cair no PRÓPRIO `.cadeado` (o texto) e o segundo num FILHO (o "
+        f"pontinho) — se os dois caem no mesmo elemento, o `closest` nunca foi "
+        f"exercitado e este caso daria verde sobre um pontinho que o piloto "
+        f"não alcança")
