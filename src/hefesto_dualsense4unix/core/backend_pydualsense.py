@@ -495,6 +495,41 @@ def _clamp_u8(valor: Any, default: int) -> int:
         return int(default) & 0xFF
 
 
+def _bytes_que_sairam(escrito: Any) -> int | None:
+    """Quantos bytes o fio disse ter escrito — ``None`` = **ele não disse**.
+
+    ESCRITA-QUE-NAO-MEDE-01 (19/09/2026). O `hidapi` devolve um `int` de
+    verdade: o número de bytes escritos, ou `-1` no erro. Só esse `int` é
+    prova; qualquer outra coisa é ausência de resposta, e esta casa já decidiu
+    o que fazer com ausência de dado — **não se acusa sem prova**. É a mesma
+    disciplina do ``sondado_em is None`` do `core/escritor_cru.py`.
+
+    Por que o teste é `isinstance` e não `int(...)`: em boa parte da suíte o
+    `device` é um dublê, e `int(MagicMock())` devolve `1` — que compararia
+    diferente do tamanho do quadro e faria TODA escrita de teste virar "curta".
+    Uma acusação de escrita curta nascida de um dublê seria a mesma classe de
+    defeito que esta função existe para curar, só com o sinal trocado.
+
+    `bool` fica de fora de propósito: ele É `int` em Python, e um dublê que
+    devolve `True` estaria dizendo "escrevi 1 byte" sem querer dizer isso.
+    """
+    if isinstance(escrito, bool) or not isinstance(escrito, int):
+        return None
+    return int(escrito)
+
+
+def _escrita_completa(escrito: Any, pedidos: int) -> bool:
+    """A escrita entregou os `pedidos` bytes inteiros?
+
+    ``True`` quando o fio disse que saíram todos **ou não disse nada**;
+    ``False`` só quando ele disse um número e o número é outro — a escrita
+    curta e o `-1` de erro. É o predicado que `enviado=` passa a refletir, em
+    vez do incondicional que dizia "enviado" por a chamada não ter levantado.
+    """
+    saidos = _bytes_que_sairam(escrito)
+    return saidos is None or saidos == int(pedidos)
+
+
 @dataclass
 class _DesiredOutput:
     """Último output aplicado = "perfil ativo" materializado em HID.
@@ -1797,8 +1832,13 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             fallback: list[int] = super().prepareReport()
             return fallback
 
-    def writeReport(self, outReport: list[int]) -> None:  # noqa: N802,N803 - upstream
+    def writeReport(self, outReport: list[int]) -> int | None:  # noqa: N802,N803 - upstream
         """Write com carimbo de sequência BT (BTREPORT-02), SERIALIZADO.
+
+        **Devolve quantos bytes saíram** (``None`` = o fio não disse), e é isso
+        que permite a quem chama dizer a verdade — ver `_escrever_conferindo`
+        logo abaixo. O upstream devolvia `None`; quem ignora o retorno segue
+        funcionando igual.
 
         Reports 0x31 ganham o contador por handle (wrap 0-15) + CRC recalculado
         NUMA CÓPIA — o buffer original (que `sendReport` guarda em
@@ -1846,9 +1886,39 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                 stamped = list(outReport)
                 rep.stamp_bt_seq(stamped, self._bt_seq)
                 self._bt_seq = (self._bt_seq + 1) & 0x0F
-                self.device.write(bytes(stamped))
-                return
-            self.device.write(bytes(outReport))
+                return self._escrever_conferindo(bytes(stamped))
+            return self._escrever_conferindo(bytes(outReport))
+
+    def _escrever_conferindo(self, quadro: bytes) -> int | None:
+        """Escreve `quadro` no fio e DEVOLVE o que o fio respondeu.
+
+        ESCRITA-QUE-NAO-MEDE-01 (19/09/2026). O corpo era
+        ``self.device.write(bytes(...))`` com o retorno JOGADO FORA, e esta é a
+        raiz de um instrumento que mentia: quem chama não tinha como saber se a
+        escrita saiu inteira, então concluía "saiu" de a chamada não ter
+        levantado exceção. Na noite de 19/09 o log dizia
+        ``cor=(0,255,0) enviado=True`` com a barra física APAGADA, e ela
+        confirmou com o olho.
+
+        **O comportamento da escrita não muda aqui — só o que ela RELATA.**
+        Não há retry, não há report diferente, não há bit tocado: o `hid_write`
+        é o mesmo, na mesma ordem, dentro do mesmo lock. O que passa a existir
+        é a resposta: quantos bytes foram pedidos e quantos o fio disse ter
+        escrito.
+
+        Devolve o inteiro que o `hidapi` respondeu, ou ``None`` quando ele não
+        respondeu número nenhum — ver :func:`_bytes_que_sairam` para por que
+        "não disse" **não** é "falhou".
+        """
+        escrito = self.device.write(quadro)
+        saidos = _bytes_que_sairam(escrito)
+        if saidos is not None and saidos != len(quadro):
+            logger.warning(
+                "escrita_curta_no_hidraw",
+                pedidos=len(quadro),
+                saidos=saidos,
+            )
+        return saidos
 
 
 class PyDualSenseController(IController):
@@ -4285,12 +4355,24 @@ class PyDualSenseController(IController):
                 # e o log diz "escrito" com a barra apagada.
                 escritor = getattr(handle, "writeReport", None)
                 if callable(escritor):
-                    escritor(list(report))
-                    ok = True
+                    escrito = escritor(list(report))
                 else:
                     device = getattr(handle, "device", handle)
                     escrito = device.write(report)
-                    ok = escrito is None or int(escrito) == len(report)
+                # ESCRITA-QUE-NAO-MEDE-01 (19/09/2026): a conferência vale nos
+                # DOIS ramos. Era `ok = True` incondicional no ramo do
+                # `writeReport` — e handle BT toma SEMPRE esse ramo, então a
+                # única conferência que existia estava em código que o rádio
+                # nunca alcança. O log dizia `enviado=True` com a barra
+                # apagada, medido com o olho dela na noite de 19/09.
+                ok = _escrita_completa(escrito, len(report))
+                if not ok:
+                    logger.warning(
+                        "gatilho_da_cor_escrita_curta",
+                        key=key,
+                        pedidos=len(report),
+                        saidos=_bytes_que_sairam(escrito),
+                    )
             except Exception as exc:
                 logger.warning("gatilho_da_cor_falhou", key=key, err=str(exc))
             resultado[key] = ok
