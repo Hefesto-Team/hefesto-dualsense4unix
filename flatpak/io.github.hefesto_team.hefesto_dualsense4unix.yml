@@ -383,6 +383,13 @@ modules:
       # em /usr/local/lib, quem grava é o helper rodando elevado no HOST.
       - install -Dm755 scripts/bt_nosniff_now.sh
           /app/share/hefesto-dualsense4unix/scripts/bt_nosniff_now.sh
+      # O-NO-NASCE-FECHADO-01 (20/09/2026): o install-host-udev.sh decide em
+      # tempo de execução se a 70 vai FECHADA (com broker) ou ABERTA (sem), e
+      # quem gera a variante aberta é este script. Sem ele bundlado o helper cai
+      # no fail-safe e não instala a 70 nenhuma — fechá-la sem quem a abra
+      # deixaria o DualSense inutilizável.
+      - install -Dm755 scripts/regra_do_no_aberta.sh
+          /app/share/hefesto-dualsense4unix/scripts/regra_do_no_aberta.sh
       # o `bt_active_mode.sh` é o ExecStartPost do drop-in do bluetooth.service e o `bt_ponte_privilegiada.sh` é o helper que a janela chama; sem eles no pacote, os dois caminhos apontam para arquivo que nunca existe (22/08/2026)
       - install -Dm755 scripts/bt_active_mode.sh
           /app/share/hefesto-dualsense4unix/scripts/bt_active_mode.sh

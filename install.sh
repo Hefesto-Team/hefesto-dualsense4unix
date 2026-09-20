@@ -52,6 +52,15 @@
 #                         USB em /usr/share/alsa/ucm2, sem tocar o alsa-ucm-conf.
 #                         Sem ele o GE-Proton não acha a vibração dos jogos da
 #                         Sony pelo cabo. --no-udev também pula este passo.
+#   --no-fechar-o-no      OPT-OUT do nó que nasce FECHADO (DEFAULT ON, decisão
+#                         dela de 20/09/2026). Por default o hidraw do DualSense
+#                         físico nasce 0600 root (TAG-="uaccess") e o broker o
+#                         abre sob pedido — é o que impede a Steam de pegá-lo no
+#                         instante da conexão e deixar a barra de luz apagada.
+#                         Com esta flag o nó volta a nascer aberto para a sessão,
+#                         e o broker é renderizado sabendo disso (as duas metades
+#                         da cura têm de concordar). Use só se precisar do nó
+#                         aberto para ferramenta de terceiro.
 #   --no-kernel-watch     OPT-OUT do kernel-watch (DEFAULT ON): serviço de
 #                         usuário que vigia o ecossistema USB/BT/xHCI no journal
 #                         (storm -71, rate-limit do 8BitDo BT, erros de hci/xHCI
@@ -255,6 +264,15 @@ SKIP_KERNEL_WATCH=0
 NO_PROTON_PIN=0
 SKIP_SND_QUIRK=0
 NO_UCM=0
+# O-NO-NASCE-FECHADO-01 (decisão dela, 20/09/2026): o nó hidraw do DualSense
+# físico NASCE FECHADO (0600 root) e o Hefesto o abre sob pedido. É DEFAULT,
+# sem flag e sem pergunta — palavra dela: *"o Hefesto tem que ter prioridade em
+# tudo e isso deveria estar no install por default"*. O `--no-fechar-o-no` é o
+# opt-OUT para quem precise do nó aberto para a sessão (diagnóstico com
+# ferramenta de terceiro, máquina sem o broker de pé): instala a regra udev
+# aberta E renderiza o broker sabendo disso, porque as duas metades têm de
+# concordar. Nasce 0 = a cura vale.
+ABRIR_O_NO=0
 KEEP_STEAM_INPUT=0
 # CONFERENCIA-FINAL-01: o doctor roda no fim, por padrão. `--no-doctor` pula.
 RUN_DOCTOR=1
@@ -293,6 +311,7 @@ for arg in "$@"; do
         --no-dkms)            NO_DKMS=1 ;;
         --no-snd-quirk)       SKIP_SND_QUIRK=1 ;;
         --no-ucm)             NO_UCM=1 ;;
+        --no-fechar-o-no)     ABRIR_O_NO=1 ;;
         --no-kernel-watch)    SKIP_KERNEL_WATCH=1 ;;
         --with-storm-watch)   : ;;  # deprecated: o kernel-watch já é DEFAULT
         --no-proton-pin)      NO_PROTON_PIN=1 ;;

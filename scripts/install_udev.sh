@@ -17,6 +17,13 @@ ASSETS="$HERE/assets"
 # FEAT-DSX-DEFINITIVE-FIX-01 §7.5.
 DISABLE_USB_AUDIO=0
 
+# O-NO-NASCE-FECHADO-01 (decisão dela, 20/09/2026): o `70-ps5-controller.rules`
+# versionado FECHA o nó do DualSense físico (`TAG-="uaccess"`, 0600 root) e o
+# broker o abre sob pedido. É o DEFAULT, por ordem dela. `--no-fechar-o-no`
+# instala uma cópia com as duas linhas 0ce6 reabertas — para quem precise do nó
+# aberto para ferramenta de terceiro, ou para reverter sem editar asset.
+ABRIR_O_NO=0
+
 # Mesmo padrão do uninstall.sh e do purge.sh: `--help` sai 0 e argumento
 # desconhecido ABORTA com 2 sem escrever nada em /etc. Aqui o pior caso é
 # inócuo (o script só reaplica regras), mas dois padrões de parser na mesma
@@ -31,6 +38,12 @@ sudo. Idempotente: reexecutar é seguro.
 Opções:
   --disable-usb-audio   instala também a regra 75 (opt-in): desliga o áudio USB
                         do DualSense inteiro — sem microfone NEM fone do jack
+  --no-fechar-o-no      OPT-OUT: o hidraw do DualSense físico volta a nascer
+                        ABERTO para a sessão. Por default ele nasce 0600 root e
+                        quem o abre é o broker, sob pedido — é o que impede a
+                        Steam de pegá-lo no instante da conexão pelo rádio. Se
+                        usar aqui, use também no ./install.sh: o broker precisa
+                        ser renderizado sabendo disso
   --help, -h            mostra esta ajuda e sai
 
 Nada é instalado enquanto esta ajuda estiver sendo exibida.
@@ -40,6 +53,7 @@ FIM
 for arg in "$@"; do
     case "$arg" in
         --disable-usb-audio) DISABLE_USB_AUDIO=1 ;;
+        --no-fechar-o-no)    ABRIR_O_NO=1 ;;
         --help|-h)           uso; exit 0 ;;
         *)
             echo "argumento desconhecido: $arg" >&2
@@ -69,6 +83,7 @@ for f in \
     "$ASSETS/hefesto-dualsense4unix.conf" \
     "$HERE/scripts/bt_nosniff_now.sh" \
     "$HERE/scripts/bt_bonds_snapshot.sh" \
+    "$HERE/scripts/regra_do_no_aberta.sh" \
     "$ASSETS/systemd/hefesto-bt-bonds-snapshot.service" \
 ; do
     [[ -f "$f" ]] || { echo "ERRO: asset ausente: $f" >&2; exit 1; }
@@ -96,7 +111,28 @@ else
 fi
 
 echo "[1/3] copiando udev rules para /etc/udev/rules.d/..."
-sudo install -Dm644 "$ASSETS/70-ps5-controller.rules"             /etc/udev/rules.d/70-ps5-controller.rules
+if [[ "$ABRIR_O_NO" -eq 1 ]]; then
+    # A transformação tem UM DONO desde 20/09/2026: `scripts/regra_do_no_aberta.sh`.
+    # O `sed` morava aqui inline; quando os pacotes de distro passaram a
+    # precisar da mesma variante aberta (auditoria da O-NO-NASCE-FECHADO-01,
+    # bloqueante 3), seis cópias do `sed` seriam seis oportunidades de uma
+    # delas envelhecer sozinha. As duas guardas — «sobrou linha fechada?» e
+    # «saíram as DUAS linhas 0ce6 abertas?» — moram lá, e ele não escreve o
+    # destino quando qualquer uma reprova.
+    _regra_aberta="$(mktemp)"
+    if ! bash "$HERE/scripts/regra_do_no_aberta.sh" \
+            "$ASSETS/70-ps5-controller.rules" "$_regra_aberta"; then
+        rm -f "$_regra_aberta"
+        echo "ERRO: --no-fechar-o-no não conseguiu reabrir todas as linhas do asset." >&2
+        echo "nada foi instalado. Confira assets/70-ps5-controller.rules." >&2
+        exit 1
+    fi
+    sudo install -Dm644 "$_regra_aberta"                          /etc/udev/rules.d/70-ps5-controller.rules
+    rm -f "$_regra_aberta"
+    echo "  AVISO: --no-fechar-o-no — o hidraw do DualSense nasce ABERTO; a Steam pode pegá-lo antes do broker"
+else
+    sudo install -Dm644 "$ASSETS/70-ps5-controller.rules"         /etc/udev/rules.d/70-ps5-controller.rules
+fi
 sudo install -Dm644 "$ASSETS/71-uinput.rules"                     /etc/udev/rules.d/71-uinput.rules
 # 71-uhid: /dev/uhid acessível ao usuário — o gamepad virtual vira um DualSense de
 # verdade (hidraw + lightbar + LEDs + sensores), o que faz a vibração funcionar
