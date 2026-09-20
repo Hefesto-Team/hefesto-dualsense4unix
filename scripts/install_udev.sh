@@ -83,6 +83,7 @@ for f in \
     "$ASSETS/hefesto-dualsense4unix.conf" \
     "$HERE/scripts/bt_nosniff_now.sh" \
     "$HERE/scripts/bt_bonds_snapshot.sh" \
+    "$HERE/scripts/regra_do_no_aberta.sh" \
     "$ASSETS/systemd/hefesto-bt-bonds-snapshot.service" \
 ; do
     [[ -f "$f" ]] || { echo "ERRO: asset ausente: $f" >&2; exit 1; }
@@ -111,14 +112,16 @@ fi
 
 echo "[1/3] copiando udev rules para /etc/udev/rules.d/..."
 if [[ "$ABRIR_O_NO" -eq 1 ]]; then
-    # Reabre SÓ as duas linhas do DualSense standard (0ce6). As do Edge (0df2)
-    # e a do vpad nunca fecharam — ver o cabeçalho do asset.
+    # A transformação tem UM DONO desde 20/09/2026: `scripts/regra_do_no_aberta.sh`.
+    # O `sed` morava aqui inline; quando os pacotes de distro passaram a
+    # precisar da mesma variante aberta (auditoria da O-NO-NASCE-FECHADO-01,
+    # bloqueante 3), seis cópias do `sed` seriam seis oportunidades de uma
+    # delas envelhecer sozinha. As duas guardas — «sobrou linha fechada?» e
+    # «saíram as DUAS linhas 0ce6 abertas?» — moram lá, e ele não escreve o
+    # destino quando qualquer uma reprova.
     _regra_aberta="$(mktemp)"
-    sed -e 's/MODE="0600", OWNER="root", GROUP="root", TAG-="uaccess"/MODE="0660", TAG+="uaccess"/' \
-        "$ASSETS/70-ps5-controller.rules" > "$_regra_aberta"
-    # O grep IGNORA comentário: o cabeçalho do asset CITA `TAG-="uaccess"` ao
-    # explicar como reverter, e uma guarda que lesse a prosa reprovaria sempre.
-    if grep -v '^[[:space:]]*#' "$_regra_aberta" | grep -q 'TAG-="uaccess"'; then
+    if ! bash "$HERE/scripts/regra_do_no_aberta.sh" \
+            "$ASSETS/70-ps5-controller.rules" "$_regra_aberta"; then
         rm -f "$_regra_aberta"
         echo "ERRO: --no-fechar-o-no não conseguiu reabrir todas as linhas do asset." >&2
         echo "nada foi instalado. Confira assets/70-ps5-controller.rules." >&2

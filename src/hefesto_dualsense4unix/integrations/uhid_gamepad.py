@@ -796,20 +796,36 @@ def capture_dualsense_blueprint(hidraw_path: str) -> dict[str, Any] | None:
                     tamanho=len(descriptor))
 
     features: dict[int, bytes] = {}
+    # A PORTA, e não é `os.open` (O-NO-NASCE-FECHADO-01, auditoria de
+    # 20/09/2026). Com a regra da cura instalada o `/dev/hidraw` do físico
+    # nasce `0600 root`, e um `os.open(path)` daqui colhe `EACCES` e devolve
+    # None — que se lê como «o controle não respondeu features», o sintoma
+    # errado, sobre o aparelho errado. O `abrir_hidraw` entra pelo `cmd open`
+    # do broker (fd O_RDWR por SCM_RIGHTS, servido por root), com queda
+    # DECLARADA para o `open()` direto de quem não tem broker. É a mesma porta
+    # que a irmã `scripts/capture_blueprint.py` já usava desde 15/08/2026 —
+    # esta ficou para trás e só apareceu quando o nó passou a nascer fechado.
+    from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+        PortaFechadaError,
+        abrir_hidraw,
+    )
+
     try:
-        fd = os.open(hidraw_path, os.O_RDWR)
-    except OSError as exc:
+        aberto = abrir_hidraw(hidraw_path, escrita=True)
+    except PortaFechadaError as exc:
         logger.warning("uhid_hidraw_open_failed", path=hidraw_path, err=str(exc))
         return None
+    logger.debug("uhid_blueprint_porta", path=hidraw_path, porta=aberto.porta,
+                 motivo=aberto.motivo)
     try:
         for report_id, size in _FEATURE_SIZES:
             try:
-                features[report_id] = _hidiocgfeature(fd, report_id, size)
+                features[report_id] = _hidiocgfeature(aberto.fd, report_id, size)
             except OSError as exc:
                 logger.warning("uhid_feature_read_failed", report=hex(report_id),
                                err=str(exc))
     finally:
-        os.close(fd)
+        aberto.fechar()
 
     # O probe do hid_playstation lê o 0x09 para o MAC — e nós sobrescrevemos os
     # bytes 1..6 dele com o MAC do jogador. Um report vazio/truncado passava no

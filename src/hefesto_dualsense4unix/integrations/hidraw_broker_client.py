@@ -583,6 +583,17 @@ def make_exposicao_factory(daemon: Any) -> Callable[[str], AbstractContextManage
     """
 
     def _exposicao(path: str) -> AbstractContextManager[bool]:
+        # O MODO NATIVO GANHA DO `with` TRANSITÓRIO (auditoria de 20/09/2026).
+        # A lease de exposição do broker é por CONEXÃO, e este `with` sai do
+        # MESMO cliente que o pedido do Modo Nativo: o `unexpose` do `finally`
+        # acharia o nó no `held` da conexão, veria `refcount == 1` e mandaria o
+        # nó para o REPOUSO — fechando, no meio do Modo Nativo, o nó que o
+        # jogo está usando. O reconciliador reabriria em até 2 s, e 2 s é
+        # exatamente a janela que a Steam usa.
+        with contextlib.suppress(Exception):
+            ja_aberto = getattr(daemon, "no_exposto_pelo_modo_nativo", None)
+            if callable(ja_aberto) and ja_aberto(path):
+                return contextlib.nullcontext(True)
         try:
             client = broker_client_for(daemon)
         except Exception:
