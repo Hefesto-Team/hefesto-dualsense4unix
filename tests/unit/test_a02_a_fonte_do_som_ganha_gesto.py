@@ -78,6 +78,45 @@ def casa(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> pathlib.Pat
     return profiles_dir()
 
 
+@pytest.fixture(autouse=True)
+def _o_cache_da_camada_1_comeca_vazio() -> Any:
+    """Esta régua mede o MÓDULO, então ela garante o estado do módulo.
+
+    **A MESMA CURA, PELO MESMO ENVENENADOR** — a irmã
+    `test_a02_os_botoes_do_som_fazem_o_que_dizem.py` já a tinha desde a costura
+    de 11/09/2026, e o par é literalmente o mesmo:
+
+        pytest test_a02_o_botao_do_mic_tem_tres_estados.py <este arquivo>
+            -> 2 failed, `assert '' == 'jogo'`
+        pytest <este arquivo>
+            -> 12 passed
+
+    `a02.pacote(ctx)` do vizinho preenche o cache de módulo `_CAMADA_1` com a
+    leitura DAQUELE contexto; quem roda depois no mesmo processo acha
+    `_CAMADA_1[P1]` e `aceso_da_rota` devolve o `botao_aceso` de lá (`""`) em
+    vez de ler o byte do `entry` que ESTA régua monta.
+
+    MEDIDO EM 20/09/2026, e o achado é de varredura, não desta leva: nenhum dos
+    dois arquivos mudou — só a vizinhança em que eles correm. **Estado de
+    módulo tem um dono, e quem mede o módulo o zera.**
+
+    E DEVOLVE O QUE ACHOU: um teste que limpa a casa do vizinho e não a devolve
+    troca um defeito de ordem por outro, na direção contrária.
+    """
+    from pacotes import a02_controles as a02
+
+    antes = dict(a02._CAMADA_1)
+    a02._CAMADA_1.clear()
+    quando, em_voo = a02._CAMADA_1_QUANDO[0], a02._CAMADA_1_EM_VOO[0]
+    a02._CAMADA_1_QUANDO[0] = 0.0
+    a02._CAMADA_1_EM_VOO[0] = False
+    yield
+    a02._CAMADA_1.clear()
+    a02._CAMADA_1.update(antes)
+    a02._CAMADA_1_QUANDO[0] = quando
+    a02._CAMADA_1_EM_VOO[0] = em_voo
+
+
 @pytest.fixture
 def fileira_de_tres(monkeypatch: pytest.MonkeyPatch) -> None:
     """A página publicada COM o terceiro botão — o mundo depois do `--publicar`.

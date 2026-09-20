@@ -80,6 +80,7 @@ from hefesto_dualsense4unix.integrations.fontes_de_captura import (
     CasamentoUSB,
     escolher_fonte,
     fontes_dualsense,
+    fontes_nativas,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -988,6 +989,38 @@ def canal_publicado(uniq: str, conectados: list[str]) -> bool | None:
             return False
         return None
     return escolher_fonte(fontes, uniq, list(conectados), usb) is not None
+
+
+def microfone_nativo_no_ar(uniq: str, conectados: list[str]) -> bool | None:
+    """Há fonte de captura NATIVA para `uniq` agora? `None` = não sei.
+
+    APARELHO-NAO-SE-CONTRADIZ-01, PARTE 3. É a irmã de :func:`canal_publicado`,
+    e a diferença é uma palavra: ali a pergunta é *"o canal deste controle está
+    no ar"* (o nosso serve), aqui é *"o kernel publica o microfone deste
+    controle sozinho"* — que é exatamente o que o botão «Nativo» promete.
+
+    Quem separa nossas fontes das do kernel é
+    :func:`fontes_de_captura.fontes_nativas`, e a razão de a pergunta ser essa
+    (e não *"é cabo?"*) está escrita lá: ela acompanha o aparelho sozinha.
+
+    **AS TRÊS RESPOSTAS SÃO TRÊS COISAS**, com a mesma disciplina da irmã:
+    ``True`` há nó nativo atribuível; ``False`` o ``pactl`` respondeu e não há;
+    ``None`` o ``pactl`` não respondeu. **"Não sei" nunca vira "não dá"** — um
+    botão que ficasse cinza por servidor de som mudo apagaria uma escolha dela
+    sem nenhum fato por trás.
+    """
+    rc, saida = _rodar(["pactl", "list", "sources", "short"])
+    if rc != 0:
+        return None
+    nativas = fontes_nativas(saida)
+    if not nativas:
+        return False
+    if escolher_fonte(nativas, uniq, [], None) is not None:
+        return True
+    usb = casamento_usb_agora(list(conectados))
+    if usb is None:
+        return None
+    return escolher_fonte(nativas, uniq, list(conectados), usb) is not None
 
 
 def casamento_usb_agora(uniqs: list[str]) -> CasamentoUSB | None:

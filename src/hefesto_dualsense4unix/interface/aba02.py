@@ -1168,6 +1168,32 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .rota button{flex:1;height:30px;border-radius:5px;font-size:10.5px;white-space:nowrap;font-family:inherit;
     border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);cursor:pointer}
   .rota button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
+  /* O «NATIVO» FORA DE ALCANCE — 20/09/2026, decisão dela, verbatim: *"Fica os
+     dois botões. Mas no rádio o botão fica cinza sem ser ativado"*.
+
+     POR QUE SUMIR SERIA PIOR, e é a razão que ela comprou: um botão que SOME
+     não ensina nada; um botão cinza diz *"isto existe, e aqui não dá"* — e
+     quem plugar o cabo vê a MESMA tela ganhar a opção, sem ter de descobrir
+     que ela existia. A tela é a mesma nos dois transportes; o que muda é o que
+     está ao alcance.
+
+     A CARA É A DA PEÇA DAS DEZ (`monta.botao_cinza` → `.seg button.apagado`),
+     letra por letra, e é de propósito: um segundo cinza nesta casa seria um
+     segundo vocabulário para o mesmo fato.
+
+     E O ENDEREÇO MORA NO CONTAINER, que é o oposto do que o bloco `.mic-modo`
+     mais acima proíbe — a exceção é real e é de alvo, não de descuido. O que
+     apagava os dois botões em 01/09 era o alvo `texto`, que faz
+     `el.textContent = t`; este é `classe`, que só liga e desliga um nome
+     (`hefesto_vivo.escrever`, ramo `classe`, que retorna antes de tocar em
+     conteúdo). O botão não pode carregá-lo porque `data-hef-alvo` é UM por
+     elemento e o dele já é o `on` do par — está escrito no próprio piloto.
+     UM CAMPO SÓ alimenta o cinza e a razão do `?`, como na peça das dez: com
+     dois, seria possível pintar cinza sem razão, ou razão sem cinza. */
+  .mic-modo.sem-nativo button[data-mic-modo="nativo"],
+  .mic-modo.sem-nativo button[data-mic-modo="nativo"]:hover{
+    border-color:var(--border-sutil);background:var(--panel);
+    color:var(--texto-mudo);font-weight:400;cursor:not-allowed}
   /* os 16 glifos: grandes, SOLTOS (sem caixa) e coloridos por identidade.
      UMA REGRA PARA OS QUATRO: `plast` é a cor do plástico (a variável do card) e
      `on` é a cor de "acendeu agora". Antes havia um par de regras por modelo
@@ -2665,11 +2691,16 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                    nome com os interruptores de sensor da mesma aba.
                    E O CONTAINER PERDEU O `data-campo` — ver o comentário no
                    CSS: endereçá-lo trocava os dois botões por um travessão. -->
-              <span class="rota mic-modo">
+              <!-- O «NATIVO» FICA CINZA ONDE ELE NÃO ALCANÇA — 20/09/2026,
+                   decisão dela: *"Fica os dois botões. Mas no rádio o botão
+                   fica cinza sem ser ativado"*. A razão vai no `?` ao lado, e
+                   o porquê de o endereço morar no CONTAINER (e não no botão)
+                   está no bloco `.mic-modo` do CSS. -->
+              <span class="rota mic-modo" data-campo="mic-nativo-fora" data-hef-alvo="classe" data-hef-classe="sem-nativo">
                 <button class="{'on' if mic_modo == 'virtual' else ''}" data-gesto="mic-modo" data-mic-modo="virtual" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="virtual"
                   title="{DICA_MIC_VIRTUAL}">Virtual</button>
                 <button class="{'on' if mic_modo == 'nativo' else ''}" data-gesto="mic-modo" data-mic-modo="nativo" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="nativo"
-                  title="{DICA_MIC_NATIVO}">Nativo</button>
+                  title="{DICA_MIC_NATIVO}">Nativo</button>{ponto_de_interrogacao("mic-nativo-fora")}
               </span>
             <!-- QUEM ESTÁ TE OUVINDO — 19/09/2026, decisão dela na
                  `A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01`, e ela escolheu as DUAS

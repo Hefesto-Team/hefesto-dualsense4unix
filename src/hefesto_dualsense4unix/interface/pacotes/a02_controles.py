@@ -1222,6 +1222,39 @@ _SONO: dict[str, str] = {}
 #: parou de lê-lo em 13/09/2026 (FRASES-E-DICAS-02): ela diz só o estado.
 _REGRA_DO_SONO: list[bool | None] = [None]
 
+#: A QUARTA LEITURA DA MESMA VOLTA — `{uniq: há fonte NATIVA?}`.
+#:
+#: APARELHO-NAO-SE-CONTRADIZ-01, PARTE 3 (20/09/2026). Chave AUSENTE e `None`
+#: são **não sei**, e "não sei" nunca apaga o botão: a razão está no dono da
+#: resposta (`eleicao_de_microfone.microfone_nativo_no_ar`).
+#:
+#: ELA PEGA CARONA na thread da `_camada_1` pela mesma razão do `_SONO` logo
+#: acima — é a MESMA família de pergunta (o PipeWire), e uma thread nova seria o
+#: terceiro leitor de servidor de som desta aba.
+_MIC_NATIVO: dict[str, bool | None] = {}
+
+
+def _ler_o_nativo(na_mesa: tuple[str, ...]) -> dict[str, bool | None]:
+    """`{uniq: há fonte nativa?}` da mesa inteira. BLOQUEANTE — roda `pactl`.
+
+    Uma pergunta por controle porque a resposta É por controle: com dois
+    DualSense no cabo há duas fontes nativas, e quem sabe casar cada uma com o
+    seu aparelho é o dono (`escolher_fonte`, pelo nome e pelo casamento USB).
+    """
+    from hefesto_dualsense4unix.integrations import eleicao_de_microfone
+
+    fora: dict[str, bool | None] = {}
+    for uniq in na_mesa:
+        if not uniq:
+            continue
+        try:
+            fora[uniq] = eleicao_de_microfone.microfone_nativo_no_ar(
+                uniq, list(na_mesa))
+        except Exception:
+            # Uma leitura que falha não apaga as outras e NÃO vira `False`.
+            continue
+    return fora
+
 
 def _ler_o_sono(lido: dict[str, Any]) -> dict[str, str]:
     """`{uniq: acordado|dormindo}` de quem tem sink. BLOQUEANTE — roda `pactl`.
@@ -1311,10 +1344,17 @@ def _camada_1(entradas: tuple[tuple[str, int | None], ...],
                 regra = audio_saida.regra_nunca_dorme_instalada()
             except Exception:
                 regra = None
+            # O NATIVO VEM NA MESMA VOLTA, e depois do sono: os três são
+            # leitura do mesmo servidor de som, e três threads para a mesma
+            # família de pergunta é o defeito que a `_camada_1` existe para não
+            # cometer.
+            nativo = _ler_o_nativo(na_mesa)
             _CAMADA_1.clear()
             _CAMADA_1.update(novo)
             _SONO.clear()
             _SONO.update(sono)
+            _MIC_NATIVO.clear()
+            _MIC_NATIVO.update(nativo)
             _REGRA_DO_SONO[0] = regra
         finally:
             _CAMADA_1_EM_VOO[0] = False
@@ -2039,6 +2079,46 @@ def modo_do_mic(endereco: str) -> str:
     return "virtual" if getattr(meu, "microfone", None) is True else "nativo"
 
 
+#: A RAZÃO DE O «NATIVO» ESTAR CINZA, em uma linha e sem jargão.
+#:
+#: APARELHO-NAO-SE-CONTRADIZ-01, PARTE 3. A pergunta foi dela: *"Tenho pensado
+#: se o botão virtual ou nativo do microfone ainda fazem sentido. Pq meio que
+#: todo o Mic dele é virtual por conta dos modos não?"* — e a intuição estava
+#: certa pela metade. No rádio só existe a ponte do Hefesto; no cabo existem AS
+#: DUAS, a do kernel e a nossa.
+#:
+#: A FRASE NÃO CONFESSA DÍVIDA NOSSA (regra dela, 07/09/2026): não dá para
+#: haver «Nativo» pelo rádio porque o BlueZ registra só HID e PnP para o
+#: DualSense — nenhum perfil de áudio. Isso é do aparelho, não da nossa fila, e
+#: a linha diz o fato sem pedir desculpa.
+RAZAO_DO_NATIVO_FORA = ("Pelo rádio o controle fala só a língua dos comandos: "
+                        "o som do microfone passa pelo Hefesto.")
+
+
+def nativo_fora_de_alcance(uniq: str) -> str:
+    """A razão quando o «Nativo» não alcança este controle; `""` quando alcança.
+
+    UM CAMPO SÓ alimenta os dois lados — o cinza do botão (alvo `classe` no
+    container) e o texto do `?` (alvo `html` na dica) —, que é o contrato da
+    peça das dez (`monta.botao_cinza`): com dois campos seria possível pintar
+    cinza sem razão, ou razão sem cinza.
+
+    **"NÃO SEI" NÃO APAGA BOTÃO.** `None` (servidor de som mudo, leitura ainda
+    não feita) devolve `""`, e o botão fica como está. Apagar uma escolha dela
+    por falta de resposta seria a tela decidindo no escuro — a mesma disciplina
+    de `eleicao_de_microfone.canal_publicado`, que nunca transforma silêncio em
+    "saiu do ar".
+
+    E A PERGUNTA É AO APARELHO, nunca ao transporte: quem responde é
+    `microfone_nativo_no_ar`, que procura uma fonte de captura deste controle
+    que **não** seja nossa. No dia em que o BlueZ publicar um perfil de áudio
+    para o DualSense, o botão volta ao alcance sozinho.
+    """
+    if not uniq:
+        return ""
+    return "" if _MIC_NATIVO.get(uniq) is not False else RAZAO_DO_NATIVO_FORA
+
+
 # ---------------------------------------------------------------------------
 # O QUE A PÁGINA PUBLICADA TEM — e por que o pacote precisa perguntar
 # ---------------------------------------------------------------------------
@@ -2077,6 +2157,36 @@ PAGINA = "02-controles.html"
 #: usa, e o `except` estreito da função é o que garante que ninguém a mova de
 #: volta em silêncio: acima daqui, o import REPROVA em vez de responder `False`.
 A_FILEIRA_TEM_TRES = _a_pagina_tem_o_ouvir_junto()
+
+
+def _a_pagina_tem_o_alcance_do_nativo() -> bool:
+    """A página PUBLICADA já sabe apagar o «Nativo»? Lido uma vez, do arquivo.
+
+    APARELHO-NAO-SE-CONTRADIZ-01, PARTE 3. Mesma régua — e as mesmas três
+    lições — do :func:`_a_pagina_tem_o_ouvir_junto` logo acima: pergunta ao
+    PUBLICADO (é ele que o piloto abre), depois de `PAGINA` existir, e engole
+    só as duas maneiras de um ARQUIVO faltar.
+
+    **E POR QUE ELA PRECISA EXISTIR:** o gerador escreve em `mockup/`, e quem
+    publica é ela (`check_o_desenho_aprovado.py --publicar 02`). Emitir
+    `mic-nativo-fora` para uma página que ainda não tem o endereço põe a chave
+    em `orfaos` no casamento das dez e reprova a régua que cobra isso. Enquanto
+    ela não aprovar, o campo não sai; no dia em que aprovar, ele liga sem que
+    ninguém toque em código.
+    """
+    from hefesto_dualsense4unix.interface import onde
+
+    try:
+        doc = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):  # pragma: no cover - defensivo
+        return False
+    return 'data-hef-classe="sem-nativo"' in doc
+
+
+#: A página publicada apaga o «Nativo»? Resolvido no import, **e AQUI de
+#: propósito** — acima da constante `PAGINA` a chamada morre com `NameError`,
+#: que é o defeito 1 medido em 11/09/2026 no irmão desta função.
+A_PAGINA_APAGA_O_NATIVO = _a_pagina_tem_o_alcance_do_nativo()
 
 
 def texto_da_bateria(pct: int | None) -> str:
@@ -2856,6 +2966,13 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # ressalva do transporte (que saiu, porque era dívida NOSSA).
                 "alto-ressalva": recado_da_rota(uniq) or NADA_A_DIZER,
                 "mic-modo-aceso": modo_do_mic(norm_mac(uniq) or ""),
+                # O «NATIVO» CINZA — 20/09/2026, decisão dela: *"Fica os dois
+                # botões. Mas no rádio o botão fica cinza sem ser ativado"*.
+                # A chave vai em TODO tique (é o que faz o cinza SAIR quando o
+                # cabo entra), e só enquanto a página publicada souber recebê-la
+                # — ver `_a_pagina_tem_o_alcance_do_nativo`.
+                **({"mic-nativo-fora": nativo_fora_de_alcance(uniq)
+                    or NADA_A_DIZER} if A_PAGINA_APAGA_O_NATIVO else {}),
                 # A DEGRADAÇÃO DA MÁSCARA SAIU DA TELA — 13/09/2026,
                 # A-MARCA-DA-DEGRADACAO-01. Era `mascara-degradou`: o asterisco
                 # colado ao nome da máscara, com a frase de
@@ -4383,6 +4500,23 @@ def mic_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # onde pousar.
     if not _mic_do_produto.pode_ligar_o_mic(dados):
         raise RuntimeError(_mic_do_produto.dica_do_microfone(dados))
+    # O «NATIVO» RECUSA ONDE ELE NÃO ALCANÇA — 20/09/2026, a outra metade da
+    # decisão dela. O botão fica CINZA e **continua respondendo** (é o contrato
+    # de `monta.botao_cinza`: `disabled` mataria o clique, e o clique é o único
+    # caminho de quem navega pelo controle até a razão). Então quem diz "não
+    # dá" é este `raise`, com a MESMA frase que o `?` mostra — um fato, uma
+    # frase, um dono.
+    #
+    # E SÓ O «NATIVO»: o «Virtual» grava nos dois transportes desde a D-12, e
+    # recusá-lo aqui reabriria a queixa 15 dela.
+    #
+    # E A FRASE VAI PELO NOME DA CONSTANTE, não pela variável que a condição
+    # devolve: a régua `check_a_tela_nao_confessa` reconstrói o recado do
+    # `raise` estaticamente, e `raise RuntimeError(razao)` chega a ela sem uma
+    # letra de prosa — um recado que nenhum portão de língua lê. O dono
+    # continua sendo UM (`RAZAO_DO_NATIVO_FORA`, o mesmo que o `?` mostra).
+    if qual == "nativo" and nativo_fora_de_alcance(uniq):
+        raise RuntimeError(RAZAO_DO_NATIVO_FORA)
 
     ok, motivo = _resposta(p.machine_declare(
         {"controles": {dados.endereco: {
