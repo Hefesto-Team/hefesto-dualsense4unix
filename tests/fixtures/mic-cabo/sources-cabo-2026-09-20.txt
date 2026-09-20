@@ -1,0 +1,98 @@
+	Name: alsa_input.usb-Sony_Interactive_Entertainment_DualSense_Wireless_Controller-00.HiFi__Mic__source
+	Description: DualSense wireless controller (PS5) Controller microphone
+	Driver: PipeWire
+	Sample Specification: s16le 2ch 48000Hz
+	Channel Map: front-left,front-right
+	Owner Module: 4294967295
+	Mute: no
+	Volume: front-left: 64225 /  98% / -0.53 dB,   front-right: 64225 /  98% / -0.53 dB
+	        balance 0.00
+	Base Volume: 65536 / 100% / 0.00 dB
+	Monitor of Sink: n/a
+	Latency: 0 usec, configured 0 usec
+	Flags: HARDWARE DECIBEL_VOLUME LATENCY
+	Properties:
+		alsa.card = "2"
+		alsa.card_name = "DualSense Wireless Controller"
+		alsa.class = "generic"
+		alsa.components = "USB054c:0ce6"
+		alsa.device = "0"
+		alsa.driver_name = "snd_usb_audio"
+		alsa.id = "USB Audio"
+		alsa.long_card_name = "Sony Interactive Entertainment DualSense Wireless Controller at usb-0000:0c:00."
+		alsa.mixer_device = "_ucm0003.hw:Controller"
+		alsa.mixer_name = "USB Mixer"
+		alsa.name = "USB Audio"
+		alsa.resolution_bits = "16"
+		alsa.subclass = "generic-mix"
+		alsa.subdevice = "0"
+		alsa.subdevice_name = "subdevice #0"
+		alsa.sync.id = "00000000:00000000:00000000:00000000"
+		api.alsa.card.longname = "Sony Interactive Entertainment DualSense Wireless Controller at usb-0000:0c:00."
+		api.alsa.card.name = "DualSense Wireless Controller"
+		api.alsa.open.ucm = "true"
+		api.alsa.path = "hw:Controller,0"
+		api.alsa.pcm.card = "2"
+		api.alsa.pcm.stream = "capture"
+		audio.channels = "2"
+		audio.position = "[ FL, FR ]"
+		card.profile.device = "1"
+		device.api = "alsa"
+		device.bus = "usb"
+		device.class = "sound"
+		device.icon_name = "audio-input-microphone"
+		device.id = "238"
+		device.profile.description = "Controller microphone"
+		device.profile.name = "HiFi: Mic: source"
+		device.routes = "1"
+		factory.name = "api.alsa.pcm.source"
+		media.class = "Audio/Source"
+		device.description = "DualSense wireless controller (PS5)"
+		node.dont-reconnect = "true"
+		node.name = "alsa_input.usb-Sony_Interactive_Entertainment_DualSense_Wireless_Controller-00.HiFi__Mic__source"
+		node.nick = "DualSense Wireless Controller"
+		node.pause-on-idle = "false"
+		object.path = "alsa:acp:Controller:1:capture"
+		port.group = "capture"
+		priority.driver = "1500"
+		priority.session = "1500"
+		factory.id = "19"
+		clock.quantum-limit = "8192"
+		client.id = "97"
+		node.driver = "true"
+		node.loop.name = "data-loop.0"
+		library.name = "audioconvert/libspa-audioconvert"
+		object.id = "83"
+		object.serial = "1494137"
+		node.max-latency = "16384/48000"
+		api.alsa.period-size = "512"
+		api.alsa.period-num = "64"
+		api.alsa.headroom = "512"
+		api.acp.auto-port = "false"
+		api.acp.auto-profile = "false"
+		api.alsa.card = "2"
+		api.alsa.split-enable = "true"
+		api.alsa.use-acp = "true"
+		api.dbus.ReserveDevice1 = "Audio2"
+		api.dbus.ReserveDevice1.Priority = "-20"
+		device.bus-id = "usb-Sony_Interactive_Entertainment_DualSense_Wireless_Controller-00"
+		device.bus_path = "pci-0000:0c:00.3-usb-0:4.1.3:1.0"
+		device.enum.api = "udev"
+		device.name = "alsa_card.usb-Sony_Interactive_Entertainment_DualSense_Wireless_Controller-00"
+		device.nick = "DualSense Wireless Controller"
+		device.plugged.usec = "88161581143"
+		device.product.id = "0x0ce6"
+		device.product.name = "DualSense wireless controller (PS5)"
+		device.serial = "Sony_Interactive_Entertainment_DualSense_Wireless_Controller"
+		device.subsystem = "sound"
+		sysfs.path = "/devices/pci0000:00/0000:00:08.1/0000:0c:00.3/usb3/3-4/3-4.1/3-4.1.3/3-4.1.3:1.0/sound/card2"
+		device.vendor.id = "0x054c"
+		device.vendor.name = "Sony Corp."
+		spa.object.id = "6"
+		device.string = "2"
+	Ports:
+		[In] Mic: Controller microphone (type: Mic, priority: 100, availability unknown)
+	Active Port: [In] Mic
+	Formats:
+		pcm
+

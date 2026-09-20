@@ -43,14 +43,27 @@ Ver ``integrations/canal_do_microfone.pedaco_do_bombeador`` e a régua
 AS QUATRO HIPÓTESES, EM ORDEM DE FORÇA
 =======================================
 
-**H1 — o ganho de hardware que o produto não sabe que existe.** O elemento ALSA
-de captura do DualSense no cabo chama-se literalmente ``Headset`` e foi medido a
-**31%** em 25/07/2026 (MIC-USB-01). E
+**H1 — o ganho de hardware que o produto não sabe que existe. A HIPÓTESE VIROU
+DO AVESSO EM 20/09/2026, e a cura de uma ponta é o contrário da cura da outra.**
+O elemento ALSA de captura do DualSense no cabo chama-se ``Headset`` (Feature
+Unit 5 do descritor UAC, faixa 0…12288 = 0…+48 dB). A MIC-USB-01 o mediu a
+**31%** em 25/07/2026; **esse número caiu**. Lido em repouso em 17/09 e de novo
+em 20/09/2026, nesta bancada: ``Mono: Capture 101 [100%] [48.00dB] [on]`` — **no
+topo da faixa**.
+
+A H1 dizia *"um sinal que nasce a um terço e é amplificado depois"*; o que se
+mede é o **oposto**: o sinal nasce com **+48 dB de ganho que ninguém escolheu**,
+e o produto não alcança o botão.
 ``grep -rn "amixer|alsactl|snd_ctl|alsaaudio" src/ scripts/ install.sh``
-devolve **VAZIO**: o produto nunca tocou o mixer ALSA. Um sinal que nasce a um
-terço e é amplificado depois é exatamente um sinal *"não limpo"* — e a
-``mic.volume`` dela não pode compensar, porque ``definir_volume_da_captura``
-trava em 0–100% (``integrations/audio_control.py``) e não amplifica.
+continua **VAZIO**, e a ``mic.volume`` dela trava em 0–100% em
+``integrations/audio_control.py`` — ela atenua, nunca amplifica, e não fala com
+este elemento. A pergunta deixa de ser *"falta ganho?"* e passa a ser **"sobra
+ganho, e ele não tem dono"**.
+
+O que decide se esses +48 dB pioram o som é se o ganho é analógico (o pré-amp
+traz ruído próprio) ou digital (o SNR não muda) — e **isso não se sabe**. Só o
+par controlado do ``--ganho`` separa os dois, ele ESCREVE no mixer dela, e por
+isso é janela própria, com ela presente. Ver ``--ganho-plano``.
 
 **H2 — o remix que ninguém escolheu.** O ``parec`` do alimentador é lançado com
 ``--rate``/``--channels`` tirados do **DESTINO** (o ``module-pipe-source``, que é
@@ -60,6 +73,21 @@ DualSense por USB põe coisas diferentes em canais diferentes: se a ENTRADA
 repetir o padrão — o mono num canal só do par —, o remix custa 6 dB e traz o
 ruído do canal morto junto. **Nenhuma régua desta casa lê o formato da ORIGEM**,
 então isso hoje é invisível a todos os portões.
+
+    **NOTA DE 20/09/2026 — a H2 sai da posição de candidata forte, e não é
+    apagada.** O remix 2 → 1 **não é, por si, uma perda**: a média ``(L+R)/2``
+    de dois microfones *melhora* o SNR em cerca de **3 dB**, porque o sinal é
+    correlacionado e soma coerente enquanto o ruído, descorrelacionado, cai por
+    raiz de 2. E as amostras já medidas confirmam o array de dois microfones —
+    energia praticamente igual nos dois canais (RMS 86,56 × 87,43) com apenas
+    **14,4%** de amostras idênticas (20.702 de 144.000), que é ruído
+    descorrelacionado, não mono duplicado nem canal morto. O ``Capture Channel
+    Map`` da placa fecha: ``chmap-fixed=FL,FR``, dois canais de verdade.
+    O que **ainda poderia** degradar é *comb filtering* por diferença de fase
+    entre os dois microfones — e isso **não foi medido**. A correlação cruzada
+    só responde com FALA: sobre ruído de fundo ela é plana por construção, e
+    *"não há atraso"* seria indistinguível de *"o instrumento não mede"*.
+    **Essa medição precisa da orelha dela.**
 
 **H3 — o ``common[7]`` que não sai no cabo.** Pelo rádio a base segura vai
 incondicionalmente; pelo cabo, por omissão, o byte nunca é escrito e o firmware
@@ -162,12 +190,96 @@ Este instrumento mede por **PulseAudio/ALSA** (``pactl``, ``amixer``,
 com o daemon.** O passo 4 é o único que escreve, e ele NÃO está aqui: ele é do
 ``escrita_pelo_broker.py``, que é a porta desta casa para isso.
 
+O QUE O DESCRITOR USB JÁ RESPONDEU, E FECHOU — MIC-CABO-SPDIF-01
+=================================================================
+
+A porta de captura que o PipeWire mostrava em 17/09 chamava-se
+``iec958-stereo-input`` e dizia «Entrada digital S/PDIF». **O aparelho não tem
+S/PDIF nenhum.** O ``--descritor`` prova isso sem servidor de som, sem daemon e
+em qualquer máquina: ele LÊ ``/sys/bus/usb/devices/<X>/descriptors`` e traduz
+cada ``wTerminalType`` por uma tabela do padrão UAC que mora dentro do
+instrumento. A captura sai pelo terminal **0x0402, «Headset»**; os dois códigos
+que significariam digital — ``0x0602`` («Digital audio interface») e ``0x0605``
+(«S/PDIF interface») — **não aparecem em lugar nenhum do descritor**. A palavra
+``iec958`` era invenção do lado do host: o DualSense falta na tabela
+``cards.USB-Audio.pcm.iec958_device`` do ``alsa-lib``, então ``iec958:CARD=…``
+cai no ``default 0`` e **é** ``hw:CARD,0`` — o mesmo e único PCM da placa.
+
+**Nenhum número desta seção é digitado: o valor vem do aparelho, o nome vem da
+tabela.** Se a Sony mudar o descritor num firmware novo, o instrumento acusa.
+
+O QUE FOI MEDIDO EM 20/09/2026, E O QUE NÃO FOI
+================================================
+
+Com um DualSense no cabo, tudo por leitura pura (``/proc``, ``/sys``, ``dpkg``,
+``amixer`` de consulta). **Nada tocou o servidor de som dela.**
+
+**FECHADO — o ganho em repouso.** ``Headset: Mono: Capture 101 [100%]
+[48.00dB] [on]``, lido duas vezes, com intervalo, e **idêntico** às duas. É
+valor de repouso, não um terceiro dono mexendo.
+
+**FECHADO — o ``ctlerr=1``, e a ambiguidade era do LEITOR.** O ``ctlerr`` de
+``/proc/asound/cardN/usbmixer`` **não é contador de erro**: é o
+``ignore_ctl_error`` do mixer. Nesta máquina ele vem do quirk **desta casa** —
+``/etc/modprobe.d/hefesto-dualsense-storm.conf`` (SPRINT-GAME-RUMBLE-01) traz
+``quirk_flags=054c:0ce6:ignore_ctl_error|ctl_msg_delay_1m`` — enquanto o
+parâmetro global ``ignore_ctl_error`` continua em ``N``. E o log do kernel não
+traz uma linha de erro de mixer para esta placa. Logo não há defeito de leitura
+a suspeitar, e a porta analógica depende do fone, como a estrutura dizia.
+
+**FECHADO — o comando que a sprint mandava rodar estava errado.**
+``amixer -c N cget name='Headset Mic Jack'`` **falha** com «Cannot find the
+given element»: os dois jacks vivem em ``iface=CARD``, e o ``cget`` procura em
+``iface=MIXER``. Quem lê é ``amixer -c N contents``. Ler a falha como «o jack
+não existe» seria concluir o contrário do que há.
+
+**NÃO MEDIDO, com a razão** — os três, e nenhum é conclusão:
+
+* **o par com fone / sem fone.** Lidos agora, ``Headphone Jack`` e
+  ``Headset Mic Jack`` estão os dois em ``off`` — coerente com nada plugado no
+  P2. O outro lado do par precisa da mão dela.
+* **``hw:N,0`` direto contra a porta.** O nó de captura está **RUNNING**, então
+  o ``arecord`` disputa o PCM e volta ocupado. **Ocupado não é «o caminho está
+  quebrado»** — esta casa já concluiu isso sobre um caminho sadio. Só vale com
+  o nó conferidamente suspenso, e suspender o nó é mexer no som dela.
+* **o *comb filtering* entre L e R.** Precisa de FALA: sobre ruído de fundo a
+  correlação cruzada é plana por construção, e *"não há atraso"* seria
+  indistinguível de *"o instrumento não mede"*.
+
+**E O MUNDO MUDOU ENTRE 17 E 20/09, o que muda o DONO do defeito.** Com o UCM
+desta casa instalado (HAPTICA-NATIVA-01), o perfil da placa passou a ser
+``HiFi`` e a porta de captura passou de ``iec958-stereo-input`` (do
+``alsa-card-profile`` da distro) para ``[In] Mic``, do nosso
+``assets/ucm/DualSense-HiFi.conf``. **O ganho continua fora de alcance pelo
+mesmo motivo e por outro dono:** o ``SectionDevice."Mic"`` declara
+``CapturePCM`` e ``CapturePriority``, e nenhum ``CaptureVolume`` ou
+``CaptureMixerElem``.
+
+A RECOMENDAÇÃO, EM UMA LINHA, PARA ELA
+=======================================
+
+**NÃO trocar o perfil da placa** — o perfil está certo e quem mentia era o nome;
+trocar corta o áudio no meio da sessão e, sem headset no P2, devolve a source
+sem porta de captura que já entregou 327.680 bytes de silêncio digital.
+**O que há a decidir é outra coisa:** se o Hefesto passa a LIGAR o
+``Headset Capture Volume`` no próprio UCM — o que põe o ganho ao alcance da tela
+e dela — e, se sim, com que valor, porque hoje ele está no topo (+48 dB) e
+ninguém escolheu isso. O preço de cada lado: **ligar** dá o botão a ela e deixa
+o WirePlumber restaurar volume de captura por rota (que é uma camada a mais de
+estado persistido, a mesma família do mudo da camada 1); **não ligar** mantém os
++48 dB fixos, fora do alcance de todos. A medição que separa as duas é o
+``--ganho``, e ela é com a orelha dela.
+
 USO
 ====
     scripts/ensaios/o_caminho_do_mic_no_cabo.py --censo
+    scripts/ensaios/o_caminho_do_mic_no_cabo.py --descritor
     scripts/ensaios/o_caminho_do_mic_no_cabo.py --canais --segundos 10
+    scripts/ensaios/o_caminho_do_mic_no_cabo.py --ganho-plano
 
-Sem argumento, faz o censo.
+Sem argumento, faz o censo. O ``--descritor`` é o único que roda com o servidor
+de som caído. O ``--ganho-plano`` **imprime o protocolo e não mede nada**: o
+passo que ele descreve escreve no mixer dela.
 """
 
 from __future__ import annotations
@@ -192,6 +304,48 @@ _MARCA_NO_NOME = "dualsense"
 
 #: s16le. É o formato que o ``parec`` pede e o que este instrumento decodifica.
 _BYTES_POR_AMOSTRA = 2
+
+#: Os aparelhos cujo descritor este instrumento sabe ler, por ``idVendor:idProduct``.
+#: O DualSense e o DualSense Edge — os mesmos dois do quirk de áudio desta casa
+#: (``/etc/modprobe.d/hefesto-dualsense-storm.conf``).
+_APARELHOS_UAC = {
+    ("054c", "0ce6"): "DualSense",
+    ("054c", "0df2"): "DualSense Edge",
+}
+
+#: ``wTerminalType`` → nome do PADRÃO, da «USB Device Class Definition for
+#: Terminal Types» 1.0. **Esta tabela é o único texto digitado do
+#: ``--descritor``; o valor que se traduz vem do aparelho.** Os dois códigos que
+#: significam digital são o ``0x0602`` e o ``0x0605``, e é por eles que a
+#: pergunta «é S/PDIF?» se responde LENDO em vez de acreditar no rótulo do host.
+_TIPOS_DE_TERMINAL = {
+    0x0100: "USB Undefined", 0x0101: "USB Streaming", 0x01FF: "USB vendor specific",
+    0x0200: "Input Undefined", 0x0201: "Microphone", 0x0202: "Desktop microphone",
+    0x0203: "Personal microphone", 0x0204: "Omni-directional microphone",
+    0x0205: "Microphone array", 0x0206: "Processing microphone array",
+    0x0300: "Output Undefined", 0x0301: "Speaker", 0x0302: "Headphones",
+    0x0303: "Head Mounted Display Audio", 0x0304: "Desktop speaker",
+    0x0305: "Room speaker", 0x0306: "Communication speaker",
+    0x0307: "Low frequency effects speaker",
+    0x0400: "Bi-directional Undefined", 0x0401: "Handset", 0x0402: "Headset",
+    0x0403: "Speakerphone, no echo reduction",
+    0x0404: "Echo-suppressing speakerphone", 0x0405: "Echo-canceling speakerphone",
+    0x0500: "Telephony Undefined", 0x0501: "Phone line", 0x0502: "Telephone",
+    0x0503: "Down Line Phone",
+    0x0600: "External Undefined", 0x0601: "Analog connector",
+    0x0602: "Digital audio interface", 0x0603: "Line connector",
+    0x0604: "Legacy audio connector", 0x0605: "S/PDIF interface",
+    0x0606: "1394 DA stream", 0x0607: "1394 DV stream soundtrack",
+    0x0700: "Embedded Undefined", 0x0703: "CD player", 0x0710: "Radio Receiver",
+}
+
+#: Os DOIS códigos que declarariam uma interface digital. Se nenhum aparecer no
+#: descritor, a palavra «S/PDIF» que a tela do sistema mostra é do host.
+_TIPOS_DIGITAIS = (0x0602, 0x0605)
+
+#: Subtipos de descritor de classe (``bDescriptorType`` 0x24) que interessam
+#: numa interface AudioControl de UAC1.
+_AC_HEADER, _AC_INPUT, _AC_OUTPUT, _AC_FEATURE = 0x01, 0x02, 0x03, 0x06
 
 
 def _rodar(argv: list[str], *, entrada: bytes | None = None) -> str:
@@ -335,6 +489,283 @@ def _rms_e_pico(pcm: bytes, canais: int) -> list[tuple[float, int]]:
     return saida
 
 
+# --- O DESCRITOR USB, que responde «é S/PDIF?» sem servidor de som ----------
+
+
+def _aparelho_uac() -> tuple[str, str, str]:
+    """``(pasta em /sys, rótulo, "vid:pid")`` do primeiro DualSense no cabo.
+
+    Percorre ``/sys/bus/usb/devices`` e casa por ``idVendor``/``idProduct``.
+    **Não abre o aparelho, não fala com o daemon, não precisa de PipeWire.**
+    """
+    raiz = "/sys/bus/usb/devices"
+    try:
+        nomes = sorted(os.listdir(raiz))
+    except OSError:
+        return "", "", ""
+    for nome in nomes:
+        pasta = os.path.join(raiz, nome)
+        try:
+            with open(os.path.join(pasta, "idVendor"), encoding="ascii") as fonte:
+                vid = fonte.read().strip().lower()
+            with open(os.path.join(pasta, "idProduct"), encoding="ascii") as fonte:
+                pid = fonte.read().strip().lower()
+        except OSError:
+            continue
+        rotulo = _APARELHOS_UAC.get((vid, pid))
+        if rotulo:
+            return pasta, rotulo, f"{vid}:{pid}"
+    return "", "", ""
+
+
+def _descritores_crus(pasta: str) -> bytes:
+    """Os bytes de ``<pasta>/descriptors``, ou vazio."""
+    try:
+        with open(os.path.join(pasta, "descriptors"), "rb") as fonte:
+            return fonte.read()
+    except OSError:
+        return b""
+
+
+def _ler_uac(bruto: bytes) -> tuple[dict[int, dict], list[str]]:
+    """Percorre os descritores e devolve ``(unidades por id, linhas de fluxo)``.
+
+    Caminha a lista TLV (``bLength``, ``bDescriptorType``, …) e só interpreta o
+    que está DENTRO de uma interface de classe 0x01 (Audio): ``0x24`` é
+    CS_INTERFACE, e o significado do subtipo depende da subclasse da interface
+    corrente — AudioControl (0x01) tem terminais e unidades; AudioStreaming
+    (0x02) tem o formato e o terminal a que se liga.
+
+    Função PURA: recebe bytes, devolve estrutura. É ela que os testes medem.
+    """
+    unidades: dict[int, dict] = {}
+    fluxo: list[str] = []
+    subclasse = 0
+    ligado_a = 0
+    pos = 0
+    while pos + 1 < len(bruto):
+        tamanho = bruto[pos]
+        tipo = bruto[pos + 1]
+        if tamanho < 2 or pos + tamanho > len(bruto):
+            break
+        corpo = bruto[pos : pos + tamanho]
+        if tipo == 0x04 and tamanho >= 9:  # INTERFACE
+            subclasse = corpo[6] if corpo[5] == 0x01 else 0
+            ligado_a = 0
+        elif tipo == 0x24 and tamanho >= 3 and subclasse == 0x01:  # AudioControl
+            sub = corpo[2]
+            if sub == _AC_INPUT and tamanho >= 12:
+                unidades[corpo[3]] = {
+                    "tipo": "entrada",
+                    "terminal": corpo[4] | (corpo[5] << 8),
+                    "fonte": None,
+                    "canais": corpo[7],
+                    "mapa": corpo[8] | (corpo[9] << 8),
+                }
+            elif sub == _AC_OUTPUT and tamanho >= 9:
+                unidades[corpo[3]] = {
+                    "tipo": "saida",
+                    "terminal": corpo[4] | (corpo[5] << 8),
+                    "fonte": corpo[7],
+                    "canais": 0,
+                    "mapa": 0,
+                }
+            elif sub == _AC_FEATURE and tamanho >= 7:
+                unidades[corpo[3]] = {
+                    "tipo": "ganho",
+                    "terminal": None,
+                    "fonte": corpo[4],
+                    "canais": 0,
+                    "mapa": 0,
+                    "controles": bytes(corpo[6 : tamanho - 1]),
+                }
+        elif tipo == 0x24 and tamanho >= 3 and subclasse == 0x02:  # AudioStreaming
+            sub = corpo[2]
+            if sub == 0x01 and tamanho >= 4:  # AS_GENERAL
+                ligado_a = corpo[3]
+            elif sub == 0x02 and tamanho >= 11:  # FORMAT_TYPE I
+                taxa = corpo[8] | (corpo[9] << 8) | (corpo[10] << 16)
+                fluxo.append(
+                    f"terminal {ligado_a}: {corpo[4]} canal(is) × "
+                    f"{corpo[6]} bits × {taxa} Hz"
+                )
+        pos += tamanho
+    return unidades, fluxo
+
+
+def _terminal_da_captura(unidades: dict[int, dict]) -> int | None:
+    """O ``wTerminalType`` da ENTRADA que alimenta o fluxo que sobe para o host.
+
+    Anda a corrente ao contrário a partir do ``OUTPUT TERMINAL`` de tipo «USB
+    Streaming» (0x0101) — que é por onde o host recebe —, seguindo ``bSourceID``
+    até chegar a um terminal de entrada. **Não adivinha pelo nome nem pelo
+    índice: segue o que o descritor liga.**
+    """
+    origem: int | None = None
+    for unidade in unidades.values():
+        if unidade["tipo"] == "saida" and unidade["terminal"] == 0x0101:
+            origem = unidade["fonte"]
+            break
+    vistos: set[int] = set()
+    while origem is not None and origem in unidades and origem not in vistos:
+        vistos.add(origem)
+        unidade = unidades[origem]
+        if unidade["tipo"] == "entrada":
+            terminal = unidade["terminal"]
+            return terminal if isinstance(terminal, int) else None
+        origem = unidade["fonte"]
+    return None
+
+
+def _nome_do_terminal(codigo: int) -> str:
+    return _TIPOS_DE_TERMINAL.get(codigo, "(fora da tabela do padrão)")
+
+
+def _descritor() -> int:
+    """Responde «o microfone entra por uma porta digital?» LENDO o aparelho."""
+    pasta, rotulo, ids = _aparelho_uac()
+
+    print("=" * 78)
+    print("  o_caminho_do_mic_no_cabo — o DESCRITOR USB (leitura de /sys)")
+    print("=" * 78)
+    print(f"  interpretador ..... {sys.executable}")
+    print("  porta ............. /sys/bus/usb/devices (nem pactl, nem ALSA)")
+    print("  precisa de som? ... NÃO — roda com o PipeWire caído")
+    print("=" * 78)
+
+    if not pasta:
+        print()
+        print("  NÃO HÁ DUALSENSE NO CABO NESTA MÁQUINA.")
+        print("  O descritor só existe enquanto o aparelho está plugado.")
+        print("-" * 78)
+        print("RESUMO: mesa vazia — nada a afirmar sobre o descritor.")
+        print("-" * 78)
+        return 2
+
+    bruto = _descritores_crus(pasta)
+    if not bruto:
+        print()
+        print(f"  achei {rotulo} em {pasta}, mas não consegui ler `descriptors`.")
+        print("-" * 78)
+        print("RESUMO: leitura falhou — NÃO é o mesmo que «não é S/PDIF».")
+        print("-" * 78)
+        return 2
+
+    unidades, fluxo = _ler_uac(bruto)
+    print()
+    print(f"  aparelho .......... {rotulo}  ({ids})")
+    print(f"  em ................ {pasta}")
+    print(f"  descritores ....... {len(bruto)} bytes")
+
+    print()
+    print("  -- OS TERMINAIS, com o tipo TRADUZIDO pela tabela do padrão UAC ------")
+    if not unidades:
+        print("   (nenhuma unidade de AudioControl — o aparelho não declara áudio?)")
+    for uid in sorted(unidades):
+        unidade = unidades[uid]
+        if unidade["tipo"] == "ganho":
+            controles = unidade.get("controles", b"").hex(" ") or "(vazio)"
+            print(
+                f"   unidade {uid:2d}  GANHO (Feature Unit)  fonte={unidade['fonte']}"
+                f"  bmaControls={controles}"
+            )
+            continue
+        codigo = unidade["terminal"] or 0
+        lado = "ENTRADA" if unidade["tipo"] == "entrada" else "SAÍDA  "
+        extra = ""
+        if unidade["tipo"] == "entrada":
+            extra = f"  canais={unidade['canais']}  mapa=0x{unidade['mapa']:04x}"
+        else:
+            extra = f"  fonte={unidade['fonte']}"
+        print(
+            f"   unidade {uid:2d}  {lado}  0x{codigo:04x}"
+            f"  «{_nome_do_terminal(codigo)}»{extra}"
+        )
+
+    if fluxo:
+        print()
+        print("  -- O QUE CADA FLUXO CARREGA ------------------------------------------")
+        for linha in fluxo:
+            print(f"   {linha}")
+
+    digitais = sorted(
+        {
+            unidade["terminal"]
+            for unidade in unidades.values()
+            if unidade["terminal"] in _TIPOS_DIGITAIS
+        }
+    )
+    captura = _terminal_da_captura(unidades)
+
+    print()
+    print("-" * 78)
+    if captura is None:
+        print("VEREDITO: não achei a corrente de captura no descritor. NÃO conclua")
+        print("          nada sobre o microfone a partir desta corrida.")
+        print("-" * 78)
+        return 2
+    print(
+        f"captura: terminal 0x{captura:04x} ({_nome_do_terminal(captura)})"
+        f" · S/PDIF declarado: {'SIM' if digitais else 'NÃO'}"
+    )
+    if not digitais:
+        print()
+        print("Os dois códigos que declarariam digital — 0x0602 («Digital audio")
+        print("interface») e 0x0605 («S/PDIF interface») — NÃO aparecem no descritor.")
+        print("Toda palavra «S/PDIF» ou «iec958» que a tela do sistema mostrar é")
+        print("rótulo do HOST, não do aparelho, e não custa um byte de áudio.")
+    print("-" * 78)
+    return 0
+
+
+def _ganho_plano() -> int:
+    """IMPRIME o protocolo do par controlado do ganho. **Não mede nada.**
+
+    O passo que este texto descreve ESCREVE no mixer dela, e por isso ele não
+    roda aqui: a execução é janela própria, com ela presente, e com um
+    ``--restaura`` que devolve o valor **lido** antes de qualquer escrita — o
+    valor lido, nunca um valor digitado, que é a armadilha de medir contra a
+    própria saída.
+    """
+    print("=" * 78)
+    print("  o_caminho_do_mic_no_cabo — o PLANO do ganho (não mede, não escreve)")
+    print("=" * 78)
+    print()
+    print("  O par controlado: a MESMA frase, a MESMA duração, o MESMO comando,")
+    print("  um fator por vez, em três degraus do `Headset Capture Volume`:")
+    print()
+    print("      +48 dB (o de hoje)   ·   +24 dB   ·   0 dB")
+    print()
+    print("  Em cada degrau, TRÊS números: RMS da voz · pico · piso ENTRE as frases.")
+    print()
+    print("  -- A CONTA QUE DECIDE, escrita ANTES de medir ------------------------")
+    print("   piso e voz caem os MESMOS dB → o ganho é digital, aplicado depois do")
+    print("       conversor. O SNR não muda. A H1 morre inteira, e fica registrado")
+    print("       para ninguém remedir.")
+    print("   o piso cai MAIS que a voz  → o ganho é analógico e o pré-amp traz")
+    print("       ruído próprio. Há cura, e o número é dela.")
+    print("   a voz satura em +48 e não em +24 → há recorte hoje, e é audível.")
+    print("       Há cura, e é urgente.")
+    print()
+    print("  -- POR QUE ESTE COMANDO NÃO O EXECUTA --------------------------------")
+    print("   Escrever no `Headset Capture Volume` é escrever no SISTEMA dela, não")
+    print("   no Hefesto. O produto não tem hoje uma linha de amixer/alsactl em")
+    print("   src/, scripts/ nem install.sh. Se esse ganho ganhar dono, o dono é o")
+    print("   scripts/doctor.sh — que já é dono da camada 2 e já tem --fix — e ele")
+    print("   nasce com DEFAULT escrito e justificado, nunca «deixa como está».")
+    print()
+    print("  -- A RECOMENDAÇÃO, EM UMA LINHA, PARA ELA ---------------------------")
+    print("   NÃO trocar o perfil da placa: o perfil está certo e quem mentia era")
+    print("   o nome. O que há a decidir é se o Hefesto passa a LIGAR o")
+    print("   `Headset Capture Volume` no próprio UCM — ligar dá o botão a ela e")
+    print("   traz uma camada a mais de estado persistido; não ligar mantém os")
+    print("   +48 dB fixos, fora do alcance de todos.")
+    print("-" * 78)
+    print("RESUMO: plano impresso. Nada foi medido e nada foi escrito.")
+    print("-" * 78)
+    return 0
+
+
 def _censo() -> int:
     no = _no_do_cabo()
     card, perfil = _cartao_do_dualsense()
@@ -384,8 +815,14 @@ def _censo() -> int:
     print()
     print("   O produto NUNCA escreve aqui: `amixer`/`alsactl`/`snd_ctl` não")
     print("   aparecem em src/, scripts/ nem install.sh. E a `mic.volume` dela")
-    print("   trava em 0–100%: o deslizante da tela não recupera o que se perdeu")
-    print("   antes dele.")
+    print("   trava em 0–100% — ela ATENUA, nunca amplifica, e não fala com este")
+    print("   elemento.")
+    print()
+    print("   O 31% de 25/07/2026 (MIC-USB-01) CAIU. Lido em repouso em 17/09 e")
+    print("   de novo em 20/09/2026: 100% / +48,00 dB — o TOPO da faixa. A H1 não")
+    print("   morreu, virou do avesso: não é que falte ganho, é que SOBRA ganho e")
+    print("   ele não tem dono. Se é analógico ou digital, só o par controlado do")
+    print("   `--ganho-plano` separa, e esse passo é com ela.")
 
     print()
     print("  -- A ORIGEM NATIVA (antes do perfil) ---------------------------------")
@@ -463,8 +900,22 @@ def main() -> int:
     partidor = argparse.ArgumentParser(description=__doc__ and __doc__.splitlines()[0])
     partidor.add_argument("--censo", action="store_true", help="PASSO 1 (padrão)")
     partidor.add_argument("--canais", action="store_true", help="PASSO 2 — decide a H2")
+    partidor.add_argument(
+        "--descritor",
+        action="store_true",
+        help="o descritor USB: responde «é S/PDIF?» sem servidor de som",
+    )
+    partidor.add_argument(
+        "--ganho-plano",
+        action="store_true",
+        help="imprime o protocolo do par controlado do ganho — NÃO mede, NÃO escreve",
+    )
     partidor.add_argument("--segundos", type=int, default=10)
     args = partidor.parse_args()
+    if args.descritor:
+        return _descritor()
+    if args.ganho_plano:
+        return _ganho_plano()
     if args.canais:
         return _canais(max(1, args.segundos))
     return _censo()
