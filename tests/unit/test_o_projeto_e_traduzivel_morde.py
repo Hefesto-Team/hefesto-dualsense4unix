@@ -861,3 +861,45 @@ def test_forcar_piso_recusa_universo_vazio(tmp_path: Path) -> None:
     vazia.mkdir()
     with pytest.raises(catraca.CatracaTorta):
         _motor(vazia).forcar_piso("prosa-publicada", "uma razão qualquer")
+
+
+def test_o_portao_ainda_sobe_num_python_sem_tomllib(tmp_path: Path) -> None:
+    """O QUE A MORDIDA ARRANCA: o `try/except` em volta do `import tomllib`.
+
+    `pyproject.toml` declara `requires-python = ">=3.10"` e o job `lint-test`
+    do CI roda `pytest tests/unit` nas TRÊS versões, com `fail-fast: false`.
+    `tomllib` só existe a partir do 3.11: um import pelado mata a COLETA deste
+    arquivo na perna 3.10 — e módulo que some da coleta some CALADO, que é o
+    defeito que a GUARDA-GI-REAL-01 existe para pegar. O irmão
+    `check_version_consistency.py` já tinha a cura; este chamador ficou de fora.
+
+    A mordida esconde o `tomllib` do interpretador e lê a ÚLTIMA queixa. Com o
+    plano B, ela fala de `tomli` — o pacote que numa máquina 3.10 vem junto do
+    `pytest`. Sem ele, fala de `tomllib`, e a perna 3.10 é coleta quebrada.
+
+    Ela não prova que o 3.10 passa: aqui só há 3.12, e `tomli` não está
+    instalado. Prova que o caminho do plano B EXISTE e é percorrido — que é o
+    que um Python 3.10 precisa encontrar.
+    """
+    receita = (
+        "import sys\n"
+        "class _SemTomllib:\n"
+        "    def find_spec(self, nome, caminho=None, alvo=None):\n"
+        "        if nome == 'tomllib':\n"
+        "            raise ModuleNotFoundError(\"No module named 'tomllib'\")\n"
+        "        return None\n"
+        "sys.modules.pop('tomllib', None)\n"
+        "sys.meta_path.insert(0, _SemTomllib())\n"
+        "import importlib.util\n"
+        f"spec = importlib.util.spec_from_file_location('alvo', {str(SCRIPT)!r})\n"
+        "spec.loader.exec_module(importlib.util.module_from_spec(spec))\n"
+    )
+    prova = subprocess.run(
+        [sys.executable, "-c", receita], capture_output=True, text=True
+    )
+    ultima = [linha for linha in prova.stderr.splitlines() if linha.strip()]
+    ultima_queixa = ultima[-1] if ultima else ""
+    assert "tomllib" not in ultima_queixa, (
+        "o `import tomllib` está pelado: num Python 3.10 este arquivo nem "
+        f"chega a ser coletado.\n{prova.stderr[-600:]}"
+    )
