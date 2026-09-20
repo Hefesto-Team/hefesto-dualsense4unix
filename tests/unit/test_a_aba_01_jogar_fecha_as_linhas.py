@@ -275,7 +275,7 @@ def test_o_cadeado_manda_o_valor_absoluto_e_nunca_um_toggle() -> None:
     for guardado, pedido in ((False, True), (True, False)):
         p = _PonteDeMentira()
         aba.cadeado(_ctx([], autoswitch_locked=guardado),
-                    {"evento": "change"}, p)
+                    {"evento": "click"}, p)
         assert p.chamadas, "o cadeado não chamou NADA"
         nome, _, kwargs = p.chamadas[0]
         assert nome == "autoswitch_lock_set", (
@@ -306,7 +306,7 @@ def test_um_clique_grava_uma_vez_so_no_disco_dela() -> None:
     assert p.chamadas == [], (
         "o `click` gravou: um clique na caixa grava DUAS vezes no disco dela")
 
-    aba.cadeado(ctx, {"evento": "change"}, p)
+    aba.cadeado(ctx, {"evento": "click"}, p)
     assert len(p.chamadas) == 1, "o `change` não gravou"
 
     # E UM RECADO SEM `evento` CONTINUA VALENDO: a régua dos botões monta o
@@ -340,7 +340,7 @@ def test_o_cadeado_confirma_em_verde() -> None:
     # 1. O SERVIÇO CONFIRMOU: volta calado, e é isso que acende o verde.
     p = _PonteDeMentira()
     assert aba.cadeado(_ctx([], autoswitch_locked=False),
-                       {"evento": "change"}, p) is None
+                       {"evento": "click"}, p) is None
     assert p.chamadas, "o cadeado não chamou NADA"
 
     # 2. O SERVIÇO NÃO RESPONDEU (`None`): o verde não pode acender, e a frase
@@ -348,7 +348,7 @@ def test_o_cadeado_confirma_em_verde() -> None:
     #    *"o produto recusou, e a frase VAI PARA A TELA"*.
     p = _PonteDeMentira(cadeado=None)
     with pytest.raises(RuntimeError) as caiu:
-        aba.cadeado(_ctx([], autoswitch_locked=False), {"evento": "change"}, p)
+        aba.cadeado(_ctx([], autoswitch_locked=False), {"evento": "click"}, p)
     assert str(caiu.value) == aba.CADEADO_RECUSA, (
         f"a recusa disse {str(caiu.value)!r} — a frase é a da janela antiga, e "
         f"texto de tela novo é palavra dela")
@@ -358,7 +358,7 @@ def test_o_cadeado_confirma_em_verde() -> None:
     #    recusa por uma piscada verde sobre nada.
     p = _PonteDeMentira(cadeado=RuntimeError("o socket recusou"))
     with pytest.raises(RuntimeError):
-        aba.cadeado(_ctx([], autoswitch_locked=True), {"evento": "change"}, p)
+        aba.cadeado(_ctx([], autoswitch_locked=True), {"evento": "click"}, p)
 
 
 def test_a_palavra_do_cadeado_e_a_que_ela_ja_leu() -> None:
@@ -1060,6 +1060,17 @@ _LER_O_CADEADO = r"""
 })()
 """
 
+#: O EVENTO É `click`, E NÃO `change` — 19/09/2026. Um `<button>` NÃO emite
+#: `change`: só `<input>`, `<select>` e `<textarea>` emitem. O handler
+#: (`pacotes/a01_jogar.cadeado`) já filtrava por `click` desde aquele dia, com
+#: a razão escrita ao lado; estas réguas ficaram mandando `change` e reprovaram
+#: com «o cadeado não chamou NADA» sobre um produto que funcionava.
+#:
+#: Quem curou o produto não levou as réguas junto, e o preço foi oito réguas
+#: vermelhas por um dia. É a segunda metade do mesmo defeito do seletor logo
+#: abaixo: o cadeado virou `<button>` e a língua dele mudou inteira — a tag no
+#: seletor E o nome do evento.
+#:
 #: O CLIQUE, no cadeado do produto. Clicar por coordenada é a armadilha que
 #: esta casa já pagou duas vezes.
 #:
