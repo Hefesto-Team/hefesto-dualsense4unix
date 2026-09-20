@@ -512,6 +512,7 @@ echo
 # --- a corrida -------------------------------------------------------------
 VERMELHOS=()
 AUSENTES=()
+NAO_MEDIDOS=()
 TOTAL=0
 
 while IFS='|' read -r camada id runner argv; do
@@ -553,7 +554,30 @@ while IFS='|' read -r camada id runner argv; do
   fim=$(date +%s%N)
   ms=$(( (fim - inicio) / 1000000 ))
 
-  if [ "$rc" -eq 0 ]; then
+  # RC=0 NÃO É A MESMA COISA QUE «MEDIU», e a confusão entre as duas é a
+  # família de defeito que esta casa mais caçou em 2026. Medido em 20/09/2026,
+  # logo depois de o `sprints-fechadas` entrar: numa árvore SEM `docs/process/`
+  # — que é como todo worktree de agente nasce, porque `git worktree add` não
+  # copia arquivo ignorado — o portão imprimia, certinho, «NÃO MEDIDO: não há
+  # docs/process/sprints/ nesta árvore», e esta linha aqui engolia a saída e
+  # escrevia `sprints-fechadas ok`. Do lado de quem lê, verde sobre 46 sprints
+  # que ninguém abriu — byte por byte o defeito que a cura do portão dizia ter
+  # matado, mudado de andar.
+  #
+  # O CONTRATO, e ele vale para qualquer portão: quem NÃO PÔDE medir imprime
+  # `NÃO MEDIDO` na PRIMEIRA linha e devolve 0. Ele não reprova (faltou o
+  # dado, não o conserto) e também não passa por verde: sai nomeado, com a
+  # razão dele à mostra, e conta separado no fim.
+  # O casamento é por GLOB de `case`, não por fatia de string: `${s:0:10}`
+  # conta BYTES sob `LC_ALL=C` e CARACTERES fora dele, e o `Ã` tem dois bytes
+  # — a mesma linha acertaria e erraria conforme o ambiente de quem roda.
+  nao_mediu=0
+  case "$saida" in "NÃO MEDIDO"*) nao_mediu=1 ;; esac
+  if [ "$rc" -eq 0 ] && [ "$nao_mediu" -eq 1 ]; then
+    printf '  %-22s NÃO MEDIDO %5d ms\n' "$id" "$ms"
+    printf '%s\n' "$saida" | sed 's/^/      /'
+    NAO_MEDIDOS+=("$id")
+  elif [ "$rc" -eq 0 ]; then
     printf '  %-22s ok      %6d ms\n' "$id" "$ms"
   else
     printf '  %-22s VERMELHO rc=%s %5d ms\n' "$id" "$rc" "$ms"
@@ -567,8 +591,17 @@ if [ ${#AUSENTES[@]} -gt 0 ]; then
   echo "PORTÕES DECLARADOS E AUSENTES DA ÁRVORE (${#AUSENTES[@]}):"
   printf '  %s\n' "${AUSENTES[@]}"
 fi
+if [ ${#NAO_MEDIDOS[@]} -gt 0 ]; then
+  echo "NÃO MEDIDOS (${#NAO_MEDIDOS[@]}): ${NAO_MEDIDOS[*]}"
+  echo "  Faltou o DADO, não o conserto — eles não reprovam. Mas também não"
+  echo "  entram na conta dos verdes: ninguém pode dizer que estão certos."
+fi
 if [ ${#VERMELHOS[@]} -eq 0 ] && [ ${#AUSENTES[@]} -eq 0 ]; then
-  echo "TODOS VERDES — ${TOTAL} portões."
+  if [ ${#NAO_MEDIDOS[@]} -gt 0 ]; then
+    echo "VERDES — $((TOTAL - ${#NAO_MEDIDOS[@]})) de ${TOTAL} portões; ${#NAO_MEDIDOS[@]} NÃO MEDIDO(S)."
+  else
+    echo "TODOS VERDES — ${TOTAL} portões."
+  fi
   exit 0
 fi
 echo "REPROVOU: ${#VERMELHOS[@]} vermelho(s) de ${TOTAL}${VERMELHOS[0]+ -> }${VERMELHOS[*]:-}"

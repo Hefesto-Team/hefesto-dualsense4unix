@@ -25,6 +25,7 @@ clone limpo por ausência de ambiente.
 from __future__ import annotations
 
 import importlib.util
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -399,3 +400,113 @@ def test_o_movedor_esta_ligado_ao_portoes_sh():
         "leitura pura, o portão moveria arquivo por trás de quem trabalha")
     assert all("--mover" not in ln for ln in minhas), (
         f"o portão foi declarado com `--mover`: {minhas}")
+
+
+# ---------------------------------------------------------------------------
+# 10 — A FRONTEIRA É UMA SÓ, e quem responde por ela é o `--seco`
+#
+# `separa_presas_e_livres` nasceu em 20/09/2026 com uma promessa escrita na
+# docstring dela: *"`--seco` e `--exigir` precisam da MESMA fronteira, e duas
+# cópias divergem caladas"*. A promessa não tinha régua. Medido no mesmo dia,
+# ao conferir: devolvendo a `_exige` uma fronteira PRÓPRIA — `presas = toda
+# fechada com QUALQUER citação`, em vez de só a citação por caminho — as vinte
+# réguas do arquivo ficaram VERDES, e o produto passou a mentir nas duas
+# pontas ao mesmo tempo:
+#
+#     $ ... --exigir   ->  "OK: 1 fechada(s) ... todas presas"        rc=0
+#     $ ... --seco     ->  "LIVRES para descer: 1"
+#
+# O portão dizia que não havia o que descer sobre exatamente a sprint que o
+# `--mover` desceria no comando seguinte.
+#
+# A RÉGUA PERGUNTA AO DONO em vez de remontar o esperado: o dono da fronteira
+# é o `--seco`, porque é o que o `--mover` obedece quando escreve no disco.
+# Montar aqui a lista certa com as mesmas constantes que a função lê seria
+# tautologia — passaria com as duas fronteiras divergentes.
+# ---------------------------------------------------------------------------
+
+SO_NOME = "2026-01-04-A-TERCEIRA-DE-MENTIRA-03-so-o-nome-a-cita.md"
+LIVRE = "2026-01-05-A-QUARTA-DE-MENTIRA-04-ninguem-a-cita.md"
+
+
+def _as_tres(tmp_path):
+    """Uma presa por caminho, uma citada só pelo nome, e uma sem citação.
+
+    A do MEIO é o arranjo difícil: as duas fronteiras plausíveis discordam
+    sobre ela e concordam sobre as outras duas.
+    """
+    sprints = _arvore(tmp_path)
+    _cita_pelo_caminho(tmp_path)
+    for nome in (SO_NOME, LIVRE):
+        (sprints / nome).write_text(
+            f"---\nsprint: {nome[:40]}\nestado: feita\n---\n\n# X\n",
+            encoding="utf-8")
+    (tmp_path / "docs" / "process" / "UMA-LISTA.md").write_text(
+        f"A sprint `{SO_NOME}` fechou, e esta linha não diz pasta nenhuma.\n",
+        encoding="utf-8")
+    return sprints
+
+
+def _os_md_do_bloco(saida: str, abertura: str, fechamento: str) -> set[str]:
+    depois = saida.split(abertura)
+    assert len(depois) == 2, f"«{abertura}» não saiu uma vez só:\n{saida}"
+    corpo = depois[1].split(fechamento)[0]
+    return {p.strip() for p in re.findall(r"\S+\.md", corpo)}
+
+
+def test_a_fronteira_do_exigir_e_a_mesma_que_o_seco_usa(tmp_path):
+    """O que o portão manda descer é, nome por nome, o que o `--seco` solta.
+
+    A MORDIDA ARRANCA a chamada a `separa_presas_e_livres` dentro de `_exige`
+    e põe no lugar QUALQUER outra fronteira — contar toda citação, contar
+    nenhuma, perdoar quando houver presa. Este teste reprova nas três, porque
+    não compara contra uma lista digitada: compara contra a resposta do dono.
+    """
+    _as_tres(tmp_path)
+
+    seco = _roda(tmp_path, "--seco")
+    exigir = _roda(tmp_path, "--exigir")
+
+    soltas = {Path(p).name for p in _os_md_do_bloco(
+        seco.stdout, "LIVRES para descer:", "SECO:")}
+    descem = {Path(p).name for p in _os_md_do_bloco(
+        exigir.stdout, "podem descer AGORA:", "Rode scripts/")}
+
+    assert soltas, f"o `--seco` não soltou nenhuma — o caso perdeu o sentido:\n{seco.stdout}"
+    assert descem == soltas, (
+        "o `--exigir` e o `--seco` discordam sobre quem pode descer — são "
+        "duas fronteiras onde a docstring promete uma:\n"
+        f"  --seco solta:    {sorted(soltas)}\n"
+        f"  --exigir manda:  {sorted(descem)}\n{exigir.stdout}")
+    assert SO_NOME in descem, (
+        "a citada só pelo nome sumiu da lista do portão, e o `--mover` vai "
+        "descê-la assim mesmo — é o arranjo difícil, e é onde as duas "
+        f"fronteiras discordam:\n{exigir.stdout}")
+
+
+def test_o_exigir_reprova_exatamente_quando_o_mover_teria_o_que_fazer(tmp_path):
+    """rc=1 ⇔ o `--mover` desce alguma coisa. Medido MOVENDO, não lendo.
+
+    É a outra ponta da mesma fronteira, e ela fecha o laço no disco: o
+    veredito do portão é conferido contra o número de arquivos que o `--mover`
+    realmente tira da pasta viva, no mesmo estado de árvore.
+
+    A MORDIDA ARRANCA: qualquer divergência de fronteira entre `_exige` e
+    `_relata` quebra a equivalência — o portão passa a reprovar o que ninguém
+    move, ou a perdoar o que o próximo comando derruba.
+    """
+    sprints = _as_tres(tmp_path)
+    antes = {p.name for p in sprints.glob("*.md")}
+
+    exigir = _roda(tmp_path, "--exigir")
+    _roda(tmp_path, "--mover")
+
+    desceram = antes - {p.name for p in sprints.glob("*.md")}
+    assert (exigir.returncode == 1) == bool(desceram), (
+        f"o portão devolveu rc={exigir.returncode} e o `--mover` desceu "
+        f"{len(desceram)}: {sorted(desceram)}\n{exigir.stdout}")
+    descem = {Path(p).name for p in _os_md_do_bloco(
+        exigir.stdout, "podem descer AGORA:", "Rode scripts/")}
+    assert descem == desceram, (
+        "o portão nomeou uma lista e o disco recebeu outra:\n"
+        f"  portão: {sorted(descem)}\n  disco:  {sorted(desceram)}")
