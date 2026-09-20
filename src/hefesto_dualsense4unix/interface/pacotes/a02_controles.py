@@ -2603,6 +2603,40 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # OS QUATRO DA BANCADA. Eles só entram quando a página publicada tem
             # onde pô-los — ver `_so_se_a_pagina_tiver`, logo acima.
             **_so_se_a_pagina_tiver({
+                # QUEM ESTÁ TE OUVINDO, POR ESCRITO — 19/09/2026, e é a
+                # outra metade da decisão dela na
+                # `A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01`.
+                #
+                # **A LUZ DEIXOU DE PODER DIZER ISTO SOZINHA.** Até 19/09 o
+                # `0` queria dizer duas coisas — *"mudo"* e *"ninguém te
+                # ouve"* —, e foi por isso que ela, com o microfone LIGADO e
+                # ninguém gravando, leu a luz apagada como *"desligado"* e o
+                # primeiro clique **desligou** o microfone. Hoje a luz espelha
+                # o botão; o *"alguém te ouve"* virou o piscando, e o resto
+                # vira esta linha.
+                #
+                # **ELE ESTÁ AQUI, E NÃO NO BLOCO DE CIMA, PORQUE A BANCADA
+                # ANDOU NA FRENTE.** O endereço existe em `mockup/` e a página
+                # publicada ainda não o tem: emitir sempre poria a chave em
+                # `casamento.medir(...)["orfaos"]` e contaria em
+                # `cobertura.pintados` uma pintura que não acontece. No dia em
+                # que ela publicar a aba, esta linha passa a pintar sozinha —
+                # ninguém precisa voltar aqui.
+                #
+                # A PALAVRA TEM UM DONO SÓ (`mesa_viva.frase_de_quem_te_ouve`),
+                # e a lista vem do DAEMON, já sem os gravadores do próprio
+                # Hefesto — o medidor de nível desta mesma aba grava o canal o
+                # tempo todo, e contá-lo faria a tela dizer que alguém te ouve
+                # porque ela está aberta.
+                #
+                # `NADA_A_DIZER` quando não se sabe, e aí a `.ressalva` some
+                # sem cobrar um pixel (D-02 dela). A chave VAI EM TODO TIQUE:
+                # omiti-la deixaria a frase velha na tela para sempre, que é o
+                # defeito oposto e pior — a mesma instrução do `alto-ressalva`.
+                "mic-ressalva": (
+                    mesa_viva.frase_de_quem_te_ouve(a.get("ouvintes_do_mic"))
+                    or NADA_A_DIZER
+                ),
                 # O PONTINHO DO TOUCHPAD, decisão dela de 02/09 (item 15): *"o
                 # pontinho do touchpad só aparece quando há toque — hoje ele
                 # aparece com `touching` falso, contra o que a própria dica
@@ -2997,7 +3031,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 #   🎙  data-mudo="microfone"      `mic.set`      (ipc_handlers.py:4830)
 #   ♪   data-mudo="alto-falante"   `speaker.set`  (ipc_handlers.py:4664)
 #   Sons do jogo  data-rota="jogo" `speaker.set`  com `rota`, o mesmo :4589
-#   Virtual / Nativo  data-mic-modo  `machine.declare` (ipc_handlers.py:6713)
+#   Virtual / Nativo  data-mic-modo  `machine.declare` (ipc_handlers.py:6992)
 #
 # O "VIRTUAL / NATIVO" GANHOU DONO EM 01/09/2026, E A AFIRMAÇÃO ANTERIOR CAIU.
 # Aqui estava escrito, e é uma frase minha, da primeira leva:
