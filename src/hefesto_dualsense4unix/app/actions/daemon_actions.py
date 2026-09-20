@@ -773,9 +773,10 @@ def interpretar_guarda_do_steam_input(saida: object) -> tuple[str, str] | None:
     # BG-SAUDE-01 (26/08/2026): esta linha é a 13ª do MESMO cartão, e tinha os
     # dois defeitos das outras doze juntos — dizia "Conserto:" onde as outras
     # doze passaram a dizer "O que fazer:" (duas palavras para o mesmo papel na
-    # mesma tela), e cravava `bash install.sh`, que não existe em cinco dos
-    # seis formatos. O `./` ausente é o que a escondeu da varredura sintática
-    # da BG-INSTALL-01, que procura `./install.sh`.
+    # mesma tela), e cravava o instalador, que não existe em cinco dos seis
+    # formatos. A barra ausente a escondia da varredura sintática da
+    # BG-INSTALL-01 — ponto cego FECHADO em 20/09/2026 pela
+    # O-INSTALADOR-SEM-A-BARRA-01: a régua pega o nome em qualquer forma.
     return (
         storm_doctor.WARN,
         "Steam Input: a rede de segurança "
@@ -2283,8 +2284,8 @@ class DaemonActionsMixin(WidgetAccessMixin):
         else:
             btn.set_sensitive(False)
             btn.set_tooltip_text(
-                "O Hefesto ainda não foi instalado como serviço. Rode o "
-                "instalador (install.sh) uma vez."
+                "O Hefesto ainda não foi instalado como serviço — "
+                f"{como_atualizar_esta_instalacao()}."
             )
 
     # --- handlers ---
@@ -2388,7 +2389,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
         if err_type == "missing":
             self._show_restart_error(
                 "Este computador não tem o gerenciador de serviços que o "
-                "Hefesto usa. Rode o instalador (install.sh) uma vez."
+                f"Hefesto usa — {como_atualizar_esta_instalacao()}."
             )
             return False
         if err_type == "subprocess":

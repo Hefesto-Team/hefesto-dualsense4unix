@@ -250,6 +250,7 @@ from hefesto_dualsense4unix.integrations.fontes_de_captura import (
     PREFIXO_SOURCE_PONTE_BT,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalacao
 
 logger = get_logger(__name__)
 
@@ -578,7 +579,8 @@ def _carregar_libopus() -> ctypes.CDLL:
                 continue
         if lib is None:
             raise OpusIndisponivelError(
-                "libopus não encontrada (instale libopus0 — ver install.sh)"
+                "libopus não encontrada (instale libopus0 — "
+                f"{como_atualizar_esta_instalacao()})"
             )
         lib.opus_decoder_create.restype = ctypes.c_void_p
         lib.opus_decoder_create.argtypes = [
@@ -1867,7 +1869,10 @@ class Diagnostico:
                 "nenhum DualSense em Bluetooth (no cabo o mic já funciona sozinho)"
             )
         if not self.libopus:
-            faltas.append("libopus ausente — instale libopus0 (ver install.sh)")
+            faltas.append(
+                "libopus ausente — instale libopus0 "
+                f"({como_atualizar_esta_instalacao()})"
+            )
         if not self.pactl:
             faltas.append("pactl ausente — sem PipeWire/PulseAudio não há onde publicar")
         if self.pactl and not self.pipe_source:
