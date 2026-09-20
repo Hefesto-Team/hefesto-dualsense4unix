@@ -1104,7 +1104,7 @@ class Daemon:
             # ordem inversa, cai antes do IPC: o último a olhar a mesa não pode
             # ser o primeiro a acordar num daemon que já está se desmontando.
             # O nome do subsystem é ASCII, como o dos irmãos.
-            await self._safe_start("conexoes", self._start_conexoes)  # (noqa-acento): nome de subsystem, ASCII como o dos irmãos
+            await self._safe_start("conexoes", self._start_conexoes)  # (noqa-acento): nome ASCII
             await self._safe_start("plugins", self._start_plugins)
             # FEAT-METRICS-01: sobe o servidor de métricas Prometheus (gate
             # interno respeita metrics_enabled). Antes nunca era iniciado —
