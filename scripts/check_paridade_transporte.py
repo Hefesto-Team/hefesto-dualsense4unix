@@ -91,7 +91,7 @@ AVISO (não derruba o CI hoje)
                           afirmação verdadeira. Promoção por `RESULTADO_REPROVA`.
  10. `grau-sem-olho-dela` — o ensaio que sustenta o `O APARELHO OBEDECEU` existe
                           e diz que obedeceu, mas ninguém do `olho-dela` viu.
-                          `docs/process/METODO-DE-ISOLAMENTO.md` (seção "o que
+                          `docs/method/METODO-DE-ISOLAMENTO.md` (seção "o que
                           registrar em cada linha do mapa") diz que só o olho
                           dela sustenta esse degrau. Promoção por
                           `OLHO_DELA_REPROVA`.
@@ -503,7 +503,7 @@ SUFIXOS_EXIGIDOS = ("aciona", "de_onde_sei", "canal", "ate_onde_foi")
 #: ─────────────────────────────────────────────────────────────────────────
 #: A ESCADA DE `ate_onde_foi`, e este é o ÚNICO dono executável dela.
 #: ─────────────────────────────────────────────────────────────────────────
-#: A prosa e os critérios moram em `docs/process/METODO-DE-ISOLAMENTO.md`
+#: A prosa e os critérios moram em `docs/method/METODO-DE-ISOLAMENTO.md`
 #: (seção "O que registrar em cada linha do mapa"); o que roda mora aqui, e
 #: mais nada deve repetir a lista. Quem precisa dela IMPORTA daqui:
 #: `scripts/gerar-mapa.py` monta a legenda do `specs.html` a partir de `ESCADA`

@@ -1178,7 +1178,7 @@ outra coisa que não o produto"*. **GRAU: MEDIDO AQUI** para a divergência;
 o registro canônico é a
 [ESTADO-DA-NOITE-01](../process/sprints/arquivados/2026-08-10-ESTADO-DA-NOITE-01-o-que-ela-achou-com-o-controle-na-mao.md),
 §6, e o método de bancada é o
-[METODO-DE-ISOLAMENTO](../process/METODO-DE-ISOLAMENTO.md).
+[METODO-DE-ISOLAMENTO](../method/METODO-DE-ISOLAMENTO.md).
 
 **Esta seção não escolhe causa.** Ela documenta o caminho do rumble em cada
 camada para **estreitar a busca** — e derruba um sexto suspeito.
@@ -1612,5 +1612,5 @@ em devolver.
   — a cobertura POR PAR, que ainda não existe
 - [ESTADO-DA-NOITE-01](../process/sprints/arquivados/2026-08-10-ESTADO-DA-NOITE-01-o-que-ela-achou-com-o-controle-na-mao.md)
   — o defeito do rumble, e os cinco suspeitos caídos
-- [METODO-DE-ISOLAMENTO](../process/METODO-DE-ISOLAMENTO.md) — como se ensaia um
+- [METODO-DE-ISOLAMENTO](../method/METODO-DE-ISOLAMENTO.md) — como se ensaia um
   bit de cada vez

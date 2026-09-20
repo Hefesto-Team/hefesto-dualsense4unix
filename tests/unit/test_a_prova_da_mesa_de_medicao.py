@@ -38,6 +38,7 @@ import json
 import os
 import pathlib
 import re
+import shutil
 import subprocess
 import sys
 import urllib.error
@@ -1529,55 +1530,63 @@ def test_o_daemon_vivo_nao_e_mais_pobre_que_o_kernel(monkeypatch) -> None:
 
 
 # ---------------------------------------------------------------------------
-# ARQUIVAR A SPRINT NÃO PODE APAGAR O GESTO — 20/09/2026
+# O GESTO É DADO, E DADO VIAJA NO GIT — 20/09/2026
 # ---------------------------------------------------------------------------
-def test_o_dono_do_gesto_sobrevive_ao_arquivamento(tmp_path, monkeypatch) -> None:
-    """O arquivamento é rotina desta casa, e por isso é uma ARMADILHA.
+def test_os_dois_donos_do_gesto_sao_rastreados_pelo_git() -> None:
+    """O gesto das 199 células viaja no clone, ou não é gesto de ninguém.
 
-    Medido em 20/09/2026: os dois donos do gesto foram para
-    `sprints/arquivados/` quando as fechadas saíram da pasta que a IA lê, e
-    `_gesto_do_arquivo` passou a devolver `{}` — CALADO. As 199 células caíram
-    no fallback da procedência (canal, report, offset), que é literalmente o
-    defeito que ela apontou na linha 10 (*"sinceramente não entendi o que
-    diabos é pra fazer aqui"*), voltando inteiro seis dias depois. Sete réguas
-    ficaram vermelhas e nenhuma sabia dizer por quê.
+    Enquanto os donos moravam em `docs/process/` (`.gitignore:178`), eles
+    faltavam em TODO clone limpo e em TODA worktree de agente — e o motor
+    devolvia `{}` calado, porque a ausência era legítima. A ordem dela de
+    20/09 separou DADO de PROCESSO: *"mover o que as réguas precisam"*. Esta
+    régua cobra a metade que o `git` garante; a de baixo cobra o grito.
     """
-    sprints = tmp_path / "docs" / "process" / "sprints"
-    (sprints / "arquivados").mkdir(parents=True)
+    for relativo in (med._O_COMO_DAS_21, med._O_COMO_DO_MAPA):
+        assert relativo.startswith("docs/method/"), (
+            f"o dono do gesto voltou para uma pasta de processo: {relativo}")
+        assert (med.RAIZ / relativo).is_file(), f"sumiu do disco: {relativo}"
+        rastreado = subprocess.run(
+            ["git", "-C", str(med.RAIZ), "ls-files", "--error-unmatch",
+             relativo],
+            capture_output=True, text=True, check=False)
+        assert rastreado.returncode == 0, (
+            f"`{relativo}` não é rastreado pelo git — o gesto de 199 testes "
+            "morre no próximo clone limpo, calado, como morreu em 20/09")
+
+
+def test_o_dono_que_some_grita_e_nao_devolve_vazio(tmp_path, monkeypatch) -> None:
+    """A ausência virou defeito duro, e é a mudança de 20/09/2026.
+
+    ANTES: sem a pasta `docs/process` inteira o motor devolvia `{}` — e tinha
+    de devolver, porque um clone limpo não a tem. Aquele `{}` legítimo é o que
+    escondeu, por seis dias, o dono arquivado por baixo do leitor: as 199
+    células caíram no fallback da procedência (canal, report, offset), que é
+    literalmente o defeito que ela apontou na linha 10 (*"sinceramente não
+    entendi o que diabos é pra fazer aqui"*).
+
+    DEPOIS: o dono é versionado. Faltar não é mais ambiente — é remoção. Então
+    não há caso em que calar seja certo, e o motor levanta sempre.
+    """
     monkeypatch.setattr(med, "RAIZ", tmp_path)
-    relativo = "docs/process/sprints/UMA-SPRINT.md"
+    relativo = "docs/method/UM-DONO.md"
 
-    # 1 · NA PASTA VIVA — o caso de sempre.
-    viva = sprints / "UMA-SPRINT.md"
-    viva.write_text("conteúdo", encoding="utf-8")
-    assert med._o_dono_do_gesto(relativo) == viva
+    # 1 · NO LUGAR — o caso de sempre.
+    (tmp_path / "docs" / "method").mkdir(parents=True)
+    dono = tmp_path / relativo
+    dono.write_text("## um-id — título\n\n**O que isto prova.** algo\n",
+                    encoding="utf-8")
+    assert med._o_dono_do_gesto(relativo) == dono
 
-    # 2 · ARQUIVADA — o caso que quebrou. O gesto continua no disco.
-    viva.rename(sprints / "arquivados" / "UMA-SPRINT.md")
-    achado = med._o_dono_do_gesto(relativo)
-    assert achado is not None, (
-        "arquivar a sprint apagou o gesto de 199 testes — o motor voltou a "
-        "devolver {} calado, e o COMO vira a procedência repetida")
-    assert achado.parent.name == "arquivados", achado
-
-    # 3 · SUMIU DE VERDADE, com a pasta no disco — aí é defeito, e ele GRITA.
-    #     Devolver {} aqui é o que escondeu o estrago por seis dias.
-    achado.unlink()
+    # 2 · SUMIU, com a pasta no disco — alguém o moveu.
+    dono.unlink()
     assert med._o_dono_do_gesto(relativo) is None
     with pytest.raises(FileNotFoundError, match="o dono do gesto sumiu"):
         med._gesto_do_arquivo(relativo, r"##\s+(\S+)", lambda m: m.group(1))
 
-
-def test_sem_a_pasta_process_a_mesa_sobe_assim_mesmo(tmp_path, monkeypatch) -> None:
-    """Um clone limpo NÃO tem `docs/process` — ela é `.gitignore`.
-
-    A metade de cima desta cura levanta quando o dono some; esta prova que ela
-    não levanta quando a pasta INTEIRA não está aqui, que é o estado de toda
-    máquina que clonou o repositório. Confundir as duas quebraria a mesa em
-    todo clone limpo — e essa é a família que já derrubou o `release.yml`.
-    """
-    monkeypatch.setattr(med, "RAIZ", tmp_path)
-    assert not (tmp_path / "docs" / "process").exists()
-    assert med._gesto_do_arquivo(
-        "docs/process/sprints/QUALQUER.md", r"##\s+(\S+)",
-        lambda m: m.group(1)) == {}
+    # 3 · SEM A PASTA INTEIRA — o caso que ANTES era silêncio legítimo. Um
+    #     checkout sem `docs/method/` não é um clone limpo: é uma árvore
+    #     quebrada, e ela tem de dizer isso em vez de desenhar a página sem
+    #     gesto nenhum.
+    shutil.rmtree(tmp_path / "docs" / "method")
+    with pytest.raises(FileNotFoundError, match="o dono do gesto sumiu"):
+        med._gesto_do_arquivo(relativo, r"##\s+(\S+)", lambda m: m.group(1))

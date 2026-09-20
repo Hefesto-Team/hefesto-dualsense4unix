@@ -1,6 +1,6 @@
 """A tabela de `COMO-OLHAR-A-TELA.md` envelheceu calada — CINCO-SCRIPTS-01.
 
-`docs/process/COMO-OLHAR-A-TELA.md` é o arquivo que o `CLAUDE.md` manda ler
+`docs/method/COMO-OLHAR-A-TELA.md` é o arquivo que o `CLAUDE.md` manda ler
 **primeiro** quando o trabalho toca a tela. Ele trazia uma seção chamada
 "Os três scripts desta pasta, e qual usar", com uma tabela de três linhas —
 enquanto `ls scripts/gui-captura/` devolvia **cinco** arquivos.
@@ -54,7 +54,7 @@ import re
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[2]
-GUIA = RAIZ / "docs" / "process" / "COMO-OLHAR-A-TELA.md"
+GUIA = RAIZ / "docs" / "method" / "COMO-OLHAR-A-TELA.md"
 
 #: O retratista das dez páginas — a "regra em uma linha" do guia. Se ele sair
 #: da tabela, o guia deixa de responder à pergunta que mais se faz.
@@ -108,7 +108,7 @@ def test_a_tabela_nao_nomeia_caminho_que_nao_existe() -> None:
     )
 
     assert not fantasmas, (
-        f"a tabela de `docs/process/COMO-OLHAR-A-TELA.md` cita {', '.join(fantasmas)}, "
+        f"a tabela de `docs/method/COMO-OLHAR-A-TELA.md` cita {', '.join(fantasmas)}, "
         "que não existe nesta árvore. Este é o arquivo que o `CLAUDE.md` manda "
         "ler PRIMEIRO quando o trabalho toca a tela: um caminho morto ali manda "
         "a próxima pessoa rodar um comando que não roda, e ela conclui que a "
@@ -121,7 +121,7 @@ def test_a_tabela_nomeia_o_retratista() -> None:
     tabela = "\n".join(_linhas_da_tabela())
 
     assert RETRATISTA in tabela, (
-        f"a tabela de `docs/process/COMO-OLHAR-A-TELA.md` não cita {RETRATISTA}, "
+        f"a tabela de `docs/method/COMO-OLHAR-A-TELA.md` não cita {RETRATISTA}, "
         "que é o retratista das dez páginas e a 'regra em uma linha' do próprio "
         "guia. Sem ele na tabela, quem chega não descobre como fotografar a "
         "tela — e refaz à mão o trabalho que uma execução resolve."
@@ -149,7 +149,7 @@ def test_o_titulo_da_secao_diz_o_numero_certo() -> None:
     ]
     assert titulos, (
         "a seção que apresenta os instrumentos de tela sumiu de "
-        "`docs/process/COMO-OLHAR-A-TELA.md`."
+        "`docs/method/COMO-OLHAR-A-TELA.md`."
     )
     assert por_extenso is not None, (
         f"a tabela passou a ter {quantos} linhas e este teste não sabe escrever "
