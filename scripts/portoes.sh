@@ -282,6 +282,12 @@ rapido|pecas-do-dualsense|py|scripts/check_pecas_do_dualsense.py
 # se o hex do desenho estava certo, porque não havia com o que comparar — o
 # Cosmic Red era #b11f54 e a amostragem devolveu #A51C48. 3,5 s.
 rapido|cores-do-dualsense|py|scripts/check_cores_do_dualsense.py
+# 20/09/2026: o terceiro que abre o Chrome, e a pergunta dele é a CAIXA. Os dois
+# de cima medem o desenho do controle; este mede se o cartão da aba 02 ainda
+# cabe no orçamento que `aba02.PARA_O_CARD` declara, e se algum rótulo dele sai
+# cortado. Nasceu com o empilhamento da fileira da saída de som — sem trava, a
+# próxima altura a crescer apareceria na tela dela, não aqui. ~4 s.
+rapido|altura-do-cartao|py|scripts/check_a_altura_do_cartao.py
 rapido|regua-de-tela|py|scripts/check_regua_de_tela.py
 # A ORDEM DELA, 07/09/2026: *"o layout não informa os nossos defeitos."* Este
 # portão lê as dez páginas dos DOIS lados (bancada e publicado) e todo `Fala`
