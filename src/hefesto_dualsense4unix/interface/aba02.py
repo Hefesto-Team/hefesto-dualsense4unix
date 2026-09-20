@@ -893,6 +893,54 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
     border-radius:50%;background:var(--purple);border:2px solid var(--app-bg)}
   .vol .n{flex:0 0 30px;text-align:right;font-family:'JetBrains Mono',monospace;
           font-size:10.5px;color:var(--fg)}
+  /* ---------- O TRILHO DO GANHO DE ENTRADA (O-GANHO-DO-MIC-TEM-DONO-01) -----
+     20/09/2026, decisão dela: *"deixa o slicer 2 dele na telka"*. <!-- noqa-acento: dela -->
+
+     ELE MORA NA LINHA DO RÓTULO, e isso é ORÇAMENTO, não estética. Os quatro
+     arranjos foram medidos no DOM a 1120, 1180 e 1440px, e o cartão tem
+     **0,37px** de folga contra o teto de `PARA_O_CARD`:
+
+       linha nova embaixo do volume .......... +22,00px   o portão REPROVA
+       na fileira dos modos .................. +2,00px    REPROVA, e encolhe os dois
+       dividindo o trilho do volume .......... 0,00px     cabe, e o volume cai a 48px
+       na linha do rótulo (este) ............. 0,00px     cabe, e não encolhe nada
+
+     É O ÚNICO QUE NÃO COBRA DE NINGUÉM, e tem precedente aqui mesmo: os botões
+     Virtual/Nativo moravam nesta linha até 31/08 *porque ali o custo de altura
+     era ZERO*. Eles saíram por serem TRÊS. Um trilho cabe.
+
+     **CLASSE PRÓPRIA, E NUNCA UM `.vol`.** As regras do trilho são
+     `.vol .trilho`/`.vol .cheio`: fora de um `.vol` ele desenha INVISÍVEL, e
+     foi o que aconteceu na primeira tentativa desta medição. Mas a saída óbvia
+     — embrulhar num `.vol` — custa **5px**, porque `.vol` tem `height:22px`
+     FIXA e esta linha tem 17: o cartão vai de 327,63 para 332,63 e o
+     `scripts/check_a_altura_do_cartao.py` reprova. São as MESMAS declarações,
+     sem a altura fixa.
+
+     O `.n` PEDE 34px E NÃO 30: o número aqui é o dB com sinal (`+48`), que é um
+     caractere mais largo que o `80` do volume. Com 30 ele sai cortado, e o
+     mesmo portão mede corte de texto. */
+  .ganho{display:flex;align-items:center;gap:8px;flex:1 1 0;min-width:0;margin-left:9px}
+  .ganho .trilho{flex:1;height:5px;border-radius:3px;background:var(--panel);position:relative}
+  .ganho .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
+  .ganho .cheio::after{content:'';position:absolute;right:-5px;top:-4px;width:12px;height:12px;
+    border-radius:50%;background:var(--purple);border:2px solid var(--app-bg)}
+  .ganho .n{flex:0 0 34px;text-align:right;font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;color:var(--fg)}
+  /* O GANHO FORA DE ALCANCE veste o MESMO cinza do «Nativo» no rádio, e pela
+     mesma razão dela: o que não alcança não some da tela — fica cinza, e o
+     porquê vai no `?` ao lado. O endereço mora no CONTAINER porque o alvo é
+     `classe`, e um campo só alimenta o cinza e a razão (ver
+     `a02_controles.ganho_fora_de_alcance`). */
+  .ganho.sem-ganho .trilho,.ganho.sem-ganho .n{opacity:.4}
+  .ganho.sem-ganho .cheio::after{display:none}
+  /* O `?` DO GANHO SÓ EXISTE NO ESTADO CINZA — as duas regras da folha comum
+     (`:has(.dica:empty)` e `:has(.nada)`) o escondem sozinhas quando não há
+     razão, e por isso ele custa ZERO largura no cabo. Estes 4px são para ele
+     não encostar no número quando aparece: `+48` e o `?` colados leem como um
+     caractere só. Sai da largura do trilho, que é `flex:1 1 0`, e não da
+     altura — medido nas três larguras. */
+  .ganho + .ajuda.porque{margin-left:4px}
   /* O 🎙 E O ♪ SÃO `<button>`, E NÃO ERAM (29/08/2026). Eram `<span>` com
      `cursor:pointer` e nada atrás: nem `data-*` para a ponte achar, nem ouvinte
      para o clique cair em algum lugar. Medido — dois cliques sintéticos neles
@@ -2342,6 +2390,50 @@ ROTULO_VOL_ALTO = "Volume do alto-falante deste controle"
 DICA_VOL_ALTO = ("Arraste para escolher o volume do alto-falante deste controle. "
                  "O primeiro arrasto é o que destrava o ♪.")
 
+# ---------------------------------------------------------------------------
+# O GANHO DE ENTRADA — O-GANHO-DO-MIC-TEM-DONO-01, 20/09/2026
+# ---------------------------------------------------------------------------
+# O topo da faixa do `Headset Capture Volume`, em dB, LIDO no aparelho:
+#
+#   Simple mixer control 'Headset',0
+#     Limits: Capture 0 - 101
+#     Mono: Capture 101 [100%] [48.00dB] [on]
+#
+# ELE SERVE AO DESENHO PARADO, E SÓ A ELE. Quem diz o número no PRODUTO é
+# `a02_controles.ganho_do_microfone`, que pergunta ao `amixer` — ao APARELHO, e
+# não a esta constante. Um gerador que calculasse o dB do produto aqui seria a
+# segunda verdade sobre um valor cujo dono é o firmware.
+GANHO_TOPO_DB = 48
+
+#: O DEFAULT DO DESENHO, e ele é o mesmo do produto (§6.3 da sprint): o topo da
+#: faixa, que é o que o firmware entrega. Ver `a02_controles.GANHO_PADRAO_PCT`,
+#: onde a razão está escrita — *o único microfone dela é o do DualSense*, e
+#: baixar o ganho por conta própria o deixaria mais baixo do que está hoje.
+GANHO_PADRAO_PCT = 100
+
+ROTULO_GANHO_MIC = "Ganho de entrada do microfone deste controle, em decibéis"
+DICA_GANHO_MIC = (
+    "Ganho de entrada: o quanto o APARELHO amplifica o que entra no microfone, "
+    "de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, "
+    "o quanto desse som o produto ENTREGA ao PC."
+)
+
+
+def sinal_do_ganho(pct):
+    """O dB do DESENHO PARADO para uma posição na faixa, com sinal.
+
+    **NÃO É O NÚMERO DO PRODUTO.** No produto quem responde é o aparelho
+    (`a02_controles.ganho_do_microfone`, que lê o `amixer`); esta função existe
+    para a página parada ter um número coerente com a barra que ela desenha ao
+    lado, em vez de um literal que envelhece sozinho.
+
+    A conta é linear em dB porque a faixa DESTE elemento é: 102 degraus cobrindo
+    0…+48,00 dB (`dBminmax-min=0.00dB,max=48.00dB`), o que dá ~0,47 dB por
+    degrau. Se outro aparelho tiver outra curva, o produto continua certo — ele
+    não passa por aqui.
+    """
+    return f"{GANHO_TOPO_DB * max(0, min(100, int(pct))) / 100:+.0f}"
+
 # OS DOIS TEXTOS DO MODO DO MICROFONE — e o do "Virtual" MENTIA, medido.
 #
 # Ele prometia três coisas ("cria uma fonte de áudio própria", "entrega o
@@ -2432,7 +2524,12 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
           # ainda o monta; tirá-lo daqui quebraria a chamada sem ganhar nada.
           giro, mic_v, mic_mudo, mic_vol, alto_v, rota_pc, estado_alto,
           alto_mudo=False, alto_pode=True, mic_posse=False, tocando=True,
-          mic_modo="virtual", accel=None, conectado=True):
+          mic_modo="virtual", accel=None, conectado=True,
+          # O GANHO NASCE COM OPINIÃO, e ela é a de §6.3 da sprint: o topo da
+          # faixa, que é o que o firmware entrega. Não é "deixa como está" —
+          # é a escolha de NÃO baixar o microfone dela numa sprint cujo nome é
+          # «ter dono», e ela está escrita em `GANHO_PADRAO_PCT`.
+          mic_ganho=GANHO_PADRAO_PCT):
     """Uma caixa de controle, a partir do ITEM DA MESA — nunca de um nome digitado.
 
     É UMA função para as duas formas, porque agora é uma caixa só: o rádio diz
@@ -2718,6 +2815,8 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                 programa está gravando e entra som; a linha abaixo diz qual.
                 <br><br>
                 Os <b>dois botões abaixo</b> dizem por onde esse som chega ao PC.
+                <br><br>
+                {DICA_GANHO_MIC}
               </span></span>
               <!-- O MODO DO MICROFONE — pedido dela, 30/08: *"tá faltando o Modo do
                    Mic: Virtual, Desativado e Nativo"*.
@@ -2742,6 +2841,25 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                    E o comentário que eu escrevi para explicar isto quebrou o gerador,
                    porque trazia chaves dentro da própria f-string. Por isso ele não
                    as tem. -->
+              <!-- O GANHO DE ENTRADA — O-GANHO-DO-MIC-TEM-DONO-01, 20/09/2026, e
+                   ele é o ARRANJO D: o único dos quatro medidos que custa ZERO
+                   altura. A conta está no bloco `.ganho` do CSS, com os quatro
+                   preços; o que importa aqui é que este lugar é o mesmo vão em
+                   que Virtual/Nativo moraram até 31/08, pela mesma razão.
+
+                   O QUE ELE MOSTRA NÃO É O VOLUME DE BAIXO. O trilho de baixo é o
+                   quanto do microfone o produto ENTREGA ao PC; este é o quanto o
+                   APARELHO amplifica o que entra — o `Headset Capture Volume` da
+                   placa, 0 a +48 dB, que vivia no topo sem ninguém ter escolhido.
+                   A diferença está escrita no `?` da moldura, porque o número sai
+                   em dB e o de baixo em por cento.
+
+                   E ELE NÃO É UM `.vol`: aquele tem altura FIXA de 22px e esta
+                   linha tem 17 — embrulhar custaria 5px e o portão da altura
+                   reprovaria. Ver o CSS. -->
+              <span class="ganho" data-campo="mic-ganho-fora" data-hef-alvo="classe" data-hef-classe="sem-ganho"
+                    title="{DICA_GANHO_MIC}" role="group" aria-label="{ROTULO_GANHO_MIC}"><span class="trilho"><span class="cheio" data-campo="mic-ganho-barra"
+                data-hef-alvo="largura" style="width:{mic_ganho}%"></span></span><span class="n" data-campo="mic-ganho-num">{sinal_do_ganho(mic_ganho)}</span></span>{ponto_de_interrogacao("mic-ganho-fora")}
             </div>
             {onda(mic_v, mic_mudo, "mic")}
             {linha_de_volume("mic-porque")}

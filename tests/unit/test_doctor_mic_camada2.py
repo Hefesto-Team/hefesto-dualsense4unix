@@ -839,26 +839,87 @@ check_mic_ganho_de_captura
             "faria o decisor responder sobre o alto-falante"
         )
 
-    def test_o_estado_de_hoje_chega_ao_doctor_como_aviso(
+    def test_o_ucm_de_hoje_chega_ao_doctor_como_verde(
         self, tmp_path: Path
     ) -> None:
-        """O achado da sprint, na frase que sai na máquina dela.
+        """Com o UCM DESTA ÁRVORE instalado, o WARN cala.
 
-        É WARN e nunca FAIL de propósito — o estado nasceu com o produto e a
-        cura é decisão dela. E a linha diz, dentro dela mesma, que não é um
-        veredito sobre a qualidade do áudio: verde aqui nunca significou
-        «o microfone está bom».
+        **ESTE TESTE MEDIA O DEFEITO ATÉ 20/09/2026**, e o que ele cobrava era
+        um WARN: o `SectionDevice."Mic"` declarava só `CapturePCM` e
+        `CapturePriority`, e o `Headset Capture Volume` ficava fora do alcance
+        do PipeWire. A `O-GANHO-DO-MIC-TEM-DONO-01` pôs ali o
+        `CaptureVolume`/`CaptureMixerElem`, e a partir daí exigir o WARN seria
+        **cobrar o defeito de volta**.
+
+        **O REGISTRO DO ESTADO DE 20/09 NÃO SE PERDEU**, e é por isso que ele
+        pôde sair daqui: quem o guarda é a gravação
+        `tests/fixtures/mic-cabo/porta-ucm-mic-2026-09-20.txt`, medida por
+        `TestAPortaDeCapturaAlcancaOGanho::test_o_estado_de_hoje_reprova` —
+        que continua cobrando `fora == "sim"` sobre ela.
+
+        **O QUE A MORDIDA ARRANCA:** apague as duas linhas de
+        `assets/ucm/DualSense-HiFi.conf` e este teste reprova com o WARN de
+        volta, nomeando a porta e o elemento. É a mordida que a §8 da sprint
+        pede, e ela foi feita antes de esta redação entrar.
+
+        O `PASS` continua dizendo, dentro dele mesmo, que não é um veredito
+        sobre a qualidade do áudio: verde aqui nunca significou «o microfone
+        está bom».
         """
         saida = self._doctor_diz(tmp_path)
-        assert "WARN" in saida, f"o estado de hoje tem de avisar; veio {saida!r}"
-        assert "PASS" not in saida, f"e não pode passar; veio {saida!r}"
+        assert "PASS" in saida, (
+            f"o UCM desta árvore LIGA o ganho; o doctor tem de passar. "
+            f"Veio {saida!r}"
+        )
+        assert "WARN" not in saida, (
+            f"o WARN é o defeito de 20/09, e ele foi curado. Veio {saida!r}"
+        )
         assert "[In] Mic" in saida, "a frase nomeia a porta ativa"
-        assert "'Headset'" in saida, "e nomeia o elemento que ficou fora"
+        assert "'Headset'" in saida, "e nomeia o elemento que passou a alcançar"
         assert "FAIL" not in saida, "nunca FAIL: a cura é decisão dela"
-        assert "não sobre a qualidade do áudio" in saida, (
+        # A RESSALVA É A MESMA NAS DUAS LINHAS, e só o texto ao redor muda: o
+        # WARN diz *"não sobre a qualidade do áudio"* e o PASS diz *"NÃO é um
+        # veredito sobre a qualidade do áudio"*. O que se cobra é o FATO —
+        # digitar uma das duas frases inteiras faria esta régua reprovar no dia
+        # em que a outra fosse reescrita, sem nada ter piorado.
+        assert "qualidade do áudio" in saida, (
             "a ressalva mora na própria linha, senão o verde é lido como "
             f"«o microfone está bom». Veio {saida!r}"
         )
+
+    def test_sem_as_duas_linhas_no_ucm_o_aviso_volta(
+        self, tmp_path: Path
+    ) -> None:
+        """A MORDIDA do teste acima, versionada em vez de contada.
+
+        Instala um `SectionDevice."Mic"` sem `CaptureVolume`/`CaptureMixerElem`
+        — o de 20/09, letra por letra — e cobra o WARN de volta, com a porta e
+        o elemento nomeados.
+
+        **O QUE ELA ARRANCA:** as duas linhas do UCM. Sem este teste, o dia em
+        que alguém as apagasse deixaria só um `PASS` que passou a mentir, e o
+        verde do irmão acima seria verde sobre nada.
+        """
+        original = (REPO_ROOT / "assets" / "ucm" / "DualSense-HiFi.conf").read_text(
+            encoding="utf-8")
+        sem_ganho = "\n".join(
+            ln for ln in original.splitlines()
+            if "CaptureVolume" not in ln and "CaptureMixerElem" not in ln) + "\n"
+        assert sem_ganho != original, (
+            "a mordida não arrancou nada — as duas linhas já não estavam lá"
+        )
+        # O `_doctor_diz` instala o `.conf` da RAIZ DO REPOSITÓRIO. Com o
+        # arquivo mordido só existindo aqui, a instalação é feita à mão, na
+        # mesma casa (`mkdir` é `exist_ok`), e o `ucm=None` faz ele não
+        # sobrescrever com o original.
+        raiz = tmp_path / "ucm2" / "USB-Audio" / "Hefesto"
+        raiz.mkdir(parents=True, exist_ok=True)
+        (raiz / "DualSense-HiFi.conf").write_text(sem_ganho, encoding="utf-8")
+        saida = self._doctor_diz(tmp_path, ucm=None)
+        assert "WARN" in saida, (
+            f"sem as duas linhas o ganho volta a ficar fora. Veio {saida!r}"
+        )
+        assert "'Headset'" in saida, "e o aviso nomeia o elemento que ficou fora"
 
     def test_uma_porta_que_liga_o_ganho_chega_como_verde(
         self, tmp_path: Path

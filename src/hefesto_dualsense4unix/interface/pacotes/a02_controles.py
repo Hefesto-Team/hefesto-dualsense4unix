@@ -1273,6 +1273,192 @@ def _ler_o_nativo(na_mesa: tuple[str, ...]) -> dict[str, bool | None]:
     return fora
 
 
+#: A QUINTA LEITURA DA MESMA VOLTA — `{uniq: (por cento, dB)}` do elemento de
+#: ganho de CAPTURA da placa daquele controle.
+#:
+#: O-GANHO-DO-MIC-TEM-DONO-01, 20/09/2026. Chave AUSENTE é **não sei**, e é a
+#: resposta certa em três casos honestos: o controle está no rádio (não há placa
+#: ALSA — medido em 15/08, a placa segue o transporte), o `amixer` não está
+#: instalado, ou a leitura ainda não deu a primeira volta.
+#:
+#: ELA PEGA CARONA na thread da :func:`_camada_1` pela mesma razão do `_SONO` e
+#: do `_MIC_NATIVO`: é leitura de SISTEMA, e uma thread nova seria o quarto
+#: leitor de servidor de som desta aba.
+#:
+#: **SÃO TRÊS ESTADOS, E DOIS SERIAM UM A MENOS.** A chave AUSENTE é *ninguém
+#: perguntou ainda*; o valor `None` é *perguntei e este controle não tem onde
+#: esse ganho exista* (o rádio, a máquina sem `amixer`); a tupla é a resposta.
+#: Colapsar os dois primeiros faria a tela apagar o trilho nos ~2 s que a
+#: primeira volta da thread demora — cinza sobre uma ignorância que dura dois
+#: segundos, que é a família de defeito que `nativo_fora_de_alcance` nomeia.
+_GANHO: dict[str, tuple[int, float] | None] = {}
+
+#: O ELEMENTO DE GANHO NÃO SE DIGITA, e esta constante não é o nome dele: é o
+#: que o `amixer scontents` chama de CAPACIDADE de volume de captura. Quem
+#: escolhe o elemento é a mesma regra do decisor do `doctor`
+#: (`_dualsense_porta_de_captura_status`): o primeiro controle simples que tem
+#: `cvolume` **e** canais de captura. Cravar `Headset` aqui faria esta aba
+#: responder sobre o DualSense e calar em qualquer outro aparelho — e o produto
+#: é para qualquer usuário.
+_CAPACIDADE_DE_GANHO = "cvolume"
+
+#: O default do ganho, ESCRITO E JUSTIFICADO — §6.3 da sprint, pela ordem dela
+#: de 17/09 (*nenhum campo nasce sem opinião*).
+#:
+#: **É o topo da faixa**, que é o que o firmware entrega: o `Headset Capture
+#: Volume` vive em 101/101 = +48,00 dB desde que alguém o mediu. A razão de não
+#: baixar é dela e está medida — *o único microfone dela é o do DualSense* —, e
+#: baixar por conta própria faria o microfone dela ficar MAIS BAIXO do que está
+#: hoje, numa sprint cujo nome é «ter dono», não «mudar o som». O que muda é que
+#: a partir daqui o valor é ESCOLHA, e não sobra de firmware.
+GANHO_PADRAO_PCT = 100
+
+
+def _ganho_do_scontents(texto: str) -> tuple[int, float] | None:
+    """`(por cento, dB)` do elemento de ganho de captura, ou `None`.
+
+    Lê a saída de `amixer -c N scontents` e devolve o primeiro controle simples
+    que tem :data:`_CAPACIDADE_DE_GANHO` e canais de captura — a MESMA regra do
+    decisor do `doctor`, para as duas não divergirem sobre qual elemento é o
+    ganho desta placa.
+
+    PURA de propósito: quem roda o comando é :func:`_ler_o_ganho`. É assim que a
+    régua pode alimentá-la com a gravação de `tests/fixtures/mic-cabo/` em vez
+    de conversar com o servidor de som da máquina que roda a suíte.
+
+    `None` = o texto não tem elemento de ganho de captura. Chutar zero pintaria
+    «ganho no mínimo» sobre uma placa que não tem ganho nenhum.
+    """
+    tem_ganho = False
+    for linha in (texto or "").splitlines():
+        crua = linha.strip()
+        if crua.startswith("Simple mixer control "):
+            tem_ganho = False
+            continue
+        if crua.startswith("Capabilities:"):
+            tem_ganho = _CAPACIDADE_DE_GANHO in crua
+            continue
+        if not tem_ganho or "Capture " not in crua:
+            continue
+        # `Mono: Capture 101 [100%] [48.00dB] [on]` — o por cento é a POSIÇÃO na
+        # faixa (é o que a barra pinta) e o dB é o que o aparelho amplifica (é o
+        # que o número diz). Os dois saem da MESMA linha porque são o mesmo
+        # fato: lê-los em passagens separadas é como dois campos do mesmo bloco
+        # começam a discordar.
+        achado = re.search(r"\[(\d+)%\].*?\[(-?\d+(?:\.\d+)?)dB\]", crua)
+        if achado:
+            return (max(0, min(100, int(achado.group(1)))),
+                    float(achado.group(2)))
+    return None
+
+
+def _ler_o_ganho(nos: dict[str, str]) -> dict[str, tuple[int, float] | None]:
+    """`{uniq: (por cento, dB) | None}` da mesa. BLOQUEANTE — roda comando.
+
+    `nos` é `{uniq: nome da source}`, que já tem dono (:func:`no_do_microfone`).
+    TODO controle da mesa sai com chave: a tupla quando há elemento de ganho, e
+    `None` quando a resposta é *não há onde esse ganho exista* — o do rádio, que
+    é nó da nossa ponte e não tem placa ALSA (medido em 15/08: a placa segue o
+    transporte), e a máquina sem `amixer`.
+
+    **ESCREVER `None` É O PONTO**, e não um detalhe de implementação: sem ele a
+    aba não distingue *"ainda não perguntei"* de *"perguntei e não há"*, e o
+    cinza do trilho acenderia nos dois segundos da primeira volta.
+
+    UMA LEITURA DE `pactl` PARA A MESA INTEIRA (para descobrir de que placa é
+    cada source) e uma de `amixer` POR PLACA, nunca por controle: com quatro
+    DualSense no cabo são quatro placas distintas, e a mesma placa nunca é lida
+    duas vezes na mesma volta.
+    """
+    if not nos:
+        return {}
+    fora: dict[str, tuple[int, float] | None] = {u: None for u in nos if u}
+    alvos = {u: n for u, n in nos.items() if u and n.startswith("alsa_input.")}
+    if not alvos:
+        return fora
+    try:
+        lista = audio_saida.rodar_leitura(["pactl", "list", "sources"])
+    except Exception:
+        # Uma leitura que falha não inventa estado — a mesma regra do
+        # `_ler_o_sono` logo abaixo. Sem a lista não há como casar fonte e
+        # placa, e a mesa inteira volta a "não sei".
+        return {}
+    placa_da_fonte: dict[str, str] = {}
+    atual = ""
+    for linha in lista.splitlines():
+        crua = linha.strip()
+        if crua.startswith("Name: "):
+            atual = crua[6:]
+        elif atual and crua.startswith("alsa.card = "):
+            placa_da_fonte[atual] = crua.split("=", 1)[1].strip().strip('"')
+    por_placa: dict[str, tuple[int, float] | None] = {}
+    for uniq, no in alvos.items():
+        placa = placa_da_fonte.get(no, "")
+        if not placa:
+            continue
+        if placa not in por_placa:
+            try:
+                por_placa[placa] = _ganho_do_scontents(
+                    audio_saida.rodar_leitura(
+                        ["amixer", "-c", placa, "scontents"]))
+            except Exception:
+                por_placa[placa] = None
+        fora[uniq] = por_placa[placa]
+    return fora
+
+
+def ganho_do_microfone(uniq: str) -> tuple[int, float] | None:
+    """`(por cento, dB)` do ganho de entrada deste controle, ou `None`.
+
+    **UM DONO PARA A BARRA E PARA O NÚMERO**, que é o mesmo arranjo do
+    `mic-num`/`mic-barra` logo acima: a barra pinta a POSIÇÃO na faixa e o
+    número diz os dB, e os dois saem da mesma linha do `amixer`. Dois leitores
+    para o mesmo fato é como dois campos do mesmo bloco discordam na tela.
+
+    **A PERGUNTA É AO APARELHO**, nunca ao número que a tela escreveu nem ao que
+    o perfil guardou: o dono do ganho é o firmware, e é ele quem responde. É a
+    regra da casa para valor com dono, e aqui ela é literal — a §8 da sprint a
+    escreve com o comando (`amixer … sget`).
+
+    `None` É DE PRIMEIRA CLASSE: é o controle no rádio (sem placa ALSA), a
+    máquina sem `amixer`, e os primeiros ~2 s de aba, antes de a thread da
+    camada 1 dar a primeira volta. Quem separa os três estados é
+    :func:`ganho_fora_de_alcance`, que é quem decide o cinza.
+    """
+    return _GANHO.get(uniq) if uniq else None
+
+
+#: A razão do cinza quando o ganho não alcança este controle. Ela é o precedente
+#: do «Nativo» (§4 da sprint, decisão dela de 20/09): *"Fica os dois botões. Mas
+#: no rádio o botão fica cinza sem ser ativado"* — o que não alcança não SOME da
+#: tela, fica cinza com o porquê ao lado.
+RAZAO_DO_GANHO_FORA = (
+    "O ganho de entrada é do aparelho, e só o cabo alcança o controle dele: "
+    "pelo rádio o microfone chega como som já digitalizado, sem placa de som "
+    "onde esse controle exista. Ligue o cabo e ele acende."
+)
+
+
+def ganho_fora_de_alcance(uniq: str) -> str:
+    """A razão quando o ganho não alcança este controle; `""` quando alcança.
+
+    UM CAMPO SÓ alimenta os dois lados — o cinza do trilho (alvo `classe` no
+    container) e o texto do `?` (alvo `html` na dica) —, que é o contrato da
+    peça das dez e o mesmo de :func:`nativo_fora_de_alcance`: com dois campos
+    seria possível pintar cinza sem razão, ou razão sem cinza.
+
+    **"NÃO SEI" NÃO APAGA NADA**, e é por isso que a pergunta é ao CACHE e não
+    ao transporte: nos primeiros tiques, antes de a thread voltar, a chave nem
+    existe e o trilho fica como está. Apagar por falta de resposta seria a tela
+    decidindo no escuro — e cravar o transporte aqui prometeria que todo cabo
+    tem elemento de ganho, o que é do aparelho dizer. O cinza acende só no
+    estado do MEIO: a chave existe e o valor é `None`.
+    """
+    if not uniq or uniq not in _GANHO:
+        return ""
+    return "" if _GANHO[uniq] is not None else RAZAO_DO_GANHO_FORA
+
+
 def _ler_o_sono(lido: dict[str, Any]) -> dict[str, str]:
     """`{uniq: acordado|dormindo}` de quem tem sink. BLOQUEANTE — roda `pactl`.
 
@@ -1310,8 +1496,16 @@ def sono_do_canal(uniq: str) -> str:
 
 
 def _camada_1(entradas: tuple[tuple[str, int | None], ...],
-              na_mesa: tuple[str, ...]) -> dict[str, Any]:
+              na_mesa: tuple[str, ...],
+              nos_do_mic: dict[str, str] | None = None) -> dict[str, Any]:
     """O cache da camada 1, renovado em THREAD a cada :data:`CAMADA_1_S`.
+
+    `nos_do_mic` é `{uniq: source do microfone}` e alimenta a quinta leitura, a
+    do ganho (:data:`_GANHO`). **`None` NÃO É `{}`:** `None` quer dizer *quem
+    chamou não resolveu as fontes*, e aí o cache do ganho fica como está; `{}`
+    quer dizer *a mesa não tem microfone nenhum*, e aí ele é esvaziado. Colapsar
+    os dois faria toda régua que chama `_camada_1` de mentirinha apagar o ganho
+    da mesa de verdade.
 
     **NUNCA SÍNCRONO, nem na primeira vez** — e a primeira redação desta função
     era, o que estava errado por dois motivos que apontam para o mesmo lado:
@@ -1369,6 +1563,15 @@ def _camada_1(entradas: tuple[tuple[str, int | None], ...],
             # família de pergunta é o defeito que a `_camada_1` existe para não
             # cometer.
             nativo = _ler_o_nativo(na_mesa)
+            # O GANHO VEM NA MESMA VOLTA — O-GANHO-DO-MIC-TEM-DONO-01. Ele é a
+            # QUINTA leitura desta thread, e está aqui pela mesma razão das
+            # outras três: é pergunta ao sistema, não ao quadro. A diferença é
+            # que o comando não é o `pactl` — o ganho é do MIXER, e quem
+            # responde por ele é o `amixer`. `nos_do_mic` chega pronto: quem
+            # resolve a source de cada controle é `no_do_microfone`, e uma
+            # segunda resolução aqui seria a segunda verdade sobre o mesmo
+            # endereço.
+            ganho = None if nos_do_mic is None else _ler_o_ganho(nos_do_mic)
             # A MESA MUDOU ENQUANTO EU LIA? Então esta leitura inteira é de um
             # mundo que não existe mais, e publicá-la DESFARIA a poda — ver
             # `_CAMADA_1_SELO`. O `finally` continua destravando o voo, e o
@@ -1382,6 +1585,9 @@ def _camada_1(entradas: tuple[tuple[str, int | None], ...],
             _SONO.update(sono)
             _MIC_NATIVO.clear()
             _MIC_NATIVO.update(nativo)
+            if ganho is not None:
+                _GANHO.clear()
+                _GANHO.update(ganho)
             _REGRA_DO_SONO[0] = regra
         finally:
             _CAMADA_1_EM_VOO[0] = False
@@ -1396,7 +1602,8 @@ def _camada_1(entradas: tuple[tuple[str, int | None], ...],
 #: a esta thread acrescenta um dicionário — e um dicionário que a poda não
 #: conhece é o defeito desta sprint renascendo calado. Esta linha é o lugar em
 #: que a quarta se declara.
-_POR_CONTROLE: tuple[dict[str, Any], ...] = (_CAMADA_1, _SONO, _MIC_NATIVO)
+_POR_CONTROLE: tuple[dict[str, Any], ...] = (
+    _CAMADA_1, _SONO, _MIC_NATIVO, _GANHO)
 
 
 @poda
@@ -2264,6 +2471,34 @@ def _a_pagina_tem_o_alcance_do_nativo() -> bool:
 A_PAGINA_APAGA_O_NATIVO = _a_pagina_tem_o_alcance_do_nativo()
 
 
+def _a_pagina_tem_o_ganho() -> bool:
+    """A página PUBLICADA já tem o trilho do ganho? Lido uma vez, do arquivo.
+
+    O-GANHO-DO-MIC-TEM-DONO-01. Mesma régua, mesma razão e mesmas três lições
+    de :func:`_a_pagina_tem_o_alcance_do_nativo` logo acima — e aqui ela não é
+    precaução: a sprint **gera em `mockup/` e NÃO publica**, porque publicar é
+    ato dela. Emitir `mic-ganho-barra` para a página de hoje poria três chaves
+    em `orfaos` no casamento das dez, e o pacote se reportaria pintando o que
+    não pinta.
+
+    No dia em que ela aprovar (`check_o_desenho_aprovado.py --publicar 02`), os
+    três campos ligam sem que ninguém toque em código.
+    """
+    from hefesto_dualsense4unix.interface import onde
+
+    try:
+        doc = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):  # pragma: no cover - defensivo
+        return False
+    return 'data-campo="mic-ganho-barra"' in doc
+
+
+#: A página publicada tem o trilho do ganho? Resolvido no import, e AQUI pela
+#: mesma razão das duas irmãs acima: sobre a constante `PAGINA`, que ainda não
+#: existe lá em cima.
+A_PAGINA_TEM_O_GANHO = _a_pagina_tem_o_ganho()
+
+
 def texto_da_bateria(pct: int | None) -> str:
     """A carga na grafia da GTK, PERGUNTADA a ela — as duas frases.
 
@@ -2440,9 +2675,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # isto o "Só no controle" continuaria acendendo pelo byte, que é como o
     # card 2 dela ficou aceso com o som saindo na TV, em 03/09.
     na_mesa = tuple(str(c.get("uniq") or "") for c in ctx.conectados if c.get("uniq"))
+    # AS FONTES DO MICROFONE, resolvidas UMA VEZ e entregues à thread: é delas
+    # que sai a placa ALSA de cada controle, e é da placa que sai o elemento de
+    # ganho. Quem resolve é `no_do_microfone`, o dono do endereço — resolver de
+    # novo lá dentro seria a segunda verdade sobre a mesma fonte.
     _camada_1(
         tuple((str(c.get("uniq") or ""), _byte_da_rota(c)) for c in ctx.conectados),
         na_mesa,
+        {str(c.get("uniq") or ""): no_do_microfone(c)
+         for c in ctx.conectados if c.get("uniq")},
     )
     # ONDE CADA PONTINHO ESTÁ, por assento — ver `folha_das_posicoes`. Ele se
     # junta AQUI, e não dentro de `cards`, porque o destino é a folha da PÁGINA:
@@ -2478,6 +2719,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # número e a barra são o MESMO fato, e lê-lo duas vezes é como dois
         # campos do mesmo bloco começam a divergir.
         mic_volume = volume_do_microfone(a)
+        # LIDO UMA VEZ, USADO NOS DOIS CAMPOS, pela mesma razão do `mic_volume`
+        # logo acima: a barra e o número do ganho são o MESMO fato em duas
+        # unidades (a posição na faixa e os dB), e lê-los duas vezes é como
+        # dois campos do mesmo bloco começam a discordar.
+        mic_ganho = ganho_do_microfone(uniq)
         # O ALTO-FALANTE TEM UM DONO SÓ, e ele mora no motor. Esta linha era
         # `sp = c.get("speaker") or {}`, e o `or {}` escondia DOIS defeitos:
         #
@@ -2715,6 +2961,34 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 mic_volume if mic_volume is not None else mesa_viva.SEM_LEITOR
             ),
             "mic-barra": mic_volume if mic_volume is not None else 0,
+            # O GANHO DE ENTRADA — O-GANHO-DO-MIC-TEM-DONO-01, 20/09/2026. Ele
+            # é o TERCEIRO número desta moldura e o único que vem do APARELHO:
+            # o volume acima é do servidor de som, e este é do elemento de
+            # mixer da placa (`amixer scontents`). Os dois desfechos são os
+            # mesmos do volume, e por escrito no dono (`ganho_do_microfone`): o
+            # número diz `—` quando ninguém leu — separar "no mínimo" de "não
+            # sei" é a diferença que fez a barra do volume mentir até 12/09 —, e
+            # a barra vai a ZERO, porque `largura` é um dos
+            # `ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE`.
+            #
+            # O NÚMERO SAI EM dB E COM SINAL, e é por isso que o `.n` do bloco
+            # `.ganho` pede 34px e não 30: `+48` é mais largo que `80`. A
+            # unidade está no `?` da moldura, com a diferença entre os dois
+            # trilhos — que é o que §6.4 da sprint cobra.
+            #
+            # OS TRÊS SÓ SAEM DEPOIS DE ELA PUBLICAR — ver
+            # `_a_pagina_tem_o_ganho`. O desenho está na bancada e a publicação
+            # é ato dela; emitir antes põe três chaves em `orfaos`.
+            **({
+                "mic-ganho-num": (
+                    f"{mic_ganho[1]:+.0f}" if mic_ganho is not None
+                    else mesa_viva.SEM_LEITOR
+                ),
+                "mic-ganho-barra": mic_ganho[0] if mic_ganho is not None else 0,
+                # O CINZA E A RAZÃO NUM CAMPO SÓ — ver `ganho_fora_de_alcance`,
+                # e é a mesma forma do `mic-nativo-fora` logo abaixo.
+                "mic-ganho-fora": ganho_fora_de_alcance(uniq),
+            } if A_PAGINA_TEM_O_GANHO else {}),
             # O `mic-modo` SAIU DAQUI EM 01/09/2026, e ele APAGAVA DOIS BOTÕES.
             # O endereço `data-campo="mic-modo"` não era uma folha: era o
             # `<span class="rota mic-modo">` que ENVOLVE o Virtual e o Nativo. O
