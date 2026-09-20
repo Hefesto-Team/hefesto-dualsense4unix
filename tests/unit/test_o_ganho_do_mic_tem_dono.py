@@ -155,10 +155,15 @@ class TestOTrilhoDoGanhoNaLinhaDoRotulo:
     def test_o_bloco_do_ganho_nao_e_um_vol(self) -> None:
         """O trilho do ganho tem classe própria, e ela não declara altura fixa.
 
-        **O QUE A MORDIDA ARRANCA:** troque `class="ganho"` por `class="vol"`
-        no gerador e o cartão vai de 327,63 para 332,63px — o
+        **O QUE A MORDIDA ARRANCA:** dê uma `height:` ao `.ganho` (que é o que
+        embrulhá-lo num `.vol` faz, porque `.vol` tem `height:22px` FIXA) e o
+        cartão vai de 327,63 para 332,63px — o
         `scripts/check_a_altura_do_cartao.py` reprova por 5px. Esta régua pega
         o mesmo defeito sem abrir navegador, e por isso roda na suíte.
+
+        **QUEM PEGA A TROCA `class="ganho"` → `class="vol"` NO GERADOR é a
+        régua seguinte**, e não esta: a folha continuaria com o bloco `.ganho`
+        intacto. Medido em 20/09/2026, aplicando as duas mordidas uma a uma.
         """
         from hefesto_dualsense4unix.interface import aba02
 
@@ -504,27 +509,125 @@ class TestODonoDoNumeroPerguntaAoAparelho:
             a02._GANHO.clear()
             a02._GANHO.update(guardado)
 
-    def test_o_radio_entra_com_chave_e_o_cabo_nao_e_chutado(self) -> None:
+    def test_o_radio_entra_com_chave_e_o_cabo_nao_e_chutado(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """`_ler_o_ganho` responde por TODO controle da mesa, inclusive o mudo.
 
         **O QUE A MORDIDA ARRANCA:** faça `_ler_o_ganho` devolver `{}` quando
-        não há fonte ALSA (em vez de `{uniq: None}`) e este teste reprova — a
-        aba deixa de distinguir *ainda não perguntei* de *perguntei e não há*,
-        e o cinza do rádio nunca acende.
+        nenhum controle tem nó nativo (em vez de `{uniq: None}`) e este teste
+        reprova — a aba deixa de distinguir *ainda não perguntei* de *perguntei
+        e não há*, e o cinza do rádio nunca acende.
 
-        Não abre subprocesso: sem `alsa_input.*` na mesa a função responde
-        antes de chamar comando nenhum, que é a razão de o atalho existir.
+        Quem diz que o rádio não publica nó nativo é o DONO da resposta
+        (`eleicao_de_microfone.fonte_nativa_do_controle`), e é ele que está
+        dublado aqui — digitar «rádio → sem ganho» dentro do `_ler_o_ganho`
+        seria a segunda régua sobre o mesmo fato.
         """
+        from hefesto_dualsense4unix.integrations import eleicao_de_microfone
         from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
 
-        so_radio = {"aa:bb:cc:00:00:03": "hefesto_mic_000003",
-                    "aa:bb:cc:00:00:04": ""}
+        monkeypatch.setattr(eleicao_de_microfone, "fonte_nativa_do_controle",
+                            lambda uniq, conectados: "")
+        so_radio = ("aa:bb:cc:00:00:03", "aa:bb:cc:00:00:04")
         lido = a02._ler_o_ganho(so_radio)
         assert lido == {u: None for u in so_radio}, (
             f"a mesa só de rádio tem de sair com chave e `None`; saiu {lido!r}"
         )
-        assert a02._ler_o_ganho({}) == {}, (
+        assert a02._ler_o_ganho(()) == {}, (
             "mesa vazia é mesa vazia — não há sobre o que responder"
+        )
+
+    def test_o_ganho_do_cabo_nao_morre_no_no_da_nossa_ponte(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O controle NO FIO tem ganho, com o daemon elegendo `hefesto_mic_…`.
+
+        **O ARRANJO DIFÍCIL, E ELE É A MESA DELA DE 20/09/2026.** A primeira
+        redação desta sprint resolvia a placa pelo `canal_fonte` que o daemon
+        publica, filtrando por `alsa_input.`. Medido na mesa dela, com UM
+        DualSense no fio e três no ar, o `state_full` respondeu
+        `hefesto_mic_<hex6>` **para os quatro** — o nó que o produto ELEGEU
+        (regra 0 de `escolher_fonte`), que é da nossa ponte e não tem placa
+        ALSA nenhuma. Resultado na tela: o trilho do ganho cinza no controle
+        que estava NO CABO, com a razão mandando ligar o cabo.
+
+        A pergunta certa é outra — *qual nó o KERNEL publica para este
+        controle* — e ela já tem dono:
+        `eleicao_de_microfone.fonte_nativa_do_controle`.
+
+        **O QUE A MORDIDA ARRANCA:** volte a resolver pelo `canal_fonte` (ou
+        acrescente um filtro `no.startswith("alsa_input.")` sobre o nó eleito)
+        e este teste reprova com `None` no controle do cabo.
+
+        **O QUE É DUBLÊ, E POR QUÊ:** os comandos (`pactl`, `amixer`) e o censo
+        de USB, que lê `/sys`. O que roda de verdade é a corrente inteira que
+        decide — `fontes_nativas` → `escolher_fonte` → `CasamentoUSB.casar` →
+        `alsa.card` → `_ganho_do_scontents`. Os textos são SINTÉTICOS e a forma
+        é a da bancada; endereço real não entra em arquivo versionado.
+        """
+        from hefesto_dualsense4unix.integrations import eleicao_de_microfone
+        from hefesto_dualsense4unix.integrations.fontes_de_captura import (
+            CasamentoUSB,
+        )
+        from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
+
+        cabo = "aa:bb:cc:00:00:01"
+        radio = "aa:bb:cc:00:00:02"
+        nativo = ("alsa_input.usb-Sony_Interactive_Entertainment_DualSense_"
+                  "Wireless_Controller-00.HiFi__Mic__source")
+        # O QUE O DAEMON ELEGEU para os DOIS é o nó da nossa ponte — inclusive
+        # para o do cabo. É esta linha que a redação antiga lia.
+        curta = "\n".join([
+            f"41\t{nativo}\tPipeWire\ts16le 1ch 48000Hz\tSUSPENDED",
+            "42\thefesto_mic_000001\tPipeWire\ts16le 1ch 48000Hz\tRUNNING",
+            "43\thefesto_mic_000002\tPipeWire\ts16le 1ch 48000Hz\tRUNNING",
+        ])
+        longa = "\n".join([
+            "Source #41",
+            f"\tName: {nativo}",
+            "\tProperties:",
+            '\t\talsa.card = "2"',
+            "\tActive Port: [In] Mic",
+            "Source #42",
+            "\tName: hefesto_mic_000001",
+            "\tProperties:",
+            '\t\tdevice.string = "/run/user/1000/hefesto-hefesto_mic_000001.fifo"',
+        ])
+        amixer = (
+            "Simple mixer control 'PCM',0\n"
+            "  Capabilities: pvolume pvolume-joined pswitch pswitch-joined\n"
+            "  Playback channels: Mono\n"
+            "  Limits: Playback 0 - 100\n"
+            "  Mono: Playback 100 [100%] [0.00dB] [on]\n"
+            "Simple mixer control 'Headset',0\n"
+            "  Capabilities: cvolume cvolume-joined cswitch cswitch-joined\n"
+            "  Capture channels: Mono\n"
+            "  Limits: Capture 0 - 101\n"
+            "  Mono: Capture 77 [76%] [36.50dB] [on]\n"
+        )
+        monkeypatch.setattr(
+            eleicao_de_microfone, "_rodar",
+            lambda argv: (0, curta) if argv[-1] == "short" else (127, ""))
+        # O CENSO DE `/sys` É O ÚNICO PEDAÇO QUE UM TESTE NÃO PODE RODAR. O
+        # casamento em si roda de verdade: `casar` compara os dois mapas.
+        monkeypatch.setattr(
+            eleicao_de_microfone, "casamento_usb_agora",
+            lambda uniqs: CasamentoUSB(por_uniq={cabo: "3-2", radio: ""},
+                                       por_no={nativo: "3-2"}))
+        monkeypatch.setattr(
+            a02.audio_saida, "rodar_leitura",
+            lambda argv: longa if argv[0] == "pactl" else amixer)
+
+        lido = a02._ler_o_ganho((cabo, radio))
+        assert lido[cabo] == (76, 36.5), (
+            "o controle NO CABO ficou sem ganho: o nó foi resolvido pelo que o "
+            "daemon elegeu (`hefesto_mic_…`, sem placa ALSA) em vez de pelo nó "
+            f"nativo que o kernel publica. Saiu {lido[cabo]!r}"
+        )
+        assert lido[radio] is None, (
+            "o controle no rádio não tem placa ALSA e não pode herdar a do "
+            f"vizinho; saiu {lido[radio]!r}"
         )
 
     def test_o_default_do_ganho_esta_escrito_e_e_o_topo_da_faixa(self) -> None:
@@ -553,23 +656,49 @@ class TestODonoDoNumeroPerguntaAoAparelho:
         )
         assert aba02.sinal_do_ganho(0) == "+0"
 
-    def test_o_pacote_nao_emite_o_ganho_antes_de_ela_publicar(self) -> None:
+    def test_o_pacote_nao_emite_o_ganho_antes_de_ela_publicar(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Enquanto a página publicada não tiver o trilho, o campo não sai.
 
-        **O QUE A MORDIDA ARRANCA:** tire a guarda `A_PAGINA_TEM_O_GANHO` da
-        emissão e as três chaves entram em `orfaos` no casamento das dez — o
-        pacote passa a se reportar pintando o que não pinta. É a mesma guarda
-        que o `mic-nativo-fora` e o «Ouvir junto» já têm, e a razão é que
-        **publicar é ato dela**.
+        **O QUE A MORDIDA ARRANCA, E A PRIMEIRA REDAÇÃO NÃO ARRANCAVA NADA:**
+        esta régua comparava `A_PAGINA_TEM_O_GANHO` com o mesmo arquivo de que
+        a constante nasce — tautologia, e ela passava VERDE com a guarda
+        removida da emissão (medido em 20/09/2026, trocando a condição por
+        `if True`). Quem pergunta é o PACOTE, e é a ele que se pergunta agora:
+        com a guarda baixa as três chaves não saem, com ela alta saem. Tire o
+        `if A_PAGINA_TEM_O_GANHO else {}` e o primeiro bloco reprova nomeando
+        as chaves que vazaram.
+
+        A razão da guarda é que **publicar é ato dela**: emitir antes põe as
+        três chaves em `orfaos` no casamento das dez, e o pacote passa a se
+        reportar pintando o que não pinta.
         """
-        from hefesto_dualsense4unix.interface import onde
+        import pacotes
+
         from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
 
-        publicado = onde.pagina(a02.PAGINA, publicado=True).read_text(
-            encoding="utf-8")
-        tem = 'data-campo="mic-ganho-barra"' in publicado
-        assert a02.A_PAGINA_TEM_O_GANHO is tem, (
-            "a guarda não está respondendo sobre a página PUBLICADA — é ela "
-            "que o piloto abre, não a bancada"
+        entrada = {"uniq": "aa:bb:cc:00:00:07", "player": 1, "connected": True,
+                   "transport": "usb", "battery_pct": 95, "is_primary": True,
+                   "inputs": {}, "audio": {}}
+        do_ganho = {"mic-ganho-num", "mic-ganho-barra", "mic-ganho-fora"}
+
+        def um_card() -> dict:
+            ctx = pacotes.Contexto(state={}, mesa=[], conectados=[entrada],
+                                   estados={})
+            return next(iter(a02.pacote(ctx)["cards"].values()))
+
+        monkeypatch.setattr(a02, "A_PAGINA_TEM_O_GANHO", False)
+        vazou = do_ganho & set(um_card())
+        assert not vazou, (
+            f"o pacote emitiu {sorted(vazou)} para uma página que não os tem "
+            "— eles entram em `orfaos` no casamento das dez"
+        )
+
+        monkeypatch.setattr(a02, "A_PAGINA_TEM_O_GANHO", True)
+        faltou = do_ganho - set(um_card())
+        assert not faltou, (
+            f"publicada a página, o pacote continua sem emitir {sorted(faltou)}"
+            " — o trilho desenhado nunca receberia valor"
         )
 

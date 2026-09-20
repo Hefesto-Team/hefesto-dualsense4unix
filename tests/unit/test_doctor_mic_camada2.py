@@ -899,6 +899,13 @@ check_mic_ganho_de_captura
         **O QUE ELA ARRANCA:** as duas linhas do UCM. Sem este teste, o dia em
         que alguém as apagasse deixaria só um `PASS` que passou a mentir, e o
         verde do irmão acima seria verde sobre nada.
+
+        **E ELA CARREGA O CONTROLE POSITIVO, porque sem ele não prova nada:**
+        o WARN também volta quando o doctor não acha arquivo NENHUM — foi por
+        essa porta que a primeira redação ficou verde sem conseguir distinguir
+        *"li o arquivo mordido"* de *"não li arquivo algum"*. As duas chamadas
+        abaixo instalam pelo MESMO caminho e diferem só nas duas linhas: o
+        PASS de uma é o que prova que a outra leu o que foi escrito.
         """
         original = (REPO_ROOT / "assets" / "ucm" / "DualSense-HiFi.conf").read_text(
             encoding="utf-8")
@@ -908,14 +915,27 @@ check_mic_ganho_de_captura
         assert sem_ganho != original, (
             "a mordida não arrancou nada — as duas linhas já não estavam lá"
         )
-        # O `_doctor_diz` instala o `.conf` da RAIZ DO REPOSITÓRIO. Com o
-        # arquivo mordido só existindo aqui, a instalação é feita à mão, na
-        # mesma casa (`mkdir` é `exist_ok`), e o `ucm=None` faz ele não
-        # sobrescrever com o original.
-        raiz = tmp_path / "ucm2" / "USB-Audio" / "Hefesto"
-        raiz.mkdir(parents=True, exist_ok=True)
-        (raiz / "DualSense-HiFi.conf").write_text(sem_ganho, encoding="utf-8")
-        saida = self._doctor_diz(tmp_path, ucm=None)
+
+        def diz(corpo: str, casa: str) -> str:
+            """Instala `corpo` como o UCM desta casa e devolve o que o doctor diz.
+
+            O `_doctor_diz` instalaria o `.conf` da RAIZ DO REPOSITÓRIO; o
+            `ucm=None` o faz não sobrescrever, e a escrita à mão vai no MESMO
+            lugar que ele lê (`<raiz>/ucm2/USB-Audio/Hefesto/`).
+            """
+            raiz = tmp_path / casa / "ucm2" / "USB-Audio" / "Hefesto"
+            raiz.mkdir(parents=True, exist_ok=True)
+            (raiz / "DualSense-HiFi.conf").write_text(corpo, encoding="utf-8")
+            return self._doctor_diz(tmp_path / casa, ucm=None)
+
+        com = diz(original, "com-as-duas-linhas")
+        assert "PASS" in com and "WARN" not in com, (
+            "o CONTROLE POSITIVO caiu: com as duas linhas escritas por esta "
+            f"mesma função o doctor tinha de passar. Veio {com!r} — se ele "
+            "avisa aqui, o WARN de baixo não prova a mordida, prova que o "
+            "arquivo não foi lido"
+        )
+        saida = diz(sem_ganho, "sem-as-duas-linhas")
         assert "WARN" in saida, (
             f"sem as duas linhas o ganho volta a ficar fora. Veio {saida!r}"
         )
