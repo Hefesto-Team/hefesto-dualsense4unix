@@ -24,7 +24,7 @@ do dublê um irmão para cada uso, nomeando o que falta em vez de deixar um
 
 O QUE A CONFERÊNCIA ADVERSARIAL DE 20/09/2026 ARRANCOU DESTA RÉGUA
 ==================================================================
-A primeira versão desta régua media **dois terços do que o dublê executa**, e
+A primeira versão desta régua mediu **dois terços do que o dublê executa**, e
 as duas mordidas abaixo a passaram VERDE enquanto reproduziam, palavra por
 palavra, o `AttributeError` de cima:
 
