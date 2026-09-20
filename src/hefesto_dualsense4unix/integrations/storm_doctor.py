@@ -375,6 +375,102 @@ def gesto_de_atualizar(
         )
     ]
 
+
+# ---------------------------------------------------------------------------
+# O NOME DO PACOTE, e o gesto de INSTALAR — A-LIBOPUS-TEM-NOME-EM-CADA-CASA-01
+#
+# A frase que originou isto dizia, em toda máquina, o nome que só o Debian usa,
+# e mandava o gesto de ATUALIZAR o Hefesto. Num Arch, quem a seguia recebia
+# `target not found` e concluía que o produto estava quebrado.
+#
+# Os dois erros têm a mesma assinatura: *o valor tem dono, e quem escreveu a
+# frase digitou em vez de perguntar ao dono*. O dono do nome mora no
+# `install.sh`, em shell, e não tinha contraparte em Python — então o lado
+# Python digitou.
+# ---------------------------------------------------------------------------
+
+#: O nome do pacote de cada dependência do sistema, por formato de instalação.
+#:
+#: **SEGUNDA CÓPIA DECLARADA, e o dono é o `install.sh`** (a tabela do
+#: `_pkg_nome`, que já sabia os três nomes antes desta frente existir). O
+#: produto não lê shell em tempo de execução, então o lado Python guarda a sua
+#: cópia — e quem as mantém iguais é
+#: `tests/unit/test_o_nome_do_pacote_tem_um_dono_so.py`, que LÊ o bloco de lá e
+#: compara chave por chave, nos dois sentidos. Acrescentar um formato aqui sem
+#: acrescentar lá — ou o contrário — reprova.
+#:
+#: **Só as três famílias que empacotam.** Flatpak, Nix, checkout e o formato
+#: que ninguém assume não têm nome de pacote em canto nenhum desta casa, e
+#: inventar um é exatamente o defeito que esta frente cura: eles caem no degrau
+#: final de :func:`gesto_de_instalar`.
+PACOTE_POR_FORMATO: dict[str, dict[str, str]] = {
+    "opus": {
+        FORMATO_DEBIAN: "libopus0",
+        FORMATO_FEDORA: "opus",
+        FORMATO_ARCH: "opus",
+    },
+}
+
+#: Como a dependência se chama para quem LÊ a frase — o nome da BIBLIOTECA,
+#: com o artigo, porque ele entra no meio de uma oração. Não é nome de pacote:
+#: é o que sobra de honesto quando nenhum gerenciador assume a instalação.
+NOME_DA_DEPENDENCIA: dict[str, str] = {
+    "opus": "a libopus",
+}
+
+#: O molde do gesto de INSTALAR, por formato. Irmão do
+#: :data:`GESTO_DE_ATUALIZAR`, e a diferença é a pergunta que cada um responde:
+#: aquele diz *"como atualizo ESTE Hefesto?"*, este diz *"como ponho esta
+#: biblioteca nesta máquina?"*. Trocar um pelo outro manda quem lê atualizar o
+#: sistema inteiro sem instalar nada — foi o que a frase da libopus fez.
+GESTO_DE_INSTALAR: dict[str, str] = {
+    FORMATO_ARCH: "rode sudo pacman -S {pacote}",
+    FORMATO_FEDORA: "rode sudo dnf install {pacote}",
+    FORMATO_DEBIAN: "rode sudo apt install {pacote}",
+}
+
+#: O degrau final, para todo formato sem gerenciador que assuma o arquivo.
+#: Nomeia a biblioteca e nenhum pacote. O `FRASE_DE_ATUALIZAR[False]` não serve
+#: aqui: ele fala de atualizar o Hefesto, não de instalar isto.
+FRASE_DE_INSTALAR_GENERICA = (
+    "instale {biblioteca} pelo gerenciador de pacotes da sua distribuição"
+)
+
+
+def gesto_de_instalar(
+    chave: str,
+    *,
+    e_checkout: bool | None = None,
+    marca_flatpak: Path | None = None,
+    raiz_do_codigo: Path | None = None,
+    consultar_dono: Callable[[str], str | None] | None = None,
+) -> str:
+    """O gesto de INSTALAR esta biblioteca, com o nome que ela tem AQUI.
+
+    `chave` é a canônica do `install.sh` (a mesma do `_pkg_nome`), nunca um
+    nome de pacote. Os demais argumentos são os de
+    :func:`formato_desta_instalacao`, e existem para a bancada.
+
+    Um formato sem nome de pacote cai na frase genérica em vez de inventar um:
+    é a mesma escada de :func:`gesto_de_atualizar`, e o degrau final continua
+    sendo a resposta honesta.
+
+    `KeyError` numa chave desconhecida é de propósito — uma frase que não sabe
+    o que mandar instalar não deve chegar à tela.
+    """
+    formato = formato_desta_instalacao(
+        e_checkout=e_checkout,
+        marca_flatpak=marca_flatpak,
+        raiz_do_codigo=raiz_do_codigo,
+        consultar_dono=consultar_dono,
+    )
+    pacote = PACOTE_POR_FORMATO.get(chave, {}).get(formato)
+    molde = GESTO_DE_INSTALAR.get(formato)
+    if pacote and molde:
+        return molde.format(pacote=pacote)
+    return FRASE_DE_INSTALAR_GENERICA.format(biblioteca=NOME_DA_DEPENDENCIA[chave])
+
+
 _QUIRK_RE = re.compile(r"054c:0ce6")
 # SPRINT-GAME-RUMBLE-01: a cura de raiz é o quirk_flags do snd_usb_audio para o
 # DualSense COM ignore_ctl_error (o que ataca o mixer que martela o EP0).
@@ -959,7 +1055,11 @@ def _safe_read(path: Path) -> str:
 
 
 __all__ = [
+    "FRASE_DE_INSTALAR_GENERICA",
     "GESTO_DE_ATUALIZAR",
+    "GESTO_DE_INSTALAR",
+    "NOME_DA_DEPENDENCIA",
+    "PACOTE_POR_FORMATO",
     "PREFIXO_DA_CURA",
     "check_authorized_rule",
     "check_quirk",
@@ -972,6 +1072,7 @@ __all__ = [
     "find_localconfig_vdfs",
     "formato_desta_instalacao",
     "gesto_de_atualizar",
+    "gesto_de_instalar",
     "rotulo_do_botao",
     "rotulos_de_reserva",
     "steam_input_allowlist",
