@@ -779,15 +779,23 @@ EDICOES: tuple[Edicao, ...] = (
         ),
         porque=(
             "A-TELA-PROMETE-PAREAR-01, 19/09/2026. A frase oferecia um gesto que o "
-            "produto NÃO faz: os 18 gestos da aba Conexões não tocam em pareamento, e "
-            "`grep -rn bt_ponte_privilegiada src/` devolve ZERO — nenhuma linha de "
-            "Python jamais chamou a ponte. O transporte inteiro existe (os verbos "
-            "`esquecer`, `descobrir` e `parear`, o script instalado como root, o "
-            "sudoers com NOPASSWD, o agente ativo); o que falta é o último palmo, e é "
-            "a PONTE-SEM-CHAMADOR-01. Enquanto o botão não existir, a frase é o "
-            "produto afirmando uma capacidade que não tem — e nesta casa fato errado "
-            "se SUBSTITUI, não se guarda ao lado. O texto novo diz o que há hoje e "
-            "aponta o caminho, em vez de prometer."
+            "produto NÃO faz: os 18 gestos da aba Conexões não tocam em pareamento. "
+            "O transporte inteiro existe (os verbos `esquecer`, `descobrir` e "
+            "`parear`, o script instalado como root, o sudoers com NOPASSWD, o agente "
+            "ativo); o que falta é o último palmo, e é a PONTE-SEM-CHAMADOR-01. "
+            "Enquanto o botão não existir, a frase é o produto afirmando uma "
+            "capacidade que não tem — e nesta casa fato errado se SUBSTITUI, não se "
+            "guarda ao lado. O texto novo diz o que há hoje e aponta o caminho, em "
+            "vez de prometer.\n"
+            "FATO ERRADO, SUBSTITUÍDO (20/09/2026): esta razão dizia que "
+            "`grep -rn bt_ponte_privilegiada src/` devolvia ZERO. Não devolve mais, "
+            "e já não devolvia quando foi escrita — `integrations/conexao_zumbi.py` "
+            "chama o verbo `desconectar` desde 18/09, e "
+            "`integrations/gesto_de_pareamento.py` chama `descobrir` e `parear` desde "
+            "20/09. O QUE NÃO MUDOU, e é o que sustenta esta edição: nenhum BOTÃO da "
+            "tela pareia, porque a PONTE-SEM-CHAMADOR-01 deixou os dois botões para "
+            "depois do OK dela — parear escreve no rádio dela com quatro controles "
+            "vivos em cima."
         ),
     ),
 )

@@ -74,7 +74,8 @@
 #   bonds      <MAC_ADAPTADOR>           lista os controles pareados naquele
 #   renomear   <MAC_ADAPTADOR>           alias novo pelo STDIN (1 linha)
 #   esquecer   <MAC_ADAPTADOR> <MAC_CTRL>  remove o bond E o cache SDP
-#   descobrir  <MAC_ADAPTADOR> <SEG>     janela de busca (BLOQUEIA <SEG>)
+#   descobrir  <MAC_ADAPTADOR> <SEG>     janela de busca (BLOQUEIA <SEG>) e,
+#                                        enquanto ela vive, os candidatos
 #   parear     <MAC_ADAPTADOR> <MAC_CTRL>  Pair() + Trusted=true
 #   desconectar <MAC_ADAPTADOR> <MAC_CTRL> derruba o LINK (o controle zumbi)
 #   regra-sudo <USUARIA>                 imprime o /etc/sudoers.d (não instala)
@@ -82,6 +83,13 @@
 # SAÍDA: dado em TSV no stdout, uma linha por item; erro no stderr.
 #   adaptadores -> MAC \t ALIAS \t ligado|desligado \t hciN
 #   bonds       -> MAC \t NOME \t com-chave|sem-chave
+#   descobrir   -> MAC \t NOME \t novo|pareado \t CLASSE
+# A CLASSE é o `Class` do BlueZ em decimal (a *class of device* do
+# Bluetooth), e sai crua de propósito: quem decide se um candidato é
+# controle é quem chama, não esta ponte. Vazia quando o BlueZ não a
+# publica — um aparelho só-LE não tem classe, e inventar uma seria pior
+# que a coluna vazia. Medido na mesa dela em 20/09/2026: os seis objetos
+# de DualSense do BlueZ respondem `u 9480` (0x2508).
 # Alias e nome são higienizados (controle/tab/quebra viram espaço) porque vêm
 # do BlueZ, não de nós.
 #
@@ -98,12 +106,16 @@
 #   HEFESTO_BT_LIB          raiz da árvore do BlueZ (default /var/lib/bluetooth)
 #   HEFESTO_PONTE_DRY_RUN=1 não muda nada; imprime o que faria (= --dry-run)
 #   HEFESTO_BT_LOG_DEST     vazio = journal · caminho = arquivo · none = nada
+#   HEFESTO_BT_BIN          pasta posta NA FRENTE do PATH: `busctl`,
+#                           `bluetoothctl` e `hcitool` saem dela, não do
+#                           sistema. É o que torna a lista de candidatos
+#                           medível sem abrir varredura no rádio dela.
 set -euo pipefail
 
 #: Sob sudo os ganchos não existem. O `env_reset` do sudo já os apagaria; esta
 #: linha é o cinto para a máquina que o desligou (contenção 3 do cabeçalho).
 if [[ -n "${SUDO_UID:-}" || -n "${SUDO_USER:-}" ]]; then
-    unset HEFESTO_BT_LIB HEFESTO_PONTE_DRY_RUN HEFESTO_BT_LOG_DEST
+    unset HEFESTO_BT_LIB HEFESTO_PONTE_DRY_RUN HEFESTO_BT_LOG_DEST HEFESTO_BT_BIN
 fi
 
 #: `%/` normaliza a barra final: sem isso, uma raiz de teste terminada em
@@ -113,6 +125,18 @@ LIB="${LIB%/}"
 LIB_REAL="/var/lib/bluetooth"
 ALVO_INSTALADO="/usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh"
 SECOS="${HEFESTO_PONTE_DRY_RUN:-0}"
+
+#: BARRAMENTO DE MENTIRA. Com esta pasta na frente do PATH, o `busctl` e o
+#: `bluetoothctl` que este script chama são os DELA — os da pasta —, e não os
+#: do sistema. Existe por uma razão só: a lista de candidatos do `descobrir`
+#: só se mede abrindo uma varredura, e abrir varredura na máquina dela custa
+#: 32-43% dos pacotes do adaptador com quatro controles de pé. Inerte sob
+#: sudo, como os outros três ganchos (contenção 3 do cabeçalho).
+BIN_DE_TESTE="${HEFESTO_BT_BIN:-}"
+if [[ -n "${BIN_DE_TESTE}" ]]; then
+    PATH="${BIN_DE_TESTE}:${PATH}"
+    export PATH
+fi
 
 #: Teto da janela de busca. Existe porque o processo BLOQUEIA por esse tempo com
 #: privilégio de root — janela sem teto é root parado para sempre.
@@ -268,7 +292,10 @@ _hci_do_mac() {
     #: `renomear`/`descobrir`/`parear` MEXEM no adaptador. Sem esta linha,
     #: bastaria um MAC de teste coincidir com um adaptador vivo para um portão
     #: derrubar a mesa dela. Mesma razão do gancho de raiz do bt_bonds_snapshot.
-    [[ "${LIB}" == "${LIB_REAL}" ]] || return 1
+    #: E `HEFESTO_BT_BIN` abre a exceção, que é segura POR CONSTRUÇÃO: com ele
+    #: o `busctl` da linha seguinte é o da pasta de teste, então o barramento
+    #: que responde não é o dela. Sem ele, a guarda acima continua inteira.
+    [[ "${LIB}" == "${LIB_REAL}" || -n "${BIN_DE_TESTE}" ]] || return 1
     command -v busctl >/dev/null 2>&1 || return 1
     while read -r caminho; do
         [[ -n "${caminho}" ]] || continue
@@ -425,31 +452,113 @@ _apagar() {
     rm -rf -- "${caminho}"
 }
 
+#: FECHAR A JANELA É PARTE DO GESTO, e não higiene. Se este processo morrer sem
+#: derrubar o `bluetoothctl` que está atrás, a varredura continua de pé no
+#: adaptador DELA por até <segundos> — e varredura no próprio adaptador custa de
+#: 32% a 43% dos pacotes, com quatro controles em cima. Quem fecha a tela tem de
+#: fechar o rádio junto, inclusive quando quem fecha é um sinal.
+#:
+#: Os três moram em global porque um `trap` não enxerga `local` de função.
+BUSCA_PID=""
+BUSCA_ROTEIRO=""
+BUSCA_JAVISTOS=""
+
+_fechar_a_busca() {
+    if [[ -n "${BUSCA_PID}" ]]; then
+        kill "${BUSCA_PID}" 2>/dev/null || true
+        BUSCA_PID=""
+    fi
+    [[ -n "${BUSCA_ROTEIRO}" ]] && rm -f -- "${BUSCA_ROTEIRO}"
+    [[ -n "${BUSCA_JAVISTOS}" ]] && rm -f -- "${BUSCA_JAVISTOS}"
+    return 0
+}
+
+#: OS CANDIDATOS QUE AINDA NÃO SAÍRAM — uma linha de TSV por aparelho novo.
+#:
+#: PONTE-SEM-CHAMADOR-01 (20/09/2026). Até hoje o `descobrir` abria a janela e
+#: **não devolvia nada**: quem chamasse ficava com um adaptador varrendo e
+#: nenhuma lista para escolher. Sem a lista, o `parear` só serve a quem já sabe
+#: o endereço de cor — que é exatamente a pessoa que não precisa de botão.
+#:
+#: O ARQUIVO DE JÁ-VISTOS É O QUE FAZ A SAÍDA SER UM FLUXO, e é isso que
+#: resolve o segundo risco da sprint: o `parear` tem de correr DENTRO da janela
+#: que este verbo abriu, e só há como chamá-lo dentro dela se o endereço sair
+#: ANTES de a janela fechar. Uma lista impressa no fim mandaria quem chama
+#: parear contra um objeto que o BlueZ já pode ter recolhido.
+_candidatos_novos() {
+    local hci="$1" javistos="$2" caminho endereco nome pareado classe
+    while read -r caminho; do
+        [[ -n "${caminho}" ]] || continue
+        grep -qxF -- "${caminho}" "${javistos}" 2>/dev/null && continue
+        endereco="$(busctl get-property org.bluez "${caminho}" org.bluez.Device1 Address 2>/dev/null \
+            | sed -E 's/^s "?//; s/"?$//' || true)"
+        #: Sem endereço não há candidato — e o caminho NÃO entra em já-vistos,
+        #: porque a propriedade pode aparecer na volta seguinte.
+        [[ "${endereco}" =~ ${_MAC_FORMA} ]] || continue
+        nome="$(busctl get-property org.bluez "${caminho}" org.bluez.Device1 Alias 2>/dev/null \
+            | sed -E 's/^s "?//; s/"?$//' || true)"
+        pareado="$(busctl get-property org.bluez "${caminho}" org.bluez.Device1 Paired 2>/dev/null \
+            | sed -E 's/^b //' || true)"
+        classe="$(busctl get-property org.bluez "${caminho}" org.bluez.Device1 Class 2>/dev/null \
+            | sed -E 's/^u //' || true)"
+        [[ "${classe}" =~ ^[0-9]+$ ]] || classe=""
+        printf '%s\t%s\t%s\t%s\n' "${endereco^^}" "$(_higienizar "${nome}")" \
+            "$([[ "${pareado}" == "true" ]] && printf 'pareado' || printf 'novo')" "${classe}"
+        printf '%s\n' "${caminho}" >>"${javistos}"
+    done <<<"$(busctl tree org.bluez --list 2>/dev/null \
+        | grep -oE "^/org/bluez/${hci}/dev_[0-9A-Fa-f_]+$" | sort -u || true)"
+}
+
 #: BLOQUEIA por <SEGUNDOS> — é uma janela de busca, não um interruptor. O
 #: `--init-script` é o único jeito de dar mais de um comando a uma sessão só do
 #: bluetoothctl, e a sessão precisa ser uma só: `select` não sobrevive entre
 #: invocações (cada `bluetoothctl` é um cliente D-Bus novo), e a descoberta
 #: morre junto com o cliente que a pediu.
 verbo_descobrir() {
-    local adaptador="$1" segundos="$2" hci roteiro
+    local adaptador="$1" segundos="$2" hci fim quantos
     hci="$(_hci_do_mac "${adaptador}" || true)"
     [[ -n "${hci}" ]] || { _erro "adaptador ${adaptador} não está na mesa (plugado e ligado?)"; exit 1; }
     command -v bluetoothctl >/dev/null 2>&1 \
         || { _erro "bluetoothctl ausente — sem ele não há janela de busca"; exit 1; }
     if _seco; then
         _dizer_seco "bluetoothctl --timeout ${segundos} (select ${adaptador}; power on; pairable on; scan on)"
+        _dizer_seco "e, a cada segundo da janela, uma linha por candidato novo de ${hci}: MAC \\t NOME \\t novo|pareado \\t CLASSE"
         return 0
     fi
-    roteiro="$(mktemp)" || { _erro "não consegui criar o roteiro temporário"; exit 1; }
-    chmod 600 "${roteiro}"
-    # shellcheck disable=SC2064  # a expansão TEM de ser agora: o nome é local.
-    trap "rm -f -- '${roteiro}'" EXIT
-    printf 'select %s\npower on\npairable on\nscan on\n' "${adaptador}" >"${roteiro}"
+    BUSCA_ROTEIRO="$(mktemp)" || { _erro "não consegui criar o roteiro temporário"; exit 1; }
+    BUSCA_JAVISTOS="$(mktemp)" || { _erro "não consegui criar a lista de já-vistos"; exit 1; }
+    chmod 600 "${BUSCA_ROTEIRO}" "${BUSCA_JAVISTOS}"
+    #: O `trap` de EXIT cobre o SIGTERM, e isso é MEDIDO (20/09/2026): o bash
+    #: corre o trap de saída também quando morre por sinal, então um `trap`
+    #: separado de TERM/INT foi escrito, medido com a cura arrancada, e não
+    #: reprovou nada — era linha a mais dizendo o que esta já diz.
+    trap _fechar_a_busca EXIT
+    printf 'select %s\npower on\npairable on\nscan on\n' "${adaptador}" >"${BUSCA_ROTEIRO}"
     _registrar "janela de busca de ${segundos}s aberta em ${adaptador} (${hci})"
     #: O teto de tempo externo é cinto: se o bluetoothctl ignorar o --timeout,
     #: quem fica preso é um processo ROOT.
+    #:
+    #: E A JANELA VAI PARA O FUNDO, que é a mudança. Presa em primeiro plano
+    #: ela não deixava ninguém olhar o barramento enquanto varria — e o que
+    #: interessa a quem chama acontece justamente DURANTE a varredura.
     timeout "$((segundos + 10))" bluetoothctl --timeout "${segundos}" \
-        --init-script "${roteiro}" >/dev/null 2>&1 || true
+        --init-script "${BUSCA_ROTEIRO}" >/dev/null 2>&1 &
+    BUSCA_PID=$!
+    fim=$(( $(date +%s) + segundos ))
+    while kill -0 "${BUSCA_PID}" 2>/dev/null && (( $(date +%s) < fim )); do
+        _candidatos_novos "${hci}" "${BUSCA_JAVISTOS}"
+        sleep 1
+    done
+    #: Uma última passada com a janela já fechando: o aparelho que apareceu no
+    #: último segundo é candidato como qualquer outro, e perdê-lo obrigaria a
+    #: pessoa a repetir o gesto de PS + Create inteiro.
+    _candidatos_novos "${hci}" "${BUSCA_JAVISTOS}"
+    wait "${BUSCA_PID}" 2>/dev/null || true
+    BUSCA_PID=""
+    quantos="$(wc -l <"${BUSCA_JAVISTOS}" 2>/dev/null || printf '0')"
+    #: O DIÁRIO CONTA, NÃO NOMEIA. Uma varredura vê o celular do vizinho, e o
+    #: journal desta máquina não é lugar para o endereço de quem passou na rua.
+    _registrar "janela de busca fechada em ${adaptador} (${hci}): ${quantos} candidato(s)"
     return 0
 }
 
