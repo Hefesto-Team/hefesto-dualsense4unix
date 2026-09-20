@@ -49,10 +49,12 @@ RAIZ="$(git rev-parse --show-toplevel 2>/dev/null || dirname "$(dirname "$(readl
 # a camada rápida existe: `validar-acentuacao.py --all` sozinho custa 38 s e o
 # `shellcheck` sobre o `install.sh` de 219 KB custa 11,4 s -- os dois juntos são
 # oito vezes a camada rápida inteira, que fechava em 5,3 s com QUINZE portões.
-# CONTAGEM CORRIGIDA em 29/08/2026 — o tempo é de 25/08 e fica com a data dele;
-# a contagem envelheceu e virava número errado: hoje a tabela tem 21 `rapido` e
-# 7 `completo` (28 no `portoes.sh` sem argumento), mais 1 `suite`. Quem mexer
-# aqui conta de novo: `grep -cE '^rapido\|' scripts/portoes.sh`.
+# O tempo é de 25/08 e fica com a data dele; a CONTAGEM envelhece sozinha e por
+# isso já virou número errado duas vezes — dizia 21 `rapido` e 7 `completo`
+# enquanto a tabela tinha o dobro. Medida em 20/09/2026: **44 `rapido` e 17
+# `completo`** (61 no `portoes.sh` sem argumento), mais 1 `suite`. Quem mexer
+# aqui conta de novo, e o comando é o dono da resposta:
+#   grep -cE '^rapido\|' scripts/portoes.sh ; grep -cE '^completo\|' scripts/portoes.sh
 # ---------------------------------------------------------------------------
 _LISTA() {
   cat <<'TABELA'
@@ -273,6 +275,29 @@ rapido|cor-vem-do-aparelho|py|scripts/check_a_cor_vem_do_aparelho.py
 # O `colisao-de-sprints` SAIU EM 15/09/2026 pela mesma razão do
 # `saida-de-agente`: ele lia `docs/process/sprints/` para achar duas sprints
 # disputando o mesmo arquivo, e a pasta saiu do repositório.
+#
+# A NARRATIVA PARA DE CRESCER SOZINHA — 20/09/2026, PODA-DO-DATADO-01, e a
+# ordem dela é de 17/09, repetida em 20/09: *"temos que ter um hook pra pegar o
+# frontmatter tudo que tiver concluido e mover pro arquivo automaticamente
+# não?"*  <!-- noqa-acento: citação literal dela -->
+#
+# ELE LÊ `docs/process/sprints/`, E ISSO É O QUE DERRUBOU O `colisao-de-sprints`
+# ACIMA — a diferença está escrita, não suposta: sem a pasta no disco este
+# portão imprime NÃO MEDIDO e devolve 0, em vez de afirmar sobre o que não leu.
+# Medido em 20/09 numa árvore só com o que o git carrega: `rc=0`, "NÃO MEDIDO".
+#
+# ELE NÃO MOVE NADA. `--exigir` é leitura pura; quem move é a pessoa que vê o
+# vermelho e roda `--mover`. Portão que reescreve artefato não roda em árvore
+# de agente — é a mesma razão que mantém o `i18n_compile.sh` fora daqui.
+#
+# E ELE REPROVA SÓ O QUE TEM CONSERTO: a sprint fechada LIVRE. A presa por
+# citação de caminho sai nomeada e NÃO reprova, porque segurá-la é o trabalho
+# da trava — na árvore de 20/09 eram 13 de 21, e reprová-las seria um vermelho
+# que ninguém pode apagar. Portão sem conserto é portão que se desliga.
+#
+# Custo medido nesta árvore, com a pasta cheia: 0,40 s (a varredura de citação
+# é uma passada só, com pré-filtro literal). Cabe na camada rápida.
+rapido|sprints-fechadas|py|scripts/mover-sprints-fechadas.py --exigir
 rapido|icones|bash|scripts/gerar_icones.sh --check
 rapido|packaging-parity|bash|scripts/check_packaging_parity.sh
 rapido|glifos|py|scripts/validar-glifos.py --all
@@ -346,6 +371,7 @@ _DIVERGENCIAS() {
   cat <<'DIV'
 FORA-DO-LOCAL|scripts/ci/instalar_como_usuaria.sh|ensaio de instalação em máquina descartável; rodar na máquina dela mexeria no sistema vivo.
 FORA-DO-LOCAL|scripts/i18n_compile.sh|regenera os .mo, que são artefato compartilhado, e não tem forma --check. Portão que reescreve artefato não roda na árvore de agente.
+FORA-DO-CI|scripts/mover-sprints-fechadas.py|mede docs/process/sprints/, que é .gitignore:178 e não viaja pelo git. No CI a pasta nunca existe, então o portão só saberia dizer NÃO MEDIDO — um job que não pode reprovar ensina a não acreditar na esteira. Localmente ele mede 46 sprints; medido em 20/09.
 FORA-DO-LOCAL|pre-commit|DECISÃO EM ABERTO, e não é minha: ou o framework entra no install.sh sem flag, ou os dez portões do .pre-commit-config.yaml migram para o gancho e o .yaml some (INFRA-DE-EXECUCAO-01, I14 e §9.4). Enquanto não decidido, o CI é o único que o roda -- e esta linha declara isso em vez de fingir que não existe. Medido: `which pre-commit` -> not found nesta máquina.
 DIV
 }
@@ -486,6 +512,7 @@ echo
 # --- a corrida -------------------------------------------------------------
 VERMELHOS=()
 AUSENTES=()
+NAO_MEDIDOS=()
 TOTAL=0
 
 while IFS='|' read -r camada id runner argv; do
@@ -527,7 +554,30 @@ while IFS='|' read -r camada id runner argv; do
   fim=$(date +%s%N)
   ms=$(( (fim - inicio) / 1000000 ))
 
-  if [ "$rc" -eq 0 ]; then
+  # RC=0 NÃO É A MESMA COISA QUE «MEDIU», e a confusão entre as duas é a
+  # família de defeito que esta casa mais caçou em 2026. Medido em 20/09/2026,
+  # logo depois de o `sprints-fechadas` entrar: numa árvore SEM `docs/process/`
+  # — que é como todo worktree de agente nasce, porque `git worktree add` não
+  # copia arquivo ignorado — o portão imprimia, certinho, «NÃO MEDIDO: não há
+  # docs/process/sprints/ nesta árvore», e esta linha aqui engolia a saída e
+  # escrevia `sprints-fechadas ok`. Do lado de quem lê, verde sobre 46 sprints
+  # que ninguém abriu — byte por byte o defeito que a cura do portão dizia ter
+  # matado, mudado de andar.
+  #
+  # O CONTRATO, e ele vale para qualquer portão: quem NÃO PÔDE medir imprime
+  # `NÃO MEDIDO` na PRIMEIRA linha e devolve 0. Ele não reprova (faltou o
+  # dado, não o conserto) e também não passa por verde: sai nomeado, com a
+  # razão dele à mostra, e conta separado no fim.
+  # O casamento é por GLOB de `case`, não por fatia de string: `${s:0:10}`
+  # conta BYTES sob `LC_ALL=C` e CARACTERES fora dele, e o `Ã` tem dois bytes
+  # — a mesma linha acertaria e erraria conforme o ambiente de quem roda.
+  nao_mediu=0
+  case "$saida" in "NÃO MEDIDO"*) nao_mediu=1 ;; esac
+  if [ "$rc" -eq 0 ] && [ "$nao_mediu" -eq 1 ]; then
+    printf '  %-22s NÃO MEDIDO %5d ms\n' "$id" "$ms"
+    printf '%s\n' "$saida" | sed 's/^/      /'
+    NAO_MEDIDOS+=("$id")
+  elif [ "$rc" -eq 0 ]; then
     printf '  %-22s ok      %6d ms\n' "$id" "$ms"
   else
     printf '  %-22s VERMELHO rc=%s %5d ms\n' "$id" "$rc" "$ms"
@@ -541,8 +591,17 @@ if [ ${#AUSENTES[@]} -gt 0 ]; then
   echo "PORTÕES DECLARADOS E AUSENTES DA ÁRVORE (${#AUSENTES[@]}):"
   printf '  %s\n' "${AUSENTES[@]}"
 fi
+if [ ${#NAO_MEDIDOS[@]} -gt 0 ]; then
+  echo "NÃO MEDIDOS (${#NAO_MEDIDOS[@]}): ${NAO_MEDIDOS[*]}"
+  echo "  Faltou o DADO, não o conserto — eles não reprovam. Mas também não"
+  echo "  entram na conta dos verdes: ninguém pode dizer que estão certos."
+fi
 if [ ${#VERMELHOS[@]} -eq 0 ] && [ ${#AUSENTES[@]} -eq 0 ]; then
-  echo "TODOS VERDES — ${TOTAL} portões."
+  if [ ${#NAO_MEDIDOS[@]} -gt 0 ]; then
+    echo "VERDES — $((TOTAL - ${#NAO_MEDIDOS[@]})) de ${TOTAL} portões; ${#NAO_MEDIDOS[@]} NÃO MEDIDO(S)."
+  else
+    echo "TODOS VERDES — ${TOTAL} portões."
+  fi
   exit 0
 fi
 echo "REPROVOU: ${#VERMELHOS[@]} vermelho(s) de ${TOTAL}${VERMELHOS[0]+ -> }${VERMELHOS[*]:-}"

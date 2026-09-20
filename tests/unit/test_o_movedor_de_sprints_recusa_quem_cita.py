@@ -25,6 +25,7 @@ clone limpo por ausência de ambiente.
 from __future__ import annotations
 
 import importlib.util
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -277,3 +278,235 @@ def test_exigir_passa_com_a_pasta_viva_so_de_abertas(tmp_path):
 
     assert pronto.returncode == 0
     assert "OK:" in pronto.stdout
+
+
+# ---------------------------------------------------------------------------
+# 9 — `--exigir` COMO PORTÃO, e o arranjo DIFÍCIL é o que faltava
+#
+# Os dois casos da seção 8 cobrem o arranjo FÁCIL: uma fechada sem citação
+# nenhuma, e uma pasta só de abertas. Na árvore viva de 20/09/2026 o arranjo
+# fácil era MINORIA — 8 de 21 fechadas estavam livres, e as outras 13 estavam
+# presas por citação de caminho, seguradas de propósito pela trava.
+#
+# É a pergunta que esta casa aprendeu a fazer: *a régua cobre o arranjo
+# difícil ou só o fácil?* A régua do rótulo do gravador conferia dois nomes de
+# SOM e nunca os da HÁPTICA, que eram os que colidiam. Aqui era o mesmo: a
+# régua conferia a livre e nunca a presa, que é a maioria.
+# ---------------------------------------------------------------------------
+
+def test_exigir_nao_reprova_a_fechada_que_a_citacao_segura(tmp_path):
+    """A presa por caminho NÃO reprova, e sai nomeada.
+
+    A MORDIDA ARRANCA: faça `_exige` contar toda fechada — que é o que ele
+    fazia até 20/09/2026 — e este teste reprova com `rc=1`. É o vermelho
+    eterno: a trava segura a sprint DE PROPÓSITO (soltá-la quebraria o
+    citador), e um portão que reprova o estado certo não tem conserto. Portão
+    sem conserto é portão que alguém desliga.
+    """
+    sprints = _arvore(tmp_path)
+    _cita_pelo_caminho(tmp_path)
+
+    pronto = _roda(tmp_path, "--exigir")
+
+    assert pronto.returncode == 0, (
+        "a presa reprovou o portão — e ela não tem conserto do lado de quem "
+        f"vê o vermelho:\n{pronto.stdout}")
+    assert "presas pela citação, e FICAM: 1" in pronto.stdout, pronto.stdout
+    assert NOME in pronto.stdout, "a presa não foi nomeada"
+    assert (sprints / NOME).is_file()
+
+
+def test_exigir_reprova_a_livre_mesmo_no_meio_das_presas(tmp_path):
+    """Uma livre entre presas ainda reprova, e SÓ ela é listada para descer.
+
+    A MORDIDA ARRANCA: se `_exige` deixar de separar e passar a devolver 0
+    sempre que houver qualquer presa, este teste reprova — seria a cura
+    passando do ponto, trocando o vermelho eterno por um portão cego.
+    """
+    sprints = _arvore(tmp_path)
+    _cita_pelo_caminho(tmp_path)
+    livre = "2026-01-02-OUTRA-SPRINT-DE-MENTIRA-02-a-que-ninguem-cita.md"
+    (sprints / livre).write_text(
+        "---\nsprint: OUTRA-SPRINT-DE-MENTIRA-02\nestado: absorvida\n---\n\n"
+        "# Outra\n", encoding="utf-8")
+
+    pronto = _roda(tmp_path, "--exigir")
+
+    assert pronto.returncode == 1, pronto.stdout
+    descem = pronto.stdout.split("podem descer AGORA:")[-1]
+    assert livre in descem, pronto.stdout
+    assert NOME not in descem, (
+        "a presa entrou na lista do que desce — a separação não é a mesma "
+        f"que o `--seco` usa:\n{pronto.stdout}")
+
+
+def test_exigir_sem_a_pasta_diz_nao_medido_e_nunca_ok(tmp_path):
+    """Sem `docs/process/` no disco, o portão declara que NÃO MEDIU.
+
+    Clone limpo nunca tem a pasta — ela é `.gitignore:178`. Até 20/09/2026
+    este caminho imprimia *"OK: nenhuma sprint fechada na pasta viva"* e
+    devolvia 0: afirmava sobre 46 sprints que não tinha lido.
+
+    A MORDIDA ARRANCA: devolva a linha `OK: nenhuma sprint fechada na pasta
+    viva` ao ramo da pasta ausente e este teste reprova. É *ausência é
+    resposta* — sem o dado, diga "não sei" e por quê, nunca "nenhum".
+    """
+    pronto = _roda(tmp_path, "--exigir")
+
+    assert pronto.returncode == 0, pronto.stderr
+    assert "NÃO MEDIDO" in pronto.stdout, pronto.stdout
+    assert "OK:" not in pronto.stdout, (
+        "o portão disse OK sobre uma árvore que não leu — é verde sobre "
+        f"nada:\n{pronto.stdout}")
+
+
+def test_exigir_nao_move_um_byte(tmp_path):
+    """O portão é LEITURA PURA. Quem move é a pessoa que vê o vermelho.
+
+    A MORDIDA ARRANCA: faça `--exigir` chamar `mover()` e este teste reprova.
+    Portão que reescreve artefato não roda em árvore de agente — é a razão
+    declarada que mantém o `i18n_compile.sh` fora do `portoes.sh`.
+    """
+    sprints = _arvore(tmp_path)
+
+    pronto = _roda(tmp_path, "--exigir")
+
+    assert pronto.returncode == 1, pronto.stdout
+    assert (sprints / NOME).is_file(), "o portão moveu a sprint"
+    assert not (sprints / "arquivados").exists(), "o portão criou a gaveta"
+
+
+def test_o_movedor_esta_ligado_ao_portoes_sh():
+    """O movedor é portão declarado, senão a narrativa volta a crescer sozinha.
+
+    A ordem dela, 17 e 20/09/2026, é que isto rode sem ninguém lembrar. Um
+    script que só existe no disco é um script que ninguém roda — foi o que
+    deixou a regra *fato errado se SUBSTITUI* sem instrumento desde 11/08.
+
+    A MORDIDA ARRANCA: tire a linha `sprints-fechadas` da tabela de
+    `portoes.sh` e este teste reprova. Ele lê o arquivo em vez de rodá-lo,
+    igual ao portão do portão, para valer sem venv nem árvore de git.
+    """
+    tabela = (RAIZ / "scripts" / "portoes.sh").read_text(encoding="utf-8")
+    linhas = [ln.strip() for ln in tabela.splitlines()
+              if ln.strip().startswith(("rapido|", "completo|"))]
+    minhas = [ln for ln in linhas if "mover-sprints-fechadas.py" in ln]
+
+    assert minhas, (
+        "o movedor não está na tabela de portoes.sh — sem isso ele só roda "
+        "quando alguém lembra, que é o estado que a sprint veio curar")
+    assert all("--exigir" in ln for ln in minhas), (
+        f"o movedor está declarado sem `--exigir`: {minhas}. Sem a forma de "
+        "leitura pura, o portão moveria arquivo por trás de quem trabalha")
+    assert all("--mover" not in ln for ln in minhas), (
+        f"o portão foi declarado com `--mover`: {minhas}")
+
+
+# ---------------------------------------------------------------------------
+# 10 — A FRONTEIRA É UMA SÓ, e quem responde por ela é o `--seco`
+#
+# `separa_presas_e_livres` nasceu em 20/09/2026 com uma promessa escrita na
+# docstring dela: *"`--seco` e `--exigir` precisam da MESMA fronteira, e duas
+# cópias divergem caladas"*. A promessa não tinha régua. Medido no mesmo dia,
+# ao conferir: devolvendo a `_exige` uma fronteira PRÓPRIA — `presas = toda
+# fechada com QUALQUER citação`, em vez de só a citação por caminho — as vinte
+# réguas do arquivo ficaram VERDES, e o produto passou a mentir nas duas
+# pontas ao mesmo tempo:
+#
+#     $ ... --exigir   ->  "OK: 1 fechada(s) ... todas presas"        rc=0
+#     $ ... --seco     ->  "LIVRES para descer: 1"
+#
+# O portão dizia que não havia o que descer sobre exatamente a sprint que o
+# `--mover` desceria no comando seguinte.
+#
+# A RÉGUA PERGUNTA AO DONO em vez de remontar o esperado: o dono da fronteira
+# é o `--seco`, porque é o que o `--mover` obedece quando escreve no disco.
+# Montar aqui a lista certa com as mesmas constantes que a função lê seria
+# tautologia — passaria com as duas fronteiras divergentes.
+# ---------------------------------------------------------------------------
+
+SO_NOME = "2026-01-04-A-TERCEIRA-DE-MENTIRA-03-so-o-nome-a-cita.md"
+LIVRE = "2026-01-05-A-QUARTA-DE-MENTIRA-04-ninguem-a-cita.md"
+
+
+def _as_tres(tmp_path):
+    """Uma presa por caminho, uma citada só pelo nome, e uma sem citação.
+
+    A do MEIO é o arranjo difícil: as duas fronteiras plausíveis discordam
+    sobre ela e concordam sobre as outras duas.
+    """
+    sprints = _arvore(tmp_path)
+    _cita_pelo_caminho(tmp_path)
+    for nome in (SO_NOME, LIVRE):
+        (sprints / nome).write_text(
+            f"---\nsprint: {nome[:40]}\nestado: feita\n---\n\n# X\n",
+            encoding="utf-8")
+    (tmp_path / "docs" / "process" / "UMA-LISTA.md").write_text(
+        f"A sprint `{SO_NOME}` fechou, e esta linha não diz pasta nenhuma.\n",
+        encoding="utf-8")
+    return sprints
+
+
+def _os_md_do_bloco(saida: str, abertura: str, fechamento: str) -> set[str]:
+    depois = saida.split(abertura)
+    assert len(depois) == 2, f"«{abertura}» não saiu uma vez só:\n{saida}"
+    corpo = depois[1].split(fechamento)[0]
+    return {p.strip() for p in re.findall(r"\S+\.md", corpo)}
+
+
+def test_a_fronteira_do_exigir_e_a_mesma_que_o_seco_usa(tmp_path):
+    """O que o portão manda descer é, nome por nome, o que o `--seco` solta.
+
+    A MORDIDA ARRANCA a chamada a `separa_presas_e_livres` dentro de `_exige`
+    e põe no lugar QUALQUER outra fronteira — contar toda citação, contar
+    nenhuma, perdoar quando houver presa. Este teste reprova nas três, porque
+    não compara contra uma lista digitada: compara contra a resposta do dono.
+    """
+    _as_tres(tmp_path)
+
+    seco = _roda(tmp_path, "--seco")
+    exigir = _roda(tmp_path, "--exigir")
+
+    soltas = {Path(p).name for p in _os_md_do_bloco(
+        seco.stdout, "LIVRES para descer:", "SECO:")}
+    descem = {Path(p).name for p in _os_md_do_bloco(
+        exigir.stdout, "podem descer AGORA:", "Rode scripts/")}
+
+    assert soltas, f"o `--seco` não soltou nenhuma — o caso perdeu o sentido:\n{seco.stdout}"
+    assert descem == soltas, (
+        "o `--exigir` e o `--seco` discordam sobre quem pode descer — são "
+        "duas fronteiras onde a docstring promete uma:\n"
+        f"  --seco solta:    {sorted(soltas)}\n"
+        f"  --exigir manda:  {sorted(descem)}\n{exigir.stdout}")
+    assert SO_NOME in descem, (
+        "a citada só pelo nome sumiu da lista do portão, e o `--mover` vai "
+        "descê-la assim mesmo — é o arranjo difícil, e é onde as duas "
+        f"fronteiras discordam:\n{exigir.stdout}")
+
+
+def test_o_exigir_reprova_exatamente_quando_o_mover_teria_o_que_fazer(tmp_path):
+    """rc=1 ⇔ o `--mover` desce alguma coisa. Medido MOVENDO, não lendo.
+
+    É a outra ponta da mesma fronteira, e ela fecha o laço no disco: o
+    veredito do portão é conferido contra o número de arquivos que o `--mover`
+    realmente tira da pasta viva, no mesmo estado de árvore.
+
+    A MORDIDA ARRANCA: qualquer divergência de fronteira entre `_exige` e
+    `_relata` quebra a equivalência — o portão passa a reprovar o que ninguém
+    move, ou a perdoar o que o próximo comando derruba.
+    """
+    sprints = _as_tres(tmp_path)
+    antes = {p.name for p in sprints.glob("*.md")}
+
+    exigir = _roda(tmp_path, "--exigir")
+    _roda(tmp_path, "--mover")
+
+    desceram = antes - {p.name for p in sprints.glob("*.md")}
+    assert (exigir.returncode == 1) == bool(desceram), (
+        f"o portão devolveu rc={exigir.returncode} e o `--mover` desceu "
+        f"{len(desceram)}: {sorted(desceram)}\n{exigir.stdout}")
+    descem = {Path(p).name for p in _os_md_do_bloco(
+        exigir.stdout, "podem descer AGORA:", "Rode scripts/")}
+    assert descem == desceram, (
+        "o portão nomeou uma lista e o disco recebeu outra:\n"
+        f"  portão: {sorted(descem)}\n  disco:  {sorted(desceram)}")
