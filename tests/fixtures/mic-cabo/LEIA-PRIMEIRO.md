@@ -28,6 +28,25 @@ reclama.
 **Os nós do rádio ficam de fora de propósito:** os nomes deles carregam sufixo
 derivado do endereço do controle, e endereço não entra em arquivo versionado.
 
+**O QUE NÃO ESTÁ AQUI, e por quê.** Quatro casos que as réguas precisam medir
+não existem nesta bancada, e por isso **nascem no `tmp_path` do pytest, de uma
+subtração ou de um acréscimo DECLARADO sobre uma gravação desta pasta** — nunca
+de um arquivo digitado à mão e guardado aqui, que é o defeito que esta pasta
+existe para matar:
+
+| caso | como nasce | quem usa |
+| --- | --- | --- |
+| elemento de captura só de chave (`cswitch` sem `cvolume`) | a gravação do DualSense sem a capacidade de volume de captura | `test_elemento_so_de_chave_nao_e_ganho` |
+| a mesma placa com os dois, o só-de-chave na frente | a gravação do DualSense com um bloco só de chave por cima | `test_o_ganho_ganha_do_elemento_so_de_chave` |
+| porta que prende o elemento num valor fixo | três linhas de `[Element …]` | `test_valor_fixo_nao_e_o_deslizante` |
+| porta que liga OUTRO elemento | três linhas de `[Element …]` | `test_merge_de_outro_elemento_nao_alcanca_o_ganho` |
+
+**O primeiro tem medição:** em 20/09/2026, as três placas desta máquina não têm
+um só elemento de captura com chave e sem volume — a 0 (HDMI) só tem `pswitch`,
+a 1 tem `cvolume cswitch` e a 2 (o DualSense) tem `cvolume … cswitch …`. O caso
+existe no mundo e não existe aqui; gravá-lo é impossível, inventá-lo em silêncio
+seria pior.
+
 **Como regravar**, se a máquina mudar: os comandos estão na coluna «de onde
 saiu», todos com `LC_ALL=C` — sem ele o `pactl` traduz e o leitor fica cego.
 Regravar é a resposta certa quando o mundo muda; **editar à mão é o defeito que

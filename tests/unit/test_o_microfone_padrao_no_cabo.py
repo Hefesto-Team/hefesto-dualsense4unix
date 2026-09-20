@@ -94,24 +94,52 @@ _FIXTURES_MIC_CABO = RAIZ / "tests" / "fixtures" / "mic-cabo"
 _SOURCES_GRAVADA = _FIXTURES_MIC_CABO / "sources-cabo-2026-09-20.txt"
 
 
-def _porta_desconhecida_gravada() -> tuple[str, str]:
-    """`(linha da porta, nome da porta ativa)` lidos da gravação de 20/09/2026."""
-    if not _SOURCES_GRAVADA.is_file():
-        return ("", "")
-    porta = ativa = ""
+def _primeira_porta_e_ativa(texto: str) -> tuple[str, str]:
+    """`(linha da porta, nome da porta ativa)` da PRIMEIRA source do texto.
+
+    Para na primeira `Active Port:`, e desiste se uma segunda source começar
+    antes dela. A leitura anterior varria o texto inteiro e guardava a PRIMEIRA
+    porta listada com a ÚLTIMA porta ativa — que num texto de mais de uma
+    source são de blocos diferentes, e o dublê passaria a descrever uma máquina
+    que não existe. Hoje a gravação tem uma source só; a régua não pode
+    depender disso.
+    """
+    porta = ""
     dentro = False
-    for linha in _SOURCES_GRAVADA.read_text(encoding="utf-8").splitlines():
+    cabecalhos = nomes = 0
+    for linha in texto.splitlines():
         nua = linha.strip()
+        # Uma source começa com `Source #N` (saída completa) ou, num recorte de
+        # um bloco só como o desta gravação, com a própria linha `Name:`. As
+        # duas contam separado: no formato completo, as duas aparecem na MESMA
+        # source, e somá-las faria a leitura parar na primeira delas.
+        if nua.startswith("Source #"):
+            cabecalhos += 1
+            if cabecalhos > 1:
+                break  # a primeira source acabou sem porta ativa
+            continue
+        if nua.startswith("Name:"):
+            nomes += 1
+            if nomes > 1:
+                break
+            continue
         if nua == "Ports:":
             dentro = True
             continue
         if nua.startswith("Active Port:"):
-            ativa = nua.split(":", 1)[1].strip()
-            dentro = False
-            continue
+            return (porta, nua.split(":", 1)[1].strip())
         if dentro and nua:
             porta = porta or nua
-    return (porta, ativa)
+    return (porta, "")
+
+
+def _porta_desconhecida_gravada() -> tuple[str, str]:
+    """A dupla lida da gravação de 20/09/2026, ou dois vazios se ela sumiu."""
+    if not _SOURCES_GRAVADA.is_file():
+        return ("", "")
+    return _primeira_porta_e_ativa(
+        _SOURCES_GRAVADA.read_text(encoding="utf-8")
+    )
 
 
 PORTA_DESCONHECIDA, ATIVA_DESCONHECIDA = _porta_desconhecida_gravada()
@@ -839,3 +867,38 @@ def test_a_fixture_da_porta_desconhecida_e_gravada() -> None:
         "a porta ATIVA tem de ser a porta listada — se divergirem, o dublê "
         "descreve uma máquina que não existe"
     )
+
+
+def test_a_leitura_da_porta_para_na_primeira_source() -> None:
+    """A dupla tem de sair do MESMO bloco, e a gravação de hoje não prova isso.
+
+    Ela tem uma source só, então uma leitura que varresse o arquivo inteiro
+    daria o mesmo resultado — e passaria verde guardando a primeira porta de um
+    bloco com a última `Active Port:` de outro. Aqui vão duas sources nas duas
+    formas que o `pactl` emite (com e sem o cabeçalho `Source #`), e o que se
+    cobra é que a segunda não contamine a primeira.
+    """
+    com_cabecalho = (
+        "Source #1\n"
+        "\tName: alsa_input.primeira\n"
+        "\tPorts:\n"
+        "\t\tporta-da-primeira: Primeira (availability unknown)\n"
+        "\tActive Port: porta-da-primeira\n"
+        "Source #2\n"
+        "\tName: alsa_input.segunda\n"
+        "\tPorts:\n"
+        "\t\tporta-da-segunda: Segunda (available)\n"
+        "\tActive Port: porta-da-segunda\n"
+    )
+    porta, ativa = _primeira_porta_e_ativa(com_cabecalho)
+    assert ativa == "porta-da-primeira", f"veio {ativa!r}"
+    assert porta.startswith("porta-da-primeira:"), f"veio {porta!r}"
+
+    sem_cabecalho = com_cabecalho.replace("Source #1\n", "").replace(
+        "Source #2\n", ""
+    )
+    porta, ativa = _primeira_porta_e_ativa(sem_cabecalho)
+    assert (ativa, porta.startswith("porta-da-primeira:")) == (
+        "porta-da-primeira",
+        True,
+    ), f"veio porta={porta!r} ativa={ativa!r}"
