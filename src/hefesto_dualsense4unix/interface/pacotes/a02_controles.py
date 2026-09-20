@@ -1352,10 +1352,9 @@ def _ganho_do_scontents(texto: str) -> tuple[int, float] | None:
     return None
 
 
-def _ler_o_ganho(nos: dict[str, str]) -> dict[str, tuple[int, float] | None]:
+def _ler_o_ganho(na_mesa: tuple[str, ...]) -> dict[str, tuple[int, float] | None]:
     """`{uniq: (por cento, dB) | None}` da mesa. BLOQUEANTE — roda comando.
 
-    `nos` é `{uniq: nome da source}`, que já tem dono (:func:`no_do_microfone`).
     TODO controle da mesa sai com chave: a tupla quando há elemento de ganho, e
     `None` quando a resposta é *não há onde esse ganho exista* — o do rádio, que
     é nó da nossa ponte e não tem placa ALSA (medido em 15/08: a placa segue o
@@ -1365,15 +1364,40 @@ def _ler_o_ganho(nos: dict[str, str]) -> dict[str, tuple[int, float] | None]:
     aba não distingue *"ainda não perguntei"* de *"perguntei e não há"*, e o
     cinza do trilho acenderia nos dois segundos da primeira volta.
 
-    UMA LEITURA DE `pactl` PARA A MESA INTEIRA (para descobrir de que placa é
-    cada source) e uma de `amixer` POR PLACA, nunca por controle: com quatro
-    DualSense no cabo são quatro placas distintas, e a mesma placa nunca é lida
-    duas vezes na mesma volta.
+    A PERGUNTA NÃO É AO `canal_fonte` DO DAEMON, e a primeira redação desta
+    função era — **medido na mesa dela em 20/09/2026, com um DualSense no FIO e
+    três no ar: os quatro responderam `hefesto_mic_<hex6>`**, o nó da nossa
+    ponte, que não tem placa ALSA nenhuma. O ganho ficava cinza no controle que
+    estava no cabo, com a razão mandando ligar o cabo. O `canal_fonte` é o nó
+    que o produto ELEGEU (regra 0 de `escolher_fonte`), e a pergunta daqui é
+    outra: *qual nó deste controle o KERNEL publica*. Quem responde é o dono —
+    :func:`eleicao_de_microfone.fonte_nativa_do_controle`, a irmã de corpo
+    único da que o «Nativo» já usa uma leitura acima.
+
+    O QUE ELA CUSTA, medido na mesa de quatro dela em 20/09/2026: **~70 ms**,
+    dentro de uma thread que acorda a cada :data:`CAMADA_1_S` (2 s) — a mesma
+    ordem de grandeza do `_ler_o_nativo` logo acima (~55 ms), que faz a mesma
+    pergunta por controle. A leitura LONGA do `pactl` é uma só para a mesa
+    inteira (é dela que sai a placa de cada nó), e a do `amixer` é POR PLACA e
+    nunca por controle: com quatro DualSense no cabo são quatro placas
+    distintas, e a mesma placa nunca é lida duas vezes na mesma volta.
     """
-    if not nos:
+    from hefesto_dualsense4unix.integrations import eleicao_de_microfone
+
+    mesa = [u for u in na_mesa if u]
+    if not mesa:
         return {}
-    fora: dict[str, tuple[int, float] | None] = {u: None for u in nos if u}
-    alvos = {u: n for u, n in nos.items() if u and n.startswith("alsa_input.")}
+    fora: dict[str, tuple[int, float] | None] = {u: None for u in mesa}
+    alvos: dict[str, str] = {}
+    for uniq in mesa:
+        try:
+            no = eleicao_de_microfone.fonte_nativa_do_controle(uniq, mesa)
+        except Exception:
+            # Uma leitura que falha não apaga as outras e NÃO vira "não há" —
+            # a mesma regra de `_ler_o_nativo` logo acima.
+            continue
+        if no:
+            alvos[uniq] = no
     if not alvos:
         return fora
     try:
@@ -1496,16 +1520,8 @@ def sono_do_canal(uniq: str) -> str:
 
 
 def _camada_1(entradas: tuple[tuple[str, int | None], ...],
-              na_mesa: tuple[str, ...],
-              nos_do_mic: dict[str, str] | None = None) -> dict[str, Any]:
+              na_mesa: tuple[str, ...]) -> dict[str, Any]:
     """O cache da camada 1, renovado em THREAD a cada :data:`CAMADA_1_S`.
-
-    `nos_do_mic` é `{uniq: source do microfone}` e alimenta a quinta leitura, a
-    do ganho (:data:`_GANHO`). **`None` NÃO É `{}`:** `None` quer dizer *quem
-    chamou não resolveu as fontes*, e aí o cache do ganho fica como está; `{}`
-    quer dizer *a mesa não tem microfone nenhum*, e aí ele é esvaziado. Colapsar
-    os dois faria toda régua que chama `_camada_1` de mentirinha apagar o ganho
-    da mesa de verdade.
 
     **NUNCA SÍNCRONO, nem na primeira vez** — e a primeira redação desta função
     era, o que estava errado por dois motivos que apontam para o mesmo lado:
@@ -1567,11 +1583,11 @@ def _camada_1(entradas: tuple[tuple[str, int | None], ...],
             # QUINTA leitura desta thread, e está aqui pela mesma razão das
             # outras três: é pergunta ao sistema, não ao quadro. A diferença é
             # que o comando não é o `pactl` — o ganho é do MIXER, e quem
-            # responde por ele é o `amixer`. `nos_do_mic` chega pronto: quem
-            # resolve a source de cada controle é `no_do_microfone`, e uma
-            # segunda resolução aqui seria a segunda verdade sobre o mesmo
-            # endereço.
-            ganho = None if nos_do_mic is None else _ler_o_ganho(nos_do_mic)
+            # responde por ele é o `amixer`. E quem responde por qual nó o
+            # KERNEL publica para cada controle é a eleição: perguntar ao
+            # `canal_fonte` do daemon daria o nó que o produto ELEGEU — o
+            # nosso, sem placa ALSA, inclusive no cabo.
+            ganho = _ler_o_ganho(na_mesa)
             # A MESA MUDOU ENQUANTO EU LIA? Então esta leitura inteira é de um
             # mundo que não existe mais, e publicá-la DESFARIA a poda — ver
             # `_CAMADA_1_SELO`. O `finally` continua destravando o voo, e o
@@ -1585,9 +1601,8 @@ def _camada_1(entradas: tuple[tuple[str, int | None], ...],
             _SONO.update(sono)
             _MIC_NATIVO.clear()
             _MIC_NATIVO.update(nativo)
-            if ganho is not None:
-                _GANHO.clear()
-                _GANHO.update(ganho)
+            _GANHO.clear()
+            _GANHO.update(ganho)
             _REGRA_DO_SONO[0] = regra
         finally:
             _CAMADA_1_EM_VOO[0] = False
@@ -2675,15 +2690,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # isto o "Só no controle" continuaria acendendo pelo byte, que é como o
     # card 2 dela ficou aceso com o som saindo na TV, em 03/09.
     na_mesa = tuple(str(c.get("uniq") or "") for c in ctx.conectados if c.get("uniq"))
-    # AS FONTES DO MICROFONE, resolvidas UMA VEZ e entregues à thread: é delas
-    # que sai a placa ALSA de cada controle, e é da placa que sai o elemento de
-    # ganho. Quem resolve é `no_do_microfone`, o dono do endereço — resolver de
-    # novo lá dentro seria a segunda verdade sobre a mesma fonte.
     _camada_1(
         tuple((str(c.get("uniq") or ""), _byte_da_rota(c)) for c in ctx.conectados),
         na_mesa,
-        {str(c.get("uniq") or ""): no_do_microfone(c)
-         for c in ctx.conectados if c.get("uniq")},
     )
     # ONDE CADA PONTINHO ESTÁ, por assento — ver `folha_das_posicoes`. Ele se
     # junta AQUI, e não dentro de `cards`, porque o destino é a folha da PÁGINA:
