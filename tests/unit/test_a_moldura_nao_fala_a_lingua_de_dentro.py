@@ -50,7 +50,16 @@ O_QUE_ELE_LE = (
     "src/hefesto_dualsense4unix/interface/hefesto_vivo.py",
     "src/hefesto_dualsense4unix/gui/ponte_da_tela.py",
     "src/hefesto_dualsense4unix/app/tray.py",
-    "src/hefesto_dualsense4unix/app/compact_window.py",
+    # A `compact_window.py` SAIU — 19/09/2026, ORFAOS-DA-MIGRACAO-01
+    # (`6a2ee8fe2`, "a janela compacta sai do caminho, e os três vigias dela
+    # caem"). O portão `check_a_janela_nao_confessa.py` já a tirou da própria
+    # lista no mesmo dia, com a razão escrita na linha 130; só esta régua ficou
+    # citando o arquivo, e reprovou por nove casos com o produto intacto.
+    #
+    # Esta lista É frágil de propósito — o comentário acima diz que ela quebra
+    # quando a superfície muda, "que é o que se quer". Funcionou: quebrou,
+    # apontou o arquivo pelo nome, e a cura foi de uma linha. A fragilidade
+    # cobrou o preço certo.
     "src/hefesto_dualsense4unix/utils/identidade.py",
     "packaging/hefesto-dualsense4unix.desktop",
     "assets/hefesto-dualsense4unix.service",

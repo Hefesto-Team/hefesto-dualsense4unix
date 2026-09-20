@@ -749,19 +749,39 @@ def test_cada_mais_n_conta_a_propria_lista(pacote) -> None:
     """Passo 6 — a conta da lista errada, que esta aba já cometeu uma vez.
 
     `gui.aba_conexoes.sobraram` está citado em quatro lugares desta árvore como
-    dono desta frase, e ele conta o ACORDEÃO. Aqui cada `+N` conta a lista que
-    ele legenda.
+    dono desta frase, e ele conta o ACORDEÃO. Aqui o `+N` que sobrou conta a
+    lista que ele legenda.
 
-    MORDE: faça o `+N` do exame contar a lista dos vizinhos e as duas asserções
-    trocam de número.
+    O `+N` DO EXAME CALOU EM 19/09/2026, E NÃO É REGRESSÃO. A decisão 08-Q7
+    dela foi ATENDIDA MELHOR: o piloto passou a clonar o molde da linha
+    (`hefesto_vivo.BOOTSTRAP`, `data-hef-molde`) e todo achado aparece —
+    palavra dela no mesmo dia, *a lista rola, sem teto*. Uma lista que não
+    sobra não tem o que legendar, e `exame-mais` devolve `NADA_A_DIZER` em
+    todo tique.
+
+    Esta régua ficou medindo o teto que ela mandou tirar, e reprovou por um dia
+    inteiro com o produto fazendo exatamente o que ela pediu. É o padrão que
+    esta casa já nomeou: *a régua media o mundo de ontem*.
+
+    MORDE, e continua mordendo o que importa: faça o `+N` dos vizinhos contar a
+    lista do exame e a asserção troca de número. E se alguém devolver o teto do
+    exame sem reabrir esta régua, a primeira asserção pega.
     """
     quantos_no_exame = pacote.TETO_DO_EXAME + 2
     quantos_vizinhos = pacote.TETO_DE_VIZINHOS + 1
     fora = pacote._o_que_nao_coube([1] * quantos_no_exame, [1] * quantos_vizinhos)
-    assert f"+{quantos_no_exame - pacote.TETO_DO_EXAME} " in fora["exame-mais"], fora
-    assert "achado" in fora["exame-mais"], fora
+    assert fora["exame-mais"] == pacote._monta().NADA_A_DIZER, (
+        "o `+N` do exame voltou a falar. Se o teto voltou de propósito, esta "
+        "régua tem de voltar junto — e a decisão dela de 19/09 («a lista rola, "
+        "sem teto») precisa de uma nota datada dizendo o que caducou. "
+        f"veio: {fora}"
+    )
     assert f"+{quantos_vizinhos - pacote.TETO_DE_VIZINHOS} " in fora["vizinho-mais"], fora
     assert "rádio vizinho" in fora["vizinho-mais"], fora
+    assert "achado" not in fora["vizinho-mais"], (
+        "o `+N` dos vizinhos está legendando a lista do EXAME — é a conta "
+        f"trocada que esta aba já cometeu uma vez. veio: {fora}"
+    )
 
 
 def test_o_desenho_tem_onde_dizer_o_que_nao_coube() -> None:
