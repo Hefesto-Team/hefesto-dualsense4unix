@@ -251,8 +251,7 @@ def decidir(
         mudo no firmware                         -> 0
         captando + bateria < 30%                 -> 3
         captando                                 -> 2
-        algum app com o microfone aberto         -> 1
-        resto                                    -> 0
+        resto (o microfone está LIGADO)          -> 1
 
     **O `None` é um valor de primeira classe, e não um buraco.** Ele sai em
     duas situações, e as duas são honestas:
@@ -271,8 +270,36 @@ def decidir(
 
     **A bateria só modula um aviso que já existe.** `bateria_pct is None` é o
     firmware que ainda não reportou a carga, e ausência não vira `3`: o estado
-    cai para `2`, que continua verdadeiro. E bateria baixa SEM captação não
-    acende nada — a luz é sobre quem te escuta.
+    cai para `2`, que continua verdadeiro.
+
+    A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01 — DECISÃO DELA, 19/09/2026
+    ----------------------------------------------------------
+    **A lista VAZIA deixou de apagar.** Até aqui `not ouvintes` devolvia `0`, e
+    o efeito medido na mesa dela foi que **a luz nunca acendia**: o único
+    gravador do canal é o medidor da própria aba Controles, que
+    `e_stream_do_hefesto` exclui de propósito (regra 3), então `quem_ouve_agora`
+    devolvia `[]` para todo controle e o decisor escrevia `estado=0` sempre —
+    três vezes no journal daquela noite, 23:04:11, 23:07:21 e 23:07:34.
+
+    Ela apertou o botão esperando a luz responder, viu apagado, e **o primeiro
+    clique DESLIGOU um microfone que já estava ligado**. A tela mostrava o nível
+    e a luz dizia o contrário: duas superfícies do mesmo produto respondendo
+    diferente sobre a mesma pergunta.
+
+    Perguntada com quatro opções, ela escolheu as DUAS metades — *«Espelhar o
+    botão E consertar a tela»*:
+
+    * **a luz do controle** diz o estado do MEU microfone: mudo → apagada ·
+      ligado → **ACESA** · ligado com alguém de FORA ouvindo → piscando;
+    * **a aba Controles** diz QUEM ouve, por escrito.
+
+    Então `mudo is True` é o ÚNICO ramo que apaga. O «alguém te ouve» não se
+    perdeu — virou o piscar, e ganhou texto na tela.
+
+    **O filtro anti-auto-referência continua certo**, e não é contradição: se o
+    medidor da tela contasse como ouvinte, a luz diria *«alguém está gravando
+    você»* sobre a janela do próprio Hefesto. Ele excluir e a luz acender mesmo
+    assim é justamente o desenho que ela escolheu.
     """
     if mudo is True:
         return APAGADA
@@ -280,8 +307,9 @@ def decidir(
         return None
     if ouvintes is None:
         return None
-    if not ouvintes:
-        return APAGADA
+    # A LISTA VAZIA NÃO APAGA MAIS — decisão dela, 19/09/2026. Ver a docstring:
+    # ninguém de fora ouvindo é o caso NORMAL de um microfone ligado, e apagar
+    # aqui fazia a luz nunca acender na mesa dela. Só `mudo is True` apaga.
     if captando is True:
         if bateria_pct is not None and bateria_pct < LIMIAR_DE_BATERIA_PCT:
             return PISCANDO_LENTO
