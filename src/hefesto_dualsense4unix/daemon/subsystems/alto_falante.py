@@ -783,6 +783,10 @@ class AltoFalanteSubsystem:
         self._faltam_ancoras = 0
         #: `({uniq: fonte}, (nome do perfil, carimbo))` — SFX-POR-CONTROLE-01.
         self._fontes_em_cache: tuple[dict[str, str], Any] = ({}, None)
+        #: `{uniq de perfil: fonte}` — a escolha VIVA, a que ela acabou de
+        #: fazer na tela. Ela vence o perfil e mora na memória do daemon; ver
+        #: :meth:`escolher_a_fonte`.
+        self._fonte_viva: dict[str, str] = {}
         #: O `StateStore` do daemon, que sabe o perfil ATIVO agora.
         self._store: Any = None
         self._fonte = fonte_de_controles or controles_na_lista
@@ -932,8 +936,58 @@ class AltoFalanteSubsystem:
         """
         from hefesto_dualsense4unix.integrations.alto_falante_bt import FONTE_PADRAO
 
+        # A ESCOLHA VIVA VENCE O PERFIL, e a razão está medida — 20/09/2026,
+        # `O-BOTAO-ENTREGA-O-QUE-PROMETE-01`. Com ela de ouvido, às 04:30, os
+        # quatro controles estavam com o botão do meio aceso e o som do PC saiu
+        # **só na TV**: *"so saiu na tv."* A escolha dela ia para o PERFIL, e
+        # este método só sabia ler perfil ATIVO — sem perfil ativo, ou com a
+        # escolha ainda não salva, `_fontes_do_perfil` devolve `{}` e o nó fica
+        # no padrão para sempre. O clique nunca chegava ao aparelho.
+        #
+        # O perfil continua sendo onde a escolha DURA; este dicionário é onde
+        # ela vale AGORA, e some com o daemon de propósito: ele é memória de
+        # sessão, não uma segunda gravação concorrendo com o disco.
+        viva = self._fonte_viva.get(_uniq_de_perfil(uniq))
+        if viva:
+            return viva
         fontes = self._fontes_do_perfil()
         return fontes.get(_uniq_de_perfil(uniq)) or FONTE_PADRAO
+
+    def escolher_a_fonte(self, uniq: str, fonte: str) -> bool:
+        """`mix` ou `sfx` para ESTE controle, valendo no nó que já está de pé.
+
+        Quem chama é o `speaker.set` do IPC, que é o caminho por onde a tela
+        fala com o daemon. O efeito chega ao nó na varredura seguinte, pelo
+        `_reafinar` que a SOM-JUNTO-01 construiu: o `module-null-sink` fica com
+        o mesmo id e o mesmo nome, e o que vai e volta é o `module-loopback` do
+        monitor da saída padrão.
+
+        **Não grava disco.** Quem guarda a escolha entre sessões é o perfil, e
+        ele tem dono (`profiles.schema.SpeakerOverrides.fonte`). Dois
+        escritores para a mesma escolha é como ela se perde: um grava, o outro
+        relê o que não mudou, e a última palavra vira sorteio.
+
+        Devolve `False` para valor que :func:`rota_do_no` não saiba tratar —
+        tipo fechado, a mesma disciplina do `Literal` do perfil.
+        """
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import (
+            FONTE_MIX,
+            FONTE_SFX,
+        )
+
+        if fonte not in (FONTE_MIX, FONTE_SFX):
+            return False
+        self._fonte_viva[_uniq_de_perfil(uniq)] = fonte
+        logger.info("som_fonte_escolhida", uniq=uniq, fonte=fonte)
+        return True
+
+    def fonte_escolhida(self, uniq: str) -> str:
+        """A fonte que vale para este controle AGORA — a viva, ou a do perfil.
+
+        Existe para o IPC responder o que ficou valendo sem duplicar a regra de
+        precedência do método acima.
+        """
+        return self._fonte_do_controle(uniq)
 
     def _fontes_do_perfil(self) -> dict[str, str]:
         """`{uniq: fonte}` do perfil ativo — e `{}` é resposta honesta.

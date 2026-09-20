@@ -78,6 +78,7 @@ obrigatória nesta casa. Os dois ganharam endereço no gerador (`luz-cor` e
 """
 from __future__ import annotations
 
+import contextlib
 import re
 from collections.abc import Callable
 from typing import Any
@@ -3928,6 +3929,29 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
                      f"ou 'alto-falante'")
 
 
+def _dizer_a_fonte_ao_daemon(p: Any, uniq: str, fonte: str) -> None:
+    """Manda a camada 1 ao daemon AGORA, além de gravá-la no perfil.
+
+    **A METADE QUE FALTAVA, e o preço dela foi medido com o ouvido dela** —
+    20/09/2026, 04:30. Os quatro DualSense estavam com o botão do meio aceso e
+    o som do PC saiu **só na TV**: *"so saiu na tv."* A escolha ia ao PERFIL, e
+    o único leitor dela no daemon era `_fontes_do_perfil`, que lê o perfil
+    ATIVO. Sem perfil ativo — ou antes de o "Salvar" acontecer — a resposta é
+    `{}`, o nó fica no padrão, e o clique dela não move uma nota de som.
+
+    O PERFIL CONTINUA SENDO ONDE A ESCOLHA DURA. Este caminho é o que a faz
+    valer AGORA; os dois juntos são o que o botão prometia desde 10/09.
+
+    **NÃO LEVANTA.** Um daemon sem o subsystem do som de pé responde
+    `sem_controle`, e isso não é razão para derrubar o gesto: a gravação no
+    perfil vale igual, e a recusa apareceria como um erro vermelho sobre um
+    clique que funcionou pela metade. Quem denuncia a metade que faltou é o
+    selo da própria coluna, que lê o nó vivo.
+    """
+    with contextlib.suppress(Exception):
+        p.speaker_set(uniq=uniq, fonte=fonte)
+
+
 @gesto("02-controles.html", "rota", grava="save_profile")
 def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Onde o som do controle sai. **"Sons do jogo" tem dono; "Só no controle" não.**
@@ -4021,6 +4045,7 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # chamam de «Sons do jogo», porque é sobre ele que o `mix` se soma.
     if qual == ROTA_OUVIR_JUNTO:
         audio_saida.devolver_o_som_do_pc()
+        _dizer_a_fonte_ao_daemon(p, uniq, "mix")
         lembrar: dict[str, Any] = {"fonte": "mix"}
         if _byte_da_rota(ctx.por_uniq(uniq)) == ROTA_DO_CANAL[CANAL_TODO_O_PC]:
             de_volta = ROTA_DO_CANAL[CANAL_SONS_DO_JOGO]
@@ -4040,6 +4065,7 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # não. Vai ANTES do resto para que uma recusa da camada 1 não deixe o
     # perfil a meio caminho.
     if fonte_do_controle(ctx.por_uniq(uniq)) == "mix":
+        _dizer_a_fonte_ao_daemon(p, uniq, "sfx")
         _lembrar_do_som(ctx, uniq, speaker={"fonte": "sfx"})
 
     # A CAMADA 1 VEM PRIMEIRO — ver a docstring. `uniqs_na_mesa` é a mesa

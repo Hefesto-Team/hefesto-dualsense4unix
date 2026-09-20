@@ -104,6 +104,18 @@ class Ponte:
     def so(self, nome: str) -> list[dict[str, Any]]:
         return [p for n, p in self.chamadas if n == nome]
 
+    def com_byte_de_rota(self) -> list[dict[str, Any]]:
+        """Os `speaker.set` que escrevem no FIRMWARE, e só eles.
+
+        Desde 20/09/2026 este gesto também fala `speaker.set` para mandar a
+        CAMADA 1 (`fonte`) ao daemon — sem isso a escolha dela só chegava ao nó
+        pelo perfil ATIVO, e sem perfil ativo não chegava nunca. As réguas que
+        medem *"ele mexeu no aparelho?"* passaram a perguntar pelo CAMPO em vez
+        do método: contar chamadas as faria reprovar a camada que não toca em
+        byte nenhum.
+        """
+        return [p for p in self.so("speaker_set") if "rota" in p]
+
 
 @pytest.fixture(autouse=True)
 def _o_cache_da_camada_1_comeca_vazio() -> Any:
@@ -367,7 +379,7 @@ class TestSairDoTodoOSomDoPC:
         _gesto("rota")(_ctx(_dele(P1, rota=a02.ROTA_DO_CANAL[a02.CANAL_TODO_O_PC])),
                        {"uniq": P1, "rota": "junto"}, p)
 
-        pedidos = p.so("speaker_set")
+        pedidos = p.com_byte_de_rota()
         assert pedidos, "o «Ouvir junto» não devolveu o byte da rota ao daemon"
         assert pedidos[0]["rota"] == a02.ROTA_DO_CANAL[a02.CANAL_SONS_DO_JOGO]
         assert pedidos[0]["uniq"] == P1, "o byte foi para outro controle"
@@ -392,7 +404,7 @@ class TestSairDoTodoOSomDoPC:
 
         p = Ponte()
         _gesto("rota")(_ctx(_dele(P1, rota=antes)), {"uniq": P1, "rota": "junto"}, p)
-        depois = p.so("speaker_set")[0]["rota"]
+        depois = p.com_byte_de_rota()[0]["rota"]
         assert audio_saida.recado_da_rota(depois, "sink-do-p1", "sink-da-tv") == ""
 
     def test_vindo_de_sons_do_jogo_ele_continua_calado(
@@ -409,8 +421,8 @@ class TestSairDoTodoOSomDoPC:
         p = Ponte()
         _gesto("rota")(_ctx(_dele(P1, rota=a02.ROTA_DO_CANAL[a02.CANAL_SONS_DO_JOGO])),
                        {"uniq": P1, "rota": "junto"}, p)
-        assert "speaker_set" not in p.nomes, (
-            f"o «Ouvir junto» mexeu no firmware sem precisar: {p.nomes}")
+        assert not p.com_byte_de_rota(), (
+            f"o «Ouvir junto» mexeu no firmware sem precisar: {p.chamadas}")
 
     def test_sem_byte_publicado_ele_tambem_fica_calado(
         self, casa: pathlib.Path, sem_maquina_dela: dict[str, list[Any]]
@@ -424,8 +436,8 @@ class TestSairDoTodoOSomDoPC:
         """
         p = Ponte()
         _gesto("rota")(_ctx(_dele(P1, rota=None)), {"uniq": P1, "rota": "junto"}, p)
-        assert "speaker_set" not in p.nomes, (
-            f"reenviou a rota sobre um byte que o daemon nunca publicou: {p.nomes}")
+        assert not p.com_byte_de_rota(), (
+            f"reenviou a rota sobre um byte que o daemon nunca publicou: {p.chamadas}")
 
     def test_o_perfil_lembra_as_duas_metades_e_so_do_dono(
         self, casa: pathlib.Path, sem_maquina_dela: dict[str, list[Any]]
