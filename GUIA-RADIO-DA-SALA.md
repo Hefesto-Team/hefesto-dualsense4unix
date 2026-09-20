@@ -268,6 +268,12 @@ bluetoothctl remove <MAC_CONTROLE>
 sudo rm -f /var/lib/bluetooth/*/cache/<MAC_CONTROLE>
 
 # 2. Parear no adaptador de destino (controle em PS + Create)
+#    O PS + Create é obrigatório porque NINGUÉM CONSTRUIU a alternativa,
+#    e não porque o firmware a proíba: o feature report 0x0A «Set
+#    Bluetooth Pairing» grava host + link key no controle POR CABO
+#    (docs/protocol/dualsense-plataforma-e-identidade.md §3). Nunca foi
+#    medido no aparelho, não está implementado, e o próprio documento
+#    desaconselha a escrita — mas a porta existe.
 bluetoothctl
 > select <MAC_DO_DONGLE_DESTINO>
 > scan on

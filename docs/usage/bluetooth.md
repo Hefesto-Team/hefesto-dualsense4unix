@@ -29,6 +29,34 @@ connect AA:BB:CC:DD:EE:FF
 exit
 ```
 
+### Por que o PS + Create é obrigatório — e a razão NÃO é o firmware
+
+Esta casa afirmou por engano, em 19/09/2026, que pôr o controle em modo de
+pareamento *"é firmware, não há verbo, D-Bus nem sysfs que faça isso"*. A
+conclusão prática está certa; **a razão está errada**, e é a razão que a
+próxima pessoa lê.
+
+O DualSense **tem** uma porta para isso: o feature report **`0x0A` «Set
+Bluetooth Pairing»**, 27 bytes, que grava o endereço do host e a link key de
+16 bytes no próprio controle — **por cabo**, na mesma ordem de bytes do BlueZ.
+Está descrito em
+[dualsense-plataforma-e-identidade.md](../protocol/dualsense-plataforma-e-identidade.md),
+§3, e o `0x0A` aparece no censo de reports lido do descritor dos controles
+desta bancada.
+
+**Por que ninguém a usa, e as três ressalvas importam:**
+
+1. o grau declarado do documento é `afirmado-no-doc` — **nenhum byte saiu para
+   o aparelho**;
+2. **não está implementado**: não há uma linha de código nesta árvore que
+   escreva o `0x0A`;
+3. o próprio documento **desaconselha**, porque `0x0A` é escrita e, mal
+   formado, reescreve o pareamento de um controle que alguém está usando.
+
+**A frase certa é: hoje o PS + Create é obrigatório porque ninguém construiu a
+alternativa — não porque o firmware a proíba.** Quem ler *"é firmware, não
+dá"* fecha uma porta que está aberta e documentada.
+
 Depois de pareado, o daemon detecta em até 5 segundos. Para conferir:
 
 ```bash
