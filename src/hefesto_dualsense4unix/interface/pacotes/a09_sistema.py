@@ -667,7 +667,7 @@ def _perguntar_o_prontuario() -> None:
     ELA CUSTAVA 6,9 SEGUNDOS E ESTA TELA NÃO LIA UM BYTE DELA — medido em
     06/09/2026, e é a cura do pior tique das dez abas.
 
-    `medir_prontuario_dos_jogos()` (`daemon_actions.py:820`) é a composição de
+    `medir_prontuario_dos_jogos()` (`daemon_actions.py:821`) é a composição de
     dois donos: `prontuario_dos_jogos.levantar_censo()` e
     `interpretar_prontuario_dos_jogos(censo)`. O `examinar=True` do censo é o
     que abre o executável de cada jogo instalado para descobrir a API de
@@ -3035,7 +3035,7 @@ def _porque_o_proton_nao_trava(pin: Any, travar: Any) -> str | None:
 # promete TRÊS tempos — *"Mostra, jogo por jogo, (…) e só então tira"* —, e o
 # do "Refazer os consertos automáticos" só pode contar quantos jogos tinham
 # Steam Input ligado se contar ANTES de desligá-lo (é a D-33, e a janela antiga
-# já a paga: `daemon_actions.py:1148`, *"medido ANTES de rodar — depois os
+# já a paga: `daemon_actions.py:1149`, *"medido ANTES de rodar — depois os
 # appids já foram zerados no vdf e não haveria mais como nomear o jogo"*).
 # ---------------------------------------------------------------------------
 
@@ -3340,7 +3340,7 @@ def ver_detalhes(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 #: OS CINCO QUE NÃO SÃO IPC, e por isso não estão aqui. Medidos no fonte em
 #: 01/09/2026, um a um — a linha de cada um está no relato da leva:
 #:
-#:   `desligar`             `_run_systemctl_async("stop")` (daemon_actions.py:2234)
+#:   `desligar`             `_run_systemctl_async("stop")` (daemon_actions.py:2235)
 #:   `refazer-consertos`    `bash scripts/*.sh` (…:1218)
 #:   `refazer-proton`       diálogo GTK + `config.vdf` da Steam (…:1793)
 #:   `procurar-camadas`     censo do `system.reg` em disco (emulation_actions.py:2146)

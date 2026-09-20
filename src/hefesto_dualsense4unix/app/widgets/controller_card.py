@@ -146,6 +146,7 @@ from hefesto_dualsense4unix.utils.color_contrast import (
     rgb_para_hex,
     tintar_progressbar,
 )
+from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalacao
 
 RGB = tuple[int, int, int]
 
@@ -935,12 +936,25 @@ DICA_CANAL_E_PADRAO: Final[str] = (
     "É o padrão: o Hefesto instala a regra que impede o alto-falante de "
     "dormir junto com o produto, para todo controle. Não há nada a ligar aqui."
 )
-#: A cura foi arrancada (ou nunca entrou). O sintoma no jogo é silencioso, e
-#: por isso a tela o denuncia em vez de calar.
-DICA_CANAL_SEM_A_REGRA: Final[str] = (
-    "A regra que impede o alto-falante de dormir NÃO está instalada nesta "
-    "máquina. Rode o install.sh de novo — ela entra sem flag nenhuma."
-)
+def dica_canal_sem_a_regra() -> str:
+    """A cura foi arrancada (ou nunca entrou) — e a tela denuncia.
+
+    O sintoma no jogo é silencioso, e por isso a tela o denuncia em vez de
+    calar.
+
+    **É FUNÇÃO, e não a constante que era até 20/09/2026** (BG-INSTALL-01):
+    a frase cravava «Rode o install.sh de novo», e em cinco dos seis formatos
+    deste produto (`.deb`, `.rpm`, Arch, Nix e o pip) o arquivo não está na
+    máquina de quem está lendo. O gesto certo tem dono —
+    `utils/repo_files.como_atualizar_esta_instalacao()` —, e ele PERGUNTA ao
+    disco: congelar a resposta no import seria responder pela instalação de
+    quem importou, não pela de quem lê.
+    """
+    return (
+        "A regra que impede o alto-falante de dormir NÃO está instalada nesta "
+        f"máquina — {como_atualizar_esta_instalacao()} e ela entra sem flag "
+        "nenhuma."
+    )
 #: Quem manda no volume somos nós, e este é o número. A frase substitui a
 #: :data:`DICA_BLOCO_SPEAKER` quando há posse, porque aquela descreve o estado
 #: SEM posse ("o volume é do firmware do controle") e passaria a mentir.
@@ -4804,7 +4818,7 @@ if _GTK_DISPONIVEL:
             if self._speaker_regra_do_sono is True:
                 frases.append(DICA_CANAL_E_PADRAO)
             elif self._speaker_regra_do_sono is False:
-                frases.append(DICA_CANAL_SEM_A_REGRA)
+                frases.append(dica_canal_sem_a_regra())
             return frases
 
         def _montar_capsula_stick(
@@ -5923,7 +5937,6 @@ __all__ = [
     "DICA_CANAL_ACORDADO",
     "DICA_CANAL_DORMINDO",
     "DICA_CANAL_E_PADRAO",
-    "DICA_CANAL_SEM_A_REGRA",
     "DICA_MIC_ATIVAR",
     "DICA_MIC_DEVOLVER",
     "DICA_MIC_SEM_LEITURA",
@@ -5988,6 +6001,7 @@ __all__ = [
     "cor_do_swatch",
     "dedos_do_inputs",
     "desenhar_swatch",
+    "dica_canal_sem_a_regra",
     "dica_do_titulo",
     "frase_do_alvo_do_mic",
     "frase_mais_longa_do_que_chega_ao_jogo",
