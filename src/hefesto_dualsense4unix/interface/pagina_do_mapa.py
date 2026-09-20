@@ -764,6 +764,32 @@ EDICOES: tuple[Edicao, ...] = (
             "O fato do cabo passivo vale para qualquer um."
         ),
     ),
+    Edicao(
+        antes=(
+            "              + '<br><span class=\"passo\">o Hefesto desfaz o pareamento "
+            "antigo, limpa o que ficou para trás e '\n"
+            "              + \"pareia de novo no adaptador certo — sem terminal, com o "
+            "controle na mão.</span></li>\";"
+        ),
+        depois=(
+            "              + '<br><span class=\"passo\">hoje isto é gesto de terminal: "
+            "o passo a passo está no '\n"
+            "              + \"<b>GUIA-RADIO-DA-SALA</b>, §6.3 — e o controle precisa "
+            "estar na sua mão, em PS + Create.</span></li>\";"
+        ),
+        porque=(
+            "A-TELA-PROMETE-PAREAR-01, 19/09/2026. A frase oferecia um gesto que o "
+            "produto NÃO faz: os 18 gestos da aba Conexões não tocam em pareamento, e "
+            "`grep -rn bt_ponte_privilegiada src/` devolve ZERO — nenhuma linha de "
+            "Python jamais chamou a ponte. O transporte inteiro existe (os verbos "
+            "`esquecer`, `descobrir` e `parear`, o script instalado como root, o "
+            "sudoers com NOPASSWD, o agente ativo); o que falta é o último palmo, e é "
+            "a PONTE-SEM-CHAMADOR-01. Enquanto o botão não existir, a frase é o "
+            "produto afirmando uma capacidade que não tem — e nesta casa fato errado "
+            "se SUBSTITUI, não se guarda ao lado. O texto novo diz o que há hoje e "
+            "aponta o caminho, em vez de prometer."
+        ),
+    ),
 )
 
 
