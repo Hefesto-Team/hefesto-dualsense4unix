@@ -337,11 +337,20 @@ class TestOGesto:
         A `fonte` é do NÓ (camada 1, PipeWire); a rota é do FIRMWARE (camada
         2). Mandar um byte de rota aqui escreveria no aparelho uma escolha que
         ela não fez — e apagaria a que estava valendo.
+
+        **A RÉGUA PASSOU A OLHAR O CAMPO, E NÃO O MÉTODO — 20/09/2026.** Ela
+        dizia `"speaker_set" not in p.nomes`, e aquilo era mais do que o
+        parágrafo acima pede: desde a `O-BOTAO-ENTREGA-O-QUE-PROMETE-01` este
+        ramo fala `speaker.set` de propósito, para mandar a `fonte` ao daemon —
+        sem isso a escolha dela só chegava ao nó pelo perfil ATIVO, e sem
+        perfil ativo não chegava nunca. O que continua proibido, e é o que o
+        defeito era, é o BYTE: nenhuma chamada deste ramo pode levar `rota`.
         """
         p = Ponte()
         _gesto("rota")(_ctx(), {"uniq": P1, "rota": "junto"}, p)
-        assert "speaker_set" not in p.nomes, (
-            f"o «Ouvir junto» mexeu no firmware: {p.nomes}")
+        com_rota = [c for c in p.chamadas if c[0] == "speaker_set" and "rota" in c[1]]
+        assert not com_rota, (
+            f"o «Ouvir junto» mexeu no firmware: {com_rota}")
 
     def test_uma_rota_que_a_pagina_nao_manda_e_recusada(
         self, casa: pathlib.Path

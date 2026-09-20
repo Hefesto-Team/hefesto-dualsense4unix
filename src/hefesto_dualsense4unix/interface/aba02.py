@@ -674,8 +674,13 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .moldura > .sticks .stick{flex:0 0 auto;align-self:center}
   .moldura > .sticks .xy{margin-top:0}
   .moldura > .glifos{height:100%;align-content:space-between}
-  /* moldura SÓ onde o original põe */
-  .moldura{border:1px solid var(--border-forte);border-radius:6px;background:var(--app-bg);padding:7px 9px}
+  /* moldura SÓ onde o original põe.
+     O RESPIRO DE CIMA E DE BAIXO FOI DE 7 PARA 3 — 20/09/2026. É a economia que
+     pesa mais em todo o cartão, porque ela se repete em CADA moldura de CADA
+     coluna: 8px por moldura, e a coluna do som tem duas. O respiro LATERAL fica
+     nos 9 — ele é o que separa o texto da borda, e cortá-lo encostaria os
+     rótulos no traço. */
+  .moldura{border:1px solid var(--border-forte);border-radius:6px;background:var(--app-bg);padding:3px 9px}
   /* O RÓTULO DE LINHA TEM UMA COR SÓ NAS DEZ ABAS — 30/08/2026.
      Eu curei `.sec-rot` e assumi que era A classe de rótulo. São CINCO —
      `.sec-rot`, `.linha-rot`, `.rot`, `.stick-rot` e o `<th>` das tabelas — e ela
@@ -896,9 +901,14 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      `--prova-gesto` dava verde porque nunca os tocava.
      `font-family:inherit` é o preço de virar botão: sem ele o navegador põe a
      fonte dele e o glifo encolhe. */
-  .mudo-i{width:22px;height:22px;flex:0 0 22px;border-radius:5px;cursor:pointer;
+  /* 16px E NÃO 22 — 20/09/2026. Ele é o botão mais alto da linha de volume, e
+     por isso é ELE que dita a altura dela: o trilho tem 4px e o número, 13. Os
+     6px que saem daqui saem do cartão duas vezes, uma por moldura de som.
+     O `line-height` desce junto (14 = 16 menos as duas bordas de 1px), senão o
+     glifo desencosta do meio e o ♪ nasce colado na borda de baixo. */
+  .mudo-i{width:16px;height:16px;flex:0 0 16px;border-radius:5px;cursor:pointer;
           border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);
-          font-size:10px;line-height:20px;text-align:center;padding:0;font-family:inherit}
+          font-size:10px;line-height:14px;text-align:center;padding:0;font-family:inherit}
   /* AS DUAS CORES DO ♪ NÃO MORAM AQUI, e a razão é que elas PERGUNTAM A PALAVRA
      ao dono: os seletores casam o que `mesa_viva.selo_do_mic` devolve, e um
      seletor com a palavra digitada à mão para de casar CALADO no dia em que o
@@ -1118,13 +1128,16 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      164px e a linha do rótulo pedia 292 numa moldura de 242: os 50px de
      diferença eram o "Nativo" e metade do "Desativado" pintados fora da caixa,
      por cima do bloco dos sensores. Aqui a fileira mede 150 e cabe com folga. */
-  /* O `.mic-modo` HERDA A `.rota` INTEIRA e não acrescenta nada — 31/08/2026,
-     quando ela mandou os dois descerem *"igual o Sons do Jogo e Todo o som do
-     PC"*. O seletor fica no HTML (`class="rota mic-modo"`) para dizer QUAL
-     fileira é esta, mas de estilo ele não tem UMA linha própria: dois blocos
-     que fazem o mesmo gesto na mesma coluna têm de ser o mesmo botão, e uma
-     regra a mais aqui é como as duas alturas voltam.
-     As 5 linhas de pastilha de 17px que moravam aqui saíram junto. */
+  /* O `.mic-modo` HERDAVA A `.rota` INTEIRA — 31/08/2026, quando ela mandou os
+     dois descerem *"igual o Sons do Jogo e Todo o som do PC"*. **DEIXOU DE
+     HERDAR EM 20/09/2026**, e o fato que mudou está medido: os nomes que ela
+     escreveu para a saída de som empilharam aquela fileira, e esta continua
+     deitada. As duas regras que isso custou moram no bloco `.rota` abaixo,
+     declaradas ali com a razão — não aqui, para não haver dois lugares
+     dizendo a altura do mesmo botão.
+     O seletor continua no HTML (`class="rota mic-modo"`) para dizer QUAL
+     fileira é esta. As 5 linhas de pastilha de 17px que moravam aqui saíram em
+     31/08 e não voltaram. */
   /* O `data-campo` DO CONTAINER SAIU DAQUI EM 01/09/2026, e ele APAGAVA os dois
      botões. (O nome dele não se escreve por extenso nesta linha: a régua do
      casamento acha `data-campo` por expressão regular e NÃO tira comentário,
@@ -1138,16 +1151,17 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      antes 4, depois 0, nos dois valores que o pacote emitia (`''` e
      `'sem posse'`). Endereço de pintura só pode morar em FOLHA — um container
      endereçado é um container que some. */
-  /* 30px, E NÃO OS 36 DE `--h-escolha` — 31/08/2026, e o número é o preço do
-     pedido dela. Até hoje a coluna do som tinha UMA fileira de escolha (a rota
-     do alto-falante); com os modos do microfone descendo *"igual o Sons do Jogo"*
-     ela passou a ter DUAS, e a coluna foi de 236 para 269px. O card foi junto,
-     de 308 para 341, contra os 328 que a caixa reserva: 13px a mais, e o P4
-     saindo da tela.
-     Medido: 6px por fileira em duas fileiras, mais 1px de margem em cada, dão
-     os 14 que faltavam. Não é altura inventada — é a mesma faixa do chip da
-     fita (28 a 30px) que esta aba já usa no `.mascara .chip`, e as duas
-     fileiras continuam IGUAIS entre si, que é o que ela pediu. */
+  /* ERAM 30px NAS DUAS FILEIRAS, E NÃO OS 36 DE `--h-escolha` — 31/08/2026, e o
+     número era o preço do pedido dela. Até ali a coluna do som tinha UMA
+     fileira de escolha (a saída do alto-falante); com os modos do microfone
+     descendo *"igual o Sons do Jogo"* ela passou a ter DUAS, e a coluna foi de
+     236 para 269px. O card foi junto, de 308 para 341, contra os 328 que a
+     caixa reserva: 13px a mais, e o P4 saindo da tela.
+     **OS 30 CAÍRAM EM 20/09/2026** — 17 na fileira da saída de som (três
+     empilhados) e 19 nesta —, e o que trocou foi o fato: os rótulos que ela
+     escreveu não cabem deitados. As duas fileiras deixaram de ser IGUAIS entre
+     si porque deixaram de ter a mesma forma; o que continua igual é a
+     gramática (escolha exclusiva, um aceso). */
   /* A FILEIRA QUEBRA EM VEZ DE CORTAR — decisão dela, 12/09/2026, opção (b) de
      três. O que ela comprou está medido: com `flex:1` e `white-space:nowrap` os
      botões NÃO encolhem abaixo do próprio rótulo, então a fileira transborda a
@@ -1164,10 +1178,41 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      uma segunda linha e o card cresce 35px (30 do botão + 5 do vão). Na largura
      do desenho — e na janela dela, que é 1918 — nada quebra e nada muda: a
      conta de `ALTURA_DO_CARD` continua valendo porque ela é medida ali. */
-  .rota{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
-  .rota button{flex:1;height:30px;border-radius:5px;font-size:10.5px;white-space:nowrap;font-family:inherit;
+  /* A FILEIRA DA SAÍDA DE SOM EMPILHA — 20/09/2026, e o preço foi medido e pago.
+     Os nomes que ela escreveu (*"Efeitos do Jogo, Efeitos do Jogo e Áudio da TV
+     no Controle, Tudo na TV e Nada no Controle"*) não cabem lado a lado: a
+     fileira vive na coluna do Microfone, que mede 278px na janela do produto, e
+     o do meio sozinho pede mais que isso. Lado a lado eles quebrariam em duas
+     linhas de tamanhos diferentes, que é o transbordo que a decisão de 12/09
+     comprou para não cortar rótulo.
+
+     TRÊS LINHAS CUSTAM `3*altura + 2*gap`, e é daí que saem os 70px de um
+     empilhamento ingênuo (3x30 + 2x5 = 100, contra os 30 de uma linha só). É
+     daí que eles voltam: com 17px e vão de 2, a fileira mede 55 — 25 a mais, e
+     não 70. O resto do orçamento veio das outras quatro alturas desta folha
+     (`.mic-modo`, `.mudo-i`, `.sensores-peca .sw` e o respiro da `.moldura`),
+     cada uma com a razão no seu bloco. O cartão ENCOLHEU: a régua
+     `scripts/check_a_altura_do_cartao.py` mede o renderizado contra
+     `aba02.PARA_O_CARD` e reprova quem o fizer crescer.
+
+     O `flex-wrap` SAIU com a coluna: numa direção de coluna ele quebraria em
+     COLUNAS, que é o oposto do que a decisão de 12/09 pediu. O que protege o
+     rótulo agora é a própria linha inteira — cada botão tem a largura da
+     coluna. */
+  .rota{display:flex;flex-direction:column;gap:2px;margin-top:5px}
+  .rota button{flex:0 0 auto;height:17px;border-radius:5px;font-size:10.5px;white-space:nowrap;font-family:inherit;
     border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);cursor:pointer}
   .rota button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
+  /* O MODO DO MICROFONE CONTINUA DEITADO, e agora precisa dizê-lo — 20/09/2026.
+     Enquanto as duas fileiras eram a mesma, o `.mic-modo` não tinha uma linha
+     própria de estilo, e o bloco de comentário mais acima registra por quê. A
+     fileira da saída de som empilhou; esta não pode empilhar junto, porque são
+     DOIS rótulos curtos que cabem deitados e uma segunda coluna de três linhas
+     na mesma moldura estouraria o orçamento do cartão.
+     São 19px e não os 17 da vizinha porque este par divide a linha com o nome
+     do bloco, e abaixo de 19 o texto do «Virtual» encosta na borda. */
+  .rota.mic-modo{flex-direction:row;flex-wrap:wrap;gap:5px}
+  .rota.mic-modo button{flex:1;height:19px}
   /* O «NATIVO» FORA DE ALCANCE — 20/09/2026, decisão dela, verbatim: *"Fica os
      dois botões. Mas no rádio o botão fica cinza sem ser ativado"*.
 
@@ -1246,7 +1291,12 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .sensores-peca{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;
                  gap:8px;margin-left:auto}
   .sensores-peca .sw{
-    height:26px;border-radius:6px;font-size:10.5px;font-family:inherit;cursor:pointer;
+    /* 17px E NÃO 26 — 20/09/2026. A pastilha continua cabendo nos 30px de
+       dentro da linha fechada, e o que ela devolve é altura na coluna dos
+       sensores, que é uma das que disputam a altura do cartão. O parágrafo
+       acima diz por que 34 não cabe; 17 cabe com folga, e é a régua
+       `check_a_altura_do_cartao.py` que agora guarda o orçamento inteiro. */
+    height:17px;border-radius:6px;font-size:10.5px;font-family:inherit;cursor:pointer;
 
     border:1px solid var(--green);background:rgba(80,250,123,.09);color:var(--green);
     display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;
@@ -2086,6 +2136,40 @@ DICA_OUVIR_JUNTO = ("O som do PC sai no alto-falante deste controle e continua "
                     "saindo na TV. Serve para jogar acompanhado: cada um ouve "
                     "no próprio controle.")
 
+# ---------------------------------------------------------------------------
+# OS RÓTULOS DA FILEIRA DA SAÍDA DE SOM — escritos POR ELA, 20/09/2026
+# ---------------------------------------------------------------------------
+# Ela ditou os nomes depois de derrubar o enunciado anterior, e o que ela
+# derrubou era CONCEITO, não palavra:
+#
+#   *"não gosto do termo jogo pra se referir ao canal especifico pro sfx do
+#   controle, pq hdmi tecnicamente é jogo que manda pra lá também. além disso
+#   não curto sfx e hdmi queria algo melhor"*
+#   <!-- noqa-acento: citação literal dela -->
+#
+# Ela estava certa: `sfx` e `mix` não são duas FONTES, são dois modos do MESMO
+# nó — `sfx` deixa o nó livre para o que for endereçado a ele, `mix` derrama
+# tudo da máquina nele. O jogo manda som pelos dois caminhos, que é o que ela
+# apontou. **A tela nunca diz «sfx» nem «mix»**; os dois continuam sendo nome
+# interno, e é por isso que estes rótulos são constantes e não literais soltos
+# no miolo: quem os mudar mexe num lugar só.
+ROTULO_SO_OS_EFEITOS = "Efeitos do Jogo"
+ROTULO_EFEITOS_MAIS_A_TV = "Efeitos do Jogo e Áudio da TV no Controle"
+
+#: O TERCEIRO NÃO FOI RENOMEADO, E A RAZÃO É UMA CONTRADIÇÃO MEDIDA — 20/09/2026.
+#: O nome que ela escreveu para ele é «Tudo na TV e Nada no Controle», e este
+#: botão faz o OPOSTO: ele manda a saída padrão do sistema para o alto-falante
+#: deste controle (`audio_saida.mandar_o_som_do_pc`) e cala a televisão. A
+#: própria sprint que traz o nome exige, na MORDIDA, que ele continue fazendo
+#: isso — *"«Só no controle» → som no controle, TV em zero"*.
+#:
+#: **Pôr o nome novo aqui sem trocar o ato seria a mentira que esta sprint
+#: existe para matar**, e trocar o ato por conta própria apagaria uma
+#: capacidade medida, com dono (`app/audio_saida.mandar_o_som_do_pc`), régua e
+#: ensaio. As duas leituras são dela; qual vale é decisão dela, e até lá o
+#: rótulo fica no que o botão faz de verdade.
+ROTULO_SO_NO_CONTROLE = "Só no controle"
+
 DICA_ALTO_MUDO = ("Cala o alto-falante do controle, sem perder o volume "
                   "guardado. A partir daqui quem guarda esse volume é o "
                   "Hefesto.")
@@ -2739,9 +2823,9 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
               {sufixo_do_canal(c)}
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html">{NADA_A_DIZER}</span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>Sons do jogo</b>: só o áudio do jogo, no alto-falante do controle.
-                <b>No controle e na TV</b>: o som do PC sai nos dois.
-                <b>Só no controle</b>: o som do PC sai aqui, e a TV cala.
+                <b>{ROTULO_SO_OS_EFEITOS}</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
+                <b>{ROTULO_EFEITOS_MAIS_A_TV}</b>: tudo o que a máquina toca cai aqui também, e continua saindo na TV.
+                <b>{ROTULO_SO_NO_CONTROLE}</b>: o som do PC sai aqui, e a TV cala.
               </span></span>
             </div>
             {onda(alto_v, lado="alto")}
@@ -2764,9 +2848,9 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                  um par novo abaixo seria a segunda gramática que o gerador já
                  recusou uma vez. -->
             <div class="rota">
-              <button class="{'on' if not rota_pc else ''}" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Sons do jogo</button>
-              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="{DICA_OUVIR_JUNTO}">No controle e na TV</button>
-              <button class="{'on' if rota_pc else ''}" data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc">Só no controle</button>
+              <button class="{'on' if not rota_pc else ''}" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">{ROTULO_SO_OS_EFEITOS}</button>
+              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="{DICA_OUVIR_JUNTO}">{ROTULO_EFEITOS_MAIS_A_TV}</button>
+              <button class="{'on' if rota_pc else ''}" data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc">{ROTULO_SO_NO_CONTROLE}</button>
             </div>
             <!-- A RESSALVA DA ROTA — a peça da ONDA0-F (D-02), e o texto é do
                  motor (`audio_saida.MOTIVO_ROTA_SO_NO_BYTE`). Ela existe por um
@@ -3448,9 +3532,16 @@ MIOLO = f'''
 # que é como o título da página que ele abre já se escrevia.)
 
 LEGENDA = f'''<div class="nota">
+  <h2>O que mudou em 20/09</h2>
+  <ul>
+    <li><b>Os dois primeiros botões do alto-falante têm os nomes que você escreveu</b> — <b>{ROTULO_SO_OS_EFEITOS}</b> e <b>{ROTULO_EFEITOS_MAIS_A_TV}</b>. Você derrubou o enunciado anterior e o que você derrubou era conceito, não palavra: <i>"não gosto do termo jogo pra se referir ao canal especifico pro sfx do controle, pq hdmi tecnicamente é jogo que manda pra lá também"</i>. Os dois não são duas fontes — são dois modos do <b>mesmo</b> alto-falante: um deixa entrar só o que o jogo endereçar a este controle, o outro derrama tudo o que a máquina toca, sem tirar o som da TV.</li>
+    <li><b>A fileira empilhou, e o cartão não cresceu por isso.</b> Os nomes não cabem lado a lado na coluna onde ela vive, então os três botões passaram a ficar um sobre o outro — e os pixels que isso custaria voltaram das alturas vizinhas (o par do microfone, o botão de calar, os dois dos sensores e o respiro das molduras). O cartão ficou <b>mais baixo</b> do que era, e agora existe uma régua que reprova qualquer mudança futura que o faça crescer.</li>
+    <li class="foi"><b>O terceiro botão ainda se chama <code>Só no controle</code>, e está esperando você.</b> O nome que você escreveu para ele foi <i>"Tudo na TV e Nada no Controle"</i>, e este botão faz o oposto: ele traz o som do PC para o alto-falante deste controle e <b>cala a televisão</b>. Pôr o nome novo sem trocar o ato seria a mentira que esta tela existe para não contar; trocar o ato por conta própria apagaria uma escolha sua que está de pé desde 04/09. Diga qual das duas vale e ele muda no mesmo dia.</li>
+  </ul>
+
   <h2>O que mudou em 11/09</h2>
   <ul>
-    <li><b>Os três botões do alto-falante passaram a dizer DE ONDE O SOM SAI</b> — decisão sua, depois da sua pergunta: <i>"Tem diferença real entre todo o som do PC e Ouvir Juntos?"</i> Tem, e era a única coisa que os separava: um deixa a TV tocando, o outro a cala. Nenhum dos dois nomes dizia isso, e você leu um pelo outro. Agora a fileira é <b>Sons do jogo</b> · <b>No controle e na TV</b> · <b>Só no controle</b>. O que o botão faz não mudou: o byte do firmware e a saída padrão do sistema são os mesmos de ontem.</li>
+    <li class="foi"><b>Os três botões do alto-falante passaram a dizer DE ONDE O SOM SAI</b> — decisão sua, depois da sua pergunta: <i>"Tem diferença real entre todo o som do PC e Ouvir Juntos?"</i> Tem, e era a única coisa que os separava: um deixa a TV tocando, o outro a cala. Nenhum dos dois nomes dizia isso, e você leu um pelo outro. Os dois primeiros nomes daquele dia saíram em 20/09, com as palavras que você escreveu; o ato de cada botão não mudou em nenhuma das duas vezes.</li>
   </ul>
 
   <h2>O que mudou em 31/08</h2>
@@ -3572,7 +3663,8 @@ LEGENDA = f'''<div class="nota">
 # ou estado. Nome de classe ou de `data-*` não entra: a legenda fala com ela, e
 # ela lê o que está escrito na tela.
 TERMOS_DA_TELA = (
-    "Liberar", "Sons do jogo", "No controle e na TV", "Só no controle",
+    "Liberar", "Efeitos do Jogo", "Efeitos do Jogo e Áudio da TV no Controle",
+    "Só no controle",
     "Calibrar sensores de movimento", "Mapa do controle", "Dispositivos conectados",
     "Sem toque", "Tocando", "LED do jogador", "Barra de luz", "Touchpad",
     "Microfone", "Alto-falante", "Gatilhos", "Giroscópio",
@@ -4134,8 +4226,14 @@ def _conferir(doc):
     #      correspondência `data-rota` → rótulo mora aqui. Trocar um nome no
     #      desenho sem a palavra dela PARA o gerador.
     #      MORDIDA: devolva `Todo o som do PC` ao botão `data-rota="pc"`.
-    for rota, palavra_dela in (("jogo", "Sons do jogo"),
-                               ("junto", "No controle e na TV"),
+    #
+    #      OS DOIS PRIMEIROS TROCARAM DE PALAVRA EM 20/09/2026, e a palavra é
+    #      dela: *"Efeitos do Jogo, Efeitos do Jogo e Áudio da TV no Controle,
+    #      Tudo na TV e Nada no Controle"*. Os literais ficam DIGITADOS aqui de
+    #      propósito — ler `ROTULO_*` faria esta régua medir a própria saída,
+    #      que é a trava que não trava nada (07/09/2026).
+    for rota, palavra_dela in (("jogo", "Efeitos do Jogo"),
+                               ("junto", "Efeitos do Jogo e Áudio da TV no Controle"),
                                ("pc", "Só no controle")):
         vistos = re.findall(rf'data-rota="{rota}"[^>]*>([^<]*)</button>', corpo)
         exigir(vistos == [palavra_dela] * len(MESA),

@@ -1480,6 +1480,7 @@ def speaker_set(
     uniq: str | None = None,
     release: bool = False,
     rota: int | None = None,
+    fonte: str | None = None,
 ) -> bool:
     """Volume/mudo/devolução do alto-falante e do fone (D4 / MIC-USB-01 / SOM-02).
 
@@ -1522,7 +1523,7 @@ def speaker_set(
     **os dois no mesmo ``False``**. Quem precisa separá-los chama
     :func:`speaker_set_detalhado`.
     """
-    corpo = speaker_set_detalhado(volume, muted, uniq, release, rota)
+    corpo = speaker_set_detalhado(volume, muted, uniq, release, rota, fonte)
     return corpo is not None and corpo.get("status") == "ok"
 
 
@@ -1532,6 +1533,7 @@ def speaker_set_detalhado(
     uniq: str | None = None,
     release: bool = False,
     rota: int | None = None,
+    fonte: str | None = None,
 ) -> dict[str, Any] | None:
     """``speaker.set`` que entrega a RESPOSTA do daemon (ELO-MUDO-01, 23/08).
 
@@ -1561,6 +1563,13 @@ def speaker_set_detalhado(
         # junto do volume porque é o mesmo bloco de posse — e sozinha quando o
         # seletor de canal muda sem mexer no número.
         payload["rota"] = int(rota)
+    if fonte is not None:
+        # A CAMADA 1 (20/09/2026). Ela não vai junto do volume como a `rota`:
+        # a `rota` é o mesmo bloco de posse do report de saída, esta é o
+        # PipeWire, e um pedido só de `fonte` de propósito não toma posse
+        # nenhuma no aparelho. O daemon recusa valor fora de `mix`/`sfx`, e
+        # recusa o pedido sem `uniq` — a fonte é por controle.
+        payload["fonte"] = str(fonte)
     return _corpo_do_daemon("speaker.set", payload,
                              timeout=_TETO_DO_ATO_DE_AUDIO)
 

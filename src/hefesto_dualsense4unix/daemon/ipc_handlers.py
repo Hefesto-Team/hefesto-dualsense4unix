@@ -5957,9 +5957,18 @@ class IpcHandlersMixin:
     async def _handle_speaker_set(self, params: dict[str, Any]) -> dict[str, Any]:
         """`speaker.set` — volume/mudo/devolução do alto-falante (D4 + SOM-02).
 
-        Params: ``{volume?: 0-255, muted?: bool, rota?: 0-3, release?: bool,
-        uniq?: str}``.
-        `uniq` escolhe o controle (MAC normalizado); omitido = o primário.
+        Params: ``{volume?: 0-255, muted?: bool, rota?: 0-3,
+        fonte?: "mix"|"sfx", release?: bool, uniq?: str}``.
+        `uniq` escolhe o controle (MAC normalizado); omitido = o primário —
+        **menos para a `fonte`**, que é por controle e recusa o pedido sem
+        endereço.
+
+        AS DUAS CAMADAS, E ELAS NÃO SE CONFUNDEM: a ``rota`` é o byte do
+        firmware (por onde o PLÁSTICO toca o que saiu do nó) e a ``fonte`` é o
+        PipeWire (o que ENTRA no nó). Um pedido só de ``fonte`` não toma a
+        posse do volume e não manda byte nenhum ao aparelho; a resposta traz
+        ``fonte`` com o que ficou valendo, e a chave não aparece quando
+        ninguém a executou.
 
         Escrever é o ÚNICO jeito de o volume ser conhecido: o controle não tem
         caminho de leitura para esse registrador. A primeira chamada faz o
@@ -5991,6 +6000,7 @@ class IpcHandlersMixin:
         release = params.get("release")
         uniq = params.get("uniq")
         rota = params.get("rota")
+        fonte = params.get("fonte")
         if rota is not None:
             # SOM-ROTA-01/E3 — o caso do Zelda em um byte: `rota=2` manda o
             # canal esquerdo para o fone/TV e o DIREITO para o alto-falante do
@@ -6020,7 +6030,41 @@ class IpcHandlersMixin:
             raise ValueError("speaker.set: 'release' precisa ser boolean ou omitido")
         if uniq is not None and not isinstance(uniq, str):
             raise ValueError("speaker.set: 'uniq' precisa ser string ou omitido")
-        if release and (volume is not None or muted is not None or rota is not None):
+        if fonte is not None:
+            # A `fonte` É A CAMADA 1, E ELA FALTAVA AQUI — 20/09/2026,
+            # `O-BOTAO-ENTREGA-O-QUE-PROMETE-01`. A `rota` logo acima escolhe
+            # por onde o PLÁSTICO toca o que saiu do nó; a `fonte` escolhe o
+            # que ENTRA nele. São camadas diferentes de propósito
+            # (`profiles/schema.SpeakerOverrides.fonte` escreve a separação por
+            # extenso), e a tela só tinha como pedir a segunda.
+            #
+            # O QUE ISSO CUSTAVA: a escolha dela ia ao perfil e o daemon só a
+            # lia do perfil ATIVO. Sem perfil ativo, ou antes do "Salvar", o
+            # nó ficava no padrão e o clique dela não movia uma nota de som.
+            # Medido em 20/09 às 04:30, com ela de ouvido: *"so saiu na tv."*
+            #
+            # TIPO FECHADO, como a `rota`: os dois nomes têm UM dono
+            # (`integrations.alto_falante_bt.FONTE_MIX`/`FONTE_SFX`) e um valor
+            # que `rota_do_no` não saiba tratar não chega ao nó. A lista sai do
+            # dono em vez de ser digitada aqui — digitá-la é como as duas
+            # divergem no dia em que nascer um terceiro modo.
+            from hefesto_dualsense4unix.integrations.alto_falante_bt import (
+                FONTE_MIX,
+                FONTE_SFX,
+            )
+
+            if not isinstance(fonte, str) or fonte not in (FONTE_MIX, FONTE_SFX):
+                raise ValueError(
+                    f"speaker.set: 'fonte' precisa ser {FONTE_SFX!r} (só o que "
+                    f"o jogo mandar para este controle) ou {FONTE_MIX!r} (todo "
+                    f"o som da máquina cai nele também)"
+                )
+        if release and (
+            volume is not None
+            or muted is not None
+            or rota is not None
+            or fonte is not None
+        ):
             raise ValueError(
                 "speaker.set: 'release' não combina com 'volume'/'muted' — "
                 "devolver a posse e mandar um valor na mesma chamada não tem "
@@ -6029,6 +6073,28 @@ class IpcHandlersMixin:
 
         if release:
             return await self._speaker_release(uniq)
+
+        # A `fonte` VAI PRIMEIRO, e ela NÃO passa pelo backend: quem a executa é
+        # o subsystem do som, que é o dono do nó daquele controle. Ela vem antes
+        # do bloco de volume para que uma recusa de posse não deixe a escolha da
+        # camada 1 pelo caminho — as duas são pedidos independentes no mesmo
+        # payload, como a `rota` e o `volume` já eram.
+        fonte_feita: str | None = None
+        if fonte is not None:
+            fonte_feita = self._speaker_fonte(uniq, str(fonte))
+
+        # UM PEDIDO SÓ DE `fonte` PARA AQUI. Chamar `set_speaker_volume` sem
+        # volume e sem mudo TOMA A POSSE e manda ZERO — a armadilha 1 da SOM-02,
+        # medida. Assumir a posse do alto-falante porque ela escolheu por onde o
+        # som entra no nó seria calar o controle no clique.
+        if volume is None and muted is None and rota is None:
+            corpo: dict[str, Any] = {
+                "status": "ok" if fonte_feita else "sem_controle",
+                "speaker": self._speaker_estado(uniq),
+            }
+            if fonte_feita:
+                corpo["fonte"] = fonte_feita
+            return corpo
 
         # O suporte do backend vem ANTES da guarda abaixo: num backend que nem
         # tem o método, "sem suporte" é a resposta verdadeira e "sem volume
@@ -6064,10 +6130,45 @@ class IpcHandlersMixin:
         #    `TypeError` é a resposta certa, não um silêncio.
         extras: dict[str, Any] = {} if rota is None else {"rota": rota}
         ok = bool(setter(volume, muted=muted, uniq=uniq, **extras))
-        return {
+        corpo = {
             "status": "ok" if ok else "sem_controle",
             "speaker": self._speaker_estado(uniq),
         }
+        if fonte_feita:
+            corpo["fonte"] = fonte_feita
+        return corpo
+
+    def _speaker_fonte(self, uniq: str | None, fonte: str) -> str | None:
+        """Entrega a `fonte` ao dono do nó, e devolve a que ficou valendo.
+
+        `None` = ninguém executou: daemon sem o subsystem do som de pé (é o
+        caso do `FakeController` e do daemon antigo), ou um valor que o dono
+        recusou. Ausência é resposta, e é a mesma disciplina de todo o bloco de
+        áudio deste arquivo — `getattr` defensivo, nunca `hasattr` seguido de
+        chamada.
+
+        SEM `uniq` NÃO HÁ NÓ. A `fonte` é por controle desde a
+        SFX-POR-CONTROLE-01: aplicá-la ao primário porque o pedido veio sem
+        endereço poria o som da máquina no ouvido do jogador errado, que é a
+        família de defeito do `_handle_for(None)` (18/09/2026).
+        """
+        sub = getattr(self.daemon, "_alto_falante_subsystem", None)
+        escolher = getattr(sub, "escolher_a_fonte", None)
+        # O `valendo` sai do MESMO `getattr` defensivo do `escolher`, e não de
+        # `sub.fonte_escolhida`: o subsystem é `Any | None` para o mypy, e ler o
+        # atributo direto é a chamada em `None` que a guarda logo abaixo existe
+        # para impedir. Duas leituras com disciplinas diferentes no mesmo bloco
+        # é como um `None` atravessa a guarda do irmão.
+        valendo = getattr(sub, "fonte_escolhida", None)
+        if not uniq or not callable(escolher) or not callable(valendo):
+            return None
+        try:
+            if not escolher(uniq, fonte):
+                return None
+            return str(valendo(uniq))
+        except Exception:  # pragma: no cover - defensivo
+            logger.debug("som_fonte_nao_escolhida", uniq=uniq, exc_info=True)
+            return None
 
     async def _speaker_release(self, uniq: str | None) -> dict[str, Any]:
         """Devolve a posse dos bytes de volume (SOM-02/E3) e relê o estado.
