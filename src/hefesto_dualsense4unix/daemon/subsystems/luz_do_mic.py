@@ -53,7 +53,7 @@ voltou a ser dele.
 
 **POR QUE `set_microphone_led` E NÃO `set_mic_led`, e isto não é preferência.**
 Medido nesta árvore em 03/09/2026: `set_mic_led` coage a `bool` DUAS VEZES em
-série (`core/backend_pydualsense.py:4952`, `flag = bool(aceso)`, e `:425`,
+série (`core/backend_pydualsense.py:5015`, `flag = bool(aceso)`, e `:453`,
 `tomar(bool(aceso))`), então `2` e `3` viram `1` sem erro e sem log — luz acesa
 fixa onde devia piscar, que se lê como *"a PEÇA B não está detectando som"*. O
 único caminho de produção que carrega o nível é
