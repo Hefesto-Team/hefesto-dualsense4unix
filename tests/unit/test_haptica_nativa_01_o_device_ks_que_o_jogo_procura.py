@@ -5,7 +5,7 @@ devolve um device com o MESMO `ContainerId` do endpoint de áudio do controle
 (medido no trace de 17/09/2026). O GE-Proton exclui o DualSense desse device; o
 `audio_ks_dualsense` o grava no `system.reg` a cada lançamento.
 
-Morde em sete alturas:
+Morde em oito alturas:
 
 1. **a conta** — o `ContainerId` do `winepulse`, byte a byte;
 2. **o dono manda** — o Data4 que o próprio prefixo já registrou vence o palpite;
@@ -14,7 +14,10 @@ Morde em sete alturas:
    reordenar o arquivo; nenhum bloco alheio some;
 5. **replug e zero controles** — o device velho sai, não acumula;
 6. **N controles** — um device por controle no cabo;
-7. **prefixo ocupado** — com o `wineserver` DAQUELE prefixo vivo, não escreve.
+7. **prefixo ocupado** — com o `wineserver` DAQUELE prefixo vivo, não escreve;
+8. **D1, as duas opções do Proton** — elas nascem em TODA variante do
+   `compose_env`, que é quem o daemon materializa (a seção do fim explica o
+   buraco que essa altura fechou, e o que ele deixava passar verde).
 
 Tudo em sysfs e registro sintéticos: a suíte nunca lê o controle dela, e os
 seriais das instâncias do winebus estão na faixa sintética `aa:bb:cc`.
@@ -723,3 +726,229 @@ def test_a_sonda_pergunta_em_c_e_sem_o_loader_da_steam(tmp_path: Path) -> None:
         eco="${PROTON_ENABLE_MHWILDS_USB_AUDIO:-ausente}|${LD_LIBRARY_PATH:-}|${LD_PRELOAD:-}",
     )
     assert visto == f"1|{loader}|{preload}"
+
+
+# ------------------------------------------ D1: as duas nascem em TODA variante
+#
+# O BURACO QUE ESTA SEÇÃO FECHA, medido em 20/09/2026: arrancadas as duas linhas
+# de `compose_env` que ligam a háptica — as que fizeram o PRAGMATA vibrar na mão
+# dela —, 312 testes desta área e os 42 portões da camada rápida continuaram
+# VERDES. Todo teste do arquivo acima entrega ao wrapper um `env_do_daemon`
+# escrito à mão, então mede o WRAPPER; ninguém perguntava ao `compose_env`, que
+# é quem decide o que o daemon materializa. A `SDL_ACCELEROMETER_AS_JOYSTICK`
+# tem essa régua desde a SENSORES-NO-JOGO-02; estas duas nasceram sem.
+#
+# A MATRIZ NÃO É DIGITADA. Ela sai do produto cartesiano dos argumentos que
+# `compose_env` distingue, e é essa a diferença que importa: uma tabela de
+# variantes escrita à mão tem um segundo dono e envelhece calada — é assim que
+# um `if` novo passa por baixo de uma régua que continua verde.
+
+_LIGADAS_SEMPRE = (
+    "PROTON_KEEP_SONY_AUDIO_ENDPOINT_VISIBLE",
+    "PROTON_ENABLE_MHWILDS_USB_AUDIO",
+)
+
+
+def _toda_variante_do_compose_env() -> list[dict[str, object]]:
+    """Todo estado que `compose_env` sabe distinguir, montado do produto."""
+    variantes: list[dict[str, object]] = []
+    for native_mode in (True, False):
+        for emulation_enabled in (True, False):
+            for flavor in ("dualsense", "xbox", "nintendo"):
+                for backends in ([], ["uhid"], ["uinput"], ["uhid", "uinput"]):
+                    for fisicos in (0, 1, 2):
+                        variantes.append(
+                            {
+                                "native_mode": native_mode,
+                                "emulation_enabled": emulation_enabled,
+                                "flavor": flavor,
+                                "backends": list(backends),
+                                "fisicos": fisicos,
+                            }
+                        )
+    return variantes
+
+
+def test_as_duas_opcoes_da_haptica_nascem_em_toda_variante() -> None:
+    """D1: elas entram com «1» em todo estado, como o preload. Sem `if`."""
+    from hefesto_dualsense4unix.daemon.launch_env import compose_env
+
+    variantes = _toda_variante_do_compose_env()
+    assert len(variantes) == 144, "a matriz encolheu — alguém mexeu no produto"
+    for estado in variantes:
+        env = compose_env(**estado)  # type: ignore[arg-type]
+        for nome in _LIGADAS_SEMPRE:
+            assert env.get(nome) == "1", (
+                f"a variante {estado} saiu sem {nome}=1 — o jogo da Sony abre "
+                "sem o endpoint de 4 canais e a vibração não chega à mão dela"
+            )
+
+
+def test_as_duas_opcoes_da_haptica_moram_na_allowlist() -> None:
+    """Emitidas e não declaradas, o wrapper as descartaria sem dizer nada."""
+    from hefesto_dualsense4unix.daemon.launch_env import ENV_ALLOWLIST
+
+    for nome in _LIGADAS_SEMPRE:
+        assert nome in ENV_ALLOWLIST, nome
+
+
+# ------------------------------- o curador tem QUATRO donos, e eles têm de bater
+#
+# O SEGUNDO BURACO DE 20/09/2026, medido do mesmo jeito: trocado o nome do alvo
+# em `install.sh` (`bin/hefesto-audio-ks` → `bin/hefesto-audio-ks-MORDIDA`), os
+# 52 testes desta área e os 42 portões da camada rápida seguiram VERDES. O
+# install passaria a materializar o curador com um nome que o wrapper não
+# procura, e a háptica morreria calada: o `curar_audio_ks` cai em
+# `sem-curador`, que é um rastro, não um erro, e o jogo abre normalmente — sem
+# vibrar.
+#
+# O caminho do curador está escrito em QUATRO lugares, e nenhum perguntava aos
+# outros:
+#
+#   `install.sh`                AUDIO_KS_TARGET — quem escreve o arquivo;
+#   `uninstall.sh`              AUDIO_KS_TARGET — quem o apaga;
+#   `assets/hefesto-launch.sh`  `curador=` — quem o executa no lançamento;
+#   `scripts/doctor.sh`         a linha do `check_copias_do_wrapper` — quem avisa.
+#
+# É a mesma forma do defeito que fez nascer o `scripts/portoes.sh`: uma lista
+# em dois lugares é duas listas, e elas divergem. Aqui a régua LÊ os quatro
+# fontes e exige que digam a mesma coisa — nenhum caminho é digitado nela.
+#
+# E O EXTRATOR TAMBÉM É UMA RÉGUA: `curador=` aparece DUAS vezes no wrapper (a
+# de cima é a do `hefesto-camadas`), então ele lê de dentro do corpo do
+# `curar_audio_ks`. Um `re.search` solto teria medido o vizinho e dado verde
+# sobre o arquivo errado.
+
+_RAIZ_DO_PROJETO = Path(__file__).resolve().parents[2]
+
+
+def _um_valor(caminho: str, agulha: str, texto: str | None = None) -> str:
+    """O único valor entre aspas que `agulha` captura. Dois casamentos reprovam."""
+    if texto is None:
+        texto = (_RAIZ_DO_PROJETO / caminho).read_text(encoding="utf-8")
+    achados = re.findall(agulha, texto, re.MULTILINE)
+    assert len(achados) == 1, f"{caminho}: «{agulha}» casou {len(achados)} vezes"
+    return achados[0]
+
+
+def _corpo_da_funcao(caminho: str, nome: str) -> str:
+    """O corpo de uma função de shell, do `{` da abertura ao `}` da coluna 0."""
+    texto = (_RAIZ_DO_PROJETO / caminho).read_text(encoding="utf-8")
+    assert f"\n{nome}() {{\n" in texto, f"{caminho}: sem a função {nome}"
+    return texto.split(f"\n{nome}() {{\n", 1)[1].split("\n}\n", 1)[0]
+
+
+def _mesma_forma(caminho: str) -> str:
+    """`${HOME}` e `$HOME` são o mesmo endereço escrito de dois jeitos."""
+    return caminho.replace("${HOME}", "$HOME")
+
+
+_ALVO_DO_INSTALL = r'^readonly AUDIO_KS_TARGET="([^"]+)"'
+
+
+def test_os_quatro_donos_do_curador_dizem_o_mesmo_caminho() -> None:
+    """Trocar o nome em um só deixaria a háptica morrer sem uma linha vermelha."""
+    caminhos = {
+        "install.sh": _um_valor("install.sh", _ALVO_DO_INSTALL),
+        "uninstall.sh": _um_valor("uninstall.sh", _ALVO_DO_INSTALL),
+        "hefesto-launch.sh": _um_valor(
+            "assets/hefesto-launch.sh",
+            r'^\s*curador="([^"]+)"',
+            _corpo_da_funcao("assets/hefesto-launch.sh", "curar_audio_ks"),
+        ),
+    }
+    vistos = {dono: _mesma_forma(valor) for dono, valor in caminhos.items()}
+    assert len(set(vistos.values())) == 1, (
+        "os donos do curador do device KS divergiram — o install grava num "
+        f"nome que o wrapper não procura: {vistos}"
+    )
+
+
+def test_o_doctor_vigia_o_curador_no_mesmo_lugar_e_pela_mesma_fonte() -> None:
+    """A voz que avisa tem de olhar o arquivo que o install escreve."""
+    alvo = _mesma_forma(_um_valor("install.sh", _ALVO_DO_INSTALL))
+    pasta = _mesma_forma(_um_valor("scripts/doctor.sh", r'^\s*local bin="([^"]+)"'))
+    nome, fonte = _um_valor(
+        "scripts/doctor.sh",
+        r'"([^"|]+)\|([^"|]+)\|[^"]*a vibração dos jogos da Sony',
+    )
+    assert f"{pasta}/{nome}" == alvo, (
+        f"o doctor olha «{pasta}/{nome}» e o install escreve «{alvo}»"
+    )
+    do_install = _um_valor(
+        "install.sh", r'^readonly AUDIO_KS_SRC="\$\{ROOT_DIR\}/([^"]+)"'
+    )
+    assert fonte == do_install, (
+        f"o doctor compara contra «{fonte}» e o install copia de «{do_install}»"
+    )
+    assert (_RAIZ_DO_PROJETO / fonte).is_file(), fonte
+
+
+# ------------------------- a conferência de 20/09/2026: o que ainda passava
+#
+# As três réguas acima mordem tudo o que existe HOJE — medido arrancando cada
+# uma das duas opções, trocando o VALOR de «1» para «0», pondo uma delas sob um
+# `if` de variante e renomeando o caminho do curador em cada um dos seus donos,
+# um por vez. As duas abaixo fecham o que sobrou, e cada uma nasce de uma
+# mordida que ficou VERDE.
+
+
+def test_a_matriz_conhece_todo_argumento_do_compose_env() -> None:
+    """A matriz só vale enquanto souber de TODO eixo que o produto distingue.
+
+    A MORDIDA QUE REVELOU, 20/09/2026: acrescentado a `compose_env` um sexto
+    argumento, com as duas opções puladas quando ele vem ligado, os 1.075
+    testes que leem o wrapper e os 42 portões da camada rápida seguiram
+    VERDES. A matriz nunca passa o eixo novo, então nunca visita o ramo que
+    desliga a vibração — que é, palavra por palavra, o defeito que a régua de
+    cima diz impedir. Os eixos ali SÃO digitados; a assinatura é o dono.
+    Pergunta-se a ela.
+    """
+    import inspect
+
+    from hefesto_dualsense4unix.daemon.launch_env import compose_env
+
+    argumentos = set(inspect.signature(compose_env).parameters)
+    eixos = set(_toda_variante_do_compose_env()[0])
+    assert argumentos == eixos, (
+        "a matriz da háptica e a assinatura de `compose_env` divergiram — só na "
+        f"assinatura: {sorted(argumentos - eixos)}; só na matriz: "
+        f"{sorted(eixos - argumentos)}. Um eixo que a matriz não visita é um "
+        "ramo em que a vibração pode sair sem ninguém ver"
+    )
+
+
+def test_o_curador_entra_executavel_porque_o_wrapper_exige_isso() -> None:
+    """O install grava o curador; o wrapper só o roda se ele puder ser executado.
+
+    A MORDIDA QUE REVELOU, 20/09/2026: trocado `install -Dm755` por `-Dm644` no
+    `install.sh`, os 1.075 testes que leem o wrapper e os 42 portões da camada
+    rápida seguiram VERDES. Medido no wrapper DE VERDADE, com o curador em
+    0644: o jogo abre (rc=0), o rastro diz `sem-curador` — que é rastro, não
+    erro — e o `system.reg` do prefixo não recebe o device. A mesma morte
+    calada do caminho renomeado, pela outra metade do mesmo contrato.
+
+    O irmão `hefesto-camadas` já tinha a régua do bit (um teste que RODA o
+    bloco do install e cobra `os.access(..., os.X_OK)`); a do device KS nasceu
+    sem, e o dublê do lançamento dava o bit a si mesmo.
+
+    O número não é digitado aqui: a EXIGÊNCIA é lida do wrapper, e o modo é
+    lido do install.
+    """
+    corpo = _corpo_da_funcao("assets/hefesto-launch.sh", "curar_audio_ks")
+    assert '-x "$curador"' in corpo, (
+        "o wrapper deixou de exigir o bit de execução — esta régua mede a "
+        "exigência dele, e ela sumiu"
+    )
+    for fonte, alvo in (
+        ("AUDIO_KS_SRC", "AUDIO_KS_TARGET"),
+        ("CAMADAS_SRC", "CAMADAS_TARGET"),
+    ):
+        modo = _um_valor(
+            "install.sh",
+            rf'^\s*install -Dm(\d+) "\$\{{{fonte}\}}" "\$\{{{alvo}\}}"',
+        )
+        assert int(modo, 8) & 0o100, (
+            f"o install grava o curador de {alvo} com modo {modo} — sem o bit "
+            "de execução o wrapper o pula em silêncio e o jogo abre sem vibrar"
+        )
