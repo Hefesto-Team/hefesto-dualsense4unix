@@ -86,6 +86,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from hefesto_dualsense4unix.integrations import arranjo_da_mesa as motor
 from hefesto_dualsense4unix.integrations import plano_de_radio
 from hefesto_dualsense4unix.integrations.radio_da_mesa import (
@@ -622,6 +624,15 @@ def test_na_mesa_dela_a_tela_cala_e_o_motor_manda_mover() -> None:
 
 SCRIPT_DA_COLISAO = RAIZ / "scripts" / "check_colisao_de_sprints.py"
 
+#: O script saiu do repositório com o despacho de leva (INSUMO-FORA-DO-GIT-01,
+#: `tests/conftest.py`). Num clone limpo — o do `release.yml` — os dois testes
+#: abaixo pulam COM A RAZÃO em vez de reprovar por ambiente; onde ele existe,
+#: nada muda. E se ele sumir sem que o `.gitignore` explique, o marcador RECUSA
+#: pular e o `assert` logo abaixo reprova no claro, que é o que tem de acontecer.
+_SEM_O_SCRIPT_DA_COLISAO = pytest.mark.insumo_fora_do_git(
+    "scripts/check_colisao_de_sprints.py"
+)
+
 
 def _sprint_de_papel(nome: str, arquivo: str) -> str:
     return "\n".join(
@@ -643,6 +654,7 @@ def _sprint_de_papel(nome: str, arquivo: str) -> str:
     )
 
 
+@_SEM_O_SCRIPT_DA_COLISAO
 def test_o_achado_da_colisao_tem_linha_propria(tmp_path: Path) -> None:
     """MORDIDA. ``grep '^FALHA'`` tem de achar a colisão na saída do script.
 
@@ -725,6 +737,7 @@ def test_o_achado_da_colisao_tem_linha_propria(tmp_path: Path) -> None:
     )
 
 
+@_SEM_O_SCRIPT_DA_COLISAO
 def test_o_script_da_colisao_nao_engole_a_falha_quando_nao_ha_divida(
     tmp_path: Path,
 ) -> None:
