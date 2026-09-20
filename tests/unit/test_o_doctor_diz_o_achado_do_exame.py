@@ -40,9 +40,22 @@ def _snippet_do_exame() -> str:
     defeito que esta casa chama de *instrumento apontando para outra coisa*.
     """
     fonte = DOCTOR.read_text(encoding="utf-8")
+    # ANCORADO NA FUNÇÃO, E NÃO NA FORMA — STORM-USB-01, 20/09/2026.
+    #
+    # Esta busca começava no ARQUIVO inteiro e pegava o primeiro `| "${py}" -c`
+    # que encontrasse. No dia em que o `_o_endereco_do_storm` nasceu — acima do
+    # `check_exame_da_mesa`, com a MESMA forma de chamada — a régua passou a
+    # medir o python errado e reprovou em quatro casos, acusando o doctor de um
+    # defeito que ele não tinha. O `assert` abaixo prometia justamente que isso
+    # não aconteceria "verde sobre nada"; ele não previa o verde sobre OUTRA
+    # coisa, que é o mesmo instrumento apontado para o lugar errado.
+    #
+    # A cura é a promessa do próprio docstring: procurar DENTRO da função.
+    inicio = fonte.index("check_exame_da_mesa() {")
+    fim = fonte.index("\n}\n", inicio)
     # O SEGUNDO `py -c` do bloco: o primeiro roda `--censo`, o segundo resume.
     m = re.search(r'\| *"\$\{py\}" -c \'\n(.*?)\n\' 2>/dev/null\)"',
-                  fonte, re.S)
+                  fonte[inicio:fim], re.S)
     assert m, ("não achei o python do `check_exame_da_mesa` no `doctor.sh` — "
                "ou ele mudou de forma, e esta régua ficaria verde sobre nada")
     return m.group(1)

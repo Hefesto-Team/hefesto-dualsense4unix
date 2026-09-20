@@ -3804,6 +3804,84 @@ check_bt_crc_counters() {
     fi
 }
 
+# STORM-USB-01 (20/09/2026) — O ENDEREÇO DO -71, e não só a contagem.
+#
+# O aviso do `check_kernel_watch` diz *"33 vez(es) nos últimos 7 dias"* e manda
+# "conferir a seção USB/dropout abaixo". Aquela seção (`check_usb_dropout`)
+# correlaciona de verdade — mas só sobre `journalctl -b -k`, o BOOT ATUAL. A
+# queda de terça-feira não está lá, e é justamente a que a pessoa quer
+# explicar; o `kernel-watch` guarda meses e ninguém cruzava o log dele com o
+# `/sys`.
+#
+# A porta está gravada em CADA linha `[USB-71]` desde que a vigia nasceu. Quem
+# a lê e a cruza com a topologia é `integrations/exame_da_mesa.py --storm-usb`,
+# e a direção é essa — não um `doctor.sh --json` — pela razão de sempre: o
+# módulo viaja nos pacotes e este script não (`check_exame_da_mesa`, acima).
+#
+# `HEFESTO_DOCTOR_RAIZ_USB` troca a raiz do `/sys`. Serve para endereçar o -71
+# contra um retrato de barramento de OUTRA máquina — a de quem pediu ajuda —, e
+# é por onde a régua injeta uma bancada em vez de medir a topologia de quem
+# roda o teste.
+_o_endereco_do_storm() {
+    local log="${1}" dias="${2}"
+    local py arquivo raiz_usb
+    py="$(_python_do_produto)"
+    arquivo="${ROOT_DIR:-}/src/hefesto_dualsense4unix/integrations/exame_da_mesa.py"
+    if [[ -z "${py}" || ! -f "${arquivo}" ]]; then
+        info "NÃO SEI em qual porta esses -71 aconteceram: o exame_da_mesa.py não está ao alcance deste doctor (instalação por pacote sem o módulo, ou python ausente)"
+        return
+    fi
+    raiz_usb="${HEFESTO_DOCTOR_RAIZ_USB:-/sys/bus/usb/devices}"
+    local laudo
+    # O FORMATO É O DO DONO: o `porque` de cada porta e de cada hub sai do
+    # módulo, que é quem mediu. O que se escreve AQUI é a CURA — o que fazer
+    # com o achado —, porque cura de terminal fala de cabo e de hub e a frase
+    # do módulo tem de continuar servindo a quem só quer o laudo.
+    laudo="$("${py}" "${arquivo}" --storm-usb --log "${log}" --dias "${dias}" \
+             --raiz-usb "${raiz_usb}" 2>/dev/null | "${py}" -c '
+import json
+import sys
+
+d = json.load(sys.stdin)
+if d.get("porque_nao"):
+    print("naosei\t" + str(d["porque_nao"]))
+for p in d.get("portas") or []:
+    texto = str(p.get("porque") or "").strip()
+    if texto:
+        print("porta\t" + texto)
+for h in d.get("hubs_em_comum") or []:
+    texto = str(h.get("porque") or "").strip()
+    if texto:
+        print("hub\t" + texto)
+sobra = int(d.get("sem_endereco") or 0)
+if sobra > 0:
+    # AUSÊNCIA É RESPOSTA: a soma das portas acima é MENOR que o total contado,
+    # e quem lê tem de saber disso. Engolir a diferença deixaria uma forma de
+    # linha nova do kernel invisível para sempre.
+    print("naosei\t" + str(sobra) + " evento(s) [USB-71] da janela ficaram SEM endereço — o kernel usou uma forma de linha que este doctor ainda não sabe ler; a soma das portas acima é menor que o total")
+' 2>/dev/null)"
+    # LAUDO VAZIO SÓ ACONTECE COM O MÓDULO MUDO, e isso é medido: esta função
+    # só roda com pelo menos um `[USB-71]` na janela, e o módulo conta a MESMA
+    # janela sobre o MESMO arquivo — logo ele devolve ao menos uma porta ou ao
+    # menos um evento sem endereço, e qualquer um dos dois imprime linha.
+    # (Uma sentinela "sempre imprima algo" chegou a ser escrita aqui e saiu:
+    # nenhuma entrada a alcançava, e código que régua nenhuma pode morder é
+    # verbosidade com cara de cuidado.)
+    if [[ -z "${laudo}" ]]; then
+        info "NÃO SEI em qual porta esses -71 aconteceram: o cruzamento com a topologia do /sys não devolveu nada — o módulo não respondeu"
+        return
+    fi
+    local marca texto
+    while IFS=$'\t' read -r marca texto; do
+        [[ -n "${texto}" ]] || continue
+        case "${marca}" in
+            porta) info "  -71 em ${texto}" ;;
+            hub) warn "${texto}. É o suspeito a trocar primeiro: tire um dos aparelhos desse hub e ligue direto numa entrada do computador, ou troque o hub (de preferência um com fonte própria)" ;;
+            naosei) info "${texto}" ;;
+        esac
+    done <<<"${laudo}"
+}
+
 # kernel-watch (PLAT-06 item 4): resume o log dedicado pro leigo. Lê o
 # kernel.log novo (fallback: storm.log antigo) e conta ocorrências por tag.
 check_kernel_watch() {
@@ -3882,9 +3960,23 @@ check_kernel_watch() {
     _relata JOYCON-PROBE "${n_joycon_probe}" "$(_quantos_desde JOYCON-PROBE "${corte}")" \
         "$(_quando_o_ultimo JOYCON-PROBE)" \
         "o hid-nintendo falhou no PROBE [JOYCON-PROBE] — morte 'invisível' (o device nem chega a registrar; sem cascata [JOYCON]); ver a seção DKMS hid-nintendo abaixo"
-    _relata USB-71 "${n_usb71}" "$(_quantos_desde USB-71 "${corte}")" \
+    local recentes_usb71
+    recentes_usb71="$(_quantos_desde USB-71 "${corte}")"
+    _relata USB-71 "${n_usb71}" "${recentes_usb71}" \
         "$(_quando_o_ultimo USB-71)" \
-        "storm USB (-71) registrado no kernel-watch [USB-71] — confira a seção USB/dropout abaixo"
+        "storm USB (-71) registrado no kernel-watch [USB-71] — a PORTA e o APARELHO de cada um saem logo abaixo; as alavancas (quirk, regra 75) estão na seção USB/dropout"
+    # STORM-USB-01: o número sozinho não manda ninguém a lugar nenhum.
+    #
+    # ESTA GUARDA É ECONOMIA, NÃO COMPORTAMENTO, e medir isso custou uma
+    # mordida: quem CORTA a janela é o `--dias` do módulo, e arrancar o `-gt 0`
+    # daqui não faz um evento de agosto aparecer — ele volta a ser dois
+    # `python3` gastos para receber uma lista vazia. As duas travas ficam de
+    # propósito, e a régua `test_evento_velho_nao_ganha_endereco` exige as
+    # DUAS: só arrancando ambas é que o passado volta a ser contado no
+    # presente, que é o defeito que ela pegou em 03/09.
+    if [[ "${recentes_usb71:-0}" -gt 0 ]]; then
+        _o_endereco_do_storm "${log}" "${dias_da_janela}"
+    fi
     _relata BT-ERR "${n_bterr}" "$(_quantos_desde BT-ERR "${corte}")" \
         "$(_quando_o_ultimo BT-ERR)" \
         "o rádio BT acumulou erros [BT-ERR] — rádio sujo; ver os conselhos de posicionamento acima"
