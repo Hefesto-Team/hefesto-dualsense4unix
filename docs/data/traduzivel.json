@@ -1,0 +1,51 @@
+{
+  "_LEIA": "O PISO DAS CATRACAS. Não se edita à mão: `--aceitar` desce, `--forcar-piso «razão»` sobe com razão e data.",
+  "medidas": {
+    "fronteira-de-lingua": {
+      "data": "2026-09-20",
+      "nota": "por zona: TELA=65, ENSINA=193, REGISTRA=24, CODIGO=2191",
+      "o_que_conta": "arquivos que nenhuma regra de zonas-de-lingua.toml alcança",
+      "piso": 0,
+      "por_item": {},
+      "razao": "piso de partida da TRADUZIR-O-PROJETO-01, medido em 20/09/2026 nesta árvore",
+      "unidade": "arquivos",
+      "universo": 2473
+    },
+    "prosa-publicada": {
+      "data": "2026-09-20",
+      "nota": "470547 bytes são cópia do mesmo bloco presente nas 10 páginas — o WebKit os baixa 10 vezes e os descarta outras tantas. A razão de um CSS pertence ao gerador. CONTA comentário de HTML e de CSS, com parser; NÃO conta comentário dentro de <script>, porque separar comentário de literal de expressão regular em JavaScript pede um analisador escrito no escuro.",
+      "o_que_conta": "bytes de comentário dentro das páginas publicadas",
+      "piso": 1097724,
+      "por_item": {
+        "01-jogar.html": 106875,
+        "02-controles.html": 198927,
+        "03-gatilhos.html": 85190,
+        "04-iluminacao.html": 120744,
+        "05-vibracao.html": 98273,
+        "06-navegacao.html": 107662,
+        "07-lancadores.html": 71377,
+        "08-conexoes.html": 123949,
+        "09-sistema.html": 76674,
+        "10-perfis.html": 108053
+      },
+      "razao": "piso de partida da TRADUZIR-O-PROJETO-01, medido em 20/09/2026 nesta árvore",
+      "unidade": "bytes",
+      "universo": 10
+    },
+    "tela-sem-endereco": {
+      "bruto": {
+        "atributos_distintos": 239,
+        "frases_distintas": 3065,
+        "unidades": 3304
+      },
+      "data": "2026-09-20",
+      "nota_de_quem_gravou": "piso de partida da TRADUZIR-O-PROJETO-01, medido em 20/09/2026 nesta árvore",
+      "o_que_conta": "unidades de texto de tela sem endereço de tradução",
+      "piso": "PENDENTE",
+      "por_item": {},
+      "razao": "não há FORMA DE ENDEREÇO de tradução definida neste projeto. A seção [endereco_de_traducao] de docs/data/zonas-de-lingua.toml está ausente, e quem a define é a I18N-DA-TELA-NOVA-01. Sem saber o que é TER endereço, «frases sem endereço» daria o total — ou zero, se alguém invertesse o sinal — e nenhum dos dois mede coisa alguma. A medida acorda sozinha no dia em que a seção existir.",
+      "unidade": "unidades",
+      "universo": 10
+    }
+  }
+}

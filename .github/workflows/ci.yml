@@ -126,6 +126,13 @@ jobs:
       # digitado em dois lugares é a próxima divergência esperando acontecer.
       - run: python3 scripts/check_a_grafia_do_nome.py
       - run: python3 -m pytest tests/unit/test_portao_a_grafia_do_nome_morde.py -q
+      # A catraca da tradução — TRADUZIR-O-PROJETO-01, 20/09/2026. Três números
+      # que não sobem: arquivo fora das zonas de língua, unidade de tela sem
+      # endereço de tradução (hoje PENDENTE, e pendente NÃO é verde) e bytes de
+      # comentário dentro das dez páginas publicadas. Ele não traduz nada e não
+      # pede mutirão: cobra de quem escreve a linha nova.
+      - run: python3 scripts/check_o_projeto_e_traduzivel.py
+      - run: python3 -m pytest tests/unit/test_o_projeto_e_traduzivel_morde.py -q
 
   acentuacao:
     name: Acentuação PT-BR estrita (py${{ matrix.python }})
