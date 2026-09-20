@@ -61,7 +61,8 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 #: Teto de espera de cada `busctl`, em segundos. O mesmo número de
-#: `integrations/exame_da_mesa.py:73` e de `integrations/apelido_do_dongle.py`:
+#: `integrations/exame_da_mesa.py:92` (`ESPERA_DO_BUSCTL_S`) e de
+#: `integrations/apelido_do_dongle.py`:
 #: um `busctl` pendurado seguraria o único worker da ponte da janela, e a aba
 #: inteira pareceria travada.
 ESPERA_DO_BUSCTL_S = 5.0
