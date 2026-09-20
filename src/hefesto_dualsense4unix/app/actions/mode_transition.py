@@ -125,15 +125,24 @@ def plan_mode_transition(
         # desmonta os jogadores; preservar a preferência faz o co-op voltar
         # sozinho ao reentrar em "Jogar pelo Hefesto".
         # HARM-06: o modo desktop é o DONO da emulação de mouse/teclado, então
-        # entrar nele LIGA o mouse (conforme a preferência que o daemon
-        # persistiu) em vez de só desligar os outros dois modos e deixar o
-        # controle sem função nenhuma até alguém achar a aba Mouse. Vem por
-        # último: ligar o mouse antes de o gamepad sair faria a exclusão mútua
-        # do daemon derrubar o mouse recém-ligado.
+        # entrar nele LIGA o mouse em vez de só desligar os outros dois modos e
+        # deixar o controle sem função nenhuma até alguém achar a aba Mouse.
+        # Vem por último: ligar o mouse antes de o gamepad sair faria a exclusão
+        # mútua do daemon derrubar o mouse recém-ligado.
+        #
+        # POINT-AND-CLICK-01 (17/09/2026) — O TERCEIRO PASSO TROCOU DE FONTE, e
+        # a ORDEM não mudou. Era `mouse.emulation.restore`, que lê a flag de
+        # sessão no disco: um arquivo único da máquina, que não abre perfil
+        # nenhum. Entrar no modo descartava, em silêncio, as CINCO coisas que a
+        # aba Navegação grava no PERFIL — `mouse`, `teclado_emulado`,
+        # `key_bindings`, `button_actions` e a supressão. A ordem dela: *"o modo
+        # point and click é o modo navegação (…) Ele ativa o modo configurado
+        # lá."* O recuo para a flag de sessão continua existindo, dentro do
+        # `desktop.arranjo.apply`, para o perfil que não opina.
         return [
             ("native.mode.set", {"enabled": False, "origin": "manual"}),
             ("gamepad.emulation.set", {"enabled": False, "origin": "manual"}),
-            ("mouse.emulation.restore", {}),
+            ("desktop.arranjo.apply", {"origin": "manual"}),
         ]
     raise ValueError(f"modo desconhecido: {mode_id!r}")
 

@@ -2183,7 +2183,7 @@ def _aplicar(p: Any, plano: list[tuple[str, dict[str, Any]]]) -> None:
 
     NENHUM DESTES QUATRO MÉTODOS TEM FUNÇÃO NO `app/ipc_bridge.py` — conferido
     nas 36 que ele expõe: `native.mode.set`, `gamepad.emulation.set`,
-    `mouse.emulation.restore` e `coop.sync` não estão lá. Então é `p.chamar`,
+    `desktop.arranjo.apply` e `coop.sync` não estão lá. Então é `p.chamar`,
     que passa pelo mesmo `_safe_call` do bridge e herda o tratamento de erro.
 
     A ORDEM É A ENTREGA, e ela não é enfeite: `plan_mode_transition` põe o
@@ -2202,12 +2202,15 @@ def _aplicar(p: Any, plano: list[tuple[str, dict[str, Any]]]) -> None:
 #: quem lesse construir a cura em `ponte.py`, *"que não é território desta aba"*.
 #:
 #: **A CURA JÁ ESTÁ LÁ, e a medição é de uma linha:** `ponte.TETOS`
-#: (`pacotes/ponte.py`) declara **2,0 s** para os CINCO métodos desta aba —
-#: `native.mode.set`, `gamepad.emulation.set`, `mouse.emulation.restore`,
-#: `coop.sync` e `identity.renumber` —, que é o mesmo valor de
+#: (`pacotes/ponte.py`) declara **2,0 s** para os métodos da TROCA DE MODO desta
+#: aba — `native.mode.set`, `gamepad.emulation.set`, `coop.sync` e
+#: `identity.renumber` —, que é o mesmo valor de
 #: `mode_transition.MODE_IPC_TIMEOUT_S`, e `ponte.teto()` só cai nos 250 ms para
 #: método que não esteja na tabela. Conferido método a método contra
-#: `a01_jogar.METODOS`: os cinco estão lá.
+#: `a01_jogar.METODOS_DA_TROCA_DE_MODO`: estão todos lá. Os dois de FORA
+#: daquele conjunto têm teto próprio e declarado: `gamepad.mask.set` (2,0 s, e
+#: ele não é troca de modo) e `desktop.arranjo.apply` (**3,0 s**, porque abre um
+#: perfil do disco — POINT-AND-CLICK-01, 17/09/2026).
 #:
 #: POR QUE ISTO NÃO É NOTA DE RODAPÉ: quem lesse o texto antigo iria construir
 #: uma cura já construída, e a regra desta casa é que fato errado se SUBSTITUI —
@@ -2564,19 +2567,34 @@ def modo_navegacao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     O CASO DO MEIO, e `painel` o explica melhor do que eu resumiria: a Navegação
     **não é degrau da `ESCADA`** (`KIND_DESKTOP` existe como constante e
-    `indice_do_degrau` devolve -1 — por isso o PS+R3 não para aqui) e **tem
-    escritor**: `apply_mode('desktop')` funciona hoje. Confundir as duas
+    `indice_do_degrau` devolve -1) e **tem escritor**:
+    `apply_mode('desktop')` funciona hoje. Confundir as duas
     perguntas pintaria "sem dono" sobre um botão que dá — é a diferença entre
     `chips_sem_degrau()` e `chips_sem_dono()`.
 
     SÃO TRÊS IPCs, e o terceiro é o que faz a diferença entre entrar no modo e
-    entrar num modo sem função: `mouse.emulation.restore` LIGA o mouse conforme
-    a preferência que o daemon persistiu (HARM-06). Sem ele, o modo desktop
-    desligava os outros dois e deixava o controle sem fazer nada até alguém
-    achar a aba Mouse — foi o `MODO-QUE-NAO-CONTROLA-01`, medido com ela ao
-    vivo: *"cliquei em aplicar e nada"*. E ele vem POR ÚLTIMO: ligar o mouse
-    antes de o gamepad sair faria a exclusão mútua do daemon derrubar o mouse
-    recém-ligado. A ordem é do plano, não daqui.
+    entrar num modo sem função. Sem ele, o modo desktop desligava os outros dois
+    e deixava o controle sem fazer nada até alguém achar a aba Mouse — foi o
+    `MODO-QUE-NAO-CONTROLA-01`, medido com ela ao vivo: *"cliquei em aplicar e
+    nada"*. E ele vem POR ÚLTIMO: ligar o mouse antes de o gamepad sair faria a
+    exclusão mútua do daemon derrubar o mouse recém-ligado. A ordem é do plano,
+    não daqui.
+
+    O TERCEIRO PASSO TROCOU DE FONTE — POINT-AND-CLICK-01, 17/09/2026, pela
+    ordem dela: *"o modo point and click é o modo navegação e o modo que nós
+    mesmos podemos usar e configurar na aba navegação. **Ele ativa o modo
+    configurado lá.**"* Era `mouse.emulation.restore`, que lê a flag de sessão
+    da MÁQUINA; é `desktop.arranjo.apply`, que lê o PERFIL ATIVO — mouse,
+    `key_bindings`, `button_actions`, `teclado_emulado` e a queda da supressão.
+    As cinco coisas que a aba Navegação grava chegavam ao disco e não voltavam,
+    e o laço se fechava: a aba Navegação manda ir à aba Jogar para trocar o
+    modo, o chip daqui é a única porta, e a porta entrava num modo que não
+    carregava nada do que ela havia configurado.
+
+    FATO SUBSTITUÍDO NO PARÁGRAFO ACIMA: dizia-se aqui que *"o PS+R3 não para
+    aqui"*. Ele para desde 13/09/2026 (`hotkey.CICLO_DE_PONTES`), e desde 17/09
+    entra pela MESMA porta deste clique. O que a Navegação não tem é degrau na
+    `ESCADA` automática — que é outra pergunta, e é a de `chips_sem_degrau()`.
     """
     _aplicar(p, _plano_do_chip("navegacao"))
     _lembrar_do_chip("navegacao", o)
@@ -2858,11 +2876,24 @@ PONTE = {"chamar", "chamar_detalhado", "autoswitch_lock_set", "resultado"}
 METODOS_DA_TROCA_DE_MODO = {
     "native.mode.set",
     "gamepad.emulation.set",
-    "mouse.emulation.restore",
     "coop.sync",
     "identity.renumber",
+    # O `mouse.emulation.restore` SAIU DAQUI em 17/09/2026 (POINT-AND-CLICK-01)
+    # porque saiu do PLANO: o terceiro passo do modo Navegação passou a ser o
+    # `desktop.arranjo.apply`, logo abaixo. O método continua de pé no daemon —
+    # ele é o RECUO para o perfil que não opina —, mas quem o chama é o próprio
+    # arranjo, em processo. Declarar aqui um método que esta aba não pede seria
+    # a régua verde sobre uma ponte que ninguém atravessa.
 }
 METODOS = METODOS_DA_TROCA_DE_MODO | {
+    # O ARRANJO DO DESKTOP, E ELE FICA FORA DO CONJUNTO ACIMA DE PROPÓSITO —
+    # 17/09/2026. Aquele conjunto é uma família de TEMPO: "os que `ponte.TETOS`
+    # cobre com os 2,0 s do `MODE_IPC_TIMEOUT_S`". O arranjo tem **3,0 s**,
+    # porque abre um `.json` de perfil do disco além de falar com os devices —
+    # é a família do `profile.switch`, e a razão está escrita em `ponte.TETOS`.
+    # É o mesmo arranjo declarado do `gamepad.mask.set` logo abaixo, pelo
+    # motivo simétrico: cobrar dele os 2,0 s mandaria consertar no lugar errado.
+    "desktop.arranjo.apply",
     # A MÁSCARA DE UM APARELHO — 04/09/2026, e a AUSÊNCIA dela desta lista é
     # parte da história do defeito que a `mascara_do_controle` acabou de curar:
     # sem o nome aqui, `test_nenhum_pacote_cita_metodo_que_o_daemon_nao_atende`
@@ -2932,12 +2963,15 @@ PROVAS = [
                ("chamar", ["gamepad.emulation.set"],
                 {**_MANUAL_ON, "caminho": "xbox"})]},
     # TRÊS, e o terceiro é o que separa "entrei no modo" de "entrei num modo sem
-    # função": `mouse.emulation.restore` liga o mouse conforme a preferência
-    # persistida (HARM-06), e vem POR ÚLTIMO de propósito.
+    # função". Ele vem POR ÚLTIMO de propósito (HARM-06), e desde 17/09/2026 ele
+    # lê o PERFIL ATIVO em vez da flag de sessão da máquina
+    # (POINT-AND-CLICK-01): mouse, teclas, botões, `teclado_emulado` e a queda
+    # da supressão. `origin: manual` porque é gesto dela — sem ele o daemon lê
+    # como reconciliação e o lock de 30 s do `apply_profile_mouse` não é furado.
     {"pagina": PAGINA, "gesto": "modo-navegacao", "clique": {},  # (noqa-acento) chave do contrato
      "chama": [("chamar", ["native.mode.set"], _MANUAL_OFF),
                ("chamar", ["gamepad.emulation.set"], _MANUAL_OFF),
-               ("chamar", ["mouse.emulation.restore"], {})]},
+               ("chamar", ["desktop.arranjo.apply"], {"origin": "manual"})]},
     # RECONCILIAR ANTES DE RENUMERAR: renumerar primeiro compactaria uma mesa
     # que ainda não está completa (`home_actions.py:3122`).
     #

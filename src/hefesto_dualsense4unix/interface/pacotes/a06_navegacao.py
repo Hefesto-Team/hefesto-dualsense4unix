@@ -233,7 +233,7 @@ SEM_ENDERECO: dict[str, str] = {
 #: DUAS TÊM DONO E UMA NÃO, e qual é qual foi MEDIDO — ver o `fato_derrubado`
 #: no corpo de `teclado()`. O que o teclado emulado faz hoje **já é** "só fora
 #: do jogo": o daemon cala a emulação de desktop quando um jogo assume
-#: (`_jogo_no_controle_do_desktop`, `daemon/lifecycle.py:2522`, e o
+#: (`_jogo_no_controle_do_desktop`, `daemon/lifecycle.py:2725`, e o
 #: `gamepad_dispatched` do laço em `:4780`), e o `suppress_desktop_emulation`
 #: do perfil é a versão explícita e por perfil da MESMA coisa. Quem não tem
 #: dono é o INVERSO — "só dentro do jogo".
@@ -2188,7 +2188,7 @@ def _recusa_do_mouse(resposta: Any) -> str:
     `_call_checked_detalhado`, que é o único que entrega o corpo"*, e por isso
     um `{"status": "failed", "bloqueio": "sem_device"}` voltava como sucesso e a
     tela dela ficava sem uma palavra. A ponte entrega o corpo desde 01/09:
-    `ponte.resultado` (`interface/pacotes/ponte.py:221`) devolve o `result` do
+    `ponte.resultado` (`interface/pacotes/ponte.py:236`) devolve o `result` do
     daemon e levanta quando ninguém responde. Era um caminho que já existia e
     esta aba não chamava.
 
@@ -2558,7 +2558,7 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
        mouse/teclado no desktop (jogos de GAMEPAD que leem o controle cru)"*.
        O perfil é ativado quando o jogo casa; logo a supressão vale **durante o
        jogo** — o teclado funciona FORA dele.
-    2. `apply_profile_suppression` (`daemon/lifecycle.py:2203`) recebe esse
+    2. `apply_profile_suppression` (`daemon/lifecycle.py:2406`) recebe esse
        campo a cada ativação de perfil e liga a supressão com `desired=True`.
     3. Sem perfil nenhum a dizer o contrário, o daemon **já** cala a emulação de
        desktop quando um jogo assume: `_jogo_no_controle_do_desktop`
@@ -2579,7 +2579,7 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 
     Do outro lado, o teclado não mexe no gamepad virtual em momento nenhum.
     Quem o liga e desliga é o
-    `set_keyboard_emulation` (`daemon/lifecycle.py:1712`): ele cria ou destrói o
+    `set_keyboard_emulation` (`daemon/lifecycle.py:1915`): ele cria ou destrói o
     teclado virtual e nada mais.
 
     E COM O GAMEPAD DESPACHANDO, o teclado nem chega a ser consultado — a

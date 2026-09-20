@@ -460,6 +460,34 @@ pub async fn restore_mouse() -> Result<bool, IpcError> {
         .unwrap_or(false))
 }
 
+/// Carrega no aparelho o que a aba Navegação gravou no perfil ATIVO.
+///
+/// POINT-AND-CLICK-01 (17/09/2026). SUBSTITUI o [`restore_mouse`] como terceiro
+/// passo do `plan_mode_transition("desktop")`, e a diferença é a FONTE: aquele
+/// lê a flag de sessão da máquina, este lê o perfil — mouse, `key_bindings`,
+/// `button_actions`, `teclado_emulado` e a queda da supressão.
+///
+/// O applet tem o plano de modo DUPLICADO (outro processo, outra linguagem), e
+/// a régua `test_applet_paridade_modo` existe por isso: já divergiu uma vez, e
+/// naquela vez o applet entrava no modo desktop sem ligar o mouse. Deixá-lo no
+/// `restore_mouse` aqui reintroduziria o defeito que esta sprint cura, pela
+/// outra porta.
+///
+/// `origin: "manual"` porque o clique no menu é gesto dela — o silêncio é lido
+/// como reconciliação e não fura o lock de 30 s do `apply_profile_mouse`.
+/// `SWITCH_IPC_TIMEOUT` (3 s), e não `MODE_IPC_TIMEOUT`: este passo abre um
+/// `.json` de perfil do disco, que é a família do `profile.switch`. Espelha o
+/// `ponte.TETOS["desktop.arranjo.apply"]` da GUI.
+pub async fn apply_desktop_arranjo() -> Result<(), IpcError> {
+    call_raw_with_timeout(
+        "desktop.arranjo.apply",
+        json!({"origin": "manual"}),
+        SWITCH_IPC_TIMEOUT,
+    )
+    .await?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

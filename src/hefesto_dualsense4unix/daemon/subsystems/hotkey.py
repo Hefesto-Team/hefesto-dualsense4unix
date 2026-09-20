@@ -605,32 +605,47 @@ def _aplicar_ponte(daemon: DaemonProtocol, alvo: str) -> bool:
         # parava. A máscara fica como está: `flavor` vai `None`.
         return bool(setter(True, None, origin="manual", caminho=alvo))
     # Ponte mouse+teclado (point and click): sem vpad, o controle vira
-    # cursor/teclas. A supressão (modo jogo) tem de cair junto — senão a ponte
-    # sobe muda, porque é ela que gateia o dispatch de mouse/teclado no poll
-    # loop — e é gesto dela, então o toggle manual é legítimo.
+    # cursor/teclas.
+    #
+    # POINT-AND-CLICK-01 (17/09/2026) — O GESTO E O CLIQUE PASSAM PELA MESMA
+    # PORTA. Aqui havia QUATRO chamadas escritas à mão (supressão, mouse
+    # sempre ligado, teclado sempre ligado e persistido), e o chip da aba Jogar
+    # fazia `mouse.emulation.restore` e mais nada. O mesmo modo com DOIS donos
+    # que discordavam — o HARM-01 outra vez, e agora do lado do gesto: o
+    # `plan_mode_transition` nasceu dono único do modo em 08/2026 e o gesto no
+    # controle nunca passou a usá-lo. *Quando a cura conhece a causa, ela cobre
+    # TODOS os chamadores*; cobrir só o chip deixaria o gesto ligando o teclado
+    # que o clique não liga.
+    #
+    # `forcar_mouse=True` É O SOCORRO, e é a única diferença entre os dois
+    # caminhos. O PS + R3 é uma das duas saídas de emergência quando o jogo não
+    # responde (a dica dos gestos, em `06-navegacao.html`): obedecer a um perfil
+    # com `mouse.enabled: false` tiraria dela o cursor justamente quando ela não
+    # tem outro caminho. O clique no chip passa `False` — é a diferença entre
+    # uma escolha e um socorro, não uma inconsistência.
+    #
+    # `origin="manual"` porque É gesto dela: é o único origin que atravessa o
+    # gate R-04 (`_recriacao_bloqueada_por_jogo`) e o lock de 30 s do
+    # `apply_profile_mouse`.
+    #
+    # O SEGUNDO-ESCRITOR-01 (22/08/2026) FECHOU AQUI, e é mudança de
+    # comportamento: este ponto era o segundo escritor da
+    # `keyboard_emulation.flag`, porque `set_keyboard_emulation` persiste por
+    # padrão. O arranjo chama com `persist=False`, e a razão está no método:
+    # gravar o valor RESOLVIDO faria a opinião do PERFIL virar a preferência
+    # GLOBAL, e a precedência da T14 deixaria de existir na ativação seguinte.
+    # O teclado continua ligando no gesto; o que não acontece mais é a escolha
+    # daquele perfil passar a mandar em todos os outros.
     setter(False, origin="manual")
+    arranjo = getattr(daemon, "aplicar_o_arranjo_do_desktop", None)
+    if not callable(arranjo):
+        # Daemon enxuto (CLI, dublê antigo) — a ponte sobe assim mesmo, e o
+        # journal diz o que ela não carregou. Devolver False aqui seria dizer
+        # que a ponte não subiu, e ela subiu: o vpad já caiu.
+        logger.warning("ponte_sem_arranjo_do_desktop")
+        return True
     with contextlib.suppress(Exception):
-        daemon.set_emulation_suppressed(False)
-    with contextlib.suppress(Exception):
-        # `origin="manual"` porque É gesto dela: o `PS + R3` é a
-        # vontade explícita da usuária, e é o único origin que atravessa o
-        # gate R-04 (`_recriacao_bloqueada_por_jogo`). Vir sem ele reprovaria
-        # o mypy — o protocolo exige o parâmetro justamente para ninguém
-        # trocar de ponte "por engano" no meio da partida.
-        daemon.set_mouse_emulation(True, origin="manual")
-    with contextlib.suppress(Exception):
-        # SEGUNDO-ESCRITOR-01 (22/08/2026): esta linha é o segundo escritor da
-        # `keyboard_emulation.flag`, e por isso ela tem eco na janela. O
-        # `set_keyboard_emulation` persiste por padrão
-        # (`daemon/protocols.py:185`), então o gesto não liga o teclado só para
-        # esta partida — grava a escolha. Enquanto a janela era o único caminho
-        # até a flag, o interruptor da aba Navegação não era relido ao entrar na
-        # aba; agora é (`app/app.py`, `_REFRESH_POR_ABA["tab_navegacao_dsx"]`).
-        # Quem for recontar escritores: o grep é por `set_keyboard_emulation(`,
-        # não por `keyboard.emulation.set` — o nome do método IPC não pega esta
-        # chamada, que é em processo, e foi esse grep que sustentou a razão
-        # caduca.
-        daemon.set_keyboard_emulation(True)
+        arranjo(origin="manual", forcar_mouse=True)
     return True
 
 

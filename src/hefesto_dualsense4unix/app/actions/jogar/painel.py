@@ -60,13 +60,21 @@ Ligado/Desligado**, com os cinco modos abrindo do lado Ligado.
 O QUE CONTINUA EM ABERTO, e é honesto dizer
 -------------------------------------------
 
-* **Point And Click não tem dono nenhum** — nem degrau da ``ESCADA``, nem modo
-  do ``mode_transition``. É o único que :func:`chips_sem_dono` devolve, e ele
-  está na tela por ordem dela (*manter*), marcado, dizendo isso.
+* **Point And Click FECHOU** — POINT-AND-CLICK-01, 17/09/2026, pela ordem dela:
+  *"o modo point and click é o modo navegação e o modo que nós mesmos podemos
+  usar e configurar na aba navegação. Ele ativa o modo configurado lá."* Ele
+  nunca foi um botão órfão: é o ``kind="desktop"`` do perfil, com chip na tela
+  chamado **Navegação**, gesto no terceiro degrau do PS + R3 e uma aba inteira
+  configurando-o. **O que faltava era o fio** entre o que ela configura e o que
+  o chip ativa, e no lugar dele havia uma flag global de sessão. A linha
+  fantasma da tabela saiu, e :func:`chips_sem_dono` devolve ``()``.
 * **Navegação tem escritor e não é degrau** — ``apply_mode('desktop')``
-  funciona hoje; o que não existe é o **PS + R3** parar nela. Por isso ela é o
-  único item de :func:`chips_sem_degrau`, e por isso :func:`chips_sem_degrau`
-  **não serve** para pintar "sem dono".
+  funciona hoje, e desde 17/09 ele CARREGA O PERFIL
+  (``Daemon.aplicar_o_arranjo_do_desktop``). O que ela não tem é degrau na
+  ``ESCADA`` automática, e por isso ela é o único item de
+  :func:`chips_sem_degrau` — que por isso **não serve** para pintar "sem dono".
+  O **PS + R3** para nela desde 13/09 (``hotkey.CICLO_DE_PONTES``), que é outro
+  objeto e não a ``ESCADA``.
 * **Steam Input não se fixa pela tela**: não há método de IPC que o ligue, e o
   degrau só sobrevive com a Steam fechada. **Sony DualSense** e **Xbox** se
   fixam, e cada um é um CAMINHO (MODO-DE-CONEXAO-01, 13/09/2026): o chip manda
@@ -481,8 +489,11 @@ class Chip(NamedTuple):
         return SEM_ALGARISMO if indice < 0 else str(indice + 1)
 
 
-#: OS CINCO MODOS DO LADO **LIGADO**, na ordem do desenho, com a ponte que cada
-#: um nomeia. Os rótulos são dela (``src/hefesto_dualsense4unix/interface/paginas/01-jogar.html``);
+#: OS QUATRO MODOS DO LADO **LIGADO**, na ordem do desenho, com a ponte que
+#: cada um nomeia — e os quatro são os quatro ``data-degrau`` da página
+#: publicada. Eram CINCO aqui e quatro na tela, e a diferença era a linha
+#: fantasma `pointclick` (ver o bloco dela, abaixo).
+#: Os rótulos são dela (``src/hefesto_dualsense4unix/interface/paginas/01-jogar.html``);
 #: a ponte é a
 #: tradução para o vocabulário de ``integrations/ponte_escada``.
 #:
@@ -503,7 +514,10 @@ class Chip(NamedTuple):
 #:   * **"Teclado + Mouse"** virou **Navegação**, e ganhou o ``modo``:
 #:     ``KIND_DESKTOP`` não é degrau da ``ESCADA``, mas ``apply_mode('desktop')``
 #:     funciona hoje;
-#:   * **Point And Click** nasceu por ordem dela, e é o único sem dono nenhum.
+#:   * **Point And Click** nasceu por ordem dela — e SAIU no mesmo 31/08, pela
+#:     ordem seguinte dela: *"nos mockups tira o point and click e deixa só o
+#:     navegação."* A linha da tabela sobreviveu à tela por dezessete dias, e
+#:     saiu em 17/09/2026 (POINT-AND-CLICK-01). São QUATRO chips.
 CHIPS_DA_ESCADA: tuple[Chip, ...] = (
     Chip(
         "dualsense",
@@ -526,12 +540,30 @@ CHIPS_DA_ESCADA: tuple[Chip, ...] = (
             steam_input=True,
         ),
     ),
-    # SEM PONTE E SEM MODO — o único da tela que não tem dono nenhum. Não é
-    # degrau da `ESCADA` nem valor de `mode_transition.MODES`. Está aqui por
-    # ordem dela, de 31/08 (*manter* o Point And Click), casada com a regra de
-    # 30/08: botão sem dono no produto não vai para a tela COMO SE FUNCIONASSE.
-    # As duas convivem de um jeito só, e é o que `chips_sem_dono` serve.
-    Chip("pointclick", "Point And Click", None),
+    # A LINHA `pointclick` SAIU — POINT-AND-CLICK-01, 17/09/2026, e ela era uma
+    # LINHA FANTASMA. O comentário que estava aqui dizia três coisas e duas
+    # eram falsas: que ele era *"o único DA TELA sem dono nenhum"* (ele não
+    # está na tela desde 31/08 — a página publicada tem quatro `data-degrau` e
+    # o gerador tem trava contra o quinto) e que estava aqui *"por ordem dela,
+    # de 31/08 (manter)"* — a ordem dela de 31/08 é **tirar**: *"nos mockups
+    # tira o point and click e deixa só o navegação."*, e é a que a tela
+    # cumpre. Uma linha de código mandando a próxima pessoa CONSTRUIR um botão
+    # que a ordem dela mandou tirar é o mesmo defeito que a entrada `"mascara"`
+    # já registrou neste arquivo.
+    #
+    # E ELA ENVENENAVA UMA RÉGUA: `chips_sem_dono()` devolvia `['pointclick']`
+    # sobre um chip que a tela não mostra. A régua existe para marcar um botão
+    # inerte **na tela**; medindo uma linha que não chega lá, ela responde
+    # sobre outra coisa que não o produto — a assinatura dos instrumentos
+    # falsos desta casa. Agora devolve `()`.
+    #
+    # O MODO NÃO SAIU COM ELA: *"o modo point and click é o modo navegação"* —
+    # ordem dela de 17/09/2026. É o chip `navegacao` logo abaixo, e é o mesmo
+    # `MODE_DESKTOP`. O `Estilo Point-and-click` da aba Navegação e o perfil de
+    # fábrica `assets/estilos_de_jogo/point_and_click.json` continuam.
+    # O RÓTULO da fileira é decisão dela e não se decide aqui (§7.1 da sprint):
+    # hoje a tela diz **Navegação**, e é o que esta tabela diz.
+    #
     # O CASO DO MEIO, E ELE É BOM: `KIND_DESKTOP` EXISTE como constante
     # (`ponte_escada.KIND_DESKTOP`) e é aceito por `ponte_do_perfil` e
     # `ponte_do_carimbo` — mas NÃO É DEGRAU: a `ESCADA` não tem uma linha com
@@ -576,8 +608,17 @@ def indice_do_chip(chip: Chip) -> int:
 def chips_sem_degrau() -> tuple[Chip, ...]:
     """Os chips que nomeiam uma ponte que a ``ESCADA`` não tem.
 
-    Hoje: só a **Navegação**. O que falta a ela é o **PS + R3** parar ali — a
-    escada não sobe até o ``KIND_DESKTOP``.
+    Hoje: só a **Navegação**, e é o valor honesto — a ``ESCADA`` não tem
+    degrau ``KIND_DESKTOP``, então ``indice_do_degrau`` devolve -1.
+
+    FATO SUBSTITUÍDO — POINT-AND-CLICK-01, 17/09/2026. Aqui se dizia que *"o
+    que falta a ela é o PS + R3 parar ali"*, e a frase confundia dois objetos
+    de nomes parecidos: a escada AUTOMÁTICA (``ponte_escada.ESCADA``, quatro
+    degraus, nenhum ``KIND_DESKTOP`` — isso é verdade) e o ciclo do GESTO
+    (``hotkey.CICLO_DE_PONTES``, que é ``dualsense → xbox → mouse_teclado``).
+    **O PS + R3 para lá desde o MODO-DE-CONEXAO-01, 13/09/2026** — os mesmos
+    três chips da aba Jogar —, e desde 17/09 ele entra pela mesma porta do
+    clique (``Daemon.aplicar_o_arranjo_do_desktop``).
 
     **ISTO NÃO É "SEM DONO", E CONFUNDIR OS DOIS PINTA A TELA ERRADA.** A
     Navegação tem escritor (``ESCRITOR_DOS_MODOS[desktop]`` →
@@ -596,7 +637,14 @@ def chips_sem_dono() -> tuple[Chip, ...]:
     conjunção de duas perguntas que :func:`chips_sem_degrau` sozinha não
     responde — a Navegação reprova a primeira e passa na segunda.
 
-    Hoje devolve **um só**: o "Point And Click".
+    **HOJE DEVOLVE ``()``** — POINT-AND-CLICK-01, 17/09/2026. Ela devolvia *"um
+    só, o Point And Click"*, sobre uma linha que a tela não mostrava desde
+    31/08: a régua respondia sobre a TABELA quando a pergunta é sobre a TELA.
+    A linha fantasma saiu de :data:`CHIPS_DA_ESCADA` e a régua voltou a medir o
+    produto. A regra CSS ``.degrau.sem-dono`` e o campo do dicionário ficam de
+    pé de propósito — são a gramática desta casa para *"botão que aparece e diz
+    que ainda não tem quem o atenda"*, e a próxima fileira que precisar deles
+    não vai ter de reinventá-los.
     """
     return tuple(
         c

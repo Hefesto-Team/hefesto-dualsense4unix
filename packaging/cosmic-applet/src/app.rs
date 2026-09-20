@@ -897,12 +897,18 @@ async fn apply_system_mode(mode: SystemMode, flavor: String) -> Result<bool, Ipc
             let _ = ipc::set_native_mode(false).await;
             let saiu = ipc::set_gamepad_emulation(false, None).await;
             // HARM-06: o modo desktop é o DONO do mouse — entrar nele LIGA o
-            // cursor conforme a preferência persistida, senão o controle fica sem
-            // função nenhuma. Espelha o 3º passo do plan_mode_transition da GUI
-            // (mode_transition.py); vem por último pela mesma razão: ligar o
-            // mouse antes de o gamepad sair faria a exclusão mútua do daemon
-            // derrubar o mouse recém-ligado. Falhar aqui não é falhar no modo.
-            let _ = ipc::restore_mouse().await;
+            // cursor, senão o controle fica sem função nenhuma. Espelha o 3º
+            // passo do plan_mode_transition da GUI (mode_transition.py); vem
+            // por último pela mesma razão: ligar o mouse antes de o gamepad
+            // sair faria a exclusão mútua do daemon derrubar o mouse
+            // recém-ligado. Falhar aqui não é falhar no modo.
+            //
+            // POINT-AND-CLICK-01 (17/09/2026): era `restore_mouse`, que lê a
+            // flag de SESSÃO da máquina. É `apply_desktop_arranjo`, que lê o
+            // PERFIL ATIVO — o mesmo que a GUI passou a pedir. Sem esta linha,
+            // entrar no modo pelo applet continuaria descartando as cinco
+            // coisas que a aba Navegação grava.
+            let _ = ipc::apply_desktop_arranjo().await;
             saiu
         }
     }

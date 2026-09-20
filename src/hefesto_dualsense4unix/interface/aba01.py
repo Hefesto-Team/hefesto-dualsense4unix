@@ -1923,18 +1923,20 @@ LEGENDA = f'''<div class="nota">
       máscara. Não é descuido: o modo é <b>estado do processo</b> — existe um só
       (<code>app/actions/mode_transition.py</code>), e duas peças pedindo modos diferentes
       não têm resposta. Máscara é do <b>aparelho</b>; modo é da <b>máquina</b>.</li>
-    <li><b>Os DOIS que ainda não têm quem os atenda aparecem, e dizem isso</b> — é a sua ordem
-      de 31/08 (manter <b>Point And Click</b> e <b>Navegação</b>) somada à regra que você fixou
-      em 30/08 (<i>botão sem dono no produto não vai para a tela como se funcionasse</i>). Elas
-      convivem de um jeito só: os dois entram <b>marcados</b>, e o porquê está no ponteiro do
-      mouse. Nada de <code>opacity</code> — a lição da fita inerte é que a opacidade some com o
-      texto e cega toda régua de contraste; aqui é <b>borda tracejada</b>, cor explícita e
-      cursor de "não clique".
-      <br><b>Point And Click</b> não é degrau da escada <b>nem</b> modo do produto: não tem nada.
+    <li><b>O Point And Click é a Navegação, e a fileira tem quatro chips</b> — é a sua ordem
+      de 31/08 (<i>"nos mockups tira o point and click e deixa só o navegação"</i>), e a de
+      17/09 a completa: <i>"o modo point and click é o modo navegação e o modo que nós mesmos
+      podemos usar e configurar na aba navegação. Ele ativa o modo configurado lá."</i>
       <br><b>Navegação</b> é o caso do meio, e é bom: o <b>modo</b> tem dono e funciona hoje
-      (<code>apply_mode('desktop')</code>, o antigo "Controlar o PC"). O que ainda não existe é
-      o <b>PS + R3</b> parar nela — a Navegação não é degrau. Por isso ela leva traço no
-      dica que diz o que falta, mas <b>não</b> a borda tracejada.</li>
+      (<code>apply_mode('desktop')</code>, o antigo "Controlar o PC"), e desde 17/09 ele
+      <b>carrega o seu perfil</b> ao entrar — o mouse, as teclas, os botões e a função do
+      teclado que você gravou na aba Navegação. O <b>PS + R3</b> para nela e entra pela mesma
+      porta. O que ela não é, e por isso leva traço no lugar do algarismo, é degrau da escada
+      automática: a ordem em que o Hefesto tenta sozinho não passa por ela.
+      <br>Nenhum chip desta fileira entra <b>marcado</b> hoje. A marca continua desenhada —
+      borda tracejada, cor explícita e cursor de "não clique", e nada de <code>opacity</code>,
+      porque a lição da fita inerte é que a opacidade some com o texto e cega toda régua de
+      contraste —, e ela está pronta para a próxima fileira que precisar dela.</li>
     <li><b>Quatro controles ligados, um cartão cada</b> — a lista é a <code>MESA</code> do <code>monta.py</code>: não há "quatro" escrito num laço, e o número do jogador é campo, não a posição na fila. Continua sendo só a peça, com o <b>SVG pequeno na cor do plástico</b> — o card completo é da aba Controles.</li>
     <li><b>A borda e a cor vêm do mapa</b> — a cor do plástico sai do <code>cores-do-dualsense.csv</code> pela folha que o gerador escreveu dentro do desenho. Não está digitada aqui.</li>
     <li><b>As cinco lâmpadas do jogador ficam apagadas neste cartão</b> — medido de novo hoje,

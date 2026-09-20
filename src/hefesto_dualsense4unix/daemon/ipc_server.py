@@ -25,6 +25,13 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
     launch_env.refresh   {}          -> {status}
     mouse.emulation.set  {enabled, speed?, scroll_speed?} -> {status, enabled}
     mouse.emulation.restore {}                            -> {status, enabled}
+    desktop.arranjo.apply {origin?, forcar_mouse?}        -> {status, arranjo}
+                         O modo Navegação carregando o que a aba Navegação
+                         gravou no perfil ATIVO — mouse, teclas, botões,
+                         `teclado_emulado` e a queda da supressão. `arranjo` é
+                         `seção → estado` no vocabulário de
+                         `apply_profile_suppression`. `forcar_mouse` é o
+                         SOCORRO do PS + R3, e o clique no chip nunca o manda.
     keyboard.emulation.set {enabled: bool} -> {status, enabled, keyboard_emulation}
     coop.set             {enabled: bool}       -> {status, enabled, players}
                          `enabled:false` é RECUSADO ({status: "recusado", motivo})
@@ -217,6 +224,13 @@ class IpcServer(IpcHandlersMixin):
             "mic.volume.set": self._handle_mic_volume_set,
             "mouse.emulation.set": self._handle_mouse_emulation_set,
             "mouse.emulation.restore": self._handle_mouse_emulation_restore,
+            # POINT-AND-CLICK-01 (17/09/2026): o terceiro passo da entrada no
+            # modo Navegação. Ele SUBSTITUI o `mouse.emulation.restore` no
+            # plano — aquele lia a flag de sessão da máquina; este lê o PERFIL
+            # ATIVO, que é onde a aba Navegação grava. O método velho continua
+            # de pé: ele é o RECUO para o perfil que não opina, e quem o chama
+            # é o próprio arranjo.
+            "desktop.arranjo.apply": self._handle_desktop_arranjo_apply,
             # EMULACAO-NO-JOGO-01: o interruptor que o teclado emulado nunca
             # teve. Sem ele, "desliguei o modo mouse teclado" desligava só o
             # mouse e o R1 seguia trocando de aplicativo dentro do jogo.

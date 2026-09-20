@@ -242,14 +242,50 @@ def test_o_restore_do_mouse_nao_finge_ser_gesto() -> None:
     há dedo dela nisso. Se ele passasse a viajar como "manual", a cura viraria
     "tudo é gesto dela", que é exatamente o defeito de origem, agora escrito de
     propósito.
+
+    ONDE ELE MORA HOJE — POINT-AND-CLICK-01, 17/09/2026. Ele saiu do
+    `plan_mode_transition` (o terceiro passo do modo desktop passou a ser o
+    `desktop.arranjo.apply`, que lê o PERFIL) e virou o RECUO dentro do daemon,
+    para o perfil que não opina sobre o mouse. A régua foi atrás dele: o
+    chamador agora é `Daemon.restore_mouse_preference`, e a pergunta é a mesma —
+    aquele caminho continua carimbando `origin="profile"`.
+    """
+    texto = (
+        RAIZ / "src" / "hefesto_dualsense4unix" / "daemon/lifecycle.py"
+    ).read_text(encoding="utf-8")
+    # O RECORTE É O MÉTODO, e só ele: a fronteira é o próximo `def` no mesmo
+    # nível de indentação. Ancorar no NOME do método seguinte deixaria a régua
+    # refém da ordem do arquivo — foi assim que este recorte passou a engolir
+    # `aplicar_o_arranjo_do_desktop`, que usa `origin="manual"` de propósito no
+    # socorro do PS + R3.
+    inicio = texto.index("def restore_mouse_preference")
+    bloco = texto[inicio : texto.index("\n    def ", inicio)]
+    assert 'origin="profile"' in bloco, (
+        "o `restore_mouse_preference` deixou de se declarar reconciliação. Ele "
+        "restaura preferência persistida, e chamá-lo de gesto dela reabre o "
+        "defeito pelo outro lado."
+    )
+    assert 'origin="manual"' not in bloco, (
+        "o recuo para a flag de sessão passou a viajar como gesto manual."
+    )
+
+
+def test_o_arranjo_do_desktop_declara_a_origem() -> None:
+    """E o passo que É gesto dela declara — a outra metade da mesma cura.
+
+    ORIGEM-QUE-MENTE-01 é assimétrico de propósito: **"manual" só quando o
+    cliente DIZ que é manual**. O `desktop.arranjo.apply` é o clique dela no
+    chip Navegação, e sem a declaração o daemon o lê como reconciliação — o
+    lock de 30 s de `apply_profile_mouse` não é furado e o perfil que ela
+    acabou de pedir é adiado sem nada na tela dizer por quê.
     """
     texto = (
         RAIZ / "src" / "hefesto_dualsense4unix" / "app/actions/mode_transition.py"
     ).read_text(encoding="utf-8")
-    trecho = texto[texto.index('"mouse.emulation.restore"') :]
+    trecho = texto[texto.index('"desktop.arranjo.apply"') :]
     bloco = trecho[: trecho.index("}") + 1]
-    assert '"origin"' not in bloco, (
-        "o `mouse.emulation.restore` passou a declarar origem. Ele restaura "
-        "preferência persistida: é reconciliação por definição, e chamá-lo de "
-        "gesto dela reabre o defeito pelo outro lado."
+    assert '"origin": "manual"' in bloco, (
+        "o arranjo do desktop parou de declarar a origem. O silêncio é lido "
+        "como automático, e o gesto dela perde a única porta que atravessa o "
+        "lock manual."
     )

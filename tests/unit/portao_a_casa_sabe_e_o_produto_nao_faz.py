@@ -2455,15 +2455,13 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "L3-F porque `integrations/radio_da_mesa.py` não é posse dela (regra "
         "R-A da leva de 26/08). DONO: quem tocar o medidor de rádio."
     ),
-    "profiles/schema.py::resolver_teclado_emulado": (
-        "MEDIDO em 25/08/2026: está no `__all__` (:1345), o próprio módulo a "
-        "cita em comentário (:972), e nenhum caminho de produção a executa. "
-        "ONDE O CAMINHO SE PERDE: a resolução de teclado emulado continua "
-        "acontecendo onde acontecia antes. "
-        "O QUE A FECHA: o carregador de perfil chamá-la. NÃO fiz porque "
-        "`profiles/schema.py` é posse da frente B2 (Onda 11 - Sistema) nesta "
-        "madrugada. DONO: B2, ou a Onda 6 - Perfis na leva seguinte."
-    ),
+    # `resolver_teclado_emulado` SAIU DAQUI em 17/09/2026 — POINT-AND-CLICK-01.
+    # A lápide dizia "nenhum caminho de produção a executa", e era verdade por
+    # 24 dias: a T14 entregou o campo e a régua, não o fio. O fio é
+    # `Daemon.aplicar_o_arranjo_do_desktop`, o terceiro passo da entrada no modo
+    # Navegação — o único ponto do produto em que o teclado emulado tem
+    # contexto. **O dia em que o caminho nasce é o dia de apagar a entrada**, e
+    # foi esta régua que cobrou.
     # --- A aba Configurações (23/08/2026): o censo mede, e a tela não pergunta
     # `hub_em_comum` SAIU daqui em 26/08/2026, na edição que a ligou: a seção
     # "A mesa" (`app/actions/config/secao_mesa.py::_frase_do_hub_em_comum`) a

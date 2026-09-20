@@ -191,6 +191,7 @@ class _FakeDaemon:
         self.mouse_origem: list[str] = []
         self.teclado: list[bool] = []
         self.supressao: list[bool | None] = []
+        self.arranjo: list[dict[str, Any]] = []
         # MODO-DE-CONEXAO-01 (13/09/2026): o caminho vivo mora na config, escrito
         # só DEPOIS de o vpad alcançar o pedido — é o que `ponte_atual` lê.
         self.config = SimpleNamespace(gamepad_caminho=None)
@@ -239,6 +240,16 @@ class _FakeDaemon:
     def set_emulation_suppressed(self, value: bool | None = None) -> bool:
         self.supressao.append(value)
         return bool(value)
+
+    def aplicar_o_arranjo_do_desktop(
+        self, *, origin: str = "manual", forcar_mouse: bool = False
+    ) -> dict[str, str]:
+        # POINT-AND-CLICK-01 (17/09/2026): o gesto parou de escrever a própria
+        # sequência de quatro chamadas e passou pela porta única do clique. O
+        # dublê tem de ter o método, senão o produto cai no ramo do "daemon
+        # enxuto" e o teste vira verde sobre um gesto que não carregou nada.
+        self.arranjo.append({"origin": origin, "forcar_mouse": forcar_mouse})
+        return {"mouse": "aplicado"}
 
 
 @pytest.fixture(autouse=True)
@@ -309,15 +320,35 @@ async def test_sem_jogo_na_autoridade_nao_ha_aviso_vermelho() -> None:
 
 
 @pytest.mark.asyncio
-async def test_ponte_mouse_teclado_derruba_o_vpad_e_solta_a_supressao() -> None:
+async def test_ponte_mouse_teclado_derruba_o_vpad_e_carrega_o_arranjo() -> None:
     """A ponte de point-and-click sobe MUDA se o modo jogo continuar ligado —
-    é a supressão que gateia o dispatch de mouse/teclado no poll loop."""
+    é a supressão que gateia o dispatch de mouse/teclado no poll loop.
+
+    POINT-AND-CLICK-01 (17/09/2026) — O QUE ESTA RÉGUA MEDIA E O QUE ELA MEDE.
+    Ela cobrava as TRÊS chamadas que o gesto escrevia à mão (`supressao`,
+    `mouse`, `teclado`), e era essa mão própria o defeito: o mesmo modo tinha
+    dois donos e eles discordavam — o gesto ligava o teclado que o clique no
+    chip não ligava, e ligava o mouse que o clique deixava conforme a flag.
+    Agora os dois passam por `aplicar_o_arranjo_do_desktop`, e as três chamadas
+    acontecem LÁ DENTRO, medidas por
+    `test_o_point_and_click_ativa_o_que_a_navegacao_gravou`. Cobrá-las aqui
+    obrigaria o dublê a reimplementar o arranjo — e dublê que reimplementa o
+    produto mede a si mesmo.
+    """
     d = _FakeDaemon(flavor=PONTE_XBOX)
     await build_next_bridge_callback(d)()  # type: ignore[arg-type]
     assert ("gamepad", False, None, "manual", None) in d.trilha
-    assert d.supressao == [False]
-    assert d.mouse == [True]
-    assert d.teclado == [True]
+    assert d.arranjo == [{"origin": "manual", "forcar_mouse": True}], (
+        "o gesto não pediu o arranjo do desktop, ou pediu sem o socorro. O "
+        "PS + R3 é uma das duas saídas de emergência quando o jogo não "
+        f"responde: sem `forcar_mouse` um perfil que desliga o mouse deixa "
+        f"ela sem cursor. Pediu: {d.arranjo}"
+    )
+    assert d.mouse == [] and d.teclado == [] and d.supressao == [], (
+        "o gesto voltou a escrever as chamadas à mão, ao lado do arranjo — o "
+        f"modo com dois donos de novo. mouse={d.mouse} teclado={d.teclado} "
+        f"supressao={d.supressao}"
+    )
 
 
 @pytest.mark.asyncio

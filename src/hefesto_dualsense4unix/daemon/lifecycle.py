@@ -1667,6 +1667,209 @@ class Daemon:
         logger.info("mouse_preference_restored", enabled=pref, ok=ok)
         return bool(pref and ok)
 
+    def _perfil_do_arranjo(self) -> Any | None:
+        """O perfil ATIVO carregado do disco, ou ``None`` — nunca levanta.
+
+        Quem responde "em que perfil estamos" é
+        `profiles.manager.nome_do_perfil_que_grava`, o MESMO resolvedor que o
+        clique no chip e o PS + R3 usam para GRAVAR o modo. Um segundo
+        resolvedor aqui seria um segundo dono de *"que perfil está valendo"* —
+        e a casa já pagou por isso.
+
+        O caminho do arquivo NUNCA é escrito aqui: o nome sai do
+        `store.active_profile` e o carregador é o do pacote de perfis.
+        """
+        try:
+            from hefesto_dualsense4unix.profiles.loader import load_profile
+            from hefesto_dualsense4unix.profiles.manager import (
+                nome_do_perfil_que_grava,
+            )
+
+            nome = nome_do_perfil_que_grava(
+                getattr(getattr(self, "store", None), "active_profile", None)
+            )
+            if not nome:
+                return None
+            return load_profile(nome)
+        except Exception as exc:
+            logger.warning("arranjo_do_desktop_sem_perfil", err=str(exc))
+            return None
+
+    def aplicar_o_arranjo_do_desktop(
+        self, *, origin: str = "manual", forcar_mouse: bool = False
+    ) -> dict[str, str]:
+        """Carrega no aparelho o que a aba Navegação gravou no perfil ATIVO.
+
+        POINT-AND-CLICK-01 (17/09/2026), pela ordem dela olhando a aba
+        principal: *"o modo point and click é o modo navegação (…) Ele ativa o
+        modo configurado lá."* A primeira metade já existia — o chip
+        **Navegação** entra em ``MODE_DESKTOP`` e grava ``mode.kind`` no perfil
+        desde o MODO-DE-CONEXAO-01. A segunda metade é este método.
+
+        O QUE HAVIA NO LUGAR DELE, e por que era o defeito: o terceiro passo do
+        plano era `mouse.emulation.restore`, que chama
+        :meth:`restore_mouse_preference` e lê a **flag de sessão no disco** —
+        um arquivo único da máquina, que não abre perfil nenhum. Entrar no modo
+        descartava, em silêncio, as CINCO coisas que a aba Navegação grava:
+        ``mouse``, ``teclado_emulado``, ``key_bindings``, ``button_actions`` e a
+        supressão. *A escolha dela morria antes do aparelho* — aqui pela
+        variante mais cara: o produto perguntava ao arquivo de sessão quando
+        devia perguntar ao perfil.
+
+        **NÃO REIMPLEMENTA NADA.** Cada seção vai pelo MESMO aplicador que
+        `ProfileManager.activate` já injeta — :meth:`apply_profile_mouse` (com o
+        lock manual e a idempotência), `ProfileManager.apply_keyboard`,
+        `ProfileManager.apply_button_actions`. E NÃO chama `activate()`: aquele
+        caminho termina em `profile_switch`, o daemon reaplica o perfil INTEIRO,
+        e a barra de luz que ela DESLIGOU acende de novo sem nada na tela dizer
+        que ia acontecer (medido em 03/09, `a03_gatilhos._gravar_so_o_gatilho`).
+
+        A ORDEM DAS SEÇÕES, e ela não é arbitrária:
+
+        1. **mouse** — perfil com a seção manda; perfil sem ela **recua** para
+           :meth:`restore_mouse_preference`, que é o que o produto faz hoje. É a
+           disciplina do ``mode.caminho`` (MODO-DE-CONEXAO-01, §D.1): *nenhum
+           perfil existente muda de comportamento no dia da cura*.
+        2. **key_bindings** e **button_actions** — o teclado virtual recebe o
+           que ela escreveu, com os mesmos `botoes_calados`.
+        3. **teclado_emulado** — `schema.resolver_teclado_emulado` é a
+           precedência PURA da T14 (24/08/2026), escrita, testada e até hoje
+           **sem um único chamador de ativação real**. Ligá-la aqui é o lugar
+           certo: é o único ponto do produto em que o teclado emulado tem
+           contexto.
+        4. **supressão** — ``set_emulation_suppressed(False)``, o que o PS + R3
+           já faz. É ela que gateia o dispatch de mouse/teclado no laço do poll:
+           sem derrubá-la a ponte sobe MUDA. O ``suppress_desktop_emulation`` do
+           perfil **não** é aplicado por aqui — quem responde por ele é
+           :meth:`apply_profile_suppression` na ATIVAÇÃO, com o lock manual de
+           30 s, e um segundo escritor faria os dois discordarem.
+
+        ``forcar_mouse`` É O SOCORRO, NÃO UMA INCONSISTÊNCIA. O PS + R3 é uma
+        das duas saídas de emergência quando o jogo não responde (a dica dos
+        gestos, em `06-navegacao.html`): obedecer a um perfil com
+        ``mouse.enabled: false`` tiraria dela o cursor justamente quando ela não
+        tem outro caminho. O gesto passa ``True`` e o clique no chip passa
+        ``False`` — a diferença entre uma escolha e um socorro. As velocidades
+        continuam saindo do perfil nos dois casos.
+
+        O TECLADO NÃO PERSISTE AQUI (``persist=False``), e é o contrário do que
+        o PS + R3 fazia até hoje: gravar o valor RESOLVIDO em
+        ``keyboard_emulation.flag`` faria a opinião do PERFIL virar a
+        preferência GLOBAL, e a precedência da T14 deixaria de existir na
+        ativação seguinte — o perfil que dissesse ``true`` uma vez mandaria para
+        sempre, inclusive nos perfis sem opinião.
+
+        Devolve ``seção → estado`` no vocabulário de
+        :meth:`apply_profile_suppression` (``aplicado`` · ``adiado_lock_manual``
+        · ``ignorado_*``), porque quem pergunta precisa distinguir *"não havia o
+        que aplicar"* de *"não deu"*. NUNCA LEVANTA: falhar em carregar o
+        arranjo não é falhar em entrar no modo.
+        """
+        relatorio: dict[str, str] = {}
+        profile = self._perfil_do_arranjo()
+        secao_mouse = getattr(profile, "mouse", None) if profile is not None else None
+
+        if forcar_mouse:
+            speed = getattr(secao_mouse, "speed", None)
+            scroll = getattr(secao_mouse, "scroll_speed", None)
+            if speed is None or scroll is None:
+                from hefesto_dualsense4unix.utils.session import (
+                    load_mouse_preference,
+                )
+
+                _pref, speed_flag, scroll_flag = load_mouse_preference()
+                speed = speed if speed is not None else speed_flag
+                scroll = scroll if scroll is not None else scroll_flag
+            try:
+                ok = self.set_mouse_emulation(True, speed, scroll, origin="manual")
+                relatorio["mouse"] = APLICADO if ok else "falhou"
+            except Exception as exc:
+                relatorio["mouse"] = "falhou"
+                logger.warning("arranjo_do_desktop_mouse_forcado_falhou", err=str(exc))
+        elif secao_mouse is not None:
+            try:
+                relatorio["mouse"] = str(
+                    self.apply_profile_mouse(
+                        secao_mouse.enabled,
+                        secao_mouse.speed,
+                        secao_mouse.scroll_speed,
+                        origin=origin,
+                    )
+                )
+            except Exception as exc:
+                relatorio["mouse"] = "falhou"
+                logger.warning("arranjo_do_desktop_mouse_falhou", err=str(exc))
+        else:
+            # O RECUO, e ele é o comportamento de hoje inteiro: sem seção no
+            # perfil quem manda é a flag de sessão. Escrever um default aqui
+            # seria o segundo default digitado no meio do caminho — o defeito
+            # com outra roupa.
+            try:
+                self.restore_mouse_preference()
+                relatorio["mouse"] = "aplicado_da_sessao"
+            except Exception as exc:
+                relatorio["mouse"] = "falhou"
+                logger.warning("arranjo_do_desktop_recuo_falhou", err=str(exc))
+
+        if profile is not None:
+            try:
+                from hefesto_dualsense4unix.profiles.manager import ProfileManager
+
+                # OS MESMOS PROVIDERS DO RESTORE DE BOOT (`connection.py`): o
+                # device é resolvido NA HORA, porque o teclado sobe depois do
+                # IPC e é recriado a cada reconexão. Nenhum applier de emulação
+                # vai injetado — o mouse já foi tratado acima, e injetá-lo aqui
+                # criaria o segundo escritor da mesma seção.
+                gerente = ProfileManager(
+                    controller=self.controller,
+                    store=self.store,
+                    keyboard_device_provider=lambda: getattr(
+                        self, "_keyboard_device", None
+                    ),
+                    mouse_device_provider=lambda: getattr(self, "_mouse_device", None),
+                )
+                gerente.apply_keyboard(profile, relatorio=relatorio)
+                gerente.apply_button_actions(profile, relatorio=relatorio)
+            except Exception as exc:
+                relatorio["keyboard"] = "falhou"
+                logger.warning("arranjo_do_desktop_teclas_falharam", err=str(exc))
+        else:
+            relatorio["keyboard"] = "ignorado_sem_perfil"
+
+        try:
+            from hefesto_dualsense4unix.profiles.schema import (
+                resolver_teclado_emulado,
+            )
+            from hefesto_dualsense4unix.utils.session import (
+                load_keyboard_preference,
+            )
+
+            flag = load_keyboard_preference()
+            if flag is None:
+                flag = bool(self.config.keyboard_emulation_enabled)
+            desejado = resolver_teclado_emulado(profile, bool(flag))
+            self.set_keyboard_emulation(bool(desejado), persist=False)
+            relatorio["teclado_emulado"] = APLICADO
+        except Exception as exc:
+            relatorio["teclado_emulado"] = "falhou"
+            logger.warning("arranjo_do_desktop_teclado_falhou", err=str(exc))
+
+        try:
+            self.set_emulation_suppressed(False)
+            relatorio["supressao"] = APLICADO
+        except Exception as exc:
+            relatorio["supressao"] = "falhou"
+            logger.warning("arranjo_do_desktop_supressao_falhou", err=str(exc))
+
+        logger.info(
+            "arranjo_do_desktop_aplicado",
+            profile=getattr(profile, "name", None),
+            forcar_mouse=bool(forcar_mouse),
+            origin=origin,
+            **relatorio,
+        )
+        return relatorio
+
     def set_mouse_speed(
         self,
         speed: int | None = None,

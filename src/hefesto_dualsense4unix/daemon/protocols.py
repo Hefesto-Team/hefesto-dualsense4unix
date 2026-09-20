@@ -236,6 +236,26 @@ class DaemonProtocol(Protocol):
         """
         ...
 
+    def aplicar_o_arranjo_do_desktop(
+        self, *, origin: str = "manual", forcar_mouse: bool = False
+    ) -> dict[str, str]:
+        """O modo Navegação carregando o PERFIL ATIVO (POINT-AND-CLICK-01).
+
+        Mouse, `key_bindings`, `button_actions`, `teclado_emulado` e a queda da
+        supressão — as cinco coisas que a aba Navegação grava e que o
+        `mouse.emulation.restore` descartava, porque ele lê a flag de sessão da
+        máquina e não abre perfil nenhum.
+
+        `forcar_mouse=True` é o SOCORRO do PS + R3 (uma das duas saídas de
+        emergência quando o jogo não responde): o cursor volta mesmo com
+        `mouse.enabled: false` no perfil. O clique no chip passa `False`.
+
+        Devolve `seção → estado` no vocabulário de `apply_profile_suppression`.
+        Declarado aqui porque o GESTO o chama — o `hotkey.py` fala com o daemon
+        por este Protocol, e sem a linha o mypy reprovaria a chamada.
+        """
+        ...
+
     def is_native_mode(self) -> bool:
         """True se o Modo Nativo está ativo (FEAT-NATIVE-MODE-01)."""
         ...

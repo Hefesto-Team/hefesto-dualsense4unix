@@ -6779,6 +6779,44 @@ class IpcHandlersMixin:
         enabled = bool(restore())
         return {"status": "ok", "enabled": enabled}
 
+    async def _handle_desktop_arranjo_apply(
+        self, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Carrega no aparelho o que a aba Navegação gravou no perfil ATIVO.
+
+        POINT-AND-CLICK-01 (17/09/2026). É o TERCEIRO passo da transição para o
+        `MODE_DESKTOP`, no lugar do `mouse.emulation.restore` — que lia a flag
+        de sessão da máquina e descartava as cinco coisas que a aba Navegação
+        grava no perfil. Toda a política mora em
+        `Daemon.aplicar_o_arranjo_do_desktop`, em cópia única; aqui não há
+        regra nenhuma a repetir.
+
+        Params:
+            origin: "manual"|"profile" — a origem da ATIVAÇÃO, que é o que fura
+                o lock de 30 s do gesto manual. **O silêncio é "profile"**
+                (ORIGEM-QUE-MENTE-01): quem quer o gesto dela tem de DECLARAR,
+                e é o que o plano da transição de modo faz.
+            forcar_mouse: bool (default False) — o SOCORRO do PS + R3. O clique
+                no chip nunca o manda.
+
+        Resposta: ``{"status": "ok", "arranjo": {seção: estado}}`` — o relatório
+        inteiro, e não um `bool`. A distinção entre *"não havia o que aplicar"*
+        e *"não deu"* é o que o botão que responde calado não tem.
+
+        Daemon dublado em teste (sem o método) responde `failed` em vez de
+        estourar: o modo desktop continua valendo sem o arranjo.
+        """
+        if self.daemon is None:
+            raise ValueError("daemon não disponível para aplicar o arranjo do desktop")
+        aplicar = getattr(self.daemon, "aplicar_o_arranjo_do_desktop", None)
+        if not callable(aplicar):
+            return {"status": "failed", "arranjo": {}}
+        arranjo = aplicar(
+            origin=origem_do_pedido(params),
+            forcar_mouse=bool(params.get("forcar_mouse", False)),
+        )
+        return {"status": "ok", "arranjo": dict(arranjo or {})}
+
     async def _handle_keyboard_emulation_set(
         self, params: dict[str, Any]
     ) -> dict[str, Any]:

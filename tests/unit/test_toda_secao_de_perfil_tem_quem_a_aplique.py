@@ -207,13 +207,16 @@ _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
     ),
     "teclado_emulado": SecaoDireta(
         razao=(
-            "Z4/T14 (24/08/2026), PROVISÓRIO: o campo e a régua "
-            "(`schema.resolver_teclado_emulado`) existem, e NENHUM caminho de "
-            "ativação os chama ainda — a decisão dela sobre a frase de tela "
-            "está em aberto. Quando o fio for ligado, esta entrada vira "
-            "`SecaoPorApplier` e ganha applier na fábrica; até lá, classificar "
-            "como applier faltante seria acusar de defeito uma decisão em "
-            "aberto."
+            "O FIO FOI LIGADO em 17/09/2026 (POINT-AND-CLICK-01), e a razão "
+            "antiga — *o campo e a régua existem, e NENHUM caminho de ativação "
+            "os chama* — saiu por ter caducado. Quem o aplica é "
+            "`Daemon.aplicar_o_arranjo_do_desktop`, o terceiro passo da entrada "
+            "no modo Navegação, chamando `schema.resolver_teclado_emulado`. "
+            "CONTINUA `SecaoDireta` e não `SecaoPorApplier`: o valor não vai "
+            "por applier injetado no `ProfileManager` — ele não é aplicado a "
+            "CADA ativação de perfil, e sim ao ENTRAR no modo, que é o único "
+            "ponto em que o teclado emulado tem contexto. Injetá-lo na fábrica "
+            "faria toda troca de perfil mexer no teclado dela."
         )
     ),
     "match": SecaoDireta(

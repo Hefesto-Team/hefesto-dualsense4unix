@@ -179,19 +179,54 @@ class TestOModoNaoImpoeMouse:
     este teste garante que ninguém a tome por ela em silêncio.
     """
 
-    def test_o_plano_do_desktop_restaura_e_nao_impoe(self) -> None:
+    def test_o_plano_do_desktop_carrega_o_perfil_e_nao_impoe(self) -> None:
+        """POINT-AND-CLICK-01 (17/09/2026): a decisão dela ficou MAIS forte.
+
+        O terceiro passo era `mouse.emulation.restore`, que lê a flag de sessão
+        da MÁQUINA. É `desktop.arranjo.apply`, que lê o PERFIL — que é onde a
+        aba Navegação grava o interruptor do mouse (`_guardar_no_perfil`). O
+        modo continua não IMPONDO nada: com `mouse.enabled: false` no perfil, o
+        cursor não liga. O que mudou é que agora ele obedece à escolha dela no
+        lugar em que ela a fez.
+        """
         metodos = [m for m, _p in plan_mode_transition(MODE_DESKTOP)]
 
-        assert "mouse.emulation.restore" in metodos
-        assert "mouse.emulation.set" not in metodos
+        assert "desktop.arranjo.apply" in metodos
+        assert "mouse.emulation.set" not in metodos, (
+            "o plano passou a IMPOR o mouse. Ligar ao entrar sobrescreveria o "
+            "interruptor que ela desligou na aba Navegação, e *a vontade na "
+            "GUI prevalece sempre* (decisão dela, 09/08)."
+        )
 
-    def test_o_restore_continua_sem_origem(self) -> None:
-        """ORIGEM-QUE-MENTE-01: restaurar preferência persistida é
-        reconciliação, não gesto manual — declarar "manual" aqui carimbaria o
-        lock de 30 s que protege o gesto DELA."""
+    def test_o_arranjo_do_chip_nunca_forca_o_mouse(self) -> None:
+        """O socorro é do PS + R3, e não do clique.
+
+        `forcar_mouse=True` ignora o `mouse.enabled` do perfil, e existe para a
+        saída de emergência no controle — quando o jogo não responde e ela não
+        tem outro caminho. No clique ele seria a imposição pela porta dos
+        fundos: a cura com o nome novo e o comportamento que a decisão dela de
+        09/08 proíbe.
+        """
         passos = dict(plan_mode_transition(MODE_DESKTOP))
 
-        assert passos["mouse.emulation.restore"] == {}
+        assert "forcar_mouse" not in passos["desktop.arranjo.apply"]
+
+    def test_o_arranjo_declara_que_e_gesto_dela(self) -> None:
+        """E aqui o contrapeso do ORIGEM-QUE-MENTE-01 mudou de lado, medido.
+
+        O `mouse.emulation.restore` NÃO levava `origin`, e era certo: restaurar
+        preferência persistida é reconciliação por definição. O arranjo é outra
+        coisa — ele é o clique dela, e o `origin="manual"` é o que FURA o lock
+        de 30 s de `apply_profile_mouse` para que o modo que ela acabou de pedir
+        não seja adiado por um toggle de segundos antes.
+
+        E ele não reabre o defeito pelo outro lado: `_furar_lock_de_emulacao`
+        CONSOME o carimbo, não o cria, e o `set_mouse_emulation` que o applier
+        dispara vai com `origin="profile"`, que não re-carimba.
+        """
+        passos = dict(plan_mode_transition(MODE_DESKTOP))
+
+        assert passos["desktop.arranjo.apply"] == {"origin": "manual"}
 
 
 # --- a aba: a frase chega ao widget -----------------------------------------
