@@ -87,7 +87,7 @@ gi.require_version("Gdk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("WebKit2", "4.1")
 
-from gi.repository import GLib, Gtk, WebKit2  # noqa: E402
+from gi.repository import Gdk, GLib, Gtk, WebKit2  # noqa: E402
 
 from hefesto_dualsense4unix.app import theme as tema  # noqa: E402
 from hefesto_dualsense4unix.interface.folha_da_casa import FOLHA_DA_CASA  # noqa: E402
@@ -218,14 +218,40 @@ ALTURA_DO_DESENHO = PISO_DA_VISTA
 #: altura do desenho MAIS ela.
 ALTURA_DA_BARRA = 46
 
+#: A CARA DO BOTÃO DO MEIO, e ela tem DOIS estados — BARRA-MAXIMIZADA-01, 5ª volta.
+#:
+#: A 4ª volta trocou os botões da decoração do tema por `Gtk.Button` desta casa,
+#: e com a troca veio uma conta que ninguém pagou: **a decoração trocava esta
+#: cara sozinha, e os nossos não trocavam**. Está medido na própria sprint — a
+#: janela de teste maximizada, ainda com `set_show_close_button(True)`, responde
+#: `window-restore-symbolic` em x=1844; o produto de 19/09 responde
+#: `window-maximize-symbolic` em qualquer estado, medido nesta árvore.
+#:
+#: O GESTO SEMPRE ALTERNOU — `_gesto_da_barra` chama `unmaximize` quando a
+#: janela está cheia, e há régua para isso desde a 4ª volta. Quem não alternava
+#: era **o que a pessoa vê e o que ela ouve**: maximizada, o botão desenhava
+#: «aumentar» e prometia «Maximizar» para um clique que ia RESTAURAR. Num
+#: produto de acessibilidade essa distância é o defeito inteiro: o leitor de
+#: tela anuncia a promessa, não o ato.
+#:
+#: A chave é o estado da janela, e o valor é `(ícone, dica)` — a dica serve de
+#: nome acessível também, por :func:`vestir_o_nome_acessivel`.
+APARENCIA_DO_MAXIMIZAR: dict[bool, tuple[str, str]] = {
+    False: ("window-maximize-symbolic", "Maximizar"),
+    True: ("window-restore-symbolic", "Restaurar"),
+}
+
 #: OS TRÊS BOTÕES DA BARRA, na ordem em que `pack_end` os empilha da direita
 #: para a esquerda — logo a tupla é lida ao contrário do que aparece na tela.
 #: O lado é o do COSMIC (`theme.LADO_DO_COSMIC` = `:minimize,maximize,close`),
 #: que crava os três à direita; o produto não pergunta à sessão porque a
 #: resposta dela produziu o defeito (a medição está em `app/theme.py`).
+#:
+#: O do meio LÊ de `APARENCIA_DO_MAXIMIZAR` em vez de repetir os dois literais:
+#: são o mesmo valor, e dois donos divergem no dia em que um deles mudar.
 BOTOES_DA_BARRA = (
     ("window-close-symbolic", "fechar", "Fechar"),
-    ("window-maximize-symbolic", "maximizar", "Maximizar"),
+    (APARENCIA_DO_MAXIMIZAR[False][0], "maximizar", APARENCIA_DO_MAXIMIZAR[False][1]),
     ("window-minimize-symbolic", "minimizar", "Minimizar"),
 )
 
@@ -336,6 +362,129 @@ def literal_js(valor: object) -> str:
     script JavaScript. Desligá-lo para "economizar bytes" reabre esse buraco.
     """
     return json.dumps(valor)
+
+
+def vestir_o_nome_acessivel(botao: Any, dica: str) -> None:
+    """Prende ao PORTUGUÊS o nome que o leitor de tela anuncia.
+
+    Um `Gtk.Button` que só carrega uma imagem não tem rótulo, e o ATK cai no
+    nome do ÍCONE. **MEDIDO NESTA ÁRVORE, na sessão dela (`LANG=pt_BR.UTF-8`),
+    com a barra montada exatamente como o construtor a montava:**
+
+    ============================  =============  ==========
+    ícone                         em ``pt_BR``   em ``C``
+    ============================  =============  ==========
+    ``window-close-symbolic``     ``Fechar``     ``Close``
+    ``window-maximize-symbolic``  ``Maximize``   ``Maximize``
+    ``window-minimize-symbolic``  ``Minimize``   ``Minimize``
+    ``window-restore-symbolic``   ``Restore``    ``Restore``
+    ============================  =============  ==========
+
+    **SÓ O FECHAR ESTAVA TRADUZIDO.** Na tela dela, dois dos três botões se
+    anunciavam em inglês — «Maximize» e «Minimize» — com a dica ao lado dizendo
+    «Maximizar» e «Minimizar». Quem lê recebia uma palavra; quem ouve, outra. E
+    o estado novo desta volta entra pela mesma porta: sem esta função, a janela
+    maximizada passaria a anunciar «Restore».
+
+    CORREÇÃO DE FATO, e o erro foi meu: a primeira versão desta docstring dizia
+    que **os três** respondiam em inglês, inclusive ``'Close'``. Aquela medição
+    rodou com ``LC_ALL=C`` no próprio arquivo de ambiente da régua — herdado da
+    regra de LER o servidor de som sem tradução — e respondeu sobre o locale do
+    instrumento, não sobre o produto. A tabela acima é a medição refeita nos
+    dois locales, e é a que vale.
+
+    ``set_tooltip_text`` não faz este trabalho: a dica é um balão do GTK e não
+    entra no ATK — está na tabela, com a dica certa do lado do nome errado.
+
+    Duas réguas, em ``tests/unit/test_a_barra_diz_o_estado_da_janela.py``: a de
+    dentro do processo amarra o nome à dica (e morde na sessão dela, pelos dois
+    botões em inglês); ``test_o_nome_acessivel_nao_segue_o_locale`` mede **num
+    processo filho com ``LC_ALL=C``**, para a garantia não depender do locale
+    de quem roda a suíte.
+    """
+    acessivel = botao.get_accessible()
+    if acessivel is not None:
+        acessivel.set_name(dica)
+
+
+def montar_a_barra(
+    titulo: str,
+    subtitulo: str,
+    ao_gesto: Callable[..., None],
+) -> tuple[Any, dict[str, Any]]:
+    """A ``Gtk.HeaderBar`` da janela, com os três botões DESTA CASA.
+
+    Devolve a barra e um mapa ``gesto -> botão``, porque quem precisa mexer num
+    botão depois — :func:`vestir_a_cara_do_maximizar` — não tem como achá-lo na
+    barra sem adivinhar posição.
+
+    **POR QUE ISTO É UMA FUNÇÃO DE MÓDULO E NÃO CÓDIGO SOLTO NO `__init__`:**
+    dentro do construtor ela só era alcançável abrindo uma janela, e janela de
+    teste na sessão dela é o que a TELA-DELA-01 existe para impedir. Aqui a
+    barra nasce, é medida e morre sem toplevel nenhuma — que é o único jeito de
+    esta parte da BARRA-MAXIMIZADA-01 ter régua, já que o defeito de PINTURA
+    que dá nome à sprint continua só observável na tela dela.
+    """
+    barra = Gtk.HeaderBar()
+    # OS BOTÕES SÃO NOSSOS — 4ª volta da BARRA-MAXIMIZADA-01, 19/09.
+    #
+    # `set_show_close_button(True)` delega os três à decoração do tema, e eles
+    # nascem **filhos internos** da HeaderBar: `get_children()` não os vê, só
+    # `forall()`. Sob o cosmic-comp maximizado, some o que eles desenham —
+    # enquanto o TÍTULO, que é filho normal, continua na tela. Esse contraste é
+    # a prova: o fluxo normal da barra pinta; o caminho da decoração, não.
+    #
+    # O QUE TRÊS VOLTAS DE CURA DE PINTURA MEDIRAM, e é por isso que aquela
+    # volta mudou de assunto: maximizada, os três botões respondem visíveis em
+    # x=1806, 1844 e 1882, 32 px cada, y=11 (a margem de sombra CSD corretamente
+    # removida), com `gtk-decoration-layout` intacto em
+    # `:minimize,maximize,close`. O GTK entrega três; a tela dela mostra um.
+    # Pedir `queue_resize`, `queue_draw`, `invalidate_rect` e `hide`+`show` não
+    # muda nada, porque não há nada errado do lado que esses gestos alcançam.
+    #
+    # Botão nosso é `Gtk.Button` comum em `pack_end`: mesmo fluxo de desenho do
+    # título. Não depende do tema, não depende do compositor, e serve igual em
+    # qualquer máquina — que é o contrato deste produto.
+    barra.set_show_close_button(False)
+    botoes: dict[str, Any] = {}
+    for nome_do_icone, gesto, dica in BOTOES_DA_BARRA:
+        botao = Gtk.Button()
+        botao.set_image(Gtk.Image.new_from_icon_name(nome_do_icone, Gtk.IconSize.MENU))
+        botao.set_relief(Gtk.ReliefStyle.NONE)
+        botao.set_tooltip_text(dica)
+        botao.get_style_context().add_class("titlebutton")
+        vestir_o_nome_acessivel(botao, dica)
+        botao.connect("clicked", ao_gesto, gesto)
+        barra.pack_end(botao)
+        botoes[gesto] = botao
+    barra.set_title(titulo)
+    if subtitulo:
+        barra.set_subtitle(subtitulo)
+    return barra, botoes
+
+
+def vestir_a_cara_do_maximizar(botoes: dict[str, Any], maximizada: bool) -> bool:
+    """Põe no botão do meio a cara do estado em que a janela ESTÁ.
+
+    Devolve se houve botão a vestir — `False` na janela oculta, que não tem
+    barra nenhuma.
+
+    Troca o ícone **no lugar** (`Gtk.Image.set_from_icon_name`) em vez de montar
+    uma `Gtk.Image` nova a cada mudança de estado: a imagem velha já está
+    visível dentro do botão, e uma nova nasce escondida — seria preciso um
+    `show()` que ninguém se lembraria de dar, e o botão ficaria vazio.
+    """
+    botao = botoes.get("maximizar")
+    if botao is None:
+        return False
+    nome_do_icone, dica = APARENCIA_DO_MAXIMIZAR[bool(maximizada)]
+    imagem = botao.get_image()
+    if imagem is None:
+        return False
+    imagem.set_from_icon_name(nome_do_icone, Gtk.IconSize.MENU)
+    botao.set_tooltip_text(dica)
+    vestir_o_nome_acessivel(botao, dica)
+    return True
 
 
 class PonteDaTela:
@@ -577,6 +726,11 @@ class JanelaDaAba:
         # premissa — está em `theme.barra_que_o_sistema_usa`.
         tema.adotar_a_barra_da_sessao()
 
+        #: Os botões da barra, por gesto. Vazio na janela OCULTA, que é uma
+        #: `Gtk.OffscreenWindow` e não tem barra nenhuma — e é por isso que
+        #: `vestir_a_cara_do_maximizar` responde `False` em vez de estourar.
+        self._botoes_da_barra: dict[str, Any] = {}
+
         if oculta:
             self.janela: Any = Gtk.OffscreenWindow()
             self.janela.set_default_size(*(tamanho or TAMANHO_OCULTA))
@@ -605,41 +759,9 @@ class JanelaDaAba:
             # SEM A HeaderBar OS BOTÕES SAEM DO LADO ERRADO NO COSMIC. Não é
             # enfeite: a barra de título do sistema não segue a decoração do
             # tema, e a janela nasce com fechar/minimizar espelhados.
-            barra = Gtk.HeaderBar()
-            # OS BOTÕES SÃO NOSSOS — 4ª volta da BARRA-MAXIMIZADA-01, 19/09.
-            #
-            # `set_show_close_button(True)` delega os três à decoração do tema,
-            # e eles nascem **filhos internos** da HeaderBar: `get_children()`
-            # não os vê, só `forall()`. Sob o cosmic-comp maximizado, some o que
-            # eles desenham — enquanto o TÍTULO, que é filho normal, continua na
-            # tela. Esse contraste é a prova: o fluxo normal da barra pinta; o
-            # caminho da decoração, não.
-            #
-            # O QUE TRÊS VOLTAS DE CURA DE PINTURA MEDIRAM, e é por isso que
-            # esta volta muda de assunto: maximizada, os três botões respondem
-            # visíveis em x=1806, 1844 e 1882, 32 px cada, y=11 (a margem de
-            # sombra CSD corretamente removida), com `gtk-decoration-layout`
-            # intacto em `:minimize,maximize,close`. O GTK entrega três; a tela
-            # dela mostra um. Pedir `queue_resize`, `queue_draw`,
-            # `invalidate_rect` e `hide`+`show` não muda nada, porque não há
-            # nada errado do lado que esses gestos alcançam.
-            #
-            # Botão nosso é `Gtk.Button` comum em `pack_end`: mesmo fluxo de
-            # desenho do título. Não depende do tema, não depende do compositor,
-            # e serve igual em qualquer máquina — que é o contrato deste produto.
-            barra.set_show_close_button(False)
-            for nome_do_icone, gesto, dica in BOTOES_DA_BARRA:
-                botao = Gtk.Button()
-                botao.set_image(Gtk.Image.new_from_icon_name(
-                    nome_do_icone, Gtk.IconSize.MENU))
-                botao.set_relief(Gtk.ReliefStyle.NONE)
-                botao.set_tooltip_text(dica)
-                botao.get_style_context().add_class("titlebutton")
-                botao.connect("clicked", self._gesto_da_barra, gesto)
-                barra.pack_end(botao)
-            barra.set_title(titulo)
-            if subtitulo:
-                barra.set_subtitle(subtitulo)
+            barra, self._botoes_da_barra = montar_a_barra(
+                titulo, subtitulo or "", self._gesto_da_barra
+            )
             self.janela.set_titlebar(barra)
             # A BARRA QUE NASCE MEIA — 19/09/2026, e quem achou foi ela:
             # *"quando eu abro e antes de printar ela tá bugada (…) mas depois
@@ -666,6 +788,12 @@ class JanelaDaAba:
             # GEOMETRIA da decoração, não a cor dela. Um `draw` repinta o que o
             # layout já decidiu; o `resize` refaz o ciclo e comita a superfície
             # nova.
+            #
+            # E O MESMO EVENTO CARREGA A 5ª VOLTA, que é de outro assunto: é
+            # aqui que o botão do meio troca de cara entre «Maximizar» e
+            # «Restaurar». Ele tem de ser o mesmo handler porque é a mesma
+            # pergunta — *em que estado a janela está agora?* — e dois handlers
+            # sobre um evento só seriam dois donos da mesma resposta.
             self.janela.connect("window-state-event", self._a_barra_se_refaz)
             self.janela.connect("destroy", Gtk.main_quit)
         self.janela.add(self.view)
@@ -682,14 +810,43 @@ class JanelaDaAba:
     #: Uma volta do laço principal depois, a janela já tem o tamanho de verdade.
     ATRASOS_DO_REDESENHO_MS = (60, 300)
 
-    def _a_barra_se_refaz(self, _janela: Any, _evento: Any) -> bool:
-        """Agenda o redesenho da decoração para DEPOIS da geometria nova.
+    def _a_barra_se_refaz(self, _janela: Any, evento: Any) -> bool:
+        """Veste o botão do meio com o estado novo e agenda o redesenho.
 
         BARRA-MAXIMIZADA-01. Ver a razão inteira onde este método é ligado.
         Devolve `False` para o GTK seguir entregando o evento a quem mais o
         escute — um `True` aqui engoliria a notificação de maximizar para o
         resto da janela.
         """
+        mudou = int(getattr(evento, "changed_mask", 0) or 0)
+        estado = int(getattr(evento, "new_window_state", 0) or 0)
+
+        # A CARA DO BOTÃO VEM DO EVENTO, NUNCA DE `is_maximized()` — 5ª volta.
+        # `Gtk.Window.is_maximized` lê o que o handler PADRÃO do GTK grava, e
+        # esse handler roda DEPOIS dos que se conectam com `connect`: perguntar
+        # a ele aqui devolve o estado de antes, e o botão passaria a vida um
+        # gesto atrasado. O evento já traz o estado novo.
+        vestir_a_cara_do_maximizar(
+            self._botoes_da_barra, bool(estado & int(Gdk.WindowState.MAXIMIZED))
+        )
+
+        # SÓ O FOCO MUDOU: NÃO HÁ GEOMETRIA NOVA, E O REDESENHO NÃO SE PAGA.
+        #
+        # `Gdk.WindowState.FOCUSED` (128) é um bit de estado como os outros, e
+        # o GTK emite `window-state-event` a cada entrada e saída de foco —
+        # medido nesta árvore. Sem este filtro, clicar no terminal e voltar para
+        # a janela disparava os dois tiques do `_repintar_a_decoracao`, que faz
+        # `hide()` + `show_all()` na barra e `queue_resize` na janela inteira.
+        # Ela trabalha alternando entre as duas janelas o dia todo.
+        #
+        # A CURA DE PINTURA CONTINUA INTEIRA para o que ela existe: maximizar,
+        # restaurar, ladrilhar e desiconificar mudam bits que não são o foco, e
+        # todos seguem agendando. **Isto não é a 5ª tentativa contra o defeito
+        # de pintura** — a ordem dela de 19/09 desceu essa caça para o fim da
+        # fila, e ela continua lá. É só parar de pagar o preço fora da hora.
+        if not (mudou & ~int(Gdk.WindowState.FOCUSED)):
+            return False
+
         # DOIS TIQUES, E NÃO UM — 3ª volta, 19/09/2026. A sequência de quatro
         # fotos dela isolou o gatilho: abrir certo, ladrilhar certo, **clicar em
         # maximizar** quebra, print conserta. Um tique só a 60 ms pegava cedo
