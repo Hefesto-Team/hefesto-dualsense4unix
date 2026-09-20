@@ -19,35 +19,66 @@ uma limpa. Rodar a cura que o próprio erro imprime gravava um TERCEIRO número,
 porque a árvore mudava de estado entre as corridas — três números para o mesmo
 arquivo, no mesmo minuto, sem que uma vírgula do dado tivesse mudado.
 
+O NOME DA BRANCH SAIU JUNTO — 20/09/2026, NA CONFERÊNCIA
+--------------------------------------------------------
+A sprint mandou tirar só a contagem e escreveu *"o commit e a branch FICAM:
+eles dizem de que fonte o arquivo saiu, e o hash tem comprimento fixo"*. A razão
+é sobre o HASH. O nome da branch não tem largura fixa, e a leva que curou a
+contagem provou isso nela mesma: regerou as quatro páginas na worktree
+`worktree-wf_7917c453-7ab-2` e elas ficaram +92, +46, +23 e +23 bytes contra
+`dev`, e o `LEIA-PRIMEIRO` passou a publicar 2.280.067 onde `dev` mede
+2.280.044 — o número que o documento já trazia CERTO.
+
+A própria sprint fecha o argumento: *"se a casa quiser manter a contagem, então
+o `LEIA-PRIMEIRO` não pode publicar o TAMANHO desse arquivo"*. A casa manteve o
+tamanho publicado; logo nada de largura variável cabe no carimbo — nem a
+contagem, nem a branch. Quem lia o nome da branch era só o
+`scripts/gerar-indice-html.py`, e o que ele mostra de divergência entre as
+irmãs sempre foi POR COMMIT.
+
 O QUE A MORDIDA ARRANCA
 -----------------------
 Devolver a `procedencia()` a chave `sujos` e ao `carimbo()` o trecho
-`· árvore com {sujos} mudança(s) não commitada(s)` (arrancado em 20/09/2026,
-`scripts/carimbo_da_casa.py`). Com a cura arrancada, medido:
+`· árvore com {sujos} mudança(s) não commitada(s)`, ou devolver a chave
+`branch` e o trecho `na branch <code>{branch}</code>` (arrancados em
+20/09/2026, `scripts/carimbo_da_casa.py`). Com a cura arrancada, medido:
 
-    test_o_carimbo_nao_muda_com_a_sujeira_da_arvore .... 223 / 270 / 271 bytes
-    test_o_carimbo_nao_pergunta_o_estado_da_arvore ..... `git status --porcelain`
-    test_a_procedencia_declara_so_a_fonte ............. chave `sujos` de volta
-    test_a_pagina_publicada_...(as quatro páginas) .... 5 campos onde cabem 4
+    test_o_carimbo_nao_muda_com_a_sujeira_da_arvore .. 196/243/244/243/243 bytes
+    test_o_carimbo_nao_pergunta_o_estado_da_arvore ... `git status --porcelain`
+    test_a_procedencia_declara_so_a_fonte ........... a chave, nomeada
+    test_o_carimbo_nao_muda_com_o_nome_da_branch .... 223 → 246 bytes
+    test_a_pagina_publicada_...(as quatro páginas) .. 5 campos onde cabem 4,
+                                                      e a palavra `branch`
 
-Devolvida a cura, as oito passam. Cada teste diz, no próprio docstring, a
+Devolvida a cura, as nove passam. Cada teste diz, no próprio docstring, a
 mutação que o faz reprovar e o número que ela produziu.
+
+AS DUAS MUTAÇÕES QUE ESTA FOLHA DEIXAVA PASSAR, E COMO ELAS FORAM FECHADAS
+--------------------------------------------------------------------------
+Medidas na conferência de 20/09/2026, com as oito réguas de então VERDES:
+
+    "commit": hash + ("-sujo" if `git diff-index --quiet HEAD --` else "")
+    "branch": branch + (" (árvore suja)" if `git ls-files --modified` else "")
+
+As duas devolvem o defeito da sprint — medidas com a folha de hoje, a primeira
+dá 196/196/196/**201**/**201** bytes pelos cinco estados e a segunda
+196/196/196/**211**/196 —, e as duas escapavam por DOIS buracos somados:
+
+  - a régua do efeito só criava arquivo NÃO RASTREADO, e `diff-index` e
+    `ls-files --modified` são cegos a ele. Hoje ela atravessa CINCO estados,
+    dois deles rastreados (`ESTADOS`);
+  - a régua da raiz casava o nome do subcomando por igualdade, então
+    `diff-index` não casava com `"diff"` nem `--modified` com `-m`. Hoje o
+    casamento é por FAMÍLIA (`_pergunta_o_estado`).
 
 O QUE ESTA RÉGUA NÃO COBRE, E ESTÁ DECLARADO
 --------------------------------------------
-1. `scripts/gerar-painel.py` escreve, no CORPO do painel, um parágrafo próprio
-   «Árvore: N arquivo(s) com mudança não commitada em <commit>». Ele NÃO é o
-   carimbo: é um cartão de um painel que existe para relatar o estado do
-   projeto, ele já sai do `--check` por `_recorta_selo`, e nenhum número
-   publicado mede `html/painel.html`. Fica de fora por decisão, não por
-   esquecimento.
-2. O NOME DA BRANCH também tem comprimento variável, e a sprint decidiu que
-   commit e branch FICAM. Medido em 20/09/2026: gerar em `dev` e gerar numa
-   worktree de agente (`worktree-wf_7917c453-7ab-2`) dá uma diferença de 23
-   bytes na página. Quem regerar as páginas numa branch e publicar o tamanho
-   noutra vai ver `test_o_documento_confere_com_a_medicao_de_agora`
-   (`tests/unit/test_leia_primeiro_nao_digita_numero_a_mao.py`) reprovar — e a
-   causa é essa, não a sujeira da árvore.
+`scripts/gerar-painel.py` escreve, no CORPO do painel, um parágrafo próprio
+«Árvore: N arquivo(s) com mudança não commitada em <commit>», e um selo com o
+nome da branch. Nenhum dos dois é o carimbo: são cartões de um painel que existe
+para relatar o estado do projeto, os dois já saem do `--check` por
+`_recorta_selo`, e nenhum número publicado mede `html/painel.html`. Fica de fora
+por decisão, não por esquecimento.
 """
 from __future__ import annotations
 
@@ -71,9 +102,9 @@ import carimbo_da_casa  # depende da linha acima: `scripts/` não é pacote
 MARCA = "data-carimbo"
 
 #: QUANTOS CAMPOS a linha tem, separados por `·`. Escritos à mão pela mesma
-#: razão. Hoje: «gerado em …», «commit … na branch …», «por …» e, nas três que
-#: não são o índice, «índice dos instrumentos». Um campo a mais é um dado a mais
-#: viajando dentro do produto — foi assim que a sujeira da árvore entrou.
+#: razão. Hoje: «gerado em …», «commit …», «por …» e, nas três que não são o
+#: índice, «índice dos instrumentos». Um campo a mais é um dado a mais viajando
+#: dentro do produto — foi assim que a sujeira da árvore entrou.
 CAMPOS_ESPERADOS = {
     "index.html": 3,
     "specs.html": 4,
@@ -81,10 +112,49 @@ CAMPOS_ESPERADOS = {
     "frases-de-tela.html": 4,
 }
 
-#: As palavras com que um "estado da árvore" chega a uma linha de rodapé. Elas
-#: NÃO são a régua — a régua é a contagem de campos, que pega qualquer
-#: redação. Elas existem para a mensagem de erro NOMEAR o que voltou.
-PALAVRAS_DE_ESTADO = ("commitada", "commitado", "sujo", "staged", "modificad")
+#: As palavras com que a MESA de quem gerou chega a uma linha de rodapé. A
+#: contagem de campos acima é a régua contra um campo NOVO; esta lista é a régua
+#: contra a mesma coisa COLADA num campo que já existe — «por <gerador> (árvore
+#: suja)» tem quatro campos e carrega o estado do mesmo jeito.
+#:
+#: `branch` está na lista desde 20/09/2026: o nome da branch saiu do carimbo por
+#: ter largura variável, e ele voltaria DENTRO do campo do commit, sem mexer na
+#: contagem (medido: 92 bytes em `html/index.html` entre `dev` e uma worktree de
+#: agente).
+PALAVRAS_DE_ESTADO = (
+    "commitada", "commitado", "sujo", "suja", "staged", "modificad", "branch",
+)
+
+
+#: Os subcomandos do `git` que respondem "como está a MESA de quem gerou".
+#: Casam por FAMÍLIA, não por nome exato: `diff` alcança `diff-index`,
+#: `diff-files` e `diff-tree`.
+#:
+#: A LISTA ERA DE NOMES EXATOS até 20/09/2026, e o buraco foi medido na
+#: conferência: `git diff-index --quiet HEAD` — que é a forma canônica de
+#: perguntar isto num script — não casava com `"diff"`, e `git ls-files
+#: --modified` não casava com a exceção escrita para `-m`. Uma reintrodução da
+#: sujeira por qualquer um dos dois atravessava as oito réguas desta folha.
+SUBCOMANDOS_DE_ESTADO = ("status", "describe", "stash", "diff")
+
+#: As bandeiras que transformam um `ls-files` (que lista o ÍNDICE, e não é
+#: estado) numa pergunta sobre a mesa. As formas curta e longa, as duas.
+BANDEIRAS_DE_ESTADO = (
+    "-m", "--modified", "-d", "--deleted", "-o", "--others", "-u", "--unmerged",
+)
+
+
+def _pergunta_o_estado(tokens: list[str]) -> bool:
+    """Este comando pergunta ao `git` como está a árvore de quem gerou?"""
+    for token in tokens:
+        if any(
+            token == base or token.startswith(f"{base}-")
+            for base in SUBCOMANDOS_DE_ESTADO
+        ):
+            return True
+        if "porcelain" in token or token == "--dirty":
+            return True
+    return "ls-files" in tokens and any(b in tokens for b in BANDEIRAS_DE_ESTADO)
 
 
 def _git_existe() -> bool:
@@ -127,14 +197,57 @@ def _arvore_de_brinquedo(raiz: Path, ganchos_vazios: Path) -> None:
     git("commit", "-qm", "o commit que dá um HEAD ao brinquedo")
 
 
-def _sujar(raiz: Path, quantos: int) -> None:
-    for i in range(quantos):
-        (raiz / f"sujo{i}.txt").write_text("x\n", encoding="utf-8")
+def _rodar_git(raiz: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    """Um `git` no brinquedo, com os ganchos da casa fora do caminho."""
+    return subprocess.run(
+        [
+            "git",
+            "-c", f"core.hooksPath={raiz.parent / 'sem-ganchos'}",
+            "-c", "commit.gpgsign=false",
+            *args,
+        ],
+        cwd=raiz, capture_output=True, text=True, timeout=30,
+    )
 
 
-def _limpar(raiz: Path, quantos: int) -> None:
-    for i in range(quantos):
-        (raiz / f"sujo{i}.txt").unlink()
+#: OS CINCO ESTADOS DE ÁRVORE, e a razão de os dois últimos existirem.
+#:
+#: Até 20/09/2026 esta folha só criava arquivo NÃO RASTREADO — o arranjo FÁCIL.
+#: `git diff-index --quiet HEAD` e `git ls-files --modified` são CEGOS a arquivo
+#: não rastreado, então uma reintrodução da sujeira por qualquer um dos dois
+#: passava por baixo das oito réguas daqui. Medido na conferência, com a cura
+#: arrancada por `diff-index`: árvore limpa 196 bytes, arquivo RASTREADO
+#: modificado 201 — e as oito de então verdes.
+ESTADOS = (
+    "limpa",
+    "2 arquivos não rastreados",
+    "13 arquivos não rastreados",
+    "1 arquivo rastreado, modificado no disco",
+    "1 arquivo rastreado, modificado e no índice",
+)
+
+
+def _pondo(raiz: Path, estado: str) -> None:
+    if estado == "limpa":
+        return
+    if estado.endswith("não rastreados"):
+        for i in range(int(estado.split()[0])):
+            (raiz / f"sujo{i}.txt").write_text("x\n", encoding="utf-8")
+        return
+    (raiz / "a.txt").write_text("a mexido pela régua\n", encoding="utf-8")
+    if "índice" in estado:
+        assert _rodar_git(raiz, "add", "a.txt").returncode == 0
+
+
+def _devolvendo(raiz: Path) -> None:
+    for sujo in raiz.glob("sujo*.txt"):
+        sujo.unlink()
+    (raiz / "a.txt").write_text("a\n", encoding="utf-8")
+    _rodar_git(raiz, "reset", "-q")
+    assert not _rodar_git(raiz, "status", "--porcelain").stdout.strip(), (
+        "o brinquedo não voltou a ficar limpo entre dois estados — as medições "
+        "seguintes mediriam outra coisa."
+    )
 
 
 @pytest.fixture()
@@ -152,31 +265,58 @@ def brinquedo(tmp_path: Path) -> Path:
 # A régua: o carimbo é o MESMO, byte a byte, seja qual for o estado da árvore
 # --------------------------------------------------------------------------
 def test_o_carimbo_nao_muda_com_a_sujeira_da_arvore(brinquedo: Path) -> None:
-    """Zero, dois e treze arquivos sujos dão o MESMO carimbo, byte a byte.
+    """Os CINCO estados de árvore dão o MESMO carimbo, byte a byte.
 
-    Os três números são a mordida inteira da sprint: 0 porque a frase sumia
-    quando a árvore estava limpa, 2 e 13 porque o número de DÍGITOS de N também
-    conta — «2» e «13» não ocupam o mesmo espaço.
+    Os três primeiros são a mordida da sprint: 0 porque a frase sumia quando a
+    árvore estava limpa, 2 e 13 porque o número de DÍGITOS de N também conta —
+    «2» e «13» não ocupam o mesmo espaço.
 
-    MORDIDA: devolver `sujeira` ao `carimbo()` dá 223, 270 e 271 bytes.
+    OS DOIS ÚLTIMOS SÃO DA CONFERÊNCIA, e são o arranjo DIFÍCIL: arquivo
+    RASTREADO, modificado no disco e modificado no índice. `git status
+    --porcelain` vê os cinco, mas `git diff-index --quiet HEAD` e `git ls-files
+    --modified` só veem estes dois — e era por eles que uma reintrodução da
+    sujeira passava com as oito réguas verdes.
+
+    MORDIDA, as duas medidas em 20/09/2026:
+      - devolver `sujeira` ao `carimbo()` por `git status --porcelain` dá
+        196 / 243 / 244 / 243 / 243 bytes;
+      - pendurar `-sujo` no commit por `git diff-index --quiet HEAD` dá
+        196 / 196 / 196 / **201** / **201** — e só os dois últimos estados o
+        revelam.
     """
-    colhido: dict[int, str] = {}
-    for quantos in (0, 2, 13):
-        _sujar(brinquedo, quantos)
-        colhido[quantos] = carimbo_da_casa.carimbo(
+    esperado_sujo = {e for e in ESTADOS if e != "limpa"}
+    colhido: dict[str, str] = {}
+    for estado in ESTADOS:
+        _pondo(brinquedo, estado)
+        porcelana = _rodar_git(brinquedo, "status", "--porcelain").stdout.strip()
+        rastreado = _rodar_git(brinquedo, "diff-index", "--quiet", "HEAD", "--")
+        # O DONO DA RESPOSTA É O `git`, e é a ele que se confere o cenário: sem
+        # isto, um `_pondo()` que deixasse de sujar faria as cinco medições
+        # baterem por não haver nada a medir — a régua daria verde sobre nada.
+        assert bool(porcelana) == (estado in esperado_sujo), (
+            f"o estado {estado!r} não chegou ao brinquedo: "
+            f"`git status --porcelain` devolveu {porcelana!r}."
+        )
+        if "rastreado," in estado:
+            assert rastreado.returncode != 0, (
+                f"o estado {estado!r} não sujou nada RASTREADO — "
+                "`git diff-index --quiet HEAD` diz que a árvore está limpa, e "
+                "este teste voltaria a medir só o arranjo fácil."
+            )
+        colhido[estado] = carimbo_da_casa.carimbo(
             "scripts/gerar-mapa.py", raiz=brinquedo
         )
-        _limpar(brinquedo, quantos)
+        _devolvendo(brinquedo)
 
-    tamanhos = {n: len(linha.encode("utf-8")) for n, linha in colhido.items()}
+    tamanhos = {e: len(linha.encode("utf-8")) for e, linha in colhido.items()}
     assert len(set(colhido.values())) == 1, (
         "o carimbo muda com o estado da árvore de quem gerou — "
-        f"tamanhos em bytes por número de arquivos sujos: {tamanhos}.\n"
+        f"tamanhos em bytes por estado: {tamanhos}.\n"
         "O produto passa a carregar o `git status` de quem apertou o botão, e o "
         "tamanho publicado em `docs/data/LEIA-PRIMEIRO.md` caduca sem que o dado "
         "tenha mudado.\n"
         "As linhas colhidas:\n  "
-        + "\n  ".join(f"{n:>2} sujos: {linha}" for n, linha in colhido.items())
+        + "\n  ".join(f"{e}: {linha}" for e, linha in colhido.items())
     )
 
 
@@ -186,16 +326,25 @@ def test_o_carimbo_nao_pergunta_o_estado_da_arvore(
     """Montar o carimbo não roda um só comando que leia o estado da árvore.
 
     Esta é a régua da RAIZ: a de cima pega o efeito (bytes a mais), esta pega a
-    causa (perguntar ao `git` como está a mesa). Ela alcança um `git diff`, um
-    `git ls-files -m` ou um `git describe --dirty` que voltassem com outra
-    redação — e NOMEIA o comando na mensagem.
+    causa (perguntar ao `git` como está a mesa). Ela alcança a família `diff`
+    inteira, um `ls-files` com bandeira de estado e um `describe --dirty` que
+    voltassem com outra redação — e NOMEIA o comando na mensagem.
 
-    MORDIDA, as duas medidas em 20/09/2026: devolver a linha
-    `_git("status", "--porcelain", …)` a `procedencia()` reprova com
-    *"git status --porcelain"* no erro; trocar `rev-parse --short HEAD` por
-    `describe --always --dirty` reprova com *"git describe --always --dirty"* —
-    e essa segunda passa por baixo das outras réguas, porque `--dirty` marca o
-    estado da árvore sem mudar o número de campos da linha.
+    MORDIDA, as quatro medidas em 20/09/2026:
+      - `_git("status", "--porcelain", …)` de volta em `procedencia()` reprova
+        com *"git status --porcelain"* no erro;
+      - `rev-parse --short HEAD` trocado por `describe --always --dirty` reprova
+        com *"git describe --always --dirty"* — e essa passa por baixo das
+        outras réguas, porque `--dirty` marca o estado sem mudar o número de
+        campos da linha;
+      - `git diff-index --quiet HEAD --` pendurando `-sujo` no commit (196 →
+        201 bytes num arquivo RASTREADO modificado);
+      - `git ls-files --modified` colado no campo do commit (196 → 211).
+
+    AS DUAS ÚLTIMAS SÃO DA CONFERÊNCIA, e as duas atravessavam esta folha
+    inteira: a lista de proibidos era de nomes EXATOS, então `diff-index` não
+    casava com `"diff"` e `--modified` não casava com a exceção escrita para
+    `-m`. Hoje o casamento é por FAMÍLIA (`_pergunta_o_estado`).
     """
     perguntas: list[list[str]] = []
     original = subprocess.run
@@ -206,15 +355,10 @@ def test_o_carimbo_nao_pergunta_o_estado_da_arvore(
         return original(args, *resto, **chaves)
 
     monkeypatch.setattr(carimbo_da_casa.subprocess, "run", espiao)
-    _sujar(brinquedo, 3)
+    _pondo(brinquedo, "1 arquivo rastreado, modificado no disco")
     carimbo_da_casa.carimbo("scripts/gerar-mapa.py", raiz=brinquedo)
 
-    proibidos = ("status", "diff", "describe", "stash")
-    achados = [
-        " ".join(p) for p in perguntas
-        if any(termo in p for termo in proibidos)
-        or ("ls-files" in p and "-m" in p)
-    ]
+    achados = [" ".join(p) for p in perguntas if _pergunta_o_estado(p)]
     assert not achados, (
         "o carimbo pergunta ao `git` como está a árvore de quem gerou: "
         + "; ".join(achados)
@@ -225,21 +369,34 @@ def test_o_carimbo_nao_pergunta_o_estado_da_arvore(
 
 
 def test_a_procedencia_declara_so_a_fonte(brinquedo: Path) -> None:
-    """`procedencia()` devolve commit e branch — e nada sobre a mesa.
+    """`procedencia()` devolve o commit — e nada sobre a mesa de quem gerou.
 
-    MORDIDA: devolver a chave `sujos` faz reprovar nomeando a chave.
+    A CHAVE `branch` SAIU EM 20/09/2026, junto com `sujos` e pelo mesmo motivo:
+    largura variável dentro de um arquivo cujo TAMANHO é publicado. A sprint
+    mandou mantê-la, escrevendo *"o hash tem comprimento fixo"* — razão que vale
+    para o hash e não para o nome da branch. A conferência mediu: as quatro
+    páginas regeradas na worktree `worktree-wf_7917c453-7ab-2` ficaram 23, 23,
+    46 e 92 bytes maiores que em `dev`, e o `LEIA-PRIMEIRO` publicou 2.280.067
+    onde `dev` mede 2.280.044.
+
+    MORDIDA: devolver `sujos` ou `branch` faz reprovar NOMEANDO a chave.
     """
-    _sujar(brinquedo, 4)
+    _pondo(brinquedo, "1 arquivo rastreado, modificado e no índice")
     p = carimbo_da_casa.procedencia(raiz=brinquedo)
-    assert set(p) == {"commit", "branch"}, (
-        f"`procedencia()` devolve {sorted(p)}; esperado ['branch', 'commit'].\n"
+    assert set(p) == {"commit"}, (
+        f"`procedencia()` devolve {sorted(p)}; esperado ['commit'].\n"
         "Toda chave a mais aqui vira texto no rodapé das quatro páginas. Se ela "
-        "descrever o ESTADO da árvore, o tamanho do arquivo passa a depender de "
-        "quem gerou (ver o docstring de `procedencia()`)."
+        "descrever a MESA de quem gerou — o estado da árvore, o nome da branch "
+        "— o tamanho do arquivo passa a depender de onde alguém apertou o botão "
+        "(ver o docstring de `procedencia()`)."
     )
-    assert p["branch"] == "dev", (
-        f"o brinquedo nasceu em `dev` e `procedencia()` leu {p['branch']!r} — "
-        "a régua não está falando com o repositório que ela montou."
+    # O DONO DA RESPOSTA É O `git`, e a pergunta é OUTRA: o hash INTEIRO. Casar
+    # o curto com o curto rodaria o mesmo comando que a função roda — tautologia.
+    inteiro = _rodar_git(brinquedo, "rev-parse", "HEAD").stdout.strip()
+    assert inteiro.startswith(p["commit"]) and p["commit"] != "?", (
+        f"`procedencia()` leu o commit {p['commit']!r}, que não é um prefixo do "
+        f"HEAD do brinquedo ({inteiro!r}) — a régua não está falando com o "
+        "repositório que ela montou."
     )
 
 
@@ -285,6 +442,51 @@ def test_trocar_o_commit_nao_muda_o_tamanho_do_carimbo(brinquedo: Path) -> None:
     )
 
 
+def test_o_carimbo_nao_muda_com_o_nome_da_branch(brinquedo: Path) -> None:
+    """A mesma árvore, no mesmo commit, em duas branches: o MESMO carimbo.
+
+    O nome da branch não é a FONTE da página — a fonte é o commit, e a página é
+    publicada em `dev`. Dizer que ela saiu de `worktree-wf_7917c453-7ab-2` é
+    declarar a mesa de quem passou por ali, que é o que a sprint mandou tirar; e
+    o nome tem largura variável, que é o defeito que ela fechou.
+
+    MEDIDO NA CONFERÊNCIA, 20/09/2026, na leva que curou a contagem de sujos e
+    regerou as quatro páginas numa worktree de agente:
+
+        html/index.html ......... +92 bytes contra `dev`
+        html/painel.html ........ +46
+        html/specs.html ......... +23
+        html/frases-de-tela.html  +23
+
+    e o `docs/data/LEIA-PRIMEIRO.md` passou a publicar 2.280.067 onde `dev` mede
+    2.280.044 — o número que o documento já trazia CERTO antes da leva.
+
+    MORDIDA: devolver `na branch <code>{branch}</code>` ao `carimbo()` leva os
+    dois carimbos a 223 e 246 bytes.
+    """
+    em_dev = carimbo_da_casa.carimbo("scripts/gerar-mapa.py", raiz=brinquedo)
+    assert _rodar_git(
+        brinquedo, "checkout", "-q", "-b", "worktree-wf_7917c453-7ab-2"
+    ).returncode == 0
+    # O DONO DA RESPOSTA É O `git`: sem conferir, um `checkout` que falhasse em
+    # silêncio faria os dois carimbos baterem por serem o mesmo cenário.
+    agora_em = _rodar_git(brinquedo, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
+    assert agora_em == "worktree-wf_7917c453-7ab-2", (
+        f"o brinquedo não trocou de branch (está em {agora_em!r}) — esta régua "
+        "estaria comparando o mesmo cenário consigo mesmo."
+    )
+    na_worktree = carimbo_da_casa.carimbo("scripts/gerar-mapa.py", raiz=brinquedo)
+
+    assert em_dev == na_worktree, (
+        "o carimbo muda com o NOME DA BRANCH de quem gerou "
+        f"({len(em_dev.encode())} → {len(na_worktree.encode())} bytes).\n"
+        f"  em `dev`:      {em_dev}\n  na worktree:   {na_worktree}\n"
+        "O tamanho de `html/specs.html` é publicado em "
+        "`docs/data/LEIA-PRIMEIRO.md` e tem portão: toda página regerada fora "
+        "de `dev` grava um número que reprova assim que o merge acontece."
+    )
+
+
 # --------------------------------------------------------------------------
 # O produto: as quatro páginas publicadas
 # --------------------------------------------------------------------------
@@ -292,12 +494,18 @@ def test_trocar_o_commit_nao_muda_o_tamanho_do_carimbo(brinquedo: Path) -> None:
 def test_a_pagina_publicada_nao_carrega_a_sujeira_de_quem_gerou(nome: str) -> None:
     """O carimbo de cada página publicada tem os campos de hoje, e só eles.
 
-    A contagem de campos é a régua, e não a busca pela frase: ela pega a
-    sujeira de volta com QUALQUER redação. As palavras só entram na mensagem,
-    para nomear o que voltou.
+    SÃO DUAS RÉGUAS INDEPENDENTES, e é de propósito. A contagem de campos pega
+    um campo NOVO com qualquer redação. As PALAVRAS pegam a mesma coisa colada
+    dentro de um campo que já existe — «por <gerador> (árvore suja)» tem quatro
+    campos e carrega o estado do mesmo jeito, e foi assim que uma mutação da
+    conferência atravessou esta régua quando ela era só a contagem.
 
-    MORDIDA: o `html/specs.html` como estava antes desta leva trazia
-    «árvore com 5 mudança(s) não commitada(s)» — 5 campos onde cabem 4.
+    MORDIDA, as duas medidas em 20/09/2026:
+      - o `html/specs.html` de antes da leva trazia «árvore com 5 mudança(s)
+        não commitada(s)» — 5 campos onde cabem 4;
+      - o de antes da conferência trazia «na branch
+        <code>worktree-wf_7917c453-7ab-2</code>» — 4 campos, e a palavra
+        `branch` é quem o denuncia.
     """
     caminho = PASTA / nome
     if not caminho.is_file():
@@ -319,6 +527,13 @@ def test_a_pagina_publicada_nao_carrega_a_sujeira_de_quem_gerou(nome: str) -> No
     miolo = re.sub(r"<[^>]+>", "", linha)
     campos = [pedaco.strip() for pedaco in miolo.split("·") if pedaco.strip()]
     nomeadas = [p for p in PALAVRAS_DE_ESTADO if p in linha.lower()]
+    assert not nomeadas, (
+        f"o carimbo de html/{nome} carrega a MESA de quem gerou — as palavras "
+        f"{nomeadas} estão na linha:\n  {linha}\n"
+        "Nada de largura variável cabe aqui: o tamanho de `html/specs.html` é "
+        "publicado em `docs/data/LEIA-PRIMEIRO.md` e tem portão.\n"
+        "Regere a página depois de curar o `scripts/carimbo_da_casa.py`."
+    )
     assert len(campos) == CAMPOS_ESPERADOS[nome], (
         f"o carimbo de html/{nome} tem {len(campos)} campo(s); esperado "
         f"{CAMPOS_ESPERADOS[nome]}.\n  {linha}\n"
