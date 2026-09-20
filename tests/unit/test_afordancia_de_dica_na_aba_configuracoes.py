@@ -44,7 +44,7 @@ continua encontrando alvos.
 
 * **`Gtk.OffscreenWindow`, nunca `Gtk.Window`** — sob Xvfb não há gerenciador de
   janelas e uma `Gtk.Window` fica 1x1 para sempre
-  (`docs/process/COMO-OLHAR-A-TELA.md`).
+  (`docs/method/COMO-OLHAR-A-TELA.md`).
 * **A folha tem de ser aplicada pela tela** — sem `add_provider_for_screen` a
   medida 2 leria os zeros do tema do sistema e reprovaria uma cura sã.
 """

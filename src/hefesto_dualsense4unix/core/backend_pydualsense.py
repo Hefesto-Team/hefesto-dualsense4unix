@@ -4156,7 +4156,7 @@ class PyDualSenseController(IController):
         Colada ao item 3 vinha a frase "e sem 0x08 nenhum a barra ficou morta
         por 5 dias e 20 adoções (medido 08/08)". Ela **nunca foi medição**: era
         uma frase que só existia em docstring e que eu registrei como se fosse
-        uma — a armadilha `A-12` de `docs/process/METODO-DE-ISOLAMENTO.md`, "o
+        uma — a armadilha `A-12` de `docs/method/METODO-DE-ISOLAMENTO.md`, "o
         caderno envelhecer sem que ninguém note".
 
         A escavação do journal do daemon e dos transcritos, em 11/08, achou a
@@ -4164,7 +4164,7 @@ class PyDualSenseController(IController):
         delas com fala literal dela: 08/08 16:39, 08/08 21:35, 08/08 23:48 e
         11/08 11:40 (ensaios `lightbar-bt-aceso-*` em `docs/data/ensaios.csv`;
         a correção está registrada no ensaio `lightbar-bt-sem-0x08-cinco-dias`,
-        e a nota datada em `docs/process/METODO-DE-ISOLAMENTO.md`, seção "O que
+        e a nota datada em `docs/method/METODO-DE-ISOLAMENTO.md`, seção "O que
         ficou aberto nesta sessão — e o que 12/08 fechou").
 
         O que é VERDADE hoje sobre o 0x08:
@@ -4180,7 +4180,7 @@ class PyDualSenseController(IController):
         - em 12/08 nomeou-se a variável que faltava, e nenhuma das medições
           acima a tinha: **quem estava com o hidraw aberto no instante da
           probe** — e era o Steam. Ver o terceiro gabarito em
-          `docs/process/METODO-DE-ISOLAMENTO.md`.
+          `docs/method/METODO-DE-ISOLAMENTO.md`.
 
         A hipótese que este método torna falsificável na mesa dela — uma
         variável, um gesto, um olho —, e que segue sem ensaio que a feche:

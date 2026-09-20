@@ -92,7 +92,7 @@ def pagina() -> str:
 
     A bancada, e não o publicado, de propósito: apontar uma régua para o
     publicado a faria dar **verde sobre a página congelada**, que é a armadilha
-    mais cara do `docs/process/COMO-OLHAR-A-TELA.md` e a razão de
+    mais cara do `docs/method/COMO-OLHAR-A-TELA.md` e a razão de
     `onde.pagina()` ter a bancada por padrão.
     """
     from hefesto_dualsense4unix.interface import onde

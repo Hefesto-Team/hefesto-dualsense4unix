@@ -556,14 +556,19 @@ def papel_da_condicao(frase: str, posto: str, nomeados: set[str] | list[str]) ->
 #: linha por teste; o gesto de fazer não cabe numa linha, e ela pediu que fosse
 #: meu, por pedido dela: *"isso eu espero que seja descrito"* — a frase
 #: inteira, com o nome que ela usou, está no cabeçalho do arquivo do gesto.
-_O_COMO_DAS_21 = ("docs/process/sprints/"
+#:
+#: ELE SAIU DE `docs/process/` EM 20/09/2026 — decisão dela, *"mover o que as
+#: réguas precisam"*. O gesto é DADO: o produto o lê para desenhar a página.
+#: Morando numa pasta `.gitignore`, ele morria em todo clone limpo e em toda
+#: worktree de agente, e ainda podia ser arquivado por baixo do leitor.
+_O_COMO_DAS_21 = ("docs/method/"
                   "2026-09-07-O-COMO-DAS-21-o-gesto-exato-de-cada-linha.md")
 
 #: E O DO MAPA, escrito depois, no mesmo molde — ordem dela: *"depois de
 #: melhorar os 21. quero que aí sim vc use o novo modelo pra remodelar os demais
 #: testes via agentes."* São DOIS arquivos e não um só porque os donos são
 #: outros: as 21 são a aceitação que ela escreveu, as 178 são o acervo do mapa.
-_O_COMO_DO_MAPA = ("docs/process/sprints/"
+_O_COMO_DO_MAPA = ("docs/method/"
                    "2026-09-07-O-COMO-DO-MAPA-o-gesto-das-178-celulas.md")
 
 
@@ -662,13 +667,8 @@ def enxuga_os_passos(
     return fora
 
 
-#: ONDE UMA SPRINT FECHADA VAI PARAR. O arquivamento é rotina desta casa — as
-#: 732 fechadas saíram da pasta que a IA lê —, e ele NÃO pode apagar o gesto.
-_ARQUIVADOS = "arquivados"
-
-
 def _o_dono_do_gesto(relativo: str) -> pathlib.Path | None:
-    """O arquivo dono, na pasta viva OU na dos arquivados.
+    """O arquivo dono do gesto, em `docs/method/` — ou `None` se sumiu.
 
     ARQUIVAR A SPRINT NÃO PODE APAGAR O GESTO DE 199 TESTES. Medido em
     20/09/2026: os dois donos foram para `sprints/arquivados/` quando as
@@ -677,13 +677,15 @@ def _o_dono_do_gesto(relativo: str) -> pathlib.Path | None:
     literalmente o defeito que ela apontou na linha 10 (*"sinceramente não
     entendi o que diabos é pra fazer aqui"*), voltando inteiro seis dias
     depois. Sete réguas ficaram vermelhas e nenhuma dizia o porquê.
+
+    A BUSCA NOS `arquivados/` SAIU no mesmo dia, e não por descuido: os dois
+    donos deixaram `docs/process/sprints/` e viraram dado versionado em
+    `docs/method/`, que não tem gaveta de arquivo. Procurar numa gaveta que
+    não existe ensinaria a próxima pessoa que o arquivo pode ser movido de
+    novo — e ele não pode: quem o mover quebra o git, não uma busca.
     """
     alvo = RAIZ / relativo
-    if alvo.exists():
-        return alvo
-    p = pathlib.Path(relativo)
-    guardado = RAIZ / p.parent / _ARQUIVADOS / p.name
-    return guardado if guardado.exists() else None
+    return alvo if alvo.exists() else None
 
 
 def _gesto_do_arquivo(relativo: str, marca: str,
@@ -691,18 +693,17 @@ def _gesto_do_arquivo(relativo: str, marca: str,
     """O motor dos dois: mesma forma de seção, chaves diferentes."""
     alvo = _o_dono_do_gesto(relativo)
     if alvo is None:
-        # A PASTA INTEIRA PODE NÃO ESTAR AQUI, e aí não é defeito:
-        # `docs/process` é `.gitignore`, logo um clone limpo não a tem e a
-        # mesa tem de subir assim mesmo. O que É defeito é a pasta estar no
-        # disco e o dono ter sumido DELA — aí alguém o moveu, e devolver `{}`
-        # aqui faria o gesto morrer calado. Instrumento que sabe do próprio
-        # risco RESOLVE; este levanta.
-        if (RAIZ / pathlib.Path(relativo).parent).is_dir():
-            raise FileNotFoundError(
-                f"o dono do gesto sumiu: {relativo} — não está na pasta nem "
-                f"em {_ARQUIVADOS}/. Sem ele os testes caem na procedência "
-                f"(canal, report, offset) e param de dizer o que fazer.")
-        return {}
+        # O SILÊNCIO ACABOU DE VEZ — 20/09/2026. Enquanto o dono morava em
+        # `docs/process/` (`.gitignore`), a ausência da pasta inteira era
+        # legítima num clone limpo, e este motor devolvia `{}` calado; o preço
+        # foi o defeito acima. Em `docs/method/` o arquivo é RASTREADO: ele
+        # não pode faltar num checkout, e faltar significa que alguém o moveu
+        # ou apagou. Instrumento que sabe do próprio risco RESOLVE; este
+        # levanta, sempre, com o nome do arquivo na mão.
+        raise FileNotFoundError(
+            f"o dono do gesto sumiu: {relativo} — ele é versionado, logo a "
+            "ausência é remoção, não ambiente. Sem ele os testes caem na "
+            "procedência (canal, report, offset) e param de dizer o que fazer.")
     fora: dict[str, list[tuple[str, str]]] = {}
     atual = ""
     campos: dict[str, list[str]] = {}

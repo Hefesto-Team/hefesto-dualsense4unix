@@ -89,7 +89,7 @@ EOF
         printf 'POLÍTICA (RADIO-ABERTO-01/E7): o core do bluetoothd NUNCA sai desta máquina.\n'
         printf 'Ele contém todas as LinkKeys, LTKs e IRKs residentes, mais os MACs e nomes\n'
         printf 'de todos os aparelhos da casa. Para relatar upstream vai o BACKTRACE\n'
-        printf '(coredumpctl info), nunca o core. Ver docs/process/POLITICA-core-nunca-sai-da-maquina.md\n'
+        printf '(coredumpctl info), nunca o core. Ver docs/method/POLITICA-core-nunca-sai-da-maquina.md\n'
         ;;
     --off)
         rm -f "${SYSCTL_FILE}" "${DROPIN_FILE}"

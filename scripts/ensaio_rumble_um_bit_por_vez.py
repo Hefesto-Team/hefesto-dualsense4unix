@@ -6,7 +6,7 @@ O que falta depois da bancada de 10/08/2026
 Naquele ensaio ficou provado, com o controle na mão dela: `common[3]` (strong)
 é o motor esquerdo, `common[2]` (weak) é o direito, e o zero para de fato.
 Sabemos que o CONJUNTO funciona. Não sabemos **de quantos bits o aparelho
-precisa** — e essa é a poda que sobra (`docs/process/METODO-DE-ISOLAMENTO.md`,
+precisa** — e essa é a poda que sobra (`docs/method/METODO-DE-ISOLAMENTO.md`,
 Passo 7).
 
 Os bits estão em `core/backend_pydualsense.py:761-767`::

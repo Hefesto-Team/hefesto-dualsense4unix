@@ -128,7 +128,7 @@ import prosa_do_codigo  # o irmão nesta pasta
 
 RAIZ = Path(__file__).resolve().parents[1]
 CSV = RAIZ / "docs" / "data" / "paridade-gtk-html.csv"
-DOC = RAIZ / "docs" / "process" / "2026-09-03-O-TERCEIRO-NUMERO-a-paridade-com-a-gtk.md"
+DOC = RAIZ / "docs" / "method" / "2026-09-03-O-TERCEIRO-NUMERO-a-paridade-com-a-gtk.md"
 MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 
 COLUNAS = [

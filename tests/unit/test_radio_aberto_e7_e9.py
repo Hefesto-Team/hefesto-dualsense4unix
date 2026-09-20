@@ -30,7 +30,7 @@ import re
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-POLITICA = REPO_ROOT / "docs" / "process" / "POLITICA-core-nunca-sai-da-maquina.md"
+POLITICA = REPO_ROOT / "docs" / "method" / "POLITICA-core-nunca-sai-da-maquina.md"
 
 #: Onde o portão varre. `docs/` e `scripts/` são o que a casa publica e executa.
 RAIZES = (REPO_ROOT / "docs", REPO_ROOT / "scripts")
