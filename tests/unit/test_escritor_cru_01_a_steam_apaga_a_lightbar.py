@@ -40,13 +40,16 @@ aparelho. A sonda é injetada; o relógio é parâmetro.
 from __future__ import annotations
 
 import asyncio
+import os
 from collections.abc import Callable, Iterable, Mapping
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
+from unittest import mock
 
 import pytest
 
+import hefesto_dualsense4unix.core.escritor_cru as _escritor_cru
 import hefesto_dualsense4unix.daemon.connection as conn_mod
 from hefesto_dualsense4unix.app.widgets.controller_card import (
     ROTULO_LIGHTBAR_SEGURADA,
@@ -493,12 +496,24 @@ def test_o_campo_da_disputa_sai_da_foto_e_nunca_de_um_dible() -> None:
     # também não é motivo para acender aviso.
     assert handler._lightbar_disputada(UNIQ_A, nos) is False
 
+    # ESCRITOR-CRU-03 (19/09/2026): o PID da foto tem de estar VIVO. Esta
+    # linha guardava um `4242` inventado, e passava porque o campo LEMBRAVA a
+    # foto em vez de conferi-la — o mesmo motivo por que o aviso continuava
+    # aceso sete segundos depois de a Steam levar SIGTERM. `os.getpid()` é o
+    # único PID que um teste pode afirmar que existe.
     daemon._sentinela_de_escritor_cru._veredito = Veredito(
-        sondado_em=1.0, por_no={NO_A: (4242,)}
+        sondado_em=1.0, por_no={NO_A: (os.getpid(),)}
     )
     assert handler._lightbar_disputada(UNIQ_A, nos) is True
     assert handler._lightbar_disputada(UNIQ_B, nos) is False, "respingou no vizinho"
     assert handler._lightbar_disputada(None, nos) is False
+
+    # E o processo MORTO para de acusar, que é a cura de 19/09.
+    daemon._sentinela_de_escritor_cru._veredito = Veredito(
+        sondado_em=1.0, por_no={NO_A: (4242,)}
+    )
+    with mock.patch.object(_escritor_cru, "processo_vivo", lambda _p: False):
+        assert handler._lightbar_disputada(UNIQ_A, nos) is False
 
 
 def test_o_modo_nativo_continua_vencendo_o_aviso_da_disputa() -> None:

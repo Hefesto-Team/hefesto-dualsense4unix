@@ -1206,11 +1206,16 @@ def _nos_segurados_agora(daemon: DaemonProtocol) -> frozenset[str]:
     diário — o que não acontece quando ele roda em primeiro plano, fora da unit
     (`daemon start --foreground`), e ali um "não achei a linha" viraria "nasceu
     limpa".
+
+    **ESCRITOR-CRU-03 (19/09/2026): `de_fato`, porque o nome diz AGORA.** A
+    foto podia ser de trinta segundos atrás e um PID morto nela carimbava o
+    nascimento como `suspeita` — uma acusação sobre processo que não existe
+    mais. Conferir os PIDs custa um `stat` cada e só pode retirar acusação.
     """
     with contextlib.suppress(Exception):
         veredito = sentinela_de_escritor_cru_de(daemon).veredito
         if veredito.sondado:
-            return frozenset(veredito.nos_segurados)
+            return frozenset(veredito.nos_segurados_de_fato())
     return frozenset()
 
 
