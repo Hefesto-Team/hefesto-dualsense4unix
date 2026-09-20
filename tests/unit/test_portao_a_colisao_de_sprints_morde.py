@@ -36,6 +36,34 @@ import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ / "scripts" / "check_colisao_de_sprints.py"
+SPRINTS = RAIZ / "docs" / "process" / "sprints"
+
+# ESTA RÉGUA É VERSIONADA E OS DOIS ALVOS DELA NÃO SÃO (20/09/2026).
+#
+# `scripts/check_colisao_de_sprints.py` é `.gitignore:194` e `docs/process/` é
+# `.gitignore:178` — o despacho e a costura de leva saíram do repositório, e as
+# réguas cujo insumo saiu junto ficaram. Logo, num clone limpo ou numa árvore
+# de agente recém-criada, o `exec_module` abaixo levantava `FileNotFoundError`
+# **na COLETA**, e pytest devolvia `Interrupted: 1 error during collection`:
+# o LOTE INTEIRO morria, e `no tests ran` lê-se como limpo. É a mesma família
+# do `release.yml` que cai no clone limpo porque 129 réguas leem `docs/process`.
+#
+# O `skip` de módulo não é afrouxamento: onde o alvo EXISTE nada muda, e onde
+# ele não existe a régua passa a dizer por quê, em vez de derrubar o lote
+# calada. Quem quiser o portão de volta copia os dois ignorados para a árvore —
+# é o que o CLAUDE.md manda fazer antes de medir.
+if not SCRIPT.exists() or not SPRINTS.is_dir():
+    _faltam = [
+        str(alvo.relative_to(RAIZ))
+        for alvo, ok in ((SCRIPT, SCRIPT.exists()), (SPRINTS, SPRINTS.is_dir()))
+        if not ok
+    ]
+    pytest.skip(
+        "o insumo desta régua é IGNORADO pelo git e não veio para esta árvore: "
+        + ", ".join(_faltam)
+        + " — copie-os da árvore de quem despacha antes de medir.",
+        allow_module_level=True,
+    )
 
 _spec = importlib.util.spec_from_file_location("_colisao", SCRIPT)
 assert _spec and _spec.loader
