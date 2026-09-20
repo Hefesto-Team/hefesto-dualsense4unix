@@ -3828,7 +3828,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         #
         # O QUE O DAEMON DESTA ÁRVORE RESPONDE, medido em 06/09/2026: o corpo
         # de `mic.canal.set` NÃO traz `por_uniq` — quem o traz é o
-        # `mic.volume.set` (`daemon/ipc_handlers.py:6192`). O ato do microfone
+        # `mic.volume.set` (`daemon/ipc_handlers.py:6500`). O ato do microfone
         # monta a resposta em `AtoDoMicrofone.como_corpo`
         # (`daemon/subsystems/hotkey.py:1567`), e lá o campo não existe. Então
         # `alvo_honrado` devolve `None` aqui, esta linha fica CALADA contra o
@@ -4580,7 +4580,7 @@ METODOS: set[str] = set()
 #: sozinha que o gesto pegou.
 #:
 #: O `machine.declare` está **fora do `daemon.state_full` de propósito**, e o
-#: handler diz a razão (`ipc_handlers.py:6832`): *"aquilo é o tique de 20 Hz, e
+#: handler diz a razão (`ipc_handlers.py:7104`): *"aquilo é o tique de 20 Hz, e
 #: a declaração muda por gesto dela, não por quadro"*. Ele grava em disco
 #: (`maquina.json`), e a única confirmação é o `(ok, motivo)` da chamada — que é
 #: exatamente por que o gesto levanta com o motivo em vez de voltar calado.
