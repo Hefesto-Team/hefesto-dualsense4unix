@@ -736,6 +736,13 @@ class Daemon:
     # Estado de emulação (mouse/gamepad) capturado ANTES do Modo Nativo, para
     # restaurar ao desligar (o release apaga os flags próprios).
     _native_emu_stash: dict[str, Any] = field(default_factory=dict)
+    # O-NO-NASCE-FECHADO-01 (auditoria de 20/09/2026): os `/dev/hidrawN` que a
+    # exposição do Modo Nativo segura AGORA. É a contabilidade que faz a
+    # exposição seguir o APARELHO em vez do instante — ver
+    # `_reconciliar_exposicao_do_modo_nativo`. Leia sempre por
+    # `_nos_do_modo_nativo_vivos()`: os dublês da suíte nascem de
+    # `Daemon.__new__` e não têm campo nenhum.
+    _nos_do_modo_nativo: set[str] = field(default_factory=set)
     # FEAT-PROFILE-MODE-01: qual MODO o perfil ativo ligou ("native"|"gamepad"|
     # None). Perfis sem seção `mode` só revertem modo cuja origem foi PERFIL —
     # gesto manual da usuária nunca é derrubado por autoswitch (mesma semântica
@@ -972,6 +979,16 @@ class Daemon:
             # O gate de dispatch é o próprio _native_mode (consultado no poll
             # loop); não força _paused (evita conflatar com o pause manual).
             self.store.set_native_mode_active(True)
+            # O-NO-NASCE-FECHADO-01 (auditoria de 20/09/2026, bloqueante 1): a
+            # EXPOSIÇÃO do físico não entra aqui, e não é esquecimento. Neste
+            # ponto do boot o backend ainda não abriu handle nenhum — o
+            # `nos_hidraw_por_uniq` devolveria vazio e um pedido aqui seria
+            # verde sobre nada. Quem expõe é
+            # `_reconciliar_exposicao_do_modo_nativo`, no tique lento do
+            # `_poll_loop`, que reencontra os nós quando eles existirem.
+            # CHAMAR `set_native_mode(True)` AQUI NÃO RESOLVERIA: ele tem
+            # early-return de idempotência (`if enabled == self._native_mode`)
+            # e `_native_mode` acabou de ser lido do disco como True.
         # FEAT-MOUSE-PERSIST-01: restaura a emulação de mouse se a sessão anterior
         # a deixou ligada — antes o toggle voltava ao default (off) a cada restart
         # do daemon (reboot, takeover, reload). Só liga; nunca força off.
@@ -1107,6 +1124,11 @@ class Daemon:
             # VPAD-02, respawn de coop) e o vpad herda calibração canônica
             # (drift do gyro). Mesmo gate de backend real dos wirings acima.
             self._wire_feature_opener()
+            # O-NO-NASCE-FECHADO-01: a fábrica de exposição do nó, e ela tem
+            # de vir ANTES do connect abaixo — é o primeiro `_open_one` que
+            # precisa dela. Com a regra udev da cura e sem este wiring, o
+            # `hidapi.Device(path=…)` volta EACCES para TODOS os controles.
+            self._wire_exposicao_do_no()
             # BUG-DAEMON-NO-DEVICE-FATAL-01: tentativa inicial best-effort.
             # No caminho real, se o controle estiver ausente, o backend
             # PyDualSenseController.connect() trata "No device detected" em
@@ -1320,6 +1342,11 @@ class Daemon:
             self._native_mode = True
             self.store.set_native_mode_active(True, origin=origin)
             save_native_mode(True, emu_stash=self._native_emu_stash)
+            # O-NO-NASCE-FECHADO-01: o pedido de exposição vai ANTES do
+            # release. O release desce até o `restore` do ungrab, e com o nó
+            # nascendo fechado esse caminho FECHA — pedir depois seria abrir,
+            # fechar e deixar o jogo achar a porta trancada.
+            self._exposicao_do_modo_nativo(True)
             self._release_controller_to_game()
         else:
             self._native_mode = False
@@ -1341,6 +1368,11 @@ class Daemon:
             if reapply or restore_stash:
                 self._restore_emulation_from_stash()
             self._native_emu_stash = {}
+            # O-NO-NASCE-FECHADO-01: solta a exposição DEPOIS de o grab
+            # voltar. Soltar antes deixaria uma fresta entre o nó fechar e o
+            # daemon reassumir — curta, mas é exatamente o tipo de janela que
+            # esta cura existe para não ter.
+            self._exposicao_do_modo_nativo(False)
         if origin == "manual":
             self._mode_from_profile = None
         # DEDUP-04: o Modo Nativo muda o conteúdo das envs de launch
@@ -4496,6 +4528,194 @@ class Daemon:
         except Exception as exc:
             logger.warning("feature_opener_wire_failed", err=str(exc))
 
+    def _wire_exposicao_do_no(self) -> None:
+        """O-NO-NASCE-FECHADO-01: injeta a fábrica de exposição no backend.
+
+        Sem ela, com a regra udev da cura instalada, o `hidapi.Device(path=…)`
+        do handle de controle volta `EACCES` para TODOS os controles — é o
+        único bloqueador real da cura, e a casa já escreveu isso em
+        `daemon/connection.py`. Mesmo molde do `_wire_feature_opener`: gate
+        por `hasattr` (FakeController fica de fora) e best-effort.
+        """
+        if not hasattr(self.controller, "set_exposicao_do_no"):
+            return
+        try:
+            from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+                make_exposicao_factory,
+            )
+
+            self.controller.set_exposicao_do_no(make_exposicao_factory(self))
+            logger.info("exposicao_do_no_wired")
+        except Exception as exc:
+            logger.warning("exposicao_do_no_wire_failed", err=str(exc))
+
+    def _nos_do_modo_nativo_vivos(self) -> set[str]:
+        """Os nós que a exposição do Modo Nativo segura AGORA. Dono único.
+
+        O `Daemon` é dataclass e o campo `_nos_do_modo_nativo` é declarado lá
+        em cima — mas a suíte constrói dublês por `Daemon.__new__`, que pula o
+        `__init__` e não tem campo nenhum. Um `getattr` no ponto de uso
+        resolveria, e foi assim que esta casa já criou estado que diverge: com
+        quatro pontos de uso, um deles esquece o default. Aqui há UM dono, e
+        ele se garante sozinho.
+        """
+        nos = getattr(self, "_nos_do_modo_nativo", None)
+        if not isinstance(nos, set):
+            nos = set()
+            self._nos_do_modo_nativo = nos
+        return nos
+
+    def no_exposto_pelo_modo_nativo(self, path: str) -> bool:
+        """`path` está aberto por causa do Modo Nativo, e tem de continuar?
+
+        Quem pergunta é o `make_exposicao_factory`, a fábrica do `with` que o
+        `_open_one` do backend usa para abrir o handle de controle
+        (`hidapi.Device(path=…)`, que não aceita fd).
+
+        POR QUE A PERGUNTA EXISTE. A lease de exposição do broker é por
+        CONEXÃO: o pedido do Modo Nativo e o `with` transitório do `_open_one`
+        saem do MESMO cliente, logo da mesma conexão, logo do mesmo `held`. O
+        `unexpose` do `finally` acharia o nó no `held`, veria `refcount == 1`
+        e mandaria o nó para o REPOUSO — fechando, no meio do Modo Nativo, o
+        nó que o jogo está usando. A reconciliação do tique reabriria em até
+        2 s, e 2 s é exatamente a janela que a Steam usa.
+
+        Então o `with` vira no-op quando o nó já está aberto pelo modo: não
+        expõe (já está) e não desexpõe (não foi ele que pediu).
+        """
+        return path in self._nos_do_modo_nativo_vivos()
+
+    @staticmethod
+    def _no_de_fisico_esta_aberto(no: str) -> bool:
+        """O nó responde a QUEM VAI ABRIR — o jogo, com o uid dela.
+
+        Pergunta ao APARELHO, não à lembrança. É o que separa «o broker acha
+        que expôs» de «o nó está aberto»: num replug o `/dev/hidrawN` renasce
+        `0600 root` pela regra udev, e se o número for o mesmo a contabilidade
+        do broker continua dizendo «exposto» sobre um nó que já não está.
+        """
+        try:
+            return os.access(no, os.R_OK | os.W_OK)
+        except OSError:
+            return False
+
+    def _exposicao_do_modo_nativo(self, ligar: bool) -> None:
+        """Abre (ou solta) o físico para o JOGO enquanto o Modo Nativo dura.
+
+        O-NO-NASCE-FECHADO-01, item 2 do que faltava. No Modo Nativo quem abre
+        o `/dev/hidraw` do físico é o JOGO, por caminho e com o uid dela —
+        pelo SDL/HIDAPI dele ou pelo winebus do Proton, que dá hidraw à
+        família Sony por default. São processos de TERCEIRO: não há fd a
+        passar, não há wrapper a instrumentar, e o `hefesto-launch.sh` só
+        repassa env. Com o nó nascendo fechado, a única cura possível é o
+        broker pôr a ACL de volta enquanto o modo estiver ligado.
+
+        Até 20/09/2026 essa exposição vinha DE CARONA: `set_gamepad_emulation
+        (False)` descia até o `restore` do ungrab, que caía no ramo «não
+        rastreado» do broker. Funcionava por acidente, não por desenho — e com
+        o nó fechado aquele ramo passa a FECHAR, que é o certo.
+
+        É o GESTO — o instante em que o modo liga ou desliga. Quem o mantém
+        vivo no tempo é `_reconciliar_exposicao_do_modo_nativo`, no tique.
+        """
+        self._reconciliar_exposicao_do_modo_nativo(ligar=ligar)
+
+    def _reconciliar_exposicao_do_modo_nativo(
+        self, *, ligar: bool | None = None
+    ) -> None:
+        """A exposição do Modo Nativo segue o APARELHO, não o instante.
+
+        AUDITORIA DA O-NO-NASCE-FECHADO-01 (20/09/2026), bloqueantes 1 e 2 —
+        e os dois eram o MESMO defeito: a exposição era um ato único, disparado
+        pelo gesto de ligar o modo. Um ato único não sobrevive a nada.
+
+        1. **Não sobrevivia a REINICIAR o daemon.** No boot, `start()` lê o
+           modo do disco (`load_native_mode`) e escreve o flag direto em
+           `_native_mode` + `store` — `set_native_mode()` NÃO é chamado, e o
+           early-return de idempotência dele (`if enabled == self._native_mode`)
+           faz com que religar o modo pela tela também não chame. Resultado
+           com a cura instalada: rebootar em Modo Nativo deixava o nó
+           `0600 root` e o jogo levava `EACCES`, sem conserto pela interface.
+        2. **Não sobrevivia a um REPLUG.** A lease apontava para um
+           `/dev/hidrawN` CONCRETO. Cabo↔rádio, hub, controle que dorme: o nó
+           renasce fechado pela regra udev e não há notificação udev→broker.
+           Se o número mudasse, a lease ficava pendurada num nó morto; se
+           fosse o mesmo, a contabilidade do broker seguia dizendo «exposto».
+
+        A CURA NÃO PRECISOU DE PEÇA NOVA, e é por isso que ela cabe aqui: quem
+        já sabe do aparelho a cada 2 s é o `_poll_loop`, e quem já reaplica a
+        ACL sem acreditar em memória é o próprio broker — o `_cmd_expose`
+        SEMPRE toca o fs antes de contabilizar («um nó recriado com o mesmo
+        `hidrawN` nasceu FECHADO pela regra udev, e o estado em memória não é
+        prova de nada»). Faltava alguém PERGUNTAR de novo. É este laço.
+
+        TRÊS ATOS, nesta ordem, e nenhum é o mesmo:
+          1. SOLTAR o que saiu da mesa — ou tudo, quando o modo desliga;
+          2. EXPOR o que entrou;
+          3. REAFIRMAR o que renasceu fechado — medido no nó (`os.access`),
+             não na lembrança. Sem isto o replug que devolve o MESMO número
+             passa despercebido.
+
+        O custo por tique com tudo em ordem: um `os.access` por controle. O
+        `_logar_transicao` do cliente já rebaixa reafirmação a `debug`, então
+        isto não volta a encher o journal como o `hidraw_broker_hidden` de
+        15/08 (717 linhas em 2 h 51).
+
+        Best-effort integral: broker ausente ⇒ nada acontece e o modo segue
+        (numa máquina sem a cura, o nó já está aberto).
+        """
+        with contextlib.suppress(Exception):
+            if ligar is None:
+                ligar = bool(getattr(self, "_native_mode", False))
+            segurados = self._nos_do_modo_nativo_vivos()
+            anteriores = set(segurados)
+            alvo: set[str] = set()
+            if ligar:
+                nos_fn = getattr(self.controller, "nos_hidraw_por_uniq", None)
+                if callable(nos_fn):
+                    alvo = {
+                        no
+                        for no in (nos_fn() or {}).values()
+                        if isinstance(no, str) and no.startswith("/dev/hidraw")
+                    }
+            if not alvo and not anteriores:
+                return
+            from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+                broker_call_nonblocking,
+                broker_client_for,
+            )
+
+            client = broker_client_for(self)
+
+            def _pedido(no_alvo: str, expor: bool) -> Any:
+                """Fecha sobre `no_alvo` de VERDADE — a lambda no laço não fecha.
+
+                Uma `lambda: client.expor(no)` dentro do `for` lê o `no` da
+                ÚLTIMA volta quando o executor a chama: os quatro controles
+                virariam quatro pedidos para o mesmo nó. O truque do argumento
+                com default resolveria, mas é o mesmo defeito escrito de um
+                jeito que o mypy não consegue inferir; a fábrica resolve os
+                dois.
+                """
+                if expor:
+                    return lambda: client.expor(no_alvo)
+                return lambda: client.desexpor(no_alvo)
+
+            # O conjunto vivo passa a ser o alvo ANTES dos pedidos: os pedidos
+            # vão para o executor (Onda S #6/#10 — I/O de socket nunca na
+            # thread do event loop) e o tique seguinte não pode reencontrar a
+            # contabilidade de antes e pedir tudo de novo.
+            segurados.clear()
+            segurados.update(alvo)
+            for no in sorted(anteriores - alvo):
+                broker_call_nonblocking(self, _pedido(no, False))
+            for no in sorted(alvo - anteriores):
+                broker_call_nonblocking(self, _pedido(no, True))
+            for no in sorted(alvo & anteriores):
+                if self._no_de_fisico_esta_aberto(no):
+                    continue
+                broker_call_nonblocking(self, _pedido(no, True))
+
     def _any_game_session_open(self) -> bool:
         """Agregado `game_open` de TODOS os vpads (P1 + co-op, NUMA-01).
 
@@ -4831,6 +5051,12 @@ class Daemon:
         # sumir de vez, que é justamente a queixa que o R-03 cura. Custo por
         # tick sem pendência: uma comparação de float.
         mode_pending_next_at: float = 0.0
+        # O-NO-NASCE-FECHADO-01 (auditoria de 20/09/2026): a exposição do Modo
+        # Nativo, reconciliada no MESMO tique lento e TAMBÉM antes do gate de
+        # conexão — pela razão dos seis blocos acima e por uma própria: é com
+        # o controle FORA da mesa que a lease tem de ser solta. Custo por
+        # tique fora do Modo Nativo: uma comparação de float.
+        exposicao_nativa_next_at: float = 0.0
         from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
         previous_buttons: frozenset[str] = frozenset()
         # BUG-DAEMON-CONNECT-GHOST-INPUT-01: rastreia a borda
@@ -4869,6 +5095,15 @@ class Daemon:
                 # ABA-DO-JOGO-01: AGENDA (não espera) — ver
                 # `_schedule_steam_jogo_tick`, no molde do tique dos externos.
                 self._schedule_steam_jogo_tick()
+            if tick_started >= exposicao_nativa_next_at:
+                exposicao_nativa_next_at = tick_started + 2.0
+                # É AQUI que o Modo Nativo sobrevive a um reinício do daemon e
+                # a um replug — os dois bloqueantes da auditoria de 20/09. O
+                # boot NÃO chama `set_native_mode` (lê o flag do disco direto
+                # em `_native_mode`), então a exposição não pode depender do
+                # gesto; e a lease aponta para um `/dev/hidrawN` que o replug
+                # refaz FECHADO. Nunca derruba o poll loop.
+                self._reconciliar_exposicao_do_modo_nativo()
             if tick_started >= mode_pending_next_at:
                 mode_pending_next_at = tick_started + 1.0
                 # R-03: DEPOIS do `_sync_game_signal` de propósito — a guarda de

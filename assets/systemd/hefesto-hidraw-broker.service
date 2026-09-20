@@ -35,9 +35,24 @@ ExecStart=/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker
 # uid autorizado (a sessão dona); gravado pelo install a partir de SUDO_UID.
 # O broker RECUSA uid 0 (lição 6: render errado nunca vira broker de root).
 Environment=HEFESTO_BROKER_ALLOWED_UID=__SESSION_UID__
-# Baseline limpo no start: nunca herda um físico escondido órfão.
-ExecStartPre=/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker --restore-all-and-exit
-# Se o broker cai/é parado, RESTAURA todo físico escondido (belt final).
+# O-NO-NASCE-FECHADO-01 (decisão dela, 20/09/2026): "1" quando o
+# 70-ps5-controller.rules instalado FECHA o nó do DualSense físico
+# (TAG-="uaccess", 0600 root) e o broker é quem o abre sob pedido. Renderizado
+# pelo install; `--no-fechar-o-no` instala a regra aberta e renderiza 0.
+# É este env que acopla as duas metades: a udev decide o NASCIMENTO do nó, e o
+# broker precisa saber qual é o REPOUSO para onde devolve o nó no restore/EOF.
+Environment=HEFESTO_BROKER_NO_NASCE_FECHADO=__NO_NASCE_FECHADO__
+# Baseline no start, e a DIREÇÃO depende da cura. Com o nó nascendo fechado, um
+# `--restore-all-and-exit` aqui DESFARIA a cura a cada start/restart do broker,
+# para todo controle conectado naquele instante — a colisão medida em 20/09. O
+# `--fechar-tudo-e-sair` fecha o que a regra udev não alcançou (o controle que
+# já estava conectado) e, sem a cura instalada, cai sozinho no comportamento
+# histórico: uma unit só serve às duas máquinas, sem branch no systemd.
+ExecStartPre=/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker --fechar-tudo-e-sair
+# Se o broker cai/é parado, RESTAURA todo físico escondido (belt final). Este
+# ABRE mesmo com a cura, e é de propósito: broker fora do ar é broker que
+# deixou de ser a porta, e um nó 0600 sem porta só volta com sudo. Num app de
+# acessibilidade o piso de recuperação vale mais que a janela de risco.
 ExecStopPost=/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker --restore-all-and-exit
 Restart=on-failure
 RestartSec=1

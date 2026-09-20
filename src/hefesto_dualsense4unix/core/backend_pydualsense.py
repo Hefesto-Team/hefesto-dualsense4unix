@@ -27,6 +27,7 @@ import fcntl
 import os
 import threading
 import time
+from contextlib import AbstractContextManager
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any
 
@@ -1928,6 +1929,14 @@ class PyDualSenseController(IController):
     controle primário. Ver o cabeçalho do módulo (FEAT-DSX-MULTI-CONTROLLER-01).
     """
 
+    #: O-NO-NASCE-FECHADO-01 (20/09/2026) — a fábrica do `with` que mantém o
+    #: nó hidraw ABERTO enquanto o `hidapi.Device(path=...)` do `_open_one`
+    #: entra. Default de CLASSE pela mesma razão dos de `_PinnedPyDualSense`:
+    #: nove arquivos da suíte constroem controller/handles por `__new__`, e um
+    #: dublê mais POBRE que o produto esconde defeito em vez de revelar.
+    #: `None` = ninguém injetou (CLI, dublê) ⇒ abre por caminho como sempre.
+    _exposicao_do_no: Callable[[str], AbstractContextManager[bool]] | None = None
+
     def __init__(self, evdev_reader: EvdevReader | None = None) -> None:
         # chave (serial/MAC ou path) -> handle aberto. O `dict` preserva ordem
         # de inserção (py3.7+): o 1º inserido que ainda estiver presente é o
@@ -2033,6 +2042,9 @@ class PyDualSenseController(IController):
         # `make_broker_opener` (fd root via SCM_RIGHTS, funciona com o nó
         # escondido); None = `os.open` por caminho (comportamento histórico).
         self._feature_opener: Callable[[str], int] | None = None
+        # O-NO-NASCE-FECHADO-01: a instância nasce com o default de classe
+        # (None). Quem injeta é o daemon, em `_wire_exposicao_do_no`.
+        self._exposicao_do_no = None
         # REPLICA-03: camada GAME do desejado — o que o JOGO escreveu no vpad
         # deste controle (lightbar/player-LED), replicado pelo daemon. É o TOPO
         # do merge de `_merged_desired_for_key` (jogo vence override, auto e
@@ -2339,6 +2351,25 @@ class PyDualSenseController(IController):
         """
         with self._io_lock:
             self._feature_opener = fn
+
+    def set_exposicao_do_no(
+        self, fn: Callable[[str], AbstractContextManager[bool]] | None
+    ) -> None:
+        """Injeta (ou remove, com None) a fábrica de exposição do nó hidraw.
+
+        O-NO-NASCE-FECHADO-01 (20/09/2026) — irmã de `set_feature_opener`, e
+        pela razão OPOSTA. Aquela existe porque o broker sabe servir um fd;
+        esta existe porque o `hidapi` **não aceita fd**: o handle de controle
+        nasce de `hidapi.Device(path=...)`, e com o nó do físico nascendo
+        `0600 root` (`TAG-="uaccess"`) o `open(2)` de dentro do hidapi volta
+        `EACCES` — para TODOS os controles. Este é o único bloqueador real da
+        cura, e a única saída é o nó estar exposto DURANTE o open.
+
+        O daemon injeta `make_exposicao_factory(daemon)` (broker primeiro,
+        contexto inócuo quando não há broker). Consultado por `_open_one`.
+        """
+        with self._io_lock:
+            self._exposicao_do_no = fn
 
     def set_primary_change_observer(
         self, fn: Callable[[str | None, str | None], None] | None
@@ -3057,6 +3088,38 @@ class PyDualSenseController(IController):
         return out
 
     def _open_one(self, path: bytes, *, is_edge: bool) -> pydualsense | None:
+        """Abre UM controle por `path`, DENTRO de uma exposição do nó.
+
+        O-NO-NASCE-FECHADO-01 (20/09/2026). Com a regra udev da cura, o nó do
+        DualSense físico nasce `0600 root` e o `hidapi.Device(path=...)` que
+        abre este handle volta `EACCES` — o hidapi não aceita fd, e reabrir
+        por `/proc/self/fd/N` refaz a checagem de permissão no inode, então
+        não há como reapontar isto para o broker. O que há é pedir ao broker
+        que exponha o nó, abrir, e soltar o pedido: é o que este `with` faz.
+
+        A janela cobre o `join` do runner, não o runner inteiro — um `init()`
+        que estoure o timeout e abra DEPOIS encontra o nó já fechado e falha,
+        e essa falha é tratada pelo handoff atômico que já existia (o handle
+        órfão é fechado pela própria thread). Alargar a janela até a thread
+        acabar seria manter o físico aberto por tempo indeterminado, que é
+        exatamente a janela que a cura fecha.
+
+        Sem fábrica injetada (CLI, dublê, máquina sem a cura instalada) o
+        contexto é inócuo e o comportamento é o histórico: abre por caminho.
+        """
+        exposicao = self._exposicao_do_no
+        no = path.decode("utf-8", "replace")
+        if exposicao is None or not no.startswith("/dev/hidraw"):
+            return self._abrir_handle_pinado(path, is_edge=is_edge)
+        try:
+            contexto = exposicao(no)
+        except Exception as exc:  # fábrica quebrada NUNCA derruba o connect
+            logger.warning("exposicao_do_no_falhou", path=no, err=str(exc))
+            return self._abrir_handle_pinado(path, is_edge=is_edge)
+        with contexto:
+            return self._abrir_handle_pinado(path, is_edge=is_edge)
+
+    def _abrir_handle_pinado(self, path: bytes, *, is_edge: bool) -> pydualsense | None:
         """Abre UM controle por `path`, com a guarda de timeout do init.
 
         Retorna o handle aberto, ou None se o device sumiu entre o enumerate e

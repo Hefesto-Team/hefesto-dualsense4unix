@@ -72,11 +72,19 @@ declare -F step >/dev/null 2>&1 || step() { printf '\n[%s] %s\n' "$1" "$2"; }
 # test_install_broker_step.py).
 _render_broker_units() {
     local service_src="$1" socket_src="$2" out_dir="$3" uid="$4" grupo="$5"
-    sed "s/__SESSION_UID__/${uid}/" "${service_src}" \
+    # O-NO-NASCE-FECHADO-01: o 6º argumento é 1 quando a regra udev instalada
+    # FECHA o nó do físico. Default 1 — é DEFAULT POR ORDEM DELA ("isso deveria
+    # estar no install por default"), e um default 0 aqui faria a metade de
+    # cima da cura (a udev) ficar sem a metade de baixo (o broker): nó fechado
+    # que ninguém abre.
+    local fechado="${6:-1}"
+    sed -e "s/__SESSION_UID__/${uid}/" -e "s/__NO_NASCE_FECHADO__/${fechado}/" \
+        "${service_src}" \
         > "${out_dir}/hefesto-hidraw-broker.service"
     sed "s/__SESSION_GROUP__/${grupo}/" "${socket_src}" \
         > "${out_dir}/hefesto-hidraw-broker.socket"
-    if grep -q '__SESSION_' "${out_dir}/hefesto-hidraw-broker.service" \
+    if grep -q '__SESSION_\|__NO_NASCE_FECHADO__' \
+            "${out_dir}/hefesto-hidraw-broker.service" \
             "${out_dir}/hefesto-hidraw-broker.socket"; then
         return 1
     fi
@@ -86,10 +94,18 @@ _render_broker_units() {
 # udev no host — compartilhado por todos os formatos (o pacote .deb já cobre
 # via postinst; flatpak/appimage/native precisam desta chamada explícita).
 install_udev_host() {
+    # O-NO-NASCE-FECHADO-01: o opt-out viaja para o instalador das regras. Sem
+    # este repasse a flag mudaria só o broker, e as duas metades da cura
+    # ficariam em desacordo — nó aberto com broker achando que fecha, ou o
+    # contrário. A ausência da flag é o DEFAULT DELA: o nó nasce fechado.
+    local _udev_args=()
+    if [[ "${ABRIR_O_NO:-0}" -eq 1 ]]; then
+        _udev_args+=(--no-fechar-o-no)
+    fi
     if [[ "${SKIP_UDEV}" -eq 1 ]]; then
         printf '      udev pulado (--no-udev) — rode depois: sudo bash scripts/install_udev.sh\n'
     elif command -v sudo >/dev/null 2>&1; then
-        if bash "${ROOT_DIR}/scripts/install_udev.sh" >/dev/null 2>&1; then
+        if bash "${ROOT_DIR}/scripts/install_udev.sh" "${_udev_args[@]}" >/dev/null 2>&1; then
             printf '      udev rules aplicadas + recarregadas\n'
         else
             warn "install_udev.sh falhou — rode manualmente: sudo bash scripts/install_udev.sh"
@@ -194,7 +210,8 @@ install_broker_host() {
     elif ! _render_broker_units \
             "${ROOT_DIR}/assets/systemd/hefesto-hidraw-broker.service" \
             "${ROOT_DIR}/assets/systemd/hefesto-hidraw-broker.socket" \
-            "${_broker_tmp}" "${_broker_uid}" "${_broker_grupo}"; then
+            "${_broker_tmp}" "${_broker_uid}" "${_broker_grupo}" \
+            "$(( ${ABRIR_O_NO:-0} == 1 ? 0 : 1 ))"; then
         warn "render das units do broker deixou placeholder __SESSION_* sobrando — broker NÃO instalado"
     elif ! sudo install -Dm755 "${_broker_bin_src}" "${_broker_bin_dst}" 2>/dev/null; then
         warn "não consegui gravar ${_broker_bin_dst}"
