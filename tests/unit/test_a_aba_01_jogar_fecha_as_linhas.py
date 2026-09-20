@@ -1047,7 +1047,7 @@ _ESTADO_DO_WEBKIT: dict[str, Any] = {
 #: nos campos que declaram cor própria.
 _LER_O_CADEADO = r"""
 (function(){
-  const c = document.querySelector('input[data-gesto="cadeado"]');
+  const c = document.querySelector('[data-gesto="cadeado"]');
   if(!c) return JSON.stringify({achou: false});
   const cs = getComputedStyle(c);
   return JSON.stringify({
@@ -1060,12 +1060,24 @@ _LER_O_CADEADO = r"""
 })()
 """
 
-#: O CLIQUE, na caixa do produto. Clicar por coordenada é a armadilha que esta
-#: casa já pagou duas vezes.
+#: O CLIQUE, no cadeado do produto. Clicar por coordenada é a armadilha que
+#: esta casa já pagou duas vezes.
+#:
+#: O SELETOR NÃO DIZ A TAG, e a razão é de 20/09/2026: ele dizia
+#: `input[data-gesto="cadeado"]` desde 06/09, e em 19/09 o cadeado virou
+#: `<button>` (`3bf938e46`, a trava do perfil virando a pílula do
+#: Giroscópio). Dez réguas passaram a reprovar com o produto intacto,
+#: dizendo «NAO ACHEI A CAIXA» sobre um cadeado que estava lá.
+#:
+#: O endereço deste elemento é o `data-gesto`, que é contrato com o
+#: gerador; a tag é decisão de desenho e pode mudar de novo amanhã. Uma
+#: régua que digita a tag mede a FORMA, não o endereço — é a mesma lição
+#: que esta casa já escreveu para o nó de áudio: propriedade de posse,
+#: nunca o rótulo.
 _CLICAR_NO_CADEADO = r"""
 (function(){
-  const c = document.querySelector('input[data-gesto="cadeado"]');
-  if(!c) return 'NAO ACHEI A CAIXA DO CADEADO NA PAGINA PUBLICADA';
+  const c = document.querySelector('[data-gesto="cadeado"]');
+  if(!c) return 'NAO ACHEI O CADEADO NA PAGINA PUBLICADA';
   c.click();
   return 'cliquei';
 })()
