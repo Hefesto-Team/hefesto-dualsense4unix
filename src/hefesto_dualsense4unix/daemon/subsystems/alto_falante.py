@@ -198,13 +198,26 @@ class GerenciadorDeNosDeSom:
     def nos(self) -> dict[str, Any]:
         return dict(self._nos)
 
-    def _construir(self, uniq: str, transporte: str, mesa: tuple[str, ...]) -> Any:
+    def _construir(
+        self,
+        uniq: str,
+        transporte: str,
+        mesa: tuple[str, ...],
+        *,
+        descricao: str | None = None,
+    ) -> Any:
         """O nó daquele controle, JÁ com rótulo próprio e rota resolvida.
 
         O rótulo e a rota nascem aqui e não dentro do nó porque quem sabe a
         MESA é este gerenciador: ``sink_do_controle`` precisa da lista inteira
         de ``uniq`` para casar a placa USB certa. Com um só, dois DualSense no
         cabo entregam o som do P2 no alto-falante do P1.
+
+        O parâmetro ``descricao``  (noqa-acento) nome de parâmetro
+        existe para UM chamador — a VOLTA de :meth:`_republicar`,
+        que precisa reerguer o nó com o rótulo que estava no ar, e não com o de
+        agora. Sem ela a volta seria uma segunda tentativa do mesmo ato que
+        acabou de falhar, e não um desfazer.
         """
         if self._fabrica is not None:
             return self._fabrica(uniq)
@@ -215,7 +228,9 @@ class GerenciadorDeNosDeSom:
 
         return SinkVirtualPipeWire(
             uniq=uniq,
-            descricao=descricao_do_alto_falante(uniq),
+            descricao=(
+                descricao_do_alto_falante(uniq) if descricao is None else descricao
+            ),
             rota=self._rota_de_agora(uniq, transporte, mesa),
         )
 
@@ -470,14 +485,14 @@ class GerenciadorDeNosDeSom:
                 self._derrubar(uniq)
         for uniq in alvos:
             transporte = vistos[uniq] or TRANSPORTE_CABO
-            # **E O RÓTULO VELHO DERRUBA O NÓ — O-NOME-DO-SOM-RENOMEIA-JUNTO-01,
+            # **E O RÓTULO VELHO REPUBLICA O NÓ — O-NOME-DO-SOM-RENOMEIA-JUNTO-01,
             # 20/09/2026.** Não há renomear no lugar (o `pactl` do PipeWire não
             # tem `update-sink-proplist` — medido), então o nó RENASCE com o
-            # nome de agora pelo caminho que já existe logo abaixo. As três
-            # recusas que impedem isto de virar um nó piscando estão em
-            # `_o_rotulo_envelheceu`.
+            # nome de agora. As três recusas que impedem isto de virar um nó
+            # piscando estão em `_o_rotulo_envelheceu`; a ORDEM que impede o nó
+            # de sumir está em `_republicar`.
             if uniq in self._nos and self._o_rotulo_envelheceu(uniq, self._nos[uniq]):
-                self._derrubar(uniq)
+                self._republicar(uniq, transporte, mesa)
             if uniq in self._nos:
                 # **NÃO É MAIS UM `continue` SECO — SOM-JUNTO-01, 17/09/2026.**
                 # Esta linha fechava a porta antes de perguntar qualquer coisa,
@@ -486,35 +501,127 @@ class GerenciadorDeNosDeSom:
                 # sem renascer — quem vai e volta é a ROTA.
                 self._reafinar(uniq, self._nos[uniq], transporte, mesa)
                 continue
-            no = self._construir(uniq, transporte, mesa)
-            # SEM ROTA, SEM NÓ — e a razão está na invariante 4 de
-            # `app/audio_saida.py`: *"um `module-null-sink` sozinho seria
-            # exatamente o sink que aceita o áudio e o joga fora"*. Publicar
-            # aqui poria uma entrada MUDA por DualSense na lista de som dela;
-            # ela escolhe uma das quatro e o som some.
-            #
-            # Isto NÃO contradiz `D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-SEMPRE`.
-            # A decisão dela é sobre o nó não sumir debaixo do jogo quando o
-            # controle troca de transporte ou pisca; esta guarda é sobre nunca
-            # PUBLICAR um nó que não entrega em lugar nenhum. `rota.motivo`
-            # carrega a frase honesta, e é ela que a tela mostra.
-            rota = getattr(no, "rota", None)
-            if rota is not None and not getattr(rota, "tem_rota", True):
-                logger.info(
-                    "som_no_sem_rota",
-                    uniq=uniq,
-                    motivo=str(getattr(rota, "motivo", "")),
-                )
-                continue
-            try:
-                subiu = bool(no.iniciar())
-            except Exception as exc:  # nunca derruba a varredura
-                logger.debug("som_no_falhou", uniq=uniq, err=str(exc))
-                continue
-            if subiu:
+            no = self._erguer(uniq, transporte, mesa)
+            if no is not None:
                 self._nos[uniq] = no
-            else:
-                logger.info("som_no_nao_subiu", uniq=uniq)
+
+    def _erguer(
+        self,
+        uniq: str,
+        transporte: str,
+        mesa: tuple[str, ...],
+        *,
+        descricao: str | None = None,
+    ) -> Any:
+        """Constrói e SOBE o nó daquele controle. `None` = não subiu.
+
+        **UM DONO SÓ PARA «PÔR UM NÓ DE PÉ», e a razão é medida:** desde
+        `O-NOME-DO-SOM-RENOMEIA-JUNTO-01` há DOIS momentos em que um nó nasce —
+        o do controle que chega e o do rótulo que envelheceu
+        (:meth:`_republicar`) — e uma segunda cópia destas guardas divergiria
+        no dia em que alguém acrescentasse uma. A que ficasse para trás seria
+        a do renascimento, que é a que some sem sintoma.
+
+        Este método **não** escreve em ``self._nos``: quem o chama decide o que
+        fazer com o nó que voltou, e é isso que deixa a volta de
+        :meth:`_republicar` ser uma volta.
+        """
+        no = self._construir(uniq, transporte, mesa, descricao=descricao)
+        # SEM ROTA, SEM NÓ — e a razão está na invariante 4 de
+        # `app/audio_saida.py`: *"um `module-null-sink` sozinho seria
+        # exatamente o sink que aceita o áudio e o joga fora"*. Publicar
+        # aqui poria uma entrada MUDA por DualSense na lista de som dela;
+        # ela escolhe uma das quatro e o som some.
+        #
+        # Isto NÃO contradiz `D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-SEMPRE`.
+        # A decisão dela é sobre o nó não sumir debaixo do jogo quando o
+        # controle troca de transporte ou pisca; esta guarda é sobre nunca
+        # PUBLICAR um nó que não entrega em lugar nenhum. `rota.motivo`
+        # carrega a frase honesta, e é ela que a tela mostra.
+        rota = getattr(no, "rota", None)
+        if rota is not None and not getattr(rota, "tem_rota", True):
+            logger.info(
+                "som_no_sem_rota",
+                uniq=uniq,
+                motivo=str(getattr(rota, "motivo", "")),
+            )
+            return None
+        try:
+            subiu = bool(no.iniciar())
+        except Exception as exc:  # nunca derruba a varredura
+            logger.debug("som_no_falhou", uniq=uniq, err=str(exc))
+            return None
+        if not subiu:
+            logger.info("som_no_nao_subiu", uniq=uniq)
+            return None
+        return no
+
+    def _republicar(self, uniq: str, transporte: str, mesa: tuple[str, ...]) -> bool:
+        """O nó renasce com o rótulo de agora. False = ficou exatamente como estava.
+
+        **PRIMEIRO CONSTRÓI, DEPOIS DERRUBA — e a ordem É a cura.** Medido pelo
+        conferente em 20/09/2026, sobre a primeira versão desta cura: ela fazia
+        ``_derrubar(uniq)`` e deixava o nó renascer pelo caminho de baixo; com a
+        rota não resolvendo naquele instante — a placa USB do cabo sumindo por
+        uma varredura, a ponte do rádio ainda não de pé —, a guarda «SEM ROTA,
+        SEM NÓ» recusava o renascimento e **o nó SUMIA da mesa dela**.
+        ``set(ger.nos)`` vazio onde havia dois. Um jogo que tivesse escolhido
+        o «Alto-falante do Controle 3» perdia o dispositivo debaixo de si, e
+        pelo motivo mais bobo possível: o nome estava desatualizado.
+
+        **A REGRA QUE SOBRA: um rótulo velho é melhor que nó nenhum.** O nome
+        errado é uma queixa; o nó que some é a queda do som. Por isso as três
+        respostas possíveis são todas com nó de pé:
+
+        * a rota de agora não resolve → **não se toca no nó**, e o rótulo
+          espera a próxima varredura;
+        * o nó novo sobe → ele entra no lugar, com o nome de agora;
+        * o nó novo NÃO sobe → a VOLTA reergue o nó com o rótulo que estava no
+          ar (:meth:`_construir` recebe o rótulo pronto), e não com o de agora —
+          repetir o ato que acabou de falhar não é desfazer.
+
+        Só quando nem a volta sobe é que a mesa fica sem este nó, e aí ela
+        ficaria de qualquer jeito: o caminho de nascimento da varredura
+        seguinte tenta de novo, porque o ``uniq`` já não está em ``_nos``.
+        """
+        velho = self._nos.get(uniq)
+        if velho is None:
+            return False
+        no_ar = getattr(velho, "descricao", None)  # (noqa-acento) nome de atributo
+        try:
+            novo = self._construir(uniq, transporte, mesa)
+        except Exception:  # nunca derruba a varredura
+            logger.debug("som_rotulo_novo_ilegivel", uniq=uniq, exc_info=True)
+            return False
+        rota = getattr(novo, "rota", None)
+        if rota is not None and not getattr(rota, "tem_rota", True):
+            # A RECUSA QUE SALVA O NÓ. Sem ela o `_derrubar` de baixo já teria
+            # acontecido, e a mesa ficaria sem o nó por causa do NOME.
+            logger.info(
+                "som_rotulo_velho_espera_a_rota",
+                uniq=uniq,
+                motivo=str(getattr(rota, "motivo", "")),
+            )
+            return False
+        self._derrubar(uniq)
+        try:
+            subiu = bool(novo.iniciar())
+        except Exception as exc:  # nunca derruba a varredura
+            logger.debug("som_no_falhou", uniq=uniq, err=str(exc))
+            subiu = False
+        if subiu:
+            self._nos[uniq] = novo
+            return True
+        logger.warning("som_rotulo_velho_nao_renasceu", uniq=uniq, no_ar=str(no_ar or ""))
+        de_volta = self._erguer(
+            uniq, transporte, mesa, descricao=str(no_ar) if no_ar else None
+        )
+        if de_volta is not None:
+            self._nos[uniq] = de_volta
+            logger.info("som_no_voltou_com_o_rotulo_velho", uniq=uniq)
+        else:
+            logger.warning("som_no_sumiu_ao_republicar", uniq=uniq)
+        return False
 
     def _derrubar(self, uniq: str) -> None:
         no = self._nos.pop(uniq, None)

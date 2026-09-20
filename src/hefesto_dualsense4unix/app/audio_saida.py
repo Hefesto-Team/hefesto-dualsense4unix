@@ -1497,8 +1497,20 @@ def estado_do_sono(home: str | None = None) -> str:
 # dois `sink_name` para o mesmo nó, e o instrumento
 # `scripts/ensaios/os_nos_de_som_por_controle.py` procura o SEGUNDO. Sobrou um:
 # o do aparelho (`hefesto_som_<hex6>`), que é o que sobrevive à troca de
-# assento, exatamente como o `hefesto_mic_<hex6>` do microfone. O rótulo segue
-# o assento; o nome interno segue o aparelho.
+# assento, exatamente como o `hefesto_mic_<hex6>` do microfone. O nome interno
+# segue o aparelho.
+#
+# **E O RÓTULO SEGUE O ASSENTO COM UMA RESSALVA — 20/09/2026.** Esta linha
+# dizia isso seco, como se fosse de graça, e não era: o `device.description` de
+# um `module-null-sink` é FIXADO no `load-module` e não se reescreve (não há
+# `update-sink-proplist` no `pactl` do PipeWire — medido). Até
+# `O-NOME-DO-SOM-RENOMEIA-JUNTO-01` o rótulo era a fotografia do assento de
+# quando o nó nasceu, e ela ouviu dois deles TROCADOS entre si, em teste cego.
+# Hoje o rótulo acompanha — `daemon/subsystems/alto_falante._republicar` e
+# `daemon/subsystems/bt_mic._renomear_os_canais_velhos` republicam o nó —, mas
+# ele **espera o nó ficar em silêncio** para mudar, então pode estar uma
+# partida atrasado. A regra de quando vale está em
+# `integrations/dualsense_bt_audio.rotulo_envelheceu`.
 #
 # AS TRÊS INVARIANTES, e cada uma tem régua em
 # `tests/unit/test_o_alto_falante_virtual_esconde_o_transporte.py`:
