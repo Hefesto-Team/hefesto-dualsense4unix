@@ -1071,6 +1071,43 @@ class AltoFalanteSubsystem:
             logger.info("haptica_ancoras_bastam", controles=controles)
         self._faltam_ancoras = faltam
 
+    def _quem_o_jogo_le(self, controles: list[Any]) -> set[str]:
+        """Os ``uniq`` que algum JOGO está lendo agora — em minúsculas.
+
+        QUEM-JOGA-E-QUEM-VIBRA-01. Devolve conjunto VAZIO quando não há jogo,
+        quando `/proc` não se lê, ou quando o que o jogo abriu não se traduz em
+        controle nenhum. **O vazio é o lado seguro**: um controle que não vibra
+        é uma falta; um que vibra sozinho na mão de alguém é o defeito que ela
+        reportou em 20/09.
+
+        A lista de físicos vem de TODOS os controles da mesa, e não só dos do
+        rádio: com máscara, o jogo abre o vpad, e traduzir o vpad exige poder
+        derivá-lo de qualquer aparelho — inclusive o do cabo, que é quem
+        costuma estar jogando.
+        """
+        from hefesto_dualsense4unix.integrations.quem_o_jogo_le import (
+            dono_do_vpad_pela_forja,
+            quem_o_jogo_le,
+        )
+
+        fisicos = [
+            str(getattr(c, "uniq", "") or "") for c in controles
+        ]
+        fisicos = [u for u in fisicos if u]
+        if not fisicos:
+            return set()
+        try:
+            return quem_o_jogo_le(
+                fisicos=fisicos,
+                dono_do_vpad=lambda v: dono_do_vpad_pela_forja(v, fisicos),
+            )
+        except Exception as erro:
+            # AUSÊNCIA É RESPOSTA, e ela é registrada: um erro aqui cala a
+            # háptica da mesa inteira, e calar sem dizer por quê é o defeito
+            # que esta casa mais persegue.
+            logger.info("haptica_nao_sei_quem_joga", motivo=str(erro))
+            return set()
+
     def _casar_as_pontes(self, controles: list[Any]) -> None:
         """Sobe uma ponte por controle NO RÁDIO, e derruba a de quem saiu.
 
@@ -1223,13 +1260,33 @@ class AltoFalanteSubsystem:
             for sink_com_motor in sinks_com_motores():
                 garantir_motores_audiveis(sink_com_motor)
 
+        # QUEM O JOGO ESTÁ LENDO — QUEM-JOGA-E-QUEM-VIBRA-01, 20/09/2026.
+        # Correção dela, e ela derrubou a premissa da sprint anterior: *"é um
+        # jogo de um player e o erro era que o player 3 tava recebendo a
+        # vibração de forma espelhada"*. Antes desta linha, o modo háptica
+        # entrava em TODO controle cujo endpoint tivesse stream — e num jogo de
+        # um jogador isso não é ninguém além de quem segura o controle.
+        #
+        # É calculado UMA VEZ por volta, e não por controle: são duas varreduras
+        # de `/proc`, e repeti-las por peça multiplicaria o custo pela mesa.
+        jogando = self._quem_o_jogo_le(controles)
+
         for uniq, caminho in vivos.items():
             # O MODO PODE MUDAR COM A PONTE DE PÉ: o jogo abre o endpoint no
             # meio da partida, e é aí que a háptica passa a valer. Quem muda de
             # modo desce e sobe de novo — o escritor é UM SÓ, e trocar o
             # arranjo com a bomba rodando mudaria o corpo do report no meio.
             endpoint = self._endpoints.get(uniq)
-            modo = "haptica" if (endpoint and sink_esta_tocando(endpoint.nome)) else "som"
+            # O GATE TEM DOIS LADOS, e os dois precisam ser verdade: o jogo
+            # abriu o canal DAQUELE endpoint (o sinal de sempre) E o jogo está
+            # LENDO aquele controle (o sinal novo). Só o primeiro deixava três
+            # controles vibrarem num jogo de um jogador.
+            o_jogo_le_este = uniq.lower() in jogando
+            modo = (
+                "haptica"
+                if (endpoint and o_jogo_le_este and sink_esta_tocando(endpoint.nome))
+                else "som"
+            )
             if uniq in self._pontes:
                 if self._modo_da_ponte.get(uniq) == modo:
                     continue
