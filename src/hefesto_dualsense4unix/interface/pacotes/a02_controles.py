@@ -601,7 +601,7 @@ def leitura_viva(entrada: dict[str, Any]) -> dict[str, Any]:
     """Tudo o que o card LÊ do aparelho: glifos, gatilhos, analógicos, sensores.
 
     SEM LEITOR, TUDO VOLTA AO REPOUSO — e não ao último valor nem ao desenho. É
-    o `_reset_inputs_render` da GTK (`controller_card.py:5603`), linha por
+    o `_reset_inputs_render` da GTK (`controller_card.py:5634`), linha por
     linha: gatilhos em `0 / 255` com a barra vazia, analógicos no centro, os
     dezesseis glifos apagados e os sensores no travessão. Vale para METADE da
     mesa dela agora: o daemon só publica `inputs` para o `is_primary`.
@@ -1070,7 +1070,7 @@ def _bloco_do_speaker(entry: Any) -> dict[str, Any] | None:
     """O bloco `speaker` cru do controle, nas DUAS posições em que ele chega.
 
     ELE É A SEGUNDA LEITURA DA MESMA REGRA, e isso está declarado em vez de
-    escondido: o dono é `speaker_do_entry` (`controller_card.py:2050`), que
+    escondido: o dono é `speaker_do_entry` (`controller_card.py:2081`), que
     conhece as duas posições — `entry["speaker"]` e `entry["inputs"]["speaker"]`
     — mas devolve só `(volume, muted)`. A ROTA não passa por ele, e alargar a
     assinatura do widget da GTK a partir daqui não é trabalho desta aba.
@@ -3553,7 +3553,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 #                               `sensor.*`, `gyro.*` nem `motion.*`). O
 #                               `sensor_hub` só LÊ — as suas 15 funções são
 #                               `leitura`, `reconciliar`, `_abrir_*`, e nenhuma
-#                               liga ou desliga nada. `profiles/schema.py:950`
+#                               liga ou desliga nada. `profiles/schema.py:967`
 #                               diz que os dois estão "FORA POR AUSÊNCIA, NÃO
 #                               POR DECISÃO", com dona declarada
 #                               (`ONDA-CONTROLES-07`, que traria a
@@ -4262,7 +4262,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         # que o deslizante do volume já faz, e a resposta vem do MESMO dono.
         #
         # A FRASE É DO PRODUTO, e nenhuma nasce aqui: `frase_do_alvo_do_mic`
-        # (`app/widgets/controller_card.py:2305`) é a dona dos três estados, e
+        # (`app/widgets/controller_card.py:2336`) é a dona dos três estados, e
         # `alvo_honrado` (`app/ipc_bridge.py:1160`) é quem os lê do corpo. Os
         # dois devolvem "nada a dizer" para `True` e para `None` de propósito —
         # *"não sei" não é "não honrei"*, e inventar a confissão por ausência de
@@ -4406,7 +4406,7 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     (`controller_card.py:4316`).
 
     "TODO O SOM DO PC" SÃO DUAS CAMADAS, E A SEGUNDA NÃO É IPC. O
-    `profiles/schema.py:571` já escreve o limite com todas as letras:
+    `profiles/schema.py:587` já escreve o limite com todas as letras:
 
         LIMITE DECLARADO: a rota é a CAMADA 2 (o firmware). O estado "Todo o
         som do PC" da janela também mexe na CAMADA 1 (o *default sink* do
@@ -4596,7 +4596,7 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # O SOM CONFIRMA A ROTA NOVA, e é o gesto em que ele diz mais: os dois
     # estados prometem som no controle, e o som é o que responde *"por onde ele
     # sai agora"* sem uma palavra na tela. A GTK o toca nos dois estados
-    # (`app/widgets/controller_card.py:4286`), e não só na ida.
+    # (`app/widgets/controller_card.py:4337`), e não só na ida.
     _confirmar_com_som(ctx, uniq)
     # O PERFIL LEMBRA A ROTA — e ela é a CAMADA 2, o byte do firmware. A camada
     # 1 (a saída padrão do PipeWire) é um fato GLOBAL do sistema e não cabe num
