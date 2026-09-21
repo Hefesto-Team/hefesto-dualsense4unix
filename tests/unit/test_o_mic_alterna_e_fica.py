@@ -80,10 +80,17 @@ def mesa(monkeypatch):
         nascidos.append(p)
         return p
 
-    monkeypatch.setattr(monitor_do_microfone.subprocess, "Popen", _popen)
-    monitor_do_microfone._VIVOS.clear()
+    # **O DUBLÊ MIRA O DONO, NÃO A FACHADA** — desde 21/09 o `pw-loopback` tem
+    # um dono só (`integrations/laco_de_audio.py`) e este módulo é a fachada
+    # dele para o eixo do microfone. Mirar aqui deixaria o produto abrindo
+    # processo de verdade na máquina que roda a suíte.
+    from hefesto_dualsense4unix.integrations import laco_de_audio
+
+    monkeypatch.setattr(laco_de_audio.subprocess, "Popen", _popen)
+    monkeypatch.setattr(laco_de_audio.shutil, "which", lambda _nome: "/usr/bin/pw-loopback")
+    monitor_do_microfone._LACOS._vivos.clear()
     yield nascidos
-    monitor_do_microfone._VIVOS.clear()
+    monitor_do_microfone._LACOS._vivos.clear()
 
 
 class TestOBotaoEUmaTrava:
@@ -162,9 +169,12 @@ class TestOFechoNaoDeixaMicrofoneAberto:
         MORDIDA: tire o `atexit.register`. O microfone dela fica aberto depois
         de a interface fechar, e nada na tela diz isso.
         """
+        from hefesto_dualsense4unix.integrations import laco_de_audio
+
         fonte = pathlib.Path(
-            monitor_do_microfone.__file__).read_text(encoding="utf-8")
-        assert "atexit.register(desligar_todos)" in fonte
+            laco_de_audio.__file__).read_text(encoding="utf-8")
+        assert "atexit.register(fechar_tudo)" in fonte, (
+            "o dono do `pw-loopback` não fecha as laçadas no fim do processo")
 
 
 class TestATelaRefleteOsDoisEstados:
