@@ -53,6 +53,7 @@ from typing import Any
 import typer
 from rich.console import Console
 
+from hefesto_dualsense4unix.utils import identidade
 from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalacao
 
 console = Console()
@@ -150,6 +151,102 @@ def _estado() -> dict[str, Any] | None:
     return resposta if isinstance(resposta, dict) else None
 
 
+# ---------------------------------------------------------------------------
+# TRAY-A-LISTINHA-DELA-01 (21/09/2026) — os quatro atos da bandeja
+#
+# NENHUMA REGRA NOVA MORA AQUI, e é o contrato deste arquivo: cada função
+# abaixo pergunta ao DONO do ato e despacha o que ele responder. O tray é a
+# quarta superfície a chamar os mesmos donos (a janela GTK saiu, ficam a aba
+# Jogar, a aba Sistema e a CLI) — e a lição que esta casa pagou três vezes é
+# que a quarta cópia é a que diverge.
+# ---------------------------------------------------------------------------
+def _definir_o_modo(ligado: bool) -> bool:
+    """O interruptor da aba Jogar, pelo mesmo plano de IPC que ela despacha.
+
+    **O PLANO É DO DONO** (`painel.plano_do_modo` -> `plan_mode_transition`), e
+    a ORDEM das chamadas é a entrega: invertidas, *"o vpad nasceria com o
+    físico ainda grabado pelo jogo"*. Por isso o laço despacha na ordem em que
+    o plano vem, e nunca reordena.
+
+    **LIGAR SOBE O SERVIÇO ANTES**, e vem antes do plano porque sem o daemon de
+    pé não há a quem mandar — decisão dela de 03/09/2026: *"Adiciona essa
+    função extra quando clicar em ligar"*. A ordem inversa recusaria o clique
+    exatamente no caso que ela pediu que passasse a funcionar.
+    """
+    from hefesto_dualsense4unix.app.actions.jogar.painel import plano_do_modo
+    from hefesto_dualsense4unix.app.actions.mode_transition import (
+        MODE_GAMEPAD,
+        MODE_NATIVE,
+    )
+
+    if ligado:
+        _servico("start")
+    plano = plano_do_modo(MODE_GAMEPAD if ligado else MODE_NATIVE)
+    if plano is None:
+        return False
+    pegou = True
+    for metodo, params in plano:
+        if _chamar(metodo, params) is None:
+            pegou = False
+    return pegou
+
+
+def _reconectar_os_controles() -> bool:
+    """O «Reconectar controles» da aba Jogar — os MESMOS dois passos.
+
+    `coop.sync` reconcilia o co-op e `identity.renumber` devolve os números de
+    jogador. Ele NÃO manda um `Connect` pelo rádio: reconectar o aparelho é o
+    botão PS dela, e isso é decisão de produto registrada no gesto da aba.
+    """
+    primeiro = _chamar("coop.sync") is not None
+    segundo = _chamar("identity.renumber") is not None
+    return primeiro and segundo
+
+
+def _servico(verbo: str) -> bool:
+    """`restart` · `stop` · `start` pela unit desta instalação.
+
+    **QUEM EXECUTA É A CAMADA DE PRODUTO**, `DaemonActionsMixin`, do mesmo jeito
+    que a aba Sistema a chama (`a09_sistema._systemctl`): o `reset-failed`
+    antes de `start`/`restart` não é zelo — sem ele o `StartLimitBurst` recusa
+    o segundo clique e a bandeja receberia "não consegui" sobre uma unit sã.
+
+    **A UNIT NÃO SE DIGITA** — vem de `utils/identidade`. Uma literal do `-dev`
+    já sobreviveu a uma purga e fez a tela afirmar `not-found` sobre uma unit
+    `enabled` (01/09/2026).
+    """
+    from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin
+
+    unit = identidade.atual().unit_daemon
+    janela = DaemonActionsMixin()
+    if verbo in ("start", "restart"):
+        janela._invoke_systemctl(["reset-failed", unit], check=False)
+    resultado = janela._invoke_systemctl([verbo, unit], capture=True)
+    pegou = getattr(resultado, "returncode", -1) == 0
+    if verbo == "restart" and pegou:
+        _repor_o_lancador()
+    return pegou
+
+
+def _repor_o_lancador() -> None:
+    """O «Reiniciar» da bandeja repõe o lançador, como o da aba Sistema.
+
+    **É O MESMO ATO E O MESMO DONO** (`reposicao_dos_lancadores.repor`) — e tem
+    de ser: a decisão dela de 21/09/2026 é sobre o REINICIAR, não sobre a aba
+    Sistema. Um «Reiniciar» na bandeja que não repusesse o lançador seria o
+    mesmo botão fazendo duas coisas diferentes conforme de onde se clica.
+
+    NUNCA LEVANTA: o `restart` já deu `rc=0`, e o tray não cai por um clique.
+    O recibo vai ao registro, que é onde a bandeja tem onde falar.
+    """
+    from hefesto_dualsense4unix.integrations import reposicao_dos_lancadores as rl
+
+    try:
+        console.print(rl.frase_do_recibo(rl.repor()))
+    except Exception as erro:  # ver a docstring
+        console.print(f"[yellow]não consegui repor o lançador:[/] {erro}")
+
+
 def tray_cmd() -> None:
     """Sobe o ícone de bandeja e fica em primeiro plano até `Sair`."""
     from hefesto_dualsense4unix.app.tray import AppTray
@@ -171,6 +268,9 @@ def tray_cmd() -> None:
         on_list_profiles=_listar_perfis,
         on_switch_profile=_trocar_de_perfil,
         on_state=_estado,
+        on_set_modo=_definir_o_modo,
+        on_reconectar=_reconectar_os_controles,
+        on_servico=_servico,
     )
     if not bandeja.start():
         console.print(

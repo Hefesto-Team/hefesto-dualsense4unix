@@ -139,6 +139,22 @@ SwitchProfileFn = Callable[[str], bool]
 #: mostrar quantos controles estão conectados (FEAT-DSX-MULTI-CONTROLLER-01).
 StateFn = Callable[[], dict[str, Any] | None]
 
+#: TRAY-A-LISTINHA-DELA-01, 21/09/2026. Os quatro atos que ela mandou descer
+#: da janela para a bandeja: *"Adicionar o Reiniciar Daemon, Desativar Daemon
+#: que temos na aba sistema, na aba jogar o Status Ligado e Desligado e o
+#: reconectar controles. como opções no tray"*.
+#: <!-- noqa-acento: citação literal dela -->
+#:
+#: **SÃO OPCIONAIS, e é de propósito:** `None` faz o item NÃO EXISTIR no menu,
+#: em vez de existir cinzento. Os testes do tray e qualquer chamador antigo
+#: seguem montando o menu de quatro itens sem mudar uma linha — e um item que
+#: aparece e não faz nada é o enfeite que esta casa recusa desde o
+#: `_build_camadas_dialog`.
+#: `bool` de retorno = "pegou"; o tray usa isso só para não mentir na hora.
+ModoFn = Callable[[bool], bool]
+ReconectarFn = Callable[[], bool]
+ServicoFn = Callable[[str], bool]
+
 
 @dataclass
 class AppTray:
@@ -151,6 +167,13 @@ class AppTray:
     #: Opcional: snapshot de estado para o status item mostrar "N controles".
     #: None (default) mantém o comportamento antigo (só perfil).
     on_state: StateFn | None = None
+    #: O interruptor da aba Jogar: `True` = Ligado (gamepad), `False` =
+    #: Desligado (nativo). Ver :data:`ModoFn`.
+    on_set_modo: ModoFn | None = None
+    #: O «Reconectar controles» da aba Jogar.
+    on_reconectar: ReconectarFn | None = None
+    #: O par da aba Sistema: recebe `"restart"` ou `"stop"` ou `"start"`.
+    on_servico: ServicoFn | None = None
 
     _indicator: Any = None
     _indicator_ns: Any = None
@@ -163,6 +186,14 @@ class AppTray:
     # Evita empilhar workers se o anterior (coleta de perfis + estado via IPC)
     # ainda não terminou. Setado antes do dispatch, limpo nos dois callbacks.
     _refresh_inflight: bool = False
+    # TRAY-A-LISTINHA-DELA-01
+    _modo_ligado_item: Any = None
+    _modo_desligado_item: Any = None
+    _servico_item: Any = None
+    _servico_de_pe: bool = False
+    #: Guarda de reentrância: `True` enquanto o TIQUE mexe no rádio. Ver
+    #: :meth:`_ao_escolher_o_modo`.
+    _pintando_o_modo: bool = False
 
     def is_available(self) -> bool:
         ok, _ = probe_gi_availability()
@@ -223,6 +254,8 @@ class AppTray:
         show.connect("activate", lambda _w: self.on_show_window())
         self._menu.append(show)
 
+        self._montar_os_atos_do_jogo()
+
         self._menu.append(Gtk.SeparatorMenuItem())
 
         self._profiles_item = Gtk.MenuItem(label=_("Perfis"))
@@ -233,6 +266,8 @@ class AppTray:
         # 100% dos itens estejam em `_profile_menu_items`.
         self._profiles_item.set_submenu(self._profiles_submenu)
         self._menu.append(self._profiles_item)
+
+        self._montar_os_atos_do_servico()
 
         self._menu.append(Gtk.SeparatorMenuItem())
 
@@ -353,6 +388,164 @@ class AppTray:
                 pass
             self._indicator = None
 
+    # ------------------------------------------------------------------
+    # TRAY-A-LISTINHA-DELA-01 — os quatro atos que desceram para a bandeja
+    #
+    # A ORDEM É A DA HISTÓRIA, e foi ela quem pediu que fosse pensada assim:
+    # *"Vc ordena a listinha que deve aparecer pensando no storytellign da
+    # coisa."* <!-- noqa-acento: citação literal dela -->
+    # O menu lê de cima para baixo como uma frase:
+    #
+    #   quem sou e o que está na mesa   -> o item de estado
+    #   me abra                         -> «Abrir painel»
+    #   o que faço AGORA, no jogo       -> Ligado/Desligado · Reconectar
+    #   com que ajuste                  -> «Perfis»
+    #   e se der errado                 -> Reiniciar · Parar/Ativar o serviço
+    #   saída                           -> «Sair»
+    #
+    # O CORTE ENTRE OS DOIS GRUPOS DE AÇÃO É O QUE CUSTA CARO SE ERRAR: o que
+    # mexe no JOGO vem antes do que mexe no SERVIÇO, porque é o que ela usa no
+    # meio de uma partida — e porque «Parar o serviço» ao lado de «Ligado»
+    # faria dois interruptores parecerem o mesmo. Eles não são: a decisão dela
+    # de 31/08/2026 diz que *"Desligado"* é o **modo nativo**, não parar o
+    # Hefesto.
+    # ------------------------------------------------------------------
+    def _montar_os_atos_do_jogo(self) -> None:
+        """«Ligado/Desligado» e «Reconectar controles» — os da aba Jogar."""
+        if self._menu is None:
+            return
+        if self.on_set_modo is None and self.on_reconectar is None:
+            return
+
+        self._menu.append(Gtk.SeparatorMenuItem())
+
+        if self.on_set_modo is not None:
+            # DOIS RÁDIOS E NÃO UM ALTERNADOR, e é a forma da aba Jogar: lá o
+            # interruptor MOSTRA a posição de agora ao lado da outra. Um item
+            # que só dissesse "Desligar" esconderia em qual posição ela está —
+            # e a pergunta dela de 31/08 era exatamente essa: *"não sei se
+            # segue desativado"*.
+            self._modo_ligado_item = Gtk.RadioMenuItem(label=_("Ligado"))
+            self._modo_ligado_item.set_use_underline(False)
+            self._modo_desligado_item = Gtk.RadioMenuItem(
+                label=_("Desligado"), group=self._modo_ligado_item)
+            self._modo_desligado_item.set_use_underline(False)
+            for item, ligado in ((self._modo_ligado_item, True),
+                                 (self._modo_desligado_item, False)):
+                item.connect("activate", self._ao_escolher_o_modo, ligado)
+                self._menu.append(item)
+
+        if self.on_reconectar is not None:
+            item = Gtk.MenuItem(label=_("Reconectar controles"))
+            item.set_use_underline(False)
+            item.connect("activate", lambda _w: self._chamar_sem_cair(
+                self.on_reconectar))
+            self._menu.append(item)
+
+    def _montar_os_atos_do_servico(self) -> None:
+        """«Reiniciar o serviço» e o par «Parar»/«Ativar» — os da aba Sistema."""
+        if self._menu is None or self.on_servico is None:
+            return
+
+        self._menu.append(Gtk.SeparatorMenuItem())
+
+        reiniciar = Gtk.MenuItem(label=_("Reiniciar o serviço"))
+        reiniciar.set_use_underline(False)
+        reiniciar.connect("activate", lambda _w: self._chamar_sem_cair(
+            lambda: self.on_servico("restart")))
+        self._menu.append(reiniciar)
+
+        # UM ITEM, DOIS RÓTULOS — a forma que ela escolheu para esta ação em
+        # 03/09/2026: *"E em sistema um específico pra parar o Daemon E Ativar
+        # o Daemon"*. O rótulo segue o estado, e quem o atualiza é o tique.
+        self._servico_item = Gtk.MenuItem(label=_("Parar o serviço"))
+        self._servico_item.set_use_underline(False)
+        self._servico_item.connect("activate", self._ao_mexer_no_servico)
+        self._menu.append(self._servico_item)
+
+    def _ao_escolher_o_modo(self, item: Any, ligado: bool) -> None:
+        """Só age no rádio que ACABOU de ser marcado, e nunca no eco da pintura.
+
+        `Gtk.RadioMenuItem` emite `activate` nos DOIS itens ao trocar de
+        posição (o que sai e o que entra), e emite de novo quando o tique
+        reescreve a posição com `set_active`. Sem estes dois guardas, um
+        clique em «Desligado» mandaria também um «Ligado» ao daemon, e o tique
+        seguinte mandaria tudo de novo a cada três segundos.
+        """
+        if self._pintando_o_modo or not item.get_active():
+            return
+        if self.on_set_modo is not None:
+            self._chamar_sem_cair(lambda: self.on_set_modo(ligado))
+
+    def _ao_mexer_no_servico(self, _item: Any) -> None:
+        """Para quando está de pé; liga quando está parado."""
+        if self.on_servico is None:
+            return
+        self._chamar_sem_cair(
+            lambda: self.on_servico("stop" if self._servico_de_pe else "start"))
+
+    @staticmethod
+    def _chamar_sem_cair(acao: Any) -> None:
+        """O tray NUNCA cai por causa de um clique — nem por IPC, nem por bug.
+
+        Um `Gtk.Menu` que levanta dentro do handler deixa o item de bandeja
+        vivo e mudo, e a pessoa fica sem menu até reiniciar a sessão. O erro
+        vai para o registro, que é onde ele serve.
+        """
+        try:
+            acao()
+        except Exception as erro:  # ver a docstring
+            logger.warning("apptray_acao_falhou", erro=str(erro))
+
+    def _pintar_o_estado_dos_atos(self, state: dict[str, Any] | None) -> None:
+        """Põe os rótulos e as posições no estado de AGORA, a cada tique.
+
+        O ESTADO DO MODO É DERIVADO DO MESMO DONO QUE A ABA JOGAR USA —
+        `painel.hefesto_ligado` —, e não de uma regra escrita aqui: `True`
+        Ligado, `False` Desligado, `None` não se sabe. Com `None` os dois
+        rádios ficam como estavam: mentir uma posição é pior que não dizer.
+        """
+        de_pe = isinstance(state, dict)
+        self._servico_de_pe = de_pe
+        if self._servico_item is not None:
+            self._servico_item.set_label(
+                _("Parar o serviço") if de_pe else _("Ativar o serviço"))
+
+        if self._modo_ligado_item is None:
+            return
+        ligado = self._modo_de_agora(state)
+        if ligado is None:
+            return
+        alvo = self._modo_ligado_item if ligado else self._modo_desligado_item
+        if alvo is not None and not alvo.get_active():
+            # O GUARDA É O QUE IMPEDE O TIQUE DE VIRAR CLIQUE: sem ele,
+            # `set_active` emitiria `activate` e o tray mandaria ao daemon,
+            # a cada três segundos, o modo que ele acabou de LER.
+            self._pintando_o_modo = True
+            try:
+                alvo.set_active(True)
+            finally:
+                self._pintando_o_modo = False
+
+    @staticmethod
+    def _modo_de_agora(state: dict[str, Any] | None) -> bool | None:
+        """`True` Ligado · `False` Desligado · `None` não se sabe.
+
+        DELEGADO, e o import é tardio de propósito: `painel` puxa o motor
+        inteiro, e o tray sobe antes de qualquer janela. Com o daemon parado
+        não há `state`, e aí a resposta é `None` — a mesma que a aba Jogar dá.
+        """
+        if not isinstance(state, dict):
+            return None
+        try:
+            from hefesto_dualsense4unix.app.actions.jogar import painel
+        except Exception:  # pragma: no cover — ambiente sem o motor
+            return None
+        try:
+            return painel.hefesto_ligado(state)
+        except Exception:  # tray nunca cai por leitura
+            return None
+
     def _tick_refresh(self) -> bool:
         """Dispara a coleta de perfis + estado em thread worker (não bloqueia GTK).
 
@@ -398,6 +591,7 @@ class AppTray:
         self._render_profiles(
             profiles, self._controllers_suffix_from_state(state)
         )
+        self._pintar_o_estado_dos_atos(state)
         return False  # não repetir via GLib
 
     def _on_refresh_failed(self, _exc: Exception) -> bool:
@@ -488,10 +682,16 @@ class AppTray:
                 (p.get("name") for p in profiles if p.get("active")),
                 None,
             )
+            # A CONTAGEM DE PERFIS SAIU — 21/09/2026, palavra dela: *"no tray
+            # remover o numero de perfis"*. <!-- noqa-acento: citação dela -->
+            # Ela nunca respondeu a uma pergunta de quem abre a bandeja: o
+            # número de perfis salvos não muda nada do que está acontecendo, e
+            # ocupava a linha que diz QUEM está na mesa. Quantos perfis existem
+            # continua a uma seta de distância, no submenu «Perfis».
             label = (
                 _("Hefesto - DualSense4Unix - perfil: %s") % active
                 if active
-                else _("Hefesto - DualSense4Unix - %d perfis") % len(profiles)
+                else _("Hefesto - DualSense4Unix")
             )
             self._status_item.set_label(label + controllers_suffix)
 

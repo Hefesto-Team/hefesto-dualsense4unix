@@ -86,6 +86,31 @@ DS   = (_F / "ds_limpo.svg").read_text()
 # já aconteceu uma vez, e ela teve de refazer do zero.
 LOGO = (R / "assets/hefesto-logo.svg").read_text()
 
+#: O TAMANHO DA MARCA É 46/44 DESDE 21/09/2026, E O NÚMERO É DELA — em duas
+#: passadas, com a janela aberta na frente dela.
+#:
+#: A PRIMEIRA: uma seta desenhada em cima do logotipo e a palavra *"logo
+#: minúscula"*. Ele tinha descido de 44 para 22 em 10/09, quando a faixa de
+#: cabeçalho saiu e a marca passou para a linha do alvo — e ali ficou pequena
+#: demais para ser lida como marca. Subiu para 32/30, que era o máximo quase de
+#: graça: o chip da fita mede **30 px** fechados (`topo.html`, `.fita .chip`,
+#: onde os 7 px de ar de cada lado estão escritos), então até 30 a linha não
+#: muda de altura.
+#:
+#: A SEGUNDA DERRUBOU ESSA CONTA, e ela estava certa: *"Não dá pra aumentar a
+#: logo? Ela tá piquetuxa em 30 apenas"*. <!-- noqa-acento: citação literal dela -->
+#: **O critério "não custar altura" era MEU, não dela** — eu escolhi o número
+#: pelo preço e não pelo desenho, que é a armadilha que esta casa já nomeou.
+#: Os 44 são o tamanho que a marca tinha na faixa de cabeçalho até 10/09, o
+#: mesmo que ela aprovou; a `.fita-linha` cresce 14 px, e é conta paga por
+#: escolha dela.
+#:
+#: **A RAZÃO MORA AQUI E NÃO NO CSS**, e é medida: o `topo.html` viaja para as
+#: DEZ páginas, então cada byte de comentário dele é pago dez vezes na catraca
+#: da tradução (`scripts/check_o_projeto_e_traduzivel.py`). Este arquivo é
+#: Python e não chega a página nenhuma. Quem mandar no tamanho é o CSS; quem
+#: responde por QUÊ é este bloco.
+#:
 #: A âncora da logo no esqueleto. É um comentário HTML de propósito: assim o
 #: `topo.html` continua abrindo sozinho no navegador sem um SVG fantasma, e a
 #: âncora não pode ser confundida com conteúdo.

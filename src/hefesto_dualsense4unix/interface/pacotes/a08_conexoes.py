@@ -3142,9 +3142,13 @@ def html_da_regua_do_radio(
             # erra e a leitora relê"*. Sem nome de plástico lido, o parêntese
             # guarda só o transporte — repetir "Player 1 (Player 1, …)" seria
             # dizer o mesmo duas vezes na mesma frase.
+            # A PALAVRA DO TRANSPORTE SAIU DA ORAÇÃO — 21/09/2026. Ela passou
+            # a ser `USB`/`BT` por palavra dela, e sigla em caixa alta no meio
+            # de uma frase ("hoje no USB") é defeito de forma. O aposto virou
+            # o mesmo CHIP que a fita usa, com o ponto do meio.
             quem = str(c.get("nome") or "")
-            dentro_do_parentese = (f'{quem}, hoje no {c["via"]}' if quem
-                                   else f'hoje no {c["via"]}')
+            dentro_do_parentese = (f'{quem} · {c["via"]}' if quem
+                                   else str(c["via"]))
             blocos.append(
                 f'<span class="bloco vaga" style="width:{com_mic / teto * 100:.2f}%"'
                 f' title="Se o Player {c["jogador"]} ({dentro_do_parentese}) vier '

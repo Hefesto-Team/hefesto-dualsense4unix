@@ -512,7 +512,7 @@ _PALAVRA = _constantes(
 
 
 def palavra_do_transporte(cru):
-    """`bt` → `rádio`. A mesma tabela que `home_actions.palavra_do_transporte` usa.
+    """`usb` → `USB`, `bt` → `BT`. A tabela do dono, lida por AST.
 
     O ramo do desconhecido é do dono também: valor ausente vira a frase de "não
     sei", e valor que a tabela não conhece volta CRU — porque um transporte novo

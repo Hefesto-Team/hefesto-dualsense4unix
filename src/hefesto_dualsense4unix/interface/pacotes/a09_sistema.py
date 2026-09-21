@@ -2297,11 +2297,49 @@ def reiniciar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     ELE TAMBÉM JÁ ESTAVA EM `hefesto_vivo.PERIGOSOS`: reiniciar o daemon derruba
     a sessão dele no meio do trabalho dela, e a régua não o clica.
+
+    **E ELE REPÕE O LANÇADOR — decisão dela, 21/09/2026.** A pergunta foi dela:
+    *"seria importante ele fechar e reabrir o launcher, seja steam, epic,
+    heroic ou qualquer outro"*; posta entre três formas (automático · oferecido
+    num segundo clique · botão separado), ela escolheu a primeira com estas
+    palavras: *"Faz automático mesmo"*.
+    <!-- noqa-acento: citação literal dela -->
+
+    **O QUE ISSO CURA, e é medido:** o lançador que subiu ANTES do daemon
+    segura o controle FÍSICO (`STEAM-NO-FISICO-01`, medido quatro vezes) —
+    reiniciar sem repor devolvia a máquina ao estado que o reinício queria
+    desfazer. A Steam ainda apaga sozinha o wrapper da Launch Option.
+
+    **A REPOSIÇÃO VEM DEPOIS DO `restart`, e a ordem é a entrega:** o lançador
+    tem de nascer com o daemon já de pé, senão ele pega o físico de novo e o
+    gesto inteiro teria sido em vão.
+
+    **QUEM DECIDE E QUEM AGE É `reposicao_dos_lancadores`**, e nenhuma regra
+    dele mora aqui — inclusive a única exceção ao "automático": com jogo
+    aberto, nada é fechado, porque fechar o lançador fecharia o jogo junto. Não
+    é ressalva minha; é o contrato que o produto já aplica desde 18/09.
+
+    **A FALHA DA REPOSIÇÃO NÃO DESFAZ O REINÍCIO.** O `restart` já aconteceu e
+    deu `rc=0`; levantar aqui faria a tela dizer "não consegui" sobre um
+    serviço que reiniciou. O que acontecer vai ao recibo.
     """
     motivo = _trava(ctx, "reiniciar")
     if motivo:
         raise RuntimeError(motivo)
     _systemctl("restart")
+    _repor_o_lancador()
+
+
+def _repor_o_lancador() -> None:
+    """Fecha e reabre o lançador aberto, e relata. Nunca levanta."""
+    from hefesto_dualsense4unix.integrations import reposicao_dos_lancadores as rl
+
+    try:
+        recibo = rl.repor()
+    except Exception as erro:  # o reinício já valeu; ver a docstring acima
+        _relatar_o_recibo("reiniciar", f"não consegui repor o lançador: {erro}")
+        return
+    _relatar_o_recibo("reiniciar", rl.frase_do_recibo(recibo))
 
 
 # ---------------------------------------------------------------------------

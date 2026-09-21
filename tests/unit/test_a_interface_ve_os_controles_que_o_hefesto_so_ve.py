@@ -117,9 +117,14 @@ def test_a_jogar_escreve_o_cartao_do_externo() -> None:
     # sabe desmentir o VID mentido por um clone em modo DualShock4.
     assert "8BitDo" in html
     # A PALAVRA DO TRANSPORTE É A DO DONO (`home_actions.palavra_do_transporte`),
-    # que é o §2 do "o que se mede antes de escrever" desta sprint: "rádio", e
-    # não "bluetooth" nem "BT".
-    assert "rádio" in html
+    # que é o §2 do "o que se mede antes de escrever" desta sprint — e ela é
+    # PERGUNTADA, não digitada: em 21/09/2026 a palavra dela passou de "rádio"
+    # a "BT", e uma régua que a decorasse reprovaria a decisão dela.
+    from hefesto_dualsense4unix.app.actions.home_actions import (
+        palavra_do_transporte,
+    )
+    assert palavra_do_transporte("bt") in html
+    assert "bluetooth" not in html.lower()
     # E A TELA DIZ O QUE O HEFESTO NÃO FAZ com ele, que é a informação que a
     # pessoa procura ao ver um controle que não acende.
     assert "só vê" in html
@@ -228,7 +233,11 @@ def test_as_duas_abas_dizem_a_mesma_coisa_do_mesmo_aparelho() -> None:
 
     do_01 = jogar.pacote(_ctx([UM_8BITDO]))["externos"]
     do_08 = conexoes._html_dos_externos(_ctx([UM_8BITDO]))
-    for pedaco in ("Controle 3", "8BitDo", "rádio", "só vê"):
+    from hefesto_dualsense4unix.app.actions.home_actions import (
+        palavra_do_transporte,
+    )
+
+    for pedaco in ("Controle 3", "8BitDo", palavra_do_transporte("bt"), "só vê"):
         assert pedaco in do_01 and pedaco in do_08, pedaco
 
 

@@ -2242,7 +2242,17 @@ DICA_OUVIR_JUNTO = ("O som do PC sai no alto-falante deste controle e continua "
 # apontou. **A tela nunca diz «sfx» nem «mix»**; os dois continuam sendo nome
 # interno, e é por isso que estes rótulos são constantes e não literais soltos
 # no miolo: quem os mudar mexe num lugar só.
-ROTULO_SO_OS_EFEITOS = "Efeitos do Jogo"
+#: **O PRIMEIRO NOME FICOU SIMÉTRICO AOS OUTROS DOIS** — 21/09/2026, com o
+#: jogo aberto e o botão validado por ela: *"o primeiro botão efeitos do jogo
+#: funciona. Mas pensando aqui acho que efeitos do jogo precisaria ter outro
+#: nome o botão Efeitos do Jogo no Controle, Audio da TV na TV"*.
+#: <!-- noqa-acento: citação literal dela -->
+#:
+#: O nome velho — «Efeitos do Jogo» — dizia O QUE entra e calava ONDE cada
+#: coisa sai, e os outros dois da fileira dizem as duas metades. Os três
+#: passam a ser lidos na mesma gramática: **o que vai para o controle, e o
+#: que fica na TV**.
+ROTULO_SO_OS_EFEITOS = "Efeitos do Jogo no Controle, Áudio da TV na TV"
 ROTULO_EFEITOS_MAIS_A_TV = "Efeitos do Jogo e Áudio da TV no Controle"
 
 #: **O TERCEIRO NOME É DELA, e o ATO mudou para caber nele** — 21/09/2026,
@@ -3870,7 +3880,7 @@ LEGENDA = f'''<div class="nota">
 # ou estado. Nome de classe ou de `data-*` não entra: a legenda fala com ela, e
 # ela lê o que está escrito na tela.
 TERMOS_DA_TELA = (
-    "Liberar", "Efeitos do Jogo", "Efeitos do Jogo e Áudio da TV no Controle",
+    "Liberar", "Efeitos do Jogo no Controle, Áudio da TV na TV", "Efeitos do Jogo e Áudio da TV no Controle",
     "Só no controle",
     "Calibrar sensores de movimento", "Mapa do controle", "Dispositivos conectados",
     "Sem toque", "Tocando", "LED do jogador", "Barra de luz", "Touchpad",
@@ -4449,7 +4459,7 @@ def _conferir(doc):
     #      alto-falante fora do caminho, mais a saída padrão devolvida), e a
     #      régua segue o ato. **O `data-rota` mudou junto** — `pc` continua
     #      existindo no gesto, no perfil e no IPC, mas fora da fileira.
-    for rota, palavra_dela in (("jogo", "Efeitos do Jogo"),
+    for rota, palavra_dela in (("jogo", "Efeitos do Jogo no Controle, Áudio da TV na TV"),
                                ("junto", "Efeitos do Jogo e Áudio da TV no Controle"),
                                ("nada", "Tudo na TV e Nada no Controle")):
         vistos = re.findall(rf'data-rota="{rota}"[^>]*>([^<]*)</button>', corpo)

@@ -260,17 +260,47 @@ def test_as_quatro_superficies_seguem_a_dona(monkeypatch) -> None:
 
 
 def test_as_quatro_superficies_dizem_a_palavra_dela_hoje() -> None:
-    """E o que elas dizem HOJE é a decisão dela: `cabo` e `rádio`.
+    """E o que elas dizem HOJE é `USB` e `BT` — palavra dela, 21/09/2026.
+
+    **A PALAVRA NÃO SE DIGITA AQUI**, e é o ponto do arquivo: ela sai do dono
+    (`home_actions.palavra_do_transporte`), do mesmo jeito que as quatro
+    superfícies a tiram. A versão de 06/09 desta régua NEGAVA `"USB"` no texto
+    de tela — e teria reprovado a decisão dela em vez de reprovar um segundo
+    dono, que é o defeito que este arquivo existe para pegar. Régua de dono
+    mede DONO; a palavra é de quem manda na tela.
 
     Sem este caso, uma superfície que escrevesse a sentinela em qualquer
     situação passaria no teste de cima.
     """
-    estado, mesa = _mesa("usb", "bt")
-    for onde, texto in _superficies(estado, mesa).items():
-        assert "cabo" in texto, f"{onde} não diz a palavra dela: {texto!r}"
-        assert "USB" not in texto, (
-            f"{onde} ainda escreve a sigla de máquina: {texto!r}. `USB` é o nome "
-            "do barramento, não palavra de quem quer jogar")
+    # DUAS VOLTAS, e não uma: `_superficies` lê sempre o PRIMEIRO da mesa,
+    # então uma volta só mediria metade do dicionário — e foi assim que o
+    # defeito original sobreviveu a quatro leituras.
+    for cru in ("usb", "bt"):
+        dela = home_actions.palavra_do_transporte(cru)
+        estado, mesa = _mesa(cru, cru)
+        for onde, texto in _superficies(estado, mesa).items():
+            assert dela in texto, (
+                f"{onde} não diz a palavra dela para {cru!r}: {texto!r}")
+
+
+def test_a_tela_e_o_desenho_falam_a_mesma_palavra() -> None:
+    """A DIVERGÊNCIA DE UM MÊS FECHOU — 21/09/2026, por decisão dela.
+
+    A mesa do DESENHO (`interface/monta.MESA`) sempre disse `USB`/`BT` e o
+    produto dizia `cabo`/`rádio`: duas telas, duas línguas, e a
+    `A-PALAVRA-MESA-SAI-01` existia só para escolher uma. Ela escolheu vendo
+    as duas — *"USB e BT é muito bom"*.
+
+    MORDE: devolva `"cabo"` ao dono e esta régua reprova, porque o desenho
+    continua em `USB`.
+    """
+    from hefesto_dualsense4unix.interface import monta
+
+    for controle in monta.MESA:
+        assert controle["via"] == home_actions.palavra_do_transporte(
+            controle["transporte"]), (
+            f"o desenho diz {controle['via']!r} onde a tela diz "
+            f"{home_actions.palavra_do_transporte(controle['transporte'])!r}")
 
 
 def test_a_contagem_e_a_unica_excecao_e_ela_continua_em_sigla() -> None:

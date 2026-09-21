@@ -358,7 +358,14 @@ class TestAContaDaMesaContaQuemEstaNaMesa:
 
 #: O que o mapa de canais fala. É o PORTÃO
 #: (`scripts/check_paridade_transporte.py` cruza CSV, testes e specs), e por
-#: isso é ele quem manda no vocabulário — não a tela.
+#: isso é ele quem manda no vocabulário DO DADO.
+#:
+#: **A TELA DEIXOU DE SEGUIR O MAPA EM 21/09/2026, e foi ela quem separou os
+#: dois.** Com a janela aberta na frente dela: *"USB e BT é muito bom"*,
+#: *"Melhor que cabo e bt"*. <!-- noqa-acento: citação literal dela -->
+#: O CSV continua dizendo `cabo`/`rádio` — é dado, e é o que as 313 linhas do
+#: mapa usam. Quem responde pela TELA é `home_actions.palavra_do_transporte`,
+#: e daqui para baixo as réguas da tela PERGUNTAM a ele.
 _LINGUA_DO_MAPA = ("cabo", "rádio")
 
 
@@ -376,12 +383,21 @@ class TestOCardFalaALinguaDoMapa:
                 "perdeu o chão"
             )
 
-    def test_usb_vira_cabo_e_bt_vira_radio(self) -> None:
-        """A MORDIDA da I9. Arranque o mapa e o card volta a dizer `USB`/`BT`."""
-        assert home_actions.palavra_do_transporte("usb") == "cabo"
-        assert home_actions.palavra_do_transporte("USB") == "cabo"
-        assert home_actions.palavra_do_transporte("bt") == "rádio"
-        assert home_actions.palavra_do_transporte("bluetooth") == "rádio"
+    def test_o_dicionario_normaliza_os_seis_crus_em_duas_palavras(self) -> None:
+        """A MORDIDA do dono: seis grafias entram, DUAS palavras saem.
+
+        A palavra é a dela, de 21/09/2026: `USB` e `BT`. Aqui ela é DIGITADA
+        de propósito — este é o oráculo do dicionário, e um oráculo que
+        perguntasse ao próprio dono não mediria nada. O que a régua garante é
+        a NORMALIZAÇÃO: `bluetooth`, `radio` e `rádio` não podem chegar
+        crus à tela, que era o defeito de forma da I9.
+        """
+        assert home_actions.palavra_do_transporte("usb") == "USB"
+        assert home_actions.palavra_do_transporte("USB") == "USB"
+        assert home_actions.palavra_do_transporte("cabo") == "USB"
+        assert home_actions.palavra_do_transporte("bt") == "BT"
+        assert home_actions.palavra_do_transporte("bluetooth") == "BT"
+        assert home_actions.palavra_do_transporte("rádio") == "BT"
 
     def test_transporte_desconhecido_aparece_cru_em_vez_de_sumir(self) -> None:
         """Um transporte novo tem de chegar aos olhos de alguém.
@@ -409,10 +425,11 @@ class TestOCardFalaALinguaDoMapa:
         host._render_home(_estado_da_mesa_mista())
 
         textos = " | ".join(_textos_dos_cards(host))
-        assert "USB" not in textos
+        # `Bluetooth` NÃO — a normalização é o que a I9 deixou de pé: o cru do
+        # daemon não chega à tela, só a palavra do dono chega.
         assert "Bluetooth" not in textos
-        assert "cabo" in textos
-        assert "rádio" in textos
+        assert home_actions.palavra_do_transporte("usb") in textos
+        assert home_actions.palavra_do_transporte("bt") in textos
 
     @pytest.mark.xfail(
         strict=True,
