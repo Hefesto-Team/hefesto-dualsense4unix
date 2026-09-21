@@ -2143,10 +2143,23 @@ def selo_do_microfone(mic_mudo, *, estilo=""):
 #
 # "REINICIANDO O HEFESTO" FICA: continua verdade, e é a saída de quem não quer
 # digitar nada.
-DICA_MIC_MUDO = ("Cala o microfone e apaga a luz vermelha do controle. A partir "
-                 "daqui quem manda no mudo é o Hefesto, e o botão do controle "
-                 "para de valer. Para devolvê-lo ao controle, reinicie o "
-                 "Hefesto.")
+# O 🎙 DEIXOU DE CALAR — 20/09/2026, ordem dela, e a razão é dela também:
+# *"esse botão segue desativando o microfone, não precisamos dele mais na
+# interface pq o botão do proprio controle já o faz e ele reflete isso"*.  # noqa-acento: citação literal dela
+#
+# O que ele passa a fazer é o «testar microfone» do Discord:
+# *"ele reflete os slicers que vão mostrar no jogo como o microfone é ouvido e
+# após três segundos de fala capturada de audio ele reproduz na tela o seu som
+# falado"*.  <!-- noqa-acento: citação literal dela -->
+#
+# A DICA VELHA SAIU INTEIRA, e não fica ao lado: ela prometia *"a partir daqui
+# quem manda no mudo é o Hefesto, e o botão do controle para de valer"* — uma
+# frase que, depois desta troca, descreve um ato que o botão não faz mais.
+# Guardá-la seria deixar a tela mentir com precisão.
+DICA_MIC_TESTAR = ("Fala e ouve de volta. Grava três segundos da sua voz — com "
+                   "o volume e o ganho desta coluna já aplicados — e toca para "
+                   "você, exatamente como o jogo te ouve. Para calar o "
+                   "microfone, use o botão do próprio controle.")
 # **A DICA DO ♪ DIZ O PREÇO — decisão dela, 04/09/2026 [06].** A pergunta era se
 # o alto-falante ganharia um "Devolver", e a resposta é a mesma que ela deu ao
 # gêmeo em 31/08 (o "Liberar" do microfone): *"o botão do Controle sempre
@@ -2413,9 +2426,9 @@ GANHO_PADRAO_PCT = 100
 
 ROTULO_GANHO_MIC = "Ganho de entrada do microfone deste controle, em decibéis"
 DICA_GANHO_MIC = (
-    "Ganho de entrada: o quanto o APARELHO amplifica o que entra no microfone, "
+    "Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, "
     "de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, "
-    "o quanto desse som o produto ENTREGA ao PC."
+    "o quanto desse som o produto entrega ao PC."
 )
 
 
@@ -2871,7 +2884,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
               <span class="trilho"><span class="cheio" data-campo="mic-barra"
                 data-hef-alvo="largura" style="width:{mic_vol}%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="{mic_vol}" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="{ROTULO_VOL_MIC}" title="{DICA_VOL_MIC}"></span>
               <span class="n" data-campo="mic-num">{mic_vol}</span>
-              <button class="mudo-i" data-gesto="mudo" data-mudo="microfone" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="{ATRIBUTO_DA_LUZ_DO_MIC}" title="{DICA_MIC_MUDO}">🎙</button>
+              <button class="mudo-i" data-gesto="mic-testar" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="{ATRIBUTO_DA_LUZ_DO_MIC}" title="{DICA_MIC_TESTAR}">🎙</button>
               {ponto_de_interrogacao("mic-porque")}
             </div>
             <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:

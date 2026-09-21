@@ -15,10 +15,10 @@
       "data": "2026-09-20",
       "nota": "470547 bytes são cópia do mesmo bloco presente nas 10 páginas — o WebKit os baixa 10 vezes e os descarta outras tantas. A razão de um CSS pertence ao gerador. CONTA comentário de HTML e de CSS, com parser; NÃO conta comentário dentro de <script>, porque separar comentário de literal de expressão regular em JavaScript pede um analisador escrito no escuro.",
       "o_que_conta": "bytes de comentário dentro das páginas publicadas",
-      "piso": 1097724,
+      "piso": 1104478,
       "por_item": {
         "01-jogar.html": 106875,
-        "02-controles.html": 198927,
+        "02-controles.html": 205681,
         "03-gatilhos.html": 85190,
         "04-iluminacao.html": 120744,
         "05-vibracao.html": 98273,
@@ -28,7 +28,15 @@
         "09-sistema.html": 76674,
         "10-perfis.html": 108053
       },
-      "razao": "piso de partida da TRADUZIR-O-PROJETO-01, medido em 20/09/2026 nesta árvore",
+      "razao": "Duas features novas na mesma leva, e a prosa é o laudo delas: a QUEM-JOGA-E-QUEM-VIBRA-01 (o gate que impede três controles de vibrarem num jogo de um jogador) e a TESTAR-O-MICROFONE-01 (o glifo que deixa de calar e passa a ouvir). Os +6754 bytes são docstrings que registram POR QUE cada decisão é o que é — inclusive a correção dela que derrubou a premissa de uma sprint escrita horas antes. Cortar essa prosa para segurar o número faria a próxima pessoa remedir o que já foi medido, que é o custo que esta catraca existe para evitar do outro lado.",
+      "subidas": [
+        {
+          "data": "2026-09-20",
+          "de": 1097724,
+          "para": 1104478,
+          "razao": "Duas features novas na mesma leva, e a prosa é o laudo delas: a QUEM-JOGA-E-QUEM-VIBRA-01 (o gate que impede três controles de vibrarem num jogo de um jogador) e a TESTAR-O-MICROFONE-01 (o glifo que deixa de calar e passa a ouvir). Os +6754 bytes são docstrings que registram POR QUE cada decisão é o que é — inclusive a correção dela que derrubou a premissa de uma sprint escrita horas antes. Cortar essa prosa para segurar o número faria a próxima pessoa remedir o que já foi medido, que é o custo que esta catraca existe para evitar do outro lado."
+        }
+      ],
       "unidade": "bytes",
       "universo": 10
     },
