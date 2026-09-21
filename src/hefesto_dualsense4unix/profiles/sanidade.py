@@ -256,11 +256,75 @@ def _catch_all_com_cara_de_jogo(perfis: Sequence[Profile]) -> list[Achado]:
     return achados
 
 
+def _alvos(perfil: Profile) -> tuple[frozenset[str], frozenset[str], bool] | None:
+    """Os endereços de janela de um perfil: `(classes, processos, tem_regex)`.
+
+    ``None`` para quem não casa por critério (manual, catch-all) — esses têm
+    regras próprias neste arquivo e não entram na conta de empate.
+
+    A caixa é ignorada porque o produto a ignora: `MatchCriteria.matches` casa
+    com `re.IGNORECASE` e `_casa_sem_caixa`. Uma régua com regra de caixa
+    diferente da do produto responde sobre outra coisa — que é o defeito que
+    esta casa mais caçou.
+    """
+    match = perfil.match
+    classes = getattr(match, "window_class", None)
+    processos = getattr(match, "process_name", None)
+    if classes is None and processos is None:
+        return None
+    regex = getattr(match, "window_title_regex", None)
+    return (
+        frozenset(c.casefold() for c in (classes or [])),
+        frozenset(p.casefold() for p in (processos or [])),
+        bool(regex),
+    )
+
+
+def _podem_disputar(a: Profile, b: Profile) -> bool:
+    """Existe alguma janela do mundo que case com os DOIS?
+
+    A resposta é conservadora de propósito: só devolve ``False`` quando é
+    IMPOSSÍVEL colidirem. `MatchCriteria` é AND entre os campos preenchidos e
+    OR dentro de cada lista — então basta um campo preenchido nos dois **sem
+    interseção** para que nenhuma janela case com ambos. O `window_title_regex`
+    nunca prova impossibilidade (dois regexes podem casar com o mesmo título),
+    e por isso não é usado para calar nada.
+    """
+    alvo_a, alvo_b = _alvos(a), _alvos(b)
+    if alvo_a is None or alvo_b is None:
+        return True
+    classes_a, processos_a, _ = alvo_a
+    classes_b, processos_b, _ = alvo_b
+    if classes_a and classes_b and not (classes_a & classes_b):
+        return False
+    return not (processos_a and processos_b and not (processos_a & processos_b))
+
+
 def _prioridades_empatadas(perfis: Sequence[Profile]) -> list[Achado]:
-    """Dois perfis disputáveis na MESMA prioridade — o desempate vira sorteio.
+    """Perfis que DISPUTAM A MESMA JANELA na mesma prioridade.
 
     Perfis só-manuais ficam de fora: eles nunca são candidatos do autoswitch,
     então empatar não decide nada.
+
+    E DESDE 21/09/2026 O ALVO ENTRA NA CONTA — antes desta data a regra
+    agrupava só por número, e isso a tornava um alarme que o próprio produto
+    fabricava. Medido no disco dela naquele dia: **28 dos 29 perfis em
+    `priority: 80`**, porque `PRIORIDADE_DO_PERFIL_DE_JOGO = 80` é o que o
+    semeador escreve em todo perfil de jogo que ele cria. Os 28 têm
+    `window_class` próprio — `steam_app_1088850`, `steam_app_1245620`… — e
+    portanto **nenhum par deles podia disputar coisa nenhuma**.
+
+    O preço do alarme falso era duplo: a cura que ele imprimia mandava dar 28
+    números diferentes à mão (trabalho sem efeito, e ninguém o faria), e um
+    aviso permanente que não tem ação é o que ensina a ignorar os avisos que
+    têm. *O produto gerava o empate, avisava sobre ele, e a cura era
+    impossível.*
+
+    O QUE NÃO SE FEZ, e é decisão registrada: dar um passo de prioridade ao
+    semeador. Perfis de jogo não competem entre si — inventar hierarquia entre
+    o Elden Ring e o Stray seria dado novo que ninguém pediu, e um número por
+    jogo tem de acabar em algum lugar (`PRIORIDADE_MAXIMA`). O empate entre
+    endereços disjuntos não é defeito; é a forma certa.
     """
     disputantes = [p for p in perfis if not _e_manual(p)]
     por_prioridade: dict[int, list[Profile]] = {}
@@ -270,19 +334,32 @@ def _prioridades_empatadas(perfis: Sequence[Profile]) -> list[Achado]:
     for prioridade, grupo in sorted(por_prioridade.items()):
         if len(grupo) < 2:
             continue
-        nomes = sorted(p.name for p in grupo)
+        # Só entra no achado quem tem PELO MENOS UM par que pode casar com a
+        # mesma janela. Um perfil sozinho no grupo, depois deste filtro, não
+        # disputa com ninguém.
+        em_disputa: set[str] = set()
+        for i, um in enumerate(grupo):
+            for outro in grupo[i + 1 :]:
+                if _podem_disputar(um, outro):
+                    em_disputa.add(um.name)
+                    em_disputa.add(outro.name)
+        if len(em_disputa) < 2:
+            continue
+        nomes = sorted(em_disputa)
         achados.append(
             Achado(
                 regra="prioridades_empatadas",
                 gravidade="aviso",
                 mensagem=(
-                    f"{len(grupo)} perfis empatados na prioridade {prioridade}: "
+                    f"{len(nomes)} perfis empatados na prioridade {prioridade} "
+                    "e disputando as mesmas janelas: "
                     + ", ".join(f"'{n}'" for n in nomes)
                 ),
                 cura=(
-                    "dê números diferentes a eles — no empate quem vence depende "
-                    "da ordem de leitura do diretório, e o mesmo jogo pode abrir "
-                    "com perfis diferentes em dias diferentes"
+                    "dê números diferentes a eles — no empate o perfil que já "
+                    "está ativo continua (EMPATE-01), e quando nenhum deles é o "
+                    "ativo quem vence é o primeiro da ordem de carga, que é "
+                    "alfabética por nome de arquivo e não é critério de ninguém"
                 ),
                 perfis=tuple(nomes),
             )

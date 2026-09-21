@@ -128,6 +128,47 @@ def test_o_roteiro_cobre_o_microfone_e_o_alto_falante() -> None:
         )
 
 
+def test_todo_botao_de_rota_tem_dono_na_tabela() -> None:
+    """MORDIDA 4: a tabela de donos não pode ficar para trás da fileira.
+
+    MEDIDO em 21/09/2026, rodando `--prova-gesto` na máquina dela: dos três
+    botões do alto-falante, DOIS voltavam com *"SEM LINHA na tabela de donos —
+    este gesto chegou de um endereço que o gerador não escreve. Nada foi
+    aplicado."* A tabela conhecia `rota:jogo` e `rota:pc`, e o `pc` tinha saído
+    da fileira no dia anterior, quando ela trocou o ato do terceiro botão.
+
+    **E os dois tinham dono**: `pacotes/a02_controles.py` registra
+    `@gesto("02-controles.html", "rota")` e aceita `jogo`, `junto`, `nada` e
+    `pc`. O instrumento é que estava velho.
+
+    POR QUE ISSO PRECISA DE RÉGUA, e não de atenção: a pergunta que a
+    `--prova-gesto` existe para responder é *"este botão funciona?"*, e a
+    queixa dela de 20/09 foi exatamente essa — *"os 3 botões do auto falante
+    (…) não estão funcionando"*. Uma tabela de donos desatualizada faz a régua
+    ACUSAR O PRODUTO de não fazer o que ele faz. Instrumento que erra a favor
+    do alarme custa uma investigação inteira.
+
+    A régua lê a PÁGINA (quais rotas existem) e o FONTE (quais têm dono), e
+    nunca uma lista digitada aqui — digitar seria medir a própria saída.
+    """
+    fonte = FONTE.read_text(encoding="utf-8")
+    inicio = fonte.index("DONOS_DOS_GESTOS = {")
+    tabela = fonte[inicio : fonte.index("\n}\n", inicio)]
+    declarados = set(re.findall(r'"rota:([a-z]+)"', tabela))
+    for alvo in (PUBLICADO, BANCADA):
+        if not alvo.is_file():
+            continue
+        na_pagina = set(re.findall(r'data-rota="([a-z]+)"', alvo.read_text(encoding="utf-8")))
+        assert na_pagina, f"{alvo.name} não tem botão de rota nenhum — a fileira sumiu?"
+        sem_dono = sorted(na_pagina - declarados)
+        assert not sem_dono, (
+            f"{alvo.name} tem botão de rota sem linha em `DONOS_DOS_GESTOS`: "
+            f"{sem_dono}. A `--prova-gesto` vai dizer «nada foi aplicado» sobre "
+            f"um botão que tem dono em `pacotes/a02_controles.rota`, e quem ler "
+            f"o relatório vai concluir que o produto está quebrado."
+        )
+
+
 def test_o_passo_confessa_quando_nao_acha_o_alvo() -> None:
     """MORDIDA 3: o clique sintético reporta `achou`, em vez de estourar calado.
 

@@ -732,7 +732,7 @@ BOOTSTRAP = r"""
     // `fundo`. O clique do analógico é COR na GTK
     // (`app/widgets/controller_card.py:5462`, "accent do CONTROLE quando
     // pressionados") e era cor no piloto velho desta aba
-    // (`interface/controles_vivos.py:388`,
+    // (`interface/controles_vivos.py:512`,
     // `{color: s.on ? 'var(--plastico)' : ''}`). Sem este alvo, o pacote da
     // aba Controles teve de escrever `[L3]` em TEXTO e deixou a razão escrita
     // em `a02_controles.py:63` — *"enquanto o piloto não tiver o alvo, o texto

@@ -2735,39 +2735,30 @@ _NUMERO_SOLTO = re.compile(
 _MEDIDAS_QUE_NAO_SAO_DAQUI: tuple[str, ...] = (
     '10 colunas',
     '102.818',
-    '110 linhas',
     '12.717',
     '122.766',
     '128 linhas',
     '14.534',
     '16 linhas',
     '16.050',
-    '163 linhas',
-    '21 linhas',
     '21.026',
     '225 células',
-    '230 linhas',
     '26 colunas',
     '264 linhas',
     '27.828',
     '3.447',
-    '30 linhas',
-    '30.711',
+    # NOTA HISTÓRICA: o julgamento do juiz medido em 02/09/2026, sobre as
+    # 37 células de grau forte daquela árvore. Gerar apagaria o registro.
     '37 células',
-    '37 linhas',
+    '30.711',
     '4.750',
-    '45 células',
     '5.250',
     '53.899',
     '60 caracteres',
     '600 caracteres',
-    '616 células',
     '63 células',
-    '64 células',
-    '66 linhas',
     '696.546',
     '700.602',
-    '74 linhas',
     '85.063',
 )
 
@@ -2850,7 +2841,169 @@ def numeros_do_leia_primeiro(raiz: Path) -> dict[str, str]:
     provado = contar(celulas, "provado_por")
     observado = contar(ensaios, "observado_por")
 
+    # OS VINTE E TANTOS DE 21/09/2026 — as seções 2, 3 e 7 do documento.
+    #
+    # O bloco do topo era gerado desde 26/08; o CORPO não. O próprio
+    # `LEIA-PRIMEIRO.md` declarava a dívida — *"o que ainda é digitado à mão: o
+    # `existe`, as duas réguas por valor e as 20 casas do cruzamento (…) gerá-los
+    # pede contadores novos no portão, e é a continuação natural desta cura"*.
+    # Estes são os contadores.
+    #
+    # MEDIDO em 21/09, antes de escrevê-los: das quatro casas de `existe`, as
+    # QUATRO estavam erradas (142/79/68/19 publicados contra 154/90/48/21);
+    # linhas por controle diziam 110/99/99 contra 113/100/100; as duas réguas
+    # por valor erravam nas nove casas; o grau forte dizia 37 contra 48; e o
+    # cruzamento das duas réguas publicava 19 casas erradas de 20 — mais a
+    # multiplicação, que dizia "616 células (313 linhas x 2 lados)" quando
+    # 313 x 2 = 626.
+    #
+    # A ESPÉCIE DO ERRO É SEMPRE A MESMA, e é por isso que gerar resolve: o mapa
+    # CRESCE, e todo número digitado sobre ele nasce com prazo. Nenhum deles
+    # estava errado quando foi escrito.
+    def _escada(valor: str) -> str:
+        return {
+            "": "vazio",
+            "MONTOU": "montou",
+            "SAIU NO FIO": "saiu",
+            "O APARELHO OBEDECEU": "obedeceu",
+        }.get(valor.strip(), "outro")
+
+    def _sei(valor: str) -> str:
+        return {
+            "": "vazio",
+            "medido": "medido",
+            "inferido-do-codigo": "inferido",
+            "afirmado-no-doc": "afirmado",
+            "incerto": "incerto",
+        }.get(valor.strip(), "outro")
+
+    lados = [
+        (_sei(linha.get(f"{t}_de_onde_sei") or ""), _escada(linha.get(f"{t}_ate_onde_foi") or ""))
+        for linha in celulas
+        for t in ("cabo", "radio")
+    ]
+    existe = contar(celulas, "existe")
+    por_controle = contar(celulas, "controle")
+
+    #: GRAU FORTE é `SAIU NO FIO` ou `O APARELHO OBEDECEU` — a prova que exige
+    #: hardware. AFIRMAÇÃO FORTE é `aciona=sim` com `de_onde_sei=medido`. As
+    #: duas são definições do portão, e o documento as publica: se elas mudarem
+    #: aqui, o texto muda junto, que é o ponto inteiro de gerar.
+    grau_forte = sum(1 for _, escada in lados if escada in ("saiu", "obedeceu"))
+    afirmacao_forte = sum(
+        1
+        for linha in celulas
+        for t in ("cabo", "radio")
+        if (linha.get(f"{t}_aciona") or "").strip() == "sim"
+        and (linha.get(f"{t}_de_onde_sei") or "").strip() == "medido"
+    )
+
+    #: AS DUAS CONTAS DE DIVERGÊNCIA SÃO DIFERENTES, e a diferença já confundiu
+    #: quem lia os dois artefatos lado a lado: o `LEIA-PRIMEIRO` conta
+    #: `cabo_aciona != radio_aciona` e o `specs.html` conta o par
+    #: `(aceita, aciona)` — o segundo é sempre maior. Gerar as DUAS, com nome
+    #: que diz o que cada uma mede, é o que impede a próxima pessoa de concluir
+    #: que um dos dois mente.
+    divergem_aciona = [
+        linha
+        for linha in celulas
+        if (linha.get("cabo_aciona") or "") != (linha.get("radio_aciona") or "")
+    ]
+    #: A regra é a MESMA de `gerar-mapa.assimetrias`, de propósito, inclusive a
+    #: guarda dos dois lados respondidos (`aceita` não vazio nos dois): dois
+    #: números com o mesmo nome e contas diferentes é o defeito que a lei do
+    #: fato errado existe para matar. Se um dos dois mudar, este teste-irmão
+    #: fica vermelho — `tests/unit/test_leia_primeiro_nao_digita_numero_a_mao.py`.
+    divergem_veredicto = sum(
+        1
+        for linha in celulas
+        if (linha.get("cabo_aceita") or "").strip()
+        and (linha.get("radio_aceita") or "").strip()
+        and (linha.get("cabo_aceita") or "", linha.get("cabo_aciona") or "")
+        != (linha.get("radio_aceita") or "", linha.get("radio_aciona") or "")
+    )
+    sem_declarar = sum(
+        1 for linha in divergem_aciona if not (linha.get("assimetria_declarada") or "").strip()
+    )
+
+    com_ensaio = {ensaio.get("linha_id") for ensaio in ensaios}
+    linhas_com_ensaio = sum(1 for linha in celulas if linha.get("id") in com_ensaio)
+
+    def _com(coluna: str) -> int:
+        return sum(1 for linha in celulas if (linha.get(coluna) or "").strip())
+
+    transporte = contar(celulas, "transporte")
+    linhas_de_grau_forte = sum(
+        1
+        for linha in celulas
+        if any(
+            _escada(linha.get(f"{t}_ate_onde_foi") or "") in ("saiu", "obedeceu")
+            for t in ("cabo", "radio")
+        )
+    )
+
+    medidas_do_corpo = {
+        "mapa-id-confere": _milhar(
+            sum(
+                1
+                for linha in celulas
+                if (linha.get("id") or "")
+                == f"{linha.get('chave', '')}@{linha.get('controle', '')}"
+            )
+        ),
+        "mapa-com-ponte-alcanca": _milhar(_com("ponte_alcanca")),
+        "mapa-com-mordida-provada": _milhar(_com("mordida_provada_em")),
+        "mapa-transporte-ambos": _milhar(transporte.get("ambos", 0)),
+        "mapa-transporte-cabo-radio": _milhar(transporte.get("cabo+rádio", 0)),
+        "mapa-transporte-sem-linha-v1": _milhar(transporte.get("sem linha no v1", 0)),
+        "mapa-linhas-grau-forte": _milhar(linhas_de_grau_forte),
+        "mapa-linhas-sem-ensaio": _milhar(len(celulas) - linhas_com_ensaio),
+        "mapa-pct-divergem-aciona": (
+            f"{100 * len(divergem_aciona) / len(celulas):.1f}".replace(".", ",")
+            if celulas
+            else "0,0"
+        ),
+        "mapa-existe-tem": _milhar(existe.get("tem", 0)),
+        "mapa-existe-nao-tem": _milhar(existe.get("nao-tem", 0)),
+        "mapa-existe-desconhecido": _milhar(existe.get("desconhecido", 0)),
+        "mapa-existe-parcial": _milhar(existe.get("parcial", 0)),
+        "mapa-linhas-dualsense": _milhar(por_controle.get("dualsense", 0)),
+        "mapa-linhas-pro": _milhar(por_controle.get("pro", 0)),
+        "mapa-linhas-sn30": _milhar(por_controle.get("sn30", 0)),
+        "celulas-do-mapa": _milhar(len(lados)),
+        "celulas-grau-forte": _milhar(grau_forte),
+        "celulas-afirmacao-forte": _milhar(afirmacao_forte),
+        "mapa-divergem-aciona": _milhar(len(divergem_aciona)),
+        "mapa-divergem-sem-declarar": _milhar(sem_declarar),
+        "mapa-divergem-veredicto": _milhar(divergem_veredicto),
+        "mapa-com-teste-que-morde": _milhar(_com("teste_que_morde")),
+        "mapa-com-nota": _milhar(_com("nota")),
+        "mapa-com-provado-em": _milhar(_com("provado_em")),
+        "mapa-linhas-com-ensaio": _milhar(linhas_com_ensaio),
+        "mapa-pct-linhas-com-ensaio": (
+            f"{100 * linhas_com_ensaio / len(celulas):.1f}".replace(".", ",")
+            if celulas
+            else "0,0"
+        ),
+    }
+    for nome in ("medido", "inferido", "afirmado", "incerto", "vazio"):
+        medidas_do_corpo[f"celulas-sei-{nome}"] = _milhar(
+            sum(1 for sei, _ in lados if sei == nome)
+        )
+    for nome in ("vazio", "montou", "saiu", "obedeceu"):
+        medidas_do_corpo[f"celulas-escada-{nome}"] = _milhar(
+            sum(1 for _, escada in lados if escada == nome)
+        )
+    # As 20 casas do cruzamento, uma chave cada. O documento publica a tabela
+    # inteira, e uma casa só se conserta sozinha se tiver nome próprio.
+    for sei in ("medido", "inferido", "afirmado", "incerto", "vazio"):
+        for escada in ("vazio", "montou", "saiu", "obedeceu"):
+            medidas_do_corpo[f"cruzamento-{sei}-{escada}"] = _milhar(
+                sum(1 for s, e in lados if s == sei and e == escada)
+            )
+
     return {
+        **medidas_do_corpo,
         "caracteres-do-mapa": _milhar(caracteres),
         #: O DIVISOR É 4, e é a regra de bolso da casa para texto latino. Ele
         #: não precisa ser exato: precisa não estar errado por um fator de 2,

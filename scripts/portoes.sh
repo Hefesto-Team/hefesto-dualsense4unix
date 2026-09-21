@@ -526,6 +526,45 @@ if [ "${1:-}" = "--interpretador" ]; then
 fi
 echo
 
+# --- O LAR DE MENTIRA DO RUNNER `pytest` -----------------------------------
+#
+# MEDIDO na máquina dela em 21/09/2026, com o daemon VIVO: `bash
+# scripts/portoes.sh` sem argumento fez o portão `casa-sabe` (42 testes)
+# ESCREVER no `~/.config/hefesto-dualsense4unix` real — `controller_masks.json`
+# zerado (78 -> 27 B), o perfil do jogo regravado, e o autoswitch trocou o
+# perfil ATIVO dela no meio da corrida, de «Marvel's Guardians of the Galaxy»
+# para «Personalizado».
+#
+# O `CANARIO-FS-01` do `conftest.py` viu e fez `session.exitstatus = 1`: o
+# portão saiu **VERMELHO com os 42 testes PASSANDO**. Vermelho de ambiente
+# lê-se como regressão, e é a armadilha nomeada na §6.1 do ONDE PARAMOS de
+# 21/09.
+#
+# POR QUE O `conftest.py` NÃO BASTA: ele desvia `HOME` e os quatro `XDG_*` por
+# fixture, mas `Path.home()` avaliado no IMPORT de um módulo do produto escapa
+# do monkeypatch — é exatamente o que o texto do canário manda procurar.
+# Desviar no AMBIENTE, antes de o processo nascer, alcança os dois casos: nesta
+# corrida, nenhum `Path.home()` — em import ou em chamada — encontra a casa
+# dela.
+#
+# PROVADO NOS DOIS SENTIDOS, no mesmo dia: com o HOME real, `rc=1` e quatro
+# arquivos dela mudados; com o lar de mentira, `rc=0` e a casa dela intacta.
+#
+# O escopo é o runner `pytest` de propósito: é o único que carrega o produto
+# inteiro. Os outros runners leem arquivo e não instanciam o daemon.
+LAR_DE_MENTIRA="$(mktemp -d "${TMPDIR:-/tmp}/portoes-lar-XXXXXX")"
+mkdir -p "$LAR_DE_MENTIRA"/{config,data,cache,state,runtime}
+chmod 700 "$LAR_DE_MENTIRA/runtime"
+trap 'rm -rf "$LAR_DE_MENTIRA"' EXIT
+_AMBIENTE_DE_MENTIRA=(
+  "HOME=$LAR_DE_MENTIRA"
+  "XDG_CONFIG_HOME=$LAR_DE_MENTIRA/config"
+  "XDG_DATA_HOME=$LAR_DE_MENTIRA/data"
+  "XDG_CACHE_HOME=$LAR_DE_MENTIRA/cache"
+  "XDG_STATE_HOME=$LAR_DE_MENTIRA/state"
+  "XDG_RUNTIME_DIR=$LAR_DE_MENTIRA/runtime"
+)
+
 # --- a corrida -------------------------------------------------------------
 VERMELHOS=()
 AUSENTES=()
@@ -560,7 +599,11 @@ while IFS='|' read -r camada id runner argv; do
     # `dev` por horas, e ninguém viu — porque a lista local não o continha e o
     # portão da lista só compara `scripts/*`. Portão do CI que não cabe em
     # `scripts/` precisa caber aqui, ou o buraco continua aberto.
-    pytest) cmd="$PY -m pytest -q $argv" ;;
+    # O `env` com o LAR DE MENTIRA é o que impede este runner de escrever na
+    # casa dela — a razão inteira está no bloco «O LAR DE MENTIRA DO RUNNER
+    # `pytest`», acima. Sem ele, este portão altera a configuração de quem está
+    # usando o produto no mesmo instante.
+    pytest) cmd="env ${_AMBIENTE_DE_MENTIRA[*]} $PY -m pytest -q $argv" ;;
     *)    echo "ERRO: runner desconhecido '$runner' no portão '$id'" >&2; exit 2 ;;
   esac
 

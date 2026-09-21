@@ -277,6 +277,64 @@ def test_sprint_feita_nao_disputa_posse() -> None:
     assert uma_feita == []
 
 
+def test_espera_ela_nao_se_despacha_e_nao_disputa(tmp_path) -> None:
+    """`espera-ela`: o código fechou, o gesto dela não — e a fila tem de dizer isso.
+
+    Nasceu em 21/09/2026, de a fila MENTIR: das 25 sprints `aberta`, seis
+    tinham o código no `dev`, instalado e empurrado, e o que faltava era o
+    gesto dela. Com quatro estados elas só tinham dois lugares para morar, e
+    os dois mentiam — `aberta` mandava agente refazer o pronto, `feita`
+    derrubaria a sprint em `arquivados/` levando junto o único gesto que
+    ainda falta.
+
+    A mordida cobre as três propriedades que o estado novo promete, e cada
+    `assert` aqui quebra se alguém tirar uma delas: não se despacha, não
+    disputa posse, e sai na lista própria — nunca na dos abertos.
+    """
+    (tmp_path / "2026-09-21-ESPERA-01.md").write_text(
+        _com_estado(_sprint("ESPERA-01", posse={"A": ["src/x.py"]}), "espera-ela"),
+        encoding="utf-8",
+    )
+    (tmp_path / "2026-09-21-VIVA-01.md").write_text(
+        _sprint("VIVA-01", posse={"B": ["src/x.py"]}), encoding="utf-8"
+    )
+    base = [sys.executable, str(SCRIPT), "--pasta", str(tmp_path)]
+
+    r = subprocess.run([*base, "--exigir", "ESPERA-01"], capture_output=True, text=True)
+    assert r.returncode == 1 and "espera-ela" in r.stderr, (
+        "sprint que espera a mão dela não se despacha para agente"
+    )
+    r = subprocess.run([*base, "--abertas"], capture_output=True, text=True)
+    assert "ESPERA-01" not in r.stdout and "VIVA-01" in r.stdout
+    r = subprocess.run([*base, "--espera-ela"], capture_output=True, text=True)
+    assert "ESPERA-01" in r.stdout and "VIVA-01" not in r.stdout
+
+    # As duas reivindicam `src/x.py`; com uma em `espera-ela` não há disputa,
+    # porque a entrega de código dela já aconteceu.
+    sem_disputa = _confere(
+        a=_com_estado(_sprint("A-01", posse={"A": ["src/x.py"]}), "espera-ela"),
+        b=_sprint("B-01", posse={"B": ["src/x.py"]}),
+    )
+    assert sem_disputa == []
+
+
+def test_espera_ela_nao_desce_para_arquivados() -> None:
+    """Ela fica na pasta viva: é lá que a pauta da sessão com ela se lê.
+
+    O `mover-sprints-fechadas.py` desce `feita`, `absorvida` e `caducou`. Se
+    alguém acrescentar `espera-ela` àquela tupla, a sprint some da fila viva e
+    o gesto que falta vira invisível — que é metade do defeito que o estado
+    novo veio curar.
+    """
+    movedor = SCRIPT.parent / "mover-sprints-fechadas.py"
+    fonte = movedor.read_text(encoding="utf-8")
+    linha = next(ln for ln in fonte.splitlines() if ln.startswith("FECHADOS"))
+    assert "espera-ela" not in linha, (
+        "`espera-ela` entrou na lista dos que descem para `arquivados/` — a "
+        "sprint que espera a mão dela tem de ficar na pasta viva"
+    )
+
+
 def test_exigir_recusa_sprint_que_nao_esta_aberta(tmp_path) -> None:
     (tmp_path / "2026-09-06-FEITA-01.md").write_text(
         _com_estado(_sprint("FEITA-01", posse={"A": ["src/x.py"]}), "feita"),

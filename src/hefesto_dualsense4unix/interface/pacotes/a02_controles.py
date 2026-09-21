@@ -839,7 +839,7 @@ def folha_do_plastico(mesa: list[dict[str, Any]]) -> str:
 #:
 #: POR QUE NÃO A COR, que é o que o produto faz: o dono na GTK
 #: (`app/widgets/controller_card.py:5453-5461`) e o piloto antigo desta aba
-#: (`interface/controles_vivos.py:388`) mostram o clique MUDANDO A COR do
+#: (`interface/controles_vivos.py:512`) mostram o clique MUDANDO A COR do
 #: rótulo.
 #:
 #: **FATO SUBSTITUÍDO — O PILOTO PASSOU A SABER.** Aqui estava escrito que *"o
