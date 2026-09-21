@@ -1114,7 +1114,7 @@ def _linhas_dos_botoes(p: dict[str, Any]) -> dict[str, str]:
 # `_persist_key_bindings_to_draft` protege o que a lista não mostra. **Aqui é o
 # contrário**: o "Voltar ao padrão" desta tela zera `key_bindings` inteiro, e o
 # "Guardar" faz `apply_button_actions` reescrever o conjunto todo a partir do de
-# fábrica (`profiles/manager.py:646`, `core/acoes_de_botao.resolver`, que nunca
+# fábrica (`profiles/manager.py:647`, `core/acoes_de_botao.resolver`, que nunca
 # consulta `profile.key_bindings`). Copiar a frase de lá seria a tela afirmando
 # o oposto do que este produto faz — e é a família de defeito que esta casa
 # persegue acima de todas.
@@ -1251,7 +1251,7 @@ def atalhos_que_param_de_valer(p: dict[str, Any]) -> list[tuple[str, str]]:
     """Os `key_bindings` do perfil que o "Guardar" desta tela faz parar de valer.
 
     **É A METADE VISÍVEL DO DEFEITO §3-1**, e o defeito é do produto, não desta
-    aba: `apply_button_actions` (`profiles/manager.py:646`) roda DEPOIS do
+    aba: `apply_button_actions` (`profiles/manager.py:647`) roda DEPOIS do
     `apply_keyboard` e chama `teclado.set_bindings(...)` com o conjunto INTEIRO
     que `acoes_de_botao.resolver()` deriva — e `resolver()` parte de
     `acoes.padrao()` e **nunca consulta `profile.key_bindings`**. Logo, um perfil com
@@ -1265,7 +1265,7 @@ def atalhos_que_param_de_valer(p: dict[str, Any]) -> list[tuple[str, str]]:
     que não se perde é ruído.
 
     A RESSALVA QUE A FRASE CARREGA, e ela é medida: sem device de mouse vivo o
-    `apply_button_actions` sai antes (`manager.py:707-710`) e nada é reescrito. Por
+    `apply_button_actions` sai antes (`manager.py:708-711`) e nada é reescrito. Por
     isso a tira diz *"quando o mouse virtual estiver de pé"* em vez de prometer
     o desastre em todo caso.
 
@@ -2666,7 +2666,7 @@ def vel_cursor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
     O ALCANCE É O DE UM NÚMERO SÓ, e a medição é de 01/09: `mouse_speed` move o
     analógico esquerdo **e** o cursor do touchpad — `emit_touchpad_move` escala
     por `TOUCHPAD_SENSITIVITY * (mouse_speed / DEFAULT_MOUSE_SPEED)`
-    (`integrations/uinput_mouse.py:508`).
+    (`integrations/uinput_mouse.py:517`).
 
     E ELE PASSOU A DURAR ALÉM DA JANELA — 05/09/2026, decisão D2. Até aqui o
     número ia ao daemon e ao `session.json`, e o perfil só o recebia se ela
@@ -2685,7 +2685,7 @@ def vel_rolagem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
 
     Mesma rota speed-only do vizinho, e o mesmo motivo — ver :func:`_velocidade`.
     O que muda é o alcance: `scroll_speed` multiplica o passo do analógico
-    DIREITO em `_emit_scroll` (`integrations/uinput_mouse.py:488`) e nada mais —
+    DIREITO em `_emit_scroll` (`integrations/uinput_mouse.py:497`) e nada mais —
     o touchpad não rola.
 
     A FAIXA DELE É OUTRA, e o dono é o mesmo: `SCROLL_SPEED_MIN`/`MAX` (1..5,

@@ -2730,11 +2730,123 @@ def _avisar_troca_de_modo(daemon: DaemonProtocol) -> None:
 # (`docs/data/mapa-controles.csv`, que não é desta sprint) cita por número de
 # linha. O nome só é lido quando o tique roda, então a posição não muda nada.
 from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
+    GATILHOS as GATILHOS_DO_JOGO,
+)
+from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
     ativo as remapeamento_ativo,
 )
 from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
     traduzir as traduzir_remapeamento,
 )
+from hefesto_dualsense4unix.core.roteador_de_movimento import (  # noqa: E402
+    ativo as roteador_ativo,
+)
+
+
+def aplicar_o_movimento(
+    daemon: DaemonProtocol,
+    arranjo: Any,
+    *,
+    lx: int,
+    ly: int,
+    rx: int,
+    ry: int,
+    botoes: frozenset[str],
+) -> tuple[int, int, int, int]:
+    """O giroscópio do físico vira deslocamento no que o jogo já lê.
+
+    NUNCA LEVANTA, e não é zelo: quem chama é o tique que leva o controle ao
+    jogo. Uma exceção aqui cairia no `except` do `dispatch_gamepad`, que
+    registra um warning e **pula o forward inteiro** — os sticks, os botões e
+    os gatilhos dela morreriam no jogo por causa de uma mira. Em qualquer
+    tropeço, os quatro eixos voltam como entraram.
+
+    **A ORDEM DAS LINHAS É A ENTREGA, e ela foi corrigida pelo advogado do
+    diabo antes de a primeira linha entrar (§9 da sprint).** O acumulador de
+    ângulo DRENA antes dos portões, não depois: os três portões abaixo
+    retornam cedo, e um `consume_angulo()` atrás deles deixaria o ângulo
+    crescer enquanto o gatilho estivesse solto. Medido no papel: um arranjo de
+    mouse com gatilho, solto por dez segundos com o controle na mão, despejaria
+    o percurso inteiro no primeiro tique em que ela apertasse — uma virada de
+    câmera de milhares de pixels num quadro. Drenando antes, o que o portão
+    barra é DESCARTADO, que é o comportamento que a mão dela espera.
+
+    OS TRÊS PORTÕES, nesta ordem, e cada um evita um defeito conhecido:
+
+    1. **O gatilho**, perguntado na LÍNGUA DO LEITOR. `arranjo.gatilho` guarda
+       o id da TELA (`l2`), e `botoes` fala o vocabulário do leitor evdev
+       (`l2_btn`) — `GATILHOS` é o dicionário que já existe para essa exata
+       tradução, e sem ele a mira com gatilho nunca dispararia. E a pergunta é
+       feita aos botões ORIGINAIS, não aos que o remapeamento faz o jogo ver:
+       perguntar aos traduzidos ligaria a mira pelo botão errado no dia em que
+       ela trocasse dois botões de lugar.
+    2. **O sensor desligado por ELA.** `virtual_motion.REGISTRO` é o dono do
+       estado vivo dos sensores por peça de plástico. Se ela desligou o
+       giroscópio daquele controle, o roteador não tem o que rotear — ignorar o
+       registro faria o interruptor dela mentir, que é o defeito que o
+       `sensor.set` existe para não cometer.
+    3. **A fonte.** Sem identidade do primário (`primary_identity` devolve
+       `None` no boot, no `--fake` e no fallback por path) ou sem reader de
+       motion, não há movimento: os eixos voltam intactos.
+    """
+    try:
+        uniq = primary_identity(daemon)
+        if not uniq:
+            # SEM IDENTIDADE NÃO HÁ O QUE DRENAR: o acumulador vive no reader,
+            # e o reader se acha pelo uniq. É o único caminho em que o ângulo
+            # segue crescendo — e ele tem teto próprio
+            # (`MotionSensorReader._TETO_DO_ANGULO_GRAUS`), que é exatamente o
+            # campo que existe para o consumidor que não drena.
+            return lx, ly, rx, ry
+        # `getattr` e não o atributo direto: `_garantir_sensor_hub` mora no
+        # daemon concreto, não no `DaemonProtocol` — e um daemon de teste sem
+        # ele tem de degradar para "sem mira", nunca derrubar o forward.
+        garantir = getattr(daemon, "_garantir_sensor_hub", None)
+        if garantir is None:
+            return lx, ly, rx, ry
+        hub = garantir()
+        from hefesto_dualsense4unix.core import roteador_de_movimento as roteador
+
+        # A DRENAGEM, ANTES DE TUDO. Ver o parágrafo do docstring.
+        angulo = hub.angulo_do_movimento(uniq) if arranjo.quer_angulo else None
+
+        gatilho = arranjo.gatilho
+        if gatilho is not None and GATILHOS_DO_JOGO.get(gatilho, gatilho) not in botoes:
+            return lx, ly, rx, ry
+        from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
+
+        if not REGISTRO.estado(uniq).giroscopio:
+            return lx, ly, rx, ry
+
+        velocidade = hub.velocidade_do_movimento(uniq)
+        if velocidade is None:
+            return lx, ly, rx, ry
+
+        if arranjo.quer_angulo:
+            # O destino «mouse» quer o ÂNGULO percorrido, e a zona morta se
+            # mede na VELOCIDADE: um controle parado com deriva percorre ângulo
+            # de verdade, e é esse ângulo que faz o cursor passear sozinho.
+            if angulo is None:
+                return lx, ly, rx, ry
+            if roteador.deflexao(velocidade, arranjo) == (0, 0):
+                return lx, ly, rx, ry
+            mouse = getattr(daemon, "_mouse_device", None)
+            if mouse is not None:
+                dx, dy = roteador.pixels(angulo, arranjo)
+                mouse.emit_gyro_move(dx, dy)
+            return lx, ly, rx, ry
+
+        dh, dv = roteador.deflexao(velocidade, arranjo)
+        if dh == 0 and dv == 0:
+            return lx, ly, rx, ry
+        if arranjo.destino == roteador.DESTINO_ANALOGICO_ESQUERDO:
+            lx, ly = roteador.misturar(lx, ly, dh, dv)
+        else:
+            rx, ry = roteador.misturar(rx, ry, dh, dv)
+        return lx, ly, rx, ry
+    except Exception as exc:
+        logger.warning("roteador_de_movimento_falhou", err=str(exc))
+        return lx, ly, rx, ry
 
 
 def dispatch_gamepad(
@@ -2779,14 +2891,29 @@ def dispatch_gamepad(
         troca = remapeamento_ativo(store)
         if troca:
             botoes, l2, r2 = traduzir_remapeamento(buttons_pressed, l2, r2, troca)
-        device.forward_analog(
-            lx=state.raw_lx,
-            ly=state.raw_ly,
-            rx=state.raw_rx,
-            ry=state.raw_ry,
-            l2=l2,
-            r2=r2,
-        )
+        lx, ly = state.raw_lx, state.raw_ly
+        rx, ry = state.raw_rx, state.raw_ry
+        # MOVIMENTO-EM-QUALQUER-MASCARA-01 (21/09/2026): a mira por movimento
+        # entra AQUI, no irmão exato do ponto em que a troca botão a botão
+        # entra antes do `forward_buttons` — e pela mesma razão medida: este é
+        # o único caminho do controle até o jogo, e tudo o que NÃO é o jogo (o
+        # PS, os cinco gestos, o atalho, o teclado e o mouse emulados) lê o
+        # `buttons_pressed` ORIGINAL no laço do daemon. Logo a mira muda só o
+        # que o jogo vê, e o PS continua sendo a saída de emergência.
+        #
+        # O `if` é a régua de custo: sem arranjo, o tique paga UM `getattr`.
+        arranjo = roteador_ativo(store)
+        if arranjo is not None:
+            lx, ly, rx, ry = aplicar_o_movimento(
+                daemon,
+                arranjo,
+                lx=lx,
+                ly=ly,
+                rx=rx,
+                ry=ry,
+                botoes=buttons_pressed,
+            )
+        device.forward_analog(lx=lx, ly=ly, rx=rx, ry=ry, l2=l2, r2=r2)
         device.forward_buttons(botoes)
         # FEAT-VPAD-FF-PASSTHROUGH-01: drena o FF (rumble do jogo) do vpad e
         # repassa ao controle físico. getattr defensivo: fakes/devices sem

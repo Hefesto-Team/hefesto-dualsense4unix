@@ -608,6 +608,9 @@ def _achados(state: dict[str, Any] | None,
     som = linha_do_som_do_sistema(state)
     if som:
         linhas.append(som)
+    vulkan = linha_da_sobreposicao_vulkan()
+    if vulkan:
+        linhas.append(vulkan)
     return linhas
 
 
@@ -658,6 +661,70 @@ def linha_do_som_do_sistema(
     if entrada:
         partes.append(f"entra por {entrada}")
     return (SELO_INFORMATIVO, f"Som do sistema: {', '.join(partes)}")
+
+
+def linha_da_sobreposicao_vulkan() -> tuple[str, str] | None:
+    """*"Sobreposição Vulkan: tirada em N · posta em M · P prefixos vistos"*.
+
+    **AS DUAS PERGUNTAS DELA, 21/09/2026:** *"o botão vulcan ele identifica
+    todos os jogos que contenham isso? E vamos ter o estado de ativado e
+    desativado sobre o funcionamento dele? Pra todos os jogos?"*
+
+    O estado existia em disco desde sempre
+    (`camadas_vulkan.caminho_do_estado()`), mas **só chegava à tela depois do
+    clique**: o censo é o corpo do diálogo do clique 1 e some quando ele fecha.
+    Esta linha é o estado no lugar onde ela já olha.
+
+    **OS TRÊS NÚMEROS, e cada um responde a uma metade:**
+
+    | número | o que ele diz |
+    | --- | --- |
+    | tirada em N | o que o botão JÁ fez — camada registrada e desligada |
+    | posta em M | o que o botão ainda faria — as `sobras` do censo |
+    | P prefixos vistos | o ALCANCE, e é ele que responde à primeira pergunta |
+
+    O TERCEIRO FICA NA LINHA MESMO SENDO O MENOS INTERESSANTE: sem ele,
+    *"tirada em 1 jogo"* não diz se o produto olhou 33 prefixos ou 3 — que é
+    literalmente o que ela perguntou.
+
+    **`INFO` E NÃO UM BOTÃO** (D-2109-O-ESTADO-DO-VULKAN-E-INFORMATIVO): a linha
+    não pede ação e não muda de cor. Um «atualizar» seria trabalho dela para
+    ver o que o produto conta sozinho; e pintar de vermelho uma sobreposição
+    POSTA seria a tela confessando dívida nossa, que ela proibiu em 07/09.
+
+    NUNCA LEVANTA: disco hostil, `system.reg` torto ou HOME sem nada devolvem
+    `None`, e o exame inteiro não pode cair por causa de um Vulkan.
+    """
+    try:
+        from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
+
+        prefixos = len(cv.raizes_de_prefixo())
+        if not prefixos:
+            return None
+        jogos = cv.censo(com_nomes=False)
+        postas = sum(1 for j in jogos if j.sobras)
+        # TIRADA = camada DESLIGADA que está no NOSSO estado. A segunda metade
+        # é o que separa "nós desligamos" de "nasceu desligada": sem consultar
+        # o estado, uma camada que o próprio jogo nunca ligou contaria como
+        # trabalho nosso, e o número viraria elogio a quem não fez nada.
+        estado = cv.ler_estado()
+        tiradas = 0
+        for jogo in jogos:
+            registro = estado.get(jogo.appid) or {}
+            if any(
+                not c.ligada and cv.chave_de_estado(c.chave, c.caminho_windows) in registro
+                for c in jogo.camadas
+            ):
+                tiradas += 1
+    except Exception:
+        return None
+    jogo_ou_jogos = "jogo" if tiradas == 1 else "jogos"
+    partes = [
+        f"tirada em {tiradas} {jogo_ou_jogos}" if tiradas else "nenhuma tirada",
+        f"posta em {postas}" if postas else "nenhuma posta",
+        f"{prefixos} prefixos vistos",
+    ]
+    return (SELO_INFORMATIVO, f"Sobreposição Vulkan: {' · '.join(partes)}")
 
 
 #: O PRONTUÁRIO DOS JOGOS LEVA 7,1 SEGUNDOS — medido na máquina dela em

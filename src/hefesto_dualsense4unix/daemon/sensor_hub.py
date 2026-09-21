@@ -157,6 +157,60 @@ class SensorHub:
 
     # -- API consumida pelo event loop (barata por contrato) --------------
 
+    def velocidade_do_movimento(self, uniq: str) -> tuple[float, float, float] | None:
+        """Velocidade angular de `uniq` AGORA, em graus/s; `None` sem reader.
+
+        IRMÃ MAGRA DA `leitura()`, e a magreza é o ponto: esta é chamada pelo
+        TIQUE do jogo (60 Hz por controle), não pelo painel. Sem arredondar e
+        sem montar dicionário — uma tupla de três floats sob lock.
+
+        REGISTRA A DEMANDA, como a `leitura()`: é isto que mantém o reader de
+        motion vivo enquanto a mira estiver ligada. Sem o registro, o TTL
+        apagaria a thread no meio da partida e a mira morreria sozinha, que é a
+        forma de defeito mais difícil de diagnosticar que existe.
+
+        `None` é resposta honesta — *"não há reader para este controle"* — e
+        não `(0,0,0)`: zero é um controle parado, e um painel (ou uma mira)
+        alimentado por essa confusão descreve um aparelho que não está lá.
+        """
+        agora = self._relogio()
+        with self._lock:
+            self._demanda[uniq] = agora
+            motion = self._motion.get(uniq)
+        self._garantir_manutencao()
+        if motion is None:
+            return None
+        try:
+            giro = motion.snapshot()
+            return (float(giro.x), float(giro.y), float(giro.z))
+        except Exception:
+            return None
+
+    def angulo_do_movimento(self, uniq: str) -> tuple[float, float, float] | None:
+        """Ângulo percorrido por `uniq` desde a última chamada — **DRENA**.
+
+        TEM UM DONO SÓ, e ele está escrito para ninguém acrescentar o segundo:
+        o roteador de movimento, no tique do jogo. Um segundo chamador
+        dividiria o movimento entre os dois e a mira dela andaria pela metade —
+        é a mesma regra do `TouchpadReader.consume_motion`, cujo dono é o poll
+        loop.
+
+        Quem quiser VER o giro sem consumir chama `velocidade_do_movimento` ou
+        `leitura`, que não drenam nada.
+        """
+        agora = self._relogio()
+        with self._lock:
+            self._demanda[uniq] = agora
+            motion = self._motion.get(uniq)
+        self._garantir_manutencao()
+        if motion is None:
+            return None
+        try:
+            x, y, z = motion.consume_angulo()
+            return (float(x), float(y), float(z))
+        except Exception:
+            return None
+
     def leitura(self, uniq: str) -> dict[str, Any]:
         """Sensores conhecidos de `uniq` agora; `{}` enquanto não houver.
 
