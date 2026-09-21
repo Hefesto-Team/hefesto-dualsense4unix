@@ -208,9 +208,10 @@ class TestCardFantasma:
 
         cards = host._home_controllers_box.get_children()
         assert len(cards) == 1
-        # I9 (25/08/2026): o card fala a língua do mapa de canais — `cabo`
-        # e `rádio`, nunca `USB`/`BT`.
-        assert any("cabo" in label for label in _card_labels(host))
+        # A I9 (25/08/2026) mandava o card dizer `cabo`/`rádio`, e CAIU em
+        # 21/09/2026 por decisão dela: a tela voltou a dizer `USB`/`BT`, e o
+        # `cabo`/`rádio` ficou só no mapa de canais.
+        assert any("USB" in label for label in _card_labels(host))
 
     def test_controles_conectados_seguem_renderizando(self, fake_gtk: None) -> None:
         host = _HomeStub()
