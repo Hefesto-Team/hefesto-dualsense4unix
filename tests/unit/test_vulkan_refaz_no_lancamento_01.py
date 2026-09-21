@@ -39,6 +39,7 @@ continuam respeitadas.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -360,6 +361,12 @@ def test_a_interface_nao_ganhou_gesto_novo_por_causa_disto() -> None:
     texto = aba.read_text(encoding="utf-8")
     gestos = texto.count('@gesto("09-sistema.html", "procurar-camadas"')
     assert gestos == 1, f"o gesto das camadas deixou de ser um só: {gestos}"
-    assert "cv.curar_todos(religar=devolver, forcar=True)" in texto, (
+    # A CHAMADA GANHOU UM ARGUMENTO em 21/09/2026 (`excluir=`, a lista de
+    # exclusão do Hefesto), e a régua olha os DOIS que ela protege, não a
+    # linha inteira digitada.
+    chamada = re.search(r"cv\.curar_todos\(([^)]*)\)", texto)
+    assert chamada is not None, "o botão não chama mais o curar_todos"
+    assert re.search(r"\bforcar=True\b", chamada.group(1)), (
         "o botão parou de forçar; a regra dela de 09/08/2026 caiu junto"
     )
+    assert re.search(r"\breligar=devolver\b", chamada.group(1)), chamada.group(1)

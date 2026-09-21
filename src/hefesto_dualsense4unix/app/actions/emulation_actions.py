@@ -2226,6 +2226,9 @@ class EmulationActionsMixin(WidgetAccessMixin):
             try:
                 from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
                 from hefesto_dualsense4unix.integrations import (
+                    lista_de_exclusao,
+                )
+                from hefesto_dualsense4unix.integrations import (
                     steam_launch_options as slo,
                 )
 
@@ -2237,7 +2240,10 @@ class EmulationActionsMixin(WidgetAccessMixin):
                         "sair, e a mudança seria perdida.",
                     )
                     return
-                resultados = cv.curar_todos(religar=devolver, forcar=True)
+                resultados = cv.curar_todos(
+                    religar=devolver, forcar=True,
+                    excluir=lista_de_exclusao.appids(),
+                )
             except Exception as exc:
                 logger.warning("cura_de_camadas_falhou", erro=str(exc))
                 GLib.idle_add(

@@ -270,7 +270,13 @@ def test_o_segundo_clique_limpa_o_painel_e_leva_o_recibo_ao_diario(
     carga = gesto(_ctx(), _confirma(nome), PonteDeMentira())
 
     assert set(carga) == {"blocos"}, f"{nome}: o segundo clique narrou: {carga}"
-    assert a09._no_painel("repouso") == "repouso", (
+    # O RECIBO QUE FICA NA TELA — 21/09/2026. A queixa dela sobre o Vulkan era
+    # *«clico em confirma e não aparece nada»*, e o recibo desse gesto passou a
+    # ficar no painel (`RECIBO_QUE_FICA_NA_TELA`). A régua pergunta à lista em
+    # vez de cobrar o painel vazio de todos: o que ela proíbe continua sendo a
+    # PERGUNTA do primeiro clique, velha.
+    esperado = recibo if nome in a09.RECIBO_QUE_FICA_NA_TELA else "repouso"
+    assert a09._no_painel("repouso") == esperado, (
         f"{nome}: a pergunta do primeiro clique ficou no painel, velha")
     diario = capsys.readouterr().err
     assert f"[relato] {a09.PAGINA} · {nome}: {recibo}" in diario, (

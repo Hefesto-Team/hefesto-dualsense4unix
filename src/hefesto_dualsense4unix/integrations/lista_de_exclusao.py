@@ -177,6 +177,11 @@ def ler(config_home: Path | None = None) -> list[Entrada]:
         return []
 
 
+def appids(config_home: Path | None = None) -> list[str]:
+    """Os appids da Steam (e do umu) excluídos — o que os donos por appid leem."""
+    return [a for a in (appid_da_chave(e.chave) for e in ler(config_home)) if a]
+
+
 def contem(chave: str, config_home: Path | None = None) -> bool:
     """Esta chave está excluída?"""
     alvo = chave.strip()
@@ -282,7 +287,10 @@ _ESPERA_A_STEAM = frozenset({"steam_aberta", "jogo_da_steam_aberto"})
 
 
 def tirar_do_disco(chave: str) -> str:
-    """Tira do jogo o pino e o atalho que ele JÁ TEM. Nunca levanta.
+    """Tira do jogo o pino, o atalho e o que o Hefesto pôs no prefixo dele.
+
+    Nunca levanta. O prefixo é o `_devolver_o_prefixo`: o device KS e as
+    camadas Vulkan que a cura desligou.
 
     Status: ``"feito"`` | ``"nada_a_tirar"`` | ``"espera_a_steam"`` |
     ``"sem_appid"`` | ``"erro"``.
@@ -302,14 +310,53 @@ def tirar_do_disco(chave: str) -> str:
         return "sem_appid"
     pino = proton_pin.destravar_um_jogo(appid)
     atalho = slo.tirar_o_atalho_dos_jogos([appid])
+    prefixo = _devolver_o_prefixo(appid)
     razoes = {str(e.get("reason", "")) for e in atalho["errors"]}
-    if pino.get("status") == "recusado" or razoes & _ESPERA_A_STEAM:
+    if pino.get("status") == "recusado" or razoes & _ESPERA_A_STEAM or prefixo == "ocupado":
         return "espera_a_steam"
-    if pino.get("status") == "erro" or atalho["errors"]:
+    if pino.get("status") == "erro" or atalho["errors"] or prefixo == "erro":
         return "erro"
-    if pino.get("status") == "destravado" or atalho["removed"]:
+    if pino.get("status") == "destravado" or atalho["removed"] or prefixo == "feito":
         return "feito"
     return "nada_a_tirar"
+
+
+def _devolver_o_prefixo(appid: str) -> str:
+    """O prefixo Wine do jogo volta ao que era sem o Hefesto.
+
+    Duas coisas moram lá, e as duas são nossas: o device KS da háptica
+    (`audio_ks_dualsense`) e as camadas Vulkan que a cura desligou
+    (`camadas_vulkan`). O KS sai inteiro; as camadas voltam a ligar SÓ as que
+    nós desligamos, sem virar escolha dela (``pela_exclusao``).
+
+    Com o jogo aberto o `wineserver` regravaria o registro ao sair, e a edição
+    seria perdida: ``"ocupado"``. Status: ``"feito"`` | ``"nada"`` |
+    ``"ocupado"`` | ``"erro"``. Nunca levanta.
+    """
+    from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
+    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
+
+    status = "nada"
+    for pasta in cv.pastas_compatdata():
+        raiz = pasta / appid
+        if not (raiz / "pfx" / "system.reg").is_file():
+            continue
+        if ks.wineserver_do_prefixo_vivo(raiz / "pfx"):
+            return "ocupado"
+        try:
+            tirado = ks.aplicar(raiz, controles=[])
+            camadas = cv.aplicar_no_prefixo(
+                cv.prefixo_de_jogo(raiz, appid=appid), religar=True, pela_exclusao=True
+            )
+        except OSError:
+            return "erro"
+        if tirado.motivo == "ocupado":
+            return "ocupado"
+        if camadas.erro:
+            return "erro"
+        if tirado.escreveu or camadas.mexeu:
+            status = "feito"
+    return status
 
 
 __all__ = [
@@ -318,6 +365,7 @@ __all__ = [
     "Entrada",
     "adicionar",
     "appid_da_chave",
+    "appids",
     "caminho",
     "contem",
     "ler",
