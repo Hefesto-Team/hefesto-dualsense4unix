@@ -21,10 +21,16 @@ from pathlib import Path
 
 import pytest
 
+from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
+from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
 from hefesto_dualsense4unix.integrations import lista_de_exclusao as lx
 from hefesto_dualsense4unix.integrations import proton_pin
 from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+from tests.unit.test_a_cura_do_engasgo_alcanca_todos_os_prefixos import EPIC
+from tests.unit.test_a_cura_do_engasgo_alcanca_todos_os_prefixos import (
+    _registro as _registro_com_camadas,
+)
 from tests.unit.test_hefesto_launch_wrapper import (
     _PROBE,
     _FakeDaemon,
@@ -464,3 +470,82 @@ def test_sem_home_o_jogo_abre_do_mesmo_jeito(
     r, _ = _lancar(_runtime_com_daemon, tmp_path, "1599660", com_config=False)
     assert r.returncode == 0, r.stderr
     assert "IGNORE=" in r.stdout, r.stdout
+
+
+# ---------------------------------------------------------------------------
+# E2 — o prefixo Wine: o device KS sai, e as camadas Vulkan que NÓS
+# desligamos voltam, sem virar escolha dela
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def _prefixo_curado(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+        _steam_do_teste: tuple[Path, Path, Path]) -> Path:
+    """O prefixo de um jogo que o Hefesto já tocou: o device KS gravado e a
+    camada do Epic desligada pela cura do lançamento — como no uso real."""
+    compatdata = tmp_path / "steamapps" / "compatdata"
+    raiz = compatdata / "1599660"
+    (raiz / "pfx").mkdir(parents=True)
+    texto = ks.texto_novo(_registro_com_camadas((EPIC, "00000000")),
+                          [ks.Controle(pid=0x0CE6, bus=3, dev=28, usec=None)], 1)
+    (raiz / "pfx" / "system.reg").write_text(texto, encoding="utf-8")
+    monkeypatch.setattr(cv, "pastas_compatdata", lambda home=None: [compatdata])
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "estado-das-camadas"))
+    assert cv.curar_um_prefixo(raiz, appid="1599660").desligadas
+    assert _nossos_blocos_ks(raiz)
+    return raiz
+
+
+def _nossos_blocos_ks(raiz: Path) -> list[str]:
+    texto = (raiz / "pfx" / "system.reg").read_text(encoding="utf-8")
+    return [b for b in ks._blocos(texto) if ks.e_bloco_nosso(b)]
+
+
+def _epic_ligada(raiz: Path) -> bool:
+    camadas = cv.ler_camadas(raiz / "pfx" / "system.reg", prefixo=raiz)
+    return next(c for c in camadas if c.caminho_windows == EPIC).ligada
+
+
+def test_excluir_tira_o_ks_e_devolve_a_camada(_prefixo_curado: Path) -> None:
+    """ARRANQUE o `_devolver_o_prefixo` do `tirar_do_disco` e este teste
+    reprova: o jogo excluído seguiria com o device KS do Hefesto e sem a
+    camada do Epic que ele tinha."""
+    assert lx.tirar_do_disco("steam_app_1599660") == "feito"
+    assert not _nossos_blocos_ks(_prefixo_curado), "o device KS do Hefesto ficou"
+    assert _epic_ligada(_prefixo_curado), "a camada que o Hefesto desligou não voltou"
+
+
+def test_tirar_da_lista_a_cura_do_lancamento_volta(_prefixo_curado: Path) -> None:
+    """ARRANQUE o `pela_exclusao` (religue como o «devolver», com `manter`) e
+    este teste reprova: a exclusão viraria uma escolha permanente que ela
+    nunca fez, e tirar o jogo da lista não devolveria a cura."""
+    lx.tirar_do_disco("steam_app_1599660")
+    memoria = cv.ler_estado()["1599660"]
+    assert all("escolha" not in m for m in memoria.values()), memoria
+    assert cv.curar_um_prefixo(_prefixo_curado, appid="1599660").desligadas
+    assert not _epic_ligada(_prefixo_curado)
+
+
+def test_o_botao_vulkan_pula_o_jogo_excluido(_prefixo_curado: Path) -> None:
+    """ARRANQUE o `excluir` do `curar_todos` e este teste reprova: o botão da
+    aba Sistema desligaria de novo a camada do jogo que ela excluiu."""
+    lx.tirar_do_disco("steam_app_1599660")
+    cv.curar_todos(excluir=["1599660"])
+    assert _epic_ligada(_prefixo_curado)
+    cv.curar_todos()
+    assert not _epic_ligada(_prefixo_curado), "o controle: sem o excluir, o botão cura"
+
+
+def test_com_o_jogo_aberto_o_prefixo_espera(
+        _prefixo_curado: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """O `wineserver` vivo regravaria o registro ao sair: nada se escreve."""
+    antes = (_prefixo_curado / "pfx" / "system.reg").read_text(encoding="utf-8")
+    monkeypatch.setattr(ks, "wineserver_do_prefixo_vivo", lambda *a, **k: True)
+    assert lx.tirar_do_disco("steam_app_1599660") == "espera_a_steam"
+    assert (_prefixo_curado / "pfx" / "system.reg").read_text(encoding="utf-8") == antes
+
+
+def test_os_appids_da_lista_sao_so_os_de_steam() -> None:
+    lx.adicionar("steam_app_1599660", lancador="steam", nome="Wo Long")
+    lx.adicionar("retroarch", lancador="emulador", nome="RetroArch")
+    assert lx.appids() == ["1599660"]

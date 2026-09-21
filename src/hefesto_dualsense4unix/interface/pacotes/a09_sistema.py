@@ -3523,6 +3523,7 @@ def procurar_camadas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]
     perdido — e perdido em silêncio, que é pior.
     """
     from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
+    from hefesto_dualsense4unix.integrations import lista_de_exclusao
 
     if not _confirmado(o, "procurar-camadas"):
         prefixos = cv.censo()
@@ -3572,7 +3573,8 @@ def procurar_camadas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]
             "Windows do Proton regrava esse ajuste ao sair, e a mudança seria "
             "perdida.")
     devolver = not _CAMADAS.get("tirar", True)
-    resultados = cv.curar_todos(religar=devolver, forcar=True)
+    resultados = cv.curar_todos(
+        religar=devolver, forcar=True, excluir=lista_de_exclusao.appids())
     _CAMADAS.clear()
     _relatar_o_recibo("procurar-camadas",
                       _emulacao.frase_do_resultado(resultados, devolver=devolver))

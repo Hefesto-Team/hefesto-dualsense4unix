@@ -154,7 +154,7 @@ import re
 import shutil
 import sys
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -757,6 +757,10 @@ def gravar_estado(
 #: escolha de verdade da inferência que o wineserver forjava.
 _FEITO_CADUCO = "religada-por-fora"
 
+#: A marca do religar da lista de exclusão: sem ``escolha``, e por isso NÃO é
+#: escolha dela (`_e_escolha_dela`) — tirado da lista, o jogo volta a ser curado.
+_FEITO_PELA_EXCLUSAO = "religada-pela-exclusao"
+
 
 def _e_escolha_dela(registro_dela: dict[str, str]) -> bool:
     """O `manter` deste registro veio de um GESTO dela, ou de uma inferência?
@@ -889,8 +893,16 @@ def aplicar_no_prefixo(
     religar: bool = False,
     forcar: bool = False,
     home: Path | None = None,
+    pela_exclusao: bool = False,
 ) -> Resultado:
     """Desliga (ou religa) as camadas sobrando deste prefixo.
+
+    ``pela_exclusao`` (OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01,
+    21/09/2026): religa o que NÓS desligamos, como o «devolver», mas SEM
+    gravar ``escolha: manter``. O jogo que ela exclui do Hefesto recebe de
+    volta as camadas que ele tinha; quando ela o tira da lista, o gancho de
+    lançamento volta a curar — a exclusão não pode virar uma escolha
+    permanente que ela nunca fez.
 
     Duas regras, e as duas são pedido dela:
 
@@ -940,11 +952,11 @@ def aplicar_no_prefixo(
                 "valor_antes", "00000000"
             )
             religadas.append(camada.nome_curto)
-            memoria[marca] = {
-                "feito": "religada",
-                "escolha": "manter",
-                "quando": _agora(),
-            }
+            memoria[marca] = (
+                {"feito": _FEITO_PELA_EXCLUSAO, "quando": _agora()}
+                if pela_exclusao
+                else {"feito": "religada", "escolha": "manter", "quando": _agora()}
+            )
     else:
         for camada in prefixo.camadas:
             if not camada.e_sobra:
@@ -997,13 +1009,24 @@ def aplicar_no_prefixo(
 
 
 def curar_todos(
-    home: Path | None = None, *, religar: bool = False, forcar: bool = True
+    home: Path | None = None,
+    *,
+    religar: bool = False,
+    forcar: bool = True,
+    excluir: Collection[str] = (),
 ) -> list[Resultado]:
-    """Passa em todos os prefixos desta máquina. É o que o botão chama."""
+    """Passa em todos os prefixos desta máquina. É o que o botão chama.
+
+    ``excluir``: os appids da lista de exclusão do Hefesto (21/09/2026). O
+    botão não toca no prefixo de um jogo que ela tirou do Hefesto — quem o
+    chama lê a lista, porque este arquivo roda também como cópia avulsa, sem o
+    pacote no caminho.
+    """
+    fora = {str(a).strip() for a in excluir}
     return [
         aplicar_no_prefixo(p, religar=religar, forcar=forcar, home=home)
         for p in censo(home)
-        if p.camadas
+        if p.camadas and p.appid not in fora
     ]
 
 

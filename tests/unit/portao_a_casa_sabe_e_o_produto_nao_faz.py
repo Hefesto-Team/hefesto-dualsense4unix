@@ -1293,7 +1293,6 @@ _LISTA_DE_EXCLUSAO_SEM_BOTAO = (
 
 _SEM_CAMINHO_HOJE: dict[str, str] = {
     "integrations/lista_de_exclusao.py::adicionar": _LISTA_DE_EXCLUSAO_SEM_BOTAO,
-    "integrations/lista_de_exclusao.py::appid_da_chave": _LISTA_DE_EXCLUSAO_SEM_BOTAO,
     "integrations/lista_de_exclusao.py::contem": _LISTA_DE_EXCLUSAO_SEM_BOTAO,
     "integrations/lista_de_exclusao.py::tirar_do_disco": _LISTA_DE_EXCLUSAO_SEM_BOTAO,
     "integrations/gesto_de_pareamento.py::JanelaDeBusca":

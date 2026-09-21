@@ -164,12 +164,17 @@ def test_nenhum_nome_do_desenho_entra_na_linha() -> None:
 def test_o_nao_sei_da_mesa_nao_vira_nome() -> None:
     """`Não sei` é a AUSÊNCIA de leitura, não uma leitura.
 
-    Escrevê-lo poria `P2 · Não sei · rádio` onde cabe `P2 · rádio`.
+    Escrevê-lo poria `P2 · Não sei · BT` onde cabe `P2 · BT`.
+
+    A PALAVRA SE PERGUNTA À DONA — 21/09/2026. Esta régua digitava `rádio`, e
+    a decisão dela daquele dia (a I9 revogada: a tela diz `USB`/`BT`) a deixou
+    vermelha sem que nada estivesse errado: régua de dono mede DONO.
     """
     mesa = [{"uniq": "bb22", "jogador": 2, "nome": pacotes.NOME_SEM_LEITURA}]
     linha = a09_sistema._linha_de_identidade(NO_RADIO, mesa)
+    via = a09_sistema.palavra_do_transporte(NO_RADIO["transport"])
     assert pacotes.NOME_SEM_LEITURA not in linha, linha
-    assert linha.startswith("P2 · rádio · "), linha
+    assert linha.startswith(f"P2 · {via} · "), linha
 
 
 def test_o_transporte_nao_vira_nome_do_aparelho() -> None:
@@ -182,10 +187,15 @@ def test_o_transporte_nao_vira_nome_do_aparelho() -> None:
     **A MORDIDA:** apague o filtro `_NAO_E_NOME`. Executada em 03/09/2026:
 
         AssertionError: 'P2 · BT · rádio · o serial só é lido no cabo'
+
+    Desde 21/09/2026 a palavra do transporte na tela É `BT` (decisão dela, a
+    I9 revogada), então a mesma mordida daria `P2 · BT · BT` — e a régua conta
+    a palavra, em vez de proibir as duas grafias que agora são a certa.
     """
     linha = a09_sistema._linha_de_identidade(NO_RADIO, [])
-    assert " BT " not in linha and " USB " not in linha, linha
-    assert linha == f"P2 · rádio · {a09_sistema.SEM_SERIAL_LIDO}", linha
+    via = a09_sistema.palavra_do_transporte(NO_RADIO["transport"])
+    assert linha.split(" · ").count(via) == 1, linha
+    assert linha == f"P2 · {via} · {a09_sistema.SEM_SERIAL_LIDO}", linha
 
 
 def test_o_travessao_nao_vira_nome_do_aparelho() -> None:
