@@ -500,7 +500,7 @@ def test_os_tres_botoes_de_som_existem_na_tela(mesa):
     # cale. Montar os dois por `f'[data-mudo="{bloco}"]'` era conveniente
     # enquanto o endereço era um só; hoje seria a régua exigindo que o produto
     # mantivesse a simetria que a decisão dela desfez.
-    for botao, quem in (('[data-gesto="mic-testar"]', "🎙"),
+    for botao, quem in (('[data-gesto="mic-retorno"]', "🎙"),
                         ('[data-mudo="alto-falante"]', "♪")):
         assert tela.existe(f'{_cartao()} {botao}'), (
             f"o botão {quem} ({botao}) sumiu do cartão. Sem ele a régua "

@@ -121,7 +121,7 @@ def test_o_roteiro_cobre_o_microfone_e_o_alto_falante() -> None:
     reprova para sempre, ou, pior, é apagada por incômodo.
     """
     seletores = [s for _ms, s in _roteiro()]
-    for botao in ('[data-gesto="mic-testar"]', '[data-mudo="alto-falante"]'):
+    for botao in ('[data-gesto="mic-retorno"]', '[data-mudo="alto-falante"]'):
         assert any(botao in s for s in seletores), (
             f"o roteiro deixou de clicar {botao} — é o defeito de 29/08 "
             f"voltando: {seletores}"

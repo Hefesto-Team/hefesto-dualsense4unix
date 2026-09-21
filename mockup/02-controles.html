@@ -2441,6 +2441,11 @@
      este mesmo bloco procurando a palavra do movimento, e um comentário que a
      escrevesse viraria a primeira ocorrência do que ele veio dizer que não
      existe mais. Esta casa já pagou por isso quatro vezes em uma semana. */
+  /* O RETORNO acende no mesmo verde — 21/09/2026. Ele entra ao lado dos dois
+     estados da luz e não no lugar deles: o seletor é por VALOR do atributo, e
+     um valor a mais não afrouxa nada. O que mudou é QUAL campo alimenta o
+     atributo neste botão, e isso está no `data-campo` do HTML. */
+  .mudo-i[data-mic-luz="retorno"],
   .mudo-i[data-mic-luz="gravando"],
   .mudo-i[data-mic-luz="captando"]{
     border-color:var(--green);color:var(--green)}
@@ -3021,7 +3026,7 @@
               <span class="trilho"><span class="cheio" data-campo="mic-barra"
                 data-hef-alvo="largura" style="width:80%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="80" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC. Não é o mudo: a luz vermelha fica acesa e o botão do controle continua valendo. Grava na hora."></span>
               <span class="n" data-campo="mic-num">80</span>
-              <button class="mudo-i" data-gesto="mic-testar" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Fala e ouve de volta. Grava três segundos da sua voz — com o volume e o ganho desta coluna já aplicados — e toca para você, exatamente como o jogo te ouve. Para calar o microfone, use o botão do próprio controle.">🎙</button>
+              <button class="mudo-i" data-gesto="mic-retorno" data-campo="mic-retorno" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Liga o retorno: você se ouve enquanto ele estiver aceso, com o volume e o ganho desta coluna já aplicados — é assim que o jogo te ouve. Clique de novo para desligar. Para calar o microfone, use o botão do próprio controle." aria-pressed="false">🎙</button>
               <span class="ajuda porque">?<span class="dica" data-campo="mic-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
             <div class="vol ganho" data-campo="mic-ganho-fora" data-hef-alvo="classe"
@@ -3570,7 +3575,7 @@
               <span class="trilho"><span class="cheio" data-campo="mic-barra"
                 data-hef-alvo="largura" style="width:0%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="0" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC. Não é o mudo: a luz vermelha fica acesa e o botão do controle continua valendo. Grava na hora."></span>
               <span class="n" data-campo="mic-num">0</span>
-              <button class="mudo-i" data-gesto="mic-testar" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Fala e ouve de volta. Grava três segundos da sua voz — com o volume e o ganho desta coluna já aplicados — e toca para você, exatamente como o jogo te ouve. Para calar o microfone, use o botão do próprio controle.">🎙</button>
+              <button class="mudo-i" data-gesto="mic-retorno" data-campo="mic-retorno" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Liga o retorno: você se ouve enquanto ele estiver aceso, com o volume e o ganho desta coluna já aplicados — é assim que o jogo te ouve. Clique de novo para desligar. Para calar o microfone, use o botão do próprio controle." aria-pressed="false">🎙</button>
               <span class="ajuda porque">?<span class="dica" data-campo="mic-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
             <div class="vol ganho" data-campo="mic-ganho-fora" data-hef-alvo="classe"
@@ -4119,7 +4124,7 @@
               <span class="trilho"><span class="cheio" data-campo="mic-barra"
                 data-hef-alvo="largura" style="width:60%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="60" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC. Não é o mudo: a luz vermelha fica acesa e o botão do controle continua valendo. Grava na hora."></span>
               <span class="n" data-campo="mic-num">—</span>
-              <button class="mudo-i" data-gesto="mic-testar" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Fala e ouve de volta. Grava três segundos da sua voz — com o volume e o ganho desta coluna já aplicados — e toca para você, exatamente como o jogo te ouve. Para calar o microfone, use o botão do próprio controle.">🎙</button>
+              <button class="mudo-i" data-gesto="mic-retorno" data-campo="mic-retorno" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Liga o retorno: você se ouve enquanto ele estiver aceso, com o volume e o ganho desta coluna já aplicados — é assim que o jogo te ouve. Clique de novo para desligar. Para calar o microfone, use o botão do próprio controle." aria-pressed="false">🎙</button>
               <span class="ajuda porque">?<span class="dica" data-campo="mic-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
             <div class="vol ganho" data-campo="mic-ganho-fora" data-hef-alvo="classe"
@@ -4668,7 +4673,7 @@
               <span class="trilho"><span class="cheio" data-campo="mic-barra"
                 data-hef-alvo="largura" style="width:75%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="75" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC. Não é o mudo: a luz vermelha fica acesa e o botão do controle continua valendo. Grava na hora."></span>
               <span class="n" data-campo="mic-num">—</span>
-              <button class="mudo-i" data-gesto="mic-testar" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Fala e ouve de volta. Grava três segundos da sua voz — com o volume e o ganho desta coluna já aplicados — e toca para você, exatamente como o jogo te ouve. Para calar o microfone, use o botão do próprio controle.">🎙</button>
+              <button class="mudo-i" data-gesto="mic-retorno" data-campo="mic-retorno" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Liga o retorno: você se ouve enquanto ele estiver aceso, com o volume e o ganho desta coluna já aplicados — é assim que o jogo te ouve. Clique de novo para desligar. Para calar o microfone, use o botão do próprio controle." aria-pressed="false">🎙</button>
               <span class="ajuda porque">?<span class="dica" data-campo="mic-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
             <div class="vol ganho" data-campo="mic-ganho-fora" data-hef-alvo="classe"

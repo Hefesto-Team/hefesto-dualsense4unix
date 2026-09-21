@@ -699,6 +699,23 @@ def selo_do_alto_falante(mudo: bool, dormindo: bool, sabemos: bool) -> str:
 BOTAO_MIC_GRAVANDO = "gravando"
 BOTAO_MIC_CAPTANDO = "captando"
 
+#: **O RETORNO LIGADO** — 21/09/2026, ordem dela sobre o 🎙:
+#:
+#:     "SE EU ATIVAR COM UM CLICK E ELE FICAR VERDE ELE TÁ ATIVADO E SEGUE
+#:      ASSIM ATÉ EU DESATIVAR CLICANDO NOVAMENTE E ELE FICANDO CINZA. POR
+#:      DEFAULT SEGUE DESLIGADO"
+#:
+#: **ELE NÃO É A LUZ DO PLÁSTICO, e essa distinção é o desenho inteiro.** A
+#: luz (`BOTAO_MIC_GRAVANDO`/`BOTAO_MIC_CAPTANDO`) tem dono no daemon —
+#: `luz_do_mic.decidir`, o mesmo byte que acende o LED vermelho do controle —,
+#: e o que a mostra é o SELO ao lado, mais a frase de quem está gravando.
+#: Fazer o botão publicar aquele estado poria a tela e o controle na mão dela
+#: discordando no primeiro dia em que um dos dois fosse corrigido.
+#:
+#: **O BOTÃO MOSTRA O QUE O BOTÃO CAUSA**, que é a regra desta casa e a mesma
+#: do ♪: ele liga o retorno, e acende enquanto o retorno está de pé.
+BOTAO_MIC_RETORNO = "retorno"
+
 #: O que o daemon publica em `audio.luz_do_mic`, e é o MESMO byte que acende a
 #: luz do plástico (`daemon/subsystems/luz_do_mic`: 0 apagada · 1 acesa ·
 #: 2 piscando · 3 piscando devagar, que é piscando com bateria baixa).

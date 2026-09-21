@@ -196,8 +196,8 @@ class TestOBotaoTrocouDeAtoNaTela:
         assert 'data-mudo="microfone"' not in pagina, (
             "o 🎙 voltou a calar — e o botão do plástico já faz isso"
         )
-        assert 'data-gesto="mic-testar"' in pagina, (
-            "o gesto de testar não chegou à página publicada"
+        assert 'data-gesto="mic-retorno"' in pagina, (
+            "o gesto do retorno não chegou à página publicada"
         )
 
     def test_o_alto_falante_continua_com_o_mudo(self):
@@ -228,9 +228,9 @@ class TestOBotaoTrocouDeAtoNaTela:
         fonte = pathlib.Path(
             "src/hefesto_dualsense4unix/interface/pacotes/a02_controles.py"
         ).read_text(encoding="utf-8")
-        assert '@gesto("02-controles.html", "mic-testar")' in fonte
-        assert "def mic_testar(" in fonte
-        assert "testar_e_devolver" in fonte, (
+        assert '@gesto("02-controles.html", "mic-retorno")' in fonte
+        assert "def mic_retorno(" in fonte
+        assert "monitor_do_microfone.ligar(" in fonte, (
             "o gesto não chama o ato — é a cura escrita e nunca ligada"
         )
 
@@ -251,7 +251,7 @@ class TestOMudoNaoVIRAFALTADEVOZ:
         fonte = pathlib.Path(
             "src/hefesto_dualsense4unix/interface/pacotes/a02_controles.py"
         ).read_text(encoding="utf-8")
-        i = fonte.index("def mic_testar(")
+        i = fonte.index("def mic_retorno(")
         return fonte[i : fonte.index("\n@gesto", i)]
 
     def test_o_gesto_pergunta_o_mudo_antes_de_gravar(self):
@@ -264,8 +264,8 @@ class TestOMudoNaoVIRAFALTADEVOZ:
         # A ORDEM É O PONTO: perguntar DEPOIS de gravar não pouparia os 15 s,
         # e o recado certo chegaria tarde.
         assert corpo.index("_faces_do_microfone(") < corpo.index(
-            "testar_e_devolver(uniq)"
-        ), "a pergunta vem DEPOIS da gravação — os 15 s de silêncio continuam"
+            "monitor_do_microfone.ligar("
+        ), "a pergunta vem DEPOIS de abrir o retorno — o microfone calado abre"
 
     def test_a_recusa_manda_ao_botao_do_plastico_e_nao_a_boca(self):
         """O recado diz o que FAZER, e onde.
