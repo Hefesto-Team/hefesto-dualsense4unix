@@ -2747,6 +2747,7 @@ def aplicar_o_movimento(
     daemon: DaemonProtocol,
     arranjo: Any,
     *,
+    uniq: str | None,
     lx: int,
     ly: int,
     rx: int,
@@ -2771,6 +2772,22 @@ def aplicar_o_movimento(
     câmera de milhares de pixels num quadro. Drenando antes, o que o portão
     barra é DESCARTADO, que é o comportamento que a mão dela espera.
 
+    **O `uniq` É PARÂMETRO, E ESSA É A ENTREGA DE 21/09/2026 (tarde).** A
+    primeira redação perguntava `primary_identity(daemon)` aqui dentro, e com
+    isso a mira valia **só no controle 1**: os jogadores 2 a 4 passam por
+    `coop.CoopManager.forward_all`, que tem laço próprio. Eu declarei isso como
+    dívida e ela recusou, com todas as letras: *"cara nenhuma solução pode ser
+    feita só pro p1"*.
+
+    Ela está certa, e a razão é o que o produto É: um roteador de adaptação
+    para quem adapta o controle à própria deficiência. Uma feature de
+    acessibilidade que só alcança o P1 obriga a pessoa a ser o P1 — e quem
+    escolhe a ordem da mesa é o jogo, não ela. **Trave a classe, não a
+    instância** (ordem dela, 16/09).
+
+    Recebendo o `uniq`, os dois laços chamam ESTA função, e cada controle lê o
+    próprio giroscópio, o próprio interruptor de sensor e o próprio gatilho.
+
     OS TRÊS PORTÕES, nesta ordem, e cada um evita um defeito conhecido:
 
     1. **O gatilho**, perguntado na LÍNGUA DO LEITOR. `arranjo.gatilho` guarda
@@ -2790,7 +2807,6 @@ def aplicar_o_movimento(
        motion, não há movimento: os eixos voltam intactos.
     """
     try:
-        uniq = primary_identity(daemon)
         if not uniq:
             # SEM IDENTIDADE NÃO HÁ O QUE DRENAR: o acumulador vive no reader,
             # e o reader se acha pelo uniq. É o único caminho em que o ângulo
@@ -2907,6 +2923,7 @@ def dispatch_gamepad(
             lx, ly, rx, ry = aplicar_o_movimento(
                 daemon,
                 arranjo,
+                uniq=primary_identity(daemon),
                 lx=lx,
                 ly=ly,
                 rx=rx,

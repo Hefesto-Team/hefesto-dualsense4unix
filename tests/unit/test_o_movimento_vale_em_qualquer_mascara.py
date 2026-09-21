@@ -752,3 +752,189 @@ def test_a_porta_do_angulo_drena_e_a_da_velocidade_nao() -> None:
         "a porta da velocidade DRENOU — ela não pode roubar de ninguém")
     assert hub.angulo_do_movimento(_UNIQ) == (0.0, 5.0, 0.0)
     assert hub.angulo_do_movimento(_UNIQ) == (0.0, 0.0, 0.0)
+
+
+# ---------------------------------------------------------------------------
+# E8 — A MIRA VALE NOS QUATRO, e não só no P1
+# ---------------------------------------------------------------------------
+#
+# **ORDEM DELA, 21/09/2026:** *"cara nenhuma solução pode ser feita só pro p1"*.
+#
+# A primeira entrega desta sprint misturava o giro dentro do `dispatch_gamepad`
+# — o caminho do PRIMÁRIO. Os jogadores 2 a 4 passam por
+# `coop.CoopManager.forward_all`, que tem laço próprio, e ficariam de fora. Eu
+# declarei isso como dívida no §10.3 e ela RECUSOU a declaração.
+#
+# Ela está certa, e a razão é o que o produto é: um roteador de adaptação para
+# quem adapta o controle à própria deficiência. Uma feature de acessibilidade
+# que só alcança o P1 obriga a pessoa a ser o P1 — e quem escolhe a ordem da
+# mesa é o jogo, não ela.
+
+
+class _VpadDoJogador:
+    def __init__(self) -> None:
+        self.analog: list[dict[str, int]] = []
+        self.buttons: list[frozenset[str]] = []
+
+    def forward_analog(self, **kw: int) -> None:
+        self.analog.append(kw)
+
+    def forward_buttons(self, pressed: frozenset[str]) -> None:
+        self.buttons.append(pressed)
+
+
+class _ReaderDoJogador:
+    def __init__(self, botoes: frozenset[str] = frozenset()) -> None:
+        self._botoes = botoes
+
+    def snapshot(self) -> Any:
+        return SimpleNamespace(lx=128, ly=128, rx=128, ry=128, l2_raw=0, r2_raw=0,
+                               buttons_pressed=self._botoes)
+
+
+def _mesa_de_quatro(monkeypatch: pytest.MonkeyPatch, *, arranjo: Any,
+                    giro_por_uniq: dict[str, tuple[float, float, float]],
+                    botoes_por_uniq: dict[str, frozenset[str]] | None = None,
+                    giro_ligado: dict[str, bool] | None = None,
+                    ) -> dict[str, _VpadDoJogador]:
+    """Monta P2, P3 e P4 no `CoopManager` e roda UM tique de `forward_all`.
+
+    O P1 não entra aqui de propósito: ele tem régua própria (o
+    `dispatch_gamepad`), e a pergunta desta seção é justamente se os OUTROS
+    recebem o mesmo tratamento.
+    """
+    from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
+    from hefesto_dualsense4unix.daemon.subsystems import coop as co
+    from hefesto_dualsense4unix.daemon.subsystems.coop import (
+        CoopManager,
+        _SecondaryPlayer,
+    )
+
+    ligados = giro_ligado or {}
+    monkeypatch.setattr(REGISTRO, "estado",
+                        lambda uniq: SimpleNamespace(
+                            giroscopio=ligados.get(uniq, True)))
+
+    class _HubPorControle:
+        def velocidade_do_movimento(self, uniq: str) -> Any:
+            return giro_por_uniq.get(uniq)
+
+        def angulo_do_movimento(self, uniq: str) -> Any:
+            return (0.0, 0.0, 0.0)
+
+    store = SimpleNamespace(udp_trigger_thresholds=(0, 0))
+    rot.definir_ativo(store, arranjo)
+    daemon = SimpleNamespace(store=store, _mouse_device=None,
+                             _garantir_sensor_hub=lambda: _HubPorControle())
+
+    gerente = CoopManager.__new__(CoopManager)
+    gerente._daemon = daemon  # type: ignore[attr-defined]
+    gerente._players = {}  # type: ignore[attr-defined]
+    monkeypatch.setattr(co.CoopManager, "_recolher_os_cedidos", lambda self: None)
+    monkeypatch.setattr(co.CoopManager, "_promote_pending", lambda self: None)
+
+    vpads: dict[str, _VpadDoJogador] = {}
+    for n, uniq in enumerate(sorted(giro_por_uniq), start=2):
+        vpad = _VpadDoJogador()
+        vpads[uniq] = vpad
+        gerente._players[uniq] = _SecondaryPlayer(  # type: ignore[attr-defined]
+            identity=uniq,
+            evdev_path=f"/dev/input/event{n}",
+            reader=_ReaderDoJogador((botoes_por_uniq or {}).get(uniq, frozenset())),
+            player_index=n,
+            vpad=vpad,
+        )
+    gerente.forward_all()
+    return vpads
+
+
+_P2, _P3, _P4 = "aa:bb:cc:00:00:02", "aa:bb:cc:00:00:03", "aa:bb:cc:00:00:04"
+
+
+def test_a_mira_vale_para_os_jogadores_2_3_e_4(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """A ORDEM DELA NUMA LINHA. ARRANQUE a chamada de `aplicar_o_movimento` do
+    `coop.forward_all` e este teste reprova.
+
+    *"cara nenhuma solução pode ser feita só pro p1"* — e era exatamente o que
+    a primeira entrega desta sprint fazia.
+    """
+    vpads = _mesa_de_quatro(
+        monkeypatch, arranjo=_arranjo(sensibilidade=12),
+        giro_por_uniq={_P2: (0.0, 200.0, 0.0), _P3: (0.0, 200.0, 0.0),
+                       _P4: (0.0, 200.0, 0.0)})
+    for uniq, vpad in sorted(vpads.items()):
+        assert vpad.analog, f"{uniq} não recebeu nada"
+        assert vpad.analog[0]["rx"] != 128, (
+            f"o jogador {uniq} NÃO mirou por movimento — a mira só vale no P1")
+
+
+def test_cada_jogador_le_o_proprio_giroscopio(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """ARRANQUE o `uniq=player.identity` e ponha um endereço fixo: este teste
+    reprova.
+
+    Três controles na mesa, um parado. Se o laço perguntasse sempre ao mesmo
+    aparelho, o controle parado miraria junto — e o que se move na tela do
+    jogo não seria o que a mão daquela pessoa fez.
+    """
+    vpads = _mesa_de_quatro(
+        monkeypatch, arranjo=_arranjo(sensibilidade=12),
+        giro_por_uniq={_P2: (0.0, 200.0, 0.0), _P3: (0.0, 0.0, 0.0),
+                       _P4: (0.0, -200.0, 0.0)})
+    assert vpads[_P2].analog[0]["rx"] > 128, "o P2 girou e não mirou"
+    assert vpads[_P3].analog[0]["rx"] == 128, (
+        "o P3 estava PARADO e a mira dele se mexeu — o laço leu o giro de outro")
+    assert vpads[_P4].analog[0]["rx"] < 128, "o P4 girou ao contrário do P2"
+
+
+def test_o_interruptor_de_sensor_e_por_controle_tambem_no_coop(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """ARRANQUE o portão do `REGISTRO` (ou passe o uniq errado) e este teste
+    reprova: desligar o giroscópio de UM controle desligaria a mira de todos,
+    ou de nenhum."""
+    vpads = _mesa_de_quatro(
+        monkeypatch, arranjo=_arranjo(sensibilidade=12),
+        giro_por_uniq={_P2: (0.0, 200.0, 0.0), _P3: (0.0, 200.0, 0.0)},
+        giro_ligado={_P3: False})
+    assert vpads[_P2].analog[0]["rx"] != 128, "o P2 tinha o giro LIGADO"
+    assert vpads[_P3].analog[0]["rx"] == 128, (
+        "o P3 tinha o giro DESLIGADO por ela e mirou assim mesmo")
+
+
+def test_o_gatilho_e_por_controle_no_coop(monkeypatch: pytest.MonkeyPatch) -> None:
+    """ARRANQUE `botoes=snap.buttons_pressed` e este teste reprova: o gatilho
+    de um jogador ligaria a mira do outro."""
+    vpads = _mesa_de_quatro(
+        monkeypatch, arranjo=_arranjo(sensibilidade=12, gatilho="l2"),
+        giro_por_uniq={_P2: (0.0, 200.0, 0.0), _P3: (0.0, 200.0, 0.0)},
+        botoes_por_uniq={_P2: frozenset({remap.GATILHOS["l2"]})})
+    assert vpads[_P2].analog[0]["rx"] != 128, "o P2 apertou o gatilho e não mirou"
+    assert vpads[_P3].analog[0]["rx"] == 128, (
+        "o P3 NÃO apertou o gatilho e mirou — o laço leu os botões de outro")
+
+
+def test_sem_arranjo_o_coop_nao_paga_nada(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A régua de CUSTO no laço dos secundários: sem mira ligada, o tique não
+    chama o motor nem uma vez por jogador."""
+    vpads = _mesa_de_quatro(
+        monkeypatch, arranjo=None,
+        giro_por_uniq={_P2: (0.0, 900.0, 0.0), _P3: (0.0, 900.0, 0.0)})
+    for vpad in vpads.values():
+        assert vpad.analog[0]["rx"] == 128 and vpad.analog[0]["ry"] == 128
+
+
+def test_os_dois_lacos_chamam_o_mesmo_motor() -> None:
+    """ARRANQUE o import e copie o bloco para o `coop`: este teste reprova.
+
+    Duas redações da mesma regra fazem a próxima cura alcançar UMA — que é o
+    defeito que esta casa nomeia como *"cobrir um chamador deixa a próxima
+    pessoa remedindo o mesmo defeito"*.
+    """
+    import inspect
+
+    from hefesto_dualsense4unix.daemon.subsystems import coop, gamepad
+
+    assert "aplicar_o_movimento" in inspect.getsource(coop.CoopManager.forward_all)
+    assert coop.aplicar_o_movimento is gamepad.aplicar_o_movimento, (
+        "o co-op tem a própria cópia do motor de mira")

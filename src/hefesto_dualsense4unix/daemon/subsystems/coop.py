@@ -2081,6 +2081,26 @@ class CoopManager:
         # (`gamepad.dispatch_gamepad`), lida UMA vez por tique do `store` do
         # daemon — o remapeamento é global no perfil e vale nos quatro.
         troca = remapeamento_ativo(getattr(self._daemon, "store", None))
+        # MOVIMENTO-EM-QUALQUER-MASCARA-01 / E8 (21/09/2026): a mira por
+        # movimento vale nos QUATRO, e não só no P1.
+        #
+        # **ORDEM DELA, e ela recusou a dívida que eu tinha declarado:** *"cara
+        # nenhuma solução pode ser feita só pro p1"*. A primeira entrega desta
+        # sprint misturava o giro dentro do `dispatch_gamepad`, que é o caminho
+        # do PRIMÁRIO — este laço aqui é o dos secundários, e eles ficariam de
+        # fora. Numa feature de acessibilidade isso obriga a pessoa a ser o P1,
+        # e quem escolhe a ordem da mesa é o jogo, não ela.
+        #
+        # O MOTOR É O MESMO, chamado e não copiado: `gamepad.aplicar_o_movimento`
+        # recebe o `uniq` e cada jogador lê o PRÓPRIO giroscópio, o próprio
+        # interruptor de sensor (`virtual_motion.REGISTRO`) e o próprio gatilho.
+        # Copiar o bloco para cá deixaria duas redações da mesma regra, e a
+        # próxima cura alcançaria uma só — que é o defeito que esta casa nomeia
+        # como "cobrir um chamador deixa a próxima pessoa remedindo".
+        #
+        # LIDO UMA VEZ POR TIQUE, como a troca acima: o arranjo é global no
+        # perfil, e perguntá-lo por jogador seria o mesmo `getattr` quatro vezes.
+        arranjo_de_movimento = roteador_ativo(getattr(self._daemon, "store", None))
         for player in list(self._players.values()):
             if player.vpad is None:
                 continue  # aguardando confirmação de grab
@@ -2093,13 +2113,29 @@ class CoopManager:
             try:
                 snap = player.reader.snapshot()
                 botoes, l2, r2 = snap.buttons_pressed, snap.l2_raw, snap.r2_raw
+                lx, ly, rx, ry = snap.lx, snap.ly, snap.rx, snap.ry
+                if arranjo_de_movimento is not None:
+                    # O GATILHO LÊ OS BOTÕES ORIGINAIS, e por isso esta linha
+                    # vem ANTES da troca — igual ao primário. Com o
+                    # remapeamento ativo, a mira tem de ligar pelo botão que a
+                    # MÃO daquele jogador apertou, não pelo que o jogo vê.
+                    lx, ly, rx, ry = aplicar_o_movimento(
+                        self._daemon,
+                        arranjo_de_movimento,
+                        uniq=player.identity,
+                        lx=lx,
+                        ly=ly,
+                        rx=rx,
+                        ry=ry,
+                        botoes=snap.buttons_pressed,
+                    )
                 if troca:
                     botoes, l2, r2 = traduzir_remapeamento(botoes, l2, r2, troca)
                 player.vpad.forward_analog(
-                    lx=snap.lx,
-                    ly=snap.ly,
-                    rx=snap.rx,
-                    ry=snap.ry,
+                    lx=lx,
+                    ly=ly,
+                    rx=rx,
+                    ry=ry,
                     l2=l2,
                     r2=r2,
                 )
@@ -2135,6 +2171,12 @@ from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
 )
 from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
     traduzir as traduzir_remapeamento,
+)
+from hefesto_dualsense4unix.core.roteador_de_movimento import (  # noqa: E402
+    ativo as roteador_ativo,
+)
+from hefesto_dualsense4unix.daemon.subsystems.gamepad import (  # noqa: E402
+    aplicar_o_movimento,
 )
 
 
