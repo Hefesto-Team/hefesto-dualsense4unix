@@ -88,13 +88,21 @@ def test_sons_do_jogo_acende_pelo_byte_e_so_por_ele() -> None:
     assert recado_da_rota(BYTE_SONS_DO_JOGO, PLACA_DO_CONTROLE, A_TV) == ""
 
 
-@pytest.mark.parametrize("byte", [0, 1])
-def test_as_rotas_do_fone_apagam_os_dois(byte: int) -> None:
-    """0 e 1 são rotas legítimas que estes dois botões não representam.
+def test_a_rota_do_fone_apaga_os_tres() -> None:
+    """A rota 1 é legítima do protocolo e a fileira não a representa.
 
-    Acender o mais parecido seria arredondar o byte para o botão vizinho.
+    Acender a mais parecida seria arredondar o byte para o botão vizinho.
+
+    **A ROTA 0 SAIU DAQUI EM 21/09/2026, e o motivo é entrega.** Esta régua
+    media `[0, 1]` — e a 0 ganhou botão por ordem dela: *"os 3 botões de som
+    tem que ter saídas diferenciadas"*. «Tudo na TV e Nada no Controle» É o
+    byte 0, então exigir que ele apague os três passou a cobrar o mundo de
+    ontem: a régua reprovaria a cura em vez do defeito.
+
+    A rota 0 é medida em `test_os_tres_botoes_do_som_sao_tres_saidas.py`, que
+    é o dono do botão novo.
     """
-    assert botao_da_rota_aceso(byte, PLACA_DO_CONTROLE, PLACA_DO_CONTROLE) == ""
+    assert botao_da_rota_aceso(1, PLACA_DO_CONTROLE, PLACA_DO_CONTROLE) == ""
 
 
 @pytest.mark.parametrize("byte", [None, "3", True, 7])

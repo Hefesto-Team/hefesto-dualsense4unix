@@ -249,6 +249,17 @@ def mesa(monkeypatch: pytest.MonkeyPatch) -> _Mesa:
     )
     monkeypatch.setattr(af, "PonteDeSomPorRadio", _PonteDeMentira)
     monkeypatch.setattr(broker, "abrir_hidraw", lambda no, **_: type("N", (), {"fd": 7})())
+    # **O SEGUNDO LADO DO GATE, dublado — 21/09/2026.** Ver a nota igual em
+    # `test_haptica_por_radio_01_a_ponte_troca_de_modo.py`: a
+    # QUEM-JOGA-E-QUEM-VIBRA-01 exige também que o jogo esteja LENDO aquele
+    # controle, e a máquina da suíte não tem jogo aberto. Sem o dublê estas
+    # réguas reprovam por AMBIENTE, e vermelho de ambiente se lê como
+    # regressão.
+    monkeypatch.setattr(
+        mod.AltoFalanteSubsystem, "_quem_o_jogo_le",
+        lambda self, controles: {
+            str(getattr(c, "uniq", "")).lower() for c in controles},
+    )
 
     class _Ger:
         def reconciliar(self, *_a: Any, **_k: Any) -> None:
