@@ -263,6 +263,15 @@ class AutoSwitcher:
     # existe para o teste apontar a leitura para um `tmp_path` — o mesmo motivo
     # do `base_dir` das funções de marker do `launch_env`.
     jogo_vivo_reader: Callable[[], int | None] | None = None
+    # OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01, E3: o par do daemon para a
+    # LISTA DE EXCLUSÃO (`daemon.aplicar_a_exclusao(*, chave)` /
+    # `daemon.reverter_a_exclusao()`) e quem responde se a janela está nela
+    # (`lista_de_exclusao.contem`). None = sem daemon: byte-idêntico ao de
+    # antes. Como no modo jogo padrão, o autoswitch só reporta o FATO; a
+    # política — o Modo Nativo, a posse, o stash — mora no daemon.
+    exclusao_applier: Callable[..., object] | None = None
+    exclusao_reverter: Callable[..., object] | None = None
+    exclusao_reader: Callable[[str], bool] | None = None
 
     _last_candidate: str | None = None
     _candidate_since: float = 0.0
@@ -302,6 +311,8 @@ class AutoSwitcher:
     # entrava no relatório da ativação — a janela não tinha como lhe dizer o que
     # não entrou. Vazio = o par não foi chamado nesta instância.
     _estado_modo_jogo_padrao: str = ""
+    # E3: a `wm_class` excluída que está em foco agora; None = nenhuma.
+    _exclusao_em_foco: str | None = None
     # FOCO-ERRANTE-01: chave (candidato, perfil corrente) da última recusa
     # logada. Mesma razão — e o mesmo padrão — do `_cadeado_log_key`: a recusa
     # é avaliada a 2 Hz e o episódio medido no journal dela durou minutos; sem
@@ -492,6 +503,18 @@ class AutoSwitcher:
         resumed = self._info_gap_active
         self._info_gap_active = False
 
+        # A LISTA DE EXCLUSÃO VEM ANTES DE TUDO — E3 da
+        # OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01, 21/09/2026. A janela
+        # excluída encerra o tique antes da seleção: nem perfil, nem modo jogo
+        # padrão, nem cadeado — o jogo que ela excluiu não vê o Hefesto. E sair
+        # dela devolve o que a exclusão tirou ANTES da seleção, para o perfil
+        # da janela seguinte decidir sobre um controle já de volta.
+        if self._na_exclusao(info):
+            self._last_candidate = None
+            if not self._suppression_active():
+                self._suppress_log_key = None
+            return
+
         profile, motivo = self._selecionar_com_motivo(info)
         candidate = profile.name if profile else None
 
@@ -625,6 +648,43 @@ class AutoSwitcher:
                 return perfil, str(motivo)
         perfil_legado = self.manager.select_for_window(info)
         return perfil_legado, MOTIVO_SEM_CANDIDATO
+
+    def _na_exclusao(self, info: dict[str, Any]) -> bool:
+        """A janela em foco está na lista de exclusão? Aplica ou solta (E3).
+
+        Chamado a cada tique com leitura útil. Com a janela na lista, pede ao
+        daemon a exclusão (idempotente lá) e devolve True; fora dela, se havia
+        uma exclusão de pé, pede para soltar e devolve False. Best-effort dos
+        dois lados, como o modo jogo padrão: falha do daemon vira log.
+        """
+        wm_class = str(info.get("wm_class") or "").strip()
+        reader = self.exclusao_reader
+        excluida = False
+        if wm_class and reader is not None:
+            try:
+                excluida = bool(reader(wm_class))
+            except Exception as exc:
+                logger.warning("exclusao_leitura_falhou", err=str(exc))
+        if excluida:
+            if self._exclusao_em_foco != wm_class:
+                logger.info("autoswitch_janela_excluida", wm_class=wm_class)
+            self._exclusao_em_foco = wm_class
+            applier = self.exclusao_applier
+            if applier is not None:
+                try:
+                    applier(chave=wm_class)
+                except Exception as exc:
+                    logger.warning("exclusao_falhou", err=str(exc))
+            return True
+        if self._exclusao_em_foco is not None:
+            reverter = self.exclusao_reverter
+            if reverter is not None:
+                try:
+                    reverter()
+                except Exception as exc:
+                    logger.warning("exclusao_revert_falhou", err=str(exc))
+            self._exclusao_em_foco = None
+        return False
 
     def _sincronizar_modo_jogo_padrao(
         self, motivo: str, info: dict[str, Any]

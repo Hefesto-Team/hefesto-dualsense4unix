@@ -265,7 +265,7 @@ class DaemonProtocol(Protocol):
         enabled: bool,
         *,
         reapply: bool = True,
-        origin: Literal["manual", "profile"],
+        origin: Literal["manual", "profile", "exclusão"],
     ) -> bool:
         """Liga/desliga o Modo Nativo — solta o controle para o jogo nativo."""
         ...

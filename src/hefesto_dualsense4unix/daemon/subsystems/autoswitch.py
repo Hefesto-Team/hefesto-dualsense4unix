@@ -221,6 +221,7 @@ class AutoswitchSubsystem:
 
     async def start(self, ctx: DaemonContext) -> None:
         """Inicia o AutoSwitcher com as dependências do DaemonContext."""
+        from hefesto_dualsense4unix.integrations import lista_de_exclusao
         from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
         from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
 
@@ -249,6 +250,9 @@ class AutoswitchSubsystem:
             modo_jogo_padrao_reverter=getattr(
                 daemon, "reverter_modo_jogo_padrao", None
             ),
+            exclusao_applier=getattr(daemon, "aplicar_a_exclusao", None),
+            exclusao_reverter=getattr(daemon, "reverter_a_exclusao", None),
+            exclusao_reader=lista_de_exclusao.contem,
         )
         if not self._autoswitch.disabled():
             self._autoswitch.start()
@@ -270,6 +274,7 @@ class AutoswitchSubsystem:
 
 async def start_autoswitch(daemon: DaemonProtocol) -> None:
     """Função utilitária: inicia o AutoSwitcher usando o Daemon diretamente."""
+    from hefesto_dualsense4unix.integrations import lista_de_exclusao
     from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
     from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
 
@@ -288,6 +293,9 @@ async def start_autoswitch(daemon: DaemonProtocol) -> None:
         store=daemon.store,
         modo_jogo_padrao_applier=getattr(daemon, "aplicar_modo_jogo_padrao", None),
         modo_jogo_padrao_reverter=getattr(daemon, "reverter_modo_jogo_padrao", None),
+        exclusao_applier=getattr(daemon, "aplicar_a_exclusao", None),
+        exclusao_reverter=getattr(daemon, "reverter_a_exclusao", None),
+        exclusao_reader=lista_de_exclusao.contem,
     )
     if not daemon._autoswitch.disabled():
         daemon._autoswitch.start()
