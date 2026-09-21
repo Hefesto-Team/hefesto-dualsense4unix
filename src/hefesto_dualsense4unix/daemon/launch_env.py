@@ -2362,6 +2362,51 @@ def _avisar_canal_sem_imu(
         )
 
 
+def _device_ks_nos_lancadores() -> dict[str, int]:
+    """Grava o device KS nos prefixos dos LANÇADORES. Nunca levanta.
+
+    Devolve `{"escritos": N, "ocupados": N, "prefixos": N}` para o log — um
+    número por transição, que é o que separa *"rodou e não tinha o que fazer"*
+    de *"não rodou"*.
+
+    **O DONO DA LISTA É `camadas_vulkan.prefixos_dos_lancadores`**, e ela lê as
+    duas fontes do Heroic (o `GamesConfig/<app>.json` de quem mudou o prefixo à
+    mão e o `defaultSettings.defaultWinePrefix` de quem nunca abriu aquela
+    tela). Uma segunda lista aqui seria a segunda grafia do mesmo fato.
+    """
+    fora = {"escritos": 0, "ocupados": 0, "prefixos": 0}
+    try:
+        from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
+        from hefesto_dualsense4unix.integrations.audio_ks_dualsense import (
+            aplicar,
+            controles_no_cabo,
+            controles_no_radio,
+        )
+
+        prefixos = [
+            p for p in cv.prefixos_dos_lancadores()
+            if (p / "pfx" / "system.reg").is_file()
+        ]
+        fora["prefixos"] = len(prefixos)
+        if not prefixos:
+            return fora
+        # A ORDEM É A MESMA DO CLI: cabo e depois rádio, e nunca o mesmo
+        # aparelho duas vezes — quem tem placa de som fica com o cabo.
+        controles = controles_no_cabo() + controles_no_radio()
+        for prefixo in prefixos:
+            try:
+                r = aplicar(prefixo, controles=controles)
+            except OSError:
+                continue
+            if r.motivo == "ocupado":
+                fora["ocupados"] += 1
+            elif r.escreveu:
+                fora["escritos"] += 1
+    except Exception:  # boundary best-effort (ver a chamadora)
+        logger.debug("device_ks_nos_lancadores_falhou", exc_info=True)
+    return fora
+
+
 def materialize_launch_env(daemon: DaemonProtocol) -> None:
     """Regrava `default.env` + `steam_app_<appid>.env` com o estado REAL.
 
@@ -2583,6 +2628,31 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
         )
 
         estradas = curar_todas_as_estradas()
+        # **E O DEVICE KS VAI NA MESMA CARONA — 21/09/2026.**
+        #
+        # A háptica nativa (a que a RE Engine acha pelo `KSCATEGORY_AUDIO`)
+        # mora no `system.reg` do prefixo, e quem a escreve nos jogos da STEAM
+        # é o wrapper `hefesto-launch`, no lançamento. **O Heroic não passa por
+        # wrapper nenhum**, então o prefixo dele nunca recebia o device: medido
+        # no disco dela em 21/09 — três prefixos da Steam com 24, 36 e 42
+        # ocorrências de `HEFESTOKS`, e o do Guardiões da Galáxia com ZERO.
+        #
+        # ESTE É O GATILHO CERTO, e não um a mais: o que muda o device KS é o
+        # conjunto de CONTROLES, que é exatamente o que dispara esta função. O
+        # wrapper continua sendo quem serve a Steam; isto serve quem não tem
+        # wrapper, pela mesma conta e no mesmo instante — a simetria que a
+        # carona da estrada, logo acima, já estabeleceu.
+        #
+        # **SÓ OS PREFIXOS DE LANÇADOR**, e a restrição é de custo: os 32
+        # `compatdata` da Steam dela já têm dono, e varrer `/proc` por
+        # wineserver 33 vezes por transição de controle seria pagar de novo o
+        # que o wrapper já paga.
+        #
+        # Prefixo OCUPADO é pulado sem drama: `aplicar` devolve `"ocupado"`
+        # quando o `wineserver` daquele prefixo está vivo, e a próxima
+        # transição refaz. Escrever por baixo de um jogo aberto é o defeito
+        # que aquela guarda existe para impedir.
+        ks = _device_ks_nos_lancadores()
         logger.info(
             "launch_env_materializado",
             native=native,
@@ -2591,6 +2661,7 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
             backends=backends,
             arquivos=len(desired),
             estradas=list(estradas),
+            device_ks=ks,
         )
     except Exception:
         logger.warning("launch_env_materialize_falhou", exc_info=True)
