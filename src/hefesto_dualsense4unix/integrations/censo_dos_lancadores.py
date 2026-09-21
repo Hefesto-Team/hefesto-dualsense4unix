@@ -71,6 +71,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import cast
 
+from hefesto_dualsense4unix.integrations.identidade_de_janela import (
+    umu_por_chave_do_heroic,
+)
+
 #: O QUE SE SABE SOBRE A BIBLIOTECA DE UM LANÇADOR. São três, e nenhuma é
 #: "funciona" — a mesma disciplina do `prontuario_dos_jogos`.
 NUNCA_ABERTO = "nunca_aberto"
@@ -108,9 +112,20 @@ class JogoDoLancador:
     instalado: bool = False
     caminho: Path | None = None
     #: O BINÁRIO QUE O JOGO ABRE, relativo à pasta de instalação —
-    #: ``retail/gotg.exe``. **É A CHAVE QUE FALTAVA**, e ela só existe depois
-    #: de o jogo estar no disco: ver `classe_de_janela`.
+    #: ``retail/gotg.exe``.
+    #:
+    #: **ELE NÃO É A CHAVE DE JANELA — 21/09/2026, medido.** Esta linha dizia
+    #: *"É A CHAVE QUE FALTAVA"*, e a derivação caiu no dia em que ela abriu o
+    #: jogo: ver `classe_de_janela`. O campo fica porque ele é verdade sobre o
+    #: disco (é o binário, e a aba Lançadores o mostra); o que saiu é a
+    #: promessa de que ele casa com a janela.
     executavel: str = ""
+    #: O `umu-<N>` deste jogo, quando o lançador o conhece — **A CHAVE DE
+    #: JANELA DE VERDADE**, 21/09/2026. Ver
+    #: `integrations/identidade_de_janela.py` para a medição que a estabeleceu.
+    umu_id: str = ""
+    #: O appid da Steam, quando este jogo TAMBÉM existe lá. Segundo degrau.
+    appid_da_steam: str = ""
     #: Conteúdo adicional (DLC, pacote de arte, redistribuível). **Não é jogo**
     #: — ver `e_acessorio`.
     dlc: bool = False
@@ -119,54 +134,44 @@ class JogoDoLancador:
     def classe_de_janela(self) -> str:
         """A `wm_class` que este jogo vai anunciar — ou ``""`` quando não se sabe.
 
-        **A PREMISSA DA SPRINT CAIU AQUI, e a medição é de 10/09/2026.** O
-        enunciado dizia que *"a Steam entrega uma CHAVE; os outros cinco
-        entregam um NOME"*, e listava as portas fechadas: *"campos com `exe` /
-        `executable` / `launch` / `binar`: NENHUM"*. Isso era verdade sobre uma
-        biblioteca com **zero** jogos instalados. Com um jogo baixado, o
-        `legendary_library.json` passa a trazer::
+        **O CORPO MUDOU DE CASA EM 21/09/2026, E A DERIVAÇÃO CAIU JUNTO.** Quem
+        responde é `integrations/identidade_de_janela.classe_de_janela`, e a
+        razão inteira — com a medição que a derrubou — está escrita lá.
 
-            install: {"executable": "retail/gotg.exe", "install_path": "…"}
+        O QUE ESTA PROPRIEDADE DIZIA, e por quê. Ela devolvia o basename do
+        `install.executable`: `retail/gotg.exe` virava `gotg.exe`. A nota de
+        11/09/2026 que morava aqui declarava que isso **nunca fora medido** —
+        *"ninguém abriu Guardiões da Galáxia e leu a classe da janela viva"* —
+        e escrevia o degrau que fecharia, com as duas respostas possíveis:
 
-        O basename disso — ``gotg.exe`` — é exatamente a forma que o
-        `MatchCriteria(window_class=[…])` guarda para jogo de fora da Steam
-        (a sexta forma do `simple_match`, "janela"), e a mesma que o botão
-        «Detectar» grava quando ela abre o jogo. **A chave existe antes de ela
-        abrir o jogo uma vez — desde que ele esteja instalado.**
+            *"resposta `gotg.exe` → a derivação vira medição e esta nota sai;
+            resposta qualquer outra (o Heroic embrulha o jogo num script, e a
+            janela pode anunciar o wrapper) → o `executavel` **deixa de ser a
+            chave**."*
 
-        O QUE ELA NÃO ALCANÇA, e fica declarado em vez de adivinhado: os três
-        emuladores (RetroArch, Dolphin, mGBA) são **UM processo para todas as
-        ROMs**, então a janela é a do emulador e não a do jogo. Devolver aqui o
-        nome da ROM seria uma chave que nunca casa — o defeito R-12 que esta
-        casa já pagou. Por isso quem não tem `executavel` devolve ``""``, e
-        quem chama simplesmente não oferece a linha.
+        **EM 21/09/2026 ELA ABRIU O JOGO E A RESPOSTA FOI A SEGUNDA:**
+        ``WM_CLASS = "steam_app_1088850"``. O Heroic lança por `umu`, que monta
+        a pilha da Steam e exporta `SteamAppId`; o Proton batiza a janela por
+        ele. O `executavel` deixou de ser a chave no mesmo minuto.
 
-        **A IGUALDADE ACIMA É DERIVAÇÃO, E NÃO MEDIÇÃO — 11/09/2026, e fica
-        escrito porque sem aparelho não se inventa fato.** *"o basename do
-        `install.executable` É a `wm_class`"* vem de duas coisas verdadeiras —
-        o `MatchCriteria(window_class=…)` guarda essa forma, e o «Detectar»
-        grava o que o compositor anuncia — e de nenhuma terceira: **ninguém
-        abriu *Guardiões da Galáxia* e leu a classe da janela viva**. Abrir um
-        jogo exige a tela DELA, e é o que o preâmbulo de toda leva proíbe.
+        **O ESTRAGO ESTAVA MEDIDO NO PERFIL DELA:**
+        ``window_class: ["gotg.exe"]`` é uma regra que nunca casa — nenhum
+        perfil ativava, nenhuma feature chegava ao jogo, e a queixa dela foi a
+        leitura certa: *"o Hefesto não é identificado e não funciona lá"*.
 
-        O DEGRAU QUE FECHA, e ele custa um minuto dela: com o jogo aberto e em
-        foco, perguntar ao daemon vivo (as mesmas duas chaves que `detectar`
-        lê)::
-
-            from hefesto_dualsense4unix.app.ipc_bridge import daemon_state_full
-            daemon_state_full()["window_detect_last_class"]
-
-        * resposta ``gotg.exe`` → a derivação vira medição e esta nota sai;
-        * resposta qualquer outra (o Heroic embrulha o jogo num script, e a
-          janela pode anunciar o wrapper) → o `executavel` **deixa de ser a
-          chave**, e o que sobra é ela clicar «Detectar» uma vez por jogo, que
-          é o caminho que o produto já tem. Nada aqui depende do resultado
-          para funcionar: o «Detectar» grava o que o compositor disse, e esta
-          propriedade só ADIANTA a linha na lista.
+        O QUE CONTINUA VALENDO da nota antiga: os três emuladores (RetroArch,
+        Dolphin, mGBA) são **UM processo para todas as ROMs**, então a janela é
+        a do emulador e não a do jogo. Eles não têm `umu_id` nem appid, caem no
+        «não sei», e quem chama não oferece a linha — que é a mesma conclusão,
+        agora pelo caminho certo.
         """
-        if not self.executavel:
-            return ""
-        return self.executavel.replace("\\", "/").rsplit("/", 1)[-1].strip()
+        from hefesto_dualsense4unix.integrations.identidade_de_janela import (
+            classe_de_janela,
+        )
+
+        return classe_de_janela(
+            umu_id=self.umu_id, appid_da_steam=self.appid_da_steam,
+            executavel=self.executavel)
 
     @property
     def e_acessorio(self) -> bool:
@@ -302,6 +307,10 @@ def _heroic(pasta: Path) -> BibliotecaDoLancador:
     cache = pasta / "store_cache"
     jogos: list[JogoDoLancador] = []
     erros: list[str] = []
+    # A CHAVE DE JANELA VEM DAQUI — 21/09/2026. Uma leitura só para a
+    # biblioteca inteira: o `umu.json` é um dicionário de TODOS os jogos, e
+    # reabri-lo por jogo pagaria 29 leituras de disco na pintura de uma aba.
+    umu = umu_por_chave_do_heroic(cache)
     lojas = (("legendary", "Epic", "library", "app_name", "title"),
              ("gog", "GOG", "games", "app_name", "title"),
              ("nile", "Amazon", "library", "id", "product_title"))
@@ -330,6 +339,7 @@ def _heroic(pasta: Path) -> BibliotecaDoLancador:
                 caminho=(Path(str(instalacao["install_path"]))
                          if instalacao.get("install_path") else None),
                 executavel=str(instalacao.get("executable") or ""),
+                umu_id=umu.get(chave, ""),
                 dlc=bool(instalacao.get("is_dlc")))
             if jogo.e_acessorio:
                 continue
@@ -641,7 +651,13 @@ def jogos_com_chave_de_janela(
 #: Um padrão com `*` assina a PASTA (nasceu ou morreu arquivo) **e** cada
 #: arquivo que casa (o conteúdo mudou). Sem `*`, assina o arquivo.
 _FONTES: dict[str, tuple[str, ...]] = {
-    "Heroic": ("store_cache/*_library.json", "store_cache/*_install_info.json"),
+    #: O `umu.json` ENTROU EM 21/09/2026 — é ele que traz a CHAVE DE JANELA
+    #: desde a LANCADOR-AGNOSTICO-01. Sem ele na assinatura, instalar um jogo
+    #: novo do Heroic não invalidaria o caderno pela chave, e a aba Perfis
+    #: (que é PINTURA num processo longo) congelaria a resposta até ela
+    #: reiniciar o produto — o mesmo defeito que a nota acima descreve.
+    "Heroic": ("store_cache/*_library.json", "store_cache/*_install_info.json",
+               "store_cache/umu.json"),
     #: O `-wal` ENTRA, e é requisito e não zelo: em modo WAL o sqlite escreve
     #: as linhas novas no `pga.db-wal` e pode não tocar no `pga.db`. Quem lê
     #: em `mode=ro` enxerga os dois; a impressão tem de enxergar os dois.
