@@ -395,8 +395,10 @@ def modulos_falsos(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
 
     cv = types.ModuleType(_CV_MODNAME)
 
-    def fake_curar(*, religar: bool = False, forcar: bool = False) -> list[Any]:
-        caixa["chamadas"].append({"religar": religar, "forcar": forcar})
+    def fake_curar(*, religar: bool = False, forcar: bool = False,
+                   excluir: Any = ()) -> list[Any]:
+        caixa["chamadas"].append(
+            {"religar": religar, "forcar": forcar, "excluir": tuple(excluir)})
         return caixa["resultados"]
 
     cv.curar_todos = fake_curar  # type: ignore[attr-defined]
@@ -414,6 +416,12 @@ def modulos_falsos(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
 
     monkeypatch.setattr(pacote, "camadas_vulkan", cv, raising=False)
     monkeypatch.setattr(pacote, "steam_launch_options", slo, raising=False)
+    # A LISTA DE EXCLUSÃO (21/09/2026): o jogo que ela excluiu do Hefesto fica
+    # fora da cura, e o clique manda a lista ao dono das camadas. Um dublê com
+    # um jogo, para a régua ver o jogo chegar — e nunca a lista DELA.
+    from hefesto_dualsense4unix.integrations import lista_de_exclusao
+
+    monkeypatch.setattr(lista_de_exclusao, "appids", lambda *a, **kw: ["1599660"])
     return caixa
 
 
@@ -437,7 +445,8 @@ class TestWorker:
 
         stub._camadas_worker(devolver=False)
 
-        assert modulos_falsos["chamadas"] == [{"religar": False, "forcar": True}]
+        assert modulos_falsos["chamadas"] == [
+            {"religar": False, "forcar": True, "excluir": ("1599660",)}]
 
     def test_devolver_chega_ao_modulo_como_religar(
         self, sincrono: None, modulos_falsos: dict[str, Any]
@@ -446,7 +455,8 @@ class TestWorker:
 
         stub._camadas_worker(devolver=True)
 
-        assert modulos_falsos["chamadas"] == [{"religar": True, "forcar": True}]
+        assert modulos_falsos["chamadas"] == [
+            {"religar": True, "forcar": True, "excluir": ("1599660",)}]
 
     def test_falha_do_modulo_vira_frase_e_nao_traceback(
         self, sincrono: None, monkeypatch: pytest.MonkeyPatch

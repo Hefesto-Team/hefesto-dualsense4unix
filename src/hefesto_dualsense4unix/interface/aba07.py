@@ -509,7 +509,7 @@ CSS = """
      pela mesma razão; esta regra é a mesma lição, na fileira da aba. */
   .acoes a.btn,.lanc a.btn{text-decoration:none;display:inline-flex;
     align-items:center;justify-content:center}
-""" + CSS_POPUP
+""" + CSS_POPUP + dl.CSS_DA_EXCLUSAO
 
 # OS CARTÕES SAEM DO DESENHO, e a lista deixou de ser digitada. Ela era seis
 # dicionários com os selos e as contagens escritos à mão; agora é o que
@@ -812,8 +812,12 @@ if __name__ == "__main__":
             f"«{dl.ADICIONAR_NOVO_ROTULO}» abrem NADA — o "
             f"`href=\"#{dl.TELA_DO_NOVO}\"` aponta para um `id` que não existe, "
             "e o clique some sem uma palavra.")
+    # E A ESCOLHA DO JOGO ENTRA AO LADO, pela mesma razão — 21/09/2026, o
+    # desenho aprovado dos lançadores iguais. A casca é estática; o miolo (o
+    # título, a lista do lançador clicado e o confirmar) o pacote repinta.
     _DOC = _DOC.replace(
-        _MARCA, dl.tela_do_registro_html().strip() + "\n\n" + _MARCA, 1)
+        _MARCA, dl.tela_do_registro_html().strip() + "\n\n"
+        + dl.tela_da_escolha_html().strip() + "\n\n" + _MARCA, 1)
     onde.gravar("07-lancadores.html", _DOC)
 
     _CHIP_DE_CONTROLE = re.compile(r'^[ \t]*<label class="chip plastico"[^\n]*\n', re.M)

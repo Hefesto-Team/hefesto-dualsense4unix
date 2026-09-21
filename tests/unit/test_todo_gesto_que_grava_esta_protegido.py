@@ -141,6 +141,20 @@ ESCREVEM = {
     "restaurar_do_historico",  # troca o perfil pelo backup de ontem
     "_systemctl",              # liga, para e reinicia o serviço na máquina dela
     "curar_todos",             # tira ou devolve as camadas Vulkan dos prefixos dela
+    # A LISTA DE EXCLUSÃO — OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01,
+    # 21/09/2026. `adicionar` e `tirar` são a API do dono
+    # (`integrations/lista_de_exclusao`), e escrevem a lista E as duas listas
+    # por feature (`jogos_sem_wrapper.txt` e a de fora do pino). O
+    # `tirar_do_disco` é o mais caro dos quatro: tira o pino e o atalho — que
+    # REESCREVE o `localconfig.vdf` da Steam dela — e o device KS e as camadas
+    # Vulkan do prefixo do jogo. O `criar_para_o_jogo` é o gravador da aba
+    # Perfis, que a aba 07 chama por outro módulo, onde esta régua não desce.
+    # O `tirar` casa também o `tirar-daqui` da aba 08 (o mapa do gabinete), que
+    # já declara `machine_declare` e continua protegido do mesmo jeito.
+    "adicionar",
+    "tirar",
+    "tirar_do_disco",
+    "criar_para_o_jogo",
 
     # `escrever_a_estrada` SAIU DAQUI — LANCADOR-LOCALIZAR-01, 10/09/2026.
     #
@@ -445,8 +459,11 @@ def test_os_dois_da_leva_das_nove_estao_protegidos(nome: str) -> None:
 
 @pytest.mark.parametrize("nome", [
     "tirar-daqui", "voltar-a-usar", "nao-perguntar", "voltar-a-perguntar",
-    "consertar", "consertar-fechando-a-steam", "este-jogo-nao-funciona",
-    "deixar-tudo-pronto",
+    "consertar", "consertar-fechando-a-steam", "deixar-tudo-pronto",
+    # O `este-jogo-nao-funciona` SAIU em 21/09/2026 com o gesto — o desenho da
+    # lista de exclusão pôs o «Adicionar à lista de exclusão» no lugar dele.
+    # Os três da exclusão que gravam entram no lugar, e com mais razão.
+    "confirmar-exclusao", "tirar-da-exclusao", "confirmar-perfil",
 ])
 def test_as_oito_portas_da_aba_07_estao_protegidas(nome: str) -> None:
     """A quarta repetição, nomeada — para a regressão ter nome.

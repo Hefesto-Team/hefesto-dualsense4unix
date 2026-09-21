@@ -3514,6 +3514,11 @@ METODOS = METODOS_DA_TROCA_DE_MODO | {
     #   * o retorno passou a ser lido em 11/09/2026 (A-PERNA-QUE-FALTA-01): o
     #     gesto chama `chamar_detalhado` e traduz o `motivo` para o cartão.
     "gamepad.mask.set",
+    # A RECARGA DO CHIP «STEAM INPUT» — 21/09/2026. O chip a chama desde que
+    # nasceu, e quem a DECLARAVA era a aba 07, pelo «Este jogo não funciona»,
+    # que saiu com a lista de exclusão. O nome continua vindo de lá
+    # (`a07_lancadores.METODO_DA_RECARGA`); a declaração vem para quem chama.
+    "launch_env.refresh",
 }
 
 

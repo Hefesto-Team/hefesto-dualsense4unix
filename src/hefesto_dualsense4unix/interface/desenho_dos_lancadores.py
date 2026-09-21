@@ -184,6 +184,10 @@ class Acao:
     #: sabe para QUAL cartão a tela abriu. É a forma que o `aba06.py` já usa nos
     #: "Guardar" das telas de teclas.
     href: str = ""
+    #: O `title` do botão — o que aparece ao parar o mouse. Nasceu com o
+    #: «Adicionar à lista de exclusão» (21/09/2026), cujo rótulo é mais curto
+    #: que a frase dela e cuja explicação inteira vai aqui (§4.1 da sprint).
+    dica: str = ""
 
 
 @dataclass(frozen=True)
@@ -317,10 +321,11 @@ def acao_html(a: Acao) -> str:
     # abre a pop-up por `:target`. Um `<button>` com `href` não navega, e um
     # `<a>` sem `href` não é clicável pelo teclado — por isso os dois casos são
     # tags diferentes, e não um atributo opcional numa tag só.
+    dica = f' title="{_a(a.dica)}"' if a.dica else ""
     if a.href:
         return (f'<a class="{classe}" href="{_a(a.href)}"'
-                f'{endereco}{valor}>{_e(a.rotulo)}</a>')
-    return f'<button class="{classe}"{endereco}{valor}>{_e(a.rotulo)}</button>'
+                f'{endereco}{valor}{dica}>{_e(a.rotulo)}</a>')
+    return f'<button class="{classe}"{endereco}{valor}{dica}>{_e(a.rotulo)}</button>'
 
 
 #: O QUE VAI NO LUGAR DE UMA FILEIRA DE BOTÕES VAZIA — e ele não é enfeite.
@@ -1183,7 +1188,7 @@ NOVO_PARA_QUEM = "lanc-novo-para-quem"
 # de exceções ficam na aba 07**; "Consertar", "Restaurar de fábrica" e "Aplicar
 # aos jogos" ficam na 09.
 #
-# OS TRÊS NOMES MORAM AQUI pela mesma razão de :data:`ABRIR` e :data:`COPIAR`: o
+# OS NOMES MORAM AQUI pela mesma razão de :data:`ABRIR` e :data:`COPIAR`: o
 # desenho os escreve no `data-gesto` e o pacote os registra em `@gesto(...)`.
 # Digitá-los duas vezes é como um botão ganha endereço que ninguém atende.
 #
@@ -1194,15 +1199,16 @@ NOVO_PARA_QUEM = "lanc-novo-para-quem"
 #: "Desligar o Steam Input" — o gesto que tira a Steam do meio.
 DESLIGAR_STEAM_INPUT = "desligar-steam-input"
 
-#: "Este jogo não funciona" — marca o jogo na lista de exceções do Steam Input.
-JOGO_NAO_FUNCIONA = "este-jogo-nao-funciona"
+#: O «Este jogo não funciona» SAIU em 21/09/2026: no cartão, o «Adicionar à
+#: lista de exclusão» (:data:`EXCLUIR`) tomou o lugar dele, pelo desenho aprovado
+#: por ela; a lista do Steam Input que ele escrevia continua no chip da aba Jogar.
 
 #: "Deixar tudo pronto" — os DOIS trabalhos com UM consentimento só.
 TUDO_PRONTO = "deixar-tudo-pronto"
 
-#: OS RÓTULOS, e os três vêm do MOTOR — nunca da minha redação. O primeiro é o
-#: do botão que `emulation_actions.on_emulation_steam_input_disable` atende; os
-#: dois últimos são os do modo simples de `daemon_actions` (o bloco
+#: OS RÓTULOS, e os dois vêm do MOTOR — nunca da minha redação. O primeiro é o
+#: do botão que `emulation_actions.on_emulation_steam_input_disable` atende; o
+#: último é o do modo simples de `daemon_actions` (o bloco
 #: "FEAT-STEAM-SIMPLES-01", que traz `_STEAM_READY_CORPO` e
 #: `format_game_broken_result`), e nasceram da frase dela — *"tem jogos que
 #: precisamos ativar entrada steam, outros que temos que colocar comandos de
@@ -1213,7 +1219,6 @@ TUDO_PRONTO = "deixar-tudo-pronto"
 #: sobrevive à aposentadoria da janela — apontar para o arquivo dela seria
 #: deixar um ponteiro que morre com ela.
 DESLIGAR_STEAM_INPUT_ROTULO = "Desligar o Steam Input"
-JOGO_NAO_FUNCIONA_ROTULO = "Este jogo não funciona"
 TUDO_PRONTO_ROTULO = "Deixar tudo pronto"
 
 
@@ -1592,6 +1597,203 @@ def acao_de_tirar(chave: str) -> Acao:
     return Acao(REMOVER_ROTULO, "", REMOVER, chave)
 
 
+# ---------------------------------------------------------------------------
+# OS LANÇADORES IGUAIS — OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01
+# ---------------------------------------------------------------------------
+#
+# O pedido é dela, 21/09/2026: *"Todos os lançadores precisam ter os mesmos
+# botões e textos da steam adaptados pra eles"*, e o «Este jogo não funciona»
+# vira *"Adicionar jogo a lista de exclusão do Hefesto (cujo objetivo é
+# garantir que tal jogo não use nenhuma feature do hefesto)"*.  # noqa-acento: citação literal dela
+# O desenho foi APROVADO por ela no mesmo dia (*"perfeito aprovadíssimo."*),
+# e está em `docs/process/assets/2026-09-21-os-lancadores-iguais-*.png`.
+#
+# A FILEIRA É DE QUATRO NOS OITO CARTÕES: abrir, criar perfil, apontar outro
+# caminho, excluir. A função do «Este jogo não funciona» (a lista do Steam
+# Input) não se perde: o chip «Steam Input» da aba Jogar escreve a mesma
+# lista, jogo por jogo.
+
+#: A pop-up da escolha do jogo — UMA para a aba, como a do registro. Chega-se a
+#: ela por dois botões (excluir e criar perfil), e o conteúdo inteiro — título,
+#: lista e o botão de confirmar — é repintado pelo pacote quando ela abre,
+#: porque a lista é do lançador que foi clicado.
+TELA_DA_ESCOLHA = "escolher-jogo"
+#: O miolo da pop-up, que o pacote troca por `blocos` (HTML inteiro). É também
+#: o recipiente que o `data-hef-forma` do confirmar recolhe.
+MIOLO_DA_ESCOLHA = "lanc-escolha"
+#: O `data-linha` de cada opção da lista — o `value` é a chave do jogo.
+ESCOLHA = "lanc-escolha-jogo"
+
+EXCLUIR = "adicionar-a-exclusao"
+EXCLUIR_ROTULO = "Adicionar à lista de exclusão"
+#: A frase do §3 da sprint, no `title` do botão — o rótulo é mais curto que a
+#: frase dela por largura (a fileira da Steam ocupa a linha inteira).
+DICA_EXCLUIR = (
+    "Adicionar jogo à lista de exclusão do Hefesto: o jogo passa a ver o "
+    "controle como se o Hefesto não estivesse instalado — sem máscara, sem "
+    "perfil, sem luz, sem vibração do Hefesto, sem Proton fixado. «Tirar da "
+    "lista» devolve tudo.")
+CONFIRMAR_EXCLUSAO = "confirmar-exclusao"
+CONFIRMAR_EXCLUSAO_ROTULO = "Adicionar à lista"
+
+CRIAR_PERFIL = "criar-perfil-para-um-jogo"
+CRIAR_PERFIL_ROTULO = "Criar perfil para um jogo"
+CONFIRMAR_PERFIL = "confirmar-perfil"
+CONFIRMAR_PERFIL_ROTULO = "Criar o perfil"
+
+TIRAR_DA_EXCLUSAO = "tirar-da-exclusao"
+TIRAR_DA_EXCLUSAO_ROTULO = "Tirar da lista"
+NENHUM_EXCLUIDO = "Nenhum jogo na lista de exclusão."
+
+
+def acao_de_excluir(chave: str) -> Acao:
+    """O «Adicionar à lista de exclusão» de um cartão — abre a escolha do jogo."""
+    return Acao(EXCLUIR_ROTULO, "", EXCLUIR, chave,
+                href=f"#{TELA_DA_ESCOLHA}", dica=DICA_EXCLUIR)
+
+
+def acao_de_criar_perfil(chave: str) -> Acao:
+    """O «Criar perfil para um jogo» — abre a MESMA escolha, no modo do perfil.
+
+    D-2109-O-CRIAR-PERFIL-LEVA-A-ABA-PERFIS: o perfil nasce pelo dono da aba
+    Perfis (um gravador, dois caminhos de chegada) e a tela vai para lá.
+    """
+    return Acao(CRIAR_PERFIL_ROTULO, "", CRIAR_PERFIL, chave,
+                href=f"#{TELA_DA_ESCOLHA}")
+
+
+def fileira_comum(chave: str) -> tuple[Acao, ...]:
+    """Os quatro botões que os oito cartões têm quando o lançador está LOCALIZADO."""
+    return (Acao("Abrir o lançador", "", ABRIR, chave),
+            acao_de_criar_perfil(chave),
+            acao_de_localizar(chave, APONTAR_ROTULO),
+            acao_de_excluir(chave))
+
+
+def rodape_da_exclusao_html(excluidos: list[tuple[str, str]]) -> str:
+    """O pé do cartão: os jogos DESTE lançador na lista, cada um com o seu «Tirar».
+
+    `excluidos` é ``[(chave, nome)]``. Sem nenhum, a frase do desenho aprovado.
+    """
+    if not excluidos:
+        return f'<div class="lanc-excl">{_e(NENHUM_EXCLUIDO)}</div>'
+    partes = [
+        f"<b>{_e(nome)}</b> · <a class=\"tirar\" href=\"#\" "
+        f'data-gesto="{_a(TIRAR_DA_EXCLUSAO)}" data-v="{_a(chave)}">'
+        f"{_e(TIRAR_DA_EXCLUSAO_ROTULO)}</a>"
+        for chave, nome in excluidos
+    ]
+    return ('<div class="lanc-excl">Na lista de exclusão: '
+            + " — ".join(partes) + "</div>")
+
+
+@dataclass(frozen=True)
+class JogoParaEscolher:
+    """Uma linha da escolha: a chave é a classe da janela, o que o daemon vê."""
+
+    chave: str
+    nome: str
+    instalado: bool = True
+    marcado: bool = False
+
+
+#: A nota dos emuladores — um processo para todas as ROMs (§4.3 da sprint).
+NOTA_DO_EMULADOR = (
+    "Todos os jogos abrem na mesma janela do emulador, e o Hefesto não sabe "
+    "qual deles está aberto. Por isso a exclusão vale para o emulador inteiro.")
+NENHUM_JOGO_PARA_ESCOLHER = (
+    "Nenhum jogo aqui ainda. Quando houver, eles aparecem nesta lista.")
+#: O que a lista diz sobre o jogo da escada (§4.3): o jogo aberto já marcado.
+O_ULTIMO_QUE_ABRIU = "o último que você abriu"
+
+
+def miolo_da_escolha_html(modo: str, nome_do_lancador: str,
+                          jogos: list[JogoParaEscolher],
+                          *, emulador: bool = False) -> str:
+    """O conteúdo inteiro da pop-up, para o lançador clicado e o modo pedido.
+
+    `modo` é :data:`EXCLUIR` ou :data:`CRIAR_PERFIL`. O confirmar leva
+    `data-hef-forma` = :data:`MIOLO_DA_ESCOLHA`, e o piloto recolhe a opção
+    MARCADA (`ESCOLHA`).
+    """
+    excluir = modo == EXCLUIR
+    titulo = (f"{EXCLUIR_ROTULO} — {nome_do_lancador}" if excluir
+              else f"{CRIAR_PERFIL_ROTULO} — {nome_do_lancador}")
+    if excluir:
+        para = ('O jogo que você escolher vai ver o controle <b>como se o '
+                'Hefesto não estivesse instalado</b>: sem máscara, sem perfil, '
+                'sem luz e sem vibração do Hefesto. «Tirar da lista» devolve tudo.')
+    else:
+        para = ('O perfil nasce na aba Perfis, já apontado para o jogo que você '
+                'escolher, e a tela vai para lá.')
+    linhas: list[str] = []
+    for jogo in jogos:
+        marca = " checked" if jogo.marcado else ""
+        tags = ""
+        if jogo.marcado:
+            tags += f' <span class="excl-tag ok">{_e(O_ULTIMO_QUE_ABRIU)}</span>'
+        if not jogo.instalado:
+            tags += ' <span class="excl-tag">não instalado</span>'
+        linhas.append(
+            f'<label class="excl-jogo"><input type="radio" name="{ESCOLHA}" '
+            f'data-linha="{ESCOLHA}" value="{_a(jogo.chave)}"{marca}>'
+            f"<span>{_e(jogo.nome)}{tags}</span></label>")
+    if linhas:
+        corpo = '<div class="excl-lista">' + "".join(linhas) + "</div>"
+        if emulador:
+            corpo += f'<div class="excl-nota">{_e(NOTA_DO_EMULADOR)}</div>'
+        # O CONFIRMAR DO PERFIL É UMA ÂNCORA PARA A ABA PERFIS: o mesmo clique
+        # manda o gesto (o ouvinte do piloto não chama `preventDefault`) e
+        # troca de aba — D-2109-O-CRIAR-PERFIL-LEVA-A-ABA-PERFIS.
+        destino = "#" if excluir else "10-perfis.html"
+        confirmar = (
+            f'<a class="btn roxo" href="{destino}" '
+            f'data-gesto="{_a(CONFIRMAR_EXCLUSAO if excluir else CONFIRMAR_PERFIL)}" '
+            f'data-hef-forma="{_a(MIOLO_DA_ESCOLHA)}">'
+            f"{_e(CONFIRMAR_EXCLUSAO_ROTULO if excluir else CONFIRMAR_PERFIL_ROTULO)}</a>")
+    else:
+        corpo = f'<div class="excl-nota">{_e(NENHUM_JOGO_PARA_ESCOLHER)}</div>'
+        confirmar = ""
+    return f"""<div class="tn-topo">
+      <span class="tn-tit">{_e(titulo)}</span>
+      <span class="ajuda">?<span class="dica">{_e(DICA_EXCLUIR if excluir else
+        "Um gravador só: o perfil é criado pela aba Perfis.")}</span></span>
+      <a class="tn-x" href="#" title="Fechar">&times;</a>
+    </div>
+    <div class="tn-corpo">
+      <div class="lanc-novo-para">{para}</div>
+      {corpo}
+    </div>
+    <div class="tn-rod">
+      <a class="btn" href="#">Cancelar</a>
+      {confirmar}
+    </div>"""
+
+
+def tela_da_escolha_html() -> str:
+    """A casca da pop-up; o miolo chega pelo pacote (:func:`miolo_da_escolha_html`)."""
+    return (f'<div class="tela-nova" id="{TELA_DA_ESCOLHA}">\n'
+            f'  <div class="tn-cx" id="{MIOLO_DA_ESCOLHA}">'
+            f"{miolo_da_escolha_html(EXCLUIR, '', [])}</div>\n</div>")
+
+
+#: O CSS das peças novas — o do desenho aprovado, com a `.excl-nota` na letra
+#: do corpo da caixa (o defeito da página de proposta, §9 da sprint).
+CSS_DA_EXCLUSAO = """
+  .lanc-excl{font-size:11px;line-height:1.5;color:var(--fg);opacity:.85}
+  .lanc-excl b{font-weight:600}
+  .lanc-excl a.tirar{color:inherit;text-decoration:underline}
+  .excl-lista{max-height:46vh;overflow:auto;display:flex;flex-direction:column;
+    gap:4px;margin:10px 0;padding-right:6px}
+  .excl-jogo{display:flex;gap:10px;align-items:center;padding:6px 10px;font-size:12px;
+    border:1px solid rgba(255,255,255,.08);border-radius:8px;cursor:pointer}
+  .excl-jogo:hover{border-color:rgba(255,255,255,.22)}
+  .excl-tag{font-size:.78em;opacity:.65;margin-left:8px}
+  .excl-tag.ok{opacity:1;color:var(--verde, #3fd98a)}
+  .excl-nota{font-size:12px;opacity:.8;margin-top:8px;line-height:1.45}
+"""
+
+
 def cartao_da_steam(lida: Leitura | None) -> Lancador:
     """O ÚNICO cartão com fonte, e cada palavra dele sai de uma medição.
 
@@ -1638,7 +1840,10 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
     # `a07_lancadores.abrir_lancador`, e o `v` diz QUAL lançador — sem ele o
     # gesto teria de adivinhar pelo texto do botão, que é o mesmo nos seis.
     abrir = Acao("Abrir o lançador", "", ABRIR, STEAM)
-    criar = Acao("Criar perfil para um jogo", "", "", "")
+    # O «CRIAR PERFIL» GANHOU GESTO — 21/09/2026. Era o botão sem endereço que
+    # o §2.2 da sprint dos lançadores nomeou: morto na Steam também. Ver
+    # :func:`acao_de_criar_perfil`.
+    criar = acao_de_criar_perfil(STEAM)
     # E O TIRAR, SÓ ONDE HÁ O QUE TIRAR — a mesma regra dos outros cinco
     # (:func:`cartao_sem_censo`). Ela só ganha o botão depois de ensinar onde a
     # Steam está; sem isso não há declaração a esquecer, e o botão fingiria.
@@ -1800,6 +2005,9 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
     # «Localizar» num cartão que diz `LOCALIZADO` é a contradição que a A2-022
     # fechou.
     acoes = (*acoes, acao_de_localizar(STEAM, APONTAR_ROTULO))
+    # O EXCLUIR, logo depois do apontar — é o quarto da fileira comum
+    # (:func:`fileira_comum`), nos dois estados bons, como nos outros sete.
+    acoes = (*acoes, acao_de_excluir(STEAM))
 
     # O TIRAR VAI POR ÚLTIMO nos dois estados bons, e por último de propósito: o
     # que ela desfaz nunca disputa a primeira posição com o que ela FAZ.
@@ -1915,7 +2123,6 @@ def cartao_sem_censo(item: SemCenso, onde: str | None,
     localizar = (acao_de_localizar(item.chave),)
     # E O MESMO BOTÃO COM O RÓTULO DO OUTRO ESTADO — A2-022, 11/09/2026. Ver
     # :data:`APONTAR_ROTULO`: mesmo gesto, mesma tela, mesma gravação.
-    apontar = (acao_de_localizar(item.chave, APONTAR_ROTULO),)
     # E O TIRAR, SÓ ONDE HÁ O QUE TIRAR: o cartão que ELA ensinou. Nos de
     # fábrica que ela nunca tocou não há declaração a esquecer, e um botão que
     # não tem o que fazer é o botão que finge.
@@ -1974,11 +2181,14 @@ def cartao_sem_censo(item: SemCenso, onde: str | None,
     #: `diz`, o corpo do cartão passou a estourar a caixa nas colunas da
     #: direita — o caminho do `.desktop` já é longo e não quebra. Fotografado
     #: antes de a linha existir.
+    # A FILEIRA COMUM — 21/09/2026, o desenho aprovado por ela: os oito cartões
+    # LOCALIZADOS têm os mesmos quatro botões (:func:`fileira_comum`), e o
+    # «Apontar outro caminho» que morava aqui é o terceiro deles.
     return Lancador(
         chave=item.chave, nome=item.nome, selo="localizado",
         jogos=resumo or "—",
         diz=DIZ_ACHEI,
-        acoes=abrir + apontar + tirar, presente=True)
+        acoes=fileira_comum(item.chave) + tirar, presente=True)
 
 
 def cartoes(lida: Leitura | None) -> list[Lancador]:
@@ -2065,8 +2275,6 @@ __all__ = [
     "DIZ_NAO_LI",
     "DIZ_SEM_FONTE",
     "EMBUTIDOS",
-    "JOGO_NAO_FUNCIONA",
-    "JOGO_NAO_FUNCIONA_ROTULO",
     "MOLDURA",
     "NOVO_ALVO",
     "NOVO_PARA_O_CARTAO",

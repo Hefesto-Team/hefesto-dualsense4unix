@@ -163,6 +163,7 @@ import time
 from collections.abc import Callable
 from typing import Any
 
+from hefesto_dualsense4unix.integrations import lista_de_exclusao
 from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
 
 from . import Contexto, perfil, registrar
@@ -1205,7 +1206,7 @@ def _botao_armavel(nome: str, pergunta: str) -> desenho.Acao:
 
 
 def acoes_do_steam_input(lida: desenho.Leitura | None) -> tuple[desenho.Acao, ...]:
-    """Os TRÊS botões do Steam Input, e cada um só onde ele funciona.
+    """Os botões do Steam Input, e cada um só onde ele funciona.
 
     A DECISÃO É DELA, 06/09/2026 (`D-0609-STEAM-DIVIDIDO`): *"Steam Input e a
     lista de exceções ficam na aba 07"*. O que esta função acrescenta é a mesma
@@ -1221,11 +1222,6 @@ def acoes_do_steam_input(lida: desenho.Leitura | None) -> tuple[desenho.Acao, ..
                                   jogo aberto** — com jogo aberto o produto não
                                   fecha a Steam por nada, e oferecer o botão
                                   seria oferecer uma recusa
-    "Este jogo não funciona"      a leitura ALCANÇOU a biblioteca. É o único
-                                  gesto por-jogo que a janela velha tem para o
-                                  sintoma que ela mediu no aparelho, e ele é
-                                  reversível: não fecha nada, não edita arquivo
-                                  da Steam
     "Deixar tudo pronto"          **os DOIS têm trabalho** — falta atalho em
                                   algum jogo E o Steam Input está ligado. É a
                                   razão inteira de ele existir: os dois cabem
@@ -1235,16 +1231,22 @@ def acoes_do_steam_input(lida: desenho.Leitura | None) -> tuple[desenho.Acao, ..
                                   lado pendente, o botão daquele lado basta
     ============================  ==========================================
 
+    ERAM TRÊS até 21/09/2026: o «Este jogo não funciona» saiu com o desenho da
+    lista de exclusão, e o comentário no corpo diz para onde a lista dele foi.
+
     NENHUM DELES APARECE SEM MEDIÇÃO. Uma `Leitura` sem `steam_input` — a
     primeira meia volta, e toda régua que monte uma à mão — sai daqui com tupla
     vazia, e o cartão fica exatamente como estava.
     """
     if lida is None or not lida.viu_a_biblioteca:
         return ()
-    fora: list[desenho.Acao] = [
-        desenho.Acao(desenho.JOGO_NAO_FUNCIONA_ROTULO, "",
-                     desenho.JOGO_NAO_FUNCIONA, desenho.STEAM)
-    ]
+    # O «ESTE JOGO NÃO FUNCIONA» SAIU DA FILEIRA — 21/09/2026, o desenho
+    # aprovado por ela (OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01): no lugar
+    # dele entrou o «Adicionar à lista de exclusão», nos oito cartões. A lista
+    # do Steam Input que ele escrevia NÃO é exclusão (§11 da sprint: ela põe o
+    # Hefesto NA FRENTE do jogo), e continua alcançável pelo chip «Steam
+    # Input» da aba Jogar, que escreve a mesma lista jogo por jogo.
+    fora: list[desenho.Acao] = []
     if lida.steam_input_ligado is True and not PORTOES.jogo_aberto:
         fora.append(_botao_armavel(desenho.DESLIGAR_STEAM_INPUT,
                                    desenho.DESLIGAR_STEAM_INPUT_ROTULO))
@@ -1464,6 +1466,169 @@ def fita_html(mesa: list[dict[str, Any]]) -> str:
             + "".join(_chip(c) for c in mesa))
 
 
+# ---------------------------------------------------------------------------
+# A LISTA DE EXCLUSÃO — OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01, E5
+# ---------------------------------------------------------------------------
+
+
+@dataclasses.dataclass
+class _Escolha:
+    """Qual cartão abriu a escolha do jogo, e para quê.
+
+    Do MÓDULO, pela razão da :data:`VIGIA`: o pacote é recriado a cada tique.
+    É o mesmo papel do :data:`_PARA_QUEM` do «Localizar», com a lista junto.
+    """
+
+    modo: str = ""
+    lancador: str = ""
+    miolo: str = ""
+    jogos: tuple[desenho.JogoParaEscolher, ...] = ()
+    janelas: dict[str, tuple[str, ...]] = dataclasses.field(default_factory=dict)
+
+    def limpar(self) -> None:
+        self.modo = self.lancador = self.miolo = ""
+        self.jogos = ()
+        self.janelas = {}
+
+
+_ESCOLHA = _Escolha()
+
+#: As classes de janela MEDIDAS que o cadastro do cartão não alcança. O flatpak
+#: do RetroArch se chama `org.libretro.RetroArch`, e a janela dele diz
+#: `com.libretro.RetroArch` (medido em 10/09/2026 com `cos-cli info`).
+_JANELAS_MEDIDAS: dict[str, tuple[str, ...]] = {
+    "retroarch": ("com.libretro.RetroArch",),
+}
+
+#: Os cartões cuja biblioteca o censo LÊ jogo por jogo, com a chave de janela.
+_COM_BIBLIOTECA = ("heroic", "lutris")
+#: O cartão que não é lançador de jogo: o Flatpak é o pacote dos outros.
+_SEM_JOGOS = ("flatpak",)
+
+
+def _chave_do_emulador(lancador: str) -> str:
+    return f"emulador:{lancador}"
+
+
+def _jogos_para_escolher(
+    lancador: str, nome: str, state: dict[str, Any] | None,
+) -> tuple[list[desenho.JogoParaEscolher], dict[str, tuple[str, ...]], bool]:
+    """``(jogos, janelas por chave, é emulador)`` — a lista DAQUELE lançador.
+
+    Só entra jogo com CHAVE DE JANELA: uma linha que nunca casa com janela
+    nenhuma é pior que nenhuma (a regra da LANCADOR-AGNOSTICO-01). O jogo da
+    escada (o aberto, ou o último) nasce marcado (D-2109-O-JOGO-SE-ESCOLHE-NA-
+    LISTA). Nunca levanta: é chamado de dentro de um clique.
+    """
+    appid, _quando = a_escada_do_jogo(state)
+    marcado = f"steam_app_{appid}" if appid is not None else ""
+    ja = {e.chave for e in lista_de_exclusao.ler()}
+    jogos: list[desenho.JogoParaEscolher] = []
+    try:
+        if lancador == desenho.STEAM:
+            from hefesto_dualsense4unix.integrations import proton_pin
+            from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+            for numero in proton_pin.list_installed_appids():
+                chave = f"steam_app_{numero}"
+                jogos.append(desenho.JogoParaEscolher(
+                    chave=chave, nome=slo.nome_do_appid(numero) or f"appid {numero}",
+                    marcado=chave == marcado))
+        elif lancador in _COM_BIBLIOTECA:
+            from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
+
+            for jogo in censo.biblioteca_do_cartao(lancador).jogos:
+                chave = jogo.classe_de_janela
+                if chave and not jogo.e_acessorio:
+                    jogos.append(desenho.JogoParaEscolher(
+                        chave=chave, nome=jogo.nome, instalado=bool(jogo.instalado),
+                        marcado=chave == marcado))
+        elif lancador not in _SEM_JOGOS:
+            chave = _chave_do_emulador(lancador)
+            item = next((x for x in desenho.procurados(_declarados())
+                         if x.chave == lancador), None)
+            janelas = tuple(dict.fromkeys(
+                (*(item.atalhos if item else ()), *(item.comandos if item else ()),
+                 *_JANELAS_MEDIDAS.get(lancador, ()))))
+            linha = desenho.JogoParaEscolher(
+                chave=chave, nome=f"{nome} — todos os jogos", marcado=True)
+            return ([] if chave in ja else [linha]), {chave: janelas}, True
+    except Exception:
+        logging.getLogger(__name__).debug("lista_da_escolha_falhou", exc_info=True)
+    jogos = [j for j in jogos if j.chave not in ja]
+    jogos.sort(key=lambda j: (not j.marcado, not j.instalado, j.nome.casefold()))
+    return jogos, {}, False
+
+
+def _abrir_a_escolha(modo: str, lancador: str, state: dict[str, Any] | None) -> None:
+    """Monta a lista do cartão clicado e o miolo da pop-up. Nunca levanta."""
+    lida = VIGIA.agora()
+    nomes = {x.chave: x.nome for x in desenho.cartoes(lida)}
+    nome = nomes.get(lancador, lancador)
+    jogos, janelas, emulador = _jogos_para_escolher(lancador, nome, state)
+    _ESCOLHA.modo, _ESCOLHA.lancador = modo, lancador
+    _ESCOLHA.jogos, _ESCOLHA.janelas = tuple(jogos), janelas
+    _ESCOLHA.miolo = desenho.miolo_da_escolha_html(
+        modo, nome, jogos, emulador=emulador)
+
+
+def _o_escolhido(o: dict[str, Any]) -> desenho.JogoParaEscolher:
+    """O jogo que ela marcou na pop-up — ou a recusa, dita."""
+    forma = o.get("forma") or {}
+    chave = str(forma.get(desenho.ESCOLHA) or "").strip()
+    jogo = next((j for j in _ESCOLHA.jogos if j.chave == chave), None)
+    if jogo is None:
+        raise RuntimeError("Escolha um jogo da lista antes de confirmar.")
+    return jogo
+
+
+def com_a_exclusao(
+    lancadores: list[desenho.Lancador], lida: desenho.Leitura | None,
+) -> list[desenho.Lancador]:
+    """O rodapé da exclusão nos cartões LOCALIZADOS, e a lista da Steam sem eles.
+
+    O PÉ DO CARTÃO diz os jogos DAQUELE lançador que estão na lista, cada um com
+    o seu «Tirar da lista» — ou «Nenhum jogo na lista de exclusão.», que é a
+    frase do desenho aprovado. Só onde há o botão de excluir: um cartão que
+    não achou o lançador não tem o que excluir.
+
+    A LISTA DA STEAM PERDE OS EXCLUÍDOS. A exclusão escreve no
+    `jogos_sem_wrapper.txt`, e a lista do cartão mostra esse arquivo como
+    «você tirou», com um «Voltar a usar» que desfaria SÓ o atalho — metade da
+    exclusão, que é tudo-ou-nada. O jogo excluído aparece num lugar só: aqui.
+    """
+    try:
+        entradas = lista_de_exclusao.ler()
+    except Exception:
+        entradas = []
+    por_cartao: dict[str, list[tuple[str, str]]] = {}
+    for e in entradas:
+        por_cartao.setdefault(e.lancador, []).append((e.chave, e.nome))
+    appids_fora = {
+        a for a in (lista_de_exclusao.appid_da_chave(e.chave) for e in entradas
+                    if "atalho" in e.escritas) if a}
+    saida: list[desenho.Lancador] = []
+    for lanc in lancadores:
+        if not any(a.gesto == desenho.EXCLUIR for a in lanc.acoes):
+            saida.append(lanc)
+            continue
+        rodape = desenho.rodape_da_exclusao_html(por_cartao.get(lanc.chave, []))
+        fora = rodape
+        if lanc.chave == desenho.STEAM and lida is not None:
+            filtrada = dataclasses.replace(
+                lida, recusados=tuple(r for r in lida.recusados if r[0] not in appids_fora))
+            lista = desenho.lista_de_jogos(filtrada)
+            if desenho.LISTA_VAZIA not in lista and lista.strip():
+                fora = lista + rodape
+        saida.append(dataclasses.replace(lanc, fora=fora, tem_lista=True))
+    return saida
+
+
+def _relatar(gesto_: str, frase: str) -> None:
+    """O recibo de um gesto da exclusão, no diário — a tela mostra o cartão."""
+    print(f"[relato] {PAGINA} · {gesto_}: {frase}", file=sys.stderr)
+
+
 def _pintura(lancadores: list[desenho.Lancador]) -> dict[str, Any]:
     """A carga da aba: os endereços **e a grade inteira**, com as molduras.
 
@@ -1527,10 +1692,14 @@ def _pintura(lancadores: list[desenho.Lancador]) -> dict[str, Any]:
     valores[desenho.NOVO_PARA_QUEM] = (
         desenho.NOVO_PARA_O_CARTAO.format(nome=quem[_PARA_QUEM])
         if _PARA_QUEM in quem else desenho.NOVO_SEM_ALVO)
-    return {
-        "mesa": valores,
-        "blocos": {desenho.SELETOR_DA_GRADE: desenho.cartoes_html(lancadores)},
-    }
+    blocos = {desenho.SELETOR_DA_GRADE: desenho.cartoes_html(lancadores)}
+    # A ESCOLHA DO JOGO, quando um cartão a abriu: o miolo da pop-up inteiro,
+    # montado no clique (ele lê a biblioteca do lançador) e repetido a cada
+    # tique. O piloto só troca o `innerHTML` quando ele muda — e é isso que
+    # guarda a opção que ela marcou entre um tique e outro.
+    if _ESCOLHA.miolo:
+        blocos[f"#{desenho.MIOLO_DA_ESCOLHA}"] = _ESCOLHA.miolo
+    return {"mesa": valores, "blocos": blocos}
 
 
 def _resposta(lida: desenho.Leitura | None,
@@ -1547,7 +1716,8 @@ def _resposta(lida: desenho.Leitura | None,
     "Não perguntar para este jogo" sumiria junto — o clique dela apagaria por
     meio segundo justamente o aviso sobre o qual ela está agindo.
     """
-    return _pintura(com_o_que_o_daemon_diz(desenho.cartoes(lida), state, lida))
+    return _pintura(com_a_exclusao(
+        com_o_que_o_daemon_diz(desenho.cartoes(lida), state, lida), lida))
 
 
 @registrar("07-lancadores.html")
@@ -2250,11 +2420,9 @@ def copiar_a_linha(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 #     emulation_actions.EmulationActionsMixin._steam_input_is_on     o veredito
 #     emulation_actions.format_steam_input_result                    a frase
 #     emulation_actions.steam_input_result_tag                       a tag
-#     daemon_actions.format_game_broken_result                       a frase
 #     daemon_actions.format_steam_ready_result                       a frase
 #     daemon_actions.medir_jogos_com_steam_input                     a medição
 #     daemon_actions.DaemonActionsMixin._STEAM_READY_CORPO           o consentimento
-#     steam_launch_options.add_appid_to_steam_input_allowlist        a marca
 #     steam_launch_options.apply_wrapper_to_all_games                o wrapper
 #     steam_launch_options.with_steam_closed                         fechar/reabrir
 #
@@ -2370,46 +2538,85 @@ def desligar_o_steam_input(ctx: Contexto, o: dict[str, Any],
     return {**_resposta(VIGIA.ler(), ctx.state), "recado": frase}
 
 
-@gesto("07-lancadores.html", desenho.JOGO_NAO_FUNCIONA, grava="add_appid_to_steam_input_allowlist")
-def este_jogo_nao_funciona(ctx: Contexto, o: dict[str, Any],
-                           p: Any) -> dict[str, Any]:
-    """"Este jogo não funciona": põe o jogo na lista de exceções do Steam Input.
+@gesto("07-lancadores.html", desenho.EXCLUIR)
+def abrir_a_exclusao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Adicionar à lista de exclusão»: abre a escolha do jogo DAQUELE lançador.
 
-    SEM PERGUNTA, e isso é do motor e não descuido meu: o gesto **não fecha
-    nada, não edita arquivo da Steam e é reversível** (uma linha num arquivo
-    nosso, que a caixinha do editor de perfil também desfaz). É por isso que a
-    janela velha não abre diálogo aqui, e é por isso que esta tela não abre
-    também — pedir consentimento para um ato reversível ensina que todo botão
-    pede consentimento, e aí o consentimento que importa deixa de ser lido.
-
-    QUAL JOGO É: a mesma escada de três evidências de :func:`a_escada_do_jogo`,
-    e é ela que faz o botão servir ao caso REAL — *"o jogo não funcionou, ela
-    fechou, e só então veio reclamar"*. Sem jogo, a recusa é a frase do dono.
-
-    A RECARGA NÃO É ZELO — ela é a metade que faz a marca VALER AGORA. A lista
-    é relida do disco a cada consulta, mas o que entrega a entrada daquele jogo
-    ao controle físico só nasce quando o daemon rematerializa o ambiente de
-    inicialização. Sem ela a marca só valeria no próximo arranque do serviço, e
-    a pessoa clicaria de novo achando que o primeiro clique não pegou. É o
-    MESMO aviso best-effort que `daemon_actions._recarregar_apos_allowlist`
-    manda (serviço parado é normal — ele rematerializa sozinho ao subir).
+    O mesmo clique abre a pop-up (a âncora muda o `:target`) e manda este gesto,
+    que monta a lista — como o «Localizar» sabe para qual cartão abriu.
     """
-    from hefesto_dualsense4unix.app.actions.daemon_actions import (
-        format_game_broken_result,
-    )
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+    _abrir_a_escolha(desenho.EXCLUIR, str(o.get("v") or ""), ctx.state)
+    return _resposta(VIGIA.agora(), ctx.state)
 
-    appid, _quando = a_escada_do_jogo(ctx.state)
-    if appid is None:
-        raise RuntimeError(format_game_broken_result(status="sem_jogo"))
-    status = slo.add_appid_to_steam_input_allowlist(
-        appid, nota="marcado pela tela: 'este jogo não funciona'")
-    frase = format_game_broken_result(status=status, appid=appid)
-    if status in ("appid_invalido", "erro"):
-        raise RuntimeError(frase)
-    p.chamar(METODO_DA_RECARGA)
+
+@gesto("07-lancadores.html", desenho.CRIAR_PERFIL)
+def abrir_o_criar_perfil(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Criar perfil para um jogo»: a mesma escolha, no modo do perfil."""
+    _abrir_a_escolha(desenho.CRIAR_PERFIL, str(o.get("v") or ""), ctx.state)
+    return _resposta(VIGIA.agora(), ctx.state)
+
+
+@gesto("07-lancadores.html", desenho.CONFIRMAR_EXCLUSAO, grava="adicionar")
+def confirmar_a_exclusao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """Põe o jogo marcado na lista e tira dele, agora, o que o Hefesto pôs no disco.
+
+    A LISTA É O DONO (`integrations/lista_de_exclusao`): ela escreve nas duas
+    listas por feature e o `tirar_do_disco` tira o pino, o atalho, o device KS e
+    as camadas Vulkan. Com a Steam aberta o disco espera o vigia — e o jogo já
+    abre sem o Hefesto mesmo assim, porque o `hefesto-launch` lê a lista.
+    """
+    jogo = _o_escolhido(o)
+    status = lista_de_exclusao.adicionar(
+        jogo.chave, lancador=_ESCOLHA.lancador, nome=jogo.nome,
+        janelas=_ESCOLHA.janelas.get(jogo.chave, ()))
+    if status in ("erro", "chave_invalida"):
+        raise RuntimeError(
+            "Não consegui gravar a lista de exclusão — o arquivo está ilegível "
+            "ou a pasta de configuração não aceita escrita.")
+    disco = lista_de_exclusao.tirar_do_disco(jogo.chave)
+    _relatar(desenho.CONFIRMAR_EXCLUSAO,
+             f"{jogo.nome}: {status}; no disco: {disco}")
+    _ESCOLHA.limpar()
     VIGIA.esquecer()
-    return {**_resposta(VIGIA.ler(), ctx.state), "recado": frase}
+    return _resposta(VIGIA.ler(), ctx.state)
+
+
+@gesto("07-lancadores.html", desenho.TIRAR_DA_EXCLUSAO, grava="tirar")
+def tirar_da_exclusao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Tirar da lista»: o jogo volta ao Hefesto.
+
+    A lista sai SÓ das listas por feature em que ELA escreveu; o pino e o
+    atalho voltam quando a Steam fechar (o vigia), e o resto no próximo
+    lançamento do jogo.
+    """
+    chave = str(o.get("v") or "").strip()
+    status = lista_de_exclusao.tirar(chave)
+    if status == "erro":
+        raise RuntimeError("Não consegui tirar o jogo da lista de exclusão.")
+    _relatar(desenho.TIRAR_DA_EXCLUSAO, f"{chave}: {status}")
+    VIGIA.esquecer()
+    return _resposta(VIGIA.ler(), ctx.state)
+
+
+@gesto("07-lancadores.html", desenho.CONFIRMAR_PERFIL, grava="criar_para_o_jogo")
+def confirmar_o_perfil(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """Cria o perfil do jogo marcado PELA ABA PERFIS, e a tela vai para lá.
+
+    D-2109-O-CRIAR-PERFIL-LEVA-A-ABA-PERFIS: um gravador (o da aba Perfis,
+    :func:`a10_perfis.criar_para_o_jogo`), dois caminhos de chegada. O botão de
+    confirmar é uma âncora para `10-perfis.html`: o mesmo clique manda este
+    gesto e troca de aba, e o perfil novo chega lá aberto no editor.
+    """
+    from . import a10_perfis
+
+    jogo = _o_escolhido(o)
+    janelas = _ESCOLHA.janelas.get(jogo.chave, ())
+    classes = janelas if janelas else (jogo.chave,)
+    frase = a10_perfis.criar_para_o_jogo(
+        ctx, p, classes=classes, nome_do_jogo=jogo.nome.split(" — ")[0])
+    _relatar(desenho.CONFIRMAR_PERFIL, frase)
+    _ESCOLHA.limpar()
+    return _resposta(VIGIA.agora(), ctx.state)
 
 
 # `grava="with_steam_closed"` E NÃO `apply_wrapper_to_all_games`, que é
@@ -3035,17 +3242,18 @@ def _ok_e_motivo(resposta: Any) -> tuple[bool, str | None]:
     return bool(resposta), None
 
 
-#: O ÚNICO MÉTODO DO DAEMON QUE ESTA ABA CHAMA, e ele nasceu em 06/09/2026 com
-#: o "Este jogo não funciona". Ver :func:`este_jogo_nao_funciona`.
+#: O MÉTODO DA RECARGA nasceu aqui em 06/09/2026 com o "Este jogo não
+#: funciona", e o gesto SAIU em 21/09/2026 com o desenho da lista de exclusão
+#: (OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01). O nome fica neste módulo
+#: porque o chip «Steam Input» da aba Jogar — quem escreve a mesma lista hoje —
+#: o importa daqui, e é ELA quem o declara em `METODOS` agora.
 METODO_DA_RECARGA = "launch_env.refresh"
 
-#: FATO SUBSTITUÍDO — 06/09/2026. Aqui estava escrito que *"nenhum gesto desta
-#: aba fala com o daemon"*, e era verdade até o "Este jogo não funciona" nascer:
-#: marcar o jogo na lista de exceções só VALE AGORA se o daemon rematerializar o
-#: ambiente de inicialização, e o método existe (`launch_env.refresh`) — é o
-#: mesmo aviso best-effort que a janela velha manda depois da mesma escrita.
+#: A LISTA DE EXCLUSÃO NÃO FALA COM O DAEMON — 21/09/2026, e é de propósito: o
+#: autoswitch relê a lista a cada volta (`lista_de_exclusao.contem`) e o
+#: `hefesto-launch` a lê no lançamento. Não há ambiente a rematerializar.
 #:
-#: OS OUTROS DEZ CONTINUAM SEM PONTE, e a medição que os deixou assim não mudou:
+#: OS OUTROS CONTINUAM SEM PONTE, e a medição que os deixou assim não mudou:
 #: o wrapper vive em dois arquivos em disco, e o `state_full` não tem UMA chave
 #: sobre a Steam, sobre a lista de recusados ou sobre a de dispensados.
 # `machine_declare` ENTROU EM 08/09/2026 com o lançador declarado por ELA: é a
@@ -3058,7 +3266,7 @@ METODO_DA_RECARGA = "launch_env.refresh"
 #: não alcança o disco — quem o abre é o piloto, que é GTK, e por isso ele não
 #: entra em `METODOS`.
 PONTE: set[str] = {"chamar", "machine_declare", "escolher_arquivo"}
-METODOS: set[str] = {METODO_DA_RECARGA, "machine.declare"}
+METODOS: set[str] = {"machine.declare"}
 
 
 PAGINA = "07-lancadores.html"
@@ -3085,7 +3293,15 @@ PAGINA = "07-lancadores.html"
 #: por palavra dela, e o :data:`desenho.PROCURAR_O_ARQUIVO` — o seletor do
 #: sistema na tela de registro — ENTROU. O piso só sobe, e aqui ele nem subiu
 #: nem caiu: quem conta é a régua, e ela conta gestos com dono, não atos.
-PISO_DA_ABA = 17
+#:
+#: e de 17 PARA 21 em 21/09/2026, com a LISTA DE EXCLUSÃO (desenho aprovado
+#: por ela, OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01): ENTRARAM os cinco
+#: da fileira comum e da pop-up — :data:`desenho.EXCLUIR`,
+#: :data:`desenho.CRIAR_PERFIL`, :data:`desenho.CONFIRMAR_EXCLUSAO`,
+#: :data:`desenho.CONFIRMAR_PERFIL` e :data:`desenho.TIRAR_DA_EXCLUSAO` — e
+#: SAIU o «Este jogo não funciona», que o «Adicionar à lista de exclusão»
+#: substituiu no cartão da Steam.
+PISO_DA_ABA = 21
 
 #: SEM `PROVAS`, e a razão é o contrato da régua dos botões: ela injeta uma
 #: `PonteDeMentira` e cobra QUAL função da ponte o gesto chamou. Um gesto que
@@ -3113,19 +3329,16 @@ PROVAS: list[dict[str, Any]] = []
 #: `abrir-lancador`, e ainda mais forte: o efeito dele é a ÁREA DE
 #: TRANSFERÊNCIA do ambiente gráfico dela, que o daemon não vê de jeito nenhum.
 #:
-#: E OS TRÊS DO STEAM INPUT ENTRAM PELO MESMO MOTIVO — 06/09/2026. O
+#: E OS DO STEAM INPUT ENTRAM PELO MESMO MOTIVO — 06/09/2026 (eram três; o
+#: «Este jogo não funciona» saiu em 21/09 com a lista de exclusão). O
 #: `state_full` não tem UMA chave sobre o Steam Input: quem responde se ele está
 #: ligado é o `localconfig.vdf` da Steam, lido do disco
 #: (`emulation_actions._steam_input_is_on`), e a lista de exceções é um arquivo
-#: nosso. O `este-jogo-nao-funciona` PARECE a exceção porque manda
-#: `launch_env.refresh` ao daemon — e não é: o método rematerializa o ambiente
-#: de inicialização e **não publica nada** no `state_full`. Uma régua que
-#: cobrasse eco dele reprovaria o botão por estar CERTO.
+#: nosso.
 SEM_ECO = ("procurar", "consertar", "ver-o-que-impede", "detectar",
            "tirar-daqui", "voltar-a-usar", "voltar-a-perguntar",
            "abrir-lancador", "nao-perguntar", FECHAR, desenho.COPIAR,
-           desenho.DESLIGAR_STEAM_INPUT, desenho.JOGO_NAO_FUNCIONA,
-           desenho.TUDO_PRONTO,
+           desenho.DESLIGAR_STEAM_INPUT, desenho.TUDO_PRONTO,
            # OS DOIS DO REGISTRO (08/09/2026) entram pelo mesmo motivo dos
            # outros catorze, e por um a mais: o efeito deles é o
            # `maquina.json`, e o `state_full` não tem UMA chave sobre a

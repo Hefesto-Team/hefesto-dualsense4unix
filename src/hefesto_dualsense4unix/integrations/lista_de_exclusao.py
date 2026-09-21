@@ -108,6 +108,13 @@ class Entrada:
     nota: str = ""
     #: As listas em que ESTA exclusão escreveu — e só delas o «Tirar» sai.
     escritas: tuple[str, ...] = field(default_factory=tuple)
+    #: As OUTRAS classes de janela que esta entrada cobre. Um emulador é um
+    #: processo para todas as ROMs, e o mesmo emulador anuncia classes
+    #: diferentes conforme veio (o flatpak do RetroArch se chama
+    #: `org.libretro.RetroArch` e a janela dele diz `com.libretro.RetroArch`,
+    #: medido em 10/09/2026). Vazio para o jogo da Steam e do umu, cuja chave
+    #: JÁ é a classe da janela.
+    janelas: tuple[str, ...] = field(default_factory=tuple)
 
 
 # ---------------------------------------------------------------------------
@@ -146,6 +153,7 @@ def _ler_cru(destino: Path) -> list[Entrada]:
                 quando=str(j.get("quando", "")),
                 nota=str(j.get("nota", "")),
                 escritas=tuple(x for x in j.get("escritas", ()) if x in LISTAS),
+                janelas=tuple(str(x) for x in j.get("janelas", ()) if str(x).strip()),
             )
             for j in jogos
         ]
@@ -183,9 +191,22 @@ def appids(config_home: Path | None = None) -> list[str]:
 
 
 def contem(chave: str, config_home: Path | None = None) -> bool:
-    """Esta chave está excluída?"""
+    """Esta classe de janela está excluída — pela chave ou por uma das janelas?
+
+    É o que o autoswitch pergunta a cada tique, com a `wm_class` em foco. A
+    comparação das `janelas` ignora maiúsculas porque a mesma aplicação chega
+    com grafias diferentes: o journal de 21/09/2026 tem a janela do próprio
+    Hefesto como `Hefesto-Dualsense4Unix` (113 vezes) e como
+    `hefesto-dualsense4unix` (60).
+    """
     alvo = chave.strip()
-    return bool(alvo) and any(e.chave == alvo for e in ler(config_home))
+    if not alvo:
+        return False
+    dobrado = alvo.casefold()
+    return any(
+        e.chave == alvo or any(j.casefold() == dobrado for j in e.janelas)
+        for e in ler(config_home)
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -199,6 +220,7 @@ def adicionar(
     nota: str = "",
     config_home: Path | None = None,
     escritas_herdadas: tuple[str, ...] = (),
+    janelas: tuple[str, ...] = (),
 ) -> str:
     """Exclui o jogo. Status: ``"adicionado"`` | ``"ja_estava"`` |
     ``"chave_invalida"`` | ``"erro"``. Nunca levanta.
@@ -239,6 +261,7 @@ def adicionar(
         chave=alvo, lancador=lancador, nome=nome,
         quando=time.strftime("%Y-%m-%dT%H:%M:%S"), nota=nota,
         escritas=tuple(x for x in LISTAS if x in escritas),
+        janelas=tuple(j.strip() for j in janelas if j.strip()),
     )
     try:
         _gravar(destino, [*atuais, nova])

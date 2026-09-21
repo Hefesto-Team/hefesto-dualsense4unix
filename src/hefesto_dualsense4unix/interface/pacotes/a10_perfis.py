@@ -3814,14 +3814,7 @@ def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     QUEM MUDA DEPOIS É A ABA JOGAR, e nada aqui zera o campo de um perfil que já
     o tem: este gesto cria arquivo novo, não reescreve os dela.
     """
-    global _ESCOLHIDO
-    from types import SimpleNamespace
-
-    from hefesto_dualsense4unix.app.actions.profiles_actions import (
-        ProfilesActionsMixin,
-    )
-    from hefesto_dualsense4unix.profiles.loader import load_all_profiles
-    from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
+    from hefesto_dualsense4unix.profiles.schema import MatchAny
     from hefesto_dualsense4unix.profiles.simple_match import from_simple_choice
     from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
 
@@ -3829,8 +3822,28 @@ def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     appid = steam_appid_from_wm_class(classe) if classe else None
     regra = (from_simple_choice("steam_game", str(appid)) if appid is not None
              else MatchAny())
+    return _dizer(_nascer(ctx, p, regra, "Novo perfil"))
+
+
+def _nascer(ctx: Contexto, p: Any, regra: Any, base: str) -> str:
+    """O perfil novo no disco, já aberto no editor — o gravador dos dois caminhos.
+
+    Saiu de dentro do :func:`novo` em 21/09/2026 para o «Criar perfil para um
+    jogo» da aba Lançadores chegar ao MESMO gravador
+    (D-2109-O-CRIAR-PERFIL-LEVA-A-ABA-PERFIS): um gravador, dois caminhos de
+    chegada. A prioridade e o nome livre são os de sempre; devolve a frase.
+    """
+    global _ESCOLHIDO
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.app.actions.profiles_actions import (
+        ProfilesActionsMixin,
+    )
+    from hefesto_dualsense4unix.profiles.loader import load_all_profiles
+    from hefesto_dualsense4unix.profiles.schema import Profile
+
     todos = list(load_all_profiles())
-    nome = _nome_livre("Novo perfil", todos)
+    nome = _nome_livre(base, todos)
     # `Any` E NÃO UM `cast` PARA O MIXIN: o objeto NÃO é um mixin, e dizer que é
     # seria mentir para quem ler. O que ele é está no nome — só o cache, que é o
     # único atributo que o método lê (`getattr(self, "_profiles_cache", None)`).
@@ -3838,8 +3851,33 @@ def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     prioridade = ProfilesActionsMixin._prioridade_acima_dos_catch_all(so_o_cache)
     _gravar(Profile(name=nome, match=regra, priority=prioridade), ctx, p)
     _ESCOLHIDO = nome
-    return _dizer(f"Perfil criado: {nome} · prioridade {prioridade}, acima dos "
-                  f"que valem sempre")
+    return (f"Perfil criado: {nome} · prioridade {prioridade}, acima dos "
+            f"que valem sempre")
+
+
+def criar_para_o_jogo(ctx: Contexto, p: Any, *, classes: tuple[str, ...],
+                      nome_do_jogo: str) -> str:
+    """O perfil novo para UM jogo escolhido na aba Lançadores. Devolve a frase.
+
+    A regra segue a chave do jogo: `steam_app_<N>` (Steam e umu) vira o preset
+    `steam_game`, e o emulador — um processo para todas as ROMs — casa pelas
+    classes de janela dele. O nome do perfil é o do jogo; se o nome não servir
+    de nome de perfil, nasce «Novo perfil», como no botão desta aba.
+    """
+    from hefesto_dualsense4unix.profiles.schema import MatchCriteria
+    from hefesto_dualsense4unix.profiles.simple_match import from_simple_choice
+    from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
+
+    limpas = tuple(c.strip() for c in classes if c.strip())
+    appid = steam_appid_from_wm_class(limpas[0]) if limpas else None
+    if appid is not None:
+        regra: Any = from_simple_choice("steam_game", str(appid))
+    else:
+        regra = MatchCriteria(window_class=list(limpas))
+    try:
+        return _nascer(ctx, p, regra, nome_do_jogo.strip() or "Novo perfil")
+    except ValueError:
+        return _nascer(ctx, p, regra, "Novo perfil")
 
 
 @gesto("10-perfis.html", "duplicar", grava="_gravar")
