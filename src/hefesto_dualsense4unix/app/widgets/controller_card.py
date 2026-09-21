@@ -1282,7 +1282,7 @@ def texto_motion(entry: dict[str, Any], state_global: dict[str, Any]) -> str | N
     """
     if bool(state_global.get("native_mode")):
         return f"Giroscópio: {_FRASE_NATIVO}"
-    if _mascara_e_xbox(state_global):
+    if _mascara_e_xbox(state_global, entry):
         return f"Giroscópio: {_FRASE_MASCARA_XBOX['giroscopio']}"
     rumble_ff = state_global.get("rumble_ff")
     per_vpad = rumble_ff.get("per_vpad") if isinstance(rumble_ff, dict) else None
@@ -1700,7 +1700,8 @@ def estado_do_recurso(
     if bool(state_global.get("native_mode")):
         return EstadoDoRecurso(SITUACAO_NATIVO, _FRASE_NATIVO)
 
-    if recurso in RECURSOS_SEM_MASCARA_XBOX and _mascara_e_xbox(state_global):
+    if recurso in RECURSOS_SEM_MASCARA_XBOX and _mascara_e_xbox(
+            state_global, entry):
         frase = _FRASE_MASCARA_XBOX.get(recurso)
         return EstadoDoRecurso(SITUACAO_IMPOSSIVEL, frase) if frase else None
 
@@ -1907,16 +1908,46 @@ def frase_mais_longa_do_que_chega_ao_jogo() -> str:
     return " · ".join(partes) + "."
 
 
-def _mascara_e_xbox(state_global: dict[str, Any]) -> bool:
-    """True quando o gamepad virtual está com a máscara de Xbox 360.
+def _mascara_e_xbox(
+    state_global: dict[str, Any], entry: dict[str, Any] | None = None
+) -> bool:
+    """True quando ESTE controle está com a máscara de Xbox 360.
 
-    Lê `gamepad_emulation.flavor`, e só afirma no valor EXATO "xbox" — a
-    mesma regra do `home_actions.texto_do_custo_da_mascara`, pelo mesmo
-    motivo: valor ausente ou desconhecido não autoriza aviso nenhum.
+    **O SUJEITO É O CONTROLE, E ATÉ 21/09/2026 ERA A SESSÃO.** A função lia só
+    `gamepad_emulation.flavor` — o GLOBAL —, e a máscara por aparelho existe
+    desde a MASCARA-NO-PERFIL-01 (08/09), com ordem escrita: o degrau 1
+    (`controllers[uniq].mascara` do perfil ativo) **vence** o degrau 2
+    (`mode.gamepad_flavor`). Ler só o degrau 2 é perguntar a quem perde.
+
+    Medido na mesa dela naquele dia, com o perfil PRAGMATA:
+
+        flavor (global) = "xbox"
+        por_aparelho    = {os quatro: "dualsense"}
+
+    A máscara efetiva dos quatro era DualSense, e a tela dizia Xbox — e com
+    ela vinha a frase do giroscópio, que ela leu e recusou: *"essa frase não
+    deveria existir"*. **As duas queixas eram o mesmo defeito.**
+
+    O `flavor` continua sendo o FALLBACK, e não some: é o que responde quando
+    aquele controle não escolheu, que é a regra de herança da D-5 (*máscara do
+    JOGADOR, com a do jogo como padrão herdado*).
+
+    `entry` opcional preserva os chamadores que perguntam pela SESSÃO — há
+    um, e ele é legítimo: o custo da máscara na aba Jogar fala do modo inteiro.
     """
     gamepad = state_global.get("gamepad_emulation")
     if not isinstance(gamepad, dict):
         return False
+    if entry is not None:
+        uniq = uniq_do_entry(entry)
+        por_aparelho = gamepad.get("por_aparelho")
+        if uniq and isinstance(por_aparelho, dict):
+            dele = por_aparelho.get(uniq)
+            # ESCOLHA DO APARELHO VENCE, inclusive quando ela é «dualsense» e
+            # a sessão é «xbox». Um valor desconhecido NÃO autoriza aviso —
+            # mesma regra do `flavor`, e por isso a comparação é exata.
+            if isinstance(dele, str) and dele:
+                return dele == "xbox"
     return gamepad.get("flavor") == "xbox"
 
 
