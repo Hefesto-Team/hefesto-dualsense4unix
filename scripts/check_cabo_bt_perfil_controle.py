@@ -85,12 +85,16 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                           "`.desktop` — é da máquina, e nada aqui toca o "
                           "controle",
     "ver-detalhes": "joga o registro técnico no painel — é leitura",
-    "mic-testar": "grava três segundos da voz e a reproduz — é LEITURA do "
-                  "microfone mais uma tocada na saída padrão, e não muda "
-                  "estado nenhum: nem no aparelho, nem no perfil. O volume e "
-                  "o ganho que ele reflete são dos deslizantes ao lado, que "
-                  "têm as quatro respostas por conta deles "
-                  "(TESTAR-O-MICROFONE-01, 20/09/2026)",
+    "mic-retorno": "liga e desliga o RETORNO do microfone — um `pw-loopback` "
+                   "entre o nó de captura deste controle e a saída padrão. É "
+                   "leitura do microfone mais uma tocada na saída, e não muda "
+                   "estado nenhum: nem no aparelho, nem no perfil. **E NÃO "
+                   "PERSISTE DE PROPÓSITO** — ela pediu *\"POR DEFAULT SEGUE "
+                   "DESLIGADO\"* (21/09/2026), e um retorno que renascesse "
+                   "ligado poria a voz dela no ar sem ninguém ter clicado. O "
+                   "volume e o ganho que ele reflete são dos deslizantes ao "
+                   "lado, que têm as quatro respostas por conta deles "
+                   "(TESTAR-O-MICROFONE-01, 20/09/2026)",
     # ---- máquina e serviço: nada disso passa pelo controle ----
     "hefesto": "liga e desliga o MODO do produto — é do serviço",
     "desligar": "para o serviço — é systemd",

@@ -842,7 +842,7 @@ O_SOM_EM_TRES_ESTADOS = r"""
   // `data-mudo` porque deixou de CALAR (ordem dela), e procurá-lo por ali
   // devolvia lista vazia — a régua mediria o nada e passaria. O que ela mede
   // continua igual: a cor não vem do gerador, e o endereço vivo está lá.
-  const mics = [...document.querySelectorAll('.mudo-i[data-gesto="mic-testar"]')]
+  const mics = [...document.querySelectorAll('.mudo-i[data-gesto="mic-retorno"]')]
     .map(m => ({classe: m.className, campo: m.dataset.campo || '',
                 borda: getComputedStyle(m).borderTopColor}));
 

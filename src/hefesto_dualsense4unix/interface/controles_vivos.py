@@ -212,14 +212,15 @@ ROTEIRO_DA_PROVA_DE_GESTO: tuple[tuple[int, str] | tuple[int, str, str], ...] = 
     (3400, '[data-mudo="alto-falante"]'),
     # O 🎙 NÃO ENTRA NESTE ROTEIRO, e a ausência é decidida, não esquecimento.
     # Ele deixou de calar em 20/09 e passou a GRAVAR — abre o microfone de quem
-    # estiver na frente da máquina por até `TETO_S` (15 s) e devolve a voz pelo
-    # alto-falante. Um roteiro automático que o clica duas vezes abriria o
-    # microfone dela por meio minuto sem ela ter pedido, e estouraria o próprio
-    # relógio de 3,4 s. Quem prova o ato é a suíte
-    # (`test_o_teste_do_microfone_ouve.py`, 15 réguas, com o gravador dublado);
-    # quem prova que o BOTÃO existe e responde é o passo abaixo, que confere o
-    # alvo sem disparar a gravação.
-    (3700, '[data-gesto="mic-testar"]', "so-existe"),
+    # O 🎙 VIROU TRAVA, E O `so-existe` SEGUE SENDO A RÉGUA CERTA — 21/09/2026.
+    # Ele não grava mais três segundos: agora ele LIGA e DESLIGA o retorno
+    # (`mic-retorno`), e um retorno que fica de pé é pior do que uma gravação
+    # que termina sozinha. Clicá-lo aqui abriria o microfone dela e o deixaria
+    # aberto até alguém clicar de novo — e este roteiro roda sem ninguém olhando.
+    # Quem prova o ATO é a suíte (`test_o_teste_do_microfone_ouve.py`, com o
+    # `pw-loopback` dublado); quem prova que o BOTÃO está na página e tem dono é
+    # o passo abaixo.
+    (3700, '[data-gesto="mic-retorno"]', "so-existe"),
 )
 
 
@@ -503,12 +504,14 @@ window.HEF = (function(){
       n += onda(q('.onda', bm), d.mic.onda);
       n += est(q('.vol .cheio', bm), {width:d.mic.vol_w}) + txt(q('.vol .n', bm), d.mic.vol_n);
       // O ECO DO MUDO SAIU COM O ATO — 20/09/2026. Esta linha acendia o 🎙
-      // quando o microfone estava MUDO, e o 🎙 não cala mais: ele testa. O
-      // botão tem dono novo (`data-mic-luz`, alvo `atributo`) e quem o pinta
-      // é o `achar()` genérico, com o que `mic-botao-estado` publicar. Deixar
-      // as duas escritas vivas faria o eco do tique apagar a luz da gravação
-      // no meio dela — dois donos para o mesmo elemento, que é o defeito que
-      // os `data-campo` existem para não deixar acontecer.
+      // quando o microfone estava MUDO, e o 🎙 não cala mais. O botão tem dono
+      // novo (`data-mic-luz`, alvo `atributo`) e quem o pinta é o `achar()`
+      // genérico. Deixar as duas escritas vivas faria o eco do tique apagar a
+      // luz no meio dela — dois donos para o mesmo elemento, que é o defeito
+      // que os `data-campo` existem para não deixar acontecer.
+      // O CAMPO QUE VESTE O 🎙 MUDOU EM 21/09/2026: é o `mic-retorno` (o que o
+      // botão CAUSA), não o `mic-botao-estado` (a luz do plástico, que tem dono
+      // no daemon e aparece no selo ao lado). A disciplina é a mesma.
       n += trava(q('[data-mudo="mic-liberar"]', bm), !d.mic.posse);
     }
     const ba = q('[data-bloco="alto-falante"]', c);

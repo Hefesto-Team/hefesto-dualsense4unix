@@ -3109,6 +3109,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # `""` REMOVE O ATRIBUTO (ramo `vazio` do alvo `atributo` no
             # piloto), e é o que deixa o cinza de base sozinho quando ninguém
             # leu este microfone — a mesma disciplina do terceiro estado do ♪.
+            # **O BOTÃO MOSTRA O RETORNO, E NÃO A LUZ** — 21/09/2026. O
+            # `mic-botao-estado` (a luz do plástico) NÃO sumiu: ele continua
+            # sendo publicado logo abaixo, para quem o leia; o que mudou é que
+            # o 🎙 deixou de ser o elemento que o veste. A luz tem dono no
+            # daemon (`luz_do_mic.decidir`, o mesmo byte do LED vermelho) e já
+            # aparece no SELO ao lado; o botão veste o que o botão CAUSA, que
+            # é a regra do ♪ nesta mesma coluna.
+            "mic-retorno": (mesa_viva.BOTAO_MIC_RETORNO
+                            if monitor_do_microfone.esta_ligado(uniq) else ""),
             "mic-botao-estado": mesa_viva.estado_do_botao_do_mic(
                 a.get("luz_do_mic")),
             # O VOLUME DO MICROFONE — 12/09/2026, e é a METADE QUE FALTOU da
@@ -3751,6 +3760,10 @@ from hefesto_dualsense4unix.core.ds_output_report import (  # noqa: E402
     SAIDA_L_FONE_R_ALTO_FALANTE,
 )
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac  # noqa: E402
+from hefesto_dualsense4unix.integrations import (  # noqa: E402
+    monitor_do_microfone,
+    teste_do_microfone,
+)
 
 from . import gesto  # noqa: E402
 from . import perfil as _perfil  # noqa: E402
@@ -4224,82 +4237,61 @@ def _lembrar_do_som(
     loader.save_profile(adiante, origem="interface-nova")
 
 
-@gesto("02-controles.html", "mic-testar")
-def mic_testar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O 🎙 — fala três segundos e ouve de volta, como o «testar» do Discord.
+@gesto("02-controles.html", "mic-retorno")
+def mic_retorno(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O 🎙 — **um interruptor**: aceso, você se ouve; apagado, silêncio.
 
-    **A ORDEM É DELA, 20/09/2026:** *"aquele glifo antigo de mic que servia
-    para ligar o microfone volta a tela mas ele passa a ter o efeito do testar
-    microfone do discord, ele reflete os slicers que vão mostrar no jogo como o
-    microfone é ouvido e após três segundos de fala capturada de audio ele
-    reproduz na tela o seu som falado"*.  <!-- noqa-acento: citação literal dela -->
+    **A ORDEM É DELA, 21/09/2026**, depois de usar a versão de três segundos:
 
-    **ELE DEIXOU DE CALAR, e a razão é dela também:** *"não precisamos dele
-    mais na interface pq o botão do
-    proprio  # noqa-acento: citação literal dela
-    controle já o faz e ele reflete
-    isso"*. O mudo continua existindo — no plástico, onde `mic_da_mesa` já é o
-    dono de "quem apertou" e a tela já espelha o estado. O que sai é a
-    DUPLICATA, e com ela a frase que confiscava o botão do controle até o
-    reinício.  <!-- noqa-acento: citação literal dela -->
+        "SE EU ATIVAR COM UM CLICK E ELE FICAR VERDE ELE TÁ ATIVADO E SEGUE
+         ASSIM ATÉ EU DESATIVAR CLICANDO NOVAMENTE E ELE FICANDO CINZA. POR
+         DEFAULT SEGUE DESLIGADO, ATÉ ALGUEM CLICAR E VER ISSO REFLETINDO LÁ."
 
-    **OS DESLIZANTES SE REFLETEM SOZINHOS, e é por isso que este gesto não os
-    lê.** O volume e o ganho agem no NÓ do PipeWire; o `parec` que grava lê o
-    mesmo nó, depois deles. Ler os valores aqui e aplicá-los de novo seria a
-    segunda grafia do mesmo fato — e daria um resultado ao quadrado.
+    **POR QUE TRÊS SEGUNDOS NÃO SERVIA**, e a razão é dela por implicação: ela
+    tem DOIS deslizantes nesta coluna e precisa ajustá-los OUVINDO. Com um
+    ato que termina sozinho, o som some antes de a mão chegar ao trilho — o
+    retorno tem de durar enquanto ela estiver mexendo.
 
-    **O BOTÃO FICA EM VOO ENQUANTO GRAVA, e isso é o desenho e não o custo.**
-    O piloto despacha cada gesto numa thread (`interface/hefesto_vivo.py:2661`),
-    então a tela não congela; e o `finally` dele só devolve o botão quando o
-    gesto retorna. Quem clicou vê o botão ocupado exatamente enquanto o
-    microfone está aberto — que é o retorno que o Discord dá.
+    **O ESTADO MORA NO PROCESSO, NÃO NUMA LEMBRANÇA.** Quem responde "está
+    ligado?" é `monitor_do_microfone.esta_ligado`, que pergunta ao `poll()` do
+    `pw-loopback`: se ele morreu (o controle saiu, o servidor de som
+    reiniciou), o botão apaga no tique seguinte em vez de mentir verde.
 
-    ONDE AS RECUSAS POUSAM: no cartão daquele controle, por
-    `Piloto._recusou_dizendo`, como todo `RuntimeError` desta aba.
+    **O MUDO CONTINUA SENDO DO PLÁSTICO**, e a recusa vem antes de abrir nada:
+    com o microfone calado não há o que ouvir, e mandar *"fale mais perto"*
+    seria culpar quem clicou por um fato que o produto já sabe.
     """
-    from hefesto_dualsense4unix.integrations.teste_do_microfone import (
-        testar_e_devolver,
-    )
-
     uniq = _uniq(o)
     if not uniq:
-        raise ValueError("mic-testar: o clique não disse em qual controle")
+        raise ValueError("mic-retorno: o clique não disse em qual controle")
 
-    # **PERGUNTA ANTES DE GRAVAR, e a razão é a FRASE** — 21/09/2026, medido na
-    # mesa dela com os quatro na mão: dois dos quatro microfones entregavam
-    # `pico = 0.0000` exato, nem ruído de fundo, e o `mic_mudo` do daemon dizia
-    # `true` nesses dois. O produto estava CERTO; o que mentia era o recado.
-    #
-    # Sem esta guarda o gesto gravava 15 segundos de silêncio e terminava em
-    # *"não ouvi sua voz — fale mais perto do controle"* — **culpando quem
-    # clicou por um fato que o produto já sabia**, e mandando aproximar a boca
-    # de um microfone que está desligado. É a família do recado que manda
-    # desfazer o clique que ela acabou de dar.
-    #
-    # QUEM RESPONDE É `_faces_do_microfone`, que já é o dono de *"este
-    # microfone está calado?"* e conhece as quatro faces (o bit do plástico, o
-    # desejo, o canal e o mudo do canal). Ler `mic_mudo` à mão aqui seria a
-    # quinta leitura da mesma coisa, e conheceria uma face de quatro.
+    # DESLIGAR NÃO PERGUNTA NADA: um retorno de pé se desliga mesmo com o
+    # microfone recém-calado, e é justamente aí que ela mais precisa que ele
+    # obedeça. A guarda do mudo só vale para LIGAR.
+    if monitor_do_microfone.esta_ligado(uniq):
+        monitor_do_microfone.desligar(uniq)
+        return
+
     calado, _nao_sei = _faces_do_microfone(
         (ctx.por_uniq(uniq) or {}).get("audio") or {})
     if calado:
         raise RuntimeError(
             "o microfone deste controle está desligado — aperte o botão de "
-            "microfone no próprio controle para ligá-lo, e teste de novo")
+            "microfone no próprio controle para ligá-lo, e tente de novo")
 
-    gravado = testar_e_devolver(uniq)
-    if gravado is None:
-        # AUSÊNCIA É RESPOSTA, e ela NÃO é "seu microfone está mudo": ou não há
-        # nó de captura para este controle, ou o gravador não subiu nesta
-        # máquina. Dizer "mudo" aqui culparia o aparelho por uma falta nossa.
+    # O DONO DA ESCOLHA DA FONTE É UM SÓ. `teste_do_microfone.fonte_do_controle`
+    # já delega a `fontes_de_captura`, que conhece as regras e sabe que o nó com
+    # identidade vence. Uma segunda escolha aqui seria a segunda grafia do mesmo
+    # fato — e foi lendo o FORMATO errado do `pactl` que o botão calou um dia
+    # inteiro, com o microfone dela de pé.
+    fonte = teste_do_microfone.fonte_do_controle(uniq)
+    if not fonte:
         raise RuntimeError(
-            "não consegui abrir o microfone deste controle para testar")
-    if not gravado.pcm:
-        if gravado.motivo == "fonte-fechou":
-            raise RuntimeError(
-                "o microfone deste controle fechou no meio do teste")
+            "não consegui achar o microfone deste controle para ligar o "
+            "retorno")
+    if not monitor_do_microfone.ligar(uniq, fonte):
         raise RuntimeError(
-            "não ouvi sua voz — fale mais perto do controle e tente de novo")
+            "não consegui ligar o retorno do microfone deste controle")
 
 
 @gesto("02-controles.html", "mudo", grava="save_profile")

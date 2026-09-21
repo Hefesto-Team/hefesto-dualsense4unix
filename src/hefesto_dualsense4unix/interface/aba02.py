@@ -1977,6 +1977,7 @@ SELO_SOM_DESLIGADO = mesa_viva.selo_do_alto_falante(True, False, True)
 ATRIBUTO_DA_LUZ_DO_MIC = "data-mic-luz"
 MIC_GRAVANDO = mesa_viva.BOTAO_MIC_GRAVANDO
 MIC_CAPTANDO = mesa_viva.BOTAO_MIC_CAPTANDO
+MIC_RETORNO = mesa_viva.BOTAO_MIC_RETORNO
 
 #: O ATRIBUTO QUE O ♪ VESTE, e ele tem UM dono porque aparece em TRÊS lugares
 #: deste arquivo — o `data-hef-atributo` do botão, o `data-som` do desenho e os
@@ -2178,10 +2179,17 @@ def selo_do_microfone(mic_mudo, *, estilo=""):
 # quem manda no mudo é o Hefesto, e o botão do controle para de valer"* — uma
 # frase que, depois desta troca, descreve um ato que o botão não faz mais.
 # Guardá-la seria deixar a tela mentir com precisão.
-DICA_MIC_TESTAR = ("Fala e ouve de volta. Grava três segundos da sua voz — com "
-                   "o volume e o ganho desta coluna já aplicados — e toca para "
-                   "você, exatamente como o jogo te ouve. Para calar o "
-                   "microfone, use o botão do próprio controle.")
+#
+# **E A DE 20/09 DUROU UM DIA.** Ela prometia *"grava três segundos da sua voz
+# e toca para você"* — o ato que o botão fazia até 21/09. Ele virou um
+# INTERRUPTOR por ordem dela: *"SE EU ATIVAR COM UM CLICK E ELE FICAR VERDE
+# ELE TÁ ATIVADO E SEGUE ASSIM ATÉ EU DESATIVAR"*. Com três segundos por
+# clique não há como ajustar os dois deslizantes ouvindo: o som some antes de
+# a mão chegar ao trilho.
+DICA_MIC_TESTAR = ("Liga o retorno: você se ouve enquanto ele estiver aceso, "
+                   "com o volume e o ganho desta coluna já aplicados — é assim "
+                   "que o jogo te ouve. Clique de novo para desligar. Para "
+                   "calar o microfone, use o botão do próprio controle.")
 # **A DICA DO ♪ DIZ O PREÇO — decisão dela, 04/09/2026 [06].** A pergunta era se
 # o alto-falante ganharia um "Devolver", e a resposta é a mesma que ela deu ao
 # gêmeo em 31/08 (o "Liberar" do microfone): *"o botão do Controle sempre
@@ -2942,7 +2950,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
               <span class="trilho"><span class="cheio" data-campo="mic-barra"
                 data-hef-alvo="largura" style="width:{mic_vol}%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="{mic_vol}" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="{ROTULO_VOL_MIC}" title="{DICA_VOL_MIC}"></span>
               <span class="n" data-campo="mic-num">{mic_vol}</span>
-              <button class="mudo-i" data-gesto="mic-testar" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="{ATRIBUTO_DA_LUZ_DO_MIC}" title="{DICA_MIC_TESTAR}">🎙</button>
+              <button class="mudo-i" data-gesto="mic-retorno" data-campo="mic-retorno" data-hef-alvo="atributo" data-hef-atributo="{ATRIBUTO_DA_LUZ_DO_MIC}" title="{DICA_MIC_TESTAR}" aria-pressed="false">🎙</button>
               {ponto_de_interrogacao("mic-porque")}
             </div>
             <div class="vol ganho" data-campo="mic-ganho-fora" data-hef-alvo="classe"
@@ -3675,6 +3683,11 @@ CSS += f"""
      este mesmo bloco procurando a palavra do movimento, e um comentário que a
      escrevesse viraria a primeira ocorrência do que ele veio dizer que não
      existe mais. Esta casa já pagou por isso quatro vezes em uma semana. */
+  /* O RETORNO acende no mesmo verde — 21/09/2026. Ele entra ao lado dos dois
+     estados da luz e não no lugar deles: o seletor é por VALOR do atributo, e
+     um valor a mais não afrouxa nada. O que mudou é QUAL campo alimenta o
+     atributo neste botão, e isso está no `data-campo` do HTML. */
+  .mudo-i[{ATRIBUTO_DA_LUZ_DO_MIC}="{MIC_RETORNO}"],
   .mudo-i[{ATRIBUTO_DA_LUZ_DO_MIC}="{MIC_GRAVANDO}"],
   .mudo-i[{ATRIBUTO_DA_LUZ_DO_MIC}="{MIC_CAPTANDO}"]{{
     border-color:var(--green);color:var(--green)}}
