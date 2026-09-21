@@ -491,6 +491,123 @@ def pastas_compatdata(home: Path | None = None) -> list[Path]:
     return saida
 
 
+#: ONDE OS OUTROS LANÇADORES GUARDAM PREFIXO WINE, e o formato é IDÊNTICO ao da
+#: Steam — `<raiz>/pfx/system.reg`. Medido no disco dela em 21/09/2026.
+#:
+#: **O HEROIC GUARDA O CAMINHO POR JOGO**, em `GamesConfig/<app_name>.json`
+#: (`winePrefix`), e a raiz comum em `config.json`
+#: (`defaultSettings.defaultWinePrefix` = `~/Games/Heroic/Prefixes`). Ler os
+#: dois é de propósito: o por-jogo alcança quem mudou o prefixo à mão, e a raiz
+#: alcança quem nunca abriu o `GamesConfig`.
+_CONFIG_DO_HEROIC = (
+    ".var/app/com.heroicgameslauncher.hgl/config/heroic",
+    ".config/heroic",
+)
+
+
+def prefixos_dos_lancadores(home: Path | None = None) -> list[Path]:
+    """Todo prefixo wine de lançador que NÃO é a Steam. Read-only.
+
+    **POR QUE ESTA FUNÇÃO EXISTE — 21/09/2026, LANCADOR-AGNOSTICO-01.** Ordem
+    dela: *"O PROJETO E SUAS FEATURES DEVEM FUNCIONAR INDEPENDENTE DO LANÇADOR
+    SER STEAM."*
+
+    A háptica nativa (o device KS) e a cura de camada Vulkan enumeravam só
+    `steamapps/compatdata`. O prefixo do Heroic mora em
+    `~/Games/Heroic/Prefixes/<Nome do Jogo>`, que nenhuma `steamapps` contém —
+    o lote nunca o via.
+
+    **MEDIDO NA MÁQUINA DELA, e o número é o laudo:** três prefixos da Steam
+    trazem a marca `HEFESTOKS` no `system.reg` (24, 36 e 42 ocorrências); o
+    prefixo do Guardiões da Galáxia, aberto pelo Heroic, trazia **ZERO**. A
+    háptica não chegava, e ela leu isso como *"não funciona lá"*.
+
+    **A FORMA É A MESMA**, e é o que torna a cura barata: `<raiz>/pfx/system.reg`
+    nos dois. O que muda é só o nome da pasta — um appid numérico na Steam, o
+    TÍTULO do jogo no Heroic.
+
+    JSON PURO, sem importar o censo: este arquivo roda como cópia avulsa em
+    `~/.local/share/.../bin/hefesto-camadas`, onde o pacote não está no
+    `sys.path`. Um import do irmão faria a háptica do lançador depender de
+    estar instalada de um jeito — que é a classe de defeito que `sabe_enumerar`
+    existe para nomear.
+
+    NUNCA LEVANTA: disco hostil, JSON torto ou lançador ausente devolvem menos
+    prefixos, nunca uma exceção.
+    """
+    lar = Path.home() if home is None else home
+    achados: list[Path] = []
+    vistos: set[Path] = set()
+
+    def _guardar(caminho: object) -> None:
+        if not isinstance(caminho, str) or not caminho.strip():
+            return
+        alvo = Path(caminho.strip())
+        try:
+            if not (alvo / "pfx" / "system.reg").is_file():
+                return
+            real = alvo.resolve()
+        except OSError:
+            return
+        if real in vistos:
+            return
+        vistos.add(real)
+        achados.append(alvo)
+
+    for relativo in _CONFIG_DO_HEROIC:
+        pasta = lar / relativo
+        if not pasta.is_dir():
+            continue
+        # 1. O prefixo DE CADA JOGO, que é o mais exato.
+        for arquivo in sorted((pasta / "GamesConfig").glob("*.json")):
+            try:
+                dado = json.loads(arquivo.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            for valor in (dado or {}).values():
+                if isinstance(valor, dict):
+                    _guardar(valor.get("winePrefix"))
+        # 2. E a RAIZ comum, para quem nunca abriu o `GamesConfig`.
+        try:
+            conf = json.loads((pasta / "config.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        padroes = (conf or {}).get("defaultSettings")
+        raiz = (padroes or {}).get("defaultWinePrefix") if isinstance(
+            padroes, dict) else None
+        if isinstance(raiz, str) and raiz.strip():
+            try:
+                filhos = sorted(Path(raiz.strip()).iterdir())
+            except OSError:
+                continue
+            for filho in filhos:
+                _guardar(str(filho))
+    return achados
+
+
+def raizes_de_prefixo(home: Path | None = None) -> list[Path]:
+    """TODO prefixo wine desta máquina — Steam e os outros lançadores.
+
+    Cada item é a pasta que CONTÉM o `pfx/`: `compatdata/<appid>` na Steam,
+    `Prefixes/<Nome do Jogo>` no Heroic. É a lista que a háptica e a cura de
+    camada percorrem desde 21/09/2026.
+
+    **A ORDEM É STEAM PRIMEIRO**, e não é gosto: é a ordem em que esta casa
+    mediu as duas, e quem lê um log quer ver o caminho conhecido antes do novo.
+    """
+    saida: list[Path] = []
+    for compatdata in pastas_compatdata(home):
+        try:
+            entradas = sorted(compatdata.iterdir())
+        except OSError:
+            continue
+        for raiz in entradas:
+            if raiz.is_dir() and (raiz / "pfx").is_dir():
+                saida.append(raiz)
+    saida.extend(prefixos_dos_lancadores(home))
+    return saida
+
+
 def _nome_do_appid(appid: str, home: Path | None = None) -> str | None:
     """Nome do jogo pelo `appmanifest`, reusando o dono do formato."""
     try:
@@ -513,28 +630,33 @@ def censo(home: Path | None = None, *, com_nomes: bool = True) -> list[PrefixoDe
     dela isso é 1 de 27, e listar os 26 vazios seria enterrar o achado no
     ruído. Quem precisa da contagem total usa `pastas_compatdata`.
     """
+    # **TODO PREFIXO, E NÃO SÓ O DA STEAM — 21/09/2026.** O `isdigit()` que
+    # morava aqui era a assinatura da Steam escrita no filtro: só `compatdata`
+    # nomeia a pasta com um appid numérico. O Heroic a nomeia com o TÍTULO do
+    # jogo, e a cura de camada nunca o alcançava.
     saida: list[PrefixoDeJogo] = []
-    for pasta in pastas_compatdata(home):
-        try:
-            entradas = sorted(pasta.iterdir())
-        except OSError:
+    for raiz in raizes_de_prefixo(home):
+        achado = prefixo_de_jogo(raiz)
+        if not achado.camadas:
             continue
-        for raiz in entradas:
-            if not raiz.name.isdigit() or not raiz.is_dir():
-                continue
-            achado = prefixo_de_jogo(raiz)
-            if not achado.camadas:
-                continue
-            if com_nomes:
-                achado = PrefixoDeJogo(
-                    appid=achado.appid,
-                    raiz=achado.raiz,
-                    registro=achado.registro,
-                    camadas=achado.camadas,
-                    nome=_nome_do_appid(achado.appid, home),
-                )
-            saida.append(achado)
-    saida.sort(key=lambda p: int(p.appid))
+        if com_nomes:
+            achado = PrefixoDeJogo(
+                appid=achado.appid,
+                raiz=achado.raiz,
+                registro=achado.registro,
+                camadas=achado.camadas,
+                # O NOME SÓ SAI DO `appmanifest` QUANDO HÁ APPID NUMÉRICO. Um
+                # prefixo do Heroic já traz o título na própria pasta, e pedir
+                # o `appmanifest` dele à Steam devolveria `None` — pior que o
+                # nome que já está na mão.
+                nome=(_nome_do_appid(achado.appid, home)
+                      if achado.appid.isdigit() else raiz.name),
+            )
+        saida.append(achado)
+    # A ORDEM É PELO NOME DA PASTA, e não mais pelo `int(appid)`: com o título
+    # do Heroic no meio, o `int()` levantaria — e uma ordenação que levanta
+    # derruba a aba inteira por causa de um jogo.
+    saida.sort(key=lambda p: (not p.appid.isdigit(), p.appid.zfill(12)))
     return saida
 
 
