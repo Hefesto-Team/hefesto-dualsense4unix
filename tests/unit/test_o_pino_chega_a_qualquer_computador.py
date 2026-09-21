@@ -781,6 +781,34 @@ class TestOVigiaTravaSozinho:
             (raiz / "config" / "config.vdf").read_text(encoding="utf-8"))
         assert mapa["2497900"] == "proton_11", "o vigia brigou com a escolha nomeada"
 
+    def test_o_manter_tira_do_pino_quem_entrou_na_excecao_depois(
+        self, lar: Path, download_local: dict
+    ) -> None:
+        """OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01 (21/09/2026). O jogo já
+        estava no NOSSO pino quando entrou em `jogos_fora_do_pino.txt` — pela
+        mão dela ou pela lista de exclusão. O lock só o PULAVA, e o pino ficava.
+        MORDIDA: tire o `destravar_os_de_fora` do `--manter`."""
+        raiz = _steam_de_verdade(lar)
+        _jogo(raiz, "2497900")
+        pp._extract_verified_tarball(
+            download_local["tarball"], PINO, raiz / "compatibilitytools.d")
+        (raiz / "config" / "config.vdf").write_text(
+            _config_vdf({"2497900": "proton_11"}), encoding="utf-8"
+        )
+        estado = lar / "estado.json"
+        pp.main(["--manter", "--conf", str(download_local["conf"]),
+                 "--state", str(estado)])
+        vdf = raiz / "config" / "config.vdf"
+        assert pp.extract_compat_tool_mapping(
+            vdf.read_text(encoding="utf-8"))["2497900"] == PINO
+        assert pp.main(["--fora-do-pino", "2497900"]) == 0
+
+        pp.main(["--manter", "--conf", str(download_local["conf"]),
+                 "--state", str(estado)])
+
+        mapa = pp.extract_compat_tool_mapping(vdf.read_text(encoding="utf-8"))
+        assert mapa["2497900"] == "proton_11", "o jogo excluído continua no pino"
+
     def test_sem_steam_o_manter_nao_faz_nada(self, lar: Path, download_local: dict) -> None:
         assert pp.main(["--manter", "--conf", str(download_local["conf"])]) == 0
         assert not (lar / ".steam").exists()

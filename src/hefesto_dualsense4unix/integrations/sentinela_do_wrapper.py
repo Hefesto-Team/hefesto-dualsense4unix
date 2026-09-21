@@ -131,6 +131,7 @@ try:  # importado como módulo do pacote (GUI/daemon/testes)
         rotulo_do_jogo,
         steam_game_running,
         steam_running,
+        tirar_o_atalho_dos_jogos,
     )
 except ImportError:  # pragma: no cover - executado como script avulso pelo doctor
     from steam_launch_options import (  # type: ignore[no-redef]
@@ -145,6 +146,7 @@ except ImportError:  # pragma: no cover - executado como script avulso pelo doct
         rotulo_do_jogo,
         steam_game_running,
         steam_running,
+        tirar_o_atalho_dos_jogos,
     )
 
 #: Registro dos appids já vistos COM o wrapper. É o que separa "perdeu" de
@@ -193,6 +195,9 @@ class Censo:
     faltantes: list[JogoSemWrapper] = field(default_factory=list)
     #: appids que ela recusou explicitamente (`jogos_sem_wrapper.txt`).
     recusados: list[str] = field(default_factory=list)
+    #: os recusados que AINDA carregam o wrapper — o reparo os tira
+    #: (OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01, 21/09/2026).
+    recusados_com_wrapper: list[str] = field(default_factory=list)
     #: vdfs pulados por inteiro (Flatpak/Snap: o wrapper do host é invisível).
     sandbox: list[str] = field(default_factory=list)
     erros: list[str] = field(default_factory=list)
@@ -239,6 +244,7 @@ class Censo:
                 for j in self.faltantes
             ],
             "recusados": list(self.recusados),
+            "recusados_com_wrapper": list(self.recusados_com_wrapper),
             "sandbox": list(self.sandbox),
             "erros": list(self.erros),
             "steam_aberta": self.steam_aberta,
@@ -348,6 +354,7 @@ def censo_do_wrapper(
     fora = list(recusados if recusados is not None else ler_jogos_sem_wrapper())
     fora_set = {str(a).strip() for a in fora}
     com_wrapper: list[str] = []
+    recusados_com_wrapper: list[str] = []
     faltantes: list[JogoSemWrapper] = []
     sandbox: list[str] = []
     erros: list[str] = []
@@ -372,6 +379,10 @@ def censo_do_wrapper(
             continue
         for appid, valor in sorted(apps.items()):
             if appid in fora_set:
+                # A lista dela diz "sem o atalho" — e um jogo que já o tinha
+                # ao entrar nela continuaria com ele se o censo só PULASSE.
+                if valor is not None and WRAPPER_PREFIX in valor:
+                    recusados_com_wrapper.append(appid)
                 continue
             if valor is not None and WRAPPER_PREFIX in valor:
                 com_wrapper.append(appid)
@@ -399,6 +410,7 @@ def censo_do_wrapper(
         com_wrapper=com_wrapper,
         faltantes=faltantes,
         recusados=sorted(fora_set),
+        recusados_com_wrapper=sorted(set(recusados_com_wrapper)),
         sandbox=sandbox,
         erros=erros,
         steam_aberta=steam_running(),
@@ -515,7 +527,8 @@ def reparar_ou_adiar(
 ) -> tuple[str, Censo, dict[str, list[dict[str, str]]] | None]:
     """Repõe o wrapper onde ele falta, ou ADIA dizendo por quê.
 
-    Retorna ``(status, censo, resultado_do_apply | None)``.
+    Retorna ``(status, censo, resultado_do_apply | None)``. O resultado leva
+    também ``removed``: os recusados de quem o atalho saiu.
 
     A ordem dos portões é a mesma do `main` do `steam_launch_options`, e não é
     negociável: **jogo aberto antes de tudo** (fechar a Steam ali mataria o
@@ -535,18 +548,35 @@ def reparar_ou_adiar(
     que o censo continua reportando como intocável.
     """
     censo = censo_do_wrapper(home, vdfs, registro=registro)
-    if not censo.reparaveis:
+    if not censo.reparaveis and not censo.recusados_com_wrapper:
         return REPARO_NADA, censo, None
     if censo.jogo_aberto:
         return REPARO_ADIADO_JOGO, censo, None
     if censo.steam_aberta:
         return REPARO_ADIADO_STEAM, censo, None
-    resultado = apply_wrapper_to_all_games(
-        home=home,
-        vdfs=list(vdfs) if vdfs is not None else None,
-        dry_run=dry_run,
-        excluir=censo.recusados,
-    )
+    # O AVESSO DO REPARO, com os mesmos portões — 21/09/2026: o jogo que ela
+    # pôs em `jogos_sem_wrapper.txt` (à mão ou pela lista de exclusão do
+    # Hefesto) sai sem o atalho. Antes o censo só o pulava, e o que ele já
+    # tinha ficava.
+    tirado: dict[str, list[dict[str, str]]] = {"removed": [], "errors": []}
+    if censo.recusados_com_wrapper:
+        tirado = tirar_o_atalho_dos_jogos(
+            censo.recusados_com_wrapper,
+            home=home,
+            vdfs=list(vdfs) if vdfs is not None else None,
+            dry_run=dry_run,
+        )
+    if censo.reparaveis:
+        resultado = apply_wrapper_to_all_games(
+            home=home,
+            vdfs=list(vdfs) if vdfs is not None else None,
+            dry_run=dry_run,
+            excluir=censo.recusados,
+        )
+    else:
+        resultado = {"applied": [], "skipped": [], "errors": []}
+    resultado["removed"] = tirado["removed"]
+    resultado["errors"] = [*tirado["errors"], *resultado["errors"]]
     if resultado["errors"]:
         return REPARO_ERRO, censo, resultado
     if not dry_run and resultado["applied"]:

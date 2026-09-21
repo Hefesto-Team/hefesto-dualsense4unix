@@ -274,6 +274,44 @@ def tirar(chave: str, *, config_home: Path | None = None) -> str:
     return "removido"
 
 
+# ---------------------------------------------------------------------------
+# O disco — o que o jogo já tem sai AGORA, se a Steam deixar
+# ---------------------------------------------------------------------------
+#: As recusas que querem dizer "a Steam está aberta" nos dois donos.
+_ESPERA_A_STEAM = frozenset({"steam_aberta", "jogo_da_steam_aberto"})
+
+
+def tirar_do_disco(chave: str) -> str:
+    """Tira do jogo o pino e o atalho que ele JÁ TEM. Nunca levanta.
+
+    Status: ``"feito"`` | ``"nada_a_tirar"`` | ``"espera_a_steam"`` |
+    ``"sem_appid"`` | ``"erro"``.
+
+    As duas listas só fazem o jogo ser PULADO (§11.2 da sprint): entrar nelas
+    não tira o que ele já tem. Quem tira é o vigia da Steam — o
+    `sentinela_do_wrapper --reparar` e o `proton_pin --manter`, que desde
+    21/09 honram a própria lista nos dois sentidos —, e ele roda quando a
+    Steam fecha. Esta função é o mesmo passo feito na hora do clique, para o
+    jogo não abrir uma vez com o Hefesto antes de a Steam fechar.
+
+    Com a Steam aberta os dois donos recusam sem escrever, e o status diz
+    ``"espera_a_steam"``: a lista já está gravada, e o vigia termina o serviço.
+    """
+    appid = appid_da_chave(chave)
+    if appid is None:
+        return "sem_appid"
+    pino = proton_pin.destravar_um_jogo(appid)
+    atalho = slo.tirar_o_atalho_dos_jogos([appid])
+    razoes = {str(e.get("reason", "")) for e in atalho["errors"]}
+    if pino.get("status") == "recusado" or razoes & _ESPERA_A_STEAM:
+        return "espera_a_steam"
+    if pino.get("status") == "erro" or atalho["errors"]:
+        return "erro"
+    if pino.get("status") == "destravado" or atalho["removed"]:
+        return "feito"
+    return "nada_a_tirar"
+
+
 __all__ = [
     "LISTAS",
     "NOTA_DAS_LISTAS",
@@ -284,4 +322,5 @@ __all__ = [
     "contem",
     "ler",
     "tirar",
+    "tirar_do_disco",
 ]
