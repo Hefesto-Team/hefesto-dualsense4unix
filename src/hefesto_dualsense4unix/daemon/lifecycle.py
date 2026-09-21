@@ -2728,7 +2728,7 @@ class Daemon:
         return getattr(profile, "e_catch_all", None) is True
 
     def _janela_de_jogo_em_foco(self) -> bool:
-        """True quando a janela em foco AGORA é de um jogo Steam — ou da Steam.
+        """True quando a janela em foco AGORA é de um JOGO — de qualquer lançador.
 
         R-02, decisão 3 do plano: leitura CRUA da janela, deliberadamente
         diferente do `display_authority` (que é sticky por 30 s). Aqui a
@@ -2773,7 +2773,39 @@ class Daemon:
         wm_class = str(getattr(self.store, "window_detect_current_class", None) or "")
         if steam_appid_from_wm_class(wm_class) is not None:
             return True
-        return e_janela_do_cliente_steam(wm_class)
+        if e_janela_do_cliente_steam(wm_class):
+            return True
+        # **O TERCEIRO DEGRAU: O JOGO QUE NÃO É DA STEAM — 21/09/2026,
+        # LANCADOR-AGNOSTICO-01, ordem dela.** *"O PROJETO E SUAS FEATURES
+        # DEVEM FUNCIONAR INDEPENDENTE DO LANÇADOR SER STEAM. QUALQUER OUTRO
+        # LANÇADOR O FUNCIONAMENTO SEGUE IGUAL."*
+        #
+        # Os dois degraus acima respondem `False` para um jogo NATIVO Linux do
+        # Heroic ou do Lutris, e para toda ROM de emulador. E o que esse
+        # `False` custa está medido logo acima, na VPAD-NA-JANELA-DA-STEAM-01:
+        # com ele, um perfil de desktop pode reverter o modo e **destruir o
+        # vpad no meio da partida** — o jogo fica com um descritor órfão e um
+        # controle que não se mexe.
+        #
+        # O jogo lançado por `umu` (Heroic/Lutris/Bottles com Proton) já cai no
+        # PRIMEIRO degrau, porque anuncia `steam_app_<N>`; este degrau é para o
+        # resto, e a pergunta que ele faz é a que sempre interessou: **«esta
+        # janela é de um jogo que ela TEM?»**, sem mencionar lançador nenhum.
+        #
+        # O catálogo é o mesmo que a aba Perfis consulta, e é memoizado por
+        # assinatura de biblioteca — não há leitura de disco por tique.
+        # NUNCA LEVANTA: quem chama decide operação de vpad, e o lado seguro de
+        # uma falha de disco é o comportamento que já existia.
+        try:
+            from hefesto_dualsense4unix.integrations.jogos_locais import (
+                jogo_da_janela,
+                jogos_de_janela,
+            )
+
+            return jogo_da_janela(wm_class, jogos_de_janela()) is not None
+        except Exception as exc:  # pragma: no cover - disco hostil
+            logger.debug("catalogo_de_janelas_indisponivel", err=str(exc))
+            return False
 
     def _jogo_no_controle_do_desktop(self) -> str | None:
         """Motivo para CALAR a emulação de desktop, ou None se ela pode falar.
