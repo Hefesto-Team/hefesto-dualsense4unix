@@ -110,6 +110,22 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> _Estado:
     )
     monkeypatch.setattr(broker, "abrir_hidraw", lambda no, **_: type("N", (), {"fd": 7})())
 
+    # **O GATE DA HÁPTICA GANHOU UM SEGUNDO LADO, e a fixture foi atrás —
+    # 21/09/2026.** A QUEM-JOGA-E-QUEM-VIBRA-01 acrescentou *"o jogo está
+    # LENDO aquele controle"* ao *"o jogo abriu o canal do endpoint"*, porque
+    # só o primeiro fazia três controles vibrarem num jogo de um jogador.
+    #
+    # Estas réguas medem a FIAÇÃO do alto-falante, não a leitura de `/proc` —
+    # essa tem dono e réguas próprias (`integrations/quem_o_jogo_le.py`). Sem
+    # este dublê elas reprovavam por AMBIENTE (a máquina da suíte não tem jogo
+    # aberto), e um vermelho de ambiente se lê como regressão: foi o que
+    # aconteceu, e ficou vermelho na árvore por dias.
+    monkeypatch.setattr(
+        mod.AltoFalanteSubsystem, "_quem_o_jogo_le",
+        lambda self, controles: {
+            str(getattr(c, "uniq", "")).lower() for c in controles},
+    )
+
     controles = [_Controle("aa:bb:cc:00:00:01", "/dev/hidraw1", "bluetooth")]
 
     class _Ger:
