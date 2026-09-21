@@ -1588,9 +1588,10 @@ def com_a_exclusao(
     """O rodapé da exclusão nos cartões LOCALIZADOS, e a lista da Steam sem eles.
 
     O PÉ DO CARTÃO diz os jogos DAQUELE lançador que estão na lista, cada um com
-    o seu «Tirar da lista» — ou «Nenhum jogo na lista de exclusão.», que é a
-    frase do desenho aprovado. Só onde há o botão de excluir: um cartão que
-    não achou o lançador não tem o que excluir.
+    o seu «Tirar da lista». Só onde há o botão de excluir (um cartão que não
+    achou o lançador não tem o que excluir), e SÓ COM JOGO NA LISTA: a frase do
+    vazio saiu em 21/09/2026, palavra dela — *"é um espaço vertical que
+    ganhamos ao remover"*.
 
     A LISTA DA STEAM PERDE OS EXCLUÍDOS. A exclusão escreve no
     `jogos_sem_wrapper.txt`, e a lista do cartão mostra esse arquivo como
@@ -1609,7 +1610,8 @@ def com_a_exclusao(
                     if "atalho" in e.escritas) if a}
     saida: list[desenho.Lancador] = []
     for lanc in lancadores:
-        if not any(a.gesto == desenho.EXCLUIR for a in lanc.acoes):
+        if (not any(a.gesto == desenho.EXCLUIR for a in lanc.acoes)
+                or not por_cartao.get(lanc.chave)):
             saida.append(lanc)
             continue
         rodape = desenho.rodape_da_exclusao_html(por_cartao.get(lanc.chave, []))

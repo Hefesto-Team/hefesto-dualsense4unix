@@ -32,8 +32,15 @@ from hefesto_dualsense4unix.daemon.sensor_hub import SensorHub
 
 
 class _Ecodes:
-    """Só as constantes que os readers consultam (o módulo real é enorme)."""
+    """Só as constantes que os readers consultam (o módulo real é enorme).
 
+    `EV_SYN`/`SYN_REPORT` ENTRARAM EM 21/09/2026: o reader de movimento passou
+    a integrar o ângulo no SYN que fecha o pacote (MOVIMENTO-EM-QUALQUER-
+    MASCARA-01, E3), e sem eles o dublê levantava antes de ler um eixo.
+    """
+
+    EV_SYN = 0
+    SYN_REPORT = 0
     EV_ABS = 3
     EV_KEY = 1
     ABS_X = 0

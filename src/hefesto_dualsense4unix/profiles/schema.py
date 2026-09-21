@@ -2681,6 +2681,62 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "`None` = **ainda não sei**, e é a distinção entre 'nunca tentei' e "
         "'tentei e funciona' que faz a escada de pontes parar.",
     ),
+    # -- a mira por movimento: ARRANJO, não feature do plástico -------------
+    # MOVIMENTO-EM-QUALQUER-MASCARA-01, 21/09/2026. As linhas faltaram no dia
+    # em que a seção nasceu, e a régua desta tabela as acusou na suíte. O giro
+    # e o acelerômetro — a feature do aparelho — nascem de pé por conta deles
+    # (`test_os_dois_sensores_nascem_de_pe`); o que se classifica aqui é a
+    # TRADUÇÃO, e a razão de ela não nascer ligada está no docstring do modelo.
+    "Profile.movimento": Nascimento(
+        E_CONTRATO,
+        "`None` = nenhuma tradução do giro. É ARRANJO, não feature: ligada sem "
+        "pedido ela moveria a câmera de todo jogo quando o controle se mexe na "
+        "mesa, e no caminho `uhid` — onde o giro nativo já chega — daria DOIS "
+        "giros. Ver `ProfileMovimentoConfig`.",
+    ),
+    "ProfileMovimentoConfig.destino": Nascimento(
+        E_CONTRATO,
+        "`nenhum` guarda o arranjo e desliga a mira: é o estado que ela ESCOLHE "
+        "para experimentar sem perder a calibração. A seção só existe por gesto "
+        "dela; ver `Profile.movimento`.",
+    ),
+    "ProfileMovimentoConfig.sensibilidade": Nascimento(
+        E_CONTRATO,
+        "Parâmetro do arranjo, não a feature. O `ge=1` garante que nenhum "
+        "nascimento seja mudo — a faixa 1-12 é a do cursor.",
+    ),
+    "ProfileMovimentoConfig.eixo_horizontal": Nascimento(
+        E_CONTRATO,
+        "Parâmetro: `yaw` é girar o controle como quem mira; `roll` é incliná-lo "
+        "como volante. Os dois movem — nenhum é o silêncio.",
+    ),
+    "ProfileMovimentoConfig.inverter_horizontal": Nascimento(
+        E_CONTRATO,
+        "`False` é o sentido NATURAL do giro, não um desligado: a mira anda nos "
+        "dois casos.",
+    ),
+    "ProfileMovimentoConfig.inverter_vertical": Nascimento(
+        E_CONTRATO, "Ver `ProfileMovimentoConfig.inverter_horizontal`."
+    ),
+    "ProfileMovimentoConfig.zona_morta_graus_s": Nascimento(
+        E_CONTRATO,
+        "Parâmetro: 3°/s é a deriva do giro parado. Zero seria a mira andando "
+        "sozinha com o controle na mesa.",
+    ),
+    "ProfileMovimentoConfig.teto_graus_s": Nascimento(
+        E_CONTRATO,
+        "Parâmetro: os graus/s que valem deflexão cheia. O `gt=0` e a trava "
+        "acima da zona morta impedem um teto que nunca mova nada.",
+    ),
+    "ProfileMovimentoConfig.pixels_por_grau": Nascimento(
+        E_CONTRATO, "Parâmetro do destino `mouse` só; o `gt=0` impede o mudo."
+    ),
+    "ProfileMovimentoConfig.gatilho": Nascimento(
+        NASCE_NO_LEITOR,
+        "`None` = a mira fica SEMPRE ligada enquanto o destino não é `nenhum` — "
+        "o vazio aqui é LIGADO. Um botão escolhido a restringe ao aperto.",
+        dono="hefesto_dualsense4unix.daemon.subsystems.gamepad:aplicar_o_movimento",
+    ),
 }
 
 

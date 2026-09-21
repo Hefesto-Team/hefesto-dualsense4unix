@@ -777,24 +777,48 @@ def _o_dia_bom(desenho) -> object:
                            onde_estao=achados)
 
 
-def test_os_cartoes_localizados_tem_a_mesma_fileira(_aba07) -> None:
+def _o_dia_do_reparo(desenho) -> object:
+    """A Steam com um jogo SEM o atalho — o estado do «Consertar»."""
+    achados = tuple((item.chave, f"/opt/{item.chave}") for item in desenho.EMBUTIDOS
+                    if item.chave != desenho.STEAM)
+    return desenho.Leitura(com_wrapper=("620",), instalados=2,
+                           reparaveis=(("440", "Um jogo", "nunca recebeu o atalho"),),
+                           onde_estao=achados)
+
+
+@pytest.mark.parametrize("dia", ["bom", "reparo"])
+def test_os_cartoes_localizados_tem_a_mesma_fileira(_aba07, dia: str) -> None:
     """Os cartões ACHADOS oferecem os mesmos botões — o pedido dela, *"todos os
-    lançadores com os botões da Steam"*.
+    lançadores com os botões da Steam"* —, e os quatro vêm PRIMEIRO, na ordem
+    do dono: ela pediu os quatro numa linha só (21/09/2026), e um botão de
+    estado no meio deles os partiria em duas.
 
     A régua PERGUNTA ao dono dos rótulos (`fileira_comum`), nunca digita — régua
-    de dono mede DONO. ARRANQUE a `fileira_comum` de um cartão e ela reprova
-    nomeando qual.
+    de dono mede DONO. OS DOIS DIAS ENTRAM porque o do reparo escapou: a Steam
+    com jogo sem atalho perdia o «Criar perfil», e a régua só olhava o dia bom.
+    ARRANQUE a `fileira_comum` do cartão da Steam e o dia do reparo reprova.
     """
     desenho, _a07 = _aba07
-    cartoes = desenho.cartoes(_o_dia_bom(desenho))
+    lida = _o_dia_bom(desenho) if dia == "bom" else _o_dia_do_reparo(desenho)
+    cartoes = desenho.cartoes(lida)
     assert len(cartoes) >= 6, [c.chave for c in cartoes]
     for lanc in cartoes:
-        if lanc.chave == "flatpak":
-            continue                    # o pacote dos outros, sem jogo próprio
         esperado = [a.rotulo for a in desenho.fileira_comum(lanc.chave)]
         rotulos = [a.rotulo for a in lanc.acoes]
-        faltam = [r for r in esperado if r not in rotulos]
-        assert not faltam, (lanc.chave, rotulos)
+        assert rotulos[:len(esperado)] == esperado, (lanc.chave, rotulos)
+
+
+def test_a_lista_vazia_nao_ocupa_linha_no_cartao(_aba07) -> None:
+    """Sem jogo excluído, o cartão não ganha pé — palavra dela, 21/09/2026:
+    *"remove aquele status que é uma linha por si só (…) é um espaço vertical
+    que ganhamos ao remover"*. ARRANQUE a guarda do `com_a_exclusao` e o cartão
+    volta a ganhar um pé vazio."""
+    desenho, a07 = _aba07
+    lida = _o_dia_bom(desenho)
+    antes = desenho.cartoes(lida)
+    depois = a07.com_a_exclusao(antes, lida)
+    assert [c.fora for c in depois] == [c.fora for c in antes]
+    assert desenho.rodape_da_exclusao_html([]) == ""
 
 
 def test_nenhum_botao_do_cartao_nasce_sem_gesto(_aba07) -> None:

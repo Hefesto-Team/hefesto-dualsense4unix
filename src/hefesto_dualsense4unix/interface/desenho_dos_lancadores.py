@@ -1024,7 +1024,13 @@ ADICIONAR_ROTULO = "Localizar este lançador"
 #: «Não usar neste jogo»/«Voltar a usar» e «Voltar a perguntar»/«Não perguntar
 #: para este jogo». O ato aqui é CORRETIVO — *"o que ele achou não é o que eu
 #: quero"* —, e o rótulo passa a dizê-lo.
-APONTAR_ROTULO = "Apontar outro caminho"
+#:
+#: **ENCOLHEU EM 21/09/2026**, palavra dela: *"reescreve o texto para que os
+#: botões os 4 fiquem em uma linha só"*. A fileira do cartão tem 531 px no
+#: WebKit e os quatro somavam ~680; a frase inteira foi para o `title`
+#: (:data:`APONTAR_DICA`), que é onde o rótulo curto se explica.
+APONTAR_ROTULO = "Outro caminho"
+APONTAR_DICA = "Apontar outro caminho para este lançador"
 
 #: A frase de quem PROCUROU E NÃO ACHOU.
 #:
@@ -1584,7 +1590,8 @@ def acao_de_localizar(chave: str, rotulo: str = ADICIONAR_ROTULO) -> Acao:
     mesma tela e gravam no mesmo lugar. Só o rótulo segue o estado — um segundo
     gesto seria um segundo caminho para o mesmo disco.
     """
-    return Acao(rotulo, "", ADICIONAR, chave, href=f"#{TELA_DO_NOVO}")
+    dica = APONTAR_DICA if rotulo == APONTAR_ROTULO else ""
+    return Acao(rotulo, "", ADICIONAR, chave, href=f"#{TELA_DO_NOVO}", dica=dica)
 
 
 def acao_de_tirar(chave: str) -> Acao:
@@ -1625,9 +1632,14 @@ MIOLO_DA_ESCOLHA = "lanc-escolha"
 ESCOLHA = "lanc-escolha-jogo"
 
 EXCLUIR = "adicionar-a-exclusao"
-EXCLUIR_ROTULO = "Adicionar à lista de exclusão"
+#: O RÓTULO É O NOME DA LISTA, e o ATO é o título da pop-up que ele abre
+#: (:data:`EXCLUIR_TITULO`) — 21/09/2026, os quatro numa linha só, pedido dela.
+#: «Excluir» sozinho não entrou: na tela de quem lê em português, «excluir um
+#: jogo» é APAGAR o jogo.
+EXCLUIR_ROTULO = "Lista de exclusão"
+EXCLUIR_TITULO = "Adicionar à lista de exclusão"
 #: A frase do §3 da sprint, no `title` do botão — o rótulo é mais curto que a
-#: frase dela por largura (a fileira da Steam ocupa a linha inteira).
+#: frase dela por largura (os quatro da fileira cabem numa linha só).
 DICA_EXCLUIR = (
     "Adicionar jogo à lista de exclusão do Hefesto: o jogo passa a ver o "
     "controle como se o Hefesto não estivesse instalado — sem máscara, sem "
@@ -1637,13 +1649,18 @@ CONFIRMAR_EXCLUSAO = "confirmar-exclusao"
 CONFIRMAR_EXCLUSAO_ROTULO = "Adicionar à lista"
 
 CRIAR_PERFIL = "criar-perfil-para-um-jogo"
-CRIAR_PERFIL_ROTULO = "Criar perfil para um jogo"
+CRIAR_PERFIL_ROTULO = "Criar perfil"
+#: O título da pop-up e o `title` do botão — a frase inteira mora onde cabe.
+CRIAR_PERFIL_TITULO = "Criar perfil para um jogo"
 CONFIRMAR_PERFIL = "confirmar-perfil"
 CONFIRMAR_PERFIL_ROTULO = "Criar o perfil"
 
 TIRAR_DA_EXCLUSAO = "tirar-da-exclusao"
 TIRAR_DA_EXCLUSAO_ROTULO = "Tirar da lista"
-NENHUM_EXCLUIDO = "Nenhum jogo na lista de exclusão."
+#: O PÉ DO CARTÃO SÓ EXISTE COM JOGO EXCLUÍDO — 21/09/2026, palavra dela:
+#: *"remove aquele status que é uma linha por si só o nenhum jogo na lista de
+#: exclusão. Não precisamos disso na interface."* A frase do vazio saiu daqui e
+#: de :func:`rodape_da_exclusao_html`, que devolve nada para a lista vazia.
 
 
 def acao_de_excluir(chave: str) -> Acao:
@@ -1659,7 +1676,7 @@ def acao_de_criar_perfil(chave: str) -> Acao:
     Perfis (um gravador, dois caminhos de chegada) e a tela vai para lá.
     """
     return Acao(CRIAR_PERFIL_ROTULO, "", CRIAR_PERFIL, chave,
-                href=f"#{TELA_DA_ESCOLHA}")
+                href=f"#{TELA_DA_ESCOLHA}", dica=CRIAR_PERFIL_TITULO)
 
 
 def fileira_comum(chave: str) -> tuple[Acao, ...]:
@@ -1673,10 +1690,11 @@ def fileira_comum(chave: str) -> tuple[Acao, ...]:
 def rodape_da_exclusao_html(excluidos: list[tuple[str, str]]) -> str:
     """O pé do cartão: os jogos DESTE lançador na lista, cada um com o seu «Tirar».
 
-    `excluidos` é ``[(chave, nome)]``. Sem nenhum, a frase do desenho aprovado.
+    `excluidos` é ``[(chave, nome)]``. Sem nenhum, NADA — o pé do cartão não
+    diz a lista vazia (palavra dela, 21/09/2026).
     """
     if not excluidos:
-        return f'<div class="lanc-excl">{_e(NENHUM_EXCLUIDO)}</div>'
+        return ""
     partes = [
         f"<b>{_e(nome)}</b> · <a class=\"tirar\" href=\"#\" "
         f'data-gesto="{_a(TIRAR_DA_EXCLUSAO)}" data-v="{_a(chave)}">'
@@ -1717,8 +1735,8 @@ def miolo_da_escolha_html(modo: str, nome_do_lancador: str,
     MARCADA (`ESCOLHA`).
     """
     excluir = modo == EXCLUIR
-    titulo = (f"{EXCLUIR_ROTULO} — {nome_do_lancador}" if excluir
-              else f"{CRIAR_PERFIL_ROTULO} — {nome_do_lancador}")
+    titulo = (f"{EXCLUIR_TITULO} — {nome_do_lancador}" if excluir
+              else f"{CRIAR_PERFIL_TITULO} — {nome_do_lancador}")
     if excluir:
         para = ('O jogo que você escolher vai ver o controle <b>como se o '
                 'Hefesto não estivesse instalado</b>: sem máscara, sem perfil, '
@@ -1904,9 +1922,11 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
         # lista já diz «nunca recebeu o atalho» — a mesma palavra curta, na
         # mesma tela (`a07_lancadores._porque`).
         diz = f"<b>{_plural(falta, 'jogo', 'jogos')} sem o atalho</b>"
-        acoes: tuple[Acao, ...] = (
+        # OS DOIS DO REPARO VÃO DEPOIS DA FILEIRA COMUM — ver o bloco da
+        # fileira, mais abaixo.
+        do_estado: tuple[Acao, ...] = (
             Acao("Consertar", "verde", "consertar", STEAM),
-            Acao("Ver o que impede", "", "ver-o-que-impede", STEAM), abrir)
+            Acao("Ver o que impede", "", "ver-o-que-impede", STEAM))
         selo = "warn"
     else:
         # DOIS NÚMEROS QUE SE CONTRADIZEM A UMA LINHA DE DISTÂNCIA — achado em
@@ -1929,7 +1949,7 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
         diz = ("Os controles chegam. O atalho de inicialização está no lugar em "
                f"{_plural(len(lida.com_wrapper), 'jogo', 'jogos')} da sua "
                "biblioteca (instalados ou não).")
-        acoes = (abrir, criar)
+        do_estado = ()
         # O SELO DA STEAM É `LOCALIZADO` COMO OS OUTROS CINCO — 11/09/2026,
         # ordem dela: *"troca o chegam da steam por localizado como os  (noqa-acento) citação
         # demais"*.
@@ -1979,7 +1999,7 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
     # NO DIA BOM NADA DISSO OCUPA A TELA: sem intocáveis, o cartão sai daqui
     # byte a byte como saía antes.
     if lida.intocaveis and lida.linha:
-        acoes = (*acoes, Acao(COPIAR_ROTULO, "", COPIAR, STEAM))
+        do_estado = (*do_estado, Acao(COPIAR_ROTULO, "", COPIAR, STEAM))
         diz = diz + linha_do_wrapper_html(lida.linha)
 
     # O «LOCALIZAR» ENTRA NOS DOIS ESTADOS BONS — LANCADOR-LOCALIZAR-01,
@@ -2004,10 +2024,14 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
     # ramo só se alcança com a Steam achada ou com a biblioteca lida, e mandar
     # «Localizar» num cartão que diz `LOCALIZADO` é a contradição que a A2-022
     # fechou.
-    acoes = (*acoes, acao_de_localizar(STEAM, APONTAR_ROTULO))
-    # O EXCLUIR, logo depois do apontar — é o quarto da fileira comum
-    # (:func:`fileira_comum`), nos dois estados bons, como nos outros sete.
-    acoes = (*acoes, acao_de_excluir(STEAM))
+    #
+    # A FILEIRA COMUM PRIMEIRO, E INTEIRA — 21/09/2026. A Steam compunha a dela
+    # peça por peça, e o ramo do reparo tinha perdido o «Criar perfil» sem
+    # ninguém ver: a régua dos oito cartões iguais só olhava o dia bom. Agora os
+    # quatro vêm do MESMO dono dos outros sete (:func:`fileira_comum`), e vêm
+    # PRIMEIRO, porque ela pediu os quatro numa linha só; os botões do estado
+    # (o reparo, a cópia da linha) seguem na linha de baixo.
+    acoes = (*fileira_comum(STEAM), *do_estado)
 
     # O TIRAR VAI POR ÚLTIMO nos dois estados bons, e por último de propósito: o
     # que ela desfaz nunca disputa a primeira posição com o que ela FAZ.

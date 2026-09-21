@@ -3188,7 +3188,7 @@ class Daemon:
         )
 
     def aplicar_a_exclusao(self, *, chave: str) -> str:
-        """O jogo em foco está na lista de exclusão: o Hefesto sai da frente.
+        """O jogo em foco está na lista de exclusão: o Hefesto fica fora dele.
 
         OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01, E3. A frase da sprint é
         *"o jogo excluído vê o controle como se o Hefesto não estivesse

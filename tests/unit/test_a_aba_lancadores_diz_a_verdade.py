@@ -932,9 +932,15 @@ def test_os_dois_botoes_do_registro_dizem_coisas_diferentes(desenho):
     # A2-022, 11/09/2026. Selo e botão diziam coisas contrárias: `LOCALIZADO` em
     # cima, «Localizar» embaixo. O ato ali é corretivo, e o rótulo passa a
     # dizê-lo. **Mesmo gesto, mesma gravação — só o rótulo segue o estado.**
-    assert desenho.APONTAR_ROTULO == "Apontar outro caminho", (
+    #
+    # ENCOLHEU EM 21/09/2026, palavra dela: *"reescreve o texto para que os
+    # botões os 4 fiquem em uma linha só"*. O rótulo virou «Outro caminho», e a
+    # frase da A2-022 foi para o `title` (`APONTAR_DICA`) — o ato continua
+    # dito, só não cabe mais na face do botão.
+    assert desenho.APONTAR_ROTULO == "Outro caminho", (
         f"o rótulo do cartão LOCALIZADO é {desenho.APONTAR_ROTULO!r}, e a "
-        f"decisão dela é 'Apontar outro caminho'")
+        f"decisão dela é 'Outro caminho' (21/09/2026)")
+    assert desenho.APONTAR_DICA == "Apontar outro caminho para este lançador"
     assert len({do_cartao, global_, desenho.APONTAR_ROTULO}) == 3, (
         "dois dos três rótulos de registro voltaram a dizer a mesma coisa — "
         "cada um responde por um estado diferente do cartão")
