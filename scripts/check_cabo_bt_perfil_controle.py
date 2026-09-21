@@ -180,6 +180,7 @@ NAO_E_DO_APARELHO: dict[str, str] = {
 #: nenhuma das duas.
 DO_APARELHO: dict[str, tuple[str, ...]] = {
     "mascara": ("plataforma.vpad",),
+    "ganho-mic": ("audio.microfone.ganho",),
     "mic-modo": ("audio.microfone",),
     "mudo": ("audio.microfone.mudo",),
     "volume": ("audio.microfone.volume", "audio.alto_falante.volume"),
@@ -225,7 +226,26 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
 #: o gesto e o perfil escrevem o `common[6]` por `uniq`. **A linha sai porque
 #: esta régua manda ela sair** — foi a metade "dívida que FECHOU" desta mordida
 #: que reprovou a leva e cobrou o fecho, exatamente como desenhada.
-A_DIVIDA_CONHECIDA: dict[str, tuple[str, str]] = {}
+#:
+#: **E ELA REABRIU EM 20/09/2026, com UMA entrada e a sprint dona escrita.** O
+#: ganho de entrada do microfone ganhou deslizante naquele dia, por ordem dela
+#: — *"além disso não tá funcionando"* —, e nasce com duas das quatro
+#: respostas: ele age no CABO e não no rádio (o aparelho: pelo rádio não há
+#: placa ALSA onde o elemento exista, e a tela diz isso em vez de calar), e
+#: **não viaja no perfil**.
+#:
+#: A ausência do perfil NÃO é a escolha dela morrendo — a placa guarda o valor
+#: entre sessões, e é por isso que esta linha é dívida e não defeito. O que
+#: falta é ele acompanhar a TROCA de perfil, como o `volume` acompanha; e isso
+#: pede um leitor de placa que hoje só a interface tem, e que o daemon
+#: precisaria para aplicar. A sprint é dona disso.
+A_DIVIDA_CONHECIDA: dict[str, tuple[str, str]] = {
+    "ganho-mic": (
+        "O-GANHO-DO-MIC-VIAJA-NO-PERFIL-01",
+        "age no cabo e não no rádio (é o aparelho: sem placa ALSA não há "
+        "elemento de ganho, e a tela acende o cinza com a razão), e não vai "
+        "no perfil — a placa guarda o valor, mas ele não acompanha a troca"),
+}
 
 #: ONDE CADA FEATURE MORA NO PERFIL — `(campo do Profile, campo do
 #: ControllerOverrides)`.

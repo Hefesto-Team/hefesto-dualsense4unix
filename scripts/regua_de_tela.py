@@ -16,7 +16,7 @@ qualquer aba alcança.
 
     with Tela.abrir("02") as t:
         t.esperar_ate("document.querySelectorAll('.ctl').length === 4")
-        t.clicar_e_ouvir('.ctl [data-mudo="microfone"]')   # botão MORTO reprova
+        t.clicar_e_ouvir('.ctl [data-mudo="alto-falante"]')   # botão MORTO reprova
         print(t.medir('.stick[data-stick="l"] .p'))
 
 POR QUE ELE MORA EM ``scripts/`` E NÃO EM ``src/hefesto_dualsense4unix/interface/``

@@ -160,8 +160,13 @@ VENCE_EM_S = 8.0
 #: DAEMON (`ipc_handlers._handle_mic_canal_set`), e digitá-lo aqui faria esta
 #: régua medir a si mesma em vez de medir se a frase do dono ATRAVESSA da
 #: resposta até o cartão. É esse atravessar que este arquivo existe para cobrar.
-RECUSA_DO_ATO = ("o microfone foi ligado no canal deste controle, mas o "
-                 "Hefesto não conseguiu escrever o mudo no aparelho")
+#: **A FRASE TROCOU COM O BOTÃO — 20/09/2026.** Estas réguas miravam o 🎙, que
+#: naquele dia deixou de calar e passou a gravar; o alvo virou o ♪ da mesma
+#: coluna (a razão longa está em `test_a_recusa_pisca_no_botao.BOTOES`), e a
+#: recusa que o ♪ dá é outra: ele não fala de microfone, fala do volume que o
+#: daemon ainda não publicou. Manter a frase velha faria a régua cobrar do ♪
+#: uma frase que só o 🎙 dizia — reprovação sobre produto são.
+RECUSA_DO_ATO = "o volume deste alto-falante ainda é desconhecido"
 
 #: O que se lê do DOM a cada parada do roteiro. `dentro_de` é o item 2: de quem
 #: é o cartão em que a frase pousou.
@@ -194,7 +199,7 @@ LER_A_TELA = r"""
 #: já pagou duas vezes.
 CLICAR_NO_MIC = r"""
 (function(){
-  const b = document.querySelector('[data-controle="p1"] [data-mudo="microfone"]');
+  const b = document.querySelector('[data-controle="p1"] [data-mudo="alto-falante"]');
   if(!b) return 'NAO ACHEI O BOTAO DO MICROFONE NO CARTAO DO P1';
   b.click();
   return 'cliquei';

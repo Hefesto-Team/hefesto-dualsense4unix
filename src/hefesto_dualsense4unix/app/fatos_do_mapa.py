@@ -417,6 +417,25 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'por_que_nao_aciona': 'nada-a-acionar',
         },
     },
+    'audio.microfone.ganho@dualsense': {
+        'existe': 'tem',
+        'cabo': {
+            'aceita': 'sim',
+            'aciona': 'sim',
+            'ate_onde_foi': 'MONTOU',
+            'canal': 'alsa-pipewire',
+            'de_onde_sei': 'medido',
+            'por_que_nao_aciona': '',
+        },
+        'radio': {
+            'aceita': 'não',
+            'aciona': 'não',
+            'ate_onde_foi': '',
+            'canal': 'alsa-pipewire',
+            'de_onde_sei': 'medido',
+            'por_que_nao_aciona': 'nada-a-acionar',
+        },
+    },
     'audio.microfone.mudo@dualsense': {
         'existe': 'tem',
         'cabo': {

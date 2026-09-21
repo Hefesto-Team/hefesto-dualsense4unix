@@ -93,10 +93,22 @@ PAGINA_06 = "06-navegacao.html"  # (noqa-acento) nome de arquivo
 #: do elemento é o `data-gesto`, que é contrato com o gerador; a tag é decisão
 #: de desenho e pode mudar de novo amanhã — e mudou, do `<input>` de 06/09 para
 #: o `<button>` de 19/09, sem nada de errado com o produto nas duas vezes.
+#: **O BOTÃO DA 02 TROCOU DE DONO EM 20/09, E ESTAS RÉGUAS TROCARAM DE ALVO.**
+#: Elas miravam o 🎙 (`data-mudo="microfone"`), que naquele dia deixou de calar
+#: e passou a GRAVAR por ordem dela. O que elas medem, porém, nunca foi o
+#: microfone: é a MECÂNICA da recusa — o botão pisca, a frase pousa no cartão,
+#: o recibo vence. Qualquer gesto que recuse serve, e o ♪ da mesma coluna é o
+#: irmão exato: mesmo cartão, mesmo `data-mudo`, mesma ponte.
+#:
+#: **APONTÁ-LAS AO `mic-testar` SERIA O DEFEITO**, não a cura fiel: o gesto novo
+#: abre o microfone de quem estiver na frente da máquina por até 15 segundos e
+#: devolve a voz pelo alto-falante. Uma suíte que o dispara em sete réguas
+#: grava a sala dela sete vezes por corrida. Quem prova o ato novo é
+#: `test_o_teste_do_microfone_ouve.py`, com o gravador dublado.
 BOTOES = {
     "04": (PAGINA_04, "player",
            '[data-controle="p1"] .players button.fora[data-player="2"]'),
-    "02": (PAGINA_02, "mudo", '[data-controle="p1"] [data-mudo="microfone"]'),
+    "02": (PAGINA_02, "mudo", '[data-controle="p1"] [data-mudo="alto-falante"]'),
     "01": (PAGINA_01, "cadeado", '[data-gesto="cadeado"]'),
     "06": (PAGINA_06, "guardar-remapeamento",
            '#remapeamento [data-gesto="guardar-remapeamento"]'),
@@ -124,8 +136,13 @@ ARMAR_AS_LINHAS = r"""
 #: A FRASE QUE O ATO DO MICROFONE DEVOLVE quando falha pela metade. É frase de
 #: PROVA, a mesma de `test_a_recusa_chega_ao_cartao`: o que se mede é se a frase
 #: do dono ATRAVESSA até a tela, e digitar a do daemon mediria a própria régua.
-RECUSA_DO_MIC = ("o microfone foi ligado no canal deste controle, mas o "
-                 "Hefesto não conseguiu escrever o mudo no aparelho")
+#: **A FRASE TROCOU COM O BOTÃO — 20/09/2026.** Estas réguas miravam o 🎙, que
+#: naquele dia deixou de calar e passou a gravar; o alvo virou o ♪ da mesma
+#: coluna (a razão longa está em `test_a_recusa_pisca_no_botao.BOTOES`), e a
+#: recusa que o ♪ dá é outra: ele não fala de microfone, fala do volume que o
+#: daemon ainda não publicou. Manter a frase velha faria a régua cobrar do ♪
+#: uma frase que só o 🎙 dizia — reprovação sobre produto são.
+RECUSA_DO_MIC = "o volume deste alto-falante ainda é desconhecido"
 
 #: O PASSO E OS TETOS DAS ESPERAS POR CONDIÇÃO — generosos de propósito, e
 #: continuam sendo régua: um marco que não chega reprova dizendo qual.

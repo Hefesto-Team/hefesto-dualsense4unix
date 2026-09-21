@@ -47,7 +47,13 @@ def _roteiro() -> tuple[tuple[int, str], ...]:
             and no.target.id == "ROTEIRO_DA_PROVA_DE_GESTO"
             and no.value is not None
         ):
-            return ast.literal_eval(no.value)  # type: ignore[no-any-return]
+            # NORMALIZA PARA `(ms, seletor)`. Desde 20/09 um passo pode trazer
+            # um TERCEIRO item — `"so-existe"`, o passo que confere o alvo sem
+            # puxar o gatilho, porque o 🎙 deixou de calar e passou a GRAVAR o
+            # microfone de quem estiver na frente da máquina. A régua mede a
+            # mesma coisa nos dois: *o alvo existe na página*.
+            passos = ast.literal_eval(no.value)
+            return tuple((p[0], p[1]) for p in passos)
     raise AssertionError(
         "o `ROTEIRO_DA_PROVA_DE_GESTO` sumiu do fonte — se ele voltou a ser uma "
         "lista embutida no meio do método, esta régua deixou de alcançá-lo, e "
@@ -98,15 +104,24 @@ def test_todo_passo_do_roteiro_acha_alvo_na_tela(alvo: Path) -> None:
 
 
 def test_o_roteiro_cobre_o_microfone_e_o_alto_falante() -> None:
-    """MORDIDA 2: os DOIS botões de mudo continuam no roteiro.
+    """MORDIDA 2: os DOIS botões da coluna do som continuam no roteiro.
 
     O defeito de origem (29/08) foi o contrário deste: a prova nunca clicava o
     🎙 nem o ♪ e dava verde sobre dois botões mortos. Tirar um deles do roteiro
     para fazer a régua de cima passar seria trocar um defeito pelo outro — e
     esta régua é o que impede a cura preguiçosa.
+
+    **O ENDEREÇO DO 🎙 MUDOU EM 20/09 E O ALVO NÃO AFROUXOU.** Ele deixou de
+    calar (`data-mudo="microfone"`) e passou a testar (`data-gesto="mic-testar"`)
+    por ordem dela — *"esse botão segue desativando o microfone, não precisamos
+    dele mais na interface pq o botão do próprio controle já o faz"*. O que
+    esta régua cobra continua sendo o mesmo: que o roteiro VISITE os dois
+    botões da coluna. Deixar o seletor velho aqui faria a régua vigiar um
+    elemento que não existe mais — e uma régua que procura o que não há
+    reprova para sempre, ou, pior, é apagada por incômodo.
     """
     seletores = [s for _ms, s in _roteiro()]
-    for botao in ('[data-mudo="microfone"]', '[data-mudo="alto-falante"]'):
+    for botao in ('[data-gesto="mic-testar"]', '[data-mudo="alto-falante"]'):
         assert any(botao in s for s in seletores), (
             f"o roteiro deixou de clicar {botao} — é o defeito de 29/08 "
             f"voltando: {seletores}"

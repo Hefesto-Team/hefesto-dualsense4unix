@@ -1708,7 +1708,20 @@
   .eixo .v.neg{right:50%}
   .eixo .v.pos{left:50%}
   /* AS ONDAS SONORAS — o medidor de nível que a minha primeira versão comeu */
-  .onda{height:22px;display:flex;align-items:flex-end;gap:2px;margin-bottom:5px}
+  /* A ONDA PERDEU 4px E A LINHA DE VOLUME PERDEU 5 — 20/09/2026, e os dois
+     números são A CONTA DO GANHO, não economia solta. A linha própria que ela
+     aprovou custa 22px, e o card fechava com 0,37px de folga contra o teto de
+     `PARA_O_CARD` (327,63 de 328). *O preço não é argumento contra o desenho
+     que ela aprovou* — é a conta a pagar, e ela se paga aqui:
+
+       349,63  com o ganho na linha própria e nada devolvido  → NÃO CABE
+       334,63  as três `.vol` do card de 22px para 17 (-15)
+       326,63  as duas `.onda` de 22px para 18 (-8)           → CABE, 1,37 de folga
+
+     Medido pelo `check_a_altura_do_cartao.py` nas três larguras, a cada passo.
+     O knob do trilho tem 12px e continua cabendo nos 17; a onda com 18px
+     continua mostrando os quinze degraus. **A folga ficou MAIOR do que era.** */
+  .onda{height:18px;display:flex;align-items:flex-end;gap:2px;margin-bottom:5px}
   .onda i{flex:1;background:var(--cyan);border-radius:1px;display:block;opacity:.85}
   .onda.mudo i{background:var(--border-forte);opacity:.5}
   /* SEM LEITURA — e esta regra é a que impede a tela de mentir.
@@ -1785,7 +1798,8 @@
   .mic-glifo.cortado::after{content:'';position:absolute;left:-1.5px;top:50%;
     width:12px;height:1.5px;background:currentColor;border-radius:1px;
     transform:translateY(-50%) rotate(-45deg)}
-  .vol{display:flex;align-items:center;gap:8px;height:22px}
+  /* 17px, e não os 22 de até 20/09: ver a conta no bloco `.onda` acima. */
+  .vol{display:flex;align-items:center;gap:8px;height:17px}
   .vol .trilho{flex:1;height:5px;border-radius:3px;background:var(--panel);position:relative}
   .vol .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
   .vol .cheio::after{content:'';position:absolute;right:-5px;top:-4px;width:12px;height:12px;
@@ -1819,12 +1833,20 @@
      O `.n` PEDE 34px E NÃO 30: o número aqui é o dB com sinal (`+48`), que é um
      caractere mais largo que o `80` do volume. Com 30 ele sai cortado, e o
      mesmo portão mede corte de texto. */
-  .ganho{display:flex;align-items:center;gap:8px;flex:1 1 0;min-width:0;margin-left:9px}
+  /* O GANHO É UMA `.vol` — ele DEIXOU de morar na linha do rótulo em 20/09,
+     por ordem dela, e com isso deixou de precisar de caixa própria: a linha
+     herda `display:flex`, `gap` e os 22px de altura da `.vol`, e o que sobra
+     aqui é só o que ele tem A MAIS — a unidade e o número de quatro caracteres.
+     O `flex:1 1 0` e o `margin-left` que ele tinha eram para disputar o vão da
+     linha do rótulo com o selo e o `?`; não há mais vão a disputar. */
+  .rot-vol{flex:0 0 46px;font-size:11px;color:var(--muted);white-space:nowrap}
+  .ganho .un{flex:0 0 16px;font-size:10px;color:var(--muted);
+    font-family:'JetBrains Mono',monospace}
   .ganho .trilho{flex:1;height:5px;border-radius:3px;background:var(--panel);position:relative}
   .ganho .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
   .ganho .cheio::after{content:'';position:absolute;right:-5px;top:-4px;width:12px;height:12px;
     border-radius:50%;background:var(--purple);border:2px solid var(--app-bg)}
-  .ganho .n{flex:0 0 34px;text-align:right;font-family:'JetBrains Mono',monospace;
+  .ganho .n{flex:0 0 30px;text-align:right;font-family:'JetBrains Mono',monospace;
     font-size:10.5px;color:var(--fg)}
   /* O GANHO FORA DE ALCANCE veste o MESMO cinza do «Nativo» no rádio, e pela
      mesma razão dela: o que não alcança não some da tela — fica cinza, e o
@@ -2987,25 +3009,6 @@
                    E o comentário que eu escrevi para explicar isto quebrou o gerador,
                    porque trazia chaves dentro da própria f-string. Por isso ele não
                    as tem. -->
-              <!-- O GANHO DE ENTRADA — O-GANHO-DO-MIC-TEM-DONO-01, 20/09/2026, e
-                   ele é o ARRANJO D: o único dos quatro medidos que custa ZERO
-                   altura. A conta está no bloco `.ganho` do CSS, com os quatro
-                   preços; o que importa aqui é que este lugar é o mesmo vão em
-                   que Virtual/Nativo moraram até 31/08, pela mesma razão.
-
-                   O QUE ELE MOSTRA NÃO É O VOLUME DE BAIXO. O trilho de baixo é o
-                   quanto do microfone o produto ENTREGA ao PC; este é o quanto o
-                   APARELHO amplifica o que entra — o `Headset Capture Volume` da
-                   placa, 0 a +48 dB, que vivia no topo sem ninguém ter escolhido.
-                   A diferença está escrita no `?` da moldura, porque o número sai
-                   em dB e o de baixo em por cento.
-
-                   E ELE NÃO É UM `.vol`: aquele tem altura FIXA de 22px e esta
-                   linha tem 17 — embrulhar custaria 5px e o portão da altura
-                   reprovaria. Ver o CSS. -->
-              <span class="ganho" data-campo="mic-ganho-fora" data-hef-alvo="classe" data-hef-classe="sem-ganho"
-                    title="Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC." role="group" aria-label="Ganho de entrada do microfone deste controle, em decibéis"><span class="trilho"><span class="cheio" data-campo="mic-ganho-barra"
-                data-hef-alvo="largura" style="width:100%"></span></span><span class="n" data-campo="mic-ganho-num">+48</span></span><span class="ajuda porque">?<span class="dica" data-campo="mic-ganho-fora" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
             <span class="onda" data-campo="mic-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="mic-onda-0" data-hef-alvo="altura" style="height:22%"></i><i data-campo="mic-onda-1" data-hef-alvo="altura" style="height:48%"></i><i data-campo="mic-onda-2" data-hef-alvo="altura" style="height:72%"></i><i data-campo="mic-onda-3" data-hef-alvo="altura" style="height:95%"></i><i data-campo="mic-onda-4" data-hef-alvo="altura" style="height:64%"></i><i data-campo="mic-onda-5" data-hef-alvo="altura" style="height:38%"></i><i data-campo="mic-onda-6" data-hef-alvo="altura" style="height:52%"></i><i data-campo="mic-onda-7" data-hef-alvo="altura" style="height:80%"></i><i data-campo="mic-onda-8" data-hef-alvo="altura" style="height:44%"></i><i data-campo="mic-onda-9" data-hef-alvo="altura" style="height:26%"></i><i data-campo="mic-onda-10" data-hef-alvo="altura" style="height:58%"></i><i data-campo="mic-onda-11" data-hef-alvo="altura" style="height:88%"></i><i data-campo="mic-onda-12" data-hef-alvo="altura" style="height:40%"></i><i data-campo="mic-onda-13" data-hef-alvo="altura" style="height:20%"></i></span>
             <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
@@ -3014,11 +3017,21 @@
                    endereçou o alto-falante desta mesma coluna e deixou este
                    deslizante no número do DESENHO. Dono do valor e razão dos
                    dois alvos num endereço só: `a02_controles.volume_do_microfone`. -->
+              <span class="rot-vol">Volume</span>
               <span class="trilho"><span class="cheio" data-campo="mic-barra"
                 data-hef-alvo="largura" style="width:80%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="80" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC. Não é o mudo: a luz vermelha fica acesa e o botão do controle continua valendo. Grava na hora."></span>
               <span class="n" data-campo="mic-num">80</span>
               <button class="mudo-i" data-gesto="mic-testar" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Fala e ouve de volta. Grava três segundos da sua voz — com o volume e o ganho desta coluna já aplicados — e toca para você, exatamente como o jogo te ouve. Para calar o microfone, use o botão do próprio controle.">🎙</button>
               <span class="ajuda porque">?<span class="dica" data-campo="mic-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
+            </div>
+            <div class="vol ganho" data-campo="mic-ganho-fora" data-hef-alvo="classe"
+                 data-hef-classe="sem-ganho" title="Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC." role="group"
+                 aria-label="Ganho de entrada do microfone deste controle, em decibéis">
+              <span class="rot-vol">Ganho</span>
+              <span class="trilho"><span class="cheio" data-campo="mic-ganho-barra"
+                data-hef-alvo="largura" style="width:100%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="100" data-gesto="ganho-mic" data-campo="mic-ganho-barra" data-hef-alvo="valor" aria-label="Ganho de entrada do microfone deste controle, em decibéis" title="Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC."></span>
+              <span class="n" data-campo="mic-ganho-num">+48</span>
+              <span class="un">dB</span><span class="ajuda porque">?<span class="dica" data-campo="mic-ganho-fora" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
             <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
                  *"Os botões Virtual e Nativo ficam na parte de baixo do slider,
@@ -3545,25 +3558,6 @@
                    E o comentário que eu escrevi para explicar isto quebrou o gerador,
                    porque trazia chaves dentro da própria f-string. Por isso ele não
                    as tem. -->
-              <!-- O GANHO DE ENTRADA — O-GANHO-DO-MIC-TEM-DONO-01, 20/09/2026, e
-                   ele é o ARRANJO D: o único dos quatro medidos que custa ZERO
-                   altura. A conta está no bloco `.ganho` do CSS, com os quatro
-                   preços; o que importa aqui é que este lugar é o mesmo vão em
-                   que Virtual/Nativo moraram até 31/08, pela mesma razão.
-
-                   O QUE ELE MOSTRA NÃO É O VOLUME DE BAIXO. O trilho de baixo é o
-                   quanto do microfone o produto ENTREGA ao PC; este é o quanto o
-                   APARELHO amplifica o que entra — o `Headset Capture Volume` da
-                   placa, 0 a +48 dB, que vivia no topo sem ninguém ter escolhido.
-                   A diferença está escrita no `?` da moldura, porque o número sai
-                   em dB e o de baixo em por cento.
-
-                   E ELE NÃO É UM `.vol`: aquele tem altura FIXA de 22px e esta
-                   linha tem 17 — embrulhar custaria 5px e o portão da altura
-                   reprovaria. Ver o CSS. -->
-              <span class="ganho" data-campo="mic-ganho-fora" data-hef-alvo="classe" data-hef-classe="sem-ganho"
-                    title="Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC." role="group" aria-label="Ganho de entrada do microfone deste controle, em decibéis"><span class="trilho"><span class="cheio" data-campo="mic-ganho-barra"
-                data-hef-alvo="largura" style="width:100%"></span></span><span class="n" data-campo="mic-ganho-num">+48</span></span><span class="ajuda porque">?<span class="dica" data-campo="mic-ganho-fora" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
             <span class="onda mudo" data-campo="mic-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="mic-onda-0" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-1" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-2" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-3" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-4" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-5" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-6" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-7" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-8" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-9" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-10" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-11" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-12" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-13" data-hef-alvo="altura" style="height:16%"></i></span>
             <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
@@ -3572,11 +3566,21 @@
                    endereçou o alto-falante desta mesma coluna e deixou este
                    deslizante no número do DESENHO. Dono do valor e razão dos
                    dois alvos num endereço só: `a02_controles.volume_do_microfone`. -->
+              <span class="rot-vol">Volume</span>
               <span class="trilho"><span class="cheio" data-campo="mic-barra"
                 data-hef-alvo="largura" style="width:0%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="0" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC. Não é o mudo: a luz vermelha fica acesa e o botão do controle continua valendo. Grava na hora."></span>
               <span class="n" data-campo="mic-num">0</span>
               <button class="mudo-i" data-gesto="mic-testar" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Fala e ouve de volta. Grava três segundos da sua voz — com o volume e o ganho desta coluna já aplicados — e toca para você, exatamente como o jogo te ouve. Para calar o microfone, use o botão do próprio controle.">🎙</button>
               <span class="ajuda porque">?<span class="dica" data-campo="mic-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
+            </div>
+            <div class="vol ganho" data-campo="mic-ganho-fora" data-hef-alvo="classe"
+                 data-hef-classe="sem-ganho" title="Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC." role="group"
+                 aria-label="Ganho de entrada do microfone deste controle, em decibéis">
+              <span class="rot-vol">Ganho</span>
+              <span class="trilho"><span class="cheio" data-campo="mic-ganho-barra"
+                data-hef-alvo="largura" style="width:100%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="100" data-gesto="ganho-mic" data-campo="mic-ganho-barra" data-hef-alvo="valor" aria-label="Ganho de entrada do microfone deste controle, em decibéis" title="Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC."></span>
+              <span class="n" data-campo="mic-ganho-num">+48</span>
+              <span class="un">dB</span><span class="ajuda porque">?<span class="dica" data-campo="mic-ganho-fora" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
             <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
                  *"Os botões Virtual e Nativo ficam na parte de baixo do slider,
@@ -4103,25 +4107,6 @@
                    E o comentário que eu escrevi para explicar isto quebrou o gerador,
                    porque trazia chaves dentro da própria f-string. Por isso ele não
                    as tem. -->
-              <!-- O GANHO DE ENTRADA — O-GANHO-DO-MIC-TEM-DONO-01, 20/09/2026, e
-                   ele é o ARRANJO D: o único dos quatro medidos que custa ZERO
-                   altura. A conta está no bloco `.ganho` do CSS, com os quatro
-                   preços; o que importa aqui é que este lugar é o mesmo vão em
-                   que Virtual/Nativo moraram até 31/08, pela mesma razão.
-
-                   O QUE ELE MOSTRA NÃO É O VOLUME DE BAIXO. O trilho de baixo é o
-                   quanto do microfone o produto ENTREGA ao PC; este é o quanto o
-                   APARELHO amplifica o que entra — o `Headset Capture Volume` da
-                   placa, 0 a +48 dB, que vivia no topo sem ninguém ter escolhido.
-                   A diferença está escrita no `?` da moldura, porque o número sai
-                   em dB e o de baixo em por cento.
-
-                   E ELE NÃO É UM `.vol`: aquele tem altura FIXA de 22px e esta
-                   linha tem 17 — embrulhar custaria 5px e o portão da altura
-                   reprovaria. Ver o CSS. -->
-              <span class="ganho" data-campo="mic-ganho-fora" data-hef-alvo="classe" data-hef-classe="sem-ganho"
-                    title="Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC." role="group" aria-label="Ganho de entrada do microfone deste controle, em decibéis"><span class="trilho"><span class="cheio" data-campo="mic-ganho-barra"
-                data-hef-alvo="largura" style="width:100%"></span></span><span class="n" data-campo="mic-ganho-num">—</span></span><span class="ajuda porque">?<span class="dica" data-campo="mic-ganho-fora" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
             <span class="onda" data-campo="mic-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="mic-onda-0" data-hef-alvo="altura" style="height:18%"></i><i data-campo="mic-onda-1" data-hef-alvo="altura" style="height:30%"></i><i data-campo="mic-onda-2" data-hef-alvo="altura" style="height:22%"></i><i data-campo="mic-onda-3" data-hef-alvo="altura" style="height:41%"></i><i data-campo="mic-onda-4" data-hef-alvo="altura" style="height:28%"></i><i data-campo="mic-onda-5" data-hef-alvo="altura" style="height:19%"></i><i data-campo="mic-onda-6" data-hef-alvo="altura" style="height:35%"></i><i data-campo="mic-onda-7" data-hef-alvo="altura" style="height:24%"></i><i data-campo="mic-onda-8" data-hef-alvo="altura" style="height:30%"></i><i data-campo="mic-onda-9" data-hef-alvo="altura" style="height:20%"></i><i data-campo="mic-onda-10" data-hef-alvo="altura" style="height:38%"></i><i data-campo="mic-onda-11" data-hef-alvo="altura" style="height:26%"></i><i data-campo="mic-onda-12" data-hef-alvo="altura" style="height:22%"></i><i data-campo="mic-onda-13" data-hef-alvo="altura" style="height:31%"></i></span>
             <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
@@ -4130,11 +4115,21 @@
                    endereçou o alto-falante desta mesma coluna e deixou este
                    deslizante no número do DESENHO. Dono do valor e razão dos
                    dois alvos num endereço só: `a02_controles.volume_do_microfone`. -->
+              <span class="rot-vol">Volume</span>
               <span class="trilho"><span class="cheio" data-campo="mic-barra"
                 data-hef-alvo="largura" style="width:60%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="60" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC. Não é o mudo: a luz vermelha fica acesa e o botão do controle continua valendo. Grava na hora."></span>
               <span class="n" data-campo="mic-num">—</span>
               <button class="mudo-i" data-gesto="mic-testar" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Fala e ouve de volta. Grava três segundos da sua voz — com o volume e o ganho desta coluna já aplicados — e toca para você, exatamente como o jogo te ouve. Para calar o microfone, use o botão do próprio controle.">🎙</button>
               <span class="ajuda porque">?<span class="dica" data-campo="mic-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
+            </div>
+            <div class="vol ganho" data-campo="mic-ganho-fora" data-hef-alvo="classe"
+                 data-hef-classe="sem-ganho" title="Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC." role="group"
+                 aria-label="Ganho de entrada do microfone deste controle, em decibéis">
+              <span class="rot-vol">Ganho</span>
+              <span class="trilho"><span class="cheio" data-campo="mic-ganho-barra"
+                data-hef-alvo="largura" style="width:100%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="100" data-gesto="ganho-mic" data-campo="mic-ganho-barra" data-hef-alvo="valor" aria-label="Ganho de entrada do microfone deste controle, em decibéis" title="Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC."></span>
+              <span class="n" data-campo="mic-ganho-num">—</span>
+              <span class="un">dB</span><span class="ajuda porque">?<span class="dica" data-campo="mic-ganho-fora" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
             <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
                  *"Os botões Virtual e Nativo ficam na parte de baixo do slider,
@@ -4661,25 +4656,6 @@
                    E o comentário que eu escrevi para explicar isto quebrou o gerador,
                    porque trazia chaves dentro da própria f-string. Por isso ele não
                    as tem. -->
-              <!-- O GANHO DE ENTRADA — O-GANHO-DO-MIC-TEM-DONO-01, 20/09/2026, e
-                   ele é o ARRANJO D: o único dos quatro medidos que custa ZERO
-                   altura. A conta está no bloco `.ganho` do CSS, com os quatro
-                   preços; o que importa aqui é que este lugar é o mesmo vão em
-                   que Virtual/Nativo moraram até 31/08, pela mesma razão.
-
-                   O QUE ELE MOSTRA NÃO É O VOLUME DE BAIXO. O trilho de baixo é o
-                   quanto do microfone o produto ENTREGA ao PC; este é o quanto o
-                   APARELHO amplifica o que entra — o `Headset Capture Volume` da
-                   placa, 0 a +48 dB, que vivia no topo sem ninguém ter escolhido.
-                   A diferença está escrita no `?` da moldura, porque o número sai
-                   em dB e o de baixo em por cento.
-
-                   E ELE NÃO É UM `.vol`: aquele tem altura FIXA de 22px e esta
-                   linha tem 17 — embrulhar custaria 5px e o portão da altura
-                   reprovaria. Ver o CSS. -->
-              <span class="ganho" data-campo="mic-ganho-fora" data-hef-alvo="classe" data-hef-classe="sem-ganho"
-                    title="Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC." role="group" aria-label="Ganho de entrada do microfone deste controle, em decibéis"><span class="trilho"><span class="cheio" data-campo="mic-ganho-barra"
-                data-hef-alvo="largura" style="width:100%"></span></span><span class="n" data-campo="mic-ganho-num">—</span></span><span class="ajuda porque">?<span class="dica" data-campo="mic-ganho-fora" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
             <span class="onda mudo" data-campo="mic-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="mic-onda-0" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-1" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-2" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-3" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-4" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-5" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-6" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-7" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-8" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-9" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-10" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-11" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-12" data-hef-alvo="altura" style="height:16%"></i><i data-campo="mic-onda-13" data-hef-alvo="altura" style="height:16%"></i></span>
             <div class="vol" data-campo="mic-porque" data-hef-alvo="atributo" data-hef-atributo="data-porque">
@@ -4688,11 +4664,21 @@
                    endereçou o alto-falante desta mesma coluna e deixou este
                    deslizante no número do DESENHO. Dono do valor e razão dos
                    dois alvos num endereço só: `a02_controles.volume_do_microfone`. -->
+              <span class="rot-vol">Volume</span>
               <span class="trilho"><span class="cheio" data-campo="mic-barra"
                 data-hef-alvo="largura" style="width:75%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="75" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="Volume do microfone deste controle" title="Arraste para escolher quanto do microfone deste controle chega ao PC. Não é o mudo: a luz vermelha fica acesa e o botão do controle continua valendo. Grava na hora."></span>
               <span class="n" data-campo="mic-num">—</span>
               <button class="mudo-i" data-gesto="mic-testar" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="data-mic-luz" title="Fala e ouve de volta. Grava três segundos da sua voz — com o volume e o ganho desta coluna já aplicados — e toca para você, exatamente como o jogo te ouve. Para calar o microfone, use o botão do próprio controle.">🎙</button>
               <span class="ajuda porque">?<span class="dica" data-campo="mic-porque" data-hef-alvo="html"><i class="nada"></i></span></span>
+            </div>
+            <div class="vol ganho" data-campo="mic-ganho-fora" data-hef-alvo="classe"
+                 data-hef-classe="sem-ganho" title="Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC." role="group"
+                 aria-label="Ganho de entrada do microfone deste controle, em decibéis">
+              <span class="rot-vol">Ganho</span>
+              <span class="trilho"><span class="cheio" data-campo="mic-ganho-barra"
+                data-hef-alvo="largura" style="width:100%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="100" data-gesto="ganho-mic" data-campo="mic-ganho-barra" data-hef-alvo="valor" aria-label="Ganho de entrada do microfone deste controle, em decibéis" title="Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, o quanto desse som o produto entrega ao PC."></span>
+              <span class="n" data-campo="mic-ganho-num">—</span>
+              <span class="un">dB</span><span class="ajuda porque">?<span class="dica" data-campo="mic-ganho-fora" data-hef-alvo="html"><i class="nada"></i></span></span>
             </div>
             <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
                  *"Os botões Virtual e Nativo ficam na parte de baixo do slider,
