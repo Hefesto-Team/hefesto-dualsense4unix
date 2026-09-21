@@ -628,10 +628,11 @@ def aplicar(
 
 
 def prefixos_de_todas_as_bibliotecas() -> list[Path] | None:
-    """Todo `compatdata/<appid>` com registro, ou None se esta cópia não sabe listar.
+    """Todo prefixo wine com registro, ou None se esta cópia não sabe listar.
 
-    Reusa o `camadas_vulkan.pastas_compatdata`, que já resolve biblioteca em
-    outro disco e o mesmo `steamapps` por dois caminhos. Import TARDE e nas duas
+    Reusa o `camadas_vulkan.raizes_de_prefixo`, que soma os `compatdata` da
+    Steam (com biblioteca em outro disco e o mesmo `steamapps` por dois
+    caminhos já resolvidos) aos prefixos dos OUTROS lançadores. Import TARDE e nas duas
     formas, como lá; na cópia avulsa instalada nenhuma resolve, e a resposta
     honesta é None — não uma lista vazia disfarçada de "não achei nada".
     """
@@ -644,11 +645,24 @@ def prefixos_de_todas_as_bibliotecas() -> list[Path] | None:
             return None
     if not cv.sabe_enumerar():
         return None
+    # **TODO PREFIXO, E NÃO SÓ O DA STEAM — 21/09/2026,
+    # LANCADOR-AGNOSTICO-01.** Este laço percorria as pastas de compatibilidade
+    # da Steam, uma a uma; o prefixo do Heroic
+    # (`~/Games/Heroic/Prefixes/<Nome do Jogo>`) não está dentro de `steamapps`
+    # nenhuma, e o lote nunca o via.
+    #
+    # O NOME DA FUNÇÃO ANTIGA NÃO É CITADO AQUI de propósito: esta casa já
+    # pagou três vezes por um comentário que descreve o padrão proibido e VIRA
+    # a primeira ocorrência dele — a régua abaixo procura o literal no corpo.
+    #
+    # Medido na máquina dela: três prefixos da Steam traziam a marca
+    # `HEFESTOKS` no `system.reg` (24, 36 e 42 ocorrências) e o do Guardiões da
+    # Galáxia trazia **ZERO**. A háptica nativa não chegava ao jogo dela, e a
+    # leitura dela foi a certa: *"não funciona lá"*.
     return [
-        appid
-        for compatdata in cv.pastas_compatdata()
-        for appid in sorted(compatdata.iterdir())
-        if (appid / "pfx" / "system.reg").is_file()
+        prefixo
+        for prefixo in cv.raizes_de_prefixo()
+        if (prefixo / "pfx" / "system.reg").is_file()
     ]
 
 
