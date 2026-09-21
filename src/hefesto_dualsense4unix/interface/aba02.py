@@ -2239,19 +2239,30 @@ DICA_OUVIR_JUNTO = ("O som do PC sai no alto-falante deste controle e continua "
 ROTULO_SO_OS_EFEITOS = "Efeitos do Jogo"
 ROTULO_EFEITOS_MAIS_A_TV = "Efeitos do Jogo e Áudio da TV no Controle"
 
-#: O TERCEIRO NÃO FOI RENOMEADO, E A RAZÃO É UMA CONTRADIÇÃO MEDIDA — 20/09/2026.
-#: O nome que ela escreveu para ele é «Tudo na TV e Nada no Controle», e este
-#: botão faz o OPOSTO: ele manda a saída padrão do sistema para o alto-falante
-#: deste controle (`audio_saida.mandar_o_som_do_pc`) e cala a televisão. A
-#: própria sprint que traz o nome exige, na MORDIDA, que ele continue fazendo
-#: isso — *"«Só no controle» → som no controle, TV em zero"*.
+#: **O TERCEIRO NOME É DELA, e o ATO mudou para caber nele** — 21/09/2026,
+#: fechando a O-TERCEIRO-NOME-DELA-01. A decisão, com as duas leituras na mão:
 #:
-#: **Pôr o nome novo aqui sem trocar o ato seria a mentira que esta sprint
-#: existe para matar**, e trocar o ato por conta própria apagaria uma
-#: capacidade medida, com dono (`app/audio_saida.mandar_o_som_do_pc`), régua e
-#: ensaio. As duas leituras são dela; qual vale é decisão dela, e até lá o
-#: rótulo fica no que o botão faz de verdade.
-ROTULO_SO_NO_CONTROLE = "Só no controle"
+#:     "O nome está certo, mude o ato."
+#:
+#: **O NOME ANTIGO ERA «Só no controle», e ele não se apaga** — houve medição
+#: em cima dele, e é por isso que esta nota tem data. Ele mandava a saída
+#: padrão do sistema para o alto-falante deste controle
+#: (`audio_saida.mandar_o_som_do_pc`, byte `rota=3`) e calava a televisão.
+#: Essa capacidade **continua existindo** por IPC e por perfil, com dono,
+#: régua e ensaio; o que ela perdeu foi o botão.
+#:
+#: A ESCALA QUE ELA DESENHOU, lendo os três nomes juntos — **pouco · tudo ·
+#: nada** —, é o que torna a fileira uma pergunta só com três respostas que se
+#: excluem. E o «nada» é o `rota=0`: estéreo para o FONE, com o alto-falante
+#: do controle fora do caminho, mais a saída padrão devolvida à televisão.
+ROTULO_NADA_NO_CONTROLE = "Tudo na TV e Nada no Controle"
+
+#: A DICA DO TERCEIRO diz o que ele faz dos DOIS lados — o que sai do controle
+#: e o que volta para a televisão —, porque o nome dela já diz os dois e um
+#: `title` que repetisse só metade contradiria o botão.
+DICA_NADA_NO_CONTROLE = (
+    "O som do computador volta todo para a televisão, e o alto-falante deste "
+    "controle para de tocar. O microfone e a vibração não mudam.")
 
 DICA_ALTO_MUDO = ("Cala o alto-falante do controle, sem perder o volume "
                   "guardado. A partir daqui quem guarda esse volume é o "
@@ -2600,7 +2611,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
           # que passou a ACENDER por leitura. Ele fica na assinatura porque
           # `mesa_viva.estado_do_card` — o dono dos kwargs, e de outra onda —
           # ainda o monta; tirá-lo daqui quebraria a chamada sem ganhar nada.
-          giro, mic_v, mic_mudo, mic_vol, alto_v, rota_pc, estado_alto,
+          giro, mic_v, mic_mudo, mic_vol, alto_v, rota_nada, estado_alto,
           alto_mudo=False, alto_pode=True, mic_posse=False, tocando=True,
           mic_modo="virtual", accel=None, conectado=True,
           # O GANHO NASCE COM OPINIÃO, e ela é a de §6.3 da sprint: o topo da
@@ -3012,7 +3023,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 <b>{ROTULO_SO_OS_EFEITOS}</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
                 <b>{ROTULO_EFEITOS_MAIS_A_TV}</b>: tudo o que a máquina toca cai aqui também, e continua saindo na TV.
-                <b>{ROTULO_SO_NO_CONTROLE}</b>: o som do PC sai aqui, e a TV cala.
+                <b>{ROTULO_NADA_NO_CONTROLE}</b>: o alto-falante deste controle para de tocar, e o som do PC volta todo para a TV.
               </span></span>
             </div>
             {onda(alto_v, lado="alto")}
@@ -3035,9 +3046,9 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                  um par novo abaixo seria a segunda gramática que o gerador já
                  recusou uma vez. -->
             <div class="rota">
-              <button class="{'on' if not rota_pc else ''}" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">{ROTULO_SO_OS_EFEITOS}</button>
+              <button class="{'on' if not rota_nada else ''}" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">{ROTULO_SO_OS_EFEITOS}</button>
               <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="{DICA_OUVIR_JUNTO}">{ROTULO_EFEITOS_MAIS_A_TV}</button>
-              <button class="{'on' if rota_pc else ''}" data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc">{ROTULO_SO_NO_CONTROLE}</button>
+              <button class="{'on' if rota_nada else ''}" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" title="{DICA_NADA_NO_CONTROLE}">{ROTULO_NADA_NO_CONTROLE}</button>
             </div>
             <!-- A RESSALVA DA ROTA — a peça da ONDA0-F (D-02), e o texto é do
                  motor (`audio_saida.MOTIVO_ROTA_SO_NO_BYTE`). Ela existe por um
@@ -3265,7 +3276,7 @@ ESTADO = {
           ("Z", " +0.170", "left:50%;width:4%;background:var(--cyan)"),
     ],
     mic_v=[22, 48, 72, 95, 64, 38, 52, 80, 44, 26, 58, 88, 40, 20], mic_mudo=False,
-    alto_v=[100, 88, 64, 92, 76, 54, 82, 96, 70, 48, 86, 60, 74, 90], rota_pc=False),
+    alto_v=[100, 88, 64, 92, 76, 54, 82, 96, 70, 48, 86, 60, 74, 90], rota_nada=False),
 
   # O P2 É O "SEM TOQUE" DA CENA, e é o mesmo contraste que já faz dele o do
   # microfone MUDO: com a mesa cheia é o CONTRASTE que ensina a ler o card, e
@@ -3282,7 +3293,7 @@ ESTADO = {
           ("Z", " +0.041", "left:50%;width:1%;background:var(--cyan)"),
     ],
     mic_v=[4, 6, 5, 4, 6, 5, 4, 5, 6, 4, 5, 4, 6, 5], mic_modo="desativado", mic_mudo=True,
-    alto_v=[70, 52, 66, 44, 72, 58, 48, 64, 54, 70, 46, 60, 50, 68], rota_pc=True),
+    alto_v=[70, 52, 66, 44, 72, 58, 48, 64, 54, 70, 46, 60, 50, 68], rota_nada=True),
 
   "p3": dict(bat=31, carga="descarregando", estado_alto="Acordado",
     mic_vol=60, glifos_on={"circle"},
@@ -3299,7 +3310,7 @@ ESTADO = {
           ("Z", "      —", "left:50%;width:0%"),
     ],
     mic_v=[18, 30, 22, 41, 28, 19, 35, 24, 30, 20, 38, 26, 22, 31], mic_modo="nativo", mic_mudo=False,
-    alto_v=[55, 40, 62, 48, 58, 36, 50, 44, 60, 38, 52, 46, 42, 56], rota_pc=False),
+    alto_v=[55, 40, 62, 48, 58, 36, 50, 44, 60, 38, 52, 46, 42, 56], rota_nada=False),
 
   "p4": dict(bat=88, carga="fora_de_faixa", estado_alto="Acordado",
     mic_vol=75, glifos_on={"triangle", "r1"},
@@ -3316,7 +3327,7 @@ ESTADO = {
           ("Z", " −0.201", "left:45%;width:5%;background:var(--cyan)"),
     ],
     mic_v=[5, 4, 6, 5, 4, 5, 6, 4, 5, 6, 4, 5, 4, 6], mic_mudo=True,
-    alto_v=[80, 66, 74, 58, 84, 62, 70, 76, 54, 68, 60, 78, 64, 72], rota_pc=False),
+    alto_v=[80, 66, 74, 58, 84, 62, 70, 76, 54, 68, 60, 78, 64, 72], rota_nada=False),
 }
 
 # O QUE ABRE É O ALVO DA FITA, E O ALVO É DA MESA. Ele estava escrito duas
@@ -4412,21 +4423,31 @@ def _conferir(doc):
     #      uma decisão de PALAVRA morder: o rótulo sai do HTML acima, e a
     #      correspondência `data-rota` → rótulo mora aqui. Trocar um nome no
     #      desenho sem a palavra dela PARA o gerador.
-    #      MORDIDA: devolva `Todo o som do PC` ao botão `data-rota="pc"`.
+    #      MORDIDA: devolva `Só no controle` ao terceiro botão.
     #
-    #      OS DOIS PRIMEIROS TROCARAM DE PALAVRA EM 20/09/2026, e a palavra é
-    #      dela: *"Efeitos do Jogo, Efeitos do Jogo e Áudio da TV no Controle,
-    #      Tudo na TV e Nada no Controle"*. Os literais ficam DIGITADOS aqui de
-    #      propósito — ler `ROTULO_*` faria esta régua medir a própria saída,
-    #      que é a trava que não trava nada (07/09/2026).
+    #      OS TRÊS TÊM A PALAVRA DELA DESDE 21/09/2026, e o terceiro foi o
+    #      último: *"Efeitos do Jogo, Efeitos do Jogo e Áudio da TV no
+    #      Controle, Tudo na TV e Nada no Controle"*. Os literais ficam
+    #      DIGITADOS aqui de propósito — ler `ROTULO_*` faria esta régua medir
+    #      a própria saída, que é a trava que não trava nada (07/09/2026).
+    #
+    #      **ESTA TRAVA INVERTEU DE SENTIDO**, e a inversão é a entrega da
+    #      O-TERCEIRO-NOME-DELA-01. De 11 a 20/09 ela EXIGIA «Só no controle»
+    #      no terceiro, e exigia com razão: o botão fazia o oposto do nome que
+    #      ela escrevera — mandava todo o som do PC para o controle e calava a
+    #      televisão. Perguntada com as duas leituras na mão, ela decidiu:
+    #      *"O nome está certo, mude o ato."* O ato mudou (`rota = 0`, o
+    #      alto-falante fora do caminho, mais a saída padrão devolvida), e a
+    #      régua segue o ato. **O `data-rota` mudou junto** — `pc` continua
+    #      existindo no gesto, no perfil e no IPC, mas fora da fileira.
     for rota, palavra_dela in (("jogo", "Efeitos do Jogo"),
                                ("junto", "Efeitos do Jogo e Áudio da TV no Controle"),
-                               ("pc", "Só no controle")):
+                               ("nada", "Tudo na TV e Nada no Controle")):
         vistos = re.findall(rf'data-rota="{rota}"[^>]*>([^<]*)</button>', corpo)
         exigir(vistos == [palavra_dela] * len(MESA),
                f"o botão `{rota}` da rota do som diz {sorted(set(vistos)) or '[]'} "
-               f"e a palavra dela de 11/09 é {palavra_dela!r} — os três nomes dizem "
-               f"DE ONDE O SOM SAI, que é o que os separa")
+               f"e a palavra dela é {palavra_dela!r} — os três nomes são uma "
+               f"escala de QUANTO SOM ENTRA NO CONTROLE: pouco · tudo · nada")
 
     # 2c. A BATERIA TEM ENDEREÇO, os DOIS. Sem eles o número e a barra ficam
     #     nos 100% / 64% que este gerador desenhou, com o controle dela em

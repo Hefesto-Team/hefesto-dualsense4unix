@@ -276,8 +276,24 @@ def test_mascara_xbox_explica_em_vez_de_acusar() -> None:
     )
     linhas = _por_recurso(estado)
 
-    assert linhas["giroscopio"].texto == "a máscara Xbox 360 não tem giroscópio"
-    assert linhas["touchpad"].texto == "a máscara Xbox 360 não tem touchpad"
+    # **O SUJEITO DA FRASE MUDOU EM 21/09/2026, POR ORDEM DELA**, e esta régua
+    # passa a cobrar a PROPRIEDADE em vez do literal. Ela leu a frase antiga
+    # («a máscara Xbox 360 não tem giroscópio») no cabeçalho do cartão e
+    # disse: *"essa frase não deveria existir, não tem sentido tendo em vista
+    # que o giroscopio e mic fazem parte independente do modo ou mascara"*.
+    #
+    # Ela estava certa: o fato é sobre o CANAL ATÉ O JOGO, e a frase o
+    # afirmava sobre o APARELHO. Cravar o literal aqui prenderia a tela ao
+    # sujeito errado — e é o que prendeu por quinze dias.
+    for recurso in ("giroscopio", "touchpad"):
+        texto = linhas[recurso].texto
+        assert "o jogo vê este controle como Xbox 360" in texto, (
+            f"a frase de `{recurso}` perdeu o sujeito — ela volta a afirmar "
+            f"sobre o aparelho o que só vale para o canal: {texto!r}")
+        assert recurso.replace("giroscopio", "giroscópio") in texto
+        assert "no Hefesto ele segue ativo" in texto, (
+            f"a frase de `{recurso}` deixou de dizer que o recurso continua "
+            f"vivo no produto — sem isso ela lê-se como «você não tem»")
     assert linhas["vibracao"].texto == "no jogo agora"
     for recurso in ("giroscopio", "touchpad"):
         for palavra in PALAVRA_DA_SITUACAO.values():

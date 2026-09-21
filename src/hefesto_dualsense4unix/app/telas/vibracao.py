@@ -280,7 +280,7 @@ def motores_do_controle(entrada: dict[str, Any], state: dict[str, Any]) -> dict[
 
     **E O ``pedido_de_vibracao_fresco`` NÃO ENTRA AQUI — a razão certa, 02/09.**
     A razão que circulou era falsa: *"ele é consultado por dentro do
-    ``motores_no_fisico``"*. Não é — li o corpo (``controller_card.py:1511-1541``):
+    ``motores_no_fisico``"*. Não é — li o corpo (``controller_card.py:1589-1648``):
     o freio dele é próprio (``rumble_no_fisico_ha_s > ATIVIDADE_FRESCA_S``), e
     quem põe os dois em série é o CHAMADOR, ``estado_do_recurso`` (``:1719``
     pergunta *"o jogo PEDIU?"*, e só então ``:1721`` pergunta *"chegou aos
