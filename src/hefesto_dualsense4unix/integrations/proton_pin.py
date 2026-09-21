@@ -145,7 +145,8 @@ _FORA_DO_PINO_HEADER = """\
 #
 # AppIDs listados aqui não são travados no Proton validado: nem pelo install,
 # nem pelo vigia da Steam, nem pelo botão da aba Sistema. O Proton que você
-# escolher para eles na janela da Steam fica como está.
+# escolher para eles na janela da Steam fica como está — e o jogo que já
+# estava no Proton validado volta ao de antes quando a Steam fechar.
 #
 # Sem o Proton pinado, um upgrade de Proton pode trazer de volta o controle
 # duplicado dentro do jogo. Uma linha por AppID; '#' comenta.
@@ -1758,6 +1759,136 @@ def unlock_games_from_pinned_proton(
     return result
 
 
+def destravar_um_jogo(
+    appid: int | str,
+    *,
+    config_vdf: Path | None = None,
+    state_path: Path | None = None,
+    home: Path | None = None,
+    dry_run: bool = False,
+) -> dict[str, object]:
+    """O `unlock` para UM jogo: devolve ESTE appid ao Proton que tinha antes.
+
+    NASCEU EM 21/09/2026 para a lista de exclusão
+    (OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01, E2). O
+    `jogos_fora_do_pino.txt` só tirava o jogo do PRÓXIMO lock, e o único
+    desfazer que existia, :func:`unlock_games_from_pinned_proton`, é o do
+    desinstalar: devolve TODOS. O vigia chama esta função pelo
+    :func:`destravar_os_de_fora`, e a lista de exclusão, na hora do clique.
+
+    A REGRA É A MESMA DO DESINSTALAR, recortada para um appid: reverte só o que
+    o registro diz ser nosso, e **se ela trocou o Proton do jogo depois do
+    pino, a escolha é dela e fica** (`remove_compat_tool_mapping` pula a
+    entrada cujo nome não é mais o nosso). O registro perde só a linha deste
+    jogo; o resto dele — os outros jogos e o histórico dos pinos — fica.
+
+    Status em ``status``: ``"destravado"`` | ``"noop"`` (``reason``:
+    ``nao_era_nosso``, ``sem_estado``) | ``"recusado"`` (Steam aberta, outra
+    trava) | ``"erro"``. Nunca levanta.
+    """
+    alvo = str(appid).strip()
+    vdf = config_vdf if config_vdf is not None else default_config_vdf(home)
+    state = state_path if state_path is not None else default_lock_state_path(home)
+    result: dict[str, object] = {
+        "status": "erro", "reason": "", "vdf": str(vdf), "reverted": 0, "backup": "",
+    }
+    try:
+        data = json.loads(state.read_text(encoding="utf-8"))
+    except OSError:
+        result["status"] = "noop"
+        result["reason"] = "sem_estado"
+        return result
+    except ValueError:
+        result["reason"] = "estado_corrompido"
+        return result
+    tool_name = data.get("tool_name", "")
+    changes = data.get("changes", {})
+    if not tool_name or not isinstance(changes, dict) or alvo not in changes:
+        result["status"] = "noop"
+        result["reason"] = "nao_era_nosso"
+        return result
+    if not vdf.is_file():
+        result["reason"] = "config_vdf_ausente"
+        return result
+    if not dry_run:
+        refusal = _steam_gate()
+        if refusal is not None:
+            result["status"] = "recusado"
+            result["reason"] = refusal
+            return result
+    try:
+        with _uma_trava_por_vez(state, ativa=not dry_run):
+            try:
+                original = vdf.read_text(encoding="utf-8")
+                new_text, reverted = remove_compat_tool_mapping(
+                    original, tool_name=tool_name, changes={alvo: changes[alvo]}
+                )
+            except OSError as exc:
+                result["reason"] = str(exc)
+                return result
+            result["reverted"] = reverted
+            if dry_run:
+                result["status"] = "destravado"
+                result["reason"] = "dry_run"
+                return result
+            try:
+                if reverted:
+                    result["backup"] = str(_write_vdf_with_backup(vdf, new_text))
+                # A LINHA SAI DO REGISTRO MESMO QUANDO NADA FOI REVERTIDO: o
+                # `reverted == 0` quer dizer que ela já tinha trocado o Proton
+                # do jogo — a entrada deixou de ser nossa, e guardá-la faria um
+                # desinstalar futuro tentar desfazer o que não é mais nosso.
+                restante = {k: v for k, v in changes.items() if k != alvo}
+                tmp = state.with_name(state.name + ".tmp")
+                tmp.write_text(
+                    json.dumps({**data, "changes": restante,
+                                "updated_at": int(time.time())}, indent=2) + "\n",
+                    encoding="utf-8",
+                )
+                tmp.replace(state)
+            except OSError as exc:
+                result["reason"] = str(exc)
+                return result
+    except _TravaOcupadaError:
+        result["status"] = "recusado"
+        result["reason"] = "outra_trava_em_curso"
+        return result
+    result["status"] = "destravado"
+    return result
+
+
+def destravar_os_de_fora(
+    *,
+    config_vdf: Path | None = None,
+    state_path: Path | None = None,
+    home: Path | None = None,
+    fora: Sequence[str] | None = None,
+) -> list[str]:
+    """Tira do NOSSO pino os jogos de `jogos_fora_do_pino.txt`. Nunca levanta.
+
+    21/09/2026 (OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01, E2). A lista
+    fazia o jogo ser PULADO pelo lock, e um jogo que já estava no pino ao
+    entrar nela continuava lá — o cabeçalho do arquivo promete *"o Proton que
+    você escolher para eles fica como está"*, e o que ficava era o nosso. Cada
+    jogo passa por :func:`destravar_um_jogo`, com a regra dele: só sai o que o
+    registro diz ser nosso, e a escolha dela depois do pino fica.
+
+    Devolve os appids destravados. Os recusados (Steam aberta) ficam para o
+    próximo ciclo do vigia, que é quem chama isto.
+    """
+    nomes = list(fora) if fora is not None else ler_jogos_fora_do_pino(
+        fora_do_pino_path(home)
+    )
+    destravados: list[str] = []
+    for appid in nomes:
+        resultado = destravar_um_jogo(
+            appid, config_vdf=config_vdf, state_path=state_path, home=home
+        )
+        if resultado.get("status") == "destravado":
+            destravados.append(str(appid).strip())
+    return destravados
+
+
 # --------------------------------------------------------------------------
 # Doctor helper (puro) + inventário de jogos instalados
 # --------------------------------------------------------------------------
@@ -2246,7 +2377,7 @@ def _cmd_manter(args: argparse.Namespace) -> int:
         print(f"[proton-pin] manter: {vdf} ainda não existe — nada a travar")
         return 0
     appids = list_installed_appids()
-    return _travar_e_contar(
+    rc = _travar_e_contar(
         lock_games_to_pinned_proton(
             tool_name=name,
             appids=appids,
@@ -2260,6 +2391,12 @@ def _cmd_manter(args: argparse.Namespace) -> int:
         mirados=len(appids),
         prefixo="manter",
     )
+    # O AVESSO, no mesmo ciclo (21/09/2026): o lock PULA quem está fora do
+    # pino, e este passo tira dele quem já estava — é o que faz a lista de
+    # exclusão do Hefesto valer no disco sem ninguém apertar mais nada.
+    for appid in destravar_os_de_fora(config_vdf=vdf, state_path=args.state):
+        print(f"[proton-pin] manter: {appid} saiu do pino (jogos_fora_do_pino.txt)")
+    return rc
 
 
 def _cmd_lock(args: argparse.Namespace) -> int:
@@ -2361,8 +2498,9 @@ def nomear_fora_do_pino(appid: int | str, *, nota: str = "") -> str:
     privado deste módulo. A lista de exclusão precisa escrever nela também, e
     importar o cabeçalho privado seria um segundo dono do formato.
 
-    NÃO DESPINA: tira o jogo do PRÓXIMO lock. A entrada que ele já tem no
-    `config.vdf` fica como está — quem a tira é `unlock_games_from_pinned_proton`.
+    NÃO DESPINA NA HORA: escreve a lista e só. A entrada que o jogo já tem no
+    `config.vdf` sai quando a Steam fechar — o `--manter` do vigia chama
+    :func:`destravar_os_de_fora` —, ou na hora, por :func:`destravar_um_jogo`.
     """
     return add_appid_to_steam_input_allowlist(
         appid,
@@ -2392,8 +2530,9 @@ def _cmd_fora_do_pino(args: argparse.Namespace) -> int:
     if status in ("appid_invalido", "erro"):
         return 1
     print(
-        "[proton-pin] a entrada que ele já tem no config.vdf fica como está; "
-        "escolha o Proton dele na janela da Steam."
+        "[proton-pin] se ele já estava no Proton validado, volta ao de antes "
+        "quando a Steam fechar; o Proton que você escolher na janela da Steam "
+        "fica como está."
     )
     return 0
 

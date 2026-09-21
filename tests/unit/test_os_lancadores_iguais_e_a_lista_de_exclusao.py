@@ -13,13 +13,19 @@ jogos do Proton pinado na máquina dela.
 from __future__ import annotations
 
 import inspect
+import json
 from pathlib import Path
 
 import pytest
 
 from hefesto_dualsense4unix.integrations import lista_de_exclusao as lx
 from hefesto_dualsense4unix.integrations import proton_pin
+from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+from tests.unit.test_proton_pin import PIN_NAME, _config_vdf
+from tests.unit.test_sentinela_do_wrapper_01_a_steam_comeu_o_hefesto_launch import (
+    _vdf as _localconfig,
+)
 
 _CHAVE = "steam_app_1088850"
 _APPID = "1088850"
@@ -167,3 +173,207 @@ def test_a_linha_de_comando_do_pino_passa_pelo_dono() -> None:
     de exclusão escrevem pela MESMA função."""
     assert "nomear_fora_do_pino" in inspect.getsource(proton_pin._cmd_fora_do_pino)
     assert "devolver_ao_pino" in inspect.getsource(proton_pin._cmd_de_volta_ao_pino)
+
+
+# ---------------------------------------------------------------------------
+# E2 — tirar o pino de UM jogo (`proton_pin.destravar_um_jogo`)
+# ---------------------------------------------------------------------------
+#
+# O `jogos_fora_do_pino.txt` só tira o jogo do PRÓXIMO lock, e o único
+# desfazer que existia era o do desinstalar, que devolve TODOS. A exclusão
+# precisa devolver UM — e com a regra do desinstalar: só o que é nosso.
+
+@pytest.fixture
+def _steam_fechada(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(proton_pin, "steam_running", lambda: False)
+    monkeypatch.setattr(proton_pin, "steam_game_running", lambda: False)
+
+
+def _pinar(tmp_path: Path, jogos: list[str]) -> tuple[Path, Path]:
+    vdf = tmp_path / "config.vdf"
+    vdf.write_text(_config_vdf({"1245620": "proton_11"}), encoding="utf-8")
+    estado = tmp_path / "estado" / "proton-pin-lock.json"
+    r = proton_pin.lock_games_to_pinned_proton(
+        tool_name=PIN_NAME, appids=jogos, config_vdf=vdf, state_path=estado)
+    assert r["status"] == "locked", r
+    return vdf, estado
+
+
+def test_destravar_um_jogo_devolve_so_ele(tmp_path: Path, _steam_fechada: None) -> None:
+    """ARRANQUE o recorte `changes={alvo: …}` (passe o registro inteiro) e este
+    teste reprova: excluir UM jogo tiraria o pino de TODOS — o desinstalar
+    disfarçado de botão."""
+    vdf, estado = _pinar(tmp_path, ["1599660", "1971870"])
+    r = proton_pin.destravar_um_jogo("1599660", config_vdf=vdf, state_path=estado)
+    assert r["status"] == "destravado" and r["reverted"] == 1, r
+    mapa = proton_pin.extract_compat_tool_mapping(vdf.read_text(encoding="utf-8"))
+    assert "1599660" not in mapa, "o jogo excluído continua pinado"
+    assert mapa.get("1971870") == PIN_NAME, "o OUTRO jogo perdeu o pino"
+    registro = json.loads(estado.read_text(encoding="utf-8"))
+    assert "1599660" not in registro["changes"]
+    assert "1971870" in registro["changes"], "o registro do outro jogo sumiu"
+
+
+def test_destravar_nao_desfaz_o_proton_que_ela_trocou(
+        tmp_path: Path, _steam_fechada: None) -> None:
+    """A regra do desinstalar, recortada: se ela trocou o Proton do jogo DEPOIS
+    do pino, a escolha é dela e fica — e a linha sai do registro, para um
+    desinstalar futuro não tentar desfazer o que não é mais nosso."""
+    vdf, estado = _pinar(tmp_path, ["1599660"])
+    texto = vdf.read_text(encoding="utf-8")
+    vdf.write_text(texto.replace(f'"{PIN_NAME}"', '"proton_9"', 2), encoding="utf-8")
+    trocado = proton_pin.extract_compat_tool_mapping(vdf.read_text(encoding="utf-8"))
+    assert trocado.get("1599660") == "proton_9"
+    r = proton_pin.destravar_um_jogo("1599660", config_vdf=vdf, state_path=estado)
+    assert r["status"] == "destravado" and r["reverted"] == 0, r
+    assert proton_pin.extract_compat_tool_mapping(
+        vdf.read_text(encoding="utf-8")).get("1599660") == "proton_9"
+    assert "1599660" not in json.loads(estado.read_text(encoding="utf-8"))["changes"]
+
+
+def test_destravar_com_a_steam_aberta_nao_toca_em_nada(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch, _steam_fechada: None) -> None:
+    """ARRANQUE o `_steam_gate()` e este teste reprova: a Steam viva regrava o
+    `config.vdf` ao sair, e a edição seria perdida — ou pior, corrompida."""
+    vdf, estado = _pinar(tmp_path, ["1599660"])
+    antes = vdf.read_text(encoding="utf-8"), estado.read_text(encoding="utf-8")
+    monkeypatch.setattr(proton_pin, "steam_running", lambda: True)
+    r = proton_pin.destravar_um_jogo("1599660", config_vdf=vdf, state_path=estado)
+    assert r["status"] == "recusado", r
+    assert (vdf.read_text(encoding="utf-8"), estado.read_text(encoding="utf-8")) == antes
+
+
+def test_destravar_o_que_nao_e_nosso_e_noop(tmp_path: Path, _steam_fechada: None) -> None:
+    vdf, estado = _pinar(tmp_path, ["1599660"])
+    antes = vdf.read_text(encoding="utf-8")
+    r = proton_pin.destravar_um_jogo("424242", config_vdf=vdf, state_path=estado)
+    assert (r["status"], r["reason"]) == ("noop", "nao_era_nosso")
+    assert vdf.read_text(encoding="utf-8") == antes
+
+
+# ---------------------------------------------------------------------------
+# E2 — tirar o atalho de UM jogo, e o vigia honrando a lista nos dois sentidos
+# ---------------------------------------------------------------------------
+#
+# A lista `jogos_sem_wrapper.txt` só fazia o jogo ser PULADO: o que ele já
+# tinha ficava. Agora o dono do atalho sabe tirar de um jogo só, e o reparo do
+# vigia tira de quem está na lista.
+
+#: A linha dela que tem de sobreviver byte a byte (a do PRAGMATA, 14/08).
+_DELA = "VKD3D_CONFIG=no_upload_hvv %command%"
+
+
+@pytest.fixture
+def _steam_fechada_no_atalho(monkeypatch: pytest.MonkeyPatch) -> None:
+    for modulo in (slo, sw):
+        monkeypatch.setattr(modulo, "steam_running", lambda: False)
+        monkeypatch.setattr(modulo, "steam_game_running", lambda: False)
+
+
+def _biblioteca(tmp_path: Path) -> Path:
+    vdf = tmp_path / "localconfig.vdf"
+    vdf.write_text(_localconfig({
+        "1599660": slo.migrate_value(_DELA),
+        "1971870": slo.WRAPPER_LAUNCH,
+    }), encoding="utf-8")
+    return vdf
+
+
+def test_tirar_o_atalho_tira_so_o_jogo_pedido(
+        tmp_path: Path, _steam_fechada_no_atalho: None) -> None:
+    """ARRANQUE o filtro `so_os_jogos` do `transform_vdf_text` e este teste
+    reprova: excluir UM jogo tiraria o atalho da biblioteca inteira — o
+    `--strip` do desinstalar disfarçado de botão."""
+    vdf = _biblioteca(tmp_path)
+    r = slo.tirar_o_atalho_dos_jogos(["1599660"], vdfs=[vdf])
+    apps = slo.read_apps_by_appid(vdf.read_text(encoding="utf-8"))
+    assert [i["appid"] for i in r["removed"]] == ["1599660"], r
+    assert apps["1599660"] == _DELA, "a linha dela não sobreviveu"
+    assert slo.WRAPPER_PREFIX in (apps["1971870"] or ""), "o OUTRO jogo perdeu o atalho"
+
+
+def test_tirar_o_atalho_com_a_steam_aberta_nao_toca(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+        _steam_fechada_no_atalho: None) -> None:
+    vdf = _biblioteca(tmp_path)
+    antes = vdf.read_text(encoding="utf-8")
+    monkeypatch.setattr(slo, "steam_running", lambda: True)
+    r = slo.tirar_o_atalho_dos_jogos(["1599660"], vdfs=[vdf])
+    assert [e["reason"] for e in r["errors"]] == ["steam_aberta"], r
+    assert vdf.read_text(encoding="utf-8") == antes
+
+
+def test_o_vigia_tira_o_atalho_de_quem_esta_na_lista(
+        tmp_path: Path, _steam_fechada_no_atalho: None) -> None:
+    """ARRANQUE o `recusados_com_wrapper` do censo e este teste reprova: o
+    reparo do vigia diria «nada a fazer», e o jogo que ela excluiu continuaria
+    abrindo pelo Hefesto."""
+    vdf = _biblioteca(tmp_path)
+    assert slo.marcar_jogo_sem_wrapper("1599660") == "adicionado"
+    status, censo, resultado = sw.reparar_ou_adiar(
+        vdfs=[vdf], registro=tmp_path / "visto.json")
+    assert status == sw.REPARO_FEITO, (status, censo)
+    assert resultado is not None
+    assert [i["appid"] for i in resultado["removed"]] == ["1599660"]
+    apps = slo.read_apps_by_appid(vdf.read_text(encoding="utf-8"))
+    assert apps["1599660"] == _DELA
+    assert slo.WRAPPER_PREFIX in (apps["1971870"] or "")
+
+
+def test_o_vigia_nao_repoe_o_atalho_de_quem_esta_na_lista(
+        tmp_path: Path, _steam_fechada_no_atalho: None) -> None:
+    """O avesso, que já valia e tem de continuar valendo: o jogo da lista sem
+    o atalho é o estado CERTO, e o reparo não briga com ele."""
+    vdf = tmp_path / "localconfig.vdf"
+    vdf.write_text(_localconfig({"1599660": _DELA}), encoding="utf-8")
+    slo.marcar_jogo_sem_wrapper("1599660")
+    status, _, _ = sw.reparar_ou_adiar(vdfs=[vdf], registro=tmp_path / "visto.json")
+    assert status == sw.REPARO_NADA
+    assert slo.read_apps_by_appid(vdf.read_text(encoding="utf-8"))["1599660"] == _DELA
+
+
+# ---------------------------------------------------------------------------
+# E2 — «tirar do disco»: o passo do vigia, feito na hora do clique
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def _steam_do_teste(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+        _steam_fechada: None, _steam_fechada_no_atalho: None) -> tuple[Path, Path, Path]:
+    """Os três arquivos da Steam apontados para a pasta de teste — nenhum
+    caminho padrão alcança a Steam de verdade dela."""
+    config_vdf, estado = _pinar(tmp_path, ["1599660", "1971870"])
+    biblioteca = _biblioteca(tmp_path)
+    monkeypatch.setattr(proton_pin, "default_config_vdf", lambda home=None: config_vdf)
+    monkeypatch.setattr(proton_pin, "default_lock_state_path", lambda home=None: estado)
+    monkeypatch.setattr(slo, "discover_vdfs", lambda home=None: [biblioteca])
+    return config_vdf, estado, biblioteca
+
+
+def test_excluir_com_a_steam_fechada_tira_pino_e_atalho_na_hora(
+        _steam_do_teste: tuple[Path, Path, Path]) -> None:
+    """ARRANQUE uma das duas chamadas do `tirar_do_disco` e este teste reprova:
+    o jogo abriria UMA vez pelo Hefesto antes de a Steam fechar e o vigia
+    terminar o serviço."""
+    config_vdf, _, biblioteca = _steam_do_teste
+    assert lx.tirar_do_disco("steam_app_1599660") == "feito"
+    mapa = proton_pin.extract_compat_tool_mapping(config_vdf.read_text(encoding="utf-8"))
+    assert "1599660" not in mapa and mapa.get("1971870") == PIN_NAME
+    apps = slo.read_apps_by_appid(biblioteca.read_text(encoding="utf-8"))
+    assert apps["1599660"] == _DELA
+    assert slo.WRAPPER_PREFIX in (apps["1971870"] or "")
+    assert lx.tirar_do_disco("steam_app_1599660") == "nada_a_tirar"
+
+
+def test_excluir_com_a_steam_aberta_espera_e_nao_escreve(
+        _steam_do_teste: tuple[Path, Path, Path], monkeypatch: pytest.MonkeyPatch) -> None:
+    config_vdf, estado, biblioteca = _steam_do_teste
+    antes = [p.read_text(encoding="utf-8") for p in (config_vdf, estado, biblioteca)]
+    for modulo in (proton_pin, slo):
+        monkeypatch.setattr(modulo, "steam_running", lambda: True)
+    assert lx.tirar_do_disco("steam_app_1599660") == "espera_a_steam"
+    assert [p.read_text(encoding="utf-8") for p in (config_vdf, estado, biblioteca)] == antes
+
+
+def test_o_emulador_nao_tem_o_que_tirar_do_disco() -> None:
+    assert lx.tirar_do_disco("retroarch") == "sem_appid"

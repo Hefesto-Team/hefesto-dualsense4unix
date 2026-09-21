@@ -61,7 +61,7 @@ import shutil
 import subprocess
 import sys
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Collection, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -423,7 +423,9 @@ def migrate_value(value: str) -> str:
     return WRAPPER_LAUNCH + " " + out
 
 
-def transform_vdf_text(text: str, mode: str) -> tuple[str, int]:
+def transform_vdf_text(
+    text: str, mode: str, *, so_os_jogos: Collection[str] | None = None
+) -> tuple[str, int]:
     """Aplica `migrate`/`strip` às linhas LaunchOptions de um vdf.
 
     Retorna (texto novo, nº de linhas alteradas). Só toca linhas que contêm
@@ -458,6 +460,11 @@ def transform_vdf_text(text: str, mode: str) -> tuple[str, int]:
     texto que sobrou é da dona da máquina (o `strip` de alguma leva anterior
     comeu a nossa parte e deixou a dela). É o único modo que APAGA, nunca
     roda sozinho, e vive atrás da flag `--recolher-fora-da-arvore-viva`.
+
+    ``so_os_jogos`` (OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01, 21/09/2026)
+    restringe a reescrita às linhas cujo bloco é um destes appids — em todas
+    as árvores, como o ``strip`` já faz. ``None`` é o arquivo inteiro, o
+    comportamento de sempre. É o que deixa tirar o atalho de UM jogo.
     """
     if mode not in ("migrate", "strip", "recolher"):
         raise ValueError(f"modo desconhecido: {mode}")
@@ -486,6 +493,8 @@ def transform_vdf_text(text: str, mode: str) -> tuple[str, int]:
             )
             continue
         pendente = None
+        if so_os_jogos is not None and (not pilha or pilha[-1] not in so_os_jogos):
+            continue
         na_canonica = (
             bool(pilha) and pilha[-1].isdigit() and e_a_arvore_canonica(pilha[:-1])
         )
@@ -676,7 +685,9 @@ def apply_wrapper_vdf_text(
 
     ``excluir``: appids que a USUÁRIA marcou como "não quero o wrapper neste
     jogo" (SENTINELA-WRAPPER-01). Saem com o motivo ``opt_out_da_usuaria`` e
-    nada é escrito neles — o produto não briga com a dona da máquina. A lista
+    nada é escrito neles — o produto não briga com a dona da máquina. (Quem
+    TIRA o atalho que eles já têm é o `tirar_o_atalho_dos_jogos`, chamado pelo
+    reparo do vigia desde 21/09/2026; aqui só se pula.) A lista
     vem do `jogos_sem_wrapper.txt`; ``None`` significa "não excluir ninguém"
     (o comportamento histórico), nunca "leia o arquivo real" — quem lê o
     arquivo é o chamador, para esta função continuar pura.
@@ -877,6 +888,87 @@ def apply_wrapper_to_all_games(
                 continue
         for appid in applied:
             result["applied"].append({"vdf": str(vdf), "appid": appid, "reason": ""})
+    return result
+
+
+def tirar_o_atalho_dos_jogos(
+    appids: Sequence[str],
+    home: Path | None = None,
+    vdfs: list[Path] | None = None,
+    *,
+    dry_run: bool = False,
+) -> dict[str, list[dict[str, str]]]:
+    """Tira o NOSSO trecho da `LaunchOptions` destes jogos, e só deles.
+
+    OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01, 21/09/2026 (§11.2). Até
+    aqui o atalho só saía em massa (``--strip``, o do desinstalar), e a lista
+    `jogos_sem_wrapper.txt` só fazia o jogo ser PULADO: um jogo que já tinha o
+    atalho continuava com ele depois de entrar na lista. Excluir um jogo do
+    Hefesto tem de tirar o que ele já tem.
+
+    Tira o que o ``strip`` tira — o wrapper e o veneno legado —, preserva as
+    opções dela na mesma linha byte a byte (``strip_value``) e só toca o bloco
+    destes appids, em todas as árvores. Os portões são os do
+    ``apply_wrapper_to_all_games``, na mesma ordem: jogo aberto, depois Steam
+    aberta — a Steam viva regrava o vdf ao sair e engoliria a edição.
+
+    Retorna ``{"removed": [...], "skipped": [...], "errors": [...]}``, cada
+    item ``{"vdf", "appid", "reason"}``. Backup ``.bak.hefesto-launch-<ts>``
+    ao lado de cada vdf tocado. Nunca levanta.
+    """
+    result: dict[str, list[dict[str, str]]] = {
+        "removed": [],
+        "skipped": [],
+        "errors": [],
+    }
+    alvo = {str(a).strip() for a in appids if str(a).strip()}
+    if not alvo:
+        return result
+    invalidar_varredura_de_proc()
+    if not dry_run and steam_game_running():
+        result["errors"].append(
+            {"vdf": "", "appid": "", "reason": "jogo_da_steam_aberto"}
+        )
+        return result
+    if not dry_run and steam_running():
+        result["errors"].append({"vdf": "", "appid": "", "reason": "steam_aberta"})
+        return result
+    for vdf in vdfs if vdfs is not None else discover_vdfs(home):
+        if is_sandboxed_layout(vdf):
+            result["skipped"].append(
+                {"vdf": str(vdf), "appid": "", "reason": "sandbox"}
+            )
+            continue
+        try:
+            original = vdf.read_text(encoding="utf-8")
+        except (OSError, ValueError) as exc:
+            result["errors"].append(
+                {"vdf": str(vdf), "appid": "", "reason": str(exc)}
+            )
+            continue
+        novo, mudadas = transform_vdf_text(original, "strip", so_os_jogos=alvo)
+        if mudadas == 0:
+            continue
+        antes = read_apps_by_appid(original)
+        depois = read_apps_by_appid(novo)
+        tirados = sorted(a for a in alvo if antes.get(a) != depois.get(a))
+        if not dry_run:
+            try:
+                backup = vdf.with_name(
+                    vdf.name + f".bak.hefesto-launch-{int(time.time())}"
+                )
+                shutil.copy2(vdf, backup)
+                tmp = vdf.with_name(vdf.name + ".hefesto-tmp")
+                tmp.write_text(novo, encoding="utf-8")
+                shutil.copymode(vdf, tmp)
+                tmp.replace(vdf)
+            except OSError as exc:
+                result["errors"].append(
+                    {"vdf": str(vdf), "appid": "", "reason": str(exc)}
+                )
+                continue
+        for appid in tirados:
+            result["removed"].append({"vdf": str(vdf), "appid": appid, "reason": ""})
     return result
 
 
@@ -1823,7 +1915,8 @@ _SEM_WRAPPER_HEADER = """\
 #
 # AppIDs listados aqui ficam de fora do "Aplicar aos jogos da Steam", do passo
 # sem flag do install e do reparo automático — e o aviso de "este jogo perdeu
-# as opções de inicialização" não aparece para eles.
+# as opções de inicialização" não aparece para eles. O jogo que já tinha o
+# atalho o perde quando a Steam fechar; as outras opções da linha ficam.
 #
 # Um jogo sem o wrapper NÃO recebe as envs do Hefesto: no Bluetooth ele tende
 # a não enxergar controle nenhum, com o perfil e a luz seguindo acesos.
