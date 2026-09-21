@@ -12,21 +12,34 @@ jogos do Proton pinado na máquina dela.
 
 from __future__ import annotations
 
+import asyncio
 import inspect
 import json
 import shutil
 import subprocess
 from collections.abc import Iterator
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
+from hefesto_dualsense4unix.daemon.lifecycle import (
+    ORIGEM_EXCLUSAO,
+    Daemon,
+    DaemonConfig,
+)
+from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
 from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
 from hefesto_dualsense4unix.integrations import lista_de_exclusao as lx
 from hefesto_dualsense4unix.integrations import proton_pin
 from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+from hefesto_dualsense4unix.profiles import loader as loader_module
+from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
+from hefesto_dualsense4unix.profiles.manager import ProfileManager
+from hefesto_dualsense4unix.testing import FakeController
+from hefesto_dualsense4unix.utils import session
 from tests.unit.test_a_cura_do_engasgo_alcanca_todos_os_prefixos import EPIC
 from tests.unit.test_a_cura_do_engasgo_alcanca_todos_os_prefixos import (
     _registro as _registro_com_camadas,
@@ -549,3 +562,182 @@ def test_os_appids_da_lista_sao_so_os_de_steam() -> None:
     lx.adicionar("steam_app_1599660", lancador="steam", nome="Wo Long")
     lx.adicionar("retroarch", lancador="emulador", nome="RetroArch")
     assert lx.appids() == ["1599660"]
+
+
+# ---------------------------------------------------------------------------
+# E3 — a camada ao vivo: a janela excluída em foco liga o Modo Nativo
+# ---------------------------------------------------------------------------
+#
+# O Modo Nativo JÁ é o «Hefesto fora»: gatilhos Off na mesa inteira, vibração
+# do jogo, emulação desligada e guardada, o físico exposto ao jogo. A exclusão
+# o liga com a origem dela, anota a POSSE no stash, e solta ao sair do foco.
+
+_JANELA = "steam_app_1599660"
+
+
+class _NativoCapturado:
+    """O `set_native_mode` do daemon trocado por um que só registra — a régua
+    mede a POLÍTICA, e nada aqui escreve no controle dela."""
+
+    def __init__(self, daemon: Daemon, monkeypatch: pytest.MonkeyPatch) -> None:
+        self.chamadas: list[tuple[bool, str]] = []
+
+        def _nativo(enabled: bool, *, reapply: bool = True,
+                    restore_stash: bool = False, origin: str = "manual") -> bool:
+            self.chamadas.append((enabled, origin))
+            daemon._native_mode = enabled
+            return enabled
+
+        monkeypatch.setattr(daemon, "set_native_mode", _nativo)
+
+
+@pytest.fixture
+def _daemon(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Daemon:
+    """O flag do Modo Nativo vai para a pasta do teste: o lar de mentira da
+    suíte é COMPARTILHADO, e um `native_mode.flag` que sobrasse faria o
+    próximo daemon da suíte nascer solto."""
+    casa = tmp_path / "config-do-daemon"
+    monkeypatch.setattr(session, "config_dir", lambda ensure=False: casa.mkdir(
+        parents=True, exist_ok=True) or casa)
+    return Daemon(controller=FakeController(), config=DaemonConfig())
+
+
+def test_a_janela_excluida_liga_o_modo_nativo(
+        _daemon: Daemon, monkeypatch: pytest.MonkeyPatch) -> None:
+    nativo = _NativoCapturado(_daemon, monkeypatch)
+    _daemon.aplicar_a_exclusao(chave=_JANELA)
+    _daemon.aplicar_a_exclusao(chave=_JANELA)
+    assert nativo.chamadas == [(True, ORIGEM_EXCLUSAO)], "um pedido por episódio"
+    _daemon.reverter_a_exclusao()
+    assert nativo.chamadas[-1] == (False, ORIGEM_EXCLUSAO)
+    assert _daemon._exclusao_viva is None
+
+
+def test_o_modo_nativo_dela_nao_e_desligado_pela_exclusao(
+        _daemon: Daemon, monkeypatch: pytest.MonkeyPatch) -> None:
+    """ARRANQUE o `ligou_nativo` e este teste reprova: sair do jogo excluído
+    desligaria o Modo Nativo que ELA tinha ligado antes."""
+    nativo = _NativoCapturado(_daemon, monkeypatch)
+    _daemon._native_mode = True
+    _daemon.aplicar_a_exclusao(chave=_JANELA)
+    _daemon.reverter_a_exclusao()
+    assert nativo.chamadas == []
+    assert _daemon._native_mode is True
+
+
+def test_a_posse_da_exclusao_atravessa_o_reinicio(
+        _daemon: Daemon, monkeypatch: pytest.MonkeyPatch) -> None:
+    """ARRANQUE a leitura da posse do `_carregar_o_modo_nativo` e este teste
+    reprova: o daemon reiniciado com o jogo excluído em foco leria o Modo
+    Nativo como gesto dela, e o controle ficaria solto depois do jogo."""
+    _NativoCapturado(_daemon, monkeypatch)
+    _daemon.aplicar_a_exclusao(chave=_JANELA)
+
+    renascido = Daemon(controller=FakeController(), config=DaemonConfig())
+    nativo = _NativoCapturado(renascido, monkeypatch)
+    renascido._carregar_o_modo_nativo()
+    assert renascido._native_mode is True
+    assert renascido._exclusao_viva is not None
+    assert renascido._exclusao_viva.chave == _JANELA
+    renascido.reverter_a_exclusao()
+    assert nativo.chamadas == [(False, ORIGEM_EXCLUSAO)]
+
+
+class _EspiaoDaExclusao:
+    def __init__(self) -> None:
+        self.aplicadas: list[str] = []
+        self.revertidas = 0
+        self.modo_padrao: list[str] = []
+
+    def aplicar(self, *, chave: str) -> str:
+        self.aplicadas.append(chave)
+        return "aplicado"
+
+    def reverter(self) -> str:
+        self.revertidas += 1
+        return "aplicado"
+
+    def modo_jogo_padrao(self, *, wm_class: str = "") -> str:
+        self.modo_padrao.append(wm_class)
+        return "aplicado"
+
+
+def _o_autoswitch(espiao: _EspiaoDaExclusao) -> AutoSwitcher:
+    controle = FakeController()
+    controle.connect()
+    store = StateStore()
+    return AutoSwitcher(
+        manager=ProfileManager(controller=controle, store=store),
+        window_reader=lambda: {},
+        store=store,
+        modo_jogo_padrao_applier=espiao.modo_jogo_padrao,
+        modo_jogo_padrao_reverter=lambda **_: "aplicado",
+        exclusao_applier=espiao.aplicar,
+        exclusao_reverter=espiao.reverter,
+        exclusao_reader=lx.contem,
+    )
+
+
+def test_a_janela_excluida_nao_pede_perfil_nem_modo_jogo(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """ARRANQUE o `_na_exclusao` do tique e este teste reprova: o jogo que ela
+    excluiu ganharia o modo jogo padrão — o gamepad virtual na frente dele."""
+    monkeypatch.setattr(loader_module, "profiles_dir", lambda ensure=False: tmp_path)
+    lx.adicionar(_JANELA, lancador="steam", nome="Wo Long")
+    espiao = _EspiaoDaExclusao()
+    sw = _o_autoswitch(espiao)
+    for t in (0.0, 0.6, 60.0):
+        sw._tick({"wm_class": _JANELA, "wm_name": "Wo Long"}, t)
+    assert espiao.aplicadas == [_JANELA] * 3
+    assert espiao.modo_padrao == []
+    assert sw._current_profile is None
+
+    sw._tick({"wm_class": "firefox", "wm_name": "Mozilla"}, 61.0)
+    assert espiao.revertidas == 1
+
+
+def test_fora_da_lista_nada_muda(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(loader_module, "profiles_dir", lambda ensure=False: tmp_path)
+    espiao = _EspiaoDaExclusao()
+    sw = _o_autoswitch(espiao)
+    sw._tick({"wm_class": _JANELA, "wm_name": "Wo Long"}, 0.0)
+    sw._tick({"wm_class": "firefox"}, 1.0)
+    assert espiao.aplicadas == [] and espiao.revertidas == 0
+
+
+@pytest.mark.parametrize("rota", ["subsistema", "utilitaria"])
+def test_as_duas_rotas_de_subida_ligam_os_tres_fios(
+        rota: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    """ARRANQUE um dos três fios de uma das rotas e este teste reprova: o
+    autoswitch subiria sem saber da lista, e a E3 inteira ficaria escrita e
+    desligada — a cura que ninguém chama, o defeito mais caro desta casa."""
+    from hefesto_dualsense4unix.daemon.subsystems import autoswitch as sub
+    from hefesto_dualsense4unix.profiles import autoswitch as perfis
+    from hefesto_dualsense4unix.profiles import manager as gerente
+
+    capturado: dict[str, object] = {}
+
+    class _Captura:
+        def __init__(self, **kwargs: object) -> None:
+            capturado.update(kwargs)
+
+        def disabled(self) -> bool:
+            return True
+
+    monkeypatch.setattr(sub, "_ensure_display_env", lambda: None)
+    monkeypatch.setattr(sub, "_build_diag_window_reader", lambda store: lambda: {})
+    monkeypatch.setattr(perfis, "AutoSwitcher", _Captura)
+    monkeypatch.setattr(gerente, "gerente_do_daemon", lambda *a, **k: object())
+    daemon = SimpleNamespace(
+        store=StateStore(),
+        aplicar_a_exclusao=lambda **_: "aplicado",
+        reverter_a_exclusao=lambda: "aplicado",
+    )
+    if rota == "subsistema":
+        ctx = SimpleNamespace(daemon=daemon, controller=None, store=daemon.store)
+        asyncio.run(sub.AutoswitchSubsystem().start(ctx))  # type: ignore[arg-type]
+    else:
+        asyncio.run(sub.start_autoswitch(daemon))  # type: ignore[arg-type]
+    assert capturado["exclusao_applier"] is daemon.aplicar_a_exclusao
+    assert capturado["exclusao_reverter"] is daemon.reverter_a_exclusao
+    assert capturado["exclusao_reader"] is lx.contem

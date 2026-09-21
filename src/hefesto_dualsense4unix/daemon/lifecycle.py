@@ -25,7 +25,7 @@ import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from typing import Any, Literal, cast, get_args
+from typing import Any, Final, Literal, cast, get_args
 
 from hefesto_dualsense4unix.core.controller import ControllerState, IController
 from hefesto_dualsense4unix.core.events import EventBus, EventTopic
@@ -600,6 +600,19 @@ ORIGEM_GAME_SIGNAL = "game_signal"
 IGNORADO_SEM_JOGO = "ignorado_sem_jogo"
 IGNORADO_GESTO_DELA = "ignorado_gesto_dela"
 
+#: OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01, E3 (21/09/2026): a origem do
+#: Modo Nativo que a LISTA DE EXCLUSÃO ligou. O jogo em foco está na lista, e
+#: ele vê o controle como se o Hefesto não estivesse instalado — que é
+#: exatamente o que o Modo Nativo já faz: gatilhos soltos na mesa inteira,
+#: vibração do jogo, emulação desligada, o físico exposto ao jogo.
+ORIGEM_EXCLUSAO: Final = "exclusão"
+
+#: A chave do stash do Modo Nativo em que a exclusão anota a POSSE. O stash é
+#: o JSON que já atravessa um reinício do daemon; sem a anotação, um daemon
+#: reiniciado com o jogo excluído aberto leria o modo como gesto dela, e o
+#: controle ficaria solto depois de o jogo sair do foco.
+STASH_DA_EXCLUSAO = "exclusão"
+
 #: AUTO-01.1: o auto-ligar da emulação não agiu porque não há segundo controle
 #: na mesa. Estado próprio (e não `IGNORADO_SEM_JOGO`) porque é o caso NORMAL de
 #: quem joga sozinho — nada aconteceu de errado, simplesmente não há co-op a
@@ -640,6 +653,33 @@ class ModoJogoPadrao:
     ligou_gamepad: bool
     dono_anterior: str | None
     wm_class: str
+
+
+@dataclass
+class ExclusaoViva:
+    """O Modo Nativo que a lista de exclusão ligou (E3), e só ele.
+
+    Mesma razão do :class:`ModoJogoPadrao`: soltar ao sair do foco tem de ser
+    EXATO. Se o Modo Nativo já estava ligado — por gesto dela ou por perfil —
+    a exclusão não o ligou, e ao sair não o desliga (`ligou_nativo`).
+    """
+
+    chave: str
+    ligou_nativo: bool
+    dono_anterior: str | None
+
+
+def exclusao_do_stash(stash: object) -> ExclusaoViva | None:
+    """A posse que a exclusão anotou no stash do Modo Nativo, ou None."""
+    anotada = stash.get(STASH_DA_EXCLUSAO) if isinstance(stash, dict) else None
+    if not isinstance(anotada, dict) or not str(anotada.get("chave") or ""):
+        return None
+    dono = anotada.get("dono_anterior")
+    return ExclusaoViva(
+        chave=str(anotada["chave"]),
+        ligou_nativo=True,
+        dono_anterior=dono if isinstance(dono, str) else None,
+    )
 
 
 @dataclass
@@ -767,6 +807,9 @@ class Daemon:
     # MODO-01/B3: o modo jogo que o SINAL DE JOGO ligou, sem perfil nenhum.
     # None = não há modo jogo padrão de pé. Ver `ModoJogoPadrao`.
     _modo_jogo_padrao: ModoJogoPadrao | None = None
+    # OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01, E3: o Modo Nativo que a
+    # lista de exclusão ligou. None = nenhum jogo excluído em foco.
+    _exclusao_viva: ExclusaoViva | None = None
     # MODO-01/B3: último estado LOGADO de `aplicar_modo_jogo_padrao`. O
     # autoswitch pede a 2 Hz enquanto o jogo está em foco; sem esta chave, os
     # ~30 s de espera do lock de gesto manual virariam 60 linhas no journal.
@@ -996,8 +1039,7 @@ class Daemon:
         # SOLTO — o controle fica com o jogo. Implica pausado e NÃO restaura
         # emulação nem re-aplica perfil (os `not self._native_mode` abaixo e o
         # gate em `restore_last_profile`).
-        from hefesto_dualsense4unix.utils.session import load_native_mode
-        self._native_mode, self._native_emu_stash = load_native_mode()
+        self._carregar_o_modo_nativo()
         # CONFIG-03 (22/08/2026): a declaração de MESA do `maquina.json`. Ler no
         # boot, ao lado dos outros flags de disco, e NÃO a cada consulta: o
         # arquivo é da mesa, muda por gesto dela e nunca por trás do daemon.
@@ -1351,7 +1393,7 @@ class Daemon:
         *,
         reapply: bool = True,
         restore_stash: bool = False,
-        origin: Literal["manual", "profile"],
+        origin: Literal["manual", "profile", "exclusão"],
     ) -> bool:
         """Liga/desliga o Modo Nativo — "release total" do controle.
 
@@ -3127,6 +3169,78 @@ class Daemon:
         if gamepad_on:
             self.set_gamepad_emulation(False, origin="profile")
         self._mode_from_profile = None
+        return APLICADO
+
+    def _carregar_o_modo_nativo(self) -> None:
+        """O Modo Nativo da sessão anterior, e a posse da exclusão junto.
+
+        Saiu de dentro do `run()` em 21/09/2026 (E3 da
+        OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01) para a régua poder
+        chamá-lo: a posse que a exclusão anota no stash só vale se ESTE passo a
+        ler. Sem ele, um daemon reiniciado com o jogo excluído em foco leria o
+        modo como gesto dela e deixaria o controle solto depois do jogo.
+        """
+        from hefesto_dualsense4unix.utils.session import load_native_mode
+
+        self._native_mode, self._native_emu_stash = load_native_mode()
+        self._exclusao_viva = (
+            exclusao_do_stash(self._native_emu_stash) if self._native_mode else None
+        )
+
+    def aplicar_a_exclusao(self, *, chave: str) -> str:
+        """O jogo em foco está na lista de exclusão: o Hefesto sai da frente.
+
+        OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01, E3. A frase da sprint é
+        *"o jogo excluído vê o controle como se o Hefesto não estivesse
+        instalado"*, e a peça que faz isso já existe: o Modo Nativo (release
+        total — gatilhos Off na mesa inteira, vibração do jogo, emulação
+        desligada e guardada, saída muda, o físico exposto ao jogo pelo
+        broker). A exclusão o liga com a origem dela e ANOTA a posse no stash.
+
+        Chamada pelo `AutoSwitcher` a cada tique com a janela excluída em
+        foco — idempotente. O lock de gesto manual NÃO adia: a exclusão é
+        tudo-ou-nada (D-2109-A-EXCLUSAO-E-TUDO-OU-NADA), e um gesto de modo
+        dela de 20 s atrás não pode fazer o jogo que ela excluiu abrir com o
+        Hefesto na frente.
+        """
+        if self._exclusao_viva is not None:
+            return APLICADO
+        from hefesto_dualsense4unix.utils.session import save_native_mode
+
+        ligou = not self._native_mode
+        dono = self._mode_from_profile
+        if ligou:
+            self.set_native_mode(True, origin=ORIGEM_EXCLUSAO)
+            self._native_emu_stash = {
+                **self._native_emu_stash,
+                STASH_DA_EXCLUSAO: {"chave": chave, "dono_anterior": dono},
+            }
+            save_native_mode(True, emu_stash=self._native_emu_stash)
+        self._exclusao_viva = ExclusaoViva(
+            chave=chave, ligou_nativo=ligou, dono_anterior=dono
+        )
+        logger.info("exclusao_aplicada", chave=chave, ligou_nativo=ligou)
+        return APLICADO
+
+    def reverter_a_exclusao(self) -> str:
+        """O jogo excluído saiu do foco: devolve o que a exclusão tirou.
+
+        Só desliga o Modo Nativo se foi a exclusão que o ligou; a saída
+        re-aplica o perfil corrente e restaura a emulação do stash — é o mesmo
+        caminho de quem sai do Modo Nativo pela tela.
+        """
+        viva = self._exclusao_viva
+        if viva is None:
+            return IGNORADO_SEM_JOGO
+        self._exclusao_viva = None
+        if viva.ligou_nativo and self._native_mode:
+            self.set_native_mode(
+                False, reapply=True, restore_stash=True, origin=ORIGEM_EXCLUSAO
+            )
+        self._mode_from_profile = viva.dono_anterior
+        logger.info(
+            "exclusao_revertida", chave=viva.chave, desligou_nativo=viva.ligou_nativo
+        )
         return APLICADO
 
     def aplicar_modo_jogo_padrao(self, *, wm_class: str = "") -> str:
