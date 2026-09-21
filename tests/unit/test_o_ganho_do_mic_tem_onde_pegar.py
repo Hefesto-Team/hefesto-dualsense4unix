@@ -114,7 +114,8 @@ class TestOAtoChegaAoAparelho:
     def test_o_gesto_esta_registrado_e_chama_o_escritor(self) -> None:
         """MORDIDA: tire o decorador, ou troque a chamada por um `pass`."""
         fonte = PACOTE.read_text(encoding="utf-8")
-        assert '@gesto("02-controles.html", "ganho-mic")' in fonte
+        assert '@gesto("02-controles.html", "ganho-mic", grava="save_profile")' in fonte, (
+            "o gesto perdeu o `grava` — o ganho volta a não viajar no perfil")
         i = fonte.index("def ganho_mic(")
         corpo = fonte[i:i + 2500]
         assert "definir_ganho_do_microfone(" in corpo, (
@@ -131,12 +132,20 @@ class TestOAtoChegaAoAparelho:
 
         MORDIDA: devolva `(por_cento, 0.0)` sem reler.
         """
-        fonte = PACOTE.read_text(encoding="utf-8")
-        i = fonte.index("def definir_ganho_do_microfone(")
-        corpo = fonte[i:fonte.index("\ndef ", i + 10)]
-        assert corpo.count("scontents") >= 2, (
+        # **O CORPO MUDOU DE CASA EM 21/09/2026**, e esta régua foi com ele.
+        # `definir` mora em `integrations/ganho_do_microfone.py` desde que o
+        # `profiles/manager.py` passou a precisar dele — um módulo de perfil
+        # importando uma ABA da interface é a dependência que não pode existir.
+        # A régua continua medindo o MESMO fato: quem responde quanto o ganho
+        # ficou é o aparelho, relido.
+        do_sistema = pathlib.Path(
+            "src/hefesto_dualsense4unix/integrations/ganho_do_microfone.py"
+        ).read_text(encoding="utf-8")
+        i = do_sistema.index("def definir(")
+        corpo_real = do_sistema[i:]
+        assert corpo_real.count("scontents") >= 2, (
             "o escritor não relê o aparelho depois de escrever")
-        assert "depois[1], depois[2]" in corpo, (
+        assert "depois[1], depois[2]" in corpo_real, (
             "o retorno não é a releitura")
 
     def test_o_guarda_do_clique_duplo_esta_no_lugar(self) -> None:
@@ -229,3 +238,167 @@ def test_a_razao_do_cinza_e_a_mesma_da_recusa() -> None:
     fonte = PACOTE.read_text(encoding="utf-8")
     i = fonte.index("def ganho_mic(")
     assert "RAZAO_DO_GANHO_FORA" in fonte[i:i + 2500]
+
+
+class TestOGanhoViajaNoPerfil:
+    """**21/09/2026 — a segunda metade da ordem dela, e a que faltava.**
+
+        *"E LEMBRANDO OS DOIS SLICERS REFLETEM TANTO LÁ QUANTO NO JOGO E ISSO
+        DEVE SER SALVO."*
+
+    Os dois deslizantes da coluna do microfone são o VOLUME (o ganho da fonte
+    no PipeWire) e o GANHO (o da placa ALSA). O volume viajava no perfil desde
+    MIC-VOLUME-01; o ganho nasceu em 20/09 e ficou **um dia declarado como
+    dívida** — honestamente declarado, e ela o leu na tela antes de qualquer um
+    de nós reler o arquivo da declaração.
+
+    As quatro réguas abaixo cobrem o caminho inteiro, e a ordem é a do dado:
+    o campo existe → o gesto grava → o Salvar não destrói → a ativação aplica.
+    """
+
+    def _perfil_vazio(self):
+        from hefesto_dualsense4unix.profiles.schema import MatchManual, Profile
+
+        return Profile(name="regua-do-ganho", match=MatchManual())
+
+    def test_o_campo_existe_nos_dois_niveis(self):
+        """MORDIDA: tire `gain` de um dos dois. O `model_copy` do gesto passa a
+        guardar um campo que o esquema descarta, e o ganho some no `to_profile`
+        sem uma palavra.
+        """
+        from hefesto_dualsense4unix.profiles.schema import (
+            ControllerMicOverride,
+            ProfileMicConfig,
+        )
+
+        assert "gain" in ProfileMicConfig.model_fields
+        assert "gain" in ControllerMicOverride.model_fields
+
+    def test_o_ganho_chega_ao_controllers_do_perfil(self):
+        """O gesto grava no `controllers[uniq]`, nunca só na seção global.
+
+        **E O MOTIVO É O APLICADOR**: sem `uniq` não há como resolver QUAL
+        placa ALSA, e escrever na primeira que aparecer poria o ganho de um
+        controle no microfone de outro. Um ganho guardado só na global não é
+        aplicado por ninguém.
+
+        MORDIDA: faça `with_controller_mic` ignorar o `gain`.
+        """
+        from hefesto_dualsense4unix.app.draft_config import DraftConfig
+
+        prof = self._perfil_vazio()
+        d = DraftConfig.from_profile(prof)
+        uniq = "aa:bb:cc:00:00:01"
+        d2 = d.with_controller_mic(
+            uniq, d.effective_mic_for(uniq).model_copy(update={"gain": 62}))
+        p2 = d2.to_profile(prof.name, priority=prof.priority)
+        guardado = [v.mic.gain for v in (p2.controllers or {}).values()]
+        assert guardado == [62], f"o ganho não chegou ao disco: {p2.controllers}"
+
+    def test_o_salvar_nao_destroi_o_ganho(self):
+        """**A FAMÍLIA DE DEFEITO QUE ISTO EVITA TEM NOME E DATA:** em 05/09 o
+        «Salvar» DESTRUÍA três dos seis campos que a aba tinha acabado de
+        gravar no disco — e os destruía DEPOIS de o produto acertar.
+
+        A volta completa: perfil → draft → perfil. O ganho tem de sobreviver.
+
+        MORDIDA: tire `gain=profile.mic.gain` do `from_profile`. Esta régua
+        reprova; a de cima, não — e é por isso que são duas.
+        """
+        from hefesto_dualsense4unix.app.draft_config import DraftConfig
+
+        prof = self._perfil_vazio()
+        d = DraftConfig.from_profile(prof)
+        uniq = "aa:bb:cc:00:00:01"
+        p2 = d.with_controller_mic(
+            uniq, d.effective_mic_for(uniq).model_copy(update={"gain": 62})
+        ).to_profile(prof.name, priority=prof.priority)
+        chave = next(iter(p2.controllers))
+        # A VOLTA: abrir na janela e salvar de novo, sem tocar em nada.
+        d3 = DraftConfig.from_profile(p2)
+        assert d3.effective_mic_for(chave).gain == 62, (
+            "o ganho não chegou ao card — o override guarda e a tela não lê")
+        p3 = d3.to_profile(prof.name, priority=p2.priority)
+        assert p3.controllers[chave].mic.gain == 62, (
+            "o Salvar destruiu o ganho que a aba tinha gravado")
+
+    def test_a_ativacao_do_perfil_escreve_o_ganho_na_placa(self):
+        """**«GRAVEI» NÃO É «CHEGOU AO APARELHO»** — é a régua desta casa, e o
+        campo que grava e ninguém aplica é pior que campo nenhum: ele acende a
+        coluna «Ajuste próprio» sobre um valor que nada aplica.
+
+        MORDIDA: tire a chamada a `_aplicar_ganho_do_mic` do `apply_mic`.
+        """
+        from hefesto_dualsense4unix.profiles import manager as mgr
+
+        escritos = []
+
+        class _Falso:
+            @staticmethod
+            def definir(uniq, por_cento, na_mesa):
+                escritos.append((uniq, por_cento, tuple(na_mesa)))
+                return (por_cento, -3.0)
+
+        # **O ALVO DO DUBLÊ É O ATRIBUTO DO PACOTE, não o `sys.modules`** —
+        # `from hefesto_dualsense4unix.integrations import ganho_do_microfone`
+        # resolve pelo atributo, e trocar só a entrada do `sys.modules` deixaria
+        # o produto falando com o `amixer` da máquina que roda a suíte. Foi
+        # assim que esta régua deu verde sobre nada na primeira escrita.
+        from hefesto_dualsense4unix import integrations
+        from hefesto_dualsense4unix.integrations import ganho_do_microfone
+
+        antes = ganho_do_microfone.definir
+        integrations.ganho_do_microfone.definir = _Falso.definir
+        try:
+            m = mgr.ProfileManager.__new__(mgr.ProfileManager)
+            relatorio: dict[str, str] = {}
+            secao = type("S", (), {"gain": 62})()
+            estado = m._aplicar_ganho_do_mic(secao, "aa:bb:cc:00:00:01", relatorio)
+        finally:
+            integrations.ganho_do_microfone.definir = antes
+
+        assert escritos == [("aa:bb:cc:00:00:01", 62, ("aa:bb:cc:00:00:01",))]
+        assert estado == "aplicado"
+        assert relatorio["mic:ganho:aa:bb:cc:00:00:01"] == "aplicado"
+
+    def test_sem_uniq_nao_escreve_na_placa_de_ninguem(self):
+        """A seção GLOBAL não sabe em qual placa escrever, e chutar a primeira
+        poria o ganho de um controle no microfone de outro.
+
+        MORDIDA: troque o `if not uniq` por um recuo ao primário. Esta régua
+        reprova, e o defeito que ela descreve já aconteceu nesta casa com o
+        alvo de saída do áudio (`_handle_for(None)` caía no primário).
+        """
+        from hefesto_dualsense4unix.profiles import manager as mgr
+
+        m = mgr.ProfileManager.__new__(mgr.ProfileManager)
+        relatorio: dict[str, str] = {}
+        secao = type("S", (), {"gain": 62})()
+        assert m._aplicar_ganho_do_mic(secao, None, relatorio) == "sem_uniq"
+        assert relatorio == {"mic:ganho": "sem_uniq"}
+
+    def test_o_apply_mic_chama_mesmo_o_aplicador_do_ganho(self):
+        """**A RÉGUA DE CIMA MEDE O MÉTODO; ESTA MEDE A LIGAÇÃO.**
+
+        Sem ela, `_aplicar_ganho_do_mic` poderia existir inteiro e correto e
+        nunca ser chamado — *a cura escrita e nunca ligada*, que é o defeito
+        mais caro desta casa e já custou uma leva inteira.
+
+        E a ORDEM importa: a chamada tem de vir ANTES do `return None` que
+        atalha a seção sem `volume` e sem `muted`. Um perfil que guarde só o
+        ganho sairia pela porta sem escrever nada.
+
+        MORDIDA: mova a chamada para depois do `return None`.
+        """
+        fonte = pathlib.Path(
+            "src/hefesto_dualsense4unix/profiles/manager.py"
+        ).read_text(encoding="utf-8")
+        i = fonte.index("    def apply_mic(")
+        corpo = fonte[i : fonte.index("\n    def ", i + 10)]
+        assert "self._aplicar_ganho_do_mic(" in corpo, (
+            "o `apply_mic` não chama o aplicador do ganho — a cura está "
+            "escrita e não ligada")
+        assert corpo.index("self._aplicar_ganho_do_mic(") < corpo.index(
+            "if volume is None and muted is None:"
+        ), "o ganho é aplicado DEPOIS do atalho — um perfil só com ganho sai " \
+           "pela porta sem escrever nada"

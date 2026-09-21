@@ -135,6 +135,9 @@ from hefesto_dualsense4unix.core.speaker_scale import (
 # `core.led_control.player_led_pattern` — o caminho por onde o produto acende as
 # luzes de verdade. Uma segunda receita aqui divergiria da primeira no dia em que
 # alguém mexesse numa delas.
+from hefesto_dualsense4unix.integrations import (
+    ganho_do_microfone as _ganho_no_aparelho,
+)
 from hefesto_dualsense4unix.interface.monta import luzinhas
 
 from . import (
@@ -1300,95 +1303,29 @@ def _ler_o_nativo(na_mesa: tuple[str, ...]) -> dict[str, bool | None]:
 #: segundos, que é a família de defeito que `nativo_fora_de_alcance` nomeia.
 _GANHO: dict[str, tuple[int, float] | None] = {}
 
-#: O ELEMENTO DE GANHO NÃO SE DIGITA, e esta constante não é o nome dele: é o
-#: que o `amixer scontents` chama de CAPACIDADE de volume de captura. Quem
-#: escolhe o elemento é a mesma regra do decisor do `doctor`
-#: (`_dualsense_porta_de_captura_status`): o primeiro controle simples que tem
-#: `cvolume` **e** canais de captura. Cravar `Headset` aqui faria esta aba
-#: responder sobre o DualSense e calar em qualquer outro aparelho — e o produto
-#: é para qualquer usuário.
-_CAPACIDADE_DE_GANHO = "cvolume"
 
-#: O default do ganho, ESCRITO E JUSTIFICADO — §6.3 da sprint, pela ordem dela
-#: de 17/09 (*nenhum campo nasce sem opinião*).
+#: **O GANHO MUDOU DE CASA EM 21/09/2026, e a mudança é de CAMADA.** O leitor,
+#: o escritor e a resolução da placa ALSA moram em
+#: `integrations/ganho_do_microfone.py`; esta aba consome. A razão é a ordem
+#: dela — *"OS DOIS SLICERS REFLETEM TANTO LÁ QUANTO NO JOGO E ISSO DEVE SER
+#: SALVO"* —, e para o perfil salvar o ganho o `profiles/manager.py` precisa
+#: chamá-lo. Um módulo de perfil importando uma ABA da interface é a
+#: dependência que não pode existir, e era o que o arranjo anterior exigia.
 #:
-#: **É o topo da faixa**, que é o que o firmware entrega: o `Headset Capture
-#: Volume` vive em 101/101 = +48,00 dB desde que alguém o mediu. A razão de não
-#: baixar é dela e está medida — *o único microfone dela é o do DualSense* —, e
-#: baixar por conta própria faria o microfone dela ficar MAIS BAIXO do que está
-#: hoje, numa sprint cujo nome é «ter dono», não «mudar o som». O que muda é que
-#: a partir daqui o valor é ESCOLHA, e não sobra de firmware.
-GANHO_PADRAO_PCT = 100
+#: Os nomes abaixo ficam como ESTAVAM porque são o vocabulário desta aba e de
+#: oito réguas: o que mudou é onde o corpo mora.
+GANHO_PADRAO_PCT = _ganho_no_aparelho.GANHO_PADRAO_PCT
+_CAPACIDADE_DE_GANHO = _ganho_no_aparelho._CAPACIDADE_DE_GANHO
+_nome_do_scontrol = _ganho_no_aparelho._nome_do_scontrol
+_ganho_do_scontents = _ganho_no_aparelho.ganho_do_scontents
+_elemento_e_ganho_do_scontents = _ganho_no_aparelho.elemento_e_ganho_do_scontents
+_placa_de_cada_fonte = _ganho_no_aparelho.placa_de_cada_fonte
+placa_alsa_do_controle = _ganho_no_aparelho.placa_do_controle
 
 
-def _nome_do_scontrol(crua: str) -> str:
-    """`'Headset',0` -> `Headset,0` — o que o `amixer sset` aceita em argv."""
-    achado = re.match(r"^\s*'(.*)',(\d+)\s*$", crua)
-    return f"{achado.group(1)},{achado.group(2)}" if achado else crua.strip()
 
 
-def _ganho_do_scontents(texto: str) -> tuple[int, float] | None:
-    """`(por cento, dB)` do elemento de ganho de captura, ou `None`.
 
-    Corpo único com :func:`_elemento_e_ganho_do_scontents`, que responde a
-    mesma pergunta mais o NOME do elemento. Dois parsers da mesma saída é como
-    o leitor e o escritor do mesmo valor começam a escolher elementos
-    diferentes na mesma placa.
-    """
-    achado = _elemento_e_ganho_do_scontents(texto)
-    return None if achado is None else (achado[1], achado[2])
-
-
-def _elemento_e_ganho_do_scontents(texto: str) -> tuple[str, int, float] | None:
-    """`(elemento, por cento, dB)` — o NOME é o que o escritor precisa.
-
-    Lê a saída de `amixer -c N scontents` e devolve o primeiro controle simples
-    que tem :data:`_CAPACIDADE_DE_GANHO` e canais de captura — a MESMA regra do
-    decisor do `doctor`, para as duas não divergirem sobre qual elemento é o
-    ganho desta placa.
-
-    PURA de propósito: quem roda o comando é :func:`_ler_o_ganho`. É assim que a
-    régua pode alimentá-la com a gravação de `tests/fixtures/mic-cabo/` em vez
-    de conversar com o servidor de som da máquina que roda a suíte.
-
-    `None` = o texto não tem elemento de ganho de captura. Chutar zero pintaria
-    «ganho no mínimo» sobre uma placa que não tem ganho nenhum.
-    """
-    tem_ganho = False
-    nome = ""
-    for linha in (texto or "").splitlines():
-        crua = linha.strip()
-        if crua.startswith("Simple mixer control "):
-            tem_ganho = False
-            # `Simple mixer control 'Headset',0` -> `Headset,0`.
-            #
-            # **AS ASPAS SÃO DO `scontents`, NÃO DO NOME**, e passá-las adiante
-            # é um defeito silencioso: o `sset` recebe argv, não shell, então
-            # `'Headset',0` chegaria com as aspas literais e o amixer
-            # responderia *"Unable to find simple control"*. O clique falharia
-            # com a barra pintada certa.
-            #
-            # **E O ÍNDICE FICA**, que é a outra metade: `Headset` sem o `,0`
-            # escreve no elemento de índice 0 de uma placa cujo ganho pode ser
-            # o de índice 1 — escrita plausível no lugar errado, que é pior do
-            # que erro.
-            nome = _nome_do_scontrol(crua[len("Simple mixer control "):])
-            continue
-        if crua.startswith("Capabilities:"):
-            tem_ganho = _CAPACIDADE_DE_GANHO in crua
-            continue
-        if not tem_ganho or "Capture " not in crua:
-            continue
-        # `Mono: Capture 101 [100%] [48.00dB] [on]` — o por cento é a POSIÇÃO na
-        # faixa (é o que a barra pinta) e o dB é o que o aparelho amplifica (é o
-        # que o número diz). Os dois saem da MESMA linha porque são o mesmo
-        # fato: lê-los em passagens separadas é como dois campos do mesmo bloco
-        # começam a discordar.
-        achado = re.search(r"\[(\d+)%\].*?\[(-?\d+(?:\.\d+)?)dB\]", crua)
-        if achado:
-            return (nome, max(0, min(100, int(achado.group(1)))),
-                    float(achado.group(2)))
-    return None
 
 
 def _ler_o_ganho(na_mesa: tuple[str, ...]) -> dict[str, tuple[int, float] | None]:
@@ -1472,110 +1409,28 @@ def _ler_o_ganho(na_mesa: tuple[str, ...]) -> dict[str, tuple[int, float] | None
     return fora
 
 
-def _placa_de_cada_fonte(lista_de_sources: str) -> dict[str, str]:
-    """`{nome_do_no: placa_alsa}` da saída de `pactl list sources`.
-
-    PURA de propósito, como o :func:`_ganho_do_scontents`: quem roda o comando
-    é quem chama. Ela existe para que o LEITOR do ganho (a thread da camada 1,
-    que pergunta pela mesa inteira numa leitura só) e o ESCRITOR (o clique, que
-    pergunta por um controle) resolvam a placa pelo MESMO caminho — dois
-    resolvedores escreveriam o ganho numa placa e o leriam de outra, e a tela
-    diria que o arrasto não pegou.
-    """
-    placa: dict[str, str] = {}
-    atual = ""
-    for linha in (lista_de_sources or "").splitlines():
-        crua = linha.strip()
-        if crua.startswith("Name: "):
-            atual = crua[6:]
-        elif atual and crua.startswith("alsa.card = "):
-            placa[atual] = crua.split("=", 1)[1].strip().strip('"')
-    return placa
-
-
-def placa_alsa_do_controle(uniq: str, na_mesa: Sequence[str]) -> str:
-    """A placa ALSA deste controle, ou `""` quando não há.
-
-    `""` é resposta honesta em três casos, e nenhum deles é erro: o controle
-    está no RÁDIO (o microfone chega como som já digitalizado, sem placa onde
-    esse ganho exista — medido em 15/08: a placa segue o transporte), o `pactl`
-    não respondeu, ou o nó nativo deste controle não casou com placa nenhuma.
-
-    A PERGUNTA É AO NÓ QUE O KERNEL PUBLICA, não ao que o produto elegeu — a
-    mesma cicatriz de 20/09 que o :func:`_ler_o_ganho` documenta: com a ponte
-    de pé, `canal_fonte` devolve `hefesto_mic_<hex6>` para os quatro, e aquele
-    nó não tem placa ALSA nenhuma.
-    """
-    from hefesto_dualsense4unix.integrations import eleicao_de_microfone
-
-    if not uniq:
-        return ""
-    mesa = [u for u in na_mesa if u] or [uniq]
-    try:
-        no = eleicao_de_microfone.fonte_nativa_do_controle(uniq, mesa)
-    except Exception:
-        return ""
-    if not no:
-        return ""
-    try:
-        lista = audio_saida.rodar_leitura(["pactl", "list", "sources"])
-    except Exception:
-        return ""
-    return _placa_de_cada_fonte(lista).get(no, "")
 
 
 def definir_ganho_do_microfone(
     uniq: str, por_cento: int, na_mesa: Sequence[str]
 ) -> tuple[int, float] | None:
-    """Escreve o ganho de entrada no APARELHO e devolve o que ele ficou.
+    """Escreve o ganho no aparelho, ATUALIZA O CACHE DA TELA e devolve o que ficou.
 
-    **ESTE É O ESCRITOR QUE FALTAVA.** O ganho nasceu em 20/09 com leitor,
-    barra, número, cinza e razão — e nada que o mudasse. A tela mostrava o
-    valor e não havia onde pegá-lo: *"o efeito pronto e sem escolha"*, que é o
-    defeito-mãe desta casa, desta vez do lado de fora.
+    O corpo mora em `integrations.ganho_do_microfone.definir` desde 21/09/2026.
+    O que fica aqui é a única parte que é da INTERFACE: o cache.
 
-    **O RETORNO É A RELEITURA, NÃO O PEDIDO**, e é a regra da casa para valor
-    com dono: o `amixer` arredonda para o passo da placa (a do DualSense anda
-    de 1 em 1 dentro de 0-101, e nem toda placa é assim), então devolver o que
-    se pediu faria a tela publicar um número que o aparelho não tem. Quem
-    responde quanto o ganho ficou é o ganho.
-
-    `None` = não consegui escrever nem reler: sem placa (o rádio), sem
-    `amixer`, ou o elemento de ganho não existe nesta placa. Quem chama
-    transforma isso em recusa com razão — nunca em silêncio, e nunca num
-    número inventado.
+    **O CACHE APRENDE NA HORA.** Sem isto a tela volta ao valor velho no tique
+    seguinte — a thread da camada 1 só acorda a cada 2 s, e nesses dois segundos
+    o deslizante «pula para trás» sozinho. É o mesmo desacordo que
+    `_lembrar_do_som` cura para o volume, e é por isso que o cache não desceu
+    junto com o escritor: o `profiles/manager.py` escreve o mesmo ganho e não
+    tem tela nenhuma para manter em dia.
     """
-    placa = placa_alsa_do_controle(uniq, na_mesa)
-    if not placa:
-        return None
-    try:
-        antes = _elemento_e_ganho_do_scontents(
-            audio_saida.rodar_leitura(["amixer", "-c", placa, "scontents"]))
-    except Exception:
-        return None
-    if antes is None:
-        return None
-    elemento = antes[0]
-    alvo = max(0, min(100, int(por_cento)))
-    try:
-        # `sset <elemento> <N>%` fala a MESMA escala que a barra pinta: o por
-        # cento é a posição na faixa, e é o que o `scontents` devolve entre
-        # colchetes. Mandar dB daria um segundo vocabulário para o mesmo eixo,
-        # e a conversão seria nossa — a placa já a tem.
-        audio_saida.rodar_leitura(
-            ["amixer", "-c", placa, "sset", elemento, f"{alvo}%"])
-        depois = _elemento_e_ganho_do_scontents(
-            audio_saida.rodar_leitura(["amixer", "-c", placa, "scontents"]))
-    except Exception:
-        return None
-    if depois is None:
-        return None
-    # O CACHE APRENDE NA HORA. Sem isto a tela volta ao valor velho no tique
-    # seguinte — a thread da camada 1 só acorda a cada 2 s, e nesses dois
-    # segundos o deslizante «pula para trás» sozinho. É o mesmo desacordo que
-    # `_lembrar_do_som` cura para o volume.
-    _GANHO[uniq] = (depois[1], depois[2])
-    return (depois[1], depois[2])
+    ficou = _ganho_no_aparelho.definir(uniq, por_cento, na_mesa)
+    if ficou is not None:
+        _GANHO[uniq] = ficou
+    return ficou
+
 
 
 def ganho_do_microfone(uniq: str) -> tuple[int, float] | None:
@@ -4868,7 +4723,7 @@ def sensor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(frase)
 
 
-@gesto("02-controles.html", "ganho-mic")
+@gesto("02-controles.html", "ganho-mic", grava="save_profile")
 def ganho_mic(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O deslizante do ganho de entrada — **o ato que faltava ao número**.
 
@@ -4917,6 +4772,17 @@ def ganho_mic(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     ficou = definir_ganho_do_microfone(uniq, pedido, na_mesa)
     if ficou is None:
         raise RuntimeError(RAZAO_DO_GANHO_FORA)
+    # **E AGORA ELE VIAJA NO PERFIL — 21/09/2026, ordem dela.** *"OS DOIS
+    # SLICERS REFLETEM TANTO LÁ QUANTO NO JOGO E ISSO DEVE SER SALVO."*
+    #
+    # O QUE VAI AO DISCO É O QUE FICOU, nunca o que ela pediu: o `amixer`
+    # arredonda para o passo da placa, e gravar o pedido faria o perfil guardar
+    # um número que o aparelho não tem — e a ativação seguinte reimporia esse
+    # número inexistente por cima do certo.
+    #
+    # **DEPOIS DA ESCRITA, e só se ela pegou**, que é a disciplina de
+    # `_lembrar_do_som`: o perfil descreve o que FICOU DE PÉ, não a intenção.
+    _lembrar_do_som(ctx, uniq, mic={"gain": ficou[0]})
 
 
 @gesto("02-controles.html", "volume", grava="save_profile")
