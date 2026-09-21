@@ -14,6 +14,9 @@ from __future__ import annotations
 
 import inspect
 import json
+import shutil
+import subprocess
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -22,6 +25,14 @@ from hefesto_dualsense4unix.integrations import lista_de_exclusao as lx
 from hefesto_dualsense4unix.integrations import proton_pin
 from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+from tests.unit.test_hefesto_launch_wrapper import (
+    _PROBE,
+    _FakeDaemon,
+    _path_sem_game_mode,
+    _runtime_dir,
+    _socket_path,
+    _write_env_file,
+)
 from tests.unit.test_proton_pin import PIN_NAME, _config_vdf
 from tests.unit.test_sentinela_do_wrapper_01_a_steam_comeu_o_hefesto_launch import (
     _vdf as _localconfig,
@@ -377,3 +388,79 @@ def test_excluir_com_a_steam_aberta_espera_e_nao_escreve(
 
 def test_o_emulador_nao_tem_o_que_tirar_do_disco() -> None:
     assert lx.tirar_do_disco("retroarch") == "sem_appid"
+
+
+# ---------------------------------------------------------------------------
+# E2 — o wrapper consulta a lista: a exclusão vale com a Steam aberta
+# ---------------------------------------------------------------------------
+#
+# Até o vigia tirar o atalho (na saída da Steam), a LaunchOptions do jogo
+# excluído ainda chama o `hefesto-launch`. É o wrapper quem faz a exclusão
+# valer no primeiro lançamento depois do clique.
+
+_O_WRAPPER = Path(__file__).resolve().parents[2] / "assets" / "hefesto-launch.sh"
+
+
+@pytest.fixture
+def _runtime_com_daemon() -> Iterator[Path]:
+    """Daemon de mentira de pé: sem a lista, o wrapper EXPORTARIA as envs — é
+    o que prova que a ausência delas é a exclusão, e não um gate que caiu."""
+    base = _runtime_dir()
+    daemon = _FakeDaemon(_socket_path(base))
+    try:
+        yield base
+    finally:
+        daemon.stop()
+        shutil.rmtree(base, ignore_errors=True)
+
+
+def _lancar(runtime: Path, casa: Path, appid: str, *, com_config: bool = True
+            ) -> tuple[subprocess.CompletedProcess[str], Path]:
+    estado = casa / "estado"
+    _write_env_file(estado, "default.env", ["SDL_JOYSTICK_HIDAPI=0"])
+    env = {
+        "PATH": _path_sem_game_mode(runtime),
+        "XDG_RUNTIME_DIR": str(runtime),
+        "XDG_STATE_HOME": str(estado),
+        "SteamAppId": appid,
+    }
+    if com_config:
+        env["HOME"] = str(casa / "casa-vazia")
+        env["XDG_CONFIG_HOME"] = str(casa)
+    r = subprocess.run(["sh", str(_O_WRAPPER), "sh", "-c", _PROBE], env=env,
+                       capture_output=True, text=True, timeout=15, check=False)
+    return r, estado / "hefesto-dualsense4unix" / "launch_env" / "last_run"
+
+
+def test_o_jogo_excluido_abre_sem_nada_do_hefesto(
+        tmp_path: Path, _runtime_com_daemon: Path) -> None:
+    """ARRANQUE o `if jogo_excluido` do wrapper e este teste reprova: com a
+    Steam aberta o atalho ainda está na LaunchOptions, e o jogo que ela
+    excluiu abriria com as envs, o device KS e a camada Vulkan do Hefesto."""
+    assert lx.adicionar("steam_app_1599660", lancador="steam", nome="Wo Long") == "adicionado"
+    fora, marca_fora = _lancar(_runtime_com_daemon, tmp_path, "1599660")
+    assert fora.returncode == 0, fora.stderr
+    assert "HIDAPI=|" in fora.stdout, fora.stdout
+    assert not marca_fora.exists(), "o marcador de lançamento do Hefesto foi gravado"
+
+    dentro, marca_dentro = _lancar(_runtime_com_daemon, tmp_path, "1971870")
+    assert "HIDAPI=0|" in dentro.stdout, "o controle: sem a lista, as envs chegam"
+    assert marca_dentro.exists()
+
+
+def test_steam_app_1_nao_casa_steam_app_15(
+        tmp_path: Path, _runtime_com_daemon: Path) -> None:
+    """As aspas dos dois lados do número: excluir um jogo não exclui o de
+    appid que começa igual."""
+    lx.adicionar("steam_app_1599660", lancador="steam", nome="Wo Long")
+    r, _ = _lancar(_runtime_com_daemon, tmp_path, "159966")
+    assert "HIDAPI=0|" in r.stdout, r.stdout
+
+
+def test_sem_home_o_jogo_abre_do_mesmo_jeito(
+        tmp_path: Path, _runtime_com_daemon: Path) -> None:
+    """O wrapper roda com `set -u`: um `$HOME` cru na leitura da lista
+    abortaria o script, e o jogo não abriria."""
+    r, _ = _lancar(_runtime_com_daemon, tmp_path, "1599660", com_config=False)
+    assert r.returncode == 0, r.stderr
+    assert "IGNORE=" in r.stdout, r.stdout
