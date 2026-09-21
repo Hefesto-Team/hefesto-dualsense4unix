@@ -228,6 +228,13 @@ class UinputMouseDevice:
     # truncado a cada tick para que movimento lento não "engasgue".
     _tp_carry_x: float = 0.0
     _tp_carry_y: float = 0.0
+    # Carry fracionário da MIRA POR MOVIMENTO (MOVIMENTO-EM-QUALQUER-MASCARA-01).
+    # PAR PRÓPRIO, e não o `_tp_carry_*` reaproveitado: o touchpad e o giro
+    # podem estar movendo o cursor no mesmo tique, e um carry compartilhado
+    # faria o resto de um virar movimento do outro — o dedo dela empurraria a
+    # mira e a mira empurraria o dedo.
+    _giro_carry_x: float = 0.0
+    _giro_carry_y: float = 0.0
     # Carry fracionário do movimento do STICK (FEAT-MOUSE-CURSOR-FEEL-01):
     # mesmo padrão do touchpad — o resto sub-pixel de cada tick é levado ao
     # próximo em vez de truncado (deflexões pequenas acumulam e movem).
@@ -270,6 +277,8 @@ class UinputMouseDevice:
         self._prev_edge_keys = frozenset()
         self._tp_carry_x = 0.0
         self._tp_carry_y = 0.0
+        self._giro_carry_x = 0.0
+        self._giro_carry_y = 0.0
         self._stick_carry_x = 0.0
         self._stick_carry_y = 0.0
 
@@ -526,6 +535,44 @@ class UinputMouseDevice:
         iy = int(self._tp_carry_y)
         self._tp_carry_x -= ix
         self._tp_carry_y -= iy
+        if ix == 0 and iy == 0:
+            return
+        u = self._uinput_mod
+        if ix != 0:
+            self._device.emit(u.REL_X, ix, syn=False)
+        if iy != 0:
+            self._device.emit(u.REL_Y, iy, syn=False)
+        self._device.syn()
+
+    def emit_gyro_move(self, px_x: float, px_y: float) -> None:
+        """Move o cursor a partir de um deslocamento já em PIXELS float.
+
+        MOVIMENTO-EM-QUALQUER-MASCARA-01: é o destino «mouse» do roteador de
+        movimento. Recebe pixels e não graus porque quem sabe converter é o
+        motor puro (`core/roteador_de_movimento.pixels`) — este device não
+        conhece giroscópio nenhum, e é assim que ele continua testável sem
+        aparelho.
+
+        O CARRY É A ENTREGA, e não um detalhe: uma mira lenta produz frações de
+        pixel por tique, e `int()` as jogaria fora para sempre — o giro fino
+        (o ajuste de mira, que é justamente o que o giroscópio faz melhor que o
+        stick) simplesmente não moveria nada. Mesma disciplina do
+        `emit_touchpad_move` e do `_emit_move`, com par de carry próprio.
+
+        Sem device (emulação de mouse desligada) é no-op silencioso: o roteador
+        NÃO cria nó de mouse por conta própria — um segundo dono para o cursor
+        é decisão dela, não efeito colateral de uma mira.
+        """
+        if self._device is None or self._uinput_mod is None:
+            return
+        if px_x == 0.0 and px_y == 0.0:
+            return
+        self._giro_carry_x += px_x
+        self._giro_carry_y += px_y
+        ix = int(self._giro_carry_x)
+        iy = int(self._giro_carry_y)
+        self._giro_carry_x -= ix
+        self._giro_carry_y -= iy
         if ix == 0 and iy == 0:
             return
         u = self._uinput_mod

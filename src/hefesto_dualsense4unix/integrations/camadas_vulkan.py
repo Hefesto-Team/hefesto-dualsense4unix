@@ -504,6 +504,35 @@ _CONFIG_DO_HEROIC = (
     ".config/heroic",
 )
 
+#: RAÍZES DE JOGO POR CONVENÇÃO — O-VULKAN-VE-TODO-LANCADOR-01, 21/09/2026.
+#:
+#: **PERGUNTA DELA:** *"o botão vulcan ele identifica todos os jogos que
+#: contenham isso?"* — e a medição respondeu *quase*: a Steam e o Heroic sim,
+#: o Lutris não. Hoje ela tem o Lutris instalado e sem nenhum prefixo wine, e
+#: o primeiro jogo que nascer lá ficaria invisível para o botão, com o sintoma
+#: de sempre nesta casa: a AUSÊNCIA de dado, que se lê como "funcionou".
+#:
+#: **A VARREDURA É POR FORMA, NÃO POR LANÇADOR**, e é a decisão da sprint. Em
+#: vez de uma terceira função que conhece o Lutris (e uma quarta que conheça o
+#: próximo), pergunta-se a cada filho destas pastas se ele tem
+#: `pfx/system.reg` — que é a forma que Steam, Heroic e Lutris compartilham.
+#: Um lançador novo que respeite a convenção entra de graça.
+#:
+#: **POR QUE NÃO LER O `pga.db` DO LUTRIS:** é SQLite, e o esquema é dele — muda
+#: sem aviso. Este arquivo roda como cópia avulsa em `bin/hefesto-camadas`, onde
+#: o pacote não está no `sys.path`, e a regra que ele já declara é "sem dono
+#: externo". A varredura por forma não tem esse dono.
+_RAIZES_DE_JOGO = (
+    "Games",
+    ".local/share/lutris",
+    ".var/app/net.lutris.Lutris/data/lutris",
+)
+
+#: Quantos filhos de uma raiz se olha antes de desistir. Uma pasta `~/Games`
+#: com dez mil arquivos não pode custar dez mil `is_file()` a cada censo — e o
+#: caso real é uma dúzia de jogos.
+_MAXIMO_DE_FILHOS_POR_RAIZ = 400
+
 
 def prefixos_dos_lancadores(home: Path | None = None) -> list[Path]:
     """Todo prefixo wine de lançador que NÃO é a Steam. Read-only.
@@ -582,6 +611,19 @@ def prefixos_dos_lancadores(home: Path | None = None) -> list[Path]:
                 continue
             for filho in filhos:
                 _guardar(str(filho))
+
+    # A VARREDURA POR FORMA — ver `_RAIZES_DE_JOGO`. Roda DEPOIS da leitura do
+    # Heroic de propósito: quem tem config explícita entra pelo caminho exato,
+    # e esta varredura só acrescenta o que ninguém declarou. O `_guardar` já
+    # descarta repetido pelo caminho resolvido.
+    for relativo in _RAIZES_DE_JOGO:
+        raiz = lar / relativo
+        try:
+            filhos = sorted(raiz.iterdir())[:_MAXIMO_DE_FILHOS_POR_RAIZ]
+        except OSError:
+            continue
+        for filho in filhos:
+            _guardar(str(filho))
     return achados
 
 

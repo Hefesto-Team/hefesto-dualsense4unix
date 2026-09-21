@@ -2273,6 +2273,25 @@ class MotionSensorReader(_EvdevReconnectLoop):
 
     _THREAD_NAME: ClassVar[str] = "hefesto-motion-sensors"
 
+    #: Teto do acumulador de ângulo, em graus por eixo. Cem voltas.
+    #:
+    #: O ACUMULADOR PRECISA DE TETO PORQUE NEM TODO MUNDO DRENA. O irmão deste
+    #: campo é o `_accum_dx` do `TouchpadReader`, e ele já custou um defeito:
+    #: com o input congelado (Modo Nativo, pausa, grace) ninguém drenava, o
+    #: acumulado crescia a sessão inteira e virava um SALTO de cursor quando a
+    #: emulação voltava — a cura foi `lifecycle` drenar a cada tique
+    #: (`discard_touchpad_motion`). Aqui o teto resolve o mesmo problema sem
+    #: exigir que todo consumidor saiba que existe um acumulador: quem nunca
+    #: chama `consume_angulo` paga no máximo este valor de memória e nada mais.
+    _TETO_DO_ANGULO_GRAUS: ClassVar[float] = 36000.0
+
+    #: Maior intervalo entre dois pacotes que ainda se integra, em segundos.
+    #: Acima disto houve reabertura do nó, suspensão da máquina ou o controle
+    #: sumiu — e integrar um buraco de tempo inteiro produziria um salto de
+    #: câmera. 50 ms é ~34x o intervalo real do nó (medido: 8.124 pacotes em
+    #: 12,02 s = 675,8 Hz).
+    _MAIOR_DT_INTEGRAVEL_S: ClassVar[float] = 0.050
+
     def __init__(
         self, device_path: Path | None = None, target_uniq: str | None = None
     ) -> None:
@@ -2290,6 +2309,32 @@ class MotionSensorReader(_EvdevReconnectLoop):
         #: as duas escalas são independentes (1024 contra 8192) e a chave é a
         #: mesma letra: um dicionário só faria o giro dividir por 8192.
         self._resolucoes_accel: dict[str, int] = {}
+        #: Ângulo percorrido por eixo desde a última drenagem, em GRAUS.
+        #: Integrado na thread do reader, no ritmo do nó — não no do tique.
+        self._angulo: dict[str, float] = {"x": 0.0, "y": 0.0, "z": 0.0}
+        #: Timestamp do último `SYN_REPORT` visto, na escala do próprio evento
+        #: (`event.sec`/`event.usec`) e não do relógio do processo: é o carimbo
+        #: que o kernel pôs quando o pacote chegou, e ele não anda para trás
+        #: com NTP nem espera a nossa thread ser escalonada.
+        self._ultimo_syn: float | None = None
+
+    def consume_angulo(self) -> tuple[float, float, float]:
+        """Ângulo percorrido em cada eixo desde a última chamada — e ZERA.
+
+        DRENA, ao contrário de `snapshot()`, e a separação é a mesma do
+        touchpad (`consume_motion` x `touch_state`): quem consome ângulo é o
+        DONO do movimento (o tique do jogo, pelo roteador); quem só quer ver o
+        número chama `snapshot()` e não rouba nada de ninguém. Duas chamadas
+        deste método no mesmo tique dividiriam o movimento entre dois
+        consumidores, e a mira andaria pela metade.
+
+        Unidade: graus. Ordem: `(x, y, z)`, a mesma do `snapshot()` — ABS_RX,
+        ABS_RY, ABS_RZ.
+        """
+        with self._lock:
+            valores = (self._angulo["x"], self._angulo["y"], self._angulo["z"])
+            self._angulo = {"x": 0.0, "y": 0.0, "z": 0.0}
+            return valores
 
     def snapshot(self) -> GyroSnapshot:
         """Última velocidade angular conhecida (cópia sob lock)."""
@@ -2366,6 +2411,13 @@ class MotionSensorReader(_EvdevReconnectLoop):
             self._accel = {"x": 0.0, "y": 0.0, "z": 0.0}
             self._resolucoes = {}
             self._resolucoes_accel = {}
+            # MOVIMENTO-EM-QUALQUER-MASCARA-01: o ângulo some pela mesma razão
+            # pela qual os seis eixos somem. Guardar o ângulo de antes faria a
+            # mira dar um salto no primeiro tique depois do replug — o
+            # movimento de pôr o controle de volta na mesa viraria uma virada
+            # de câmera.
+            self._angulo = {"x": 0.0, "y": 0.0, "z": 0.0}
+            self._ultimo_syn = None
         # SENSOR-DE-VERDADE-01: o grab do nó de movimento é o que esconde o
         # giro de quem lê evdev. Perdido o nó, ele não está mais "held" — e
         # dizer que está faria a resposta do `sensor.set` afirmar exclusividade
@@ -2375,6 +2427,15 @@ class MotionSensorReader(_EvdevReconnectLoop):
         self._grab_volta_a_pendente()
 
     def _handle_event(self, event: Any, ecodes: Any) -> None:
+        # O SYN FECHA O PACOTE, e é nele que se integra. O nó publica os seis
+        # eixos e só então o SYN_REPORT; integrar a cada eixo contaria o mesmo
+        # intervalo seis vezes. O dt sai do carimbo do PRÓPRIO evento, que é o
+        # instante em que o kernel recebeu o pacote — o relógio do processo
+        # mediria também o tempo que a nossa thread levou para ser escalonada.
+        if event.type == ecodes.EV_SYN:
+            if event.code == ecodes.SYN_REPORT:
+                self._integrar_o_angulo(float(event.sec) + float(event.usec) / 1e6)
+            return
         if event.type != ecodes.EV_ABS:
             return
         # O GIRO É PROCURADO PRIMEIRO, e a ordem é deliberada: ele é o que já
@@ -2397,6 +2458,31 @@ class MotionSensorReader(_EvdevReconnectLoop):
                         int(event.value), self._resolucoes_accel.get(eixo, 0)
                     )
                 return
+
+    def _integrar_o_angulo(self, agora: float) -> None:
+        """Soma `velocidade x dt` ao ângulo de cada eixo. Nunca levanta.
+
+        O PRIMEIRO PACOTE NÃO INTEGRA: sem um SYN anterior não há intervalo, e
+        inventar um produziria um salto no instante em que o controle conecta —
+        exatamente quando a mão dela está no aparelho.
+
+        O `dt` GRANDE TAMBÉM NÃO INTEGRA (`_MAIOR_DT_INTEGRAVEL_S`): ele quer
+        dizer reabertura do nó, máquina suspensa ou controle que sumiu e
+        voltou. Integrar o buraco inteiro pela última velocidade conhecida
+        viraria uma virada de câmera de vários segundos num quadro só.
+        """
+        anterior = self._ultimo_syn
+        self._ultimo_syn = agora
+        if anterior is None:
+            return
+        dt = agora - anterior
+        if dt <= 0.0 or dt > self._MAIOR_DT_INTEGRAVEL_S:
+            return
+        teto = self._TETO_DO_ANGULO_GRAUS
+        with self._lock:
+            for eixo in ("x", "y", "z"):
+                valor = self._angulo[eixo] + self._eixos[eixo] * dt
+                self._angulo[eixo] = max(-teto, min(teto, valor))
 
 
 __all__ = [

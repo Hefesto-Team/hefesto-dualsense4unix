@@ -3592,7 +3592,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 #                               `sensor.*`, `gyro.*` nem `motion.*`). O
 #                               `sensor_hub` só LÊ — as suas 15 funções são
 #                               `leitura`, `reconciliar`, `_abrir_*`, e nenhuma
-#                               liga ou desliga nada. `profiles/schema.py:967`
+#                               liga ou desliga nada. `profiles/schema.py:1049`
 #                               diz que os dois estão "FORA POR AUSÊNCIA, NÃO
 #                               POR DECISÃO", com dona declarada
 #                               (`ONDA-CONTROLES-07`, que traria a

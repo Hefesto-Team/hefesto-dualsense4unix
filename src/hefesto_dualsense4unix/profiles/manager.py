@@ -326,6 +326,7 @@ class ProfileManager:
         self.apply_keyboard(profile, relatorio=relatorio)
         self.apply_button_actions(profile, relatorio=relatorio)
         self.apply_remapeamento(profile, relatorio=relatorio)
+        self.apply_movimento(profile, relatorio=relatorio)
         self.apply_emulation(profile, origin=origin, relatorio=relatorio)
         self.store.set_active_profile(profile.name)
         self.store.bump("profile.activated")
@@ -780,6 +781,56 @@ class ProfileManager:
         definir_ativo(self.store, mapa or None)
         if relatorio is not None and "remapeamento" not in relatorio:
             relatorio["remapeamento"] = "aplicado" if mapa else "de_fabrica"
+
+    def apply_movimento(
+        self, profile: Profile, *, relatorio: dict[str, str] | None = None
+    ) -> None:
+        """Deposita a mira por movimento do perfil no `store`.
+
+        MOVIMENTO-EM-QUALQUER-MASCARA-01. Quem obedece é `dispatch_gamepad`,
+        que lê o arranjo do `store` por tique — o mesmo canal e o mesmo motivo
+        medido do `apply_remapeamento`: a rota do boot monta o gerente à mão e
+        não recebe canal nenhum da fábrica, mas TODAS passam `store`.
+
+        O PERFIL SEM ARRANJO APAGA O DO PERFIL ANTERIOR, e é por isso que o
+        depósito acontece SEMPRE — inclusive com `None`. Sem isso a mira que
+        ela montou para um jogo continuaria valendo no jogo seguinte, que é a
+        forma exata do CAMINHO-CONTAGIO-01.
+
+        UM ARRANJO QUE O MOTOR RECUSA NÃO DERRUBA A ATIVAÇÃO: o esquema já
+        recusa no load, e só um `model_copy` sem validação chega aqui torto.
+        Nesse caso a mira fica desligada e o journal diz por quê — as luzes, os
+        gatilhos e o resto do perfil dela não pagam por uma linha.
+        """
+        from hefesto_dualsense4unix.core.roteador_de_movimento import (
+            ArranjoRecusadoError,
+            definir_ativo,
+            resolver,
+        )
+
+        arranjo = None
+        try:
+            arranjo = resolver(profile.movimento)
+        except ArranjoRecusadoError as exc:
+            logger.warning("movimento_recusado", profile=profile.name, err=str(exc))
+            if relatorio is not None:
+                relatorio["movimento"] = "falhou"
+        definir_ativo(self.store, arranjo)
+        if relatorio is not None and "movimento" not in relatorio:
+            relatorio["movimento"] = "aplicado" if arranjo else "desligado"
+        if arranjo is not None:
+            # O DIAGNÓSTICO QUE A RESSALVA PEDE: no caminho `uhid` o jogo pode
+            # estar recebendo a IMU nativa E a mira traduzida ao mesmo tempo, e
+            # a câmera andaria em dobro. Não é erro — pode ser exatamente o que
+            # ela quer num jogo que ignora o giro nativo —, mas tem de ser
+            # visível a quem for medir. Evento, não frase na tela: a tela nunca
+            # confessa dívida nossa (ordem dela, 07/09).
+            logger.info(
+                "roteador_de_movimento_ligado",
+                profile=profile.name,
+                destino=arranjo.destino,
+                gatilho=arranjo.gatilho or "sempre",
+            )
 
     def apply_keyboard(
         self, profile: Profile, *, relatorio: dict[str, str] | None = None

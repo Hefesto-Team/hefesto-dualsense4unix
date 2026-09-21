@@ -444,6 +444,88 @@ class RumbleConfig(BaseModel):
         return self
 
 
+class ProfileMovimentoConfig(BaseModel):
+    """A mira por MOVIMENTO por perfil — MOVIMENTO-EM-QUALQUER-MASCARA-01.
+
+    Aditiva ao schema v1 (sem bump de versão), mesmo contrato do `mouse` e do
+    `remapeamento`: perfil sem a seção não tem opinião, e ativá-lo NÃO liga
+    mira nenhuma.
+
+    POR QUE ELA NÃO NASCE LIGADA, e a NASCE-LIGADO-01 exige a justificativa
+    escrita: a tradução é um ARRANJO, não uma feature do aparelho. A regra
+    *"nasce ligado"* vale para o que o plástico já faz — o microfone, o giro, a
+    vibração. Ligar a tradução sem pedido moveria a câmera de todo jogo que ela
+    já joga quando o controle se mexesse na mesa; e no caminho `uhid`, onde a
+    IMU nativa já chega ao jogo, ela criaria DOIS giros e a câmera andaria em
+    dobro. O arranjo é de quem usa.
+
+    GLOBAL NO PERFIL, e não por controle: é o precedente do `remapeamento`
+    (`D-0809-A-NAVEGACAO-E-GLOBAL-NO-PERFIL` — *um mapa só por perfil*). Se ela
+    decidir o contrário, o override por controle entra em `ControllerOverrides`
+    sem migração: os campos são os mesmos.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    #: Para onde o giroscópio vai. `nenhum` guarda o arranjo e desliga a mira —
+    #: é o que permite ela experimentar sem perder a calibração que ajustou.
+    destino: Literal["nenhum", "analogico_direito", "analogico_esquerdo", "mouse"] = (
+        "nenhum"
+    )
+    #: 1 a 12, a mesma faixa do cursor (`uinput_mouse.MOUSE_SPEED_MIN/MAX`) —
+    #: a faixa é a mesma NOÇÃO (o quanto um gesto anda), e uma segunda escala
+    #: faria a tela ter de explicar duas.
+    sensibilidade: int = Field(default=6, ge=1, le=12)
+    eixo_horizontal: Literal["yaw", "roll"] = "yaw"
+    inverter_horizontal: bool = False
+    inverter_vertical: bool = False
+    #: Graus/s. A deriva do giroscópio parado morre aqui; abaixo deste valor o
+    #: roteador não move nada.
+    zona_morta_graus_s: float = Field(default=3.0, ge=0.0, le=60.0)
+    #: Graus/s que já valem deflexão cheia.
+    teto_graus_s: float = Field(default=220.0, gt=0.0, le=2000.0)
+    #: Só para o destino `mouse`: pixels por grau girado.
+    pixels_por_grau: float = Field(default=12.0, gt=0.0, le=200.0)
+    #: O botão que LIGA a mira enquanto está apertado. `None` = sempre ligada.
+    gatilho: str | None = None
+
+    @model_validator(mode="after")
+    def _o_teto_fica_acima_da_zona_morta(self) -> ProfileMovimentoConfig:
+        """Teto abaixo da zona morta é arranjo que nunca move nada.
+
+        Recusado no LOAD e não no tique: um arranjo impossível que só se revela
+        no meio do jogo é a forma de defeito que esta casa persegue.
+        """
+        if self.teto_graus_s <= self.zona_morta_graus_s:
+            raise ValueError(
+                f"teto_graus_s ({self.teto_graus_s}) tem de ser maior que "
+                f"zona_morta_graus_s ({self.zona_morta_graus_s})"
+            )
+        return self
+
+    @field_validator("gatilho")
+    @classmethod
+    def _o_gatilho_e_um_botao_que_o_jogo_conhece(cls, value: str | None) -> str | None:
+        """O gatilho sai do vocabulário do JOGO, e o PS não entra.
+
+        A lista é DERIVADA (`core/remapeamento_de_botao.REMAPEAVEIS`) e não
+        digitada — uma lista escrita aqui seria a segunda cópia do mesmo fato, e
+        a que ninguém lembraria de atualizar. O PS fica fora porque ele é a
+        saída de emergência dela: os cinco gestos da aba Navegação começam nele,
+        e é a mesma trava que o remapeamento já tem nos dois lados.
+        """
+        if value is None:
+            return None
+        from hefesto_dualsense4unix.core.remapeamento_de_botao import REMAPEAVEIS
+
+        if value not in REMAPEAVEIS:
+            raise ValueError(
+                f"gatilho desconhecido: {value!r} "
+                f"(conhecidos: {', '.join(sorted(REMAPEAVEIS))})"
+            )
+        return value
+
+
 class ProfileMouseConfig(BaseModel):
     """Seção opcional de emulação de mouse por perfil (FEAT-POINT-AND-CLICK-01).
 
@@ -1635,6 +1717,13 @@ class Profile(BaseModel):
     # virtual. A regra inteira — PS travado, colisão, o que a troca alcança — é
     # de `core/remapeamento_de_botao.resolver`, e o validador abaixo só a chama.
     remapeamento: dict[str, str] | None = None
+    # MOVIMENTO-EM-QUALQUER-MASCARA-01 (21/09/2026): a mira por movimento deste
+    # jogo. None = sem opinião — ativar o perfil não liga mira nenhuma.
+    # A serialização OMITE a chave quando None, pelo mesmo requisito de
+    # compatibilidade do `ponte` e do `remapeamento`: com `extra="forbid"` um
+    # Hefesto antigo recusaria TODOS os perfis dela ao ver a chave, não só os
+    # que usam a seção.
+    movimento: ProfileMovimentoConfig | None = None
     # FEAT-POINT-AND-CLICK-01: seção opcional de emulação de mouse.
     # - None = ativar o perfil não toca no estado da emulação (comportamento v1).
     # - Preenchida = ativar o perfil liga/desliga a emulação com as velocidades
@@ -1724,7 +1813,7 @@ class Profile(BaseModel):
         # só no save, porque o dump sai também pelo estado do IPC e pela
         # exportação.
         if isinstance(dados, dict):
-            for opcional in ("ponte", "remapeamento"):
+            for opcional in ("ponte", "remapeamento", "movimento"):
                 if dados.get(opcional) is None:
                     dados.pop(opcional, None)
         return dados

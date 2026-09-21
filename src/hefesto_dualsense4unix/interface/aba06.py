@@ -2203,7 +2203,7 @@ ATIVACAO_ESQ = [
 #   · `mouse_emulation.speed`        é UM número (1..12), e o cursor do TOUCHPAD
 #     sai dele: `emit_touchpad_move` escala por
 #     `TOUCHPAD_SENSITIVITY * (mouse_speed / DEFAULT_MOUSE_SPEED)`
-#     (`integrations/uinput_mouse.py:508`). Não há segunda velocidade a ajustar
+#     (`integrations/uinput_mouse.py:517`). Não há segunda velocidade a ajustar
 #     — o "Touch" da tela era uma conta que ninguém faz do outro lado.
 #   · `mouse_emulation.scroll_speed` é UM número (1..5) e vale só para o
 #     analógico DIREITO: `_emit_scroll(rx, ry)` (`uinput_mouse.py:412`). Rolagem
