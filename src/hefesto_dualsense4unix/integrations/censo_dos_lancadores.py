@@ -363,8 +363,20 @@ def _instalados_do_heroic(caminho: Path) -> set[str]:
 #: As colunas do `games` do `pga.db` que interessam, na ordem em que saem.
 #: Nomeadas uma a uma, e nunca `SELECT *`: o Lutris acrescenta coluna entre
 #: versões (medido: 23 colunas no dela), e ler por posição quebraria calado.
+#: **`service`/`service_id` ENTRARAM EM 21/09/2026, e são o degrau 2.** As
+#: colunas existem no `pga.db` dela (schema lido no disco, 23 colunas), e
+#: quando `service == "steam"` o `service_id` É o appid da Steam daquele jogo.
+#: Sem elas todo jogo do Lutris caía no «não sei», porque o degrau 1 (o umu-id)
+#: só tem leitor no Heroic.
 _COLUNAS_DO_LUTRIS = ("name", "slug", "executable", "directory", "installed",
-                      "runner")
+                      "runner", "service", "service_id")
+
+#: O valor da coluna `service` que significa "este jogo é da Steam". O Lutris
+#: usa o mesmo vocabulário para `gog`, `egs`, `humble` — e para esses o
+#: `service_id` é o id DAQUELA loja, que não vira `steam_app_<N>`. Casar por
+#: igualdade, e não por "tem service_id", é o que impede um id da GOG de virar
+#: uma chave de janela que nunca casa (o defeito R-12).
+_SERVICO_DA_STEAM = "steam"
 
 
 def _lutris(pasta: Path) -> BibliotecaDoLancador:
@@ -401,6 +413,18 @@ def _lutris(pasta: Path) -> BibliotecaDoLancador:
     O `.yml` continua entrando, e só ACRESCENTA o que a tabela não tiver: um
     jogo configurado à mão que nunca entrou no banco continua aparecendo, e a
     leitura nova não pode ENCOLHER o que já funcionava.
+
+    **O QUE NÃO FOI MEDIDO, E FICA DECLARADO — 21/09/2026.** O `pga.db` dela
+    tem ZERO jogos: o Lutris está instalado e vazio. Então a janela de um jogo
+    do Lutris **não foi lida em aparelho nenhum** desta casa, e esta sprint
+    aprendeu em 21/09 o preço de derivar no lugar de medir.
+
+    Por isso o que entra aqui é só o degrau que JÁ ESTÁ MEDIDO em outro leitor:
+    `service == "steam"` ⇒ `service_id` é o appid da Steam, e um appid da Steam
+    vira `steam_app_<N>` — o mesmo fato que a biblioteca da Steam usa há meses.
+    Nenhum degrau novo se inventa aqui: jogo do Lutris sem serviço da Steam
+    continua respondendo «não sei» e mandando ao «Detectar», que é a resposta
+    honesta até alguém abrir um e ler a classe.
     """
     jogos: list[JogoDoLancador] = []
     erros: list[str] = []
@@ -420,11 +444,23 @@ def _lutris(pasta: Path) -> BibliotecaDoLancador:
                 except sqlite3.Error as erro:
                     erros.append(f"pga.db não traz `games`: {erro}")
                     linhas = []
-                for nome, slug, executavel, pasta_do_jogo, instalado, _ in linhas:
+                for linha in linhas:
+                    (nome, slug, executavel, pasta_do_jogo, instalado, _runner,
+                     servico, id_do_servico) = linha
                     chave = str(slug or nome or "")
                     if not chave or chave in vistos:
                         continue
                     vistos.add(chave)
+                    # O DEGRAU 2 SAI DAQUI. `identidade_de_janela` é quem o
+                    # transforma em `steam_app_<N>`; este leitor só entrega o
+                    # número, e só quando o serviço diz que ele é da Steam.
+                    numero = str(id_do_servico or "").strip()
+                    da_steam = (
+                        numero
+                        if str(servico or "").strip().casefold()
+                        == _SERVICO_DA_STEAM and numero.isdigit()
+                        else ""
+                    )
                     jogos.append(JogoDoLancador(
                         chave=chave,
                         nome=str(nome or chave),
@@ -432,7 +468,8 @@ def _lutris(pasta: Path) -> BibliotecaDoLancador:
                         instalado=bool(instalado),
                         caminho=(Path(str(pasta_do_jogo))
                                  if pasta_do_jogo else None),
-                        executavel=str(executavel or "")))
+                        executavel=str(executavel or ""),
+                        appid_da_steam=da_steam))
     games = pasta / "games"
     if games.is_dir():
         for p in sorted(games.glob("*.yml")):

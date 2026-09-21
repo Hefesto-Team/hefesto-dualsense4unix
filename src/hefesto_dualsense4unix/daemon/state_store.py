@@ -419,6 +419,45 @@ class StateStore:
         """
         moment = now if now is not None else time.monotonic()
         useful = bool(wm_class) and wm_class != "unknown"
+        # **A NOSSA PRÓPRIA JANELA NÃO ENTRA NO STICKY — 21/09/2026.**
+        #
+        # `useful` responde *"o detector LEU alguma coisa?"*, e a janela do
+        # Hefesto é uma leitura perfeitamente boa: a saúde do detector continua
+        # subindo com ela, e é certo que suba. O sticky responde outra pergunta
+        # — *"qual foi a última janela de OUTRO app?"* — e é ela que estava
+        # sendo respondida errado.
+        #
+        # **O ESTRAGO ESTÁ NO DISCO DELA, e a casa já o citava sem ligar os
+        # dois fatos:** `schema.e_endereco_de_jogo` descreve o
+        # `personalizado.json` dela mirando `Hefesto-Dualsense4Unix` —
+        # *"a janela DO PRODUTO, gravada ali pelo «Detectar»"*. O «Detectar» lê
+        # o sticky **porque** ele devia sobreviver ao foco vir para cá quando
+        # ela clica no botão; com a nossa classe promovida a sticky, o botão
+        # gravava a regra da janela que ela estava olhando: a nossa.
+        #
+        # A doutrina é a da PARTIDA-PICOTADA-01, que `launch_env._leitura_cega`
+        # já escreve: *"a janela desta própria aplicação não é evidência de
+        # outro app em foco"*. Aqui ela alcança o lugar onde o valor NASCE, em
+        # vez de cada um dos cinco leitores do sticky se defender sozinho.
+        #
+        # **O RELÓGIO NÃO VAI JUNTO, e a assimetria é o cuidado desta cura.**
+        # `window_detect_useful_age`/`window_detect_seeing` perguntam *"o
+        # detector enxerga AGORA?"*, e olhar para a nossa janela é enxergar.
+        # Congelar o carimbo aqui faria o produto se declarar CEGO enquanto ela
+        # está justamente mexendo nele — um alarme falso trocado por outro.
+        #
+        # Import local: `profiles.autoswitch` importa de `daemon.launch_env`,
+        # que este módulo importa no topo. Subir isto fecharia o ciclo que
+        # `daemon/protocols.py` existe para manter desfeito.
+        entra_no_sticky = False
+        if useful:
+            from hefesto_dualsense4unix.profiles.autoswitch import (
+                OWN_GUI_WM_CLASSES,
+            )
+
+            entra_no_sticky = str(wm_class).strip().casefold() not in (
+                OWN_GUI_WM_CLASSES
+            )
         with self._lock:
             self._window_detect_backend = backend
             self._window_detect_current_class = (
@@ -435,9 +474,10 @@ class StateStore:
             self._window_detect_read_monotonic = moment
             if useful:
                 self._window_detect_healthy = True
-                self._window_detect_last_class = wm_class
-                self._window_detect_last_useful_monotonic = moment
                 self._window_detect_reason = None
+                self._window_detect_last_useful_monotonic = moment
+                if entra_no_sticky:
+                    self._window_detect_last_class = wm_class
             else:
                 self._window_detect_reason = reason
             if steam_appid_from_wm_class(

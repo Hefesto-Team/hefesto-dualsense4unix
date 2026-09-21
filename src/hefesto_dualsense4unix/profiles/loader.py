@@ -1748,6 +1748,14 @@ def reapontar_perfis_com_chave_de_executavel(
     3. **A chave nova tem de ser diferente.** Regravar um perfil idêntico troca
        a data do arquivo por nada — a mesma guarda do `_lembrar_do_som`.
 
+    **LÊ OS ARQUIVOS, E NÃO `load_all_profiles()` — e a razão é reentrância.**
+    Quem chama esta função é `_talvez_semear_jogos`, que é chamado DE DENTRO de
+    `load_all_profiles`. Voltar por lá reentra no semeador de presets
+    (`_maybe_seed_presets`) no meio de uma varredura — medido em 21/09: um
+    `personalizado.json` nascia no disco durante o conserto, fora de hora e sem
+    ninguém ter pedido. A leitura direta faz exatamente o que esta função
+    precisa e não acorda mais nada.
+
     Devolve os nomes dos perfis consertados. NUNCA LEVANTA: quem chama é o laço
     do daemon.
     """
@@ -1774,9 +1782,19 @@ def reapontar_perfis_com_chave_de_executavel(
     if not por_exe:
         return ()
     try:
-        perfis = load_all_profiles()
+        arquivos = sorted(profiles_dir(ensure=False).glob("*.json"))
     except Exception:  # pragma: no cover - disco hostil
         return ()
+    perfis: list[Profile] = []
+    for caminho in arquivos:
+        try:
+            with FileLock(str(_lock_path(caminho))):
+                bruto = json.loads(caminho.read_text(encoding="utf-8"))
+            perfis.append(Profile.model_validate(bruto))
+        except _PROFILE_DECODE_ERRORS:
+            # Perfil quebrado não é assunto desta função — `load_all_profiles`
+            # já avisa sobre ele, e avisar duas vezes por tique polui o log.
+            continue
     for prof in perfis:
         classes = list(getattr(getattr(prof, "match", None), "window_class", None) or [])
         if len(classes) != 1:

@@ -820,7 +820,7 @@ def _caderno_das_janelas(
     # (`steam_appid_from_wm_class`) e pergunta o nome pelo NÚMERO — e o número
     # não estava no caderno.
     #
-    # O sintoma media exatamente a queixa dela: o desfecho do botão dizia
+    # O sintoma espelhava exatamente a queixa dela: o desfecho do botão dizia
     # *"«Perfil» agora vale em: Só neste programa · Não instalado aqui (o
     # número vale)"* sobre o Guardiões da Galáxia **aberto na tela dela**.
     #

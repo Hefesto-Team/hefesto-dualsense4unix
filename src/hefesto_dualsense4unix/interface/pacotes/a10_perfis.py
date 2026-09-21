@@ -1533,16 +1533,29 @@ def _lancador_da_chave(chave: str) -> str:
     menu"*), e é a mesma que a lista do campo de baixo escreve. Travar o campo
     aqui seria tirar dela o gesto sobre um perfil que nada tem de errado.
 
+    **O RESIDUAL DE UM ENDEREÇO DA STEAM É «Steam» — 21/09/2026.** Desde que
+    `procedencia_do_match` passou a trazer aqui também o preset `steam_game`
+    (porque o jogo do Heroic anuncia `steam_app_<id>`), um appid que nenhum
+    lançador reivindica chega a esta função — e dele a resposta honesta não é
+    *"está no menu"*: é a Steam. `steam_app_<id>` é o carimbo dela, e a
+    biblioteca da Steam entra no catálogo por outra porta (por APPID, não por
+    chave de janela), então o `jogo_da_janela` não a acha e nem deve.
+
     NUNCA LEVANTA — a queda também é o residual, pelo mesmo motivo: um `.desktop`
     estragado não pode travar o seletor de um perfil que está certo.
     """
+    from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
+
+    residual = (PROCEDENCIA_DA_STEAM
+                if steam_appid_from_wm_class(chave) is not None
+                else LANCADOR_DIRETO)
     try:
         from hefesto_dualsense4unix.integrations.jogos_locais import jogo_da_janela
 
         achado = jogo_da_janela(chave, _ofertas_de_jogos())
     except Exception:
-        return LANCADOR_DIRETO
-    return _procedencia_do_jogo(achado) if achado is not None else LANCADOR_DIRETO
+        return residual
+    return _procedencia_do_jogo(achado) if achado is not None else residual
 
 
 def _jogo_da_procedencia(procedencia: str, texto: str) -> Any:
@@ -1616,6 +1629,22 @@ def _com_a_procedencia(lista: list[dict[str, Any]],
     return fora
 
 
+def _nome_no_catalogo(chave: str) -> str:
+    """O NOME do jogo com esta chave de janela, ou `""` — nunca levanta.
+
+    Extraído de `_nome_e_codigo` em 21/09/2026 porque passou a ter DOIS
+    chamadores: a chave crua de um lançador e, agora, o `steam_app_<id>` que o
+    jogo do Heroic anuncia. Duas cópias divergiriam no primeiro lançador novo.
+    """
+    try:
+        from hefesto_dualsense4unix.integrations.jogos_locais import jogo_da_janela
+
+        achado = jogo_da_janela(chave, _ofertas_de_jogos())
+    except Exception:
+        return ""
+    return str(getattr(achado, "nome", "") or "") if achado is not None else ""
+
+
 def _nome_e_codigo(chave: str) -> tuple[str, str]:
     """``(nome do jogo, código)`` para o que o perfil guarda — item 12 dela.
 
@@ -1633,6 +1662,17 @@ def _nome_e_codigo(chave: str) -> tuple[str, str]:
     código: é o que o perfil tem, e a coluna mostra o que tem em vez de ficar
     vazia. Inventar um nome seria a tela afirmando um jogo que ela não tem.
 
+    **UM NÚMERO QUE A STEAM NÃO CONHECE PODE SER DE OUTRO LANÇADOR — 21/09.**
+    O jogo do Heroic anuncia `steam_app_1088850` (o umu exporta `SteamAppId`,
+    e o Proton batiza a janela com ele), então o número chega aqui e a
+    biblioteca da Steam dela não o tem. Sem esta segunda pergunta a coluna
+    dizia *"Heroic · 1088850"* — a procedência certa ao lado de um número que
+    não significa nada para ela, e que a foto 9 manda nunca mostrar.
+
+    O código sai VAZIO nesse caso, e é a mesma regra de sempre: o número só é
+    público na Steam. Quando nem a Steam nem o catálogo conhecem, o número
+    fica — é o que o perfil tem.
+
     NUNCA LEVANTA — isto é PINTURA, uma vez por linha, a cada tique.
     """
     from hefesto_dualsense4unix.profiles.simple_match import normalize_appid
@@ -1641,16 +1681,13 @@ def _nome_e_codigo(chave: str) -> tuple[str, str]:
         return ("", "")
     appid = normalize_appid(chave)
     if appid is not None:
-        return (_nomes_dos_jogos().get(appid, ""), appid)
-    try:
-        from hefesto_dualsense4unix.integrations.jogos_locais import jogo_da_janela
-
-        achado = jogo_da_janela(chave, _ofertas_de_jogos())
-    except Exception:
-        achado = None
-    if achado is None:
-        return ("", chave)
-    return (str(getattr(achado, "nome", "") or ""), "")
+        da_steam = _nomes_dos_jogos().get(appid, "")
+        if da_steam:
+            return (da_steam, appid)
+        do_lancador = _nome_no_catalogo(f"steam_app_{appid}")
+        return (do_lancador, "") if do_lancador else ("", appid)
+    do_catalogo = _nome_no_catalogo(chave)
+    return (do_catalogo, "") if do_catalogo else ("", chave)
 
 
 def _quando_usar(match: Any, base: str) -> str:
@@ -3578,6 +3615,41 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
                   **{"editor.jogo": simple_extra(prof.match) or texto})
 
 
+def _classe_de_outro_app(ctx: Contexto) -> str:
+    """A `wm_class` da última janela que NÃO é a nossa — `""` quando não há.
+
+    **UM DONO SÓ PARA OS DOIS GESTOS QUE PERGUNTAM ISSO** (`detectar` e
+    `novo`). Os dois escreviam a mesma expressão de duas chaves, e a segunda
+    delas tinha um buraco que só o primeiro paga caro.
+
+    **O STICKY ANTES DA CRUA, e a razão é o próprio clique dela:** quando ela
+    aperta «Detectar», a janela em foco é a DO HEFESTO. `window_detect_last_class`
+    existe justamente para sobreviver a isso.
+
+    **E A CRUA PRECISA DA MESMA GUARDA — 21/09/2026.** Sem sticky (detector
+    recém-subido, ou nenhuma outra janela vista desde o boot) o recuo pegava
+    `window_detect_current_class`, que nesse instante é a NOSSA janela: o botão
+    gravava a regra do próprio Hefesto. Não é hipótese — o `personalizado.json`
+    dela mira `Hefesto-Dualsense4Unix`, e `schema.e_endereco_de_jogo` já
+    escrevia de onde aquilo veio: *"a janela DO PRODUTO, gravada ali pelo
+    «Detectar»"*.
+
+    A outra metade da cura mora no `StateStore`, onde o sticky NASCE, e as duas
+    são necessárias: lá o valor deixa de se sujar, aqui o recuo deixa de
+    escolher a nossa janela quando não há valor nenhum.
+    """
+    from hefesto_dualsense4unix.profiles.autoswitch import OWN_GUI_WM_CLASSES
+
+    for chave in ("window_detect_last_class", "window_detect_current_class"):
+        classe = str(ctx.state.get(chave) or "").strip()
+        if not classe or classe == "unknown":
+            continue
+        if classe.casefold() in OWN_GUI_WM_CLASSES:
+            continue
+        return classe
+    return ""
+
+
 @gesto("10-perfis.html", "detectar", grava="_gravar")
 def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Detectar": pegar o jogo em foco e montar a regra com ele.
@@ -3636,16 +3708,24 @@ def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
 
     nome = _perfil_do_editor(ctx)
-    classe = str(ctx.state.get("window_detect_last_class")
-                 or ctx.state.get("window_detect_current_class") or "")
-    if not classe or classe == "unknown":
-        # A ÚNICA RECUSA QUE SOBRA, e ela é a honesta: o detector não viu nada.
-        # Nada a gravar, e nenhum lugar para mandá-la — o que ela faz é abrir o
-        # jogo e clicar de novo, que é o que a frase diz.
+    classe = _classe_de_outro_app(ctx)
+    if not classe:
+        # A ÚNICA RECUSA QUE SOBRA, e ela é a honesta: o detector não viu
+        # nenhuma janela de OUTRO app. Nada a gravar, e nenhum lugar para
+        # mandá-la — o que ela faz é abrir o jogo e clicar de novo.
+        #
+        # **A RECUSA DIZ O QUE ELE ESTÁ VENDO — 21/09/2026.** "Não achei
+        # janela" sobre uma tela cheia de janelas se lê como defeito do
+        # produto; nomear a classe crua é a diferença entre ela conferir em um
+        # segundo e ela abrir um chamado. Quando a crua é a nossa própria
+        # janela, dizer isso é a informação inteira: o detector funciona, o
+        # foco é que está aqui.
+        crua = str(ctx.state.get("window_detect_current_class") or "").strip()
+        vendo = f" (estou vendo «{crua}»)" if crua and crua != "unknown" else ""
         raise RuntimeError(
             "não achei janela de jogo em foco — o detector não está vendo "
-            "nenhuma. Abra o jogo, deixe-o em foco por um instante e clique "
-            "de novo.")
+            f"nenhuma{vendo}. Abra o jogo, deixe-o em foco por um instante e "
+            "clique de novo.")
     prof = _com_o_que_esta_valendo(nome, ctx)
     appid = steam_appid_from_wm_class(classe)
     if appid is not None:
@@ -3745,8 +3825,7 @@ def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     from hefesto_dualsense4unix.profiles.simple_match import from_simple_choice
     from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
 
-    classe = str(ctx.state.get("window_detect_last_class")
-                 or ctx.state.get("window_detect_current_class") or "")
+    classe = _classe_de_outro_app(ctx)
     appid = steam_appid_from_wm_class(classe) if classe else None
     regra = (from_simple_choice("steam_game", str(appid)) if appid is not None
              else MatchAny())
