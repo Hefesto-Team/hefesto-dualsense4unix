@@ -650,6 +650,50 @@ limpar_ambiente_do_interpretador() {
     return 0
 }
 
+# A LISTA DE EXCLUSÃO DO HEFESTO — OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01,
+# 21/09/2026. O jogo que ela pôs na lista abre como se o Hefesto não estivesse
+# instalado: nenhuma env, nem a camada Vulkan, nem o device KS, nem o Game
+# Mode, nem o marcador de lançamento — o `exec env "$@"` direto, antes de tudo.
+#
+# O vigia da Steam tira o atalho do jogo excluído quando ela fecha a Steam; até
+# lá a LaunchOptions ainda chama este script, e é ESTE passo que faz a exclusão
+# valer com a Steam aberta, no primeiro lançamento depois do clique.
+#
+# A lista é do dono `integrations/lista_de_exclusao.py`, que grava uma chave
+# por linha (`"chave": "steam_app_<N>"`). A régua escreve a lista PELO DONO e
+# roda este script, então uma mudança de formato lá reprova aqui. As aspas dos
+# dois lados do número impedem que `steam_app_1` case `steam_app_12`.
+#
+# SÓ SHELL PURO, pelo mesmo motivo de `dualsense_no_cabo`: sem `grep` nem
+# `python3`, um PATH mínimo não pode fazer um jogo excluído abrir pelo Hefesto.
+jogo_excluido() {
+    je_appid="${SteamAppId:-}"
+    case "$je_appid" in
+        ''|0) return 1 ;;
+        *[!0-9]*) return 1 ;;
+    esac
+    # `${HOME:-}` e não `$HOME`: o script roda com `set -u`, e uma variável
+    # ausente aqui ABORTARIA o wrapper — o jogo não abriria. Sem as duas, não
+    # há lista a ler, e o jogo segue o caminho de sempre.
+    je_base="${XDG_CONFIG_HOME:-}"
+    if [ -z "$je_base" ]; then
+        [ -n "${HOME:-}" ] || return 1
+        je_base="$HOME/.config"
+    fi
+    je_lista="$je_base/hefesto-dualsense4unix/lista_de_exclusao.json"
+    [ -f "$je_lista" ] || return 1
+    while IFS= read -r je_linha || [ -n "$je_linha" ]; do
+        case "$je_linha" in
+            *'"chave": "steam_app_'"$je_appid"'"'*) return 0 ;;
+        esac
+    done < "$je_lista"
+    return 1
+}
+
+if jogo_excluido; then
+    exec env "$@"
+fi
+
 record_last_run || true
 
 hefesto_envs="$(decide_envs)" || hefesto_envs=""
