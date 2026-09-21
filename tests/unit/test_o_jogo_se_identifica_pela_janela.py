@@ -365,3 +365,89 @@ class TestOPerfilQueJaNasceuTortoSeConserta:
             "a migração existe e ninguém a chama")
         i = fonte.index("semear_perfis_dos_jogos()")
         assert "reapontar_perfis_com_chave_de_executavel()" in fonte[i:i + 900]
+
+
+class TestJogoEmFocoNaoPerguntaSeEDaSteam:
+    """**«É um jogo em foco?» parou de significar «é da Steam?» — 21/09/2026.**
+
+    Ordem dela: *"O PROJETO E SUAS FEATURES DEVEM FUNCIONAR INDEPENDENTE DO
+    LANÇADOR SER STEAM. QUALQUER OUTRO LANÇADOR O FUNCIONAMENTO SEGUE IGUAL."*
+
+    O que esse «não» custava está medido na VPAD-NA-JANELA-DA-STEAM-01
+    (17/08/2026): com a resposta *"não é jogo"*, um perfil de desktop pode
+    reverter o modo e **destruir o vpad no meio da partida** — o jogo fica com
+    um descritor órfão e um controle que não se mexe.
+    """
+
+    def _daemon(self, classe):
+        from hefesto_dualsense4unix.daemon.lifecycle import Daemon
+
+        d = Daemon.__new__(Daemon)
+        d.store = type("S", (), {"window_detect_current_class": classe})()
+        return d
+
+    def test_o_jogo_da_steam_continua_respondendo_sim(self):
+        """Nada do caminho que funcionava mudou — a cura é aditiva.
+
+        MORDIDA: tire o primeiro degrau.
+        """
+        assert self._daemon("steam_app_3357650")._janela_de_jogo_em_foco()
+
+    def test_o_jogo_por_umu_ja_cai_no_primeiro_degrau(self):
+        """O Heroic com Proton anuncia `steam_app_<N>` — ele nunca precisou do
+        catálogo. É o caso do Guardiões da Galáxia dela.
+        """
+        assert self._daemon(JANELA_DO_GOTG)._janela_de_jogo_em_foco()
+
+    def test_o_cliente_steam_continua_contando(self):
+        """VPAD-NA-JANELA-DA-STEAM-01: conferir um preço no meio da partida não
+        pode derrubar o vpad.
+
+        MORDIDA: tire o segundo degrau.
+        """
+        assert self._daemon("steam")._janela_de_jogo_em_foco()
+
+    def test_o_jogo_nativo_de_outro_lancador_passou_a_contar(self, monkeypatch):
+        """**O DEGRAU QUE NASCEU.** Um jogo nativo Linux do Lutris não tem
+        `steam_app_<N>` e respondia «não é jogo».
+
+        MORDIDA: tire o terceiro degrau. Esta régua reprova, e com ela volta o
+        caminho que destrói o vpad no meio da partida.
+        """
+        from hefesto_dualsense4unix.integrations import jogos_locais as jl
+
+        achado = type("J", (), {"nome": "Celeste", "chave": "celeste.x86_64"})()
+        monkeypatch.setattr(jl, "jogos_de_janela", lambda *a, **k: [achado])
+        monkeypatch.setattr(
+            jl, "jogo_da_janela",
+            lambda classe, jogos: achado if classe == "Celeste.x86_64" else None)
+
+        assert self._daemon("Celeste.x86_64")._janela_de_jogo_em_foco()
+
+    def test_o_navegador_continua_nao_sendo_jogo(self, monkeypatch):
+        """**A RÉGUA QUE IMPEDE A CURA DE PASSAR DO PONTO.** Se tudo virar
+        jogo, a reversão para desktop nunca acontece e o vpad fica de pé para
+        sempre — a política de 23/07 que o `firefox` finca.
+
+        MORDIDA: faça o terceiro degrau devolver `True` sempre.
+        """
+        from hefesto_dualsense4unix.integrations import jogos_locais as jl
+
+        monkeypatch.setattr(jl, "jogos_de_janela", lambda *a, **k: [])
+        monkeypatch.setattr(jl, "jogo_da_janela", lambda *a, **k: None)
+
+        assert not self._daemon("firefox")._janela_de_jogo_em_foco()
+
+    def test_disco_hostil_nao_derruba_o_daemon(self, monkeypatch):
+        """Quem chama decide operação de vpad; o lado seguro de uma falha de
+        disco é o comportamento que já existia.
+
+        MORDIDA: tire o `try`.
+        """
+        from hefesto_dualsense4unix.integrations import jogos_locais as jl
+
+        def _explode(*a, **k):
+            raise OSError("disco hostil")
+
+        monkeypatch.setattr(jl, "jogos_de_janela", _explode)
+        assert not self._daemon("qualquer")._janela_de_jogo_em_foco()
