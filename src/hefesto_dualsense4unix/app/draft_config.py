@@ -225,6 +225,12 @@ class MicDraft(BaseModel):
     volume: int | None = Field(default=None, ge=0, le=100)
     #: Mudo do FIRMWARE — o mesmo que apaga a luz vermelha do microfone.
     muted: bool | None = None
+    #: **O GANHO DE ENTRADA, 0..100 — 21/09/2026, ordem dela** (*"OS DOIS
+    #: SLICERS REFLETEM TANTO LÁ QUANTO NO JOGO E ISSO DEVE SER SALVO"*).
+    #: Espelha ``ProfileMicConfig.gain``/``ControllerMicOverride.gain``, e é
+    #: EIXO DIFERENTE do ``volume`` logo acima: aquele é o ganho da FONTE no
+    #: PipeWire, este é o ganho de captura da PLACA ALSA daquele controle.
+    gain: int | None = Field(default=None, ge=0, le=100)
     dirty: bool = False
     in_profile: bool = False
 
@@ -645,6 +651,11 @@ class DraftConfig(BaseModel):
                 # senão abrir o perfil na janela e salvar de novo os apagaria.
                 volume=profile.mic.volume,
                 muted=profile.mic.muted,
+                # O GANHO VEM JUNTO pela MESMA razão do par acima: sem esta
+                # linha, abrir o perfil na janela e salvar de novo apagaria o
+                # ganho que ela escolheu — que é literalmente o defeito
+                # «o Salvar DESTRUÍA» desta casa.
+                gain=profile.mic.gain,
                 dirty=False,
                 in_profile=True,
             )
@@ -771,6 +782,7 @@ class DraftConfig(BaseModel):
                 ),
                 volume=self.mic.volume,
                 muted=self.mic.muted,
+                gain=self.mic.gain,
             )
             if (self.mic.dirty or self.mic.in_profile)
             else None
@@ -1353,9 +1365,13 @@ class DraftConfig(BaseModel):
         if cfg is None:
             return self.mic
         campos = cfg.model_fields_set
+        # A LISTA É LIDA DO ESQUEMA, NÃO DIGITADA — 21/09/2026. Ela dizia
+        # `("muted", "volume")` e o `gain` teria nascido invisível aqui: o
+        # override guardaria o ganho e o card mostraria o global. É a classe de
+        # defeito «campo que grava e ninguém lê», e o esquema já sabe responder.
         return self.mic.model_copy(update={
             nome: getattr(cfg, nome)
-            for nome in ("muted", "volume") if nome in campos
+            for nome in type(cfg).model_fields if nome in campos
         } | {"in_profile": True})
 
     def with_controller_mic(self, uniq: str, mic: MicDraft) -> DraftConfig:
@@ -1390,9 +1406,11 @@ class DraftConfig(BaseModel):
             campos["muted"] = bool(mic.muted)
         if mic.volume is not None and mic.volume != self.mic.volume:
             campos["volume"] = int(mic.volume)
+        if mic.gain is not None and mic.gain != self.mic.gain:
+            campos["gain"] = int(mic.gain)
         if not campos:
             return self.with_controller_fields_cleared(
-                uniq, "mic", {"muted", "volume"}
+                uniq, "mic", {"muted", "volume", "gain"}
             )
         return self._with_override_section(
             uniq, "mic", ControllerMicOverride(**campos)

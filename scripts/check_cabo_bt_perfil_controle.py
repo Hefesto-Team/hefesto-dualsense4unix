@@ -232,24 +232,20 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
 #: que reprovou a leva e cobrou o fecho, exatamente como desenhada.
 #:
 #: **E ELA REABRIU EM 20/09/2026, com UMA entrada e a sprint dona escrita.** O
-#: ganho de entrada do microfone ganhou deslizante naquele dia, por ordem dela
-#: — *"além disso não tá funcionando"* —, e nasce com duas das quatro
-#: respostas: ele age no CABO e não no rádio (o aparelho: pelo rádio não há
-#: placa ALSA onde o elemento exista, e a tela diz isso em vez de calar), e
-#: **não viaja no perfil**.
+#: **A DÍVIDA DO GANHO MORREU EM 21/09/2026, e quem a matou foi ela:** *"OS
+#: DOIS SLICERS REFLETEM TANTO LÁ QUANTO NO JOGO E ISSO DEVE SER SALVO."*
 #:
-#: A ausência do perfil NÃO é a escolha dela morrendo — a placa guarda o valor
-#: entre sessões, e é por isso que esta linha é dívida e não defeito. O que
-#: falta é ele acompanhar a TROCA de perfil, como o `volume` acompanha; e isso
-#: pede um leitor de placa que hoje só a interface tem, e que o daemon
-#: precisaria para aplicar. A sprint é dona disso.
-A_DIVIDA_CONHECIDA: dict[str, tuple[str, str]] = {
-    "ganho-mic": (
-        "O-GANHO-DO-MIC-VIAJA-NO-PERFIL-01",
-        "age no cabo e não no rádio (é o aparelho: sem placa ALSA não há "
-        "elemento de ganho, e a tela acende o cinza com a razão), e não vai "
-        "no perfil — a placa guarda o valor, mas ele não acompanha a troca"),
-}
+#: O que esta seção dizia — *"pede um leitor de placa que hoje só a interface
+#: tem, e que o daemon precisaria para aplicar"* — era verdade e virou a cura:
+#: o leitor saiu da aba e virou `integrations/ganho_do_microfone.py`, e quem
+#: aplica na troca de perfil é `ProfileManager._aplicar_ganho_do_mic`. O campo
+#: é `mic.gain`, nos dois níveis, e o gesto grava no `controllers[uniq]`.
+#:
+#: **A LIÇÃO FICA, porque ela é da casa:** a dívida estava escrita de forma
+#: honesta e por isso não virou defeito — mas passou UM DIA declarada, e ela a
+#: leu na tela antes de qualquer um de nós reler este arquivo. Dívida declarada
+#: é melhor que dívida escondida; melhor ainda é a que não dura um dia.
+A_DIVIDA_CONHECIDA: dict[str, tuple[str, str]] = {}
 
 #: ONDE CADA FEATURE MORA NO PERFIL — `(campo do Profile, campo do
 #: ControllerOverrides)`.
@@ -268,6 +264,7 @@ NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
     "mic-modo": ("mic", "mic"),
     "mudo": ("mic", "mic"),
     "volume": ("mic", "mic"),
+    "ganho-mic": ("mic", "mic"),
     "rota": ("speaker", "speaker"),
     "sensor": (None, "sensores"),
     "cor": ("leds", "leds"),
@@ -327,10 +324,23 @@ NAO = "nao"  # noqa-acento: valor cru do mapa (`*_aciona`), não prosa
 _SEM_LINHA = "sem linha"
 _RESSALVA = "com ressalva"
 _SIM_ = "sim"
+#: **«O APARELHO NÃO TEM ISSO NESTE TRANSPORTE» É RESPOSTA, NÃO DÍVIDA** —
+#: 21/09/2026. O mapa já marcava esse fato em 163 linhas, no campo
+#: `*_por_que_nao_aciona`, com o valor `nada-a-acionar`; esta régua não o
+#: conhecia e lia todas como `nao`. O efeito era declarar dívida sobre o
+#: transporte: o ganho do microfone não existe pelo rádio porque **não há placa
+#: ALSA onde o elemento exista** (medido em 15/08: a placa segue o transporte),
+#: e nenhuma sprint desta casa vai mudar isso.
+#:
+#: Ela fica ACIMA do `nao` na escada, e abaixo do `com ressalva`, porque é uma
+#: resposta melhor do que *"não aciona e não sei dizer por quê"* e pior do que
+#: *"aciona, com a dívida escrita"*. O que ela NÃO é: motivo de reprovação —
+#: o filtro de falta cobra `nao` e `sem linha`, e esta não é nenhum dos dois.
 
 #: A ORDEM DAS RESPOSTAS, da pior para a melhor. Um gesto com duas chaves
 #: responde pela PIOR: `min` sobre este índice.
-_ESCADA = (_SEM_LINHA, NAO, _RESSALVA, _SIM_)
+_NAO_EXISTE = "nao existe no aparelho"  # noqa-acento: valor cru do mapa
+_ESCADA = (_SEM_LINHA, NAO, _NAO_EXISTE, _RESSALVA, _SIM_)
 
 #: O CONTROLE DESTA CASA. O mapa tem uma linha por (chave, controle) e as do
 #: `pro` e do `sn30` dizem `não` em quase tudo — varrer todas e ficar com a
@@ -354,7 +364,10 @@ def _resposta_de_transporte(linhas: list[dict[str, str]], lado: str) -> str:
     melhor = NAO
     for linha in minhas:
         aciona = linha.get(f"{lado}_aciona", "").strip().lower()
-        if aciona == "parcial":
+        porque = linha.get(f"{lado}_por_que_nao_aciona", "").strip().lower()
+        if aciona not in _SIM and aciona != "parcial" and porque == "nada-a-acionar":
+            resposta = _NAO_EXISTE
+        elif aciona == "parcial":
             resposta = _RESSALVA
         elif aciona in _SIM:
             resposta = (_RESSALVA if linha.get(f"{lado}_ressalva", "").strip()

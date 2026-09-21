@@ -550,6 +550,23 @@ class ProfileMicConfig(BaseModel):
     #: — e por isso ele só atravessa a troca EXPLÍCITA de perfil
     #: (MIC-GRAVACAO-01).
     muted: bool | None = None
+    #: **O GANHO DE ENTRADA, EM POR CENTO — 21/09/2026, ordem dela.** *"OS DOIS
+    #: SLICERS REFLETEM TANTO LÁ QUANTO NO JOGO E ISSO DEVE SER SALVO."* Os dois
+    #: deslizantes da coluna do microfone são o `volume` (o ganho da FONTE no
+    #: PipeWire) e este, que é o ganho de captura da PLACA ALSA daquele
+    #: controle — o `Headset Capture Volume` do DualSense. São eixos diferentes
+    #: do mesmo som, e confundi-los faria o produto escrever num e mostrar o
+    #: outro.
+    #:
+    #: `None` = o perfil não tem opinião e ativá-lo não toca no ganho. Com
+    #: número, ativar APLICA — pelo mesmo caminho e com a mesma trava manual do
+    #: `volume`, porque errar aqui também custa só um número que ela vê na tela.
+    #:
+    #: **NÃO HÁ PLACA NO RÁDIO** (medido em 15/08: a placa segue o transporte),
+    #: e o escritor devolve `None` nesse caso. Guardar o número mesmo assim é
+    #: deliberado: ela pode gravar o perfil com o controle no cabo e abri-lo com
+    #: ele no rádio, e o dia em que voltar ao cabo o ganho dela tem de estar lá.
+    gain: int | None = Field(default=None, ge=0, le=100)
 
 
 class ProfileSpeakerConfig(BaseModel):
@@ -1222,6 +1239,19 @@ class ControllerMicOverride(BaseModel):
     #: que o disco guarda continua sendo a PORCENTAGEM — o byte é derivado, e
     #: persistir byte faria o perfil dela envelhecer junto com o protocolo.
     volume: int | None = Field(default=None, ge=0, le=100)
+
+    #: **O GANHO DE ENTRADA DESTA PEÇA, 0..100 — 21/09/2026.** Irmão exato do
+    #: campo global, e a razão de ele ser POR PEÇA é a mesma do `volume` logo
+    #: acima, só que mais forte: o ganho é da PLACA ALSA, e com dois DualSense
+    #: no cabo há DUAS placas (MIC-DA-MESA-CHEIA-01). Um número só para a mesa
+    #: inteira escreveria o ganho de um controle na placa de outro.
+    #:
+    #: **O CAMINHO POR UNIDADE NASCEU ANTES DO CAMPO**, que é a ordem que esta
+    #: classe cobra de si mesma: `integrations.ganho_do_microfone.definir` já
+    #: recebe o `uniq` e resolve a placa por ele
+    #: (`placa_do_controle` → `eleicao_de_microfone.fonte_nativa_do_controle`),
+    #: e devolve `None` — nunca a placa do vizinho — quando não resolve.
+    gain: int | None = Field(default=None, ge=0, le=100)
 
     @model_validator(mode="before")
     @classmethod

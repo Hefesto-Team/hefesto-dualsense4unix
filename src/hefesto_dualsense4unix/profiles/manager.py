@@ -1510,11 +1510,31 @@ class ProfileManager:
             muted = True if muted is True else None
         elif origin != "manual":
             muted = None
+        # O GANHO DE ENTRADA — 21/09/2026, ordem dela: *"OS DOIS SLICERS
+        # REFLETEM TANTO LÁ QUANTO NO JOGO E ISSO DEVE SER SALVO."*
+        #
+        # ELE NÃO VAI PELO APPLIER, e não é descuido: o `mic_applier` fala com
+        # o daemon, e o ganho é da PLACA ALSA daquele controle — um `amixer`
+        # local, o mesmo caminho que a aba Controles usa no clique. Mandá-lo
+        # pelo IPC daria um segundo vocabulário para o mesmo eixo e um segundo
+        # escritor para o mesmo valor, que é a família de defeito que esta casa
+        # persegue.
+        #
+        # **SÓ COM `uniq`**, e a razão é medida: sem o MAC não há como resolver
+        # QUAL placa, e escrever na primeira que aparecer poria o ganho de um
+        # controle no microfone de outro. Um perfil que guarde o ganho só na
+        # seção global não o aplica — e é por isso que quem GRAVA (a aba) grava
+        # sempre no `controllers[uniq]`.
+        estado_do_ganho = self._aplicar_ganho_do_mic(secao, uniq, resultado)
         if volume is None and muted is None:
             # Seção que existe só pelo `button_toggles_system` (ou perfil cujo
             # `muted` acabou de ser silenciado pela guarda acima): nada a
             # escrever, e "nada a escrever" não é uma chamada vazia ao applier.
-            return None
+            #
+            # **O GANHO SOZINHO JÁ É OPINIÃO** — devolver `None` aqui depois de
+            # o ter escrito faria o relatório dizer "este perfil não tem
+            # microfone" sobre um perfil que acabou de mudar o ganho dela.
+            return estado_do_ganho
         # O VETO DE `audio` SAIU — 14/09/2026, mesma decisão e mesma razão do
         # irmão `apply_speaker` logo acima.
         try:
@@ -1534,6 +1554,44 @@ class ProfileManager:
                 err=str(exc),
             )
         resultado["mic"] = estado
+        return estado
+
+    def _aplicar_ganho_do_mic(
+        self,
+        secao: Any,
+        uniq: str | None,
+        resultado: dict[str, str],
+    ) -> str | None:
+        """Escreve o `gain` desta seção na placa ALSA deste controle.
+
+        Devolve o estado para o relatório, ou `None` quando não havia o que
+        escrever. Best-effort como os irmãos: uma máquina sem `amixer` ou um
+        controle no rádio não abortam a ativação do perfil.
+
+        **O RELATÓRIO DIZ A DIFERENÇA ENTRE «NÃO PEDIU» E «NÃO DEU»**, e ela
+        importa: `sem_placa` é a resposta honesta do controle no rádio (a placa
+        segue o transporte, medido em 15/08) e não é falha — o número fica
+        guardado e vale no dia em que ele voltar ao cabo.
+        """
+        pedido = getattr(secao, "gain", None)
+        if pedido is None:
+            return None
+        # IMPORT TARDIO DE PROPÓSITO. `integrations.ganho_do_microfone` puxa
+        # `app.audio_saida`, e `app` importa `profiles` — no topo isto seria um
+        # ciclo. Tardio ele só custa na primeira ativação que tenha ganho, e o
+        # perfil sem ganho nem carrega o módulo.
+        from hefesto_dualsense4unix.integrations import ganho_do_microfone
+        if not uniq:
+            resultado["mic:ganho"] = "sem_uniq"
+            return "sem_uniq"
+        try:
+            ficou = ganho_do_microfone.definir(str(uniq), int(pedido), [str(uniq)])
+        except Exception as exc:  # pragma: no cover - defesa
+            logger.warning("profile_mic_gain_failed", uniq=uniq, err=str(exc))
+            resultado[f"mic:ganho:{uniq}"] = "falhou"
+            return "falhou"
+        estado = "sem_placa" if ficou is None else "aplicado"
+        resultado[f"mic:ganho:{uniq}"] = estado
         return estado
 
     def reapply_speaker_on_connect(self, uniq: str | None = None) -> str | None:
