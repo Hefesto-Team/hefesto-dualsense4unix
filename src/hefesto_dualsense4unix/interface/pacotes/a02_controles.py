@@ -3617,6 +3617,7 @@ from hefesto_dualsense4unix.core.ds_output_report import (  # noqa: E402
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac  # noqa: E402
 from hefesto_dualsense4unix.integrations import (  # noqa: E402
     monitor_do_microfone,
+    som_do_controle_na_tv,
     teste_do_microfone,
 )
 
@@ -4506,6 +4507,19 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         audio_saida.devolver_o_som_do_pc()
         if fonte_do_controle(ctx.por_uniq(uniq)) == "mix":
             _dizer_a_fonte_ao_daemon(p, uniq, "sfx")
+        # **O «TUDO» INCLUI O SOM DO CONTROLE — 21/09/2026, ordem dela.** *"o
+        # som da tv ser A, o som do controle ser B (…) controle e tv na tv faz
+        # ab na tv. isso não rola ainda."*
+        #
+        # Sem esta linha o botão calava o alto-falante e o B ficava NO NÓ, sem
+        # ninguém para escutá-lo — ela ouvia silêncio e lia como *"o botão não
+        # faz nada de diferente"*, que do ponto de vista dela era verdade: dois
+        # botões, o mesmo resultado audível.
+        #
+        # **DEPOIS DO `devolver_o_som_do_pc` e do `sfx`, e a ordem importa:**
+        # com o `mix` de pé nos dois sentidos o som daria a volta (o PC vai ao
+        # nó, o nó volta ao PC). O laço só sobe com o sentido único garantido.
+        som_do_controle_na_tv.ligar(uniq)
         byte_calado = ROTA_DO_CANAL[CANAL_NADA_NO_CONTROLE]
         if not p.speaker_set(rota=byte_calado, uniq=uniq,
                              **_volume_conhecido(ctx.por_uniq(uniq))):
@@ -4522,6 +4536,11 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     if qual == ROTA_OUVIR_JUNTO:
         audio_saida.devolver_o_som_do_pc()
+        # SAIR DO TERCEIRO BOTÃO FECHA O LAÇO. Deixá-lo de pé aqui poria o som
+        # do controle saindo na TV **e** o alto-falante tocando — o estado que
+        # nenhum dos três botões descreve, e o pior deles: com o `mix` ligado
+        # logo abaixo, o som daria a volta inteira.
+        som_do_controle_na_tv.desligar(uniq)
         _dizer_a_fonte_ao_daemon(p, uniq, "mix")
         lembrar: dict[str, Any] = {"fonte": "mix"}
         if _byte_da_rota(ctx.por_uniq(uniq)) == ROTA_DO_CANAL[CANAL_TODO_O_PC]:
@@ -4544,6 +4563,11 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if fonte_do_controle(ctx.por_uniq(uniq)) == "mix":
         _dizer_a_fonte_ao_daemon(p, uniq, "sfx")
         _lembrar_do_som(ctx, uniq, speaker={"fonte": "sfx"})
+
+    # E FECHA O LAÇO DA TV pela mesma razão do ramo acima: os três botões são
+    # UM estado, e um laço que sobrevivesse à troca faria «Sons do jogo» tocar
+    # nos dois lugares com a tela dizendo que toca num só.
+    som_do_controle_na_tv.desligar(uniq)
 
     # A CAMADA 1 VEM PRIMEIRO — ver a docstring. `uniqs_na_mesa` é a mesa
     # inteira porque o casamento por dispositivo USB precisa saber de QUEM são
