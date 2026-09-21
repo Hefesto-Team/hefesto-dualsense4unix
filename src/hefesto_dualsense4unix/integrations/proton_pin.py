@@ -2349,14 +2349,44 @@ def _travar_e_contar(
     return 0 if result["status"] in ("locked", "noop") else 1
 
 
+def nomear_fora_do_pino(appid: int | str, *, nota: str = "") -> str:
+    """Põe `appid` no `jogos_fora_do_pino.txt`. O dono da escrita, e o único.
+
+    Status: ``"adicionado"`` | ``"ja_estava"`` | ``"appid_invalido"`` |
+    ``"erro"`` — os de `add_appid_to_steam_input_allowlist`, que é quem escreve
+    (as três armadilhas do formato estão resolvidas lá). Nunca levanta.
+
+    NASCEU EM 21/09/2026 (OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01): até
+    aqui só a linha de comando sabia escrever esta lista, com o cabeçalho
+    privado deste módulo. A lista de exclusão precisa escrever nela também, e
+    importar o cabeçalho privado seria um segundo dono do formato.
+
+    NÃO DESPINA: tira o jogo do PRÓXIMO lock. A entrada que ele já tem no
+    `config.vdf` fica como está — quem a tira é `unlock_games_from_pinned_proton`.
+    """
+    return add_appid_to_steam_input_allowlist(
+        appid,
+        path=fora_do_pino_path(),
+        nota=nota,
+        cabecalho=_FORA_DO_PINO_HEADER,
+    )
+
+
+def devolver_ao_pino(appid: int | str) -> str:
+    """O avesso de :func:`nomear_fora_do_pino`. Nunca levanta.
+
+    Status: ``"removido"`` | ``"nao_estava"`` | ``"appid_invalido"`` |
+    ``"erro"``.
+    """
+    return remove_appid_from_steam_input_allowlist(appid, path=fora_do_pino_path())
+
+
 def _cmd_fora_do_pino(args: argparse.Namespace) -> int:
     """Nomeia um jogo como fora do pino, com a data na linha de comentário."""
     appid = str(args.fora_do_pino).strip()
-    status = add_appid_to_steam_input_allowlist(
+    status = nomear_fora_do_pino(
         appid,
-        path=fora_do_pino_path(),
         nota=f"{time.strftime('%d/%m/%Y')} — fora do Proton pinado a pedido (--fora-do-pino)",
-        cabecalho=_FORA_DO_PINO_HEADER,
     )
     print(f"[proton-pin] fora do pino: {appid}: {status} ({fora_do_pino_path()})")
     if status in ("appid_invalido", "erro"):
@@ -2371,7 +2401,7 @@ def _cmd_fora_do_pino(args: argparse.Namespace) -> int:
 def _cmd_de_volta_ao_pino(args: argparse.Namespace) -> int:
     """Desfaz o `--fora-do-pino`: o próximo lock volta a alcançar o jogo."""
     appid = str(args.de_volta_ao_pino).strip()
-    status = remove_appid_from_steam_input_allowlist(appid, path=fora_do_pino_path())
+    status = devolver_ao_pino(appid)
     print(f"[proton-pin] de volta ao pino: {appid}: {status} ({fora_do_pino_path()})")
     return 1 if status in ("appid_invalido", "erro") else 0
 
