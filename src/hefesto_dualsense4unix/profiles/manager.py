@@ -34,6 +34,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     PonteConfirmada,
     Profile,
     ProfileModeConfig,
+    e_endereco_de_jogo,
     normalizar_gamepad_flavor,
 )
 from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
@@ -1877,7 +1878,24 @@ class ProfileManager:
         """
         candidates = [p for p in load_all_profiles() if p.matches(dict(window_info))]
         wm_class = str(window_info.get("wm_class") or "")
-        e_janela_de_jogo = steam_appid_from_wm_class(wm_class) is not None
+        # **QUALQUER LANÇADOR, NÃO SÓ A STEAM — 21/09/2026, ordem dela:**
+        # *"O PROJETO E SUAS FEATURES DEVEM FUNCIONAR INDEPENDENTE DO LANÇADOR
+        # SER STEAM."* Esta linha perguntava «é da Steam?» e chamava a resposta
+        # de `e_janela_de_jogo`; o nome já dizia a pergunta certa e o corpo
+        # respondia outra. `e_endereco_de_jogo` é o dono dessa pergunta desde a
+        # UNIFICA-PREDICADO-01 (11/09) e soma o carimbo `steam_app_<id>` ao
+        # cadastro que o censo dos lançadores declara.
+        #
+        # **O QUE ISSO MUDA PARA A STEAM: NADA.** O primeiro degrau de
+        # `e_endereco_de_jogo` é literalmente o predicado que estava aqui.
+        #
+        # **O QUE ISSO MUDA PARA O HEROIC: o veto passa a existir.** Com um jogo
+        # nativo do Heroic em foco e só catch-all no disco, a linha antiga dizia
+        # "não é jogo" e deixava o `vitoria` (MatchAny, prio 5) entrar por cima
+        # do perfil que ela acabou de aplicar — que é o ping-pong da R-21 (§) em
+        # outro lançador. O jogo por umu já se salvava por acidente: ele anuncia
+        # `steam_app_<id>` e caía no carimbo.
+        e_janela_de_jogo = e_endereco_de_jogo(wm_class)
         if not candidates:
             if e_janela_de_jogo:
                 return None, MOTIVO_JOGO_SEM_PERFIL_PROPRIO

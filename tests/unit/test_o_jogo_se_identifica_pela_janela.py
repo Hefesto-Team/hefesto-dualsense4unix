@@ -288,68 +288,83 @@ class TestOPerfilQueJaNasceuTortoSeConserta:
             umu_id=UMU_DO_GOTG if chave == JANELA_DO_GOTG else "")
         return [("Heroic", jogo)]
 
-    def _rodar(self, monkeypatch, perfis, catalogo):
+    def _rodar(self, monkeypatch, tmp_path, perfis, catalogo):
+        """**O DUBLÊ ESCREVE NO DISCO, e a troca foi medida em 21/09/2026.**
+
+        Ele dublava `load_all_profiles`, e a função parou de chamá-lo: ela lê
+        os arquivos direto, para não reentrar no semeador de presets. Um dublê
+        que aponta para o que o produto não usa mais dá **verde sobre nada** —
+        é a família de defeito mais cara desta casa, e ela mordeu aqui mesmo,
+        nesta leva, pela segunda vez.
+
+        Então a fixture põe os perfis ONDE o produto vai procurá-los.
+        """
         from hefesto_dualsense4unix.profiles import loader
 
+        pasta = tmp_path / "perfis"
+        pasta.mkdir(exist_ok=True)
+        for perfil in perfis:
+            (pasta / f"{perfil.name}.json").write_text(
+                perfil.model_dump_json(), encoding="utf-8")
         gravados = []
-        monkeypatch.setattr(loader, "load_all_profiles", lambda: perfis)
+        monkeypatch.setattr(loader, "profiles_dir", lambda ensure=False: pasta)
         monkeypatch.setattr(
             loader, "save_profile",
             lambda p, **k: gravados.append(p) or pathlib.Path("/x"))
         feitos = loader.reapontar_perfis_com_chave_de_executavel(catalogo)
         return feitos, gravados
 
-    def test_o_gotg_exe_vira_a_janela_de_verdade(self, monkeypatch):
+    def test_o_gotg_exe_vira_a_janela_de_verdade(self, monkeypatch, tmp_path):
         """O caso dela, exato.
 
         MORDIDA: faça a função devolver `()` sem gravar. O perfil continua com
         uma regra que nunca casa, e a queixa dela volta inteira.
         """
         feitos, gravados = self._rodar(
-            monkeypatch, [self._perfil(["gotg.exe"])], self._catalogo())
+            monkeypatch, tmp_path, [self._perfil(["gotg.exe"])], self._catalogo())
         assert feitos == ("Marvel's Guardians of the Galaxy",)
         assert list(gravados[0].match.window_class) == [JANELA_DO_GOTG]
 
-    def test_duas_entradas_e_escolha_de_alguem(self, monkeypatch):
+    def test_duas_entradas_e_escolha_de_alguem(self, monkeypatch, tmp_path):
         """Uma regra com duas classes ninguém derivou — foi escrita.
 
         MORDIDA: tire o `len(classes) != 1`. A função passa a reescrever
         regras que alguém montou à mão.
         """
         feitos, gravados = self._rodar(
-            monkeypatch, [self._perfil(["gotg.exe", "outra"])],
+            monkeypatch, tmp_path, [self._perfil(["gotg.exe", "outra"])],
             self._catalogo())
         assert feitos == () and gravados == []
 
-    def test_o_nativo_nao_e_tocado(self, monkeypatch):
+    def test_o_nativo_nao_e_tocado(self, monkeypatch, tmp_path):
         """Só o `.exe` é suspeito: ele vai por Proton, e aí quem nomeia a
         janela é o Proton. Um binário nativo casa com o basename de verdade.
 
         MORDIDA: tire a guarda do `.exe`.
         """
         feitos, gravados = self._rodar(
-            monkeypatch, [self._perfil(["seaofstars"])],
+            monkeypatch, tmp_path, [self._perfil(["seaofstars"])],
             self._catalogo(exe="seaofstars", chave="seaofstars"))
         assert feitos == () and gravados == []
 
-    def test_sem_reconhecer_nao_chuta(self, monkeypatch):
+    def test_sem_reconhecer_nao_chuta(self, monkeypatch, tmp_path):
         """Sem o jogo no censo não há para onde reapontar, e chutar repetiria o
         defeito que esta função conserta.
 
         MORDIDA: reaponte para a primeira chave do catálogo.
         """
         feitos, gravados = self._rodar(
-            monkeypatch, [self._perfil(["outrojogo.exe"])], self._catalogo())
+            monkeypatch, tmp_path, [self._perfil(["outrojogo.exe"])], self._catalogo())
         assert feitos == () and gravados == []
 
-    def test_o_igual_nao_regrava(self, monkeypatch):
+    def test_o_igual_nao_regrava(self, monkeypatch, tmp_path):
         """Regravar um perfil idêntico troca a data do arquivo por nada — a
         mesma guarda do `_lembrar_do_som`.
 
         MORDIDA: tire a comparação `nova == velha`.
         """
         feitos, gravados = self._rodar(
-            monkeypatch, [self._perfil(["mesmo.exe"])],
+            monkeypatch, tmp_path, [self._perfil(["mesmo.exe"])],
             self._catalogo(exe="mesmo.exe", chave="mesmo.exe"))
         assert feitos == () and gravados == []
 
@@ -407,7 +422,7 @@ class TestJogoEmFocoNaoPerguntaSeEDaSteam:
         """
         assert self._daemon("steam")._janela_de_jogo_em_foco()
 
-    def test_o_jogo_nativo_de_outro_lancador_passou_a_contar(self, monkeypatch):
+    def test_o_jogo_nativo_de_outro_lancador_passou_a_contar(self, monkeypatch, tmp_path):
         """**O DEGRAU QUE NASCEU.** Um jogo nativo Linux do Lutris não tem
         `steam_app_<N>` e respondia «não é jogo».
 
@@ -424,7 +439,7 @@ class TestJogoEmFocoNaoPerguntaSeEDaSteam:
 
         assert self._daemon("Celeste.x86_64")._janela_de_jogo_em_foco()
 
-    def test_o_navegador_continua_nao_sendo_jogo(self, monkeypatch):
+    def test_o_navegador_continua_nao_sendo_jogo(self, monkeypatch, tmp_path):
         """**A RÉGUA QUE IMPEDE A CURA DE PASSAR DO PONTO.** Se tudo virar
         jogo, a reversão para desktop nunca acontece e o vpad fica de pé para
         sempre — a política de 23/07 que o `firefox` finca.
@@ -438,7 +453,7 @@ class TestJogoEmFocoNaoPerguntaSeEDaSteam:
 
         assert not self._daemon("firefox")._janela_de_jogo_em_foco()
 
-    def test_disco_hostil_nao_derruba_o_daemon(self, monkeypatch):
+    def test_disco_hostil_nao_derruba_o_daemon(self, monkeypatch, tmp_path):
         """Quem chama decide operação de vpad; o lado seguro de uma falha de
         disco é o comportamento que já existia.
 

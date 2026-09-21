@@ -6,6 +6,19 @@ o daemon publicava `window_detect_last_class="Hefesto-Dualsense4Unix"` (a
 PRÓPRIA janela da GUI) e `window_detect_healthy=True` enquanto o backend
 devolvia `None` a 2 Hz, com `get_input_focus()` em `X.NONE` nas 10 amostras.
 
+**METADE DESSA MEDIÇÃO DEIXOU DE SER POSSÍVEL EM 21/09/2026, e levou 55 dias.**
+A frase acima descreve, desde 28/07, o sticky guardando a NOSSA janela — e
+ninguém ligou aquele fato ao «Detectar», que lê o sticky e grava a regra do
+perfil com ele. O `personalizado.json` dela mira `Hefesto-Dualsense4Unix` por
+causa disso. `StateStore.record_window_detect_read` passou a recusar a nossa
+própria classe no sticky (a leitura CRUA e a saúde continuam registrando-a),
+então as duas réguas que reproduziam o episódio trocaram a classe do cenário
+por `firefox`: **o que elas medem é a IDADE que cresce enquanto o sticky não
+decai, e essa propriedade não depende de QUAL classe está presa lá.** Cravar a
+classe literal faria a régua reprovar a cura em vez do defeito — a família
+*"a régua media o mundo de ontem"* — noqa-acento: frase desta casa —, que
+esta casa já pagou dezoito vezes.
+
 O que este módulo mede:
 
 1. `window_detect_seeing()` CAI depois de `WINDOW_DETECT_BLIND_AFTER_SEC` sem
@@ -96,11 +109,12 @@ def test_idade_da_ultima_leitura_util_cresce_enquanto_o_sticky_mente() -> None:
     """A medição ao vivo, reproduzida: o sticky continua exibindo a classe de
     minutos atrás; a idade é quem conta que ninguém mais viu nada."""
     store = _semeado()
-    store.record_window_detect_read("xlib", "Hefesto-Dualsense4Unix", now=10.0)
+    # A classe é de OUTRO app de propósito — ver o aviso de 21/09 no cabeçalho.
+    store.record_window_detect_read("xlib", "firefox", now=10.0)
     for passo in range(1, 21):
         store.record_window_detect_read("xlib", "unknown", now=10.0 + passo * 30.0)
 
-    assert store.window_detect_last_class == "Hefesto-Dualsense4Unix"
+    assert store.window_detect_last_class == "firefox"
     assert store.window_detect_current_class == "unknown"
     assert store.window_detect_useful_age(now=610.0) == pytest.approx(600.0)
     assert store.window_detect_seeing(now=610.0) is False
@@ -440,8 +454,8 @@ def ipc_server(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> IpcServer:
 
 
 def _cegueira_ao_vivo(store: StateStore) -> None:
-    """Reproduz a medição de 28/07: sticky com a própria GUI, leitura crua
-    cega há 10 minutos, motivo "sem foco X".
+    """Reproduz a medição de 28/07: sticky preso, leitura crua cega há 10
+    minutos, motivo "sem foco X".
 
     Ancorado no monotonic REAL (nada de congelar `time.monotonic` global: o
     relógio do event loop do asyncio é o mesmo, e travá-lo no meio de um
@@ -449,9 +463,10 @@ def _cegueira_ao_vivo(store: StateStore) -> None:
     """
     agora = time.monotonic()
     store.set_window_detect_backend("xlib", healthy=True)
-    store.record_window_detect_read(
-        "xlib", "Hefesto-Dualsense4Unix", now=agora - 600.0
-    )
+    # Era a nossa própria GUI até 21/09; hoje ela não entra no sticky, e o que
+    # este cenário precisa é de uma classe PRESA há dez minutos — qualquer uma
+    # de outro app serve, e é isso que a régua mede.
+    store.record_window_detect_read("xlib", "firefox", now=agora - 600.0)
     store.record_window_detect_read(
         "xlib", "unknown", now=agora, reason=xlib.MOTIVO_SEM_FOCO
     )
@@ -464,7 +479,7 @@ async def test_state_full_publica_a_cegueira(ipc_server: IpcServer) -> None:
 
     result = await ipc_server._handle_daemon_state_full({})
 
-    assert result["window_detect_last_class"] == "Hefesto-Dualsense4Unix"
+    assert result["window_detect_last_class"] == "firefox"
     assert result["window_detect_current_class"] == "unknown"
     assert result["window_detect_useful_age_sec"] == pytest.approx(600.0, abs=1.0)
     assert result["window_detect_seeing"] is False

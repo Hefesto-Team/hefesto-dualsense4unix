@@ -39,13 +39,27 @@ from hefesto_dualsense4unix.profiles.schema import (
     e_endereco_de_jogo,
     perfil_e_regra_de_jogo,
 )
+from hefesto_dualsense4unix.integrations.identidade_de_janela import (
+    classe_do_umu_id,
+)
 from hefesto_dualsense4unix.testing import FakeController
 
-#: O jogo REAL do disco dela, medido em 11/09/2026 com o censo:
-#: `legendary_library.json` traz `install.executable = "retail/gotg.exe"`, e o
-#: basename disso é a `wm_class` que o perfil mira.
+#: **UMA CHAVE DE JANELA QUALQUER, e não mais «a real» — 21/09/2026.**
+#:
+#: Esta linha dizia que `gotg.exe` era a `wm_class` do jogo dela, derivada do
+#: `install.executable`. Medido com o jogo aberto, a janela anuncia
+#: `steam_app_1088850` — o Heroic lança pelo umu, que exporta `SteamAppId`, e
+#: o Proton batiza a janela com ele. A derivação caiu.
+#:
+#: O valor fica porque as réguas que o usam INJETAM o `JogoLocal` pronto: elas
+#: medem o semeador (marca, colisão, recusa), não o censo, e para isso a chave
+#: só precisa ser uma chave. Quem mede o censo são as duas réguas de disco lá
+#: embaixo, e essas usam a chave de verdade, lida do `umu.json`.
 GOTG_CHAVE = "gotg.exe"
 GOTG_NOME = "Marvel's Guardians of the Galaxy"
+
+#: O umu-id do jogo dela, como o `store_cache/umu.json` do Heroic o traz.
+UMU_DO_GOTG = "umu-1088850"
 
 
 def _do_heroic(chave: str, nome: str) -> JogoLocal:
@@ -544,11 +558,31 @@ def test_a_prioridade_decide_entre_o_dela_e_o_semeado(
 # =============================================================================
 
 def _heroic_de_mentira(casa: Path, itens: list[dict[str, object]]) -> Path:
-    """Um `~/.config/heroic/store_cache/legendary_library.json` de mentira."""
+    """O `store_cache` do Heroic de mentira — a biblioteca E o `umu.json`.
+
+    **O `umu.json` ENTROU EM 21/09/2026.** É dele que sai a chave de janela do
+    jogo (`umu-1088850` -> `steam_app_1088850`); sem ele a fixture mede um
+    Heroic que nunca lançou nada, e o jogo responde «não sei» — caso legítimo,
+    mas não o da máquina dela, que é o que estas duas réguas medem.
+
+    **SÓ O QUE ESTÁ BAIXADO GANHA umu-id**, como no disco dela: o Heroic
+    escreve a entrada quando o jogo roda. Dar umu-id ao que não está instalado
+    faria a fixture mentir na direção mais cara — a de um catálogo que sabe
+    mais do que o produto pode saber.
+    """
     cache = casa / ".config" / "heroic" / "store_cache"
     cache.mkdir(parents=True, exist_ok=True)
     (cache / "legendary_library.json").write_text(
         json.dumps({"library": itens}, ensure_ascii=False), encoding="utf-8"
+    )
+    (cache / "umu.json").write_text(
+        json.dumps({
+            f"legendary_{i['app_name']}": UMU_DO_GOTG
+            for i in itens
+            if i.get("is_installed") and not
+            (i.get("install") or {}).get("is_dlc")
+        }),
+        encoding="utf-8",
     )
     return cache
 
@@ -609,9 +643,11 @@ def test_o_jogo_do_heroic_ganha_perfil_sem_dubles(tmp_path: Path) -> None:
     with (destino / "marvels_guardians_of_the_galaxy.json").open(
         encoding="utf-8"
     ) as fh:
-        assert json.load(fh)["match"]["window_class"] == ["gotg.exe"]
+        assert json.load(fh)["match"]["window_class"] == [
+            classe_do_umu_id(UMU_DO_GOTG)]
     # E o cadastro do esquema saiu declarado pelo mesmo caminho.
-    assert schema_mod.classes_de_jogo_conhecidas() == frozenset({"gotg.exe"})
+    assert schema_mod.classes_de_jogo_conhecidas() == frozenset(
+        {classe_do_umu_id(UMU_DO_GOTG)})
 
 
 def test_maquina_sem_lancador_nenhum_nao_semeia_nem_reclama(tmp_path: Path) -> None:

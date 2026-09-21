@@ -163,9 +163,9 @@ TOUCH_REGIOES = [f"clique {x.strip()}" for x in
                  _m.group(1).replace(" e ", ", ").split(",") if x.strip()]
 
 # QUEM NAVEGA O PC, e não é escolha de desenho — é o que o produto faz.
-# O poll loop lê o estado do controle PRIMÁRIO (`daemon/lifecycle.py:4541`), e
+# O poll loop lê o estado do controle PRIMÁRIO (`daemon/lifecycle.py:5509`), e
 # é esse estado, e só ele, que vai para o mouse (`_dispatch_mouse_emulation`,
-# :4744), para o teclado (:4754) e para o `hotkey_manager.observe` (:4757). Os
+# :5712), para o teclado (:5723) e para o `hotkey_manager.observe` (:5726). Os
 # secundários do co-op têm UM caminho só, o do gamepad virtual
 # (`daemon/subsystems/coop.py:2057` — `forward_analog`/`forward_buttons`).
 # Logo: com quatro na mesa, mouse, teclado e os seis gestos saem de um
@@ -2172,7 +2172,7 @@ D_REMAPEAMENTO = ajuda(
 #: gosto: ela dizia **"Ligada — atalhos e teclado na tela"**, e "ligada"
 #: afirmava um alcance que o produto NÃO tem. O daemon já cala a emulação de
 #: desktop quando um jogo assume — `_jogo_no_controle_do_desktop`
-#: (`daemon/lifecycle.py:2778`, a cura da queixa dela de 29/07 *"aperto r1 e ele
+#: (`daemon/lifecycle.py:2810`, a cura da queixa dela de 29/07 *"aperto r1 e ele
 #: muda de app ao invés de funcionar no jogo"*) e o `gamepad_dispatched` do laço
 #: (`:4780`). O que o teclado emulado faz hoje **é** "só fora do jogo": a
 #: etiqueta é que mentia.

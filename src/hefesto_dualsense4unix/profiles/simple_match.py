@@ -723,6 +723,33 @@ def procedencia_do_match(
     if fixa is not None:
         return fixa
     if preset in ("steam", "steam_game"):
+        # **A FORMA DA STEAM DEIXOU DE SIGNIFICAR «É DA STEAM» — 21/09/2026.**
+        #
+        # Medido com o jogo dela aberto: o Heroic lança pelo umu, que monta a
+        # pilha da Steam e exporta `SteamAppId`; o Proton batiza a janela de
+        # `steam_app_1088850`. Ou seja: *Guardians of the Galaxy*, que é da
+        # Epic, tem endereço com a cara da Steam — e este campo dizia «Steam»
+        # sobre ele. A tela dela mostrava «Funciona em: Heroic», e passaria a
+        # mentir no tique seguinte ao perfil ganhar a chave certa.
+        #
+        # Então a pergunta vai ao CATÁLOGO antes do rótulo fixo: quem sabe de
+        # onde o jogo vem é o censo dos lançadores, e ele conhece o endereço
+        # pelo qual a janela se anuncia. Sem catálogo a quem perguntar, ou com
+        # um endereço que ninguém reivindica, a resposta volta a ser «Steam» —
+        # que é o certo: um `steam_app_<id>` de que nenhum lançador se diz dono
+        # é um jogo da Steam.
+        # **SÓ O `steam_game`, NUNCA O `steam`.** O preset `steam` é o CLIENTE
+        # da loja (`process_name=["steam"]`), não um jogo: o `simple_extra`
+        # dele devolve a palavra `steam`, e perguntar ao catálogo por
+        # `steam_app_steam` traz o residual — a tela dizendo «Instalado aqui»
+        # sobre a própria Steam. Medido na régua, no mesmo minuto em que a
+        # cura entrou.
+        if preset == "steam_game" and lancador_da_chave is not None and (
+                match is not None):
+            numero = simple_extra(match)
+            if numero:
+                return lancador_da_chave(f"steam_app_{numero}") or (
+                    PROCEDENCIA_DA_STEAM)
         return PROCEDENCIA_DA_STEAM
     if preset in ("game", "janela"):
         # O `match is None` já saiu na primeira linha desta função — o

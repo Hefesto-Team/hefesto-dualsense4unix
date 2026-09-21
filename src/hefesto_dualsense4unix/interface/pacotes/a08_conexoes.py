@@ -4561,7 +4561,7 @@ def _com_o_teto(prof: Any, chave: str, policy: str | None) -> Any:
     `app/draft_config.with_controller_rumble:1193-1223` já decidiu que
     "intensidade igual à global não vira override". A razão é aritmética:
     `_controllers_to_rumble_scales` calcula `mult / base` e DESCARTA o fator
-    1,0 (`profiles/manager.py:2794-2844`) — guardar o override só deixaria no
+    1,0 (`profiles/manager.py:2812-2862`) — guardar o override só deixaria no
     disco uma opinião que o motor ignora.
     """
     from hefesto_dualsense4unix.profiles.schema import (

@@ -42,6 +42,9 @@ from hefesto_dualsense4unix.integrations import jogos_locais as jl
 from hefesto_dualsense4unix.integrations.censo_dos_lancadores import (
     sabe_ler,
 )
+from hefesto_dualsense4unix.integrations.identidade_de_janela import (
+    classe_do_umu_id,
+)
 from hefesto_dualsense4unix.interface.pacotes import (
     Contexto,
     a10_perfis as a10,
@@ -56,6 +59,19 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 
 HEROIC_ID = "com.heroicgameslauncher.hgl"
+
+#: O umu-id que o Heroic guarda para o jogo dela, como o disco o traz.
+UMU_DO_GOTG = "umu-1088850"
+
+#: **A CHAVE DE JANELA DO GOTG, LIDA E NUNCA DIGITADA — 21/09/2026.**
+#:
+#: Este arquivo cravava o basename do executável, que era o que o censo
+#: DERIVAVA. Medido com o jogo aberto na tela dela, a janela diz
+#: `steam_app_1088850`: o Heroic lança pelo umu, que monta a pilha da Steam e
+#: exporta `SteamAppId`. Cravar de novo a resposta — agora a certa — repetiria
+#: o erro de forma: quem responde é `identidade_de_janela`, e é a ele que a
+#: régua pergunta.
+CHAVE_DO_GOTG = classe_do_umu_id(UMU_DO_GOTG)
 
 #: O jogo baixado dela, com os campos EXATOS que o disco trouxe em 10/09/2026.
 BAIXADO: dict[str, Any] = {
@@ -94,11 +110,20 @@ def _ctx() -> Contexto:
 
 
 def _heroic(lar: pathlib.Path, itens: list[dict[str, Any]]) -> None:
-    """A biblioteca do Heroic num lar de mentira."""
-    alvo = (lar / ".var/app" / HEROIC_ID / "config/heroic/store_cache"
-            / "legendary_library.json")
-    alvo.parent.mkdir(parents=True, exist_ok=True)
-    alvo.write_text(json.dumps({"library": itens}), encoding="utf-8")
+    """A biblioteca do Heroic num lar de mentira, com o `umu.json` junto.
+
+    **O `umu.json` ENTROU EM 21/09/2026, e sem ele a fixture mede um Heroic
+    que não existe:** é dele que sai a chave de janela do jogo. Uma biblioteca
+    sem ele é o Heroic recém-instalado, cujo jogo ainda responde «não sei» — um
+    caso legítimo, mas não o da máquina DELA, que é o que estas réguas medem.
+    """
+    cache = lar / ".var/app" / HEROIC_ID / "config/heroic/store_cache"
+    cache.mkdir(parents=True, exist_ok=True)
+    (cache / "legendary_library.json").write_text(
+        json.dumps({"library": itens}), encoding="utf-8")
+    (cache / "umu.json").write_text(
+        json.dumps({f"legendary_{i['app_name']}": UMU_DO_GOTG for i in itens}),
+        encoding="utf-8")
 
 
 @pytest.fixture(autouse=True)
@@ -215,7 +240,7 @@ def test_o_campo_oferece_de_onde_o_jogo_vem(
     """
     _o_disco_tem(monkeypatch,
                  Profile(name="GOTG", priority=80,
-                         match=MatchCriteria(window_class=["gotg.exe"])))
+                         match=MatchCriteria(window_class=[CHAVE_DO_GOTG])))
 
     blocos = a10.pacote(_ctx())["blocos"]
 
@@ -316,7 +341,7 @@ def test_o_perfil_que_ja_existe_diz_de_onde_ele_vem(
     assert vem_de(MatchAny()) == "Qualquer jogo"
     assert vem_de(sm.SIMPLE_MATCH_PRESETS["browser"]) == "Navegação"
     # O jogo do Heroic, pela chave que a janela dele anuncia.
-    assert vem_de(MatchCriteria(window_class=["gotg.exe"])) == "Heroic"
+    assert vem_de(MatchCriteria(window_class=[CHAVE_DO_GOTG])) == "Heroic"
     # E OS DOIS DO DISCO DELA que catálogo nenhum conhece.
     assert vem_de(MatchCriteria(process_name=["guard"])) == jl.LANCADOR_DIRETO
     assert vem_de(
@@ -366,13 +391,13 @@ def test_a_lista_de_baixo_segue_o_campo_de_cima(
     do_heroic = a10._html_dos_jogos("Heroic")
     da_steam = a10._html_dos_jogos("Steam")
 
-    assert "gotg.exe" in do_heroic and "1245620" not in do_heroic
-    assert "1245620" in da_steam and "gotg.exe" not in da_steam
+    assert CHAVE_DO_GOTG in do_heroic and "1245620" not in do_heroic
+    assert "1245620" in da_steam and CHAVE_DO_GOTG not in da_steam
     # AS DUAS FIXAS NÃO FILTRAM, e é a saída que `editor_jogo` documenta:
     # digitar um jogo com o perfil em «Qualquer jogo» é como ela DIZ que aquele
     # perfil é daquele jogo. Esvaziar a lista prenderia o perfil onde está.
     inteira = a10._html_dos_jogos("Qualquer jogo")
-    assert "gotg.exe" in inteira and "1245620" in inteira
+    assert CHAVE_DO_GOTG in inteira and "1245620" in inteira
 
 
 def test_a_linha_da_lista_diz_nome_e_codigo_e_nunca_o_executavel(
@@ -400,7 +425,7 @@ def test_a_linha_da_lista_diz_nome_e_codigo_e_nunca_o_executavel(
     # O `value` CONTINUA SENDO O ENDEREÇO, e isso não é descuido: é o que o
     # campo grava, e trocá-lo pelo nome faria nascer um `steam_app_Sea of
     # Stars`, que nunca casa com janela nenhuma. O que ela LÊ é o `label`.
-    assert 'value="gotg.exe"' in do_heroic
+    assert f'value="{CHAVE_DO_GOTG}"' in do_heroic
 
 
 # ---------------------------------------------------------------------------
@@ -413,7 +438,8 @@ def test_escolher_o_lancador_grava_a_forma_que_ele_entrega(
 
     Ela escolhe «Heroic» num perfil que estava em «Qualquer jogo» com o jogo
     já no campo de baixo; o produto decide sozinho que a forma daquele lançador
-    é a `wm_class`, e o disco recebe `window_class: ["gotg.exe"]` — **nunca um
+    é a `wm_class`, e o disco recebe `window_class: ["steam_app_1088850"]` —
+    **nunca um
     tipo novo de casamento**, que é a regra do §4.
 
     MORDIDA: faça `forma_da_procedencia` devolver `"game"` para um lançador e
@@ -421,13 +447,13 @@ def test_escolher_o_lancador_grava_a_forma_que_ele_entrega(
     a família do R-12 que esta casa já pagou.
     """
     prof = Profile(name="Guardioes", priority=80,
-                   match=MatchCriteria(window_class=["gotg.exe"]))
+                   match=MatchCriteria(window_class=[CHAVE_DO_GOTG]))
     _o_disco_tem(monkeypatch, prof)
     _aberto_no_editor(monkeypatch, prof)
     # A REGRA VAI PARA «Qualquer jogo» primeiro, para o clique ter o que mudar.
     prof.match = MatchAny()
     monkeypatch.setattr(a10, "_editor_de",
-                        lambda _p: {"jogo": "gotg.exe", "ambiente_recado": ""})
+                        lambda _p: {"jogo": CHAVE_DO_GOTG, "ambiente_recado": ""})
 
     resposta = a10.editor_ambiente(_ctx(), _escolher("Heroic"), PonteDeMentira())
 
@@ -437,7 +463,7 @@ def test_escolher_o_lancador_grava_a_forma_que_ele_entrega(
     # suíte. Nada aqui inspeciona o objeto em memória.
     do_disco = _do_disco(prof)
     assert do_disco["match"] == {"type": "criteria",
-                                 "window_class": ["gotg.exe"],
+                                 "window_class": [CHAVE_DO_GOTG],
                                  "window_title_regex": None,
                                  "process_name": []}
 
@@ -610,9 +636,9 @@ def test_a_coluna_fala_a_lingua_do_campo(maquina_dela: pathlib.Path) -> None:
         "Steam · ELDEN RING · 1245620")
     # O jogo do lançador NÃO tem número público — e o "código" dele seria o
     # basename do executável, que é o que a foto manda nunca mostrar.
-    assert coluna(MatchCriteria(window_class=["gotg.exe"])) == (
+    assert coluna(MatchCriteria(window_class=[CHAVE_DO_GOTG])) == (
         "Heroic · Marvel's Guardians of the Galaxy")
-    assert ".exe" not in coluna(MatchCriteria(window_class=["gotg.exe"]))
+    assert ".exe" not in coluna(MatchCriteria(window_class=[CHAVE_DO_GOTG]))
     # O que o catálogo não conhece mostra O QUE TEM, sem inventar nome.
     assert coluna(MatchCriteria(process_name=["mk1.exe"])) == (
         f"{jl.LANCADOR_DIRETO} · mk1.exe")
@@ -657,7 +683,7 @@ def test_a_coluna_traduzida_chega_as_duas_portas_da_lista(
     """
     _o_disco_tem(monkeypatch,
                  Profile(name="GOTG", priority=90,
-                         match=MatchCriteria(window_class=["gotg.exe"])),
+                         match=MatchCriteria(window_class=[CHAVE_DO_GOTG])),
                  Profile(name="Elden Ring", priority=85,
                          match=MatchCriteria(
                              window_class=["steam_app_1245620"])))
@@ -689,7 +715,7 @@ def test_a_lupa_acha_o_jogo_pelo_nome_que_a_coluna_passou_a_mostrar(
     """
     _o_disco_tem(monkeypatch,
                  Profile(name="GOTG", priority=90,
-                         match=MatchCriteria(window_class=["gotg.exe"])),
+                         match=MatchCriteria(window_class=[CHAVE_DO_GOTG])),
                  Profile(name="Elden Ring", priority=85,
                          match=MatchCriteria(
                              window_class=["steam_app_1245620"])))
@@ -717,7 +743,7 @@ def test_o_clique_no_campo_arrasta_a_coluna_junto(
     _o_disco_tem(monkeypatch, prof)
     _aberto_no_editor(monkeypatch, prof)
     monkeypatch.setattr(a10, "_editor_de",
-                        lambda _p: {"jogo": "gotg.exe", "ambiente_recado": ""})
+                        lambda _p: {"jogo": CHAVE_DO_GOTG, "ambiente_recado": ""})
 
     antes = a10.pacote(_ctx())["perfis.linha.quando"]
     a10.editor_ambiente(_ctx(), _escolher("Heroic"), PonteDeMentira())
