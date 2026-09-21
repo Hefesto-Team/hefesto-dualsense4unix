@@ -968,6 +968,9 @@ class Daemon:
             start_mic_hotkey,
         )
         from hefesto_dualsense4unix.daemon.subsystems.luz_do_mic import start_luz_do_mic
+        from hefesto_dualsense4unix.daemon.subsystems.ouvinte_do_som import (
+            start_ouvinte_do_som,
+        )
 
         loop = asyncio.get_running_loop()
         self.bus.bind_loop(loop)
@@ -1141,6 +1144,19 @@ class Daemon:
             # (§5.3b e PEÇA E item 4). O laço degrada sozinho quando as peças
             # irmãs não estão no ar (ver o docstring do módulo).
             await self._safe_start("luz_do_mic", lambda: start_luz_do_mic(self))
+            # O-SOM-DO-SISTEMA-E-O-DA-TELA-01 (21/09/2026): o daemon passa a
+            # ESCUTAR o servidor de som. Sem gate, pelo mesmo motivo da luz: o
+            # pedido dela é *"sincronia com os canais de saida de som e entrada
+            # de som do sistema operacional"*, e uma sincronia que precisa de
+            # flag não é sincronia. O laço degrada sozinho — sem `pactl` no
+            # PATH ele tenta, falha, espera e tenta de novo, sem derrubar nada.
+            #
+            # AQUI E NÃO ANTES: ele não é dono de nenhum nó, só observa. Subir
+            # cedo faria a primeira leitura pegar o servidor de som antes de o
+            # `bt_mic` e o `alto_falante` publicarem os nós deles, e a primeira
+            # resposta da tela seria um mundo sem o controle dela.
+            await self._safe_start(
+                "ouvinte_do_som", lambda: start_ouvinte_do_som(self))
             # BT-MIC-REGISTRY-01: ponte de microfone por Bluetooth. O gate de
             # opt-in vive DENTRO do starter (`is_enabled`) — desligado, ele
             # devolve sem instanciar nada. Sobe aqui, ao lado do resto do
