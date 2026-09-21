@@ -9,23 +9,31 @@ nenhuma feature do hefesto)"*. <!-- noqa-acento: citação literal dela -->
 
 ESTA LISTA É UM GUARDA-CHUVA, e não um nono leitor
 --------------------------------------------------
-Três listas por feature já existiam, cada uma com dono, leitor e régua (medido
+Duas listas por feature já existiam, cada uma com dono, leitor e régua (medido
 na E0, §10.1 da sprint):
 
-- ``entrada`` — o jogo vê só o físico; dono:
-  ``steam_launch_options.add_appid_to_steam_input_allowlist``;
 - ``pino`` — o Proton pinado; dono: ``proton_pin.nomear_fora_do_pino``;
 - ``atalho`` — o atalho de inicialização; dono:
   ``steam_launch_options.marcar_jogo_sem_wrapper``.
 
-Excluir é ESCREVER nas três; tirar é sair delas. Nenhum leitor muda — cada um
+**A LISTA DO STEAM INPUT NÃO ENTRA, e ela chegou a entrar.** A primeira redação
+deste módulo punha o jogo excluído também no ``steam_input_apps.txt``, lendo o
+rótulo ``launch_env.ESTADO_ALLOWLIST_STEAM_INPUT`` («físico é o único
+dispositivo»). O rótulo é anterior à decisão dela de 09/08/2026
+(ESCONDER-EM-VEZ-DE-SAIR-01): desde então a marca **esconde o físico e mantém os
+virtuais de pé** — *"a allowlist do Steam Input NÃO tira o Hefesto da frente"*
+(`gamepad.set_steam_input_exception`). Escrever nela deixaria o Hefesto NA
+FRENTE do jogo que ela excluiu. Esta lista não toca na do Steam Input, em
+nenhum sentido.
+
+Excluir é ESCREVER nas duas; tirar é sair delas. Nenhum leitor muda — cada um
 continua lendo o mesmo arquivo de antes. A alternativa (cada feature aprender a
 perguntar a esta lista) faria oito donos lerem um arquivo novo, e o primeiro que
 esquecesse deixaria uma feature viva num jogo que ela excluiu.
 
 TIRAR DEVOLVE SÓ O QUE ESTA LISTA ESCREVEU
 ------------------------------------------
-Se o jogo já estava numa das três por escolha DELA antes de ser excluído, ele
+Se o jogo já estava numa das duas por escolha DELA antes de ser excluído, ele
 continua lá depois do «Tirar». Quem diz de quem era a linha é o próprio dono:
 ``"adicionado"`` quer dizer que a escrita foi nossa; ``"ja_estava"`` quer dizer
 que era dela. A entrada guarda só as listas em que NÓS escrevemos
@@ -35,7 +43,7 @@ escolha anterior dela, calado — a exclusão viraria borracha.
 A CHAVE É A IDENTIDADE DA JANELA
 --------------------------------
 ``steam_app_<N>`` para a Steam e para todo jogo pelo umu, que é o que
-``identidade_de_janela`` devolve e o endereço que o daemon vê em foco. As três
+``identidade_de_janela`` devolve e o endereço que o daemon vê em foco. As duas
 listas falam só dígitos, então só uma chave com ``N`` as alcança; o atalho e o
 pino são features só da Steam, e um jogo sem ``N`` não tem o que tirar ali. Os
 emuladores entram com a chave do PROCESSO — um processo para todas as ROMs, e a
@@ -60,12 +68,13 @@ from pathlib import Path
 from hefesto_dualsense4unix.integrations import proton_pin
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
-#: O arquivo, ao lado das três listas, no ``XDG_CONFIG_HOME``.
+#: O arquivo, ao lado das outras listas, no ``XDG_CONFIG_HOME``.
 RELPATH = "hefesto-dualsense4unix/lista_de_exclusao.json"
 FORMATO = 1
 
-#: As três listas por feature, na ordem em que se escreve.
-LISTAS: tuple[str, ...] = ("entrada", "pino", "atalho")
+#: As duas listas por feature, na ordem em que se escreve. A do Steam Input
+#: NÃO está aqui — ver o topo do módulo.
+LISTAS: tuple[str, ...] = ("pino", "atalho")
 
 #: A nota que acompanha a linha em cada lista — é o que ela lê se abrir o
 #: arquivo, e o que diz que a linha não é dela.
@@ -83,7 +92,7 @@ def caminho(config_home: Path | None = None) -> Path:
 
 
 def appid_da_chave(chave: str) -> str | None:
-    """O ``N`` de ``steam_app_<N>``, ou ``None`` — e só então as três listas."""
+    """O ``N`` de ``steam_app_<N>``, ou ``None`` — e só então as duas listas."""
     m = _STEAM_APP.match(chave.strip())
     return m.group(1) if m else None
 
@@ -102,15 +111,13 @@ class Entrada:
 
 
 # ---------------------------------------------------------------------------
-# As três listas — um adaptador por lista, os donos de verdade fazem a escrita
+# As duas listas — um adaptador por lista, os donos de verdade fazem a escrita
 # ---------------------------------------------------------------------------
 _POR: dict[str, Callable[[str], str]] = {
-    "entrada": lambda a: slo.add_appid_to_steam_input_allowlist(a, nota=NOTA_DAS_LISTAS),
     "pino": lambda a: proton_pin.nomear_fora_do_pino(a, nota=NOTA_DAS_LISTAS),
     "atalho": lambda a: slo.marcar_jogo_sem_wrapper(a, nota=NOTA_DAS_LISTAS),
 }
 _TIRAR: dict[str, Callable[[str], str]] = {
-    "entrada": lambda a: slo.remove_appid_from_steam_input_allowlist(a),
     "pino": proton_pin.devolver_ao_pino,
     "atalho": slo.desmarcar_jogo_sem_wrapper,
 }
@@ -191,8 +198,8 @@ def adicionar(
     """Exclui o jogo. Status: ``"adicionado"`` | ``"ja_estava"`` |
     ``"chave_invalida"`` | ``"erro"``. Nunca levanta.
 
-    `escritas_herdadas` é só para a migração (:func:`migrar_a_lista_velha`):
-    uma lista em que o jogo já estava e que passa a ser DESTA exclusão.
+    `escritas_herdadas`: listas em que o jogo já estava e que passam a ser
+    DESTA exclusão (o «Tirar» sai delas também). Vazio no uso normal.
     """
     alvo = chave.strip()
     if not alvo:
@@ -267,58 +274,14 @@ def tirar(chave: str, *, config_home: Path | None = None) -> str:
     return "removido"
 
 
-# ---------------------------------------------------------------------------
-# A migração — D-2109-A-LISTA-VELHA-VIRA-EXCLUSAO
-# ---------------------------------------------------------------------------
-NOTA_DA_MIGRACAO = "veio do «Este jogo não funciona»"
-
-
-def migrar_a_lista_velha(
-    nomear: Callable[[str], str | None],
-    *,
-    config_home: Path | None = None,
-) -> list[str]:
-    """Cada jogo que ela marcou com «Este jogo não funciona» entra na lista nova.
-
-    A intenção dela ao clicar era a mesma — *o Hefesto sai do caminho deste
-    jogo* —, e a lista velha só tirava a entrada. A linha da lista velha passa a
-    ser DESTA exclusão (`escritas_herdadas=("entrada",)`): tirar o jogo da
-    exclusão o devolve inteiro, entrada incluída.
-
-    Idempotente: quem já está na lista nova é pulado. Devolve as chaves
-    migradas nesta chamada. Nunca levanta.
-    """
-    try:
-        texto = slo.steam_input_allowlist_path().read_text(encoding="utf-8")
-        velhos = [a for a in slo.parse_steam_input_allowlist(texto) if a.isdigit()]
-    except (OSError, ValueError):
-        return []
-    migradas: list[str] = []
-    for appid in velhos:
-        chave = f"steam_app_{appid}"
-        try:
-            nome = nomear(appid) or f"o jogo {appid}"
-        except Exception:
-            nome = f"o jogo {appid}"
-        status = adicionar(
-            chave, lancador="steam", nome=nome, nota=NOTA_DA_MIGRACAO,
-            config_home=config_home, escritas_herdadas=("entrada",),
-        )
-        if status == "adicionado":
-            migradas.append(chave)
-    return migradas
-
-
 __all__ = [
     "LISTAS",
     "NOTA_DAS_LISTAS",
-    "NOTA_DA_MIGRACAO",
     "Entrada",
     "adicionar",
     "appid_da_chave",
     "caminho",
     "contem",
     "ler",
-    "migrar_a_lista_velha",
     "tirar",
 ]
