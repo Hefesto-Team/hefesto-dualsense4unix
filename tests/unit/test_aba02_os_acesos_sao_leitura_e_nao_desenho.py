@@ -92,19 +92,22 @@ def test_a_rota_vem_do_byte_do_aparelho(a02):
 
 
 def test_a_rota_desconhecida_nao_acende_botao_nenhum(a02):
-    """Rota 0 e 1 são do protocolo e NÃO são estes dois botões.
+    """A rota 1 é do protocolo e NÃO é nenhum destes botões.
 
-    `""` apaga os dois — o piloto escreve o travessão, e no alvo `classe` com
-    `data-hef-quando` nem `jogo` nem `pc` casam com ele. Acender o "mais
-    parecido" seria arredondar um byte para um botão.
+    `""` apaga os três — o piloto escreve o travessão, e no alvo `classe` com
+    `data-hef-quando` nenhum dos três casa com ele. Acender o "mais parecido"
+    seria arredondar um byte para um botão.
+
+    **A ROTA 0 SAIU DESTA RÉGUA EM 21/09/2026, e por ordem dela:** *"os 3
+    botões de som tem que ter saídas diferenciadas"*. «Tudo na TV e Nada no
+    Controle» É o byte 0, então exigir que ele apague os três passou a cobrar
+    o mundo de ontem — a régua reprovaria a cura. Quem mede a rota 0 é
+    `test_os_tres_botoes_do_som_sao_tres_saidas.py`, o dono do botão novo.
     """
-    from hefesto_dualsense4unix.core.ds_output_report import (
-        SAIDA_ESTEREO_NO_FONE,
-        SAIDA_MONO_NO_FONE,
-    )
+    from hefesto_dualsense4unix.core.ds_output_report import SAIDA_MONO_NO_FONE
 
-    for byte in (SAIDA_ESTEREO_NO_FONE, SAIDA_MONO_NO_FONE):
-        assert a02.rota_na_tela({"speaker": {"volume": 102, "rota": byte}}) == ""
+    assert a02.rota_na_tela(
+        {"speaker": {"volume": 102, "rota": SAIDA_MONO_NO_FONE}}) == ""
 
 
 def test_sem_bloco_de_alto_falante_a_tela_nao_afirma_rota(a02):
@@ -230,9 +233,17 @@ def test_o_gesto_do_modo_invalida_a_leitura_em_cache(a02, monkeypatch):
 #: OS DOIS PARES, com os valores que cada botão representa **perguntados ao
 #: pacote**. Digitar `["jogo", "pc"]` aqui seria a régua que reprova o dia em
 #: que o vocabulário da página mudar, em vez de acompanhá-lo.
+#:
+#: **E A PERGUNTA MUDOU DE DONO EM 21/09/2026.** Até aqui a fileira saía dos
+#: VALORES de `NOME_DO_BOTAO_DA_ROTA`, que responde *"que nome tem o byte
+#: tal?"* — outra pergunta. Desde 20/09 o byte 3 (`"pc"`) não tem botão nesta
+#: fileira: ela trocou o ATO do terceiro (*"O nome está certo, mude o ato."*),
+#: e a fileira passou a ser jogo · junto · nada. A régua cobrava um botão `pc`
+#: que a página não tem, e **reprovava a decisão dela em vez de um defeito**.
+#: `BOTOES_DA_FILEIRA_DO_SOM` é o dono da pergunta certa.
 def _pares(a02) -> dict[str, list[str]]:
     return {
-        "alto-rota": sorted(a02.NOME_DO_BOTAO_DA_ROTA.values()),
+        "alto-rota": sorted(a02.BOTOES_DA_FILEIRA_DO_SOM),
         "mic-modo-aceso": ["nativo", "virtual"],
     }
 

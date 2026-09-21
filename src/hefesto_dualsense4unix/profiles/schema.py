@@ -2371,6 +2371,16 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "escrito com todas as letras (*'o microfone continua SEM DONO'*).",
         falta="qual é o ganho de captura de fábrica, e se ele se escreve na adoção",
     ),
+    "ProfileMicConfig.gain": Nascimento(
+        NASCE_NO_LEITOR,
+        "O ganho de ENTRADA é da PLACA DE SOM do controle, não do firmware — "
+        "`None` quer dizer *não opino*, e quem responde é o elemento `cvolume` "
+        "da placa, que já tem um valor. Escrever um default aqui poria o "
+        "perfil mandando na amplificação de um aparelho que ele não conhece: "
+        "a mesma placa responde 0-101 no DualSense e outra coisa em qualquer "
+        "outro microfone. Só o número que ELA arrastou vai ao disco.",
+        dono="hefesto_dualsense4unix.integrations.ganho_do_microfone:definir",
+    ),
     "ProfileMicConfig.muted": Nascimento(
         NASCE_NO_LEITOR,
         "O microfone NASCE NO AR desde 17/09/2026, e `None` herda isso — só "
@@ -2456,6 +2466,9 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     ),
     "ControllerMicOverride.volume": Nascimento(
         E_CONTRATO, "Override por peça; ver `ControllerMicOverride.muted`."
+    ),
+    "ControllerMicOverride.gain": Nascimento(
+        E_CONTRATO, "Override por peça; ver `ProfileMicConfig.gain`."
     ),
     "ControllerSensoresOverride.giroscopio": Nascimento(
         NASCE_NO_LEITOR,

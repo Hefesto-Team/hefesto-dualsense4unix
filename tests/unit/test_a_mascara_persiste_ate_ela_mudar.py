@@ -1,7 +1,14 @@
-"""MASCARA-PERSISTE-01 — a máscara fica, até ela mudar na interface.
+"""MASCARA-PERSISTE-01 — a máscara fica, até ELA mudar na interface.
 
 Decisão dela, 22/08/2026: *"a máscara deveria ficar independente do jogo, até
 que eu mude na interface novamente."*
+
+**E «ELA MUDAR» NÃO É «UM PERFIL PASSAR» — corrigido em 21/09/2026.** A leitura
+de 22/08 fez o perfil de um jogo escrever o padrão da MÁQUINA, e o preço está
+no §1 de `test_a_mascara_do_perfil_nao_vira_o_padrao_da_maquina`: um perfil
+entre 29 levou a máquina inteira para Xbox, e ela perdeu giroscópio,
+acelerômetro e touchpad em todos os jogos. A decisão dela não mudou; o que
+mudou foi quem conta como «ela».
 
 Medido no journal da máquina dela no mesmo dia, e o que foi medido derruba a
 hipótese óbvia: **não é fechar o jogo que reverte a máscara**. A máscara viva
@@ -141,15 +148,35 @@ def test_a_regua_ve_o_arquivo(flag: Path) -> None:
     assert load_gamepad_emulation() == (True, "xbox")
 
 
-def test_a_mascara_do_perfil_sobrevive_a_borda_de_processo(
+def test_a_mascara_do_perfil_nao_vira_o_padrao_da_maquina(
     daemon: Daemon, flag: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O defeito dela, inteiro: perfil pede DualSense, o disco tem de aprender.
+    """**ESTA RÉGUA MEDIA A CAUSA DO DEFEITO DELA, e foi invertida em
+    21/09/2026 — MASCARA-CONTAGIO-01.**
 
-    O restore do boot (`lifecycle.start`) lê exatamente `load_gamepad_emulation`
-    e escreve o resultado em `config.gamepad_flavor`. Enquanto o disco dizia
-    `xbox`, o daemon renascia `xbox` por mais que o perfil tivesse aplicado
-    `dualsense` — foi o que o journal mostrou quatro vezes em uma hora.
+    Ela cobrava o contrário: que aplicar um perfil com `gamepad_flavor`
+    ESCREVESSE aquele valor no `gamepad_emulation.flag`, que é o padrão da
+    MÁQUINA. A intenção de 22/08 era boa e a leitura da decisão dela era pela
+    metade — *"a máscara deveria ficar independente do jogo, até que eu mude na
+    interface novamente"*. O que ela chama de *"eu mudar"* é o GESTO dela, e o
+    perfil de um jogo não é gesto de ninguém.
+
+    **O PREÇO, medido no disco dela em 21/09:** de 29 perfis, UM
+    (`future_knight.json`) tinha `mode.gamepad_flavor: "xbox"`. Bastou aquele
+    jogo abrir uma vez para o `xbox` virar o padrão da máquina — e ali ele
+    ficava, porque perfil com `null` retorna cedo e nunca desfaz. Daí em diante
+    TODO controle sem entrada no registro nascia Xbox, sem touchpad, sem
+    giroscópio e sem acelerômetro. A queixa dela chegou como *"O PERFIL
+    PRAGMATA (…) ALGO O MUDA NOVAMENTE PRA XBOX SEMPRE QUE EU O INICIO"* — e o
+    PRAGMATA nunca pediu Xbox. É a mesma família do CAMINHO-CONTAGIO-01.
+
+    **O QUE CONTINUA VALENDO da medição de 22/08:** a borda de processo É o
+    revertedor, e o disco É o que o boot lê. Por isso o conserto não foi
+    deixar o perfil escrever menos — foi tirar dele a caneta e dar ao boot a
+    devolução do vazamento (`_a_mascara_dela_sem_o_vazamento`).
+
+    MORDIDA: devolva o corpo de `_gravar_mascara_do_perfil`. A linha do disco
+    reprova, e com ela volta o defeito que ela relatou.
     """
     save_gamepad_emulation(True, "xbox")
     _vpad_obedece(daemon, monkeypatch)
@@ -157,14 +184,39 @@ def test_a_mascara_do_perfil_sobrevive_a_borda_de_processo(
     perfil = _perfil_de_jogo("dualsense")
     assert daemon.apply_profile_mode(perfil.mode, profile=perfil) == "aplicado"
 
+    # O VPAD OBEDECE AO PERFIL — isto não mudou, e é o que o jogo vê.
     assert daemon._gamepad_device is not None
     assert daemon._gamepad_device.flavor == "dualsense"
-    assert flag.read_text(encoding="utf-8").strip() == "dualsense", (
-        "o disco continuou com a máscara antiga — o próximo restart do daemon "
-        "volta para Xbox e leva touchpad, giroscópio e acelerômetro junto"
+    # E O PADRÃO DA MÁQUINA NÃO SE MEXE: só o gesto dela o escreve.
+    assert flag.read_text(encoding="utf-8").strip() == "xbox", (
+        "o perfil de um jogo voltou a promover a máscara dele a padrão da "
+        "máquina — é o contágio que tirou o giroscópio do PRAGMATA dela")
+
+
+def test_o_boot_devolve_o_xbox_que_o_vazamento_deixou(
+    daemon: Daemon, flag: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A outra metade: o arquivo dela JÁ está com o `xbox` do contágio.
+
+    Fechar as portas conserta o amanhã; o disco dela continuaria com o valor
+    que ninguém pediu. `_a_mascara_dela_sem_o_vazamento` o devolve ao default —
+    UMA vez, e não a cada boot: quem devolve grava, e a volta seguinte lê
+    `dualsense` e não faz nada.
+
+    MORDIDA: faça a função devolver `lido` sem gravar. A segunda linha reprova
+    e o `xbox` fica no disco para sempre.
+    """
+    from hefesto_dualsense4unix.daemon.lifecycle import (
+        _a_mascara_dela_sem_o_vazamento,
     )
-    # O que o boot vai ler.
-    assert load_gamepad_emulation() == (True, "dualsense")
+
+    save_gamepad_emulation(True, "xbox")
+
+    assert _a_mascara_dela_sem_o_vazamento("xbox") == "dualsense"
+    assert flag.read_text(encoding="utf-8").strip() == "dualsense"
+    # E O QUE ELA ESCOLHEU DE PROPÓSITO FICA: `dualsense` no arquivo não é
+    # vazamento, e a função não tem o que consertar.
+    assert _a_mascara_dela_sem_o_vazamento("dualsense") == "dualsense"
 
 
 def test_perfil_sem_opiniao_de_mascara_nao_escreve_nada(

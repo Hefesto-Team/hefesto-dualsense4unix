@@ -17,7 +17,16 @@ não mudou. As duas células entraram com `nada-a-acionar`, que é DECISÃO: nã
 o que acionar porque não existe comando de ligar a IMU e o sensor emite sempre.
 O contador de dívida deste arquivo não se moveu.)
 
-**RECONTADO EM 18/09/2026: são 46** — 23 no cabo, 23 no rádio. A que SAIU
+**RECONTADO EM 21/09/2026: são 47** — 23 no cabo, 24 no rádio. A que ENTROU é
+`audio.microfone.ganho@dualsense` no rádio, e a subida é de HONESTIDADE pela
+quinta vez neste arquivo: a célula NASCEU medida em 20/09 (o `amixer` do
+controle no cabo respondeu, e os três do rádio não têm placa ALSA nenhuma), com
+`aciona = não` e a razão escrita — *pelo rádio o microfone chega como som já
+digitalizado, por nó da nossa ponte; não há placa ALSA onde o elemento exista*.
+Isso é **DECISÃO, e não dívida**: o contador deste arquivo não se moveu. A tela
+diz o mesmo, com o trilho cinza e a razão no `?` ao lado.
+
+**RECONTADO EM 18/09/2026: eram 46** — 23 no cabo, 23 no rádio. A que SAIU
 saiu PELO MOTIVO CERTO, e é a mesma que entrou por honestidade em 10/09:
 `audio.alto_falante@dualsense` no rádio passou a ser ACIONADA pelo produto. O
 som pelo `0x35` e a háptica pelo `0x32` fecharam o contrato da célula, e o
@@ -509,8 +518,8 @@ def test_a_populacao_nao_depende_da_coluna_que_ela_confere() -> None:
         "que ela é derivada da própria coluna, e o portão ficaria verde "
         "justamente quando alguém esquecesse de responder"
     )
-    assert len(antes) == 46, (
-        f"o recorte de 18/09/2026 tinha 46 células medidas e não "
+    assert len(antes) == 47, (
+        f"o recorte de 21/09/2026 tinha 47 células medidas e não "
         f"acionadas, e agora tem {len(antes)}. Não é reprovação de defeito: é "
         "aviso de que o retrato deste arquivo envelheceu e o texto precisa ser "
         "recontado — leia o cabeçalho deste arquivo, que diz como"

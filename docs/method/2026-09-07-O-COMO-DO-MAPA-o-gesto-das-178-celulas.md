@@ -7261,6 +7261,53 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 ---
 
+## mapa-audio.microfone.ganho-cabo — Microfone · ganho de entrada · cabo
+
+*Célula:* `audio.microfone.ganho @ cabo`
+
+**O que isto prova.** Prova que o segundo deslizante do bloco do Microfone — o **Ganho** — muda de verdade o quanto a placa amplifica a sua voz, e que o número que a tela mostra é o que a placa devolveu, não o que foi pedido. O ganho é da PLACA DE SOM do controle, e não do firmware do DualSense: ele não passa pelo daemon.
+
+**Onde olhar.** Na aba Controles. Clique na linha de um controle **ligado pelo cabo** e o cartão dele abre. Dentro do cartão, o bloco do Microfone tem DOIS trilhos: o de cima é **Volume**, o de baixo é **Ganho**.
+
+**Os passos.**
+
+1. Clique na aba Controles.
+2. Confira na fita do topo que o controle que você vai usar diz **cabo**.
+3. Clique na linha dele para abrir o cartão.
+4. Anote o número que o trilho **Ganho** mostra.
+5. Arraste o trilho do Ganho para um valor bem diferente — 40, por exemplo — e solte.
+6. Espere dois segundos sem clicar em mais nada.
+7. Fale no microfone do controle e veja a barra de nível logo acima.
+
+**O que tem de acontecer.** O número do Ganho fica no valor novo e **não volta sozinho**. A barra de nível responde à sua voz com altura diferente da de antes. Se o número saltar de volta ao antigo, o que a tela mostra é o pedido e não a resposta da placa.
+
+**O que anotar.** O número antes, o que você arrastou, o que ficou na tela depois dos dois segundos, e se a barra de nível mudou de altura com a mesma voz.
+
+---
+
+## mapa-audio.microfone.ganho-radio — Microfone · ganho de entrada · rádio
+
+*Célula:* `audio.microfone.ganho @ rádio`
+
+**O que isto prova.** Prova que pelo rádio o produto **diz que não dá, e diz por quê** — em vez de oferecer um trilho que não faz nada. Pelo rádio o microfone chega como som já digitalizado, por um nó da ponte desta casa: não existe placa ALSA onde o elemento de ganho more. A recusa com a razão é a entrega desta célula.
+
+**Onde olhar.** O mesmo lugar: aba Controles, cartão de um controle **ligado pelo rádio**, bloco do Microfone, trilho de baixo (**Ganho**).
+
+**Os passos.**
+
+1. Clique na aba Controles.
+2. Confira na fita do topo que o controle que você vai usar diz **rádio**.
+3. Clique na linha dele para abrir o cartão.
+4. Olhe o trilho do **Ganho**: ele tem de estar **cinza**.
+5. Clique no `?` ao lado dele e leia a frase que aparece.
+6. Tente arrastar o trilho cinza.
+
+**O que tem de acontecer.** O trilho fica cinza, o `?` explica que pelo rádio não há placa de som onde o ganho exista, e o arrasto não muda número nenhum. O que NÃO pode acontecer é o trilho parecer normal e não fazer nada — é o «efeito pronto e sem escolha» ao contrário.
+
+**O que anotar.** Se o trilho estava cinza, a frase inteira do `?`, e se o arrasto mexeu em alguma coisa.
+
+---
+
 ## mapa-audio.microfone.volume-cabo — Microfone · volume · cabo
 
 *Célula:* `audio.microfone.volume @ cabo`
@@ -7297,10 +7344,10 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 1. Clique na aba Controles.
 2. Confira na fita do topo que o controle que você vai usar diz **rádio**.
 3. Clique na linha dele para abrir o cartão.
-4. Aperte o botão 🎙 para pôr o microfone no ar — ele fica verde fixo enquanto capta.
+4. Aperte o botão 🎙 para **ouvir a si mesma**: ele fica verde e assim continua até você clicar de novo.
 5. Anote o número do volume.
 6. Mude o volume daquele canal pelo painel de som do sistema e volte.
 
-**O que tem de acontecer.** O número acompanha, igual ao do cabo. E há uma segunda coisa a ver: **o botão 🎙 fica verde e PARADO** enquanto capta — quem se move é a barra de nível, com a sua voz. Desde 12/09/2026 o botão não pisca mais, por decisão dela: duas animações para o mesmo fato competiam entre si.
+**O que tem de acontecer.** O número acompanha, igual ao do cabo. E há uma segunda coisa a ver: **o botão 🎙 fica verde e assim FICA** — ele é uma trava, como o do Discord, e só o clique seguinte o apaga. Você ouve a própria voz enquanto ele estiver verde; quem se move é a barra de nível.
 
-**O que anotar.** Os três números, e se o botão ficou mesmo parado.
+**O que anotar.** Os três números, se o botão continuou verde sem você segurar nada, e se você se ouviu.

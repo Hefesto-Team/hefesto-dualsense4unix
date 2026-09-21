@@ -51,20 +51,28 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 DELA: dict[str, str] = {
     "jogo": "Efeitos do Jogo",
     "junto": "Efeitos do Jogo e Áudio da TV no Controle",
+    "nada": "Tudo na TV e Nada no Controle",
 }
 
-#: O TERCEIRO NÃO É DELA AINDA, e a razão está registrada.
+#: **O TERCEIRO PASSOU A SER DELA — 21/09/2026.**
 #:
-#: Ela escreveu «Tudo na TV e Nada no Controle» para este botão, e **o botão
-#: faz o oposto**: ele manda o som do PC para o controle e CALA a televisão —
-#: é o que a mordida da própria sprint cobra dele. Pôr o nome sem trocar o ato
-#: seria a mentira que esta aba existe para não contar, e trocar o ato é
-#: decisão dela, que espera em
-#: `docs/process/2026-09-20-AS-PERGUNTAS-QUE-ESPERAM-ELA.md`.
+#: Ele ficou dois dias com o rótulo de espera (`"Só no controle"`) porque o
+#: nome que ela escreveu — «Tudo na TV e Nada no Controle» — descrevia o
+#: OPOSTO do que o botão fazia: ele mandava o som do PC para o controle e
+#: calava a televisão.
 #:
-#: **O ponteiro é PROSA de propósito:** `docs/process/` é `.gitignore:178` e
-#: não existe num clone limpo. Uma régua que ABRISSE aquele arquivo reprovaria
-#: por ambiente, que é como 129 réguas desta casa já derrubaram o CI.
+#: **O ATO MUDOU PRIMEIRO, que é a ordem certa das duas coisas**, e a régua de
+#: espera fez exatamente o que o comentário dela prometia: *"o dia em que o ATO
+#: mudar, ela reprova e cobra a troca do rótulo junto"*. O botão hoje devolve a
+#: saída padrão ao sistema **e** põe o firmware na rota 0, com o alto-falante
+#: fora do caminho — os dois lados do próprio nome.
+#:
+#: A ordem dela que fechou isto, 21/09: *"os 3 botões de som tem que ter saídas
+#: diferenciadas (…) controle e tv na tv faz ab na tv"*.
+#: O RÓTULO DE ESPERA, guardado para ser RECUSADO. Ele viveu de 20 a 21/09 no
+#: terceiro botão, enquanto o ato não batia com o nome dela. Apagá-lo daqui
+#: deixaria a régua sem o que procurar — e é procurando por ele que ela impede
+#: a volta do arranjo que mentia.
 EM_ESPERA = "Só no controle"
 
 #: O que ela NÃO quer ver na tela: os nomes internos das duas camadas. Eles
@@ -115,23 +123,30 @@ def test_o_desenho_diz_a_palavra_dela_em_todos_os_cartoes(rota: str) -> None:
         f"20/09 é {DELA[rota]!r}")
 
 
-def test_o_terceiro_botao_continua_esperando_a_palavra_dela() -> None:
-    """O nome que ela escreveu para o terceiro descreve o OPOSTO do ato.
+def test_o_botao_de_espera_nao_voltou() -> None:
+    """O rótulo de espera saiu com o ato que o justificava.
 
-    Esta régua trava o estado de espera, e não o nome antigo por saudade: o
-    dia em que o ATO mudar, ela reprova e cobra a troca do rótulo junto — que
-    é exatamente a ordem certa das duas coisas.
+    Enquanto o terceiro botão CALAVA a televisão, o nome dela mentiria — e a
+    régua travava o `"Só no controle"` até o ato mudar. O ato mudou em 21/09.
 
-    MORDIDA: ponha «Tudo na TV e Nada no Controle» no botão `pc` sem mexer no
-    que ele faz. A tela passaria a prometer o contrário do que acontece, que é
-    a família de defeito que esta aba inteira veio matar.
+    MORDIDA: devolva `data-rota="pc"` e o rótulo de espera ao gerador. Esta
+    régua reprova, e com ela o nome dela some da tela outra vez.
     """
-    vistos = _rotulos(_bancada(), "pc")
+    doc = _bancada()
 
-    assert vistos and set(vistos) == {EM_ESPERA}, (
-        f"o terceiro botão diz {sorted(set(vistos))}; enquanto ele CALAR a "
-        f"televisão o rótulo é {EM_ESPERA!r}, e o nome dela espera a decisão "
-        f"dela — ver o cabeçalho deste arquivo")
+    assert not _rotulos(doc, "pc"), (
+        "o botão `pc` voltou à fileira — ele calava a televisão, e o nome que "
+        "ela escreveu para essa posição diz o contrário")
+    # **OS COMENTÁRIOS SAEM ANTES, e os DOIS tipos** — a página guarda lápide
+    # em comentário HTML (o estado que ela viu em 03/09, citado quatro vezes) e
+    # em comentário de CSS (as duas medições de largura). Comentário não chega
+    # a tela nenhuma, e uma régua que varresse o documento cru reprovaria a
+    # MEMÓRIA do defeito junto com ele — o avesso do que esta casa faz com
+    # decisão medida.
+    vivo = re.sub(r"<!--.*?-->|/\*.*?\*/", "", doc, flags=re.S)
+    assert EM_ESPERA not in vivo, (
+        f"o rótulo de espera {EM_ESPERA!r} voltou à TELA; o ato mudou e o "
+        f"nome dela é {DELA['nada']!r}")
 
 
 def test_a_fileira_tem_os_tres_botoes_no_mesmo_numero_de_cartoes() -> None:
@@ -143,14 +158,14 @@ def test_a_fileira_tem_os_tres_botoes_no_mesmo_numero_de_cartoes() -> None:
     sem uma palavra.
     """
     doc = _bancada()
-    quantos = {rota: len(_rotulos(doc, rota)) for rota in (*DELA, "pc")}
+    quantos = {rota: len(_rotulos(doc, rota)) for rota in DELA}
 
     assert len(set(quantos.values())) == 1, (
         f"a fileira do som não tem os três botões nos mesmos cartões: {quantos}")
     assert all(quantos.values()), f"a fileira do som sumiu do desenho: {quantos}"
 
 
-@pytest.mark.parametrize("rota", ["jogo", "junto", "pc"])
+@pytest.mark.parametrize("rota", ["jogo", "junto", "nada"])
 def test_o_nome_interno_nao_chega_ao_botao(rota: str) -> None:
     """A tela nunca diz «sfx» nem «mix» — é metade da correção dela.
 
@@ -186,6 +201,7 @@ def test_o_gerador_guarda_a_palavra_dela(rota: str) -> None:
     das_constantes = {
         "jogo": aba02.ROTULO_SO_OS_EFEITOS,
         "junto": aba02.ROTULO_EFEITOS_MAIS_A_TV,
+        "nada": aba02.ROTULO_NADA_NO_CONTROLE,
     }
     assert das_constantes[rota] == DELA[rota], (
         f"o gerador emite {das_constantes[rota]!r} para o botão `{rota}` e a "
@@ -209,7 +225,7 @@ def test_o_gerador_e_o_desenho_nao_divergiram() -> None:
     doc = _bancada()
     for rota, constante in (("jogo", aba02.ROTULO_SO_OS_EFEITOS),
                             ("junto", aba02.ROTULO_EFEITOS_MAIS_A_TV),
-                            ("pc", aba02.ROTULO_SO_NO_CONTROLE)):
+                            ("nada", aba02.ROTULO_NADA_NO_CONTROLE)):
         assert set(_rotulos(doc, rota)) == {constante}, (
             f"o gerador diz {constante!r} para o botão `{rota}` e o desenho "
             f"aprovado diz {sorted(set(_rotulos(doc, rota)))}")

@@ -1027,9 +1027,9 @@ def test_o_microfone_nao_tem_mais_cor_congelada(som: dict[str, Any]) -> None:
         assert m["borda"] != som["vermelho"], (
             f"o 🎙 do card {i} continua vermelho sobre um aparelho que ninguém "
             f"leu")
-        assert m["campo"] == "mic-botao-estado", (
+        assert m["campo"] == "mic-retorno", (
             f"o 🎙 do card {i} está com o campo {m['campo']!r} — sem o endereço "
-            f"vivo, o aceso e o piscando que ela pediu não têm quem os escreva")
+            f"vivo, o verde do retorno que ela pediu não tem quem o escreva")
     assert len({m["borda"] for m in som["mics"]}) == 1, (
         "os 🎙 dos dois cards pintam bordas diferentes sem o produto ter dito "
         "nada sobre nenhum dos dois")

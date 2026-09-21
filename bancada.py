@@ -105,8 +105,13 @@ PONTES = ["", *[degrau.ponte.chave for degrau in ESCADA]]
 #: Somar em vez de escolher é deliberado: um seletor que não contém nenhum dos
 #: 33 valores existentes apaga medição na primeira gravação. Qual vocabulário
 #: fica é decisão dela.
+#: **`instrumento` ENTROU EM 21/09/2026**, pela mesma regra do parágrafo
+#: acima: o `audio.microfone.ganho` do mapa responde `instrumento` — a medição
+#: veio do `amixer`, e não de um olho nem do CI. Sem ele na lista, abrir a
+#: bancada e gravar QUALQUER célula apagaria aquela procedência, porque a grade
+#: devolve o que o seletor oferece. O CSV é quem manda; a lista o acompanha.
 QUEM = ["", "ci", "bancada", "olho-dela",
-        "aparelho", "fonte-do-driver", "descritor"]
+        "aparelho", "fonte-do-driver", "descritor", "instrumento"]
 #: BANCADA-ESTADOS-01 (13/08/2026): as duas prosas abaixo NÃO são vocabulário —
 #: são o texto que o mapa JÁ tem em `estado_hoje`, nas duas únicas das 293 linhas
 #: em que a coluna está preenchida: `combinacao.rumble_simultaneo@dualsense` e

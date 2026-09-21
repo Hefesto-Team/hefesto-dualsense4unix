@@ -143,64 +143,54 @@ class TestOUcmLigaOElemento:
         )
 
 
-class TestOTrilhoDoGanhoNaLinhaDoRotulo:
-    """O arranjo D: o trilho na linha do rótulo, em bloco PRÓPRIO.
+class TestOTrilhoDoGanhoNaLinhaQueElaAprovou:
+    """**A RÉGUA MEDIA O ARRANJO QUE ELA RECUSOU — invertida em 21/09/2026.**
 
-    §3 da sprint, medido no DOM a 1120, 1180 e 1440px: a linha nova embaixo do
-    volume (arranjo A) custa +22,00px e o cartão tem 0,37px de folga; o mesmo
-    trilho embrulhado num `.vol` custa +5px, porque `.vol` tem `height:22px`
-    FIXA e a linha do rótulo tem 17. O bloco próprio custa ZERO.
+    O arranjo D (trilho na linha do rótulo, bloco próprio) foi escolhido pelo
+    PREÇO: a §3 da sprint mediu +22,00px para a linha nova, +5px para o `.vol`,
+    e ZERO para a linha do rótulo — e o cartão tinha 0,37px de folga.
+
+    **Ela recusou, em 20/09**, e o produto foi para a linha própria: um segundo
+    `.vol` embaixo do volume, com o rótulo «Ganho» ao lado. A lição desta casa
+    está escrita: *implemente a imagem aprovada e pague a conta de altura
+    depois, medindo*. Um arranjo escolhido pelo preço não é o desenho dela.
+
+    O que estas réguas passam a medir é o arranjo DELA — e o preço continua
+    tendo dono: `scripts/check_a_altura_do_cartao.py`, que é portão.
     """
 
-    def test_o_bloco_do_ganho_nao_e_um_vol(self) -> None:
-        """O trilho do ganho tem classe própria, e ela não declara altura fixa.
+    def test_o_ganho_e_uma_linha_propria_como_o_volume(self) -> None:
+        """Ele é um `.vol`, e herda dele o `flex`, o `gap` e a altura.
 
-        **O QUE A MORDIDA ARRANCA:** dê uma `height:` ao `.ganho` (que é o que
-        embrulhá-lo num `.vol` faz, porque `.vol` tem `height:22px` FIXA) e o
-        cartão vai de 327,63 para 332,63px — o
-        `scripts/check_a_altura_do_cartao.py` reprova por 5px. Esta régua pega
-        o mesmo defeito sem abrir navegador, e por isso roda na suíte.
-
-        **QUEM PEGA A TROCA `class="ganho"` → `class="vol"` NO GERADOR é a
-        régua seguinte**, e não esta: a folha continuaria com o bloco `.ganho`
-        intacto. Medido em 20/09/2026, aplicando as duas mordidas uma a uma.
+        MORDIDA: devolva `class="ganho"` sozinho ao container. O trilho perde
+        as regras `.vol .trilho` e desenha invisível — que é o defeito que a
+        troca de arranjo tinha de não trazer de volta.
         """
         from hefesto_dualsense4unix.interface import aba02
 
+        assert 'class="vol ganho"' in aba02.MIOLO, (
+            "o bloco do ganho deixou de ser uma `.vol` — sem ela o trilho não "
+            "herda regra nenhuma e desenha invisível")
+        # E O QUE ELE TEM A MAIS CONTINUA NA FOLHA: a unidade, o número de
+        # quatro caracteres e o cinza do fora de alcance.
         css = aba02.CSS
-        assert ".ganho{" in css, (
-            "o bloco `.ganho` não está na folha — sem ele o trilho desenha "
-            "INVISÍVEL, porque as regras do trilho são `.vol .trilho`"
-        )
-        regra = css.split(".ganho{", 1)[1].split("}", 1)[0]
-        assert "height:" not in regra, (
-            f"o `.ganho` declarou altura fixa ({regra!r}) — é exatamente os "
-            "5px que o `.vol` cobra e que o arranjo D existe para não pagar"
-        )
-        for filho in (".ganho .trilho", ".ganho .cheio", ".ganho .n"):
-            assert filho in css, (
-                f"falta `{filho}`: fora de um `.vol` o trilho não herda regra "
-                "nenhuma e desenha invisível"
-            )
+        for filho in (".ganho .un", ".ganho .n", ".ganho.sem-ganho .trilho"):
+            assert filho in css, f"falta `{filho}` na folha"
 
-    def test_o_trilho_mora_na_linha_do_rotulo_do_microfone(self) -> None:
-        """Ele nasce DENTRO do `.rot-linha`, à direita de «Microfone · ATIVO».
+    def test_o_rotulo_do_ganho_esta_na_linha_dele(self) -> None:
+        """A linha do ganho diz «Ganho», senão os dois trilhos ficam iguais.
 
-        **O QUE A MORDIDA ARRANCA:** mova o bloco para depois do
-        `{linha_de_volume(...)}` (o arranjo A) e esta régua reprova — o trilho
-        deixa de estar dentro da linha do rótulo, que é o único lugar desta
-        moldura que custa ZERO altura.
+        MORDIDA: tire o `<span class="rot-vol">{ROTULO_LINHA_GANHO}</span>` e a
+        pessoa vê dois trilhos idênticos empilhados, sem saber qual é qual.
         """
         from hefesto_dualsense4unix.interface import aba02
 
-        pagina = aba02.MIOLO
-        rotulo = re.search(
-            r'<div class="rot rot-linha">Microfone(.*?)</div>', pagina, re.S)
-        assert rotulo, "a linha do rótulo do Microfone sumiu do desenho"
-        assert 'class="ganho"' in rotulo.group(1), (
-            "o trilho do ganho não está na linha do rótulo — é o arranjo D "
-            "que a §3 mediu em 0,00px, e qualquer outro lugar cobra pixel"
-        )
+        bloco = re.search(r'<div class="vol ganho"(.*?)</div>',
+                          aba02.MIOLO, re.S)
+        assert bloco, "o bloco do ganho sumiu do desenho"
+        assert "rot-vol" in bloco.group(1), (
+            "a linha do ganho perdeu o rótulo — os dois trilhos do microfone "
+            "viram dois trilhos iguais")
 
     def test_os_dois_enderecos_do_ganho_existem_na_pagina(self) -> None:
         """A barra e o número têm `data-campo`, senão o desenho congela.
