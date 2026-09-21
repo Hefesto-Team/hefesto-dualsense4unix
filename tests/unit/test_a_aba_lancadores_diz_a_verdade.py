@@ -128,8 +128,26 @@ def test_todo_endereco_da_pagina_tem_quem_o_pinte(a07, ctx):
     mockup da casa o conta como MOCKUP); um valor sem endereço é escrito no
     nada. As duas falhas são invisíveis na tela, que é por que estão aqui.
     """
-    da_pagina = set(CAMPO.findall(_bancada())) - _do_topo()
-    emite = {k for k in a07.pacote(ctx)
+    # **A PÁGINA É A ESTÁTICA *MAIS* A GRADE QUE O PACOTE TROCA — 21/09/2026.**
+    #
+    # A `_pintura` manda a grade INTEIRA dentro de `blocos`, e é nela que vivem
+    # os cartões que ELA declarou (na máquina desta bancada, o `azahar` e o
+    # `super-zsnes`). Medir só o HTML estático fazia os endereços desses
+    # cartões parecerem órfãos — *"o pacote manda e a página não tem onde
+    # pôr"* — sobre uma grade que os tem.
+    #
+    # **E O VERMELHO ERA UMA CORRIDA**, que é o que o tornava caro: a `VIGIA`
+    # lê o disco numa THREAD, então o primeiro `pacote()` do processo devolve
+    # os seis de fábrica e o segundo já traz os declarados. Rodando o arquivo
+    # sozinho, verde; na suíte, depois de qualquer outra régua desta aba,
+    # vermelho — e a leitura fácil é *"a página quebrou"*.
+    #
+    # Somar a grade cura os dois de uma vez: a régua passa a medir o que o
+    # piloto REALMENTE tem na mão, e deixa de depender de quem correu antes.
+    fora = a07.pacote(ctx)
+    da_grade = "".join(str(v) for v in (fora.get("blocos") or {}).values())
+    da_pagina = set(CAMPO.findall(_bancada() + da_grade)) - _do_topo()
+    emite = {k for k in fora
              if k not in ("sem_dono", "cobertura", "blocos")}
     assert da_pagina, "a página não tem um endereço sequer — a régua ficou cega"
     assert da_pagina - emite == set(), (
