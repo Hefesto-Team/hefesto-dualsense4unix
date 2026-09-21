@@ -2573,9 +2573,39 @@ def start_gamepad_emulation_desfecho(
     # nenhum cria ou apaga o flag, então o opt-out dela é permanente.
     if origin == "manual":
         with contextlib.suppress(Exception):
-            from hefesto_dualsense4unix.utils.session import save_gamepad_emulation
+            from hefesto_dualsense4unix.utils.session import (
+                load_gamepad_preference,
+                save_gamepad_emulation,
+            )
 
-            save_gamepad_emulation(True, key)
+            # **O GESTO QUE NÃO FALA DE MÁSCARA NÃO ESCREVE MÁSCARA** —
+            # MASCARA-CONTAGIO-01, 21/09/2026, ponto 2.
+            #
+            # Esta linha gravava `key`, e `key` cai em `config.gamepad_flavor`
+            # quando o gesto vem SEM `flavor` (`:2354`). Desde MODO-DE-CONEXAO-01
+            # (13/09) **os chips de modo da aba Jogar vêm todos sem flavor** —
+            # eles mudam o CAMINHO —, e o `mode_transition` só põe a chave
+            # quando ela existe (`app/actions/mode_transition.py:115`). Efeito
+            # medido na máquina dela: o gesto com que ela diz «Sony DualSense»
+            # re-carimbava o `xbox` que já estava em memória, no disco, a cada
+            # clique. **O latch se realimentava pelo gesto que existia para
+            # desfazê-lo.**
+            #
+            # Quem escreve máscara agora é quem TROUXE máscara: a CLI
+            # (`cli/cmd_gamepad.py:76`, quando ela digita `--flavor`) e qualquer
+            # chamador futuro que passe o campo. Medido em 21/09: nenhuma tela
+            # do produto manda `flavor` neste método — o chip do CARTÃO usa
+            # `gamepad.mask.set`, que grava no registro por aparelho.
+            #
+            # **O EIXO DO LIGA/DESLIGA CONTINUA INTEIRO** (AUTO-01.1): sem
+            # `flavor`, reescrevemos o `True` com a máscara que JÁ ESTÁ NO
+            # DISCO. Omitir a escrita apagaria a preferência de ligado que a
+            # R-07 existe para proteger; escrever `key` inventaria opinião.
+            if flavor is not None:
+                save_gamepad_emulation(True, key)
+            else:
+                _preferencia, gravada = load_gamepad_preference()
+                save_gamepad_emulation(True, gravada)
     # DEDUP-04: gatilho "transição de backend/máscara" da materialização — o
     # wrapper hefesto-launch decide as envs pelo que fica gravado aqui.
     _materialize_launch_env(daemon)
