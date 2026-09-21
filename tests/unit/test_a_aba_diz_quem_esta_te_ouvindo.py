@@ -115,16 +115,34 @@ class TestAPalavraTemUmDono:
     """Uma cópia só das palavras, e ela cabe numa linha."""
 
     def test_a_sala_vazia_vira_a_frase_que_faltava(self) -> None:
-        """MORDIDA: devolva `""` para a lista vazia.
+        """**A FRASE SAIU EM 21/09/2026, E ESTA RÉGUA VIROU DE LADO.**
 
-        É O CASO QUE ORGANIZOU O DIA: o microfone dela estava LIGADO e nenhum
-        app gravava. A luz agora acende nesse estado — e sem esta frase a tela
-        não tem como dizer que acesa não quer dizer *"alguém te escuta"*.
+        Ela nasceu em 19/09 com uma razão medida: o microfone LIGADO com
+        nenhum app gravando apagava a luz do controle, e ela desligou o
+        próprio microfone achando que o ligava. A luz passou a acender no
+        mesmo dia, e com ela a premissa caiu — o selo «ATIVO» do cartão já diz
+        o que a frase dizia.
+
+        A ordem é dela, olhando a tela instalada:
+
+            "essa frase não faz sentido
+             tambem.  <!-- noqa-acento: a digitação dela não se limpa -->
+             pq sinceramente se o mic tá ativo tá subentendido que ele tá
+             funcionando sempre. pode remover ela."
+
+        **A DECISÃO DE 19/09 NÃO FOI APAGADA — ela CADUCOU**, e a nota datada
+        está na constante. O que esta régua guarda agora é que o estado normal
+        (ninguém gravando) **não gasta uma linha do cartão**, que é o contrato
+        da D-02 dela: *"linha fixa só quando HÁ ressalva"*.
+
+        MORDIDA: devolva a frase ao ramo da lista vazia.
         """
         import mesa_viva
 
-        assert mesa_viva.frase_de_quem_te_ouve([]) == mesa_viva.NINGUEM_TE_OUVE
-        assert mesa_viva.NINGUEM_TE_OUVE
+        assert mesa_viva.frase_de_quem_te_ouve([]) == ""
+        assert mesa_viva.NINGUEM_TE_OUVE == "", (
+            "a frase do estado vazio voltou — ela gasta uma linha do cartão "
+            "para dizer o que o selo «ATIVO» já diz")
 
     def test_a_ausencia_nao_vira_frase(self) -> None:
         """MORDIDA: trate `None` como lista vazia.
@@ -271,8 +289,20 @@ class TestOPacoteEmite:
         aba já mentiu.
         """
         base = {"mic_mudo": False, "canal_ativo": True}
+        # O VAZIO NÃO TEM MAIS FRASE — ordem dela de 21/09. O que continua
+        # tendo dono é o que HÁ a dizer: o nome de quem está gravando.
+        # O CAMPO SAI COM O MARCADOR DE VAZIO, e não com string crua: é o
+        # `NADA_A_DIZER` que a peça das dez usa para o alvo `html` — a tela não
+        # mostra texto nenhum, e o pintor não precisa de um segundo caminho
+        # para "apagar". Ler a constante em vez de digitar a tag é a regra
+        # desta casa: uma régua que digita o que devia LER mede a si mesma.
+        # O import é LOCAL porque este arquivo põe a pasta da interface no
+        # `sys.path` depois dos imports do topo — um `from ... import` lá em
+        # cima roda antes e quebra a coleta inteira.
+        from monta import NADA_A_DIZER
+
         vazia = self._campos({**base, "ouvintes_do_mic": []})
-        assert vazia["mic-ressalva"] == "Ninguém está te ouvindo ainda."
+        assert vazia["mic-ressalva"] == NADA_A_DIZER
         com_um = self._campos({**base, "ouvintes_do_mic": ["Discord"]})
         assert com_um["mic-ressalva"] == "Discord está te ouvindo."
 
