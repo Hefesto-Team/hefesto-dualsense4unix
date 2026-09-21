@@ -87,11 +87,11 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | 04-iluminacao | 35 | 9 | 12 | 6 | 7 | 1 | 26% |
 | 05-vibracao | 31 | 13 | 11 | 4 | 3 | 0 | 42% |
 | 06-navegacao | 40 | 15 | 16 | 0 | 9 | 0 | 38% |
-| 07-lancadores | 30 | 15 | 5 | 0 | 9 | 1 | 50% |
+| 07-lancadores | 30 | 14 | 6 | 0 | 9 | 1 | 47% |
 | 08-conexoes | 49 | 22 | 22 | 3 | 2 | 0 | 45% |
 | 09-sistema | 38 | 12 | 18 | 2 | 6 | 0 | 32% |
 | 10-perfis | 50 | 14 | 20 | 7 | 9 | 0 | 28% |
-| TODAS | 396 | 143 | 160 | 31 | 58 | 4 | 36% |<!-- /TABELA-DA-PARIDADE -->
+| TODAS | 396 | 142 | 161 | 31 | 58 | 4 | 36% |<!-- /TABELA-DA-PARIDADE -->
 
 A tabela é **gerada da contagem do CSV** e conferida pelo portão (regra
 `numero-publicado`): quem mexer no dado e não regerar esta seção é barrado
@@ -599,3 +599,20 @@ autoconferências de `aba01.py` e `aba02.py` recusam a marca de volta.
 
 **A MORDIDA:** com a tabela devolvida à contagem velha, o portão reprova em
 `numero-publicado` nomeando `01-jogar`, `02-controles` e `TODAS`.
+
+## Nota de verificação — 21/09/2026, o «Este jogo não funciona» sai da aba 07
+
+`OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01`. A linha **`07-lancadores` ·
+"Este jogo não funciona"** foi de `IGUAL` para **`DIFERENTE`**, e a tabela acima
+foi **recontada do CSV**: `07-lancadores` vai de `15 IGUAL · 5 DIFER · 50%` para
+`14 · 6 · 47%`, e `TODAS` de `143 · 160` para `142 · 161`.
+
+**A razão:** o desenho da lista de exclusão, aprovado por ela, pôs o «Adicionar
+à lista de exclusão» no lugar do botão nos oito cartões — e a exclusão é o
+contrário da marca. A marca por jogo continua na interface nova pelo chip
+«Steam Input» da aba Jogar (`a01_jogar.modo_steam`), com o mesmo dono. As duas
+linhas que a citavam (esta e a `09-sistema` · "Steam — Este jogo não
+funciona") passaram a ter o escopo do sinal em `a01_jogar.py`.
+
+**A MORDIDA:** com a tabela devolvida à contagem velha, o portão reprova em
+`numero-publicado` nomeando `07-lancadores` e `TODAS`.

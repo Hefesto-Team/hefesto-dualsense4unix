@@ -85,6 +85,14 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                           "`.desktop` — é da máquina, e nada aqui toca o "
                           "controle",
     "ver-detalhes": "joga o registro técnico no painel — é leitura",
+    # ---- o «Criar perfil para um jogo» (21/09/2026) ----
+    # OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01. Ele só abre a escolha do
+    # jogo; quem cria o perfil é o gravador da aba Perfis. Os quatro da lista
+    # de exclusão NÃO entram aqui, e não por esquecimento: eles chegam pela
+    # pintura do cartão, e esta régua lê a página estática — declará-los seria
+    # razão sem dono, que a régua acusa.
+    "criar-perfil-para-um-jogo": "abre a escolha do jogo para um perfil novo — "
+                                 "é da tela",
     "mic-retorno": "liga e desliga o RETORNO do microfone — um `pw-loopback` "
                    "entre o nó de captura deste controle e a saída padrão. É "
                    "leitura do microfone mais uma tocada na saída, e não muda "

@@ -1601,11 +1601,11 @@ BOOTSTRAP = r"""
             : document.getElementById(pedido);
           if(!cx) return null;
           const fora = {};
-          // A CHAVE É O `data-linha`, OU o `data-campo` quando não há. A aba
-          // Navegação marcou as 21 linhas com `data-linha`; a Gatilhos já tinha
-          // `data-campo` em cada valor da coluna, e marcá-los de novo seria a
-          // segunda cópia do mesmo endereço.
+          // A CHAVE É O `data-linha` (Navegação) OU o `data-campo` (Gatilhos) —
+          // nunca os dois. O RÁDIO (21/09/2026, a escolha do jogo da aba 07) divide
+          // UM endereço entre as opções: só a MARCADA responde, senão vence a última.
           for(const el of cx.querySelectorAll('[data-linha],[data-campo]')){
+            if(el.type === 'radio' && !el.checked) continue;
             const chave = el.dataset.linha || el.dataset.campo;
             fora[chave] = ('value' in el)
               ? String(el.value ?? '') : (el.textContent || '').trim();

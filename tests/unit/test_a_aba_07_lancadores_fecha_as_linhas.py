@@ -504,17 +504,6 @@ def vdf_de_mentira(tmp_path, monkeypatch):
     return alvo
 
 
-class _PonteDeMentira:
-    """Registra o que o gesto mandou ao serviço. Nunca abre socket nenhum."""
-
-    def __init__(self) -> None:
-        self.chamados: list[str] = []
-
-    def chamar(self, metodo: str, **params: object) -> bool:
-        self.chamados.append(metodo)
-        return True
-
-
 def _com_steam_input(desenho, **extra):
     """Uma leitura em que a biblioteca foi lida E o Steam Input está ligado."""
     return desenho.Leitura(
@@ -742,70 +731,31 @@ def test_o_desligar_le_o_arquivo_de_volta_antes_de_dizer_pronto(
 
 
 # --------------------------------------------------------------------------
-# PASSO 2 — "Este jogo não funciona"
+# PASSO 2 — "Este jogo não funciona" SAIU, e a exclusão entrou no lugar
 # --------------------------------------------------------------------------
-def test_o_jogo_marcado_chega_na_lista_de_excecoes_e_o_servico_recarrega(
-        a07, ctx, monkeypatch, tmp_path):
-    """A MORDIDA DO PASSO 2, e ela tem DUAS metades — as duas cobradas aqui.
+def test_o_jogo_nao_funciona_saiu_e_a_exclusao_entrou_no_lugar(a07, desenho):
+    """21/09/2026, o desenho aprovado por ela (OS-LANCADORES-IGUAIS-E-A-LISTA-
+    DE-EXCLUSAO-01): no lugar do «Este jogo não funciona» entrou o «Adicionar à
+    lista de exclusão», nos oito cartões.
 
-    1. **o appid chegou ao arquivo.** A régua lê a lista de volta pelo LEITOR do
-       produto (`parse_steam_input_allowlist`), nunca por um `in` no texto: um
-       appid comentado passaria por substring e não vale como marca;
-    2. **o serviço foi avisado.** Sem a recarga a marca só valeria no próximo
-       arranque, e ela clicaria de novo achando que o primeiro clique não pegou.
+    A lista do Steam Input que o botão velho escrevia NÃO é exclusão — ela põe o
+    Hefesto NA FRENTE do jogo (§11 da sprint) —, e continua alcançável pelo chip
+    «Steam Input» da aba Jogar, que escreve a mesma lista jogo por jogo. Os três
+    testes que provavam o gesto velho (a marca no arquivo, a recarga, a recusa
+    sem jogo) saíram com ele; o chip tem os dele em
+    `test_steam_input_01_o_chip_que_acende_por_jogo.py`.
 
-    ARRANQUE o `p.chamar(METODO_DA_RECARGA)` e a segunda metade reprova.
-    """
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    lista = tmp_path / "steam_input_apps.txt"
-    monkeypatch.setattr(slo, "steam_input_allowlist_path", lambda *a, **kw: lista)
-    monkeypatch.setattr(a07, "a_escada_do_jogo", lambda _s: (9990001, a07.FECHADO))
-    monkeypatch.setattr(a07.VIGIA, "ler", lambda: None)
-    ponte = _PonteDeMentira()
-
-    carga = a07.este_jogo_nao_funciona(ctx, {"v": "steam"}, ponte)
-
-    assert slo.parse_steam_input_allowlist(lista.read_text(encoding="utf-8")) == [
-        "9990001"], f"o appid não chegou à lista: {lista.read_text()!r}"
-    assert ponte.chamados == [a07.METODO_DA_RECARGA], (
-        "o serviço não foi avisado — a marca só valeria no próximo arranque, e "
-        "o segundo clique dela pareceria o primeiro")
-    assert carga["recado"], "o gesto marcou o jogo e não disse nada na tela"
-
-
-def test_o_jogo_nao_funciona_recusa_quando_nao_sabe_qual_jogo_e(
-        a07, ctx, monkeypatch):
-    """Sem jogo, a recusa é a frase do dono — nunca um palpite de appid."""
-    from hefesto_dualsense4unix.app.actions.daemon_actions import (
-        format_game_broken_result,
-    )
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    monkeypatch.setattr(a07, "a_escada_do_jogo", lambda _s: (None, a07.FECHADO))
-
-    def _nunca(*a, **kw):
-        raise AssertionError("marcou um jogo escolhido por acaso")
-
-    monkeypatch.setattr(slo, "add_appid_to_steam_input_allowlist", _nunca)
-    with pytest.raises(RuntimeError) as erro:
-        a07.este_jogo_nao_funciona(ctx, {"v": "steam"}, _PonteDeMentira())
-    assert str(erro.value) == format_game_broken_result(status="sem_jogo")
-
-
-def test_o_jogo_nao_funciona_nao_pede_consentimento(a07, desenho):
-    """Ele é REVERSÍVEL: não fecha nada e não edita arquivo da Steam.
-
-    Por isso a janela velha não abre diálogo aqui, e esta tela não abre também.
-    Pedir consentimento para um ato reversível ensina que todo botão pede
-    consentimento — e aí o consentimento que importa deixa de ser lido.
+    A MORDIDA: devolva o botão velho à `acoes_do_steam_input` e a primeira linha
+    reprova; tire a `fileira_comum` do cartão da Steam e a segunda reprova.
     """
     lida = _com_steam_input(desenho)
     fileira = desenho.acoes_html(
         a07.com_o_que_o_daemon_diz(desenho.cartoes(lida), None, lida)[0])
-    assert f'data-gesto="{desenho.JOGO_NAO_FUNCIONA}"' in fileira
-    assert (f'data-gesto="{desenho.JOGO_NAO_FUNCIONA}" '
-            f'data-v="{a07._confirmo(desenho.JOGO_NAO_FUNCIONA)}"') not in fileira
+    assert 'data-gesto="este-jogo-nao-funciona"' not in fileira
+    assert f'data-gesto="{desenho.EXCLUIR}"' in fileira
+    assert not hasattr(a07, "este_jogo_nao_funciona"), (
+        "o gesto velho continua registrado sem botão na tela — um clique que "
+        "nenhuma página oferece")
 
 
 # --------------------------------------------------------------------------

@@ -354,6 +354,13 @@ A_DIVIDA: dict[str, str] = {
     # «por enquanto» que a ordem dela proíbe; a de `a04_iluminacao.py` era um
     # laudo nosso no cartão dela. As duas foram medidas por busca em `src/`
     # antes de sair daqui. **Esta lista só encolhe, e encolheu.**
+    # A LISTA DE EXCLUSÃO — 21/09/2026, o desenho aprovado por ela
+    # (OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01). O sujeito é o JOGO que
+    # ela escolheu, e o «não estivesse» é a ESCOLHA dela, não falta nossa: a
+    # frase diz o que a exclusão faz, e o «Tirar da lista» desfaz.
+    "como se o Hefesto não estivesse instalado":
+        "o sujeito é o JOGO excluído por ela; a frase descreve a escolha, não "
+        "uma capacidade que devemos — 21/09/2026",
 }
 
 

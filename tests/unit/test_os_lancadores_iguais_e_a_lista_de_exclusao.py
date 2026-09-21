@@ -741,3 +741,178 @@ def test_as_duas_rotas_de_subida_ligam_os_tres_fios(
     assert capturado["exclusao_applier"] is daemon.aplicar_a_exclusao
     assert capturado["exclusao_reverter"] is daemon.reverter_a_exclusao
     assert capturado["exclusao_reader"] is lx.contem
+
+
+# ---------------------------------------------------------------------------
+# E5 — os oito cartões iguais, a escolha do jogo e os gestos
+# ---------------------------------------------------------------------------
+_APPID_WO_LONG = "1599660"
+
+
+@pytest.fixture()
+def _aba07(monkeypatch: pytest.MonkeyPatch) -> Iterator[tuple]:
+    """O desenho e o pacote da aba 07, com a VIGIA parada.
+
+    Os gestos devolvem `_resposta(VIGIA.agora(), …)`, e a vigia sem dado dispara
+    a thread que lê o disco de verdade — o vazamento medido em 13/09/2026 em
+    `test_a_aba_07_lancadores_fecha_as_linhas.py`. Aqui ela responde nada, e a
+    escolha que um teste abre não sobra para o seguinte.
+    """
+    from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
+    from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07
+
+    monkeypatch.setattr(a07.VIGIA, "agora", lambda: None)
+    monkeypatch.setattr(a07.VIGIA, "ler", lambda: None)
+    monkeypatch.setattr(a07.VIGIA, "esquecer", lambda: None)
+    a07._ESCOLHA.limpar()
+    yield desenho, a07
+    a07._ESCOLHA.limpar()
+
+
+def _o_dia_bom(desenho) -> object:
+    """A Steam em ordem e os outros achados — os cartões no estado LOCALIZADO."""
+    achados = tuple((item.chave, f"/opt/{item.chave}") for item in desenho.EMBUTIDOS
+                    if item.chave != desenho.STEAM)
+    return desenho.Leitura(com_wrapper=("620", "440"), instalados=2,
+                           onde_estao=achados)
+
+
+def test_os_cartoes_localizados_tem_a_mesma_fileira(_aba07) -> None:
+    """Os cartões ACHADOS oferecem os mesmos botões — o pedido dela, *"todos os
+    lançadores com os botões da Steam"*.
+
+    A régua PERGUNTA ao dono dos rótulos (`fileira_comum`), nunca digita — régua
+    de dono mede DONO. ARRANQUE a `fileira_comum` de um cartão e ela reprova
+    nomeando qual.
+    """
+    desenho, _a07 = _aba07
+    cartoes = desenho.cartoes(_o_dia_bom(desenho))
+    assert len(cartoes) >= 6, [c.chave for c in cartoes]
+    for lanc in cartoes:
+        if lanc.chave == "flatpak":
+            continue                    # o pacote dos outros, sem jogo próprio
+        esperado = [a.rotulo for a in desenho.fileira_comum(lanc.chave)]
+        rotulos = [a.rotulo for a in lanc.acoes]
+        faltam = [r for r in esperado if r not in rotulos]
+        assert not faltam, (lanc.chave, rotulos)
+
+
+def test_nenhum_botao_do_cartao_nasce_sem_gesto(_aba07) -> None:
+    """O «Criar perfil para um jogo» era um botão SEM gesto (§1 da sprint).
+    ARRANQUE o gesto dele e este teste reprova: é o botão morto de antes,
+    multiplicado por oito."""
+    desenho, _a07 = _aba07
+    for lanc in desenho.cartoes(_o_dia_bom(desenho)):
+        mortos = [a.rotulo for a in lanc.acoes if not a.gesto]
+        assert not mortos, (lanc.chave, mortos)
+
+
+def test_o_emulador_nao_promete_exclusao_por_rom(_aba07) -> None:
+    """Um processo para todas as ROMs (§4.3): a lista oferece UMA linha.
+    ARRANQUE o ramo do emulador e este teste reprova — a lista ofereceria uma
+    ROM que o daemon não sabe distinguir."""
+    _desenho, a07 = _aba07
+    jogos, janelas, emulador = a07._jogos_para_escolher("retroarch", "RetroArch", None)
+    assert emulador and len(jogos) == 1
+    assert jogos[0].chave == "emulador:retroarch"
+    assert "com.libretro.RetroArch" in janelas[jogos[0].chave]
+
+
+def test_a_exclusao_do_emulador_casa_pela_janela_medida(_aba07) -> None:
+    """A janela do RetroArch diz `com.libretro.RetroArch`, e o flatpak é `org.`
+    (medido em 10/09/2026). A lista casa pela JANELA, sem caixa."""
+    _desenho, a07 = _aba07
+    jogos, janelas, _ = a07._jogos_para_escolher("retroarch", "RetroArch", None)
+    lx.adicionar(jogos[0].chave, lancador="retroarch", nome=jogos[0].nome,
+                 janelas=janelas[jogos[0].chave])
+    assert lx.contem("com.libretro.RetroArch")
+    assert lx.contem("COM.LIBRETRO.RETROARCH")
+    assert not lx.contem("steam_app_1599660")
+
+
+class _Ctx:
+    state: dict | None = None
+
+
+def _escolher(monkeypatch: pytest.MonkeyPatch, a07, modo: str) -> None:
+    monkeypatch.setattr(
+        a07, "_jogos_para_escolher",
+        lambda lancador, nome, state: (
+            [a07.desenho.JogoParaEscolher(chave=_JANELA, nome="Wo Long")], {}, False))
+    a07._abrir_a_escolha(modo, a07.desenho.STEAM, None)
+
+
+def test_confirmar_a_exclusao_grava_e_tira_do_disco(
+        _aba07, monkeypatch: pytest.MonkeyPatch) -> None:
+    """ARRANQUE o `tirar_do_disco` do confirmar e este teste reprova: o jogo
+    entraria na lista com o pino e o atalho de antes."""
+    desenho, a07 = _aba07
+    tirados: list[str] = []
+    monkeypatch.setattr(lx, "tirar_do_disco",
+                        lambda chave: tirados.append(chave) or "feito")
+    _escolher(monkeypatch, a07, desenho.EXCLUIR)
+    assert f"#{desenho.MIOLO_DA_ESCOLHA}" in a07._pintura([])["blocos"]
+    a07.confirmar_a_exclusao(_Ctx(), {"forma": {desenho.ESCOLHA: _JANELA}}, None)
+    assert lx.contem(_JANELA)
+    assert tirados == [_JANELA]
+    assert f"#{desenho.MIOLO_DA_ESCOLHA}" not in a07._pintura([])["blocos"], (
+        "a pop-up continuaria com o jogo que ela acabou de excluir")
+
+
+def test_confirmar_sem_escolha_recusa_dizendo(
+        _aba07, monkeypatch: pytest.MonkeyPatch) -> None:
+    desenho, a07 = _aba07
+    _escolher(monkeypatch, a07, desenho.EXCLUIR)
+    with pytest.raises(RuntimeError, match="Escolha um jogo"):
+        a07.confirmar_a_exclusao(_Ctx(), {"forma": {}}, None)
+    assert not lx.contem(_JANELA)
+
+
+def test_tirar_da_lista_pelo_rodape(_aba07) -> None:
+    """O «Tirar da lista» do rodapé leva a CHAVE no `data-v`, e o gesto a tira.
+    ARRANQUE o `lista_de_exclusao.tirar` do gesto e este teste reprova."""
+    desenho, a07 = _aba07
+    lx.adicionar(_JANELA, lancador=desenho.STEAM, nome="Wo Long")
+    rodape = desenho.rodape_da_exclusao_html([(_JANELA, "Wo Long")])
+    assert (f'data-gesto="{desenho.TIRAR_DA_EXCLUSAO}" data-v="{_JANELA}"'
+            in rodape)
+    a07.tirar_da_exclusao(_Ctx(), {"v": _JANELA}, None)
+    assert not lx.contem(_JANELA)
+
+
+def test_o_rodape_diz_o_excluido_e_a_lista_da_steam_nao_o_repete(_aba07) -> None:
+    """ARRANQUE o filtro dos recusados e este teste reprova: o jogo excluído
+    apareceria duas vezes no cartão, uma delas com um «Voltar a usar» que
+    desfaria só o atalho — metade da exclusão."""
+    desenho, a07 = _aba07
+    lx.adicionar(_JANELA, lancador=desenho.STEAM, nome="Wo Long")
+    lida = desenho.Leitura(
+        com_wrapper=("620",), instalados=1,
+        recusados=((_APPID_WO_LONG, "Wo Long"), ("70", "Jogo tirado")))
+    steam = a07.com_a_exclusao(desenho.cartoes(lida), lida)[0]
+    assert "Na lista de exclusão" in steam.fora and "Wo Long" in steam.fora
+    assert steam.fora.count("Wo Long") == 1, steam.fora
+    assert "Jogo tirado" in steam.fora, "o recusado DELA continua na lista"
+
+
+def test_criar_perfil_passa_pelo_gravador_da_aba_perfis(
+        _aba07, monkeypatch: pytest.MonkeyPatch) -> None:
+    """D-2109-O-CRIAR-PERFIL-LEVA-A-ABA-PERFIS: um gravador, dois caminhos de
+    chegada. ARRANQUE a chamada ao `a10_perfis.criar_para_o_jogo` e este teste
+    reprova — a aba Lançadores teria um segundo gravador de perfil."""
+    from hefesto_dualsense4unix.interface.pacotes import a10_perfis
+
+    desenho, a07 = _aba07
+    pedidos: list[tuple] = []
+    monkeypatch.setattr(a10_perfis, "criar_para_o_jogo",
+                        lambda ctx, p, *, classes, nome_do_jogo:
+                        pedidos.append((classes, nome_do_jogo)) or "ok")
+    _escolher(monkeypatch, a07, desenho.CRIAR_PERFIL)
+    a07.confirmar_o_perfil(_Ctx(), {"forma": {desenho.ESCOLHA: _JANELA}}, None)
+    assert pedidos == [((_JANELA,), "Wo Long")]
+    miolo = desenho.miolo_da_escolha_html(
+        desenho.CRIAR_PERFIL, "Steam",
+        [desenho.JogoParaEscolher(chave=_JANELA, nome="Wo Long")])
+    assert 'href="10-perfis.html"' in miolo, (
+        "o confirmar do perfil não leva à aba Perfis — o perfil nasceria sem "
+        "ela ver onde")

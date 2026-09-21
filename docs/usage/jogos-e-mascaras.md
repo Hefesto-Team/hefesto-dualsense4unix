@@ -47,15 +47,17 @@ DualSense à **API da Steam** (`SetDualSenseTriggerEffect`, da Steamworks). Esse
 títulos têm suporte a DualSense de verdade, mas ele só funciona com o **Steam
 Input daquele jogo LIGADO**.
 
-**Você não precisa marcar nada para isso.** O botão **"Este jogo não funciona"**
-(aba **Lançadores** — ele era da Sistema até 06/09/2026, quando ela dividiu o
-assunto: Steam Input e a lista de exceções ficam na Lançadores, e "Consertar",
-"Restaurar de fábrica" e "Aplicar aos jogos" ficam na Sistema) e a caixinha **"Esconder os controles físicos neste jogo"**
-(aba **Perfis**) continuam existindo, e escrevem no mesmo arquivo — mas o que
-elas garantiam já vale em **todo** jogo desde **09/08/2026**: o Hefesto esconde
-o controle físico sozinho, e o jogo enxerga um dispositivo por jogador. O que a
-marca ainda faz, e só isso, é impedir o guarda
-(`scripts/disable_steam_input.sh`) de **desligar** o Steam Input daquele jogo.
+**Você não precisa marcar nada para isso.** Desde **09/08/2026** o Hefesto
+esconde o controle físico sozinho em **todo** jogo, e o jogo enxerga um
+dispositivo por jogador. Para um jogo que pede o Steam Input ligado, o chip
+**"Steam Input"** da aba **Jogar** liga a entrada da Steam **naquele jogo**, e
+a marca que ele deixa impede o guarda (`scripts/disable_steam_input.sh`) de
+**desligar** o Steam Input dele.
+
+O botão «Este jogo não funciona», que fazia a mesma marca pela aba Lançadores,
+saiu em 21/09/2026. No lugar dele entrou o «Adicionar à lista de exclusão», que
+é o contrário: o jogo escolhido passa a ver o controle **como se o Hefesto não
+estivesse instalado**.
 
 **O co-op continua funcionando nesses jogos**, marcados ou não: o gamepad
 virtual continua de pé e o jogador 2 permanece.

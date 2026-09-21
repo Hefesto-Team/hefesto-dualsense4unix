@@ -192,8 +192,21 @@ def test_todo_gesto_do_html_tem_dono_ou_esta_declarado_sem_dono(a07):
                                   "consertar-fechando-a-steam",
                                   "copiar-a-linha",
                                   "desligar-steam-input",
-                                  "este-jogo-nao-funciona",
                                   "deixar-tudo-pronto",
+                                  # A LISTA DE EXCLUSÃO ENTROU EM 21/09/2026, e
+                                  # cai na mesma categoria: o «Adicionar» só
+                                  # nasce no cartão LOCALIZADO, os dois de
+                                  # confirmar só no miolo da pop-up que o
+                                  # clique monta, e o «Tirar da lista» só no
+                                  # rodapé de quem tem jogo excluído. Quem
+                                  # prova que os cinco chegam à tela é
+                                  # `test_os_lancadores_iguais_e_a_lista_de_
+                                  # exclusao.py`. O `este-jogo-nao-funciona`
+                                  # SAIU com o gesto no mesmo dia.
+                                  "adicionar-a-exclusao",
+                                  "confirmar-exclusao",
+                                  "confirmar-perfil",
+                                  "tirar-da-exclusao",
                                   # O «Tirar daqui» ENTROU EM 08/09/2026 e cai
                                   # na mesma categoria: ele só nasce no cartão
                                   # que ELA declarou, e a página estática nasce
@@ -550,7 +563,10 @@ def test_o_piso_de_gestos_da_aba_so_sobe(a07):
     conhece (pedido dela) — «Localizar este Lançador» e «Tirar daqui»; e DE
     DEZESSEIS PARA DEZESSETE em 09/09/2026, com a CURA POR ESTRADA
     (LANCADORES-ZERO-01 §5.3): o «Consertar» dos lançadores que o atalho de
-    inicialização da Steam não alcança.
+    inicialização da Steam não alcança; e DE DEZESSETE PARA VINTE E UM em
+    21/09/2026, com a LISTA DE EXCLUSÃO (OS-LANCADORES-IGUAIS-E-A-LISTA-DE-
+    EXCLUSAO-01): entraram os cinco da fileira comum e da pop-up, e saiu o
+    «Este jogo não funciona», que o «Adicionar à lista de exclusão» tomou.
 
     **O NOME DESTA RÉGUA DIZIA `catorze` E O PISO JÁ ERA 16** — ele envelheceu
     duas vezes em três dias, porque nome com número dentro é um fato a manter
@@ -559,7 +575,7 @@ def test_o_piso_de_gestos_da_aba_so_sobe(a07):
     import pacotes
 
     quantos = sum(1 for (p, _) in pacotes.GESTOS if p == PAGINA)
-    assert quantos >= a07.PISO_DA_ABA == 17, (
+    assert quantos >= a07.PISO_DA_ABA == 21, (
         f"{PAGINA} tem {quantos} gestos com dono e o piso é {a07.PISO_DA_ABA}")
 
 

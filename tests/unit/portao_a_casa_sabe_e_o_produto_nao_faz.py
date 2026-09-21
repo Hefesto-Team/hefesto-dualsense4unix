@@ -1279,21 +1279,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
 #:
 #: No dia em que o caminho nascer, a entrada deixa de bater com a árvore e
 #: ``test_a_lista_de_lacunas_nao_envelhece_calada`` cobra que ela seja apagada.
-_LISTA_DE_EXCLUSAO_SEM_BOTAO = (
-    "OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01, 21/09/2026. O dono da "
-    "lista (E1) entrou antes dos botões DE PROPÓSITO: o cartão é pintado ao "
-    "vivo pelo `desenho_dos_lancadores`, o mesmo módulo que o gerador usa, e "
-    "publicar a fileira antes dos gestos poria na tela dela três botões que "
-    "não fazem nada, em oito cartões (§9.1 da sprint). O desenho está APROVADO "
-    "por ela («perfeito aprovadíssimo»), e a ordem é: motor, gestos, e só "
-    "então o desenho publicado de uma vez. O QUE O FECHARIA: a E5 — os gestos "
-    "«Adicionar à lista de exclusão» e «Tirar da lista» em "
-    "`interface/pacotes/a07_lancadores.py`."
-)
-
 _SEM_CAMINHO_HOJE: dict[str, str] = {
-    "integrations/lista_de_exclusao.py::adicionar": _LISTA_DE_EXCLUSAO_SEM_BOTAO,
-    "integrations/lista_de_exclusao.py::tirar_do_disco": _LISTA_DE_EXCLUSAO_SEM_BOTAO,
     "integrations/gesto_de_pareamento.py::JanelaDeBusca":
         "PONTE-SEM-CHAMADOR-01, 20/09/2026. O módulo nasceu para fechar "
         "a lacuna mais cara desta casa: "

@@ -59,8 +59,20 @@ _ABA_CITADA = re.compile(r"aba \*{0,2}([A-ZÁÉÍÓÚÃÕÂÊÔÇ][a-záéíóú
 #: (um `<span>` da dica vem logo DEPOIS do fecho, nunca dentro). O grupo é
 #: preguiçoso para parar no primeiro `</button>`.
 _BOTAO = re.compile(r"<button\b[^>]*>(.*?)</button>", re.S)
+#: OS DEGRAUS DA ABA JOGAR são alvo de clique com gesto, e não `<button>` —
+#: entraram em 21/09/2026, quando o «Este jogo não funciona» saiu da aba
+#: Lançadores e a exceção por jogo passou a morar SÓ no chip «Steam Input».
+#: Sem eles no universo, o guia não tinha como apontar o único lugar certo.
+_DEGRAU = re.compile(
+    r'<span class="degrau"[^>]*\bdata-gesto="[^"]+"[^>]*>(.*?)</span>', re.S)
 #: A BARRA DAS DEZ: `<a class="aba" href="NN-nome.html">Nome</a>`.
-_ABA_NA_BARRA = re.compile(r'<a[^>]*class="aba"[^>]*href="([^"]+)"[^>]*>([^<]+)')
+#:
+#: A ABA ATIVA É `class="aba ativa"`, e a régua a perdia — medido em 21/09/2026.
+#: O nome das abas sai da barra da PRIMEIRA página publicada, a 01, onde a Jogar
+#: é a ativa: com `class="aba"` exato, a Jogar nunca entrou no universo, e
+#: nenhum ponteiro do guia podia mandar a pessoa para lá.
+_ABA_NA_BARRA = re.compile(
+    r'<a[^>]*class="aba(?:\s[^"]*)?"[^>]*href="([^"]+)"[^>]*>([^<]+)')
 #: Marcação interna que sobra dentro do rótulo de um botão.
 _TAGS = re.compile(r"<[^>]+>")
 
@@ -110,7 +122,7 @@ def _rotulo_do_botao(bruto: str) -> str | None:
 def _aba_do_botao(rotulo: str) -> str | None:
     """Nome da aba onde mora o botão de rótulo ``rotulo``, ou None."""
     for aba, html in _paginas():
-        for bruto in _BOTAO.findall(html):
+        for bruto in (*_BOTAO.findall(html), *_DEGRAU.findall(html)):
             if _rotulo_do_botao(bruto) == rotulo:
                 return aba
     return _rotulos_do_cartao().get(rotulo)
@@ -123,8 +135,10 @@ def _aba_do_botao(rotulo: str) -> str | None:
 #: O dono é `interface/desenho_dos_lancadores.py`, e o nome da aba sai da barra
 #: das dez como o de qualquer outra.
 _ROTULOS_QUE_NASCEM_NO_CARTAO = (
-    "COPIAR_ROTULO", "DESLIGAR_STEAM_INPUT_ROTULO",
-    "JOGO_NAO_FUNCIONA_ROTULO", "TUDO_PRONTO_ROTULO",
+    "COPIAR_ROTULO", "DESLIGAR_STEAM_INPUT_ROTULO", "TUDO_PRONTO_ROTULO",
+    # O «Este jogo não funciona» SAIU em 21/09/2026; o «Adicionar à lista de
+    # exclusão» nasce no cartão localizado, que `cartoes(None)` também não tem.
+    "EXCLUIR_ROTULO",
 )
 
 
@@ -154,7 +168,7 @@ def _rotulos_de_botao() -> set[str]:
     achados = {
         _rotulo_do_botao(bruto)
         for _aba, html in _paginas()
-        for bruto in _BOTAO.findall(html)
+        for bruto in (*_BOTAO.findall(html), *_DEGRAU.findall(html))
     }
     return {r for r in achados if r} | set(_rotulos_do_cartao())
 
