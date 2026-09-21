@@ -112,10 +112,20 @@ class TestOBotaoEUmaTrava:
         assert not mesa[0].terminou, "o retorno morreu no mesmo clique"
 
     def test_o_clique_seguinte_desliga(self, mesa):
-        """MORDIDA: faça `alternar` sempre ligar. O segundo clique não apaga."""
-        monitor_do_microfone.alternar(UNIQ, "hefesto_mic_000001")
+        """O SEGUNDO CLIQUE APAGA, e é a metade da ordem dela que faltava.
+
+        **O `alternar` DO MÓDULO SAIU EM 21/09** e esta régua anda pelo caminho
+        que o gesto anda de verdade: a guarda do microfone mudo mora ENTRE o
+        «está ligado?» e o «ligar», então nenhum chamador podia usar um
+        `alternar` que decidisse os dois por conta própria. Medir pelo caminho
+        que ninguém usa é a régua respondendo sobre outra coisa que não o
+        produto — a assinatura dos seis instrumentos falsos de 05/09.
+
+        MORDIDA: faça o `desligar` devolver `False` sem matar nada.
+        """
+        monitor_do_microfone.ligar(UNIQ, "hefesto_mic_000001")
         assert monitor_do_microfone.esta_ligado(UNIQ)
-        monitor_do_microfone.alternar(UNIQ, "hefesto_mic_000001")
+        monitor_do_microfone.desligar(UNIQ)
         assert not monitor_do_microfone.esta_ligado(UNIQ)
         assert mesa[0].terminou, "o processo do retorno ficou de pé"
 

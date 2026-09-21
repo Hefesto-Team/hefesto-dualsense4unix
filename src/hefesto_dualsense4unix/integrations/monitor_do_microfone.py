@@ -45,9 +45,14 @@ from __future__ import annotations
 
 from hefesto_dualsense4unix.integrations.laco_de_audio import LATENCIA_MS, Lacos
 
+#: **O `alternar` SAIU EM 21/09/2026, e não por descuido.** Ele existia e era
+#: elegante — *"liga se estava desligado, desliga se estava ligado"* —, mas
+#: NENHUM chamador podia usá-lo: a guarda do microfone mudo mora ENTRE o «está
+#: ligado?» e o «ligar» (recusar antes de abrir é o que poupa a ela um botão
+#: que promete som e entrega silêncio). Promessa pública sem caminho é resto, e
+#: o portão `casa-sabe` a apanhou no mesmo dia em que ela nasceu.
 __all__ = [
     "LATENCIA_MS",
-    "alternar",
     "desligar",
     "desligar_todos",
     "esta_ligado",
@@ -91,18 +96,6 @@ def ligar(uniq: str, fonte: str, *, destino: str = "") -> bool:
 def desligar(uniq: str) -> bool:
     """Desliga o retorno deste controle. `True` = havia um e ele morreu."""
     return _LACOS.desligar(uniq)
-
-
-def alternar(uniq: str, fonte: str, *, destino: str = "") -> bool:
-    """Liga se estava desligado, desliga se estava ligado. O estado NOVO.
-
-    **É O CONTRATO DO BOTÃO DELA** — *"SE EU ATIVAR COM UM CLICK E ELE FICAR
-    VERDE ELE TÁ ATIVADO E SEGUE ASSIM ATÉ EU DESATIVAR CLICANDO NOVAMENTE"*.
-    """
-    if esta_ligado(uniq):
-        desligar(uniq)
-        return False
-    return ligar(uniq, fonte, destino=destino)
 
 
 def desligar_todos() -> int:

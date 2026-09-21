@@ -327,15 +327,16 @@ _SIM_ = "sim"
 #: **«O APARELHO NÃO TEM ISSO NESTE TRANSPORTE» É RESPOSTA, NÃO DÍVIDA** —
 #: 21/09/2026. O mapa já marcava esse fato em 163 linhas, no campo
 #: `*_por_que_nao_aciona`, com o valor `nada-a-acionar`; esta régua não o
-#: conhecia e lia todas como `nao`. O efeito era declarar dívida sobre o
+#: conhecia e lia todas como :data:`NAO`. O efeito era declarar dívida sobre o
 #: transporte: o ganho do microfone não existe pelo rádio porque **não há placa
 #: ALSA onde o elemento exista** (medido em 15/08: a placa segue o transporte),
 #: e nenhuma sprint desta casa vai mudar isso.
 #:
-#: Ela fica ACIMA do `nao` na escada, e abaixo do `com ressalva`, porque é uma
+#: Ela fica ACIMA do :data:`NAO` na escada, e abaixo do `com ressalva`, porque é
 #: resposta melhor do que *"não aciona e não sei dizer por quê"* e pior do que
 #: *"aciona, com a dívida escrita"*. O que ela NÃO é: motivo de reprovação —
-#: o filtro de falta cobra `nao` e `sem linha`, e esta não é nenhum dos dois.
+#: o filtro de falta cobra :data:`NAO` e `sem linha`, e esta não é nenhum dos
+#: dois.
 
 #: A ORDEM DAS RESPOSTAS, da pior para a melhor. Um gesto com duas chaves
 #: responde pela PIOR: `min` sobre este índice.

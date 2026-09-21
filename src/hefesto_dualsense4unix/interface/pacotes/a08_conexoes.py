@@ -4511,7 +4511,7 @@ def _chave_no_perfil(ctx: Contexto, uniq: str) -> str:
     """A chave deste controle em ``Profile.controllers`` — doze hexa, ou ``""``.
 
     DUAS RÉGUAS, E AS DUAS TÊM DE CONCORDAR. A do PERFIL é `norm_mac` do
-    esquema (`profiles/schema.py:1856`), que canoniza `aa:bb:…` em `aabbcc…`; a
+    esquema (`profiles/schema.py:1885`), que canoniza `aa:bb:…` em `aabbcc…`; a
     do `maquina.json` é `app.actions.external_controllers.chave_de_maquina`, que
     faz o mesmo e ainda RECUSA o MAC forjado que começa em `02` — o que o
     `usb_probe_degrade` inventa somando VID, PID e bus, e que dois clones do
@@ -4549,7 +4549,7 @@ def _com_o_teto(prof: Any, chave: str, policy: str | None) -> Any:
 
     "SEGUE O GLOBAL" APAGA A SEÇÃO INTEIRA (``rumble=None``), e não grava
     ``policy=None``. `_controllers_to_rumble_scales` tem DOIS desvios seguidos:
-    `cfg.rumble is None` (`profiles/manager.py:2736`) e `"policy" not in
+    `cfg.rumble is None` (`profiles/manager.py:2821`) e `"policy" not in
     model_fields_set` (`:2481`). O primeiro é o que o esquema chama de "campo
     não escrito = sem opinião", e é o que o merge POR CAMPO promete
     (`ControllerRumbleOverride`, docstring). O segundo existe para um override
@@ -4561,7 +4561,7 @@ def _com_o_teto(prof: Any, chave: str, policy: str | None) -> Any:
     `app/draft_config.with_controller_rumble:1193-1223` já decidiu que
     "intensidade igual à global não vira override". A razão é aritmética:
     `_controllers_to_rumble_scales` calcula `mult / base` e DESCARTA o fator
-    1,0 (`profiles/manager.py:2664-2714`) — guardar o override só deixaria no
+    1,0 (`profiles/manager.py:2794-2844`) — guardar o override só deixaria no
     disco uma opinião que o motor ignora.
     """
     from hefesto_dualsense4unix.profiles.schema import (
@@ -4618,7 +4618,7 @@ def teto_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     e este gesto não grava nada — a frase que falta é dela.
 
     É DO PERFIL, NÃO DA MÁQUINA. Sem perfil ativo não há onde guardar a força
-    de um controle (`profiles/schema.py:816`), e a recusa diz em que aba
+    de um controle (`profiles/schema.py:831`), e a recusa diz em que aba
     escolher um.
 
     FATO ERRADO, SUBSTITUÍDO no mesmo dia: esta linha dizia *"medido no daemon
