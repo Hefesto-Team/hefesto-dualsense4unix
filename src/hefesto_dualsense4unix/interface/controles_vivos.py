@@ -282,11 +282,36 @@ DONOS_DOS_GESTOS = {
     "sensor:acelerometro": "NÃO TEM DONO, e o dado também não existe: "
     "daemon/sensor_hub.leitura() publica gyro e touchpad, e o mapa de canais "
     "dá movimento.acelerometro como não/não, os dois MEDIDOS.",
-    "rota:jogo": "app/audio_saida.RotaDeSaida + status_actions."
-    "_aplicar_rota_do_sistema — troca o default sink do SISTEMA, que é global.",
-    "rota:pc": "app/audio_saida.RotaDeSaida (o mesmo dono) — e por ser global, "
-    "dois controles com rotas diferentes é pergunta que o desenho faz e o "
-    "produto ainda não responde.",
+    # OS TRÊS DA FILEIRA, E OS TRÊS TÊM O MESMO DONO — 21/09/2026.
+    #
+    # Até esta data a tabela conhecia `rota:jogo` e `rota:pc`, e o `pc` saiu da
+    # fileira em 20/09, quando ela trocou o ato do terceiro botão. Resultado
+    # medido rodando `--prova-gesto` na máquina dela: dos três botões clicados,
+    # DOIS voltavam com *"SEM LINHA na tabela de donos — este gesto chegou de
+    # um endereço que o gerador não escreve. Nada foi aplicado."*
+    #
+    # E OS DOIS TINHAM DONO. `pacotes/a02_controles.py:4436` registra
+    # `@gesto("02-controles.html", "rota", grava="save_profile")`, e o corpo
+    # aceita `jogo`, `junto`, `nada` e `pc` — recusando qualquer outra com
+    # `ValueError`. O instrumento é que tinha ficado para trás.
+    #
+    # POR QUE ISSO É CARO, e não é detalhe de texto: a queixa dela de 20/09 foi
+    # *"os 3 botões do auto falante estão errados também e não estão
+    # funcionando"*, e a régua que existe para responder essa pergunta
+    # respondia **"nada foi aplicado"** sobre dois botões que funcionam. Uma
+    # tabela de donos velha não erra devagar: ela acusa o produto.
+    "rota:jogo": "pacotes/a02_controles.rota (grava=save_profile) — byte "
+    "`OUTPUT_PATH_SEL`=2 pelo `speaker.set`, mais `app/audio_saida.RotaDeSaida`"
+    " devolvendo a saída padrão do sistema (camada 1).",
+    "rota:junto": "pacotes/a02_controles.rota — o MESMO dono, com "
+    "`speaker.fonte='mix'`: o monitor da saída padrão cai TAMBÉM no sink do "
+    "controle, e a TV continua tocando. Não é uma terceira camada.",
+    "rota:nada": "pacotes/a02_controles.rota — o MESMO dono: rota 0 (o "
+    "alto-falante fora do caminho) mais a saída padrão devolvida ao sistema. "
+    "É o ato que ela decidiu em 20/09, com o nome que ela já tinha escrito.",
+    "rota:pc": "pacotes/a02_controles.rota — continua rota válida pelo perfil, "
+    "pelo IPC e pela CLI, mas SAIU DA FILEIRA em 20/09; por ser global, dois "
+    "controles com rotas diferentes é pergunta que o produto ainda não responde.",
     "alvo": "app/alvo_de_edicao.definir_alvo (janela) + controller.target.set "
     "(daemon). Nesta leva o acordeão só RELATA quem está aberto.",
     # OS TRÊS DE SOM TÊM DONO — e é a diferença que importa em relação aos dois

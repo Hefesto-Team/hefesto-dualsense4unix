@@ -43,7 +43,7 @@ onde saiu em 25/08. Corrigir à mão seria pagar o mesmo preço de novo amanhã.
 | `docs/protocol/dualsense-referencia-canonica.md` | <!--@bytes:docs/protocol/dualsense-referencia-canonica.md-->122.130<!--/--> | **O PROTOCOLO.** O que o DualSense entende, byte a byte. | Quando a pergunta é "que report/offset/valor eu mando". Use a régua de conversão da seção 6. |
 | `docs/protocol/paridade-bluetooth-versus-cabo.md` | <!--@bytes:docs/protocol/paridade-bluetooth-versus-cabo.md-->18.732<!--/--> | Tabela cabo x rádio em prosa. Declara-se desempatador nas linhas `MEDIDO AO VIVO`. | Para visão geral. **Onde divergir do mapa fora das linhas `MEDIDO AO VIVO`, o mapa vence** — ele tem domínio fechado e portão; a tabela é prosa. |
 | `docs/method/METODO-DE-ISOLAMENTO.md` | <!--@bytes:docs/method/METODO-DE-ISOLAMENTO.md-->63.703<!--/--> | O ciclo de ensaio: perguntas de sanidade, oito passos, as armadilhas A-1..A-25. | Quando você vai **produzir** medição nova, não consumir. Cuidado: ele ainda ensina o nome de coluna `grau`, que o portão de hoje reprova (seção 6). |
-| `scripts/check_paridade_transporte.py` | <!--@bytes:scripts/check_paridade_transporte.py-->145.519<!--/--> | **O PORTÃO** do mapa, e a melhor explicação de método da casa — a docstring nomeia cada regra e o defeito real que a fez nascer. | Antes de escrever no CSV. Leia a docstring inteira — ela vai da linha 2 à <!--@ultima-linha-da-docstring-do-portao-->343<!--/-->. |
+| `scripts/check_paridade_transporte.py` | <!--@bytes:scripts/check_paridade_transporte.py-->153.052<!--/--> | **O PORTÃO** do mapa, e a melhor explicação de método da casa — a docstring nomeia cada regra e o defeito real que a fez nascer. | Antes de escrever no CSV. Leia a docstring inteira — ela vai da linha 2 à <!--@ultima-linha-da-docstring-do-portao-->343<!--/-->. |
 | `scripts/eliminacao.py` | <!--@bytes:scripts/eliminacao.py-->11.675<!--/--> | **O JUIZ.** Lê o caderno e devolve um veredito por suspeito. | Seção 4. |
 | `bancada.py` | <!--@bytes:bancada.py-->26.156<!--/--> | O formulário que grava no mapa. **A escada de degraus não nasce aqui:** ele a importa do portão (`from check_paridade_transporte import VALORES_DA_ESCADA`) desde 19/08/2026 — há um dono só. | Quando for editar célula. |
 
@@ -65,16 +65,16 @@ o estudo guarda o caminho.
 
 ## 2. Como uma linha do mapa é organizada
 
-`id` é sempre exatamente `chave@controle` (confere em 308 de <!--@linhas-do-mapa-->313<!--/--> linhas), então
+`id` é sempre exatamente `chave@controle` (confere em <!--@mapa-id-confere-->313<!--/--> de <!--@linhas-do-mapa-->313<!--/--> linhas), então
 `vibracao.rumble.ff@dualsense` é uma chave de busca legítima. Os três controles
-são `dualsense` (110 linhas), `pro` (99) e `sn30` (99).
+são `dualsense` (<!--@mapa-linhas-dualsense-->113<!--/--> linhas), `pro` (<!--@mapa-linhas-pro-->100<!--/-->) e `sn30` (<!--@mapa-linhas-sn30-->100<!--/-->).
 
 <!--@colunas-em-pares-->28<!--/--> das <!--@colunas-do-mapa-->50<!--/--> colunas
 vêm em pares `cabo_*` / `radio_*` (<!--@pares-de-transporte-->14<!--/--> pares) —
 cabo e rádio respondidos lado a lado na mesma linha. As que importam para decidir:
 
-- `existe` — a peça existe no aparelho? (`tem` 142 · `desconhecido` 79 ·
-  `nao-tem` 68 · `parcial` 19)
+- `existe` — a peça existe no aparelho? (`tem` <!--@mapa-existe-tem-->154<!--/--> · `desconhecido` <!--@mapa-existe-desconhecido-->48<!--/--> ·
+  `nao-tem` <!--@mapa-existe-nao-tem-->90<!--/--> · `parcial` <!--@mapa-existe-parcial-->21<!--/-->)
 - `cabo_aceita` / `radio_aceita` — o **aparelho** aceita o comando por ali?
 - `cabo_aciona` / `radio_aciona` — o **Hefesto** aciona aquilo hoje? É a coluna
   do produto, e é a que o portão lê para dizer o que é afirmação forte.
@@ -82,20 +82,20 @@ cabo e rádio respondidos lado a lado na mesma linha. As que importam para decid
   `radio_ate_onde_foi` — **as duas réguas**, seção 3.
 - `ponte_alcanca` / `ponte_de_onde_sei` — **o eixo de ponte** (20/08/2026), e
   ele não é um par cabo/rádio: pergunta por qual ponte a feature chega ao jogo
-  (`gamepad/dualsense`, `gamepad/xbox360`, `mouse+teclado`). Preenchido em 10 de
+  (`gamepad/dualsense`, `gamepad/xbox360`, `mouse+teclado`). Preenchido em <!--@mapa-com-ponte-alcanca-->10<!--/--> de
   <!--@linhas-do-mapa-->313<!--/--> linhas hoje, todas com `gamepad/dualsense` + `inferido-do-codigo`. Quem
   filtrar o mapa sem estas duas colunas não enxerga a direção inteira.
-- `teste_que_morde` (66 linhas) e `mordida_provada_em` (33) — o teste que
+- `teste_que_morde` (<!--@mapa-com-teste-que-morde-->108<!--/--> linhas) e `mordida_provada_em` (<!--@mapa-com-mordida-provada-->61<!--/-->) — o teste que
   reprova quando a cura é arrancada, e a prova de que alguém arrancou e viu.
-- `provado_em` (74 linhas, data pura) — quando. Cuidado: `mordida_provada_em`
+- `provado_em` (<!--@mapa-com-provado-em-->84<!--/--> linhas, data pura) — quando. Cuidado: `mordida_provada_em`
   tem o mesmo sufixo `_em` e **é prosa**, não data.
-- `nota` (230 linhas), `cabo_ressalva` / `radio_ressalva`, `*_evidencia`,
+- `nota` (<!--@mapa-com-nota-->232<!--/--> linhas), `cabo_ressalva` / `radio_ressalva`, `*_evidencia`,
   `*_detalhe` — **a prosa**. É onde mora o que salva trabalho, e é o que este
   documento existe para te ajudar a ler **sob demanda, pela chave**.
 
 **Não confie na coluna `transporte`.** Ela tem seis valores e nenhum deles é o
-transporte de hoje: `ambos` (36) e `cabo+rádio` (74) são o mesmo valor com duas
-grafias, e `sem linha no v1` (163 linhas, metade do mapa) é marca de migração,
+transporte de hoje: `ambos` (<!--@mapa-transporte-ambos-->36<!--/-->) e `cabo+rádio` (<!--@mapa-transporte-cabo-radio-->75<!--/-->) são o mesmo valor com duas
+grafias, e `sem linha no v1` (<!--@mapa-transporte-sem-linha-v1-->166<!--/--> linhas, metade do mapa) é marca de migração,
 não transporte. Quem responde por transporte são os pares `cabo_*` / `radio_*`.
 
 ---
@@ -110,23 +110,23 @@ que mediam. Os domínios são fechados e o portão reprova valor fora deles.
 
 | Valor | Significa | Células |
 |---|---|---:|
-| `medido` | alguém pôs o aparelho na mesa e viu | 127 |
-| `inferido-do-codigo` | alguém leu a fonte (nossa ou do driver) | 302 |
-| `afirmado-no-doc` | está escrito em alguma página | 5 |
-| `incerto` | ninguém sabe de onde saiu | 7 |
-| vazio | ninguém respondeu este lado | 175 |
+| `medido` | alguém pôs o aparelho na mesa e viu | <!--@celulas-sei-medido-->154<!--/--> |
+| `inferido-do-codigo` | alguém leu a fonte (nossa ou do driver) | <!--@celulas-sei-inferido-->438<!--/--> |
+| `afirmado-no-doc` | está escrito em alguma página | <!--@celulas-sei-afirmado-->27<!--/--> |
+| `incerto` | ninguém sabe de onde saiu | <!--@celulas-sei-incerto-->7<!--/--> |
+| vazio | ninguém respondeu este lado | <!--@celulas-sei-vazio-->0<!--/--> |
 
 **Régua 2 — `ate_onde_foi`: ATÉ ONDE A PROVA CHEGOU.** É uma escada, e cada
 degrau contém o anterior.
 
 | Valor | Direção | Significa | Células |
 |---|---|---|---:|
-| `MONTOU` | saída | o produto montou o report | 72 |
-| `SAIU NO FIO` | saída | o byte saiu e algo voltou | 16 |
-| `O APARELHO OBEDECEU` | saída | acendeu, girou, saiu som | 21 |
+| `MONTOU` | saída | o produto montou o report | <!--@celulas-escada-montou-->96<!--/--> |
+| `SAIU NO FIO` | saída | o byte saiu e algo voltou | <!--@celulas-escada-saiu-->20<!--/--> |
+| `O APARELHO OBEDECEU` | saída | acendeu, girou, saiu som | <!--@celulas-escada-obedeceu-->28<!--/--> |
 | `O JOGO RECEBEU` | **entrada** | o processo do jogo ABRIU o nó do nosso vpad | 0 |
 | `O JOGO REAGIU` | **entrada** | o jogo agiu sobre o que recebeu | 0 |
-| vazio | — | a escada não foi registrada | 507 |
+| vazio | — | a escada não foi registrada | <!--@celulas-escada-vazio-->482<!--/--> |
 
 **OS DOIS ÚLTIMOS SÃO DE 19/08/2026, e nasceram de um buraco que este arquivo já
 confessava em duas linhas** — `toque.touchpad` diz *"quem ler `radio_aciona =
@@ -144,21 +144,21 @@ conta handle MORTO como fd vivo; a outra varre só os PIDs da Steam, onde o
 `winedevice` não está).
 
 **A confusão que custa caro, dita na cara: uma régua não implica a outra.** O
-cruzamento das 616 células (<!--@linhas-do-mapa-->313<!--/--> linhas x 2 lados), medido em 02/09/2026:
+cruzamento das <!--@celulas-do-mapa-->626<!--/--> células (<!--@linhas-do-mapa-->313<!--/--> linhas x 2 lados), medido agora:
 
 | | vazio | MONTOU | SAIU NO FIO | OBEDECEU |
 |---|---:|---:|---:|---:|
-| `medido` | **64** | 26 | 16 | 21 |
-| `inferido-do-codigo` | 257 | **45** | 0 | 0 |
-| `afirmado-no-doc` | 4 | 1 | 0 | 0 |
-| `incerto` | 7 | 0 | 0 | 0 |
-| vazio | 175 | 0 | 0 | 0 |
+| `medido` | **<!--@cruzamento-medido-vazio-->74<!--/-->** | <!--@cruzamento-medido-montou-->32<!--/--> | <!--@cruzamento-medido-saiu-->20<!--/--> | <!--@cruzamento-medido-obedeceu-->28<!--/--> |
+| `inferido-do-codigo` | <!--@cruzamento-inferido-vazio-->376<!--/--> | **<!--@cruzamento-inferido-montou-->62<!--/-->** | <!--@cruzamento-inferido-saiu-->0<!--/--> | <!--@cruzamento-inferido-obedeceu-->0<!--/--> |
+| `afirmado-no-doc` | <!--@cruzamento-afirmado-vazio-->25<!--/--> | <!--@cruzamento-afirmado-montou-->2<!--/--> | <!--@cruzamento-afirmado-saiu-->0<!--/--> | <!--@cruzamento-afirmado-obedeceu-->0<!--/--> |
+| `incerto` | <!--@cruzamento-incerto-vazio-->7<!--/--> | <!--@cruzamento-incerto-montou-->0<!--/--> | <!--@cruzamento-incerto-saiu-->0<!--/--> | <!--@cruzamento-incerto-obedeceu-->0<!--/--> |
+| vazio | <!--@cruzamento-vazio-vazio-->0<!--/--> | <!--@cruzamento-vazio-montou-->0<!--/--> | <!--@cruzamento-vazio-saiu-->0<!--/--> | <!--@cruzamento-vazio-obedeceu-->0<!--/--> |
 
 Leia as duas casas em negrito e você entendeu o mapa:
 
-- **64 células são `medido` com a escada vazia.** Alguém mediu e não registrou
+- **<!--@cruzamento-medido-vazio-->74<!--/--> células são `medido` com a escada vazia.** Alguém mediu e não registrou
   até onde a prova chegou. `medido` **não** quer dizer que o aparelho obedeceu.
-- **45 células são `inferido-do-codigo` com `MONTOU`.** Ninguém tocou no
+- **<!--@cruzamento-inferido-montou-->62<!--/--> células são `inferido-do-codigo` com `MONTOU`.** Ninguém tocou no
   aparelho: leram a fonte e viram que o produto monta o report. Subir o primeiro
   degrau não exige hardware — subir do segundo em diante, exige.
 
@@ -169,12 +169,12 @@ elas**. A regra só cobra ponte de quem afirma forte — as outras 6 vazias não
 falha, são censo que ninguém respondeu.
 
 **Afirmação forte** é `aciona=sim` **e** `de_onde_sei=medido`. **Grau forte** é
-`SAIU NO FIO` ou `O APARELHO OBEDECEU` — hoje são **37 células, em 21 linhas**,
+`SAIU NO FIO` ou `O APARELHO OBEDECEU` — hoje são **<!--@celulas-grau-forte-->48<!--/--> células, em <!--@mapa-linhas-grau-forte-->26<!--/--> linhas**,
 e a regra 6 do portão exige que cada uma tenha ensaio casado no caderno. Conferi
 agora: **37 de 37 têm. Zero órfãos.**
 
-**O mapa da ignorância, de graça:** o caderno cobre **30 das <!--@linhas-do-mapa-->313<!--/--> linhas
-(9,7%)**. As outras 278 são inferência de código. Antes de gastar leitura,
+**O mapa da ignorância, de graça:** o caderno cobre **<!--@mapa-linhas-com-ensaio-->40<!--/--> das <!--@linhas-do-mapa-->313<!--/--> linhas
+(<!--@mapa-pct-linhas-com-ensaio-->12,8<!--/-->%)**. As outras <!--@mapa-linhas-sem-ensaio-->273<!--/--> são inferência de código. Antes de gastar leitura,
 saiba que o lastro empírico está concentrado em 10% do mapa.
 
 ---
@@ -197,9 +197,12 @@ onde eu aciono", os inocentados dizem "**o que eu posso parar de fazer**" — fo
 assim que a lightbar caiu de cinco canais escritos para um.
 
 **Onde os dois sistemas não se falam, e você precisa saber:** o portão do mapa
-cobra que exista ensaio, nunca qual foi o veredito. Resultado medido hoje: das
-37 células de grau forte, **só 12 têm julgamento conclusivo**; 25 descansam sobre
-ensaios que o próprio juiz chama de `inconclusivo`. Isso **não é contradição** —
+cobra que exista ensaio, nunca qual foi o veredito. Resultado medido em
+02/09/2026, quando o grau forte eram 37 células: **só 12 tinham julgamento
+conclusivo**; 25 descansavam sobre ensaios que o próprio juiz chama de
+`inconclusivo`. **A conta não foi refeita desde então, e o grau forte de hoje é
+<!--@celulas-grau-forte-->48<!--/--> células** — quem precisar do número novo
+roda o `scripts/eliminacao.py`. Isso **não é contradição** —
 são perguntas diferentes — mas se você ler "O APARELHO OBEDECEU" no mapa e
 "falta o ensaio que discrimina" no caderno, é isto que está acontecendo.
 
@@ -270,9 +273,9 @@ for x in csv.DictReader(open("docs/data/ensaios.csv", encoding="utf-8")):
 ```
 
 **A tabela cabo x rádio inteira, que cabe em 3.447 caracteres** (medido rodando
-o trecho abaixo em 22/08/2026)**:** só **37 das <!--@linhas-do-mapa-->313<!--/--> linhas** têm
+o trecho abaixo em 22/08/2026)**:** só **<!--@mapa-divergem-aciona-->39<!--/--> das <!--@linhas-do-mapa-->313<!--/--> linhas** têm
 `cabo_aciona != radio_aciona`. O mapa paga 26 colunas espelhadas em todas as 308
-para uma distinção que existe em 11,4% delas.
+para uma distinção que existe em <!--@mapa-pct-divergem-aciona-->12,5<!--/-->% delas.
 
 ```python
 import csv
@@ -282,9 +285,9 @@ for r in csv.DictReader(open("docs/data/mapa-controles.csv", encoding="utf-8")):
               f' declarada={"sim" if r["assimetria_declarada"] else "NAO"}')
 ```
 
-Dessas 37, **14 têm `assimetria_declarada` vazia**. A regra 7 do portão é AVISO
+Dessas <!--@mapa-divergem-aciona-->39<!--/-->, **<!--@mapa-divergem-sem-declarar-->3<!--/--> têm `assimetria_declarada` vazia**. A regra 7 do portão é AVISO
 de propósito — a divergência mais comum é "ninguém respondeu esse lado", que é
-buraco de censo, não mentira. As 14 são a régua de quando promovê-la a FALHA.
+buraco de censo, não mentira. As <!--@mapa-divergem-sem-declarar-->3<!--/--> são a régua de quando promovê-la a FALHA.
 
 ---
 
@@ -308,7 +311,7 @@ esteja o documento onde ele aparece.
 
 **Termos que ainda colidem — não invente a resposta, é decisão dela:**
 
-- `transporte` = `ambos` **ou** `cabo+rádio` (36 e 74 linhas, mesmo sentido). A
+- `transporte` = `ambos` **ou** `cabo+rádio` (<!--@mapa-transporte-ambos-->36<!--/--> e <!--@mapa-transporte-cabo-radio-->75<!--/--> linhas, mesmo sentido). A
   coluna não tem domínio declarado, então o portão não vê. Não filtre por ela.
 - `provado_por` (mapa, <!--@mapa-com-provado-por-->84<!--/--> linhas:
   `aparelho` <!--@mapa-provado-aparelho-->45<!--/-->, `fonte-do-driver`
@@ -351,13 +354,13 @@ escrita em lugar nenhum:
 
 Um esqueleto que parecesse completo seria pior que nenhum. **Vá à prosa quando:**
 
-- a célula tem grau forte (**37 células**) — a ressalva é onde mora a condição
+- a célula tem grau forte (**<!--@celulas-grau-forte-->48<!--/--> células**) — a ressalva é onde mora a condição
   sob a qual a prova vale;
-- a linha tem ensaio no caderno (**30 linhas**) — o caderno tem o "como";
-- a linha tem `nota` (**230 linhas**) — é onde ficam as notas datadas, e a regra
+- a linha tem ensaio no caderno (**<!--@mapa-linhas-com-ensaio-->40<!--/--> linhas**) — o caderno tem o "como";
+- a linha tem `nota` (**<!--@mapa-com-nota-->232<!--/--> linhas**) — é onde ficam as notas datadas, e a regra
   da casa é que **decisão medida não se apaga**;
-- os dois lados divergem (**37 linhas**) — leia `assimetria_declarada`, ou saiba
-  que ela está vazia em 14 delas.
+- os dois lados divergem (**<!--@mapa-divergem-aciona-->39<!--/--> linhas**) — leia `assimetria_declarada`, ou saiba
+  que ela está vazia em <!--@mapa-divergem-sem-declarar-->3<!--/--> delas.
 
 **Duas prosas que já salvaram medição neste mês**, para você entender o que está
 em jogo antes de achar que a ressalva é enfeite: uma célula dizia "nada foi

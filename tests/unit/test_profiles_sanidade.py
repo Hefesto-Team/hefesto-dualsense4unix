@@ -350,6 +350,104 @@ def test_empate_entre_especificos_e_achado() -> None:
     assert "50" in achados[0].mensagem
 
 
+def test_empate_entre_enderecos_disjuntos_nao_e_achado() -> None:
+    """Perfis de jogo na mesma prioridade, cada um com a SUA janela: silêncio.
+
+    É o caso do disco dela, medido em 21/09/2026: 28 dos 29 perfis em
+    `priority: 80`, porque é o que `PRIORIDADE_DO_PERFIL_DE_JOGO` escreve — e
+    cada um com `window_class` próprio. Nenhum par disputa coisa nenhuma, e o
+    aviso que existia ali era o produto alarmando sobre um empate que ele mesmo
+    fabricava, com uma cura que ninguém conseguiria seguir.
+
+    MORDIDA: devolver o agrupamento só-por-número faz este teste reprovar com
+    dois perfis, e com os 28 dela reprovaria do mesmo jeito.
+    """
+    achados = _de(
+        verificar_perfis(
+            [
+                _perfil(
+                    "gotg",
+                    match=MatchCriteria(window_class=["steam_app_1088850"]),
+                    priority=80,
+                ),
+                _perfil(
+                    "stray",
+                    match=MatchCriteria(window_class=["steam_app_1332010"]),
+                    priority=80,
+                ),
+            ]
+        ),
+        "prioridades_empatadas",
+    )
+    assert achados == [], (
+        "dois perfis de jogo com endereços de janela disjuntos não disputam "
+        "nada — nenhuma janela do mundo casa com os dois"
+    )
+
+
+def test_empate_com_a_mesma_janela_continua_sendo_achado() -> None:
+    """A outra ponta da mordida: quando a disputa existe, o aviso tem de sair.
+
+    Dois perfis na mesma prioridade apontando para a MESMA `window_class` são
+    o defeito de verdade — abrir aquele jogo escolhe um dos dois, e qual deles
+    depende de quem estava ativo antes.
+    """
+    achados = _de(
+        verificar_perfis(
+            [
+                _perfil(
+                    "pragmata",
+                    match=MatchCriteria(window_class=["steam_app_3357650"]),
+                    priority=80,
+                ),
+                _perfil(
+                    "pragmata2",
+                    match=MatchCriteria(window_class=["STEAM_APP_3357650"]),
+                    priority=80,
+                ),
+            ]
+        ),
+        "prioridades_empatadas",
+    )
+    assert len(achados) == 1, (
+        "a caixa é ignorada pelo produto (`_casa_sem_caixa`), então estes dois "
+        "casam com a mesma janela e disputam"
+    )
+    assert achados[0].perfis == ("pragmata", "pragmata2")
+
+
+def test_processos_disjuntos_tambem_calam() -> None:
+    """O mesmo raciocínio vale para `process_name`, que é AND com a classe."""
+    achados = _de(
+        verificar_perfis(
+            [
+                _perfil("faith", match=MatchCriteria(process_name=["faith.exe"]), priority=78),
+                _perfil("mina", match=MatchCriteria(process_name=["mina.exe"]), priority=78),
+            ]
+        ),
+        "prioridades_empatadas",
+    )
+    assert achados == []
+
+
+def test_um_par_em_disputa_no_meio_de_muitos_disjuntos_sai_sozinho() -> None:
+    """O achado nomeia só quem disputa — os outros não entram na lista.
+
+    É o que torna o aviso acionável: com 28 perfis na mesma prioridade e UM par
+    colidindo, a pessoa lê dois nomes, e não vinte e oito.
+    """
+    perfis = [
+        _perfil(f"jogo{i}", match=MatchCriteria(window_class=[f"steam_app_{i}"]), priority=80)
+        for i in range(5)
+    ]
+    perfis.append(
+        _perfil("clone", match=MatchCriteria(window_class=["steam_app_3"]), priority=80)
+    )
+    achados = _de(verificar_perfis(perfis), "prioridades_empatadas")
+    assert len(achados) == 1
+    assert achados[0].perfis == ("clone", "jogo3")
+
+
 def test_empate_com_perfil_manual_nao_conta() -> None:
     """Perfil só-manual nunca é candidato — empatar com ele não decide nada."""
     achados = verificar_perfis(
