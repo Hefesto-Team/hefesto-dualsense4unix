@@ -812,6 +812,25 @@ def _caderno_das_janelas(
     except Exception:  # pragma: no cover - disco hostil; ver o contrato acima
         return [], {}
     nomes = {j.chave.casefold(): j.nome for j in jogos if j.chave}
+    # **O CADERNO RESPONDE TAMBÉM PELO NÚMERO — 21/09/2026,
+    # LANCADOR-AGNOSTICO-01.** A chave de um jogo do Heroic é
+    # `steam_app_<N>`, porque ele lança por `umu`, que monta a pilha da Steam e
+    # exporta `SteamAppId`. Mas nem toda consulta chega aqui com a classe
+    # inteira: o «Detectar» lê a classe, extrai o appid pela fonte única
+    # (`steam_appid_from_wm_class`) e pergunta o nome pelo NÚMERO — e o número
+    # não estava no caderno.
+    #
+    # O sintoma media exatamente a queixa dela: o desfecho do botão dizia
+    # *"«Perfil» agora vale em: Só neste programa · Não instalado aqui (o
+    # número vale)"* sobre o Guardiões da Galáxia **aberto na tela dela**.
+    #
+    # O alias NÃO cria linha nova na lista — `jogos` continua com um item por
+    # jogo, e é ele que alimenta o `<datalist>`. O que ganha entrada é só o
+    # caderno de NOMES, que é consulta.
+    for jogo in jogos:
+        numero = steam_appid_de_texto(jogo.chave)
+        if numero is not None:
+            nomes.setdefault(str(numero), jogo.nome)
     _NOMES_DAS_JANELAS = (assinatura, jogos, nomes)
     return jogos, nomes
 
@@ -948,7 +967,7 @@ def frase_do_campo_do_jogo(
       Enquanto ela digita o nome atrás da lista, silêncio.
 
     **A QUINTA, E ELA É DE 10/09/2026:** o campo pode agora guardar a
-    `wm_class` de um jogo de lançador (``gotg.exe``), porque o `<datalist>`
+    `wm_class` de um jogo de lançador, porque o `<datalist>`
     passou a oferecê-la. Sem `chaves`, esse texto caía no silêncio do último
     ramo — a lista ofereceria a linha e o rótulo ao lado não diria o nome do
     jogo que ela acabou de escolher. Com `chaves` (``{wm_class: nome}``), ele
@@ -961,14 +980,31 @@ def frase_do_campo_do_jogo(
     """
     if not isinstance(texto, str) or not texto.strip():
         return None
-    appid = steam_appid_de_texto(texto)
-    if appid is not None:
-        nome = nomes.get(str(appid))
-        return (nome, False) if nome else (MSG_FORA_DA_MAQUINA, False)
     # A CONSULTA DOBRA A CAIXA dos dois lados — `nomes_das_janelas` entrega a
     # chave em minúsculas, e o que ela digita (ou o que o «Detectar» pegou da
     # janela) vem como o compositor o anunciou. Ver `jogo_da_janela`.
     do_lancador = (chaves or {}).get(texto.strip().casefold())
+    appid = steam_appid_de_texto(texto)
+    if appid is not None:
+        nome = nomes.get(str(appid))
+        if nome:
+            return (nome, False)
+        # **O LANÇADOR RESPONDE ANTES DE O PRODUTO DIZER «FORA DA MÁQUINA» —
+        # 21/09/2026, LANCADOR-AGNOSTICO-01.** Um jogo do Heroic anuncia a
+        # janela como `steam_app_<N>` (o umu monta a pilha da Steam e exporta
+        # `SteamAppId`), então esta linha é ALCANÇADA por um jogo que está
+        # instalado — só não pela Steam. Sem esta consulta o produto respondia
+        # *"Não instalado aqui (o número vale)"* sobre o Guardiões da Galáxia
+        # que estava aberto na tela dela.
+        #
+        # **A ORDEM É A DA VERDADE, e não a da conveniência:** a biblioteca da
+        # Steam primeiro porque um `steam_app_<N>` que ELA tem na Steam é um
+        # jogo da Steam; o catálogo dos lançadores depois, porque ele responde
+        # pelo mesmo número quando o dono é outro. Quem não está em nenhum dos
+        # dois é o caso normal do jogo que ela ainda vai comprar.
+        if do_lancador:
+            return (do_lancador, False)
+        return (MSG_FORA_DA_MAQUINA, False)
     if do_lancador:
         return (do_lancador, False)
     if parece_endereco(texto):

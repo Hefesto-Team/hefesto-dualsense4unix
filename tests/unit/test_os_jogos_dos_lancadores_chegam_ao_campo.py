@@ -43,13 +43,41 @@ from hefesto_dualsense4unix.integrations import jogos_locais as jl
 HEROIC_ID = "com.heroicgameslauncher.hgl"
 
 
-def _heroic(lar: pathlib.Path, itens: list[dict[str, Any]]) -> pathlib.Path:
-    """Uma biblioteca da Epic de mentira, na árvore de flatpak que é a dela."""
+def _heroic(
+    lar: pathlib.Path,
+    itens: list[dict[str, Any]],
+    umu: dict[str, str] | None = None,
+) -> pathlib.Path:
+    """Uma biblioteca da Epic de mentira, na árvore de flatpak que é a dela.
+
+    **O `umu.json` ENTROU EM 21/09/2026, e ele é de onde a chave de janela vem
+    hoje.** Até então esta fixture escrevia só a biblioteca, e a chave era
+    DERIVADA do `install.executable` — uma derivação que a janela viva do GotG
+    derrubou no mesmo dia. Uma fixture sem o `umu.json` mede o mundo de ontem.
+
+    `umu=None` escreve o mapa REAL medido no disco dela; `umu={}` escreve o
+    caso legítimo de um jogo que o umu não conhece.
+    """
     pasta = lar / ".var/app" / HEROIC_ID / "config/heroic"
     alvo = pasta / "store_cache/legendary_library.json"
     alvo.parent.mkdir(parents=True, exist_ok=True)
     alvo.write_text(json.dumps({"library": itens}), encoding="utf-8")
+    mapa = UMU_DO_DISCO_DELA if umu is None else umu
+    (alvo.parent / "umu.json").write_text(json.dumps(mapa), encoding="utf-8")
     return pasta
+
+
+#: O `store_cache/umu.json` dela, medido em 21/09/2026 — com o `__timestamp`
+#: que o Heroic guarda no mesmo dicionário e que NÃO é jogo.
+UMU_DO_DISCO_DELA: dict[str, Any] = {
+    "legendary_63a665088eb1480298f1e57943b225d8": "umu-1088850",
+    "__timestamp": {"legendary_63a665088eb1480298f1e57943b225d8":
+                    "Thu Sep 10 2026 00:17:23 GMT-0300"},
+}
+
+#: A `wm_class` que a janela do GotG anuncia DE VERDADE — medida com `xprop` na
+#: tela dela em 21/09/2026, com o jogo aberto pelo Heroic.
+JANELA_DO_GOTG = "steam_app_1088850"
 
 
 #: O jogo baixado dela, com os campos EXATOS que o disco trouxe em 10/09/2026.
@@ -127,21 +155,34 @@ def test_o_redistribuivel_da_gog_cai_pela_mesma_regua(
 # ---------------------------------------------------------------------------
 # 2. A CHAVE — e o basename, que é o que a janela anuncia
 # ---------------------------------------------------------------------------
-def test_a_chave_de_janela_e_o_basename_do_executavel(
+def test_a_chave_de_janela_vem_do_umu_e_nao_do_executavel(
     tmp_path: pathlib.Path,
 ) -> None:
-    """``retail/gotg.exe`` → ``gotg.exe``, que é o que a `wm_class` traz.
+    """**FATO SUBSTITUÍDO — 21/09/2026, e esta régua cravava o errado.**
 
-    **MORDIDA:** devolva `self.executavel` inteiro em `classe_de_janela` e a
-    regra do perfil vira `window_class=["retail/gotg.exe"]`, que **nunca** casa
-    com janela nenhuma — o defeito R-12, com verde em toda a suíte.
+    Ela dizia: *"``retail/gotg.exe`` → ``gotg.exe``, que é o que a `wm_class`
+    traz"*. A segunda metade era DERIVAÇÃO, e o próprio código declarava isso
+    (a nota de 11/09 em `classe_de_janela`: *"ninguém abriu Guardiões da
+    Galáxia e leu a classe da janela viva"*).
+
+    Ela abriu, e o `xprop` respondeu ``steam_app_1088850``: o Heroic lança por
+    `umu`, que monta a pilha da Steam e exporta `SteamAppId`; o Proton batiza a
+    janela por ele. **Uma régua de texto de tela cobra a PROPRIEDADE, nunca o
+    literal** — e esta cravava um literal que impedia a cura.
+
+    **MORDIDA:** devolva o basename do executável em `classe_de_janela`. O
+    perfil volta a nascer com `window_class=["gotg.exe"]`, que nunca casa —
+    e era esse o estado do perfil dela entre 10 e 21/09.
     """
     _heroic(tmp_path, [BAIXADO])
 
     jogo = censo.biblioteca_de("Heroic", lar=tmp_path).instalados[0]
 
     assert jogo.executavel == "retail/gotg.exe"
-    assert jogo.classe_de_janela == "gotg.exe"
+    assert jogo.umu_id == "umu-1088850"
+    assert jogo.classe_de_janela == JANELA_DO_GOTG
+    assert jogo.classe_de_janela != "gotg.exe", (
+        "a derivação pelo executável voltou")
     assert jogo.caminho == pathlib.Path("/casa/Games/Heroic/MarvelGOTG")
 
 
@@ -173,7 +214,7 @@ def test_quem_nao_tem_chave_nao_e_oferecido_mesmo_instalado(
     com_chave = censo.jogos_com_chave_de_janela(lar=tmp_path)
 
     assert [(lanc, j.classe_de_janela) for lanc, j in com_chave] == [
-        ("Heroic", "gotg.exe")]
+        ("Heroic", JANELA_DO_GOTG)]
     assert len(censo.biblioteca_de("Heroic", lar=tmp_path).jogos) == 3
 
 
@@ -220,7 +261,7 @@ def test_o_jogo_do_lancador_vira_oferta_com_a_wm_class_no_value(
     ofertas = jl.jogos_dos_lancadores(lar=tmp_path)
 
     assert [(j.valor, j.rotulo, j.forma) for j in ofertas] == [
-        ("gotg.exe", "Marvel's Guardians of the Galaxy (Heroic)", "janela")]
+        ("steam_app_1088850", "Marvel's Guardians of the Galaxy (Heroic)", "janela")]
 
 
 def test_o_que_o_campo_grava_casa_com_a_janela_de_verdade() -> None:
@@ -483,7 +524,7 @@ def test_o_detectar_acha_o_jogo_do_heroic_do_lutris_e_o_direto(
 
     **MORDIDA:** faça `jogo_da_janela` devolver `None` sempre (ou compare com
     `==` sem `casefold`) e o `GOTG.EXE` do `pga.db` deixa de reconhecer a
-    janela `gotg.exe` do Heroic — o mesmo jogo deixa de se reconhecer conforme
+    janela `steam_app_1088850` do Heroic — o mesmo jogo deixa de se reconhecer conforme
     o lançador por onde ela o abriu.
     """
     _heroic(tmp_path, [BAIXADO])
@@ -496,14 +537,14 @@ def test_o_detectar_acha_o_jogo_do_heroic_do_lutris_e_o_direto(
     jogos = jl.jogos_com_janela(lar=tmp_path, pastas=[tmp_path])
     achar = lambda c: jl.jogo_da_janela(c, jogos)  # noqa: E731
 
-    assert achar("gotg.exe").nome == "Marvel's Guardians of the Galaxy"
-    assert achar("gotg.exe").lancador == "Heroic"
+    assert achar("steam_app_1088850").nome == "Marvel's Guardians of the Galaxy"
+    assert achar("steam_app_1088850").lancador == "Heroic"
     assert achar("Celeste.x86_64").lancador == "Lutris"
     assert achar("SUPERZSNES").lancador == jl.LANCADOR_DIRETO
     # A CAIXA DOBRA DOS DOIS LADOS, e não é gosto: `MatchCriteria.matches` já
-    # compara `window_class` sem caixa (`_casa_sem_caixa`), e o `pga.db` guarda
-    # `GOTG.exe` onde a janela anuncia `gotg.exe`.
-    assert achar("GOTG.EXE").nome == "Marvel's Guardians of the Galaxy"
+    # compara `window_class` sem caixa (`_casa_sem_caixa`), e o compositor pode
+    # anunciar a classe com a caixa que o toolkit escolheu.
+    assert achar("STEAM_APP_1088850").nome == "Marvel's Guardians of the Galaxy"
     # A STEAM TEM DONO, e não é este: quem traduz appid é `catalogo_de_jogos`.
     assert achar("steam_app_3357650") is None
     # AS DUAS RECUSAS HONESTAS do «Detectar» continuam de pé.
@@ -518,7 +559,7 @@ def test_o_nome_da_janela_chega_ao_rotulo_sem_a_tela_ler_disco_duas_vezes(
     """A PONTA: `nomes_das_janelas` + `frase_do_campo_do_jogo` = o nome do jogo.
 
     É o caminho inteiro que a aba Perfis vai chamar numa linha, e ele responde
-    ao `gotg.exe` exatamente como responde ao `3357650`: com o NOME.
+    ao `steam_app_1088850` exatamente como responde ao `3357650`: com o NOME.
 
     **E ELE É MEMOIZADO**, porque quem chama é PINTURA — dez vezes por
     segundo, sobre um `pga.db` e 221 `.desktop`.
@@ -532,11 +573,16 @@ def test_o_nome_da_janela_chega_ao_rotulo_sem_a_tela_ler_disco_duas_vezes(
 
     chaves = jl.nomes_das_janelas(lar=tmp_path, pastas=[tmp_path])
 
-    assert chaves == {"gotg.exe": "Marvel's Guardians of the Galaxy"}
-    assert jl.frase_do_campo_do_jogo("gotg.exe", {}, chaves) == (
+    # **O NÚMERO ENTRA JUNTO — 21/09/2026.** O caderno responde pela classe E
+    # pelo appid que ela contém, porque o «Detectar» pergunta pelo número (ele
+    # extrai o appid da classe pela fonte única do produto). Sem o alias, o
+    # botão dizia *"Não instalado aqui"* sobre o jogo aberto na tela dela.
+    assert chaves == {"steam_app_1088850": "Marvel's Guardians of the Galaxy",
+                      "1088850": "Marvel's Guardians of the Galaxy"}
+    assert jl.frase_do_campo_do_jogo("steam_app_1088850", {}, chaves) == (
         "Marvel's Guardians of the Galaxy", False)
     # O QUE O DETECTOR ENTREGA vem como o compositor anunciou; a consulta dobra.
-    assert jl.frase_do_campo_do_jogo("GOTG.exe", {}, chaves) == (
+    assert jl.frase_do_campo_do_jogo("STEAM_APP_1088850", {}, chaves) == (
         "Marvel's Guardians of the Galaxy", False)
     assert jl.nomes_das_janelas(lar=tmp_path, pastas=[tmp_path]) is chaves
 
@@ -588,7 +634,8 @@ def test_o_caderno_releu_o_disco_quando_ela_instalou_o_segundo_jogo(
     _heroic(tmp_path, [BAIXADO])
 
     antes = jl.nomes_das_janelas(lar=tmp_path, pastas=[tmp_path])
-    assert antes == {"gotg.exe": "Marvel's Guardians of the Galaxy"}
+    assert antes == {"steam_app_1088850": "Marvel's Guardians of the Galaxy",
+                     "1088850": "Marvel's Guardians of the Galaxy"}
     # O MESMO DISCO DUAS VEZES continua sendo o MESMO objeto — o freio existe.
     assert jl.nomes_das_janelas(lar=tmp_path, pastas=[tmp_path]) is antes
 
@@ -596,14 +643,22 @@ def test_o_caderno_releu_o_disco_quando_ela_instalou_o_segundo_jogo(
     #: do mesmo `store_cache`, sem criar nem apagar nada na pasta de cima.
     segundo = dict(BAIXADO, app_name="outro", title="Hades II",
                    install={"executable": "bin/hades2.exe", "is_dlc": False})
-    _heroic(tmp_path, [BAIXADO, segundo])
+    # **O `umu.json` VEM JUNTO — 21/09/2026.** Um `.exe` sem umu-id não tem
+    # chave de janela (o Proton é quem batiza a janela, não o nome do arquivo),
+    # e uma régua que instalasse o segundo jogo SEM o umu mediria o caderno
+    # relendo o disco e não achando nada — verde sobre o freio, e nada sobre a
+    # releitura.
+    _heroic(tmp_path, [BAIXADO, segundo], umu=dict(
+        UMU_DO_DISCO_DELA, legendary_outro="umu-1145350"))
 
     depois = jl.nomes_das_janelas(lar=tmp_path, pastas=[tmp_path])
 
     assert depois is not antes
-    assert depois == {"gotg.exe": "Marvel's Guardians of the Galaxy",
-                      "hades2.exe": "Hades II"}
-    assert jl.frase_do_campo_do_jogo("hades2.exe", {}, depois) == (
+    assert depois == {"steam_app_1088850": "Marvel's Guardians of the Galaxy",
+                      "1088850": "Marvel's Guardians of the Galaxy",
+                      "steam_app_1145350": "Hades II",
+                      "1145350": "Hades II"}
+    assert jl.frase_do_campo_do_jogo("steam_app_1145350", {}, depois) == (
         "Hades II", False)
 
 
@@ -712,7 +767,13 @@ def test_a_aba_perfis_responde_o_nome_do_jogo_do_heroic(
     from hefesto_dualsense4unix.profiles.simple_match import from_simple_choice
 
     jl._NOMES_DAS_JANELAS = None
-    _heroic(tmp_path, [BAIXADO])
+    #: **O NATIVO ENTRA JUNTO — 21/09/2026.** Ele é o terceiro degrau da
+    #: `identidade_de_janela`: sem umu-id e sem appid, um binário que NÃO é
+    #: `.exe` roda direto e o toolkit batiza a janela com o basename. É o caso
+    #: que a cura do Heroic não podia encolher.
+    nativo = dict(BAIXADO, app_name="nativo", title="Celeste",
+                  install={"executable": "Celeste.x86_64", "is_dlc": False})
+    _heroic(tmp_path, [BAIXADO, nativo])
     de_verdade, assinar = jl.jogos_com_janela, jl.assinatura_das_janelas
     monkeypatch.setattr(jl, "jogos_com_janela", lambda *_a, **_k: de_verdade(
         lar=tmp_path, pastas=[tmp_path]))
@@ -723,14 +784,14 @@ def test_a_aba_perfis_responde_o_nome_do_jogo_do_heroic(
     monkeypatch.setattr(a10, "_nomes_dos_jogos", lambda: {"3357650": "PRAGMATA"})
 
     # 1. O RÓTULO ao lado do campo (`a10_perfis.py`, dentro de `_jogo_reconhecido`)
-    assert a10._jogo_reconhecido("gotg.exe") == (
+    assert a10._jogo_reconhecido("steam_app_1088850") == (
         "Marvel's Guardians of the Galaxy", False)
     assert a10._jogo_reconhecido("3357650") == ("PRAGMATA", False)
 
     # 2. O DESFECHO do «Detectar» (o último `return` de `detectar`)
     prof = SimpleNamespace(name="Perfil",
-                           match=from_simple_choice("janela", "gotg.exe"))
-    assert a10._agora_vale_em(prof, "gotg.exe").endswith(
+                           match=from_simple_choice("janela", "steam_app_1088850"))
+    assert a10._agora_vale_em(prof, "steam_app_1088850").endswith(
         "· Marvel's Guardians of the Galaxy")
 
     # 3. O `<datalist>` do campo «Nome do Jogo» — as DUAS origens
@@ -744,16 +805,25 @@ def test_a_aba_perfis_responde_o_nome_do_jogo_do_heroic(
     # tem jogos do Heroic é ruído. O jogo da Steam ganhou o número com o
     # separador da casa, que é o item 12 da segunda lista dela.
     # O `value` NÃO MUDOU, e é ele que o campo grava.
-    assert ('<option value="gotg.exe" '
+    assert ('<option value="steam_app_1088850" '
             'label="Marvel\'s Guardians of the Galaxy"></option>') in html
     assert '<option value="3357650" label="PRAGMATA · 3357650">' in html
 
     # 4. A FORMA que o Salvar grava para o que a lista ofereceu
-    assert a10._forma_do_que_ela_escolheu("gotg.exe") == "janela"
-    assert a10._forma_do_que_ela_escolheu("GOTG.EXE") == "janela"
+    #
+    # **AS DUAS FORMAS GERAM A MESMA REGRA — medido em 21/09/2026**, e é o que
+    # torna a cura da LANCADOR-AGNOSTICO-01 aditiva: a chave do jogo do Heroic
+    # é `steam_app_<N>`, que `normalize_appid` lê como appid, então a forma é
+    # `steam_game`; e `from_simple_choice("steam_game", "1088850")` produz
+    # exatamente `window_class=["steam_app_1088850"]` — a mesma regra que a
+    # forma «janela» produziria, e ela casa com a janela viva.
+    assert a10._forma_do_que_ela_escolheu("steam_app_1088850") == "steam_game"
+    assert a10._forma_do_que_ela_escolheu("Celeste.x86_64") == "janela"
     assert a10._forma_do_que_ela_escolheu("3357650") == "steam_game"
     assert a10._forma_do_que_ela_escolheu("Cyberpunk2077.exe") == "game"
-    assert from_simple_choice("janela", "gotg.exe").window_class == ["gotg.exe"]
+    assert (from_simple_choice("steam_game", "1088850").window_class
+            == from_simple_choice("janela", "steam_app_1088850").window_class
+            == ["steam_app_1088850"])
 
 
 def test_o_botao_detectar_nomeia_o_jogo_do_heroic_que_acabou_de_gravar(
@@ -780,7 +850,13 @@ def test_o_botao_detectar_nomeia_o_jogo_do_heroic_que_acabou_de_gravar(
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
     jl._NOMES_DAS_JANELAS = None
-    _heroic(tmp_path, [BAIXADO])
+    #: **O NATIVO ENTRA JUNTO — 21/09/2026.** Ele é o terceiro degrau da
+    #: `identidade_de_janela`: sem umu-id e sem appid, um binário que NÃO é
+    #: `.exe` roda direto e o toolkit batiza a janela com o basename. É o caso
+    #: que a cura do Heroic não podia encolher.
+    nativo = dict(BAIXADO, app_name="nativo", title="Celeste",
+                  install={"executable": "Celeste.x86_64", "is_dlc": False})
+    _heroic(tmp_path, [BAIXADO, nativo])
     de_verdade, assinar = jl.jogos_com_janela, jl.assinatura_das_janelas
     monkeypatch.setattr(jl, "jogos_com_janela", lambda *_a, **_k: de_verdade(
         lar=tmp_path, pastas=[tmp_path]))
@@ -803,16 +879,26 @@ def test_o_botao_detectar_nomeia_o_jogo_do_heroic_que_acabou_de_gravar(
         def chamar(self, metodo: str, *a: Any, **kw: Any) -> Any:
             return True
 
+    # **A JANELA É A REAL, medida com `xprop` na tela dela em 21/09/2026.** Até
+    # esta data a régua mandava `gotg.exe`, que era a DERIVAÇÃO pelo executável
+    # — e o «Detectar» gravava fielmente um valor que nunca casaria. Medir o
+    # botão contra o que a janela NÃO diz é a régua respondendo sobre outra
+    # coisa que não o produto.
     ctx = Contexto(state={"active_profile": "Perfil",
-                          "window_detect_last_class": "gotg.exe"},
+                          "window_detect_last_class": "steam_app_1088850"},
                    mesa=[], conectados=[], estados={})
 
     fora = a10.detectar(ctx, {}, _Ponte())
 
     # A REGRA continua a que a ONDA5-10-01 gravava — nada regrediu.
-    assert list(todos[0].match.window_class) == ["gotg.exe"]
-    # O CAMPO se corrige com o endereço, e não com o nome: é ele que grava.
-    assert fora["mesa"]["editor.jogo"] == "gotg.exe"
+    assert list(todos[0].match.window_class) == ["steam_app_1088850"]
+    # O CAMPO se corrige com o NÚMERO, e não com o nome: a chave do jogo do
+    # Heroic é `steam_app_<N>`, o «Detectar» a lê como appid (a fonte única
+    # `steam_appid_from_wm_class`) e o campo mostra o número — exatamente como
+    # faz com um jogo da Steam. As duas origens ficaram indistinguíveis na
+    # tela, que é o que ela pediu: *"qualquer outro lançador o funcionamento
+    # segue igual"*.
+    assert fora["mesa"]["editor.jogo"] == "1088850"
     # E A FRASE nomeia o jogo, que é a queixa dela de 11/09/2026.
     # Desde 13/09/2026 a frase viaja em `relato`: a tira da aba não fala mais.
     frase = str(fora.get("relato") or "")

@@ -1700,6 +1700,13 @@ def _talvez_semear_jogos() -> None:
         if assinatura == _assinatura_da_biblioteca_vista:
             return
         semear_perfis_dos_jogos()
+        # **E O QUE JÁ NASCEU TORTO SE CONSERTA — 21/09/2026,
+        # LANCADOR-AGNOSTICO-01.** A semeadura acima passa a gravar a chave
+        # certa; os perfis que nasceram com a derivação pelo executável ficaram
+        # no disco dela com uma regra que NUNCA casa. Ao lado, e não dentro:
+        # semear e consertar são dois atos, e uma exceção num não pode comer o
+        # outro.
+        reapontar_perfis_com_chave_de_executavel()
         # Só depois de a varredura TERMINAR: uma exceção no meio não pode
         # registrar a biblioteca como já tratada.
         _assinatura_da_biblioteca_vista = assinatura
@@ -1709,6 +1716,91 @@ def _talvez_semear_jogos() -> None:
             err=str(exc),
             err_type=type(exc).__name__,
         )
+
+
+def reapontar_perfis_com_chave_de_executavel(
+    catalogo: Sequence[tuple[str, object]] | None = None,
+) -> tuple[str, ...]:
+    """Conserta os perfis que nasceram com o basename do `.exe` como janela.
+
+    **A QUEIXA DELA, 21/09/2026:** *"GUARDIÃES DA GALAXIA ABERTO E AO INVÉS DE
+    IDENTIFICAR ID DO JOGO AUTOMATICAMENTE COMO É NA STEAM NÃO OCORRRE ISSO E
+    POR CONSEQUENCIA O HEFESTO NÃO É IDENTIFICADO E NÃO FUNCIONA LÁ."*
+
+    O perfil dela tinha ``window_class: ["gotg.exe"]`` — a derivação que a
+    LANCADOR-AGNOSTICO-01 derrubou. A janela do jogo anuncia
+    ``steam_app_1088850``, e a regra nunca casava: nenhum perfil ativava e
+    nenhuma feature chegava ao jogo.
+
+    Curar a origem faz o PRÓXIMO perfil nascer certo. Este consertos os que já
+    estão no disco — sem o qual a cura chegaria só para quem instalasse o
+    produto do zero.
+
+    **AS TRÊS GUARDAS, e todas são de não-atropelar:**
+
+    1. **Só uma entrada, e ela termina em `.exe`.** Um `.exe` vai por
+       Proton/wine em qualquer lançador, e nesse caminho quem nomeia a janela é
+       o Proton — a única forma que a derivação produzia. Regra com duas
+       entradas, ou com uma que não seja `.exe`, é escolha de alguém.
+    2. **O censo tem de RECONHECER o executável**, pelo basename, num jogo que
+       hoje tem chave. Sem isso não há para onde reapontar, e chutar seria
+       repetir o defeito que esta função conserta.
+    3. **A chave nova tem de ser diferente.** Regravar um perfil idêntico troca
+       a data do arquivo por nada — a mesma guarda do `_lembrar_do_som`.
+
+    Devolve os nomes dos perfis consertados. NUNCA LEVANTA: quem chama é o laço
+    do daemon.
+    """
+    from hefesto_dualsense4unix.integrations.censo_dos_lancadores import (
+        jogos_com_chave_de_janela,
+    )
+
+    consertados: list[str] = []
+    try:
+        lista = (list(catalogo) if catalogo is not None
+                 else list(jogos_com_chave_de_janela()))
+    except Exception:  # pragma: no cover - disco hostil
+        return ()
+    # **O CATÁLOGO É O DO CENSO, e não o `jogos_dos_lancadores`**: é ele que
+    # guarda o `executavel` ao lado da `classe_de_janela`, e são os DOIS que
+    # esta função precisa — o velho para reconhecer, o novo para reapontar.
+    por_exe: dict[str, str] = {}
+    for _lancador, jogo in lista:
+        exe = str(getattr(jogo, "executavel", "") or "")
+        chave = str(getattr(jogo, "classe_de_janela", "") or "")
+        if exe and chave:
+            por_exe.setdefault(
+                exe.replace("\\", "/").rsplit("/", 1)[-1].casefold(), chave)
+    if not por_exe:
+        return ()
+    try:
+        perfis = load_all_profiles()
+    except Exception:  # pragma: no cover - disco hostil
+        return ()
+    for prof in perfis:
+        classes = list(getattr(getattr(prof, "match", None), "window_class", None) or [])
+        if len(classes) != 1:
+            continue
+        velha = str(classes[0] or "").strip()
+        if not velha.casefold().endswith(".exe"):
+            continue
+        nova = por_exe.get(velha.casefold())
+        if not nova or nova.casefold() == velha.casefold():
+            continue
+        try:
+            novo = prof.model_copy(
+                update={"match": prof.match.model_copy(
+                    update={"window_class": [nova]})})
+            save_profile(novo, origem="lancador_agnostico")
+        except Exception as exc:  # pragma: no cover - disco hostil
+            logger.warning(
+                "reaponte_de_chave_falhou", profile=prof.name, err=str(exc))
+            continue
+        consertados.append(prof.name)
+        logger.info(
+            "perfil_reapontado_para_a_janela_de_verdade",
+            profile=prof.name, de=velha, para=nova)
+    return tuple(consertados)
 
 
 def _profile_path(identifier: str | Profile) -> Path:
@@ -2456,6 +2548,7 @@ __all__ = [
     "migrate_default_profile_name",
     "perfis_de_jogo_semeados",
     "perfis_que_casam_com_o_cliente_steam",
+    "reapontar_perfis_com_chave_de_executavel",
     "restaurar_do_historico",
     "save_profile",
     "seed_default_presets",
