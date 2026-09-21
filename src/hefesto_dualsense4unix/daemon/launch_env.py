@@ -2556,6 +2556,33 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
             daemon._launch_env_assinatura = (  # type: ignore[attr-defined]
                 native, enabled, flavor, tuple(backends), fisicos,
             )
+        # **E AS OUTRAS ESTRADAS SÃO REESCRITAS AQUI — 21/09/2026,
+        # LANCADOR-AGNOSTICO-01.** Ordem dela: *"O PROJETO E SUAS FEATURES
+        # DEVEM FUNCIONAR INDEPENDENTE DO LANÇADOR SER STEAM. QUALQUER OUTRO
+        # LANÇADOR O FUNCIONAMENTO SEGUE IGUAL."*
+        #
+        # Até aqui a assimetria era estrutural: a Steam recebia o ambiente VIVO
+        # (este `default.env`, relido pelo `hefesto-launch.sh` a cada
+        # lançamento) e os outros lançadores recebiam uma FOTOCÓPIA tirada no
+        # dia em que alguém clicou o botão «Consertar» — que saiu em 10/09/2026
+        # (LANCADOR-LOCALIZAR-01) e levou o ÚNICO chamador de
+        # `integrations/cura_por_estrada` junto. O módulo ficou escrito,
+        # testado e sem ninguém para acioná-lo.
+        #
+        # **A CARONA É O QUE TORNA AS DUAS SIMÉTRICAS:** o mesmo gatilho, a
+        # mesma conta, no mesmo instante. A escrita é idempotente e FUNDE (ela
+        # lê, junta e regrava, preservando o que é dela), então rodar a cada
+        # transição não acumula nada.
+        #
+        # **DENTRO DO `try`, e de propósito:** a função já promete nunca
+        # levantar, e o `except` desta borda é a segunda rede. A materialização
+        # quebrada não pode derrubar o start da emulação — que é o contrato
+        # escrito na docstring desta função.
+        from hefesto_dualsense4unix.integrations.cura_por_estrada import (
+            curar_todas_as_estradas,
+        )
+
+        estradas = curar_todas_as_estradas()
         logger.info(
             "launch_env_materializado",
             native=native,
@@ -2563,6 +2590,7 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
             mascara=flavor,
             backends=backends,
             arquivos=len(desired),
+            estradas=list(estradas),
         )
     except Exception:
         logger.warning("launch_env_materialize_falhou", exc_info=True)

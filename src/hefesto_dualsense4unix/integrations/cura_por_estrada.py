@@ -481,3 +481,77 @@ def escrever_a_estrada(plano: Plano) -> str:
         else:
             _escrever_no_override(estrada.arquivo, plano.ambiente)
     return frase_do_feito(plano)
+
+
+#: OS CARTÕES QUE TÊM ESTRADA, e os `app-id`/`stem` que os denunciam.
+#:
+#: **A TABELA NÃO É NOVA — ela é LIDA do censo** (`censo_dos_lancadores._ONDE`),
+#: que já a tem por outra razão (achar a pasta de configuração). Uma segunda
+#: cópia aqui divergiria no dia em que um lançador trocasse de `app-id`, e o
+#: sintoma seria o pior desta casa: a cura escreveria no arquivo de ontem e a
+#: tela diria «pronto».
+#:
+#: A STEAM NÃO ENTRA, e a razão está em `estradas_do_cartao`: ela tem o atalho
+#: de inicialização, que é a estrada dela.
+def cartoes_com_estrada() -> tuple[tuple[str, tuple[str, ...]], ...]:
+    """`[(chave, atalhos)]` dos lançadores que podem receber a cura."""
+    from hefesto_dualsense4unix.integrations.censo_dos_lancadores import _ONDE
+
+    return tuple(
+        (lancador.casefold(), (app_id, subpasta))
+        for lancador, (app_id, subpasta) in _ONDE.items())
+
+
+def curar_todas_as_estradas(
+    lar: Path | None = None,
+    pasta_do_ambiente: Path | None = None,
+    raiz_sistema: Path | None = None,
+) -> tuple[str, ...]:
+    """Escreve o ambiente da ponte em TODA estrada que existir. O que escreveu.
+
+    **POR QUE ESTA FUNÇÃO EXISTE — 21/09/2026, LANCADOR-AGNOSTICO-01.** Ordem
+    dela: *"O PROJETO E SUAS FEATURES DEVEM FUNCIONAR INDEPENDENTE DO LANÇADOR
+    SER STEAM. QUALQUER OUTRO LANÇADOR O FUNCIONAMENTO SEGUE IGUAL."*
+
+    Este módulo inteiro estava **ÓRFÃO desde 10/09/2026**. Ele nasceu com um
+    chamador só — o botão «Consertar» do cartão do lançador —, e a
+    LANCADOR-LOCALIZAR-01 tirou o botão. A cura ficou escrita, testada e sem
+    ninguém para acioná-la; a dívida ficou declarada no `casa-sabe`, que é
+    honesto e não é entrega.
+
+    **O QUE ISSO CUSTAVA, e é a diferença estrutural entre a Steam e o resto:**
+    a Steam recebe o ambiente VIVO — o daemon rematerializa o `default.env` a
+    cada transição e o `hefesto-launch.sh` o lê no lançamento. Os outros
+    lançadores recebiam uma FOTOCÓPIA tirada no dia em que alguém clicou um
+    botão que não existe mais. Um ambiente de 10/09 num produto que mudou todo
+    dia desde então.
+
+    **A CURA É CARONA, E NÃO BOTÃO**, e é o que a torna simétrica: quem chama é
+    o mesmo ponto que já regrava o `default.env` da Steam
+    (`daemon/launch_env.materialize_launch_env`). As duas estradas passam a ser
+    reescritas pelo mesmo gatilho, com a mesma conta — que é literalmente o
+    *"o funcionamento segue igual"* que ela pediu.
+
+    **IDEMPOTENTE E FUNDE, e isso já era verdade antes desta função:**
+    `_escrever_no_heroic` lê, funde e regrava preservando o que é dela; o
+    override do Flatpak idem. Rodar a cada transição não acumula nada.
+
+    **NUNCA LEVANTA.** Quem chama é a borda de materialização do daemon, que já
+    é best-effort declarada: *"a materialização quebrada não pode derrubar o
+    start da emulação"*. Um lançador ilegível ou uma estrada sem ambiente
+    devolve nada e segue — e quem quiser a RAZÃO tem o `planejar`, que a diz.
+
+    Devolve as chaves dos cartões em que escreveu, para o journal.
+    """
+    escritos: list[str] = []
+    for chave, atalhos in cartoes_com_estrada():
+        try:
+            plano = planejar(chave, atalhos, lar, pasta_do_ambiente,
+                             raiz_sistema)
+            if plano.impedimento or not plano.estradas or not plano.ambiente:
+                continue
+            escrever_a_estrada(plano)
+        except Exception:  # pragma: no cover - disco hostil; ver a docstring
+            continue
+        escritos.append(chave)
+    return tuple(escritos)
