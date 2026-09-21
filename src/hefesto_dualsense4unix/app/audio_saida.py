@@ -69,6 +69,7 @@ from dataclasses import dataclass, field
 from typing import Any, Final, NamedTuple
 
 from hefesto_dualsense4unix.core.ds_output_report import (
+    SAIDA_ESTEREO_NO_FONE,
     SAIDA_L_FONE_R_ALTO_FALANTE,
     SAIDA_SO_NO_ALTO_FALANTE,
 )
@@ -1117,6 +1118,16 @@ BYTE_SONS_DO_JOGO: Final[int] = SAIDA_L_FONE_R_ALTO_FALANTE
 #: O `OUTPUT_PATH_SEL` de "Todo o som do PC": só o alto-falante interno.
 BYTE_TODO_O_SOM_DO_PC: Final[int] = SAIDA_SO_NO_ALTO_FALANTE
 
+#: **«NADA NO CONTROLE» É O BYTE 0** — decisão dela de 20/09/2026, a
+#: O-TERCEIRO-NOME-DELA-01. Estéreo para o FONE, com o alto-falante do
+#: controle fora do caminho: é a tradução literal do nome dela na camada 2.
+#:
+#: Até 21/09 o 0 apagava os dois botões, e a razão escrita era boa — *"é uma
+#: rota legítima do protocolo que estes dois botões não representam"*. **O que
+#: mudou não foi a razão: foi a fileira**, que ganhou o terceiro botão e passou
+#: a representá-la.
+BYTE_NADA_NO_CONTROLE: Final[int] = SAIDA_ESTEREO_NO_FONE
+
 #: A frase do cartão quando as duas camadas DISCORDAM: o firmware está roteado
 #: para "Só no controle" e a saída padrão do sistema não é este controle.
 #: Foi o estado medido em 03/09 — o botão aceso com o som saindo na TV.
@@ -1152,7 +1163,8 @@ def botao_da_rota_aceso(
     3 (todo o som do PC)   padrão É este controle     ``"pc"``
     3 (todo o som do PC)   padrão é outra saída       ``""`` (recado)
     2 (sons do jogo)       qualquer                   ``"jogo"``
-    0, 1 ou ausente        qualquer                   ``""``
+    0 (nada no controle)   qualquer                   ``"nada"``
+    1 ou ausente           qualquer                   ``""``
     =====================  =========================  ==============
 
     A segunda linha é a que não se adivinha: apagar OS DOIS é mais honesto que
@@ -1160,9 +1172,10 @@ def botao_da_rota_aceso(
     o firmware quer uma coisa e o sistema faz outra. Quem diz isso em palavras
     é :func:`recado_da_rota`.
 
-    As rotas 0 e 1 (tudo no fone, mono no fone) apagam os dois de propósito:
-    são rotas legítimas do protocolo que estes dois botões não representam, e
-    acender um deles ali seria arredondar o byte para o botão mais parecido.
+    **A ROTA 0 GANHOU BOTÃO EM 21/09/2026** e deixou esta lista: ela é «Tudo
+    na TV e Nada no Controle», o terceiro nome dela. A rota 1 (mono no fone)
+    continua apagando os três de propósito — é rota legítima do protocolo que
+    a fileira não representa, e acender a mais parecida seria arredondar.
 
     ``sink_do_controle`` vazio é o RÁDIO — o DualSense não publica placa de som
     por Bluetooth. Aí a camada 1 não tem como estar no controle, e "pc" nunca
@@ -1172,6 +1185,13 @@ def botao_da_rota_aceso(
         return ""
     if byte == BYTE_SONS_DO_JOGO:
         return "jogo"
+    # O BYTE 0 ACENDE O TERCEIRO, e não depende da camada 1: «Nada no
+    # Controle» é uma afirmação sobre o que SAI do plástico, e o plástico
+    # obedece ao byte. O «Tudo na TV» do nome é a camada 1, que o gesto
+    # devolve no mesmo ato — mas se alguém mudar a saída padrão por fora, o
+    # que este botão promete sobre o CONTROLE continua verdade.
+    if byte == BYTE_NADA_NO_CONTROLE:
+        return "nada"
     if byte != BYTE_TODO_O_SOM_DO_PC:
         return ""
     if sink_do_controle and sink_padrao == sink_do_controle:

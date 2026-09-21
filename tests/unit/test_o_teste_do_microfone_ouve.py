@@ -233,3 +233,89 @@ class TestOBotaoTrocouDeAtoNaTela:
         assert "testar_e_devolver" in fonte, (
             "o gesto não chama o ato — é a cura escrita e nunca ligada"
         )
+
+
+class TestOMudoNaoVIRAFALTADEVOZ:
+    """**21/09/2026, medido na mesa dela com os quatro na mão.**
+
+    Dois dos quatro microfones entregavam `pico = 0.0000` EXATO — nem ruído de
+    fundo —, e o `mic_mudo` do daemon dizia `true` nesses dois. O produto
+    estava certo; o que mentia era o recado: o 🎙 gravava quinze segundos de
+    silêncio e terminava em *"não ouvi sua voz — fale mais perto do controle"*.
+
+    **A frase culpava quem clicou por um fato que o produto já sabia**, e
+    mandava aproximar a boca de um microfone desligado.
+    """
+
+    def _gesto(self):
+        fonte = pathlib.Path(
+            "src/hefesto_dualsense4unix/interface/pacotes/a02_controles.py"
+        ).read_text(encoding="utf-8")
+        i = fonte.index("def mic_testar(")
+        return fonte[i : fonte.index("\n@gesto", i)]
+
+    def test_o_gesto_pergunta_o_mudo_antes_de_gravar(self):
+        """MORDIDA: tire a guarda. O gesto volta a abrir o microfone de um
+        controle desligado e a terminar culpando quem clicou.
+        """
+        corpo = self._gesto()
+        assert "_faces_do_microfone(" in corpo, (
+            "o gesto não pergunta se o microfone está calado antes de gravar")
+        # A ORDEM É O PONTO: perguntar DEPOIS de gravar não pouparia os 15 s,
+        # e o recado certo chegaria tarde.
+        assert corpo.index("_faces_do_microfone(") < corpo.index(
+            "testar_e_devolver(uniq)"
+        ), "a pergunta vem DEPOIS da gravação — os 15 s de silêncio continuam"
+
+    def test_a_recusa_manda_ao_botao_do_plastico_e_nao_a_boca(self):
+        """O recado diz o que FAZER, e onde.
+
+        MORDIDA: devolva *"fale mais perto"* neste ramo.
+        """
+        corpo = self._gesto()
+        i = corpo.index("_faces_do_microfone(")
+        recusa = corpo[i : i + 900]
+        assert "botão" in recusa and "controle" in recusa, (
+            "a recusa não diz onde ligar o microfone")
+        assert "fale mais perto" not in recusa, (
+            "a recusa manda aproximar a boca de um microfone desligado")
+
+    def test_o_nao_sei_nao_recusa(self):
+        """*Não sei* não é *está mudo*.
+
+        `_faces_do_microfone` devolve um par, e só a PRIMEIRA metade recusa:
+        um controle cujo `mic_mudo` ainda não chegou tem de poder ser testado
+        — é o teste que vai responder. Recusar aqui apagaria o botão nos
+        primeiros tiques de toda aba.
+
+        MORDIDA: troque `calado, _nao_sei` por `calado, nao_sei` e recuse nos
+        dois. O caso abaixo reprova.
+        """
+        from hefesto_dualsense4unix.interface.pacotes.a02_controles import (
+            _faces_do_microfone,
+        )
+
+        calado, nao_sei = _faces_do_microfone({})
+        assert nao_sei and not calado, (
+            "um estado que ninguém leu está sendo lido como «mudo»")
+        corpo = self._gesto()
+        assert "_nao_sei" in corpo, (
+            "o gesto passou a recusar também quando NÃO SABE — o botão morre "
+            "nos primeiros tiques de toda aba")
+
+    def test_o_mudo_do_plastico_sozinho_ja_recusa(self):
+        """As quatro faces são um OU: qualquer uma calada cala o conjunto.
+
+        É o estado medido dos controles p2 e p4 dela em 21/09: o bit do
+        plástico dizendo `true`, o canal ativo, e o nó entregando zeros.
+        """
+        from hefesto_dualsense4unix.interface.pacotes.a02_controles import (
+            _faces_do_microfone,
+        )
+
+        calado, _ = _faces_do_microfone(
+            {"mic_mudo": True, "canal_ativo": True, "canal_mudo": False})
+        assert calado
+        vivo, _ = _faces_do_microfone(
+            {"mic_mudo": False, "canal_ativo": True, "canal_mudo": False})
+        assert not vivo

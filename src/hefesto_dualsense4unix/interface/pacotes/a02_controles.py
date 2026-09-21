@@ -94,6 +94,7 @@ from hefesto_dualsense4unix.app.ipc_bridge import (
 )
 from hefesto_dualsense4unix.app.widgets.controller_card import (
     ALL_BUTTONS,
+    CANAL_NADA_NO_CONTROLE,
     CANAL_SONS_DO_JOGO,
     CANAL_TODO_O_PC,
     DICA_AUDIO_SEM_ENDERECO,
@@ -597,7 +598,7 @@ def leitura_viva(entrada: dict[str, Any]) -> dict[str, Any]:
     """Tudo o que o card LÊ do aparelho: glifos, gatilhos, analógicos, sensores.
 
     SEM LEITOR, TUDO VOLTA AO REPOUSO — e não ao último valor nem ao desenho. É
-    o `_reset_inputs_render` da GTK (`controller_card.py:5556`), linha por
+    o `_reset_inputs_render` da GTK (`controller_card.py:5603`), linha por
     linha: gatilhos em `0 / 255` com a barra vazia, analógicos no centro, os
     dezesseis glifos apagados e os sensores no travessão. Vale para METADE da
     mesa dela agora: o daemon só publica `inputs` para o `is_primary`.
@@ -861,7 +862,7 @@ CLICADO = "[%s]"
 # `rotulo_lightbar` devolve `(rótulo, base_do_accent)`, e O DISCRIMINADOR É O
 # PRIMEIRO. O segundo responde outra pergunta, e a docstring dele a escreve:
 # *"a cor devolvida é a BASE do accent (crua); `None` = usar o neutro"*
-# (`controller_card.py:1178`).
+# (`controller_card.py:1180`).
 #
 # TOMAR O SEGUNDO POR "há cor conhecida a mostrar?" COLAPSA DOIS PARES, e a
 # auditoria de 02/09/2026 mediu os dois com sonda, sem tocar o aparelho:
@@ -1066,7 +1067,7 @@ def _bloco_do_speaker(entry: Any) -> dict[str, Any] | None:
     """O bloco `speaker` cru do controle, nas DUAS posições em que ele chega.
 
     ELE É A SEGUNDA LEITURA DA MESMA REGRA, e isso está declarado em vez de
-    escondido: o dono é `speaker_do_entry` (`controller_card.py:2003`), que
+    escondido: o dono é `speaker_do_entry` (`controller_card.py:2050`), que
     conhece as duas posições — `entry["speaker"]` e `entry["inputs"]["speaker"]`
     — mas devolve só `(volume, muted)`. A ROTA não passa por ele, e alargar a
     assinatura do widget da GTK a partir daqui não é trabalho desta aba.
@@ -1099,6 +1100,12 @@ def _bloco_do_speaker(entry: Any) -> dict[str, Any] | None:
 NOME_DO_BOTAO_DA_ROTA: dict[int, str] = {
     ROTA_DO_CANAL[CANAL_SONS_DO_JOGO]: "jogo",
     ROTA_DO_CANAL[CANAL_TODO_O_PC]: "pc",
+    # O BYTE 0 GANHOU NOME EM 21/09/2026, e até aqui ele apagava os dois
+    # botões: era uma rota legítima do protocolo que a fileira não
+    # representava, e acender um dos dois nela seria arredondar o byte para o
+    # botão mais parecido. **Agora ela TEM botão** — é «Tudo na TV e Nada no
+    # Controle», o terceiro nome dela.
+    ROTA_DO_CANAL[CANAL_NADA_NO_CONTROLE]: "nada",
 }
 
 
@@ -2065,6 +2072,13 @@ def aceso_da_rota(uniq: str, entry: Any) -> str:
 #: é o que ELA lê: não «mix», não «fonte», não o nome do nó.
 ROTA_OUVIR_JUNTO = "junto"
 
+#: **O TERCEIRO BOTÃO — «Tudo na TV e Nada no Controle»**, decisão dela de
+#: 20/09/2026 (*"O nome está certo, mude o ato."*). Ele substitui o `"pc"` na
+#: FILEIRA, e só nela: o `"pc"` continua existindo no gesto, no perfil e no
+#: IPC, porque a capacidade «som do PC no controle» tem dono, régua e ensaio —
+#: o que ela perdeu foi o botão, não o caminho.
+ROTA_NADA_NO_CONTROLE = "nada"
+
 
 def fonte_do_controle(entry: Any) -> str:
     """`mix`/`sfx` deste controle, do `state_full` — `""` = ninguém sabe dizer.
@@ -2166,7 +2180,12 @@ def aceso_da_fileira(uniq: str, entry: Any) -> str:
     de 03/09 (botão aceso, som na TV). Só depois dele o `mix` fala.
     """
     aceso = aceso_da_rota(uniq, entry)
-    if aceso == "pc" or not A_FILEIRA_TEM_TRES:
+    # «NADA NO CONTROLE» VENCE PELA MESMA RAZÃO QUE «pc» VENCE — 21/09/2026: os
+    # dois são estados em que a camada 2 já decidiu sozinha o que sai do
+    # plástico, e o `mix` da camada 1 não tem como contradizê-los. Com a rota
+    # em 0 o alto-falante está fora do caminho: um `mix` esquecido no perfil
+    # acenderia «No controle e na TV» sobre um controle que não toca nada.
+    if aceso in ("pc", ROTA_NADA_NO_CONTROLE) or not A_FILEIRA_TEM_TRES:
         return aceso
     return ROTA_OUVIR_JUNTO if fonte_do_controle(entry) == "mix" else aceso
 
@@ -2879,7 +2898,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         #   1. o bloco chega em DUAS posições. `speaker_do_entry` aceita
         #      `entry["speaker"]` **e** `entry["inputs"]["speaker"]` porque
         #      *"quem publica é o daemon, e o widget não pode quebrar por causa
-        #      de onde o dado mora"* (`controller_card.py:2003`). Medido na mesa
+        #      de onde o dado mora"* (`controller_card.py:2050`). Medido na mesa
         #      dela em 02/09/2026 às 16h: o daemon publica nas DUAS. No dia em
         #      que ele publicar só na de dentro, esta aba ficava cega e a de
         #      cima continuava dizendo um número;
@@ -4246,6 +4265,28 @@ def mic_testar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if not uniq:
         raise ValueError("mic-testar: o clique não disse em qual controle")
 
+    # **PERGUNTA ANTES DE GRAVAR, e a razão é a FRASE** — 21/09/2026, medido na
+    # mesa dela com os quatro na mão: dois dos quatro microfones entregavam
+    # `pico = 0.0000` exato, nem ruído de fundo, e o `mic_mudo` do daemon dizia
+    # `true` nesses dois. O produto estava CERTO; o que mentia era o recado.
+    #
+    # Sem esta guarda o gesto gravava 15 segundos de silêncio e terminava em
+    # *"não ouvi sua voz — fale mais perto do controle"* — **culpando quem
+    # clicou por um fato que o produto já sabia**, e mandando aproximar a boca
+    # de um microfone que está desligado. É a família do recado que manda
+    # desfazer o clique que ela acabou de dar.
+    #
+    # QUEM RESPONDE É `_faces_do_microfone`, que já é o dono de *"este
+    # microfone está calado?"* e conhece as quatro faces (o bit do plástico, o
+    # desejo, o canal e o mudo do canal). Ler `mic_mudo` à mão aqui seria a
+    # quinta leitura da mesma coisa, e conheceria uma face de quatro.
+    calado, _nao_sei = _faces_do_microfone(
+        (ctx.por_uniq(uniq) or {}).get("audio") or {})
+    if calado:
+        raise RuntimeError(
+            "o microfone deste controle está desligado — aperte o botão de "
+            "microfone no próprio controle para ligá-lo, e teste de novo")
+
     gravado = testar_e_devolver(uniq)
     if gravado is None:
         # AUSÊNCIA É RESPOSTA, e ela NÃO é "seu microfone está mudo": ou não há
@@ -4373,7 +4414,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         # que o deslizante do volume já faz, e a resposta vem do MESMO dono.
         #
         # A FRASE É DO PRODUTO, e nenhuma nasce aqui: `frase_do_alvo_do_mic`
-        # (`app/widgets/controller_card.py:2258`) é a dona dos três estados, e
+        # (`app/widgets/controller_card.py:2305`) é a dona dos três estados, e
         # `alvo_honrado` (`app/ipc_bridge.py:1160`) é quem os lê do corpo. Os
         # dois devolvem "nada a dizer" para `True` e para `None` de propósito —
         # *"não sei" não é "não honrei"*, e inventar a confissão por ausência de
@@ -4514,7 +4555,7 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     tem o som normal do jogo"*. É o `OUTPUT_PATH_SEL` = 2: canal esquerdo para o
     fone/TV, direito para o alto-falante do controle. O `speaker.set` leva a
     `rota` (`ipc_handlers.py:5814`) e a GUI estável manda exatamente isto
-    (`controller_card.py:4273`).
+    (`controller_card.py:4316`).
 
     "TODO O SOM DO PC" SÃO DUAS CAMADAS, E A SEGUNDA NÃO É IPC. O
     `profiles/schema.py:571` já escreve o limite com todas as letras:
@@ -4560,9 +4601,10 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     uniq, qual = _uniq(o), str(o.get("rota") or "")
     if not uniq:
         raise ValueError("rota: o clique não disse em qual controle")
-    if qual not in ("jogo", "pc", ROTA_OUVIR_JUNTO):
+    if qual not in ("jogo", "pc", ROTA_OUVIR_JUNTO,
+                    ROTA_NADA_NO_CONTROLE):
         raise ValueError(f"rota: não conheço a rota {qual!r} — a página manda "
-                         f"'jogo', 'junto' ou 'pc'")
+                         f"'jogo', 'junto', 'nada' ou 'pc'")
 
     # "OUVIR JUNTO" É A `fonte`, E ELA NÃO É UMA TERCEIRA CAMADA — 10/09/2026
     # (SOM-NA-TELA-01, a A3). O produto já obedecia a `speaker.fonte` desde a
@@ -4596,6 +4638,41 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # escolha que ela não fez. A `fonte` é do NÓ; a rota é do FIRMWARE — o que
     # esta linha faz é devolver o firmware ao estado que os outros dois botões
     # chamam de «Sons do jogo», porque é sobre ele que o `mix` se soma.
+    # **«TUDO NA TV E NADA NO CONTROLE»** — o terceiro botão, 21/09/2026.
+    #
+    # Ele é a terceira resposta da escala que ela desenhou (pouco · tudo ·
+    # nada), e faz os DOIS lados do próprio nome, nesta ordem:
+    #
+    #   «Tudo na TV»     devolve a saída padrão do sistema — camada 1;
+    #   «Nada no Controle»  `rota = 0`: estéreo para o FONE, com o alto-falante
+    #                    do controle fora do caminho — camada 2.
+    #
+    # E APAGA O `mix`, pela mesma disciplina dos outros dois: os três botões
+    # são UM estado, e deixar o `mix` de pé embaixo de «Nada no Controle»
+    # faria o controle continuar ouvindo o PC com a tela dizendo que não.
+    #
+    # **NÃO É O `♪`, e a diferença está escrita no próprio código** (`:1571`):
+    # o mudo do alto-falante é um byte de FIRMWARE aplicado DEPOIS disto, e
+    # com ele o monitor continua entregando a onda ao nó. Este botão diz o que
+    # ENTRA no nó; o `♪` cala o plástico. Camadas diferentes, donos diferentes.
+    if qual == ROTA_NADA_NO_CONTROLE:
+        audio_saida.devolver_o_som_do_pc()
+        if fonte_do_controle(ctx.por_uniq(uniq)) == "mix":
+            _dizer_a_fonte_ao_daemon(p, uniq, "sfx")
+        byte_calado = ROTA_DO_CANAL[CANAL_NADA_NO_CONTROLE]
+        if not p.speaker_set(rota=byte_calado, uniq=uniq,
+                             **_volume_conhecido(ctx.por_uniq(uniq))):
+            raise RuntimeError(
+                "o Hefesto não confirmou a rota do alto-falante: ou ele "
+                "parou, ou este controle se desligou")
+        # SEM SOM DE CONFIRMAÇÃO, e a ausência é o desenho: os outros dois
+        # botões prometem som NO CONTROLE e o tocam para responder *"por onde
+        # ele sai agora"*. Este promete o contrário. Tocar aqui seria o botão
+        # desmentindo a si mesmo no instante do clique.
+        _lembrar_do_som(ctx, uniq, speaker={"fonte": "sfx",
+                                            "rota": byte_calado})
+        return
+
     if qual == ROTA_OUVIR_JUNTO:
         audio_saida.devolver_o_som_do_pc()
         _dizer_a_fonte_ao_daemon(p, uniq, "mix")

@@ -671,6 +671,21 @@ TEXTO_CANAL_PERGUNTA: Final[str] = "O que sai no controle:"
 #: PipeWire e todo o som do PC passa a sair no controle.
 CANAL_SONS_DO_JOGO: Final[str] = "jogo"
 CANAL_TODO_O_PC: Final[str] = "tudo"
+
+#: **NADA NO CONTROLE** — decisão dela, 20/09/2026, a O-TERCEIRO-NOME-DELA-01:
+#: *"O nome está certo, mude o ato."*
+#:
+#: Ele é a terceira resposta de uma escala que ELA desenhou lendo os três nomes
+#: juntos, e a escala é **pouco · tudo · nada**:
+#:
+#: ====================================  ===========================
+#: o nome dela                           o que entra no nó
+#: ====================================  ===========================
+#: Efeitos do Jogo                       só o que o jogo endereçar
+#: Efeitos do Jogo e Áudio da TV…        tudo da máquina (`mix`)
+#: **Tudo na TV e Nada no Controle**     **nada**
+#: ====================================  ===========================
+CANAL_NADA_NO_CONTROLE: Final[str] = "nada"
 #: Os rótulos são os que ELA escreveu, e a medição os liberou.
 #:
 #: Ela avisou na sprint que aquela linha é a mais apertada do card e mandou
@@ -714,9 +729,15 @@ DICAS_DO_CANAL: Final[tuple[tuple[str, str], ...]] = (
 #: `tudo` usa o **3** — só o alto-falante interno: com o som do PC inteiro
 #: vindo pelo sink do controle, mandar metade para um fone que não existe
 #: seria perder metade.
+#: `nada` usa o **0** — estéreo para o FONE, e o alto-falante do controle fora
+#: do caminho. É a tradução literal de «Nada no Controle» na camada do
+#: firmware, e ela cabe no byte que já existe: a `rota` escolhe entre o fone e
+#: o alto-falante, e a televisão não aparece em lugar nenhum dela (é a camada
+#: 1, o default sink, que o gesto devolve no mesmo ato).
 ROTA_DO_CANAL: Final[dict[str, int]] = {
     CANAL_SONS_DO_JOGO: 2,
     CANAL_TODO_O_PC: 3,
+    CANAL_NADA_NO_CONTROLE: 0,
 }
 
 #: Rótulos dos DOIS botões do alto-falante (SOM-02, entregas 2 e 3). Cada um
@@ -1247,10 +1268,12 @@ def texto_motion(entry: dict[str, Any], state_global: dict[str, Any]) -> str | N
     ruído crônico. O que mudou é que há duas situações em que o silêncio faz
     a tela parecer QUEBRADA quando ela está certa:
 
-    * **máscara Xbox 360** — o jogo não recebe giroscópio, e o motivo não é
+    * **máscara Xbox 360** — o JOGO não recebe giroscópio, e o motivo não é
       defeito nosso: a API do controle de Xbox não tem esse sensor. Sem a
       frase, ela vê um card com giroscópio desenhado e nenhum sinal de que o
-      dado não sai dali;
+      dado não sai dali. **O sujeito é o jogo, e não o controle** (21/09/2026,
+      ordem dela): o aparelho segue publicando movimento, e a Navegação e os
+      gestos seguem usando;
     * **Modo Nativo** — não existe gamepad virtual, e perguntar se o dado
       "chegou ao vpad" não faz sentido. O jogo abre o hidraw do controle
       físico e recebe tudo, inclusive o giroscópio.
@@ -1446,15 +1469,38 @@ _NOME_NA_FRASE: Final[tuple[tuple[str, str], ...]] = (
     ("alto_falante", "som do controle"),
 )
 
-#: A frase do estado IMPOSSÍVEL, por recurso. Ela é a mais valiosa das quatro
-#: e é a que hoje não existe: com máscara Xbox o card mostra um sensor apagado
-#: como se estivesse quebrado, quando o que houve é que a API escolhida não
-#: tem aquele sensor. O texto longo e explicativo continua sendo o
-#: `home_actions.TEXTO_CUSTO_MASCARA_XBOX` — este é a versão de uma linha, para
-#: caber dentro do bloco.
+#: A frase do estado IMPOSSÍVEL, por recurso — a versão de uma linha do
+#: `home_actions.TEXTO_CUSTO_MASCARA_XBOX`, para caber dentro do bloco.
+#:
+#: **O SUJEITO DA FRASE MUDOU EM 21/09/2026, e o sujeito era o defeito.** Ela
+#: abriu a tela instalada e disse:
+#:
+#:     "essa frase não deveria existir, não tem sentido tendo em vista que o
+#:      giroscopio e mic fazem parte independente do modo ou mascara"
+#:
+#: E ela estava certa duas vezes. **O microfone nunca esteve aqui** —
+#: `RECURSOS_SEM_MASCARA_XBOX` só tem giroscópio e touchpad, e o microfone é
+#: nó de áudio do PipeWire, que a máscara não alcança por desenho.
+#:
+#: **E O GIROSCÓPIO CONTINUA VIVO NO PRODUTO.** O que a máscara Xbox tira é o
+#: canal até o JOGO — o vpad nasce `uinput` com 8 eixos e 11 botões, e não há
+#: onde pôr IMU. O aparelho segue publicando movimento: os selos «Giroscópio»
+#: e «Acelerômetro» do cartão acendem, a aba Navegação move o cursor com ele,
+#: e os gestos o usam. A frase antiga dizia *"a máscara Xbox 360 não tem
+#: giroscópio"* no cabeçalho do cartão, solta, e lia-se como **"este controle
+#: não tem giroscópio"** — afirmação sobre o APARELHO onde o fato é sobre o
+#: CANAL.
+#:
+#: *É a mesma família do instrumento que aponta para outra coisa*, e esta casa
+#: a persegue por escrito: a frase estava tecnicamente defensável e
+#: praticamente falsa para quem a lia.
 _FRASE_MASCARA_XBOX: Final[dict[str, str]] = {
-    "giroscopio": "a máscara Xbox 360 não tem giroscópio",
-    "touchpad": "a máscara Xbox 360 não tem touchpad",
+    "giroscopio": (
+        "o jogo vê este controle como Xbox 360, e essa API não leva "
+        "giroscópio — no Hefesto ele segue ativo"),
+    "touchpad": (
+        "o jogo vê este controle como Xbox 360, e essa API não leva "
+        "touchpad — no Hefesto ele segue ativo"),
 }
 
 #: E a do Modo Nativo, em que não há gamepad virtual nenhum: o jogo abre o
@@ -1638,10 +1684,11 @@ def estado_do_recurso(
     1. **Modo Nativo?** Não há gamepad virtual — o jogo fala direto com o
        hidraw do controle. Perguntar "chegou ao vpad?" não faria sentido, e
        responder "não" seria mentira;
-    2. **A máscara apaga este recurso?** Então ele não chega, não vai chegar,
-       e o motivo não é defeito nosso: o controle de Xbox não tem giroscópio
-       nem touchpad. É o estado que hoje não existe e que faz a tela parecer
-       quebrada quando ela está certa;
+    2. **A máscara apaga este recurso NO CANAL ATÉ O JOGO?** Então ele não
+       chega lá, não vai chegar, e o motivo não é defeito nosso: a API do
+       controle de Xbox não tem giroscópio nem touchpad. **No Hefesto os dois
+       seguem ativos** — é o que a frase tem de dizer, e não dizia até
+       21/09/2026;
     3. **Há vpad?** Sem vpad não há caminho, e ``None`` deixa o card mudo em
        vez de acusar;
     4. **Só então** o carimbo decide entre chegando, parado e nunca.

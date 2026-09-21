@@ -193,7 +193,7 @@ A coluna da direita tem quatro respostas, e a cor é de significado:
 | **no jogo agora** | verde | o dado saiu daqui e alguém escreveu de volta, agora (com o número medido ao lado: `(~158 Hz)`, `(motores: 30/120)`) |
 | **parou** | amarelo | já esteve chegando e parou — era para estar chegando e não está |
 | **sem pedido ainda** | apagado | o jogo nunca pediu. Não é avaria |
-| **a máscara Xbox 360 não tem giroscópio** (ou touchpad) | apagado | a API do controle de Xbox não tem aquele recurso. Também não é avaria — por isso não é vermelho |
+| **o jogo vê este controle como Xbox 360, e essa API não leva giroscópio — no Hefesto ele segue ativo** (ou touchpad) | apagado | a API do controle de Xbox não tem aquele recurso. Também não é avaria — por isso não é vermelho |
 
 Onde não há gamepad virtual para medir, a aba **substitui** os painéis por uma
 frase, e diz qual dos três casos é: **Conexão Nativa** (não há controle virtual
