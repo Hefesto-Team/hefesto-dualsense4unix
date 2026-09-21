@@ -1290,21 +1290,23 @@ def test_a_linha_da_verdade_continua_fora_do_cartao() -> None:
 # A PALAVRA DO TRANSPORTE — e o defeito vivo que ela cura
 # --------------------------------------------------------------------------
 @pytest.mark.parametrize("transporte", ["usb", "bt"])
-def test_o_cabecalho_do_cartao_fala_cabo_e_radio_e_nao_a_sigla(
+def test_o_cabecalho_do_cartao_pergunta_a_palavra_ao_dono(
         transporte: str) -> None:
-    """Na tela é **cabo** e **rádio** (`docs/A-LINGUA-DESTA-CASA`, §1).
+    """Na tela é **USB** e **BT** — palavra dela, 21/09/2026.
 
-    A contagem do topo (`2 USB · 0 BT`) é a única exceção, decidida por ela em
-    06/09 — e ela não passa por este campo.
+    **A NEGAÇÃO SAIU INTEIRA, e é decisão dela.** Até 21/09 esta régua negava
+    `("USB", "BT")` no texto de tela, pela I9 de 25/08. Ela olhou a fita e
+    disse o contrário — *"USB e BT é muito bom"* —, e com isso a tela e o
+    desenho passaram a falar a mesma palavra. O que a régua mede é o que
+    sempre importou: **o cartão PERGUNTA ao dono** em vez de traduzir por
+    conta própria.
 
     MORDE: devolva o `VIA_DO_TRANSPORTE.get(...)` ao pacote e as duas voltas
-    reprovam com a sigla de máquina.
+    reprovam, porque o cartão passa a responder por si.
     """
     card = _card({"transport": transporte})
     assert card["via"] == palavra_do_transporte(transporte), (
         "o cabeçalho do cartão deixou de perguntar a palavra ao dono")
-    assert card["via"] not in ("USB", "BT"), (
-        f"a sigla de máquina voltou ao texto de tela: {card['via']!r}")
 
 
 def test_o_transporte_nao_aparece_duas_vezes_no_cabecalho() -> None:

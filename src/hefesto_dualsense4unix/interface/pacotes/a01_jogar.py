@@ -1627,7 +1627,8 @@ def _ressalva_da_mascara(state: dict[str, Any]) -> str:
     virtual**, e `mascara_efetiva` só é lida na criação de um
     (`gamepad.py:2162`). O clique é aceito, gravado no disco e não muda nada que
     se veja. A janela GTK escondia a caixa inteira fora do modo `gamepad`
-    (`home_actions.py:2648`); esta tela deixava clicar e ficava calada — que é
+    (`home_actions.py:2889`, `set_visible(modo_exibido == "gamepad")`); esta
+    tela deixava clicar e ficava calada — que é
     pior, porque o silêncio se lê como defeito.
 
     **A ESCOLHA NÃO SE PERDE, e é isso que esta linha diz.** `gamepad.mask.set`

@@ -243,8 +243,9 @@
      13/09/2026, por delegação dela, com a foto da tela na mão. É
      reversível: o que muda é este bloco e a linha do alvo, no corpo da
      página. */
+  /* 46/44 e não 24/22 desde 21/09/2026 — a conta está em `monta.MARCA_DA_LOGO`. */
   .logo{
-    width:24px;height:24px;border-radius:50%;flex:0 0 24px;
+    width:46px;height:46px;border-radius:50%;flex:0 0 46px;
     background:radial-gradient(circle at 35% 30%,#3b2d5c,#1a1b24 70%);
     border:1px solid var(--linha);
     display:flex;align-items:center;justify-content:center;font-size:12px;
@@ -719,11 +720,7 @@
      folha das cores por `data-colorway`, gerada de `docs/data/cores-do-dualsense.csv`
      — a mesma fonte que o specs.html usa. */
   .logo{background:none;border:none;overflow:hidden}
-  /* 22 E NÃO 44 desde 10/09/2026: o logotipo desceu da faixa de cabeçalho (que
-     saiu) para a linha do alvo, e ali a caixa mede 24 px. A tag do `.svg` dela
-     continua saindo 40x40 do `monta.py` — quem manda no tamanho final é esta
-     linha, e sempre foi. */
-  .logo svg{width:22px;height:22px;display:block}
+  .logo svg{width:44px;height:44px;display:block}
   .ds-svg{width:100%;height:auto;display:block}
   .cartao .ds-svg{width:72px;flex:0 0 72px}
 

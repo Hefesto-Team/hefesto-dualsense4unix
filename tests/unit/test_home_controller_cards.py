@@ -39,27 +39,27 @@ class TestFormatSubtitle:
     def test_com_bateria_e_primario(self) -> None:
         assert (
             _format_controller_subtitle("usb", is_primary=True, battery_pct=87)
-            == "cabo  ·  primário  ·  87%"
+            == "USB  ·  primário  ·  87%"
         )
 
     def test_sem_bateria_omite_percentual(self) -> None:
         assert (
             _format_controller_subtitle("bt", is_primary=False, battery_pct=None)
-            == "rádio"
+            == "BT"
         )
 
     def test_bateria_zero_e_mostrada(self) -> None:
         """0% é dado REAL (bateria morta) — diferente de None (sem dado)."""
         assert (
             _format_controller_subtitle("bt", is_primary=False, battery_pct=0)
-            == "rádio  ·  0%"
+            == "BT  ·  0%"
         )
 
     def test_bool_nao_vira_bateria(self) -> None:
         """bool é subclasse de int — payload malformado não vira "True%"."""
         assert (
             _format_controller_subtitle("usb", is_primary=False, battery_pct=True)
-            == "cabo"
+            == "USB"
         )
 
     def test_transport_ausente_diz_que_nao_sabe(self) -> None:
@@ -70,7 +70,9 @@ class TestFormatSubtitle:
         tem de dizer o que sabe e o que não sabe. E `USB`/`BT`, que este mesmo
         card mostrava, são o nome do barramento e a sigla do protocolo — não as
         palavras de quem quer jogar. O mapa de canais, que é o portão, fala
-        **cabo** e **rádio**; agora a aba fala também.
+        **cabo** e **rádio**; a TELA voltou a dizer `USB`/`BT` em 21/09/2026,
+        por palavra dela (*"USB e BT é muito bom"*), e quem responde por ela é
+        `home_actions.palavra_do_transporte`. O `"?"` é que nunca volta.
         """
         assert (
             _format_controller_subtitle(None, is_primary=False, battery_pct=None)
@@ -266,14 +268,14 @@ def test_render_mostra_bateria_e_nunca_o_mac(fake_gtk: None) -> None:
     assert len(cards) == 2
 
     texts_p1 = _card_texts(cards[0])
-    assert "cabo  ·  primário  ·  87%" in texts_p1
+    assert "USB  ·  primário  ·  87%" in texts_p1
     assert not any("c311f0" in t for t in texts_p1), (
         "o fim do MAC voltou ao card — ele não identifica nada que a usuária "
         "consiga ler no controle"
     )
 
     texts_p2 = _card_texts(cards[1])
-    assert "rádio" in texts_p2
+    assert "BT" in texts_p2
     # Sem bateria: nada de "%" no segundo card.
     assert not any("%" in t for t in texts_p2)
 
@@ -286,7 +288,7 @@ def test_render_sem_campos_novos_nao_regride(fake_gtk: None) -> None:
     )
 
     (card,) = host._home_controllers_box.get_children()
-    assert "cabo  ·  primário" in _card_texts(card)
+    assert "USB  ·  primário" in _card_texts(card)
 
 
 def test_render_usa_o_jogador_do_daemon_e_nao_a_posicao(fake_gtk: None) -> None:

@@ -1523,8 +1523,7 @@ def toast_da_troca_de_mascara(desfecho: str, pedida: object) -> str:
     return f"O jogo agora vê: {alvo}"
 
 
-#: O vocabulário de transporte da casa, e ele tem UM dono: o mapa de canais
-#: (`docs/data/mapa-controles.csv`), que fala **cabo** e **rádio**.
+#: O vocabulário de transporte DA TELA, e ele tem UM dono: esta tabela.
 #:
 #: I9 (25/08/2026). Medido no §2.2h da sprint: QUATRO dialetos para o mesmo
 #: fato, na mesma janela — a Início dizia `USB`/`BT`, os externos `cabo`/`BT`, a
@@ -1532,16 +1531,31 @@ def toast_da_troca_de_mascara(desfecho: str, pedida: object) -> str:
 #: Nenhum deles estava errado sozinho; juntos ensinavam que são coisas
 #: diferentes.
 #:
-#: "USB" e "BT" não são palavras de quem quer jogar: são o nome do barramento e
-#: a sigla do protocolo. Ela tem um cabo e tem um controle sem fio — é isso que
-#: a tela passa a dizer.
+#: A I9 FOI REVOGADA POR ELA EM 21/09/2026, e a revogação veio em dois tempos,
+#: com a janela aberta na frente dela. Primeiro a caixa: *"cabo e bt escrito em
+#: minúsculo. Escreva: Cabo ou BT"*; <!-- noqa-acento: citação literal dela -->
+#: e depois, vendo a fita inteira, a palavra: *"USB e BT é muito bom"*.
+#:
+#: **O QUE A I9 MEDIU CONTINUA MEDIDO** — quatro dialetos na mesma janela é
+#: defeito, e um dono só é a cura. O que caiu foi a ESCOLHA da palavra: o
+#: argumento de 25/08 era que "USB"/"BT" não são palavras de quem quer jogar.
+#: A dona da tela discordou olhando para ela, e é a única medição que decide
+#: isto. O dono segue sendo esta tabela.
+#:
+#: **E A DIVERGÊNCIA COM O DESENHO FECHOU DE GRAÇA:** a mesa do mockup
+#: (`interface/monta.MESA`) sempre disse `USB`/`BT`, e o produto dizia
+#: `cabo`/`rádio`. Eram duas telas com duas línguas, e a `A-PALAVRA-MESA-SAI-01`
+#: existia para escolher uma. Ela escolheu.
+#:
+#: `cabo`/`rádio` continua sendo a língua do MAPA DE CANAIS
+#: (`docs/data/mapa-controles.csv`), que é DADO e não tela.
 _PALAVRA_DO_TRANSPORTE: Final[dict[str, str]] = {
-    "usb": "cabo",
-    "cabo": "cabo",
-    "bt": "rádio",
-    "bluetooth": "rádio",
-    "radio": "rádio",
-    "rádio": "rádio",
+    "usb": "USB",
+    "cabo": "USB",
+    "bt": "BT",
+    "bluetooth": "BT",
+    "radio": "BT",
+    "rádio": "BT",
 }
 
 #: O que se diz quando o daemon não disse por onde o controle fala. "?" era o

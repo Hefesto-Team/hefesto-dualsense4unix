@@ -49,7 +49,7 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 #: A PALAVRA DELA, digitada. `data-rota` → o rótulo que o botão tem de dizer.
 DELA: dict[str, str] = {
-    "jogo": "Efeitos do Jogo",
+    "jogo": "Efeitos do Jogo no Controle, Áudio da TV na TV",
     "junto": "Efeitos do Jogo e Áudio da TV no Controle",
     "nada": "Tudo na TV e Nada no Controle",
 }
