@@ -425,6 +425,56 @@ IGNORADO_CATCH_ALL = "ignorado_catch_all"
 IGNORADO_JANELA_DE_JOGO = "ignorado_janela_de_jogo"
 
 
+def _a_mascara_dela_sem_o_vazamento(do_disco: object) -> str | None:
+    """A máscara dela lida do disco, com o `xbox` do vazamento devolvido.
+
+    MASCARA-CONTAGIO-01, ponto 3, 21/09/2026 — **irmã exata de
+    :func:`_a_escolha_dela_sem_o_vazamento`, logo abaixo**, no outro eixo. A
+    ordem dela de 19/09 nomeava os dois: *"sim tudo dualsense, tudo ligado
+    mascara dualsense por default mas esse vazamento me preocupa"*.
+    <!-- noqa-acento: citação literal dela -->
+
+    O `gamepad_emulation.flag` da máquina dela diz `xbox` — e não por escolha
+    dela para todos os jogos. Os pontos 1 e 2 desta sprint fecharam as DUAS
+    portas que o escreviam sem pedido: o perfil do Future Knight promovendo a
+    máscara dele a padrão da máquina, e o chip «Sony DualSense» re-carimbando o
+    valor da memória a cada clique. O arquivo ficou com um valor que ninguém
+    pediu, e todo controle sem entrada no registro nasce dele.
+
+    **SÓ O VALOR QUE O VAZAMENTO ESCREVE É DEVOLVIDO**, e a assimetria é a
+    mesma da irmã: `xbox` é a única máscara que as duas portas carimbavam sem
+    ela pedir, e é a que tira giroscópio, acelerômetro e touchpad do jogo. Um
+    `dualsense` no arquivo não precisa de conserto — já é o default.
+
+    **E NENHUMA TELA ESCREVE `xbox` AQUI, medido em 21/09.** O chip de modo da
+    aba Jogar não manda `flavor` desde MODO-DE-CONEXAO-01 (13/09) e o chip do
+    CARTÃO usa `gamepad.mask.set`, que grava no registro por aparelho
+    (`controller_masks.json` — os quatro dela em `dualsense`). O único caminho
+    intencional é a CLI (`cli/cmd_gamepad.py:76`, com `--flavor`).
+
+    **UMA VEZ, e não a cada boot:** quem devolve escreve o arquivo, então a
+    volta seguinte lê `dualsense` e esta função não faz nada. É o que a torna
+    migração, e não uma regra permanente — ela continua podendo escolher Xbox
+    para tudo pela CLI, e a escolha fica.
+    """
+    from hefesto_dualsense4unix.integrations.uinput_gamepad import resolver_flavor
+
+    lido = resolver_flavor(do_disco) if do_disco else None
+    if lido != "xbox":
+        return lido
+    with contextlib.suppress(Exception):
+        from hefesto_dualsense4unix.utils.session import save_gamepad_emulation
+
+        save_gamepad_emulation(True, "dualsense")
+    logger.info(
+        "mascara_global_devolvida_ao_default",
+        era=lido,
+        agora="dualsense",
+        motivo="escrita_pelo_perfil_ou_pelo_gesto_sem_mascara",
+    )
+    return "dualsense"
+
+
 def _a_escolha_dela_sem_o_vazamento(do_disco: object) -> str | None:
     """A escolha dela lida do disco, com o `xbox` do vazamento devolvido.
 
@@ -1022,6 +1072,9 @@ class Daemon:
         gp_enabled, gp_flavor = load_gamepad_emulation()
         if gp_enabled and not self._native_mode:
             self.config.gamepad_emulation_enabled = True
+            # MASCARA-CONTAGIO-01, ponto 3: a flag é a ESCOLHA DELA, e o `xbox`
+            # que as duas portas fechadas carimbavam é devolvido aqui, UMA vez.
+            gp_flavor = _a_mascara_dela_sem_o_vazamento(gp_flavor)
             if gp_flavor:
                 self.config.gamepad_flavor = gp_flavor
             self.config.mouse_emulation_enabled = False
@@ -3249,7 +3302,12 @@ class Daemon:
             **({"caminho": caminho} if caminho is not None else {}),
         )
         if desfecho != EMU_BLOQUEADO_POR_JOGO:
-            self._gravar_mascara_do_perfil(flavor)
+            # **A CHAMADA A `_gravar_mascara_do_perfil` SAIU — MASCARA-CONTAGIO-01,
+            # 21/09/2026.** A razão inteira está na NOTA DATADA daquele método,
+            # logo abaixo. Em uma linha: a máscara que UM jogo pede não pode
+            # virar o padrão da MÁQUINA, porque a volta não existe — perfil sem
+            # `mode.gamepad_flavor` saía pela porta sem desfazer nada, e o
+            # `xbox` do Future Knight virou lei sobre os outros 28 perfis dela.
             self._esquecer_mascara_adiada(desfecho)
             return False
         self._registrar_mascara_adiada(flavor, profile=profile)
@@ -3268,66 +3326,58 @@ class Daemon:
         return None
 
     def _gravar_mascara_do_perfil(self, flavor: str | None) -> None:
-        """MASCARA-PERSISTE-01 — a máscara do perfil sobrevive ao restart.
+        """MASCARA-PERSISTE-01 — e a NOTA DATADA que a substituiu.
 
-        Decisão dela, 22/08/2026: *"a máscara deveria ficar independente do
-        jogo, até que eu mude na interface novamente."*
+        **ESTE MÉTODO NÃO ESCREVE MAIS NADA — MASCARA-CONTAGIO-01, 21/09/2026.**
+        Ele fica, sem chamador e sem corpo, porque a decisão que o criou foi
+        MEDIDA e o preço dela está pago: quem o apagasse faria a próxima pessoa
+        remedir o mesmo dia. O que caducou é o LUGAR, não o problema.
 
-        Medido na máquina dela no mesmo dia, no journal: o perfil do Sackboy
-        pede `dualsense`, o lançamento aplica — e o `gamepad_emulation.flag`
-        continuava com o `xbox` do último gesto manual (03:37). Resultado: TODO
-        restart do daemon voltava para `xbox`, e com ele sumiam touchpad,
-        giroscópio e acelerômetro, que só existem no descritor DualSense.
-        **Não é fechar o jogo que reverte** — a máscara viva atravessou 39
-        minutos de jogo fechado sem se mexer; quem reverte é a borda de
-        processo, porque o disco nunca aprendia a máscara do perfil.
+        O QUE ELE FAZIA, e por que era legítimo em 22/08/2026. Decisão dela:
+        *"a máscara deveria ficar independente do jogo, até que eu mude na
+        interface novamente."* Medido no journal daquele dia: o perfil do
+        Sackboy pedia `dualsense`, o lançamento aplicava, e o
+        `gamepad_emulation.flag` continuava com o `xbox` do último gesto manual
+        — TODO restart do daemon voltava para `xbox`, e com ele sumiam touchpad,
+        giroscópio e acelerômetro. **Não era fechar o jogo que revertia**; era a
+        borda de processo, porque o disco nunca aprendia a máscara do perfil.
 
-        NOTA DATADA sobre a R-07 (23/07/2026, `subsystems/gamepad.py:2093`):
-        ela diz que **só gesto manual** escreve a máscara em disco, e curou
-        *"ela escolhia Xbox, abria o Sackboy e a flag virava dualsense"*. A
-        decisão de 22/08 revira o eixo da MÁSCARA — perfil é gesto dela também,
-        feito antes, na mesma interface. A R-07 continua literal na camada
-        dela: `start_gamepad_emulation` segue sem gravar nada com
-        `origin="profile"`. O que grava é ESTE ponto, uma camada acima, que é o
-        único lugar onde se sabe que um PERFIL pediu uma máscara — o start não
-        distingue "o perfil pediu dualsense" de "o boot releu o disco".
+        O QUE ELE CAUSOU, medido na máquina dela em 21/09 com os arquivos na
+        mão:
 
-        O eixo do LIGA/DESLIGA fica inteiro na R-07, e é o que a guarda da
-        preferência em disco protege: sem flag (opt-out gravado por ela, ou
-        nunca configurado) nada é escrito aqui — nenhum perfil ressuscita um
-        vpad que ela desligou de propósito (AUTO-01.1).
+            gamepad_emulation.flag ......... xbox   (o padrão da MÁQUINA)
+            controller_masks.json .......... os quatro em dualsense
+            future_knight.json ............. mode.gamepad_flavor: "xbox"
+            pragmata.json .................. mode.gamepad_flavor: null
 
-        As outras duas guardas:
+        `future_knight.json` é o ÚNICO dos 29 perfis dela com máscara declarada.
+        Ao ativá-lo, este método promoveu a escolha de UM JOGO a padrão da
+        MÁQUINA — e **a volta não existe**: um perfil com `gamepad_flavor: null`
+        saía na primeira linha (`if not flavor: return`) sem desfazer nada. O
+        PRAGMATA nunca escolheu Xbox e abria em Xbox. A queixa dela: *"ALGUMAS
+        VEZES ALTEREI O MODO DE CONEXÃO DOS CONTROLES E MÁSCARAS MAS ALGO O MUDA
+        NOVAMENTE PRA XBOX SEMPRE QUE EU O INICIO."*
 
-        - `flavor` vazio é *"sem opinião de máscara"* (E1 da
-          ESCOLHA-DELA-VENCE-01) — ausência de pedido não é pedido;
-        - grava-se o EFEITO, não o transporte (ELO-MUDO-01): só quando a
-          máscara VIVA virou a pedida. O desfecho basta não ser
-          `bloqueado_por_jogo` para chegar aqui, e `falhou` e
-          `recusado_steam_input` também passam nesse filtro.
+        **É A MESMA CLASSE DO CAMINHO-CONTAGIO-01 (19/09), no outro eixo** — e a
+        ordem dela daquele dia já nomeava os dois: *"sim tudo dualsense, tudo
+        ligado mascara dualsense por default mas esse vazamento me preocupa"*.
+        <!-- noqa-acento: citação literal dela -->
+        Só o eixo do CAMINHO foi feito; o da MÁSCARA ficou de pé dois dias.
 
-        NOTA DATADA — MODO-DE-CONEXAO-01, 13/09/2026. Esta gravação continua
-        valendo para a MÁSCARA do perfil, e só para ela. Até hoje o chip de
-        modo da aba Jogar mandava a máscara e fazia a flag guardar o que era,
-        na verdade, o MODO — e com máscara no cartão ele não mudava nada. O
-        modo virou o CAMINHO (`mode.caminho`), com arquivo próprio
-        (`utils/session.save_gamepad_caminho`), e não passa por aqui.
+        POR QUE A DECISÃO DE 22/08 NÃO SE PERDE. Ela pedia que a máscara
+        sobrevivesse ao restart. Isso hoje é entregue por
+        `controllers[uniq].mascara` (MASCARA-NO-PERFIL-01, 09/09/2026, POSTERIOR
+        e mais específica): a máscara vive no PRÓPRIO perfil, é aplicada por
+        `apply_controller_mascaras` e persiste no registro por aparelho, que
+        VENCE o global em `mascara_efetiva`. Em 22/08 esse registro não existia
+        — o flag global era o único lugar que havia, e era por isso que a cura
+        daquele dia tinha de passar por ele.
+
+        **O MÉTODO CONTINUA AQUI E CONTINUA VAZIO DE PROPÓSITO:** é onde a régua
+        `test_a_mascara_de_um_jogo_nao_vira_padrao_da_maquina` morde, e é o
+        endereço que o journal e as seis páginas que o citam abrem.
         """
-        if not flavor:
-            return
-        if self._mascara_viva() != flavor:
-            return
-        with contextlib.suppress(Exception):
-            from hefesto_dualsense4unix.utils.session import (
-                load_gamepad_preference,
-                save_gamepad_emulation,
-            )
-
-            preferencia, gravada = load_gamepad_preference()
-            if preferencia is not True or gravada == flavor:
-                return
-            save_gamepad_emulation(True, flavor)
-            logger.info("mascara_do_perfil_persistida", de=gravada, para=flavor)
+        return
 
     def _mascara_ja_adiada_por_jogo(self, flavor: str | None) -> bool:
         """True se um pedido de máscara já foi recusado e o jogo segue na frente.
