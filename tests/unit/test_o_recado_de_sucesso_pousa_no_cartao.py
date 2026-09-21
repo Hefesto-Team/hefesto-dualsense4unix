@@ -110,8 +110,19 @@ CHAVE_P1 = "aabbcc000001"
 
 
 def _ctl(uniq: str, transporte: str, jogador: int) -> dict:
+    # O BLOCO `speaker` É O QUE DESTRAVA O ♪, e a ausência dele não era um
+    # dublê mais simples: era um dublê MAIS POBRE QUE O PRODUTO, que é a
+    # família de defeito que esta casa persegue por escrito. O daemon publica
+    # `speaker` assim que alguém escreve um volume (`ipc_handlers.py:4212`), e
+    # o ♪ recusa enquanto ele não existe — *"calar antes de saber o volume
+    # tranca-o em zero"*. Sem o bloco, toda régua de SUCESSO deste arquivo
+    # mediria uma RECUSA e a leria como defeito da piscada.
+    #
+    # `rota: 2` é «Efeitos do Jogo», o estado em que o cartão dela nasce: L
+    # para o fone e R para o alto-falante do controle.
     return {"uniq": uniq, "connected": True, "transport": transporte,
-            "player": jogador, "audio": {"mic_mudo": False}}
+            "player": jogador, "audio": {"mic_mudo": False},
+            "speaker": {"volume": 100, "muted": False, "rota": 2}}
 
 
 ESTADO = {
@@ -185,7 +196,7 @@ function(){
       borda: cs.borderTopColor,
     });
   }
-  const b = document.querySelector('[data-controle="p1"] [data-mudo="microfone"]');
+  const b = document.querySelector('[data-controle="p1"] [data-mudo="alto-falante"]');
   return {
     // O RELÓGIO DA PÁGINA, o mesmo do `setTimeout` que apaga a piscada. É ele
     // que mede quanto ela durou: o do Python somaria o atraso da pergunta.
@@ -246,7 +257,7 @@ LER_A_TELA = "(function(){ return JSON.stringify((" + _LEITURA + ")()); })()"
 _VIGIA = r"""
 function(ler){
   if(!(window.__hef && window.__hef.voltouDoVoo)) return 'sem ponte';
-  const seletor = '[data-controle="p1"] [data-mudo="microfone"]';
+  const seletor = '[data-controle="p1"] [data-mudo="alto-falante"]';
   if(!document.querySelector(seletor)) return 'sem botão';
   if(window.__reguaTrilha) return 'vigiando';
   const trilha = window.__reguaTrilha = [];
@@ -275,7 +286,7 @@ VIGIAR_O_BOTAO = "JSON.stringify((" + _VIGIA + ")(" + _LEITURA + "))"
 #: espera separa o voo deste clique do voo do anterior.
 _CLICAR_NO_MIC = r"""
 function(marco){
-  const b = document.querySelector('[data-controle="p1"] [data-mudo="microfone"]');
+  const b = document.querySelector('[data-controle="p1"] [data-mudo="alto-falante"]');
   if(!b) return 'NAO ACHEI O BOTAO DO MICROFONE NO CARTAO DO P1';
   if(!window.__reguaTrilha) return 'SEM O VIGIA — o clique não teria marco na trilha';
   window.__reguaTrilha.push({marco: marco, t: performance.now()});
@@ -312,7 +323,7 @@ def _trilha_desde(marco: str) -> str:
 #: aba, não desta.
 PUBLICAR_O_ROTULO = r"""
 (function(){
-  const b = document.querySelector('[data-controle="p1"] [data-mudo="microfone"]');
+  const b = document.querySelector('[data-controle="p1"] [data-mudo="alto-falante"]');
   if(!b) return 'sem botao';
   b.setAttribute('data-hef-em-voo', 'Calando…');
   return b.innerHTML;
@@ -414,7 +425,7 @@ def medido() -> dict:
     # socket, não achava daemon, e o cartão recebia a frase laranja. É o mesmo
     # arranjo do `test_a_recusa_chega_ao_cartao`, do outro lado do desfecho.
     guardado = (hv.mesa_viva.estado_do_daemon, hv.ponte.mic_canal_set_detalhado,
-                hv.pacotes.GESTOS.get(chave))
+                hv.ponte.speaker_set, hv.pacotes.GESTOS.get(chave))
     #: O VALOR DO PRODUTO, lido do módulo. Até 13/09/2026 aqui se liam também os
     #: dois prazos do recado (6 s o recibo, 30 s a recusa), que saíram com o
     #: canal na FRASES-E-DICAS-01; o que sobra é saber se eles voltaram.
@@ -437,6 +448,18 @@ def medido() -> dict:
     hv.ponte.mic_canal_set_detalhado = (  # type: ignore[assignment]
         lambda *a, **k: {"status": "ok", "canal_feito": True,
                          "firmware_pedido": True})
+    # `speaker.set` PASSANDO — o alvo destas réguas virou o ♪ em 20/09 (o 🎙
+    # deixou de calar e passou a gravar), e o ♪ fala por OUTRO método da ponte.
+    # Sem este dublê a régua percorria o caminho da RECUSA achando que era o do
+    # sucesso, e reprovava a piscada verde por um `speaker_set` que nunca
+    # chegava a daemon nenhum — exatamente o que o comentário de 04/09 logo
+    # acima descreve para o método irmão.
+    #
+    # `True` é o que a ponte real devolve aqui (`ipc_bridge.speaker_set` ->
+    # `bool`), e não um `True` mais frouxo: o dublê que responde melhor que o
+    # produto é a família `duble-por-new-fica-mais-pobre-que-o-produto` virada
+    # do avesso, e esconde tanto quanto.
+    hv.ponte.speaker_set = lambda *a, **k: True  # type: ignore[assignment]
 
     args = argparse.Namespace(
         oculta=True, segundos=0.0, passear=False, parada=900, foto="",
@@ -682,7 +705,7 @@ def medido() -> dict:
         piloto.pronto = False
         piloto.tela.janela.destroy()
         (hv.mesa_viva.estado_do_daemon, hv.ponte.mic_canal_set_detalhado,
-         velho) = guardado
+         hv.ponte.speaker_set, velho) = guardado
         if velho is None:
             hv.pacotes.GESTOS.pop(chave, None)
         else:

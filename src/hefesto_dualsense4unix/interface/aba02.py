@@ -809,7 +809,20 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .eixo .v.neg{right:50%}
   .eixo .v.pos{left:50%}
   /* AS ONDAS SONORAS — o medidor de nível que a minha primeira versão comeu */
-  .onda{height:22px;display:flex;align-items:flex-end;gap:2px;margin-bottom:5px}
+  /* A ONDA PERDEU 4px E A LINHA DE VOLUME PERDEU 5 — 20/09/2026, e os dois
+     números são A CONTA DO GANHO, não economia solta. A linha própria que ela
+     aprovou custa 22px, e o card fechava com 0,37px de folga contra o teto de
+     `PARA_O_CARD` (327,63 de 328). *O preço não é argumento contra o desenho
+     que ela aprovou* — é a conta a pagar, e ela se paga aqui:
+
+       349,63  com o ganho na linha própria e nada devolvido  → NÃO CABE
+       334,63  as três `.vol` do card de 22px para 17 (-15)
+       326,63  as duas `.onda` de 22px para 18 (-8)           → CABE, 1,37 de folga
+
+     Medido pelo `check_a_altura_do_cartao.py` nas três larguras, a cada passo.
+     O knob do trilho tem 12px e continua cabendo nos 17; a onda com 18px
+     continua mostrando os quinze degraus. **A folga ficou MAIOR do que era.** */
+  .onda{height:18px;display:flex;align-items:flex-end;gap:2px;margin-bottom:5px}
   .onda i{flex:1;background:var(--cyan);border-radius:1px;display:block;opacity:.85}
   .onda.mudo i{background:var(--border-forte);opacity:.5}
   /* SEM LEITURA — e esta regra é a que impede a tela de mentir.
@@ -886,7 +899,8 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .mic-glifo.cortado::after{content:'';position:absolute;left:-1.5px;top:50%;
     width:12px;height:1.5px;background:currentColor;border-radius:1px;
     transform:translateY(-50%) rotate(-45deg)}
-  .vol{display:flex;align-items:center;gap:8px;height:22px}
+  /* 17px, e não os 22 de até 20/09: ver a conta no bloco `.onda` acima. */
+  .vol{display:flex;align-items:center;gap:8px;height:17px}
   .vol .trilho{flex:1;height:5px;border-radius:3px;background:var(--panel);position:relative}
   .vol .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
   .vol .cheio::after{content:'';position:absolute;right:-5px;top:-4px;width:12px;height:12px;
@@ -920,12 +934,20 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      O `.n` PEDE 34px E NÃO 30: o número aqui é o dB com sinal (`+48`), que é um
      caractere mais largo que o `80` do volume. Com 30 ele sai cortado, e o
      mesmo portão mede corte de texto. */
-  .ganho{display:flex;align-items:center;gap:8px;flex:1 1 0;min-width:0;margin-left:9px}
+  /* O GANHO É UMA `.vol` — ele DEIXOU de morar na linha do rótulo em 20/09,
+     por ordem dela, e com isso deixou de precisar de caixa própria: a linha
+     herda `display:flex`, `gap` e os 22px de altura da `.vol`, e o que sobra
+     aqui é só o que ele tem A MAIS — a unidade e o número de quatro caracteres.
+     O `flex:1 1 0` e o `margin-left` que ele tinha eram para disputar o vão da
+     linha do rótulo com o selo e o `?`; não há mais vão a disputar. */
+  .rot-vol{flex:0 0 46px;font-size:11px;color:var(--muted);white-space:nowrap}
+  .ganho .un{flex:0 0 16px;font-size:10px;color:var(--muted);
+    font-family:'JetBrains Mono',monospace}
   .ganho .trilho{flex:1;height:5px;border-radius:3px;background:var(--panel);position:relative}
   .ganho .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
   .ganho .cheio::after{content:'';position:absolute;right:-5px;top:-4px;width:12px;height:12px;
     border-radius:50%;background:var(--purple);border:2px solid var(--app-bg)}
-  .ganho .n{flex:0 0 34px;text-align:right;font-family:'JetBrains Mono',monospace;
+  .ganho .n{flex:0 0 30px;text-align:right;font-family:'JetBrains Mono',monospace;
     font-size:10.5px;color:var(--fg)}
   /* O GANHO FORA DE ALCANCE veste o MESMO cinza do «Nativo» no rádio, e pela
      mesma razão dela: o que não alcança não some da tela — fica cinza, e o
@@ -2425,6 +2447,49 @@ GANHO_TOPO_DB = 48
 GANHO_PADRAO_PCT = 100
 
 ROTULO_GANHO_MIC = "Ganho de entrada do microfone deste controle, em decibéis"
+#: OS NOMES DAS DUAS LINHAS — decisão dela por aprovação do desenho, 20/09/2026.
+#: Sem eles as duas linhas são dois trilhos iguais empilhados, e nada na tela
+#: diz qual é qual: o de cima é o quanto do microfone o produto ENTREGA ao PC,
+#: o de baixo é o quanto o APARELHO amplifica o que entra. *A tela não pede que
+#: a pessoa deduza qual deslizante é qual pelo número que ele mostra.*
+# ---------------------------------------------------------------------------
+# O GANHO DE ENTRADA — LINHA PRÓPRIA, e a posição é ORDEM DELA
+# ---------------------------------------------------------------------------
+# 20/09/2026, medida contra o desenho que ela aprovou
+# (`docs/process/assets/2026-09-20-o-ganho-do-mic-como-ficaria.png`):
+#
+#     "o slicer tá diferente da posição de onde ficaria o slicer da
+#      versao  # noqa-acento: citação literal dela, e a digitação dela
+#             não se limpa
+#      original que eu havia aprovado. além disso não tá funcionando"
+#
+# ELE NASCEU NO LUGAR ERRADO, e a razão do erro está escrita: a primeira
+# redação o pôs na LINHA DO RÓTULO porque ali custava ZERO altura — o «arranjo
+# D», escolhido pelo preço e não pelo desenho. O desenho que ela viu e aprovou
+# é este: duas linhas EMPILHADAS no mesmo estilo, cada uma com o nome à
+# esquerda, o trilho no meio e a unidade à direita. *O preço não é argumento
+# contra o desenho que ela aprovou* — é a conta a pagar, e ela está paga no
+# bloco `.onda` do CSS, passo a passo.
+#
+# E O QUE FALTAVA PARA ELE FUNCIONAR ERA O `<input>`: o arranjo D tinha só o
+# `.cheio`, que PINTA e não recebe clique. A barra mostrava o ganho e não havia
+# onde pegá-la — *"o efeito pronto e sem escolha"*, o defeito-mãe desta casa.
+# O `<input>` é o mesmo do volume acima, com o gesto `ganho-mic`.
+#
+# **ESTA RAZÃO MORA NO PYTHON, E NÃO NO HTML, DE PROPÓSITO** — e a regra é
+# nova, de 20/09: a primeira redação a escreveu como comentário HTML e ela
+# viajou inteira para a página, +2887 bytes que o `WebKit2.WebView` carrega a
+# cada abertura e que a catraca da tradução cobrou na hora. Comentário que
+# explica o GERADOR fica no gerador; no HTML só fica o que explica o HTML.
+ROTULO_LINHA_VOLUME = "Volume"
+ROTULO_LINHA_GANHO = "Ganho"
+
+#: A unidade do ganho, SEPARADA do número. O volume sai em por cento e este em
+#: decibéis, e é a diferença que a linha precisa dizer sem gastar o `?`. Ela
+#: mora fora do `data-campo` de propósito: o número tem dono que o reescreve a
+#: cada tique, a unidade nunca muda.
+UNIDADE_DO_GANHO = "dB"
+
 DICA_GANHO_MIC = (
     "Ganho de entrada: o quanto o aparelho amplifica o que entra no microfone, "
     "de 0 a +48 dB. É outro trilho, e não o de baixo — aquele é o volume, "
@@ -2854,25 +2919,6 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                    E o comentário que eu escrevi para explicar isto quebrou o gerador,
                    porque trazia chaves dentro da própria f-string. Por isso ele não
                    as tem. -->
-              <!-- O GANHO DE ENTRADA — O-GANHO-DO-MIC-TEM-DONO-01, 20/09/2026, e
-                   ele é o ARRANJO D: o único dos quatro medidos que custa ZERO
-                   altura. A conta está no bloco `.ganho` do CSS, com os quatro
-                   preços; o que importa aqui é que este lugar é o mesmo vão em
-                   que Virtual/Nativo moraram até 31/08, pela mesma razão.
-
-                   O QUE ELE MOSTRA NÃO É O VOLUME DE BAIXO. O trilho de baixo é o
-                   quanto do microfone o produto ENTREGA ao PC; este é o quanto o
-                   APARELHO amplifica o que entra — o `Headset Capture Volume` da
-                   placa, 0 a +48 dB, que vivia no topo sem ninguém ter escolhido.
-                   A diferença está escrita no `?` da moldura, porque o número sai
-                   em dB e o de baixo em por cento.
-
-                   E ELE NÃO É UM `.vol`: aquele tem altura FIXA de 22px e esta
-                   linha tem 17 — embrulhar custaria 5px e o portão da altura
-                   reprovaria. Ver o CSS. -->
-              <span class="ganho" data-campo="mic-ganho-fora" data-hef-alvo="classe" data-hef-classe="sem-ganho"
-                    title="{DICA_GANHO_MIC}" role="group" aria-label="{ROTULO_GANHO_MIC}"><span class="trilho"><span class="cheio" data-campo="mic-ganho-barra"
-                data-hef-alvo="largura" style="width:{mic_ganho}%"></span></span><span class="n" data-campo="mic-ganho-num">{sinal_do_ganho(mic_ganho)}</span></span>{ponto_de_interrogacao("mic-ganho-fora")}
             </div>
             {onda(mic_v, mic_mudo, "mic")}
             {linha_de_volume("mic-porque")}
@@ -2881,11 +2927,21 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                    endereçou o alto-falante desta mesma coluna e deixou este
                    deslizante no número do DESENHO. Dono do valor e razão dos
                    dois alvos num endereço só: `a02_controles.volume_do_microfone`. -->
+              <span class="rot-vol">{ROTULO_LINHA_VOLUME}</span>
               <span class="trilho"><span class="cheio" data-campo="mic-barra"
                 data-hef-alvo="largura" style="width:{mic_vol}%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="{mic_vol}" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="{ROTULO_VOL_MIC}" title="{DICA_VOL_MIC}"></span>
               <span class="n" data-campo="mic-num">{mic_vol}</span>
               <button class="mudo-i" data-gesto="mic-testar" data-campo="mic-botao-estado" data-hef-alvo="atributo" data-hef-atributo="{ATRIBUTO_DA_LUZ_DO_MIC}" title="{DICA_MIC_TESTAR}">🎙</button>
               {ponto_de_interrogacao("mic-porque")}
+            </div>
+            <div class="vol ganho" data-campo="mic-ganho-fora" data-hef-alvo="classe"
+                 data-hef-classe="sem-ganho" title="{DICA_GANHO_MIC}" role="group"
+                 aria-label="{ROTULO_GANHO_MIC}">
+              <span class="rot-vol">{ROTULO_LINHA_GANHO}</span>
+              <span class="trilho"><span class="cheio" data-campo="mic-ganho-barra"
+                data-hef-alvo="largura" style="width:{mic_ganho}%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="{mic_ganho}" data-gesto="ganho-mic" data-campo="mic-ganho-barra" data-hef-alvo="valor" aria-label="{ROTULO_GANHO_MIC}" title="{DICA_GANHO_MIC}"></span>
+              <span class="n" data-campo="mic-ganho-num">{sinal_do_ganho(mic_ganho)}</span>
+              <span class="un">{UNIDADE_DO_GANHO}</span>{ponto_de_interrogacao("mic-ganho-fora")}
             </div>
             <!-- OS DOIS MODOS DESCERAM PARA CÁ — decisão dela, 31/08/2026:
                  *"Os botões Virtual e Nativo ficam na parte de baixo do slider,
@@ -4447,6 +4503,12 @@ def _conferir(doc):
     for campo, alvos in (("bateria-barra", ("largura",)),
                          ("alto-barra", ("largura", "valor")),
                          ("mic-barra", ("largura", "valor")),
+                         # O GANHO ENTROU NA LISTA — 20/09/2026, e pela mesma
+                         # razão que o deslizante do microfone entrou em 12/09:
+                         # *uma lista só cobra o que está escrita nela*. Ele
+                         # nasceu naquela manhã com um `alvo=largura` e nada
+                         # mais, e a régua não o viu porque não o conhecia.
+                         ("mic-ganho-barra", ("largura", "valor")),
                          ("luz-cor", ("cor", "cor")), ("touch-ponto", ("classe",)),
                          ("touch-ponto-2", ("classe",))):
         tags = re.findall(r'<[^>]*data-campo="' + re.escape(campo) + r'"[^>]*>', corpo)
@@ -4473,9 +4535,25 @@ def _conferir(doc):
     # 2f. OS DOIS DESLIZANTES (D-08 dela). Um por bloco, dois por card, e cada
     #     um diz de QUAL volume fala — sem o `data-volume` o gesto não sabe se
     #     mexe no microfone ou no alto-falante.
-    exigir(corpo.count('type="range"') == 2 * len(MESA),
-           f"os {2 * len(MESA)} deslizantes de volume sumiram — os dois "
-           f"volumes voltam a ser pintura, e o ♪ volta a travar para sempre")
+    #     E SÃO TRÊS, DESDE 20/09/2026: o ganho de entrada ganhou o dele por
+    #     ordem dela — *"além disso não tá funcionando"*. A conta CRUA de
+    #     `type="range"` passou a contar por GESTO de propósito: com o número
+    #     solto, acrescentar o trilho do ganho fazia a régua passar mesmo que
+    #     um dos dois volumes tivesse virado pintura de novo. *Uma régua que
+    #     conta o total não vê a troca.*
+    trilhos = {"volume": 2, "ganho-mic": 1}
+    exigir(corpo.count('type="range"') == sum(trilhos.values()) * len(MESA),
+           f"os {sum(trilhos.values()) * len(MESA)} deslizantes sumiram — os "
+           f"volumes voltam a ser pintura, o ♪ volta a travar para sempre e o "
+           f"ganho volta a ser um número sem onde pegar")
+    for gesto_do_trilho, quantos in trilhos.items():
+        vistos = len(re.findall(
+            r'type="range"[^>]*data-gesto="' + gesto_do_trilho + r'"'
+            r'|data-gesto="' + gesto_do_trilho + r'"[^>]*type="range"', corpo))
+        exigir(vistos == quantos * len(MESA),
+               f"o deslizante `{gesto_do_trilho}` está em {vistos} lugar(es) e "
+               f"devia estar em {quantos * len(MESA)} — sem o `data-gesto` o "
+               f"arrasto morre no stderr que ela nunca lê")
     for qual in ("microfone", "alto-falante"):
         exigir(corpo.count(f'data-volume="{qual}"') == len(MESA),
                f"o deslizante de {qual} não está nos {len(MESA)} lugares")

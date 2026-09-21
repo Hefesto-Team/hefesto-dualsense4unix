@@ -119,6 +119,20 @@ _O_APARELHO_DELA = "dualsense"
 #: lê-la como "montou" seria inventar o degrau mais barato.
 SEM_REGISTRO = "—"
 
+#: **O LADO EM QUE NÃO HÁ O QUE PROVAR** — 20/09/2026, com o `ganho-mic`.
+#:
+#: Ele NÃO é um degrau da escada, e por isso não entra em `_ORDEM`: é a
+#: resposta a *"até onde a prova chegou deste lado?"* quando a pergunta não se
+#: aplica, porque a feature não existe neste transporte por APARELHO. Ver
+#: :func:`_nada_a_acionar`, que é quem o decide, e a condição dupla que o
+#: impede de virar porta dos fundos.
+#:
+#: **A DIFERENÇA PARA O `—` É O PONTO INTEIRO:** `—` quer dizer *ninguém
+#: registrou*, e é uma falta; este quer dizer *não há o que registrar*, e é um
+#: fato do aparelho. Colapsar os dois faria a régua cobrar para sempre uma
+#: prova que ninguém pode dar.
+NAO_SE_APLICA = "n/a"
+
 #: A ORDEM, do pior para o melhor. Derivada de `ESCADA`, nunca redigitada: o
 #: dia em que a escada ganhar um sexto degrau, esta régua o herda.
 _ORDEM = (SEM_REGISTRO, *VALORES_DA_ESCADA)
@@ -168,6 +182,18 @@ CUSTOS = {
 #:   também, pedindo que a linha saia. Sem isso a lista vira propaganda no dia
 #:   seguinte à primeira cura.
 A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
+    "ganho-mic": (
+        "médio",
+        "2026-09-20-O-GANHO-DO-MIC-TEM-DONO-01.md",
+        "`audio.microfone.ganho@dualsense` está em MONTOU no cabo e o rádio "
+        "não se aplica (não há placa ALSA onde o elemento exista — é o "
+        "aparelho, não dívida). O caminho de escrita existe desde 20/09 e a "
+        "suíte o sustenta; o que falta é o ARRASTO com a orelha dela, que é o "
+        "único jeito de o degrau `O APARELHO OBEDECEU` deixar de ser "
+        "inferência. **A leitura já foi medida** e é o que sustenta o MONTOU: "
+        "o `scontents` do que está no cabo responde `[100%] [48.00dB]`. É da "
+        "O-GANHO-DO-MIC-TEM-DONO-01",
+    ),
     "mascara": (
         "grande",
         "2026-09-08-SENSORES-NO-JOGO-01-o-giroscopio-e-o-acelerometro-provados-ate-o-jogo.md",
@@ -307,6 +333,40 @@ def _pior(degraus: list[str]) -> str:
     return min(degraus, key=_ORDEM.index) if degraus else SEM_REGISTRO
 
 
+def _nada_a_acionar(linha: dict[str, str], lado: str) -> bool:
+    """Este lado tem alguma coisa a provar? `True` = não tem, e não conta.
+
+    **NÃO SE COBRA PROVA DE UM TRANSPORTE EM QUE A FEATURE NÃO EXISTE.** A
+    regra nasceu em 20/09/2026, com o `ganho-mic` — o primeiro gesto de tela
+    que é **só cabo por APARELHO**, e não por dívida nossa: pelo rádio o
+    microfone do DualSense chega como som já digitalizado, por nó da nossa
+    ponte, e não há placa ALSA onde o elemento de ganho exista. A tela não
+    esconde isso: o trilho fica cinza com a razão ao lado.
+
+    Sem esta linha, :func:`ate_onde_foi` respondia pelo PIOR incluindo um lado
+    vazio que nunca vai deixar de ser vazio — e a feature caía para
+    `SEM_REGISTRO` com o cabo já em `O APARELHO OBEDECEU`. A saída seria
+    declará-la em :data:`A_PROVA_QUE_FALTA` para sempre, e a lista das faltas
+    **deixaria de ser uma fila**: uma entrada que nunca sai é propaganda ao
+    contrário.
+
+    **A CONDIÇÃO É DUPLA DE PROPÓSITO**, e é o que a impede de virar uma porta
+    dos fundos: não basta `aciona = não`. A causa tem de ser `nada-a-acionar`,
+    que no vocabulário do mapa quer dizer *não há o que mexer deste lado* — e
+    NÃO `divida` (falta trabalho nosso), nem `nao-medido` (falta medição), nem
+    `o-aparelho-recusa` (há o que mexer, e ele recusou). Essas três continuam
+    derrubando o degrau, que é o trabalho desta régua.
+    """
+    aciona = (linha.get(f"{lado}_aciona") or "").strip().lower()
+    causa = (linha.get(f"{lado}_por_que_nao_aciona") or "").strip().lower()
+    # AS DUAS GRAFIAS, e a segunda não é descuido: o domínio da coluna é
+    # `não`, mas o CSV já teve a grafia sem acento (medido em 20/09, numa célula de
+    # `radio_aceita`), e uma régua que só conhece a forma certa deixa de
+    # enxergar exatamente a linha que precisa de conserto.
+    sem_acento = "n" + "ao"  # noqa-acento: é VALOR de coluna, não texto de tela
+    return aciona in ("não", sem_acento) and causa == "nada-a-acionar"
+
+
 def ate_onde_foi(chaves: tuple[str, ...],
                  mapa: dict[str, list[dict[str, str]]]) -> tuple[str, str]:
     """`(cabo, rádio)` — o degrau de um gesto, pela PIOR das chaves dele.
@@ -322,10 +382,16 @@ def ate_onde_foi(chaves: tuple[str, ...],
         for chave in chaves:
             minhas = [linha for linha in mapa.get(chave, [])
                       if linha.get("controle") == _O_APARELHO_DELA]
-            degraus.extend(_degrau(linha, lado) for linha in minhas)
+            vivas = [linha for linha in minhas
+                     if not _nada_a_acionar(linha, lado)]
+            degraus.extend(_degrau(linha, lado) for linha in vivas)
             if not minhas:
                 degraus.append(SEM_REGISTRO)
-        fora.append(_pior(degraus))
+        # TODAS as chaves deste lado são «nada a acionar»: a pergunta não se
+        # aplica. `_pior([])` devolveria `—`, e a feature cairia para
+        # SEM_REGISTRO com o outro lado já no destino.
+        fora.append(NAO_SE_APLICA if minhas and not degraus
+                    else _pior(degraus))
     return fora[0], fora[1]
 
 
@@ -395,8 +461,15 @@ def destino_de(chaves: tuple[str, ...],
 
 
 def chegou(degrau: str, destino: str) -> bool:
-    """A prova alcançou o destino daquela feature?"""
-    return _ORDEM.index(degrau) >= _ORDEM.index(destino)
+    """A prova alcançou o destino daquela feature?
+
+    :data:`NAO_SE_APLICA` responde SIM, e não é indulgência: um transporte em
+    que a feature não existe não tem prova a dar, e cobrá-la manteria a
+    feature parada para sempre com o outro lado já no destino. Quem decide que
+    um lado é assim é :func:`_nada_a_acionar`, com condição dupla; aqui só se
+    obedece ao que ela decidiu.
+    """
+    return degrau == NAO_SE_APLICA or _ORDEM.index(degrau) >= _ORDEM.index(destino)
 
 
 def celulas_no_jogo(mapa: dict[str, list[dict[str, str]]]) -> list[str]:

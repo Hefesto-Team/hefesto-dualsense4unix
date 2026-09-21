@@ -49,20 +49,36 @@ def regua():
 
 
 def test_a_tela_de_hoje_passa(regua, capsys):
-    """O estado de agora é VERDE — e SEM dívida declarada nenhuma.
+    """O estado de agora é VERDE — e toda dívida aberta sai NOMEADA.
 
     ATÉ 09/09/2026 esta régua exigia aqui o nome `volume` na saída: era a única
     dívida declarada, e ela tinha de sair NOMEADA em vez de em silêncio. A
     dívida fechou (MIC-VOLUME-02: a bancada dela mediu o `common[6]`
     obedecendo, ela mandou ligar o byte, e o gesto e o perfil o escrevem por
-    `uniq`), então o que se cobra agora é o CONTADOR em zero — e quem guarda a
-    propriedade de "dívida aberta sai nomeada" é o teste logo abaixo, com uma
-    dívida de mentira, porque hoje não existe nenhuma de verdade para ler.
+    `uniq`), e de 09 a 20/09 o que se cobrou foi o CONTADOR EM ZERO.
+
+    **ZERO DEIXOU DE SER A PROPRIEDADE EM 20/09/2026**, quando o `ganho-mic`
+    abriu a segunda dívida de verdade desta casa. E a distinção é o ponto: o
+    contador em zero não era a regra — era o ESTADO daquele dia, e cravá-lo
+    aqui fazia esta régua reprovar a próxima dívida HONESTA, declarada com
+    sprint dona, como se fosse defeito. *Uma régua que proíbe o inventário de
+    crescer não mede qualidade: mede a data em que foi escrita.*
+
+    O que se cobra agora é o que sempre foi a propriedade: o portão fica
+    VERDE, e **cada dívida aberta sai com o nome e a dona na saída** — que é o
+    que impede uma dívida de existir em silêncio.
     """
     assert regua.main() == 0
     saida = capsys.readouterr().out
     assert "VERDE" in saida
-    assert "0 em dívida declarada" in saida
+    for gesto in regua.A_DIVIDA_CONHECIDA:
+        sprint, _razao = regua.A_DIVIDA_CONHECIDA[gesto]
+        assert f"dívida: {gesto}" in saida, (
+            f"a dívida `{gesto}` está declarada e não sai nomeada — é uma "
+            f"dívida em silêncio, que é o que esta régua existe para impedir")
+        assert sprint in saida, (
+            f"a dívida `{gesto}` sai sem a dona; sem ela ninguém sabe onde o "
+            f"fecho está escrito")
 
 
 def test_divida_aberta_sai_nomeada_e_nao_reprova(regua, monkeypatch, capsys):
@@ -81,9 +97,15 @@ def test_divida_aberta_sai_nomeada_e_nao_reprova(regua, monkeypatch, capsys):
         regua.A_DIVIDA_CONHECIDA, "mudo",
         ("2026-01-01-DE-MENTIRA.md", "dívida de mentira, só para provar que a "
                                      "declarada sai nomeada"))
+    # O CONTADOR É O DE HOJE MAIS UMA, e não um número cravado: desde
+    # 20/09/2026 existe dívida de VERDADE declarada (o `ganho-mic`), e cravar
+    # «1» aqui faria este teste medir o inventário do dia em que foi escrito
+    # em vez da propriedade que ele existe para guardar — a mesma cicatriz que
+    # o `test_a_tela_de_hoje_passa` acabou de pagar, na linha de cima.
+    quantas = len(regua.A_DIVIDA_CONHECIDA)
     assert regua.main() == 0
     saida = capsys.readouterr().out
-    assert "1 em dívida declarada" in saida
+    assert f"{quantas} em dívida declarada" in saida
     assert "dívida: mudo" in saida
     assert "2026-01-01-DE-MENTIRA.md" in saida
 

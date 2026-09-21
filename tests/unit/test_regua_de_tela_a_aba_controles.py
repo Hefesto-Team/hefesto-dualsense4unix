@@ -492,9 +492,18 @@ def test_os_tres_botoes_de_som_existem_na_tela(mesa):
     # do desenho e ela confirmou que fica fora, sabendo que ele existe no
     # produto (ver o bloco de baixo). Cobrar aqui um botão que ela mandou tirar
     # é a régua brigando com a decisão, não medindo a tela.
-    for bloco in ("microfone", "alto-falante"):
-        assert tela.existe(f'{_cartao()} [data-mudo="{bloco}"]'), (
-            f'o botão [data-mudo="{bloco}"] sumiu do cartão. Sem ele a régua '
+    #
+    # E OS DOIS DEIXARAM DE TER O MESMO ENDEREÇO — 20/09/2026. O 🎙 saiu do
+    # `data-mudo` por ordem dela (*"esse botão segue desativando o microfone,
+    # não precisamos dele mais na interface"*) e virou `data-gesto="mic-testar"`;
+    # o ♪ FICOU no `data-mudo`, porque ele não tem botão no plástico que o
+    # cale. Montar os dois por `f'[data-mudo="{bloco}"]'` era conveniente
+    # enquanto o endereço era um só; hoje seria a régua exigindo que o produto
+    # mantivesse a simetria que a decisão dela desfez.
+    for botao, quem in (('[data-gesto="mic-testar"]', "🎙"),
+                        ('[data-mudo="alto-falante"]', "♪")):
+        assert tela.existe(f'{_cartao()} {botao}'), (
+            f"o botão {quem} ({botao}) sumiu do cartão. Sem ele a régua "
             "não teria como reprovar quem o quebrasse."
         )
 
@@ -674,7 +683,7 @@ def test_o_instrumento_declara_o_que_nao_faz():
 def test_a_ponte_leva_json_nos_dois_sentidos(mesa):
     """O recado é JSON — e um recado ilegível não pode virar `None` calado."""
     tela, _ = mesa
-    recados = tela.clicar_e_ouvir(f'{_cartao()} [data-mudo="microfone"]')
+    recados = tela.clicar_e_ouvir(f'{_cartao()} [data-mudo="alto-falante"]')
     assert isinstance(recados[0].objeto, dict), recados[0].bruto
     assert json.loads(recados[0].bruto) == recados[0].objeto
     assert recados[0].aos > 0, "o recado chegou sem hora"

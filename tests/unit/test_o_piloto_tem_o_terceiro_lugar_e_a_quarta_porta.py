@@ -149,7 +149,7 @@ LER_A_TELA = r"""
 #: pagou duas vezes.
 CLICAR_NO_MIC = r"""
 (function(){
-  const b = document.querySelector('[data-controle="p1"] [data-mudo="microfone"]');
+  const b = document.querySelector('[data-controle="p1"] [data-mudo="alto-falante"]');
   if(!b) return 'NAO ACHEI O BOTAO DO MICROFONE NO CARTAO DO P1';
   b.click();
   return 'cliquei';
@@ -162,7 +162,7 @@ CLICAR_NO_MIC = r"""
 #: reproduzem a corrida com um roteiro que se lê.
 CLICAR_NO_MIC_DE = r"""
 (function(pref){
-  const b = document.querySelector('[data-controle="' + pref + '"] [data-mudo="microfone"]');
+  const b = document.querySelector('[data-controle="' + pref + '"] [data-mudo="alto-falante"]');
   if(!b) return 'NAO ACHEI O BOTAO DO MICROFONE EM ' + pref;
   b.click();
   return 'cliquei em ' + pref;
@@ -175,7 +175,7 @@ LER_OS_DOIS_BOTOES = r"""
 (function(){
   const fora = {};
   for(const pref of ['p1', 'p2']){
-    const b = document.querySelector('[data-controle="' + pref + '"] [data-mudo="microfone"]');
+    const b = document.querySelector('[data-controle="' + pref + '"] [data-mudo="alto-falante"]');
     fora[pref] = b ? {deu_certo: b.classList.contains('hef-deu-certo'),
                       recusou: b.classList.contains('hef-recusou'),
                       em_voo: b.classList.contains('hef-em-voo')} : null;

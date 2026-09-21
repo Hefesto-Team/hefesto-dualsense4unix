@@ -72,7 +72,7 @@ FRASES = {
 PAGINA_01 = "01-jogar.html"
 PAGINA_02 = "02-controles.html"
 PAGINA_03 = "03-gatilhos.html"
-MIC_P1 = '[data-controle="p1"] [data-mudo="microfone"]'
+MIC_P1 = '[data-controle="p1"] [data-mudo="alto-falante"]'
 RECONECTAR = 'button[data-gesto="reconectar"]'
 
 #: QUANTO SE ESPERA DEPOIS DE A PÁGINA FICAR PRONTA: uma dúzia de tiques de

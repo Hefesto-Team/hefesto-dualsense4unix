@@ -80,7 +80,7 @@ from __future__ import annotations
 
 import contextlib
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Any
 
 from hefesto_dualsense4unix.app.actions.home_actions import (
@@ -1314,8 +1314,26 @@ _CAPACIDADE_DE_GANHO = "cvolume"
 GANHO_PADRAO_PCT = 100
 
 
+def _nome_do_scontrol(crua: str) -> str:
+    """`'Headset',0` -> `Headset,0` — o que o `amixer sset` aceita em argv."""
+    achado = re.match(r"^\s*'(.*)',(\d+)\s*$", crua)
+    return f"{achado.group(1)},{achado.group(2)}" if achado else crua.strip()
+
+
 def _ganho_do_scontents(texto: str) -> tuple[int, float] | None:
     """`(por cento, dB)` do elemento de ganho de captura, ou `None`.
+
+    Corpo único com :func:`_elemento_e_ganho_do_scontents`, que responde a
+    mesma pergunta mais o NOME do elemento. Dois parsers da mesma saída é como
+    o leitor e o escritor do mesmo valor começam a escolher elementos
+    diferentes na mesma placa.
+    """
+    achado = _elemento_e_ganho_do_scontents(texto)
+    return None if achado is None else (achado[1], achado[2])
+
+
+def _elemento_e_ganho_do_scontents(texto: str) -> tuple[str, int, float] | None:
+    """`(elemento, por cento, dB)` — o NOME é o que o escritor precisa.
 
     Lê a saída de `amixer -c N scontents` e devolve o primeiro controle simples
     que tem :data:`_CAPACIDADE_DE_GANHO` e canais de captura — a MESMA regra do
@@ -1330,10 +1348,24 @@ def _ganho_do_scontents(texto: str) -> tuple[int, float] | None:
     «ganho no mínimo» sobre uma placa que não tem ganho nenhum.
     """
     tem_ganho = False
+    nome = ""
     for linha in (texto or "").splitlines():
         crua = linha.strip()
         if crua.startswith("Simple mixer control "):
             tem_ganho = False
+            # `Simple mixer control 'Headset',0` -> `Headset,0`.
+            #
+            # **AS ASPAS SÃO DO `scontents`, NÃO DO NOME**, e passá-las adiante
+            # é um defeito silencioso: o `sset` recebe argv, não shell, então
+            # `'Headset',0` chegaria com as aspas literais e o amixer
+            # responderia *"Unable to find simple control"*. O clique falharia
+            # com a barra pintada certa.
+            #
+            # **E O ÍNDICE FICA**, que é a outra metade: `Headset` sem o `,0`
+            # escreve no elemento de índice 0 de uma placa cujo ganho pode ser
+            # o de índice 1 — escrita plausível no lugar errado, que é pior do
+            # que erro.
+            nome = _nome_do_scontrol(crua[len("Simple mixer control "):])
             continue
         if crua.startswith("Capabilities:"):
             tem_ganho = _CAPACIDADE_DE_GANHO in crua
@@ -1347,7 +1379,7 @@ def _ganho_do_scontents(texto: str) -> tuple[int, float] | None:
         # começam a discordar.
         achado = re.search(r"\[(\d+)%\].*?\[(-?\d+(?:\.\d+)?)dB\]", crua)
         if achado:
-            return (max(0, min(100, int(achado.group(1)))),
+            return (nome, max(0, min(100, int(achado.group(1)))),
                     float(achado.group(2)))
     return None
 
@@ -1416,14 +1448,7 @@ def _ler_o_ganho(na_mesa: tuple[str, ...]) -> dict[str, tuple[int, float] | None
         # `_ler_o_sono` logo abaixo. Sem a lista não há como casar fonte e
         # placa, e a mesa inteira volta a "não sei".
         return {}
-    placa_da_fonte: dict[str, str] = {}
-    atual = ""
-    for linha in lista.splitlines():
-        crua = linha.strip()
-        if crua.startswith("Name: "):
-            atual = crua[6:]
-        elif atual and crua.startswith("alsa.card = "):
-            placa_da_fonte[atual] = crua.split("=", 1)[1].strip().strip('"')
+    placa_da_fonte = _placa_de_cada_fonte(lista)
     por_placa: dict[str, tuple[int, float] | None] = {}
     for uniq, no in alvos.items():
         placa = placa_da_fonte.get(no, "")
@@ -1438,6 +1463,112 @@ def _ler_o_ganho(na_mesa: tuple[str, ...]) -> dict[str, tuple[int, float] | None
                 por_placa[placa] = None
         fora[uniq] = por_placa[placa]
     return fora
+
+
+def _placa_de_cada_fonte(lista_de_sources: str) -> dict[str, str]:
+    """`{nome_do_no: placa_alsa}` da saída de `pactl list sources`.
+
+    PURA de propósito, como o :func:`_ganho_do_scontents`: quem roda o comando
+    é quem chama. Ela existe para que o LEITOR do ganho (a thread da camada 1,
+    que pergunta pela mesa inteira numa leitura só) e o ESCRITOR (o clique, que
+    pergunta por um controle) resolvam a placa pelo MESMO caminho — dois
+    resolvedores escreveriam o ganho numa placa e o leriam de outra, e a tela
+    diria que o arrasto não pegou.
+    """
+    placa: dict[str, str] = {}
+    atual = ""
+    for linha in (lista_de_sources or "").splitlines():
+        crua = linha.strip()
+        if crua.startswith("Name: "):
+            atual = crua[6:]
+        elif atual and crua.startswith("alsa.card = "):
+            placa[atual] = crua.split("=", 1)[1].strip().strip('"')
+    return placa
+
+
+def placa_alsa_do_controle(uniq: str, na_mesa: Sequence[str]) -> str:
+    """A placa ALSA deste controle, ou `""` quando não há.
+
+    `""` é resposta honesta em três casos, e nenhum deles é erro: o controle
+    está no RÁDIO (o microfone chega como som já digitalizado, sem placa onde
+    esse ganho exista — medido em 15/08: a placa segue o transporte), o `pactl`
+    não respondeu, ou o nó nativo deste controle não casou com placa nenhuma.
+
+    A PERGUNTA É AO NÓ QUE O KERNEL PUBLICA, não ao que o produto elegeu — a
+    mesma cicatriz de 20/09 que o :func:`_ler_o_ganho` documenta: com a ponte
+    de pé, `canal_fonte` devolve `hefesto_mic_<hex6>` para os quatro, e aquele
+    nó não tem placa ALSA nenhuma.
+    """
+    from hefesto_dualsense4unix.integrations import eleicao_de_microfone
+
+    if not uniq:
+        return ""
+    mesa = [u for u in na_mesa if u] or [uniq]
+    try:
+        no = eleicao_de_microfone.fonte_nativa_do_controle(uniq, mesa)
+    except Exception:
+        return ""
+    if not no:
+        return ""
+    try:
+        lista = audio_saida.rodar_leitura(["pactl", "list", "sources"])
+    except Exception:
+        return ""
+    return _placa_de_cada_fonte(lista).get(no, "")
+
+
+def definir_ganho_do_microfone(
+    uniq: str, por_cento: int, na_mesa: Sequence[str]
+) -> tuple[int, float] | None:
+    """Escreve o ganho de entrada no APARELHO e devolve o que ele ficou.
+
+    **ESTE É O ESCRITOR QUE FALTAVA.** O ganho nasceu em 20/09 com leitor,
+    barra, número, cinza e razão — e nada que o mudasse. A tela mostrava o
+    valor e não havia onde pegá-lo: *"o efeito pronto e sem escolha"*, que é o
+    defeito-mãe desta casa, desta vez do lado de fora.
+
+    **O RETORNO É A RELEITURA, NÃO O PEDIDO**, e é a regra da casa para valor
+    com dono: o `amixer` arredonda para o passo da placa (a do DualSense anda
+    de 1 em 1 dentro de 0-101, e nem toda placa é assim), então devolver o que
+    se pediu faria a tela publicar um número que o aparelho não tem. Quem
+    responde quanto o ganho ficou é o ganho.
+
+    `None` = não consegui escrever nem reler: sem placa (o rádio), sem
+    `amixer`, ou o elemento de ganho não existe nesta placa. Quem chama
+    transforma isso em recusa com razão — nunca em silêncio, e nunca num
+    número inventado.
+    """
+    placa = placa_alsa_do_controle(uniq, na_mesa)
+    if not placa:
+        return None
+    try:
+        antes = _elemento_e_ganho_do_scontents(
+            audio_saida.rodar_leitura(["amixer", "-c", placa, "scontents"]))
+    except Exception:
+        return None
+    if antes is None:
+        return None
+    elemento = antes[0]
+    alvo = max(0, min(100, int(por_cento)))
+    try:
+        # `sset <elemento> <N>%` fala a MESMA escala que a barra pinta: o por
+        # cento é a posição na faixa, e é o que o `scontents` devolve entre
+        # colchetes. Mandar dB daria um segundo vocabulário para o mesmo eixo,
+        # e a conversão seria nossa — a placa já a tem.
+        audio_saida.rodar_leitura(
+            ["amixer", "-c", placa, "sset", elemento, f"{alvo}%"])
+        depois = _elemento_e_ganho_do_scontents(
+            audio_saida.rodar_leitura(["amixer", "-c", placa, "scontents"]))
+    except Exception:
+        return None
+    if depois is None:
+        return None
+    # O CACHE APRENDE NA HORA. Sem isto a tela volta ao valor velho no tique
+    # seguinte — a thread da camada 1 só acorda a cada 2 s, e nesses dois
+    # segundos o deslizante «pula para trás» sozinho. É o mesmo desacordo que
+    # `_lembrar_do_som` cura para o volume.
+    _GANHO[uniq] = (depois[1], depois[2])
+    return (depois[1], depois[2])
 
 
 def ganho_do_microfone(uniq: str) -> tuple[int, float] | None:
@@ -4666,6 +4797,57 @@ def sensor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     frase = frase_do_interruptor_de_sensor(corpo)
     if frase:
         raise RuntimeError(frase)
+
+
+@gesto("02-controles.html", "ganho-mic")
+def ganho_mic(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O deslizante do ganho de entrada — **o ato que faltava ao número**.
+
+    Ordem dela, 20/09/2026, olhando a tela instalada:
+
+        "o slicer tá diferente da posição de onde ficaria o slicer da
+         versao  # noqa-acento: citação literal dela, e a digitação dela
+                não se limpa
+         original que eu havia aprovado. além disso não tá funcionando"
+
+    As duas metades da queixa são a mesma falta. O ganho nasceu naquela manhã
+    com leitor, barra, número, cinza e razão — e com um `<span class="cheio">`
+    no lugar do deslizante. Um `span` PINTA; ele não recebe arrasto. A barra
+    mostrava o ganho certo e não havia onde pegá-la.
+
+    **ELE NÃO PASSA PELO DAEMON, e é por desenho.** O ganho de entrada é da
+    PLACA (`Headset Capture Volume`, o elemento de captura do `amixer`), não do
+    firmware do DualSense: não há método de IPC para ele, e inventar um faria o
+    daemon virar intermediário de um valor que o `alsa-lib` já expõe. Quem
+    escreve é :func:`definir_ganho_do_microfone`, e quem confirma é a releitura.
+
+    **A RECUSA TEM RAZÃO E ELA JÁ EXISTIA:** :data:`RAZAO_DO_GANHO_FORA` é o
+    mesmo texto que pinta o trilho de cinza quando o controle está no rádio.
+    Uma segunda frase aqui faria a tela explicar o mesmo fato de duas maneiras.
+    """
+    uniq = _uniq(o)
+    if not uniq:
+        raise ValueError("ganho-mic: o clique não disse em qual controle")
+    # O `click` DEPOIS DO `change` NÃO É UM SEGUNDO PEDIDO — o mesmo guarda do
+    # gesto `volume` logo abaixo, e pela mesma razão: um `<input type="range">`
+    # clicado na pista dispara `input`, `change` e `click`, e o bootstrap
+    # escuta os dois últimos. Sem ele, cada clique escreve duas vezes na placa.
+    if (str(o.get("tipo") or "").lower() == "input"
+            and str(o.get("evento") or "").lower() == "click"):
+        return
+    crua = o.get("valor")
+    if crua is None:
+        raise ValueError("ganho-mic: o deslizante não mandou valor nenhum")
+    try:
+        pedido = int(float(crua))
+    except (TypeError, ValueError):
+        raise ValueError(
+            "ganho-mic: o deslizante não mandou um número") from None
+
+    na_mesa = [str(c.get("uniq") or "") for c in ctx.conectados if c.get("uniq")]
+    ficou = definir_ganho_do_microfone(uniq, pedido, na_mesa)
+    if ficou is None:
+        raise RuntimeError(RAZAO_DO_GANHO_FORA)
 
 
 @gesto("02-controles.html", "volume", grava="save_profile")

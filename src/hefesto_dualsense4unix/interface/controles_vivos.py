@@ -196,17 +196,34 @@ PRAZO_DO_MODO_S = 4.0
 #: cada seletor contra a página PUBLICADA sem abrir janela nenhuma; e, em tempo de
 #: execução, o :func:`_clique_que_confessa`, que faz cada passo dizer se achou o
 #: alvo em vez de estourar calado.
-ROTEIRO_DA_PROVA_DE_GESTO: tuple[tuple[int, str], ...] = (
+ROTEIRO_DA_PROVA_DE_GESTO: tuple[tuple[int, str] | tuple[int, str, str], ...] = (
     (1500, ".faixa"),
     (2000, '.sw[data-sensor="giroscopio"]'),
+    # OS TRÊS BOTÕES DO ALTO-FALANTE, e são três de propósito — 20/09/2026.
+    # O roteiro clicava só o `pc`, e a queixa dela foi sobre os TRÊS: *"os 3
+    # botões do auto falante estão errados também e não estão funcionando"*.
+    # Uma prova que exercita um de três passa verde sobre os outros dois, que
+    # é a família `regua-que-mede-o-arranjo-facil` — a mesma que já mordeu esta
+    # casa neste mesmo dia. Eles vão em ordem de volta: `pc` sai da saída
+    # padrão, `junto` liga o `mix`, `jogo` devolve tudo ao lugar.
     (2500, '.rota button[data-rota="pc"]'),
-    (2800, '[data-mudo="microfone"]'),
-    (3100, '[data-mudo="microfone"]'),
+    (2800, '.rota button[data-rota="junto"]'),
+    (3100, '.rota button[data-rota="jogo"]'),
     (3400, '[data-mudo="alto-falante"]'),
+    # O 🎙 NÃO ENTRA NESTE ROTEIRO, e a ausência é decidida, não esquecimento.
+    # Ele deixou de calar em 20/09 e passou a GRAVAR — abre o microfone de quem
+    # estiver na frente da máquina por até `TETO_S` (15 s) e devolve a voz pelo
+    # alto-falante. Um roteiro automático que o clica duas vezes abriria o
+    # microfone dela por meio minuto sem ela ter pedido, e estouraria o próprio
+    # relógio de 3,4 s. Quem prova o ato é a suíte
+    # (`test_o_teste_do_microfone_ouve.py`, 15 réguas, com o gravador dublado);
+    # quem prova que o BOTÃO existe e responde é o passo abaixo, que confere o
+    # alvo sem disparar a gravação.
+    (3700, '[data-gesto="mic-testar"]', "so-existe"),
 )
 
 
-def _clique_que_confessa(card: str, seletor: str) -> str:
+def _clique_que_confessa(card: str, seletor: str, so_existe: bool = False) -> str:
     """O clique sintético que AVISA quando o alvo não está lá.
 
     Um `.click()` cru sobre `querySelector` que devolveu `null` levanta dentro
@@ -220,12 +237,19 @@ def _clique_que_confessa(card: str, seletor: str) -> str:
     import json as _json
 
     sel = _json.dumps(seletor)
+    # `so_existe` NÃO É UM CLIQUE MAIS FRACO — é a resposta a um botão cujo ato
+    # toca o aparelho de quem está na frente da máquina. O 🎙 grava o microfone
+    # por até 15 s e devolve a voz pelo alto-falante; dispará-lo num roteiro
+    # automático seria o instrumento usando o aparelho dela sem ela ter pedido.
+    # O passo continua REPROVANDO quando o alvo não existe, que é o que ele
+    # existe para pegar — só não puxa o gatilho.
+    clique = "" if so_existe else "if(e){e.click();}"
     return (
         "(function(){var c=" + card + ";"
         "var e=c?c.querySelector(" + sel + "):null;"
         "window.webkit.messageHandlers.hefesto.postMessage(JSON.stringify("
         "{gesto:'roteiro',alvo:" + sel + ",achou:!!e}));"
-        "if(e){e.click();}})()"
+        + clique + "})()"
     )
 
 
@@ -478,7 +502,13 @@ window.HEF = (function(){
     if(bm){
       n += onda(q('.onda', bm), d.mic.onda);
       n += est(q('.vol .cheio', bm), {width:d.mic.vol_w}) + txt(q('.vol .n', bm), d.mic.vol_n);
-      n += cls(q('[data-mudo="microfone"]', bm), 'on', d.mic.off);
+      // O ECO DO MUDO SAIU COM O ATO — 20/09/2026. Esta linha acendia o 🎙
+      // quando o microfone estava MUDO, e o 🎙 não cala mais: ele testa. O
+      // botão tem dono novo (`data-mic-luz`, alvo `atributo`) e quem o pinta
+      // é o `achar()` genérico, com o que `mic-botao-estado` publicar. Deixar
+      // as duas escritas vivas faria o eco do tique apagar a luz da gravação
+      // no meio dela — dois donos para o mesmo elemento, que é o defeito que
+      // os `data-campo` existem para não deixar acontecer.
       n += trava(q('[data-mudo="mic-liberar"]', bm), !d.mic.posse);
     }
     const ba = q('[data-bloco="alto-falante"]', c);
@@ -1164,9 +1194,13 @@ class Janela:
         # `length-1` existe para toda mesa com pelo menos um card, então a prova
         # vale na mesa de um e continua valendo na de dois.
         um = "document.querySelectorAll('.ctl')[document.querySelectorAll('.ctl').length-1]"
-        for ms, seletor in ROTEIRO_DA_PROVA_DE_GESTO:
+        for passo in ROTEIRO_DA_PROVA_DE_GESTO:
+            ms, seletor = passo[0], passo[1]
+            so_existe = len(passo) > 2 and passo[2] == "so-existe"
             GLib.timeout_add(
-                ms, lambda s=seletor: (self._js(_clique_que_confessa(um, s)), False)[1]
+                ms,
+                lambda s=seletor, e=so_existe: (
+                    self._js(_clique_que_confessa(um, s, e)), False)[1],
             )
 
     def _agendar_saida(self) -> None:
