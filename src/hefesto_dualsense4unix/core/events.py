@@ -48,6 +48,15 @@ class EventTopic:
     #: quebraria o contrato de perfil e de plugin; (2) o botão do mic nem
     #: chega lá — o `hid-playstation` CONSOME a borda e ela não vira evdev.
     MIC_DA_MESA = "mic.da_mesa"
+    #: O-SOM-DO-SISTEMA-E-O-DA-TELA-01: a saída e a entrada PADRÃO do sistema
+    #: mudaram — `{saida, entrada}`, os nomes crus dos nós. Quem publica é
+    #: `daemon/subsystems/ouvinte_do_som`, que segue um `pactl subscribe`.
+    #:
+    #: **Tópico próprio, e não `STATE_UPDATE`**: este fato não vem do controle
+    #: nem do laço de poll — vem do servidor de som, e chega fora de tique.
+    #: Quem quiser reagir a ele (um plugin, a tela) não pode ser obrigado a
+    #: ouvir o estado inteiro a 10 Hz para vê-lo.
+    SOM_DO_SISTEMA = "som.do_sistema"
 
 
 @dataclass

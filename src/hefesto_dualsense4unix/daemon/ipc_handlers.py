@@ -2973,6 +2973,21 @@ class IpcHandlersMixin:
                 target_index = raw_target
         result["output_target_index"] = target_index
 
+        # O-SOM-DO-SISTEMA-E-O-DA-TELA-01 (21/09/2026): a saída e a entrada
+        # PADRÃO do sistema, como o servidor de som as diz AGORA. Ela pediu
+        # *"sincronia com os canais de saida de som e entrada de som do sistema
+        # operacional"*, e sem este bloco a tela não tinha como saber sequer
+        # qual é a saída da máquina.
+        #
+        # **NÃO CUSTA UM SUBPROCESSO POR TIQUE**, e é o ponto do desenho: o
+        # valor foi lido pelo `ouvinte_do_som` quando MUDOU, e mora no daemon.
+        # Perguntar `pactl get-default-sink` aqui seriam dois `fork` a 10 Hz.
+        from hefesto_dualsense4unix.daemon.subsystems.ouvinte_do_som import (
+            som_do_sistema_payload,
+        )
+
+        result["som_do_sistema"] = som_do_sistema_payload(self.daemon)
+
         # Paridade CLI-GUI: expõe estado da emulação de mouse se o daemon
         # dono da IPC tiver config acessível (FEAT-CLI-PARITY-01).
         #

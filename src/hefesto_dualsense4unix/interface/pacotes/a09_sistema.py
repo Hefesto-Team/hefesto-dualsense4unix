@@ -377,17 +377,46 @@ def _limpar_o_painel() -> None:
     _PERGUNTA.clear()
 
 
+#: OS GESTOS CUJO RECIBO FICA NA TELA, e a lista é curta de propósito.
+#:
+#: **A TELA-CALADA-03 (13/09/2026) CONTINUA VALENDO**, e a palavra dela é
+#: *"essas frases de status que aparecem no rodapé isso não deveria estar
+#: aparecendo"*. <!-- noqa-acento: citação literal dela -->
+#: O recibo dos outros cinco destrutivos sai da tela porque **o ato deles se vê
+#: sozinho**: o serviço para e o rótulo troca, os consertos mudam o exame, a
+#: Steam fecha e reabre na frente dela.
+#:
+#: **O «Tirar a sobreposição Vulkan» é o único cujo efeito é INVISÍVEL.** Ele
+#: escreve dentro do registro do prefixo Wine de cada jogo; a linha do exame,
+#: três centímetros acima, dizia `✓ OK` antes e continua dizendo depois. Sem
+#: recibo, o clique 2 não deixa **nenhum** rastro na tela — e foi exatamente
+#: essa a queixa dela em 21/09/2026: *"Clico em confirma e não aparece nada.
+#: Os logs não falam nada que preste também."*
+#: <!-- noqa-acento: citação literal dela -->
+#:
+#: A REGRA QUE ISSO DEIXA, e ela é a que cabe nas duas: **recibo de status
+#: sai; recibo de ato que não se vê FICA.** Um gesto novo só entra aqui se o
+#: efeito dele não aparecer em nenhum outro lugar da tela.
+RECIBO_QUE_FICA_NA_TELA = ("procurar-camadas",)
+
+
 def _relatar_o_recibo(gesto_: str, frase: str) -> None:
-    """O recibo do segundo clique vai ao diário da janela, e não à tela.
+    """O recibo do segundo clique: sempre ao diário, e à TELA quando ele some.
 
     A FRASE CONTINUA SENDO A DO DONO (`format_fix_safe_result`,
     `format_proton_lock_result`, `format_apply_wrapper_result`,
     `frase_do_resultado`) e continua sendo produzida — quem depura lê no
     `interface.log`. O desenho da linha é o mesmo que a TELA-CALADA-01 dá ao
     recado de sucesso do piloto: `[relato] <página> · <gesto>: <frase>`.
+
+    Quem está em :data:`RECIBO_QUE_FICA_NA_TELA` **também** escreve no painel,
+    e o porquê está lá.
     """
-    if frase:
-        print(f"[relato] {PAGINA} · {gesto_}: {frase}", file=sys.stderr)
+    if not frase:
+        return
+    print(f"[relato] {PAGINA} · {gesto_}: {frase}", file=sys.stderr)
+    if gesto_ in RECIBO_QUE_FICA_NA_TELA:
+        _para_o_painel(frase)
 
 
 #: A INSTRUÇÃO DO SEGUNDO TEMPO. Ela JÁ ERA desta aba — a última linha do que o
@@ -576,7 +605,59 @@ def _achados(state: dict[str, Any] | None,
     prontuario = _prontuario(pode_perguntar)
     if prontuario:
         linhas.append(prontuario)
+    som = linha_do_som_do_sistema(state)
+    if som:
+        linhas.append(som)
     return linhas
+
+
+#: O selo da linha do som. `INFO` e não `OK`: ela não é um teste que passou, é
+#: um FATO da máquina — e `OK` sobre um fato ensina que existia algo a corrigir.
+#: A camada do produto traduz os três vereditos (`gui/aba_sistema`), e `INFO`
+#: sai como «NOTA», o mesmo selo da linha da regra de áudio.
+SELO_INFORMATIVO = "[INFO]"
+
+
+def linha_do_som_do_sistema(
+        state: dict[str, Any] | None) -> tuple[str, str] | None:
+    """*"Som do sistema: sai em X, entra por Y"* — `None` quando não se sabe.
+
+    **O PEDIDO É DELA, 21/09/2026:** *"outra coisa que precisamos ter é
+    sincronia com os canais de saida de som e entrada de som do sistema
+    operacional. isso é importante."*
+    <!-- noqa-acento: citação literal dela -->
+
+    **OS NOMES SÃO OS DO PAINEL DELA, e é o ponto inteiro.** Eles vêm da
+    `Description` que o próprio servidor de som publica — as mesmas palavras
+    que o painel do COSMIC mostra («Microfone do Controle 1», «HDA NVidia
+    Estéreo digital (HDMI)»). Ler o nome CRU aqui daria
+    `alsa_output.pci-0000_0a_00.1.hdmi-stereo`, que não é palavra de quem quer
+    jogar — e, pior, não seria o mesmo texto que ela lê do outro lado da tela.
+
+    **NÃO CUSTA UM SUBPROCESSO.** O valor foi lido pelo `ouvinte_do_som` quando
+    MUDOU e viaja no `state_full`. Esta aba já paga 2,4 s de exame; mais dois
+    `pactl` por tique era o que não se podia acrescentar.
+
+    **AUSÊNCIA É AUSÊNCIA.** Sem o bloco (daemon velho, `pactl` fora do PATH,
+    ouvinte que ainda não respondeu) a linha NÃO APARECE — em vez de aparecer
+    dizendo travessão. Uma linha de exame que diz "não sei" sobre som ensina
+    que há algo errado com o som.
+    """
+    if not isinstance(state, dict):
+        return None
+    bloco = state.get("som_do_sistema")
+    if not isinstance(bloco, dict):
+        return None
+    saida = str(bloco.get("saida_nome") or bloco.get("saida") or "").strip()
+    entrada = str(bloco.get("entrada_nome") or bloco.get("entrada") or "").strip()
+    if not saida and not entrada:
+        return None
+    partes = []
+    if saida:
+        partes.append(f"sai em {saida}")
+    if entrada:
+        partes.append(f"entra por {entrada}")
+    return (SELO_INFORMATIVO, f"Som do sistema: {', '.join(partes)}")
 
 
 #: O PRONTUÁRIO DOS JOGOS LEVA 7,1 SEGUNDOS — medido na máquina dela em
@@ -2178,7 +2259,7 @@ def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `ipc_bridge`. Não é uma segunda porta para o disco.
 
     E ELE PEGA NA HORA, sem reiniciar nada: o `_handle_machine_declare`
-    (`daemon/ipc_handlers.py:7142`) relê o `maquina.json` e **rebinda**
+    (`daemon/ipc_handlers.py:7157`) relê o `maquina.json` e **rebinda**
     `daemon._maquina`; o `_orcamento_declarado` (`core/rumble.py:167`) lê a
     fonte a cada pedido de vibração, e não uma cópia do boot. Está escrito lá
     com todas as letras: *"uma cópia feita no boot ficaria velha exatamente no
@@ -2386,6 +2467,30 @@ def _repor_o_lancador() -> None:
 #: A PALAVRA DO BOTÃO ARMADO. É DELA, escolhida entre três em 03/09/2026.
 CONFIRMA = "Confirma?"
 
+#: O RÓTULO ARMADO DE UM GESTO QUE FAZ DUAS COISAS — 21/09/2026.
+#:
+#: `"Confirma?"` basta quando o botão só sabe um ato. O «Tirar a sobreposição
+#: Vulkan» sabe DOIS: ele tira o que está ligado e DEVOLVE o que nós tínhamos
+#: tirado, e qual dos dois vai acontecer depende do que o censo achou.
+#:
+#: **O DEFEITO QUE ISTO CURA É DELA, de 21/09/2026.** Nesta máquina o único
+#: prefixo com camada é o Sackboy, e as duas do Epic já estão DESLIGADAS —
+#: então o segundo clique dela ia **devolver** a sobreposição, com o botão
+#: dizendo "Tirar" e o armado dizendo "Confirma?". A frase do painel avisava,
+#: e o olho dela estava no botão. *Onde o dedo clica é onde o verbo tem de
+#: estar.*
+#:
+#: Quem preenche é o gesto, no clique que ARMA; o `_ARMADO` é limpo a cada
+#: volta e este acompanha.
+_CONFIRMA_DO_GESTO: dict[str, str] = {}
+
+#: As duas caras armadas do «Tirar a sobreposição Vulkan». Elas dizem o VERBO,
+#: que é o que faltava: o botão em repouso diz "Tirar" mesmo quando o que ele
+#: tem a fazer é devolver, porque o rótulo em repouso é lido do DESENHO
+#: (`_rotulo_do_desenho`) e o desenho não sabe o que há nos prefixos dela.
+CONFIRMA_TIRAR = "Confirma tirar?"
+CONFIRMA_DEVOLVER = "Confirma devolver?"
+
 #: O VERBO É DELA — *"em sistema um específico pra parar o Daemon E Ativar o
 #: Daemon"*, 03/09/2026. O SUBSTANTIVO não é escolha minha: é o vocabulário
 #: desta aba, fechado com ela em 31/08 e escrito no `mockup/TODO-DELA.md` —
@@ -2547,7 +2652,7 @@ def _rotulo_de_agora(gesto: str, de_pe: bool) -> str:
     dela pendurado sobre uma pergunta que a tela não mostra mais.
     """
     if gesto == _armado_agora():
-        return CONFIRMA
+        return _CONFIRMA_DO_GESTO.get(gesto) or CONFIRMA
     if gesto == DESLIGAR and not de_pe:
         return ATIVAR
     return _rotulo_do_desenho(gesto)
@@ -2613,7 +2718,16 @@ def _confirmado(o: dict[str, Any], gesto_: str,
     """
     rotulo = str(o.get("texto") or "").strip()
     armado = _armado_agora() == gesto_
-    if rotulo == CONFIRMA:
+    # AS PALAVRAS ARMADAS DESTE GESTO — 21/09/2026. Era `rotulo == CONFIRMA`, e
+    # bastava enquanto todo botão armado dizia a mesma coisa. O «Tirar a
+    # sobreposição Vulkan» passou a dizer o VERBO (`_CONFIRMA_DO_GESTO`), e uma
+    # comparação contra a palavra genérica recusaria o consentimento que o
+    # próprio botão acabou de oferecer — o clique 2 nunca valeria.
+    palavras_armadas = {CONFIRMA}
+    especifica = _CONFIRMA_DO_GESTO.get(gesto_)
+    if especifica:
+        palavras_armadas.add(especifica)
+    if rotulo in palavras_armadas:
         _ARMADO.clear()
         if not armado:
             raise RuntimeError(
@@ -3361,15 +3475,31 @@ def procurar_camadas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]
         fim = ("Clique de novo para TIRAR."
                if proximo == "tirar"
                else "Clique de novo para DEVOLVER o que eu tinha tirado.")
+        # O VERBO VAI PARA O BOTÃO — 21/09/2026. Ver `_CONFIRMA_DO_GESTO`: a
+        # frase acima já dizia qual dos dois atos vem, e ela clicou olhando
+        # para o botão, que dizia "Tirar" e depois "Confirma?".
+        _CONFIRMA_DO_GESTO["procurar-camadas"] = (
+            CONFIRMA_TIRAR if proximo == "tirar" else CONFIRMA_DEVOLVER)
         # QUANDO A PERGUNTA VENCE, O CENSO FICA e só a instrução sai — ver
         # `_PERGUNTA` (13/09/2026).
         return _so_armou(_de_pe(ctx), _para_o_painel(
             f"{corpo}\n\n{fim}", pergunta_de="procurar-camadas", fica=corpo))
 
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+    from hefesto_dualsense4unix.integrations import reposicao_dos_lancadores as rl
 
+    _CONFIRMA_DO_GESTO.pop("procurar-camadas", None)
     _limpar_o_painel()
-    if slo.steam_game_running():
+    # A PERGUNTA DO JOGO PASSOU A SER A DO DONO — 21/09/2026. Era
+    # `slo.steam_game_running()` direto, e ele lê uma FOTO de até 5 s. Decidir
+    # um ato destrutivo sobre uma foto de 5 s atrás é decidir sobre um jogo que
+    # já fechou — ou não ver um que acabou de abrir. `rl.jogo_aberto` invalida
+    # a foto antes de perguntar, que é o que todo gesto destrutivo desta casa
+    # faz desde 25/08/2026.
+    #
+    # E ELE ALCANÇA O HEROIC E O LUTRIS, que era o §2 desta sprint: os dois
+    # lançam pelo `umu`, que se anuncia como Steam (`steam_app_<N>`), então a
+    # agulha do `reaper SteamLaunch AppId=` casa os jogos deles também.
+    if rl.jogo_aberto():
         raise RuntimeError(
             "Tem jogo aberto — feche-o e clique de novo. Com o jogo vivo o "
             "Windows do Proton regrava esse ajuste ao sair, e a mudança seria "
