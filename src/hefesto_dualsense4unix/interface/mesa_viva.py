@@ -735,7 +735,26 @@ def estado_do_botao_do_mic(luz: object) -> str:
 #: BOTÃO (mudo apaga, ligado acende), e com isso ela deixou de distinguir
 #: sozinha *"ligado"* de *"ligado e alguém te ouvindo"*. A aba Controle é quem
 #: passa a dizer QUEM, por escrito, e esta é a única cópia dessas palavras.
-NINGUEM_TE_OUVE = "Ninguém está te ouvindo ainda."
+#: **A FRASE SAIU DA TELA EM 21/09/2026, POR ORDEM DELA**, e a constante fica
+#: vazia em vez de sumir: quem a lia é a régua, e apagar o nome deixaria a
+#: decisão sem sujeito.
+#:
+#:     "Ninguém está te ouvindo ainda. na real essa frase não faz sentido
+#:      tambem.  <!-- noqa-acento: a digitação dela não se limpa -->
+#:      pq sinceramente se o mic tá ativo tá subentendido que ele tá
+#:      funcionando sempre. pode remover ela."
+#:
+#: **A DECISÃO DE 19/09 NÃO SE APAGA — ela CADUCOU, e a razão é medida.** A
+#: frase nasceu porque o microfone LIGADO com nenhum app gravando apagava a luz
+#: do controle, e ela desligou o próprio microfone achando que o ligava; a
+#: linha existia para explicar que *acesa* não quer dizer *alguém te escuta*.
+#: **A luz passou a acender em 19/09**, e com ela a premissa da frase caiu: o
+#: selo «ATIVO» do cartão já diz o que ela precisa saber.
+#:
+#: E AS OUTRAS FRASES FICAM. *"Discord está te ouvindo."* é informação que
+#: nada mais na tela dá, e ela não pediu para tirar — o que saiu é o estado
+#: VAZIO, que é o normal e não merece uma linha.
+NINGUEM_TE_OUVE = ""
 
 #: Quantos caracteres cabem em UMA linha da `.ressalva` do bloco do microfone,
 #: e o número é MEDIDO — Chrome headless sobre `mockup/02-controles.html` na

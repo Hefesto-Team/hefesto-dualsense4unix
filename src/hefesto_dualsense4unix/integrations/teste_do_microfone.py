@@ -323,7 +323,19 @@ def fonte_do_controle(uniq: str, *, saida_pactl: str = "") -> str | None:
         ambiente["LC_ALL"] = "C"
         try:
             saida = subprocess.run(  # argv fixo, sem shell
-                ["pactl", "list", "sources"],
+                # **`short` É OBRIGATÓRIO, E A FALTA DELE CALAVA O BOTÃO** —
+                # medido na mesa dela em 21/09/2026, com o microfone ATIVO e o
+                # nó de pé: `fontes_dualsense` parseia o formato CURTO
+                # (`índice\tnome\tdriver\tformato\testado`), e a docstring
+                # dela diz isso com todas as letras. Na saída LONGA o
+                # `linha.split("\t")` devolve `["", "Name: hefesto_mic_e64203"]`
+                # e o nome sai com o rótulo colado — nenhum nó casa, a lista
+                # volta com lixo, e o gesto recusa dizendo *"não consegui abrir
+                # o microfone deste controle"* sobre um microfone que está lá.
+                #
+                # Ela clicou o 🎙 e não ouviu nada: `[gesto falhou]
+                # 02-controles.html · mic-testar` no `interface.log`, às 01:36.
+                ["pactl", "list", "short", "sources"],
                 capture_output=True,
                 text=True,
                 timeout=5,
