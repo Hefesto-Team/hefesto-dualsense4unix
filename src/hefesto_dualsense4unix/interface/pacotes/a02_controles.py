@@ -4074,6 +4074,62 @@ def _lembrar_do_som(
     loader.save_profile(adiante, origem="interface-nova")
 
 
+@gesto("02-controles.html", "mic-testar")
+def mic_testar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O 🎙 — fala três segundos e ouve de volta, como o «testar» do Discord.
+
+    **A ORDEM É DELA, 20/09/2026:** *"aquele glifo antigo de mic que servia
+    para ligar o microfone volta a tela mas ele passa a ter o efeito do testar
+    microfone do discord, ele reflete os slicers que vão mostrar no jogo como o
+    microfone é ouvido e após três segundos de fala capturada de audio ele
+    reproduz na tela o seu som falado"*.  <!-- noqa-acento: citação literal dela -->
+
+    **ELE DEIXOU DE CALAR, e a razão é dela também:** *"não precisamos dele
+    mais na interface pq o botão do
+    proprio  # noqa-acento: citação literal dela
+    controle já o faz e ele reflete
+    isso"*. O mudo continua existindo — no plástico, onde `mic_da_mesa` já é o
+    dono de "quem apertou" e a tela já espelha o estado. O que sai é a
+    DUPLICATA, e com ela a frase que confiscava o botão do controle até o
+    reinício.  <!-- noqa-acento: citação literal dela -->
+
+    **OS DESLIZANTES SE REFLETEM SOZINHOS, e é por isso que este gesto não os
+    lê.** O volume e o ganho agem no NÓ do PipeWire; o `parec` que grava lê o
+    mesmo nó, depois deles. Ler os valores aqui e aplicá-los de novo seria a
+    segunda grafia do mesmo fato — e daria um resultado ao quadrado.
+
+    **O BOTÃO FICA EM VOO ENQUANTO GRAVA, e isso é o desenho e não o custo.**
+    O piloto despacha cada gesto numa thread (`interface/hefesto_vivo.py:2661`),
+    então a tela não congela; e o `finally` dele só devolve o botão quando o
+    gesto retorna. Quem clicou vê o botão ocupado exatamente enquanto o
+    microfone está aberto — que é o retorno que o Discord dá.
+
+    ONDE AS RECUSAS POUSAM: no cartão daquele controle, por
+    `Piloto._recusou_dizendo`, como todo `RuntimeError` desta aba.
+    """
+    from hefesto_dualsense4unix.integrations.teste_do_microfone import (
+        testar_e_devolver,
+    )
+
+    uniq = _uniq(o)
+    if not uniq:
+        raise ValueError("mic-testar: o clique não disse em qual controle")
+
+    gravado = testar_e_devolver(uniq)
+    if gravado is None:
+        # AUSÊNCIA É RESPOSTA, e ela NÃO é "seu microfone está mudo": ou não há
+        # nó de captura para este controle, ou o gravador não subiu nesta
+        # máquina. Dizer "mudo" aqui culparia o aparelho por uma falta nossa.
+        raise RuntimeError(
+            "não consegui abrir o microfone deste controle para testar")
+    if not gravado.pcm:
+        if gravado.motivo == "fonte-fechou":
+            raise RuntimeError(
+                "o microfone deste controle fechou no meio do teste")
+        raise RuntimeError(
+            "não ouvi sua voz — fale mais perto do controle e tente de novo")
+
+
 @gesto("02-controles.html", "mudo", grava="save_profile")
 def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O 🎙 e o ♪ — os dois botões de calar, e eles ALTERNAM o que a tela mostra.

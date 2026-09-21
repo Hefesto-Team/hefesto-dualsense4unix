@@ -7,7 +7,7 @@
 #  pq é um jogo de um player e o erro era que o player 3 tava recebendo a
 #  vibração de forma espelhada".
 #
-# O instrumento anterior media se A CORRENTE fechava. Este mede QUEM RECEBE, que
+# O instrumento anterior mediu se A CORRENTE fechava. Este mede QUEM RECEBE, e
 # é a pergunta que a queixa dela faz.
 #
 # Só lê o journal do daemon. Não toca em nada.

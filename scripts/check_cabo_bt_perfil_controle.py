@@ -85,6 +85,12 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                           "`.desktop` — é da máquina, e nada aqui toca o "
                           "controle",
     "ver-detalhes": "joga o registro técnico no painel — é leitura",
+    "mic-testar": "grava três segundos da voz e a reproduz — é LEITURA do "
+                  "microfone mais uma tocada na saída padrão, e não muda "
+                  "estado nenhum: nem no aparelho, nem no perfil. O volume e "
+                  "o ganho que ele reflete são dos deslizantes ao lado, que "
+                  "têm as quatro respostas por conta deles "
+                  "(TESTAR-O-MICROFONE-01, 20/09/2026)",
     # ---- máquina e serviço: nada disso passa pelo controle ----
     "hefesto": "liga e desliga o MODO do produto — é do serviço",
     "desligar": "para o serviço — é systemd",

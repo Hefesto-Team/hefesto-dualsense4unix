@@ -838,7 +838,11 @@ O_SOM_EM_TRES_ESTADOS = r"""
 
   // O 🎙 DOS DOIS CARDS: nenhuma cor congelada, e nenhum endereço — quem diz o
   // estado do microfone é o selo ao lado, que é vivo.
-  const mics = [...document.querySelectorAll('.mudo-i[data-mudo="microfone"]')]
+  // O SELETOR MUDOU EM 20/09/2026, e não é afrouxamento: o 🎙 deixou de ter
+  // `data-mudo` porque deixou de CALAR (ordem dela), e procurá-lo por ali
+  // devolvia lista vazia — a régua mediria o nada e passaria. O que ela mede
+  // continua igual: a cor não vem do gerador, e o endereço vivo está lá.
+  const mics = [...document.querySelectorAll('.mudo-i[data-gesto="mic-testar"]')]
     .map(m => ({classe: m.className, campo: m.dataset.campo || '',
                 borda: getComputedStyle(m).borderTopColor}));
 
@@ -1054,7 +1058,7 @@ def test_a_dica_do_som_nao_manda_para_janela_nenhuma() -> None:
     primeira asserção reprova achando a palavra `janela`; devolva o
     `hefesto-dualsense4unix speaker release` e a segunda reprova.
     """
-    for nome, dica in (("🎙", a02_gerador.DICA_MIC_MUDO),
+    for nome, dica in (("🎙", a02_gerador.DICA_MIC_TESTAR),
                        ("♪", a02_gerador.DICA_ALTO_MUDO)):
         assert "janela" not in dica.lower(), (
             f"a dica do {nome} continua mandando para uma janela: {dica!r}")
@@ -1062,12 +1066,22 @@ def test_a_dica_do_som_nao_manda_para_janela_nenhuma() -> None:
             f"a dica do {nome} voltou a pôr uma linha de comando na tela — "
             f"a língua desta casa a proíbe em texto de tela: {dica!r}")
 
-    # A SAÍDA QUE SOBRA É A QUE ELA PODE EXECUTAR, e ela continua escrita: o
-    # 🎙 tira o botão do controle das mãos de quem o segura, e quem lê precisa
-    # saber como devolvê-lo sem digitar nada.
-    assert "reinicie o Hefesto" in a02_gerador.DICA_MIC_MUDO, (
-        "a dica do 🎙 deixou de dizer como devolver o botão ao controle — é a "
-        "única saída que existe fora desta tela, e ela é um clique")
+    # A ASSERÇÃO DO «reinicie o Hefesto» CADUCOU COM O ATO — 20/09/2026.
+    # Ela cobrava que a dica do 🎙 dissesse como devolver o botão do controle,
+    # porque o 🎙 o CONFISCAVA até o reinício. O botão deixou de calar, por
+    # ordem dela: *"não precisamos dele mais na interface pq o botão do
+    # proprio  # noqa-acento: citação literal dela
+    # controle já o faz e ele reflete isso"*.  <!-- noqa-acento: citação literal dela -->
+    # Sem confisco não há o que devolver, e cobrar a frase manteria na tela uma
+    # saída para um problema que o produto não cria mais.
+    #
+    # O QUE SOBRA NO LUGAR, e é o que esta régua passa a medir: a dica tem de
+    # APONTAR ONDE SE CALA. Tirar o ato da tela sem dizer para onde ele foi
+    # deixaria quem lê procurando um botão que não existe — a primeira
+    # proibição da língua desta casa.
+    assert "controle" in a02_gerador.DICA_MIC_TESTAR.lower(), (
+        "a dica do 🎙 não diz mais onde se cala o microfone — o ato saiu da "
+        "tela e quem lê precisa saber que ele está no plástico")
 
 
 def test_nenhum_botao_de_som_promete_botao_nesta_tela() -> None:
