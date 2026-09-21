@@ -1975,8 +1975,6 @@ SELO_SOM_DESLIGADO = mesa_viva.selo_do_alto_falante(True, False, True)
 #: APARELHO, e o piloto REMOVE o atributo quando não há leitura, deixando o
 #: cinza de base sozinho. Uma classe ficaria pendurada.
 ATRIBUTO_DA_LUZ_DO_MIC = "data-mic-luz"
-MIC_GRAVANDO = mesa_viva.BOTAO_MIC_GRAVANDO
-MIC_CAPTANDO = mesa_viva.BOTAO_MIC_CAPTANDO
 MIC_RETORNO = mesa_viva.BOTAO_MIC_RETORNO
 
 #: O ATRIBUTO QUE O ♪ VESTE, e ele tem UM dono porque aparece em TRÊS lugares
@@ -3683,16 +3681,14 @@ CSS += f"""
      este mesmo bloco procurando a palavra do movimento, e um comentário que a
      escrevesse viraria a primeira ocorrência do que ele veio dizer que não
      existe mais. Esta casa já pagou por isso quatro vezes em uma semana. */
-  /* O RETORNO acende no mesmo verde — 21/09/2026. Ele entra ao lado dos dois
-     estados da luz e não no lugar deles: o seletor é por VALOR do atributo, e
-     um valor a mais não afrouxa nada. O que mudou é QUAL campo alimenta o
-     atributo neste botão, e isso está no `data-campo` do HTML. */
-  .mudo-i[{ATRIBUTO_DA_LUZ_DO_MIC}="{MIC_RETORNO}"],
-  .mudo-i[{ATRIBUTO_DA_LUZ_DO_MIC}="{MIC_GRAVANDO}"],
-  .mudo-i[{ATRIBUTO_DA_LUZ_DO_MIC}="{MIC_CAPTANDO}"]{{
+  /* O RETORNO É O ÚNICO VALOR QUE SOBROU — 21/09/2026. As duas regras dos
+     estados da LUZ DO PLÁSTICO saíram com o campo que as escrevia: o 🎙 passou
+     a vestir o que ele CAUSA, e o valor que ninguém escreve mais não pode
+     ficar no seletor. É a regra que o `.solta` deixou — *"CSS de elemento que
+     ninguém mais escreve é promessa esperando alguém tropeçar nela"* —, e o
+     parágrafo acima já a aplicava a si mesmo. */
+  .mudo-i[{ATRIBUTO_DA_LUZ_DO_MIC}="{MIC_RETORNO}"]{{
     border-color:var(--green);color:var(--green)}}
-  .mudo-i[{ATRIBUTO_DA_LUZ_DO_MIC}="{MIC_CAPTANDO}"]{{
-    background:rgba(80,250,123,.14)}}
 """
 
 MIOLO = f'''
@@ -3747,7 +3743,7 @@ LEGENDA = f'''<div class="nota">
   <ul>
     <li><b>Os dois primeiros botões do alto-falante têm os nomes que você escreveu</b> — <b>{ROTULO_SO_OS_EFEITOS}</b> e <b>{ROTULO_EFEITOS_MAIS_A_TV}</b>. Você derrubou o enunciado anterior e o que você derrubou era conceito, não palavra: <i>"não gosto do termo jogo pra se referir ao canal especifico pro sfx do controle, pq hdmi tecnicamente é jogo que manda pra lá também"</i>. Os dois não são duas fontes — são dois modos do <b>mesmo</b> alto-falante: um deixa entrar só o que o jogo endereçar a este controle, o outro derrama tudo o que a máquina toca, sem tirar o som da TV.</li>
     <li><b>A fileira empilhou, e o cartão não cresceu por isso.</b> Os nomes não cabem lado a lado na coluna onde ela vive, então os três botões passaram a ficar um sobre o outro — e os pixels que isso custaria voltaram das alturas vizinhas (o par do microfone, o botão de calar, os dois dos sensores e o respiro das molduras). O cartão ficou <b>mais baixo</b> do que era, e agora existe uma régua que reprova qualquer mudança futura que o faça crescer.</li>
-    <li class="foi"><b>O terceiro botão ainda se chama <code>Só no controle</code>, e está esperando você.</b> O nome que você escreveu para ele foi <i>"Tudo na TV e Nada no Controle"</i>, e este botão faz o oposto: ele traz o som do PC para o alto-falante deste controle e <b>cala a televisão</b>. Pôr o nome novo sem trocar o ato seria a mentira que esta tela existe para não contar; trocar o ato por conta própria apagaria uma escolha sua que está de pé desde 04/09. Diga qual das duas vale e ele muda no mesmo dia.</li>
+    <li><b>O terceiro botão ganhou o nome que você escreveu</b> — <b>{ROTULO_NADA_NO_CONTROLE}</b> —, e ganhou porque o <b>ato</b> mudou primeiro. Ele esperou dois dias: o nome descrevia o oposto do que o botão fazia, e pôr o nome novo sem trocar o ato seria a mentira que esta tela existe para não contar. Agora ele faz os dois lados do próprio nome: devolve todo o som do computador à televisão <b>e</b> tira o alto-falante deste controle do caminho.</li>
   </ul>
 
   <h2>O que mudou em 11/09</h2>

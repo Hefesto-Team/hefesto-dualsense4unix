@@ -94,7 +94,7 @@ def test_a_rota_do_fone_apaga_os_tres() -> None:
     Acender a mais parecida seria arredondar o byte para o botão vizinho.
 
     **A ROTA 0 SAIU DAQUI EM 21/09/2026, e o motivo é entrega.** Esta régua
-    media `[0, 1]` — e a 0 ganhou botão por ordem dela: *"os 3 botões de som
+    cobrava `[0, 1]` — e a 0 ganhou botão por ordem dela: *"os 3 botões de som
     tem que ter saídas diferenciadas"*. «Tudo na TV e Nada no Controle» É o
     byte 0, então exigir que ele apague os três passou a cobrar o mundo de
     ontem: a régua reprovaria a cura em vez do defeito.

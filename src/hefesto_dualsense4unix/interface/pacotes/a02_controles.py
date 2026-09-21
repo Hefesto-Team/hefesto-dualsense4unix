@@ -1129,10 +1129,13 @@ def rota_na_tela(entry: Any) -> str:
     quando o daemon nunca publicou `speaker` para este controle — o estado real
     de quem nunca recebeu um `speaker.set` (`ipc_handlers.py:4212`).
 
-    ELE TAMBÉM APAGA OS DOIS NAS ROTAS 0 E 1 (tudo no fone, mono no fone), e
-    isso é de propósito: são rotas legítimas do protocolo que estes dois botões
-    não representam. Acender um deles ali seria arredondar o byte para o botão
-    mais parecido.
+    ELE TAMBÉM APAGA OS TRÊS NA ROTA 1 (mono no fone), e isso é de propósito:
+    é rota legítima do protocolo que estes botões não representam, e acender o
+    mais parecido seria arredondar o byte.
+
+    **A ROTA 0 SAIU DESSA LISTA EM 21/09/2026:** ela GANHOU botão — «Tudo na TV
+    e Nada no Controle», o terceiro nome dela —, e o byte passa a acender o que
+    ele significa. Ver `NOME_DO_BOTAO_DA_ROTA`.
     """
     bloco = _bloco_do_speaker(entry)
     if bloco is None:
@@ -1933,6 +1936,22 @@ ROTA_OUVIR_JUNTO = "junto"
 #: IPC, porque a capacidade «som do PC no controle» tem dono, régua e ensaio —
 #: o que ela perdeu foi o botão, não o caminho.
 ROTA_NADA_NO_CONTROLE = "nada"
+
+#: **OS TRÊS BOTÕES DA FILEIRA, e um dono só — 21/09/2026.**
+#:
+#: `NOME_DO_BOTAO_DA_ROTA` responde outra pergunta (*"que nome tem o byte
+#: tal?"*) e continua mapeando o byte 3 para `"pc"`. **Mas `"pc"` não é mais um
+#: botão desta fileira** desde 20/09, quando ela trocou o ATO do terceiro:
+#: *"O nome está certo, mude o ato."*
+#:
+#: As duas coisas são verdade ao mesmo tempo, e confundi-las já custou: a régua
+#: do desenho derivava a fileira dos VALORES daquele dicionário e cobrava um
+#: botão `pc` que a página não tem — e reprovava a decisão dela em vez de um
+#: defeito.
+#:
+#: O `"pc"` continua vivo no GESTO, no perfil e no IPC: a capacidade «som do PC
+#: no controle» tem dono, régua e ensaio. O que ela perdeu foi o botão.
+BOTOES_DA_FILEIRA_DO_SOM = ("jogo", ROTA_OUVIR_JUNTO, ROTA_NADA_NO_CONTROLE)
 
 
 def fonte_do_controle(entry: Any) -> str:
@@ -2973,8 +2992,28 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # é a regra do ♪ nesta mesma coluna.
             "mic-retorno": (mesa_viva.BOTAO_MIC_RETORNO
                             if monitor_do_microfone.esta_ligado(uniq) else ""),
-            "mic-botao-estado": mesa_viva.estado_do_botao_do_mic(
-                a.get("luz_do_mic")),
+            # **`mic-botao-estado` SAIU DAQUI — 21/09/2026, e não por
+            # descuido.** Ele levava ao 🎙 os três estados da LUZ DO PLÁSTICO
+            # (apagada · acesa · piscando), pedido dela em 10/09: *"ele
+            # captando audio vai ficar no estado de piscando (guia visual pro
+            # leigo)"*.  # noqa-acento: citação literal dela
+            #
+            # Em 21/09 ela trocou o ATO do mesmo botão — *"SE EU ATIVAR COM UM
+            # CLICK E ELE FICAR VERDE (…) POR DEFAULT SEGUE DESLIGADO"* — e os
+            # dois não cabem num elemento só: o microfone dela nasce ATIVO
+            # (ordem de 18/09), então a luz deixaria o 🎙 verde **sem ela ter
+            # clicado**, que é exatamente o que ela mandou não acontecer.
+            #
+            # Com o 🎙 vestindo o retorno, o campo ficou SEM ELEMENTO — e campo
+            # sem elemento é o que `test_a_aba_controles_reusa_o_motor` proíbe
+            # com todas as letras: ele sai a cada tique e não muda nada.
+            # Mantê-lo *"para quem o leia"* é a dívida que aquele portão existe
+            # para não deixar nascer.
+            #
+            # **O QUE NÃO SE PERDEU:** o byte continua acendendo o LED do
+            # PLÁSTICO — é hardware, não tela —, e o selo ao lado continua
+            # dizendo ATIVO/MUDO. O que saiu foi a segunda cópia disso num
+            # botão que passou a significar outra coisa.
             # O VOLUME DO MICROFONE — 12/09/2026, e é a METADE QUE FALTOU da
             # decisão dela de 02/09 (item 16): *"o número E a barra. Hoje os
             # dois estão congelados no desenho: com o volume em 40, a tela
@@ -4449,8 +4488,10 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     uniq, qual = _uniq(o), str(o.get("rota") or "")
     if not uniq:
         raise ValueError("rota: o clique não disse em qual controle")
-    if qual not in ("jogo", "pc", ROTA_OUVIR_JUNTO,
-                    ROTA_NADA_NO_CONTROLE):
+    # A FILEIRA VEM DO DONO, e o `"pc"` entra ao lado dela: ele não é botão
+    # desta fileira desde 20/09, mas continua sendo rota válida pelo perfil,
+    # pelo IPC e pela CLI — ver `BOTOES_DA_FILEIRA_DO_SOM`.
+    if qual not in (*BOTOES_DA_FILEIRA_DO_SOM, "pc"):
         raise ValueError(f"rota: não conheço a rota {qual!r} — a página manda "
                          f"'jogo', 'junto', 'nada' ou 'pc'")
 

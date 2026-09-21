@@ -696,8 +696,19 @@ def selo_do_alto_falante(mudo: bool, dormindo: bool, sabemos: bool) -> str:
 #: São palavras e não números porque quem as lê é um SELETOR DE CSS, e um
 #: seletor com o número do protocolo dentro (`[data-mic-luz="2"]`) não diz nada
 #: a quem abre a folha. O número fica do lado de quem fala com o aparelho.
-BOTAO_MIC_GRAVANDO = "gravando"
-BOTAO_MIC_CAPTANDO = "captando"
+#: **`BOTAO_MIC_GRAVANDO` E `BOTAO_MIC_CAPTANDO` SAÍRAM — 21/09/2026.**
+#:
+#: Eram as palavras dos três estados da LUZ DO PLÁSTICO no 🎙, pedido dela de
+#: 10/09. Em 21/09 ela trocou o ATO do mesmo botão — *"SE EU ATIVAR COM UM
+#: CLICK E ELE FICAR VERDE (…) POR DEFAULT SEGUE DESLIGADO"* —, o 🎙 passou a
+#: vestir o RETORNO, e as duas palavras ficaram sem elemento que as usasse.
+#:
+#: **O QUE NÃO SE PERDEU, e é por isso que isto é resto e não decisão:** o byte
+#: continua sendo o mesmo que acende o LED vermelho do plástico, e o LED
+#: continua acendendo — é hardware. `luz_do_mic.decidir`, no daemon, continua
+#: sendo o dono dos quatro estados. O selo ao lado do botão continua dizendo
+#: ATIVO/MUDO, e a frase de quem está gravando continua onde estava. O que saiu
+#: foi a SEGUNDA cópia disso, num botão que passou a significar outra coisa.
 
 #: **O RETORNO LIGADO** — 21/09/2026, ordem dela sobre o 🎙:
 #:
@@ -715,37 +726,6 @@ BOTAO_MIC_CAPTANDO = "captando"
 #: **O BOTÃO MOSTRA O QUE O BOTÃO CAUSA**, que é a regra desta casa e a mesma
 #: do ♪: ele liga o retorno, e acende enquanto o retorno está de pé.
 BOTAO_MIC_RETORNO = "retorno"
-
-#: O que o daemon publica em `audio.luz_do_mic`, e é o MESMO byte que acende a
-#: luz do plástico (`daemon/subsystems/luz_do_mic`: 0 apagada · 1 acesa ·
-#: 2 piscando · 3 piscando devagar, que é piscando com bateria baixa).
-_LUZ_ACESA, _LUZ_PISCA, _LUZ_PISCA_LENTO = 1, 2, 3
-
-
-def estado_do_botao_do_mic(luz: object) -> str:
-    """A palavra do botão 🎙 para o estado da luz — `""` quando não se sabe.
-
-    **UM DONO, E ELE NÃO DECIDE NADA** — traduz. Quem decide os três estados é
-    `luz_do_mic.decidir`, no daemon, e é o mesmo byte que acende a luz no
-    plástico; escrever um segundo ternário aqui (mudo? canal? nível?) poria a
-    tela e o controle na mão dela discordando no primeiro dia em que um dos
-    dois fosse corrigido.
-
-    `""` é resposta de primeira classe: nenhuma classe acende, e o botão fica
-    com o cinza de base — *"ninguém leu o microfone deste controle"*. É a mesma
-    disciplina do terceiro estado do ♪.
-
-    O `3` (piscando devagar, bateria baixa) devolve a mesma palavra do `2`: a
-    diferença entre eles é um aviso de CARGA, e a carga já tem lugar próprio no
-    cartão. Duas piscadas diferentes no mesmo botão seriam duas gramáticas para
-    quem só quer saber se está sendo ouvido.
-    """
-    if isinstance(luz, bool) or not isinstance(luz, int):
-        return ""
-    if luz in (_LUZ_PISCA, _LUZ_PISCA_LENTO):
-        return BOTAO_MIC_CAPTANDO
-    return BOTAO_MIC_GRAVANDO if luz == _LUZ_ACESA else ""
-
 
 #: A FRASE DE QUEM TE OUVE — 19/09/2026, a outra metade da decisão dela na
 #: `A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01`. A luz do plástico passou a espelhar o
@@ -835,7 +815,19 @@ def estado_do_card(
     mic: Any = None,
     mic_vol: int | None = None,
     canal: str = "",
-    rota_pc: bool | None = None,
+    # **`rota_pc` VIROU `rota_nada` EM 21/09/2026**, e a troca não é de nome:
+    # é de PERGUNTA. O `rota_pc` respondia *"a saída padrão do sistema é este
+    # controle?"* — a camada 1 —, e acendia o botão «Só no controle». Aquele
+    # botão saiu da fileira em 20/09, quando ela trocou o ato do terceiro
+    # (*"O nome está certo, mude o ato."*), e o que existe hoje é «Tudo na TV e
+    # Nada no Controle», que é o BYTE 0 do firmware.
+    #
+    # `aba02.bloco` foi renomeado naquele dia e esta ponta ficou para trás:
+    # `estado_do_card` continuou entregando `rota_pc`, e o `bloco()` passou a
+    # levantar `TypeError: missing keyword-only argument 'rota_nada'` — onze
+    # erros na suíte, e a bancada de tela morta. *A renomeação que alcança um
+    # lado só é a mesma família do `mic-botao-estado` órfão.*
+    rota_nada: bool | None = None,
     onda_mic: list[int] | None = None,
 ) -> dict[str, Any]:
     """Os kwargs que `aba02.bloco()` pede, a partir de UM `entry` do IPC.
@@ -963,7 +955,7 @@ def estado_do_card(
         "alto_pode": alto_pode,
         "mic_vol": mic_vol if mic_vol is not None else 0,
         "alto_v": [alto_pct if alto_pct is not None else 0] + [PISO_DA_ONDA] * (QUADROS_DA_ONDA - 1),
-        "rota_pc": bool(rota_pc),
+        "rota_nada": bool(rota_nada),
         "estado_alto": canal or "",
         # `None` = NÃO SEI, e é diferente de zero. O DualSense não devolve o
         # volume que tem — a chave `speaker` só aparece depois de um

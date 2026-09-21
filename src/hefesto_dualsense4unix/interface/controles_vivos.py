@@ -204,9 +204,16 @@ ROTEIRO_DA_PROVA_DE_GESTO: tuple[tuple[int, str] | tuple[int, str, str], ...] = 
     # botões do auto falante estão errados também e não estão funcionando"*.
     # Uma prova que exercita um de três passa verde sobre os outros dois, que
     # é a família `regua-que-mede-o-arranjo-facil` — a mesma que já mordeu esta
-    # casa neste mesmo dia. Eles vão em ordem de volta: `pc` sai da saída
-    # padrão, `junto` liga o `mix`, `jogo` devolve tudo ao lugar.
-    (2500, '.rota button[data-rota="pc"]'),
+    # casa neste mesmo dia. Eles vão em ordem de volta: `nada` devolve o som
+    # à TV, `junto` liga o `mix`, `jogo` devolve tudo ao lugar.
+    #
+    # **ERA `pc` ATÉ 21/09/2026**, e o botão saiu da fileira em 20/09, quando
+    # ela trocou o ATO do terceiro (*"O nome está certo, mude o ato."*). Um
+    # roteiro que clica num seletor que a página não tem bate em `null`,
+    # levanta dentro do WebKit e o `_js` não lê o erro: **a prova dá VERDE
+    # sobre um botão morto**, que é exatamente o defeito que ela existe para
+    # pegar.
+    (2500, '.rota button[data-rota="nada"]'),
     (2800, '.rota button[data-rota="junto"]'),
     (3100, '.rota button[data-rota="jogo"]'),
     (3400, '[data-mudo="alto-falante"]'),
@@ -1320,7 +1327,7 @@ class Janela:
                 entrada,
                 mic_vol=self.lento.get(c["uniq"], {}).get("mic_vol"),
                 canal=self.lento.get(c["uniq"], {}).get("canal", ""),
-                rota_pc=self.lento.get(c["uniq"], {}).get("rota_pc"),
+                rota_nada=self.lento.get(c["uniq"], {}).get("rota_nada"),
                 onda_mic=self._onda(c["uniq"]),
             )
 
@@ -1550,7 +1557,8 @@ class Janela:
                 "vol_n": "—" if alto_pct is None else str(alto_pct),
                 "mudo": eco_alto_mudo,
                 "pode": e["alto_pode"],
-                "rota": self.eco_rota.get(c["uniq"], "pc" if e["rota_pc"] else "jogo"),
+                "rota": self.eco_rota.get(
+                    c["uniq"], "nada" if e["rota_nada"] else "jogo"),
             },
             # OS DOIS INTERRUPTORES NASCEM DESLIGADOS, e é a resposta honesta:
             # não há campo no perfil, método no IPC nem gate no daemon — grep de
@@ -1578,9 +1586,11 @@ class Janela:
             from hefesto_dualsense4unix.integrations.audio_control import volume_da_captura
 
             lista = audio_saida.rodar_leitura(["pactl", "list", "sinks", "short"])
-            padrao = audio_saida.sink_padrao_da_saida(
-                audio_saida.rodar_leitura(["pactl", "info"])
-            )
+            # A SAÍDA PADRÃO SAIU DESTA FAIXA em 21/09/2026, e o `pactl info`
+            # com ela: ela servia só ao `rota_pc`, que era o botão «Só no
+            # controle» — e esse botão deixou a fileira. Uma leitura de
+            # processo por tique lento para alimentar um campo que ninguém
+            # mostra é custo sem entrega.
             novo: dict[str, dict[str, Any]] = {}
             for uniq in alvos:
                 sink = self.mic.sink_de(uniq) if self.mic is not None else ""
@@ -1591,7 +1601,18 @@ class Janela:
                     fonte = getattr(leitura, "fonte", "") if leitura else ""
                 novo[uniq] = {
                     "canal": {"acordado": "Acordado", "dormindo": "Dormindo"}.get(canal, ""),
-                    "rota_pc": bool(sink) and padrao == sink,
+                    # **A FAIXA LENTA NÃO SABE O BYTE, e dizer que sabe é o
+                    # defeito.** Ela lê o SERVIDOR DE SOM (`pactl`), e o que
+                    # respondia aqui — *"a saída padrão é este controle?"* —
+                    # era a camada 1, que acendia o botão «Só no controle». Esse
+                    # botão saiu da fileira em 20/09. O terceiro de hoje é o
+                    # byte 0 do firmware, e o firmware não passa por esta faixa.
+                    #
+                    # Quem responde de verdade é o PRODUTO, pelo campo
+                    # `alto-rota` (`audio_saida.botao_da_rota_aceso`, que lê as
+                    # DUAS camadas). Esta bancada mostra o eco do clique, que é
+                    # o que ela existe para exercitar.
+                    "rota_nada": False,
                     "mic_vol": volume_da_captura(fonte=fonte) if fonte else None,
                 }
             GLib.idle_add(self._guardar_lento, novo)

@@ -696,7 +696,13 @@ def test_a_eleicao_nao_muda_quem_e_ouvido_no_canal_de_cada_um(pactl, monkeypatch
 
 #: OS CHAMADORES DE `escolher_fonte`, MEDIDOS por AST em 06/09/2026.
 #:
-#: **SÃO OITO desde 18/09/2026** — `daemon/subsystems/hotkey.py` entrou com o
+#: **SÃO NOVE desde 21/09/2026** — `integrations/teste_do_microfone.py` entrou
+#: com o 🎙 que virou trava: `fonte_do_controle` responde *"de que nó sai a voz
+#: deste controle"* para o retorno do `pw-loopback` montar a ponte. Ele PASSA
+#: PELA REGRA 0 — delega a `escolher_fonte` e não reimplementa escolha nenhuma,
+#: que é o contrato desta lista. Ver a dirigida 9/9.
+#:
+#: **ERAM OITO desde 18/09/2026** — `daemon/subsystems/hotkey.py` entrou com o
 #: nascimento do microfone que não passa por cima da escolha gravada dela: ele
 #: pergunta ao dono DE QUE CONTROLE é o nó que o WirePlumber guarda como padrão.
 #: Ver a dirigida 8/8.
@@ -726,6 +732,7 @@ CHAMADORES_MEDIDOS = frozenset(
         "integrations/eleicao_de_microfone.py",
         "integrations/fontes_de_captura.py",
         "integrations/quem_ouve_o_microfone.py",
+        "integrations/teste_do_microfone.py",
     }
 )
 
