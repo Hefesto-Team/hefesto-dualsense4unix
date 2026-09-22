@@ -614,31 +614,65 @@ def test_a_tela_acende_so_com_a_ponte_de_pe(lar) -> None:
         "a ponte está de pé para este jogo e o chip continua apagado")
 
 
-def test_o_chip_do_steam_input_nao_apaga_o_do_caminho(lar) -> None:
-    """Os DOIS acesos ao mesmo tempo — e é a verdade do degrau 4.
+def _com_o_caminho(caminho: str | None, *, modo_desktop: bool = False) -> Contexto:
+    """O `_ctx()` com outro caminho vivo — ou na Navegação."""
+    ctx = _ctx()
+    ctx.state["gamepad_emulation"] = {"enabled": not modo_desktop,
+                                      "flavor": caminho or "", "caminho": caminho}
+    return ctx
 
-    `ponte_escada.ESCADA[3]` é `Ponte(gamepad, dualsense, steam_input=True)` e
-    tem `recria_vpad=False`: o Steam Input senta EM CIMA do caminho DualSense em
-    vez de substituí-lo. «Sony DualSense» e «Steam Input» são verdade juntos.
 
-    A MORDIDA: devolva o chip do Steam Input ao campo `modo-aceso`
-    (`aba01._campo_do_chip`) e os dois passam a disputar UM endereço — o piloto
-    escreve o mesmo valor em todo elemento daquele `data-campo`, e acender um
-    apaga o outro. Esta linha reprova.
-    """
+def _ponte_de_pe() -> None:
     slo.add_appid_to_steam_input_allowlist(APPID)
     ponte.garantir_ponte(allowlist=[APPID])
     aba.VIGIA_DO_STEAM_INPUT.esquecer()
     aba.VIGIA_DO_STEAM_INPUT.ler()
 
+
+def test_com_a_ponte_de_pe_so_o_steam_input_acende(lar) -> None:
+    """UM ACESO SÓ — a D-2 da sprint, decidida por ela em 21/09/2026.
+
+    A régua daqui cobrava os DOIS acesos («Sony DualSense» + «Steam Input»), o
+    padrão que a sprint propôs enquanto a D-2 esperava a palavra dela. A
+    palavra veio com a aba aberta: *"dois botões ligados no modo"*. O Steam
+    Input é o DEGRAU 4 da escada (`ponte_escada.ESCADA[3]`, que senta sobre o
+    caminho DualSense), e o degrau em que se está é um.
+
+    A MORDIDA: apague o `if steam: aceso = ""` de `a01_jogar._estado_da_tela`
+    e a primeira asserção reprova — os dois voltam a acender juntos.
+    """
+    _ponte_de_pe()
+
     fora = aba._estado_da_tela(_ctx().state)
-    assert fora["modo-aceso"] == "dualsense", (
-        f"o caminho vivo deixou de acender: {fora['modo-aceso']!r}")
+    assert fora["modo-aceso"] == "", (
+        f"o «Sony DualSense» acendeu junto com o Steam Input: {fora['modo-aceso']!r}")
     assert fora["steam-input-aceso"] == "steam", (
-        f"o Steam Input não acendeu junto: {fora['steam-input-aceso']!r}")
+        f"a ponte está de pé e o Steam Input não acendeu: {fora['steam-input-aceso']!r}")
     assert "steam-input-aceso" in aba.DA_PAGINA, (
         "o endereço não está na promessa da aba — o `cobertura` passaria a "
         "contar um campo que a régua não confere")
+
+
+@pytest.mark.parametrize(("caminho", "desktop", "quem"), [
+    ("xbox", False, "xbox"),
+    ("dualsense", True, "navegacao"),
+])
+def test_fora_do_degrau_4_acende_o_chip_de_verdade(lar, caminho, desktop, quem) -> None:
+    """Sobre o Xbox, ou na Navegação, o degrau 4 não está de pé.
+
+    A lista dela e o vdf dizem Steam Input para o jogo, e o chip dele NÃO
+    acende: a ponte da escada é gamepad + DualSense + Steam Input, e a tela
+    mostra o degrau em que se está. A MORDIDA: troque a guarda
+    `aceso != CAMINHO_SOB_O_STEAM_INPUT` por nada e o Steam Input volta a
+    acender aqui, apagando o chip que está de verdade no comando.
+    """
+    _ponte_de_pe()
+
+    fora = aba._estado_da_tela(_com_o_caminho(caminho, modo_desktop=desktop).state)
+    assert fora["steam-input-aceso"] == "", (
+        f"o Steam Input acendeu fora do degrau 4 ({caminho}, desktop={desktop})")
+    assert fora["modo-aceso"] == quem, (
+        f"esperava {quem!r} aceso e saiu {fora['modo-aceso']!r}")
 
 
 def test_o_chip_do_steam_input_tem_UM_endereco_proprio_e_cravado() -> None:  # noqa: N802
@@ -682,8 +716,8 @@ def test_o_chip_do_steam_input_tem_UM_endereco_proprio_e_cravado() -> None:  # n
     assert por_campo[aba01.CAMPO_DO_STEAM_INPUT] == 1, (
         f"esperava UM chip em `{aba01.CAMPO_DO_STEAM_INPUT}` e a tabela dá "
         f"{por_campo[aba01.CAMPO_DO_STEAM_INPUT]} (de {len(aba01.MODOS)} "
-        f"chips). Partilhando o `{aba01.CAMPO_DO_MODO}`, acender o Steam Input "
-        f"APAGA o «Sony DualSense» — e os dois são verdade ao mesmo tempo")
+        f"chips). Partilhando o `{aba01.CAMPO_DO_MODO}`, o Steam Input perde o "
+        f"endereço por onde `_estado_da_tela` o acende — e nunca mais acende")
 
     corpo = onde.pagina("01-jogar.html").read_text(encoding="utf-8")
     quantos = corpo.count(f'data-campo="{aba01.CAMPO_DO_STEAM_INPUT}"')
