@@ -1499,11 +1499,14 @@ def _campo_do_chip(m):
 
     O Steam Input não é exclusivo de nenhum deles: o degrau 4 da
     `ponte_escada.ESCADA` é ``Ponte(gamepad, dualsense, steam_input=True)`` e
-    tem ``recria_vpad=False`` — ele senta EM CIMA do caminho DualSense. Logo
-    «Sony DualSense» e «Steam Input» passam a poder estar acesos ao mesmo
-    tempo, e num campo compartilhado o valor de um APAGARIA o outro: o piloto
-    escreve o mesmo valor em todo elemento do endereço, e cada um acende só se
-    casar o `data-hef-quando`.
+    tem ``recria_vpad=False`` — ele senta EM CIMA do caminho DualSense.
+
+    **FATO SUBSTITUÍDO — 21/09/2026.** Aqui se dizia que os dois passavam a
+    poder estar acesos juntos; era o padrão da sprint enquanto a D-2 esperava a
+    palavra dela, e ela decidiu UM SÓ (*"dois botões ligados no modo"*). O campo
+    próprio continua: é por ele que o emissor (`pacotes/a01_jogar.
+    _estado_da_tela`) diz qual dos dois acende, porque o Steam Input não tem
+    caminho e o laço do ``modo-aceso`` nunca o escolheria.
 
     **CUSTO ZERO DE PIXEL, e foi o que decidiu.** `data-campo` está em
     `scripts/check_o_desenho_aprovado.INVISIVEIS`, e a classe acesa continua
@@ -2456,8 +2459,8 @@ def _conferir(doc):
            f"o chip do Steam Input não tem campo próprio: esperava 1 chip em "
            f"`{CAMPO_DO_STEAM_INPUT}`, a tabela dá "
            f"{_por_campo[CAMPO_DO_STEAM_INPUT]}. Partilhando o "
-           f"`{CAMPO_DO_MODO}`, acender o Steam Input APAGA o «Sony "
-           f"DualSense» — e os dois são verdade ao mesmo tempo")
+           f"`{CAMPO_DO_MODO}`, o Steam Input perde o endereço por onde o "
+           f"emissor o acende — e o chip nunca mais acende")
     for campo, quantos, oque in (
         ("hef-posicao", len(INTERRUPTOR), "as posições do interruptor"),
         (CAMPO_DO_MODO, _por_campo[CAMPO_DO_MODO],

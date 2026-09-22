@@ -99,9 +99,14 @@ DA_PAGINA: tuple[str, ...] = (
     #
     # O Steam Input é ORTOGONAL ao caminho: o degrau 4 da `ponte_escada.ESCADA`
     # é `Ponte(gamepad, dualsense, steam_input=True)` e tem `recria_vpad=False`
-    # — ele senta EM CIMA do caminho DualSense em vez de substituí-lo. Logo
-    # «Sony DualSense» e «Steam Input» são verdade ao mesmo tempo, e num campo
-    # compartilhado o segundo apagaria o primeiro.
+    # — ele senta EM CIMA do caminho DualSense em vez de substituí-lo.
+    #
+    # FATO SUBSTITUÍDO — 21/09/2026. Aqui se dizia que os dois acendiam juntos,
+    # e era o padrão que a sprint deixou enquanto a D-2 esperava a palavra
+    # dela. A palavra veio — *"dois botões ligados no modo"* — e acende UM, o
+    # degrau em que se está (`_estado_da_tela`, UM ACESO SÓ). O campo próprio
+    # ficou, e é por ele que o Python diz QUAL dos dois acende: o Steam Input
+    # não tem caminho, e o laço do `modo-aceso` nunca o escolheria.
     #
     # CUSTO ZERO DE PIXEL, e foi o que decidiu o desenho: `data-campo`,
     # `data-hef-alvo` e `data-hef-quando` estão todos em
@@ -1693,6 +1698,11 @@ TTL_DO_STEAM_INPUT_S = 20.0
 #: lugares é como os dois algarismos da fileira divergiram em 31/08.
 CHIP_DO_STEAM_INPUT = "steam"
 
+#: O chip sobre o qual o degrau do Steam Input senta — `ESCADA[3]` é
+#: `Ponte(gamepad, dualsense, steam_input=True)`. Só com ele aceso o Steam Input
+#: pode ser o degrau de agora (ver `_estado_da_tela`, UM ACESO SÓ).
+CAMINHO_SOB_O_STEAM_INPUT = "dualsense"
+
 
 @dataclasses.dataclass(frozen=True)
 class _DoSteamInput:
@@ -1950,16 +1960,29 @@ def _estado_da_tela(state: dict[str, Any]) -> dict[str, str]:
     # que de fato é da máquina — a posição do interruptor e o chip da fileira.
     # Quem decide o `modo-aceso` é o `caminho` acima, nunca a máscara
     # (MODO-DE-CONEXAO-01, 13/09/2026).
+    #
+    # UM ACESO SÓ — a D-2 da STEAM-INPUT-01, decidida por ela em 21/09/2026 com
+    # a aba aberta: *"dois botões ligados no modo"*. A sprint deixara os dois
+    # acesos por padrão («Sony DualSense» + «Steam Input») e registrara o «um
+    # só» como o desenho aprovado; a queixa dela escolheu o desenho. O Steam
+    # Input é um DEGRAU da escada (`ponte_escada.ESCADA[3]`: gamepad + DualSense
+    # + Steam Input), e o degrau em que se está é um só: com a ponte de pé
+    # sobre o caminho DualSense quem acende é ele, e o «Sony DualSense» apaga.
+    # Sobre o Xbox ou na Navegação o degrau 4 não está de pé, e acende o chip
+    # de verdade. O campo continua PRÓPRIO (:data:`DA_PAGINA`): é o que deixa o
+    # Python dizer qual dos dois, em vez de o último escrito apagar o outro.
+    steam = _steam_input_da_tela(state)
+    if aceso != CAMINHO_SOB_O_STEAM_INPUT:
+        steam = ""
+    if steam:
+        aceso = ""
     return {
         # AS PALAVRAS SÃO AS DO DESENHO (`aba01.INTERRUPTOR`), e é o `data-hef-
         # quando` de cada rótulo que decide qual acende — o Python manda o
         # ESTADO, não a classe.
         "hef-posicao": "" if ligado is None else ("ligado" if ligado else "desligado"),
         "modo-aceso": aceso,
-        # CAMPO PRÓPRIO, e ele NÃO entra no laço acima: o Steam Input é
-        # ortogonal ao caminho (ver :data:`DA_PAGINA`). Somá-lo ao `aceso`
-        # apagaria o «Sony DualSense» no exato estado em que os dois valem.
-        "steam-input-aceso": _steam_input_da_tela(state),
+        "steam-input-aceso": steam,
     }
 
 
