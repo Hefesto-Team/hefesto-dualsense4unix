@@ -226,26 +226,35 @@ def test_todo_gesto_do_html_tem_dono_ou_esta_declarado_sem_dono(a07):
 
 
 def test_os_botoes_que_a_pintura_traz_existem_no_html_pintado(a07, ctx, desenho):
-    """Os quatro que faltam no HTML estático chegam pela fileira `-acoes`.
+    """A fileira pintada da Steam é a MESMA nos dois estados — e é a dos outros sete.
 
-    Sem esta régua, `Consertar` poderia ter dono, ter prova unitária e **nunca
-    aparecer na tela** — porque a fileira de botões do cartão da Steam é
-    pintada, e um erro ali é mudo.
+    A fileira de botões do cartão da Steam é PINTADA, e um erro ali é mudo: por
+    isso a régua lê o valor que vai para a tela (`steam-acoes`), e não o objeto.
+
+    21/09/2026, palavra dela: *"a ideia é termos os mesmos botões pra todos os
+    lançadores. sempre."* O «Consertar» e o «Ver o que impede» saíram — o
+    reparo é do vigia —, e o estado com jogo faltando passa a ter a MESMA
+    fileira do dia bom.
+
+    A MORDIDA: devolva um botão só ao ramo do reparo e a igualdade reprova.
     """
     lida = desenho.Leitura(
         com_wrapper=("1",),
         reparaveis=(("2", "Um jogo", "nunca recebeu o atalho"),),
         instalados=3)
     html = desenho.Quadro(lancadores=desenho.cartoes(lida)).valores()["steam-acoes"]
-    for nome in ("consertar", "ver-o-que-impede"):
-        assert f'data-gesto="{nome}"' in html, (
-            f"o cartão da Steam com jogo faltando não traz o botão {nome!r}")
     ok = desenho.Leitura(com_wrapper=("1",), instalados=1)
     html_ok = desenho.Quadro(
         lancadores=desenho.cartoes(ok)).valores()["steam-acoes"]
-    assert 'data-gesto="consertar"' not in html_ok, (
-        "o `Consertar` continua aceso numa biblioteca em ordem — um clique que "
-        "não conserta nada é o botão que finge")
+    for acao in desenho.fileira_comum(desenho.STEAM):
+        assert f'data-gesto="{acao.gesto}"' in html, (
+            f"o cartão da Steam com jogo faltando perdeu o «{acao.rotulo}»")
+    assert html == html_ok, (
+        "a fileira da Steam com jogo faltando não é a do dia bom — um botão "
+        "que só aparece num estado é um botão que os outros cartões não têm")
+    for nome in ("consertar", "ver-o-que-impede"):
+        assert f'data-gesto="{nome}"' not in html, (
+            f"o botão {nome!r} voltou ao cartão da Steam")
 
 
 # --------------------------------------------------------------------------
@@ -341,11 +350,11 @@ def test_nenhum_cartao_promete_um_numero_de_controles(desenho):
 
 
 def test_o_selo_segue_os_reparaveis_e_nao_os_faltantes(desenho):
-    """Um jogo INTOCÁVEL não acende o `Consertar`.
+    """Um jogo INTOCÁVEL não faz o cartão acusar impedimento.
 
     `apply_wrapper_vdf_text` pula a linha com a lista de IGNORE estendida à mão
     por construção: remover só o trecho do Hefesto deixaria um fragmento-comando
-    e o jogo nunca mais abriria. Um selo `NÃO CHEGAM` ali ofereceria um reparo
+    e o jogo nunca mais abriria. Um selo `NÃO CHEGAM` ali acusaria um reparo
     que o produto se recusa a fazer.
     """
     so_intocavel = desenho.Leitura(
@@ -358,16 +367,11 @@ def test_o_selo_segue_os_reparaveis_e_nao_os_faltantes(desenho):
     # mesmo: que um jogo INTOCÁVEL não faça o cartão acusar impedimento.
     assert cartao.selo == "localizado", (
         "o cartão acusa impedimento por causa de um jogo que o produto não toca")
-    assert 'data-gesto="consertar"' not in desenho.acoes_html(cartao), (
-        "o `Consertar` está aceso e não há nada que ele possa consertar")
-    # A PALAVRA MUDOU EM 11/09/2026 — A2-020, aprovada por ela: o carimbo dizia
-    # «linha intocável — só reparo manual» e passou a dizer «linha editada à
-    # mão», que é a MESMA palavra que a linha do jogo já usava dois centímetros
-    # abaixo. O que a régua cobra continua sendo o ATO — o jogo que o produto
-    # não toca aparece no carimbo, com o número —, e por isso ela mede o número
-    # e o estado, não a palavra que nós escolhemos.
-    assert "1 jogo" in cartao.carimbo and "à mão" in cartao.carimbo, (
-        f"o jogo que o produto não toca sumiu da tela ({cartao.carimbo!r}) — "
+    # O CARIMBO SAIU EM 21/09/2026 (o corpo de todo cartão é o contador), e o
+    # jogo que o produto não toca continua na tela: na lista do pé, com o nome
+    # e o motivo. A régua cobra o ATO — ele aparece —, não o lugar de ontem.
+    assert "Jogo intocável" in cartao.fora and "à mão" in cartao.fora, (
+        f"o jogo que o produto não toca sumiu da tela ({cartao.fora!r}) — "
         "ele fica sem o atalho para sempre e ninguém saberia")
 
 
@@ -490,29 +494,6 @@ def test_tirar_e_voltar_a_usar_escrevem_no_arquivo_de_verdade(ctx, a07):
         "deixa a pessoa presa no estado em que clicou")
 
 
-def test_consertar_recusa_dizendo_quando_a_steam_esta_aberta(ctx, monkeypatch):
-    """A recusa vai para a TELA, e com a frase da sentinela.
-
-    `RuntimeError` é o contrato desta casa para "o produto recusou" — e a
-    frase precisa nomear o jogo e dizer o que vai acontecer, porque
-    *"1 jogo com problema"* é o texto que deixou o Pragmata quebrado a noite
-    inteira.
-    """
-    from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
-
-    from types import SimpleNamespace
-
-    censo = SimpleNamespace(regressoes=[], novos=[], intocaveis=[],
-                            jogo_aberto=False, steam_aberta=True)
-    monkeypatch.setattr(
-        sw, "reparar_ou_adiar",
-        lambda *a, **kw: (sw.REPARO_ADIADO_STEAM, censo, None))
-    monkeypatch.setattr(sw, "frase_do_aviso",
-                        lambda c: "Preciso da Steam FECHADA para repor.")
-    with pytest.raises(RuntimeError, match="FECHADA"):
-        _gesto("consertar")(ctx, {"v": "steam"}, None)
-
-
 def test_detectar_recusa_dizendo_quando_nao_ha_jogo(ctx, monkeypatch):
     """Sem jogo aberto o botão RECUSA — não inventa um jogo nem responde calado."""
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
@@ -547,7 +528,8 @@ def test_esta_regua_nao_alcanca_a_biblioteca_dela():
 
 
 def test_o_piso_de_gestos_da_aba_so_sobe(a07):
-    """Ele SÓ SOBE. Uma queda não aparece na tela: o clique não faz nada.
+    """Ele SÓ SOBE por queda sem querer. Uma queda não aparece na tela: o clique
+    não faz nada.
 
     SUBIU DE SEIS PARA SETE em 02/09/2026, com o "Voltar a perguntar" que a
     decisão dela mandou nascer; DE SETE PARA OITO em 03/09/2026, com o
@@ -555,27 +537,26 @@ def test_o_piso_de_gestos_da_aba_so_sobe(a07):
     as duas faltas de paridade que a medição das dez abas nomeou — o "Não
     perguntar para este jogo" e o "Posso fechar a Steam por uns 20 segundos?";
     e DE DEZ PARA ONZE em 04/09/2026, com o "Copiar a linha" (decisão `07[01]`
-    do PO), que é **o único botão de copiar de toda a interface nova**; e DE
-    ONZE PARA CATORZE em 06/09/2026, com os TRÊS do Steam Input que a decisão
-    dela (`D-0609-STEAM-DIVIDIDO`) trouxe para esta aba — "Desligar o Steam
-    Input", "Este jogo não funciona" e "Deixar tudo pronto"; e DE CATORZE PARA
-    DEZESSEIS em 08/09/2026, com o registro do lançador que o Hefesto não
-    conhece (pedido dela) — «Localizar este Lançador» e «Tirar daqui»; e DE
-    DEZESSEIS PARA DEZESSETE em 09/09/2026, com a CURA POR ESTRADA
-    (LANCADORES-ZERO-01 §5.3): o «Consertar» dos lançadores que o atalho de
-    inicialização da Steam não alcança; e DE DEZESSETE PARA VINTE E UM em
-    21/09/2026, com a LISTA DE EXCLUSÃO (OS-LANCADORES-IGUAIS-E-A-LISTA-DE-
-    EXCLUSAO-01): entraram os cinco da fileira comum e da pop-up, e saiu o
-    «Este jogo não funciona», que o «Adicionar à lista de exclusão» tomou.
+    do PO); e DE ONZE PARA CATORZE em 06/09/2026, com os TRÊS do Steam Input
+    (`D-0609-STEAM-DIVIDIDO`); e DE CATORZE PARA DEZESSEIS em 08/09/2026, com
+    o registro do lançador — «Localizar este Lançador» e «Tirar daqui»; e DE
+    DEZESSEIS PARA DEZESSETE em 09/09/2026, com a CURA POR ESTRADA; e DE
+    DEZESSETE PARA VINTE E UM em 21/09/2026, com a LISTA DE EXCLUSÃO.
+
+    **E DESCEU DE VINTE E UM PARA CATORZE na mesma noite, e DE PROPÓSITO** — a
+    única descida desta história: os sete botões que só a Steam tinha saíram,
+    palavra dela (*"a ideia é termos os mesmos botões pra todos os
+    lançadores. sempre."*). O que eles faziam à mão o produto faz sozinho — o
+    vigia repõe o atalho, o guarda desliga o Steam Input.
 
     **O NOME DESTA RÉGUA DIZIA `catorze` E O PISO JÁ ERA 16** — ele envelheceu
     duas vezes em três dias, porque nome com número dentro é um fato a manter
-    em dois lugares. O nome de agora diz a REGRA, que não muda: o piso só sobe.
+    em dois lugares. O nome de agora diz a REGRA, que não muda.
     """
     import pacotes
 
     quantos = sum(1 for (p, _) in pacotes.GESTOS if p == PAGINA)
-    assert quantos >= a07.PISO_DA_ABA == 21, (
+    assert quantos >= a07.PISO_DA_ABA == 14, (
         f"{PAGINA} tem {quantos} gestos com dono e o piso é {a07.PISO_DA_ABA}")
 
 
@@ -618,7 +599,7 @@ def test_o_produto_procura_os_cinco_pelas_pastas_do_motor(a07, desenho, monkeypa
     """
     pasta = _pastas_falsas(monkeypatch, tmp_path, "net.lutris.Lutris")
     onde = dict(a07._onde_estao_os_lancadores())
-    # O CAMINHO INTEIRO, e não o `stem`: é o que a frase `DIZ_ACHEI` promete
+    # O CAMINHO INTEIRO, e não o `stem`: é o que a frase `DIZ_ACHEI` prometia
     # ("dizer ONDE é o que deixa ela conferir a resposta sem acreditar em mim").
     # Com o nome solto, uma máquina com o Heroic nativo E o Heroic por Flatpak
     # não dizia qual dos dois o produto achou — e ela não podia `ls` a resposta.
@@ -703,10 +684,14 @@ def test_o_cartao_achado_e_o_nao_achado_dizem_coisas_diferentes(desenho):
     # continue distinguível dos outros dois na tela — pelo selo e pelo
     # `presente`, que as linhas acima já medem — e que ele seja o único calado.
     # Uma frase que voltasse a nascer aqui reprovaria, e é isso que morde.
-    assert achei.diz == "", (
-        f"o cartão do lançador ACHADO voltou a falar: {achei.diz!r}. Ela o "
-        f"calou em 11/09 — o selo `LOCALIZADO` e a contagem de jogos já dizem "
-        f"tudo o que a frase dizia")
+    #
+    # E O CORPO GANHOU O CONTADOR EM 21/09/2026, palavra dela: *"falta o mesmo
+    # textinho de contador da steam pros demais (…) todos tem que serem
+    # iguais."* O contador é carimbo, não frase — e é SÓ ele: uma frase que
+    # voltasse a nascer ao lado dele continua reprovando aqui.
+    assert achei.diz == desenho.contador_html(0), (
+        f"o cartão do lançador ACHADO diz outra coisa além do contador: "
+        f"{achei.diz!r}. Ela o calou em 11/09 e deu a ele o contador em 21/09")
     assert nao_achei.diz and nao_procurei.diz, (
         "o cartão calado tinha de ser SÓ o do achado — os outros dois estados "
         "precisam da frase, porque neles o selo sozinho não diz o que fazer")
@@ -1439,29 +1424,27 @@ def test_remover_um_appid_que_nao_estava_na_lista_devolve_falso():
         "o segundo clique na mesma linha disse que desfez de novo")
 
 
-def test_a_ponte_confirmada_volta_ao_carimbo(desenho):
+def test_a_ponte_confirmada_chega_ao_contador(desenho):
     """`◆ N jogos já sabem por onde entrar` — a promessa que estava sem fonte.
 
     O HTML de 02/09 dizia `◆ 3 jogos já sabem por onde entrar` com o número
     DIGITADO, e `prontuario_dos_jogos.pontes_confirmadas` respondia a mesma
     pergunta sem nenhum chamador.
+
+    DESDE 21/09/2026 ELE ABRE O CORPO de todo cartão localizado — o da Steam
+    inclusive —, e o ZERO também se diz: ela escolheu o contador em todos, e
+    um cartão que calasse no zero voltaria a ser diferente dos vizinhos.
     """
     sem = desenho.Leitura(com_wrapper=("1",), instalados=1)
-    assert desenho.carimbo_da_steam(sem) == "", (
-        "zero pontes ocupou a linha do carimbo para não dizer nada")
+    assert desenho.cartao_da_steam(sem).diz == desenho.contador_html(0)
 
-    com = desenho.Leitura(com_wrapper=("1",), instalados=1, pontes=3,
-                          intocaveis=(("9", "Jogo", "linha à mão"),))
-    carimbo = desenho.carimbo_da_steam(com)
-    assert "3 jogos já sabem por onde entrar" in carimbo, (
-        f"a ponte confirmada sumiu do carimbo: {carimbo!r}")
-    # A PALAVRA MUDOU EM 11/09/2026 — A2-020: «linha editada à mão» no lugar de
-    # «linha intocável — só reparo manual». A régua cobra o ATO: o jogo que o
-    # produto decidiu não tocar tem de estar no carimbo, com o número.
-    assert "1 jogo" in carimbo and "à mão" in carimbo, (
-        f"o carimbo calou sobre o jogo que o produto decidiu não tocar "
-        f"({carimbo!r}) — é assim que ele fica sem o atalho para sempre sem "
-        f"ninguém saber")
+    com = desenho.Leitura(com_wrapper=("1",), instalados=1, pontes=3)
+    diz = desenho.cartao_da_steam(com).diz
+    assert "3 jogos já sabem por onde entrar" in diz, (
+        f"a ponte confirmada sumiu do corpo do cartão da Steam: {diz!r}")
+    assert desenho.cartao_da_steam(com).carimbo == "", (
+        "o contador foi para o carimbo — o lugar dele é o corpo, como nos "
+        "outros sete")
 
 
 def _disco_dublado(monkeypatch, *, dispensados=("4242",), pontes=3,
@@ -1973,10 +1956,11 @@ def test_nao_ha_cartao_da_epic_e_o_heroic_e_a_porta_das_duas_lojas(desenho):
             f"da tela onde aquela loja aparece — tirá-lo daqui apaga a loja da "
             f"interface inteira, que é o oposto do que ela pediu.")
 
-    # E NENHUMA FRASE DE TELA FALA DE EPIC POR CONTA PRÓPRIA: as três frases dos
+    # E NENHUMA FRASE DE TELA FALA DE EPIC POR CONTA PRÓPRIA: as frases dos
     # cartões são as gerais, e uma quarta redação só para uma loja voltaria a
     # ser um segundo dono do mesmo assunto.
-    for frase in (desenho.DIZ_ACHEI, desenho.DIZ_NAO_ACHEI, desenho.DIZ_SEM_FONTE):
+    # (O `DIZ_ACHEI` saiu em 21/09/2026: o achado diz só o contador.)
+    for frase in (desenho.DIZ_NAO_ACHEI, desenho.DIZ_SEM_FONTE):
         assert "Epic" not in frase, (
             f"uma frase geral de cartão passou a nomear a Epic: {frase!r}. O "
             f"lugar da Epic é o rótulo do Heroic, e um segundo lugar envelhece "
@@ -2521,10 +2505,10 @@ def test_cartao_que_nao_declara_defeito_nao_oferece_conserto(desenho):
     pergunta dela é sobre o PAR selo↔botão — se o botão *deveria existir naquele
     estado* —, e essa nenhuma fazia.
 
-    **O CONTRASTE QUE PROVA que a régua não é ampla demais:** no cartão da Steam
-    o mesmo verbo tem antecedente. Selo `NÃO CHEGAM`, moldura `impede`, e a
-    frase logo acima do botão nomeando o jogo que perdeu o atalho — ali o
-    «Consertar» responde a uma frase, e esta régua o deixa passar.
+    **O CONTRASTE que ela provava caiu em 21/09/2026:** o «Consertar» da
+    Steam — o único com antecedente, selo `NÃO CHEGAM` e o jogo nomeado —
+    saiu com os outros botões que só a Steam tinha. A régua fica: ela é o que
+    impede o verbo de voltar pendurado num estado bom.
 
     **A MORDIDA:** devolva o ramo do `consertar` ao estado `localizado` de
     `cartao_sem_censo` e ela cai nomeando o cartão e o selo. Ela é o que impede
@@ -2566,12 +2550,17 @@ def test_cartao_que_nao_declara_defeito_nao_oferece_conserto(desenho):
           "é a palavra dela, de 09/09/2026.")
 
 
-def test_o_consertar_da_steam_continua_onde_ha_o_que_consertar(desenho):
-    """A GUARDA DE VACUIDADE da régua acima: ela não pode ter matado o certo.
+def test_a_steam_com_jogo_sem_o_atalho_continua_declarando_o_defeito(desenho):
+    """A GUARDA DE VACUIDADE da régua acima, e da saída dos botões.
 
-    Sem esta, apagar o «Consertar» da Steam INTEIRO — inclusive do estado que
-    nomeia o jogo quebrado — deixaria a régua de cima verde. *Uma régua que só
-    sabe proibir não mede nada.*
+    O «Consertar» saiu em 21/09/2026 com os outros que só a Steam tinha, e o
+    que NÃO podia sair junto é a DECLARAÇÃO: o selo `warn` e o corpo dizendo
+    quantos jogos estão sem o atalho. Sem esta régua, apagar o ramo inteiro do
+    reparo deixaria a régua de cima verde — *uma régua que só sabe proibir não
+    mede nada.*
+
+    A MORDIDA: faça o ramo `if falta:` de `cartao_da_steam` devolver o selo
+    `localizado` e esta régua reprova.
     """
     lida = desenho.Leitura(
         com_wrapper=("1",), instalados=3,
@@ -2580,9 +2569,10 @@ def test_o_consertar_da_steam_continua_onde_ha_o_que_consertar(desenho):
 
     assert steam.selo == "warn", (
         f"a Steam com jogo reparável deixou de sair `warn`: {steam.selo!r}")
-    assert "Consertar" in [a.rotulo for a in steam.acoes], (
-        f"o cartão que DIZ que os controles não chegam perdeu o «Consertar»: "
-        f"{[a.rotulo for a in steam.acoes]}")
+    assert "1 jogo sem o atalho" in steam.diz, (
+        f"o corpo parou de dizer quantos jogos estão sem o atalho: {steam.diz!r}")
+    assert steam.diz.startswith(desenho.contador_html(0)), (
+        "o contador deixou de abrir o corpo no estado do reparo")
 
 
 class _Seletor:

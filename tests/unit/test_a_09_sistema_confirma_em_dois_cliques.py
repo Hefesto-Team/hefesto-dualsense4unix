@@ -253,7 +253,7 @@ def test_fora_do_prazo_ele_recusa_dizendo_e_nao_age(a09, ctx, janela, monkeypatc
     """
     a09.desligar(ctx, _clique(a09._rotulo_do_desenho("desligar")), None)
     # O RELÓGIO É O DO PRODUTO, e o teste o EMPURRA em vez de digitar 21: quem
-    # diz quanto dura o consentimento é `a07_lancadores.SEGUNDOS_PARA_CONFIRMAR`.
+    # diz quanto dura o consentimento é `confirmacao.SEGUNDOS_PARA_CONFIRMAR`.
     a09._ARMADO["ate"] -= a09.segundos_para_confirmar() + 1
 
     with pytest.raises(RuntimeError, match="segundos"):
@@ -264,14 +264,14 @@ def test_fora_do_prazo_ele_recusa_dizendo_e_nao_age(a09, ctx, janela, monkeypatc
 
 
 def test_a_janela_do_consentimento_e_a_da_aba_que_ja_confirma(a09):
-    """O relógio é PERGUNTADO, nunca digitado — o dono é a aba Lançadores.
+    """O relógio é PERGUNTADO, nunca digitado — o dono é `pacotes/confirmacao`.
 
     A MORDIDA: troque `segundos_para_confirmar()` por um `20.0` literal e mude o
     `SEGUNDOS_PARA_CONFIRMAR` de lá. Reprova, porque as duas deixam de casar.
     """
-    from pacotes import a07_lancadores
+    from pacotes import confirmacao
 
-    assert a09.segundos_para_confirmar() == a07_lancadores.SEGUNDOS_PARA_CONFIRMAR
+    assert a09.segundos_para_confirmar() == confirmacao.SEGUNDOS_PARA_CONFIRMAR
 
 
 # ---------------------------------------------------------------------------

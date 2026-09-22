@@ -441,7 +441,7 @@ def test_o_prontuario_de_sete_segundos_nunca_roda_no_tique(a09, monkeypatch):
         f"Ela pediu o censo com {chamou[0]!r}, e o `examinar=True` é o que fez o "
         "tique da 09 custar 1.329 ms num teto de 100 — treze vezes o teto, com "
         "a mesa parada. Esta tela lê UM campo do censo, e ele não depende de "
-        "ler executável nenhum (`prontuario_dos_jogos.py:519`).")
+        "ler executável nenhum (`prontuario_dos_jogos.py:559`).")
 
 
 def test_a_primeira_leitura_e_sincrona_e_a_releitura_e_thread(a09, ctx):

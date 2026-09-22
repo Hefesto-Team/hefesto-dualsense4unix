@@ -11,10 +11,10 @@ a interface nova não a chamava.
     -------------------------------------   ----------------------------------
     banner "o jogo aberto não passou pelo    `aviso_do_jogo_aberto`, sobre
     wrapper", sem clique (2 abas)            `home_actions.wrapper_banner_text`
-    "Não perguntar para este jogo"           gesto `nao-perguntar`, sobre
-                                             `lwd.add_dismissed_appid`
-    fechar a Steam por ~20 s, aplicar        gesto `consertar-fechando-a-steam`,
-    e reabrir, com consentimento             sobre `slo.with_steam_closed`
+    "Não perguntar para este jogo" e         SAÍRAM em 21/09/2026, com os outros
+    fechar a Steam por ~20 s                 botões que só a Steam tinha — o
+                                             reparo é do vigia; o «Voltar a
+                                             perguntar» desfaz o que já foi dito
     a escada de TRÊS evidências do jogo      `a_escada_do_jogo`, sobre
     (inclusive o jogo JÁ FECHADO)            `launch_env` + a wm_class do estado
 
@@ -24,15 +24,14 @@ que mais importam:
 * troque `ha.wrapper_banner_text(state)` por um teste próprio de `wrapper_used`
   e o `test_o_aviso_e_a_decisao_da_gtk_e_nao_uma_copia` reprova — é a forma de
   defeito que esta casa persegue: a segunda cópia de uma regra que já tem dono;
-* apague o `data-v` `CONFIRMO` do segundo clique (ou a janela de tempo) e o
-  `test_um_clique_so_nunca_fecha_a_steam` reprova — sem os dois guardas a régua
-  `--prova-gesto` fecharia a Steam DELA para provar que sabe clicar;
+* apague o `remove_dismissed_appid` do `voltar-a-perguntar` e o
+  `test_voltar_a_perguntar_tira_do_arquivo_de_verdade` reprova;
 * devolva `steam_game_running_appid()` para o `detectar` e o
   `test_a_escada_alcanca_o_jogo_que_ela_ja_fechou` reprova.
 
 NADA AQUI TOCA A MÁQUINA DELA. O `conftest.py` desta casa desvia `HOME` e os
 quatro `XDG_*`; o que escreve em disco escreve no lar de mentira, e o que
-fecharia a Steam é dublado — fechar a Steam de quem roda a suíte seria o
+abriria a Steam é dublado — mexer na Steam de quem roda a suíte seria o
 instrumento brigando com o produto, que é a armadilha 3 desta casa.
 """
 from __future__ import annotations
@@ -183,12 +182,15 @@ def test_o_aviso_respeita_a_dispensa_dela(a07, desenho):
         "a dispensa de um jogo calou o aviso de todos os outros")
 
 
-def test_o_aviso_e_o_botao_de_dispensar_chegam_ao_cartao(a07, desenho):
+def test_o_aviso_chega_ao_cartao(a07, desenho):
     """O que a função devolve tem de APARECER no cartão que a tela recebe.
 
     Sem esta régua o aviso poderia estar certo, ter teste unitário e **nunca
     chegar à tela** — que é o defeito que a `test_os_botoes_que_a_pintura_traz`
     da régua irmã existe para pegar, aqui aplicado ao corpo do cartão.
+
+    O BOTÃO DE DISPENSAR SAIU EM 21/09/2026 com os outros que só a Steam tinha
+    (*"a ideia é termos os mesmos botões pra todos os lançadores. sempre."*).
     """
     from hefesto_dualsense4unix.app.actions import home_actions as ha
 
@@ -198,13 +200,8 @@ def test_o_aviso_e_o_botao_de_dispensar_chegam_ao_cartao(a07, desenho):
     # longa do dono saiu do corpo, e o estado ficou.
     assert a07.JOGO_ABERTO_SEM_O_ATALHO in steam.diz
     assert ha.WRAPPER_MISSING_TEXT not in steam.diz
-    marcacao = desenho.acoes_html(steam)
-    assert 'data-gesto="nao-perguntar"' in marcacao, (
-        "o aviso acendeu e não veio com o botão que o dispensa — ela ficaria "
-        "com um aviso que não sabe calar")
-    assert 'data-v="3357650"' in marcacao, (
-        "o botão de dispensar não diz QUAL jogo: ele dispensaria um appid "
-        "escolhido por acaso")
+    assert 'data-gesto="nao-perguntar"' not in desenho.acoes_html(steam), (
+        "o «Não perguntar» voltou ao cartão — um botão que os outros sete não têm")
 
 
 def test_sem_appid_o_aviso_fica_e_o_botao_some(a07, desenho):
@@ -243,211 +240,26 @@ def test_a_pintura_do_aviso_nao_toca_o_disco(a07, monkeypatch):
 
 
 # --------------------------------------------------------------------------
-# 2. "Não perguntar para este jogo" — a metade de ida que só a GTK escrevia
+# 2. "Voltar a perguntar" — o desfazer do que ela já dispensou
+#
+# O «NÃO PERGUNTAR» E O «FECHAR A STEAM» SAÍRAM EM 21/09/2026, e as réguas
+# deles com eles. A lista de dispensados continua lida (`calados`), e quem já
+# dispensou um jogo continua tendo por onde desfazer.
 # --------------------------------------------------------------------------
-def test_nao_perguntar_escreve_no_arquivo_de_verdade(a07):
-    """O par completo, contra o `launch_dialog_dismissed.json` do lar de mentira.
+def test_voltar_a_perguntar_tira_do_arquivo_de_verdade(a07):
+    """Contra o `launch_dialog_dismissed.json` do lar de mentira: o arquivo muda.
 
-    Não "a função foi chamada": **o arquivo mudou**, e o desfazer o desfaz.
+    A MORDIDA: troque o `remove_dismissed_appid` do gesto por um `True` e este
+    teste reprova — o gesto diria que desfez e o jogo ficaria dispensado.
     """
     from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
 
-    assert "3357650" not in lwd.load_dismissed_appids(), "o lar de mentira sujo"
-    _gesto("nao-perguntar")(_ctx(), {"v": "3357650"}, None)
-    assert "3357650" in lwd.load_dismissed_appids(), (
-        "o gesto disse que aplicou e o `launch_dialog_dismissed.json` não tem "
-        "o appid")
+    lwd.add_dismissed_appid("3357650")
+    assert "3357650" in lwd.load_dismissed_appids(), "o lar de mentira não gravou"
     _gesto("voltar-a-perguntar")(_ctx(), {"v": "3357650"}, None)
     assert "3357650" not in lwd.load_dismissed_appids(), (
-        "o par ficou pela metade — um gesto que só vai numa direção deixa a "
-        "pessoa presa no estado em que clicou")
-
-
-def test_nao_perguntar_sem_appid_recusa_e_nao_escreve(a07, monkeypatch):
-    """Um clique sem `data-v` dispensaria um jogo escolhido por acaso."""
-    from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
-
-    def _nunca(*a: Any, **kw: Any) -> Any:
-        raise AssertionError("escreveu no arquivo com o clique recusado")
-
-    monkeypatch.setattr(lwd, "add_dismissed_appid", _nunca)
-    with pytest.raises(ValueError):
-        _gesto("nao-perguntar")(_ctx(), {"texto": "x"}, None)
-
-
-def test_nao_perguntar_recusa_dizendo_quando_o_disco_engole(a07, monkeypatch):
-    """`add_dismissed_appid` ENGOLE a exceção — quem confere é a releitura.
-
-    A MORDIDA: apague o `if appid not in lwd.load_dismissed_appids()` e este
-    teste reprova. Sem ele o gesto diria "aplicou" com o disco cheio, o aviso
-    voltaria no tique seguinte e o segundo clique pareceria o primeiro.
-    """
-    from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
-
-    # O QUE A RÉGUA CASA MUDOU EM 11/09/2026 — A2-045, aprovada por ela: a
-    # recusa dizia «lista de dispensados» e o nome do arquivo no disco, que são
-    # NOSSOS. Agora diz o estado e a consequência inteira, que é o que ela lê.
-    monkeypatch.setattr(lwd, "add_dismissed_appid", lambda a: None)
-    monkeypatch.setattr(lwd, "load_dismissed_appids", set)
-    with pytest.raises(RuntimeError, match="vai voltar no próximo jogo"):
-        _gesto("nao-perguntar")(_ctx(), {"v": "4242"}, None)
-
-
-# --------------------------------------------------------------------------
-# 3. fechar a Steam por ~20 s — a parede que o HTML tinha reerguido
-# --------------------------------------------------------------------------
-def _com_reparavel(a07, desenho, monkeypatch, *, steam_aberta=True,
-                   jogo_aberto=False):
-    """A leitura de um disco com UM jogo a repor, e os portões do censo."""
-    lida = desenho.Leitura(com_wrapper=("1",),
-                           reparaveis=(("2", "Um jogo", "perdeu"),),
-                           instalados=3)
-    monkeypatch.setattr(a07, "PORTOES",
-                        a07._Portoes(jogo_aberto=jogo_aberto,
-                                     steam_aberta=steam_aberta))
-    return lida
-
-
-def test_o_botao_de_fechar_a_steam_so_aparece_onde_ele_funciona(
-        a07, desenho, monkeypatch):
-    """Com jogo aberto o produto não fecha a Steam por NADA.
-
-    `stop_steam` com jogo aberto mataria o jogo e o progresso não salvo — então
-    oferecer o botão ali seria oferecer uma recusa. E com a Steam já fechada o
-    `Consertar` basta.
-
-    A MORDIDA: tire o `and not PORTOES.jogo_aberto` e o segundo caso reprova.
-    """
-    lida = _com_reparavel(a07, desenho, monkeypatch)
-    aberto = desenho.acoes_html(_cartao_da_steam(a07, desenho, lida, None))
-    assert f'data-gesto="{a07.FECHAR}"' in aberto
-    assert a07.PERGUNTA_DA_STEAM in aberto, (
-        "o rótulo não é o do diálogo da GTK — o texto de tela tem um dono")
-
-    _com_reparavel(a07, desenho, monkeypatch, jogo_aberto=True)
-    com_jogo = desenho.acoes_html(_cartao_da_steam(a07, desenho, lida, None))
-    assert f'data-gesto="{a07.FECHAR}"' not in com_jogo, (
-        "o botão que fecha a Steam apareceu com um jogo aberto")
-
-    _com_reparavel(a07, desenho, monkeypatch, steam_aberta=False)
-    fechada = desenho.acoes_html(_cartao_da_steam(a07, desenho, lida, None))
-    assert f'data-gesto="{a07.FECHAR}"' not in fechada, (
-        "o botão apareceu com a Steam já fechada — não há o que fechar")
-
-
-def test_sem_o_que_repor_o_botao_de_fechar_a_steam_nao_aparece(
-        a07, desenho, monkeypatch):
-    """Fechar a Steam de quem não tem nada a repor é custo puro."""
-    monkeypatch.setattr(a07, "PORTOES", a07._Portoes(steam_aberta=True))
-    lida = desenho.Leitura(com_wrapper=("1",), instalados=1)
-    html = desenho.acoes_html(_cartao_da_steam(a07, desenho, lida, None))
-    assert f'data-gesto="{a07.FECHAR}"' not in html
-
-
-def test_um_clique_so_nunca_fecha_a_steam(a07, monkeypatch):
-    """O consentimento que `with_steam_closed` EXIGE de quem a chama.
-
-    O primeiro clique ARMA e devolve o cartão; nada foi fechado. É o que impede
-    a régua automática (`--prova-gesto`) de derrubar a Steam DELA para provar
-    que sabe clicar.
-
-    A MORDIDA: faça o gesto chamar `with_steam_closed` no primeiro clique e
-    este teste reprova.
-    """
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    def _nunca(*a: Any, **kw: Any) -> Any:
-        raise AssertionError("fechou a Steam com UM clique")
-
-    monkeypatch.setattr(slo, "with_steam_closed", _nunca)
-    monkeypatch.setattr(a07.VIGIA, "agora", lambda: None)
-    carga = _gesto(a07.FECHAR)(_ctx(), {"v": "steam"}, None)
-    assert "blocos" in carga and "mesa" in carga
-
-
-def test_o_segundo_clique_precisa_do_data_v_que_so_o_cartao_armado_tem(
-        a07, desenho, monkeypatch):
-    """O `data-v` do confirmar SÓ existe depois de um clique de verdade.
-
-    A MORDIDA: emita o `CONFIRMO` no botão não-armado e este teste reprova —
-    a régua leria o DOM, clicaria uma vez e fecharia a Steam dela.
-    """
-    lida = _com_reparavel(a07, desenho, monkeypatch)
-    a07._desarmar()
-    desarmado = desenho.acoes_html(_cartao_da_steam(a07, desenho, lida, None))
-    assert f'data-v="{a07.CONFIRMO}"' not in desarmado
-
-    a07._armar(a07.FECHAR)
-    armado = desenho.acoes_html(_cartao_da_steam(a07, desenho, lida, None))
-    assert f'data-v="{a07.CONFIRMO}"' in armado
-    assert a07.CONFIRMA_A_STEAM in armado, (
-        "o rótulo do confirmar não é o `rotulo_ok` do diálogo da GTK")
-
-
-def test_a_confirmacao_expirada_nao_fecha_a_steam(a07, monkeypatch):
-    """Ela armou, saiu para o almoço e voltou. Ninguém fecha nada.
-
-    A MORDIDA: tire o `if not _armado()` e este teste reprova.
-    """
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    def _nunca(*a: Any, **kw: Any) -> Any:
-        raise AssertionError("fechou a Steam com a confirmação vencida")
-
-    monkeypatch.setattr(slo, "with_steam_closed", _nunca)
-    a07._desarmar()
-    # O NÚMERO DE SEGUNDOS SAIU DA FRASE EM 11/09/2026 — A2-056, aprovada por
-    # ela: ele não muda o que ela faz, que é clicar de novo. A régua casa o
-    # FATO da expiração, que é o que ela mede.
-    with pytest.raises(RuntimeError, match="Passou do tempo"):
-        _gesto(a07.FECHAR)(_ctx(), {"v": a07.CONFIRMO}, None)
-
-
-def test_o_segundo_clique_desce_pelo_with_steam_closed(a07, monkeypatch):
-    """O motor é o da GTK, e o gesto NÃO reimplementa fechar/aplicar/reabrir.
-
-    A MORDIDA: troque o `with_steam_closed` por um `stop_steam` + `apply` +
-    `reopen_steam` escritos aqui e este teste reprova por não ver a chamada.
-    """
-    from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    chamadas: list[str] = []
-
-    def _janela(tarefa, **kw: Any):
-        chamadas.append("with_steam_closed")
-        return slo.STEAM_JANELA_OK, tarefa()
-
-    monkeypatch.setattr(slo, "with_steam_closed", _janela)
-    monkeypatch.setattr(
-        sw, "reparar_ou_adiar",
-        lambda *a, **kw: (sw.REPARO_FEITO, sw.Censo(), {"applied": []}))
-    monkeypatch.setattr(a07.VIGIA, "ler", lambda: None)
-    a07._armar(a07.FECHAR)
-    carga = _gesto(a07.FECHAR)(_ctx(), {"v": a07.CONFIRMO}, None)
-    assert chamadas == ["with_steam_closed"]
-    assert "blocos" in carga
-
-
-def test_a_recusa_de_fechar_e_a_frase_da_gtk(a07, monkeypatch):
-    """A frase da recusa tem UM dono: `format_steam_janela_recusa`.
-
-    A MORDIDA: redija a recusa aqui e este teste reprova. Ela já diz, nos dois
-    casos que importam, que **nada foi mudado** — e é a mesma que a janela
-    velha mostra, para as duas telas não divergirem sobre o mesmo desfecho.
-    """
-    from hefesto_dualsense4unix.app.actions.daemon_actions import (
-        format_steam_janela_recusa,
-    )
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    for janela in (slo.STEAM_JANELA_JOGO_ABERTO, slo.STEAM_JANELA_NAO_FECHOU):
-        monkeypatch.setattr(slo, "with_steam_closed",
-                            lambda t, j=janela, **kw: (j, None))
-        a07._armar(a07.FECHAR)
-        with pytest.raises(RuntimeError) as erro:
-            _gesto(a07.FECHAR)(_ctx(), {"v": a07.CONFIRMO}, None)
-        assert str(erro.value) == format_steam_janela_recusa(janela)
+        "o gesto disse que desfez e o `launch_dialog_dismissed.json` continua "
+        "com o appid")
 
 
 # --------------------------------------------------------------------------
@@ -522,75 +334,3 @@ def test_o_detectar_nao_diz_aberto_sobre_um_jogo_fechado(a07, monkeypatch):
     assert "está aberto agora" not in diz, (
         "o produto disse que um jogo FECHADO está aberto agora")
     assert "já fechou" in diz and "Um Jogo" in diz
-
-
-# --------------------------------------------------------------------------
-# 5. os portões do censo, que decidem qual botão o cartão oferece
-# --------------------------------------------------------------------------
-def test_um_censo_que_falha_desarma_o_botao_que_fecha_a_steam(a07, monkeypatch,
-                                                              tmp_path):
-    """Sem censo não há resposta sobre a Steam — e o padrão é não oferecer.
-
-    A MORDIDA: tire o `PORTOES = _Portoes()` do ramo de erro do `_ler_do_disco`
-    e este teste reprova: um `steam_aberta=True` de uma leitura ANTERIOR
-    acenderia o botão que fecha a Steam dela com base num censo que falhou.
-    """
-    from hefesto_dualsense4unix.integrations import jogos_locais as jl
-    from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
-
-    monkeypatch.setattr(a07, "PORTOES", a07._Portoes(steam_aberta=True))
-    monkeypatch.setattr(jl, "pastas_de_atalhos", lambda: [tmp_path])
-
-    def _explode(**kw: Any) -> Any:
-        raise OSError("vdf ilegível")
-
-    monkeypatch.setattr(sw, "censo_do_wrapper", _explode)
-    lida = a07._ler_do_disco()
-    assert lida.erros, "a régua mediria o caminho feliz"
-    padrao = a07._Portoes()
-    assert padrao == a07.PORTOES, (
-        "os portões ficaram com o valor de uma leitura que falhou")
-
-
-def test_o_censo_de_verdade_responde_pelos_dois_portoes():
-    """O `getattr` do `_ler_do_disco` tolera DUBLÊ, nunca um motor que renomeou.
-
-    POR QUE ESTE TESTE EXISTE, e sem ele a tolerância seria uma morte em
-    silêncio: as réguas desta casa montam censos de mentira com os campos que
-    cada uma precisa, e por isso o `_ler_do_disco` lê os dois portões com
-    `getattr(..., False)`. No dia em que `sentinela_do_wrapper.Censo` renomeasse
-    `steam_aberta`, o `getattr` responderia `False` **para sempre** — o botão
-    que fecha a Steam nunca mais apareceria, e nada acusaria. Este teste é o
-    que acusa.
-    """
-    from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
-
-    censo = sw.Censo()
-    for campo in ("jogo_aberto", "steam_aberta"):
-        assert hasattr(censo, campo), (
-            f"`sentinela_do_wrapper.Censo` não tem mais `{campo}` — o "
-            "`getattr` do `_ler_do_disco` passaria a responder False sempre, e "
-            "o botão que fecha a Steam sumiria da tela sem nada acusar.")
-
-
-def test_os_portoes_saem_do_mesmo_censo_que_a_leitura(a07, monkeypatch,
-                                                      tmp_path):
-    """Uma passada, dois resultados — nunca duas medições que discordam."""
-    from types import SimpleNamespace
-
-    from hefesto_dualsense4unix.integrations import jogos_locais as jl
-    from hefesto_dualsense4unix.integrations import prontuario_dos_jogos as pdj
-    from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
-
-    censo = SimpleNamespace(com_wrapper=["7"], reparaveis=[], intocaveis=[],
-                            recusados=[], erros=[], jogo_aberto=True,
-                            steam_aberta=True)
-    monkeypatch.setattr(jl, "pastas_de_atalhos", lambda: [tmp_path])
-    monkeypatch.setattr(sw, "censo_do_wrapper", lambda **kw: censo)
-    monkeypatch.setattr(sw, "frase_do_aviso", lambda c: "")
-    monkeypatch.setattr(pdj, "jogos_instalados", list)
-    monkeypatch.setattr(pdj, "pontes_confirmadas", list)
-    lida = a07._ler_do_disco()
-    assert lida.com_wrapper == ("7",)
-    esperado = a07._Portoes(jogo_aberto=True, steam_aberta=True)
-    assert esperado == a07.PORTOES

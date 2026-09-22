@@ -5,17 +5,18 @@ Elas são do PO, 04/09/2026
 (`docs/process/2026-09-04-O-PO-DECIDE-as-54-e-os-sete-conflitos.md` §2,
 `07-lancadores`), e a sprint que as executa é a `ONDA2-07-LANCADORES-01`:
 
-    [01] o reparo manual sem caminho   os DOIS — botão «Copiar a linha» E a
-                                       linha à mostra —, e SÓ no estado em que
-                                       o cartão já diz «linha intocável»
+    [01] o reparo manual sem caminho   a linha à mostra, SÓ no estado em que
+                                       o cartão já diz «linha intocável» (o
+                                       botão «Copiar a linha» saiu em 21/09)
     [02] a frase que manda a um botão  ela para de nomear lugar. **O texto tem
          inexistente                   UM dono para as duas telas, e ele NÃO é
                                        desta posse** — o que esta régua cobra é
                                        que a aba não escreva uma SEGUNDA frase
-    [03] de onde o aviso some          as DUAS recusas calam: «Não perguntar
-                                       para este jogo» e «Tirar daqui»
-    [04] 63 e 22 na mesma tela         o corpo nomeia o conjunto —
-                                       «da sua biblioteca (instalados ou não)»
+    [03] de onde o aviso some          as DUAS recusas calam: a lista antiga
+                                       do «Não perguntar» e o «Tirar daqui»
+    [04] 63 e 22 na mesma tela         CADUCOU em 21/09: a frase do atalho
+                                       saiu do corpo, e o corpo de todo cartão
+                                       é o mesmo contador de pontes
 
 O QUE ELAS CURAM, e cada uma é um defeito medido:
 
@@ -34,17 +35,13 @@ A MORDIDA DE CADA UMA está colada no relatório desta frente
 (`docs/process/agentes/2026-09-04/ONDA2-07.md`), e o resumo é este:
 
     apague o `if lida.intocaveis and lida.linha:` de `cartao_da_steam`
-        → 2 reprovam (o botão e o bloco somem da fileira pintada)
+        → 1 reprova (o bloco some do corpo)
     torne o mesmo `if` incondicional
-        → 1 reprova (o cartão em ordem passa a carregar botão e bloco)
+        → 1 reprova (o bloco nasce no dia bom)
     apague `linha=slo.WRAPPER_LAUNCH` de `_ler_do_disco`
-        → 1 reprova (a linha nunca chega ao desenho, e o botão nunca nasce)
-    faça `para_a_area_de_transferencia` devolver sempre `True`
-        → 1 reprova (o gesto passa a dizer "Copiado!" sem ter copiado)
+        → 1 reprova (a linha nunca chega ao desenho)
     tire `lida.recusados` de `calados`
         → 1 reprova (o «Tirar daqui» volta a não calar o aviso)
-    tire `(instalados ou não)` do corpo do cartão
-        → 1 reprova
 """
 
 from __future__ import annotations
@@ -80,26 +77,17 @@ def a07():
 def _a_maquina_nao_entra_na_regua(monkeypatch):
     """Nenhum teste daqui depende de haver jogo da Steam aberto na máquina.
 
-    O VAZAMENTO, MEDIDO EM 13/09/2026: o gesto `copiar_a_linha` devolve
-    `_resposta(VIGIA.agora(), …)`, e a vigia sem dado dispara a thread
-    `hefesto-lancadores`. Ela roda o `_ler_do_disco` de verdade, cujo censo
-    pergunta `steam_game_running()` ao `/proc` real e grava `PORTOES`, global do
-    módulo — medido, a gravação caiu DOIS testes depois do clique. Daí em diante
-    `jogo_aberto=True` escondia o «Desligar o Steam Input» e o «Deixar tudo
-    pronto», e quatro testes reprovavam só porque a máquina estava jogando;
-    `test_a_leitura_do_disco_leva_o_steam_input_ate_o_cartao` lia o `/proc` sem
-    thread nenhuma.
+    O VAZAMENTO, MEDIDO EM 13/09/2026: um gesto que devolvia `VIGIA.agora()`
+    disparava a thread `hefesto-lancadores`, que rodava o `_ler_do_disco` de
+    verdade — e o censo pergunta `steam_game_running()` ao `/proc` real.
+    Quatro testes reprovavam só porque a máquina estava jogando. Os botões
+    daquele vazamento saíram em 21/09/2026; o dublê fica, porque o censo
+    continua perguntando.
 
     O DUBLÊ VAI NOS DOIS LUGARES, e os dois foram medidos: a sentinela guarda a
     própria cópia de `steam_game_running` (`from .steam_launch_options import`),
-    e um dublê só em `steam_launch_options` deixa os mesmos quatro vermelhos com
-    o jogo aberto. Quem precisa de outro valor sobrescreve no próprio teste.
-
-    O QUE NÃO ENTROU, porque foi medido e não mordeu: devolver `PORTOES` e o
-    cache da vigia ao padrão a cada teste, e esperar a thread da vigia terminar.
-    Com o dublê no lugar os dois não mudaram resultado nenhum — nem neste
-    arquivo sozinho, nem com um arquivo anterior sujando o módulo (o
-    `_ler_do_disco` dublado do quarto teste já regrava `PORTOES`).
+    e um dublê só em `steam_launch_options` deixa a outra cópia viva. Quem
+    precisa de outro valor sobrescreve no próprio teste.
     """
     from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
@@ -164,27 +152,28 @@ def _em_ordem(desenho, linha: str, **extra):
 # --------------------------------------------------------------------------
 # [01] o reparo manual sem caminho — OS DOIS, SÓ QUANDO FAZ FALTA
 # --------------------------------------------------------------------------
-def test_o_estado_intocavel_traz_o_botao_e_a_linha(desenho, linha_do_motor):
-    """Com jogo intocável, o cartão oferece as DUAS saídas da decisão.
+#: O gesto do botão que SAIU em 21/09/2026 — escrito aqui como literal porque o
+#: desenho não tem mais a constante, e a régua cobra que ele não volte.
+COPIAR_QUE_SAIU = 'data-gesto="copiar-a-linha"'
 
-    E as duas juntas não são luxo: a cópia pode falhar CALADA — pôr texto na
-    área de transferência não devolve resposta nenhuma —, e a linha à mostra
-    ainda salva.
+
+def test_o_estado_intocavel_traz_a_linha_a_mostra(desenho, linha_do_motor):
+    """Com jogo intocável, o cartão mostra a linha — e o «Copiar» não volta.
+
+    O BOTÃO SAIU EM 21/09/2026 com os outros botões que só a Steam tinha,
+    palavra dela: *"a ideia é termos os mesmos botões pra todos os lançadores.
+    sempre."* A linha à mostra fica, e é a metade da decisão `07[01]` que a
+    cópia calada nunca garantiu: com ela na tela, um `Ctrl+C` salva o dia.
     """
     lida = _com_intocavel(desenho, linha_do_motor)
-    fileira = _fileira(desenho, lida)
     corpo = _corpo(desenho, lida)
 
-    assert f'data-gesto="{desenho.COPIAR}"' in fileira, (
-        f"o cartão com jogo intocável não traz o botão {desenho.COPIAR!r}. O "
-        f"carimbo dele já diz 'só reparo manual' e a tela continuaria sem "
-        f"oferecer um caminho para fazê-lo.")
-    assert desenho.COPIAR_ROTULO in fileira, (
-        f"o botão existe e não tem o rótulo que ela decidiu "
-        f"({desenho.COPIAR_ROTULO!r})")
+    assert COPIAR_QUE_SAIU not in _fileira(desenho, lida), (
+        "o «Copiar a linha» voltou ao cartão da Steam — um botão que os outros "
+        "sete cartões não têm")
     assert 'class="linha-do-wrapper"' in corpo, (
-        "a linha à mostra não entrou no corpo do cartão — sem ela, uma cópia "
-        "que falhe em silêncio deixa a pessoa sem saída nenhuma")
+        "a linha à mostra não entrou no corpo do cartão — o carimbo diz «só "
+        "reparo manual» e a tela ficaria sem o que copiar")
     assert desenho._e(linha_do_motor) in corpo, (
         "o bloco à mostra não traz a linha do motor. Uma linha diferente da "
         "que o produto grava faria ela colar à mão uma opção que o Hefesto "
@@ -192,33 +181,23 @@ def test_o_estado_intocavel_traz_o_botao_e_a_linha(desenho, linha_do_motor):
 
 
 def test_no_dia_bom_nada_disso_ocupa_a_tela(desenho, linha_do_motor):
-    """Sem jogo intocável, o cartão sai como saía antes — a outra metade da decisão.
+    """Sem jogo intocável, o bloco da linha não nasce — a outra metade da decisão.
 
-    *"No dia bom o cartão fica exatamente como está"*. Um botão de copiar
-    permanente seria trabalho manual oferecido a quem não precisa dele: nos
-    outros estados a `_VigiaDaSteam` repõe sozinha assim que o jogo e a Steam
-    fecham.
+    *"No dia bom o cartão fica exatamente como está"*: nos outros estados o
+    vigia (`hefesto-steam-input-guard`) repõe o atalho sozinho.
     """
-    fileira = _fileira(desenho, _em_ordem(desenho, linha_do_motor))
-    corpo = _corpo(desenho, _em_ordem(desenho, linha_do_motor))
-    assert f'data-gesto="{desenho.COPIAR}"' not in fileira, (
-        "o «Copiar a linha» apareceu numa biblioteca em ordem — a decisão é "
-        "«só quando faz falta»")
-    assert "linha-do-wrapper" not in corpo, (
+    assert "linha-do-wrapper" not in _corpo(desenho, _em_ordem(desenho, linha_do_motor)), (
         "o bloco da linha apareceu numa biblioteca em ordem")
 
 
 def test_sem_a_linha_o_cartao_cala_em_vez_de_inventar(desenho):
-    """Leitura com intocáveis e SEM linha: nem botão, nem bloco.
+    """Leitura com intocáveis e SEM linha: nenhum bloco.
 
     O DESENHO NÃO IMPORTA O PRODUTO — é o que deixa o gerador rodar como script
-    solto —, então a linha chega pelo contrato frio. Sem ela, um botão de
-    copiar copiaria o vazio e diria "Copiado!", e o bloco mostraria um `<code>`
-    em branco onde a tela promete uma linha para colar.
+    solto —, então a linha chega pelo contrato frio. Sem ela, o bloco mostraria
+    um `<code>` em branco onde a tela promete uma linha para colar.
     """
-    lida = _com_intocavel(desenho, "")
-    assert f'data-gesto="{desenho.COPIAR}"' not in _fileira(desenho, lida)
-    assert "linha-do-wrapper" not in _corpo(desenho, lida)
+    assert "linha-do-wrapper" not in _corpo(desenho, _com_intocavel(desenho, ""))
 
 
 def test_o_produto_enche_a_linha_com_a_constante_do_motor(
@@ -245,66 +224,6 @@ def test_o_produto_enche_a_linha_com_a_constante_do_motor(
         f"`_ler_do_disco` devolveu linha={lida.linha!r}. Ela tem de ser a "
         f"constante do motor: é a MESMA que o reparo grava no vdf e a MESMA "
         f"que o botão da janela velha copia.")
-
-
-def test_o_gesto_copia_a_linha_do_motor_e_diz_o_que_fez(
-        a07, ctx, linha_do_motor, monkeypatch):
-    """O clique põe a linha na área de transferência e devolve o recibo dela.
-
-    O RECIBO É O CANAL DE SUCESSO DA D-01 (`{"recado": …}`), e o texto é o da
-    decisão `07[01]` — a mesma primeira oração que a janela velha já diz.
-    """
-    copiado: list[str] = []
-    monkeypatch.setattr(a07, "para_a_area_de_transferencia",
-                        lambda t: (copiado.append(t), True)[1])
-    resposta = a07.copiar_a_linha(ctx, {"v": "steam"}, None)
-    assert copiado == [linha_do_motor], (
-        f"o gesto mandou copiar {copiado!r} — e o que se cola na Steam é a "
-        f"linha do motor")
-    assert resposta.get("recado") == a07.COPIADO, (
-        "o gesto copiou e não disse nada. Sem o `recado`, o único sinal de que "
-        "o clique funcionou é a área de transferência — que ela não vê.")
-    assert "mesa" in resposta, (
-        "o gesto não devolveu a carga da pintura: o cartão ficaria com o "
-        "estado do tique anterior até o próximo")
-
-
-def test_o_gesto_recusa_dizendo_quando_a_area_nao_confirma(
-        a07, ctx, monkeypatch):
-    """O DUBLÊ SABE RECUSAR, e é a metade que prova que a régua mede algo.
-
-    Pôr texto na área de transferência não devolve resposta nenhuma — a
-    própria janela velha conclui `copied = True` por não ter levantado, dentro
-    de um `suppress(Exception)`. Aqui a confirmação é LIDA DE VOLTA, e quando
-    ela não vem a tela DIZ, apontando a segunda saída que está logo acima do
-    botão.
-    """
-    monkeypatch.setattr(a07, "para_a_area_de_transferencia", lambda _t: False)
-    with pytest.raises(RuntimeError) as caiu:
-        a07.copiar_a_linha(ctx, {"v": "steam"}, None)
-    frase = str(caiu.value)
-    # O QUE A RÉGUA PROCURA MUDOU EM 11/09/2026 — A2-057, aprovada por ela: a
-    # recusa dizia «área de transferência» (o mecanismo) e nomeava o cartão;
-    # agora diz «copiar» (o ato) e aponta o lugar — *"logo acima deste botão"*.
-    # O que ela cobra é o mesmo: a segunda saída, com a tecla.
-    assert "Ctrl+C" in frase and "acima deste botão" in frase, (
-        f"a recusa não manda ela para a linha à mostra: {frase!r}. Uma recusa "
-        f"que só diz 'não consegui' deixa a pessoa onde o defeito a deixava.")
-
-
-def test_a_area_de_transferencia_recusa_sem_laco_de_gtk(a07):
-    """Sem janela viva, `para_a_area_de_transferencia` devolve `False`.
-
-    É O COMPORTAMENTO CERTO, e não uma limitação: uma régua que chame o gesto
-    sem janela nenhuma **não tem** área de transferência, e dizer "copiei" ali
-    seria o instrumento provando o que não aconteceu. Ela também não pode
-    LEVANTAR: quem chama é um gesto, e um traceback aqui trocaria a frase da
-    recusa por um erro que ela não lê.
-    """
-    assert a07.para_a_area_de_transferencia("") is False, (
-        "copiar o vazio não é copiar")
-    assert a07.para_a_area_de_transferencia("qualquer coisa") is False, (
-        "a função afirmou ter copiado sem um laço de GTK para confirmar")
 
 
 # --------------------------------------------------------------------------
@@ -419,318 +338,6 @@ def test_as_duas_listas_entram_na_conta_dos_calados(a07, desenho):
 
 
 # --------------------------------------------------------------------------
-# [04] 63 e 22 na mesma tela — O CORPO NOMEIA O CONJUNTO
-# --------------------------------------------------------------------------
-def test_o_corpo_nomeia_o_conjunto_dos_dois_numeros(desenho, linha_do_motor):
-    """As duas contagens continuam as medidas, e a tela diz que são conjuntos diferentes.
-
-    ELA COBRA OS DOIS NÚMEROS JUNTOS, que é como o defeito aparece: o canto diz
-    `2 jogos instalados` e o corpo diz `5 jogos da sua biblioteca` a uma linha
-    de distância. Quem lê vê 5 > 2 e conclui que um dos dois mente.
-
-    O LITERAL ESTÁ AQUI porque ele É a decisão: `07[04]` escolheu *"o corpo
-    nomeia o conjunto"* contra as outras duas opções — contar só instalados
-    (que apagaria as dezenas de jogos já preparados) e pôr os dois números no
-    canto (que disputa a linha com o selo em janela estreita). Texto de tela é
-    dela, e uma régua que aceitasse qualquer redação não cobraria a escolha.
-    """
-    lida = desenho.Leitura(com_wrapper=tuple(str(n) for n in range(5)),
-                           instalados=2, linha=linha_do_motor)
-    cartao = desenho.cartao_da_steam(lida)
-    assert cartao.jogos == "2 jogos instalados"
-    assert "5 jogos da sua biblioteca (instalados ou não)" in cartao.diz, (
-        f"o corpo não nomeia o conjunto: {cartao.diz!r}. Sem as três palavras, "
-        f"os dois números do cartão continuam parecendo contradição.")
-
-
-# ==========================================================================
-# O STEAM INPUT — o que a Steam põe ENTRE o controle e o jogo
-#
-# DECISÃO DELA, 06/09/2026 (`D-0609-STEAM-DIVIDIDO`): **o Steam Input e a lista
-# de exceções ficam nesta aba**; "Consertar", "Restaurar de fábrica" e "Aplicar
-# aos jogos" ficam na 09.
-#
-# O QUE ESTAVA MEDIDO (`docs/data/paridade-gtk-html.csv`, linhas 250, 251, 254):
-# a janela velha desliga o Steam Input, marca o jogo que não funciona e faz as
-# duas coisas de uma vez; a interface nova não fazia NENHUMA das três, em aba
-# nenhuma.
-#
-# A PROVA DESTE BLOCO É O ARQUIVO, e não o código que o escreve. As duas réguas
-# que decidem — `test_o_desligar_le_o_arquivo_de_volta_antes_de_dizer_pronto` e
-# a irmã dela — montam um `localconfig.vdf` de MENTIRA num `HOME` de mentira,
-# rodam o gesto com um script que EDITA o arquivo, e cobram o que ficou EM
-# DISCO. Um script que não escreve nada faz a tela RECUSAR — que é o defeito
-# que a `HONESTIDADE-STEAM-01` nomeou (*o script pode sair 0 tendo adiado*).
-# ==========================================================================
-VDF_LIGADO = '''"UserLocalConfigStore"
-{
-\t"Software"
-\t{
-\t\t"Valve"
-\t\t{
-\t\t\t"Steam"
-\t\t\t{
-\t\t\t\t"apps"
-\t\t\t\t{
-\t\t\t\t\t"9990001"
-\t\t\t\t\t{
-\t\t\t\t\t\t"UseSteamControllerConfig"\t\t"2"
-\t\t\t\t\t}
-\t\t\t\t}
-\t\t\t}
-\t\t}
-\t}
-}
-'''
-
-
-@pytest.fixture
-def vdf_de_mentira(tmp_path, monkeypatch):
-    """Um `localconfig.vdf` de MENTIRA, num `HOME` de mentira, com um appid que
-    não existe na Steam de ninguém.
-
-    O `9990001` É SINTÉTICO DE PROPÓSITO, e é a mesma escolha da frente irmã
-    (`ONDA5-07-01`): um appid real faria a régua falar de um jogo que pode estar
-    na biblioteca de alguém. E o `HOME` é `tmp_path` — **nada do disco dela é
-    aberto por este arquivo**, o que a régua de isolamento desta aba já cobra em
-    `test_a_aba_lancadores_diz_a_verdade.py`.
-    """
-    lar = tmp_path / "lar"
-    alvo = lar / ".steam/steam/userdata/123/config/localconfig.vdf"
-    alvo.parent.mkdir(parents=True)
-    alvo.write_text(VDF_LIGADO, encoding="utf-8")
-    monkeypatch.setenv("HOME", str(lar))
-    monkeypatch.setattr(pathlib.Path, "home", classmethod(lambda cls: lar))
-    return alvo
-
-
-def _com_steam_input(desenho, **extra):
-    """Uma leitura em que a biblioteca foi lida E o Steam Input está ligado."""
-    return desenho.Leitura(
-        com_wrapper=("620",), instalados=1,
-        steam_input="<b>Ligado para Um Jogo</b>", steam_input_ligado=True,
-        **extra)
-
-
-# --------------------------------------------------------------------------
-# PASSO 1 — conferir e desligar
-# --------------------------------------------------------------------------
-def test_a_tela_diz_coisas_diferentes_com_o_steam_input_ligado_e_desligado(
-        a07, monkeypatch):
-    """A MORDIDA DO PASSO 1: dois dublês, duas telas.
-
-    ELA MEDE O PRODUTO, e não o texto do código: o que se compara é o CORPO DO
-    CARTÃO que a pintura emite (`steam-diz`), montado a partir da leitura que a
-    vigia faz do disco. Com o dublê dizendo "ligado" e com o dublê dizendo
-    "desligado", o cartão tem de dizer coisas diferentes — e as palavras têm de
-    ser as do DONO (`emulation_actions.markup_status_steam_input`), nunca uma
-    segunda redação desta aba.
-
-    ARRANQUE `steam_input=frase_do_steam_input` de `_ler_do_disco` e as duas
-    telas voltam a ser a mesma: o cartão fica calado sobre o Steam Input, e a
-    tela nova volta a não saber o que a janela velha sabe.
-    """
-    from hefesto_dualsense4unix.app.actions import emulation_actions as ea
-
-    # O `efetiva` SAIU DO DUBLÊ em 13/09/2026 (RESTOS-DA-ONDA-DOIS-01): a 07 lê
-    # só a lista das exceções (`_steam_input_excecoes`) e não varre mais hidraw.
-    def _dublê(ligado, jogos=(), excecoes=()):
-        monkeypatch.setattr(ea.EmulationActionsMixin, "_steam_input_is_on",
-                            staticmethod(lambda: ligado))
-        monkeypatch.setattr(ea.EmulationActionsMixin, "_steam_input_appids_ligados",
-                            staticmethod(lambda: list(jogos)))
-        monkeypatch.setattr(ea.EmulationActionsMixin, "_steam_input_excecoes",
-                            staticmethod(lambda: list(excecoes)))
-        return a07._o_que_a_steam_poe_no_meio()
-
-    ligado, e_ligado = _dublê(True, jogos=["9990001"])
-    desligado, e_desligado = _dublê(False)
-    assert (e_ligado, e_desligado) == (True, False)
-    assert ligado != desligado, (
-        "a tela diz a MESMA coisa com o Steam Input ligado e desligado — é "
-        "verde sobre nada")
-    # AS PALAVRAS SÃO DO DONO, e a régua PERGUNTA a ele em vez de digitar: um
-    # literal aqui daria verde no dia em que a frase dele mudasse e a tela
-    # ficasse com a antiga.
-    assert "Desligado" in ea.markup_status_steam_input(False, [], [])
-    assert desligado in ea.markup_status_steam_input(False, [], []), (
-        "a frase do estado desligado não é a do dono — esta aba redigiu a sua")
-    assert ligado.startswith("<b>") and ligado.endswith("</b>"), (
-        "o estado LIGADO perdeu a ênfase: `.lanc-diz b` é o laranja da aba, e "
-        "sem ele a notícia que pede ação sai com o peso de quem não pede")
-    assert "<span" not in ligado and "foreground" not in ligado, (
-        "o markup do Pango vazou para a tela — um `foreground=` não pinta nada "
-        "num navegador, e o atributo morto fica lá")
-
-
-def test_o_botao_de_desligar_so_nasce_com_o_steam_input_ligado(a07, desenho):
-    """"Desligar o Steam Input" não aparece onde ele não teria o que desligar.
-
-    Três estados, três respostas: LIGADO oferece o botão; DESLIGADO não; e a
-    leitura que NÃO FALA de Steam Input (a primeira meia volta, e toda régua que
-    monte uma `Leitura` à mão) também não — porque ali o produto não mediu, e um
-    botão sobre uma medição que não aconteceu é o defeito que esta aba nasceu
-    para matar.
-    """
-    def _fileira(lida):
-        cartoes = a07.com_o_que_o_daemon_diz(desenho.cartoes(lida), None, lida)
-        return desenho.acoes_html(cartoes[0])
-
-    ligado = _fileira(_com_steam_input(desenho))
-    desligado = _fileira(desenho.Leitura(com_wrapper=("620",), instalados=1,
-                                         steam_input="Desligado — tudo certo",
-                                         steam_input_ligado=False))
-    calado = _fileira(desenho.Leitura(com_wrapper=("620",), instalados=1))
-
-    alvo = f'data-gesto="{desenho.DESLIGAR_STEAM_INPUT}"'
-    assert alvo in ligado, "o botão não nasce com o Steam Input ligado"
-    assert alvo not in desligado, (
-        "o botão aparece com o Steam Input JÁ desligado — clicar não mudaria "
-        "nada, e botão que não muda nada é botão que finge")
-    assert alvo not in calado, (
-        "o botão aparece numa leitura que não mediu o Steam Input")
-    assert desenho.DESLIGAR_STEAM_INPUT_ROTULO in ligado
-
-
-def test_o_desligar_recusa_com_jogo_aberto_e_a_frase_e_do_dono(a07, ctx, monkeypatch):
-    """Jogo aberto: NADA acontece, e a frase é a da janela velha.
-
-    `steam -shutdown` com jogo aberto MATA o jogo e o progresso não salvo. É o
-    primeiro portão do dono (`emulation_actions._steam_input_decidir`) e ele
-    vem antes de tudo — inclusive antes de perguntar qualquer coisa.
-    """
-    from hefesto_dualsense4unix.app.actions.emulation_actions import (
-        format_steam_input_result,
-    )
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    monkeypatch.setattr(a07, "_o_script_que_desliga", lambda: "/bin/true")
-    monkeypatch.setattr(slo, "steam_game_running", lambda: True)
-
-    def _nunca(*a, **kw):
-        raise AssertionError("fechou a Steam com um jogo aberto")
-
-    monkeypatch.setattr(slo, "with_steam_closed", _nunca)
-    a07._desarmar()
-    with pytest.raises(RuntimeError) as erro:
-        a07.desligar_o_steam_input(ctx, {"v": "steam"}, None)
-    assert str(erro.value) == format_steam_input_result(status="jogo_aberto")
-
-
-def test_o_desligar_com_a_steam_aberta_pergunta_antes_de_fechar(
-        a07, ctx, desenho, monkeypatch):
-    """DOIS cliques, e o primeiro não fecha nada.
-
-    A MORDIDA: faça `_este_clique_confirma` devolver `True` sempre e o primeiro
-    clique passa a fechar a Steam DELA — que é exatamente o que a
-    `--prova-gesto` faria na volta seguinte, com o `data-v` que o DOM tinha.
-    """
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    monkeypatch.setattr(a07, "_o_script_que_desliga", lambda: "/bin/true")
-    monkeypatch.setattr(slo, "steam_game_running", lambda: False)
-    monkeypatch.setattr(slo, "steam_running", lambda: True)
-    monkeypatch.setattr(a07.VIGIA, "agora", lambda: _com_steam_input(desenho))
-
-    fechou: list[str] = []
-    monkeypatch.setattr(slo, "with_steam_closed",
-                        lambda t, **kw: (fechou.append("fechou"),
-                                         (slo.STEAM_JANELA_OK, t()))[1])
-    a07._desarmar()
-    carga = a07.desligar_o_steam_input(ctx, {"v": desenho.STEAM}, None)
-    assert fechou == [], "o PRIMEIRO clique já fechou a Steam dela"
-    assert carga["recado"] == a07.PERGUNTA_DA_STEAM
-    assert a07._armado_agora() == desenho.DESLIGAR_STEAM_INPUT
-
-    # E o cartão ARMADO oferece o `data-v` que o segundo clique exige — o
-    # guarda e a tela têm um dono só.
-    lida = _com_steam_input(desenho)
-    armado = desenho.acoes_html(
-        a07.com_o_que_o_daemon_diz(desenho.cartoes(lida), None, lida)[0])
-    assert f'data-v="{a07._confirmo(desenho.DESLIGAR_STEAM_INPUT)}"' in armado
-    assert a07.CONFIRMA_A_STEAM in armado
-
-
-def test_o_consentimento_de_um_ato_nao_vale_para_o_outro(a07, desenho):
-    """Armar "Deixar tudo pronto" NÃO confirma "Desligar o Steam Input".
-
-    ERA UM RELÓGIO SÓ até 06/09/2026, e com três botões que fecham a Steam isso
-    passou a ser um buraco: o sim dado a um ato valeria para o outro. **O
-    consentimento é do ATO, nunca da aba.**
-
-    A MORDIDA: volte `_confirmo` a devolver uma constante única (`"steam:
-    confirmo"`) e o `data-v` de um botão passa a confirmar o outro.
-    """
-    a07._armar(desenho.TUDO_PRONTO)
-    assert a07._armado_agora() == desenho.TUDO_PRONTO
-    assert a07._confirmo(desenho.TUDO_PRONTO) != a07._confirmo(
-        desenho.DESLIGAR_STEAM_INPUT)
-    # o `data-v` do outro ato ARMA o outro ato, e não confirma este
-    assert a07._este_clique_confirma(
-        desenho.DESLIGAR_STEAM_INPUT,
-        {"v": a07._confirmo(desenho.TUDO_PRONTO)}) is False
-    assert a07._armado_agora() == desenho.DESLIGAR_STEAM_INPUT, (
-        "armar um ato não desarmou o outro — dois consentimentos pendurados "
-        "sobre a mesma Steam, e nenhum dizendo a qual a confirmação responde")
-    a07._desarmar()
-
-
-def test_o_desligar_le_o_arquivo_de_volta_antes_de_dizer_pronto(
-        a07, ctx, desenho, vdf_de_mentira, monkeypatch):
-    """A PROVA É O ARQUIVO — o que ficou em disco, lido de volta.
-
-    O script de mentira EDITA o `localconfig.vdf` (é o que o de verdade faz), e
-    a régua cobra as duas coisas: o arquivo mudou, e a tela disse que deu certo.
-
-    A MORDIDA, e ela é a do defeito real: troque o script por um que não escreva
-    nada. O `rc` continua 0, a tag continua ausente — e a tela tem de RECUSAR,
-    porque a releitura ainda diz que está ligado. Era exatamente assim que a
-    janela velha mentia antes da `HONESTIDADE-STEAM-01`: *"Steam Input
-    desligado"*, incondicional, sobre um no-op.
-    """
-    from hefesto_dualsense4unix.app.actions.emulation_actions import (
-        format_steam_input_result,
-    )
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    monkeypatch.setattr(slo, "steam_game_running", lambda: False)
-    monkeypatch.setattr(slo, "steam_running", lambda: False)
-    monkeypatch.setattr(a07.VIGIA, "agora", lambda: None)
-    monkeypatch.setattr(a07.VIGIA, "ler", lambda: None)
-    monkeypatch.setattr(a07, "_o_script_que_desliga", lambda: "/bin/true")
-
-    assert '"UseSteamControllerConfig"\t\t"2"' in vdf_de_mentira.read_text()
-
-    # 1. O SCRIPT QUE NÃO ESCREVE NADA — a tela RECUSA.
-    monkeypatch.setattr(a07, "_rodar_o_script", lambda s: (0, ""))
-    a07._desarmar()
-    with pytest.raises(RuntimeError) as erro:
-        a07.desligar_o_steam_input(ctx, {"v": desenho.STEAM}, None)
-    assert erro.value.args[0] == format_steam_input_result(
-        status="executado", rc=0, tag=None, ainda_ligado=True), (
-        "a tela disse outra coisa que não a frase do dono para 'rodou e "
-        "continua ligado'")
-    assert '"UseSteamControllerConfig"\t\t"2"' in vdf_de_mentira.read_text(), (
-        "o dublê que não escreve nada escreveu alguma coisa")
-
-    # 2. O SCRIPT QUE DE FATO DESLIGA — a tela diz que deu certo.
-    def _desliga(_script):
-        vdf_de_mentira.write_text(
-            vdf_de_mentira.read_text(encoding="utf-8").replace(
-                '"UseSteamControllerConfig"\t\t"2"',
-                '"UseSteamControllerConfig"\t\t"0"'),
-            encoding="utf-8")
-        return 0, "[steam-input] resultado=aplicado\n"
-
-    monkeypatch.setattr(a07, "_rodar_o_script", _desliga)
-    carga = a07.desligar_o_steam_input(ctx, {"v": desenho.STEAM}, None)
-    assert '"UseSteamControllerConfig"\t\t"0"' in vdf_de_mentira.read_text(), (
-        "o arquivo não mudou — e a tela ia dizer que mudou")
-    assert carga["recado"] == format_steam_input_result(
-        status="executado", rc=0, tag="aplicado", ainda_ligado=False)
-
-
-# --------------------------------------------------------------------------
 # PASSO 2 — "Este jogo não funciona" SAIU, e a exclusão entrou no lugar
 # --------------------------------------------------------------------------
 def test_o_jogo_nao_funciona_saiu_e_a_exclusao_entrou_no_lugar(a07, desenho):
@@ -748,7 +355,7 @@ def test_o_jogo_nao_funciona_saiu_e_a_exclusao_entrou_no_lugar(a07, desenho):
     A MORDIDA: devolva o botão velho à `acoes_do_steam_input` e a primeira linha
     reprova; tire a `fileira_comum` do cartão da Steam e a segunda reprova.
     """
-    lida = _com_steam_input(desenho)
+    lida = desenho.Leitura(com_wrapper=("620",), instalados=1)
     fileira = desenho.acoes_html(
         a07.com_o_que_o_daemon_diz(desenho.cartoes(lida), None, lida)[0])
     assert 'data-gesto="este-jogo-nao-funciona"' not in fileira
@@ -756,158 +363,6 @@ def test_o_jogo_nao_funciona_saiu_e_a_exclusao_entrou_no_lugar(a07, desenho):
     assert not hasattr(a07, "este_jogo_nao_funciona"), (
         "o gesto velho continua registrado sem botão na tela — um clique que "
         "nenhuma página oferece")
-
-
-# --------------------------------------------------------------------------
-# PASSO 3 — "Deixar tudo pronto", com UM consentimento
-# --------------------------------------------------------------------------
-def test_deixar_tudo_pronto_faz_os_dois_dentro_de_um_consentimento_so(
-        a07, ctx, desenho, monkeypatch):
-    """A MORDIDA DO PASSO 3: UM consentimento, e os DOIS trabalhos dentro dele.
-
-    A régua conta as janelas de Steam fechada (tem de ser UMA) e cobra que as
-    duas pernas rodaram DENTRO dela — o script primeiro, o atalho depois.
-
-    A razão de não serem dois diálogos está no motor: os dois cabem numa janela
-    de `with_steam_closed`, e pedir duas vezes é fazer a pessoa pagar duas vezes
-    pelo mesmo fechamento da Steam.
-    """
-    from hefesto_dualsense4unix.app.actions import daemon_actions as da
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    ordem: list[str] = []
-    monkeypatch.setattr(a07, "_o_script_que_desliga", lambda: "/bin/true")
-    monkeypatch.setattr(a07, "_rodar_o_script",
-                        lambda s: (ordem.append("script"), (0, ""))[1])
-    monkeypatch.setattr(slo, "apply_wrapper_to_all_games",
-                        lambda *a, **kw: (ordem.append("wrapper"),
-                                          {"applied": ["9990001"]})[1])
-    monkeypatch.setattr(da, "medir_jogos_com_steam_input", lambda: ["Um Jogo"])
-    monkeypatch.setattr(a07, "_o_steam_input_continua_ligado", lambda: False)
-    monkeypatch.setattr(a07.VIGIA, "agora", lambda: _com_steam_input(desenho))
-    monkeypatch.setattr(a07.VIGIA, "ler", lambda: None)
-
-    janelas: list[str] = []
-
-    def _janela(tarefa, **kw):
-        janelas.append("abriu")
-        return slo.STEAM_JANELA_OK, tarefa()
-
-    monkeypatch.setattr(slo, "with_steam_closed", _janela)
-
-    a07._desarmar()
-    # 1º clique: pergunta, e NADA roda.
-    primeiro = a07.deixar_tudo_pronto(ctx, {"v": desenho.STEAM}, None)
-    assert janelas == [] and ordem == [], "o primeiro clique já fechou a Steam"
-    # A FRASE DO CONSENTIMENTO É A DO MOTOR, palavra por palavra.
-    assert primeiro["recado"] == " ".join(
-        da.DaemonActionsMixin._STEAM_READY_CORPO.split()), (
-        "o consentimento foi redigido aqui em vez de vir do dono")
-
-    # 2º clique: UMA janela, os DOIS trabalhos, nesta ordem.
-    carga = a07.deixar_tudo_pronto(
-        ctx, {"v": a07._confirmo(desenho.TUDO_PRONTO)}, None)
-    assert janelas == ["abriu"], (
-        f"{len(janelas)} janelas de Steam fechada — a pessoa pagaria "
-        f"{len(janelas)} vezes pelo mesmo fechamento")
-    assert ordem == ["script", "wrapper"]
-    assert carga["recado"] == da.format_steam_ready_result(
-        janela=slo.STEAM_JANELA_OK,
-        dados={"script": (0, ""), "wrapper": {"applied": ["9990001"]},
-               "steam_input_jogos": ["Um Jogo"]})
-
-
-def test_deixar_tudo_pronto_nao_trava_o_proton_calado(
-        a07, ctx, desenho, monkeypatch):
-    """O «tudo pronto» faz os DOIS atos que o consentimento nomeia, e só eles.
-
-    INSTALL-UNIVERSAL, 18/09/2026. Uma leva pôs aqui um terceiro efeito, a
-    trava do Proton de todo jogo, debaixo de um consentimento que anuncia *"as
-    duas coisas que costumam brigar com o controle"* e de um recibo que nunca
-    fala do Proton — e ele travava até sem o Proton pinado instalado. Saiu no
-    mesmo dia: a trava é do vigia da Steam, que dispara nesta mesma saída dela.
-    Pôr de volta pede o OK dela sobre a frase do consentimento.
-
-    MORDIDA: devolva a chamada a `lock_proton_for_all_games` ao `_acao`.
-    """
-    from hefesto_dualsense4unix.app.actions import daemon_actions as da
-    from hefesto_dualsense4unix.integrations import proton_pin
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    ordem: list[str] = []
-    monkeypatch.setattr(a07, "_o_script_que_desliga", lambda: "/bin/true")
-    monkeypatch.setattr(a07, "_rodar_o_script",
-                        lambda s: (ordem.append("script"), (0, ""))[1])
-    monkeypatch.setattr(slo, "apply_wrapper_to_all_games",
-                        lambda *a, **kw: (ordem.append("wrapper"),
-                                          {"applied": ["9990001"]})[1])
-    monkeypatch.setattr(proton_pin, "lock_proton_for_all_games",
-                        lambda **kw: (ordem.append("proton"),
-                                      {"locked": 1, "status": "locked"})[1])
-    monkeypatch.setattr(da, "medir_jogos_com_steam_input", lambda: ["Um Jogo"])
-    monkeypatch.setattr(a07, "_o_steam_input_continua_ligado", lambda: False)
-    monkeypatch.setattr(a07.VIGIA, "agora", lambda: _com_steam_input(desenho))
-    monkeypatch.setattr(a07.VIGIA, "ler", lambda: None)
-    monkeypatch.setattr(slo, "with_steam_closed",
-                        lambda tarefa, **kw: (slo.STEAM_JANELA_OK, tarefa()))
-
-    a07._desarmar()
-    a07.deixar_tudo_pronto(ctx, {"v": desenho.STEAM}, None)
-    a07.deixar_tudo_pronto(ctx, {"v": a07._confirmo(desenho.TUDO_PRONTO)}, None)
-
-    assert ordem == ["script", "wrapper"], ordem
-
-
-def test_deixar_tudo_pronto_so_nasce_quando_os_dois_tem_trabalho(a07, desenho):
-    """Ele é o botão do consentimento ÚNICO — e só faz falta onde há dois atos.
-
-    Com um lado só pendente, o botão daquele lado já resolve com um
-    consentimento igual; um terceiro botão ali seria escolha oferecida sem
-    diferença, que é o que a decisão dela tirou da tela em primeiro lugar.
-    """
-    def _fileira(lida):
-        return desenho.acoes_html(
-            a07.com_o_que_o_daemon_diz(desenho.cartoes(lida), None, lida)[0])
-
-    alvo = f'data-gesto="{desenho.TUDO_PRONTO}"'
-    so_steam_input = _com_steam_input(desenho)
-    os_dois = _com_steam_input(
-        desenho, reparaveis=(("70", "Um Jogo", "nunca recebeu o atalho"),))
-    so_wrapper = desenho.Leitura(
-        com_wrapper=("620",), instalados=1, steam_input="Desligado — tudo certo",
-        steam_input_ligado=False,
-        reparaveis=(("70", "Um Jogo", "nunca recebeu o atalho"),))
-
-    assert alvo in _fileira(os_dois)
-    assert alvo not in _fileira(so_steam_input)
-    assert alvo not in _fileira(so_wrapper)
-
-
-def test_a_leitura_do_disco_leva_o_steam_input_ate_o_cartao(
-        a07, desenho, vdf_de_mentira, monkeypatch):
-    """A PONTE INTEIRA, do disco ao corpo do cartão — e é ela que morde.
-
-    A régua de cima prova que o produto SABE dizer coisas diferentes; esta prova
-    que o que ele sabe CHEGA à tela. São dois defeitos diferentes, e o segundo é
-    o mais silencioso: uma leitura certa que ninguém emite deixa o cartão calado
-    e nada acusa.
-
-    A MORDIDA: arranque `steam_input=` e `steam_input_ligado=` da `Leitura` que
-    `_ler_do_disco` devolve. A frase some do corpo do cartão e o botão de
-    desligar não nasce — com o arquivo em disco dizendo que está LIGADO.
-    """
-    assert '"UseSteamControllerConfig"\t\t"2"' in vdf_de_mentira.read_text()
-    lida = a07._ler_do_disco()
-    assert lida.steam_input_ligado is True, (
-        "o produto leu o arquivo, viu ligado, e a leitura não conta isso a "
-        "ninguém")
-    assert lida.steam_input, "a frase não chegou à `Leitura`"
-
-    cartoes = a07.com_o_que_o_daemon_diz(desenho.cartoes(lida), None, lida)
-    quadro = desenho.Quadro(lancadores=cartoes).valores()
-    assert lida.steam_input in quadro["steam-diz"], (
-        "a frase está na leitura e não no corpo do cartão — pintura perdida")
-    assert f'data-gesto="{desenho.DESLIGAR_STEAM_INPUT}"' in quadro["steam-acoes"]
 
 
 # --------------------------------------------------------------------------
@@ -965,12 +420,16 @@ def test_com_cada_condicao_falsa_o_lembrete_nao_nasce(a07, qual, estado):
     assert aviso == "", f"o lembrete nasceu com {qual}"
 
 
-def test_com_as_quatro_verdadeiras_o_lembrete_nasce_e_traz_o_botao_de_dispensar(
-        a07, desenho):
+def test_com_as_quatro_verdadeiras_o_lembrete_nasce(a07, desenho):
     """A outra metade: sem ela a régua acima passaria com o aviso morto.
 
     Uma régua que só cobra AUSÊNCIA fica verde sobre um aviso que nunca nasce —
     é o defeito que esta casa nomeou no `--prova-gesto` do microfone.
+
+    O «NÃO PERGUNTAR» SAIU EM 21/09/2026 com os outros botões que só a Steam
+    tinha. O aviso é um rótulo de estado, e quem o cala continua sendo a
+    resposta dela: o «Não usar neste jogo» da lista e a lista de exclusão, que
+    escreve no mesmo `jogos_sem_wrapper.txt`.
     """
     lida = desenho.Leitura(com_wrapper=("620",), instalados=1)
     aviso, appid = a07.aviso_do_jogo_aberto(_mesa_com_jogo_sem_atalho(), lida)
@@ -978,7 +437,7 @@ def test_com_as_quatro_verdadeiras_o_lembrete_nasce_e_traz_o_botao_de_dispensar(
 
     cartoes = a07.com_o_que_o_daemon_diz(
         desenho.cartoes(lida), _mesa_com_jogo_sem_atalho(), lida)
-    fileira = desenho.acoes_html(cartoes[0])
-    assert f'data-gesto="nao-perguntar" data-v="{appid}"' in fileira, (
-        "o aviso nasceu sem o botão que o dispensa — o lembrete voltaria a "
-        "cada tique e ela não teria como calá-lo")
+    assert cartoes[0].diz.startswith(aviso), (
+        "o aviso nasceu e não chegou ao corpo do cartão da Steam")
+    assert 'data-gesto="nao-perguntar"' not in desenho.acoes_html(cartoes[0]), (
+        "o «Não perguntar» voltou ao cartão — um botão que os outros sete não têm")

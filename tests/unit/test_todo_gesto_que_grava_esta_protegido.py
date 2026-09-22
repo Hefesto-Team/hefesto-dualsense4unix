@@ -458,26 +458,27 @@ def test_os_dois_da_leva_das_nove_estao_protegidos(nome: str) -> None:
 
 
 @pytest.mark.parametrize("nome", [
-    "tirar-daqui", "voltar-a-usar", "nao-perguntar", "voltar-a-perguntar",
-    "consertar", "consertar-fechando-a-steam", "deixar-tudo-pronto",
+    "tirar-daqui", "voltar-a-usar", "voltar-a-perguntar",
     # O `este-jogo-nao-funciona` SAIU em 21/09/2026 com o gesto — o desenho da
     # lista de exclusão pôs o «Adicionar à lista de exclusão» no lugar dele.
     # Os três da exclusão que gravam entram no lugar, e com mais razão.
     "confirmar-exclusao", "tirar-da-exclusao", "confirmar-perfil",
+    # E NA MESMA NOITE SAÍRAM QUATRO: `nao-perguntar`, `consertar`,
+    # `consertar-fechando-a-steam` e `deixar-tudo-pronto`, com os outros
+    # botões que só a Steam tinha — o reparo é do vigia.
 ])
-def test_as_oito_portas_da_aba_07_estao_protegidas(nome: str) -> None:
+def test_as_portas_da_aba_07_estao_protegidas(nome: str) -> None:
     """A quarta repetição, nomeada — para a regressão ter nome.
 
-    A `STEAM-INPUT-01` mediu que a régua era cega para a aba INTEIRA. Os oito
+    A `STEAM-INPUT-01` mediu que a régua era cega para a aba INTEIRA. Estas
     escrevem em arquivos DELA: `jogos_sem_wrapper.txt`,
-    `launch_dialog_dismissed.json`, o `localconfig.vdf` da Steam e a lista de
-    exceções do Steam Input. O `deixar-tudo-pronto` é o mais caro — ele reescreve
-    a linha de lançamento de TODOS os jogos.
+    `launch_dialog_dismissed.json`, a lista de exclusão, o pino, o atalho e o
+    perfil novo.
     """
     from hefesto_dualsense4unix.interface.hefesto_vivo import PERIGOSOS
 
     assert ("07-lancadores.html", nome) in set(PERIGOSOS), (
-        f"`{nome}` saiu de PERIGOSOS — é uma das OITO portas da aba 07 que a "
+        f"`{nome}` saiu de PERIGOSOS — é uma das portas da aba 07 que a "
         "régua não enxergava até 06/09/2026.")
 
 

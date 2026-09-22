@@ -38,7 +38,6 @@ import html
 import inspect
 import io
 import json
-import os
 import pathlib
 import re
 import sys
@@ -364,35 +363,11 @@ def test_a_06_a_marca_sai_da_troca_e_fica_nas_definicoes(publicado: bool) -> Non
 
 # ---------------------------------------------------------------------------
 # 3. A 07 — a leitura do Steam Input não varre hidraw
+#
+# A RÉGUA QUE PASSAVA PELA ABA 07 SAIU EM 21/09/2026: a linha do Steam Input
+# deixou o cartão da Steam (os mesmos botões e o mesmo corpo em todo cartão,
+# palavra dela), e a 07 não lê mais o Steam Input. A assinatura, abaixo, fica.
 # ---------------------------------------------------------------------------
-def test_a_07_a_leitura_do_steam_input_nao_varre_hidraw(
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """MORDIDA: devolva `a07_lancadores.py` e `emulation_actions.py` da base."""
-    from hefesto_dualsense4unix.app.actions import emulation_actions as ea
-    from hefesto_dualsense4unix.broker import hidraw_broker
-    from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as p7
-
-    varreu: list[str] = []
-    monkeypatch.setattr(hidraw_broker, "physical_nodes_exposure",
-                        lambda *a, **k: varreu.append("physical_nodes_exposure") or {})
-    listar = os.listdir
-
-    def listar_vigiado(caminho: Any = ".") -> list[str]:
-        if "hidraw" in str(caminho):
-            varreu.append(str(caminho))
-        return listar(caminho)
-
-    monkeypatch.setattr(os, "listdir", listar_vigiado)
-    monkeypatch.setattr("hefesto_dualsense4unix.daemon.launch_env.steam_input_appids",
-                        lambda path=None: {990000011})
-    monkeypatch.setattr(ea.EmulationActionsMixin, "_steam_input_is_on",
-                        staticmethod(lambda: False))
-    frase, _ligado = p7._o_que_a_steam_poe_no_meio()
-    assert varreu == [], f"a leitura do Steam Input da 07 varreu os hidraw: {varreu}"
-    assert "Exceção por jogo: 1 jogo(s)" in frase, (
-        f"a contagem das exceções não chegou à 07: {frase!r}")
-
-
 def test_a_07_a_assinatura_do_status_nao_pede_o_efetiva() -> None:
     """O valor sem leitor saiu da assinatura, e o nome antigo da leitura saiu junto."""
     from hefesto_dualsense4unix.app.actions import emulation_actions as ea

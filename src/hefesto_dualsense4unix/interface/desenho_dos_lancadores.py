@@ -297,13 +297,27 @@ def selo_html(selo: str) -> str:
 
 
 def carimbo_html(texto: str) -> str:
-    """O carimbo verde, ou VAZIO. Vazio some do cartão, e é o certo.
-
-    Um carimbo que dissesse "0 jogos já sabem por onde entrar" ocuparia a linha
-    para não dizer nada — e o desenho o pôs na fileira dos botões justamente
-    para não custar altura quando não há notícia.
-    """
+    """O carimbo verde, ou VAZIO. Vazio some do cartão, e é o certo."""
     return f'<span class="carimbo">◆ {_e(texto)}</span>' if texto else ""
+
+
+def contador_html(pontes: int) -> str:
+    """O contador do corpo do cartão — o MESMO nos oito, zero inclusive.
+
+    21/09/2026, palavra dela: *"falta o mesmo textinho de contador da steam pros
+    demais. (…) todos tem que serem iguais."* Ele era o carimbo da fileira da
+    Steam, e só ela o tinha. Agora abre o corpo de todo cartão LOCALIZADO — onde
+    os outros sete tinham espaço vazio, então ele não custa altura a eles.
+
+    O ZERO APARECE, e a regra de antes (*"zero some"*) caiu com o pedido: ela
+    escolheu o contador em todos, inclusive com 0, olhando o desenho.
+
+    `pontes` é quantos jogos DAQUELE lançador já têm ponte confirmada num
+    perfil (`prontuario_dos_jogos`) — a Steam pelo appid, os outros pela classe
+    da janela de cada jogo da biblioteca (:meth:`DoDisco.pontes_de`).
+    """
+    return carimbo_html(
+        f"{_plural(pontes, 'jogo já sabe', 'jogos já sabem')} por onde entrar")
 
 
 def acao_html(a: Acao) -> str:
@@ -893,24 +907,6 @@ def procurados(declarados: tuple[SemCenso, ...] = ()) -> tuple[SemCenso, ...]:
 #: 118 → 50 caracteres, cinco vezes.
 DIZ_SEM_FONTE = "<b>O perfil casa pelo nome do processo e pela janela.</b>"
 
-#: A frase de quem PROCUROU E ACHOU — **VAZIA DESDE 11/09/2026, ordem dela**:
-#: *"remove as frases do achei esse lançador aqui"*.  <!-- noqa-acento: citação literal dela -->
-#:
-#: O CARTÃO JÁ DIZ AS DUAS COISAS SEM ELA. O selo `LOCALIZADO` responde *"o
-#: produto achou este lançador"*, e a linha de cima responde quantos jogos ele
-#: tem — a frase repetia o selo em prosa, no plural, em cinco cartões
-#: empilhados. Ela viu os cinco de uma vez e recusou os cinco.
-#:
-#: **O CAMINHO NÃO SE PERDEU, mudou de lugar**: ele continua sendo lido e
-#: continua sendo o que o `presente=True` afirma; o que saiu foi pintá-lo na
-#: tela. Quem precisa conferir por onde o produto achou o lançador tem o
-#: `doctor`, que imprime o atalho e o comando de cada um.
-#:
-#: A CONSTANTE FICA, e vazia de propósito — ela é o LUGAR da frase deste
-#: estado, e apagá-la faria o cartão do achado e o do não-achado deixarem de
-#: ser simétricos no código. As réguas que perguntam pelo estado continuam
-#: tendo a quem perguntar.
-DIZ_ACHEI = ""
 
 # A FRASE DE QUEM PROCUROU E NÃO ACHOU (`DIZ_NAO_ACHEI`) MUDOU DE LUGAR EM
 # 11/09/2026, e a mudança é mecânica, não de gosto: com a A2-013 ela passou a
@@ -950,15 +946,7 @@ ABRIR = "abrir-lancador"
 #: precisa ter um botão na gui, mas ele se auto corrigir ao clicarmos em aplicar
 #: ou salvar o perfil"*. Quem o constrói é a LANCADOR-CARONA-01.
 
-#: O NOME DO GESTO DO "Copiar a linha", pela mesma razão do :data:`ABRIR`.
-#: DECISÃO DELA (PO, 04/09/2026, `07[01]`): *"Os dois, só quando faz falta"* —
-#: o botão E a linha à mostra, e **só** no estado em que o cartão já diz
-#: «linha intocável».
-COPIAR = "copiar-a-linha"
 
-#: O RÓTULO DO BOTÃO, palavra por palavra da decisão. Ele mora aqui e não no
-#: pacote porque quem o escreve é o desenho; o pacote só atende o gesto.
-COPIAR_ROTULO = "Copiar a linha"
 
 # ---------------------------------------------------------------------------
 # REGISTRAR O QUE O HEFESTO NÃO CONHECE — 08/09/2026, pedido dela
@@ -1187,73 +1175,17 @@ NOVO_ALVO = "lanc-novo-alvo"
 #: `data-campo` de verdade — é TEXTO, o produto é o dono, e ela não digita nele.
 NOVO_PARA_QUEM = "lanc-novo-para-quem"
 
+
 # ---------------------------------------------------------------------------
-# O STEAM INPUT — o que a Steam põe ENTRE o controle e o jogo
+# OS BOTÕES DO STEAM INPUT E DO REPARO SAÍRAM DO CARTÃO — 21/09/2026
 #
-# DECISÃO DELA, 06/09/2026 (`D-0609-STEAM-DIVIDIDO`): **o Steam Input e a lista
-# de exceções ficam na aba 07**; "Consertar", "Restaurar de fábrica" e "Aplicar
-# aos jogos" ficam na 09.
-#
-# OS NOMES MORAM AQUI pela mesma razão de :data:`ABRIR` e :data:`COPIAR`: o
-# desenho os escreve no `data-gesto` e o pacote os registra em `@gesto(...)`.
-# Digitá-los duas vezes é como um botão ganha endereço que ninguém atende.
-#
-# **"Steam Input" É PALAVRA DE TELA**, e está no glossário
-# (`docs/A-LINGUA-DESTA-CASA-…`, §2) com o dono. `vdf`, `env` e `appid` NÃO
-# são — nenhuma frase daqui os pronuncia.
+# Aqui moravam os nomes e os rótulos do «Desligar o Steam Input», do «Deixar
+# tudo pronto» e do «Copiar a linha» (e, até a tarde, do «Este jogo não
+# funciona»). A palavra dela: *"a ideia é termos os mesmos botões pra todos os
+# lançadores. sempre."* O que eles faziam à mão o produto faz sozinho — o guarda
+# desliga o Steam Input e o vigia repõe o atalho (`hefesto-steam-input-guard`)
+# —, e a marca do Steam Input por jogo continua no chip da aba Jogar.
 # ---------------------------------------------------------------------------
-#: "Desligar o Steam Input" — o gesto que tira a Steam do meio.
-DESLIGAR_STEAM_INPUT = "desligar-steam-input"
-
-#: O «Este jogo não funciona» SAIU em 21/09/2026: no cartão, o «Adicionar à
-#: lista de exclusão» (:data:`EXCLUIR`) tomou o lugar dele, pelo desenho aprovado
-#: por ela; a lista do Steam Input que ele escrevia continua no chip da aba Jogar.
-
-#: "Deixar tudo pronto" — os DOIS trabalhos com UM consentimento só.
-TUDO_PRONTO = "deixar-tudo-pronto"
-
-#: OS RÓTULOS, e os dois vêm do MOTOR — nunca da minha redação. O primeiro é o
-#: do botão que `emulation_actions.on_emulation_steam_input_disable` atende; o
-#: último é o do modo simples de `daemon_actions` (o bloco
-#: "FEAT-STEAM-SIMPLES-01", que traz `_STEAM_READY_CORPO` e
-#: `format_game_broken_result`), e nasceram da frase dela — *"tem jogos que
-#: precisamos ativar entrada steam, outros que temos que colocar comandos de
-#: inicialização — é uma confusão real"*.
-#:
-#: O ENDEREÇO É O DO MOTOR, e não o da janela que está saindo
-#: (`D-0609-GTK-LEVA-INTEIRA`): o que se reusa é a função dona da palavra, que
-#: sobrevive à aposentadoria da janela — apontar para o arquivo dela seria
-#: deixar um ponteiro que morre com ela.
-DESLIGAR_STEAM_INPUT_ROTULO = "Desligar o Steam Input"
-TUDO_PRONTO_ROTULO = "Deixar tudo pronto"
-
-
-def steam_input_html(frase: str) -> str:
-    """A linha do Steam Input dentro do cartão da Steam, ou NADA.
-
-    ELA NÃO É INVENTADA AQUI, e é o mesmo contrato frio de
-    :func:`linha_do_wrapper_html`: este módulo não importa o produto (é o que
-    deixa o gerador rodar como script solto), então a frase chega pronta em
-    `Leitura.steam_input` — e quem a enche pergunta ao DONO dela
-    (`emulation_actions.markup_status_steam_input`, a mesma que escreve a linha
-    da janela velha).
-
-    VAZIA É RESPOSTA: uma `Leitura` que não fala de Steam Input não põe linha
-    nenhuma no cartão. É o estado da primeira meia volta e o de toda régua que
-    monte uma `Leitura` à mão — e escrever "Desligado" ali seria a tela
-    afirmando o resultado de uma medição que não aconteceu.
-
-    UM `<br>` E NENHUMA CLASSE NOVA, e a escolha é de ALCANCE: a página que o
-    produto renderiza é a publicada, e publicar é ato DELA — uma classe nova
-    aqui só ganharia folha de estilo no dia em que ela aprovasse o desenho, e
-    até lá a linha nasceria sem regra nenhuma. O `<br>` é a forma que o próprio
-    cartão já usa para o aviso do jogo aberto (`a07_lancadores.
-    aviso_do_jogo_aberto`), e ela chega à tela dela HOJE, pelo `blocos`, sem
-    mexer num pixel do que ela aprovou. **A cor não se perde**: `.lanc-diz b` já
-    é laranja no CSS da aba, e é por isso que quem enche a frase põe o `<b>` só
-    no estado LIGADO.
-    """
-    return f"<br>{frase}" if frase else ""
 
 
 def linha_do_wrapper_html(linha: str) -> str:
@@ -1266,11 +1198,9 @@ def linha_do_wrapper_html(linha: str) -> str:
     (`docs/data/paridade-gtk-html.csv`, linha 237). Com a linha na tela, um
     `Ctrl+C` salva o dia sem o produto ter de acertar a seleção.
 
-    ESTE MÓDULO NÃO COPIA NADA, e o parágrafo acima é prosa: quem fala com a
-    área de transferência é `a07_lancadores.para_a_area_de_transferencia`, e
-    nomear a classe do GTK aqui daria à régua da paridade um endereço onde não
-    há um ato. É o defeito que esta casa nomeia como *a régua confundindo a
-    PALAVRA com o ATO*.
+    ESTE MÓDULO NÃO COPIA NADA, e desde 21/09/2026 ninguém na aba copia: o
+    botão «Copiar a linha» saiu com os outros botões do estado, e a linha à
+    mostra é a saída que sobra.
 
     ELA NÃO É INVENTADA AQUI. Este módulo **não importa nada do produto** (é o
     que deixa o gerador rodar como script solto), então a linha chega pelo
@@ -1316,6 +1246,9 @@ class DoDisco:
     #: :func:`resposta_do_flatpak`). Chave AUSENTE = nada a dizer, e o cartão
     #: fica com o travessão.
     resumos: tuple[tuple[str, str], ...] = ()
+    #: Quantos jogos de cada cartão já têm ponte confirmada: `(chave, n)`.
+    #: Ver :func:`contador_html`.
+    pontes: tuple[tuple[str, int], ...] = ()
 
     #: **O CAMPO `estradas` SAIU — LANCADOR-LOCALIZAR-01, 10/09/2026.** Ele
     #: guardava as chaves que TÊM por onde receber o ambiente, e existia para
@@ -1326,6 +1259,9 @@ class DoDisco:
 
     def resumo(self, chave: str) -> str:
         return dict(self.resumos).get(chave, "")
+
+    def pontes_de(self, chave: str) -> int:
+        return dict(self.pontes).get(chave, 0)
 
 
 #: A RESPOSTA VAZIA — a primeira meia volta, e o padrão de toda `Leitura`
@@ -1338,7 +1274,8 @@ SEM_DISCO = DoDisco()
 def medir_no_disco(onde_estao: tuple[tuple[str, str], ...],
                    declarados: tuple[SemCenso, ...] = (),
                    lar: Path | None = None,
-                   raiz_sistema: Path | None = None) -> DoDisco:
+                   raiz_sistema: Path | None = None,
+                   com_ponte: frozenset[str] = frozenset()) -> DoDisco:
     """BLOQUEIA — abre os arquivos dos lançadores e responde o que o cartão mostra.
 
     **QUEM CHAMA É A VIGIA, e só ela** (`a07_lancadores._Vigia.ler`, na thread
@@ -1352,6 +1289,9 @@ def medir_no_disco(onde_estao: tuple[tuple[str, str], ...],
     :param lar: o `HOME` a inspecionar; o padrão é o de verdade. A régua passa
         um lar de mentira, e por isso ele viaja junto com `raiz_sistema` — os
         dois formam o par que faz uma medição ficar inteira dentro do `tmp`.
+    :param com_ponte: as classes de janela (em `casefold`) que têm ponte
+        confirmada num perfil — `prontuario_dos_jogos.classes_com_ponte`. É o
+        que o contador de cada cartão conta (:func:`contador_html`).
     """
     onde = dict(onde_estao)
     itens = [x for x in procurados(declarados) if x.chave != STEAM]
@@ -1382,6 +1322,7 @@ def medir_no_disco(onde_estao: tuple[tuple[str, str], ...],
     caixas = resposta_do_flatpak(tuple(vistos), lar, raiz_sistema)
 
     resumos: list[tuple[str, str]] = []
+    pontes: list[tuple[str, int]] = []
     for item in itens:
         if not onde.get(item.chave):
             continue
@@ -1389,7 +1330,8 @@ def medir_no_disco(onde_estao: tuple[tuple[str, str], ...],
         #: resumo também: montar a frase aqui seria a segunda verdade sobre a
         #: mesma contagem, e "37 jogos" contra "37 na biblioteca" na mesma tela
         #: é a cara de uma janela montada em dois lugares que não se falam.
-        linha = _censo.biblioteca_do_cartao(item.chave, lar).resumo
+        biblioteca = _censo.biblioteca_do_cartao(item.chave, lar)
+        linha = biblioteca.resumo
         #: **A LINHA DO «FLATPAK» É OUTRA PERGUNTA — §5.4, 09/09/2026.** Ele
         #: não tem biblioteca (o censo diz `SEM_BIBLIOTECA`, e o resumo sai
         #: vazio), e até hoje a linha dele ficava com um travessão.
@@ -1397,7 +1339,12 @@ def medir_no_disco(onde_estao: tuple[tuple[str, str], ...],
             linha = caixas
         if linha:
             resumos.append((item.chave, linha))
-    return DoDisco(tuple(resumos))
+        # UMA JANELA CONTA UMA VEZ: o emulador tem um processo para todas as
+        # ROMs, e a biblioteca dele repete a mesma classe em cada linha.
+        classes = {j.classe_de_janela.casefold() for j in biblioteca.jogos
+                   if j.classe_de_janela}
+        pontes.append((item.chave, len(classes & com_ponte)))
+    return DoDisco(tuple(resumos), tuple(pontes))
 
 
 @dataclass(frozen=True)
@@ -1447,25 +1394,15 @@ class Leitura:
     #: clique. O corpo passou a dizer só a contagem (:func:`cartao_da_steam`), e
     #: um campo que ninguém lê seria a vigia montando, a cada volta, uma frase
     #: para ninguém.
-    #: A LINHA DE INICIALIZAÇÃO do Hefesto — o que o botão «Copiar a linha»
-    #: copia e o que o bloco à mostra exibe. Ela é `steam_launch_options.
+    #: A LINHA DE INICIALIZAÇÃO do Hefesto — o que o bloco à mostra exibe no
+    #: jogo de linha editada à mão. Ela é `steam_launch_options.
     #: WRAPPER_LAUNCH`, e vem por aqui porque o desenho não importa o produto.
+    #: VAZIA É RESPOSTA: sem linha o cartão não mostra o bloco.
     #:
-    #: VAZIA É RESPOSTA, e não descuido: sem linha o cartão não oferece o botão
-    #: nem o bloco. Um botão de copiar sobre uma linha que o desenho não tem
-    #: copiaria o vazio e diria "Copiado!".
+    #: OS DOIS CAMPOS DO STEAM INPUT (`steam_input`, `steam_input_ligado`)
+    #: SAÍRAM em 21/09/2026 com a linha e os botões dele — ver o bloco
+    #: «OS BOTÕES DO STEAM INPUT E DO REPARO SAÍRAM DO CARTÃO».
     linha: str = ""
-    #: A FRASE DO STEAM INPUT, já pronta para a tela — vinda do dono dela
-    #: (`emulation_actions.markup_status_steam_input`). Ver
-    #: :func:`steam_input_html`.
-    #:
-    #: VAZIA É RESPOSTA: a leitura não falou de Steam Input, e o cartão cala.
-    steam_input: str = ""
-    #: O Steam Input está LIGADO fora da lista de exceções? `None` = não sei
-    #: (não medi, ou não achei a Steam). **É ele que decide o botão**, e não a
-    #: frase: uma frase presente com `None` diz "não achei a Steam", e oferecer
-    #: "Desligar" ali seria oferecer uma recusa.
-    steam_input_ligado: bool | None = None
     erros: tuple[str, ...] = ()
     #: O QUE O DISCO DIZ DOS OUTROS CARTÕES, medido na MESMA passada da vigia:
     #: a linha de cada um e quem tem estrada para a cura. Ver :class:`DoDisco`.
@@ -1922,11 +1859,12 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
         # lista já diz «nunca recebeu o atalho» — a mesma palavra curta, na
         # mesma tela (`a07_lancadores._porque`).
         diz = f"<b>{_plural(falta, 'jogo', 'jogos')} sem o atalho</b>"
-        # OS DOIS DO REPARO VÃO DEPOIS DA FILEIRA COMUM — ver o bloco da
-        # fileira, mais abaixo.
-        do_estado: tuple[Acao, ...] = (
-            Acao("Consertar", "verde", "consertar", STEAM),
-            Acao("Ver o que impede", "", "ver-o-que-impede", STEAM))
+        # O «CONSERTAR» E O «VER O QUE IMPEDE» SAÍRAM — 21/09/2026, palavra
+        # dela: *"a ideia é termos os mesmos botões pra todos os lançadores.
+        # sempre."* O reparo é do vigia (`hefesto-steam-input-guard`, a cada
+        # 30 min e a cada escrita da Steam), e na mesma noite ele repôs o
+        # atalho do PRAGMATA sem clique nenhum. O motivo de cada jogo está na
+        # lista do pé do cartão.
         selo = "warn"
     else:
         # DOIS NÚMEROS QUE SE CONTRADIZEM A UMA LINHA DE DISTÂNCIA — achado em
@@ -1946,10 +1884,13 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
         # contam coisas diferentes. As outras duas opções morreram por medição:
         # contar só instalados apagaria as dezenas de jogos já preparados, e pôr
         # os dois números no canto disputa a linha com o selo em janela estreita.
-        diz = ("Os controles chegam. O atalho de inicialização está no lugar em "
-               f"{_plural(len(lida.com_wrapper), 'jogo', 'jogos')} da sua "
-               "biblioteca (instalados ou não).")
-        do_estado = ()
+        # A FRASE DO ATALHO SAIU — 21/09/2026, palavra dela: *"todos tem que
+        # serem iguais"*. Ela dizia *"Os controles chegam. O atalho de
+        # inicialização está no lugar em N jogos"* — um texto que só a Steam
+        # tinha. O corpo de todo cartão localizado passou a ser o MESMO
+        # contador (:func:`contador_html`), e o que ela precisa saber quando
+        # o atalho falta continua dito no ramo de cima, em laranja.
+        diz = ""
         # O SELO DA STEAM É `LOCALIZADO` COMO OS OUTROS CINCO — 11/09/2026,
         # ordem dela: *"troca o chegam da steam por localizado como os  (noqa-acento) citação
         # demais"*.
@@ -1969,23 +1910,17 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
         # num lugar em que as outras cinco dizem «achei».
         selo = "localizado"
 
-    # A LINHA DO STEAM INPUT — `D-0609-STEAM-DIVIDIDO`, decisão dela.
-    #
-    # ELA VEM DEPOIS DO CORPO E ANTES DA LINHA À MOSTRA, e a ordem é de assunto:
-    # o corpo fala do ATALHO de inicialização, esta fala de quem ENTREGA o
-    # controle ao jogo, e o bloco de baixo é a saída manual do primeiro.
-    #
-    # E ELA SÓ OCUPA A TELA QUANDO HÁ MEDIÇÃO. Uma `Leitura` sem
-    # `steam_input` — a primeira meia volta, e toda régua que monte uma à mão —
-    # sai daqui byte a byte como saía antes; é a mesma regra do carimbo, da
-    # lista de jogos e do bloco da linha.
-    diz = diz + steam_input_html(lida.steam_input)
+    # A LINHA DO STEAM INPUT SAIU DO CARTÃO — 21/09/2026, com os dois botões
+    # dela («Desligar o Steam Input» e «Deixar tudo pronto»). O guarda desliga
+    # o Steam Input sozinho (`hefesto-steam-input-guard`), e o que é por jogo
+    # mora no chip «Steam Input» da aba Jogar. Um cartão igual aos outros
+    # sete não tem uma linha que só ele tem.
 
     # OS DOIS, SÓ QUANDO FAZ FALTA — PO, 04/09/2026, `07[01]`.
     #
     # O ESTADO É O DA LINHA INTOCÁVEL, e não o da recusa do Consertar: essa
-    # metade CAIU em 03/09, quando a recusa passou a armar a `_VigiaDaSteam`,
-    # que repõe sozinha assim que o jogo e a Steam fecham. O buraco que sobra é
+    # metade CAIU em 03/09, quando a recusa passou a armar uma vigia que repõe
+    # sozinha — e hoje quem repõe é o `hefesto-steam-input-guard`. O buraco que sobra é
     # só o dos intocáveis — os jogos que o produto DECIDIU nunca tocar
     # (`apply_wrapper_vdf_text` os pula por construção), e para os quais o
     # carimbo já escreve *"N jogos com a linha intocável — só reparo manual"*.
@@ -1998,8 +1933,10 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
     #
     # NO DIA BOM NADA DISSO OCUPA A TELA: sem intocáveis, o cartão sai daqui
     # byte a byte como saía antes.
+    #
+    # O «COPIAR A LINHA» SAIU em 21/09/2026 com os outros botões do estado; a
+    # LINHA fica à mostra, que é a metade que a cópia calada nunca garantiu.
     if lida.intocaveis and lida.linha:
-        do_estado = (*do_estado, Acao(COPIAR_ROTULO, "", COPIAR, STEAM))
         diz = diz + linha_do_wrapper_html(lida.linha)
 
     # O «LOCALIZAR» ENTRA NOS DOIS ESTADOS BONS — LANCADOR-LOCALIZAR-01,
@@ -2030,8 +1967,10 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
     # ninguém ver: a régua dos oito cartões iguais só olhava o dia bom. Agora os
     # quatro vêm do MESMO dono dos outros sete (:func:`fileira_comum`), e vêm
     # PRIMEIRO, porque ela pediu os quatro numa linha só; os botões do estado
-    # (o reparo, a cópia da linha) seguem na linha de baixo.
-    acoes = (*fileira_comum(STEAM), *do_estado)
+    # E A LINHA DE BAIXO ACABOU na mesma noite: os botões do estado saíram.
+    acoes = fileira_comum(STEAM)
+    # O CONTADOR ABRE O CORPO, como nos outros sete (:func:`contador_html`).
+    diz = contador_html(lida.pontes) + (f"<br>{diz}" if diz else "")
 
     # O TIRAR VAI POR ÚLTIMO nos dois estados bons, e por último de propósito: o
     # que ela desfaz nunca disputa a primeira posição com o que ela FAZ.
@@ -2040,7 +1979,7 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
     return Lancador(
         chave=STEAM, nome="Steam", selo=selo,
         jogos=_plural(lida.instalados, "jogo instalado", "jogos instalados"),
-        diz=diz, acoes=acoes, carimbo=carimbo_da_steam(lida),
+        diz=diz, acoes=acoes,
         fora=lista_de_jogos(lida), tem_lista=True,
         # ERA `True` CRAVADO, e o `True` cravado é o que fazia a conta do topo
         # dizer "1 encontrado" numa máquina sem Steam nenhuma. As duas respostas
@@ -2049,39 +1988,6 @@ def cartao_da_steam(lida: Leitura | None) -> Lancador:
         # negativas, então aqui pelo menos uma é verdadeira — escrever a conta
         # mesmo assim é o que impede a constante de voltar por descuido.
         presente=bool(lida.onde_esta_a_steam) or lida.viu_a_biblioteca)
-
-
-def carimbo_da_steam(lida: Leitura) -> str:
-    """As duas notícias do carimbo, na ordem em que ela precisa lê-las.
-
-    O CARIMBO NÃO É SÓ BOA NOTÍCIA. Ele é o único lugar que sobra no cartão, e
-    calar sobre um jogo que o produto DECIDIU não tocar é como ele fica sem o
-    atalho para sempre sem ninguém saber.
-
-    A PONTE CONFIRMADA VOLTA AO CARTÃO, e ela é a promessa que o desenho fazia
-    e o produto tinha largado: o HTML de 02/09 dizia ``◆ 3 jogos já sabem por
-    onde entrar`` com o número DIGITADO, e `prontuario_dos_jogos` já respondia a
-    mesma pergunta desde sempre, sem um chamador. Agora responde daqui — e no
-    dia em que ela confirmar a primeira ponte, o carimbo acende sozinho.
-
-    ZERO SOME, e é o mesmo critério que `carimbo_html` já aplicava: *"0 jogos
-    já sabem por onde entrar"* ocuparia a linha para não dizer nada.
-    """
-    partes: list[str] = []
-    if lida.pontes:
-        partes.append(f"{_plural(lida.pontes, 'jogo já sabe', 'jogos já sabem')} "
-                      "por onde entrar")
-    if lida.intocaveis:
-        # «LINHA EDITADA À MÃO», E NÃO «LINHA INTOCÁVEL — SÓ REPARO MANUAL» —
-        # A2-020, 11/09/2026, aprovada por ela. «intocável» é a NOSSA decisão,
-        # não o fato; e a própria aba já chama este estado de «linha editada à
-        # mão» na linha do jogo, dois centímetros abaixo
-        # (`a07_lancadores._porque`). *"só reparo manual"* mandava fazer algo
-        # sem dizer como — e o «Copiar a linha», que só nasce neste estado, é o
-        # como. 48 → 33.
-        partes.append(f"{_plural(len(lida.intocaveis), 'jogo', 'jogos')} com a "
-                      "linha editada à mão")
-    return " · ".join(partes)
 
 
 def resposta_do_flatpak(vizinhos: tuple[str, ...], lar: Path | None = None,
@@ -2211,7 +2117,7 @@ def cartao_sem_censo(item: SemCenso, onde: str | None,
     return Lancador(
         chave=item.chave, nome=item.nome, selo="localizado",
         jogos=resumo or "—",
-        diz=DIZ_ACHEI,
+        diz=contador_html(do_disco.pontes_de(item.chave)),
         acoes=fileira_comum(item.chave) + tirar, presente=True)
 
 
@@ -2290,11 +2196,6 @@ __all__ = [
     "APONTAR_ROTULO",
     "A_STEAM",
     "CLASSE_DA_GRADE",
-    "COPIAR",
-    "COPIAR_ROTULO",
-    "DESLIGAR_STEAM_INPUT",
-    "DESLIGAR_STEAM_INPUT_ROTULO",
-    "DIZ_ACHEI",
     "DIZ_NAO_ACHEI",
     "DIZ_NAO_LI",
     "DIZ_SEM_FONTE",
@@ -2319,8 +2220,6 @@ __all__ = [
     "SUFIXO_DA_LISTA",
     "TELA_DO_NOVO",
     "TELA_DO_NOVO_TITULO",
-    "TUDO_PRONTO",
-    "TUDO_PRONTO_ROTULO",
     "Acao",  # (noqa-acento) nome de CLASSE — identificador Python não leva acento
     "DoDisco",
     "JogoNaLista",
@@ -2332,7 +2231,6 @@ __all__ = [
     "acao_de_tirar",
     "acao_html",
     "acoes_html",
-    "carimbo_da_steam",
     "carimbo_html",
     "cartao_da_steam",
     "cartao_sem_censo",
@@ -2346,7 +2244,6 @@ __all__ = [
     "procurados",
     "resposta_do_flatpak",
     "selo_html",
-    "steam_input_html",
     "tela_do_registro_html",
     "um_cartao",
     "valores_do_cartao",

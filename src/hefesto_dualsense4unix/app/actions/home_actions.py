@@ -666,9 +666,9 @@ def texto_native_bt_fragil(numeros: Sequence[int]) -> str:
 # Aplicar, no Salvar Perfil e no Importar (ONDA5-07-02). Com a Steam aberta o
 # reparo é adiado (`sentinela_do_wrapper._como_reparar`), e por isso a condição
 # está ESCRITA. Uma promessa sem ela — *"reponho assim que a Steam fechar"* —
-# dependeria de uma vigia que a interface nova só arma por clique dela na aba
-# Lançadores (`a07_lancadores._VigiaDaSteam`: *"ELA SÓ NASCE DE UM CLIQUE
-# DELA"*); prometer isso aqui seria prometer o que ninguém cumpre.
+# dependeria de uma vigia que a interface nova só armava por clique dela na
+# aba Lançadores (a `_VigiaDaSteam`, que saiu em 21/09/2026); prometer isso
+# aqui seria prometer o que ninguém cumpria.
 #
 # "ATALHO DE INICIALIZAÇÃO" É A PALAVRA DA TELA e `hefesto-launch` é a da casa
 # (`docs/A-LINGUA-DESTA-CASA`, §2). E os dois botões que a frase nomeia — os

@@ -828,10 +828,10 @@ def _perguntar_o_prontuario() -> None:
         examinar=True      6.900 ms       22 jogos   veredito: None
 
     **O ÚNICO CAMPO QUE A LINHA DESTA TELA LÊ É `ponte_divergente`**, e ele não
-    encosta na varredura: `prontuario_dos_jogos.py:454` o define como *"há
+    encosta na varredura: `prontuario_dos_jogos.py:492` o define como *"há
     carimbo de ponte confirmada"* contra *"a lista de exceções de hoje"*, os dois
     lidos do disco em milissegundos. Quem diz isso não sou eu — é o docstring do
-    dono, em `:519`: *"O carimbo não depende de ler executável nenhum"*. A
+    dono, em `:559`: *"O carimbo não depende de ler executável nenhum"*. A
     `evidencia`, que é tudo o que os 7 s produzem, entra em `NAO_SEI` e em
     `IMPEDIDO`, e nenhum dos dois chega a esta aba.
 
@@ -2497,8 +2497,8 @@ def _repor_o_lancador() -> None:
 # na Lançadores"**. E escolheu a palavra do botão armado, entre três:
 # **"Confirma?"**.
 #
-# O MECANISMO NÃO NASCE AQUI — ELE JÁ RODA EM PRODUÇÃO. A `07-lancadores`
-# confirma assim desde 03/09 (`a07_lancadores.fechar_a_steam_e_repor`): o
+# O MECANISMO NÃO NASCEU AQUI. A `07-lancadores` confirmava assim de 03/09 a
+# 21/09/2026 (o «Posso fechar a Steam», que saiu com os botões da Steam): o
 # primeiro clique ARMA e devolve o botão com o rótulo trocado; o segundo só vale
 # se trouxer o valor que **só existe no botão já armado**, e só dentro da janela
 # de tempo. Os dois guardas são independentes de propósito — um deles sozinho
@@ -2689,14 +2689,15 @@ _ARMADO: dict[str, Any] = {}
 def segundos_para_confirmar() -> float:
     """A janela do consentimento — PERGUNTADA a quem já a tem.
 
-    O dono é `a07_lancadores.SEGUNDOS_PARA_CONFIRMAR`, e ele não é um número
-    solto: é *"o consentimento que `with_steam_closed` EXIGE de quem a chama, na
-    forma que uma página tem"*. Um `20.0` digitado aqui seria a segunda duração
-    de consentimento desta casa, e as duas se afastariam na primeira mudança.
+    O dono é `pacotes/confirmacao.SEGUNDOS_PARA_CONFIRMAR`, e ele não é um
+    número solto: é *"o consentimento que `with_steam_closed` EXIGE de quem a
+    chama, na forma que uma página tem"*. Um `20.0` digitado aqui seria a
+    segunda duração de consentimento desta casa. ATÉ 21/09/2026 ele era lido
+    pela aba 07, que o reexportava — e a aba 07 deixou de confirmar.
     """
-    from . import a07_lancadores
+    from . import confirmacao
 
-    return float(a07_lancadores.SEGUNDOS_PARA_CONFIRMAR)
+    return float(confirmacao.SEGUNDOS_PARA_CONFIRMAR)
 
 
 def _armado_agora() -> str:
@@ -2774,8 +2775,8 @@ def _confirmado(o: dict[str, Any], gesto_: str,
 
     O SEGUNDO SEM O PRIMEIRO NÃO BASTARIA, e o caso é real: a prova automática
     desta casa (`--prova-gesto`) clica cada botão UMA vez por volta, com o que o
-    DOM tinha — e o DOM tinha a pergunta. É o mesmo raciocínio escrito em
-    `a07_lancadores.fechar_a_steam_e_repor`.
+    DOM tinha — e o DOM tinha a pergunta. É o mesmo raciocínio que a 07
+    usava no «Posso fechar a Steam», que saiu em 21/09/2026.
 
     FORA DO PRAZO ELE LEVANTA, em vez de agir ou de rearmar calado: a frase vai
     ao diário pelo caminho do `RuntimeError` (e o botão pisca a recusa — a
@@ -3050,8 +3051,8 @@ def aplicar_aos_jogos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     jogos sem ela colar um a um. `D-0609-STEAM-DIVIDIDO` decidiu o endereço:
     **"Aplicar aos jogos" fica na 09.**
 
-    O MOTOR É O MESMO DA JANELA ANTIGA, e o mesmo do "Deixar tudo pronto" da
-    aba 07: `steam_launch_options.apply_wrapper_to_all_games` DENTRO de uma
+    O MOTOR É O MESMO DA JANELA ANTIGA, e o do "Deixar tudo pronto" que a aba
+    07 teve até 21/09: `steam_launch_options.apply_wrapper_to_all_games` numa
     janela de `with_steam_closed`. Nada aqui reescreve o ato — nem o `getattr`
     defensivo, que é o contrato PATH-06: uma instalação antiga sem a aplicação
     em massa recusa DIZENDO, com a frase do dono
