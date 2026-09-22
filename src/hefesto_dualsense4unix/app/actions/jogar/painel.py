@@ -991,6 +991,35 @@ _NAO_CONFERIU = "Não consegui conferir a numeração dos controles."
 _NAO_COMPACTOU = "Não consegui ajustar a numeração dos controles."
 
 
+#: O PASSO 0 DO «RECONECTAR CONTROLES» — o rádio, ordem dela de 22/09/2026:
+#: *"pera o reconectar deveria sim tocar no radio. não faz sentido ele ficar de
+#: fora."* <!-- noqa-acento: citação literal dela -->
+#:
+#: Duas frases porque são dois desfechos que pedem coisas diferentes dela: um
+#: já está resolvido, o outro espera a mão dela. Quem faz os dois passos é
+#: `integrations/gesto_de_reconexao.reconectar`.
+_VOLTARAM_PELO_RADIO = "{quantos} controle(s) voltaram pelo rádio."
+_ESPERAM_O_PS = (
+    "Aperte PS em {quantos} controle(s): o rádio dizia que estavam aqui e o "
+    "sistema não os via, e eu derrubei esse elo morto."
+)
+
+
+def recado_do_radio(voltaram: int, esperam_o_ps: int) -> str:
+    """O que o passo do rádio conseguiu, em palavras da tela. `""` = nada a dizer.
+
+    **SEM NOTÍCIA, SEM FRASE** — a mesma regra do `recibo_do_reconectar` abaixo,
+    e pela razão dela de 09/09, na grafia dela: *"remover essa frase que
+    aparece tambem ao clciar em reconectar controles"*.  # (noqa-acento): dela
+    """
+    partes = []
+    if voltaram > 0:
+        partes.append(_VOLTARAM_PELO_RADIO.format(quantos=voltaram))
+    if esperam_o_ps > 0:
+        partes.append(_ESPERAM_O_PS.format(quantos=esperam_o_ps))
+    return " ".join(partes)
+
+
 def _na_lingua_da_tela(resultado: object) -> str:
     """O desfecho do `identity.renumber` em palavras da tela.
 
