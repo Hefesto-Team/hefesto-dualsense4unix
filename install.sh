@@ -3000,8 +3000,8 @@ mkdir -p "${BIN_DIR}"
 cat > "${LAUNCHER}" <<LAUNCH
 #!/usr/bin/env bash
 # O console script do mesmo nome (pyproject.toml) abre a MESMA interface, por
-# `interface.hefesto_vivo:main`. Este arquivo o SOBRESCREVE de propósito: ele
-# desprende a janela do terminal (setsid+nohup) e passa pelo `run.sh`, que
+# interface.hefesto_vivo:main. Este arquivo o SOBRESCREVE de propósito: ele
+# desprende a janela do terminal (setsid+nohup) e passa pelo run.sh, que
 # cuida do XWayland e do pixbuf antes de o Python subir.
 setsid nohup "${ROOT_DIR}/interface.sh" "\$@" </dev/null >/dev/null 2>&1 &
 disown 2>/dev/null || true
