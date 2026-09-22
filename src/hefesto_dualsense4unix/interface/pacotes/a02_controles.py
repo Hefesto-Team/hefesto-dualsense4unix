@@ -1932,8 +1932,8 @@ ROTA_OUVIR_JUNTO = "junto"
 
 #: **O TERCEIRO BOTÃO — «Tudo na TV e Nada no Controle»**, decisão dela de
 #: 20/09/2026 (*"O nome está certo, mude o ato."*). Ele substitui o `"pc"` na
-#: FILEIRA, e só nela: o `"pc"` continua existindo no gesto, no perfil e no
-#: IPC, porque a capacidade «som do PC no controle» tem dono, régua e ensaio —
+#: FILEIRA, e só nela: o `"pc"` continua existindo no gesto, no IPC e na CLI,
+#: porque a capacidade «som do PC no controle» tem dono, régua e ensaio —
 #: o que ela perdeu foi o botão, não o caminho.
 ROTA_NADA_NO_CONTROLE = "nada"
 
@@ -1949,8 +1949,10 @@ ROTA_NADA_NO_CONTROLE = "nada"
 #: botão `pc` que a página não tem — e reprovava a decisão dela em vez de um
 #: defeito.
 #:
-#: O `"pc"` continua vivo no GESTO, no perfil e no IPC: a capacidade «som do PC
-#: no controle» tem dono, régua e ensaio. O que ela perdeu foi o botão.
+#: O `"pc"` continua vivo no GESTO, no IPC e na CLI: a capacidade «som do PC
+#: no controle» tem dono, régua e ensaio. O que ela perdeu foi o botão. O
+#: PERFIL guarda o 3 e o aparelho o recebe como 2 desde 22/09/2026 — ver
+#: `Daemon.apply_profile_speaker`.
 BOTOES_DA_FILEIRA_DO_SOM = ("jogo", ROTA_OUVIR_JUNTO, ROTA_NADA_NO_CONTROLE)
 
 
@@ -2062,18 +2064,6 @@ def aceso_da_fileira(uniq: str, entry: Any) -> str:
     if aceso in ("pc", ROTA_NADA_NO_CONTROLE) or not A_FILEIRA_TEM_TRES:
         return aceso
     return ROTA_OUVIR_JUNTO if fonte_do_controle(entry) == "mix" else aceso
-
-
-def recado_da_rota(uniq: str) -> str:
-    """A frase do cartão quando as duas camadas discordam; `""` quando não.
-
-    Só há UM desacordo que precisa de palavras, e o dono dele é
-    `audio_saida.recado_da_rota`: o firmware roteado para "todo o som do PC"
-    com a saída padrão do sistema em outro lugar — o estado exato que ela viu
-    em 03/09, com o botão aceso e o som na TV.
-    """
-    lida = _CAMADA_1.get(uniq)
-    return "" if lida is None else str(lida.recado)
 
 
 # ---------------------------------------------------------------------------
@@ -2357,10 +2347,9 @@ def dica_do_canal(sono: str) -> str:
 # deste arquivo; o que saiu foi o único que apontava para uma dívida NOSSA, e
 # é exatamente essa a linha que ela traçou.
 #
-# E O QUE FICA NO CAMPO: `recado_da_rota`, que fala do DESACORDO das duas
-# camadas de som — um fato de AGORA, que ela desfaz trocando a saída do
-# sistema. Estado presente é o que a tela pode dizer; capacidade por entregar,
-# não.
+# E O CAMPO SAIU INTEIRO EM 22/09/2026, por ordem dela. O que ficava nele era
+# `recado_da_rota`, o desacordo das duas camadas de som — um fato de AGORA,
+# mas que mandava clicar num botão que a fileira não tem desde 21/09.
 #
 # O portão que guarda os dois casos é `scripts/check_a_tela_nao_confessa.py`.
 # ---------------------------------------------------------------------------
@@ -2393,11 +2382,16 @@ def _controles_declarados(recarregar: bool = False) -> dict[str, Any]:
 def modo_do_mic(endereco: str) -> str:
     """Qual dos dois botões do modo do microfone está aceso.
 
-    A REGRA É A DA GTK, e é uma linha só lá: `meu.get("microfone") is True`
-    (`app/actions/config/secao_controles.py:924`), que alimenta o
-    `set_active(bool(ligado))` do interruptor (`:642`). `True` e só `True` é
-    Virtual; ausência e `False` deixam a ponte no chão do mesmo jeito, e as duas
-    são Nativo — que é por que desligar grava `None` e não `False`.
+    **A REGRA É A DA INVERSÃO DE 18/09/2026**, ordem dela: *"todos os controles
+    tem que nascer com tudo mic, giroscopio e afins"*. Quem responde no daemon
+    é `bt_mic.uniqs_recusados`, e a tabela dele é de três valores: ausência
+    LIGA, `True` liga, e só `False` desliga. Então só o `False` é Nativo.
+
+    AQUI ESTAVA A REGRA DE ANTES — `microfone is True` é Virtual, ausência é
+    Nativo —, que era a da GTK e valia enquanto o default fosse o silêncio.
+    Com ela, o segundo, o terceiro e o quarto controle da mesa dela nasciam com
+    a ponte de pé e o cartão acendia «Nativo»: a tela dizendo o contrário do
+    que o daemon faz, medido em 22/09/2026 com dois DualSense no rádio.
 
     SEM ENDEREÇO NÃO SE AFIRMA NADA: um controle sem `uniq` normalizado não tem
     linha no `maquina.json`, e escrever "Nativo" ali seria afirmar uma escolha
@@ -2406,7 +2400,7 @@ def modo_do_mic(endereco: str) -> str:
     if not endereco:
         return ""
     meu = _controles_declarados().get(endereco)
-    return "virtual" if getattr(meu, "microfone", None) is True else "nativo"
+    return "nativo" if getattr(meu, "microfone", None) is False else "virtual"
 
 
 #: A RAZÃO DE O «NATIVO» ESTAR CINZA, em uma linha e sem jargão.
@@ -3162,7 +3156,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # `NADA_A_DIZER` quando não se sabe, e aí a `.ressalva` some
                 # sem cobrar um pixel (D-02 dela). A chave VAI EM TODO TIQUE:
                 # omiti-la deixaria a frase velha na tela para sempre, que é o
-                # defeito oposto e pior — a mesma instrução do `alto-ressalva`.
+                # defeito oposto e pior. É a única ressalva do cartão desde
+                # 22/09/2026 — a do alto-falante saiu por ordem dela.
                 "mic-ressalva": (
                     mesa_viva.frase_de_quem_te_ouve(a.get("ouvintes_do_mic"))
                     or NADA_A_DIZER
@@ -3364,27 +3359,14 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # `aceso_da_fileira`. O terceiro é a `fonte`, que o produto já
                 # obedecia e que a tela não tinha como oferecer.
                 "alto-rota": aceso_da_fileira(uniq, c),
-                # A RESSALVA DO ALTO-FALANTE — a peça da ONDA0-F (D-02), e o
-                # texto é do motor (`audio_saida.MOTIVO_ROTA_SO_NO_BYTE`). Ela
-                # **nasce e morre com o desacordo**: sem ele, o campo vai com
-                # `monta.NADA_A_DIZER` e a linha some sem cobrar um pixel.
-                #
-                # E A CHAVE VAI EM TODO TIQUE, que é a instrução da folha com
-                # todas as letras: omiti-la deixaria a frase velha na tela para
-                # sempre — o defeito oposto, e pior.
-                #
-                # **ELA PASSOU A TER DOIS INFORMANTES — 06/09/2026, o QUARTO
-                # selo.** O desacordo das duas camadas vem primeiro porque é um
-                # fato de AGORA, que ela pode desfazer trocando a saída do
-                # sistema; a ressalva do transporte é uma dívida NOSSA, que
-                # nenhum clique dela resolve. Dizer as duas na mesma linha
-                # trocaria o alarme por dois avisos — a mesma regra do
-                # `selo_do_som`.
-                # UM INFORMANTE SÓ, DESDE 07/09/2026 — ver o bloco "O QUARTO
-                # SELO SAIU DA TELA". Eram dois: o desacordo das camadas de som
-                # (que fica, porque é um fato de AGORA que ela desfaz) e a
-                # ressalva do transporte (que saiu, porque era dívida NOSSA).
-                "alto-ressalva": recado_da_rota(uniq) or NADA_A_DIZER,
+                # A RESSALVA DO ALTO-FALANTE SAIU DA TELA — 22/09/2026,
+                # ordem dela: *"o alto-falante deste controle está roteado
+                # para receber todo o som (…) não esquece de remover isso
+                # viu"*. O campo dizia o desacordo das duas camadas e mandava
+                # clicar num botão que a fileira não tem desde 21/09. A rota
+                # que o produzia deixou de chegar ao aparelho pelo perfil
+                # (`Daemon.apply_profile_speaker`), e o motor que compõe a
+                # frase continua de pé para o ensaio `a_rota_do_som_vai_e_volta`.
                 "mic-modo-aceso": modo_do_mic(norm_mac(uniq) or ""),
                 # O «NATIVO» CINZA — 20/09/2026, decisão dela: *"Fica os dois
                 # botões. Mas no rádio o botão fica cinza sem ser ativado"*.
@@ -5050,12 +5032,15 @@ def mic_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     é **chamável**, relida a cada varredura, e por isso a escolha vale **sem
     reiniciar o daemon** (`daemon/subsystems/bt_mic.py:60`).
 
-    DESLIGAR GRAVA `None`, NUNCA `False`, e a razão é do `utils/maquina.py`:
-    *"'nunca pedi' e 'não quero' deixam a ponte no chão do mesmo jeito — e um
-    `false` gravado seria um valor de catálogo para o silêncio"*. O `None`
-    **sobrescreve** de propósito: `fundir_declaracao:650` declara que *"`None`
-    presente na declaração é uma escolha e SOBRESCREVE; só a AUSÊNCIA da chave
-    preserva o que havia"*. Sem isso, "Nativo" seria um botão calado.
+    **O "NATIVO" GRAVA `False` — MUDOU EM 22/09/2026, e é a inversão chegando
+    aqui.** Ele gravava `None`, e a razão era boa enquanto o default fosse o
+    silêncio: *"'nunca pedi' e 'não quero' deixam a ponte no chão do mesmo
+    jeito"*. A ordem dela de 18/09 — *"todos os controles tem que nascer com
+    tudo mic, giroscopio e afins"* — inverteu o default, e a ausência passou a
+    LIGAR: o `None` virou o botão que não desliga, e a ponte subia no
+    hotplug seguinte ao clique. O `False` é o único registro de que ela disse
+    não (`bt_mic.uniqs_recusados`), e é o mesmo que o «Desligado» da aba
+    Conexões grava desde 18/09 — o gêmeo deste gesto, que foi curado sozinho.
 
     **O "VIRTUAL" NÃO RECUSA MAIS NO CABO — 04/09/2026, queixa 15 dela.** O que
     estava escrito aqui, e caiu inteiro:
@@ -5150,7 +5135,7 @@ def mic_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     ok, motivo = _resposta(p.machine_declare(
         {"controles": {dados.endereco: {
-            "microfone": True if qual == "virtual" else None}}}))
+            "microfone": qual == "virtual"}}}))
     if not ok:
         raise RuntimeError(motivo or "não consegui gravar o modo do microfone")
     # O DISCO MUDOU, ENTÃO A LEITURA EM CACHE MORREU — e ela morre AQUI, não no
@@ -5257,12 +5242,14 @@ PROVAS = [
     # "NATIVO". O controle da régua está no CABO (`transport: "usb"`,
     # `test_os_botoes_tem_dono.FALSO`).
     #
-    # O `None` É O VALOR, E NÃO A AUSÊNCIA: um `{}` aqui passaria com o gesto
-    # mandando qualquer coisa. E a CHAVE é o `uniq` sem os dois-pontos — é o que
-    # o `norm_mac` devolve, e é a chave que o `maquina.json` tem.
+    # O `False` É O VALOR, E NÃO A AUSÊNCIA: um `{}` aqui passaria com o gesto
+    # mandando qualquer coisa, e o `None` que estava aqui até 22/09/2026 é
+    # hoje o valor que LIGA (a inversão de 18/09 — ver o gesto). E a CHAVE é o
+    # `uniq` sem os dois-pontos — é o que o `norm_mac` devolve, e é a chave que
+    # o `maquina.json` tem.
     {"pagina": PAGINA, "gesto": "mic-modo", "clique": {"micModo": "nativo"},  # (noqa-acento) id
      "chama": [("machine_declare",
-                [{"controles": {"aabbcc000001": {"microfone": None}}}], {})]},
+                [{"controles": {"aabbcc000001": {"microfone": False}}}], {})]},
     # "VIRTUAL" NO CABO — A PROVA DA QUEIXA 15, e ela é NOVA em 04/09/2026.
     # Aqui estava escrito que uma prova assim *"estaria pedindo ao botão que
     # mentisse"*, porque o "Virtual" recusava no cabo. A recusa caiu com a D-12

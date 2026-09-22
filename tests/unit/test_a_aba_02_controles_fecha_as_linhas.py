@@ -402,27 +402,25 @@ def test_o_byte_do_pc_com_a_saida_no_controle_acende_pc() -> None:
     assert a02.aceso_da_rota(UNIQ, {"speaker": {"rota": BYTE_PC}}) == "pc"
 
 
-def test_o_desacordo_vira_frase_no_cartao() -> None:
-    """Apagar os dois botões não explica; a ressalva é o que explica.
+def test_o_desacordo_nao_vira_mais_frase_no_cartao() -> None:
+    """A ressalva do alto-falante SAIU — 22/09/2026, ordem dela.
 
-    A frase é do MOTOR (`audio_saida.MOTIVO_ROTA_SO_NO_BYTE`) — escrevê-la aqui
-    seria a segunda cópia, e a que envelheceria calada.
+    *"o alto-falante deste controle está roteado para receber todo o som (…)
+    não esquece de remover isso viu"*. O motor que compõe a frase continua de
+    pé para o ensaio; o cartão não a carrega mais, e a página não tem mais o
+    endereço.
+
+    MORDIDA: devolva `"alto-ressalva": recado_da_rota(uniq) or NADA_A_DIZER`
+    ao pintor e esta régua reprova.
     """
     _com_camada_1(byte=BYTE_PC, sink_do_controle=SINK, sink_padrao="hdmi")
-    assert a02.recado_da_rota(UNIQ) == audio_saida.MOTIVO_ROTA_SO_NO_BYTE
-
-
-def test_sem_desacordo_a_ressalva_manda_o_marcador_e_a_linha_some() -> None:
-    """A chave vai em TODO tique, e sem frase ela leva o `.nada`.
-
-    Omiti-la deixaria a frase velha na tela para sempre — o defeito oposto, e
-    pior. E mandar `""` escreveria um travessão solto: `escrever()` troca vazio
-    por `—` para TODOS os alvos, o `html` incluído.
-    """
-    _com_camada_1(byte=BYTE_JOGO, sink_do_controle=SINK, sink_padrao=SINK)
-    campos = _card({"speaker": {"volume": 102, "muted": False,
-                                "rota": BYTE_JOGO}})
-    assert campos["alto-ressalva"] == a02.NADA_A_DIZER
+    campos = _card({"speaker": {"volume": 102, "muted": False, "rota": BYTE_PC}})
+    assert "alto-ressalva" not in campos, campos.get("alto-ressalva")
+    assert not hasattr(a02, "recado_da_rota"), (
+        "a leitura do recado ficou no pacote sem ninguém para chamá-la")
+    pagina = onde.pagina(a02.PAGINA, publicado=True).read_text(encoding="utf-8")
+    assert 'data-campo="alto-ressalva"' not in pagina, (
+        "a página publicada ainda tem o endereço da ressalva do alto-falante")
 
 
 def test_sem_a_camada_1_lida_o_byte_ainda_responde() -> None:
@@ -432,7 +430,6 @@ def test_sem_a_camada_1_lida_o_byte_ainda_responde() -> None:
     não existe: o byte é um fato lido, e é metade da resposta.
     """
     assert a02.aceso_da_rota(UNIQ, {"speaker": {"rota": BYTE_JOGO}}) == "jogo"
-    assert a02.recado_da_rota(UNIQ) == ""
 
 
 def test_o_pintor_nao_conversa_com_o_pipewire_no_tique() -> None:

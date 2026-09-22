@@ -1132,14 +1132,14 @@ BYTE_NADA_NO_CONTROLE: Final[int] = SAIDA_ESTEREO_NO_FONE
 #: para "Só no controle" e a saída padrão do sistema não é este controle.
 #: Foi o estado medido em 03/09 — o botão aceso com o som saindo na TV.
 #:
-#: **O NOME DO BOTÃO É CITADO AQUI, e por isso esta frase MUDA QUANDO ELE MUDA.**
-#: Em 11/09/2026 ela renomeou a fileira para dizer de onde o som sai
-#: («Ouvir junto» → «No controle e na TV», «Todo o som do PC» → «Só no
-#: controle»), e esta linha mandava clicar num botão que a tela não tem mais.
+#: **ELA SAIU DA TELA EM 22/09/2026, por ordem dela** — *"não esquece de
+#: remover isso viu"*. O cartão não tem mais a ressalva do alto-falante, e o
+#: que restava desta frase era a instrução final, que mandava clicar num botão
+#: aposentado em 21/09 («Só no controle»). O motor fica: ele responde ao ensaio
+#: `scripts/ensaios/a_rota_do_som_vai_e_volta.py`, que é de quem desenvolve.
 MOTIVO_ROTA_SO_NO_BYTE: Final[str] = (
     "o alto-falante deste controle está roteado para receber todo o som, mas "
-    "a saída padrão do sistema não é ele — o som continua saindo onde estava. "
-    "Clique em 'Só no controle' para mandá-lo para cá."
+    "a saída padrão do sistema não é ele — o som continua saindo onde estava."
 )
 
 

@@ -2403,6 +2403,7 @@ class MicrofonesNoAr:
     def __init__(self) -> None:
         self._ordem: list[str] = []
         self._sem_canal: dict[str, int] = {}
+        self._canal_visto: set[str] = set()
 
     @staticmethod
     def _chave(uniq: str) -> str:
@@ -2414,6 +2415,7 @@ class MicrofonesNoAr:
         self._ordem = [u for u in self._ordem if self._chave(u) != chave]
         self._ordem.append(uniq)
         self._sem_canal.pop(chave, None)
+        self._canal_visto.discard(chave)
 
     def saiu(self, uniq: str) -> bool:
         """`uniq` saiu do ar. Devolve se ele estava."""
@@ -2421,6 +2423,7 @@ class MicrofonesNoAr:
         antes = len(self._ordem)
         self._ordem = [u for u in self._ordem if self._chave(u) != chave]
         self._sem_canal.pop(chave, None)
+        self._canal_visto.discard(chave)
         return len(self._ordem) != antes
 
     def esta(self, uniq: str | None) -> bool:
@@ -2438,17 +2441,34 @@ class MicrofonesNoAr:
         chave = self._chave(exceto)
         return [u for u in reversed(self._ordem) if self._chave(u) != chave]
 
-    def anotar_leitura(self, uniq: str, publicado: bool | None) -> bool:
+    def anotar_leitura(
+        self, uniq: str, publicado: bool | None, *, na_mesa: bool | None = None
+    ) -> bool:
         """Uma leitura do canal de `uniq`. `True` = ele saiu do ar DE FATO agora.
 
         `None` é *"não sei"* e não conta para nada — nem para sair, nem para
         zerar a conta de quem já faltou uma vez.
+
+        **SÓ SOME O CANAL QUE JÁ SUBIU — 22/09/2026.** Medido no journal dela,
+        com dois DualSense no rádio: o P2 nasceu no ar às 13:51:53, este laço
+        contou duas faltas e o tirou às 13:51:56, e o canal dele só foi
+        publicado às 13:52:01. O nascimento (`nascer_no_ar`) põe o controle
+        aqui ANTES de a ponte publicar a fonte, e a falta de quem ainda não
+        tinha canal era lida como *"o canal sumiu"*. O padrão escapava porque o
+        `canal_ativo` dele vem da fonte padrão; o segundo, o terceiro e o
+        quarto perdiam a palavra e o selo pintava DESLIGADO. Então a falta só
+        conta depois de o canal ter sido visto de pé desde a entrada — menos
+        quando o controle saiu da mesa (`na_mesa is False`), que é ausência de
+        fato.
         """
         chave = self._chave(uniq)
         if publicado is None:
             return False
         if publicado:
             self._sem_canal.pop(chave, None)
+            self._canal_visto.add(chave)
+            return False
+        if na_mesa is not False and chave not in self._canal_visto:
             return False
         vezes = self._sem_canal.get(chave, 0) + 1
         self._sem_canal[chave] = vezes
@@ -3036,7 +3056,7 @@ async def _conferir_quem_saiu_do_ar(daemon: DaemonProtocol, uniqs: list[str]) ->
             else:
                 resposta = await daemon._run_blocking(canal_publicado, uniq, list(uniqs))
                 publicado = resposta if isinstance(resposta, bool) else None
-            if not no_ar.anotar_leitura(uniq, publicado):
+            if not no_ar.anotar_leitura(uniq, publicado, na_mesa=na_mesa):
                 continue
             no_ar.saiu(uniq)
             esquecer_a_palavra(uniq)

@@ -584,18 +584,21 @@ class TestOQuartoSeloSaiuDaTela:
                 f"esta dívida em 07/09/2026")
 
     def test_o_cartao_nao_confessa_no_radio(self) -> None:
-        """O campo continua existindo; o que ele não faz mais é confessar.
+        """O cartão não confessa dívida nossa no rádio — 07/09/2026.
 
-        E ELE NÃO FICOU MUDO POR ISSO: o outro informante (o desacordo das duas
-        camadas de som) continua lá, e é o certo — aquilo é um fato de AGORA,
-        que ela desfaz trocando a saída do sistema. Estado presente a tela pode
-        dizer; capacidade por entregar, não.
+        **E O CAMPO INTEIRO SAIU EM 22/09/2026, por ordem dela.** Aqui estava
+        escrito que ele continuava existindo com o outro informante — o
+        desacordo das duas camadas de som. Esse informante mandava clicar num
+        botão que a fileira não tem desde 21/09, e ela pediu a frase fora. O
+        que esta régua cobra hoje é que nenhum campo do alto-falante volte a
+        falar do Hefesto.
         """
         card = _card(_entrada(transport="bt"))
-        assert "alto-ressalva" in card, (
-            "o campo sumiu do pacote — um campo que a página tem e o pacote "
-            "não manda fica congelado no que o gerador escreveu")
-        assert "Hefesto" not in str(card["alto-ressalva"]), (
+        assert "alto-ressalva" not in card, (
+            "a ressalva do alto-falante voltou ao cartão — ela saiu inteira em "
+            "22/09/2026, por ordem dela, e a página não tem mais o endereço")
+        assert not any("Hefesto" in str(v) for k, v in card.items()
+                       if str(k).startswith("alto-")), (
             "o cartão voltou a confessar dívida nossa no rádio")
 
     def test_os_gestos_nao_apagam_por_uma_divida_nossa(self) -> None:

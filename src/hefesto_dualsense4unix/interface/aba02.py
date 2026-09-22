@@ -2264,8 +2264,11 @@ ROTULO_EFEITOS_MAIS_A_TV = "Efeitos do Jogo e Áudio da TV no Controle"
 #: em cima dele, e é por isso que esta nota tem data. Ele mandava a saída
 #: padrão do sistema para o alto-falante deste controle
 #: (`audio_saida.mandar_o_som_do_pc`, byte `rota=3`) e calava a televisão.
-#: Essa capacidade **continua existindo** por IPC e por perfil, com dono,
-#: régua e ensaio; o que ela perdeu foi o botão.
+#: Essa capacidade **continua existindo** pelo IPC e pela CLI, com dono,
+#: régua e ensaio; o que ela perdeu foi o botão. **E O PERFIL DEIXOU DE
+#: APLICÁ-LA em 22/09/2026**: a peça guarda o 3, e o aparelho o recebe como
+#: «Sons do jogo» (`Daemon.apply_profile_speaker`) — o perfil só carrega a
+#: camada 2, e sozinha ela é a metade que botão nenhum desta fileira acende.
 #:
 #: A ESCALA QUE ELA DESENHOU, lendo os três nomes juntos — **pouco · tudo ·
 #: nada** —, é o que torna a fileira uma pergunta só com três respostas que se
@@ -3066,16 +3069,6 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
               <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="{DICA_OUVIR_JUNTO}">{ROTULO_EFEITOS_MAIS_A_TV}</button>
               <button class="{'on' if rota_nada else ''}" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" title="{DICA_NADA_NO_CONTROLE}">{ROTULO_NADA_NO_CONTROLE}</button>
             </div>
-            <!-- A RESSALVA DA ROTA — a peça da ONDA0-F (D-02), e o texto é do
-                 motor (`audio_saida.MOTIVO_ROTA_SO_NO_BYTE`). Ela existe por um
-                 estado que ela VIU em 03/09: o card 2 com "Só no controle"
-                 aceso e o som saindo na TV. Hoje os dois botões APAGAM nesse
-                 desacordo (a decisão [09]), e apagar sozinho não explica —
-                 esta linha é o que explica.
-                 NO REPOUSO ELA NÃO OCUPA NADA: a folha das dez a esconde por
-                 `:empty` e pelo marcador `.nada`, e o pacote manda o marcador
-                 em TODO tique. Sem a chave, a frase velha ficaria para sempre. -->
-            {monta_ressalva("alto-ressalva")}
           </div>
         </div>
 
@@ -4458,7 +4451,7 @@ def _conferir(doc):
     #      *"O nome está certo, mude o ato."* O ato mudou (`rota = 0`, o
     #      alto-falante fora do caminho, mais a saída padrão devolvida), e a
     #      régua segue o ato. **O `data-rota` mudou junto** — `pc` continua
-    #      existindo no gesto, no perfil e no IPC, mas fora da fileira.
+    #      existindo no gesto, no IPC e na CLI, mas fora da fileira.
     for rota, palavra_dela in (("jogo", "Efeitos do Jogo no Controle, Áudio da TV na TV"),
                                ("junto", "Efeitos do Jogo e Áudio da TV no Controle"),
                                ("nada", "Tudo na TV e Nada no Controle")):
