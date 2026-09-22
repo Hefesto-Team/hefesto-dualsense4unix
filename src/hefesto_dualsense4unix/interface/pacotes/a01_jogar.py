@@ -3357,6 +3357,51 @@ def cadeado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(CADEADO_RECUSA)
 
 
+def _o_radio_de_volta(ctx: Contexto) -> tuple[int, int]:
+    """PASSO 0 — o RÁDIO. Devolve `(voltaram, esperam_o_ps)`.
+
+    **ORDEM DELA, 22/09/2026:** *"pera o reconectar deveria sim tocar no radio.
+    não faz sentido ele ficar de fora."* <!-- noqa-acento: citação dela -->
+    Ela revoga a regra de 12/08 que este botão citava — *"o botão PS é dela;
+    `reconectar` não existe de propósito"* —, e o dia mediu por quê: a mesa
+    dela caiu num estado em que o BlueZ dizia `Connected` para quatro controles
+    com o kernel sem HID nenhum deles. **O PS não resolve esse**: para o rádio
+    já está tudo certo. Quem destrava é derrubar o elo morto, e isso é nosso.
+
+    QUEM ESTÁ NA MESA NÃO É TOCADO, e é a linha que impede o botão de derrubar
+    o controle que está jogando: mexer no rádio de quem o daemon já enxerga
+    seria trocar um problema que não existe por três segundos sem controle.
+
+    NUNCA LEVANTA: o rádio é acréscimo. Se o `busctl` não responder, o gesto
+    segue para os jogadores — que é o que ele sempre fez.
+    """
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+    from hefesto_dualsense4unix.integrations import gesto_de_reconexao as radio
+
+    na_mesa = {
+        norm_mac(str(peca.get("uniq") or "")) or ""
+        for peca in (ctx.mesa or [])
+        if isinstance(peca, dict)
+    }
+    voltaram = esperam = 0
+    try:
+        conhecidos = radio.dualsenses_do_radio()
+    except Exception:  # best-effort: o rádio não derruba o gesto
+        return (0, 0)
+    for mac, _conectado in conhecidos:
+        if (norm_mac(mac) or "") in na_mesa:
+            continue
+        try:
+            desfecho = radio.reconectar(mac)
+        except Exception:
+            continue
+        if desfecho.estado == radio.ESTADO_VOLTOU:
+            voltaram += 1
+        elif desfecho.estado == radio.ESTADO_SO_O_PS:
+            esperam += 1
+    return (voltaram, esperam)
+
+
 @gesto("01-jogar.html", "reconectar")
 def reconectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Reconectar Controles": os jogadores voltam, e a numeração se ajeita.
@@ -3420,6 +3465,11 @@ def reconectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
     mataria o gesto sem uma palavra na tela, que é o defeito que este passo
     cura.
     """
+    # PASSO 0 — O RÁDIO, ordem dela de 22/09/2026. Ver `_o_radio_de_volta`.
+    # Ele vem ANTES do `coop.sync` pela mesma razão que a numeração vem depois
+    # da reconciliação: um controle que volta pelo rádio agora é um jogador que
+    # o passo 1 ainda alcança nesta mesma execução.
+    voltaram, esperam_o_ps = _o_radio_de_volta(ctx)
     try:
         sync = p.resultado("coop.sync")
     except Exception as erro:
@@ -3435,7 +3485,11 @@ def reconectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
     #: identidade do cartão. `None` é o que faz a tela responder com a piscada
     #: verde no botão, que é como esta casa diz "deu certo" desde a 03-Q4.
     recibo = _painel().recibo_do_reconectar(jogadores, renumerou)
-    return {"recado": recibo} if recibo else None
+    # O RECADO DO RÁDIO VEM NA FRENTE: ele é o que pede alguma coisa dela (o
+    # PS), e o recibo dos jogadores é o que já aconteceu.
+    do_radio = _painel().recado_do_radio(voltaram, esperam_o_ps)
+    junto = " ".join(parte for parte in (do_radio, recibo) if parte)
+    return {"recado": junto} if junto else None
 
 
 #: OS DOIS DESTA ABA NA LISTA DOS DEZESSEIS, classificados um a um — 02/09/2026.

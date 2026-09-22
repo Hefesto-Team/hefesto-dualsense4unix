@@ -467,6 +467,18 @@ _PORTAS_DE_AMBIENTE: dict[str, tuple[str, ...]] = {
 #: razão é o que permite a próxima pessoa discordar com conhecimento de causa.
 #: Interruptor novo que ninguém classificar reprova por estar SEM CLASSIFICAÇÃO.
 _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
+    "HEFESTO_RADIO_DE_VERDADE": (
+        "22/09/2026 — o ESCAPE da guarda do rádio "
+        "(`integrations/gesto_de_reconexao._a_suite_esta_rodando`). Ela nasceu "
+        "de um estrago medido: o passo de rádio do «Reconectar controles» "
+        "nasceu sem trava e a primeira corrida de 457 testes chamou "
+        "`Disconnect` e `Connect` nos QUATRO DualSense da mesa dela, ao vivo. "
+        "Com a suíte no ar o `busctl` deste módulo recusa; "
+        "`HEFESTO_RADIO_DE_VERDADE=1` devolve o bus a quem PRECISA medi-lo, e "
+        "transfere para quem declarou a responsabilidade pelo rádio dela. É "
+        "instrumento e não promessa: o produto instalado não lê esta chave, "
+        "nenhum fluxo dela passa por aqui, e ligá-la não abre feature nenhuma."
+    ),
     "HEFESTO_NA_TELA": (
         "04/09/2026 — o ESCAPE da guarda TELA-DELA-01/02. Sem ele, a suíte e "
         "os 21 instrumentos de `scripts/` que abrem `Gtk.Window` desviam a "
