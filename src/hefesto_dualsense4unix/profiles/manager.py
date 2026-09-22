@@ -17,7 +17,11 @@ from typing import Any
 
 from hefesto_dualsense4unix.core.controller import IController, OutputSpec, TriggerEffect
 from hefesto_dualsense4unix.core.keyboard_mappings import DEFAULT_BUTTON_BINDINGS, KeyBinding
-from hefesto_dualsense4unix.core.led_control import LEGADO, LedSettings
+from hefesto_dualsense4unix.core.led_control import (
+    LEGADO,
+    LedSettings,
+    cor_escolhida,
+)
 from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles.loader import (
@@ -440,6 +444,11 @@ class ProfileManager:
         right = build_from_name(profile.triggers.right.mode, profile.triggers.right.params)
         settings = _to_led_settings(profile.leds)
         effective = settings.apply_brightness(settings.brightness_level)
+        # O PRETO NÃO É COR — 22/09/2026, ordem dela. A pergunta vai à cor
+        # ESCOLHIDA (antes do brilho): depois dele, um `lightbar_brightness`
+        # em 0.0 também é preto, e ali o apagado é o que ela pediu. Ver
+        # `led_control.cor_escolhida`.
+        cor_do_global = cor_escolhida(settings.lightbar)
         self._configure_auto_player_colors(profile)
         # O PERFIL APLICA TUDO — decisão dela, 14/09/2026
         # (`D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`).
@@ -477,7 +486,7 @@ class ProfileManager:
             OutputSpec(
                 trigger_left=left,
                 trigger_right=right,
-                led=effective.lightbar,
+                led=None if cor_do_global is None else effective.lightbar,
                 player_leds=settings.player_leds,
             )
         )
@@ -2671,7 +2680,15 @@ def _controllers_to_specs(
                 settings = LedSettings(
                     lightbar=rgb, brightness_level=float(brilho)
                 )
-                led = settings.apply_brightness(settings.brightness_level).lightbar
+                # O PRETO NÃO É COR, e aqui ele era a peça inteira: a do
+                # controle dela guardava `[0,0,0]` e apagava a barra em toda
+                # conexão. Ver `led_control.cor_escolhida` — `None` devolve o
+                # controle à paleta automática do número.
+                led = (
+                    None
+                    if cor_escolhida(rgb) is None
+                    else settings.apply_brightness(settings.brightness_level).lightbar
+                )
             if "player_leds" in campos:
                 player_leds = _to_led_settings(cfg.leds).player_leds
         if (

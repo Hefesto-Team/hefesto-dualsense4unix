@@ -502,7 +502,7 @@ class Vibracao:
     :param do_controle: ``controllers[uniq].rumble.policy`` do perfil — o
         override desta peça, ``None`` quando ela não sobrepõe nada.
     :param do_perfil: ``Profile.rumble.policy`` — **o DENOMINADOR**. O fator por
-        peça é RELATIVO a ele (`profiles/manager.py:2502`), e não à política que
+        peça é RELATIVO a ele (`profiles/manager.py:2893`), e não à política que
         multiplica. Sem opinião, o produto assume ``balanceado``.
     :param a_viva: ``state['rumble_policy']`` — **o que MULTIPLICA**, e é o único
         "global" que o motor sente (`daemon/ipc_handlers.py:2923` publica o
