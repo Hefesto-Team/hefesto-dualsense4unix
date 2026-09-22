@@ -49,6 +49,10 @@ class _Controle:
 
 class _PonteDeMentira:
     criadas: ClassVar[list[Any]] = []
+    #: Os `uniq` cujo `subir()` FALHA — é o caminho de verdade pelo qual a
+    #: recusa nasce, e escrevê-la à mão no dicionário deixaria a mordida sem
+    #: morder: medido nesta régua, em 22/09/2026.
+    falham: ClassVar[set[str]] = set()
 
     def __init__(self, **kw: Any) -> None:
         self.uniq = kw["uniq"]
@@ -58,7 +62,7 @@ class _PonteDeMentira:
         _PonteDeMentira.criadas.append(self)
 
     def subir(self) -> bool:
-        return True
+        return self.uniq not in _PonteDeMentira.falham
 
     def descer(self, **_: Any) -> bool:
         self.desceu = True
@@ -119,6 +123,7 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> _Bancada:
     from hefesto_dualsense4unix.integrations import hidraw_broker_client as broker
 
     _PonteDeMentira.criadas = []
+    _PonteDeMentira.falham = set()
     b = _Bancada(sub=None)  # type: ignore[arg-type]
 
     def _toca(nome: Any, *_a: Any, **kw: Any) -> bool:
@@ -265,7 +270,136 @@ def test_o_servidor_mudo_nao_levanta_ponte_nova(bancada: _Bancada) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 5. a porta dos fundos — a háptica que cai para o som
+# 5. O LAÇO FECHADO — e ele apareceu na mesa dela um minuto depois de instalar
+# ---------------------------------------------------------------------------
+class TestOLacoDoNoQueNaoNasce:
+    """O nó de som só nasce com ROTA, e no rádio a rota era «a ponte está de pé».
+
+    Com a ponte nascendo sob demanda isso vira um laço fechado, e o diário dela
+    o escreveu a cada cinco segundos, com a frase do próprio produto:
+
+        `som_no_sem_rota` — *"o som do PC ainda não está saindo neste controle
+        pelo rádio … o que falta é a ponte deste controle subir"*
+
+        o nó só nasce com rota → a rota só existe com a ponte de pé → a ponte
+        só sobe se alguém tocar NO NÓ → o nó não existe.
+
+    A cura é a pergunta mudar de sentido: `_ponte_do_radio_de` responde **«há
+    caminho»**, e não «está de pé agora».
+    """
+
+    def _sub(self, bancada: _Bancada) -> Any:
+        bancada.volta(*MESA)
+        return bancada.sub
+
+    def test_sem_ponte_de_pe_o_controle_do_radio_ainda_tem_caminho(
+        self, bancada: _Bancada
+    ) -> None:
+        """MORDIDA: devolva `None` quando `self._pontes.get(uniq)` for `None` —
+        o nó de som nunca mais nasce, e o diário dela volta a repetir
+        `som_no_sem_rota` para sempre."""
+        sub = self._sub(bancada)
+        assert sub._pontes == {}, "a bancada precisa começar SEM ponte"
+        caminho = sub._ponte_do_radio_de(MESA[0])
+        assert caminho is not None and caminho() is True
+
+    def test_a_ponte_de_pe_continua_respondendo_por_si(
+        self, bancada: _Bancada
+    ) -> None:
+        """Quando há ponte, quem responde é ela — não uma promessa."""
+        bancada.toca(MESA[0])
+        sub = self._sub(bancada)
+        caminho = sub._ponte_do_radio_de(MESA[0])
+        assert caminho is not None and caminho() is True
+        assert caminho == sub._pontes[MESA[0]].esta_de_pe
+
+    def test_a_ponte_que_nao_subiu_tira_o_caminho_e_o_prazo_devolve(
+        self, bancada: _Bancada, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A falha de verdade — com o som dela na mão — some com o nó.
+
+        E **com prazo**: sem ele, uma falha passageira calaria aquele controle
+        até ela reconectá-lo, porque sem nó não há como pedir de novo.
+
+        MORDIDA: tire o `self._ponte_recusada[uniq] = time.monotonic()` do ramo
+        do `else` e o nó continua publicado sobre uma ponte que não sobe —
+        exatamente o sumidouro que a régua de 07/09 trava.
+        """
+        agora = [1000.0]
+        monkeypatch.setattr(mod.time, "monotonic", lambda: agora[0])
+        # O CAMINHO DE VERDADE: alguém toca, a ponte tenta e NÃO sobe.
+        _PonteDeMentira.falham.add(MESA[0])
+        bancada.toca(MESA[0])
+        sub = self._sub(bancada)
+        assert _PonteDeMentira.criadas, "a ponte nem foi tentada"
+        assert sub._pontes == {}, "a ponte que não subiu ficou guardada"
+
+        assert sub._ponte_do_radio_de(MESA[0]) is None
+
+        agora[0] += mod.RECUSA_DA_PONTE_S + 1
+        caminho = sub._ponte_do_radio_de(MESA[0])
+        assert caminho is not None and caminho() is True
+        assert MESA[0] not in sub._ponte_recusada, "a recusa vencida ficou no dicionário"
+
+    def test_a_ponte_que_sobe_apaga_a_recusa_velha(
+        self, bancada: _Bancada, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Sem isto, um controle que falhou uma vez carregaria a recusa por um
+        minuto mesmo já tendo som saindo por ele.
+
+        MORDIDA: tire o `self._ponte_recusada.pop(uniq, None)` do ramo do
+        `subir()` que deu certo.
+        """
+        agora = [1000.0]
+        monkeypatch.setattr(mod.time, "monotonic", lambda: agora[0])
+        _PonteDeMentira.falham.add(MESA[0])
+        bancada.toca(MESA[0])
+        bancada.volta(*MESA)
+        assert MESA[0] in bancada.sub._ponte_recusada
+
+        _PonteDeMentira.falham.clear()
+        bancada.volta(*MESA)
+        assert bancada.sub._pontes != {}, "a ponte não subiu na segunda volta"
+        assert MESA[0] not in bancada.sub._ponte_recusada
+
+    def test_sem_gravador_na_maquina_nao_ha_caminho(
+        self, bancada: _Bancada, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A `libopus` não é a única coisa que falta numa máquina recém-feita.
+
+        Sem `pw-record` nem `parec`, `argv_do_gravador` devolve `[]` e a ponte
+        NUNCA sobe. Sem esta pergunta o nó seria publicado assim mesmo, ela
+        tocaria, a ponte falharia, o nó sumiria — e voltaria um minuto depois,
+        piscando na lista de som dela para sempre.
+
+        MORDIDA: tire o `not ha_gravador_de_monitor()` da promessa.
+        """
+        from hefesto_dualsense4unix.integrations import alto_falante_bt as af
+
+        sub = self._sub(bancada)
+        monkeypatch.setattr(af, "ha_gravador_de_monitor", lambda: False)
+        assert sub._ponte_do_radio_de(MESA[0]) is None
+
+    def test_sem_libopus_nao_ha_caminho(
+        self, bancada: _Bancada, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A promessa pergunta À MÁQUINA — é isso que a separa do `lambda: True`.
+
+        MORDIDA: devolva `lambda: True` sem consultar
+        `a_ponte_do_radio_pode_subir` e esta régua reprova: o nó nasceria numa
+        máquina onde a ponte não tem como subir.
+        """
+        from hefesto_dualsense4unix.integrations import alto_falante_bt as af
+
+        sub = self._sub(bancada)
+        monkeypatch.setattr(
+            af, "a_ponte_do_radio_pode_subir", lambda: (False, "sem libopus")
+        )
+        assert sub._ponte_do_radio_de(MESA[0]) is None
+
+
+# ---------------------------------------------------------------------------
+# 6. a porta dos fundos — a háptica que cai para o som
 # ---------------------------------------------------------------------------
 def test_a_haptica_sem_fonte_nao_vira_som_em_silencio(
     bancada: _Bancada, monkeypatch: pytest.MonkeyPatch

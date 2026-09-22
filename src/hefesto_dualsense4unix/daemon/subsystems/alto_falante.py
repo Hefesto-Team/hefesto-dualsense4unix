@@ -97,6 +97,7 @@ import asyncio
 import contextlib
 import functools
 import threading
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -133,6 +134,21 @@ RECONCILIA_S = 5.0
 #: menos de 0,5 s"*, e o vigia tem de caber dentro dela com folga para a
 #: passada do `pactl`.
 VIGIA_DO_MODO_S = 0.4
+
+#: Quanto tempo a ponte que NÃO SUBIU segura a rota daquele controle —
+#: RADIO-AFOGADO-01, 22/09/2026.
+#:
+#: Com a ponte nascendo sob demanda, «a ponte não está de pé» virou o estado de
+#: REPOUSO, e não uma falha: dizer que não há rota por causa dele foi o que
+#: prendeu o nó de som num laço — sem nó não há o que tocar, sem alguém tocando
+#: a ponte não sobe, e sem ponte o nó não nascia.
+#:
+#: O que continua sendo falha é o `subir()` que FALHOU, com o som dela na mão.
+#: Esse fica lembrado, e o nó some com a frase honesta. **Mas com prazo:** uma
+#: falha passageira (o broker ocupado por um instante) calaria o alto-falante
+#: daquele controle até ela reconectá-lo, porque sem nó ela não tem como
+#: pedir de novo.
+RECUSA_DA_PONTE_S = 60.0
 
 #: Os doze dígitos hex de um MAC. Um ``uniq`` que não os tenha não é endereço,
 #: e `norm_mac` só FILTRA hex — sem esta trava, `"a"` viraria uma chave válida
@@ -790,6 +806,8 @@ class AltoFalanteSubsystem:
         #: mandando AGORA. O escritor é um só, e trocar de arranjo exige
         #: derrubar e subir — é por isso que o modo é lembrado.
         self._modo_da_ponte: dict[str, str] = {}
+        #: `uniq -> quando o `subir()` falhou` — ver :data:`RECUSA_DA_PONTE_S`.
+        self._ponte_recusada: dict[str, float] = {}
         #: Quantos controles no rádio ficaram sem âncora USB na última volta —
         #: lembrado para o aviso sair na MUDANÇA, e não a cada `RECONCILIA_S`.
         self._faltam_ancoras = 0
@@ -1047,18 +1065,58 @@ class AltoFalanteSubsystem:
     # mesma família do `sink_do_controle` no cabo.
 
     def _ponte_do_radio_de(self, uniq: str) -> Any:
-        """O callable que diz se a ponte DESTE controle está no ar.
+        """O callable que diz se este controle TEM CAMINHO pelo rádio.
 
-        `None` é resposta honesta e o padrão: sem ponte, `rota_do_no` recusa o
-        rádio com a frase certa. O que ele NUNCA pode ser é um `lambda: True`
-        otimista — isso publicaria rota sobre uma ponte inexistente e o nó
-        voltaria a ser o sumidouro que
-        `tests/unit/test_o_no_de_som_nao_nasce_sumidouro.py` trava.
+        **A PERGUNTA MUDOU DE SENTIDO EM 22/09/2026 — RADIO-AFOGADO-01, e a
+        mudança foi medida no aparelho dela.** Até aqui este método respondia
+        *"a ponte está no ar AGORA?"*, e isso estava certo enquanto a ponte era
+        permanente. Ela deixou de ser: agora só sobe com alguém tocando, porque
+        de pé em silêncio ela afogava o rádio e derrubava três dos quatro
+        controles da mesa.
+
+        Com o sentido velho, o produto travava num laço fechado — e ele
+        apareceu no diário dela no minuto seguinte à instalação, `som_no_sem_
+        rota` a cada cinco segundos:
+
+            o nó de som só nasce com rota  →  a rota só existe com a ponte de
+            pé  →  a ponte só sobe se alguém tocar NO NÓ  →  o nó não existe.
+
+        Então a resposta honesta de hoje é *"há caminho"*, e ela tem três
+        partes, nesta ordem:
+
+        1. a ponte está de pé — o caminho não é promessa, é fato;
+        2. o `subir()` FALHOU há pouco (:data:`RECUSA_DA_PONTE_S`) — aí não há
+           caminho, e o nó some com a frase honesta em vez de engolir áudio;
+        3. esta máquina consegue subir a ponte — `a_ponte_do_radio_pode_subir`
+           responde pela `libopus` e `ha_gravador_de_monitor` pelo `pw-record`
+           / `parec`. Com os dois, há caminho, e ele se abre em cerca de dois
+           segundos quando o primeiro som chegar; sem qualquer um deles a
+           ponte não tem como subir NUNCA, e publicar o nó seria o sumidouro.
+
+        **ISTO NÃO É O `lambda: True` OTIMISTA que a doutrina velha proibia.**
+        Aquele dizia *sim* sem perguntar nada a ninguém; este pergunta à
+        máquina e à última tentativa. O que a régua do sumidouro trava — que
+        todo `module-null-sink` publicado tenha por onde entregar — continua
+        de pé: no rádio quem entrega é a ponte, e a ponte sobe quando houver o
+        que entregar.
         """
         ponte = self._pontes.get(uniq)
-        if ponte is None:
+        if ponte is not None:
+            return ponte.esta_de_pe
+        quando = self._ponte_recusada.get(uniq)
+        if quando is not None:
+            if time.monotonic() - quando < RECUSA_DA_PONTE_S:
+                return None
+            self._ponte_recusada.pop(uniq, None)
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import (
+            a_ponte_do_radio_pode_subir,
+            ha_gravador_de_monitor,
+        )
+
+        pode, _porque = a_ponte_do_radio_pode_subir()
+        if not pode or not ha_gravador_de_monitor():
             return None
-        return ponte.esta_de_pe
+        return lambda: True
 
     def _avisar_ancoras_que_faltam(self, faltam: int, controles: int) -> None:
         """O controle no rádio sem âncora USB fica sem vibração — e diz isso.
@@ -1340,6 +1398,13 @@ class AltoFalanteSubsystem:
                 # processo que subiu: ele é colhido aqui mesmo.
                 if gravador is not None:
                     derrubar_leitor_de_pipe(gravador)
+                # E ISTO TAMBÉM É RECUSA — RADIO-AFOGADO-01. Chegar aqui quer
+                # dizer que alguém ESTÁ tocando neste controle (o portão do som
+                # já deixou passar) e mesmo assim não houve PCM: ou o gravador
+                # não subiu, ou o nó sumiu debaixo dele. Nos dois casos o nó
+                # daquele controle não tem por onde entregar, e continuar
+                # publicado o faria engolir o áudio dela.
+                self._ponte_recusada[uniq] = time.monotonic()
                 logger.info("som_ponte_sem_fonte", uniq=uniq, motivo=motivo)
                 continue
             # O CAMINHO VAI NO FECHO, e o `functools.partial` diz o tipo: um
@@ -1397,8 +1462,14 @@ class AltoFalanteSubsystem:
             if ponte.subir():
                 self._pontes[uniq] = ponte
                 self._modo_da_ponte[uniq] = modo
+                # SUBIU: o caminho está provado, e a recusa velha não vale mais.
+                self._ponte_recusada.pop(uniq, None)
             else:
                 ponte.descer()
+                # NÃO SUBIU com o som dela na mão: isto é falha de verdade, e
+                # o nó daquele controle tem de sumir com a frase honesta em vez
+                # de engolir áudio. Ver :data:`RECUSA_DA_PONTE_S`.
+                self._ponte_recusada[uniq] = time.monotonic()
                 logger.info("som_ponte_nao_subiu", uniq=uniq, motivo=ponte.motivo)
 
     def _descer_ponte_ociosa(self, uniq: str) -> None:

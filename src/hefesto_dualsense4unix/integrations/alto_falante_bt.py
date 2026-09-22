@@ -2405,6 +2405,29 @@ def a_ponte_do_radio_sabe_montar() -> bool:
     return True
 
 
+def ha_gravador_de_monitor() -> bool:
+    """Existe NESTA MÁQUINA um programa capaz de ler o monitor de um nó?
+
+    **RADIO-AFOGADO-01, 22/09/2026.** Gêmea de
+    :func:`a_ponte_do_radio_pode_subir` e pela mesma razão dela: desde que a
+    ponte passou a nascer sob demanda, alguém precisa responder *"esta máquina
+    CONSEGUE ter ponte?"* antes de a primeira nota tocar — e a `libopus` não é
+    a única coisa que falta numa máquina recém-instalada.
+
+    Sem o `pw-record` nem o `parec`, :func:`argv_do_gravador` devolve `[]` e a
+    ponte nunca sobe. Publicar o nó de som de um controle no rádio ali seria
+    publicar um `module-null-sink` que aceita o áudio e o joga fora — o
+    sumidouro que `tests/unit/test_o_no_de_som_nao_nasce_sumidouro.py` trava
+    desde 07/09.
+
+    Pergunta só pelo PROGRAMA, que é o que não muda com o nó: se o gravador
+    subir e não achar a fonte, quem responde é
+    :func:`fonte_do_monitor_do_no`, e o subsystem lembra a recusa.
+    """
+    return any(shutil.which(binario) is not None
+               for binario, _modelo in GRAVADORES_DO_MONITOR)
+
+
 def a_ponte_do_radio_pode_subir() -> tuple[bool, str]:
     """Esta máquina consegue subir a ponte AGORA? `(pode, por quê não)`.
 
@@ -3613,6 +3636,7 @@ __all__ = [
     "fonte_com_ritmo",
     "fonte_de_arquivo",
     "fonte_do_monitor_do_no",
+    "ha_gravador_de_monitor",
     "monitor_da_saida_padrao",
     "montar_com_o_common_preservado",
     "montar_pelos_dois_arranjos",
