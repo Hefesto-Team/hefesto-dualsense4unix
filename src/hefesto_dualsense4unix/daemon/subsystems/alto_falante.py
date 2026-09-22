@@ -1367,10 +1367,17 @@ class AltoFalanteSubsystem:
             # a razão de portão nenhum ter visto isto estão em
             # `tests/unit/test_a_ponte_do_som_nao_afoga_o_radio.py`.
             #
-            # O PREÇO, e ele é real: o som deixa de ser instantâneo. O vigia
-            # do modo nota em até :data:`VIGIA_DO_MODO_S` e `subir()` custou
-            # 1,45 s na prova — perto de dois segundos até o primeiro quadro.
-            # É a mesma espera que a háptica paga desde 19/09.
+            # O PREÇO, MEDIDO NA MESA DELA e não estimado: **255 ms** do
+            # primeiro quadro de áudio à ponte de pé. O relógio, do diário de
+            # 22/09/2026 às 17:57:45 — som às .967, `vigia_do_modo_acordou_a_
+            # volta modo=som` às 45.162 (195 ms) e `som_radio_ponte_de_pe` às
+            # 45.221 (mais 59 ms). A queda leva 318 ms.
+            #
+            # FATO SUBSTITUÍDO: esta linha dizia *"1,45 s … perto de dois
+            # segundos"*, estimando por uma subida do diário que incluía o
+            # pedido do canal do microfone. Medida sozinha, a ponte sobe em
+            # 59 ms — e a diferença entre 255 ms e dois segundos é a diferença
+            # entre ela não notar e ela reclamar.
             #
             # **A DÚVIDA É ASSIMÉTRICA, e é ela que faz a cura valer.** As
             # duas respostas fixas de `na_duvida` erram de um lado: `True`

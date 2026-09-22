@@ -364,6 +364,17 @@ só existir enquanto alguém está tocando naquele controle
 (`RADIO-AFOGADO-01`, `daemon/subsystems/alto_falante.py`); com a mesa parada,
 as escritas vão de 375/s a ZERO.
 
+**O QUE ELA CUSTA, medido no mesmo dia às 17:57:45:** o som começou às `.967`,
+o vigia acordou a volta às `45.162` e a ponte estava de pé às `45.221` —
+**255 ms** do primeiro quadro ao fio, e 318 ms para deitar quando o som acaba.
+
+**O QUE A CURA NÃO ALCANÇA, e é o que sobra para a camada de baixo:** o
+`uhid.ko` descarta sem avisar ninguém. Enquanto o `os.write` devolver sucesso
+sobre um report jogado fora, quem escreve não tem como ceder — e no dia em que
+quatro pontes forem LEGÍTIMAS (quatro jogadores com som no controle), o teto de
+ar volta a ser alcançado sem que uma única escrita falhe. O freio tem de nascer
+onde a fila enche.
+
 **O que isto NÃO diz:** que o caso dos relatores de 2024 é o mesmo. Eles não
 tinham Hefesto nenhum escrevendo. O que a nossa medição acrescenta ao §6.2 é
 que **este EAGAIN tem pelo menos uma causa que não é o aparelho** — e que
