@@ -460,9 +460,14 @@ def test_a_ponte_de_um_cai_a_luz_dele_apaga_e_o_outro_nao_e_tocado(mesa: Any) ->
 
     MORDIDA: tire `await _conferir_quem_saiu_do_ar(daemon, uniqs)` do
     `canal_do_microfone_loop`, e A fica no ar para sempre sem canal.
+
+    A PRIMEIRA VOLTA VÊ O CANAL DE PÉ — 22/09/2026: só some o canal que já
+    subiu (`MicrofonesNoAr.anotar_leitura`). No produto o laço lê a cada dois
+    segundos, então um canal que existe é visto antes de cair.
     """
     _apertar(mesa, P1, ligado=True)
     _apertar(mesa, P4, ligado=True)
+    _voltas_do_canal(mesa, 1)
     luzes_antes = len(mesa.backend.escritas_de_luz)
     del mesa.pipewire.publicados[_n(P1)]
 
@@ -480,6 +485,43 @@ def test_a_ponte_de_um_cai_a_luz_dele_apaga_e_o_outro_nao_e_tocado(mesa: Any) ->
     assert [e for e in depois if e[0] == _n(P4)] == [], f"a luz de B foi tocada: {depois}"
     assert mesa.registro.no_ar() == {_n(P4): True}
     assert _eleito(mesa) == P4
+
+
+def test_quem_nasce_antes_do_canal_nao_sai_do_ar_esperando_por_ele(mesa: Any) -> None:
+    """O segundo controle nasce no ar, e o canal dele sobe segundos depois.
+
+    MEDIDO NO JOURNAL DELA em 22/09/2026, com dois DualSense no rádio: o P2
+    nasceu no ar às 13:51:53, o laço do canal contou duas faltas e o tirou às
+    13:51:56 (`mic_da_mesa_saiu_do_ar_de_fato`), e a fonte dele foi publicada
+    às 13:52:01. A palavra foi esquecida, a ponte passou a seguir o ouvinte da
+    fonte, e o selo do cartão pintou DESLIGADO — em todo controle que não era
+    o padrão.
+
+    E A GUARDA NÃO O FAZ IMORTAL: depois de visto, o canal que some tira do ar
+    em duas voltas, como sempre.
+
+    MORDIDA: tire de `MicrofonesNoAr.anotar_leitura` a linha que devolve
+    `False` para o canal ainda não visto — B sai do ar na segunda volta.
+    """
+    _apertar(mesa, P1, ligado=True)
+    del mesa.pipewire.publicados[_n(P4)]
+    mesa.backend.mudo[_n(P4)] = False
+
+    assert asyncio.run(hotkey.nascer_no_ar(mesa.daemon, P4)) is True
+    _voltas_do_canal(mesa, 3)
+    assert hotkey._no_ar_da_sessao(mesa.daemon).todos() == [P1, P4], (
+        "o controle saiu do ar esperando o próprio canal subir")
+    assert mesa.registro.no_ar() == {_n(P1): True, _n(P4): True}
+
+    mesa.pipewire.publicados[_n(P4)] = _canal(P4)
+    _voltas_do_canal(mesa, 1)
+    assert hotkey._CANAL_POR_UNIQ[P4].get("canal_ativo") is True, (
+        "o canal subiu e o selo do controle continua sem dizer ATIVO")
+
+    del mesa.pipewire.publicados[_n(P4)]
+    _voltas_do_canal(mesa, 2)
+    assert hotkey._no_ar_da_sessao(mesa.daemon).todos() == [P1], (
+        "o canal visto sumiu e o controle ficou no ar para sempre")
 
 
 def test_nao_saber_se_o_canal_existe_nunca_tira_do_ar(mesa: Any) -> None:

@@ -236,14 +236,41 @@ class TestApplierDoDaemon:
         ``Daemon.apply_profile_speaker``. O perfil continua guardando o canal,
         a ativação continua dizendo "aplicado", e o controle nunca muda de
         canal — a mentira mais barata de todas.
+
+        O canal desta régua é o 0 («Tudo na TV e Nada no Controle»): o 3 tem
+        linha própria logo abaixo, e medir a passagem com ele confundiria as
+        duas perguntas.
         """
         backend = _BackendComAudio()
         backend.connect()
-        estado = _daemon(backend).apply_profile_speaker(180, False, rota=3)
+        estado = _daemon(backend).apply_profile_speaker(180, False, rota=0)
 
         assert estado == "aplicado"
         assert backend.escritas_de_audio == [
-            {"volume": 180, "muted": False, "uniq": None, "rota": 3}
+            {"volume": 180, "muted": False, "uniq": None, "rota": 0}
+        ]
+
+    def test_a_rota_sem_botao_chega_ao_aparelho_como_sons_do_jogo(self) -> None:
+        """A rota 3 da peça vira 2 — 22/09/2026, pedido dela.
+
+        *"ligar o mic e o autofalante dos demais controles pra refletirem de
+        fato as escolhas do user na interface"*. O «Só no controle» perdeu o
+        botão em 21/09 e o perfil só carrega a camada 2: aplicá-lo deixava o
+        firmware esperando todo o som do PC com o PC tocando em outro lugar, e
+        a fileira do cartão sem um botão aceso. Medido na mesa dela, com o P2
+        na peça de 21/09.
+
+        MORDIDA: tire o ramo `if rota == SAIDA_SO_NO_ALTO_FALANTE` de
+        `Daemon.apply_profile_speaker` — o backend recebe 3 de novo.
+        """
+        backend = _BackendComAudio()
+        backend.connect()
+        estado = _daemon(backend).apply_profile_speaker(
+            102, True, uniq="aabbcc000002", rota=3)
+
+        assert estado == "aplicado"
+        assert backend.escritas_de_audio == [
+            {"volume": 102, "muted": True, "uniq": "aabbcc000002", "rota": 2}
         ]
 
     def test_sem_canal_o_byte_do_microfone_fica_intocado(self) -> None:

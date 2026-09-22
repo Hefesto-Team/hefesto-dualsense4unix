@@ -28,6 +28,10 @@ from dataclasses import dataclass, field
 from typing import Any, Final, Literal, cast, get_args
 
 from hefesto_dualsense4unix.core.controller import ControllerState, IController
+from hefesto_dualsense4unix.core.ds_output_report import (
+    SAIDA_L_FONE_R_ALTO_FALANTE,
+    SAIDA_SO_NO_ALTO_FALANTE,
+)
 from hefesto_dualsense4unix.core.events import EventBus, EventTopic
 from hefesto_dualsense4unix.daemon.battery_journal import (
     INTERVALO_SONDA_S,
@@ -3993,6 +3997,9 @@ class Daemon:
         escrevê-lo inteiro apagaria o caminho do mic em silêncio. Quem preserva
         os outros bits é o `_byte_da_rota` do backend, que lê o valor vigente
         do handle antes de trocar só os dois bits da rota.
+
+        **E A ROTA 3 CHEGA AO APARELHO COMO 2** — 22/09/2026, a razão está no
+        corpo. Só por aqui: o `speaker.set` do IPC continua escrevendo o 3.
         """
         if volume is None:
             # Nunca um `set_speaker_volume` sem volume — ver a docstring. A
@@ -4003,6 +4010,21 @@ class Daemon:
         if not callable(setter):
             logger.debug("profile_speaker_backend_sem_suporte", origin=origin)
             return IGNORADO_SEM_CONTROLE
+        # A ROTA 3 DO PERFIL CHEGA AO APARELHO COMO 2 — 22/09/2026, pedido
+        # dela: *"ligar o mic e o autofalante dos demais controles pra
+        # refletirem de fato as escolhas do user na interface"*. O «Só no
+        # controle» (3) perdeu o botão em 21/09 (O-TERCEIRO-NOME-DELA-01), e o
+        # perfil só carrega a camada 2 (`ProfileSpeakerConfig.rota`): o 3 vindo
+        # daqui é sempre a metade — o firmware esperando todo o som do PC, e o
+        # PC tocando em outro lugar —, que nenhum botão da fileira acende.
+        # Medido na mesa dela: a peça do P2, de 21/09 às 11:38, deixava o
+        # cartão dele sem botão aceso ao lado do P1 em «Sons do jogo». O 2 é o
+        # botão que diz o que o plástico toca. O arquivo NÃO é reescrito, e o
+        # `speaker.set` do IPC e da CLI (que não passa por aqui) segue gravando 3.
+        if rota == SAIDA_SO_NO_ALTO_FALANTE:
+            logger.info("profile_speaker_rota_sem_botao", de=rota,
+                        para=SAIDA_L_FONE_R_ALTO_FALANTE, uniq=uniq, origin=origin)
+            rota = SAIDA_L_FONE_R_ALTO_FALANTE
         alvo = max(0, min(255, int(volume)))
         try:
             ok = bool(setter(alvo, muted=bool(muted), uniq=uniq, rota=rota))

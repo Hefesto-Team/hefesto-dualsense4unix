@@ -165,12 +165,17 @@ def test_a_rota_sai_do_mesmo_bloco_que_o_volume(a02):
 # ---------------------------------------------------------------------------
 # 2. O MODO DO MICROFONE — o dono é o disco
 # ---------------------------------------------------------------------------
-def test_o_modo_do_mic_e_a_regra_da_gtk_so_true_e_virtual(a02, monkeypatch):
-    """`meu.get("microfone") is True` — `secao_controles.py:876`, uma linha.
+def test_o_modo_do_mic_segue_a_inversao_so_false_e_nativo(a02, monkeypatch):
+    """A tabela do daemon — `bt_mic.uniqs_recusados` —, com três valores.
 
-    Ausência e `False` deixam a ponte no chão do mesmo jeito, e por isso as duas
-    são Nativo. É a mesma razão de o gesto gravar `None` ao desligar, em vez de
-    `False`.
+    Ausência LIGA desde a ordem dela de 18/09/2026 (*"todos os controles tem
+    que nascer com tudo mic, giroscopio e afins"*), então só o `False` é
+    Nativo. A régua antiga cobrava a regra da GTK (`microfone is True`), e com
+    ela o cartão de todo controle não declarado acendia «Nativo» sobre uma
+    ponte de pé — medido na mesa dela em 22/09/2026.
+
+    MORDIDA: devolva `is True` a `modo_do_mic`, e as duas últimas linhas
+    reprovam.
     """
     from types import SimpleNamespace
 
@@ -181,8 +186,24 @@ def test_o_modo_do_mic_e_a_regra_da_gtk_so_true_e_virtual(a02, monkeypatch):
     })
     assert a02.modo_do_mic("aabbcc000001") == "virtual"
     assert a02.modo_do_mic("aabbcc000002") == "nativo"
-    assert a02.modo_do_mic("aabbcc000003") == "nativo"
-    assert a02.modo_do_mic("aabbcc000009") == "nativo"
+    assert a02.modo_do_mic("aabbcc000003") == "virtual"
+    assert a02.modo_do_mic("aabbcc000009") == "virtual"
+
+
+def test_o_nativo_da_aba_02_grava_o_mesmo_que_o_desligado_da_aba_08(a02):
+    """Um valor só para "não quero": o `False` do `maquina.json`.
+
+    As duas abas escrevem a mesma declaração por caminhos diferentes, e em
+    18/09/2026 só a 08 foi curada — a 02 ficou gravando `None`, que hoje é o
+    valor que LIGA. Esta régua é o que impede a próxima metade.
+
+    MORDIDA: devolva `None` ao gesto `mic_modo`.
+    """
+    prova = [p for p in a02.PROVAS
+             if p["gesto"] == "mic-modo" and p["clique"]["micModo"] == "nativo"]
+    assert len(prova) == 1, "a prova do «Nativo» sumiu das PROVAS da aba"
+    declarado = prova[0]["chama"][0][1][0]["controles"]
+    assert list(declarado.values()) == [{"microfone": False}], declarado
 
 
 def test_sem_endereco_o_modo_do_mic_nao_acende_nenhum(a02, monkeypatch):

@@ -58,7 +58,7 @@ class TestOsTresNomesNaTela:
             f"dela é {NOME_DELA!r}")
 
     def test_o_valor_velho_saiu_da_fileira(self, alvo: pathlib.Path) -> None:
-        """`pc` continua existindo no gesto, no perfil e no IPC — **fora da
+        """`pc` continua existindo no gesto, no IPC e na CLI — **fora da
         fileira**. Deixá-lo na tela com o rótulo novo seria a mentira que esta
         sprint existe para matar: o nome dizendo «nada» e o clique mandando
         tudo.
@@ -173,7 +173,9 @@ def test_a_capacidade_velha_nao_foi_apagada() -> None:
     """**§7 da sprint: não apague a `rota=3`.**
 
     Doze arquivos a referenciam, e uma delas é a planilha de ensaios. O que
-    ela perdeu foi o BOTÃO; o caminho continua por IPC e por perfil, e a
+    ela perdeu foi o BOTÃO; o caminho continua pelo IPC e pela CLI (o perfil
+    guarda o 3 e o aparelho o recebe como 2 desde 22/09 — ver
+    `Daemon.apply_profile_speaker`), e a
     pergunta de se ele volta a ter porta na tela é dela.
 
     MORDIDA: apague `CANAL_TODO_O_PC` do `ROTA_DO_CANAL`.
