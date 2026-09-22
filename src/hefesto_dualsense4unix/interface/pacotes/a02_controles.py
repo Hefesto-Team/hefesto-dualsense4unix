@@ -2471,7 +2471,7 @@ def nativo_fora_de_alcance(uniq: str) -> str:
 # ENTÃO ELE PERGUNTA À PÁGINA, uma vez, e o dia em que ela publicar liga os quatro
 # sem ninguém tocar em código. É o mesmo padrão que a `03-gatilhos` já usa
 # (`a03_gatilhos._enderecos_da_pagina`), e `publicado=True` é deliberado: o
-# piloto abre SEMPRE o publicado (`hefesto_vivo.py:2432`, `:2766`, `:2963`), e
+# piloto abre SEMPRE o publicado (`hefesto_vivo.py:2438`, `:2766`, `:2963`), e
 # contar as casas da bancada endereçaria o que o `WebView` não tem.
 #: O NOME DA PÁGINA, e ele é UM só neste arquivo: a régua dos gestos o lê lá
 #: embaixo, o `_enderecos_da_pagina` o lê aqui, e o `@registrar` o repete porque
@@ -3895,7 +3895,7 @@ def _fora_do_voo(fn: Callable[[], None]) -> None:
     """Roda `fn` numa linha própria, sem segurar o botão que está em voo.
 
     **O GESTO JÁ NÃO RODA NO TIQUE** — medido em 06/09/2026 no piloto: ele
-    despacha cada gesto numa thread (`interface/hefesto_vivo.py:2661`), porque
+    despacha cada gesto numa thread (`interface/hefesto_vivo.py:2667`), porque
     *"`daemon.reload` leva 9,5 segundos"*. Logo a tela não congela nem se o som
     for chamado direto, e o `TIQUE_MS` de 100 ms segue livre.
 

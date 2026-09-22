@@ -1008,8 +1008,15 @@ def fita(ativo: str = "todos", inerte: bool = False, titulo: str | None = None,
     # e cada troca deixava para trás o nó de texto dos quatro espaços.
     # Medido em 02/09/2026, com a trava de `_fita` solta numa bancada:
     # **29 tiques, 29 pinturas** — uma por tique, sem nada ter mudado.
+    #
+    # O RÓTULO SÓ VEM COM ALGUÉM PARA ESCOLHER — 22/09/2026, pedido dela olhando
+    # a tela sem controle nenhum: *"quando não tiver controle Não Aparece o
+    # selecionar:"*. Com a mesa vazia não há chip, e o `Selecionar:` sobrava
+    # sozinho apontando para nada. O desenho (`mesa=None`) tem sempre a mesa
+    # do mockup, então as dez páginas geradas não mudam um byte.
+    rotulo = f"<span>{ROTULO_DA_FITA}</span>" if lista else ""
     return (f'<div class="fita{" inerte" if inerte else ""}" title="{t}">\n'
-            f'      <span>{ROTULO_DA_FITA}</span>\n      ' + "\n      ".join(chips)
+            f"      {rotulo}\n      " + "\n      ".join(chips)
             + "\n    </div>")
 
 
@@ -1864,9 +1871,12 @@ def monta(arq: str, titulo_aba: str, miolo: str, css_extra: str = "",
     # ignora os atributos invisíveis de propósito, e foi por isto que ela pediu
     # o ajuste: *"a ideia do mockup é o desenho ser possível de ser comparado
     # ao produto final"* — comparar o que se VÊ, não o andaime.
+    #
+    # O «N controles:» SAIU EM 22/09/2026 (pedido dela, para ganhar espaço
+    # lateral): sobra o endereço da segunda metade, e o `x USB · y BT` já diz
+    # quantos são.
     t = re.sub(r'(<div class="conectado"><span class="bolinha">●</span> )[^<]*<b>[^<]*</b>',
-               rf'\g<1><span data-campo="conta">{len(CONECTADOS)} controles:</span> '
-               rf'<b data-campo="conta-b">{_mesa_viva.frase_dos_transportes(usb, bt)}</b>',
+               rf'\g<1><b data-campo="conta-b">{_mesa_viva.frase_dos_transportes(usb, bt)}</b>',
                t, count=1)
 
     # O PERFIL ATIVO, mesma razão: o nome vem do daemon (`active_profile`) e a

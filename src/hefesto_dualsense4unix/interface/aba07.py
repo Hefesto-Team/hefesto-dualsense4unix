@@ -431,7 +431,6 @@ CSS = """
      acidente de CSS; aqui a linha de jogo é uma fileira densa, e um botão de
      34px por jogo empurraria a lista para fora do cartão. */
   .lanc-fora .btn.mini{height:24px;font-size:10.5px;padding:0 9px;flex:0 0 auto}
-  .lanc-vazio{font-size:11px;color:var(--comment)}
   /* A LINHA DE INICIALIZAÇÃO À MOSTRA — 04/09/2026, decisão `07[01]` do PO.
      Ela NASCE AUSENTE: `desenho_dos_lancadores.linha_do_wrapper_html` devolve
      string vazia sempre que não há jogo com a linha intocável, e o bloco não
@@ -779,10 +778,10 @@ if __name__ == "__main__":
     # (`p.fita`) antes de visitar campo nenhum — quando essa troca acontece, todo
     # `data-campo` que estivesse dentro da fita deixa de existir no DOM.
     #
-    # QUEM ESCREVE OS CHIPS, e sem ele isto seria maquiagem: o pacote da aba,
-    # `pacotes/a07_lancadores.fita_html()`, emitido em `blocos[".fita"]`. O
-    # `blocos` corre DEPOIS do `p.fita` e reconsulta o documento pela classe, então
-    # ele acerta o alvo com ou sem a troca do bloco inteiro.
+    # QUEM ESCREVE OS CHIPS, e sem ele isto seria maquiagem: o piloto,
+    # `hefesto_vivo._fita` (`monta.fita` com a mesa viva), o mesmo das dez abas.
+    # O pacote da aba escrevia a fita da mesa vazia até 22/09/2026 — ver o
+    # `pacote()` de `pacotes/a07_lancadores.py`.
     #
     # O QUE FICA: o `Selecionar:` e o chip `Todos`, que são ESTRUTURA — não nomeiam
     # aparelho nenhum e o `Todos` é o alvo desta aba (fora de `monta.ABAS_QUE_ESCOLHEM`).

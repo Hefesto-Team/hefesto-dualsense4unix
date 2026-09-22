@@ -2915,3 +2915,24 @@ def test_os_selos_de_uma_mesma_moldura_tem_a_mesma_cor(desenho):
           "aos dois. Duas cores para o mesmo estado é uma cor a mais para ela "
           "decodificar — é a razão escrita em `MOLDURA` e a que `off`/`nao_sei` "
           "já cumprem.")
+
+
+def test_a_lista_vazia_da_steam_nao_ocupa_um_pixel(desenho):
+    """*"isso na steam essa frase tem que sumir pra nivelarmos a altura do bloco
+    da styeam com demais."* — ela, 22/09/2026.
+
+    A lista vazia era a frase «Nada pendente, e você não tirou nem dispensou
+    nenhum jogo.» embaixo de uma linha, e só o cartão da Steam pagava os 28 px.
+    Agora ela é SÓ um comentário HTML: o navegador não desenha nada, e o
+    `:empty` da `.lanc-fora` ignora comentário — a borda e a margem somem
+    junto. Um espaço em volta do comentário já quebraria o `:empty`.
+
+    A MORDIDA: devolva a frase a `desenho_dos_lancadores.LISTA_VAZIA` e a
+    primeira asserção reprova.
+    """
+    import re
+
+    lida = desenho.Leitura(com_wrapper=("1",), instalados=1)
+    fora = desenho.valores_do_cartao(desenho.cartao_da_steam(lida))["steam-fora"]
+    assert re.fullmatch(r"<!--.*?-->", fora, re.S), (
+        f"a lista vazia da Steam voltou a desenhar alguma coisa: {fora!r}")

@@ -105,9 +105,13 @@ LARG, ALT = 1920, 1080
 #:     painel do COSMIC (zona exclusiva)   82   em cima
 #:     doca do COSMIC   (zona exclusiva)  110   embaixo
 #:     borda da janela                      1   de cada lado
-#:     Gtk.HeaderBar                       46   (= ponte_da_tela.ALTURA_DA_BARRA)
+#:     Gtk.HeaderBar                       46   (a de 09/09; hoje ALTURA_DA_BARRA)
 #:
 #:     altura da vista: 1080 − 82 − 1 − 46 − 1 − 110 = 840   <- MEDIDO na foto
+#:
+#: A BARRA FOI A 39 EM 22/09/2026 (`ponte_da_tela.CSS_DA_BARRA`), e a vista
+#: real ganhou 7 px. O 840 FICA até a próxima foto dela maximizada: ele é o
+#: MEDIDO, e o que cabe em 840 cabe em 847 — o contrário não.
 #:     largura da vista: 1920 − 1 − 1 = 1918                 <- derivado: o
 #:         painel e a doca são de cima e de baixo, e não há zona exclusiva
 #:         lateral; sobra a mesma borda de 1 px que a foto mostra em cima e

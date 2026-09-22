@@ -239,10 +239,9 @@
      ao lado do perfil ativo. As duas mudanças estão em `.fita-linha`, logo
      abaixo.
 
-     O LUGAR DA CONTAGEM («N controles: x USB · y BT») foi decidido em
-     13/09/2026, por delegação dela, com a foto da tela na mão. É
-     reversível: o que muda é este bloco e a linha do alvo, no corpo da
-     página. */
+     O LUGAR DA CONTAGEM (`x USB · y BT`) foi decidido em 13/09/2026, por
+     delegação dela, com a foto da tela na mão. É reversível: o que muda é
+     este bloco e a linha do alvo, no corpo da página. */
   /* 46/44 e não 24/22 desde 21/09/2026 — a conta está em `monta.MARCA_DA_LOGO`. */
   .logo{
     width:46px;height:46px;border-radius:50%;flex:0 0 46px;
@@ -264,6 +263,11 @@
     display:flex;align-items:center;gap:8px;
     font-size:12px;color:var(--texto-mudo);
   }
+  .marca-nome{font-size:14px;line-height:1.15;font-weight:700;letter-spacing:-.01em;
+              white-space:nowrap;color:var(--fg);margin-right:6px}
+  .marca-nome .m-hef{color:var(--pink)}
+  .marca-nome .m-4{color:var(--green)}
+  .fita > span:first-child{font-size:13.5px;color:var(--texto-suave)}
   /* o Perfil Ativo — igual nas dez abas, sempre visível.
      O EMPURRÃO PARA A DIREITA MUDOU DE DONO em 10/09/2026: quem carrega o
      `margin-left:auto` agora é a `.conectado`, que passou a ser o PRIMEIRO do
@@ -397,7 +401,8 @@
      e todo chip da fita mede 30 em qualquer estado — o «Todos», de borda 1,
      ganha 1 px de ar em cima e embaixo nas dez. O ar horizontal não mudou. */
   .fita .chip{padding-top:calc(7px - var(--borda-do-chip));
-              padding-bottom:calc(7px - var(--borda-do-chip))}
+              padding-bottom:calc(7px - var(--borda-do-chip));
+              white-space:nowrap}
   /* A COR DO CHIP VEM DA MESA, NÃO DE UMA CLASSE POR MODELO. Eram
      `.c-red` e `.c-blue`, uma classe por plástico — com quatro controles na mesa
      viram quatro, e com os 28 do CSV, vinte e oito. `monta.fita()` escreve a
@@ -1557,7 +1562,7 @@
 
      A MARCA É `data-conectado`, E NÃO A CLASSE `off`, e a escolha decide se a
      cura vale AO VIVO: é o atributo que o piloto compara e vira nos passos `1b`
-     e `1c` (`hefesto_vivo.py:1434` e `:1380`), e é a mesma chave da S-04. Com
+     e `1c` (`hefesto_vivo.py:1440` e `:1380`), e é a mesma chave da S-04. Com
      os quatro DualSense dela na mesa, o P3 chega, o passo `1c` escreve
      `conectado="sim"`, e os três chips voltam a existir no mesmo tique — sem
      recarregar a página, porque quem os escondia era o seletor e não um nó
@@ -1852,13 +1857,14 @@
     <rect x="70" y="108" width="60" height="24" rx="6" style="fill: rgb(144, 144, 144); paint-order: stroke markers; filter: url(&quot;#outline-filter-0&quot;);"/>
   </g>
 </svg></div>
+    <div class="marca-nome"><span class="m-hef">Hefesto</span><br><span class="m-ds">DualSense<span class="m-4">4</span>Unix</span></div>
     <div class="fita" title="O que você mudar nesta aba vai para o controle escolhido aqui.">
       <span>Selecionar:</span>
       <label class="chip" data-gesto="escolher-na-fita" data-pref="todos" data-controle="">Todos</label>
       <label class="chip plastico on" data-campo="fita-chip" data-gesto="escolher-na-fita" data-pref="p1" data-controle="" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> <span class="via">USB</span></label>
       <label class="chip plastico" data-campo="fita-chip" data-gesto="escolher-na-fita" data-pref="p2" data-controle="" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> <span class="via">BT</span></label>
     </div>
-    <div class="conectado"><span class="bolinha">●</span> <span data-campo="conta">2 controles:</span> <b data-campo="conta-b">1 USB · 1 BT</b></div>
+    <div class="conectado"><span class="bolinha">●</span> <b data-campo="conta-b">1 USB · 1 BT</b></div>
     <div class="perfil-ativo">
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">—</span>

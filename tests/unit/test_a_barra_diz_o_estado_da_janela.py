@@ -345,3 +345,60 @@ def test_o_evento_veste_o_botao_mesmo_sem_agendar_redesenho(monkeypatch: Any) ->
     assert _icone(botao) == "window-restore-symbolic"
     quem._a_barra_se_refaz(None, _evento_de_estado(Gdk.WindowState.MAXIMIZED, 0))
     assert _icone(botao) == "window-maximize-symbolic"
+
+
+# -- a barra no jeito do vizinho (22/09/2026) ---------------------------------
+
+
+def _girar_o_laco(ms: int) -> None:
+    """Roda o laço do GTK por `ms`. SEM ELE O ESTILO NÃO SE RECALCULA.
+
+    Medido ao escrever esta régua: com `set_state_flags(PRELIGHT)` e só o
+    `events_pending()`, o botão responde a cor de REPOUSO mesmo com o nó já
+    dizendo `:hover` — e a régua daria "o hover não pinta" sobre um hover que
+    pinta. O estilo é validado no tique do relógio de quadros.
+    """
+    from gi.repository import GLib, Gtk
+
+    GLib.timeout_add(ms, Gtk.main_quit)
+    Gtk.main()
+
+
+def test_a_barra_tem_a_altura_do_vizinho_e_os_botoes_sem_pilula() -> None:
+    """*"altura da barra de navegação tá diferente do padrão e tem um circulo
+    transparente em cada botão minimizar maximizar fechar"* — ela, 22/09/2026.
+
+    A barra presa a uma janela DE VERDADE (nunca mostrada) pede no máximo
+    `ALTURA_DA_BARRA` + 1 px (a borda de baixo do tema); o botão não tem fundo
+    em repouso, e tem no `:hover`, para o clique continuar respondendo.
+
+    A MORDIDA: esvazie `CSS_DA_BARRA` e as três asserções reprovam — a barra
+    volta aos 47 px do tema e o botão à pílula branca a 10 %.
+    """
+    from gi.repository import Gtk
+
+    barra, botoes = _barra_de_verdade()
+    janela = Gtk.Window(title="nunca mostrada")
+    janela.set_titlebar(barra)
+    barra.show_all()
+    altura = barra.get_preferred_height()[1]
+    janela.destroy()
+    assert altura <= ponte_da_tela.ALTURA_DA_BARRA + 1, (
+        f"a barra pede {altura} px; o combinado é {ponte_da_tela.ALTURA_DA_BARRA}")
+
+    barra, botoes = _barra_de_verdade()
+    oculta = Gtk.OffscreenWindow()
+    oculta.add(barra)
+    oculta.show_all()
+    _girar_o_laco(150)
+    for gesto, botao in botoes.items():
+        ctx = botao.get_style_context()
+        fundo = ctx.get_property("background-color", ctx.get_state())
+        assert fundo.alpha == 0, f"o botão {gesto!r} tem fundo em repouso: {fundo.to_string()}"
+    fechar = botoes["fechar"]
+    fechar.set_state_flags(Gtk.StateFlags.PRELIGHT, False)
+    _girar_o_laco(150)
+    ctx = fechar.get_style_context()
+    fundo = ctx.get_property("background-color", ctx.get_state())
+    oculta.destroy()
+    assert fundo.alpha > 0, "o botão não responde ao mouse por cima — o clique ficou mudo"

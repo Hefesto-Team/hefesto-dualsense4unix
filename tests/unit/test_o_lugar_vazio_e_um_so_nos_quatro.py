@@ -85,17 +85,23 @@ def _o_que_chega_a_tela(pagina: str, ctx: pacotes.Contexto,
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize("arquivo", ABAS)
 def test_a_fita_da_mesa_vazia_troca_o_desenho(arquivo: str) -> None:
-    """Zero controles, zero chips — e a fita É repintada, não deixada como está.
+    """Zero controles, zero chips, zero rótulo — e a fita É repintada.
+
+    O RÓTULO SAIU EM 22/09/2026, pedido dela: *"quando não tiver controle Não
+    Aparece o selecionar:"*. Ele sobrava sozinho, apontando para nada.
 
     A MORDIDA: devolva o `if not mesa: return ""` ao `hefesto_vivo._fita` e
     este teste reprova nas dez: `""` é o piloto pulando a pintura, e a tela
-    fica com os dois chips do desenho.
+    fica com os dois chips do desenho. Tire o `if lista` do rótulo em
+    `monta.fita` e a terceira asserção reprova nas dez.
     """
     fita = hefesto_vivo._fita([], arquivo)
     assert 'class="fita' in fita, (
         f"{arquivo}: com a mesa vazia a fita não foi emitida — o piloto pula a "
         "pintura e a tela fica com `P1 · Cosmic Red · USB` do desenho")
     assert 'class="chip' not in fita, f"{arquivo}: a fita vazia inventou chip:\n{fita}"
+    assert "Selecionar" not in fita, (
+        f"{arquivo}: sem controle nenhum o `Selecionar:` voltou a sobrar sozinho:\n{fita}")
 
 
 def test_a_fita_da_mesa_vazia_cobre_as_dez() -> None:

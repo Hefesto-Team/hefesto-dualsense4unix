@@ -781,6 +781,12 @@ TRAVESSAO = "—"
 #: a emite recebe `P2 • Desconectado` no lugar vazio, em vez do travessão —
 #: ver a razão medida em :func:`apagar_os_lugares_sem_dono`. Aba que não a emite não ganha
 #: chave nova: `chaves` é a união do que a PRÓPRIA carga trouxe.
+#: O CABEÇALHO SEM CONTROLE NENHUM — 22/09/2026. Com o «N controles:» fora da
+#: tela, a segunda metade é tudo o que sobra, e com a mesa vazia
+#: `frase_dos_transportes(0, 0)` devolve vazio: a tela mostraria um travessão
+#: solto ao lado da bolinha.
+SEM_CONTROLE_NA_MESA = "Nenhum controle"
+
 IDENTIDADE_DO_LUGAR = "identidade"
 #: O separador do rótulo, igual ao do desenho (que o envolve num `<span
 #: class="pt">` — aqui não, porque esta chave se escreve por `texto`).
@@ -1141,7 +1147,7 @@ def topo(ctx: Contexto) -> dict[str, Any]:
     """
     from hefesto_dualsense4unix.interface import mesa_viva
 
-    conta, conta_b = mesa_viva.texto_da_contagem(ctx.mesa)
+    _, conta_b = mesa_viva.texto_da_contagem(ctx.mesa)
     # O CHIP "PERFIL ATIVO" É DAS DEZ ABAS, e por isso ele pergunta ao dono —
     # costura da ONDA D, 06/09/2026. Aqui estava `ctx.state.get("active_profile")`
     # cru, que só tem a PRIMEIRA das duas pernas: o daemon. Com ele respondendo
@@ -1154,9 +1160,11 @@ def topo(ctx: Contexto) -> dict[str, Any]:
 
     ativo = _perfil.nome_do_ativo(ctx.state)
     return {
-        # O `●` é do desenho e já está na página; o texto começa depois dele.
-        "conta": conta.replace("● ", "").strip(),
-        "conta-b": conta_b,
+        # O «N controles:» SAIU DA TELA — 22/09/2026, pedido dela:
+        # *"Esse x controles cai fora pra ganharmos espaçço Lateral"*.  # (noqa-acento): dela
+        # O cabeçalho diz só `x USB · y BT`, que já conta; e sem controle
+        # nenhum a metade que sobrou diria nada, então ela diz `Nenhum controle`.
+        "conta-b": conta_b or SEM_CONTROLE_NA_MESA,
         "perfil": ativo or "—",
         # AS DUAS DICAS DO RODAPÉ, e elas são do topo pela MESMA razão que o
         # resto daqui: o `fim.html` é um só para as dez páginas, logo não

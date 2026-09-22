@@ -749,8 +749,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # passaria a ressalvar um estado que acabou. Ver `_cadeado_cego`.
         CADEADO_CEGO: _cadeado_cego(ctx.state),
         "cartoes": cartoes,
-        # O INTERRUPTOR E A FILEIRA, VIVOS — 03/09/2026. Ver `_estado_da_tela`.
-        **_estado_da_tela(ctx.state),
+        # O INTERRUPTOR E A FILEIRA, VIVOS — 03/09/2026. Ver `_estado_da_tela`;
+        # e a fileira apaga com a mesa vazia, ver `_a_fileira_com_a_mesa`.
+        **_a_fileira_com_a_mesa(_estado_da_tela(ctx.state), ctx.mesa),
         "pendente": "",
         "pendente-alvo": "",
         # O INTERRUPTOR DA FAIXA FICA APAGADO, e é ele que esconde a caixa
@@ -769,7 +770,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "pintados": len(DA_PAGINA) + len(cartoes) * len(POR_CARTAO),
         "sem_dono": 0,
     }
-    # `perfil`, `conta` e `conta-b` NÃO saem daqui: são do cabeçalho, que é das
+    # `perfil` e `conta-b` NÃO saem daqui: são do cabeçalho, que é das
     # dez abas, e o dono deles é `pacotes.topo()`. Emiti-los aqui criava um
     # segundo dono — e foi assim que `conta_b` (com underscore) conviveu com o
     # `conta-b` da página sem nunca casar.
@@ -1885,6 +1886,24 @@ def _steam_input_da_tela(state: dict[str, Any]) -> str:
     if appid is None:
         return ""
     return CHIP_DO_STEAM_INPUT if str(appid) in dado.ligados else ""
+
+
+def _a_fileira_com_a_mesa(tela: dict[str, str], mesa: list[dict[str, Any]]) -> dict[str, str]:
+    """SEM CONTROLE NA MESA, NENHUM BOTÃO DO MODO ACENDE — 22/09/2026.
+
+    Pedido dela, olhando a aba sem controle nenhum e o «Steam Input» aceso:
+    *"ligado mesmo sem controle"*. O daemon continua dizendo o caminho, e a
+    lista dela continua dizendo Steam Input para o último jogo — mas o Modo é o
+    caminho de UM CONTROLE até o jogo, e sem controle não há caminho em uso.
+    Acender o «Sony DualSense» no lugar seria o mesmo botão aceso sobre nada.
+
+    O INTERRUPTOR FICA: `Ligado` é o serviço, que está de pé com ou sem
+    controle. E `_estado_da_tela` continua respondendo sobre o DAEMON; quem
+    decide que a tela cala é esta função, que é quem conhece a mesa.
+    """
+    if mesa:
+        return tela
+    return {**tela, "modo-aceso": "", "steam-input-aceso": ""}
 
 
 def _estado_da_tela(state: dict[str, Any]) -> dict[str, str]:
