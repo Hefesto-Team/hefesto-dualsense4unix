@@ -329,6 +329,14 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "install.sh:3950 (--ensure) e uninstall.sh:1444 o rodam; "
         "doctor.sh:3995 (check_proton_pin, --report) também",
     ),
+    "integrations/opcoes_por_jogo.py": (
+        "install.sh",
+        "src/hefesto_dualsense4unix/integrations/opcoes_por_jogo.py",
+        "install.sh:4096 substitui __OPCOES_POR_JOGO__ na unit, cujo ExecStart "
+        "é `python3 __OPCOES_POR_JOGO__ --aplicar` "
+        "(assets/hefesto-steam-input-guard.service:54) — o mesmo caminho dos "
+        "irmãos __SENTINELA__ e __PROTON_PIN__, que rodam na mesma unit",
+    ),
     "integrations/audio_ks_dualsense.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/audio_ks_dualsense.py",

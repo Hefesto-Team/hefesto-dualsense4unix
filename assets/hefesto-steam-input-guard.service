@@ -40,3 +40,15 @@ ExecStart=-/usr/bin/env python3 __SENTINELA__ --reparar
 #    adia (rc 3), e isso não é falha. Com `--no-proton-pin` o install apaga
 #    esta linha da unidade.
 ExecStart=-/usr/bin/env python3 __PROTON_PIN__ --manter
+#
+# 4) As opções de inicialização que ELA declarou, na mesma carona (21/09/2026,
+#    OPCOES-POR-JOGO-01). A Steam guarda UMA linha de LaunchOptions por jogo, e
+#    a tabela declarativa que ela mantinha fora do produto reescrevia essa
+#    linha sem o atalho — medido no diário de um dia inteiro: o PRAGMATA
+#    perdia o atalho de hora em hora e o passo 2 o repunha, das 04:31 às 22:00.
+#    Agora a tabela é do Hefesto (`opcoes_por_jogo.txt`) e a linha sai COMPOSTA:
+#    o atalho na frente, as opções dela atrás.
+#
+#    O `-` pelo mesmo motivo dos passos 2 e 3: com a Steam ou um jogo abertos
+#    ele adia (rc 3), e isso não é falha.
+ExecStart=-/usr/bin/env python3 __OPCOES_POR_JOGO__ --aplicar

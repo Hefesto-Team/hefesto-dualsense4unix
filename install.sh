@@ -4069,6 +4069,9 @@ else
     install -Dm644 "${ROOT_DIR}/assets/hefesto-steam-input-guard.timer" \
         "${USER_UNIT_DIR}/hefesto-steam-input-guard.timer" 2>/dev/null || _guard_ok=0
     SENTINELA_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/sentinela_do_wrapper.py"
+    # O QUARTO PASSO DO VIGIA (21/09/2026, OPCOES-POR-JOGO-01): a tabela de
+    # opções de inicialização por jogo, composta com o atalho. Ver o asset.
+    OPCOES_POR_JOGO_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/opcoes_por_jogo.py"
     # O TERCEIRO PASSO DO VIGIA é o `--manter` do Proton pinado (18/09/2026):
     # repõe o pino do cache e trava todo jogo quando a Steam sai. Com
     # `--no-proton-pin` a linha dele SAI da unidade — a pessoa disse não, e o
@@ -4090,6 +4093,7 @@ else
         -e "s#__SCRIPT__#${ROOT_DIR}/scripts/disable_steam_input.sh#g" \
         -e "s#__SENTINELA__#${SENTINELA_PY}#g" \
         -e "s#__PROTON_PIN__#${PROTON_PIN_PY}#g" \
+        -e "s#__OPCOES_POR_JOGO__#${OPCOES_POR_JOGO_PY}#g" \
         "${ROOT_DIR}/assets/hefesto-steam-input-guard.service" > "${_guard_tmp}" 2>/dev/null \
        && [[ -s "${_guard_tmp}" ]]; then
         install -Dm644 "${_guard_tmp}" "${USER_UNIT_DIR}/hefesto-steam-input-guard.service" \
