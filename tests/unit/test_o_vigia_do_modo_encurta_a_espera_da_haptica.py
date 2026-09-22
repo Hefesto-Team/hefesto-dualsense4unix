@@ -89,18 +89,40 @@ class _Endpoint:
         self.nome = nome
 
 
-def _subsystem(*, endpoints: dict[str, str], modos: dict[str, str]) -> Any:
+def _subsystem(
+    *, endpoints: dict[str, str], modos: dict[str, str], jogando: set[str] | None = None
+) -> Any:
     quem = object.__new__(af.AltoFalanteSubsystem)
     quem._endpoints = {u: _Endpoint(n) for u, n in endpoints.items()}  # type: ignore[attr-defined]
     quem._modo_da_ponte = dict(modos)  # type: ignore[attr-defined]
+    if jogando is not None:
+        quem._jogando = frozenset(j.lower() for j in jogando)  # type: ignore[attr-defined]
     return quem
 
 
+def _som(uniq: str) -> str:
+    """O nome do `hefesto_som_<hex6>` daquele controle, como o vigia o pede."""
+    return bt.nome_do_sink(uniq)
+
+
 def _com_tocando(monkeypatch: pytest.MonkeyPatch, resposta: object) -> None:
-    def falso(_nomes: Any) -> Any:
+    """O servidor de som de mentira — **e ele só responde sobre o que foi
+    PERGUNTADO**.
+
+    RADIO-AFOGADO-01, 22/09/2026, e isto foi achado pela mordida: até aqui o
+    dublê devolvia a resposta inteira ignorando os nomes recebidos, e por isso
+    era mais FROUXO que o produto. Com ele, arrancar `nome_do_sink` da pergunta
+    do vigia deixava as catorze réguas VERDES — a régua do alto-falante passava
+    sobre uma pergunta que nunca fora feita.
+    """
+
+    def falso(nomes: Any) -> Any:
         if isinstance(resposta, Exception):
             raise resposta
-        return resposta
+        if resposta is None:
+            return None
+        pedidos = {n for n in nomes if n}
+        return {n for n in resposta if n in pedidos}  # type: ignore[union-attr]
 
     monkeypatch.setattr(bt, "sinks_que_tocam", falso)
 
@@ -109,14 +131,61 @@ def test_o_jogo_que_comeca_a_tocar_acorda_a_volta(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """É o defeito de 18/09: a ponte em «som» com o jogo já tocando."""
-    quem = _subsystem(endpoints={P1: "hef_p1"}, modos={P1: "som"})
-    _com_tocando(monkeypatch, {"hef_p1"})
+    quem = _subsystem(endpoints={P1: "hef_p1"}, modos={P1: "som"}, jogando={P1})
+    _com_tocando(monkeypatch, {"hef_p1", _som(P1)})
     assert quem._o_modo_de_alguem_mudou() is True
+
+
+def test_o_som_que_comeca_acorda_a_volta(monkeypatch: pytest.MonkeyPatch) -> None:
+    """RADIO-AFOGADO-01, 22/09/2026 — o lado que o vigia não via.
+
+    A ponte do som passou a só existir com som; sem esta linha, o primeiro som
+    de cada partida espera a volta INTEIRA (`RECONCILIA_S`, 5 s) em vez de
+    `VIGIA_DO_MODO_S` (0,4 s).
+
+    MORDIDA: tire `nome_do_sink` da pergunta do vigia — o alto-falante some da
+    passada, o vigia não vê nada mudar e devolve `False`.
+    """
+    quem = _subsystem(endpoints={P1: "hef_p1"}, modos={})
+    _com_tocando(monkeypatch, {_som(P1)})
+    assert quem._o_modo_de_alguem_mudou() is True
+
+
+def test_a_mesa_ociosa_nao_acorda_a_volta(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Quatro controles parados, nenhuma ponte: não há o que reconciliar.
+
+    Sem isto a cura se pagaria com uma reconciliação a cada 0,4 s — a
+    tempestade de `pactl` que a sprint do vigia veta.
+    """
+    quem = _subsystem(endpoints={P1: "hef_p1", P2: "hef_p2"}, modos={})
+    _com_tocando(monkeypatch, set())
+    assert quem._o_modo_de_alguem_mudou() is False
+
+
+def test_o_som_que_para_derruba_a_ponte(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O outro lado: ponte de pé sem ninguém tocando é a enxurrada de volta."""
+    quem = _subsystem(endpoints={P1: "hef_p1"}, modos={P1: "som"})
+    _com_tocando(monkeypatch, set())
+    assert quem._o_modo_de_alguem_mudou() is True
+
+
+def test_o_endpoint_de_quem_o_jogo_nao_le_nao_acorda(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O palpite do vigia usa os DOIS sinais, como a volta.
+
+    Sem `self._jogando`, um endpoint tocando num controle que o jogo não lê
+    faria o vigia pedir háptica, a volta recusar, e o vigia pedir de novo — 2,5
+    reconciliações por segundo, para sempre.
+    """
+    quem = _subsystem(endpoints={P1: "hef_p1"}, modos={}, jogando=set())
+    _com_tocando(monkeypatch, {"hef_p1"})
+    assert quem._o_modo_de_alguem_mudou() is False
 
 
 def test_o_jogo_que_fecha_tambem_acorda(monkeypatch: pytest.MonkeyPatch) -> None:
     """O outro lado: sem ele o alto-falante fica mudo até a volta inteira."""
-    quem = _subsystem(endpoints={P1: "hef_p1"}, modos={P1: "haptica"})
+    quem = _subsystem(endpoints={P1: "hef_p1"}, modos={P1: "haptica"}, jogando={P1})
     _com_tocando(monkeypatch, set())
     assert quem._o_modo_de_alguem_mudou() is True
 
@@ -126,8 +195,9 @@ def test_nada_mudou_nao_acorda(monkeypatch: pytest.MonkeyPatch) -> None:
     quem = _subsystem(
         endpoints={P1: "hef_p1", P2: "hef_p2"},
         modos={P1: "haptica", P2: "som"},
+        jogando={P1},
     )
-    _com_tocando(monkeypatch, {"hef_p1"})
+    _com_tocando(monkeypatch, {"hef_p1", _som(P2)})
     assert quem._o_modo_de_alguem_mudou() is False
 
 
@@ -135,7 +205,7 @@ def test_servidor_mudo_nao_mexe_em_ponte_nenhuma(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Um `pactl` que falhou não pode derrubar a ponte de um jogo aberto."""
-    quem = _subsystem(endpoints={P1: "hef_p1"}, modos={P1: "haptica"})
+    quem = _subsystem(endpoints={P1: "hef_p1"}, modos={P1: "haptica"}, jogando={P1})
     _com_tocando(monkeypatch, None)
     assert quem._o_modo_de_alguem_mudou() is False
 

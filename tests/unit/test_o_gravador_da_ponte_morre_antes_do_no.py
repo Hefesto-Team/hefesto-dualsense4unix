@@ -75,6 +75,7 @@ import pytest
 from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from hefesto_dualsense4unix.integrations import canal_do_microfone as canal
+from tests.unit.o_alto_falante_que_toca import todo_alto_falante_toca
 
 pytestmark = pytest.mark.skipif(
     not sys.platform.startswith("linux"),
@@ -713,6 +714,7 @@ def test_r9_a_fonte_sem_saida_no_subsystem_e_colhida(
         return None, abrir(["pw-record"]), "o gravador subiu sem `stdout`"
 
     monkeypatch.setattr(af, "fonte_do_monitor_do_no", _fonte_que_devolve_o_processo)
+    todo_alto_falante_toca(monkeypatch)
 
     class _Controle:
         uniq = P1
@@ -761,6 +763,7 @@ def test_a_ponte_que_nao_sobe_colhe_o_gravador(
         return resposta
 
     monkeypatch.setattr(af, "fonte_do_monitor_do_no", _com_o_duble)
+    todo_alto_falante_toca(monkeypatch)
     monkeypatch.setattr(af, "a_ponte_do_radio_pode_subir", lambda: (False, "sem libopus"))
 
     class _Controle:

@@ -55,6 +55,7 @@ _MESA = (
     ("aa:bb:cc:00:00:a3", "radio"),
     ("aa:bb:cc:00:00:a4", "cabo"),
 )
+from tests.unit.o_alto_falante_que_toca import todo_alto_falante_toca
 
 _BUS_BT = 0x05
 _BUS_USB = 0x03
@@ -159,6 +160,7 @@ def mesa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[dict[str, 
         return verdadeira(**kw)
 
     monkeypatch.setattr(af, "PonteDeSomPorRadio", _ponte_seca)
+    todo_alto_falante_toca(monkeypatch)
     try:
         yield {"mandados": mandados, "abertos": abertos}
     finally:

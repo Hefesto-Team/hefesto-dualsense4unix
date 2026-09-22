@@ -83,6 +83,20 @@ class _Estado:
     tocando: dict[str, bool]
     monitores: list[str]
 
+    def o_alto_falante_toca(self, uniq: str, sim: bool = True) -> None:
+        """Alguém está tocando no `hefesto_som_<hex6>` daquele controle.
+
+        **RADIO-AFOGADO-01, 22/09/2026, e sem isto estas réguas mediriam outro
+        produto.** Até este dia a ponte do som subia em silêncio, e as réguas
+        daqui herdaram esse mundo: elas chamam `_casar_as_pontes` e esperam uma
+        `PonteDeSomPorRadio` do outro lado. Agora a ponte do som só existe com
+        som — então quem mede o ARRANJO tem de dizer que há som, senão mede a
+        desistência e não a troca de modo.
+        """
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import nome_do_sink
+
+        self.tocando[nome_do_sink(uniq)] = sim
+
 
 @pytest.fixture
 def bancada(monkeypatch: pytest.MonkeyPatch) -> _Estado:
@@ -150,6 +164,7 @@ def test_o_endpoint_sobe_por_controle_no_radio(bancada: _Estado) -> None:
 
 def test_sem_o_jogo_tocando_a_ponte_e_a_do_som(bancada: _Estado) -> None:
     """O endpoint fica publicado; o escritor continua sendo o do alto-falante."""
+    bancada.o_alto_falante_toca(bancada.controles[0].uniq)
     bancada.sub._casar_as_pontes(bancada.controles)
     ponte = _PonteDeMentira.criadas[-1]
     assert ponte.arranjo is None, "arranjo None = o padrão do som"
@@ -175,6 +190,7 @@ def test_a_fonte_da_haptica_pede_quatro_canais(bancada: _Estado) -> None:
 
 def test_o_jogo_abrindo_no_meio_derruba_e_sobe_de_novo(bancada: _Estado) -> None:
     """Trocar o arranjo com a bomba rodando mudaria o corpo do report no meio."""
+    bancada.o_alto_falante_toca(bancada.controles[0].uniq)
     bancada.sub._casar_as_pontes(bancada.controles)
     primeira = _PonteDeMentira.criadas[-1]
     bancada.tocando["endpoint::aa:bb:cc:00:00:01"] = True
@@ -186,6 +202,7 @@ def test_o_jogo_abrindo_no_meio_derruba_e_sobe_de_novo(bancada: _Estado) -> None
 
 def test_o_modo_que_nao_muda_nao_reconstroi_nada(bancada: _Estado) -> None:
     """Reconstruir a cada tique cortaria o som e a vibração a cada volta."""
+    bancada.o_alto_falante_toca(bancada.controles[0].uniq)
     bancada.sub._casar_as_pontes(bancada.controles)
     bancada.sub._casar_as_pontes(bancada.controles)
     bancada.sub._casar_as_pontes(bancada.controles)
@@ -193,6 +210,7 @@ def test_o_modo_que_nao_muda_nao_reconstroi_nada(bancada: _Estado) -> None:
 
 
 def test_o_controle_que_sai_leva_a_ponte_e_o_endpoint(bancada: _Estado) -> None:
+    bancada.o_alto_falante_toca(bancada.controles[0].uniq)
     bancada.sub._casar_as_pontes(bancada.controles)
     bancada.sub._casar_as_pontes([])
     assert _PonteDeMentira.criadas[-1].desceu is True

@@ -753,6 +753,18 @@ class AltoFalanteSubsystem:
 
     name = "alto_falante"
 
+    #: Quem o jogo estava LENDO na última volta — lembrado para o vigia do
+    #: modo poder adivinhar o que a volta decidiria sem varrer `/proc` a cada
+    #: :data:`VIGIA_DO_MODO_S`. Fica velho por até uma volta, e o preço de
+    #: estar velho é UMA reconciliação a mais, nunca uma ponte errada.
+    #:
+    #: **MORA NO CORPO DA CLASSE, e não no `__init__`** — e o motivo é uma
+    #: armadilha desta casa: dublê montado por `object.__new__` não roda o
+    #: `__init__`, e estado novo que só nasce lá deixa o dublê mais POBRE que
+    #: o produto. `frozenset` e não `set`: um mutável no corpo da classe seria
+    #: compartilhado por todas as instâncias.
+    _jogando: frozenset[str] = frozenset()
+
     def __init__(
         self,
         *,
@@ -1270,6 +1282,7 @@ class AltoFalanteSubsystem:
         # É calculado UMA VEZ por volta, e não por controle: são duas varreduras
         # de `/proc`, e repeti-las por peça multiplicaria o custo pela mesa.
         jogando = self._quem_o_jogo_le(controles)
+        self._jogando = frozenset(jogando)
 
         for uniq, caminho in vivos.items():
             # O MODO PODE MUDAR COM A PONTE DE PÉ: o jogo abre o endpoint no
@@ -1287,6 +1300,30 @@ class AltoFalanteSubsystem:
                 if (endpoint and o_jogo_le_este and sink_esta_tocando(endpoint.nome))
                 else "som"
             )
+            # A PONTE DO SOM SÓ EXISTE ENQUANTO HÁ SOM — RADIO-AFOGADO-01,
+            # 22/09/2026, e é o defeito que tirou três dos quatro controles
+            # dela da mesa. Ela escrevia 93,75 reports de 334 B por segundo
+            # por controle, tocasse alguém ou não; o teto medido desta mesa é
+            # DUAS pontes, e a terceira derrubou os quatro em 11 a 89
+            # segundos. Os números, a corrente até o `EAGAIN` do bluetoothd e
+            # a razão de portão nenhum ter visto isto estão em
+            # `tests/unit/test_a_ponte_do_som_nao_afoga_o_radio.py`.
+            #
+            # O PREÇO, e ele é real: o som deixa de ser instantâneo. O vigia
+            # do modo nota em até :data:`VIGIA_DO_MODO_S` e `subir()` custou
+            # 1,45 s na prova — perto de dois segundos até o primeiro quadro.
+            # É a mesma espera que a háptica paga desde 19/09.
+            #
+            # **A DÚVIDA É ASSIMÉTRICA, e é ela que faz a cura valer.** As
+            # duas respostas fixas de `na_duvida` erram de um lado: `True`
+            # devolve a enxurrada toda vez que o `pactl` engasga; `False`
+            # calaria o alto-falante de um jogo aberto. Quem JÁ TEM ponte fica
+            # com ela na dúvida; quem não tem não ganha uma.
+            if modo == "som" and not sink_esta_tocando(
+                nome_do_sink(uniq), na_duvida=uniq in self._pontes
+            ):
+                self._descer_ponte_ociosa(uniq)
+                continue
             if uniq in self._pontes:
                 if self._modo_da_ponte.get(uniq) == modo:
                     continue
@@ -1338,6 +1375,15 @@ class AltoFalanteSubsystem:
                     gravador_h = None
                     modo = "som"
                     logger.info("haptica_sem_fonte", uniq=uniq, motivo=motivo_h)
+                    # E A PORTA DOS FUNDOS: cair para o alto-falante sem
+                    # ninguém tocando nele devolveria a enxurrada por aqui. O
+                    # gravador do som já subiu neste ponto, e quem desiste o
+                    # colhe — ninguém mais o faria.
+                    if not sink_esta_tocando(nome_do_sink(uniq)):
+                        if gravador is not None:
+                            derrubar_leitor_de_pipe(gravador)
+                        self._descer_ponte_ociosa(uniq)
+                        continue
             ponte = PonteDeSomPorRadio(
                 uniq=uniq,
                 abrir_hidraw=functools.partial(self._abrir_hidraw, caminho),
@@ -1354,6 +1400,24 @@ class AltoFalanteSubsystem:
             else:
                 ponte.descer()
                 logger.info("som_ponte_nao_subiu", uniq=uniq, motivo=ponte.motivo)
+
+    def _descer_ponte_ociosa(self, uniq: str) -> None:
+        """A ponte de quem não tem o que tocar desce. Idempotente.
+
+        RADIO-AFOGADO-01, 22/09/2026. Separado de
+        :meth:`_casar_as_pontes` porque a desistência tem DUAS portas — o modo
+        do som sem som, e a háptica que caiu para o som sem som — e escrever a
+        queda duas vezes é como uma delas envelhece sem a outra.
+
+        **NÃO MEXE NO ENDPOINT.** O nó de quatro canais fica publicado com a
+        ponte deitada: nó que some quebra o jogo que já o escolheu, e essa é
+        decisão dela de 08/09. O que cai é o ESCRITOR, não o que o jogo vê.
+        """
+        ponte = self._pontes.pop(uniq, None)
+        self._modo_da_ponte.pop(uniq, None)
+        if ponte is not None:
+            ponte.descer()
+            logger.info("som_ponte_ociosa_descida", uniq=uniq)
 
     def _abrir_hidraw(self, caminho: str) -> int | None:
         """O fd de escrita daquele nó, pelo BROKER — nunca por `os.open` cru.
@@ -1528,11 +1592,24 @@ class AltoFalanteSubsystem:
         return False
 
     def _o_modo_de_alguem_mudou(self) -> bool:
-        """Algum endpoint passou a tocar (ou parou) desde a última volta?
+        """Alguém passou a tocar (ou parou) desde a última volta?
 
-        Uma passada de `pactl` para todos os endpoints — ver
-        :data:`VIGIA_DO_MODO_S`. Sem endpoint não há o que vigiar, e a pergunta
-        nem é feita.
+        Uma passada de `pactl` para todos os nós — ver :data:`VIGIA_DO_MODO_S`.
+        Sem endpoint não há o que vigiar, e a pergunta nem é feita.
+
+        **O VIGIA OLHA OS DOIS NÓS DE CADA CONTROLE — RADIO-AFOGADO-01,
+        22/09/2026.** Até esta data ele via só o endpoint da háptica, porque a
+        ponte do som estava sempre de pé e não havia partida a esperar. Agora
+        ela só sobe com som tocando, e um vigia cego ao `hefesto_som_<hex6>`
+        deixaria o primeiro som dela esperar a volta inteira —
+        :data:`RECONCILIA_S`, cinco segundos. A pergunta é a MESMA: os dois
+        nomes vão na mesma passada, e `sinks_que_tocam` não cobra por nome.
+
+        **NÃO DUPLICA A DECISÃO**, e por isso o palpite é grosseiro: quem
+        decide o modo continua sendo `_casar_as_pontes`, que também pergunta
+        quem o jogo LÊ. O vigia reusa a última resposta (`self._jogando`) só
+        para não acordar a volta à toa; estar velha custa uma reconciliação a
+        mais, nunca uma ponte errada.
         """
         nomes = {uniq: ep.nome for uniq, ep in self._endpoints.items() if ep.nome}
         if not nomes:
@@ -1542,19 +1619,30 @@ class AltoFalanteSubsystem:
             # puxa o PipeWire, e a importação no topo arrastaria isso para todo
             # processo que só quer o subsystem.
             from hefesto_dualsense4unix.integrations.alto_falante_bt import (
+                nome_do_sink,
                 sinks_que_tocam,
             )
 
-            tocando = sinks_que_tocam(nomes.values())
+            alto_falantes = {uniq: nome_do_sink(uniq) for uniq in nomes}
+            tocando = sinks_que_tocam(
+                [*nomes.values(), *(n for n in alto_falantes.values() if n)]
+            )
         except Exception as exc:  # nunca derruba a thread do som
             logger.debug("vigia_do_modo_falhou", err=str(exc))
             return False
         if tocando is None:
             return False  # servidor mudo não é "ninguém toca"
         for uniq, nome in nomes.items():
-            agora = "haptica" if nome in tocando else "som"
-            if self._modo_da_ponte.get(uniq, "som") != agora:
-                logger.info("vigia_do_modo_acordou_a_volta", uniq=uniq, modo=agora)
+            if nome in tocando and uniq.lower() in self._jogando:
+                agora: str | None = "haptica"
+            elif alto_falantes.get(uniq, "") in tocando:
+                agora = "som"
+            else:
+                agora = None
+            if self._modo_da_ponte.get(uniq) != agora:
+                logger.info(
+                    "vigia_do_modo_acordou_a_volta", uniq=uniq, modo=agora or "nenhuma"
+                )
                 return True
         return False
 
