@@ -305,8 +305,15 @@ def _leds_config_to_draft(leds_cfg: Any) -> LedsDraft:
     player_5: tuple[bool, bool, bool, bool, bool] = (
         player[0], player[1], player[2], player[3], player[4]
     )
+    # O PRETO QUE JÁ ESTÁ NO DISCO TAMBÉM NÃO É COR — 22/09/2026, ordem dela.
+    # Sete dos perfis dela guardam `[0,0,0]` no global, e sem esta linha eles
+    # chegariam à tela como uma cor escolhida — e o Salvar seguinte os
+    # reescreveria, fechando o círculo. Ver `led_control.cor_escolhida`.
+    from hefesto_dualsense4unix.core.led_control import cor_escolhida
+
+    lida = cor_escolhida((int(rgb_raw[0]), int(rgb_raw[1]), int(rgb_raw[2])))
     return LedsDraft(
-        lightbar_rgb=(int(rgb_raw[0]), int(rgb_raw[1]), int(rgb_raw[2])),
+        lightbar_rgb=lida,
         lightbar_brightness=brightness_pct,
         player_leds=player_5,
         auto_player_colors=bool(getattr(leds_cfg, "auto_player_colors", True)),
@@ -336,12 +343,21 @@ def _leds_draft_to_config(
     """
     from hefesto_dualsense4unix.profiles.schema import LedsConfig
 
-    rgb = leds.lightbar_rgb or (0, 0, 0)
+    # O PRETO NÃO É COR — 22/09/2026, ordem dela (`led_control.cor_escolhida`).
+    # Aqui estava `leds.lightbar_rgb or (0, 0, 0)`, e era a PORTA DE ENTRADA do
+    # defeito: `None` quer dizer *"não sei a cor deste controle"*, e virava
+    # preto GRAVADO no arquivo. Foi assim que a peça do Starlight Blue nasceu
+    # com `[0,0,0]` num "Salvar Perfil" e passou a apagar a barra dele em toda
+    # conexão. Sem cor conhecida, o campo NÃO entra: quem decide é a paleta
+    # automática do número, e o arquivo fica sem opinião em vez de com uma
+    # opinião que ninguém deu.
+    rgb = leds.lightbar_rgb
     kwargs: dict[str, Any] = {
-        "lightbar": rgb,
         "player_leds": list(leds.player_leds),
         "lightbar_brightness": leds.lightbar_brightness / 100.0,
     }
+    if rgb is not None:
+        kwargs["lightbar"] = rgb
     if include_auto:
         kwargs["auto_player_colors"] = leds.auto_player_colors
     if only_fields is not None:
@@ -1224,7 +1240,12 @@ class DraftConfig(BaseModel):
         override é limpa (herda tudo do global).
         """
         campos: set[str] = set()
-        if leds.lightbar_rgb != self.leds.lightbar_rgb:
+        # SEM COR LIDA NÃO NASCE PEÇA — 22/09/2026, ordem dela sobre o preto.
+        # `None` aqui é *"não sei a cor deste controle"*, e comparado com o
+        # global ele SEMPRE diverge: era assim que um controle sem leitura
+        # ganhava peça própria — e a peça saía preta. Ver
+        # `led_control.cor_escolhida` e o `_leds_draft_to_config` acima.
+        if leds.lightbar_rgb is not None and leds.lightbar_rgb != self.leds.lightbar_rgb:
             campos.add("lightbar")
         if leds.lightbar_brightness != self.leds.lightbar_brightness:
             campos.add("lightbar_brightness")

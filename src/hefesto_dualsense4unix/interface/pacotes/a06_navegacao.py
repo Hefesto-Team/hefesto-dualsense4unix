@@ -1147,7 +1147,7 @@ def _linhas_dos_botoes(p: dict[str, Any]) -> dict[str, str]:
 # `_persist_key_bindings_to_draft` protege o que a lista não mostra. **Aqui é o
 # contrário**: o "Voltar ao padrão" desta tela zera `key_bindings` inteiro, e o
 # "Guardar" faz `apply_button_actions` reescrever o conjunto todo a partir do de
-# fábrica (`profiles/manager.py:647`, `core/acoes_de_botao.resolver`, que nunca
+# fábrica (`profiles/manager.py:656`, `core/acoes_de_botao.resolver`, que nunca
 # consulta `profile.key_bindings`). Copiar a frase de lá seria a tela afirmando
 # o oposto do que este produto faz — e é a família de defeito que esta casa
 # persegue acima de todas.
@@ -1284,7 +1284,7 @@ def atalhos_que_param_de_valer(p: dict[str, Any]) -> list[tuple[str, str]]:
     """Os `key_bindings` do perfil que o "Guardar" desta tela faz parar de valer.
 
     **É A METADE VISÍVEL DO DEFEITO §3-1**, e o defeito é do produto, não desta
-    aba: `apply_button_actions` (`profiles/manager.py:647`) roda DEPOIS do
+    aba: `apply_button_actions` (`profiles/manager.py:656`) roda DEPOIS do
     `apply_keyboard` e chama `teclado.set_bindings(...)` com o conjunto INTEIRO
     que `acoes_de_botao.resolver()` deriva — e `resolver()` parte de
     `acoes.padrao()` e **nunca consulta `profile.key_bindings`**. Logo, um perfil com

@@ -378,7 +378,7 @@ def apply_led_settings(controller: IController, settings: LedSettings) -> None:
 
     Quem acende os cinco pontinhos numa troca de perfil é `ProfileManager.apply`,
     que emite `player_leds` dentro do `OutputSpec` de `apply_output_defaults`
-    (profiles/manager.py:353). O backend converte ali mesmo, em
+    (profiles/manager.py:357). O backend converte ali mesmo, em
     `_write_partial_output`: `mask = sum(1 << i for i, b in
     enumerate(out.player_leds) if b)` (core/backend_pydualsense.py:4750) — o
     MESMO layout que `player_bitmask` calcula neste arquivo. As duas conversões
@@ -408,6 +408,42 @@ def off() -> LedSettings:
     return LedSettings(lightbar=(0, 0, 0))
 
 
+#: O PRETO, escrito uma vez. Ele é o default do `LedsConfig.lightbar` do
+#: esquema, e é isso que faz dele o valor de QUEM NÃO OPINOU.
+PRETO: RGB = (0, 0, 0)
+
+
+def cor_escolhida(rgb: RGB | None) -> RGB | None:
+    """A cor que a pessoa escolheu — ``None`` quando não houve escolha.
+
+    **O PRETO É BANIDO COMO COR — 22/09/2026, ordem dela:** *"vamos banir esse
+    preto de aparecer independente do controle tambem"*. <!-- noqa-acento -->
+
+    A QUEIXA QUE O REVELOU, e ela é de um controle só: *"pq o lightbar do
+    starlight blue sempre desliga após conectar? mesmo o perfil atual não
+    mandando ele desligar"*. O perfil MANDAVA: a peça daquele controle tinha
+    `leds.lightbar: [0,0,0]`, escrita por um "Salvar Perfil" das 13:53 daquele
+    dia, quando a cor lida veio vazia. Medido no mesmo disco: **sete dos 29
+    perfis dela** guardam o preto na seção GLOBAL — neles, abrir o jogo apaga
+    a barra dos QUATRO.
+
+    A CAUSA É DE FORMA, e está no esquema: `LedsConfig.lightbar` nasce
+    `(0, 0, 0)`, então *"não opinou"* e *"quero apagado"* são o mesmo byte. Com
+    um valor só para as duas coisas, a leitura honesta é a que não apaga nada:
+    preto vira `None`, e quem decide a cor passa a ser a paleta automática do
+    número (`cores_sem_colisao`).
+
+    **APAGAR A BARRA CONTINUA POSSÍVEL, e por outro caminho:** o brilho. O
+    `lightbar_brightness` em 0.0 zera os três canais DEPOIS desta função
+    (`LedSettings.apply_brightness`), e esse é um campo que só a mão dela move.
+    Banir a cor preta não tira dela o apagar; tira do produto o direito de
+    apagar sozinho.
+    """
+    if rgb is None:
+        return None
+    return None if tuple(rgb) == PRETO else rgb
+
+
 def hex_to_rgb(hex_str: str) -> RGB:
     """Converte '#RRGGBB' ou 'RRGGBB' para tupla (r, g, b)."""
     s = hex_str.strip().lstrip("#")
@@ -428,10 +464,12 @@ __all__ = [
     "DO_BROADCAST",
     "DO_GLOBAL",
     "LEGADO",
+    "PRETO",
     "RGB",
     "LedSettings",
     "PecaDaMesa",
     "apply_led_settings",
+    "cor_escolhida",
     "cores_sem_colisao",
     "hex_to_rgb",
     "off",

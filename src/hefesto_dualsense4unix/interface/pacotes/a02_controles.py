@@ -4018,7 +4018,7 @@ def _lembrar_do_som(
     daemon confirmou. O perfil é o REGISTRO do que já está de pé.
 
     E o disco não fica para trás: `ProfileManager.activate` faz
-    `load_profile(name)` a CADA ativação (`profiles/manager.py:284`) — não há
+    `load_profile(name)` a CADA ativação (`profiles/manager.py:288`) — não há
     cópia do `Profile` em memória atravessando ativações, então a próxima
     (hotplug, troca de jogo, boot) lê o que esta função escreveu.
 
