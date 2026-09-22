@@ -44,6 +44,7 @@ from typing import Any, ClassVar
 import pytest
 
 from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
+from tests.unit.o_alto_falante_que_toca import todo_alto_falante_toca
 
 
 @dataclass
@@ -126,6 +127,7 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
 
     monkeypatch.setattr(af, "fonte_do_monitor_do_no", _fonte_do_monitor)
     monkeypatch.setattr(af, "PonteDeSomPorRadio", _ponte)
+    todo_alto_falante_toca(monkeypatch)
     monkeypatch.setattr(broker, "abrir_hidraw", lambda no, **_: _No(no))
 
     controles = [

@@ -148,6 +148,12 @@ class _Servidor:
         self.cargas: list[str] = []
         self.quedas: list[str] = []
         self.jogo_em: set[str] = set()
+        #: Os `hefesto_som_<hex6>` que existem E têm som saindo —
+        #: RADIO-AFOGADO-01, 22/09/2026. Eles não são `module-null-sink` desta
+        #: bancada de propósito: quem varre endpoint órfão lê `list short
+        #: modules`, e pôr o nó do alto-falante ali faria a varredura tratá-lo
+        #: como endpoint sem dono.
+        self.som_de: set[str] = set()
         self._proximo = 500
 
     def por(self, uniq: str, ancora: eh.Ancora) -> str:
@@ -183,16 +189,26 @@ class _Servidor:
             self.quedas.append(argv[2])
             return ""
         if argv[:4] == ["pactl", "list", "short", "sinks"]:
-            return "\n".join(
+            linhas = [
                 f"{mid}\t{nome}\tPipeWire\tfloat32le 4ch 48000Hz\tRUNNING"
                 for mid, (nome, _c) in self.modulos.items()
-            )
+            ]
+            linhas += [
+                f"8{i}\t{nome}\tPipeWire\tfloat32le 2ch 48000Hz\tRUNNING"
+                for i, nome in enumerate(sorted(self.som_de))
+            ]
+            return "\n".join(linhas)
         if argv[:4] == ["pactl", "list", "short", "sink-inputs"]:
-            return "\n".join(
+            linhas = [
                 f"9{mid}\t{mid}\t12\tprotocol-native.c\tfloat32le 4ch 48000Hz"
                 for mid, (nome, _c) in self.modulos.items()
                 if nome in self.jogo_em
-            )
+            ]
+            linhas += [
+                f"98{i}\t8{i}\t12\tprotocol-native.c\tfloat32le 2ch 48000Hz"
+                for i, nome in enumerate(sorted(self.som_de))
+            ]
+            return "\n".join(linhas)
         return None
 
 
@@ -231,6 +247,16 @@ class _Mesa:
     ancoras: list[eh.Ancora]
 
     def casar(self, *uniqs: str) -> None:
+        """A volta do daemon, com o alto-falante de cada um TOCANDO.
+
+        RADIO-AFOGADO-01, 22/09/2026: a ponte do som deixou de subir em
+        silêncio, e estas réguas medem a ÂNCORA e o ARRANJO — o que a ponte faz
+        depois de existir. Quem quiser medir o silêncio esvazia `som_de`.
+        """
+        for u in uniqs:
+            nome = af.nome_do_sink(u)
+            if nome:
+                self.servidor.som_de.add(nome)
         self.sub._casar_as_pontes([_Controle(u) for u in uniqs])
 
 

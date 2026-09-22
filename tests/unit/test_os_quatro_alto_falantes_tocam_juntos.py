@@ -56,6 +56,7 @@ from tests.unit.test_os_quatro_microfones_ficam_no_ar import (
     _Daemon,
     _PipeWire,
 )
+from tests.unit.o_alto_falante_que_toca import todo_alto_falante_toca
 
 RADIO = "bluetooth"
 CABO = "usb"
@@ -180,6 +181,7 @@ def som(monkeypatch: pytest.MonkeyPatch) -> Any:
 
     monkeypatch.setattr(af, "fonte_do_monitor_do_no", _fonte_do_monitor)
     monkeypatch.setattr(af, "PonteDeSomPorRadio", _ponte_seca)
+    todo_alto_falante_toca(monkeypatch)
     return SimpleNamespace(lidos=lidos, fios=fios)
 
 
@@ -264,6 +266,7 @@ def fiacao(monkeypatch: pytest.MonkeyPatch) -> Any:
             return True
 
     monkeypatch.setattr(af, "PonteDeSomPorRadio", _PonteQueGuarda)
+    todo_alto_falante_toca(monkeypatch)
     monkeypatch.setattr(
         af, "fonte_do_monitor_do_no", lambda _no, **_k: ((lambda n: bytes(n)), None, "")
     )

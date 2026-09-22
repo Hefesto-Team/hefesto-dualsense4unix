@@ -325,6 +325,51 @@ são o que se procura no log quando a mesa dela engasgar:
 dorme" é dele e **não foi confirmada por trace nenhum** — nem por mim. Vale
 como pista para um ensaio de `btmon`, não como fato.
 
+### 6.2.1 E NA NOSSA MESA A CAUSA ERA NOSSA — medido em 22/09/2026
+
+O §6.2 fecha dizendo que o EAGAIN dos relatores é *pista para um ensaio de
+`btmon`, não fato*. **Na mesa dela o ensaio aconteceu, e o culpado era o
+Hefesto.**
+
+A queixa dela foi *"4 controles conectados só um aparece na interface agora"*.
+<!-- noqa-acento: citação literal dela --> O que os diários disseram:
+
+| o que | quanto |
+| --- | --- |
+| escrita da ponte de som por rádio | **93,75 reports de 334 B por segundo, POR CONTROLE** |
+| no fio (`ACL Data TX`, +5 de L2CAP+HIDP) | 339 B por pacote ≈ 254 kbit/s por ponte |
+| quatro pontes num adaptador só | ≈ 1,0 Mbit/s SÓ de saída |
+| `kernel: playstation …: Output queue is full` | 3807 linhas em um minuto, um único aparelho |
+| `escrita_recusada` no diário do daemon | **ZERO** |
+
+**O TETO MEDIDO DESTA MESA É DUAS PONTES.** Duas viveram 63 minutos sem um
+único EAGAIN; uma sozinha, 44 minutos. As **três** vezes em que a terceira
+subiu, os quatro controles caíram em 11, 15 e 89 segundos.
+
+**A corrente, na ordem em que os diários a mostram:** a bomba escreve → a fila
+de saída do `uhid` enche (é `uhid`, não `hid_playstation`: a frase «Output
+queue is full» não existe no driver que esta casa compila, e o BlueZ moderno
+entrega HID de rádio por `uhid`) → o socket L2CAP enche → `bluetoothd` leva o
+`EAGAIN` do §6.2 em `hidp_send_message()` → a sessão HIDP cai → o daemon perde
+o `hidraw`. Nos quatro episódios em que os dois diários se cruzam, o EAGAIN vem
+PRIMEIRO e a sessão cai no mesmo segundo.
+
+**E O QUE ESCONDEU ISTO POR SEMANAS:** *a escrita nunca falha*. O kernel
+descarta calado, o `os.write` devolve sucesso, a bomba conta
+`escritas_aceitas_pelo_kernel` e segue. Régua nenhuma tinha o que ler.
+
+**A cura é do host, e tinha de ser** — o §4 já diz que no DualSense não existe
+campo de taxa, então não há freio do lado do aparelho. A ponte de som passou a
+só existir enquanto alguém está tocando naquele controle
+(`RADIO-AFOGADO-01`, `daemon/subsystems/alto_falante.py`); com a mesa parada,
+as escritas vão de 375/s a ZERO.
+
+**O que isto NÃO diz:** que o caso dos relatores de 2024 é o mesmo. Eles não
+tinham Hefesto nenhum escrevendo. O que a nossa medição acrescenta ao §6.2 é
+que **este EAGAIN tem pelo menos uma causa que não é o aparelho** — e que
+antes de culpar o DualSense por atropelar vizinho, vale contar quantos bytes o
+próprio host está pondo no ar.
+
 ### 6.3 O que NÃO serve, e por que está escrito aqui
 
 - **Fórum Arch #288754 e amigos** — "4 DualSense pararam de funcionar no Linux e

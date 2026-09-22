@@ -39,6 +39,7 @@ import pytest
 
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from hefesto_dualsense4unix.integrations import dualsense_bt_audio as bt
+from tests.unit.o_alto_falante_que_toca import todo_alto_falante_toca
 
 #: Onde mora o byte dos enables no report montado do `0x35`: o valor do bloco
 #: `0x11` começa em [4], e o primeiro byte dele é o dos enables.
@@ -188,6 +189,7 @@ class TestAFiacao:
         monkeypatch.setattr(
             af, "fonte_do_monitor_do_no",
             lambda _no, **_k: ((lambda _n: b""), None, ""))
+        todo_alto_falante_toca(monkeypatch)
 
         class _Controle:
             def __init__(self, uniq: str) -> None:
