@@ -289,6 +289,14 @@ def test_o_gerenciador_de_producao_recebe_o_callable_da_ponte() -> None:
     Sem esta injeção o gerenciador não tem a quem perguntar, ``rota_do_no``
     recusa o rádio com a frase honesta, e a ponte fica de pé entregando som a
     um nó que ninguém aponta.
+
+    **O QUE A RESPOSTA SIGNIFICA MUDOU EM 22/09/2026 — RADIO-AFOGADO-01.**
+    Esta régua exigia ``None`` para quem não tem ponte, e isso estava certo
+    enquanto a ponte era permanente: sem ela, não havia caminho. Agora a ponte
+    nasce sob demanda, e exigir ``None`` aqui travava o produto num laço — o nó
+    só nasce com rota, a rota só existia com a ponte de pé, e a ponte só sobe
+    se alguém tocar no nó que não nasceu. O que se mede agora é o PAR: a
+    promessa para quem PODE ter ponte, e o ``None`` para quem TENTOU e falhou.
     """
     sub = mod.AltoFalanteSubsystem(fonte_de_controles=lambda: [])
 
@@ -303,9 +311,15 @@ def test_o_gerenciador_de_producao_recebe_o_callable_da_ponte() -> None:
             "o gerenciador de produção nasceu sem saber a quem perguntar pela "
             "ponte — a rota do rádio nunca sairá de «recusada»"
         )
-        assert ger._ponte_do_radio("nao-existe") is None, (
-            "o callable devolveu algo para um controle SEM ponte; um "
-            "`lambda: True` otimista publicaria rota sobre nada"
+        promessa = ger._ponte_do_radio("aa:bb:cc:00:00:ab")
+        assert promessa is not None and promessa() is True, (
+            "o controle que PODE ter ponte ficou sem caminho — e sem caminho o "
+            "nó de som dele não nasce, o que devolve o laço de 22/09"
         )
+        # E o outro lado, que é o que impede a promessa de virar o `lambda:
+        # True` otimista que esta régua sempre vetou: quem TENTOU e falhou
+        # perde o caminho, e o nó dele some com a frase honesta.
+        sub._ponte_recusada["aa:bb:cc:00:00:ab"] = mod.time.monotonic()
+        assert ger._ponte_do_radio("aa:bb:cc:00:00:ab") is None
     finally:
         asyncio.run(sub.stop())
