@@ -545,7 +545,7 @@ def rotulo(token: str) -> str:
 
 #: O NOME PRIVADO CONTINUA RESPONDENDO — 06/09/2026, e o alias é a metade
 #: barata de uma renomeação. `tabela_efetiva` deixou de ser privada porque tinha
-#: chamador de fora havia semanas: `interface/pacotes/a06_navegacao.py:1049` a
+#: chamador de fora havia semanas: `interface/pacotes/a06_navegacao.py:1126` a
 #: chama para montar as linhas dos botões, e a alternativa — remontar as três
 #: camadas dentro da aba — é a SEGUNDA VERDADE que esta casa persegue. Um
 #: privado com chamador de fora não é encapsulamento, é um contrato não

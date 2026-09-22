@@ -1131,8 +1131,12 @@ def luzinhas(jogador: int, extra: str = "") -> str:
     `1 | vão | 3 | vão | 1` — as cinco não são igualmente espaçadas, e o
     jogador 1 é a do MEIO. O padrão vem de :data:`PADRAO_JOGADOR`, que sai de
     `core/led_control.py::player_led_pattern`.
+
+    `jogador=0` é o LUGAR SEM CONTROLE: as cinco desenhadas e nenhuma acesa —
+    o pedido dela de 21/09/2026 para a linha LEDs do lugar vazio, *"tem que
+    aparecer, mas não aparecer ligado"*.
     """
-    acesas = PADRAO_JOGADOR[jogador]
+    acesas = "" if jogador == 0 else PADRAO_JOGADOR[jogador]
     saida = []
     for n in "12345":
         if n in "25":

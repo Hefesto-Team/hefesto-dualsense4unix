@@ -56,6 +56,7 @@ from pacotes.a06_navegacao import (  # noqa: E402
     chips_da_fita,
     rotulo_de_quem_navega,
 )
+from pacotes.a06_navegacao import linha_do_cartao as _linha_do_cartao  # noqa: E402
 from pacotes.a06_navegacao import SEM_TROCA as _SEM_TROCA_DO_PACOTE  # noqa: E402
 
 #: O QUE A TROCA DE BOTÕES ALCANÇA — F1-REMAPEAR, 13/09/2026. Só essas linhas da
@@ -1784,7 +1785,6 @@ def controle(c):
     # conjunção é o que impede a próxima pessoa de trocar aquela fonte e ganhar
     # um cartão desconectado com a bolinha verde de "Navega o PC".
     navega = conectado and n == NAVEGA
-    ponto = '<span class="bolinha"></span>' if navega else ""
     # (a) A CASCA — o que o estado decide na moldura.
     classe = f'nav-ctl{" navega" if navega else ""}' if conectado else "nav-ctl vazia"
     tinta = f' style="color:{cor_da_zona(c["cor"])}"' if conectado else ""
@@ -1795,10 +1795,7 @@ def controle(c):
     luz = {"luz": _hex(player_slot_color(n))} if conectado else {}
     # (b) O TEXTO INICIAL de cada campo — e SÓ o texto.
     identidade = c["nome"] if conectado else SEM_NINGUEM_AQUI
-    estado = (
-        f'{ponto}{c["via"]} <span class="pt">•</span> '
-        f'{"Navega o PC" if navega else "Só a janela"}'
-    ) if conectado else VAZIO
+    estado = _linha_do_cartao(c["via"], navega) if conectado else VAZIO
     return (
         f'              <div class="{classe}"{tinta}'
         f' data-controle="{c.get("uniq") or c["pref"]}"'
@@ -1807,7 +1804,8 @@ def controle(c):
         f'                {desenho(c, **luz)}\n'
         f'                <div class="nav-rot">P{n} <span class="pt">•</span> '
         f'<span data-campo="identidade">{identidade}</span></div>\n'
-        f'                <div class="nav-est" data-campo="navega">{estado}</div>\n'
+        f'                <div class="nav-est" data-campo="navega"'
+        f' data-hef-alvo="html">{estado}</div>\n'
         f'              </div>')
 
 

@@ -100,7 +100,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from . import Contexto, perfil, registrar
+from . import LUGAR_VAZIO, TRAVESSAO, Contexto, perfil, registrar
 
 #: Vazio, e o vazio é uma AFIRMAÇÃO: cada valor desta aba tem dono medido. A
 #: régua reprova um pacote que pinta 0 e declara 0, de propósito.
@@ -1632,6 +1632,44 @@ def secao_da_troca(mesa: list[dict[str, Any]], recuo: str = "  ") -> str:
     ])
 
 
+def o_lugar_vazio() -> dict[str, str]:
+    """O que a coluna SEM controle mostra nos dois desenhos da aba.
+
+    PEDIDO DELA, 21/09/2026, com zero controles na mesa: *"os leds na linha
+    dos leds do p3,p4 tem que aparecerem mas não aparecerem ligados como o p1 e
+    o p2"*. O P1 e o P2 mostravam as duas tiras ACESAS no azul e no vermelho do
+    mockup — o alvo `html` fica fora do travessão, e ninguém repintava —, e o
+    P3 e o P4 um travessão seco no lugar do desenho.
+
+    A LINHA LEDs É O DESENHO APAGADO: as duas tiras em `TIRA_APAGADA` e as
+    cinco lâmpadas sem nenhuma acesa (`monta.luzinhas(0)`). Um lugar vazio não
+    tem número de jogador, e acender o padrão do P1 diria um.
+
+    A LINHA JOGADOR É O TRAVESSÃO: o P1 e o P2 a deixavam EM BRANCO (a folha
+    esconde os botões de um lugar esvaziado) e o P3 e o P4 escreviam `—`. Uma
+    fileira de botões não tem desenho apagado — não há número a escolher —, e
+    o travessão é a palavra que o próprio desenho usa ali.
+
+    O ESTILO VAI NO TRAVESSÃO, e é a regra da folha copiada: a tinta cinza e o
+    centro do `.nada` moram em `.ctrl.vazia[data-conectado="nao"] .nada`, e o
+    lugar que ESVAZIOU não é `.vazia` — medido na foto de 21/09, o traço do P1
+    saía branco e encostado à esquerda ao lado do cinza centrado do P3. Uma
+    regra nova na folha seria pixel da página publicada; esta é a mesma, no
+    elemento.
+    """
+    return {
+        "luz": desenho_da_luz("", 1.0, 0, estado=APAGADA),
+        "players": (f'<span class="nada" style="{ESTILO_DO_TRACO_VAZIO}">'
+                    f'{TRAVESSAO}</span>'),
+    }
+
+
+#: A REGRA `.ctrl.vazia[data-conectado="nao"] .nada` da folha, letra por letra —
+#: ver `o_lugar_vazio`.
+ESTILO_DO_TRACO_VAZIO = ("display:flex;align-items:center;justify-content:center;"
+                         "height:100%;width:100%;color:var(--linha)")
+
+
 @registrar("04-iluminacao.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
     p = perfil.ativo(ctx.state.get("active_profile"))
@@ -1906,6 +1944,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         }
     return {
         "colunas": colunas,
+        LUGAR_VAZIO: o_lugar_vazio(),
         #: A COR DE CADA ITEM DO ANTES/DEPOIS, na ordem em que a seção os
         #: desenha. Ela vem por CAMPO e não só pelo `blocos:` abaixo porque o
         #: `blocos:` é invisível às duas réguas desta casa — a troca mora no
