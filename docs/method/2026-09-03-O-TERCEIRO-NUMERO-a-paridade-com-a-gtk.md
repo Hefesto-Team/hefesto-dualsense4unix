@@ -71,7 +71,7 @@ não conta como paridade, porque a queixa dela que originou tudo foi exatamente
 essa — *"o produto via html não funcionou igual o gtk"*.
 
 O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.csv)**,
-396 linhas, e o portão que o mantém honesto é
+395 linhas, e o portão que o mantém honesto é
 **[`scripts/check_paridade_gtk_html.py`](../../scripts/check_paridade_gtk_html.py)**.
 
 ---
@@ -87,11 +87,11 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | 04-iluminacao | 35 | 9 | 12 | 6 | 7 | 1 | 26% |
 | 05-vibracao | 31 | 13 | 11 | 4 | 3 | 0 | 42% |
 | 06-navegacao | 40 | 15 | 16 | 0 | 9 | 0 | 38% |
-| 07-lancadores | 30 | 14 | 6 | 0 | 9 | 1 | 47% |
+| 07-lancadores | 29 | 9 | 12 | 0 | 8 | 0 | 31% |
 | 08-conexoes | 49 | 22 | 22 | 3 | 2 | 0 | 45% |
-| 09-sistema | 38 | 12 | 18 | 2 | 6 | 0 | 32% |
+| 09-sistema | 38 | 12 | 19 | 1 | 6 | 0 | 32% |
 | 10-perfis | 50 | 14 | 20 | 7 | 9 | 0 | 28% |
-| TODAS | 396 | 142 | 161 | 31 | 58 | 4 | 36% |<!-- /TABELA-DA-PARIDADE -->
+| TODAS | 395 | 137 | 168 | 30 | 57 | 3 | 35% |<!-- /TABELA-DA-PARIDADE -->
 
 A tabela é **gerada da contagem do CSV** e conferida pelo portão (regra
 `numero-publicado`): quem mexer no dado e não regerar esta seção é barrado
@@ -104,6 +104,14 @@ as abas 08 e 09 contaram uma feature a menos cada uma **no resumo que
 escreveram**, e a lista de features delas — que é o dado — sempre teve **49** e
 **38**, como a tabela acima continua mostrando. E o `01-jogar` publicou **11%**
 onde a divisão daquele dia dava **12%** (5 de 42).
+
+**A 07 CAIU DE 47% PARA 31% EM 21/09/2026, e não perdeu função.** Ela
+pediu os mesmos botões em todos os lançadores, e os sete que só a Steam tinha
+saíram: o reparo do atalho e o Steam Input desligado passaram a ser do vigia
+`hefesto-steam-input-guard`, sem clique. Um `IGUAL` que vira *"automático"* é
+`DIFERENTE` pela régua — que é dura de propósito —, e o «Ver o que impede»,
+que só o HTML tinha, saiu do mapa com o botão. Na mesma recontagem a linha do
+«Aplicar aos jogos» da 09 fechou: o botão já estava publicado.
 
 **As duas correções ficam; os valores que elas corrigiram, não.** O total de
 `FALTA_NO_HTML` e a paridade da `01-jogar` mudam a cada cura, e quem quiser os

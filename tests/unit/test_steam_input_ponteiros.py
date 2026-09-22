@@ -135,9 +135,10 @@ def _aba_do_botao(rotulo: str) -> str | None:
 #: O dono é `interface/desenho_dos_lancadores.py`, e o nome da aba sai da barra
 #: das dez como o de qualquer outra.
 _ROTULOS_QUE_NASCEM_NO_CARTAO = (
-    "COPIAR_ROTULO", "DESLIGAR_STEAM_INPUT_ROTULO", "TUDO_PRONTO_ROTULO",
     # O «Este jogo não funciona» SAIU em 21/09/2026; o «Adicionar à lista de
     # exclusão» nasce no cartão localizado, que `cartoes(None)` também não tem.
+    # E NA MESMA NOITE saíram o «Copiar a linha» e os dois do Steam Input, com
+    # os outros botões que só a Steam tinha.
     "EXCLUIR_ROTULO",
 )
 
@@ -147,8 +148,9 @@ def _rotulos_do_cartao() -> dict[str, str]:
     from hefesto_dualsense4unix.interface import desenho_dos_lancadores as dl
 
     aba = _nome_das_abas().get("07-lancadores.html", "Lançadores")
-    return {getattr(dl, n): aba for n in _ROTULOS_QUE_NASCEM_NO_CARTAO
-            if isinstance(getattr(dl, n, None), str)}
+    # SEM `getattr(…, None)`: um nome que sumiu do desenho reprova aqui, em
+    # vez de sair calado da lista e deixar a régua medindo menos do que diz.
+    return {getattr(dl, n): aba for n in _ROTULOS_QUE_NASCEM_NO_CARTAO}
 
 
 def _rotulos_de_botao() -> set[str]:

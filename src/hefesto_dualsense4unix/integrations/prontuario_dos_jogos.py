@@ -337,6 +337,44 @@ def pontes_confirmadas(config_home: Path | None = None) -> dict[str, Ponte]:
     return {appid: item[2] for appid, item in melhor.items()}
 
 
+def classes_com_ponte(config_home: Path | None = None) -> set[str]:
+    """As classes de janela (em `casefold`) dos perfis COM ponte confirmada.
+
+    É a pergunta de :func:`pontes_confirmadas` sem o recorte da Steam: ali só
+    entra `steam_app_<appid>`; aqui entra toda classe que o `match` do perfil
+    declara — a de um jogo do Heroic, do Lutris ou de um emulador também. Quem
+    pergunta é o contador dos cartões da aba Lançadores (21/09/2026, *"todos
+    tem que serem iguais"*), que conta os jogos DAQUELE lançador.
+
+    Perfil ilegível ou sem carimbo não entra, pela mesma regra de lá: *"ainda
+    não sei"* é ausência, nunca uma ponte vazia.
+    """
+    pasta = pasta_de_perfis(config_home)
+    try:
+        arquivos = sorted(pasta.glob("*.json"))
+    except OSError:  # pragma: no cover - pasta sumiu entre o listar e o ler
+        return set()
+    achadas: set[str] = set()
+    for arquivo in arquivos:
+        try:
+            dados = json.loads(arquivo.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(dados, dict):
+            continue
+        crua = dados.get("ponte")
+        if not isinstance(crua, dict) or not isinstance(crua.get("kind"), str):
+            continue
+        match = dados.get("match")
+        if not isinstance(match, dict) or match.get("type") != "criteria":
+            continue
+        classes = match.get("window_class")
+        if isinstance(classes, list):
+            achadas |= {c.strip().casefold() for c in classes
+                        if isinstance(c, str) and c.strip()}
+    return achadas
+
+
 def _appids_do_perfil(dados: dict[str, object]) -> set[str]:
     """Os appids que o `match` deste perfil declara (gêmeo do manager)."""
     match = dados.get("match")

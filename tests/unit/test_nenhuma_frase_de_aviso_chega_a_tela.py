@@ -318,38 +318,8 @@ def test_a_dica_do_canal_e_rotulo_de_estado() -> None:
         assert sono in dica and _e_rotulo_de_estado(dica), dica
 
 
-# --------------------------------------------------------------------------
-# 07 — o sufixo das exceções do Steam Input
-# --------------------------------------------------------------------------
-def test_o_sufixo_das_excecoes_conta_e_nao_narra(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A linha do Steam Input pelo caminho do produto, com uma exceção na lista.
-
-    FRASES-E-DICAS-03, 13/09/2026. A contagem fica, porque a 07 não mostra a
-    lista das exceções em outro lugar. MORDIDA: devolva a narração depois da
-    contagem em `emulation_actions.markup_status_steam_input`, e esta régua
-    reprova.
-
-    A ÂNCORA SÓ CONHECE O TRAVESSÃO. Medido pela validação: a narração devolvida
-    com dois-pontos no lugar dele passava aqui. Por isso a linha visível tem de
-    terminar na contagem.
-
-    NOTA DATADA — 13/09/2026 (RESTOS-DA-ONDA-DOIS-01). A régua passava pelos três
-    valores do `efetiva` e cobrava a mesma linha nos três. O `efetiva` saiu da
-    leitura e da assinatura, e não há mais estado da exceção que a linha possa
-    narrar; o que continua valendo é a linha terminar na contagem.
-    """
-    from hefesto_dualsense4unix.app.actions import emulation_actions as ea
-    from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as p7
-
-    monkeypatch.setattr(ea.EmulationActionsMixin, "_steam_input_is_on",
-                        staticmethod(lambda: False))
-    monkeypatch.setattr(ea.EmulationActionsMixin, "_steam_input_excecoes",
-                        staticmethod(lambda: [990000011]))
-    frase, _ligado = p7._o_que_a_steam_poe_no_meio()
-    visivel = _sem_etiqueta(frase)
-    assert "Exceção por jogo: 1 jogo(s)" in visivel, visivel
-    assert not _achadas(visivel), visivel
-    assert visivel.rstrip().endswith("Exceção por jogo: 1 jogo(s)"), visivel
+# O «07 — o sufixo das exceções do Steam Input» SAIU em 21/09/2026: a linha do
+# Steam Input deixou o cartão da Steam, e não há mais sufixo na tela a medir.
 
 
 # --------------------------------------------------------------------------

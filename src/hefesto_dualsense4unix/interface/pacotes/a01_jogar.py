@@ -1721,8 +1721,8 @@ class _VigiaDoSteamInput:
 
     É a MESMA classe da aba 07 (`a07_lancadores._Vigia`), com o mesmo contrato,
     e a repetição é consciente: os pacotes são território exclusivo por desenho,
-    e o que se compartilha entre abas é o CONSENTIMENTO (`pacotes/confirmacao`),
-    que tem estado global de verdade. Um cache é do módulo que o enche.
+    e o que se compartilha entre abas é o que tem dono único (`pacotes/perfil`,
+    `pacotes/confirmacao`). Um cache é do módulo que o enche.
 
     O CONTRATO É "NUNCA BLOQUEIE": :meth:`agora` devolve o que tem — ``None`` na
     primeira volta — e dispara a releitura quando o dado passou do TTL. Quem
@@ -2706,7 +2706,7 @@ def modo_xbox(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 #     steam_input_ponte.garantir_fora_da_lista_desligado     desligar no vdf
 #     steam_input_ponte.estado_da_ponte                      ler sem tocar
 #     steam_input_ponte.Estado.frase                         a frase da tela
-#     pacotes/confirmacao.este_clique_confirma               o consentimento
+#     (o consentimento de dois tempos da 07 saiu em 21/09/2026)
 #     a07_lancadores.METODO_DA_RECARGA                       valer AGORA
 #
 # A confissão que ficou meses no fonte do dono
@@ -2830,14 +2830,14 @@ def _reconciliar_o_vdf(alvo: str, ligar: bool) -> str:
     **ESTE GESTO NUNCA FECHA A STEAM DELA — e a razão é MEDIDA, não de gosto.**
     A sprint pedia o consentimento de dois tempos da aba 07 (primeiro clique
     arma, segundo fecha a Steam e escreve). Ele não alcança esta tela, e o
-    motivo está no desenho do chip:
+    motivo está no desenho do chip (o botão da 07 saiu em 21/09/2026):
 
-    * o chip é um ``<span>`` ESTÁTICO da fileira. O botão da aba 07 é
-      redesenhado a cada tique (`_botao_armavel`) e TROCA de rótulo para
-      «Fechar e continuar»; um chip não troca — e um consentimento que ela não
-      LÊ não é consentimento;
-    * o segundo guarda de `confirmacao.este_clique_confirma` exige que o clique
-      traga o ``data-v`` que **só existe no cartão já armado**. O piloto manda
+    * o chip é um ``<span>`` ESTÁTICO da fileira. O botão armável é
+      redesenhado a cada tique e TROCA de rótulo para «Fechar e continuar»;
+      um chip não troca — e um consentimento que ela não LÊ não é
+      consentimento;
+    * o segundo guarda daquele consentimento exigia que o clique trouxesse
+      o ``data-v`` que **só existe no cartão já armado**. O piloto manda
       `v: d.v || ''` (`hefesto_vivo`, o `manda_do_alvo`), lido do atributo — e
       um ``data-v`` cravado no chip valeria para o PRIMEIRO clique, que é o
       contrário do que o guarda existe para fazer.

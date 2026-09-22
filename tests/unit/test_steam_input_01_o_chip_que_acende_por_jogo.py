@@ -63,7 +63,6 @@ from hefesto_dualsense4unix.integrations import steam_input_ponte as ponte
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 from hefesto_dualsense4unix.interface.pacotes import Contexto
 from hefesto_dualsense4unix.interface.pacotes import a01_jogar as aba
-from hefesto_dualsense4unix.interface.pacotes import confirmacao
 from hefesto_dualsense4unix.interface.pacotes.a07_lancadores import METODO_DA_RECARGA
 
 # O CONSTRUTOR DE VDF É REUSADO — §5.3 da sprint, com todas as letras:
@@ -150,18 +149,15 @@ def _steam_fechada(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def _vigia_limpa():
-    """A vigia e o consentimento são de MÓDULO — dois testes se contaminam.
+    """A vigia é de MÓDULO — dois testes se contaminam.
 
-    Sem isto, o cache de um teste responde pelo lar de outro, e um gesto armado
-    num teste confirma no seguinte.
+    Sem isto, o cache de um teste responde pelo lar de outro.
     """
     aba.VIGIA_DO_STEAM_INPUT._dado = None
     aba.VIGIA_DO_STEAM_INPUT._quando = 0.0
-    confirmacao.desarmar()
     yield
     aba.VIGIA_DO_STEAM_INPUT._dado = None
     aba.VIGIA_DO_STEAM_INPUT._quando = 0.0
-    confirmacao.desarmar()
 
 
 class PonteDeMentira:
@@ -374,7 +370,7 @@ def test_com_a_steam_aberta_o_gesto_grava_a_vontade_e_nao_toca_no_vdf(
     **E O GESTO NÃO FECHA A STEAM DELA.** A sprint pedia o consentimento de dois
     tempos da aba 07; ele não alcança um chip. O botão da 07 é redesenhado a
     cada tique e TROCA de rótulo para «Fechar e continuar»; o chip é um `<span>`
-    estático, e o segundo guarda de `confirmacao.este_clique_confirma` exige um
+    estático, e o segundo guarda daquele consentimento (saiu em 21/09) exigia um
     `data-v` que **só existe no cartão já armado**. Um consentimento que ela não
     LÊ não é consentimento. O dublê de `with_steam_closed` desta régua levanta
     se alguém tentar.
@@ -714,147 +710,43 @@ def _arvore(modulo: Any) -> Any:
     return ast.parse(inspect.getsource(modulo))
 
 
-def _de_onde_importa(modulo: Any, nome: str) -> set[str]:
-    """De quais módulos este módulo importa `nome`, lendo a ÁRVORE do fonte."""
-    import ast
-
-    de = set()
-    for no in ast.walk(_arvore(modulo)):
-        if isinstance(no, ast.ImportFrom):
-            for alvo in no.names:
-                if alvo.name == nome:
-                    de.add(no.module or "")
-    return de
-
-
-def _define(modulo: Any, nome: str) -> bool:
-    """Este módulo DEFINE uma função com este nome?"""
-    import ast
-
-    return any(
-        isinstance(no, (ast.FunctionDef, ast.AsyncFunctionDef)) and no.name == nome
-        for no in ast.walk(_arvore(modulo))
-    )
-
-
-def test_o_consentimento_que_fecha_a_steam_tem_UM_dono() -> None:  # noqa: N802
-    """`este_clique_confirma` mora em `pacotes/confirmacao`, e em mais lugar nenhum.
-
-    **POR QUE ELA EXISTE:** o consentimento que fecha a Steam dela nasceu
-    PRIVADO na aba 07 (`_este_clique_confirma`, `_ARMADO`, `_confirmo`), e
-    bastava enquanto UMA aba fechava a Steam. Assim que uma segunda precisar do
-    mesmo, as duas saídas erradas estão nomeadas: importar o símbolo privado da
-    outra aba, ou reescrever a conta. *A terceira cópia é sempre a mais frouxa*
-    — é o que o próprio docstring dizia quando ele era da 07: *"Três cópias do
-    consentimento que fecha a Steam dela é exatamente onde uma delas ficaria
-    mais frouxa que as outras."*
-
-    A MORDIDA: devolva o corpo de `_este_clique_confirma` para dentro de
-    `a07_lancadores` (ou escreva uma cópia em qualquer `pacotes/a*.py`) e esta
-    régua reprova nomeando o arquivo.
-
-    E ELA ALCANÇA O ESTADO, que é a metade que um import igual não garante: a
-    aba 07 lê o MESMO `_ARMADO` de `confirmacao`.
-
-    **FATO CORRIGIDO PELA CONFERÊNCIA — 20/09/2026.** Aqui se dizia *"o relógio
-    (`_ARMADO`) é UM só"*, e a medição derrubou: `a09_sistema` tem `_ARMADO`
-    PRÓPRIO e o gesto `aplicar-aos-jogos` chama `with_steam_closed`. Armar a 07
-    e a 09 deixa OS DOIS pendurados ao mesmo tempo. O que ESTA régua prova é o
-    alcance dela — a 07 e a ausência de cópias; quem cobra o resto, e NOMEIA a
-    dívida da 09, é
-    :func:`test_quem_fecha_a_steam_dela_nao_inventa_um_segundo_relogio`.
-    """
-    import importlib
-    import pathlib as _pathlib
-
-    from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07
-
-    esperado = {"hefesto_dualsense4unix.interface.pacotes.confirmacao",
-                ".confirmacao", "confirmacao"}
-    de = _de_onde_importa(a07, "este_clique_confirma")
-    assert de & esperado, (
-        f"a07_lancadores não importa `este_clique_confirma` de "
-        f"`pacotes/confirmacao` — importa de {de or 'lugar nenhum'}")
-    assert a07._este_clique_confirma is confirmacao.este_clique_confirma
-
-    # E NENHUM PACOTE DE ABA DEFINE O SEU. A varredura é sobre os arquivos, e
-    # não sobre uma lista digitada: a aba que nascer amanhã entra sozinha.
-    pasta = _pathlib.Path(confirmacao.__file__).parent
-    copias = []
-    for arquivo in sorted(pasta.glob("a[0-9][0-9]_*.py")):
-        mod = importlib.import_module(
-            f"hefesto_dualsense4unix.interface.pacotes.{arquivo.stem}")
-        for nome in ("este_clique_confirma", "_este_clique_confirma"):
-            if _define(mod, nome):
-                copias.append(f"{arquivo.name}::{nome}")
-    assert not copias, (
-        f"cópia(s) do consentimento que fecha a Steam dela fora do dono: "
-        f"{copias}. Quem precisa dele importa de `pacotes/confirmacao`")
-
-    # O RELÓGIO É UM SÓ, e é o que um import repetido não prova.
-    assert not hasattr(a07, "_ARMADO") or a07._ARMADO is confirmacao._ARMADO
-    confirmacao.armar("um-ato")
-    assert a07._armado_agora() == "um-ato", (
-        "a aba 07 lê um relógio diferente do de `confirmacao` — dois "
-        "consentimentos pendurados sobre a mesma Steam")
-    confirmacao.desarmar()
-
-
 #: QUEM FECHA A STEAM DELA COM RELÓGIO PRÓPRIO — dívida NOMEADA, medida, e
 #: anterior a esta leva. A isenção é do ARQUIVO, com a razão do lado; é o mesmo
 #: contrato de `test_todo_gesto_que_grava_esta_protegido.ISENTOS`.
-RELOGIO_PROPRIO_DECLARADO: dict[str, str] = {
-    "a09_sistema.py":
-        "o gesto `aplicar-aos-jogos` chama `with_steam_closed` e arma pelo "
-        "`_ARMADO` PRÓPRIO do módulo. A conta de lá é mais rica — `_confirmado"
-        "(…, antes_de_armar=…)` recusa o clique 1 (SISTEMA-BOTOES-01, 13/09) — "
-        "e não cabe na de `confirmacao` sem reescrever a aba, que é de outra "
-        "posse. MEDIDO em 20/09/2026: armar a 07 e a 09 deixa OS DOIS "
-        "pendurados ao mesmo tempo. Fica nomeada para não ser invisível",
-}
 
 
-def test_quem_fecha_a_steam_dela_nao_inventa_um_segundo_relogio() -> None:
-    """Toda aba que fecha a Steam DELA arma pelo relógio de `confirmacao`.
+def test_so_uma_aba_fecha_a_steam_dela_com_relogio_proprio() -> None:
+    """Dois relógios sobre a MESMA Steam deixam dois consentimentos pendurados.
 
-    **POR QUE ELA EXISTE, e é a conferência de 20/09/2026.** A régua irmã
-    (`…_tem_UM_dono`) mediu só a aba 07 — a que acabara de ser refatorada — e
-    concluía, no docstring, que *"o relógio é UM só"*. A casa já tinha o
-    contra-exemplo VIVO: `a09_sistema._ARMADO`, com `aplicar-aos-jogos`
-    chamando `with_steam_closed`. *A régua mediu o arranjo fácil*, que é a
-    assinatura desta casa desde 20/09.
+    **A HISTÓRIA, e ela é curta.** Em 20/09/2026 a conferência mediu que armar
+    a aba 07 e a aba 09 deixava os DOIS consentimentos de pé ao mesmo tempo —
+    cada uma com o seu `_ARMADO`, as duas chamando `with_steam_closed`. A régua
+    de então exigia o relógio de `pacotes/confirmacao` e declarava a 09 como
+    dívida. Em 21/09/2026 os botões da 07 que fechavam a Steam saíram (*"a
+    ideia é termos os mesmos botões pra todos os lançadores. sempre."*), e a
+    dívida acabou por construção: sobra UM relógio sobre a Steam dela, o da 09.
 
-    O QUE ELA COBRA: um pacote de aba que alcance `with_steam_closed` não pode
-    ter um `_ARMADO` de módulo que não seja o de `confirmacao` — a não ser que
-    esteja em :data:`RELOGIO_PROPRIO_DECLARADO`, com a medição do lado.
+    O QUE ELA COBRA AGORA: no máximo UMA aba alcança `with_steam_closed` com
+    um `_ARMADO` de módulo. A varredura é sobre os arquivos, não sobre uma
+    lista: a aba que nascer amanhã entra sozinha.
 
     **O RECORTE É "QUEM FECHA A STEAM", e não "quem tem `_ARMADO`."**
     `a10_perfis` tem o dela e está CERTO: ela arma o «Remover perfil», que não
-    toca a Steam de ninguém. Cobrar relógio único ali seria a régua reprovando
-    o que não é o defeito.
+    toca a Steam de ninguém.
 
-    AS DUAS MORDIDAS:
-
-    1. tire `a09_sistema.py` de :data:`RELOGIO_PROPRIO_DECLARADO` e ela reprova
-       nomeando o arquivo — a dívida de hoje;
-    2. dê a uma aba qualquer um `_ARMADO` próprio **e** uma chamada a
-       `with_steam_closed`, e ela reprova sem ninguém acrescentar um nome: a
-       varredura é sobre os arquivos, não sobre uma lista.
-
-    E A DECLARAÇÃO TAMBÉM MORDE, no outro sentido: um arquivo declarado que
-    deixar de ter relógio próprio reprova, para a isenção não envelhecer calada.
+    A MORDIDA: dê a uma segunda aba um `_ARMADO` de módulo **e** uma chamada a
+    `with_steam_closed`, e ela reprova nomeando as duas. E a outra ponta: se
+    nenhuma aba fechar mais a Steam, ela reprova por não medir nada — é a hora
+    de apagá-la junto.
     """
     import importlib
     import pathlib as _pathlib
 
-    pasta = _pathlib.Path(confirmacao.__file__).parent
-    culpados: list[str] = []
-    declarados_ociosos: list[str] = []
+    pasta = _pathlib.Path(aba.__file__).parent
+    com_relogio: list[str] = []
     for arquivo in sorted(pasta.glob("a[0-9][0-9]_*.py")):
         mod = importlib.import_module(
             f"hefesto_dualsense4unix.interface.pacotes.{arquivo.stem}")
-        proprio = (getattr(mod, "_ARMADO", confirmacao._ARMADO)
-                   is not confirmacao._ARMADO)
         fecha = any(
             isinstance(no, ast.Call) and (
                 (isinstance(no.func, ast.Attribute)
@@ -863,80 +755,44 @@ def test_quem_fecha_a_steam_dela_nao_inventa_um_segundo_relogio() -> None:
                     and no.func.id == "with_steam_closed"))
             for no in ast.walk(ast.parse(inspect.getsource(mod)))
         )
-        if fecha and proprio and arquivo.name not in RELOGIO_PROPRIO_DECLARADO:
-            culpados.append(arquivo.name)
-        if arquivo.name in RELOGIO_PROPRIO_DECLARADO and not (fecha and proprio):
-            declarados_ociosos.append(arquivo.name)
+        if fecha and hasattr(mod, "_ARMADO"):
+            com_relogio.append(arquivo.name)
 
-    assert not culpados, (
-        f"aba(s) que fecham a Steam DELA com relógio de consentimento próprio, "
-        f"sem declaração: {culpados}. Dois relógios sobre a MESMA Steam deixam "
-        f"dois consentimentos pendurados ao mesmo tempo — quem precisa do "
-        f"mecanismo importa de `pacotes/confirmacao`")
-    assert not declarados_ociosos, (
-        f"declaração(ões) em RELOGIO_PROPRIO_DECLARADO que já não descrevem o "
-        f"arquivo: {declarados_ociosos}. Uma isenção que sobrevive ao defeito "
-        f"envelhece calada — tire a linha no mesmo commit que curou")
+    assert len(com_relogio) <= 1, (
+        f"abas que fecham a Steam DELA, cada uma com o seu relógio de "
+        f"consentimento: {com_relogio}. Dois relógios sobre a MESMA Steam "
+        f"deixam dois consentimentos pendurados ao mesmo tempo")
+    assert com_relogio, (
+        "nenhuma aba fecha mais a Steam com consentimento — esta régua não "
+        "mede nada; apague-a no mesmo commit")
 
 
-def test_a_divida_do_segundo_relogio_e_real_e_esta_medida() -> None:
-    """A dívida declarada acima não é teórica: os DOIS ficam armados juntos.
-
-    Ela existe para que :data:`RELOGIO_PROPRIO_DECLARADO` não vire uma linha de
-    prosa. O dia em que a 09 passar a usar `confirmacao`, ESTA régua reprova —
-    e é o sinal de tirar a declaração, não de reescrever a régua.
-
-    A MORDIDA: faça `a09_sistema._ARMADO` ser o de `confirmacao` e a última
-    linha reprova, dizendo que a dívida acabou.
-    """
-    from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
-
-    confirmacao.desarmar()
-    a09._ARMADO.clear()
-    try:
-        confirmacao.armar("fechar-a-steam")
-        a09._ARMADO.update(
-            gesto="aplicar-aos-jogos",
-            ate=__import__("time").monotonic() + confirmacao.SEGUNDOS_PARA_CONFIRMAR)
-        assert confirmacao.armado_agora() == "fechar-a-steam"
-        assert a09._armado_agora() == "aplicar-aos-jogos", (
-            "a dívida do segundo relógio ACABOU — a aba 09 passou a ler o "
-            "relógio de `confirmacao`. Tire `a09_sistema.py` de "
-            "RELOGIO_PROPRIO_DECLARADO no mesmo commit")
-    finally:
-        confirmacao.desarmar()
-        a09._ARMADO.clear()
 
 
-def test_a_aba_jogar_nao_pede_consentimento_porque_nao_tem_onde(lar) -> None:
-    """**O CHIP NÃO USA O CONSENTIMENTO, e isso é medido — não esquecimento.**
+def test_a_aba_jogar_nao_fecha_a_steam_porque_nao_tem_onde_perguntar(lar) -> None:
+    """**O CHIP NÃO FECHA A STEAM, e isso é medido — não esquecimento.**
 
     A sprint (§4.2) pedia o consentimento de dois tempos também na aba Jogar.
-    Ele não alcança um chip, e o motivo está no desenho:
-
-    1. o chip é um `<span>` ESTÁTICO da fileira. O botão da aba 07 é redesenhado
-       a cada tique (`_botao_armavel`) e TROCA de rótulo para «Fechar e
-       continuar»; um chip não troca, e um consentimento que ela não LÊ não é
-       consentimento;
-    2. o segundo guarda exige o `data-v` que **só existe no cartão já armado**.
-       O piloto manda `v: d.v || ''`, lido do ATRIBUTO — um `data-v` cravado no
-       chip valeria já para o primeiro clique, que é o contrário do que o guarda
-       existe para fazer.
+    Ele não alcança um chip: o chip é um `<span>` ESTÁTICO da fileira, sem
+    rótulo para trocar para «Fechar e continuar» e sem o `data-v` que só um
+    botão já armado carrega — um consentimento que ela não LÊ não é
+    consentimento.
 
     **E NÃO PRECISA:** quem completa o vdf é o `hefesto-steam-input-guard.path`,
     medido **active** e **enabled** na máquina dela em 20/09/2026.
 
-    A régua trava as DUAS pontas — o chip não pede consentimento, e o botão que
-    fecha a Steam de verdade continua existindo na aba 07.
+    A MORDIDA: chame `with_steam_closed` de qualquer ponto de `a01_jogar` e
+    esta régua reprova — a árvore do fonte é lida, não a docstring.
     """
-    from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07
-
-    assert not _de_onde_importa(aba, "este_clique_confirma"), (
-        "a aba Jogar voltou a pedir consentimento — e ela não tem onde mostrar "
-        "a pergunta nem como carregar o `data-v` que o guarda exige")
-    assert a07.PERGUNTA_DA_STEAM and a07.CONFIRMA_A_STEAM, (
-        "o botão que fecha a Steam DE VERDADE sumiu da aba 07 — o chip da 01 "
-        "manda para ele quando o desligar não alcança")
+    chamadas = [
+        no.lineno for no in ast.walk(_arvore(aba))
+        if isinstance(no, ast.Call) and (
+            (isinstance(no.func, ast.Attribute) and no.func.attr == "with_steam_closed")
+            or (isinstance(no.func, ast.Name) and no.func.id == "with_steam_closed"))
+    ]
+    assert not chamadas, (
+        f"a aba Jogar passou a fechar a Steam (linhas {chamadas}) — e ela não "
+        f"tem onde mostrar a pergunta nem como carregar o consentimento")
 
 
 def test_o_gesto_esta_registrado_e_declara_o_que_grava() -> None:
