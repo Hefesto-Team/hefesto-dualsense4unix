@@ -1400,6 +1400,12 @@ BOOTSTRAP = r"""
     // 3. OS RECADOS SAÍRAM DA PINTURA — 13/09/2026, FRASES-E-DICAS-01. Este
     // passo pintava a lista `p.recados` que o tique mandava; nenhuma carga a
     // traz mais. Ver a nota no lugar em que `pintar_recados` morava.
+    //
+    // 4. A PÁGINA APARECE — 22/09/2026, DEPOIS da primeira pintura (ver
+    // `folha_da_casa.CLASSE_DA_ESPERA`). A GUARDA É DO SAMBA: `remove` de
+    // classe ausente reescreve o atributo — 40 mutações em 40 tiques, medido.
+    if(document.documentElement.classList.contains('hef-esperando'))
+      document.documentElement.classList.remove('hef-esperando');
     return n;
   };
   // O OUVINTE DE CLIQUE, e ele é UM SÓ para a página inteira. Um
@@ -3100,6 +3106,8 @@ class Piloto:
             # lá); o que o piloto faz aqui é PARAR de pintar no vazio e DIZER.
             ao_morrer_a_pagina=self._a_pagina_morreu,
             oculta=args.oculta,
+            # A PÁGINA SÓ APARECE PINTADA — 22/09/2026, ver `ROTEIRO_DA_ESPERA`.
+            esperar_a_pintura=True,
             # A MOLDURA NÃO TEM SEGUNDA LINHA — 08/09/2026, e ela saiu porque
             # falava a língua de dentro. Aqui ia `subtitulo="as dez abas,
             # vivas"`, que a `Gtk.HeaderBar` escrevia embaixo de "Hefesto": era

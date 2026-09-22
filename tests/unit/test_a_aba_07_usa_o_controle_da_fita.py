@@ -96,6 +96,21 @@ MESA_COM_UM_SEM_COR = [
 ]
 
 
+#: O texto que `mesa_viva.mesa_do_estado` põe em `nome` quando o leitor de cor
+#: não conhece a peça: a AUSÊNCIA de leitura, que o chip não pode escrever.
+SEM_LEITURA_DE_COR = "Não sei"
+
+#: A classe do esqueleto (`interface/topo.html`) que a fita ocupa.
+SELETOR_DA_FITA = ".fita"
+
+
+def _fita_da_07(mesa: list[dict]) -> str:
+    """A fita que o produto pinta nesta aba, pelo dono das dez."""
+    from hefesto_dualsense4unix.interface import hefesto_vivo
+
+    return hefesto_vivo._fita(mesa, PAGINA)
+
+
 @pytest.fixture(scope="module")
 def a07():
     from hefesto_dualsense4unix.interface.pacotes import a07_lancadores
@@ -156,7 +171,11 @@ def _chips(html: str) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# 1. O PACOTE — quem escreve a fita desta aba
+# 1. O PILOTO — quem escreve a fita desta aba desde 22/09/2026
+#
+# Estes três casos mediam `a07_lancadores.fita_html`, a fita PRÓPRIA desta aba.
+# Ela saiu (ver a lápide no módulo), e as regras que eles guardam valem para a
+# fita que o produto pinta aqui: `hefesto_vivo._fita(mesa, PAGINA)`.
 # ---------------------------------------------------------------------------
 def test_o_chip_sem_cor_lida_nao_inventa_cor(a07) -> None:
     """Regra dela: campo sem informação NÃO MOSTRA NADA.
@@ -165,7 +184,7 @@ def test_o_chip_sem_cor_lida_nao_inventa_cor(a07) -> None:
     jogador e o transporte — e cala sobre o que ela não trouxe. Sem isto o
     caminho fácil é o travessão, o `Não sei` cru ou, pior, o nome do mockup.
     """
-    chips = _chips(a07.fita_html(MESA_COM_UM_SEM_COR))
+    chips = _chips(_fita_da_07(MESA_COM_UM_SEM_COR))
     assert len(chips) == 3, (
         f"esperava `Todos` + dois controles, saíram {len(chips)}. Uma fita que "
         f"perde chip esconde controle da mesa dela.")
@@ -174,8 +193,8 @@ def test_o_chip_sem_cor_lida_nao_inventa_cor(a07) -> None:
     assert "--plastico" not in do_radio, (
         f"o chip do controle SEM cor lida trouxe `--plastico`. Inventar a cor "
         f"do plástico é a lei de 03/09 ao contrário:\n{do_radio}")
-    assert a07.SEM_LEITURA_DE_COR not in do_radio, (
-        f"o chip escreveu {a07.SEM_LEITURA_DE_COR!r} na tela. `mesa_do_estado` "
+    assert SEM_LEITURA_DE_COR not in do_radio, (
+        f"o chip escreveu {SEM_LEITURA_DE_COR!r} na tela. `mesa_do_estado` "
         f"usa esse texto quando o leitor não conhece a peça — ele é a AUSÊNCIA "
         f"de leitura, e a regra dela é não mostrar nada:\n{do_radio}")
     assert "P2" in do_radio and _palavra("bt") in do_radio, (
@@ -189,7 +208,7 @@ def test_o_chip_com_cor_lida_diz_o_modelo(a07) -> None:
     Sem este caso, apagar tudo passaria — e um chip que nunca nomeia controle
     nenhum zera a régua do mesmo jeito que a página vazia zeraria.
     """
-    do_cabo = _chips(a07.fita_html(MESA_COM_UM_SEM_COR))[1]
+    do_cabo = _chips(_fita_da_07(MESA_COM_UM_SEM_COR))[1]
     assert "White" in do_cabo, (
         f"o modelo LIDO do aparelho não chegou ao chip:\n{do_cabo}")
     assert "P1" in do_cabo and _palavra("usb") in do_cabo, (
@@ -203,7 +222,7 @@ def test_a_fita_nao_cai_de_volta_no_desenho(a07) -> None:
     `monta.CONECTADOS` quando a leitura falha. `Cosmic Red` e `Starlight Blue`
     são o desenho, e é exatamente isso que ela viu na tela.
     """
-    saiu = a07.fita_html(MESA_COM_UM_SEM_COR)
+    saiu = _fita_da_07(MESA_COM_UM_SEM_COR)
     lidos = {str(c["nome"]) for c in MESA_COM_UM_SEM_COR if c["cor"]}
     for nome in _colorways():
         if nome in lidos:
@@ -212,19 +231,6 @@ def test_a_fita_nao_cai_de_volta_no_desenho(a07) -> None:
             f"a fita trouxe {nome!r}, e ele NÃO saiu da leitura "
             f"(lidos: {sorted(lidos)}). O caminho de volta ao mockup está "
             f"aberto:\n{saiu}")
-
-
-def test_a_fita_nunca_volta_vazia(a07) -> None:
-    """Mesa vazia ainda tem rótulo e `Todos`.
-
-    O piloto troca o bloco por `innerHTML` — devolver `""` aqui APAGARIA o
-    `Selecionar:` da tela dela, que é estrutura e não identidade.
-    """
-    saiu = a07.fita_html([])
-    assert "Selecionar:" in saiu, f"a fita vazia perdeu o rótulo:\n{saiu}"
-    assert len(_chips(saiu)) == 1, (
-        f"a mesa vazia produziu chip de controle. Sem controle na mesa não há "
-        f"quem nomear:\n{saiu}")
 
 
 def test_a_fita_tem_um_dono_so_com_alguem_na_mesa(a07, ctx, monkeypatch) -> None:
@@ -256,41 +262,46 @@ def test_a_fita_tem_um_dono_so_com_alguem_na_mesa(a07, ctx, monkeypatch) -> None
 
     # 1. o seletor tem de EXISTIR na página, senão o bloco cairia no nada
     assert 'class="fita' in _bancada(), (
-        f"a página não tem `{a07.SELETOR_DA_FITA}` — o `blocos` cairia no chão, "
+        f"a página não tem `{SELETOR_DA_FITA}` — o `blocos` cairia no chão, "
         f"e `querySelector` devolve `null` sem uma linha de erro")
 
     # 2. com alguém na mesa, quem escreve é o PILOTO — e esta aba se cala
     blocos = a07.pacote(ctx).get("blocos") or {}
-    assert a07.SELETOR_DA_FITA not in blocos, (
-        f"a aba 07 voltou a publicar um bloco em {a07.SELETOR_DA_FITA!r} com "
+    assert SELETOR_DA_FITA not in blocos, (
+        f"a aba 07 voltou a publicar um bloco em {SELETOR_DA_FITA!r} com "
         f"alguém na mesa. `.fita` é endereço do PILOTO (`hefesto_vivo._fita` "
         f"→ `monta.fita`): dois donos no mesmo tique é a tela sambando, e quem "
         f"ganha é o bloco — a fita MENOS informada das duas.")
 
 
-def test_a_fita_da_mesa_vazia_ainda_sai_daqui(a07, monkeypatch) -> None:
-    """A metade que separa o conserto da maquiagem: com a mesa VAZIA alguém
-    ESCREVE, e é esta aba.
+def test_a_fita_da_mesa_vazia_tambem_e_do_piloto(a07, monkeypatch) -> None:
+    """ERA `test_a_fita_da_mesa_vazia_ainda_sai_daqui`, e a premissa dele morreu.
 
-    `hefesto_vivo._fita` devolve `""` sem ninguém na mesa, e o JS só troca o
-    bloco `if(p.fita)` — "deixar a fita como está" ali é deixar os DOIS chips do
-    desenho (`P1 · Cosmic Red · USB`, `P2 · Starlight Blue · BT`) na tela dela.
-    É o único caso em que esta aba ainda tem o que dizer.
+    Ele exigia que esta aba escrevesse a fita da mesa vazia porque
+    `hefesto_vivo._fita` devolvia `""` sem ninguém na mesa. Desde 21/09/2026 o
+    piloto pinta a fita vazia, e esta aba virou o segundo dono daquele caso:
+    ela pintava `Selecionar:` + `Todos` sobre controle nenhum, e em 22/09 ela
+    pediu *"quando não tiver controle Não Aparece o selecionar:"*.
 
-    A MORDIDA: apague o `if not ctx.mesa:` de `pacote` e este caso reprova.
+    A MORDIDA: devolva o `if not ctx.mesa:` com o `blocos[SELETOR_DA_FITA]` a
+    `a07_lancadores.pacote` e a primeira asserção reprova.
     """
     import pacotes
+
+    from hefesto_dualsense4unix.interface import hefesto_vivo
 
     monkeypatch.setattr(a07.VIGIA, "agora", lambda: None)
     vazia = pacotes.Contexto(state={"active_profile": "regua"},
                              mesa=[], conectados=[], estados={})
 
-    fita = (a07.pacote(vazia).get("blocos") or {}).get(a07.SELETOR_DA_FITA)
-    assert fita, (
-        "com a mesa VAZIA ninguém escreve a fita — nem o piloto (que se cala) "
-        "nem esta aba. A tela fica com os dois controles do mockup.")
-    assert "Selecionar:" in fita and "Todos" in fita, (
-        f"a fita da mesa vazia perdeu a estrutura:\n{fita}")
+    blocos = a07.pacote(vazia).get("blocos") or {}
+    assert SELETOR_DA_FITA not in blocos, (
+        f"com a mesa VAZIA esta aba voltou a escrever a fita — segundo dono, e "
+        f"o que ela escreve é `Selecionar:` sobre nada:\n{blocos[SELETOR_DA_FITA]}")
+
+    fita = hefesto_vivo._fita([], "07-lancadores.html")
+    assert 'class="fita' in fita, "o piloto se calou com a mesa vazia"
+    assert "Selecionar" not in fita and "Todos" not in fita, fita
     for nome in _colorways():
         assert nome not in fita, (
             f"a fita da mesa VAZIA nomeia {nome!r} — o desenho voltou a mandar "

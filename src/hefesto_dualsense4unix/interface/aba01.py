@@ -906,7 +906,7 @@ CSS = """
 
      A MARCA É `data-conectado`, E NÃO A CLASSE `off`, e a escolha decide se a
      cura vale AO VIVO: é o atributo que o piloto compara e vira nos passos `1b`
-     e `1c` (`hefesto_vivo.py:1434` e `:1380`), e é a mesma chave da S-04. Com
+     e `1c` (`hefesto_vivo.py:1440` e `:1380`), e é a mesma chave da S-04. Com
      os quatro DualSense dela na mesa, o P3 chega, o passo `1c` escreve
      `conectado="sim"`, e os três chips voltam a existir no mesmo tique — sem
      recarregar a página, porque quem os escondia era o seletor e não um nó
@@ -2331,8 +2331,18 @@ def _conferir(doc):
     #    conectados. *"Todas as abas tem que ter só dois controles conectados."*
     exigir(corpo.count('data-conectado="sim"') == 2, "não são 2 controles conectados")
     exigir(corpo.count('data-conectado="nao"') == 2, "não são 2 lugares vazios")
-    exigir(f"{len(monta.CONECTADOS)} controles:" in doc,
-           "o cabeçalho não conta os conectados")
+    # O CABEÇALHO CONTA PELO TRANSPORTE desde 22/09/2026 — o «N controles:»
+    # saiu por pedido dela (*"cai fora pra ganharmos espaçço Lateral"*),  # (noqa-acento): dela
+    # e quem conta é o `x USB · y BT`. A trava cobra as duas metades da decisão: a
+    # palavra que saiu não volta, e a conta dos conectados continua na tela.
+    exigir(f"{len(monta.CONECTADOS)} controles:" not in doc,
+           "o «N controles:» voltou ao cabeçalho — ela o tirou em 22/09")
+    from hefesto_dualsense4unix.interface import mesa_viva as _mesa_viva_
+
+    _usb = sum(1 for c in monta.CONECTADOS if str(c.get("transporte") or "").lower() == "usb")
+    _bt = len(monta.CONECTADOS) - _usb
+    exigir(f'<b data-campo="conta-b">{_mesa_viva_.frase_dos_transportes(_usb, _bt)}</b>' in doc,
+           "o cabeçalho não conta os conectados pelo transporte")
 
     # 5. LUGAR VAZIO NÃO TEM MÁSCARA ESCOLHIDA. Sem controle não há escolha, e
     #    marcar uma desenharia um ajuste que não existe.

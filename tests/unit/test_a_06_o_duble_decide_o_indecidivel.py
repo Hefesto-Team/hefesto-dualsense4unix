@@ -529,9 +529,11 @@ def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):
     rato = ESTADO["mouse_emulation"]
     conta_b = str(valor["conta-b"])
 
-    assert str(len(ligados)) in str(valor["conta"]), (
-        f"o dublê tem {len(ligados)} controles ligados e o cabeçalho diz "
-        f"{valor['conta']!r}")
+    # O «N controles:» SAIU DA TELA EM 22/09/2026 (pedido dela, para ganhar
+    # espaço lateral): quem conta é a segunda metade, pelo transporte, e o
+    # endereço da primeira não volta.
+    assert "conta" not in valor, (
+        f"o cabeçalho voltou a emitir o «N controles:»: {valor.get('conta')!r}")
     assert f"{usb} USB" in conta_b and f"{bt} BT" in conta_b, (
         f"o dublê tem {usb} no cabo e {bt} no rádio, e a segunda metade do "
         f"cabeçalho diz {conta_b!r}")

@@ -145,8 +145,12 @@ def test_o_interruptor_e_o_chip_saem_do_daemon(
     Com o daemon em `desktop` a GTK marcaria "Controlar o PC"; a página mostrava
     **Ligado** + **Sony DualSense**. O `Ligado` até está certo (o Hefesto está no
     meio), mas por acaso: nada o tinha lido.
+
+    COM UM CONTROLE NA MESA desde 22/09/2026: sem ninguém a fileira apaga
+    inteira (`a01_jogar._a_fileira_com_a_mesa`, pedido dela), e o que esta régua
+    mede é de onde vem o chip quando ele acende.
     """
-    fora = aba.pacote(_ctx(state))
+    fora = aba.pacote(_com_mesa(state))
     assert fora["hef-posicao"] == posicao, (
         f"a posição do interruptor saiu {fora['hef-posicao']!r} com o daemon em "
         f"{painel.modo_vivo(state)!r}")
@@ -307,7 +311,7 @@ def test_a_leitura_e_do_produto_e_nao_uma_copia(monkeypatch: Any) -> None:
     monkeypatch.setattr(painel, "modo_vivo", lambda _s: "gamepad")
     monkeypatch.setattr(painel, "caminho_vivo", lambda _s: "xbox")
     monkeypatch.setattr(home_actions, "mascara_do_aparelho", lambda _s: "dualsense")
-    fora = aba.pacote(_ctx(VIVO_NAVEGACAO))
+    fora = aba.pacote(_com_mesa(VIVO_NAVEGACAO))
     assert fora["hef-posicao"] == "desligado", (
         "o pacote deixou de usar `painel.hefesto_ligado` — a posição virou cópia")
     assert fora["modo-aceso"] == "xbox", (

@@ -55,12 +55,11 @@ if str(RAIZ / "src") not in sys.path:
     sys.path.insert(0, str(RAIZ / "src"))
 
 from hefesto_dualsense4unix.app.actions import home_actions
-from hefesto_dualsense4unix.interface import mesa_viva
+from hefesto_dualsense4unix.interface import hefesto_vivo, mesa_viva
 from hefesto_dualsense4unix.interface import pacotes as _pacotes
 from hefesto_dualsense4unix.interface.pacotes import (
     Contexto,
     a01_jogar,
-    a07_lancadores,
     a09_sistema,
 )
 
@@ -231,13 +230,21 @@ def test_o_gerador_nao_escreve_a_bancada_como_efeito_de_import() -> None:
 # ---------------------------------------------------------------------------
 # 3 — A PALAVRA DA TELA SAI DA DONA, nas quatro superfícies
 # ---------------------------------------------------------------------------
+def _primeiro_chip(fita: str) -> str:
+    """O primeiro chip de controle da fita — o `Todos` não é aparelho."""
+    chips = [c for c in fita.split('<label class="chip')[1:] if ">Todos<" not in c]
+    return chips[0] if chips else fita
+
+
 def _superficies(estado: dict[str, Any], mesa: list[dict[str, Any]]) -> dict[str, str]:
     """As quatro superfícies em que a palavra mora, numa leitura só."""
     ctx = Contexto(state=estado, mesa=mesa, conectados=estado["controllers"], estados={})
     cartoes = a01_jogar.pacote(ctx)["cartoes"]
     return {
         "cartão da Jogar": str(cartoes[UNIQ_A]["identidade"]),
-        "chip da Lançadores": a07_lancadores._chip(mesa[0]),
+        # A FITA PRÓPRIA DA 07 SAIU EM 22/09/2026; o chip que a Lançadores
+        # mostra é o do piloto, o mesmo das dez abas.
+        "chip da Lançadores": _primeiro_chip(hefesto_vivo._fita(mesa, "07-lancadores.html")),
         "chip da Sistema": a09_sistema._um_chip(mesa[0]),
         "linha da Sistema": a09_sistema._linha_de_identidade(estado["controllers"][0], mesa),
     }

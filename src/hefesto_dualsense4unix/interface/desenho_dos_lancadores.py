@@ -393,16 +393,18 @@ SEM_LISTA = "<!-- ainda não há lista para este cartão -->"
 #: o comentário não é vazio, e o navegador o renderiza como nada.
 SEM_FRASE = "<!-- a primeira leitura da Steam ainda não voltou -->"
 
-#: A frase da lista de jogos VAZIA do cartão da Steam. Ela existe pela mesma
-#: razão do de cima, e diz o que o travessão não dizia: a lista tem QUATRO
-#: origens (falta o atalho · linha intocável · você tirou · você dispensou), e
-#: vazia significa que nenhuma delas tem item — não que ninguém olhou.
+#: A LISTA DE JOGOS VAZIA DO CARTÃO DA STEAM — e ela deixou de ser uma frase
+#: em 22/09/2026. Era *«Nada pendente, e você não tirou nem dispensou nenhum
+#: jogo.»*, e ela mandou sair: *"isso na steam essa frase tem que sumir pra
+#: nivelarmos a altura do bloco da styeam com demais."* A frase e a linha de
+#: cima dela custavam 28 px que só o cartão da Steam pagava (156 contra 128 da
+#: fileira de baixo), e o desenho da aba já dizia que a lista *"só aparece
+#: quando há o que dizer"* (o comentário da `.lanc-fora`, em `aba07.py`).
 #:
-#: **ENCURTADA EM 11/09/2026 — A2-018, aprovada por ela.** As duas metades
-#: continuam inteiras; o que saiu foi a sintaxe torcida de *"nenhum que você
-#: tenha tirado ou dispensado"*, que é a construção que mais custa a quem
-#: traduz. 72 → 58 caracteres.
-LISTA_VAZIA = "Nada pendente, e você não tirou nem dispensou nenhum jogo."
+#: É UM COMENTÁRIO pela razão de :data:`SEM_LISTA`: `""` viraria travessão no
+#: `escrever()` do BOOTSTRAP. E comentário não conta para o `:empty`, então a
+#: `.lanc-fora:not(:empty)` fica sem a borda e sem a margem de cima.
+LISTA_VAZIA = "<!-- nenhum jogo pendente, tirado ou dispensado na Steam -->"
 
 
 def acoes_html(lanc: Lancador) -> str:
@@ -636,8 +638,8 @@ class JogoNaLista:
     botao: str = ""
 
 
-def linhas_de_jogos(itens: list[JogoNaLista], vazio: str = "") -> str:
-    """A lista de jogos do cartão, ou a frase de lista vazia.
+def linhas_de_jogos(itens: list[JogoNaLista]) -> str:
+    """A lista de jogos do cartão, ou `""` sem jogo nenhum.
 
     O `data-v` DE CADA LINHA É O APPID, e não o rótulo: dois jogos podem ter o
     mesmo nome na biblioteca (uma demo e o jogo), e `rotulo_do_jogo` cai para
@@ -646,7 +648,7 @@ def linhas_de_jogos(itens: list[JogoNaLista], vazio: str = "") -> str:
     pelo `nome_do_kernel` e não pelo rótulo.
     """
     if not itens:
-        return f'<div class="lanc-vazio">{_e(vazio)}</div>' if vazio else ""
+        return ""
     linhas = []
     for j in itens:
         botao = (
@@ -1494,7 +1496,7 @@ def lista_de_jogos(lida: Leitura) -> str:
                     gesto="voltar-a-perguntar", botao="Voltar a perguntar")
         for a, r in lida.dispensados
     ]
-    return linhas_de_jogos(itens, vazio=LISTA_VAZIA)
+    return linhas_de_jogos(itens) or LISTA_VAZIA
 
 
 def acao_de_localizar(chave: str, rotulo: str = ADICIONAR_ROTULO) -> Acao:

@@ -90,7 +90,10 @@ gi.require_version("WebKit2", "4.1")
 from gi.repository import Gdk, GLib, Gtk, WebKit2  # noqa: E402
 
 from hefesto_dualsense4unix.app import theme as tema  # noqa: E402
-from hefesto_dualsense4unix.interface.folha_da_casa import FOLHA_DA_CASA  # noqa: E402
+from hefesto_dualsense4unix.interface.folha_da_casa import (  # noqa: E402
+    CLASSE_DA_ESPERA,
+    FOLHA_DA_CASA,
+)
 from hefesto_dualsense4unix.utils import identidade as _identidade  # noqa: E402
 
 #: O DONO DO NOME. A barra da janela LÊ daqui — ver
@@ -149,6 +152,27 @@ SEGUNDOS_PARA_ESQUECER_O_CRASH = 60.0
 #: O nome do canal de mensagens. A página o pronuncia em
 #: ``window.webkit.messageHandlers.<canal>.postMessage``.
 CANAL_PADRAO = "hefesto"
+
+#: QUANTO A PÁGINA ESPERA A PRIMEIRA PINTURA antes de aparecer assim mesmo.
+#:
+#: No vídeo dela a pintura chega em 1 a 2 quadros (33 a 66 ms) depois de a
+#: página aparecer. O prazo é a rede de segurança do caso em que o piloto NÃO
+#: pinta — travado, ou sem o bootstrap: aí a tela mostra o arquivo como está
+#: (o desenho), que é o comportamento de antes, em vez de ficar sem miolo.
+PRAZO_DA_ESPERA_MS = 1500
+
+#: O ROTEIRO DA ESPERA — ver ``CLASSE_DA_ESPERA`` em `interface/folha_da_casa`.
+#:
+#: Ele roda no INÍCIO do documento (`UserScriptInjectionTime.START`): o WebKit
+#: o injeta quando o parser insere o `<html>`, antes do primeiro quadro — e é
+#: esse o instante que interessa, porque o defeito é o que aparece ANTES de o
+#: piloto chegar. Sem `<html>` ele não faz nada, e a página aparece como antes.
+ROTEIRO_DA_ESPERA = (
+    "(function(){var h=document.documentElement;if(!h)return;"
+    f"h.classList.add('{CLASSE_DA_ESPERA}');"
+    f"setTimeout(function(){{h.classList.remove('{CLASSE_DA_ESPERA}');}},"
+    f"{PRAZO_DA_ESPERA_MS});}})();"
+)
 
 #: O QUE O DESENHO PEDE NO MÍNIMO, em pixels.
 #:
@@ -213,10 +237,51 @@ PISO_DA_VISTA = 809
 #: dois e apaga esta linha.
 ALTURA_DO_DESENHO = PISO_DA_VISTA
 
-#: A ``Gtk.HeaderBar`` desta janela, medida (04/09/2026, GTK3 + adw-gtk3-dark):
-#: **46 px**. Ela fica FORA do miolo, então a janela na tela precisa pedir a
-#: altura do desenho MAIS ela.
-ALTURA_DA_BARRA = 46
+#: A ``Gtk.HeaderBar`` desta janela: **39 px**, e o número sai do
+#: :data:`CSS_DA_BARRA`. Ela fica FORA do miolo, então a janela na tela precisa
+#: pedir a altura do desenho MAIS ela.
+#:
+#: ERA 46 ATÉ 22/09/2026, a altura que o adw-gtk3-dark dá sozinho. Ela
+#: fotografou a janela ao lado do Chrome e escreveu por cima: *"altura da barra
+#: de navegação tá diferente do padrão e tem um circulo transparente em cada
+#: botão minimizar maximizar fechar"*. O vizinho que ela comparou mede 39 px, e
+#: os três botões dele são só o glifo, sem fundo.
+ALTURA_DA_BARRA = 39
+
+#: A BARRA NO JEITO DO VIZINHO — 22/09/2026, ver :data:`ALTURA_DA_BARRA`.
+#:
+#: O CÍRCULO ERA O TEMA: o adw-gtk3-dark pinta todo `button.titlebutton` com
+#: fundo branco a 10 % (medido: `rgba(255,255,255,0.1)`, 32 x 46 px), e é
+#: aquela pílula que ela via. Aqui o botão fica sem fundo em repouso e ganha
+#: um só no `:hover` e no `:active` — clicar continua dando resposta.
+#:
+#: O PROVEDOR É POR WIDGET (:func:`montar_a_barra`), e não de tela: uma regra
+#: de tela para `button` alcançaria todo botão GTK do processo, inclusive o
+#: popup do `<select>` que o WebKit desenha fora da página. Por widget, cada
+#: regra só casa o nó em que foi posta — por isso não há seletor descendente.
+CSS_DA_BARRA = """
+headerbar {
+  min-height: 39px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+button {
+  min-height: 24px;
+  min-width: 24px;
+  padding: 4px;
+  margin: 0;
+  border: none;
+  border-radius: 6px;
+  box-shadow: none;
+  background: none;
+}
+button:hover {
+  background-color: alpha(currentColor, 0.12);
+}
+button:active {
+  background-color: alpha(currentColor, 0.2);
+}
+"""
 
 #: A CARA DO BOTÃO DO MEIO, e ela tem DOIS estados — BARRA-MAXIMIZADA-01, 5ª volta.
 #:
@@ -446,9 +511,16 @@ def montar_a_barra(
     # título. Não depende do tema, não depende do compositor, e serve igual em
     # qualquer máquina — que é o contrato deste produto.
     barra.set_show_close_button(False)
+    estilo = Gtk.CssProvider()
+    estilo.load_from_data(CSS_DA_BARRA.encode("utf-8"))
+    barra.get_style_context().add_provider(estilo, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
     botoes: dict[str, Any] = {}
     for nome_do_icone, gesto, dica in BOTOES_DA_BARRA:
         botao = Gtk.Button()
+        botao.get_style_context().add_provider(estilo, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        # Centrado, o fundo do `:hover` fica quadrado (32 x 32) em vez de uma
+        # pílula da altura da barra.
+        botao.set_valign(Gtk.Align.CENTER)
         botao.set_image(Gtk.Image.new_from_icon_name(nome_do_icone, Gtk.IconSize.MENU))
         botao.set_relief(Gtk.ReliefStyle.NONE)
         botao.set_tooltip_text(dica)
@@ -502,6 +574,10 @@ class PonteDaTela:
         malformada. Se for ``None``, a recusa ainda é registrada em
         :attr:`recusas` e impressa no ``stderr`` — **nunca engolida**.
     :param folha: a folha de usuário; ``None`` para nenhuma.
+    :param esperar_a_pintura: esconde o que carrega dado até a primeira pintura
+        (:data:`ROTEIRO_DA_ESPERA`). Só serve a quem PINTA a página inteira a
+        cada troca — o piloto único; uma janela que não pinta ficaria
+        :data:`PRAZO_DA_ESPERA_MS` sem miolo a cada carga.
     """
 
     def __init__(
@@ -511,6 +587,7 @@ class PonteDaTela:
         ao_receber: Callable[[dict[str, Any]], None] | None = None,
         ao_recusar: Callable[[str, str], None] | None = None,
         folha: str | None = FOLHA_DA_CASA,
+        esperar_a_pintura: bool = False,
     ) -> None:
         self.canal = canal
         self._ao_receber = ao_receber
@@ -534,6 +611,16 @@ class PonteDaTela:
                     folha,
                     WebKit2.UserContentInjectedFrames.TOP_FRAME,
                     WebKit2.UserStyleLevel.USER,
+                    None,
+                    None,
+                )
+            )
+        if esperar_a_pintura:
+            ucm.add_script(
+                WebKit2.UserScript(
+                    ROTEIRO_DA_ESPERA,
+                    WebKit2.UserContentInjectedFrames.TOP_FRAME,
+                    WebKit2.UserScriptInjectionTime.START,
                     None,
                     None,
                 )
@@ -665,6 +752,7 @@ class JanelaDaAba:
         canal: str = CANAL_PADRAO,
         folha: str | None = FOLHA_DA_CASA,
         tamanho: tuple[int, int] | None = None,
+        esperar_a_pintura: bool = False,
     ) -> None:
         self.arquivo = arquivo
         self.titulo_esperado = titulo_esperado
@@ -689,7 +777,8 @@ class JanelaDaAba:
         self._viva_desde = time.monotonic()
 
         self.ponte = PonteDaTela(
-            canal=canal, ao_receber=ao_receber, ao_recusar=ao_recusar, folha=folha
+            canal=canal, ao_receber=ao_receber, ao_recusar=ao_recusar, folha=folha,
+            esperar_a_pintura=esperar_a_pintura,
         )
         self.view = self.ponte.view
         self.view.connect("load-changed", self._carregou)

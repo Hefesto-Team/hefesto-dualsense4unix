@@ -79,7 +79,7 @@ tem, sem tocar arquivo de fora.
 FATO SUBSTITUÍDO — 02/09/2026, corretivo. Aqui estava escrito que **a frase de
 recusa NÃO CHEGA À TELA DELA**, e que toda frase deste arquivo era escrita para
 um dia futuro. **Isso caducou no mesmo dia:** o piloto ganhou
-`_recusou_dizendo` (`hefesto_vivo.py:3477`), e o `except` de `trabalhar()` põe a
+`_recusou_dizendo` (`hefesto_vivo.py:3485`), e o `except` de `trabalhar()` põe a
 frase no cartão pelo `idle_add`, na hora do clique e não no tique seguinte.
 
 O QUE MUDOU EM 13/09/2026 (FRASES-E-DICAS-01): **nenhuma frase de recusa fala
@@ -114,7 +114,7 @@ mesmo tempo, medidas contra a página que o produto renderiza:
 
 * das TRÊS opções que a tela dela oferece, DUAS viraram clique morto — e uma
   delas era a única forma de desligar o teclado por esta aba. Morto **e mudo,
-  por contrato**: `_recusou_dizendo` (`hefesto_vivo.py:3477`) levava à tela a
+  por contrato**: `_recusou_dizendo` (`hefesto_vivo.py:3485`) levava à tela a
   frase do `RuntimeError` e NÃO a do `ValueError`, porque clique-inválido fala
   com quem programa. Transformar uma opção de verdade em clique-inválido é
   justamente pedir esse silêncio para o clique dela;
@@ -376,7 +376,7 @@ def _o_que_a_pagina_oferece() -> frozenset[str]:
     ABERTO e sem trocar de aba. O arquivo muda, o selo muda, o pacote passa a
     emitir a palavra nova — e o DOM carregado ainda é o antigo, então a escrita
     volta a ser descartada até o próximo carregamento. Trocar de aba já
-    recarrega (`hefesto_vivo.py:4711`, `_ir`), e reabrir também. Ler o DOM em vez do
+    recarrega (`hefesto_vivo.py:4719`, `_ir`), e reabrir também. Ler o DOM em vez do
     arquivo exigiria uma pergunta ao piloto que o `Contexto` não tem.
     """
     global _OFERTAS
@@ -2878,7 +2878,7 @@ def tecla_escrita(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     trava; o `change` que vem depois a atualiza com o texto final.
 
     A RECUSA É `RuntimeError`, e não `ValueError`, de propósito: o
-    `_recusou_dizendo` do piloto (`hefesto_vivo.py:3477`) guarda a classe da
+    `_recusou_dizendo` do piloto (`hefesto_vivo.py:3485`) guarda a classe da
     exceção no relato, e `ValueError` é a linguagem de quem programa. Desde
     13/09/2026 nenhuma das duas chega à tela: a combinação que ela digitou e o
     produto não sabe digitar pisca a recusa no campo (FRASES-E-DICAS-01).
@@ -4037,7 +4037,7 @@ SEM_GESTO = {
 #: levantar. **Isso caducou porque o `return` mudo morreu** — os dois ramos de
 #: "nada a fazer" (aqui e no `guardar-definicoes`) passaram a RECUSAR DIZENDO, e
 #: `recusou dizendo` vem ANTES de `aceito sem eco` na ordem de `classe()`
-#: (`hefesto_vivo.py:1549`). Logo esta declaração NÃO cobre mais o caso do
+#: (`hefesto_vivo.py:1555`). Logo esta declaração NÃO cobre mais o caso do
 #: não-fazer-nada calado: ele voltou a ser visível para a régua do aparelho, com
 #: nome próprio. O que `SEM_ECO` cobre é só o que está escrito acima — o daemon
 #: não publica conteúdo de perfil, e o efeito das linhas "ACEITOU" mora no disco.

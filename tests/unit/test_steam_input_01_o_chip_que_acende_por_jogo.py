@@ -846,3 +846,29 @@ def test_o_gesto_esta_registrado_e_declara_o_que_grava() -> None:
     assert aba.GESTO_DO_STEAM_INPUT not in aba.BOTOES_SEM_DONO, (
         "o chip está listado como sem dono E tem gesto — a lista manda a "
         "próxima pessoa construir o que já está construído")
+
+
+def test_sem_controle_na_mesa_nenhum_botao_do_modo_acende(lar) -> None:
+    """O Modo apaga com a mesa vazia — pedido dela, 22/09/2026.
+
+    *"ligado mesmo sem controle"*: a aba sem controle nenhum mostrava o «Steam
+    Input» aceso, porque o daemon e a lista dela ainda diziam o degrau 4. A
+    mesma ponte, com UM controle na mesa, volta a acender o Steam Input — é o
+    que separa a cura de um Modo que nunca acende.
+
+    A MORDIDA: faça `a01_jogar._a_fileira_com_a_mesa` devolver `tela` sempre e
+    a primeira metade reprova com o «Steam Input» aceso sobre mesa nenhuma.
+    """
+    _ponte_de_pe()
+
+    vazio = aba.pacote(_ctx())
+    assert vazio["steam-input-aceso"] == "" and vazio["modo-aceso"] == "", (
+        f"sem controle na mesa o Modo acendeu: steam={vazio['steam-input-aceso']!r} "
+        f"modo={vazio['modo-aceso']!r}")
+
+    ctx = _ctx()
+    ctx.mesa.append({"pref": "p1", "jogador": 1, "uniq": "aa:bb:cc:00:00:01",
+                     "transporte": "usb", "via": "USB", "cor": "", "nome": ""})
+    com_um = aba.pacote(ctx)
+    assert com_um["steam-input-aceso"] == "steam", (
+        f"com um controle na mesa o Steam Input não acendeu: {com_um['steam-input-aceso']!r}")

@@ -281,7 +281,7 @@ def test_o_chip_da_fita_nomeia_os_vinte_e_oito_modelos() -> None:
     `if nome in (…os quatro do desenho…)` reprova neste caso, e não em nenhum
     outro desta casa.
     """
-    from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07
+    from hefesto_dualsense4unix.interface import hefesto_vivo
 
     nomes = sorted({(ln.get("nome") or "").strip() for ln in _mapa()} - {""})
     assert len(nomes) == 28, (
@@ -289,11 +289,14 @@ def test_o_chip_da_fita_nomeia_os_vinte_e_oito_modelos() -> None:
         f"mapeou mais um, o número sobe — o que não pode é o chip parar nos "
         f"quatro do desenho.")
 
+    ids = {(ln.get("nome") or "").strip(): ln["id"] for ln in _mapa()}
     faltaram = []
     for nome in nomes:
-        mesa = [{"pref": "p1", "jogador": 1, "cor": "sim", "nome": nome,
+        mesa = [{"pref": "p1", "jogador": 1, "cor": ids[nome], "nome": nome,
                  "via": "USB", "transporte": "usb", "alvo": True}]
-        fita = a07.fita_html(mesa)
+        # A FITA QUE O PRODUTO PINTA NA 07 desde 22/09/2026 — a própria da aba
+        # (`a07_lancadores.fita_html`) saiu, e a lei dos 28 vale para esta.
+        fita = hefesto_vivo._fita(mesa, "07-lancadores.html")
         if nome not in fita:
             faltaram.append(nome)
     assert not faltaram, (
@@ -309,13 +312,17 @@ def test_o_chip_nao_nomeia_modelo_nenhum_com_a_mesa_vazia() -> None:
     exatamente o defeito que esta leva existe para matar: era assim que a fita
     dizia `P1 · Cosmic Red · USB` com um White na mesa dela.
     """
-    from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07
+    from hefesto_dualsense4unix.interface import hefesto_vivo
 
-    fita = a07.fita_html([])
+    fita = hefesto_vivo._fita([], "07-lancadores.html")
     nomes = {(ln.get("nome") or "").strip() for ln in _mapa()} - {""}
     achados = sorted(n for n in nomes if n in fita)
     assert not achados, (
         f"a fita de uma mesa VAZIA nomeia {achados} — o desenho voltou a mandar "
         f"na tela do produto.")
-    assert "Selecionar:" in fita and "Todos" in fita, (
-        f"a fita perdeu a ESTRUTURA e não só a identidade:\n{fita}")
+    # A ESTRUTURA TAMBÉM SAI desde 22/09/2026, pedido dela: *"quando não tiver
+    # controle Não Aparece o selecionar:"*. A fita é emitida (o piloto não se
+    # cala), mas vazia: sem rótulo e sem `Todos` sobre controle nenhum.
+    assert 'class="fita' in fita, "o piloto se calou com a mesa vazia"
+    assert "Selecionar" not in fita and "Todos" not in fita, (
+        f"a fita da mesa vazia voltou a oferecer escolha sobre nada:\n{fita}")

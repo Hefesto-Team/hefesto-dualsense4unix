@@ -1694,7 +1694,7 @@ def _coluna(c, e=None, conectado=None):
     #    tela continuava mostrando `0 /255` e `60 /255` do desenho com o daemon
     #    dizendo `—`.
     # 2. O DONO DO CLIQUE. O ouvinte sobe com
-    #    `closest` pela lista de assentos (`hefesto_vivo.py:1546`) e lê
+    #    `closest` pela lista de assentos (`hefesto_vivo.py:1552`) e lê
     #    `dataset.controle || dataset.uniq`. Achava este `<div>` e lia `""`, de
     #    modo que "Testar" e "Parar" chegavam ao pacote sem controle nenhum e
     #    RECUSAVAM SEMPRE — para ela, com o rato de verdade. A régua unitária

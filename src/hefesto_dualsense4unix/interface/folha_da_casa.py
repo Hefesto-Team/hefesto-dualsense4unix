@@ -135,6 +135,26 @@ import re
 #: bootstrap, nas dez páginas, e uma classe que o piloto acende sem a folha
 #: correspondente é uma classe que não faz nada — o defeito que esta casa
 #: chama de *acender luz sem lâmpada*.
+#: ``.hef-esperando`` É A PÁGINA QUE O PILOTO AINDA NÃO PINTOU — 22/09/2026.
+#: Ela gravou a troca de abas e mostrou: *"tem alguma espécie de mockup em todas
+#: as páginas que quando eu mudo de aba sempre mostra uma versão mockup delas
+#: antes de arrumar"*. Medido no vídeo dela, quadro a quadro: a cada troca, o
+#: arquivo publicado — que É o desenho aprovado, com os dois controles do
+#: mockup — fica 1 a 2 quadros (33 a 66 ms) na tela antes da primeira pintura.
+#:
+#: Quem acende a classe é o roteiro de ESPERA (`gui/ponte_da_tela`,
+#: ``ROTEIRO_DA_ESPERA``), no início do documento; quem apaga é o fim do
+#: ``pintar`` do bootstrap, ou o prazo do próprio roteiro se o piloto não
+#: pintar. Só o que carrega DADO some: o miolo e as três peças vivas do
+#: cabeçalho. A logo, o nome, a tira de abas e o rodapé ficam — é o que faz a
+#: troca parecer troca, e não uma janela piscando.
+#:
+#: `opacity` E NÃO `visibility`: três páginas têm filho com
+#: ``visibility:visible`` (`.motor .teto.mx.on`, `.desfecho.on`), que furaria
+#: o esconderijo. Opacidade zero no pai esconde todo descendente, e nenhum dos
+#: dois muda o layout.
+CLASSE_DA_ESPERA = "hef-esperando"
+
 FOLHA_DA_CASA = (
     ".nota{display:none !important}"
     ".hef-sem-item{display:none !important}"
@@ -144,6 +164,8 @@ FOLHA_DA_CASA = (
     "outline:1px solid var(--green,#50fa7b) !important}"
     ".hef-recusou{border-color:var(--orange,#ffb86c) !important;"
     "outline:1px solid var(--orange,#ffb86c) !important}"
+    ".hef-esperando div.miolo,.hef-esperando .fita,.hef-esperando .conectado,"
+    ".hef-esperando .perfil-ativo{opacity:0 !important}"
 )
 
 

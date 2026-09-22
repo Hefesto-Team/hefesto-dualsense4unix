@@ -57,8 +57,8 @@ ESTADOS = {
     # plástico quando a cor foi lida, e pelo rádio ela não é
     "sem-cor-lida": "document.querySelectorAll('.fita .chip.plastico')"
                     ".forEach(c => c.classList.remove('plastico'));",
-    # a fita com um chip só: a 07 nasce assim, e é o que a aba pinta com a
-    # lista de controles vazia (`a07_lancadores.fita_html`)
+    # a fita com um chip só: é assim que a 07 está no arquivo publicado, antes
+    # do primeiro tique
     "so-todos": "document.querySelectorAll('.fita .chip')"
                 ".forEach(c => { if ((c.textContent || '').trim() !== 'Todos') c.remove(); });",
     # o cabo: todo controle com a cor lida ganha a classe do plástico
