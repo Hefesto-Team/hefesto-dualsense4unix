@@ -591,6 +591,11 @@ class DraftConfig(BaseModel):
     # troca de botões que ela acabou de guardar. Passthrough, fora do gate
     # `mesmo_perfil`: é configuração dela, não regra de identidade.
     source_remapeamento: dict[str, str] | None = None
+    # MOVIMENTO-EM-QUALQUER-MASCARA-01 (21/09/2026): o QUARTO. `Profile.movimento`
+    # nasceu sem escritor na janela, e o Salvar o apagava — medido na suíte do
+    # mesmo dia: o perfil entrava com a mira por movimento e saía de
+    # `to_profile` com `None`. Passthrough, fora do gate, pela mesma razão.
+    source_movimento: Any | None = None
 
     source_name: str | None = None
 
@@ -696,6 +701,7 @@ class DraftConfig(BaseModel):
             source_button_actions=profile.button_actions,
             source_teclado_emulado=profile.teclado_emulado,
             source_remapeamento=profile.remapeamento,
+            source_movimento=profile.movimento,
             source_name=profile.name,
         )
 
@@ -890,6 +896,7 @@ class DraftConfig(BaseModel):
             button_actions=self.source_button_actions,
             teclado_emulado=self.source_teclado_emulado,
             remapeamento=self.source_remapeamento,
+            movimento=self.source_movimento,
             mouse=mouse_cfg,
             mic=mic_cfg,
             speaker=speaker_cfg,

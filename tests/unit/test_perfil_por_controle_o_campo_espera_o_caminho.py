@@ -624,12 +624,17 @@ def test_o_interruptor_de_sensor_existe_e_e_por_peca() -> None:
         for nome, _ in inspect.getmembers(sensor_hub_module.SensorHub, inspect.isfunction)
         if not nome.startswith("_")
     }
+    # AS DUAS PORTAS DA MIRA POR MOVIMENTO entraram em 21/09/2026
+    # (MOVIMENTO-EM-QUALQUER-MASCARA-01, E4): `angulo_do_movimento` drena o
+    # ângulo integrado no ritmo do nó, `velocidade_do_movimento` só lê.
     assert publicos == {
+        "angulo_do_movimento",
         "entradas",
         "grab_do_movimento",
         "leitura",
         "reconciliar",
         "stop_all",
+        "velocidade_do_movimento",
     }, f"o SensorHub mudou de superfície pública: {sorted(publicos)}"
 
     from hefesto_dualsense4unix.daemon import ipc_handlers, ipc_server

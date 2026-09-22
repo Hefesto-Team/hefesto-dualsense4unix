@@ -302,6 +302,17 @@ _PERNAS: dict[str, dict[str, Resposta]] = {
             "profiles/manager.py::apply_remapeamento", "nenhum lançador no caminho"
         ),
     },
+    "movimento": {
+        VOLTA: NaoSeAplica(
+            "é depositado no `store` do gerente e lido por tique pelos dois "
+            "laços (`dispatch_gamepad` e o co-op); o store não morre com o cabo, "
+            "e o ângulo acumulado do controle que caiu é descartado."
+        ),
+        RESISTE: NaoSeAplica("não é byte do aparelho."),
+        INDEPENDE: Cumprida(
+            "profiles/manager.py::apply_movimento", "nenhum lançador no caminho"
+        ),
+    },
     # ---------------- o que NÃO chega ao controle ----------------
     "ponte": {
         VOLTA: NaoSeAplica("memória de qual ponte funcionou; nada vai ao controle."),

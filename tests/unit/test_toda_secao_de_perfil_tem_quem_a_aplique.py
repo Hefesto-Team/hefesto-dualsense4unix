@@ -197,6 +197,19 @@ _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
             "ativação já passam, inclusive a do boot, que monta o gerente à mão."
         )
     ),
+    "movimento": SecaoDireta(
+        razao=(
+            "MOVIMENTO-EM-QUALQUER-MASCARA-01 (21/09/2026). `apply_movimento` "
+            "resolve o arranjo (`core/roteador_de_movimento.resolver`) e o "
+            "DEPOSITA no `store` do gerente — sempre, inclusive `None`, para a "
+            "mira do jogo anterior não contagiar o seguinte. Nada é escrito no "
+            "controle. Quem obedece são os dois laços por tique "
+            "(`gamepad.dispatch_gamepad` e `coop.CoopManager.forward_all`, pelo "
+            "mesmo `aplicar_o_movimento`). Não é applier injetado pelo mesmo "
+            "motivo medido do `remapeamento`: o `store` é o que TODAS as rotas "
+            "de ativação passam, inclusive a do boot."
+        )
+    ),
     "controllers": SecaoDireta(
         razao=(
             "Mapa ADITIVO de overrides por controle físico: `apply` o resolve "

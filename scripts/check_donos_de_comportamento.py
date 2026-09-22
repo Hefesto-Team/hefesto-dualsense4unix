@@ -67,7 +67,10 @@ MAPA = RAIZ / "docs" / "data" / "donos-de-comportamento.csv"
 #: cinco laudos mediram. Quem declarar uma duplicata nova estoura o teto de
 #: propósito: a alternativa é ela entrar calada, e foi assim que 27.689 linhas
 #: de ``interface/pacotes/`` nasceram sem ninguém somar o custo.
-TETO_DE_LINHAS_DUPLICADAS = 2397
+#:
+#: 21/09/2026 — 2.301: a `_VigiaDaSteam` (96 linhas) saiu da aba 07 com os
+#: botões que só a Steam tinha, e a duplicata dela saiu do mapa junto.
+TETO_DE_LINHAS_DUPLICADAS = 2301
 
 #: Onde a tela nova mora. Um símbolo SO-GTK que apareça aqui deixou de ser
 #: SO-GTK — é o item 3 do cabeçalho.
