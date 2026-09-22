@@ -154,6 +154,49 @@ def test_o_perfil_de_ontem_continua_saindo_igual() -> None:
     assert "movimento" not in perfil.model_dump()
 
 
+#: Uma mira FORA do padrão em todo campo que o salvar poderia zerar — com o
+#: padrão, um `None` virando `ProfileMovimentoConfig()` passaria despercebido.
+_MIRA_DELA = ProfileMovimentoConfig(
+    destino="mouse", sensibilidade=9, eixo_horizontal="roll",
+    inverter_vertical=True, zona_morta_graus_s=18.0, gatilho="l2")
+
+
+def test_o_salvar_perfil_transporta_a_mira_por_movimento() -> None:
+    """ARRANQUE `movimento=self.source_movimento` de `DraftConfig.to_profile` e
+    este teste reprova nas duas linhas.
+
+    O DEFEITO, medido pela suíte em 21/09/2026, no mesmo dia em que o campo
+    nasceu: `to_profile` reconstrói o perfil do zero, e a mira não tinha
+    transporte — todo «Salvar Perfil» e todo gesto de aba que grava o perfil
+    (Controles, Vibração, Perfis) devolvia `movimento=None`, e a mira dela
+    sumia do disco sem uma palavra. Com nome novo ela vai junto, como o
+    `remapeamento`: é configuração dela, não regra de identidade do perfil.
+    """
+    from hefesto_dualsense4unix.app.draft_config import DraftConfig
+
+    perfil = Profile(name="Com Mira", match=MatchAny(type="any"), movimento=_MIRA_DELA)
+    rascunho = DraftConfig.from_profile(perfil)
+    assert rascunho.to_profile("Com Mira").movimento == _MIRA_DELA
+    assert rascunho.to_profile("Outro Nome").movimento == _MIRA_DELA
+
+
+def test_a_mira_sobrevive_a_ida_e_volta_pelo_disco() -> None:
+    """O caminho inteiro do Salvar, pelo disco do lar de mentira do conftest.
+
+    `save_profile` → `load_profile` → rascunho → `to_profile` → `save_profile`
+    → `load_profile`. A régua de cima mede o rascunho; esta mede que o disco
+    devolve o que recebeu, com o perfil sem mira continuando SEM a chave.
+    """
+    from hefesto_dualsense4unix.app.draft_config import DraftConfig
+    from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
+
+    save_profile(Profile(name="Mira Ida E Volta", match=MatchAny(type="any"),
+                         movimento=_MIRA_DELA))
+    rascunho = DraftConfig.from_profile(load_profile("Mira Ida E Volta"))
+    save_profile(rascunho.to_profile("Mira Ida E Volta"))
+    assert load_profile("Mira Ida E Volta").movimento == _MIRA_DELA
+
+
 def test_teto_abaixo_da_zona_morta_e_recusado_no_load() -> None:
     """ARRANQUE o `model_validator` e este teste reprova — o arranjo silencioso
     que nunca move nada só apareceria no meio da partida dela."""

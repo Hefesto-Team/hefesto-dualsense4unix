@@ -88,6 +88,18 @@ ISENTOS: dict[str, str] = {
         "o campo omitido quando vazio, o depósito na ativação, os dois "
         "`forward_buttons`, o transporte do Salvar e os quatro gestos da tela."
     ),
+    "movimento": (
+        "MOVIMENTO-EM-QUALQUER-MASCARA-01 (21/09/2026). A isenção é do "
+        "INSTRUMENTO, pela mesma razão do `remapeamento`: o irmão deste portão "
+        "dirige a JANELA GTK, e a mira por movimento não tem superfície lá — nem "
+        "na interface nova, ainda: quem a escreve hoje é o JSON do perfil. O "
+        "rascunho a TRANSPORTA (`DraftConfig.source_movimento`), porque "
+        "`to_profile` reconstrói o perfil do zero — e esta régua achou o "
+        "defeito no dia em que o campo nasceu: o Salvar devolvia `None`. ELE "
+        "TEM RÉGUA COM MORDIDA em `test_o_movimento_vale_em_qualquer_mascara.py` "
+        "(o transporte do Salvar, com o mesmo nome e com nome novo, e a ida e "
+        "volta pelo disco)."
+    ),
     "version": (
         "constante do esquema (`Literal[1] = 1`). Não é configuração dela, não "
         "há gesto que a mude e o pydantic recusa qualquer outro valor no load "
