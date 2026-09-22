@@ -170,15 +170,19 @@ def test_a_linha_do_cartao_leva_o_transporte(aba):
 
     Medido em 02/09/2026, com a foto: o desenho escreve
     `USB <span class="pt">•</span> Navega o PC` e o pacote mandava só
-    `Navega o PC` — o piloto escreve `textContent`, então o primeiro tique
-    apagava o transporte do cartão. A tela nascia dizendo por onde o controle
-    está ligado e parava de dizer meio segundo depois.
+    `Navega o PC` — o piloto escrevia `textContent`, então o primeiro tique
+    apagava o transporte do cartão.
+
+    DESDE 21/09/2026 A LINHA É HTML, e a razão é a bolinha verde de quem navega:
+    o texto não sabia devolvê-la (ver `a06_navegacao.linha_do_cartao`). A régua
+    passou a cobrar a MESMA marcação que o gerador escreve, com a bolinha.
     """
     _, _, pronto = aba
     linha = pronto["colunas"]["p1"]["navega"]
-    assert linha == "BT • Navega o PC", (
+    assert linha == '<span class="bolinha"></span>BT <span class="pt">•</span> Navega o PC', (
         f"o cartão do primário saiu {linha!r}. O `data-campo=\"navega\"` cobre "
-        "a linha inteira do desenho — sem o transporte, a pintura o APAGA.")
+        "a linha inteira do desenho — sem o transporte, a pintura o APAGA; sem a "
+        "bolinha, o primário perde o ponto verde.")
     assert "via" not in pronto["colunas"]["p1"], (
         "`via` voltou a ser chave própria: ela não tem endereço no desenho, e "
         "quem a recebia era o `navega`.")
@@ -187,8 +191,28 @@ def test_a_linha_do_cartao_leva_o_transporte(aba):
 def test_a_linha_do_cartao_nao_inventa_transporte(aba):
     """Sem casa na mesa, sai só o papel — nunca um transporte adivinhado."""
     _, mod, _ = aba
-    assert mod._linha_do_cartao({}, True) == "Navega o PC"
+    assert mod._linha_do_cartao({}, True) == '<span class="bolinha"></span>Navega o PC'
     assert mod._linha_do_cartao({}, False) == "Só a janela"
+
+
+def test_o_gerador_e_o_pacote_desenham_a_mesma_linha(aba):
+    """UM DONO, DOIS CHAMADORES — o que a bancada mostra é o que o tique pinta.
+
+    A MORDIDA: devolva ao `aba06.controle` a f-string que ele tinha — com a
+    bolinha escrita à mão — e troque o `PONTO` do pacote. As duas linhas
+    divergem, e o cartão pisca no primeiro tique entre a do desenho e a do
+    produto.
+    """
+    import onde
+
+    _, mod, _ = aba
+    doc = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
+    # O MIOLO INTEIRO DO `<div>`, e não um pedaço: a linha sem a bolinha é
+    # substring da linha com ela, e uma régua de `in` daria verde sobre o
+    # primário que perdeu o ponto verde.
+    for via, primario in (("USB", True), ("BT", False)):
+        miolo = f'data-hef-alvo="html">{mod.linha_do_cartao(via, primario)}</div>'
+        assert miolo in doc, f"a bancada e o tique divergem na linha {via!r}"
 
 
 def test_as_vinte_e_uma_linhas_saem_do_perfil(monkeypatch, tmp_path):

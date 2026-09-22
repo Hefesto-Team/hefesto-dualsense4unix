@@ -548,6 +548,33 @@ NAO_SAO_VALOR = {"cobertura", "sem_dono"}
 #: — "de todas as abas"), e não um segundo vocabulário.
 LUGAR_SEM_DONO = "*"
 
+#: O QUE O LUGAR VAZIO MOSTRA ONDE O TRAVESSÃO NÃO ALCANÇA — 21/09/2026.
+#:
+#: `{campo: valor}` na raiz do pacote. O molde escreve `—` só nos campos de
+#: TEXTO (`ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE`), e os campos de alvo `html` —
+#: um DESENHO — ficavam com o que o mockup desenhou. Ela fotografou isso com
+#: zero controles na mesa: a linha LEDs do P1 e do P2 ACESA em azul e vermelho,
+#: a do P3 e do P4 com o travessão, e o cartão da Navegação dizendo
+#: `P1 • P1 • Desconectado` em verde — *"p1,p2 tão diferentes do p3 e p4"*.
+#:
+#: QUEM SABE O DESENHO APAGADO É A ABA, e é por isso que o valor vem dela: o
+#: travessão é a palavra de um campo de texto, e num desenho seria apagar o
+#: desenho — ela pediu o contrário, *"tem que aparecer, mas não ligado"*. O
+#: despachante só aplica: em TODO lugar sem dono (o que nasceu vazio e o que
+#: esvaziou), para que os quatro tenham UMA leitura. `apagar_os_lugares_sem_dono`
+#: consome a chave; ela não viaja até a página.
+LUGAR_VAZIO = "vazio"
+
+#: AS MARCAS DO LUGAR — `{classe: [uniq, …]}` na raiz do pacote, 21/09/2026.
+#:
+#: Uma classe que a casca de UM lugar carrega por ser quem é — o `navega` da
+#: `06-navegacao`, o cartão verde de quem navega o PC. O gerador a escreve no
+#: P1 do desenho e ninguém a tirava: com a mesa vazia o P1 continuava verde
+#: afirmando um controle navegando, e com o P2 no comando o verde ficava no P1.
+#: O piloto acende a classe nos lugares da lista e apaga nos outros três; uma
+#: classe que o pacote não nomeia não é tocada.
+MARCAS_DO_LUGAR = "marcas"
+
 #: OS QUATRO LUGARES DA MESA DO DESENHO. O HTML nasce com eles todos — dois
 #: conectados e dois vazios, por decisão dela em 31/08 — e o produto tem de
 #: apagar o que a mesa de agora não preenche.
@@ -644,6 +671,10 @@ def apagar_os_lugares_sem_dono(
     # reescreve por cima do que o passo 0 da pintura acabou de pôr na tela, e
     # o que sobra é um travessão onde a aba tinha escrito o estado do lugar.
     ja_escrito = _o_que_o_bloco_ja_escreveu(carga)
+    # O QUE A ABA DISSE DO LUGAR VAZIO VENCE O TRAVESSÃO — ver `LUGAR_VAZIO`.
+    # Sai da carga AQUI, e não no `normalizar`, porque é esta conta que sabe
+    # QUAIS lugares estão vazios.
+    vazio = carga.pop(LUGAR_VAZIO, None) or {}
     for pref in apagar:
         colunas[pref] = dict.fromkeys(chaves - ja_escrito.get(pref, set()),
                                       TRAVESSAO)
@@ -667,6 +698,8 @@ def apagar_os_lugares_sem_dono(
         if IDENTIDADE_DO_LUGAR in chaves:
             colunas[pref][IDENTIDADE_DO_LUGAR] = (
                 f"P{pref[1:]} {PONTO_DO_ROTULO} {SEM_NINGUEM_AQUI}")
+        colunas[pref].update({k: v for k, v in vazio.items()
+                              if k not in ja_escrito.get(pref, set())})
     # A MOLDURA TAMBÉM, e não só o texto: com os travessões escritos, o card do
     # P2 continuava com a borda de CONECTADO e os botões de máscara acesos. Meio
     # apagado é pior que aceso — quem olha lê a borda antes de ler o campo.
@@ -1424,6 +1457,19 @@ def normalizar(pacote: dict[str, Any], para_pref: dict[str, str] | None = None) 
     blocos = pacote.get("blocos")
     if isinstance(blocos, dict) and blocos:
         fora["blocos"] = blocos
+    # AS DUAS CHAVES DO LUGAR — 21/09/2026, ver `LUGAR_VAZIO` e
+    # `MARCAS_DO_LUGAR`. São `dict` na raiz, e o laço acima come todo `dict`
+    # calado: é o mesmo buraco que o `blocos` passou dois dias dentro.
+    vazio = pacote.get(LUGAR_VAZIO)
+    if isinstance(vazio, dict) and vazio:
+        fora[LUGAR_VAZIO] = {str(k): v for k, v in vazio.items()
+                             if not isinstance(v, (dict, list))}
+    marcas = pacote.get(MARCAS_DO_LUGAR)
+    if isinstance(marcas, dict):
+        fora[MARCAS_DO_LUGAR] = {
+            str(classe): sorted({para_pref.get(str(u)) or para_pref.get(_so_hex(str(u)))
+                                 or str(u) for u in (lugares or [])})
+            for classe, lugares in marcas.items()}
     return fora
 
 

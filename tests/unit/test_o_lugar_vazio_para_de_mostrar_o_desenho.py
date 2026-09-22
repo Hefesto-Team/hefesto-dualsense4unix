@@ -330,10 +330,20 @@ def test_o_travessao_nao_pousa_em_marca_que_o_texto_nao_devolve(pacotes_mod):
 
     # e a leitura da página tem de estar ENXERGANDO alguma coisa: sem isto o
     # teste acima passaria por vacuidade no dia em que o parser quebrasse.
-    assert pacotes_mod.enderecos_que_o_texto_apaga("06-navegacao.html") == {
-        "navega"}, (
-        "a `06-navegacao` publicada perdeu o `<span class=\"bolinha\">` dentro "
-        "do `navega` — a razão desta régua mudou")
+    #
+    # A PRIMEIRA ÂNCORA TAMBÉM SAIU PELA PORTA DA MELHORA — 21/09/2026. Era
+    # `06-navegacao·navega`, a linha com a bolinha verde. Poupá-la do travessão
+    # guardava a bolinha, e o preço era um lugar ESVAZIADO dizendo `● USB •
+    # Navega o PC` com a mesa vazia — ela fotografou. A linha ganhou alvo
+    # `html` e dono (`a06_navegacao.linha_do_cartao`), a bolinha volta quando o
+    # controle volta, e o endereço saiu desta lista pela mesma porta que o
+    # `luz` da 04. A âncora cobra que ele NÃO volte a ela sem o alvo novo.
+    alvos_06 = pacotes_mod.alvos_da_pagina("06-navegacao.html")
+    assert "navega" not in pacotes_mod.enderecos_que_o_texto_apaga("06-navegacao.html"), (
+        "o `navega` da 06 voltou a ser texto com a bolinha dentro — o travessão "
+        "e a bolinha voltam a brigar")
+    assert alvos_06.get("navega") == {"html"}, (
+        f"o `navega` da 06 perdeu o alvo `html`: {alvos_06.get('navega')}")
     # A SEGUNDA ÂNCORA MUDOU DE ENDEREÇO — 03/09/2026, fato substituído. Ela era
     # `04-iluminacao·aceso`, e o `aceso` NÃO EXISTE MAIS na página publicada: a
     # cura de 02/09 renomeou o endereço para `luz`, com alvo `html`, justamente
@@ -577,6 +587,15 @@ def test_os_quatro_lugares_ficam_no_travessao_e_marcados(pacotes_mod, pagina):
             assert identidade == esperado, (
                 f"{pagina}/{pref}: a identidade do lugar vazio diz "
                 f"{identidade!r} e devia dizer {esperado!r}")
+        # O QUE A ABA DECLARA DO LUGAR VAZIO É A OUTRA EXCEÇÃO — 21/09/2026,
+        # `pacotes.LUGAR_VAZIO`. É um DESENHO apagado (os LEDs da 04), e a
+        # régua o cobra por igualdade com o que a aba declarou, campo a campo:
+        # nada além do travessão e dele.
+        declarado = dict(bruto.get(pacotes_mod.LUGAR_VAZIO) or {})
+        for campo, valor in declarado.items():
+            assert campos.pop(campo, None) == valor, (
+                f"{pagina}/{pref}: o `{campo}` do lugar vazio não é o que a aba "
+                "declarou em `LUGAR_VAZIO`")
         valores = set(campos.values())
         assert valores == {pacotes_mod.TRAVESSAO}, (
             f"{pagina}/{pref}: sobrou valor que não é travessão: {valores}")

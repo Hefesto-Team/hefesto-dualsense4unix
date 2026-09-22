@@ -911,7 +911,23 @@ BOOTSTRAP = r"""
       el.setAttribute(nome, t);
       return el.getAttribute(nome) === antes ? 0 : 1;
     }
-    if(el.textContent !== t){
+    // O TEXTO IGUAL COM MARCAÇÃO POR DENTRO TAMBÉM SE ESCREVE — 21/09/2026. O
+    // rótulo do lugar que NASCE vazio vem do desenho como `P3 <span
+    // class="pt">•</span> Desconectado`; o `textContent` dele é igual ao que o
+    // pacote manda, e a comparação sozinha o deixava como estava. Numa caixa
+    // `flex` os espaços em volta do `<span>` somem, e a tela dizia
+    // `P3•Desconectado` ao lado de um `P1 • Desconectado` — ela viu: *"p1,p2
+    // tão diferentes do p3 e p4"*. Escrever uma vez deixa os quatro com a
+    // mesma forma.
+    //
+    // SÓ QUANDO OS FILHOS SÃO O SEPARADOR, e nenhum outro: o `.pt` é o único
+    // filho que o texto devolve inteiro (o `•` está na string). Qualquer outro
+    // — a bolinha de quem navega, um endereço, um botão — o texto apagaria e
+    // não devolveria, que é o defeito que `enderecos_que_o_texto_apaga` guarda.
+    const so_o_ponto = !!el.firstElementChild
+      && Array.prototype.every.call(el.children, function(f){
+           return f.classList.contains('pt') && !f.firstElementChild; });
+    if(el.textContent !== t || so_o_ponto){
       el.textContent = t;
       // O PAINEL QUE MOSTRA O FIM. Um registro tem ordem: o que acabou de
       // acontecer é a última linha, e um painel de seis linhas que abre nas
@@ -1356,6 +1372,20 @@ BOOTSTRAP = r"""
         // dois controles são dois `class` reserializados por tique, para
         // sempre, sem que um lugar tenha mudado de dono.
         if(el.classList.contains('off')){ el.classList.remove('off'); }
+      }
+    }
+    // 1d. AS MARCAS DO LUGAR — 21/09/2026, `pacotes.MARCAS_DO_LUGAR`. A classe
+    // acende nos lugares da lista e apaga nos outros; a que o pacote não nomeia
+    // fica como está. Sem isto o `navega` da Navegação ficava no P1 do desenho
+    // para sempre: verde com a mesa vazia, verde com o P2 no comando.
+    for(const [classe, com] of Object.entries(p.marcas || {})){
+      for(const pref of ['p1', 'p2', 'p3', 'p4']){
+        const quer = (com || []).indexOf(pref) >= 0;
+        for(const el of document.querySelectorAll('[data-controle="' + pref + '"]')){
+          if(el.classList.contains(classe) !== quer){
+            el.classList.toggle(classe, quer); n += 1;
+          }
+        }
       }
     }
     // 2. OS CAMPOS POR CONTROLE — dentro do bloco daquele `data-controle`.
@@ -2291,29 +2321,33 @@ def _fita(mesa: list[dict[str, Any]], pagina: str) -> str:
     # A dela é a certa, e a razão é dela também: ver QUE HÁ um controle ali
     # importa mais do que saber a cor dele. Sumir da fita esconderia o controle
     # do rádio da própria fonte de identidade que a lei manda consultar.
-    if not mesa:
-        # MESA VAZIA é a única razão de não pintar: sem controle nenhum não há
-        # chip a emitir, e devolver "" deixa a fita como está.
-        #
-        # A GUARDA ERA MAIOR E MENTIA — 03/09/2026. Ela dizia
-        # `any(not c.get("cor") for c in mesa)`, e a intenção era esperar a
-        # resposta do leitor de plástico, que é perguntado em thread. Só que
-        # pelo RÁDIO a resposta NUNCA vem: o mapa de canais responde
-        # `identidade.cor_do_aparelho = não` e `mesa_viva.LeitorDeCor` marca
-        # aquele endereço como perguntado com `None` para sempre. Com um
-        # controle no cabo e outro no rádio — a mesa dela — a fita ficava
-        # eternamente no desenho, e a tela dizia `P1 · Cosmic Red · USB` /
-        # `P2 · Starlight Blue · BT` sobre um White e um controle sem cor
-        # legível. Fotografado nas dez abas em 03/09/2026.
-        #
-        # ESPERAR PELO QUE NUNCA CHEGA É CAIR DE VOLTA NO MOCKUP, que é
-        # exatamente o que a lei da identidade proíbe. Quem trata a cor que não
-        # veio é o `monta.fita`: o chip nasce sem `--plastico`, e o `.chip` cai
-        # no tom neutro que a folha de estilo já declara como recurso.
-        #
-        # `SystemExit` NÃO é `Exception` — herda de `BaseException`, e um
-        # `except Exception` passa ao lado. O `except` abaixo cobre os dois.
-        return ""
+    # A MESA VAZIA TAMBÉM PINTA — 21/09/2026, e o "deixa a fita como está" que
+    # morava aqui era o defeito. Com zero controles o `return ""` deixava na
+    # tela os dois chips do DESENHO (`P1 · Cosmic Red · USB`,
+    # `P2 · Starlight Blue · BT`), e ela fotografou isso nas dez abas: *"dois
+    # controles conectados quando não tem nenhum"*. `monta.fita(mesa=[])` já
+    # sabia a resposta certa — o rótulo e nenhum chip
+    # (`test_a_mesa_vazia_nao_inventa_chip`); faltava o piloto perguntar.
+    #
+    # A GUARDA ERA MAIOR E MENTIA — 03/09/2026. Ela dizia
+    # `any(not c.get("cor") for c in mesa)`, e a intenção era esperar a
+    # resposta do leitor de plástico, que é perguntado em thread. Só que
+    # pelo RÁDIO a resposta NUNCA vem: o mapa de canais responde
+    # `identidade.cor_do_aparelho = não` e `mesa_viva.LeitorDeCor` marca
+    # aquele endereço como perguntado com `None` para sempre. Com um
+    # controle no cabo e outro no rádio — a mesa dela — a fita ficava
+    # eternamente no desenho, e a tela dizia `P1 · Cosmic Red · USB` /
+    # `P2 · Starlight Blue · BT` sobre um White e um controle sem cor
+    # legível. Fotografado nas dez abas em 03/09/2026.
+    #
+    # ESPERAR PELO QUE NUNCA CHEGA É CAIR DE VOLTA NO MOCKUP, que é
+    # exatamente o que a lei da identidade proíbe. Quem trata a cor que não
+    # veio é o `monta.fita`: o chip nasce sem `--plastico`, e o `.chip` cai
+    # no tom neutro que a folha de estilo já declara como recurso.
+    #
+    # `SystemExit` NÃO é `Exception` — herda de `BaseException`, e um
+    # `except Exception` passa ao lado. O `except` abaixo cobre os dois.
+    #
     # O TÍTULO É DA PÁGINA, E TEM DONO — 05/09/2026. Sem esta linha a troca do
     # bloco inteiro levava embora o `title` PRÓPRIO da 06 — *"Não se aplica:
     # mouse, teclado e gestos saem de um controle só…"* — e punha no lugar o

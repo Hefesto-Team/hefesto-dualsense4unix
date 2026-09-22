@@ -79,7 +79,7 @@ tem, sem tocar arquivo de fora.
 FATO SUBSTITUÍDO — 02/09/2026, corretivo. Aqui estava escrito que **a frase de
 recusa NÃO CHEGA À TELA DELA**, e que toda frase deste arquivo era escrita para
 um dia futuro. **Isso caducou no mesmo dia:** o piloto ganhou
-`_recusou_dizendo` (`hefesto_vivo.py:3443`), e o `except` de `trabalhar()` põe a
+`_recusou_dizendo` (`hefesto_vivo.py:3477`), e o `except` de `trabalhar()` põe a
 frase no cartão pelo `idle_add`, na hora do clique e não no tique seguinte.
 
 O QUE MUDOU EM 13/09/2026 (FRASES-E-DICAS-01): **nenhuma frase de recusa fala
@@ -114,7 +114,7 @@ mesmo tempo, medidas contra a página que o produto renderiza:
 
 * das TRÊS opções que a tela dela oferece, DUAS viraram clique morto — e uma
   delas era a única forma de desligar o teclado por esta aba. Morto **e mudo,
-  por contrato**: `_recusou_dizendo` (`hefesto_vivo.py:3443`) levava à tela a
+  por contrato**: `_recusou_dizendo` (`hefesto_vivo.py:3477`) levava à tela a
   frase do `RuntimeError` e NÃO a do `ValueError`, porque clique-inválido fala
   com quem programa. Transformar uma opção de verdade em clique-inválido é
   justamente pedir esse silêncio para o clique dela;
@@ -154,7 +154,18 @@ from hefesto_dualsense4unix.core.keyboard_mappings import (
     PADRAO_QUE_A_TELA_PUBLICADA_NAO_DIZ,
 )
 
-from . import NOME_SEM_LEITURA, Contexto, identidade_de, jogador_de, perfil, registrar
+from . import (
+    LUGAR_VAZIO,
+    MARCAS_DO_LUGAR,
+    NOME_SEM_LEITURA,
+    SEM_NINGUEM_AQUI,
+    TRAVESSAO,
+    Contexto,
+    identidade_de,
+    jogador_de,
+    perfil,
+    registrar,
+)
 
 #: CORRIGIDO EM 01/09/2026. Aqui estava escrito que a velocidade do cursor e da
 #: rolagem "mora no perfil, não no state_full". **O daemon publica as duas**, em
@@ -268,10 +279,14 @@ PALAVRAS_DO_TECLADO: dict[bool, tuple[str, ...]] = {
 }
 
 #: O SEPARADOR DO CARTÃO — o mesmo `•` que o desenho põe entre o transporte e o
-#: papel (`aba06.controle`: `{via} <span class="pt">•</span> {papel}`). Ele é
-#: texto porque o endereço `data-campo="navega"` cobre a LINHA INTEIRA: o piloto
-#: escreve `textContent`, e o que não vier na string some da tela.
-PONTO = " • "
+#: papel, com a MESMA marcação (`<span class="pt">`). O endereço
+#: `data-campo="navega"` cobre a LINHA INTEIRA e, desde 21/09/2026, tem alvo
+#: `html`: a linha é desenhada por `linha_do_cartao`, para o gerador e o pacote.
+PONTO = ' <span class="pt">•</span> '
+
+#: A BOLINHA DE QUEM NAVEGA — o filho mudo que só o CSS desenha, e o motivo de a
+#: linha ser `html`. Ver `linha_do_cartao`.
+BOLINHA = '<span class="bolinha"></span>'
 
 #: O PREFIXO DAS VINTE E UMA LINHAS de *o que cada botão faz*. Um por botão de
 #: `core/acoes_de_botao.BOTOES` — a lista é do produto, e não se digita aqui.
@@ -361,7 +376,7 @@ def _o_que_a_pagina_oferece() -> frozenset[str]:
     ABERTO e sem trocar de aba. O arquivo muda, o selo muda, o pacote passa a
     emitir a palavra nova — e o DOM carregado ainda é o antigo, então a escrita
     volta a ser descartada até o próximo carregamento. Trocar de aba já
-    recarrega (`hefesto_vivo.py:4677`, `_ir`), e reabrir também. Ler o DOM em vez do
+    recarrega (`hefesto_vivo.py:4711`, `_ir`), e reabrir também. Ler o DOM em vez do
     arquivo exigiria uma pergunta ao piloto que o `Contexto` não tem.
     """
     global _OFERTAS
@@ -1050,8 +1065,26 @@ def _linha_do_cartao(c: dict[str, Any], primario: bool) -> str:
     O `ctx.conectados` é a resposta CRUA do daemon e traz `transport`; a mesa
     traz `via`. Quem entra na tela é o da mesa.
     """
+    return linha_do_cartao(str(c.get("via") or ""), primario)
+
+
+def linha_do_cartao(via: str, primario: bool) -> str:
+    """A linha de estado do cartão, em HTML — UM DONO, DOIS CHAMADORES.
+
+    O gerador (`aba06.controle`) desenha a bancada com ela e o pacote pinta o
+    produto com ela a cada tique; é o mesmo arranjo do `desenho_da_luz` da 04.
+
+    ELA VIROU HTML EM 21/09/2026, e a razão é a BOLINHA. O endereço tinha alvo
+    `texto`, e o texto não sabe devolver o `<span class="bolinha">`: o molde
+    poupava a linha para não apagá-la (`enderecos_que_o_texto_apaga`), e por
+    isso um lugar ESVAZIADO continuava dizendo `● USB • Navega o PC` em verde
+    com a mesa vazia — foi o que ela fotografou. Com o alvo `html` o lugar
+    vazio recebe o travessão (`LUGAR_VAZIO`) e a bolinha VOLTA quando o
+    controle volta, porque quem a desenha passa a ser esta função.
+    """
     papel = "Navega o PC" if primario else "Só a janela"
-    return PONTO.join(x for x in (str(c.get("via") or ""), papel) if x)
+    corpo = f"{via}{PONTO}{papel}" if via else papel
+    return (BOLINHA if primario else "") + corpo
 
 
 def _linhas_dos_botoes(p: dict[str, Any]) -> dict[str, str]:
@@ -1930,6 +1963,22 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     return {
         "colunas": cards,
         "mesa": mesa,
+        # O CARTÃO VAZIO É UM SÓ NOS QUATRO LUGARES — 21/09/2026, com zero
+        # controles na mesa ela viu *"p1,p2 tão diferentes do p3 e p4"*: o P1
+        # dizia `P1 • P1 • Desconectado` com `● USB • Navega o PC` em verde, o
+        # P2 `BT • Só a janela`, e o P3 e o P4 `P3 • Desconectado` com `—`.
+        #
+        # A IDENTIDADE AQUI É SÓ O NOME: o `P{n} •` do rótulo é ESTRUTURA e mora
+        # fora do `data-campo` (`aba06.controle`), e a frase-padrão do
+        # despachante — que traz o número — o repetia. A LINHA DE ESTADO leva
+        # o travessão que o molde não escreve nela (`enderecos_que_o_texto_
+        # apaga`: ela tem a bolinha por dentro, e num lugar vazio não há
+        # bolinha a guardar).
+        LUGAR_VAZIO: {"identidade": SEM_NINGUEM_AQUI, "navega": TRAVESSAO},
+        # O VERDE DE QUEM NAVEGA vai para o cartão do PRIMÁRIO, e só para ele.
+        # O gerador o crava no P1 do desenho; sem esta chave ele ficava lá com
+        # a mesa vazia, ou com outro controle no comando.
+        MARCAS_DO_LUGAR: {"navega": [str(chefe.get("uniq") or "")] if chefe else []},
         # A FOLHA VIVA DO PLÁSTICO. Ela vai por `blocos` e não por campo porque
         # o casco do desenho é `var(--z-…)` dentro do SVG, e o piloto não tem
         # alvo que escreva variável CSS — ver `folha_do_plastico`.
@@ -2829,7 +2878,7 @@ def tecla_escrita(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     trava; o `change` que vem depois a atualiza com o texto final.
 
     A RECUSA É `RuntimeError`, e não `ValueError`, de propósito: o
-    `_recusou_dizendo` do piloto (`hefesto_vivo.py:3443`) guarda a classe da
+    `_recusou_dizendo` do piloto (`hefesto_vivo.py:3477`) guarda a classe da
     exceção no relato, e `ValueError` é a linguagem de quem programa. Desde
     13/09/2026 nenhuma das duas chega à tela: a combinação que ela digitou e o
     produto não sabe digitar pisca a recusa no campo (FRASES-E-DICAS-01).
