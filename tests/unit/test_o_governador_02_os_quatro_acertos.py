@@ -3,9 +3,10 @@
 A GOVERNADOR-DO-RADIO-01 foi aprovada com quatro decisões de produto e um
 resíduo da O-DIARIO. Uma régua por item, e cada uma MORDE:
 
-1. **«Ligar aqui» vale enquanto a ponte estiver de pé.** A R3 é *sempre pedir
-   mover*: a ponte desceu, a próxima subida no adaptador cheio pergunta de
-   novo. E a vaga que nunca subiu não gasta a resposta dela.
+1. **«Ligar aqui» vale enquanto o controle ficar no adaptador** — REVISTO em
+   23/09 pela A-COSTURA-DA-ONDA-2-01; dizia «enquanto a ponte estiver de pé».
+   A ponte que desce e sobe não pergunta de novo, e a vaga que nunca subiu
+   também não gasta a resposta dela.
 2. **A marca «além do limite» sai quando o adaptador volta a caber** — a tela
    não pode dizer «além do limite» com 2 de 2.
 3. **Num 2B longo, a religação espera cada vez mais** (5 → 10 → 20 → 40 → 60 s)
@@ -106,7 +107,7 @@ def _alem(governador: gov.GovernadorDoRadio, adaptador: str) -> dict[str, bool]:
 
 
 # ---------------------------------------------------------------------------
-# 1. «Ligar aqui» vale enquanto a ponte estiver de pé
+# 1. «Ligar aqui» vale enquanto o controle ficar no adaptador (revisto em 23/09)
 # ---------------------------------------------------------------------------
 def _a_terceira_no_a_com_vaga_no_b(
     relogio: _Relogio, registro: _Diario
@@ -122,15 +123,19 @@ def _a_terceira_no_a_com_vaga_no_b(
     return governador
 
 
-def test_a_ponte_que_desceu_gasta_o_ligar_aqui_e_a_proxima_pergunta_de_novo() -> None:
-    """A R3 é *sempre pedir mover*: a resposta dela valia para AQUELA ponte.
+def test_a_ponte_que_desceu_nao_gasta_o_ligar_aqui_enquanto_ele_fica_no_adaptador() -> None:
+    """A resposta dela vale enquanto o CONTROLE ficar naquele adaptador.
 
-    Até a GOVERNADOR-DO-RADIO-02 o «Ligar aqui» valia por (controle, adaptador)
-    até o daemon reiniciar: o jogo fechava, a ponte descia, e a próxima subida
-    no adaptador cheio vinha sem pergunta nenhuma, dias depois.
+    REVISTA EM 23/09 PELA A-COSTURA-DA-ONDA-2-01 (item 4, decisão de quem
+    coordena). Esta régua cobrava o contrário — «a ponte desceu, a próxima
+    subida pergunta de novo» —, e o preço medido na conferência foi perguntar a
+    ela no meio da partida: a troca som → vibração derruba e sobe a ponte, e o
+    som sob demanda desce sempre que para. Quem gasta a resposta agora é o
+    controle SAIR do adaptador; essa metade está em
+    ``test_a_costura_da_onda_2.py::test_o_ligar_aqui_cai_quando_o_controle_sai_do_adaptador``.
 
-    MORDIDA: tire do ``_soltar`` o ``self._autorizados.discard(...)`` e a
-    segunda subida passa sem perguntar.
+    MORDIDA: volte a pôr no ``_soltar`` o descarte da autorização quando a
+    ponte desce — a segunda subida vira pergunta e esta régua reprova.
     """
     relogio, registro = _Relogio(), _Diario()
     governador = _a_terceira_no_a_com_vaga_no_b(relogio, registro)
@@ -143,13 +148,12 @@ def test_a_ponte_que_desceu_gasta_o_ligar_aqui_e_a_proxima_pergunta_de_novo() ->
     vaga.soltar("a fonte do som secou")
 
     relogio.agora += 1.0
-    de_novo = governador.pedir_vaga(CONTROLE_3, "som")
-    assert isinstance(de_novo, gov.Recusa), (
-        "a ponte desceu e a próxima subida no adaptador cheio não perguntou"
+    de_novo = governador.pedir_vaga(CONTROLE_3, "haptica")
+    assert isinstance(de_novo, gov.Vaga), (
+        "a ponte desceu e subiu de novo, com ele no mesmo adaptador, e perguntou a ela"
     )
-    assert de_novo.motivo == gov.MOTIVO_CHEIO
-    [pedido] = governador.publicar()[ADAPTADOR_A]["pedidos"]
-    assert pedido["uniq"] == CONTROLE_3, "a pergunta de novo não chegou à tela"
+    assert de_novo.alem_do_limite is True and de_novo.por_escolha_dela is True
+    assert governador.publicar()[ADAPTADOR_A]["pedidos"] == []
 
 
 def test_a_vaga_que_nunca_subiu_nao_gasta_a_resposta_dela() -> None:
