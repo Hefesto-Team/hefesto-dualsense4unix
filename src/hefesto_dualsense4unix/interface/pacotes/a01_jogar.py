@@ -1784,8 +1784,22 @@ class _VigiaDoSteamInput:
             self._em_curso = False
 
     def esquecer(self) -> None:
-        """Invalida o cache. É o que o clique no chip faz de verdade."""
+        """Invalida o cache — a próxima :meth:`agora` dispara a releitura."""
         self._quando = 0.0
+
+    def renovar(self) -> None:
+        """Relê AGORA — é o que o gesto faz depois de escrever. Nunca levanta.
+
+        :meth:`esquecer` sozinho não basta: :meth:`agora` devolve o guardado
+        enquanto a thread relê, e o guardado é a leitura que o próprio gesto
+        fez ANTES de escrever. O tique seguinte ao clique pintava o «Steam
+        Input» que ela acabara de desligar. Se o disco falhar aqui, a escrita
+        já valeu: cai para :meth:`esquecer`, e a thread tenta no tique.
+        """
+        try:
+            self.ler()
+        except Exception:
+            self.esquecer()
 
     def ler(self) -> _DoSteamInput:
         """BLOQUEIA — lê o disco. Só de thread worker ou de gesto, nunca do tique."""
@@ -2813,21 +2827,26 @@ def _o_jogo_que_sai_do_steam_input(ctx: Contexto, chave: str) -> str:
     *"Feche o jogo e clique de novo. Nada foi mudado."* — e o «clique de novo»
     vale, porque o «Sony DualSense» alcança o jogo fechado.
 
-    NO «XBOX» E NA «NAVEGAÇÃO» O PORTÃO NÃO RECUSA O CLIQUE: com o jogo da
-    Steam aberto o jogo fica na lista, calado. O caminho mudou (o chip
-    novo acende e o Steam Input apaga, que é o degrau de agora), e a recusa
-    diria *"Nada foi mudado"* sobre um caminho que mudou. A lista se resolve no
-    próximo «Sony DualSense», que é onde o Steam Input voltaria a acender.
+    ONDE O CAMINHO MUDA, O PORTÃO NÃO RECUSA O CLIQUE — no «Xbox», na
+    «Navegação» e no «Sony DualSense» vindo de um deles: com o jogo da Steam
+    aberto o jogo fica na lista, calado, e o tique pinta o degrau de agora (no
+    «Sony DualSense», o «Steam Input» que ela marcou). A recusa diria *"Nada
+    foi mudado"* sobre um caminho que mudou. Quem recusa é só o clique SOBRE o
+    «Steam Input» aceso, e é ali que a lista se resolve.
     """
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
     if not ctx.state:
         return ""
+    sobre_o_degrau = _chip_do_caminho(ctx.state) == CAMINHO_SOB_O_STEAM_INPUT
     if chave == CAMINHO_SOB_O_STEAM_INPUT:
+        if not sobre_o_degrau and slo.steam_game_running():
+            # Vindo do «Xbox» ou da «Navegação», o caminho MUDA — e a recusa
+            # diria "Nada foi mudado". O jogo fica, e o Steam Input acende.
+            return ""
         return _o_jogo_no_steam_input(
             ctx.state, VIGIA_DO_STEAM_INPUT.ler(), so_aberto=False)
-    if (ctx.mesa and _chip_do_caminho(ctx.state) == CAMINHO_SOB_O_STEAM_INPUT
-            and not slo.steam_game_running()):
+    if ctx.mesa and sobre_o_degrau and not slo.steam_game_running():
         return _o_jogo_no_steam_input(ctx.state, VIGIA_DO_STEAM_INPUT.ler())
     return ""
 
@@ -3193,11 +3212,13 @@ def _mudar_o_steam_input(p: Any, alvo: str, ligar: bool) -> dict[str, Any] | Non
     if status in ("appid_invalido", "erro"):
         raise RuntimeError(str(format_game_broken_result(status=status, appid=alvo)))
     p.chamar(METODO_DA_RECARGA)
-    VIGIA_DO_STEAM_INPUT.esquecer()
 
-    # 2. A PONTE — o arquivo da Steam, e o veredito relido dele.
-    recado = _reconciliar_o_vdf(alvo, ligar)
-    VIGIA_DO_STEAM_INPUT.esquecer()
+    # 2. A PONTE — o arquivo da Steam, e o veredito relido dele. A vigia é
+    # relida mesmo quando o veredito levanta: a lista já mudou.
+    try:
+        recado = _reconciliar_o_vdf(alvo, ligar)
+    finally:
+        VIGIA_DO_STEAM_INPUT.renovar()
     # SEM NOTÍCIA, SEM FRASE — JOGAR-02, 09/09/2026: `None` faz a tela responder
     # com a piscada verde do botão, que é como esta casa diz "deu certo". Um
     # `{"recado": ""}` pousaria uma caixa verde VAZIA sobre a fileira.

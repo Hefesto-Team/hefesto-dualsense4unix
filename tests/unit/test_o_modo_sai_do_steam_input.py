@@ -312,3 +312,53 @@ def test_a_pendencia_do_prazo_estourado_some_quando_o_daemon_alcanca() -> None:
     assert aba._pendencia(_ctx(aberto=False, caminho="dualsense").state) == {
         "caminho": "xbox"}
     assert aba._pendencia(_ctx(aberto=False, caminho="xbox").state) == {}
+
+
+def test_o_sony_dualsense_vindo_do_xbox_com_o_jogo_aberto_nao_diz_nada_foi_mudado(
+        vdf, monkeypatch) -> None:
+    """Do «Xbox» para o «Sony DualSense» com um jogo da Steam aberto: o caminho MUDA.
+
+    A recusa do portão termina em *"Nada foi mudado"*, e aqui ela mentiria: o
+    plano já saiu e o caminho virou `dualsense`. É o mesmo recorte do «Xbox»
+    (ver `_o_jogo_que_sai_do_steam_input`): só recusa quem clicou SOBRE o
+    Steam Input aceso. O jogo fica na lista, e o tique acende o «Steam Input»,
+    que é o degrau que ela marcou.
+
+    A MORDIDA: tire a condição do caminho de antes no ramo do «Sony DualSense»
+    e o gesto levanta a recusa depois de trocar o caminho.
+    """
+    _ponte_de_pe()
+    monkeypatch.setattr(slo, "steam_game_running", lambda: True)
+    monkeypatch.setattr(ponte, "steam_game_running", lambda: True)
+
+    p = PonteDeMentira()
+    assert aba.modo_dualsense(_ctx(aberto=True, caminho="xbox"),
+                              {"texto": "Sony DualSense"}, p) is None
+    assert "gamepad.emulation.set" in p.chamadas
+    assert APPID in ponte.ler_allowlist()
+
+
+def test_o_tique_logo_depois_do_clique_ja_pinta_a_lista_nova(vdf, monkeypatch) -> None:
+    """O primeiro tique depois do clique pinta o disco NOVO, sem esperar a vigia.
+
+    O tique só lê o que a vigia guarda (`agora()`), e a releitura dela roda numa
+    thread que o tique não espera. Se o gesto só invalidasse o cache, o tique
+    seguinte pintaria a leitura de ANTES da escrita — a que o próprio gesto fez
+    para decidir — com o «Steam Input» ainda aceso. Aqui a thread é desligada:
+    o que se mede é o que está guardado quando o gesto volta.
+
+    A MORDIDA: troque a releitura do fim de `_mudar_o_steam_input` por
+    `VIGIA_DO_STEAM_INPUT.esquecer()` e o tique pinta o «Steam Input».
+    """
+    _ponte_de_pe()
+    ctx = _ctx(aberto=True)
+    monkeypatch.setattr(aba.VIGIA_DO_STEAM_INPUT, "_disparar", lambda: None)
+    antes = aba.pacote(ctx)
+    assert (antes["modo-aceso"], antes["steam-input-aceso"]) == ("", "steam")
+
+    aba.modo_dualsense(ctx, {"texto": "Sony DualSense"}, PonteDeMentira())
+
+    depois = aba.pacote(ctx)
+    assert (depois["modo-aceso"], depois["steam-input-aceso"]) == ("dualsense", ""), (
+        f"o tique depois do clique pintou {depois['modo-aceso']!r} / "
+        f"{depois['steam-input-aceso']!r}: a leitura guardada era a de antes")
