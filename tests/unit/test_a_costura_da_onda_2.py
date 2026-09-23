@@ -115,7 +115,9 @@ def _o_vermelho_fica_esperando(
 async def test_com_um_movimento_esperando_nenhum_outro_comeca(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
-    """A palavra dela: *«moveriamos por exemplo 1 controle por vez»*. <!-- noqa-acento: citação literal dela -->
+    """Um por vez vale também para o arrastar. A palavra dela:
+
+    *«moveriamos por exemplo 1 controle por vez»* <!-- noqa-acento: citação literal dela -->
 
     O vermelho foi pareado no quarto e espera a conferência — a trava já está
     livre. Arrastar o azul, conectar um controle novo ou mandar o próprio
@@ -770,6 +772,7 @@ def _composicoes_da_palavra(raiz: Path) -> set[tuple[str, str]]:
     Docstring não conta: prosa que descreve o padrão não é o padrão.
     """
     import ast
+    import itertools
     import re
 
     palavra_no_fim = re.compile(r"\bEntrada\s*$")
@@ -788,7 +791,7 @@ def _composicoes_da_palavra(raiz: Path) -> set[tuple[str, str]]:
         for no in ast.walk(arvore):
             if isinstance(no, ast.JoinedStr):
                 partes = no.values
-                for atual, seguinte in zip(partes, partes[1:], strict=False):
+                for atual, seguinte in itertools.pairwise(partes):
                     if (
                         isinstance(atual, ast.Constant)
                         and isinstance(atual.value, str)
