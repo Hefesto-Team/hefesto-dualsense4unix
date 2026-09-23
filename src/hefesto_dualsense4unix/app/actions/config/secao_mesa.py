@@ -170,7 +170,6 @@ from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.maquina import (
     MapaDaMesa,
-    MaquinaConfig,
     carregar_maquina,
     fundir_declaracao,
 )
@@ -2246,17 +2245,31 @@ def _nome_da_entrada(caminho: str, mapa: MapaDaMesa | None) -> str | None:
     """O nome da entrada em que este caminho está — pelo DONO do nome.
 
     A-COSTURA-DA-ONDA-2-01, item 6: quem compõe «Entrada 9» é
-    `entrada_a_entrada.nome_da_porta`, e esta seção só pergunta. Ela tem o
-    `mapa` (é o que os dois chamadores entregam), e o mapa é chaveado pelo
-    caminho: por isso a pergunta vai pelo caminho, sem `lugares` e sem
-    barramentos — que, sem a amarra pelo lugar, não acrescentariam nada e
-    custariam uma leitura do `/sys` por linha. `None` é "ela não declarou".
+    `entrada_a_entrada.nome_da_porta`, e esta seção só pergunta — com o
+    documento INTEIRO: os `lugares` do disco (o nome que ela deu ao lugar e a
+    amarra do número) e o `mapa` em vigor, que é o que os dois chamadores
+    entregam e pode trazer o rascunho do «Aplicar». Os barramentos deste boot o
+    dono lê sozinho (um `realpath` por hub-raiz).
+
+    FATO SUBSTITUÍDO NA CONFERÊNCIA DE 23/09: esta função perguntava com um
+    documento só com o `mapa` e com `controladores={}`, dizendo que o resto
+    «não acrescentaria nada». Acrescentava o nome: o governador, perguntando ao
+    mesmo dono com o documento inteiro, dizia «o Extensor à esquerda» na frase
+    da recusa, e esta coluna dizia «Entrada 9» sobre o mesmo adaptador.
+
+    `None` é "ela não declarou" — e também "não deu para perguntar": a coluna
+    volta ao texto de hoje, nunca cai.
     """
     if mapa is None or not caminho:
         return None
-    from hefesto_dualsense4unix.integrations.entrada_a_entrada import nome_da_porta
+    try:
+        from hefesto_dualsense4unix.integrations.entrada_a_entrada import nome_da_porta
 
-    return nome_da_porta(caminho, maquina=MaquinaConfig(mapa=mapa), controladores={})
+        documento = carregar_maquina().model_copy(update={"mapa": mapa})
+        return nome_da_porta(caminho, maquina=documento)
+    except Exception:  # o nome nunca derruba a coluna: sem ele, o texto de hoje
+        logger.debug("secao_mesa_nome_da_entrada_ilegivel", caminho=caminho, exc_info=True)
+        return None
 
 
 def _painel_em_portugues(painel: str) -> str:
