@@ -1561,9 +1561,15 @@ class AltoFalanteSubsystem:
         sem ponte e acorda a volta em até :data:`VIGIA_DO_MODO_S` — a ponte
         sobe logo, e não na volta seguinte, cinco segundos depois.
         """
-        alvo = uniq.lower()
+        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+        # PELOS DÍGITOS, como o governador (conferência de 23/09/2026): a tela
+        # pode mandar o `uniq` com ou sem os dois-pontos, e o governador já o
+        # autorizou pela chave normalizada. Comparar o texto cru deixava a
+        # autorização valer e a volta sem acordar — cinco segundos a mais.
+        alvo = norm_mac(uniq) or uniq.lower()
         self._esperando_vaga = frozenset(
-            (u, m) for u, m in self._esperando_vaga if u.lower() != alvo
+            (u, m) for u, m in self._esperando_vaga if (norm_mac(u) or u.lower()) != alvo
         )
 
     def _descer_ponte_ociosa(self, uniq: str) -> None:

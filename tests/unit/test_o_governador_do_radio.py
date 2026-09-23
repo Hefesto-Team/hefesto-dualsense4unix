@@ -26,6 +26,7 @@ o ioctl é um dublê com o layout do kernel escrito à mão, e o diário mora em
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import fcntl
 import functools
@@ -34,6 +35,7 @@ import struct
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, ClassVar
 
 import pytest
@@ -771,3 +773,134 @@ def test_a_ponte_que_terminou_sozinha_sai_e_a_sob_demanda_religa(som: Any) -> No
         "a ponte morta ficou no lugar e a ponte sob demanda não religou"
     )
 
+
+
+
+# ---------------------------------------------------------------------------
+# 8. as quatro ligações que nenhuma régua mordia — conferência de 23/09/2026
+# ---------------------------------------------------------------------------
+# Arrancar qualquer uma destas deixava a suíte do território inteira verde: o
+# IPC do «Ligar aqui» sem chamar o governador, o `start()` sem ligar o aviso,
+# a ponte que não subiu segurando a vaga, e o subsystem que desiste sem fonte
+# segurando a vaga. As duas últimas custam o adaptador: a vaga esquecida só
+# sai no PRAZO_PARA_SUBIR_S, e até lá a terceira ponte ouve «cheio» à toa.
+
+
+@pytest.mark.asyncio
+async def test_o_ipc_ligar_aqui_responde_pelo_governador() -> None:
+    """O IPC ``radio.ponte.ligar_aqui`` é a resposta dela à pergunta da R3.
+
+    MORDIDA: faça o handler devolver ``ok`` sem chamar ``ligar_aqui`` e a
+    terceira ponte segue recusada.
+    """
+    from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
+
+    relogio, registro = _Relogio(), _Diario()
+    onde = {CONTROLE_1: ADAPTADOR_A, CONTROLE_2: ADAPTADOR_A, CONTROLE_3: ADAPTADOR_A}
+    governador = _dois_adaptadores_de_pe(relogio, registro, onde)
+    for uniq in (CONTROLE_1, CONTROLE_2):
+        vaga = governador.pedir_vaga(uniq, "som")
+        assert isinstance(vaga, gov.Vaga)
+        vaga.subiu()
+    assert isinstance(governador.pedir_vaga(CONTROLE_3, "som"), gov.Recusa)
+
+    class _Handlers(IpcHandlersMixin):
+        def __init__(self, alvo: Any) -> None:
+            self.daemon = alvo
+
+    handlers = _Handlers(
+        SimpleNamespace(_alto_falante_subsystem=SimpleNamespace(governador=governador))
+    )
+    resposta = await handlers._handle_radio_ponte_ligar_aqui({"uniq": CONTROLE_3})
+    assert resposta == {"status": "ok", "uniq": CONTROLE_3}
+    vaga = governador.pedir_vaga(CONTROLE_3, "som")
+    assert isinstance(vaga, gov.Vaga), "ela respondeu «Ligar aqui» e a ponte seguiu recusada"
+    assert vaga.alem_do_limite is True and vaga.por_escolha_dela is True
+
+    with pytest.raises(ValueError):
+        await handlers._handle_radio_ponte_ligar_aqui({})
+    sem = _Handlers(SimpleNamespace(_alto_falante_subsystem=None))
+    assert (await sem._handle_radio_ponte_ligar_aqui({"uniq": CONTROLE_3}))["status"] == (
+        "sem_governador"
+    )
+
+
+def test_o_start_liga_o_aviso_e_o_ligar_aqui_acaba_a_espera(som: Any) -> None:
+    """O ``start()`` entrega ao governador quem acordar quando ela responde.
+
+    A tela pode mandar o ``uniq`` sem os dois-pontos: o governador o autoriza
+    pelos dígitos, e a espera do subsystem tem de acabar pelos mesmos dígitos.
+
+    MORDIDA: tire do ``start()`` a linha do ``ao_autorizar`` e o controle
+    continua esperando depois da resposta dela.
+    """
+    sub, _ = som
+    governador = sub.governador
+    sub.governador = None
+    sub._governador_injetado = governador
+
+    class _Ctx:
+        controller = None
+        store = None
+
+    try:
+        asyncio.run(sub.start(_Ctx()))
+        assert sub.governador is governador
+    finally:
+        asyncio.run(sub.stop())
+
+    sub.governador = governador
+    sub._casar_as_pontes([_Controle(u) for u in (CONTROLE_1, CONTROLE_2, CONTROLE_3)])
+    assert sub._esperando_vaga == frozenset({(CONTROLE_3, "som")})
+    assert governador.ligar_aqui(CONTROLE_3.replace(":", "").upper()) is True
+    assert sub._esperando_vaga == frozenset(), "ela respondeu e o controle seguiu esperando"
+    sub._casar_as_pontes([_Controle(u) for u in (CONTROLE_1, CONTROLE_2, CONTROLE_3)])
+    assert sorted(sub._pontes) == [CONTROLE_1, CONTROLE_2, CONTROLE_3]
+    assert sub._pontes[CONTROLE_3].vaga.alem_do_limite is True
+
+
+def test_a_ponte_que_nao_subiu_devolve_a_vaga_ao_descer(monkeypatch: pytest.MonkeyPatch) -> None:
+    """``subir()`` falhou antes da thread: é o ``descer()`` que devolve a vaga.
+
+    MORDIDA: tire o ``_soltar_a_vaga`` do ramo sem thread do ``descer()`` e a
+    vaga fica ocupando o adaptador.
+    """
+    relogio, registro = _Relogio(), _Diario()
+    governador = gov.GovernadorDoRadio(
+        adaptador_de=lambda _u: ADAPTADOR_A, registrar=registro, relogio=relogio
+    )
+    vaga = governador.pedir_vaga(CONTROLE_1, "som")
+    assert isinstance(vaga, gov.Vaga)
+    monkeypatch.setattr(af, "a_ponte_do_radio_pode_subir", lambda: (False, "sem opus"))
+    ponte = af.PonteDeSomPorRadio(
+        uniq=CONTROLE_1, abrir_hidraw=lambda: None, fonte_de_pcm=lambda n: b"", vaga=vaga
+    )
+    assert ponte.subir() is False
+    ponte.descer()
+    assert vaga.solta is True, "a ponte que nunca subiu segurou a vaga"
+    assert governador.publicar() == {}, "o adaptador seguiu com uma vaga de ninguém"
+    assert registro.de(diario.PONTE_DESCEU) == [], "desceu no diário o que nunca subiu"
+
+
+def test_sem_fonte_o_subsystem_devolve_a_vaga(som: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """O som não teve fonte: a vaga pedida volta, e o adaptador segue com lugar.
+
+    MORDIDA: tire o ``vaga.soltar("o som não teve fonte")`` e o segundo
+    controle ouve «cheio» num adaptador com uma ponte só.
+    """
+    sub, _ = som
+    fonte_de_verdade = af.fonte_do_monitor_do_no
+
+    def _sem_fonte_no_3(no: str, **kw: Any) -> tuple[Any, Any, str]:
+        if no == af.nome_do_sink(CONTROLE_3):
+            return None, None, "o gravador não subiu"
+        return fonte_de_verdade(no, **kw)
+
+    monkeypatch.setattr(af, "fonte_do_monitor_do_no", _sem_fonte_no_3)
+    sub._casar_as_pontes([_Controle(CONTROLE_1), _Controle(CONTROLE_3)])
+    assert sorted(sub._pontes) == [CONTROLE_1]
+    sub._casar_as_pontes([_Controle(CONTROLE_1), _Controle(CONTROLE_2)])
+    assert sorted(sub._pontes) == [CONTROLE_1, CONTROLE_2], (
+        "a vaga do controle sem fonte ficou presa e o segundo ouviu «cheio»"
+    )
+    assert sub._esperando_vaga == frozenset()
