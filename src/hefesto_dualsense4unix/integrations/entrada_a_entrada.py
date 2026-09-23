@@ -625,6 +625,7 @@ class LacoDaEntrada:
             passo, total = self._andadas + 1, self._andadas + len(self._perguntas)
         elif fase == EM_PE:
             passo, total = self._aprendidas + 1, self._aprendidas + len(self._vagas)
+        ultima = None if self._ultima is None else self._ultima.como_dicionario()
         return {
             "estado": fase,
             "tela": TELAS.get(fase),
@@ -634,7 +635,7 @@ class LacoDaEntrada:
             "face": FACE_EM_PE if fase == EM_PE else None,
             "feitas": self._feitas,
             "gravou": None if self._ultima is None else self._ultima.gravou,
-            "ultima": None if self._ultima is None else self._ultima.como_dicionario(),
+            "ultima": ultima,  # (noqa-acento) chave de máquina, ASCII por contrato
         }
 
 
