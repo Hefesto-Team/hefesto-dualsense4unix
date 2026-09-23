@@ -4858,7 +4858,7 @@ def _moldes_de_painel(cena: dict[str, Any]) -> str:
             if lug.get("quedas_desde"):
                 linhas += (f'<div class="queda-desde">Quedas contadas desde '
                            f'{_x(lug["quedas_desde"])}</div>')
-            moldes.append(f'<template class="painel-molde" data-painel="historico" '
+            moldes.append(f'<template class="painel-molde" data-painel="sino" '
                           f'data-alvo="{_x(lid)}" data-titulo="{_x(_titulo_do_lugar(lug))}">'
                           f'<div class="historico">{linhas}</div></template>')
         # QUEM VEM PARA CÁ: o arrastar de quem não arrasta.
@@ -5196,8 +5196,8 @@ def html_das_portas(cena: dict[str, Any]) -> str:
                            f'<use href="#rd-{meu["icone"]}"/></svg>')
             dica = _x(f'{porta.get("rotulo") or porta["caminho"]} · USB {porta.get("usb")} · '
                       f'{(meu.get("nome") or meu.get("tipo")) if meu else "livre"} — {porque}.')
-            tres = " tres" if porta.get("usb") == "3.0" else ""
-            botoes.append(f'<button class="porta {estado}{tres}" '
+            usb3 = " tres" if porta.get("usb") == "3.0" else ""  # (noqa-acento) classe do desenho
+            botoes.append(f'<button class="porta {estado}{usb3}" '
                           f'data-grupo="{_x(nome)}" title="{dica}" aria-label="{dica}" '
                           f'data-gesto="examinar-portas" data-alvo="{_x(porta["id"])}">'
                           f'{desenho}</button>')
@@ -5507,10 +5507,10 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
             portas.append({"id": f"porta-{end}", "caminho": caminho, "usb": "2.0",
                            "ocupa": end, "grupo": _grupo_da_porta(caminho),
                            "rotulo": entrada or caminho})
-    sino = _quedas_por_adaptador(_em_fundo("historico", _ler_o_historico, 60.0),
+    sino = _quedas_por_adaptador(_em_fundo("sino", _ler_o_historico, 60.0),
                                  caminho_para_endereco, maquina, controladores)
-    historico = _FUNDO.get("historico", (0.0, None))[1] or {}
-    desde = str(historico.get("desde") or "")
+    lido_do_sino = _FUNDO.get("sino", (0.0, None))[1] or {}
+    desde = str(lido_do_sino.get("desde") or "")
     for lug in lugares:
         lug["quedas"] = sino.get(lug["id"], [])
         if lug["quedas"] and desde:
