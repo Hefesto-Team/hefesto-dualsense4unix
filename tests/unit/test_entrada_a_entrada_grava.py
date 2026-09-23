@@ -575,19 +575,26 @@ def test_a_projecao_passa_pelo_dono_do_dbus_e_pela_trava_comum(
 
     O caminho é o de produção: ``projetar_o_nome`` → ``apelido_do_dongle`` →
     ``bluez_dbus`` → o barramento (aqui, o de mentira). Com a trava na mão de
-    outro motor, o ``Alias`` NÃO sai.
+    outro motor, o ``Alias`` NÃO sai. E com um Pro Controller naquele
+    adaptador, o nome sai COSTURADO — o Pro cai sob carga sem o prefixo, e é
+    por isso que a projeção não escreve o ``Alias`` por conta própria.
     """
     lugar = f"pci-{PCI_A}-usb-0:3"
     barramento = bm.BarramentoDeMentira()
     vivo = bd.DonoVivo(barramento, lugares=lambda: {"hci9": lugar})
     assert vivo.ligar()
     monkeypatch.setattr(bd, "dono", lambda: vivo)
-    sem_nintendo = str(tmp_path / "hidraw")
+    hidraw = tmp_path / "hidraw"
+    (hidraw / "hidraw0" / "device").mkdir(parents=True)
+    (hidraw / "hidraw0" / "device" / "uevent").write_text(
+        f"HID_NAME=Pro Controller\nHID_PHYS={bm.ADAPTADOR}\nHID_UNIQ=aa:bb:cc:00:00:44\n",
+        encoding="utf-8",
+    )
 
     def renomear(endereco: str, nome: str) -> Any:
         from hefesto_dualsense4unix.integrations.apelido_do_dongle import renomear_o_dongle
 
-        return renomear_o_dongle(endereco, nome, raiz_hidraw=sem_nintendo)
+        return renomear_o_dongle(endereco, nome, raiz_hidraw=str(hidraw))
 
     monkeypatch.setattr(diario_do_radio, "PRAZO_DA_TRAVA_S", 0.2)
     with diario_do_radio.trava_do_radio("bt-watchdog", prazo_s=1.0):
@@ -597,7 +604,7 @@ def test_a_projecao_passa_pelo_dono_do_dbus_e_pela_trava_comum(
 
     feito = ee.projetar_o_nome(lugar, "Sofá", renomear=renomear)
     assert feito is not None and feito.aplicado
-    assert (bm.HCI, bd.ADAPTADOR, "Alias", "Sofá") in barramento.escritas
+    assert (bm.HCI, bd.ADAPTADOR, "Alias", "Nintendo Sofá") in barramento.escritas
 
     assert ee.projetar_o_nome(f"pci-{PCI_B}-usb-0:9", "X", renomear=renomear) is None
 
