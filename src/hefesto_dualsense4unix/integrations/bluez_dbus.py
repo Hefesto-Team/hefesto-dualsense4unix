@@ -239,6 +239,23 @@ _POR_FIO = threading.local()
 
 
 @contextlib.contextmanager
+def _pela_borda() -> Iterator[None]:
+    """Marca o fio como DENTRO da borda enquanto a escrita roda.
+
+    É o que :func:`busctl` confere antes de escrever: sem a marca, um verbo que
+    escreve não sai. Assim a chamada direta ``bluez_dbus.busctl(["call", …])``
+    — que pularia a trava e o diário, e que a régua de dono não enxerga porque
+    usa as constantes daqui — volta ``None`` em vez de chegar ao BlueZ.
+    """
+    anterior = getattr(_POR_FIO, "na_borda", False)
+    _POR_FIO.na_borda = True
+    try:
+        yield
+    finally:
+        _POR_FIO.na_borda = anterior
+
+
+@contextlib.contextmanager
 def na_trava(quem: str = QUEM_PADRAO, *, prazo_s: float | None = None) -> Iterator[float]:
     """Segura a trava comum do rádio enquanto o bloco roda. Entrega quanto esperou.
 
@@ -392,6 +409,10 @@ def busctl(argumentos: Sequence[str], *, espera: float = ESPERA_DO_BUSCTL_S) -> 
     ``None``. Saída vazia com código ``0`` é SUCESSO — é o que o
     ``set-property`` devolve.
 
+    ESCRITA SÓ DE DENTRO DA BORDA: um verbo que não é leitura só sai quando
+    quem chama passou por :meth:`LeitorDoBluez.chamar` ou
+    :meth:`LeitorDoBluez.escrever_propriedade` (a guarda, a trava e o diário).
+
     SOB A SUÍTE: escrita nunca; leitura só por um ``busctl`` de mentira que a
     régua pôs na frente do ``PATH``. O do sistema é o barramento DELA, e uma
     régua que o lê mede a máquina de quem mantém o projeto, não o produto.
@@ -403,6 +424,9 @@ def busctl(argumentos: Sequence[str], *, espera: float = ESPERA_DO_BUSCTL_S) -> 
     saída.
     """
     verbo = argumentos[0] if argumentos else ""
+    if verbo not in _LEITURAS_DO_BUSCTL and not getattr(_POR_FIO, "na_borda", False):
+        _registrar("bluez_escrita_fora_da_borda", nivel="warning", verbo=verbo)
+        return None
     achado = shutil.which(FERRAMENTA)
     if achado is None:
         return None
@@ -704,12 +728,13 @@ class LeitorDoBluez:
         if recusa is not None:
             return recusa
         if metodo in METODOS_SEM_TRAVA:
-            escrita = fazer()
+            with _pela_borda():
+                escrita = fazer()
         else:
             from hefesto_dualsense4unix.integrations.diario_do_radio import TravaOcupadaError
 
             try:
-                with na_trava(quem):
+                with na_trava(quem), _pela_borda():
                     escrita = fazer()
             except TravaOcupadaError as ocupada:
                 return Escrita(False, TRAVA_OCUPADA, str(ocupada))
