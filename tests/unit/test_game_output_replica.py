@@ -90,7 +90,13 @@ class TestCamadaGameNoMerge:
         assert ctl._merged_desired_for_key(MAC_1).led == (0, 255, 0)
 
     def test_merge_por_campo_game_parcial_herda_o_resto(self) -> None:
-        """GAME só com player_leds: a cor continua vindo das camadas de baixo."""
+        """GAME só com player_leds: o número é RECUSADO e nada muda embaixo.
+
+        STEAM-NO-FISICO-01 (23/09/2026): esta régua travava a réplica do
+        número do jogo no físico; a decisão dela (*"Hefesto manda e controla
+        sempre"*) a revogou. O número do jogador é do Hefesto, inclusive em
+        co-op — ver `bp.numeracao_do_jogo`.
+        """
         ctl = _ctl_com(_fake_handle(), _FakeNode())
         ctl._desired_default.led = (10, 20, 30)
 
@@ -98,7 +104,8 @@ class TestCamadaGameNoMerge:
 
         merged = ctl._merged_desired_for_key(MAC_1)
         assert merged.led == (10, 20, 30)
-        assert merged.player_leds == (True, False, False, False, True)
+        assert merged.player_leds is None
+        assert UNIQ_1 not in ctl._game_output_by_uniq
 
     def test_escreve_no_hardware_pela_rota_sysfs(self) -> None:
         node = _FakeNode()
@@ -109,7 +116,8 @@ class TestCamadaGameNoMerge:
         )
 
         assert node.rgb_calls == [(1, 2, 3)]
-        assert node.player_calls == [(False, True, False, False, False)]
+        # STEAM-NO-FISICO-01: o número do jogo não vai ao aparelho.
+        assert node.player_calls == []
 
     def test_reassert_reafirm_a_cor_do_jogo_nao_a_paleta(self) -> None:
         """O reassert periódico (reconnect_loop) durante a sessão reafirma a
@@ -216,7 +224,9 @@ class TestFimDaSessao:
         # O jogo pode ter escrito por hidraw (classe LED stale): cache fora.
         assert node.invalidated == 1
         assert node.rgb_calls == [(0, 0, 153)]
-        assert node.player_calls == [(True, False, False, False, False)]
+        # STEAM-NO-FISICO-01: o número do jogo nunca virou camada, então não
+        # há número a devolver — ele nunca saiu do Hefesto.
+        assert node.player_calls == []
         assert ctl._game_output_by_uniq == {}
 
     def test_trigger_volta_ao_perfil_quando_ha_perfil(self) -> None:
@@ -299,18 +309,16 @@ class TestRetencaoNaoSobreviveAoClose:
         autoridade = {"valor": "daemon"}
         ctl.set_game_authority_provider(lambda: autoridade["valor"])
 
-        # Cliente Steam escreve player_leds sob 'daemon' (sem jogo): fica
-        # RETIDO, nunca chega ao físico (é o veto de drop-sem-retenção).
-        assert (
-            ctl.set_game_output_for(
-                MAC_1, player_leds=(False, False, True, False, False)
-            )
-            is True
-        )
-        assert ctl._retained_game_outputs[UNIQ_1] == {
-            "player_leds": (False, False, True, False, False)
-        }
-        assert node.player_calls == []
+        # Cliente Steam escreve uma cor sob 'daemon' (sem jogo): fica RETIDA,
+        # nunca chega ao físico (é o veto de drop-sem-retenção).
+        #
+        # STEAM-NO-FISICO-01 (23/09/2026): esta régua usava `player_leds`, que
+        # desde a decisão dela é recusado ANTES da retenção (o número é do
+        # Hefesto). A retenção continua existindo para a cor que não é número,
+        # e é com ela que a purga se mede.
+        assert ctl.set_game_output_for(MAC_1, led=(9, 99, 9)) is True
+        assert ctl._retained_game_outputs[UNIQ_1] == {"led": (9, 99, 9)}
+        assert node.rgb_calls == []
 
         # Cliente fecha a sessão (UHID_CLOSE) — o fantasma tem de sumir
         # JUNTO com as camadas GAME/triggers (que aqui nunca existiram).
@@ -321,10 +329,10 @@ class TestRetencaoNaoSobreviveAoClose:
         # com a sessão antiga abre: a autoridade sobe e o replay da
         # abertura do gate não pode entregar o valor do cliente morto.
         autoridade["valor"] = "game"
-        node.player_calls.clear()
+        node.rgb_calls.clear()
         ctl.replay_retained_game_outputs()
 
-        assert node.player_calls == []
+        assert node.rgb_calls == []
 
     def test_close_purga_a_retencao_mesmo_com_camada_game_presente(self) -> None:
         """Caso misto: o jogo já tinha escrito (camada GAME) e, além disso,

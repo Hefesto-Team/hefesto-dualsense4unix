@@ -608,6 +608,66 @@ _LAYER_USER = "usuaria"
 #: co-op e o revert restauraria o número do jogador para sempre.
 _COOP_LAYER_FIELDS = ("player_leds",)
 
+#: STEAM-NO-FISICO-01 — o NÚMERO DO JOGADOR é do Hefesto, sempre. Decisão dela
+#: de 23/09/2026 (`D-2309-O-HEFESTO-MANDA-NO-NUMERO`): *"Hefesto manda e
+#: controla sempre"*. O `player_leds` que o jogo, o SDL, a Steam ou o kernel
+#: escrevem no vpad NÃO chega ao físico — nem como camada, nem como escrita.
+#:
+#: A camada do CO-OP (`_COOP_LAYER_FIELDS`, logo acima) não é afetada, e é aí
+#: que a tensão escrita na sprint se desfaz: quem a publica é o próprio Hefesto
+#: (`daemon/subsystems/coop.py`, `_publicar_camada_coop`), com o número da
+#: mesa. O «mesmo em co-op» dela é sobre a numeração do JOGO, que é outra.
+_CAMPOS_QUE_O_HEFESTO_NUMERA: frozenset[str] = frozenset({"player_leds"})
+
+#: A cor que é NÚMERO, e não pintura: a paleta de jogador do SDL.
+#:
+#: Lida no fonte, `libsdl-org/SDL@0c8feecc`
+#: `src/joystick/hidapi/SDL_hidapi_ps5.c` (`SetLedsForPlayerIndex`): *"This
+#: list is the same as what hid-sony.c uses in the Linux kernel"*. E o mesmo
+#: arquivo diz QUANDO ela sai (`HIDAPI_DriverPS5_UpdateEffects`): só se o
+#: jogo NÃO escolheu cor (`ctx->color_set` falso). Ou seja, uma cor desta
+#: tabela no vpad é o SDL escrevendo o número do jogador na barra; o jogo que
+#: pinta a barra de propósito (`SDL_SetGamepadLED`) manda a cor dele, e ela
+#: continua passando. As quatro primeiras são as MEDIDAS no diário dela
+#: (`game_output_replicado cor=(0, 0, 64)`, `(64, 0, 0)`, `(0, 64, 0)`,
+#: `(32, 0, 32)`, 21/09/2026); as três últimas são do fonte.
+PALETA_DE_JOGADOR_DO_SDL: frozenset[tuple[int, int, int]] = frozenset(
+    {
+        (0x00, 0x00, 0x40),  # azul — jogador 1
+        (0x40, 0x00, 0x00),  # vermelho — jogador 2
+        (0x00, 0x40, 0x00),  # verde — jogador 3
+        (0x20, 0x00, 0x20),  # rosa — jogador 4
+        (0x20, 0x10, 0x00),  # laranja — jogador 5
+        (0x00, 0x10, 0x10),  # verde-azulado — jogador 6
+        (0x10, 0x10, 0x10),  # branco — jogador 7
+    }
+)
+
+
+def numeracao_do_jogo(campos: Mapping[str, Any]) -> frozenset[str]:
+    """Os campos de uma réplica de exibição que são NÚMERO de jogador.
+
+    STEAM-NO-FISICO-01. É o predicado inteiro da primeira obrigação da decisão
+    dela de 23/09/2026 — o resto da cura só o consulta, nos DOIS portões (a
+    entrada `set_game_output_for` e o merge `_merged_desired_for_key`), pela
+    mesma razão que o PERFIL-MANDA-01 pôs o dele nos dois.
+
+    `player_leds` é número sempre. `led` só é número quando a cor é uma da
+    `PALETA_DE_JOGADOR_DO_SDL` — o jogo que pinta a barra por gameplay segue
+    pintando.
+    """
+    numero = {
+        nome
+        for nome, valor in campos.items()
+        if nome in _CAMPOS_QUE_O_HEFESTO_NUMERA and valor is not None
+    }
+    cor = campos.get("led")
+    if cor is not None:
+        with contextlib.suppress(TypeError, ValueError):
+            if tuple(int(c) for c in cor) in PALETA_DE_JOGADOR_DO_SDL:
+                numero.add("led")
+    return frozenset(numero)
+
 
 def _spec_fields(spec: OutputSpec) -> dict[str, Any]:
     """Campos NÃO-None de um `OutputSpec` (o vocabulário parcial do PERFIL-01)."""
@@ -2738,7 +2798,15 @@ class PyDualSenseController(IController):
             # rádio), e o da entrada impede a escrita direta no HID, que não
             # passa por resolve nenhum. Cobrir um só deixaria a cor dela voltar
             # a cada evento e o jogo a apagar no quadro seguinte.
-            game = _sem_os_campos(game, self._campos_do_perfil_locked(uniq))
+            #
+            # STEAM-NO-FISICO-01: e o NÚMERO não cede nunca — o segundo portão
+            # da mesma regra da entrada (`numeracao_do_jogo`), pela mesma razão
+            # de o PERFIL-MANDA-01 ter dois: uma camada escrita antes de a
+            # regra existir não pode voltar pelo resolve.
+            nao_pinta = self._campos_do_perfil_locked(uniq) | numeracao_do_jogo(
+                {nome: getattr(game, nome) for nome in _OUTPUT_FIELDS}
+            )
+            game = _sem_os_campos(game, nao_pinta)
             if game is not None:
                 resolved = _merge_desired(resolved, game)
         return resolved
@@ -6502,10 +6570,16 @@ class PyDualSenseController(IController):
         led: tuple[int, int, int] | None = None,
         player_leds: tuple[bool, bool, bool, bool, bool] | None = None,
     ) -> bool:
-        """Aplica no físico `uniq` a lightbar/player-LED que o jogo pintou no vpad.
+        """Aplica no físico `uniq` a lightbar que o jogo pintou no vpad.
 
-        PERFIL-MANDA-01 (16/09/2026) — A PRIMEIRA PENEIRA, e ela vem antes de
-        tudo: campo com dono declarado para este controle (`perfil`/`usuaria`,
+        STEAM-NO-FISICO-01 (23/09/2026) — A PENEIRA DO NÚMERO, antes de todas:
+        o `player_leds` do jogo e a cor da paleta de jogador do SDL
+        (`numeracao_do_jogo`) são RECUSADOS sempre, inclusive em co-op. O
+        número e a barra que diz o número são do Hefesto — ordem dela, *"Hefesto
+        manda e controla sempre"*. O journal diz a recusa uma vez por campo e
+        por sessão (`game_output_recusado_o_hefesto_numera`).
+
+        PERFIL-MANDA-01 (16/09/2026) — A SEGUNDA PENEIRA: campo com dono declarado para este controle (`perfil`/`usuaria`,
         o carimbo do R-20) é RECUSADO aqui — não vira camada, não vai ao HID e
         não é retido. Ordem dela, com o Sackboy aberto: *"meu perfil manda"*.
         O predicado inteiro está em `_campos_do_perfil_locked`, com a medição
@@ -6550,6 +6624,26 @@ class PyDualSenseController(IController):
             return True
         defender = False
         with self._io_lock:
+            # STEAM-NO-FISICO-01 — A PENEIRA DO NÚMERO, antes de todas: o
+            # número do jogador (e a cor que é número, a paleta do SDL) é do
+            # Hefesto, sempre, inclusive em co-op. Decisão dela de 23/09/2026.
+            # Não vira camada, não vai ao HID, não é retido, e não dispara a
+            # defesa: nada chegou ao aparelho, então não há o que desfazer.
+            numero = numeracao_do_jogo(fields)
+            if numero:
+                recusa = {campo: fields.pop(campo) for campo in sorted(numero)}
+                ja_dito = self._recusa_ao_jogo_logada.setdefault(alvo, set())
+                marcas = {f"numero:{campo}" for campo in recusa}
+                if not marcas <= ja_dito:
+                    ja_dito.update(marcas)
+                    logger.info(
+                        "game_output_recusado_o_hefesto_numera",
+                        uniq=alvo,
+                        campos=sorted(recusa),
+                        **self._luz_para_o_journal(recusa),
+                    )
+                if not fields:
+                    return True
             # PERFIL-MANDA-01: o que ela escolheu para ESTE controle não chega
             # a ser oferecido ao gate — nem vira camada, nem vai ao HID. Recusar
             # na ENTRADA, e não só no merge, é o que evita a disputa: sem

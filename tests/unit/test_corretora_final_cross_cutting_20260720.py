@@ -175,7 +175,12 @@ class TestLedSetRespeitaAAutoridadeDoJogo:
         )
 
         assert resultado["status"] == "ok"
-        assert node.player_calls[-1] == (False, False, True, False, False)
+        # STEAM-NO-FISICO-01 (23/09/2026): até ali o número do JOGO vencia o
+        # gesto dela; a decisão dela (*"Hefesto manda e controla sempre"*)
+        # inverteu — o número do jogo nunca chega ao físico, e o que ela
+        # escolheu fica.
+        assert node.player_calls[-1] == (True, False, False, False, False)
+        assert (False, False, True, False, False) not in node.player_calls
         # (a asserção sobre a trava manual saiu em 14/09/2026 — ela foi
         #  revogada por decisão dela; ver test_a_trava_que_ninguem_solta_01)
 
