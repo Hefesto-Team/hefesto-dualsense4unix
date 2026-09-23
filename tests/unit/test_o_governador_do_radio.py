@@ -280,6 +280,70 @@ def test_saida_que_nao_se_sabe_nao_vira_deficit() -> None:
     assert governador.publicar()[ADAPTADOR_A]["fila"] is None, "«não sei» publicado como número"
 
 
+@dataclass
+class _MedidorQueTroca:
+    """Mede o adaptador parado (saída zero) ou diz «não sei», conforme a régua."""
+
+    endereco: str = ADAPTADOR_A
+    sabe: bool = True
+
+    def amostrar(self) -> dict[str, ar.ArDoAdaptador]:
+        if self.sabe:
+            return {
+                self.endereco: ar.ArDoAdaptador(
+                    hci=0, endereco=self.endereco, entrada_por_s=700.0,
+                    saida_por_s=0.0, janela_s=gov.PERIODO_S, conexoes=(),
+                )
+            }
+        return _MedidorQueNaoSabe(self.endereco).amostrar()
+
+
+def test_nao_sei_nao_anda_o_relogio_do_teto() -> None:
+    """Conferência de 23/09/2026: «não sei» depois de ceder não é parada.
+
+    O governador cedeu sobre uma janela medida, e o medidor passou a dizer
+    «não sei». Contado no relógio de parede, o teto derrubava as pontes em
+    dois segundos e o diário escrevia «não drena» — zero pacote no ar,
+    concluído de nenhum pacote medido. O relógio do teto soma só as janelas
+    MEDIDAS; com elas, o teto continua valendo.
+
+    MORDIDA: volte o teto para ``agora - cedendo_desde`` e as pontes caem
+    durante o «não sei».
+    """
+    relogio, registro = _Relogio(), _Diario()
+    medidor = _MedidorQueTroca()
+    governador = gov.GovernadorDoRadio(
+        medidor=medidor,
+        adaptador_de=lambda _u: ADAPTADOR_A,
+        registrar=registro,
+        relogio=relogio,
+    )
+    vaga = governador.pedir_vaga(CONTROLE_1, "som")
+    assert isinstance(vaga, gov.Vaga)
+    vaga.subiu()
+    for _ in range(24):
+        vaga.contar_escrita()
+    relogio.agora += gov.PERIODO_S
+    governador.tique()
+    assert vaga.cedendo is True, "24 escritas sem nada no ar e o governador não cedeu"
+
+    medidor.sabe = False
+    for _ in range(16):  # quatro segundos de «não sei»
+        relogio.agora += gov.PERIODO_S
+        governador.tique()
+    assert vaga.derrubar is False, "o «não sei» derrubou as pontes como se fosse parada"
+    assert registro.de(gov.FILA_PARADA) == []
+    assert vaga.cedendo is True, "o «não sei» mudou a decisão sem medida"
+
+    medidor.sabe = True
+    for _ in range(12):  # três segundos MEDIDOS de adaptador parado
+        relogio.agora += gov.PERIODO_S
+        governador.tique()
+    assert vaga.derrubar is True, "o teto parou de valer sobre a parada medida"
+    [parada] = registro.de(gov.FILA_PARADA)
+    assert gov.TETO_DE_CEDER_S < parada["depois"]["cedeu_s"] <= gov.TETO_DE_CEDER_S + 0.5
+
+
 # ---------------------------------------------------------------------------
 # 3. o teto — consumidor parado não é congestão
 # ---------------------------------------------------------------------------
