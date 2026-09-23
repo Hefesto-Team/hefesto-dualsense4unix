@@ -1462,7 +1462,21 @@ class AltoFalanteSubsystem:
                     Recusa,
                 )
 
-                vaga = governador.pedir_vaga(uniq, modo)
+                # O PEDIDO QUE LEVANTA NÃO DERRUBA A PONTE — O-ALTO-FALANTE-
+                # DIZ-ATIVO-01, 23/09/2026. O `pedir_vaga` roda o
+                # `plano_de_radio` sem `try` (A-COSTURA-DA-ONDA-2-01), e uma
+                # exceção aqui subia até `_reconciliar`: nenhuma ponte da mesa
+                # subia e nenhum nó era publicado naquela volta. A cura mora no
+                # CHAMADOR: o pedido que falha é «não sei», e a ponte sobe como
+                # subia antes do governador existir — sem vaga, que é o mesmo
+                # caminho do dublê montado por `__new__`.
+                try:
+                    vaga = governador.pedir_vaga(uniq, modo)
+                except Exception:
+                    logger.warning(
+                        "governador_pedido_de_vaga_falhou", uniq=uniq, modo=modo, exc_info=True
+                    )
+                    vaga = None
                 if isinstance(vaga, Recusa):
                     esperando.add((uniq, modo))
                     continue
