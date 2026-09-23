@@ -525,8 +525,9 @@ def test_sem_o_bluez_nenhum_adaptador_mora_dentro_da_maquina(
     já tem 2 controles… Mover o Player 4 para o adaptador dentro da máquina e
     ligar lá?». Medido no piloto, na conferência da TRANSPLANTE-DA-SECAO-01.
 
-    MORDIDA: devolva `"entrada": entrada or DENTRO_DA_MAQUINA` na cena, ou
-    tire o `sabido` do filtro de `_moldes_de_pergunta`.
+    MORDIDA: devolva `"entrada": entrada or DENTRO_DA_MAQUINA` na cena, tire
+    o `sabido` do filtro de `_moldes_de_pergunta`, ou deixe o `sabido` só com
+    o BlueZ (sem o `maquina is not None`).
     """
     from hefesto_dualsense4unix.integrations.bluez_dbus import AdaptadorDoBluez
 
@@ -552,6 +553,20 @@ def test_sem_o_bluez_nenhum_adaptador_mora_dentro_da_maquina(
     mesa._FUNDO.clear()
     assert "data-pedido" not in _campos(mesa)["radio-moldes"], (
         "com a vaga ainda sem porta sabida, o pedido virou «Todas as entradas»")
+
+    # O BlueZ descreveu os dois, e o `maquina.json` ainda está no fio: a
+    # janela congelaria «A Entrada 1.2» no lugar do «Sala» que ela deu.
+    monkeypatch.setattr(mesa, "_ler_o_bluez", lambda: (adaptadores, aparelhos))
+    lido = mesa._ler_a_maquina
+
+    def no_fio() -> Any:
+        raise TimeoutError("o maquina.json ainda não voltou")
+
+    monkeypatch.setattr(mesa, "_ler_a_maquina", no_fio)
+    mesa._FUNDO.clear()
+    assert "data-pedido" not in _campos(mesa)["radio-moldes"], (
+        "a janela do pedido abriria sem o nome que ela deu ao adaptador")
+    monkeypatch.setattr(mesa, "_ler_a_maquina", lido)
 
     # O BlueZ responde: o pedido chega com os dois lugares pelo nome, e o
     # adaptador que ELE descreveu sem porta continua dentro da máquina.

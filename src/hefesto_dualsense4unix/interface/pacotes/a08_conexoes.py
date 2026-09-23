@@ -5505,8 +5505,11 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
             # descreveu sem porta), não o que sobra: um endereço que só o
             # daemon publicou — o primeiro tique, com o BlueZ ainda no fio —
             # não tem porta sabida, e a linha e as perguntas não afirmam nada.
+            # As perguntas esperam também o NOME (o `maquina.json`): a janela
+            # do pedido congela o texto, e «a Entrada 1.2» no lugar do «Sala»
+            # que ela deu ficaria lá até ela responder.
             "entrada": entrada or (DENTRO_DA_MAQUINA if bz is not None else ""),
-            "sabido": bz is not None,
+            "sabido": bz is not None and maquina is not None,
             "face": face or "",
             "hub": bool(getattr(mz, "atras_de_hub", False)),
             "varrendo": bool(getattr(bz, "varrendo", False)),
