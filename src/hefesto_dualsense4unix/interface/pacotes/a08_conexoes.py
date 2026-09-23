@@ -88,17 +88,13 @@ _DECLARACAO: object | None = None
 #: o desenho pinta e é ela que o `data-v` de cada `<select>` endereça.
 _MESA_DO_RADIO: object | None = None
 
-#: `vid:pid` por POSIÇÃO no desenho — o que estava no slot N quando o último
-#: tique pintou. É a ponte entre o clique (que só sabe dizer "o terceiro") e o
-#: `maquina.json` (que só sabe endereçar por `vid:pid`).
-_VIZINHOS: tuple[str, ...] = ()
 
 #: O que só o exame COMPLETO traz: `pareamentos`, `vizinhanca_das_portas` e as
 #: ordens de serviço. Vazio até ela clicar em **Examinar Portas**.
 _EXTRAS: tuple[object, ...] = ()
 
 #: A ordem de serviço de cada POSIÇÃO da tira do exame, ou `None` quando aquela
-#: linha é uma conferência (que não se dispensa). Mesma ponte do `_VIZINHOS`.
+#: linha é uma conferência (que não se dispensa).
 #: `Any` E NÃO `object`: o que mora aqui é a `ordem` que o exame da mesa
 #: devolve, com `.chave` e `.arranjo`. `object` não tem atributo nenhum, e
 #: então o `ignorar` que os lê não passava no `mypy` — a anotação estava
@@ -1212,9 +1208,10 @@ def _card_da_ordem(ordem: Any) -> str:
             f'<span class="caixa alvo">{_e(destino)}</span></div></div>')
 
 
-#: OS OUTROS DOIS TETOS DO DESENHO — decisão **08-Q7**, 06/09/2026. Eles moram
-#: aqui, ao lado do primeiro, porque o `+N` é conta do PRODUTO e o número é do
-#: DESENHO: a coluna do exame tem CINCO blocos e a fileira dos vizinhos QUATRO.
+#: O TETO DO DESENHO — decisão **08-Q7**, 06/09/2026. Mora aqui porque o `+N`
+#: é conta do PRODUTO e o número é do DESENHO: a coluna do exame tem CINCO
+#: blocos. (A fileira dos vizinhos, que tinha QUATRO, saiu em 23/09/2026 com a
+#: seção do rádio: os vizinhos viraram selos na régua do espectro, sem teto.)
 #:
 #: **LIDOS DE UM LUGAR SÓ, nunca digitados nos dois arquivos.** O `aba08.py`
 #: importa este pacote (`_pacote08`) e emite os blocos por estes mesmos números;
@@ -1229,7 +1226,6 @@ def _card_da_ordem(ordem: Any) -> str:
 #: item, e o exame não tem máximo. Todo número cravado aqui como teto seria o
 #: mesmo defeito com outra data.
 TETO_DO_EXAME = 5
-TETO_DE_VIZINHOS = 4
 
 
 def _monta() -> Any:
@@ -1303,7 +1299,7 @@ def _sobraram(quantos: int, cabem: int, um: str, muitos: str) -> str:
     return f'<div class="mais">{_e(frase)}</div>'
 
 
-def _o_que_nao_coube(itens: list[Any], vizinhos: list[Any]) -> dict[str, str]:
+def _o_que_nao_coube(itens: list[Any]) -> dict[str, str]:
     """Os DOIS `+N` que faltavam nesta aba — decisão **08-Q7** dela, 06/09/2026.
 
     *"Quando sobra, a lista ganha uma última linha curta: '+1 recomendação não
@@ -1343,8 +1339,6 @@ def _o_que_nao_coube(itens: list[Any], vizinhos: list[Any]) -> dict[str, str]:
         # tem quatro entradas e a fileira não rola), e é ele quem diz. O que
         # esta linha guarda é a metade do exame.
         "exame-mais": nada,
-        "vizinho-mais": _sobraram(len(vizinhos), TETO_DE_VIZINHOS,
-                                  "rádio vizinho", "rádios vizinhos") or nada,
     }
 
 
@@ -1551,59 +1545,6 @@ def _exame() -> list[dict[str, Any]]:
     remedindo o mesmo defeito.
     """
     return [_linha(i) for i in _itens_da_tela() if not _calada(i)]
-
-
-def _adaptadores(conectados: Any, state: Any = None) -> dict[str, Any]:
-    """Quem está em qual adaptador de rádio.
-
-    O MAC NÃO SAI DAQUI CRU para lugar nenhum que se grave: este pacote devolve
-    para a tela em memória, e a máscara da casa (octetos 4 e 5 zerados) é o que
-    vai para qualquer relato. São dois portões nesta árvore e eles não perdoam.
-
-    ESTA PONTE NUNCA PASSOU TRÁFEGO — consertado em 05/09/2026
-    ---------------------------------------------------------
-    Até hoje a chamada era ``ocupacao_por_adaptador([c.get("uniq") for c in
-    conectados])`` — uma lista de **strings**. O dono
-    (`integrations/radio_da_mesa.py:323`) declara `Iterable[Mapping]` e faz
-    ``controle.get("transport")``, então a chamada levantava
-    ``AttributeError: 'str' object has no attribute 'get'`` **sempre**, e o
-    ``except Exception`` abaixo engolia.
-
-    Medido em 05/09/2026 com o python desta árvore::
-
-        ocupacao_por_adaptador(['aabbcc000011'])          -> AttributeError
-        ocupacao_por_adaptador([{'uniq': …, 'transport': 'bt'}])
-            -> {'': Ocupacao(slots_input=260.4, …)}
-
-    Resultado: a chave ``adaptadores`` deste pacote era **sempre ``{}``**, em
-    toda máquina, desde que a linha foi escrita. O sintoma era a AUSÊNCIA de
-    dado, que não quebra tela nenhuma — a assinatura de defeito mais cara desta
-    casa. E é por isso que `html_da_regua_do_radio` recalcula a ocupação por
-    conta própria em 353 linhas, em vez de ler o dono.
-
-    A SEGUNDA METADE: `com_ponte_de_mic`. A GTK passa o conjunto
-    (`app/actions/config/secao_mesa.py:1335`), e sem ele a conta ignora o custo
-    do microfone no rádio — 260,4 onde a GTK conta 276,7 para um controle com a
-    ponte de pé. A fonte é ``state["bt_mic"]["uniqs"]``, e a ausência da chave
-    vira conjunto vazio pela mesma razão escrita lá: um daemon mais velho que a
-    janela não a manda, e cair seria pior que contar sem o microfone.
-    """
-    try:
-        perfil._com_o_src()
-        from hefesto_dualsense4unix.integrations import radio_da_mesa
-
-        bloco = (state or {}).get("bt_mic") if isinstance(state, dict) else None
-        uniqs = bloco.get("uniqs") if isinstance(bloco, dict) else None
-        com_mic = (
-            frozenset(u for u in uniqs if isinstance(u, str))
-            if isinstance(uniqs, list)
-            else frozenset()
-        )
-
-        ocup = radio_da_mesa.ocupacao_por_adaptador(conectados, com_ponte_de_mic=com_mic)
-        return {str(k): v for k, v in (ocup or {}).items()}
-    except Exception:
-        return {}
 
 
 def _bancada() -> Any:
@@ -1892,176 +1833,6 @@ RENOMEAR_DICA = (
     "Duplo clique para dar um nome a este adaptador — «Sala», «Extra». "
     "O resto da tela passa a usá-lo."
 )
-
-#: O cabeçalho da tabela dos adaptadores. Ele viaja JUNTO com as linhas porque o
-#: bloco inteiro é trocado por `innerHTML` — o mesmo molde do `.mm-faces` e da
-#: régua do rádio. Deixá-lo fora obrigaria a pintura a conhecer a estrutura do
-#: `<table>` do desenho, que é o acoplamento que o alvo `html` existe para
-#: evitar.
-_CABECALHO_DOS_ADAPTADORES = (
-    "<tr><th>Nome</th><th>Adaptador</th><th>Onde está</th></tr>"
-)
-
-#: O que a tabela diz quando a varredura do barramento não respondeu. Ela é
-#: DIFERENTE de "nenhum adaptador": ausência de leitura não é ausência de
-#: aparelho, e é o defeito que esta casa chama de *ausência de notícia lida
-#: como sucesso*. O `None` de `_mesa_do_radio` é o único caminho até aqui.
-_NAO_CONSEGUI_LER_OS_ADAPTADORES = "Não consegui ler os adaptadores agora."
-
-#: E o que ela diz quando LEU e não havia nenhum. A frase é a da janela estável
-#: (`secao_mesa`), e existe porque uma tabela vazia lê como tela quebrada.
-_NENHUM_ADAPTADOR = "Nenhum adaptador Bluetooth encontrado."
-
-
-def _apelidos_por_interface() -> dict[str, str]:
-    """`{hciN: o nome que ELA deu}` — vazio quando o BlueZ não respondeu.
-
-    O DONO DA COSTURA É `apelido_do_dongle.Dongle.nome`, que devolve o alias
-    **sem** a marca que o produto acrescenta. Ler `alias` cru aqui poria na
-    coluna o nome com a costura, que é o que a janela estável evita de
-    propósito (`secao_mesa._campo_do_nome`).
-    """
-    dongles = _dongles()
-    if not dongles:
-        return {}
-    with contextlib.suppress(Exception):
-        perfil._com_o_src()
-        from hefesto_dualsense4unix.app.actions.config.secao_mesa import (
-            _dongle_por_interface,
-        )
-
-        return {
-            interface: nome
-            for interface, dongle in _dongle_por_interface(dongles).items()
-            if (nome := str(getattr(dongle, "nome", "") or ""))
-        }
-    return {}
-
-
-def _html_dos_adaptadores() -> str:
-    """A tabela "Nome · Adaptador · Onde está" com os adaptadores DELA.
-
-    ELA ERA CENÁRIO — e é a tabela mais lida desta aba. O desenho crava duas
-    linhas ("Sala / TP-Link UB500 / Entrada 3 · traseira" e "Sem nome / Intel
-    AX211 / Interno · M.2") sobre uma bancada que tem **TRÊS** adaptadores, os
-    três `2357:0604`. Medido em 04/09/2026: `ler_a_mesa()` devolve três, e o
-    BlueZ dá a cada um o nome que ela escreveu.
-
-    AS TRÊS COLUNAS TÊM TRÊS DONOS, e nenhuma frase nasce aqui:
-
-    * **Nome** — `apelido_do_dongle.Dongle.nome`, o alias dela sem a costura;
-    * **Adaptador** — `secao_mesa._nome_do_adaptador`, que é VID:PID e **nunca**
-      `hciN`: o índice inverte entre boots, e um nome que troca de dono faz a
-      pessoa mexer na porta errada (decisão M1);
-    * **Onde está** — `secao_mesa._onde_esta_o_adaptador`, que já fala o número
-      do mapa DELA quando ela desenhou a mesa, e desce a procedência para o
-      `title`.
-
-    O `contenteditable` DA PRIMEIRA CÉLULA CONTINUA, porque o gesto de renomear
-    é dela e é duplo clique (`RENOMEAR_DICA`, decisão de 31/08). O que muda é o
-    texto que ele começa editando: o nome do adaptador, e não "Sala".
-
-    **E A CÉLULA GANHOU DONO — 04/09/2026.** Ela era `contenteditable` e mais
-    nada: nenhum gesto, e `apelido_do_dongle` sem um único chamador na interface
-    nova. *Ela digitava e perdia.* Agora a célula leva o `data-hef-gesto` e o
-    `data-caminho` — o endereço de barramento, que é a palavra comum desta aba —,
-    e o gesto :func:`renomear_adaptador` grava no BlueZ.
-
-    **O `hciN` NÃO VAI PARA O HTML** (decisão M1) e o endereço, tampouco: o
-    `data-caminho` é `3-1.2`, e quem o traduz em BD Address é
-    :func:`_endereco_e_nome_do_adaptador`, no ato do clique.
-    """
-    mesa = _mesa_do_radio()
-    if mesa is None:
-        return f'{_CABECALHO_DOS_ADAPTADORES}<tr><td colspan="3" class="mudo">' \
-               f"{_NAO_CONSEGUI_LER_OS_ADAPTADORES}</td></tr>"
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.app.actions.config.secao_mesa import (
-        _nome_do_adaptador,
-        _onde_esta_o_adaptador,
-    )
-    from hefesto_dualsense4unix.gui.aba_conexoes import _e
-
-    apelidos = _apelidos_por_interface()
-    mapa = getattr(_declaracao(), "mapa", None)
-    linhas = []
-    for a in tuple(getattr(mesa, "adaptadores", ()) or ()):
-        nome = apelidos.get(str(getattr(a, "interface", "")), "")
-        onde, dica = _onde_esta_o_adaptador(a, mapa)
-        mudo = "" if nome else ' class="mudo"'
-        # A PROCEDÊNCIA SÓ VAI QUANDO EXISTE. `_onde_esta_o_adaptador` devolve
-        # `None` de dica para o adaptador que não está em entrada declarada, e
-        # pôr a dica do RENOMEAR nessa célula seria prometer, no hover da coluna
-        # "Onde está", um gesto que é da coluna "Nome".
-        titulo = f' title="{_e(dica)}"' if dica else ""
-        linhas.append(
-            f"<tr><td{mudo}>"
-            f'<span class="renomeia" contenteditable="true" '
-            f'data-hef-gesto="{GESTO_DO_APELIDO}" '
-            f'data-caminho="{_e(str(getattr(a, "caminho", "") or ""))}" '
-            f'title="{_e(RENOMEAR_DICA)}">{_e(nome or SEM_NOME)}</span></td>'
-            f'<td class="mudo">{_e(_nome_do_adaptador(a))}</td>'
-            f"<td{titulo}>{_e(onde)}</td></tr>")
-    if not linhas:
-        linhas = [f'<tr><td colspan="3" class="mudo">{_NENHUM_ADAPTADOR}</td></tr>']
-    return _CABECALHO_DOS_ADAPTADORES + "".join(linhas)
-
-
-def _onde_dos_vizinhos(mesa: Any) -> list[str]:
-    """A terceira coluna do bloco de cada rádio vizinho: **onde ele está**.
-
-    E ELA CARREGA O AVISO DE VIZINHANÇA, que é o mesmo fato que a linha do
-    Check-up chama de *"dois rádios da bancada estão em entradas vizinhas"* —
-    só que dito ao lado do rádio CULPADO. Na janela estável ele aparece nos
-    dois lugares; aqui aparecia só na linha do exame, sem dizer qual dos rádios
-    é. Medido nesta bancada em 04/09/2026: o `3554:fa09` é *"vizinho do
-    adaptador 3"*, e os outros dois calam.
-
-    OS DOIS DONOS SÃO DO PRODUTO — `secao_mesa._onde_esta_o_radio` (que já
-    junta o painel com o aviso, e já fala o número do mapa dela quando existe) e
-    `secao_mesa._avisos_de_vizinhanca` (que garante **um** aviso por par: são
-    dois aparelhos e UM problema, e marcar os dois leria como dois).
-    """
-    if mesa is None:
-        return []
-    with contextlib.suppress(Exception):
-        perfil._com_o_src()
-        from hefesto_dualsense4unix.app.actions.config.secao_mesa import (
-            _avisos_de_vizinhanca,
-            _onde_esta_o_radio,
-        )
-
-        avisos = _avisos_de_vizinhanca(mesa)
-        mapa = getattr(_declaracao(), "mapa", None)
-        return [
-            _onde_esta_o_radio(r, avisos.get(str(getattr(r, "no", ""))), mapa)
-            for r in tuple(getattr(mesa, "radios", ()) or ())
-        ]
-    return []
-
-
-def _dicas_dos_vizinhos(mesa: Any) -> list[str]:
-    """O `title` de cada "onde" — a segunda metade do aviso de vizinhança.
-
-    `_avisos_de_vizinhanca` devolve `(sufixo, dica)`: o sufixo entra na coluna
-    (é o que se lê sem gesto nenhum) e a dica diz POR QUE aquilo importa. Sem
-    ela a coluna acusaria sem explicar, que é a metade que a janela estável
-    nunca deixou de fora.
-    """
-    if mesa is None:
-        return []
-    with contextlib.suppress(Exception):
-        perfil._com_o_src()
-        from hefesto_dualsense4unix.app.actions.config.secao_mesa import (
-            _avisos_de_vizinhanca,
-        )
-
-        avisos = _avisos_de_vizinhanca(mesa)
-        return [
-            (avisos.get(str(getattr(r, "no", ""))) or ("", ""))[1]
-            for r in tuple(getattr(mesa, "radios", ()) or ())
-        ]
-    return []
 
 
 # ---------------------------------------------------------------------------
@@ -2650,78 +2421,6 @@ def colorway_do_controle(m: Any) -> str:
     return str(m.get("cor") or "")
 
 
-def _da_mesa_para_a_regua(m: dict[str, Any], com_mic: set[str]) -> dict[str, Any]:
-    """Um controle da mesa VIVA na língua da régua do rádio.
-
-    O `"Não sei"` DA MESA VIRA VAZIO AQUI, e foi um vazamento medido em
-    03/09/2026 com os dois controles dela: o `title` da fatia do rádio saía
-    *"Não sei — 260,4 turnos de entrada"*. `COR_DESCONHECIDA` é o que a mesa
-    responde quando ninguém leu a cor, e ele é para o Python decidir — não para
-    a tela mostrar. Vazio faz quem lê cair no `Player N`, que é um fato.
-    """
-    nome = str(m.get("nome") or "")
-    return {
-        "jogador": m.get("jogador"),
-        "nome": "" if nome == _cor_desconhecida() else nome,
-        # AS DUAS CHAVES VIAJAM JUNTAS, e a que faltava aqui apagou a régua
-        # inteira — 06/09/2026, `CONEXOES-LIGAR-TUDO-01`.
-        #
-        # `via` é a PALAVRA que a régua escreve num `title` (*"hoje no cabo"*);
-        # `transporte` é a chave CRUA que :func:`_e_radio` compara. A costura da
-        # ONDA B trocou o `c["via"] == "BT"` de `_regua_do_radio` por
-        # `_e_radio(c)` — e `c` ali é o dicionário que ESTA função devolve, que
-        # nunca carregou `transporte`. Resultado medido: `no_radio` ficava
-        # SEMPRE vazio, e a régua de Desempenho mostrava zero controle no rádio
-        # com o controle no rádio. **É exatamente o sintoma que o comentário da
-        # troca dizia estar prevenindo** — calado, sem log; quem o revelou foram
-        # as duas réguas de identidade que a costura deixou vermelhas.
-        "via": str(m.get("via") or ""),
-        "transporte": str(m.get("transporte") or ""),
-        "plastico": _hex_do_plastico(str(m.get("cor") or "")),
-        # A PONTE QUE SUBIU, e não a que se pediu. É a mesma fonte que o
-        # `radio_da_mesa.ocupacao_por_adaptador` usa (`bt_mic.uniqs`), com a
-        # razão escrita lá: *"uma ponte pedida que não subiu não ocupa fatia de
-        # rádio nenhuma"*. O desenho mostra a fatia laranja porque na bancada a
-        # ponte está de pé; aqui ela só aparece quando está mesmo.
-        "mic": (norm_mac(str(m.get("uniq") or "")) or "") in com_mic,
-    }
-
-
-def _nomes_dos_adaptadores() -> tuple[dict[str, str], dict[str, str]]:
-    """`({endereço: nome}, {hciN: nome})` — as duas chaves da MESMA leitura.
-
-    A régua precisa das duas porque as duas pontas dela falam línguas
-    diferentes: a pista COM gente é endereçada pelo endereço de rádio (é o que
-    `radio_da_mesa.adaptador_por_uniq` lê do `HID_PHYS`), e a pista VAZIA é
-    endereçada pelo `hciN` da varredura do sysfs (que não publica endereço
-    nenhum — medido em 22/08). O `Dongle` do BlueZ é o único lugar onde as duas
-    aparecem juntas, e é por isso que a junção mora aqui.
-
-    **O ENDEREÇO NÃO SAI DAQUI PARA A TELA.** Ele é chave de casamento e mais
-    nada: o que a pista escreve é o `nome`. Um MAC na tela é o que o
-    `check_endereco_de_radio.py` reprova, e com razão.
-    """
-    dongles = _dongles()
-    if not dongles:
-        return {}, {}
-    por_endereco: dict[str, str] = {}
-    por_interface: dict[str, str] = {}
-    for d in dongles:
-        nome = str(getattr(d, "nome", "") or "")
-        if not nome:
-            continue
-        endereco = str(getattr(d, "endereco", "") or "")
-        if endereco:
-            por_endereco[endereco] = nome
-        # `/org/bluez/hci1` → `hci1`. É o único ponto em que o `hciN` é usado, e
-        # ele NUNCA vai para a tela: a decisão M1 o proíbe ali porque o índice
-        # inverte entre boots. Aqui ele só casa duas leituras do mesmo instante.
-        interface = str(getattr(d, "objeto", "") or "").rsplit("/", 1)[-1]
-        if interface:
-            por_interface[interface] = nome
-    return por_endereco, por_interface
-
-
 # ---------------------------------------------------------------------------
 # A CONTA DE SLOTS POR ADAPTADOR — "cabe o que eu quero fazer?"
 # ---------------------------------------------------------------------------
@@ -2748,445 +2447,6 @@ def _nomes_dos_adaptadores() -> tuple[dict[str, str], dict[str, str]]:
 # SEGUNDO `state_full` por entrada na aba"*). Aqui o `ctx.state` do tique já é o
 # `state_full`, então o segundo pedido não existe — a dívida do dono não
 # atravessa para cá.
-
-
-def _conta_de_slots(ctx: Contexto) -> str:
-    """As linhas do "cabe mais um?" por adaptador, ou a resposta honesta.
-
-    A ORDEM DAS LINHAS É A DO DONO (`secao_orcamento._ContaDeSlots.falas`): por
-    adaptador, o pendente antes do "cabe mais um" — o que está errado agora vem
-    antes do que se pode planejar.
-
-    **O `linha_do_plano` FICA DE FORA, e é decisão medida.** Ele diz quem está
-    em qual adaptador e quanto isso custa — que é exatamente o que a régua
-    logo acima desenha, com a cor do plástico de cada um. Repeti-lo em texto
-    seria a segunda grafia do mesmo fato na MESMA seção, e a primeira coisa que
-    uma segunda grafia perde é a revisão dela.
-    """
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.app.actions.config.secao_orcamento import (
-        NINGUEM_NO_RADIO,
-        SEM_RESPOSTA_DO_DAEMON,
-    )
-    from hefesto_dualsense4unix.integrations import plano_de_radio
-
-    st = ctx.state
-    # SEM RESPOSTA NÃO É RÁDIO VAZIO. `state` vazio quer dizer que o serviço não
-    # falou; uma lista `controllers` vazia quer dizer que ele falou e não há
-    # ninguém. Confundir os dois é o defeito da B1 acima.
-    if not st:
-        return html.escape(SEM_RESPOSTA_DO_DAEMON)
-
-    planos: dict[str, Any] = {}
-    with contextlib.suppress(Exception):
-        bt_mic = st.get("bt_mic")
-        planos = plano_de_radio.plano_por_adaptador(
-            [c for c in (st.get("controllers") or []) if isinstance(c, dict)],
-            com_ponte_de_mic=((bt_mic.get("uniqs") or [])
-                              if isinstance(bt_mic, dict) else ()),
-            mic_declarado=_mics_que_ela_quer(
-                [c for c in (st.get("controllers") or []) if isinstance(c, dict)]
-            ),
-            apelidos=_apelidos_por_endereco(),
-        )
-    if not planos:
-        return html.escape(NINGUEM_NO_RADIO)
-
-    linhas: list[str] = []
-    for _endereco, plano in sorted(planos.items()):
-        pendente = plano_de_radio.linha_do_declarado_que_nao_subiu(plano)
-        if pendente:
-            linhas.append(html.escape(pendente))
-        linhas.append(html.escape(plano_de_radio.linha_do_cabe_mais_um(plano)))
-    return "<br>".join(linhas)
-
-
-def _mics_que_ela_quer(conectados: list[dict[str, Any]]) -> tuple[str, ...]:
-    """Os `uniq` cujo microfone ELA quer no ar — TODOS, menos os que desligou.
-
-    É a metade que separa as duas contas do dono (`plano_de_radio`, regra 1): o
-    que SUBIU vem do daemon (`bt_mic.uniqs`), o que ela QUER sai daqui. Sem esta
-    lista a tela mostraria "está tudo certo" sobre uma ponte no chão — o padrão
-    que a queixa do Sackboy revelou.
-
-    **A CONTA VIROU EM 18/09/2026**, e ela tinha de virar junto com o default do
-    daemon (ordem dela: *"todos os controles tem que nascer com tudo mic,
-    giroscopio e afins"*). Esta função se chamava `_mics_declarados` e devolvia
-    só quem tinha `microfone: true` no `maquina.json`. Com o produto ligando por
-    ausência, ela passaria a mentir do lado mais caro: um controle que ela nunca
-    declarou e cuja ponte não subiu ficaria FORA da lista, e o aviso *"o
-    microfone deste controle não está de pé"* nunca apareceria — a tela diria
-    "está tudo certo" exatamente no caso novo.
-
-    A régua é a do daemon, lida do mesmo lugar: `microfone is False` é a recusa;
-    ausência e `True` querem a ponte. Só controles CONECTADOS entram, porque a
-    conta é sobre a mesa de agora.
-    """
-    declarada = _declaracao()
-    recusados: set[str] = set()
-    if declarada is not None:
-        with contextlib.suppress(Exception):
-            recusados = {
-                _so_hex(str(chave))
-                for chave, valor in (getattr(declarada, "controles", {}) or {}).items()
-                if getattr(valor, "microfone", None) is False
-            }
-    querido: list[str] = []
-    for entrada in conectados:
-        chave = _so_hex(str(entrada.get("uniq") or ""))
-        if chave and chave not in recusados:
-            querido.append(chave)
-    return tuple(querido)
-
-
-def _apelidos_por_endereco() -> dict[str, str]:
-    """`{endereço de rádio: o nome que ELA deu}` — a primeira metade de
-    :func:`_nomes_dos_adaptadores`.
-
-    O nome vai para a frase do "cabe mais um" pelo `plano.nome_na_tela`, e o
-    `hciN` NUNCA vai: a decisão M1 o proíbe porque o índice é a vaga, não o
-    aparelho, e ele inverte entre boots. Sem apelido o dono escreve **Adaptador
-    sem nome**, que é palavra dele.
-    """
-    por_endereco, _por_interface = _nomes_dos_adaptadores()
-    return por_endereco
-
-
-def _chave_de_radio(endereco: str) -> str:
-    """O endereço de rádio na forma que os DOIS lados podem comparar.
-
-    **O DEFEITO QUE ISTO FECHA foi achado por ELA em 08/09/2026**, olhando a aba
-    com os quatro DualSense na mesa: a régua desenhava CINCO pistas para TRÊS
-    adaptadores, as três com nome apareciam vazias, e os dois controles do rádio
-    caíam em duas pistas "Sem nome".
-
-    A CAUSA É A CAIXA, e nada além dela. Medido na máquina dela:
-
-        BlueZ  ->  'AC:A7:F1:00:00:CE'   (`org.bluez.Adapter1.Address`)
-        sysfs  ->  'ac:a7:f1:00:00:ce'   (`HID_PHYS`)
-
-    É o MESMO adaptador. O `grupos.pop(endereco)` nunca casava, então todo grupo
-    sobrevivia até o ramo do "sobrou" e virava pista sem nome — ao lado das
-    pistas nomeadas e vazias.
-
-    O comentário logo abaixo AFIRMAVA a premissa falsa, palavra por palavra:
-    *"o `endereco` de cada adaptador vem do BlueZ, e é a MESMA chave que o
-    `adaptador_por_uniq` devolve"*. Era a mesma chave semanticamente e duas
-    chaves diferentes para um `dict`.
-
-    **E O SINTOMA JÁ TINHA APARECIDO**, por outra causa, em 06/09 — está escrito
-    na função que monta os grupos. Duas causas diferentes, o mesmo desenho
-    errado na tela dela: é o preço de casar por string sem uma forma canônica.
-    Agora há uma, e ela é obrigatória nos dois lados.
-    """
-    return endereco.strip().lower()
-
-
-def _endereco_do_adaptador(interface: str) -> str:
-    """O endereço de rádio daquele `hciN`, pelo BlueZ. `""` = não perguntei.
-
-    É a ponte entre a varredura do sysfs (que conhece `hciN` e a porta) e o
-    medidor (que conhece endereço). Sem o BlueZ ela devolve vazio, e o efeito é
-    o certo: a pista do adaptador nasce vazia em vez de receber a fatia de
-    outro.
-    """
-    if not interface:
-        return ""
-    for d in (_dongles() or ()):
-        if str(getattr(d, "objeto", "") or "").rsplit("/", 1)[-1] == interface:
-            return _chave_de_radio(str(getattr(d, "endereco", "") or ""))
-    return ""
-
-
-def _e_radio(c: dict[str, object]) -> bool:
-    """Este controle fala por rádio? Lê a chave CRUA, nunca a palavra da tela.
-
-    `transporte` é `"usb"`/`"bt"` e vem de `mesa_viva.py:509`; `via` carrega a
-    PALAVRA da tela ("cabo"/"rádio"), que muda com o glossário. Comparar a palavra
-    faria esta aba perder os controles do rádio na primeira vez que alguém
-    traduzisse a tela — calado, sem log e sem régua vermelha.
-
-    A `ONDA4-S10-O-TRANSPORTE-01` mediu os cinco pontos e escreveu o caminho; ela
-    não podia executá-lo porque este arquivo não era da posse dela. Quem fechou
-    foi a costura da ONDA B, 06/09/2026.
-
-    **QUEM CHAMAR ISTO TEM DE PASSAR UM DICIONÁRIO QUE CARREGUE `transporte`**, e
-    a advertência custou um defeito vivo no mesmo dia
-    (`CONEXOES-LIGAR-TUDO-01`): a troca da ONDA B aplicou esta função ao
-    dicionário de :func:`_da_mesa_para_a_regua`, que só carregava a PALAVRA — e a
-    régua de Desempenho passou a mostrar ZERO controle no rádio com o controle no
-    rádio, que é o sintoma exato que a troca dizia estar prevenindo. Um dicionário
-    sem a chave crua responde `False` sobre TUDO, calado.
-    """
-    return str(c.get("transporte") or "").strip().lower() == "bt"
-
-
-def _regua_do_radio(ctx: Contexto) -> str:
-    """A régua de Desempenho com a mesa DELA — pistas, eixo e legenda.
-
-    O QUE O PRODUTO SABE, e é só isto: quem está no rádio (a mesa), em qual
-    adaptador cada um está (`radio_da_mesa.adaptador_por_uniq`, que lê o
-    `HID_PHYS` do sysfs) e quanto cada fatia custa (`radio_da_mesa`, os mesmos
-    quatro números que o desenho já lia).
-
-    **UMA PISTA POR ADAPTADOR DELA — 04/09/2026, e o que faltava era a FONTE.**
-    O que estava escrito aqui dizia, com todas as letras, que o passo seguinte
-    *"espera uma fonte: `radio_da_mesa` só sabe mapear `uniq` → adaptador
-    (`adaptador_por_uniq`), e não sabe ENUMERAR os adaptadores"*. **Sabe outro
-    módulo:** `mesa_de_radio.ler_a_mesa().adaptadores` — o mesmo que esta aba já
-    lia para os rádios vizinhos, e que devolve TRÊS nesta bancada (medido em
-    04/09). A régua desenhava uma pista quando havia gente no rádio e uma pista
-    vazia e sem nome quando não havia; com os dois controles dela no cabo, a
-    seção Desempenho respondia *"cabe mais um controle no rádio?"* mostrando UMA
-    barra sobre TRÊS adaptadores.
-
-    **E O NOME DO ADAPTADOR TAMBÉM TEM FONTE.** A outra frase que estava aqui —
-    *"o apelido mora na declaração dela, endereçado por CAMINHO de barramento, e
-    aqui a chave é o endereço de rádio: as duas não casam hoje"* — descrevia o
-    caminho errado. O apelido **não** está no `maquina.json`: está no
-    `org.bluez.Adapter1.Alias` (`secao_mesa`: *"o alias mora no BlueZ, que não
-    passa pelo rascunho da máquina"*), e o `Dongle` que o traz carrega TAMBÉM o
-    endereço e o `/org/bluez/hciN` — as duas pontas que faltavam. O casamento é
-    endereço→nome para a pista com gente e `hciN`→nome para as vazias, e ele
-    fecha porque as duas chaves saem da MESMA leitura.
-
-    A ORDEM DAS PISTAS É A DA TABELA acima — `ler_a_mesa()` devolve os
-    adaptadores em ordem de `hciN`, e é essa ordem que a tabela de "Adaptadores
-    Bluetooth" mostra. Duas listas do mesmo hardware em ordens diferentes fariam
-    a pessoa procurar a barra do adaptador errado.
-
-    O ADAPTADOR QUE O SYSFS NÃO SOUBE DIZER continua ganhando pista própria, sem
-    nome, e a regra é do dono: `adaptador_por_uniq` devolve `""` para o controle
-    cujo `HID_PHYS` não é MAC, e *"nunca empresta o adaptador do vizinho"*.
-    """
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.integrations import radio_da_mesa as rm
-
-    com_mic = {c for c in (norm_mac(str(u)) for u in
-                           ((ctx.state.get("bt_mic") or {}).get("uniqs") or [])) if c}
-    todos = [_da_mesa_para_a_regua(m, com_mic) for m in ctx.mesa]
-    # A COMPARAÇÃO LÊ A CHAVE CRUA, NÃO A PALAVRA — costura da ONDA B, 06/09/2026.
-    # A `via` passou a carregar a palavra da tela ("cabo"/"rádio"); quem agrupa por
-    # adaptador compara `transporte` ("usb"/"bt"), que o item da mesa publica ao lado
-    # (`mesa_viva.py:509`). Sem esta troca, esta aba mostraria ZERO controles no rádio
-    # com os dois no rádio — calado, sem log e sem régua vermelha. A S-10 mediu e
-    # escreveu o caminho; ela não podia executá-lo porque este arquivo não era dela.
-    no_radio = [c for c in todos if _e_radio(c)]
-    no_cabo = [c for c in todos if not _e_radio(c)]
-
-    onde: dict[str, str] = {}
-    if no_radio:
-        with contextlib.suppress(Exception):
-            # A SEXTA COMPARAÇÃO DE `via`, e ela sobreviveu à costura da ONDA B
-            # — 06/09/2026. Com a `via` carregando "rádio", esta lista nascia
-            # VAZIA e `adaptador_por_uniq` recebia nada: todos os controles do
-            # rádio caíam no grupo SEM_ADAPTADOR, numa pista sem nome, e as
-            # pistas dos três adaptadores dela ficavam vazias ao lado.
-            onde = rm.adaptador_por_uniq(
-                [str(m.get("uniq") or "") for m in ctx.mesa if _e_radio(m)])
-
-    # UM GRUPO POR ADAPTADOR, e o SEM_ADAPTADOR por último. `adaptador_por_uniq`
-    # devolve `""` para quem o sysfs não soube dizer, e a regra de honestidade é
-    # dele: *"nunca empresta o adaptador do vizinho"*. Aqui isso vira uma pista
-    # à parte, sem nome — e não uma fatia enfiada na pista de outro.
-    grupos: dict[str, list[dict[str, Any]]] = {}
-    for m, c in zip(ctx.mesa, todos, strict=True):
-        if not _e_radio(c):
-            continue
-        grupos.setdefault(
-            _chave_de_radio(onde.get(str(m.get("uniq") or ""), "")), []).append(c)
-
-    nome_por_endereco, nome_por_interface = _nomes_dos_adaptadores()
-    pistas: list[dict[str, Any]] = []
-    # PRIMEIRO OS ADAPTADORES QUE EXISTEM, na ordem da tabela. Cada um leva o que
-    # está NELE — e quando não há ninguém, leva a pista vazia que o desenho dela
-    # já traz (o `if not dentro` de :func:`html_da_regua_do_radio` escreve
-    # "Nenhum controle neste rádio · 0 de 1.600").
-    #
-    # O `endereco` de cada adaptador vem do BlueZ e o do grupo vem do sysfs, e os
-    # dois passam por `_chave_de_radio` — que existe porque eles NÃO eram a mesma
-    # chave: o BlueZ escreve em maiúsculas e o sysfs em minúsculas. Um adaptador
-    # que o BlueZ não listou não tem
-    # como casar com o grupo, e por isso ele aparece com o que sabe de si (o
-    # `hciN` → nome) e sem fatia — nunca com a fatia de outro.
-    mesa = _mesa_do_radio()
-    for a in tuple(getattr(mesa, "adaptadores", ()) or ()):
-        interface = str(getattr(a, "interface", ""))
-        endereco = _endereco_do_adaptador(interface)
-        dentro = grupos.pop(endereco, []) if endereco else []
-        pistas.append({
-            "nome": nome_por_interface.get(interface, "") or SEM_NOME,
-            "dica": "",
-            "dentro": dentro,
-            "vagas": no_cabo,
-        })
-    # E DEPOIS O QUE SOBROU: um grupo cujo endereço não bate com adaptador
-    # nenhum da varredura. Ele existe — há um controle falando por ele —, e
-    # calá-lo seria esconder ocupação de rádio real.
-    for chave in sorted(grupos, key=lambda k: (k == "", k)):
-        pistas.append({
-            "nome": nome_por_endereco.get(chave, "") or SEM_NOME,
-            "dica": "",
-            "dentro": grupos[chave],
-            "vagas": no_cabo,
-        })
-    if not pistas:
-        # NEM ADAPTADOR NEM CONTROLE NO RÁDIO — E ISSO NÃO PODE VIRAR UM EIXO
-        # SOZINHO.
-        #
-        # O DEFEITO, fotografado na mesa dela em 03/09/2026 com o White no cabo
-        # e nada no rádio: `grupos` nasce dos controles que estão NO RÁDIO, e
-        # sem nenhum ele fica vazio, `pistas` fica vazia e o bloco inteiro sai
-        # com uma `.eixo` e uma `.leg` e MAIS NADA. A seção "Desempenho · o
-        # rádio de cada adaptador, em turnos" renderizava a escala 0…1.600 e a
-        # legenda anunciando `+16,3` e `+276,7` sobre ZERO barra — números com
-        # cara de medição e sem nada a que pertencer. Medido no WebKit:
-        # `querySelectorAll('.bloco')` devolveu 0 e `.pista` devolveu 0.
-        #
-        # ESTE RAMO ENCOLHEU em 04/09: ele só é alcançado quando a varredura do
-        # barramento FALHOU (`_mesa_do_radio()` devolve `None`) e não há
-        # ninguém no rádio. Com a varredura de pé, o laço acima já dá uma pista
-        # a cada adaptador dela.
-        #
-        # O NOME FICA VAZIO DE PROPÓSITO. Sem leitura não se sabe QUAL adaptador
-        # é — e ela tem três. Escrever `Sem nome` aqui afirmaria "existe UM
-        # adaptador, e ele não tem apelido"; a coluna vazia não afirma nada, e
-        # os 96 px do `.pista .quem` seguram o alinhamento com o eixo do mesmo
-        # jeito.
-        pistas = [{"nome": "", "dica": "", "dentro": [], "vagas": []}]
-    return html_da_regua_do_radio(
-        pistas, no_radio,
-        teto=rm.SLOTS_POR_SEGUNDO,
-        sem_mic=rm.HZ_INPUT_SEM_MIC * rm.SLOTS_POR_RELATORIO,
-        com_mic=(rm.HZ_INPUT_COM_MIC + rm.HZ_AUDIO_COM_MIC) * rm.SLOTS_POR_RELATORIO,
-        num=_num_da_tela, palavra=rm.palavra_da_ocupacao)
-
-
-def _num_da_tela(valor: float) -> str:
-    """`1600` → `1.600`; `260.4` → `260,4`. A vírgula tem dono único."""
-    from hefesto_dualsense4unix.app.fala_do_mapa import formata_pt_br
-
-    inteiro, _, decimal = formata_pt_br(valor).partition(",")
-    milhar = f"{int(inteiro):,}".replace(",", ".")
-    return milhar if decimal == "0" and float(valor).is_integer() else f"{milhar},{decimal}"
-
-
-def html_da_regua_do_radio(
-    pistas: list[dict[str, Any]],
-    no_radio: list[dict[str, Any]],
-    *,
-    teto: float,
-    sem_mic: float,
-    com_mic: float,
-    num: Any,
-    palavra: Any,
-) -> str:
-    """A régua de Desempenho inteira: as pistas, o eixo e a legenda.
-
-    ELA SE TROCA INTEIRA e não campo a campo, pela razão que o piloto já
-    escreve sobre a fita: *"um bloco cujo NÚMERO DE FILHOS muda com o dado não
-    tem como ser pintado campo a campo — não há endereço para um filho que
-    ainda não existe"*. Quantos adaptadores, quantos controles em cada um e
-    quantas vagas mudam com a mesa dela.
-
-    E ELA NÃO PODIA FICAR NO GERADOR: o `title` de cada bloco nomeia o plástico
-    (*"Starlight Blue — 260,4 turnos de entrada"*), e `title` é texto que a tela
-    mostra. Não há alvo de atributo no `escrever()` do piloto — a única forma
-    honesta de curar um `title` congelado é o bloco inteiro nascer do produto.
-
-    :param pistas: uma por adaptador — ``nome``, ``dica`` (o `title` da coluna
-        da esquerda, vazio quando ninguém sabe), ``dentro`` e ``vagas``.
-    :param no_radio: os controles no rádio, para a legenda.
-    :param num: o formatador de número da tela (a vírgula tem dono único).
-    :param palavra: a palavra da ocupação, do `radio_da_mesa`.
-    """
-    linhas = []
-    for p in pistas:
-        dica = f' title="{p["dica"]}"' if p.get("dica") else ""
-        dentro = list(p.get("dentro") or [])
-        if not dentro:
-            linhas.append(
-                f'        <div class="pista">\n'
-                f'          <span class="quem"{dica}>{p["nome"]}</span>\n'
-                f'          <span class="trilho"><span class="vazio">Nenhum controle '
-                f'neste rádio</span></span>\n'
-                f'          <span class="num">0 <i>de {num(teto)}</i></span>\n'
-                f'        </div>')
-            continue
-        blocos, usado = [], 0.0
-        for c in dentro:
-            # SEM COR LIDA A FATIA FICA NEUTRA, e o texto volta para a tinta de
-            # tema: pintar o bloco com a cor do desenho seria a mesma mentira,
-            # um andar abaixo.
-            plastico = str(c.get("plastico") or "")
-            pinta = (f";background:{plastico};color:{tinta_legivel(plastico)}"
-                     if plastico else "")
-            nome = str(c.get("nome") or "") or f'Player {c["jogador"]}'
-            blocos.append(
-                f'<span class="bloco usa" style="width:{sem_mic / teto * 100:.2f}%{pinta}"'
-                f' title="{nome} — {num(sem_mic)} turnos de entrada">'
-                f'P{c["jogador"]} · {num(sem_mic)}</span>')
-            usado += sem_mic
-            if c.get("mic"):
-                blocos.append(
-                    f'<span class="bloco mic" style="width:{(com_mic - sem_mic) / teto * 100:.2f}%"'
-                    f' title="Microfone do Player {c["jogador"]} pelo rádio — '
-                    f'+{num(com_mic - sem_mic)} turnos"></span>')
-                usado += com_mic - sem_mic
-        for c in list(p.get("vagas") or []):
-            if usado + com_mic > teto:
-                break
-            usado += com_mic
-            # O APOSTO ENTRE TRAVESSÕES E O IMPERFEITO DO SUBJUNTIVO SAÍRAM —
-            # 11/09/2026, A1-059: *"duas construções que o tradutor automático
-            # erra e a leitora relê"*. Sem nome de plástico lido, o parêntese
-            # guarda só o transporte — repetir "Player 1 (Player 1, …)" seria
-            # dizer o mesmo duas vezes na mesma frase.
-            # A PALAVRA DO TRANSPORTE SAIU DA ORAÇÃO — 21/09/2026. Ela passou
-            # a ser `USB`/`BT` por palavra dela, e sigla em caixa alta no meio
-            # de uma frase ("hoje no USB") é defeito de forma. O aposto virou
-            # o mesmo CHIP que a fita usa, com o ponto do meio.
-            quem = str(c.get("nome") or "")
-            dentro_do_parentese = (f'{quem} · {c["via"]}' if quem
-                                   else str(c["via"]))
-            blocos.append(
-                f'<span class="bloco vaga" style="width:{com_mic / teto * 100:.2f}%"'
-                f' title="Se o Player {c["jogador"]} ({dentro_do_parentese}) vier '
-                f'para este rádio com o microfone ligado: +{num(com_mic)} turnos.">'
-                f'+1 · {num(usado)}</span>')
-        total = sum(com_mic if c.get("mic") else sem_mic for c in dentro)
-        fracao = total / teto
-        linhas.append(
-            f'        <div class="pista">\n'
-            f'          <span class="quem"{dica}>{p["nome"]}</span>\n'
-            f'          <span class="trilho" title="{palavra(fracao)} — {num(total)} dos '
-            f'{num(teto)} turnos ({fracao * 100:.0f}%). Rádio cheio tem volta: basta tirar '
-            f'um controle daqui.">\n'
-            f'            {"".join(blocos)}\n'
-            f'          </span>\n'
-            f'          <span class="num">{num(total)} <i>de {num(teto)}</i></span>\n'
-            f'        </div>')
-    legenda = [
-        f'            <span><i style="background:{c["plastico"]}"></i>'
-        f'{rotulo_do_controle(c, completo=False)} — {num(sem_mic)}</span>'
-        for c in no_radio if c.get("plastico")
-    ]
-    return (
-        "\n".join(linhas) + "\n"
-        '          <div class="eixo">\n'
-        '            <span class="quem"></span>\n'
-        '            <span class="regua"><i>0</i><span>400</span><span>800</span>'
-        f'<span>1.200</span><span>{num(teto)}</span></span>\n'
-        '            <span class="num"></span>\n'
-        '          </div>\n'
-        '\n'
-        '          <div class="leg">\n'
-        + ("\n".join(legenda) + "\n" if legenda else "")
-        + f'            <span><i style="background:var(--orange)"></i>O microfone de cada um '
-          f'— +{num(com_mic - sem_mic)}</span>\n'
-          f'            <span><i class="vaga"></i>Cada controle que vier do cabo '
-          f'— +{num(com_mic)}</span>\n'
-          '          </div>')
 
 
 # ---------------------------------------------------------------------------
@@ -3568,71 +2828,9 @@ def _gabinete(recarregar: bool = False) -> Any:
     return _GABINETE
 
 
-def _frase_do_hub() -> str:
-    """O hub que está acima de TODOS os adaptadores — fato, por quê e conselho.
-
-    O DONO É `secao_mesa._frase_do_hub_em_comum`, e ele responde com as TRÊS
-    frases ou com o silêncio das três. A regra que ele guarda é a que a coluna
-    "Onde está" não consegue guardar: aquela escreve *"Em hub"* linha a linha e
-    **nunca compara as linhas entre si**; quem compara é
-    `censo_do_barramento.hub_em_comum`, que sobe a cadeia em vez de olhar o pai.
-
-    **O CONSELHO É A METADE OPCIONAL**, e ele só nasce quando há para onde
-    mandar — buraco livre, alcançável com a mão, numa controladora DIFERENTE.
-    Três adaptadores no mesmo hub é o arranjo que o próprio guia de rádio manda
-    comprar: o fato sozinho não é queixa.
-
-    MEDIDO NESTA BANCADA EM 06/09/2026: os três adaptadores dela estão em
-    `usb1/1-4`, `usb3/3-1/3-1.2` e `usb3/3-1/3-1.4` — **não há hub acima dos
-    três**, e a linha CALA. É o estado certo, e é o que a foto mostra.
-    """
-    with contextlib.suppress(Exception):
-        perfil._com_o_src()
-        from hefesto_dualsense4unix.app.actions.config.secao_mesa import (
-            _frase_do_hub_em_comum,
-        )
-
-        mesa, censo = _mesa_do_radio(), _censo()
-        if mesa is None or censo is None:
-            return _sem_valor()
-        frases = [f for f in _frase_do_hub_em_comum(mesa, censo, _entradas()) if f]
-        if frases:
-            return "<br>".join(frases)
-    return _sem_valor()
-
-
-def _frases_do_gabinete() -> str:
-    """As contagens de entrada LADO A LADO, mais a pergunta — nunca uma escolha.
-
-    O DONO É `secao_mesa._linhas_do_gabinete`, e a regra inteira é dele: o que o
-    firmware conta e o que o kernel conta vão os DOIS, e o produto **não
-    escolhe** entre eles. Escolher desenharia um gabinete que ninguém tem, e a
-    pessoa procuraria na traseira buracos que o mapa não mostra.
-
-    SEM `gabinete.json` — primeira instalação, ou install anterior a 25/08 — a
-    resposta é o silêncio, e a seção fala como falava antes. Firmware é FONTE,
-    nunca premissa.
-
-    MEDIDO NESTA BANCADA EM 06/09/2026: a BIOS conta **5** entradas USB e o
-    barramento conta **15** buracos; as duas discordam, e a terceira linha é a
-    pergunta que só ela pode responder. Sem esta linha, o mapa do gabinete
-    desenhava a traseira dela sem dizer quantos buracos ela deveria ter.
-    """
-    with contextlib.suppress(Exception):
-        perfil._com_o_src()
-        from hefesto_dualsense4unix.app.actions.config.secao_mesa import (
-            _linhas_do_gabinete,
-        )
-
-        linhas = [f for f in _linhas_do_gabinete(_gabinete()) if f]
-        if linhas:
-            return "<br>".join(linhas)
-    return _sem_valor()
-
-
 @registrar("08-conexoes.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
-    global _ORDENS_NA_TELA, _VIZINHOS
+    global _ORDENS_NA_TELA
     st = ctx.state
     # O EXAME COMPLETO PEDIDO UMA VEZ, ANTES DE LER A TIRA. Ele corre em thread
     # e não bloqueia este tique — o que ele traz aparece no tique seguinte, que
@@ -3650,10 +2848,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     _ORDENS_NA_TELA = tuple(getattr(i, "ordem", None) for i in vivos)
     # O QUE SOBRA NÃO É CLICÁVEL, MAS PASSOU A SER DITO — 06/09/2026, decisão
     # 08-Q7 dela: *"Quando sobra, a lista ganha uma última linha curta"*. O
-    # desenho tem CINCO linhas de exame (`TETO_DO_EXAME`) e QUATRO blocos de
-    # vizinho (`TETO_DE_VIZINHOS`); se a mesa dela render mais, a pintura
-    # escreve nos lugares que existem e os endereços `exame-mais` e
-    # `vizinho-mais` dizem quantos não couberam. Nenhum clique age sobre o alvo
+    # desenho tem CINCO linhas de exame (`TETO_DO_EXAME`); se a mesa dela
+    # render mais, a pintura escreve nos lugares que existem e o endereço
+    # `exame-mais` diz quantos não couberam. Nenhum clique age sobre o alvo
     # errado (o `data-v` só vai até o teto e o `_slot` confere a faixa).
     #
     # **A DÍVIDA QUE ISTO FECHA ESTAVA ESCRITA AQUI**, e o comentário que a
@@ -3661,46 +2858,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # guardado ao lado: o Hefesto não descreve a limitação, ele constrói o
     # mecanismo que a remove (10-Q6).
 
-    adap = _adaptadores(ctx.conectados, ctx.state)
     declaracao = _declaracao()
-
-    # OS VIZINHOS SÃO OS DELA, e não os quatro do desenho. Enquanto eram os do
-    # desenho, o `<select>` "— O que é? —" só podia gravar no `maquina.json`
-    # dela um rádio da bancada de exemplo — a razão pela qual este gesto passou
-    # a primeira leva sem dono.
-    radios = tuple(getattr(_mesa_do_radio(), "radios", ()) or ())
-    _VIZINHOS = tuple(_chave_do_radio(r) for r in radios)
-    para_id, rotulo_do_tipo = _tipos_de_radio()
-    pergunta = _a_pergunta()
-    declarados = _radios_declarados(declaracao)
-    vizinho_nome, vizinho_tipo, vizinho_pergunta = [], [], []
-    # `strict=True` E NÃO POR ESTILO: as duas saem do MESMO `radios` duas
-    # linhas acima, então um comprimento diferente aqui quer dizer que alguém
-    # passou a montar `_VIZINHOS` noutro lugar — e o `zip` frouxo apagaria os
-    # rádios do fim em silêncio, que é o pior desfecho numa lista que endereça
-    # o clique dela por POSIÇÃO.
-    for chave, radio in zip(_VIZINHOS, radios, strict=True):
-        # `vid:pid` É O NOME QUE O PRODUTO TEM. A GUI estável escreve o mesmo
-        # (`gui/aba_conexoes.html_dos_vizinhos`), e a tela já explica por quê:
-        # *"o sistema entrega o nome cru e não sabe o que é"*. Um nome bonito
-        # aqui seria adivinhação a partir do vid.
-        vizinho_nome.append(chave)
-        # A TELA SUGERE, ELA CONFIRMA — decisão dela de 03/09/2026, e a razão
-        # está em :data:`_SUGESTAO_DO_KERNEL`. Enquanto ela não respondeu, a
-        # primeira opção do `<select>` deixa de ser "— O que é? —" seco e passa
-        # a carregar o que o kernel LEU, ainda como pergunta: "— Teclado? —".
-        #
-        # A RESPOSTA DELA VENCE O KERNEL, SEMPRE, e é a mesma precedência da
-        # janela estável (`secao_mesa._celula_do_que_e`): declarado primeiro, o
-        # que o kernel leu depois, e a pergunta seca quando ninguém sabe. Com
-        # ela respondida a primeira opção volta a ser a pergunta — a sugestão
-        # não pode ficar por cima do que ela disse.
-        respondido = rotulo_do_tipo.get(declarados.get(chave, ""), "")
-        sugerida = ("" if respondido
-                    else _sugestao_do_vizinho(str(getattr(radio, "no", "")), para_id))
-        primeira = _pergunta_sugerida(sugerida, pergunta) if sugerida else pergunta
-        vizinho_pergunta.append(primeira)
-        vizinho_tipo.append(respondido or primeira)
     # O QUE NÃO CABE AQUI, E FICA NOMEADO: a borda CIANO de "o produto não sabe
     # o que é isto" (`select.pronto.pergunta`) está CRAVADA no desenho — dois
     # dos quatro blocos, para sempre — e nunca é repintada. Na mesa desta casa
@@ -3896,21 +3054,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # dizia que ela não tinha respondido a visada; o `maquina.json` dela diz
         # que respondeu.
         **_sala_na_tela(declaracao),
-        # A RÉGUA DO RÁDIO INTEIRA, pelo dono único. Ver
-        # `html_da_regua_do_radio`: o `title` de cada fatia nomeia o plástico, e
-        # `title` não tem alvo no piloto — o bloco tem de nascer do produto.
-        "regua-do-radio": _regua_do_radio(ctx),
-        # A CONTA DE SLOTS POR ADAPTADOR — 06/09/2026. A régua acima mostra o
-        # que ESTÁ; esta linha responde o que CABE, que é a pergunta de quem
-        # tem um controle no cabo e quer trazê-lo. Ver :func:`_conta_de_slots`.
-        "conta-de-slots": _conta_de_slots(ctx),
-        # A TABELA DOS ADAPTADORES — 04/09/2026. Ela era HTML fixo do mockup
-        # ("Sala / TP-Link UB500 / Entrada 3 · traseira" e "Sem nome / Intel
-        # AX211 / Interno · M.2") sobre uma bancada com TRÊS adaptadores. É
-        # trocada INTEIRA pela mesma razão da régua e do mapa: quantas linhas
-        # existem é o que a máquina dela responde, e não há endereço para uma
-        # `<tr>` que ainda não nasceu.
-        "adaptadores-tabela": _html_dos_adaptadores(),
+        # A RÉGUA DO RÁDIO, A CONTA DE SLOTS E A TABELA DOS ADAPTADORES SAÍRAM
+        # em 23/09/2026 (TRANSPLANTE-DA-SECAO-01): a seção inteira é o
+        # `mapa-do-radio.html` aprovado, e os campos dela vêm de
+        # :func:`campos_do_radio`, no fim deste dicionário.
         # OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026, linha 305
         # de `docs/data/paridade-gtk-html.csv`. Ver :func:`_html_dos_externos`.
         "externos-lista": _html_dos_externos(ctx),
@@ -3992,7 +3139,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "exame-calada": [i["calada"] for i in itens],
         "ignorar-dica": [i["dica-do-ignorar"] for i in itens],
         # OS DOIS `+N` — decisão 08-Q7. Ver :func:`_o_que_nao_coube`.
-        **_o_que_nao_coube(itens, vizinho_nome),
+        **_o_que_nao_coube(itens),
+        # A SEÇÃO RÁDIO E ADAPTADORES — o `mapa-do-radio.html` aprovado,
+        # TRANSPLANTE-DA-SECAO-01. Ver :func:`campos_do_radio`.
+        **campos_do_radio(ctx),
         # O CARIMBO do topo do Check-up — publicado no mesmo dia e pela mesma
         # decisão, e também já pintado.
         "examinado": _carimbo_do_exame(),
@@ -4002,28 +3152,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # não há juízo, e um travessão numa linha de veredito seria a tela
         # afirmando um nada.
         **veredito,
-        "vizinho-nome": vizinho_nome,
-        # A ORDEM DESTES TRÊS IMPORTA, e é a única coisa neste dicionário em
-        # que ela importa: `vizinho-pergunta` reescreve o TEXTO da primeira
-        # `<option>`, e o alvo `valor` do `<select>` logo abaixo só aceita o que
-        # a caixa OFERECE (`hefesto_vivo.escrever`: `o.text === t`). Emitido
-        # depois, a escrita do valor cairia num texto que ainda não existe e
-        # seria descartada calada — a tela pegaria a sugestão só no tique
-        # seguinte. `Object.entries` preserva a ordem de inserção nos dois
-        # lados, e é dela que a pintura de UM tique depende.
-        "vizinho-pergunta": vizinho_pergunta,
-        "vizinho-tipo": vizinho_tipo,
-        # ONDE CADA RÁDIO VIZINHO ESTÁ, e o AVISO DE VIZINHANÇA junto — ver
-        # :func:`_onde_dos_vizinhos`. É o mesmo fato que a linha do Check-up
-        # chama de "dois rádios da bancada estão em entradas vizinhas"; aqui ele
-        # aparece ao lado do rádio CULPADO, que é a metade que faltava para a
-        # frase do exame ter endereço na mesa.
-        "vizinho-onde": _onde_dos_vizinhos(_mesa_do_radio()),
-        "vizinho-onde-dica": _dicas_dos_vizinhos(_mesa_do_radio()),
         "exame": itens,
         "achados": len(itens),
         "graves": sum(1 for i in itens if i["grave"]),
-        "adaptadores": adap,
         # QUAL CONTROLE A SAÍDA ESTÁ MIRANDO — ver :func:`_alvo_de_saida`. Ela
         # marca o rádio do acordeão, e com ele o chip da fita: as regras
         # `body:has(#gc-pN:checked) .fita .chip:nth-child(n)` do gerador fazem
@@ -4042,8 +3173,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # (`status_actions.texto_de_controle_nao_adotado`).
         "sem-driver": _frase_do_sem_driver(st),
         "radio-fragil": _frase_do_radio_fragil(st),
-        "hub-em-comum": _frase_do_hub(),
-        "gabinete-contagens": _frases_do_gabinete(),
         # SÓ O QUE ESTE TIQUE ACHOU SEM DONO — hoje só uma coisa entra aqui: uma
         # política de vibração guardada no perfil que o `<select>` da tela não
         # sabe mostrar. Declarar é o oposto de pintar a opção errada.
@@ -4072,20 +3201,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # contaria pintura que não aconteceu nos dois últimos casos.
         # Os dois novos POR CONTROLE (`mic-caminho`, `luz-trava`) não precisam
         # de termo: eles entram pelo `sum(len(v) …)` das colunas.
-        # O `+ 2` DE 04/09 são a tabela dos adaptadores e o escopo do botão do
-        # microfone; o `+ len(veredito)` são a frase do veredito e os quatro
-        # interruptores de estado dela, LIDOS em vez de digitados — o
-        # dicionário vem vazio quando o produto não pôde responder, e contar um
-        # `+ 5` cravado contaria pintura que não aconteceu. O
-        # `len(vizinho_nome) * 3` virou `* 5`: o "onde" e a dica dele.
-        # O `+ 4 + 5` DE 06/09/2026: as QUATRO linhas de ressalva (`sem-driver`,
-        # `radio-fragil`, `hub-em-comum`, `gabinete-contagens`) e os CINCO
-        # rádios do acordeão que o `alvo-aberto` marca. As quatro contam mesmo
-        # caladas — `monta.NADA_A_DIZER` é uma escrita, e é ela que APAGA a
-        # linha do tique anterior.
-        "cobertura": {"pintados": 4 + 2 + 4 + 5 + len(confissao) + len(veredito)
-                      + len(itens) * 4 + 1 + len(adap)
-                      + len(vizinho_nome) * 5
+        # O `+ len(veredito)` são a frase do veredito e os quatro interruptores
+        # de estado dela, LIDOS em vez de digitados — o dicionário vem vazio
+        # quando o produto não pôde responder. O `+ 2 + 5`: as DUAS linhas de
+        # ressalva (`sem-driver`, `radio-fragil`) e os CINCO rádios do acordeão
+        # que o `alvo-aberto` marca — as ressalvas contam mesmo caladas, porque
+        # `monta.NADA_A_DIZER` é uma escrita. O `+ 12` são os campos da seção
+        # do rádio (:func:`campos_da_secao`), e a cerimônia entra pelo `sum`.
+        "cobertura": {"pintados": 2 + 1 + 2 + 5 + len(confissao) + len(veredito)
+                      + len(itens) * 4 + 1 + 12
                       + sum(len(v) for v in colunas.values()),
                       "sem_dono": len(SEM_DONO) + len(sem_dono)},
     }
@@ -4208,6 +3332,25 @@ SEM_GESTO: dict[str, str] = {
         "*\"pergunta em que entrada ele está ligado\"*, e a tela não tem onde "
         "perguntar. Pendurá-lo no `acrescentar_extensao` faria o botão criar uma "
         "filha numa entrada que ela não escolheu.",
+    # OS TRÊS CUSTOS SEM DONO DA SEÇÃO DO RÁDIO — TRANSPLANTE-DA-SECAO-01,
+    # 23/09/2026. O desenho aprovado deixa ligar e desligar cada custo da linha
+    # do controle; o microfone tem dono (`custo-mic`, o mesmo ato do 🎙) e
+    # estes três não têm.
+    "custo-som":
+        "a ponte de som por rádio sobe quando o JOGO manda som ao controle "
+        "(`radio_governador`), e não há interruptor por controle no produto: o "
+        "único ato que a liga à mão é o «Ligar aqui» da janela do adaptador "
+        "cheio. Um botão que desligasse a ponte brigaria com o jogo no tique "
+        "seguinte.",
+    "custo-vibracao":
+        "mesma razão do `custo-som`: a vibração por rádio viaja na MESMA ponte "
+        "(o 0x32 com o bloco 0x11), e quem a sobe é o jogo. Não há dono por "
+        "controle para desligá-la.",
+    "custo-luz":
+        "a barra de luz não custa rádio que se meça — ela viaja no mesmo "
+        "relatório de saída que o controle já manda. O desenho a mostra como "
+        "custo e o produto não tem o que tirar da conta; o interruptor dela "
+        "mora na aba Iluminação.",
 }
 
 
@@ -4681,122 +3824,19 @@ def teto_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 # este adaptador"*, e nenhum código da interface nova chamava
 # `integrations/apelido_do_dongle`. **Ela digitava e perdia.**
 #
-# O MOTOR SEMPRE EXISTIU, e é o mesmo que a janela estável usa
-# (`secao_mesa._ao_salvar_o_nome`): `renomear_o_dongle(endereco, nome)` grava o
-# `Alias` no BlueZ por `busctl`, com a costura do prefixo Nintendo por cima
-# quando o adaptador hospeda um Pro.
+# O NOME É DO LUGAR, desde 23/09/2026 (TRANSPLANTE-DA-SECAO-01, item 1): o
+# escritor é UM, `entrada_a_entrada.dar_nome`, e é o mesmo da janela estável
+# (`secao_mesa._ao_salvar_o_nome`). O `Alias` do BlueZ é a projeção desse nome.
 
 #: O NOME DO GESTO, e ele é UM só: o HTML o escreve, o teste o lê e o relatório
 #: o cita. Digitá-lo três vezes é como um `data-gesto` fica órfão de um lado.
-GESTO_DO_APELIDO = "renomear-adaptador"
-
-
-def _endereco_e_nome_do_adaptador(caminho: str) -> tuple[str, str]:
-    """Do `3-1.2` da tela para `(BD Address, o nome DELA de agora)`.
-
-    A JUNÇÃO PASSA PELO `hciN` E NÃO SAI DAQUI, e a razão é do dono
-    (`secao_mesa._dongle_por_interface`): *"o sysfs conhece porta e `vid:pid` e
-    não publica o endereço; o BlueZ conhece o endereço e não conhece a porta"*.
-    O índice inverte entre boots, então ele nasce e morre dentro desta chamada —
-    o que atravessa para a escrita é sempre o BD Address.
-
-    Devolve `("", "")` quando a mesa não responde ou o caminho não é de nenhum
-    adaptador desta mesa. Um par vazio é uma RESPOSTA, e quem chama a transforma
-    em recusa dizendo — nunca em escrita no adaptador errado.
-    """
-    if not caminho:
-        return "", ""
-    mesa = _mesa_do_radio()
-    if mesa is None:
-        return "", ""
-    alvo = next((a for a in tuple(getattr(mesa, "adaptadores", ()) or ())
-                 if str(getattr(a, "caminho", "") or "") == caminho), None)
-    if alvo is None:
-        return "", ""
-    interface = str(getattr(alvo, "interface", "") or "")
-    with contextlib.suppress(Exception):
-        perfil._com_o_src()
-        from hefesto_dualsense4unix.app.actions.config.secao_mesa import (
-            _dongle_por_interface,
-        )
-
-        dongle = _dongle_por_interface(_dongles()).get(interface)
-        if dongle is not None:
-            return str(dongle.endereco), str(dongle.nome)
-    return "", ""
-
-
-def _gravar_o_apelido(endereco: str, nome: str) -> Any:
-    """Escreve o `Alias` no BlueZ. Devolve a `Renomeacao` do dono.
-
-    NÃO CONFERE O QUE GRAVOU, e é do dono a razão medida: *"a escrita é
-    assíncrona — ler logo depois devolve o valor antigo — e uma conferência com
-    espera dentro travaria a interface por um segundo a cada salvamento."*
-
-    A COSTURA DO PREFIXO NINTENDO VAI JUNTO, e ela é de `renomear_o_dongle`:
-    num adaptador que hospeda um Pro, o alias sem o prefixo devolve o aparelho
-    ao sniff frágil. Escrever o `Alias` cru daqui desfaria isso em silêncio.
-    """
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.integrations.apelido_do_dongle import renomear_o_dongle
-
-    return renomear_o_dongle(endereco, nome, dongles=_dongles())
-
-
-@gesto("08-conexoes.html", GESTO_DO_APELIDO, grava="renomear_o_dongle")
-def renomear_adaptador(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O nome que ELA deu ao adaptador, gravado no BlueZ.
-
-    **O QUE CHEGA É `texto`**, e não `valor`: a célula é um `contenteditable`, e
-    o ouvinte do piloto manda `texto: alvo.textContent` para quem não tem
-    `value` (`hefesto_vivo.py`). `SEM_NOME` é o marcador do vazio na tela e
-    NUNCA é gravado — ele é a ausência de nome, não um nome.
-
-    **NÃO ESCREVE QUANDO O NOME NÃO MUDOU**, e a regra é da janela estável
-    (`secao_mesa._ao_salvar_o_nome`): *"Sem ela, cada troca de aba reescreveria
-    o alias dos três adaptadores com o valor que eles já têm — escrita à toa num
-    barramento de sistema, e uma delas cairia bem em cima do prefixo que segura
-    o Pro."* É também o que torna o clique da régua inofensivo: ela clica com o
-    texto que a tela mostra, que é o nome de agora.
-
-    **O QUE FALTA PARA ELE VALER NA MÃO DELA, e não é meu** — `hefesto_vivo.py`
-    está no `nao_toca` desta sprint. O ouvinte do piloto escuta `click` e
-    `change`; um `contenteditable` não dispara nenhum dos dois ao PERDER O FOCO,
-    que é quando ela termina de digitar. O gesto está de pé e o endereço está no
-    HTML; falta a linha do ouvinte. Ver o relatório desta frente.
-    """
-    caminho = str(o.get("caminho") or "").strip()
-    if not caminho:
-        raise ValueError(
-            "O clique não disse em qual adaptador — o nome iria para o rádio "
-            "errado.")
-    novo = str(o.get("texto") or o.get("valor") or "").strip()
-    if not novo or novo == SEM_NOME:
-        raise ValueError(
-            f"renomear-adaptador: {SEM_NOME!r} é como a tela mostra a ausência "
-            f"de nome, e não um nome — apagar o apelido é outro gesto")
-    endereco, agora = _endereco_e_nome_do_adaptador(caminho)
-    if not endereco:
-        raise RuntimeError(
-            "renomear-adaptador: este adaptador não está mais ligado, ou o "
-            "Bluetooth do sistema não respondeu por ele agora")
-    if novo == agora:
-        return
-    feito = _gravar_o_apelido(endereco, novo)
-    if not getattr(feito, "aplicado", False):
-        # A FRASE DA RECUSA É DO MOTOR — `Renomeacao.porque` traz as três que ele
-        # sabe dizer ("Este adaptador não está mais na mesa.", "Não achei este
-        # adaptador no Bluetooth do sistema.", "O Bluetooth do sistema recusou o
-        # nome novo."). Escrever uma quarta aqui seria a segunda grafia.
-        raise RuntimeError(str(getattr(feito, "porque", "") or "")
-                           or "o Bluetooth do sistema não gravou o nome novo")
-    # O BLUEZ NÃO ECOA, então a próxima leitura tem de ser nova: sem isto a
-    # tabela continuaria mostrando o nome velho até alguém apertar "Examinar".
-    _dongles(recarregar=True)
+#: Desde 23/09/2026 é o nome do desenho aprovado (`mapa-do-radio.html`), e o
+#: gesto mora com os outros da seção, em :func:`adaptador_renomear`.
+GESTO_DO_APELIDO = "adaptador-renomear"
 
 
 @gesto("08-conexoes.html", "vizinho-o-que-e", grava="machine_declare")
-def vizinho_o_que_e(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def vizinho_o_que_e(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"— O que é? —": ela responde o que é aquele rádio vizinho.
 
     TEM DONO: `MesaDeclarada.radios[vid:pid].tipo` (`utils/maquina.py:308`), e
@@ -4829,9 +3869,14 @@ def vizinho_o_que_e(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     palavra que ela nunca disse, que é justamente o que a sugestão existe para
     não fazer.
     """
-    posicao = _slot(o, len(_VIZINHOS), "vizinho-o-que-e")
-    chave = _VIZINHOS[posicao]
-    rotulo = str(o.get("valor") or o.get("rotulo") or "").strip()
+    chave = str(o.get("alvo") or "")
+    vizinhos = {v["id"] for v in _CENA_NA_TELA.get("vizinhos", ())}
+    if chave not in vizinhos:
+        raise ValueError(f"vizinho-o-que-e: {chave!r} não é um rádio que está na tela")
+    rotulo = str(o.get("valor") or "").strip()
+    if not rotulo:
+        # O TOQUE NO SELO SÓ ABRE as respostas; quem responde é o botão do painel.
+        return {"armou": True}
     para_id, _ = _tipos_de_radio()
     if rotulo in ("", _a_pergunta()) or rotulo in _perguntas_sugeridas():
         tipo = None
@@ -4845,6 +3890,7 @@ def vizinho_o_que_e(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             f"({sorted(para_id)})")
     _declarar(p, {"radios": {chave: {"tipo": tipo}}})
     _reler_a_declaracao()
+    return None
 
 
 @gesto("08-conexoes.html", "examinar-portas")
@@ -5266,8 +4312,1656 @@ def luz_nao_acende(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     comecar_a_espera(uniq)
 
 
-PONTE = {"chamar", "machine_declare"}
-METODOS = {"controller.target.set"}
+# ---------------------------------------------------------------------------
+# A SEÇÃO DO RÁDIO — o `mapa-do-radio.html` aprovado, TRANSPLANTE-DA-SECAO-01
+# ---------------------------------------------------------------------------
+# O DESENHO É O APROVADO EM 23/09 (`mockup/mapa-do-radio.html`), e a regra da
+# casa vale inteira: o Python PINTA, a página só mexe na tela. Tudo o que o
+# desenho calculava em JavaScript — Hz, pontes, canais, quem está colado em
+# quem — sai daqui, dos donos; o JavaScript da página abre e fecha o que já
+# veio pintado.
+#
+# UMA CENA, DOIS LEITORES. :func:`cena_do_radio` monta a cena da máquina dela;
+# o gerador (`interface/aba08.py`) monta a do desenho com o CSV do mockup
+# aprovado. Os dois passam pelas MESMAS funções de desenho, e é isso que faz a
+# bancada e a tela dela serem a mesma forma.
+#
+# O QUE MUDA DE TIQUE A TIQUE NÃO ENTRA NO HTML DA SALA: os Hz vão em listas
+# próprias (`hz-movimento`, `hz-voz`, `hz-pouco`), distribuídas pela ordem do
+# DOM. Com eles dentro, a sala seria reescrita a cada tique e levaria junto o
+# campo em que ela estivesse digitando.
+import itertools  # noqa: E402
+import threading  # noqa: E402
+from collections.abc import Callable  # noqa: E402
+
+from hefesto_dualsense4unix.integrations.radio_da_mesa import (  # noqa: E402
+    FATIAS_DA_PONTE,
+    HZ_AUDIO_COM_MIC,
+    HZ_DA_PONTE,
+    HZ_INPUT_COM_MIC,
+    HZ_INPUT_SEM_MIC,
+    N_MAX_PONTES,
+)
+
+#: Quantas pontes de som ou vibração um adaptador aguenta — o dono é
+#: `radio_da_mesa.N_MAX_PONTES`. O desenho aprovado chama de
+#: `PONTES_POR_ADAPTADOR`, e a régua de paridade trava os dois juntos.
+PONTES_POR_ADAPTADOR = N_MAX_PONTES
+#: O que uma ponte tira do ar do adaptador, por segundo: `FATIAS_DA_PONTE`
+#: fatias por relatório, menos a do escravo, vezes `HZ_DA_PONTE`. É o
+#: `MARGINAL_DA_PONTE = 187.5` do desenho aprovado.
+MARGINAL_DA_PONTE = (FATIAS_DA_PONTE - 1) * HZ_DA_PONTE
+#: Os 79 canais do Bluetooth clássico em 2,4 GHz.
+CANAIS_DO_BT = 79
+#: Abaixo disto o giroscópio passa de 8 ms entre leituras e o número fica
+#: laranja. É o corte do desenho aprovado (`HZ_QUE_ENGASGA`), declarado lá como
+#: «corte de desenho, não medido»; a bancada dela decide o de verdade.
+HZ_QUE_ENGASGA = 125.0
+#: As larguras da linha de um controle, na proporção do desenho aprovado e em
+#: constantes do dono: o que o controle manda (2 fatias por relatório), o que o
+#: microfone acrescenta, e a ponte (a fatia do escravo junto).
+_LARGURA_DA_ENTRADA = round(2 * HZ_INPUT_SEM_MIC, 1)
+_LARGURA_DO_MIC = round(2 * (HZ_INPUT_COM_MIC + HZ_AUDIO_COM_MIC - HZ_INPUT_SEM_MIC), 1)
+_LARGURA_DA_PONTE = round((FATIAS_DA_PONTE + 1) * HZ_DA_PONTE, 1)
+
+#: As palavras da seção. Curtas, porque é a ordem dela de 23/09: *"tá muito
+#: grande, verborrágico e confuso"*.  (noqa-acento: citação literal dela)
+SEGURE = "Segure PS + Create"
+DE_UM_NOME = "Dê um nome a este adaptador"
+ONDE_FICA = "Onde fica?"
+MARCA_VARRENDO = ("Outro programa está procurando aparelhos por aqui. "
+                  "Controle novo vai para outro adaptador.")
+USB3_AO_LADO = "Entrada USB 3.0: faz ruído no rádio. Prefira uma 2.0."
+SEM_RADIO = "Sem rádio"
+#: O traço do «não há» e da faixa de canais (o do desenho aprovado).
+TRACO_CURTO = "\u2013"
+
+#: Os ícones do desenho aprovado, pelo tipo do aparelho. O prefixo `rd-` é o
+#: sprite desta seção, e não colide com nenhum `id` da aba.
+ICONE_DO_APARELHO = {
+    "teclado": "teclado", "mouse": "mouse", "caixa": "caixa",
+    "fone": "fone", "webcam": "webcam", "outro": "radio",
+}
+ICONE_DO_RADIO = {
+    "wifi": "wifi", "fone": "fone", "teclado": "teclado",
+    "mouse": "mouse", "webcam": "webcam", "caixa_de_som": "caixa", "caixa": "caixa",
+}
+ICONE_DO_CUSTO = {"mic": "mic", "som": "som", "haptica": "vibra"}
+NOME_DO_CUSTO = {"mic": "microfone", "som": "som", "haptica": "vibração"}
+#: As cores de quem não tem plástico: cinzas do mesmo mundo, para que a cor
+#: continue sendo a identidade dos controles (desenho aprovado, `COR_DO_TIPO`).
+COR_DO_TIPO = {
+    "teclado": "#8b8fa8", "mouse": "#6d7186", "webcam": "#a8a08c",
+    "caixa": "#8c8299", "fone": "#7e9aa8", "outro": "#606062",
+}
+ARTIGO_DO_TIPO = {"caixa": "a", "webcam": "a"}
+PASSAGEIROS = (("giro", "Giroscópio e acelerômetro"), ("touch", "Touchpad"),
+               ("botoes", "Botões, sticks e gatilhos"))
+
+#: O que se diz no sino, pelo `o_que` do diário. NADA DO DIÁRIO CHEGA CRU À
+#: TELA: o motivo técnico fica no arquivo; aqui fica a palavra dela.
+FRASE_DO_DIARIO = {
+    "adaptador cheio": "Pediram som com o adaptador cheio",
+    "fila parada": "O adaptador parou de enviar",
+    "ponte subiu": "Som além do limite",
+}
+#: A frase da ponte root já nasce escrita para o sino (o campo `frase`); o
+#: nome da porta entra pelo dono (`entrada_a_entrada.com_o_nome_dela`).
+PAROU_DE_REINICIAR = "parou de reiniciar o adaptador"
+
+
+def _x(texto: object) -> str:
+    return html.escape("" if texto is None else str(texto), quote=True)
+
+
+def _ic(nome: str, classe: str = "") -> str:
+    extra = f" {classe}" if classe else ""
+    return f'<svg class="i{extra}" aria-hidden="true"><use href="#rd-{nome}"/></svg>'
+
+
+def _silhueta(ap: dict[str, Any], classe: str = "ds") -> str:
+    cor = ap.get("cor") or "var(--texto-mudo)"
+    return (f'<svg class="i {classe}" aria-hidden="true" style="color:{_x(cor)}" '
+            f'data-colorway="{_x(ap.get("colorway") or "")}"><use href="#rd-ds"/></svg>')
+
+
+def _maiuscula(frase: str) -> str:
+    return frase[:1].upper() + frase[1:]
+
+
+def _cor_de(ap: dict[str, Any]) -> str:
+    return str(ap.get("cor") or COR_DO_TIPO.get(str(ap.get("tipo")), "var(--texto-mudo)"))
+
+
+def _veu(cor: str, alfa: float) -> str:
+    m = re.fullmatch(r"#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})", cor or "")
+    if not m:
+        return cor
+    r, g, b = (int(p, 16) for p in m.groups())
+    return f"rgba({r},{g},{b},{alfa})"
+
+
+def _hz(valor: Any) -> str:
+    """O Hz de agora, inteiro; vazio = não sei (o piloto põe o travessão)."""
+    if isinstance(valor, bool) or not isinstance(valor, (int, float)):
+        return ""
+    return f"{round(valor)} Hz"
+
+
+def como_se_chama(ap: dict[str, Any]) -> str:
+    """«o <b>Cosmic Red</b> de <b>Vitória</b>» — a cor é a identidade do controle."""
+    nome = str(ap.get("nome") or "")
+    if ap.get("tipo") == "controle":
+        cor = str(ap.get("cor_nome") or "") or str(ap.get("rotulo") or "")
+        if cor:
+            return f"o <b>{_x(cor)}</b>" + (f" de <b>{_x(nome)}</b>" if nome else "")
+    artigo = ARTIGO_DO_TIPO.get(str(ap.get("tipo")), "o")
+    return f"{artigo} <b>{_x(nome or ap.get('rotulo') or '')}</b>"
+
+
+#: O adaptador sem porta — o da placa-mãe, que não pendura em entrada nenhuma.
+DENTRO_DA_MAQUINA = "Dentro da máquina"
+
+
+def como_se_chama_o_lugar(lug: dict[str, Any]) -> str:
+    """«o <b>Sala</b>», «a <b>Entrada 4.4</b>» ou «o adaptador <b>dentro da
+    máquina</b>» — o nome dela primeiro."""
+    if lug.get("nome"):
+        return f"o <b>{_x(lug['nome'])}</b>"
+    entrada = str(lug.get("entrada") or "")
+    if entrada == DENTRO_DA_MAQUINA:
+        return f"o adaptador <b>{_x(entrada[0].lower() + entrada[1:])}</b>"
+    return f"a <b>{_x(entrada)}</b>"
+
+
+def _titulo_do_lugar(lug: dict[str, Any]) -> str:
+    return str(lug.get("nome") or lug.get("entrada") or "")
+
+
+def _moradores(cena: dict[str, Any], lid: str) -> list[dict[str, Any]]:
+    return [a for a in cena.get("aparelhos", ()) if a.get("lugar") == lid]
+
+
+def _pontes(cena: dict[str, Any], lid: str) -> list[dict[str, Any]]:
+    return [a for a in _moradores(cena, lid)
+            if a.get("tipo") == "controle" and a.get("ponte")]
+
+
+def _ocupado(cena: dict[str, Any]) -> bool:
+    """Um movimento esperando PS + Create segura «Mover» e «Conectar» (item 6)."""
+    return bool(cena.get("ocupado"))
+
+
+def _canais_de(cena: dict[str, Any], lid: str) -> int | None:
+    faixas = [v for v in cena.get("evitados", ()) if v.get("lugar") == lid]
+    if not faixas and not cena.get("canais_medidos", {}).get(lid, False):
+        return None
+    return CANAIS_DO_BT - sum(int(v["fim"]) - int(v["ini"]) for v in faixas)
+
+
+# -- a linha de um aparelho -------------------------------------------------
+
+
+def _linha_do_controle(ap: dict[str, Any], cena: dict[str, Any]) -> str:
+    aid = _x(ap["id"])
+    mic = bool(ap.get("mic"))
+    ponte = ap.get("ponte")
+    alem = bool(ap.get("alem"))
+    mov_flex = HZ_INPUT_COM_MIC if mic else HZ_INPUT_SEM_MIC
+    voz_flex = f"{HZ_AUDIO_COM_MIC} 1 0" if mic else "0 0 26px"
+    manda = round(_LARGURA_DA_ENTRADA + (_LARGURA_DO_MIC if mic else 0), 1)
+    passageiros = "".join(
+        f'<span class="passageiro" role="img" title="{_x(rot)}: vem junto, não custa nada" '
+        f'aria-label="{_x(rot)}: vem junto, não custa nada">{_ic(ic)}</span>'
+        for ic, rot in PASSAGEIROS)
+    voz = (f'<span class="hz" data-campo="hz-voz" data-alvo="{aid}">'
+           f'{_x(_hz(ap.get("hz_voz")))}</span>') if mic else ""
+    nome = _x(ap.get("nome") or ap.get("rotulo") or "")
+    botoes_da_ponte = []
+    for k in ("som", "haptica"):
+        ligado = ponte == k
+        flex = "1 1 0" if (ponte is None or ligado) else "0 0 34px"
+        hz = f'<span class="hz">{_x(_hz(HZ_DA_PONTE))}</span>' if ligado else ""
+        passou = " Passou do limite: pode engasgar." if (ligado and alem) else ""
+        rotulo = _maiuscula(NOME_DO_CUSTO[k])
+        gesto = "custo-som" if k == "som" else "custo-vibracao"
+        botoes_da_ponte.append(
+            f'<button class="vaga {k}{" alem" if ligado and alem else ""}" '
+            f'aria-pressed="{str(ligado).lower()}" aria-label="{rotulo} de {nome}" '
+            f'title="{rotulo}: {round(HZ_DA_PONTE)} por segundo. Pelo rádio, som ou '
+            f'vibração, um por vez.{passou}" style="flex:{flex}" '
+            f'data-gesto="{gesto}" data-alvo="{aid}">{_ic(ICONE_DO_CUSTO[k])}{hz}</button>')
+    return (
+        '<div class="faixa-do-aparelho" style="width:100%">'
+        f'<div class="fluxo manda" style="flex:{manda} 1 0" title="O que o controle manda">'
+        f'{_ic("manda", "seta")}'
+        f'<div class="vaga entrada fixa partida" style="flex:{manda} 0 0" '
+        'title="O que o controle manda">'
+        f'<span class="parte movimento" data-campo="hz-pouco" data-hef-alvo="classe" '
+        f'data-hef-classe="pouco" data-alvo="{aid}" style="flex:{mov_flex} 1 0" '
+        'title="Movimento por segundo">'
+        f'{_ic("sinal")}<span class="hz" data-campo="hz-movimento" data-alvo="{aid}">'
+        f'{_x(_hz(ap.get("hz_mov")))}</span>{passageiros}</span>'
+        f'<button class="parte voz selo-mic" style="flex:{voz_flex}" '
+        f'aria-pressed="{str(mic).lower()}" aria-label="Microfone de {nome}" '
+        'title="Microfone: divide a fila com o movimento" '
+        f'data-gesto="custo-mic" data-alvo="{aid}">{_ic("mic")}{voz}</button>'
+        '</div></div>'
+        f'<div class="fluxo recebe" style="flex:{_LARGURA_DA_PONTE} 1 0" '
+        'title="O que o PC manda para o controle">'
+        f'{_ic("recebe", "seta")}'
+        f'<div class="ponte" style="flex:{_LARGURA_DA_PONTE} 0 0">'
+        + "".join(botoes_da_ponte) + '</div>'
+        f'<button class="selo-zero" aria-pressed="{str(bool(ap.get("luz", True))).lower()}" '
+        f'aria-label="Barra de luz de {nome}" title="Barra de luz: não pesa no rádio" '
+        f'data-gesto="custo-luz" data-alvo="{aid}">{_ic("lightbar")}</button>'
+        '</div></div>')
+
+
+def _vaga_de(ap: dict[str, Any], cena: dict[str, Any]) -> int:
+    if ap.get("tipo") != "controle" or not ap.get("ponte"):
+        return 0
+    pontes = _pontes(cena, str(ap.get("lugar")))
+    return pontes.index(ap) + 1 if ap in pontes else 0
+
+
+def html_da_linha(ap: dict[str, Any], cena: dict[str, Any]) -> str:
+    """Uma linha da sala: desenho, nome, o que manda e recebe, qual vaga de ponte."""
+    aid = _x(ap["id"])
+    esperando = bool(ap.get("esperando"))
+    arrasta = not ap.get("fixo") and not esperando and not _ocupado(cena)
+    nome = str(ap.get("nome") or "")
+    rotulo = str(ap.get("rotulo") or "")
+    quem = ((f'controle {ap.get("cor_nome")}' if ap.get("cor_nome") else "controle")
+            if ap.get("tipo") == "controle" else str(ap.get("tipo")))
+    le = _x(f"{nome or rotulo}, {quem}")
+    if arrasta:
+        abre = (f'<div class="linha" data-id="{aid}" data-alvo="{aid}" draggable="true" '
+                f'tabindex="0" role="button" aria-label="{le} — Enter para mudar de adaptador">')
+    else:
+        abre = (f'<div class="linha{" esperando" if esperando else ""}" data-id="{aid}" '
+                f'data-alvo="{aid}" aria-label="{le}">')
+    if ap.get("tipo") == "controle":
+        desenho = _silhueta(ap)
+    else:
+        desenho = (f'<svg class="i ico" aria-hidden="true" style="color:{_x(_cor_de(ap))}">'
+                   f'<use href="#rd-{ICONE_DO_APARELHO.get(str(ap.get("tipo")), "radio")}"/></svg>')
+    campo = (f'<input class="nome" value="{_x(nome)}" placeholder="{_x(rotulo)}" '
+             'aria-label="Nome deste aparelho" title="Clique para renomear; arraste para mover" '
+             f'draggable="true" data-gesto="aparelho-renomear" data-alvo="{aid}">')
+    if esperando:
+        return (abre + desenho + campo + f'<div class="features"><span class="segure">{SEGURE}'
+                '</span></div><span class="conta-da-vaga">' + TRACO_CURTO + '</span></div>')
+    if ap.get("tipo") == "controle":
+        faixa = _linha_do_controle(ap, cena)
+    elif ap.get("tipo") == "webcam":
+        return (abre + desenho + campo + f'<div class="features"><span class="sem-radio" '
+                f'title="Não usa rádio; só ocupa porta">{SEM_RADIO}</span></div>'
+                '<span class="conta-da-vaga zero" title="Não usa rádio">'
+                + TRACO_CURTO + '</span></div>')
+    else:
+        # CAIXA E FONE NÃO GANHAM HZ ESTIMADO (R10: nada estimado na tela). O
+        # desenho dividia um custo calculado por quatro; aqui fica a vaga, com a
+        # cor e o ícone de quem a ocupa, e o número só volta quando houver medida.
+        cor = _cor_de(ap)
+        faixa = (f'<div class="faixa-do-aparelho" style="width:100%">'
+                 f'<div class="vaga entrada fixa" style="flex:1 1 0;background:var(--panel);'
+                 f'border-color:{_x(cor)};color:{_x(cor)}" '
+                 f'title="{_x(_maiuscula(nome or rotulo))}: usa o rádio">'
+                 f'{_ic(ICONE_DO_APARELHO.get(str(ap.get("tipo")), "radio"))}'
+                 '</div></div>')
+    vaga = _vaga_de(ap, cena)
+    passou = vaga > PONTES_POR_ADAPTADOR
+    titulo = ("Passou do limite" if passou else f"Som {vaga} de {PONTES_POR_ADAPTADOR}"
+              ) if vaga else "Sem som"
+    fatias = (f'<span class="conta-da-vaga{" alem" if passou else ""}" data-campo="vaga-de-ponte" '
+              f'data-alvo="{aid}" title="{titulo}">'
+              + (f"{vaga} de {PONTES_POR_ADAPTADOR}" if vaga else TRACO_CURTO) + "</span>")
+    return abre + desenho + campo + f'<div class="features">{faixa}</div>' + fatias + "</div>"
+
+
+# -- o cartão de um adaptador -----------------------------------------------
+
+
+def _marcas_de_onde(lug: dict[str, Any], cena: dict[str, Any]) -> str:
+    partes = []
+    if lug.get("face"):
+        icone = "hub" if lug.get("hub") else "placa"
+        face = _x(lug["face"])
+        partes.append(f'<span class="marca {"hub" if lug.get("hub") else "direto"}" role="img" '
+                      f'title="{face}" aria-label="{face}">{_ic(icone)}</span>'
+                      f'<span>{_x(lug.get("entrada") or "")}</span>')
+    if lug.get("varrendo"):
+        partes.append(f'<span class="marca varrendo" role="img" title="{MARCA_VARRENDO}" '
+                      f'aria-label="{MARCA_VARRENDO}">{_ic("varrendo")}</span>')
+    if lug.get("junto"):
+        dica = _x(_maiuscula(str(lug["junto"])) + ".")
+        partes.append(f'<span class="marca junto" role="img" title="{dica}" '
+                      f'aria-label="{dica}">{_ic("aviso")}</span>')
+    if lug.get("usb3"):
+        partes.append(f'<span class="marca usb3" role="img" title="{USB3_AO_LADO}" '
+                      f'aria-label="{USB3_AO_LADO}">{_ic("aviso")}</span>')
+    for ap in _moradores(cena, str(lug["id"])):
+        if ap.get("esperando"):
+            quem = _x(ap.get("cor_nome") or ap.get("nome") or ap.get("rotulo") or "controle")
+            partes.append(f'<span class="espera" data-campo="esperando-parear" '
+                          f'data-alvo="{_x(ap["id"])}" title="Segure PS + Create no {quem} '
+                          f'até a luz piscar.">{_silhueta(ap)}{SEGURE}</span>')
+    if lug.get("conectando"):
+        partes.append(f'<span class="espera" data-campo="esperando-parear" data-alvo="" '
+                      f'title="Segure PS + Create no controle até a luz piscar.">'
+                      f'{_silhueta({})}{SEGURE}</span>')
+    if not lug.get("face"):
+        partes.append(f'<a class="ensina" href="#mapear-entrada-a-entrada" '
+                      f'data-alvo="{_x(lug.get("lugar") or "")}" title="Mapear Entrada a Entrada">'
+                      f'{_ic("uma-a-uma")}{ONDE_FICA}</a>')
+    return '<span class="onde">' + "".join(partes) + "</span>"
+
+
+def _conta_do_lugar(lug: dict[str, Any], cena: dict[str, Any]) -> str:
+    n = len(_pontes(cena, str(lug["id"])))
+    maximo = PONTES_POR_ADAPTADOR
+    classe = "estourou" if n > maximo else ("apertado" if n == maximo else "")
+    dica = f"Controles com som ou vibração: {n} de {maximo}" + (
+        " — o som engasga" if n > maximo else "")
+    partes = [f'<span class="quanto canais-do-lugar {classe}" data-campo="lugar-pontes" '
+              f'role="img" title="{dica}" aria-label="{dica}">{_ic("som")}{n}/{maximo}</span>']
+    canais = _canais_de(cena, str(lug["id"]))
+    if canais is not None:
+        dica = (f"Usa os {CANAIS_DO_BT} canais" if canais == CANAIS_DO_BT else
+                f"Evita {CANAIS_DO_BT - canais} dos {CANAIS_DO_BT} canais (vizinhos)")
+        apertado = " apertado" if canais < CANAIS_DO_BT else ""
+        partes.append(f'<span class="canais-do-lugar{apertado}" '
+                      f'role="img" title="{dica}" aria-label="{dica}">'
+                      f'{_ic("radio")}{canais}/{CANAIS_DO_BT}</span>')
+    livres = maximo - n
+    if livres >= 1:
+        dica = "Cabe mais 1 com som" if livres == 1 else f"Cabem mais {livres} com som"
+        miolo = _ic("mais") + "".join(_ic("ds", "ds") for _ in range(livres))
+        classe = ""
+    else:
+        dica = "Passou do limite: o som engasga" if livres < 0 else "Cheio de som (sem som, cabe)"
+        miolo = _ic("nao-cabe")
+        classe = " passou" if livres < 0 else " nao-cabe"
+    partes.append(f'<span class="sobra{classe}" role="img" title="{dica}" '
+                  f'aria-label="{dica}">{miolo}</span>')
+    return '<span class="lugar-conta">' + "".join(partes) + "</span>"
+
+
+def _barra_do_lugar(lug: dict[str, Any], cena: dict[str, Any]) -> str:
+    pontes = _pontes(cena, str(lug["id"]))
+    maximo = PONTES_POR_ADAPTADOR
+    escala = max(maximo, len(pontes))
+    vagas = []
+    for i in range(escala):
+        ap = pontes[i] if i < len(pontes) else None
+        classe = "vaga-ponte" + (" cheia" if ap else "") + (" alem" if i >= maximo else "") + (
+            " reservada" if ap and ap.get("esperando") else "")
+        if ap:
+            cor = _cor_de(ap)
+            borda = f";border-color:{_x(cor)}" if i < maximo else ""
+            dica = (f'{ap.get("cor_nome") or ap.get("nome") or ap.get("rotulo") or ""} · '
+                    f'{NOME_DO_CUSTO[str(ap["ponte"])]}'
+                    + (" · esperando" if ap.get("esperando") else "")
+                    + (" · passou do limite" if i >= maximo else ""))
+            vagas.append(f'<div class="{classe}" style="background:{_x(_veu(cor, .5))}{borda}" '
+                         f'title="{_x(dica)}">{_ic(ICONE_DO_CUSTO[str(ap["ponte"])])}</div>')
+        else:
+            vagas.append(f'<div class="{classe}" title="Vaga livre"></div>')
+    estourado = len(pontes) > maximo
+    teto = ""
+    if estourado:
+        teto = (f'<div class="marca-do-teto" '
+                f'style="left:calc({maximo / escala * 100:.4g}% - 1.5px)" '
+                f'title="Limite: {maximo}"></div>')
+    return ('<div class="barra-do-lugar">'
+            f'<div class="trilho vagas{" estourado" if estourado else ""}" '
+            f'data-campo="lugar-barra" data-alvo="{_x(lug["id"])}">' + "".join(vagas)
+            + "</div>" + teto + "</div>")
+
+
+def html_do_lugar(lug: dict[str, Any], cena: dict[str, Any]) -> str:
+    """O cartão de um adaptador: a linha de cima, e os aparelhos quando aberto."""
+    lid = _x(lug["id"])
+    pontes = _pontes(cena, str(lug["id"]))
+    moradores = _moradores(cena, str(lug["id"]))
+    aberto = cena.get("aberto") == lug["id"]
+    classes = ["lugar"]
+    if len(pontes) > PONTES_POR_ADAPTADOR:
+        classes.append("cheio")
+    if lug.get("conectando") or any(a.get("esperando") for a in moradores):
+        classes.append("esperando")
+    if aberto:
+        classes.append("aberto")
+    ver = ("Esconder" if aberto else "Ver") + " os aparelhos deste adaptador"
+    nome = str(lug.get("nome") or "")
+    largura = max(len(nome or DE_UM_NOME) + 2, 10)
+    sino = ""
+    quedas = lug.get("quedas") or []
+    if quedas:
+        dica = f"{len(quedas)} {'queda' if len(quedas) == 1 else 'quedas'} — ver quando"
+        sino = (f'<button class="sino" title="{dica}" aria-label="{dica}" '
+                f'data-gesto="adaptador-historico" data-alvo="{lid}">{_ic("aviso")}</button>')
+    chegou = " ".join(sorted(_x(c) for c in lug.get("chegou") or ()))
+    topo = (
+        '<div class="lugar-topo">'
+        f'<button class="abre-lugar" aria-expanded="{str(aberto).lower()}" title="{ver}" '
+        f'aria-label="{ver}" data-gesto="abrir-adaptador" data-alvo="{lid}">▶</button>'
+        f'<input class="lugar-nome" value="{_x(nome)}" placeholder="{DE_UM_NOME}" '
+        f'aria-label="Nome deste adaptador" style="width:{largura}ch" '
+        f'data-gesto="adaptador-renomear" data-alvo="{lid}">'
+        + _marcas_de_onde(lug, cena) + sino + _barra_do_lugar(lug, cena)
+        + _conta_do_lugar(lug, cena) + "</div>")
+    linhas = "".join(html_da_linha(ap, cena) for ap in moradores)
+    apagado = ' apagado" aria-disabled="true' if _ocupado(cena) else ""
+    lampada = ""
+    if cena.get("proposta") and cena["proposta"].get("destino") == lug["id"]:
+        lampada = (f'<button class="lampada{apagado}" title="Quem funciona melhor aqui" '
+                   f'aria-label="Quem funciona melhor aqui" data-gesto="sugerir-alocacao" '
+                   f'data-alvo="{lid}">{_ic("lampada")}</button>')
+    soltar = ("Arraste outro para cá" if moradores else "Arraste um aparelho para cá")
+    corpo = (f'<div class="aparelhos" data-campo="doca" data-alvo="{lid}">{linhas}'
+             f'<div class="soltar-fila"><button class="soltar{apagado}" '
+             f'title="Trazer um aparelho para cá" data-gesto="trazer-para-ca" '
+             f'data-alvo="{lid}">{_ic("soltar")}{soltar}</button>{lampada}</div></div>')
+    return (f'<div class="{" ".join(classes)}" data-id="{lid}" data-alvo="{lid}" '
+            f'data-chegou="{chegou}">' + topo + corpo + "</div>")
+
+
+# -- as janelas que a página abre -------------------------------------------
+
+
+def _como_se_pareia(ap: dict[str, Any]) -> str:
+    if ap.get("tipo") == "controle":
+        return "Depois, segure <b>PS + Create</b> até a luz piscar."
+    artigo = ARTIGO_DO_TIPO.get(str(ap.get("tipo")), "o")
+    return f"Depois, ponha {artigo} {_x(ap.get('tipo'))} para parear."
+
+
+def pergunta_de_mover(ap: dict[str, Any], destino: dict[str, Any], cena: dict[str, Any]) -> str:
+    """A pergunta ANTES de mover (R7): só ele sai, e o que ela faz com a mão."""
+    ela = ARTIGO_DO_TIPO.get(str(ap.get("tipo"))) == "a"
+    cheio = (ap.get("tipo") == "controle" and ap.get("ponte")
+             and len(_pontes(cena, str(destino["id"]))) >= PONTES_POR_ADAPTADOR)
+    return (f"Mover {como_se_chama(ap)} para {como_se_chama_o_lugar(destino)}?<br>"
+            f"Só {'ela' if ela else 'ele'} sai daqui. {_como_se_pareia(ap)}"
+            + (" Lá o som pode engasgar." if cheio else ""))
+
+
+def _moldes_de_pergunta(cena: dict[str, Any]) -> str:
+    lugares = {str(lug["id"]): lug for lug in cena.get("lugares", ())}
+    moldes = []
+    for ap in cena.get("aparelhos", ()):
+        if ap.get("fixo") or ap.get("esperando") or ap.get("tipo") == "webcam":
+            continue
+        for lid, destino in lugares.items():
+            if lid == ap.get("lugar"):
+                continue
+            moldes.append(f'<template class="pergunta-molde" data-alvo="{_x(ap["id"])}" '
+                          f'data-destino="{_x(lid)}" data-sim="Mover">'
+                          f'{pergunta_de_mover(ap, destino, cena)}</template>')
+    pedido = cena.get("pedido")
+    if pedido:
+        ap = next((a for a in cena.get("aparelhos", ()) if a["id"] == pedido.get("uniq")), None)
+        origem = lugares.get(str(pedido.get("lugar")))
+        vagas = [v for v in pedido.get("vagas") or () if v in lugares]
+        o_que = "a vibração" if pedido.get("tipo") in ("vibracao", "haptica") else "o som"
+        if ap is not None and origem is not None:
+            chave = _x(f'{pedido.get("uniq")}|{pedido.get("lugar")}')
+            if vagas:
+                destino = lugares[vagas[0]]
+                moldes.append(
+                    f'<template class="pergunta-molde" data-pedido="{chave}" '
+                    f'data-alvo="{_x(ap["id"])}" data-destino="{_x(destino["id"])}" '
+                    f'data-sim="Mover e ligar" data-outro="Ligar aqui">'
+                    f'{_maiuscula(como_se_chama_o_lugar(origem))} já tem {PONTES_POR_ADAPTADOR} '
+                    f'controles com som ou vibração.<br>Mover {como_se_chama(ap)} para '
+                    f'{como_se_chama_o_lugar(destino)} e ligar lá?</template>')
+            else:
+                moldes.append(
+                    f'<template class="pergunta-molde" data-pedido="{chave}" '
+                    f'data-alvo="{_x(ap["id"])}" data-destino="" data-sim="" data-outro="Ligar">'
+                    f'Todas as entradas já têm {PONTES_POR_ADAPTADOR} controles com som ou '
+                    f'vibração.<br>Ligar {o_que} mesmo assim? Pode engasgar.</template>')
+    return "".join(moldes)
+
+
+def _botoes(itens: list[tuple[str, str, str]]) -> str:
+    """`(ícone, rótulo, atributos)` → a lista de botões de um painel."""
+    return ('<div class="escolha">' + "".join(
+        f'<button class="btn" {attrs}>{_ic(ic) if ic else ""}{_x(rot)}</button>'
+        for ic, rot, attrs in itens) + "</div>")
+
+
+def _moldes_de_painel(cena: dict[str, Any]) -> str:
+    lugares = list(cena.get("lugares", ()))
+    moldes = []
+    movidos = [a for a in cena.get("aparelhos", ())
+               if not a.get("fixo") and not a.get("esperando") and a.get("tipo") != "webcam"]
+    for lug in lugares:
+        lid = str(lug["id"])
+        # O SINO: o que aconteceu com este adaptador, pela hora, mais novo primeiro.
+        if lug.get("quedas"):
+            linhas = "".join(
+                f'<div class="queda">{_ic("aviso")}<span>{_x(_maiuscula(q["porque"]))}</span>'
+                f'<span class="quando">{_x(q["quando"])}</span></div>'
+                for q in lug["quedas"])
+            if lug.get("quedas_desde"):
+                linhas += (f'<div class="queda-desde">Quedas contadas desde '
+                           f'{_x(lug["quedas_desde"])}</div>')
+            moldes.append(f'<template class="painel-molde" data-painel="historico" '
+                          f'data-alvo="{_x(lid)}" data-titulo="{_x(_titulo_do_lugar(lug))}">'
+                          f'<div class="historico">{linhas}</div></template>')
+        # QUEM VEM PARA CÁ: o arrastar de quem não arrasta.
+        vem = [(("ds" if a.get("tipo") == "controle"
+                 else ICONE_DO_APARELHO.get(str(a.get("tipo")), "radio")),
+                (a.get("nome") or a.get("rotulo") or "")
+                + (f' · {a["cor_nome"]}' if a.get("cor_nome") else ""),
+                f'data-aparelho="{_x(a["id"])}" data-destino="{_x(lid)}"')
+               for a in movidos if a.get("lugar") != lid]
+        titulo = ("Quem vem para " + (lug.get("nome") or ("a " + str(lug.get("entrada") or "")))
+                  + "?") if vem else "Nada para trazer"
+        moldes.append(f'<template class="painel-molde" data-painel="quem-vem" '
+                      f'data-alvo="{_x(lid)}" data-titulo="{_x(titulo)}">'
+                      f'{_botoes(vem) if vem else ""}</template>')
+    # PARA ONDE VAI: o mesmo ato, pelo teclado.
+    for ap in movidos:
+        itens = [("hub" if d.get("hub") else "placa",
+                  f'{_titulo_do_lugar(d)} · com som {len(_pontes(cena, str(d["id"])))} de '
+                  f'{PONTES_POR_ADAPTADOR}',
+                  f'data-aparelho="{_x(ap["id"])}" data-destino="{_x(d["id"])}"')
+                 for d in lugares if d["id"] != ap.get("lugar")]
+        titulo = f'Para onde vai {ap.get("cor_nome") or ap.get("nome") or ap.get("rotulo") or ""}?'
+        moldes.append(f'<template class="painel-molde" data-painel="para-onde" '
+                      f'data-alvo="{_x(ap["id"])}" data-titulo="{_x(titulo)}">'
+                      f'{_botoes(itens)}</template>')
+    # O QUE É ESTE RÁDIO: as respostas do produto (`secao_mesa._TIPOS_DE_RADIO`,
+    # pelo `_tipos_de_radio`). A resposta vai no `value` do botão, que é o que o
+    # ouvinte do piloto manda como `valor` — um `data-valor` seria sobrescrito.
+    _, rotulos = _tipos_de_radio()
+    for viz in cena.get("vizinhos", ()):
+        itens = [(ICONE_DO_RADIO.get(tipo, "radio"), rotulo,
+                  f'data-gesto="vizinho-o-que-e" data-alvo="{_x(viz["id"])}" '
+                  f'value="{_x(rotulo)}"')
+                 for tipo, rotulo in rotulos.items()]
+        moldes.append(f'<template class="painel-molde" data-painel="o-que-e" '
+                      f'data-alvo="{_x(viz["id"])}" data-titulo="O que é este rádio?">'
+                      f'{_botoes(itens)}</template>')
+    # CONECTAR: o destino vem escolhido pela D8, e o que está perto.
+    destino = cena.get("destino_do_conectar") or (lugares[0]["id"] if lugares else "")
+    chips = "".join(
+        f'<button class="op" aria-pressed="{str(lug["id"] == destino).lower()}" '
+        f'title="Com som: {len(_pontes(cena, str(lug["id"])))} de {PONTES_POR_ADAPTADOR}" '
+        f'data-gesto="escolher-adaptador" data-alvo="{_x(lug["id"])}">'
+        f'{_x(_titulo_do_lugar(lug))}</button>' for lug in lugares)
+    achados = "".join(
+        '<div class="achado">'
+        + (_ic("ds", "ds cheio") if a.get("tipo") == "controle" else _ic("radio", "ico"))
+        + f'<span class="nome">{_x(a.get("nome"))}</span>'
+        + (f'<span class="forca" title="Sinal: mais perto de zero, mais perto">'
+           f'{_x(a["forca"])} dBm</span>' if a.get("forca") is not None else "")
+        + (f'<button class="btn" data-gesto="conectar-aparelho" data-alvo="{_x(a["id"])}">'
+           'Conectar</button>' if a.get("conhecido") else
+           f'<button class="btn" data-gesto="parear-aparelho" data-alvo="{_x(a["id"])}">'
+           'Parear</button>')
+        + "</div>" for a in cena.get("perto", ()))
+    moldes.append(f'<template class="painel-molde" data-painel="conectar" data-alvo="" '
+                  f'data-titulo="Procurando" data-pulso="1">'
+                  f'<div class="conectar"><div class="escolha-lugar" role="group" '
+                  f'aria-label="Em qual adaptador conectar">{chips}</div>'
+                  f'<div class="achados">{achados}</div></div></template>')
+    return "".join(moldes)
+
+
+#: As respostas de «O que é este rádio?» — as do produto
+#: (`gui.aba_conexoes.RESPOSTAS_DO_VIZINHO`, menos a pergunta) com a chave do
+#: ícone. O «Fone» do desenho não entra: o `maquina.json` não tem esse tipo.
+def html_da_sala(cena: dict[str, Any]) -> str:
+    """A sala inteira — os cartões, as perguntas e os painéis, prontos."""
+    if not cena.get("lugares"):
+        return '<div class="sala-vazia">Nenhum adaptador Bluetooth encontrado.</div>'
+    return ("".join(html_do_lugar(lug, cena) for lug in cena["lugares"])
+            + _moldes_de_pergunta(cena) + _moldes_de_painel(cena))
+
+
+# -- quem está no ar ---------------------------------------------------------
+
+
+def _faixas_livres(evitados: list[dict[str, Any]]) -> list[tuple[int, int]]:
+    livres, c = [], 0
+    for v in sorted(evitados, key=lambda v: int(v["ini"])):
+        if int(v["ini"]) > c:
+            livres.append((c, int(v["ini"])))
+        c = max(c, int(v["fim"]))
+    if c < CANAIS_DO_BT:
+        livres.append((c, CANAIS_DO_BT))
+    return livres
+
+
+def _pct(valor: float) -> str:
+    return f"{valor / CANAIS_DO_BT * 100:.4g}%"
+
+
+def _custa(faixa: dict[str, Any], evitados: list[dict[str, Any]]) -> int:
+    if faixa.get("forca") == "fora":
+        return 0
+    return sum(max(0, min(int(faixa["fim"]), int(v["fim"])) - max(int(faixa["ini"]), int(v["ini"])))
+               for v in evitados)
+
+
+def html_dos_canais(cena: dict[str, Any]) -> str:
+    """A régua dos 79 canais: onde o Bluetooth salta, o que ele evita, e — só
+    quando se sabe o canal — o vizinho provável."""
+    lugares = {str(lug["id"]): lug for lug in cena.get("lugares", ())}
+    evitados = list(cena.get("evitados", ()))
+    partes = [f'<div class="salto" style="left:{_pct(a)};width:{_pct(b - a)}"></div>'
+              for a, b in _faixas_livres(evitados)]
+    for v in evitados:
+        dono = lugares.get(str(v.get("lugar")))
+        quem = (re.sub(r"</?b>", "", _maiuscula(como_se_chama_o_lugar(dono)))
+                if dono else "O rádio")
+        partes.append(f'<div class="evitado" style="left:{_pct(int(v["ini"]))};'
+                      f'width:{_pct(int(v["fim"]) - int(v["ini"]))}" title="{_x(quem)} parou de '
+                      f'saltar nos canais {v["ini"]} a {v["fim"]} — medido no próprio adaptador">'
+                      '</div>')
+    na_faixa = [e for e in cena.get("espectro", ()) if e.get("forca") != "fora"]
+    pistas: list[list[dict[str, Any]]] = []
+    pista_de: dict[str, int] = {}
+    for e in sorted(na_faixa, key=lambda e: int(e["ini"])):
+        for i, pista in enumerate(pistas):
+            if all(int(e["ini"]) >= int(o["fim"]) or int(e["fim"]) <= int(o["ini"]) for o in pista):
+                pista.append(e)
+                pista_de[e["id"]] = i
+                break
+        else:
+            if len(pistas) >= 2:
+                pistas[1].append(e)
+                pista_de[e["id"]] = 1
+            else:
+                pistas.append([e])
+                pista_de[e["id"]] = len(pistas) - 1
+    for e in na_faixa:
+        sem_nome = not e.get("nome")
+        custa = _custa(e, evitados)
+        classe = f'faixa provavel {e.get("forca", "")}' + (" sem-nome" if sem_nome else "") + (
+            f' pista-{pista_de[e["id"]]}' if len(pistas) > 1 else "") + (" custa" if custa else "")
+        dica = (f'{e.get("nome") or "Rádio sem nome"} — canais {e["ini"]} a {e["fim"]} (provável)'
+                + (f". Custa {custa} canais." if custa else "."))
+        fala = dica + (" Toque para dizer o que é." if sem_nome else " Toque para trocar.")
+        icone = "ajuda" if sem_nome else ICONE_DO_RADIO.get(str(e.get("tipo")), "radio")
+        partes.append(f'<button class="{classe}" style="left:{_pct(int(e["ini"]))};'
+                      f'width:{_pct(int(e["fim"]) - int(e["ini"]))}" title="{_x(dica)}" '
+                      f'aria-label="{_x(fala)}" data-gesto="vizinho-o-que-e" '
+                      f'data-alvo="{_x(e["id"])}">{_ic(icone)}'
+                      f'<span class="ch"> {e["ini"]}{TRACO_CURTO}{e["fim"]}</span></button>')
+    return "".join(partes)
+
+
+def duas_pistas(cena: dict[str, Any]) -> bool:
+    na_faixa = sorted((e for e in cena.get("espectro", ()) if e.get("forca") != "fora"),
+                      key=lambda e: int(e["ini"]))
+    return any(int(b["ini"]) < int(a["fim"]) for a, b in itertools.pairwise(na_faixa))
+
+
+def html_fora_da_faixa(cena: dict[str, Any]) -> str:
+    """O que está no ar e não tem lugar na régua: quem está em 5 GHz, e os
+    vizinhos cujo canal a máquina não diz (o produto não inventa a faixa)."""
+    partes = []
+    for e in cena.get("espectro", ()):
+        if e.get("forca") != "fora":
+            continue
+        dica = _x(f'{e.get("nome") or "Este rádio"} em 5 GHz: fora desta faixa')
+        partes.append(f'<span class="selo-fora" role="img" title="{dica}" aria-label="{dica}">'
+                      f'{_ic(ICONE_DO_RADIO.get(str(e.get("tipo")), "radio"))} 5 GHz</span>')
+    for viz in cena.get("vizinhos", ()):
+        tipo = str(viz.get("tipo") or "")
+        rotulo = str(viz.get("nome") or "")
+        sugestao = str(viz.get("sugestao") or "")
+        dica = (_x(f"{rotulo}: canal que o sistema não diz. Toque para trocar.") if tipo
+                else _x(f"{sugestao}? Toque para dizer o que é.") if sugestao
+                else "Rádio sem nome. Toque para dizer o que é.")
+        icone = ICONE_DO_RADIO.get(tipo, "radio") if tipo else "ajuda"
+        partes.append(f'<button class="selo-fora vizinho{"" if tipo else " sem-nome"}" '
+                      f'title="{dica}" aria-label="{dica}" data-gesto="vizinho-o-que-e" '
+                      f'data-alvo="{_x(viz["id"])}">{_ic(icone)}</button>')
+    return "".join(partes)
+
+
+def _evitados_do_pior(cena: dict[str, Any]) -> int:
+    contas = [_canais_de(cena, str(lug["id"])) for lug in cena.get("lugares", ())]
+    medidos = [c for c in contas if c is not None]
+    return max((CANAIS_DO_BT - c for c in medidos), default=0) if medidos else -1
+
+
+def html_espectro_conta(cena: dict[str, Any]) -> str:
+    evitados = _evitados_do_pior(cena)
+    faixa = list(cena.get("espectro", ()))
+    pior = max(faixa, key=lambda e: _custa(e, list(cena.get("evitados", ()))), default=None)
+    pior_custa = _custa(pior, list(cena.get("evitados", ()))) if pior else 0
+    sem_nome = (sum(1 for e in faixa if not e.get("nome"))
+                + sum(1 for v in cena.get("vizinhos", ()) if not v.get("tipo")))
+    partes = [f"{evitados}/{CANAIS_DO_BT} evitados" if evitados >= 0 else ""]
+    if pior and pior_custa:
+        partes.append(f'pior: {pior.get("nome") or "sem nome"}')
+    if sem_nome:
+        partes.append(f"{sem_nome} sem nome")
+    return " · ".join(p for p in partes if p)
+
+
+def html_meus_no_ar(cena: dict[str, Any]) -> str:
+    no_ar = [a for a in cena.get("aparelhos", ()) if a.get("tipo") != "webcam"]
+    if not no_ar:
+        return ""
+    tipos: list[str] = []
+    for a in no_ar:
+        if a["tipo"] not in tipos:
+            tipos.append(str(a["tipo"]))
+    icones = "".join(_ic("ds", "ds") if t == "controle"
+                     else _ic(ICONE_DO_APARELHO.get(t, "radio")) for t in tipos)
+    contas = [c for c in (_canais_de(cena, str(lug["id"])) for lug in cena.get("lugares", ()))
+              if c is not None]
+    restam = ("" if not contas else str(contas[0]) if min(contas) == max(contas)
+              else f"{min(contas)}{TRACO_CURTO}{max(contas)}")
+    dica = f"Seus {len(no_ar)} aparelhos Bluetooth saltam pelos {restam} canais livres" if restam \
+        else f"Seus {len(no_ar)} aparelhos Bluetooth saltam pelos canais livres"
+    return (f'<span class="no-ar-dentro" role="img" title="{_x(dica)}" aria-label="{_x(dica)}">'
+            f'{icones}&nbsp;{len(no_ar)} no ar</span>')
+
+
+# -- a vizinhança das portas -------------------------------------------------
+
+
+def _numero_da_porta(caminho: str) -> tuple[str, int] | None:
+    m = re.fullmatch(r"(.*)\.(\d+)", caminho) or re.fullmatch(r"(\d+)-(\d+)", caminho)
+    return (m.group(1), int(m.group(2))) if m else None
+
+
+def _ao_lado(a: dict[str, Any], b: dict[str, Any]) -> bool:
+    x, y = _numero_da_porta(str(a["caminho"])), _numero_da_porta(str(b["caminho"]))
+    return bool(x and y and x[0] == y[0] and abs(x[1] - y[1]) == 1)
+
+
+def _o_que_ocupa(porta: dict[str, Any], cena: dict[str, Any]) -> dict[str, Any] | None:
+    ocupa = porta.get("ocupa")
+    if not ocupa:
+        return None
+    lug = next((lg for lg in cena.get("lugares", ()) if lg["id"] == ocupa), None)
+    if lug:
+        return {"tipo": "adaptador", "nome": _titulo_do_lugar(lug), "radio": True, "icone": "radio"}
+    ap = next((a for a in cena.get("aparelhos", ()) if a["id"] == ocupa), None)
+    if ap:
+        return {"tipo": ap["tipo"], "nome": ap.get("nome") or ap.get("rotulo"),
+                "radio": ap["tipo"] != "webcam",
+                "icone": "ds" if ap["tipo"] == "controle"
+                else ICONE_DO_APARELHO.get(str(ap["tipo"]), "radio"), "cor": _cor_de(ap)}
+    viz = next((v for v in (*cena.get("espectro", ()), *cena.get("vizinhos", ()))
+                if v["id"] == ocupa), None)
+    if viz:
+        return {"tipo": viz.get("tipo"), "nome": viz.get("nome"), "radio": True,
+                "icone": ICONE_DO_RADIO.get(str(viz.get("tipo")), "radio")}
+    return None
+
+
+def como_esta_a_porta(porta: dict[str, Any], cena: dict[str, Any]) -> tuple[str, str]:
+    """`(estado, porquê)` — as três regras do desenho aprovado, pela porta ao lado."""
+    meu = _o_que_ocupa(porta, cena)
+    vizinhas = [o for o in cena.get("portas", ()) if o["id"] != porta["id"] and _ao_lado(o, porta)]
+    radios = [o for o in vizinhas if (_o_que_ocupa(o, cena) or {}).get("radio")]
+    tres = [o for o in vizinhas if o.get("usb") == "3.0" and _o_que_ocupa(o, cena)]
+    if meu and meu.get("radio"):
+        if tres:
+            return "ruim", "USB 3.0 ao lado"
+        if radios:
+            quem = [str((_o_que_ocupa(o, cena) or {}).get("nome") or "") for o in radios]
+            return "atento", "colado em " + (", ".join(q for q in quem if q) or "outro rádio")
+        return "bom", "nenhum rádio ao lado"
+    if not meu:
+        if porta.get("usb") == "3.0":
+            return "neutro", "livre (USB 3.0: melhor para o que não é rádio)"
+        if radios:
+            return "atento", "livre, rádio ao lado"
+        return "bom", "livre"
+    return "neutro", "não usa rádio"
+
+
+def html_das_portas(cena: dict[str, Any]) -> str:
+    grupos: list[tuple[str, list[dict[str, Any]]]] = []
+    for porta in cena.get("portas", ()):
+        grupo = next((g for g in grupos if g[0] == porta.get("grupo")), None)
+        if grupo is None:
+            grupo = (str(porta.get("grupo") or ""), [])
+            grupos.append(grupo)
+        grupo[1].append(porta)
+    saida = []
+    for nome, portas in grupos:
+        botoes = []
+        for porta in portas:
+            meu = _o_que_ocupa(porta, cena)
+            estado, porque = como_esta_a_porta(porta, cena)
+            desenho = ""
+            if meu:
+                cor = f' style="color:{_x(meu["cor"])}"' if meu.get("cor") else ""
+                classe = "i ds" if meu["icone"] == "ds" else "i"
+                desenho = (f'<svg class="{classe}" aria-hidden="true"{cor}>'
+                           f'<use href="#rd-{meu["icone"]}"/></svg>')
+            dica = _x(f'{porta.get("rotulo") or porta["caminho"]} · USB {porta.get("usb")} · '
+                      f'{(meu.get("nome") or meu.get("tipo")) if meu else "livre"} — {porque}.')
+            tres = " tres" if porta.get("usb") == "3.0" else ""
+            botoes.append(f'<button class="porta {estado}{tres}" '
+                          f'data-grupo="{_x(nome)}" title="{dica}" aria-label="{dica}" '
+                          f'data-gesto="examinar-portas" data-alvo="{_x(porta["id"])}">'
+                          f'{desenho}</button>')
+        saida.append(f'<div class="grupo-de-portas" title="{_x(nome)}" aria-label="{_x(nome)}">'
+                     + "".join(botoes) + "</div>")
+    return "".join(saida)
+
+
+def html_da_conta_do_radio(cena: dict[str, Any]) -> str:
+    controles = sum(1 for a in cena.get("aparelhos", ()) if a.get("tipo") == "controle")
+    lugares = len(cena.get("lugares", ()))
+    return (f"{controles} {'controle' if controles == 1 else 'controles'} · "
+            f"{lugares} {'adaptador' if lugares == 1 else 'adaptadores'}")
+
+
+def campos_da_secao(cena: dict[str, Any]) -> dict[str, Any]:
+    """O que o pacote emite para a seção, NA ORDEM: a sala antes dos Hz, porque
+    os Hz pousam nos elementos que a sala acabou de escrever."""
+    controles = [a for lug in cena.get("lugares", ()) for a in _moradores(cena, str(lug["id"]))
+                 if a.get("tipo") == "controle" and not a.get("esperando")]
+    com_mic = [a for a in controles if a.get("mic")]
+    return {
+        "conta-de-adaptadores": html_da_conta_do_radio(cena),
+        "radio-sala": html_da_sala(cena),
+        "hz-movimento": [_hz(a.get("hz_mov")) for a in controles],
+        "hz-pouco": ["sim" if isinstance(a.get("hz_mov"), (int, float))
+                     and a["hz_mov"] < HZ_QUE_ENGASGA else "" for a in controles],
+        "hz-voz": [_hz(a.get("hz_voz")) for a in com_mic],
+        "espectro-canais": html_dos_canais(cena),
+        "espectro-duas-pistas": "sim" if duas_pistas(cena) else "",
+        "espectro-fora-da-faixa": html_fora_da_faixa(cena),
+        "meus-no-ar": html_meus_no_ar(cena),
+        "espectro-conta": html_espectro_conta(cena),
+        "vizinhanca-das-portas": html_das_portas(cena),
+        "radio-ocupado": "sim" if _ocupado(cena) else "",
+    }
+
+
+# -- a cena da máquina dela --------------------------------------------------
+# O TIQUE RODA NO LAÇO DO GTK (o `pacote()` é chamado ali), e uma leitura lenta
+# aqui congelaria a janela — a lição de 15/09. Por isso o que não vem no
+# `state_full` (o BlueZ, o diário, o `kernel.log`, o `maquina.json`) é lido num
+# fio próprio, e o tique pinta a última leitura pronta.
+
+_FUNDO: dict[str, tuple[float, Any]] = {}
+_FUNDO_EM_VOO: set[str] = set()
+_TRAVA_DO_FUNDO = threading.Lock()
+#: A régua liga isto para ler na hora, sem fio — e sem máquina dela.
+LER_NA_HORA = False
+
+
+def _em_fundo(chave: str, ler: Callable[[], Any], validade_s: float) -> Any:
+    """A última leitura de `chave`; pede outra num fio quando ela venceu."""
+    agora = time.monotonic()
+    with _TRAVA_DO_FUNDO:
+        visto = _FUNDO.get(chave)
+        if (visto is not None and agora - visto[0] < validade_s) or chave in _FUNDO_EM_VOO:
+            return None if visto is None else visto[1]
+        _FUNDO_EM_VOO.add(chave)
+
+    def trabalhar() -> None:
+        try:
+            valor = ler()
+        except Exception:  # a leitura nunca derruba a tela: sem ela, «não sei»
+            valor = None
+        with _TRAVA_DO_FUNDO:
+            _FUNDO[chave] = (time.monotonic(), valor)
+            _FUNDO_EM_VOO.discard(chave)
+
+    if LER_NA_HORA:
+        trabalhar()
+        return _FUNDO[chave][1]
+    threading.Thread(target=trabalhar, name=f"radio-{chave}", daemon=True).start()
+    return None if visto is None else visto[1]
+
+
+def _esquecer(*chaves: str) -> None:
+    """Depois de um gesto que grava, a próxima volta lê de novo."""
+    with _TRAVA_DO_FUNDO:
+        for chave in chaves:
+            _FUNDO.pop(chave, None)
+
+
+def _ler_o_bluez() -> tuple[tuple[Any, ...], tuple[Any, ...]] | None:
+    """`(adaptadores, aparelhos)` do dono do BlueZ. Sob a suíte, nada: a régua injeta."""
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.integrations import bluez_dbus
+
+    if bluez_dbus.a_suite_esta_rodando():
+        return None
+    dono = bluez_dbus.dono()
+    adaptadores = dono.adaptadores()
+    aparelhos = dono.aparelhos()
+    if adaptadores is None:
+        return None
+    return tuple(adaptadores), tuple(aparelhos or ())
+
+
+def _ler_a_maquina() -> tuple[Any, dict[int, str]]:
+    """O `maquina.json` e os barramentos DESTE boot — os dois que o nome da porta pede."""
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.integrations.mesa_de_radio import controladores_dos_barramentos
+    from hefesto_dualsense4unix.utils.maquina import carregar_maquina
+
+    return carregar_maquina(), dict(controladores_dos_barramentos())
+
+
+def _ler_o_historico() -> dict[str, Any]:
+    """O que o sino lê: as quedas do `kernel.log`, desde quando se mede, e o diário."""
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.integrations import diario_do_radio, storm_doctor
+
+    contagens = storm_doctor.historico_do_radio()
+    try:
+        linhas = storm_doctor.caminho_do_kernel_log().read_text(
+            encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        linhas = []
+    diario = diario_do_radio.ler()
+    quedas = sorted(storm_doctor.quedas(storm_doctor.ler_eventos_do_radio(linhas)),
+                    key=lambda e: e.carimbo)
+    familia = contagens.get(storm_doctor.FAMILIA_DA_QUEDA)
+    return {
+        "desde": familia.medida_desde if familia is not None else "",
+        "quedas": [(q, storm_doctor.o_fato_da_queda(q, diario),
+                    diario_do_radio.pontes_de_pe(diario, q.carimbo)) for q in quedas],
+        "diario": diario,
+    }
+
+
+def _dicionario(valor: object) -> dict[str, Any]:
+    return valor if isinstance(valor, dict) else {}
+
+
+def _mac(valor: object) -> str:
+    return str(norm_mac(str(valor or "")) or "").upper()
+
+
+def _hora(carimbo: float, hoje: float) -> str:
+    local = time.localtime(carimbo)
+    if time.strftime("%Y%m%d", local) == time.strftime("%Y%m%d", time.localtime(hoje)):
+        return time.strftime("%H:%M", local)
+    return time.strftime("%d/%m %H:%M", local)
+
+
+def _quedas_por_adaptador(historico: dict[str, Any] | None, caminhos: dict[str, str],
+                          maquina: Any, controladores: dict[int, str],
+                          ) -> dict[str, list[dict[str, Any]]]:
+    """`{endereço: [{quando, porque, carimbo}]}` — o sino de cada adaptador, pela hora.
+
+    A queda do `kernel.log` não diz o adaptador: ela vai para o que tinha mais
+    pontes de pé naquele instante (o mesmo que o fato conta). Do diário, só as
+    quatro frases que a tela sabe dizer — o motivo técnico fica no arquivo.
+    """
+    if not historico:
+        return {}
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.integrations import entrada_a_entrada
+
+    agora = time.time()
+    por: dict[str, list[dict[str, Any]]] = {}
+
+    def pousar(endereco: str, carimbo: float, porque: str) -> None:
+        if endereco and porque:
+            por.setdefault(endereco, []).append(
+                {"carimbo": carimbo, "quando": _hora(carimbo, agora), "porque": porque})
+
+    for queda, fato, de_pe in historico.get("quedas") or ():
+        cheio = max(de_pe.items(), key=lambda par: len(par[1]), default=("", set()))[0]
+        pousar(_mac(cheio), float(queda.carimbo), fato or "Os controles caíram")
+    for linha in historico.get("diario") or ():
+        o_que = str(linha.get("o_que") or "")
+        carimbo = float(linha.get("carimbo") or 0.0)
+        if o_que == "ponte subiu" and not linha.get("alem_do_limite"):
+            continue
+        if o_que in FRASE_DO_DIARIO:
+            pousar(_mac(linha.get("adaptador")), carimbo, FRASE_DO_DIARIO[o_que])
+        elif o_que == PAROU_DE_REINICIAR:
+            dita = entrada_a_entrada.com_o_nome_dela(
+                linha, maquina=maquina, controladores=controladores)
+            pousar(caminhos.get(str(linha.get("porta") or ""), ""), carimbo,
+                   str(dita.get("frase") or "O adaptador não se cura sozinho. Tire e ponha ele."))
+    for lista in por.values():
+        lista.sort(key=lambda q: q["carimbo"], reverse=True)
+    return por
+
+
+#: O tipo de um aparelho Bluetooth pela classe dele (o «Class of Device»):
+#: áudio e periféricos são os que dividem o rádio com os controles.
+def _tipo_pela_classe(classe: int | None) -> str:
+    if not isinstance(classe, int):
+        return "outro"
+    maior, menor = (classe >> 8) & 0x1F, (classe >> 2) & 0x3F
+    if maior == 0x04:
+        return "fone" if menor in (0x01, 0x06) else "caixa"
+    if maior == 0x05:
+        return {0x10: "teclado", 0x20: "mouse"}.get(menor & 0x30, "outro")
+    return "outro"
+
+
+def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
+    """A cena da seção pela máquina dela — os donos, e nada estimado (R10)."""
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.integrations import entrada_a_entrada
+    from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
+
+    st: dict[str, Any] = ctx.state or {}
+    ar: dict[str, Any] = _dicionario(st.get("radio_ar"))
+    governador: dict[str, Any] = _dicionario(st.get("radio_governador"))
+    central: dict[str, Any] = _dicionario(st.get("radio_central"))
+    bluez = _em_fundo("bluez", _ler_o_bluez, 3.0)
+    lida = _em_fundo("maquina", _ler_a_maquina, 5.0)
+    maquina, controladores = lida if lida else (None, {})
+    mesa = _mesa_do_radio()
+    adaptadores_bz, aparelhos_bz = bluez if bluez else ((), ())
+
+    por_hci = {str(getattr(a, "interface", "")): a for a in getattr(mesa, "adaptadores", ()) or ()}
+    enderecos: list[str] = []
+    for a in adaptadores_bz:
+        if _mac(a.endereco) and _mac(a.endereco) not in enderecos:
+            enderecos.append(_mac(a.endereco))
+    for chave in (*ar.keys(), *governador.keys()):
+        if _mac(chave) and _mac(chave) not in enderecos:
+            enderecos.append(_mac(chave))
+    bz_de = {_mac(a.endereco): a for a in adaptadores_bz}
+
+    agora = time.time()
+    prazo = _prazo_do_pendente()
+    movimentos = [m for m in central.get("movimentos") or () if isinstance(m, dict)]
+    esperando = [m for m in movimentos if m.get("estado") == "esperando"
+                 and agora - float(m.get("quando") or 0.0) <= prazo]
+    ocupado = bool(esperando)
+
+    # Quem está COLADO em outro rádio — a mesa já mediu (`Mesa.apertadas`).
+    apertadas = {n for par in getattr(mesa, "apertadas", ()) or () for n in par}
+
+    lugares: list[dict[str, Any]] = []
+    caminho_para_endereco: dict[str, str] = {}
+    evitados: list[dict[str, Any]] = []
+    canais_medidos: dict[str, bool] = {}
+    portas: list[dict[str, Any]] = []
+    for end in enderecos:
+        bz = bz_de.get(end)
+        mz = por_hci.get(str(getattr(bz, "hci", ""))) if bz is not None else None
+        lugar = str(getattr(bz, "lugar", "") or getattr(mz, "lugar", "") or "")
+        caminho = str(getattr(mz, "caminho", "") or "")
+        if caminho:
+            caminho_para_endereco[caminho] = end
+        declarado = maquina.lugares.get(lugar) if (maquina is not None and lugar) else None
+        # Antes da primeira leitura do `maquina.json` (ela é de fundo), o
+        # documento em branco: a porta aparece como «Entrada 1.2» e não como
+        # «Dentro da máquina» — que é só do adaptador sem porta.
+        documento = maquina if maquina is not None else MaquinaConfig()
+        entrada = entrada_a_entrada.rotulo_da_entrada(
+            lugar, maquina=documento, controladores=controladores) if lugar else None
+        face = entrada_a_entrada.face_do_lugar(
+            lugar, maquina=documento, controladores=controladores) if lugar else None
+        publicado = ar.get(end) or next((v for k, v in ar.items() if _mac(k) == end), None) or {}
+        lista = publicado.get("canais_evitados") if isinstance(publicado, dict) else None
+        if isinstance(lista, list):
+            canais_medidos[end] = True
+            evitados.extend({"lugar": end, "ini": a, "fim": b} for a, b in _faixas(lista))
+        junto = ""
+        no = str(getattr(mz, "no", "") or "")
+        if no and no in apertadas:
+            junto = "colado em outro rádio"
+        lugares.append({
+            "id": end, "lugar": lugar,
+            "nome": str(getattr(declarado, "nome", "") or ""),
+            "entrada": entrada or DENTRO_DA_MAQUINA,
+            "face": face or "",
+            "hub": bool(getattr(mz, "atras_de_hub", False)),
+            "varrendo": bool(getattr(bz, "varrendo", False)),
+            "junto": junto, "usb3": False,
+            "conectando": any(not m.get("aparelho") and _mac(m.get("destino")) == end
+                              for m in esperando),
+            "chegou": [str(m.get("aparelho") or "") for m in movimentos
+                       if m.get("estado") == "chegou" and _mac(m.get("destino")) == end],
+        })
+        if caminho:
+            portas.append({"id": f"porta-{end}", "caminho": caminho, "usb": "2.0",
+                           "ocupa": end, "grupo": _grupo_da_porta(caminho),
+                           "rotulo": entrada or caminho})
+    sino = _quedas_por_adaptador(_em_fundo("historico", _ler_o_historico, 60.0),
+                                 caminho_para_endereco, maquina, controladores)
+    historico = _FUNDO.get("historico", (0.0, None))[1] or {}
+    desde = str(historico.get("desde") or "")
+    for lug in lugares:
+        lug["quedas"] = sino.get(lug["id"], [])
+        if lug["quedas"] and desde:
+            lug["quedas_desde"] = desde[8:10] + "/" + desde[5:7]
+
+    aparelhos = _aparelhos_da_cena(ctx, st, governador, esperando, aparelhos_bz,
+                                   {str(getattr(a, "caminho", "")): _mac(a.endereco)
+                                    for a in adaptadores_bz}, enderecos)
+    declarados = _radios_declarados(_declaracao())
+    para_id, rotulo_do_tipo = _tipos_de_radio()
+    vizinhos = []
+    for r in getattr(mesa, "radios", ()) or ():
+        chave = _chave_do_radio(r)
+        tipo = declarados.get(chave, "")
+        # A SUGESTÃO DO KERNEL só entra enquanto ela não respondeu, e só na dica
+        # — vestida de pergunta; o `maquina.json` só recebe a palavra DELA.
+        vizinhos.append({"id": chave, "tipo": tipo, "nome": rotulo_do_tipo.get(tipo, ""),
+                         "sugestao": "" if tipo else _sugestao_do_vizinho(
+                             str(getattr(r, "no", "") or ""), para_id)})
+        if getattr(r, "caminho", ""):
+            portas.append({"id": f"porta-{chave}", "caminho": str(r.caminho),
+                           "usb": "3.0" if getattr(r, "usb3", False) else "2.0",
+                           "ocupa": chave, "grupo": _grupo_da_porta(str(r.caminho)),
+                           "rotulo": str(r.caminho)})
+    pedido = None
+    for end, publicado in governador.items():
+        for p in (publicado or {}).get("pedidos") or ():
+            pedido = {"uniq": str(p.get("uniq") or ""), "tipo": str(p.get("tipo") or ""),
+                      "vagas": [_mac(v) for v in p.get("vagas") or ()], "lugar": _mac(end)}
+            break
+        if pedido:
+            break
+    if pedido:
+        quem = str(pedido["uniq"])
+        dono = next((a for a in aparelhos if _so_hex(str(a["id"])) == _so_hex(quem)), None)
+        pedido["uniq"] = str(dono["id"]) if dono else quem
+    proposta = central.get("proposta") if isinstance(central.get("proposta"), dict) else None
+    if proposta:
+        dono = next((a for a in aparelhos
+                     if _so_hex(a["id"]) == _so_hex(str(proposta.get("controle") or ""))), None)
+        proposta = ({"controle": dono["id"], "destino": _mac(proposta.get("destino"))}
+                    if dono else None)
+    cena = {
+        "lugares": lugares, "aparelhos": aparelhos, "evitados": evitados,
+        "canais_medidos": canais_medidos, "espectro": [], "vizinhos": vizinhos,
+        "portas": portas, "pedido": pedido, "proposta": proposta, "ocupado": ocupado,
+        "aberto": _ABERTO.get("lugar"),
+        "perto": _perto(aparelhos_bz, adaptadores_bz, aparelhos),
+    }
+    cena["destino_do_conectar"] = _destino_do_conectar(cena, st)
+    return cena
+
+
+def _faixas(canais: list[Any]) -> list[tuple[int, int]]:
+    """`[20, 21, 22, 30]` → `[(20, 23), (30, 31)]` — o mapa AFH em faixas."""
+    faixas: list[tuple[int, int]] = []
+    for c in sorted({int(c) for c in canais if isinstance(c, int) and 0 <= c < CANAIS_DO_BT}):
+        if faixas and faixas[-1][1] == c:
+            faixas[-1] = (faixas[-1][0], c + 1)
+        else:
+            faixas.append((c, c + 1))
+    return faixas
+
+
+def _grupo_da_porta(caminho: str) -> str:
+    """As portas que dividem o mesmo hub — é a proximidade física que conta."""
+    pai = caminho.rsplit(".", 1)[0] if "." in caminho else ""
+    return pai or "Direto no computador"
+
+
+def _prazo_do_pendente() -> float:
+    try:
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.integrations.central_do_radio import PRAZO_DO_PENDENTE_S
+
+        return float(PRAZO_DO_PENDENTE_S)
+    except Exception:
+        return 120.0
+
+
+def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, Any],
+                       esperando: list[dict[str, Any]], aparelhos_bz: tuple[Any, ...],
+                       endereco_do_caminho: dict[str, str],
+                       enderecos: list[str]) -> list[dict[str, Any]]:
+    """Os controles pelo `state_full` (as quatro chaves por controle) e o resto pelo BlueZ."""
+    da_mesa = {str(m.get("uniq") or ""): m for m in ctx.mesa}
+    alem = {_so_hex(str(p.get("uniq") or "")): (p.get("tipo"), bool(p.get("alem_do_limite")))
+            for publicado in governador.values()
+            for p in _dicionario(publicado).get("pontes") or ()}
+    alias = {_mac(a.endereco): str(a.nome or "") for a in aparelhos_bz}
+    fora: list[dict[str, Any]] = []
+    vistos: set[str] = set()
+    for c in st.get("controllers") or ():
+        if not isinstance(c, dict) or str(c.get("transport") or "").lower() != "bt":
+            continue
+        uniq = str(c.get("uniq") or "")
+        adaptador = _mac(c.get("adaptador"))
+        if not uniq or adaptador not in enderecos:
+            continue
+        eu = da_mesa.get(uniq) or {}
+        slug = str(eu.get("cor") or "")
+        cor = _hex_do_plastico(slug)
+        audio = _dicionario(c.get("audio"))
+        ponte = c.get("ponte_do_radio")
+        tipo_gov, passou = alem.get(_so_hex(uniq), (None, False))
+        if ponte not in ("som", "haptica") and tipo_gov in ("som", "vibracao"):
+            ponte = "som" if tipo_gov == "som" else "haptica"
+        nome_bz = alias.get(_mac(uniq), "")
+        fora.append({
+            "id": uniq, "tipo": "controle", "lugar": adaptador,
+            "nome": "" if nome_bz.startswith("DualSense") else nome_bz,
+            "rotulo": f"Player {eu['jogador']}" if eu.get("jogador") else "DualSense",
+            "cor": cor if cor.startswith("#") else "", "colorway": slug,
+            "cor_nome": "" if str(eu.get("nome") or "") in ("", _cor_desconhecida())
+            else str(eu["nome"]),
+            "mic": (not audio.get("mic_mudo")) if "mic_mudo" in audio
+            else bool(c.get("hz_voz")),
+            "ponte": ponte if ponte in ("som", "haptica") else None, "alem": passou,
+            "hz_mov": c.get("hz_movimento"), "hz_voz": c.get("hz_voz"), "luz": True,
+            "esperando": False, "fixo": False,
+        })
+        vistos.add(_so_hex(uniq))
+    # QUEM ESTÁ SENDO MOVIDO JÁ SAIU DAQUI e espera no destino: é a linha que
+    # diz «Segure PS + Create» (R1), com a vaga de ponte guardada.
+    for m in esperando:
+        quem = _so_hex(str(m.get("aparelho") or ""))
+        if not quem:
+            continue
+        ja = next((a for a in fora if _so_hex(a["id"]) == quem), None)
+        if ja is not None:
+            ja.update(lugar=_mac(m.get("destino")), esperando=True)
+            continue
+        eu = next((m2 for u, m2 in da_mesa.items() if _so_hex(u) == quem), {})
+        slug = str(eu.get("cor") or "")
+        cor = _hex_do_plastico(slug)
+        fora.append({"id": str(m.get("aparelho")), "tipo": "controle" if m.get("e_controle")
+                     else "outro", "lugar": _mac(m.get("destino")), "nome": "",
+                     "rotulo": f"Player {eu['jogador']}" if eu.get("jogador") else "",
+                     "cor": cor if cor.startswith("#") else "", "colorway": slug,
+                     "cor_nome": "" if str(eu.get("nome") or "") in ("", _cor_desconhecida())
+                     else str(eu["nome"]),
+                     "esperando": True, "fixo": False})
+        vistos.add(quem)
+    for a in aparelhos_bz:
+        endereco = _mac(a.endereco)
+        adaptador = endereco_do_caminho.get(str(a.adaptador), "")
+        # Um DualSense que o daemon não publica não vira «outro aparelho».
+        if (not a.conectado or not adaptador or _so_hex(endereco) in vistos
+                or "V054C" in str(getattr(a, "modalias", "")).upper()):
+            continue
+        fora.append({"id": endereco, "tipo": _tipo_pela_classe(a.classe), "lugar": adaptador,
+                     "nome": str(a.nome or ""), "rotulo": str(a.nome or ""),
+                     "esperando": False, "fixo": False})
+        vistos.add(_so_hex(endereco))
+    return fora
+
+
+def _perto(aparelhos_bz: tuple[Any, ...], adaptadores_bz: tuple[Any, ...],
+           ja: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """O que o rádio está vendo e não está ligado — a lista do «Conectar»."""
+    ligados = {_so_hex(a["id"]) for a in ja}
+    vistos: dict[str, dict[str, Any]] = {}
+    for a in aparelhos_bz:
+        if a.conectado or a.rssi is None or _so_hex(a.endereco) in ligados:
+            continue
+        vistos[_mac(a.endereco)] = {
+            "id": _mac(a.endereco), "nome": a.nome or _mac(a.endereco),
+            "tipo": "controle" if "054C" in str(a.modalias).upper() else "outro",
+            "forca": a.rssi, "conhecido": bool(a.pareado),
+        }
+    return sorted(vistos.values(), key=lambda a: -(a["forca"] or -999))
+
+
+def _destino_do_conectar(cena: dict[str, Any], st: dict[str, Any]) -> str:
+    """O destino que a tela mostra no «Conectar»: o que ela escolheu no chip,
+    ou a D8 (`plano_de_radio.ordem_dos_destinos`). É ESTE que vai no
+    `radio.mover` — a ordem da tela e a da central não divergem no empate."""
+    if not cena["lugares"]:
+        return ""
+    escolhido = _ABERTO.get("destino")
+    if escolhido and any(lug["id"] == escolhido for lug in cena["lugares"]):
+        return str(escolhido)
+    with contextlib.suppress(Exception):
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.integrations import plano_de_radio
+
+        controles = [c for c in st.get("controllers") or ()
+                     if isinstance(c, dict) and c.get("adaptador")]
+        planos = plano_de_radio.plano_por_adaptador(
+            controles, adaptadores=[str(lug["id"]).lower() for lug in cena["lugares"]])
+        ordem = plano_de_radio.ordem_dos_destinos(
+            planos, varrendo=[lug["id"] for lug in cena["lugares"] if lug.get("varrendo")])
+        if ordem:
+            return _mac(ordem[0].endereco)
+    return str(cena["lugares"][0]["id"])
+
+
+#: O que a tela está mostrando AGORA — o gesto age sobre a cena que ela viu,
+#: como o ⊘ do Check-up age sobre `_ORDENS_NA_TELA`.
+_CENA_NA_TELA: dict[str, Any] = {}
+#: O adaptador aberto no acordeão e o destino escolhido no «Conectar».
+_ABERTO: dict[str, Any] = {}
+
+
+def _laco() -> Any:
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.integrations import entrada_a_entrada
+
+    return entrada_a_entrada.o_laco()
+
+
+def _campos_da_cerimonia() -> dict[str, Any]:
+    """As três telas do «Mapear Entrada a Entrada», pelo laço (ENTRADA-A-ENTRADA-02).
+
+    O laço anda no tique só enquanto a cerimônia está aberta; fechada, ele não
+    lê nada. A página segue `entrada-tela` para a âncora da fase.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.app.widgets import calibrar_entradas as calib
+    from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee
+
+    laco = _laco()
+    foto = laco.estado()
+    if foto.get("estado") not in (None, ee.PARADO, ee.FIM):
+        foto = laco.olhar()
+    contador, quem = "", ""
+    if foto.get("estado") == ee.SENTADA:
+        contador = (f'entrada {foto.get("passo")} de {foto.get("total")} '
+                    f'<span class="pt">·</span> {calib.SEM_SAIR_DA_CADEIRA}')
+        pergunta = foto.get("pergunta") or {}
+        quem = (f'{_x(pergunta.get("especie") or "")} <span class="pt">·</span> '
+                f'<code>{_x(pergunta.get("caminho") or "")}</code>') if pergunta else ""
+    elif foto.get("estado") == ee.EM_PE:
+        contador = f'entrada {foto.get("passo")} de {foto.get("total")}'
+        quem = calib.PROCURANDO
+    elif foto.get("estado") == ee.FIM:
+        quem = _x(calib.CONVITE_EM_PE)
+    return {"entrada-tela": foto.get("tela") or "", "entrada-contador": contador,
+            "entrada-quem": quem}
+
+
+def campos_do_radio(ctx: Contexto) -> dict[str, Any]:
+    """Os campos da seção Rádio e Adaptadores, pela cena da máquina dela."""
+    global _CENA_NA_TELA
+    cena = cena_do_radio(ctx)
+    _CENA_NA_TELA = cena
+    campos = campos_da_secao(cena)
+    with contextlib.suppress(Exception):
+        campos.update(_campos_da_cerimonia())
+    return campos
+
+
+def _lugar_na_tela(o: dict[str, Any]) -> dict[str, Any]:
+    alvo = str(o.get("alvo") or "")
+    lug = next((lg for lg in _CENA_NA_TELA.get("lugares", ()) if lg["id"] == alvo), None)
+    if not isinstance(lug, dict):
+        raise ValueError(f"o clique não disse um adaptador que está na tela ({alvo!r})")
+    return lug
+
+
+def _aparelho_na_tela(alvo: str) -> dict[str, Any]:
+    ap = next((a for a in _CENA_NA_TELA.get("aparelhos", ()) if a["id"] == alvo), None)
+    if not isinstance(ap, dict):
+        raise ValueError(f"o clique não disse um aparelho que está na tela ({alvo!r})")
+    return ap
+
+
+# -- os gestos da seção -------------------------------------------------------
+
+
+@gesto("08-conexoes.html", "abrir-adaptador")
+def abrir_adaptador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """Abre um adaptador e fecha os outros (acordeão exclusivo, ordem dela)."""
+    lug = _lugar_na_tela(o)
+    _ABERTO["lugar"] = None if _ABERTO.get("lugar") == lug["id"] else lug["id"]
+    return {"armou": True}
+
+
+def _gravar_o_nome(lugar: str, nome: str) -> Any:
+    """O nome é do LUGAR (D3) e mora no `maquina.json`; o `Alias` do BlueZ é a
+    projeção dele, e quem o escreve é o `bt_active_mode.sh`, UM escritor só
+    (TRANSPLANTE-DA-SECAO-01, item 1: eram três)."""
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.integrations.entrada_a_entrada import dar_nome
+
+    feito = dar_nome(lugar, nome)
+    _esquecer("maquina")
+    _reler_a_declaracao()
+    return feito
+
+
+@gesto("08-conexoes.html", GESTO_DO_APELIDO, grava="dar_nome")
+def adaptador_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O nome que ela dá ao adaptador — no lugar dele, e o adaptador herda."""
+    lug = _lugar_na_tela(o)
+    if not lug.get("lugar"):
+        raise RuntimeError("este adaptador é da placa-mãe: não tem entrada a nomear")
+    novo = str(o.get("valor") or "").strip()
+    if novo == str(lug.get("nome") or ""):
+        return
+    feito = _gravar_o_nome(str(lug["lugar"]), novo)
+    if not getattr(feito, "gravou", False):
+        raise RuntimeError("o nome não foi gravado")
+
+
+def _alias_do_aparelho(endereco: str, nome: str) -> Any:
+    """O `Alias` de um APARELHO no BlueZ, pelo dono (`bluez_dbus`)."""
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.integrations import bluez_dbus
+
+    dono = bluez_dbus.dono()
+    caminho = dono.caminho_do_aparelho(endereco)
+    if not caminho:
+        raise RuntimeError("o Bluetooth do sistema não achou este aparelho agora")
+    escrita = dono.escrever_propriedade(
+        caminho, bluez_dbus.APARELHO, "Alias", "s", nome, quem="tela")
+    _esquecer("bluez")
+    return escrita
+
+
+@gesto("08-conexoes.html", "aparelho-renomear", grava="escrever_propriedade")
+def aparelho_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O nome de um aparelho — Vitória, Caixa de som — no `Alias` do BlueZ."""
+    ap = _aparelho_na_tela(str(o.get("alvo") or ""))
+    novo = str(o.get("valor") or "").strip()
+    if novo == str(ap.get("nome") or ""):
+        return
+    endereco = norm_mac(str(ap["id"])) or ""
+    endereco = ":".join(endereco[i:i + 2] for i in range(0, 12, 2)).upper() \
+        if len(endereco) == 12 and ":" not in endereco else endereco.upper()
+    escrita = _alias_do_aparelho(endereco, novo)
+    if not getattr(escrita, "feita", False):
+        raise RuntimeError("o Bluetooth do sistema não gravou o nome novo")
+
+
+def _mover(p: Any, aparelho: str | None, destino: str) -> dict[str, Any]:
+    """`radio.mover` pelo dono (a central) — SEMPRE com o destino que a tela mostrou."""
+    if _CENA_NA_TELA.get("ocupado"):
+        raise RuntimeError("outro movimento está esperando PS + Create")
+    parametros: dict[str, Any] = {"destino": destino}
+    if aparelho:
+        parametros["aparelho"] = aparelho
+    resposta = p.resultado("radio.mover", **parametros)
+    status = str((resposta or {}).get("status") or "") if isinstance(resposta, dict) else ""
+    if status != "ok":
+        # «ocupado» é também «outro movimento em curso»: o botão treme (R8).
+        raise RuntimeError(f"o rádio não aceitou agora ({status or 'sem resposta'})")
+    return {"armou": True}
+
+
+@gesto("08-conexoes.html", "confirmar-mudanca", grava="_mover")
+def confirmar_mudanca(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Mover» (e «Mover e ligar»): o aparelho vai para o destino da pergunta."""
+    alvo, destino = str(o.get("alvo") or ""), str(o.get("destino") or "")
+    if not alvo or not destino:
+        raise ValueError("a pergunta não disse quem vai nem para onde")
+    return _mover(p, alvo, destino)
+
+
+def _ligar_aqui(p: Any, uniq: str) -> None:
+    resposta = p.resultado("radio.ponte.ligar_aqui", uniq=uniq)
+    if not isinstance(resposta, dict) or resposta.get("status") != "ok":
+        raise RuntimeError("a ponte não subiu aqui")
+
+
+@gesto("08-conexoes.html", "ligar-mesmo-assim", grava="_ligar_aqui")
+def ligar_mesmo_assim(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """«Ligar aqui»: a terceira ponte sobe no adaptador cheio, marcada além do limite (R4)."""
+    alvo = str(o.get("alvo") or "")
+    if not alvo:
+        raise ValueError("a pergunta não disse qual controle")
+    _ligar_aqui(p, alvo)
+
+
+@gesto("08-conexoes.html", "conectar-aparelho", grava="_mover")
+def conectar_aparelho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Conectar»: sem alvo, a janela abre no destino da D8 e o controle que
+    ela segurar chega; com alvo (um achado que o destino já conhece), é Mover."""
+    destino = str(_CENA_NA_TELA.get("destino_do_conectar") or "")
+    if not destino:
+        raise RuntimeError("não há adaptador Bluetooth para conectar")
+    return _mover(p, str(o.get("alvo") or "") or None, destino)
+
+
+@gesto("08-conexoes.html", "parear-aparelho", grava="_mover")
+def parear_aparelho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Parear» um aparelho que o rádio achou, no destino escolhido."""
+    alvo = str(o.get("alvo") or "")
+    if not alvo:
+        raise ValueError("o clique não disse qual aparelho")
+    return _mover(p, alvo, str(_CENA_NA_TELA.get("destino_do_conectar") or ""))
+
+
+@gesto("08-conexoes.html", "escolher-adaptador")
+def escolher_adaptador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """O chip do «Conectar»: o destino que ela escolheu vale no próximo pedido."""
+    lug = _lugar_na_tela(o)
+    _ABERTO["destino"] = lug["id"]
+    _CENA_NA_TELA["destino_do_conectar"] = lug["id"]
+    return {"armou": True}
+
+
+@gesto("08-conexoes.html", "equilibrar-radio")
+def equilibrar_radio(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Equilibrar»: a proposta da central abre a pergunta; sem proposta, treme (R8)."""
+    if _CENA_NA_TELA.get("ocupado"):
+        raise RuntimeError("esperando um controle chegar")
+    if not _CENA_NA_TELA.get("proposta"):
+        raise RuntimeError("já está equilibrado")
+    return {"armou": True}
+
+
+def _so_abre() -> dict[str, Any]:
+    """Os gestos que só ABREM o que já veio pintado: a página abre, o Python
+    confere que há o que abrir e responde sem piscar."""
+    return {"armou": True}
+
+
+@gesto("08-conexoes.html", "cancelar-mudanca")
+def cancelar_mudanca(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Cancelar» a pergunta: nada muda no rádio."""
+    return _so_abre()
+
+
+@gesto("08-conexoes.html", "trazer-para-ca")
+def trazer_para_ca(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Arraste para cá» clicado: a lista de quem pode vir (a página a abre)."""
+    _lugar_na_tela(o)
+    if _CENA_NA_TELA.get("ocupado"):
+        raise RuntimeError("esperando um controle chegar")
+    return _so_abre()
+
+
+@gesto("08-conexoes.html", "sugerir-alocacao")
+def sugerir_alocacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """A lâmpada: a proposta da central para este adaptador (a página a mostra)."""
+    lug = _lugar_na_tela(o)
+    proposta = _CENA_NA_TELA.get("proposta") or {}
+    if proposta.get("destino") != lug["id"]:
+        raise RuntimeError("não há quem funcione melhor aqui agora")
+    return _so_abre()
+
+
+@gesto("08-conexoes.html", "aceitar-sugestao")
+def aceitar_sugestao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Mover» do balão: abre a MESMA pergunta de todo mover (R7)."""
+    return _so_abre()
+
+
+@gesto("08-conexoes.html", "adaptador-historico")
+def adaptador_historico(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """O sino: o que aconteceu com este adaptador, pela hora (a página o abre)."""
+    lug = _lugar_na_tela(o)
+    if not lug.get("quedas"):
+        raise RuntimeError("nada aconteceu com este adaptador")
+    return _so_abre()
+
+
+@gesto("08-conexoes.html", "custo-mic", grava="mic_canal_set_detalhado")
+def custo_mic(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O microfone de um controle: o mesmo ato do 🎙 da aba Controles (D-12)."""
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.app.widgets.controller_card import acao_mic
+
+    uniq = str(o.get("alvo") or "")
+    dele = ctx.por_uniq(uniq) if uniq else None
+    if not dele:
+        raise ValueError("o clique não disse em qual controle")
+    acao = acao_mic(dele)
+    if not acao.sensivel:
+        raise RuntimeError(acao.dica)
+    agora = bool((dele.get("audio") or {}).get("mic_mudo"))
+    corpo = p.mic_canal_set_detalhado(agora, uniq=uniq)
+    if not isinstance(corpo, dict) or corpo.get("status") != "ok":
+        raise RuntimeError("o Hefesto não confirmou o microfone")
+
+
+# -- as três telas do «Mapear Entrada a Entrada» ------------------------------
+
+
+@gesto("08-conexoes.html", "entrada-comecar")
+def entrada_comecar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """Abrir a âncora começa o laço — no lugar do «Onde fica?», se veio de um."""
+    _laco().comecar(str(o.get("alvo") or "") or None)
+    return {"armou": True}
+
+
+@gesto("08-conexoes.html", "entrada-face", grava="responder")
+def entrada_face(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """A resposta dela — uma das quatro faces do produto —, gravada na hora."""
+    face = str(o.get("face") or o.get("valor") or "")
+    gravacao = _laco().responder(face)
+    _esquecer("maquina")
+    if not gravacao.gravou:
+        raise RuntimeError("a entrada não foi gravada")
+
+
+@gesto("08-conexoes.html", "entrada-pular")
+def entrada_pular(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Não sei onde fica»: não grava, e não pergunta de novo nesta vez."""
+    _laco().pular()
+    return {"armou": True}
+
+
+@gesto("08-conexoes.html", "entrada-levantar")
+def entrada_levantar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Vou mostrar agora»: a fase em pé."""
+    _laco().levantar()
+    return {"armou": True}
+
+
+@gesto("08-conexoes.html", "entrada-nao-alcanco", grava="nao_alcanco")
+def entrada_nao_alcanco(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """«Não alcanço»: a vaga sai da conta de vez."""
+    _laco().nao_alcanco()
+    _esquecer("maquina")
+
+
+@gesto("08-conexoes.html", "entrada-parar")
+def entrada_parar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Já chega por hoje»: fecha, e nada se perde — cada resposta já foi."""
+    _laco().parar()
+    return {"armou": True}
+
+
+PONTE = {"chamar", "machine_declare", "resultado", "mic_canal_set_detalhado"}
+METODOS = {"controller.target.set", "radio.mover", "radio.ponte.ligar_aqui"}
 
 
 #: O QUE ESTA ABA DECLARA À RÉGUA — o piso e as provas moram AQUI, e não no
@@ -5397,7 +6091,14 @@ PROVAS = [
 #: os sete desta aba entraram na conta dos "dezesseis aplicados que não
 #: aplicam" de 02/09: eles recusaram, com frase, porque o clique automático não
 #: levava o argumento do próprio botão (`caminho`, `entrada`, `face`, `uniq`).
+#:
+#: OS QUATRO DA SEÇÃO DO RÁDIO — 23/09/2026: `adaptador-renomear`,
+#: `entrada-face` e `entrada-nao-alcanco` gravam no `maquina.json` (o nome e o
+#: mapa das entradas), e `aparelho-renomear` grava o `Alias` no BlueZ. O
+#: `state_full` não publica nenhum dos três.
 SEM_ECO = ("sala-altura", "sala-visada", "mic-existe", "vizinho-o-que-e",
            "ignorar", "examinar-portas", "teto-da-vibracao",
            "escolher-aparelho", "escolher-entrada", "tirar-daqui",
-           "nova-entrada", "nova-extensao", "nova-face")
+           "nova-entrada", "nova-extensao", "nova-face",
+           "adaptador-renomear", "aparelho-renomear", "entrada-face",
+           "entrada-nao-alcanco")
