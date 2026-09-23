@@ -10,9 +10,10 @@ e cada caso diz a mordida que o derruba.
 1. **§P4 — âncora não é gesto.** `#mapear-entradas` e `#mapear-entrada-a-entrada`
    abrem por `:target`; um `data-gesto` nelas seria um segundo nome para o
    mesmo ato, e um gesto com o nome de uma âncora confunde os dois.
-2. **Todo campo tem dono, e todo dono tem campo** — na página publicada, contra
-   o que o pacote emite. Campo sem dono é pintura que cai no vazio; dono sem
-   campo escreve para ninguém. Os dois dão verde calado.
+2. **Todo campo tem dono, e todo dono tem campo** — na página da bancada
+   (`onde.pagina`, o `mockup/`; o portão `desenho-aprovado` a mantém igual à
+   publicada), contra o que o pacote emite. Campo sem dono é pintura que cai
+   no vazio; dono sem campo escreve para ninguém. Os dois dão verde calado.
 3. **Todo gesto tem dono** — inclusive os que moram dentro de `<template>`
    (as janelas que a página abre), ou declarado em `SEM_GESTO` com a razão.
 4. **A paridade com o desenho**: `PONTES_POR_ADAPTADOR` e `MARGINAL_DA_PONTE`
@@ -22,9 +23,14 @@ e cada caso diz a mordida que o derruba.
    listas caem nos elementos certos** (a ordem do DOM é a ordem da lista).
 7. **O dublê do `radio.mover` é o daemon de verdade**: o gesto passa pelo
    tratador real, com a central e o governador de mentira atrás dele.
-8. **«Além do limite» é laranja, nunca vermelho.**
+8. **«Além do limite» é laranja, nunca vermelho** — e quem passou do limite é
+   quem o GOVERNADOR marcou, na ordem em que as pontes chegaram.
 9. **O sino lê o diário pela palavra dela**, pela hora, e nada cru.
 10. **A porta sem nome se chama pelo `devpath`** («Entrada 4.1.4»).
+11. **A leitura de fundo não pisca**: depois de um gesto que grava, o tique
+    pinta a leitura de antes até a nova chegar, e a leitura em voo nasce
+    vencida.
+12. **O piloto da aba 08 ouve o endereço que a página emite** (`data-gesto`).
 
 A mesa é DECLARADA — BlueZ, `maquina.json`, `/sys` e o histórico entram por
 dublê —, e a faixa de endereços é a sintética da casa.
@@ -124,7 +130,7 @@ def _pagina() -> str:
 
 def _secao_da_pagina() -> _Arvore:
     arvore = _ler(_pagina(), "rd-secao")
-    assert arvore.elementos, "a página publicada perdeu o `#rd-secao`"
+    assert arvore.elementos, "a página da bancada perdeu o `#rd-secao`"
     return arvore
 
 
@@ -260,7 +266,7 @@ def _gestos_de(html: str) -> set[str]:
 
 
 def test_todo_gesto_da_secao_tem_dono(mesa: Any) -> None:
-    """Na página publicada E no que o produto pinta (sala, janelas, balão).
+    """Na página da bancada E no que o produto pinta (sala, janelas, balão).
 
     MORDIDA: troque o `data-gesto` do botão do balão por um nome sem `@gesto`.
     """
@@ -693,3 +699,34 @@ def test_a_leitura_em_voo_durante_o_gesto_nasce_vencida(
     _esperar_o_fio(mesa, "prova-do-voo")
     assert len(lidas) == 2, "a leitura de antes do gesto valeu pela validade inteira"
     assert mesa._em_fundo("prova-do-voo", ler, 60.0) == "nova"
+
+
+# ---------------------------------------------------------------------------
+# 12. O piloto da aba 08 ouve o endereço que a página emite
+# ---------------------------------------------------------------------------
+def test_o_piloto_da_08_ouve_o_endereco_que_a_pagina_emite() -> None:
+    """Item 4 da sprint: o `conexoes_vivas.py` procurava `[data-g]`, a página
+    emite `data-gesto`, e todo clique caía em `null`. A prova do gesto roda à
+    mão (`--oculta --sem-ponte --prova-gesto`, fora da suíte); esta régua lê o
+    FONTE do piloto — sem importar o GTK — e a página que ele abre.
+
+    MORDIDA: volte o `closest('[data-gesto]')` do `OUVINTE` para `[data-g]`.
+    """
+    import ast
+
+    fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/conexoes_vivas.py").read_text(
+        encoding="utf-8")
+    textos = {alvo.id: str(no.value.value) for no in ast.parse(fonte).body
+              if isinstance(no, ast.Assign) and isinstance(no.value, ast.Constant)
+              for alvo in no.targets if isinstance(alvo, ast.Name)}
+    ouve = set(re.findall(r"closest\('\[([\w-]+)\]'\)", textos["OUVINTE"]))
+    assert ouve == {"data-gesto"}, f"o ouvinte do piloto procura {sorted(ouve)}"
+    clica = set(re.findall(r"querySelectorAll\('\[([\w-]+)\]'\)", textos["PROVA_DO_GESTO"]))
+    assert clica == {"data-gesto"}, f"a prova do gesto procura {sorted(clica)}"
+    from hefesto_dualsense4unix.interface import onde
+
+    # A PUBLICADA, e não a bancada: é ela que o piloto abre (`conexoes_vivas.PAGINA`).
+    publicada = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
+    secao = _ler(publicada, "rd-secao").elementos
+    assert any("data-gesto" in a for _t, a in secao), "a seção publicada perdeu os gestos"
+    assert not any("data-g" in a for _t, a in secao), "a seção voltou a falar `data-g`"
