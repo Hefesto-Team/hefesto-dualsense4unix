@@ -17,6 +17,8 @@ import os
 import select
 import threading
 import time
+from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, ClassVar
@@ -2292,11 +2294,26 @@ class MotionSensorReader(_EvdevReconnectLoop):
     #: 12,02 s = 675,8 Hz).
     _MAIOR_DT_INTEGRAVEL_S: ClassVar[float] = 0.050
 
+    #: A janela dos Hz do nó — AR-MEDIDO-01 (23/09/2026), decisão R10 dela:
+    #: cada controle mostra os Hz de movimento que recebe AGORA. Um segundo.
+    _JANELA_DA_TAXA_S: ClassVar[float] = 1.0
+
     def __init__(
         self, device_path: Path | None = None, target_uniq: str | None = None
     ) -> None:
         super().__init__()  # HANG-01: self-pipe de wake (request_reopen/stop)
         self._target_uniq = target_uniq
+        # AR-MEDIDO-01: os intervalos entre pacotes, no carimbo do KERNEL —
+        # ver `hz_do_movimento`. `(fim, dt)` de cada intervalo contíguo.
+        self._taxa_intervalos: deque[tuple[float, float]] = deque()
+        self._taxa_soma = 0.0
+        self._taxa_ultimo_kernel: float | None = None
+        self._taxa_ultimo_mono: float | None = None
+        self._taxa_aberto_em: float | None = None
+        self._taxa_perdeu = False
+        #: O relógio do PROCESSO, para o silêncio e a abertura — injetável na
+        #: régua. O ritmo dos pacotes vem do carimbo do kernel, não daqui.
+        self._relogio_da_taxa: Callable[[], float] = time.monotonic
         self._device_path = device_path or self._locate()
         self._lock = threading.RLock()
         self._thread: threading.Thread | None = None
@@ -2335,6 +2352,75 @@ class MotionSensorReader(_EvdevReconnectLoop):
             valores = (self._angulo["x"], self._angulo["y"], self._angulo["z"])
             self._angulo = {"x": 0.0, "y": 0.0, "z": 0.0}
             return valores
+
+    def hz_do_movimento(self) -> float | None:
+        """Pacotes por segundo que o nó de movimento recebe AGORA, ou ``None``.
+
+        AR-MEDIDO-01 (23/09/2026). É a régua da memória da casa
+        *o-poll-tick-nao-mede-o-radio*: para medir o fio do controle, conte o
+        nó de MOVIMENTO — o DualSense publica um pacote por relatório de
+        estado, parado ou não (o ``MSC_TIMESTAMP`` muda sempre, então o quadro
+        nunca sai vazio). Com o ``hid-playstation`` da casa (patch 0003,
+        padrão do install) o quadro de ÁUDIO do microfone não chega aqui: o
+        número é movimento, não movimento mais voz.
+
+        O relógio é o CARIMBO DO KERNEL de cada ``SYN_REPORT``, não o do
+        processo: a nossa thread pode atrasar, o carimbo não. E o intervalo que
+        atravessa um ``SYN_DROPPED`` não entra — pacote que o NOSSO buffer
+        perdeu não é pacote que o rádio deixou de trazer. O silêncio do rádio
+        entra, sim: um enlace parado derruba o número, que é o ponto.
+
+        ``None`` = não sei: nó fechado, ou aberto há menos de uma janela.
+        ``0.0`` = o nó está aberto e nada chegou numa janela inteira.
+        """
+        agora = self._relogio_da_taxa()
+        janela = self._JANELA_DA_TAXA_S
+        with self._lock:
+            aberto_em = self._taxa_aberto_em
+            if aberto_em is None or self._active_dev is None:
+                return None
+            if agora - aberto_em < janela:
+                return None
+            ultimo = self._taxa_ultimo_mono
+            silencio = agora - (ultimo if ultimo is not None else aberto_em)
+            if silencio >= janela:
+                return 0.0
+            pacotes = len(self._taxa_intervalos)
+            tempo = self._taxa_soma + max(0.0, silencio)
+        if pacotes == 0 or tempo <= 0.0:
+            return None
+        return round(pacotes / tempo, 1)
+
+    def _contar_o_pacote(self, carimbo: float) -> None:
+        """Um ``SYN_REPORT`` chegou com este carimbo do kernel."""
+        janela = self._JANELA_DA_TAXA_S
+        with self._lock:
+            anterior = self._taxa_ultimo_kernel
+            self._taxa_ultimo_kernel = carimbo
+            self._taxa_ultimo_mono = self._relogio_da_taxa()
+            perdeu, self._taxa_perdeu = self._taxa_perdeu, False
+            if anterior is not None and not perdeu:
+                dt = carimbo - anterior
+                # Carimbo que anda para trás ou salta mais que duas janelas é
+                # o relógio de parede mudando (o evdev carimba em REALTIME),
+                # não o rádio: o intervalo não entra.
+                if 0.0 < dt <= 2 * janela:
+                    self._taxa_intervalos.append((carimbo, dt))
+                    self._taxa_soma += dt
+            while self._taxa_intervalos and self._taxa_intervalos[0][0] < carimbo - janela:
+                _fim, velho = self._taxa_intervalos.popleft()
+                self._taxa_soma -= velho
+            if not self._taxa_intervalos:
+                self._taxa_soma = 0.0
+
+    def _zerar_a_taxa(self, *, aberto: bool) -> None:
+        with self._lock:
+            self._taxa_intervalos.clear()
+            self._taxa_soma = 0.0
+            self._taxa_ultimo_kernel = None
+            self._taxa_ultimo_mono = None
+            self._taxa_perdeu = False
+            self._taxa_aberto_em = self._relogio_da_taxa() if aberto else None
 
     def snapshot(self) -> GyroSnapshot:
         """Última velocidade angular conhecida (cópia sob lock)."""
@@ -2377,6 +2463,7 @@ class MotionSensorReader(_EvdevReconnectLoop):
         default do kernel e o painel segue mostrando um número plausível em
         vez de sumir (degradação silenciosa, como o tema sem CSS).
         """
+        self._zerar_a_taxa(aberto=True)
         resolucoes: dict[str, int] = {}
         resolucoes_accel: dict[str, int] = {}
         try:
@@ -2418,6 +2505,7 @@ class MotionSensorReader(_EvdevReconnectLoop):
             # de câmera.
             self._angulo = {"x": 0.0, "y": 0.0, "z": 0.0}
             self._ultimo_syn = None
+        self._zerar_a_taxa(aberto=False)
         # SENSOR-DE-VERDADE-01: o grab do nó de movimento é o que esconde o
         # giro de quem lê evdev. Perdido o nó, ele não está mais "held" — e
         # dizer que está faria a resposta do `sensor.set` afirmar exclusividade
@@ -2434,7 +2522,11 @@ class MotionSensorReader(_EvdevReconnectLoop):
         # mediria também o tempo que a nossa thread levou para ser escalonada.
         if event.type == ecodes.EV_SYN:
             if event.code == ecodes.SYN_REPORT:
-                self._integrar_o_angulo(float(event.sec) + float(event.usec) / 1e6)
+                carimbo = float(event.sec) + float(event.usec) / 1e6
+                self._contar_o_pacote(carimbo)
+                self._integrar_o_angulo(carimbo)
+            elif event.code == getattr(ecodes, "SYN_DROPPED", 3):
+                self._taxa_perdeu = True
             return
         if event.type != ecodes.EV_ABS:
             return
