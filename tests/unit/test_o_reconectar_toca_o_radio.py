@@ -27,6 +27,7 @@ from __future__ import annotations
 import sys
 from typing import Any
 
+from hefesto_dualsense4unix.integrations import bluez_dbus
 from hefesto_dualsense4unix.integrations import gesto_de_reconexao as radio
 
 #: A faixa sintética da casa — octetos 4 e 5 zerados.
@@ -153,17 +154,20 @@ def test_quem_esta_na_mesa_nao_e_tocado(monkeypatch: Any) -> None:
 # 4. a suíte não fala com o rádio dela — a régua do estrago do dia
 # ---------------------------------------------------------------------------
 def test_a_suite_nunca_alcanca_o_bus_de_verdade() -> None:
-    """`_busctl` recusa enquanto a suíte estiver no ar.
+    """O `busctl` do dono recusa o barramento dela enquanto a suíte estiver no ar.
 
     **O ESTRAGO QUE A PRODUZIU:** a primeira corrida que alcançou o passo do
     rádio chamou `Disconnect` e `Connect` nos quatro DualSense da mesa dela, ao
     vivo. O recado saiu no relatório do teste: *"Aperte PS em 4 controle(s)"*.
 
-    MORDIDA: tire o `if _a_suite_esta_rodando(): return None` de `_busctl` e
-    esta régua reprova — e a próxima corrida derruba a mesa dela de novo.
+    A guarda nasceu neste módulo e subiu para a borda do dono do BlueZ
+    (BLUEZ-UM-DONO-01), que é por onde o gesto lê e escreve agora.
+
+    MORDIDA: tire a guarda da suíte de `bluez_dbus.busctl` e esta régua
+    reprova — e a próxima corrida derruba a mesa dela de novo.
     """
-    assert radio._a_suite_esta_rodando() is True
-    assert radio._busctl(["tree", "org.bluez", "--list"]) is None
+    assert bluez_dbus.a_suite_esta_rodando() is True
+    assert bluez_dbus.busctl(["tree", bluez_dbus.SERVICO, "--list"]) is None
     # E o gesto inteiro, sem dublê nenhum, não toca em nada e não mente: sem
     # árvore não há lista, e sem lista não há controle a mexer.
     assert radio.dualsenses_do_radio() == []
@@ -173,4 +177,4 @@ def test_a_suite_nunca_alcanca_o_bus_de_verdade() -> None:
 def test_a_porta_de_fuga_existe_e_e_declarada(monkeypatch: Any) -> None:
     """Quem precisa medir o bus de verdade declara — e assume o rádio dela."""
     monkeypatch.setenv(radio.RADIO_DE_VERDADE_NA_SUITE, "1")
-    assert radio._a_suite_esta_rodando() is False
+    assert bluez_dbus.a_suite_esta_rodando() is False

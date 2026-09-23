@@ -47,11 +47,19 @@ SEM SUDO, E ISSO É MEDIDO
 install — pedir senha para algo que não precisa dela ensina a pessoa a digitar
 senha sem motivo.
 
+PELO DONO DO BLUEZ, E NA TRAVA DO RÁDIO (BLUEZ-UM-DONO-01, 23/09/2026)
+========================================================================
+Ler e escrever passam por ``integrations/bluez_dbus.py``: a guarda contra a
+suíte, que nasceu AQUI em 22/09, subiu para a borda de lá e vale para toda
+escrita do produto. O ``Disconnect`` e o ``Connect`` de :func:`reconectar` vão
+JUNTOS dentro da trava comum do rádio: sem ela, o watchdog podia dar o
+``Connect`` dele no meio do nosso gesto.
+
 TRÊS DISCIPLINAS, HERDADAS DE ``integrations/exame_da_mesa.py``
 ================================================================
-* **Nunca levanta.** Toda saída é um :class:`Resultado`; ausência do ``busctl``,
-  erro do bus e teto de tempo colapsam em :data:`ESTADO_NAO_DEU`, que é uma
-  resposta e não uma exceção;
+* **Nunca levanta.** Toda saída é um :class:`Resultado`; barramento fora, erro
+  do BlueZ, trava ocupada e teto de tempo colapsam em :data:`ESTADO_NAO_DEU`,
+  que é uma resposta e não uma exceção;
 * **"não deu" nunca é "desconectou"** — o quarto estado é obrigatório, e é o
   remédio do ELO-MUDO-01 aplicado aqui: ausência de notícia não pode ser lida
   como sucesso;
@@ -62,34 +70,17 @@ TRÊS DISCIPLINAS, HERDADAS DE ``integrations/exame_da_mesa.py``
 
 from __future__ import annotations
 
-import os
-import re
-import shutil
-import subprocess
-import sys
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
+from hefesto_dualsense4unix.integrations import bluez_dbus
+from hefesto_dualsense4unix.integrations.bluez_dbus import RADIO_DE_VERDADE_NA_SUITE
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: Teto de espera de cada `busctl`, em segundos. O mesmo número de
-#: `integrations/exame_da_mesa.py:92` (`ESPERA_DO_BUSCTL_S`) e de
-#: `integrations/apelido_do_dongle.py`:
-#: um `busctl` pendurado seguraria o único worker da ponte da janela, e a aba
-#: inteira pareceria travada.
-ESPERA_DO_BUSCTL_S = 5.0
-
-#: O serviço e a interface, escritos uma vez.
-SERVICO = "org.bluez"
-INTERFACE_DO_DISPOSITIVO = "org.bluez.Device1"
-
-#: O caminho de UM dispositivo, e nada mais fundo. A âncora de fim importa: o
-#: BlueZ pendura filhos sob cada dispositivo (`.../dev_XX/sep1`, os endpoints de
-#: áudio do DualSense), e chamar `Disconnect` num endpoint não derruba nada. É o
-#: mesmo recorte de `exame_da_mesa._CAMINHO_DE_DISPOSITIVO`.
-_CAMINHO_DE_DISPOSITIVO = re.compile(r"^/org/bluez/hci[0-9]+/dev_[0-9A-Fa-f_]+$")
+#: Como este gesto assina na trava e no diário comuns do rádio.
+QUEM = "reconectar"
 
 #: Os quatro estados. Nenhum deles é acento — são chaves de máquina.
 ESTADO_DESCONECTOU = "desconectou"
@@ -183,58 +174,45 @@ def _normalizar(mac: str) -> str | None:
     return "_".join(limpo[i : i + 2] for i in range(0, 12, 2)).upper()
 
 
-def caminho_do_controle(mac: str, *, executar: Executar | None = None) -> str | None:
-    """O caminho D-Bus deste endereço, em QUALQUER adaptador. ``None`` se não há.
+def _leitor(executar: Executar | None) -> bluez_dbus.LeitorDoBluez:
+    """O dono do BlueZ, ou um leitor sobre o dublê de quem injetou ``executar``."""
+    return bluez_dbus.dono() if executar is None else bluez_dbus.pelo_executor(executar)
 
-    Varre `busctl tree` e casa pelo sufixo ``dev_<MAC>``. Não recebe ``hciN`` e
-    não o deduz: numa mesa de três adaptadores o índice é sorteio, e o mesmo
-    controle já apareceu sob ``hci1`` e sob ``hci2`` no mesmo dia.
-    """
+
+def _caminho(leitor: bluez_dbus.LeitorDoBluez, mac: str) -> str | None:
     alvo = _normalizar(mac)
     if alvo is None:
         return None
-    rodar = _busctl if executar is None else executar
-    bruto = rodar(["tree", SERVICO, "--list"])
-    if bruto is None:
-        return None
-    sufixo = f"/dev_{alvo}"
-    for linha in bruto.splitlines():
-        caminho = linha.strip()
-        if not caminho.endswith(sufixo):
-            continue
-        if _CAMINHO_DE_DISPOSITIVO.match(caminho):
-            return caminho
-    return None
+    return leitor.caminho_do_aparelho(alvo.replace("_", ":").lower())
+
+
+def _conectado(leitor: bluez_dbus.LeitorDoBluez, caminho: str) -> bool | None:
+    return bluez_dbus.como_booleano(
+        leitor.propriedade(caminho, bluez_dbus.APARELHO, "Connected")
+    )
+
+
+def caminho_do_controle(mac: str, *, executar: Executar | None = None) -> str | None:
+    """O caminho D-Bus deste endereço, em QUALQUER adaptador. ``None`` se não há.
+
+    Casa pelo endereço, que é o que não muda. Não recebe ``hciN`` e não o
+    deduz: numa mesa de três adaptadores o índice é sorteio, e o mesmo controle
+    já apareceu sob ``hci1`` e sob ``hci2`` no mesmo dia.
+    """
+    return _caminho(_leitor(executar), mac)
 
 
 def esta_conectado(mac: str, *, executar: Executar | None = None) -> bool | None:
     """O BlueZ diz que este endereço está conectado AGORA? ``None`` = não sei.
 
     Três respostas e não duas, pelo mesmo motivo do resto do arquivo: sem
-    ``busctl``, com o ``bluetoothd`` fora ou com o dispositivo ausente da
+    barramento, com o ``bluetoothd`` fora ou com o dispositivo ausente da
     árvore, a resposta honesta é ``None``. Quem espera o botão PS tem de tratar
     ``None`` como "continua esperando", nunca como "voltou".
     """
-    caminho = caminho_do_controle(mac, executar=executar)
-    if caminho is None:
-        return None
-    rodar = _busctl if executar is None else executar
-    bruto = rodar(
-        ["get-property", SERVICO, caminho, INTERFACE_DO_DISPOSITIVO, "Connected"]
-    )
-    if bruto is None:
-        return None
-    texto = bruto.strip()
-    if not texto:
-        return None
-    # O `busctl` responde com o tipo na frente: `b true`. Mesmo desembrulho de
-    # `exame_da_mesa._propriedade_do_dispositivo`.
-    valor = texto.split()[-1].strip('"').lower()
-    if valor in ("true", "yes", "1"):
-        return True
-    if valor in ("false", "no", "0"):
-        return False
-    return None
+    leitor = _leitor(executar)
+    caminho = _caminho(leitor, mac)
+    return None if caminho is None else _conectado(leitor, caminho)
 
 
 def desconectar(mac: str, *, executar: Executar | None = None) -> Resultado:
@@ -246,31 +224,21 @@ def desconectar(mac: str, *, executar: Executar | None = None) -> Resultado:
     que impede a pessoa de esperar um controle que nunca vai cair.
     """
     mascara = mascarar(mac)
-    caminho = caminho_do_controle(mac, executar=executar)
+    leitor = _leitor(executar)
+    caminho = _caminho(leitor, mac)
     if caminho is None:
         logger.info("reconexao_sem_alvo_no_bluez", endereco=mascara)
         return Resultado(ESTADO_SEM_ALVO, FRASE_SEM_ALVO, mascara)
 
-    if esta_conectado(mac, executar=executar) is False:
+    if _conectado(leitor, caminho) is False:
         logger.info("reconexao_ja_estava_fora", endereco=mascara)
         return Resultado(ESTADO_JA_ESTAVA_FORA, FRASE_JA_ESTAVA_FORA, mascara)
 
-    rodar = _busctl if executar is None else executar
-    bruto = rodar(["call", SERVICO, caminho, INTERFACE_DO_DISPOSITIVO, "Disconnect"])
-    if bruto is None:
+    if not leitor.desconectar(caminho, quem=QUEM).feita:
         logger.warning("reconexao_disconnect_nao_deu", endereco=mascara)
         return Resultado(ESTADO_NAO_DEU, FRASE_NAO_DEU, mascara)
     logger.info("reconexao_disconnect_pedido", endereco=mascara)
     return Resultado(ESTADO_DESCONECTOU, FRASE_DESCONECTOU, mascara)
-
-
-#: Teto do `Connect`, em segundos. Ele é MAIOR que o do resto porque o
-#: `Connect` CHAMA o aparelho: o BlueZ tenta alcançar um rádio que pode estar
-#: dormindo, e desistir em 5 s chamaria de "não deu" o que só estava demorando.
-#: Medido na mesa dela em 22/09/2026: a recusa de um controle dormindo volta em
-#: menos de 2 s (`br-connection-create-socket`), e um controle acordado
-#: responde em 3-4 s.
-ESPERA_DO_CONNECT_S = 12.0
 
 
 #: O par do DualSense FÍSICO, escrito como o `Modalias` do BlueZ o entrega.
@@ -294,59 +262,17 @@ def dualsenses_do_radio(
     inverte entre boots, e é a mesma razão de :func:`caminho_do_controle` não
     receber adaptador nenhum.
     """
-    rodar = _busctl if executar is None else executar
-    bruto = rodar(["tree", SERVICO, "--list"])
-    if bruto is None:
-        return []
+    leitor = _leitor(executar)
     achados: list[tuple[str, bool | None]] = []
-    for linha in bruto.splitlines():
-        caminho = linha.strip()
-        if not _CAMINHO_DE_DISPOSITIVO.match(caminho):
+    for caminho in leitor.caminhos() or ():
+        mac = bluez_dbus.endereco_do_aparelho(caminho)
+        if mac is None:
             continue
-        modalias = rodar(
-            ["get-property", SERVICO, caminho, INTERFACE_DO_DISPOSITIVO, "Modalias"]
-        )
-        if not modalias or _MODALIAS_DO_DUALSENSE not in modalias:
+        modalias = leitor.propriedade(caminho, bluez_dbus.APARELHO, "Modalias")
+        if not isinstance(modalias, str) or _MODALIAS_DO_DUALSENSE not in modalias:
             continue
-        mac = caminho.rsplit("/dev_", 1)[-1].replace("_", ":").lower()
-        achados.append((mac, esta_conectado(mac, executar=executar)))
+        achados.append((mac, _conectado(leitor, caminho)))
     return achados
-
-
-#: A PORTA DE FUGA, para quem precisar medir o bus de verdade num teste. Quem
-#: a declara assume a responsabilidade pelo rádio dela — é o mesmo contrato do
-#: `HEFESTO_NA_TELA` da `utils/tela_de_mentira`.
-RADIO_DE_VERDADE_NA_SUITE = "HEFESTO_RADIO_DE_VERDADE"
-
-
-def _a_suite_esta_rodando() -> bool:
-    """A suíte está no ar? Então este módulo NÃO fala com o rádio dela.
-
-    **ESTA GUARDA NASCEU DE UM ESTRAGO MEDIDO — 22/09/2026, e o estrago foi
-    meu.** O passo do rádio do «Reconectar controles» nasceu sem ela, e a
-    primeira corrida de 457 testes que o alcançou chamou `Disconnect` e
-    `Connect` nos QUATRO DualSense da mesa dela, ao vivo, no meio do trabalho
-    dela. O recado do gesto saiu no relatório do teste: *"Aperte PS em 4
-    controle(s)"*.
-
-    É a mesma família da TELA-DELA-01 (`tests/conftest.py`) e da TELA-DELA-02
-    (`utils/tela_de_mentira`): a suíte alcançando o aparelho dela. A diferença
-    é que ali dava para REDIRECIONAR (uma tela de mentira) e aqui não há bus de
-    mentira para onde mandar — então a resposta é recusar, e recusar devolve
-    exatamente o que este módulo já sabe dizer: `None`, o *"não deu"* que vira
-    `ESTADO_NAO_DEU` sem mentir que caiu ou que voltou.
-
-    Quem injeta `executar` (todas as réguas deste módulo) não passa por aqui: o
-    dublê é chamado direto, e continua exercitando a lógica inteira.
-    """
-    if os.environ.get(RADIO_DE_VERDADE_NA_SUITE) == "1":
-        return False
-    return bool(os.environ.get("PYTEST_CURRENT_TEST")) or "pytest" in sys.modules
-
-
-def _connect_com_folga(argumentos: Sequence[str]) -> str | None:
-    """O `busctl` do `Connect`, com o teto maior. Ver `ESPERA_DO_CONNECT_S`."""
-    return _busctl(argumentos, espera=ESPERA_DO_CONNECT_S)
 
 
 def reconectar(mac: str, *, executar: Executar | None = None) -> Resultado:
@@ -357,69 +283,42 @@ def reconectar(mac: str, *, executar: Executar | None = None) -> Resultado:
     1. ``Disconnect`` quando o BlueZ ainda diz ``Connected`` — é o elo morto do
        estado que ela viu, com o rádio de pé e o kernel sem HID. Sem derrubá-lo,
        o PS dela não tem efeito: para o rádio o controle já está aqui;
-    2. ``Connect``. Funciona com o controle ACORDADO (o elo caiu e ele continua
-       ligado); com ele dormindo, o BlueZ recusa e o desfecho é
-       :data:`ESTADO_SO_O_PS` — a metade que continua sendo dela.
+    2. ``Connect``, com o teto maior do dono (``ESPERA_DO_CONNECT_S``: o
+       ``Connect`` CHAMA o aparelho). Funciona com o controle ACORDADO; com ele
+       dormindo, o BlueZ recusa e o desfecho é :data:`ESTADO_SO_O_PS` — a
+       metade que continua sendo dela.
 
+    Os dois passos vão na MESMA trava do rádio: ninguém entra entre eles.
     Nunca levanta, como todo o resto do módulo, e não usa ``sudo``.
     """
+    from hefesto_dualsense4unix.integrations.diario_do_radio import TravaOcupadaError
+
     mascara = mascarar(mac)
-    caminho = caminho_do_controle(mac, executar=executar)
+    leitor = _leitor(executar)
+    caminho = _caminho(leitor, mac)
     if caminho is None:
         logger.info("reconexao_sem_alvo_no_bluez", endereco=mascara)
         return Resultado(ESTADO_SEM_ALVO, FRASE_SEM_ALVO, mascara)
 
-    rodar = _busctl if executar is None else executar
-    if esta_conectado(mac, executar=executar) is not False:
-        # O elo morto sai primeiro. Um `Connect` por cima dele responde "já
-        # está conectado" e não levanta sessão de entrada nenhuma — medido na
-        # mesa dela, quatro vezes, com o kernel sem HID o tempo todo.
-        if rodar(["call", SERVICO, caminho, INTERFACE_DO_DISPOSITIVO, "Disconnect"]) is None:
-            logger.warning("reconexao_disconnect_nao_deu", endereco=mascara)
-            return Resultado(ESTADO_NAO_DEU, FRASE_NAO_DEU, mascara)
-        logger.info("reconexao_elo_morto_derrubado", endereco=mascara)
-
-    # O `Connect` CHAMA o aparelho e tem teto próprio — ver
-    # `ESPERA_DO_CONNECT_S`. Quem injeta `executar` (a régua) fica com o dele:
-    # dublê não espera nada.
-    chamar = rodar if executar is not None else _connect_com_folga
-    voltou = chamar(["call", SERVICO, caminho, INTERFACE_DO_DISPOSITIVO, "Connect"])
-    if voltou is None:
+    try:
+        with bluez_dbus.na_trava(QUEM):
+            if _conectado(leitor, caminho) is not False:
+                # O elo morto sai primeiro. Um `Connect` por cima dele responde
+                # "já está conectado" e não levanta sessão de entrada nenhuma —
+                # medido na mesa dela, quatro vezes, com o kernel sem HID.
+                if not leitor.desconectar(caminho, quem=QUEM).feita:
+                    logger.warning("reconexao_disconnect_nao_deu", endereco=mascara)
+                    return Resultado(ESTADO_NAO_DEU, FRASE_NAO_DEU, mascara)
+                logger.info("reconexao_elo_morto_derrubado", endereco=mascara)
+            voltou = leitor.conectar(caminho, quem=QUEM)
+    except TravaOcupadaError:
+        logger.warning("reconexao_trava_ocupada", endereco=mascara)
+        return Resultado(ESTADO_NAO_DEU, FRASE_NAO_DEU, mascara)
+    if not voltou.feita:
         logger.info("reconexao_connect_recusado", endereco=mascara)
         return Resultado(ESTADO_SO_O_PS, FRASE_SO_O_PS, mascara)
     logger.info("reconexao_voltou_pelo_radio", endereco=mascara)
     return Resultado(ESTADO_VOLTOU, FRASE_VOLTOU, mascara)
-
-
-def _busctl(
-    argumentos: Sequence[str], *, espera: float = ESPERA_DO_BUSCTL_S
-) -> str | None:
-    """Roda um `busctl` de USUÁRIO no bus do sistema e devolve a saída.
-
-    ``None`` para os três jeitos de não dar — ferramenta ausente, código de
-    saída diferente de zero e teto de tempo estourado. O chamador transforma os
-    três em :data:`ESTADO_NAO_DEU`, que é a única leitura honesta: nenhum deles
-    prova que o controle caiu, e nenhum deles prova que não caiu.
-
-    Sem ``sudo``, e isso é o ponto: medido em 22/08/2026, o ``Disconnect`` de
-    ``org.bluez.Device1`` responde para o uid 1000. O helper privilegiado do
-    install existe para o que PRECISA de raiz, e este gesto não precisa.
-    """
-    if _a_suite_esta_rodando():
-        return None
-    if shutil.which("busctl") is None:
-        return None
-    try:
-        saida = subprocess.run(
-            ["busctl", *argumentos],
-            capture_output=True,
-            text=True,
-            timeout=espera,
-            check=False,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return None
-    return saida.stdout if saida.returncode == 0 else None
 
 
 __all__ = [
@@ -433,6 +332,8 @@ __all__ = [
     "FRASE_JA_ESTAVA_FORA",
     "FRASE_NAO_DEU",
     "FRASE_SEM_ALVO",
+    "QUEM",
+    "RADIO_DE_VERDADE_NA_SUITE",
     "Resultado",
     "caminho_do_controle",
     "desconectar",
