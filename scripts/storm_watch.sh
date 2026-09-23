@@ -29,6 +29,27 @@
 #             DEPRECIADOS-01, 19/08/2026 — os contadores só saem do ioctl
 #             HCIGETDEVINFO, e btmgmt/bluetoothctl não os expõem).
 #
+# AS QUATRO FAMÍLIAS DO RÁDIO (O-DIARIO-DO-RADIO-01, 23/09/2026). A palavra
+# «storm» cobre pelo menos quatro físicas diferentes (dossiê de 23/09, em
+# docs/process/estudos/2026-09-23-radio/dossies.md), e esta vigia era cega a
+# três delas — 0 dos 4.019 «Output queue is full» de 22/09 chegaram ao log:
+#   [USB-71]         família 1, o -71 de porta. O do ARRANQUE (a enumeração
+#                    que acontece antes de a vigia subir) passou a entrar: a
+#                    primeira volta de cada boot relê o boot inteiro;
+#   [BT-SOCKET]      família 2A, o «BT socket write error» do bluetoothd — o
+#                    EAGAIN que derrubou os quatro controles em 22/09;
+#   [FILA-CHEIA]     família 2B, o «Output queue is full» do uhid — a fila
+#                    presa com o bluetoothd sem drenar;
+#   [ENLACE-PARADO]  família 2, «link tx timeout» e «killing stalled
+#                    connection»: o kernel desistindo de um enlace;
+#   [BT-TRAVADO]     família 3, o controlador travado em laço («command
+#                    0x.... tx timeout» do Realtek, 24.998 vezes em 13/09);
+#   [CRC]            família 4, a entrada descartada por CRC.
+# Essas famílias chegam em RAJADA (no 2B são 100 linhas/s), então o log
+# registra só a BORDA: a primeira linha sai inteira, as iguais são contadas, e
+# um resumo sai a cada HEFESTO_KERNELWATCH_RESUMO_S (60) enquanto a rajada dura
+# e outro quando ela acaba (HEFESTO_KERNELWATCH_JANELA_S, 10, sem repetir).
+#
 # Log: ~/.local/state/hefesto-dualsense4unix/kernel.log (novo nome). O antigo
 # storm.log é PRESERVADO se existir (histórico); se não existir, vira symlink
 # para kernel.log (compat para humanos e scripts antigos).
@@ -40,6 +61,9 @@
 # Hooks de teste (PUROS: stdin/args → stdout; não tocam journal nem estado):
 #   --classify                              lê linhas short-iso do stdin e as
 #                                           escreve com a TAG classificada
+#   --test-desde MARCA BOOT_ID              diz de onde o journal começa (o boot
+#                                           inteiro na primeira volta do boot,
+#                                           o agora nas outras) e grava a marca
 #   --test-bt-delta P_RX P_TX C_RX C_TX DEV emite a linha [BT-ERR] se delta > 0
 #   --test-bt-sem-contador                  emite a linha [BT-SEM-CONTADOR]
 #
@@ -52,7 +76,13 @@ set -uo pipefail
 # QUALQUER retorno negativo — não hardcoda -110) + "failed to get joycon
 # info" (joycon_read_info, a causa medida) + "init over bluetooth failed" (só
 # existe no patch — o retry agindo). [JOYCON] intacto (exceeded max attempts).
-GREP_UNION="error -71|can.t add hid device|device descriptor read/64, error|not accepting address|unable to enumerate usb device|joycon_enforce_subcmd_rate|probe - fail = -|failed to get joycon info|init over bluetooth failed|bluetooth: hci[0-9].*(timeout|failed|error)|xhci_hcd.*(reset|died|timeout|halt)"
+# As quatro famílias do rádio (O-DIARIO-DO-RADIO-01): «output queue is full»
+# (2B, do uhid), «bt socket write error» (2A, do bluetoothd), «link tx timeout»
+# e «killing stalled connection» (o enlace parado), «command 0x.... tx timeout»
+# (3, o controlador travado) e «crc.s check failed» (4, a entrada). Os dois do
+# hci também casam o padrão genérico `bluetooth: hci…`; ficam escritos por
+# extenso para que tirar o genérico não os cegue.
+GREP_UNION="error -71|can.t add hid device|device descriptor read/64, error|not accepting address|unable to enumerate usb device|joycon_enforce_subcmd_rate|probe - fail = -|failed to get joycon info|init over bluetooth failed|output queue is full|bt socket write error|link tx timeout|killing stalled connection|command 0x[0-9a-f]{4} tx timeout|crc.s check failed|bluetooth: hci[0-9].*(timeout|failed|error)|xhci_hcd.*(reset|died|timeout|halt)"
 
 # CADERNO-QUE-NÃO-ESCREVE-01: o `awk` desta casa lê de um cano que NUNCA fecha
 # (`journalctl -f`), e o mawk bufferiza a ENTRADA — ver o comentário do
@@ -93,23 +123,101 @@ _AWK_CMD="$(_escolher_awk)"
 # linha quando o `awk` desta máquina não for o mawk (o gawk ignora `-W
 # interactive` como opção desconhecida mas honra o `fflush()`). Os dois juntos
 # cobrem os dois interpretadores.
+#
+# A BORDA (O-DIARIO-DO-RADIO-01). As famílias do rádio chegam em rajada — no 2B
+# de 22/09 foram 100 linhas por segundo durante 81 s —, e uma vigia que copia
+# cada linha enche o log e esconde o que importa: QUANDO começou, QUANTO durou.
+# Para as tags de rajada, a primeira linha de cada aparelho sai inteira (a
+# borda), as seguintes só somam, e o total sai em duas linhas de resumo: uma a
+# cada `resumo` segundos enquanto a rajada dura («segue»), outra quando ela
+# acaba («repetiu»). Acabou = `janela` segundos sem repetir. O relógio é o da
+# própria linha, não o da máquina: a releitura do arranque passa horas em
+# segundos, e o awk não tem timer — por isso o fim de uma rajada só é escrito
+# quando chega a linha seguinte (ou no fim da entrada).
+#
+# A chave da rajada é a TAG mais o aparelho (os dois primeiros campos da
+# mensagem: `playstation 0005:054C:0CE6.000C:`, `Bluetooth: hci0:`). As três
+# linhas de cada volta do laço do Realtek caem na mesma chave, e os três
+# controles que levam EAGAIN no mesmo segundo também.
 classify() {
-    ${_AWK_CMD:-awk} '
+    ${_AWK_CMD:-awk} \
+        -v janela="${HEFESTO_KERNELWATCH_JANELA_S:-10}" \
+        -v resumo="${HEFESTO_KERNELWATCH_RESUMO_S:-60}" '
+    # "2026-09-22T16:46:32-03:00" -> segundos. O fuso é ignorado de propósito:
+    # só se compara hora com hora do MESMO fluxo. Aritmética de calendário
+    # (dias desde 1970) em vez de mktime(), que nem todo awk tem.
+    function segundos(ts,   y, mo, d, yy, era, yoe, mm, doy, doe) {
+        y = substr(ts, 1, 4) + 0; mo = substr(ts, 6, 2) + 0; d = substr(ts, 9, 2) + 0
+        if (y < 1970 || mo < 1 || mo > 12 || d < 1) return -1
+        yy = (mo <= 2) ? y - 1 : y
+        era = int(yy / 400); yoe = yy - era * 400
+        mm = (mo > 2) ? mo - 3 : mo + 9
+        doy = int((153 * mm + 2) / 5) + d - 1
+        doe = yoe * 365 + int(yoe / 4) - int(yoe / 100) + doy
+        return (era * 146097 + doe - 719468) * 86400 \
+            + substr(ts, 12, 2) * 3600 + substr(ts, 15, 2) * 60 + substr(ts, 18, 2)
+    }
+    function fechar(k) {
+        if (extra[k] > 0)
+            print ultts[k] " " tagk[k] " repetiu +" extra[k] " (" total[k] " desde " inits[k] ", " (ult[k] - ini[k]) " s): " texto[k]
+        delete ult[k]; delete ini[k]; delete extra[k]; delete total[k]
+        delete ultts[k]; delete inits[k]; delete tagk[k]; delete texto[k]; delete rep[k]
+    }
     {
         low = tolower($0)
         tag = "[KERNEL]"
+        borda = 0
         if (low ~ /joycon_enforce_subcmd_rate/) tag = "[JOYCON]"
         else if (low ~ /probe - fail = -|failed to get joycon info|init over bluetooth failed/) tag = "[JOYCON-PROBE]"
         else if (low ~ /error -71|can.t add hid device|device descriptor read\/64, error|not accepting address|unable to enumerate usb device/) tag = "[USB-71]"
-        else if (low ~ /xhci_hcd.*(reset|died|timeout|halt)/) tag = "[XHCI]"
-        else if (low ~ /bluetooth: hci[0-9].*(timeout|failed|error)/) tag = "[BT-HCI]"
+        else if (low ~ /output queue is full/) { tag = "[FILA-CHEIA]"; borda = 1 }
+        else if (low ~ /bt socket write error/) { tag = "[BT-SOCKET]"; borda = 1 }
+        else if (low ~ /link tx timeout|killing stalled connection/) { tag = "[ENLACE-PARADO]"; borda = 1 }
+        else if (low ~ /command 0x[0-9a-f][0-9a-f][0-9a-f][0-9a-f] tx timeout|read reg16 failed|failed to generate devcoredump/) { tag = "[BT-TRAVADO]"; borda = 1 }
+        else if (low ~ /crc.s check failed/) { tag = "[CRC]"; borda = 1 }
+        else if (low ~ /xhci_hcd.*(reset|died|timeout|halt)/) { tag = "[XHCI]"; borda = 1 }
+        else if (low ~ /bluetooth: hci[0-9].*(timeout|failed|error)/) { tag = "[BT-HCI]"; borda = 1 }
         # short-iso: "TS host identificador: msg" → "TS [TAG] msg"
         ts = $1
         rest = $0
         sub(/^[^ ]+ +/, "", rest)     # remove o timestamp
         sub(/^[^ ]+ +/, "", rest)     # remove o hostname
         sub(/^[^ ]+: +/, "", rest)    # remove "kernel:" / "bluetoothd[pid]:"
+        t = segundos(ts)
+        # Rajadas de OUTRA chave que esfriaram também fecham aqui: sem timer,
+        # a chegada de qualquer linha é o relógio. A distância é em módulo: o
+        # journal intercala kernel e bluetoothd, e um salto para trás também é
+        # outra rajada.
+        if (t >= 0) {
+            for (j in ult) {
+                dist = t - ult[j]
+                if (dist < 0) dist = -dist
+                if (dist > janela) fechar(j)
+            }
+        }
+        if (!borda || t < 0) {
+            print ts " " tag " " rest
+            fflush()
+            next
+        }
+        split(rest, campo, " ")
+        k = tag " " campo[1] " " campo[2]
+        if (k in ult) {
+            extra[k]++; total[k]++; ult[k] = t; ultts[k] = ts
+            if (t - rep[k] >= resumo) {
+                print ts " " tag " segue +" extra[k] " (" total[k] " desde " inits[k] ", " (t - ini[k]) " s): " texto[k]
+                extra[k] = 0; rep[k] = t
+                fflush()
+            }
+            next
+        }
+        ini[k] = t; ult[k] = t; rep[k] = t; extra[k] = 0; total[k] = 1
+        inits[k] = ts; ultts[k] = ts; tagk[k] = tag; texto[k] = rest
         print ts " " tag " " rest
+        fflush()
+    }
+    END {
+        for (j in ult) fechar(j)
         fflush()
     }'
 }
@@ -179,6 +287,24 @@ bt_delta_loop() {
     done
 }
 
+# De onde o `journalctl -f` começa. A PRIMEIRA volta de cada boot relê o boot
+# inteiro (`-b --lines=all`): o -71 da enumeração acontece no segundo do boot,
+# antes de a vigia subir, e sem esta releitura ele nunca entrava no log —
+# medido em 23/09, quatro boots da semana com -71 no arranque e nenhum no
+# kernel.log. As voltas SEGUINTES do mesmo boot (a unit re-tenta com
+# RestartSec) começam do agora (`-n0`), para não duplicar o que já foi escrito.
+# A marca é o boot_id, gravado num arquivo do estado.
+#   $1 = arquivo da marca · $2 = boot_id atual · imprime os argumentos, um por linha
+desde_do_journal() {
+    local marca="$1" boot="$2"
+    if [[ -n "${boot}" && "$(cat "${marca}" 2>/dev/null || true)" != "${boot}" ]]; then
+        printf '%s\n' "${boot}" >"${marca}" 2>/dev/null || true
+        printf '%s\n' -b --lines=all
+    else
+        printf '%s\n' -n0
+    fi
+}
+
 # ---- hooks de teste (puros, saem antes de tocar estado/journal) --------------
 case "${1:-}" in
     --classify)
@@ -192,6 +318,10 @@ case "${1:-}" in
         ;;
     --test-bt-sem-contador)
         bt_sem_contador
+        exit 0
+        ;;
+    --test-desde)
+        desde_do_journal "${2:-}" "${3:-}"
         exit 0
         ;;
 esac
@@ -223,16 +353,23 @@ if ! journalctl -k -n1 >/dev/null 2>&1; then
     exit 1
 fi
 
-echo "# $(date '+%F %T') kernel-watch iniciado (padrões: USB-71 JOYCON JOYCON-PROBE BT-HCI XHCI + contadores hci; preventivos ficam silenciosos até a 1ª ocorrência)" >>"${LOG}"
+mapfile -t DESDE < <(desde_do_journal "${STATE_DIR}/kernel-watch.boot" \
+    "$(cat /proc/sys/kernel/random/boot_id 2>/dev/null || true)")
+if [[ "${DESDE[0]:-}" == "-b" ]]; then
+    echo "# $(date '+%F %T') kernel-watch: primeira volta deste boot — relendo o arranque (o -71 da enumeração nasce antes da vigia)" >>"${LOG}"
+fi
+echo "# $(date '+%F %T') kernel-watch iniciado (padrões: USB-71 JOYCON JOYCON-PROBE FILA-CHEIA BT-SOCKET ENLACE-PARADO BT-TRAVADO CRC BT-HCI XHCI + contadores hci; preventivos ficam silenciosos até a 1ª ocorrência; rajada vira borda + resumo)" >>"${LOG}"
 
 bt_delta_loop &
 BT_LOOP_PID=$!
 trap 'kill "${BT_LOOP_PID}" 2>/dev/null' EXIT INT TERM
 
-# -f follow, -n0 começa do agora (o journald já guarda histórico), short-iso p/
-# timestamp estável. Fontes: kernel (+ = OU lógico) e o bluetoothd (unit).
+# -f follow; o começo sai de `desde_do_journal` (o boot inteiro na primeira
+# volta do boot, `-n0` — o agora — nas outras); short-iso p/ timestamp estável.
+# Fontes: kernel (+ = OU lógico) e o bluetoothd (unit), que é de onde vem o
+# «BT socket write error» da família 2A.
 # --case-sensitive=false: sem smartcase surpresa ("Bluetooth: hci" tem maiúscula).
-journalctl -f -n0 -o short-iso --case-sensitive=false --grep="${GREP_UNION}" \
+journalctl -f "${DESDE[@]}" -o short-iso --case-sensitive=false --grep="${GREP_UNION}" \
     _TRANSPORT=kernel + _SYSTEMD_UNIT=bluetooth.service \
     2>>"${LOG}" | classify >>"${LOG}"
 
