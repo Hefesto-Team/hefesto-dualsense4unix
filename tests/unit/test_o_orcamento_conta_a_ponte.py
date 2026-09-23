@@ -222,7 +222,7 @@ def test_o_ritmo_da_ponte_e_o_que_a_bomba_manda() -> None:
     for arranjo in (bomba.ARRANJO_PADRAO, bomba.ARRANJO_HAPTICA_032):
         intervalo = arranjo.intervalo_de_envio_s
         assert intervalo is not None, arranjo.nome
-        assert rm.HZ_DA_PONTE == pytest.approx(1.0 / intervalo), arranjo.nome
+        assert pytest.approx(1.0 / intervalo) == rm.HZ_DA_PONTE, arranjo.nome
 
 
 def test_o_csv_e_as_constantes_sao_o_mesmo_numero() -> None:
