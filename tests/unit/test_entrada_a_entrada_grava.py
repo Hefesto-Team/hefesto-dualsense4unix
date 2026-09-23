@@ -98,7 +98,12 @@ class SysfsDeMentira:
         self.barramentos = dict(barramentos)
         self._dirs: dict[str, Path] = {}
         for bus, pci in sorted(barramentos.items()):
-            base = raiz / "devices" / "pci0000:00" / pci / f"usb{bus}"
+            # ``platform/…`` é o controlador que não é PCI (o ``vhci_hcd`` do
+            # usbip): o censo não acha controlador na cadeia, e não há lugar.
+            pai = raiz / "devices" / pci if pci.startswith("platform/") else (
+                raiz / "devices" / "pci0000:00" / pci
+            )
+            base = pai / f"usb{bus}"
             self._no(
                 base,
                 f"usb{bus}",
@@ -825,3 +830,164 @@ def test_responder_de_novo_a_mesma_face_nao_embaralha_a_fileira(
     fileira = {f.nome: f.portas for f in carregar_maquina().mapa.faces}
     assert fileira[ee.FACE_FRENTE] == ["1", "2", "3"], "a fileira dela foi embaralhada"
 
+
+def test_o_hub_que_chega_com_o_dualsense_dentro_e_a_porta_do_hub(
+    tmp_path: Path, disco: Path
+) -> None:
+    """O buraco é onde o HUB entrou, não a porta do hub onde o DualSense está.
+
+    MORDIDA: tirar o filtro de quem pendura em outro aparelho novo — o
+    desempate da Sony escolhe o DualSense, e a porta vista vira ``3-2.1``.
+    """
+    sysfs = SysfsDeMentira(tmp_path / "sys", BOOT_1)
+    laco = _laco(sysfs)
+    laco.comecar()
+    sysfs.plugar(3, "2", HUB)
+    sysfs.plugar(4, "2", HUB)
+    sysfs.plugar(3, "2.1", DUALSENSE)
+
+    porta = laco.olhar()["porta"]
+    assert porta is not None
+    assert porta["caminho"] == "3-2", "a porta do hub foi gravada como se fosse o buraco"
+    assert porta["lugar"] == f"pci-{PCI_B}-usb-0:2"
+
+
+def test_o_aparelho_sem_controlador_pci_nao_e_chegada(tmp_path: Path, disco: Path) -> None:
+    """Sem controlador PCI não há lugar (o ``vhci_hcd`` do usbip, por exemplo),
+    e sem lugar não há o que gravar: não pode virar «porta vista».
+
+    MORDIDA: aceitar o aparelho sem ``controlador_pci`` — o laço anda para
+    «vista» com lugar vazio, e a resposta dela vira ``sem_lugar``.
+    """
+    sysfs = SysfsDeMentira(tmp_path / "sys", {**BOOT_1, 9: "platform/vhci_hcd.0"})
+    laco = _laco(sysfs)
+    laco.comecar()
+    sysfs.plugar(9, "1", DUALSENSE)
+    assert laco.olhar()["estado"] == ee.ESPERANDO, "aparelho sem lugar virou porta vista"
+
+
+def test_o_caminho_repetido_noutra_entrada_fica_vazio(
+    boot_1: SysfsDeMentira, disco: Path
+) -> None:
+    """Um aparelho está em UMA entrada. Se o desenho ainda dava o mesmo caminho
+    a outra entrada (a outra janela, ou um boot que trocou os barramentos), ela
+    perde o caminho — senão os leitores de hoje respondem pela entrada errada.
+
+    MORDIDA: não esvaziar a outra — ``porta_de`` (o leitor de hoje) responde
+    ``3``, que é o número que ela deu a OUTRO buraco.
+    """
+    from hefesto_dualsense4unix.integrations.mapa_das_portas import porta_de
+
+    lugar = f"pci-{PCI_B}-usb-0:4.2"
+    maquina.gravar_maquina(
+        {
+            "mapa": {
+                "faces": [{"nome": ee.FACE_FRENTE, "portas": ["3", "7"]}],
+                "portas": {"3": {"caminho": "3-4.2"}, "7": {"caminho": "3-4.2"}},
+            },
+            "lugares": {lugar: {"entrada": "7"}},
+        }
+    )
+    laco = _laco(boot_1)
+    laco.comecar()
+    assert _mapear(boot_1, laco, 3, "4.2", ee.FACE_FRENTE).entrada == "7"
+
+    documento = carregar_maquina()
+    assert porta_de(documento.mapa, "3-4.2") == "7", "o leitor de hoje achou a outra entrada"
+    outra = documento.mapa.portas.get("3")
+    assert outra is None or outra.caminho is None, "a outra entrada ficou com o caminho"
+
+
+def test_o_lugar_que_dizia_ser_esta_entrada_perde_a_amarra_e_guarda_o_nome(
+    boot_1: SysfsDeMentira, disco: Path
+) -> None:
+    """Um número é de UM lugar. A amarra velha de outro lugar (que já não vale:
+    o desenho pôs esta entrada noutro buraco) cai; o nome dele fica.
+
+    MORDIDA: não tirar a amarra do outro — os dois lugares dizem «7», e a
+    amarra que ACABOU de ser gravada já nasce "não sei".
+    """
+    novo = f"pci-{PCI_B}-usb-0:4.2"
+    velho = f"pci-{PCI_A}-usb-0:9"
+    maquina.gravar_maquina(
+        {
+            "mapa": {
+                "faces": [{"nome": ee.FACE_ATRAS, "portas": ["7"]}],
+                "portas": {"7": {"caminho": "3-4.2"}},
+            },
+            "lugares": {velho: {"entrada": "7", "nome": "Velho"}},
+        }
+    )
+    laco = _laco(boot_1)
+    laco.comecar()
+    assert _mapear(boot_1, laco, 3, "4.2", ee.FACE_ATRAS).entrada == "7"
+
+    documento = carregar_maquina()
+    assert maquina.entrada_do_lugar(documento, novo) == "7", "a amarra nova nasceu «não sei»"
+    assert documento.lugares[velho].entrada is None
+    assert documento.lugares[velho].nome == "Velho", "o nome do outro lugar foi junto"
+
+
+def test_dois_numeros_para_o_mesmo_lugar_e_nao_sei() -> None:
+    """Sem amarra, o desenho de hoje dá nome pelos caminhos deste lugar — e os
+    dois lados do mesmo buraco (``3-4`` e ``4-4``) com números diferentes é
+    "não sei", nunca o primeiro da lista.
+
+    MORDIDA: escolher um dos dois — sai «Entrada 1» para um buraco que o
+    desenho diz ser também a 2.
+    """
+    documento = MaquinaConfig.model_validate(
+        {
+            "mapa": {
+                "faces": [{"nome": ee.FACE_ATRAS, "portas": ["1", "2"]}],
+                "portas": {"1": {"caminho": "3-4"}, "2": {"caminho": "4-4"}},
+            }
+        }
+    )
+    lugar = f"pci-{PCI_B}-usb-0:4"
+    assert ee.nome_do_lugar(lugar, maquina=documento, controladores=BOOT_1) is None
+
+
+def test_a_extensao_fica_no_quadrado_de_quem_a_hospeda(
+    boot_1: SysfsDeMentira, disco: Path
+) -> None:
+    """A entrada que nasce de uma extensão desenha dentro do quadrado da que a
+    hospeda e não entra em fileira nenhuma (``FaceDeclarada``).
+
+    MORDIDA: pôr a extensão na face respondida — o ``15a`` aparece numa
+    fileira «Na escrivaninha» que o desenho dela não tem.
+    """
+    maquina.gravar_maquina(
+        {
+            "mapa": {
+                "faces": [{"nome": ee.FACE_FRENTE, "portas": ["15"]}],
+                "portas": {"15a": {"filha_de": "15", "caminho": "3-4.2"}},
+            }
+        }
+    )
+    laco = _laco(boot_1)
+    laco.comecar()
+    gravacao = _mapear(boot_1, laco, 3, "4.2", ee.FACE_ESCRIVANINHA)
+
+    assert gravacao.entrada == "15a" and gravacao.face == ee.FACE_FRENTE
+    documento = carregar_maquina()
+    assert [(f.nome, f.portas) for f in documento.mapa.faces] == [(ee.FACE_FRENTE, ["15"])]
+    assert documento.mapa.portas["15a"].filha_de == "15"
+
+
+def test_o_dualsense_numa_porta_com_nome_nao_projeta_alias(
+    boot_1: SysfsDeMentira, disco: Path
+) -> None:
+    """O ``Alias`` é do ADAPTADOR que está no lugar; o DualSense no cabo não é
+    adaptador, e não há o que projetar.
+
+    MORDIDA: projetar para todo aparelho — o laço pede ao dono do D-Bus um
+    Alias para um lugar onde não há dongle nenhum.
+    """
+    lugar = f"pci-{PCI_B}-usb-0:4.2"
+    assert ee.dar_nome(lugar, "Sofá", projetar=lambda *_: None).gravou
+    projetados: list[tuple[str, str]] = []
+    laco = _laco(boot_1, projetar=lambda qual, nome: projetados.append((qual, nome)))
+    laco.comecar()
+    _mapear(boot_1, laco, 3, "4.2", ee.FACE_FRENTE)
+    assert projetados == []
