@@ -519,6 +519,66 @@ def test_nao_sei_onde_ele_esta_nao_derruba_a_resposta_dela() -> None:
     assert isinstance(vaga, gov.Vaga) and vaga.por_escolha_dela
 
 
+def test_o_sysfs_ilegivel_do_leitor_de_verdade_tambem_e_nao_sei(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O «não sei» com o LEITOR DE PRODUÇÃO, e não com um dublê que levanta.
+
+    A régua de cima prova o «não sei» com um ``adaptador_de`` que levanta
+    ``OSError`` — e o leitor de produção nunca levantava:
+    ``radio_da_mesa.adaptador_por_uniq`` engole o erro do ``/sys`` e devolve
+    ``""``, e ``""`` é justamente o que ``conferir_as_autorizacoes`` lê como
+    «desconectou». O ramo da régua era inalcançável no produto, e o hidraw
+    ilegível derrubava a resposta dela. Aqui o leitor é o de verdade, sobre
+    uma árvore de ``/sys`` de mentira.
+
+    MORDIDA: tire do ``_adaptador_pelo_hid_phys`` o ``listar`` que não engole
+    o erro — a raiz ilegível vira «desconectou» e esta régua reprova.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
+    from hefesto_dualsense4unix.integrations import dualsense_bt_audio
+
+    raiz = tmp_path / "hidraw"
+
+    def plugar(controle: str, adaptador: str) -> None:
+        no = raiz / f"hidraw{controle[-1]}" / "device"
+        no.mkdir(parents=True, exist_ok=True)
+        (no / "uevent").write_text(
+            f"HID_NAME=Wireless Controller\nHID_PHYS={adaptador}\nHID_UNIQ={controle}\n",
+            encoding="utf-8",
+        )
+
+    for controle, adaptador in (
+        (CONTROLE_1, ADAPTADOR_A), (CONTROLE_2, ADAPTADOR_A), (CONTROLE_3, ADAPTADOR_A),
+        (CONTROLE_4, ADAPTADOR_B),
+    ):
+        plugar(controle, adaptador)
+    monkeypatch.setattr(dualsense_bt_audio, "_SYSFS_HIDRAW", str(raiz))
+    relogio = _Relogio()
+    governador = gov.GovernadorDoRadio(registrar=_Diario(), relogio=relogio)
+    for uniq in (CONTROLE_1, CONTROLE_2, CONTROLE_4):
+        vaga = governador.pedir_vaga(uniq, "som")
+        # O leitor de verdade leu a árvore: cada um no adaptador do HID_PHYS.
+        assert isinstance(vaga, gov.Vaga)
+        assert vaga.adaptador == (ADAPTADOR_B if uniq == CONTROLE_4 else ADAPTADOR_A)
+        vaga.subiu("som")
+    assert isinstance(governador.pedir_vaga(CONTROLE_3, "som"), gov.Recusa)
+    assert governador.ligar_aqui(CONTROLE_3) is True
+
+    # O /sys que não se lê — a raiz deixou de ser uma pasta: «não sei».
+    ilegivel = tmp_path / "nao-e-pasta"
+    ilegivel.write_text("", encoding="utf-8")
+    monkeypatch.setattr(dualsense_bt_audio, "_SYSFS_HIDRAW", str(ilegivel))
+    assert governador.conferir_as_autorizacoes() == 0, (
+        "o /sys ilegível foi lido como «desconectou» e a resposta dela caiu"
+    )
+
+    # O controle de verdade: legível, e ele foi para o B — agora cai.
+    monkeypatch.setattr(dualsense_bt_audio, "_SYSFS_HIDRAW", str(raiz))
+    plugar(CONTROLE_3, ADAPTADOR_B)
+    assert governador.conferir_as_autorizacoes() == 1
+
+
 # ---------------------------------------------------------------------------
 # 5. as vagas na ordem da D8
 # ---------------------------------------------------------------------------
