@@ -7,6 +7,17 @@ recebe os paths por parâmetro (default = sistema real) para testes com fixtures
 
 Fronteira Aurora: o quirk `054c:0ce6:gn` do cmdline e as regras 99-usb são do
 ritual-Aurora — aqui só REPORTAMOS o estado, não mexemos.
+
+A PALAVRA «STORM» TEM QUATRO FAMÍLIAS (O-DIARIO-DO-RADIO-01, 23/09/2026). A
+frase acima — «a cura de raiz do storm é o quirk» — vale só para a família 1a
+(o -71 do áudio USB no cabo). O rádio tem outras três físicas, e o
+:func:`classificar_o_historico` separa as quatro a partir do ``kernel.log`` do
+kernel-watch: 1 (porta USB), 2A e 2B (o rádio afogado: o bluetoothd que leva
+EAGAIN, a fila do uhid parada), 3 (o controlador travado em laço) e 4 (a
+entrada descartada por CRC). É essa separação que dá fonte ao sino da aba
+Conexões: cada queda do rádio pode dizer o fato — «4 controles com som
+(limite 2)» — com :func:`o_fato_da_queda`, que junta o histórico com o diário
+comum (``integrations/diario_do_radio.py``).
 """
 from __future__ import annotations
 
@@ -15,9 +26,12 @@ import re
 import shutil
 import subprocess
 import warnings
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass
+from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 from hefesto_dualsense4unix.utils.repo_files import (
     FRASE_DE_ATUALIZAR,
@@ -1047,6 +1061,177 @@ def storm_report(
     return achados
 
 
+# --- o histórico do rádio, por família (O-DIARIO-DO-RADIO-01) ------------------
+
+#: A tag do kernel-watch (``scripts/storm_watch.sh``) → ``(família, nome)``. O
+#: nome é o que a tela pode dizer: curto, sem culpa e sem a palavra «storm».
+FAMILIAS_DO_RADIO: dict[str, tuple[str, str]] = {
+    "[USB-71]": ("1", "porta USB"),
+    "[BT-SOCKET]": ("2A", "rádio afogado"),
+    "[FILA-CHEIA]": ("2B", "fila parada"),
+    "[ENLACE-PARADO]": ("2", "enlace parado"),
+    "[BT-TRAVADO]": ("3", "adaptador travado"),
+    "[CRC]": ("4", "entrada corrompida"),
+}
+
+#: A família que DERRUBA os controles: o EAGAIN do bluetoothd que vira
+#: ``uhid_disconnect`` (dossiê de 23/09, os quatro episódios de 22/09).
+FAMILIA_DA_QUEDA = "2A"
+
+#: Quantas pontes de som ou vibração um adaptador aguenta. PROVISÓRIO, e a
+#: medida é da bancada dela (o índice da leva de 23/09: «2 pontes por
+#: adaptador» até o GOVERNADOR-DO-RADIO-01, que passa a ser o dono do número).
+LIMITE_DE_PONTES_POR_ADAPTADOR = 2
+
+#: Uma linha do kernel.log: ``TS [TAG] mensagem``, ou o resumo de uma rajada,
+#: ``TS [TAG] repetiu +N (…): mensagem`` / ``TS [TAG] segue +N (…): mensagem``.
+_LINHA_DO_VIGIA = re.compile(
+    r"^(?P<ts>\S+) (?P<tag>\[[A-Z0-9-]+\]) "
+    r"(?:(?P<resumo>repetiu|segue) \+(?P<n>\d+) \([^)]*\): )?(?P<texto>.*)$"
+)
+
+
+@dataclass(frozen=True)
+class EventoDoRadio:
+    """Uma linha do kernel-watch que é de uma das quatro famílias."""
+
+    quando: str
+    carimbo: float
+    tag: str
+    familia: str
+    #: 1 na borda (a primeira linha da rajada); N num resumo.
+    ocorrencias: int
+    #: A primeira linha de uma rajada — é ela que marca QUANDO começou.
+    borda: bool
+    texto: str
+
+
+@dataclass
+class ContagemDaFamilia:
+    """Quantas vezes uma família apareceu, e quando."""
+
+    familia: str
+    nome: str
+    rajadas: int = 0
+    ocorrencias: int = 0
+    primeira: str = ""
+    ultima: str = ""
+
+
+def _carimbo(ts: str) -> float | None:
+    try:
+        return datetime.fromisoformat(ts).timestamp()
+    except ValueError:
+        return None
+
+
+def ler_eventos_do_radio(linhas: Iterable[str]) -> list[EventoDoRadio]:
+    """As linhas das quatro famílias, na ordem em que vieram.
+
+    Linha de outra tag, comentário e linha sem hora legível ficam de fora — o
+    ``kernel.log`` também guarda o Nintendo, o xHCI e os banners da vigia.
+    """
+    eventos: list[EventoDoRadio] = []
+    for linha in linhas:
+        casou = _LINHA_DO_VIGIA.match(linha.rstrip("\n"))
+        if casou is None:
+            continue
+        familia = FAMILIAS_DO_RADIO.get(casou["tag"])
+        if familia is None:
+            continue
+        carimbo = _carimbo(casou["ts"])
+        if carimbo is None:
+            continue
+        resumo = casou["resumo"]
+        eventos.append(
+            EventoDoRadio(
+                quando=casou["ts"],
+                carimbo=carimbo,
+                tag=casou["tag"],
+                familia=familia[0],
+                ocorrencias=int(casou["n"]) if resumo else 1,
+                borda=resumo is None,
+                texto=casou["texto"],
+            )
+        )
+    return eventos
+
+
+def classificar_o_historico(linhas: Iterable[str]) -> dict[str, ContagemDaFamilia]:
+    """``{família: contagem}`` de tudo o que o kernel-watch viu.
+
+    As rajadas contam como o log as guarda: a borda soma uma rajada e uma
+    ocorrência, e cada resumo soma as ocorrências que ele diz. Assim o 2B de
+    22/09 (3.807 linhas no kernel) é UMA rajada com 3.807 ocorrências, e não
+    três linhas.
+    """
+    contagens: dict[str, ContagemDaFamilia] = {}
+    for evento in ler_eventos_do_radio(linhas):
+        nome = FAMILIAS_DO_RADIO[evento.tag][1]
+        conta = contagens.setdefault(
+            evento.familia, ContagemDaFamilia(familia=evento.familia, nome=nome)
+        )
+        conta.ocorrencias += evento.ocorrencias
+        if evento.borda:
+            conta.rajadas += 1
+        if not conta.primeira:
+            conta.primeira = evento.quando
+        conta.ultima = evento.quando
+    return contagens
+
+
+def caminho_do_kernel_log() -> Path:
+    """O ``kernel.log`` do kernel-watch desta conta."""
+    from hefesto_dualsense4unix.utils.xdg_paths import state_dir
+
+    return state_dir() / "kernel.log"
+
+
+def historico_do_radio(caminho: Path | None = None) -> dict[str, ContagemDaFamilia]:
+    """:func:`classificar_o_historico` sobre o ``kernel.log``. Nunca levanta."""
+    texto = _safe_read(caminho or caminho_do_kernel_log())
+    return classificar_o_historico(texto.splitlines())
+
+
+def quedas(eventos: Iterable[EventoDoRadio]) -> list[EventoDoRadio]:
+    """As bordas da família que derruba os controles (:data:`FAMILIA_DA_QUEDA`)."""
+    return [e for e in eventos if e.familia == FAMILIA_DA_QUEDA and e.borda]
+
+
+def o_fato_da_queda(
+    queda: EventoDoRadio,
+    entradas_do_diario: Iterable[dict[str, Any]],
+    *,
+    limite: int = LIMITE_DE_PONTES_POR_ADAPTADOR,
+) -> str | None:
+    """O fato de uma queda, dito do jeito que a tela diz. ``None`` = não sei.
+
+    Pergunta ao diário quais pontes estavam de pé no instante da queda e fala
+    do adaptador mais carregado: «4 controles com som (limite 2)». Sem ponte
+    registrada naquele instante, não há fato a dizer — e inventar um seria o
+    sino afirmando o que ninguém mediu.
+    """
+    from hefesto_dualsense4unix.integrations.diario_do_radio import pontes_de_pe
+
+    por_adaptador = pontes_de_pe(list(entradas_do_diario), queda.carimbo)
+    if not por_adaptador:
+        return None
+    pontes = max(por_adaptador.values(), key=len)
+    controles = {controle for controle, _tipo in pontes}
+    tipos = {tipo for _controle, tipo in pontes}
+    if not controles:
+        return None
+    if tipos == {"som"}:
+        o_que = "com som"
+    elif tipos == {"vibracao"}:
+        o_que = "com vibração"
+    else:
+        o_que = "com som ou vibração"
+    quantos = len(controles)
+    palavra = "controle" if quantos == 1 else "controles"
+    return f"{quantos} {palavra} {o_que} (limite {limite})"
+
+
 def _safe_read(path: Path) -> str:
     try:
         return path.read_text(encoding="utf-8", errors="ignore")
@@ -1055,24 +1240,35 @@ def _safe_read(path: Path) -> str:
 
 
 __all__ = [
+    "FAMILIAS_DO_RADIO",
+    "FAMILIA_DA_QUEDA",
     "FRASE_DE_INSTALAR_GENERICA",
     "GESTO_DE_ATUALIZAR",
     "GESTO_DE_INSTALAR",
+    "LIMITE_DE_PONTES_POR_ADAPTADOR",
     "NOME_DA_DEPENDENCIA",
     "PACOTE_POR_FORMATO",
     "PREFIXO_DA_CURA",
+    "ContagemDaFamilia",
+    "EventoDoRadio",
+    "caminho_do_kernel_log",
     "check_authorized_rule",
     "check_quirk",
     "check_snd_audio_healthy",
     "check_snd_quirk",
     "check_steam_input",
     "check_wireplumber",
+    "classificar_o_historico",
     "contar_placas_dualsense",
     "controles_no_cabo",
     "find_localconfig_vdfs",
     "formato_desta_instalacao",
     "gesto_de_atualizar",
     "gesto_de_instalar",
+    "historico_do_radio",
+    "ler_eventos_do_radio",
+    "o_fato_da_queda",
+    "quedas",
     "rotulo_do_botao",
     "rotulos_de_reserva",
     "steam_input_allowlist",
