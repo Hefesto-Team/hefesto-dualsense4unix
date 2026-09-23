@@ -525,7 +525,17 @@ def ler_mapa_afh(
     BLOQUEIA até ``prazo_s``: quem chama do laço do daemon chama numa thread.
     O filtro do socket deixa passar só ``Command Complete``/``Status`` do
     nosso opcode, então o que chega é a resposta — ou nada.
+
+    No MODO FALSO (a suíte, o smoke) o rádio de verdade não é perguntado: é
+    o único comando que este módulo manda ao controlador, e a trava mora
+    nele, não só em quem o chama (conferência da AR-MEDIDO-01, 23/09/2026).
+    Quem injeta ``abrir`` segue perguntando ao dublê.
     """
+    if abrir is None:
+        from hefesto_dualsense4unix.utils.xdg_paths import fake_mode_enabled
+
+        if fake_mode_enabled():
+            return None
     try:
         sock = (abrir or _abrir_hci_cru)(hci)
     except OSError:

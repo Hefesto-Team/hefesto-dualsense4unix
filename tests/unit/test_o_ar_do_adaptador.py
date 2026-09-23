@@ -422,6 +422,19 @@ def test_ler_mapa_afh_que_nao_abre_o_socket_e_nao_sei() -> None:
     assert ar.ler_mapa_afh(0, 12, abrir=recusa) is None
 
 
+def test_no_modo_falso_o_afh_nunca_pergunta_ao_radio_de_verdade(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O único comando ao controlador tem a trava NELE, não só em quem chama."""
+    monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_FAKE", "1")
+
+    def recusa(*_a: object, **_k: object) -> None:
+        raise AssertionError("a suíte abriu um socket HCI para perguntar ao rádio")
+
+    monkeypatch.setattr(socket, "socket", recusa)
+    assert ar.ler_mapa_afh(0, 12) is None
+
+
 def test_os_canais_que_o_adaptador_evita_sao_os_evitados_em_todos_os_enlaces() -> None:
     um = ar.mapa_afh_da_resposta(_resposta_afh(1, {20, 21, 22}), 1)
     outro = ar.mapa_afh_da_resposta(_resposta_afh(2, {21, 22, 40}), 2)
