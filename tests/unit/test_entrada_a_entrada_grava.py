@@ -547,8 +547,9 @@ def test_dar_nome_grava_o_lugar_e_projeta_no_adaptador_que_esta_nele(
     feito = ee.dar_nome(
         lugar,
         "  Extensor à esquerda ",
-        projetar=lambda l, n: ee.projetar_o_nome(l, n, adaptadores=adaptadores,
-                                                 renomear=renomear),
+        projetar=lambda qual, n: ee.projetar_o_nome(
+            qual, n, adaptadores=adaptadores, renomear=renomear
+        ),
     )
 
     assert feito.gravou and feito.projetado is True
@@ -558,6 +559,24 @@ def test_dar_nome_grava_o_lugar_e_projeta_no_adaptador_que_esta_nele(
 
     apagado = ee.dar_nome(lugar, "", projetar=lambda *_: pytest.fail("apagar não projeta"))
     assert apagado.gravou and lugar not in carregar_maquina().lugares
+
+
+def test_o_dongle_plugado_numa_porta_com_nome_herda_o_nome(
+    boot_1: SysfsDeMentira, disco: Path
+) -> None:
+    """D3: ela deu nome à porta; o dongle que entra nela recebe o nome no Alias."""
+    lugar = f"pci-{PCI_B}-usb-0:4.2"
+    assert ee.dar_nome(lugar, "Sofá", projetar=lambda *_: None).gravou
+    projetados: list[tuple[str, str]] = []
+    laco = _laco(boot_1, projetar=lambda qual, nome: projetados.append((qual, nome)))
+    laco.comecar()
+    boot_1.plugar(3, "4.2", DONGLE_BT)
+    porta = laco.olhar()["porta"]
+    assert porta["e_bluetooth"] is True and porta["nome"] == "Sofá"
+
+    assert laco.responder(ee.FACE_ESCRIVANINHA).gravou
+    assert projetados == [(lugar, "Sofá")]
+    assert ee.nome_do_lugar(lugar) == "Sofá", "o nome dela vence o «Entrada 1»"
 
 
 @pytest.fixture()
@@ -692,9 +711,9 @@ def _literais(fonte: str) -> list[tuple[int, str]]:
     docs: set[int] = set()
     for no in ast.walk(arvore):
         if isinstance(no, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
-            corpo = no.body
-            if corpo and isinstance(corpo[0], ast.Expr) and isinstance(corpo[0].value, ast.Constant):
-                docs.add(id(corpo[0].value))
+            primeiro = no.body[0] if no.body else None
+            if isinstance(primeiro, ast.Expr) and isinstance(primeiro.value, ast.Constant):
+                docs.add(id(primeiro.value))
     return [
         (no.lineno, no.value)
         for no in ast.walk(arvore)
