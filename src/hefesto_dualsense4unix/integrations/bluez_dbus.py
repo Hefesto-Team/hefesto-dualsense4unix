@@ -125,6 +125,13 @@ ESPERA_DA_FOTO_S = 3.0
 #: isto, uma máquina sem barramento (Flatpak) pagaria a tentativa a cada leitura.
 TENTAR_O_GIO_DE_NOVO_S = 60.0
 
+#: Depois de uma foto que NÃO veio com o ``bluetoothd`` de pé (o
+#: ``GetManagedObjects`` estourou os :data:`ESPERA_DA_FOTO_S`, ou o BlueZ
+#: respondeu erro), quanto tempo o dono espera para tirar outra. Sem isto o dono
+#: ficava cego até o ``bluetoothd`` reiniciar: o único gatilho de foto nova era o
+#: ``NameOwnerChanged``, e um BlueZ lento que se recupera sozinho não o emite.
+REFOTOGRAFAR_S = 5.0
+
 _CAMINHO_DE_ADAPTADOR = re.compile(r"^/org/bluez/(hci[0-9]+)$")
 _CAMINHO_DE_APARELHO = re.compile(
     r"^(/org/bluez/hci[0-9]+)/dev_([0-9A-Fa-f]{2}(?:_[0-9A-Fa-f]{2}){5})$"
@@ -1489,6 +1496,7 @@ class DonoVivo(LeitorDoBluez):
         self._fila: list[Sinal] | None = None
         self._bluez_de_pe = False
         self._dono_do_bluez = ""
+        self._ultima_foto: float | None = None
         self._agente: Any = None
         self._tranca_do_agente = threading.Lock()
 
@@ -1529,6 +1537,7 @@ class DonoVivo(LeitorDoBluez):
         with self._tranca_da_foto:
             with self._tranca:
                 self._fila = []
+                self._ultima_foto = time.monotonic()
             foto = self._barramento.objetos(espera=ESPERA_DA_FOTO_S)
             dono = self._barramento.dono_do_nome(SERVICO) if foto is not None else ""
             with self._tranca:
@@ -1589,10 +1598,33 @@ class DonoVivo(LeitorDoBluez):
         return self._barramento.vivo()
 
     def caminhos(self, *, espera: float | None = None) -> tuple[str, ...] | None:
+        """A árvore da foto; ``None`` = não sei.
+
+        Sem foto de pé, a leitura responde ``None`` AGORA e pede outra foto em
+        segundo plano, no máximo uma a cada :data:`REFOTOGRAFAR_S` — quem lê tem
+        orçamento (a varredura, meio segundo) e não pode pagar o
+        ``GetManagedObjects`` inteiro.
+        """
         with self._tranca:
-            if not self._bluez_de_pe:
-                return None
-            return tuple(sorted(self._objetos))
+            if self._bluez_de_pe:
+                return tuple(sorted(self._objetos))
+            agora = time.monotonic()
+            vencida = self._ultima_foto is None or agora - self._ultima_foto >= REFOTOGRAFAR_S
+            if vencida:
+                self._ultima_foto = agora
+        if vencida:
+            self._em_segundo_plano(self._refotografar_se_o_bluez_esta_la)
+        return None
+
+    def _refotografar_se_o_bluez_esta_la(self) -> None:
+        """A foto de novo — só se o ``org.bluez`` tem dono AGORA.
+
+        Perguntar ao ``org.bluez`` sem dono pediria ao barramento que o ATIVASSE
+        (``org.bluez.service``): quem parou o ``bluetoothd`` de propósito o veria
+        voltar sozinho. Sem dono, quem refotografa é o ``NameOwnerChanged``.
+        """
+        if self._barramento.dono_do_nome(SERVICO):
+            self._fotografar()
 
     def propriedade(
         self, caminho: str, interface: str, nome: str, *, espera: float | None = None
