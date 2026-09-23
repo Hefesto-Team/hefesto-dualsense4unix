@@ -4469,8 +4469,22 @@ def _moradores(cena: dict[str, Any], lid: str) -> list[dict[str, Any]]:
 
 
 def _pontes(cena: dict[str, Any], lid: str) -> list[dict[str, Any]]:
-    return [a for a in _moradores(cena, lid)
-            if a.get("tipo") == "controle" and a.get("ponte")]
+    """As pontes deste adaptador NA ORDEM DAS VAGAS — a «N de 2» de cada linha.
+
+    QUEM PASSOU DO LIMITE TEM DONO, e é o governador: a vaga que subiu por
+    «Ligar aqui» leva `alem_do_limite`, e as `n_max` primeiras na ordem em que
+    CHEGARAM cabem (`governador_do_radio._recalcular_o_limite`). Numerar pela
+    ordem de `controllers` era um segundo dono da mesma resposta: com o
+    Cosmic Red na frente da lista e marcado pelo governador, a linha dele dizia
+    «Som 1 de 2» com o botão de som laranja, e a de OUTRO controle dizia
+    «Passou do limite» (achado na conferência da TRANSPLANTE-DA-SECAO-01).
+    Por isso: as marcadas por último, e o resto na ordem de chegada que o
+    governador publica; sem ela, a ordem da cena.
+    """
+    moradores = [a for a in _moradores(cena, lid)
+                 if a.get("tipo") == "controle" and a.get("ponte")]
+    return sorted(moradores, key=lambda a: (bool(a.get("alem")),
+                                            a.get("ordem_da_vaga", len(moradores))))
 
 
 def _ocupado(cena: dict[str, Any]) -> bool:
@@ -5576,6 +5590,10 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
     alem = {_so_hex(str(p.get("uniq") or "")): (p.get("tipo"), bool(p.get("alem_do_limite")))
             for publicado in governador.values()
             for p in _dicionario(publicado).get("pontes") or ()}
+    # A ORDEM EM QUE AS PONTES CHEGARAM, que é a do governador (ver `_pontes`).
+    ordem_da_vaga = {_so_hex(str(p.get("uniq") or "")): i
+                     for publicado in governador.values()
+                     for i, p in enumerate(_dicionario(publicado).get("pontes") or ())}
     alias = {_mac(a.endereco): str(a.nome or "") for a in aparelhos_bz}
     fora: list[dict[str, Any]] = []
     vistos: set[str] = set()
@@ -5595,7 +5613,11 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
         if ponte not in ("som", "haptica") and tipo_gov in ("som", "vibracao"):
             ponte = "som" if tipo_gov == "som" else "haptica"
         nome_bz = alias.get(_mac(uniq), "")
+        vaga: dict[str, Any] = {}
+        if _so_hex(uniq) in ordem_da_vaga:
+            vaga["ordem_da_vaga"] = ordem_da_vaga[_so_hex(uniq)]
         fora.append({
+            **vaga,
             "id": uniq, "tipo": "controle", "lugar": adaptador,
             "nome": "" if nome_bz.startswith("DualSense") else nome_bz,
             "rotulo": f"Player {eu['jogador']}" if eu.get("jogador") else "DualSense",

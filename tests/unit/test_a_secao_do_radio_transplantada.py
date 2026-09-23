@@ -507,6 +507,36 @@ def test_alem_do_limite_e_laranja_nunca_vermelho(mesa: Any) -> None:
         "a ponte além do limite não ganhou a marca na linha")
 
 
+def test_quem_passou_do_limite_e_quem_o_governador_marcou(mesa: Any) -> None:
+    """A «N de 2» de cada linha é a ordem em que as pontes CHEGARAM, e a que
+    passou do limite é a que o governador marcou — um dono só.
+
+    O governador tira a marca das `n_max` primeiras vagas na ordem de chegada
+    (`_recalcular_o_limite`); a tela numerava pela ordem de `controllers`. Com
+    o Cosmic Red na frente da lista e marcado, a linha dele dizia «1 de 2» com
+    o botão de som laranja, e a de OUTRO controle dizia «Passou do limite».
+
+    MORDIDA: devolva `_pontes` à ordem da cena (tire o `sorted`), ou ordene só
+    pela marca e esqueça a ordem de chegada (`ordem_da_vaga`).
+    """
+    estado = _estado(pedido=False)
+    for c in estado["controllers"]:
+        c.update(adaptador=A1, ponte_do_radio="som")
+    # Chegaram o P3, o P2 e, por «Ligar aqui», o P1 — a lista da cena é P1, P2, P3.
+    estado["radio_governador"] = {A1: {"n_max": 2, "pontes": [
+        {"uniq": U3, "tipo": "som", "alem_do_limite": False},
+        {"uniq": U2, "tipo": "som", "alem_do_limite": False},
+        {"uniq": U1, "tipo": "som", "alem_do_limite": True}]}}
+    sala = mesa.html_da_sala(mesa.cena_do_radio(_ctx(estado)))
+    contas = {alvo: (bool(alem), texto) for alem, alvo, texto in re.findall(
+        r'<span class="conta-da-vaga( alem)?" data-alvo="([^"]+)" title="[^"]*">([^<]*)</span>',
+        sala) if alvo in (U1, U2, U3)}
+    assert contas == {U3: (False, "1 de 2"), U2: (False, "2 de 2"), U1: (True, "3 de 2")}, (
+        f"a vaga de cada linha não é a do governador: {contas}")
+    laranjas = re.findall(r'class="vaga som alem"[^>]*data-alvo="([^"]+)"', sala)
+    assert laranjas == [U1], f"o som laranja está em outra linha: {laranjas}"
+
+
 # ---------------------------------------------------------------------------
 # 9. O sino — pela palavra dela, pela hora, nada cru
 # ---------------------------------------------------------------------------
