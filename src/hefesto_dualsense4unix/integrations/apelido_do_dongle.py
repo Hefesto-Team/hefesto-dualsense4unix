@@ -121,11 +121,8 @@ que não faz nada. Ver :func:`limpar_o_nome`.
 
 from __future__ import annotations
 
-import json
 import os
 import re
-import shutil
-import subprocess
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 
@@ -134,6 +131,7 @@ from hefesto_dualsense4unix.core.linhagem_nintendo import (
     OUIS_LINHAGEM_COM_DOIS_PONTOS,
     _e_da_linhagem_nintendo,
 )
+from hefesto_dualsense4unix.integrations import bluez_dbus
 
 #: O prefixo que tira o Pro Controller do sniff frágil. Caixa canônica, igual à
 #: de ``scripts/bt_active_mode.sh:142`` — os dois escritores têm de produzir a
@@ -145,11 +143,8 @@ PREFIXO_NINTENDO = "Nintendo"
 #: devolveu foi 247, e o número que vale é o medido.
 TETO_DE_BYTES = 247
 
-#: Teto de espera de cada `busctl`, em segundos. Mesmo número de
-#: ``integrations/exame_da_mesa.py:92`` (`ESPERA_DO_BUSCTL_S`) — um `busctl`
-#: pendurado seguraria o
-#: worker e a janela pareceria travada.
-ESPERA_DO_BUSCTL_S = 5.0
+#: Como este módulo assina na trava e no diário comuns do rádio.
+QUEM = "apelido-do-dongle"
 
 #: OUIs da linhagem Nintendo, minúsculas com ``:`` — a faixa do Pro desta
 #: bancada e a do 8BitDo em modo Switch, que mente VID/PID como ``057E:2009``
@@ -192,8 +187,6 @@ _CAMINHO_DE_ADAPTADOR = re.compile(r"/org/bluez/hci[0-9]+")
 _MARCA_NOME = "HID_NAME="
 _MARCA_PHYS = "HID_PHYS="
 _MARCA_UNIQ = "HID_UNIQ="
-
-_INTERFACE_ADAPTADOR = "org.bluez.Adapter1"
 
 
 @dataclass(frozen=True)
@@ -448,19 +441,18 @@ def ler_os_dongles(
     máquina sem adaptador nenhum. Quem chama diz isso na tela — nunca uma
     tabela em branco.
     """
-    rodar = _busctl if executar is None else executar
-    arvore = rodar(["tree", "org.bluez", "--list"])
-    if arvore is None:
+    leitor = _leitor(executar)
+    caminhos = leitor.caminhos()
+    if caminhos is None:
         return ()
     com_nintendo = adaptadores_com_nintendo(
         raiz=raiz_hidraw, listar=listar, ler=ler
     )
     achados: list[Dongle] = []
-    for linha in arvore.splitlines():
-        caminho = linha.strip()
+    for caminho in caminhos:
         if not _CAMINHO_DE_ADAPTADOR.fullmatch(caminho):
             continue
-        endereco = _propriedade(rodar, caminho, "Address")
+        endereco = leitor.endereco_do_adaptador(caminho)
         if not endereco:
             # Adaptador sem endereço legível não tem identidade, e sem
             # identidade não há o que renomear: `hciN` não serve, e é
@@ -469,10 +461,14 @@ def ler_os_dongles(
         achados.append(
             Dongle(
                 endereco=endereco.upper(),
-                alias=_propriedade(rodar, caminho, "Alias") or "",
-                nome_do_sistema=_propriedade(rodar, caminho, "Name") or "",
+                alias=_texto(leitor.propriedade(caminho, bluez_dbus.ADAPTADOR, "Alias")),
+                nome_do_sistema=_texto(
+                    leitor.propriedade(caminho, bluez_dbus.ADAPTADOR, "Name")
+                ),
                 hospeda_nintendo=endereco.lower() in com_nintendo,
-                ligado=_propriedade(rodar, caminho, "Powered") == "true",
+                ligado=bluez_dbus.como_booleano(
+                    leitor.propriedade(caminho, bluez_dbus.ADAPTADOR, "Powered")
+                ) is True,
                 objeto=caminho,
             )
         )
@@ -504,12 +500,11 @@ def renomear_o_dongle(
     — ler logo depois devolve o valor antigo), e uma conferência com espera
     dentro travaria a interface por um segundo a cada salvamento.
     """
-    rodar = _busctl if executar is None else executar
     tabela = (
         tuple(dongles)
         if dongles is not None
         else ler_os_dongles(
-            executar=rodar, raiz_hidraw=raiz_hidraw, listar=listar, ler=ler
+            executar=executar, raiz_hidraw=raiz_hidraw, listar=listar, ler=ler
         )
     )
     alvo = next(
@@ -536,25 +531,19 @@ def renomear_o_dongle(
             truncado=truncado,
             porque="Não achei este adaptador no Bluetooth do sistema.",
         )
-    resposta = rodar(
-        [
-            "set-property",
-            "org.bluez",
-            alvo.objeto,
-            _INTERFACE_ADAPTADOR,
-            "Alias",
-            "s",
-            alias,
-        ]
-    )
-    if resposta is None:
+    escrita = _leitor(executar).escrever_alias(alvo.objeto, alias, quem=QUEM)
+    if not escrita.feita:
         return Renomeacao(
             endereco=alvo.endereco,
             nome=nome,
             alias=alias,
             costurado=costurado,
             truncado=truncado,
-            porque="O Bluetooth do sistema recusou o nome novo.",
+            porque=(
+                "O rádio estava ocupado com outro gesto; tente de novo."
+                if escrita.erro == bluez_dbus.TRAVA_OCUPADA
+                else "O Bluetooth do sistema recusou o nome novo."
+            ),
         )
     return Renomeacao(
         endereco=alvo.endereco,
@@ -608,9 +597,8 @@ def costurar_a_mesa(
     O passe **nunca subtrai**: adaptador que carrega o prefixo e não hospeda
     Nintendo fica como está. Ver :func:`limpar_o_nome`.
     """
-    rodar = _busctl if executar is None else executar
     tabela = ler_os_dongles(
-        executar=rodar, raiz_hidraw=raiz_hidraw, listar=listar, ler=ler
+        executar=executar, raiz_hidraw=raiz_hidraw, listar=listar, ler=ler
     )
     feitos: list[Renomeacao] = []
     for dongle in tabela:
@@ -621,7 +609,7 @@ def costurar_a_mesa(
                 dongle.endereco,
                 dongle.nome,
                 dongles=tabela,
-                executar=rodar,
+                executar=executar,
             )
         )
     return tuple(feitos)
@@ -632,75 +620,23 @@ def costurar_a_mesa(
 # ---------------------------------------------------------------------------
 
 
-def _propriedade(
-    executar: Callable[[Sequence[str]], str | None], caminho: str, nome: str
-) -> str:
-    """Uma propriedade de ``org.bluez.Adapter1``, já desembrulhada."""
-    bruto = executar(
-        ["get-property", "org.bluez", caminho, _INTERFACE_ADAPTADOR, nome]
-    )
-    return "" if bruto is None else _desembrulhar(bruto)
+def _leitor(
+    executar: Callable[[Sequence[str]], str | None] | None,
+) -> bluez_dbus.LeitorDoBluez:
+    """O dono do BlueZ (BLUEZ-UM-DONO-01), ou um sobre o dublê de quem injetou.
 
-
-def _desembrulhar(bruto: str) -> str:
-    """O valor de uma resposta do ``busctl``, com JSON na frente e texto atrás.
-
-    **Por que JSON, e por que não o desembrulho de
-    ``exame_da_mesa.py:_propriedade_do_dispositivo``:** aquele faz
-    ``texto.split()[-1]``, que serve para ``b true`` e ``s "yes"`` e MUTILA
-    qualquer nome com espaço — ``s "Nintendo MeowSystem"`` voltaria como
-    ``MeowSystem``. Nomes com espaço e acento são o assunto deste módulo
-    inteiro, então aqui o desembrulho tem de ser o certo.
-
-    O texto continua atendido como plano B, para o caso de um ``busctl`` que
-    não conheça ``--json`` (anterior ao systemd 239, de 2018) ou de um dublê de
-    teste que responda no formato humano.
+    Ler e escrever o ``Alias`` era um ``busctl`` deste módulo, com o único
+    desembrulho que não mutilava nome com espaço. O desembrulho foi com ele
+    para o dono, e a escrita passa pela borda de lá: a guarda da suíte e a
+    trava comum do rádio — o ``bt_active_mode.sh`` do watchdog escreve o mesmo
+    ``Alias``.
     """
-    texto = bruto.strip()
-    if not texto:
-        return ""
-    try:
-        dado = json.loads(texto)
-    except ValueError:
-        pass
-    else:
-        if isinstance(dado, dict) and "data" in dado:
-            valor = dado["data"]
-            return valor if isinstance(valor, str) else str(valor).lower()
-        return str(dado)
-    tipo, _, resto = texto.partition(" ")
-    if tipo == "s" and resto.startswith('"') and resto.endswith('"'):
-        return resto[1:-1].replace('\\"', '"').replace("\\\\", "\\")
-    return resto.strip('"') if resto else texto
+    return bluez_dbus.dono() if executar is None else bluez_dbus.pelo_executor(executar)
 
 
-def _busctl(argumentos: Sequence[str]) -> str | None:
-    """Roda um ``busctl`` e devolve a saída, ou ``None`` se não deu.
-
-    Ausência da ferramenta, erro e teto de tempo colapsam em ``None``: para
-    quem chama os três significam "não deu para falar com o BlueZ". Molde de
-    ``integrations/exame_da_mesa.py:329`` (`_busctl`), com uma diferença: as leituras
-    pedem ``--json=short``, porque o valor que interessa aqui é um nome com
-    espaço e acento (ver :func:`_desembrulhar`).
-
-    Saída vazia com código ``0`` é SUCESSO, não falha — é o que o
-    ``set-property`` devolve. Por isso o contrato é ``None`` contra ``str``, e
-    nunca "string vazia é erro".
-    """
-    if shutil.which("busctl") is None:
-        return None
-    modo = ["--json=short"] if argumentos and argumentos[0] == "get-property" else []
-    try:
-        saida = subprocess.run(
-            ["busctl", *modo, *argumentos],
-            capture_output=True,
-            text=True,
-            timeout=ESPERA_DO_BUSCTL_S,
-            check=False,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return None
-    return saida.stdout if saida.returncode == 0 else None
+def _texto(valor: object) -> str:
+    """O valor de uma propriedade de texto, ou ``""`` quando ela não respondeu."""
+    return valor if isinstance(valor, str) else ""
 
 
 def _valor_do_uevent(texto: str, marca: str) -> str:
@@ -721,7 +657,6 @@ def _ler_texto(caminho: str) -> str:
 
 
 __all__ = [
-    "ESPERA_DO_BUSCTL_S",
     "NOMES_NINTENDO",
     "OUIS_NINTENDO",
     "PREFIXO_NINTENDO",
