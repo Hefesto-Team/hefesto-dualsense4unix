@@ -36,6 +36,8 @@
 #                        02/08/2026 (BLUEZ-PADRAO-INVERTIDO-01) — desinstalar o
 #                        Hefesto não pode piorar o Bluetooth da máquina.
 #   --yes,-y             responde 'sim' para prompts.
+#   --dry-run,-n         ENSAIO: imprime o que removeria e não remove nada (ver
+#                        «O ENSAIO», logo depois das flags).
 #
 # Onda PLATAFORMA (2026-07-18) — removidos por DEFAULT, simétricos ao install:
 #   - regras udev 81 (USB power devices + hosts) + modprobe.d do btusb — rm +
@@ -215,6 +217,7 @@ KEEP_STEAM_INPUT=0       # desliga Steam Input PSSupport por default (FEAT-DISAB
 # ganha é de EFEITO — o sistema dela sai do uninstall funcionando como entrou.
 KEEP_BLUEZ=1             # preserva o backport por default; --restore-bluez desfaz
 AUTO_YES=0
+DRY_RUN=0
 
 # BUG-UNINSTALL-HELP-DESINSTALA-01: não havia `--help`, e argumento desconhecido
 # só imprimia um aviso e SEGUIA desinstalando. Ou seja: `./uninstall.sh --help`
@@ -244,6 +247,8 @@ Opções:
                         os bonds pareados.
   --keep-bluez          [no-op] preservar já é o padrão desde 02/08/2026
   --yes, -y             não pergunta nada (necessário sem TTY)
+  --dry-run, -n         ensaio: diz o que removeria nesta máquina e não remove
+                        nada (não pede senha, não para processo nenhum)
   --help, -h            mostra esta ajuda e sai
 
 Nada é removido enquanto esta ajuda estiver sendo exibida.
@@ -265,6 +270,7 @@ for arg in "$@"; do
         --keep-bluez)        KEEP_BLUEZ=1 ;;
         --restore-bluez)     KEEP_BLUEZ=0 ;;
         --yes|-y)            AUTO_YES=1 ;;
+        --dry-run|-n)        DRY_RUN=1 ;;
         --help|-h)           uso; exit 0 ;;
         *)
             printf '[uninstall] argumento desconhecido: %s\n' "$arg" >&2
@@ -320,6 +326,91 @@ _cleanup_sudo_keepalive() {
     [[ -n "${SUDO_KEEPALIVE_PID}" ]] && kill "${SUDO_KEEPALIVE_PID}" 2>/dev/null || true
 }
 trap _cleanup_sudo_keepalive EXIT
+
+# ---------------------------------------------------------------------------
+# O ENSAIO — `--dry-run` (INSTALL-E-UNINSTALL-DO-RADIO-01, 23/09/2026)
+# ---------------------------------------------------------------------------
+# O install tem o seu desde 03/09 (ENSAIO-DO-INSTALL-01); o uninstall não
+# tinha, e `--dry-run` abortava como argumento desconhecido. Quem quisesse ver
+# o que ele tira da máquina tinha de lê-lo inteiro — ou rodá-lo, e rodá-lo
+# para o daemon dela, mata os processos do Hefesto por `pkill` e tira o
+# /etc inteiro.
+#
+# A FORMA: o roteiro de verdade corre inteiro, e cada comando que MUDA a
+# máquina vira uma função que só diz o que faria. As PERGUNTAS continuam de
+# verdade — `[[ -e ]]`, `dkms status`, `systemctl is-active`, `busctl
+# get-property`, `flatpak list`, os `python3 -` e `python3 -I -c` que só leem
+# — e é por isso que o plano é o DESTA máquina. O `sudo` responde «sim» às
+# perguntas de credencial (o plano segue o caminho COM root, que é o que se
+# quer ver) e nunca executa nada. As falas vão para o descritor 3 (a saída
+# de quando o ensaio começou), para nunca caírem dentro de um `$(...)`.
+#
+# O ALCANCE É UMA LISTA, e uma lista esquece. Por isso a régua
+# `tests/unit/test_o_ensaio_do_uninstall_nao_escreve.py` roda o ensaio num lar
+# de mentira com TODO binário que muda máquina dublado no PATH: um comando
+# novo, esquecido aqui, chega ao dublê e reprova — e a casa de mentira tem de
+# sair byte a byte igual.
+if [[ "${DRY_RUN}" -eq 1 ]]; then
+    exec 3>&1
+    AUTO_YES=1
+    log() { printf '[uninstall · ensaio] %s\n' "$*"; }
+    _faria() { printf '[uninstall · ensaio] FARIA: %s%s\n' "${_ENS_ROOT:-}" "$*" >&3; }
+    log "ENSAIO: nada é removido, nada é parado, nenhuma senha é pedida — cada linha FARIA é o que o uninstall de verdade faria nesta máquina"
+    _start_sudo_keepalive() { :; }
+    # O `sudo` do ensaio: credencial é «sim»; o que só LÊ (`dkms status`, o
+    # `diff -rq` da biblioteca do DKMS) roda sem root; os verbos que têm dublê
+    # próprio passam por ele, marcados «(root)»; o resto só é dito.
+    sudo() {
+        case "$*" in
+            "-n true"|"-v"|"-A -v"|"-n -v") return 0 ;;
+        esac
+        local -a _ens_argv=("$@")
+        while [[ "${_ens_argv[0]:-}" == -[nAEHkS] ]]; do _ens_argv=("${_ens_argv[@]:1}"); done
+        case "${_ens_argv[0]:-}" in
+            diff) command diff "${_ens_argv[@]:1}"; return ;;
+            systemctl|dkms|flatpak|busctl|udevadm|hciconfig|python3)
+                _ENS_ROOT="(root) " "${_ens_argv[@]}"; return ;;
+        esac
+        _ENS_ROOT="(root) " _faria "${_ens_argv[*]}"
+        return 0
+    }
+    for _ens_cmd in rm rmdir mv cp install mkdir ln chmod chown touch tee find \
+                    pkill killall pip pip3 apt-get dnf pacman kernelstub \
+                    update-desktop-database gtk-update-icon-cache update-initramfs \
+                    gpasswd depmod modprobe rmmod gsettings dconf gnome-extensions \
+                    bash sh; do
+        eval "${_ens_cmd}() { _faria \"${_ens_cmd} \$*\"; return 0; }"
+    done
+    unset _ens_cmd
+    kill() { if [[ "${1:-}" == "-0" ]]; then builtin kill "$@"; else _faria "kill $*"; fi; }
+    mktemp() { return 1; }
+    sleep() { :; }
+    timeout() { while [[ "${1:-}" == -* ]]; do shift; done; shift; "$@"; }
+    systemctl() {
+        local _ens_a
+        for _ens_a in "$@"; do
+            [[ "${_ens_a}" == -* ]] && continue
+            case "${_ens_a}" in
+                is-active|is-enabled|is-failed|cat|show|status|list-units|list-unit-files|list-timers)
+                    command systemctl "$@"; return ;;
+            esac
+            break
+        done
+        _faria "systemctl $*"
+    }
+    dkms() { if [[ "${1:-}" == "status" ]]; then command dkms "$@"; else _faria "dkms $*"; fi; }
+    flatpak() { case "${1:-}" in list|info) command flatpak "$@" ;; *) _faria "flatpak $*" ;; esac; }
+    busctl() { case "${1:-}" in get-property|tree|introspect|status|list) command busctl "$@" ;; *) _faria "busctl $*" ;; esac; }
+    udevadm() { if [[ "${1:-}" == "info" ]]; then command udevadm "$@"; else _faria "udevadm $*"; fi; }
+    hciconfig() { if [[ $# -le 1 ]]; then command hciconfig "$@"; else _faria "hciconfig $*"; fi; }
+    python3() {
+        if [[ "${1:-}" == "-" || ( "${1:-}" == "-I" && "${2:-}" == "-c" ) ]]; then
+            command python3 "$@"
+        else
+            _faria "python3 $*"
+        fi
+    }
+fi
 
 # Prime a credencial só se algum passo com root vai rodar: remoção de udev
 # (default), applet COSMIC instalado, pacote .deb ou os artefatos de plataforma
@@ -1967,5 +2058,9 @@ if [[ -d "${HOME}/.local/share/hefesto-dualsense4unix" ]] \
 fi
 
 printf '\n─────────────────────────────────────────\n'
-printf ' Hefesto - DualSense4Unix desinstalado (wipe completo)\n'
+if [[ "${DRY_RUN}" -eq 1 ]]; then
+    printf ' Hefesto - DualSense4Unix: ENSAIO — nada foi removido; as linhas FARIA são o plano\n'
+else
+    printf ' Hefesto - DualSense4Unix desinstalado (wipe completo)\n'
+fi
 printf '─────────────────────────────────────────\n\n'
