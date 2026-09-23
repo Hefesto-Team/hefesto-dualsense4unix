@@ -4226,6 +4226,53 @@ check_bt_agent_service() {
     fi
 }
 
+# A TRAVA COMUM DO RÁDIO (O-DIARIO-DO-RADIO-01; instalada pelo passo 3e-trava
+# desde a INSTALL-E-UNINSTALL-DO-RADIO-01, 23/09/2026). O watchdog do Bluetooth
+# (root), o `bt_active_mode.sh` (root, no start do bluetoothd) e o daemon (a
+# sessão) pegam um `flock` antes de mexer no rádio — e a trava só é comum se os
+# dois lados abrirem o MESMO arquivo. As quatro perguntas, na ordem em que uma
+# resposta errada torna as seguintes inúteis:
+#   1. o `tmpfiles.d` está instalado? (sem ele não há trava depois do boot);
+#   2. a pasta existe, e NÃO é gravável pela sessão? (gravável é FALHA: o root
+#      abre o arquivo ali, e a pasta deixaria trocá-lo por um link);
+#   3. o arquivo é arquivo, 0660, grupo `hefesto`?
+#   4. a sessão consegue escrever nele? (sem o grupo nos processos dela — quem
+#      acabou de entrar no grupo —, a trava funciona só para ler).
+# Os ganchos `HEFESTO_DOCTOR_TRAVA_*` existem para a régua não depender do /run
+# de quem a roda.
+check_trava_do_radio() {
+    local conf="${HEFESTO_DOCTOR_TRAVA_CONF:-/etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf}"
+    local pasta="${HEFESTO_DOCTOR_TRAVA_DIR:-/run/hefesto-dualsense4unix}"
+    local trava="${pasta}/radio.lock"
+    local modo grupo
+    if [[ ! -f "${conf}" ]]; then
+        warn "a trava comum do rádio não está instalada — o watchdog do Bluetooth (root) e o daemon mexem no rádio sem se enxergar: $(conselho_de_instalacao)$(so_no_checkout "(o passo 3e-trava a cria)")"
+        return
+    fi
+    if [[ ! -d "${pasta}" ]]; then
+        warn "a trava comum do rádio está instalada mas ${pasta} não existe — ela nasce no boot; para agora: sudo systemd-tmpfiles --create ${conf}"
+        return
+    fi
+    if [[ -w "${pasta}" ]]; then
+        fail "${pasta} é GRAVÁVEL pela sua sessão — o root abre a trava ali, e uma pasta gravável deixaria trocá-la por um link; corrija: sudo systemd-tmpfiles --create ${conf}"
+        return
+    fi
+    if [[ -L "${trava}" || ! -f "${trava}" ]]; then
+        warn "a trava ${trava} falta (ou é um link) — sudo systemd-tmpfiles --create ${conf}"
+        return
+    fi
+    read -r modo grupo <<<"$(stat -c '%a %G' "${trava}" 2>/dev/null || echo '? ?')"
+    if [[ "${modo}" != "660" || "${grupo}" != "hefesto" ]]; then
+        warn "a trava ${trava} está ${modo}, grupo ${grupo} (o certo é 660, grupo hefesto) — sudo systemd-tmpfiles --create ${conf}"
+        return
+    fi
+    if [[ -w "${trava}" ]]; then
+        pass "trava comum do rádio de pé (${trava}, 660, grupo hefesto) — o watchdog e o daemon disputam o mesmo arquivo"
+    else
+        warn "a trava comum do rádio está de pé, mas esta sessão ainda não está no grupo hefesto — o daemon a usa só para ler (a fila funciona) até você sair e entrar na sessão"
+    fi
+}
+
 # ONDA-R2 (sprint 2026-07-21 BlueZ, camada 2): resiliência do bluetoothd —
 # timers de snapshot de bonds + watchdog de saúde ativos e drop-in presente.
 check_bt_resilience() {
@@ -7275,6 +7322,7 @@ main() {
     check_bluez_backport_version
     check_bt_agent_service
     check_bt_resilience
+    check_trava_do_radio
     check_bt_bonds_persistidos
     check_bt_connected_sem_hidraw
     check_bt_sdp_cache_envenenado

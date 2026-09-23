@@ -296,11 +296,14 @@ install_trava_do_radio_host() {
         warn "o grupo 'hefesto' não existe (quem o cria são as regras udev: sudo bash scripts/install_udev.sh) — a trava comum do rádio NÃO foi criada"
         return 0
     fi
-    if ! sudo install -Dm644 -o root -g root "${_trava_fonte}" "${_trava_conf}" 2>/dev/null; then
+    # Os dois destinos LITERAIS, e não pela variável: a paridade
+    # (`check_packaging_parity.sh`) cobra o caminho na linha que instala.
+    if ! sudo install -Dm644 -o root -g root "${_trava_fonte}" \
+            /etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf 2>/dev/null; then
         warn "não consegui gravar ${_trava_conf} — a trava comum do rádio NÃO foi criada"
         return 0
     fi
-    if ! sudo systemd-tmpfiles --create "${_trava_conf}" >/dev/null 2>&1; then
+    if ! sudo systemd-tmpfiles --create /etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf >/dev/null 2>&1; then
         warn "systemd-tmpfiles --create falhou — a trava comum do rádio nasce no próximo boot"
         return 0
     fi

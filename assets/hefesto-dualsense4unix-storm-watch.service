@@ -1,5 +1,5 @@
 [Unit]
-Description=Hefesto - DualSense4Unix: registra o storm USB (-71) do DualSense num log dedicado
+Description=Hefesto - DualSense4Unix: kernel-watch — o que o kernel diz do USB, do rádio Bluetooth e do xHCI (-71, fila cheia, EAGAIN do bluetoothd, enlace parado, adaptador travado, CRC), num log dedicado
 Documentation=man:journalctl(1)
 After=default.target
 
