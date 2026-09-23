@@ -314,7 +314,7 @@ def test_sair_do_steam_input_desliga_o_jogo_e_so_ele(lar) -> None:
 
     FATO SUBSTITUÍDO — O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01, 23/09/2026, pela
     regra dela (*"a idea é eu poder escolher qualquer que seja o modo
-    independnete da ordem"*). Aqui se media o chip como INTERRUPTOR: o segundo
+    independnete da ordem"*). Esta régua tratava o chip como INTERRUPTOR: o segundo
     clique nele desligava. Na fileira que é grupo de rádio o segundo clique
     REAPLICA, e quem tira o jogo da lista é clicar em qualquer um dos outros
     três (`a01_jogar.o_que_o_chip_faz`). A primeira metade abaixo mede isso; o
