@@ -91,7 +91,7 @@ from typing import Any
 
 import pytest
 
-from hefesto_dualsense4unix.integrations import plano_de_radio, varredura_do_radio
+from hefesto_dualsense4unix.integrations import bluez_dbus, plano_de_radio, varredura_do_radio
 from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     PALAVRAS_DE_CULPA,
 )
@@ -694,7 +694,12 @@ def test_o_leitor_nao_toca_no_radio_de_ninguem(tmp_path: Path) -> None:
     corpo = fonte.split('"""', 2)[2]
     for verbo in ("StartDiscovery", "StopDiscovery", "set-property", "Powered"):
         assert verbo not in corpo, f"o leitor não pode chamar {verbo}"
-    assert "get-property" in corpo
+    # BLUEZ-UM-DONO-01: o leitor pergunta ao dono do BlueZ, e nenhuma escrita
+    # do dono aparece aqui. A leitura tem de estar lá — senão esta régua passa
+    # sobre um módulo que não pergunta nada.
+    for escrita in bluez_dbus.ESCRITAS:
+        assert f".{escrita}(" not in corpo, f"o leitor não pode chamar {escrita}"
+    assert ".propriedade(" in corpo
 
 
 def test_o_leitor_nao_deixa_o_locale_cegar_a_leitura(
@@ -706,14 +711,15 @@ def test_o_leitor_nao_deixa_o_locale_cegar_a_leitura(
     significaria dizer "ninguém varre" enquanto ela perde 43% dos pacotes.
     """
     vistos: list[dict[str, str]] = []
-    original = varredura_do_radio.subprocess.run
+    # O subprocesso mora no dono do BlueZ desde a BLUEZ-UM-DONO-01.
+    original = bluez_dbus.subprocess.run
 
     def espiar(*args: Any, **kwargs: Any) -> Any:
         vistos.append(dict(kwargs.get("env") or {}))
         return original(*args, **kwargs)
 
     _ligar_o_barramento(monkeypatch, tmp_path, {"hci7": (bm.ADAPTADOR_PARADO, "false")})
-    monkeypatch.setattr(varredura_do_radio.subprocess, "run", espiar)
+    monkeypatch.setattr(bluez_dbus.subprocess, "run", espiar)
     varredura_do_radio.quem_esta_varrendo()
 
     assert vistos, "o leitor não abriu subprocesso nenhum"

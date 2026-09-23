@@ -58,14 +58,12 @@ bastante para o motor escolher outro destino.
 
 from __future__ import annotations
 
-import os
 import re
-import shutil
-import subprocess
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
+from hefesto_dualsense4unix.integrations import bluez_dbus
 from hefesto_dualsense4unix.integrations.conexao_zumbi import mac_limpo
 
 #: A queda de pacotes medida quando a varredura corre **no mesmo adaptador que
@@ -90,13 +88,6 @@ QUEDA_MAXIMA_MEDIDA = 43.4
 #: ``/org/bluez/hciN`` e nada mais. Os nós de DEVICE (``.../dev_AA_BB_...``)
 #: ficam de fora pela forma: eles não têm ``org.bluez.Adapter1``.
 _NO_DO_ADAPTADOR = re.compile(r"^/org/bluez/(hci[0-9]+)$")
-
-#: O que o ``busctl get-property`` devolve para um ``b``: ``b true`` / ``b false``.
-_BOOLEANO = re.compile(r"^b\s+(true|false)$")
-
-#: O que ele devolve para um ``s``: ``s "AC:A7:F1:00:00:41"``. Medido na mesa
-#: dela em 20/09/2026 — as aspas são do ``busctl``, não do endereço.
-_TEXTO = re.compile(r'^s\s+"(.*)"$')
 
 #: Sem ``busctl`` não há como perguntar — e não perguntar não é "nenhum".
 SEM_BUSCTL = "não há `busctl` nesta máquina — não consigo perguntar ao BlueZ"
@@ -126,7 +117,7 @@ SEM_RESPOSTA_A_TEMPO = (
 #:
 #: **MEDIDO em 20/09/2026, com um `busctl` que não responde: 15,1 s.** Três
 #: adaptadores, uma pergunta travada por adaptador, cada uma esperando os 5 s
-#: de :func:`_rodar`. É o travamento de 15/09/2026 escrito de novo, com a
+#: do ``busctl``. É o travamento de 15/09/2026 escrito de novo, com a
 #: lembrança segurando só a FREQUÊNCIA e não a DURAÇÃO.
 #:
 #: Meio segundo é SESSENTA vezes a leitura inteira medida contra o BlueZ vivo
@@ -177,57 +168,23 @@ class Varredura:
         return self.sei and not self.mudos
 
 
-def _rodar(args: Sequence[str], *, segundos: float) -> str:
-    """Executa e devolve o stdout, ou ``""``. Nunca levanta.
-
-    ``segundos`` é obrigatório de propósito: este era um padrão de 5,0 s que
-    ninguém passava, e três dele em fila seguraram a thread do desenho por
-    15,1 s (medido em 20/09/2026, `busctl` travado). Quem chama tem de dizer
-    quanto do :data:`ORCAMENTO_DA_LEITURA` esta pergunta pode gastar.
-
-    ``LC_ALL=C`` não é zelo. O ``pactl`` desta casa já cegou um leitor duas
-    vezes por traduzir a própria saída, e um leitor cego responde *"não há"*
-    sobre aparelho de pé — que aqui seria dizer "ninguém varre" enquanto a tela
-    dela come 32% dos pacotes do controle.
-    """
-    ambiente = dict(os.environ)
-    ambiente["LC_ALL"] = "C"
-    try:
-        saida = subprocess.run(
-            list(args),
-            capture_output=True,
-            text=True,
-            timeout=segundos,
-            check=False,
-            env=ambiente,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return ""
-    return saida.stdout or ""
-
-
 def _resta(fim: float) -> float:
     """O que sobra do orçamento para a próxima pergunta, nunca menos do que o mínimo."""
     return max(_MINIMO_POR_PERGUNTA, fim - time.monotonic())
 
 
-def _propriedade(caminho: str, nome: str, *, ate: float) -> str:
-    """Uma propriedade do ``org.bluez.Adapter1``, crua. ``""`` quando não deu."""
-    bruto = _rodar(
-        ["busctl", "get-property", "org.bluez", caminho, "org.bluez.Adapter1", nome],
-        segundos=_resta(ate),
-    )
-    return str(bruto).strip()
-
-
 def quem_esta_varrendo(*, orcamento: float = ORCAMENTO_DA_LEITURA) -> Varredura:
     """Os adaptadores com ``Discovering=true``, por endereço — ou "não sei".
 
-    Quatro degraus, e cada um que falha tem resposta PRÓPRIA:
+    Quatro degraus, e cada um que falha tem resposta PRÓPRIA. A pergunta é ao
+    dono do BlueZ (``bluez_dbus.dono()``, BLUEZ-UM-DONO-01): pela foto do
+    ``ObjectManager`` quando ele está vivo — sem subprocesso —, pelo ``busctl``
+    quando não:
 
-    1. ``busctl`` existe? Não → :data:`SEM_BUSCTL`;
-    2. ``busctl tree org.bluez`` lista adaptadores? Nada → :data:`SEM_BLUEZ`;
-    3. por adaptador, ``Discovering`` e ``Address``. O que não responder entra
+    1. o dono pode perguntar? Não → :data:`SEM_BUSCTL`;
+    2. a árvore do ``org.bluez`` lista adaptadores? Nada → :data:`SEM_BLUEZ`;
+    3. por adaptador, ``Discovering`` e o endereço (o do kernel, ou o
+       ``Address`` quando o kernel não diz). O que não responder entra
        em :attr:`Varredura.mudos`, não em "não varre". Se NENHUM responder, a
        leitura inteira é :data:`MESA_TODA_MUDA` — não ouvir ninguém não é ouvir
        "ninguém";
@@ -241,15 +198,16 @@ def quem_esta_varrendo(*, orcamento: float = ORCAMENTO_DA_LEITURA) -> Varredura:
     faria o motor comparar maçã com laranja e nunca casar — um filtro que não
     casa é um filtro que não filtra, e ninguém veria.
     """
-    if shutil.which("busctl") is None:
+    leitor = bluez_dbus.dono()
+    if not leitor.pode_perguntar():
         return Varredura(motivo=SEM_BUSCTL)
 
     ate = time.monotonic() + orcamento
-    arvore = _rodar(["busctl", "tree", "org.bluez", "--list"], segundos=_resta(ate))
+    arvore = leitor.caminhos(espera=_resta(ate)) or ()
     adaptadores = [
-        (achado.group(1), linha)
-        for linha in (bruta.strip() for bruta in arvore.splitlines())
-        if (achado := _NO_DO_ADAPTADOR.match(linha)) is not None
+        (achado.group(1), caminho)
+        for caminho in arvore
+        if (achado := _NO_DO_ADAPTADOR.match(caminho)) is not None
     ]
     if not adaptadores:
         # Zero adaptadores numa máquina COM BlueZ de pé e zero adaptadores numa
@@ -267,15 +225,16 @@ def quem_esta_varrendo(*, orcamento: float = ORCAMENTO_DA_LEITURA) -> Varredura:
             estourou = True
             mudos.add(hci)
             continue
-        estado = _BOOLEANO.match(_propriedade(caminho, "Discovering", ate=ate))
+        estado = bluez_dbus.como_booleano(
+            leitor.propriedade(caminho, bluez_dbus.ADAPTADOR, "Discovering", espera=_resta(ate))
+        )
         if estado is None:
             mudos.add(hci)
             continue
         ouvidos += 1
-        if estado.group(1) != "true":
+        if not estado:
             continue
-        escrito = _TEXTO.match(_propriedade(caminho, "Address", ate=ate))
-        endereco = mac_limpo(escrito.group(1)) if escrito is not None else None
+        endereco = mac_limpo(leitor.endereco_do_adaptador(caminho, espera=_resta(ate)))
         if endereco is None:
             mudos.add(hci)
             continue
@@ -317,9 +276,10 @@ def varredura_recente(
 ) -> Varredura:
     """Como :func:`quem_esta_varrendo`, mas no máximo uma pergunta por ``validade``.
 
-    É o que a tela chama. A leitura crua abre até sete subprocessos numa mesa de
-    três adaptadores; repeti-la a cada pintura seria pôr o rádio no caminho do
-    desenho, que é a forma exata do defeito de 15/09/2026.
+    É o que a tela chama. Pelo ``busctl``, a leitura crua abre até sete
+    subprocessos numa mesa de três adaptadores; repeti-la a cada pintura seria
+    pôr o rádio no caminho do desenho, que é a forma exata do defeito de
+    15/09/2026.
 
     **A lembrança segura a FREQUÊNCIA; quem segura a DURAÇÃO é o
     :data:`ORCAMENTO_DA_LEITURA`.** Sem ele, uma leitura a cada 3 s ainda podia
