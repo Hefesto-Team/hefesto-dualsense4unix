@@ -884,18 +884,9 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     # CORRIGIDAS no lugar (`core/rumble.py`, `a02_controles.py` e duas em
     # `a08_conexoes.py`): fora do `nao_toca:`, o número se reescreve.
     "interface/pacotes/a06_navegacao.py::core/acoes_de_botao.py:285",
-    # A-SUITE-NAO-PERGUNTA-AO-SOM-01 (13/09/2026) — endereço deslocado, e ele JÁ
-    # estava errado antes: na base `76f3d8cd` a `conftest.py:2308` era prosa do
-    # docstring de `_montar_usb`, e o `HEFESTO_CARONA_WRAPPER=0` que o docstring
-    # cita morava na 2241. Passava porque a linha não estava em branco. O bloco
-    # SOM-DE-MENTIRA do `tests/conftest.py` somou 11 linhas acima dela, a 2308
-    # virou linha em branco e a régua acusou. `src/` é `nao_toca` da sprint.
-    #
-    # O NÚMERO CERTO JÁ ESTÁ MEDIDO — quem for dono do arquivo troca e apaga a
-    # linha daqui (o `test_a_lista_de_pendentes_nao_vira_paisagem` cobra):
-    #   a10_perfis.py:509  `conftest.py:2308` -> `:2252`
-    #   (o `monkeypatch.setenv("HEFESTO_CARONA_WRAPPER", "0")` de `_hefesto_fake_env`)
-    "interface/pacotes/a10_perfis.py::conftest.py:2308",
+    # A DA A-SUITE-NAO-PERGUNTA-AO-SOM-01 SAIU DAQUI NA COSTURA (23/09/2026): quem
+    # coordena reapontou `a10_perfis.py` pelo símbolo — `SKIP_PRESET_SEED` e
+    # `HEFESTO_CARONA_WRAPPER` de `_hefesto_fake_env` (`conftest.py:2209` e `:2254`).
     # A DA FRASES-E-DICAS-02 SAIU DAQUI NA COSTURA (13/09/2026): quem coordena
     # reapontou `a09_sistema.py` para `a08_conexoes.py:3781`, o `"blocos"` do
     # mapa do gabinete.

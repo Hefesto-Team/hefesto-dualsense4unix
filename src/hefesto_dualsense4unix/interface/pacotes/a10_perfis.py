@@ -250,7 +250,7 @@ def _escolhido(todos: list[dict[str, Any]], ativo: str) -> str:
     FATO SUBSTITUÍDO — 02/09/2026, e é a segunda correção desta mesma linha.
     Estava escrito que, *"no mesmo lar de mentira do `conftest.py`"*,
     `load_all_profiles()` devolve **9 perfis** (os de fábrica, que ela semeia).
-    **Sob o `pytest` ele devolve `[]`**: a `conftest.py:2114` põe
+    **Sob o `pytest` ele devolve `[]`**: a `conftest.py:2209` põe
     `HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED=1` em TODO teste, e é justamente
     esse env que desliga o `_maybe_seed_presets`. Os nove eram reais — mas num
     processo SEM o pytest, que é onde a medição de 01/09 rodou. Conferido em
@@ -506,7 +506,7 @@ def _com_a_carona(frase: str) -> str:
     `passada()` daqui é o mesmo trabalho sem a segunda troca de thread.
 
     `ligada()` É O PORTÃO E NÃO UM `if` MEU: ele é o mesmo que a janela estável
-    consulta, e é o que desliga a carona na suíte (a `conftest.py:2308` põe
+    consulta, e é o que desliga a carona na suíte (a `conftest.py:2254` põe
     `HEFESTO_CARONA_WRAPPER=0`). Uma régua desta aba não vai ao `/proc` dela.
 
     NUNCA LEVANTA. Ela é efeito colateral de um gesto que já deu certo: uma
@@ -1840,7 +1840,7 @@ def _valendo(ctx: Contexto, todos: list[Any] | None = None) -> str:
     distinção é a que impede a cura de desarmar o §P7. Só se rebaixa o nome a
     `""` quando há uma lista contra a qual conferi-lo; sem lista, o nome cru
     segue, e `ativar`/`remover` continuam recusando. Medido em 02/09/2026: sob
-    o `pytest` a `conftest.py:2114` põe
+    o `pytest` a `conftest.py:2209` põe
     `HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED=1` em TODO teste, e
     `load_all_profiles()` devolve **[]** — sem esta guarda, todas as réguas
     desta aba passariam a medir o ramo vazio e a guarda de apagar o perfil que
@@ -4290,7 +4290,7 @@ PISO_DA_ABA = 16
 #: FATO SUBSTITUÍDO — 02/09/2026. Aqui estava escrito que, "no mesmo lar de
 #: mentira que o `conftest.py` monta", `load_all_profiles()` devolve **9
 #: perfis** e que a pasta vista por `pacote()` "tem nove". **Sob o `pytest` ela
-#: tem ZERO**: a `conftest.py:2114` põe
+#: tem ZERO**: a `conftest.py:2209` põe
 #: `HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED=1` em todo teste, e é esse env que
 #: desliga a semeadura. A conclusão não muda — nenhum perfil se chama "regua",
 #: e os nove gestos levantam antes de tocar a ponte; o que muda é que eles
