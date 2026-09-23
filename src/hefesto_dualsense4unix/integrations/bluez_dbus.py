@@ -1190,7 +1190,16 @@ class BarramentoGio:
         self.erro = ""
 
     def abrir(self, *, espera: float = 2.0) -> bool:
-        """Liga o fio e a conexão. ``False`` quando não deu, com :attr:`erro`."""
+        """Liga o fio e a conexão. ``False`` quando não deu, com :attr:`erro`.
+
+        SOB A SUÍTE o barramento de SISTEMA não abre: é o BlueZ dela, e a borda
+        só recusaria as escritas — a foto, a assinatura e o ``GetNameOwner``
+        leriam a mesa dela, que é o que o ``busctl`` já recusa. Uma régua que
+        precisa do Gio passa o endereço de um ``dbus-daemon`` particular.
+        """
+        if self.e_do_sistema and a_suite_esta_rodando():
+            self.erro = "a suíte não abre o barramento de sistema"
+            return False
         try:
             from gi.repository import Gio, GLib
         except Exception as problema:  # ImportError, ValueError ou stub sem Gio
