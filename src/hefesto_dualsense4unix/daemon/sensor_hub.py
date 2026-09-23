@@ -186,32 +186,6 @@ class SensorHub:
         except Exception:
             return None
 
-    def hz_do_movimento(self, uniq: str) -> float | None:
-        """Pacotes por segundo que o nó de movimento de `uniq` recebe AGORA.
-
-        AR-MEDIDO-01 (23/09/2026), R10 dela: os Hz reais de cada controle. O
-        número é do reader (`MotionSensorReader.hz_do_movimento`); aqui só se
-        pergunta a ele. REGISTRA A DEMANDA pela mesma razão da irmã acima: é o
-        que abre o reader de um controle cujo card ainda não pediu sensor.
-
-        `None` = não sei (sem reader, ou reader aberto há menos de uma janela).
-        """
-        agora = self._relogio()
-        with self._lock:
-            self._demanda[uniq] = agora
-            motion = self._motion.get(uniq)
-        self._garantir_manutencao()
-        perguntar = getattr(motion, "hz_do_movimento", None)
-        if not callable(perguntar):
-            return None
-        try:
-            hz = perguntar()
-        except Exception:
-            return None
-        if isinstance(hz, bool) or not isinstance(hz, (int, float)):
-            return None
-        return float(hz)
-
     def angulo_do_movimento(self, uniq: str) -> tuple[float, float, float] | None:
         """Ângulo percorrido por `uniq` desde a última chamada — **DRENA**.
 
@@ -355,6 +329,32 @@ class SensorHub:
         except Exception as exc:  # o `state_full` não cai por causa de um node
             logger.debug("sensor_hub_entradas_falhou", identity=uniq, err=str(exc))
             return None
+
+    def hz_do_movimento(self, uniq: str) -> float | None:
+        """Pacotes por segundo que o nó de movimento de `uniq` recebe AGORA.
+
+        AR-MEDIDO-01 (23/09/2026), R10 dela: os Hz reais de cada controle. O
+        número é do reader (`MotionSensorReader.hz_do_movimento`); aqui só se
+        pergunta a ele. REGISTRA A DEMANDA pela mesma razão da irmã acima: é o
+        que abre o reader de um controle cujo card ainda não pediu sensor.
+
+        `None` = não sei (sem reader, ou reader aberto há menos de uma janela).
+        """
+        agora = self._relogio()
+        with self._lock:
+            self._demanda[uniq] = agora
+            motion = self._motion.get(uniq)
+        self._garantir_manutencao()
+        perguntar = getattr(motion, "hz_do_movimento", None)
+        if not callable(perguntar):
+            return None
+        try:
+            hz = perguntar()
+        except Exception:
+            return None
+        if isinstance(hz, bool) or not isinstance(hz, (int, float)):
+            return None
+        return float(hz)
 
     def stop_all(self) -> None:
         """Para a manutenção e todos os readers. Idempotente."""
