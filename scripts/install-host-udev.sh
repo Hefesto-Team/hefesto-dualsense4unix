@@ -371,6 +371,9 @@ fi
 if [[ -n "${HIDPLAYSTATION_SRC}" ]]; then
     echo "  - hefesto-hid-playstation.conf (retry de feature report do hid-playstation patchado)"
 fi
+if [[ -f /etc/modprobe.d/hefesto-uhid.conf ]]; then
+    echo "  - contrapressão do uhid rearmada a quente (o pedido --uhid-contrapressao já está em /etc/modprobe.d)"
+fi
 if [[ "${BROKER_INSTALL_OK}" -eq 1 ]]; then
     echo "  - hefesto-hidraw-broker (broker root hide-hidraw, BROKER-01; uid ${BROKER_SESSION_UID}, grupo ${BROKER_SESSION_GROUP})"
 elif [[ -n "${BROKER_BIN_SRC}" && -n "${BROKER_UNITS_SRC}" ]]; then
@@ -487,6 +490,23 @@ _build_install_cmd() {
         cmd+="printf '2' > /sys/module/hid_playstation/parameters/feature_retries 2>/dev/null || true; "
         cmd+="printf 'Y' > /sys/module/hid_playstation/parameters/ds4_short_pairing_info 2>/dev/null || true; "
         cmd+="printf 'Y' > /sys/module/hid_playstation/parameters/ds4_synthetic_mac 2>/dev/null || true; "
+    fi
+    # RADIO-AFOGADO-02 — o uhid com contrapressão (INSTALL-E-UNINSTALL-DO-
+    # RADIO-01, 23/09/2026). O `uninstall.sh` devolve o `backpressure` a 0 a
+    # quente, e este helper nunca o rearmava: é o par que a régua da paridade
+    # quente cobra.
+    #
+    # O QUE ESTE CAMINHO FAZ, E O QUE ELE NÃO FAZ, com a razão: o módulo e a
+    # conf são OPT-IN (`./install.sh --uhid-contrapressao`), e os pacotes não
+    # os levam (`X-HefestoNaoEmpacotado` na própria conf) — ligar muda o
+    # `write(2)` de todo HID por Bluetooth da máquina, e ninguém leva isso sem
+    # pedir. Então aqui não se instala nada novo: o pedido dela é a conf em
+    # /etc/modprobe.d, gravada pelo install, e só com ela no disco o parâmetro
+    # é rearmado — o pedido que já está na máquina volta a valer agora, sem
+    # recarregar o uhid (que derrubaria todo HID por Bluetooth). Sem a conf, o
+    # de fábrica segue, e o redirect falha calado num uhid sem o parâmetro.
+    if [[ -f /etc/modprobe.d/hefesto-uhid.conf ]]; then
+        cmd+="printf '1' > /sys/module/uhid/parameters/backpressure 2>/dev/null || true; "
     fi
     # BROKER-01 (Onda S — fd-injection): binário + units-template renderizadas
     # (__SESSION_UID__/__SESSION_GROUP__) + enable --now do .socket (só ele —

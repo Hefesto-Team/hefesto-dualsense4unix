@@ -54,8 +54,21 @@ INSTALL = texto_do_instalador()
 UNINSTALL = (REPO_ROOT / "uninstall.sh").read_text(encoding="utf-8")
 HOST_UDEV = (REPO_ROOT / "scripts" / "install-host-udev.sh").read_text(encoding="utf-8")
 
-#: Caminho de parâmetro de módulo em `/sys`, ex.: hid_nintendo/bt_probe_retries.
-_PARAM = re.compile(r"/sys/module/([a-z0-9_]+)/parameters/([a-z0-9_]+)")
+#: Uma ESCRITA num parâmetro de módulo em `/sys`, ex.: hid_nintendo/bt_probe_retries.
+#:
+#: O VERBO É PARTE DO PADRÃO (INSTALL-E-UNINSTALL-DO-RADIO-01, 23/09/2026). A
+#: régua casava o CAMINHO em qualquer linha de código, e o `install.sh` passava
+#: por rearmar o `uhid/backpressure` sem escrever nada: a linha era um `cat` que
+#: LIA o parâmetro e um `printf` de dica com o `tee` dentro do texto. O ciclo
+#: uninstall+install deixava a contrapressão desligada até o boot, com a régua
+#: verde. Agora só conta o caminho que vem logo depois de um `tee` (a forma do
+#: `install.sh`) ou de um `>` (a forma do comando elevado do
+#: `install-host-udev.sh`) — e uma dica de texto não pode trazer nenhum dos dois
+#: colado ao caminho sem virar, ela mesma, o defeito que esta régua existe para
+#: pegar.
+_PARAM = re.compile(
+    r"(?:\btee\s+(?:-a\s+)?|>\s*)/sys/module/([a-z0-9_]+)/parameters/([a-z0-9_]+)"
+)
 
 
 def _sem_comentarios(texto: str) -> list[str]:
