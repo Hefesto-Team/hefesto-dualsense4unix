@@ -875,6 +875,10 @@ def test_o_caminho_repetido_noutra_entrada_fica_vazio(
 
     MORDIDA: não esvaziar a outra — ``porta_de`` (o leitor de hoje) responde
     ``3``, que é o número que ela deu a OUTRO buraco.
+
+    E a TELA mostra o número que a resposta vai gravar. MORDIDA: a porta vista
+    perguntar primeiro ao desenho pelo caminho, e só depois à amarra — a tela
+    diz «3» e a resposta grava «7».
     """
     from hefesto_dualsense4unix.integrations.mapa_das_portas import porta_de
 
@@ -890,7 +894,9 @@ def test_o_caminho_repetido_noutra_entrada_fica_vazio(
     )
     laco = _laco(boot_1)
     laco.comecar()
-    assert _mapear(boot_1, laco, 3, "4.2", ee.FACE_FRENTE).entrada == "7"
+    boot_1.plugar(3, "4.2", DUALSENSE)
+    assert laco.olhar()["porta"]["entrada"] == "7", "a tela mostra um número e grava outro"
+    assert laco.responder(ee.FACE_FRENTE).entrada == "7"
 
     documento = carregar_maquina()
     assert porta_de(documento.mapa, "3-4.2") == "7", "o leitor de hoje achou a outra entrada"
