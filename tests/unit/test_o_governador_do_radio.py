@@ -507,6 +507,7 @@ def test_a_terceira_ponte_pergunta_e_ligar_aqui_a_sobe_marcada() -> None:
     [subida] = [e for e in registro.de(diario.PONTE_SUBIU) if e["controle"] == CONTROLE_3]
     assert subida["alem_do_limite"] is True
     assert subida["frase"] == "3 pontes num adaptador (limite 2)."
+    assert subida["por_que"] == "ela ligou além do limite"
 
 
 def test_sem_vaga_em_lugar_nenhum_a_ponte_sobe_marcada_e_o_diario_diz() -> None:
@@ -525,6 +526,14 @@ def test_sem_vaga_em_lugar_nenhum_a_ponte_sobe_marcada_e_o_diario_diz() -> None:
     assert isinstance(vaga, gov.Vaga), "sem vaga em lugar nenhum, a ponte foi recusada"
     assert vaga.alem_do_limite is True
     assert registro.de(gov.ADAPTADOR_CHEIO) == [], "perguntou mover sem ter para onde"
+    # Conferência de 23/09/2026: o diário dizia «ela ligou além do limite»
+    # aqui também — uma escolha atribuída a ela, que ninguém perguntou.
+    # MORDIDA: marque toda vaga além do limite como escolha dela e isto reprova.
+    vaga.subiu()
+    [subida] = [e for e in registro.de(diario.PONTE_SUBIU) if e["controle"] == CONTROLE_3]
+    assert subida["alem_do_limite"] is True
+    assert subida["por_que"] == "não há vaga em outro adaptador"
+    assert "ela" not in subida["por_que"].split(), "o diário atribuiu a ela uma escolha"
 
 
 def test_a_ponte_que_desce_devolve_a_vaga() -> None:
