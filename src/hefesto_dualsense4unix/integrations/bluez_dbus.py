@@ -13,26 +13,36 @@ executor de cinco. Este módulo é o dono:
   (Flatpak sem ``--socket=system-bus``, ``gi`` ausente), com o desembrulho que
   não mutila nome com espaço — o de ``apelido_do_dongle``, que mora aqui agora;
 * **ESCREVE** ``Alias``, ``Connect``, ``Disconnect``, ``RemoveDevice``,
-  ``Pair``, ``Trusted`` e ``StartDiscovery``/``StopDiscovery`` do NOSSO cliente;
-* **RECUSA NA BORDA** toda escrita no BlueZ de verdade enquanto a suíte roda.
-  A política D-Bus desta máquina deixa qualquer uid local chamar qualquer
-  método do ``org.bluez`` (``/usr/share/dbus-1/system.d/bluetooth.conf``) —
-  inclusive a suíte, que em 22/09/2026 derrubou os quatro DualSense dela;
-* o ENDEREÇO do adaptador vem do ioctl do kernel (``HCIGETDEVINFO``), não do
-  texto de ninguém; o LUGAR dele (D3) é o caminho PCI mais as portas do USB.
+  ``Pair``, ``Trusted`` e ``StartDiscovery``/``StopDiscovery`` do NOSSO
+  cliente — toda escrita DENTRO da trava comum do rádio
+  (``diario_do_radio.trava_do_radio``), e as que mudam o rádio com uma linha no
+  diário comum;
+* **RECUSA NA BORDA** toda escrita no BlueZ de verdade enquanto a suíte roda, e
+  sob a suíte nem LÊ o barramento dela: só um ``busctl`` de mentira responde;
+* o ENDEREÇO do adaptador vem do kernel (``ar_do_adaptador.LeitorDoKernel``, o
+  ``HCIGETDEVINFO``), não do texto de ninguém; o LUGAR dele (D3) é o caminho PCI
+  mais as portas do USB.
 
 AUSÊNCIA É RESPOSTA. ``None`` quer dizer "não deu para perguntar", nunca "não
 há". Quem lê decide o que dizer; este módulo não inventa o vazio.
 
+AS DUAS EXCEÇÕES DA TRAVA, e as duas são de propósito:
+
+* o ``StopDiscovery`` não espera ninguém — ele SOLTA o rádio (a busca custa de
+  32% a 43% do adaptador), e esperar a trava por ele seria deixar a busca de pé
+  enquanto o watchdog segura um tique inteiro;
+* o agente próprio (``agente_de_pareamento``) nunca a pede: o ``Pair`` de quem
+  pareia já a segura enquanto o BlueZ chama o agente, e pedir de novo seria uma
+  espera de 10 a 30 s em cada pareamento.
+
 DONOS EXTERNOS, declarados e não absorvidos: os scripts root
 (``bt_ponte_privilegiada.sh``, ``bt_active_mode.sh``, ``bt_health_watchdog.sh``)
 e o ``hefesto-bt-agent``. São shell e root; o que o D-Bus não alcança como uid
-1000 continua com eles.
+1000 continua com eles, e a trava é de quem os chama.
 """
 
 from __future__ import annotations
 
-import array
 import atexit
 import contextlib
 import fcntl
@@ -40,13 +50,11 @@ import json
 import os
 import re
 import shutil
-import socket
-import struct
 import subprocess
 import sys
 import threading
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
@@ -71,13 +79,31 @@ FERRAMENTA = "busctl"
 ERRO_REJEITADO = "org.bluez.Error.Rejected"
 ERRO_CANCELADO = "org.bluez.Error.Canceled"
 ERRO_JA_EXISTE = "org.bluez.Error.AlreadyExists"
-ERRO_ACESSO_NEGADO = "org.freedesktop.DBus.Error.AccessDenied"
 
 #: Os motivos de uma escrita que não chegou ao BlueZ. Não são erros D-Bus: são
 #: o dono dizendo por que nem tentou.
 RECUSA_DA_SUITE = "hefesto.RecusaDaSuite"
 SEM_BARRAMENTO = "hefesto.SemBarramento"
 SEM_AGENTE = "hefesto.SemAgente"
+TRAVA_OCUPADA = "hefesto.TravaOcupada"
+
+#: Como a borda assina no diário e na trava quando quem escreve não se nomeou.
+QUEM_PADRAO = "hefesto"
+
+#: O ``o_que`` da linha que a borda deixa no diário comum a cada escrita que
+#: MUDA o rádio. Um só texto para todo motor, com o método ao lado: o leitor
+#: (o sino) procura por esta constante, e um sinônimo seria linha que ninguém acha.
+ESCREVEU_NO_BLUEZ = "escreveu no BlueZ"
+
+#: Os métodos que mudam o rádio — e só eles vão ao diário. ``Alias`` e
+#: ``Trusted`` são propriedade, não ar: entram na trava e ficam fora do sino.
+_METODOS_DO_DIARIO = frozenset(
+    {"Connect", "Disconnect", "Pair", "RemoveDevice", "StartDiscovery", "StopDiscovery"}
+)
+
+#: As escritas que NÃO esperam a trava. Ver o cabeçalho; a régua cobra que a
+#: lista seja exatamente esta.
+METODOS_SEM_TRAVA = frozenset({"StopDiscovery"})
 
 #: Teto de cada pergunta pelo caminho de reserva. O número que ``exame_da_mesa``,
 #: ``apelido_do_dongle`` e ``gesto_de_reconexao`` repetiam, cada um no seu.
@@ -115,11 +141,11 @@ RADIO_DE_VERDADE_NA_SUITE = "HEFESTO_RADIO_DE_VERDADE"
 
 
 def a_suite_esta_rodando() -> bool:
-    """A suíte está no ar? Então nada daqui escreve no BlueZ dela.
+    """A suíte está no ar? Então nada daqui escreve no BlueZ dela, nem o lê.
 
-    É o mesmo sinal que ``gesto_de_reconexao`` usava sozinho desde 22/09/2026,
-    quando a primeira corrida de 457 testes chamou ``Disconnect`` e ``Connect``
-    nos quatro DualSense da mesa dela, ao vivo. Agora ele guarda a BORDA: toda
+    É o sinal que ``gesto_de_reconexao`` usava sozinho desde 22/09/2026, quando
+    a primeira corrida de 457 testes chamou ``Disconnect`` e ``Connect`` nos
+    quatro DualSense da mesa dela, ao vivo. Agora ele guarda a BORDA: toda
     escrita passa por :meth:`LeitorDoBluez.chamar` ou
     :meth:`LeitorDoBluez.escrever_propriedade`, e as duas perguntam aqui.
     """
@@ -129,17 +155,13 @@ def a_suite_esta_rodando() -> bool:
 
 
 # ---------------------------------------------------------------------------
-# O diário — sem terceiro no import, porque o doctor carrega este módulo.
+# O diário do processo e o endereço — sem terceiro no import: o doctor chega
+# aqui pelo ``exame_da_mesa``.
 # ---------------------------------------------------------------------------
 
 
 def _registrar(evento: str, *, nivel: str = "info", **campos: Any) -> None:
-    """Uma linha no diário do processo. Nunca levanta.
-
-    O ``structlog`` entra tarde e dentro de ``try``: o ``exame_da_mesa`` chega
-    aqui pelo ``python`` que o doctor escolher, e uma dependência de terceiro no
-    import viraria uma linha muda na conferência.
-    """
+    """Uma linha no log do processo. Nunca levanta."""
     try:
         from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -148,18 +170,22 @@ def _registrar(evento: str, *, nivel: str = "info", **campos: Any) -> None:
         return
 
 
-def _mascara(mac: str) -> str:
-    """O endereço com os octetos 4 e 5 zerados — o único que vai ao diário."""
-    from hefesto_dualsense4unix.integrations.gesto_de_reconexao import mascarar
-
-    return mascarar(mac)
-
-
 def _mac(valor: object) -> str | None:
     """Endereço limpo, minúsculo e com dois-pontos — ou ``None``."""
     from hefesto_dualsense4unix.integrations.conexao_zumbi import mac_limpo
 
     return mac_limpo(valor if isinstance(valor, str) else None)
+
+
+def _endereco_do_no(caminho: str) -> str | None:
+    """O endereço de um aparelho pelo caminho: ``…/dev_AA_BB_…`` → ``aa:bb:…``."""
+    forma = _CAMINHO_DE_APARELHO.match(caminho)
+    return _mac(forma.group(2).replace("_", ":")) if forma else None
+
+
+def _hci_de(caminho: str) -> str:
+    achado = _CAMINHO_DE_ADAPTADOR.match(caminho)
+    return achado.group(1) if achado else ""
 
 
 # ---------------------------------------------------------------------------
@@ -172,8 +198,9 @@ class Escrita:
     """O que aconteceu com UMA escrita no BlueZ. Imutável, nunca uma exceção.
 
     ``erro`` é o nome D-Bus do erro quando o BlueZ respondeu que não
-    (``org.bluez.Error.Failed``), ou um dos motivos do dono (:data:`RECUSA_DA_SUITE`,
-    :data:`SEM_BARRAMENTO`, :data:`SEM_AGENTE`) quando nem se tentou.
+    (``org.bluez.Error.Failed``), ou um dos motivos do dono
+    (:data:`RECUSA_DA_SUITE`, :data:`SEM_BARRAMENTO`, :data:`SEM_AGENTE`,
+    :data:`TRAVA_OCUPADA`) quando nem se tentou.
     """
 
     feita: bool
@@ -184,7 +211,7 @@ class Escrita:
     @property
     def nem_tentou(self) -> bool:
         """O dono recusou antes de falar com o BlueZ — não houve tentativa."""
-        return self.erro in (RECUSA_DA_SUITE, SEM_BARRAMENTO, SEM_AGENTE)
+        return self.erro in (RECUSA_DA_SUITE, SEM_BARRAMENTO, SEM_AGENTE, TRAVA_OCUPADA)
 
 
 class RecusaNoBarramento(Exception):  # noqa: N818 — nome de domínio, não de erro
@@ -194,6 +221,72 @@ class RecusaNoBarramento(Exception):  # noqa: N818 — nome de domínio, não de
         super().__init__(mensagem or nome)
         self.nome = nome
         self.mensagem = mensagem or nome
+
+
+# ---------------------------------------------------------------------------
+# A trava — reentrante por fio, porque o motor que segura um gesto inteiro
+# (Disconnect + Connect) passa pela borda de novo a cada escrita.
+# ---------------------------------------------------------------------------
+
+_POR_FIO = threading.local()
+
+
+@contextlib.contextmanager
+def na_trava(quem: str = QUEM_PADRAO, *, prazo_s: float | None = None) -> Iterator[float]:
+    """Segura a trava comum do rádio enquanto o bloco roda. Entrega quanto esperou.
+
+    Reentrante NO MESMO FIO: um ``flock`` pedido de novo pelo mesmo processo
+    num descritor novo esperaria por ele mesmo até o prazo. Quem já está dentro
+    passa direto.
+
+    Levanta ``diario_do_radio.TravaOcupadaError`` quando o prazo acaba — a borda
+    a traduz em :data:`TRAVA_OCUPADA`; um motor que segura o gesto inteiro a
+    traduz na frase dele. Sem conseguir nem ABRIR a trava (``OSError``), segue
+    sem ela e diz no log: é o precedente do vigia de zumbis
+    (``daemon/subsystems/conexoes.py``), e um gesto dela não pode morrer porque
+    o install ainda não criou a pasta.
+    """
+    if getattr(_POR_FIO, "dentro", 0):
+        _POR_FIO.dentro += 1
+        try:
+            yield 0.0
+        finally:
+            _POR_FIO.dentro -= 1
+        return
+    from hefesto_dualsense4unix.integrations import diario_do_radio
+
+    prazo = diario_do_radio.PRAZO_DA_TRAVA_S if prazo_s is None else prazo_s
+    with contextlib.ExitStack() as pilha:
+        try:
+            espera = pilha.enter_context(diario_do_radio.trava_do_radio(quem, prazo_s=prazo))
+        except OSError as problema:
+            _registrar("bluez_escrita_sem_trava", nivel="warning", motivo=str(problema)[:200])
+            espera = 0.0
+        _POR_FIO.dentro = 1
+        try:
+            yield espera
+        finally:
+            _POR_FIO.dentro = 0
+
+
+def _no_diario(quem: str, metodo: str, caminho: str, escrita: Escrita) -> None:
+    """A linha da borda no diário comum. Nunca levanta: a escrita já aconteceu."""
+    if metodo not in _METODOS_DO_DIARIO:
+        return
+    try:
+        from hefesto_dualsense4unix.integrations import diario_do_radio
+
+        diario_do_radio.registrar(
+            quem,
+            ESCREVEU_NO_BLUEZ,
+            metodo,
+            depois={"feita": escrita.feita, "erro": escrita.erro or None},
+            metodo=metodo,
+            hci=_hci_de(caminho) or _hci_de(caminho.rsplit("/dev_", 1)[0]) or None,
+            controle=_endereco_do_no(caminho),
+        )
+    except Exception:
+        _registrar("bluez_diario_nao_gravou", nivel="warning")
 
 
 # ---------------------------------------------------------------------------
@@ -228,9 +321,7 @@ def desembrulhar(bruto: str | None) -> Any | None:
     tipo, _, resto = texto.partition(" ")
     resto = resto.strip()
     if tipo == "b":
-        if resto in ("true", "false"):
-            return resto == "true"
-        return None
+        return resto == "true" if resto in ("true", "false") else None
     if tipo in ("s", "o", "g"):
         if len(resto) >= 2 and resto.startswith('"') and resto.endswith('"'):
             return resto[1:-1].replace('\\"', '"').replace("\\\\", "\\")
@@ -269,10 +360,22 @@ def como_booleano(valor: object) -> bool | None:
 #: Os verbos que só LEEM. Todo o resto escreve, e a borda o recusa sob a suíte.
 _LEITURAS_DO_BUSCTL = frozenset({"tree", "get-property", "introspect"})
 
+#: O ``PATH`` de um sistema sem ninguém na frente. É por ele que se sabe qual
+#: ``busctl`` é o do sistema — o que fala com o barramento dela.
+_PATH_DO_SISTEMA = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
 #: O que roda UMA pergunta de ``busctl``: recebe os argumentos (sem o nome do
 #: programa) e devolve a saída, ou ``None`` quando não deu. É a forma que os
 #: dublês da suíte sempre tiveram.
 Executar = Callable[[Sequence[str]], "str | None"]
+
+
+def _e_o_do_sistema(achado: str) -> bool:
+    """Este ``busctl`` é o do sistema, e não um de mentira posto no ``PATH``?"""
+    do_sistema = shutil.which(FERRAMENTA, path=_PATH_DO_SISTEMA)
+    if do_sistema is None:
+        return False
+    return os.path.realpath(achado) == os.path.realpath(do_sistema)
 
 
 def busctl(argumentos: Sequence[str], *, espera: float = ESPERA_DO_BUSCTL_S) -> str | None:
@@ -282,6 +385,10 @@ def busctl(argumentos: Sequence[str], *, espera: float = ESPERA_DO_BUSCTL_S) -> 
     ``None``. Saída vazia com código ``0`` é SUCESSO — é o que o
     ``set-property`` devolve.
 
+    SOB A SUÍTE: escrita nunca; leitura só por um ``busctl`` de mentira que a
+    régua pôs na frente do ``PATH``. O do sistema é o barramento DELA, e uma
+    régua que o lê mede a máquina de quem mantém o projeto, não o produto.
+
     ``--json=short`` vai DEPOIS do verbo, e só no ``get-property``: o
     ``busctl`` aceita a opção em qualquer posição, e os ``busctl`` de mentira da
     suíte casam o verbo pela primeira palavra. ``LC_ALL=C`` não é zelo: o
@@ -289,9 +396,10 @@ def busctl(argumentos: Sequence[str], *, espera: float = ESPERA_DO_BUSCTL_S) -> 
     saída.
     """
     verbo = argumentos[0] if argumentos else ""
-    if verbo not in _LEITURAS_DO_BUSCTL and a_suite_esta_rodando():
+    achado = shutil.which(FERRAMENTA)
+    if achado is None:
         return None
-    if shutil.which(FERRAMENTA) is None:
+    if a_suite_esta_rodando() and (verbo not in _LEITURAS_DO_BUSCTL or _e_o_do_sistema(achado)):
         return None
     modo = ["--json=short"] if verbo == "get-property" else []
     ambiente = dict(os.environ)
@@ -311,56 +419,39 @@ def busctl(argumentos: Sequence[str], *, espera: float = ESPERA_DO_BUSCTL_S) -> 
 
 
 # ---------------------------------------------------------------------------
-# O kernel: o endereço de cada adaptador pelo ioctl, e o lugar pelo sysfs.
+# O kernel: o endereço de cada adaptador, e o lugar pelo sysfs.
 # ---------------------------------------------------------------------------
 
-#: ``_IOR('H', 210, int)`` e ``_IOR('H', 211, int)`` — ``include/net/bluetooth/hci_sock.h``.
-_HCIGETDEVLIST = 0x800448D2
-_HCIGETDEVINFO = 0x800448D3
-_HCI_MAX_DEV = 16
-#: ``sizeof(struct hci_dev_info)`` é 92; o buffer tem folga.
-_TAMANHO_DO_INFO = 128
 
-
-def enderecos_pelo_ioctl() -> dict[str, str] | None:
+def enderecos_pelo_kernel(leitor: Any = None) -> dict[str, str] | None:
     """``{hciN: endereço}`` direto do kernel, sem ``bluetoothd`` e sem texto.
 
-    É o que o ``hciconfig`` lê: um socket HCI cru e dois ioctl de leitura
-    (``HCIGETDEVLIST``, ``HCIGETDEVINFO``). Responde como uid 1000 — medido na
-    mesa dela em 23/09/2026, os dois adaptadores de pé. Não depende do
-    ``bluetoothd``, e é por isso que o endereço sai daqui e não do ``Address``
-    do D-Bus: o texto é do terceiro, o número é do kernel.
+    O dono do ioctl é ``ar_do_adaptador.LeitorDoKernel`` (AR-MEDIDO-01): um
+    socket HCI cru, ``HCIGETDEVLIST`` e ``HCIGETDEVINFO``, que respondem como
+    uid 1000 e não dependem do ``bluetoothd``. Escrever um segundo leitor do
+    mesmo ioctl aqui seria a segunda verdade sobre o mesmo número.
 
     ``None`` é "não deu": sem ``AF_BLUETOOTH`` neste Python, socket recusado
     (Flatpak), ou a suíte no ar — a suíte não lê a mesa dela por aqui.
     """
-    if a_suite_esta_rodando():
-        return None
-    familia = getattr(socket, "AF_BLUETOOTH", None)
-    protocolo = getattr(socket, "BTPROTO_HCI", None)
-    if familia is None or protocolo is None:
+    if leitor is None and a_suite_esta_rodando():
         return None
     try:
-        with socket.socket(familia, socket.SOCK_RAW, protocolo) as tomada:
-            lista = array.array(
-                "B", struct.pack("=H", _HCI_MAX_DEV) + bytes(2 + 8 * _HCI_MAX_DEV)
-            )
-            fcntl.ioctl(tomada.fileno(), _HCIGETDEVLIST, lista, True)
-            quantos = min(struct.unpack_from("=H", lista, 0)[0], _HCI_MAX_DEV)
-            achados: dict[str, str] = {}
-            for indice in range(quantos):
-                (numero,) = struct.unpack_from("=H", lista, 4 + 8 * indice)
-                info = array.array(
-                    "B", struct.pack("=H", numero) + bytes(_TAMANHO_DO_INFO - 2)
-                )
-                fcntl.ioctl(tomada.fileno(), _HCIGETDEVINFO, info, True)
-                cru = info.tobytes()
-                nome = cru[2:10].split(b"\0", 1)[0].decode("ascii", "replace")
-                endereco = ":".join(f"{octeto:02x}" for octeto in reversed(cru[10:16]))
-                if nome and endereco != "00:00:00:00:00:00":
-                    achados[nome] = endereco
-            return achados
-    except OSError:
+        if leitor is None:
+            from hefesto_dualsense4unix.integrations.ar_do_adaptador import LeitorDoKernel
+
+            leitor = LeitorDoKernel()
+        numeros = leitor.adaptadores()
+        if numeros is None:
+            return None
+        achados: dict[str, str] = {}
+        for numero in numeros:
+            leitura = leitor.ler(numero)
+            if leitura is None or leitura.endereco == "00:00:00:00:00:00":
+                continue
+            achados[f"hci{int(numero)}"] = leitura.endereco
+        return achados
+    except Exception:
         return None
 
 
@@ -386,9 +477,7 @@ def lugares_dos_adaptadores() -> dict[str, str]:
     if a_suite_esta_rodando():
         return {}
     try:
-        from hefesto_dualsense4unix.integrations.mesa_de_radio import (
-            adaptadores_bluetooth,
-        )
+        from hefesto_dualsense4unix.integrations.mesa_de_radio import adaptadores_bluetooth
 
         return {
             a.interface: lugar_de(a.controlador_pci, a.devpath)
@@ -414,10 +503,14 @@ class MudancaDeLugar:
 
     @property
     def frase(self) -> str:
-        """O fato, curto, para a tela e para o diário."""
+        """O fato, curto, para o diário — é de lá que a tela o lê."""
         if self.tipo == "trocado":
             return "O adaptador desta porta foi trocado."
         return "Este adaptador mudou de porta."
+
+
+#: O ``o_que`` da linha do diário quando um dongle troca de lugar.
+MUDOU_DE_LUGAR = "adaptador mudou de lugar"
 
 
 def perceber_as_mudancas(
@@ -451,6 +544,38 @@ def _memoria_dos_lugares() -> Path:
     return state_dir() / "lugares-dos-adaptadores.json"
 
 
+def _guardar_e_comparar(
+    arquivo: Path, agora: Mapping[str, str]
+) -> tuple[MudancaDeLugar, ...]:
+    """Lê a memória, compara e grava a de agora — sob ``flock``, porque o
+    daemon e a janela ligam cada um o seu dono e perguntariam juntos."""
+    arquivo.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(arquivo, os.O_RDWR | os.O_CREAT | os.O_CLOEXEC | os.O_NOFOLLOW, 0o644)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        bruto = os.read(fd, 1 << 20).decode("utf-8", "replace")
+        try:
+            lido = json.loads(bruto) if bruto.strip() else {}
+        except ValueError:
+            lido = {}
+        antes = (
+            {str(k): str(v) for k, v in lido.items()} if isinstance(lido, dict) else {}
+        )
+        mudancas = perceber_as_mudancas(antes, agora)
+        guardado = dict(antes)
+        for mudanca in mudancas:
+            if mudanca.lugar_antigo and guardado.get(mudanca.lugar_antigo) == mudanca.endereco:
+                del guardado[mudanca.lugar_antigo]
+        guardado.update(agora)
+        texto = json.dumps(guardado, ensure_ascii=False, indent=1, sort_keys=True)
+        os.lseek(fd, 0, os.SEEK_SET)
+        os.ftruncate(fd, 0)
+        os.write(fd, texto.encode("utf-8"))
+        return mudancas
+    finally:
+        os.close(fd)
+
+
 # ---------------------------------------------------------------------------
 # As leituras compostas.
 # ---------------------------------------------------------------------------
@@ -458,7 +583,11 @@ def _memoria_dos_lugares() -> Path:
 
 @dataclass(frozen=True)
 class AdaptadorDoBluez:
-    """Um adaptador. ``caminho`` e ``hci`` caducam entre boots: nunca guarde."""
+    """Um adaptador. ``caminho`` e ``hci`` caducam entre boots: nunca guarde.
+
+    ``lugar`` é a chave D3 (:func:`lugar_de`) — é ela, e não o endereço, que
+    segue o nome que ela deu à porta.
+    """
 
     caminho: str
     hci: str
@@ -472,7 +601,7 @@ class AdaptadorDoBluez:
 
 @dataclass(frozen=True)
 class AparelhoDoBluez:
-    """Um aparelho que o BlueZ conhece, num adaptador."""
+    """Um aparelho que o BlueZ conhece, num adaptador (``adaptador`` é o caminho)."""
 
     caminho: str
     adaptador: str
@@ -487,13 +616,8 @@ class AparelhoDoBluez:
     modalias: str = ""
 
 
-def _hci_de(caminho: str) -> str:
-    achado = _CAMINHO_DE_ADAPTADOR.match(caminho)
-    return achado.group(1) if achado else ""
-
-
-def _no_de_aparelho(endereco: str) -> str:
-    return "dev_" + endereco.upper().replace(":", "_")
+def _inteiro(valor: object) -> int | None:
+    return valor if isinstance(valor, int) and not isinstance(valor, bool) else None
 
 
 # ---------------------------------------------------------------------------
@@ -507,15 +631,15 @@ class LeitorDoBluez:
     Duas subclasses: :class:`DonoVivo` (o Gio, a foto ao vivo) e
     :class:`PeloBusctl` (o caminho de reserva, e a forma dos dublês da suíte).
     As escritas passam TODAS por :meth:`chamar` e :meth:`escrever_propriedade`,
-    que é onde a guarda da suíte mora.
+    que é onde moram a guarda da suíte, a trava e o diário.
     """
 
-    #: ``True`` quando o destino é o BlueZ de verdade (o barramento de sistema
-    #: ou o ``busctl`` do sistema). Só esses a guarda da suíte recusa: um dublê
-    #: não é o rádio dela.
+    #: ``True`` quando o destino é o BlueZ de verdade. Só esses a guarda da
+    #: suíte recusa: um dublê não é o rádio dela.
     toca_o_sistema: bool = False
 
-    #: ``True`` só onde há conexão viva para registrar o agente próprio (R5).
+    #: ``True`` só onde há conexão viva para registrar o agente próprio (R5) e
+    #: manter uma busca de pé (a busca é POR CLIENTE).
     atende_o_proprio_pareamento: bool = False
 
     # -- o transporte (cada subclasse) ---------------------------------------
@@ -543,13 +667,7 @@ class LeitorDoBluez:
         raise NotImplementedError
 
     def _escrever(
-        self,
-        caminho: str,
-        interface: str,
-        nome: str,
-        assinatura: str,
-        valor: Any,
-        espera: float,
+        self, caminho: str, interface: str, nome: str, assinatura: str, valor: Any, espera: float
     ) -> Escrita:
         raise NotImplementedError
 
@@ -568,12 +686,28 @@ class LeitorDoBluez:
     def _recusa(self) -> Escrita | None:
         if self.toca_o_sistema and a_suite_esta_rodando():
             _registrar("bluez_escrita_recusada_pela_suite", nivel="warning")
-            return Escrita(
-                False,
-                RECUSA_DA_SUITE,
-                "a suíte está no ar e este é o BlueZ de verdade",
-            )
+            return Escrita(False, RECUSA_DA_SUITE, "a suíte está no ar e este é o BlueZ de verdade")
         return None
+
+    def _na_borda(
+        self, quem: str, metodo: str, caminho: str, fazer: Callable[[], Escrita]
+    ) -> Escrita:
+        """Guarda da suíte, trava e diário — nesta ordem, para toda escrita."""
+        recusa = self._recusa()
+        if recusa is not None:
+            return recusa
+        if metodo in METODOS_SEM_TRAVA:
+            escrita = fazer()
+        else:
+            from hefesto_dualsense4unix.integrations.diario_do_radio import TravaOcupadaError
+
+            try:
+                with na_trava(quem):
+                    escrita = fazer()
+            except TravaOcupadaError as ocupada:
+                return Escrita(False, TRAVA_OCUPADA, str(ocupada))
+        _no_diario(quem, metodo, caminho, escrita)
+        return escrita
 
     def chamar(
         self,
@@ -584,12 +718,15 @@ class LeitorDoBluez:
         argumentos: Sequence[Any] = (),
         *,
         espera: float = ESPERA_DO_BUSCTL_S,
+        quem: str = QUEM_PADRAO,
     ) -> Escrita:
-        """Chama um método do BlueZ. A borda: sob a suíte, o sistema recusa."""
-        recusa = self._recusa()
-        if recusa is not None:
-            return recusa
-        return self._chamar(caminho, interface, metodo, assinatura, argumentos, espera)
+        """Chama um método do BlueZ — pela borda."""
+        return self._na_borda(
+            quem,
+            metodo,
+            caminho,
+            lambda: self._chamar(caminho, interface, metodo, assinatura, argumentos, espera),
+        )
 
     def escrever_propriedade(
         self,
@@ -600,23 +737,30 @@ class LeitorDoBluez:
         valor: Any,
         *,
         espera: float = ESPERA_DO_BUSCTL_S,
+        quem: str = QUEM_PADRAO,
     ) -> Escrita:
-        """Grava uma propriedade do BlueZ. A mesma borda de :meth:`chamar`."""
-        recusa = self._recusa()
-        if recusa is not None:
-            return recusa
-        return self._escrever(caminho, interface, nome, assinatura, valor, espera)
+        """Grava uma propriedade do BlueZ — pela mesma borda de :meth:`chamar`."""
+        return self._na_borda(
+            quem,
+            nome,
+            caminho,
+            lambda: self._escrever(caminho, interface, nome, assinatura, valor, espera),
+        )
 
     # -- as leituras compostas -----------------------------------------------
 
     def endereco_do_adaptador(
-        self, caminho: str, *, espera: float | None = None
+        self,
+        caminho: str,
+        *,
+        espera: float | None = None,
+        kernel: Mapping[str, str] | None = None,
     ) -> str | None:
-        """O endereço deste adaptador: o do ioctl quando dá, o do D-Bus quando não."""
-        kernel = self._enderecos_do_kernel()
+        """O endereço deste adaptador: o do kernel quando dá, o do D-Bus quando não."""
+        do_kernel = self._enderecos_do_kernel() if kernel is None else kernel
         hci = _hci_de(caminho)
-        if kernel and hci in kernel:
-            return kernel[hci]
+        if do_kernel and hci in do_kernel:
+            return do_kernel[hci]
         return _mac(self.propriedade(caminho, ADAPTADOR, "Address", espera=espera))
 
     def adaptadores(self) -> tuple[AdaptadorDoBluez, ...] | None:
@@ -624,13 +768,14 @@ class LeitorDoBluez:
         caminhos = self.caminhos()
         if caminhos is None:
             return None
+        kernel = self._enderecos_do_kernel() or {}
         lugares = self._lugares()
         achados: list[AdaptadorDoBluez] = []
         for caminho in caminhos:
             hci = _hci_de(caminho)
             if not hci:
                 continue
-            endereco = self.endereco_do_adaptador(caminho)
+            endereco = self.endereco_do_adaptador(caminho, kernel=kernel)
             if endereco is None:
                 continue
             achados.append(
@@ -641,29 +786,25 @@ class LeitorDoBluez:
                     alias=str(self.propriedade(caminho, ADAPTADOR, "Alias") or ""),
                     nome=str(self.propriedade(caminho, ADAPTADOR, "Name") or ""),
                     ligado=como_booleano(self.propriedade(caminho, ADAPTADOR, "Powered")),
-                    varrendo=como_booleano(
-                        self.propriedade(caminho, ADAPTADOR, "Discovering")
-                    ),
+                    varrendo=como_booleano(self.propriedade(caminho, ADAPTADOR, "Discovering")),
                     lugar=lugares.get(hci, ""),
                 )
             )
         return tuple(achados)
 
-    def aparelhos(self) -> tuple[AparelhoDoBluez, ...] | None:
-        """Os aparelhos de todos os adaptadores. ``None`` = não deu para perguntar."""
+    def aparelhos(self, *, adaptador: str | None = None) -> tuple[AparelhoDoBluez, ...] | None:
+        """Os aparelhos — de todos os adaptadores, ou só do CAMINHO ``adaptador``."""
         caminhos = self.caminhos()
         if caminhos is None:
             return None
         achados: list[AparelhoDoBluez] = []
         for caminho in caminhos:
             forma = _CAMINHO_DE_APARELHO.match(caminho)
-            if forma is None:
+            if forma is None or (adaptador is not None and forma.group(1) != adaptador):
                 continue
-            endereco = _mac(forma.group(2).replace("_", ":"))
+            endereco = _endereco_do_no(caminho)
             if endereco is None:
                 continue
-            rssi = self.propriedade(caminho, APARELHO, "RSSI")
-            classe = self.propriedade(caminho, APARELHO, "Class")
             achados.append(
                 AparelhoDoBluez(
                     caminho=caminho,
@@ -674,10 +815,8 @@ class LeitorDoBluez:
                     pareado=como_booleano(self.propriedade(caminho, APARELHO, "Paired")),
                     vinculado=como_booleano(self.propriedade(caminho, APARELHO, "Bonded")),
                     confiavel=como_booleano(self.propriedade(caminho, APARELHO, "Trusted")),
-                    rssi=rssi if isinstance(rssi, int) and not isinstance(rssi, bool) else None,
-                    classe=classe
-                    if isinstance(classe, int) and not isinstance(classe, bool)
-                    else None,
+                    rssi=_inteiro(self.propriedade(caminho, APARELHO, "RSSI")),
+                    classe=_inteiro(self.propriedade(caminho, APARELHO, "Class")),
                     modalias=str(self.propriedade(caminho, APARELHO, "Modalias") or ""),
                 )
             )
@@ -688,15 +827,14 @@ class LeitorDoBluez:
         alvo = _mac(endereco)
         if alvo is None:
             return None
+        kernel = self._enderecos_do_kernel() or {}
         for caminho in self.caminhos() or ():
-            if _hci_de(caminho) and self.endereco_do_adaptador(caminho) == alvo:
+            if _hci_de(caminho) and self.endereco_do_adaptador(caminho, kernel=kernel) == alvo:
                 return caminho
         return None
 
-    def caminho_do_aparelho(
-        self, endereco: str, *, adaptador: str | None = None
-    ) -> str | None:
-        """O caminho deste aparelho — em QUALQUER adaptador, ou no ``adaptador`` dado.
+    def caminho_do_aparelho(self, endereco: str, *, adaptador: str | None = None) -> str | None:
+        """O caminho deste aparelho — em QUALQUER adaptador, ou no de endereço ``adaptador``.
 
         Casa pelo endereço, que é o que não muda; o ``hciN`` é sorteio de
         enumeração. Sem ``adaptador``, o primeiro achado na ordem da árvore.
@@ -710,10 +848,9 @@ class LeitorDoBluez:
         pai = self.caminho_do_adaptador(adaptador) if adaptador is not None else None
         if adaptador is not None and pai is None:
             return None
-        no = _no_de_aparelho(alvo)
         for caminho in caminhos:
             forma = _CAMINHO_DE_APARELHO.match(caminho)
-            if forma is None or not caminho.endswith("/" + no):
+            if forma is None or _endereco_do_no(caminho) != alvo:
                 continue
             if pai is None or forma.group(1) == pai:
                 return caminho
@@ -721,94 +858,110 @@ class LeitorDoBluez:
 
     # -- as escritas nomeadas ------------------------------------------------
 
-    def escrever_alias(self, caminho_do_adaptador: str, texto: str) -> Escrita:
+    def escrever_alias(
+        self, caminho_do_adaptador: str, texto: str, *, quem: str = QUEM_PADRAO
+    ) -> Escrita:
         """O ``Alias`` do adaptador. Sem privilégio: medido como uid 1000 em 22/08."""
-        return self.escrever_propriedade(caminho_do_adaptador, ADAPTADOR, "Alias", "s", texto)
+        return self.escrever_propriedade(
+            caminho_do_adaptador, ADAPTADOR, "Alias", "s", texto, quem=quem
+        )
 
-    def conectar(self, caminho: str, *, espera: float = ESPERA_DO_CONNECT_S) -> Escrita:
+    def conectar(
+        self, caminho: str, *, espera: float = ESPERA_DO_CONNECT_S, quem: str = QUEM_PADRAO
+    ) -> Escrita:
         """``Connect`` — chama o aparelho, e ele pode estar dormindo."""
-        return self.chamar(caminho, APARELHO, "Connect", espera=espera)
+        return self.chamar(caminho, APARELHO, "Connect", espera=espera, quem=quem)
 
-    def desconectar(self, caminho: str) -> Escrita:
+    def desconectar(self, caminho: str, *, quem: str = QUEM_PADRAO) -> Escrita:
         """``Disconnect`` — derruba a conexão; o bond fica."""
-        return self.chamar(caminho, APARELHO, "Disconnect")
+        return self.chamar(caminho, APARELHO, "Disconnect", quem=quem)
 
-    def remover_aparelho(self, caminho_do_aparelho: str) -> Escrita:
-        """``RemoveDevice`` no adaptador pai — esquece o bond NESTE adaptador só."""
+    def remover_aparelho(self, caminho_do_aparelho: str, *, quem: str = QUEM_PADRAO) -> Escrita:
+        """``RemoveDevice`` no adaptador pai — esquece o bond NESTE adaptador só.
+
+        O resto em disco (a pasta do bond com o dongle fora, o cache SDP) e a
+        lápide são da ponte root (``esquecer``): o D-Bus não alcança o disco.
+        """
         forma = _CAMINHO_DE_APARELHO.match(caminho_do_aparelho)
         if forma is None:
             return Escrita(False, SEM_BARRAMENTO, "isto não é caminho de aparelho")
         return self.chamar(
-            forma.group(1), ADAPTADOR, "RemoveDevice", "o", (caminho_do_aparelho,)
+            forma.group(1), ADAPTADOR, "RemoveDevice", "o", (caminho_do_aparelho,), quem=quem
         )
 
-    def confiar(self, caminho: str, sim: bool = True) -> Escrita:
+    def confiar(self, caminho: str, sim: bool = True, *, quem: str = QUEM_PADRAO) -> Escrita:
         """``Trusted`` — o aparelho reconecta sem pedir licença ao agente."""
-        return self.escrever_propriedade(caminho, APARELHO, "Trusted", "b", bool(sim))
+        return self.escrever_propriedade(caminho, APARELHO, "Trusted", "b", bool(sim), quem=quem)
 
-    def parear(self, caminho: str, *, espera: float = ESPERA_DO_PAIR_S) -> Escrita:
-        """``Pair`` e, se deu, ``Trusted``. Aqui sem agente próprio: o BlueZ usa o padrão."""
-        escrita = self.chamar(caminho, APARELHO, "Pair", espera=espera)
-        if escrita.feita:
-            self.confiar(caminho)
+    def parear(
+        self, caminho: str, *, espera: float = ESPERA_DO_PAIR_S, quem: str = QUEM_PADRAO
+    ) -> Escrita:
+        """``Pair`` e, se deu, ``Trusted`` — os dois na mesma trava.
+
+        Por aqui, sem conexão viva, não há agente próprio: quem atende é o
+        padrão (o ``hefesto-bt-agent``, o piso). :class:`DonoVivo` troca isto
+        pelo agente nosso (R5).
+        """
+        from hefesto_dualsense4unix.integrations.diario_do_radio import TravaOcupadaError
+
+        recusa = self._recusa()
+        if recusa is not None:
+            return recusa
+        try:
+            with na_trava(quem):
+                escrita = self.chamar(caminho, APARELHO, "Pair", espera=espera, quem=quem)
+                if escrita.feita:
+                    self.confiar(caminho, quem=quem)
+        except TravaOcupadaError as ocupada:
+            return Escrita(False, TRAVA_OCUPADA, str(ocupada))
         return escrita
 
-    def comecar_busca(self, caminho_do_adaptador: str) -> Escrita:
-        """``StartDiscovery`` — só vale na conexão viva: a busca é POR CLIENTE."""
+    def comecar_busca(self, caminho_do_adaptador: str, *, quem: str = QUEM_PADRAO) -> Escrita:
+        """``StartDiscovery`` — só vale numa conexão que fica: a busca é POR CLIENTE."""
         return Escrita(False, SEM_BARRAMENTO, "a busca só vale numa conexão que fica")
 
-    def parar_busca(self, caminho_do_adaptador: str) -> Escrita:
+    def parar_busca(self, caminho_do_adaptador: str, *, quem: str = QUEM_PADRAO) -> Escrita:
         """``StopDiscovery`` do NOSSO cliente — a busca alheia não se para de fora."""
         return Escrita(False, SEM_BARRAMENTO, "a busca só vale numa conexão que fica")
 
     # -- o lugar (D3) ---------------------------------------------------------
 
-    def conferir_os_lugares(
-        self, *, memoria: Path | None = None
-    ) -> tuple[MudancaDeLugar, ...]:
+    def conferir_os_lugares(self, *, memoria: Path | None = None) -> tuple[MudancaDeLugar, ...]:
         """Compara o lugar de cada adaptador com o da última vez, e guarda o de agora.
 
         Trocar o dongle de porta é PERCEBIDO e dito: cada mudança vai ao diário
-        com a frase dela; a tela lê o que esta função devolve. A memória é nossa
-        (``~/.local/state``), nunca do BlueZ nem do ``maquina.json`` dela.
+        comum com a frase (:attr:`MudancaDeLugar.frase`), que é de onde a tela a
+        lê. A memória é nossa (``~/.local/state``), nunca do BlueZ nem do
+        ``maquina.json`` dela. Nunca levanta.
         """
         adaptadores = self.adaptadores()
-        if not adaptadores:
-            return ()
-        agora = {a.lugar: a.endereco for a in adaptadores if a.lugar}
+        agora = {a.lugar: a.endereco for a in adaptadores or () if a.lugar}
         if not agora:
             return ()
-        arquivo = memoria if memoria is not None else _memoria_dos_lugares()
         try:
-            antes_bruto = json.loads(arquivo.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            antes_bruto = {}
-        antes = {
-            str(lugar): str(endereco)
-            for lugar, endereco in (antes_bruto.items() if isinstance(antes_bruto, dict) else ())
-        }
-        mudancas = perceber_as_mudancas(antes, agora)
-        guardado = dict(antes)
-        for mudanca in mudancas:
-            if mudanca.lugar_antigo and guardado.get(mudanca.lugar_antigo) == mudanca.endereco:
-                del guardado[mudanca.lugar_antigo]
-        guardado.update(agora)
-        with contextlib.suppress(OSError):
-            arquivo.parent.mkdir(parents=True, exist_ok=True)
-            temporario = arquivo.with_suffix(".tmp")
-            temporario.write_text(
-                json.dumps(guardado, ensure_ascii=False, indent=1, sort_keys=True),
-                encoding="utf-8",
+            mudancas = _guardar_e_comparar(
+                memoria if memoria is not None else _memoria_dos_lugares(), agora
             )
-            temporario.replace(arquivo)
+        except OSError:
+            _registrar("bluez_lugares_sem_memoria", nivel="warning")
+            return ()
         for mudanca in mudancas:
-            _registrar(
-                "bluez_adaptador_mudou_de_lugar",
-                tipo=mudanca.tipo,
-                lugar=mudanca.lugar,
-                lugar_antigo=mudanca.lugar_antigo,
-                endereco=_mascara(mudanca.endereco),
-            )
+            try:
+                from hefesto_dualsense4unix.integrations import diario_do_radio
+
+                diario_do_radio.registrar(
+                    QUEM_PADRAO,
+                    MUDOU_DE_LUGAR,
+                    mudanca.tipo,
+                    antes={"lugar": mudanca.lugar_antigo or None,
+                           "endereco": mudanca.endereco_antigo or None},
+                    depois={"lugar": mudanca.lugar, "endereco": mudanca.endereco},
+                    adaptador=mudanca.endereco,
+                    porta=mudanca.lugar,
+                    frase=mudanca.frase,
+                )
+            except Exception:
+                _registrar("bluez_lugar_sem_diario", nivel="warning")
         return mudancas
 
 
@@ -881,9 +1034,8 @@ class PeloBusctl(LeitorDoBluez):
     def propriedade(
         self, caminho: str, interface: str, nome: str, *, espera: float | None = None
     ) -> Any | None:
-        return desembrulhar(
-            self._rodar(["get-property", SERVICO, caminho, interface, nome], espera)
-        )
+        bruto = self._rodar(["get-property", SERVICO, caminho, interface, nome], espera)
+        return desembrulhar(bruto)
 
     def _chamar(
         self,
@@ -903,16 +1055,11 @@ class PeloBusctl(LeitorDoBluez):
         return Escrita(True, resposta=bruto)
 
     def _escrever(
-        self,
-        caminho: str,
-        interface: str,
-        nome: str,
-        assinatura: str,
-        valor: Any,
-        espera: float,
+        self, caminho: str, interface: str, nome: str, assinatura: str, valor: Any, espera: float
     ) -> Escrita:
         bruto = self._rodar(
-            ["set-property", SERVICO, caminho, interface, nome, assinatura, _texto_do_busctl(valor)],
+            ["set-property", SERVICO, caminho, interface, nome, assinatura,
+             _texto_do_busctl(valor)],
             espera,
         )
         if bruto is None:
@@ -920,7 +1067,7 @@ class PeloBusctl(LeitorDoBluez):
         return Escrita(True, resposta=bruto)
 
     def _enderecos_do_kernel(self) -> Mapping[str, str] | None:
-        return enderecos_pelo_ioctl() if self._executar is None else None
+        return enderecos_pelo_kernel() if self._executar is None else None
 
     def _lugares(self) -> Mapping[str, str]:
         return lugares_dos_adaptadores() if self._executar is None else {}
@@ -996,14 +1143,7 @@ class Barramento(Protocol):
     ) -> Escrita: ...
 
     def escrever(
-        self,
-        caminho: str,
-        interface: str,
-        nome: str,
-        assinatura: str,
-        valor: Any,
-        *,
-        espera: float,
+        self, caminho: str, interface: str, nome: str, assinatura: str, valor: Any, *, espera: float
     ) -> Escrita: ...
 
     def exportar(
@@ -1020,9 +1160,9 @@ class BarramentoGio:
 
     Conexão própria porque o agente (R5) se registra pelo nome único dela, e o
     BlueZ atende o ``Pair`` pelo agente do MESMO remetente (``agent_get(sender)``,
-    ``src/agent.c``). Fio próprio porque sinal e objeto exportado são entregues
-    no contexto do fio que os assinou: um ``GLib.MainLoop`` num contexto privado
-    não disputa nada com o laço do GTK nem com o asyncio do daemon.
+    ``src/device.c:3374`` do 5.86). Fio próprio porque sinal e objeto exportado
+    são entregues no contexto do fio que os assinou: um ``GLib.MainLoop`` num
+    contexto privado não disputa nada com o laço do GTK nem com o asyncio.
 
     ``endereco`` ``None`` é o barramento de sistema; a suíte passa o endereço de
     um ``dbus-daemon`` particular.
@@ -1063,9 +1203,7 @@ class BarramentoGio:
         gio = self._gio
         self._contexto.push_thread_default()
         try:
-            endereco = self._endereco or gio.dbus_address_get_for_bus_sync(
-                gio.BusType.SYSTEM, None
-            )
+            endereco = self._endereco or gio.dbus_address_get_for_bus_sync(gio.BusType.SYSTEM, None)
             conexao = gio.DBusConnection.new_for_address_sync(
                 endereco,
                 gio.DBusConnectionFlags.AUTHENTICATION_CLIENT
@@ -1086,8 +1224,8 @@ class BarramentoGio:
         finally:
             self._contexto.pop_thread_default()
 
-    def _no_fio(self, funcao: Callable[[], Any], *, espera: float = 2.0) -> Any:
-        """Roda ``funcao`` no fio do barramento e devolve o resultado."""
+    def _no_fio(self, funcao: Callable[[], Any], *, espera: float = 5.0) -> Any:
+        """Roda ``funcao`` no fio do barramento e devolve o resultado (``None`` no prazo)."""
         if threading.current_thread() is self._fio:
             return funcao()
         caixa: dict[str, Any] = {}
@@ -1118,7 +1256,7 @@ class BarramentoGio:
         )
 
     def nome_unico(self) -> str:
-        return self._conexao.get_unique_name() if self._conexao is not None else ""
+        return str(self._conexao.get_unique_name() or "") if self._conexao is not None else ""
 
     def dono_do_nome(self, nome: str) -> str:
         escrita = self.chamar(
@@ -1135,15 +1273,12 @@ class BarramentoGio:
         return str(escrita.resposta[0])
 
     def objetos(self, *, espera: float) -> dict[str, dict[str, dict[str, Any]]] | None:
-        escrita = self.chamar(
-            SERVICO, "/", OBJETOS, "GetManagedObjects", "", (), espera=espera
-        )
+        escrita = self.chamar(SERVICO, "/", OBJETOS, "GetManagedObjects", "", (), espera=espera)
         if not escrita.feita or not escrita.resposta:
             return None
-        bruto = escrita.resposta[0]
         return {
             str(caminho): {str(i): dict(p) for i, p in interfaces.items()}
-            for caminho, interfaces in bruto.items()
+            for caminho, interfaces in escrita.resposta[0].items()
         }
 
     def assinar(self, ao_sinal: Callable[[Sinal], None]) -> bool:
@@ -1153,7 +1288,7 @@ class BarramentoGio:
             _conexao: Any,
             _remetente: str,
             caminho: str,
-            interface: str,
+            _interface: str,
             nome: str,
             parametros: Any,
             *_dados: Any,
@@ -1163,9 +1298,8 @@ class BarramentoGio:
                 if nome == "InterfacesAdded":
                     ao_sinal(Sinal("entrou", caminho=valores[0], propriedades=valores[1]))
                 elif nome == "InterfacesRemoved":
-                    ao_sinal(
-                        Sinal("saiu", caminho=valores[0], interfaces_que_sairam=tuple(valores[1]))
-                    )
+                    saiu = tuple(valores[1])
+                    ao_sinal(Sinal("saiu", caminho=valores[0], interfaces_que_sairam=saiu))
                 elif nome == "PropertiesChanged":
                     ao_sinal(
                         Sinal(
@@ -1179,17 +1313,15 @@ class BarramentoGio:
                 elif nome == "NameOwnerChanged" and valores[0] == SERVICO:
                     ao_sinal(Sinal("dono", dono_novo=valores[2]))
             except Exception:
-                return
+                _registrar("bluez_sinal_nao_entendido", nivel="warning")
 
         def assinar_no_fio() -> bool:
             conexao = self._conexao
             nenhum = gio.DBusSignalFlags.NONE
             self._assinaturas = [
-                conexao.signal_subscribe(
-                    SERVICO, OBJETOS, "InterfacesAdded", None, None, nenhum, chegou
-                ),
-                conexao.signal_subscribe(
-                    SERVICO, OBJETOS, "InterfacesRemoved", None, None, nenhum, chegou
+                *(
+                    conexao.signal_subscribe(SERVICO, OBJETOS, sinal, None, None, nenhum, chegou)
+                    for sinal in ("InterfacesAdded", "InterfacesRemoved")
                 ),
                 conexao.signal_subscribe(
                     SERVICO,
@@ -1229,9 +1361,7 @@ class BarramentoGio:
         if conexao is None:
             return Escrita(False, SEM_BARRAMENTO, self.erro)
         glib, gio = self._glib, self._gio
-        parametros = (
-            glib.Variant(f"({assinatura})", tuple(argumentos)) if assinatura else None
-        )
+        parametros = glib.Variant(f"({assinatura})", tuple(argumentos)) if assinatura else None
         try:
             resposta = conexao.call_sync(
                 destino,
@@ -1245,8 +1375,7 @@ class BarramentoGio:
                 None,
             )
         except glib.Error as problema:
-            nome = gio.DBusError.get_remote_error(problema) or ""
-            return Escrita(False, nome, problema.message)
+            return Escrita(False, gio.DBusError.get_remote_error(problema) or "", problema.message)
         except Exception as problema:
             return Escrita(False, SEM_BARRAMENTO, str(problema))
         return Escrita(True, resposta=resposta.unpack() if resposta is not None else ())
@@ -1255,27 +1384,12 @@ class BarramentoGio:
         self, caminho: str, interface: str, nome: str, assinatura: str, valor: Any, *, espera: float
     ) -> Escrita:
         """``Properties.Set`` no ``org.bluez``, com o valor já no tipo do D-Bus."""
-        conexao = self._conexao
-        if conexao is None:
+        if self._conexao is None:
             return Escrita(False, SEM_BARRAMENTO, self.erro)
-        glib, gio = self._glib, self._gio
-        try:
-            conexao.call_sync(
-                SERVICO,
-                caminho,
-                PROPRIEDADES,
-                "Set",
-                glib.Variant("(ssv)", (interface, nome, glib.Variant(assinatura, valor))),
-                None,
-                gio.DBusCallFlags.NONE,
-                int(max(_MINIMO_POR_PERGUNTA, espera) * 1000),
-                None,
-            )
-        except glib.Error as problema:
-            return Escrita(False, gio.DBusError.get_remote_error(problema) or "", problema.message)
-        except Exception as problema:
-            return Escrita(False, SEM_BARRAMENTO, str(problema))
-        return Escrita(True)
+        variante = self._glib.Variant(assinatura, valor)
+        return self.chamar(
+            SERVICO, caminho, PROPRIEDADES, "Set", "ssv", (interface, nome, variante), espera=espera
+        )
 
     def exportar(
         self, caminho: str, xml: str, tratador: Callable[[str, str, tuple[Any, ...]], Any]
@@ -1348,17 +1462,31 @@ class BarramentoGio:
 class DonoVivo(LeitorDoBluez):
     """O dono de verdade: a foto do ``ObjectManager``, mantida pelos sinais.
 
-    Assina ANTES de tirar a primeira foto: um sinal que chegue no meio é
-    reaplicado depois dela, e reaplicar o mesmo valor não muda nada.
+    Assina ANTES de tirar a foto, e os sinais que chegam DURANTE a foto ficam
+    numa fila e são reaplicados, na ordem, por cima dela: reaplicar um valor
+    que a foto já trazia não muda nada, e o que mudou depois dela não se perde.
+
+    ``kernel`` e ``lugares`` são injetáveis para a régua; no sistema, o
+    ``HCIGETDEVINFO`` e o sysfs.
     """
 
     atende_o_proprio_pareamento = True
 
-    def __init__(self, barramento: Barramento) -> None:
+    def __init__(
+        self,
+        barramento: Barramento,
+        *,
+        kernel: Callable[[], Mapping[str, str] | None] | None = None,
+        lugares: Callable[[], Mapping[str, str]] | None = None,
+    ) -> None:
         self._barramento = barramento
         self.toca_o_sistema = bool(getattr(barramento, "e_do_sistema", False))
+        self._kernel = kernel
+        self._lugares_de = lugares
         self._tranca = threading.Lock()
+        self._tranca_da_foto = threading.Lock()
         self._objetos: dict[str, dict[str, dict[str, Any]]] = {}
+        self._fila: list[Sinal] | None = None
         self._bluez_de_pe = False
         self._dono_do_bluez = ""
         self._agente: Any = None
@@ -1373,6 +1501,8 @@ class DonoVivo(LeitorDoBluez):
         if not self._barramento.assinar(self._ao_sinal):
             return False
         self._fotografar()
+        if self.toca_o_sistema:
+            self._em_segundo_plano(self.conferir_os_lugares)
         return True
 
     def fechar(self) -> None:
@@ -1383,48 +1513,75 @@ class DonoVivo(LeitorDoBluez):
             agente.desregistrar()
         self._barramento.fechar()
 
+    @staticmethod
+    def _em_segundo_plano(funcao: Callable[[], Any]) -> None:
+        """Trabalho que o fio do barramento não pode fazer: ele entrega os sinais."""
+
+        def rodar() -> None:
+            try:
+                funcao()
+            except Exception:
+                _registrar("bluez_trabalho_de_fundo_falhou", nivel="warning")
+
+        threading.Thread(target=rodar, name="hefesto-bluez-fundo", daemon=True).start()
+
     def _fotografar(self) -> None:
-        foto = self._barramento.objetos(espera=ESPERA_DA_FOTO_S)
-        dono = self._barramento.dono_do_nome(SERVICO)
-        with self._tranca:
-            self._objetos = foto or {}
-            self._bluez_de_pe = foto is not None
-            self._dono_do_bluez = dono
+        with self._tranca_da_foto:
+            with self._tranca:
+                self._fila = []
+            foto = self._barramento.objetos(espera=ESPERA_DA_FOTO_S)
+            dono = self._barramento.dono_do_nome(SERVICO) if foto is not None else ""
+            with self._tranca:
+                self._objetos = foto or {}
+                self._bluez_de_pe = foto is not None
+                self._dono_do_bluez = dono
+                fila, self._fila = self._fila or [], None
+                for sinal in fila:
+                    self._aplicar(sinal)
 
     def _ao_sinal(self, sinal: Sinal) -> None:
         if sinal.tipo == "dono":
-            if not sinal.dono_novo:
-                with self._tranca:
-                    self._objetos = {}
-                    self._bluez_de_pe = False
-                    self._dono_do_bluez = ""
-                with self._tranca_do_agente:
-                    if self._agente is not None:
-                        self._agente.invalidar()
-                _registrar("bluez_saiu_do_barramento", nivel="warning")
-            else:
-                self._fotografar()
+            if sinal.dono_novo:
                 _registrar("bluez_voltou_ao_barramento")
+                self._em_segundo_plano(self._fotografar)
+                return
+            with self._tranca:
+                self._objetos = {}
+                self._bluez_de_pe = False
+                self._dono_do_bluez = ""
+            with self._tranca_do_agente:
+                if self._agente is not None:
+                    self._agente.invalidar()
+            _registrar("bluez_saiu_do_barramento", nivel="warning")
             return
         with self._tranca:
-            if sinal.tipo == "entrou":
-                objeto = self._objetos.setdefault(sinal.caminho, {})
-                for interface, propriedades in (sinal.propriedades or {}).items():
-                    objeto[interface] = dict(propriedades)
-            elif sinal.tipo == "saiu":
-                objeto = self._objetos.get(sinal.caminho)
-                if objeto is not None:
-                    for interface in sinal.interfaces_que_sairam:
-                        objeto.pop(interface, None)
-                    if not objeto:
-                        del self._objetos[sinal.caminho]
-            elif sinal.tipo == "mudou":
-                propriedades = self._objetos.setdefault(sinal.caminho, {}).setdefault(
-                    sinal.interface, {}
-                )
-                propriedades.update(sinal.mudadas or {})
-                for nome in sinal.invalidadas:
-                    propriedades.pop(nome, None)
+            if self._fila is not None:
+                self._fila.append(sinal)
+                return
+            self._aplicar(sinal)
+        adaptador_novo = sinal.tipo == "entrou" and ADAPTADOR in (sinal.propriedades or {})
+        if self.toca_o_sistema and adaptador_novo:
+            self._em_segundo_plano(self.conferir_os_lugares)
+
+    def _aplicar(self, sinal: Sinal) -> None:
+        """Um sinal na foto. Chamado com :attr:`_tranca` na mão."""
+        if sinal.tipo == "entrou":
+            objeto = self._objetos.setdefault(sinal.caminho, {})
+            for interface, propriedades in (sinal.propriedades or {}).items():
+                objeto[interface] = dict(propriedades)
+        elif sinal.tipo == "saiu":
+            restante = self._objetos.get(sinal.caminho)
+            if restante is not None:
+                for interface in sinal.interfaces_que_sairam:
+                    restante.pop(interface, None)
+                if not restante:
+                    del self._objetos[sinal.caminho]
+        elif sinal.tipo == "mudou":
+            objeto = self._objetos.setdefault(sinal.caminho, {})
+            propriedades = objeto.setdefault(sinal.interface, {})
+            propriedades.update(sinal.mudadas or {})
+            for nome in sinal.invalidadas:
+                propriedades.pop(nome, None)
 
     # -- leitura: a foto ------------------------------------------------------
 
@@ -1449,9 +1606,13 @@ class DonoVivo(LeitorDoBluez):
             return self._dono_do_bluez
 
     def _enderecos_do_kernel(self) -> Mapping[str, str] | None:
-        return enderecos_pelo_ioctl() if self.toca_o_sistema else None
+        if self._kernel is not None:
+            return self._kernel()
+        return enderecos_pelo_kernel() if self.toca_o_sistema else None
 
     def _lugares(self) -> Mapping[str, str]:
+        if self._lugares_de is not None:
+            return self._lugares_de()
         return lugares_dos_adaptadores() if self.toca_o_sistema else {}
 
     # -- escrita: a conexão ---------------------------------------------------
@@ -1470,52 +1631,51 @@ class DonoVivo(LeitorDoBluez):
         )
 
     def _escrever(
-        self,
-        caminho: str,
-        interface: str,
-        nome: str,
-        assinatura: str,
-        valor: Any,
-        espera: float,
+        self, caminho: str, interface: str, nome: str, assinatura: str, valor: Any, espera: float
     ) -> Escrita:
-        return self._barramento.escrever(
-            caminho, interface, nome, assinatura, valor, espera=espera
-        )
+        return self._barramento.escrever(caminho, interface, nome, assinatura, valor, espera=espera)
 
-    def comecar_busca(self, caminho_do_adaptador: str) -> Escrita:
+    def comecar_busca(self, caminho_do_adaptador: str, *, quem: str = QUEM_PADRAO) -> Escrita:
         """``StartDiscovery`` pela NOSSA conexão — a busca vive enquanto ela viver."""
-        return self.chamar(caminho_do_adaptador, ADAPTADOR, "StartDiscovery")
+        return self.chamar(caminho_do_adaptador, ADAPTADOR, "StartDiscovery", quem=quem)
 
-    def parar_busca(self, caminho_do_adaptador: str) -> Escrita:
+    def parar_busca(self, caminho_do_adaptador: str, *, quem: str = QUEM_PADRAO) -> Escrita:
         """``StopDiscovery`` — só a busca que NÓS abrimos; a alheia recusa por si."""
-        return self.chamar(caminho_do_adaptador, ADAPTADOR, "StopDiscovery")
+        return self.chamar(caminho_do_adaptador, ADAPTADOR, "StopDiscovery", quem=quem)
 
-    def parear(self, caminho: str, *, espera: float = ESPERA_DO_PAIR_S) -> Escrita:
+    def parear(
+        self, caminho: str, *, espera: float = ESPERA_DO_PAIR_S, quem: str = QUEM_PADRAO
+    ) -> Escrita:
         """``Pair`` atendido pelo NOSSO agente (R5), e ``Trusted`` se deu.
 
         O BlueZ 5.86 escolhe o agente do pareamento por ``agent_get(sender)``
-        (``src/device.c``, ``pair_device``): quem chama ``Pair`` com agente
+        (``src/device.c:3374``, ``pair_device``), e a autenticação do bond usa
+        esse mesmo agente (``device.c:7599``): quem chama ``Pair`` com agente
         registrado é atendido pelo PRÓPRIO agente, seja quem for o padrão. Por
         isso o agente mora nesta conexão e o ``Pair`` sai por ela. Nunca
         ``RequestDefaultAgent``: o ``hefesto-bt-agent`` continua o padrão, de
-        piso, para o que chega sozinho.
+        piso, para o que chega sozinho — e a capacidade dos adaptadores só muda
+        com o padrão (``adapter.c:9400``), então ela não muda.
         """
+        from hefesto_dualsense4unix.integrations.diario_do_radio import TravaOcupadaError
+
         recusa = self._recusa()
         if recusa is not None:
             return recusa
         agente = self._agente_pronto()
         if agente is None:
             return Escrita(False, SEM_AGENTE, "o agente próprio não se registrou")
-        with agente.esperando(caminho):
-            escrita = self.chamar(caminho, APARELHO, "Pair", espera=espera)
-        if escrita.feita:
-            self.confiar(caminho)
+        try:
+            with na_trava(quem), agente.esperando(caminho):
+                escrita = self.chamar(caminho, APARELHO, "Pair", espera=espera, quem=quem)
+                if escrita.feita:
+                    self.confiar(caminho, quem=quem)
+        except TravaOcupadaError as ocupada:
+            return Escrita(False, TRAVA_OCUPADA, str(ocupada))
         return escrita
 
     def _agente_pronto(self) -> Any:
-        from hefesto_dualsense4unix.integrations.agente_de_pareamento import (
-            AgenteDePareamento,
-        )
+        from hefesto_dualsense4unix.integrations.agente_de_pareamento import AgenteDePareamento
 
         with self._tranca_do_agente:
             if self._agente is None:
@@ -1551,6 +1711,7 @@ def dono() -> LeitorDoBluez:
 
     Sob a suíte NUNCA nasce o vivo do sistema: a suíte lê pelo ``busctl`` do
     ``PATH`` (que a régua troca por um de mentira) e a borda recusa a escrita.
+    Uma régua que precisa de outro dono o põe em ``_DONO``.
     """
     global _DONO, _GIO_FALHOU_EM
     with _TRANCA_DO_DONO:
@@ -1575,10 +1736,10 @@ __all__ = [
     "AGENTE",
     "APARELHO",
     "CICLO",
-    "ERRO_ACESSO_NEGADO",
     "ERRO_CANCELADO",
     "ERRO_JA_EXISTE",
     "ERRO_REJEITADO",
+    "ESCREVEU_NO_BLUEZ",
     "ESCRITAS",
     "ESPERA_DO_BUSCTL_S",
     "ESPERA_DO_CONNECT_S",
@@ -1586,11 +1747,16 @@ __all__ = [
     "FERRAMENTA",
     "GERENTE_DE_AGENTES",
     "LEITURAS",
+    "METODOS_SEM_TRAVA",
+    "MUDOU_DE_LUGAR",
+    "QUEM_PADRAO",
     "RADIO_DE_VERDADE_NA_SUITE",
+    "RAIZ_DO_BLUEZ",
     "RECUSA_DA_SUITE",
     "SEM_AGENTE",
     "SEM_BARRAMENTO",
     "SERVICO",
+    "TRAVA_OCUPADA",
     "AdaptadorDoBluez",
     "AparelhoDoBluez",
     "Barramento",
@@ -1607,9 +1773,10 @@ __all__ = [
     "como_booleano",
     "desembrulhar",
     "dono",
-    "enderecos_pelo_ioctl",
+    "enderecos_pelo_kernel",
     "lugar_de",
     "lugares_dos_adaptadores",
+    "na_trava",
     "pela_linha_de_comando",
     "pelo_executor",
     "perceber_as_mudancas",
