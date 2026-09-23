@@ -2266,7 +2266,7 @@ def _nome_da_entrada(caminho: str, mapa: MapaDaMesa | None) -> str | None:
         from hefesto_dualsense4unix.integrations.entrada_a_entrada import nome_da_porta
 
         documento = carregar_maquina().model_copy(update={"mapa": mapa})
-        return nome_da_porta(caminho, maquina=documento)
+        return nome_da_porta(caminho, maquina=documento, so_o_declarado=True)
     except Exception:  # o nome nunca derruba a coluna: sem ele, o texto de hoje
         logger.debug("secao_mesa_nome_da_entrada_ilegivel", caminho=caminho, exc_info=True)
         return None

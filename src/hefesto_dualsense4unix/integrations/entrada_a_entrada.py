@@ -121,6 +121,7 @@ from hefesto_dualsense4unix.integrations.lugar_declarado import (
     declarar_a_maquina,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.lugar import FORMA_DO_CAMINHO
 from hefesto_dualsense4unix.utils.maquina import (
     MapaDaMesa,
     MaquinaConfig,
@@ -1027,6 +1028,7 @@ def nome_da_porta(
     *,
     maquina: MaquinaConfig | None = None,
     controladores: Mapping[int, str] | None = None,
+    so_o_declarado: bool = False,
 ) -> str | None:
     """O nome da porta por QUALQUER das duas chaves da casa.
 
@@ -1035,12 +1037,27 @@ def nome_da_porta(
     escrevem). O caminho é traduzido pelo ``utils/lugar.lugar_do_caminho``
     com os barramentos DESTE boot; e, se o lugar não tem amarra, vale o número
     que o desenho de hoje dá a este caminho — o ``mapa`` não migrou.
+
+    SEM NOME E SEM NÚMERO, A PORTA SE CHAMA COMO O DESENHO APROVADO MOSTRA —
+    «Entrada 4.1.4», o ``devpath`` (TRANSPLANTE-DA-SECAO-01, item 4 de quem
+    coordena). Com o mapa dela vazio, a frase da recusa caía para «Este
+    adaptador já tem…» e a seção nova não tinha como dizer ONDE. ``None`` fica
+    para o que não é porta: chave vazia, fora das duas formas, ou o lugar do
+    adaptador embutido, que não pendura em entrada nenhuma.
+
+    ``so_o_declarado=True`` devolve ``None`` em vez do ``devpath``: é para quem
+    tem um texto próprio e mais rico para a porta sem nome — a coluna «Onde
+    está» da ``secao_mesa`` diz «Barramento 3, porta 1.2 · Direita».
     """
     if not chave:
         return None
     documento = maquina if maquina is not None else carregar_maquina()
-    if partes_do_lugar(chave) is not None:
-        return nome_do_lugar(chave, maquina=documento, controladores=controladores)
+    partes = partes_do_lugar(chave)
+    if partes is not None:
+        nome = nome_do_lugar(chave, maquina=documento, controladores=controladores)
+        if nome or so_o_declarado:
+            return nome
+        return _entrada_pelo_devpath(partes[1])
     barramentos = (
         controladores if controladores is not None else _controladores_do_sistema()
     )
@@ -1050,7 +1067,16 @@ def nome_da_porta(
         if nome:
             return nome
     numero = _entrada_do_caminho(documento, chave, lugar, barramentos)
-    return None if numero is None else f"{PALAVRA_DA_ENTRADA} {numero}"
+    if numero is not None:
+        return f"{PALAVRA_DA_ENTRADA} {numero}"
+    if so_o_declarado or not FORMA_DO_CAMINHO.match(chave):
+        return None
+    return _entrada_pelo_devpath(chave.partition("-")[2])
+
+
+def _entrada_pelo_devpath(devpath: str) -> str | None:
+    """«Entrada 4.1.4» — o nome de quem ela ainda não nomeou nem numerou."""
+    return f"{PALAVRA_DA_ENTRADA} {devpath}" if devpath else None
 
 
 def nome_do_adaptador(

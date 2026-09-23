@@ -597,13 +597,14 @@ def test_o_nome_da_porta_pergunta_aos_donos(monkeypatch: pytest.MonkeyPatch) -> 
     """``nome_da_porta``: o ``hciN`` do kernel (a amostra), o caminho do
     ``mesa_de_radio`` e o NOME do dono do nome da porta (``entrada_a_entrada``).
 
-    REVISTA EM 23/09 PELA A-COSTURA-DA-ONDA-2-01 (item 6): esta régua cobrava
-    «Entrada 4.1.4» — o ``devpath`` — para a porta que ela não mapeou, e era o
-    governador compondo um segundo nome. Agora o nome é do dono; porta sem
-    nome é ``""``, e a frase diz «este adaptador».
-
-    MORDIDA: volte a compor ``f"Entrada {devpath}"`` no governador — a porta
-    que ela não mapeou ganha um nome inventado e esta régua reprova.
+    REVISTA EM 23/09 PELA A-COSTURA-DA-ONDA-2-01 (item 6): o nome é do dono, e
+    o governador não compõe um segundo. E REVISTA DE NOVO NO MESMO DIA PELA
+    TRANSPLANTE-DA-SECAO-01 (item 4 de quem coordena): a porta sem nome e sem
+    número se chama como o desenho aprovado mostra, «Entrada 4.1.4» — e quem
+    compõe é o DONO (``entrada_a_entrada.nome_da_porta``). O embutido, que
+    não pendura em entrada nenhuma, continua ``""``: a frase diz «este
+    adaptador». Quem compõe o nome fora do dono é o que a régua
+    ``_OS_QUE_PODEM`` da ``test_a_costura_da_onda_2`` reprova.
     """
     from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee
 
@@ -631,8 +632,8 @@ def test_o_nome_da_porta_pergunta_aos_donos(monkeypatch: pytest.MonkeyPatch) -> 
         ADAPTADOR_A: ar.ArDoAdaptador(hci=3, endereco=ADAPTADOR_A),
         ADAPTADOR_B: ar.ArDoAdaptador(hci=5, endereco=ADAPTADOR_B),
     }
-    assert gov.nome_da_porta(ADAPTADOR_A, amostra=amostra) == "", (
-        "a porta que ela não mapeou ganhou um nome inventado"
+    assert gov.nome_da_porta(ADAPTADOR_A, amostra=amostra) == "Entrada 4.1.4", (
+        "a porta que ela não mapeou não se chama como o desenho aprovado mostra"
     )
     assert gov.nome_da_porta(ADAPTADOR_B, amostra=amostra) == "", "o embutido ganhou entrada"
     assert gov.nome_da_porta("aa:bb:cc:00:00:ee", amostra=amostra) == ""
