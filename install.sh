@@ -3651,9 +3651,31 @@ else
     readonly STORM_USER_UNIT_DIR="${HOME}/.config/systemd/user"
     readonly STORM_UNIT_TARGET="${STORM_USER_UNIT_DIR}/hefesto-dualsense4unix-storm-watch.service"
 
+    # A MARCA DO BOOT (O-DIARIO-DO-RADIO-01, instalada em 23/09/2026). A
+    # primeira volta de cada boot relê o boot inteiro, e ela se reconhece pela
+    # marca `kernel-watch.boot` (`desde_do_journal`, no storm_watch.sh). Numa
+    # ATUALIZAÇÃO com a vigia já rodando neste boot, a volta que o restart
+    # abaixo abre seria "a primeira" para a vigia NOVA — que não tinha marca —
+    # e escreveria de novo no kernel.log tudo o que a velha já escreveu. Por
+    # isso a marca recebe o boot de agora ANTES do restart; o preço é não reler
+    # o arranque deste boot, que a vigia velha também não relia.
+    #
+    # E O RESTART É PRECISO: `enable --now` não troca o processo de uma unit
+    # que já está de pé, e a vigia velha seguiria rodando o script antigo até
+    # o próximo login — sem as tags novas do rádio.
+    readonly STORM_MARCA="${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix/kernel-watch.boot"
+    _storm_ativa=0
+    if command -v systemctl >/dev/null 2>&1 \
+            && systemctl --user is-active --quiet hefesto-dualsense4unix-storm-watch.service 2>/dev/null; then
+        _storm_ativa=1
+    fi
+
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
         _faria "instalar o vigia do kernel em ${STORM_SCRIPT_TARGET}"
         _faria "copiar ${STORM_UNIT_TARGET} e habilitá-lo (log em ${HOME}/.local/state/hefesto-dualsense4unix/kernel.log)"
+        if [[ "${_storm_ativa}" -eq 1 ]]; then
+            _faria "gravar o boot de agora em ${STORM_MARCA} e REINICIAR a vigia que já roda (sem reler o boot, para não duplicar o kernel.log)"
+        fi
     elif [[ ! -f "${STORM_SCRIPT_SRC}" || ! -f "${STORM_UNIT_SRC}" ]]; then
         warn "kernel-watch: arquivos-fonte ausentes — reinstale o repo"
     else
@@ -3662,7 +3684,19 @@ else
         cp -f "${STORM_UNIT_SRC}" "${STORM_UNIT_TARGET}"
         if command -v systemctl >/dev/null 2>&1; then
             systemctl --user daemon-reload >/dev/null 2>&1 || true
-            if systemctl --user enable --now hefesto-dualsense4unix-storm-watch.service >/dev/null 2>&1; then
+            if [[ "${_storm_ativa}" -eq 1 ]]; then
+                _storm_boot="$(cat /proc/sys/kernel/random/boot_id 2>/dev/null || true)"
+                if [[ -n "${_storm_boot}" ]]; then
+                    mkdir -p "$(dirname "${STORM_MARCA}")"
+                    printf '%s\n' "${_storm_boot}" > "${STORM_MARCA}"
+                fi
+                systemctl --user enable hefesto-dualsense4unix-storm-watch.service >/dev/null 2>&1 || true
+                if systemctl --user restart hefesto-dualsense4unix-storm-watch.service >/dev/null 2>&1; then
+                    printf '      reiniciado com o script novo — log em ~/.local/state/hefesto-dualsense4unix/kernel.log (compat: storm.log)\n'
+                else
+                    warn "restart falhou — reinicie: systemctl --user restart hefesto-dualsense4unix-storm-watch.service"
+                fi
+            elif systemctl --user enable --now hefesto-dualsense4unix-storm-watch.service >/dev/null 2>&1; then
                 printf '      habilitado — log em ~/.local/state/hefesto-dualsense4unix/kernel.log (compat: storm.log)\n'
             else
                 warn "enable falhou — habilite: systemctl --user enable --now hefesto-dualsense4unix-storm-watch.service"

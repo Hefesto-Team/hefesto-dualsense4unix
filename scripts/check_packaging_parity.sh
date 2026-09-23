@@ -859,6 +859,57 @@ else
     echo "[ OK ] vigia do Wi-Fi USB: assets/systemd/hefesto-wifi-usb-vigia.service ausente — nada a checar"
 fi
 
+# A TRAVA COMUM DO RÁDIO (O-DIARIO-DO-RADIO-01, instalada pela INSTALL-E-
+# UNINSTALL-DO-RADIO-01, 23/09/2026). Mesmo desenho da seção do vigia acima: o
+# destino é cobrado na linha que INSTALA (e o `tmpfiles --create` na que o
+# aplica), a remoção na linha que REMOVE, e o doctor por definição E chamada no
+# main. O caminho do pacote (`install-host-udev.sh`) fica de fora por decisão
+# escrita no `install_trava_do_radio_host`: sem motor root disputando o rádio,
+# a trava da sessão basta.
+echo "== a trava comum do rádio (install × uninstall × doctor) =="
+if [[ -f assets/tmpfiles.d/hefesto-dualsense4unix-radio.conf ]]; then
+    missing=()
+    _trava_lib="$(sed -e :a -e '/\\$/N; s/\\\n[[:space:]]*/ /; ta' scripts/lib/camada_de_maquina.sh 2>/dev/null \
+        | grep -v '^[[:space:]]*#' \
+        | grep -vE '^[[:space:]]*(log|echo|printf|warn|info)[[:space:]]' || true)"
+    _trava_lib_inst="$(grep -E '(^|[[:space:]])install[[:space:]]+-D' <<<"${_trava_lib}" || true)"
+    _trava_un="$(sed -e :a -e '/\\$/N; s/\\\n[[:space:]]*/ /; ta' uninstall.sh 2>/dev/null \
+        | grep -v '^[[:space:]]*#' \
+        | grep -vE '^[[:space:]]*(log|echo|printf|warn|info)[[:space:]]' || true)"
+    _trava_un_rm="$(grep -E '(^|[[:space:]])rm[[:space:]]+-f' <<<"${_trava_un}" || true)"
+    _trava_inst="$(grep -v '^[[:space:]]*#' install.sh 2>/dev/null || true)"
+    _trava_doc="$(grep -v '^[[:space:]]*#' scripts/doctor.sh 2>/dev/null || true)"
+    grep -qF '/etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf' <<<"${_trava_lib_inst}" \
+        || missing+=("scripts/lib/camada_de_maquina.sh(não instala o tmpfiles.d)")
+    grep -qF 'assets/tmpfiles.d/hefesto-dualsense4unix-radio.conf' <<<"${_trava_lib}" \
+        || missing+=("scripts/lib/camada_de_maquina.sh(não lê o asset)")
+    grep -qF 'systemd-tmpfiles --create /etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf' <<<"${_trava_lib}" \
+        || missing+=("scripts/lib/camada_de_maquina.sh(não aplica o tmpfiles.d na hora)")
+    grep -qE '^[[:space:]]*install_trava_do_radio_host[[:space:]]*$' <<<"${_trava_inst}" \
+        || missing+=("install.sh(não chama install_trava_do_radio_host)")
+    for _trava_dest in /etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf \
+                       /run/hefesto-dualsense4unix/radio.lock; do
+        grep -qF -- "${_trava_dest}" <<<"${_trava_un_rm}" \
+            || missing+=("uninstall.sh(não remove ${_trava_dest})")
+    done
+    grep -qF 'rmdir /run/hefesto-dualsense4unix' <<<"${_trava_un}" \
+        || missing+=("uninstall.sh(não tira a pasta /run/hefesto-dualsense4unix)")
+    grep -qE '^check_trava_do_radio\(\)' <<<"${_trava_doc}" \
+        || missing+=("scripts/doctor.sh(sem check_trava_do_radio)")
+    grep -qE '^[[:space:]]+check_trava_do_radio[[:space:]]*$' <<<"${_trava_doc}" \
+        || missing+=("scripts/doctor.sh(o main não chama check_trava_do_radio)")
+    if [[ "${#missing[@]}" -eq 0 ]]; then
+        echo "[ OK ] trava comum do rádio: o install a cria e aplica, o uninstall a tira, o doctor pergunta"
+    else
+        echo "[FAIL] trava comum do rádio: FALTANDO em: ${missing[*]}"
+        echo "       Trava que o install cria e o uninstall não tira fica em /etc para sempre;"
+        echo "       trava que ninguém cria deixa o watchdog e o daemon sem se enxergar."
+        rc=1
+    fi
+else
+    echo "[ OK ] trava comum do rádio: assets/tmpfiles.d/hefesto-dualsense4unix-radio.conf ausente — nada a checar"
+fi
+
 # Contenção BT (2026-07-25): o TERCEIRO módulo DKMS (hid-playstation, retry de
 # feature report na probe) ganhou os dois blocos irmãos acima mas NUNCA ganhou o
 # seu — e o furo era o pior dos três: o dkms.conf dele tem AUTOINSTALL="yes",

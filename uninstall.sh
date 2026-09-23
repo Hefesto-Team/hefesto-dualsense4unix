@@ -358,6 +358,12 @@ grep -qsF '# >>> hefesto JustWorksRepairing >>>' /etc/bluetooth/main.conf 2>/dev
 [[ -e /etc/sudoers.d/49-hefesto-bt-ponte ]] && _NEEDS_SUDO=1
 [[ -e /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh ]] && _NEEDS_SUDO=1
 [[ "${KEEP_BLUEZ}" -eq 0 && -f "${HOME}/.cache/hefesto-dualsense4unix/bluez-backport/VERSOES-ANTERIORES.txt" ]] && _NEEDS_SUDO=1
+# O-DIARIO-DO-RADIO-01 (instalado pela INSTALL-E-UNINSTALL-DO-RADIO-01): a
+# trava comum do rádio (tmpfiles.d + /run), os carimbos do reinício da ponte e
+# o diário do root — os três de root.
+[[ -e /etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf ]] && _NEEDS_SUDO=1
+[[ -e /run/hefesto-dualsense4unix || -e /run/hefesto-bt-ponte ]] && _NEEDS_SUDO=1
+compgen -G '/var/lib/hefesto-dualsense4unix/radio-diario.jsonl*' >/dev/null 2>&1 && _NEEDS_SUDO=1
 # Onda S: broker root hide-hidraw (BROKER-01) — unit de sistema, precisa root.
 [[ -e /etc/systemd/system/hefesto-hidraw-broker.service ]] && _NEEDS_SUDO=1
 [[ -e /etc/systemd/system/hefesto-hidraw-broker.socket ]] && _NEEDS_SUDO=1
@@ -840,6 +846,40 @@ if sudo -n true 2>/dev/null; then
         sudo rm -f /etc/sudoers.d/49-hefesto-bt-ponte 2>/dev/null || true
     fi
     sudo rm -f /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh 2>/dev/null || true
+    # OS CARIMBOS DO REINÍCIO DA PONTE (O-DIARIO-DO-RADIO-01): `reset-<porta>`,
+    # `.dito`, `.seguidos` e `.desistiu`, na pasta 0700 que o próprio
+    # `reiniciar-travado` cria. É tmpfs e some no boot; sair aqui é o que faz o
+    # produto não deixar rastro até lá.
+    sudo rm -rf /run/hefesto-bt-ponte 2>/dev/null || true
+    # A TRAVA COMUM DO RÁDIO — simétrica ao `install_trava_do_radio_host`. Sai
+    # DEPOIS dos timers (desabilitados acima): o watchdog é quem a disputa com
+    # o daemon, e o daemon já foi parado no começo deste script. O `rmdir` é
+    # puro: se alguém pôs outra coisa na pasta, ela fica.
+    if [[ -e /etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf || -d /run/hefesto-dualsense4unix ]]; then
+        log "removendo a trava comum do rádio (tmpfiles.d + /run/hefesto-dualsense4unix)"
+        sudo rm -f /etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf \
+            /run/hefesto-dualsense4unix/radio.lock 2>/dev/null || true
+        sudo rmdir /run/hefesto-dualsense4unix 2>/dev/null || true
+    fi
+    # O DIÁRIO DO RÁDIO DO ROOT (`/var/lib/hefesto-dualsense4unix/radio-diario.jsonl`
+    # e o `.1` da rotação), escrito pela ponte e pelo watchdog. É HISTÓRICO,
+    # como o kernel.log da sessão, e segue a doutrina dos dados dela:
+    # preservado por padrão, apagado só com --purge-config. Preservado com o
+    # carimbo da desinstalação no nome — ao lado do acervo de bonds guardado —,
+    # e é o nome que importa: com o nome de antes, a próxima instalação o
+    # releria no arranque como se fosse desta vida.
+    for _diario_root in /var/lib/hefesto-dualsense4unix/radio-diario.jsonl \
+                        /var/lib/hefesto-dualsense4unix/radio-diario.jsonl.1; do
+        [[ -f "${_diario_root}" ]] || continue
+        if [[ "${KEEP_CONFIG}" -eq 1 ]]; then
+            _diario_guardado="${_diario_root%%.jsonl*}.pre-uninstall-$(date +%Y%m%d-%H%M%S).jsonl${_diario_root##*.jsonl}"
+            log "preservando o diário do rádio do root em ${_diario_guardado} (apagar de vez: --purge-config)"
+            sudo mv "${_diario_root}" "${_diario_guardado}" 2>/dev/null || true
+        else
+            log "removendo o diário do rádio do root ${_diario_root} (--purge-config)"
+            sudo rm -f "${_diario_root}" 2>/dev/null || true
+        fi
+    done
     # Os alvos das regras-cola 82 e 83, no mesmo gate das regras.
     if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
         sudo rm -f /etc/systemd/system/hefesto-bt-bonds-snapshot.service \
@@ -877,24 +917,57 @@ if sudo -n true 2>/dev/null; then
     # bluetooth/hci0`, o primeiro degrau sempre vence, e os três de baixo — que
     # são justamente a migração — nunca seriam exercitados. Portão que só
     # consegue medir o caminho que já funcionava é decoração.
-    _hci=""
+    #
+    # TODOS OS ADAPTADORES, e o NOME volta ao padrão (INSTALL-E-UNINSTALL-DO-
+    # RADIO-01, 23/09/2026 — decisão de quem coordena, P-11). Até aqui o bloco
+    # olhava o PRIMEIRO adaptador e só tirava o prefixo «Nintendo ». Com a
+    # ENTRADA-A-ENTRADA-02 o Alias passou a levar o NOME DO LUGAR (o
+    # `maquina.json`, projetado pelo `bt_active_mode.sh` e pelo renomear da
+    # aba), em qualquer adaptador da mesa — e desinstalar deixava o rádio dela
+    # chamado «Sofá» para sempre. O produto não deixa rastro. As três formas:
+    #   - o Alias é um nome de lugar do Hefesto (com ou sem o prefixo) → volta
+    #     ao padrão do BlueZ (Alias vazio, que o BlueZ lê como o nome do
+    #     sistema);
+    #   - o Alias é «Nintendo » + o próprio nome do sistema → idem;
+    #   - o Alias é «Nintendo » + um nome que NÃO é do Hefesto → tira só o
+    #     prefixo: o nome embaixo dele é de quem o escreveu, e não é nosso.
+    # Um Alias sem o prefixo e que não é lugar do Hefesto não é tocado.
+    _hcis=()
     for _hci_p in "${HEFESTO_SYSFS_BLUETOOTH:-/sys/class/bluetooth}"/hci*; do
         [[ -e "${_hci_p}" ]] || continue
         [[ "${_hci_p##*/}" =~ ^hci[0-9]+$ ]] || continue
-        _hci="${_hci_p##*/}"
-        break
+        _hcis+=("${_hci_p##*/}")
     done
-    if [[ -z "${_hci}" ]] && command -v busctl >/dev/null 2>&1; then
-        _hci="$(busctl tree org.bluez --list 2>/dev/null \
-            | grep -oE '/org/bluez/hci[0-9]+' | sed 's#.*/##' | sort -u | head -1 || true)"
+    if [[ "${#_hcis[@]}" -eq 0 ]] && command -v busctl >/dev/null 2>&1; then
+        mapfile -t _hcis < <(busctl tree org.bluez --list 2>/dev/null \
+            | grep -oE '/org/bluez/hci[0-9]+' | sed 's#.*/##' | sort -u || true)
     fi
-    if [[ -z "${_hci}" ]] && command -v btmgmt >/dev/null 2>&1; then
-        _hci="$(timeout 5 btmgmt info 2>/dev/null | grep -oE '^hci[0-9]+' | head -1 || true)"
+    if [[ "${#_hcis[@]}" -eq 0 ]] && command -v btmgmt >/dev/null 2>&1; then
+        mapfile -t _hcis < <(timeout 5 btmgmt info 2>/dev/null | grep -oE '^hci[0-9]+' | sort -u || true)
     fi
-    if [[ -z "${_hci}" ]] && command -v hciconfig >/dev/null 2>&1; then
-        _hci="$(hciconfig 2>/dev/null | awk -F: '/^hci/{print $1; exit}' || true)"
+    if [[ "${#_hcis[@]}" -eq 0 ]] && command -v hciconfig >/dev/null 2>&1; then
+        mapfile -t _hcis < <(hciconfig 2>/dev/null | awk -F: '/^hci/{print $1}' || true)
     fi
-    if [[ -n "${_hci}" ]]; then
+    # Os nomes de lugar que o Hefesto projeta no Alias, lidos do `maquina.json`
+    # desta casa pelo `python3` isolado — a mesma leitura do `bt_active_mode.sh`.
+    _nomes_do_hefesto=()
+    _maquina_json="${XDG_CONFIG_HOME:-${HOME}/.config}/hefesto-dualsense4unix/maquina.json"
+    if [[ -f "${_maquina_json}" ]] && command -v python3 >/dev/null 2>&1; then
+        mapfile -t _nomes_do_hefesto < <(python3 -I -c '
+import json, sys
+try:
+    with open(sys.argv[1], encoding="utf-8") as fh:
+        doc = json.load(fh)
+except (OSError, ValueError):
+    sys.exit(0)
+lugares = doc.get("lugares") if isinstance(doc, dict) else None
+for dele in (lugares.values() if isinstance(lugares, dict) else ()):
+    nome = dele.get("nome") if isinstance(dele, dict) else None
+    if isinstance(nome, str) and nome.strip() and "\n" not in nome:
+        print(nome.strip())
+' "${_maquina_json}" 2>/dev/null || true)
+    fi
+    for _hci in ${_hcis[@]+"${_hcis[@]}"}; do
         # ATENÇÃO: `hciconfig lp` exige a lista separada por VÍRGULA. Com
         # espaços ele lê só o primeiro token e a reversão vira NO-OP
         # silencioso — medido ao vivo 23/07: "lp rswitch hold sniff park"
@@ -918,12 +991,26 @@ if sudo -n true 2>/dev/null; then
             log "  adaptador segue como a cura do Pro o deixou — instale o pacote e"
             log "  rode: sudo hciconfig ${_hci} lp rswitch,hold,sniff,park"
         fi
+        command -v busctl >/dev/null 2>&1 || continue
         _alias="$(busctl get-property org.bluez "/org/bluez/${_hci}" org.bluez.Adapter1 Alias 2>/dev/null | sed -E 's/^s "?//; s/"?$//' || true)"
-        if [[ "${_alias}" == Nintendo\ * ]]; then
-            sudo busctl set-property org.bluez "/org/bluez/${_hci}" org.bluez.Adapter1 Alias s "${_alias#Nintendo }" 2>/dev/null || true
-            log "nome do adaptador revertido para '${_alias#Nintendo }' (tirado o prefixo Nintendo)"
+        [[ -n "${_alias}" ]] || continue
+        _nome_do_sistema="$(busctl get-property org.bluez "/org/bluez/${_hci}" org.bluez.Adapter1 Name 2>/dev/null | sed -E 's/^s "?//; s/"?$//' || true)"
+        _base="${_alias#Nintendo }"
+        _e_do_hefesto=0
+        for _um_nome in ${_nomes_do_hefesto[@]+"${_nomes_do_hefesto[@]}"}; do
+            [[ "${_base}" == "${_um_nome}" ]] && _e_do_hefesto=1
+        done
+        if [[ "${_alias}" == Nintendo\ * && -n "${_nome_do_sistema}" && "${_base}" == "${_nome_do_sistema}" ]]; then
+            _e_do_hefesto=1
         fi
-    fi
+        if [[ "${_e_do_hefesto}" -eq 1 ]]; then
+            sudo busctl set-property org.bluez "/org/bluez/${_hci}" org.bluez.Adapter1 Alias s "" 2>/dev/null || true
+            log "nome do adaptador ${_hci} devolvido ao padrão do sistema${_nome_do_sistema:+ ('${_nome_do_sistema}')} — '${_alias}' era do Hefesto"
+        elif [[ "${_alias}" == Nintendo\ * ]]; then
+            sudo busctl set-property org.bluez "/org/bluez/${_hci}" org.bluez.Adapter1 Alias s "${_base}" 2>/dev/null || true
+            log "nome do adaptador revertido para '${_base}' (tirado o prefixo Nintendo)"
+        fi
+    done
     if [[ -d /var/lib/hefesto-dualsense4unix/bt-bonds ]]; then
         # CICLO-QUE-PROVA-01 (08/08/2026) — MEDIDO no ciclo real, na máquina dela:
         # este bloco fazia `rm -rf` por default, sem flag e sem confirmação, e o
@@ -966,8 +1053,13 @@ if sudo -n true 2>/dev/null; then
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
 elif [[ -e /etc/systemd/system/hefesto-bt-bonds-snapshot.timer \
         || -e /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf \
+        || -e /etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf \
         || -e /etc/sudoers.d/49-hefesto-bt-ponte ]]; then
     log "sudo indisponível — resiliência do bluetoothd (timers/drop-ins/scripts) NÃO removida"
+    if [[ -e /etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf ]]; then
+        log "  nem a trava comum do rádio:"
+        log "  sudo rm -f /etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf /run/hefesto-dualsense4unix/radio.lock && sudo rmdir /run/hefesto-dualsense4unix"
+    fi
     if [[ -e /etc/sudoers.d/49-hefesto-bt-ponte ]]; then
         log "  e a ponte privilegiada FICOU: é privilégio de root pendurado, remova à mão —"
         log "  sudo rm /etc/sudoers.d/49-hefesto-bt-ponte /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh"
@@ -1374,6 +1466,22 @@ else
         fi
     fi
 fi
+
+# A OBRA DO BACKPORT DO BLUEZ (BLUETOOTHD-NAO-DERRUBA-01, 23/09/2026). O
+# `scripts/construir_bluez_backport.sh` deixa no cache a árvore de compilação
+# (`bluez-obra`, ~824 MB com os logs) e as fontes baixadas (`bluez-fontes`).
+# São subprodutos regeneráveis — o script os refaz do zero a cada preparo — e
+# saem SEMPRE, DEPOIS do restauro acima: o `bluez-backport/`, com os .deb e o
+# VERSOES-ANTERIORES.txt que o `--restore-bluez` lê, não é tocado aqui (sai só
+# com --purge-config, junto com o resto do cache).
+for _bz_sobra in "${HOME}/.cache/hefesto-dualsense4unix/bluez-obra" \
+                 "${HOME}/.cache/hefesto-dualsense4unix/bluez-fontes"; do
+    if [[ -d "${_bz_sobra}" ]]; then
+        log "removendo a obra do backport do BlueZ (${_bz_sobra}) — regenerável pelo scripts/construir_bluez_backport.sh"
+        rm -rf "${_bz_sobra}" 2>/dev/null \
+            || log "  não consegui apagar ${_bz_sobra} inteira — confira os donos dos arquivos"
+    fi
+done
 
 # Quirk de boot do áudio USB (usbcore.quirks). NÃO removido por default: é
 # cmdline do kernel (sensível) e pode ser mantido por toolchain externa do
@@ -1802,7 +1910,48 @@ if [[ -f "${HOME}/.local/state/hefesto-dualsense4unix/gabinete.json" ]]; then
     log "removendo o censo do gabinete (~/.local/state/hefesto-dualsense4unix/gabinete.json)"
     rm -f "${HOME}/.local/state/hefesto-dualsense4unix/gabinete.json"
 fi
+# O RÁDIO DA SESSÃO (a leva do rádio, 23/09/2026) — o que o produto escreve no
+# estado dela, e o destino de cada coisa:
+ESTADO_DO_RADIO="${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix"
+# - `lugares-dos-adaptadores.json` (BLUEZ-UM-DONO-01): estado, não histórico —
+#   em qual porta cada adaptador estava na última conferência. Sai SEMPRE, como
+#   o gabinete.json acima: deixá-lo faria a próxima instalação conferir lugar
+#   contra a mesa de outra vida.
+if [[ -f "${ESTADO_DO_RADIO}/lugares-dos-adaptadores.json" ]]; then
+    log "removendo o registro dos lugares dos adaptadores (${ESTADO_DO_RADIO}/lugares-dos-adaptadores.json)"
+    rm -f "${ESTADO_DO_RADIO}/lugares-dos-adaptadores.json"
+fi
+# - o DIÁRIO do rádio da sessão (`radio-diario.jsonl` e o `.1`): histórico, com
+#   a mesma regra do diário do root lá em cima — guardado com o carimbo da
+#   desinstalação no nome (a próxima instalação não o relê no arranque), e
+#   apagado só com --purge-config.
+for _diario_sessao in "${ESTADO_DO_RADIO}/radio-diario.jsonl" "${ESTADO_DO_RADIO}/radio-diario.jsonl.1"; do
+    [[ -f "${_diario_sessao}" ]] || continue
+    if [[ "${KEEP_CONFIG}" -eq 1 ]]; then
+        _diario_guardado="${_diario_sessao%%.jsonl*}.pre-uninstall-$(date +%Y%m%d-%H%M%S).jsonl${_diario_sessao##*.jsonl}"
+        log "preservando o diário do rádio em ${_diario_guardado} (apagar de vez: --purge-config)"
+        mv -f "${_diario_sessao}" "${_diario_guardado}" 2>/dev/null || true
+    else
+        log "removendo o diário do rádio ${_diario_sessao} (--purge-config)"
+        rm -f "${_diario_sessao}"
+    fi
+done
+# - o kernel.log e a MARCA do boot (`kernel-watch.boot`, O-DIARIO-DO-RADIO-01)
+#   andam JUNTOS: a marca diz à vigia que este boot já foi relido para dentro
+#   do log. Apagar só a marca faria uma reinstalação no mesmo boot reler tudo e
+#   DUPLICAR o log; apagar só o log deixaria a vigia nova sem o arranque. Por
+#   padrão os dois ficam (o log é o histórico dela); com --purge-config, os
+#   dois saem.
+if [[ "${KEEP_CONFIG}" -eq 0 ]]; then
+    for _kw in "${ESTADO_DO_RADIO}/kernel.log" "${ESTADO_DO_RADIO}/kernel-watch.boot"; do
+        if [[ -f "${_kw}" ]]; then
+            log "removendo ${_kw} (--purge-config)"
+            rm -f "${_kw}"
+        fi
+    done
+fi
 rmdir "${HOME}/.local/state/hefesto-dualsense4unix" 2>/dev/null || true
+rmdir "${ESTADO_DO_RADIO}" 2>/dev/null || true
 # O passo anterior de limpeza do share-dir roda antes do wrapper sair — repete
 # a checagem de diretório-pai vazio para não deixar rastro.
 if [[ -d "${HOME}/.local/share/hefesto-dualsense4unix" ]] \
