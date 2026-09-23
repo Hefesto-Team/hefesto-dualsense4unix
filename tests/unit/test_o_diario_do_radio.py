@@ -106,11 +106,21 @@ def test_o_leitor_junta_o_diario_dela_com_o_do_root_pela_hora(tmp_path: Path) ->
 
 
 def test_com_a_suite_no_ar_a_trava_e_o_root_nao_sao_os_dela(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
+    """ARRANQUE A GUARDA da suíte em ``caminho_da_trava`` e este teste reprova.
+
+    A trava comum FINGE estar instalada: sem isso, a régua respondia se o
+    install desta máquina já criou ``/run/hefesto-dualsense4unix`` — e não se a
+    guarda existe. Medido na conferência de 23/09: com a guarda arrancada e a
+    pasta ainda ausente, o teste passava verde.
+    """
+    comum = tmp_path / "run" / "radio.lock"
+    comum.parent.mkdir()
+    monkeypatch.setattr(diario, "TRAVA_COMUM", comum)
     monkeypatch.delenv(diario.ENV_TRAVA, raising=False)
     monkeypatch.delenv(diario.ENV_DIARIO_DO_ROOT, raising=False)
-    assert diario.caminho_da_trava() != diario.TRAVA_COMUM
+    assert diario.caminho_da_trava() != comum
     assert diario.caminho_do_diario_do_root() is None
 
 
@@ -663,6 +673,59 @@ def test_o_daemon_espera_a_trava_que_o_watchdog_segura(tmp_path: Path) -> None:
         watchdog.communicate(timeout=30)
     [entrada] = diario.ler(caminhos=[tmp_path / "dela.jsonl"])
     assert entrada["antes"]["dono"].startswith("bt-watchdog ")
+
+
+def test_o_tique_inteiro_roda_com_a_trava() -> None:
+    """O tique pega a trava ANTES da primeira vigia que age.
+
+    Rodar o tique de verdade aqui falaria com o BlueZ dela (``busctl
+    set-property``, ``systemctl restart``), então esta régua lê a ORDEM do
+    script — é a única forma sem tocar o rádio. Os testes do ``--so-a-trava``
+    provam o ``_pegar_a_trava``; este prova que o tique o chama. Medido na
+    conferência de 23/09: arrancar a chamada do corpo do script passava verde
+    em todas as réguas.
+
+    ARRANQUE A CURA — tire o ``_pegar_a_trava || exit 0`` do corpo, ou desça-o
+    para depois da vigia 0 — e este teste reprova.
+    """
+    linhas = WATCHDOG.read_text(encoding="utf-8").splitlines()
+    pega = [n for n, linha in enumerate(linhas) if linha == "_pegar_a_trava || exit 0"]
+    assert len(pega) == 1, "o tique não pega a trava do rádio no corpo do script"
+    gancho = next(n for n, linha in enumerate(linhas) if '"--so-a-trava"' in linha)
+    vigia0 = next(n for n, linha in enumerate(linhas) if linha.startswith("# --- vigia 0"))
+    assert gancho < pega[0] < vigia0, "a trava tem de vir antes da primeira vigia"
+    #: Chamada no corpo do script (não a definição da função, nem o gancho
+    #: ``--sdp-cache-only`` da régua, que é indentado e sai antes).
+    for n, linha in enumerate(linhas[: pega[0]]):
+        if linha.endswith("() {"):
+            continue
+        assert not linha.startswith(("vigia_", "systemctl ", "busctl ")), (
+            f"linha {n + 1} age no rádio antes de o tique pegar a trava: {linha}"
+        )
+
+
+def test_o_watchdog_na_arvore_de_teste_nao_pega_a_trava_da_maquina(tmp_path: Path) -> None:
+    """Com a árvore do BlueZ desviada e sem o gancho, nada de trava comum.
+
+    ARRANQUE A GUARDA — volte o default do ``TRAVA_DO_RADIO`` para a trava
+    comum — e o watchdog de teste diz que foi atrás dela.
+    """
+    env = {
+        chave: valor for chave, valor in os.environ.items() if chave != "HEFESTO_RADIO_TRAVA"
+    }
+    env.update(
+        HEFESTO_BT_SRC=str(tmp_path / "bluetooth"),
+        HEFESTO_BT_STAMP_DIR=str(tmp_path / "stamps"),
+        HEFESTO_BT_LOG_DEST="none",
+        HEFESTO_RADIO_DIARIO_ROOT=str(tmp_path / "diario-root.jsonl"),
+    )
+    resultado = subprocess.run(
+        ["bash", str(WATCHDOG), "--so-a-trava", "0"],
+        capture_output=True, text=True, timeout=30, env=env,
+    )
+    assert resultado.returncode == 0, resultado.stderr
+    assert "sigo sem a trava" in resultado.stdout
+    assert "/run/hefesto-dualsense4unix" not in resultado.stdout
 
 
 def _bloco_do_diario(texto: str) -> str:
