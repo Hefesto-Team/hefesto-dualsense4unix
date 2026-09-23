@@ -1231,7 +1231,7 @@ class BarramentoGio:
         caixa: dict[str, Any] = {}
         feito = threading.Event()
 
-        def rodar() -> bool:
+        def rodar(*_dados: Any) -> bool:
             try:
                 caixa["valor"] = funcao()
             except Exception as problema:

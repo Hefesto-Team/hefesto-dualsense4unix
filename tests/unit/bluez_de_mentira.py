@@ -307,7 +307,7 @@ class _Fio:
         caixa: dict[str, Any] = {}
         feito = threading.Event()
 
-        def rodar() -> bool:
+        def rodar(*_dados: Any) -> bool:
             caixa["v"] = funcao()
             feito.set()
             return False
