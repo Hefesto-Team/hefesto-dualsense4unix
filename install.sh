@@ -260,6 +260,14 @@ WITH_WIREPLUMBER_FIX=1
 WITH_WIREPLUMBER_DISABLE_MIC=0
 WITH_USB_QUIRK=0
 NO_DKMS=0
+# RADIO-AFOGADO-02 (22/09/2026): o `uhid` patchado, que pode DIZER a quem
+# escreve que a fila de saída encheu em vez de descartar calado. **OPT-IN, e
+# a razão está escrita no `assets/dkms/uhid/README.md`:** ligar muda a
+# semântica do `write(2)` para TODO userspace que escreve report de saída num
+# HID por Bluetooth, o Steam Input inclusive. O produto está CORRETO sem ele —
+# a cura de primeira ordem é a ponte de som só existir enquanto há som. Este
+# módulo é o que sobra para quando quatro pontes forem legítimas.
+COM_UHID_CONTRAPRESSAO=0
 SKIP_KERNEL_WATCH=0
 NO_PROTON_PIN=0
 SKIP_SND_QUIRK=0
@@ -309,6 +317,7 @@ for arg in "$@"; do
         --with-wireplumber-disable-mic) WITH_WIREPLUMBER_DISABLE_MIC=1 ;;
         --with-usb-quirk)     WITH_USB_QUIRK=1 ;;
         --no-dkms)            NO_DKMS=1 ;;
+        --uhid-contrapressao) COM_UHID_CONTRAPRESSAO=1 ;;
         --no-snd-quirk)       SKIP_SND_QUIRK=1 ;;
         --no-ucm)             NO_UCM=1 ;;
         --no-fechar-o-no)     ABRIR_O_NO=1 ;;
@@ -2700,6 +2709,23 @@ install_dkms_rtw88_usb_host
 # para o mesmo módulo; a razão está escrita no próprio `dkms.conf`.
 step "3k" "contenção BT + microfone: hid-playstation patchado via DKMS"
 install_dkms_hid_playstation_host
+
+# ---------------------------------------------------------------------------
+# 3k2. DKMS uhid com contrapressão — OPT-IN, --uhid-contrapressao
+# ---------------------------------------------------------------------------
+# RADIO-AFOGADO-02, 22/09/2026. O `uhid.ko` de fábrica descarta o report em
+# silêncio quando a fila de saída (31 lugares) enche: `uhid_queue()` é `void`,
+# faz `kfree(ev)` com um `hid_warn`, e `uhid_hid_output_raw()` devolve `count`
+# assim mesmo. Medido na mesa dela: 3807 descartes num minuto, e ZERO escritas
+# recusadas no diário do produto. Sem sinal, quem escreve não tem como ceder.
+#
+# **ELE NÃO É DEFAULT, e é o único DKMS desta casa que não é.** Ligar muda a
+# semântica do `write(2)` para TODO userspace que escreve report de saída num
+# HID por Bluetooth — o Steam Input inclusive —, e quem trata falha de escrita
+# como «o aparelho sumiu» largaria o controle no primeiro engasgo do rádio.
+# O produto está correto sem ele. Razão completa em assets/dkms/uhid/README.md.
+step "3k2" "uhid com contrapressão (OPT-IN: --uhid-contrapressao)"
+install_dkms_uhid_host
 
 # ---------------------------------------------------------------------------
 # 3l. Regenerar o initramfs (INITRAMFS-01) — DEFAULT, sem flag

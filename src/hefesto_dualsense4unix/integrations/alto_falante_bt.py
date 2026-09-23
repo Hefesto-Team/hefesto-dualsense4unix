@@ -94,6 +94,7 @@ from __future__ import annotations
 
 import contextlib
 import ctypes
+import errno as _errno
 import json
 import os
 import shutil
@@ -831,10 +832,39 @@ ARRANJO_035 = Arranjo(
 #: o arranjo declara o controle. E o bloco háptico é o SIMPLES (64 bytes), não
 #: o dobrado que as duas fontes externas descrevem.
 #:
-#: **ELE NÃO LEVA ÁUDIO, e isso é uma limitação declarada:** pôr voz e vibração
-#: no MESMO report do rádio é coisa que esta casa ainda não mediu. Pelo cabo os
-#: dois viajam juntos (é um stream de quatro canais); pelo rádio, enquanto
-#: ninguém medir, o escritor manda um ou outro.
+#: **ELE NÃO LEVA ÁUDIO — e isto é limite DESTE arranjo, não do aparelho.**
+#:
+#: CORREÇÃO DE FATO, 22/09/2026, apontada por ela: *"sim já foi medido veja
+#: como corrigimos isso"*.  <!-- noqa-acento: citação literal dela -->
+#: Esta nota dizia *"pôr voz e vibração no MESMO report do rádio é coisa que
+#: esta casa ainda não mediu"*, e quem a lia concluía que o controle não sabe
+#: fazer os dois. Não é o que a bancada diz.
+#:
+#: **MEDIDO EM 18/09/2026, 01h15-01h35, com a mão dela** — a passada AZUL de
+#: `HAPTICA-POR-RADIO-01` (`docs/process/sprints/arquivados/`, tabela do P1):
+#: o `0x35`, o MESMO report que a ponte do alto-falante já escreve, com o
+#: bloco `0x11` e o bloco háptico — **vibrou**.
+#:
+#: **E É AQUI QUE A LEITURA FÁCIL ERRA — ela me pegou em 22/09.** O `montar`
+#: daquele ensaio (`scripts/ensaios/a_haptica_pelo_radio.py`) põe o bloco
+#: háptico em `[11]` tag, `[12]` len, `[13..76]` corpo. O :data:`ARRANJO_035`
+#: põe o ÁUDIO em `[11]` tag, `[12]` len, `[13..212]` corpo. **É o mesmo
+#: assento.** A vibração que vibrou sentou onde o som viaja: a passada azul
+#: provou que o envelope do `0x35` aceita o bloco háptico, e NÃO que os dois
+#: cabem juntos — eles nunca estiveram no mesmo report.
+#:
+#: Os 117 bytes zerados em [213..278] que a sprint cita são LEITURA DE LAYOUT,
+#: não medição. **A passada que falta é essa:** Opus em [13..212] e bloco
+#: háptico em [213..278], no mesmo report, com a orelha e a mão dela. Enquanto
+#: ela não existir, «um ou outro» é o que esta casa sabe — e o P4 (*"pôr o
+#: bloco `0x92` no mesmo report do som"*) não pode ser ligado só por leitura.
+#:
+#: Por isso :mod:`daemon.subsystems.alto_falante` escolhe UM arranjo por
+#: controle (`ARRANJO_HAPTICA_032` no modo háptica, :data:`ARRANJO_035` no
+#: modo som), e isso está certo até a medição existir.
+#:
+#: Pelo cabo os dois já viajam juntos — é um stream de quatro canais, 1-2 a voz
+#: e 3-4 os motores (:data:`CANAIS_DA_HAPTICA`).
 ARRANJO_HAPTICA_032 = Arranjo(
     nome="0x32-háptica",
     fonte=(
@@ -1742,6 +1772,26 @@ def conferir_o_alvo_do_gravador(rotulo: str) -> str | None:
     return None
 
 
+#: OS ERRNOS QUE DIZEM «A FILA ESTÁ CHEIA AGORA» — RADIO-AFOGADO-02,
+#: 22/09/2026, e eles só chegam num kernel que tem voz.
+#:
+#: O `uhid.ko` de fábrica descarta CALADO: `uhid_queue()` é `void`, faz
+#: `kfree(ev)` com um `hid_warn` e `uhid_hid_output_raw()` devolve `count`
+#: assim mesmo. Medido nesta máquina em 22/09: 80 escritas, 80 «sucessos», 53
+#: descartes no diário do kernel — e o produto sem um único sinal.
+#:
+#: Com o patch de contrapressão (`uhid_queue` devolvendo `-EAGAIN` e
+#: `uhid_hid_output_raw` propagando), a mesma prova dá 29 aceitas e 51
+#: recusadas. Aí o `os.write` levanta `BlockingIOError`, e é ESTE conjunto que
+#: o separa de *"o aparelho sumiu"*.
+#:
+#: **Ceder não custa ar.** A escrita recusada não põe um byte no rádio — é
+#: exatamente o freio que faltava, e por isso ceder é seguir, não desistir.
+FILA_CHEIA_DO_KERNEL: frozenset[int] = frozenset(
+    {_errno.EAGAIN, _errno.EWOULDBLOCK, _errno.ENOBUFS}
+)
+
+
 @dataclass
 class ContagemDaBomba:
     """O que a bomba mediu. **Nenhum destes números é "saiu som".**
@@ -1766,6 +1816,11 @@ class ContagemDaBomba:
     reports_montados: int = 0
     escritas_aceitas_pelo_kernel: int = 0
     escritas_recusadas: int = 0
+    #: Quadros que a FILA DO KERNEL recusou por estar cheia — e que por isso
+    #: não custaram um byte de ar. Ver :data:`FILA_CHEIA_DO_KERNEL`. Ele fica
+    #: em ZERO com o `uhid` de fábrica, que descarta calado: o número só
+    #: existe onde o kernel tem voz.
+    quadros_cedidos_por_fila_cheia: int = 0
     bytes_escritos: int = 0
     segundos: float = 0.0
     #: Blocos hápticos montados, e quantos deles saíram MUDOS (todas as
@@ -1884,6 +1939,10 @@ class BombaDeSomPeloRadio:
         #: dele põe a tag do AudioControl no byte [2].
         self.common = common
         self._codificador = codificador
+        #: Está cedendo quadros à fila cheia do kernel AGORA? Lembrado só para
+        #: o aviso sair na BORDA — a 93,75 escritas por segundo, um aviso por
+        #: quadro seria a enxurrada de volta, no journal em vez de no rádio.
+        self._cedendo = False
         self._seq = 0
         #: QUADROS de áudio já mandados — não reports. O `[10]` do `0x35` conta
         #: quadros, e um arranjo de dois quadros avança de dois em dois.
@@ -2079,15 +2138,37 @@ class BombaDeSomPeloRadio:
         bomba seguiu"*, e o número que a pessoa vai citar é
         :attr:`ContagemDaBomba.escritas_aceitas_pelo_kernel`, que só sobe
         quando um byte de verdade saiu.
+
+        **E O `True` DA FILA CHEIA É A MESMA COISA — RADIO-AFOGADO-02,
+        22/09/2026.** O valor devolvido responde *"a ponte segue?"*, nunca *"o
+        byte chegou?"*, e a diferença passou a importar no dia em que o kernel
+        ganhou voz: ver :data:`FILA_CHEIA_DO_KERNEL`.
         """
         if self.seco or self.escritor is None:
             return True
         try:
             escritos = int(self.escritor(report))
         except OSError as erro:
+            if erro.errno in FILA_CHEIA_DO_KERNEL:
+                # A FILA ESTÁ CHEIA AGORA — e isto NÃO é o aparelho sumindo.
+                # Cede o quadro e segue: um quadro de áudio a menos é um
+                # estalo; derrubar a ponte é o controle mudo até a próxima
+                # volta. E ceder não custa ar nenhum — a escrita recusada não
+                # põe um byte no rádio, que é justamente o freio que faltava.
+                self.contagem.quadros_cedidos_por_fila_cheia += 1
+                if not self._cedendo:
+                    self._cedendo = True
+                    logger.info("som_radio_cedendo_a_fila_cheia", erro=str(erro))
+                return True
             self.contagem.escritas_recusadas += 1
             logger.info("som_escrita_recusada", erro=str(erro))
             return False
+        if self._cedendo:
+            self._cedendo = False
+            logger.info(
+                "som_radio_voltou_a_caber",
+                cedidos=self.contagem.quadros_cedidos_por_fila_cheia,
+            )
         self.contagem.escritas_aceitas_pelo_kernel += 1
         self.contagem.bytes_escritos += escritos
         return True
@@ -3584,6 +3665,7 @@ __all__ = [
     "ENABLES_COM_MIC",
     "ENABLES_SEM_MIC",
     "ENVELOPE_BYTES",
+    "FILA_CHEIA_DO_KERNEL",
     "FONTE_MIX",
     "FONTE_PADRAO",
     "FONTE_SFX",

@@ -644,6 +644,65 @@ install_dkms_hid_nintendo_host() {
     return 0
 }
 
+# RADIO-AFOGADO-02 (22/09/2026): módulo `uhid` patchado, pela MESMA lib
+# genérica scripts/dkms_lib.sh (4ª instância — zero ajuste na lib).
+#
+# **ELE É O ÚNICO DKMS DESTA CASA QUE NÃO É DEFAULT**, e isso é decisão escrita,
+# não esquecimento: ligar a contrapressão muda a semântica do `write(2)` para
+# TODO userspace que escreve report de saída num HID por Bluetooth — o Steam
+# Input inclusive —, e quem trata falha de escrita como «o aparelho sumiu»
+# largaria o controle no primeiro engasgo do rádio. O produto está CORRETO sem
+# ele; a cura de primeira ordem é a ponte de som só existir enquanto há som
+# (RADIO-AFOGADO-01). Razão completa em assets/dkms/uhid/README.md.
+#
+# O `--no-dkms` também o pula: quem recusa DKMS recusa todos.
+install_dkms_uhid_host() {
+    if [[ "${COM_UHID_CONTRAPRESSAO:-0}" -ne 1 ]]; then
+        printf '      pulado (opt-in: ./install.sh --uhid-contrapressao)\n'
+        return 0
+    fi
+    if [[ "${NO_DKMS}" -eq 1 ]]; then
+        printf '      pulado (--no-dkms)\n'
+        return 0
+    fi
+    if ! command -v sudo >/dev/null 2>&1; then
+        warn "sudo ausente — uhid com contrapressão NÃO instalado (o de fábrica continua, fail-safe)"
+        return 0
+    fi
+    if ! sudo -n true 2>/dev/null; then
+        warn "sudo recusado — uhid com contrapressão pulado (re-execute ./install.sh --uhid-contrapressao)"
+        return 0
+    fi
+    # shellcheck source=scripts/dkms_lib.sh
+    source "${ROOT_DIR}/scripts/dkms_lib.sh"
+    dkms_warn_secureboot_once
+    local _uhid_src="${ROOT_DIR}/assets/dkms/uhid"
+    dkms_install_patched_module hefesto-uhid \
+        "$(dkms_pkg_version "${_uhid_src}")" "${_uhid_src}" uhid
+    if ! dkms_module_from_updates uhid; then
+        warn "uhid patchado NÃO ficou staged (veja avisos acima) — o de fábrica continua (fail-safe), e a conf do modprobe.d seria inerte nele"
+        return 0
+    fi
+    if sudo install -Dm644 "${ROOT_DIR}/assets/modprobe.d/hefesto-uhid.conf" \
+            /etc/modprobe.d/hefesto-uhid.conf 2>/dev/null; then
+        printf '      contrapressão pedida em /etc/modprobe.d/hefesto-uhid.conf\n'
+    else
+        warn "não consegui gravar /etc/modprobe.d/hefesto-uhid.conf"
+    fi
+    # **NUNCA RECARREGAMOS O uhid**, e aqui a regra é mais dura que a do
+    # hid-playstation: o `uhid` é o dono de TODO HID por Bluetooth da máquina —
+    # um `rmmod` derruba os controles, o teclado e o mouse sem fio de uma vez.
+    # O patchado vale no próximo boot. Enquanto isso, o parâmetro do módulo
+    # CARREGADO diz qual está de pé.
+    if [[ -e /sys/module/uhid/parameters/backpressure ]]; then
+        printf '      módulo patchado JÁ carregado (backpressure=%s; liga a quente com `echo 1 | sudo tee /sys/module/uhid/parameters/backpressure`)\n' \
+            "$(cat /sys/module/uhid/parameters/backpressure 2>/dev/null || echo '?')"
+    else
+        printf '      o de fábrica está carregado — o patchado entra no PRÓXIMO BOOT (recarregar o uhid derrubaria todo HID por Bluetooth)\n'
+    fi
+    return 0
+}
+
 # Contenção BT (25/07): módulo hid-playstation patchado (retry opcional nos
 # feature reports da probe) via a MESMA lib genérica scripts/dkms_lib.sh (3ª
 # instância — hid-nintendo é a 1ª, rtw88_usb a 2ª; ZERO ajuste na lib).
