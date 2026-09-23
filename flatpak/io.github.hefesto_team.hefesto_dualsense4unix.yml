@@ -83,6 +83,19 @@ finish-args:
   - --filesystem=~/snap/steam:ro
   # Portals do freedesktop (notificações, tray, background, window tracking)
   - --talk-name=org.freedesktop.portal.*
+  # O AR MEDIDO (AR-MEDIDO-01; decisão de quem coordena, INSTALL-E-UNINSTALL-
+  # DO-RADIO-01, 23/09/2026). No Flatpak o daemon roda DENTRO do sandbox, e o
+  # medidor do rádio — os Hz de cada controle e os canais que o adaptador usa,
+  # que a seção aprovada por ela mostra — abre um socket HCI cru e faz ioctls
+  # de LEITURA. Sem as duas linhas ele responde «não sei» em todo adaptador:
+  #   - `--allow=bluetooth` libera o AF_BLUETOOTH no seccomp do sandbox;
+  #   - `--share=network` mantém o sandbox no netns inicial, fora do qual o
+  #     kernel recusa o socket de Bluetooth (EAFNOSUPPORT, `bt_sock_create`).
+  # Nenhuma dá root nem CAP_NET_RAW (o Read AFH Channel Map passa pelo filtro do
+  # HCI sem capacidade, medido na AR-MEDIDO-01). O preço, declarado: o app
+  # passa a ter rede, e o produto é para qualquer um — inclusive quem usa Flatpak.
+  - --allow=bluetooth
+  - --share=network
 
 modules:
   # Módulo 1: todas as dependências Python do Hefesto - DualSense4Unix num único pip install.

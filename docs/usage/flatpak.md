@@ -257,6 +257,8 @@ O manifest `flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml` declara a
 | `--filesystem=xdg-run/hefesto-dualsense4unix:create`      | Socket IPC entre GUI e daemon                       |
 | `--filesystem=xdg-config/hefesto-dualsense4unix:create`   | Leitura e escrita de perfis                         |
 | `--talk-name=org.freedesktop.portal.*`     | Portals do freedesktop (tray, background)           |
+| `--allow=bluetooth`                        | O medidor do rádio abre o socket de Bluetooth (os Hz e os canais de cada adaptador) |
+| `--share=network`                          | Mantém o sandbox na rede do sistema: fora dela o kernel recusa o socket de Bluetooth |
 
 > **Por que `--socket=x11` e não `--socket=fallback-x11`.** O `fallback-x11` só
 > monta o socket X11 quando **não** há Wayland — e no COSMIC há. Como esta
