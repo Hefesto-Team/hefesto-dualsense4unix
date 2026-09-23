@@ -724,9 +724,26 @@ def _o_dualsense_no_furo(furo: Furo, censo: Censo) -> Aparelho | None:
 
 
 def _lugar_do_furo(furo: Furo, controladores: Mapping[int, str]) -> str:
-    """O lugar de um buraco pelos nós dele — ``""`` quando não dá para dizer."""
-    lugares = {lugar for no in furo.nos if (lugar := lugar_do_no(no, controladores))}
-    return lugares.pop() if len(lugares) == 1 else ""
+    """O lugar de um buraco: o do lado 2.0, onde o DualSense enumera.
+
+    Os dois nós de um buraco USB 3 NÃO dão o mesmo lugar quando o controlador
+    numera as duas raízes de jeitos diferentes. Medido na mesa dela em 23/09:
+    no ``0000:02:00.0``, ``usb1-port6`` é o par de ``usb2-port2``, e os dois
+    lados são ``…-usb-0:6`` e ``…-usb-0:2`` (o udev publica o mesmo ``ID_PATH``
+    para ``usb1-port2`` e ``usb2-port2`` — por isso existe o
+    ``ID_PATH_WITH_USB_REVISION``). Exigir que os dois concordassem devolvia
+    "não sei" para esses buracos: o «Não alcanço» não ia ao disco e a entrada
+    aprendida voltava para a conta ao sair o cabo.
+
+    O lado 2.0 é o de barramento MENOR: o xHCI registra a raiz 2.0 antes da
+    3.x. É o lugar que o DualSense ganha ali (``_porta_vista``), e o único que
+    não colide com o buraco vizinho.
+    """
+    nos = sorted(
+        (no for no in furo.nos if caminho_do_no(no)),
+        key=lambda no: int(caminho_do_no(no).partition("-")[0]),
+    )
+    return lugar_do_no(nos[0], controladores) if nos else ""
 
 
 def _o_furo_e_conhecido(
