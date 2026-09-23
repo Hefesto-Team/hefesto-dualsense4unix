@@ -102,6 +102,7 @@ OS CINCO ACERTOS DA CONFERÊNCIA (GOVERNADOR-DO-RADIO-02, 23/09/2026)
 from __future__ import annotations
 
 import math
+import os
 import re
 import threading
 import time
@@ -326,19 +327,42 @@ def _tipo(tipo: str) -> str:
     return TIPO_VIBRACAO if tipo in ("haptica", "háptica", TIPO_VIBRACAO) else TIPO_SOM
 
 
+class _HidrawIlegivelError(RuntimeError):
+    """A raiz do ``hidraw`` no ``/sys`` não se leu: onde o controle está é «não sei».
+
+    NÃO é ``OSError`` de propósito: ``radio_da_mesa.adaptador_por_uniq`` engole
+    o ``OSError`` do ``listar`` e devolve ``""`` — que para a admissão é «sem
+    casa» e para :meth:`GovernadorDoRadio.conferir_as_autorizacoes` é
+    «desconectou». Levantando, a admissão continua igual (ela já trata o erro
+    como ``""``) e a conferência pode dizer «não sei».
+    """
+
+
+def _listar_o_hidraw(raiz: str) -> list[str]:
+    """``os.listdir`` que não engole o erro — ver :class:`_HidrawIlegivelError`."""
+    try:
+        return os.listdir(raiz)
+    except OSError as erro:
+        raise _HidrawIlegivelError(raiz) from erro
+
+
 def _adaptador_pelo_hid_phys(uniq: str) -> str:
-    """O endereço do adaptador do controle, pelo ``HID_PHYS`` — ``""`` = não sei.
+    """O endereço do adaptador do controle, pelo ``HID_PHYS`` — ``""`` = não está no rádio.
 
     A raiz do sysfs é a MESMA da varredura do som e do microfone
     (``dualsense_bt_audio._SYSFS_HIDRAW``), lida na CHAMADA: é ela que a suíte
     aponta para o vazio, e um default resolvido no import leria o hidraw da
     mesa dela no meio de um teste.
+
+    A raiz que não se lê LEVANTA :class:`_HidrawIlegivelError` (conferência da
+    A-COSTURA-DA-ONDA-2-01): antes ela saía ``""``, e a conferência do «Ligar
+    aqui» lia o ``/sys`` ilegível como «ele desconectou».
     """
     from hefesto_dualsense4unix.integrations import dualsense_bt_audio
     from hefesto_dualsense4unix.integrations.radio_da_mesa import adaptador_por_uniq
 
     raiz = str(getattr(dualsense_bt_audio, "_SYSFS_HIDRAW", "") or "/sys/class/hidraw")
-    return adaptador_por_uniq([uniq], raiz=raiz).get(uniq, "")
+    return adaptador_por_uniq([uniq], raiz=raiz, listar=_listar_o_hidraw).get(uniq, "")
 
 
 @dataclass(eq=False)
