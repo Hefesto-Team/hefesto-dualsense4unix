@@ -338,7 +338,9 @@ def test_as_escritas_que_provam_a_fila_perguntam_ao_uhid_do_dkms() -> None:
     fonte = Path(__file__).resolve().parents[2] / "assets/dkms/uhid/uhid.c"
     achado = re.search(r"^#define\s+UHID_BUFSIZE\s+(\d+)", fonte.read_text(), re.M)
     assert achado, f"o UHID_BUFSIZE sumiu de {fonte}"
-    assert gov.ESCRITAS_QUE_PROVAM_QUE_A_FILA_ANDA == 2 * int(achado.group(1))
+    fila_do_uhid = int(achado.group(1))
+    prova = gov.ESCRITAS_QUE_PROVAM_QUE_A_FILA_ANDA
+    assert prova == 2 * fila_do_uhid, f"{prova} escritas com a fila do uhid em {fila_do_uhid}"
 
 
 @dataclass
