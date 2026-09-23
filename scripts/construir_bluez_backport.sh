@@ -36,6 +36,8 @@
 #   HEFESTO_BLUEZ_CACHE=/outro scripts/construir_bluez_backport.sh --revisao 3
 #       # reconstrói uma revisão antiga para provar a receita; exige um cache
 #       # que NÃO seja o que o install lê
+#   HEFESTO_BLUEZ_JOBS=4 scripts/construir_bluez_backport.sh
+#       # compila com 4 processos em vez de um por núcleo
 #
 # Idempotente: com os três .deb da versão alvo já no cache e o SHA256SUMS
 # batendo, sai 0 sem baixar nem compilar. A árvore de obra é refeita do zero
@@ -52,6 +54,9 @@ CACHE="${HEFESTO_BLUEZ_CACHE:-${HOME}/.cache/hefesto-dualsense4unix}"
 FONTES="${CACHE}/bluez-fontes"
 OBRA="${CACHE}/bluez-obra"
 SAIDA="${CACHE}/bluez-backport"
+# Paralelismo do build e do make check. O padrão é um núcleo por processador;
+# numa máquina em uso, com pouca memória livre, peça menos.
+JOBS="${HEFESTO_BLUEZ_JOBS:-$(nproc)}"
 
 RC_USO=2
 RC_DEPS=3
@@ -74,6 +79,7 @@ AMBIENTE_LIMPO=(
 # O recorte que a mordida compila: a struct input_device (e o enum que ela
 # cita), toda função hidp_send_* e os #define HIDP_SEND_* do patch. Casa pelo
 # NOME, não pela linha, então serve ao vanilla e ao patchado.
+# shellcheck disable=SC2016  # é um programa awk: o $ é do awk, não do shell
 RECORTE_AWK='
 !dentro && /^#define HIDP_SEND_/ { print; next }
 !dentro && /^(enum reconnect_mode_t|struct input_device) \{/ { dentro = 1; fim = "^};"; print; next }
@@ -120,7 +126,13 @@ baixar() {
     mkdir -p "${destino%/*}"
     parcial="${destino}.parcial"
     diga "baixando ${url}"
-    curl -fsSL --retry 3 --connect-timeout 20 -o "${parcial}" "${url}" \
+    # Sem teto de tempo o curl fica PARADO para sempre numa conexão que aceitou
+    # e não manda nada — medido em 23/09 no redirecionamento do Launchpad, com
+    # o mesmo arquivo chegando em 16 s por outro curl. Cada tentativa tem teto,
+    # uma transferência abaixo de 1 KB/s por 60 s é abandonada, e o --retry
+    # tenta de novo.
+    curl -fsSL --retry 3 --retry-delay 5 --connect-timeout 20 --max-time 300 \
+            --speed-limit 1024 --speed-time 60 -o "${parcial}" "${url}" \
         || morra "${RC_FONTE}" "não consegui baixar ${url}"
     if [[ "$(sha_de "${parcial}")" != "${esperado}" ]]; then
         rm -f "${parcial}"
@@ -288,7 +300,7 @@ checar_dependencias() {
 
 compilar() {
     diga "dpkg-buildpackage -b -us -uc (log em ${OBRA}/build.log)"
-    if ! (cd "${ARVORE}" && "${AMBIENTE_LIMPO[@]}" dpkg-buildpackage -b -us -uc -j"$(nproc)") \
+    if ! (cd "${ARVORE}" && "${AMBIENTE_LIMPO[@]}" dpkg-buildpackage -b -us -uc -j"${JOBS}") \
             > "${OBRA}/build.log" 2>&1; then
         tail -n 40 "${OBRA}/build.log" >&2
         morra "${RC_BUILD}" "o build falhou (log em ${OBRA}/build.log)"
@@ -297,7 +309,7 @@ compilar() {
 
 unit_do_bluez() {
     diga "make check, o unit/ do próprio BlueZ (log em ${OBRA}/unit.log)"
-    if ! (cd "${ARVORE}" && "${AMBIENTE_LIMPO[@]}" make -j"$(nproc)" check) \
+    if ! (cd "${ARVORE}" && "${AMBIENTE_LIMPO[@]}" make -j"${JOBS}" check) \
             > "${OBRA}/unit.log" 2>&1; then
         grep -E '^(FAIL|ERROR):' "${OBRA}/unit.log" >&2 || tail -n 40 "${OBRA}/unit.log" >&2
         morra "${RC_UNIT}" "o unit/ do BlueZ reprovou (log em ${OBRA}/unit.log)"
