@@ -21,7 +21,8 @@ O QUE ESTA RÉGUA MEDE: numa mesma aba do Chrome, na mesma vista, a caixa da
 02-controles e a da Calibrar — e exige a mesma largura, a mesma altura e o
 mesmo lugar (±2 px), nas quatro vistas e com 0, 1 no cabo, 1 no rádio, 2 e 4
 controles (a MATRIZ dela: *"nunca é pensada só em um modo, rota, forma de
-conexão se cabo ou se bt, ou só pro player 1"*). As duas páginas são as da
+conexão se cabo ou se bt, ou só pro player 1"*). E que a altura ganha vire vão
+ACIMA do rodapé, que desce para o fim da caixa. As duas páginas são as da
 BANCADA (`mockup/`): é lá que o desenho mora até ela aprovar.
 
 A MORDIDA: devolva à `documento()` do `calibrar.py` a regra antiga
@@ -43,6 +44,8 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)
 
+import olhar  # a vista dela tem dono, e ele mora ao lado do gerador
+
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 PAGINA = "calibrar-sensores.html"
 ABA_VIZINHA = "02-controles.html"
@@ -50,12 +53,19 @@ ABA_VIZINHA = "02-controles.html"
 #: A folga que a sprint pede: arredondamento de subpixel, nada mais.
 FOLGA = 2
 
-#: As vistas: o piso da janela (`ponte_da_tela.TAMANHO_OCULTA`), a dela
-#: maximizada (`olhar.VISTA_DELA`), a ladrilhada abaixo do piso de 809 — onde a
-#: caixa encolhe com a vista em vez de passar da tela — e uma BAIXA, em que o
-#: conteúdo da Calibrar não cabe e o miolo tem de rolar por dentro.
-VISTAS = {"piso": (1212, 809), "dela": (1918, 840), "ladrilhada": (1212, 700),
-          "baixa": (1212, 480)}
+#: O PISO DA JANELA, que é `ponte_da_tela.TAMANHO_OCULTA`. Escrito aqui porque
+#: aquele módulo sobe o WebKit, e a CI não o tem: importá-lo faria esta régua
+#: inteira pular lá. `test_as_vistas_sao_as_dos_donos` confere os dois contra o
+#: dono onde o WebKit existe — um número redigitado sem essa conferência é o
+#: 1180 desta página de novo.
+PISO = (1212, 809)
+
+#: As vistas: o piso da janela, a dela maximizada (`olhar.VISTA_DELA`, lida do
+#: dono), a ladrilhada abaixo do piso — onde a caixa encolhe com a vista em vez
+#: de passar da tela — e uma BAIXA, em que o conteúdo da Calibrar não cabe e o
+#: miolo tem de rolar por dentro. As duas últimas têm a largura do piso.
+VISTAS = {"piso": PISO, "dela": olhar.VISTA_DELA, "ladrilhada": (PISO[0], 700),
+          "baixa": (PISO[0], 480)}
 
 
 def _controle(i: int, via: str) -> dict[str, Any]:
@@ -87,8 +97,16 @@ MEDIR = """() => {
   if (miolo) { miolo.scrollTop = miolo.scrollHeight; }
   const cabe = el => { if (!el) { return false; } const e = el.getBoundingClientRect();
                        return e.bottom <= r.bottom + 1 && e.top >= r.top - 1; };
+  // O RODAPÉ NO FIM DA CAIXA: com o miolo rolado até o fim, o que sobra entre
+  // a última linha e a borda de baixo é só o recuo do miolo e a borda. A
+  // altura que a caixa ganhou vira vão ACIMA do rodapé, nunca abaixo do aviso.
+  const folga = miolo ? {
+    embaixo: Math.round(r.bottom - miolo.lastElementChild.getBoundingClientRect().bottom),
+    esperada: Math.round(parseFloat(getComputedStyle(miolo).paddingBottom)
+                         + parseFloat(getComputedStyle(c).borderBottomWidth))} : null;
   return {fim_alcancavel: miolo ? cabe(c.querySelector('.rodape'))
                                   && cabe(miolo.lastElementChild) : null,
+          folga: folga,
           x: Math.round(r.left), y: Math.round(r.top),
           largura: Math.round(r.width), altura: Math.round(r.height),
           embaixo: Math.round(r.bottom), vista: [innerWidth, innerHeight],
@@ -188,6 +206,39 @@ def test_a_calibracao_nao_passa_da_vista(medido: dict[str, Any], vista: str) -> 
         assert cal["fim_alcancavel"], (
             f"na vista {vista} ({mesa}) o fim da Calibrar (o rodapé com Começar e "
             f"Fechar, e o aviso) fica fora da caixa mesmo com o miolo rolado")
+
+
+@pytest.mark.parametrize("vista", VISTAS)
+def test_o_rodape_desce_para_o_fim_da_caixa(medido: dict[str, Any], vista: str) -> None:
+    """O rodapé e o aviso terminam na borda de baixo da caixa, como o das abas.
+
+    A caixa cresceu até a altura da janela; sem o rodapé descer, a altura nova
+    viraria um vão ABAIXO do aviso, e a tela pareceria a caixa pequena de antes
+    pintada sobre um fundo maior. MORDE: tire o `margin-top:auto` do `.rodape`
+    no `calibrar.py`, regere, e a folga de baixo passa de 21 px para centenas.
+    """
+    for mesa in ("dois", *MESAS):
+        folga = medido[vista][mesa]["folga"]
+        assert folga and abs(folga["embaixo"] - folga["esperada"]) <= FOLGA, (
+            f"na vista {vista} ({mesa}) sobram {folga and folga['embaixo']} px "
+            f"entre o aviso e a borda de baixo da Calibrar, e o recuo do miolo "
+            f"mais a borda são {folga and folga['esperada']} — o rodapé não "
+            f"desceu para o fim da caixa")
+
+
+def test_as_vistas_sao_as_dos_donos() -> None:
+    """O piso desta régua é o `TAMANHO_OCULTA` da janela, e a vista dela é a do `olhar`.
+
+    O piso fica escrito em :data:`PISO` para a régua rodar sem WebKit; esta
+    conferência é o que impede o número de envelhecer calado.
+    """
+    try:
+        from hefesto_dualsense4unix.gui.ponte_da_tela import TAMANHO_OCULTA
+    except (ImportError, ValueError) as erro:  # pragma: no cover — sem WebKit
+        pytest.skip(f"a janela não importou ({erro}); o piso não tem com quem conferir")
+    assert tuple(TAMANHO_OCULTA) == PISO, (
+        f"o piso da janela virou {TAMANHO_OCULTA} e esta régua mede {PISO}")
+    assert VISTAS["dela"] == olhar.VISTA_DELA
 
 
 def test_a_bancada_e_o_que_o_gerador_escreve(calibrar_mod: Any) -> None:
