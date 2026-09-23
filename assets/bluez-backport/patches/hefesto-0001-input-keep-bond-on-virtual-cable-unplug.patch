@@ -1,0 +1,65 @@
+From: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>
+Date: Thu, 23 Jul 2026 01:45:00 -0300
+Subject: [PATCH] input: keep the bond AND the device on Virtual Cable Unplug
+
+Since 5.85 moved BR/EDR HID input to the userspace HID (uhid) path, the HID
+control-channel message VIRTUAL_CABLE_UNPLUG reaches bluetoothd's input
+profile and used to trigger device_remove_bonding(), deleting the on-disk
+bond from /var/lib/bluetooth (BOND-KEEP-01, ~hefesto24.04.2).
+
+BOND-KEEP-02 (~hefesto24.04.3): keeping the bond is not enough. The unplug/
+disconnect path can still leave the BONDED device flagged temporary, and
+TemporaryTimeout then garbage-collects the device AND its on-disk bond about
+30 seconds after the disconnect. Measured live on 2026-07-23: a bonded
+controller switched to its USB cable (emitting Virtual Cable Unplug on the
+way out) and its bond directory evaporated ~30s later, with bluetoothd alive
+and no RemoveDevice call anywhere. A bonded device must never be temporary:
+re-assert non-temporary on the unplug path.
+
+Keep the bond by default; set BLUEZ_HID_UNPLUG_REMOVES_BOND=1 in the service
+environment to restore the historical (stock) behaviour. Everything else
+about the unplug path (tearing down the uhid node, clearing the flag) is
+unchanged.
+
+Signed-off-by: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>
+---
+ profiles/input/device.c | 33 ++++++++++++++++++++++++++++++++-
+ 1 file changed, 32 insertions(+), 1 deletion(-)
+
+--- a/profiles/input/device.c
++++ b/profiles/input/device.c
+@@ -172,8 +172,33 @@
+
+ static void virtual_cable_unplug(struct input_device *idev)
+ {
+-	device_remove_bonding(idev->device,
++	/*
++	 * HEFESTO BOND-KEEP-01: a HID device that emits Virtual Cable Unplug
++	 * on power-off / link loss (measured: Nintendo Switch Pro Controller
++	 * and 8BitDo in Switch mode) would otherwise have its persistent bond
++	 * deleted here -- a uhid-path regression since 5.85 that forces a full
++	 * re-pair after every power-off. Keep the bond by default; set
++	 * BLUEZ_HID_UNPLUG_REMOVES_BOND=1 to restore the stock behaviour.
++	 */
++	const char *env = getenv("BLUEZ_HID_UNPLUG_REMOVES_BOND");
++
++	if (env && env[0] == '1')
++		device_remove_bonding(idev->device,
+ 				btd_device_get_bdaddr_type(idev->device));
++	else
++		DBG("keeping bond on virtual cable unplug (HEFESTO BOND-KEEP-01)");
++
++	/*
++	 * HEFESTO BOND-KEEP-02 (2026-07-23): the unplug/disconnect path can
++	 * still leave a BONDED device flagged temporary; TemporaryTimeout then
++	 * garbage-collects the device AND its on-disk bond ~30s after the
++	 * disconnect (measured live: bonded controller switched to USB cable,
++	 * emitted VCU, bond directory evaporated half a minute later). A
++	 * bonded device must never be temporary: re-assert it here.
++	 */
++	if (device_is_bonded(idev->device,
++				btd_device_get_bdaddr_type(idev->device)))
++		btd_device_set_temporary(idev->device, false);
+
+ 	idev->virtual_cable_unplug = false;
+ }
