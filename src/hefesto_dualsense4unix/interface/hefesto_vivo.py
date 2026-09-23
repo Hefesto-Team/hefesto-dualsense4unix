@@ -4108,7 +4108,12 @@ class Piloto:
         # confundiria "a aba mandou coluna" com "há controle aqui", e o passo
         # `1c` reabriria lugar vazio. O `pref` de cada conectado é o `pN` da
         # posição de jogador, que é o mesmo endereço que a página desenha.
-        pacotes.apagar_os_lugares_sem_dono(carga, _com_dono(ctx))
+        #
+        # E A PÁGINA VAI JUNTO — O-LUGAR-VAZIO-DIZ-O-QUE-O-DESENHO-DIZ-01,
+        # 23/09/2026: é com ela que a conta lê o lugar vazio do DESENHO, e o
+        # nome `html` e a barra `cor` de um lugar sem controle param de mostrar o
+        # exemplo do desenho ou o último controle que passou por ali.
+        pacotes.apagar_os_lugares_sem_dono(carga, _com_dono(ctx), pagina=self.pagina)
 
         # O RECADO NÃO VIAJA MAIS NO TIQUE — 13/09/2026, FRASES-E-DICAS-01. A
         # carga levava `recados` (a lista do depósito) para a pintura repor a

@@ -476,7 +476,14 @@ def pacote_da_pagina(pagina: str, ctx: Contexto) -> dict[str, Any] | None:
         return fora
     colunas = dict(fora.get(POR_CONTROLE[0]) or {})
     colunas[LUGAR_SEM_DONO] = molde
-    return {**fora, POR_CONTROLE[0]: colunas}
+    com_molde = {**fora, POR_CONTROLE[0]: colunas}
+    # E O QUE A ABA PINTA POR LUGAR, INTEIRO — ver `CAMPOS_DO_LUGAR`. O molde
+    # deixa de fora os campos `html`, e é neles que o desenho do lugar vazio
+    # tem mais a dizer.
+    pinta = _PINTA.get(_chave_do_molde(pagina, ctx))
+    if pinta:
+        com_molde[CAMPOS_DO_LUGAR] = sorted(pinta)
+    return com_molde
 
 
 #: AS TRÊS PALAVRAS PARA A MESMA COISA. Cada aba nasceu com a sua — `cartoes` na
@@ -488,9 +495,24 @@ def pacote_da_pagina(pagina: str, ctx: Contexto) -> dict[str, Any] | None:
 #: do desenho sem ganhar nada. Unifica-se AQUI, na saída, que é onde o piloto lê.
 POR_CONTROLE = ("colunas", "cartoes", "cards")
 
-#: O que NUNCA é valor de tela: a contagem da régua e a lista de órfãos. As duas
-#: são metadado do pacote e pintá-las escreveria "{'pintados': 25}" numa caixa.
-NAO_SAO_VALOR = {"cobertura", "sem_dono"}
+#: OS CAMPOS QUE A ABA PINTA POR LUGAR — O-LUGAR-VAZIO-DIZ-O-QUE-O-DESENHO-DIZ-01,
+#: 23/09/2026. Lista na raiz do pacote da mesa VAZIA, e ela só existe ali.
+#:
+#: Com um controle na mesa as colunas vivas já dizem o que a aba pinta. Com a
+#: mesa vazia só sobra o molde, e o molde é o que o TRAVESSÃO atende: os campos
+#: `html` ficam fora dele. Sem esta lista `apagar_os_lugares_sem_dono` não
+#: saberia que a 08 pinta o `nome` do cartão — e o nome ficava como estava: o
+#: exemplo do desenho, ou o do último controle que passou por ali.
+#:
+#: ELA É A TRAVA, e não só a fonte: o desenho do lugar vazio só é escrito onde a
+#: aba ESCREVE. Um campo que ninguém reescreve quando o controle chega guardaria
+#: o vazio no lugar cheio. Sai da carga em `apagar_os_lugares_sem_dono`.
+CAMPOS_DO_LUGAR = "campos-do-lugar"
+
+#: O que NUNCA é valor de tela: a contagem da régua, a lista de órfãos e os
+#: campos do lugar. São metadado do pacote, e pintá-los escreveria
+#: "{'pintados': 25}" numa caixa.
+NAO_SAO_VALOR = {"cobertura", "sem_dono", CAMPOS_DO_LUGAR}
 
 # ---------------------------------------------------------------------------
 # O ESTADO VAZIO — a tela mente quando a mesa esvazia
@@ -627,8 +649,15 @@ def _o_que_o_bloco_ja_escreveu(carga: dict[str, Any]) -> dict[str, set[str]]:
 
 def apagar_os_lugares_sem_dono(
         carga: dict[str, Any],
-        com_dono: Iterable[str] | None = None) -> dict[str, Any]:
+        com_dono: Iterable[str] | None = None,
+        pagina: str | None = None) -> dict[str, Any]:
     """Escreve travessão em todo lugar do desenho que a mesa de agora não tem.
+
+    E ONDE O TRAVESSÃO NÃO CHEGA À TELA, O DESENHO DIZ — O-LUGAR-VAZIO-DIZ-O-QUE-
+    O-DESENHO-DIZ-01, 23/09/2026. Com `pagina`, os campos de alvo `html`, `cor` e
+    `atributo` de um lugar vazio recebem o que o desenho publica num lugar vazio
+    (`o_que_o_desenho_diz_do_lugar_vazio`). Sem `pagina`, só o travessão, como
+    antes — o piloto sempre a passa.
 
     ELA MORA AQUI, e não no piloto, POR CAUSA DA RÉGUA. O molde do despachante
     só vira travessão na tela porque alguém aplica esta conta, e a régua que
@@ -675,6 +704,11 @@ def apagar_os_lugares_sem_dono(
     # Sai da carga AQUI, e não no `normalizar`, porque é esta conta que sabe
     # QUAIS lugares estão vazios.
     vazio = carga.pop(LUGAR_VAZIO, None) or {}
+    # O QUE A ABA PINTA POR LUGAR — as chaves vivas e, com a mesa vazia, a lista
+    # que o despachante mandou (`CAMPOS_DO_LUGAR`). Sai da carga SEMPRE: ela é
+    # instrução para esta conta, não valor de tela.
+    pinta = chaves | {str(k) for k in (carga.pop(CAMPOS_DO_LUGAR, None) or ())}
+    diz = o_que_o_desenho_diz_do_lugar_vazio(pagina) if pagina else {}
     for pref in apagar:
         colunas[pref] = dict.fromkeys(chaves - ja_escrito.get(pref, set()),
                                       TRAVESSAO)
@@ -698,6 +732,12 @@ def apagar_os_lugares_sem_dono(
         if IDENTIDADE_DO_LUGAR in chaves:
             colunas[pref][IDENTIDADE_DO_LUGAR] = (
                 f"P{pref[1:]} {PONTO_DO_ROTULO} {SEM_NINGUEM_AQUI}")
+        # O DESENHO DIZ O LUGAR VAZIO onde o travessão não chega — e só onde a
+        # aba pinta (`pinta`), senão o vazio ficaria no lugar quando o controle
+        # chegasse. A foto dela, 23/09/2026, zero controles na mesa: a 08 dizia
+        # `Sony • Player 1 • Cosmic Red • USB` com a barra rosa acesa no P1.
+        colunas[pref].update({k: v for k, v in diz.get(pref, {}).items()
+                              if k in pinta and k not in ja_escrito.get(pref, set())})
         colunas[pref].update({k: v for k, v in vazio.items()
                               if k not in ja_escrito.get(pref, set())})
     # A MOLDURA TAMBÉM, e não só o texto: com os travessões escritos, o card do
@@ -767,6 +807,26 @@ _LUGAR_DE_MENTIRA: dict[str, Any] = {
 #: uma pintura fantasma inteira por hotplug para chegar ao mesmo dicionário.
 _MOLDE: dict[tuple[str, str], dict[str, str]] = {}
 
+#: TUDO o que a pintura fantasma emitiu por lugar, na mesma chave do `_MOLDE` —
+#: o molde menos as exceções do travessão. É a lista `CAMPOS_DO_LUGAR`. Mesmas
+#: duas razões do `_MOLDE` para não entrar na poda: só nomes, de um controle
+#: sintético.
+_PINTA: dict[tuple[str, str], frozenset[str]] = {}
+
+
+def _chave_do_molde(pagina: str, ctx: Contexto) -> tuple[str, str]:
+    """`(página, perfil ativo)` — a chave do `_MOLDE` e do `_PINTA`.
+
+    O NOME SE PERGUNTA AO DONO, e aqui ele é CHAVE DE CACHE — 19/09/2026. Com o
+    `ctx.state.get("active_profile")` cru a chave era `None` em toda volta na
+    máquina dela (o daemon não publica o perfil de janela), e trocar de perfil
+    NÃO invalidava o molde: a página seguia com o molde do perfil anterior. Ver
+    `perfil.nome_do_ativo`.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import perfil as _perfil_
+
+    return (pagina, _perfil_.nome_do_ativo(ctx.state))
+
 #: O que a tela escreve onde não há dado. TEXTO DE TELA É DELA, e este não é
 #: novo: é o mesmo caractere que o desenho já põe nos lugares P3/P4 e que o
 #: `escrever()` do piloto já escreve em `null`/`""`.
@@ -832,7 +892,29 @@ SEM_NINGUEM_AQUI = "Desconectado"
 #: `cor` FICA pela razão inversa e igualmente medida: o ramo dele ESCREVE e
 #: depois COMPARA (`el.style.color = t; return el.style.color === antes ? 0 : 1`),
 #: então um travessão recusado devolve 0 e o contador não mente.
+#:
+#: E ERA O PONTO CEGO — 23/09/2026, O-LUGAR-VAZIO-DIZ-O-QUE-O-DESENHO-DIZ-01. O
+#: contador não mente, e a TELA fica com a cor de antes: o `—` recusado não apaga
+#: nada. A razão acima mediu o contador, não o que ela vê — e a barra rosa do P1
+#: da 08 ficou acesa com zero controles na mesa. Quem apaga agora é o desenho do
+#: lugar vazio (`ALVOS_QUE_O_DESENHO_DIZ`), e o `cor` continua fora deste
+#: conjunto porque o molde precisa da chave para o desenho saber que ela existe.
 ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE = {"largura", "altura", "html", "fundo"}
+
+#: OS ALVOS EM QUE O LUGAR VAZIO DIZ O QUE O DESENHO DIZ — O-LUGAR-VAZIO-DIZ-O-
+#: QUE-O-DESENHO-DIZ-01, 23/09/2026. São os três em que o travessão não põe na
+#: tela a palavra do lugar vazio:
+#:
+#: `html`     — fica fora do molde (ver acima) e, com um controle na mesa, vira
+#:              um `—` que apaga a marcação. O nome do cartão da 08 é `html`.
+#: `cor`      — o `—` é recusado e a cor de antes fica. Vazio é `""`, que devolve
+#:              o elemento à folha de estilo.
+#: `atributo` — o `—` só sabe apagar. O desenho diz o que um lugar vazio tem ali.
+#:
+#: O DONO É O DESENHO: o valor de um campo num lugar vazio é o valor dele no
+#: cartão que o desenho publica vazio (`data-conectado="nao"`), com o número do
+#: jogador trocado. Ver `o_que_o_desenho_diz_do_lugar_vazio`.
+ALVOS_QUE_O_DESENHO_DIZ = frozenset({"html", "cor", "atributo"})
 
 _LUGAR_NO_HTML = re.compile(r'data-controle="(p\d+)"')
 
@@ -1029,6 +1111,206 @@ def enderecos_que_o_texto_apaga(pagina: str) -> frozenset[str]:
     return frozenset(olho.mudos) if olho is not None else frozenset()
 
 
+# ---------------------------------------------------------------------------
+# O LUGAR VAZIO DIZ O QUE O DESENHO DIZ — O-LUGAR-VAZIO-DIZ-O-QUE-O-DESENHO-DIZ-01
+# ---------------------------------------------------------------------------
+# A QUEIXA DELA, 23/09/2026, com a foto da 08 e nenhum controle na mesa: o topo
+# dizia `Nenhum controle` e os cartões `Sony • Player 1 • Cosmic Red • USB` e
+# `Sony • Player 2 • Starlight Blue • BT`, com a barra rosa do P1 acesa. Não era
+# cache: o nome é `html` e a barra é `cor`, e num lugar vazio ninguém os
+# escrevia. MEDIDO no piloto oculto, nesta árvore, antes da cura: com um
+# controle de mentira no P2 que depois SAI, o cartão do P2 continuava dizendo
+# `Sony • Player 2 • USB` três segundos depois, com o topo em `Nenhum controle`.
+#
+# A CLASSE: sete páginas publicam campo por lugar de alvo `html`, `cor` ou
+# `atributo`, e só três declaravam o próprio `LUGAR_VAZIO`. Cada aba inventando
+# o seu é o defeito que a casa mais paga — então o dono é UM, e é o desenho.
+
+#: Um `data-controle` que é LUGAR (`p1`…`p4`), e não o SVG (`dualsense`).
+_E_LUGAR = re.compile(r"p\d+")
+
+
+def _o_numero_trocado(valor: str, de: int, para: int) -> str:
+    """O número do jogador `de` vira `para` onde ele É o número: `P3`, `Player 3`.
+
+    A FRONTEIRA É A TRAVA: `#74588e`, `3px`, `0.3` e `gc-p3` não são o número
+    de um jogador, e nenhum deles casa. Quem confere que a troca não pegou
+    nada a mais é `_a_palavra_do_desenho`, contra o segundo lugar vazio.
+    """
+    return re.sub(rf"(?<![0-9A-Za-z#_.-])([Pp]?){de}(?![0-9A-Za-z_%-])",
+                  lambda m: f"{m.group(1)}{para}", valor)
+
+
+class _OLugarNoDesenho(html.parser.HTMLParser):
+    """Os lugares da página publicada, campo a campo — com o miolo CRU do `html`.
+
+    CRU, E NÃO O TEXTO: o alvo `html` escreve `innerHTML`, e o nome do cartão da
+    08 é `Player 3 <span class="pt">•</span> Desconectado`. O texto perderia o
+    `<span>`, e o `•` sairia colado.
+
+    SÓ OS DESCENDENTES DO LUGAR: o `achar()` do piloto procura com
+    `querySelectorAll` DENTRO do `[data-controle]`, e o próprio elemento do
+    lugar nunca é alcançado — a 06 põe o `plastico` nele.
+    """
+
+    def __init__(self, doc: str) -> None:
+        super().__init__(convert_charrefs=True)
+        self._doc = doc
+        #: Onde começa cada linha — o `getpos()` conta linha e coluna.
+        self._linhas = [0, *(m.end() for m in re.finditer("\n", doc))]
+        #: `pref` → `campo` → `[((alvo, atributo), valor), …]`, em ordem.
+        self.campos: dict[str, dict[str, list[tuple[tuple[str, str], str]]]] = {}
+        #: Os lugares que o desenho publica VAZIOS, em ordem.
+        self.vazios: list[str] = []
+        self._pilha: list[dict[str, Any]] = []
+
+    def _onde(self) -> int:
+        linha, coluna = self.getpos()
+        return self._linhas[linha - 1] + coluna
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        d = {k: (v or "") for k, v in attrs}
+        lugar = d.get("data-controle", "")
+        lugar = lugar if _E_LUGAR.fullmatch(lugar) else ""
+        if lugar and d.get("data-conectado") == "nao" and lugar not in self.vazios:  # (noqa-acento) valor do atributo
+            self.vazios.append(lugar)
+        dentro = next((q["lugar"] for q in reversed(self._pilha) if q["lugar"]), "")
+        chave = d.get("data-campo") or d.get("data-papel") or d.get("data-hef") or ""
+        quadro: dict[str, Any] = {
+            "tag": tag, "lugar": lugar, "campo": None,
+            "miolo": self._onde() + len(self.get_starttag_text() or "")}
+        if chave and dentro and not lugar:
+            alvo = d.get("data-hef-alvo") or "texto"
+            nome = (d.get("data-hef-atributo") or "").strip().lower()
+            if alvo != "atributo":
+                nome = ""
+            quadro["campo"] = (dentro, chave, (alvo, nome), d.get(nome, "") if nome else "")
+        self._pilha.append(quadro)
+        if tag in _SEM_FECHO:
+            self._fechar(tag, quadro["miolo"])
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.handle_starttag(tag, attrs)
+        if tag not in _SEM_FECHO:
+            self._fechar(tag, self._pilha[-1]["miolo"])
+
+    def handle_endtag(self, tag: str) -> None:
+        self._fechar(tag, self._onde())
+
+    def _fechar(self, tag: str, fim: int) -> None:
+        for i in range(len(self._pilha) - 1, -1, -1):
+            if self._pilha[i]["tag"] == tag:
+                break
+        else:
+            return
+        while len(self._pilha) > i:
+            quadro = self._pilha.pop()
+            if quadro["campo"] is None:
+                continue
+            lugar, chave, assinatura, valor = quadro["campo"]
+            if assinatura[0] == "html":
+                valor = self._doc[quadro["miolo"]:fim]
+            self.campos.setdefault(lugar, {}).setdefault(chave, []).append(
+                (assinatura, valor))
+
+
+def _a_palavra_do_desenho(alvo: str, por_lugar: dict[int, list[str]]) -> Callable[[int], str]:
+    """O que o desenho diz daquele campo num lugar vazio de número `n`.
+
+    `por_lugar` é `{número: [valores]}` dos lugares que o desenho publica vazios.
+    Quatro respostas, na ordem:
+
+    * `cor` é sempre `""` — a cor sai e o elemento volta à folha de estilo;
+    * os lugares vazios dizem a MESMA coisa (o traço, a paleta da 04) — é ela;
+    * dizem a mesma coisa A MENOS DO NÚMERO (`Player 3 •…`, `Player 4 •…`) — é o
+      molde, com o número do lugar. A troca é CONFERIDA: aplicada ao primeiro,
+      tem de reproduzir os outros letra por letra;
+    * qualquer outra coisa — um só lugar vazio com número dentro, ou exemplos
+      diferentes em cada um (o colorway `galactic-purple` e `white`) — é `""`:
+      o desenho não diz UMA coisa do lugar vazio, e campo sem informação não
+      mostra nada.
+    """
+    if alvo == "cor":
+        return lambda _n: ""
+    valores: dict[int, str] = {}
+    for n, vs in por_lugar.items():
+        if not vs:
+            continue
+        if len(set(vs)) != 1:
+            return lambda _n: ""
+        valores[n] = vs[0]
+    if len(set(valores.values())) == 1 and (
+            len(valores) > 1
+            or all(_o_numero_trocado(v, n, n + 1) == v for n, v in valores.items())):
+        (unica,) = set(valores.values())
+        return lambda _n: unica
+    if len(valores) > 1:
+        ref = min(valores)
+        molde = valores[ref]
+        if all(_o_numero_trocado(molde, ref, n) == v for n, v in valores.items()):
+            return lambda n: _o_numero_trocado(molde, ref, n)
+    return lambda _n: ""
+
+
+#: `pagina` → `{pref: {campo: valor}}`, lido uma vez por página.
+_DESENHO_DO_VAZIO: dict[str, dict[str, dict[str, str]]] = {}
+
+
+def o_que_o_desenho_diz_do_lugar_vazio(pagina: str) -> dict[str, dict[str, str]]:
+    """`{pref: {campo: valor}}` — o lugar vazio do desenho, para os QUATRO lugares.
+
+    UM DONO SÓ para o lugar vazio de toda aba, e ele é o desenho: o P3 e o P4
+    nascem vazios na página publicada, por decisão dela de 31/08, e o que eles
+    mostram é o que um lugar vazio mostra. Só os alvos em que o travessão não
+    chega (`ALVOS_QUE_O_DESENHO_DIZ`), e só os campos de UM alvo — um endereço
+    que a página escreve de dois jeitos (o `alto-canal` da 02 é `classe` num
+    elemento e `html` noutro) não tem uma palavra que sirva aos dois.
+
+    O QUE A ABA DECLARA EM `LUGAR_VAZIO` VENCE — é aplicado depois, em
+    `apagar_os_lugares_sem_dono`: a linha LEDs apagada da 04 é pedido dela que o
+    desenho não tem.
+
+    Vazio quando a página não abre ou não publica lugar vazio nenhum: aí o
+    desenho não diz nada, e o travessão continua sozinho.
+    """
+    lembrado = _DESENHO_DO_VAZIO.get(pagina)
+    if lembrado is None:
+        lembrado = _ler_o_lugar_vazio_do_desenho(pagina)
+        _DESENHO_DO_VAZIO[pagina] = lembrado
+    return {pref: dict(campos) for pref, campos in lembrado.items()}
+
+
+def _ler_o_lugar_vazio_do_desenho(pagina: str) -> dict[str, dict[str, str]]:
+    from hefesto_dualsense4unix.interface import onde
+
+    try:
+        doc = onde.pagina(pagina, publicado=True).read_text(encoding="utf-8")
+    except OSError:
+        return {}
+    olho = _OLugarNoDesenho(doc)
+    olho.feed(doc)
+    olho.close()
+    if not olho.vazios:
+        return {}
+    assinaturas: dict[str, set[tuple[str, str]]] = {}
+    for campos in olho.campos.values():
+        for chave, ocorrencias in campos.items():
+            assinaturas.setdefault(chave, set()).update(a for a, _ in ocorrencias)
+    fora: dict[str, dict[str, str]] = {pref: {} for pref in sorted(TODOS_OS_LUGARES)}
+    for chave, sinais in sorted(assinaturas.items()):
+        if len(sinais) != 1:
+            continue
+        ((alvo, _nome),) = sinais
+        if alvo not in ALVOS_QUE_O_DESENHO_DIZ:
+            continue
+        palavra = _a_palavra_do_desenho(alvo, {
+            int(pref[1:]): [v for _, v in olho.campos.get(pref, {}).get(chave, [])]
+            for pref in olho.vazios})
+        for pref in fora:
+            fora[pref][chave] = palavra(int(pref[1:]))
+    return fora
+
+
 def chaves_por_controle(pacote: dict[str, Any]) -> set[str]:
     """Os campos que este pacote emite POR CONTROLE, nas três palavras.
 
@@ -1091,16 +1373,10 @@ def molde_do_lugar(
         # PÁGINA SEM LUGAR DE CONTROLE não tem molde a fazer — e rodar a pintura
         # dela de novo NÃO É INÓCUO. Ver `lugares_da_pagina`.
         return {}
-    # O NOME SE PERGUNTA AO DONO, e aqui ele é CHAVE DE CACHE — 19/09/2026.
-    # Com o `ctx.state.get("active_profile")` cru a chave era `None` em toda
-    # volta na máquina dela (o daemon não publica o perfil de janela), e
-    # trocar de perfil NÃO invalidava o molde: a página seguia com o molde
-    # do perfil anterior. Ver `perfil.nome_do_ativo`.
-    from hefesto_dualsense4unix.interface.pacotes import perfil as _perfil_
-
-    chave = (pagina, _perfil_.nome_do_ativo(ctx.state))
+    # A CHAVE TEM DONO — `_chave_do_molde`, que diz por que o perfil entra.
+    chave = _chave_do_molde(pagina, ctx)
     lembrado = _MOLDE.get(chave)
-    if lembrado is not None:
+    if lembrado is not None and chave in _PINTA:
         return dict(lembrado)
     alvos = alvos_da_pagina(pagina)
     if not alvos:
@@ -1129,6 +1405,7 @@ def molde_do_lugar(
                and k not in apaga),
         TRAVESSAO)
     _MOLDE[chave] = molde
+    _PINTA[chave] = frozenset(chaves_por_controle(seria))
     return dict(molde)
 
 
@@ -1478,6 +1755,11 @@ def normalizar(pacote: dict[str, Any], para_pref: dict[str, str] | None = None) 
             str(classe): sorted({para_pref.get(str(u)) or para_pref.get(_so_hex(str(u)))
                                  or str(u) for u in (lugares or [])})
             for classe, lugares in marcas.items()}
+    # OS CAMPOS DO LUGAR, com a mesa vazia — ver `CAMPOS_DO_LUGAR`. Lista na
+    # raiz: o laço acima a poria na `mesa` como campo solto, e ela é instrução.
+    campos = pacote.get(CAMPOS_DO_LUGAR)
+    if isinstance(campos, (list, tuple, set, frozenset)) and campos:
+        fora[CAMPOS_DO_LUGAR] = sorted(str(k) for k in campos)
     return fora
 
 
