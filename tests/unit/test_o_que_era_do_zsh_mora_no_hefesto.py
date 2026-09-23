@@ -377,6 +377,77 @@ def test_a_lista_so_traz_wifi_no_barramento_usb(tmp_path: Path) -> None:
     assert _wifi(amb, "--lista").stdout.split() == [IFC]
 
 
+def test_wifi_pcie_nao_entra_na_lista(tmp_path: Path) -> None:
+    """A classe é Wi-Fi USB. Uma placa Wi-Fi PCIe TEM `wireless` e não tem o
+    defeito: fica com o scan de fundo do NetworkManager e fora do vigia — que,
+    com ela na lista, reiniciaria uma "porta USB" montada do aparelho errado."""
+    amb = _mesa(tmp_path)
+    sysfs = Path(amb["HEFESTO_WIFI_SYSFS"])
+    (sysfs / "bus" / "pci").mkdir(parents=True)
+    placa = sysfs / "devices" / "pci0000:00" / "0000:02:00.0"
+    placa.mkdir(parents=True)
+    (placa / "subsystem").symlink_to(sysfs / "bus" / "pci")
+    wlp = sysfs / "class" / "net" / "wlp2s0"
+    (wlp / "wireless").mkdir(parents=True)
+    (wlp / "device").symlink_to(placa)
+    assert _wifi(amb, "--lista").stdout.split() == [IFC]
+
+
+def test_o_seco_vale_tambem_para_o_reforco(tmp_path: Path) -> None:
+    """`--vigiar --seco` só DIZ: nem o reset da porta nem o `set_network` do
+    reforço — um ensaio que desliga o scan de fundo não é ensaio."""
+    amb = _mesa(tmp_path)
+    _associar(amb, bgscan='"simple:30:-65:300"')
+    r = _wifi(amb, "--vigiar", "--seco")
+    assert "desligaria agora (--seco, nada feito)" in r.stdout
+    assert not (_fake(amb) / "chamadas").exists() or "set_network" not in (
+        _fake(amb) / "chamadas"
+    ).read_text(encoding="utf-8"), "o --seco mexeu no wpa_supplicant"
+
+
+def test_sem_associacao_a_contagem_recomeca(tmp_path: Path) -> None:
+    """Sem associação quem cuida é o NetworkManager; as falhas de antes não
+    podem somar com as da associação nova e reiniciar a porta no primeiro tique."""
+    amb = _mesa(tmp_path)
+    estado = Path(amb["HEFESTO_WIFI_ESTADO"])
+    estado.mkdir()
+    (estado / f"{IFC}.falhas").write_text("2\n", encoding="utf-8")
+    r = _wifi(amb, "--vigiar")
+    assert r.returncode == 0
+    assert not (estado / f"{IFC}.falhas").exists()
+
+
+def test_depois_de_um_reinicio_o_freio_dos_dez_minutos_segura_o_seguinte(tmp_path: Path) -> None:
+    """O cenário 3 semeia o estado à mão; este prova que o próprio reinício o
+    grava — sem isso o freio nunca pegaria um reset de verdade."""
+    amb = _mesa(tmp_path)
+    _associar(amb, roteador=False)
+    for _ in range(3):
+        _wifi(amb, "--vigiar")
+    assert (_fake(amb) / "reset").read_text(encoding="utf-8").count("reset ") == 1
+    for _ in range(3):
+        r = _wifi(amb, "--vigiar")
+    assert "espero dar 600 s" in r.stdout
+    assert (_fake(amb) / "reset").read_text(encoding="utf-8").count("reset ") == 1
+
+
+def test_bluetooth_no_mesmo_controlador_e_noutro_hub_nao_e_aviso(tmp_path: Path) -> None:
+    """Mesmo controlador PCI não é mesmo hub: o aviso é da CADEIA de hub."""
+    amb = _mesa(tmp_path)
+    _associar(amb)
+    sysfs = Path(amb["HEFESTO_WIFI_SYSFS"])
+    outro = (
+        sysfs / "devices" / "pci0000:00" / "0000:00:08.1" / "usb3" / "3-2" / "3-2.3" / "3-2.3:1.0"
+    )
+    outro.mkdir(parents=True)
+    (sysfs / "class" / "bluetooth" / "hci0").mkdir()
+    (sysfs / "class" / "bluetooth" / "hci0" / "device").symlink_to(outro)
+    (_fake(amb) / "uid").write_text("0\n", encoding="utf-8")
+    r = _wifi(amb, "--status")
+    assert "hub sem Bluetooth" in r.stdout
+    assert "AVISO" not in r.stdout
+
+
 def test_gancho_de_comando_sem_sysfs_de_mentira_e_recusado(tmp_path: Path) -> None:
     """A trava: dublê de `wpa_cli` com o sysfs de verdade leria o dongle de quem
     roda a suíte — e o `--vigiar` reiniciaria a porta dele."""
