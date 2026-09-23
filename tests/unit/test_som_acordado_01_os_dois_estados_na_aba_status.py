@@ -610,7 +610,7 @@ def test_os_dois_estados_custam_zero_altura_no_card() -> None:
 
 
 # `test_o_selo_dormindo_cabe_no_teto_de_largura_do_selo` SAIU EM 23/09/2026
-# com o selo que ele media (O-ALTO-FALANTE-DIZ-ATIVO-01). O teto `_SELO_CHARS`
+# com o selo que ele mediu (O-ALTO-FALANTE-DIZ-ATIVO-01). O teto `_SELO_CHARS`
 # continua medido pelos textos que sobram, e a guarda da largura com o canal
 # presente é `test_os_dois_estados_custam_zero_altura_no_card`, logo acima.
 
