@@ -654,9 +654,9 @@ def apagar_os_lugares_sem_dono(
     """Escreve travessão em todo lugar do desenho que a mesa de agora não tem.
 
     E ONDE O TRAVESSÃO NÃO CHEGA À TELA, O DESENHO DIZ — O-LUGAR-VAZIO-DIZ-O-QUE-
-    O-DESENHO-DIZ-01, 23/09/2026. Com `pagina`, os campos de alvo `html`, `cor` e
+    O-DESENHO-DIZ-01, 23/09/2026. Com a página, os campos de alvo `html`, `cor` e
     `atributo` de um lugar vazio recebem o que o desenho publica num lugar vazio
-    (`o_que_o_desenho_diz_do_lugar_vazio`). Sem `pagina`, só o travessão, como
+    (`o_que_o_desenho_diz_do_lugar_vazio`). Sem a página, só o travessão, como
     antes — o piloto sempre a passa.
 
     ELA MORA AQUI, e não no piloto, POR CAUSA DA RÉGUA. O molde do despachante
@@ -1253,7 +1253,7 @@ def _a_palavra_do_desenho(alvo: str, por_lugar: dict[int, list[str]]) -> Callabl
     return lambda _n: ""
 
 
-#: `pagina` → `{pref: {campo: valor}}`, lido uma vez por página.
+#: Nome da página → `{pref: {campo: valor}}`, lido uma vez por página.
 _DESENHO_DO_VAZIO: dict[str, dict[str, dict[str, str]]] = {}
 
 

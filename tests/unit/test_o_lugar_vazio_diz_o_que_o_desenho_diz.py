@@ -280,7 +280,7 @@ def test_as_sete_paginas_sao_as_sete() -> None:
                     "08-conexoes.html"], SETE
 
 
-@pytest.mark.parametrize("pagina", SETE)
+@pytest.mark.parametrize("pagina", SETE)  # (noqa-acento): nome de parâmetro
 def test_as_sete_paginas_com_a_mesa_vazia(pagina: str) -> None:
     """Zero controles: nenhum dos quatro lugares mostra o que o desenho pôs
     num lugar COM controle — nem o nome, nem a cor, nem o atributo."""
@@ -293,7 +293,7 @@ def test_as_sete_paginas_com_a_mesa_vazia(pagina: str) -> None:
         "controle — a foto dela de 23/09/2026:\n  " + "\n  ".join(vazaram))
 
 
-@pytest.mark.parametrize("pagina", SETE)
+@pytest.mark.parametrize("pagina", SETE)  # (noqa-acento): nome de parâmetro
 def test_as_sete_paginas_com_um_controle_no_p2(pagina: str) -> None:
     """Um controle no P2: o P1, o P3 e o P4 continuam dizendo o lugar vazio."""
     carga = _carga(pagina, [NO_P2])
@@ -350,7 +350,7 @@ def test_o_p2_sai_e_volta_a_desconectado_no_tique_seguinte() -> None:
 # ---------------------------------------------------------------------------
 # 3. O LUGAR QUE ESVAZIA NÃO GUARDA NADA DO CONTROLE, e o que chega apaga o vazio
 # ---------------------------------------------------------------------------
-@pytest.mark.parametrize("pagina", SETE)
+@pytest.mark.parametrize("pagina", SETE)  # (noqa-acento): nome de parâmetro
 def test_o_que_a_regra_escreve_no_vazio_a_aba_reescreve_no_cheio(pagina: str) -> None:
     """A trava da regra: ela só escreve onde a aba escreve.
 
@@ -385,7 +385,7 @@ def test_a_lista_do_lugar_nao_chega_a_pagina() -> None:
 
 
 def test_sem_a_pagina_a_conta_e_a_de_antes() -> None:
-    """Quem chama sem `pagina` recebe só o travessão — nenhum desenho."""
+    """Quem chama sem a página recebe só o travessão — nenhum desenho."""
     carga = {"colunas": {"p1": {"nome": "Régua", "plastico": "#fff"}}}
     fora = pacotes.apagar_os_lugares_sem_dono(carga, ["p1"])
     assert fora["colunas"]["p2"] == {"nome": pacotes.TRAVESSAO,
