@@ -234,6 +234,17 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "falta é o registro do degrau, não o comportamento. É a linha 20 do "
         "roteiro da mesa",
     ),
+    # O 🎙 DA SEÇÃO DO RÁDIO (TRANSPLANTE-DA-SECAO-01, 23/09/2026) é o `mudo` da
+    # 02, chamado (`a08_conexoes.custo_mic`): a escada é a MESMA célula, e a
+    # falta fecha junto com a linha de cima — as duas saem no mesmo dia.
+    "custo-mic": (
+        "horas",
+        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio-com-ela.md",
+        "é o MESMO ato do `mudo` da aba 02 — o gesto dela, chamado pela linha do "
+        "controle na seção do rádio —, e para na mesma célula "
+        "`audio.microfone.mudo@dualsense` (MONTOU nos dois). O que falta é o "
+        "registro do degrau, e é a linha 20 do roteiro da mesa, como a do `mudo`",
+    ),
     "volume": (
         "horas",
         "2026-09-09-MIC-VOLUME-02-o-byte-do-aparelho-medido-e-ligado-ao-campo.md",
