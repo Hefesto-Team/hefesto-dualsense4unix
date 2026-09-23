@@ -866,6 +866,12 @@ def test_a_paridade_da_familia_passa_e_morde(tmp_path: Path) -> None:
             "scripts/lib/camada_de_maquina.sh(não instala "
             "/usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh)",
         ),
+        # A pergunta do rfkill (a outra peça A) definida e nunca feita.
+        (
+            "scripts/doctor.sh",
+            "    check_bt_rfkill\n",
+            "scripts/doctor.sh(o main não chama check_bt_rfkill)",
+        ),
         # O `disable` vem também no recado do ramo sem sudo.
         (
             "uninstall.sh",

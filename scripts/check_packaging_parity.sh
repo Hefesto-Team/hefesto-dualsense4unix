@@ -835,12 +835,20 @@ if [[ -f assets/systemd/hefesto-wifi-usb-vigia.service ]]; then
         || missing+=("scripts/doctor.sh(sem check_wifi_usb)")
     grep -qE '^[[:space:]]+check_wifi_usb[[:space:]]*$' <<<"${_wifi_doc}" \
         || missing+=("scripts/doctor.sh(o main não chama check_wifi_usb)")
+    # A OUTRA peça A da sprint, a pergunta do rfkill: não tem install nem
+    # uninstall (é leitura), e o par que ela tem é o do doctor — definida E
+    # chamada no main. Uma pergunta definida e nunca feita é o rádio desligado
+    # que ninguém vê, que é exatamente o que ela veio curar.
+    grep -qE '^check_bt_rfkill\(\)' <<<"${_wifi_doc}" \
+        || missing+=("scripts/doctor.sh(sem check_bt_rfkill)")
+    grep -qE '^[[:space:]]+check_bt_rfkill[[:space:]]*$' <<<"${_wifi_doc}" \
+        || missing+=("scripts/doctor.sh(o main não chama check_bt_rfkill)")
     grep -qF 'hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf' <<<"${_wifi_lib_inst}" \
         || missing+=("scripts/lib/camada_de_maquina.sh(não escreve o drop-in do watchdog)")
     grep -qF 'hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf' <<<"${_wifi_un_rm}" \
         || missing+=("uninstall.sh(não remove o drop-in do watchdog)")
     if [[ "${#missing[@]}" -eq 0 ]]; then
-        echo "[ OK ] vigia do Wi-Fi USB: o install põe os quatro destinos, o uninstall tira os quatro, o doctor pergunta; o drop-in do watchdog entra e sai"
+        echo "[ OK ] vigia do Wi-Fi USB: o install põe os quatro destinos, o uninstall tira os quatro, o doctor pergunta (e pergunta pelo rfkill); o drop-in do watchdog entra e sai"
     else
         echo "[FAIL] vigia do Wi-Fi USB: FALTANDO em: ${missing[*]}"
         echo "       Peça que o install põe e o uninstall não tira é o defeito que tirou"
