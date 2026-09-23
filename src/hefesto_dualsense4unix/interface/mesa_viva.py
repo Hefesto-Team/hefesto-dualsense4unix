@@ -33,11 +33,16 @@ import csv
 import json
 import pathlib
 import socket
+import threading
 from typing import Any
 
 from hefesto_dualsense4unix.app.actions.base import numero_do_controle
 from hefesto_dualsense4unix.app.mesa import controles_conectados
 from hefesto_dualsense4unix.core.speaker_scale import percentual_do_volume
+from hefesto_dualsense4unix.integrations.cor_do_plastico import (
+    AgendaDaPergunta,
+    IdentidadeDeFabrica,
+)
 from hefesto_dualsense4unix.utils import xdg_paths
 
 #: A raiz do repositório é a DESTE arquivo — nunca um caminho escrito à mão.
@@ -232,79 +237,114 @@ def _codigo_para_colorway() -> dict[str, tuple[str, str]]:
 CORES = _codigo_para_colorway()
 
 #: O que a linha do rótulo diz quando a cor não é legível. É "não sei", e é
-#: resposta válida: o `ler_pelo_cabo` do produto devolve `None` sem levantar
-#: quando o aparelho não responde, quando o broker fecha a porta ou quando o
-#: código de fábrica está fora da tabela de vinte e uma entradas.
+#: resposta válida — mas só a que o aparelho DEU (código fora da tabela) ou a de
+#: quem não pode responder fica para sempre; a falha de um instante volta a ser
+#: perguntada (`cor_do_plastico.AgendaDaPergunta`).
 COR_DESCONHECIDA = "Não sei"
 
 
 class LeitorDeCor:
-    """Pergunta a cor do plástico UMA VEZ por endereço, nos DOIS transportes.
+    """Pergunta a cor do plástico por endereço, nos DOIS transportes.
 
-    Não é um caminho novo: é `integrations/cor_do_plastico.ler_pelo_cabo`, o
-    mesmo que a aba Configurações já chama ao entrar. Fica atrás desta classe
-    por três razões medidas:
+    Não é um caminho novo: é `integrations/cor_do_plastico.ler_identidade_pelo_cabo`,
+    o mesmo leitor que a aba Configurações e o daemon chamam. Fica atrás desta
+    classe por três razões medidas:
 
     * o pedido é um `SET_FEATURE` da família `0x80` — a mesma em que um par
       errado RESETA o aparelho —, então ele NÃO pode entrar num tique de 10 Hz;
       a trava do módulo confere o pedido byte a byte antes do `ioctl`;
     * quem decide a quem perguntar é o MAPA (`identidade.cor_do_aparelho`,
       coluna `aciona` do lado daquele transporte), não um `if` decorado. **A
-      célula do rádio virou `sim` em 02/09/2026** — SUBSTITUÍDO o que esta
-      docstring dizia até então (*"pelo rádio a resposta não vem"*, com
-      `radio_aciona = não`): o `EIO` de 15/08 era a semente do NOSSO CRC, e com
-      a semente de escrita `0x53` o controle dela no rádio devolveu o serial em
-      13,6 ms. O mecanismo aqui não mudou uma linha — mudou a célula, e o
-      produto seguiu;
-    * a resposta não muda — está no serial de fábrica —, então uma vez por
-      endereço por sessão basta.
+      célula do rádio virou `sim` em 02/09/2026**: o `EIO` de 15/08 era a
+      semente do NOSSO CRC, e com a semente de escrita `0x53` o controle dela
+      no rádio devolveu o serial em 13,6 ms;
+    * QUANDO perguntar de novo é da `AgendaDaPergunta`, o dono que o daemon
+      também chama. **SUBSTITUÍDO em 22/09/2026** o *"uma vez por endereço por
+      sessão basta"*: a resposta não muda, mas a FALHA não é resposta, e
+      guardá-la como `None` apagou modelo e cor dos dois controles dela
+      (A-FITA-PERDEU-O-MODELO-E-A-COR-01).
+
+    O `leitor` injetado fala o contrato da fonte: `uniq -> IdentidadeDeFabrica`.
     """
 
-    def __init__(self, *, ligado: bool = True, leitor: Any = None) -> None:
+    def __init__(
+        self,
+        *,
+        ligado: bool = True,
+        leitor: Any = None,
+        agenda: AgendaDaPergunta | None = None,
+    ) -> None:
         self.ligado = ligado
         self._leitor = leitor
+        self._agenda = agenda if agenda is not None else AgendaDaPergunta()
         self._cache: dict[str, Any] = {}
 
     def conhecidos(self) -> dict[str, Any]:
         return dict(self._cache)
 
     def pendentes(self, entradas: list[dict[str, Any]]) -> list[str]:
-        """Quem ainda não foi perguntado E pode responder neste transporte."""
+        """Quem perguntar AGORA — e cada um devolvido fica em voo até `perguntar`.
+
+        Quem recebe a lista TEM de chamar `perguntar` para cada `uniq` dela:
+        é a volta da pergunta que solta o voo. `disparar` faz as duas coisas.
+        """
         fora = []
         for entrada in entradas:
             uniq = str(entrada.get("uniq") or "")
+            if not uniq:
+                continue
             transporte = str(entrada.get("transport") or "")
-            if not uniq or uniq in self._cache:
-                continue
             if aciona("identidade.cor_do_aparelho", transporte) != "sim":
-                # O mapa respondeu que aquele transporte não entrega. Marca como
-                # perguntado para não voltar aqui a cada tique.
-                self._cache[uniq] = None
+                # O mapa respondeu que aquele transporte não entrega: uma
+                # pergunta nenhuma, e a agenda fecha o endereço.
+                self._cache.setdefault(uniq, None)
+                self._agenda.fechar(uniq)
                 continue
-            fora.append(uniq)
+            if self._agenda.reservar(uniq):
+                fora.append(uniq)
         return fora
+
+    def disparar(self, entradas: list[dict[str, Any]]) -> None:
+        """`pendentes` + uma thread por pergunta. É o que o tique chama."""
+        for uniq in self.pendentes(entradas):
+            threading.Thread(
+                target=self.perguntar, args=(uniq,), name=f"cor-{uniq[-6:]}", daemon=True
+            ).start()
 
     def perguntar(self, uniq: str) -> Any:
         """Bloqueia. Quem chama põe numa thread — nunca na do GTK."""
         if not self.ligado:
+            # `registrar`, e não `fechar`: quem chega aqui foi reservado por
+            # `pendentes`, e só `registrar` solta o voo.
             self._cache[uniq] = None
+            self._agenda.registrar(
+                uniq, IdentidadeDeFabrica(nao_pode=True, motivo="a leitura está desligada")
+            )
             return None
         leitor = self._leitor
         if leitor is None:
-            from hefesto_dualsense4unix.integrations.cor_do_plastico import ler_pelo_cabo
+            from hefesto_dualsense4unix.integrations.cor_do_plastico import (
+                ler_identidade_pelo_cabo,
+            )
 
-            leitor = ler_pelo_cabo
+            leitor = ler_identidade_pelo_cabo
+        achado = IdentidadeDeFabrica(motivo="o leitor não devolveu")
         try:
-            cor = leitor(uniq)
-        except Exception:
-            cor = None
-        self._cache[uniq] = cor
-        return cor
+            achado = leitor(uniq)
+        except Exception as erro:
+            achado = IdentidadeDeFabrica(motivo=f"o leitor levantou {type(erro).__name__}")
+        finally:
+            if achado.definitiva:
+                # A falha não escreve: ela não apaga o que já se sabia.
+                self._cache[uniq] = achado.cor
+            self._agenda.registrar(uniq, achado)
+        return achado.cor
 
     def esquecer_ausentes(self, vivos: set[str]) -> None:
         for uniq in list(self._cache):
             if uniq not in vivos:
                 del self._cache[uniq]
+        self._agenda.esquecer_ausentes(vivos)
 
 
 # ---------------------------------------------------------------------------

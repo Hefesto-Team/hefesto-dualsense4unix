@@ -749,7 +749,7 @@ def linha_da_sobreposicao_vulkan() -> tuple[str, str] | None:
 #: A CURA É A DA JANELA ANTIGA, com o mecanismo do piloto: uma thread, uma de
 #: cada vez, e o tique publica o que já se sabe. É o mesmo molde do leitor de cor
 #: (`hefesto_vivo._contexto`) e do serial de fábrica
-#: (`ipc_handlers._identidade_em_voo`) — perguntar é caro, então pergunta-se
+#: (`cor_do_plastico.AgendaDaPergunta`) — perguntar é caro, então pergunta-se
 #: fora do caminho e mostra-se a última resposta.
 #:
 #: **E A THREAD NÃO BASTOU — 06/09/2026.** A thread tirou a varredura do laço do

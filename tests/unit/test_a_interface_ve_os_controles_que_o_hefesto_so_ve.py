@@ -279,9 +279,8 @@ class _PilotoDeMentira:
         self._externos: list[dict[str, Any]] = []
         self._externos_lidos_em = 0.0
         self._externos_no_ar = False
-        # O QUE `_contexto` TAMBÉM LÊ, e só isso: o leitor de cor (que responde
-        # `{}` até a primeira pergunta voltar) e a trava das threads dele.
-        self.perguntados: set[str] = set()
+        # O QUE `_contexto` TAMBÉM LÊ, e só isso: o leitor de cor, que responde
+        # `{}` até a primeira pergunta voltar e guarda a própria trava.
         self.leitor = _LeitorDeMentira()
 
     #: OS DOIS TETOS SÃO OS DA CLASSE REAL, emprestados e nunca digitados: um
@@ -308,7 +307,10 @@ class _LeitorDeMentira:
     def conhecidos(self) -> dict[str, Any]:
         return {}
 
-    def perguntar(self, _uniq: str) -> None:
+    def esquecer_ausentes(self, _vivos: set[str]) -> None:
+        return None
+
+    def disparar(self, _entradas: list[dict[str, Any]]) -> None:
         return None
 
 

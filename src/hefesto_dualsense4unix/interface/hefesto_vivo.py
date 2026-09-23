@@ -3078,10 +3078,9 @@ class Piloto:
         #: O custo das DUAS VIAGENS de IPC, separado do custo total do tique. É
         #: o que responde "quem come o orçamento" sem adivinhação.
         self.custo_do_ipc: list[float] = []
+        #: Quem pode perguntar de novo, e quando, é do leitor
+        #: (`cor_do_plastico.AgendaDaPergunta`) — nunca duas em voo por controle.
         self.leitor = mesa_viva.LeitorDeCor(ligado=not args.sem_cor)
-        #: Os `uniq` já perguntados ao leitor de cor. Sem esta trava, cada tique
-        #: abriria uma thread nova para o mesmo controle — 2 por segundo.
-        self.perguntados: set[str] = set()
         #: OS CONTROLES QUE O HEFESTO SÓ VÊ, e as duas travas da leitura deles —
         #: EXTERNOS-01, 06/09/2026. A lista é a ÚLTIMA resposta boa; o carimbo
         #: diz quando ela chegou; a bandeira impede duas perguntas no ar.
@@ -3806,13 +3805,12 @@ class Piloto:
         # pergunta voltar — por isso a mesa nasce "Não sei" e vira "Starlight
         # Blue" na segunda remontagem. Perguntar é BLOQUEANTE (fala com o
         # aparelho), então vai em thread: no tique ela travaria a janela.
-        for c in ctx_conectados:
-            uniq = str(c.get("uniq") or "")
-            if uniq and uniq not in self.perguntados:
-                self.perguntados.add(uniq)
-                threading.Thread(
-                    target=self.leitor.perguntar, args=(uniq,), daemon=True
-                ).start()
+        # A-FITA-PERDEU-O-MODELO-E-A-COR-01, 22/09/2026: aqui havia uma trava
+        # PRÓPRIA de uma pergunta por controle por janela, e a falha de um
+        # instante virava «Não sei» até ela fechar a janela.
+        self.leitor.esquecer_ausentes(
+            {str(c.get("uniq") or "") for c in ctx_conectados})
+        self.leitor.disparar(ctx_conectados)
         conectados = ctx_conectados
         # OS QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026. A pergunta sai em
         # thread e a resposta é lida do cache, pela mesma razão da cor do

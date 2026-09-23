@@ -819,7 +819,7 @@ def _unidade_do_hefesto() -> str:
 
 
 def _leitor_duble(codigos: str | None) -> Any:
-    """Um `ler_pelo_cabo` de mentira, que responde os códigos que se pedir.
+    """Um `ler_identidade_pelo_cabo` de mentira, que responde os códigos pedidos.
 
     Existe para PROVAR a junta `código de fábrica → colorway do desenho →
     --plastico` sem mandar um byte ao aparelho dela. É o mesmo ponto de injeção
@@ -828,14 +828,21 @@ def _leitor_duble(codigos: str | None) -> Any:
     """
     if not codigos:
         return None
-    from hefesto_dualsense4unix.integrations.cor_do_plastico import cor_do_codigo
+    from hefesto_dualsense4unix.integrations.cor_do_plastico import (
+        IdentidadeDeFabrica,
+        cor_do_serial,
+    )
 
     fila = [c.strip() for c in codigos.split(",") if c.strip()]
     entregues: dict[str, Any] = {}
 
     def leitor(uniq: str) -> Any:
+        # O contrato da fonte (`ler_identidade_pelo_cabo`): um serial de
+        # mentira com o código nos caracteres 5 e 6 é uma RESPOSTA, e fica.
         if uniq not in entregues:
-            entregues[uniq] = cor_do_codigo(fila[len(entregues) % len(fila)])
+            codigo = fila[len(entregues) % len(fila)][:2].rjust(2, "0")
+            serial = f"DUBL{codigo}".ljust(17, "0")
+            entregues[uniq] = IdentidadeDeFabrica(serial=serial, cor=cor_do_serial(serial))
         return entregues[uniq]
 
     return leitor
@@ -875,7 +882,6 @@ class Janela:
         self.leitor_de_cor = mesa_viva.LeitorDeCor(
             ligado=not args.sem_cor, leitor=_leitor_duble(args.cor_duble)
         )
-        self.perguntando: set[str] = set()
         self.mic = None
         self._roteiro: list[dict[str, Any]] | None = None
         self._t0 = 0.0
@@ -1317,12 +1323,7 @@ class Janela:
         conectados = mesa_viva.controles_conectados(state)
         vivos = {str(c.get("uniq") or "") for c in conectados}
         self.leitor_de_cor.esquecer_ausentes(vivos)
-        for uniq in self.leitor_de_cor.pendentes(conectados):
-            if uniq not in self.perguntando:
-                self.perguntando.add(uniq)
-                threading.Thread(
-                    target=self.leitor_de_cor.perguntar, args=(uniq,), daemon=True
-                ).start()
+        self.leitor_de_cor.disparar(conectados)
 
         mesa = mesa_viva.mesa_do_estado(state, self.leitor_de_cor.conhecidos(), alvo=self.alvo)
         if not mesa:
