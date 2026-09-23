@@ -298,6 +298,15 @@ COLISOES_DECLARADAS = {
         "seria ajustar a régua ao caso; a colisão fica declarada porque é o "
         "segundo caso a mostrar que o classificador não tem como decidir."
     ),
+    "D-COSTURA-BLUEZ": (
+        "É de PRODUTO desde 23/09/2026: a decisão diz quem escreve o `Alias` "
+        "do adaptador, e `test_entrada_a_entrada_02_as_telas_aprovadas.py::"
+        "test_o_motor_nao_escreve_no_bluez` mede que o motor das portas não "
+        "importa escritor de BlueZ. A triagem a chama de processo porque a "
+        "`escolha` fala de «script» e de «dono», e o vocabulário de produto "
+        "não tem palavra de rádio. Até a ENTRADA-A-ENTRADA-02 ela era citada "
+        "só no cabeçalho; ganhou régua de verdade, e a colisão é a prova."
+    ),
 }
 
 
