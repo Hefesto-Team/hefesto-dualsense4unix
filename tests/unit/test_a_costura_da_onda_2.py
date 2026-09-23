@@ -279,3 +279,95 @@ def test_no_radio_central_controle_e_sempre_o_uniq(
             f"`controle` com outro sentido no radio_central: {valor!r}"
         )
     assert all(isinstance(v, bool) for v in _chaves(publicado, "e_controle"))
+
+
+# ---------------------------------------------------------------------------
+# 3. o desligamento fecha a central
+# ---------------------------------------------------------------------------
+
+
+def _daemon_de_mentira() -> Any:
+    """O ``Daemon`` de verdade, com o controle de mentira e nada ligado."""
+    from hefesto_dualsense4unix.core.controller import ControllerState
+    from hefesto_dualsense4unix.core.events import EventBus
+    from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
+    from hefesto_dualsense4unix.testing.fake_controller import FakeController
+
+    estado = ControllerState(
+        battery_pct=80, l2_raw=0, r2_raw=0, connected=True, transport="usb"
+    )
+    return Daemon(
+        controller=FakeController(transport="usb", states=[estado]),
+        bus=EventBus(),
+        config=DaemonConfig(
+            poll_hz=120,
+            auto_reconnect=False,
+            ipc_enabled=False,
+            udp_enabled=False,
+            autoswitch_enabled=False,
+            mouse_emulation_enabled=False,
+            keyboard_emulation_enabled=False,
+            mic_button_toggles_system=False,
+            plugins_enabled=False,
+        ),
+    )
+
+
+def _esperar(condicao: Any, teto: float = 5.0) -> bool:
+    import time
+
+    fim = time.monotonic() + teto
+    while time.monotonic() < fim:
+        if condicao():
+            return True
+        time.sleep(0.01)
+    return bool(condicao())
+
+
+@pytest.mark.asyncio
+async def test_o_desligamento_fecha_a_central_e_o_pairable_volta(
+    diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo
+) -> None:
+    """O daemon para no meio da janela: o ``Pairable`` do destino volta a ``false``.
+
+    A janela de pareamento liga o ``Pairable`` SÓ durante o gesto, e quem o
+    devolve é o fio da central — que só solta a espera do PS + Create quando vê
+    o ``fechar()``. O relógio aqui é o de verdade, e a janela é de um minuto:
+    sem o ``shutdown`` fechar a central, ela seguiria aberta depois do daemon.
+
+    MORDIDA: tire do ``connection.shutdown`` o bloco da central — o
+    ``Pairable`` do quarto fica ``true`` e esta régua reprova.
+    """
+    import asyncio
+
+    from hefesto_dualsense4unix.daemon.connection import shutdown
+
+    daemon = _daemon_de_mentira()
+    central = cr.CentralDoRadio(
+        dono=dono,
+        onde_esta=mundo.onde_esta,
+        movimento=mundo.hz,
+        esquecer_na_ponte=mundo.esquecer_na_ponte,
+        sysfs={"listar": lambda _p: [], "raiz": "/nao/existe"},
+        segundos_da_janela=60,
+    )
+    daemon._central_do_radio = central
+    try:
+        feito = await asyncio.to_thread(central.comecar_a_mover, VERMELHO, QUARTO)
+        assert feito.estado == cr.ESPERANDO
+        assert await asyncio.to_thread(
+            _esperar, lambda: mundo.propriedade_do_adaptador(QUARTO, "Pairable") is True
+        ), "a janela não abriu"
+
+        await shutdown(daemon)
+
+        assert mundo.propriedade_do_adaptador(QUARTO, "Pairable") is False, (
+            "o daemon parou e o Pairable do destino ficou ligado"
+        )
+        assert central.movimento_de(VERMELHO).estado == cr.NAO_CHEGOU
+        assert not any(fio.is_alive() for fio in central._fios.values())
+        # Fechada, a central não abre outra janela.
+        assert central.comecar_a_mover(AZUL, VARANDA).motivo == cr.MOTIVO_OCUPADO
+        assert mundo.escritas_no(VARANDA, "Pairable") == []
+    finally:
+        central.fechar()
