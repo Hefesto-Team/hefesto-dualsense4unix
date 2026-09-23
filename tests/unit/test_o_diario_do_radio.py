@@ -775,3 +775,20 @@ def test_o_daemon_monta_o_vigia_com_a_trava() -> None:
     )
 
     assert isinstance(ConexoesSubsystem()._vigia.ponte, PonteComTrava)
+
+
+def test_o_watchdog_root_recusa_trava_que_e_link(tmp_path: Path) -> None:
+    """Root num arquivo que ela também abre: um link no lugar da trava não leva a
+    escrita do root a outro arquivo.
+
+    ARRANQUE A GUARDA — tire o ``[[ -L "${TRAVA_DO_RADIO}" ]]`` de
+    ``_pegar_a_trava`` — e o nome do watchdog aparece dentro do alvo do link.
+    """
+    alvo = tmp_path / "arquivo-de-outra-pessoa"
+    alvo.write_text("intocado\n", encoding="utf-8")
+    (tmp_path / "radio.lock").symlink_to(alvo)
+    watchdog = _watchdog(tmp_path, "--so-a-trava", "0")
+    saida, _erro = watchdog.communicate(timeout=30)
+    assert watchdog.returncode == 0
+    assert "link simbólico" in saida
+    assert alvo.read_text(encoding="utf-8") == "intocado\n"

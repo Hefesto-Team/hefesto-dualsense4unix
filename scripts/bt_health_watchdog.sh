@@ -129,13 +129,24 @@ TRAVA_FD=""
 
 #: Pega a trava comum com prazo. 0 = com ela (ou sem trava comum nesta
 #: máquina, dito no log); 1 = outro motor a segurou o prazo inteiro.
+#:
+#: ROOT NUM ARQUIVO QUE ELA TAMBÉM ABRE. O arquivo da trava tem o grupo dela
+#: (o daemon escreve nele quem está com a trava), então este script nunca o
+#: reabre pelo nome depois de aberto: o dono é escrito PELO DESCRITOR, e um
+#: link simbólico no lugar do arquivo é recusado antes do `open`. O diretório
+#: é do root e não é gravável por ela (ver o que o install precisa, na sprint),
+#: e é isso que fecha a corrida entre a conferência e o `open`.
 _pegar_a_trava() {
     local dono inicio fim milis
     if [[ ! -d "${TRAVA_DO_RADIO%/*}" ]]; then
         log "sem a trava comum do rádio (${TRAVA_DO_RADIO%/*} não existe — é o install que a cria); sigo sem ela"
         return 0
     fi
-    if ! exec {TRAVA_FD}>>"${TRAVA_DO_RADIO}"; then
+    if [[ -L "${TRAVA_DO_RADIO}" ]]; then
+        log "recusando a trava do rádio: ${TRAVA_DO_RADIO} é link simbólico; sigo sem ela"
+        return 0
+    fi
+    if ! exec {TRAVA_FD}<>"${TRAVA_DO_RADIO}"; then
         log "não consegui abrir a trava do rádio (${TRAVA_DO_RADIO}); sigo sem ela"
         TRAVA_FD=""
         return 0
@@ -155,7 +166,9 @@ _pegar_a_trava() {
             "{\"dono\": $(_json_texto "${dono}")}" \
             "{\"espera_s\": $(printf '%d.%03d' $((milis / 1000)) $((milis % 1000)))}"
     fi
-    printf 'bt-watchdog %s\n' "$$" >"${TRAVA_DO_RADIO}" 2>/dev/null || true
+    #: Pelo descritor, na posição 0, sem truncar: quem lê fica com a primeira
+    #: linha, que é esta.
+    printf 'bt-watchdog %s\n' "$$" 1>&"${TRAVA_FD}" 2>/dev/null || true
     return 0
 }
 
