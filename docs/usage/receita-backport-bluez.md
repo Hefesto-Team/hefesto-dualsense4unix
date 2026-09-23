@@ -106,7 +106,7 @@ journalctl -u bluetooth | grep 'report dropped'
 
 | opção | o que faz |
 | --- | --- |
-| (nenhuma) | constrói a última revisão; com os `.deb` dela no cache e o `SHA256SUMS` batendo, sai 0 sem baixar nem compilar |
+| (nenhuma) | constrói a última revisão; com os `.deb` dela no cache, o `SHA256SUMS` batendo e o `ORIGEM.txt` dizendo as mesmas fontes e os mesmos patches, sai 0 sem baixar nem compilar |
 | `--forcar` | reconstrói mesmo já pronto |
 | `--sem-unit` | pula o `make check` |
 | `--preparar` | só os passos 1 a 4 |
