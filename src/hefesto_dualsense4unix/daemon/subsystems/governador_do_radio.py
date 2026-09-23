@@ -198,6 +198,10 @@ class Vaga:
     adaptador: str
     tipo: str
     alem_do_limite: bool = False
+    #: «Além do limite» porque ELA respondeu «Ligar aqui» (R3 → R4), e não
+    #: porque não havia vaga em outro adaptador (R4 sozinha). O diário não
+    #: pode atribuir a ela uma escolha que ela não fez.
+    por_escolha_dela: bool = False
     pedida_em: float = 0.0
     #: Escritas aceitas pelo kernel — o lado «nosso» do déficit.
     escritas: int = 0
@@ -398,10 +402,13 @@ class GovernadorDoRadio:
                 self._pedidos.pop(chave, None)
                 return self._conceder(uniq, adaptador, tipo, alem=False, agora=agora)
             vagas = self._adaptadores_com_vaga(exceto=adaptador)
-            if (chave, adaptador) in self._autorizados or not vagas:
+            autorizado = (chave, adaptador) in self._autorizados
+            if autorizado or not vagas:
                 # R4: ela escolheu «Ligar aqui», ou não há para onde mover.
                 self._pedidos.pop(chave, None)
-                return self._conceder(uniq, adaptador, tipo, alem=True, agora=agora)
+                vaga = self._conceder(uniq, adaptador, tipo, alem=True, agora=agora)
+                vaga.por_escolha_dela = autorizado
+                return vaga
             recusa = Recusa(uniq, adaptador, tipo, MOTIVO_CHEIO, vagas)
             anterior = self._pedidos.get(chave)
             self._pedidos[chave] = _Pedido(uniq, tipo, adaptador, vagas, agora)
@@ -486,9 +493,15 @@ class GovernadorDoRadio:
         if vaga.alem_do_limite:
             campos["alem_do_limite"] = True
             campos["frase"] = f"{no_adaptador} pontes num adaptador (limite {self.n_max})."
+        if not vaga.alem_do_limite:
+            por_que = "há som para mandar"
+        elif vaga.por_escolha_dela:
+            por_que = "ela ligou além do limite"
+        else:
+            por_que = "não há vaga em outro adaptador"
         self._escrever(
             diario.PONTE_SUBIU,
-            "ela ligou além do limite" if vaga.alem_do_limite else "há som para mandar",
+            por_que,
             depois={"pontes": no_adaptador},
             adaptador=vaga.adaptador or None,
             controle=vaga.uniq,
