@@ -1075,7 +1075,7 @@ def _mesa_com_rotulo(mesa: list[dict[str, Any]]) -> list[dict[str, Any]]:
     `_linhas_da_guarda` lê `controle.get("rotulo")` (`perfis_web.py:588`).
     **`mesa_do_estado` não devolve nenhum dos dois** — os campos dela são
     `pref`, `uniq`, `jogador`, `cor`, `nome`, `via`, `transporte`, `alvo`,
-    `mascara` (`mesa_viva.py:405-417`). Medido: `guarda.nome` saía `["", ""]`
+    `mascara` (`mesa_viva.py:493-514`). Medido: `guarda.nome` saía `["", ""]`
     para os DOIS controles da mesa dela, e a tabela ficava sem nome nenhum.
 
     FATO ERRADO, SUBSTITUÍDO — 11/09/2026. Aqui estava escrito *"QUEM JÁ FAZIA
@@ -1883,7 +1883,7 @@ def _rotulo_do_remover(alvo: str) -> str:
     não tem diálogo. O `on_profile_remove` da janela estável abre um
     `gui_dialogs.confirm_delete_profile` (`profiles_actions.py:3231`), que é
     GTK e MODAL; daqui não dá para abri-lo, porque **os gestos rodam em
-    thread** (`hefesto_vivo.py:3431`) e GTK só aceita diálogo no laço principal.
+    thread** (`hefesto_vivo.py:3430`) e GTK só aceita diálogo no laço principal.
 
     **FATO CADUCO, SUBSTITUÍDO — 02/09/2026.** Aqui estava escrito que *"a
     recusa do piloto não serve de pergunta: ela sai em `stderr`, no terminal,

@@ -3547,10 +3547,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 #
 # O QUE TEM DONO, medido nos 39 métodos do `ipc_server` em 01/09/2026:
 #
-#   🎙  data-mudo="microfone"      `mic.set`      (ipc_handlers.py:4830)
-#   ♪   data-mudo="alto-falante"   `speaker.set`  (ipc_handlers.py:5957)
+#   🎙  data-mudo="microfone"      `mic.set`      (ipc_handlers.py:6251)
+#   ♪   data-mudo="alto-falante"   `speaker.set`  (ipc_handlers.py:5997)
 #   Sons do jogo  data-rota="jogo" `speaker.set`  com `rota`, o mesmo :4589
-#   Virtual / Nativo  data-mic-modo  `machine.declare` (ipc_handlers.py:7098)
+#   Virtual / Nativo  data-mic-modo  `machine.declare` (ipc_handlers.py:7182)
 #
 # O "VIRTUAL / NATIVO" GANHOU DONO EM 01/09/2026, E A AFIRMAÇÃO ANTERIOR CAIU.
 # Aqui estava escrito, e é uma frase minha, da primeira leva:
@@ -4180,10 +4180,10 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     o desenho não tem.
 
     **São métodos diferentes, e não é detalhe.** O `mic.set` é o MUDO NO
-    FIRMWARE (camada 3, `ipc_handlers.py:4830`): é o único que apaga a luz
+    FIRMWARE (camada 3, `ipc_handlers.py:6251`): é o único que apaga a luz
     vermelha do plástico, e a partir dele o botão físico do controle deixa de
     valer — é o que o `title` do desenho já promete. O `speaker.set` manda ZERO
-    ao alto-falante guardando o volume preferido (`ipc_handlers.py:5957`).
+    ao alto-falante guardando o volume preferido (`ipc_handlers.py:5997`).
     Trocar um pelo outro calaria a coisa errada.
 
     ALTERNAR EXIGE LER O ESTADO, e ele vem do daemon, nunca de memória nossa:
