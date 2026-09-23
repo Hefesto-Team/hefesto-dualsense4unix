@@ -3512,7 +3512,7 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
         fecharPainel(); return;
       }
       var b;
-      if((b = perto(ev, '.radio .sino'))){ abrirPainel('historico', b.dataset.alvo); return; }
+      if((b = perto(ev, '.radio .sino'))){ abrirPainel('sino', b.dataset.alvo); return; }
       if((b = perto(ev, '.radio .soltar'))){
         if(b.classList.contains('apagado')) balancar(b); else abrirPainel('quem-vem', b.dataset.alvo);
         return;
