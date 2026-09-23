@@ -797,3 +797,31 @@ def test_os_dois_do_doctor_continuam_stdlib_no_import() -> None:
         check=False,
     )
     assert feito.returncode == 0 and feito.stdout.strip() == "ok", feito.stderr[-800:]
+
+
+# ---------------------------------------------------------------------------
+# 5. as regras do laço que não tinham dente (conferência, 23/09/2026)
+# ---------------------------------------------------------------------------
+#
+# Cada teste abaixo nasceu de uma cura que passava com a régua inteira verde
+# quando arrancada. O nome diz a regra; a mordida está no docstring.
+
+
+def test_responder_de_novo_a_mesma_face_nao_embaralha_a_fileira(
+    boot_1: SysfsDeMentira, disco: Path
+) -> None:
+    """A ordem da fileira é o desenho dela: confirmar a face de uma porta já
+    mapeada não pode mandar o número para o fim.
+
+    MORDIDA: tirar o número de TODAS as faces (inclusive a escolhida) e
+    acrescentá-lo de novo — a fileira ``1, 2, 3`` vira ``2, 3, 1``.
+    """
+    laco = _laco(boot_1)
+    laco.comecar()
+    for degrau in ("1", "2", "3"):
+        _mapear(boot_1, laco, 3, f"4.{degrau}", ee.FACE_FRENTE)
+    assert _mapear(boot_1, laco, 3, "4.1", ee.FACE_FRENTE).entrada == "1"
+
+    fileira = {f.nome: f.portas for f in carregar_maquina().mapa.faces}
+    assert fileira[ee.FACE_FRENTE] == ["1", "2", "3"], "a fileira dela foi embaralhada"
+
