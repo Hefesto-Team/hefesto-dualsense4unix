@@ -2346,9 +2346,8 @@ def linha_de_volume(campo, razao=""):
 # **O DE FORA (`alto-canal-porque`) NÃO TEM MAIS O QUE DIZER — 23/09/2026,
 # O-ALTO-FALANTE-DIZ-ATIVO-01.** Ele levava o sono do canal para a dica
 # (`Canal de áudio dormindo`), e a palavra saiu da tela inteira. O endereço
-# FICA, porque a página publicada o tem e o pacote o pinta com o marcador de
-# nada; o que ele fazia era a mesma coisa que o selo do microfone faz sem dica
-# nenhuma.
+# FICA, porque a página publicada o tem e o pacote o pinta com o vazio, que
+# apaga a dica; a pílula fica como a do microfone, que não tem dica nenhuma.
 #
 # A CENA DO DESENHO É O CASO NORMAL, e ela vale NOS DOIS TRANSPORTES: todo
 # controle da mesa tem o nó de som dele (`hefesto_som_<hex6>`, que o produto
@@ -2386,8 +2385,8 @@ def sufixo_do_canal(c):
     palavra = (mesa_viva.selo_do_alto_falante(False, True) if na_mesa
                else NADA_A_DIZER)
     # O INVÓLUCRO NÃO É ENFEITE, mesmo sem frase: ele é o endereço que a página
-    # publicada tem, e o pacote o pinta com o marcador de nada — um `title` com
-    # frase precisaria do alvo `atributo` num elemento próprio, e é este.
+    # publicada tem, e o pacote o pinta com o vazio — um `title` com frase
+    # precisaria do alvo `atributo` num elemento próprio, e é este.
     return ('<span data-campo="alto-canal-porque" data-hef-alvo="atributo"'
             ' data-hef-atributo="title"><span class="selo-ativo no-rotulo'
             f'{" on" if na_mesa else ""}"'
