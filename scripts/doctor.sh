@@ -1515,6 +1515,29 @@ check_dropin_do_mic_armado() {
     info "  se o mic do controle é o que você quer, peça de propósito: hefesto-dualsense4unix mic promote (isso grava a marca em ${marca}, e o doctor para de reclamar)"
 }
 
+# O ALTO-FALANTE QUE NÃO DORME (SOM-QUE-NAO-DORME-01; conferido pelo doctor
+# desde a INSTALL-E-UNINSTALL-DO-RADIO-01, 23/09/2026). A cura é o drop-in 54
+# do WirePlumber, que o install põe sem flag. O único aviso de que ele faltava
+# era indireto — o «Canal dormindo» da tela, que saiu por ordem dela
+# (O-ALTO-FALANTE-DIZ-ATIVO-01) —, e o leitor Python dele
+# (`audio_saida.regra_nunca_dorme_instalada`) só alimentava a janela GTK. Lê o
+# disco, então vale sem controle na mesa. Só o CABO depende dele: pelo rádio
+# não há placa ALSA, e o som vai pela ponte do Hefesto.
+check_dropin_do_alto_falante_acordado() {
+    local nome=54-hefesto-dualsense-alto-falante-nunca-dorme.conf
+    local posto="${HOME}/.config/wireplumber/wireplumber.conf.d/${nome}"
+    local fonte="${ROOT_DIR}/assets/wireplumber/${nome}"
+    if [[ ! -f "${posto}" ]]; then
+        warn "o alto-falante do controle pode dormir no cabo (falta ${posto}) — o começo de cada som depois de um silêncio se perde: $(conselho_de_instalacao)$(so_no_checkout "(só ele: bash scripts/fix_wireplumber_default_source.sh --nunca-dorme)")"
+        return
+    fi
+    if [[ -r "${fonte}" ]] && ! cmp -s "${fonte}" "${posto}"; then
+        warn "o drop-in ${nome} é de outra versão — $(conselho_de_instalacao)$(so_no_checkout "(só ele: bash scripts/fix_wireplumber_default_source.sh --nunca-dorme)")"
+        return
+    fi
+    pass "o alto-falante do controle não dorme no cabo (drop-in 54 no lugar)"
+}
+
 check_dualsense_sink_disabled() {
     local d="${HOME}/.config/wireplumber/wireplumber.conf.d/53-hefesto-dualsense-disable-output.conf"
     if [[ -f "${d}" ]]; then
@@ -7381,6 +7404,7 @@ main() {
     check_dropin_do_mic_armado
     check_default_source_monitor
     check_dualsense_sink_disabled
+    check_dropin_do_alto_falante_acordado
     check_ucm_do_dualsense
     check_ancoras_da_haptica_por_radio
     check_audio_sink_muted
