@@ -160,6 +160,53 @@ def test_o_bluetoothd_que_sai_vira_nao_sei_e_o_que_volta_refotografa(
     assert bm.esperar(lambda: vivo.caminhos() is not None)
 
 
+def test_a_foto_que_falhou_com_o_bluez_de_pe_e_tirada_de_novo(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Um ``GetManagedObjects`` que estourou o prazo não cega o dono para sempre.
+
+    Achado na conferência: o único gatilho de foto nova era o
+    ``NameOwnerChanged``. Um ``bluetoothd`` lento no instante em que o daemon
+    ligava o dono — o regime das quedas de 22/09 — deixava a árvore em "não sei"
+    até o próximo reinício do serviço, e todo leitor do produto respondia
+    "não deu" com o BlueZ de pé.
+
+    MORDIDA: tire o ``_em_segundo_plano(self._refotografar_se_o_bluez_esta_la)``
+    de ``DonoVivo.caminhos`` — a árvore nunca volta.
+    """
+    monkeypatch.setattr(bd, "REFOTOGRAFAR_S", 0.0)
+    barramento = bm.BarramentoDeMentira()
+    barramento.fotos_que_falham = 1
+    dono = bd.DonoVivo(barramento)
+    assert dono.ligar()
+
+    assert dono.caminhos() is None, "sem foto é 'não sei', nunca a árvore vazia"
+    assert bm.esperar(lambda: dono.caminhos() is not None)
+    assert bm.HCI in (dono.caminhos() or ())
+
+
+def test_sem_dono_do_org_bluez_a_foto_nao_e_pedida(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Sem ``bluetoothd`` no barramento, pedir a foto ATIVARIA o serviço
+    (``org.bluez.service``): quem o parou de propósito o veria voltar sozinho.
+    Quem refotografa, então, é o ``NameOwnerChanged``.
+
+    MORDIDA: troque o ``if self._barramento.dono_do_nome(SERVICO):`` de
+    ``_refotografar_se_o_bluez_esta_la`` por ``if True:`` — o dono pede a foto
+    ao nome sem dono.
+    """
+    monkeypatch.setattr(bd, "REFOTOGRAFAR_S", 0.0)
+    barramento = bm.BarramentoDeMentira()
+    barramento.bluez_de_pe = False
+    dono = bd.DonoVivo(barramento)
+    assert dono.ligar()
+    assert barramento.fotos == 1
+
+    for _ in range(3):
+        assert dono.caminhos() is None
+    time.sleep(0.2)
+    assert barramento.fotos == 1
+
+
 # ---------------------------------------------------------------------------
 # 2. a guarda na borda
 # ---------------------------------------------------------------------------

@@ -102,6 +102,11 @@ class BarramentoDeMentira:
         self.padrao: list[str] = ["bt-agent"]
         self.o_padrao_atendeu: list[str] = []
         self.durante_a_foto: Callable[[], None] | None = None
+        #: Quantas fotos ainda saem SEM resposta com o BlueZ de pé — o
+        #: ``GetManagedObjects`` que estoura o prazo de um ``bluetoothd`` lento.
+        self.fotos_que_falham = 0
+        #: Quantos ``GetManagedObjects`` o dono pediu.
+        self.fotos = 0
         self._ao_sinal: Callable[[bd.Sinal], None] | None = None
         self.fechado = False
 
@@ -117,6 +122,10 @@ class BarramentoDeMentira:
         return self.DONO_DO_BLUEZ if self.bluez_de_pe else ""
 
     def objetos(self, *, espera: float) -> dict[str, dict[str, dict[str, Any]]] | None:
+        self.fotos += 1
+        if self.bluez_de_pe and self.fotos_que_falham > 0:
+            self.fotos_que_falham -= 1
+            return None
         foto = copy.deepcopy(self.mesa) if self.bluez_de_pe else None
         if self.durante_a_foto is not None:
             self.durante_a_foto()
