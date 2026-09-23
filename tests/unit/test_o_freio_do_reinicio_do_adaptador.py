@@ -128,7 +128,9 @@ def test_o_quarto_reinicio_sem_cura_nao_acontece(tmp_path: Path) -> None:
     assert entrada["o_que"] == "parou de reiniciar o adaptador"
     assert (entrada["porta"], entrada["familia"]) == (PORTA, "3")
     assert entrada["antes"]["reinicios"] == 3
-    assert entrada["frase"] == f"O adaptador da porta {PORTA} não se cura sozinho. Tire e ponha ele."
+    assert entrada["frase"] == (
+        f"O adaptador da porta {PORTA} não se cura sozinho. Tire e ponha ele."
+    )
 
     # Os tiques seguintes seguram CALADOS: o sino não repete a frase.
     for _ in range(2):
