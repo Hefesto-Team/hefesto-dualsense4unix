@@ -865,7 +865,7 @@ CLICADO = "[%s]"
 # `rotulo_lightbar` devolve `(rótulo, base_do_accent)`, e O DISCRIMINADOR É O
 # PRIMEIRO. O segundo responde outra pergunta, e a docstring dele a escreve:
 # *"a cor devolvida é a BASE do accent (crua); `None` = usar o neutro"*
-# (`controller_card.py:1180`).
+# (`controller_card.py:1209`).
 #
 # TOMAR O SEGUNDO POR "há cor conhecida a mostrar?" COLAPSA DOIS PARES, e a
 # auditoria de 02/09/2026 mediu os dois com sonda, sem tocar o aparelho:
@@ -3720,7 +3720,7 @@ def _volume_conhecido(dele: dict[str, Any]) -> dict[str, Any]:
     um número de palpite tomaria a posse com o valor errado.
 
     E MANDÁ-LO QUANDO SE SABE É O QUE A GUI ESTÁVEL FAZ, pela cura de
-    04/08/2026 (`controller_card.py:4265`): *"reafirmá-lo aqui é dizer ao
+    04/08/2026 (`controller_card.py:4406`): *"reafirmá-lo aqui é dizer ao
     firmware o mesmo que a tela mostra, em vez de deixá-lo adivinhar"*.
 
     QUEM LÊ É `speaker_do_entry`, E NÃO ESTA FUNÇÃO. Ela fazia
