@@ -115,6 +115,7 @@ from hefesto_dualsense4unix.integrations.ar_do_adaptador import (
     ADAPTADOR_SUMIU,
     IOCTL_FALHOU,
     SEM_BLUETOOTH,
+    TIPO_ACL,
 )
 from hefesto_dualsense4unix.integrations.radio_da_mesa import N_MAX_PONTES
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -312,6 +313,11 @@ def _chave(uniq: str) -> str:
     return norm_mac(uniq) or str(uniq or "").lower()
 
 
+def _nada_a_listar(_raiz: str) -> list[str]:
+    """A ordem das vagas não relê o sysfs: todo controle chega com o adaptador."""
+    return []
+
+
 def _nenhum_diario() -> list[dict[str, Any]]:
     """O leitor do governador de régua: não há diário dela para ler."""
     return []
@@ -402,6 +408,10 @@ class Vaga:
 @dataclass(frozen=True)
 class Recusa:
     """A ponte não sobe agora. ``vagas`` são os adaptadores onde caberia.
+
+    As ``vagas`` saem na ordem da D8 (``plano_de_radio.ordem_dos_destinos``, a
+    mesma da central — A-COSTURA-DA-ONDA-2-01): a primeira é o «para onde» que a
+    tela pergunta, e a frase diz os nomes nessa ordem.
 
     ``adaptador`` e ``vagas`` são ENDEREÇOS: dado para quem chama (a tela
     endereça o pedido por eles). A :attr:`frase` não os leva — ela pergunta o
@@ -702,7 +712,53 @@ class GovernadorDoRadio:
             and self._parado_ate.get(endereco, 0.0) <= agora
             and sum(1 for v in self._vagas if v.adaptador == endereco) < self.n_max
         ]
-        return tuple(livres)
+        return self._na_ordem_da_d8(livres, exceto)
+
+    def _na_ordem_da_d8(self, livres: list[str], exceto: str) -> tuple[str, ...]:
+        """As vagas na ordem de ``plano_de_radio.ordem_dos_destinos`` — a D8 dela.
+
+        A-COSTURA-DA-ONDA-2-01, item 5: a tela pergunta «Mover para ...?» pela
+        PRIMEIRA vaga, e a central escolhe o destino pela mesma função. Por
+        endereço, as duas divergiam sobre «para onde» na primeira mesa em que o
+        endereço menor não fosse o de mais vaga.
+
+        Os planos saem do mesmo ``plano_de_radio.plano_por_adaptador`` que a
+        central usa, com o que o governador sabe sem ler nada: as pontes são as
+        vagas dele, e os controles de cada adaptador são os enlaces ACL que o
+        kernel mede (a amostra do medidor de ar). DUAS DIFERENÇAS DECLARADAS com a
+        central, que lê o ``state_full``: um fone no rádio conta aqui como
+        controle, e quem VARRE não é sabido (``varrendo=None`` — a função não
+        penaliza ninguém, em vez de chutar). Chamado com a trava, sem sysfs:
+        todo controle chega com o adaptador dito.
+        """
+        from hefesto_dualsense4unix.integrations import plano_de_radio
+
+        controles: dict[str, dict[str, Any]] = {}
+        for endereco, ar in (self._amostra or {}).items():
+            for enlace in getattr(ar, "conexoes", None) or ():
+                chave = _chave(str(getattr(enlace, "endereco", "") or ""))
+                if chave and getattr(enlace, "tipo", None) == TIPO_ACL:
+                    controles.setdefault(chave, {"uniq": chave, "adaptador": endereco})
+        for vaga in self._vagas:
+            if vaga.adaptador:
+                chave = _chave(vaga.uniq)
+                controles[chave] = {
+                    "uniq": chave,
+                    "adaptador": vaga.adaptador,
+                    "ponte_do_radio": "haptica" if vaga.tipo == TIPO_VIBRACAO else "som",
+                }
+        planos = plano_de_radio.plano_por_adaptador(
+            [{"transport": "bt", "connected": True, **c} for c in controles.values()],
+            adaptadores=[*livres, exceto],
+            n_max=self.n_max,
+            listar=_nada_a_listar,
+        )
+        ordem = [
+            str(p.endereco)
+            for p in plano_de_radio.ordem_dos_destinos(planos, exceto=exceto)
+            if p.endereco in livres
+        ]
+        return (*ordem, *(e for e in livres if e not in ordem))
 
     def pedir_vaga(self, uniq: str, tipo: str) -> Vaga | Recusa:
         """Uma vaga para a ponte deste controle, ou a :class:`Recusa` dita."""

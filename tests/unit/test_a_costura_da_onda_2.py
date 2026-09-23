@@ -515,3 +515,129 @@ def test_nao_sei_onde_ele_esta_nao_derruba_a_resposta_dela() -> None:
     onde[CONTROLE_3] = ADAPTADOR_A
     vaga = governador.pedir_vaga(CONTROLE_3, "som")
     assert isinstance(vaga, gov.Vaga) and vaga.por_escolha_dela
+
+
+# ---------------------------------------------------------------------------
+# 5. as vagas na ordem da D8
+# ---------------------------------------------------------------------------
+
+
+class _MedidorDaMesa:
+    """O ar dos três adaptadores, com os enlaces ACL que o kernel lista em cada um."""
+
+    def __init__(self, enlaces: dict[str, tuple[str, ...]]) -> None:
+        self.enlaces = enlaces
+
+    def amostrar(self) -> dict[str, Any]:
+        from hefesto_dualsense4unix.integrations import ar_do_adaptador as ar
+
+        return {
+            endereco: ar.ArDoAdaptador(
+                hci=numero,
+                endereco=endereco,
+                conexoes=tuple(
+                    ar.Enlace(handle=i + 1, endereco=u, tipo=ar.TIPO_ACL, saida=False,
+                              estado=1, link_mode=0)
+                    for i, u in enumerate(self.enlaces.get(endereco, ()))
+                ),
+                janela_s=0.25,
+            )
+            for numero, endereco in enumerate((ADAPTADOR_A, ADAPTADOR_B, ADAPTADOR_C))
+        }
+
+
+def _mesa(
+    dono: bd.DonoVivo,
+    relogio: rm.Relogio,
+    *,
+    pontes: dict[str, str | None],
+) -> tuple[Any, Any]:
+    """A mesma mesa para o governador e para a central.
+
+    ``pontes`` é ``{controle: modo ou None}``; o C1, o C2 e o C3 estão no A, o
+    C4 no B, e o C também existe (vazio). O C3 é o que pede vaga.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
+
+    onde = {
+        CONTROLE_1: ADAPTADOR_A, CONTROLE_2: ADAPTADOR_A, CONTROLE_3: ADAPTADOR_A,
+        CONTROLE_4: ADAPTADOR_B,
+    }
+    enlaces: dict[str, tuple[str, ...]] = {}
+    for controle, adaptador in onde.items():
+        enlaces[adaptador] = (*enlaces.get(adaptador, ()), controle)
+    governador = _governador(
+        onde, _Relogio(), medidor=_MedidorDaMesa(enlaces), nomear={
+            ADAPTADOR_A: "Entrada 1", ADAPTADOR_B: "Entrada 2", ADAPTADOR_C: "Entrada 3",
+        }.get,
+    )
+    governador.tique()  # a amostra do ar entra no governador
+    for controle, modo in pontes.items():
+        if modo is not None:
+            vaga = governador.pedir_vaga(controle, modo)
+            assert isinstance(vaga, gov.Vaga), controle
+            vaga.subiu(modo)
+
+    central = cr.CentralDoRadio(
+        dono=dono,
+        onde_esta=lambda u: onde.get(":".join(u[i : i + 2] for i in range(0, 12, 2)), ""),
+        relogio=relogio,
+        dormir=relogio.dormir,
+        sysfs={"listar": lambda _p: [], "raiz": "/nao/existe"},
+    )
+    central.conhecer([
+        {
+            "uniq": controle.replace(":", ""),
+            "transport": "bt",
+            "connected": True,
+            "adaptador": adaptador,
+            "ponte_do_radio": pontes.get(controle),
+        }
+        for controle, adaptador in onde.items()
+    ])
+    return governador, central
+
+
+@pytest.mark.parametrize(
+    ("pontes", "esperada"),
+    [
+        # O B tem uma ponte e o C nenhuma: mais vaga de ponte primeiro.
+        ({CONTROLE_1: "som", CONTROLE_2: "som", CONTROLE_4: "som"},
+         (ADAPTADOR_C, ADAPTADOR_B)),
+        # Vaga igual; o B tem um controle e o C nenhum: menos controles primeiro.
+        ({CONTROLE_1: "som", CONTROLE_2: "haptica", CONTROLE_4: None},
+         (ADAPTADOR_C, ADAPTADOR_B)),
+    ],
+    ids=["mais-vaga", "menos-controles"],
+)
+def test_as_vagas_da_recusa_saem_na_ordem_da_d8_da_central(
+    diario: Path,
+    dono: bd.DonoVivo,
+    relogio: rm.Relogio,
+    pontes: dict[str, str | None],
+    esperada: tuple[str, ...],
+) -> None:
+    """A tela pergunta «Mover para a primeira vaga?», e a central, sem destino
+    pedido, escolhe pela D8. As duas respostas são a MESMA — e a frase diz os
+    nomes nessa ordem.
+
+    Nas duas mesas o endereço do B é menor que o do C, e é o C que a D8 escolhe.
+
+    MORDIDA: devolva do ``_adaptadores_com_vaga`` as vagas por endereço (sem o
+    ``_na_ordem_da_d8``) — o B vem primeiro, contra a central, e esta régua
+    reprova.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
+
+    governador, central = _mesa(dono, relogio, pontes=pontes)
+
+    recusa = governador.pedir_vaga(CONTROLE_3, "som")
+
+    assert isinstance(recusa, gov.Recusa)
+    assert recusa.vagas == esperada
+    assert central.escolher_destino(CONTROLE_3) == recusa.vagas[0], (
+        "a tela e a central divergem sobre «para onde»"
+    )
+    [pedido] = governador.publicar()[ADAPTADOR_A]["pedidos"]
+    assert tuple(pedido["vagas"]) == esperada
+    assert recusa.frase.endswith("Há vaga na Entrada 3 e na Entrada 2.")
