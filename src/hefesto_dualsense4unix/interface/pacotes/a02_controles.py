@@ -3236,8 +3236,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 ),
                 # A BARRA VAI A ZERO QUANDO NÃO SE SABE, e é o mesmo desfecho
                 # que a `bateria-barra` já tem duas dúzias de linhas acima, pela
-                # mesma razão: `largura` é um dos ALVOS_QUE_O_TRAVESSAO_NAO_
-                # ATENDE (`pacotes/__init__.py:796`) — `width: "—%"` o CSSOM
+                # mesma razão: `largura` é um dos alvos de
+                # `pacotes.ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE` — `width: "—%"` o CSSOM
                 # recusa e o contador de pintura soma +1 por tique para sempre.
                 # Deixá-la na largura do desenho seria a tela afirmando um
                 # volume que ninguém mediu; o número ao lado diz `—`, que é o
