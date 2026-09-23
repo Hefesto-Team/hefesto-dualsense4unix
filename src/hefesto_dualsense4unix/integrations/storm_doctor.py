@@ -1144,6 +1144,40 @@ class ContagemDaFamilia:
     ocorrencias: int = 0
     primeira: str = ""
     ultima: str = ""
+    #: Desde quando o kernel-watch PROCURA esta família (``AAAA-MM-DDTHH:MM:SS``).
+    #: Antes disso, zero não é zero: é «não olhei».
+    medida_desde: str = ""
+
+
+#: A primeira linha de cada volta do kernel-watch: ``# AAAA-MM-DD HH:MM:SS
+#: kernel-watch iniciado (padrões: USB-71 JOYCON … + contadores hci; …)``. As
+#: palavras entre «padrões:» e o «+» são as tags que AQUELA volta procurava.
+_BANNER_DO_VIGIA = re.compile(
+    r"^# (?P<data>\d{4}-\d{2}-\d{2}) (?P<hora>\d{2}:\d{2}:\d{2}) "
+    r"kernel-watch iniciado \(padrões: (?P<lista>[^+)]*)"
+)
+
+#: Quem via a família ANTES de ela ganhar tag própria: o laço do Realtek e o
+#: «link tx timeout» entravam pela tag genérica ``[BT-HCI]``. (A família 2 era
+#: vista pela metade: o «killing stalled connection» não casava o genérico.)
+_VISTA_PELA_TAG_GENERICA = {"2": "BT-HCI", "3": "BT-HCI"}
+
+
+def _desde_quando_se_mede(linhas: Iterable[str]) -> dict[str, str]:
+    """``{família: primeiro banner do kernel-watch que a procurava}``."""
+    desde: dict[str, str] = {}
+    for linha in linhas:
+        casou = _BANNER_DO_VIGIA.match(linha)
+        if casou is None:
+            continue
+        procuradas = set(casou["lista"].split())
+        quando = f"{casou['data']}T{casou['hora']}"
+        for tag, (familia, _nome) in FAMILIAS_DO_RADIO.items():
+            if tag.strip("[]") in procuradas or (
+                _VISTA_PELA_TAG_GENERICA.get(familia) in procuradas
+            ):
+                desde.setdefault(familia, quando)
+    return desde
 
 
 def _carimbo(ts: str) -> float | None:
@@ -1201,7 +1235,17 @@ def classificar_o_historico(linhas: Iterable[str]) -> dict[str, ContagemDaFamili
     :data:`JANELA_DA_RAJADA_S` depois da anterior da mesma família abre outra.
     É o que deixa o log de antes das famílias — linha a linha, 74.973 linhas no
     laço de 13/09 — contar as mesmas rajadas que o log de hoje conta.
+
+    «NÃO OLHEI» NÃO É ZERO (a R2 dela: *«tiveram storm nos dias anteriores»*).
+    Até 23/09 o kernel-watch não procurava a fila cheia, o EAGAIN do
+    bluetoothd nem o CRC — 0 dos 4.019 «Output queue is full» de 22/09 estão
+    no log. Por isso cada família diz :attr:`ContagemDaFamilia.medida_desde`,
+    lido dos banners do próprio kernel-watch, e uma família que nenhuma volta
+    procurou FICA DE FORA do dicionário: ausente é «não medido»; presente com
+    zero rajadas é «medido, e não houve».
     """
+    linhas = list(linhas)
+    medida_desde = _desde_quando_se_mede(linhas)
     contagens: dict[str, ContagemDaFamilia] = {}
     ultima_vista: dict[str, float] = {}
     for evento in ler_eventos_do_radio(linhas):
@@ -1219,6 +1263,13 @@ def classificar_o_historico(linhas: Iterable[str]) -> dict[str, ContagemDaFamili
         if not conta.primeira:
             conta.primeira = evento.quando
         conta.ultima = evento.quando
+    nomes = dict(FAMILIAS_DO_RADIO.values())
+    for familia in medida_desde:
+        contagens.setdefault(familia, ContagemDaFamilia(familia=familia, nome=nomes[familia]))
+    for conta in contagens.values():
+        #: Uma linha da família prova que ela era procurada ao menos dali.
+        candidatos = [c for c in (medida_desde.get(conta.familia), conta.primeira[:19]) if c]
+        conta.medida_desde = min(candidatos) if candidatos else ""
     return contagens
 
 
