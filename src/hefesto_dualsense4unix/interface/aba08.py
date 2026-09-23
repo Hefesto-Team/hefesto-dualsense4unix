@@ -380,10 +380,10 @@ def teto_que_vale(c):
 # porque o valor é lido DUAS vezes: uma para escrever a célula e outra para
 # decidir se ela sai apagada (`class="mudo"`) — dois literais iguais é um que
 # pode ficar para trás.
-# O `SEM_NOME` PASSOU A VIR DO PACOTE em 04/09/2026, com a tabela: agora quem
-# escreve essa célula na tela viva é `a08_conexoes._html_dos_adaptadores`, e
-# duas grafias da mesma palavra é o que faz o desenho e o produto divergirem
-# no primeiro dia em que uma delas mudar.
+# O `SEM_NOME` PASSOU A VIR DO PACOTE em 04/09/2026, com a tabela. A tabela
+# saiu da tela viva em 23/09 (TRANSPLANTE-DA-SECAO-01) e a seção nova não o
+# escreve: ele sobra só para o `ADAPTADORES` deste desenho, que a nota da
+# seção 3 e o mapa das entradas ainda leem.
 # ---------------------------------------------------------------------------
 SEM_NOME = _pacote08.SEM_NOME
 ADAPTADORES = [
@@ -1764,11 +1764,11 @@ MAPEAR_UMA_A_UMA = "Mapear Entrada a Entrada"
 #: endereço de contrato, não vocabulário de tela.
 EXAMINAR_PORTAS = "Examinar Entradas"
 
-#: A DICA DO CAMPO DE NOME — e ela mudou de casa em 04/09/2026, com a tabela:
-#: quem a escreve na tela viva é `a08_conexoes._html_dos_adaptadores`, então o
-#: dono passou a ser o pacote. A razão dela (*"tirar o botão Renomear e
+#: A DICA DO CAMPO DE NOME — e ela mudou de casa em 04/09/2026, com a tabela.
+#: A tabela saiu da tela viva em 23/09 (TRANSPLANTE-DA-SECAO-01), e desde então
+#: esta constante e a do pacote não têm leitor. A razão dela (*"tirar o botão Renomear e
 #: adicionar a possibilidade de renomear dando duplo clique no nome"*, 31/08)
-#: está lá, com o resto.
+#: segue no pacote, junto da constante.
 RENOMEAR_DICA = _pacote08.RENOMEAR_DICA
 
 
