@@ -1443,8 +1443,8 @@ fi
 # `uninstall.sh` pelo NOME do asset dá DOIS falsos, medidos —
 # `bluetooth-dropin-10-hefesto-resilience.conf` é removido pelo nome de DESTINO
 # (`/etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf`,
-# uninstall.sh:681) e o `proton-pin.conf` é desfeito pelo `proton_pin.py
-# --unlock` (uninstall.sh:1466), que não cita arquivo nenhum. O nome no disco
+# uninstall.sh:910) e o `proton-pin.conf` é desfeito pelo `proton_pin.py
+# --unlock` (uninstall.sh:1887), que não cita arquivo nenhum. O nome no disco
 # dela não é o nome no repositório, e um portão que finge o contrário reprova
 # quem está certo. A remoção continua cobrada por família, onde o nome de
 # destino é conhecido (udev, modprobe, DKMS, broker, BlueZ, teclado na tela).
