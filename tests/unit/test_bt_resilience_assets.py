@@ -155,7 +155,13 @@ class TestDropinResilience:
         probou normalmente. Ou seja, o nome não atrapalha o clone.
         """
         text = (REPO_ROOT / "scripts" / "bt_active_mode.sh").read_text(encoding="utf-8")
-        assert "Nintendo ${ALIAS_ATUAL}" in text, "deve prefixar 'Nintendo' no alias"
+        # ENTRADA-A-ENTRADA-02: a base do prefixo passou a ser o nome do lugar
+        # (ou o alias atual) — a régua lê a FORMA, não o nome da variável.
+        prefixado = re.search(r'(\w+)="Nintendo \$\{\w+\}"', text)
+        assert prefixado, "deve prefixar 'Nintendo' no alias"
+        assert f'Alias s "${{{prefixado.group(1)}}}"' in text, (
+            "o valor prefixado tem de ser o que vai ao Alias"
+        )
 
     def test_no_sniff_e_por_dispositivo_nao_do_adaptador(self) -> None:
         """BT-SNIFF-PER-OUI-01 (23/07) — o escopo do no-sniff é POR CONTROLE.
