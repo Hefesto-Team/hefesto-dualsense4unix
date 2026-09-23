@@ -177,7 +177,7 @@ def _mac(valor: object) -> str | None:
     return mac_limpo(valor if isinstance(valor, str) else None)
 
 
-def _endereco_do_no(caminho: str) -> str | None:
+def endereco_do_aparelho(caminho: str) -> str | None:
     """O endereço de um aparelho pelo caminho: ``…/dev_AA_BB_…`` → ``aa:bb:…``."""
     forma = _CAMINHO_DE_APARELHO.match(caminho)
     return _mac(forma.group(2).replace("_", ":")) if forma else None
@@ -283,7 +283,7 @@ def _no_diario(quem: str, metodo: str, caminho: str, escrita: Escrita) -> None:
             depois={"feita": escrita.feita, "erro": escrita.erro or None},
             metodo=metodo,
             hci=_hci_de(caminho) or _hci_de(caminho.rsplit("/dev_", 1)[0]) or None,
-            controle=_endereco_do_no(caminho),
+            controle=endereco_do_aparelho(caminho),
         )
     except Exception:
         _registrar("bluez_diario_nao_gravou", nivel="warning")
@@ -802,7 +802,7 @@ class LeitorDoBluez:
             forma = _CAMINHO_DE_APARELHO.match(caminho)
             if forma is None or (adaptador is not None and forma.group(1) != adaptador):
                 continue
-            endereco = _endereco_do_no(caminho)
+            endereco = endereco_do_aparelho(caminho)
             if endereco is None:
                 continue
             achados.append(
@@ -850,7 +850,7 @@ class LeitorDoBluez:
             return None
         for caminho in caminhos:
             forma = _CAMINHO_DE_APARELHO.match(caminho)
-            if forma is None or _endereco_do_no(caminho) != alvo:
+            if forma is None or endereco_do_aparelho(caminho) != alvo:
                 continue
             if pai is None or forma.group(1) == pai:
                 return caminho
@@ -1773,6 +1773,7 @@ __all__ = [
     "como_booleano",
     "desembrulhar",
     "dono",
+    "endereco_do_aparelho",
     "enderecos_pelo_kernel",
     "lugar_de",
     "lugares_dos_adaptadores",
