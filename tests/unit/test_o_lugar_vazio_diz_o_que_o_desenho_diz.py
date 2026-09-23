@@ -28,7 +28,11 @@ AS MORDIDAS, cada uma com a saída na entrega:
   P2 dizendo o nome do controle que saiu;
 * arranque a troca do número (`_a_palavra_do_desenho` devolvendo `""` no
   molde) — :func:`test_os_quatro_cartoes_da_08_dizem_player_n_desconectado`
-  reprova.
+  reprova;
+* arranque o `pagina=self.pagina` do `Piloto._tique` —
+  :func:`test_o_tique_do_piloto_leva_a_pagina_ao_apagador` reprova com o P1
+  dizendo `Sony • Player 1 • Cosmic Red • USB`. As outras réguas chamam a
+  conta elas mesmas e ficavam verdes sem a cura do produto.
 """
 
 from __future__ import annotations
@@ -465,3 +469,98 @@ def test_o_elemento_do_proprio_lugar_nao_e_cobrado() -> None:
     vazios, proprios = hefesto_vivo._o_lugar_no_arquivo(_PAGINA_DE_MENTIRA)
     assert vazios == {"p3", "p4"}
     assert proprios == {("p4", "casca")}
+
+
+# ---------------------------------------------------------------------------
+# 6. O TIQUE DO PILOTO — a cura mora numa linha dele, e ela também morde
+# ---------------------------------------------------------------------------
+class _PonteQueGuarda:
+    """A ponte do piloto sem WebView: guarda a pintura e devolve a contagem."""
+
+    def __init__(self) -> None:
+        self.pinturas: list[str] = []
+
+    def perguntar(self, js: str, volta: Any) -> None:
+        self.pinturas.append(js)
+        volta("1", None)
+
+    def rodar(self, js: str) -> None:
+        self.pinturas.append(js)
+
+
+def _tiques_do_piloto(pagina: str, mesas: list[list[dict[str, Any]]],
+                      monkeypatch: pytest.MonkeyPatch) -> list[dict[str, Any]]:
+    """Roda o `Piloto._tique` DE VERDADE, uma vez por mesa, e devolve cada carga.
+
+    Sem janela e SEM DAEMON: o estado, o contexto e os corações são dublês. O
+    `XDG_RUNTIME_DIR` da suíte é o real (`tests/conftest.py`), e o que falasse
+    com o socket falaria com o daemon dela — por isso nada aqui abre socket.
+    """
+    import types
+
+    # O `pacotes` DO PILOTO, pelo nome longo: o `import pacotes` desta régua é
+    # outro objeto de módulo, e o dublê dos corações tem de cair no do tique.
+    from hefesto_dualsense4unix.interface import pacotes as pac
+    monkeypatch.setattr(pac, "bater_os_coracoes", lambda *_a, **_k: None)
+    agora: dict[str, Any] = {}
+
+    def contexto(st: dict[str, Any]) -> tuple[Any, dict[str, str]]:
+        mesa = mesa_viva.mesa_do_estado(st, {})
+        para_pref = {str(c.get("uniq") or ""): c["pref"] for c in mesa}
+        return pac.Contexto(state=st, mesa=mesa, conectados=list(st["controllers"]),
+                            estados={}), para_pref
+
+    ponte = _PonteQueGuarda()
+    piloto: Any = types.SimpleNamespace(
+        pronto=True, _pintura_no_ar=False, _pular=0, _pulados_por_voo=0,
+        _pulados_por_custo=0, pagina=pagina, ponte=ponte,
+        args=types.SimpleNamespace(prova_de_mockup=False, conta_mutacoes=0),
+        _estado_do_tique=lambda: agora["st"], _contexto=contexto,
+        trocas={}, tiques={}, pinturas={}, voltas=0, custos=[], custo_do_ipc=[],
+        _contar_mutacoes=lambda: None)
+    cargas = []
+    for controles in mesas:
+        agora["st"] = {"connected": True, "controllers": [dict(c) for c in controles]}
+        # O PRIMEIRO TIQUE LÊ O DESENHO e pode passar do teto; o `_pular` que
+        # ele deixa calaria o segundo, que é justamente o que se mede.
+        piloto._pular = 0
+        antes = len(ponte.pinturas)
+        assert hefesto_vivo.Piloto._tique(piloto) is True
+        assert len(ponte.pinturas) == antes + 1, "o tique não pintou"
+        assert hefesto_vivo._json(piloto._carga_de_agora) in ponte.pinturas[-1]
+        cargas.append(piloto._carga_de_agora)
+    return cargas
+
+
+def test_o_tique_do_piloto_leva_a_pagina_ao_apagador(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """O `Piloto._tique` DE VERDADE pinta a 08 como o desenho pinta o vazio.
+
+    AS RÉGUAS DE CIMA CHAMAM A CONTA ELAS MESMAS, com `pagina=` — e por isso
+    ficavam verdes com o piloto chamando SEM a página. Medido na conferência de
+    23/09/2026: arrancado o `pagina=self.pagina` do `_tique`, 82 testes das
+    quatro réguas do lugar vazio passavam, e a tela voltava à foto dela.
+
+    O caminho é o do produto inteiro: a mesa vazia, um controle no P2, e a mesa
+    vazia de novo — três tiques, e a TELA simulada com o `escrever()` do piloto.
+
+    A MORDIDA: tire `pagina=self.pagina` da chamada em `Piloto._tique` — esta
+    régua reprova com o P1 mostrando o nome do desenho.
+    """
+    pagina = "08-conexoes.html"
+    cargas = _tiques_do_piloto(pagina, [[], [NO_P2], []], monkeypatch)
+    cravados, telas, texto = _a_tela(pagina, cargas)
+    esperado_vazio = [f"Player {n} {PONTO} Desconectado" for n in range(1, 5)]
+    for rotulo, vivos, carga in zip(("vazia", "P2", "P2 saiu"), telas, cargas, strict=True):
+        vazaram = hefesto_vivo._o_desenho_cheio_no_lugar_vazio(
+            cravados, vivos, carga["vazios"], texto)
+        assert not vazaram, f"{rotulo}:\n  " + "\n  ".join(vazaram)
+        for n in range(1, 5):
+            pref = f"p{n}"
+            if pref in carga["vazios"]:
+                assert _o_que_diz(cravados, vivos, pref, "nome") == [
+                    esperado_vazio[n - 1]], (rotulo, pref)
+                assert _o_que_diz(cravados, vivos, pref, "plastico") == [""], (
+                    f"{rotulo}: a barra do {pref} ficou acesa sem controle")
+    assert cargas[1]["vazios"] == ["p1", "p3", "p4"], cargas[1]["vazios"]
+    assert cargas[2]["vazios"] == ["p1", "p2", "p3", "p4"], cargas[2]["vazios"]
