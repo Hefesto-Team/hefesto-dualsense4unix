@@ -653,6 +653,28 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "para o teste começar de um diretório de perfis vazio; em produção a "
         "semeadura é justamente o que se quer. MEDIDO em 12/08/2026."
     ),
+    "HEFESTO_RADIO_TRAVA": (
+        "23/09/2026, O-DIARIO-DO-RADIO-01 — desvia a trava comum do rádio "
+        "(`integrations/diario_do_radio.caminho_da_trava`, e o mesmo nome no "
+        "`bt_health_watchdog.sh`). Existe para a régua pôr o watchdog root e o "
+        "daemon disputando um arquivo de `tmp_path`, e não a trava de "
+        "/run/hefesto-dualsense4unix que segura o watchdog DELA. O produto "
+        "instalado não a escreve: sem ela, cada lado acha a trava comum sozinho."
+    ),
+    "HEFESTO_RADIO_DIARIO": (
+        "23/09/2026, O-DIARIO-DO-RADIO-01 — desvia o diário comum do rádio de "
+        "quem roda como ela (`integrations/diario_do_radio.caminho_do_diario`). "
+        "É o gancho da régua e de quem mede à mão; o produto instalado não o "
+        "escreve, e sem ele o diário mora em ~/.local/state, que é o que a "
+        "sprint pede. Ligá-lo não abre feature nenhuma."
+    ),
+    "HEFESTO_RADIO_DIARIO_ROOT": (
+        "23/09/2026, O-DIARIO-DO-RADIO-01 — desvia o diário dos motores ROOT "
+        "(`diario_do_radio.caminho_do_diario_do_root`, a ponte privilegiada e o "
+        "watchdog). Com a suíte no ar o leitor Python já não o abre sem este "
+        "gancho, e a ponte o APAGA sob sudo junto com os outros ganchos: nenhum "
+        "fluxo dela passa por aqui, e o produto instalado não o escreve."
+    ),
 }
 
 #: Interruptores que SÃO promessa à usuária: abrem uma feature que ela pode
@@ -2948,6 +2970,30 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "`present()` a janela dele — o que exige decidir o que ela quer que "
         "aconteça no segundo clique, e por isso não foi feito aqui."
     ),
+    "integrations/storm_doctor.py::historico_do_radio":
+        "O-DIARIO-DO-RADIO-01, 23/09/2026. A FONTE DO SINO da aba Conexões: "
+        "o `kernel.log` do kernel-watch classificado pelas quatro famílias "
+        "do rádio (1 porta USB, 2A/2B rádio afogado, 3 adaptador travado, 4 "
+        "CRC), que a sprint manda o `storm_doctor` separar. ONDE O CAMINHO SE "
+        "PERDE: quem mostra é o sino da seção Rádio e Adaptadores, e a tela "
+        "(`interface/`) está no `nao_toca` desta sprint. O QUE O FECHARIA: a "
+        "TRANSPLANTE-DA-SECAO-01 (onda 3 da leva de 23/09) chamando esta "
+        "leitura no pacote da aba 08.",
+    "integrations/storm_doctor.py::quedas":
+        "O-DIARIO-DO-RADIO-01, 23/09/2026. As bordas da família 2A — o "
+        "EAGAIN do bluetoothd que derrubou os quatro controles em 22/09 — "
+        "que o sino lista como quedas. ONDE O CAMINHO SE PERDE: a tela "
+        "(`interface/`) está no `nao_toca` desta sprint. O QUE O FECHARIA: a "
+        "TRANSPLANTE-DA-SECAO-01 (onda 3 da leva de 23/09) listando as "
+        "quedas no sino de cada adaptador.",
+    "integrations/storm_doctor.py::o_fato_da_queda":
+        "O-DIARIO-DO-RADIO-01, 23/09/2026. O fato de cada queda dito como a "
+        "tela diz, «4 controles com som (limite 2)», lido do diário comum "
+        "(as pontes de pé no instante). ONDE O CAMINHO SE PERDE: são dois "
+        "pontos — a tela (`interface/`, no `nao_toca` desta sprint) e o "
+        "escritor das pontes no diário, que é o governador. O QUE O "
+        "FECHARIA: o GOVERNADOR-DO-RADIO-01 registrando `ponte subiu`/`ponte "
+        "desceu` e a TRANSPLANTE-DA-SECAO-01 pondo a frase no sino.",
 }
 
 #: ONDA0-Z7 (24/08/2026): achado FORA do escopo desta sprint, durante a
