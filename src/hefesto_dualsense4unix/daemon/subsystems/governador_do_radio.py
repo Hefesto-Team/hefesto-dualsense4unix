@@ -30,7 +30,8 @@ menos o que o adaptador pôs no ar (o Δ``acl_tx`` do ``ar_do_adaptador``, que s
 sobe DEPOIS de haver crédito do controlador). Acima de :data:`LIMIAR_DO_DEFICIT`
 pacotes, as pontes daquele adaptador cedem os quadros NA FONTE, antes da fila
 do kernel; abaixo de :data:`FOLGA_PARA_VOLTAR`, voltam a escrever. O diário
-registra só a BORDA.
+registra só a BORDA — e no máximo um episódio por adaptador a cada
+:data:`INTERVALO_DAS_BORDAS_NO_DIARIO_S`, com os calados contados.
 
 **«NÃO SEI» NUNCA É ZERO.** ``saida_por_s`` ``None`` é o medidor dizendo que a
 janela não deu taxa (o contador parado com enlace de pé, o adaptador que
@@ -105,6 +106,15 @@ FOLGA_PARA_VOLTAR = 10
 #: novo. Uma volta do subsystem do som (``RECONCILIA_S``): a tentativa seguinte
 #: é a prova de que ele voltou a drenar.
 ESPERA_DA_FILA_PARADA_S = 5.0
+
+#: De quanto em quanto tempo um episódio de ceder entra no diário, por
+#: adaptador. CONFERÊNCIA DE 23/09/2026: só a borda não bastava. Três pontes
+#: num adaptador que escoa duas (a R4, que é o caso deste governador) alternam
+#: ceder e voltar a cada janela — medido no dublê, 240 linhas por minuto, e o
+#: diário de meio mega girava em minutos, levando junto o ``PONTE_SUBIU`` que o
+#: ``storm_doctor.o_fato_da_queda`` precisa e as frases dos outros motores. O
+#: episódio que não entra é CONTADO, e a próxima linha diz quantos foram.
+INTERVALO_DAS_BORDAS_NO_DIARIO_S = 60.0
 
 #: Um pedido que a tela não respondeu e que ninguém renovou some. O subsystem
 #: renova a cada volta enquanto há som esperando; sem som, a pergunta perde o
@@ -263,9 +273,22 @@ class _Estado:
     #: Segundos de janela MEDIDA em que as pontes seguiram cedendo — o relógio
     #: do teto. Janela de «não sei» não soma: ela não mediu parada nenhuma.
     cedendo_medido_s: float = 0.0
-    cedidos_na_borda: int = 0
+    #: O episódio de agora entrou no diário? O «voltou» só entra se o «cedeu»
+    #: entrou (:data:`INTERVALO_DAS_BORDAS_NO_DIARIO_S`).
+    episodio_escrito: bool = False
     ultimo_ar: Any = None
     deficit_medido: bool = False
+
+
+@dataclass
+class _BordasNoDiario:
+    """Quando a última borda de um adaptador entrou no diário, e quantos
+    episódios ficaram calados desde então. Fora do :class:`_Estado` de
+    propósito: o estado sai quando o adaptador fica sem ponte, e a ponte que
+    cai e religa não pode zerar a conta do diário a cada volta."""
+
+    escrita_em: float | None = None
+    calados: int = 0
 
 
 @dataclass
@@ -307,6 +330,7 @@ class GovernadorDoRadio:
         #: ``(chave do controle, adaptador)`` que ela mandou «Ligar aqui».
         self._autorizados: set[tuple[str, str]] = set()
         self._parado_ate: dict[str, float] = {}
+        self._bordas_no_diario: dict[str, _BordasNoDiario] = {}
         self._amostra: dict[str, Any] | None = None
         self._thread: threading.Thread | None = None
         self._parar = threading.Event()
@@ -614,13 +638,26 @@ class GovernadorDoRadio:
             estado.cedendo_medido_s = 0.0
             for vaga in vagas:
                 vaga.cedendo = True
-            logger.info("governador_cedeu", adaptador=endereco, fila=round(estado.fila))
+            diario_das_bordas = self._bordas_no_diario.setdefault(endereco, _BordasNoDiario())
+            estado.episodio_escrito = (
+                diario_das_bordas.escrita_em is None
+                or agora - diario_das_bordas.escrita_em >= INTERVALO_DAS_BORDAS_NO_DIARIO_S
+            )
+            if not estado.episodio_escrito:
+                diario_das_bordas.calados += 1
+                logger.debug("governador_cedeu", adaptador=endereco, fila=round(estado.fila))
+                return
+            calados, diario_das_bordas.calados = diario_das_bordas.calados, 0
+            diario_das_bordas.escrita_em = agora
+            logger.info(
+                "governador_cedeu", adaptador=endereco, fila=round(estado.fila), calados=calados
+            )
             bordas.append(
                 (
                     CEDEU_NA_FONTE,
                     {
                         "por_que": "o adaptador não escoou o que as pontes escreveram",
-                        "antes": {"fila": round(estado.fila)},
+                        "antes": {"fila": round(estado.fila), "episodios_calados": calados},
                         "adaptador": endereco,
                         "controles": sorted(v.uniq for v in vagas),
                     },
@@ -633,6 +670,10 @@ class GovernadorDoRadio:
             estado.cedendo_medido_s = 0.0
             for vaga in vagas:
                 vaga.cedendo = False
+            if not estado.episodio_escrito:
+                logger.debug("governador_voltou", adaptador=endereco, segundos=round(segundos, 2))
+                return
+            estado.episodio_escrito = False
             logger.info("governador_voltou", adaptador=endereco, segundos=round(segundos, 2))
             bordas.append(
                 (
@@ -744,6 +785,7 @@ __all__ = [
     "FILA_PARADA",
     "FOLGA_PARA_VOLTAR",
     "FRASE_DA_FILA_PARADA",
+    "INTERVALO_DAS_BORDAS_NO_DIARIO_S",
     "LIMIAR_DO_DEFICIT",
     "MOTIVO_CHEIO",
     "MOTIVO_PARADO",
