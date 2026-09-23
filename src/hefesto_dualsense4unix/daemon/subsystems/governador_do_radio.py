@@ -16,8 +16,8 @@ Até :data:`~hefesto_dualsense4unix.integrations.radio_da_mesa.N_MAX_PONTES`
 pontes por adaptador — o número tem UM dono, o ``radio_da_mesa``. A terceira
 não é recusada calada:
 
-* há vaga em outro adaptador → :class:`Recusa` com a frase «A Entrada 4.1.4 já
-  tem 2 controles com som ou vibração. Há vaga na Entrada 1.4.», e o pedido
+* há vaga em outro adaptador → :class:`Recusa` com a frase «A Entrada 3 já
+  tem 2 controles com som ou vibração. Há vaga na Entrada 5.», e o pedido
   fica publicado para a tela PERGUNTAR (R3: sempre pedir mover). Ela escolhe
   «Ligar aqui» (:meth:`GovernadorDoRadio.ligar_aqui`) e a ponte sobe marcada
   «além do limite»;
@@ -291,7 +291,7 @@ def nome_da_porta(endereco: str, *, amostra: Mapping[str, Any] | None = None) ->
 
 
 def _o_lugar(nome: str, *, com_em: bool = False, maiuscula: bool = False) -> str:
-    """O nome com o artigo do desenho (``comoSeChamaOLugar``): «a Entrada 4.1.4»,
+    """O nome com o artigo do desenho (``comoSeChamaOLugar``): «a Entrada 3»,
     e «o <nome>» para o nome que ela deu. ``com_em`` contrai: «na», «no».
 
     A palavra é a do dono do nome (``entrada_a_entrada.PALAVRA_DA_ENTRADA``).
