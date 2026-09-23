@@ -1738,7 +1738,7 @@ HEFESTO_FLATPAK_APP_IDS=(
     "br.andrefarias.Hefesto"
 )
 for _fp_id in "${HEFESTO_FLATPAK_APP_IDS[@]}"; do
-    if flatpak list --user --app 2>/dev/null | grep -q "${_fp_id}"; then
+    if grep -q "${_fp_id}" <<<"$(flatpak list --user --app 2>/dev/null)"; then
         log "desinstalando Flatpak ${_fp_id}"
         flatpak uninstall --user -y "${_fp_id}" >/dev/null 2>&1 || true
     fi
