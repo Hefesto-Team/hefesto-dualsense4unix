@@ -4342,7 +4342,7 @@ def sala_altura(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"O dongle fica acima da cabeça de quem joga sentado?" — grava a resposta.
 
     É uma das duas coisas que barramento nenhum responde, e por isso ela é
-    DECLARADA: `MesaDeclarada.altura_da_antena` (`utils/maquina.py:296`), que só
+    DECLARADA: `MesaDeclarada.altura_da_antena` (`utils/maquina.py:306`), que só
     aceita `"acima"`, `"abaixo"` ou `None`.
 
     QUEM CONSOME: `exame_da_mesa.vizinhanca_das_portas` recebe
@@ -4365,7 +4365,7 @@ def sala_altura(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 def sala_visada(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Tem gente sentada entre o dongle e o sofá?" — grava a resposta.
 
-    O par da de cima: `MesaDeclarada.linha_de_visada` (`utils/maquina.py:297`),
+    O par da de cima: `MesaDeclarada.linha_de_visada` (`utils/maquina.py:307`),
     `"com_gente"` / `"livre"` / `None`. Corpo humano absorve 2,4 GHz e nenhum
     barramento sabe disso — é o que o cabeçalho do `utils/maquina.py` chama de "o
     que nenhum barramento sabe".
@@ -4463,7 +4463,7 @@ def mic_existe(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     continua publicando a fonte. O que a tela promete aqui é outra coisa —
     *"Desligado, nenhum programa o enxerga"* — e isso é a PONTE, que existe ou
     não existe: `ControleDeclarado.microfone` no `maquina.json`
-    (`utils/maquina.py:563`), decisão dela de 22/08/2026 (*"por controle"*).
+    (`utils/maquina.py:680`), decisão dela de 22/08/2026 (*"por controle"*).
 
     QUEM CONSOME, e é por isso que o clique vale AGORA: o
     `_handle_machine_declare` relê o disco, rebinda `daemon._maquina` e SOBE OU
@@ -4799,7 +4799,7 @@ def renomear_adaptador(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 def vizinho_o_que_e(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"— O que é? —": ela responde o que é aquele rádio vizinho.
 
-    TEM DONO: `MesaDeclarada.radios[vid:pid].tipo` (`utils/maquina.py:298`), e
+    TEM DONO: `MesaDeclarada.radios[vid:pid].tipo` (`utils/maquina.py:308`), e
     é o mesmo gesto do seletor da GUI estável
     (`secao_mesa._ao_declarar_o_radio:1486`). O Hefesto acha o aparelho no
     barramento e não sabe para que ele serve — a resposta é dela, e é ela que
