@@ -5,7 +5,7 @@
 # idênticas, e sem este recibo o portão das fotos ficaria vermelho
 # para sempre.
 
-ensaio:  2026-09-22 01:51
+ensaio:  2026-09-23 17:51
 abas:    10
 modo:    --todas --publicado --doc
 origem:  src/hefesto_dualsense4unix/interface/paginas
@@ -24,6 +24,6 @@ f9c987db499630eb72f8f78c291ce1e19aed44b541458275279a586e557ba43b  aba-01-jogar.p
 c4a39cc3ac85e9c2a6faf33539330aef656ca36f2f09dd30407aabfb6b5fca35  aba-05-vibracao.png
 a41abaf839f2d6e4cc1f934a2c1681ae824ae22a9827f6851c1de84c7581f7f9  aba-06-navegacao.png
 611338f81cb2da5bb2a08bcb294b478d58a32aea8675ee83681bb54b4a281bab  aba-07-lancadores.png
-3e8d3af5505ce23e4bdc52a58ca9115666d49bec822afbdecce0b3f52b2a22ce  aba-08-conexoes.png
+ba0f79da71e6e9c32c076820d8fdefac479d310ed0bc70b8bb779c1902416a14  aba-08-conexoes.png
 bfbefe171e89bfac373d4323ca1e3a6acd70723e0b30b645dfa06bb33c343365  aba-09-sistema.png
 ce00cd26e9b942fd3fa36122c69e9d9da859e88964a8bd6674baa29bf608a9c9  aba-10-perfis.png
