@@ -834,3 +834,116 @@ def test_o_movimento_da_central_vem_do_sensor_hub_do_ipc() -> None:
     daemon._ipc_server = SimpleNamespace(_garantir_sensor_hub=lambda: hub)
     assert daemon._movimento_para_a_central("aabbcc000001") == 248.0
     assert perguntas == ["aabbcc000001"]
+
+
+# ---------------------------------------------------------------------------
+# 10. o alias do `bt_active_mode.sh` vai dentro da trava
+# ---------------------------------------------------------------------------
+#
+# Decisão de quem coordena (23/09): o script que prefixa «Nintendo» renomeia
+# DENTRO da trava comum. A bancada é a do N-IGUAL-A-UM-01 — três adaptadores de
+# mentira, `busctl` e `id` dublês —, e o dublê do `busctl` pergunta à trava, no
+# instante do `set-property`, se ela está presa.
+
+
+def _bancada_com_trava(tmp_path: Path) -> tuple[Any, Path, Path]:
+    from tests.unit.test_o_prefixo_vai_no_adaptador_que_hospeda_nintendo import Bancada
+
+    banca = Bancada(tmp_path)
+    trava = tmp_path / "run" / "radio.lock"
+    trava.parent.mkdir()
+    real = banca.fakes / "busctl-real"
+    (banca.fakes / "busctl").rename(real)
+    no_instante = tmp_path / "trava-no-set-property.txt"
+    (banca.fakes / "busctl").write_text(
+        "#!/usr/bin/env bash\n"
+        'if [[ "$1" == "set-property" ]]; then\n'
+        f"    if flock -n '{trava}' true; then echo livre; else echo presa; fi >> '{no_instante}'\n"
+        "fi\n"
+        f"exec '{real}' \"$@\"\n",
+        encoding="utf-8",
+    )
+    (banca.fakes / "busctl").chmod(0o755)
+    return banca, trava, no_instante
+
+
+def _ambiente_do_script(banca: Any, trava: Path, **extra: str) -> dict[str, str]:
+    return {
+        "PATH": ":".join([str(banca.fakes), "/usr/bin", "/bin"]),
+        "HOME": str(banca.tmp),
+        "LANG": os.environ.get("LANG", "pt_BR.UTF-8"),
+        "HEFESTO_SYS_BLUETOOTH": str(banca.sys_bt),
+        "HEFESTO_BT_LIB": str(banca.lib),
+        "HEFESTO_BT_LOG_DEST": str(banca.log),
+        "HEFESTO_RADIO_TRAVA": str(trava),
+        **extra,
+    }
+
+
+ATIVO = RAIZ / "scripts" / "bt_active_mode.sh"
+
+
+def test_o_alias_e_escrito_com_a_trava_na_mao(tmp_path: Path) -> None:
+    """MORDIDA: tire o ``_na_trava`` do laço do alias — o ``set-property`` roda
+    com a trava livre, e esta régua reprova."""
+    from tests.unit.test_o_prefixo_vai_no_adaptador_que_hospeda_nintendo import (
+        HOSPEDEIRO_DO_PRO,
+    )
+
+    banca, trava, no_instante = _bancada_com_trava(tmp_path)
+
+    feito = subprocess.run(
+        ["bash", str(ATIVO), "--quiet"], capture_output=True, text=True, timeout=60,
+        env=_ambiente_do_script(banca, trava),
+    )
+
+    assert feito.returncode == 0, feito.stderr
+    assert HOSPEDEIRO_DO_PRO in banca.aliases_escritos()
+    assert no_instante.read_text(encoding="utf-8").split() == ["presa"]
+
+
+def test_com_outro_motor_na_trava_o_alias_espera_o_prazo_e_desiste(tmp_path: Path) -> None:
+    import fcntl
+
+    banca, trava, _no_instante = _bancada_com_trava(tmp_path)
+    with open(trava, "a+") as outro_motor:
+        fcntl.flock(outro_motor, fcntl.LOCK_EX)
+        feito = subprocess.run(
+            ["bash", str(ATIVO), "--quiet"], capture_output=True, text=True, timeout=60,
+            env=_ambiente_do_script(banca, trava, HEFESTO_RADIO_TRAVA_PRAZO_S="1"),
+        )
+
+    assert feito.returncode == 0, feito.stderr
+    assert banca.aliases_escritos() == {}, "escreveu por cima de outro motor"
+    assert "outro motor segura a trava do rádio" in banca.log.read_text(encoding="utf-8")
+
+
+def test_a_trava_herdada_do_watchdog_nao_espera_o_proprio_pai(tmp_path: Path) -> None:
+    """O watchdog chama o script com o tique inteiro na trava, e o descritor vem
+    junto. Sem reconhecê-lo, o filho esperaria o pai o prazo inteiro e o alias
+    nunca sairia de dentro do tique.
+
+    MORDIDA: tire o laço do ``/proc/$$/fd`` — o filho espera o prazo, desiste,
+    e esta régua reprova.
+    """
+    import time
+
+    from tests.unit.test_o_prefixo_vai_no_adaptador_que_hospeda_nintendo import (
+        HOSPEDEIRO_DO_PRO,
+    )
+
+    banca, trava, no_instante = _bancada_com_trava(tmp_path)
+    tique = (
+        f"exec {{fd}}<>'{trava}' && flock -n \"$fd\" || exit 9\n"
+        f"bash '{ATIVO}' --quiet\n"
+    )
+    antes = time.monotonic()
+    feito = subprocess.run(
+        ["bash", "-c", tique], capture_output=True, text=True, timeout=60,
+        env=_ambiente_do_script(banca, trava, HEFESTO_RADIO_TRAVA_PRAZO_S="3"),
+    )
+
+    assert feito.returncode == 0, feito.stderr
+    assert time.monotonic() - antes < 3.0, "o filho esperou o próprio pai"
+    assert HOSPEDEIRO_DO_PRO in banca.aliases_escritos()
+    assert no_instante.read_text(encoding="utf-8").split() == ["presa"]
