@@ -469,7 +469,9 @@ def test_na_espera_crescente_o_ceder_de_cada_tentativa_nao_entra_no_diario() -> 
     degraus = registro.de(gov.FILA_PARADA)
     assert len(degraus) == 5, degraus
     cedeu = registro.de(gov.CEDEU_NA_FONTE)
-    assert len(cedeu) == 1, f"{len(cedeu)} CEDEU em {len(degraus)} degraus: cada tentativa virou linha"
+    assert len(cedeu) == 1, (
+        f"{len(cedeu)} CEDEU em {len(degraus)} degraus: cada tentativa virou linha"
+    )
     assert registro.de(gov.VOLTOU_A_ESCREVER) == []
 
 
