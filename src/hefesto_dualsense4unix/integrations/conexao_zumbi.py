@@ -341,14 +341,22 @@ def enderecos_que_o_bluez_conhece(*, executor: object = None) -> set[tuple[str, 
     Conjunto VAZIO é lido como *"não sei"*, não como *"o BlueZ não conhece
     ninguém"* — quem trata disso é :func:`zumbis`, que se recusa a acusar
     ninguém sem esta leitura.
+
+    A pergunta é ao dono do BlueZ (BLUEZ-UM-DONO-01): com ele vivo, a árvore
+    sai da foto do ``ObjectManager`` e esta volta de cinco em cinco segundos
+    deixa de abrir um subprocesso. O ``executor`` injetado continua sendo o
+    dublê de linha inteira que a régua sempre usou.
     """
-    correr = executor if callable(executor) else _rodar
-    if executor is None and shutil.which("busctl") is None:
-        return set()
-    texto = correr(["busctl", "tree", "org.bluez", "--list"])
+    from hefesto_dualsense4unix.integrations import bluez_dbus
+
+    leitor = (
+        bluez_dbus.pela_linha_de_comando(executor)
+        if callable(executor)
+        else bluez_dbus.dono()
+    )
     achados: set[tuple[str, str]] = set()
-    for linha in texto.splitlines():
-        achado = _NO_DO_BLUEZ.match(linha.strip())
+    for caminho in leitor.caminhos() or ():
+        achado = _NO_DO_BLUEZ.match(caminho)
         if achado is None:
             continue
         endereco = mac_limpo(achado.group(2).replace("_", ":"))
@@ -579,7 +587,8 @@ def olhar_a_mesa(
     if not conhecidos and not impedimentos:
         impedimentos = [
             "não consegui perguntar ao BlueZ quais aparelhos ele conhece "
-            "(busctl/bluetoothd) — sem essa leitura eu não acuso ninguém"
+            "(barramento do sistema/bluetoothd) — sem essa leitura eu não acuso "
+            "ninguém"
         ]
     return links, com_hid, conhecidos, impedimentos
 
