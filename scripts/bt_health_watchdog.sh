@@ -122,7 +122,13 @@ fi
 _diario() { _diario_escrever "${DIARIO_DO_RADIO}" "bt-watchdog" "$@"; }
 
 # --- a trava do rádio ------------------------------------------------------
-TRAVA_DO_RADIO="${HEFESTO_RADIO_TRAVA:-/run/hefesto-dualsense4unix/radio.lock}"
+#: A mesma guarda do diário: com a árvore do BlueZ desviada (a suíte) e sem o
+#: gancho, este script não segura a trava DELA — um teste que rodasse o tique
+#: prenderia o watchdog e o daemon dela, e escreveria o próprio nome no arquivo.
+TRAVA_DO_RADIO="${HEFESTO_RADIO_TRAVA:-}"
+if [[ -z "${TRAVA_DO_RADIO}" && -z "${HEFESTO_BT_SRC:-}" ]]; then
+    TRAVA_DO_RADIO="/run/hefesto-dualsense4unix/radio.lock"
+fi
 PRAZO_DA_TRAVA_S="${HEFESTO_RADIO_TRAVA_PRAZO_S:-60}"
 [[ "${PRAZO_DA_TRAVA_S}" =~ ^[0-9]+$ ]] || PRAZO_DA_TRAVA_S=60
 TRAVA_FD=""
@@ -138,6 +144,10 @@ TRAVA_FD=""
 #: e é isso que fecha a corrida entre a conferência e o `open`.
 _pegar_a_trava() {
     local dono inicio fim milis
+    if [[ -z "${TRAVA_DO_RADIO}" ]]; then
+        log "árvore do BlueZ desviada e sem HEFESTO_RADIO_TRAVA: sigo sem a trava (a comum é a da máquina)"
+        return 0
+    fi
     if [[ ! -d "${TRAVA_DO_RADIO%/*}" ]]; then
         log "sem a trava comum do rádio (${TRAVA_DO_RADIO%/*} não existe — é o install que a cria); sigo sem ela"
         return 0
