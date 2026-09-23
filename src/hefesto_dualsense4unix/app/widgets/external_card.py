@@ -709,7 +709,7 @@ if _GTK_DISPONIVEL:
         vira grade de TRÊS colunas fixas, e cinco números virariam duas fileiras
         de altura para caber `[1][2][3] / [4][5]`.
 
-        Trocar a orientação é a receita que `secao_mesa.py:257` já usa: uma
+        Trocar a orientação é a receita que `secao_mesa.py:662` já usa: uma
         fileira deitada de itens curtos, sem gastar altura, e sem mexer no padrão
         do widget — que cinco outras telas dependem dele como está.
 
