@@ -858,7 +858,7 @@ _ha_conexao() {
 _estampas() { printf '%s\n' "${HEFESTO_PONTE_STAMPS:-/run/hefesto-bt-ponte}"; }
 
 verbo_reiniciar_travado() {
-    local linha hci quantos porta agora_hci carimbo ultimo agora pausa espera
+    local linha hci quantos porta agora_hci carimbo anterior agora pausa espera
     local recusou=0 achou=0 volta
     if [[ "${SYSFS}" == "${SYSFS_REAL}" && "$(id -u)" -ne 0 ]]; then
         _erro "'reiniciar-travado' requer root (é a ponte privilegiada)"
@@ -893,12 +893,12 @@ verbo_reiniciar_travado() {
         fi
         carimbo="$(_estampas)/reset-${porta}"
         agora="$(date +%s)"
-        ultimo="$(cat -- "${carimbo}" 2>/dev/null || echo 0)"
-        [[ "${ultimo}" =~ ^[0-9]+$ ]] || ultimo=0
-        if (( agora - ultimo < INTERVALO_ENTRE_RESETS_S )); then
-            printf 'segurado\t%s\t%s\treiniciado há %ss\n' "${porta}" "${hci}" "$((agora - ultimo))"
+        anterior="$(cat -- "${carimbo}" 2>/dev/null || echo 0)"
+        [[ "${anterior}" =~ ^[0-9]+$ ]] || anterior=0
+        if (( agora - anterior < INTERVALO_ENTRE_RESETS_S )); then
+            printf 'segurado\t%s\t%s\treiniciado há %ss\n' "${porta}" "${hci}" "$((agora - anterior))"
             _diario "bt-ponte" "não insistiu no reinício" \
-                "o adaptador voltou a travar depois de reiniciado há $(( (agora - ultimo) / 60 )) min — tire e ponha o adaptador da porta ${porta}" \
+                "o adaptador voltou a travar depois de reiniciado há $(( (agora - anterior) / 60 )) min — tire e ponha o adaptador da porta ${porta}" \
                 "{\"hci\": $(_json_texto "${hci}"), \"timeouts\": ${quantos}}" null \
                 "\"porta\": $(_json_texto "${porta}"), \"familia\": \"3\", \"frase\": $(_json_texto "O adaptador da porta ${porta} travou de novo. Tire e ponha ele.")"
             continue
