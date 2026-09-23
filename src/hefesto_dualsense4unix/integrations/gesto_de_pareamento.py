@@ -63,6 +63,20 @@ AS TRÊS DISCIPLINAS, AS MESMAS DE ``gesto_de_reconexao.py``
   argumento da ponte; o que vai para a tela e para o diário é
   :attr:`Candidato.mascara`.
 
+PELO DONO DO BLUEZ E PELO AGENTE NOSSO (BLUEZ-UM-DONO-01, 23/09/2026)
+======================================================================
+Com o dono do D-Bus vivo (``bluez_dbus.DonoVivo``), a janela é NOSSA: o
+``StartDiscovery`` sai da conexão do dono — a busca é POR CLIENTE e morre com
+quem a abriu —, os candidatos saem da foto do ``ObjectManager``, e o ``Pair``
+sai pela mesma conexão, onde mora o ``Agent1`` próprio (R5): o pareamento que
+ELA inicia é atendido por nós, sem virar o agente padrão. A ponte root
+(``descobrir``/``parear``) fica de PISO, para quando o dono não está vivo — e
+o ``hefesto-bt-agent`` atende o que chega sozinho.
+
+Nos dois caminhos, o que ESCREVE no rádio entra na trava comum
+(``diario_do_radio``). O ``StopDiscovery`` é a única exceção: ele solta o
+rádio, e esperar alguém para soltá-lo manteria a busca de pé.
+
 QUEM É CONTROLE SE PERGUNTA À CLASSE, NUNCA AO NOME
 ====================================================
 Antes de parear, um candidato não tem ``hidraw``, não tem ``HID_UNIQ`` e não tem
@@ -84,6 +98,7 @@ import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
+from hefesto_dualsense4unix.integrations import bluez_dbus
 from hefesto_dualsense4unix.integrations.conexao_zumbi import (
     PONTE_INSTALADA,
     PontePrivilegiada,
@@ -93,6 +108,9 @@ from hefesto_dualsense4unix.integrations.gesto_de_reconexao import mascarar
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+#: Como este gesto assina na trava e no diário comuns do rádio.
+QUEM = "pareamento"
 
 #: Quanto tempo a janela de busca fica aberta, por padrão. Trinta segundos é o
 #: que cabe entre segurar PS + Create e a barra piscar sem a pessoa achar que
@@ -277,6 +295,21 @@ def _abrir_de_verdade(argumentos: Sequence[str]) -> subprocess.Popen[str]:
     )
 
 
+def _dono_que_pareia(dono: bluez_dbus.LeitorDoBluez | None) -> bluez_dbus.LeitorDoBluez | None:
+    """O dono do BlueZ, se ele pode manter uma busca e atender um ``Pair``.
+
+    Só o dono VIVO pode: a busca é por cliente e morre com um ``busctl`` que
+    sai, e o agente próprio precisa de uma conexão que fica.
+    """
+    leitor = dono if dono is not None else bluez_dbus.dono()
+    return leitor if leitor.atende_o_proprio_pareamento else None
+
+
+def _limpo(nome: str) -> str:
+    """O nome de terceiro sem caractere de controle — o que a ponte fazia no TSV."""
+    return " ".join("".join(c if c.isprintable() else " " for c in nome).split())
+
+
 def _correr_de_verdade(argumentos: Sequence[str]) -> tuple[int, str]:
     """Roda a ponte até o fim. Os três jeitos de não dar viram ``(1, motivo)``."""
     try:
@@ -308,6 +341,7 @@ class JanelaDeBusca:
         caminho: str = PONTE_INSTALADA,
         abrir: Abrir | None = None,
         correr: Correr | None = None,
+        dono: bluez_dbus.LeitorDoBluez | None = None,
     ) -> None:
         self.adaptador = mac_limpo(adaptador) or ""
         self.segundos = _segundos_validos(segundos)
@@ -319,6 +353,19 @@ class JanelaDeBusca:
         self._tranca = threading.Lock()
         self._achados: list[Candidato] = []
         self._vistos: set[str] = set()
+        #: O dono vivo, quando a janela é nossa; ``None`` quando é a da ponte.
+        #: Quem injeta a ponte (``abrir``/``correr``) escolhe a ponte.
+        self._dono = _dono_que_pareia(dono) if abrir is None and correr is None else None
+        self._no_do_adaptador = ""
+        self._fim: float | None = None
+        self._fechada = False
+        self._tranca_de_fechar = threading.Lock()
+        self._relogio: threading.Timer | None = None
+
+    @property
+    def pelo_dono(self) -> bool:
+        """A janela é a NOSSA (dono vivo e agente próprio), e não a da ponte."""
+        return self._dono is not None
 
     # -- abrir e fechar -------------------------------------------------------
 
@@ -330,6 +377,8 @@ class JanelaDeBusca:
         """
         if not self.adaptador:
             return "o endereço do adaptador não tem forma de endereço"
+        if self._dono is not None:
+            return self._abrir_pelo_dono(self._dono)
         if self._processo is not None:
             return ""
         argumentos = [
@@ -341,8 +390,15 @@ class JanelaDeBusca:
             self.adaptador,
             str(self.segundos),
         ]
+        from hefesto_dualsense4unix.integrations.diario_do_radio import TravaOcupadaError
+
         try:
-            self._processo = self._abrir(argumentos)
+            # A trava cobre o NASCIMENTO da busca da ponte: ela não começa a
+            # varrer no meio do gesto de outro motor.
+            with bluez_dbus.na_trava(QUEM):
+                self._processo = self._abrir(argumentos)
+        except TravaOcupadaError as ocupada:
+            return f"o rádio estava ocupado: {ocupada}"
         except (OSError, ValueError) as erro:
             return f"não consegui abrir a busca: {erro}"
         self._fio = threading.Thread(
@@ -355,6 +411,50 @@ class JanelaDeBusca:
             segundos=self.segundos,
         )
         return ""
+
+    def _abrir_pelo_dono(self, dono: bluez_dbus.LeitorDoBluez) -> str:
+        """``StartDiscovery`` pela conexão do dono, com um relógio que a fecha."""
+        if self._no_do_adaptador:
+            return ""
+        no = dono.caminho_do_adaptador(self.adaptador)
+        if no is None:
+            return "o adaptador não está na mesa (plugado e ligado?)"
+        escrita = dono.comecar_busca(no, quem=QUEM)
+        if not escrita.feita:
+            return f"o BlueZ não abriu a busca: {escrita.erro or escrita.mensagem}"
+        self._no_do_adaptador = no
+        self._fim = time.monotonic() + self.segundos
+        # A busca é da conexão do dono, que vive o processo inteiro: sem este
+        # relógio, uma janela esquecida varreria até o daemon sair.
+        self._relogio = threading.Timer(self.segundos, self.fechar)
+        self._relogio.daemon = True
+        self._relogio.start()
+        logger.info(
+            "pareamento_janela_aberta",
+            adaptador=mascarar(self.adaptador),
+            segundos=self.segundos,
+            pelo_dono=True,
+        )
+        return ""
+
+    def _colher(self) -> None:
+        """Os aparelhos que a foto do dono tem sob este adaptador, em ordem."""
+        dono = self._dono
+        if dono is None or not self._no_do_adaptador:
+            return
+        for aparelho in dono.aparelhos(adaptador=self._no_do_adaptador) or ():
+            with self._tranca:
+                if aparelho.endereco in self._vistos:
+                    continue
+                self._vistos.add(aparelho.endereco)
+                self._achados.append(
+                    Candidato(
+                        endereco=aparelho.endereco,
+                        nome=_limpo(aparelho.nome),
+                        ja_pareado=bool(aparelho.pareado),
+                        classe=aparelho.classe,
+                    )
+                )
 
     def _ler(self) -> None:
         """O fio que lê o fluxo da ponte. Engole tudo, de propósito.
@@ -388,16 +488,27 @@ class JanelaDeBusca:
     @property
     def aberta(self) -> bool:
         """A varredura ainda está de pé AGORA?"""
+        if self._dono is not None:
+            return (
+                self._fim is not None and not self._fechada and time.monotonic() < self._fim
+            )
         processo = self._processo
         return processo is not None and processo.poll() is None
 
     def candidatos(self) -> tuple[Candidato, ...]:
-        """O que já saiu da ponte, nesta volta. Seguro a qualquer momento."""
+        """O que já apareceu nesta volta. Seguro a qualquer momento."""
+        self._colher()
         with self._tranca:
             return tuple(self._achados)
 
     def esperar(self, teto: float | None = None) -> None:
         """Espera a janela fechar sozinha. **Nunca chame isto no tique.**"""
+        if self._dono is not None:
+            if self._fim is not None:
+                resta = self._fim - time.monotonic()
+                time.sleep(max(0.0, resta if teto is None else min(resta, teto)))
+            self.fechar()
+            return
         processo = self._processo
         if processo is None:
             return
@@ -411,6 +522,20 @@ class JanelaDeBusca:
 
     def fechar(self) -> None:
         """Derruba a varredura agora. Idempotente e silencioso."""
+        dono = self._dono
+        if dono is not None:
+            if self._relogio is not None and self._relogio is not threading.current_thread():
+                self._relogio.cancel()
+            # O relógio e quem chama podem fechar juntos: um só para a busca.
+            with self._tranca_de_fechar:
+                if not self._no_do_adaptador or self._fechada:
+                    return
+                # Colhe antes de parar: sem a busca, o BlueZ recolhe os
+                # aparelhos que ela achou e que ninguém pareou.
+                self._colher()
+                self._fechada = True
+                dono.parar_busca(self._no_do_adaptador, quem=QUEM)
+            return
         processo = self._processo
         if processo is None:
             return
@@ -455,15 +580,43 @@ class JanelaDeBusca:
             if achado.endereco == alvo and achado.ja_pareado:
                 logger.info("pareamento_ja_estava", endereco=mascara)
                 return Resultado(ESTADO_JA_PAREADO, FRASE_JA_PAREADO)
-        codigo, erro = self._correr(
-            ["sudo", "-n", "--", self.caminho, "parear", self.adaptador, alvo]
-        )
+        if self._dono is not None:
+            return self._parear_pelo_dono(self._dono, alvo, mascara)
+        from hefesto_dualsense4unix.integrations.diario_do_radio import TravaOcupadaError
+
+        try:
+            with bluez_dbus.na_trava(QUEM):
+                codigo, erro = self._correr(
+                    ["sudo", "-n", "--", self.caminho, "parear", self.adaptador, alvo]
+                )
+        except TravaOcupadaError as ocupada:
+            codigo, erro = 1, str(ocupada)
         if codigo == 0:
             logger.info(
                 "pareamento_deu", endereco=mascara, adaptador=mascarar(self.adaptador)
             )
             return Resultado(ESTADO_PAREOU, FRASE_PAREOU)
         logger.warning("pareamento_nao_deu", endereco=mascara, motivo=erro[:200])
+        return Resultado(ESTADO_NAO_DEU, FRASE_NAO_PAREOU)
+
+    def _parear_pelo_dono(
+        self, dono: bluez_dbus.LeitorDoBluez, alvo: str, mascara: str
+    ) -> Resultado:
+        """O ``Pair`` pela conexão do dono — atendido pelo agente próprio (R5)."""
+        no = dono.caminho_do_aparelho(alvo, adaptador=self.adaptador)
+        if no is None:
+            logger.warning("pareamento_sem_objeto", endereco=mascara)
+            return Resultado(ESTADO_NAO_DEU, FRASE_NAO_PAREOU)
+        escrita = dono.parear(no, quem=QUEM)
+        if escrita.feita:
+            logger.info(
+                "pareamento_deu",
+                endereco=mascara,
+                adaptador=mascarar(self.adaptador),
+                pelo_dono=True,
+            )
+            return Resultado(ESTADO_PAREOU, FRASE_PAREOU)
+        logger.warning("pareamento_nao_deu", endereco=mascara, motivo=escrita.erro)
         return Resultado(ESTADO_NAO_DEU, FRASE_NAO_PAREOU)
 
 
@@ -486,23 +639,27 @@ def procurar(
     abrir: Abrir | None = None,
     correr: Correr | None = None,
     conferir_a_porta: bool = True,
+    dono: bluez_dbus.LeitorDoBluez | None = None,
 ) -> Resultado:
     """Abre a janela, espera ela fechar e devolve os candidatos.
 
     **Bloqueia pelos segundos pedidos.** Não existe para o tique: existe para o
     fio que a aba já sabe abrir. Quem quiser mostrar a lista crescendo usa a
     :class:`JanelaDeBusca` direto.
+
+    A porta privilegiada só é conferida quando a janela é a da PONTE: pelo
+    dono vivo não há ``sudo`` no caminho.
     """
-    if conferir_a_porta:
+    janela = JanelaDeBusca(
+        adaptador, segundos, caminho=caminho, abrir=abrir, correr=correr, dono=dono
+    )
+    if conferir_a_porta and not janela.pelo_dono:
         motivos = impedimentos(caminho)
         if motivos:
             logger.info("pareamento_sem_porta", motivos=len(motivos))
             return Resultado(
                 ESTADO_SEM_PORTA, FRASE_SEM_PORTA.format(motivos="; ".join(motivos))
             )
-    janela = JanelaDeBusca(
-        adaptador, segundos, caminho=caminho, abrir=abrir, correr=correr
-    )
     motivo = janela.abrir_a_janela()
     if motivo:
         logger.warning("pareamento_busca_nao_abriu", motivo=motivo)
@@ -545,6 +702,7 @@ __all__ = [
     "FRASE_NINGUEM",
     "FRASE_PAREOU",
     "FRASE_SEM_PORTA",
+    "QUEM",
     "SEGUNDOS_DA_JANELA",
     "SEGUNDOS_MAX",
     "Candidato",
