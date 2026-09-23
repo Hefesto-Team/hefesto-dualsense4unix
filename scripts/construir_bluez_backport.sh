@@ -39,8 +39,9 @@
 #   HEFESTO_BLUEZ_JOBS=4 scripts/construir_bluez_backport.sh
 #       # compila com 4 processos em vez de um por núcleo
 #
-# Idempotente: com os três .deb da versão alvo já no cache e o SHA256SUMS
-# batendo, sai 0 sem baixar nem compilar. A árvore de obra é refeita do zero
+# Idempotente: com os três .deb da versão alvo já no cache, o SHA256SUMS
+# batendo e o ORIGEM.txt dizendo as mesmas fontes e os mesmos patches, sai 0
+# sem baixar nem compilar. A árvore de obra é refeita do zero
 # a cada preparo, então duas corridas dão a mesma árvore.
 #
 # Códigos de saída: 0 ok · 2 uso · 3 falta dependência · 4 fonte não confere
@@ -362,13 +363,30 @@ debs_alvo() {
     done
 }
 
+# O que entrou no build: as fontes e o hash de cada patch da revisão. É a
+# chave do cache — o mesmo texto que vai para o ORIGEM.txt.
+origem() {
+    local p
+    printf 'versao=%s\n' "${ALVO}"
+    printf 'upstream=%s %s\n' "$(ler FONTE_UPSTREAM_URL)" "$(ler FONTE_UPSTREAM_SHA256)"
+    printf 'empacotamento=%s %s\n' "$(ler EMPACOTAMENTO_URL)" "$(ler EMPACOTAMENTO_SHA256)"
+    for p in ${PATCHES}; do
+        printf 'patch=%s %s\n' "${p}" "$(sha_de "${ASSETS}/patches/${p}")"
+    done
+    printf 'construido_por=scripts/construir_bluez_backport.sh\n'
+}
+
+# O atalho só vale quando os .deb conferem E foram feitos com o que está na
+# árvore agora. Sem a segunda pergunta, um hefesto-0002 mudado sem subir a
+# revisão respondia «já construído» e o install levava o .deb velho.
 ja_construido() {
     local deb
-    [[ -f "${SAIDA}/SHA256SUMS" ]] || return 1
+    [[ -f "${SAIDA}/SHA256SUMS" && -f "${SAIDA}/ORIGEM.txt" ]] || return 1
     while read -r deb; do
         [[ -f "${SAIDA}/${deb}" ]] || return 1
         grep -qxF "$(sha_de "${SAIDA}/${deb}")  ${deb}" "${SAIDA}/SHA256SUMS" || return 1
     done < <(debs_alvo)
+    [[ "$(origem)" == "$(cat "${SAIDA}/ORIGEM.txt")" ]]
 }
 
 entregar() {
@@ -398,15 +416,7 @@ entregar() {
     # SHA256SUMS só dos três de agora, por basename — é como o install lê.
     (cd "${SAIDA}" && debs_alvo | xargs sha256sum > SHA256SUMS.novo)
     mv -f "${SAIDA}/SHA256SUMS.novo" "${SAIDA}/SHA256SUMS"
-    {
-        printf 'versao=%s\n' "${ALVO}"
-        printf 'upstream=%s %s\n' "$(ler FONTE_UPSTREAM_URL)" "$(ler FONTE_UPSTREAM_SHA256)"
-        printf 'empacotamento=%s %s\n' "$(ler EMPACOTAMENTO_URL)" "$(ler EMPACOTAMENTO_SHA256)"
-        for p in ${PATCHES}; do
-            printf 'patch=%s %s\n' "${p}" "$(sha_de "${ASSETS}/patches/${p}")"
-        done
-        printf 'construido_por=scripts/construir_bluez_backport.sh\n'
-    } > "${SAIDA}/ORIGEM.txt"
+    origem > "${SAIDA}/ORIGEM.txt"
     diga "entregue em ${SAIDA}:"
     cat "${SAIDA}/SHA256SUMS"
 }
@@ -462,7 +472,7 @@ main() {
     ARCH="$(dpkg --print-architecture)"
 
     if [[ "${modo}" == "construir" && "${forcar}" -eq 0 ]] && ja_construido; then
-        diga "já construído: ${ALVO} em ${SAIDA}, SHA256SUMS confere — nada a fazer (--forcar reconstrói)"
+        diga "já construído: ${ALVO} em ${SAIDA}, SHA256SUMS e ORIGEM.txt conferem — nada a fazer (--forcar reconstrói)"
         exit 0
     fi
 

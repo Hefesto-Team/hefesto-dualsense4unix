@@ -14,8 +14,11 @@ Esta bancada prova, SEM REDE e sem sudo, que a receita versionada fecha:
 - o ``scripts/construir_bluez_backport.sh --preparar`` monta a árvore com
   ``dpkg-source`` a partir de fontes sintéticas com os MESMOS nomes, e duas
   corridas dão a mesma árvore;
-- com os ``.deb`` da versão alvo no cache e o ``SHA256SUMS`` batendo, a
-  segunda corrida não baixa nem compila;
+- com os ``.deb`` da versão alvo no cache, o ``SHA256SUMS`` batendo e o
+  ``ORIGEM.txt`` dizendo os patches da árvore, a segunda corrida não baixa nem
+  compila — e um ``.deb`` feito com outro patch manda reconstruir;
+- a revisão antiga só se reconstrói num cache que NÃO é o do install, medido
+  pelo caminho e não pela variável;
 - a versão alvo é ``~hefesto24.04.4``;
 - a MORDIDA do ``hefesto-0002``: ``assets/bluez-backport/prova/eagain.c`` roda
   as ``hidp_send_*`` recortadas do ``device.c`` contra um ``socketpair`` cheio
@@ -40,7 +43,12 @@ devolvida com md5 conferido):
 - trocar o ``! aead_do_kernel_disponivel`` do test-mesh-crypto por ``true`` →
   ``test_o_unit_do_bluez_so_perdoa_a_falha_que_a_maquina_explica`` reprova;
 - acrescentar ``sudo apt-get install`` ao script →
-  ``test_o_script_nao_instala_nada`` reprova.
+  ``test_o_script_nao_instala_nada`` reprova;
+- devolver a guarda da revisão antiga que só olhava se ``HEFESTO_BLUEZ_CACHE``
+  estava vazia → ``test_revisao_antiga_so_se_reconstroi_fora_do_cache_do_install``
+  reprova em três dos quatro jeitos de apontar, com rc=4 (foi baixar);
+- tirar a comparação do ``ORIGEM.txt`` do ``ja_construido`` →
+  ``test_debs_feitos_com_outro_patch_mandam_reconstruir`` reprova nos dois casos.
 """
 from __future__ import annotations
 
@@ -80,9 +88,10 @@ def _assets() -> Path:
     return _raiz() / "assets" / "bluez-backport"
 
 
-def _baseline() -> dict[str, str]:
+def _baseline(caminho: Path | None = None) -> dict[str, str]:
     valores: dict[str, str] = {}
-    for linha in (_assets() / "BASELINE").read_text(encoding="utf-8").splitlines():
+    arquivo = caminho if caminho is not None else _assets() / "BASELINE"
+    for linha in arquivo.read_text(encoding="utf-8").splitlines():
         if not linha or linha.startswith("#") or "=" not in linha:
             continue
         chave, valor = linha.split("=", 1)
@@ -379,8 +388,24 @@ def test_duas_corridas_do_preparo_dao_a_mesma_arvore(bancada):
     assert _retrato(bancada["arvore"]) == retrato
 
 
-@precisa_das_ferramentas
-def test_com_os_debs_no_cache_a_corrida_nao_baixa_nem_compila(bancada):
+def _origem(env: dict[str, str]) -> str:
+    """O ORIGEM.txt que a última revisão escreve, lido do BASELINE da bancada."""
+    base = _baseline(Path(env["HEFESTO_BLUEZ_BASELINE"]))
+    linhas = [
+        f"versao={ALVO}",
+        f"upstream={base['FONTE_UPSTREAM_URL']} {base['FONTE_UPSTREAM_SHA256']}",
+        f"empacotamento={base['EMPACOTAMENTO_URL']} {base['EMPACOTAMENTO_SHA256']}",
+        *(
+            f"patch={nome} {_sha(_assets() / 'patches' / nome)}"
+            for nome in base["PATCHES_R4"].split()
+        ),
+        "construido_por=scripts/construir_bluez_backport.sh",
+    ]
+    return "\n".join(linhas) + "\n"
+
+
+def _cache_pronto(bancada: dict) -> tuple[Path, str]:
+    """A saída como o build a deixa: os três .deb, o SHA256SUMS e o ORIGEM.txt."""
     shutil.rmtree(bancada["cache"] / "bluez-fontes")
     saida = bancada["saida"]
     saida.mkdir(parents=True)
@@ -393,6 +418,44 @@ def test_com_os_debs_no_cache_a_corrida_nao_baixa_nem_compila(bancada):
         deb.write_bytes(f"deb de mentira de {pacote}\n".encode())
         linhas.append(f"{_sha(deb)}  {deb.name}\n")
     (saida / "SHA256SUMS").write_text("".join(linhas), encoding="utf-8")
+    (saida / "ORIGEM.txt").write_text(_origem(bancada["env"]), encoding="utf-8")
+    return saida, arch
+
+
+@precisa_das_ferramentas
+@pytest.mark.parametrize("como_envelheceu", ["patch_mudou", "sem_origem"])
+def test_debs_feitos_com_outro_patch_mandam_reconstruir(bancada, como_envelheceu):
+    """O atalho pergunta também COM O QUE os .deb foram feitos.
+
+    Medido em 23/09/2026: com o ORIGEM.txt dizendo outro hefesto-0002 (ou sem
+    ORIGEM.txt nenhum), o script respondia «já construído» — um patch mudado
+    sem subir a revisão deixava o .deb velho no cache que o install lê.
+    """
+    saida, _ = _cache_pronto(bancada)
+    origem = saida / "ORIGEM.txt"
+    if como_envelheceu == "patch_mudou":
+        texto = origem.read_text(encoding="utf-8")
+        velho = re.sub(
+            r"^(patch=hefesto-0002-\S+) [0-9a-f]{64}$",
+            r"\1 " + "0" * 64,
+            texto,
+            flags=re.M,
+        )
+        assert velho != texto
+        origem.write_text(velho, encoding="utf-8")
+    else:
+        origem.unlink()
+
+    proc = _rodar(bancada)
+    assert "já construído" not in proc.stdout
+    # A reconstrução começa pela rede, que aqui é o curl de mentira.
+    assert proc.returncode == 4, proc.stdout + proc.stderr
+    assert bancada["marca_curl"].exists()
+
+
+@precisa_das_ferramentas
+def test_com_os_debs_no_cache_a_corrida_nao_baixa_nem_compila(bancada):
+    saida, arch = _cache_pronto(bancada)
 
     proc = _rodar(bancada)
     assert proc.returncode == 0, proc.stdout + proc.stderr
