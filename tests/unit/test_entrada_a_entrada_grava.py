@@ -497,6 +497,29 @@ def test_a_entrada_numerada_na_outra_janela_ganha_a_amarra(
     assert carregar_maquina().lugares[f"pci-{PCI_B}-usb-0:4.2"].entrada == "7"
 
 
+def test_o_adaptador_na_entrada_numerada_na_outra_janela_herda_o_numero() -> None:
+    """Sem amarra pelo lugar, o desenho de hoje (pelo caminho DESTE boot) ainda
+    dá nome ao adaptador — e só quando o caminho não é de outro lugar."""
+    lugar = f"pci-{PCI_B}-usb-0:4.1.4"
+    adaptador = bd.AdaptadorDoBluez("/org/bluez/hci0", "hci0", "aa:bb:cc:00:00:01", lugar=lugar)
+    desenho = {
+        "mapa": {
+            "faces": [{"nome": "Hub da mesa", "portas": ["9"]}],
+            "portas": {"9": {"caminho": "3-4.1.4"}},
+        }
+    }
+    documento = MaquinaConfig.model_validate(desenho)
+    assert ee.nome_do_adaptador(adaptador, maquina=documento, controladores=BOOT_1) == "Entrada 9"
+    assert ee.nome_do_adaptador(adaptador, maquina=documento, controladores=BOOT_2) is None, (
+        "noutro boot o caminho 3-4.1.4 é outra porta, e o nome foi junto"
+    )
+
+    de_outro = MaquinaConfig.model_validate(
+        {**desenho, "lugares": {f"pci-{PCI_A}-usb-0:4.1.4": {"entrada": "9"}}}
+    )
+    assert ee.nome_do_adaptador(adaptador, maquina=de_outro, controladores=BOOT_1) is None
+
+
 def test_o_conselho_de_porta_do_vigia_diz_o_nome_dela() -> None:
     """A ponte root escreve o caminho do sistema no diário; quem lê o diário
     troca pelo nome dela. A frase é a de ``bt_ponte_privilegiada.sh``."""

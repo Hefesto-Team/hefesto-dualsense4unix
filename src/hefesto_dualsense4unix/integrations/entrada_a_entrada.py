@@ -86,6 +86,7 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.maquina import (
     MapaDaMesa,
     MaquinaConfig,
+    caminhos_do_lugar,
     carregar_maquina,
     entrada_do_lugar,
     entradas_do_mapa,
@@ -283,10 +284,10 @@ class LacoDaEntrada:
                 self._estado = ESPERANDO
                 self._porta = None
             novos = [a for nome, a in presentes.items() if nome not in self._vistos]
-            chegou = o_que_chegou(novos)
+            chegou = _o_que_chegou(novos)
             if chegou is not None:
                 self._vistos.update(a.nome_do_kernel for a in novos)
-                self._porta = porta_vista(chegou, self._carregar())
+                self._porta = _porta_vista(chegou, self._carregar())
                 self._estado = VISTA
             return self._foto()
 
@@ -303,7 +304,7 @@ class LacoDaEntrada:
             if self._estado != VISTA or porta is None:
                 raise RuntimeError("não há porta vista para responder")
             maquina = self._carregar()
-            gravacao = gravar_a_porta(
+            gravacao = _gravar_a_porta(
                 porta,
                 face,
                 maquina=maquina,
@@ -356,7 +357,7 @@ class LacoDaEntrada:
         except Exception:  # defensivo — a leitura some sob a mão
             logger.debug("entrada_a_entrada_leitura_falhou", exc_info=True)
             return {}
-        return presentes_com_lugar(censo)
+        return _presentes_com_lugar(censo)
 
     def _foto(self) -> dict[str, Any]:
         return {
@@ -368,11 +369,11 @@ class LacoDaEntrada:
 
 
 # ---------------------------------------------------------------------------
-# As peças do laço — funções, para a régua e para quem mais precisar
+# As peças do laço — privadas: quem está de fora fala com o laço
 # ---------------------------------------------------------------------------
 
 
-def presentes_com_lugar(censo: Censo) -> dict[str, Aparelho]:
+def _presentes_com_lugar(censo: Censo) -> dict[str, Aparelho]:
     """``{caminho: aparelho}`` do que está plugado e TEM lugar.
 
     Hub-raiz não é aparelho (``Censo.conectados``); aparelho sem controlador
@@ -385,7 +386,7 @@ def presentes_com_lugar(censo: Censo) -> dict[str, Aparelho]:
     }
 
 
-def o_que_chegou(novos: Sequence[Aparelho]) -> Aparelho | None:
+def _o_que_chegou(novos: Sequence[Aparelho]) -> Aparelho | None:
     """Qual dos aparelhos novos é a PORTA — ``None`` quando não dá para dizer.
 
     * o que pendura em outro aparelho novo não é a porta: é o que veio junto
@@ -412,11 +413,11 @@ def o_que_chegou(novos: Sequence[Aparelho]) -> Aparelho | None:
     return None
 
 
-def porta_vista(aparelho: Aparelho, maquina: MaquinaConfig) -> PortaVista:
+def _porta_vista(aparelho: Aparelho, maquina: MaquinaConfig) -> PortaVista:
     """O aparelho que chegou, com o que ela já disse sobre aquele lugar.
 
     O número vem da amarra pelo lugar e, sem ela, do desenho de hoje pelo
-    caminho DESTE boot — a mesma ordem de :func:`gravar_a_porta`, para a tela
+    caminho DESTE boot — a mesma ordem de :func:`_gravar_a_porta`, para a tela
     mostrar o número que a resposta vai gravar.
     """
     lugar = lugar_de(aparelho.controlador_pci, aparelho.devpath)
@@ -434,12 +435,12 @@ def porta_vista(aparelho: Aparelho, maquina: MaquinaConfig) -> PortaVista:
         e_bluetooth=(aparelho.classe, aparelho.subclasse, aparelho.protocolo)
         == ("e0", "01", "01"),
         entrada=entrada,
-        face=None if entrada is None else face_da_entrada(maquina.mapa, entrada),
+        face=None if entrada is None else _face_da_entrada(maquina.mapa, entrada),
         nome=_nome_declarado(maquina, lugar),
     )
 
 
-def gravar_a_porta(
+def _gravar_a_porta(
     porta: PortaVista,
     face: str,
     *,
@@ -506,13 +507,13 @@ def gravar_a_porta(
             lugares[outro] = {"entrada": None}
 
     recibo = gravar({"mapa": {"faces": faces, "portas": portas}, "lugares": lugares})
-    face_final = face_da_entrada(mapa, numero) if e_extensao else face
+    face_final = _face_da_entrada(mapa, numero) if e_extensao else face
     if not recibo.gravou:
         logger.warning("entrada_a_entrada_nao_gravou", motivo=recibo.motivo)
     return Gravacao(porta.lugar, numero, face_final or face, recibo.gravou, recibo.motivo)
 
 
-def face_da_entrada(mapa: MapaDaMesa, numero: str) -> str | None:
+def _face_da_entrada(mapa: MapaDaMesa, numero: str) -> str | None:
     """A face em que este número está — a da entrada que hospeda, se extensão."""
     for face in mapa.faces:
         if numero in face.portas:
@@ -530,17 +531,37 @@ def face_da_entrada(mapa: MapaDaMesa, numero: str) -> str | None:
 # ---------------------------------------------------------------------------
 
 
-def nome_do_lugar(lugar: str, *, maquina: MaquinaConfig | None = None) -> str | None:
+def nome_do_lugar(
+    lugar: str,
+    *,
+    maquina: MaquinaConfig | None = None,
+    controladores: Mapping[int, str] | None = None,
+) -> str | None:
     """O nome desta porta: o que ela deu, ou «Entrada 3». ``None`` = não sei.
 
     É o que a seção nova põe no lugar do «Entrada 4.1.4», o que o conselho de
     porta do vigia diz, e o nome que o adaptador plugado nesta porta herda.
+
+    Sem amarra pelo lugar, vale o número que o desenho de hoje dá a um dos
+    caminhos deste lugar NESTE boot (``utils/maquina.caminhos_do_lugar``): a
+    entrada que ela numerou na outra janela também dá nome ao adaptador que
+    está nela. Dois números para o mesmo lugar é "não sei".
     """
     documento = maquina if maquina is not None else carregar_maquina()
     nome = _nome_declarado(documento, lugar)
     if nome:
         return nome
     numero = entrada_do_lugar(documento, lugar)
+    if numero is None:
+        barramentos = (
+            controladores if controladores is not None else _controladores_do_sistema()
+        )
+        achados = {
+            achado
+            for caminho in caminhos_do_lugar(lugar, barramentos)
+            if (achado := _entrada_do_caminho(documento, caminho, lugar)) is not None
+        }
+        numero = achados.pop() if len(achados) == 1 else None
     return None if numero is None else f"{PALAVRA_DA_ENTRADA} {numero}"
 
 
@@ -562,20 +583,25 @@ def nome_da_porta(
         return None
     documento = maquina if maquina is not None else carregar_maquina()
     if partes_do_lugar(chave) is not None:
-        return nome_do_lugar(chave, maquina=documento)
+        return nome_do_lugar(chave, maquina=documento, controladores=controladores)
     barramentos = (
         controladores if controladores is not None else _controladores_do_sistema()
     )
     lugar = lugar_do_caminho(chave, barramentos)
     if lugar:
-        nome = nome_do_lugar(lugar, maquina=documento)
+        nome = nome_do_lugar(lugar, maquina=documento, controladores=barramentos)
         if nome:
             return nome
     numero = _entrada_do_caminho(documento, chave, lugar)
     return None if numero is None else f"{PALAVRA_DA_ENTRADA} {numero}"
 
 
-def nome_do_adaptador(adaptador: Any, *, maquina: MaquinaConfig | None = None) -> str | None:
+def nome_do_adaptador(
+    adaptador: Any,
+    *,
+    maquina: MaquinaConfig | None = None,
+    controladores: Mapping[int, str] | None = None,
+) -> str | None:
     """D3: o adaptador herda o nome da porta em que está.
 
     Serve ao ``bluez_dbus.AdaptadorDoBluez`` e ao ``mesa_de_radio.Adaptador``
@@ -583,7 +609,9 @@ def nome_do_adaptador(adaptador: Any, *, maquina: MaquinaConfig | None = None) -
     inverte entre boots, e o nome iria junto para o outro dongle.
     """
     lugar = str(getattr(adaptador, "lugar", "") or "")
-    return nome_do_lugar(lugar, maquina=maquina) if lugar else None
+    if not lugar:
+        return None
+    return nome_do_lugar(lugar, maquina=maquina, controladores=controladores)
 
 
 def com_o_nome_dela(
@@ -784,14 +812,9 @@ __all__ = [
     "PortaVista",
     "com_o_nome_dela",
     "dar_nome",
-    "face_da_entrada",
-    "gravar_a_porta",
     "nome_da_porta",
     "nome_do_adaptador",
     "nome_do_lugar",
     "o_laco",
-    "o_que_chegou",
-    "porta_vista",
-    "presentes_com_lugar",
     "projetar_o_nome",
 ]
