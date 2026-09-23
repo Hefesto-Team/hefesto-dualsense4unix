@@ -747,6 +747,64 @@ def test_a_secao_mesa_pergunta_o_nome_ao_dono_da_entrada(
     assert _onde_esta_o_adaptador(adaptador) == ("Barramento 3, porta 1.2 · Direita", None)
 
 
+def test_a_frase_e_a_coluna_dizem_o_mesmo_nome_da_mesma_porta(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A MESMA porta, as duas telas, o MESMO nome — com o dono de verdade.
+
+    A régua de cima troca o dono por um dublê que ignora o que recebe, e por
+    isso não via o que a coluna PERGUNTAVA: a ``secao_mesa`` montava um
+    ``maquina.json`` só com o ``mapa`` e sem os barramentos, e o dono,
+    perguntado sem os ``lugares``, não achava o nome que ela deu ao lugar.
+    Medido em 23/09 na conferência: a frase da recusa dizia «o Extensor à
+    esquerda já tem 2 controles…» e a coluna «Onde está», sobre o mesmo
+    adaptador, dizia «Entrada 9». Dois nomes para uma porta é o segundo dono
+    que o item 6 existe para matar.
+
+    MORDIDA: volte o ``secao_mesa._nome_da_entrada`` a perguntar com
+    ``MaquinaConfig(mapa=mapa)`` e ``controladores={}`` — a coluna diz
+    «Entrada 9» e esta régua reprova.
+    """
+    from tests.conftest import exigir_gi_real
+
+    exigir_gi_real("a coluna 'Onde está' da secao_mesa")
+    from hefesto_dualsense4unix.app.actions.config import secao_mesa
+    from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
+    from hefesto_dualsense4unix.integrations import ar_do_adaptador as ar
+    from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee
+    from hefesto_dualsense4unix.integrations import mesa_de_radio
+    from hefesto_dualsense4unix.utils import maquina
+
+    pci = "0000:0c:00.3"
+    no_extensor = mesa_de_radio.Adaptador(
+        interface="hci3", no="/mentira/3-4.1.4", vid="2357", pid="0604", busnum=3,
+        devpath="4.1.4", controlador_pci=pci,
+    )
+    documento = maquina.MaquinaConfig(
+        mapa=maquina.MapaDaMesa(portas={"9": maquina.PortaDeclarada(caminho="3-4.1.4")}),
+        lugares={
+            maquina.lugar_de(pci, "4.1.4"): maquina.LugarDeclarado(nome="Extensor à esquerda")
+        },
+    )
+    # O disco dela e os barramentos deste boot, sem ler nada da máquina dela.
+    monkeypatch.setattr(ee, "carregar_maquina", lambda: documento)
+    monkeypatch.setattr(secao_mesa, "carregar_maquina", lambda: documento)
+    monkeypatch.setattr(ee, "_controladores_do_sistema", lambda: {3: pci})
+    # O governador acha o adaptador pelo kernel; a suíte o calaria.
+    monkeypatch.setattr(bd, "a_suite_esta_rodando", lambda: False)
+    monkeypatch.setattr(bd, "enderecos_pelo_kernel", lambda *_a, **_k: {})
+    monkeypatch.setattr(mesa_de_radio, "adaptadores_bluetooth", lambda **_k: [no_extensor])
+    amostra = {ADAPTADOR_A: ar.ArDoAdaptador(hci=3, endereco=ADAPTADOR_A)}
+
+    na_frase = gov.nome_da_porta(ADAPTADOR_A, amostra=amostra)
+    na_coluna, _dica = secao_mesa._onde_esta_o_adaptador(no_extensor, documento.mapa)
+
+    assert na_frase == "Extensor à esquerda"
+    assert na_coluna == na_frase, (
+        f"a frase diz {na_frase!r} e a coluna diz {na_coluna!r} sobre a mesma porta"
+    )
+
+
 #: Quem pode compor o nome da porta, e por quê. Tudo o mais em ``src/`` que junte
 #: a palavra «Entrada» com um número é um segundo dono.
 _O_DONO = "integrations/entrada_a_entrada.py"
