@@ -52,7 +52,7 @@ set -euo pipefail
 # cinto para a máquina que o desligou. O de LOG fica — ele não muda nada do que
 # o script DECIDE, só onde ele escreve o diário, e o uninstall depende dele.
 if [[ -n "${SUDO_UID:-}" || -n "${SUDO_USER:-}" ]]; then
-    unset HEFESTO_SYS_BLUETOOTH HEFESTO_BT_LIB
+    unset HEFESTO_SYS_BLUETOOTH HEFESTO_BT_LIB HEFESTO_MAQUINA_JSON
 fi
 SYS_BLUETOOTH="${HEFESTO_SYS_BLUETOOTH:-/sys/class/bluetooth}"
 SYS_BLUETOOTH="${SYS_BLUETOOTH%/}"
@@ -405,11 +405,113 @@ if command -v busctl >/dev/null 2>&1; then
         printf 'bt-active-mode %s\n' "$$" 1>&"${TRAVA_FD}" 2>/dev/null || true
         return 0
     }
-    for HCI in ${COM_NINTENDO[@]+"${COM_NINTENDO[@]}"}; do
+    # --- o NOME DO LUGAR (ENTRADA-A-ENTRADA-02, 23/09/2026) ------------------
+    # D3: o adaptador herda o nome da porta em que está. O nome é dela e mora
+    # no `maquina.json` (`lugares[<lugar>].nome`, gravado pelo «Mapear Entrada
+    # a Entrada» e pelo renomear da aba); o `Alias` é a projeção dele, e tem UM
+    # escritor: este script, dentro da trava (a `D-COSTURA-BLUEZ` dela — dois
+    # escritores do mesmo alias é a duplicidade que o `e5376a0` desfez). O
+    # dongle que muda de porta leva o nome da porta nova no próximo tique do
+    # watchdog.
+    #
+    # O LUGAR vem do UDEV (`ID_PATH` do aparelho USB do adaptador), a mesma
+    # grafia que o produto grava (`utils/lugar.py`) — este script não a monta.
+    # O NOME vem do `maquina.json` pelo `python3` do sistema, isolado (`-I`):
+    # root não roda o Python da casa (o venv é gravável por ela), e o JSON só
+    # se lê com ferramenta de JSON. Sem udev ou sem python3, o alias fica como
+    # está — ausência não apaga nome de ninguém.
+    declare -A NOME_DO_LUGAR=()
+    #: `uid:caminho` do `maquina.json` da casa — ou só `:caminho` pelo gancho de
+    #: teste. Vazio quando não há UM só: duas casas com Hefesto é "não sei".
+    _maquina_json() {
+        local nome uid casa arquivo achados=()
+        if [[ -n "${HEFESTO_MAQUINA_JSON:-}" ]]; then
+            printf ':%s\n' "${HEFESTO_MAQUINA_JSON}"
+            return 0
+        fi
+        # Com os ganchos de teste, nunca a casa de ninguém: um teste não lê o
+        # `maquina.json` DELA.
+        [[ -n "${HEFESTO_SYS_BLUETOOTH:-}" || -n "${HEFESTO_BT_LIB:-}" ]] && return 0
+        while IFS=: read -r nome _ uid _ _ casa _; do
+            [[ "${uid}" =~ ^[0-9]+$ ]] || continue
+            (( uid >= 1000 && uid < 60000 )) || continue
+            arquivo="${casa}/.config/hefesto-dualsense4unix/maquina.json"
+            [[ -f "${arquivo}" && ! -L "${arquivo}" ]] && achados+=("${uid}:${arquivo}")
+        done < <(getent passwd 2>/dev/null || cat /etc/passwd 2>/dev/null || true)
+        [[ "${#achados[@]}" -eq 1 ]] && printf '%s\n' "${achados[0]}"
+        return 0
+    }
+    _ler_os_nomes_dos_lugares() {
+        local alvo dono arquivo lugar nome
+        alvo="$(_maquina_json)"
+        [[ -n "${alvo}" ]] || return 0
+        command -v python3 >/dev/null 2>&1 || return 0
+        dono="${alvo%%:*}"
+        arquivo="${alvo#*:}"
+        while IFS=$'\t' read -r lugar nome; do
+            [[ -n "${lugar}" && -n "${nome}" ]] && NOME_DO_LUGAR["${lugar}"]="${nome}"
+        done < <(python3 -I -c '
+import json, os, stat, sys
+arquivo, dono = sys.argv[1], sys.argv[2]
+try:
+    fd = os.open(arquivo, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+except OSError:
+    sys.exit(0)
+with os.fdopen(fd, "rb") as fh:
+    info = os.fstat(fh.fileno())
+    if not stat.S_ISREG(info.st_mode) or info.st_size > 1 << 20:
+        sys.exit(0)
+    if dono and str(info.st_uid) != dono:
+        sys.exit(0)
+    try:
+        doc = json.loads(fh.read().decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        sys.exit(0)
+if not isinstance(doc, dict) or doc.get("version", 1) != 1:
+    sys.exit(0)
+lugares = doc.get("lugares")
+for lugar, dele in sorted(lugares.items() if isinstance(lugares, dict) else ()):
+    nome = dele.get("nome") if isinstance(dele, dict) else None
+    if not isinstance(nome, str) or not isinstance(lugar, str):
+        continue
+    nome = nome.strip()
+    if nome and len(nome) <= 60 and nome.isprintable() and lugar.isprintable():
+        print(lugar + "\t" + nome)
+' "${arquivo}" "${dono}" 2>/dev/null || true)
+    }
+    #: O `ID_PATH` do aparelho USB deste adaptador, pelo udev — vazio quando
+    #: não há (adaptador embutido sem USB, ou udev ausente).
+    _lugar_do_adaptador() {  # $1 = hciN
+        local usb
+        command -v udevadm >/dev/null 2>&1 || return 0
+        usb="$(readlink -f -- "${SYS_BLUETOOTH}/$1/device/.." 2>/dev/null || true)"
+        [[ -n "${usb}" && -d "${usb}" ]] || return 0
+        udevadm info -q property -p "${usb}" 2>/dev/null | sed -n 's/^ID_PATH=//p' | head -1 || true
+    }
+    _ler_os_nomes_dos_lugares
+    for HCI in "${ADAPTADORES[@]}"; do
         ADAPTER_OBJ="/org/bluez/${HCI}"
+        HOSPEDA=0
+        for UM in ${COM_NINTENDO[@]+"${COM_NINTENDO[@]}"}; do
+            [[ "${UM}" == "${HCI}" ]] && HOSPEDA=1
+        done
+        NOME=""
+        if [[ "${#NOME_DO_LUGAR[@]}" -gt 0 ]]; then
+            LUGAR="$(_lugar_do_adaptador "${HCI}")"
+            [[ -n "${LUGAR}" ]] && NOME="${NOME_DO_LUGAR[${LUGAR}]:-}"
+        fi
+        [[ -n "${NOME}" || "${HOSPEDA}" -eq 1 ]] || continue
         ALIAS_ATUAL="$(_prop_adaptador "${HCI}" Alias)"
-        [[ -n "${ALIAS_ATUAL}" && "${ALIAS_ATUAL}" != Nintendo* ]] || continue
-        NOVO="Nintendo ${ALIAS_ATUAL}"
+        BASE="${NOME:-${ALIAS_ATUAL}}"
+        [[ -n "${BASE}" ]] || continue
+        # A costura é a de `apelido_do_dongle`: o prefixo só onde a linhagem
+        # mora, e nunca dobrado.
+        if [[ "${HOSPEDA}" -eq 1 && "${BASE}" != Nintendo* ]]; then
+            NOVO="Nintendo ${BASE}"
+        else
+            NOVO="${BASE}"
+        fi
+        [[ "${NOVO}" != "${ALIAS_ATUAL}" ]] || continue
         # O BlueZ recusa a chamada inteira quando o corte cai no meio de um
         # caractere multibyte (medido; ver `apelido_do_dongle`), e o shell não
         # tem como cortar UTF-8 em fronteira de caractere sem depender de
@@ -424,7 +526,11 @@ if command -v busctl >/dev/null 2>&1; then
             break
         fi
         if busctl set-property org.bluez "${ADAPTER_OBJ}" org.bluez.Adapter1 Alias s "${NOVO}" 2>/dev/null; then
-            log "alias do adaptador ${HCI} -> '${NOVO}' (tira o Pro do sniff frágil)"
+            if [[ -n "${NOME}" ]]; then
+                log "alias do adaptador ${HCI} -> '${NOVO}' (o nome da porta em que ele está)"
+            else
+                log "alias do adaptador ${HCI} -> '${NOVO}' (tira o Pro do sniff frágil)"
+            fi
         else
             log "falha ao setar alias de ${HCI} (adaptador não pronto?) — o watchdog re-tenta"
         fi
