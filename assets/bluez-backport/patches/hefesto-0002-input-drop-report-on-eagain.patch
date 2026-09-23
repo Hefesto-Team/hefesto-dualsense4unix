@@ -1,0 +1,155 @@
+From: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>
+Date: Wed, 23 Sep 2026 06:00:00 -0300
+Subject: [PATCH] input: drop the report on EAGAIN instead of destroying the
+ device
+
+Both HIDP channels are non-blocking: btio opens the interrupt and the
+control L2CAP sockets with G_IO_FLAG_NONBLOCK. When the socket send buffer
+is momentarily full, writev() fails with EAGAIN, hidp_send_message()
+returns false, and hidp_send_output() (and the SET_REPORT/GET_REPORT
+senders) answer with uhid_disconnect(idev, true): a transient congestion
+destroys the HID device. Measured live on 2026-09-22 with four DualSense
+controllers over Bluetooth: in each of four episodes the EAGAIN in
+bluetoothd and the ENODEV seen by the writer of the hidraw node happened in
+the same second, on three controllers at once, with zero "Output queue is
+full" from the kernel uhid driver.
+
+A full send buffer is congestion, not a dead link. Remember the errno of
+the failed send; on EAGAIN/EWOULDBLOCK drop that one report, count it and
+keep the device. The drop is logged at most once per second per device,
+with the running total, and the log line keeps the stock prefix
+"BT socket write error: ..." so existing log readers still match it. Any
+other error (ENOTCONN, EPIPE, EBADFD, ECONNRESET, a partial write, no
+channel) keeps the stock behaviour and still tears the uhid node down.
+
+BT_IO_OPT_FLUSHABLE on the interrupt channel is deliberately left out.
+
+Signed-off-by: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>
+---
+ profiles/input/device.c | 67 +++++++++++++++++++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 61 insertions(+), 6 deletions(-)
+
+--- a/profiles/input/device.c
++++ b/profiles/input/device.c
+@@ -87,6 +87,9 @@
+ 	bool			virtual_cable_unplug;
+ 	uint8_t			type;
+ 	unsigned int		idle_timer;
++	int			send_err;
++	uint64_t		send_dropped;
++	int64_t			send_dropped_logged_at;
+ };
+ 
+ static int idle_timeout = 0;
+@@ -253,6 +256,44 @@
+ 					NULL);
+ }
+ 
++/*
++ * HEFESTO BLUETOOTHD-NAO-DERRUBA-01 (hefesto-0002): both L2CAP channels are
++ * non-blocking (btio sets G_IO_FLAG_NONBLOCK), so a send buffer that is full
++ * for a moment fails the write with EAGAIN. That is congestion, not a dead
++ * link: drop that one report, count it and keep the device. Any other error
++ * (ENOTCONN, EPIPE, EBADFD, ECONNRESET, a partial write...) keeps the stock
++ * behaviour and the callers still tear the uhid node down.
++ */
++#define HIDP_SEND_DROP_LOG_INTERVAL_US	1000000
++
++static bool hidp_send_err_transient(int err)
++{
++	if (err == EAGAIN)
++		return true;
++#if EWOULDBLOCK != EAGAIN
++	if (err == EWOULDBLOCK)
++		return true;
++#endif
++	return false;
++}
++
++/* Counts one dropped report; true when this one should be logged. */
++static bool hidp_send_count_drop(struct input_device *idev)
++{
++	int64_t now = g_get_monotonic_time();
++
++	idev->send_dropped++;
++
++	if (idev->send_dropped_logged_at &&
++			now - idev->send_dropped_logged_at <
++					HIDP_SEND_DROP_LOG_INTERVAL_US)
++		return false;
++
++	idev->send_dropped_logged_at = now;
++
++	return true;
++}
++
+ static bool hidp_send_message(struct input_device *idev, GIOChannel *chan,
+ 				uint8_t hdr, const uint8_t *data, size_t size)
+ {
+@@ -262,6 +303,7 @@
+ 
+ 	if (!chan) {
+ 		error("BT socket not connected");
++		idev->send_err = ENOTCONN;
+ 		return false;
+ 	}
+ 
+@@ -278,13 +320,24 @@
+ 
+ 	len = writev(fd, iov, 2);
+ 	if (len < 0) {
+-		error("BT socket write error: %s (%d)", strerror(errno), errno);
++		idev->send_err = errno;
++
++		if (!hidp_send_err_transient(idev->send_err))
++			error("BT socket write error: %s (%d)",
++				strerror(idev->send_err), idev->send_err);
++		else if (hidp_send_count_drop(idev))
++			error("BT socket write error: %s (%d): report dropped, "
++				"%llu so far", strerror(idev->send_err),
++				idev->send_err,
++				(unsigned long long) idev->send_dropped);
++
+ 		return false;
+ 	}
+ 
+ 	if ((size_t) len < size + 1) {
+ 		error("BT socket write error: partial write (%zd of %zu bytes)",
+ 								len, size + 1);
++		idev->send_err = EIO;
+ 		return false;
+ 	}
+ 
+@@ -717,7 +770,7 @@
+ 
+ 	sent = hidp_send_intr_message(idev, hdr, ev->u.output.data,
+ 						ev->u.output.size);
+-	if (!sent)
++	if (!sent && !hidp_send_err_transient(idev->send_err))
+ 		uhid_disconnect(idev, true);
+ }
+ 
+@@ -760,8 +813,9 @@
+ 		idev->report_rsp_id = ev->u.set_report.id;
+ 	} else {
+ 		uhid_send_set_report_reply(idev, ev->u.set_report.id, EIO);
+-		/* Force UHID_DESTROY on error */
+-		uhid_disconnect(idev, true);
++		/* Force UHID_DESTROY on error, unless the socket was just full */
++		if (!hidp_send_err_transient(idev->send_err))
++			uhid_disconnect(idev, true);
+ 	}
+ }
+ 
+@@ -808,8 +862,9 @@
+ 	} else {
+ 		uhid_send_get_report_reply(idev, NULL, 0, ev->u.get_report.id,
+ 									EIO);
+-		/* Force UHID_DESTROY on error */
+-		uhid_disconnect(idev, true);
++		/* Force UHID_DESTROY on error, unless the socket was just full */
++		if (!hidp_send_err_transient(idev->send_err))
++			uhid_disconnect(idev, true);
+ 	}
+ }
+ 

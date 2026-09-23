@@ -1,0 +1,41 @@
+bluez (5.86-0ubuntu0.1~hefesto24.04.4) noble; urgency=medium
+
+  * hefesto-0002 (BLUETOOTHD-NAO-DERRUBA-01): o EAGAIN do socket HIDP
+    não derruba mais o controle. Com o socket cheio, o relatório daquela
+    escrita é descartado e contado (log no máximo 1x/s por aparelho, com
+    o total), e o aparelho fica. Erro terminal (ENOTCONN, EPIPE, EBADFD,
+    ECONNRESET) segue derrubando. Medido em 22/09: nos 4 episódios,
+    EAGAIN no bluetoothd e ENODEV no escritor no mesmo segundo, em 3
+    controles, com zero "Output queue is full".
+  * Primeira versão reproduzível: fonte fixado por hash, patches e
+    receita versionados (scripts/construir_bluez_backport.sh).
+
+ -- Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>  Wed, 23 Sep 2026 06:00:00 -0300
+
+bluez (5.86-0ubuntu0.1~hefesto24.04.3) noble; urgency=medium
+
+  * hefesto-0001 (BOND-KEEP-02): o Virtual Cable Unplug nunca deixa um
+    device BONDED marcado como temporario -- o TemporaryTimeout estava
+    coletando o device E o bond em disco ~30s apos o disconnect (medido
+    ao vivo 23/07: controle foi pro cabo USB e o bond evaporou).
+
+ -- Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>  Thu, 23 Jul 2026 01:45:00 -0300
+
+bluez (5.86-0ubuntu0.1~hefesto24.04.2) noble; urgency=medium
+
+  * hefesto-0001-input-keep-bond-on-virtual-cable-unplug: mantem o bond em
+    disco quando um controle HID manda Virtual Cable Unplug ao desligar
+    (medido: Nintendo Switch Pro + 8BitDo modo Switch evaporavam o bond a
+    cada queda no caminho uhid desde o 5.85, forcando re-pareamento).
+    Reversivel por BLUEZ_HID_UNPLUG_REMOVES_BOND=1.
+
+ -- Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>  Wed, 22 Jul 2026 21:00:00 -0300
+
+bluez (5.86-0ubuntu0.1~hefesto24.04.1) noble; urgency=medium
+
+  * Backport hefesto para noble: upstream 5.86 sobre o packaging do
+    resolute. Motivo: retry-limit + backoff exponencial em loops de
+    reconexao (upstream 17a227b7) - mitiga o gatilho do heap corruption
+    medido com controles BT (sprint 2026-07-21).
+
+ -- hefesto <hefesto@localhost>  Wed, 22 Jul 2026 01:16:31 -0300
