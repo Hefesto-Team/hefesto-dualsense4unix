@@ -4167,12 +4167,53 @@ _bluez_version_verdict() {
 # dbus>=1.10, libudev>=196, json-c>=0.13 e ell>=0.39, todos satisfeitos ali. O
 # dpkg seguiu dizendo 5.64 com o rádio rodando 5.86, e este portão reprovava a
 # cura que já estava de pé.
-_bluez_versao_do_daemon_vivo() {
+_bluez_binario_vivo() {
     local caminho
     caminho="$(systemctl show bluetooth.service -p ExecStart --value 2>/dev/null \
         | grep -oE 'path=[^ ]+' | head -1 | cut -d= -f2)"
     [[ -n "${caminho}" && -x "${caminho}" ]] || return 1
+    printf '%s\n' "${caminho}"
+}
+
+_bluez_versao_do_daemon_vivo() {
+    local caminho
+    caminho="$(_bluez_binario_vivo)" || return 1
     "${caminho}" --version 2>/dev/null | tr -d '[:space:]'
+}
+
+# AS CURAS DO BACKPORT, perguntadas ao BINÁRIO (INSTALL-E-UNINSTALL-DO-RADIO-01,
+# 23/09/2026). A faixa de versão acima diz «5.86» para o .3 e para o .4 — e o
+# .4 é o do hefesto-0002, em que o EAGAIN do rádio cheio deixa de derrubar a
+# sessão HID dos controles (BLUETOOTHD-NAO-DERRUBA-01). Um 5.86 oficial também
+# passaria. A mesma pergunta do passo 3f do install: cada patch deixa uma marca
+# no binário, e quem diz qual é o `MARCA_hefesto-NNNN` do
+# `assets/bluez-backport/BASELINE` — o doctor lê, não digita. Sem o BASELINE (o
+# pacote não o leva), diz que não sabe.
+check_bluez_curas_do_backport() {
+    local vivo baseline="${HEFESTO_DOCTOR_BLUEZ_BASELINE:-${ROOT_DIR}/assets/bluez-backport/BASELINE}"
+    local nome marca faltam=() tem=()
+    vivo="${HEFESTO_DOCTOR_BLUETOOTHD:-$(_bluez_binario_vivo || true)}"
+    if [[ ! -r "${baseline}" ]]; then
+        info "não sei conferir as curas do backport do BlueZ nesta instalação (sem o assets/bluez-backport/BASELINE)"
+        return
+    fi
+    if [[ -z "${vivo}" || ! -r "${vivo}" ]]; then
+        info "não achei o bluetoothd que o systemd executa — pulo a conferência das curas do backport"
+        return
+    fi
+    while IFS=$'\t' read -r nome marca; do
+        [[ -n "${marca}" ]] || continue
+        if grep -a -q -F -- "${marca}" "${vivo}" 2>/dev/null; then
+            tem+=("${nome}")
+        else
+            faltam+=("${nome}")
+        fi
+    done < <(sed -n 's/^MARCA_\([^=]*\)=\(.*\)$/\1\t\2/p' "${baseline}" 2>/dev/null)
+    if [[ "${#faltam[@]}" -eq 0 && "${#tem[@]}" -gt 0 ]]; then
+        pass "o bluetoothd em execução traz as curas do backport desta casa (${tem[*]})"
+    elif [[ "${#faltam[@]}" -gt 0 ]]; then
+        warn "o bluetoothd em execução (${vivo}) não traz ${faltam[*]} — sem o hefesto-0002, o rádio cheio (EAGAIN) derruba a sessão dos controles por Bluetooth: $(conselho_de_instalacao)$(so_no_checkout "(o passo 3f instala o backport que estiver no cache; sem ele: scripts/construir_bluez_backport.sh)")"
+    fi
 }
 
 check_bluez_backport_version() {
@@ -4199,7 +4240,7 @@ check_bluez_backport_version() {
             warn "bluez ${ver}${origem} >= ${_BZ_TETO} — o 5.87 carrega um uso-depois-de-liberado em dev_disconnected (src/adapter.c: device_is_connected() chamado depois de adapter_remove_connection() liberar o device; commit 5d836f1). A correção 5bc6aa79 está um commit DEPOIS do 5.87 e nenhum lançamento a carregava até 07/08/2026 — se esta versão é o 5.88 ou mais nova, confira se ela já traz o 5bc6aa79 e suba o teto (_BZ_TETO) no doctor.sh. O alvo desta casa é o backport 5.86$(so_no_checkout "(./install.sh, passo 3f)"); o porquê está em docs/process/estudos/2026-08-07-o-defeito-do-bluez-que-ela-lembrou-e-os-outros-cinco.md §D"
             ;;
         old)
-            fail "bluez ${ver}${origem} < 5.79 — crashes crônicos de input/HIDP (heap corruption, 6x/5 dias medidos) documentados; aplique o backport: $(conselho_de_instalacao)$(so_no_checkout "(passo ONDA-R aplica sozinho se os .debs estiverem em ~/.cache/hefesto-dualsense4unix/bluez-backport/; senão, gere-os pela receita em docs/usage/receita-backport-bluez.md, seção 3, caminho 1)")"
+            fail "bluez ${ver}${origem} < 5.79 — crashes crônicos de input/HIDP (heap corruption, 6x/5 dias medidos) documentados; aplique o backport: $(conselho_de_instalacao)$(so_no_checkout "(passo ONDA-R aplica sozinho se os .debs estiverem em ~/.cache/hefesto-dualsense4unix/bluez-backport/; senão, gere-os com scripts/construir_bluez_backport.sh)")"
             ;;
         *)
             info "bluez não encontrado (nem daemon em execução, nem pacote) — pulo o check de versão"
@@ -7320,6 +7361,7 @@ main() {
     check_cmdline_platform
     hdr "rádio e pareamento (G2)"
     check_bluez_backport_version
+    check_bluez_curas_do_backport
     check_bt_agent_service
     check_bt_resilience
     check_trava_do_radio
