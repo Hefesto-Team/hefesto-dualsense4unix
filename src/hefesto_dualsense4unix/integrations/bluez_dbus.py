@@ -1210,6 +1210,7 @@ class BarramentoGio:
         self._conexao: Any = None
         self._fio: threading.Thread | None = None
         self._pronto = threading.Event()
+        self._cancelar: Any = None
         self._assinaturas: list[int] = []
         self._exportados: dict[str, int] = {}
         self.erro = ""
@@ -1233,9 +1234,16 @@ class BarramentoGio:
         self._gio, self._glib = Gio, GLib
         self._contexto = GLib.MainContext.new()
         self._laco = GLib.MainLoop.new(self._contexto, False)
+        self._cancelar = Gio.Cancellable.new()
         self._fio = threading.Thread(target=self._viver, name="hefesto-bluez", daemon=True)
         self._fio.start()
         if not self._pronto.wait(espera):
+            # O fio está preso no aperto de mão com um barramento mudo. Sem o
+            # cancelamento ele ficava pendurado para sempre — e o dono() tenta de
+            # novo a cada minuto, um fio a mais por tentativa; se o barramento
+            # voltasse, cada um deles ligava uma conexão e um laço que ninguém
+            # fecha. Medido na conferência: vivo 3 s depois do prazo.
+            self._cancelar.cancel()
             self.erro = "o barramento não respondeu a tempo"
             return False
         return self._conexao is not None
@@ -1244,15 +1252,22 @@ class BarramentoGio:
         gio = self._gio
         self._contexto.push_thread_default()
         try:
-            endereco = self._endereco or gio.dbus_address_get_for_bus_sync(gio.BusType.SYSTEM, None)
+            endereco = self._endereco or gio.dbus_address_get_for_bus_sync(
+                gio.BusType.SYSTEM, self._cancelar
+            )
             conexao = gio.DBusConnection.new_for_address_sync(
                 endereco,
                 gio.DBusConnectionFlags.AUTHENTICATION_CLIENT
                 | gio.DBusConnectionFlags.MESSAGE_BUS_CONNECTION,
                 None,
-                None,
+                self._cancelar,
             )
             conexao.set_exit_on_close(False)
+            if self._cancelar.is_cancelled():
+                # Quem abriu já desistiu: a conexão que chegou tarde não fica.
+                with contextlib.suppress(Exception):
+                    conexao.close_sync(None)
+                raise RuntimeError("o barramento respondeu depois do prazo")
             self._conexao = conexao
         except Exception as problema:
             self.erro = str(problema)
