@@ -1248,22 +1248,62 @@ source "${ROOT_DIR}/scripts/lib/camada_de_maquina.sh"
 # lê cada caminho absoluto citado abaixo e exige que ele apareça no corpo da
 # função correspondente em `scripts/lib/camada_de_maquina.sh`. Alguém que mude o
 # alvo lá e esqueça daqui reprova, com o caminho na mensagem — é a mordida.
+#
+# OS PORTÕES VÊM ANTES DA DESCRIÇÃO (INSTALL-E-UNINSTALL-DO-RADIO-01,
+# 23/09/2026). Até aqui o ensaio descrevia cada cura como se ela fosse rodar,
+# com qualquer flag: `--dry-run --no-wifi-usb` prometia instalar o vigia do
+# Wi-Fi USB, e `--dry-run --no-udev` prometia o /etc inteiro. Era o plano de
+# OUTRA linha de comando. Cada ramo repete os portões da função que ele
+# descreve, e a régua `tests/unit/test_o_ensaio_respeita_os_portoes.py`
+# confere, função por função, que as flags lidas lá são as lidas aqui.
 _ensaio_camada() {
     case "$1" in
         udev)
-            _faria_root "copiar as regras udev canônicas de assets/*.rules para /etc/udev/rules.d/ e recarregar o udev (scripts/install_udev.sh)"
+            if [[ "${SKIP_UDEV}" -eq 1 ]]; then
+                _nao_faria "regras udev (--no-udev)"
+                return 0
+            fi
+            if [[ "${ABRIR_O_NO:-0}" -eq 1 ]]; then
+                _faria_root "copiar as regras udev canônicas de assets/*.rules para /etc/udev/rules.d/ e recarregar o udev (scripts/install_udev.sh) — a 70 vai ABERTA (--no-fechar-o-no)"
+            else
+                _faria_root "copiar as regras udev canônicas de assets/*.rules para /etc/udev/rules.d/ e recarregar o udev (scripts/install_udev.sh)"
+            fi
             ;;
         osk)
+            if [[ "${NO_OSK}" -eq 1 ]]; then
+                _nao_faria "teclado na tela do L3 (--no-osk)"
+                _faria "gravar a escolha (resultado=pulado) em ${HOME}/.local/state/hefesto-dualsense4unix/teclado-na-tela.conf"
+                return 0
+            fi
             _faria "instalar o teclado na tela do L3 pelo gerenciador de pacotes: wvkbd em Wayland, onboard em X11 (scripts/install_osk.sh)"
             _faria "gravar o que aconteceu em ${HOME}/.local/state/hefesto-dualsense4unix/teclado-na-tela.conf"
             ;;
         broker)
+            if [[ "${SKIP_UDEV}" -eq 1 ]]; then
+                _nao_faria "broker hide-hidraw (--no-udev)"
+                return 0
+            fi
             _faria_root "instalar o broker em /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker"
-            _faria_root "instalar /etc/systemd/system/hefesto-hidraw-broker.service e .socket (renderizados com o seu uid e grupo)"
+            if [[ "${ABRIR_O_NO:-0}" -eq 1 ]]; then
+                _faria_root "instalar /etc/systemd/system/hefesto-hidraw-broker.service e .socket (renderizados com o seu uid e grupo, sabendo que o nó nasce ABERTO: --no-fechar-o-no)"
+            else
+                _faria_root "instalar /etc/systemd/system/hefesto-hidraw-broker.service e .socket (renderizados com o seu uid e grupo)"
+            fi
             _faria_root "systemctl daemon-reload e enable --now hefesto-hidraw-broker.socket"
             _faria "gravar o registro de posse em ${HOME}/.local/state/hefesto-dualsense4unix/broker-owner.conf"
             ;;
+        trava-do-radio)
+            if [[ "${SKIP_UDEV}" -eq 1 ]]; then
+                _nao_faria "a trava comum do rádio (--no-udev) — o daemon segue com a trava da sessão, que o root não enxerga"
+                return 0
+            fi
+            _faria_root "gravar /etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf e rodar systemd-tmpfiles --create nele: /run/hefesto-dualsense4unix do root (0755) e a trava radio.lock (0660, grupo hefesto) que o watchdog e o daemon disputam"
+            ;;
         bt-res)
+            if [[ "${SKIP_UDEV}" -eq 1 ]]; then
+                _nao_faria "resiliência do bluetoothd (--no-udev)"
+                return 0
+            fi
             _faria_root "instalar oito roteiros de Bluetooth em /usr/local/lib/hefesto-dualsense4unix/ (snapshot e restauro de bonds, watchdog, modo ativo)"
             _faria_root "rodar bt_active_mode.sh AGORA (tira o Pro Controller do modo sniff — não reinicia o bluetoothd)"
             _faria_root "instalar /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf (Restart + WatchdogSec=0 + snapshot na parada)"
@@ -1272,6 +1312,10 @@ _ensaio_camada() {
             _faria_root "criar /var/lib/hefesto-dualsense4unix/bt-bonds (modo 700) para os snapshots"
             ;;
         bt-agent)
+            if [[ "${SKIP_UDEV}" -eq 1 ]]; then
+                _nao_faria "agente de pareamento (--no-udev)"
+                return 0
+            fi
             _faria_root "instalar /etc/systemd/system/hefesto-bt-agent.service e habilitá-lo (agente de pareamento persistente; instala bluez-tools se faltar)"
             ;;
         bt-ponte)
@@ -1283,24 +1327,68 @@ _ensaio_camada() {
             _faria "gravar o censo em ${HOME}/.local/state/hefesto-dualsense4unix/gabinete.json"
             ;;
         dkms-nintendo)
+            if [[ "${NO_DKMS}" -eq 1 ]]; then
+                _nao_faria "módulo DKMS hefesto-hid-nintendo (--no-dkms)"
+                return 0
+            fi
             _faria_root "compilar e instalar o módulo DKMS hefesto-hid-nintendo (substitui o hid-nintendo in-tree por precedência; o in-tree NUNCA é removido)"
             _faria_root "instalar /etc/modprobe.d/hefesto-hid-nintendo.conf (bt_probe_retries=3 + skip_tx_on_rate_exceeded=1)"
             ;;
         dkms-rtw88)
+            if [[ "${NO_DKMS}" -eq 1 ]]; then
+                _nao_faria "módulo DKMS hefesto-rtw88-usb (--no-dkms)"
+                return 0
+            fi
             _faria_root "compilar e instalar o módulo DKMS hefesto-rtw88-usb (cura do fantasma USB do dongle WiFi; sem conf em /etc/modprobe.d)"
             ;;
         wifi-usb)
+            if [[ "${NO_WIFI_USB}" -eq 1 ]]; then
+                _nao_faria "vigia do Wi-Fi USB (--no-wifi-usb)"
+                return 0
+            fi
+            if [[ "${SKIP_UDEV}" -eq 1 ]]; then
+                _nao_faria "vigia do Wi-Fi USB (--no-udev)"
+                return 0
+            fi
             _faria_root "instalar /usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh e a cópia dele em /etc/NetworkManager/dispatcher.d/90-hefesto-wifi-usb (root, 755) — o scan de fundo do Wi-Fi USB sai a cada associação"
             _faria_root "instalar /etc/systemd/system/hefesto-wifi-usb-vigia.service e hefesto-wifi-usb-vigia.timer e habilitar o timer (reinicia a porta do dongle quando ele trava mudo; sem Wi-Fi USB, não faz nada)"
             ;;
         dkms-playstation)
+            if [[ "${NO_DKMS}" -eq 1 ]]; then
+                _nao_faria "módulo DKMS hefesto-hid-playstation (--no-dkms)"
+                return 0
+            fi
             _faria_root "compilar e instalar o módulo DKMS hefesto-hid-playstation (retry de feature report na contenção BT)"
             _faria_root "instalar /etc/modprobe.d/hefesto-hid-playstation.conf (feature_retries=2 + ds4_* do clone no cabo)"
             ;;
+        dkms-uhid)
+            if [[ "${COM_UHID_CONTRAPRESSAO:-0}" -ne 1 ]]; then
+                _nao_faria "uhid com contrapressão (opt-in: --uhid-contrapressao)"
+                return 0
+            fi
+            if [[ "${NO_DKMS}" -eq 1 ]]; then
+                _nao_faria "uhid com contrapressão (--no-dkms)"
+                return 0
+            fi
+            _faria_root "compilar e instalar o módulo DKMS hefesto-uhid (só nos kernels conferidos do dkms.conf; fora deles o de fábrica assume)"
+            _faria_root "instalar /etc/modprobe.d/hefesto-uhid.conf (backpressure=1) e, com o patchado já carregado, ligar a contrapressão a quente em /sys/module/uhid/parameters/backpressure (o uhid NUNCA é recarregado)"
+            ;;
         ucm)
+            if [[ "${NO_UCM}" -eq 1 ]]; then
+                _nao_faria "perfil UCM do DualSense (--no-ucm)"
+                return 0
+            fi
+            if [[ "${SKIP_UDEV}" -eq 1 ]]; then
+                _nao_faria "perfil UCM do DualSense (--no-udev)"
+                return 0
+            fi
             _faria_root "gravar o verbo HiFi do DualSense em /usr/share/alsa/ucm2/USB-Audio/Hefesto/ e um gancho por controlador USB em /usr/share/alsa/ucm2/conf.d/USB-Audio/ (o pacote alsa-ucm-conf fica intacto; scripts/install_ucm_dualsense.sh)"
             ;;
         initramfs)
+            if [[ "${NO_DKMS}" -eq 1 ]]; then
+                _nao_faria "regenerar o initramfs (--no-dkms)"
+                return 0
+            fi
             _faria_root "regenerar o initramfs UMA vez, e só se algum módulo DKMS acima tiver mudado (update-initramfs)"
             ;;
     esac
@@ -1335,6 +1423,7 @@ _ENSAIO_CURAS_DE_HOST=(
     "install_udev_host:udev"
     "install_osk_host:osk"
     "install_broker_host:broker"
+    "install_trava_do_radio_host:trava-do-radio"
     "install_bt_resilience_host:bt-res"
     "install_bt_agent_host:bt-agent"
     "install_bt_ponte_privilegiada_host:bt-ponte"
@@ -1343,6 +1432,7 @@ _ENSAIO_CURAS_DE_HOST=(
     "install_dkms_rtw88_usb_host:dkms-rtw88"
     "install_wifi_usb_host:wifi-usb"
     "install_dkms_hid_playstation_host:dkms-playstation"
+    "install_dkms_uhid_host:dkms-uhid"
     "install_ucm_dualsense_host:ucm"
     "flush_initramfs_host:initramfs"
 )
@@ -1647,6 +1737,11 @@ if [[ "${FORMAT}" != "native" ]]; then
     # regra 83 apontava para uma unit inexistente e o salva-vidas de bonds nunca
     # gravou nada para quem instalou por aqui (medido em 07/08, estudo da
     # cobertura do install, item 9). Mesma função do passo 3e-bis do nativo.
+    # O-DIARIO-DO-RADIO-01: a trava que o watchdog root e o daemon disputam.
+    # ANTES da resiliência, que roda o `bt_active_mode.sh` na hora e abre a
+    # trava — o porquê está em `install_trava_do_radio_host`.
+    step "trava" "a trava comum do rádio (DEFAULT em todo formato)"
+    install_trava_do_radio_host
     step "bt-res" "ONDA-R2: resiliência do bluetoothd (DEFAULT em todo formato)"
     install_bt_resilience_host
     # ONDA-R (31/08/2026): o agente de pareamento persistente era código de topo
@@ -1689,6 +1784,12 @@ if [[ "${FORMAT}" != "native" ]]; then
     # 3k do fluxo native. Opt-out compartilhado: --no-dkms.
     step "dkms-p" "DKMS hid-playstation patchado (contenção BT — DEFAULT em todo formato)"
     install_dkms_hid_playstation_host
+    # RADIO-AFOGADO-02: o uhid com contrapressão é mudança de KERNEL, ortogonal
+    # ao formato do aplicativo, e o opt-in dela (`--uhid-contrapressao`) vale
+    # em qualquer formato. Mesma função do passo 3k2 do nativo; ANTES do flush
+    # do initramfs, que é um só para todos os módulos.
+    step "dkms-u" "uhid com contrapressão (OPT-IN: --uhid-contrapressao)"
+    install_dkms_uhid_host
     # INITRAMFS-01: um flush só, DEPOIS de todos os DKMS (regenerar por módulo
     # custaria dezenas de segundos e ~140 MB de escrita cada). No-op se nenhum
     # módulo ficou staged.
@@ -2461,6 +2562,15 @@ PYEOF
         [[ "${_cmdline_changed}" -eq 0 ]] && printf '      nada a mudar no cmdline (estado já garantido; donos em %s)\n' "${CMDLINE_OWNERS_FILE}"
     fi
 fi
+
+# ---------------------------------------------------------------------------
+# 3e-trava. A trava comum do rádio (O-DIARIO-DO-RADIO-01) — DEFAULT
+# ---------------------------------------------------------------------------
+# O corpo mora em `install_trava_do_radio_host`, e o outro lado da cerca a
+# chama também. A POSIÇÃO: antes do 3e-bis, que roda o `bt_active_mode.sh`
+# como root na hora — e ele abre a trava.
+step "3e-trava" "a trava comum do rádio (o watchdog root e o daemon no mesmo arquivo)"
+install_trava_do_radio_host
 
 # ---------------------------------------------------------------------------
 # 3e-bis. ONDA-R2: resiliência do bluetoothd — DEFAULT em TODO formato

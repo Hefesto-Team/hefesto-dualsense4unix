@@ -245,6 +245,81 @@ install_broker_host() {
     rm -rf "${_broker_tmp}"
 }
 
+# A TRAVA COMUM DO RÁDIO (O-DIARIO-DO-RADIO-01, instalada pela
+# INSTALL-E-UNINSTALL-DO-RADIO-01, 23/09/2026).
+#
+# O watchdog (root), o `bt_active_mode.sh` (root, no start do bluetoothd) e o
+# daemon (a sessão) mexem no mesmo rádio, e cada um pega um `flock` antes. A
+# trava só é COMUM se os dois lados abrirem o MESMO arquivo — e quem o cria é
+# este passo, por um `tmpfiles.d` que o refaz a cada boot. Sem ele, o watchdog
+# segue sem trava (e diz no log) e o daemon trava num arquivo da sessão que o
+# root não enxerga. O texto, com o porquê do modo e do grupo, é o de
+# `assets/tmpfiles.d/hefesto-dualsense4unix-radio.conf`.
+#
+# ANTES DA RESILIÊNCIA, e a ordem não é estética: o `install_bt_resilience_host`
+# roda o `bt_active_mode.sh` como root na hora, e ele ABRE a trava. Com o
+# diretório de pé e o arquivo ausente, o root o criaria 0644 root:root, e o
+# daemon ficaria com um descritor só de leitura. O `systemd-tmpfiles --create`
+# acerta modo e dono de um arquivo que já exista, então uma trava criada torta
+# por uma versão anterior também sai daqui certa.
+#
+# O GRUPO `hefesto` TEM DE EXISTIR, e quem o cria são as regras udev
+# (`scripts/install_udev.sh`, VPAD-09). Sem ele o `tmpfiles` recusaria a linha;
+# o passo diz isso e não grava nada.
+#
+# NÃO VAI PELO CAMINHO DO PACOTE (`install-host-udev.sh`), com a razão: lá não
+# há motor root que dispute o rádio — o watchdog, o drop-in do bluetoothd e a
+# regra do sudoers da ponte são deste instalador, o mesmo desenho dos timers da
+# resiliência. Sem motor root, a trava da sessão já põe em fila todos os
+# escritores que existem naquela máquina (vigia e central moram no daemon).
+install_trava_do_radio_host() {
+    local _trava_fonte="${ROOT_DIR}/assets/tmpfiles.d/hefesto-dualsense4unix-radio.conf"
+    local _trava_conf=/etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf
+    local _trava_quem
+    if [[ "${SKIP_UDEV}" -eq 1 ]]; then
+        printf '      pulado (--no-udev) — o daemon segue com a trava da sessão, que o watchdog root não enxerga\n'
+        return 0
+    fi
+    if ! command -v sudo >/dev/null 2>&1; then
+        warn "sudo ausente — a trava comum do rádio NÃO foi criada (o watchdog e o daemon não se enxergam)"
+        return 0
+    fi
+    if ! sudo -n true 2>/dev/null; then
+        warn "sudo recusado — a trava comum do rádio pulada (re-execute ./install.sh)"
+        return 0
+    fi
+    if ! command -v systemd-tmpfiles >/dev/null 2>&1; then
+        warn "systemd-tmpfiles ausente — a trava comum do rádio NÃO foi criada (o watchdog e o daemon seguem cada um com a sua)"
+        return 0
+    fi
+    if ! getent group hefesto >/dev/null 2>&1; then
+        warn "o grupo 'hefesto' não existe (quem o cria são as regras udev: sudo bash scripts/install_udev.sh) — a trava comum do rádio NÃO foi criada"
+        return 0
+    fi
+    if ! sudo install -Dm644 -o root -g root "${_trava_fonte}" "${_trava_conf}" 2>/dev/null; then
+        warn "não consegui gravar ${_trava_conf} — a trava comum do rádio NÃO foi criada"
+        return 0
+    fi
+    if ! sudo systemd-tmpfiles --create "${_trava_conf}" >/dev/null 2>&1; then
+        warn "systemd-tmpfiles --create falhou — a trava comum do rádio nasce no próximo boot"
+        return 0
+    fi
+    printf '      trava comum do rádio de pé: /run/hefesto-dualsense4unix/radio.lock (0660, grupo hefesto) — o watchdog e o daemon disputam o mesmo arquivo\n'
+    # Quem acabou de entrar no grupo (as regras udev acima o fazem) só o tem
+    # nos processos da PRÓXIMA sessão. Dizer isso aqui é o que separa "o daemon
+    # não escreve o nome na trava" de defeito.
+    # Lidos para variável, e nunca `id | grep -q`: sob `pipefail` o `grep -q`
+    # que acha e fecha o cano devolve 141 ao pipe inteiro (CORRIDA-DO-PIPEFAIL-01).
+    _trava_quem="${SUDO_USER:-$(id -un)}"
+    local _trava_no_disco _trava_agora
+    _trava_no_disco=" $(id -nG "${_trava_quem}" 2>/dev/null || true) "
+    _trava_agora=" $(id -nG 2>/dev/null || true) "
+    if [[ "${_trava_no_disco}" == *" hefesto "* && "${_trava_agora}" != *" hefesto "* ]]; then
+        printf '        (você entrou no grupo hefesto agora: o daemon escreve o próprio nome na trava depois de sair e entrar na sessão; até lá ele a usa só para ler, e a fila funciona igual)\n'
+    fi
+    return 0
+}
+
 # O NOME DO LUGAR CHEGA AO WATCHDOG (pedido da onda 3a à O-QUE-E-DO-HEFESTO-
 # SAI-DO-ZSH-01, 23/09/2026). O `bt_active_mode.sh` dá ao adaptador o nome da
 # porta em que ele está, lido do `maquina.json` de quem instalou — e o watchdog
@@ -737,9 +812,21 @@ install_dkms_uhid_host() {
     # um `rmmod` derruba os controles, o teclado e o mouse sem fio de uma vez.
     # O patchado vale no próximo boot. Enquanto isso, o parâmetro do módulo
     # CARREGADO diz qual está de pé.
+    #
+    # O REARME A QUENTE (INSTALL-E-UNINSTALL-DO-RADIO-01, 23/09/2026). O
+    # `uninstall.sh` devolve o `backpressure` a 0 a quente, de propósito; e
+    # aqui o install só IMPRIMIA como ligá-lo à mão. O ciclo uninstall+install
+    # com a flag deixava a contrapressão desligada até o boot seguinte, com o
+    # módulo patchado carregado e a conf dizendo 1 — o defeito do `9c944a8`,
+    # que a régua não via porque lia o caminho no próprio texto da dica. Quem
+    # chega aqui PEDIU a contrapressão (`--uhid-contrapressao`), e o parâmetro
+    # é 0644 exatamente para ligar sem recarregar.
     if [[ -e /sys/module/uhid/parameters/backpressure ]]; then
-        printf '      módulo patchado JÁ carregado (backpressure=%s; liga a quente com `echo 1 | sudo tee /sys/module/uhid/parameters/backpressure`)\n' \
-            "$(cat /sys/module/uhid/parameters/backpressure 2>/dev/null || echo '?')"
+        if printf '1' | sudo tee /sys/module/uhid/parameters/backpressure >/dev/null 2>&1; then
+            printf '      módulo patchado JÁ carregado — contrapressão ligada a quente (vale já, sem recarregar o uhid)\n'
+        else
+            warn "não consegui ligar a contrapressão a quente — ela vale no próximo boot, pela conf do modprobe.d"
+        fi
     else
         printf '      o de fábrica está carregado — o patchado entra no PRÓXIMO BOOT (recarregar o uhid derrubaria todo HID por Bluetooth)\n'
     fi
