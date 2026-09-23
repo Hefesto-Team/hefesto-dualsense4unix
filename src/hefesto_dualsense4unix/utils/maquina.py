@@ -195,6 +195,25 @@ _MAXIMO_DO_ARRANJO = 256
 #: perto disso — ver ``OrdemDispensada._assinatura_sem_identidade``.
 _DOZE_HEX = re.compile(r"[0-9a-fA-F]{12}")
 
+#: O LUGAR de uma porta (D3), na grafia do ``ID_PATH`` do udev:
+#: ``pci-0000:0c:00.3-usb-0:4.1.4`` é o controlador PCI mais a cadeia de portas.
+#: É a chave do DONO do BlueZ (``bluez_dbus.lugar_de`` pergunta aqui) e a que o
+#: «Mapear Entrada a Entrada» grava. Não carrega o número do barramento, e é
+#: esse o ponto: o ``busnum`` é a ORDEM em que os dois xHCI sobem (medido em
+#: 23/09: ``usb1``/``usb2`` = ``0000:02:00.0``, ``usb3``/``usb4`` =
+#: ``0000:0c:00.3``), e um kernel novo ou uma placa a mais o troca calado.
+#: ``pci-<controlador>`` sem portas é o adaptador que não pendura em USB.
+_LUGAR = re.compile(
+    r"^pci-(?P<pci>[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f])"
+    r"(?:-usb-0:(?P<devpath>[0-9]+(?:\.[0-9]+)*))?$"
+)
+
+#: O nome que ela dá a um lugar. Sessenta caracteres: é o que cabe no topo do
+#: cartão do adaptador, e o ``Alias`` do BlueZ, para onde ele é projetado, tem
+#: teto de 247 BYTES com o prefixo Nintendo na frente
+#: (``apelido_do_dongle.TETO_DE_BYTES``).
+_MAXIMO_DO_NOME_DO_LUGAR = 60
+
 
 class RadioDeclarado(BaseModel):
     """Um aparelho vizinho que divide a faixa de 2,4 GHz com os controles.
@@ -522,6 +541,57 @@ class MapaDaMesa(BaseModel):
         return self
 
 
+class LugarDeclarado(BaseModel):
+    """Uma porta pelo LUGAR (D3): qual entrada DELA ela é, e o nome que ela deu.
+
+    ENTRADA-A-ENTRADA-01 (23/09/2026). A chave do dicionário é o lugar
+    (:func:`lugar_de`), e não o caminho de barramento: é o que a cerimônia
+    «Mapear Entrada a Entrada» grava quando ela pluga o DualSense numa porta e
+    diz qual é.
+
+    ``entrada`` é o número do ``mapa`` (``"3"``, ``"15a"``) — a face, o
+    caminho e os nós continuam onde sempre moraram, no ``mapa``, e é lá que os
+    seis leitores da interface e o ``mapa-das-portas.html`` os leem. Este
+    registro é só a AMARRA entre o número dela e o lugar do metal; repetir a
+    face aqui seria o segundo dono que a ``ABAS-01`` curou.
+
+    ``nome`` é o nome do lugar («Extensor à esquerda»). O adaptador Bluetooth
+    que estiver nesta porta HERDA este nome (D3); o ``Alias`` do BlueZ é só a
+    projeção dele, escrita pelo dono do D-Bus.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    entrada: str | None = None
+    nome: str | None = None
+
+    @field_validator("entrada")
+    @classmethod
+    def _entrada_e_numero_dela(cls, valor: str | None) -> str | None:
+        if valor is not None and not _NUMERO_DE_ENTRADA.match(valor):
+            raise ValueError(
+                f"número de entrada {valor!r} não é até três dígitos com uma "
+                "letra opcional"
+            )
+        return valor
+
+    @field_validator("nome")
+    @classmethod
+    def _nome_aparado(cls, valor: str | None) -> str | None:
+        """Espaço em volta sai; nome vazio é ``None`` — "ela não deu nome"."""
+        if valor is None:
+            return None
+        limpo = valor.strip()
+        if not limpo:
+            return None
+        if len(limpo) > _MAXIMO_DO_NOME_DO_LUGAR:
+            raise ValueError(
+                f"nome de {len(limpo)} caracteres não cabe no cartão do "
+                f"adaptador (até {_MAXIMO_DO_NOME_DO_LUGAR})"
+            )
+        return limpo
+
+
 class ControleDeclarado(BaseModel):
     """O que um controle não anuncia sobre si.
 
@@ -727,6 +797,13 @@ class MaquinaConfig(BaseModel):
     # acima — campo novo sem bump É a migração, e o caminho já está construído
     # nos dois sentidos.
     lancadores: dict[str, LancadorDeclarado] = Field(default_factory=dict)
+    # ENTRADA-A-ENTRADA-01 (23/09/2026): cada porta pelo LUGAR (D3). Campo de
+    # TOPO, e não um campo novo dentro de ``mapa.portas``, por uma razão de
+    # volta de versão: chave de topo desconhecida é copiada VERBATIM pelo
+    # código de ontem (``gravar_maquina_com_descartes``), e um campo novo dentro
+    # de ``PortaDeclarada`` (``extra="forbid"``) faria o código de ontem
+    # recusar o ``mapa`` INTEIRO e reescrever o arquivo sem ele.
+    lugares: dict[str, LugarDeclarado] = Field(default_factory=dict)
     # NOTA DATADA (T2, CONFIGURAÇÕES-FECHA-01, 24/08/2026): ``ambiente`` saiu
     # do esquema. O campo nasceu na v1 sem escritor NEM leitor — quem grava a
     # correção de ambiente é ``gravar_correcao_de_ambiente``
@@ -800,6 +877,154 @@ class MaquinaConfig(BaseModel):
                     "aspas (a-z, 0-9, `-` e `_`, até 32)"
                 )
         return vivos
+
+    @field_validator("lugares", mode="before")
+    @classmethod
+    def _chave_e_o_lugar_e_none_esquece(cls, valor: Any) -> Any:
+        """A chave é o lugar na grafia do dono; ``{"lugares": {l: None}}`` esquece.
+
+        O ``None`` é o mesmo desfazer de ``lancadores`` (ver
+        :meth:`_o_none_e_o_esquecimento`), e pela mesma razão: a fusão desce
+        nos dicionários, então mandar a lista sem uma chave não tira chave
+        nenhuma. Sem ele, uma porta mapeada por engano ficaria mapeada para
+        sempre.
+        """
+        if not isinstance(valor, Mapping):
+            return valor
+        vivos = {k: v for k, v in valor.items() if v is not None}
+        if len(vivos) > _MAXIMO_DE_ENTRADAS:
+            raise ValueError(
+                f"{len(vivos)} lugares declarados, e o teto é {_MAXIMO_DE_ENTRADAS}"
+            )
+        for chave in vivos:
+            if not isinstance(chave, str) or not _LUGAR.match(chave):
+                raise ValueError(
+                    f"lugar {chave!r} não é 'pci-<controlador>-usb-0:<portas>' "
+                    "(a grafia do ID_PATH do udev)"
+                )
+        return vivos
+
+
+# ---------------------------------------------------------------------------
+# O LUGAR (D3) — a grafia e a tradução, num lugar só
+# ---------------------------------------------------------------------------
+#
+# Decisão de quem coordena (ENTRADA-A-ENTRADA-01, 23/09/2026): há DUAS chaves
+# de porta nesta casa. O ``mapa`` chaveia pelo caminho de barramento
+# (``3-4.1.4``), que carrega o número do barramento; o dono do BlueZ e o
+# «Mapear Entrada a Entrada» chaveiam pelo lugar (``pci-…-usb-0:4.1.4``). O
+# ``mapa`` NÃO migra nesta leva — são seis leitores na interface —, e a
+# tradução entre as duas mora AQUI. Todo leitor pergunta a estas funções; uma
+# segunda montagem da mesma string é como se produzem duas palavras que quase
+# batem.
+#
+# SÃO FUNÇÕES PURAS, e quem as chama no caminho do doctor (``bluez_dbus``,
+# ``mesa_de_radio``) as importa TARDE: aqueles dois são stdlib no import,
+# porque o doctor os carrega pelo ``python3`` do sistema.
+
+
+def lugar_de(controlador_pci: str, devpath: str) -> str:
+    """O LUGAR de uma porta: o controlador PCI e a cadeia de portas do USB.
+
+    ``lugar_de("0000:0c:00.3", "4.1.4")`` → ``pci-0000:0c:00.3-usb-0:4.1.4``.
+    ``""`` quando não há controlador — "não sei onde". Sem ``devpath``, só o
+    controlador: é o adaptador que não pendura em USB nenhum.
+    """
+    if not controlador_pci:
+        return ""
+    if not devpath:
+        return f"pci-{controlador_pci}"
+    return f"pci-{controlador_pci}-usb-0:{devpath}"
+
+
+def partes_do_lugar(lugar: str) -> tuple[str, str] | None:
+    """``(controlador, devpath)`` de um lugar — ``None`` se não é um lugar."""
+    casado = _LUGAR.match(lugar or "")
+    if casado is None:
+        return None
+    return casado.group("pci"), casado.group("devpath") or ""
+
+
+def lugar_do_caminho(caminho: str, controladores: Mapping[int, str]) -> str:
+    """O caminho de barramento vira lugar: ``3-4.1.4`` → ``pci-…-usb-0:4.1.4``.
+
+    ``controladores`` é ``{busnum: controlador PCI}`` DESTE boot — quem lê é
+    ``mesa_de_radio.controladores_dos_barramentos``. ``""`` quando o caminho
+    não tem a forma do kernel ou o barramento não está na leitura: "não sei",
+    nunca um lugar inventado.
+    """
+    if not caminho or not _CAMINHO_DE_BARRAMENTO.match(caminho):
+        return ""
+    busnum, _, devpath = caminho.partition("-")
+    controlador = controladores.get(int(busnum), "")
+    return lugar_de(controlador, devpath) if controlador else ""
+
+
+def caminhos_do_lugar(lugar: str, controladores: Mapping[int, str]) -> tuple[str, ...]:
+    """O inverso — e são ATÉ DOIS, e esta função não escolhe.
+
+    Um controlador xHCI publica dois barramentos, o lado 2.0 e o 3.x, e o
+    ``ID_PATH`` é o mesmo nos dois lados de um buraco (medido em 23/09: o hub
+    ``05e3`` desta bancada é ``3-4`` e ``4-4``). O DualSense e os dongles são
+    2.0 e enumeram sempre do lado 2.0; quem precisa de UM caminho olha qual
+    dos candidatos está no barramento agora.
+    """
+    partes = partes_do_lugar(lugar)
+    if partes is None or not partes[1]:
+        return ()
+    controlador, devpath = partes
+    return tuple(
+        f"{busnum}-{devpath}"
+        for busnum, dono in sorted(controladores.items())
+        if dono == controlador
+    )
+
+
+def entradas_do_mapa(mapa: MapaDaMesa) -> frozenset[str]:
+    """Todo número de entrada do desenho — das faces e das entradas avulsas."""
+    numeros = {numero for face in mapa.faces for numero in face.portas}
+    numeros.update(mapa.portas)
+    return frozenset(numeros)
+
+
+def entrada_do_lugar(maquina: MaquinaConfig, lugar: str) -> str | None:
+    """O número DELA para este lugar — ``None`` quando a amarra não vale mais.
+
+    Três conferências, e cada uma é um jeito real de a amarra caducar:
+
+    * **a entrada saiu do desenho** — ela apagou a face na outra janela;
+    * **outro lugar diz ser a mesma entrada** — só acontece com o arquivo
+      editado à mão, e aí a resposta é "não sei", nunca um dos dois no chute;
+    * **o desenho pôs outro aparelho nesta entrada depois** — o ``caminho``
+      do ``mapa`` passou a ter OUTRAS portas. A comparação é pelo ``devpath``,
+      que não depende da numeração do barramento: um caminho gravado antes de
+      uma troca de ``busnum`` continua batendo com o lugar.
+    """
+    declarado = maquina.lugares.get(lugar)
+    if declarado is None or declarado.entrada is None:
+        return None
+    numero = declarado.entrada
+    if numero not in entradas_do_mapa(maquina.mapa):
+        return None
+    if any(
+        outro != lugar and dele.entrada == numero
+        for outro, dele in maquina.lugares.items()
+    ):
+        return None
+    partes = partes_do_lugar(lugar)
+    porta = maquina.mapa.portas.get(numero)
+    caminho = porta.caminho if porta is not None else None
+    if caminho and partes is not None and caminho.partition("-")[2] != partes[1]:
+        return None
+    return numero
+
+
+def lugar_da_entrada(maquina: MaquinaConfig, numero: str) -> str | None:
+    """O lugar amarrado a este número — o inverso de :func:`entrada_do_lugar`."""
+    for lugar in sorted(maquina.lugares):
+        if entrada_do_lugar(maquina, lugar) == numero:
+            return lugar
+    return None
 
 
 def caminho_da_maquina() -> Path:

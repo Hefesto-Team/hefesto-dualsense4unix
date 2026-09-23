@@ -158,6 +158,16 @@ class Adaptador:
         """
         return _caminho_de_barramento(self.busnum, self.devpath)
 
+    @property
+    def lugar(self) -> str:
+        """O LUGAR (D3): ``pci-0000:0c:00.3-usb-0:4.1.4`` — a chave do dono.
+
+        É por ela que o «Mapear Entrada a Entrada» grava e que o adaptador
+        herda o nome da porta. O :attr:`caminho` fica para quem ainda chaveia
+        pelo barramento; a tradução entre os dois é de ``utils/maquina``.
+        """
+        return _lugar(self.controlador_pci, self.devpath)
+
 
 @dataclass(frozen=True)
 class RadioUsb:
@@ -182,6 +192,11 @@ class RadioUsb:
     def caminho(self) -> str:
         """``3-1.1.4`` — o mesmo de :attr:`Adaptador.caminho`, pelo mesmo motivo."""
         return _caminho_de_barramento(self.busnum, self.devpath)
+
+    @property
+    def lugar(self) -> str:
+        """O LUGAR (D3) — o mesmo de :attr:`Adaptador.lugar`, pelo mesmo motivo."""
+        return _lugar(self.controlador_pci, self.devpath)
 
 
 @dataclass(frozen=True)
@@ -398,6 +413,50 @@ def vizinhancas_apertadas(
     return pares
 
 
+def controladores_dos_barramentos(
+    *,
+    raiz_usb: str = "/sys/bus/usb/devices",
+    listar: Callable[[str], list[str]] = os.listdir,
+    real: Callable[[str], str] = os.path.realpath,
+) -> dict[int, str]:
+    """``{busnum: controlador PCI}`` DESTE boot — o que traduz caminho em lugar.
+
+    Um ``realpath`` por hub-raiz (``usb1``..``usbN``), sem abrir arquivo:
+    medido em 23/09, ``usb1``/``usb2`` penduram em ``0000:02:00.0`` e
+    ``usb3``/``usb4`` em ``0000:0c:00.3``. É a leitura que
+    ``utils/maquina.lugar_do_caminho`` recebe por argumento, e é por ela que o
+    nome de uma porta sobrevive a um boot que troque a ordem dos barramentos.
+
+    Dicionário vazio é resposta: sem ``/sys`` (contêiner) não há o que
+    traduzir, e quem pergunta diz "não sei".
+    """
+    try:
+        nomes = listar(raiz_usb)
+    except OSError:
+        return {}
+    achados: dict[int, str] = {}
+    for nome in nomes:
+        raiz = _HUB_RAIZ.match(nome)
+        if raiz is None:
+            continue
+        controlador = _controlador_pci(os.path.join(raiz_usb, nome), real)
+        if controlador:
+            achados[int(nome[3:])] = controlador
+    return achados
+
+
+def _lugar(controlador_pci: str, devpath: str) -> str:
+    """A grafia do lugar, perguntada ao dono dela (``utils/maquina``).
+
+    Import TARDIO: este módulo é stdlib no import, porque o doctor o carrega
+    pelo ``python3`` do sistema (``exame_da_mesa._vizinhancas_do_sistema``), e
+    o ``utils/maquina`` traz o pydantic. Só quem pergunta pelo lugar paga.
+    """
+    from hefesto_dualsense4unix.utils.maquina import lugar_de
+
+    return lugar_de(controlador_pci, devpath)
+
+
 def _caminho_de_barramento(busnum: int, devpath: str) -> str:
     """``busnum-devpath``, ou ``""`` quando falta metade.
 
@@ -512,6 +571,7 @@ __all__ = [
     "Mesa",
     "RadioUsb",
     "adaptadores_bluetooth",
+    "controladores_dos_barramentos",
     "ler_a_mesa",
     "radios_do_barramento",
     "vizinhancas_apertadas",

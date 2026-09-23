@@ -492,12 +492,15 @@ def lugar_de(controlador_pci: str, devpath: str) -> str:
     A grafia é a do ``ID_PATH`` do udev (``pci-0000:0c:00.3-usb-0:1.1.4``):
     sem o número do barramento, que é ordem de enumeração, e com a cadeia de
     portas, que é o metal. ``""`` quando não há controlador — "não sei onde".
+
+    A GRAFIA MORA EM ``utils/maquina.lugar_de`` (ENTRADA-A-ENTRADA-01): o
+    «Mapear Entrada a Entrada» grava por esta chave, e a tradução entre ela e
+    o caminho de barramento é de lá. O import é TARDIO porque este arquivo é
+    stdlib no import — o doctor chega aqui pelo ``exame_da_mesa``.
     """
-    if not controlador_pci:
-        return ""
-    if not devpath:
-        return f"pci-{controlador_pci}"
-    return f"pci-{controlador_pci}-usb-0:{devpath}"
+    from hefesto_dualsense4unix.utils.maquina import lugar_de as _grafia
+
+    return _grafia(controlador_pci, devpath)
 
 
 def lugares_dos_adaptadores() -> dict[str, str]:

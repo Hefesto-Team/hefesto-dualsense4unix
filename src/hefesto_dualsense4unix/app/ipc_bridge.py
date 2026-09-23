@@ -904,9 +904,14 @@ _SECAO_DO_CAMPO: dict[str, str] = {
 #: portões inteiros ficavam verdes: aquele teste não está no `portoes.sh` nem no
 #: `ci.yml`. Sem o rótulo, `_rotulos_dos_descartados` cai no `rotulos.get(campo,
 #: campo)` e a barra de status dela mostraria a palavra crua `lancadores`.
+#:
+#: O `lugares` (ENTRADA-A-ENTRADA-01, 23/09/2026) também não tem seção: é
+#: escrito pelo «Mapear Entrada a Entrada» da aba Conexões. O que se perde é
+#: qual entrada é cada porta, e o nome que ela deu a cada uma.
 _ROTULOS_SEM_SECAO: dict[str, str] = {
     "mapa": "O desenho das entradas",
     "lancadores": "Onde estão os seus lançadores",
+    "lugares": "Qual entrada é cada porta",
 }
 
 
