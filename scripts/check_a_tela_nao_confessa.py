@@ -743,14 +743,6 @@ SEM_LETRA: dict[str, str] = {
         "idem, no campo do jogo",
     "a01_jogar.py:mascara_do_controle ← motivo":
         "a recusa do `gamepad.mask.set`, palavra por palavra do daemon",
-    "a01_jogar.py:_reconciliar_o_vdf ← str(resultado[1].frase())":
-        "`integrations/steam_input_ponte.Estado.frase()`, devolvida inteira "
-        "pelo `garantir_ponte` — ela NOMEIA o jogo em vez de contar e termina "
-        "em «Ligo assim que a Steam fechar (com ela viva a edição é engolida "
-        "na saída dela)». O sujeito é A STEAM, e a frase diz um estado de "
-        "agora que o guarda do vdf desfaz sozinho quando ela sai. Redigitá-la "
-        "no pacote seria a segunda cópia de um texto que tem dono — "
-        "STEAM-INPUT-01, 20/09/2026",
     "a02_controles.py:mudo ← frase":
         "a recusa do `mic.set`, montada pelo motor do microfone",
     "a02_controles.py:rota ← desfecho.motivo":

@@ -27,8 +27,12 @@ AS QUATRO MORDIDAS, e cada teste diz a sua no docstring:
    `<span>` não tem como perguntar, e o guarda do vdf completa quando ela sai;
 3. arranque o filtro por appid → um segundo jogo muda de valor e ninguém pediu.
    É a `CAMINHO-CONTAGIO-01` com outro campo;
-4. arranque o terceiro estado → a tela acende no PENDENTE, afirmando uma ponte
-   que não está de pé.
+4. volte a acender só com a ponte de pé (`dado.ligados`) → o PENDENTE apaga, e
+   o clique dela com a Steam aberta volta sem acender nada. FATO SUBSTITUÍDO
+   em 23/09/2026 (O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01, pela regra dela): a
+   mordida era a inversa — acender no PENDENTE era *"afirmar uma ponte que
+   não está de pé"*. Na fileira que é grupo de rádio o aceso é a ESCOLHA
+   dela, e o que falta aplicar vai à faixa de pendência com a frase do dono.
 
 O FURO DESTA RÉGUA, DECLARADO porque é regra da casa: **ela mede o texto que nós
 escrevemos, não a Steam lendo-o.** Um `vdf` perfeitamente escrito e uma Steam que
@@ -303,13 +307,18 @@ def test_o_clique_nao_arrasta_o_outro_jogo(lar) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 2. O SEGUNDO CLIQUE DESLIGA — e só aquele jogo
+# 2. SAIR DO STEAM INPUT DESLIGA — e só aquele jogo
 # ---------------------------------------------------------------------------
-def test_o_segundo_clique_desliga_o_jogo_e_so_ele(lar) -> None:
-    """Clique, clique: o appid sai da lista e o vdf volta a `"0"`.
+def test_sair_do_steam_input_desliga_o_jogo_e_so_ele(lar) -> None:
+    """Clique no «Steam Input», clique no «Sony DualSense»: o appid sai e o vdf volta a `"0"`.
 
-    O CHIP É UM INTERRUPTOR, e quem decide o sentido é o DISCO (a vigia), não o
-    que a tela mostra: a página pode ter até vinte segundos.
+    FATO SUBSTITUÍDO — O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01, 23/09/2026, pela
+    regra dela (*"a idea é eu poder escolher qualquer que seja o modo
+    independnete da ordem"*). Aqui se media o chip como INTERRUPTOR: o segundo
+    clique nele desligava. Na fileira que é grupo de rádio o segundo clique
+    REAPLICA, e quem tira o jogo da lista é clicar em qualquer um dos outros
+    três (`a01_jogar.o_que_o_chip_faz`). A primeira metade abaixo mede isso; o
+    filtro por appid, que é o que esta régua existe para morder, continua.
 
     **A MORDIDA DO FILTRO VALE AQUI, E O ARRANJO É O DIFÍCIL DE PROPÓSITO.**
     `garantir_fora_da_lista_desligado` escolhe os alvos por SUBTRAÇÃO: desliga
@@ -334,13 +343,19 @@ def test_o_segundo_clique_desliga_o_jogo_e_so_ele(lar) -> None:
     assert _valor(lar, APPID) == ponte.LIGADO
     assert _valor(lar, OUTRO) == ponte.LIGADO
 
+    # O SEGUNDO CLIQUE NO «STEAM INPUT» REAPLICA — não é mais interruptor.
     aba.VIGIA_DO_STEAM_INPUT.esquecer()
     aba.modo_steam(_ctx(), {}, PonteDeMentira())
+    assert APPID in _lista() and _valor(lar, APPID) == ponte.LIGADO, (
+        "o segundo clique no «Steam Input» desligou — o chip voltou a ser "
+        "interruptor, e clicar no aceso apagava o que ela escolheu")
+
+    aba.modo_dualsense(_ctx(), {"texto": "Sony DualSense"}, PonteDeMentira())
 
     assert APPID not in _lista(), (
-        f"o segundo clique não tirou o jogo da lista: {_lista()}")
+        f"o «Sony DualSense» não tirou o jogo da lista: {_lista()}")
     assert _valor(lar, APPID) == ponte.DESLIGADO, (
-        f"o segundo clique não desfez a ponte: o vdf diz "
+        f"sair do Steam Input não desfez a ponte: o vdf diz "
         f"{_valor(lar, APPID)!r}. Um chip que liga e não desliga é pior que um "
         f"chip que não faz nada")
     assert _valor(lar, OUTRO) == ponte.LIGADO, (
@@ -354,6 +369,11 @@ def test_o_segundo_clique_desliga_o_jogo_e_so_ele(lar) -> None:
 def test_com_a_steam_aberta_o_gesto_grava_a_vontade_e_nao_toca_no_vdf(
         lar, monkeypatch) -> None:
     """**A MORDIDA 2** — o gate da Steam, e ele é do DONO, não deste gesto.
+
+    O ADIAMENTO NÃO É RECUSA — O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01, 23/09/2026.
+    Até aqui o gesto levantava com a frase do dono, e a tela piscava recusa
+    sobre um clique que valeu. Agora ele volta com a piscada verde, o chip
+    acende pela escolha dela, e a frase vai à faixa de pendência.
 
     Arranque o gate (faça `garantir_ponte` escrever com a Steam viva, ou
     dublê `ponte.steam_running` para `False` dentro do `garantir_ponte`) e a
@@ -377,9 +397,11 @@ def test_com_a_steam_aberta_o_gesto_grava_a_vontade_e_nao_toca_no_vdf(
     """
     monkeypatch.setattr(slo, "steam_running", lambda: True)
     monkeypatch.setattr(ponte, "steam_running", lambda: True)
+    ctx = _ctx()
 
-    with pytest.raises(RuntimeError) as erro:
-        aba.modo_steam(_ctx(), {}, PonteDeMentira())
+    assert aba.modo_steam(ctx, {}, PonteDeMentira()) is None, (
+        "o clique com a Steam aberta respondeu com recusa ou recado — o que "
+        "falta aplicar é pendência, não recusa (O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01)")
 
     assert APPID in _lista(), (
         f"a vontade dela se perdeu no clique em que ela a fez: {_lista()}. O "
@@ -387,17 +409,26 @@ def test_com_a_steam_aberta_o_gesto_grava_a_vontade_e_nao_toca_no_vdf(
     assert _valor(lar, APPID) == "0", (
         f"houve escrita no vdf com a Steam VIVA: o valor virou "
         f"{_valor(lar, APPID)!r}, e a Steam regrava o arquivo ao sair")
-    # A FRASE É A DO DONO — `Estado.frase()`, que NOMEIA o jogo e já diz quando.
+    # O CHIP ACENDE PELA ESCOLHA DELA, e a FRASE É A DO DONO na faixa de
+    # pendência — `Estado.frase()`, que NOMEIA o jogo e já diz quando.
+    assert aba._estado_da_tela(ctx.state)["steam-input-aceso"] == "steam", (
+        "o clique com a Steam aberta voltou e o chip não acendeu — é o "
+        "«cliquei e nada acendeu» da queixa dela")
     esperada = ponte.estado_da_ponte(allowlist=[APPID]).frase()
-    assert str(erro.value) == esperada, (
-        f"a tela digitou uma frase própria em vez de ler a do dono:\n"
-        f"  saiu    {str(erro.value)!r}\n  esperava {esperada!r}")
-    assert "Ligo assim que a Steam fechar" in str(erro.value)
+    faixa = aba._faixa_do_pendente(ctx.state)[0]
+    assert esperada in faixa, (
+        f"a faixa de pendência não leva a frase do dono:\n"
+        f"  faixa   {faixa!r}\n  esperava {esperada!r}")
+    assert "Ligo assim que a Steam fechar" in faixa
 
 
 def test_desligar_com_a_steam_aberta_tira_da_lista_e_diz_quando(
         lar, monkeypatch) -> None:
     """O avesso, e ele tem frase própria porque o dono não tem uma.
+
+    A SAÍDA DO STEAM INPUT É CLICAR NUM DOS OUTROS TRÊS — O-MODO-QUE-NAO-SAI-
+    DO-STEAM-INPUT-01, 23/09/2026. E o recado VOLTA em vez de levantar: a lista
+    mudou, o caminho mudou, o chip clicado acende — o que falta é da Steam.
 
     Ligar adiado usa `Estado.frase()`, que nomeia o jogo e termina em *"Ligo
     assim que a Steam fechar"*. `garantir_fora_da_lista_desligado` devolve só
@@ -418,14 +449,13 @@ def test_desligar_com_a_steam_aberta_tira_da_lista_e_diz_quando(
     monkeypatch.setattr(ponte, "steam_running", lambda: True)
     aba.VIGIA_DO_STEAM_INPUT.esquecer()
 
-    with pytest.raises(RuntimeError) as erro:
-        aba.modo_steam(_ctx(), {}, PonteDeMentira())
+    resposta = aba.modo_dualsense(_ctx(), {"texto": "Sony DualSense"}, PonteDeMentira())
 
     assert APPID not in _lista(), f"a vontade não foi desfeita: {_lista()}"
     assert _valor(lar, APPID) == ponte.LIGADO, (
         "houve escrita no vdf com a Steam VIVA — a edição some na saída dela")
-    assert str(erro.value) == aba.STEAM_INPUT_SAIU_E_A_STEAM_ESTA_ABERTA, (
-        f"a tela piscou verde ou digitou outra coisa: {str(erro.value)!r}")
+    assert resposta == {"recado": aba.STEAM_INPUT_SAIU_E_A_STEAM_ESTA_ABERTA}, (
+        f"a tela piscou verde ou digitou outra coisa: {resposta!r}")
 
 
 #: OS AJUDANTES QUE O GESTO PRECISA ALCANÇAR, no MÍNIMO. É a trava da trava:
@@ -517,28 +547,40 @@ def test_o_gesto_nunca_fecha_a_steam_dela(lar, monkeypatch) -> None:
             f"{sorted(alcance)}")
 
 
-def test_com_o_jogo_aberto_nada_e_escrito(lar, monkeypatch) -> None:
-    """Jogo aberto: recusa com a frase do dono, e nem a lista nem o vdf mudam.
+def test_com_o_jogo_aberto_a_lista_e_gravada_e_o_vdf_espera(lar, monkeypatch) -> None:
+    """Jogo da Steam aberto: o clique grava a lista, o vdf espera, e nada recusa.
 
-    A MORDIDA: tire o portão de jogo aberto e a lista passa a ser escrita no
-    instante em que ela está jogando — com o vdf adiado de qualquer forma, o
-    clique mudaria o que o daemon entrega ao jogo EM CURSO.
+    FATO SUBSTITUÍDO — O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01, 23/09/2026, §3
+    item 5. Esta régua cobrava a RECUSA (*"Feche o jogo e clique de novo"*) e
+    dizia que gravar a lista com o jogo aberto *"mudaria o que o daemon entrega
+    ao jogo EM CURSO"*. Isso nunca foi medido, e o git diz de onde o portão
+    veio: o desenho da STEAM-INPUT-01 (§4.2) o punha só na PONTE, com a razão
+    *"fechar a Steam mataria o jogo"*; o commit `c417498e0` recuou de fechar a
+    Steam e deixou o portão na frente da lista também. O que a lista decide com
+    o jogo aberto é a exceção do daemon (`gamepad.esconder_o_fisico_para_o_jogo`,
+    que só reafirma o estado canônico, sem criar nem destruir device) e o
+    arming do PRÓXIMO lançamento.
+
+    O VDF CONTINUA ESPERANDO, e quem espera é o dono: `garantir_ponte` adia com
+    o jogo aberto antes de olhar a Steam. A frase dele vai à faixa.
+
+    A MORDIDA: devolva o portão (`if slo.steam_game_running(): raise ...`) a
+    `a01_jogar._o_clique_da_fileira` e o clique volta a recusar.
     """
-    from hefesto_dualsense4unix.app.actions.daemon_actions import (
-        format_steam_janela_recusa,
-    )
-
-    monkeypatch.setattr(slo, "steam_game_running", lambda: True)
-    monkeypatch.setattr(ponte, "steam_game_running", lambda: True)
+    for dono in (slo, ponte):
+        monkeypatch.setattr(dono, "steam_running", lambda: True)
+        monkeypatch.setattr(dono, "steam_game_running", lambda: True)
     antes = lar.read_text(encoding="utf-8")
+    ctx = _ctx()
 
-    with pytest.raises(RuntimeError) as erro:
-        aba.modo_steam(_ctx(), {}, PonteDeMentira())
+    assert aba.modo_steam(ctx, {}, PonteDeMentira()) is None
 
-    assert str(erro.value) == format_steam_janela_recusa("jogo_aberto")
-    assert not slo.steam_input_allowlist_path().exists(), (
-        "a lista foi escrita com um jogo aberto")
-    assert lar.read_text(encoding="utf-8") == antes
+    assert APPID in _lista(), "a escolha dela não foi gravada com o jogo aberto"
+    assert lar.read_text(encoding="utf-8") == antes, (
+        "houve escrita no vdf com o jogo aberto")
+    assert aba._estado_da_tela(ctx.state)["steam-input-aceso"] == "steam"
+    assert "Ligo assim que o jogo e a Steam fecharem" in (
+        aba._faixa_do_pendente(ctx.state)[0])
 
 
 # ---------------------------------------------------------------------------
@@ -574,21 +616,24 @@ def test_sem_jogo_o_gesto_recusa_dizendo_e_nada_e_escrito(lar) -> None:
 # ---------------------------------------------------------------------------
 # 5. A TELA LÊ OS TRÊS ESTADOS
 # ---------------------------------------------------------------------------
-def test_a_tela_acende_so_com_a_ponte_de_pe(lar) -> None:
-    """**A MORDIDA 4** — o terceiro estado, e sem ele o chip volta a mentir.
+def test_a_tela_acende_pela_escolha_dela(lar) -> None:
+    """**A MORDIDA 4** — o PENDENTE acende, e o que falta vai à faixa.
 
     | o que se sabe | a tela |
     | --- | --- |
-    | na lista **e** o vdf diz `"2"` | chip **aceso** |
-    | na lista e o vdf ainda diz `"0"` (PENDENTE) | chip **apagado** |
+    | na lista **e** o vdf diz `"2"` | chip **aceso**, faixa sem a ponte |
+    | na lista e o vdf ainda diz `"0"` (PENDENTE) | chip **aceso**, e a frase do dono na faixa |
     | fora da lista | chip apagado |
 
-    Arranque o terceiro estado — faça `_steam_input_da_tela` responder
-    `dado.lista` em vez de `dado.ligados` — e o caso do meio acende. A segunda
-    asserção reprova.
+    FATO SUBSTITUÍDO — O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01, 23/09/2026, §3
+    item 3. Esta régua cobrava o PENDENTE APAGADO, e o custo disso foi a queixa
+    dela: com a Steam aberta o clique no «Steam Input» voltava e nada acendia.
+    Na fileira que é grupo de rádio o chip aceso é o que ela ESCOLHEU; a ponte
+    que ainda não subiu não some da tela, vai à faixa de pendência com a frase
+    do dono (`ponte.Estado.frase`).
 
-    Acender no PENDENTE é a tela afirmando uma ponte que não está de pé: quem
-    clicou veria o chip aceso, abriria o jogo e não teria Steam Input nenhum.
+    A MORDIDA: faça `_o_jogo_na_lista` responder por `dado.ligados` em vez de
+    `dado.lista` e o caso do meio apaga — a segunda asserção reprova.
     """
     ctx = _ctx()
 
@@ -601,9 +646,12 @@ def test_a_tela_acende_so_com_a_ponte_de_pe(lar) -> None:
     aba.VIGIA_DO_STEAM_INPUT.esquecer()
     aba.VIGIA_DO_STEAM_INPUT.ler()
     assert _valor(lar, APPID) == "0"
-    assert aba._estado_da_tela(ctx.state)["steam-input-aceso"] == "", (
-        "o chip acendeu no PENDENTE — a tela afirmando uma ponte que não está "
-        "de pé, que é o `excecao_inerte` com outra roupa")
+    assert aba._estado_da_tela(ctx.state)["steam-input-aceso"] == "steam", (
+        "o chip apagou no PENDENTE — a escolha dela sumiu da tela porque a "
+        "Steam ainda não reescreveu o arquivo")
+    dono = ponte.estado_da_ponte(allowlist=[APPID]).frase()
+    assert dono in aba._faixa_do_pendente(ctx.state)[0], (
+        "o PENDENTE acendeu sem dizer, na faixa, o que falta aplicar")
 
     # (a) LIGADO — a ponte de pé
     ponte.garantir_ponte(allowlist=[APPID])
@@ -612,6 +660,8 @@ def test_a_tela_acende_so_com_a_ponte_de_pe(lar) -> None:
     aba.VIGIA_DO_STEAM_INPUT.ler()
     assert aba._estado_da_tela(ctx.state)["steam-input-aceso"] == "steam", (
         "a ponte está de pé para este jogo e o chip continua apagado")
+    assert aba._a_ponte_que_falta(ctx.state) == "", (
+        "a ponte está de pé e a faixa ainda diz que falta")
 
 
 def _com_o_caminho(caminho: str | None, *, modo_desktop: bool = False) -> Contexto:
@@ -662,8 +712,9 @@ def test_fora_do_degrau_4_acende_o_chip_de_verdade(lar, caminho, desktop, quem) 
 
     A lista dela e o vdf dizem Steam Input para o jogo, e o chip dele NÃO
     acende: a ponte da escada é gamepad + DualSense + Steam Input, e a tela
-    mostra o degrau em que se está. A MORDIDA: troque a guarda
-    `aceso != CAMINHO_SOB_O_STEAM_INPUT` por nada e o Steam Input volta a
+    mostra o degrau em que se está. A MORDIDA: em `a01_jogar._estado_da_tela`,
+    pergunte `_steam_input_da_tela` sem a guarda do caminho (a comparação com
+    a linha do «Steam Input» em `o_que_o_chip_faz`) e o Steam Input volta a
     acender aqui, apagando o chip que está de verdade no comando.
     """
     _ponte_de_pe()
