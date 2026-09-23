@@ -634,6 +634,60 @@ def test_o_contador_em_pe_e_refeito_pela_leitura_de_agora(vazia: Gabinete, disco
     assert not disco.exists(), "pular em pé gravou"
 
 
+def test_o_tique_que_nao_leu_nao_anda_o_laco(
+    mesa: Gabinete, tmp_path: Path, disco: Path
+) -> None:
+    """``ler_o_barramento`` devolve ``Censo()`` quando o ``/sys`` não se deixa
+    ler, e ``listar_entradas`` devolve ``()``: é "não sei", nunca "não há
+    aparelho" nem "não há vaga". Um tique assim não muda a fase — sem a
+    guarda, a tela sentada pulava para «Acabou a parte sem levantar.» e a em
+    pé também, por um tique que não viu nada.
+
+    MORDIDA: tire ``_nao_sei`` do ``olhar`` (ou do ``responder``) — a fase
+    vai ao fim, ou a pergunta da vez some.
+    """
+    cego = {"cego": False}
+
+    def ler() -> Censo:
+        return Censo() if cego["cego"] else mesa.ler()
+
+    laco = ee.LacoDaEntrada(ler=ler, entradas=mesa.entradas)
+    antes = laco.comecar()
+    cego["cego"] = True
+    depois = laco.olhar()
+    assert depois["estado"] == ee.SENTADA, "um tique cego pulou para o fim"
+    assert depois["pergunta"] == antes["pergunta"]
+    with pytest.raises(RuntimeError):
+        laco.responder(ee.FACE_FRENTE)
+    assert laco.estado()["pergunta"] == antes["pergunta"], "a pergunta da vez sumiu"
+    assert not disco.exists()
+
+    vazia = Gabinete(tmp_path / "vazia", BOOT_1)
+    sem_nos = {"sem": False}
+
+    def entradas() -> tuple[NoDeEntrada, ...]:
+        return () if sem_nos["sem"] else vazia.entradas()
+
+    def ler_em_pe() -> Censo:
+        return Censo() if cego["cego"] else vazia.ler()
+
+    cego["cego"] = False
+    em_pe = ee.LacoDaEntrada(ler=ler_em_pe, entradas=entradas)
+    em_pe.comecar()
+    em_pe.levantar()
+    ds = vazia.plugar(1, "2", DUALSENSE)
+    assert em_pe.olhar()["ultima"]["gravou"]
+    vazia.tirar(ds)
+    foto = em_pe.olhar()
+    sem_nos["sem"] = True
+    assert em_pe.olhar()["estado"] == ee.EM_PE, "um tique sem nós pulou para o fim"
+    sem_nos["sem"] = False
+    cego["cego"] = True
+    assert em_pe.olhar()["total"] == foto["total"], "um tique cego devolveu a aprendida à conta"
+    cego["cego"] = False
+    assert em_pe.olhar()["total"] == foto["total"]
+
+
 def test_ja_chega_por_hoje_fecha_em_qualquer_fase(mesa: Gabinete, disco: Path) -> None:
     laco = _laco(mesa)
     for fase in (ee.SENTADA, ee.FIM, ee.EM_PE):
