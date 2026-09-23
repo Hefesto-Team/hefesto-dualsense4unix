@@ -636,14 +636,30 @@ def test_o_install_poe_os_quatro_destinos_e_liga_o_timer(tmp_path: Path) -> None
         "install_wifi_usb_host",
         {"HEFESTO_WIFI_SYSFS": amb["HEFESTO_WIFI_SYSFS"], "HEFESTO_NM_ETC": str(nm)},
     )
+    linhas = sudo.splitlines()
+    # O destino tem de ser o ALVO de um `install`, e não só aparecer no diário:
+    # o caminho do script também vem na linha do `--ensure` na hora, e com o
+    # `install` dele arrancado a pergunta "o caminho está no diário?" seguia
+    # verde — medido pela conferência em 23/09.
+    instalados = [ln.split()[-1] for ln in linhas if ln.startswith("install ")]
     for destino in DESTINOS_DO_WIFI:
-        assert destino in sudo, f"o install não pôs {destino}"
+        assert destino in instalados, f"o install não pôs {destino}"
     assert "install -Dm755 -o root -g root" in sudo, "o dispatcher tem de ser de root, 755"
-    assert "systemctl enable --now hefesto-wifi-usb-vigia.timer" in sudo
+    assert "systemctl enable --now hefesto-wifi-usb-vigia.timer" in linhas
+    # O daemon-reload vem DEPOIS das units no disco e ANTES do enable: numa
+    # reinstalação, o systemd habilitaria a unit de ontem.
+    ultima_unit = max(
+        i for i, ln in enumerate(linhas) if ln.startswith("install ") and "wifi-usb-vigia" in ln
+    )
+    reload = linhas.index("systemctl daemon-reload", ultima_unit)
+    assert reload < linhas.index("systemctl enable --now hefesto-wifi-usb-vigia.timer")
     # Com dongle agora, o reforço vai na hora.
     assert "/usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh --ensure" in sudo
     assert (captura / "90-hefesto-wifi-usb").read_bytes() == WIFI.read_bytes(), (
         "o dispatcher é CÓPIA do mesmo fonte"
+    )
+    assert (captura / "wifi_usb.sh").read_bytes() == WIFI.read_bytes(), (
+        "o ExecStart do vigia é o mesmo fonte"
     )
     assert "vigia do Wi-Fi USB ativo" in saida
 
@@ -690,11 +706,22 @@ def test_as_duas_saidas_nao_tocam_em_nada(tmp_path: Path, flag: str, frase: str)
 def test_o_uninstall_tira_os_quatro_antes_de_apagar_a_casa_dos_scripts() -> None:
     texto = _codigo(UNINSTALL.read_text(encoding="utf-8"))
     ini = texto.index("removendo o vigia do Wi-Fi USB")
-    bloco = texto[ini : texto.index("\nfi\n", ini)]
+    # Sem as linhas de RECADO: o ramo sem sudo ensina os mesmos comandos num
+    # `log`, e um recado basta a um `in` solto com o `disable` ou o `rm`
+    # arrancados (medido pela conferência em 23/09: o `disable` arrancado
+    # passava verde, lido do recado do outro ramo).
+    bloco = "\n".join(
+        ln
+        for ln in texto[ini : texto.index("\nfi\n", ini)].replace("\\\n", " ").splitlines()
+        if not re.match(r"\s*(log|echo|printf|warn|info)\s", ln)
+    )
     for destino in DESTINOS_DO_WIFI:
         assert destino in bloco, f"o uninstall não tira {destino}"
     assert "disable --now hefesto-wifi-usb-vigia.timer" in bloco
     assert "rm -rf /run/hefesto-wifi-usb" in bloco
+    assert "systemctl daemon-reload" in bloco, (
+        "sem o reload, o systemd segue com a unit que saiu do disco"
+    )
     assert ini < texto.index("sudo rmdir /usr/local/lib/hefesto-dualsense4unix"), (
         "o wifi_usb.sh tem de sair ANTES do rmdir da casa dos scripts de sistema"
     )
@@ -755,6 +782,36 @@ def test_a_paridade_da_familia_passa_e_morde(tmp_path: Path) -> None:
     )
     assert "[FAIL] vigia do Wi-Fi USB" in saida
     assert "uninstall.sh(não remove /etc/NetworkManager/dispatcher.d/90-hefesto-wifi-usb)" in saida
+
+
+@pytest.mark.parametrize(
+    ("arquivo", "velho", "queixa"),
+    [
+        # O caminho do script vem também na linha do `--ensure` na hora.
+        (
+            "scripts/lib/camada_de_maquina.sh",
+            '    sudo install -Dm755 "${ROOT_DIR}/scripts/wifi_usb.sh" \\\n'
+            "        /usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh 2>/dev/null || _wifi_ok=0\n",
+            "scripts/lib/camada_de_maquina.sh(não instala "
+            "/usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh)",
+        ),
+        # O `disable` vem também no recado do ramo sem sudo.
+        (
+            "uninstall.sh",
+            "        sudo systemctl disable --now hefesto-wifi-usb-vigia.timer"
+            " >/dev/null 2>&1 || true\n",
+            "uninstall.sh(não desabilita o timer)",
+        ),
+    ],
+)
+def test_a_paridade_nao_le_o_ato_no_recado(
+    tmp_path: Path, arquivo: str, velho: str, queixa: str
+) -> None:
+    """As duas mordidas que a conferência de 23/09 achou passando verde: o ato
+    arrancado e o mesmo caminho ainda escrito num recado ou noutra linha."""
+    saida = _paridade_numa_arvore(tmp_path, {arquivo: (velho, "")})
+    assert "[FAIL] vigia do Wi-Fi USB" in saida, saida
+    assert queixa in saida
 
 
 # --- o doctor sabe dizer se está de pé ---------------------------------------

@@ -786,30 +786,48 @@ fi
 echo "== vigia do Wi-Fi USB e o drop-in do watchdog (install × uninstall × doctor) =="
 if [[ -f assets/systemd/hefesto-wifi-usb-vigia.service ]]; then
     missing=()
-    _wifi_lib="$(grep -v '^[[:space:]]*#' scripts/lib/camada_de_maquina.sh 2>/dev/null || true)"
-    _wifi_un="$(grep -v '^[[:space:]]*#' uninstall.sh 2>/dev/null || true)"
+    #: O lado do INSTALL tem a mesma armadilha, ao contrário: o caminho do
+    #: script aparece também na linha que roda o `--ensure` na hora, e o do timer
+    #: no recado de «habilite à mão». Medido pela conferência em 23/09: com o
+    #: `install` do `wifi_usb.sh` arrancado, esta seção seguia verde, lida do
+    #: `--ensure` — e o `ExecStart` do vigia apontaria para arquivo que nunca
+    #: existiu. Então o arquivo que se INSTALA é cobrado numa linha de
+    #: `install -D`; o nome da unit (que a linha de install recebe por variável)
+    #: e o `enable` são cobrados no código sem recado.
+    _wifi_lib="$(sed -e :a -e '/\\$/N; s/\\\n[[:space:]]*/ /; ta' scripts/lib/camada_de_maquina.sh 2>/dev/null \
+        | grep -v '^[[:space:]]*#' \
+        | grep -vE '^[[:space:]]*(log|echo|printf|warn|info)[[:space:]]' || true)"
+    _wifi_lib_inst="$(grep -E '(^|[[:space:]])install[[:space:]]+-D' <<<"${_wifi_lib}" || true)"
     #: A REMOÇÃO é cobrada na linha que REMOVE, não em qualquer linha: o
     #: caminho aparece também na guarda do `if`, no `_NEEDS_SUDO` e no recado de
     #: "rode à mão" — e qualquer um deles bastaria a um grep solto, com o `rm`
     #: arrancado (medido: a primeira versão desta seção passou assim). As
     #: continuações de linha são juntadas, e linha de recado não conta.
-    _wifi_un_rm="$(sed -e :a -e '/\\$/N; s/\\\n[[:space:]]*/ /; ta' uninstall.sh 2>/dev/null \
+    #: O `disable` do timer tem o MESMO recado ao lado («sudo systemctl disable
+    #: --now …» no ramo sem sudo), e por isso se cobra no mesmo texto sem recado
+    #: — medido em 23/09 pela conferência: cobrado em `grep -v '#'` puro, o
+    #: `disable` arrancado passava verde, lido do `log` do outro ramo.
+    _wifi_un_acao="$(sed -e :a -e '/\\$/N; s/\\\n[[:space:]]*/ /; ta' uninstall.sh 2>/dev/null \
         | grep -v '^[[:space:]]*#' \
-        | grep -vE '^[[:space:]]*(log|echo|printf|warn|info)[[:space:]]' \
-        | grep -E '(^|[[:space:]])rm[[:space:]]+-f' || true)"
+        | grep -vE '^[[:space:]]*(log|echo|printf|warn|info)[[:space:]]' || true)"
+    _wifi_un_rm="$(grep -E '(^|[[:space:]])rm[[:space:]]+-f' <<<"${_wifi_un_acao}" || true)"
     _wifi_inst="$(grep -v '^[[:space:]]*#' install.sh 2>/dev/null || true)"
     _wifi_doc="$(grep -v '^[[:space:]]*#' scripts/doctor.sh 2>/dev/null || true)"
     for _wifi_dest in /usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh \
                       /etc/NetworkManager/dispatcher.d/90-hefesto-wifi-usb \
                       hefesto-wifi-usb-vigia.service hefesto-wifi-usb-vigia.timer; do
-        grep -qF -- "${_wifi_dest}" <<<"${_wifi_lib}" \
+        case "${_wifi_dest}" in
+            /*) _wifi_onde="${_wifi_lib_inst}" ;;
+            *)  _wifi_onde="${_wifi_lib}" ;;
+        esac
+        grep -qF -- "${_wifi_dest}" <<<"${_wifi_onde}" \
             || missing+=("scripts/lib/camada_de_maquina.sh(não instala ${_wifi_dest})")
         grep -qF -- "${_wifi_dest}" <<<"${_wifi_un_rm}" \
             || missing+=("uninstall.sh(não remove ${_wifi_dest})")
     done
     grep -qF 'enable --now hefesto-wifi-usb-vigia.timer' <<<"${_wifi_lib}" \
         || missing+=("scripts/lib/camada_de_maquina.sh(não habilita o timer)")
-    grep -qF 'disable --now hefesto-wifi-usb-vigia.timer' <<<"${_wifi_un}" \
+    grep -qF 'disable --now hefesto-wifi-usb-vigia.timer' <<<"${_wifi_un_acao}" \
         || missing+=("uninstall.sh(não desabilita o timer)")
     grep -qE '^[[:space:]]*install_wifi_usb_host[[:space:]]*$' <<<"${_wifi_inst}" \
         || missing+=("install.sh(não chama install_wifi_usb_host)")
@@ -817,7 +835,7 @@ if [[ -f assets/systemd/hefesto-wifi-usb-vigia.service ]]; then
         || missing+=("scripts/doctor.sh(sem check_wifi_usb)")
     grep -qE '^[[:space:]]+check_wifi_usb[[:space:]]*$' <<<"${_wifi_doc}" \
         || missing+=("scripts/doctor.sh(o main não chama check_wifi_usb)")
-    grep -qF '10-hefesto-maquina.conf' <<<"${_wifi_lib}" \
+    grep -qF 'hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf' <<<"${_wifi_lib_inst}" \
         || missing+=("scripts/lib/camada_de_maquina.sh(não escreve o drop-in do watchdog)")
     grep -qF 'hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf' <<<"${_wifi_un_rm}" \
         || missing+=("uninstall.sh(não remove o drop-in do watchdog)")
