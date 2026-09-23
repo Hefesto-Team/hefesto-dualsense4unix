@@ -78,12 +78,30 @@
 #                                        enquanto ela vive, os candidatos
 #   parear     <MAC_ADAPTADOR> <MAC_CTRL>  Pair() + Trusted=true
 #   desconectar <MAC_ADAPTADOR> <MAC_CTRL> derruba o LINK (o controle zumbi)
+#   reiniciar-travado                    reinicia o adaptador que o KERNEL diz
+#                                        estar travado em laço (família 3) —
+#                                        sem argumento nenhum: quem escolhe a
+#                                        porta é o journal do kernel, nunca
+#                                        quem chama
 #   regra-sudo <USUARIA>                 imprime o /etc/sudoers.d (não instala)
+#
+# A TRAVA DO RÁDIO É DE QUEM CHAMA (O-DIARIO-DO-RADIO-01). Os motores que mexem
+# no rádio passam por um `flock` em /run/hefesto-dualsense4unix/radio.lock
+# (`integrations/diario_do_radio.py`). Esta ponte NUNCA o pede: quem a chama já
+# o segura — o watchdog root e a central do daemon —, e um segundo `flock` aqui,
+# num processo filho, esperaria pelo próprio pai até o prazo.
+#
+# O DIÁRIO DO ROOT. O que esta ponte faz sozinha vai para
+# /var/lib/hefesto-dualsense4unix/radio-diario.jsonl, no MESMO formato do
+# diário dela: o leitor (`diario_do_radio.ler`) junta os dois pela hora. Root não
+# escreve no lar dela — um link simbólico ali levaria esta escrita a qualquer
+# arquivo da máquina.
 #
 # SAÍDA: dado em TSV no stdout, uma linha por item; erro no stderr.
 #   adaptadores -> MAC \t ALIAS \t ligado|desligado \t hciN
 #   bonds       -> MAC \t NOME \t com-chave|sem-chave
 #   descobrir   -> MAC \t NOME \t novo|pareado \t CLASSE
+#   reiniciar-travado -> reiniciado|recusado|segurado \t PORTA \t hciN \t DETALHE
 # A CLASSE é o `Class` do BlueZ em decimal (a *class of device* do
 # Bluetooth), e sai crua de propósito: quem decide se um candidato é
 # controle é quem chama, não esta ponte. Vazia quando o BlueZ não a
@@ -110,12 +128,24 @@
 #                           `bluetoothctl` e `hcitool` saem dela, não do
 #                           sistema. É o que torna a lista de candidatos
 #                           medível sem abrir varredura no rádio dela.
+#   HEFESTO_BT_LAPIDES      a lista de lápides (default: a do acervo de bonds,
+#                           só com a árvore REAL; com raiz de teste e sem este
+#                           gancho, nenhuma lápide é escrita)
+#   HEFESTO_RADIO_DIARIO_ROOT  o diário do root (mesma regra)
+#   HEFESTO_SYSFS_RAIZ      raiz do /sys que o `reiniciar-travado` lê e escreve
+#   HEFESTO_BT_JOURNAL      arquivo lido no lugar do journal do kernel
+#   HEFESTO_PONTE_STAMPS    onde mora o carimbo do último reinício por porta
+#   HEFESTO_USB_PAUSA_S     a pausa entre desautorizar e autorizar a porta
+#   HEFESTO_USB_ESPERA_S    quanto esperar o adaptador voltar
 set -euo pipefail
 
 #: Sob sudo os ganchos não existem. O `env_reset` do sudo já os apagaria; esta
 #: linha é o cinto para a máquina que o desligou (contenção 3 do cabeçalho).
 if [[ -n "${SUDO_UID:-}" || -n "${SUDO_USER:-}" ]]; then
-    unset HEFESTO_BT_LIB HEFESTO_PONTE_DRY_RUN HEFESTO_BT_LOG_DEST HEFESTO_BT_BIN
+    unset HEFESTO_BT_LIB HEFESTO_PONTE_DRY_RUN HEFESTO_BT_LOG_DEST HEFESTO_BT_BIN \
+        HEFESTO_BT_LAPIDES HEFESTO_RADIO_DIARIO_ROOT HEFESTO_SYSFS_RAIZ \
+        HEFESTO_BT_JOURNAL HEFESTO_PONTE_STAMPS HEFESTO_USB_PAUSA_S \
+        HEFESTO_USB_ESPERA_S
 fi
 
 #: `%/` normaliza a barra final: sem isso, uma raiz de teste terminada em
@@ -125,6 +155,18 @@ LIB="${LIB%/}"
 LIB_REAL="/var/lib/bluetooth"
 ALVO_INSTALADO="/usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh"
 SECOS="${HEFESTO_PONTE_DRY_RUN:-0}"
+
+#: A raiz do /sys do `reiniciar-travado`. Com ela desviada, nada do kernel é
+#: lido nem escrito — é a mesa de mentira da régua.
+SYSFS="${HEFESTO_SYSFS_RAIZ:-/sys}"
+SYSFS="${SYSFS%/}"
+SYSFS_REAL="/sys"
+
+#: As lápides e o diário moram na pasta do root do produto. Só a árvore REAL
+#: escreve neles sem gancho: uma régua com a raiz desviada que esquecesse de
+#: desviá-los escreveria no disco dela.
+LAPIDES_REAIS="/var/lib/hefesto-dualsense4unix/bt-bonds/.lapides"
+DIARIO_REAL="/var/lib/hefesto-dualsense4unix/radio-diario.jsonl"
 
 #: BARRAMENTO DE MENTIRA. Com esta pasta na frente do PATH, o `busctl` e o
 #: `bluetoothctl` que este script chama são os DELA — os da pasta —, e não os
@@ -159,6 +201,53 @@ _registrar() {
 
 _erro() { printf '%s: %s\n' "${0##*/}" "$*" >&2; }
 
+# --- o diário do root (O-DIARIO-DO-RADIO-01) -------------------------------
+#
+# DUAS CÓPIAS, UMA FORMA: estas duas funções existem byte a byte iguais aqui e
+# no `bt_health_watchdog.sh`, os dois escritores root do diário. Não é um
+# `source` de propósito: um script root que lê outro arquivo em tempo de
+# execução herda o risco de quem pode escrever nele. A régua
+# `tests/unit/test_o_diario_do_radio.py` confere que as duas cópias são a
+# mesma, e que o leitor Python entende a linha que elas escrevem.
+
+#: Texto -> string JSON. Barra e aspas escapadas; controle vira espaço.
+_json_texto() {
+    local s="${1:-}"
+    s="${s//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    s="$(printf '%s' "${s}" | tr '\000-\037' ' ')"
+    printf '"%s"' "${s}"
+}
+
+#: Uma ação no diário do root. $1 destino (vazio = não registra) · $2 quem ·
+#: $3 o quê · $4 por quê · $5 antes (JSON) · $6 depois (JSON) · $7 campos a
+#: mais, já em JSON (`"porta": "3-4.1.4"`). Nunca falha: a ação já aconteceu.
+_diario_escrever() {
+    local alvo="${1:-}" linha tamanho
+    [[ -n "${alvo}" ]] || return 0
+    [[ -L "${alvo}" ]] && return 0
+    linha="{\"quando\": $(_json_texto "$(date -Iseconds 2>/dev/null || true)"), \"carimbo\": $(date +%s), \"quem\": $(_json_texto "$2"), \"o_que\": $(_json_texto "$3"), \"por_que\": $(_json_texto "$4"), \"antes\": ${5:-null}, \"depois\": ${6:-null}${7:+, $7}}"
+    install -d -m 0755 "${alvo%/*}" 2>/dev/null || true
+    tamanho="$(stat -c %s "${alvo}" 2>/dev/null || echo 0)"
+    if [[ "${tamanho}" -gt 524288 ]]; then
+        mv -f -- "${alvo}" "${alvo}.1" 2>/dev/null || true
+    fi
+    printf '%s\n' "${linha}" >>"${alvo}" 2>/dev/null || true
+    return 0
+}
+
+#: Onde ESTA execução registra: o gancho, ou o diário real quando a árvore e o
+#: /sys são os de verdade; com raiz de teste e sem gancho, em lugar nenhum.
+_diario_alvo() {
+    if [[ -n "${HEFESTO_RADIO_DIARIO_ROOT:-}" ]]; then
+        printf '%s\n' "${HEFESTO_RADIO_DIARIO_ROOT}"
+    elif [[ "${LIB}" == "${LIB_REAL}" && "${SYSFS}" == "${SYSFS_REAL}" ]]; then
+        printf '%s\n' "${DIARIO_REAL}"
+    fi
+}
+
+_diario() { _diario_escrever "$(_diario_alvo)" "$@"; }
+
 #: Uso/entrada inválida sai com 2 — código distinto de falha operacional, para
 #: a janela saber que o problema é dela e não do rádio.
 _recusar() { _erro "$*"; exit 2; }
@@ -174,6 +263,7 @@ uso: bt_ponte_privilegiada.sh <verbo> [argumentos]
   descobrir  <MAC_ADAPTADOR> <SEGUNDOS>
   parear     <MAC_ADAPTADOR> <MAC_CONTROLE>
   desconectar <MAC_ADAPTADOR> <MAC_CONTROLE>
+  reiniciar-travado
   regra-sudo <USUARIA>
 
   --dry-run como PRIMEIRO argumento: não muda nada, imprime o que faria.
@@ -428,8 +518,46 @@ verbo_esquecer() {
         [[ "${pasta_adap##*/}" =~ ${_MAC_FORMA} ]] || continue
         _apagar "${pasta_adap}/cache/${controle}" "cache SDP"
     done
-    _seco || _registrar "controle ${controle} esquecido do adaptador ${adaptador} (bond + cache SDP)"
+    _enterrar "${adaptador}" "${controle}"
+    if ! _seco; then
+        _registrar "controle ${controle} esquecido do adaptador ${adaptador} (bond + cache SDP + lápide)"
+        _diario "bt-ponte" "esqueceu o controle" "pedido à ponte privilegiada" \
+            "{\"bond\": $(_json_texto "no adaptador")}" \
+            "{\"bond\": null, \"lapide\": true}" \
+            "\"adaptador\": $(_json_texto "${adaptador}"), \"controle\": $(_json_texto "${controle}"), \"pedido_por\": $(_json_texto "${SUDO_USER:-}")"
+    fi
     return 0
+}
+
+#: A LÁPIDE (O-DIARIO-DO-RADIO-01). Quem esquece um bond de propósito escreve
+#: aqui, e o `bt_bonds_autorestore.sh` não o ressuscita de um snapshot de antes
+#: disso — sem ela, um crash do bluetoothd nas 24 h seguintes devolveria o bond
+#: velho, e o controle movido voltaria a ter casa em dois adaptadores. UMA
+#: linha, UM controle num adaptador: o verbo já só aceita um par, e a R6 dela é
+#: que nada se apaga em lote.
+_lapides_alvo() {
+    if [[ -n "${HEFESTO_BT_LAPIDES:-}" ]]; then
+        printf '%s\n' "${HEFESTO_BT_LAPIDES}"
+    elif [[ "${LIB}" == "${LIB_REAL}" ]]; then
+        printf '%s\n' "${LAPIDES_REAIS}"
+    fi
+}
+
+_enterrar() {
+    local adaptador="$1" controle="$2" alvo
+    alvo="$(_lapides_alvo)"
+    [[ -n "${alvo}" ]] || return 0
+    if _seco; then
+        _dizer_seco "gravaria a lápide de ${controle} em ${adaptador}: ${alvo}"
+        return 0
+    fi
+    if [[ -L "${alvo}" ]]; then
+        _erro "recusando a lápide: ${alvo} é link simbólico"
+        return 0
+    fi
+    install -d -m 700 "${alvo%/*}" 2>/dev/null || true
+    printf '%s %s %s\n' "$(date +%s)" "${adaptador}" "${controle}" >>"${alvo}"
+    chmod 600 "${alvo}" 2>/dev/null || true
 }
 
 #: Guarda de forma para TODA remoção: só apaga caminho que é EXATAMENTE
@@ -640,6 +768,181 @@ verbo_desconectar() {
     exit 1
 }
 
+# --- FAMÍLIA 3: o adaptador travado em laço (O-DIARIO-DO-RADIO-01) ----------
+#
+# Em 13/09/2026 um controlador Realtek travou das 01:13 às 18:29: 24.998 vezes
+# «command 0xfc61 tx timeout», uma a cada ~2,5 s, e nada se recuperou sozinho —
+# acabou quando alguém tirou o dongle da porta. Este verbo é esse gesto feito
+# por software: desautoriza e reautoriza a PORTA USB do adaptador (o
+# `authorized` 0 → 1 do sysfs), que desliga o driver e enumera o aparelho de
+# novo.
+#
+# SEM ARGUMENTO, DE PROPÓSITO. Quem decide QUAL adaptador está travado é o
+# journal do KERNEL (`journalctl -k`), que processo nenhum de usuária consegue
+# escrever — o /dev/kmsg é do root. Então a regra do sudoers não tem argumento
+# a casar, e ninguém consegue, por este verbo, reiniciar um adaptador são.
+#
+# AS TRÊS GUARDAS, e a ordem importa:
+#   1. o LAÇO: pelo menos LIMIAR_DO_LACO «command 0x.... tx timeout» do mesmo
+#      hciN na janela — uma ocorrência solta acontece em adaptador são;
+#   2. a PORTA, nunca o hciN: o hciN muda de número entre boots e entre
+#      replugs. Ele só serve para achar a porta NESTE instante; dali em diante
+#      quem manda é o caminho do barramento (`3-4.1.4`), e o hciN de agora
+#      tem de sair DELA e bater com o que o journal acusou;
+#   3. NINGUÉM CONECTADO: com qualquer conexão de pé no adaptador (os nós
+#      `hciN:<handle>` do kernel), o verbo recusa. Um adaptador em laço não tem
+#      controle vivo — se tem, a leitura está errada, e errar aqui derruba a
+#      mesa dela.
+# E o freio: uma porta só é reiniciada uma vez a cada INTERVALO_ENTRE_RESETS_S.
+# Se o laço voltar depois disso, o verbo não insiste — o que resta é a mão
+# dela, e o diário diz qual porta.
+LIMIAR_DO_LACO=5
+JANELA_DO_LACO_S=150
+INTERVALO_ENTRE_RESETS_S=900
+_PORTA_FORMA='^[0-9]{1,3}-[0-9]{1,3}(\.[0-9]{1,3}){0,6}$'
+
+#: As linhas do kernel na janela. O `-k` é o transporte do kernel: é isso que
+#: impede alguém de fabricar um laço com `logger`.
+_linhas_do_kernel() {
+    if [[ -n "${HEFESTO_BT_JOURNAL:-}" ]]; then
+        cat -- "${HEFESTO_BT_JOURNAL}" 2>/dev/null || true
+        return 0
+    fi
+    command -v journalctl >/dev/null 2>&1 || return 0
+    journalctl -k -b --since "-${JANELA_DO_LACO_S}s" -o cat --no-pager 2>/dev/null || true
+}
+
+#: `hciN QUANTOS` de quem passou do limiar, um por linha.
+_hcis_em_laco() {
+    _linhas_do_kernel \
+        | grep -oiE 'hci[0-9]+: command 0x[0-9a-f]{4} tx timeout' \
+        | cut -d: -f1 | sort | uniq -c \
+        | awk -v limiar="${LIMIAR_DO_LACO}" '$1 >= limiar { print $2, $1 }' || true
+}
+
+#: hciN -> o caminho USB do adaptador (`3-4.1.4`). Falha se não for USB, ou se
+#: o caminho não tiver a forma de porta.
+_porta_do_hci() {
+    local hci="$1" real interface aparelho porta
+    real="$(readlink -f -- "${SYSFS}/class/bluetooth/${hci}" 2>/dev/null)" || return 1
+    [[ "${real}" == */bluetooth/"${hci}" ]] || return 1
+    interface="${real%/bluetooth/*}"
+    aparelho="${interface%/*}"
+    porta="${aparelho##*/}"
+    [[ "${porta}" =~ ${_PORTA_FORMA} ]] || return 1
+    [[ "${interface##*/}" == "${porta}:"* ]] || return 1
+    printf '%s\n' "${porta}"
+}
+
+#: O hciN que mora AGORA na porta — lido a partir da porta, não do nome.
+_hci_da_porta() {
+    local porta="$1" achado
+    for achado in "${SYSFS}/bus/usb/devices/${porta}/${porta}":*/bluetooth/hci*; do
+        [[ -e "${achado}" ]] || continue
+        [[ "${achado##*/}" =~ ^hci[0-9]+$ ]] || continue
+        printf '%s\n' "${achado##*/}"
+        return 0
+    done
+    return 1
+}
+
+_ha_conexao() {
+    local hci="$1" porta="$2" no
+    for no in "${SYSFS}/class/bluetooth/${hci}":* \
+              "${SYSFS}/bus/usb/devices/${porta}/${porta}":*/bluetooth/"${hci}/${hci}":*; do
+        [[ -e "${no}" ]] && return 0
+    done
+    return 1
+}
+
+_estampas() { printf '%s\n' "${HEFESTO_PONTE_STAMPS:-/run/hefesto-bt-ponte}"; }
+
+verbo_reiniciar_travado() {
+    local linha hci quantos porta agora_hci carimbo ultimo agora pausa espera
+    local recusou=0 achou=0 volta
+    if [[ "${SYSFS}" == "${SYSFS_REAL}" && "$(id -u)" -ne 0 ]]; then
+        _erro "'reiniciar-travado' requer root (é a ponte privilegiada)"
+        exit 1
+    fi
+    while read -r hci quantos; do
+        [[ "${hci}" =~ ^hci[0-9]+$ ]] || continue
+        achou=1
+        if ! porta="$(_porta_do_hci "${hci}")"; then
+            printf 'recusado\t-\t%s\tsem porta USB\n' "${hci}"
+            _diario "bt-ponte" "recusou reiniciar o adaptador" \
+                "${quantos} «command tx timeout» seguidos, mas o ${hci} não tem porta USB legível" \
+                "{\"hci\": $(_json_texto "${hci}"), \"timeouts\": ${quantos}}" null \
+                "\"familia\": \"3\""
+            recusou=1
+            continue
+        fi
+        agora_hci="$(_hci_da_porta "${porta}" || true)"
+        if [[ "${agora_hci}" != "${hci}" ]]; then
+            printf 'recusado\t%s\t%s\to hci da porta agora é %s\n' "${porta}" "${hci}" "${agora_hci:-nenhum}"
+            recusou=1
+            continue
+        fi
+        if _ha_conexao "${hci}" "${porta}"; then
+            printf 'recusado\t%s\t%s\thá conexão de pé\n' "${porta}" "${hci}"
+            _diario "bt-ponte" "recusou reiniciar o adaptador" \
+                "o kernel acusa laço, mas há conexão de pé nele — reiniciar derrubaria quem está ligado" \
+                "{\"hci\": $(_json_texto "${hci}"), \"timeouts\": ${quantos}}" null \
+                "\"porta\": $(_json_texto "${porta}"), \"familia\": \"3\""
+            recusou=1
+            continue
+        fi
+        carimbo="$(_estampas)/reset-${porta}"
+        agora="$(date +%s)"
+        ultimo="$(cat -- "${carimbo}" 2>/dev/null || echo 0)"
+        [[ "${ultimo}" =~ ^[0-9]+$ ]] || ultimo=0
+        if (( agora - ultimo < INTERVALO_ENTRE_RESETS_S )); then
+            printf 'segurado\t%s\t%s\treiniciado há %ss\n' "${porta}" "${hci}" "$((agora - ultimo))"
+            _diario "bt-ponte" "não insistiu no reinício" \
+                "o adaptador voltou a travar depois de reiniciado há $(( (agora - ultimo) / 60 )) min — tire e ponha o adaptador da porta ${porta}" \
+                "{\"hci\": $(_json_texto "${hci}"), \"timeouts\": ${quantos}}" null \
+                "\"porta\": $(_json_texto "${porta}"), \"familia\": \"3\", \"frase\": $(_json_texto "O adaptador da porta ${porta} travou de novo. Tire e ponha ele.")"
+            continue
+        fi
+        if _seco; then
+            _dizer_seco "reiniciaria a porta ${porta} (${hci}, ${quantos} timeouts): authorized 0 -> 1"
+            continue
+        fi
+        pausa="${HEFESTO_USB_PAUSA_S:-2}"
+        [[ "${pausa}" =~ ^[0-9]+$ ]] || pausa=2
+        if ! printf '0' >"${SYSFS}/bus/usb/devices/${porta}/authorized" 2>/dev/null; then
+            printf 'recusado\t%s\t%s\to kernel não aceitou desautorizar\n' "${porta}" "${hci}"
+            recusou=1
+            continue
+        fi
+        sleep "${pausa}"
+        printf '1' >"${SYSFS}/bus/usb/devices/${porta}/authorized" 2>/dev/null || true
+        install -d -m 700 "$(_estampas)" 2>/dev/null || true
+        printf '%s\n' "${agora}" >"${carimbo}" 2>/dev/null || true
+        #: A volta: o adaptador reaparece na MESMA porta, possivelmente com
+        #: outro hciN. Esperar é o que separa «reiniciei» de «reiniciei e ele
+        #: voltou».
+        espera="${HEFESTO_USB_ESPERA_S:-30}"
+        [[ "${espera}" =~ ^[0-9]+$ ]] || espera=30
+        volta=""
+        while :; do
+            volta="$(_hci_da_porta "${porta}" || true)"
+            [[ -n "${volta}" || "${espera}" -le 0 ]] && break
+            sleep 1
+            espera=$((espera - 1))
+        done
+        printf 'reiniciado\t%s\t%s\t%s\n' "${porta}" "${hci}" "${quantos}"
+        _registrar "adaptador da porta ${porta} (${hci}) reiniciado: ${quantos} «command tx timeout» seguidos"
+        _diario "bt-ponte" "reiniciou o adaptador" \
+            "${quantos} «command tx timeout» seguidos no ${hci}: o controlador travou em laço" \
+            "{\"hci\": $(_json_texto "${hci}"), \"timeouts\": ${quantos}}" \
+            "{\"hci\": $(_json_texto "${volta}"), \"voltou\": $([[ -n "${volta}" ]] && echo true || echo false)}" \
+            "\"porta\": $(_json_texto "${porta}"), \"familia\": \"3\", \"frase\": $(_json_texto "O adaptador da porta ${porta} travou e foi reiniciado.")"
+    done < <(_hcis_em_laco)
+    [[ "${achou}" -eq 1 ]] || return 0
+    [[ "${recusou}" -eq 0 ]] || exit 1
+    return 0
+}
+
 #: DONO ÚNICO da regra do sudoers. O `install.sh` só canaliza a saída daqui
 #: para o `visudo -c`. Verbo novo no `case` lá embaixo tem de aparecer aqui, ou
 #: a janela não consegue chamá-lo — que é o sentido certo da falha.
@@ -669,6 +972,7 @@ Cmnd_Alias HEFESTO_BT_PONTE = \\
     ${ALVO_INSTALADO} esquecer ${m} ${m}, \\
     ${ALVO_INSTALADO} parear ${m} ${m}, \\
     ${ALVO_INSTALADO} desconectar ${m} ${m}, \\
+    ${ALVO_INSTALADO} reiniciar-travado, \\
     ${ALVO_INSTALADO} descobrir ${m} [0-9], \\
     ${ALVO_INSTALADO} descobrir ${m} [0-9][0-9], \\
     ${ALVO_INSTALADO} descobrir ${m} [0-9][0-9][0-9]
@@ -726,6 +1030,10 @@ case "${VERBO}" in
         _mac "${1}" 'MAC do adaptador'; ARG_ADAPTADOR="${VALIDADO}"
         _mac "${2}" 'MAC do controle';  ARG_CONTROLE="${VALIDADO}"
         verbo_desconectar "${ARG_ADAPTADOR}" "${ARG_CONTROLE}"
+        ;;
+    reiniciar-travado)
+        [[ $# -eq 0 ]] || _recusar "reiniciar-travado não recebe argumento (quem escolhe a porta é o kernel)"
+        verbo_reiniciar_travado
         ;;
     regra-sudo)
         [[ $# -eq 1 ]] || _recusar "regra-sudo recebe exatamente 1 argumento (nome da usuária)"
