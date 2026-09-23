@@ -70,7 +70,13 @@ MAPA = RAIZ / "docs" / "data" / "donos-de-comportamento.csv"
 #:
 #: 21/09/2026 — 2.301: a `_VigiaDaSteam` (96 linhas) saiu da aba 07 com os
 #: botões que só a Steam tinha, e a duplicata dela saiu do mapa junto.
-TETO_DE_LINHAS_DUPLICADAS = 2301
+#:
+#: 23/09/2026 — 2.101: a régua de Desempenho da aba 08 (`_regua_do_radio`, a
+#: duplicata `regua.do_radio` de 200 linhas) saiu com a seção antiga
+#: (TRANSPLANTE-DA-SECAO-01), e a linha `radio.ocupacao.para_a_tela` saiu com a
+#: ponte `_adaptadores`: a tela deixou de fazer a conta da ocupação e passou a
+#: LER a do daemon (`radio_ar`, `radio_governador`). As duas saíram do mapa.
+TETO_DE_LINHAS_DUPLICADAS = 2101
 
 #: Onde a tela nova mora. Um símbolo SO-GTK que apareça aqui deixou de ser
 #: SO-GTK — é o item 3 do cabeçalho.

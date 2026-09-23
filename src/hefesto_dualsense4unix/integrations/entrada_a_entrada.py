@@ -1057,7 +1057,7 @@ def nome_da_porta(
         nome = nome_do_lugar(chave, maquina=documento, controladores=controladores)
         if nome or so_o_declarado:
             return nome
-        return _entrada_pelo_devpath(partes[1])
+        return rotulo_do_numero(partes[1])
     barramentos = (
         controladores if controladores is not None else _controladores_do_sistema()
     )
@@ -1071,12 +1071,18 @@ def nome_da_porta(
         return f"{PALAVRA_DA_ENTRADA} {numero}"
     if so_o_declarado or not FORMA_DO_CAMINHO.match(chave):
         return None
-    return _entrada_pelo_devpath(chave.partition("-")[2])
+    return rotulo_do_numero(chave.partition("-")[2])
 
 
-def _entrada_pelo_devpath(devpath: str) -> str | None:
-    """«Entrada 4.1.4» — o nome de quem ela ainda não nomeou nem numerou."""
-    return f"{PALAVRA_DA_ENTRADA} {devpath}" if devpath else None
+def rotulo_do_numero(numero: str) -> str | None:
+    """«Entrada 3», ou «Entrada 4.1.4» para quem ela ainda não nomeou nem
+    numerou — a palavra do dono diante do número (ou do ``devpath``).
+
+    PÚBLICA PARA QUE NINGUÉM MAIS COMPONHA A PALAVRA: o gerador da aba 08 põe
+    o número do desenho aprovado no cartão, e compor ali seria o segundo dono
+    que a ``test_a_costura_da_onda_2`` recusa (TRANSPLANTE-DA-SECAO-01).
+    """
+    return f"{PALAVRA_DA_ENTRADA} {numero}" if numero else None
 
 
 def rotulo_da_entrada(
@@ -1099,7 +1105,7 @@ def rotulo_da_entrada(
     numero = _numero_conhecido(documento, lugar, "", barramentos)
     if numero is not None:
         return f"{PALAVRA_DA_ENTRADA} {numero}"
-    return _entrada_pelo_devpath(partes[1])
+    return rotulo_do_numero(partes[1])
 
 
 def face_do_lugar(
@@ -1354,4 +1360,5 @@ __all__ = [
     "nome_do_lugar",
     "o_laco",
     "rotulo_da_entrada",
+    "rotulo_do_numero",
 ]

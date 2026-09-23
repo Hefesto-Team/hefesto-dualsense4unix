@@ -323,21 +323,20 @@ def test_a_frase_nova_diz_o_que_o_produto_faz() -> None:
 def test_o_campo_do_nome_do_adaptador_tem_gesto(pacote) -> None:
     """Ela digita e o produto tem onde ouvir — o defeito da §3 desta aba.
 
-    ATÉ HOJE a célula era `contenteditable` e mais nada: nenhum gesto,
-    nenhum chamador de `apelido_do_dongle` na interface nova. *Ela vai digitar e
-    perder.*
-
-    A RÉGUA LÊ A TABELA QUE O PRODUTO EMITE, não o gerador — e aceita a mesa
-    vazia, porque uma bancada sem adaptador não é defeito desta aba.
+    DESDE 23/09/2026 o campo é o `input.lugar-nome` do cartão de cada adaptador
+    (TRANSPLANTE-DA-SECAO-01), e o gesto grava pelo dono do nome do LUGAR
+    (`grava="dar_nome"`). A RÉGUA LÊ O CARTÃO QUE O PRODUTO EMITE, não o gerador.
     """
     from hefesto_dualsense4unix.interface.pacotes import GESTOS
 
     assert ("08-conexoes.html", pacote.GESTO_DO_APELIDO) in GESTOS
-    tabela = pacote._html_dos_adaptadores()
-    linhas = re.findall(r'<span class="renomeia"[^>]*>', tabela)
-    for linha in linhas:
-        assert f'data-hef-gesto="{pacote.GESTO_DO_APELIDO}"' in linha
-        assert "data-caminho=" in linha
+    cartao = pacote.html_do_lugar(
+        {"id": "E8473A000009", "lugar": "pci-0000:00:14.0-usb-0:1.2", "nome": "",
+         "entrada": "Entrada 1.2"}, {"lugares": [], "aparelhos": []})
+    campo = re.search(r'<input class="lugar-nome"[^>]*>', cartao)
+    assert campo, cartao[:300]
+    assert f'data-gesto="{pacote.GESTO_DO_APELIDO}"' in campo.group(0)
+    assert 'data-alvo="E8473A000009"' in campo.group(0)
 
 
 def test_renomear_recusa_dizendo_sem_o_alvo(pacote) -> None:
@@ -350,63 +349,60 @@ def test_renomear_recusa_dizendo_sem_o_alvo(pacote) -> None:
 
 
 def test_renomear_nao_escreve_quando_o_nome_nao_mudou(pacote, monkeypatch) -> None:
-    """O mesmo nome não vai ao barramento — a regra é a da janela estável.
+    """O mesmo nome não é gravado de novo — a regra é a da janela estável.
 
-    `secao_mesa._ao_salvar_o_nome`: *"Sem ela, cada troca de aba reescreveria o
-    alias dos três adaptadores com o valor que eles já têm — escrita à toa num
-    barramento de sistema, e uma delas cairia bem em cima do prefixo que segura
-    o Pro."*
+    E O CLIQUE QUE SÓ POSICIONA O CURSOR NÃO GRAVA: o ouvinte do piloto ouve
+    `click` e `change` no mesmo campo, e o nome só vale no `change`.
 
-    MORDE: sem a comparação, este teste vê o escritor ser chamado.
+    MORDE: sem a comparação, este teste vê o escritor ser chamado com o nome
+    que já estava lá.
     """
     from hefesto_dualsense4unix.interface.pacotes import GESTOS
 
-    from hefesto_dualsense4unix.integrations.apelido_do_dongle import Renomeacao
+    chamou: list[tuple[str, str]] = []
 
-    chamou: list[str] = []
+    class _Feito:
+        gravou = True
 
-    def _escreveu(endereco: str, nome: str) -> Renomeacao:
-        chamou.append(nome)
-        return Renomeacao(endereco=endereco, nome=nome, aplicado=True)
+    def _escreveu(lugar: str, nome: str) -> _Feito:
+        chamou.append((lugar, nome))
+        return _Feito()
 
-    monkeypatch.setattr(pacote, "_endereco_e_nome_do_adaptador",
-                        lambda caminho: ("AA:BB:CC:00:00:01", "Sala"))
-    monkeypatch.setattr(pacote, "_gravar_o_apelido", _escreveu)
+    monkeypatch.setattr(pacote, "_CENA_NA_TELA", {"lugares": [
+        {"id": "E8473A000009", "lugar": "pci-0000:00:14.0-usb-0:1.2", "nome": "Sala"}]})
+    monkeypatch.setattr(pacote, "_gravar_o_nome", _escreveu)
     gesto = GESTOS[("08-conexoes.html", pacote.GESTO_DO_APELIDO)]
-    gesto(None, {"caminho": "3-1.2", "texto": "Sala"}, None)
+    assert gesto(None, {"alvo": "E8473A000009", "valor": "Outro", "evento": "click"},
+                 None) == {"armou": True}
+    gesto(None, {"alvo": "E8473A000009", "valor": "Sala", "evento": "change"}, None)
     assert chamou == []
-    gesto(None, {"caminho": "3-1.2", "texto": "Sala do fundo"}, None)
-    assert chamou == ["Sala do fundo"]
+    gesto(None, {"alvo": "E8473A000009", "valor": "Sala do fundo", "evento": "change"}, None)
+    assert chamou == [("pci-0000:00:14.0-usb-0:1.2", "Sala do fundo")]
 
 
-def test_o_escritor_do_apelido_chama_o_dono_com_a_assinatura_dele(
+def test_o_escritor_do_nome_chama_o_dono_com_a_assinatura_dele(
     pacote, monkeypatch
 ) -> None:
     """A ASSINATURA, e não só o nome — a cicatriz de 04/09/2026.
 
     *"Duas vezes em 04/09 um gesto passou VERDE sem gravar um byte: uma porque o
     dicionário ia como `timeout` posicional, outra porque `_run_blocking` não
-    aceita keywords."* Aqui a régua fixa o contrato: `renomear_o_dongle` recebe
-    o BD Address e o nome POSICIONAIS, e a leitura de mão em `dongles=` — que é
-    a economia de varredura que o dono documenta.
+    aceita keywords."* Aqui a régua fixa o contrato do escritor ÚNICO de
+    23/09/2026: `entrada_a_entrada.dar_nome(lugar, nome)`, os dois posicionais.
     """
-    from hefesto_dualsense4unix.integrations import apelido_do_dongle
+    from hefesto_dualsense4unix.integrations import entrada_a_entrada
 
     visto: dict[str, object] = {}
 
-    def _falso(endereco, nome, **kw):
-        visto.update(endereco=endereco, nome=nome, **kw)
-        return apelido_do_dongle.Renomeacao(
-            endereco=endereco, nome=nome, aplicado=True)
+    def _falso(lugar, nome, **kw):
+        visto.update(lugar=lugar, nome=nome, **kw)
+        return entrada_a_entrada.NomeDado(lugar, nome, True, "")
 
-    monkeypatch.setattr(apelido_do_dongle, "renomear_o_dongle", _falso)
-    monkeypatch.setattr(pacote, "_dongles", lambda recarregar=False: ())
-    feito = pacote._gravar_o_apelido("AA:BB:CC:00:00:01", "Sala do fundo")
-    assert feito.aplicado
-    assert visto["endereco"] == "AA:BB:CC:00:00:01"
-    assert visto["nome"] == "Sala do fundo"
-    assert "dongles" in visto, (
-        "a leitura de mão não foi passada — o dono varreria o barramento de novo")
+    monkeypatch.setattr(entrada_a_entrada, "dar_nome", _falso)
+    monkeypatch.setattr(pacote, "_reler_a_declaracao", lambda: None)
+    feito = pacote._gravar_o_nome("pci-0000:00:14.0-usb-0:1.2", "Sala do fundo")
+    assert feito.gravou
+    assert visto == {"lugar": "pci-0000:00:14.0-usb-0:1.2", "nome": "Sala do fundo"}
 
 
 # ---------------------------------------------------------------------------
@@ -734,58 +730,37 @@ def test_o_mais_n_do_exame_cala_sem_travessao(pacote) -> None:
     que é ruído com cara de dado — e é para isso que o `monta.NADA_A_DIZER`
     existe, com a folha escondendo a linha por `:has(.nada)`.
 
-    MORDE: mande `""` em vez do `NADA_A_DIZER` e as duas asserções reprovam.
+    O `vizinho-mais` SAIU EM 23/09/2026 com a fileira dos vizinhos
+    (TRANSPLANTE-DA-SECAO-01): os vizinhos viraram selos na régua do espectro,
+    que não tem teto.
+
+    MORDE: mande `""` em vez do `NADA_A_DIZER` e a asserção reprova.
     """
     nada = pacote._monta().NADA_A_DIZER
-    fora = pacote._o_que_nao_coube([1] * pacote.TETO_DO_EXAME,
-                                   [1] * pacote.TETO_DE_VIZINHOS)
-    assert fora["exame-mais"] == nada, fora
-    assert fora["vizinho-mais"] == nada, fora
-    assert all(v for v in fora.values()), (
-        "uma das chaves veio VAZIA — o piloto a traduziria em `—`")
+    fora = pacote._o_que_nao_coube([1] * pacote.TETO_DO_EXAME)
+    assert fora == {"exame-mais": nada}, fora
 
 
-def test_cada_mais_n_conta_a_propria_lista(pacote) -> None:
-    """Passo 6 — a conta da lista errada, que esta aba já cometeu uma vez.
+def test_o_mais_n_do_exame_nao_conta_o_que_rola(pacote) -> None:
+    """Passo 6 — o `+N` do exame CALOU em 19/09/2026, e não é regressão.
 
-    `gui.aba_conexoes.sobraram` está citado em quatro lugares desta árvore como
-    dono desta frase, e ele conta o ACORDEÃO. Aqui o `+N` que sobrou conta a
-    lista que ele legenda.
+    A decisão 08-Q7 dela foi ATENDIDA MELHOR: o piloto passou a clonar o molde
+    da linha (`hefesto_vivo.BOOTSTRAP`, `data-hef-molde`) e todo achado aparece
+    — palavra dela no mesmo dia, *a lista rola, sem teto*.
 
-    O `+N` DO EXAME CALOU EM 19/09/2026, E NÃO É REGRESSÃO. A decisão 08-Q7
-    dela foi ATENDIDA MELHOR: o piloto passou a clonar o molde da linha
-    (`hefesto_vivo.BOOTSTRAP`, `data-hef-molde`) e todo achado aparece —
-    palavra dela no mesmo dia, *a lista rola, sem teto*. Uma lista que não
-    sobra não tem o que legendar, e `exame-mais` devolve `NADA_A_DIZER` em
-    todo tique.
-
-    Esta régua ficou medindo o teto que ela mandou tirar, e reprovou por um dia
-    inteiro com o produto fazendo exatamente o que ela pediu. É o padrão que
-    esta casa já nomeou: *a régua media o mundo de ontem*.  (noqa-acento: verbo medir, imperfeito)
-
-    MORDE, e continua mordendo o que importa: faça o `+N` dos vizinhos contar a
-    lista do exame e a asserção troca de número. E se alguém devolver o teto do
-    exame sem reabrir esta régua, a primeira asserção pega.
+    MORDE: se alguém devolver o teto do exame sem reabrir esta régua, ela pega.
     """
-    quantos_no_exame = pacote.TETO_DO_EXAME + 2
-    quantos_vizinhos = pacote.TETO_DE_VIZINHOS + 1
-    fora = pacote._o_que_nao_coube([1] * quantos_no_exame, [1] * quantos_vizinhos)
+    fora = pacote._o_que_nao_coube([1] * (pacote.TETO_DO_EXAME + 2))
     assert fora["exame-mais"] == pacote._monta().NADA_A_DIZER, (
         "o `+N` do exame voltou a falar. Se o teto voltou de propósito, esta "
         "régua tem de voltar junto — e a decisão dela de 19/09 («a lista rola, "
         "sem teto») precisa de uma nota datada dizendo o que caducou. "
         f"veio: {fora}"
     )
-    assert f"+{quantos_vizinhos - pacote.TETO_DE_VIZINHOS} " in fora["vizinho-mais"], fora
-    assert "rádio vizinho" in fora["vizinho-mais"], fora
-    assert "achado" not in fora["vizinho-mais"], (
-        "o `+N` dos vizinhos está legendando a lista do EXAME — é a conta "
-        f"trocada que esta aba já cometeu uma vez. veio: {fora}"
-    )
 
 
 def test_o_desenho_tem_onde_dizer_o_que_nao_coube() -> None:
-    """E os dois endereços têm de existir na página — senão a conta não chega.
+    """E o endereço tem de existir na página — senão a conta não chega.
 
     A peça é a `monta.ressalva`, que a folha esconde por `:empty` e `:has(.nada)`
     — a linha só existe no dia em que sobra.
@@ -793,13 +768,12 @@ def test_o_desenho_tem_onde_dizer_o_que_nao_coube() -> None:
     from hefesto_dualsense4unix.interface import onde
 
     html = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
-    for campo in ("exame-mais", "vizinho-mais"):
-        achado = re.search(rf'<div class="ressalva" data-campo="{campo}"[^>]*>', html)
-        assert achado, f"o desenho não tem onde dizer o `{campo}`"
-        assert 'data-hef-alvo="html"' in achado.group(0), achado.group(0)
+    achado = re.search(r'<div class="ressalva" data-campo="exame-mais"[^>]*>', html)
+    assert achado, "o desenho não tem onde dizer o `exame-mais`"
+    assert 'data-hef-alvo="html"' in achado.group(0), achado.group(0)
     assert ".ressalva:has(.nada){display:none}" in html, (
-        "a folha perdeu a peça que esconde a linha sem conteúdo — os dois `+N` "
-        "passariam a ocupar altura todo dia")
+        "a folha perdeu a peça que esconde a linha sem conteúdo — o `+N` "
+        "passaria a ocupar altura todo dia")
 
 
 def test_o_veredito_continua_cego_para_a_calada(pacote, cena, mesa) -> None:
@@ -1020,94 +994,26 @@ def test_sem_radio_fragil_a_linha_some(pacote) -> None:
     assert pacote._frase_do_radio_fragil({"native_bt_fragil": False}) == nada
 
 
-def test_as_quatro_ressalvas_novas_tem_endereco_na_pagina() -> None:
-    """As quatro linhas existem no desenho, com o alvo `html`.
+def test_as_ressalvas_tem_endereco_na_pagina() -> None:
+    """As linhas existem no desenho, com o alvo `html`.
 
     A RÉGUA COBRA O ENDEREÇO, não a frase: a frase é do dono e muda quando ele
     mudar; o que não pode sumir é o lugar onde ela cabe. Endereço que some é
-    campo que o piloto não acha e escreve zero — calado, que é como os quatro
-    viviam até hoje.
+    campo que o piloto não acha e escreve zero.
 
-    MORDE: tire uma das quatro do gerador, regere, e a linha dela cai aqui.
+    ERAM QUATRO ATÉ 23/09/2026: `hub-em-comum` e `gabinete-contagens` saíram com
+    a tabela dos adaptadores (TRANSPLANTE-DA-SECAO-01) — o «junto» do cartão e
+    o selo de cada porta dizem o que elas diziam, no lugar do adaptador.
+
+    MORDE: tire uma das duas do gerador, regere, e a linha dela cai aqui.
     """
     from hefesto_dualsense4unix.interface import onde
 
     html = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
-    for campo in ("sem-driver", "radio-fragil", "hub-em-comum",
-                  "gabinete-contagens"):
+    for campo in ("sem-driver", "radio-fragil"):
         achado = re.search(rf'<div class="ressalva" data-campo="{campo}"[^>]*>', html)
         assert achado, f"o desenho não tem onde dizer o `{campo}`"
         assert 'data-hef-alvo="html"' in achado.group(0), achado.group(0)
-
-
-def test_o_hub_em_comum_e_as_contagens_saem_dos_donos(pacote) -> None:
-    """As duas frases são de `secao_mesa`, e o produto NÃO escolhe entre elas.
-
-    A REGRA DAS CONTAGENS É A QUE MAIS IMPORTA: o que o firmware conta e o que o
-    kernel conta vão os DOIS, lado a lado. Escolher um desenharia um gabinete
-    que ninguém tem, e ela procuraria na traseira buracos que o mapa não mostra.
-
-    MORDE: faça `_frases_do_gabinete` devolver só a primeira linha e a segunda
-    asserção cai; troque o `<br>` por um espaço e a terceira cai.
-    """
-    from hefesto_dualsense4unix.app.actions.config.secao_mesa import (
-        _linhas_do_gabinete,
-    )
-
-    gabinete = {
-        "contagens": {
-            "firmware": {"valor": 5, "de_onde_sei": "lido-do-firmware"},
-            "kernel_buracos": {"valor": 15, "de_onde_sei": "lido-do-kernel"},
-        }
-    }
-    esperadas = [f for f in _linhas_do_gabinete(gabinete) if f]
-    assert len(esperadas) >= 2, "o dono não deu as duas contagens — a cena mudou"
-    antes = pacote._GABINETE
-    try:
-        pacote._GABINETE = gabinete
-        saiu = pacote._frases_do_gabinete()
-    finally:
-        pacote._GABINETE = antes
-    for frase in esperadas:
-        assert frase in saiu, f"a linha do gabinete perdeu {frase!r}"
-    assert saiu.count("<br>") == len(esperadas) - 1, saiu
-
-
-def test_sem_gabinete_json_a_linha_das_contagens_some(pacote) -> None:
-    """Primeira instalação não tem `gabinete.json`, e a linha não nasce.
-
-    Firmware é FONTE, nunca premissa — e uma linha que só sabe dizer "não sei"
-    ocupa a largura que esta aba não tem.
-
-    MORDE: devolva `""` em vez do marcador e a linha passa a ocupar altura com
-    um travessão dentro.
-    """
-    nada = str(pacote._monta().NADA_A_DIZER)
-    antes = pacote._GABINETE
-    try:
-        pacote._GABINETE = {}
-        assert pacote._frases_do_gabinete() == nada
-    finally:
-        pacote._GABINETE = antes
-
-
-def test_a_regua_do_radio_recebe_a_chave_crua_do_transporte(pacote) -> None:
-    """`_da_mesa_para_a_regua` carrega `transporte`, e sem ele a régua zera.
-
-    O DEFEITO MEDIDO (06/09/2026): a costura da ONDA B trocou o
-    `c["via"] == "BT"` de `_regua_do_radio` por `_e_radio(c)`, e o `c` de lá é o
-    dicionário que esta função devolve — que **nunca carregou `transporte`**.
-    `no_radio` ficava sempre vazio, e a régua de Desempenho mostrava ZERO
-    controle no rádio com o controle no rádio. É o sintoma exato que o
-    comentário da troca dizia estar prevenindo.
-
-    MORDE: tire a chave `transporte` do dicionário e `_e_radio` responde `False`
-    sobre um controle que está no rádio.
-    """
-    m = {"jogador": 2, "nome": "Galactic Purple", "via": "rádio",
-         "transporte": "bt", "cor": "galactic-purple", "uniq": "aa:bb:cc:00:00:02"}
-    saiu = pacote._da_mesa_para_a_regua(m, set())
-    assert pacote._e_radio(saiu), (
-        "a régua do rádio não reconhece o controle que está NO rádio — a chave "
-        "crua não viajou junto com a palavra")
-    assert saiu["via"] == "rádio", "a palavra da tela se perdeu no caminho"
+    for saiu in ("hub-em-comum", "gabinete-contagens"):
+        assert f'data-campo="{saiu}"' not in html, (
+            f"`{saiu}` voltou à página sem dono no pacote")

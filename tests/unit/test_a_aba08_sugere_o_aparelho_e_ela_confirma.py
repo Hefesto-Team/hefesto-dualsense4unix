@@ -216,12 +216,17 @@ def _declarou(ponte: PonteDeMentira) -> list[dict[str, Any]]:
 
 @pytest.fixture
 def um_vizinho(a08, monkeypatch):
-    """UM rádio pintado na posição 0, e o disco relido vira dublê.
+    """UM rádio na tela, e o disco relido vira dublê.
+
+    DESDE 23/09/2026 (TRANSPLANTE-DA-SECAO-01) o vizinho não é mais uma posição
+    numa fileira (`_VIZINHOS[v]`): é um selo na régua do espectro com
+    `data-alvo` = `vid:pid`, e o gesto confere o alvo contra a cena que foi à
+    tela (`_CENA_NA_TELA["vizinhos"]`).
 
     `_reler_a_declaracao` abre o `maquina.json` de quem roda; num teste
     unitário isso é ler o arquivo DELA sem precisar.
     """
-    monkeypatch.setattr(a08, "_VIZINHOS", ("3554:fa09",), raising=False)
+    monkeypatch.setattr(a08, "_CENA_NA_TELA", {"vizinhos": [{"id": "3554:fa09"}]})
     monkeypatch.setattr(a08, "_reler_a_declaracao", lambda: None)
 
 
@@ -230,7 +235,7 @@ def _clicar(pac, a08, ponte, valor: str) -> None:
     assert fn is not None, "vizinho-o-que-e perdeu o dono"
     ctx = pac.Contexto(state={"active_profile": "regua"}, mesa=[],
                        conectados=[], estados={})
-    fn(ctx, {"v": "0", "valor": valor}, ponte)
+    fn(ctx, {"alvo": "3554:fa09", "valor": valor, "evento": "click"}, ponte)
 
 
 def test_o_gesto_nao_grava_a_sugestao_como_resposta_dela(pac, a08, um_vizinho):
@@ -281,24 +286,46 @@ def test_a_palavra_que_nao_e_da_lista_continua_recusando(pac, a08, um_vizinho):
 # ---------------------------------------------------------------------------
 # 5. A TELA TEM ONDE POUSAR — o endereço existe na página, e é UM por bloco
 # ---------------------------------------------------------------------------
-def test_a_pagina_tem_o_endereco_da_pergunta_uma_vez_por_vizinho():
-    """`vizinho-pergunta` mora na PRIMEIRA `<option>` de cada `<select>`.
+def test_o_toque_no_selo_so_abre_e_o_rotulo_de_fora_da_tela_recusa(pac, a08, um_vizinho):
+    """O selo não carrega resposta; e um alvo que não foi à tela não grava.
 
-    Emitir um endereço que a página não tem é o defeito que esta aba já tem dez
-    vezes (medido em 03/09) — o pacote fala, `achar()` não encontra ninguém, e
-    o valor morre calado. A régua conta CONTRA `vizinho-tipo`, que é o dono da
-    caixa: um bloco de vizinho tem exatamente uma pergunta.
+    ERA `test_a_pagina_tem_o_endereco_da_pergunta_uma_vez_por_vizinho`, que
+    contava a `<option data-campo="vizinho-pergunta">` de cada `<select>` — a
+    fileira dos vizinhos saiu em 23/09/2026 (TRANSPLANTE-DA-SECAO-01). O
+    endereço de hoje é o selo (`data-gesto="vizinho-o-que-e" data-alvo`) e o
+    painel «O que é este rádio?», cujos botões levam a resposta no `value`.
+
+    MORDE: tire o `if not rotulo` do gesto e o toque no selo cai no `raise`;
+    tire a conferência do alvo e o segundo caso grava.
+    """
+    ponte = PonteDeMentira()
+    fn = pac.gesto_da_pagina(PAGINA, "vizinho-o-que-e")
+    ctx = pac.Contexto(state={}, mesa=[], conectados=[], estados={})
+    assert fn(ctx, {"alvo": "3554:fa09", "valor": "", "evento": "click"}, ponte) == {
+        "armou": True}
+    with pytest.raises(ValueError):
+        fn(ctx, {"alvo": "046d:08e5", "valor": "Webcam", "evento": "click"}, ponte)
+    assert _declarou(ponte) == []
+
+
+def test_a_pagina_tem_o_selo_e_o_painel_de_cada_vizinho():
+    """A tela tem onde pousar: um selo por vizinho e um molde de respostas.
+
+    Emitir um gesto que a página não tem é o defeito que esta aba já teve dez
+    vezes (medido em 03/09). A régua conta os selos CONTRA os moldes do painel:
+    cada vizinho que a tela mostra tem as respostas do produto.
     """
     import re
 
     from hefesto_dualsense4unix.interface import onde
 
     html = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
-    caixas = len(re.findall(r'data-campo="vizinho-tipo"', html))
-    perguntas = len(re.findall(r'data-campo="vizinho-pergunta"', html))
-    assert caixas > 0, "o desenho perdeu os blocos de vizinho"
-    assert perguntas == caixas, (
-        f"{perguntas} pergunta(s) endereçada(s) para {caixas} caixa(s)")
-    assert re.search(
-        r'<option[^>]*data-campo="vizinho-pergunta"[^>]*>[^<]*\?', html), (
-        "o endereço saiu da opção que FAZ a pergunta")
+    selos = set(re.findall(
+        r'<button class="selo-fora vizinho"[^>]*data-gesto="vizinho-o-que-e" '
+        r'data-alvo="([^"]+)"', html))
+    paineis = set(re.findall(
+        r'<template class="painel-molde" data-painel="o-que-e" data-alvo="([^"]+)"', html))
+    assert selos, "o desenho perdeu os selos dos vizinhos"
+    assert selos == paineis, f"selos {sorted(selos)}, painéis {sorted(paineis)}"
+    assert re.search(r'data-gesto="vizinho-o-que-e" data-alvo="[^"]+" value="Webcam"',
+                     html), "as respostas saíram do `value` do botão do painel"

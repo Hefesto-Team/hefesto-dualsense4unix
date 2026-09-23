@@ -2884,57 +2884,21 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "`present()` a janela dele — o que exige decidir o que ela quer que "
         "aconteça no segundo clique, e por isso não foi feito aqui."
     ),
-    "integrations/storm_doctor.py::historico_do_radio":
-        "O-DIARIO-DO-RADIO-01, 23/09/2026. A FONTE DO SINO da aba Conexões: "
-        "o `kernel.log` do kernel-watch classificado pelas quatro famílias "
-        "do rádio (1 porta USB, 2A/2B rádio afogado, 3 adaptador travado, 4 "
-        "CRC), que a sprint manda o `storm_doctor` separar. ONDE O CAMINHO SE "
-        "PERDE: quem mostra é o sino da seção Rádio e Adaptadores, e a tela "
-        "(`interface/`) está no `nao_toca` desta sprint. O QUE O FECHARIA: a "
-        "TRANSPLANTE-DA-SECAO-01 (onda 3 da leva de 23/09) chamando esta "
-        "leitura no pacote da aba 08.",
-    "integrations/storm_doctor.py::quedas":
-        "O-DIARIO-DO-RADIO-01, 23/09/2026. As bordas da família 2A — o "
-        "EAGAIN do bluetoothd que derrubou os quatro controles em 22/09 — "
-        "que o sino lista como quedas. ONDE O CAMINHO SE PERDE: a tela "
-        "(`interface/`) está no `nao_toca` desta sprint. O QUE O FECHARIA: a "
-        "TRANSPLANTE-DA-SECAO-01 (onda 3 da leva de 23/09) listando as "
-        "quedas no sino de cada adaptador.",
-    "integrations/storm_doctor.py::o_fato_da_queda":
-        "O-DIARIO-DO-RADIO-01, 23/09/2026. O fato de cada queda dito como a "
-        "tela diz, «4 controles com som (limite 2)», lido do diário comum "
-        "(as pontes de pé no instante). ONDE O CAMINHO SE PERDE: são dois "
-        "pontos — a tela (`interface/`, no `nao_toca` desta sprint) e o "
-        "escritor das pontes no diário, que é o governador. O QUE O "
-        "FECHARIA: o GOVERNADOR-DO-RADIO-01 registrando `ponte subiu`/`ponte "
-        "desceu` e a TRANSPLANTE-DA-SECAO-01 pondo a frase no sino.",
-    "integrations/entrada_a_entrada.py::o_laco":
-        "ENTRADA-A-ENTRADA-01, 23/09/2026. O laço UM por processo da janela, "
-        "como o rascunho do mapa da aba 08. ONDE O CAMINHO SE PERDE: a aba "
-        "08 (`aba08.py`, `08-conexoes.html`) está no `nao_toca` desta sprint. "
-        "O QUE O FECHARIA: a TRANSPLANTE-DA-SECAO-01 (onda 3 da leva de "
-        "23/09) pedindo o laço daqui nos tratadores da cerimônia.",
-    "integrations/entrada_a_entrada.py::dar_nome":
-        "ENTRADA-A-ENTRADA-01 e -02, 23/09/2026. D3: o nome é do LUGAR e mora "
-        "no `maquina.json`; o Alias do BlueZ é a projeção, e o escritor único "
-        "dele é o `bt_active_mode.sh`, que lê este nome (a D-COSTURA-BLUEZ). "
-        "ONDE O CAMINHO SE PERDE: o gesto vivo `renomear-adaptador` ainda "
-        "grava o Alias por endereço (`a08_conexoes`, da TRANSPLANTE). O QUE O "
-        "FECHARIA: a TRANSPLANTE-DA-SECAO-01 ligando o `adaptador-renomear` "
-        "do mockup aprovado a esta função.",
+    # AS SEIS LÁPIDES DA LEVA DE 23/09 QUE A TRANSPLANTE-DA-SECAO-01 CUROU saíram
+    # daqui no mesmo commit que as fiou: `storm_doctor.historico_do_radio`,
+    # `quedas` e `o_fato_da_queda` (o sino de cada adaptador), e
+    # `entrada_a_entrada.o_laco`, `dar_nome` e `com_o_nome_dela` (a cerimônia,
+    # o nome do lugar e o conselho de porta com o nome dela).
     "integrations/entrada_a_entrada.py::nome_do_adaptador":
         "ENTRADA-A-ENTRADA-01, 23/09/2026. D3: o adaptador herda o nome da "
-        "porta em que está, pelo lugar e nunca pelo hciN. ONDE O CAMINHO SE "
-        "PERDE: o cartão do adaptador da seção nova é da TRANSPLANTE, e a aba "
-        "08 está no `nao_toca` desta sprint. O QUE O FECHARIA: a "
-        "TRANSPLANTE-DA-SECAO-01 dando a cada lugar o nome desta função.",
-    "integrations/entrada_a_entrada.py::com_o_nome_dela":
-        "ENTRADA-A-ENTRADA-01, 23/09/2026. O conselho de porta do vigia com o "
-        "nome dela: «O adaptador da porta 3-4.1.4 travou de novo» vira «O "
-        "adaptador da Entrada 3 travou de novo». ONDE O CAMINHO SE PERDE: o "
-        "sino lê o diário e é da TRANSPLANTE; a aba 08 está no `nao_toca` "
-        "desta sprint. O QUE O FECHARIA: a TRANSPLANTE-DA-SECAO-01 passando "
-        "cada linha do diário por aqui antes de pôr a frase no sino.",
+        "porta em que está, pelo lugar e nunca pelo hciN. A TRANSPLANTE-DA-"
+        "SECAO-01 NÃO A CHAMA, E É DE PROPÓSITO: o campo do cartão mostra SÓ o "
+        "nome que ela deu (o `maquina.lugares[lugar].nome`, a mesma leitura de "
+        "`_nome_declarado`) com a entrada AO LADO, por `rotulo_da_entrada`; "
+        "esta função funde os dois (o nome, ou «Entrada 3») e poria o número "
+        "dentro do campo que ela edita. ONDE O CAMINHO SE PERDE: nenhuma frase "
+        "da tela precisa hoje de UM nome só para o adaptador. O QUE O FECHARIA: "
+        "a primeira frase que precise — um recado sobre o adaptador pelo nome.",
 }
 
 #: ONDA0-Z7 (24/08/2026): achado FORA do escopo desta sprint, durante a

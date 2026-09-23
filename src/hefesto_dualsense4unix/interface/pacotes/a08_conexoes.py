@@ -44,10 +44,10 @@ if TYPE_CHECKING:
     from hefesto_dualsense4unix.gui.aba_conexoes import Vibracao
 
 #: CORRIGIDO EM 01/09/2026. Aqui estavam "exame" e "adaptadores" como órfãos.
-#: Os dois têm dono, e são os mesmos que a `gui/aba_conexoes.py` dela usa hoje:
-#: `integrations/exame_da_mesa` devolve os itens do exame prontos, e
-#: `integrations/radio_da_mesa.ocupacao_por_adaptador` diz quem está em qual
-#: adaptador. Perguntar só ao `state_full` foi o erro.
+#: O exame tem dono (`integrations/exame_da_mesa` devolve os itens prontos). A
+#: chave `adaptadores` SAIU EM 23/09/2026 com a tabela que a lia
+#: (TRANSPLANTE-DA-SECAO-01): quem está em qual adaptador vem agora do
+#: `state_full` (`radio_ar`, `radio_governador`), que o daemon publica.
 SEM_DONO: dict[str, str] = {}
 
 
@@ -1893,7 +1893,7 @@ def html_da_conta(frase: str) -> str:
     POR QUE O GERADOR TAMBÉM CHAMA ISTO (`aba08.py`): enquanto o desenho e o
     produto escreverem a mesma frase duas vezes, elas divergem sem que ninguém
     veja. É a mesma razão pela qual o gerador já importava
-    :func:`rotulo_do_controle` e :func:`tinta_legivel` deste módulo.
+    :func:`rotulo_do_controle` deste módulo.
     """
     return frase.replace(" • ", _PONTO)
 
@@ -2338,20 +2338,10 @@ def _texto_da_bateria(bruto: Any) -> str:
     return Controle(uniq="", jogador=0, via="", bateria=n).texto_da_bateria
 
 
-#: `--fg` e `--app-bg` do esqueleto. São cor de TEMA, não de plástico: o número
-#: dentro do bloco precisa ser lido sobre qualquer um dos 28 modelos, e nenhum
-#: dos dois candidatos serve para todos — `--fg` some no Starlight Blue,
-#: `--app-bg` some no Galactic Purple.
-_TINTAS_DE_TEXTO = (("var(--fg)", (0xF8, 0xF8, 0xF2)),
-                    ("var(--app-bg)", (0x21, 0x22, 0x2C)))
-
-
-def tinta_legivel(fundo_hex: str) -> str:
-    """A tinta de texto que se lê sobre aquele plástico, pela conta da casa."""
-    from hefesto_dualsense4unix.utils.color_contrast import razao_contraste
-
-    rgb = tuple(int(fundo_hex.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4))
-    return max(_TINTAS_DE_TEXTO, key=lambda t: razao_contraste(rgb, t[1]))[0]
+#: `tinta_legivel` e `_TINTAS_DE_TEXTO` SAÍRAM EM 23/09/2026: escolhiam a tinta
+#: do número DENTRO do bloco da régua de Desempenho, e a régua saiu com a seção
+#: antiga (TRANSPLANTE-DA-SECAO-01). Na sala nova a cor do plástico pinta a
+#: silhueta e a borda da linha; nenhum texto se lê em cima dela.
 
 
 def _hex_do_plastico(slug: str) -> str:
@@ -2422,32 +2412,15 @@ def colorway_do_controle(m: Any) -> str:
 
 
 # ---------------------------------------------------------------------------
-# A CONTA DE SLOTS POR ADAPTADOR — "cabe o que eu quero fazer?"
+# A CONTA DE SLOTS POR ADAPTADOR — SAIU EM 23/09/2026
 # ---------------------------------------------------------------------------
-#
-# A RÉGUA DE CIMA MOSTRA O QUE ESTÁ; ESTA RESPONDE O QUE CABE. São perguntas
-# diferentes, e a segunda não se lê de uma barra: olhar uma fatia de 260,4 em
-# 1.600 não diz se o PRÓXIMO controle entra — e é essa a pergunta de quem tem
-# um controle no cabo e quer trazê-lo para o rádio.
-#
-# O DONO É `integrations/plano_de_radio.py`, e ele já escreve TODAS as frases:
-# `linha_do_cabe_mais_um` (a resposta com o "ficaria em N de M"),
-# `linha_do_declarado_que_nao_subiu` (o microfone que ela marcou e que não está
-# de pé) e as duas respostas honestas de `secao_orcamento` para os dois estados
-# em que não há conta a fazer. **Nenhuma nasce aqui.**
-#
-# OS DOIS ESTADOS QUE NÃO SÃO CONTA são a metade que a régua de cima não tem, e
-# a cicatriz é do dono: *"**Nunca 'Folgada'**: a cura da B1, medida em
-# 23/08/2026 — com o Hefesto parado as três barras diziam 'Folgada', em verde,
-# '0/1600', byte a byte a tela de um rádio vazio."* Não saber e estar vazio são
-# coisas diferentes, e a diferença é a informação inteira.
-#
-# ESTA CONTA NÃO PERGUNTA NADA A NINGUÉM. A janela estável faz um `state_full`
-# próprio por `call_async` (e o dono declara isso como dívida: *"este é o
-# SEGUNDO `state_full` por entrada na aba"*). Aqui o `ctx.state` do tique já é o
-# `state_full`, então o segundo pedido não existe — a dívida do dono não
-# atravessa para cá.
-
+# `_conta_de_slots` respondia «cabe mais um?» numa linha de texto sob a régua
+# de Desempenho, com as frases de `plano_de_radio` e as duas respostas honestas
+# de `secao_orcamento`. As duas saíram com a seção antiga (TRANSPLANTE-DA-SECAO-01):
+# a sala do desenho aprovado responde no cartão de cada adaptador («com som 1
+# de 2»), e o que não cabe vira o pedido do governador (`radio_governador`).
+# A cicatriz da B1 — *não saber e estar vazio são coisas diferentes* — continua
+# de pé, no `"lido"` da cena (ver `html_da_sala`).
 
 # ---------------------------------------------------------------------------
 # O TETO DA VIBRAÇÃO POR CONTROLE — MIGRA-CONEXOES-11, 01/09/2026
@@ -4419,9 +4392,18 @@ def _ic(nome: str, classe: str = "") -> str:
 
 
 def _silhueta(ap: dict[str, Any], classe: str = "ds") -> str:
+    """O DualSense na cor do plástico dele, pelo `color` (o sprite é `currentColor`).
+
+    SEM O `data-colorway` DO DESENHO, e é medido: no `mapa-do-radio.html` a
+    silhueta o carrega para a aba08 repintar as zonas, mas a folha das zonas
+    (`svg[data-colorway] .z-casca`) não alcança o que mora atrás de um `<use>`
+    — o seletor casa o SÍMBOLO no sprite, e o sprite desta seção nem tem as
+    classes de zona. O atributo seria cor cravada sem efeito, e o portão da cor
+    (`check_a_cor_vem_do_aparelho.py`) o acusa com razão.
+    """
     cor = ap.get("cor") or "var(--texto-mudo)"
-    return (f'<svg class="i {classe}" aria-hidden="true" style="color:{_x(cor)}" '
-            f'data-colorway="{_x(ap.get("colorway") or "")}"><use href="#rd-ds"/></svg>')
+    return (f'<svg class="i {classe}" aria-hidden="true" style="color:{_x(cor)}">'
+            f'<use href="#rd-ds"/></svg>')
 
 
 def _maiuscula(frase: str) -> str:
@@ -4921,6 +4903,11 @@ def _moldes_de_painel(cena: dict[str, Any]) -> str:
     return "".join(moldes)
 
 
+#: A frase da sala quando o BlueZ RESPONDEU e não há adaptador — a mesma da
+#: tabela que a seção substituiu (TRANSPLANTE-DA-SECAO-01).
+NENHUM_ADAPTADOR = "Nenhum adaptador Bluetooth encontrado."
+
+
 def html_da_sala(cena: dict[str, Any], com_hz: bool = False) -> str:
     """Os cartões dos adaptadores, e só eles.
 
@@ -4931,7 +4918,14 @@ def html_da_sala(cena: dict[str, Any], com_hz: bool = False) -> str:
     moram em `radio-moldes`. `com_hz` é do DESENHO, que não tem tique.
     """
     if not cena.get("lugares"):
-        return '<div class="sala-vazia">Nenhum adaptador Bluetooth encontrado.</div>'
+        # NÃO TER LIDO NÃO É NÃO TER — a cicatriz da B1 (23/08/2026): com o
+        # serviço mudo as barras diziam «Folgada», byte a byte a tela de um
+        # rádio vazio. A frase só sai quando alguém RESPONDEU que não há; sem
+        # resposta (o primeiro tique, o BlueZ que não falou) a sala não afirma
+        # nada.
+        if not cena.get("lido", True):
+            return str(_monta().NADA_A_DIZER)
+        return f'<div class="sala-vazia">{NENHUM_ADAPTADOR}</div>'
     return "".join(html_do_lugar(lug, cena, com_hz) for lug in cena["lugares"])
 
 
@@ -5194,6 +5188,8 @@ def html_das_portas(cena: dict[str, Any]) -> str:
 
 
 def html_da_conta_do_radio(cena: dict[str, Any]) -> str:
+    if not cena.get("lugares") and not cena.get("lido", True):
+        return str(_monta().NADA_A_DIZER)  # «0 adaptadores» sem resposta seria inventar
     controles = sum(1 for a in cena.get("aparelhos", ()) if a.get("tipo") == "controle")
     lugares = len(cena.get("lugares", ()))
     return (f"{controles} {'controle' if controles == 1 else 'controles'} · "
@@ -5514,6 +5510,9 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
         proposta = ({"controle": dono["id"], "destino": _mac(proposta.get("destino"))}
                     if dono else None)
     cena = {
+        # ALGUÉM RESPONDEU sobre os adaptadores: o BlueZ, ou o daemon pelo
+        # `radio_ar`/`radio_governador`. Sem isso a sala não diz «nenhum».
+        "lido": bluez is not None or bool(ar) or bool(governador),
         "lugares": lugares, "aparelhos": aparelhos, "evitados": evitados,
         "canais_medidos": canais_medidos, "espectro": [], "vizinhos": vizinhos,
         "portas": portas, "pedido": pedido, "proposta": proposta, "ocupado": ocupado,
@@ -5595,7 +5594,7 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
             "id": uniq, "tipo": "controle", "lugar": adaptador,
             "nome": "" if nome_bz.startswith("DualSense") else nome_bz,
             "rotulo": f"Player {eu['jogador']}" if eu.get("jogador") else "DualSense",
-            "cor": cor if cor.startswith("#") else "", "colorway": slug,
+            "cor": cor if cor.startswith("#") else "",
             "cor_nome": "" if str(eu.get("nome") or "") in ("", _cor_desconhecida())
             else str(eu["nome"]),
             "mic": (not audio.get("mic_mudo")) if "mic_mudo" in audio
@@ -5621,7 +5620,7 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
         fora.append({"id": str(m.get("aparelho")), "tipo": "controle" if m.get("e_controle")
                      else "outro", "lugar": _mac(m.get("destino")), "nome": "",
                      "rotulo": f"Player {eu['jogador']}" if eu.get("jogador") else "",
-                     "cor": cor if cor.startswith("#") else "", "colorway": slug,
+                     "cor": cor if cor.startswith("#") else "",
                      "cor_nome": "" if str(eu.get("nome") or "") in ("", _cor_desconhecida())
                      else str(eu["nome"]),
                      "esperando": True, "fixo": False})
@@ -5847,7 +5846,7 @@ def _mover(p: Any, aparelho: str | None, destino: str) -> dict[str, Any]:
     return {"armou": True}
 
 
-@gesto("08-conexoes.html", "confirmar-mudanca", grava="_mover")
+@gesto("08-conexoes.html", "confirmar-mudanca", grava="radio.mover")
 def confirmar_mudanca(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """«Mover» (e «Mover e ligar»): o aparelho vai para o destino da pergunta."""
     alvo, destino = str(o.get("alvo") or ""), str(o.get("destino") or "")
@@ -5862,7 +5861,7 @@ def _ligar_aqui(p: Any, uniq: str) -> None:
         raise RuntimeError("a ponte não subiu aqui")
 
 
-@gesto("08-conexoes.html", "ligar-mesmo-assim", grava="_ligar_aqui")
+@gesto("08-conexoes.html", "ligar-mesmo-assim", grava="radio.ponte.ligar_aqui")
 def ligar_mesmo_assim(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """«Ligar aqui»: a terceira ponte sobe no adaptador cheio, marcada além do limite (R4)."""
     alvo = str(o.get("alvo") or "")
@@ -5871,7 +5870,7 @@ def ligar_mesmo_assim(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _ligar_aqui(p, alvo)
 
 
-@gesto("08-conexoes.html", "conectar-aparelho", grava="_mover")
+@gesto("08-conexoes.html", "conectar-aparelho", grava="radio.mover")
 def conectar_aparelho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """«Conectar»: sem alvo, a janela abre no destino da D8 e o controle que
     ela segurar chega; com alvo (um achado que o destino já conhece), é Mover."""
@@ -5881,7 +5880,7 @@ def conectar_aparelho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     return _mover(p, str(o.get("alvo") or "") or None, destino)
 
 
-@gesto("08-conexoes.html", "parear-aparelho", grava="_mover")
+@gesto("08-conexoes.html", "parear-aparelho", grava="radio.mover")
 def parear_aparelho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """«Parear» um aparelho que o rádio achou, no destino escolhido."""
     alvo = str(o.get("alvo") or "")
@@ -6030,7 +6029,9 @@ METODOS = {"controller.target.set", "radio.mover", "radio.ponte.ligar_aqui"}
 #: teste, para que ligar uma aba não exija editar um arquivo que oito pessoas
 #: editariam ao mesmo tempo.
 PAGINA = "08-conexoes.html"
-PISO_DA_ABA = 16
+#: 16 → 37 em 23/09/2026: a seção do rádio trouxe os gestos do desenho aprovado
+#: e a cerimônia do «Mapear Entrada a Entrada» (TRANSPLANTE-DA-SECAO-01).
+PISO_DA_ABA = 37
 PROVAS = [
     # O `index` da prova é 0 porque o controle de mentira é o único da lista —
     # e o `_indice` cai na posição quando o daemon não publicou `index`.

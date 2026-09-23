@@ -40,11 +40,13 @@ from hefesto_dualsense4unix.gui import aba_conexoes as _aba_conexoes  # noqa: E4
 # `structlog`, que é o que separa este par do `secao_exame` (ele puxa
 # `escritor_cru`, que puxa o logger, e o `python3 aba08.py` desta pasta não roda
 # no `.venv`). Ver `VEREDITO_DO_DESENHO`, abaixo.
+from hefesto_dualsense4unix.integrations import entrada_a_entrada as _entrada_a_entrada  # noqa: E402,E501
 from hefesto_dualsense4unix.integrations import exame_da_mesa as _exame_da_mesa  # noqa: E402
 from hefesto_dualsense4unix.integrations import ordens_da_mesa as _ordens_da_mesa  # noqa: E402
 
-# O PACOTE DESTA ABA — e ele é DONO de três coisas que os dois lados desenham:
-# o rótulo do controle, a tinta legível sobre o plástico e a régua do rádio.
+# O PACOTE DESTA ABA — e ele é DONO do que os dois lados desenham: o rótulo do
+# controle e, desde 23/09/2026, a seção «Rádio e Adaptadores» inteira (a sala,
+# os moldes e as réguas do espectro — TRANSPLANTE-DA-SECAO-01).
 # Mesma dependência que o `aba04.py` já tem do `pacotes.a04_iluminacao`, e pela
 # mesma razão: enquanto o desenho e o produto escreverem a mesma frase duas
 # vezes, elas divergem sem que ninguém veja.
@@ -594,7 +596,6 @@ def caminho_do_mic(c):
 # da bancada, o pacote a cada tique com a mesa viva. Mesmo molde da
 # `a04_iluminacao.um_botao_de_player`.
 rotulo = _pacote08.rotulo_do_controle
-tinta_legivel = _pacote08.tinta_legivel
 
 
 CSS = CSS_GLIFO + CSS_POPUP + """
@@ -1368,60 +1369,12 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      nunca entre irmãos — `space-between` só empurra o buraco para o meio */
   .lado-e > .empurra,.lado-d > .empurra{margin-top:auto}
 
-  /* ================= o orçamento do rádio =================
-     UMA conta, e ela é uma régua de turnos por adaptador. O que está em uso vem
-     na cor do PLÁSTICO de quem gastou; o microfone é a tampa laranja; e as
-     VAGAS tracejadas são os controles da MESA que hoje estão no cabo.
+  /* ================= o orçamento do rádio — SAIU EM 23/09/2026 =================
+     `.capa`, `.pista`, `.bloco`, `.eixo` e `.leg` eram a régua de turnos por
+     adaptador. A seção virou o desenho aprovado (TRANSPLANTE-DA-SECAO-01), a
+     régua saiu, e as regras saem junto: CSS de elemento que não existe mais é
+     a segunda versão viva de uma decisão (a mesma conta de 28/08, acima).
      ------------------------------------------------------------------ */
-  .capa{display:flex;align-items:center;gap:12px;height:var(--h-escolha)}
-  .capa .rot{font-size:12px;font-weight:600;color:var(--rot-campo)}
-  /* `.teto` (a leitura "Teto da vibração • Sem teto") e `.capa select.pronto` (o
-     dropdown dos três perfis) SAÍRAM em 28/08 — a leitura por
-     `D-O-SEM-TETO-SAI-DOS-DOIS-LUGARES`, o dropdown porque o teto global mudou-se
-     para a aba Sistema como "Perfil de Bateria". As regras saem junto: CSS de
-     elemento que não existe mais é a segunda versão viva de uma decisão.
-     A CAPA CONTINUA COM `--h-escolha` (36px) MESMO SEM CAMPO, e isso é uma
-     dívida ANOTADA, não uma escolha de desenho: o token existia para o rótulo
-     ficar na linha de base do campo ao lado, e o campo saiu. Os dois títulos
-     irmãos do MESMO quadro ("Adaptadores Bluetooth" e "Outros rádios na faixa de
-     2,4 GHz") são `.linha-rot`, que ocupa 23px (19 de altura + 4 de margem) —
-     13px a menos. Encolher não foi pedido e não é o que falta a nada hoje (a aba
-     já cabe na janela dela com folga), então fica medido aqui em vez de mudado
-     às escondidas. */
-  .pista{display:flex;align-items:center;gap:12px;height:30px;font-size:11px}
-  .pista .quem{flex:0 0 96px;color:var(--texto-suave);white-space:nowrap;
-               overflow:hidden;text-overflow:ellipsis}
-  .pista .trilho{flex:1;height:22px;border-radius:5px;background:var(--app-bg);
-                 border:1px solid var(--border-sutil);display:flex;overflow:hidden}
-  .pista .num{flex:0 0 128px;text-align:right;font-family:'JetBrains Mono',monospace;
-              font-size:10.5px;color:var(--fg)}
-  .pista .num i{font-style:normal;color:var(--texto-mudo)}
-  .bloco{display:flex;align-items:center;justify-content:center;
-         font-family:'JetBrains Mono',monospace;font-size:9.5px;overflow:hidden;white-space:nowrap}
-  /* a cor do bloco é a do PLÁSTICO de quem gastou, e a do número é a que se lê
-     em cima dela — nenhuma das duas digitada aqui.
-     O FUNDO VEM INLINE, do dono da régua (`a08_conexoes.html_da_regua_do_radio`),
-     e não de um `--plastico` cravado na página: quem não teve a cor lida fica
-     com a neutra abaixo, que é a mesma promessa da borda da linha do controle. */
-  .bloco.usa{background:var(--border-forte);font-weight:500}
-  .bloco.mic{background:var(--orange);box-shadow:inset 1px 0 0 var(--app-bg)}
-  /* a vaga é o que UM controle a mais custaria. Ela precisa fechar dos dois lados. */
-  .bloco.vaga{border-left:1px dashed var(--border-forte);color:var(--texto-mudo);
-    background:repeating-linear-gradient(135deg,transparent 0 5px,rgba(255,255,255,.03) 5px 10px)}
-  .bloco.vaga:last-child{border-right:1px dashed var(--border-forte)}
-  .pista .vazio{align-self:center;padding-left:9px;font-size:10.5px;color:var(--comment)}
-  /* a régua de baixo: os mesmos recuos do trilho, para os números caírem no lugar */
-  .eixo{display:flex;gap:12px;height:15px}
-  .eixo .quem{flex:0 0 96px} .eixo .num{flex:0 0 128px}
-  .eixo .regua{flex:1;display:flex;position:relative;
-               font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--comment)}
-  .eixo .regua i{position:absolute;left:0;font-style:normal}
-  .eixo .regua span{flex:1;text-align:right}
-  .leg{display:flex;gap:16px;margin-top:8px;padding-left:108px;flex-wrap:wrap;
-       font-size:10.5px;color:var(--texto-mudo)}
-  .leg span{display:flex;align-items:center;gap:6px}
-  .leg i{width:10px;height:10px;border-radius:2px;display:block;flex:0 0 10px}
-  .leg i.vaga{border:1px dashed var(--border-forte)}
 
   /* OS DOIS BOTÕES DA MESA VIRARAM `<a href="#…">`, e um `<a>` chega sublinhado.
      Medido em 29/08: altura e largura ficaram iguais (34×539, os mesmos do
@@ -3349,7 +3302,7 @@ def _cena_do_desenho() -> dict:
     for linha in (x for x in linhas if x["tabela"] == "lugar"):
         lugares.append({
             "id": linha["id"], "lugar": linha["id"], "nome": linha["nome"],
-            "entrada": f'Entrada {linha["c"]}',
+            "entrada": _entrada_a_entrada.rotulo_do_numero(linha["c"]),
             "face": faces.get(linha["d"], ""), "hub": linha["a"] == "hub",
             "varrendo": "varrendo" in linha.get("h", ""), "junto": "", "usb3": False,
             "conectando": False, "chegou": [], "quedas": [], "teto": float(linha["e"]),
@@ -3359,7 +3312,7 @@ def _cena_do_desenho() -> dict:
         aparelhos.append({
             "id": linha["id"], "tipo": linha["a"], "lugar": linha["c"], "nome": linha["nome"],
             "rotulo": f"Player {i + 1}" if linha["a"] == "controle" else linha["nome"],
-            "cor": linha["b"], "colorway": "", "cor_nome": linha["g"],
+            "cor": linha["b"], "cor_nome": linha["g"],
             "mic": "mic" in ligado, "luz": "luz" in ligado, "fixo": "fixo" in ligado,
             "ponte": ("haptica" if "vib" in ligado else "som" if "ponte" in ligado else None),
             "som": float(linha["d"] or 0), "esperando": False, "alem": False,

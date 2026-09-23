@@ -17,11 +17,15 @@ O QUE ESTE PORTÃO COBRA:
    fora desta tabela;
 2. **o que a tela mostra é o nome DELA.** O alias guardado é
    `"Nintendo Extra"`; o campo diz `"Extra"`;
-3. **o que vai ao BlueZ é o costurado.** Salvar `"Extra"` num adaptador que
-   hospeda Nintendo escreve `"Nintendo Extra"` de volta — a régua olha o que
-   chegaria ao `set-property`, não o que a função devolveu;
+3. **o nome vai ao dono do LUGAR, cru** — MUDOU EM 23/09/2026
+   (TRANSPLANTE-DA-SECAO-01, item 1). Até ali salvar `"Extra"` escrevia
+   `"Nintendo Extra"` no `Alias` do BlueZ por endereço; eram três escritores
+   do mesmo nome (esta janela, a aba 08 e o `bt_active_mode.sh`), e o último
+   ganhava. Agora o nome é do lugar (`entrada_a_entrada.dar_nome`, no
+   `maquina.json`), e a costura do prefixo que segura o Pro é do único
+   escritor do `Alias`, o `bt_active_mode.sh`;
 4. **nome igual não escreve.** Sem essa comparação, cada troca de aba
-   reescreveria o alias dos três adaptadores;
+   regravaria o nome dos três adaptadores;
 5. **a junção da tabela é por `hciN` e nunca é guardada**; a junção do medidor
    é por ENDEREÇO dos dois lados;
 6. **a captura não fala com o BlueZ.** O alias é texto que ela escreveu.
@@ -42,7 +46,6 @@ _gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
 from hefesto_dualsense4unix.app.actions.config import secao_mesa
-from hefesto_dualsense4unix.integrations import apelido_do_dongle
 from hefesto_dualsense4unix.integrations.apelido_do_dongle import Dongle
 from hefesto_dualsense4unix.integrations.censo_do_barramento import Censo
 from hefesto_dualsense4unix.integrations.mesa_de_radio import Adaptador, Mesa
@@ -59,6 +62,11 @@ class _Hospedeiro:
         self._maquina_pendente: dict[str, Any] | None = None
 
 
+#: O controlador PCI de mentira: com ele cada adaptador tem LUGAR (D3), que é
+#: onde o nome mora desde 23/09/2026.
+_PCI = "0000:00:14.0"
+
+
 def _mesa() -> Mesa:
     """Dois adaptadores: um em porta direta, um atrás de hub."""
     return Mesa(
@@ -71,6 +79,7 @@ def _mesa() -> Mesa:
                 busnum=1,
                 devpath="1",
                 painel="back",
+                controlador_pci=_PCI,
             ),
             Adaptador(
                 interface="hci1",
@@ -80,9 +89,39 @@ def _mesa() -> Mesa:
                 busnum=1,
                 devpath="2.1",
                 atras_de_hub=True,
+                controlador_pci=_PCI,
             ),
         )
     )
+
+
+def _lugar(interface: str) -> str:
+    return next(a.lugar for a in _mesa().adaptadores if a.interface == interface)
+
+
+class _DonoDoNome:
+    """O `dar_nome` de mentira: registra o que o produto GRAVARIA, e responde
+    como o dono — com um `NomeDado` e nunca mais frouxo que ele (a assinatura
+    é a mesma: `lugar` e `nome`, posicionais)."""
+
+    def __init__(self, gravou: bool = True) -> None:
+        self.gravacoes: list[tuple[str, str]] = []
+        self._gravou = gravou
+
+    def __call__(self, lugar: str, nome: str) -> Any:
+        from hefesto_dualsense4unix.integrations.entrada_a_entrada import NomeDado
+
+        self.gravacoes.append((lugar, nome))
+        return NomeDado(lugar, nome, self._gravou, "")
+
+
+@pytest.fixture
+def dono_do_nome(monkeypatch: pytest.MonkeyPatch) -> _DonoDoNome:
+    from hefesto_dualsense4unix.integrations import entrada_a_entrada
+
+    dono = _DonoDoNome()
+    monkeypatch.setattr(entrada_a_entrada, "dar_nome", dono)
+    return dono
 
 
 def _dongles() -> tuple[Dongle, ...]:
@@ -170,24 +209,6 @@ def _textos(raiz: Any) -> list[str]:
     return achados
 
 
-class _BusctlDeMentira:
-    """Um `executar` que registra o que o produto MANDARIA ao BlueZ.
-
-    A régua tem de olhar o argumento do `set-property`, e não o que a função
-    devolveu: uma costura que só existe no valor de retorno protege o Pro em
-    lugar nenhum.
-    """
-
-    def __init__(self) -> None:
-        self.escritas: list[tuple[str, str]] = []
-
-    def __call__(self, argumentos: Any) -> str | None:
-        partes = list(argumentos)
-        if partes and partes[0] == "set-property":
-            self.escritas.append((partes[2], partes[-1]))
-        return ""
-
-
 # --- 1. A coluna existe quando alguém respondeu ----------------------------
 
 
@@ -267,120 +288,97 @@ def test_a_secao_diz_que_o_nome_nao_espera_o_aplicar() -> None:
 # --- 2. O que vai ao BlueZ é o costurado -----------------------------------
 
 
-def test_salvar_um_nome_escreve_o_alias_costurado(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """"Casa" num adaptador com Pro chega ao BlueZ como "Nintendo Casa".
+def test_salvar_um_nome_grava_no_lugar_e_sem_a_costura(dono_do_nome: _DonoDoNome) -> None:
+    """"Casa" num adaptador com Pro vai ao dono do LUGAR como "Casa".
 
-    A régua não é "a função foi chamada": é o argumento do `set-property`. Um
-    produto que costurasse só o valor de retorno deixaria o Pro caindo sob
-    carga e passaria num teste de chamada.
+    A COSTURA NÃO MORA MAIS AQUI (23/09/2026): o prefixo `Nintendo` é do
+    `bt_active_mode.sh`, que escreve o `Alias` lendo o nome do lugar. Gravar
+    "Nintendo Casa" no `maquina.json` poria no nome DELA uma palavra que é
+    proteção do rádio — e o watchdog costuraria de novo por cima.
 
-    Mordida: passar `nome` cru para o `set-property` (isto é, chamar
-    `_busctl` direto em vez de `renomear_o_dongle`).
+    Mordida: voltar a chamar `renomear_o_dongle` — o dono do lugar não é
+    chamado, e a lista fica vazia.
     """
-    busctl = _BusctlDeMentira()
-    monkeypatch.setattr(
-        secao_mesa,
-        "renomear_o_dongle",
-        lambda endereco, nome, **kw: apelido_do_dongle.renomear_o_dongle(
-            endereco, nome, executar=busctl, **kw
-        ),
-    )
-
     caixa, painel = _montar(_Hospedeiro())
     campo = _campos(caixa)[1]
     campo.set_text("Casa")
     painel._ao_salvar_o_nome(campo, _EXTRA)
 
-    assert busctl.escritas == [("/org/bluez/hci1", "Nintendo Casa")], (
-        "o produto não costurou o prefixo ao gravar. Sem ele o Pro Controller "
-        f"cai sob carga — rumble e IMU juntos. Escritas: {busctl.escritas}"
-    )
+    assert dono_do_nome.gravacoes == [(_lugar("hci1"), "Casa")], (
+        f"o nome não foi ao dono do lugar, cru: {dono_do_nome.gravacoes}")
 
 
-def test_salvar_num_adaptador_sem_nintendo_nao_acrescenta_palavra(
-    monkeypatch: pytest.MonkeyPatch,
+def test_salvar_num_adaptador_sem_nintendo_grava_o_nome_dela(
+    dono_do_nome: _DonoDoNome,
 ) -> None:
-    """O produto não põe palavra que não protege nada.
-
-    Mordida: costurar sempre, sem olhar `hospeda_nintendo`.
-    """
-    busctl = _BusctlDeMentira()
-    monkeypatch.setattr(
-        secao_mesa,
-        "renomear_o_dongle",
-        lambda endereco, nome, **kw: apelido_do_dongle.renomear_o_dongle(
-            endereco, nome, executar=busctl, **kw
-        ),
-    )
-
+    """O produto não põe palavra no nome dela — em adaptador nenhum."""
     caixa, painel = _montar(_Hospedeiro())
     campo = _campos(caixa)[0]
     campo.set_text("Sofá")
     painel._ao_salvar_o_nome(campo, _SALA)
 
-    assert busctl.escritas == [("/org/bluez/hci0", "Sofá")]
+    assert dono_do_nome.gravacoes == [(_lugar("hci0"), "Sofá")]
 
 
-def test_nome_que_nao_mudou_nao_vai_ao_bluez(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Sair do campo sem ter mexido não escreve nada.
+def test_nome_que_nao_mudou_nao_grava(dono_do_nome: _DonoDoNome) -> None:
+    """Sair do campo sem ter mexido não grava nada.
 
-    Sem esta guarda, cada troca de aba reescreveria o alias dos três
-    adaptadores dela com o valor que eles já têm — e uma dessas escritas cai
-    bem em cima do prefixo que segura o Pro.
+    Sem esta guarda, cada troca de aba regravaria o nome dos três adaptadores
+    dela com o valor que eles já têm.
 
     Mordida: apagar o `if novo == alvo.nome: return`.
     """
-    chamadas: list[Any] = []
-    monkeypatch.setattr(
-        secao_mesa,
-        "renomear_o_dongle",
-        lambda *a, **k: chamadas.append(a),
-    )
-
     caixa, painel = _montar(_Hospedeiro())
     campo = _campos(caixa)[1]
     painel._ao_sair_do_nome(campo, None, _EXTRA)
 
-    assert not chamadas, (
-        "sair do campo sem mexer escreveu no BlueZ. O texto do campo é o nome "
+    assert not dono_do_nome.gravacoes, (
+        "sair do campo sem mexer gravou o nome. O texto do campo é o nome "
         "LIMPO; comparar contra o alias faria toda saída de campo gravar."
     )
 
 
 def test_o_espelho_de_memoria_impede_a_segunda_escrita_igual(
-    monkeypatch: pytest.MonkeyPatch,
+    dono_do_nome: _DonoDoNome,
 ) -> None:
     """Depois de gravar, o produto sabe o nome novo sem reler o BlueZ.
 
-    Reler não é opção: a escrita do `Alias` é assíncrona e ler logo depois
-    devolve o valor ANTIGO (medido em `apelido_do_dongle`). Sem o espelho, o
-    próximo `focus-out` compararia contra o nome velho e mandaria o mesmo alias
-    de novo.
+    Reler não é opção: o `Alias` só muda no próximo tique do watchdog, e ler
+    logo depois devolve o valor ANTIGO. Sem o espelho, o próximo `focus-out`
+    compararia contra o nome velho e gravaria o mesmo nome de novo.
 
     Mordida: apagar a reconstrução de `self._dongles` em `_ao_salvar_o_nome`.
     """
-    busctl = _BusctlDeMentira()
-    monkeypatch.setattr(
-        secao_mesa,
-        "renomear_o_dongle",
-        lambda endereco, nome, **kw: apelido_do_dongle.renomear_o_dongle(
-            endereco, nome, executar=busctl, **kw
-        ),
-    )
-
     caixa, painel = _montar(_Hospedeiro())
     campo = _campos(caixa)[1]
     campo.set_text("Casa")
     painel._ao_salvar_o_nome(campo, _EXTRA)
     painel._ao_salvar_o_nome(campo, _EXTRA)
 
-    assert len(busctl.escritas) == 1, (
-        f"o mesmo nome foi ao BlueZ {len(busctl.escritas)} vezes"
+    assert len(dono_do_nome.gravacoes) == 1, (
+        f"o mesmo nome foi gravado {len(dono_do_nome.gravacoes)} vezes"
     )
+
+
+def test_o_adaptador_sem_lugar_nao_grava_e_o_campo_volta(
+    dono_do_nome: _DonoDoNome,
+) -> None:
+    """O adaptador da placa-mãe não pendura em entrada: não há onde o nome morar.
+
+    Sem o controlador PCI a mesa não sabe o LUGAR, e gravar sob uma chave vazia
+    seria um nome que nenhum adaptador herda. O campo volta ao que era, em vez
+    de fingir que gravou.
+    """
+    caixa, painel = _montar(_Hospedeiro())
+    painel._mesa = Mesa(adaptadores=tuple(
+        Adaptador(interface=a.interface, no=a.no, vid=a.vid, pid=a.pid,
+                  busnum=a.busnum, devpath=a.devpath) for a in _mesa().adaptadores))
+    campo = _campos(caixa)[0]
+    campo.set_text("Sofá")
+    painel._ao_salvar_o_nome(campo, _SALA)
+
+    assert not dono_do_nome.gravacoes
+    assert campo.get_text() == "Sala"
 
 
 # --- 3. As duas junções ----------------------------------------------------
