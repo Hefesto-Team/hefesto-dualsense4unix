@@ -565,7 +565,11 @@ def test_a_terceira_ponte_pergunta_e_ligar_aqui_a_sobe_marcada() -> None:
     recusa = governador.pedir_vaga(CONTROLE_3, "haptica")
     assert isinstance(recusa, gov.Recusa), "a terceira ponte subiu sem perguntar"
     assert (recusa.motivo, recusa.vagas) == (gov.MOTIVO_CHEIO, (ADAPTADOR_B,))
-    assert recusa.frase == f"Este adaptador está cheio. Há vaga em {ADAPTADOR_B}."
+    # GOVERNADOR-DO-RADIO-02, item 4: a frase não leva endereço. Sem quem diga o
+    # nome (a suíte não lê a mesa dela), ela diz «este adaptador» e «outro».
+    assert recusa.frase == (
+        "Este adaptador já tem 2 controles com som ou vibração. Há vaga em outro adaptador."
+    )
     assert isinstance(governador.pedir_vaga(CONTROLE_3, "haptica"), gov.Recusa)
     assert len(registro.de(gov.ADAPTADOR_CHEIO)) == 1, "a pergunta repetida encheu o diário"
     [pedido] = governador.publicar()[ADAPTADOR_A]["pedidos"]
