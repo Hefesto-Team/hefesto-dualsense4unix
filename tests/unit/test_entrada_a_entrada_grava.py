@@ -997,3 +997,24 @@ def test_o_dualsense_numa_porta_com_nome_nao_projeta_alias(
     laco.comecar()
     _mapear(boot_1, laco, 3, "4.2", ee.FACE_FRENTE)
     assert projetados == []
+
+
+def test_o_rotulo_do_rodape_diz_entrada_e_nunca_porta() -> None:
+    """O rótulo do campo ``lugares`` vai para a barra de status dela quando o
+    campo é descartado, e a tela diz «entrada», nunca «porta»
+    (``D-A-PALAVRA-ENTRADA``: «porta» colide com porta de rede).
+
+    MORDIDA: devolva o rótulo «Qual entrada é cada porta» — reprova nomeando o
+    campo.
+    """
+    import re
+
+    from hefesto_dualsense4unix.app import ipc_bridge
+
+    com_porta = {
+        campo: rotulo
+        for campo, rotulo in ipc_bridge._ROTULOS_SEM_SECAO.items()
+        if re.search(r"\bportas?\b", rotulo, re.IGNORECASE)
+    }
+    assert "lugares" in ipc_bridge._ROTULOS_SEM_SECAO
+    assert not com_porta, f"rótulo de tela com a palavra «porta»: {com_porta}"
