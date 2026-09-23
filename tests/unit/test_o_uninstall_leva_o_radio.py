@@ -55,7 +55,7 @@ def _fake(pasta: Path, nome: str, corpo: str) -> None:
 
 BLOCO_DOS_NOMES = _recorte(
     "# BT-NINTENDO-ACTIVE-01: reverter a link policy",
-    "    if [[ -d /var/lib/hefesto-dualsense4unix/bt-bonds ]]; then",
+    "    # O carimbo da desinstalação, um só:",
 )
 
 
@@ -76,7 +76,10 @@ def _mesa(tmp_path: Path, adaptadores: dict[str, tuple[str, str]], lugares: list
         json.dumps(
             {
                 "version": 1,
-                "lugares": {f"pci-0000:00:14.0-usb-0:{i}:1.0": {"nome": n} for i, n in enumerate(lugares)},
+                "lugares": {
+                    f"pci-0000:00:14.0-usb-0:{i}:1.0": {"nome": n}
+                    for i, n in enumerate(lugares)
+                },
             }
         ),
         encoding="utf-8",
@@ -239,3 +242,86 @@ def test_a_trava_os_carimbos_e_o_diario_do_root_saem() -> None:
     assert "/etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf" in codigo
     assert "sudo rmdir /run/hefesto-dualsense4unix" in codigo
     assert "/var/lib/hefesto-dualsense4unix/radio-diario.jsonl" in codigo
+
+
+# ---------------------------------------------------------------------------
+# 4. O diário do root vai JUNTO do acervo de bonds guardado (P-2.2)
+# ---------------------------------------------------------------------------
+#
+# Decisão de quem coordena: o diário do rádio do root é o histórico que explica
+# a mesa que os bonds descrevem — vai para a MESMA pasta carimbada e não se
+# apaga por padrão. O bloco é recortado do uninstall REAL e roda com o
+# /var/lib trocado por uma pasta de mentira; o `sudo` de mentira executa o
+# comando e RECUSA qualquer argumento que ainda aponte para o /var/lib de
+# verdade (a troca tem de ter pegado tudo).
+#
+# A MORDIDA, medida: tirar o `sudo mv -f "${_diarios_root[@]}"` deixa o diário
+# no caminho de antes, e o primeiro teste reprova.
+
+VAR_LIB = "/var/lib/hefesto-dualsense4unix"
+BLOCO_DOS_BONDS = _recorte(
+    "    # O carimbo da desinstalação, um só:",
+    "    sudo systemctl daemon-reload >/dev/null 2>&1 || true\n",
+)
+
+
+def _acervo(tmp_path: Path, *, purge: bool, com_bonds: bool = True) -> Path:
+    raiz = tmp_path / "var-lib"
+    raiz.mkdir()
+    if com_bonds:
+        (raiz / "bt-bonds").mkdir()
+        (raiz / "bt-bonds" / "snapshot-1.tar").write_text("bonds\n", encoding="utf-8")
+    for nome in ("radio-diario.jsonl", "radio-diario.jsonl.1"):
+        (raiz / nome).write_text('{"o_que": "x"}\n', encoding="utf-8")
+    fakes = tmp_path / "fakes-acervo"
+    _fake(
+        fakes,
+        "sudo",
+        'for a in "$@"; do\n'
+        '  [[ "$a" == *' + VAR_LIB + '* ]] && { echo "RECUSEI $a" >&2; exit 97; }\n'
+        "done\n"
+        'exec "$@"\n',
+    )
+    bloco = BLOCO_DOS_BONDS.replace(VAR_LIB, str(raiz))
+    assert VAR_LIB not in bloco
+    script = (
+        "set -uo pipefail\n"
+        'log() { printf "[uninstall] %s\\n" "$*"; }\n'
+        f"KEEP_CONFIG={0 if purge else 1}\nREMOVE_UDEV=0\n" + bloco
+    )
+    r = subprocess.run(
+        [BASH, "-c", script],
+        env={"PATH": f"{fakes}:/usr/bin:/bin", "HOME": str(tmp_path)},
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    assert "RECUSEI" not in r.stderr, r.stderr
+    return raiz
+
+
+def test_o_diario_do_root_vai_junto_dos_bonds_guardados(tmp_path: Path) -> None:
+    raiz = _acervo(tmp_path, purge=False)
+    guardados = sorted(raiz.glob("bt-bonds.pre-uninstall-*"))
+    assert len(guardados) == 1, sorted(p.name for p in raiz.iterdir())
+    dentro = sorted(p.name for p in guardados[0].iterdir())
+    assert dentro == ["radio-diario.jsonl", "radio-diario.jsonl.1", "snapshot-1.tar"], dentro
+    assert not list(raiz.glob("radio-diario*")), (
+        "o diário ficou no caminho de antes: a próxima instalação o releria como desta vida"
+    )
+
+
+def test_sem_bonds_o_diario_ainda_e_guardado(tmp_path: Path) -> None:
+    raiz = _acervo(tmp_path, purge=False, com_bonds=False)
+    guardados = sorted(raiz.glob("bt-bonds.pre-uninstall-*"))
+    assert len(guardados) == 1
+    assert sorted(p.name for p in guardados[0].iterdir()) == [
+        "radio-diario.jsonl",
+        "radio-diario.jsonl.1",
+    ]
+
+
+def test_com_purge_config_bonds_e_diario_saem_juntos(tmp_path: Path) -> None:
+    raiz = _acervo(tmp_path, purge=True)
+    assert sorted(p.name for p in raiz.iterdir()) == []

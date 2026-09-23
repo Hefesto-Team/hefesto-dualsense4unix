@@ -148,7 +148,11 @@ def test_binario_curado_com_a_biblioteca_atras(tmp_path: Path) -> None:
     veredito, detalhe = _veredito(
         tmp_path,
         marcas=["hefesto-0001", "hefesto-0002"],
-        versoes={"bluez": ALVO, "bluez-cups": ALVO, "libbluetooth3": "5.86-0ubuntu0.1~hefesto24.04.2"},
+        versoes={
+            "bluez": ALVO,
+            "bluez-cups": ALVO,
+            "libbluetooth3": "5.86-0ubuntu0.1~hefesto24.04.2",
+        },
     )
     assert veredito == "atras", veredito
     assert "libbluetooth3" in detalhe
@@ -165,12 +169,15 @@ def test_o_registro_leva_a_versao_que_o_archive_serve(tmp_path: Path) -> None:
         "apt-cache",
         "cat <<'X'\n"
         "     bluez | 5.86-0ubuntu0.1~hefesto24.04.4 | file:/cache Packages\n"
-        "     bluez | 5.72-0ubuntu5.5 | http://apt.pop-os.org/ubuntu noble-updates/main amd64 Packages\n"
+        "     bluez | 5.72-0ubuntu5.5 | http://apt.pop-os.org/ubuntu noble-updates/main "
+        "amd64 Packages\n"
         "     bluez | 5.72-0ubuntu5 | http://apt.pop-os.org/ubuntu noble/main amd64 Packages\n"
         "X\n",
     )
     _fake(fakes, "dpkg", f'exec "{DPKG}" "$@"\n')
-    script = "set -euo pipefail\n" + _funcao("_bz_maior_do_archive") + "_bz_maior_do_archive bluez\n"
+    script = (
+        "set -euo pipefail\n" + _funcao("_bz_maior_do_archive") + "_bz_maior_do_archive bluez\n"
+    )
     r = subprocess.run(
         [BASH, "-c", script],
         env={"PATH": f"{fakes}:/usr/bin:/bin"},
