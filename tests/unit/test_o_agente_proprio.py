@@ -16,7 +16,10 @@ particular com o Gio de verdade — que é o que prova o caminho que o produto u
 
 from __future__ import annotations
 
+import threading
+import time
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -119,6 +122,44 @@ def test_pin_e_chave_sao_recusados_e_o_que_so_mostra_passa(
             with pytest.raises(bd.RecusaNoBarramento):
                 tratador(dono, metodo, (DISPOSITIVO,))
         assert tratador(dono, "DisplayPasskey", (DISPOSITIVO, 123456, 0)) == ()
+
+
+def test_o_agente_atende_sem_pedir_a_trava(
+    barramento: bm.BarramentoDeMentira, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Decisão de quem coordena: o agente NUNCA pede a trava do rádio.
+
+    O ``Pair`` segura a trava enquanto o BlueZ chama o agente — e a chamada chega
+    no fio do barramento, que não é o fio do ``Pair``: a trava reentrante não o
+    reconhece. Se o agente a pedisse, esperaria o próprio ``Pair`` até o prazo,
+    de 10 a 30 s em cada pareamento. Aqui o ``Pair`` é o fio da régua, com a
+    trava na mão, e o BlueZ é outro fio.
+
+    MORDIDA: faça o ``_atender`` pedir ``bluez_dbus.na_trava`` — a resposta só
+    sai no prazo da trava, recusada.
+    """
+    monkeypatch.setattr(diario_do_radio, "PRAZO_DA_TRAVA_S", 0.5)
+    agente = _agente(barramento)
+    tratador = barramento.exportados[CAMINHO_DO_AGENTE]
+    resposta: dict[str, Any] = {}
+
+    def o_bluez_chamando() -> None:
+        inicio = time.monotonic()
+        try:
+            resposta["valor"] = tratador(
+                barramento.DONO_DO_BLUEZ, "RequestConfirmation", (DISPOSITIVO, 1)
+            )
+        except Exception as problema:
+            resposta["erro"] = problema
+        resposta["segundos"] = time.monotonic() - inicio
+
+    with bd.na_trava(gp.QUEM), agente.esperando(DISPOSITIVO):
+        fio = threading.Thread(target=o_bluez_chamando)
+        fio.start()
+        fio.join(timeout=3)
+
+    assert resposta.get("valor") == (), resposta
+    assert resposta["segundos"] < 0.2, "o agente esperou a trava do Pair que o chamou"
 
 
 def test_ao_sair_o_agente_desregistra(
