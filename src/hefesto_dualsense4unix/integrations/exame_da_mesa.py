@@ -41,8 +41,6 @@ import argparse
 import datetime
 import json
 import re
-import shutil
-import subprocess
 import sys
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -84,12 +82,6 @@ ROTULO_DAS_ORDENS = "Mudanças recomendadas"
 #: A chave da linha de cima. Não é o slug de regra nenhuma — ela existe
 #: justamente para o caso em que nenhuma regra chegou a rodar.
 CHAVE_DAS_ORDENS = "ordens_da_mesa"
-
-#: Teto de espera de cada chamada ao `busctl`, em segundos. O número é o mesmo
-#: teto curto que a casa usa para leitura viva de BT — a conferência inteira
-#: roda num worker, mas um `busctl` pendurado seguraria o worker e a próxima
-#: entrada na aba pareceria travada.
-ESPERA_DO_BUSCTL_S = 5.0
 
 #: O caminho de UM dispositivo Bluetooth no D-Bus, e nada mais fundo.
 #:
@@ -326,47 +318,6 @@ def suporte_ao_controle(
     )
 
 
-def _busctl(argumentos: Sequence[str]) -> str | None:
-    """Roda um `busctl` e devolve a saída, ou ``None`` se não deu.
-
-    Ausência da ferramenta, erro e teto de tempo colapsam em ``None``: para o
-    exame os três significam "não deu para conferir", e é o `nao_sei` que
-    responde por eles.
-    """
-    if shutil.which("busctl") is None:
-        return None
-    try:
-        saida = subprocess.run(
-            ["busctl", *argumentos],
-            capture_output=True,
-            text=True,
-            timeout=ESPERA_DO_BUSCTL_S,
-            check=False,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return None
-    return saida.stdout if saida.returncode == 0 else None
-
-
-def _propriedade_do_dispositivo(
-    executar: Callable[[Sequence[str]], str | None], caminho: str, nome: str
-) -> str | None:
-    """Uma propriedade de `org.bluez.Device1`, crua e sem aspas.
-
-    Mesmo desembrulho de `_dbus_bt_prop` (`scripts/doctor.sh:2552-2556`): o
-    `busctl` responde ``b true``, com o tipo na frente.
-    """
-    bruto = executar(
-        ["get-property", "org.bluez", caminho, "org.bluez.Device1", nome]
-    )
-    if bruto is None:
-        return None
-    texto = bruto.strip()
-    if not texto:
-        return None
-    return texto.split()[-1].strip('"')
-
-
 def pareamentos(
     *, executar: Callable[[Sequence[str]], str | None] | None = None
 ) -> Item:
@@ -389,8 +340,12 @@ def pareamentos(
     carrega (`:3227`), e ele vai para o terminal de quem pediu; esta vai para
     uma tela que o retrato das abas fotografa e versiona.
     """
-    rodar = executar if executar is not None else _busctl
-    arvore = rodar(["tree", "org.bluez", "--list"])
+    # O dono do BlueZ (BLUEZ-UM-DONO-01), importado AQUI e não no topo: este
+    # arquivo é 100% stdlib no import, porque o doctor o roda como script.
+    from hefesto_dualsense4unix.integrations import bluez_dbus
+
+    leitor = bluez_dbus.dono() if executar is None else bluez_dbus.pelo_executor(executar)
+    arvore = leitor.caminhos()
     if arvore is None:
         return Item(
             chave="pareamentos",
@@ -398,11 +353,7 @@ def pareamentos(
             estado=ESTADO_NAO_SEI,
             porque="Não deu para perguntar ao Bluetooth do sistema.",
         )
-    caminhos = [
-        linha.strip()
-        for linha in arvore.splitlines()
-        if _CAMINHO_DE_DISPOSITIVO.fullmatch(linha.strip())
-    ]
+    caminhos = [c for c in arvore if _CAMINHO_DE_DISPOSITIVO.fullmatch(c)]
     if not caminhos:
         return Item(
             chave="pareamentos",
@@ -416,12 +367,16 @@ def pareamentos(
     pela_metade = 0
     sem_resposta = 0
     for caminho in caminhos:
-        pareado = _propriedade_do_dispositivo(rodar, caminho, "Paired")
-        vinculado = _propriedade_do_dispositivo(rodar, caminho, "Bonded")
+        pareado = bluez_dbus.como_booleano(
+            leitor.propriedade(caminho, bluez_dbus.APARELHO, "Paired")
+        )
+        vinculado = bluez_dbus.como_booleano(
+            leitor.propriedade(caminho, bluez_dbus.APARELHO, "Bonded")
+        )
         if pareado is None or vinculado is None:
             sem_resposta += 1
             continue
-        if pareado == "true" and vinculado == "false":
+        if pareado and not vinculado:
             pela_metade += 1
     if pela_metade:
         return Item(
