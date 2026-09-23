@@ -35,11 +35,25 @@ class Relogio:
         return self.agora
 
 
+class _NoDeMovimento:
+    """O nó recém-aberto: sem ``absinfo`` legível, como num kernel antigo."""
+
+    def absinfo(self, _codigo: int) -> object:
+        raise OSError(22, "Invalid argument")
+
+
 def _leitor(relogio: Relogio) -> MotionSensorReader:
+    """O leitor ABERTO pelo mesmo gancho que o laço de reconexão chama.
+
+    CONFERÊNCIA DE 23/09/2026: este dublê chamava ``_zerar_a_taxa`` sozinho, e
+    arrancar a abertura da taxa de ``_on_device_opened`` — o que deixaria os Hz
+    em «não sei» para sempre no produto — passava com as 60 réguas verdes.
+    """
     leitor = MotionSensorReader(device_path=Path("/nao/existe"), target_uniq="aabbcc000011")
     leitor._relogio_da_taxa = relogio
-    leitor._active_dev = object()
-    leitor._zerar_a_taxa(aberto=True)
+    no = _NoDeMovimento()
+    leitor._active_dev = no
+    leitor._on_device_opened(no)
     return leitor
 
 
@@ -289,6 +303,30 @@ async def test_o_state_full_publica_o_orcamento_de_ar_por_adaptador(
     assert ar[vazio]["canais_evitados"] is None
 
 
+def test_controle_desconectado_nao_pede_hz_a_ninguem(monkeypatch: object) -> None:
+    """Perguntar abriria um leitor para um controle que não está na mesa."""
+    _daemon, handlers = _handlers(monkeypatch)
+    entradas = [{"uniq": UNIQ_1, "transport": "bt", "connected": False}]
+    handlers._merge_radio(entradas)  # type: ignore[attr-defined]
+    assert (entradas[0]["hz_movimento"], entradas[0]["hz_voz"]) == (None, None)
+    assert handlers._sensor_hub.perguntados == []  # type: ignore[attr-defined]
+
+
+def test_o_adaptador_do_controle_e_relido_depois_do_prazo(monkeypatch: object) -> None:
+    """O cache do ``HID_PHYS`` vence: o controle que mudou de adaptador aparece."""
+    import time
+
+    _daemon, handlers = _handlers(monkeypatch)
+    velho = "aa:bb:cc:00:00:0b"
+    alvo = frozenset({UNIQ_1})
+    handlers._adaptadores_em_cache = (time.monotonic(), alvo, {UNIQ_1: velho})  # type: ignore[attr-defined]
+    assert handlers._adaptadores_do_radio([UNIQ_1]) == {UNIQ_1: velho}  # type: ignore[attr-defined]
+    vencido = time.monotonic() - handlers._ADAPTADOR_TTL_S - 0.1  # type: ignore[attr-defined]
+    handlers._adaptadores_em_cache = (vencido, alvo, {UNIQ_1: velho})  # type: ignore[attr-defined]
+    assert handlers._adaptadores_do_radio([UNIQ_1]) == {UNIQ_1: ADAPTADOR_A}, (  # type: ignore[attr-defined]
+        "o cache velho sobreviveu ao prazo: a tela mostraria o adaptador antigo")
+
+
 def test_o_afh_e_perguntado_numa_thread_e_so_de_tempos_em_tempos(
     monkeypatch: object,
 ) -> None:
@@ -360,6 +398,23 @@ def test_a_voz_e_a_taxa_de_quadros_de_audio_da_ponte_do_microfone() -> None:
     relogio.agora += 0.6
     ponte.audio, ponte.invalidos = 100, 6  # ninguém ouvindo: o contador parou
     assert sub.hz_de_voz(UNIQ_1) == 0.0, "ponte de pé e ninguém ouvindo é zero"
+
+
+def test_a_ponte_do_microfone_que_recomecou_e_nao_sei_e_nunca_taxa_negativa() -> None:
+    from hefesto_dualsense4unix.daemon.subsystems.bt_mic import BtMicSubsystem
+
+    ponte = _PonteDoMic("AA:BB:CC:00:00:01")
+    sub = BtMicSubsystem(gerenciador=SimpleNamespace(pontes={"/dev/hidraw9": ponte}))
+    sub._gerenciador = sub._gerenciador_injetado
+    relogio = Relogio()
+    sub._relogio_da_voz = relogio
+    sub.hz_de_voz(UNIQ_1)
+    relogio.agora += 1.0
+    ponte.audio = 100
+    assert sub.hz_de_voz(UNIQ_1) == 100.0
+    relogio.agora += 1.0
+    ponte.audio = 5  # a ponte caiu e subiu de novo: o contador recomeçou
+    assert sub.hz_de_voz(UNIQ_1) is None
 
 
 def test_sem_ponte_do_microfone_a_voz_e_nao_sei() -> None:
