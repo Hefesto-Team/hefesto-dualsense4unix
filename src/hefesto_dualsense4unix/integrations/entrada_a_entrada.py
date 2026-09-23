@@ -481,9 +481,10 @@ def _gravar_a_porta(
     if not e_extensao:
         # A entrada que nasce de uma extensão desenha dentro do quadrado de
         # quem a hospeda e NÃO entra em fileira nenhuma (``FaceDeclarada``).
-        for existente in faces:
-            existente["portas"] = [n for n in existente["portas"] if n != numero]
         alvo = next((f for f in faces if f["nome"] == face), None)
+        for existente in faces:
+            if existente is not alvo:
+                existente["portas"] = [n for n in existente["portas"] if n != numero]
         if alvo is None:
             alvo = {
                 "nome": face,
@@ -492,7 +493,10 @@ def _gravar_a_porta(
                 "alto": face == FACE_QUE_E_ALTO,
             }
             faces.append(alvo)
-        alvo["portas"].append(numero)
+        # A ORDEM DA FILEIRA É O DESENHO DELA: confirmar a mesma face de uma
+        # porta já mapeada não a manda para o fim (conferência, 23/09/2026).
+        if numero not in alvo["portas"]:
+            alvo["portas"].append(numero)
 
     portas: dict[str, Any] = {numero: {"caminho": porta.caminho}}
     if nos:
