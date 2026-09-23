@@ -1,0 +1,2932 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hefesto — Rádio e Adaptadores</title>
+<!--
+  RÁDIO E ADAPTADORES — a seção nova. Mockup para ela aprovar. 22/09/2026.
+
+  A ORDEM DESTA VOLTA, com as palavras dela: *"na real eu quero ter menos texto
+  nessa interface. ela tá muito carregada (…) texto aparece só como tooltip. tá
+  muito lotado mesmo de texto e tá bem confuso. falta indicar os controles svg
+  tipo cosmic red e afins."*
+
+  O QUE ISSO MUDOU, e é uma regra e não uma limpeza:
+
+    **IDENTIDADE fica na tela. EXPLICAÇÃO vira dica.**
+
+  Identidade é o que a pessoa precisa para saber DE QUEM é a coisa — o nome do
+  adaptador, o nome de quem segura o controle, o número da entrada. Explicação é
+  tudo que ensina o que aquilo significa — quanto custa, por que está junto, o
+  que o rádio já evita. A primeira não tem substituto visual; a segunda tem, e é
+  o ícone.
+
+  A LEGENDA INTEIRA SAIU. Seis linhas para dizer o que cada cor era — e a cor já
+  está no ícone do chip que a produz. Uma legenda é o sintoma de que o desenho
+  não se explica; quando ele se explica, ela é peso.
+
+  A SILHUETA É A DA CASA: o `<path class="corpo">` do `ds_limpo.svg`, byte a
+  byte. Desenhar um segundo DualSense aqui abriria uma segunda fonte para a
+  mesma figura — que é o defeito que esta casa paga desde que o `novo-layout/`
+  divergiu 25 KB sem ninguém ver.
+
+  OS ENDEREÇOS ESTÃO POSTOS, e é o item 1 do laudo de QA que ela aprovou:
+  `data-campo` diz o que o Python PINTA, `data-hef-alvo` diz COMO, e
+  `data-gesto` diz o que a pessoa ACIONA. Sem os três, o produto não alcança um
+  botão desta seção e régua nenhuma consegue morder. Onde a aba já tem um gesto
+  para a mesma coisa, o nome é o DELA — `examinar-portas` e `vizinho-o-que-e` —
+  porque um segundo nome para o mesmo ato é como o contrato se parte.
+
+  STANDALONE: nenhuma fonte de rede, nenhum script externo. O CSV embutido é a
+  verdade; este HTML é a leitura — mesma forma do `specs.html`.
+-->
+<style>
+  /* A PALETA É A DA CASA, token por token — lida de
+     `interface/paginas/08-conexoes.html`, que é o que o produto renderiza.
+     Nomes iguais aos de lá de propósito: assim esta seção cai dentro da aba
+     sem uma linha de tradução. */
+  :root {
+    --app-bg:#21222c; --panel:#282a36; --elevated:#2b2d3a;
+    --border-sutil:#343746; --border-forte:#44475a; --linha:#53576f;
+    --fg:#f8f8f2; --texto-suave:#c8ccda; --texto-mudo:#9a9eb8; --comment:#8896c4;
+    --cyan:#8be9fd; --green:#50fa7b; --orange:#ffb86c;
+    --pink:#ff79c6; --purple:#bd93f9; --red:#ff5555; --yellow:#f1fa8c;
+    --sel-bg:rgba(189,147,249,0.16);
+
+    --font-corpo: 'Space Grotesk', system-ui, sans-serif;
+    --font-dado:  'JetBrains Mono', ui-monospace, monospace;
+    --ease: cubic-bezier(.22,.61,.36,1);
+
+    /* UMA COR POR COISA QUE CUSTA RÁDIO, e as quatro saem da paleta. A mesma
+       cor no ícone do chip e na fatia da barra — é o que dispensa a legenda. */
+    --c-entrada: var(--cyan);
+    --c-mic:     var(--pink);
+    --c-som:     var(--orange);
+    --c-haptica: var(--purple);
+    /* E A VERSÃO CALMA DE CADA UMA. Uma barra de 900 px em ciano cheio, quatro
+       vezes na mesma tela, grita — ela olhou e disse *"tá carregadíssimo (…) e
+       não tá harmônico"*. O preenchimento cai para um véu da cor e o ÍCONE
+       fica cheio: a identidade continua inteira e o volume some. */
+    --c-entrada-veu: rgba(139,233,253,.32);
+    --c-som-veu:     rgba(255,184,108,.32);
+    --c-haptica-veu: rgba(189,147,249,.32);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0; padding: 20px;
+    background: var(--app-bg); color: var(--fg);
+    font-family: var(--font-corpo); font-size: 13.5px; line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* O ÍCONE, EM UM LUGAR SÓ. Traço em `currentColor`, tamanho pela `font-size`
+     do pai — assim um ícone nunca precisa de uma cor própria escrita à mão. */
+  .i { width: 1em; height: 1em; display: block; flex: none;
+       fill: none; stroke: currentColor; stroke-width: 1.9;
+       stroke-linecap: round; stroke-linejoin: round; }
+  .i.cheio { fill: currentColor; stroke: none; }
+  /* A SILHUETA É TRAÇO, E NÃO PREENCHIMENTO — medido nas duas: o
+     `<path class="corpo">` do `ds_limpo.svg` é uma forma com RECORTES (os
+     furos dos analógicos e do touchpad, por `fill-rule="evenodd"`). Preenchê-la
+     a 30 px de largura deixa os furos comerem quase todo o corpo e o resultado
+     lê como um anel fino. O traço desenha o contorno E os recortes, e é o que
+     entrega «isto é um DualSense, e é DESTA cor» de longe. */
+  /* O TRAÇO DA SILHUETA É FIXO EM PIXEL, e não em unidade do desenho.
+     Ela viu o que estava errado: *"a borda dos svgs contém os motores hápticos
+     e por isso fica grossa destoando do resto"*. A borda dupla das
+     empunhaduras é o contorno da casca do aparelho — ela existe no desenho da
+     casa e não sai. O que destoava era a ESPESSURA: um `stroke-width` em
+     unidades do `viewBox` engorda quando o desenho encolhe, e a 34 px ele
+     ficava mais pesado que os ícones ao lado, que são de 1,9.
+     Com `non-scaling-stroke` o traço vale 1,1 px em qualquer tamanho, e a
+     silhueta passa a pesar o mesmo que o resto da linha. */
+  .ds { fill: none; stroke: currentColor; stroke-width: 1.1;
+        vector-effect: non-scaling-stroke; }
+
+  /* O PALCO É A SEÇÃO, E NÃO A JANELA — medido em 22/09/2026 na aba real.
+     Pergunta dela: *"não vai sobrepor o menu de abas e nem o banner ou
+     rodapé, certo?"*.  <!-- (noqa-acento) -->
+
+     Ia sobrepor os três. A casca da `08-conexoes.html` a 1280x800 é:
+       banner  `.fita-linha`  topo  17, altura  68
+       abas    `.tira`        topo  85, altura  42
+       MIOLO   `.miolo`       topo 127, altura 609  (overflow-y: auto)
+       rodapé  `.rodape`      topo 736, altura  47
+     O painel nasceu `position: fixed; top:0; bottom:0` e o véu `fixed;
+     inset:0` — os dois cobriam de 0 a 800, isto é, os três.
+
+     A CURA TEM DUAS PARTES, e a segunda é a que não se vê:
+     1. `position: relative` aqui e `absolute` nos dois: o painel passa a
+        medir a SEÇÃO, e o `.miolo` continua dono do que rola.
+     2. `z-index: 0` aqui. Isto abre um contexto de empilhamento próprio, e
+        é o que garante que NENHUM z-index de dentro — hoje ou depois —
+        alcance a casca. Sem ele a regra vale por disciplina; com ele, por
+        construção.
+
+     E O PAINEL DEIXOU DE DESLIZAR DE FORA. `transform: translateX(100%)`
+     fechado punha 340 px de conteúdo à DIREITA do palco: sem `overflow:
+     hidden` ele apareceria, e com `overflow: hidden` os balões da régua
+     seriam decepados. A entrada agora é véu + 14 px, e o fechado é
+     `visibility: hidden` — que não pinta, não recebe clique e não gera
+     rolagem lateral no `.miolo`. */
+  .quadro {
+    position: relative; z-index: 0;
+    max-width: 1210px; margin: 0 auto;
+    background: var(--panel); border: 1px solid var(--linha);
+    border-radius: 9px; padding: 11px 14px 14px;
+  }
+
+  /* ------------------------------------------------------------ cabeçalho */
+  .cab { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
+  .cab .seta { color: var(--purple); font-size: 10px; }
+  .cab h1 { font-size: 13.5px; font-weight: 600; margin: 0; color: var(--purple); }
+  .cab .conta {
+    font-family: var(--font-dado); font-size: 11px; color: var(--texto-mudo);
+    margin-left: 4px;
+  }
+  .cab .direita { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 13px; border-radius: 7px; min-height: 32px;
+    background: transparent; border: 1px solid var(--linha);
+    color: var(--texto-suave); font: inherit; font-size: 12.5px; cursor: pointer;
+    text-decoration: none;  /*: o `.btn` também veste `<a>` — ver os dois do rodapé */
+    transition: background var(--ease) 120ms, border-color var(--ease) 120ms, color var(--ease) 120ms;
+  }
+  .btn:hover { border-color: var(--texto-suave); color: var(--fg); }
+  .btn:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+  .btn .i { font-size: 15px; }
+  .btn.principal { border-color: var(--green); color: var(--green); }
+  .btn.principal:hover { background: rgba(80,250,123,.1); }
+  .btn.so-icone { padding: 7px; width: 32px; justify-content: center; }
+
+  /* ------------------------------------------------------------- A SALA
+     OS ADAPTADORES SÃO EMPILHADOS, e não três colunas — ordem dela, 22/09,
+     vendo os quatro controles espremidos numa coluna de 386 px:
+     *"todos os dualsense expremidos dessa forma fica horrível. Eles no mínimo
+     deveriam ocupar o espaço horizontal todo."*
+
+     Em três colunas, a linha de um controle tinha 386 px para caber silhueta,
+     nome e três botões — e sobrava zero para a barra dele. Empilhado, cada
+     dispositivo tem a largura toda, que é o que a barra de features precisa
+     para dizer alguma coisa.
+
+     E O ADAPTADOR VAZIO ENCOLHE PARA UMA LINHA, também ordem dela: *"ambos
+     pequenos como uma linha"*. Um card vazio com 300 px de altura reservada é
+     o que ela olhou e não curtiu duas vezes. */
+  .sala { display: flex; flex-direction: column; gap: 7px; }
+
+  .lugar {
+    background: var(--app-bg); border: 1px solid var(--linha);
+    border-radius: 9px; padding: 5px 10px 6px;
+    display: flex; flex-direction: column; gap: 7px;
+    transition: border-color var(--ease) 140ms;
+  }
+  /* A MARCA DE QUEM VARRE É ÂMBAR, e não vermelha: não há nada errado
+     acontecendo — outra janela está fazendo o trabalho dela. */
+  .marca.varrendo { color: var(--yellow); cursor: help; }
+  .lugar.alvo  { border-color: var(--green); background: rgba(80,250,123,.06); }
+  /* O DESTINO PISCA UMA VEZ depois de receber — é o que diz "caiu aqui" sem
+     trocar o que ela está vendo. */
+  .lugar.recebeu { animation: recebeu 900ms var(--ease) 1; }
+  @keyframes recebeu {
+    0%, 100% { border-color: var(--border-forte); }
+    25%, 60% { border-color: var(--green); }
+  }
+  @media (prefers-reduced-motion: reduce) { .lugar.recebeu { animation: none } }
+  .lugar.cheio { border-color: var(--orange); }
+
+  /* O ADAPTADOR É UMA LINHA QUE EXPANDE — ordem dela, 22/09: *"a ideia é que
+     essa seção não quebre o limite vertical que temos nessa página e nas
+     outras pra não arrumarmos pra cabeça"*.
+
+     Com os três abertos a seção passava de 840 px, e a aba tem 855 no total
+     para topo, três seções e rodapé. Fechado, um adaptador é UMA linha de
+     34 px que já diz tudo o que se bate o olho para saber: nome, entrada,
+     barra, quanto do rádio, quantos canais. Aberto, mostra os aparelhos.
+
+     E O ESTOURADO NASCE ABERTO: quem precisa de atenção não pode cobrar um
+     clique para se mostrar. */
+  .lugar-topo { display: flex; align-items: center; gap: 8px; min-height: 28px; }
+  .abre-lugar {
+    width: 24px; height: 24px; padding: 0; flex: none; border-radius: 5px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: transparent; border: 1px solid transparent;
+    color: var(--texto-mudo); cursor: pointer; font-size: 10px;
+    transition: transform var(--ease) 140ms;
+  }
+  .abre-lugar:hover { border-color: var(--linha); color: var(--fg); }
+  .abre-lugar:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+  .abre-lugar[aria-expanded="true"] { transform: rotate(90deg); }
+  .lugar-corpo { display: flex; flex-direction: column; gap: 8px; }
+
+  /* O NOME É EDITÁVEL NO LUGAR. Hoje o gesto existe e é invisível — um
+     sublinhado pontilhado. Ela disse que não fazia ideia de como renomear. */
+  .lugar-nome {
+    font-size: 13.5px; font-weight: 600; color: var(--fg);
+    width: 16ch; flex: none; min-height: 26px;
+    background: transparent; border: 1px solid var(--linha); border-radius: 6px;
+    padding: 3px 6px; font-family: inherit;
+  }
+  .lugar-nome:hover { border-color: var(--texto-mudo); }
+  .lugar-nome:focus { outline: none; border-color: var(--purple); background: var(--panel); }
+  .lugar-nome::placeholder { color: var(--orange); font-weight: 400; font-style: italic; }
+
+  .sino {
+    width: 26px; height: 26px; padding: 0; flex: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 50%; border: 1px solid rgba(255,184,108,.5);
+    background: transparent; color: var(--orange); cursor: pointer; font-size: 14px;
+  }
+  .sino:hover { background: rgba(255,184,108,.14); }
+  .sino:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+
+  /* ------------------------------------------------------- onde ele está
+     AS PALAVRAS SÃO AS DO «MAPEAR ENTRADAS». O que era palavra virou ÍCONE, e
+     a palavra virou a dica. */
+  .onde { display: flex; align-items: center; gap: 6px;
+          font-family: var(--font-dado); font-size: 11px; color: var(--texto-mudo); }
+  .onde .marca {
+    display: inline-flex; align-items: center; font-size: 15px;
+    color: var(--texto-suave); cursor: help;
+  }
+  .onde .marca.hub   { color: var(--orange); }
+  .onde .marca.junto { color: var(--orange); }
+  .onde .marca.usb3  { color: var(--yellow); }
+
+  .ensina {
+    display: inline-flex; align-items: center; gap: 4px; min-height: 26px;
+    padding: 1px 9px; border-radius: 20px; font-size: 11.5px;
+    color: var(--purple); border: 1px solid rgba(189,147,249,.65);
+    background: transparent; cursor: pointer; font-family: var(--font-corpo);
+    text-decoration: none;  /*: o «Onde fica?» é `<a href>`, não `<button>` */
+  }
+  .ensina:hover { background: var(--sel-bg); }
+  .ensina:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+  .ensina .i { font-size: 13px; }
+
+  /* --------------------------------------------- a barra DO ADAPTADOR
+     ELA É SEGMENTADA POR DISPOSITIVO, e cada bloco tem a cor do plástico
+     daquele aparelho — ordem dela: *"no caso ali seriam 6 blocos sendo cada um
+     4 controles, 1 teclado e um mouse e cada tendo a cor do plástico de cada
+     controle. e diferenciando a cor do mouse e teclado."*
+
+     São DUAS segmentações diferentes na mesma tela, e é de propósito: esta diz
+     DE QUEM é o rádio; a de dentro de cada linha diz NO QUE ele é gasto. Uma
+     fala em cor de plástico, a outra em cor de feature — e o olho separa as
+     duas porque a cor do bloco é a mesma da silhueta logo abaixo. */
+  .lugar-conta { display: flex; align-items: center; gap: 8px; margin-left: auto;
+                 font-family: var(--font-dado); font-size: 11.5px; color: var(--texto-mudo); }
+  .lugar-conta .quanto.apertado { color: var(--orange); }
+  .lugar-conta .quanto.estourou { color: var(--orange); font-weight: 600; }
+  .lugar-conta .sobra { display: flex; align-items: center; gap: 3px; cursor: help; }
+  .lugar-conta .sobra.nao-cabe { color: var(--texto-suave); }
+  .lugar-conta .sobra.passou { color: var(--orange); }
+  .lugar-conta .sobra .i { font-size: 14px; }
+  .canais-do-lugar { display: flex; align-items: center; gap: 4px; cursor: help;
+                     font-size: 11px; color: var(--texto-mudo); }
+  .canais-do-lugar .i { font-size: 14px; }
+  .canais-do-lugar.apertado { color: var(--orange); }
+
+  .trilho {
+    position: relative; height: 10px; border-radius: 5px; overflow: hidden; opacity: .88;
+    background: var(--panel); border: 1px solid var(--linha); display: flex; gap: 1px;
+  }
+  .trilho.estourado { border-color: rgba(255,184,108,.6); }
+  .bloco { height: 100%; min-width: 2px; cursor: help;
+           transition: width var(--ease) 260ms, filter var(--ease) 120ms; }
+  .bloco:hover { filter: brightness(1.25); }
+  /* A MARCA DO TETO: onde a antena acaba. Uma barra que satura em 100% mente
+     exatamente no estado em que a pessoa precisa dela. */
+  .barra-do-lugar { position: relative; padding-top: 7px; flex: 1 1 auto; min-width: 110px; }
+  .marca-do-teto {
+    position: absolute; top: 0; width: 0; height: 0; transform: translateX(-4px);
+    border-left: 4px solid transparent; border-right: 4px solid transparent;
+    border-top: 5px solid var(--orange); cursor: help;
+  }
+
+  /* ------------------------------------------- a linha de um dispositivo */
+  .aparelhos { display: flex; flex-direction: column; gap: 2px; }
+
+  /* A LINHA NÃO TEM MOLDURA. Eram quatro caixas encaixadas — card, linha,
+     faixa e vaga —, e o olho não tem onde descansar. Fica o fundo, que separa
+     sem desenhar mais uma borda. */
+  /* A LINHA É UMA GRADE DE QUATRO COLUNAS, e não uma fila. Em `flex` o ícone
+     de um teclado (19 px) e a silhueta de um controle (34 px) empurravam a
+     faixa para posições diferentes, e as seis linhas do mesmo adaptador saíam
+     desalinhadas — ela olhou e disse *"falta alinhamento horizontal desses
+     elementos"*. Com a grade, desenho, nome, faixa e número ficam em colunas
+     fixas, e o olho pode descer a coluna sem tropeçar. */
+  .linha {
+    display: grid; grid-template-columns: 36px 13ch 1fr 6ch;
+    align-items: center; gap: 9px;
+    padding: 3px 8px 3px 5px; border-radius: 7px;
+    background: transparent; border: 1px solid transparent;
+    cursor: grab; user-select: none;
+    transition: background var(--ease) 120ms;
+  }
+  .linha:hover { background: var(--panel); }
+  .linha:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+  .linha.arrastando { opacity: .45; }
+  .linha .ds  { width: 34px; height: 24px; justify-self: center; }
+  .linha .ico { font-size: 19px; justify-self: center; }
+  /* TODO NOME É EDITÁVEL — ordem dela: *"todo texto ali tem que permitir que eu
+     possa alterar. Vitória, Caixa de som, teclado, mouse"*. O campo tem moldura
+     ao passar o rato: um input sem moldura nenhuma não se anuncia como campo,
+     que é o defeito da tabela de hoje. */
+  .nome {
+    font-size: 12.5px; color: var(--fg); background: transparent;
+    border: 1px solid transparent; border-radius: 5px;
+    padding: 3px 5px; min-height: 26px; width: 100%; min-width: 0; font-family: inherit;
+  }
+  .nome:hover { border-color: var(--linha); }
+  .nome:focus { outline: none; border-color: var(--purple); background: var(--app-bg); }
+
+  /* A BARRA DE FEATURES DO CONTROLE, e ela é o pedido literal dela: *"ter uma
+     barra interna com os espaços reservados pra cada feature na barra dele e
+     dentro da barra de cada controle, teriamos os svgs de cada feature
+     ocupando o espaço ali."*
+
+     SÃO DOIS ESPAÇOS, e não quatro, porque a física é essa:
+       · o que o controle manda — e o MICROFONE anda dentro dele. Medido:
+         `dualsense_bt_audio.py` diz que o áudio não abre canal novo, o input
+         cai de 260,4 para 170,5 Hz e o total mal se mexe. Por isso o ◉ é um
+         selo DENTRO deste espaço, e não um espaço ao lado.
+       · a ponte — som OU vibração, nunca os dois (`alto_falante_bt.py:835`).
+         Um espaço reservado com dois ocupantes possíveis.
+
+     O ESPAÇO FICA RESERVADO MESMO DESLIGADO: é o que deixa ver, sem clicar,
+     quanto aquele controle AINDA pode pedir. */
+  /* A FAIXA DE CADA LINHA É PROPORCIONAL AO QUE AQUELE APARELHO GASTA, na
+     mesma escala dentro do adaptador. Sem isso a linha do teclado (96 fatias)
+     desenhava a mesma largura que a de um controle (928) — e a barra mentia
+     exatamente onde ela existe para comparar. O que sobra à direita é o que
+     aquele aparelho NÃO gasta. */
+  .features { display: flex; min-width: 0; }
+  .faixa-do-aparelho { display: flex; gap: 0; min-width: 0; align-items: center; }
+  /* UM GRUPO POR DIREÇÃO. A linha entre eles é a informação: o que está de um
+     lado não disputa fila com o que está do outro. */
+  .fluxo { display: flex; align-items: center; gap: 4px; min-width: 0; }
+  .fluxo .seta { font-size: 13px; flex: none; opacity: .4; }
+  .fluxo.manda .seta  { color: var(--c-entrada); }
+  .fluxo.recebe .seta { color: var(--c-som); }
+  .fluxo + .fluxo { margin-left: 7px; padding-left: 7px;
+                    border-left: 1px solid var(--border-forte); }
+  .sem-radio { font-family: var(--font-dado); font-size: 10.5px;
+               color: var(--texto-mudo); opacity: .7; cursor: help;
+               align-self: center; }
+  .fatias.zero { opacity: .45; }
+  .vaga {
+    position: relative; display: flex; align-items: center; gap: 5px;
+    height: 24px; border-radius: 6px; padding: 0 7px;
+    border: 1px dashed var(--linha); background: transparent;
+    color: var(--texto-mudo); font: inherit; font-size: 11px; cursor: pointer;
+    overflow: hidden; transition: all var(--ease) 140ms;
+  }
+  .vaga .i { font-size: 15px; flex: none; }
+  /* O HERTZ FICA ONDE ELE É GERADO — dentro da vaga que o cobra. */
+  .hz { font-family: var(--font-dado); font-size: 10px; opacity: .8;
+        white-space: nowrap; margin-left: 3px; }
+  /* AS DUAS PARTES DA FILA. A divisória entre elas é o dado: ela anda quando o
+     microfone liga, e é isso que a tela tem de mostrar. */
+  .parte { display: flex; align-items: center; gap: 2px; min-width: 0;
+           height: 24px; border-radius: 6px; padding: 0 6px; overflow: hidden;
+           border: 1px solid transparent; font: inherit; font-size: 11px;
+           transition: flex-grow var(--ease) 200ms; }
+  /* AS PARTES SÃO A VAGA. A moldura externa virou redundante quando a fila
+     passou a ter dois pedaços com moldura própria — e, mantida, espremia os
+     dois para 22 px, abaixo dos 24 que um alvo de toque pede. */
+  .parte.movimento { color: var(--c-entrada); border-color: var(--c-entrada);
+                     background: var(--panel); }
+  .parte.voz { color: var(--texto-mudo); border-style: dashed;
+               border-color: var(--linha); cursor: pointer;
+               justify-content: center; }
+  .parte.voz[aria-pressed="true"] { color: var(--c-mic); border-style: solid;
+                                    border-color: var(--c-mic);
+                                    background: rgba(255,121,198,.08); }
+  .parte.voz:focus-visible { outline: 2px solid var(--purple); outline-offset: 1px; }
+  /* SÓ A VAGA PARTIDA PERDE A MOLDURA — achado por ela em 22/09: *"cade a
+     barra desses elementos?"*.  <!-- (noqa-acento) -->
+     A regra nasceu sem o `.partida` e alcançou a caixa de som, o fone e a
+     webcam, que têm vaga INTEIRA: elas ficaram com o número solto no escuro,
+     sem nada que dissesse quanto daquela linha é delas. A moldura é a barra. */
+  .vaga.entrada.fixa.partida { gap: 3px; padding: 0; border: none;
+                               background: none; height: 24px;
+                               overflow: visible; }
+  /* UM PASSAGEIRO não tem largura porque não tem custo próprio. */
+  .passageiro { display: inline-flex; align-items: center; flex: none;
+                font-size: 13px; opacity: .45; cursor: help; margin-left: 2px; }
+  .passageiro:hover, .passageiro:focus-visible { opacity: .95; }
+  .vaga:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+  .vaga.fixa { cursor: help; }
+  .vaga[aria-pressed="true"], .vaga.fixa { border-style: solid; }
+  /* UMA MANCHA DE COR SÓ, e ela é o resumo lá em cima. Dois arranjos antes
+     deste eram dissonantes: cor cheia nas oito barras gritava, e véu em todas
+     virava lama — o ciano em azul-petróleo, o laranja em marrom. O que fecha
+     é HIERARQUIA: a barra do adaptador é a única mancha; as vagas das linhas
+     ficam no fundo do painel e levam a cor só na BORDA e no ÍCONE. */
+  .vaga[aria-pressed="true"], .vaga.fixa { background: var(--panel); }
+  .vaga.entrada[aria-pressed="true"], .vaga.entrada.fixa {
+    border-color: var(--c-entrada); color: var(--c-entrada); }
+  .vaga.som[aria-pressed="true"]     { border-color: var(--c-som);     color: var(--c-som); }
+  .vaga.haptica[aria-pressed="true"] { border-color: var(--c-haptica); color: var(--c-haptica); }
+  .vaga:not([aria-pressed="true"]):not(.fixa):hover { border-color: var(--texto-suave); color: var(--texto-suave); }
+  .vaga:not([aria-pressed="true"]):not(.fixa):hover { border-color: var(--texto-suave); color: var(--texto-suave); }
+
+  /* O MICROFONE É UM SELO DENTRO DA VAGA DA ENTRADA, porque é ali que ele
+     viaja. Pôr o ◉ ao lado desenharia um fluxo que o aparelho não tem. */
+  /* O SELO DE UMA FEATURE QUE NÃO PESA. Largura fixa, fora da barra: a barra é
+     a conta de rádio, e um custo zero não pode ocupar espaço nela. */
+  .selo-zero {
+    width: 26px; height: 24px; border-radius: 6px; padding: 0; flex: none;
+    margin-left: 5px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px dashed var(--linha); background: transparent;
+    color: var(--texto-mudo); cursor: pointer; font-size: 15px;
+  }
+  .selo-zero[aria-pressed="true"] { border-style: solid; border-color: var(--yellow);
+                                    color: var(--yellow); }
+  .selo-zero:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+
+  /* O SELO DO MICROFONE VIROU PARTE DA FILA, e as regras de bolinha que ele
+     tinha antes davam forma de pílula a um pedaço de barra. A forma dele agora
+     é a de `.parte`: o que muda entre ligado e desligado é a LARGURA. */
+  .selo-mic { padding: 0 5px; }
+
+  /* A ESCOLHA DA PONTE: som e vibração dividem UMA vaga, e os dois ícones
+     moram dentro dela — acender um apaga o outro. */
+  .ponte { display: flex; gap: 3px; flex: 1 1 auto; min-width: 88px; }
+
+  .fatias { font-family: var(--font-dado); font-size: 10.5px; color: var(--texto-mudo);
+            text-align: right; cursor: help; }
+
+  /* A VAGA DE SOLTAR, uma linha só — para o adaptador que está sobrando. */
+  /* «ARRASTE PARA CÁ» É UM BOTÃO — ordem dela. Uma faixa tracejada que diz uma
+     coisa e não responde ao clique é o que faz a pessoa tentar e desistir. */
+  .soltar-fila { display: flex; align-items: center; justify-content: center; gap: 6px;
+                 margin-top: 3px; }
+  .soltar {
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    flex: 1 1 auto; min-height: 28px; border: 1px dashed var(--linha);
+    border-radius: 7px; background: transparent; font: inherit;
+    color: var(--texto-mudo); font-size: 11.5px; cursor: pointer;
+  }
+  .soltar:hover { border-color: var(--texto-suave); color: var(--texto-suave); }
+  .soltar:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+  .lugar.alvo .soltar { border-color: var(--green); color: var(--green); }
+
+  /* A LÂMPADA — ordem dela: a frase da sugestão *"tem que ser um balão botão
+     verde com svg de lâmpada ao lado do adicionar itens de cada extensor
+     sobrando e clicando aí sim ele exibe"*. Ela só nasce no adaptador que tem
+     espaço E tem alguém para receber. */
+  /* A LÂMPADA É SÓ O ÍCONE — ordem dela: *"a direita dele temos só o svg da
+     lâmpada"*. A palavra «Sugerir» ao lado de «Arraste para cá» punha dois
+     rótulos disputando a mesma linha. */
+  .lampada {
+    display: inline-flex; align-items: center; justify-content: center; flex: none;
+    width: 30px; height: 28px; padding: 0; border-radius: 7px; font-family: inherit;
+    border: 1px solid var(--green); background: rgba(80,250,123,.08);
+    color: var(--green); cursor: pointer;
+  }
+  .lampada:hover { background: rgba(80,250,123,.2); }
+  .lampada:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+  .lampada .i { font-size: 14px; }
+
+  .balao {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px; border-radius: 8px;
+    background: rgba(80,250,123,.09); border: 1px solid rgba(80,250,123,.35);
+    font-size: 12.5px; color: var(--texto-suave);
+  }
+  .balao .ds { width: 28px; height: 20px; flex: none; }
+  .balao .como { font-size: 11px; color: var(--texto-mudo); }
+  .balao .ok {
+    margin-left: auto; padding: 5px 14px; border-radius: 6px; min-height: 28px;
+    background: var(--green); border: none; color: var(--app-bg);
+    font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .balao .ok:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+
+  /* ------------------------------------------------------- a sugestão
+     A ÚNICA FRASE LONGA QUE FICA NA TELA, e ela é dela: *"O controle Cosmic
+     Red da Vitória funciona melhor no Extensor à esquerda"*. É a coisa que a
+     seção existe para dizer; virar ícone seria virar charada. */
+  .sugestao {
+    display: flex; align-items: center; gap: 8px; margin-top: 10px;
+    padding: 7px 10px; border-radius: 9px;
+    background: rgba(80,250,123,.07); border: 1px solid rgba(80,250,123,.3);
+    font-size: 12.5px; color: var(--texto-suave);
+  }
+  .sugestao.impossivel { background: rgba(255,184,108,.07); border-color: rgba(255,184,108,.32); }
+  .sugestao .marca { color: var(--green); font-size: 16px; display: flex; }
+  .sugestao.impossivel .marca { color: var(--orange); }
+  .sugestao .ds { width: 26px; height: 18px; flex: none; }
+  .sugestao .ok {
+    margin-left: auto; padding: 5px 14px; border-radius: 6px; min-height: 28px;
+    background: var(--green); border: none; color: var(--app-bg);
+    font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .sugestao .ok:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+
+  /* ------------------------------------------------------- o espectro
+     SLOTS DE BT E OCUPAÇÃO DE 2,4 GHz SÃO DUAS FÍSICAS: um dongle não enche o
+     copo, ele ENCOLHE O COPO. Por isso a régua tem outra forma e outra altura
+     — pôr as duas na mesma barra foi o que fez a tela de hoje mentir. */
+  .espectro { margin-bottom: 11px; }
+  .espectro-cab {
+    display: flex; align-items: center; gap: 7px; margin-bottom: 6px;
+    font-size: 12.5px; font-weight: 600; color: var(--green);
+  }
+  .espectro-cab .ajuda {
+    width: 20px; height: 20px; padding: 0; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--linha); background: transparent;
+    color: var(--texto-mudo); cursor: help; font-size: 13px;
+  }
+  .espectro-cab .conta { font-weight: 400; font-size: 11px; color: var(--texto-mudo);
+                         font-family: var(--font-dado); }
+  .selo-fora {
+    display: inline-flex; align-items: center; gap: 4px; margin-left: auto;
+    padding: 1px 7px; border-radius: 999px; cursor: help;
+    border: 1px dashed var(--border-forte); color: var(--texto-mudo);
+    font-family: var(--font-dado); font-size: 10px;
+  }
+  .selo-fora .i { font-size: 13px; }
+  .selo-fora + .no-ar { margin-left: 9px; }
+  /* A FAIXA DAS PORTAS — a segunda física. Ela é discreta de propósito: a
+     régua de cima é o que muda a toda hora; esta muda quando alguém pluga
+     alguma coisa, e o valor dela é responder «quem está colado em quem». */
+  .portas { display: flex; gap: 14px; margin-top: 6px; flex-wrap: wrap; }
+  .grupo-de-portas {
+    display: flex; gap: 3px; padding: 3px; border-radius: 7px;
+    border: 1px dashed var(--border-sutil); cursor: help;
+  }
+  .porta {
+    width: 26px; height: 26px; border-radius: 5px; padding: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--linha); background: var(--app-bg);
+    color: var(--texto-mudo); cursor: pointer;
+    transition: all var(--ease) 130ms;
+  }
+  .porta .i { font-size: 14px; }
+  .porta .ds { width: 18px; height: 13px; }
+  .porta.bom    { border-color: rgba(80,250,123,.45); }
+  .porta.atento { border-color: var(--orange); }
+  .porta.ruim   { border-color: var(--orange); background: rgba(255,184,108,.08); }
+  /* USB 3.0 leva um risco: a entrada em si é o vizinho, ocupada ou não. */
+  .porta.tres::after {
+    content: ''; position: absolute; width: 18px; height: 1px;
+    background: var(--yellow); transform: translateY(9px);
+  }
+  .porta { position: relative; }
+  .porta.vizinha { background: var(--sel-bg); border-color: var(--purple); }
+  .porta:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+
+  .canais {
+    position: relative; height: 38px; border-radius: 9px;
+    background: var(--app-bg); border: 1px solid var(--linha); overflow: hidden;
+  }
+  .evitado {
+    position: absolute; top: 0; bottom: 0;
+    background: repeating-linear-gradient(45deg,
+      rgba(255,184,108,.22) 0 4px, transparent 4px 8px);
+  }
+  /* DUAS PISTAS só existem quando há sobreposição; com uma, a faixa ocupa a
+     altura toda e nada muda.
+
+     E A RÉGUA CRESCE COM ELAS. Espremer duas pistas nos 38 px de uma deixava
+     cada faixa com 10 px de altura — clicável no papel, inalcançável no dedo.
+     Dois alvos de 24 px pedem 58 px de régua, e a seção continua 70 px abaixo
+     do teto vertical da página. */
+  .canais.duas-pistas { height: 58px; }
+  .canais.duas-pistas .faixa.pista-0 { top: 4px;  bottom: auto; height: 24px; }
+  .canais.duas-pistas .faixa.pista-1 { top: 30px; bottom: auto; height: 24px; }
+  .faixa {
+    position: absolute; top: 6px; bottom: 6px; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; overflow: hidden; border: 1px solid transparent;
+    padding: 0; background: none;
+  }
+  .faixa { background: var(--panel); border-color: var(--linha); color: var(--texto-mudo); }
+  .faixa.forte { border-color: var(--orange); color: var(--orange); }
+  .faixa.medio { border-color: var(--yellow); color: var(--yellow); }
+  .faixa.fraco { border-color: var(--comment); color: var(--comment); }
+  /* FORA DA FAIXA: existe, e não disputa. O cinza é a informação. */
+  .faixa.fora { border-style: dashed; border-color: var(--border-forte);
+                color: var(--texto-mudo); opacity: .55; }
+  /* O QUE ELA AINDA NÃO ENSINOU pede a palavra em roxo, e é o único lugar da
+     régua que cobra alguma coisa. */
+  /* QUEM ESTÁ CUSTANDO CANAL ganha o anel — é a diferença entre um vizinho que
+     só existe e um vizinho que pesa. */
+  .faixa.custa { background: rgba(255,184,108,.10); }
+  /* R11 — A FAIXA DO VIZINHO É PROVÁVEL, e a borda diz isso: o que o rádio
+     MEDE é o canal que ele evita (o hachurado); quem ocupa é dedução. */
+  .faixa.provavel { border-style: dashed; }
+  .faixa.sem-nome { border-color: var(--purple); color: var(--purple);
+                    background: var(--sel-bg); cursor: pointer; }
+  .faixa.sem-nome:focus-visible { outline: 2px solid var(--purple); outline-offset: 1px; }
+  /* O NÚMERO MORA DENTRO DO BLOCO — ordem dela: *"isso de legenda não funciona
+     coloca o número ou dentro da seção dele"*. Três números soltos embaixo
+     obrigam a pessoa a medir com o olho onde cada bloco cai; dentro do bloco,
+     a resposta está onde a pergunta nasce. */
+  .faixa .ch { font-family: var(--font-dado); font-size: 9.5px; opacity: .9;
+               margin-left: 4px; }
+
+  /* ONDE O SEU BLUETOOTH SALTA. Os vizinhos ficam PARADOS numa faixa; o
+     Bluetooth salta por todos os canais que sobraram, 1.600 vezes por segundo.
+     É a diferença que explica tudo o mais, e ela não estava desenhada. */
+  .salto {
+    position: absolute; top: 0; bottom: 0; pointer-events: none;
+    background: repeating-linear-gradient(90deg,
+      rgba(139,233,253,.13) 0 1px, transparent 1px 7px);
+  }
+  .no-ar { display: flex; align-items: center; gap: 5px; margin-left: auto;
+           padding-right: 10px; margin-right: 6px; border-right: 1px solid var(--linha);
+           font-size: 11px; color: var(--texto-mudo); cursor: help; }
+  .no-ar .i { font-size: 15px; }
+  .no-ar .ds { width: 20px; height: 14px; }
+
+  /* ------------------------------------------------- a barra das entradas
+     OS TRÊS BOTÕES FICAM (palavra dela) e só mudam de lugar: saem do meio da
+     seção — onde «Mapear Entradas» e «Mapear Entrada a Entrada» disputavam
+     colunas diferentes com nomes quase iguais — e viram uma barra só, no pé,
+     na ordem em que se usam. Aqui a palavra É o rótulo do ato, não explicação:
+     o nome de cada um é contrato com a aba. */
+  .entradas {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--linha);
+  }
+  /* O RECADO É UMA LINHA SÓ e nunca empurra nada: ele vive no vão que a
+     fileira já tinha, encolhe com reticências e some sozinho. */
+  .recado {
+    margin-left: auto; display: none; align-items: center; gap: 8px;
+    min-width: 0; font-size: 12px; color: var(--texto-suave);
+    padding: 0 4px;
+  }
+  .recado.vivo { display: inline-flex; animation: recado-entra 180ms var(--ease); }
+  .recado .diz { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .recado .desfazer {
+    flex: none; min-height: 26px; padding: 0 10px; border-radius: 6px;
+    border: 1px solid var(--border-forte); background: transparent;
+    color: var(--purple); font: inherit; font-size: 11.5px; cursor: pointer;
+  }
+  .recado .desfazer:hover { border-color: var(--purple); background: var(--sel-bg); }
+  /* O BOTÃO QUE FAZ A COISA acontecer é o verde, e é o único com peso: a
+     pergunta tem duas saídas e só uma delas mexe no aparelho dela. */
+  .recado .confirma { color: var(--green); border-color: var(--green); }
+  .recado .confirma:hover { border-color: var(--green); background: rgba(80,250,123,.10); }
+  .recado.perguntando { color: var(--fg); margin-left: 0; flex: 1 1 auto; }
+  /* A PERGUNTA NUNCA É CORTADA. Medido a 820 px: a frase pedia 706 px e tinha
+     600, e as reticências comiam justamente o que ela precisa para decidir —
+     se o controle volta sozinho ou se pede PS + Create. Um aviso serve
+     resumido; uma pergunta, não. Ela quebra em linha e a fileira cresce os
+     poucos pixels que isso custa. */
+  .recado.perguntando .diz { white-space: normal; overflow: visible;
+                             text-overflow: clip; }
+  .entradas.perguntando > .btn,
+  .entradas.perguntando > .mapa { display: none; }
+  .recado .desfazer:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+  @keyframes recado-entra { from { opacity: 0 } to { opacity: 1 } }
+  @media (prefers-reduced-motion: reduce) { .recado.vivo { animation: none } }
+  .recado + .mapa { margin-left: 6px; }
+
+  .entradas .mapa {
+    margin-left: auto; color: var(--purple); text-decoration: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 7px;
+    border: 1px solid var(--border-sutil);
+  }
+  .entradas .mapa .i { font-size: 16px; }
+  .entradas .mapa:hover { border-color: var(--purple); background: var(--sel-bg); }
+  .entradas .mapa:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+
+  /* --------------------------------------------------- O PAINEL LATERAL
+     DECISÃO DELA: *"virar um painel lateral"*. Com dez aparelhos a gaveta
+     embutida empurrava a sala inteira para baixo. */
+  /* O VÉU DA PERGUNTA É MAIS FUNDO QUE O DO PAINEL. Medido: `rgba(0,0,0,.45)`
+     sobre um tema já escuro quase não se vê, e a seção continuava parecendo
+     acionável atrás de uma decisão que bloqueia. O painel lateral é uma
+     gaveta — dá para olhar a sala enquanto ele está aberto; a pergunta, não. */
+  #veu-pergunta.aberto { background: rgba(0,0,0,.72); }
+  .caixa-pergunta {
+    position: absolute; z-index: 3; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(440px, calc(100% - 40px));
+    background: var(--elevated); border: 1px solid var(--border-forte);
+    border-radius: 10px; padding: 16px 17px 14px;
+    box-shadow: 0 14px 40px rgba(0,0,0,.45);
+    display: flex; flex-direction: column; gap: 13px;
+  }
+  .caixa-pergunta[hidden] { display: none; }
+  .caixa-pergunta .diz { margin: 0; font-size: 13px; line-height: 1.5; color: var(--fg); }
+  .caixa-pergunta .botoes { display: flex; justify-content: flex-end; gap: 8px; }
+  .caixa-pergunta .confirma { color: var(--green); border-color: var(--green); }
+  .caixa-pergunta .confirma:hover { border-color: var(--green); background: rgba(80,250,123,.10); }
+  .veu {
+    position: absolute; inset: 0; border-radius: 9px;
+    background: rgba(0,0,0,.45);
+    opacity: 0; pointer-events: none; transition: opacity var(--ease) 180ms;
+  }
+  .veu.aberto { opacity: 1; pointer-events: auto; }
+  .painel {
+    position: absolute; top: 0; right: 0; bottom: 0; width: 340px; max-width: 92%;
+    background: var(--panel); border-left: 1px solid var(--linha);
+    border-radius: 0 9px 9px 0; overflow-y: auto;
+    padding: 15px 15px 20px; display: flex; flex-direction: column; gap: 11px;
+    /* O DESLIZE É PARA DENTRO. Fechado a 14 px À DIREITA o painel punha borda
+       fora do palco, e num `.miolo` com `overflow: auto` isso vira barra de
+       rolagem lateral. Começando 14 px à esquerda, ele nunca passa da borda. */
+    opacity: 0; visibility: hidden; transform: translateX(-14px);
+    transition: opacity var(--ease) 180ms, transform var(--ease) 180ms,
+                visibility 0s linear 180ms;
+    z-index: 2;
+  }
+  .painel.aberto { opacity: 1; visibility: visible; transform: none;
+                   transition-delay: 0s, 0s, 0s; }
+  .painel-cab { display: flex; align-items: center; gap: 9px; }
+  .painel-cab h2 { font-size: 13.5px; font-weight: 600; margin: 0; color: var(--green); }
+  .pulso { width: 7px; height: 7px; border-radius: 50%; background: var(--green);
+           animation: pisca 1.4s var(--ease) infinite; flex: none; }
+  @keyframes pisca { 0%,100% { opacity: 1 } 50% { opacity: .25 } }
+  @media (prefers-reduced-motion: reduce) {
+    .pulso { animation: none }
+    .fatia, .painel, .veu, .btn, .custo { transition: none }
+  }
+  .painel-cab .fechar { margin-left: auto; }
+
+  .escolha-lugar { display: flex; gap: 5px; flex-wrap: wrap; }
+  .op {
+    padding: 5px 10px; border-radius: 20px; font-size: 11.5px; min-height: 28px;
+    border: 1px solid var(--linha); background: var(--app-bg);
+    color: var(--texto-mudo); cursor: pointer; font-family: inherit;
+  }
+  .op[aria-pressed="true"] { border-color: var(--green); color: var(--green); background: rgba(80,250,123,.1); }
+  .op:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
+
+  .achados { display: flex; flex-direction: column; gap: 5px; overflow-y: auto; }
+  .achado {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 9px; border-radius: 9px;
+    background: var(--app-bg); border: 1px solid var(--linha);
+  }
+  .achado .ds { width: 26px; height: 18px; flex: none; color: var(--cyan); }
+  .achado .ico { font-size: 17px; color: var(--texto-mudo); flex: none; }
+  .achado .nome { font-size: 12.5px; }
+  .achado .forca { margin-left: auto; font-family: var(--font-dado); font-size: 10.5px; color: var(--texto-mudo); }
+  .achado .btn { padding: 4px 10px; font-size: 11.5px; min-height: 26px; }
+
+  .queda {
+    display: flex; align-items: center; gap: 8px; padding: 6px 9px;
+    border-radius: 9px; background: var(--app-bg); border: 1px solid var(--linha);
+    font-size: 12px;
+  }
+  .queda .quando { font-family: var(--font-dado); font-size: 10.5px; color: var(--texto-mudo); margin-left: auto; }
+
+  .painel .escolha { display: flex; flex-direction: column; gap: 7px; }
+
+  /* ------------------------------------------ PROPOSTA DE 23/09 (as doze)
+     R10 — A BARRA DO ADAPTADOR SÃO AS VAGAS DE PONTE. O que transborda um
+     adaptador é o que o PC escreve em ritmo fixo (som e vibração); a entrada
+     é elástica e se ajeita no ar que sobra. Então a barra conta o que é fixo,
+     uma vaga por ponte, e o limite é o medido: duas. */
+  .trilho.vagas { height: 14px; overflow: visible; opacity: 1; gap: 3px;
+                  background: transparent; border: 0; }
+  .vaga-ponte { flex: 1 1 0; height: 100%; border-radius: 4px; cursor: help;
+                border: 1px dashed var(--linha); display: flex; align-items: center;
+                justify-content: center; color: var(--fg); }
+  .vaga-ponte .i { font-size: 10px; }
+  .vaga-ponte.cheia { border-style: solid; }
+  .vaga-ponte.alem  { border: 1px solid var(--orange); }
+  .vaga-ponte.reservada { animation: pisca 1.4s var(--ease) infinite; }
+  /* O MOVIMENTO QUE CAIU FICA LARANJA — nunca vermelho: rádio cheio é
+     reversível (regra de `radio_da_mesa.py`). */
+  .parte.movimento.pouco { border-color: var(--orange); }
+  .parte.movimento.pouco .hz { color: var(--orange); font-weight: 600; opacity: 1; }
+  .fatias.alem { color: var(--orange); font-weight: 600; }
+  .vaga.alem { border-color: var(--orange) !important; }
+  /* R1 — ESPERANDO PS + CREATE. É estado, não recado: sem ele a pessoa não
+     sabe o que fazer com o controle na mão. */
+  .espera { display: inline-flex; align-items: center; gap: 5px; min-height: 24px;
+            padding: 1px 9px; border-radius: 20px; font-family: var(--font-corpo);
+            font-size: 11.5px; color: var(--green); border: 1px solid rgba(80,250,123,.6);
+            animation: pisca 1.4s var(--ease) infinite; white-space: nowrap; }
+  .espera .ds { width: 20px; height: 14px; }
+  .lugar.esperando { border-color: rgba(80,250,123,.6); }
+  .linha.esperando { cursor: default; }
+  .linha.esperando .nome { opacity: .6; }
+  .linha .segure { color: var(--green); font-size: 11.5px;
+                   animation: pisca 1.4s var(--ease) infinite; }
+  /* R8 — SEM RECADO: a recusa do «Equilibrar» é o botão que balança. */
+  .btn.recusa { animation: recusa 420ms var(--ease) 1; border-color: var(--texto-mudo); }
+  @keyframes recusa { 0%,100% { transform: none } 25% { transform: translateX(-3px) }
+                      75% { transform: translateX(3px) } }
+  @media (prefers-reduced-motion: reduce) {
+    .vaga-ponte.reservada, .espera, .linha .segure, .btn.recusa { animation: none }
+  }
+  .caixa-pergunta .outro[hidden] { display: none; }
+</style>
+</head>
+<body>
+
+<div class="quadro">
+  <div class="cab">
+    <span class="seta" aria-hidden="true">&#9660;</span>
+    <h1>Rádio e Adaptadores</h1>
+    <span class="conta" id="conta" data-campo="conta-de-adaptadores" data-hef-alvo="html"></span>
+    <div class="direita">
+      <button class="btn principal" id="b-conectar" data-gesto="conectar-aparelho">
+        <svg class="i"><use href="#i-mais"/></svg> Conectar</button>
+      <button class="btn" id="b-equilibrar" data-gesto="equilibrar-radio"
+              title="Move um controle por vez">
+        <svg class="i"><use href="#i-equilibrar"/></svg> Equilibrar</button>
+    </div>
+  </div>
+
+  <!-- OS VIZINHOS VÊM PRIMEIRO — ordem dela, 22/09: *"talvez fosse importante
+       ele aparecer primeiro acima dos dispositivos de conexão e com outro nome
+       melhor. do que só 2.4"*.
+
+       E A ORDEM CONTA UMA HISTÓRIA: primeiro o ar que já está lá — que não é
+       meu e eu não escolhi —, depois as antenas que eu ponho nele. Embaixo, a
+       régua era um rodapé sem dono, e a pergunta dela (*"como é que isso tá
+       falando com os controles?"*) não tinha resposta na tela.
+
+       O NOME. «Rádio e Adaptadores» já é o nome da seção que expande, então
+       este bloco precisava de um próprio. «2,4 GHz» é a UNIDADE, não o
+       assunto. «Vizinhos de rádio» descrevia só metade — os de fora — e a
+       pergunta dela foi exatamente sobre a outra metade: *"se temos wifi,
+       fones, caixa de som, webcam e os controles além do mouse e teclado, como
+       isso se relaciona com os demais?"*.
+       «Quem está no ar» é a pergunta que a pessoa faz olhando para lá, cabe os
+       dois lados, e é palavra de todo mundo. -->
+  <div class="espectro" data-campo="quem-esta-no-ar">
+    <div class="espectro-cab">
+      Quem está no ar
+      <span class="ajuda" role="img"
+            aria-label="Wi-Fi, teclado e mouse sem fio dividem os 2,4 GHz com o Bluetooth. O hachurado são os canais que os adaptadores evitam; as faixas com nome são o vizinho provável."
+            title="Wi-Fi, teclado e mouse sem fio dividem os 2,4 GHz com o Bluetooth. O hachurado são os canais que os adaptadores evitam; as faixas com nome são o vizinho provável.">
+        <svg class="i"><use href="#i-ajuda"/></svg></span>
+      <span class="fora-da-faixa" id="fora-da-faixa"
+            data-campo="espectro-fora-da-faixa" data-hef-alvo="html"></span>
+      <span class="no-ar" id="meus-no-ar" role="img"></span>
+      <span class="conta" id="fonte-espectro" data-campo="espectro-conta" data-hef-alvo="html"></span>
+    </div>
+    <div class="canais" id="canais" data-campo="espectro-canais" data-hef-alvo="html"></div>
+    <!-- A SEGUNDA FÍSICA: as PORTAS. Ela não repete a régua de cima; mede
+         outra coisa, e é por isso que fica abaixo e não dentro. -->
+    <div class="portas" id="portas" data-campo="vizinhanca-das-portas"
+         data-hef-alvo="html"></div>
+  </div>
+
+  <div class="sala" id="sala" data-campo="radio-sala" data-hef-alvo="html"></div>
+
+  <div class="entradas">
+    <!-- ESTES DOIS NÃO SÃO GESTOS, E O ERRO ERA MEU — medido em 22/09 na
+         `paginas/08-conexoes.html`: as duas telas se abrem por
+         `href="#mapear-entradas"` e `href="#mapear-entrada-a-entrada"`, CSS
+         `:target` puro, sem uma linha de JavaScript e sem `data-gesto` nenhum.
+         Este arquivo declarava um `data-gesto` de nome próprio para eles, e
+         transplantar isso criaria um SEGUNDO nome para um ato que já tem
+         o dele.
+
+         Palavra dela, 22/09: *"mapear entradas, mapear entrada a entrada e
+         examinar entrada e o botão pro mapa das portas, vc sabe que eles já
+         estão prontos, correto? não mexeremos nelees"*.
+         <!== (noqa-acento: citação literal dela) ==>
+
+         No produto as âncoras acham as `div.tela-nova` irmãs. Aqui elas não
+         acham nada, e é de propósito: o mockup mostra a FORMA do contrato,
+         não reimplementa as telas. -->
+    <a class="btn" id="b-mapear" href="#mapear-entradas"
+       title="Mapear Entradas — desenhar a minha mesa: as entradas numeradas por face, com ocupada, vazia, serve e vale evitar">
+      <svg class="i"><use href="#i-mapa"/></svg> Mapear Entradas</a>
+    <a class="btn" id="b-uma-a-uma" href="#mapear-entrada-a-entrada"
+       title="Mapear Entrada a Entrada — um toque por aparelho: você pluga, ele aprende">
+      <svg class="i"><use href="#i-uma-a-uma"/></svg> Mapear Entrada a Entrada</a>
+    <button class="btn" id="b-examinar" data-gesto="examinar-portas"
+            title="Examinar Entradas — refaz o exame das entradas, energia e rádio, e repinta o Check-up">
+      <svg class="i"><use href="#i-reexaminar"/></svg> Examinar Entradas</button>
+    <!-- R8, 23/09: SEM RECADO. A TELA-CALADA-01 vale aqui também: a
+         confirmação de um ato é o destino que pisca, e a recusa é o botão que
+         balança. A pergunta ANTES de mover continua — é pergunta, não
+         narração. -->
+    <!-- SÓ O SVG, e a razão é dela: *"o link que vai abrir vai ser no
+         navegador"*. Um rótulo de três palavras prometia uma gaveta desta
+         mesma tela; o ícone sozinho promete um lugar, e a dica diz qual. -->
+    <a class="mapa so-icone" href="mapa-das-portas.html"
+       title="O mapa das entradas — abre no navegador"
+       aria-label="O mapa das entradas — abre no navegador">
+      <svg class="i"><use href="#i-mapa"/></svg></a>
+  </div>
+
+  <!-- A PERGUNTA É UMA JANELA, e não uma linha no rodapé — ela viu e disse:
+       *"aparece escondido ali no final. Pop up?"*.  <!== (noqa-acento) ==>
+
+       A faixa do rodapé serve para AVISAR: ela custa zero de altura e some
+       sozinha, que é o certo para «pronto, já foi». Não serve para PERGUNTAR
+       sobre um ato que derruba o controle na mão de quem está jogando: ali
+       embaixo, longe de onde o dedo soltou, a pergunta se lê depois do susto.
+
+       A janela mora DENTRO do palco, como o painel lateral: o `.quadro` é
+       `position: relative` com contexto de empilhamento próprio, então ela
+       cobre a seção e não encosta no banner, nas abas nem no rodapé do app.
+       E custa ZERO de altura — nada é empurrado.
+
+       O resultado continua na faixa. Pergunta interrompe; aviso não. -->
+  <div class="veu" id="veu-pergunta"></div>
+  <div class="caixa-pergunta" id="pergunta" role="alertdialog" aria-modal="true"
+       aria-labelledby="pergunta-diz" hidden>
+    <p class="diz" id="pergunta-diz" data-campo="pergunta"></p>
+    <div class="botoes">
+      <button class="btn cancelar" id="pergunta-nao" data-gesto="cancelar-mudanca">Cancelar</button>
+      <!-- R3 + R4: o «ligar aqui mesmo» de quem não pode re-parear agora. -->
+      <button class="btn outro" id="pergunta-outro" data-gesto="ligar-mesmo-assim" hidden></button>
+      <button class="btn confirma" id="pergunta-sim" data-gesto="confirmar-mudanca"></button>
+    </div>
+  </div>
+
+  <!-- O véu e o painel são filhos do PALCO, não do documento. -->
+  <div class="veu" id="veu"></div>
+  <aside class="painel" id="painel" aria-hidden="true" inert role="dialog" aria-labelledby="painel-titulo">
+    <div class="painel-cab">
+      <span class="pulso" id="pulso"></span>
+      <h2 id="painel-titulo">Procurando</h2>
+      <button class="btn so-icone fechar" id="b-fechar" aria-label="Fechar" title="Fechar">
+        <svg class="i"><use href="#i-sair"/></svg></button>
+    </div>
+    <div id="painel-corpo"></div>
+  </aside>
+</div>
+
+<!-- o sprite: a silhueta da casa + os ícones -->
+<!-- O SPRITE. Um `<symbol>` por coisa, `<use>` onde ela aparece — assim o
+     mesmo desenho custa bytes uma vez só, e trocar um ícone é uma linha. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <!-- A SILHUETA É A DA CASA, montada de QUATRO grupos do `ds_limpo.svg`:
+       `grupo-ombros` + `z-casca #corpo` + `touchpad` + `grupo-analogicos`.
+
+       PORQUE QUATRO, e cada um custou uma volta: o `class="corpo"` sozinho
+       desenha só os dois punhos e a ponte de baixo — ela olhou e disse
+       *"o svg dos controles segue careca"*, e estava certa nas duas vezes.
+       Os ombros fecham as pontas de cima; **quem fecha o TOPO é o
+       touchpad**, que na geometria deste desenho é a peça que une um punho
+       ao outro. Sem ele o contorno fica aberto em cima, e a 34 px isso lê
+       como um controle sem cabeça.
+
+       PORQUE NÃO CINCO: com `grupo-face` e `grupo-direcional` o desenho
+       fica completo e vira sopa nesse tamanho. Medido lado a lado; a
+       comparação está em `/tmp` e a escolha é esta.
+
+       Os dez `transform-box: fill-box` vêm com os ombros e FICAM. O
+       `2026-08-28-ONDE-PARAMOS` mediu 30,4 por cento da tinta perdida
+       ali por causa deles — mas só sob librsvg, e a janela GTK, a única
+       que passava por ele, saiu em 06/09. Chrome e WebKitGTK honram. -->
+  <symbol id="i-ds" viewBox="6.399 22.990 116.684 80.472">
+<g id="grupo-ombros">
+    <g id="r1" class="z-gatilhos" data-entrada="r1" transform="translate(0 25.6200) scale(1 0.96813) translate(0 -25.6200)">
+      <path class="peca" fill="none" fill-rule="evenodd" d="M 94.013 26.506 L 98.913 26.506 C 100.322 26.506 101.463 27.494 101.463 28.712 C 101.463 29.93 100.322 30.918 98.913 30.918 L 92.792 31.331 C 91.514 31.353 91.463 29.93 91.463 28.712 C 91.463 27.494 92.605 26.506 94.013 26.506 Z M 94.013 27.198 L 98.913 27.198 C 99.88 27.198 100.663 27.876 100.663 28.712 C 100.663 29.548 99.825 29.869 98.858 29.869 L 94.013 30.226 C 93.047 30.226 92.263 29.548 92.263 28.712 C 92.263 27.876 93.047 27.198 94.013 27.198 Z" style="transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.982871, 0.184294, -0.184294, 0.982871, -0.038083, -0.003536)"/>
+    </g>
+    <g id="r2" class="z-gatilhos" data-entrada="r2" data-feature="gatilho-adaptativo-direito">
+      <path class="peca" fill="none" fill-rule="evenodd" d="M 101.323 29.18 L 106.723 29.18 C 107.662 29.18 108.217 30.669 108.252 30.894 C 108.287 31.119 108.63 32.476 107.73 32.54 L 101.047 32.503 C 100.108 32.503 100.447 31.702 100.447 30.763 C 100.447 29.824 100.384 29.18 101.323 29.18 Z M 101.41 29.718 L 106.647 29.685 C 107.144 29.685 107.549 30.379 107.692 30.859 C 107.834 31.335 107.438 31.504 107.438 31.504 L 106.545 31.432 L 104.226 31.421 L 101.125 31.575 C 100.946 31.542 100.972 31.43 100.971 31.413 C 100.97 31.39 100.999 31.071 101.01 30.834 C 101.031 30.392 100.96 29.753 101.41 29.718 Z" style="stroke-miterlimit: 1; stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.958223, 0.286023, -0.286023, 0.958223, 0, -0.000001)"/>
+    </g>
+    <g id="l1" class="z-gatilhos" transform="translate(0 25.6400) scale(1 0.96657) translate(0 -25.6400) matrix(-1, 0, 0, 1, 128.089752, 0.014236)" style="" data-entrada="l1">
+      <path class="peca" fill="none" fill-rule="evenodd" d="M 94.013 26.506 L 98.913 26.506 C 100.322 26.506 101.463 27.494 101.463 28.712 C 101.463 29.93 100.322 30.918 98.913 30.918 L 92.792 31.331 C 91.514 31.353 91.463 29.93 91.463 28.712 C 91.463 27.494 92.605 26.506 94.013 26.506 Z M 94.013 27.198 L 98.913 27.198 C 99.88 27.198 100.663 27.876 100.663 28.712 C 100.663 29.548 99.825 29.869 98.858 29.869 L 94.013 30.226 C 93.047 30.226 92.263 29.548 92.263 28.712 C 92.263 27.876 93.047 27.198 94.013 27.198 Z" style="transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.982871, 0.184294, -0.184294, 0.982871, -0.038083, -0.003536)"/>
+    </g>
+    <g id="l2" class="z-gatilhos" transform="matrix(-1, 0, 0, 1, 128.089752, 0.014236)" style="" data-entrada="l2" data-feature="gatilho-adaptativo-esquerdo">
+      <path class="peca" fill="none" fill-rule="evenodd" d="M 101.323 29.18 L 106.723 29.18 C 107.662 29.18 108.217 30.669 108.252 30.894 C 108.287 31.119 108.63 32.476 107.73 32.54 L 101.047 32.503 C 100.108 32.503 100.447 31.702 100.447 30.763 C 100.447 29.824 100.384 29.18 101.323 29.18 Z M 101.41 29.718 L 106.647 29.685 C 107.144 29.685 107.549 30.379 107.692 30.859 C 107.834 31.335 107.438 31.504 107.438 31.504 L 106.545 31.432 L 104.226 31.421 L 101.125 31.575 C 100.946 31.542 100.972 31.43 100.971 31.413 C 100.97 31.39 100.999 31.071 101.01 30.834 C 101.031 30.392 100.96 29.753 101.41 29.718 Z" style="stroke-miterlimit: 1; stroke-width: 0px; transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.958223, 0.286023, -0.286023, 0.958223, 0, -0.000001)"/>
+    </g>
+  <g id="corpo" class="z-casca" data-feature="chassi">
+      <path class="corpo" fill="none" fill-rule="evenodd" d="M 31.988 29.976 c 4.338 -0.492 8.454 -0.567 10.927 -0.484 a 0.5 0.5 0 0 1 0.105 0.985 c -0.486 0.122 -0.833 0.633 -1.017 1.493 c -0.175 0.817 -0.157 1.758 -0.081 2.38 c 0.33 1.664 1.178 6.225 1.96 11.341 c 0.81 5.291 -1.34 9.03 -2.59 10.287 v 0.001 c -1.67 1.68 -3.4 3.42 -5.826 6.837 c -2.47 3.479 -6.002 11.309 -9.178 18.944 c -2.387 5.736 -4.554 11.315 -5.9 14.777 c -0.44 1.135 -0.793 2.042 -1.036 2.653 l -0.017 0.038 l -0.076 0.158 c -0.088 0.188 -0.199 0.42 -0.347 0.655 l 3.12 0.422 c 0.543 -0.004 0.956 -0.109 1.301 -0.3 c 0.356 -0.196 0.676 -0.501 1 -0.956 c 0.56 -0.786 1.07 -1.92 1.78 -3.493 l 0.432 -0.958 c 1.208 -2.657 2.445 -5.838 3.515 -8.588 l 0.093 -0.239 a 190 190 0 0 1 1.468 -3.702 c 0.418 -1.006 0.784 -1.813 1.06 -2.23 c 0.7 -1.058 1.729 -2.597 3.492 -3.677 c 1.774 -1.086 4.236 -1.676 7.754 -0.983 h 40.07 c 2.805 -0.695 5.28 -0.355 7.32 0.81 c 2.049 1.17 3.613 3.143 4.645 5.624 c 1.189 2.86 1.943 4.997 2.648 7.039 l 0.2 0.578 c 0.632 1.836 1.254 3.639 2.154 5.89 q 0.14 0.35 0.274 0.696 c 0.463 1.19 0.9 2.31 1.572 3.161 c 0.389 0.493 0.845 0.874 1.413 1.11 c 0.566 0.234 1.279 0.338 2.204 0.223 l 2.647 -0.449 c -0.141 -0.228 -0.247 -0.452 -0.333 -0.633 l -0.077 -0.158 l -0.016 -0.038 c -0.243 -0.61 -0.596 -1.518 -1.037 -2.653 c -1.345 -3.462 -3.512 -9.04 -5.899 -14.777 c -3.176 -7.635 -6.708 -15.465 -9.178 -18.944 c -2.426 -3.417 -4.157 -5.158 -5.825 -6.837 h -0.002 c -1.25 -1.258 -3.398 -4.997 -2.59 -10.288 c 0.783 -5.116 1.63 -9.677 1.961 -11.342 c 0.075 -0.621 0.094 -1.562 -0.08 -2.379 c -0.185 -0.86 -0.532 -1.37 -1.018 -1.493 a 0.5 0.5 0 0 1 0.105 -0.985 c 2.473 -0.083 6.589 -0.008 10.927 0.484 c 4.328 0.49 8.927 1.402 12.334 3.015 a 0.5 0.5 0 0 1 0.228 0.218 c 2.635 4.97 8.471 18.727 10.833 34.172 c 1.475 9.65 1.358 17.23 0.24 22.728 c -1.112 5.468 -3.24 8.991 -5.9 10.329 c -1.724 0.867 -2.9 0.956 -3.742 0.504 l -0.09 -0.052 l -3.331 0.566 l -0.022 0.003 c -1.069 0.134 -1.964 0.023 -2.722 -0.291 c -0.757 -0.313 -1.343 -0.816 -1.814 -1.413 c -0.775 -0.98 -1.276 -2.27 -1.736 -3.457 q -0.128 -0.331 -0.254 -0.65 c -0.91 -2.274 -1.539 -4.098 -2.171 -5.933 l -0.2 -0.579 c -0.703 -2.034 -1.449 -4.148 -2.627 -6.98 c -0.968 -2.33 -2.404 -4.106 -4.216 -5.14 c -1.805 -1.031 -4.03 -1.354 -6.642 -0.695 a 0.5 0.5 0 0 1 -0.122 0.016 h -40.18 a 0.5 0.5 0 0 1 -0.098 -0.01 c -3.334 -0.666 -5.547 -0.096 -7.084 0.846 c -1.557 0.953 -2.48 2.318 -3.181 3.376 c -0.214 0.323 -0.544 1.035 -0.97 2.062 c -0.42 1.01 -0.915 2.28 -1.46 3.68 l -0.097 0.25 c -1.067 2.743 -2.313 5.946 -3.533 8.63 l -0.42 0.929 c -0.704 1.568 -1.265 2.814 -1.888 3.688 c -0.38 0.534 -0.806 0.961 -1.331 1.251 c -0.529 0.291 -1.124 0.424 -1.816 0.424 l -0.067 -0.004 l -3.916 -0.53 l -0.022 0.013 c -0.842 0.452 -2.018 0.363 -3.742 -0.504 c -2.66 -1.338 -4.788 -4.86 -5.9 -10.33 c -1.118 -5.497 -1.235 -13.077 0.24 -22.727 c 2.363 -15.445 8.198 -29.203 10.833 -34.172 a 0.5 0.5 0 0 1 0.228 -0.218 c 3.407 -1.613 8.006 -2.524 12.334 -3.015 M 17.638 99.989 l -0.024 0.017 q -0.044 0.029 -0.093 0.055 c -0.401 0.216 -1.185 0.305 -2.818 -0.516 c -2.24 -1.127 -4.277 -4.26 -5.37 -9.636 c -1.088 -5.347 -1.215 -12.802 0.249 -22.377 c 2.319 -15.164 8.021 -28.696 10.65 -33.708 c 3.243 -1.498 7.639 -2.375 11.869 -2.854 a 81 81 0 0 1 9.418 -0.505 c -0.248 0.396 -0.4 0.86 -0.494 1.296 c -0.207 0.966 -0.18 2.036 -0.093 2.73 l 0.005 0.035 a 293 293 0 0 1 1.957 11.316 c 0.759 4.962 -1.274 8.388 -2.31 9.431 c -1.685 1.694 -3.46 3.48 -5.934 6.964 c -2.548 3.59 -6.121 11.534 -9.285 19.139 c -2.392 5.75 -4.57 11.353 -5.914 14.813 c -0.434 1.116 -0.78 2.01 -1.02 2.613 l -0.079 0.16 c -0.211 0.433 -0.39 0.8 -0.713 1.027 M 110.346 99.977 q 0.063 0.046 0.134 0.084 c 0.401 0.216 1.185 0.305 2.819 -0.516 c 2.24 -1.127 4.276 -4.26 5.369 -9.636 c 1.088 -5.347 1.215 -12.802 -0.249 -22.377 c -2.319 -15.164 -8.021 -28.696 -10.65 -33.708 c -3.243 -1.498 -7.639 -2.375 -11.869 -2.854 a 81 81 0 0 0 -9.418 -0.505 c 0.248 0.396 0.4 0.86 0.494 1.296 c 0.207 0.966 0.18 2.036 0.093 2.73 l -0.005 0.035 a 293 293 0 0 0 -1.957 11.316 c -0.758 4.962 1.274 8.388 2.31 9.431 c 1.685 1.694 3.46 3.48 5.934 6.964 c 2.548 3.59 6.122 11.534 9.285 19.139 c 2.392 5.75 4.569 11.353 5.914 14.813 c 0.434 1.116 0.781 2.01 1.02 2.613 l 0.079 0.16 c 0.2 0.41 0.372 0.762 0.664 0.99 Z"/>
+    </g>
+  </g>
+<g id="corpo" class="z-casca" data-feature="chassi">
+      <path class="corpo" fill="none" fill-rule="evenodd" d="M 31.988 29.976 c 4.338 -0.492 8.454 -0.567 10.927 -0.484 a 0.5 0.5 0 0 1 0.105 0.985 c -0.486 0.122 -0.833 0.633 -1.017 1.493 c -0.175 0.817 -0.157 1.758 -0.081 2.38 c 0.33 1.664 1.178 6.225 1.96 11.341 c 0.81 5.291 -1.34 9.03 -2.59 10.287 v 0.001 c -1.67 1.68 -3.4 3.42 -5.826 6.837 c -2.47 3.479 -6.002 11.309 -9.178 18.944 c -2.387 5.736 -4.554 11.315 -5.9 14.777 c -0.44 1.135 -0.793 2.042 -1.036 2.653 l -0.017 0.038 l -0.076 0.158 c -0.088 0.188 -0.199 0.42 -0.347 0.655 l 3.12 0.422 c 0.543 -0.004 0.956 -0.109 1.301 -0.3 c 0.356 -0.196 0.676 -0.501 1 -0.956 c 0.56 -0.786 1.07 -1.92 1.78 -3.493 l 0.432 -0.958 c 1.208 -2.657 2.445 -5.838 3.515 -8.588 l 0.093 -0.239 a 190 190 0 0 1 1.468 -3.702 c 0.418 -1.006 0.784 -1.813 1.06 -2.23 c 0.7 -1.058 1.729 -2.597 3.492 -3.677 c 1.774 -1.086 4.236 -1.676 7.754 -0.983 h 40.07 c 2.805 -0.695 5.28 -0.355 7.32 0.81 c 2.049 1.17 3.613 3.143 4.645 5.624 c 1.189 2.86 1.943 4.997 2.648 7.039 l 0.2 0.578 c 0.632 1.836 1.254 3.639 2.154 5.89 q 0.14 0.35 0.274 0.696 c 0.463 1.19 0.9 2.31 1.572 3.161 c 0.389 0.493 0.845 0.874 1.413 1.11 c 0.566 0.234 1.279 0.338 2.204 0.223 l 2.647 -0.449 c -0.141 -0.228 -0.247 -0.452 -0.333 -0.633 l -0.077 -0.158 l -0.016 -0.038 c -0.243 -0.61 -0.596 -1.518 -1.037 -2.653 c -1.345 -3.462 -3.512 -9.04 -5.899 -14.777 c -3.176 -7.635 -6.708 -15.465 -9.178 -18.944 c -2.426 -3.417 -4.157 -5.158 -5.825 -6.837 h -0.002 c -1.25 -1.258 -3.398 -4.997 -2.59 -10.288 c 0.783 -5.116 1.63 -9.677 1.961 -11.342 c 0.075 -0.621 0.094 -1.562 -0.08 -2.379 c -0.185 -0.86 -0.532 -1.37 -1.018 -1.493 a 0.5 0.5 0 0 1 0.105 -0.985 c 2.473 -0.083 6.589 -0.008 10.927 0.484 c 4.328 0.49 8.927 1.402 12.334 3.015 a 0.5 0.5 0 0 1 0.228 0.218 c 2.635 4.97 8.471 18.727 10.833 34.172 c 1.475 9.65 1.358 17.23 0.24 22.728 c -1.112 5.468 -3.24 8.991 -5.9 10.329 c -1.724 0.867 -2.9 0.956 -3.742 0.504 l -0.09 -0.052 l -3.331 0.566 l -0.022 0.003 c -1.069 0.134 -1.964 0.023 -2.722 -0.291 c -0.757 -0.313 -1.343 -0.816 -1.814 -1.413 c -0.775 -0.98 -1.276 -2.27 -1.736 -3.457 q -0.128 -0.331 -0.254 -0.65 c -0.91 -2.274 -1.539 -4.098 -2.171 -5.933 l -0.2 -0.579 c -0.703 -2.034 -1.449 -4.148 -2.627 -6.98 c -0.968 -2.33 -2.404 -4.106 -4.216 -5.14 c -1.805 -1.031 -4.03 -1.354 -6.642 -0.695 a 0.5 0.5 0 0 1 -0.122 0.016 h -40.18 a 0.5 0.5 0 0 1 -0.098 -0.01 c -3.334 -0.666 -5.547 -0.096 -7.084 0.846 c -1.557 0.953 -2.48 2.318 -3.181 3.376 c -0.214 0.323 -0.544 1.035 -0.97 2.062 c -0.42 1.01 -0.915 2.28 -1.46 3.68 l -0.097 0.25 c -1.067 2.743 -2.313 5.946 -3.533 8.63 l -0.42 0.929 c -0.704 1.568 -1.265 2.814 -1.888 3.688 c -0.38 0.534 -0.806 0.961 -1.331 1.251 c -0.529 0.291 -1.124 0.424 -1.816 0.424 l -0.067 -0.004 l -3.916 -0.53 l -0.022 0.013 c -0.842 0.452 -2.018 0.363 -3.742 -0.504 c -2.66 -1.338 -4.788 -4.86 -5.9 -10.33 c -1.118 -5.497 -1.235 -13.077 0.24 -22.727 c 2.363 -15.445 8.198 -29.203 10.833 -34.172 a 0.5 0.5 0 0 1 0.228 -0.218 c 3.407 -1.613 8.006 -2.524 12.334 -3.015 M 17.638 99.989 l -0.024 0.017 q -0.044 0.029 -0.093 0.055 c -0.401 0.216 -1.185 0.305 -2.818 -0.516 c -2.24 -1.127 -4.277 -4.26 -5.37 -9.636 c -1.088 -5.347 -1.215 -12.802 0.249 -22.377 c 2.319 -15.164 8.021 -28.696 10.65 -33.708 c 3.243 -1.498 7.639 -2.375 11.869 -2.854 a 81 81 0 0 1 9.418 -0.505 c -0.248 0.396 -0.4 0.86 -0.494 1.296 c -0.207 0.966 -0.18 2.036 -0.093 2.73 l 0.005 0.035 a 293 293 0 0 1 1.957 11.316 c 0.759 4.962 -1.274 8.388 -2.31 9.431 c -1.685 1.694 -3.46 3.48 -5.934 6.964 c -2.548 3.59 -6.121 11.534 -9.285 19.139 c -2.392 5.75 -4.57 11.353 -5.914 14.813 c -0.434 1.116 -0.78 2.01 -1.02 2.613 l -0.079 0.16 c -0.211 0.433 -0.39 0.8 -0.713 1.027 M 110.346 99.977 q 0.063 0.046 0.134 0.084 c 0.401 0.216 1.185 0.305 2.819 -0.516 c 2.24 -1.127 4.276 -4.26 5.369 -9.636 c 1.088 -5.347 1.215 -12.802 -0.249 -22.377 c -2.319 -15.164 -8.021 -28.696 -10.65 -33.708 c -3.243 -1.498 -7.639 -2.375 -11.869 -2.854 a 81 81 0 0 0 -9.418 -0.505 c 0.248 0.396 0.4 0.86 0.494 1.296 c 0.207 0.966 0.18 2.036 0.093 2.73 l -0.005 0.035 a 293 293 0 0 0 -1.957 11.316 c -0.758 4.962 1.274 8.388 2.31 9.431 c 1.685 1.694 3.46 3.48 5.934 6.964 c 2.548 3.59 6.122 11.534 9.285 19.139 c 2.392 5.75 4.569 11.353 5.914 14.813 c 0.434 1.116 0.781 2.01 1.02 2.613 l 0.079 0.16 c 0.2 0.41 0.372 0.762 0.664 0.99 Z"/>
+    </g>
+<g id="touchpad" class="z-touch" data-entrada="touchpad" data-feature="touchpad" style="filter: url(&quot;#outline-filter-1&quot;);" transform="matrix(1.001104, 0, 0, 1, -0.095276, 0)">
+      <path class="peca" fill="none" fill-rule="evenodd" d="M 46.88 28.593 C 51.286 27.585 60.03 27.088 64.869 27.088 C 69.922 27.088 76.626 27.388 81.892 28.593 C 84.132 29.105 85.332 29.955 85.883 31.041 C 86.42 32.1 86.264 33.255 86.142 34.131 C 85.658 37.616 84.982 41.794 84.21 46.56 L 84.208 46.574 C 83.804 49.063 82.786 50.798 81.445 51.908 C 80.109 53.014 78.493 53.463 76.951 53.463 L 50.855 53.463 C 48.838 53.463 47.274 52.944 46.141 52.053 C 45.007 51.16 44.347 49.927 44.085 48.58 C 43.58 45.984 42.85 41.844 42.029 37.195 L 41.667 35.145 C 41.253 32.806 41.617 31.292 42.687 30.292 C 43.201 29.812 43.843 29.484 44.549 29.23 C 45.252 28.975 46.048 28.783 46.88 28.593 M 64.869 28.103 C 60.045 28.103 51.391 28.6 47.098 29.583 C 46.263 29.773 45.521 29.954 44.88 30.185 C 44.241 30.416 43.736 30.687 43.358 31.039 C 42.647 31.705 42.262 32.792 42.646 34.965 L 43.008 37.015 C 43.829 41.666 44.558 45.796 45.061 48.382 C 45.282 49.521 45.83 50.525 46.749 51.25 C 47.67 51.974 49.006 52.449 50.855 52.449 L 59.826 52.449 L 76.951 52.449 C 78.308 52.449 79.69 52.053 80.818 51.12 C 81.942 50.19 82.856 48.693 83.225 46.409 L 83.227 46.405 C 84 41.631 84.675 37.462 85.157 33.988 C 85.284 33.072 85.371 32.238 85 31.508 C 84.643 30.804 83.784 30.064 81.675 29.583 C 76.52 28.404 69.905 28.103 64.869 28.103" style="stroke-width: 1.97183px;"/>
+    </g>
+<g id="grupo-analogicos" transform="matrix(1, 0, 0, 1, 2.116542, -0.779778)">
+    <g id="stick_l" class="z-analogicos" data-entrada="stick_l" data-clique="l3">
+      <path class="peca" fill="none" fill-rule="evenodd" d="M 37.500 64.463 a 8.000 8.000 0 1 0 16.000 0 a 8.000 8.000 0 1 0 -16.000 0 Z M 38.500 64.463 a 7.000 7.000 0 1 1 14.000 0 a 7.000 7.000 0 1 1 -14.000 0 Z"/>
+    <g class="miolo"><ellipse style="stroke-width: 0px; stroke: rgb(54, 17, 17); " cx="45.5" cy="64.463" rx="4.645" ry="4.645" fill="none"/></g></g>
+    <g id="stick_r" class="z-analogicos" data-entrada="stick_r" data-clique="r3"><path class="peca" fill="none" fill-rule="evenodd" d="M 70.5 64.463 C 70.5 70.621 77.167 74.47 82.5 71.391 C 84.975 69.962 86.5 67.321 86.5 64.463 C 86.5 58.305 79.833 54.456 74.5 57.535 C 72.025 58.964 70.5 61.605 70.5 64.463 Z M 71.5 64.463 C 71.5 59.074 77.333 55.707 82 58.401 C 84.166 59.651 85.5 61.962 85.5 64.463 C 85.5 69.852 79.667 73.219 75 70.525 C 72.834 69.275 71.5 66.964 71.5 64.463 Z" style="stroke-width: 1;"/><g class="miolo"><ellipse style="stroke-width: 0; stroke: rgb(54, 17, 17); " cx="78.5" cy="64.463" rx="4.645" ry="4.645" fill="none"/></g></g>
+
+
+  </g>
+  </symbol>
+  <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M2.5 8.8a15 15 0 0 1 19 0M5.5 12.3a10 10 0 0 1 13 0M8.8 15.8a5 5 0 0 1 6.4 0"/><circle cx="12" cy="19.2" r="1.1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-fone" viewBox="0 0 24 24"><path d="M4 14.5V12a8 8 0 0 1 16 0v2.5"/><rect x="2" y="13.5" width="4.5" height="7" rx="2"/><rect x="17.5" y="13.5" width="4.5" height="7" rx="2"/></symbol>
+  <symbol id="i-webcam" viewBox="0 0 24 24"><circle cx="12" cy="9.5" r="6.5"/><circle cx="12" cy="9.5" r="2.2"/><path d="M6.5 20.5h11"/></symbol>
+  <symbol id="i-teclado" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2.5"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></symbol>
+  <symbol id="i-mouse" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="5"/><path d="M12 6.5v3.5"/></symbol>
+  <symbol id="i-caixa" viewBox="0 0 24 24"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><circle cx="12" cy="15" r="3.6"/><circle cx="12" cy="7" r="1.2"/></symbol>
+  <symbol id="i-radio" viewBox="0 0 24 24"><path d="M12 21v-8"/><circle cx="12" cy="10.5" r="2"/><path d="M7.4 5.6a8 8 0 0 0 0 9.8M16.6 5.6a8 8 0 0 1 0 9.8"/></symbol>
+  <symbol id="i-hub" viewBox="0 0 24 24"><rect x="2.5" y="9.5" width="19" height="6.5" rx="2.5"/><path d="M7 9.5V6M12 9.5V3.5M17 9.5V6"/></symbol>
+  <symbol id="i-placa" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/><path d="M10 3v3.5M14 3v3.5M10 17.5V21M14 17.5V21M3 10h3.5M3 14h3.5M17.5 10H21M17.5 14H21"/></symbol>
+  <symbol id="i-aviso" viewBox="0 0 24 24"><path d="M12 3.2 2.4 20.4h19.2L12 3.2z"/><path d="M12 10v4.6M12 18v.01"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2.2" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18.2v3.2"/></symbol>
+  <symbol id="i-som" viewBox="0 0 24 24"><path d="M4 9.2v5.6h3.6L13 19V5L7.6 9.2H4z"/><path d="M16.6 9.4a3.6 3.6 0 0 1 0 5.2M19.4 6.8a7.4 7.4 0 0 1 0 10.4"/></symbol>
+  <symbol id="i-vibra" viewBox="0 0 24 24"><rect x="8.5" y="4" width="7" height="16" rx="2"/><path d="M5 8.5v7M2 10v4M19 8.5v7M22 10v4"/></symbol>
+  <symbol id="i-mais" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-equilibrar" viewBox="0 0 24 24"><path d="M3.5 8.5h14l-3.5-3.5M20.5 15.5h-14l3.5 3.5"/></symbol>
+  <symbol id="i-reexaminar" viewBox="0 0 24 24"><path d="M20.5 12a8.5 8.5 0 1 1-2.5-6"/><path d="M20.5 3.5v5h-5"/></symbol>
+  <symbol id="i-ajuda" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.8"/><path d="M9.6 9.6a2.5 2.5 0 1 1 3.2 2.4c-.5.2-.8.7-.8 1.2v.5"/><path d="M12 17.3v.01"/></symbol>
+  <symbol id="i-nao-cabe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.8"/><path d="M5.8 5.8l12.4 12.4"/></symbol>
+  <symbol id="i-soltar" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3.5" stroke-dasharray="4 3.2"/><path d="M12 7.5v7M8.8 11.3 12 14.5l3.2-3.2"/></symbol>
+  <symbol id="i-mapa" viewBox="0 0 24 24"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><path d="M2.5 9.5h19M8 9.5v10M15 4.5v15"/></symbol>
+  <symbol id="i-uma-a-uma" viewBox="0 0 24 24"><rect x="2.5" y="8" width="7" height="8" rx="2"/><rect x="14.5" y="8" width="7" height="8" rx="2"/><path d="M9.5 12h5"/><path d="M18 3.5v3M18 17.5v3"/></symbol>
+  <symbol id="i-lampada" viewBox="0 0 24 24"><path d="M9 18h6M10 21.5h4"/><path d="M12 2.5a6.5 6.5 0 0 0-3.8 11.8c.5.4.8 1 .8 1.6V18h6v-2.1c0-.6.3-1.2.8-1.6A6.5 6.5 0 0 0 12 2.5z"/></symbol>
+  <symbol id="i-sinal" viewBox="0 0 24 24"><path d="M12 20V9"/><circle cx="12" cy="6.5" r="2"/><path d="M7.6 13.5a6 6 0 0 1 0-8.5M16.4 13.5a6 6 0 0 0 0-8.5"/></symbol>
+  <symbol id="i-varrendo" viewBox="0 0 24 24"><path d="M12 12 4.6 7.7a8.5 8.5 0 1 1 0 8.6"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-manda" viewBox="0 0 24 24"><path d="M4 12h15"/><path d="M13.5 6.5 19.5 12l-6 5.5"/></symbol>
+  <symbol id="i-recebe" viewBox="0 0 24 24"><path d="M20 12H5"/><path d="M10.5 6.5 4.5 12l6 5.5"/></symbol>
+  <symbol id="i-giro" viewBox="0 0 24 24"><path d="M12 4.2a7.8 7.8 0 1 1-6.9 4.1"/><path d="M8.6 1.6 12 4.3 8.6 7"/><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-touch" viewBox="0 0 24 24"><rect x="2.4" y="6" width="19.2" height="12" rx="2.5"/><path d="M12 10.4v3.2"/></symbol>
+  <symbol id="i-botoes" viewBox="0 0 24 24"><circle cx="12" cy="5.4" r="2.2"/><circle cx="12" cy="18.6" r="2.2"/><circle cx="5.4" cy="12" r="2.2"/><circle cx="18.6" cy="12" r="2.2"/></symbol>
+  <symbol id="i-lightbar" viewBox="0 0 24 24"><rect x="3.5" y="9.5" width="17" height="5" rx="2.5"/><path d="M6 6.5V4M12 6V3M18 6.5V4M6 17.5V20M12 18v3M18 17.5V20"/></symbol>
+  <symbol id="i-sair" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+</svg>
+
+<!--
+  O CSV É A VERDADE, e este HTML é a leitura — mesma forma do `specs.html`.
+  Uma tabela por linha, nomeada na primeira coluna, porque ela pediu UM csv.
+
+    lugar    : id, nome, tipo, barramento, entrada, face, teto, quedas
+    aparelho : id, nome, tipo, cor, lugar, entrada, mic, ponte, colorway, ligado
+    espectro : id, nome, tipo, canal ini, canal fim, força
+    evitado  : id, —,    —,    canal ini, canal fim
+
+  DE ONDE VÊM OS NÚMEROS, e a unidade é FATIA DE 625 µs — não report.
+
+  **CADA REPORT CUSTA DUAS FATIAS, e não uma.** O BT Classic é TDD: o mestre
+  transmite numa fatia e o escravo responde na seguinte. `radio_da_mesa.py:115`
+  diz `SLOTS_POR_RELATORIO = 1` e por isso a conta de hoje erra o AR por
+  fator 2. É também o que reconcilia os ~800 reports/s medidos em 23/08 com o
+  teto de 1.600: são a mesma coisa em duas unidades.
+
+    520,8  entrada — 260,4 reports/s MEDIDOS (`HZ_INPUT_SEM_MIC`), a 2 fatias.
+           O report 0x31 tem 78 B; com HIDP e L2CAP vai a 83, que é o TETO
+           EXATO do 3-DH1 (1 fatia). Um byte a mais saltaria para 3.
+    +32,6  o microfone — MEDIDO: 276,7 reports/s com ele contra 260,4 sem.
+           **Ele NÃO abre canal novo.** `dualsense_bt_audio.py` mede a troca:
+           o input cai de 260,4 para 170,5 Hz e o áudio sobe a 106,2 — o total
+           mal se mexe. O mic custa +16,3 reports/s = +32,6 fatias.
+    375    a ponte pelo rádio — 93,75 relatórios/s MEDIDOS em 22/09/2026, a 4
+           fatias: o 0x35 tem 334 B, vai a 339 no ar, e o menor pacote legal é
+           o 2-DH3 (3 fatias) mais a resposta.
+
+  **SOM E VIBRAÇÃO PELO RÁDIO SÃO EXCLUSIVOS, e é uma fatia só para os dois.**
+  `alto_falante_bt.py:835`, literal: *"pôr voz e vibração no MESMO report do
+  rádio é coisa que esta casa ainda não mediu. Pelo cabo os dois viajam juntos;
+  pelo rádio, enquanto ninguém medir, **o escritor manda um ou outro**"*. Uma
+  versão anterior deste desenho cobrava 281 de som MAIS 188 de vibração no
+  mesmo controle — um custo que o produto não emite. Por isso os dois ícones
+  aqui são um interruptor de três posições, e não dois independentes.
+
+  **ISTO É O QUE A TELA DE HOJE NÃO CONTA.** `mapa-das-portas.html:1357` diz
+  *"Nenhum deles muda a conta do rádio"* sobre vibração e áudio, e por isso a
+  tela anuncia *"caberiam mais 11 com microfone"* com o rádio em 250%.
+
+  O CENÁRIO DESENHADO É O ALVO DELA: quatro DualSense com tudo ligado ao mesmo
+  tempo. 4 x (520,8+32,6+375) = 3.713,6 fatias, mais teclado e mouse, de 1.600
+  por antena. **Não cabe em duas** (116%); em três, cabe.
+-->
+<script type="text/csv" id="dados">
+tabela,id,nome,a,b,c,d,e,f,g,h,i
+lugar,L1,,direto,1,4,Traseira,1500,0,USB 2.0
+lugar,L2,,hub,3,4.4,Num hub ou extensão,1500,0,USB 2.0,varrendo
+lugar,L3,,hub,3,4.1.4,Num hub ou extensão,1500,3,USB 2.0
+aparelho,P1,Vitória,controle,#ae335a,L3,520.8,32.6,375,Cosmic Red,mic+ponte+luz,L3|L2
+aparelho,P2,Pedro,controle,#7eb8d4,L3,520.8,32.6,375,Starlight Blue,mic+ponte+luz,L3
+aparelho,P3,Ana,controle,#e35b8c,L3,520.8,32.6,375,Nova Pink,mic+ponte+luz,L3
+aparelho,P4,Rafa,controle,#74588e,L3,520.8,32.6,375,Galactic Purple,mic+ponte+luz,L3|L1
+aparelho,S1,Caixa de som,caixa,,L2,244,0,0,,,L2
+aparelho,F1,Fone,fone,,L2,244,0,0,,,L2
+aparelho,W1,Webcam,webcam,,L1,0,0,0,,fixo,
+espectro,E1,Teclado,teclado,18,34,medio,,,
+espectro,E2,Mouse,mouse,52,68,medio,,,
+espectro,E3,Wi-Fi,wifi,24,46,forte,,,
+porta,T1,,1-4,2.0,L1,Traseira,,,,
+porta,T2,,3-4.2,2.0,E1,Hub da mesa,,,,
+porta,T3,,3-4.3,2.0,W1,Hub da mesa,,,,
+porta,T4,,3-4.4,2.0,L2,Hub da mesa,,,,
+porta,T5,,3-4.1.2,2.0,E2,Extensor,,,,
+porta,T6,,3-4.1.4,2.0,L3,Extensor,,,,
+porta,T7,,4-1,3.0,E3,Traseira 3.0,,,,
+porta,T8,,4-4.1,3.0,,Traseira 3.0,,,,
+evitado,V1,,L3,20,32,,,,
+evitado,V2,,L2,54,66,,,,
+</script>
+
+<script type="text/csv" id="perto">
+id,nome,tipo,forca,conhecido
+D1,DualSense,controle,-52,sim
+D2,Xiaomi Scale S400,outro,-78,nao
+D3,Xiaomi Band 9,outro,-81,nao
+</script>
+
+<script type="text/csv" id="quedas">
+lugar,quando,porque
+L3,18:47,4 controles com som (limite 2)
+L3,17:12,3 controles com som (limite 2)
+L3,16:47,4 controles com som (limite 2)
+</script>
+
+<script>
+/* ------------------------------------------------------------------ o CSV */
+function lerCsv(id) {
+  const cru = document.getElementById(id).textContent.trim().split('\n');
+  const cab = cru.shift().split(',');
+  return cru.filter(l => l.trim()).map(linha => {
+    const campos = linha.split(',');
+    const o = {}; cab.forEach((c, i) => { o[c] = (campos[i] ?? '').trim(); });
+    return o;
+  });
+}
+
+const linhas = lerCsv('dados');
+/* A CONVIVÊNCIA COM O BLUEZ, e ela não é uma trégua: é uma MEDIÇÃO.
+
+   Pergunta dela, 22/09: *"a parte de não entrar em conflito com o bluez
+   lembra?"*.  <!-- (noqa-acento) -->
+
+   A RESERVA MORREU EM 20/09, e a medição matou a premissa
+   (`RESERVA-DO-RADIO-01`, `integrations/varredura_do_radio.py`). Não existe
+   *"o adaptador onde o sistema varre"*: a busca é do adaptador que A PESSOA
+   ABRE nas Configurações, um só, e nenhum enquanto ela não abre. Quatro
+   corridas com a mão dela, a última conferida por foto da tela. Uma reserva
+   fixa teria de adivinhar em qual adaptador ela vai clicar — e erraria.
+
+   E NÃO HÁ ALAVANCA DE FORA. `StartDiscovery` e `StopDiscovery` são contados
+   **por cliente** pelo BlueZ: medido em 19/09, um `StopDiscovery` de terceiro
+   devolve `No discovery started` e a busca continua. Só quem ligou desliga.
+
+   ENTÃO O PRODUTO NÃO DISPUTA — ELE PERGUNTA E DESVIA. `Discovering` é
+   propriedade pública do `org.bluez.Adapter1`, não custa privilégio nenhum, e
+   responde pelo estado de agora.
+
+   NA TELA ISSO NÃO VIRA AVISO: VIRA CONTA. O adaptador que está sendo varrido
+   entrega menos, e é exatamente a física que esta seção já ensina para os
+   vizinhos — *um vizinho não enche a barra, ele ENCOLHE a antena*. Por isso o
+   `teto` é um GETTER e não um número: o desvio acontece sozinho em todo lugar
+   que lê o teto (dezoito), inclusive na sugestão e no «Equilibrar». Uma
+   segunda regra «não sugira o que está varrendo» seria a régua paralela que
+   esta casa já pagou onze vezes. */
+const QUEDA_MINIMA_DA_VARREDURA = 32.5;
+const QUEDA_MAXIMA_DA_VARREDURA = 43.4;
+
+const LUGARES = linhas.filter(l => l.tabela === 'lugar').map(l => {
+  const o = {
+    id: l.id, nome: l.nome, tipo: l.a, barramento: l.b, entrada: l.c,
+    /* VAZIO É «NÃO SEI ONDE ESTOU», e é daqui que o «Mapear Entrada a Entrada»
+       passa a ser chamado — no lugar onde a dúvida aparece. */
+    face: l.d, teto_parado: Number(l.e), quedas: Number(l.f || 0), usb: l.g,
+    varrendo: /varrendo/i.test(l.h || ''),
+  };
+  Object.defineProperty(o, 'teto', {
+    enumerable: true,
+    /* O PIOR CASO MEDIDO, e declarado: as duas corridas em que a varredura
+       correu no mesmo adaptador do controle deram 32,5% e 43,4%. Mostrar a
+       melhor faria a barra prometer um ar que pode não estar lá. */
+    get() {
+      return this.varrendo
+        ? Math.round(this.teto_parado * (1 - QUEDA_MAXIMA_DA_VARREDURA / 100))
+        : this.teto_parado;
+    },
+  });
+  return o;
+});
+const APARELHOS = linhas.filter(l => l.tabela === 'aparelho').map(l => ({
+  id: l.id, nome: l.nome, tipo: l.a, cor: l.b, lugar: l.c,
+  entrada: Number(l.d), mic: Number(l.e), ponte: Number(l.f), cor_nome: l.g,
+  /* ONDE ELE JÁ ESTÁ PAREADO. Um bond é POR ADAPTADOR: o mesmo controle pode
+     ter pareamento em dois, e é o caso da mesa dela — 4 DualSense e 6 bonds.
+     É o que separa uma mudança que acontece sozinha de uma que pede a mão.
+     NASCEU DENTRO DO `ligado` por um descuido de recuo, e o sintoma foi mudo:
+     `ap.bonds` vinha `undefined`, `jaConhece` respondia «não» para todo mundo,
+     e a tela mandava segurar PS + Create até para quem já tinha bond lá. */
+  bonds: (l.i || '').split('|').filter(Boolean),
+  ligado: {
+      mic: /mic/.test(l.h),
+    /* UM INTERRUPTOR DE TRÊS POSIÇÕES, e não dois independentes: pelo rádio o
+       escritor manda som OU vibração, nunca os dois. */
+    ponte: /vib/.test(l.h) ? 'haptica' : (/som|ponte/.test(l.h) ? 'som' : null),
+    /* A LIGHTBAR NÃO PESA NO RÁDIO, e é uma feature como as outras. O kernel
+       escreve o 0x31 dela QUANDO A COR MUDA, não em regime — o mesmo vale
+       para os gatilhos adaptativos. Por isso ela é um selo ao lado da barra,
+       e não uma vaga dentro dela: dar-lhe largura desenharia um custo que o
+       aparelho não cobra. */
+    luz: /luz/.test(l.h),
+  },
+  /* «fixo» é só quem não pode sair do lugar. Não ter feature para ligar é
+     outra coisa, e quem decide isso é o TIPO. Os dois sentidos moraram
+     neste campo por uma volta, e o efeito foi a lâmpada ficar muda no
+     adaptador onde só caberia um teclado. */
+  fixo: /fixo/.test(l.h),
+}));
+const ESPECTRO = linhas.filter(l => l.tabela === 'espectro').map(l => ({
+  id: l.id, nome: l.nome, tipo: l.a, ini: Number(l.b), fim: Number(l.c), forca: l.d,
+}));
+/* O MAPA AFH É POR ADAPTADOR, e é isso que liga o ar à sala. Cada `hci` mantém
+   o seu; um dongle colado num adaptador atrapalha ELE. A casa já mediu:
+   a varredura custa 32-43 por cento no próprio adaptador e só ruído nos
+   outros. */
+const EVITADOS = linhas.filter(l => l.tabela === 'evitado').map(l => ({
+  lugar: l.a, ini: Number(l.b), fim: Number(l.c),
+}));
+const CANAIS_DO_BT = 79;
+/* Quantos canais restam a UM adaptador. É o outro lado da mesma moeda da
+   barra de fatias: as 1600 fatias por segundo são 1600 SALTOS por segundo, e
+   cada uma cai num canal. Tirar canais não tira fatias — aumenta a chance de
+   cada fatia cair em cima de um vizinho. O que colide, o baseband retransmite,
+   e retransmissão gasta fatia. Por isso o ar encolhido faz a barra subir sem
+   ninguém ligar nada. */
+function canaisDe(lid) {
+  const perdidos = EVITADOS.filter(v => !v.lugar || v.lugar === lid)
+    .reduce((s, v) => s + (v.fim - v.ini), 0);
+  return CANAIS_DO_BT - perdidos;
+}
+/* A SEGUNDA FÍSICA, e ela não é a do espectro — pedido dela, 22/09:
+   *"as faixas de radio que competem em si e os dispositivos 2.4 cuja a
+   vizinhaça com outro dongle 2.4 impactam profundamente no funcionamento do
+   outro dispositivo (…) precisamos de outra faixa abaixo dela para a
+   vizinhança das portas tambem"*.  <!-- (noqa-acento) -->
+
+   ELA ESTÁ CERTA, E SÃO DUAS COISAS SEPARADAS:
+
+   - a RÉGUA de cima mede o ESPECTRO: quem ocupa canal de 2,4 GHz. Os
+     adaptadores não aparecem lá porque não ficam num canal — saltam pelos 79,
+     1.600 vezes por segundo. Desenhá-los como faixa seria a mentira do Wi-Fi
+     de 5 GHz.
+   - esta faixa mede a PORTA: duas antenas coladas se atrapalham por
+     proximidade física, e uma entrada USB 3.0 joga ~20 dB de ruído em 2,4 GHz
+     (`docs/protocol/por-que-usb3-atrapalha-24ghz.md`, white paper da Intel).
+     Nada disso tem a ver com canal, e é por isso que «pular uma casa» no hub
+     funciona.
+
+   A TOPOLOGIA AQUI É A DA MÁQUINA DELA, lida do `/sys/bus/usb/devices` em
+   22/09/2026:
+
+       usb3 (480M)  3-4      Hub USB2.1
+                      3-4.1    Hub USB2.1      ← hub dentro de hub
+                        3-4.1.2  receptor 2,4 G (mouse)
+                        3-4.1.4  adaptador BT
+                      3-4.2    receptor 2,4 G (teclado)
+                      3-4.3    webcam C920
+                      3-4.4    adaptador BT
+       usb1 (480M)  1-4      adaptador BT
+       usb4 (10 G)  4-1      Wi-Fi 802.11ac a 5000M — USB 3.0
+                    4-4.1    livre, e também 3.0
+
+   O achado que ela vai reconhecer: o mouse e um adaptador dividem o hub
+   `3-4.1`; o teclado e outro adaptador dividem o `3-4`. */
+const PORTAS = lerCsv('dados').filter(l => l.tabela === 'porta').map(l => ({
+  id: l.id, caminho: l.a, usb: l.b, ocupa: l.c, grupo: l.d,
+}));
+
+const QUEDAS = lerCsv('quedas');
+
+/* ------------------------------------------------------------ a conta
+   UM DONO SÓ para "quanto este lugar está usando". A tela inteira lê daqui —
+   e ela conta o que SAI, que é o que falta na de hoje. */
+const CUSTO_DE_UM_CONTROLE = 520.8 + 32.6 + 375;
+function custoDe(ap) {
+  return ap.entrada
+    + (ap.ligado.mic ? ap.mic : 0)
+    + (ap.ligado.ponte ? ap.ponte : 0);
+}
+function fatiasDe(ap) {
+  return [['entrada', ap.entrada],
+          ['mic',     ap.ligado.mic ? ap.mic : 0],
+          ['som',     ap.ligado.ponte === 'som' ? ap.ponte : 0],
+          ['haptica', ap.ligado.ponte === 'haptica' ? ap.ponte : 0]];
+}
+const moradoresDe = lid => APARELHOS.filter(a => a.lugar === lid);
+/* O MAIOR APARELHO DO LUGAR — a escala das faixas daquele card. */
+/* OS HERTZ DE CADA COISA — é o que ela pediu ver: *"a ideia é podermos mostrar
+   o quanto custa em termo de hertz cada coisa"*.
+
+   ENTRADA — 267 Hz, MEDIDO NA MÁQUINA DELA em 22/09/2026: quatro segundos no
+   nó de movimento do DualSense físico deram 1.070 pacotes em 4,01 s = 267,1 Hz.
+   Bate com o `HZ_INPUT_SEM_MIC = 260,4` que a casa mediu em 25/07.
+
+   E AQUI ESTÁ A RESPOSTA SOBRE O GIROSCÓPIO. Tudo o que o controle manda cabe
+   NESSES MESMOS 267 Hz, porque o relatório de entrada por rádio é o `0x31` de
+   **78 bytes FIXOS** (`docs/protocol/driver-hid-playstation.md:87`). Dentro
+   dele viajam, sempre, tenha ligado ou não: botões, sticks, gatilhos
+   analógicos, **giroscópio** (offsets 15-20), acelerômetro, touchpad, bateria
+   e o mudo do microfone.
+
+   **Desligar o giroscópio não devolve um byte de rádio.** Ele já está no
+   pacote que vem de qualquer jeito — e é o contrário do que a intuição diz.
+   Por isso ele não ganha vaga: ganha selo DENTRO da vaga da conexão.
+
+   MICROFONE — +16,3 Hz (276,7 com ele contra 260,4 sem). Não abre canal: o
+   input CAI para 170,5 Hz e o áudio sobe para 106,2 na mesma fila.
+
+   PONTE — 93,75 Hz. Som (`0x35`, 334 B) OU vibração (`0x32`, 142 B), nunca
+   os dois (`alto_falante_bt.py:835`).
+
+   BARRA DE LUZ e GATILHOS ADAPTATIVOS — 0 Hz em regime: o escritor só manda
+   quando a cor ou a curva MUDA (`dualsense_bt_audio.py:68`).
+
+   CAIXA e FONE — 244 fatias, e este é o único número ESTIMADO da tela: A2DP
+   SBC a 328 kbps = 41 kB/s; a ~672 B por pacote dá ~61 pacotes/s, e cada um
+   é 2-DH5 (3 fatias) mais a resposta = 4. 61 x 4 = 244. Sem medição de fio.
+
+   WEBCAM — 0 fatias: ela é USB, não rádio. Fica na tela porque OCUPA PORTA, e
+   porque uma webcam USB 3.0 joga ~20 dB de ruído em 2,4 GHz
+   (`docs/protocol/por-que-usb3-atrapalha-24ghz.md`). A dela é USB 2.0.
+
+   WI-FI — ele está na régua, em 2,4, e é ordem dela: *"colocaa o wifi de volta
+   pq agora tá 5.0 mas na maioria das vezes é 2.4"*.  <!-- (noqa-acento) -->
+
+   O ROTEADOR DELA responde canal 161 / 5.805 MHz hoje, e nessa configuração
+   ele não disputa nada — mas configuração de roteador muda, e a maioria das
+   casas está em 2,4. Desenhar o caso raro faria a tela ensinar o contrário do
+   que a pessoa vai encontrar.
+
+   O canal 6 de Wi-Fi ocupa 2.426-2.448 MHz. O Bluetooth numera os canais a
+   partir de 2.402 MHz, um por MHz: 2.426 é o 24 e 2.448 é o 46. Daí o 24-46.
+
+   E quem estiver em 5 GHz continua aparecendo — a régua sabe a palavra
+   `fora`, e quem a traz sai do eixo e vira selo no cabeçalho, porque um rádio
+   que não disputa esta faixa não pode ocupar espaço nela. */
+/* A PALAVRA «FATIA» SAIU DA TELA — pedido dela, 22/09/2026: *"o termo fatias
+   é muito dificil de entender se tratando de bt"*.  <!-- (noqa-acento) -->
+
+   Ela está certa: «fatia» é jargão do TDD do Bluetooth (o rádio parte o segundo
+   em 1.600 pedaços de 625 µs e salta um canal por pedaço). Quem abre a tela
+   quer saber se cabe, não como o TDD funciona. Na tela ficam duas grandezas
+   que qualquer pessoa lê: **Hz**, que é quantas vezes por segundo a coisa fala,
+   e **% de uma antena**, que é se cabe. A conta em fatias continua viva por
+   baixo, e sai por extenso nas dicas de quem quiser o porquê.
+
+   O QUE O MICROFONE FAZ DE VERDADE — e é a correção que ela cobrou:
+   *"viu como corrigimos isso no projeto e viu que isso não tá diversificado
+   ali?"*.  <!-- (noqa-acento) -->
+
+   Ele NÃO soma 16 Hz. Ele ROUBA. A entrada por rádio é o `0x31` de 78 bytes, e
+   o bit 1 do byte 1 diz se aquele pacote traz ESTADO ou traz ÁUDIO: os dois
+   são exclusivos, não cabem juntos em 78 bytes, e o firmware ALTERNA
+   (`dualsense_bt_audio.py:43`). Medido ao vivo em 25/07/2026, A/B no mesmo
+   controle, 3 s por janela:
+
+       mic DESLIGADO : movimento 260,4 Hz   voz   0,0 Hz   total 260,4
+       mic LIGADO    : movimento 170,5 Hz   voz 106,2 Hz   total 276,7
+       desligado de novo: movimento 274,3 Hz                total 274,6
+
+   O total quase não muda — **o que anda é a divisória**. Ligar o microfone
+   custa ~35% dos relatórios de movimento, e é por isso que quem mira com
+   giroscópio precisa ver essa troca acontecer na tela em vez de ler «+16 Hz».
+
+   A MINHA MÁQUINA CONFIRMA O LADO DE CIMA: 267,1 Hz medidos aqui em
+   22/09/2026 (1.070 pacotes em 4,01 s no nó de movimento do DualSense físico).
+
+   E DESDE 06/09/2026 ESSE PREÇO SÓ SE PAGA COM ALGUÉM OUVINDO
+   (ONDA5-MIC-VIRTUAL-02): o pedido segue o estado da source — `RUNNING` liga,
+   qualquer outro desliga. Está na dica do selo. */
+const HZ = {
+  movimento_so: 260.4,   // sem microfone
+  movimento_mic: 170.5,  // com microfone — o que SOBRA para movimento
+  voz: 106.2,            // o que o microfone toma
+  ponte: 93.75,
+};
+const FATIAS_POR_SEGUNDO = 1600;
+const PASSAGEIROS = [
+  ['i-giro',   'Giroscópio e acelerômetro'],
+  ['i-touch',  'Touchpad'],
+  ['i-botoes', 'Botões, sticks e gatilhos'],
+];
+
+const escalaDoLugar = lid =>
+  Math.max(1, ...moradoresDe(lid).map(custoDe));
+const usoDe = lid => moradoresDe(lid).reduce((s, a) => s + custoDe(a), 0);
+
+/* ------------------------------------------------ PROPOSTA DE 23/09
+   R10 — «Hz reais + pontes». Nada somado na tela (D-CONTA-ADITIVA-DO-RADIO).
+
+   A ENTRADA É ELÁSTICA, e isto é medido (23/08, relógio do sensor): um
+   controle sozinho num adaptador dá ~800 relatórios/s, dois dividindo dão
+   ~400 cada, em três adaptadores. Cada relatório de entrada custa 2 fatias.
+   O que NÃO se ajeita são as saídas de ritmo fixo — a ponte de som ou de
+   vibração, 93,75 por segundo —, e é isso que afoga um adaptador.
+
+   NO PRODUTO os Hz vêm do contador (HCIGETDEVINFO por adaptador, o relógio do
+   sensor por controle). AQUI a conta abaixo só imita o que o contador diria,
+   para o desenho ter números de verdade na forma:
+     ar      = C_eff − 187,5 × pontes − o som dos fones e caixas
+     por controle = ar / 2 / controles
+     voz     = 38% disso quando o microfone está ouvindo (106 Hz no máximo)
+   C_eff = 1.500 é o hci0 medido (94% de 1.600); 187,5 é a ponte com k = 3,
+   a hipótese de trabalho até a bancada medir o k. */
+const PONTES_POR_ADAPTADOR = 2;   // medido: duas viveram 63 min no mesmo adaptador
+const MARGINAL_DA_PONTE = 187.5;
+const PARTE_DA_VOZ = HZ.voz / (HZ.voz + HZ.movimento_mic);
+/* ABAIXO DE 125 Hz o giroscópio passa de 8 ms entre leituras — o número fica
+   laranja. Corte de desenho, não medido; a bancada decide o de verdade. */
+const HZ_QUE_ENGASGA = 125;
+
+const ligadosEm = lid => moradoresDe(lid).filter(a => !a.esperando);
+/* AS PONTES DE UM ADAPTADOR contam quem está esperando PS + Create: a vaga
+   fica reservada, senão o «Equilibrar» mandaria dois para a mesma. */
+const pontesDe = lid => moradoresDe(lid)
+  .filter(a => a.tipo === 'controle' && a.ligado.ponte);
+function arDe(lid) {
+  const lug = LUGARES.find(l => l.id === lid);
+  const ms = ligadosEm(lid);
+  const pontes = ms.filter(a => a.tipo === 'controle' && a.ligado.ponte).length;
+  const sons = ms.filter(a => a.tipo === 'caixa' || a.tipo === 'fone')
+    .reduce((s, a) => s + a.entrada, 0);
+  return lug.teto - MARGINAL_DA_PONTE * pontes - sons;
+}
+function hzDe(ap) {
+  const n = ligadosEm(ap.lugar).filter(a => a.tipo === 'controle').length || 1;
+  const parte = Math.max(0, arDe(ap.lugar)) / 2 / n;
+  const voz = ap.ligado.mic ? Math.min(HZ.voz, parte * PARTE_DA_VOZ) : 0;
+  return { mov: parte - voz, voz };
+}
+/* A PONTE DE UM CONTROLE: qual vaga ele ocupa, contando da primeira. */
+function vagaDe(ap) {
+  if (ap.tipo !== 'controle' || !ap.ligado.ponte) return 0;
+  return pontesDe(ap.lugar).indexOf(ap) + 1;
+}
+
+/* R12 — UM MOVIMENTO DE CADA VEZ. A régua é a de 20/09
+   (`plano_de_radio.ordem_de_redistribuicao`): primeiro tirar ponte de quem
+   passou de duas; depois subir o PIOR movimento da mesa. Um movimento só vale
+   se melhora — é o que faz o «Equilibrar» parar sozinho. */
+function estadoDaMesa() {
+  const alem = LUGARES.reduce((s, l) =>
+    s + Math.max(0, pontesDe(l.id).length - PONTES_POR_ADAPTADOR), 0);
+  const hzs = APARELHOS.filter(a => a.tipo === 'controle' && !a.esperando)
+    .map(a => hzDe(a).mov);
+  return { alem, pior: hzs.length ? Math.min(...hzs) : Infinity };
+}
+const melhorQue = (a, b) => a.alem < b.alem || (a.alem === b.alem && a.pior > b.pior + 10);
+function sugestao(soPara) {
+  const agora = estadoDaMesa();
+  let melhor = null;
+  for (const ap of APARELHOS) {
+    if (ap.fixo || ap.esperando || ap.tipo !== 'controle') continue;
+    for (const destino of LUGARES) {
+      if (destino.id === ap.lugar || (soPara && destino.id !== soPara.id)) continue;
+      if (ap.ligado.ponte && pontesDe(destino.id).length >= PONTES_POR_ADAPTADOR) continue;
+      const de = ap.lugar;
+      ap.lugar = destino.id;
+      const depois = estadoDaMesa();
+      ap.lugar = de;
+      if (melhorQue(depois, agora) && (!melhor || melhorQue(depois, melhor.depois))) {
+        melhor = { ap, destino, depois };
+      }
+    }
+  }
+  /* SEM MOVIMENTO QUE RESOLVA, com ponte além do limite: é a R4 — degrada e
+     avisa. O aviso é o número laranja; nada é desligado. */
+  if (!melhor) return agora.alem ? { impossivel: true } : null;
+  return melhor;
+}
+
+/* --------------------------------------------------------- os desenhos
+   UM ÍCONE POR COISA, em um lugar só. Trocar um ícone é uma linha, e nenhum
+   `<use>` espalhado precisa saber o nome do símbolo. */
+const ICONE_DO_APARELHO = {
+  teclado: 'i-teclado', mouse: 'i-mouse', caixa: 'i-caixa',
+  fone: 'i-fone', webcam: 'i-webcam', outro: 'i-radio',
+};
+const ICONE_DO_RADIO = {
+  wifi: 'i-wifi', fone: 'i-fone', teclado: 'i-teclado',
+  mouse: 'i-mouse', webcam: 'i-webcam',
+};
+const ICONE_DO_CUSTO = { mic: 'i-mic', som: 'i-som', haptica: 'i-vibra' };
+/* A COR DE UM APARELHO. O controle traz a do plástico; os outros ganham uma
+   cor própria, porque a barra do adaptador é segmentada POR DISPOSITIVO e
+   precisa dizer de quem é cada bloco — ordem dela, 22/09: *"e diferenciando a
+   cor do mouse e teclado"*.
+   As cinco são dessaturadas de propósito: elas convivem, na mesma tela, com as
+   cores de FEATURE (ciano, rosa, laranja, roxo) da barra de dentro. Se
+   competissem, as duas segmentações virariam uma só mancha. */
+/* O VÉU DE UMA COR: o mesmo tratamento das features, para que a linha de um
+   teclado e a de um controle falem a mesma língua. */
+function veuDaCor(cor, alfa) {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(cor || '');
+  if (!m) return cor;
+  return 'rgba(' + parseInt(m[1], 16) + ',' + parseInt(m[2], 16) + ',' +
+    parseInt(m[3], 16) + ',' + alfa + ')';
+}
+/* AS CORES DOS CONTROLES SÃO AS DO PLÁSTICO DE VERDADE — a tabela dos 28 do
+   `ds_limpo.svg`, a mesma que o `mapa-do-controle.html` usa como banco de
+   provas. Ordem dela, 22/09: *"sim veja o mapa dos controles"*.
+
+     Cosmic Red      #ae335a       Starlight Blue  #7eb8d4
+     Nova Pink       #e35b8c       Galactic Purple #74588e
+
+   E ELAS JÁ SÃO HARMÔNICAS, porque são cor de plástico: nenhuma passa de 60%
+   de saturação. As que eu tinha inventado (#d13a3a, #8be9fd, #ff79c6, #a06ee1)
+   eram tokens de INTERFACE, feitos para gritar em texto pequeno — quatro deles
+   lado a lado numa barra viram arco-íris, e o vermelho ainda brigava com o
+   vermelho de alerta do card estourado.
+
+   O teclado, o mouse e os outros ficam em cinzas do mesmo mundo: eles não têm
+   plástico declarado, e competir com os controles seria mentir sobre o que é
+   identidade. */
+const COR_DO_TIPO = {
+  teclado: '#8b8fa8', mouse: '#6d7186', webcam: '#a8a08c',
+  caixa: '#8c8299', fone: '#7e9aa8', outro: '#606062',
+};
+function corDe(ap) { return ap.cor || COR_DO_TIPO[ap.tipo] || 'var(--texto-mudo)'; }
+/* A PRIMEIRA LETRA DE UMA FRASE DE TELA É MAIÚSCULA — ordem dela, 22/09, e
+   vale para o que se lê e para o que se ouve. Um dono só evita a divergência
+   que a auditoria achou: o `title` capitalizava e o `aria-label` não. */
+const maiuscula = s => (s || '').replace(/^./, c => c.toUpperCase());
+const virgula = n => String(n).replace('.', ',');
+
+const NOME_CUSTO = {
+  mic: 'microfone', som: 'som', haptica: 'vibração',
+  entrada: 'o que o controle manda',
+};
+
+function icone(nome, classe) {
+  const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  s.setAttribute('class', 'i' + (classe ? ' ' + classe : ''));
+  s.setAttribute('aria-hidden', 'true');
+  const u = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+  u.setAttribute('href', '#' + nome);
+  s.appendChild(u);
+  return s;
+}
+/* A SILHUETA CARREGA O `data-colorway`, que é o alvo que a aba08 já usa para
+   repintar o desenho sem trocar o SVG inteiro — medido lá: trocar o `innerHTML`
+   custava 50 KB na ponte a cada meio segundo. */
+function silhueta(ap, classe) {
+  const s = icone('i-ds', classe || 'ds');
+  s.style.color = ap.cor || 'var(--texto-mudo)';
+  s.dataset.campo = 'desenho';
+  s.dataset.hefAlvo = 'atributo';
+  s.dataset.hefAtributo = 'data-colorway';
+  s.dataset.colorway = (ap.cor_nome || '').toLowerCase().replace(/ /g, '-');
+  return s;
+}
+
+/* COMO UMA COISA SE CHAMA NUMA FRASE. Um dono só, porque a mesma regra vale na
+   sugestão, no painel e em qualquer recado que venha depois. O nome da pessoa
+   sozinho não diz QUAL controle — na tela do sistema são quatro «DualSense
+   Wireless Controller» idênticos, e a cor do plástico é o que o olho resolve
+   de longe. */
+/* O NOME É DIGITADO POR ELA, e estas duas funções devolvem HTML — o balão já
+   as jogava num `innerHTML`. Um nome de adaptador com `<` viraria marcação, e
+   o que ela digitou sumiria da tela sem erro nenhum. A fuga é aqui, no dono
+   do texto, e não em cada chamador. */
+function texto(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+/* «DE» E NÃO «DA» — achado em 22/09 na primeira frase com nome masculino:
+   *"O Starlight Blue da Pedro"*. O artigo era fixo no feminino porque as
+   primeiras frases foram escritas com o nome dela. Um nome não diz gênero de
+   ninguém, e este produto é para qualquer pessoa — `de` está certo sempre. */
+function comoSeChama(ap) {
+  if (ap.tipo === 'controle' && ap.cor_nome) {
+    /* SEM NOME, A COR BASTA. «O Starlight Blue de quem usa este» era a frase
+       que saía, e ela é pior que o silêncio: o controle já está identificado
+       pela cor, que é a identidade dele nesta tela. */
+    return 'o <b>' + texto(ap.cor_nome) + '</b>' +
+      (ap.nome ? ' de <b>' + texto(ap.nome) + '</b>' : '');
+  }
+  /* O ARTIGO É MINÚSCULO E SEGUE O TIPO — «Mover O Cosmic Red» e «O Caixa de
+     som» saíam na tela. Quem começa frase passa por `maiuscula`. */
+  return (ARTIGO_DO_TIPO[ap.tipo] || 'o') + ' <b>' + texto(ap.nome) + '</b>';
+}
+const ARTIGO_DO_TIPO = { caixa: 'a', webcam: 'a' };
+function comoSeChamaOLugar(lug) {
+  return lug.nome ? 'o <b>' + texto(lug.nome) + '</b>'
+                  : 'a <b>Entrada ' + texto(lug.entrada) + '</b>';
+}
+/* O QUE UM LEITOR DE TELA ANUNCIA. A cor do plástico é a identidade do
+   aparelho, e ela existe só como pixel — quem não enxerga cor fica com quatro
+   «Vitória, Pedro, Ana, Rafa» e nenhuma das duas metades da resposta. */
+function comoSeLe(ap) {
+  const q = ap.tipo === 'controle' && ap.cor_nome
+    ? 'controle ' + ap.cor_nome : ap.tipo;
+  return ap.nome + ', ' + q;
+}
+
+/* --------------------------------------------------------------- pintar */
+function pintar() {
+  const sala = document.getElementById('sala');
+  sala.innerHTML = '';
+
+  for (const lug of LUGARES) {
+    const moradores = moradoresDe(lug.id);
+    const pontes = pontesDe(lug.id);
+    const esperando = moradores.filter(a => a.esperando);
+    const card = document.createElement('div');
+    card.className = 'lugar' + (pontes.length > PONTES_POR_ADAPTADOR ? ' cheio' : '') +
+      (esperando.length ? ' esperando' : '');
+    card.dataset.campo = 'lugar';
+    card.dataset.alvo = lug.id;
+    /* O ID NO PRÓPRIO BLOCO: o destino de um arrasto é o adaptador inteiro,
+       aberto ou fechado, e a lista interna some quando ele fecha. */
+    card.dataset.id = lug.id;
+
+    // ---- a linha de cima: nome · onde · conta ----------------------------
+    const topo = document.createElement('div');
+    topo.className = 'lugar-topo';
+
+    if (lug.aberto === undefined) {
+      /* No primeiro desenho abre UM só: o que estourou mais. */
+      const pior = LUGARES.filter(l => pontesDe(l.id).length > PONTES_POR_ADAPTADOR)
+        .sort((a, b) => pontesDe(b.id).length - pontesDe(a.id).length)[0];
+      for (const o of LUGARES) o.aberto = false;
+      if (pior) pior.aberto = true;
+    }
+    const abre = document.createElement('button');
+    abre.className = 'abre-lugar';
+    abre.textContent = '\u25B6';
+    abre.setAttribute('aria-expanded', String(lug.aberto));
+    abre.title = (lug.aberto ? 'Esconder' : 'Ver') + ' os aparelhos deste adaptador';
+    abre.setAttribute('aria-label', abre.title);
+    abre.dataset.gesto = 'abrir-adaptador';
+    abre.dataset.alvo = lug.id;
+    /* ABRIR UM FECHA OS OUTROS — ordem dela, 22/09: *"quando extende um o outro
+       minimiza"*. É o que garante o limite vertical sem ninguém ter de pensar
+       nele: a seção tem UMA altura, e ela não cresce com o número de
+       adaptadores. É a mesma forma que a aba já usa entre as três seções dela
+       (um `<input type=radio>` por quadro). */
+    abre.addEventListener('click', () => {
+      const abrindo = !lug.aberto;
+      for (const o of LUGARES) o.aberto = false;
+      lug.aberto = abrindo;
+      pintar();
+    });
+    topo.appendChild(abre);
+
+    const nome = document.createElement('input');
+    nome.className = 'lugar-nome'; nome.value = lug.nome;
+    /* «SEM NOME» NÃO É UM NOME — é um campo esperando. */
+    nome.placeholder = 'Dê um nome a este adaptador';
+    nome.setAttribute('aria-label', 'Nome deste adaptador');
+    nome.dataset.gesto = 'adaptador-renomear';
+    nome.dataset.alvo = lug.id;
+    nome.dataset.campo = 'lugar-nome';
+    nome.dataset.hefAlvo = 'valor';
+    /* A LARGURA SEGUE O TEXTO — «Extensor à esquer» cortado é o mesmo defeito
+       do «Caixa de» que esta seção existe para matar. */
+    const caberNome = () => {
+      nome.style.width = Math.max(
+        (nome.value || nome.placeholder).length + 2, 10) + 'ch';
+    };
+    caberNome();
+    nome.addEventListener('input', caberNome);
+    nome.addEventListener('change', () => { lug.nome = nome.value; pintar(); });
+    topo.appendChild(nome);
+
+    const onde = document.createElement('span');
+    onde.className = 'onde';
+    if (lug.face) {
+      const m = document.createElement('span');
+      m.className = 'marca ' + (lug.tipo === 'hub' ? 'hub' : 'direto');
+      m.appendChild(icone(lug.tipo === 'hub' ? 'i-hub' : 'i-placa'));
+      m.title = lug.face; m.setAttribute('role', 'img');
+      m.setAttribute('aria-label', lug.face);
+      onde.appendChild(m);
+      const e = document.createElement('span');
+      e.textContent = 'Entrada ' + lug.entrada;
+      onde.appendChild(e);
+    }
+    /* QUEM ESTÁ VARRENDO GANHA MARCA, e a marca não é um alarme: é a razão
+       de a barra dele estar mais curta. Sem ela a antena encolhe sozinha e a
+       pessoa não sabe por quê — o pior tipo de número numa tela. */
+    if (lug.varrendo) {
+      const v = document.createElement('span');
+      v.className = 'marca varrendo';
+      v.appendChild(icone('i-varrendo'));
+      v.title = 'Outro programa está procurando aparelhos por aqui. Controle novo vai para outro adaptador.';
+      v.setAttribute('role', 'img'); v.setAttribute('aria-label', v.title);
+      v.dataset.campo = 'lugar-varrendo';
+      onde.appendChild(v);
+    }
+    /* DOIS RÁDIOS NO MESMO BARRAMENTO SE ATRAPALHAM, e isso nunca esteve na
+       tela — só no Check-up, como uma linha de texto. */
+    /* COLADO É PORTA VIZINHA, NÃO BARRAMENTO — o estudo de 23/09: a marca
+       acusava todo par no mesmo barramento, inclusive os que já pulam uma
+       casa, que é o conselho aplicado na mesa dela. A régua é a da faixa das
+       portas, um dono só. */
+    const portaDele = PORTAS.find(p => p.ocupa === lug.id);
+    const aPorta = portaDele ? comoEstaAPorta(portaDele) : null;
+    if (aPorta && aPorta.estado !== 'bom' && aPorta.estado !== 'neutro') {
+      const j = document.createElement('span');
+      j.className = 'marca junto';
+      j.appendChild(icone('i-aviso'));
+      j.title = maiuscula(aPorta.porque) + '.';
+      j.setAttribute('role', 'img'); j.setAttribute('aria-label', j.title);
+      onde.appendChild(j);
+    }
+    /* A ENTRADA USB 3.0 É UM VIZINHO QUE NÃO APARECE NA RÉGUA, porque não é
+       um aparelho — é a tomada. `docs/protocol/por-que-usb3-atrapalha-24ghz.md`
+       traz a fonte: da ordem de 20 dB acrescentados na faixa de 2,4 GHz. */
+    if (/3\.0/.test(lug.usb || '')) {
+      const u = document.createElement('span');
+      u.className = 'marca usb3';
+      u.appendChild(icone('i-aviso'));
+      u.title = 'Entrada USB 3.0: faz ruído no rádio. Prefira uma 2.0.';
+      u.setAttribute('role', 'img'); u.setAttribute('aria-label', u.title);
+      onde.appendChild(u);
+    }
+    /* R1 — O DESTINO DIZ O QUE FAZER COM O CONTROLE NA MÃO. Aparece fechado
+       ou aberto, porque arrastar não abre o destino (decisão dela, 22/09). */
+    for (const ap of esperando) {
+      const e = document.createElement('span');
+      e.className = 'espera';
+      e.dataset.campo = 'esperando-parear';
+      e.dataset.alvo = ap.id;
+      e.appendChild(silhueta(ap));
+      e.append('Segure PS + Create');
+      e.title = 'Segure PS + Create no ' + (ap.cor_nome || ap.nome) + ' até a luz piscar.';
+      onde.appendChild(e);
+    }
+    if (!lug.face) {
+      //: `<a href>` e não `<button data-gesto>`: este atalho abre a MESMA
+      //: `#mapear-entrada-a-entrada` do rodapé, e ela é uma âncora `:target`
+      //: no produto. Um segundo nome para o mesmo ato parte o contrato.
+      const b = document.createElement('a');
+      b.className = 'ensina';
+      b.href = '#mapear-entrada-a-entrada';
+      b.appendChild(icone('i-uma-a-uma'));
+      b.append('Onde fica?');
+      b.title = 'Mapear Entrada a Entrada';
+      b.dataset.alvo = lug.id;
+      b.addEventListener('click', () => ensinarOnde(lug));
+      onde.appendChild(b);
+    }
+    topo.appendChild(onde);
+
+    if (lug.quedas > 0) {
+      const sino = document.createElement('button');
+      sino.className = 'sino';
+      sino.appendChild(icone('i-aviso'));
+      sino.title = lug.quedas + ' quedas — ver quando';
+      sino.setAttribute('aria-label', sino.title);
+      sino.dataset.gesto = 'adaptador-historico';
+      sino.dataset.alvo = lug.id;
+      sino.addEventListener('click', () => abrirHistorico(lug));
+      topo.appendChild(sino);
+    }
+
+    const conta = document.createElement('span');
+    conta.className = 'lugar-conta';
+    /* R10 — «PONTES N DE 2» no lugar do «232%». O número é CONTAGEM, não
+       estimativa: quantos controles recebem som ou vibração por este rádio. */
+    const n = pontes.length;
+    const q = document.createElement('span');
+    q.className = 'quanto canais-do-lugar ' +
+      (n > PONTES_POR_ADAPTADOR ? 'estourou' : (n === PONTES_POR_ADAPTADOR ? 'apertado' : ''));
+    q.dataset.campo = 'lugar-pontes';
+    q.appendChild(icone('i-som'));
+    q.append(n + '/' + PONTES_POR_ADAPTADOR);
+    q.title = 'Controles com som ou vibração: ' + n + ' de ' + PONTES_POR_ADAPTADOR +
+      (n > PONTES_POR_ADAPTADOR ? ' — o som engasga' : '');
+    q.setAttribute('role', 'img');
+    q.setAttribute('aria-label', q.title);
+    conta.appendChild(q);
+
+    const canais = canaisDe(lug.id);
+    const ch = document.createElement('span');
+    ch.className = 'canais-do-lugar' + (canais < CANAIS_DO_BT ? ' apertado' : '');
+    ch.appendChild(icone('i-radio'));
+    ch.append(canais + '/' + CANAIS_DO_BT);
+    ch.title = canais === CANAIS_DO_BT ? 'Usa os ' + CANAIS_DO_BT + ' canais'
+      : 'Evita ' + (CANAIS_DO_BT - canais) + ' dos ' + CANAIS_DO_BT + ' canais (vizinhos)';
+    ch.setAttribute('role', 'img');
+    ch.setAttribute('aria-label', ch.title);
+    conta.appendChild(ch);
+
+    const livres = PONTES_POR_ADAPTADOR - n;
+    const sobra = document.createElement('span');
+    sobra.className = 'sobra' + (livres < 0 ? ' passou' : (livres === 0 ? ' nao-cabe' : ''));
+    if (livres >= 1) {
+      sobra.appendChild(icone('i-mais'));
+      for (let i = 0; i < livres; i++) sobra.appendChild(icone('i-ds', 'ds'));
+      sobra.title = livres === 1 ? 'Cabe mais 1 com som' : 'Cabem mais ' + livres + ' com som';
+    } else {
+      sobra.appendChild(icone('i-nao-cabe'));
+      sobra.title = livres < 0 ? 'Passou do limite: o som engasga' : 'Cheio de som (sem som, cabe)';
+    }
+    sobra.setAttribute('role', 'img');
+    sobra.setAttribute('aria-label', sobra.title);
+    conta.appendChild(sobra);
+    topo.appendChild(conta);
+    // ---- a barra: UMA VAGA POR PONTE, na cor de quem a ocupa ------------
+    const barra = document.createElement('div');
+    barra.className = 'barra-do-lugar';
+    const trilho = document.createElement('div');
+    trilho.className = 'trilho vagas';
+    trilho.dataset.campo = 'lugar-barra';
+    trilho.dataset.alvo = lug.id;
+    trilho.dataset.hefAlvo = 'html';
+    const escala = Math.max(PONTES_POR_ADAPTADOR, n);
+    for (let i = 0; i < escala; i++) {
+      const ap = pontes[i];
+      const v = document.createElement('div');
+      v.className = 'vaga-ponte' + (ap ? ' cheia' : '') +
+        (i >= PONTES_POR_ADAPTADOR ? ' alem' : '') + (ap && ap.esperando ? ' reservada' : '');
+      if (ap) {
+        v.style.background = veuDaCor(corDe(ap), .5);
+        if (i < PONTES_POR_ADAPTADOR) v.style.borderColor = corDe(ap);
+        v.appendChild(icone(ICONE_DO_CUSTO[ap.ligado.ponte]));
+        v.title = (ap.cor_nome || ap.nome) + ' · ' + NOME_CUSTO[ap.ligado.ponte] +
+          (ap.esperando ? ' · esperando' : '') + (i >= PONTES_POR_ADAPTADOR ? ' · passou do limite' : '');
+      } else {
+        v.title = 'Vaga livre';
+      }
+      trilho.appendChild(v);
+    }
+    barra.appendChild(trilho);
+    if (n > PONTES_POR_ADAPTADOR) {
+      const marca = document.createElement('div');
+      marca.className = 'marca-do-teto';
+      marca.style.left = 'calc(' + (PONTES_POR_ADAPTADOR / escala) * 100 + '% - 1.5px)';
+      marca.title = 'Limite: ' + PONTES_POR_ADAPTADOR;
+      barra.appendChild(marca);
+      trilho.classList.add('estourado');
+    }
+    topo.insertBefore(barra, conta);
+    card.appendChild(topo);
+    if (!lug.aberto) { sala.appendChild(card); continue; }
+
+    // ---- uma linha por dispositivo, na largura toda -----------------------
+    const lista = document.createElement('div');
+    lista.className = 'aparelhos';
+    lista.dataset.lugar = lug.id;
+    lista.dataset.campo = 'doca';
+    lista.dataset.alvo = lug.id;
+    for (const ap of moradores) lista.appendChild(linhaDe(ap));
+
+    /* O ADAPTADOR SOBRANDO VIRA UMA LINHA, com a vaga de soltar e a lâmpada —
+       as duas coisas que ela pediu que faltavam nos extensores. */
+    /* A VAGA DE SOLTAR EXISTE SEMPRE — ordem dela: *"falta espaço pra soltar e
+       arrastar cada dispositivo no extensor à direita e no à esquerda"*. Ela
+       não some quando não cabe mais um CONTROLE: cabe um teclado, um mouse,
+       uma webcam, e o alvo de arrastar não pode desaparecer. */
+    {
+      const fila = document.createElement('div');
+      fila.className = 'soltar-fila';
+      const pe = document.createElement('button');
+      pe.className = 'soltar';
+      pe.appendChild(icone('i-soltar'));
+      pe.append(moradores.length ? 'Arraste outro para cá' : 'Arraste um aparelho para cá');
+      pe.title = 'Trazer um aparelho para cá';
+      pe.dataset.gesto = 'trazer-para-ca';
+      pe.dataset.alvo = lug.id;
+      pe.addEventListener('click', () => quemVemPraCa(lug));
+      fila.appendChild(pe);
+      const s = sugestaoPara(lug);
+      if (s) {
+        const lamp = document.createElement('button');
+        lamp.className = 'lampada';
+        lamp.appendChild(icone('i-lampada'));
+        lamp.title = 'Quem funciona melhor aqui';
+        lamp.setAttribute('aria-label', lamp.title);
+        lamp.dataset.gesto = 'sugerir-alocacao';
+        lamp.dataset.alvo = lug.id;
+        lamp.addEventListener('click', () => mostrarBalao(card, s));
+        fila.appendChild(lamp);
+      }
+      lista.appendChild(fila);
+    }
+    card.appendChild(lista);
+    sala.appendChild(card);
+  }
+
+  document.getElementById('conta').textContent =
+    APARELHOS.filter(a => a.tipo === 'controle').length + ' controles · ' +
+    LUGARES.length + ' adaptadores';
+  pintarEspectro();
+  pintarPortas();
+}
+
+/* A SUGESTÃO PARA UM LUGAR: quem, do adaptador mais cheio, caberia aqui e
+   melhoraria o pior. É a mesma conta da `sugestao()` global, mirada num
+   destino — a lâmpada é por adaptador, então a pergunta também é. */
+function sugestaoPara(destino) {
+  const s = sugestao(destino);
+  return s && !s.impossivel ? s : null;
+}
+
+/* A PERGUNTA — a janela que vem ANTES do ato (R7, R8). O terceiro botão é o
+   da R3 + R4: «ligar aqui mesmo» para quem não pode re-parear agora. */
+let _fecharPergunta = null;
+function perguntar(diz, rotuloSim, sim, nao, outro) {
+  const caixa = document.getElementById('pergunta');
+  const veu = document.getElementById('veu-pergunta');
+  if (!caixa) return;
+  const antesDoFoco = document.activeElement;
+  caixa.querySelector('.diz').innerHTML = diz;
+  const s = caixa.querySelector('#pergunta-sim');
+  const n = caixa.querySelector('#pergunta-nao');
+  const o = caixa.querySelector('#pergunta-outro');
+  s.textContent = rotuloSim;
+  /* CLONAR PARA TROCAR O OUVINTE: `addEventListener` empilha, e a segunda
+     pergunta da sessão dispararia a resposta da primeira junto. */
+  const s2 = s.cloneNode(true), n2 = n.cloneNode(true), o2 = o.cloneNode(true);
+  s.replaceWith(s2); n.replaceWith(n2); o.replaceWith(o2);
+  o2.hidden = !outro;
+  if (outro) o2.textContent = outro.rotulo;
+  const fechar = () => {
+    caixa.hidden = true;
+    veu.classList.remove('aberto');
+    document.removeEventListener('keydown', porEscape, true);
+    _fecharPergunta = null;
+    if (antesDoFoco && antesDoFoco.focus) antesDoFoco.focus();
+  };
+  const porEscape = e => {
+    if (e.key === 'Escape') { e.stopPropagation(); fechar(); if (nao) nao(); }
+  };
+  s2.addEventListener('click', () => { fechar(); sim(); });
+  n2.addEventListener('click', () => { fechar(); if (nao) nao(); });
+  if (outro) o2.addEventListener('click', () => { fechar(); outro.aoEscolher(); });
+  /* O VÉU FECHA, e fechar é CANCELAR. Um clique fora que confirmasse seria a
+     pior saída possível para um ato que derruba o controle. */
+  veu.onclick = () => { fechar(); if (nao) nao(); };
+  document.addEventListener('keydown', porEscape, true);
+  _fecharPergunta = () => { fechar(); if (nao) nao(); };
+  caixa.hidden = false;
+  veu.classList.add('aberto');
+  s2.focus();
+}
+
+/* R1 + R7 — MOVER É DESCONECTAR, ESQUECER E PAREAR DE NOVO, e a janela diz
+   as três coisas antes. Palavra dela, 23/09: *"No ato de mover e arrasta pra
+   outro dispositivo. No pop UP ele aparece falando que vai fazer isso se vc
+   der o ok"*.  <!-- (noqa-acento) -->
+
+   NÃO HÁ MAIS «SAI E VOLTA SOZINHO». O estudo derrubou: o controle guarda UM
+   computador só, e a chave do pareamento é presa aos dois endereços. Um bond
+   velho no destino não traz o controle de volta — ele chama sempre o último
+   que o pareou. Toda mudança passa por PS + Create, e a janela não promete
+   outra coisa. */
+function comoSeParea(ap) {
+  if (ap.tipo === 'controle') return 'Depois, segure <b>PS + Create</b> até a luz piscar.';
+  return 'Depois, ponha ' + (ARTIGO_DO_TIPO[ap.tipo] || 'o') + ' ' + ap.tipo + ' para parear.';
+}
+function pedirParaMover(ap, destinoId, depois) {
+  if (!ap || ap.lugar === destinoId || ap.fixo) return false;
+  const lug = LUGARES.find(l => l.id === destinoId);
+  document.querySelectorAll('.lugar.alvo').forEach(l => l.classList.remove('alvo'));
+  const alvo = document.querySelector('.lugar[data-id="' + destinoId + '"]');
+  if (alvo) alvo.classList.add('alvo');
+  const ela = ARTIGO_DO_TIPO[ap.tipo] === 'a';
+  /* R4 — se lá também não cabe a ponte, a janela diz o fato ANTES. */
+  const cheio = ap.tipo === 'controle' && ap.ligado.ponte &&
+    pontesDe(destinoId).length >= PONTES_POR_ADAPTADOR;
+  /* DUAS LINHAS, E A PRIMEIRA DIZ «SÓ ELE» — ela, 23/09: *"moveriamos por
+     exemplo 1 controle por vez. Apagaria esse um controle (…) E não apagar
+     tudo"*.  <!-- (noqa-acento) --> */
+  perguntar(
+    'Mover ' + comoSeChama(ap) + ' para ' + comoSeChamaOLugar(lug) + '?<br>' +
+    'Só ' + (ela ? 'ela' : 'ele') + ' sai daqui. ' + comoSeParea(ap) +
+    (cheio ? ' Lá o som pode engasgar.' : ''),
+    'Mover',
+    () => { moverAgora(ap, destinoId); if (depois) depois(); },
+    () => { if (alvo) alvo.classList.remove('alvo'); });
+  return true;
+}
+
+/* R3 + R4 — A TERCEIRA PONTE NUM ADAPTADOR PEDE MOVER, sempre. Se ela não
+   puder re-parear agora, «Ligar aqui mesmo» liga — o som engasga, e a tela
+   diz o fato no número laranja. Sem vaga em lugar nenhum, só resta ligar. */
+function pedirVagaDePonte(ap, k) {
+  const lug = LUGARES.find(l => l.id === ap.lugar);
+  let destino = null, melhor = null;
+  for (const d of LUGARES) {
+    if (d.id === ap.lugar || pontesDe(d.id).length >= PONTES_POR_ADAPTADOR) continue;
+    const de = ap.lugar;
+    ap.lugar = d.id; ap.ligado.ponte = k;
+    const est = estadoDaMesa();
+    ap.lugar = de; ap.ligado.ponte = null;
+    if (!melhor || melhorQue(est, melhor)) { melhor = est; destino = d; }
+  }
+  const ligarAqui = () => { ap.ligado.ponte = k; pintar(); };
+  const oQue = k === 'som' ? 'o som' : 'a vibração';
+  if (!destino) {
+    perguntar('Todas as entradas já têm ' + PONTES_POR_ADAPTADOR +
+      ' controles com som ou vibração.<br>Ligar ' + oQue + ' mesmo assim? Pode engasgar.',
+      'Ligar', ligarAqui);
+    return;
+  }
+  perguntar(maiuscula(comoSeChamaOLugar(lug)) + ' já tem ' + PONTES_POR_ADAPTADOR +
+    ' controles com som ou vibração.<br>Mover ' + comoSeChama(ap) + ' para ' +
+    comoSeChamaOLugar(destino) + ' e ligar lá?',
+    'Mover e ligar',
+    () => { ap.ligado.ponte = k; moverAgora(ap, destino.id); },
+    null,
+    { rotulo: 'Ligar aqui', aoEscolher: ligarAqui });
+}
+
+/* O ATO. O controle sai daqui (esquecido de propósito — a marca impede o
+   autorestore de ressuscitar a conexão) e ESPERA no destino, com a vaga de
+   ponte guardada. Chegou = o `HID_PHYS` diz o adaptador certo. */
+const PS_CREATE_NO_MOCKUP_MS = 4000;
+function moverAgora(ap, destinoId) {
+  if (!ap || ap.lugar === destinoId) return false;
+  ap.lugar = destinoId;
+  ap.bonds = [];
+  ap.esperando = true;
+  pintar();
+  if (!window.SEM_RELOGIO) setTimeout(() => chegou(ap), PS_CREATE_NO_MOCKUP_MS);
+  return true;
+}
+function chegou(ap) {
+  if (!ap.esperando) return;
+  ap.esperando = false;
+  ap.bonds = [ap.lugar];
+  pintar();
+  /* A CONFIRMAÇÃO É A PISCADA (R8). */
+  const card = document.querySelector('.lugar[data-id="' + ap.lugar + '"]');
+  if (card) {
+    card.classList.add('recebeu');
+    setTimeout(() => card.classList.remove('recebeu'), 900);
+  }
+}
+
+/* R6 REVISTA POR ELA, 23/09: nada se apaga em lote. A conexão velha de um
+   controle em outro adaptador sai quando AQUELE controle é movido — é o
+   `bonds = []` de `moverAgora`. As outras ficam. */
+
+function mostrarBalao(card, s) {
+  const velho = card.querySelector('.balao');
+  if (velho) { velho.remove(); return; }
+  const b = document.createElement('div');
+  b.className = 'balao';
+  b.dataset.campo = 'sugestao-do-radio';
+  b.dataset.hefAlvo = 'html';
+  b.appendChild(icone('i-lampada'));
+  if (s.ap.tipo === 'controle') b.appendChild(silhueta(s.ap));
+  const t = document.createElement('span');
+  t.innerHTML = maiuscula(comoSeChama(s.ap)) + ' funciona melhor n' + comoSeChamaOLugar(s.destino);
+  b.appendChild(t);
+  /* O «MOVER» DO BALÃO ABRE A MESMA JANELA de todo mover: é ela que diz o que
+     será desconectado e esquecido (R7). Um atalho que pulasse a janela seria
+     o único mover sem aviso. */
+  const ok = document.createElement('button');
+  ok.className = 'ok'; ok.textContent = 'Mover';
+  ok.dataset.gesto = 'aceitar-sugestao';
+  ok.dataset.alvo = s.ap.id;
+  ok.addEventListener('click', () => { b.remove(); pedirParaMover(s.ap, s.destino.id); });
+  b.appendChild(ok);
+  card.appendChild(b);
+  ok.focus();
+}
+
+/* ------------------------------------------------ a linha de um dispositivo
+   ELA OCUPA A LARGURA TODA, e é o pedido dela: um controle espremido em 386 px
+   não tem onde desenhar no que gasta o rádio. */
+function linhaDe(ap) {
+  const linha = document.createElement('div');
+  linha.className = 'linha' + (ap.esperando ? ' esperando' : '');
+  linha.draggable = !ap.fixo && !ap.esperando;
+  linha.dataset.id = ap.id;
+  linha.dataset.campo = 'aparelho';
+  linha.dataset.alvo = ap.id;
+  /* ARRASTAR NÃO PODE SER O ÚNICO CAMINHO. Num app de acessibilidade, um gesto
+     que só existe no rato exclui exatamente quem o produto atende. */
+  if (!ap.fixo && !ap.esperando) {
+    linha.tabIndex = 0;
+    linha.setAttribute('role', 'button');
+    linha.setAttribute('aria-label', comoSeLe(ap) + ' — Enter para mudar de adaptador');
+    linha.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); paraOndeVai(ap); }
+    });
+  } else {
+    linha.setAttribute('aria-label', comoSeLe(ap));
+  }
+
+  if (ap.tipo === 'controle') {
+    linha.appendChild(silhueta(ap));
+  } else {
+    const ic = icone(ICONE_DO_APARELHO[ap.tipo] || 'i-radio', 'ico');
+    ic.style.color = corDe(ap);
+    linha.appendChild(ic);
+  }
+
+  /* TODO NOME É EDITÁVEL — ordem dela, 22/09: *"todo texto ali tem que permitir
+     que eu possa alterar. Vitória, Caixa de som, teclado, mouse"*. */
+  const nome = document.createElement('input');
+  nome.className = 'nome'; nome.value = ap.nome;
+  nome.setAttribute('aria-label', 'Nome deste aparelho');
+  nome.title = 'Clique para renomear; arraste para mover';
+  /* ARRASTAR PELO NOME, e o campo continua editável. Um `<input>` come o
+     arrasto do pai: quem pegava a linha pelo nome não levava nada. Ele nasce
+     arrastável e SÓ deixa de ser quando ela clica dentro dele — aí o arrasto
+     volta a ser o de selecionar texto, que é o que se espera de um campo em
+     edição. */
+  nome.draggable = true;
+  nome.addEventListener('focus', () => { nome.draggable = false; });
+  nome.addEventListener('blur', () => { nome.draggable = true; });
+  nome.addEventListener('dragstart', e => {
+    e.dataTransfer.setData('text/plain', ap.id);
+    e.dataTransfer.effectAllowed = 'move';
+    linha.classList.add('arrastando');
+  });
+  nome.addEventListener('dragend', () => linha.classList.remove('arrastando'));
+  nome.dataset.gesto = 'aparelho-renomear';
+  nome.dataset.alvo = ap.id;
+  nome.dataset.campo = 'aparelho-nome';
+  nome.dataset.hefAlvo = 'valor';
+  nome.addEventListener('change', () => { ap.nome = nome.value; pintar(); });
+  nome.addEventListener('mousedown', e => e.stopPropagation());
+  nome.addEventListener('keydown', e => e.stopPropagation());
+  linha.appendChild(nome);
+
+  // ---- a barra de features, com os espaços reservados ---------------------
+  const features = document.createElement('div');
+  features.className = 'features';
+  /* AS DUAS DIREÇÕES, E ELAS NÃO DISPUTAM NADA ENTRE SI — pedido dela,
+     22/09/2026, depois de perguntar como tudo funciona junto nos jogos dela.
+
+     A tela punha as três barras lado a lado, e lado a lado se lê como UMA
+     fila. Não é: o giroscópio, o acelerômetro, o touchpad e o microfone vão
+     no que o controle MANDA; o som e a vibração vêm no que o PC ESCREVE nele.
+     São dois caminhos, e é por isso que ela pode ter tudo ligado ao mesmo
+     tempo — foi o que ela viu no Don't Scream, no Big Walk e no PRAGMATA.
+
+     A separação é uma linha vertical e uma seta por grupo. Sem palavra nova
+     na tela: o que cada seta quer dizer fica na dica dela. */
+  const faixa = document.createElement('div');
+  faixa.className = 'faixa-do-aparelho';
+  /* A escala é o aparelho mais caro DESTE adaptador: o maior enche a linha e os
+     outros encurtam na proporção. A comparação entre adaptadores é trabalho da
+     barra de cima, que é segmentada por dispositivo na escala do teto. */
+  /* R10 — A LARGURA NÃO É MAIS CUSTO SOMADO. Cada linha ocupa a largura toda
+     e as partes dentro dela são os Hz de agora. */
+  faixa.style.width = '100%';
+  features.appendChild(faixa);
+
+  /* R1 — QUEM ESPERA PS + CREATE não manda nada ainda: a linha diz o gesto e
+     só. Os Hz voltam quando o controle chega. */
+  if (ap.esperando) {
+    faixa.remove();
+    const e = document.createElement('span');
+    e.className = 'segure';
+    e.textContent = 'Segure PS + Create';
+    features.appendChild(e);
+    linha.appendChild(features);
+    const z = document.createElement('span');
+    z.className = 'fatias';
+    z.textContent = '\u2013';
+    linha.appendChild(z);
+    return linha;
+  }
+
+  if (ap.tipo === 'controle') {
+    /* VAGA 1 — E ELA SE DIVIDE. O que o controle manda cabe numa fila só, e
+       a fila tem duas partes: MOVIMENTO e VOZ. O microfone não é um acréscimo
+       na ponta — é a divisória andando. Quem liga o mic vê o pedaço do
+       movimento ENCOLHER, que é o fato. */
+    const hz = hzDe(ap);
+    const v1 = document.createElement('div');
+    v1.className = 'vaga entrada fixa partida';
+    v1.style.flex = ap.entrada + (ap.ligado.mic ? ap.mic : 0) + ' 0 0';
+    v1.title = 'O que o controle manda';
+
+    const mov = document.createElement('span');
+    mov.className = 'parte movimento' + (hz.mov < HZ_QUE_ENGASGA ? ' pouco' : '');
+    mov.style.flex = Math.max(hz.mov, 40) + ' 1 0';
+    mov.appendChild(icone('i-sinal'));
+    const hz1 = document.createElement('span');
+    hz1.className = 'hz';
+    hz1.dataset.campo = 'hz-movimento';
+    hz1.dataset.alvo = ap.id;
+    hz1.textContent = Math.round(hz.mov) + ' Hz';
+    mov.appendChild(hz1);
+    /* R10 — O NÚMERO É O DE AGORA, contado; a dica diz de onde ele vem e o
+       que o move, sem prometer conta. */
+    mov.title = 'Movimento: ' + Math.round(hz.mov) + ' por segundo' +
+      (hz.mov < HZ_QUE_ENGASGA ? ' (baixo)' : '');
+
+    /* OS PASSAGEIROS viajam dentro do relatório de movimento, e por isso ficam
+       DENTRO desta parte: é onde eles de fato andam. */
+    for (const [ic, rot] of PASSAGEIROS) {
+      const s = document.createElement('span');
+      s.className = 'passageiro';
+      s.appendChild(icone(ic));
+      s.title = rot + ': vem junto, não custa nada';
+      s.setAttribute('role', 'img');
+      s.setAttribute('aria-label', s.title);
+      mov.appendChild(s);
+    }
+    v1.appendChild(mov);
+
+    /* O MICROFONE É A OUTRA PARTE DA FILA, e o botão dele É essa parte:
+       apertado, ele ocupa a largura que toma. Um selo do tamanho de um ícone
+       desenharia um custo pequeno onde o custo é 40% da fila. */
+    const mic = document.createElement('button');
+    mic.className = 'parte voz selo-mic';
+    mic.style.flex = ap.ligado.mic ? Math.max(hz.voz, 40) + ' 1 0' : '0 0 26px';
+    mic.appendChild(icone('i-mic'));
+    if (ap.ligado.mic) {
+      const hzv = document.createElement('span');
+      hzv.className = 'hz'; hzv.textContent = Math.round(hz.voz) + ' Hz';
+      mic.appendChild(hzv);
+    }
+    mic.setAttribute('aria-pressed', String(ap.ligado.mic));
+    mic.setAttribute('aria-label', 'Microfone de ' + ap.nome);
+    mic.title = 'Microfone: divide a fila com o movimento';
+    mic.dataset.gesto = 'custo-mic';
+    mic.dataset.alvo = ap.id;
+    mic.addEventListener('click', e => {
+      e.stopPropagation(); ap.ligado.mic = !ap.ligado.mic; pintar();
+    });
+    v1.appendChild(mic);
+
+    const manda = document.createElement('div');
+    manda.className = 'fluxo manda';
+    manda.style.flex = (ap.entrada + (ap.ligado.mic ? ap.mic : 0)) + ' 1 0';
+    const setaM = icone('i-manda', 'seta');
+    setaM.setAttribute('role', 'img');
+    manda.appendChild(setaM);
+    manda.appendChild(v1);
+    manda.title = 'O que o controle manda';
+    faixa.appendChild(manda);
+
+    /* VAGA 2 — a ponte. UM espaço, dois ocupantes possíveis: pelo rádio o
+       escritor manda som OU vibração, nunca os dois. */
+    const ponte = document.createElement('div');
+    ponte.className = 'ponte';
+    ponte.style.flex = ap.ponte + ' 0 0';
+    for (const k of ['som', 'haptica']) {
+      const b = document.createElement('button');
+      b.className = 'vaga ' + k;
+      b.appendChild(icone(ICONE_DO_CUSTO[k]));
+      if (ap.ligado.ponte === k) {
+        const hz = document.createElement('span');
+        hz.className = 'hz'; hz.textContent = Math.round(HZ.ponte) + ' Hz';
+        b.appendChild(hz);
+      }
+      b.setAttribute('aria-pressed', String(ap.ligado.ponte === k));
+      /* O RÓTULO COMEÇA MAIÚSCULO como qualquer outra frase da tela. O
+         `NOME_CUSTO` é minúsculo porque ele entra NO MEIO de frases («acender
+         o som»), e quem usa no começo é que capitaliza — o `title` já fazia,
+         o `aria-label` não, e a divergência só aparecia para quem ouve. */
+      b.setAttribute('aria-label', maiuscula(NOME_CUSTO[k]) + ' de ' + ap.nome);
+      /* A TELA DIZ O QUE ACONTECE, e só. A razão de ser um de cada vez, a
+         procedência da medição e a passada que ainda falta estão no
+         cabeçalho deste arquivo e no mapa de canais. Ordem dela, 22/09:
+         *"sem tolltips que refutem o projeto"*.  <!-- (noqa-acento) --> */
+      const alem = ap.ligado.ponte === k && vagaDe(ap) > PONTES_POR_ADAPTADOR;
+      if (alem) b.classList.add('alem');
+      b.title = maiuscula(NOME_CUSTO[k]) + ': ' + Math.round(HZ.ponte) + ' por segundo. ' +
+        'Pelo rádio, som ou vibração, um por vez.' + (alem ? ' Passou do limite: pode engasgar.' : '');
+      /* QUEM ESTÁ LIGADO OCUPA A VAGA INTEIRA; o outro encolhe para um botão
+         de troca. Dois botões de largura igual liam-se como DUAS vagas, e
+         desenhavam um espaço reservado que o rádio não tem: pelo rádio a
+         ponte é uma só. */
+      b.style.flex = ap.ligado.ponte === null ? '1 1 0'
+                   : (ap.ligado.ponte === k ? '1 1 0' : '0 0 34px');
+      b.dataset.gesto = k === 'som' ? 'custo-som' : 'custo-vibracao';
+      b.dataset.alvo = ap.id;
+      b.addEventListener('click', e => {
+        e.stopPropagation();
+        const ligando = ap.ligado.ponte === null;
+        if (ligando && pontesDe(ap.lugar).length >= PONTES_POR_ADAPTADOR) {
+          pedirVagaDePonte(ap, k);
+          return;
+        }
+        ap.ligado.ponte = (ap.ligado.ponte === k) ? null : k;
+        pintar();
+      });
+      ponte.appendChild(b);
+    }
+    const recebe = document.createElement('div');
+    recebe.className = 'fluxo recebe';
+    recebe.style.flex = ap.ponte + ' 1 0';
+    const setaR = icone('i-recebe', 'seta');
+    setaR.setAttribute('role', 'img');
+    recebe.appendChild(setaR);
+    recebe.appendChild(ponte);
+    recebe.title = 'O que o PC manda para o controle';
+    faixa.appendChild(recebe);
+
+    /* AS FEATURES QUE NÃO PESAM ficam FORA da barra, como selos. É o que
+       responde à pergunta dela — *"os que usam desses canais via bt preciso
+       que separe eles com o valor real"* — para os DOIS lados: as que pesam
+       têm largura proporcional; as que não pesam têm zero de largura e
+       aparecem mesmo assim, para que a pessoa saiba que existem e que são de
+       graça. */
+    const luz = document.createElement('button');
+    luz.className = 'selo-zero';
+    luz.appendChild(icone('i-lightbar'));
+    luz.setAttribute('aria-pressed', String(ap.ligado.luz));
+    luz.setAttribute('aria-label', 'Barra de luz de ' + ap.nome);
+    luz.title = 'Barra de luz: não pesa no rádio';
+    luz.dataset.gesto = 'custo-luz';
+    luz.dataset.alvo = ap.id;
+    luz.addEventListener('click', e => {
+      e.stopPropagation(); ap.ligado.luz = !ap.ligado.luz; pintar();
+    });
+    recebe.appendChild(luz);
+  } else {
+    /* TECLADO, MOUSE, WEBCAM E CAIXA não têm feature para ligar — a vaga
+       mostra o que eles gastam, e nada mais, em vez de fingir um botão. */
+    /* CUSTO ZERO NÃO GANHA BARRA. Medido em 22/09: a webcam saía com
+       `faixa-do-aparelho` de largura 0 e a vaga de 16 px, e o "sem rádio"
+       vazava 77 px por cima da linha. Uma barra de largura zero não é um
+       desenho pequeno — é um desenho que não existe, com texto solto em cima.
+       Quem não pesa no rádio diz isso em palavra, no lugar da barra. */
+    if (custoDe(ap) === 0) {
+      faixa.remove();
+      const nada = document.createElement('span');
+      nada.className = 'sem-radio';
+      nada.textContent = 'Sem rádio';
+      nada.title = 'Não usa rádio; só ocupa porta';
+      features.appendChild(nada);
+      linha.appendChild(features);
+      const z = document.createElement('span');
+      z.className = 'fatias zero';
+      z.textContent = '\u2013';
+      z.title = 'Não usa rádio';
+      linha.appendChild(z);
+      return linha;
+    }
+    const v = document.createElement('div');
+    v.className = 'vaga entrada fixa';
+    v.style.flex = '1 1 0';
+    v.appendChild(icone(ICONE_DO_APARELHO[ap.tipo] || 'i-radio'));
+    const hzO = document.createElement('span');
+    hzO.className = 'hz';
+    /* CADA PACOTE DE A2DP CUSTA 4 FATIAS (2-DH5 = 3, mais a resposta), então o
+       hertz sai da divisão — e o zero da webcam sai como palavra, não como
+       "0 Hz", que se leria como aparelho mudo em vez de aparelho sem rádio. */
+    hzO.textContent = custoDe(ap) === 0 ? 'Sem rádio'
+                    : Math.round(custoDe(ap) / 4) + ' Hz';
+    v.appendChild(hzO);
+    v.title = maiuscula(ap.nome) + ': ' + Math.round(custoDe(ap) / 4) + ' pacotes de som por segundo';
+    v.style.background = 'var(--panel)';
+    v.style.borderColor = corDe(ap);
+    v.style.color = corDe(ap);
+    faixa.appendChild(v);
+  }
+  linha.appendChild(features);
+
+  /* O NÚMERO QUE SOBRA NA DIREITA É «QUANTO DE UMA ANTENA», e não mais a
+     contagem de fatias: *"o termo fatias é muito dificil de entender se
+     tratando de bt"*.  <!-- (noqa-acento) -->
+     É o mesmo dado — 928 de 1.600 é 58% —, dito na grandeza em que a pergunta
+     é feita: cabe ou não cabe. */
+  /* R10 — A COLUNA DA DIREITA DIZ QUAL VAGA DE PONTE ELE OCUPA, e não mais
+     «% de uma antena»: a porcentagem era a soma que a D-CONTA-ADITIVA proíbe.
+     É o que liga a linha à barra do adaptador lá em cima. */
+  const f = document.createElement('span');
+  const vaga = vagaDe(ap);
+  f.className = 'fatias' + (vaga > PONTES_POR_ADAPTADOR ? ' alem' : '');
+  f.dataset.campo = 'vaga-de-ponte';
+  f.dataset.alvo = ap.id;
+  f.textContent = vaga ? vaga + ' de ' + PONTES_POR_ADAPTADOR : '\u2013';
+  f.title = vaga ? (vaga > PONTES_POR_ADAPTADOR ? 'Passou do limite' : 'Som ' + vaga + ' de ' + PONTES_POR_ADAPTADOR)
+               : 'Sem som';
+  linha.appendChild(f);
+
+  linha.addEventListener('dragstart', e => {
+    e.dataTransfer.setData('text/plain', ap.id);
+    linha.classList.add('arrastando');
+  });
+  linha.addEventListener('dragend', () => linha.classList.remove('arrastando'));
+  return linha;
+}
+
+/* ARRASTAR é o gesto do rato; a lista do painel é o do teclado; a lâmpada é o
+   atalho de quem não quer nenhum dos dois. Os três fazem a mesma coisa. */
+/* O ALVO É O ADAPTADOR INTEIRO, ABERTO OU FECHADO — pedido dela, 22/09:
+   *"clicar e arrastar qualquer elemento (…) me permita jogar rapidamente pro
+   adaptador minimizado"*.  <!-- (noqa-acento) -->
+
+   O alvo era a `.aparelhos`, que só existe com o adaptador ABERTO. Com o
+   acordeão exclusivo — um aberto por vez, decisão dela — isso queria dizer
+   que o único destino alcançável era aquele de onde a linha estava saindo.
+   Mudar para `.lugar` faz a fileira fechada aceitar, e é a mesma linha de
+   código para os dois casos. */
+const ondeSoltar = e =>
+  (e.target.closest && e.target.closest('.lugar')) || null;
+
+document.addEventListener('dragover', e => {
+  const doca = ondeSoltar(e);
+  if (!doca) return;
+  e.preventDefault();
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('.lugar').forEach(l => l.classList.remove('alvo'));
+  doca.classList.add('alvo');
+});
+document.addEventListener('dragleave', e => {
+  const doca = ondeSoltar(e);
+  if (doca && !doca.contains(e.relatedTarget)) doca.classList.remove('alvo');
+});
+document.addEventListener('drop', e => {
+  const doca = ondeSoltar(e);
+  if (!doca) return;
+  e.preventDefault();
+  const ap = APARELHOS.find(a => a.id === e.dataTransfer.getData('text/plain'));
+  document.querySelectorAll('.lugar').forEach(l => l.classList.remove('alvo'));
+  /* A JANELA PERGUNTA E O DESTINO SE MARCA — e o adaptador NÃO se abre. Abrir o
+     destino fecharia o de origem (o acordeão é exclusivo) e ela perderia de
+     vista a fila de onde acabou de tirar a linha. */
+  if (ap) pedirParaMover(ap, doca.dataset.id);
+});
+
+/* --------------------------------------------------------- o espectro */
+/* QUANTOS CANAIS UM VIZINHO CUSTA: a interseção entre a faixa dele e os canais
+   que o adaptador ABANDONOU. É o que transforma a régua de enfeite em conta —
+   ordem dela: *"a parte do gigahertz tem que ser útil ao user de alguma forma"*.
+   A física: o Bluetooth salta entre 79 canais e o AFH tira do salto os que
+   estão ocupados. Um dongle não enche a barra do adaptador — ele ENCOLHE a
+   antena, e este número é o quanto. */
+function canaisQueCusta(e) {
+  /* FORA DA FAIXA NÃO CUSTA. O Wi-Fi dela responde canal 161 / 5.805 MHz, e
+     desenhar-lhe o anel de quem pesa seria a régua acusando um inocente. */
+  if (e.forca === 'fora') return 0;
+  return EVITADOS.reduce((s, v) =>
+    s + Math.max(0, Math.min(e.fim, v.fim) - Math.max(e.ini, v.ini)), 0);
+}
+
+/* A PISTA É A PRIMEIRA QUE NÃO ENCOSTA EM NINGUÉM. Duas bastam para o caso
+   real (um Wi-Fi largo mais um dongle); acima disso a régua volta a empilhar,
+   e é melhor empilhar do que espremer a ponto de não se ler o número. */
+function pistaLivre(e, pistas) {
+  for (let i = 0; i < pistas.length; i++) {
+    if (pistas[i].every(o => e.ini >= o.fim || e.fim <= o.ini)) {
+      pistas[i].push(e); return i;
+    }
+  }
+  if (pistas.length >= 2) { pistas[1].push(e); return 1; }
+  pistas.push([e]); return pistas.length - 1;
+}
+
+/* QUEM ATRAPALHA QUEM, NA PORTA. Três regras, e as três são medidas:
+
+   1. DOIS RÁDIOS NO MESMO GRUPO — duas antenas a centímetros uma da outra.
+      Esta casa já media isso no Check-up como linha de texto; aqui vira marca.
+   2. USB 3.0 NO MESMO GRUPO QUE UM RÁDIO — ~20 dB de ruído em 2,4 GHz.
+   3. UMA PORTA LIVRE NUM GRUPO SEM RÁDIO é a boa para o próximo, e é o
+      «pular uma casa» que resolveu a mesa dela.
+
+   A avaliação é por GRUPO (o hub), porque é a proximidade física que conta —
+   não o barramento lógico. */
+const EH_RADIO = new Set(['controle', 'wifi', 'teclado', 'mouse', 'fone', 'caixa']);
+
+function oQueOcupa(porta) {
+  if (!porta.ocupa) return null;
+  const l = LUGARES.find(x => x.id === porta.ocupa);
+  if (l) return { tipo: 'adaptador', nome: l.nome || 'Entrada ' + l.entrada, radio: true, icone: 'i-radio' };
+  const a = APARELHOS.find(x => x.id === porta.ocupa);
+  if (a) return { tipo: a.tipo, nome: a.nome, radio: a.tipo !== 'webcam',
+                  icone: a.tipo === 'controle' ? 'i-ds' : (ICONE_DO_APARELHO[a.tipo] || 'i-radio'),
+                  cor: corDe(a) };
+  const e = ESPECTRO.find(x => x.id === porta.ocupa);
+  if (e) return { tipo: e.tipo, nome: e.nome, radio: true,
+                  icone: ICONE_DO_RADIO[e.tipo] || 'i-radio' };
+  return null;
+}
+
+/* COLADO É PORTA AO LADO — a regra da casa, medida na mesa dela: «pular uma
+   casa» resolve. O estudo de 23/09 achou a faixa chamando de «colado» o par
+   que pula uma (3-4.2 com 3-4.4) e acusando a porta 3.0 LIVRE. Porta 3.0 sem
+   nada plugado não faz ruído; o que faz é o tráfego 3.0 ao lado do rádio. */
+function numeroDaPorta(porta) {
+  const m = /^(.*)\.(\d+)$/.exec(porta.caminho) || /^(\d+)-(\d+)$/.exec(porta.caminho);
+  return m ? { pai: m[1], n: Number(m[2]) } : null;
+}
+function aoLado(a, b) {
+  const x = numeroDaPorta(a), y = numeroDaPorta(b);
+  return !!(x && y && x.pai === y.pai && Math.abs(x.n - y.n) === 1);
+}
+function comoEstaAPorta(porta) {
+  const meu = oQueOcupa(porta);
+  const vizinhas = PORTAS.filter(o => o.id !== porta.id && aoLado(o, porta));
+  const radiosAoLado = vizinhas.filter(o => { const q = oQueOcupa(o); return q && q.radio; });
+  const tresOcupadaAoLado = vizinhas.filter(o => o.usb === '3.0' && oQueOcupa(o));
+  if (meu && meu.radio) {
+    if (tresOcupadaAoLado.length) return { estado: 'ruim', porque: 'USB 3.0 ao lado' };
+    if (radiosAoLado.length) {
+      const quem = radiosAoLado.map(o => (oQueOcupa(o) || {}).nome).filter(Boolean);
+      return { estado: 'atento', porque: 'colado em ' + (quem.join(', ') || 'outro rádio') };
+    }
+    return { estado: 'bom', porque: 'nenhum rádio ao lado' };
+  }
+  if (!meu) {
+    if (porta.usb === '3.0') return { estado: 'neutro', porque: 'livre (USB 3.0: melhor para o que não é rádio)' };
+    if (radiosAoLado.length) return { estado: 'atento', porque: 'livre, rádio ao lado' };
+    return { estado: 'bom', porque: 'livre' };
+  }
+  return { estado: 'neutro', porque: 'não usa rádio' };
+}
+
+function pintarPortas() {
+  const faixa = document.getElementById('portas');
+  if (!faixa) return;
+  faixa.innerHTML = '';
+  const grupos = [];
+  for (const porta of PORTAS) {
+    let g = grupos.find(x => x.nome === porta.grupo);
+    if (!g) { g = { nome: porta.grupo, portas: [] }; grupos.push(g); }
+    g.portas.push(porta);
+  }
+  for (const g of grupos) {
+    const bloco = document.createElement('div');
+    bloco.className = 'grupo-de-portas';
+    bloco.title = g.nome;
+    bloco.setAttribute('aria-label', g.nome);
+    for (const porta of g.portas) {
+      const meu = oQueOcupa(porta);
+      const como = comoEstaAPorta(porta);
+      const c = document.createElement('button');
+      c.className = 'porta ' + como.estado + (porta.usb === '3.0' ? ' tres' : '');
+      c.dataset.grupo = g.nome;
+      c.dataset.gesto = 'examinar-portas';
+      c.dataset.alvo = porta.id;
+      if (meu) {
+        const ic = icone(meu.icone, meu.icone === 'i-ds' ? 'ds' : '');
+        if (meu.cor) ic.style.color = meu.cor;
+        c.appendChild(ic);
+      }
+      c.title = 'Entrada ' + porta.caminho + ' · USB ' + porta.usb + ' · ' +
+        (meu ? meu.nome || meu.tipo : 'livre') + ' — ' + como.porque + '.';
+      c.setAttribute('aria-label', c.title);
+      /* O IMPACTO EM TEMPO REAL: passar por uma porta acende as que dividem o
+         hub com ela. É a resposta à pergunta dela — «qual objeto impacta o
+         quê» — e ela é de ida e volta, porque a proximidade é mútua. */
+      c.addEventListener('mouseenter', () => acenderGrupo(g.nome, true));
+      c.addEventListener('mouseleave', () => acenderGrupo(g.nome, false));
+      c.addEventListener('focus', () => acenderGrupo(g.nome, true));
+      c.addEventListener('blur', () => acenderGrupo(g.nome, false));
+      bloco.appendChild(c);
+    }
+    faixa.appendChild(bloco);
+  }
+}
+
+function acenderGrupo(nome, ligar) {
+  for (const c of document.querySelectorAll('.porta')) {
+    c.classList.toggle('vizinha', ligar && c.dataset.grupo === nome);
+  }
+}
+
+function pintarEspectro() {
+  const faixa = document.getElementById('canais');
+  faixa.innerHTML = '';
+  const pistas = [];
+  faixa.classList.remove('duas-pistas');
+  /* A CAMADA DO SALTO vem primeiro, por baixo de tudo: ela é o fundo em que os
+     vizinhos se apoiam. */
+  const livres = [];
+  let c = 0;
+  for (const v of EVITADOS.slice().sort((a, b) => a.ini - b.ini)) {
+    if (v.ini > c) livres.push([c, v.ini]);
+    c = Math.max(c, v.fim);
+  }
+  if (c < CANAIS_DO_BT) livres.push([c, CANAIS_DO_BT]);
+  for (const [a, b] of livres) {
+    const s = document.createElement('div');
+    s.className = 'salto';
+    s.style.left = (a / CANAIS_DO_BT * 100) + '%';
+    s.style.width = ((b - a) / CANAIS_DO_BT * 100) + '%';
+    faixa.appendChild(s);
+  }
+  for (const v of EVITADOS) {
+    const d = document.createElement('div');
+    d.className = 'evitado';
+    d.style.left = (v.ini / 79 * 100) + '%';
+    d.style.width = ((v.fim - v.ini) / 79 * 100) + '%';
+    const dono = LUGARES.find(l => l.id === v.lugar);
+    d.title = (dono ? maiuscula(comoSeChamaOLugar(dono)).replace(/<\/?b>/g, '') : 'O rádio') +
+      ' parou de saltar nos canais ' + v.ini + ' a ' + v.fim + ' — medido no próprio adaptador';
+    faixa.appendChild(d);
+  }
+  /* QUEM NÃO ESTÁ EM 2,4 NÃO ENTRA NA RÉGUA DE 2,4 — achado por ela em
+     22/09/2026: *"tá certo a sobreposição do teclado e wifi (...)? parece um
+     erro"*.  <!-- (noqa-acento) -->
+
+     ERA ERRO, E MEDIDO: o Wi-Fi ocupava px 1 a 329 e o Teclado px 269 a 508 na
+     mesma pista — 60 px de sobreposição, com o Wi-Fi pintando POR CIMA. E o
+     Wi-Fi dela responde canal 161 / 5.805 MHz, ou seja, nem sequer disputa
+     esta faixa. Desenhá-lo aqui era afirmar uma disputa que não existe.
+
+     Ele não some da tela: vira selo cinza no cabeçalho, ao lado dos aparelhos,
+     dizendo o que ele CUSTARIA se caísse para 2,4. */
+  const foraDaFaixa = ESPECTRO.filter(e => e.forca === 'fora');
+  const naFaixa = ESPECTRO.filter(e => e.forca !== 'fora');
+  /* AS PISTAS SÃO DECIDIDAS ANTES DE PINTAR A PRIMEIRA. Numa passagem só, quem
+     era pintado antes da segunda pista existir ficava de altura inteira e
+     voltava a encobrir o vizinho — o defeito que a pista veio curar. */
+  const pistaDe = new Map();
+  for (const e of naFaixa.slice().sort((a, b) => a.ini - b.ini)) {
+    pistaDe.set(e.id, pistaLivre(e, pistas));
+  }
+  faixa.classList.toggle('duas-pistas', pistas.length > 1);
+  for (const e of naFaixa) {
+    const semNome = !e.nome;
+    const d = document.createElement('button');
+    /* E QUANDO DOIS VIZINHOS DE VERDADE SE SOBREPÕEM — um Wi-Fi em 2,4 mais um
+       teclado, que é o caso de quase todo mundo — a régua tem de MOSTRAR a
+       sobreposição, não escondê-la sob quem foi pintado por último. Cada faixa
+       recebe a primeira pista livre; com uma só, ocupa a altura inteira. */
+    d.className = 'faixa provavel ' + e.forca + (semNome ? ' sem-nome' : '') +
+                  (pistas.length > 1 ? ' pista-' + pistaDe.get(e.id) : '');
+    d.style.left = (e.ini / 79 * 100) + '%';
+    d.style.width = ((e.fim - e.ini) / 79 * 100) + '%';
+    const custa = canaisQueCusta(e);
+    if (custa) d.classList.add('custa');
+    d.title = (e.nome || 'Rádio sem nome') +
+      (e.forca === 'fora' ? ' em 5 GHz: fora desta faixa'
+        : ' — canais ' + e.ini + ' a ' + e.fim + ' (provável)') +
+      (custa ? '. Custa ' + custa + ' canais.' : '.');
+    d.dataset.gesto = 'vizinho-o-que-e';
+    d.dataset.alvo = e.id;
+    d.addEventListener('click', () => batizarRadio(e));
+    if (semNome) {
+      /* OS QUATRO «— O que é? —» DE HOJE VIRAM ETIQUETAS NA RÉGUA: o que ela
+         ensina fica desenhado onde o aparelho de fato atrapalha, em vez de numa
+         fileira de dropdowns sem posição. O GESTO É O DA ABA — `vizinho-o-que-e`
+         já existe, e um segundo nome para o mesmo ato parte o contrato. */
+      d.appendChild(icone('i-ajuda'));
+      d.setAttribute('aria-label', d.title + '. Toque para dizer o que é.');
+    } else {
+      d.appendChild(icone(ICONE_DO_RADIO[e.tipo] || 'i-radio'));
+      d.setAttribute('aria-label', d.title + '. Toque para trocar.');
+    }
+    const ch = document.createElement('span');
+    ch.className = 'ch'; ch.textContent = ' ' + e.ini + '\u2013' + e.fim;
+    d.appendChild(ch);
+    faixa.appendChild(d);
+  }
+  /* O CABEÇALHO NOMEIA O CULPADO, que é a única coisa acionável aqui: saber
+     que 27 canais sumiram não muda nada; saber QUAL aparelho pesa, sim. */
+  /* POR ADAPTADOR, NÃO SOMADO — cada um tem o seu mapa de canais, e somar
+     os de dois adaptadores dava «24/79» a um rádio que evita 12. */
+  const evitados = Math.max(0, ...LUGARES.map(l => CANAIS_DO_BT - canaisDe(l.id)));
+  const semNome = ESPECTRO.filter(e => !e.nome).length;
+  const pior = ESPECTRO.slice().sort((a, b) => canaisQueCusta(b) - canaisQueCusta(a))[0];
+  const conta = document.getElementById('fonte-espectro');
+  conta.textContent = evitados + '/79 evitados' +
+    (pior && canaisQueCusta(pior) ? ' \u00B7 pior: ' + (pior.nome || 'sem nome') : '') +
+    (semNome ? ' \u00B7 ' + semNome + ' sem nome' : '');
+  /* OS SEUS APARELHOS TAMBÉM ESTÃO NO AR, e eles não têm lugar no eixo: saltam
+     pelo que sobrou. É a resposta à pergunta dela — *"como isso se relaciona
+     com os demais?"* —, e é o que a régua não dizia. */
+  const fora = document.getElementById('fora-da-faixa');
+  fora.innerHTML = '';
+  for (const e of foraDaFaixa) {
+    const s = document.createElement('span');
+    s.className = 'selo-fora';
+    s.appendChild(icone(ICONE_DO_RADIO[e.tipo] || 'i-radio'));
+    s.append(' 5 GHz');
+    s.title = (e.nome || 'Este rádio') + ' em 5 GHz: fora desta faixa';
+    s.setAttribute('role', 'img');
+    s.setAttribute('aria-label', s.title);
+    fora.appendChild(s);
+  }
+  const meus = document.getElementById('meus-no-ar');
+  meus.innerHTML = '';
+  const porTipo = {};
+  const noAr = APARELHOS.filter(a => a.tipo !== 'webcam');
+  for (const a of noAr) porTipo[a.tipo] = (porTipo[a.tipo] || 0) + 1;
+  for (const tipo of Object.keys(porTipo)) {
+    const ic = icone(tipo === 'controle' ? 'i-ds' : (ICONE_DO_APARELHO[tipo] || 'i-radio'),
+                     tipo === 'controle' ? 'ds' : '');
+    meus.appendChild(ic);
+  }
+  const n = noAr.length;
+  const cada = LUGARES.map(l => canaisDe(l.id));
+  const restam = Math.min(...cada) === Math.max(...cada) ? String(cada[0])
+               : Math.min(...cada) + '\u2013' + Math.max(...cada);
+  meus.append('\u00A0' + n + ' no ar');
+  meus.title = 'Seus ' + n + ' aparelhos Bluetooth saltam pelos ' + restam + ' canais livres';
+  conta.title = 'O adaptador que mais evita: ' + evitados + ' de 79 canais' +
+    (pior && canaisQueCusta(pior) ? '. Pior vizinho: ' + (pior.nome || 'sem nome') + '.' : '.');
+}
+
+/* ----------------------------------------------------------- o painel
+   O QUE O LAUDO DE QA ACHOU, e está curado aqui: o painel fechado continuava
+   alcançável pelo Tab com `aria-hidden="true"` — o leitor de tela não via e o
+   teclado ia parar num foco invisível. O `inert` fecha os dois de uma vez. E o
+   foco agora ENTRA quando ele abre e VOLTA para quem o abriu quando fecha. */
+const painel = document.getElementById('painel');
+const veu = document.getElementById('veu');
+let quemAbriu = null;
+
+function abrirPainel(titulo, corpo, pulsando) {
+  quemAbriu = document.activeElement;
+  document.getElementById('painel-titulo').textContent = titulo;
+  document.getElementById('pulso').style.display = pulsando ? '' : 'none';
+  const alvo = document.getElementById('painel-corpo');
+  alvo.innerHTML = ''; alvo.appendChild(corpo);
+  painel.classList.add('aberto');
+  painel.removeAttribute('inert');
+  painel.setAttribute('aria-hidden', 'false');
+  veu.classList.add('aberto');
+  const primeiro = painel.querySelector('button, a, input, [tabindex]:not([tabindex="-1"])');
+  if (primeiro) primeiro.focus();
+}
+function fecharPainel() {
+  if (painel.contains(document.activeElement)) document.activeElement.blur();
+  painel.classList.remove('aberto');
+  painel.setAttribute('inert', '');
+  painel.setAttribute('aria-hidden', 'true');
+  veu.classList.remove('aberto');
+  if (quemAbriu && document.contains(quemAbriu)) quemAbriu.focus();
+  quemAbriu = null;
+}
+document.getElementById('b-fechar').addEventListener('click', fecharPainel);
+veu.addEventListener('click', fecharPainel);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharPainel(); });
+
+function listaDeBotoes(itens, aoEscolher, comIcone) {
+  const corpo = document.createElement('div');
+  corpo.className = 'escolha';
+  for (const it of itens) {
+    const b = document.createElement('button');
+    b.className = 'btn';
+    if (comIcone) b.appendChild(icone(comIcone(it)));
+    b.append(typeof it === 'string' ? it : it.rotulo);
+    b.addEventListener('click', () => aoEscolher(it));
+    corpo.appendChild(b);
+  }
+  return corpo;
+}
+
+/* CONECTAR — a paridade com a tela do sistema, num painel lateral (decisão
+   dela). O adaptador de destino vem ESCOLHIDO no mais vazio: é o que faz o
+   multi-adaptador ser automático sem ser mudo. */
+document.getElementById('b-conectar').addEventListener('click', () => {
+  const corpo = document.createElement('div');
+  corpo.style.cssText = 'display:flex;flex-direction:column;gap:11px;min-height:0';
+
+  /* R5 + D8 — o destino vem escolhido no que tem MAIS VAGA DE PONTE, e no
+     empate o de menos controles. Só vale no parear: depois, quem liga é o
+     controle, e ele chama sempre o mesmo computador. */
+  const maisVazio = LUGARES.slice().sort((a, b) =>
+    (pontesDe(a.id).length - pontesDe(b.id).length) ||
+    (ligadosEm(a.id).filter(x => x.tipo === 'controle').length -
+     ligadosEm(b.id).filter(x => x.tipo === 'controle').length) ||
+    (a.varrendo - b.varrendo))[0];
+  const escolha = document.createElement('div');
+  escolha.className = 'escolha-lugar';
+  escolha.setAttribute('role', 'group');
+  escolha.setAttribute('aria-label', 'Em qual adaptador conectar');
+  for (const l of LUGARES) {
+    const b = document.createElement('button');
+    b.className = 'op';
+    b.textContent = l.nome || 'Entrada ' + l.entrada;
+    b.setAttribute('aria-pressed', String(l.id === maisVazio.id));
+    b.title = 'Com som: ' + pontesDe(l.id).length + ' de ' + PONTES_POR_ADAPTADOR;
+    b.dataset.gesto = 'escolher-adaptador';
+    b.dataset.alvo = l.id;
+    b.addEventListener('click', () => {
+      escolha.querySelectorAll('.op').forEach(o => o.setAttribute('aria-pressed', 'false'));
+      b.setAttribute('aria-pressed', 'true');
+    });
+    escolha.appendChild(b);
+  }
+  corpo.appendChild(escolha);
+
+  const lista = document.createElement('div');
+  lista.className = 'achados';
+  for (const a of lerCsv('perto')) {
+    const seu = a.conhecido === 'sim';
+    const div = document.createElement('div');
+    div.className = 'achado';
+    if (a.tipo === 'controle') {
+      const d = icone('i-ds', 'ds cheio'); div.appendChild(d);
+    } else {
+      div.appendChild(icone('i-radio', 'ico'));
+    }
+    const n = document.createElement('span');
+    n.className = 'nome'; n.textContent = a.nome; div.appendChild(n);
+    const f = document.createElement('span');
+    f.className = 'forca'; f.textContent = a.forca + ' dBm';
+    f.title = 'Sinal: mais perto de zero, mais perto';
+    div.appendChild(f);
+    const b = document.createElement('button');
+    b.className = 'btn';
+    b.textContent = seu ? 'Conectar' : 'Parear';
+    b.dataset.gesto = seu ? 'conectar-aparelho' : 'parear-aparelho';
+    b.dataset.alvo = a.id;
+    div.appendChild(b);
+    lista.appendChild(div);
+  }
+  corpo.appendChild(lista);
+  abrirPainel('Procurando', corpo, true);
+});
+
+/* O HISTÓRICO, atrás do sino — pedido dela, e economiza a altura que uma lista
+   permanente custaria. */
+function abrirHistorico(lug) {
+  const corpo = document.createElement('div');
+  corpo.style.cssText = 'display:flex;flex-direction:column;gap:6px';
+  for (const q of QUEDAS.filter(q => q.lugar === lug.id)) {
+    const d = document.createElement('div');
+    d.className = 'queda';
+    d.appendChild(icone('i-aviso'));
+    const t = document.createElement('span'); t.textContent = maiuscula(q.porque);
+    d.appendChild(t);
+    const w = document.createElement('span');
+    w.className = 'quando'; w.textContent = q.quando;
+    d.appendChild(w);
+    corpo.appendChild(d);
+  }
+  abrirPainel(lug.nome || 'Entrada ' + lug.entrada, corpo);
+}
+
+/* «MAPEAR ENTRADA A ENTRADA», chamado de onde a dúvida está — e com as MESMAS
+   quatro respostas que o pop-up de hoje já oferece. Inventar uma quinta
+   abriria uma segunda língua para a mesma pergunta. */
+const FACES = ['Frente do gabinete', 'Traseira', 'Num hub ou extensão', 'Na escrivaninha'];
+function ensinarOnde(lug) {
+  abrirPainel('Onde fica esta entrada?',
+    listaDeBotoes(FACES, face => { lug.face = face; fecharPainel(); pintar(); },
+      f => /hub|extens/.test(f) ? 'i-hub' : 'i-placa'));
+}
+
+/* QUEM VEM PRA CÁ: o «Arraste para cá» clicado vira a lista dos aparelhos que
+   estão em outro adaptador. É o mesmo ato do arrastar, pelo caminho de quem
+   não arrasta. */
+function quemVemPraCa(lug) {
+  const itens = APARELHOS.filter(a => a.lugar !== lug.id && !a.fixo)
+    .map(a => ({ rotulo: a.nome + (a.cor_nome ? ' \u00B7 ' + a.cor_nome : ''), a }));
+  if (!itens.length) { abrirPainel('Nada para trazer', document.createElement('div')); return; }
+  abrirPainel('Quem vem para ' + (lug.nome || 'a Entrada ' + lug.entrada) + '?',
+    listaDeBotoes(itens, it => { fecharPainel(); pedirParaMover(it.a, lug.id); },
+      it => it.a.tipo === 'controle' ? 'i-ds' : (ICONE_DO_APARELHO[it.a.tipo] || 'i-radio')));
+}
+
+/* O CAMINHO DE TECLADO para mover um controle — o mesmo ato do arrastar. */
+function paraOndeVai(ap) {
+  const itens = LUGARES.filter(l => l.id !== ap.lugar)
+    .map(l => ({ rotulo: (l.nome || 'Entrada ' + l.entrada) +
+                 ' · com som ' + pontesDe(l.id).length + ' de ' + PONTES_POR_ADAPTADOR, l }));
+  abrirPainel('Para onde vai ' + (ap.cor_nome || ap.nome) + '?',
+    listaDeBotoes(itens, it => { fecharPainel(); pedirParaMover(ap, it.l.id); },
+      it => it.l.tipo === 'hub' ? 'i-hub' : 'i-placa'));
+}
+
+function batizarRadio(radio) {
+  const itens = [['Wi-Fi','wifi','i-wifi'], ['Fone','fone','i-fone'],
+                 ['Teclado','teclado','i-teclado'], ['Mouse','mouse','i-mouse'],
+                 ['Webcam','webcam','i-webcam'], ['Outro','outro','i-radio']]
+    .map(([rotulo, tipo, ic]) => ({ rotulo, tipo, ic }));
+  abrirPainel('O que é este rádio?',
+    listaDeBotoes(itens, it => {
+      radio.nome = it.rotulo; radio.tipo = it.tipo; fecharPainel(); pintar();
+    }, it => it.ic));
+}
+
+/* R12 — O EQUILIBRAR PROPÕE UM MOVIMENTO SÓ, pela mesma janela de todo
+   mover. Ela aperta PS + Create, o Hefesto confere que o controle chegou, e
+   só então o próximo clique propõe o próximo. Com um controle ainda
+   esperando, ou nada a melhorar, o botão balança (R8) e a dica diz por quê. */
+const bEquilibrar = document.getElementById('b-equilibrar');
+const TITULO_DO_EQUILIBRAR = bEquilibrar.title;
+function recusar(botao, porque) {
+  botao.title = porque;
+  botao.classList.remove('recusa');
+  void botao.offsetWidth;
+  botao.classList.add('recusa');
+  setTimeout(() => { botao.classList.remove('recusa'); botao.title = TITULO_DO_EQUILIBRAR; }, 2500);
+}
+bEquilibrar.addEventListener('click', () => {
+  const esperando = APARELHOS.find(a => a.esperando);
+  if (esperando) {
+    recusar(bEquilibrar, 'Esperando o ' + (esperando.cor_nome || esperando.nome) + ' chegar');
+    return;
+  }
+  const s = sugestao();
+  if (!s) { recusar(bEquilibrar, 'Já está equilibrado'); return; }
+  if (s.impossivel) { recusar(bEquilibrar, 'Nenhuma entrada com vaga'); return; }
+  pedirParaMover(s.ap, s.destino.id);
+});
+
+/* OS TRÊS BOTÕES DAS ENTRADAS — mantidos, só reposicionados. No produto eles
+   abrem os mesmos pop-ups de hoje; aqui só mostram o painel para ela julgar. */
+document.getElementById('b-uma-a-uma').addEventListener('click', () => {
+  ensinarOnde(LUGARES.find(l => !l.face) || LUGARES[0]);
+});
+for (const [bid, titulo, texto] of [
+  ['b-mapear', 'Mapear Entradas',
+   'Abre o desenho do gabinete: as entradas numeradas por face, com ocupada, vazia, serve e vale evitar.'],
+  ['b-examinar', 'Examinar Entradas',
+   'Refaz o exame das entradas — energia e rádio — e repinta o Check-up.'],
+]) {
+  document.getElementById(bid).addEventListener('click', () => {
+    const corpo = document.createElement('div');
+    corpo.style.cssText = 'color:var(--texto-mudo);font-size:12.5px';
+    corpo.textContent = texto;
+    abrirPainel(titulo, corpo);
+  });
+}
+
+pintar();
+</script>
+</body>
+</html>

@@ -129,17 +129,13 @@ def _constantes(caminho, nomes):
     return achado
 
 
+# OS HZ MEDIDOS DO RÁDIO, lidos do dono. A conta aditiva de fatias
+# (`SLOTS_POR_RELATORIO`, `palavra_da_ocupacao`, o teto de 1.600) SAIU desta
+# aba em 23/09/2026 com a seção do rádio (TRANSPLANTE-DA-SECAO-01): a tela diz
+# Hz de verdade e pontes N de 2, e não soma (R10, D-CONTA-ADITIVA-DO-RADIO).
 RADIO = _constantes(
     R / "src/hefesto_dualsense4unix/integrations/radio_da_mesa.py",
-    {"SLOTS_POR_SEGUNDO", "SLOTS_POR_RELATORIO", "HZ_INPUT_SEM_MIC",
-     "HZ_INPUT_COM_MIC", "HZ_AUDIO_COM_MIC", "CORTE_FOLGADA", "CORTE_APERTADA",
-     "PALAVRA_FOLGADA", "PALAVRA_APERTADA", "PALAVRA_CHEIA"})
-
-TETO = RADIO["SLOTS_POR_SEGUNDO"]
-CUSTO_SEM_MIC = RADIO["HZ_INPUT_SEM_MIC"] * RADIO["SLOTS_POR_RELATORIO"]
-CUSTO_COM_MIC = ((RADIO["HZ_INPUT_COM_MIC"] + RADIO["HZ_AUDIO_COM_MIC"])
-                 * RADIO["SLOTS_POR_RELATORIO"])
-CUSTO_DO_MIC = CUSTO_COM_MIC - CUSTO_SEM_MIC
+    {"HZ_INPUT_SEM_MIC", "HZ_INPUT_COM_MIC", "HZ_AUDIO_COM_MIC"})
 
 # ---------------------------------------------------------------------------
 # O TETO DA VIBRAÇÃO — o global e o do controle, com os dois números do produto.
@@ -215,13 +211,6 @@ def num(valor):
     inteiro, _, decimal = _fala.formata_pt_br(valor).partition(",")
     milhar = f"{int(inteiro):,}".replace(",", ".")
     return milhar if decimal == "0" and float(valor).is_integer() else f"{milhar},{decimal}"
-
-
-def palavra_da_ocupacao(fracao):
-    """As três palavras do produto — nunca vermelho, rádio cheio tem volta."""
-    if fracao < RADIO["CORTE_FOLGADA"]:
-        return RADIO["PALAVRA_FOLGADA"]
-    return RADIO["PALAVRA_APERTADA"] if fracao < RADIO["CORTE_APERTADA"] else RADIO["PALAVRA_CHEIA"]
 
 
 # ---------------------------------------------------------------------------
@@ -412,45 +401,6 @@ RADIOS_VIZINHOS = [
     ("Unknown 0e8d:0608", "— O que é? —", True),
 ]
 
-#: AS RESPOSTAS DO "— O que é? —", E ELAS NÃO SE DIGITAM MAIS AQUI — 01/09/2026.
-#:
-#: A lista estava escrita duas vezes: nesta linha e em
-#: `gui/aba_conexoes.RESPOSTAS_DO_VIZINHO`, que é a camada de tela DESTA MESMA
-#: aba. As duas eram idênticas byte a byte, e é essa a armadilha: enquanto forem
-#: iguais ninguém vê problema, e no dia em que uma ganhar uma opção a tela
-#: oferece uma resposta que o gesto não sabe traduzir — o `<select>` mostra
-#: "Fone", ela escolhe, e o clique **recusa dizendo que não conhece a palavra**.
-#:
-#: O gesto `vizinho-o-que-e` traduz o rótulo desta lista para o `tipo` do
-#: esquema (`secao_mesa._TIPOS_DE_RADIO`); derivar daqui é o que mantém as três
-#: listas amarradas num dono só.
-VIZINHOS = list(_aba_conexoes.RESPOSTAS_DO_VIZINHO)
-
-
-#: O ENDEREÇO DA PRIMEIRA `<option>` — a pergunta em si.
-#:
-#: Ela deixa de ser texto morto em 03/09/2026 porque a tela passou a SUGERIR: o
-#: pacote reescreve o TEXTO desta opção com o que o kernel leu daquele rádio,
-#: ainda vestido de pergunta (`— Teclado? —`), e ela confirma escolhendo na
-#: mesma caixa. Decisão dela, perguntada se a "Câmera" do kernel é a "Webcam" da
-#: lista: *"Depende do aparelho. (…) A tela pode SUGERIR e deixar você
-#: confirmar, em vez de decidir sozinha."*
-#:
-#: NÃO NASCE UMA CAIXA NOVA, e isso é o contrato: a `<option>` já existia, o
-#: `<select>` já existia, e nem uma nem outro mudam de tamanho, de lugar ou de
-#: cor. A janela estável resolve o mesmo problema com TRÊS caixas a mais por
-#: linha — a palavra, o selo `(lido)` e um botão "Corrigir"
-#: (`secao_mesa._celula_respondida`) —, e essas três são desenho DELA.
-PERGUNTA_DO_VIZINHO = ' data-campo="vizinho-pergunta"'
-
-
-def viz_sel(escolhida):
-    return "".join(
-        f'<option{" selected" if v == escolhida else ""}'
-        f'{PERGUNTA_DO_VIZINHO if i == 0 else ""}>{v}</option>'
-        for i, v in enumerate(VIZINHOS))
-
-
 def sel(opcoes, escolhida, classe="pronto", dica="", gesto="", campo=""):
     """Um `<select>` com a opção escolhida marcada — uma forma só na tela.
 
@@ -634,10 +584,6 @@ def tem_mic_pelo_radio(c):
 #: o pacote a cada tique com o transporte vivo.
 def caminho_do_mic(c):
     return _pacote08.caminho_do_microfone(transporte_de(c))
-
-
-def custo(c):
-    return CUSTO_COM_MIC if tem_mic_pelo_radio(c) else CUSTO_SEM_MIC
 
 
 # O RÓTULO E A TINTA MUDARAM-SE PARA O PACOTE — 03/09/2026,
@@ -2038,50 +1984,6 @@ def exame(estado, txt, dica, linha=0):
           </div>'''
 
 
-#: UM BLOCO POR VIZINHO, os quatro numa fileira só — e não mais uma tabela de
-#: duas linhas. Nada se perdeu: o nome cru continua em cima, a resposta continua
-#: embaixo, e o "O que é" que era cabeçalho de coluna virou o que sempre foi — a
-#: pergunta que o próprio campo faz.
-def viz_bloco(nome, escolha, pergunta=False, linha=0):
-    """Um vizinho: o nome cru que o sistema entrega, e o que ELA diz que ele é.
-
-    `linha` tem a mesma razão do `linha` do :func:`exame`, e o mesmo preço se
-    faltar: os quatro `<select>` são iguais e o ouvinte não teria como dizer
-    qual mudou — declarar "isto é um teclado" gravaria no rádio errado.
-
-    O que endereça o rádio no `maquina.json` é `vid:pid`
-    (`MesaDeclarada._chave_de_radio_e_vid_pid`), e ele NÃO cabe aqui: os quatro
-    blocos são HTML estático e o par só se sabe depois de ler o barramento. Quem
-    lê é `a08_conexoes.pacote()`, que pinta o nome e guarda a ordem — a posição
-    é a ponte entre o desenho e a mesa dela.
-    """
-    d = ("O sistema não sabe o que é este rádio. Com o nome, o Hefesto sabe o que dá para "
-         "desligar. «Outro» abre um campo para você escrever."
-         if pergunta else
-         "O que é este rádio. Mudar aqui já corrige. «Outro» abre um campo para você escrever "
-         "o nome.")
-    c = "pronto pergunta" if pergunta else "pronto"
-    # A TERCEIRA LINHA DO BLOCO — 04/09/2026: ONDE aquele rádio está, com o aviso
-    # de vizinhança colado quando há um. Os dois donos são do produto
-    # (`secao_mesa._onde_esta_o_radio` e `secao_mesa._avisos_de_vizinhanca`), e
-    # nesta bancada UM dos três rádios acusa: *"Não sei · vizinho do adaptador
-    # 3"*. É o mesmo fato que a linha do Check-up chama de "dois rádios da
-    # bancada estão em entradas vizinhas" — e que ali não diz qual dos rádios é.
-    #
-    # NO DESENHO ELE FICA MUDO, e é a mesma regra dos `<i class="est">`: o mockup
-    # é HTML estático, ninguém o pinta quando ela o abre no navegador, e uma cena
-    # de bancada não tem como saber a entrada de um rádio que não existe. O
-    # travessão é a palavra da casa para "sem dado" (`gui.aba_conexoes.TRACO`).
-    return (f'              <div class="viz">'
-            f'<span class="qual" data-campo="vizinho-nome" title="{nome}">{nome}</span>'
-            f'<select class="{c}" title="{d}" data-gesto="vizinho-o-que-e" data-v="{linha}"'
-            f' data-campo="vizinho-tipo" data-hef-alvo="valor">'
-            f'{viz_sel(escolha)}</select>'
-            f'<i class="vaviso" data-campo="vizinho-onde-dica" data-hef-alvo="classe"></i>'
-            f'<span class="onde" data-campo="vizinho-onde">'
-            f'{_aba_conexoes.TRACO}</span></div>')
-
-
 # ---------------------------------------------------------------------------
 # UM CONTROLE DO ACORDEÃO — uma função, N chamadas, zero texto repetido.
 # ---------------------------------------------------------------------------
@@ -2557,61 +2459,10 @@ def linha_do_controle(c):
 
 
 # ---------------------------------------------------------------------------
-# A RÉGUA DO RÁDIO — o desenho dela, com a mesa da BANCADA.
-#
-# O HTML sai de `pacotes.a08_conexoes.html_da_regua_do_radio`, que é o dono das
-# duas versões: esta e a que o produto pinta a cada tique. Aqui só se monta a
-# mesa da bancada na língua que ele lê — e é essa a fronteira que a
-# `IDENTIDADE-VEM-DE-CIMA-01` desenha: a FORMA é de quem desenha, o DADO é de
-# quem lê o aparelho.
-#
-# POR QUE A RÉGUA INTEIRA E NÃO CAMPO A CAMPO: o `title` de cada fatia nomeia o
-# plástico ("Starlight Blue — 260,4 turnos de entrada"), e não há alvo de
-# atributo no `escrever()` do piloto. Um `title` congelado só se cura com o
-# bloco nascendo do produto.
-# ---------------------------------------------------------------------------
-def _do_desenho(c):
-    """Um controle da bancada na língua da régua: a cor já resolvida em hex.
-
-    O `via` DAQUI É A PALAVRA DA TELA, e não a sigla — 06/09/2026. A régua a
-    escreve num `title` (*"hoje no …"*), e a bancada dizia **"hoje no USB"**
-    contra o **"hoje no cabo"** que o produto pinta: a mesma frase em duas
-    línguas, e a do desenho é a que o glossário bane (`USB` só sobrevive na
-    contagem do topo). Quem traduz é o dono — `home_actions.palavra_do_transporte`
-    —, a partir da chave crua de :func:`transporte_de`.
-    """
-    return {"jogador": c["jogador"], "nome": c["nome"],
-            "via": palavra_do_transporte(transporte_de(c)),
-            "plastico": cor_da_zona(c["cor"]), "mic": tem_mic_pelo_radio(c)}
-
-
-def regua_do_radio():
-    pistas = []
-    for a in ADAPTADORES:
-        # SÓ QUEM ESTÁ NA MESA OCUPA BANDA: um controle desconectado não gasta
-        # turno de rádio, e desenhá-lo na pista afirmaria uma disputa que não
-        # existe.
-        dentro = [POR_PREF[p] for p in a["prefs"] if POR_PREF[p].get("conectado", True)]
-        # AS VAGAS SÃO OS CONTROLES DA MESA QUE HOJE ESTÃO NO CABO — não um "+1"
-        # imaginário. A pergunta que a régua responde deixou de ser "quantos
-        # caberiam" e passou a ser "e se os meus quatro viessem para o rádio".
-        vagas = [x for x in CONECTADOS if x["pref"] not in a["prefs"]]
-        pistas.append({"nome": a["nome"], "dica": f'{a["modelo"]} — {a["onde"]}',
-                       "dentro": [_do_desenho(c) for c in dentro],
-                       "vagas": [_do_desenho(c) for c in vagas]})
-    return _pacote08.html_da_regua_do_radio(
-        pistas, [_do_desenho(c) for c in NO_RADIO],
-        teto=TETO, sem_mic=CUSTO_SEM_MIC, com_mic=CUSTO_COM_MIC,
-        num=num, palavra=palavra_da_ocupacao)
-
-
-# ---------------------------------------------------------------------------
 # As contas que o texto do exame cita — contadas, nunca digitadas.
 # ---------------------------------------------------------------------------
 POR_NOMEAR = [v for v in RADIOS_VIZINHOS if v[2]]
 JA_NOMEADOS = [v for v in RADIOS_VIZINHOS if not v[2]]
-TOTAL_NO_RADIO = sum(custo(c) for c in NO_RADIO)
-TODOS_COM_MIC = len(CONECTADOS) * CUSTO_COM_MIC
 #: "o Player 1 e o Player 4" — a lista escrita por extenso, do jeito que se lê.
 JOGADORES_NO_CABO = " e o ".join(f"Player {c['jogador']}" for c in NO_CABO)
 
@@ -3325,6 +3176,524 @@ TELA_MAPEAR = f'''
 # "gravado" e o laudo de quatro blocos. O carimbo dela cobre aquele DESENHO;
 # esta pop-up desenha o CÓDIGO.
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# A SEÇÃO DO RÁDIO — o `mockup/mapa-do-radio.html` aprovado vira a cx8-3.
+# TRANSPLANTE-DA-SECAO-01, 23/09/2026.
+#
+# TRÊS COISAS SAEM DO DESENHO APROVADO, LIDAS E NÃO COPIADAS À MÃO: a folha de
+# estilo, o sprite dos ícones e a cena de exemplo (o CSV que ele embute). Copiar
+# à mão abriria a segunda grafia do desenho que ela aprovou — o defeito que o
+# `novo-layout/` pagou divergindo 25 KB em silêncio.
+#
+# O QUE NÃO SAI DE LÁ: o roteiro. O do desenho CALCULA a tela (Hz estimados,
+# sugestão, espectro inventado); aqui quem calcula é o pacote
+# (`a08_conexoes.campos_da_secao`), com os donos do produto. O roteiro desta
+# página só ABRE o que o Python já pintou — pergunta, painel, acordeão,
+# arrasto — e é por isso que ele cabe numa folha.
+# ---------------------------------------------------------------------------
+_DESENHO_DO_RADIO = R / "mockup/mapa-do-radio.html"
+_DESENHO_DO_RADIO_TXT = _DESENHO_DO_RADIO.read_text(encoding="utf-8")
+
+#: As classes do desenho que a tela renomeia. A palavra «fatia» não chega à
+#: tela nem como nome de classe (regra da leva: *nunca a palavra «fatia»*).
+_CLASSES_RENOMEADAS = {"fatias": "conta-da-vaga", "fatia": "pedaco"}
+
+
+def _escopo(seletores: str) -> str:
+    """`.a, .b:hover` → `.radio .a, .radio .b:hover` — a folha do desenho só vale na seção."""
+    fora = []
+    for sel in seletores.split(","):
+        sel = sel.strip()
+        if not sel:
+            continue
+        if sel in (":root", ".quadro"):
+            fora.append(".radio")
+        elif sel == "*":
+            fora.append(".radio, .radio *")
+        elif sel.startswith("#"):
+            fora.append(".radio #rd-" + sel[1:])
+        else:
+            fora.append(".radio " + sel)
+    return ", ".join(fora)
+
+
+def _css_do_radio() -> str:
+    """A folha do desenho aprovado, com escopo `.radio` e sem o que é da página.
+
+    Saem: o `body` (a página é da aba) e a moldura do `.quadro` (a seção mora
+    no quadro da aba, que já tem borda e fundo) — do `.quadro` fica só o palco:
+    `position: relative` e o contexto de empilhamento que segura o painel e a
+    pergunta DENTRO da seção. Os `@keyframes` ganham o prefixo `rd-`.
+    """
+    corpo = re.search(r"<style>(.*?)</style>", _DESENHO_DO_RADIO_TXT, re.S).group(1)
+    corpo = re.sub(r"/\*.*?\*/", "", corpo, flags=re.S)
+    for velho, novo in _CLASSES_RENOMEADAS.items():
+        corpo = re.sub(rf"\.{velho}\b", f".{novo}", corpo)
+    nomes = re.findall(r"@keyframes\s+([\w-]+)", corpo)
+    for nome in nomes:
+        corpo = re.sub(rf"\b{nome}\b", f"rd-{nome}", corpo)
+    saida, i = [], 0
+    while True:
+        abre = corpo.find("{", i)
+        if abre < 0:
+            break
+        cabeca = corpo[i:abre].strip()
+        # o bloco inteiro, com as chaves aninhadas do `@media`/`@keyframes`
+        prof, j = 0, abre
+        while j < len(corpo):
+            if corpo[j] == "{":
+                prof += 1
+            elif corpo[j] == "}":
+                prof -= 1
+                if prof == 0:
+                    break
+            j += 1
+        miolo = corpo[abre + 1:j]
+        i = j + 1
+        if cabeca.startswith("@keyframes"):
+            saida.append(f"{cabeca}{{{miolo}}}")
+        elif cabeca.startswith("@media"):
+            dentro = []
+            for sel, decl in re.findall(r"([^{}]+)\{([^{}]*)\}", miolo):
+                dentro.append(f"{_escopo(sel)}{{{decl.strip()}}}")
+            saida.append(f"{cabeca}{{{''.join(dentro)}}}")
+        elif cabeca == "body":
+            continue
+        elif cabeca == ".quadro":
+            saida.append(".quadro.radio{position:relative;z-index:0}")
+        else:
+            saida.append(f"{_escopo(cabeca)}{{{' '.join(miolo.split())}}}")
+    return "\n  ".join(saida)
+
+
+#: O QUE A PÁGINA DA ABA PÕE NAS MESMAS CLASSES e a folha do desenho não
+#: desfaz — medido lado a lado no Chrome (a caixa de cada peça na seção contra
+#: a mesma peça no `mapa-do-radio.html`). A folha do desenho vence onde diz
+#: alguma coisa; estas linhas apagam o que ela CALA e a página diz.
+CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
+  .radio .btn{height:auto;padding-top:7px;padding-bottom:7px}
+  .radio .btn.so-icone{padding:7px}
+  .radio .painel .escolha{height:auto}
+  .radio .porta{margin-left:0;line-height:normal;font-size:inherit;text-decoration:none;
+                white-space:normal}
+  .radio .porta:hover{text-decoration:none}
+  .radio .marca{color:inherit}
+  .radio .espectro-cab .ajuda{line-height:normal;text-align:center;flex:none;position:static}
+  .radio .quadro-topo.cab{margin-bottom:0}
+  .radio .quadro-topo.cab .conta{margin-left:4px}
+  .radio .lugar:not(.aberto) > .aparelhos{display:none}
+  .radio .sala-vazia{color:var(--texto-mudo);font-size:12.5px;padding:10px 4px}
+  .radio .moldes{display:none}
+  .radio .btn.apagado{cursor:not-allowed;border-color:var(--border-sutil);color:var(--texto-mudo)}
+  .radio .fora-da-faixa{display:flex;align-items:center;gap:4px;margin-left:auto}
+  .radio .fora-da-faixa .selo-fora{margin-left:0}
+  .radio .fora-da-faixa + .no-ar{margin-left:9px}
+  .radio .no-ar-dentro{display:flex;align-items:center;gap:5px}
+  .radio .historico{display:flex;flex-direction:column;gap:6px}
+  .radio .queda-desde{font-size:11px;color:var(--texto-mudo);padding:2px 4px}
+  .radio .conectar{display:flex;flex-direction:column;gap:11px;min-height:0}
+  .radio .soltar.apagado,.radio .lampada.apagado{cursor:not-allowed;opacity:.5}
+"""
+
+
+def _sprite_do_radio() -> str:
+    """O sprite do desenho, com os ids em `rd-` e a silhueta sem os ids de dentro.
+
+    A silhueta do DualSense vem do `ds_limpo.svg` com os ids das peças (`corpo`
+    duas vezes, `r1`, `touchpad`…) e os `data-*` do mapa do controle. Numa
+    página que já tem desenhos do controle, um `id="corpo"` a mais é um
+    `url(#…)` que passa a apontar para o lugar errado — e os `data-entrada`
+    fariam as réguas do mapa contarem peças que não são deste controle.
+    """
+    bloco = re.search(r'(<svg width="0" height="0"[^>]*>)(.*?)(</svg>)\s*\n',
+                      _DESENHO_DO_RADIO_TXT, re.S)
+    abre, corpo, fecha = bloco.groups()
+    corpo = re.sub(r"<!--.*?-->", "", corpo, flags=re.S)
+
+    def limpa_o_ds(m: re.Match) -> str:
+        dentro = m.group(2)
+        dentro = re.sub(r'\s(?:id|class|data-[\w-]+)="[^"]*"', "", dentro)
+        dentro = re.sub(r'\sstyle="[^"]*filter[^"]*"', "", dentro)
+        return m.group(1) + dentro + m.group(3)
+
+    corpo = re.sub(r'(<symbol id="i-ds"[^>]*>)(.*?)(</symbol>)', limpa_o_ds, corpo, flags=re.S)
+    corpo = re.sub(r'<symbol id="i-', '<symbol id="rd-', corpo)
+    corpo = "\n".join(linha for linha in corpo.splitlines() if linha.strip())
+    return abre + "\n" + corpo + "\n" + fecha
+
+
+def _csv_do_desenho(ident: str) -> list[dict[str, str]]:
+    cru = re.search(rf'<script type="text/csv" id="{ident}">(.*?)</script>',
+                    _DESENHO_DO_RADIO_TXT, re.S).group(1).strip().splitlines()
+    cabeca = cru[0].split(",")
+    return [dict(zip(cabeca, (c.strip() for c in linha.split(",")), strict=False))
+            for linha in cru[1:] if linha.strip()]
+
+
+#: O desenho escreve «Traseira»; a face do produto é a da cerimônia
+#: (`calibrar_entradas.FACES`), na mesma ordem das quatro do desenho.
+_FACES_DO_DESENHO = ("Frente do gabinete", "Traseira", "Num hub ou extensão", "Na escrivaninha")
+
+
+def _cena_do_desenho() -> dict:
+    """A cena do desenho aprovado, na forma que o pacote pinta.
+
+    OS HZ SÃO A CONTA DO DESENHO, e só do desenho: a bancada não tem daemon, e o
+    desenho aprovado mostra números na forma. No produto os Hz vêm do contador
+    (`state_full`) e nada é estimado (R10) — o pacote nunca faz esta conta.
+    """
+    linhas = _csv_do_desenho("dados")
+    faces = dict(zip(_FACES_DO_DESENHO, CALIB["FACES"], strict=True))
+    hz_por_ponte = _pacote08.MARGINAL_DA_PONTE
+    lugares, aparelhos = [], []
+    for linha in (x for x in linhas if x["tabela"] == "lugar"):
+        lugares.append({
+            "id": linha["id"], "lugar": linha["id"], "nome": linha["nome"],
+            "entrada": f'Entrada {linha["c"]}',
+            "face": faces.get(linha["d"], ""), "hub": linha["a"] == "hub",
+            "varrendo": "varrendo" in linha.get("h", ""), "junto": "", "usb3": False,
+            "conectando": False, "chegou": [], "quedas": [], "teto": float(linha["e"]),
+        })
+    for i, linha in enumerate(x for x in linhas if x["tabela"] == "aparelho"):
+        ligado = linha.get("h", "")
+        aparelhos.append({
+            "id": linha["id"], "tipo": linha["a"], "lugar": linha["c"], "nome": linha["nome"],
+            "rotulo": f"Player {i + 1}" if linha["a"] == "controle" else linha["nome"],
+            "cor": linha["b"], "colorway": "", "cor_nome": linha["g"],
+            "mic": "mic" in ligado, "luz": "luz" in ligado, "fixo": "fixo" in ligado,
+            "ponte": ("haptica" if "vib" in ligado else "som" if "ponte" in ligado else None),
+            "som": float(linha["d"] or 0), "esperando": False, "alem": False,
+        })
+    for lug in lugares:
+        dentro = [a for a in aparelhos if a["lugar"] == lug["id"]]
+        controles = [a for a in dentro if a["tipo"] == "controle"]
+        pontes = [a for a in controles if a["ponte"]]
+        for k, a in enumerate(pontes):
+            a["alem"] = k >= _pacote08.PONTES_POR_ADAPTADOR
+        sons = sum(a["som"] for a in dentro if a["tipo"] in ("caixa", "fone"))
+        ar = max(0.0, lug["teto"] - hz_por_ponte * len(pontes) - sons)
+        parte = ar / 2 / (len(controles) or 1)
+        fracao_da_voz = RADIO["HZ_AUDIO_COM_MIC"] / (RADIO["HZ_AUDIO_COM_MIC"]
+                                                     + RADIO["HZ_INPUT_COM_MIC"])
+        for a in controles:
+            voz = min(RADIO["HZ_AUDIO_COM_MIC"], parte * fracao_da_voz) if a["mic"] else 0.0
+            a["hz_mov"], a["hz_voz"] = parte - voz, (voz if a["mic"] else None)
+    # O SINO: as quedas do desenho, na palavra do produto (o diário não chega cru).
+    quedas = [q for q in _csv_do_desenho("quedas")]
+    for lug in lugares:
+        lug["quedas"] = [{"carimbo": 0.0, "quando": q["quando"],
+                          "porque": _pacote08.FRASE_DO_DIARIO["ponte subiu"]}
+                         for q in quedas if q["lugar"] == lug["id"]]
+        if lug["quedas"]:
+            lug["quedas_desde"] = "23/09"
+    evitados = [{"lugar": x["a"], "ini": int(x["b"]), "fim": int(x["c"])}
+                for x in linhas if x["tabela"] == "evitado"]
+    # OS VIZINHOS SÃO SELOS, E NÃO FAIXAS: o produto não lê o canal de um
+    # teclado sem fio, e a tela não inventa a faixa dele (R10).
+    tipo_do_desenho = {"teclado": "teclado", "mouse": "mouse", "wifi": "wifi"}
+    vizinhos = [{"id": x["id"], "tipo": tipo_do_desenho.get(x["a"], ""), "nome": x["nome"],
+                 "sugestao": ""} for x in linhas if x["tabela"] == "espectro"]
+    portas = [{"id": x["id"], "caminho": x["a"], "usb": x["b"], "ocupa": x["c"],
+               "grupo": x["d"], "rotulo": x["a"]} for x in linhas if x["tabela"] == "porta"]
+    perto = [{"id": x["id"], "nome": x["nome"], "tipo": x["tipo"], "forca": int(x["forca"]),
+              "conhecido": x["conhecido"] == "sim"} for x in _csv_do_desenho("perto")]
+    cheio = max(lugares, key=lambda lg: sum(1 for a in aparelhos
+                                            if a["lugar"] == lg["id"] and a["ponte"]))
+    vazio = min(lugares, key=lambda lg: (sum(1 for a in aparelhos
+                                             if a["lugar"] == lg["id"] and a["ponte"]),
+                                         lg["varrendo"]))
+    quem_sai = [a for a in aparelhos if a["lugar"] == cheio["id"] and a["ponte"]][-1]
+    cena = {
+        "lugares": lugares, "aparelhos": aparelhos, "evitados": evitados,
+        "canais_medidos": {lg["id"]: True for lg in lugares}, "espectro": [],
+        "vizinhos": vizinhos, "portas": portas, "pedido": None,
+        "proposta": {"controle": quem_sai["id"], "destino": vazio["id"]},
+        "ocupado": False, "aberto": cheio["id"], "perto": perto,
+        "destino_do_conectar": vazio["id"],
+    }
+    return cena
+
+
+CENA_DO_RADIO = _cena_do_desenho()
+CAMPOS_DO_RADIO = _pacote08.campos_da_secao(CENA_DO_RADIO)
+#: A sala do DESENHO nasce com os Hz escritos; a do produto, com o lugar deles
+#: vazio — o tique os pinta pelas listas `hz-*` (ver `a08_conexoes.html_da_sala`).
+SALA_DO_DESENHO = _pacote08.html_da_sala(CENA_DO_RADIO, com_hz=True)
+SPRITE_DO_RADIO = _sprite_do_radio()
+
+#: O CONVITE DA FASE EM PÉ, CURTO — R9 dela: *"usarmos um dualsense e o USB
+#: pra sairmos de porta em porta"*. A frase longa do produto
+#: (`calibrar_entradas.CONVITE_DO_ENCAIXE`) vai para o «?» da tela, inteira.
+ENCAIXE_CURTO = "Encaixe o DualSense numa entrada vazia."
+
+#: A DICA DO «QUEM ESTÁ NO AR». A do desenho terminava em *"as faixas com nome
+#: são o vizinho provável"*, e o produto não desenha faixa de vizinho: o canal
+#: de um teclado sem fio não se lê (R10 — nada estimado). Os vizinhos viram
+#: SELOS ao lado do título, e a frase diz isso.
+AJUDA_DO_AR = ("Wi-Fi, teclado e mouse sem fio dividem os 2,4 GHz com o Bluetooth. O "
+               "hachurado são os canais que os adaptadores evitam; os selos são os rádios "
+               "que o sistema vê perto.")  # noqa-acento (texto de tela)
+
+#: O roteiro da seção. Ele só ABRE o que o Python pintou: quem decide é o
+#: pacote, e o piloto leva cada `data-gesto` ao Python pelo ouvinte único (que
+#: escuta na CAPTURA — lê o `dataset` antes deste roteiro fechar a janela).
+SCRIPT_DA_SECAO_DO_RADIO = r"""
+  <script>
+  (function(){
+    'use strict';
+    if(window.__hefRadio) return;
+    window.__hefRadio = true;
+    function um(sel, raiz){ return (raiz || document).querySelector(sel); }
+    function todos(sel, raiz){ return Array.prototype.slice.call((raiz || document).querySelectorAll(sel)); }
+    function perto(ev, sel){ return ev.target && ev.target.closest ? ev.target.closest(sel) : null; }
+    function aspas(v){ return String(v).replace(/["\\]/g, '\\$&'); }
+    function comPiloto(){ return !!(window.__hef && window.__hef.ouvindo); }
+    function abrirASecao(){ var r = document.getElementById('cx8-3'); if(r && !r.checked) r.checked = true; }
+    function balancar(b){ b.classList.remove('recusa'); void b.offsetWidth; b.classList.add('recusa');
+      setTimeout(function(){ b.classList.remove('recusa'); }, 500); }
+
+    // ---- o acordeão: abrir um adaptador fecha os outros (o Python lembra) ----
+    document.addEventListener('click', function(ev){
+      var b = perto(ev, '.radio .abre-lugar');
+      if(!b) return;
+      var card = b.closest('.lugar'), abrindo = !card.classList.contains('aberto');
+      todos('.radio .lugar').forEach(function(l){
+        l.classList.remove('aberto');
+        var a = um('.abre-lugar', l); if(a) a.setAttribute('aria-expanded', 'false');
+      });
+      if(abrindo){ card.classList.add('aberto'); b.setAttribute('aria-expanded', 'true'); }
+    });
+    // ---- a largura do nome segue o texto ----
+    document.addEventListener('input', function(ev){
+      var n = perto(ev, '.radio .lugar-nome');
+      if(n) n.style.width = Math.max((n.value || n.placeholder).length + 2, 10) + 'ch';
+    });
+
+    // ---- a PERGUNTA, antes de todo mover (R7) ----
+    var antesDaPergunta = null;
+    function moldeDe(alvo, destino){
+      return um('.radio template.pergunta-molde:not([data-pedido])[data-alvo="' + aspas(alvo)
+                + '"][data-destino="' + aspas(destino) + '"]');
+    }
+    function perguntar(m){
+      if(!m) return false;
+      abrirASecao();
+      var caixa = document.getElementById('rd-pergunta');
+      antesDaPergunta = document.activeElement;
+      um('.diz', caixa).innerHTML = m.innerHTML;
+      var sim = document.getElementById('rd-pergunta-sim');
+      var outro = document.getElementById('rd-pergunta-outro');
+      sim.textContent = m.dataset.sim || ''; sim.hidden = !m.dataset.sim;
+      sim.dataset.alvo = m.dataset.alvo || ''; sim.dataset.destino = m.dataset.destino || '';
+      outro.textContent = m.dataset.outro || ''; outro.hidden = !m.dataset.outro;
+      outro.dataset.alvo = m.dataset.alvo || '';
+      todos('.radio .lugar.alvo').forEach(function(l){ l.classList.remove('alvo'); });
+      if(m.dataset.destino){
+        var c = um('.radio .lugar[data-id="' + aspas(m.dataset.destino) + '"]');
+        if(c) c.classList.add('alvo');
+      }
+      caixa.hidden = false;
+      document.getElementById('rd-veu-pergunta').classList.add('aberto');
+      (sim.hidden ? outro : sim).focus();
+      return true;
+    }
+    function fecharAPergunta(){
+      var caixa = document.getElementById('rd-pergunta');
+      if(caixa.hidden) return;
+      caixa.hidden = true;
+      document.getElementById('rd-veu-pergunta').classList.remove('aberto');
+      todos('.radio .lugar.alvo').forEach(function(l){ l.classList.remove('alvo'); });
+      if(antesDaPergunta && document.contains(antesDaPergunta)) antesDaPergunta.focus();
+    }
+    document.addEventListener('click', function(ev){
+      if(perto(ev, '#rd-pergunta .btn') || perto(ev, '#rd-veu-pergunta')) fecharAPergunta();
+    });
+
+    // ---- o PAINEL lateral: o que a página abre, o Python já pintou ----
+    var quemAbriu = null;
+    function abrirPainel(tipo, alvo){
+      var m = um('.radio template.painel-molde[data-painel="' + tipo + '"][data-alvo="'
+                 + aspas(alvo || '') + '"]');
+      if(!m) return false;
+      abrirASecao();
+      quemAbriu = document.activeElement;
+      var p = document.getElementById('rd-painel');
+      document.getElementById('rd-painel-titulo').textContent = m.dataset.titulo || '';
+      document.getElementById('rd-pulso').style.display = m.dataset.pulso ? '' : 'none';
+      var corpo = document.getElementById('rd-painel-corpo');
+      corpo.innerHTML = ''; corpo.appendChild(m.content.cloneNode(true));
+      p.classList.add('aberto'); p.removeAttribute('inert'); p.setAttribute('aria-hidden', 'false');
+      document.getElementById('rd-veu').classList.add('aberto');
+      var primeiro = um('button, a, input', corpo) || document.getElementById('rd-fechar');
+      if(primeiro) primeiro.focus();
+      return true;
+    }
+    function fecharPainel(){
+      var p = document.getElementById('rd-painel');
+      if(!p.classList.contains('aberto')) return;
+      if(p.contains(document.activeElement)) document.activeElement.blur();
+      p.classList.remove('aberto'); p.setAttribute('inert', ''); p.setAttribute('aria-hidden', 'true');
+      document.getElementById('rd-veu').classList.remove('aberto');
+      if(quemAbriu && document.contains(quemAbriu)) quemAbriu.focus();
+      quemAbriu = null;
+    }
+    document.addEventListener('keydown', function(ev){
+      if(ev.key === 'Escape'){ fecharAPergunta(); fecharPainel(); }
+    });
+    document.addEventListener('click', function(ev){
+      if(perto(ev, '#rd-fechar') || perto(ev, '#rd-veu')){ fecharPainel(); return; }
+      // escolher dentro do painel: quem vem / para onde → a pergunta
+      var ir = perto(ev, '#rd-painel [data-aparelho][data-destino]');
+      if(ir){ fecharPainel(); perguntar(moldeDe(ir.dataset.aparelho, ir.dataset.destino)); return; }
+      var chip = perto(ev, '#rd-painel .op');
+      if(chip){
+        todos('.op', chip.parentNode).forEach(function(o){ o.setAttribute('aria-pressed', 'false'); });
+        chip.setAttribute('aria-pressed', 'true'); return;
+      }
+      if(perto(ev, '#rd-painel .escolha [data-gesto]') || perto(ev, '#rd-painel .achado .btn')){
+        fecharPainel(); return;
+      }
+      var b;
+      if((b = perto(ev, '.radio .sino'))){ abrirPainel('historico', b.dataset.alvo); return; }
+      if((b = perto(ev, '.radio .soltar'))){
+        if(b.classList.contains('apagado')) balancar(b); else abrirPainel('quem-vem', b.dataset.alvo);
+        return;
+      }
+      if((b = perto(ev, '.radio .selo-fora.vizinho'))){ abrirPainel('o-que-e', b.dataset.alvo); return; }
+      if((b = perto(ev, '#rd-b-conectar'))){
+        if(b.classList.contains('apagado')) balancar(b); else abrirPainel('conectar', '');
+        return;
+      }
+      if((b = perto(ev, '#rd-b-equilibrar'))){
+        var s = um('.radio template.balao-molde');
+        if(b.classList.contains('apagado') || !s || !perguntar(moldeDe(s.dataset.controle, s.dataset.destino)))
+          balancar(b);
+        return;
+      }
+      // a lâmpada: o balão da sugestão, dentro do cartão
+      if((b = perto(ev, '.radio .lampada'))){
+        var card = b.closest('.lugar'), velho = um('.balao', card);
+        if(velho){ velho.remove(); return; }
+        var t = um('.radio template.balao-molde[data-destino="' + aspas(b.dataset.alvo) + '"]');
+        if(!t || b.classList.contains('apagado')){ balancar(b); return; }
+        card.appendChild(t.content.cloneNode(true));
+        var ok = um('.balao .ok', card); if(ok) ok.focus();
+        return;
+      }
+      if((b = perto(ev, '.radio .balao .ok'))){
+        var bal = b.closest('.balao');
+        perguntar(moldeDe(b.dataset.alvo, bal.dataset.destino));
+        bal.remove(); return;
+      }
+    });
+    // o teclado: Enter numa linha abre «Para onde vai» — arrastar não é o único caminho
+    document.addEventListener('keydown', function(ev){
+      if(ev.key !== 'Enter' && ev.key !== ' ') return;
+      var l = ev.target && ev.target.matches && ev.target.matches('.radio .linha[tabindex]') ? ev.target : null;
+      if(!l) return;
+      ev.preventDefault(); abrirPainel('para-onde', l.dataset.id);
+    });
+
+    // ---- ARRASTAR: o destino é o adaptador inteiro, aberto ou fechado ----
+    document.addEventListener('dragstart', function(ev){
+      var l = perto(ev, '.radio .linha[draggable="true"]');
+      if(!l || !ev.dataTransfer) return;
+      if(document.activeElement && document.activeElement.classList.contains('nome')
+         && l.contains(document.activeElement)) return;
+      ev.dataTransfer.setData('text/plain', l.dataset.id);
+      ev.dataTransfer.effectAllowed = 'move';
+      l.classList.add('arrastando');
+    });
+    document.addEventListener('dragend', function(){
+      todos('.radio .linha.arrastando').forEach(function(l){ l.classList.remove('arrastando'); });
+    });
+    document.addEventListener('dragover', function(ev){
+      var c = perto(ev, '.radio .lugar');
+      if(!c) return;
+      ev.preventDefault();
+      if(ev.dataTransfer) ev.dataTransfer.dropEffect = 'move';
+      todos('.radio .lugar.alvo').forEach(function(l){ if(l !== c) l.classList.remove('alvo'); });
+      c.classList.add('alvo');
+    });
+    document.addEventListener('dragleave', function(ev){
+      var c = perto(ev, '.radio .lugar');
+      if(c && !c.contains(ev.relatedTarget)) c.classList.remove('alvo');
+    });
+    document.addEventListener('drop', function(ev){
+      var c = perto(ev, '.radio .lugar');
+      if(!c) return;
+      ev.preventDefault();
+      c.classList.remove('alvo');
+      var quem = ev.dataTransfer ? ev.dataTransfer.getData('text/plain') : '';
+      if(quem) perguntar(moldeDe(quem, c.dataset.id));
+    });
+
+    // ---- o pedido do governador vira a janela, uma vez por pedido (R3) ----
+    var pedidosVistos = {};
+    function olharOsPedidos(){
+      todos('.radio template.pergunta-molde[data-pedido]').forEach(function(m){
+        var k = m.dataset.pedido;
+        if(pedidosVistos[k]) return;
+        if(!document.getElementById('rd-pergunta').hidden) return;
+        pedidosVistos[k] = true;
+        perguntar(m);
+      });
+    }
+    // ---- a chegada pisca o destino (R8: a confirmação é a piscada) ----
+    var chegados = {};
+    function olharAsChegadas(){
+      todos('.radio .lugar[data-chegou]').forEach(function(c){
+        (c.dataset.chegou || '').split(' ').filter(Boolean).forEach(function(q){
+          var k = c.dataset.id + '|' + q;
+          if(chegados[k]) return;
+          chegados[k] = true;
+          c.classList.add('recebeu');
+          setTimeout(function(){ c.classList.remove('recebeu'); }, 900);
+        });
+      });
+    }
+
+    // ---- a cerimônia: a âncora abre, o laço do Python diz a tela ----
+    var alvoDaCerimonia = '', ultimaTela = '';
+    document.addEventListener('click', function(ev){
+      var a = perto(ev, '.radio a.ensina');
+      if(a) alvoDaCerimonia = a.dataset.alvo || '';
+      // SEM PILOTO (o desenho aberto no navegador) a resposta leva ao fim, como
+      // no desenho aprovado; COM ele, quem diz a próxima tela é o laço.
+      if(!comPiloto() && perto(ev, '[data-gesto="entrada-face"],[data-gesto="entrada-pular"]'))
+        location.hash = 'mapear-entrada-a-entrada-fim';
+    }, true);
+    window.addEventListener('hashchange', function(){
+      if(location.hash === '#mapear-entrada-a-entrada' && !ultimaTela){
+        var b = document.getElementById('rd-comecar');
+        if(b){ b.dataset.alvo = alvoDaCerimonia; b.click(); }
+      }
+      alvoDaCerimonia = '';
+    });
+    function seguirATela(){
+      var el = um('[data-campo="entrada-tela"]');
+      if(!el) return;
+      var t = (el.getAttribute('data-tela') || '').trim();
+      if(t === '\u2014') t = '';
+      if(t === ultimaTela) return;
+      var antes = ultimaTela; ultimaTela = t;
+      if(t){ if(location.hash !== '#' + t) location.hash = t; }
+      else if(antes && /^#mapear-entrada-a-entrada/.test(location.hash)) location.hash = '';
+    }
+
+    // ---- UM observador para as três leituras: o tique troca, a página olha ----
+    function olhar(){ olharOsPedidos(); olharAsChegadas(); seguirATela(); }
+    var raiz = document.getElementById('rd-secao');
+    if(raiz && window.MutationObserver){
+      new MutationObserver(olhar).observe(raiz, {subtree: true, childList: true,
+        attributes: true, attributeFilter: ['data-tela', 'data-chegou']});
+    }
+    olhar();
+  })();
+  </script>
+"""
+
+
 _CALIB_PY = R / "src/hefesto_dualsense4unix/app/widgets/calibrar_entradas.py"
 PROGRESSO = "entrada {feitos} de {total}"
 _confere_no_produto(_CALIB_PY, [
@@ -3375,35 +3744,45 @@ PENEIRA_QUANDO_ELA_EXISTIR = (
 PENEIRA = ""
 
 
-def cerimonia(ident, pergunta, contador, quem, botoes, dica):
+def cerimonia(ident, pergunta, contador, quem, botoes, dica, rodape):
+    """Uma das três telas do «Mapear Entrada a Entrada».
+
+    OS ATOS SÃO GESTOS DO LAÇO — ENTRADA-A-ENTRADA-02 e a TRANSPLANTE: cada
+    botão chama `entrada_a_entrada.o_laco()` pelo pacote, e quem diz a próxima
+    tela é o laço (`entrada-tela`), não um `href`. O contador e o «quem» têm
+    endereço nas três telas: o valor é um só, e só a tela aberta aparece.
+    """
     return f'''
 <div class="tela-nova" id="{ident}">
   <div class="tn-cx">
     <div class="tn-topo">
       <span class="tn-tit">{MAPEAR_UMA_A_UMA}</span>
       {ajuda(dica)}
-      <a class="tn-x" href="#" title="Fechar">×</a>
+      <a class="tn-x" href="#" title="Fechar" data-gesto="entrada-parar">×</a>
     </div>
     <div class="tn-corpo">
       {f'<div class="tn-frase">{PENEIRA}</div>' if PENEIRA else ""}
       <div class="moldura">
         <div class="ce-cartao">
           <span class="ce-perg">{pergunta}</span>
-          <span class="ce-cont">{contador}</span>
-          <span class="ce-quem">{quem}</span>
+          <span class="ce-cont" data-campo="entrada-contador" data-hef-alvo="html">{contador}</span>
+          <span class="ce-quem" data-campo="entrada-quem" data-hef-alvo="html">{quem}</span>
         </div>
         <div class="ce-botoes">{botoes}</div>
         <p class="ce-relogios">{OS_DOIS_RELOGIOS}</p>
       </div>
     </div>
     <div class="tn-rod">
-      <a class="btn" href="#" title="Pula esta entrada, sem gravar nada e sem perguntar de novo.">{CALIB["ROTULO_NAO_SEI"]}</a>
-      <a class="btn" href="#" title="Fecha a janela na hora, sem confirmação e sem resumo. Nada se perde: cada resposta já foi ao disco.">{CALIB["ROTULO_JA_CHEGA"]}</a>
+      {rodape}
     </div>
   </div>
 </div>
 '''
 
+
+JA_CHEGA = (f'<a class="btn" href="#" data-gesto="entrada-parar" title="Fecha a janela na hora, '
+            f'sem confirmação e sem resumo. Nada se perde: cada resposta já foi ao disco.">'
+            f'{CALIB["ROTULO_JA_CHEGA"]}</a>')
 
 TELA_SENTADA = cerimonia(
     "mapear-entrada-a-entrada",
@@ -3412,45 +3791,48 @@ TELA_SENTADA = cerimonia(
     + f' <span class="pt">·</span> {CALIB["SEM_SAIR_DA_CADEIRA"]}',
     f'{SEM_LUGAR[0][0]} <span class="pt">·</span> <code>{SEM_LUGAR[0][1]}</code>',
     "".join(
-        f'<a class="btn{" foco" if i == 0 else ""}" '
-        f'href="#mapear-entrada-a-entrada-fim" title="Cria uma entrada nesta face '
-        f'para este aparelho e para o que estiver pendurado nele. '
-        f'Gravado na hora.">{f}</a>'
+        f'<button class="btn{" foco" if i == 0 else ""}" data-gesto="entrada-face" '
+        f'value="{f}" title="Cria uma entrada nesta face para este aparelho e para o que '
+        f'estiver pendurado nele. Gravado na hora.">{f}</button>'
         for i, f in enumerate(CALIB["FACES"])),
     "A pergunta é sobre a <b>entrada</b>, não sobre o aparelho: mesmo quando o kernel "
     "não diz o que é a coisa, você sabe em que buraco ela está.<br><br>"
     "O rótulo é <b>espécie · nome do kernel</b>. O caminho fica à vista porque é a única "
-    "coisa que distingue dois aparelhos idênticos.<br><br>"
-    "O <b>foco</b> já está em <b>{}</b>: não há live region alcançável no GTK 3, "
-    "então mover o foco <i>é</i> o anúncio do passo novo.".format(CALIB["FACES"][0]))
+    "coisa que distingue dois aparelhos idênticos.",
+    f'<button class="btn" data-gesto="entrada-pular" title="Pula esta entrada, sem gravar '
+    f'nada e sem perguntar de novo.">{CALIB["ROTULO_NAO_SEI"]}</button>\n      {JA_CHEGA}')
 
 TELA_FIM = cerimonia(
     "mapear-entrada-a-entrada-fim",
     CALIB["FIM_DA_FASE_SENTADA"],
     "",
     CALIB["CONVITE_EM_PE"],
-    f'<a class="btn foco" href="#mapear-entrada-a-entrada-em-pe" title="Guarda a leitura '
+    f'<button class="btn foco" data-gesto="entrada-levantar" title="Guarda a leitura '
     f'de agora como referência e entra na fase em pé. É a única porta para ela.">'
-    f'{CALIB["ROTULO_VOU_MOSTRAR"]}</a>'
-    f'<a class="btn" href="#" title="Fecha a janela. Mesmo destino do “{CALIB["ROTULO_JA_CHEGA"]}”.">'
+    f'{CALIB["ROTULO_VOU_MOSTRAR"]}</button>'
+    f'<a class="btn" href="#" data-gesto="entrada-parar" title="Fecha a janela. Mesmo destino do “{CALIB["ROTULO_JA_CHEGA"]}”.">'
     f'{CALIB["ROTULO_DEIXAR_PARA_DEPOIS"]}</a>',
     "É um <b>fim de verdade</b>: sem aviso de incompletude, sem selo de pendência, sem "
     "cartaz. O contador some, porque não há mais o que contar nesta fase.<br><br>"
-    "Quem já tem lugar para tudo <b>abre a janela direto aqui</b>.")
+    "Quem já tem lugar para tudo <b>abre a janela direto aqui</b>.",
+    JA_CHEGA)
 
 TELA_EM_PE = cerimonia(
     "mapear-entrada-a-entrada-em-pe",
-    CALIB["CONVITE_DO_ENCAIXE"],
+    ENCAIXE_CURTO,
     PROGRESSO.format(feitos=1, total=EM_PE_TOTAL),
     CALIB["PROCURANDO"],
-    f'<a class="btn foco" href="#" title="Tira esta entrada da conta de vez: não vira '
-    f'dívida, não vira aviso, e o Hefesto não volta a perguntar. Ela diminui o TOTAL do '
-    f'contador, não o feito.">{CALIB["ROTULO_NAO_ALCANCO"]}</a>',
+    f'<button class="btn foco" data-gesto="entrada-nao-alcanco" title="Tira esta entrada da '
+    f'conta de vez: não vira dívida, não vira aviso, e o Hefesto não volta a perguntar. Ela '
+    f'diminui o TOTAL do contador, não o feito.">{CALIB["ROTULO_NAO_ALCANCO"]}</button>',
+    CALIB["CONVITE_DO_ENCAIXE"] + "<br><br>"
     "Aqui a face <b>não se pergunta</b>: toda entrada aprendida de pé é gravada em "
-    "<b>{}</b>.<br><br>O total <b>encolhe</b> — ele é recalculado pela leitura de agora, "
-    "e “{}” tira uma vaga da conta. Por isso não há barra de progresso: uma barra andaria "
-    "para trás.".format(CALIB["FACES"][1], CALIB["ROTULO_NAO_ALCANCO"]))
+    "<b>{}</b>. O total <b>encolhe</b> — ele é recalculado pela leitura de agora, "
+    "e “{}” tira uma vaga da conta.".format(CALIB["FACES"][1], CALIB["ROTULO_NAO_ALCANCO"]),
+    JA_CHEGA)
 
+
+CSS += CSS_DA_SECAO_DO_RADIO
 
 MIOLO = f'''
     <!-- ======== A TABELA DAS CORES DELA, uma vez para a página inteira ========
@@ -3703,139 +4085,93 @@ MIOLO = f'''
       </div>
     </div>
 
-    <!-- ======== 3. RÁDIO E ADAPTADORES — o inventário e, embaixo e separado,
-         o Desempenho. ======== -->
-    <div class="quadro">
+    <!-- ======== 3. RÁDIO E ADAPTADORES — o `mapa-do-radio.html` aprovado ========
+         TRANSPLANTE-DA-SECAO-01, 23/09/2026. A seção inteira é o desenho que
+         ela aprovou; a folha, o sprite e a cena de exemplo são LIDOS dele
+         (`_css_do_radio`, `_sprite_do_radio`, `_cena_do_desenho`). Quem pinta
+         é o pacote (`a08_conexoes.campos_da_secao`); o roteiro só abre o que
+         o Python já pintou.
+
+         AS DUAS ÂNCORAS NÃO SÃO GESTOS, e é a regra da §P4: `#mapear-entradas`
+         e `#mapear-entrada-a-entrada` abrem as `div.tela-nova` por `:target`.
+         Quem começa o laço da cerimônia é o `#rd-comecar`, que o roteiro clica
+         quando a âncora abre — um gesto de nome próprio, e não um segundo nome
+         para a âncora. ======== -->
+    <div class="quadro radio" id="rd-secao">
       <input class="abre" type="radio" name="cx8-secao" id="cx8-3">
-      <div class="quadro-topo">
+      <div class="quadro-topo cab">
         <label class="quadro-titulo" for="cx8-3">Rádio e Adaptadores</label>
-        <span class="ajuda">?<span class="dica">
-          «{MAPEAR_ENTRADAS}» numera as entradas do seu gabinete — depois disso a tela diz
-          «Entrada 9» em vez de «porta 3-2.1». «{MAPEAR_UMA_A_UMA}» é um toque por aparelho:
-          você pluga, ele aprende. Os rádios vizinhos são tudo que fala em 2,4 GHz perto do
-          seu adaptador; o sistema não sabe o que são, e você sabe.
-        </span></span>
-        <a class="porta" href="mapa-das-portas.html" title="Abre o mapa das entradas do seu gabinete: os arranjos possíveis, com o porquê de cada um, e a conta dos {num(TETO)} turnos por adaptador.">O mapa das entradas&nbsp;↗</a>
+        <span class="conta" data-campo="conta-de-adaptadores" data-hef-alvo="html">{CAMPOS_DO_RADIO["conta-de-adaptadores"]}</span>
+        <div class="direita">
+          <button class="btn principal" id="rd-b-conectar" data-gesto="conectar-aparelho" data-campo="radio-ocupado" data-hef-alvo="classe" data-hef-classe="apagado" title="Conectar um aparelho novo">
+            <svg class="i" aria-hidden="true"><use href="#rd-mais"/></svg> Conectar</button>
+          <button class="btn" id="rd-b-equilibrar" data-gesto="equilibrar-radio" data-campo="radio-ocupado" data-hef-alvo="classe" data-hef-classe="apagado" title="Move um controle por vez">
+            <svg class="i" aria-hidden="true"><use href="#rd-equilibrar"/></svg> Equilibrar</button>
+        </div>
       </div>
       <div class="quadro-corpo">
-        <div class="duas-colunas">
-
-          <div class="lado-e">
-            <div class="linha-rot"><b style="color:var(--texto-suave)">Adaptadores Bluetooth</b></div>
-            <!-- A TABELA GANHOU ENDEREÇO — 04/09/2026, e ela era a peça mais
-                 lida desta aba sendo CENÁRIO. As duas linhas abaixo ("Sala /
-                 TP-Link UB500 / Entrada 3" e "Sem nome / Intel AX211 /
-                 Interno") são de uma bancada de exemplo; a mesa desta casa tem
-                 TRÊS adaptadores, os três `2357:0604`, e o BlueZ dá a cada um o
-                 nome que ela escreveu.
-
-                 O BLOCO É TROCADO INTEIRO, com o `<tr>` do cabeçalho junto, e é
-                 a mesma razão do `.mm-faces` e da régua do rádio: quantas
-                 linhas existem é o que a máquina dela responde, e não há
-                 endereço para uma `<tr>` que ainda não nasceu. Deixar o
-                 cabeçalho fora obrigaria a pintura a conhecer a estrutura do
-                 `<table>` do desenho.
-
-                 AS TRÊS COLUNAS TÊM TRÊS DONOS NO PRODUTO, e nenhum deles é
-                 este arquivo — ver `a08_conexoes._html_dos_adaptadores`. -->
-            <table class="tab" data-campo="adaptadores-tabela" data-hef-alvo="html">
-              <tr><th>Nome</th><th>Adaptador</th><th>Onde está</th></tr>
-{chr(10).join(f"""              <tr><td{' class="mudo"' if a["nome"] == SEM_NOME else ""}><span class="renomeia" contenteditable="true" title="{RENOMEAR_DICA}">{a["nome"]}</span></td>
-                  <td class="mudo">{a["modelo"]}</td>
-                  <td>{a["onde"]} <span class="mudo">· {a["detalhe"]}</span></td></tr>"""
-                  for a in ADAPTADORES)}
-            </table>
-            <!-- O QUE A TABELA LEVANTA E NÃO RESPONDE — 06/09/2026. A coluna
-                 "Onde está" escreve "Em hub" linha a linha e **nunca compara as
-                 linhas entre si**; quem compara é
-                 `censo_do_barramento.hub_em_comum`, que sobe a cadeia em vez de
-                 olhar o pai, e a frase é de `secao_mesa._frase_do_hub_em_comum`
-                 — fato, por quê e, só quando há para onde mandar, conselho.
-                 A GTK costurou isso em 26/08 justamente por ser a casa sabendo
-                 e o produto não fazendo; no HTML ele tinha voltado ao estado
-                 anterior.
-
-                 E AS CONTAGENS DO GABINETE, logo abaixo, na MESMA ordem da
-                 janela estável: o que o firmware conta e o que o kernel conta,
-                 LADO A LADO, e a pergunta que só ela responde. O produto
-                 **não escolhe** entre os dois números — escolher desenharia um
-                 gabinete que ninguém tem, e ela procuraria na traseira buracos
-                 que o mapa não mostra. Sem `gabinete.json`, silêncio. -->
-            {monta_ressalva("hub-em-comum")}
-            {monta_ressalva("gabinete-contagens")}
-            <div class="acoes empurra">
-              <a class="btn" href="#mapear-entradas" title="Abre o desenho do seu gabinete e numera as entradas. É lá que você responde a altura do dongle e se tem gente entre ele e o sofá.">{MAPEAR_ENTRADAS}</a>
-              <button class="btn" data-gesto="examinar-portas" title="Refaz o exame das entradas — energia e rádio — e repinta o Check-up.">{EXAMINAR_PORTAS}</button>
-            </div>
+        <div class="espectro">
+          <div class="espectro-cab">
+            Quem está no ar
+            <span class="ajuda" role="img" aria-label="{AJUDA_DO_AR}" title="{AJUDA_DO_AR}"><svg class="i" aria-hidden="true"><use href="#rd-ajuda"/></svg></span>
+            <span class="fora-da-faixa" data-campo="espectro-fora-da-faixa" data-hef-alvo="html">{CAMPOS_DO_RADIO["espectro-fora-da-faixa"]}</span>
+            <span class="no-ar" data-campo="meus-no-ar" data-hef-alvo="html">{CAMPOS_DO_RADIO["meus-no-ar"]}</span>
+            <span class="conta" data-campo="espectro-conta" data-hef-alvo="html">{CAMPOS_DO_RADIO["espectro-conta"]}</span>
           </div>
-
-          <div class="lado-d">
-            <div class="linha-rot"><b style="color:var(--texto-suave)">Outros rádios na faixa de 2,4 GHz</b></div>
-            <div class="vizinhos">
-{chr(10).join(viz_bloco(*v, linha=i) for i, v in enumerate(RADIOS_VIZINHOS))}
-            </div>
-            <!-- O `+N` DOS VIZINHOS — a mesma decisão 08-Q7, a outra lista.
-                 A fileira tem QUATRO blocos (`a08_conexoes.TETO_DE_VIZINHOS`) e
-                 nesta bancada há quatro rádios: hoje ele não sobra, e por isso
-                 não ocupa um pixel. No dia em que ela espetar o quinto, o rádio
-                 que não coubesse sumiria calado — e é a lista em que isso custa
-                 mais, porque um rádio por nomear é justamente o que a linha do
-                 Check-up manda nomear.
-
-                 CADA `+N` CONTA A PRÓPRIA LISTA. É a régua do erro que esta aba
-                 já cometeu: `gui.aba_conexoes.sobraram` foi tomado por dono
-                 desta frase em quatro lugares da árvore, e ele conta o
-                 ACORDEÃO. -->
-            {monta_ressalva("vizinho-mais")}
-            <div class="acoes empurra">
-              <a class="btn" href="#mapear-entrada-a-entrada" title="Um toque por aparelho e o Hefesto aprende em que entrada cada um está.">{MAPEAR_UMA_A_UMA}</a>
-            </div>
-          </div>
-
+          <div class="canais" data-campo="espectro-canais" data-hef-alvo="html">{CAMPOS_DO_RADIO["espectro-canais"]}</div>
+          <div class="portas" data-campo="vizinhanca-das-portas" data-hef-alvo="html">{CAMPOS_DO_RADIO["vizinhanca-das-portas"]}</div>
         </div>
 
-        <!-- ---- Desempenho: embaixo e separado, como ela pediu. ---- -->
-        <div class="sub-secao">
-          <div class="capa">
-            <span class="rot"><b style="color:var(--texto-suave)">Desempenho</b>
-              <span class="pt">•</span> Quanto do rádio de cada adaptador está em uso</span>
-            <span class="ajuda">?<span class="dica">
-              O rádio de cada adaptador tem {num(TETO)} turnos de tempo para dividir entre tudo
-          que fala nele. Cada controle come {num(CUSTO_SEM_MIC)}; com o microfone pelo rádio,
-          {num(CUSTO_COM_MIC)}. Hoje {len(NO_RADIO)} dos {len(MESA)}
-          {_plural(len(NO_RADIO), "está", "estão")} no rádio: {num(TOTAL_NO_RADIO)}. As vagas
-          tracejadas são os que estão no cabo — se os {len(MESA)} viessem para o mesmo
-          adaptador, seriam {num(TODOS_COM_MIC)} das {num(TETO)}.
-            </span></span>
+        <div class="sala" data-campo="radio-sala" data-hef-alvo="html">{SALA_DO_DESENHO}</div>
+        <div class="moldes" data-campo="radio-moldes" data-hef-alvo="html">{CAMPOS_DO_RADIO["radio-moldes"]}</div>
+
+        <div class="entradas">
+          <a class="btn" href="#mapear-entradas" title="{MAPEAR_ENTRADAS} — as entradas do gabinete numeradas por face">
+            <svg class="i" aria-hidden="true"><use href="#rd-mapa"/></svg> {MAPEAR_ENTRADAS}</a>
+          <a class="btn" href="#mapear-entrada-a-entrada" title="{MAPEAR_UMA_A_UMA} — um toque por aparelho: você pluga, ele aprende">
+            <svg class="i" aria-hidden="true"><use href="#rd-uma-a-uma"/></svg> {MAPEAR_UMA_A_UMA}</a>
+          <button class="btn" data-gesto="examinar-portas" title="{EXAMINAR_PORTAS} — refaz o exame das entradas, energia e rádio, e repinta o Check-up">
+            <svg class="i" aria-hidden="true"><use href="#rd-reexaminar"/></svg> {EXAMINAR_PORTAS}</button>
+          <a class="mapa so-icone" href="mapa-das-portas.html" title="O mapa das entradas — abre no navegador" aria-label="O mapa das entradas — abre no navegador">
+            <svg class="i" aria-hidden="true"><use href="#rd-mapa"/></svg></a>
+          <button hidden id="rd-comecar" data-gesto="entrada-comecar" data-alvo=""></button>
+          <i hidden data-campo="entrada-tela" data-hef-alvo="atributo" data-hef-atributo="data-tela"></i>
+        </div>
+
+        <div class="veu" id="rd-veu-pergunta"></div>
+        <div class="caixa-pergunta" id="rd-pergunta" role="alertdialog" aria-modal="true" aria-labelledby="rd-pergunta-diz" hidden>
+          <p class="diz" id="rd-pergunta-diz"></p>
+          <div class="botoes">
+            <button class="btn cancelar" id="rd-pergunta-nao" data-gesto="cancelar-mudanca">Cancelar</button>
+            <button class="btn outro" id="rd-pergunta-outro" data-gesto="ligar-mesmo-assim" hidden></button>
+            <button class="btn confirma" id="rd-pergunta-sim" data-gesto="confirmar-mudanca"></button>
           </div>
-
-        <!-- A RÉGUA INTEIRA TEM ENDEREÇO — 03/09/2026, `IDENTIDADE-VEM-DE-CIMA-01`.
-             O `title` de cada fatia nomeia o plástico ("Starlight Blue — 260,4
-             turnos de entrada") e não há alvo de ATRIBUTO no `escrever()` do
-             piloto: um `title` congelado só se cura com o bloco nascendo do
-             produto. Quantos adaptadores, quantos controles em cada um e
-             quantas vagas mudam com a mesa dela — é a mesma razão da fita e do
-             mapa do gabinete. -->
-        <div class="regua-do-radio" data-campo="regua-do-radio" data-hef-alvo="html">
-{regua_do_radio()}
         </div>
-        <!-- A CONTA DE SLOTS POR ADAPTADOR — 06/09/2026, a linha 330 do CSV da
-             paridade. A régua acima mostra o que ESTÁ; esta linha responde o que
-             CABE, que é outra pergunta e não se lê de uma barra: olhar uma fatia
-             de 260,4 em 1.600 não diz se o PRÓXIMO controle entra.
-
-             ELA NASCE MUDA NO DESENHO, e isso é a regra da `.ressalva`: a
-             bancada não tem a mesa dela dentro, e uma conta cravada aqui seria a
-             terceira cena de exemplo desta aba a passar por medição. Quem a
-             escreve é `a08_conexoes._conta_de_slots`, que lê o dono
-             (`integrations/plano_de_radio`) e não redige uma palavra. -->
-        {monta_ressalva("conta-de-slots")}
-        </div>
+        <div class="veu" id="rd-veu"></div>
+        <aside class="painel" id="rd-painel" aria-hidden="true" inert role="dialog" aria-labelledby="rd-painel-titulo">
+          <div class="painel-cab">
+            <span class="pulso" id="rd-pulso"></span>
+            <h2 id="rd-painel-titulo"></h2>
+            <button class="btn so-icone fechar" id="rd-fechar" aria-label="Fechar" title="Fechar">
+              <svg class="i" aria-hidden="true"><use href="#rd-sair"/></svg></button>
+          </div>
+          <div id="rd-painel-corpo"></div>
+        </aside>
       </div>
     </div>
+{SPRITE_DO_RADIO}
+{SCRIPT_DA_SECAO_DO_RADIO}
 '''
 
 LEGENDA = f'''<div class="nota">
+  <h2>«Rádio e Adaptadores» é o desenho que você aprovou em 23/09 — e o que ficou diferente</h2>
+  <ul>
+    <li><b>A seção inteira é o <code>mapa-do-radio.html</code></b>: a folha, os ícones e esta cena de exemplo são lidos dele. No produto quem pinta é o Hefesto, com os Hz medidos, as pontes «N de {_pacote08.PONTES_POR_ADAPTADOR}» e o sino de cada adaptador.</li>
+    <li><b>Os vizinhos viraram selos, e não faixas.</b> O produto não lê o canal de um teclado ou de um Wi-Fi; desenhar a faixa seria estimar (R10). O hachurado — os canais que cada adaptador evita — é medido e continua.</li>
+    <li><b>Caixa e fone não mostram Hz</b>: o contador mede os controles. A vaga deles fica, com a cor e o ícone.</li>
+    <li><b>A fase em pé diz uma frase só</b>: «{ENCAIXE_CURTO}» (R9). A explicação longa foi para o «?».</li>
+    <li><b>A tabela dos adaptadores, a régua de turnos e as linhas «hub em comum» e «contagens do gabinete» saíram</b> com a seção velha. O nome do adaptador é o campo do cartão, e ele é o nome da ENTRADA.</li>
+  </ul>
   <h2>As duas janelas do gabinete entraram na tela — e o que elas NÃO fazem</h2>
   <ul>
     <li><b>Os dois botões abrem agora, e o que abre não é tela nova.</b> <b>{MAPEAR_ENTRADAS}</b> é a janela <code>mapa_da_mesa.py</code> e <b>{MAPEAR_UMA_A_UMA}</b> é a <code>calibrar_entradas.py</code>, as duas já rodando. <b>Todo texto delas sai do produto, lido por AST</b> — a mesma disciplina dos sete números do rádio. O que o AST não alcança (o veredito de cada entrada, os dois relógios, as três dicas de botão) tem portão: a geração <b>para</b> se a frase deixar de existir no fonte.</li>
@@ -3861,7 +4197,7 @@ LEGENDA = f'''<div class="nota">
   <h2>MODO não é MÁSCARA, e nada nesta tela diz que você perde o microfone</h2>
   <ul>
     <li><b>O microfone segue o TRANSPORTE, e a máscara não o toca.</b> Pelo cabo o DualSense expõe uma placa USB Audio própria e o PipeWire a publica sozinho (medido em 15/08/2026: duas placas ALSA, ~475.000 amostras não-zero cada). Pelo rádio não existe placa nenhuma — o aparelho não anuncia A2DP, HFP nem HSP —, e o áudio vem em Opus <i>dentro</i> do relatório HID 0x31: quem o traz é a ponte do Hefesto, que publica uma fonte de captura do PipeWire. <b>No rádio o microfone já é emulado hoje</b>, com outro nome.</li>
-    <li><b>Por isso a chavinha “pelo cabo / pelo rádio” SAIU.</b> Ela oferecia uma escolha que o transporte já tinha feito — e o próprio mockup se contradizia: o gerador já derivava o caminho do transporte e desenhava a chavinha ao lado. Ponto final dela, 28/08: <i>“se tiver em modo rádio, então o mic é modo rádio”</i>. Os {num(CUSTO_DO_MIC)} turnos viraram <b>consequência</b>, e a tela os mostra na régua de Desempenho em vez de perguntar por eles.</li>
+    <li><b>Por isso a chavinha “pelo cabo / pelo rádio” SAIU.</b> Ela oferecia uma escolha que o transporte já tinha feito — e o próprio mockup se contradizia: o gerador já derivava o caminho do transporte e desenhava a chavinha ao lado. Ponto final dela, 28/08: <i>“se tiver em modo rádio, então o mic é modo rádio”</i>. O custo do microfone virou <b>consequência</b>, e a tela o mostra em Hz na linha de cada controle, em «Rádio e Adaptadores», em vez de perguntar por ele.</li>
     <li><b>Nenhum aviso de máscara, em máscara nenhuma</b> — e o motivo é mais forte do que “o Pro só não tem microfone”. A máscara limita o que o <b>jogo</b> recebe, não o que o <b>controle</b> faz: o Hefesto continua acendendo a barra de luz, aplicando o gatilho e lendo o giro do DualSense físico em qualquer máscara. E a lacuna mais visível — o mic — tem cura: o estado <b>Emulado</b> da <code>ONDA-CONEXOES-06</code> entrega o áudio por um dispositivo que qualquer jogo enxerga, independentemente da máscara.</li>
     <li><b>Nativo e Emulado desceram de escolha para LEITURA.</b> Com o transporte explícito e a máscara explícita por controle (aba Jogar), o resultado fica determinado: cabo → a placa do próprio aparelho; rádio → a ponte. Sobraram <b>dois estados</b> — Ligado e Desligado —, e a tela <b>diz</b> o caminho em vez de perguntá-lo. O “Automático” não entra: a heurística que o moveria (<code>integrations/api_de_entrada.py</code>) errou em <b>13 de 14</b> dos jogos dela.</li>
   </ul>
@@ -3897,28 +4233,14 @@ LEGENDA = f'''<div class="nota">
     <li><b>Isso nasce como sprint sobre o que já existe.</b> A <code>POR-UNIDADE-01</code> (10/08) já grava política de vibração POR CONTROLE (<code>profiles/manager._controllers_to_rumble_scales</code>), relativa à global. <b>Falta uma frase sua:</b> quando o controle sobrepõe, ele vence sempre, ou o produto aplica o <code>min</code> como faz hoje entre o orçamento e a política? O <code>min</code> é o que impede um “teto” de <i>aumentar</i> a força.</li>
   </ul>
 
-  <h2>O terceiro quadro voltou para a tela — e o que ainda não cabe</h2>
-  <ul>
-    <li><b>“Rádio e adaptadores” mostrava {VISIVEL_3_ANTES}&nbsp;px de {Q_RADIO}: a barra do título, e mais nada.</b> Hoje mostra <b>{VISIVEL_3}</b> — título e a primeira linha do corpo, que é o piso que a régua passou a exigir. E isso <b>não</b> se conseguiu encolhendo o terceiro quadro: só quem está <b>acima</b> de um quadro decide quanto dele aparece. Os dois da frente somavam {Q_EXAME + Q_GESTAO_ANTES}&nbsp;px e o teto é <b>{TETO_DOS_DOIS}</b>; agora somam {Q_GESTAO + Q_EXAME}.</li>
-    <li><b>Os {Q_GESTAO_ANTES - Q_GESTAO}&nbsp;px vieram de dois lugares, e nenhum deles é conteúdo.</b> A <b>Gestão de Controles</b> virou uma <b>lista emoldurada</b> em vez de {len(MESA)} cartões soltos: {len(MESA)}×4&nbsp;px de borda mais 27 de vão somavam <b>43&nbsp;px que não mostram nada</b> — mais do que uma linha inteira de controle —, e a lista os troca por 5&nbsp;px de fio: <b>saldo de 38</b>. Os outros <b>8</b> saíram do respiro do corpo aberto, que era 48 e é 40 — o campo continua com os {H_ESCOLHA} do token <code>--h-escolha</code>, o que saiu foi padding, e no estado “Todos” esses 8 valem por {len(MESA)}. <b>A ordem dos quadros não pagou px nenhum</b>: ela mudou de <i>onde</i> os px caem, que é o que decide o que aparece.</li>
-    <li><b>E a nova ordem também lê melhor.</b> Os controles vêm primeiro — é o que a pessoa veio ver —, e o exame da sala desceu para junto do inventário dela: o exame fala da <b>“Entrada 3”</b>, e a tabela que diz o que está na Entrada 3 agora é a de baixo, e não a de outro lugar da aba.</li>
-    <li><b>A aba mede {ALTURA}&nbsp;px e o miolo mostra {VISIVEL}: ficam {ESCONDE}&nbsp;px por dentro</b> (eram {ESCONDE_ANTES}). No estado <b>“Todos”</b>, {ESCONDE_TODOS} (eram {ESCONDE_TODOS_ANTES}) — e ali a <b>Gestão de Controles inteira cabe</b>, com os {len(MESA)} abertos: antes o P{MESA[-1]["jogador"]} ficava cortado no meio.</li>
-    <li><b>O que AINDA não cabe, e o número é este: no estado “Todos” o terceiro quadro continua em ZERO.</b> A conta é fria — com os {len(MESA)} abertos a Gestão de Controles mede {TODOS}&nbsp;px (eram {TODOS_ANTES}), e {TODOS} + {Q_EXAME} = {TODOS + Q_EXAME} contra o teto de {TETO_DOS_DOIS}. <b>Faltam {TODOS + Q_EXAME - TETO_DOS_DOIS}&nbsp;px</b>, e não há onde tirá-los sem cortar: cada corpo aberto é uma linha de campo de {H_ESCOLHA}&nbsp;px, que é o token <code>--h-escolha</code> desta casa.</li>
-    <li><b>Se a aba tiver de caber INTEIRA, o que teria de sair — e o preço de cada um.</b> A seção <b>“Desempenho”</b> ({DESEMPENHO}&nbsp;px), a <b>tabela dos adaptadores com os dois botões</b> ({INVENTARIO}), ou o quadro <b>“Está tudo certo?”</b> inteiro ({Q_EXAME}). <b>A decisão é sua</b> — nenhuma delas foi tomada aqui. Note o que <b>não</b> paga nada: as cinco linhas do exame não encolhem sem sumir uma, e a fileira dos rádios vizinhos não manda na altura da coluna em que está — tirá-la economiza zero.</li>
-    <li><b>Mas na SUA janela ela já cabe.</b> Numa tela de {num(ALT_TV)}&nbsp;px o miolo tem {UTIL_TV}&nbsp;px de conteúdo, e a aba agora pede {ALTURA - 34}: <b>sobram {UTIL_TV - (ALTURA - 34)}&nbsp;px</b>. Antes desta leva faltavam 9. A janela abre com 757 nas dez abas porque foi assim que a Jogar foi aprovada — se a altura da janela subir, esta aba deixa de esconder qualquer coisa, e é <b>uma</b> decisão para as dez, não dez.</li>
-  </ul>
-
   <h2>Escolhas que precisam do seu aval</h2>
   <ul>
-    <li><b>A ordem dos quadros mudou, e é a mudança que devolveu o terceiro para a tela.</b> “Gestão de Controles” passou a vir <b>primeiro</b>, e “Está tudo certo?” desceu para junto de “Rádio e adaptadores”. Duas razões: a aritmética (só quem está acima decide quanto do de baixo aparece, e não havia arranjo com o exame na frente em que o terceiro coubesse), e a leitura — o exame fala da <b>Entrada 3</b>, e a tabela que diz o que está na Entrada 3 agora é a de baixo, não a de outro lugar. <b>Se você preferir o exame na frente</b>, ele volta: o preço é o terceiro quadro voltar a mostrar {VISIVEL_3_ANTES}&nbsp;px.</li>
+    <li><b>A ordem dos quadros mudou, e é a mudança que devolveu o terceiro para a tela.</b> “Gestão de Controles” passou a vir <b>primeiro</b>, e “Está tudo certo?” desceu para junto de “Rádio e adaptadores”. Duas razões: a aritmética (só quem está acima decide quanto do de baixo aparece, e não havia arranjo com o exame na frente em que o terceiro coubesse), e a leitura — o exame fala da <b>Entrada 3</b>, e a tabela que diz o que está na Entrada 3 agora é a de baixo, não a de outro lugar.</li>
     <li><b>“Vale Sem teto, do global, abaixo” SAIU — e o desempate que esta linha pedia deixou de existir.</b> Ela mandou tirar a leitura e deixar só o seletor (<code>D-O-SEM-TETO-SAI-DOS-DOIS-LUGARES</code>), e a frase saiu dos <b>dois</b> lugares em que estava: destas {len(MESA)} linhas de controle (o que ela via) e da capa do Desempenho (y=834, fora da dobra — o que casava letra por letra com o pedido, e que ela não podia ter visto). O <b>“abaixo”</b> caducou de qualquer jeito, por uma segunda razão independente: com o teto global mudando-se para a <b>{ABA_DO_TETO_GLOBAL}</b>, o endereço que a frase dava aponta para um lugar que não existe mais nesta aba. <b>A frase não se perdeu</b> — ela vive no <code>?</code> do campo, que a lê sob demanda em vez de gastar uma coluna nas {len(MESA)} linhas. E o desempate que este item pedia (“o teto global morar na mesma moldura dos {len(MESA)} tetos de controle”, por {H_ESCOLHA + 9}&nbsp;px) está <b>respondido</b>: o global saiu da aba inteira, e não custa px nenhum aqui.</li>
     <li><b>Os quatro botões viraram UMA fileira, e ela custou zero.</b> Você escreveu a ordem com todas as letras — <i>“Examinar de novo. / Já Movi - Reexaminar. / Ignorar / Ver Ordens ignoradas.”</i> — e com um par em cada coluna essa ordem não existe: a leitura de uma grade de duas colunas é esquerda→direita, e “Ignorar” (que estava à direita) teria de vir antes de “{VER_IGNORADAS}” (que estava à esquerda). <b>Medido:</b> o quadro tinha 204&nbsp;px e continua com {Q_EXAME}; a fileira nasce no mesmo y=575; os quatro botões passaram de 265,5 para <b>272&nbsp;px cada</b>, todos iguais, e a borda direita não andou um pixel.</li>
     <li><b>“Ver as ordens caladas” virou “{VER_IGNORADAS}”, e o motivo é o PAR.</b> O botão irmão chama-se <b>Ignorar</b>: quem o aperta procura depois as ordens <i>ignoradas</i>. “Caladas” era a única palavra da dupla sem par na tela. <b>Uma diferença para a sua frase:</b> você escreveu “Ver Ordens ignoradas” e a tela diz “Ver <u>as</u> ordens ignoradas” — o artigo é o que já estava lá, e só a última palavra mudou. Se você quiser a sua frase ao pé da letra, é <b>uma</b> palavra a menos.</li>
-    <li><b>A seção continua chamando-se “Desempenho”, e a escolha é minha — derrube-a numa frase.</b> Ela perdeu o dropdown para a <b>{ABA_DO_TETO_GLOBAL}</b> e sobrou só a régua. Foi proposto renomeá-la para <b>“Rádio em uso”</b>, e a proposta cai numa medição de duas palavras: o subtítulo é frase <i>sua</i> (“o rádio de cada adaptador, em fatias”), então o rótulo ficaria <b>“Rádio em uso • O rádio de cada adaptador, em turnos”</b> — “rádio” duas vezes em oito palavras. Trocar o subtítulo para desfazer a repetição seria mexer na sua frase. E “Desempenho” não fica órfão: com o perfil noutra aba e com outro nome, sobra <b>um sentido só</b> para a palavra nesta tela — quanto do tempo do rádio está em uso.</li>
     <li><b>O gesto de voltar para “Todos” está na própria linha aberta</b>, e o chip da fita também volta: ele clica desde 05/09/2026, e o mesmo endereço vale nas três abas que escolhem controle.</li>
-    <li><b>“Adaptadores Bluetooth” continua sendo título novo na tela.</b> Ele existe para a coluna da esquerda ser irmã da direita. É palavra nova, e a palavra é sua.</li>
     <li><b>O resumo da linha fechada virou grade</b>: máscara, microfone e bateria repartem a linha em <code>126fr 272fr 76fr</code> — as três larguras <i>naturais</i> medidas, e não três números escolhidos. Assim as colunas caem no mesmo x nas {len(MESA)} linhas sozinhas, os percentuais terminam juntos, e o vão de 350&nbsp;px que sobrava entre o nome e um resumo encostado à direita desapareceu. É o mesmo remédio das quatro barras de bateria da aba Controles.</li>
-    <li><b>Dois controles do mesmo plástico continuam com a borda idêntica</b> — e agora também com dois blocos idênticos na régua do rádio. O número do jogador dentro do bloco atenua, mas não resolve.</li>
     <li><b>Onde as declarações desta aba gravam?</b> Continua aberto, e agora com um caso concreto: o microfone é da <b>máquina</b> ou do <b>perfil</b>? A sua resposta de 28/08 foi <i>“nos dois: a máquina decide o padrão, o perfil sobrepõe”</i> — a tela ainda não mostra o recibo disso.</li>
     <li><b>Qual régua manda no arranjo</b> (<code>D-QUAL-REGUA-MANDA-NO-ARRANJO</code>) — a tela mostra a receita, que é o que o código tem; se o juízo por entrada vencer, o texto do imperativo muda.</li>
   </ul>
@@ -4079,9 +4401,9 @@ if __name__ == "__main__":
             "os rádios das seções não dividem o mesmo `name` — sem isso o navegador "
             "não tem como fechar a outra")
 
-    # 1b. OS DOIS TETOS SÃO DO PACOTE, E O DESENHO TEM DE OBEDECÊ-LOS — 06/09/2026,
+    # 1b. O TETO É DO PACOTE, E O DESENHO TEM DE OBEDECÊ-LO — 06/09/2026,
     #     08-Q7. O `+N` conta `quantos - cabem`, e o `cabem` sai de
-    #     `a08_conexoes.TETO_DO_EXAME` / `TETO_DE_VIZINHOS`. Se o desenho ganhar um
+    #     `a08_conexoes.TETO_DO_EXAME`. Se o desenho ganhar um
     #     sexto bloco de exame e o teto ficar em cinco, a linha passa a dizer que
     #     sobrou o que na verdade coube — o `+N` mentindo pelo lado que ninguém
     #     confere. A régua LÊ o HTML gerado; ela não recontabiliza a lista que o
@@ -4091,9 +4413,6 @@ if __name__ == "__main__":
             f"o desenho tem {_LINHAS_DO_EXAME} linhas de exame e o `+N` conta sobre "
             f"{_pacote08.TETO_DO_EXAME} — os dois números têm de sair do mesmo "
             "lugar, senão a linha diz que sobrou o que coube")
-    _exigir(len(RADIOS_VIZINHOS) == _pacote08.TETO_DE_VIZINHOS,
-            f"a fileira tem {len(RADIOS_VIZINHOS)} blocos de vizinho e o `+N` conta "
-            f"sobre {_pacote08.TETO_DE_VIZINHOS}")
 
     # 1c. O ALVO DE SAÍDA TEM DE ALCANÇAR OS {len(MESA) + 1} RÁDIOS — 06/09/2026.
     #     A lista `alvo-aberto` é distribuída por POSIÇÃO no DOM, e o pacote a
@@ -4109,13 +4428,15 @@ if __name__ == "__main__":
             "mais de um rádio do acordeão nasce `checked` — o desenho não pode "
             "afirmar dois alvos de saída ao mesmo tempo")
 
-    # 1d. AS QUATRO RESSALVAS NOVAS, uma por aviso que a casa sabia e a tela não
+    # 1d. AS RESSALVAS, uma por aviso que a casa sabia e a tela não
     #     dizia. A régua cobra o ENDEREÇO, e não a frase: a frase é do dono no
     #     produto e muda quando ele mudar; o que não pode sumir é o lugar onde
     #     ela cabe. Endereço que some é campo que o piloto não acha e escreve
     #     zero — calado, que é a forma em que os quatro viviam até hoje.
-    for _campo in ("sem-driver", "radio-fragil", "hub-em-comum",
-                   "gabinete-contagens"):
+    # `hub-em-comum` e `gabinete-contagens` saíram em 23/09/2026 com a seção
+    # do rádio (TRANSPLANTE-DA-SECAO-01): a tabela a que elas respondiam não
+    # existe mais, e o «junto» e o selo das portas dizem o que elas diziam.
+    for _campo in ("sem-driver", "radio-fragil"):
         _exigir(_HTML.count(f'class="ressalva" data-campo="{_campo}"') == 1,
                 f"a linha de ressalva `{_campo}` não está na página — o dono da "
                 f"frase existe no produto e a tela volta a não ter onde escrevê-la")
@@ -4292,6 +4613,31 @@ if __name__ == "__main__":
             f"a frase do rádio não fala dos {_radio} controle(s) no rádio")
     _exigir(_numero(r"dos seus (\d+) controles", "o total da frase do rádio") == len(_na_mesa),
             f"a frase do rádio não fala dos seus {len(_na_mesa)} controles")
+
+    # 5. A SEÇÃO DO RÁDIO — TRANSPLANTE-DA-SECAO-01, 23/09/2026.
+    #    (a) todo campo que o pacote emite tem endereço na página, e todo
+    #        endereço da seção tem quem o emita;
+    #    (b) as duas âncoras das telas continuam âncoras: nenhum `data-gesto`
+    #        nelas, e nenhum gesto com o nome de uma âncora (a §P4);
+    #    (c) «fatia» não chega à tela, nem como classe.
+    _SECAO = _HTML[_HTML.index('id="rd-secao"'):_HTML.index("window.__hefRadio")]
+    _EMITIDOS = set(_pacote08.campos_da_secao(CENA_DO_RADIO)) | {
+        "entrada-tela", "entrada-contador", "entrada-quem"}
+    _NA_PAGINA = set(re.findall(r'data-campo="([^"]+)"', _HTML))
+    for _campo in sorted(_EMITIDOS - _NA_PAGINA):
+        _exigir(False, f"o pacote emite `{_campo}` e a página não tem onde pintá-lo")
+    _DA_SECAO = set(re.findall(r'data-campo="([^"]+)"', _SECAO))
+    for _campo in sorted(_DA_SECAO - _EMITIDOS - {"hz-movimento", "hz-voz", "hz-pouco"}):
+        _exigir(False, f"a seção tem o endereço `{_campo}` e o pacote não o emite")
+    _ANCORAS = re.findall(r'<a [^>]*href="#(mapear-[\w-]+)"[^>]*>', _HTML)
+    for _a in re.findall(r'<a [^>]*href="#mapear-entrada(?:s|-a-entrada)"[^>]*>', _HTML):
+        _exigir("data-gesto" not in _a, f"uma âncora das telas ganhou gesto: {_a[:90]}")
+    _GESTOS = set(re.findall(r'data-gesto="([^"]+)"', _HTML))
+    for _g in sorted(_GESTOS & set(_ANCORAS)):
+        _exigir(False, f"o gesto `{_g}` tem o nome de uma âncora — dois nomes para um ato")
+    _exigir("fatia" not in _SECAO.lower(), "a palavra «fatia» chegou à seção do rádio")
+    _exigir(_HTML.count('id="rd-secao"') == 1 and _HTML.count('<symbol id="rd-ds"') == 1,
+            "a seção ou o sprite do rádio saiu repetido")
 
     if _falhas:
         raise SystemExit("ERRO em 08-conexoes — decisão dela desfeita:\n  "

@@ -4330,7 +4330,6 @@ def luz_nao_acende(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 # próprias (`hz-movimento`, `hz-voz`, `hz-pouco`), distribuídas pela ordem do
 # DOM. Com eles dentro, a sala seria reescrita a cada tique e levaria junto o
 # campo em que ela estivesse digitando.
-import itertools  # noqa: E402
 import threading  # noqa: E402
 from collections.abc import Callable  # noqa: E402
 
@@ -4502,7 +4501,12 @@ def _canais_de(cena: dict[str, Any], lid: str) -> int | None:
 # -- a linha de um aparelho -------------------------------------------------
 
 
-def _linha_do_controle(ap: dict[str, Any], cena: dict[str, Any]) -> str:
+def _e_pouco(hz: Any) -> bool:
+    """Movimento abaixo do que o jogo sente como liso — a parte fica laranja."""
+    return isinstance(hz, (int, float)) and not isinstance(hz, bool) and hz < HZ_QUE_ENGASGA
+
+
+def _linha_do_controle(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool) -> str:
     aid = _x(ap["id"])
     mic = bool(ap.get("mic"))
     ponte = ap.get("ponte")
@@ -4515,7 +4519,8 @@ def _linha_do_controle(ap: dict[str, Any], cena: dict[str, Any]) -> str:
         f'aria-label="{_x(rot)}: vem junto, não custa nada">{_ic(ic)}</span>'
         for ic, rot in PASSAGEIROS)
     voz = (f'<span class="hz" data-campo="hz-voz" data-alvo="{aid}">'
-           f'{_x(_hz(ap.get("hz_voz")))}</span>') if mic else ""
+           f'{_x(_hz(ap.get("hz_voz"))) if com_hz else ""}</span>') if mic else ""
+    pouco = " pouco" if com_hz and _e_pouco(ap.get("hz_mov")) else ""
     nome = _x(ap.get("nome") or ap.get("rotulo") or "")
     botoes_da_ponte = []
     for k in ("som", "haptica"):
@@ -4537,11 +4542,11 @@ def _linha_do_controle(ap: dict[str, Any], cena: dict[str, Any]) -> str:
         f'{_ic("manda", "seta")}'
         f'<div class="vaga entrada fixa partida" style="flex:{manda} 0 0" '
         'title="O que o controle manda">'
-        f'<span class="parte movimento" data-campo="hz-pouco" data-hef-alvo="classe" '
+        f'<span class="parte movimento{pouco}" data-campo="hz-pouco" data-hef-alvo="classe" '
         f'data-hef-classe="pouco" data-alvo="{aid}" style="flex:{mov_flex} 1 0" '
         'title="Movimento por segundo">'
         f'{_ic("sinal")}<span class="hz" data-campo="hz-movimento" data-alvo="{aid}">'
-        f'{_x(_hz(ap.get("hz_mov")))}</span>{passageiros}</span>'
+        f'{_x(_hz(ap.get("hz_mov"))) if com_hz else ""}</span>{passageiros}</span>'
         f'<button class="parte voz selo-mic" style="flex:{voz_flex}" '
         f'aria-pressed="{str(mic).lower()}" aria-label="Microfone de {nome}" '
         'title="Microfone: divide a fila com o movimento" '
@@ -4565,7 +4570,7 @@ def _vaga_de(ap: dict[str, Any], cena: dict[str, Any]) -> int:
     return pontes.index(ap) + 1 if ap in pontes else 0
 
 
-def html_da_linha(ap: dict[str, Any], cena: dict[str, Any]) -> str:
+def html_da_linha(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool = False) -> str:
     """Uma linha da sala: desenho, nome, o que manda e recebe, qual vaga de ponte."""
     aid = _x(ap["id"])
     esperando = bool(ap.get("esperando"))
@@ -4593,7 +4598,7 @@ def html_da_linha(ap: dict[str, Any], cena: dict[str, Any]) -> str:
         return (abre + desenho + campo + f'<div class="features"><span class="segure">{SEGURE}'
                 '</span></div><span class="conta-da-vaga">' + TRACO_CURTO + '</span></div>')
     if ap.get("tipo") == "controle":
-        faixa = _linha_do_controle(ap, cena)
+        faixa = _linha_do_controle(ap, cena, com_hz)
     elif ap.get("tipo") == "webcam":
         return (abre + desenho + campo + f'<div class="features"><span class="sem-radio" '
                 f'title="Não usa rádio; só ocupa porta">{SEM_RADIO}</span></div>'
@@ -4614,7 +4619,7 @@ def html_da_linha(ap: dict[str, Any], cena: dict[str, Any]) -> str:
     passou = vaga > PONTES_POR_ADAPTADOR
     titulo = ("Passou do limite" if passou else f"Som {vaga} de {PONTES_POR_ADAPTADOR}"
               ) if vaga else "Sem som"
-    fatias = (f'<span class="conta-da-vaga{" alem" if passou else ""}" data-campo="vaga-de-ponte" '
+    fatias = (f'<span class="conta-da-vaga{" alem" if passou else ""}" '
               f'data-alvo="{aid}" title="{titulo}">'
               + (f"{vaga} de {PONTES_POR_ADAPTADOR}" if vaga else TRACO_CURTO) + "</span>")
     return abre + desenho + campo + f'<div class="features">{faixa}</div>' + fatias + "</div>"
@@ -4644,14 +4649,17 @@ def _marcas_de_onde(lug: dict[str, Any], cena: dict[str, Any]) -> str:
     for ap in _moradores(cena, str(lug["id"])):
         if ap.get("esperando"):
             quem = _x(ap.get("cor_nome") or ap.get("nome") or ap.get("rotulo") or "controle")
-            partes.append(f'<span class="espera" data-campo="esperando-parear" '
+            partes.append(f'<span class="espera" '
                           f'data-alvo="{_x(ap["id"])}" title="Segure PS + Create no {quem} '
                           f'até a luz piscar.">{_silhueta(ap)}{SEGURE}</span>')
     if lug.get("conectando"):
-        partes.append(f'<span class="espera" data-campo="esperando-parear" data-alvo="" '
+        partes.append(f'<span class="espera" data-alvo="" '
                       f'title="Segure PS + Create no controle até a luz piscar.">'
                       f'{_silhueta({})}{SEGURE}</span>')
-    if not lug.get("face"):
+    if not lug.get("lugar"):
+        # O ADAPTADOR DA PLACA-MÃE não pendura em entrada: não há o que mapear.
+        partes.append(f'<span>{_x(lug.get("entrada") or DENTRO_DA_MAQUINA)}</span>')
+    elif not lug.get("face"):
         partes.append(f'<a class="ensina" href="#mapear-entrada-a-entrada" '
                       f'data-alvo="{_x(lug.get("lugar") or "")}" title="Mapear Entrada a Entrada">'
                       f'{_ic("uma-a-uma")}{ONDE_FICA}</a>')
@@ -4664,7 +4672,7 @@ def _conta_do_lugar(lug: dict[str, Any], cena: dict[str, Any]) -> str:
     classe = "estourou" if n > maximo else ("apertado" if n == maximo else "")
     dica = f"Controles com som ou vibração: {n} de {maximo}" + (
         " — o som engasga" if n > maximo else "")
-    partes = [f'<span class="quanto canais-do-lugar {classe}" data-campo="lugar-pontes" '
+    partes = [f'<span class="quanto canais-do-lugar {classe}" '
               f'role="img" title="{dica}" aria-label="{dica}">{_ic("som")}{n}/{maximo}</span>']
     canais = _canais_de(cena, str(lug["id"]))
     if canais is not None:
@@ -4716,11 +4724,11 @@ def _barra_do_lugar(lug: dict[str, Any], cena: dict[str, Any]) -> str:
                 f'title="Limite: {maximo}"></div>')
     return ('<div class="barra-do-lugar">'
             f'<div class="trilho vagas{" estourado" if estourado else ""}" '
-            f'data-campo="lugar-barra" data-alvo="{_x(lug["id"])}">' + "".join(vagas)
+            f'data-alvo="{_x(lug["id"])}">' + "".join(vagas)
             + "</div>" + teto + "</div>")
 
 
-def html_do_lugar(lug: dict[str, Any], cena: dict[str, Any]) -> str:
+def html_do_lugar(lug: dict[str, Any], cena: dict[str, Any], com_hz: bool = False) -> str:
     """O cartão de um adaptador: a linha de cima, e os aparelhos quando aberto."""
     lid = _x(lug["id"])
     pontes = _pontes(cena, str(lug["id"]))
@@ -4752,7 +4760,7 @@ def html_do_lugar(lug: dict[str, Any], cena: dict[str, Any]) -> str:
         f'data-gesto="adaptador-renomear" data-alvo="{lid}">'
         + _marcas_de_onde(lug, cena) + sino + _barra_do_lugar(lug, cena)
         + _conta_do_lugar(lug, cena) + "</div>")
-    linhas = "".join(html_da_linha(ap, cena) for ap in moradores)
+    linhas = "".join(html_da_linha(ap, cena, com_hz) for ap in moradores)
     apagado = ' apagado" aria-disabled="true' if _ocupado(cena) else ""
     lampada = ""
     if cena.get("proposta") and cena["proposta"].get("destino") == lug["id"]:
@@ -4760,7 +4768,7 @@ def html_do_lugar(lug: dict[str, Any], cena: dict[str, Any]) -> str:
                    f'aria-label="Quem funciona melhor aqui" data-gesto="sugerir-alocacao" '
                    f'data-alvo="{lid}">{_ic("lampada")}</button>')
     soltar = ("Arraste outro para cá" if moradores else "Arraste um aparelho para cá")
-    corpo = (f'<div class="aparelhos" data-campo="doca" data-alvo="{lid}">{linhas}'
+    corpo = (f'<div class="aparelhos" data-alvo="{lid}">{linhas}'
              f'<div class="soltar-fila"><button class="soltar{apagado}" '
              f'title="Trazer um aparelho para cá" data-gesto="trazer-para-ca" '
              f'data-alvo="{lid}">{_ic("soltar")}{soltar}</button>{lampada}</div></div>')
@@ -4913,15 +4921,50 @@ def _moldes_de_painel(cena: dict[str, Any]) -> str:
     return "".join(moldes)
 
 
-#: As respostas de «O que é este rádio?» — as do produto
-#: (`gui.aba_conexoes.RESPOSTAS_DO_VIZINHO`, menos a pergunta) com a chave do
-#: ícone. O «Fone» do desenho não entra: o `maquina.json` não tem esse tipo.
-def html_da_sala(cena: dict[str, Any]) -> str:
-    """A sala inteira — os cartões, as perguntas e os painéis, prontos."""
+def html_da_sala(cena: dict[str, Any], com_hz: bool = False) -> str:
+    """Os cartões dos adaptadores, e só eles.
+
+    A SALA TEM DE SER ESTÁVEL entre tiques: o piloto a troca inteira quando o
+    texto muda, e trocá-la no meio de um nome sendo digitado ou de um arrasto
+    derruba os dois. Por isso o que muda a cada tique — os Hz — pousa nas
+    listas `hz-*`, e as janelas (que carregam o sinal de quem está perto)
+    moram em `radio-moldes`. `com_hz` é do DESENHO, que não tem tique.
+    """
     if not cena.get("lugares"):
         return '<div class="sala-vazia">Nenhum adaptador Bluetooth encontrado.</div>'
-    return ("".join(html_do_lugar(lug, cena) for lug in cena["lugares"])
-            + _moldes_de_pergunta(cena) + _moldes_de_painel(cena))
+    return "".join(html_do_lugar(lug, cena, com_hz) for lug in cena["lugares"])
+
+
+def html_dos_moldes(cena: dict[str, Any]) -> str:
+    """As perguntas, os painéis e o balão prontos, em `<template>` — a página os abre.
+
+    COM UM MOVIMENTO ESPERANDO, NENHUMA PERGUNTA DE MOVER NASCE (item 6 da
+    leva): o arrasto, a lista e o balão ficam sem janela para abrir, e o botão
+    cinza já diz que é para esperar. Um molde a mais levaria a um «Mover» que a
+    central recusa — a recusa que a tela existe para não precisar dar.
+    """
+    if not cena.get("lugares"):
+        return ""
+    perguntas = "" if _ocupado(cena) else _moldes_de_pergunta(cena)
+    return perguntas + _moldes_de_painel(cena) + _molde_do_balao(cena)
+
+
+def _molde_do_balao(cena: dict[str, Any]) -> str:
+    """A sugestão da central (`radio_central.proposta`), atrás da lâmpada do destino."""
+    proposta = cena.get("proposta") or {}
+    ap = next((a for a in cena.get("aparelhos", ()) if a["id"] == proposta.get("controle")), None)
+    destino = next((lug for lug in cena.get("lugares", ())
+                    if lug["id"] == proposta.get("destino")), None)
+    if ap is None or destino is None or _ocupado(cena):
+        return ""
+    desenho = _silhueta(ap) if ap.get("tipo") == "controle" else ""
+    return (f'<template class="balao-molde" data-controle="{_x(ap["id"])}" '
+            f'data-destino="{_x(destino["id"])}"><div class="balao" '
+            f'data-destino="{_x(destino["id"])}">{_ic("lampada")}{desenho}'
+            f'<span>{_maiuscula(como_se_chama(ap))} funciona melhor '
+            f'n{como_se_chama_o_lugar(destino)}</span>'
+            f'<button class="ok" data-gesto="aceitar-sugestao" data-alvo="{_x(ap["id"])}">'
+            'Mover</button></div></template>')
 
 
 # -- quem está no ar ---------------------------------------------------------
@@ -4995,12 +5038,6 @@ def html_dos_canais(cena: dict[str, Any]) -> str:
                       f'data-alvo="{_x(e["id"])}">{_ic(icone)}'
                       f'<span class="ch"> {e["ini"]}{TRACO_CURTO}{e["fim"]}</span></button>')
     return "".join(partes)
-
-
-def duas_pistas(cena: dict[str, Any]) -> bool:
-    na_faixa = sorted((e for e in cena.get("espectro", ()) if e.get("forca") != "fora"),
-                      key=lambda e: int(e["ini"]))
-    return any(int(b["ini"]) < int(a["fim"]) for a, b in itertools.pairwise(na_faixa))
 
 
 def html_fora_da_faixa(cena: dict[str, Any]) -> str:
@@ -5172,12 +5209,11 @@ def campos_da_secao(cena: dict[str, Any]) -> dict[str, Any]:
     return {
         "conta-de-adaptadores": html_da_conta_do_radio(cena),
         "radio-sala": html_da_sala(cena),
+        "radio-moldes": html_dos_moldes(cena),
         "hz-movimento": [_hz(a.get("hz_mov")) for a in controles],
-        "hz-pouco": ["sim" if isinstance(a.get("hz_mov"), (int, float))
-                     and a["hz_mov"] < HZ_QUE_ENGASGA else "" for a in controles],
+        "hz-pouco": ["sim" if _e_pouco(a.get("hz_mov")) else "" for a in controles],
         "hz-voz": [_hz(a.get("hz_voz")) for a in com_mic],
         "espectro-canais": html_dos_canais(cena),
-        "espectro-duas-pistas": "sim" if duas_pistas(cena) else "",
         "espectro-fora-da-faixa": html_fora_da_faixa(cena),
         "meus-no-ar": html_meus_no_ar(cena),
         "espectro-conta": html_espectro_conta(cena),
@@ -5481,11 +5517,23 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
         "lugares": lugares, "aparelhos": aparelhos, "evitados": evitados,
         "canais_medidos": canais_medidos, "espectro": [], "vizinhos": vizinhos,
         "portas": portas, "pedido": pedido, "proposta": proposta, "ocupado": ocupado,
-        "aberto": _ABERTO.get("lugar"),
+        "aberto": (_ABERTO["lugar"] if "lugar" in _ABERTO
+                   else _o_mais_cheio(lugares, aparelhos)),
         "perto": _perto(aparelhos_bz, adaptadores_bz, aparelhos),
     }
     cena["destino_do_conectar"] = _destino_do_conectar(cena, st)
     return cena
+
+
+def _o_mais_cheio(lugares: list[dict[str, Any]], aparelhos: list[dict[str, Any]]) -> str | None:
+    """O adaptador que mais passou do limite de pontes, ou nenhum."""
+    def pontes(lid: str) -> int:
+        return sum(1 for a in aparelhos if a.get("lugar") == lid
+                   and a.get("tipo") == "controle" and a.get("ponte"))
+    cheios = [lug for lug in lugares if pontes(str(lug["id"])) > PONTES_POR_ADAPTADOR]
+    if not cheios:
+        return None
+    return str(max(cheios, key=lambda lug: pontes(str(lug["id"])))["id"])
 
 
 def _faixas(canais: list[Any]) -> list[tuple[int, int]]:
@@ -5672,8 +5720,10 @@ def _campos_da_cerimonia() -> dict[str, Any]:
         quem = calib.PROCURANDO
     elif foto.get("estado") == ee.FIM:
         quem = _x(calib.CONVITE_EM_PE)
-    return {"entrada-tela": foto.get("tela") or "", "entrada-contador": contador,
-            "entrada-quem": quem}
+    # O VAZIO É O `NADA_A_DIZER`: um `""` viraria travessão nas três telas.
+    nada = _monta().NADA_A_DIZER
+    return {"entrada-tela": foto.get("tela") or "", "entrada-contador": contador or nada,
+            "entrada-quem": quem or nada}
 
 
 def campos_do_radio(ctx: Contexto) -> dict[str, Any]:
@@ -5709,7 +5759,7 @@ def _aparelho_na_tela(alvo: str) -> dict[str, Any]:
 def abrir_adaptador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """Abre um adaptador e fecha os outros (acordeão exclusivo, ordem dela)."""
     lug = _lugar_na_tela(o)
-    _ABERTO["lugar"] = None if _ABERTO.get("lugar") == lug["id"] else lug["id"]
+    _ABERTO["lugar"] = None if _CENA_NA_TELA.get("aberto") == lug["id"] else lug["id"]
     return {"armou": True}
 
 
@@ -5726,18 +5776,27 @@ def _gravar_o_nome(lugar: str, nome: str) -> Any:
     return feito
 
 
+def _so_o_foco(o: dict[str, Any]) -> bool:
+    """O clique que só POSICIONA o cursor num campo de nome: o ouvinte do piloto
+    ouve `click` e `change` no mesmo elemento, e o nome só vale no `change`."""
+    return str(o.get("evento") or "") == "click"
+
+
 @gesto("08-conexoes.html", GESTO_DO_APELIDO, grava="dar_nome")
-def adaptador_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def adaptador_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """O nome que ela dá ao adaptador — no lugar dele, e o adaptador herda."""
+    if _so_o_foco(o):
+        return {"armou": True}
     lug = _lugar_na_tela(o)
     if not lug.get("lugar"):
         raise RuntimeError("este adaptador é da placa-mãe: não tem entrada a nomear")
     novo = str(o.get("valor") or "").strip()
     if novo == str(lug.get("nome") or ""):
-        return
+        return None
     feito = _gravar_o_nome(str(lug["lugar"]), novo)
     if not getattr(feito, "gravou", False):
         raise RuntimeError("o nome não foi gravado")
+    return None
 
 
 def _alias_do_aparelho(endereco: str, nome: str) -> Any:
@@ -5756,18 +5815,21 @@ def _alias_do_aparelho(endereco: str, nome: str) -> Any:
 
 
 @gesto("08-conexoes.html", "aparelho-renomear", grava="escrever_propriedade")
-def aparelho_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def aparelho_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """O nome de um aparelho — Vitória, Caixa de som — no `Alias` do BlueZ."""
+    if _so_o_foco(o):
+        return {"armou": True}
     ap = _aparelho_na_tela(str(o.get("alvo") or ""))
     novo = str(o.get("valor") or "").strip()
     if novo == str(ap.get("nome") or ""):
-        return
+        return None
     endereco = norm_mac(str(ap["id"])) or ""
     endereco = ":".join(endereco[i:i + 2] for i in range(0, 12, 2)).upper() \
         if len(endereco) == 12 and ":" not in endereco else endereco.upper()
     escrita = _alias_do_aparelho(endereco, novo)
     if not getattr(escrita, "feita", False):
         raise RuntimeError("o Bluetooth do sistema não gravou o nome novo")
+    return None
 
 
 def _mover(p: Any, aparelho: str | None, destino: str) -> dict[str, Any]:

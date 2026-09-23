@@ -117,8 +117,19 @@ PROVA_DO_GESTO = r"""
     if(!vivo){ cinzas.push(n); continue; }
     nomes.push(n);
   }
+  // OS GESTOS DOS MOLDES — a pergunta, os painéis e o balão nascem em
+  // `<template>` e só entram no DOM quando a página os abre. A prova não os
+  // clica (abrir cada um é o roteiro da página), mas COBRA o dono de cada nome:
+  // um gesto de molde sem dono é um botão que a tela oferece e ninguém atende.
+  const moldes = [];
+  for(const t of raiz.querySelectorAll('template')){
+    for(const el of t.content.querySelectorAll('[data-gesto]')){
+      const n = el.dataset.gesto;
+      if(!vistos.has(n) && moldes.indexOf(n) < 0) moldes.push(n);
+    }
+  }
   window.webkit.messageHandlers.hefesto.postMessage(JSON.stringify(
-    {gesto:'prova-lista', nomes:nomes, cinzas:cinzas}));
+    {gesto:'prova-lista', nomes:nomes, cinzas:cinzas, moldes:moldes}));
   nomes.forEach((n, i) => setTimeout(() => {
     const el = Array.from(raiz.querySelectorAll('[data-gesto="'+n+'"]')).find(e => !e.disabled);
     if(!el) return;
@@ -280,6 +291,7 @@ class Janela:
         self.erros_js: list[str] = []
         self.prova_nomes: list[str] = []
         self.prova_cinzas: list[str] = []
+        self.prova_moldes: list[str] = []
         self.remontagens = 0
         self.chave: tuple[Any, ...] = ()
         self.rss: list[int] = []
@@ -465,6 +477,7 @@ class Janela:
         if nome == "prova-lista":
             self.prova_nomes = [str(n) for n in objeto.get("nomes") or []]
             self.prova_cinzas = [str(n) for n in objeto.get("cinzas") or []]
+            self.prova_moldes = [str(n) for n in objeto.get("moldes") or []]
             return
         dono = _dono_do_gesto(nome)
         if dono is None:
@@ -490,11 +503,18 @@ class Janela:
         ]
         if self.prova_cinzas:
             linhas.append(f"  cinzas (não se clica): {', '.join(self.prova_cinzas)}")
+        orfaos = [n for n in self.prova_moldes if _dono_do_gesto(n) is None]
+        if self.prova_moldes:
+            linhas.append(f"  nos moldes (dono conferido, sem clique): "
+                          f"{', '.join(self.prova_moldes)}")
+        if orfaos:
+            linhas.append(f"  MOLDE SEM DONO: {', '.join(orfaos)}")
         if faltam:
             linhas.append(f"  NÃO CHEGARAM: {', '.join(faltam)}")
         if self.sem_dono:
             linhas.append(f"  SEM DONO: {', '.join(sorted(set(self.sem_dono)))}")
-        passou = bool(self.prova_nomes) and not faltam and not self.sem_dono and not self.erros_js
+        passou = (bool(self.prova_nomes) and not faltam and not self.sem_dono
+                  and not self.erros_js and not orfaos)
         return passou, "\n".join(linhas)
 
     # -- o relato ----------------------------------------------------------
