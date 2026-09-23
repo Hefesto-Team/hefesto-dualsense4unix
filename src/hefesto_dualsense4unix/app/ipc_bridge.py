@@ -907,11 +907,14 @@ _SECAO_DO_CAMPO: dict[str, str] = {
 #:
 #: O `lugares` (ENTRADA-A-ENTRADA-01, 23/09/2026) também não tem seção: é
 #: escrito pelo «Mapear Entrada a Entrada» da aba Conexões. O que se perde é
-#: qual entrada é cada porta, e o nome que ela deu a cada uma.
+#: onde fica cada entrada no metal, e o nome que ela deu a cada uma. A palavra
+#: é «entrada», nunca «porta» (`D-A-PALAVRA-ENTRADA`): a primeira redação
+#: dizia «porta» e a conferência de 23/09 a trocou.
+#: PROVISÓRIO — decisão dela: a frase é nova e ainda não passou pelo olho dela.
 _ROTULOS_SEM_SECAO: dict[str, str] = {
     "mapa": "O desenho das entradas",
     "lancadores": "Onde estão os seus lançadores",
-    "lugares": "Qual entrada é cada porta",
+    "lugares": "O lugar de cada entrada",
 }
 
 
