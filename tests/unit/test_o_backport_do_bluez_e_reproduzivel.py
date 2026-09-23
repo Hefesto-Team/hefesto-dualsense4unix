@@ -518,6 +518,24 @@ def test_revisao_antiga_so_se_reconstroi_fora_do_cache_do_install(bancada, tmp_p
 
 
 @precisa_das_ferramentas
+@pytest.mark.parametrize("jobs", ["0", "quatro", "-2", ""])
+def test_numero_de_processos_invalido_para_antes_de_baixar(bancada, jobs):
+    env = dict(bancada["env"])
+    env["HEFESTO_BLUEZ_JOBS"] = jobs
+    shutil.rmtree(bancada["cache"] / "bluez-fontes")
+    proc = subprocess.run(
+        ["bash", str(_script())], env=env, capture_output=True, text=True, timeout=60
+    )
+    if jobs == "":
+        # Vazio é o padrão: um processo por núcleo. Segue, e a rede é o curl de mentira.
+        assert proc.returncode == 4, proc.stdout + proc.stderr
+        return
+    assert proc.returncode == 2, proc.stdout + proc.stderr
+    assert "HEFESTO_BLUEZ_JOBS" in proc.stderr
+    assert not bancada["marca_curl"].exists()
+
+
+@precisa_das_ferramentas
 def test_revisao_antiga_fora_do_cache_do_install_monta_a_arvore_da_tres(bancada):
     """O outro lado da guarda: num cache à parte, o ``.3`` se reconstrói."""
     proc = _rodar(bancada, "--revisao", "3", "--preparar")

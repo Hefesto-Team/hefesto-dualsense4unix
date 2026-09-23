@@ -461,6 +461,9 @@ main() {
     revisao_ultima="$(ler REVISAO_ULTIMA)"
     REVISAO="${REVISAO:-${revisao_ultima}}"
     [[ "${REVISAO}" =~ ^[0-9]+$ ]] || morra "${RC_USO}" "revisão inválida: ${REVISAO}"
+    # Conferido aqui, e não no fim: um HEFESTO_BLUEZ_JOBS=0 (ou com erro de
+    # digitação) só estourava no dpkg-buildpackage, depois de baixar e preparar.
+    [[ "${JOBS}" =~ ^[1-9][0-9]*$ ]] || morra "${RC_USO}" "HEFESTO_BLUEZ_JOBS inválido: ${JOBS} (um inteiro a partir de 1)"
     # A pergunta é pelo LUGAR, não pela variável: HEFESTO_BLUEZ_CACHE escrito
     # com o próprio caminho do install (ou um link para ele) passava, e o .3
     # sobrescrevia o SHA256SUMS que o install lê.
