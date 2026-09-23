@@ -1482,9 +1482,20 @@ else
     # teclado na tela (:892): um comentário — ou a prosa de um `Description:` —
     # citando o arquivo satisfaria um grep ingênuo, e o portão viraria decoração
     # exatamente no dia em que a instalação fosse arrancada e o comentário ficasse.
+    #
+    # E A PROSA DO ENSAIO TAMBÉM NÃO CONTA (INSTALL-E-UNINSTALL-DO-RADIO-01,
+    # 23/09/2026 — o P-17 que a conferência da O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01
+    # achou): o `_faria_root "instalar …hefesto-wifi-usb-vigia.service…"` do
+    # `--dry-run` do install é uma FRASE sobre a instalação, não a instalação.
+    # Medido: com a lib `camada_de_maquina.sh` arrancada da lista de donos,
+    # esta seção seguia verde, dando o vigia por instalado pelo texto do
+    # ensaio. As linhas que só FALAM (`_faria*`, `_nao_faria`, `log`, `echo`,
+    # `printf`, `warn`, `info`, `step`) saem, como nas seções de família acima.
     _dono_codigo=""
     if [[ "${#_dono_arquivos[@]}" -gt 0 ]]; then
-        _dono_codigo="$(grep -hv '^[[:space:]]*#' "${_dono_arquivos[@]}" 2>/dev/null || true)"
+        _dono_codigo="$(grep -hv '^[[:space:]]*#' "${_dono_arquivos[@]}" 2>/dev/null \
+            | grep -vE '^[[:space:]]*(_faria|_faria_root|_nao_faria|log|echo|printf|warn|info|step)[[:space:]]' \
+            || true)"
     fi
 
     # Caminho 3, montado antes do laço: helper de `scripts/` que algum dono CHAMA.
@@ -1494,7 +1505,9 @@ else
     while IFS= read -r _helper; do
         [[ -f "${_helper}" ]] || continue
         grep -qF -- "$(basename "${_helper}")" <<<"${_dono_codigo}" || continue
-        _helper_codigo+="$(grep -v '^[[:space:]]*#' "${_helper}" 2>/dev/null || true)"$'\n'
+        _helper_codigo+="$(grep -v '^[[:space:]]*#' "${_helper}" 2>/dev/null \
+            | grep -vE '^[[:space:]]*(_faria|_faria_root|_nao_faria|log|echo|printf|warn|info|step)[[:space:]]' \
+            || true)"$'\n'
     done < <(find scripts -maxdepth 1 -name '*.sh' -type f 2>/dev/null | sort)
 
     # Caminho 2 — cópia de DIRETÓRIO e GLOB, resolvidos de verdade contra o disco.
