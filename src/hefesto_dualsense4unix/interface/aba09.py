@@ -976,7 +976,7 @@ def item_cinza(rotulo, diz, gesto, cls=""):
 #: Não se guardam os DOIS atributos com o mesmo valor. Um deles seria o que
 #: ninguém lê, e a próxima pessoa leria `data-perfil` concluindo que é ele que
 #: chega — que é exatamente o engano que custou este comentário. `data-v` é o
-#: nome que o piloto já capta (a aba Conexões o usa em `aba08.py:909`), e o
+#: nome que o piloto já capta (a aba Conexões o usa em `aba08.py:1936`), e o
 #: guia manda usar o vocabulário que existe em vez de inventar um terceiro.
 #: O ENDEREÇO DO ACESO VAI NO BOTÃO, E NÃO NA CAIXA QUE OS CONTÉM — 03/09/2026.
 #:
