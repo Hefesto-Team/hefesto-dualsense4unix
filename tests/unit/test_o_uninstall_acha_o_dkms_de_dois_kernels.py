@@ -14,8 +14,8 @@ A régua roda o ensaio (`--dry-run`) num lar de mentira com um `dkms` que dá
 duas linhas com uma pausa entre elas, e exige o `dkms remove` dos quatro no
 plano.
 
-A mesma forma morava no `flatpak list --user --app | grep -q <id>`: com o
-aplicativo novo listado antes do antigo, o antigo nunca saía.
+A mesma forma morava no `flatpak list --user --app | grep -q <id>`: com os
+dois listados, o id de hoje, que vem primeiro, nunca saía.
 
 A MORDIDA, medida: devolver o `| grep -q .` ao bloco do hid-nintendo (ou o
 `| grep -q '^hefesto-uhid'` ao do uhid, ou o `| grep -q` ao do Flatpak) tira a
