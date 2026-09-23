@@ -81,6 +81,24 @@
 #     insistir é alimentar o loop de auth. Aí o journal diz o gesto que resolve.
 #
 # ---------------------------------------------------------------------------
+# 4. AS LÁPIDES — o bond esquecido DE PROPÓSITO não volta (O-DIARIO-DO-RADIO-01)
+# ---------------------------------------------------------------------------
+# A restauração é aditiva, e isso a torna segura contra a chave rotacionada —
+# mas cega à INTENÇÃO. Mover um controle de adaptador (a R1 dela, 23/09:
+# apagar a conexão no adaptador antigo e parear só no destino) tira o bond do
+# adaptador antigo; o snapshot de antes do gesto ainda o tem, e um crash do
+# bluetoothd nas 24 h seguintes o devolveria: o controle voltaria a ter bond
+# em dois adaptadores, que é o defeito que o mover existe para desfazer.
+#
+# A lápide é UMA LINHA POR CONTROLE NUM ADAPTADOR, nunca um lote (a R6, revista
+# por ela na madrugada de 23/09: um controle por vez, e nada se apaga em lote):
+#     <epoch> <MAC do adaptador> <MAC do controle>
+# em ${SRC_ROOT}/.lapides, e quem a escreve é o verbo `esquecer` da ponte
+# privilegiada — o único caminho do produto que apaga um bond. Ela enterra só o
+# que existia ANTES dela: um snapshot mais novo que a lápide é o controle
+# pareado de novo ali, por ela, e esse volta como qualquer outro.
+#
+# ---------------------------------------------------------------------------
 # Uso:
 #   bt_bonds_autorestore.sh [--quiet]   modo unit (exige $SERVICE_RESULT != success)
 #   bt_bonds_autorestore.sh --force     ignora o gate (doctor/diagnóstico humano)
@@ -105,6 +123,9 @@ AGORA="${HEFESTO_BT_AGORA:-$(date +%s)}"
 BOOT_ID="${HEFESTO_BT_BOOT_ID:-$(cat /proc/sys/kernel/random/boot_id 2>/dev/null || echo desconhecido)}"
 
 LEDGER="${SRC_ROOT}/.autorestore-ledger"
+#: As lápides (seção 4 do cabeçalho). O nome começa com ponto como o do
+#: ledger: a varredura dos snapshots pula tudo que começa com ponto.
+LAPIDES="${SRC_ROOT}/.lapides"
 
 #: MAC do BlueZ no nome de diretório: AA:BB:CC:DD:EE:FF.
 _MAC_RE='^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}$'
@@ -264,6 +285,21 @@ _restauros_neste_boot() {
 
 CORTE_IDADE=$((AGORA - MAX_IDADE_H * 3600))
 
+#: `ADAPTADOR/CONTROLE` (maiúsculas) -> epoch da lápide mais nova daquele par.
+#: Linha torta é pulada: a lista é escrita por root, mas um arquivo meio
+#: gravado não pode enterrar quem não foi esquecido — nem calar a volta.
+declare -A LAPIDE=()
+if [[ -f "${LAPIDES}" && ! -L "${LAPIDES}" ]]; then
+    while read -r _quando _adaptador _controle _resto; do
+        [[ "${_quando}" =~ ^[0-9]+$ ]] || continue
+        [[ "${_adaptador}" =~ ${_MAC_RE} && "${_controle}" =~ ${_MAC_RE} ]] || continue
+        _par="${_adaptador^^}/${_controle^^}"
+        if [[ -z "${LAPIDE[${_par}]:-}" || "${_quando}" -gt "${LAPIDE[${_par}]}" ]]; then
+            LAPIDE["${_par}"]="${_quando}"
+        fi
+    done < "${LAPIDES}"
+fi
+
 # ---------------------------------------------------------------------------
 # A varredura: do snapshot MAIS NOVO para o mais velho.
 # ---------------------------------------------------------------------------
@@ -275,6 +311,7 @@ CORTE_IDADE=$((AGORA - MAX_IDADE_H * 3600))
 # contém aquele device com chave é o que ganha.
 RESTAURADOS=0
 SUSPENSOS=0
+ENTERRADOS=0
 declare -A JA_VISTO=()
 
 while IFS= read -r SNAP; do
@@ -309,6 +346,18 @@ while IFS= read -r SNAP; do
             DST_INFO="${DST}/${CHAVE}/info"
             if [[ -f "${DST_INFO}" ]] && _tem_chave "${DST_INFO}"; then
                 JA_VISTO["${CHAVE}"]=vivo
+                continue
+            fi
+
+            # A LÁPIDE: este é o snapshot MAIS NOVO que ainda tem o par, e ele
+            # é de antes de o par ser esquecido de propósito. Então nenhum
+            # outro (todos mais velhos) pode trazê-lo de volta — o JA_VISTO
+            # fecha a porta para eles também.
+            _enterrado_em="${LAPIDE[${CHAVE^^}]:-}"
+            if [[ -n "${_enterrado_em}" && "${EPOCH}" -le "${_enterrado_em}" ]]; then
+                JA_VISTO["${CHAVE}"]=enterrado
+                ENTERRADOS=$((ENTERRADOS + 1))
+                log "LÁPIDE: ${DBASE} foi esquecido de propósito em ${ABASE} — o snapshot ${NOME} é de antes disso, e ele não volta"
                 continue
             fi
 
@@ -357,9 +406,11 @@ while IFS= read -r SNAP; do
     done < <(find "${SNAP}" -mindepth 1 -maxdepth 1 -type d -print0 2>/dev/null)
 done < <(find "${SRC_ROOT}" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort -r)
 
-if [[ "${RESTAURADOS}" -eq 0 && "${SUSPENSOS}" -eq 0 ]]; then
+if [[ "${RESTAURADOS}" -eq 0 && "${SUSPENSOS}" -eq 0 && "${ENTERRADOS}" -eq 0 ]]; then
     log "nenhum bond faltando — nada a restaurar"
-else
+elif [[ "${ENTERRADOS}" -eq 0 ]]; then
     log "restauração automática: ${RESTAURADOS} bond(s) de volta, ${SUSPENSOS} suspenso(s) pelo freio"
+else
+    log "restauração automática: ${RESTAURADOS} bond(s) de volta, ${SUSPENSOS} suspenso(s) pelo freio, ${ENTERRADOS} esquecido(s) de propósito ficaram onde estão"
 fi
 exit 0

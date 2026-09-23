@@ -277,3 +277,310 @@ def test_a_trava_sai_quando_o_processo_morre(tmp_path: Path) -> None:
         prazo_s=2.0,
     ) as espera:
         assert espera < 2.0
+
+
+# --- as lápides -----------------------------------------------------------------
+#
+# Mover um controle (a R1 dela) apaga o bond no adaptador antigo. O snapshot de
+# antes do gesto ainda o tem, e o autorestore — aditivo — o devolveria no
+# primeiro crash do bluetoothd. A lápide é o «esquecido de propósito»: um
+# controle num adaptador, escrita pelo `esquecer` da ponte, lida pelo
+# autorestore. Faixa sintética `aa:bb:cc`, como manda o anonimato de fixture.
+
+PONTE = RAIZ / "scripts" / "bt_ponte_privilegiada.sh"
+AUTORESTORE = RAIZ / "scripts" / "bt_bonds_autorestore.sh"
+
+ADAPTADOR = "AA:BB:CC:00:00:11"
+OUTRO_ADAPTADOR = "AA:BB:CC:00:00:33"
+VERMELHO = "AA:BB:CC:00:00:22"
+AZUL = "AA:BB:CC:00:00:44"
+
+
+def _info_com_chave() -> str:
+    return "[General]\nName=DualSense Wireless Controller\n\n[LinkKey]\nKey=AAAA\nType=4\n"
+
+
+def _nome_do_snapshot(epoch: int) -> str:
+    return time.strftime("%Y%m%d-%H%M%S", time.localtime(epoch)) + "-4242"
+
+
+def _snapshot(acervo: Path, epoch: int, pares: list[tuple[str, str]]) -> None:
+    for adaptador, controle in pares:
+        dev = acervo / _nome_do_snapshot(epoch) / adaptador / controle
+        dev.mkdir(parents=True, exist_ok=True)
+        (dev / "info").write_text(_info_com_chave(), encoding="utf-8")
+
+
+def _autorestore(acervo: Path, destino: Path, agora: int) -> subprocess.CompletedProcess[str]:
+    destino.mkdir(parents=True, exist_ok=True)
+    env = {
+        **os.environ,
+        "HEFESTO_BT_BONDS_SRC": str(acervo),
+        "HEFESTO_BT_DST": str(destino),
+        "HEFESTO_BT_BOOT_ID": "boot-do-ensaio-lapide",
+        "HEFESTO_BT_AGORA": str(agora),
+        "HEFESTO_BT_LOG_DEST": "none",
+        "SERVICE_RESULT": "core-dump",
+    }
+    return subprocess.run(
+        ["bash", str(AUTORESTORE)], capture_output=True, text=True, timeout=60, env=env
+    )
+
+
+def _voltou(destino: Path, adaptador: str, controle: str) -> bool:
+    return (destino / adaptador / controle / "info").exists()
+
+
+def test_a_lapide_segura_um_controle_e_deixa_os_outros_voltarem(tmp_path: Path) -> None:
+    """O crash comeu os dois bonds; só o esquecido de propósito fica fora.
+
+    ARRANQUE A CURA — tire o bloco da LÁPIDE do ``bt_bonds_autorestore.sh`` — e
+    o vermelho volta do snapshot: este teste reprova.
+    """
+    agora = int(time.time())
+    acervo, destino = tmp_path / "acervo", tmp_path / "bluetooth"
+    _snapshot(acervo, agora - 600, [(ADAPTADOR, VERMELHO), (ADAPTADOR, AZUL)])
+    (acervo / ".lapides").write_text(f"{agora - 300} {ADAPTADOR} {VERMELHO}\n", encoding="utf-8")
+    resultado = _autorestore(acervo, destino, agora)
+    assert resultado.returncode == 0, resultado.stderr
+    assert _voltou(destino, ADAPTADOR, AZUL), resultado.stdout
+    assert not _voltou(destino, ADAPTADOR, VERMELHO), (
+        "o bond esquecido de propósito voltou do snapshot — o controle movido "
+        "teria casa em dois adaptadores de novo"
+    )
+    assert "LÁPIDE" in resultado.stdout
+    assert "1 esquecido(s) de propósito" in resultado.stdout
+
+
+def test_pareado_de_novo_depois_da_lapide_volta(tmp_path: Path) -> None:
+    """A lápide só enterra o que existia ANTES dela."""
+    agora = int(time.time())
+    acervo, destino = tmp_path / "acervo", tmp_path / "bluetooth"
+    _snapshot(acervo, agora - 60, [(ADAPTADOR, VERMELHO)])
+    (acervo / ".lapides").write_text(f"{agora - 300} {ADAPTADOR} {VERMELHO}\n", encoding="utf-8")
+    resultado = _autorestore(acervo, destino, agora)
+    assert _voltou(destino, ADAPTADOR, VERMELHO), resultado.stdout
+
+
+def test_a_lapide_e_de_um_controle_num_adaptador(tmp_path: Path) -> None:
+    """Esquecer o vermelho no adaptador 11 não enterra o vermelho no 33."""
+    agora = int(time.time())
+    acervo, destino = tmp_path / "acervo", tmp_path / "bluetooth"
+    _snapshot(acervo, agora - 600, [(ADAPTADOR, VERMELHO), (OUTRO_ADAPTADOR, VERMELHO)])
+    (acervo / ".lapides").write_text(f"{agora - 300} {ADAPTADOR} {VERMELHO}\n", encoding="utf-8")
+    _autorestore(acervo, destino, agora)
+    assert not _voltou(destino, ADAPTADOR, VERMELHO)
+    assert _voltou(destino, OUTRO_ADAPTADOR, VERMELHO)
+
+
+def test_linha_torta_na_lista_nao_enterra_ninguem(tmp_path: Path) -> None:
+    agora = int(time.time())
+    acervo, destino = tmp_path / "acervo", tmp_path / "bluetooth"
+    _snapshot(acervo, agora - 600, [(ADAPTADOR, VERMELHO)])
+    (acervo / ".lapides").write_text(
+        f"ontem {ADAPTADOR} {VERMELHO}\n{agora} {ADAPTADOR}\n{agora} x y\n", encoding="utf-8"
+    )
+    _autorestore(acervo, destino, agora)
+    assert _voltou(destino, ADAPTADOR, VERMELHO)
+
+
+def _ambiente_da_ponte(tmp_path: Path, **extra: str) -> dict[str, str]:
+    env = {
+        chave: valor
+        for chave, valor in os.environ.items()
+        if chave not in ("SUDO_UID", "SUDO_USER")
+    }
+    env.update(
+        HEFESTO_BT_LIB=str(tmp_path / "bluetooth"),
+        HEFESTO_BT_LOG_DEST="none",
+        HEFESTO_RADIO_DIARIO_ROOT=str(tmp_path / "diario-root.jsonl"),
+        **extra,
+    )
+    return env
+
+
+def test_o_esquecer_da_ponte_escreve_a_lapide_que_o_autorestore_le(tmp_path: Path) -> None:
+    """De ponta a ponta: o gesto que apaga é o mesmo que enterra."""
+    agora = int(time.time())
+    acervo = tmp_path / "acervo"
+    _snapshot(acervo, agora - 600, [(ADAPTADOR, VERMELHO), (ADAPTADOR, AZUL)])
+    bond = tmp_path / "bluetooth" / ADAPTADOR / VERMELHO
+    bond.mkdir(parents=True)
+    (bond / "info").write_text(_info_com_chave(), encoding="utf-8")
+
+    resultado = subprocess.run(
+        ["bash", str(PONTE), "esquecer", ADAPTADOR.lower(), VERMELHO.lower()],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        env=_ambiente_da_ponte(tmp_path, HEFESTO_BT_LAPIDES=str(acervo / ".lapides")),
+    )
+    assert resultado.returncode == 0, resultado.stderr
+    assert not bond.exists()
+    linhas = (acervo / ".lapides").read_text(encoding="utf-8").splitlines()
+    assert len(linhas) == 1, "uma lápide, de UM controle, num adaptador"
+    quando, adaptador, controle = linhas[0].split()
+    assert (adaptador, controle) == (ADAPTADOR, VERMELHO)
+    assert abs(int(quando) - agora) < 60
+
+    [entrada] = diario.ler(caminhos=[tmp_path / "diario-root.jsonl"])
+    assert entrada["o_que"] == "esqueceu o controle"
+    assert entrada["controle"] == VERMELHO
+    assert entrada["depois"] == {"bond": None, "lapide": True}
+
+    destino = tmp_path / "bluetooth-depois-do-crash"
+    _autorestore(acervo, destino, agora + 5)
+    assert _voltou(destino, ADAPTADOR, AZUL)
+    assert not _voltou(destino, ADAPTADOR, VERMELHO)
+
+
+def test_o_esquecer_a_seco_so_diz_a_lapide(tmp_path: Path) -> None:
+    lapides = tmp_path / ".lapides"
+    resultado = subprocess.run(
+        ["bash", str(PONTE), "--dry-run", "esquecer", ADAPTADOR, VERMELHO],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        env=_ambiente_da_ponte(tmp_path, HEFESTO_BT_LAPIDES=str(lapides)),
+    )
+    assert resultado.returncode == 0, resultado.stderr
+    assert "gravaria a lápide" in resultado.stdout
+    assert not lapides.exists()
+
+
+# --- o adaptador travado em laço (família 3) --------------------------------------
+#
+# O laço de 13/09, com as linhas reais (três por volta, a cada ~2,5 s), sobre
+# uma mesa sysfs de mentira: o adaptador travado está na porta 3-1.1.2, e um
+# vizinho são, na 3-4.1.4, teve UM timeout solto — que acontece em adaptador são.
+
+LACO_DE_13_09 = "".join(
+    f"2026-09-13T01:{13 + (s // 60):02d}:{s % 60:02d}-03:00 maquina kernel: Bluetooth: hci0: {m}\n"
+    for s in range(45, 60, 2)
+    for m in (
+        "command 0xfc61 tx timeout",
+        "RTL: RTL: Read reg16 failed (-110)",
+        "RTL: Failed to generate devcoredump",
+    )
+) + "2026-09-13T01:14:10-03:00 maquina kernel: Bluetooth: hci1: command 0x0c03 tx timeout\n"
+
+
+def _mesa_sysfs(raiz: Path, adaptadores: dict[str, str]) -> Path:
+    """``{hciN: porta}`` → um /sys com class/bluetooth, bus/usb/devices e o authorized."""
+    for hci, porta in adaptadores.items():
+        aparelho = raiz / "devices" / "pci0000:00" / "usb" / porta
+        interface = aparelho / f"{porta}:1.0"
+        (interface / "bluetooth" / hci).mkdir(parents=True)
+        (aparelho / "authorized").write_text("semente", encoding="utf-8")
+        classe = raiz / "class" / "bluetooth"
+        classe.mkdir(parents=True, exist_ok=True)
+        (classe / hci).symlink_to(interface / "bluetooth" / hci)
+        barramento = raiz / "bus" / "usb" / "devices"
+        barramento.mkdir(parents=True, exist_ok=True)
+        (barramento / porta).symlink_to(aparelho)
+    return raiz
+
+
+def _reiniciar(tmp_path: Path, sysfs: Path, *args: str, **extra: str) -> subprocess.CompletedProcess[str]:
+    journal = tmp_path / "journal.txt"
+    if not journal.exists():
+        journal.write_text(LACO_DE_13_09, encoding="utf-8")
+    env = _ambiente_da_ponte(
+        tmp_path,
+        HEFESTO_SYSFS_RAIZ=str(sysfs),
+        HEFESTO_BT_JOURNAL=str(journal),
+        HEFESTO_PONTE_STAMPS=str(tmp_path / "stamps"),
+        HEFESTO_USB_PAUSA_S="0",
+        HEFESTO_USB_ESPERA_S="0",
+        **extra,
+    )
+    return subprocess.run(
+        ["bash", str(PONTE), "reiniciar-travado", *args],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        env=env,
+    )
+
+
+def _autorizado(sysfs: Path, porta: str) -> str:
+    return (sysfs / "bus" / "usb" / "devices" / porta / "authorized").read_text(encoding="utf-8")
+
+
+def test_o_laco_de_13_09_reinicia_uma_porta_so_e_a_certa(tmp_path: Path) -> None:
+    """Exatamente um reinício, na porta do adaptador em laço.
+
+    ARRANQUE O DETECTOR — faça ``_hcis_em_laco`` não imprimir nada — e o teste
+    não vê reinício nenhum. Baixe o ``LIMIAR_DO_LACO`` para 1 e o vizinho são
+    também é reiniciado: o teste reprova pelos dois.
+    """
+    sysfs = _mesa_sysfs(tmp_path / "sys", {"hci0": "3-1.1.2", "hci1": "3-4.1.4"})
+    resultado = _reiniciar(tmp_path, sysfs)
+    assert resultado.returncode == 0, resultado.stderr
+    assert resultado.stdout.splitlines() == ["reiniciado\t3-1.1.2\thci0\t8"]
+    assert _autorizado(sysfs, "3-1.1.2") == "1", "a porta do travado não foi reautorizada"
+    assert _autorizado(sysfs, "3-4.1.4") == "semente", "o vizinho são foi tocado"
+    [entrada] = diario.ler(caminhos=[tmp_path / "diario-root.jsonl"])
+    assert entrada["o_que"] == "reiniciou o adaptador"
+    assert entrada["porta"] == "3-1.1.2"
+    assert entrada["familia"] == "3"
+    assert entrada["antes"] == {"hci": "hci0", "timeouts": 8}
+    assert entrada["depois"] == {"hci": "hci0", "voltou": True}
+
+
+def test_com_conexao_de_pe_o_reinicio_e_recusado(tmp_path: Path) -> None:
+    """Um adaptador com controle ligado não é reiniciado, diga o journal o que disser."""
+    sysfs = _mesa_sysfs(tmp_path / "sys", {"hci0": "3-1.1.2"})
+    conexao = sysfs / "devices" / "pci0000:00" / "usb" / "3-1.1.2" / "3-1.1.2:1.0"
+    (conexao / "bluetooth" / "hci0" / "hci0:256").mkdir()
+    (sysfs / "class" / "bluetooth" / "hci0:256").symlink_to(
+        conexao / "bluetooth" / "hci0" / "hci0:256"
+    )
+    resultado = _reiniciar(tmp_path, sysfs)
+    assert resultado.returncode == 1
+    assert resultado.stdout.splitlines() == ["recusado\t3-1.1.2\thci0\thá conexão de pé"]
+    assert _autorizado(sysfs, "3-1.1.2") == "semente"
+    [entrada] = diario.ler(caminhos=[tmp_path / "diario-root.jsonl"])
+    assert entrada["o_que"] == "recusou reiniciar o adaptador"
+
+
+def test_o_freio_nao_reinicia_a_mesma_porta_duas_vezes(tmp_path: Path) -> None:
+    sysfs = _mesa_sysfs(tmp_path / "sys", {"hci0": "3-1.1.2"})
+    assert _reiniciar(tmp_path, sysfs).returncode == 0
+    (sysfs / "bus" / "usb" / "devices" / "3-1.1.2" / "authorized").write_text(
+        "semente", encoding="utf-8"
+    )
+    segundo = _reiniciar(tmp_path, sysfs)
+    assert segundo.returncode == 0
+    assert segundo.stdout.startswith("segurado\t3-1.1.2\thci0\t")
+    assert _autorizado(sysfs, "3-1.1.2") == "semente", "reiniciou de novo dentro do freio"
+    frases = [e.get("frase") for e in diario.ler(caminhos=[tmp_path / "diario-root.jsonl"])]
+    assert "O adaptador da porta 3-1.1.2 travou de novo. Tire e ponha ele." in frases
+
+
+def test_sem_laco_nada_acontece(tmp_path: Path) -> None:
+    sysfs = _mesa_sysfs(tmp_path / "sys", {"hci0": "3-1.1.2"})
+    (tmp_path / "journal.txt").write_text(LACO_DE_13_09.splitlines()[0] + "\n", encoding="utf-8")
+    resultado = _reiniciar(tmp_path, sysfs)
+    assert resultado.returncode == 0
+    assert resultado.stdout == ""
+    assert _autorizado(sysfs, "3-1.1.2") == "semente"
+
+
+def test_o_reinicio_nao_aceita_argumento(tmp_path: Path) -> None:
+    sysfs = _mesa_sysfs(tmp_path / "sys", {"hci0": "3-1.1.2"})
+    resultado = _reiniciar(tmp_path, sysfs, "3-4.1.4")
+    assert resultado.returncode == 2
+    assert _autorizado(sysfs, "3-1.1.2") == "semente"
+
+
+def test_os_ganchos_do_reinicio_morrem_sob_sudo(tmp_path: Path) -> None:
+    """Sob sudo o /sys de mentira some: o verbo mira o /sys real e exige root."""
+    sysfs = _mesa_sysfs(tmp_path / "sys", {"hci0": "3-1.1.2"})
+    resultado = _reiniciar(tmp_path, sysfs, SUDO_UID="1000")
+    if os.geteuid() == 0:  # pragma: no cover - a suíte não roda como root
+        pytest.skip("como root o verbo alcançaria o /sys real")
+    assert resultado.returncode == 1
+    assert "requer root" in resultado.stderr
+    assert _autorizado(sysfs, "3-1.1.2") == "semente"
+    assert not (tmp_path / "diario-root.jsonl").exists()
