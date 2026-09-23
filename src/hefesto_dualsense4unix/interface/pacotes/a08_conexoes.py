@@ -3224,6 +3224,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 #      para "dá" é a tela deixar de ser exemplo.
 from . import gesto  # noqa: E402
 
+# O 🎙 DA LINHA DO CONTROLE É O GESTO DA ABA 02 — um ato, um dono (D-12). No
+# topo do módulo, e não dentro do gesto, para a régua do que grava
+# (`test_todo_gesto_que_grava_esta_protegido._portas`) descer por ele.
+from .a02_controles import mudo as _o_mudo_da_aba_02  # noqa: E402
+
 #: O QUE FOI MARCADO E **NÃO** FOI LIGADO, com o motivo medido de cada um. Esta
 #: lista não é lápide: o piloto imprime `[gesto sem dono] 08-conexoes.html · X`
 #: a cada clique nesses botões, e é assim que o que falta aparece na tela em vez
@@ -5956,21 +5961,19 @@ def adaptador_historico(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
 
 @gesto("08-conexoes.html", "custo-mic", grava="mic_canal_set_detalhado")
 def custo_mic(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O microfone de um controle: o mesmo ato do 🎙 da aba Controles (D-12)."""
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.app.widgets.controller_card import acao_mic
+    """O microfone de um controle: o MESMO ato do 🎙 da aba Controles (D-12).
 
+    O MESMO ATO, E NÃO UMA CÓPIA DELE: o gesto é o `mudo` da aba 02, chamado.
+    A primeira versão deste gesto (TRANSPLANTE-DA-SECAO-01) refazia o pedido ao
+    daemon e parava ali — e com isso o perfil não lembrava o microfone ligado
+    por aqui, as recusas do alvo não chegavam, e a mesma chave da mesa tinha
+    dois comportamentos conforme a aba. Um dono só: o que a 02 grava, confessa
+    e recusa vale igual nesta linha.
+    """
     uniq = str(o.get("alvo") or "")
-    dele = ctx.por_uniq(uniq) if uniq else None
-    if not dele:
+    if not uniq or not ctx.por_uniq(uniq):
         raise ValueError("o clique não disse em qual controle")
-    acao = acao_mic(dele)
-    if not acao.sensivel:
-        raise RuntimeError(acao.dica)
-    agora = bool((dele.get("audio") or {}).get("mic_mudo"))
-    corpo = p.mic_canal_set_detalhado(agora, uniq=uniq)
-    if not isinstance(corpo, dict) or corpo.get("status") != "ok":
-        raise RuntimeError("o Hefesto não confirmou o microfone")
+    _o_mudo_da_aba_02(ctx, {"uniq": uniq, "mudo": "microfone"}, p)
 
 
 # -- as três telas do «Mapear Entrada a Entrada» ------------------------------

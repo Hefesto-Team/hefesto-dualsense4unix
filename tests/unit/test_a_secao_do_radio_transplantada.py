@@ -199,7 +199,7 @@ def _estado(*, hz: tuple[float, float, float] = (250.0, 98.0, 200.0),
 def _ctx(estado: dict[str, Any]) -> Any:
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
-    return Contexto(state=estado, mesa=[
+    return Contexto(state=estado, conectados=list(estado["controllers"]), mesa=[
         {"uniq": U1, "cor": "cosmic-red", "jogador": 1, "nome": "Cosmic Red"},
         {"uniq": U2, "cor": "white", "jogador": 2, "nome": "White"},
         {"uniq": U3, "cor": "", "jogador": 3, "nome": ""},
@@ -570,3 +570,23 @@ def test_o_nome_que_ela_digita_nao_vira_marcacao(mesa: Any, monkeypatch: pytest.
     for chave in ("radio-sala", "radio-moldes"):
         assert "<b>Sala</b>" not in campos[chave], chave
     assert "&lt;b&gt;Sala&lt;/b&gt;" in campos["radio-sala"]
+
+
+def test_o_microfone_da_linha_e_o_gesto_da_aba_02(mesa: Any,
+                                                   monkeypatch: pytest.MonkeyPatch) -> None:
+    """D-12: o 🎙 é UM ato. O da linha do controle é o `mudo` da 02, chamado —
+    o que ela grava no perfil, confessa e recusa vale igual aqui.
+
+    MORDIDA: volte a pedir `mic_canal_set_detalhado` direto no `custo_mic` — o
+    perfil deixa de lembrar o microfone ligado por esta aba, e a identidade cai.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import a02_controles
+
+    assert mesa._o_mudo_da_aba_02 is a02_controles.mudo
+    pedidos: list[dict[str, Any]] = []
+    monkeypatch.setattr(mesa, "_o_mudo_da_aba_02", lambda ctx, o, p: pedidos.append(o))
+    ctx = _ctx(_estado())
+    _gesto("custo-mic")(ctx, {"alvo": U1, "evento": "click"}, None)
+    assert pedidos == [{"uniq": U1, "mudo": "microfone"}]
+    with pytest.raises(ValueError):
+        _gesto("custo-mic")(ctx, {"alvo": "aabbcc0000ff"}, None)

@@ -88,10 +88,10 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | 05-vibracao | 31 | 13 | 11 | 4 | 3 | 0 | 42% |
 | 06-navegacao | 40 | 15 | 16 | 0 | 9 | 0 | 38% |
 | 07-lancadores | 29 | 9 | 12 | 0 | 8 | 0 | 31% |
-| 08-conexoes | 49 | 22 | 22 | 3 | 2 | 0 | 45% |
+| 08-conexoes | 49 | 16 | 26 | 5 | 2 | 0 | 33% |
 | 09-sistema | 38 | 12 | 19 | 1 | 6 | 0 | 32% |
 | 10-perfis | 50 | 14 | 20 | 7 | 9 | 0 | 28% |
-| TODAS | 395 | 137 | 168 | 30 | 57 | 3 | 35% |<!-- /TABELA-DA-PARIDADE -->
+| TODAS | 395 | 131 | 172 | 32 | 57 | 3 | 33% |<!-- /TABELA-DA-PARIDADE -->
 
 A tabela é **gerada da contagem do CSV** e conferida pelo portão (regra
 `numero-publicado`): quem mexer no dado e não regerar esta seção é barrado
@@ -112,6 +112,14 @@ saíram: o reparo do atalho e o Steam Input desligado passaram a ser do vigia
 `DIFERENTE` pela régua — que é dura de propósito —, e o «Ver o que impede»,
 que só o HTML tinha, saiu do mapa com o botão. Na mesma recontagem a linha do
 «Aplicar aos jogos» da 09 fechou: o botão já estava publicado.
+
+**A 08 CAIU DE 45% PARA 33% EM 23/09/2026, e a razão é a mesma régua dura.**
+A seção «Rádio e Adaptadores» virou o desenho aprovado dela
+(TRANSPLANTE-DA-SECAO-01): a tabela dos adaptadores virou cartões, os vizinhos
+viraram selos, a vizinhança passou a ser dita por porta e a ocupação passou a
+ser LIDA do daemon em vez de recalculada — quatro `IGUAL` viraram `DIFERENTE`.
+E duas ressalvas saíram com a tabela, sem lugar no desenho: o hub em comum e as
+contagens do gabinete, agora `FALTA_NO_HTML` declaradas.
 
 **As duas correções ficam; os valores que elas corrigiram, não.** O total de
 `FALTA_NO_HTML` e a paridade da `01-jogar` mudam a cada cura, e quem quiser os
