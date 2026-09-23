@@ -1496,6 +1496,14 @@ async def shutdown(daemon: DaemonProtocol) -> None:
     ):
         with contextlib.suppress(Exception):
             await parar_som()
+    # A-COSTURA-DA-ONDA-2-01: a central do rádio fecha antes do vigia das
+    # conexões — a ordem inversa do arranque. Sem isto, o daemon que para no
+    # meio de uma janela de pareamento deixa o `Pairable` do destino `true`: o
+    # fio da central só o devolve quando vê o `fechar()`.
+    central = getattr(daemon, "_central_do_radio", None)
+    if central is not None:
+        with contextlib.suppress(Exception):
+            await asyncio.to_thread(central.fechar)
     # CONEXAO-ZUMBI-01: o vigia das conexões cai junto, e é a TERCEIRA ponta da
     # receita que o `subsystems/__init__.py` descreve. Sem esta linha a thread
     # continuaria olhando a mesa — e chamando `sudo` — com o daemon já morto.
