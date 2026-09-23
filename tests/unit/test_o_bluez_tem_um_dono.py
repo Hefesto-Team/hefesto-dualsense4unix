@@ -577,6 +577,89 @@ def test_o_parear_pela_ponte_espera_a_trava(
     assert corridas == []
 
 
+def test_a_busca_da_ponte_so_nasce_com_a_trava(
+    trava_de_mentira: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Decisão de quem coordena: o ``descobrir`` do piso entra na trava — a busca
+    não começa a varrer no meio do gesto de outro motor.
+
+    Achado na conferência: a cura estava no código e nenhuma régua a cobrava —
+    arrancada, os 104 testes do território passavam.
+
+    MORDIDA: tire o ``na_trava`` do ``abrir_a_janela`` da ponte — a ponte nasce
+    com a trava na mão de outro motor.
+    """
+    monkeypatch.setattr(diario_do_radio, "PRAZO_DA_TRAVA_S", 0.1)
+    abertas: list[Any] = []
+
+    def abrir(argumentos: Any) -> _ProcessoVivo:
+        abertas.append(argumentos)
+        return _ProcessoVivo()
+
+    janela = gp.JanelaDeBusca(bm.ADAPTADOR, 5, abrir=abrir, correr=lambda _a: (0, ""))
+    assert not janela.pelo_dono
+    pronto = threading.Event()
+    outro = threading.Thread(target=_segurar_a_trava, args=(0.6, pronto, []))
+    outro.start()
+    assert pronto.wait(2)
+    motivo = janela.abrir_a_janela()
+    outro.join()
+    janela.fechar()
+
+    assert motivo, "a busca abriu com a trava na mão de outro motor"
+    assert abertas == []
+
+
+def test_a_janela_pelo_dono_fecha_sozinha_quando_o_tempo_acaba(
+    vivo: bd.DonoVivo, barramento: bm.BarramentoDeMentira, trava_de_mentira: Path
+) -> None:
+    """A busca é da conexão do dono, que vive o processo inteiro: sem o relógio,
+    uma janela esquecida varreria até o daemon sair — e a busca custa de 32% a
+    43% do adaptador.
+
+    Achado na conferência: arrancado o relógio, nenhuma régua reprovava.
+
+    MORDIDA: não ligue o ``_relogio`` em ``_abrir_pelo_dono`` — o
+    ``StopDiscovery`` nunca sai.
+    """
+    janela = gp.JanelaDeBusca(bm.ADAPTADOR, 5, dono=vivo)
+    assert janela.pelo_dono
+    janela.segundos = 0.2  # o relógio usa o prazo da janela; a régua não espera 5 s
+    assert janela.abrir_a_janela() == ""
+    assert "StartDiscovery" in barramento.metodos()
+
+    assert bm.esperar(lambda: "StopDiscovery" in barramento.metodos())
+    assert not janela.aberta
+
+
+def test_fechar_colhe_os_achados_antes_de_parar_a_busca(
+    vivo: bd.DonoVivo, barramento: bm.BarramentoDeMentira, trava_de_mentira: Path
+) -> None:
+    """Sem a busca, o BlueZ recolhe os aparelhos que ela achou e ninguém pareou:
+    o controle que apareceu no último instante não pode sumir com ela.
+
+    Achado na conferência: arrancada a colheita do ``fechar``, nenhuma régua
+    reprovava.
+
+    MORDIDA: tire o ``self._colher()`` de ``JanelaDeBusca.fechar`` — o candidato
+    que entrou antes de fechar e saiu depois some da lista.
+    """
+    janela = gp.JanelaDeBusca(bm.ADAPTADOR, 5, dono=vivo)
+    assert janela.abrir_a_janela() == ""
+    tardio = "aa:bb:cc:00:00:55"
+    barramento.emitir(
+        bd.Sinal("entrou", caminho=bm.no_de(tardio),
+                 propriedades={bd.APARELHO: {"Class": 9480, "Alias": "DualSense"}})
+    )
+    janela.fechar()
+    barramento.emitir(
+        bd.Sinal("saiu", caminho=bm.no_de(tardio), interfaces_que_sairam=(bd.APARELHO,))
+    )
+
+    assert "StopDiscovery" in barramento.metodos()
+    assert tardio in {c.endereco for c in janela.candidatos()}
+
+
 # ---------------------------------------------------------------------------
 # 4. o diário
 # ---------------------------------------------------------------------------
