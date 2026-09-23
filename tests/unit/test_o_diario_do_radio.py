@@ -693,3 +693,85 @@ def test_a_linha_do_shell_com_aspas_e_acento_o_python_le(tmp_path: Path) -> None
     assert entrada["antes"] == {"hci": "hci0"}
     assert entrada["depois"] is None
     assert entrada["porta"] == "3-1.1.2"
+
+
+# --- o vigia de zumbis do daemon na mesma trava ------------------------------------
+
+
+class _PonteDeMentira:
+    """A ponte de verdade sem sudo: anota quem pediu, e quando."""
+
+    def __init__(self) -> None:
+        self.pedidos: list[str] = []
+
+    def impedimentos(self) -> list[str]:
+        return []
+
+    def desconectar(self, link: object) -> tuple[bool, str]:
+        self.pedidos.append(link.controle)  # type: ignore[attr-defined]
+        return True, ""
+
+
+def _link() -> object:
+    from hefesto_dualsense4unix.integrations.conexao_zumbi import LinkDeRadio
+
+    return LinkDeRadio(hci="hci0", adaptador="AA:BB:CC:00:00:11", controle="AA:BB:CC:00:00:22")
+
+
+def test_o_vigia_derruba_o_link_com_a_trava_e_deixa_rastro(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from hefesto_dualsense4unix.daemon.subsystems.conexoes import PonteComTrava
+
+    monkeypatch.setenv(diario.ENV_TRAVA, str(tmp_path / "radio.lock"))
+    monkeypatch.setenv(diario.ENV_DIARIO, str(tmp_path / "radio-diario.jsonl"))
+    interna = _PonteDeMentira()
+    ponte = PonteComTrava(interna=interna)  # type: ignore[arg-type]
+    assert ponte.desconectar(_link()) == (True, "")  # type: ignore[arg-type]
+    assert interna.pedidos == ["AA:BB:CC:00:00:22"]
+    [entrada] = diario.ler(caminhos=[tmp_path / "radio-diario.jsonl"])
+    assert (entrada["quem"], entrada["o_que"]) == ("vigia-de-zumbis", "derrubou o link")
+    assert entrada["controle"] == "AA:BB:CC:00:00:22"
+    assert entrada["hci"] == "hci0"
+    assert diario.dono_da_trava(tmp_path / "radio.lock").startswith("vigia-de-zumbis ")
+
+
+def test_com_a_trava_na_mao_do_watchdog_o_vigia_nao_derruba_nada(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Dois motores no mesmo rádio: o vigia espera o prazo e desiste da volta.
+
+    ARRANQUE A CURA — faça o ``ConexoesSubsystem`` montar a
+    ``PontePrivilegiada`` crua — e ``test_o_daemon_monta_o_vigia_com_a_trava``
+    reprova; arranque a trava da ``PonteComTrava`` e este reprova com o link
+    derrubado por cima do watchdog.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.conexoes import PonteComTrava
+
+    monkeypatch.setenv(diario.ENV_TRAVA, str(tmp_path / "radio.lock"))
+    monkeypatch.setenv(diario.ENV_DIARIO, str(tmp_path / "dela.jsonl"))
+    watchdog = _watchdog(tmp_path, "--so-a-trava", "3")
+    try:
+        fim = time.monotonic() + 15
+        while not diario.dono_da_trava(tmp_path / "radio.lock").startswith("bt-watchdog"):
+            assert time.monotonic() < fim, "o watchdog não pegou a trava"
+            time.sleep(0.05)
+        interna = _PonteDeMentira()
+        ponte = PonteComTrava(interna=interna, prazo_s=0.3)  # type: ignore[arg-type]
+        agiu, motivo = ponte.desconectar(_link())  # type: ignore[arg-type]
+    finally:
+        watchdog.communicate(timeout=30)
+    assert (agiu, interna.pedidos) == (False, []), "derrubou o link com o watchdog agindo"
+    assert "próxima volta" in motivo
+    [desistencia] = diario.ler(caminhos=[tmp_path / "dela.jsonl"])
+    assert desistencia["o_que"] == diario.DESISTIU_DA_TRAVA
+    assert desistencia["antes"]["dono"].startswith("bt-watchdog ")
+
+
+def test_o_daemon_monta_o_vigia_com_a_trava() -> None:
+    from hefesto_dualsense4unix.daemon.subsystems.conexoes import (
+        ConexoesSubsystem,
+        PonteComTrava,
+    )
+
+    assert isinstance(ConexoesSubsystem()._vigia.ponte, PonteComTrava)

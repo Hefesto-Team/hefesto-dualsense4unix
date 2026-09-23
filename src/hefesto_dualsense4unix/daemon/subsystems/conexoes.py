@@ -29,6 +29,16 @@ sistema não vê um microfone neste controle». Por isso cada volta deixa um
 em :func:`caminho_do_diario`, com o que aconteceu **e o gesto que resta** —
 quando a cura não basta, a frase já diz "repareie neste adaptador", que é o que
 a aba Conexões tem de mostrar.
+
+A TRAVA E O DIÁRIO COMUNS (O-DIARIO-DO-RADIO-01, 23/09/2026)
+-------------------------------------------------------------
+Este vigia é um dos três motores que mexem no rádio sozinhos — os outros são o
+``bt_health_watchdog.sh`` (root, a cada 2 min) e a central que vai nascer. Até
+aqui nenhum sabia do outro. Agora a derrubada do link passa pela trava comum
+(:func:`~hefesto_dualsense4unix.integrations.diario_do_radio.trava_do_radio`),
+com prazo curto — quem não a consegue tenta na próxima volta, cinco segundos
+depois —, e deixa o rastro no diário comum, que é de onde o sino da aba lê. O
+``conexao-zumbi.json`` continua: ele é a ÚLTIMA volta; o diário é a história.
 """
 
 from __future__ import annotations
@@ -39,11 +49,13 @@ import json
 import os
 import threading
 import time
-from dataclasses import asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from hefesto_dualsense4unix.integrations import diario_do_radio
 from hefesto_dualsense4unix.integrations.conexao_zumbi import (
+    LinkDeRadio,
     PontePrivilegiada,
     Veredito,
     VigiaDeZumbis,
@@ -70,6 +82,67 @@ INTERVALO_S = 5.0
 #: defeito — e o de estar desligada é o que ela viu: dois controles conectados,
 #: ambos jogador 1, ambos com a barra azul.
 ENV_DESLIGA = "HEFESTO_DUALSENSE4UNIX_CONEXAO_ZUMBI"
+
+
+#: Como este vigia se chama na trava e no diário comuns.
+QUEM = "vigia-de-zumbis"
+
+#: Quanto o vigia espera a trava antes de desistir desta volta. Dez segundos são
+#: duas voltas: o zumbi continua lá na próxima, e o watchdog pode segurar a
+#: trava por um tique inteiro (até ~40 s com o ``pair``).
+PRAZO_DA_TRAVA_S = 10.0
+
+
+@dataclass
+class PonteComTrava(PontePrivilegiada):
+    """A ponte do vigia, pela trava do rádio e com rastro no diário comum.
+
+    Embrulha a :class:`PontePrivilegiada` de verdade (``interna``) em vez de
+    mudar o módulo da regra: a regra decide QUEM é zumbi; o jeito de agir —
+    em fila com os outros motores, e escrevendo o que fez — é do produto.
+    """
+
+    interna: PontePrivilegiada = field(default_factory=PontePrivilegiada)
+    prazo_s: float = PRAZO_DA_TRAVA_S
+
+    def impedimentos(self) -> list[str]:
+        """Os da ponte de verdade: a trava não impede, só põe em fila."""
+        return self.interna.impedimentos()
+
+    def desconectar(self, link: LinkDeRadio) -> tuple[bool, str]:
+        """Derruba o link com a trava na mão, e registra o que aconteceu."""
+        with contextlib.ExitStack() as pilha:
+            sem_trava = False
+            try:
+                pilha.enter_context(
+                    diario_do_radio.trava_do_radio(QUEM, prazo_s=self.prazo_s)
+                )
+            except diario_do_radio.TravaOcupadaError as erro:
+                return False, f"{erro}; tento na próxima volta"
+            except OSError:
+                # Sem conseguir nem abrir a trava, o vigia não fica mudo: o
+                # zumbi é real e a cura é segura. O diário diz que foi sem ela.
+                logger.debug("conexao_zumbi_sem_trava", exc_info=True)
+                sem_trava = True
+            agiu, motivo = self.interna.desconectar(link)
+            diario_do_radio.registrar(
+                QUEM,
+                "derrubou o link" if agiu else "tentou derrubar o link",
+                "conectou e não virou controle: sem hidraw e sem registro no BlueZ",
+                antes={"link": "de pé"},
+                depois={"link": "caiu" if agiu else "de pé", "motivo": motivo or None},
+                adaptador=link.adaptador,
+                controle=link.controle,
+                hci=link.hci,
+                sem_trava=sem_trava or None,
+                #: Com a trava só de pasta de execução (o install ainda não
+                #: criou a comum), este vigia ficou em fila com a central, mas
+                #: não com o watchdog root — e o diário tem de dizer isso.
+                trava_comum=diario_do_radio.a_trava_e_comum(
+                    diario_do_radio.caminho_da_trava()
+                ),
+            )
+            return agiu, motivo
 
 
 def caminho_do_diario() -> Path:
@@ -125,7 +198,7 @@ class ConexoesSubsystem:
         olhador: Any = None,
         intervalo_s: float = INTERVALO_S,
     ) -> None:
-        self._vigia = vigia or VigiaDeZumbis(ponte=PontePrivilegiada())
+        self._vigia = vigia or VigiaDeZumbis(ponte=PonteComTrava())
         self._olhador = olhador or olhar_a_mesa
         self._intervalo_s = intervalo_s
         self._thread: threading.Thread | None = None
@@ -197,7 +270,10 @@ class ConexoesSubsystem:
 __all__ = [
     "ENV_DESLIGA",
     "INTERVALO_S",
+    "PRAZO_DA_TRAVA_S",
+    "QUEM",
     "ConexoesSubsystem",
+    "PonteComTrava",
     "caminho_do_diario",
     "ler_o_diario",
 ]
