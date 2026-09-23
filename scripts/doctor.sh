@@ -599,6 +599,44 @@ check_uhid() {
     fi
 }
 
+# A CONTRAPRESSÃO DO UHID (RADIO-AFOGADO-02, opt-in `--uhid-contrapressao`;
+# conferida pelo doctor desde a INSTALL-E-UNINSTALL-DO-RADIO-01, 23/09/2026).
+# O pedido é a conf em /etc/modprobe.d; o que vale é o parâmetro do módulo
+# CARREGADO. Três respostas: ligada; pedida e desligada a quente (o uninstall a
+# desliga, e um rearme que falhou a deixa assim até o boot); e pedida com o de
+# fábrica carregado — que é «entra no próximo boot» num kernel conferido e
+# «não vale neste kernel» fora da lista do `patch/BASELINE` (o DKMS pula ali,
+# de propósito). Sem o pedido, nada a conferir. Ganchos `HEFESTO_DOCTOR_UHID_*`
+# e `HEFESTO_DOCTOR_KERNEL`: a régua não depende do uhid de quem a roda.
+check_uhid_contrapressao() {
+    local conf="${HEFESTO_DOCTOR_UHID_CONF:-/etc/modprobe.d/hefesto-uhid.conf}"
+    local param="${HEFESTO_DOCTOR_UHID_PARAM:-/sys/module/uhid/parameters/backpressure}"
+    local baseline="${ROOT_DIR}/assets/dkms/uhid/patch/BASELINE"
+    local kernel="${HEFESTO_DOCTOR_KERNEL:-$(uname -r)}" validados="" um valor
+    [[ -f "${conf}" ]] || return 0
+    if [[ -r "${param}" ]]; then
+        valor="$(cat "${param}" 2>/dev/null || true)"
+        if [[ "${valor}" == "1" || "${valor}" == "Y" ]]; then
+            pass "contrapressão do uhid ligada (o rádio cheio diz «espere» em vez de perder o comando)"
+        else
+            warn "a contrapressão do uhid foi pedida e está DESLIGADA agora (${valor:-?}) — ligue sem recarregar o uhid: echo 1 | sudo tee ${param}"
+        fi
+        return
+    fi
+    if [[ -r "${baseline}" ]]; then
+        validados="$(sed -n 's/^KERNELS_VALIDADOS=//p' "${baseline}" | head -1 | tr ',' ' ')"
+        for um in ${validados}; do
+            if [[ "${kernel}" == "${um}" || "${kernel}" == "${um}"-* ]]; then
+                info "a contrapressão do uhid foi pedida e entra no PRÓXIMO BOOT (o uhid de fábrica está carregado; recarregá-lo derrubaria todo HID por Bluetooth)"
+                return
+            fi
+        done
+        warn "a contrapressão do uhid foi pedida, mas o kernel ${kernel} não está entre os conferidos (${validados:-nenhum}) — o uhid de fábrica segue, e o pedido não vale neste kernel"
+        return
+    fi
+    info "a contrapressão do uhid foi pedida e o uhid carregado é o de fábrica — não sei dizer se o patchado entra no próximo boot (sem o patch/BASELINE nesta instalação)"
+}
+
 # O hid_playstation é quem entrega lightbar e LED de jogador pelo sysfs (regra 77) e
 # quem faz o gamepad virtual virar um DualSense de verdade (uhid). Sem ele o daemon
 # funciona, mas essas features somem — por isso warn, não fail.
@@ -7453,6 +7491,7 @@ main() {
     check_usb_storm_config_conflict
     check_uinput
     check_uhid
+    check_uhid_contrapressao
     check_hid_playstation
     check_hid_playstation_probe_abortado
     check_led_sysfs_gravavel
