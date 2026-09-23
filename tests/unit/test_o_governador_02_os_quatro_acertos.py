@@ -522,13 +522,15 @@ def test_o_arranque_nao_fecha_a_ponte_que_o_daemon_novo_tem(tmp_path: Path) -> N
 
 
 def test_quem_fecha_e_o_iniciar_do_governador_de_producao(tmp_path: Path) -> None:
-    """O ``iniciar()`` fecha — e só com medidor.
+    """O ``iniciar()`` fecha — na thread dele, antes do primeiro tique, e só
+    com medidor.
 
     Sem medidor é o modo falso: o smoke rodando ao lado do daemon dela veria as
     pontes VIVAS dele como fantasmas e as desceria no diário.
 
-    MORDIDA: tire a chamada do ``iniciar()`` e o arranque deixa a fantasma; ou
-    ponha-a antes da guarda do medidor e o modo falso fecha pontes vivas.
+    MORDIDA: tire a chamada do ``_laco`` e o arranque deixa a fantasma; ou
+    ponha-a no ``iniciar()`` antes da guarda do medidor e o modo falso fecha
+    pontes vivas.
     """
     caminho = tmp_path / "diario.jsonl"
     _o_daemon_que_morreu(caminho)
@@ -550,10 +552,8 @@ def test_quem_fecha_e_o_iniciar_do_governador_de_producao(tmp_path: Path) -> Non
 
     producao = novo(_MedidorDoAdaptador())
     producao.iniciar()
-    try:
-        assert diario.pontes_de_pe(diario.ler(caminhos=[caminho]), math.inf) == {}
-    finally:
-        producao.parar()
+    producao.parar(esperar_s=5.0)  # a thread fecha antes do primeiro tique, e sai
+    assert diario.pontes_de_pe(diario.ler(caminhos=[caminho]), math.inf) == {}
 
 
 def test_o_governador_de_regua_nao_le_o_diario_dela(

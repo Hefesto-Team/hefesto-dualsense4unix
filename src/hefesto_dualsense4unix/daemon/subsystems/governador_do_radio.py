@@ -571,7 +571,11 @@ class GovernadorDoRadio:
             return None if self._amostra is None else dict(self._amostra)
 
     def iniciar(self) -> None:
-        """Fecha as pontes fantasmas e sobe o tique numa thread.
+        """Sobe o tique numa thread — que, antes do primeiro tique, fecha as
+        pontes fantasmas (:meth:`fechar_as_pontes_fantasmas`).
+
+        Na thread, e não aqui: quem chama é o ``start()`` assíncrono do som, e
+        ler dois diários de meio mega seguraria o laço de eventos do daemon.
 
         Sem medidor não há o que medir — e não há o que fechar: sem medidor é o
         modo falso (a suíte, o smoke), e um daemon de mentira rodando ao lado do
@@ -579,7 +583,6 @@ class GovernadorDoRadio:
         """
         if self._medidor is None:
             return
-        self.fechar_as_pontes_fantasmas()
         if self._thread is not None and self._thread.is_alive():
             return
         self._parar.clear()
@@ -596,6 +599,10 @@ class GovernadorDoRadio:
             thread.join(timeout=esperar_s)
 
     def _laco(self) -> None:
+        try:
+            self.fechar_as_pontes_fantasmas()
+        except Exception:  # o arranque nunca derruba o governador
+            logger.debug("governador_fantasmas_falhou", exc_info=True)
         while not self._parar.wait(self._periodo_s):
             try:
                 self.tique()
@@ -622,15 +629,18 @@ class GovernadorDoRadio:
             if self._fantasmas_fechadas:
                 return 0
             self._fantasmas_fechadas = True
-            # A chave é a do ``pontes_de_pe`` — o texto do ``controle`` como foi
-            # escrito, e não os dígitos: uma subida velha grafada de outro jeito
-            # é OUTRA ponte para o leitor, e ficaria de pé para sempre.
-            nossas = {(v.uniq, v.tipo) for v in self._vagas if v.subiu_em is not None}
         try:
             de_pe = diario.pontes_de_pe(list(self._ler_o_diario()), math.inf)
         except Exception:  # diário ilegível: não há o que fechar, e o daemon sobe
             logger.debug("governador_diario_ilegivel_no_arranque", exc_info=True)
             return 0
+        # AS NOSSAS SÃO LIDAS DEPOIS DO DIÁRIO: a ponte que subir no meio marca o
+        # ``subiu_em`` ANTES de escrever o SUBIU, então toda subida nova que a
+        # leitura viu já está aqui. E a chave é a do ``pontes_de_pe`` — o texto
+        # do ``controle`` como foi escrito, não os dígitos: uma subida velha
+        # grafada de outro jeito é OUTRA ponte para o leitor, e ficaria de pé.
+        with self._trava:
+            nossas = {(v.uniq, v.tipo) for v in self._vagas if v.subiu_em is not None}
         fechadas = 0
         for adaptador, pontes in sorted(de_pe.items()):
             for controle, tipo in sorted(pontes):
