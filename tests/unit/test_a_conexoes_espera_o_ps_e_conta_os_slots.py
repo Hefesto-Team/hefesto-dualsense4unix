@@ -7,10 +7,12 @@ botão vira 'Cancelar'"*. Até 06/09/2026 o gesto derrubava o controle e voltava
 sem contagem, sem Cancelar e sem recado. Ela clicava, o controle caía, e a tela
 não dizia uma palavra sobre o que fazer nem por quanto tempo esperar.
 
-**A SEGUNDA RESPONDE OUTRA PERGUNTA QUE A RÉGUA DE CIMA NÃO RESPONDE.** A barra
-do Desempenho mostra o que ESTÁ em cada adaptador; a conta de slots responde o
-que CABE — e isso não se lê de uma fatia: olhar 260,4 em 1.600 não diz se o
-PRÓXIMO controle entra.
+**A SEGUNDA — a conta de slots — SAIU EM 23/09/2026** (TRANSPLANTE-DA-SECAO-01).
+Ela respondia o que CABE em cada adaptador numa linha de texto sob a régua da
+ocupação; a seção «Rádio e Adaptadores» passou a ser o desenho aprovado dela, e
+lá a resposta é o próprio cartão de cada adaptador («com som 1 de 2») e o
+pedido do governador quando não cabe. A régua dessa resposta mora em
+`test_a_secao_do_radio_transplantada.py`.
 
 O QUE ESTA RÉGUA COBRA, e nenhuma delas passa por acaso
 --------------------------------------------------------
@@ -33,9 +35,9 @@ O QUE ESTA RÉGUA COBRA, e nenhuma delas passa por acaso
    (…) não deveria estar aparecendo"*, *"em todas as abas da interface"*. A
    instrução do segundo tempo (o PS com a contagem) fica; a frase do fim vai ao
    diário da janela, uma vez só.
-5. **Nenhuma frase nasce na interface.** As sete que a tela mostra são
-   comparadas contra o DONO em `app/`, e não redigitadas aqui.
-6. **Os três endereços existem na página que o produto renderiza.** Campo sem
+5. **Nenhuma frase nasce na interface.** As que a tela mostra são comparadas
+   contra o DONO em `app/`, e não redigitadas aqui.
+6. **Os dois endereços existem na página que o produto renderiza.** Campo sem
    endereço é pintura que cai no vazio, e ela dá verde em toda régua que só
    pergunte se o motor existe.
 
@@ -50,7 +52,6 @@ dizendo que o botão não virou Cancelar.
 """
 from __future__ import annotations
 
-import html
 import pathlib
 import sys
 from typing import Any
@@ -309,100 +310,29 @@ def test_a_pintura_emite_os_dois_campos_no_cartao(pac, a08, dono, monkeypatch) -
 
 
 # ---------------------------------------------------------------------------
-# 6 · A conta de slots — os três estados, com as frases do dono
+# 6 · A conta de slots — CADUCOU EM 23/09/2026
+#
+# Os cinco casos que moravam aqui cobravam `a08._conta_de_slots`: a resposta
+# honesta sem serviço (SEM_RESPOSTA_DO_DAEMON), o rádio vazio, a frase do dono
+# por adaptador, o declarado que não subiu antes do «cabe mais um» e o `hciN`
+# fora da tela. A linha saiu com a régua da ocupação quando a seção virou o
+# desenho aprovado (TRANSPLANTE-DA-SECAO-01). O que cada caso protegia foi para
+# a seção nova e é cobrado em `test_a_secao_do_radio_transplantada.py`: o cartão
+# diz «com som N de 2», o que não cabe vira o pedido do governador, e nenhum
+# `hciN` nem endereço de rádio chega à tela.
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture
-def orcamento():
-    from hefesto_dualsense4unix.app.actions.config import secao_orcamento
+def test_a_conta_de_slots_saiu_com_o_endereco() -> None:
+    """A função e o endereço saíram JUNTOS — nenhum dos dois ficou órfão."""
+    from pacotes import a08_conexoes
 
-    return secao_orcamento
+    from hefesto_dualsense4unix.interface import onde
 
-
-def test_sem_resposta_do_servico_a_conta_diz_que_nao_sabe(
-    pac, a08, orcamento,
-) -> None:
-    """**Nunca "Folgada"** — a cicatriz da B1, medida pelo dono em 23/08/2026.
-
-    Com o Hefesto parado as três barras diziam "Folgada", em verde, "0/1600" —
-    byte a byte a tela de um rádio vazio. Não saber e estar vazio são coisas
-    diferentes, e a diferença é a informação inteira.
-    """
-    assert a08._conta_de_slots(pac.Contexto(state={})) == orcamento.SEM_RESPOSTA_DO_DAEMON
-
-
-def test_com_o_radio_vazio_a_conta_diz_que_esta_vazio(pac, a08, orcamento) -> None:
-    dele = {"uniq": UNIQ, "transport": "usb", "connected": True}
-    conta = a08._conta_de_slots(pac.Contexto(state={"controllers": [dele]}))
-    assert conta == orcamento.NINGUEM_NO_RADIO
-    assert conta != orcamento.SEM_RESPOSTA_DO_DAEMON, (
-        "rádio vazio e serviço mudo não podem dizer a mesma coisa")
-
-
-def test_com_gente_no_radio_a_conta_responde_por_adaptador(
-    pac, a08, monkeypatch,
-) -> None:
-    """A frase é a do dono (`plano_de_radio.linha_do_cabe_mais_um`), inteira."""
-    from hefesto_dualsense4unix.integrations import plano_de_radio
-
-    dele = {"uniq": UNIQ, "transport": "bt", "connected": True, "player_slot": 1}
-    plano = plano_de_radio.PlanoDoAdaptador(
-        endereco="aabbcc000009", apelido="Sala", jogadores=(1,),
-        agora=plano_de_radio.Ocupacao(controles=1, com_microfone=0,
-                                      slots_input=260.4, slots_teto=1600))
-    monkeypatch.setattr(plano_de_radio, "plano_por_adaptador",
-                        lambda *a, **k: {"aabbcc000009": plano})
-    conta = a08._conta_de_slots(pac.Contexto(state={"controllers": [dele]}))
-    # O `html.escape` é da TELA, não da frase: o alvo é `html`, e as aspas do
-    # nome do adaptador têm de sair escapadas ou o nome dela quebra a marcação.
-    assert conta == html.escape(plano_de_radio.linha_do_cabe_mais_um(plano)), (
-        f"a conta não é a frase do dono: {conta!r}")
-    assert "Sala" in conta, "o nome que ELA deu ao adaptador não chegou à frase"
-
-
-def test_o_declarado_que_nao_subiu_vem_antes_do_cabe_mais_um(
-    pac, a08, monkeypatch,
-) -> None:
-    """O que está errado AGORA vem antes do que se pode planejar — ordem do dono.
-
-    E ele existe porque ausência de notícia lida como notícia de sucesso é o
-    padrão que a queixa do Sackboy revelou: sem esta linha a tela mostraria
-    "está tudo certo" sobre uma ponte no chão.
-    """
-    from hefesto_dualsense4unix.integrations import plano_de_radio
-
-    dele = {"uniq": UNIQ, "transport": "bt", "connected": True}
-    plano = plano_de_radio.PlanoDoAdaptador(
-        endereco="aabbcc000009", apelido="Sala", jogadores=(1,),
-        com_mic_declarado=frozenset({CHAVE}),
-        agora=plano_de_radio.Ocupacao(controles=1, com_microfone=0,
-                                      slots_input=260.4, slots_teto=1600))
-    monkeypatch.setattr(plano_de_radio, "plano_por_adaptador",
-                        lambda *a, **k: {"aabbcc000009": plano})
-    conta = a08._conta_de_slots(pac.Contexto(state={"controllers": [dele]}))
-    pendente = html.escape(plano_de_radio.linha_do_declarado_que_nao_subiu(plano) or "")
-    cabe = html.escape(plano_de_radio.linha_do_cabe_mais_um(plano))
-    assert pendente and pendente in conta and cabe in conta
-    assert conta.index(pendente) < conta.index(cabe), (
-        "o que está errado agora tem de vir antes do que se pode planejar")
-
-
-def test_o_hcin_nunca_chega_a_conta(pac, a08, monkeypatch) -> None:
-    """Decisão M1: o índice é a VAGA, não o aparelho, e inverte entre boots."""
-    from hefesto_dualsense4unix.integrations import plano_de_radio
-
-    dele = {"uniq": UNIQ, "transport": "bt", "connected": True}
-    plano = plano_de_radio.PlanoDoAdaptador(
-        endereco="aabbcc000009", jogadores=(1,),
-        agora=plano_de_radio.Ocupacao(controles=1, slots_input=260.4,
-                                      slots_teto=1600))
-    monkeypatch.setattr(plano_de_radio, "plano_por_adaptador",
-                        lambda *a, **k: {"aabbcc000009": plano})
-    conta = a08._conta_de_slots(pac.Contexto(state={"controllers": [dele]}))
-    assert "hci" not in conta.lower(), f"o `hciN` chegou à tela: {conta!r}"
-    assert "aabbcc" not in conta.lower(), (
-        "o endereço de rádio chegou à tela — ele é chave de casamento e mais nada")
+    assert not hasattr(a08_conexoes, "_conta_de_slots")
+    pagina = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
+    assert 'data-campo="conta-de-slots"' not in pagina, (
+        "a página voltou a ter `conta-de-slots`, e o pacote não escreve mais nele")
 
 
 # ---------------------------------------------------------------------------
@@ -410,7 +340,7 @@ def test_o_hcin_nunca_chega_a_conta(pac, a08, monkeypatch) -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("endereco", ["luz-texto", "luz-espera", "conta-de-slots"])
+@pytest.mark.parametrize("endereco", ["luz-texto", "luz-espera"])
 def test_a_pagina_tem_o_endereco(endereco: str) -> None:
     """Campo sem endereço é pintura que cai no vazio — e dá verde calado.
 

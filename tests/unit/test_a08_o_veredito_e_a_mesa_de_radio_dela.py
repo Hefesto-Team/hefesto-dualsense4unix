@@ -40,12 +40,12 @@ só ele:
                                                    segura_a_cor`
  3   um `<i class="vst">` fora de                  `..._tem_um_interruptor_
      `aba08.veredito_do_checkup`, e regerar        por_estado_do_veredito`
- 4   `pistas` voltando a nascer só dos GRUPOS      `..._uma_pista_por_
-     de controle                                   adaptador` (e a irmã)
- 5   `<table class="tab">` sem `data-campo`        `..._a_tabela_dos_
+ 4   (caducou em 23/09/2026 — a régua de fatias    `..._uma_pista_por_
+     saiu com a seção velha)                       adaptador` (e a irmã)
+ 5   (caducou em 23/09/2026 — a tabela saiu)       `..._a_tabela_dos_
                                                    adaptadores_tem_endereco`
- 6   o `<i class="vaviso">` DEPOIS do `.onde`      `..._a_coluna_onde_dos_
-                                                   vizinhos_tem_endereco`
+ 6   (caducou em 23/09/2026 — a coluna "Onde"      `..._a_coluna_onde_dos_
+     saiu; o vizinho é selo)                       vizinhos_tem_endereco`
  7   (caducou em 13/09/2026 — o aviso da mesa      `..._nao_anexa_o_aviso_
      suja saiu da dica, FRASES-E-DICAS-02)         da_mesa_suja`
  8   (caducou em 13/09/2026 — a razão do           `..._a_razao_do_nascimento_
@@ -249,260 +249,15 @@ def test_a_linha_de_veredito_mora_acima_das_duas_colunas() -> None:
 
 
 # ---------------------------------------------------------------------------
-# A MESA DE RÁDIO — a tabela, a régua e a coluna "Onde"
+# A MESA DE RÁDIO SAIU DESTA RÉGUA — 23/09/2026, TRANSPLANTE-DA-SECAO-01.
+#
+# A tabela dos adaptadores, a régua de Desempenho e a coluna "Onde" dos vizinhos
+# saíram da tela com a seção velha: «Rádio e Adaptadores» é o
+# `mapa-do-radio.html` aprovado. O que elas prendiam continua preso, pela seção
+# nova, em `test_a_secao_do_radio_transplantada.py` — um cartão por adaptador
+# que o BlueZ enumera, o nome DELA no campo do cartão, e o vizinho como selo
+# com o endereço `vid:pid` do gesto.
 # ---------------------------------------------------------------------------
-class _Adaptador:
-    """O mínimo que `_html_dos_adaptadores` e a régua perguntam."""
-
-    def __init__(self, interface: str, no: str = "", devpath: str = "") -> None:
-        self.interface = interface
-        self.no = no or f"/sys/{interface}"
-        self.caminho = devpath or "3-1"
-        self.vid = "2357"
-        self.pid = "0604"
-        self.busnum = 3
-        self.devpath = devpath or "1"
-        self.painel = ""
-        self.atras_de_hub = False
-        self.controlador_pci = ""
-
-
-class _Mesa:
-    def __init__(self, adaptadores: object, radios: object = ()) -> None:
-        self.adaptadores = adaptadores
-        self.radios = radios
-        self.apertadas = ()
-
-
-class _Dongle:
-    """O `Dongle` do BlueZ tem as TRÊS pontas: endereço, `hciN` e nome."""
-
-    def __init__(self, endereco: str, interface: str, nome: str) -> None:
-        self.endereco = endereco
-        self.objeto = f"/org/bluez/{interface}"
-        self.nome = nome
-
-
-def _com_a_bancada(monkeypatch, adaptadores, dongles):  # type: ignore[no-untyped-def]
-    """Troca as duas leituras de máquina por uma bancada declarada."""
-    p = _pacote()
-    monkeypatch.setattr(p, "_MESA_DO_RADIO", _Mesa(adaptadores))
-    monkeypatch.setattr(p, "_DONGLES", tuple(dongles))
-    return p
-
-
-def test_a_tabela_dos_adaptadores_tem_uma_linha_por_adaptador(monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    """TRÊS adaptadores viram TRÊS linhas — e cada uma com o nome DELA.
-
-    A máquina desta casa tem três `2357:0604`, e é por isso que o nome importa:
-    a coluna do meio repete nos três, e o que os separa é o apelido do BlueZ.
-    """
-    p = _com_a_bancada(
-        monkeypatch,
-        [_Adaptador("hci0"), _Adaptador("hci1"), _Adaptador("hci2")],
-        [_Dongle("AA:BB:CC:00:00:01", "hci0", "Sala"),
-         _Dongle("AA:BB:CC:00:00:02", "hci1", "Extra"),
-         _Dongle("AA:BB:CC:00:00:03", "hci2", "")],
-    )
-    html = p._html_dos_adaptadores()
-    assert html.count("<tr>") == 4, (
-        f"a tabela saiu com {html.count('<tr>') - 1} linhas para três "
-        f"adaptadores (mais o cabeçalho)")
-    assert "Sala" in html and "Extra" in html, (
-        "o nome que ela deu ao adaptador não chegou à tabela")
-    assert p.SEM_NOME in html, (
-        "o adaptador sem apelido tinha de dizer a palavra do produto, e não "
-        "ficar em branco")
-    assert "TP-Link UB500" not in html and "Intel AX211" not in html, (
-        "a tabela ainda traz os modelos da bancada de exemplo do mockup")
-
-
-def test_a_tabela_nao_confunde_nao_li_com_nao_ha(monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    """Varredura FALHA e mesa VAZIA dizem coisas diferentes.
-
-    Ausência de leitura lida como ausência de aparelho é o defeito que esta
-    casa chama de *ausência de notícia lida como sucesso*.
-    """
-    p = _pacote()
-    monkeypatch.setattr(p, "_MESA_DO_RADIO", None)
-    monkeypatch.setattr(p, "_dongles", lambda recarregar=False: None)
-    # `_mesa_do_radio()` só devolve `None` quando a leitura levanta.
-    monkeypatch.setattr(p, "_mesa_do_radio", lambda recarregar=False: None)
-    falhou = p._html_dos_adaptadores()
-
-    monkeypatch.setattr(p, "_mesa_do_radio", lambda recarregar=False: _Mesa([]))
-    vazia = p._html_dos_adaptadores()
-
-    assert falhou != vazia, (
-        "a tabela diz a mesma coisa quando não conseguiu ler e quando leu e "
-        "não achou nada — são afirmações opostas")
-    assert p._NAO_CONSEGUI_LER_OS_ADAPTADORES in falhou
-    assert p._NENHUM_ADAPTADOR in vazia
-
-
-def test_a_tabela_dos_adaptadores_tem_endereco() -> None:
-    """Sem o `data-campo` no `<table>`, o pacote pinta no vazio.
-
-    ARRANQUE A CURA: tire o `data-campo="adaptadores-tabela"` do `aba08.py`,
-    regenere, e este teste reprova.
-    """
-    html = BANCADA.read_text()
-    assert re.search(r'<table class="tab" data-campo="adaptadores-tabela" '
-                     r'data-hef-alvo="html">', html), (
-        "a tabela de adaptadores voltou a ser HTML fixo do mockup — ela é a "
-        "peça mais lida desta aba, e era cenário")
-
-
-def test_a_regua_tem_uma_pista_por_adaptador(monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    """TRÊS adaptadores e NINGUÉM no rádio ainda são três pistas.
-
-    Era UMA, sem nome: `pistas` nascia dos GRUPOS de controle, e com os dois
-    DualSense dela no cabo a seção Desempenho respondia *"cabe mais um controle
-    no rádio?"* mostrando uma barra sobre três adaptadores.
-
-    ARRANQUE A CURA: volte o `pistas` a nascer só de `grupos` e este teste
-    reprova.
-    """
-    from hefesto_dualsense4unix.interface.pacotes import Contexto
-
-    p = _com_a_bancada(
-        monkeypatch,
-        [_Adaptador("hci0"), _Adaptador("hci1"), _Adaptador("hci2")],
-        [_Dongle("AA:BB:CC:00:00:01", "hci0", "Sala"),
-         _Dongle("AA:BB:CC:00:00:02", "hci1", "Extra"),
-         _Dongle("AA:BB:CC:00:00:03", "hci2", "Terceiro")],
-    )
-    uniq = "aa:bb:cc:00:00:09"
-    mesa = [{"pref": "p1", "uniq": uniq, "jogador": 1, "cor": "white",
-             "nome": "White", "via": "USB", "transporte": "usb",
-             "mascara": "DualSense"}]
-    conectados = [{"uniq": uniq, "transport": "usb", "connected": True,
-                   "battery_pct": 100}]
-    html = p._regua_do_radio(
-        Contexto(state={"controllers": conectados}, mesa=mesa,
-                 conectados=conectados, estados={}))
-
-    quantas = html.count('class="pista"')
-    assert quantas == 3, (
-        f"a régua saiu com {quantas} pistas para três adaptadores — ela é a que "
-        f"responde 'cabe mais um controle no rádio?'")
-    for nome in ("Sala", "Extra", "Terceiro"):
-        assert nome in html, (
-            f"a pista do adaptador {nome!r} saiu sem o nome que ela deu — era "
-            f"'Sem nome' para os três, que é o problema que os nomes vieram "
-            f"resolver")
-
-
-def test_a_regua_nao_empresta_o_adaptador_do_vizinho(monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    """Adaptador sem gente fica com a pista VAZIA, não com a fatia de outro."""
-    from hefesto_dualsense4unix.interface.pacotes import Contexto
-
-    p = _com_a_bancada(
-        monkeypatch, [_Adaptador("hci0"), _Adaptador("hci1")],
-        [_Dongle("AA:BB:CC:00:00:01", "hci0", "Sala"),
-         _Dongle("AA:BB:CC:00:00:02", "hci1", "Extra")])
-    mesa: list[dict[str, object]] = []
-    html = p._regua_do_radio(
-        Contexto(state={"controllers": []}, mesa=mesa, conectados=[], estados={}))
-    assert html.count("Nenhum controle neste rádio") == 2, (
-        "com dois adaptadores e ninguém no rádio, as DUAS pistas têm de dizer "
-        "que estão vazias — a frase é do dono (`html_da_regua_do_radio`)")
-
-
-def test_o_endereco_de_radio_nao_vai_para_a_tela(monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    """O MAC do adaptador é chave de casamento, e mais nada.
-
-    Há dois portões de anonimato nesta casa, e a régua e a tabela passaram a
-    ler o BlueZ — que entrega endereço. Ele não pode atravessar.
-    """
-    from hefesto_dualsense4unix.interface.pacotes import Contexto
-
-    endereco = "AA:BB:CC:00:00:01"
-    p = _com_a_bancada(monkeypatch, [_Adaptador("hci0")],
-                       [_Dongle(endereco, "hci0", "Sala")])
-    saidas = [p._html_dos_adaptadores(),
-              p._regua_do_radio(Contexto(state={"controllers": []}, mesa=[],
-                                         conectados=[], estados={}))]
-    for html in saidas:
-        assert endereco not in html and endereco.lower() not in html, (
-            "o endereço do adaptador chegou à tela — ele é chave de casamento "
-            "entre o sysfs e o BlueZ, nunca texto de tela")
-
-
-# ---------------------------------------------------------------------------
-# A COLUNA "ONDE" DOS RÁDIOS VIZINHOS
-# ---------------------------------------------------------------------------
-def test_a_coluna_onde_dos_vizinhos_tem_endereco() -> None:
-    """Um `.onde` por bloco `.viz`, com o interruptor do aviso antes dele.
-
-    A ORDEM IMPORTA: a cor chega pelo combinador `~`, que só alcança IRMÃOS
-    POSTERIORES. Com o `<i>` depois do `<span>`, o amarelo nunca acende.
-    """
-    html = BANCADA.read_text()
-    blocos = re.findall(r'<div class="viz">.*?</div>', html)
-    assert blocos, "nenhum bloco de rádio vizinho no desenho"
-    for bloco in blocos:
-        assert 'data-campo="vizinho-onde"' in bloco, (
-            "um bloco de vizinho ficou sem a coluna 'Onde' — a linha do "
-            "Check-up acusa 'dois rádios em entradas vizinhas' e não diz qual")
-        assert bloco.index('data-campo="vizinho-onde-dica"') < bloco.index(
-            'data-campo="vizinho-onde"'), (
-            "o interruptor do aviso nasceu DEPOIS da linha que ele pinta — o "
-            "`~` do CSS só alcança irmãos posteriores, e o amarelo nunca acende")
-
-
-def test_o_onde_e_o_aviso_saem_do_produto(monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    """Um rádio colado num adaptador ACUSA; os outros calam.
-
-    As duas frases são de `secao_mesa` — `_onde_esta_o_radio` e
-    `_avisos_de_vizinhanca` —, e a segunda garante **um** aviso por par: são
-    dois aparelhos e UM problema, e marcar os dois leria como dois.
-    """
-    class _Radio:
-        def __init__(self, no: str, devpath: str) -> None:
-            self.no = no
-            self.caminho = devpath
-            self.vid = "3554"
-            self.pid = "fa09"
-            self.busnum = 3
-            self.devpath = devpath
-            self.painel = ""
-            self.atras_de_hub = True
-            self.controlador_pci = ""
-            self.usb3 = False
-
-    p = _pacote()
-    adaptador = _Adaptador("hci0", no="/sys/3-1.1.1", devpath="1.1.1")
-    perto = _Radio("/sys/3-1.1.2", "1.1.2")
-    longe = _Radio("/sys/4-3", "3")
-    mesa = _Mesa([adaptador], (perto, longe))
-    mesa.apertadas = ((adaptador.no, perto.no),)
-
-    onde = p._onde_dos_vizinhos(mesa)
-    dicas = p._dicas_dos_vizinhos(mesa)
-    assert len(onde) == 2 and len(dicas) == 2, (
-        "a coluna 'Onde' tem de ter uma resposta por rádio — a tela endereça "
-        "por POSIÇÃO, e uma lista curta cala o rádio do fim")
-    assert dicas[0] and not dicas[1], (
-        f"o aviso de vizinhança saiu {dicas!r}: ele tem de acusar o rádio "
-        f"colado no adaptador e calar sobre o outro")
-    assert onde[0] != onde[1], (
-        "os dois rádios dizem a mesma coisa na coluna 'Onde', e só um está "
-        "encostado no adaptador")
-
-
-def test_o_vizinho_onde_chega_ao_pacote() -> None:
-    """A ligação — as duas listas saem do `pacote()`, na mesma ordem do nome."""
-    p = _pacote()
-    saiu = p.pacote(_ctx())
-    assert "vizinho-onde" in saiu and "vizinho-onde-dica" in saiu, (
-        "o `pacote()` não emite a coluna 'Onde' dos vizinhos")
-    assert len(saiu["vizinho-onde"]) == len(saiu["vizinho-nome"]), (
-        "a coluna 'Onde' e a do nome têm comprimentos diferentes — a tela "
-        "distribui as duas por POSIÇÃO, e um descompasso escreve o 'onde' de "
-        "um rádio na linha de outro")
-
-
 # ---------------------------------------------------------------------------
 # O CONTEXTO VIVO — a mesa de dois que faz o `pacote()` correr inteiro
 # ---------------------------------------------------------------------------

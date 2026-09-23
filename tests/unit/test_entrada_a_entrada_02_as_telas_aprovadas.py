@@ -40,6 +40,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import types
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -290,8 +291,15 @@ def _lugar(pci: str, devpath: str) -> str:
 _TELA = re.compile(
     r'<div class="tela-nova" id="(mapear-entrada-a-entrada[^"]*)">(.*?)\n</div>', re.S
 )
-_BOTAO = re.compile(r'<a class="(?:btn[^"]*|tn-x)"[^>]*>(.*?)</a>', re.S)
-_CONTADOR = re.compile(r'<span class="ce-cont">(.*)</span>$', re.M)
+# DESDE 23/09/2026 (TRANSPLANTE-DA-SECAO-01) a página FIA as três telas: cada
+# botão carrega o `data-gesto` que o pacote ouve, e as faces viraram `<button>`
+# porque a face vai no `value` — o ouvinte do piloto manda `el.value` como
+# `valor`, e uma âncora não tem `value`. Os outros continuam `<a>`.
+_BOTAO = re.compile(r'<(?:a|button) class="(?:btn[^"]*|tn-x)"[^>]*>(.*?)</(?:a|button)>', re.S)
+_GESTO_DA_TAG = re.compile(
+    r'<(?:a|button) class="(?:btn[^"]*|tn-x)"[^>]*?data-gesto="([^"]+)"[^>]*>(.*?)</(?:a|button)>',
+    re.S)
+_CONTADOR = re.compile(r'<span class="ce-cont"[^>]*>(.*)</span>$', re.M)
 
 
 def _texto(fragmento: str) -> str:
@@ -352,6 +360,54 @@ def test_cada_botao_das_tres_telas_tem_gesto_no_motor() -> None:
     for rotulo, (gesto, _args) in GESTO_DO_BOTAO.items():
         assert callable(getattr(ee.LacoDaEntrada, gesto, None)), (rotulo, gesto)
     assert set(GESTO_DO_BOTAO) == vistos, "gesto declarado para um botão que a página não tem"
+
+
+class _LacoQueAnota:
+    """O motor de mentira: anota qual método o gesto do pacote chamou, e com o quê."""
+
+    def __init__(self) -> None:
+        self.chamou: list[tuple[str, tuple[Any, ...]]] = []
+
+    def __getattr__(self, nome: str) -> Any:
+        if not callable(getattr(ee.LacoDaEntrada, nome, None)):
+            raise AttributeError(nome)
+
+        def anotar(*args: Any) -> Any:
+            self.chamou.append((nome, args))
+            return types.SimpleNamespace(gravou=True)
+
+        return anotar
+
+
+def test_cada_botao_da_pagina_chama_o_metodo_que_o_contrato_diz(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O fio que a TRANSPLANTE pôs: o `data-gesto` de cada botão, CLICADO no
+    pacote, chama o método do motor que o contrato diz — com a face certa.
+
+    Sem isto, «Já chega por hoje» poderia chamar `pular` e o teste de cima não
+    veria: ele só confere que o RÓTULO está no contrato.
+
+    MORDIDA: troque, no gerador, o `data-gesto` do «Não sei onde fica» por
+    `entrada-parar` e regere — reprova nomeando o botão.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import GESTOS
+    from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
+
+    for ancora, tela in _as_tres_telas().items():
+        tags = _GESTO_DA_TAG.findall(tela)
+        assert len(tags) == len(_botoes(tela)), (
+            f"{ancora}: um botão da tela ficou sem `data-gesto`")
+        for gesto, rotulo in tags:
+            rotulo = _texto(rotulo)
+            dono = GESTOS.get(("08-conexoes.html", gesto))
+            assert dono is not None, f"{ancora}: «{rotulo}» chama `{gesto}`, que não tem dono"
+            laco = _LacoQueAnota()
+            monkeypatch.setattr(a08, "_laco", lambda laco=laco: laco)
+            dono(None, {"valor": rotulo if rotulo in ee.FACES else "", "evento": "click"}, None)
+            assert laco.chamou == [GESTO_DO_BOTAO[rotulo]], (
+                f"{ancora}: «{rotulo}» chamou {laco.chamou}, e o contrato diz "
+                f"{GESTO_DO_BOTAO[rotulo]}")
 
 
 # ---------------------------------------------------------------------------

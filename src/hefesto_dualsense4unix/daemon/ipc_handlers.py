@@ -7603,7 +7603,12 @@ class IpcHandlersMixin:
         Volta assim que a trava do rádio vem — no máximo 5 s de espera, decisão
         de quem coordena —, com o movimento «esperando»; o resto segue num fio e
         chega pelo ``state_full["radio_central"]``. ``status: "ocupado"`` é a
-        recusa: o botão treme, sem recado, e nada mudou.
+        recusa, e ela tem DUAS causas com a mesma resposta: a trava do rádio não
+        veio no prazo do gesto, ou OUTRO MOVIMENTO ESTÁ EM CURSO — um por vez
+        (``central_do_radio.MOTIVO_OCUPADO``). Nas duas o botão treme, sem
+        recado, e nada mudou; a tela já apaga os botões de mover enquanto um
+        movimento espera (``a08_conexoes._ocupado``), e esta recusa é a segunda
+        trava, para o pedido que chega entre dois tiques.
         """
         from hefesto_dualsense4unix.integrations.central_do_radio import MOTIVO_OCUPADO
 

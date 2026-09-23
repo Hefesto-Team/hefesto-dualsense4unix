@@ -129,7 +129,6 @@ from hefesto_dualsense4unix.app.actions.config.moldura import (
 from hefesto_dualsense4unix.integrations.apelido_do_dongle import (
     Dongle,
     ler_os_dongles,
-    renomear_o_dongle,
 )
 from hefesto_dualsense4unix.integrations.censo_do_barramento import (
     GRAU_LIDO,
@@ -1689,23 +1688,22 @@ class _PainelDaMesa:
         return False
 
     def _ao_salvar_o_nome(self, campo: Any, endereco: str) -> None:
-        """Escreve o nome no BlueZ — e só quando ele MUDOU.
+        """Grava o nome do LUGAR do adaptador — e só quando ele MUDOU.
 
-        A comparação é contra `Dongle.nome`, que é o alias já limpo da costura.
-        Sem ela, cada troca de aba reescreveria o alias dos três adaptadores
-        com o valor que eles já têm — escrita à toa num barramento de sistema,
-        e uma delas cairia bem em cima do prefixo que segura o Pro.
+        UM ESCRITOR SÓ — TRANSPLANTE-DA-SECAO-01, item 1 (23/09/2026). Esta
+        janela escrevia o `Alias` no BlueZ por endereço (`renomear_o_dongle`),
+        a aba 08 também, e o `bt_active_mode.sh` trocava o apelido pelo nome do
+        lugar no tique seguinte: três escritores do mesmo nome, e o último a
+        escrever ganhava. Agora o nome é da ENTRADA
+        (`entrada_a_entrada.dar_nome`, no `maquina.json`), e o `Alias` é a
+        projeção que o watchdog escreve.
 
-        Não relê para conferir, e é medido: a escrita do `Alias` é assíncrona,
-        e ler logo depois devolve o valor ANTIGO
-        (`integrations/apelido_do_dongle`). Uma conferência com espera dentro
-        travaria a janela por um segundo a cada salvamento. Em vez disso a
-        tabela guarda o que o BlueZ respondeu ao `set-property`, que é o que se
-        pode afirmar.
+        A comparação é contra `Dongle.nome`, que é o alias já limpo da costura:
+        sem ela, cada troca de aba regravaria o nome que já está lá.
 
-        Roda na thread da tela de propósito: é UM `busctl` de escrita, no gesto
-        dela, e o resultado tem de estar na mão antes de a linha ser redesenhada
-        — ao contrário da leitura, que são treze e acontece sozinha.
+        O ESPELHO DE MEMÓRIA fica, pela razão de sempre: o `Alias` só muda no
+        próximo tique do watchdog, e o próximo `focus-out` compararia contra o
+        nome velho e gravaria o mesmo nome de novo.
         """
         alvo = next(
             (d for d in self._dongles if d.endereco == endereco),
@@ -1716,14 +1714,25 @@ class _PainelDaMesa:
         novo = campo.get_text().strip()
         if novo == alvo.nome:
             return
-        try:
-            feito = renomear_o_dongle(endereco, novo, dongles=self._dongles)
-        except Exception:
-            logger.warning("apelido_do_dongle_falhou", exc_info=True)
-            return
-        if not feito.aplicado:
+        interface = alvo.objeto.rsplit("/", 1)[-1]
+        lugar = next((str(a.lugar or "") for a in self._mesa.adaptadores
+                      if a.interface == interface), "")
+        if not lugar:
+            # O ADAPTADOR DA PLACA-MÃE não pendura em entrada: não há lugar
+            # onde o nome morar, e o campo volta ao que era.
             with contextlib.suppress(Exception):
-                campo.set_tooltip_text(_(feito.porque) if feito.porque else _(_DICA_DO_NOME))
+                campo.set_text(alvo.nome)
+            return
+        try:
+            from hefesto_dualsense4unix.integrations.entrada_a_entrada import dar_nome
+
+            feito = dar_nome(lugar, novo)
+        except Exception:
+            logger.warning("nome_do_lugar_falhou", exc_info=True)
+            return
+        if not feito.gravou:
+            with contextlib.suppress(Exception):
+                campo.set_tooltip_text(_(_DICA_DO_NOME))
             return
         # O espelho de memória substitui a releitura que não se pode fazer. Sem
         # ele, o próximo `focus-out` compararia contra o nome velho e mandaria
@@ -1731,7 +1740,7 @@ class _PainelDaMesa:
         self._dongles = tuple(
             Dongle(
                 endereco=d.endereco,
-                alias=feito.alias,
+                alias=novo,
                 nome_do_sistema=d.nome_do_sistema,
                 hospeda_nintendo=d.hospeda_nintendo,
                 ligado=d.ligado,

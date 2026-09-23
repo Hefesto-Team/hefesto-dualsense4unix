@@ -104,7 +104,17 @@ ESCREVEM = {
     "clear_mask",
     "autoswitch_lock_set",     # grava a trava da troca automática
     "save_autoswitch_locked",  # o escritor por baixo dela
-    "renomear_o_dongle",       # grava o alias do adaptador no BlueZ
+    # `renomear_o_dongle` SAIU DAQUI em 23/09/2026 (TRANSPLANTE-DA-SECAO-01):
+    # o nome do adaptador passou a ser do LUGAR e tem UM escritor
+    # (`entrada_a_entrada.dar_nome`, no `maquina.json`); a porta antiga ficou
+    # sem chamador na tela, e um nome sem chamador não acusa coisa alguma.
+    "dar_nome",                # grava o nome do lugar no `maquina.json` dela
+    "escrever_propriedade",    # grava o `Alias` de um aparelho no BlueZ dela
+    # AS DUAS RESPOSTAS DO «MAPEAR ENTRADA A ENTRADA» (a cerimônia da 08): a
+    # face e o «Não alcanço» vão ao `maquina.json` dela na hora.
+    "responder",
+    "nao_alcanco",
+    "mic_canal_set_detalhado",  # liga ou cala o microfone dela, ao vivo
     "rumble_motores_set",      # grava a barra de cada motor no perfil dela
     "rumble_policy_set_checked",  # muda o degrau de vibração de TODOS, ao vivo
     "set_text",                # `Gtk.Clipboard.set_text` — a área dela
@@ -183,7 +193,16 @@ METODOS_QUE_ESCREVEM = {
     "gamepad.mask.set",
     "profile.save",
     "autoswitch.lock",
+    # O RÁDIO DELA — TRANSPLANTE-DA-SECAO-01, 23/09/2026. `radio.mover` tira o
+    # controle de um adaptador e o pareia noutro (mexe nos pareamentos do
+    # BlueZ dela); `radio.ponte.ligar_aqui` sobe uma ponte de som além do
+    # limite do adaptador.
+    "radio.mover",
+    "radio.ponte.ligar_aqui",
 }
+
+#: As portas de IPC do `ponte.py` cujo PRIMEIRO argumento é o método.
+_CHAMAM_O_METODO = ("chamar", "chamar_detalhado", "resultado")
 
 
 #: AS ISENÇÕES, e cada uma carrega a MEDIÇÃO que a sustenta.
@@ -312,7 +331,7 @@ def _portas(fn, _visto: frozenset[str] = frozenset(),
             achadas.add(nome)
             continue
         # `p.chamar("machine.declare", …)` — o método vai no primeiro argumento
-        if nome in ("chamar", "chamar_detalhado") and no.args:
+        if nome in _CHAMAM_O_METODO and no.args:
             alvo = no.args[0]
             if isinstance(alvo, ast.Constant) and alvo.value in METODOS_QUE_ESCREVEM:
                 achadas.add(str(alvo.value))
@@ -537,22 +556,23 @@ def test_a_regua_desce_pelo_ajudante_do_mesmo_modulo() -> None:
     seja, a cura podia ser desfeita em silêncio — que é a definição de cura sem
     régua.
 
-    Aqui a profundidade é medida DIRETAMENTE, no caso que a revelou: o gesto
-    `08-conexoes·renomear-adaptador` não chama `renomear_o_dongle`; ele chama
-    `_gravar_o_apelido`, do mesmo arquivo, e é o ajudante que grava no BlueZ.
+    Aqui a profundidade é medida DIRETAMENTE, no herdeiro do caso que a
+    revelou: o gesto `08-conexoes·adaptador-renomear` (era `renomear-adaptador`
+    até 23/09/2026, TRANSPLANTE-DA-SECAO-01) não chama `dar_nome`; ele chama
+    `_gravar_o_nome`, do mesmo arquivo, e é o ajudante que grava no disco dela.
     """
     gestos = _gestos_registrados()
-    fn = gestos[("08-conexoes.html", "renomear-adaptador")]
+    fn = gestos[("08-conexoes.html", "adaptador-renomear")]
 
-    assert "renomear_o_dongle" in _portas(fn), (
+    assert "dar_nome" in _portas(fn), (
         "a régua parou de descer pelos ajudantes do módulo: ela voltou a ler "
-        "só o corpo do gesto, e é assim que `renomear-adaptador` ficou "
+        "só o corpo do gesto, e é assim que o nome do adaptador ficou "
         "desprotegido até 04/09/2026."
     )
     # E a superfície do próprio gesto NÃO tem a porta — é isso que torna o
     # caso uma prova de profundidade, e não uma coincidência.
     fonte = inspect.getsource(fn)
-    assert "renomear_o_dongle" not in fonte.split('"""')[-1], (
+    assert "dar_nome(" not in fonte.split('"""')[-1], (
         "o gesto passou a chamar a porta DIRETAMENTE; este caso deixou de "
         "provar a descida. Escolha outro gesto que grave por ajudante."
     )

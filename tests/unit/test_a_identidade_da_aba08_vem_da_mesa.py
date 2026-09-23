@@ -75,15 +75,19 @@ def test_sem_congelado_na_bancada_da_08() -> None:
 def test_os_enderecos_da_identidade_existem_na_bancada() -> None:
     """Os quatro endereços desta cura, no arquivo que o produto vai renderizar.
 
-    SÃO QUATRO E NÃO UM: `nome` e `plastico` são POR CONTROLE; `regua-do-radio`
+    SÃO QUATRO E NÃO UM: `nome` e `plastico` são POR CONTROLE; `radio-sala`
     e `aparelhos` são blocos que se trocam inteiros porque o número de filhos
     deles muda com a mesa dela. O `fita-chip` é o quinto e mora na fita, que é
     das dez abas — ver `test_os_chips_da_fita_tem_endereco`.
+
+    O `regua-do-radio` VIROU `radio-sala` EM 23/09/2026: a régua de Desempenho
+    saiu com a seção antiga, e o cartão de cada adaptador (a sala do desenho
+    aprovado, TRANSPLANTE-DA-SECAO-01) é quem nomeia o controle que está nele.
     """
     html = BANCADA.read_text(encoding="utf-8")
     for endereco in ('data-campo="nome" data-hef-alvo="html"',
                      'data-campo="plastico" data-hef-alvo="cor"',
-                     'data-campo="regua-do-radio" data-hef-alvo="html"',
+                     'data-campo="radio-sala" data-hef-alvo="html"',
                      'data-campo="aparelhos" data-hef-alvo="html"'):
         assert endereco in html, (
             f"o endereço `{endereco}` sumiu da bancada da 08 — sem ele o produto "
@@ -126,6 +130,10 @@ def test_os_chips_da_fita_tem_endereco() -> None:
 # ---------------------------------------------------------------------------
 # (b) O PACOTE ESCREVE — e é esta metade que impede a maquiagem
 # ---------------------------------------------------------------------------
+#: O adaptador de prova, na faixa sintética da casa.
+ADAPTADOR = "aa:bb:cc:00:00:09"
+
+
 def _ctx(cor_do_p2: str = "galactic-purple") -> Any:
     """Uma mesa de dois: um no cabo com cor lida, um no rádio (cor variável)."""
     from hefesto_dualsense4unix.interface.pacotes import Contexto
@@ -141,10 +149,14 @@ def _ctx(cor_do_p2: str = "galactic-purple") -> Any:
     ]
     conectados = [
         {"uniq": p1, "transport": "usb", "connected": True, "battery_pct": 100},
-        {"uniq": p2, "transport": "bt", "connected": True, "battery_pct": 64},
+        {"uniq": p2, "transport": "bt", "connected": True, "battery_pct": 64,
+         "adaptador": ADAPTADOR},
     ]
-    return Contexto(state={"controllers": conectados}, mesa=mesa,
-                    conectados=conectados, estados={})
+    # O ADAPTADOR vem do `radio_ar` que o daemon publica: sem ele a sala não tem
+    # onde sentar o controle do rádio, e a régua do nome mediria uma sala vazia.
+    return Contexto(state={"controllers": conectados,
+                           "radio_ar": {ADAPTADOR: {"pontes": [], "n_max": 2}}},
+                    mesa=mesa, conectados=conectados, estados={})
 
 
 def test_o_pacote_escreve_o_rotulo_da_mesa() -> None:
@@ -188,26 +200,29 @@ def test_sem_cor_lida_nao_se_inventa_nem_se_escreve_nao_sei() -> None:
             f"a palavra interna da mesa vazou para a tela: {c['nome']!r}")
         for do_desenho in ("Cosmic Red", "Starlight Blue", "Galactic Purple"):
             assert do_desenho not in c["nome"]
-    inteiro = c["nome"] + str(pac.get("regua-do-radio") or "")
+    inteiro = c["nome"] + str(pac.get("radio-sala") or "")
     assert "Não sei" not in inteiro, (
-        "`Não sei` apareceu na régua do rádio — foi o vazamento medido em 03/09, "
-        "no `title` da fatia: *'Não sei — 260,4 turnos de entrada'*")
+        "`Não sei` apareceu na sala do rádio — foi o vazamento medido em 03/09, "
+        "no `title` da régua antiga: *'Não sei — 260,4 turnos de entrada'*")
 
 
-def test_a_regua_do_radio_e_um_bloco_e_nomeia_quem_esta_na_mesa() -> None:
-    """A régua de Desempenho nasce do produto, com os controles da mesa.
+def test_a_sala_do_radio_e_um_bloco_e_nomeia_quem_esta_na_mesa() -> None:
+    """A sala do rádio nasce do produto, com os controles da mesa.
 
-    ELA É UM BLOCO e não um campo por vez porque o `title` de cada fatia nomeia
-    o plástico — e `title` não tem alvo no `escrever()` do piloto.
+    ERA A RÉGUA DE DESEMPENHO até 23/09/2026 (`regua-do-radio`, com pista e
+    legenda); a seção virou o desenho aprovado (TRANSPLANTE-DA-SECAO-01) e a
+    sala é o bloco que a substitui. CONTINUA UM BLOCO pela mesma razão: o
+    `title` de cada linha nomeia o plástico — e `title` não tem alvo no
+    `escrever()` do piloto.
     """
-    html = str(_pacote().pacote(_ctx()).get("regua-do-radio") or "")
-    assert 'class="pista"' in html and 'class="leg"' in html, (
-        "a régua do rádio saiu sem pista ou sem legenda")
+    html = str(_pacote().pacote(_ctx()).get("radio-sala") or "")
+    assert 'class="lugar' in html and 'class="linha' in html, (
+        "a sala do rádio saiu sem o cartão do adaptador ou sem a linha do controle")
     assert "Galactic Purple" in html, (
-        "a régua do rádio não nomeou o controle que está NO rádio")
+        "a sala do rádio não nomeou o controle que está NO rádio")
     for do_desenho in ("Cosmic Red", "Starlight Blue"):
         assert do_desenho not in html, (
-            f"a régua do rádio trouxe `{do_desenho}`, que é do desenho")
+            f"a sala do rádio trouxe `{do_desenho}`, que é do desenho")
 
 
 def test_o_rotulo_tem_um_dono_so() -> None:
@@ -222,8 +237,9 @@ def test_o_rotulo_tem_um_dono_so() -> None:
     """
     fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/aba08.py").read_text(
         encoding="utf-8")
-    for linha in ("rotulo = _pacote08.rotulo_do_controle",
-                  "tinta_legivel = _pacote08.tinta_legivel"):
+    # A TINTA SAIU EM 23/09/2026 com a régua de Desempenho, a única que a usava
+    # (TRANSPLANTE-DA-SECAO-01); o rótulo continua com um dono só.
+    for linha in ("rotulo = _pacote08.rotulo_do_controle",):
         assert linha in fonte, (
             f"`{linha}` sumiu do gerador — o rótulo do plástico voltou a ter "
             f"duas escritas, e duas escritas divergem caladas")
