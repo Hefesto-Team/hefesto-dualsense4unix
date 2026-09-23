@@ -36,7 +36,11 @@ devolvida com md5 conferido):
   devolveu ao vanilla, e o hash do ``device.c`` não confere;
 - fazer ``ja_construido`` devolver sempre 1 →
   ``test_com_os_debs_no_cache_a_corrida_nao_baixa_nem_compila`` reprova: o
-  ``curl`` de mentira é chamado.
+  ``curl`` de mentira é chamado;
+- trocar o ``! aead_do_kernel_disponivel`` do test-mesh-crypto por ``true`` →
+  ``test_o_unit_do_bluez_so_perdoa_a_falha_que_a_maquina_explica`` reprova;
+- acrescentar ``sudo apt-get install`` ao script →
+  ``test_o_script_nao_instala_nada`` reprova.
 """
 from __future__ import annotations
 
@@ -417,6 +421,45 @@ def test_revisao_antiga_so_se_reconstroi_fora_do_cache_do_install(bancada):
     )
     assert proc.returncode == 2, proc.stdout + proc.stderr
     assert "HEFESTO_BLUEZ_CACHE" in proc.stderr
+
+
+def _perdoa(tmp_path: Path, teste: str, *, aead_disponivel: bool) -> bool:
+    """Roda a `falha_explicada_pela_maquina` do script com um python3 de mentira.
+
+    O python3 de mentira responde a pergunta da AF_ALG: sai 0 quando o AEAD do
+    kernel está disponível, 1 quando não. Nada é compilado.
+    """
+    binarios = tmp_path / f"bin-{int(aead_disponivel)}"
+    binarios.mkdir(exist_ok=True)
+    python3 = binarios / "python3"
+    python3.write_text(f"#!/bin/sh\nexit {0 if aead_disponivel else 1}\n", encoding="utf-8")
+    python3.chmod(0o755)
+    programa = (
+        "set -u\n"
+        f"eval \"$(sed -n '/^aead_do_kernel_disponivel() {{/,/^}}/p; "
+        f"/^falha_explicada_pela_maquina() {{/,/^}}/p' '{_script()}')\"\n"
+        f"falha_explicada_pela_maquina '{teste}'\n"
+    )
+    env = dict(os.environ)
+    env["PATH"] = f"{binarios}{os.pathsep}{env.get('PATH', '')}"
+    proc = subprocess.run(
+        ["bash", "-c", programa], env=env, capture_output=True, text=True, timeout=30
+    )
+    assert proc.returncode in (0, 1), proc.stderr
+    return proc.returncode == 0
+
+
+def test_o_unit_do_bluez_so_perdoa_a_falha_que_a_maquina_explica(tmp_path):
+    """O test-mesh-crypto só é perdoado com o AEAD do kernel medido AUSENTE.
+
+    Medido em 23/09/2026: a máquina dela desliga o algif_aead (CVE-2026-31431)
+    e o test-mesh-crypto reprova ali, sem ligar nada de profiles/input. Um
+    perdão incondicional esconderia a mesma falha numa máquina onde ela é do
+    código; um perdão por nome deixaria passar qualquer outro teste.
+    """
+    assert _perdoa(tmp_path, "unit/test-mesh-crypto", aead_disponivel=False)
+    assert not _perdoa(tmp_path, "unit/test-mesh-crypto", aead_disponivel=True)
+    assert not _perdoa(tmp_path, "unit/test-hog", aead_disponivel=False)
 
 
 def _sem_texto_entre_aspas(linha: str) -> str:
