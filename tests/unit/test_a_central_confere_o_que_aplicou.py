@@ -243,7 +243,7 @@ def test_o_fone_confere_pelo_connected_do_destino(
 
     feito = central.mover(FONE, QUARTO)
 
-    assert feito.controle is False
+    assert feito.e_controle is False
     assert feito.estado == cr.CHEGOU
     assert mundo.objeto(QUARTO, FONE)["Connected"] is True
     assert mundo.lapides == [(SALA, FONE)]
@@ -458,8 +458,10 @@ def test_o_publicado_so_tem_os_tres_estados_e_nenhum_texto_de_tela(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
     central = _central(dono, mundo, relogio)
-    _aplicar_que_falha(mundo, relogio, central)
+    # O «não chegou» vem ANTES do «esperando»: com um movimento em curso, nenhum
+    # outro começa — nem para acabar «não chegou» (A-COSTURA-DA-ONDA-2-01, item 1).
     central.mover("aa:bb:cc:00:00:9e", QUARTO)
+    _aplicar_que_falha(mundo, relogio, central)
 
     publicado = central.publicar()
 
@@ -470,7 +472,7 @@ def test_o_publicado_so_tem_os_tres_estados_e_nenhum_texto_de_tela(
     assert estados == {cr.ESPERANDO, cr.NAO_CHEGOU}
     for movimento in publicado["movimentos"]:
         assert set(movimento) == {
-            "aparelho", "destino", "estado", "passo", "motivo", "origens", "controle", "quando"
+            "aparelho", "destino", "estado", "passo", "motivo", "origens", "e_controle", "quando"
         }
 
 

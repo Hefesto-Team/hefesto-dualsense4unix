@@ -52,6 +52,13 @@ Rodar duas vezes não move nada duas vezes: o mover em curso devolve o mesmo
 movimento, e o aparelho que já está no destino, sem bond em outro lugar, volta
 «chegou» sem uma escrita no rádio. Nada aqui cria nó de som.
 
+UM POR VEZ, TAMBÉM NO ARRASTAR (A-COSTURA-DA-ONDA-2-01)
+======================================================
+Com um movimento em curso — no gesto, ou aplicado e ainda «esperando» a
+conferência, já sem a trava —, nenhum outro começa: o pedido volta
+:data:`MOTIVO_OCUPADO`, e o botão treme. A conferida é feita duas vezes, antes
+e DEPOIS de pegar a trava, porque o outro pode nascer enquanto este espera.
+
 O «CONECTAR» (D8) é o mesmo caminho sem alvo: a janela abre no destino com
 mais vaga de ponte (:func:`plano_de_radio.ordem_dos_destinos`), e o controle
 que aparecer nela é o que ela está segurando.
@@ -118,7 +125,10 @@ PASSO_FIM = "fim"
 
 # --- por que um movimento acabou como acabou (chaves de máquina) ------------
 
-#: A trava do rádio não veio no prazo do gesto — o botão treme, sem recado.
+#: O botão treme, sem recado, e nada mudou. Duas razões, e a tela não separa:
+#: a trava do rádio não veio no prazo do gesto, ou OUTRO movimento está em curso
+#: — um por vez vale também para o arrastar (A-COSTURA-DA-ONDA-2-01, a palavra
+#: dela: *«moveriamos por exemplo 1 controle por vez»*). <!-- noqa-acento: citação literal dela -->
 MOTIVO_OCUPADO = "ocupado"
 #: O dono do BlueZ não conseguiu perguntar nada: não sei, e nada foi tocado.
 MOTIVO_SEM_BLUEZ = "sem_bluez"
@@ -202,7 +212,10 @@ class Movimento:
     #: Os adaptadores em que ele tinha bond ANTES — os que saem no fim.
     origens: tuple[str, ...] = ()
     #: É controle (confere pelo ``HID_PHYS``) ou outro aparelho (pelo ``Connected``).
-    controle: bool = True
+    #: UMA CHAVE, UM SENTIDO (A-COSTURA-DA-ONDA-2-01): no ``radio_central`` a chave
+    #: ``controle`` é o ``uniq`` da ``proposta`` do «Equilibrar»; o booleano daqui
+    #: se chama ``e_controle``, no campo e no publicado.
+    e_controle: bool = True
     #: O ``Pair`` no destino deu — a conexão nova existe, confirmada ou não.
     pareou_no_destino: bool = False
     #: Relógio monotônico do começo — para o prazo do «esperando».
@@ -223,7 +236,7 @@ class Movimento:
             "passo": self.passo,
             "motivo": self.motivo,
             "origens": list(self.origens),
-            "controle": self.controle,
+            "e_controle": self.e_controle,
             "quando": round(self.quando, 3),
         }
 
@@ -669,6 +682,11 @@ class CentralDoRadio:
         Volta em no máximo :data:`PRAZO_DA_TRAVA_DO_GESTO_S` e um pouco: ou o
         movimento em curso («esperando»), ou a recusa (:data:`MOTIVO_OCUPADO`),
         que não fica guardada — o botão treme e nada mudou.
+
+        UM POR VEZ (A-COSTURA-DA-ONDA-2-01): com QUALQUER movimento em curso — de
+        outro aparelho, ou deste para outro destino — a recusa sai na hora, sem
+        fio e sem esperar a trava. O mesmo pedido de novo devolve o mesmo
+        movimento (a idempotência da MOVER).
         """
         alvo = endereco_de(aparelho)
         if alvo is None:
@@ -677,6 +695,8 @@ class CentralDoRadio:
         repetido = self._o_mesmo_em_curso(alvo, destino)
         if repetido is not None:
             return repetido
+        if self._ocupada():
+            return self._recusa_por_outro(alvo, destino)
         return self._no_fio(
             alvo, destino, lambda pronto: self.mover(alvo, destino, _ao_pegar_a_trava=pronto)
         )
@@ -686,14 +706,31 @@ class CentralDoRadio:
 
         O movimento nasce com :data:`CONECTANDO` no lugar do endereço — ainda não
         se sabe QUEM vai chegar, só ONDE (a D8) — e ganha o endereço quando o
-        controle aparece na janela.
+        controle aparece na janela. Um por vez, como o :meth:`comecar_a_mover`.
         """
         repetido = self._o_mesmo_em_curso(CONECTANDO, destino)
         if repetido is not None:
             return repetido
+        if self._ocupada():
+            return self._recusa_por_outro(CONECTANDO, destino)
         return self._no_fio(
             CONECTANDO, destino, lambda pronto: self.conectar(destino, _ao_pegar_a_trava=pronto)
         )
+
+    def _ocupada(self) -> bool:
+        """Há movimento em curso, ou a central já fechou — então nada começa.
+
+        Quem chama já descartou o MESMO pedido em curso (:meth:`_o_mesmo_em_curso`):
+        o que sobra em curso é outro, e um por vez vale para ele também.
+        Fechada (:meth:`fechar`, o desligamento do daemon), a central não abre
+        janela nenhuma: o ``Pairable`` que ela ligasse não teria quem desligar.
+        """
+        return self._parar.is_set() or self.em_curso
+
+    def _recusa_por_outro(self, chave: str, destino: str | None) -> Movimento:
+        """A recusa do um por vez — a mesma forma da trava ocupada, e não guardada."""
+        logger.info("central_um_por_vez", aparelho=mascarar(chave), fechada=self._parar.is_set())
+        return Movimento(chave, destino or "", NAO_CHEGOU, PASSO_FIM, MOTIVO_OCUPADO)
 
     def _no_fio(
         self,
@@ -712,6 +749,10 @@ class CentralDoRadio:
             finally:
                 pronto.set()
             fim = caixa.get("fim")
+            if fim is not None and fim.motivo == MOTIVO_OCUPADO:
+                # A recusa não começou nada: vigiar a chave dela vigiaria o
+                # movimento de OUTRO pedido, num segundo fio.
+                return
             self._vigiar_ate_resolver(fim.aparelho if fim is not None else chave)
 
         fio = threading.Thread(target=trabalhar, name="hefesto-central-mover", daemon=True)
@@ -760,8 +801,19 @@ class CentralDoRadio:
         repetido = self._o_mesmo_em_curso(alvo, destino)
         if repetido is not None:
             return repetido
+        if self._ocupada():
+            return self._recusa_por_outro(alvo, destino)
         try:
             with bluez_dbus.na_trava(QUEM, prazo_s=self._prazo_da_trava_s):
+                # UM POR VEZ, DE NOVO, JÁ COM A TRAVA: o outro pode ter nascido
+                # enquanto esta esperava, e soltado a trava ainda «esperando» a
+                # conferência. Sem esta segunda olhada, dois pedidos quase juntos
+                # abriam duas janelas, uma depois da outra.
+                repetido = self._o_mesmo_em_curso(alvo, destino)
+                if repetido is not None:
+                    return repetido
+                if self._ocupada():
+                    return self._recusa_por_outro(alvo, destino)
                 # O «esperando» nasce ANTES de avisar quem espera a trava: senão
                 # o gesto da tela leria o movimento de ontem, já acabado.
                 self._guardar(Movimento(alvo, destino or "", ESPERANDO, PASSO_PREPARANDO,
@@ -795,8 +847,16 @@ class CentralDoRadio:
         repetido = self._o_mesmo_em_curso(CONECTANDO, destino)
         if repetido is not None:
             return repetido
+        if self._ocupada():
+            return self._recusa_por_outro(CONECTANDO, destino)
         try:
             with bluez_dbus.na_trava(QUEM, prazo_s=self._prazo_da_trava_s):
+                # Um por vez, de novo, já com a trava — a razão está no :meth:`mover`.
+                repetido = self._o_mesmo_em_curso(CONECTANDO, destino)
+                if repetido is not None:
+                    return repetido
+                if self._ocupada():
+                    return self._recusa_por_outro(CONECTANDO, destino)
                 self._guardar(Movimento(CONECTANDO, destino or "", ESPERANDO, PASSO_PREPARANDO,
                                         comecou=self._relogio()))
                 if _ao_pegar_a_trava is not None:
@@ -844,13 +904,13 @@ class CentralDoRadio:
                 NAO_CHEGOU, MOTIVO_FORA_DO_RADIO,
             )
         pedido = endereco_de(destino) if destino else self.escolher_destino(alvo)
-        controle = self._e_controle(foto, alvo)
+        e_controle = self._e_controle(foto, alvo)
         origens = tuple(sorted(
             e for e, a in foto.do_aparelho.items() if e != pedido and a.pareado
         ))
         movimento = Movimento(
             alvo, pedido or "", ESPERANDO, PASSO_PREPARANDO,
-            origens=origens, controle=controle, comecou=comeco,
+            origens=origens, e_controle=e_controle, comecou=comeco,
         )
         if pedido is None or pedido not in foto.adaptadores:
             return self._acabou(movimento, NAO_CHEGOU, MOTIVO_SEM_DESTINO)
@@ -869,7 +929,7 @@ class CentralDoRadio:
         # deixava o controle sem bond em lugar nenhum se ela não apertasse
         # PS + Create. Nada se pareia nem se esquece aqui — só se confere, e o
         # «esperando» segue para a vigia como depois de um parear.
-        if controle and self._onde_esta(_hex12(alvo)) == pedido:
+        if e_controle and self._onde_esta(_hex12(alvo)) == pedido:
             conferindo = self._guardar(replace(movimento, passo=PASSO_CONFERINDO))
             if self._conferir(conferindo, dono):
                 return self._esquecer_as_origens(conferindo, dono)
@@ -945,7 +1005,9 @@ class CentralDoRadio:
         ))
         with self._tranca:
             self._movimentos.pop(CONECTANDO, None)
-        return self._guardar(replace(movimento, aparelho=achado, origens=origens, controle=True))
+        return self._guardar(
+            replace(movimento, aparelho=achado, origens=origens, e_controle=True)
+        )
 
     # -- os passos -------------------------------------------------------------
 
@@ -1034,7 +1096,7 @@ class CentralDoRadio:
     def _chegou(self, movimento: Movimento, dono: bluez_dbus.LeitorDoBluez) -> bool:
         """A pergunta do CONFERIR, UMA vez. Controle: ``HID_PHYS`` no destino E o
         movimento chegando. Outro aparelho: o BlueZ o diz conectado no destino."""
-        if movimento.controle:
+        if movimento.e_controle:
             uniq = _hex12(movimento.aparelho)
             if self._onde_esta(uniq) != movimento.destino:
                 return False
@@ -1175,7 +1237,7 @@ class CentralDoRadio:
                 if self.movimento_de(movimento.aparelho) == movimento:
                     self._esquecer_as_origens(movimento, dono)
             return
-        if movimento.controle and movimento.origens:
+        if movimento.e_controle and movimento.origens:
             onde = self._onde_esta(_hex12(movimento.aparelho))
             if onde and onde in movimento.origens:
                 self._acabou(movimento, NAO_CHEGOU, MOTIVO_VOLTOU)
