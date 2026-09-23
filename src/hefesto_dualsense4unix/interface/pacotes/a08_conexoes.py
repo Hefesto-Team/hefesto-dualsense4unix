@@ -5246,8 +5246,14 @@ def campos_da_secao(cena: dict[str, Any]) -> dict[str, Any]:
 _FUNDO: dict[str, tuple[float, Any]] = {}
 _FUNDO_EM_VOO: set[str] = set()
 _TRAVA_DO_FUNDO = threading.Lock()
+#: Quantas vezes cada leitura foi dada por velha (`_esquecer`). A leitura que
+#: começou antes de um gesto gravar volta com o disco de ANTES, e é por este
+#: número que ela sabe que já nasceu velha.
+_GERACAO: dict[str, int] = {}
 #: A régua liga isto para ler na hora, sem fio — e sem máquina dela.
 LER_NA_HORA = False
+#: O carimbo de quem venceu: `agora - VENCIDA` nunca cabe na validade.
+VENCIDA = float("-inf")
 
 
 def _em_fundo(chave: str, ler: Callable[[], Any], validade_s: float) -> Any:
@@ -5258,6 +5264,7 @@ def _em_fundo(chave: str, ler: Callable[[], Any], validade_s: float) -> Any:
         if (visto is not None and agora - visto[0] < validade_s) or chave in _FUNDO_EM_VOO:
             return None if visto is None else visto[1]
         _FUNDO_EM_VOO.add(chave)
+        geracao = _GERACAO.get(chave, 0)
 
     def trabalhar() -> None:
         try:
@@ -5265,7 +5272,8 @@ def _em_fundo(chave: str, ler: Callable[[], Any], validade_s: float) -> Any:
         except Exception:  # a leitura nunca derruba a tela: sem ela, «não sei»
             valor = None
         with _TRAVA_DO_FUNDO:
-            _FUNDO[chave] = (time.monotonic(), valor)
+            fresca = _GERACAO.get(chave, 0) == geracao
+            _FUNDO[chave] = (time.monotonic() if fresca else VENCIDA, valor)
             _FUNDO_EM_VOO.discard(chave)
 
     if LER_NA_HORA:
@@ -5276,10 +5284,27 @@ def _em_fundo(chave: str, ler: Callable[[], Any], validade_s: float) -> Any:
 
 
 def _esquecer(*chaves: str) -> None:
-    """Depois de um gesto que grava, a próxima volta lê de novo."""
+    """Depois de um gesto que grava, a próxima volta lê de novo.
+
+    A LEITURA DE AGORA FICA ATÉ A NOVA CHEGAR — achado na conferência da
+    TRANSPLANTE-DA-SECAO-01. Esta função APAGAVA a chave, e o tique logo
+    depois do gesto pintava «não sei» com o fio ainda lendo: o nome que ela
+    acabara de dar sumia do campo (o `maquina.json` em branco), e depois de um
+    renomear de aparelho a sala INTEIRA virava o vazio calado quando o daemon
+    não publicava `radio_ar` — medido, um tique de sala apagada e de volta.
+    Agora a leitura só VENCE: o tique seguinte pede outra e pinta a de antes,
+    e a sala muda uma vez, para o que ela gravou.
+
+    E A LEITURA QUE JÁ ESTAVA EM VOO nasce vencida (`_GERACAO`): ela pode ter
+    lido o disco antes da gravação, e guardá-la com carimbo novo mostraria o
+    nome velho pela validade inteira.
+    """
     with _TRAVA_DO_FUNDO:
         for chave in chaves:
-            _FUNDO.pop(chave, None)
+            _GERACAO[chave] = _GERACAO.get(chave, 0) + 1
+            visto = _FUNDO.get(chave)
+            if visto is not None:
+                _FUNDO[chave] = (VENCIDA, visto[1])
 
 
 def _ler_o_bluez() -> tuple[tuple[Any, ...], tuple[Any, ...]] | None:
