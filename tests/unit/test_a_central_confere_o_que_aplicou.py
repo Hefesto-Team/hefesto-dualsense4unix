@@ -290,6 +290,57 @@ def test_destino_que_nao_esta_na_mesa_nao_abre_janela(
     assert mundo.metodos("StartDiscovery") == []
 
 
+def test_o_movimento_em_nao_sei_nao_apaga_a_conexao_viva_do_destino(
+    diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
+) -> None:
+    """O kernel diz que ele JÁ está no destino, e o movimento ainda é «não sei».
+
+    O ``SensorHub`` responde ``None`` enquanto o nó de movimento não fecha uma
+    janela — um controle que acabou de reconectar, ou que ninguém perguntou nos
+    últimos 5 s (o TTL da demanda). O mover lia esse «não sei» como «não está
+    lá», tratava a conexão VIVA do destino como a «velha» da R6, esquecia-a pela
+    ponte (com lápide) e abria a janela pedindo PS + Create. Sem o gesto dela,
+    o controle ficava sem bond em adaptador nenhum: a sala já tinha saído no
+    primeiro mover.
+
+    MORDIDA: tire o bloco «o kernel já o diz no destino» do ``_mover_na_trava``
+    — o bond do quarto sai, uma segunda lápide aparece, e esta régua reprova.
+    """
+    nao_sei = {"agora": False}
+
+    def movimento(u: str) -> float | None:
+        return None if nao_sei["agora"] else mundo.hz(u)
+
+    central = cr.CentralDoRadio(
+        dono=dono,
+        onde_esta=mundo.onde_esta,
+        movimento=movimento,
+        esquecer_na_ponte=mundo.esquecer_na_ponte,
+        relogio=relogio,
+        dormir=relogio.dormir,
+        sysfs={"listar": lambda _p: [], "raiz": "/nao/existe"},
+    )
+    relogio.agendar(2.0, lambda: mundo.segurar_ps_create(VERMELHO))
+    assert central.mover(VERMELHO, QUARTO).estado == cr.CHEGOU
+    chamadas, escritas = len(mundo.chamadas), len(mundo.escritas)
+
+    nao_sei["agora"] = True
+    de_novo = central.mover(VERMELHO, QUARTO)
+
+    assert mundo.objeto(QUARTO, VERMELHO) is not None, "a conexão viva do quarto saiu"
+    assert mundo.objeto(QUARTO, VERMELHO)["Paired"] is True
+    assert mundo.onde_esta(rm.uniq(VERMELHO)) == QUARTO
+    assert mundo.lapides == [(SALA, VERMELHO)], "uma lápide a mais: o quarto foi esquecido"
+    assert mundo.chamadas[chamadas:] == [] and mundo.escritas[escritas:] == []
+    # «Não sei» não é «chegou»: fica esperando, e a vigia resolve quando o número vem.
+    assert (de_novo.estado, de_novo.motivo) == (cr.ESPERANDO, cr.MOTIVO_SEM_CONFIRMACAO)
+    nao_sei["agora"] = False
+    central.vigiar()
+    feito = central.movimento_de(VERMELHO)
+    assert (feito.estado, feito.motivo) == (cr.CHEGOU, cr.MOTIVO_JA_ESTAVA)
+    assert _da_central(diario) == [cr.MOVEU_O_APARELHO], "nada se moveu na segunda vez"
+
+
 # ---------------------------------------------------------------------------
 # 6. sem o agente próprio, o piso
 # ---------------------------------------------------------------------------
