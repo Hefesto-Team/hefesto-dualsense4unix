@@ -49,6 +49,14 @@ isso o veredito daqui **nunca** licencia repintura em regime: ele licencia
 UMA reafirmação no fim da sequência (``GATILHO-DA-COR-01``) e, na aba Status,
 a frase honesta de que a cor mostrada é a PEDIDA.
 
+**NOTA DATADA — 23/09/2026, e a regra acima mudou por decisão dela.** *"Hefesto
+manda e controla sempre, steam sequestrou hefesto corrigiu ao no segundo após"*
+(STEAM-NO-FISICO-01). O SENTINELA continua licenciando uma reafirmação só; a
+:class:`VigiaDoSequestro`, no fim deste módulo, licencia a reescrita da barra e
+do número a cada segundo ENQUANTO um processo alheio segurar o nó — e só a barra
+e o número, nunca vibração, gatilho ou áudio (o que zerou motor alheio no
+RUMBLE-SEM-DONO-01 era um report que levava os motores).
+
 O QUE ELE NÃO VÊ, dito antes que alguém descubra do jeito caro
 ==============================================================
 - **Só reconhece a Steam.** A varredura é restrita aos PIDs dela (os mesmos
@@ -650,20 +658,266 @@ class SentinelaDeEscritorCru:
         return novo, tuple(n for n in novo.nos_segurados if n not in antes)
 
 
+# ---------------------------------------------------------------------------
+# STEAM-NO-FISICO-01 — a vigia do sequestro: corrigir em até um segundo
+# ---------------------------------------------------------------------------
+
+#: A fatia do laço de reconexão enquanto a vigia está de guarda. É o que torna
+#: «em até um segundo» uma conta que fecha: reafirmação a cada
+#: `INTERVALO_DA_REAFIRMACAO_S`, avaliada a cada meia fatia.
+PASSO_DA_VIGIA_S: float = 0.5
+
+#: De quanto em quanto a barra e o número são reescritos num nó sequestrado.
+#: 0,9 s com a fatia de 0,5 s dá uma reescrita a cada segundo cravado — o teto
+#: que ela deu (*"corrigiu ao no segundo após"*) — e não duas: meio segundo
+#: pagaria o dobro de reports sem que o olho dela visse diferença.
+INTERVALO_DA_REAFIRMACAO_S: float = 0.9
+
+#: A sonda de `/proc` (≈11 ms nesta máquina, medido em 23/09/2026: 453 pids,
+#: 146 legíveis, 4.385 fds) roda a cada fatia só enquanto há nó ABERTO sem
+#: sequestrador conhecido — é o único estado em que um processo novo pode
+#: chegar sem aviso, e a borda dele tem de ser vista em meio segundo.
+INTERVALO_DA_SONDA_S: float = 0.5
+
+#: Com o sequestro já visto, a sonda só precisa dizer quando ele acabou; a
+#: reescrita continua a cada segundo, e reafirmar um nó que já foi solto é
+#: inofensivo (é a cor do próprio Hefesto). Dois segundos cortam três quartos
+#: da varredura numa sessão longa de Modo Nativo, que é onde o jogo segura o nó
+#: o tempo inteiro.
+INTERVALO_DA_SONDA_COM_SEQUESTRO_S: float = 2.0
+
+
+def no_alcancavel(no: str) -> bool:
+    """Um processo DESTE usuário consegue abrir este nó agora?
+
+    É a pergunta que decide se vale varrer `/proc`: com a regra udev da cura
+    (O-NO-NASCE-FECHADO-01) o nó do físico é `0600 root`, e nenhum processo da
+    sessão consegue abri-lo — logo ninguém NOVO pode sequestrá-lo, e a sonda
+    seria gasto sem pergunta. Ele fica alcançável no Modo Nativo (o broker
+    expõe de propósito), numa máquina sem a cura, ou na janela de milissegundos
+    em que o `_open_one` expõe o nó para o `hidapi`.
+
+    `os.access` respeita a ACL (é o `access(2)` do kernel), custa ~0,4 µs
+    (medido em 23/09/2026) e não abre nada. Falha de leitura devolve ``True``:
+    na dúvida, a vigia olha.
+    """
+    try:
+        return os.access(no, os.R_OK | os.W_OK)
+    except Exception:  # pragma: no cover - caminho malformado
+        return True
+
+
+@dataclass(frozen=True)
+class PassoDaVigia:
+    """O que um passo da vigia viu — uma FOTO, como o `Veredito`."""
+
+    sondou: bool = False
+    novos: tuple[str, ...] = ()
+    soltos: tuple[str, ...] = ()
+    a_reafirmar: tuple[str, ...] = ()
+    pids: Mapping[str, tuple[int, ...]] = field(default_factory=dict)
+
+
+class VigiaDoSequestro:
+    """Diz, a cada fatia, QUAIS nós do físico reescrever — e só isso.
+
+    STEAM-NO-FISICO-01, a segunda obrigação da decisão dela de 23/09/2026:
+
+        *"steam sequestrou hefesto corrigiu ao no segundo após"* — e,
+        na sprint: *"o Hefesto reescreve a barra e o número em até 1 s,
+        quantas vezes for preciso"*.
+
+    **POR QUE NÃO É O `SentinelaDeEscritorCru`.** O sentinela licencia UMA
+    reafirmação no fim da sequência, e a foto dele é a verdade que a aba Status
+    lê. A vigia muda as duas coisas: ela reafirma enquanto o sequestro durar, e
+    olha também no Modo Nativo, onde o sentinela não olha por regra antiga
+    (*"no modo nativo devolvemos o controle pra steam"*). Pendurar isto nele
+    trocaria o texto da aba Status sem ninguém pedir. A SONDA é a mesma
+    (:func:`escritores_crus_alheios`) — uma varredura só de `/proc` no produto,
+    chamada por dois donos.
+
+    **SEGURAR NÃO É ESCREVER, e a vigia sabe.** Não há como ler a cor que a
+    barra mostra (ver o cabeçalho deste módulo). Então enquanto um processo
+    alheio segura o nó, a barra e o número são reescritos a cada segundo — o
+    preço é um report mínimo por segundo por controle sequestrado (duas fatias
+    de rádio, contra ~800 reports/s de uma mesa cheia), e ele só existe
+    enquanto houver sequestrador.
+
+    **QUANDO ELA VARRE.** Nó fechado e nenhum sequestrador conhecido: nunca —
+    ninguém da sessão consegue abrir um nó `0600 root`. Nó alcançável: a cada
+    `INTERVALO_DA_SONDA_S`. Sequestro conhecido: a cada
+    `INTERVALO_DA_SONDA_COM_SEQUESTRO_S`, só para saber quando acabou; entre
+    duas varreduras, o PID que morreu solta o nó na hora (um `stat`).
+
+    Não lê relógio nem `/proc` por conta própria: tudo entra por injeção
+    (`sonda`, `alcancavel`, `vivo`), como no sentinela. É o que deixa exercitar
+    minutos de vigia em microssegundos de teste.
+    """
+
+    def __init__(
+        self,
+        *,
+        sonda: Sonda | None = None,
+        alcancavel: Callable[[str], bool] | None = None,
+        vivo: Callable[[int], bool] | None = None,
+        intervalo_da_sonda_s: float = INTERVALO_DA_SONDA_S,
+        intervalo_com_sequestro_s: float = INTERVALO_DA_SONDA_COM_SEQUESTRO_S,
+        intervalo_da_reafirmacao_s: float = INTERVALO_DA_REAFIRMACAO_S,
+    ) -> None:
+        self._sonda: Sonda = sonda if sonda is not None else escritores_crus_alheios
+        self._alcancavel = alcancavel if alcancavel is not None else no_alcancavel
+        self._vivo = vivo if vivo is not None else processo_vivo
+        self._intervalo_da_sonda_s = float(intervalo_da_sonda_s)
+        self._intervalo_com_sequestro_s = float(intervalo_com_sequestro_s)
+        self._intervalo_da_reafirmacao_s = float(intervalo_da_reafirmacao_s)
+        #: nó -> PIDs alheios que o seguram, pela última sonda (só vivos).
+        self._por_no: dict[str, tuple[int, ...]] = {}
+        self._sondado_em: float | None = None
+        #: nó -> quando a barra e o número dele foram reescritos pela última vez.
+        self._reafirmado_em: dict[str, float] = {}
+        #: nó -> quantas reescritas desde que o sequestro começou (para o diário).
+        self._reescritas: dict[str, int] = {}
+        #: Os sequestros já DITOS (nó -> PIDs): é contra eles que as bordas se
+        #: medem. Separado de `_por_no` porque o PID morto sai de lá entre duas
+        #: varreduras, e a borda de saída não pode sumir junto.
+        self._anunciados: dict[str, tuple[int, ...]] = {}
+        self._vigilante = False
+
+    @property
+    def vigilante(self) -> bool:
+        """True quando a próxima fatia tem de ser curta (há o que vigiar)."""
+        return self._vigilante
+
+    @property
+    def sequestrados(self) -> Mapping[str, tuple[int, ...]]:
+        """Os nós sequestrados na última foto, com os PIDs. Só leitura."""
+        return dict(self._por_no)
+
+    def reescritas(self, no: str) -> int:
+        """Quantas vezes a barra deste nó foi reescrita neste sequestro."""
+        return self._reescritas.get(str(no), 0)
+
+    def quer_sondar(self, nos: Iterable[str], agora: float) -> bool:
+        """Este passo precisa varrer `/proc`? Barato: `access` e `stat`.
+
+        Atualiza `vigilante` como efeito — quem pergunta é a fatia, e a
+        resposta decide o tamanho da próxima.
+        """
+        alvos = {str(n) for n in nos if n}
+        self._esquecer_fora(alvos)
+        self._soltar_os_mortos()
+        abertos_sem_dono = [
+            n for n in alvos if n not in self._por_no and self._alcancavel(n)
+        ]
+        self._vigilante = bool(abertos_sem_dono or self._por_no)
+        if not self._vigilante:
+            return False
+        if self._sondado_em is None:
+            return True
+        intervalo = (
+            self._intervalo_da_sonda_s
+            if abertos_sem_dono
+            else self._intervalo_com_sequestro_s
+        )
+        return (float(agora) - self._sondado_em) >= intervalo
+
+    def passo(
+        self, nos: Iterable[str], agora: float, *, sondar: bool
+    ) -> PassoDaVigia:
+        """Um passo da vigia: (talvez) varre, e diz o que reescrever AGORA.
+
+        ``sondar`` vem de :meth:`quer_sondar`; separar as duas é o que deixa o
+        chamador mandar SÓ a varredura para o executor — o resto é memória.
+        Falha da sonda preserva a foto anterior (ausência não é "ninguém
+        segura", a mesma disciplina do sentinela).
+        """
+        agora = float(agora)
+        alvos = sorted({str(n) for n in nos if n})
+        sondou = False
+        if sondar and alvos:
+            try:
+                bruto = self._sonda(alvos)
+            except Exception as exc:  # sonda é best-effort por contrato
+                logger.debug("vigia_do_sequestro_sonda_falhou", err=str(exc))
+            else:
+                sondou = True
+                self._sondado_em = agora
+                self._por_no = {
+                    str(no): tuple(p for p in (int(x) for x in pids) if self._vivo(p))
+                    for no, pids in dict(bruto).items()
+                    if str(no) in alvos and pids
+                }
+                self._por_no = {no: pids for no, pids in self._por_no.items() if pids}
+        antes = self._anunciados
+        novos = tuple(n for n in sorted(self._por_no) if n not in antes)
+        soltos = tuple(n for n in sorted(antes) if n not in self._por_no)
+        pids = {n: self._por_no[n] for n in novos}
+        pids.update({n: antes[n] for n in soltos})
+        self._anunciados = dict(self._por_no)
+        for no in soltos:
+            self._reafirmado_em.pop(no, None)
+        a_reafirmar = tuple(
+            n
+            for n in sorted(self._por_no)
+            if n in novos
+            or (agora - self._reafirmado_em.get(n, float("-inf")))
+            >= self._intervalo_da_reafirmacao_s
+        )
+        self._vigilante = self._vigilante or bool(self._por_no)
+        return PassoDaVigia(
+            sondou=sondou,
+            novos=novos,
+            soltos=soltos,
+            a_reafirmar=a_reafirmar,
+            pids=pids,
+        )
+
+    def reafirmado(self, nos: Iterable[str], agora: float) -> None:
+        """Marca que a barra e o número destes nós acabaram de ser reescritos."""
+        for no in nos:
+            self._reafirmado_em[str(no)] = float(agora)
+            self._reescritas[str(no)] = self._reescritas.get(str(no), 0) + 1
+
+    def encerrar(self, no: str) -> int:
+        """Zera a conta de um sequestro que acabou; devolve quantas reescritas."""
+        return self._reescritas.pop(str(no), 0)
+
+    def _soltar_os_mortos(self) -> None:
+        """O PID que morreu solta o nó sem esperar a próxima varredura."""
+        vivos = {
+            no: tuple(p for p in pids if self._vivo(p)) for no, pids in self._por_no.items()
+        }
+        self._por_no = {no: pids for no, pids in vivos.items() if pids}
+
+    def _esquecer_fora(self, alvos: set[str]) -> None:
+        """Nó que saiu da mesa (desconexão, replug com outro número) sai da foto."""
+        for no in [n for n in self._por_no if n not in alvos]:
+            del self._por_no[no]
+        for no in [n for n in self._reafirmado_em if n not in alvos]:
+            del self._reafirmado_em[no]
+
+
 __all__ = [
+    "INTERVALO_DA_REAFIRMACAO_S",
+    "INTERVALO_DA_SONDA_COM_SEQUESTRO_S",
+    "INTERVALO_DA_SONDA_S",
     "MAX_PIDS_DA_STEAM",
     "ORCAMENTO_DA_VARREDURA_AMPLA_S",
     "ORCAMENTO_DA_VARREDURA_DE_PIDS_S",
     "ORCAMENTO_DA_VARREDURA_S",
+    "PASSO_DA_VIGIA_S",
     "PGREP_TIMEOUT_S",
     "VALIDADE_DO_VEREDITO_S",
+    "PassoDaVigia",
     "SentinelaDeEscritorCru",
     "Sonda",
     "Veredito",
+    "VigiaDoSequestro",
     "escritores_crus_alheios",
     "holders_de_hidraw",
     "holders_de_hidraw_de_qualquer_um",
     "invalidar_pids_da_steam",
+    "no_alcancavel",
     "pids_da_steam",
     "processo_vivo",
 ]
