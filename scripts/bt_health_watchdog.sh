@@ -39,7 +39,10 @@
 # 5. ADAPTADOR TRAVADO EM LAÇO (O-DIARIO-DO-RADIO-01, a família 3): a cada tique
 #    o watchdog pede à ponte privilegiada o `reiniciar-travado`, que só age se o
 #    journal do KERNEL mostra o laço de «command tx timeout» num adaptador sem
-#    ninguém conectado. Em 13/09 um Realtek passou 17 h assim.
+#    ninguém conectado. Em 13/09 um Realtek passou 17 h assim. O freio mora na
+#    ponte: um reinício por porta a cada 15 min, e PARA depois de três seguidos
+#    sem cura (GOVERNADOR-DO-RADIO-01) — daí em diante o sino diz «tire e
+#    ponha», e o watchdog segue perguntando só para a ponte ver o laço sumir.
 #
 # A TRAVA E O DIÁRIO (O-DIARIO-DO-RADIO-01, 23/09/2026). Este watchdog é um dos
 # três motores que mexem no rádio — os outros são o vigia de zumbis e a central
@@ -561,8 +564,10 @@ vigia_rebind_orfaos
 
 # --- vigia 5: adaptador travado em laço (O-DIARIO-DO-RADIO-01) ---------------
 # Quem decide é a ponte (o journal do kernel, a porta, ninguém conectado, o
-# freio de 15 min) — aqui só se chama, com a trava já na mão. A árvore de teste
-# não chama: o verbo leria o journal DELA.
+# freio de 15 min e o que PARA depois de três reinícios sem cura) — aqui só se
+# chama, com a trava já na mão, e a cada tique: é o tique que deixa a ponte ver
+# o laço sumir e soltar o freio. A árvore de teste não chama: o verbo leria o
+# journal DELA.
 vigia_adaptador_travado() {
     local _s
     [[ -z "${HEFESTO_BT_SRC:-}" ]] || return 0
