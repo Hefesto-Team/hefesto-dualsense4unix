@@ -1083,6 +1083,34 @@ FAMILIA_DA_QUEDA = "2A"
 #: adaptador» até o GOVERNADOR-DO-RADIO-01, que passa a ser o dono do número).
 LIMITE_DE_PONTES_POR_ADAPTADOR = 2
 
+#: O LOG DE ANTES DAS FAMÍLIAS. Até 23/09 o kernel-watch marcava o laço do
+#: Realtek e o enlace parado com a tag genérica ``[BT-HCI]`` (as 74.973 linhas
+#: de 13/09 estão assim no kernel.log dela), e a fila cheia, o CRC e o EAGAIN do
+#: bluetoothd nem entravam. A pergunta dela na R2 — *«tiveram storm nos dias
+#: anteriores»* — só se responde relendo o PASSADO pelo conteúdo: estas tags
+#: genéricas têm a mensagem reclassificada pelas mesmas palavras do
+#: classificador do ``storm_watch.sh``.
+_TAGS_GENERICAS = frozenset({"[BT-HCI]", "[KERNEL]"})
+_RECLASSIFICAR: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"output queue is full", re.I), "[FILA-CHEIA]"),
+    (re.compile(r"bt socket write error", re.I), "[BT-SOCKET]"),
+    (re.compile(r"link tx timeout|killing stalled connection", re.I), "[ENLACE-PARADO]"),
+    (
+        re.compile(
+            r"command 0x[0-9a-f]{4} tx timeout|read reg16 failed|"
+            r"failed to generate devcoredump",
+            re.I,
+        ),
+        "[BT-TRAVADO]",
+    ),
+    (re.compile(r"crc.s check failed", re.I), "[CRC]"),
+)
+
+#: Sem repetir por este tanto, a rajada acabou — o mesmo número do
+#: ``HEFESTO_KERNELWATCH_JANELA_S`` do kernel-watch, para o log velho (linha a
+#: linha) e o novo (borda e resumo) contarem rajada do mesmo jeito.
+JANELA_DA_RAJADA_S = 10.0
+
 #: Uma linha do kernel.log: ``TS [TAG] mensagem``, ou o resumo de uma rajada,
 #: ``TS [TAG] repetiu +N (…): mensagem`` / ``TS [TAG] segue +N (…): mensagem``.
 _LINHA_DO_VIGIA = re.compile(
@@ -1136,7 +1164,13 @@ def ler_eventos_do_radio(linhas: Iterable[str]) -> list[EventoDoRadio]:
         casou = _LINHA_DO_VIGIA.match(linha.rstrip("\n"))
         if casou is None:
             continue
-        familia = FAMILIAS_DO_RADIO.get(casou["tag"])
+        tag = casou["tag"]
+        if tag in _TAGS_GENERICAS:
+            tag = next(
+                (nova for padrao, nova in _RECLASSIFICAR if padrao.search(casou["texto"])),
+                tag,
+            )
+        familia = FAMILIAS_DO_RADIO.get(tag)
         if familia is None:
             continue
         carimbo = _carimbo(casou["ts"])
@@ -1147,7 +1181,7 @@ def ler_eventos_do_radio(linhas: Iterable[str]) -> list[EventoDoRadio]:
             EventoDoRadio(
                 quando=casou["ts"],
                 carimbo=carimbo,
-                tag=casou["tag"],
+                tag=tag,
                 familia=familia[0],
                 ocorrencias=int(casou["n"]) if resumo else 1,
                 borda=resumo is None,
@@ -1160,20 +1194,28 @@ def ler_eventos_do_radio(linhas: Iterable[str]) -> list[EventoDoRadio]:
 def classificar_o_historico(linhas: Iterable[str]) -> dict[str, ContagemDaFamilia]:
     """``{família: contagem}`` de tudo o que o kernel-watch viu.
 
-    As rajadas contam como o log as guarda: a borda soma uma rajada e uma
-    ocorrência, e cada resumo soma as ocorrências que ele diz. Assim o 2B de
-    22/09 (3.807 linhas no kernel) é UMA rajada com 3.807 ocorrências, e não
-    três linhas.
+    As ocorrências contam como o log as guarda: a borda soma uma, e cada resumo
+    soma as que ele diz. Assim o 2B de 22/09 (3.807 linhas no kernel) é UMA
+    rajada com 3.807 ocorrências, e não três linhas. A RAJADA é contada pelo
+    relógio, e não pela forma da linha: uma linha que chega mais de
+    :data:`JANELA_DA_RAJADA_S` depois da anterior da mesma família abre outra.
+    É o que deixa o log de antes das famílias — linha a linha, 74.973 linhas no
+    laço de 13/09 — contar as mesmas rajadas que o log de hoje conta.
     """
     contagens: dict[str, ContagemDaFamilia] = {}
+    ultima_vista: dict[str, float] = {}
     for evento in ler_eventos_do_radio(linhas):
         nome = FAMILIAS_DO_RADIO[evento.tag][1]
         conta = contagens.setdefault(
             evento.familia, ContagemDaFamilia(familia=evento.familia, nome=nome)
         )
         conta.ocorrencias += evento.ocorrencias
-        if evento.borda:
+        anterior = ultima_vista.get(evento.familia)
+        if evento.borda and (
+            anterior is None or abs(evento.carimbo - anterior) > JANELA_DA_RAJADA_S
+        ):
             conta.rajadas += 1
+        ultima_vista[evento.familia] = evento.carimbo
         if not conta.primeira:
             conta.primeira = evento.quando
         conta.ultima = evento.quando
@@ -1245,6 +1287,7 @@ __all__ = [
     "FRASE_DE_INSTALAR_GENERICA",
     "GESTO_DE_ATUALIZAR",
     "GESTO_DE_INSTALAR",
+    "JANELA_DA_RAJADA_S",
     "LIMITE_DE_PONTES_POR_ADAPTADOR",
     "NOME_DA_DEPENDENCIA",
     "PACOTE_POR_FORMATO",

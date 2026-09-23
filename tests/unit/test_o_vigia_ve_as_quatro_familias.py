@@ -243,7 +243,9 @@ def test_o_storm_doctor_separa_as_quatro_familias() -> None:
     historico = storm_doctor.classificar_o_historico(_kernel_log_de_mentira().splitlines())
     assert set(historico) == {"1", "2", "2A", "2B", "3", "4"}
     assert historico["2B"].ocorrencias == 8101
-    assert historico["2B"].rajadas == 2
+    #: A linha solta das 16:46:32 e a rajada que começa no mesmo segundo são o
+    #: mesmo episódio: a rajada é contada pelo relógio.
+    assert historico["2B"].rajadas == 1
     assert historico["3"].rajadas == 1
     assert historico["3"].ocorrencias == 2
     assert historico["2A"].nome == "rádio afogado"
@@ -289,3 +291,33 @@ def test_o_fato_nao_usa_palavra_proibida_na_tela() -> None:
     )
     assert "fatia" not in texto.lower()
     assert all("fatia" not in nome for _f, nome in storm_doctor.FAMILIAS_DO_RADIO.values())
+
+
+def test_o_log_de_antes_das_familias_tambem_conta(tmp_path: Path) -> None:
+    """A R2 dela: *«tiveram storm nos dias anteriores»*.
+
+    Até 23/09 o laço do Realtek e o enlace parado entravam no kernel.log com a
+    tag genérica ``[BT-HCI]``, linha a linha — é assim que as 74.973 linhas de
+    13/09 estão lá. O ``storm_doctor`` relê o passado pelo conteúdo.
+
+    ARRANQUE A RELEITURA — esvazie ``_TAGS_GENERICAS`` — e o 13/09 some do
+    histórico: este teste reprova.
+    """
+    velho = []
+    for s in range(0, 30, 3):
+        ts = f"2026-09-13T01:14:{s:02d}-03:00"
+        velho += [
+            f"{ts} [BT-HCI] Bluetooth: hci0: command 0xfc61 tx timeout",
+            f"{ts} [BT-HCI] Bluetooth: hci0: RTL: RTL: Read reg16 failed (-110)",
+            f"{ts} [BT-HCI] Bluetooth: hci0: RTL: Failed to generate devcoredump",
+        ]
+    velho += [
+        "2026-09-13T18:29:13-03:00 [BT-HCI] Bluetooth: hci0: command 0xfc61 tx timeout",
+        "2026-08-15T22:20:42-03:00 [BT-HCI] Bluetooth: hci0: link tx timeout",
+        "2026-08-01T10:00:00-03:00 [BT-HCI] Bluetooth: hci0: Opcode 0x080f failed: -22",
+    ]
+    historico = storm_doctor.classificar_o_historico(velho)
+    assert historico["3"].ocorrencias == 31
+    assert historico["3"].rajadas == 2, "o laço contínuo é UMA rajada; 18:29 é outra"
+    assert historico["2"].rajadas == 1
+    assert set(historico) == {"2", "3"}, "o Opcode failed não é de família nenhuma"
