@@ -76,6 +76,8 @@ para saber qual controle é qual; a cor da lightbar continua sendo dela e mora e
 from __future__ import annotations
 
 import os
+import threading
+import time
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -256,10 +258,34 @@ class IdentidadeDeFabrica:
 
     Os dois campos viajam juntos porque vêm da MESMA resposta e nascem no mesmo
     instante; separá-los faria duas leituras do aparelho onde uma basta.
+
+    **OS DOIS ``None`` NÃO SÃO O MESMO «NÃO SEI»** — A-FITA-PERDEU-O-MODELO-E-A-COR-01,
+    22/09/2026. ``cor=None`` saía igual quando o aparelho respondeu com um
+    código fora da tabela (resposta: não muda nunca) e quando o descritor não
+    chegou ou o ``ioctl`` estourou (falha: a próxima pode responder). Quem
+    guardava tratava as duas como a primeira, e os dois controles dela ficaram
+    sem modelo nem cor pelo resto da sessão. ``definitiva`` separa as duas AQUI,
+    na fonte — quem guarda não adivinha:
+
+    * ``respondeu`` — o aparelho devolveu o eco certo; o que veio vale para
+      sempre, inclusive a cor ``None``;
+    * ``nao_pode`` — a trava recusou o pedido: repetir mandaria os mesmos bytes
+      à mesma trava;
+    * o resto é FALHA DE AGORA, e ``motivo`` diz qual.
     """
 
     serial: str | None = None
     cor: CorDoPlastico | None = None
+    nao_pode: bool = False
+    motivo: str = ""
+
+    @property
+    def respondeu(self) -> bool:
+        return self.serial is not None or self.cor is not None
+
+    @property
+    def definitiva(self) -> bool:
+        return self.respondeu or self.nao_pode
 
 
 @dataclass(frozen=True)
@@ -684,7 +710,7 @@ def _perguntar_ao_hidraw(
     try:
         no = porta(caminho, escrita=True)
     except OSError as erro:
-        logger.debug("cor_do_plastico_sem_acesso", caminho=caminho, erro=str(erro))
+        logger.info("cor_do_plastico_sem_acesso", caminho=caminho, erro=str(erro))
         return None
     try:
         saida = array.array("B", pedido)
@@ -693,7 +719,7 @@ def _perguntar_ao_hidraw(
         entrada[0] = FEATURE_RESPOSTA
         lidos = disparar(no.fd, _hidiocgfeature(tamanho), entrada, True)
     except OSError as erro:
-        logger.debug(
+        logger.info(
             "cor_do_plastico_ioctl_falhou",
             caminho=caminho,
             porta=no.porta,
@@ -749,7 +775,8 @@ def ler_identidade_pelo_cabo(
 
     **Nunca levanta.** Sem aparelho, sem permissão, com firmware que não responde
     ou com código fora da tabela, os dois campos saem ``None`` — e ``None`` vira
-    travessão na tela, que é resposta válida em toda esta casa.
+    travessão na tela, que é resposta válida em toda esta casa. Se perguntar de
+    novo adianta, quem diz é ``definitiva`` (ver :class:`IdentidadeDeFabrica`).
 
     **É O MESMO CAMINHO DE SEMPRE, com o serial deixando de ser descartado.** O
     :func:`ler_pelo_cabo` passou a delegar aqui: um transporte só, uma trava só,
@@ -772,7 +799,10 @@ def ler_identidade_pelo_cabo(
     """
     alvo = alvo_do_controle(uniq, raiz=raiz, listar=listar, ler=ler)
     if alvo is None:
-        return IdentidadeDeFabrica()
+        # FALHA, e não «não pode», de propósito: o nó que ainda não nasceu e o
+        # aparelho de outro fabricante chegam aqui iguais. Nenhum byte sai sem
+        # alvo, e a agenda desiste sozinha depois do último degrau do recuo.
+        return IdentidadeDeFabrica(motivo="nenhum DualSense físico com este endereço")
     pedido = montar_pedido()
     if alvo.transporte == RADIO:
         # Pelo rádio o feature report vai assinado, e o CRC NÃO É OPCIONAL:
@@ -790,7 +820,7 @@ def ler_identidade_pelo_cabo(
             caminho=alvo.caminho,
             transporte=alvo.transporte,
         )
-        return IdentidadeDeFabrica()
+        return IdentidadeDeFabrica(nao_pode=True, motivo="a trava recusou o pedido")
     except Exception as erro:  # defensivo — a leitura jamais derruba a janela
         logger.debug(
             "cor_do_plastico_falhou",
@@ -798,17 +828,19 @@ def ler_identidade_pelo_cabo(
             transporte=alvo.transporte,
             erro=str(erro),
         )
-        return IdentidadeDeFabrica()
+        return IdentidadeDeFabrica(motivo=f"a conversa levantou {type(erro).__name__}")
     if not resposta:
-        return IdentidadeDeFabrica()
+        # A porta que não abriu e o `ioctl` que estourou chegam aqui iguais; o
+        # log de `_perguntar_ao_hidraw` diz qual dos dois.
+        return IdentidadeDeFabrica(motivo="o aparelho não respondeu")
     serial = serial_de(resposta)
+    if serial is None:
+        return IdentidadeDeFabrica(motivo="a resposta veio sem o eco do pedido")
     # A COR PODE SER `None` COM O SERIAL PRESENTE, e isso não é defeito: a
     # tabela tem vinte e uma entradas e a Sony fabrica edições novas sem avisar.
     # Um serial legível com código fora da tabela é "sei qual aparelho é, não
     # sei a cor dele" — duas respostas diferentes, e a tela as mostra diferente.
-    return IdentidadeDeFabrica(
-        serial=serial, cor=None if serial is None else cor_do_serial(serial)
-    )
+    return IdentidadeDeFabrica(serial=serial, cor=cor_do_serial(serial))
 
 
 def ler_pelo_cabo(
@@ -829,3 +861,124 @@ def ler_pelo_cabo(
     return ler_identidade_pelo_cabo(
         uniq, raiz=raiz, listar=listar, ler=ler, perguntar=perguntar
     ).cor
+
+
+# ---------------------------------------------------------------------------
+# A nova tentativa — UM dono, chamado pela janela e pelo daemon
+# ---------------------------------------------------------------------------
+
+#: O recuo entre uma leitura que FALHOU e a seguinte: três novas tentativas, e
+#: depois desiste até o controle sair da mesa e voltar.
+RECUO_DA_NOVA_TENTATIVA: tuple[float, ...] = (5.0, 30.0, 120.0)
+
+
+class AgendaDaPergunta:
+    """Quando se pode perguntar a identidade de um ``uniq`` — e quando não.
+
+    A-FITA-PERDEU-O-MODELO-E-A-COR-01, 22/09/2026. A janela
+    (``interface/mesa_viva.LeitorDeCor``) e o daemon
+    (``daemon/ipc_handlers._identidade_de_fabrica``) guardavam a primeira
+    resposta PARA SEMPRE, e a falha de um instante virava «este controle não
+    tem cor». Medido no ``interface.log`` e no journal dela: a janela das 23:36
+    abriu 28 s depois do segundo controle entrar pelo rádio, no meio de um
+    engasgo de 5 s em que o daemon perdia um terceiro nó (``ENODEV``). O broker
+    serviu um descritor na hora, e a pergunta por ele não trouxe cor; serviu o
+    outro 5 s depois, quando o cliente já tinha desistido (prazo de 2 s). As
+    duas falhas eram de um instante — a janela das 23:43, sem uma linha de
+    código mudada, leu os dois.
+
+    As regras, e cada uma tem razão:
+
+    * **resposta definitiva fecha** o ``uniq`` (ver ``IdentidadeDeFabrica.definitiva``);
+    * **falha reabre com recuo** (:data:`RECUO_DA_NOVA_TENTATIVA`) e depois
+      desiste — o pedido é um ``SET_FEATURE`` da família ``0x80``, e ele não
+      entra no tique de 10 Hz de ninguém;
+    * **nunca duas em voo** para o mesmo ``uniq``, nem se o controle sair e
+      voltar no meio da pergunta — por isso :meth:`esquecer_ausentes` não
+      solta quem está em voo;
+    * **nunca duas no mesmo intervalo**: entre o começo de uma pergunta e o da
+      seguinte passa ao menos o primeiro degrau do recuo, mesmo que a lista de
+      controles pisque e o esquecimento zere a conta a cada tique;
+    * **o leitor é o mesmo**: a agenda só decide QUANDO. Quem pergunta chama o
+      :func:`ler_identidade_pelo_cabo` de sempre, com a trava de sempre.
+
+    Os três métodos são seguros entre fios: quem reserva é o laço (da janela ou
+    do daemon), quem registra é a thread que perguntou.
+    """
+
+    def __init__(
+        self,
+        *,
+        recuo: tuple[float, ...] = RECUO_DA_NOVA_TENTATIVA,
+        relogio: Any = time.monotonic,
+    ) -> None:
+        self._recuo = tuple(recuo)
+        self._relogio = relogio
+        self._trava = threading.Lock()
+        self._em_voo: set[str] = set()
+        self._fechados: set[str] = set()
+        self._falhas: dict[str, int] = {}
+        self._proxima: dict[str, float] = {}
+        self._ultima: dict[str, float] = {}
+
+    def reservar(self, uniq: str) -> bool:
+        """``True`` = pergunte AGORA; o ``uniq`` fica em voo até :meth:`registrar`."""
+        if not uniq:
+            return False
+        with self._trava:
+            if uniq in self._em_voo or uniq in self._fechados:
+                return False
+            agora = self._relogio()
+            quando = self._proxima.get(uniq)
+            if quando is not None and agora < quando:
+                return False
+            ultima = self._ultima.get(uniq)
+            if ultima is not None and self._recuo and agora - ultima < self._recuo[0]:
+                return False
+            self._em_voo.add(uniq)
+            self._ultima[uniq] = agora
+            return True
+
+    def registrar(self, uniq: str, achado: IdentidadeDeFabrica) -> None:
+        """O que a pergunta devolveu. Solta o voo e decide se volta a perguntar."""
+        with self._trava:
+            self._em_voo.discard(uniq)
+            if achado.definitiva:
+                self._fechar_travado(uniq)
+                return
+            falhas = self._falhas.get(uniq, 0) + 1
+            self._falhas[uniq] = falhas
+            if falhas > len(self._recuo):
+                self._fechar_travado(uniq)
+                desistiu, espera = True, None
+            else:
+                espera = self._recuo[falhas - 1]
+                self._proxima[uniq] = self._relogio() + espera
+                desistiu = False
+        logger.info(
+            "identidade_de_fabrica_falhou",
+            uniq=uniq,
+            motivo=achado.motivo,
+            falhas=falhas,
+            desistiu=desistiu,
+            proxima_em_s=espera,
+        )
+
+    def fechar(self, uniq: str) -> None:
+        """Quem não pode responder — o mapa de canais diz que o transporte não entrega."""
+        with self._trava:
+            self._fechar_travado(uniq)
+
+    def esquecer_ausentes(self, vivos: set[str]) -> None:
+        """Quem saiu da mesa volta do zero — é o «até reconectar» da desistência."""
+        with self._trava:
+            for uniq in list(self._fechados | set(self._falhas)):
+                if uniq not in vivos:
+                    self._fechados.discard(uniq)
+                    self._falhas.pop(uniq, None)
+                    self._proxima.pop(uniq, None)
+
+    def _fechar_travado(self, uniq: str) -> None:
+        self._fechados.add(uniq)
+        self._falhas.pop(uniq, None)
+        self._proxima.pop(uniq, None)

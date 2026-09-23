@@ -860,17 +860,15 @@ class IpcHandlersMixin:
     _launch_arm_task: Any = None
 
     #: ROTA-A (02/09/2026): a IDENTIDADE DE FÁBRICA por `uniq` — `{serial,
-    #: modelo}`, os dois `None` até o aparelho responder. **Cache de SESSÃO, sem
-    #: TTL**, e a ausência de TTL é o ponto: o serial está gravado no firmware e
-    #: não muda; reperguntar seria mandar um `SET_FEATURE` da família `0x80` de
-    #: novo, a mesma em que um par errado RESETA o controle.
-    #:
-    #: `_identidade_em_voo` é o guarda de reentrância: o `state_full` roda a
-    #: 10 Hz e sem ele a mesma pergunta sairia dez vezes por segundo enquanto a
-    #: primeira ainda não voltou. Mesmo padrão de class attribute dos caches
-    #: acima (o mixin não é dataclass), com shadow por instância no primeiro uso.
+    #: modelo}`, os dois `None` até o aparelho responder. Só a RESPOSTA entra: o
+    #: serial está gravado no firmware e não muda. QUANDO perguntar de novo é da
+    #: `cor_do_plastico.AgendaDaPergunta` — a mesma regra da janela, com a
+    #: trava de uma pergunta em voo por controle, porque o `state_full` roda a
+    #: 10 Hz e o pedido é um `SET_FEATURE` da família `0x80`. Mesmo padrão de
+    #: class attribute dos caches acima (o mixin não é dataclass), com shadow
+    #: por instância no primeiro uso.
     _identidade_de_fabrica_cache: dict[str, dict[str, str | None]] | None = None
-    _identidade_em_voo: set[str] | None = None
+    _agenda_da_identidade: Any = None
 
     #: S2 (sensores na aba Status): `SensorHub` lazy — os readers de
     #: giroscópio/touchpad só nascem quando alguém pede o `state_full` e
@@ -3856,6 +3854,16 @@ class IpcHandlersMixin:
             entry["vpad_backend"] = backend
             entry["vpad_motivo"] = motivo
 
+        # A DESISTÊNCIA DURA ATÉ O CONTROLE SAIR E VOLTAR: quem não está na mesa
+        # recomeça do zero na próxima vez que aparecer.
+        self._agenda_de_identidade().esquecer_ausentes(
+            {
+                str(entry["uniq"])
+                for entry in entries
+                if entry.get("connected") and isinstance(entry.get("uniq"), str)
+            }
+        )
+
     def _identidade_publicada(
         self, entry: dict[str, Any], uniq: str | None
     ) -> dict[str, str | None]:
@@ -3889,10 +3897,9 @@ class IpcHandlersMixin:
         "aplicado" sem ter aplicado. O daemon é quem tem o aparelho.
 
         **E POR QUE ELA NÃO ACONTECE NESTA FUNÇÃO:** este handler roda a 10 Hz.
-        A leitura sai numa thread de UMA VEZ por `uniq` (`_identidade_em_voo`
-        impede a segunda), o resultado fica em cache de sessão sem TTL — o
-        serial está no firmware e não muda — e o tique publica o que já se sabe.
-        Enquanto não voltar, sai ``None``, que é a verdade daquele instante.
+        A leitura sai numa thread, uma em voo por `uniq`, e o tique publica o
+        que já se sabe. Enquanto não voltar, sai ``None``, que é a verdade
+        daquele instante.
         """
         declarado: str | None = None
         maquina = getattr(self.daemon, "_maquina", None) if self.daemon else None
@@ -3912,7 +3919,7 @@ class IpcHandlersMixin:
     def _identidade_de_fabrica(
         self, uniq: str | None, entry: dict[str, Any]
     ) -> dict[str, str | None]:
-        """``{serial, modelo}`` do cache de sessão, disparando a leitura se faltar.
+        """``{serial, modelo}`` do cache de sessão, disparando a leitura se for a hora.
 
         Nunca bloqueia e nunca levanta. Ver :meth:`_identidade_publicada` para o
         contrato e para a razão de a leitura sair numa thread.
@@ -3926,54 +3933,72 @@ class IpcHandlersMixin:
             self._identidade_de_fabrica_cache = cache
         pronto = cache.get(uniq)
         if pronto is not None:
+            # O que o aparelho respondeu não muda: nem a agenda é consultada.
             return dict(pronto)
-        em_voo = self._identidade_em_voo
-        if em_voo is None:
-            em_voo = set()
-            self._identidade_em_voo = em_voo
-        if uniq in em_voo:
-            return dict(vazio)
-        em_voo.add(uniq)
-        with contextlib.suppress(Exception):
-            import threading
+        if self._agenda_de_identidade().reservar(uniq):
+            try:
+                import threading
 
-            threading.Thread(
-                target=self._perguntar_identidade,
-                args=(uniq,),
-                name=f"identidade-{uniq[:6]}",
-                daemon=True,
-            ).start()
+                threading.Thread(
+                    target=self._perguntar_identidade,
+                    args=(uniq,),
+                    name=f"identidade-{uniq[:6]}",
+                    daemon=True,
+                ).start()
+            except Exception:
+                # A thread não nasceu: a pergunta não saiu, e o voo tem de ser
+                # solto como falha — senão o `uniq` fica preso para sempre.
+                with contextlib.suppress(Exception):
+                    from hefesto_dualsense4unix.integrations.cor_do_plastico import (
+                        IdentidadeDeFabrica,
+                    )
+
+                    self._agenda_de_identidade().registrar(
+                        uniq, IdentidadeDeFabrica(motivo="a thread não nasceu")
+                    )
         return dict(vazio)
 
-    def _perguntar_identidade(self, uniq: str) -> None:
-        """A leitura, fora do laço. Grava no cache MESMO quando não sabe.
-
-        Gravar o "não sei" impede a pergunta de voltar a cada tique num controle
-        que não RESPONDEU — SUBSTITUÍDO em 03/09 o *"não pode responder (o do
-        rádio: o filtro de cabo mora em `no_do_controle`)"*: na ONDA-CONEXOES-11
-        o filtro saiu e a função morreu. Sem isto, uma thread a cada 100 ms.
-        """
-        serial: str | None = None
-        modelo: str | None = None
-        try:
+    def _agenda_de_identidade(self) -> Any:
+        """A `AgendaDaPergunta` desta instância, criada no primeiro uso."""
+        agenda = getattr(self, "_agenda_da_identidade", None)
+        if agenda is None:
             from hefesto_dualsense4unix.integrations.cor_do_plastico import (
-                ler_identidade_pelo_cabo,
+                AgendaDaPergunta,
             )
 
+            agenda = AgendaDaPergunta()
+            self._agenda_da_identidade = agenda
+        return agenda
+
+    def _perguntar_identidade(self, uniq: str) -> None:
+        """A leitura, fora do laço. Só a RESPOSTA entra no cache.
+
+        A falha de agora não escreve — ela não apaga o que já se sabia — e volta
+        à agenda, que decide a próxima (A-FITA-PERDEU-O-MODELO-E-A-COR-01).
+        SUBSTITUÍDO em 22/09/2026 o *"Grava no cache MESMO quando não sabe"*:
+        era essa gravação que prendia o ``None`` até o daemon reiniciar.
+        """
+        from hefesto_dualsense4unix.integrations.cor_do_plastico import (
+            IdentidadeDeFabrica,
+            ler_identidade_pelo_cabo,
+        )
+
+        achado = IdentidadeDeFabrica(motivo="a leitura não devolveu")
+        try:
             achado = ler_identidade_pelo_cabo(uniq)
-            serial = achado.serial
-            modelo = None if achado.cor is None else achado.cor.nome
         except Exception as erro:  # defensivo — jamais derruba o daemon
-            logger.debug("identidade_de_fabrica_falhou", uniq=uniq, erro=str(erro))
+            achado = IdentidadeDeFabrica(motivo=f"a leitura levantou {type(erro).__name__}")
         finally:
-            cache = self._identidade_de_fabrica_cache
-            if cache is None:
-                cache = {}
-                self._identidade_de_fabrica_cache = cache
-            cache[uniq] = {"serial": serial, "modelo": modelo}
-            em_voo = self._identidade_em_voo
-            if em_voo is not None:
-                em_voo.discard(uniq)
+            if achado.definitiva:
+                cache = self._identidade_de_fabrica_cache
+                if cache is None:
+                    cache = {}
+                    self._identidade_de_fabrica_cache = cache
+                cache[uniq] = {
+                    "serial": achado.serial,
+                    "modelo": None if achado.cor is None else achado.cor.nome,
+                }
+            self._agenda_de_identidade().registrar(uniq, achado)
 
     def _merge_sensores(self, entry: dict[str, Any], uniq: str | None) -> None:
         """Acrescenta `gyro`/`touchpad` ao `inputs` deste controle (S2).

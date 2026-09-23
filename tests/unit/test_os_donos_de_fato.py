@@ -366,7 +366,6 @@ class _Handler:
         self.daemon = daemon
         self.controller = _Vazio()
         self._identidade_de_fabrica_cache: dict[str, Any] | None = None
-        self._identidade_em_voo: set[str] | None = None
         self._perguntas: list[str] = []
 
     # --- os auxiliares fora do assunto ---
@@ -402,9 +401,14 @@ class _Handler:
             cache = {}
             self._identidade_de_fabrica_cache = cache
         cache[uniq] = {"serial": None, "modelo": "Cosmic Red"}
-        voo = self._identidade_em_voo
-        if voo is not None:
-            voo.discard(uniq)
+        # A volta da pergunta solta o voo na agenda de verdade, como o produto.
+        from hefesto_dualsense4unix.integrations.cor_do_plastico import (
+            IdentidadeDeFabrica,
+        )
+
+        self._agenda_de_identidade().registrar(
+            uniq, IdentidadeDeFabrica(serial="DUBL00###########")
+        )
 
     def enriquecer(self, entradas: list[dict[str, Any]]) -> None:
         self._mixin._enrich_controllers_per_controller(self, entradas, None)  # type: ignore[arg-type]
