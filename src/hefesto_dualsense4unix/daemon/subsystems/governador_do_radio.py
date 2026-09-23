@@ -87,8 +87,9 @@ OS CINCO ACERTOS DA CONFERÊNCIA (GOVERNADOR-DO-RADIO-02, 23/09/2026)
    contadas, não escritas.
 4. **A frase da recusa diz o NOME, nunca o endereço.** O adaptador é dito como
    a tela o diz, por :func:`nome_da_porta`, que pergunta ao DONO do nome da
-   porta — o ``entrada_a_entrada`` (A-COSTURA-DA-ONDA-2-01). Sem nome, a frase
-   diz «este adaptador».
+   porta — o ``entrada_a_entrada`` (A-COSTURA-DA-ONDA-2-01). A porta que ela não
+   nomeou é «Entrada 4.1.4», pelo dono (TRANSPLANTE-DA-SECAO-01); sem porta
+   nenhuma — o adaptador embutido —, a frase diz «este adaptador».
 5. **Ponte fantasma não conta.** O daemon que morre sem ``stop()`` deixa no
    diário ``PONTE_SUBIU`` sem ``PONTE_DESCEU``. No arranque o governador fecha
    essas pontes com :data:`MOTIVO_DO_REINICIO`
@@ -235,7 +236,8 @@ _ENDERECO_DE_RADIO = re.compile(r"(?i)(?<![0-9a-f])[0-9a-f]{2}(?::[0-9a-f]{2}){5
 
 
 def nome_da_porta(endereco: str, *, amostra: Mapping[str, Any] | None = None) -> str:
-    """O nome que a tela dá a este adaptador — o que ela deu, ou «Entrada 3» —, ou ``""``.
+    """O nome que a tela dá a este adaptador — o que ela deu, «Entrada 3» ou
+    «Entrada 4.1.4» —, ou ``""``.
 
     UM DONO DO NOME DA PORTA (A-COSTURA-DA-ONDA-2-01, item 6): o nome é do
     «Mapear Entrada a Entrada» (``entrada_a_entrada.nome_da_porta``, que traduz
@@ -248,14 +250,17 @@ def nome_da_porta(endereco: str, *, amostra: Mapping[str, Any] | None = None) ->
     * o NOME é o do dono, pelo caminho — ele o traduz no lugar (D3), e a
       entrada que ela numerou na outra janela também vale.
 
-    FATO SUBSTITUÍDO EM 23/09: aqui se compunha a palavra com o número dela ou,
-    sem ele, com o ``devpath`` — um segundo dono do nome, e o ``devpath`` virava
-    «Entrada 4.1.4», que se lê como um número DELA. Porta que ela não mapeou não
-    tem nome: ``""``.
+    FATO SUBSTITUÍDO DUAS VEZES EM 23/09: aqui se compunha a palavra com o
+    número dela ou, sem ele, com o ``devpath`` — um segundo dono do nome, que a
+    A-COSTURA-DA-ONDA-2-01 tirou daqui. A TRANSPLANTE-DA-SECAO-01 (item 4 de quem
+    coordena) devolveu o «Entrada 4.1.4» à porta que ela não nomeou nem
+    numerou, como o desenho aprovado mostra — mas NO DONO
+    (``entrada_a_entrada.nome_da_porta``): este governador recebe a palavra
+    pronta e não compõe nada.
 
     ``""`` é «não sei»: adaptador embutido (sem USB), endereço que o kernel não
-    conhece, porta sem nome, ou a suíte no ar — que não lê a mesa dela por
-    aqui. Quem chama diz «este adaptador», nunca o endereço.
+    conhece, ou a suíte no ar — que não lê a mesa dela por aqui. Quem chama diz
+    «este adaptador», nunca o endereço.
     """
     try:
         from hefesto_dualsense4unix.integrations import bluez_dbus
