@@ -215,6 +215,61 @@ def test_quem_esperou_a_trava_confere_de_novo_com_ela_na_mao(
     assert len(mundo.metodos("StartDiscovery")) == 1, "duas janelas abriram"
 
 
+def test_dois_conectar_quase_juntos_abrem_uma_janela_so(
+    diario: Path,
+    mundo: rm.RadioDeMentira,
+    dono: bd.DonoVivo,
+    relogio: rm.Relogio,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A régua de cima, para o «Conectar»: a segunda olhada vale nele também.
+
+    A régua de cima só exercita o :meth:`CentralDoRadio.mover`, e a conferência
+    arrancou a segunda olhada do :meth:`CentralDoRadio.conectar` sem nenhuma
+    régua reprovar. Dois «Conectar» quase juntos, para o quarto e para a
+    varanda: os dois passam pela primeira olhada e esperam a trava. O que
+    ganha abre a janela, e um controle novo aparece e fica «esperando». O
+    outro, já com a trava na mão, olha de novo e recusa.
+
+    MORDIDA: tire do :meth:`CentralDoRadio.conectar` a segunda olhada — o
+    segundo abre outra janela e esta régua reprova.
+    """
+    central = _central(dono, mundo, relogio)
+    mundo.pair_mente = True
+    # Um controle que ainda não tem bond em lugar nenhum.
+    mundo.fisicos[VERDE] = rm.Fisico(VERDE, rm.CLASSE_DE_CONTROLE)
+    relogio.agendar(2.0, lambda: mundo.segurar_ps_create(VERDE))
+
+    chegaram = threading.Semaphore(0)
+    de_verdade = bd.na_trava
+
+    @contextlib.contextmanager
+    def contando(quem: str = bd.QUEM_PADRAO, *, prazo_s: float | None = None) -> Iterator[float]:
+        chegaram.release()
+        with de_verdade(quem, prazo_s=prazo_s) as esperou:
+            yield esperou
+
+    monkeypatch.setattr(bd, "na_trava", contando)
+    fins: list[cr.Movimento] = []
+    fios = [
+        threading.Thread(target=lambda d=d: fins.append(central.conectar(d)))
+        for d in (QUARTO, VARANDA)
+    ]
+    with diario_do_radio.trava_do_radio("vigia"):
+        for fio in fios:
+            fio.start()
+        assert chegaram.acquire(timeout=5) and chegaram.acquire(timeout=5)
+    for fio in fios:
+        fio.join(timeout=10)
+
+    desfechos = sorted((m.estado, m.motivo) for m in fins)
+    assert desfechos == [
+        (cr.ESPERANDO, cr.MOTIVO_SEM_CONFIRMACAO),
+        (cr.NAO_CHEGOU, cr.MOTIVO_OCUPADO),
+    ], desfechos
+    assert len(mundo.metodos("StartDiscovery")) == 1, "duas janelas abriram"
+
+
 # ---------------------------------------------------------------------------
 # 2. uma chave, um sentido
 # ---------------------------------------------------------------------------
