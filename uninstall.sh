@@ -1000,7 +1000,7 @@ if sudo -n true 2>/dev/null; then
     #   - o Alias é um nome de lugar do Hefesto (com ou sem o prefixo) → volta
     #     ao padrão do BlueZ (Alias vazio, que o BlueZ lê como o nome do
     #     sistema);
-    #   - o Alias é «Nintendo » + o próprio nome do sistema → idem;
+    #   - «Nintendo » + o nome do sistema, com ou sem o « #N» do BlueZ → idem;
     #   - o Alias é «Nintendo » + um nome que NÃO é do Hefesto → tira só o
     #     prefixo: o nome embaixo dele é de quem o escreveu, e não é nosso.
     # Um Alias sem o prefixo e que não é lugar do Hefesto não é tocado.
@@ -1072,7 +1072,7 @@ for dele in (lugares.values() if isinstance(lugares, dict) else ()):
         for _um_nome in ${_nomes_do_hefesto[@]+"${_nomes_do_hefesto[@]}"}; do
             [[ "${_base}" == "${_um_nome}" ]] && _e_do_hefesto=1
         done
-        if [[ "${_alias}" == Nintendo\ * && -n "${_nome_do_sistema}" && "${_base}" == "${_nome_do_sistema}" ]]; then
+        if [[ "${_alias}" == Nintendo\ * && -n "${_nome_do_sistema}" && "${_base% #[0-9]*}" == "${_nome_do_sistema% #[0-9]*}" ]]; then
             _e_do_hefesto=1
         fi
         if [[ "${_e_do_hefesto}" -eq 1 ]]; then
