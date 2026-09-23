@@ -341,6 +341,62 @@ def test_o_movimento_em_nao_sei_nao_apaga_a_conexao_viva_do_destino(
     assert _da_central(diario) == [cr.MOVEU_O_APARELHO], "nada se moveu na segunda vez"
 
 
+def _onde_esta_que_quebra(mundo: rm.RadioDeMentira, quebrado: dict[str, bool]) -> Any:
+    def onde_esta(u: str) -> str:
+        if quebrado["sim"]:
+            raise RuntimeError("o sysfs sumiu sob a mão")
+        return mundo.onde_esta(u)
+
+    return onde_esta
+
+
+def test_um_erro_no_meio_do_mover_nao_emperra_a_central(
+    diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
+) -> None:
+    """O ``mover`` promete nunca levantar. Uma exceção no meio deixava o
+    movimento «esperando» para sempre: o «Equilibrar» nunca mais propunha nada
+    e o mesmo pedido devolvia o movimento morto até o daemon reiniciar.
+
+    MORDIDA: tire o ``except`` do ``mover`` — a exceção sobe e esta régua reprova.
+    """
+    quebrado = {"sim": True}
+    central = _central(dono, mundo, relogio)
+    central._onde_esta = _onde_esta_que_quebra(mundo, quebrado)
+
+    feito = central.mover(VERMELHO, QUARTO)
+
+    assert (feito.estado, feito.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_FALHOU)
+    assert central.em_curso is False, "a central ficou emperrada num «esperando» morto"
+    assert mundo.lapides == [] and mundo.objeto(SALA, VERMELHO) is not None
+    # E o próximo pedido anda.
+    quebrado["sim"] = False
+    relogio.agendar(2.0, lambda: mundo.segurar_ps_create(VERMELHO))
+    assert central.mover(VERMELHO, QUARTO).estado == cr.CHEGOU
+
+
+def test_um_erro_na_vigia_nao_segura_o_esperando_alem_do_prazo(
+    diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
+) -> None:
+    """A vigia roda num fio: uma exceção ali matava o fio e o «esperando» nunca
+    mais chegava ao prazo.
+
+    MORDIDA: tire o ``except`` da ``vigiar`` — a exceção sobe e esta régua reprova.
+    """
+    quebrado = {"sim": False}
+    central = _central(dono, mundo, relogio)
+    central._onde_esta = _onde_esta_que_quebra(mundo, quebrado)
+    feito = _aplicar_que_falha(mundo, relogio, central)
+    assert feito.estado == cr.ESPERANDO
+
+    quebrado["sim"] = True
+    relogio.agora = feito.comecou + cr.PRAZO_DO_PENDENTE_S + 1
+    central.vigiar()
+
+    feito = central.movimento_de(VERMELHO)
+    assert (feito.estado, feito.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_PRAZO)
+    assert mundo.lapides == []
+
+
 # ---------------------------------------------------------------------------
 # 6. sem o agente próprio, o piso
 # ---------------------------------------------------------------------------

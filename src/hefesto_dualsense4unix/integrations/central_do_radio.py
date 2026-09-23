@@ -140,6 +140,9 @@ MOTIVO_SEM_CONFIRMACAO = "sem_confirmacao"
 MOTIVO_VOLTOU = "voltou"
 #: O «esperando» passou do prazo sem confirmar.
 MOTIVO_PRAZO = "prazo"
+#: Um erro no meio do caminho: o movimento acaba aqui, com o que já estava
+#: feito, e a central segue livre para o próximo pedido.
+MOTIVO_FALHOU = "falhou"
 
 # --- o diário -----------------------------------------------------------------
 
@@ -407,6 +410,9 @@ class CentralDoRadio:
         self._tranca = threading.Lock()
         self._movimentos: dict[str, Movimento] = {}
         self._fios: dict[str, threading.Thread] = {}
+        #: A chave do último movimento que ESTE fio guardou — é por ela que um
+        #: erro no meio acha o movimento a encerrar (o «Conectar» troca de chave).
+        self._no_fio_atual = threading.local()
         self._parar = threading.Event()
         self._ultimos_controles: tuple[Mapping[str, Any], ...] = ()
         self._adaptadores_em_cache: tuple[float, tuple[bluez_dbus.AdaptadorDoBluez, ...]] | None = (
@@ -464,7 +470,21 @@ class CentralDoRadio:
     def _guardar(self, movimento: Movimento) -> Movimento:
         with self._tranca:
             self._movimentos[movimento.aparelho] = movimento
+        self._no_fio_atual.chave = movimento.aparelho
         return movimento
+
+    def _falhou(self, chave: str) -> Movimento:
+        """Um erro no meio do mover: o movimento deste fio acaba «não chegou».
+
+        Sem isto a promessa de nunca levantar caía, e o movimento ficava
+        «esperando» para sempre — o «Equilibrar» mudo e o mesmo pedido
+        devolvendo o movimento morto até o daemon reiniciar.
+        """
+        logger.warning("central_mover_levantou", aparelho=mascarar(chave), exc_info=True)
+        atual = self._pela_chave(getattr(self._no_fio_atual, "chave", chave))
+        if atual is None or not atual.em_curso:
+            return atual or Movimento(chave, "", NAO_CHEGOU, PASSO_FIM, MOTIVO_FALHOU)
+        return self._acabou(atual, NAO_CHEGOU, MOTIVO_FALHOU)
 
     def publicar(
         self,
@@ -707,7 +727,10 @@ class CentralDoRadio:
                                         comecou=self._relogio()))
                 if _ao_pegar_a_trava is not None:
                     _ao_pegar_a_trava()
-                return self._mover_na_trava(alvo, destino)
+                try:
+                    return self._mover_na_trava(alvo, destino)
+                except Exception:
+                    return self._falhou(alvo)
         except TravaOcupadaError:
             logger.info("central_mover_trava_ocupada", aparelho=mascarar(alvo))
             return Movimento(alvo, destino or "", NAO_CHEGOU, PASSO_FIM, MOTIVO_OCUPADO)
@@ -737,7 +760,10 @@ class CentralDoRadio:
                                         comecou=self._relogio()))
                 if _ao_pegar_a_trava is not None:
                     _ao_pegar_a_trava()
-                return self._conectar_na_trava(destino)
+                try:
+                    return self._conectar_na_trava(destino)
+                except Exception:
+                    return self._falhou(CONECTANDO)
         except TravaOcupadaError:
             logger.info("central_conectar_trava_ocupada")
             return Movimento(CONECTANDO, destino or "", NAO_CHEGOU, PASSO_FIM, MOTIVO_OCUPADO)
@@ -1075,30 +1101,46 @@ class CentralDoRadio:
         Sem a trava para olhar; com ela para esquecer a origem. Chegou no
         destino → esquece a origem e «chegou»; voltou para a origem → «não
         chegou»; passou do prazo → «não chegou». Nada se apaga sem o «chegou».
-        """
-        from hefesto_dualsense4unix.integrations.diario_do_radio import TravaOcupadaError
 
+        Nunca levanta: ela roda num fio, e uma exceção ali matava o fio com o
+        movimento «esperando» para sempre. Um erro numa volta é «não sei» — e o
+        prazo continua valendo.
+        """
         pendentes = [
             m for m in self.movimentos()
             if m.em_curso and m.passo == PASSO_CONFERINDO
         ]
         for movimento in pendentes:
-            dono = self._dono()
-            if self._chegou(movimento, dono):
-                try:
-                    with bluez_dbus.na_trava(QUEM, prazo_s=self._prazo_da_trava_s):
-                        if self.movimento_de(movimento.aparelho) == movimento:
-                            self._esquecer_as_origens(movimento, dono)
-                except TravaOcupadaError:
-                    continue
-                continue
-            if movimento.controle and movimento.origens:
-                onde = self._onde_esta(_hex12(movimento.aparelho))
-                if onde and onde in movimento.origens:
-                    self._acabou(movimento, NAO_CHEGOU, MOTIVO_VOLTOU)
-                    continue
-            if self._relogio() - movimento.comecou >= self._prazo_do_pendente_s:
-                self._acabou(movimento, NAO_CHEGOU, MOTIVO_PRAZO)
+            try:
+                self._vigiar_um(movimento)
+            except Exception:
+                logger.warning(
+                    "central_vigia_levantou", aparelho=mascarar(movimento.aparelho), exc_info=True
+                )
+                if (
+                    self._relogio() - movimento.comecou >= self._prazo_do_pendente_s
+                    and self.movimento_de(movimento.aparelho) == movimento
+                ):
+                    self._acabou(movimento, NAO_CHEGOU, MOTIVO_PRAZO)
+
+    def _vigiar_um(self, movimento: Movimento) -> None:
+        from hefesto_dualsense4unix.integrations.diario_do_radio import TravaOcupadaError
+
+        dono = self._dono()
+        if self._chegou(movimento, dono):
+            with contextlib.suppress(TravaOcupadaError), bluez_dbus.na_trava(
+                QUEM, prazo_s=self._prazo_da_trava_s
+            ):
+                if self.movimento_de(movimento.aparelho) == movimento:
+                    self._esquecer_as_origens(movimento, dono)
+            return
+        if movimento.controle and movimento.origens:
+            onde = self._onde_esta(_hex12(movimento.aparelho))
+            if onde and onde in movimento.origens:
+                self._acabou(movimento, NAO_CHEGOU, MOTIVO_VOLTOU)
+                return
+        if self._relogio() - movimento.comecou >= self._prazo_do_pendente_s:
+            self._acabou(movimento, NAO_CHEGOU, MOTIVO_PRAZO)
 
     def _vigiar_ate_resolver(self, alvo: str) -> None:
         """O fio do gesto, depois do mover: vigia o «esperando» até resolver."""
@@ -1116,6 +1158,7 @@ __all__ = [
     "CONFERIR_S",
     "ESPERANDO",
     "ESTADOS",
+    "MOTIVO_FALHOU",
     "MOTIVO_FORA_DO_RADIO",
     "MOTIVO_JA_ESTAVA",
     "MOTIVO_NAO_PAREOU",
