@@ -6969,7 +6969,15 @@ check_wifi_usb() {
     fi
     lista="$(printf '%s' "${lista}" | tr '\n' ' ' | sed 's/ $//')"
     if [[ ! -x "${instalado}" ]]; then
-        warn "há Wi-Fi USB (${lista}) e o vigia do dongle não está instalado — o scan de fundo pode derrubá-lo de 5 em 5 min e um travamento mudo fica sem cura: $(conselho_de_instalacao)"
+        # O PACOTE NÃO O LIGA, por decisão (P-15 da INSTALL-E-UNINSTALL-DO-
+        # RADIO-01, a razão está no `install-host-udev.sh`): mandar quem
+        # instalou por pacote «atualizar» seria mandar repetir o que não
+        # entrega. O gesto que liga é o instalador do repositório.
+        if esta_instalacao_e_um_checkout; then
+            warn "há Wi-Fi USB (${lista}) e o vigia do dongle não está instalado — o scan de fundo pode derrubá-lo de 5 em 5 min e um travamento mudo fica sem cura: $(conselho_de_instalacao)"
+        else
+            warn "há Wi-Fi USB (${lista}) e o vigia do dongle não está ligado — o scan de fundo pode derrubá-lo de 5 em 5 min e um travamento mudo fica sem cura. O pacote não o liga (é um serviço de root que reinicia porta USB); quem o liga é o instalador do repositório do Hefesto, rodado de um clone dele, em qualquer formato"
+        fi
         problema=1
     elif [[ "${st_timer}" != "active" ]]; then
         warn "o vigia do Wi-Fi USB está instalado e o timer não está ativo (${st_timer:-?}) — ligue: sudo systemctl enable --now hefesto-wifi-usb-vigia.timer"

@@ -178,6 +178,18 @@ fi
 # restauro automático) é do `install_bt_resilience_host` do `install.sh`, que
 # desde 22/08 roda nos dois lados da bifurcação de formato.
 #
+# O VIGIA DO WI-FI USB NÃO VAI POR AQUI, e é decisão (INSTALL-E-UNINSTALL-DO-
+# RADIO-01, 23/09/2026, o P-15): nem o timer `hefesto-wifi-usb-vigia`, nem o
+# dispatcher `90-hefesto-wifi-usb` do NetworkManager, nem o drop-in
+# `10-hefesto-maquina.conf` do watchdog. O desenho é o dos timers acima: um
+# serviço de root que liga sozinho a cada minuto e reinicia porta USB é
+# escolha de quem roda o `install.sh`, não efeito colateral de um pacote. E o
+# drop-in precisa da CASA de uma pessoa (ele mostra ao watchdog o
+# `maquina.json` dela), que um helper de pacote rodado por root não tem — nem
+# o watchdog, que ele serve, vem por aqui. O pacote leva o `wifi_usb.sh` em
+# /usr/share (o `--status` serve a qualquer um), e o `doctor.sh` diz a quem
+# tem Wi-Fi USB como ligar o vigia.
+#
 # Quando o formato não traz as fontes, o `TEST==` das regras as deixa INERTES em
 # vez de falhando, e o aviso mais abaixo diz isso com todas as letras — nenhum
 # dos dois estados é silencioso.
