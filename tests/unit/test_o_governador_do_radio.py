@@ -591,10 +591,13 @@ def test_o_limite_de_pontes_tem_um_dono_so() -> None:
     `LIMITE_DE_PONTES_POR_ADAPTADOR` no `storm_doctor` —, e dois números
     iguais por coincidência divergem na primeira medição da bancada.
     """
-    assert storm_doctor.LIMITE_DE_PONTES_POR_ADAPTADOR is radio_da_mesa.N_MAX_PONTES
+    assert storm_doctor.LIMITE_DE_PONTES_POR_ADAPTADOR == radio_da_mesa.N_MAX_PONTES
     assert gov.GovernadorDoRadio().n_max == radio_da_mesa.N_MAX_PONTES
+    # O `is` não prova o dono: o 2 é o mesmo objeto em qualquer lugar do
+    # CPython, e `= int("2")` passava (conferência de 23/09/2026). O que prova
+    # é a atribuição ler o nome do dono.
     fonte = Path(storm_doctor.__file__).read_text(encoding="utf-8")
-    assert "LIMITE_DE_PONTES_POR_ADAPTADOR = 2" not in fonte, (
+    assert "\nLIMITE_DE_PONTES_POR_ADAPTADOR = N_MAX_PONTES\n" in fonte, (
         "o storm_doctor voltou a digitar o limite em vez de lê-lo do dono"
     )
 
