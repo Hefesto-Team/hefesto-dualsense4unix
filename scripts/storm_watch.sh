@@ -78,11 +78,13 @@ set -uo pipefail
 # existe no patch — o retry agindo). [JOYCON] intacto (exceeded max attempts).
 # As quatro famílias do rádio (O-DIARIO-DO-RADIO-01): «output queue is full»
 # (2B, do uhid), «bt socket write error» (2A, do bluetoothd), «link tx timeout»
-# e «killing stalled connection» (o enlace parado), «command 0x.... tx timeout»
-# (3, o controlador travado) e «crc.s check failed» (4, a entrada). Os dois do
-# hci também casam o padrão genérico `bluetooth: hci…`; ficam escritos por
-# extenso para que tirar o genérico não os cegue.
-GREP_UNION="error -71|can.t add hid device|device descriptor read/64, error|not accepting address|unable to enumerate usb device|joycon_enforce_subcmd_rate|probe - fail = -|failed to get joycon info|init over bluetooth failed|output queue is full|bt socket write error|link tx timeout|killing stalled connection|command 0x[0-9a-f]{4} tx timeout|crc.s check failed|bluetooth: hci[0-9].*(timeout|failed|error)|xhci_hcd.*(reset|died|timeout|halt)"
+# e «killing stalled connection» (o enlace parado), «command 0x.... tx timeout»,
+# «read reg16 failed» e «failed to generate devcoredump» (3, o controlador
+# travado — as três linhas de cada volta do laço) e «crc.s check failed» (4, a
+# entrada). As do hci também casam o padrão genérico `bluetooth: hci…`; ficam
+# escritas por extenso para que tirar o genérico não as cegue — e a régua
+# (`test_o_vigia_ve_as_quatro_familias.py`) mede cada família SEM o genérico.
+GREP_UNION="error -71|can.t add hid device|device descriptor read/64, error|not accepting address|unable to enumerate usb device|joycon_enforce_subcmd_rate|probe - fail = -|failed to get joycon info|init over bluetooth failed|output queue is full|bt socket write error|link tx timeout|killing stalled connection|command 0x[0-9a-f]{4} tx timeout|read reg16 failed|failed to generate devcoredump|crc.s check failed|bluetooth: hci[0-9].*(timeout|failed|error)|xhci_hcd.*(reset|died|timeout|halt)"
 
 # CADERNO-QUE-NÃO-ESCREVE-01: o `awk` desta casa lê de um cano que NUNCA fecha
 # (`journalctl -f`), e o mawk bufferiza a ENTRADA — ver o comentário do
