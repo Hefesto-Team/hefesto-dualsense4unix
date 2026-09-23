@@ -86,8 +86,9 @@ OS CINCO ACERTOS DA CONFERÊNCIA (GOVERNADOR-DO-RADIO-02, 23/09/2026)
    por degrau e uma quando a fila volta a andar; as tentativas do meio são
    contadas, não escritas.
 4. **A frase da recusa diz o NOME, nunca o endereço.** O adaptador é dito como
-   a tela o diz — «Entrada 4.1.4» —, por :func:`nome_da_porta`, que pergunta
-   aos donos de hoje. Sem nome, a frase diz «este adaptador».
+   a tela o diz, por :func:`nome_da_porta`, que pergunta ao DONO do nome da
+   porta — o ``entrada_a_entrada`` (A-COSTURA-DA-ONDA-2-01). Sem nome, a frase
+   diz «este adaptador».
 5. **Ponte fantasma não conta.** O daemon que morre sem ``stop()`` deixa no
    diário ``PONTE_SUBIU`` sem ``PONTE_DESCEU``. No arranque o governador fecha
    essas pontes com :data:`MOTIVO_DO_REINICIO`
@@ -227,39 +228,33 @@ _ADAPTADOR_FORA = frozenset({ADAPTADOR_DESLIGADO, ADAPTADOR_SUMIU, IOCTL_FALHOU,
 #: A frase do adaptador que parou de escoar — a mesma na recusa e no diário.
 FRASE_DA_FILA_PARADA = "Este adaptador parou de enviar. O som volta sozinho."
 
-#: A palavra da tela para o lugar de um adaptador — a do desenho aprovado
-#: (``mockup/mapa-do-radio.html``: ``'Entrada ' + lug.entrada``) e a da
-#: decisão ``D-A-PALAVRA-ENTRADA``: «Entrada», nunca «porta».
-PALAVRA_DA_ENTRADA = "Entrada"
-
 #: Um endereço de rádio em qualquer grafia com dois-pontos. A frase de tela
 #: NUNCA o leva (GOVERNADOR-DO-RADIO-02): um nome que vier com ele é «não sei».
 _ENDERECO_DE_RADIO = re.compile(r"(?i)(?<![0-9a-f])[0-9a-f]{2}(?::[0-9a-f]{2}){5}(?![0-9a-f])")
 
 
 def nome_da_porta(endereco: str, *, amostra: Mapping[str, Any] | None = None) -> str:
-    """O nome que a tela dá a este adaptador — «Entrada 4.1.4» —, ou ``""``.
+    """O nome que a tela dá a este adaptador — o que ela deu, ou «Entrada 3» —, ou ``""``.
 
-    GOVERNADOR-DO-RADIO-02, item 4. O governador não inventa nome: ele pergunta
-    aos donos que já existem, e a regra de composição é a do desenho aprovado
-    (``'Entrada ' + lug.entrada``):
+    UM DONO DO NOME DA PORTA (A-COSTURA-DA-ONDA-2-01, item 6): o nome é do
+    «Mapear Entrada a Entrada» (``entrada_a_entrada.nome_da_porta``, que traduz
+    pelo ``utils/maquina.py``). Este governador só acha QUAL porta é, e pergunta:
 
     * o ``hciN`` do endereço é o do KERNEL — a amostra do medidor de ar, que já
       traz ``hci`` e ``endereco`` da mesma leitura, e, sem ela,
       ``bluez_dbus.enderecos_pelo_kernel`` (o mesmo ioctl);
-    * o lugar do ``hciN`` é o do ``mesa_de_radio.adaptadores_bluetooth`` — o
-      ``devpath`` e o caminho de barramento;
-    * se ELA declarou aquela entrada no mapa do gabinete, o número é o dela
-      (``mapa_das_portas.porta_de``, o dono de «em qual entrada está este
-      caminho»); senão, o ``devpath``, como no desenho.
+    * o caminho do ``hciN`` é o do ``mesa_de_radio.adaptadores_bluetooth``;
+    * o NOME é o do dono, pelo caminho — ele o traduz no lugar (D3), e a
+      entrada que ela numerou na outra janela também vale.
+
+    FATO SUBSTITUÍDO EM 23/09: aqui se compunha a palavra com o número dela ou,
+    sem ele, com o ``devpath`` — um segundo dono do nome, e o ``devpath`` virava
+    «Entrada 4.1.4», que se lê como um número DELA. Porta que ela não mapeou não
+    tem nome: ``""``.
 
     ``""`` é «não sei»: adaptador embutido (sem USB), endereço que o kernel não
-    conhece, ou a suíte no ar — que não lê a mesa dela por aqui. Quem chama
-    diz «este adaptador», nunca o endereço.
-
-    QUANDO A ENTRADA-A-ENTRADA-01 DER NOME À PORTA (o arquivo chaveado pelo
-    lugar, com a tradução em ``utils/maquina.py``), é ESTA a função que passa a
-    perguntar a ela. Um lugar só a mudar.
+    conhece, porta sem nome, ou a suíte no ar — que não lê a mesa dela por
+    aqui. Quem chama diz «este adaptador», nunca o endereço.
     """
     try:
         from hefesto_dualsense4unix.integrations import bluez_dbus
@@ -284,13 +279,11 @@ def nome_da_porta(endereco: str, *, amostra: Mapping[str, Any] | None = None) ->
         from hefesto_dualsense4unix.integrations.mesa_de_radio import adaptadores_bluetooth
 
         lugar = next((a for a in adaptadores_bluetooth() if a.interface == interface), None)
-        if lugar is None or not lugar.devpath:
+        if lugar is None or not lugar.caminho:
             return ""
-        from hefesto_dualsense4unix.integrations.mapa_das_portas import porta_de
-        from hefesto_dualsense4unix.utils.maquina import carregar_maquina
+        from hefesto_dualsense4unix.integrations import entrada_a_entrada
 
-        numero = porta_de(carregar_maquina().mapa, lugar.caminho)
-        return f"{PALAVRA_DA_ENTRADA} {numero or lugar.devpath}"
+        return entrada_a_entrada.nome_da_porta(lugar.caminho) or ""
     except Exception:  # o nome nunca derruba a recusa: sem ele, «este adaptador»
         logger.debug("governador_nome_da_porta_ilegivel", exc_info=True)
         return ""
@@ -298,7 +291,12 @@ def nome_da_porta(endereco: str, *, amostra: Mapping[str, Any] | None = None) ->
 
 def _o_lugar(nome: str, *, com_em: bool = False, maiuscula: bool = False) -> str:
     """O nome com o artigo do desenho (``comoSeChamaOLugar``): «a Entrada 4.1.4»,
-    e «o <nome>» para o nome que ela deu. ``com_em`` contrai: «na», «no»."""
+    e «o <nome>» para o nome que ela deu. ``com_em`` contrai: «na», «no».
+
+    A palavra é a do dono do nome (``entrada_a_entrada.PALAVRA_DA_ENTRADA``).
+    """
+    from hefesto_dualsense4unix.integrations.entrada_a_entrada import PALAVRA_DA_ENTRADA
+
     feminino = nome.startswith(PALAVRA_DA_ENTRADA + " ")
     artigo = ("na" if feminino else "no") if com_em else ("a" if feminino else "o")
     if maiuscula:
@@ -1359,7 +1357,6 @@ __all__ = [
     "MOTIVO_CHEIO",
     "MOTIVO_DO_REINICIO",
     "MOTIVO_PARADO",
-    "PALAVRA_DA_ENTRADA",
     "PERIODO_S",
     "PRAZO_PARA_SUBIR_S",
     "QUEM",

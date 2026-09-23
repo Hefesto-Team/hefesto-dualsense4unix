@@ -170,6 +170,7 @@ from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.maquina import (
     MapaDaMesa,
+    MaquinaConfig,
     carregar_maquina,
     fundir_declaracao,
 )
@@ -1763,12 +1764,12 @@ def _nome_do_adaptador(adaptador: Adaptador) -> str:
     return f"{adaptador.vid}:{adaptador.pid}"
 
 
-#: A palavra da entrada do gabinete. "Entrada", nunca "porta" — é a decisão
-#: `D-A-PALAVRA-ENTRADA`, e ela sai da frase dela: *"o número da entrada usb
-#: salvaria muito como coluna"*. O identificador de código continua `porta`; o
-#: que a tela mostra é isto.
-#: PROVISÓRIO — decisão dela: a frase é nova e ainda não passou pelo olho dela.
-_ENTRADA_DELA = "Entrada {numero}"
+#: O NOME DA ENTRADA NÃO NASCE AQUI (A-COSTURA-DA-ONDA-2-01, item 6). Aqui
+#: morava a constante `_ENTRADA_DELA`, a terceira grafia do mesmo nome — o
+#: governador e o «Mapear Entrada a Entrada» tinham as outras duas. O dono é
+#: `entrada_a_entrada.nome_da_porta`, e esta seção pergunta a ele
+#: (:func:`_nome_da_entrada`). A palavra continua a da decisão
+#: `D-A-PALAVRA-ENTRADA`: "Entrada", nunca "porta".
 
 #: A dica da entrada declarada. Ela carrega a PROCEDÊNCIA, que é o padrão desta
 #: casa: a tela afirma o número dela, e o hover diz de onde ele veio e como o
@@ -2073,11 +2074,15 @@ def _onde_esta_o_adaptador(
         # Sem nó USB o adaptador não pendura em entrada nenhuma: é PCIe, UART
         # ou SDIO, ou seja, faz parte da máquina. Não há o que trocar de lugar.
         return "Dentro da máquina", None
-    numero = None if mapa is None else porta_de(mapa, adaptador.caminho)
-    if numero is not None:
-        return _ENTRADA_DELA.format(numero=numero), _PROCEDENCIA_DA_ENTRADA.format(
-            numero=numero, caminho=adaptador.caminho
+    nome = _nome_da_entrada(adaptador.caminho, mapa)
+    if nome is not None:
+        numero = None if mapa is None else porta_de(mapa, adaptador.caminho)
+        dica = (
+            None
+            if numero is None
+            else _PROCEDENCIA_DA_ENTRADA.format(numero=numero, caminho=adaptador.caminho)
         )
+        return nome, dica
     partes = [
         f"Barramento {adaptador.busnum}, porta {adaptador.devpath}",
         _painel_em_portugues(adaptador.painel),
@@ -2233,13 +2238,25 @@ def _onde_esta_o_radio(
     Com o mapa, o painel do kernel dá lugar ao número dela — que é a diferença
     entre "Direita" e "Entrada 7". Sem o mapa, o texto é o de hoje.
     """
-    numero = None if mapa is None else porta_de(mapa, radio.caminho)
-    onde = (
-        _painel_em_portugues(radio.painel)
-        if numero is None
-        else _ENTRADA_DELA.format(numero=numero)
-    )
+    onde = _nome_da_entrada(radio.caminho, mapa) or _painel_em_portugues(radio.painel)
     return onde if aviso is None else f"{onde} · {aviso[0]}"
+
+
+def _nome_da_entrada(caminho: str, mapa: MapaDaMesa | None) -> str | None:
+    """O nome da entrada em que este caminho está — pelo DONO do nome.
+
+    A-COSTURA-DA-ONDA-2-01, item 6: quem compõe «Entrada 9» é
+    `entrada_a_entrada.nome_da_porta`, e esta seção só pergunta. Ela tem o
+    `mapa` (é o que os dois chamadores entregam), e o mapa é chaveado pelo
+    caminho: por isso a pergunta vai pelo caminho, sem `lugares` e sem
+    barramentos — que, sem a amarra pelo lugar, não acrescentariam nada e
+    custariam uma leitura do `/sys` por linha. `None` é "ela não declarou".
+    """
+    if mapa is None or not caminho:
+        return None
+    from hefesto_dualsense4unix.integrations.entrada_a_entrada import nome_da_porta
+
+    return nome_da_porta(caminho, maquina=MaquinaConfig(mapa=mapa), controladores={})
 
 
 def _painel_em_portugues(painel: str) -> str:

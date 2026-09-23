@@ -2908,49 +2908,12 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "escritor das pontes no diário, que é o governador. O QUE O "
         "FECHARIA: o GOVERNADOR-DO-RADIO-01 registrando `ponte subiu`/`ponte "
         "desceu` e a TRANSPLANTE-DA-SECAO-01 pondo a frase no sino.",
-    "integrations/entrada_a_entrada.py::LacoDaEntrada":
-        "ENTRADA-A-ENTRADA-01 e -02, 23/09/2026. O MOTOR do «Mapear Entrada a "
-        "Entrada» (a R9 dela: ligar de verdade), servindo as três telas "
-        "aprovadas: a fase sentada (os aparelhos plugados sem lugar), o fim e a "
-        "fase em pé (as entradas vazias, «Atrás do gabinete»), gravando no "
-        "`maquina.json`. ONDE O CAMINHO SE PERDE: as três telas da âncora na "
-        "aba 08 — a `interface/` está no `nao_toca` das duas sprints, e a "
-        "fiação na página é da TRANSPLANTE. O QUE O FECHARIA: a "
-        "TRANSPLANTE-DA-SECAO-01 (onda 3b da leva de 23/09) chamando `o_laco()` "
-        "do pacote da aba 08: `comecar` ao abrir, `olhar` no tique, "
-        "`responder` nas faces, `pular` no «Não sei onde fica», `levantar` no "
-        "«Vou mostrar agora», `nao_alcanco` no «Não alcanço» e `parar` no «Já "
-        "chega por hoje».",
-    "integrations/entrada_a_entrada.py::Pergunta":
-        "ENTRADA-A-ENTRADA-02, 23/09/2026. Um passo da fase sentada — o "
-        "aparelho e o que pende dele, se é hub —, que a tela sentada pinta "
-        "(«espécie · caminho», «Onde fica o hub?»). ONDE O CAMINHO SE PERDE: a "
-        "aba 08 está no `nao_toca` desta sprint. O QUE O FECHARIA: a "
-        "TRANSPLANTE-DA-SECAO-01 pintando `o_laco().estado()[\"pergunta\"]`.",
     "integrations/entrada_a_entrada.py::o_laco":
         "ENTRADA-A-ENTRADA-01, 23/09/2026. O laço UM por processo da janela, "
         "como o rascunho do mapa da aba 08. ONDE O CAMINHO SE PERDE: a aba "
         "08 (`aba08.py`, `08-conexoes.html`) está no `nao_toca` desta sprint. "
         "O QUE O FECHARIA: a TRANSPLANTE-DA-SECAO-01 (onda 3 da leva de "
         "23/09) pedindo o laço daqui nos tratadores da cerimônia.",
-    "integrations/entrada_a_entrada.py::PortaVista":
-        "ENTRADA-A-ENTRADA-01 e -02, 23/09/2026. Um aparelho num lugar, com "
-        "o número, a face e o nome que ela já deu àquele lugar — a cara da "
-        "pergunta da fase sentada. ONDE O CAMINHO SE PERDE: a aba 08 está no "
-        "`nao_toca` desta sprint. O QUE O FECHARIA: a TRANSPLANTE-DA-SECAO-01 "
-        "pintando `o_laco().estado()[\"pergunta\"]` na tela sentada.",
-    "integrations/entrada_a_entrada.py::Gravacao":
-        "ENTRADA-A-ENTRADA-01, 23/09/2026. O que a resposta dela fez no "
-        "disco — gravou ou o motivo de não ter gravado —, que a tela vira "
-        "piscada (sem recado, R8). ONDE O CAMINHO SE PERDE: a aba 08 está no "
-        "`nao_toca` desta sprint. O QUE O FECHARIA: a TRANSPLANTE-DA-SECAO-01 "
-        "lendo a volta de `o_laco().responder(face)` no tratador do botão.",
-    "integrations/entrada_a_entrada.py::NomeDado":
-        "ENTRADA-A-ENTRADA-01 e -02, 23/09/2026. O que `dar_nome` fez: o nome "
-        "do lugar no disco. ONDE O CAMINHO SE PERDE: o campo `lugar-nome` da "
-        "seção nova é da TRANSPLANTE, e a aba 08 está no `nao_toca` desta "
-        "sprint. O QUE O FECHARIA: a TRANSPLANTE-DA-SECAO-01 ligando o gesto "
-        "`adaptador-renomear` a `dar_nome`.",
     "integrations/entrada_a_entrada.py::dar_nome":
         "ENTRADA-A-ENTRADA-01 e -02, 23/09/2026. D3: o nome é do LUGAR e mora "
         "no `maquina.json`; o Alias do BlueZ é a projeção, e o escritor único "
@@ -2959,26 +2922,12 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "grava o Alias por endereço (`a08_conexoes`, da TRANSPLANTE). O QUE O "
         "FECHARIA: a TRANSPLANTE-DA-SECAO-01 ligando o `adaptador-renomear` "
         "do mockup aprovado a esta função.",
-    "integrations/entrada_a_entrada.py::nome_do_lugar":
-        "ENTRADA-A-ENTRADA-01, 23/09/2026. O nome da porta — o que ela deu, "
-        "ou «Entrada 3» — no lugar do «Entrada 4.1.4» do mockup. ONDE O "
-        "CAMINHO SE PERDE: a seção nova da aba 08 é da TRANSPLANTE, e a aba "
-        "está no `nao_toca` desta sprint. O QUE O FECHARIA: a "
-        "TRANSPLANTE-DA-SECAO-01 pintando a `.onde` de cada lugar com esta "
-        "resposta.",
     "integrations/entrada_a_entrada.py::nome_do_adaptador":
         "ENTRADA-A-ENTRADA-01, 23/09/2026. D3: o adaptador herda o nome da "
         "porta em que está, pelo lugar e nunca pelo hciN. ONDE O CAMINHO SE "
         "PERDE: o cartão do adaptador da seção nova é da TRANSPLANTE, e a aba "
         "08 está no `nao_toca` desta sprint. O QUE O FECHARIA: a "
         "TRANSPLANTE-DA-SECAO-01 dando a cada lugar o nome desta função.",
-    "integrations/entrada_a_entrada.py::nome_da_porta":
-        "ENTRADA-A-ENTRADA-01, 23/09/2026. O nome da porta pelas DUAS chaves "
-        "da casa (o lugar do dono do BlueZ e o caminho de barramento da ponte "
-        "root). ONDE O CAMINHO SE PERDE: quem mostra é o sino e a seção nova, "
-        "da TRANSPLANTE; a aba 08 está no `nao_toca` desta sprint. O QUE O "
-        "FECHARIA: a TRANSPLANTE-DA-SECAO-01 perguntando aqui o nome de cada "
-        "porta que o diário cita.",
     "integrations/entrada_a_entrada.py::com_o_nome_dela":
         "ENTRADA-A-ENTRADA-01, 23/09/2026. O conselho de porta do vigia com o "
         "nome dela: «O adaptador da porta 3-4.1.4 travou de novo» vira «O "
@@ -2986,18 +2935,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "sino lê o diário e é da TRANSPLANTE; a aba 08 está no `nao_toca` "
         "desta sprint. O QUE O FECHARIA: a TRANSPLANTE-DA-SECAO-01 passando "
         "cada linha do diário por aqui antes de pôr a frase no sino.",
-    "integrations/mesa_de_radio.py::controladores_dos_barramentos":
-        "ENTRADA-A-ENTRADA-01, 23/09/2026. `{busnum: controlador PCI}` deste "
-        "boot, a leitura que traduz o caminho de barramento no lugar. Quem "
-        "chama é `entrada_a_entrada.nome_da_porta` e `nome_do_lugar`, ainda "
-        "sem caminho de produção. O QUE O FECHARIA: a TRANSPLANTE-DA-SECAO-01 "
-        "(onda 3 da leva de 23/09) fiando o motor na aba 08.",
-    "utils/maquina.py::lugar_da_entrada":
-        "ENTRADA-A-ENTRADA-01, 23/09/2026. O lugar amarrado a um número dela "
-        "— o que impede o desenho de hoje de dar a um lugar o número que já "
-        "é de outro. Quem chama é o motor `entrada_a_entrada`, ainda sem "
-        "caminho de produção. O QUE O FECHARIA: a TRANSPLANTE-DA-SECAO-01 "
-        "(onda 3 da leva de 23/09) fiando o motor na aba 08.",
 }
 
 #: ONDA0-Z7 (24/08/2026): achado FORA do escopo desta sprint, durante a
