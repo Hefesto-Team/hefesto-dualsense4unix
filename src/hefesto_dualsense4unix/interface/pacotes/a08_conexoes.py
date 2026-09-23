@@ -4657,7 +4657,9 @@ def _marcas_de_onde(lug: dict[str, Any], cena: dict[str, Any]) -> str:
         partes.append(f'<span class="espera" data-alvo="" '
                       f'title="Segure PS + Create no controle até a luz piscar.">'
                       f'{_silhueta({})}{SEGURE}</span>')
-    if not lug.get("lugar"):
+    if not lug.get("sabido", True):
+        pass  # o BlueZ ainda não disse onde ele pendura: nem placa-mãe, nem «Onde fica?»
+    elif not lug.get("lugar"):
         # O ADAPTADOR DA PLACA-MÃE não pendura em entrada: não há o que mapear.
         partes.append(f'<span>{_x(lug.get("entrada") or DENTRO_DA_MAQUINA)}</span>')
     elif not lug.get("face"):
@@ -4798,7 +4800,12 @@ def pergunta_de_mover(ap: dict[str, Any], destino: dict[str, Any], cena: dict[st
 
 
 def _moldes_de_pergunta(cena: dict[str, Any]) -> str:
-    lugares = {str(lug["id"]): lug for lug in cena.get("lugares", ())}
+    # A JANELA DO PEDIDO ABRE UMA VEZ (`pedidosVistos`, na página) e congela o
+    # texto do primeiro tique: um lugar ainda sem porta sabida entraria nela
+    # como «o adaptador dentro da máquina» — dos DOIS lados da pergunta. Quem
+    # não foi descrito espera o tique em que o BlueZ responder.
+    todos = {str(lug["id"]): lug for lug in cena.get("lugares", ())}
+    lugares = {lid: lug for lid, lug in todos.items() if lug.get("sabido", True)}
     moldes = []
     for ap in cena.get("aparelhos", ()):
         if ap.get("fixo") or ap.get("esperando") or ap.get("tipo") == "webcam":
@@ -4814,8 +4821,9 @@ def _moldes_de_pergunta(cena: dict[str, Any]) -> str:
         ap = next((a for a in cena.get("aparelhos", ()) if a["id"] == pedido.get("uniq")), None)
         origem = lugares.get(str(pedido.get("lugar")))
         vagas = [v for v in pedido.get("vagas") or () if v in lugares]
+        cedo = any(v in todos and v not in lugares for v in pedido.get("vagas") or ())
         o_que = "a vibração" if pedido.get("tipo") in ("vibracao", "haptica") else "o som"
-        if ap is not None and origem is not None:
+        if ap is not None and origem is not None and not cedo:
             chave = _x(f'{pedido.get("uniq")}|{pedido.get("lugar")}')
             if vagas:
                 destino = lugares[vagas[0]]
@@ -4967,7 +4975,7 @@ def _molde_do_balao(cena: dict[str, Any]) -> str:
     proposta = cena.get("proposta") or {}
     ap = next((a for a in cena.get("aparelhos", ()) if a["id"] == proposta.get("controle")), None)
     destino = next((lug for lug in cena.get("lugares", ())
-                    if lug["id"] == proposta.get("destino")), None)
+                    if lug["id"] == proposta.get("destino") and lug.get("sabido", True)), None)
     if ap is None or destino is None or _ocupado(cena):
         return ""
     desenho = _silhueta(ap) if ap.get("tipo") == "controle" else ""
@@ -5015,7 +5023,7 @@ def html_dos_canais(cena: dict[str, Any]) -> str:
     for v in evitados:
         dono = lugares.get(str(v.get("lugar")))
         quem = (re.sub(r"</?b>", "", _maiuscula(como_se_chama_o_lugar(dono)))
-                if dono else "O rádio")
+                if dono and dono.get("sabido", True) else "O rádio")
         partes.append(f'<div class="evitado" style="left:{_pct(int(v["ini"]))};'
                       f'width:{_pct(int(v["fim"]) - int(v["ini"]))}" title="{_x(quem)} parou de '
                       f'saltar nos canais {v["ini"]} a {v["fim"]} — medido no próprio adaptador">'
@@ -5493,7 +5501,12 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
         lugares.append({
             "id": end, "lugar": lugar,
             "nome": str(getattr(declarado, "nome", "") or ""),
-            "entrada": entrada or DENTRO_DA_MAQUINA,
+            # «Dentro da máquina» é RESPOSTA do BlueZ (o adaptador que ele
+            # descreveu sem porta), não o que sobra: um endereço que só o
+            # daemon publicou — o primeiro tique, com o BlueZ ainda no fio —
+            # não tem porta sabida, e a linha e as perguntas não afirmam nada.
+            "entrada": entrada or (DENTRO_DA_MAQUINA if bz is not None else ""),
+            "sabido": bz is not None,
             "face": face or "",
             "hub": bool(getattr(mz, "atras_de_hub", False)),
             "varrendo": bool(getattr(bz, "varrendo", False)),

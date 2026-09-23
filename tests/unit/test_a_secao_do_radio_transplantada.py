@@ -31,6 +31,9 @@ e cada caso diz a mordida que o derruba.
     pinta a leitura de antes até a nova chegar, e a leitura em voo nasce
     vencida.
 12. **O piloto da aba 08 ouve o endereço que a página emite** (`data-gesto`).
+13. **«Dentro da máquina» é resposta do BlueZ**, não o que sobra: sem ele, o
+    adaptador não tem porta sabida, e nem a linha nem a janela do pedido
+    afirmam onde ele está.
 
 A mesa é DECLARADA — BlueZ, `maquina.json`, `/sys` e o histórico entram por
 dublê —, e a faixa de endereços é a sintética da casa.
@@ -511,6 +514,59 @@ def test_alem_do_limite_e_laranja_nunca_vermelho(mesa: Any) -> None:
     sala = _campos(mesa)["radio-sala"]
     assert re.search(r'class="vaga som alem"', sala), (
         "a ponte além do limite não ganhou a marca na linha")
+
+
+def test_sem_o_bluez_nenhum_adaptador_mora_dentro_da_maquina(
+        mesa: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """No primeiro tique o BlueZ ainda está no fio, e os adaptadores chegam só
+    pelo `radio_ar`/`radio_governador` do daemon. A cena os chamava de «Dentro
+    da máquina» — o que sobra quando não há porta —, e a janela do pedido, que
+    abre UMA vez e congela o texto, perguntava «O adaptador dentro da máquina
+    já tem 2 controles… Mover o Player 4 para o adaptador dentro da máquina e
+    ligar lá?». Medido no piloto, na conferência da TRANSPLANTE-DA-SECAO-01.
+
+    MORDIDA: devolva `"entrada": entrada or DENTRO_DA_MAQUINA` na cena, ou
+    tire o `sabido` do filtro de `_moldes_de_pergunta`.
+    """
+    from hefesto_dualsense4unix.integrations.bluez_dbus import AdaptadorDoBluez
+
+    descrito = mesa._ler_o_bluez
+    monkeypatch.setattr(mesa, "_ler_o_bluez", lambda: None)
+    estado = _estado()
+    estado["radio_central"]["proposta"] = {"controle": U3, "destino": A2}
+    campos = mesa.campos_do_radio(_ctx(estado))
+    tela = " ".join(map(str, campos.values()))
+    assert "dentro da m" not in tela.lower(), (
+        "sem o BlueZ, a porta que ninguém descreveu virou «Dentro da máquina»")
+    # E o lugar sem nome nem porta não entra numa frase pela metade: o balão
+    # dizia «funciona melhor na <b></b>», a dica do canal «A  parou de saltar».
+    assert "<b></b>" not in tela and 'title="A  ' not in tela, (
+        "uma frase nomeou o lugar que ninguém descreveu")
+    assert "data-pedido" not in campos["radio-moldes"], (
+        "a janela do pedido abriria com o texto do tique em que nada se sabia")
+
+    # O BlueZ descreveu a origem e ainda não a vaga: sem a espera, a vaga
+    # sumia do filtro e a janela dizia «Todas as entradas já têm 2».
+    adaptadores, aparelhos = descrito()
+    monkeypatch.setattr(mesa, "_ler_o_bluez", lambda: (adaptadores[:1], aparelhos))
+    mesa._FUNDO.clear()
+    assert "data-pedido" not in _campos(mesa)["radio-moldes"], (
+        "com a vaga ainda sem porta sabida, o pedido virou «Todas as entradas»")
+
+    # O BlueZ responde: o pedido chega com os dois lugares pelo nome, e o
+    # adaptador que ELE descreveu sem porta continua dentro da máquina.
+    placa = AdaptadorDoBluez("/org/bluez/hci2", "hci2", "AA:BB:CC:00:00:21", lugar="",
+                             varrendo=False)
+    monkeypatch.setattr(mesa, "_ler_o_bluez", lambda: ((*adaptadores, placa), aparelhos))
+    mesa._FUNDO.clear()
+    estado = _estado()
+    estado["radio_ar"]["aa:bb:cc:00:00:21"] = {"pontes": [], "n_max": 2}
+    campos = mesa.campos_do_radio(_ctx(estado))
+    pedido = re.search(r"<template[^>]*data-pedido[^>]*>(.*?)</template>",
+                       campos["radio-moldes"])
+    assert pedido and pedido.group(1).startswith("O <b>Sala</b> já tem"), campos["radio-moldes"]
+    assert "a <b>Entrada 4.1.4</b> e ligar lá?" in pedido.group(1)
+    assert campos["radio-sala"].count("Dentro da máquina") == 1
 
 
 def test_quem_passou_do_limite_e_quem_o_governador_marcou(mesa: Any) -> None:
