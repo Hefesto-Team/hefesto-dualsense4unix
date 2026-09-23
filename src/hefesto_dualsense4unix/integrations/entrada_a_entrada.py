@@ -657,21 +657,22 @@ def projetar_o_nome(
     escreve pelo ``bluez_dbus``, dentro da trava comum do rádio. ``None``
     quando não há adaptador neste lugar: não há o que projetar.
     """
-    if adaptadores is None:
-
-        def adaptadores() -> Iterable[Any]:
-            from hefesto_dualsense4unix.integrations import bluez_dbus
-
-            return bluez_dbus.dono().adaptadores() or ()
-
-    alvo = next((a for a in adaptadores() if getattr(a, "lugar", "") == lugar), None)
+    lidos = adaptadores() if adaptadores is not None else _adaptadores_do_dono()
+    alvo = next((a for a in lidos if getattr(a, "lugar", "") == lugar), None)
     if alvo is None:
         return None
-    if renomear is None:
-        from hefesto_dualsense4unix.integrations.apelido_do_dongle import (
-            renomear_o_dongle as renomear,
-        )
-    return renomear(alvo.endereco, nome)
+    if renomear is not None:
+        return renomear(alvo.endereco, nome)
+    from hefesto_dualsense4unix.integrations.apelido_do_dongle import renomear_o_dongle
+
+    return renomear_o_dongle(alvo.endereco, nome)
+
+
+def _adaptadores_do_dono() -> Iterable[Any]:
+    """Os adaptadores pelo dono do D-Bus — cada um com o seu ``lugar``."""
+    from hefesto_dualsense4unix.integrations import bluez_dbus
+
+    return bluez_dbus.dono().adaptadores() or ()
 
 
 # ---------------------------------------------------------------------------
