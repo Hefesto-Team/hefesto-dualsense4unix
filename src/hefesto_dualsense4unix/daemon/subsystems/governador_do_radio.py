@@ -38,6 +38,12 @@ reiniciou). Tratar como zero seria inventar um déficit do tamanho das nossas
 escritas; tratar como folga seria inventar escoamento. O governador não muda
 de ideia sem medida, e as escritas daquela janela não entram na conta.
 
+E o relógio do teto também não anda sem medida (conferência de 23/09/2026):
+ele soma só as janelas MEDIDAS em que as pontes seguiram cedendo. Contado no
+relógio de parede, dois segundos de «não sei» logo depois de ceder derrubavam
+as pontes e escreviam no diário «não drena» — a mesma conclusão de zero pacote
+no ar, tirada de nenhum pacote medido.
+
 E CEDER TEM O MESMO TETO DA FILA CHEIA (:data:`~hefesto_dualsense4unix.
 integrations.alto_falante_bt.TETO_DE_CEDER_S`): um adaptador que não escoa por
 mais que isso não está congestionado, está parado. As pontes dele caem com o
@@ -239,6 +245,9 @@ class _Estado:
     fila: float = 0.0
     cedendo: bool = False
     cedendo_desde: float | None = None
+    #: Segundos de janela MEDIDA em que as pontes seguiram cedendo — o relógio
+    #: do teto. Janela de «não sei» não soma: ela não mediu parada nenhuma.
+    cedendo_medido_s: float = 0.0
     cedidos_na_borda: int = 0
     ultimo_ar: Any = None
     deficit_medido: bool = False
@@ -535,12 +544,8 @@ class GovernadorDoRadio:
                 estado = self._estados.setdefault(endereco, _Estado())
                 ar = (amostra or {}).get(endereco)
                 self._medir(estado, vagas, ar, endereco, agora, bordas)
-                if (
-                    estado.cedendo
-                    and estado.cedendo_desde is not None
-                    and agora - estado.cedendo_desde > TETO_DE_CEDER_S
-                ):
-                    paradas.append((endereco, list(vagas), agora - estado.cedendo_desde))
+                if estado.cedendo and estado.cedendo_medido_s > TETO_DE_CEDER_S:
+                    paradas.append((endereco, list(vagas), estado.cedendo_medido_s))
         for o_que, dados in bordas:
             self._escrever(o_que, **dados)
         for endereco, vagas, cedendo_s in paradas:
@@ -576,9 +581,13 @@ class GovernadorDoRadio:
             return
         estado.deficit_medido = True
         estado.fila = max(0.0, estado.fila + escritas - float(saida) * janela)
+        if estado.cedendo and estado.fila > FOLGA_PARA_VOLTAR:
+            # Seguiu cedendo numa janela MEDIDA: só esta anda o relógio do teto.
+            estado.cedendo_medido_s += janela
         if not estado.cedendo and estado.fila > LIMIAR_DO_DEFICIT:
             estado.cedendo = True
             estado.cedendo_desde = agora
+            estado.cedendo_medido_s = 0.0
             for vaga in vagas:
                 vaga.cedendo = True
             logger.info("governador_cedeu", adaptador=endereco, fila=round(estado.fila))
@@ -597,6 +606,7 @@ class GovernadorDoRadio:
             estado.cedendo = False
             segundos = agora - (estado.cedendo_desde or agora)
             estado.cedendo_desde = None
+            estado.cedendo_medido_s = 0.0
             for vaga in vagas:
                 vaga.cedendo = False
             logger.info("governador_voltou", adaptador=endereco, segundos=round(segundos, 2))
@@ -625,6 +635,7 @@ class GovernadorDoRadio:
             if estado is not None:
                 estado.cedendo = False
                 estado.cedendo_desde = None
+                estado.cedendo_medido_s = 0.0
                 estado.fila = 0.0
             for vaga in vagas:
                 vaga.derrubar = True
