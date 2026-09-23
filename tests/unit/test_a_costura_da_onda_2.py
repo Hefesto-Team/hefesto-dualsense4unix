@@ -515,6 +515,8 @@ CONTROLE_1 = "aa:bb:cc:00:00:01"
 CONTROLE_2 = "aa:bb:cc:00:00:02"
 CONTROLE_3 = "aa:bb:cc:00:00:03"
 CONTROLE_4 = "aa:bb:cc:00:00:04"
+CONTROLE_5 = "aa:bb:cc:00:00:05"
+CONTROLE_6 = "aa:bb:cc:00:00:06"
 
 
 class _Relogio:
@@ -742,17 +744,19 @@ def _mesa(
     relogio: rm.Relogio,
     *,
     pontes: dict[str, str | None],
+    no_c: tuple[str, ...] = (),
 ) -> tuple[Any, Any]:
     """A mesma mesa para o governador e para a central.
 
     ``pontes`` é ``{controle: modo ou None}``; o C1, o C2 e o C3 estão no A, o
-    C4 no B, e o C também existe (vazio). O C3 é o que pede vaga.
+    C4 no B, e o C também existe — vazio, ou com os controles ``no_c``, sem
+    ponte. O C3 é o que pede vaga.
     """
     from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
 
     onde = {
         CONTROLE_1: ADAPTADOR_A, CONTROLE_2: ADAPTADOR_A, CONTROLE_3: ADAPTADOR_A,
-        CONTROLE_4: ADAPTADOR_B,
+        CONTROLE_4: ADAPTADOR_B, **dict.fromkeys(no_c, ADAPTADOR_C),
     }
     enlaces: dict[str, tuple[str, ...]] = {}
     for controle, adaptador in onde.items():
@@ -790,37 +794,45 @@ def _mesa(
 
 
 @pytest.mark.parametrize(
-    ("pontes", "esperada"),
+    ("pontes", "no_c", "esperada"),
     [
         # O B tem uma ponte e o C nenhuma: mais vaga de ponte primeiro.
-        ({CONTROLE_1: "som", CONTROLE_2: "som", CONTROLE_4: "som"},
+        ({CONTROLE_1: "som", CONTROLE_2: "som", CONTROLE_4: "som"}, (),
          (ADAPTADOR_C, ADAPTADOR_B)),
         # Vaga igual; o B tem um controle e o C nenhum: menos controles primeiro.
-        ({CONTROLE_1: "som", CONTROLE_2: "haptica", CONTROLE_4: None},
+        ({CONTROLE_1: "som", CONTROLE_2: "haptica", CONTROLE_4: None}, (),
+         (ADAPTADOR_C, ADAPTADOR_B)),
+        # A VAGA VENCE OS CONTROLES: o C tem dois controles sem ponte e o B um,
+        # COM ponte. Só a conta das pontes põe o C na frente — contando só os
+        # controles, o B viria primeiro (conferência de 23/09: nas duas mesas de
+        # cima as duas contas davam a mesma ordem, e a das pontes não mordia).
+        ({CONTROLE_1: "som", CONTROLE_2: "som", CONTROLE_4: "som"}, (CONTROLE_5, CONTROLE_6),
          (ADAPTADOR_C, ADAPTADOR_B)),
     ],
-    ids=["mais-vaga", "menos-controles"],
+    ids=["mais-vaga", "menos-controles", "a-vaga-vence-os-controles"],
 )
 def test_as_vagas_da_recusa_saem_na_ordem_da_d8_da_central(
     diario: Path,
     dono: bd.DonoVivo,
     relogio: rm.Relogio,
     pontes: dict[str, str | None],
+    no_c: tuple[str, ...],
     esperada: tuple[str, ...],
 ) -> None:
     """A tela pergunta «Mover para a primeira vaga?», e a central, sem destino
     pedido, escolhe pela D8. As duas respostas são a MESMA — e a frase diz os
     nomes nessa ordem.
 
-    Nas duas mesas o endereço do B é menor que o do C, e é o C que a D8 escolhe.
+    Nas três mesas o endereço do B é menor que o do C, e é o C que a D8 escolhe.
 
     MORDIDA: devolva do ``_adaptadores_com_vaga`` as vagas por endereço (sem o
     ``_na_ordem_da_d8``) — o B vem primeiro, contra a central, e esta régua
-    reprova.
+    reprova. E tire do ``_na_ordem_da_d8`` a conta das pontes (as vagas do
+    governador) — a terceira mesa reprova.
     """
     from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
 
-    governador, central = _mesa(dono, relogio, pontes=pontes)
+    governador, central = _mesa(dono, relogio, pontes=pontes, no_c=no_c)
 
     recusa = governador.pedir_vaga(CONTROLE_3, "som")
 
