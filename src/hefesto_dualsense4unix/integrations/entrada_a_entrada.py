@@ -384,12 +384,23 @@ class LacoDaEntrada:
 
     def olhar(self) -> dict[str, Any]:
         """Um tique: relê o que a fase precisa e anda o laço. Parado e no fim,
-        não lê nada."""
+        não lê nada.
+
+        A leitura que não respondeu é "não sei", e "não sei" não anda o laço:
+        ``Censo()`` sem hub-raiz nenhum (o ``OSError`` de
+        ``ler_o_barramento``) ou nenhum nó de entrada lido diriam "nenhuma
+        pergunta" e "nenhuma vaga", e a fase pularia para o fim por um tique
+        que não viu nada.
+        """
         with self._trava:
             if self._fase == SENTADA:
-                self._andar_sentada(self._ler_o_censo())
+                censo = self._ler_o_censo()
+                if not _nao_sei(censo):
+                    self._andar_sentada(censo)
             elif self._fase == EM_PE:
-                self._andar_em_pe(self._ler_o_censo(), self._ler_as_entradas())
+                censo, lidas = self._ler_o_censo(), self._ler_as_entradas()
+                if not _nao_sei(censo) and lidas:
+                    self._andar_em_pe(censo, lidas)
             return self._foto()
 
     def responder(self, face: str) -> Gravacao:
@@ -408,6 +419,10 @@ class LacoDaEntrada:
                 raise RuntimeError("não há pergunta para responder")
             pergunta = self._perguntas[0]
             censo = self._ler_o_censo()
+            if _nao_sei(censo):
+                # A leitura não respondeu: "não sei" não é "o aparelho saiu", e
+                # a pergunta da vez fica onde está.
+                raise RuntimeError("o barramento não respondeu")
             presentes = {aparelho.nome_do_kernel for aparelho in censo.conectados()}
             if pergunta.porta.caminho not in presentes:
                 # O aparelho saiu entre o tique e o toque: gravar agora poria a
@@ -1142,6 +1157,16 @@ def _controladores(censo: Censo) -> dict[int, str]:
         for aparelho in censo.aparelhos
         if aparelho.e_raiz and aparelho.controlador_pci
     }
+
+
+def _nao_sei(censo: Censo) -> bool:
+    """A leitura do barramento não respondeu? Sem hub-raiz nenhum, é "não sei".
+
+    Toda máquina com USB tem hub-raiz, e ``ler_o_barramento`` devolve
+    ``Censo()`` vazio quando o ``/sys`` não se deixa ler. Ler isso como "nenhum
+    aparelho" é responder "não sei" com zero.
+    """
+    return not any(aparelho.e_raiz for aparelho in censo.aparelhos)
 
 
 def _nome_declarado(maquina: MaquinaConfig, lugar: str) -> str | None:
