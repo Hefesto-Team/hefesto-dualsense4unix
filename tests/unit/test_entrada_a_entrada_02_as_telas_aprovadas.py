@@ -66,7 +66,10 @@ from tests.unit import radio_de_mentira as rm
 
 RAIZ = Path(__file__).resolve().parents[2]
 SRC = RAIZ / "src" / "hefesto_dualsense4unix"
-PAGINA = SRC / "interface" / "paginas" / "08-conexoes.html"
+PAGINA = SRC / "interface" / "paginas" / "08-conexoes.html"  # (noqa-acento) nome de PASTA
+#: A chave da foto do laço para a última gravação — chave de máquina, ASCII
+#: por contrato (a mesma regra do ``"especie"`` do ``PortaVista``).
+ULTIMA = "ultima"  # (noqa-acento) chave de máquina
 
 PCI_A = "0000:0a:00.0"
 PCI_B = "0000:0b:00.0"
@@ -517,7 +520,7 @@ def test_a_fase_em_pe_conta_as_vazias_e_grava_atras_do_gabinete(
     ds = vazia.plugar(1, "2", DUALSENSE)
     foto = laco.olhar()
     assert (foto["passo"], foto["total"]) == (2, 12), "o total andou para trás"
-    ultima = foto["ultima"]
+    ultima = foto[ULTIMA]
     assert ultima["gravou"] and ultima["face"] == ee.FACE_ATRAS
     documento = carregar_maquina()
     numero = ultima["entrada"]
@@ -544,20 +547,20 @@ def test_a_entrada_aprendida_de_pe_e_conhecida_pelo_lugar_noutro_boot(
     boot = Gabinete(tmp_path / "boot1", BOOT_1)
     laco = _em_pe(boot)
     boot.plugar(1, "2", DUALSENSE)  # a porta 2 do controlador A
-    numero = laco.olhar()["ultima"]["entrada"]
+    numero = laco.olhar()[ULTIMA]["entrada"]
     assert carregar_maquina().mapa.portas[numero].nos == ["usb1-port2", "usb2-port2"]
 
     depois = Gabinete(tmp_path / "boot2", BOOT_2)
     novo = _em_pe(depois)
     assert novo.estado()["total"] == 11
     depois.plugar(3, "2", DUALSENSE)  # a porta 2 do A, agora no barramento 3
-    assert novo.olhar()["ultima"] is None, "a entrada aprendida foi aprendida de novo"
+    assert novo.olhar()[ULTIMA] is None, "a entrada aprendida foi aprendida de novo"
     depois.tirar("3-2")
     novo.olhar()
     depois.plugar(1, "2", DUALSENSE)  # a porta 2 do B, com os nós que a do A tinha
     foto = novo.olhar()
-    assert foto["ultima"] is not None and foto["ultima"]["gravou"], "a vaga do B sumiu da conta"
-    assert foto["ultima"]["lugar"] == _lugar(PCI_B, "2")
+    assert foto[ULTIMA] is not None and foto[ULTIMA]["gravou"], "a vaga do B sumiu da conta"
+    assert foto[ULTIMA]["lugar"] == _lugar(PCI_B, "2")
 
 
 def test_nao_alcanco_tira_da_conta_de_vez(vazia: Gabinete, disco: Path) -> None:
@@ -579,9 +582,9 @@ def test_nao_alcanco_tira_da_conta_de_vez(vazia: Gabinete, disco: Path) -> None:
 
     vazia.plugar(3, "5", DUALSENSE)  # ela alcançou, afinal: a leitura vence
     foto = amanha.olhar()
-    assert foto["ultima"]["gravou"], foto
+    assert foto[ULTIMA]["gravou"], foto
     declarado = carregar_maquina().lugares[_lugar(PCI_B, "5")]
-    assert declarado.fora is None and declarado.entrada == foto["ultima"]["entrada"]
+    assert declarado.fora is None and declarado.entrada == foto[ULTIMA]["entrada"]
 
 
 def test_o_buraco_usb3_da_raiz_que_numera_diferente_tem_o_lugar_do_lado_20(
@@ -609,12 +612,12 @@ def test_o_buraco_usb3_da_raiz_que_numera_diferente_tem_o_lugar_do_lado_20(
     total = laco.estado()["total"]
     ds = deslocada.plugar(1, "4", DUALSENSE)  # usb1-port4, o par de usb2-port2
     foto = laco.olhar()
-    assert foto["ultima"]["gravou"] and foto["ultima"]["lugar"] == _lugar(PCI_A, "4"), foto
+    assert foto[ULTIMA]["gravou"] and foto[ULTIMA]["lugar"] == _lugar(PCI_A, "4"), foto
     deslocada.tirar(ds)
     assert laco.olhar()["total"] == total, "a entrada aprendida voltou para a conta"
 
     foto = laco.nao_alcanco()  # o primeiro a sair: usb1-port3 + usb2-port1
-    assert foto["ultima"]["gravou"], foto["ultima"]
+    assert foto[ULTIMA]["gravou"], foto[ULTIMA]
     assert carregar_maquina().lugares[_lugar(PCI_A, "3")].fora is True
     assert _em_pe(deslocada).estado()["total"] == total - 2, "o Hefesto voltou a perguntar"
 
@@ -676,7 +679,7 @@ def test_o_tique_que_nao_leu_nao_anda_o_laco(
     em_pe.comecar()
     em_pe.levantar()
     ds = vazia.plugar(1, "2", DUALSENSE)
-    assert em_pe.olhar()["ultima"]["gravou"]
+    assert em_pe.olhar()[ULTIMA]["gravou"]
     vazia.tirar(ds)
     foto = em_pe.olhar()
     sem_nos["sem"] = True
@@ -708,7 +711,7 @@ def test_ja_chega_por_hoje_fecha_em_qualquer_fase(mesa: Gabinete, disco: Path) -
             "face": None,
             "feitas": 0,
             "gravou": None,
-            "ultima": None,
+            ULTIMA: None,
         }
     with pytest.raises(RuntimeError):
         laco.levantar()  # «Vou mostrar agora» só existe no fim
@@ -811,11 +814,11 @@ def test_so_o_dualsense_marca_uma_porta(vazia: Gabinete, disco: Path) -> None:
     laco = _em_pe(vazia)
     dongle = vazia.plugar(1, "2", DONGLE_BT)
     foto = laco.olhar()
-    assert foto["ultima"] is None and not disco.exists(), "o dongle marcou uma porta"
+    assert foto[ULTIMA] is None and not disco.exists(), "o dongle marcou uma porta"
     vazia.tirar(dongle)
     laco.olhar()
     vazia.plugar(1, "2", DUALSENSE)
-    assert laco.olhar()["ultima"]["gravou"], "o DualSense não marcou"
+    assert laco.olhar()[ULTIMA]["gravou"], "o DualSense não marcou"
 
 
 def test_a_re_enumeracao_do_dongle_nao_vira_a_porta_que_ela_plugou(
@@ -837,7 +840,7 @@ def test_a_re_enumeracao_do_dongle_nao_vira_a_porta_que_ela_plugou(
     gabinete.tirar(dongle)
     laco.olhar()
     gabinete.plugar(3, "1", DONGLE_BT)
-    assert laco.olhar()["ultima"] is None
+    assert laco.olhar()[ULTIMA] is None
     assert not disco.exists()
 
 
