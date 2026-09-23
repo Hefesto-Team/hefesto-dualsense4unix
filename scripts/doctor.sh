@@ -4097,6 +4097,90 @@ check_kernel_watch() {
     fi
 }
 
+# AS FAMÍLIAS DO RÁDIO no kernel-watch (O-DIARIO-DO-RADIO-01; resumidas pelo
+# doctor desde a INSTALL-E-UNINSTALL-DO-RADIO-01, 23/09/2026). O kernel-watch
+# marca o rádio com tags próprias — [BT-SOCKET], [FILA-CHEIA], [ENLACE-PARADO],
+# [BT-TRAVADO], [CRC] — e grava uma rajada como borda + resumo; o log de antes
+# delas só se lê reclassificando o [BT-HCI] pelo conteúdo. Quem sabe as duas
+# coisas é o `storm_doctor.classificar_o_historico`, e o doctor PERGUNTA a ele:
+# não redigita padrão nenhum. A janela é a do `check_kernel_watch` (aviso só
+# dentro dela; fora, histórico). Família que nenhuma volta da vigia procurou é
+# «não olhei», e zero ali não é zero. O -71 (família 1) já sai no
+# `check_kernel_watch`, com a porta.
+check_familias_do_radio() {
+    local log="${HOME}/.local/state/hefesto-dualsense4unix/kernel.log"
+    local dias="${HEFESTO_DOCTOR_JANELA_DIAS:-7}" corte py saida
+    [[ -f "${log}" ]] || return 0
+    corte="$(date -d "${dias} days ago" +%Y-%m-%d 2>/dev/null || echo 0000-00-00)"
+    py="$(_python_do_produto)"
+    [[ -n "${py}" ]] || { info "sem python para ler as famílias do rádio no kernel-watch"; return; }
+    saida="$(HEFESTO_SRC="${ROOT_DIR}/src" "${py}" - "${log}" "${corte}" <<'PY' 2>/dev/null
+import os
+import sys
+
+src = os.environ.get("HEFESTO_SRC", "")
+if src and os.path.isdir(src):
+    sys.path.insert(0, src)
+try:
+    from hefesto_dualsense4unix.integrations.storm_doctor import (
+        FAMILIAS_DO_RADIO,
+        classificar_o_historico,
+    )
+except Exception:  # noqa: BLE001 - qualquer falha de import é "não sei"
+    print("sem-produto")
+    raise SystemExit(0)
+with open(sys.argv[1], encoding="utf-8", errors="ignore") as fh:
+    linhas = fh.read().splitlines()
+tudo = classificar_o_historico(linhas)
+janela = classificar_o_historico(
+    [linha for linha in linhas if linha.startswith("#") or linha[:10] >= sys.argv[2]]
+)
+for tag, (familia, nome) in FAMILIAS_DO_RADIO.items():
+    if familia == "1":
+        continue
+    conta = tudo.get(familia)
+    if conta is None:
+        print(f"naoolhei\t{tag}\t{nome}")
+        continue
+    recente = janela.get(familia)
+    dia = conta.ultima[:10]
+    ultima = f"{dia[8:10]}/{dia[5:7]}" if len(dia) == 10 else "?"
+    print(
+        f"familia\t{tag}\t{nome}\t{conta.rajadas}\t{recente.rajadas if recente else 0}\t{ultima}"
+    )
+PY
+)" || saida=""
+    if [[ -z "${saida}" || "${saida}" == "sem-produto" ]]; then
+        info "NÃO SEI ler as famílias do rádio no kernel-watch: o storm_doctor não está ao alcance do python ${py}"
+        return
+    fi
+    local marca tag nome total recentes ultima cura naoolhei=()
+    while IFS=$'\t' read -r marca tag nome total recentes ultima; do
+        if [[ "${marca}" == "naoolhei" ]]; then
+            naoolhei+=("${nome} ${tag}")
+            continue
+        fi
+        case "${tag}" in
+            "[BT-SOCKET]") cura="É o que derruba os controles por Bluetooth: o bluetoothd com o hefesto-0002 (o backport do passo 3f) segura a sessão" ;;
+            "[FILA-CHEIA]") cura="A fila de saída de um controle encheu: o uhid com contrapressão segura$(so_no_checkout "(./install.sh --uhid-contrapressao)")" ;;
+            "[ENLACE-PARADO]") cura="O enlace de um controle parou de andar: distância ou interferência — aproxime o controle do adaptador" ;;
+            "[BT-TRAVADO]") cura="Um adaptador travou: o watchdog o reinicia sozinho, até três vezes seguidas; se não voltar, tire e ponha o adaptador" ;;
+            "[CRC]") cura="Pacotes corrompidos: interferência de 2.4 GHz — afaste o adaptador dos receivers e do Wi-Fi USB" ;;
+            *) cura="" ;;
+        esac
+        if [[ "${recentes:-0}" -gt 0 ]]; then
+            warn "rádio: ${nome} ${tag} — ${recentes} vez(es) nos últimos ${dias} dias (a última em ${ultima}); ${total} no log inteiro. ${cura}"
+        elif [[ "${total:-0}" -gt 0 ]]; then
+            info "rádio: ${nome} ${tag} não aconteceu nos últimos ${dias} dias. O log guarda ${total}, a última em ${ultima} — histórico, não o estado de agora"
+        fi
+    done <<<"${saida}"
+    if [[ "${#naoolhei[@]}" -gt 0 ]]; then
+        local lista
+        lista="$(printf '%s, ' "${naoolhei[@]}")"
+        info "o kernel-watch deste log ainda não procurava: ${lista%, } — zero aqui é «não olhei»; a vigia nova, que o install reinicia, passa a procurar"
+    fi
+}
+
 # PLAT-03 item 2: os params do hefesto no cmdline — comparação /proc/cmdline
 # (boot ATUAL) × configuration do kernelstub/grub (PRÓXIMO boot) = "aplicado"
 # vs "pendente de reboot". A policy sysfs NUNCA entra aqui (ela mente).
@@ -7381,6 +7465,7 @@ main() {
     check_bt_radio
     check_bt_crc_counters
     check_kernel_watch
+    check_familias_do_radio
     check_cmdline_platform
     hdr "rádio e pareamento (G2)"
     check_bluez_backport_version

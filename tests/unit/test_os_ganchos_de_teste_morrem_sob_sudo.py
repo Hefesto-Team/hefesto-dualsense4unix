@@ -54,9 +54,9 @@ def test_todo_gancho_lido_morre_sob_sudo(nome: str) -> None:
     guarda = _GUARDA.search(codigo)
     assert guarda, f"{nome} não tem a guarda do sudo (SUDO_UID/SUDO_USER → unset)"
     apagados = set(re.findall(r"\bHEFESTO_[A-Z0-9_]+", guarda.group("corpo")))
-    leituras = {
-        m.group(1): m.start() for m in reversed(list(re.finditer(r"\$\{(HEFESTO_[A-Z0-9_]+)", codigo)))
-    }
+    todas = list(re.finditer(r"\$\{(HEFESTO_[A-Z0-9_]+)", codigo))
+    #: gancho -> a posição da PRIMEIRA leitura (o reversed deixa a primeira por último).
+    leituras = {m.group(1): m.start() for m in reversed(todas)}
     assert leituras, f"controle: {nome} não lê gancho nenhum — a régua não mede nada"
     faltam = sorted(set(leituras) - apagados - SCRIPTS_DE_ROOT[nome])
     assert not faltam, (
