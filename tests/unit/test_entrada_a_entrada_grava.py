@@ -33,6 +33,7 @@ from __future__ import annotations
 import ast
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -525,9 +526,16 @@ def test_o_adaptador_na_entrada_numerada_na_outra_janela_herda_o_numero() -> Non
     assert ee.nome_do_adaptador(adaptador, maquina=de_outro, controladores=BOOT_1) is None
 
 
+#: As frases que a ponte root escreve no diário com a porta dentro — LIDAS do
+#: script, nunca digitadas aqui: digitada, a régua continuaria verde no dia em
+#: que o escritor mudasse a redação e a troca deixasse de casar.
+_FRASES_DA_PONTE_ROOT = re.compile(r'"(O adaptador da porta \$\{porta\}[^"]*)"')
+
+
 def test_o_conselho_de_porta_do_vigia_diz_o_nome_dela() -> None:
     """A ponte root escreve o caminho do sistema no diário; quem lê o diário
-    troca pelo nome dela. A frase é a de ``bt_ponte_privilegiada.sh``."""
+    troca pelo nome dela. As frases são as de ``bt_ponte_privilegiada.sh``,
+    todas elas, lidas do script."""
     documento = MaquinaConfig.model_validate(
         {
             "mapa": {
@@ -537,15 +545,19 @@ def test_o_conselho_de_porta_do_vigia_diz_o_nome_dela() -> None:
             "lugares": {f"pci-{PCI_B}-usb-0:4.1.4": {"entrada": "3"}},
         }
     )
-    linha = {
-        "o_que": "resetou a porta",
-        "porta": "3-4.1.4",
-        "familia": "3",
-        "frase": "O adaptador da porta 3-4.1.4 travou de novo. Tire e ponha ele.",
-    }
-    com_nome = ee.com_o_nome_dela(linha, maquina=documento, controladores=BOOT_1)
-    assert com_nome["frase"] == "O adaptador da Entrada 3 travou de novo. Tire e ponha ele."
-    assert com_nome["porta_nome"] == "Entrada 3"
+    script = (RAIZ / "scripts" / "bt_ponte_privilegiada.sh").read_text(encoding="utf-8")
+    moldes = sorted(set(_FRASES_DA_PONTE_ROOT.findall(script)))
+    assert moldes, "a ponte root não escreve mais «O adaptador da porta …» — a régua perdeu o alvo"
+    for molde in moldes:
+        linha = {
+            "o_que": "reiniciou o adaptador",
+            "porta": "3-4.1.4",
+            "familia": "3",
+            "frase": molde.replace("${porta}", "3-4.1.4"),
+        }
+        com_nome = ee.com_o_nome_dela(linha, maquina=documento, controladores=BOOT_1)
+        assert com_nome["frase"] == molde.replace("porta ${porta}", "Entrada 3"), molde
+        assert com_nome["porta_nome"] == "Entrada 3"
 
     do_dono = {"o_que": bd.MUDOU_DE_LUGAR, "porta": f"pci-{PCI_B}-usb-0:4.1.4",
                "frase": "Este adaptador mudou de porta."}
@@ -1007,8 +1019,6 @@ def test_o_rotulo_do_rodape_diz_entrada_e_nunca_porta() -> None:
     MORDIDA: devolva o rótulo «Qual entrada é cada porta» — reprova nomeando o
     campo.
     """
-    import re
-
     from hefesto_dualsense4unix.app import ipc_bridge
 
     com_porta = {
