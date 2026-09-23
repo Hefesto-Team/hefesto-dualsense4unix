@@ -421,7 +421,8 @@ def _o_2b_pelo_governador(
             vaga = None
 
 
-def test_um_pacote_alheio_na_meia_janela_nao_prova_que_a_fila_anda() -> None:
+@pytest.mark.parametrize("primeira_janela", [10, 20])
+def test_um_pacote_alheio_na_meia_janela_nao_prova_que_a_fila_anda(primeira_janela: int) -> None:
     """O contador ``acl_tx`` é do ADAPTADOR inteiro: um pacote por janela pode
     ser de qualquer aparelho, e a meia janela de uma tentativa escreve pouco.
 
@@ -430,13 +431,19 @@ def test_um_pacote_alheio_na_meia_janela_nao_prova_que_a_fila_anda() -> None:
     em nove, abaixo do limiar, e um pacote alheio bastava: 77 «fila voltou a
     andar» em dez minutos, e a espera presa em 5 s — o 2B longo de antes.
 
-    MORDIDA: devolva o ``return float(saida) * janela >= 1.0 and not
-    estado.cedendo`` do ``_medir`` e a espera nunca cresce.
+    Com vinte escritas na meia janela a fila fica em 19 — abaixo do limiar,
+    então ninguém cede —, e só a FOLGA separa «escoou» de «ainda não encheu».
+
+    MORDIDAS: devolva o ``return float(saida) * janela >= 1.0 and not
+    estado.cedendo`` do ``_medir`` e a espera nunca cresce (as duas); tire a
+    folga da prova e a de vinte passa.
     """
     relogio, registro = _Relogio(), _Diario()
     medidor = _MedidorDoAdaptador(saida_por_janela=1.0)
     governador = _governador(relogio, registro, {}, medidor=medidor)
-    _o_2b_pelo_governador(governador, relogio, segundos=600.0, primeira_janela=10)
+    _o_2b_pelo_governador(
+        governador, relogio, segundos=600.0, primeira_janela=primeira_janela
+    )
 
     esperas = [p["depois"]["espera_s"] for p in registro.de(gov.FILA_PARADA)]
     assert registro.de(gov.FILA_ANDOU) == [], (
