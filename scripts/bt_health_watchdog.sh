@@ -35,6 +35,20 @@
 #    É transiente: um rebind no driver VANILLA ressuscita (provado ao vivo).
 #    Delegado a scripts/bt_rebind_orphans.sh (escopo estreito + guarda contra
 #    laço). Vale ouro no alvo de 4 controles por Bluetooth ao mesmo tempo.
+#
+# 5. ADAPTADOR TRAVADO EM LAÇO (O-DIARIO-DO-RADIO-01, a família 3): a cada tique
+#    o watchdog pede à ponte privilegiada o `reiniciar-travado`, que só age se o
+#    journal do KERNEL mostra o laço de «command tx timeout» num adaptador sem
+#    ninguém conectado. Em 13/09 um Realtek passou 17 h assim.
+#
+# A TRAVA E O DIÁRIO (O-DIARIO-DO-RADIO-01, 23/09/2026). Este watchdog é um dos
+# três motores que mexem no rádio — os outros são o vigia de zumbis e a central
+# do daemon —, e até aqui nenhum sabia do outro: o `Connect` daqui podia cair
+# no meio de um controle sendo movido. Agora o tique inteiro roda com a trava
+# comum na mão (`flock` em /run/hefesto-dualsense4unix/radio.lock, com prazo);
+# quem não a consegue no prazo pula o tique, e a espera e a desistência vão
+# para o diário do root (/var/lib/hefesto-dualsense4unix/radio-diario.jsonl),
+# no formato que `integrations/diario_do_radio.py` lê. As ações também.
 set -euo pipefail
 
 JANELA_MIN=10
@@ -65,6 +79,85 @@ _registrar() {
     esac
 }
 log() { _registrar "$*"; printf '%s\n' "$*"; }
+
+# --- o diário do root (O-DIARIO-DO-RADIO-01) -------------------------------
+#
+# DUAS CÓPIAS, UMA FORMA: `_json_texto` e `_diario_escrever` existem byte a
+# byte iguais aqui e no `bt_ponte_privilegiada.sh`, os dois escritores root do
+# diário — sem `source`, porque script root que lê outro arquivo herda o risco
+# de quem pode escrevê-lo. A régua `tests/unit/test_o_diario_do_radio.py`
+# confere as duas cópias.
+#: Texto -> string JSON. Barra e aspas escapadas; controle vira espaço.
+_json_texto() {
+    local s="${1:-}"
+    s="${s//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    s="$(printf '%s' "${s}" | tr '\000-\037' ' ')"
+    printf '"%s"' "${s}"
+}
+
+#: Uma ação no diário do root. $1 destino (vazio = não registra) · $2 quem ·
+#: $3 o quê · $4 por quê · $5 antes (JSON) · $6 depois (JSON) · $7 campos a
+#: mais, já em JSON (`"porta": "3-4.1.4"`). Nunca falha: a ação já aconteceu.
+_diario_escrever() {
+    local alvo="${1:-}" linha tamanho
+    [[ -n "${alvo}" ]] || return 0
+    [[ -L "${alvo}" ]] && return 0
+    linha="{\"quando\": $(_json_texto "$(date -Iseconds 2>/dev/null || true)"), \"carimbo\": $(date +%s), \"quem\": $(_json_texto "$2"), \"o_que\": $(_json_texto "$3"), \"por_que\": $(_json_texto "$4"), \"antes\": ${5:-null}, \"depois\": ${6:-null}${7:+, $7}}"
+    install -d -m 0755 "${alvo%/*}" 2>/dev/null || true
+    tamanho="$(stat -c %s "${alvo}" 2>/dev/null || echo 0)"
+    if [[ "${tamanho}" -gt 524288 ]]; then
+        mv -f -- "${alvo}" "${alvo}.1" 2>/dev/null || true
+    fi
+    printf '%s\n' "${linha}" >>"${alvo}" 2>/dev/null || true
+    return 0
+}
+
+#: O diário do root, ou nenhum: com a árvore do BlueZ desviada (a suíte) e
+#: sem o gancho, este script não escreve no disco dela.
+DIARIO_DO_RADIO="${HEFESTO_RADIO_DIARIO_ROOT:-}"
+if [[ -z "${DIARIO_DO_RADIO}" && -z "${HEFESTO_BT_SRC:-}" ]]; then
+    DIARIO_DO_RADIO="/var/lib/hefesto-dualsense4unix/radio-diario.jsonl"
+fi
+_diario() { _diario_escrever "${DIARIO_DO_RADIO}" "bt-watchdog" "$@"; }
+
+# --- a trava do rádio ------------------------------------------------------
+TRAVA_DO_RADIO="${HEFESTO_RADIO_TRAVA:-/run/hefesto-dualsense4unix/radio.lock}"
+PRAZO_DA_TRAVA_S="${HEFESTO_RADIO_TRAVA_PRAZO_S:-60}"
+[[ "${PRAZO_DA_TRAVA_S}" =~ ^[0-9]+$ ]] || PRAZO_DA_TRAVA_S=60
+TRAVA_FD=""
+
+#: Pega a trava comum com prazo. 0 = com ela (ou sem trava comum nesta
+#: máquina, dito no log); 1 = outro motor a segurou o prazo inteiro.
+_pegar_a_trava() {
+    local dono inicio fim milis
+    if [[ ! -d "${TRAVA_DO_RADIO%/*}" ]]; then
+        log "sem a trava comum do rádio (${TRAVA_DO_RADIO%/*} não existe — é o install que a cria); sigo sem ela"
+        return 0
+    fi
+    if ! exec {TRAVA_FD}>>"${TRAVA_DO_RADIO}"; then
+        log "não consegui abrir a trava do rádio (${TRAVA_DO_RADIO}); sigo sem ela"
+        TRAVA_FD=""
+        return 0
+    fi
+    if ! flock -n "${TRAVA_FD}"; then
+        dono="$(head -n1 -- "${TRAVA_DO_RADIO}" 2>/dev/null | cut -c1-120 || true)"
+        inicio="$(date +%s%N)"
+        if ! flock -w "${PRAZO_DA_TRAVA_S}" "${TRAVA_FD}"; then
+            _diario "desistiu da trava" "${dono:-outro motor} segurou a trava por mais de ${PRAZO_DA_TRAVA_S} s" \
+                "{\"dono\": $(_json_texto "${dono}")}" "{\"espera_s\": ${PRAZO_DA_TRAVA_S}}"
+            log "a trava do rádio ficou com ${dono:-outro motor} por ${PRAZO_DA_TRAVA_S} s — pulo este tique"
+            return 1
+        fi
+        fim="$(date +%s%N)"
+        milis=$(( (fim - inicio) / 1000000 ))
+        _diario "esperou a trava" "${dono:-outro motor} estava com ela" \
+            "{\"dono\": $(_json_texto "${dono}")}" \
+            "{\"espera_s\": $(printf '%d.%03d' $((milis / 1000)) $((milis % 1000)))}"
+    fi
+    printf 'bt-watchdog %s\n' "$$" >"${TRAVA_DO_RADIO}" 2>/dev/null || true
+    return 0
+}
 
 # COMPAT BLUEZ-586-CTL-01 + WATCHDOG-FP-01 (22/07): o bluetoothctl 5.86 é MUDO
 # no modo one-shot (regressão do cliente) e a função-sombra interativa também
@@ -185,6 +278,8 @@ vigia_sdp_cache() {
         grep -q '^\[ServiceRecords\]' "${CACHE}" 2>/dev/null && continue
 
         log "controle ${MAC} ZUMBI (conectado, SDP não-resolvido, zero hidraw) — forçando SDP browse via Connect()"
+        _diario "forçou o SDP por Connect()" "conectado, sem registro SDP e sem hidraw" \
+            "{\"sdp\": false}" null "\"controle\": $(_json_texto "${MAC}")"
         for TENTATIVA in 1 2 3 4 5 6; do
             # br-connection-busy é esperado enquanto a conexão entrante ainda
             # está em curso; insistir é o certo (medido: sucesso na 3ª/12ª).
@@ -231,6 +326,20 @@ if [[ "${1:-}" == "--sdp-cache-only" ]]; then
     vigia_sdp_cache
     exit 0
 fi
+
+# --so-a-trava <SEGUNDOS>: pega a trava como o tique pega, segura por
+# <SEGUNDOS> e sai. Existe para a régua provar que este watchdog e o daemon
+# disputam a MESMA trava, sem rodar vigia nenhuma.
+if [[ "${1:-}" == "--so-a-trava" ]]; then
+    _pegar_a_trava || exit 3
+    sleep "${2:-0}"
+    exit 0
+fi
+
+# O tique inteiro roda com a trava do rádio na mão. Sem ela no prazo, o tique
+# é pulado: o próximo vem em dois minutos, e agir por cima de outro motor é o
+# defeito que a trava existe para impedir.
+_pegar_a_trava || exit 0
 
 # --- vigia 0: modo ativo p/ Nintendo (BT-NINTENDO-ACTIVE-01) ------------------
 # Reafirma nome "Nintendo*" + link policy sem SNIFF a cada tick (2 min): cobre
@@ -313,6 +422,9 @@ if [[ "${RECUSAS}" -ge "${LIMIAR_RECUSAS}" ]]; then
         else
             log "estado doente confirmado (${RECUSAS} recusas/${JANELA_MIN}min, 0 conectados) — reiniciando bluetooth.service"
             printf '%s' "${AGORA}" > "${STAMP_RESTART}"
+            _diario "reiniciou o bluetooth.service" \
+                "estado doente: ${RECUSAS} recusas de ${APARELHOS_RECUSADOS} aparelhos em ${JANELA_MIN} min, nenhum conectado" \
+                "{\"recusas\": ${RECUSAS}, \"conectados\": 0}" null
             systemctl restart bluetooth.service || log "restart do bluetooth.service FALHOU"
         fi
     fi
@@ -346,6 +458,9 @@ while IFS= read -r OBJ; do
     MAC_TRUST="${MAC_TRUST//_/:}"
     if busctl set-property org.bluez "${OBJ}" org.bluez.Device1 Trusted b true 2>/dev/null; then
         log "device ${MAC_TRUST} tinha bond mas estava SEM trust (reconexão entrante recusada como 'unknown device') — Trusted=true aplicado"
+        _diario "aplicou Trusted=true" "bond sem trust: a reconexão entrante era recusada" \
+            "{\"trusted\": false}" "{\"trusted\": true}" \
+            "\"controle\": $(_json_texto "${MAC_TRUST}"), \"hci\": $(_json_texto "$(cut -d/ -f4 <<<"${OBJ}")")"
     else
         log "falha ao aplicar Trusted=true em ${MAC_TRUST} — o doctor vai apontar"
     fi
@@ -379,6 +494,9 @@ while IFS= read -r OBJ; do
         _btctl_lento 25 pair "${MAC}" || true
         _btctl_lento 5 trust "${MAC}" || true
         BONDED2="$(_dbus_device_prop "${OBJ}" Bonded)"
+        _diario "promoveu o bond temporário" "conectado com Paired e sem Bonded: o bond evaporaria no desligar" \
+            "{\"bonded\": false}" "{\"bonded\": $([[ "${BONDED2}" == "true" ]] && echo true || echo false)}" \
+            "\"controle\": $(_json_texto "${MAC}")"
         if [[ "${BONDED2}" == "true" ]]; then
             log "bond de ${MAC} promovido e persistido (Bonded=true)"
             /usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh --quiet 2>/dev/null || true
@@ -417,4 +535,25 @@ vigia_rebind_orfaos() {
 }
 
 vigia_rebind_orfaos
+
+# --- vigia 5: adaptador travado em laço (O-DIARIO-DO-RADIO-01) ---------------
+# Quem decide é a ponte (o journal do kernel, a porta, ninguém conectado, o
+# freio de 15 min) — aqui só se chama, com a trava já na mão. A árvore de teste
+# não chama: o verbo leria o journal DELA.
+vigia_adaptador_travado() {
+    local _s
+    [[ -z "${HEFESTO_BT_SRC:-}" ]] || return 0
+    for _s in \
+        /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh \
+        "$(dirname "$(readlink -f "$0")")/bt_ponte_privilegiada.sh" \
+    ; do
+        if [[ -x "${_s}" ]]; then
+            "${_s}" reiniciar-travado >/dev/null 2>&1 || true
+            return 0
+        fi
+    done
+    return 0
+}
+
+vigia_adaptador_travado
 exit 0
