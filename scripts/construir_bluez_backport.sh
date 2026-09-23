@@ -307,14 +307,50 @@ compilar() {
     fi
 }
 
+# O AES-CCM do kernel pela AF_ALG, que o unit/test-mesh-crypto usa (pela ell).
+# Há máquina que o desliga de propósito: a dela tem
+# /etc/modprobe.d/disable-algif_aead.conf (CVE-2026-31431), e ali o bind
+# devolve ENOENT. Só leitura: nada é carregado nem escrito.
+aead_do_kernel_disponivel() {
+    python3 -c 'import socket
+s = socket.socket(socket.AF_ALG, socket.SOCK_SEQPACKET, 0)
+s.bind(("aead", "ccm(aes)"))' >/dev/null 2>&1
+}
+
+# Um FAIL do unit/ que a MÁQUINA explica, e não o código: o teste só é
+# perdoado quando a pré-condição dele é medida ausente AGORA. Medido em
+# 23/09/2026: o unit/test-mesh-crypto liga só o próprio .o e a -lell — nada de
+# profiles/input —, e reprova em «Crypto packet encrypt» com o algif_aead
+# desligado. Qualquer outro FAIL, ou este com o AEAD disponível, reprova.
+falha_explicada_pela_maquina() {
+    case "$1" in
+        unit/test-mesh-crypto) ! aead_do_kernel_disponivel ;;
+        *) return 1 ;;
+    esac
+}
+
 unit_do_bluez() {
+    local log="${ARVORE}/test-suite.log" linha tipo teste
     diga "make check, o unit/ do próprio BlueZ (log em ${OBRA}/unit.log)"
     if ! (cd "${ARVORE}" && "${AMBIENTE_LIMPO[@]}" make -j"${JOBS}" check) \
             > "${OBRA}/unit.log" 2>&1; then
-        grep -E '^(FAIL|ERROR):' "${OBRA}/unit.log" >&2 || tail -n 40 "${OBRA}/unit.log" >&2
-        morra "${RC_UNIT}" "o unit/ do BlueZ reprovou (log em ${OBRA}/unit.log)"
+        # Sem o test-suite.log o make check nem chegou a rodar os testes.
+        if [[ ! -f "${log}" ]] || ! grep -qE '^(FAIL|ERROR): ' "${log}"; then
+            tail -n 40 "${OBRA}/unit.log" >&2
+            morra "${RC_UNIT}" "o make check falhou antes de rodar os testes (log em ${OBRA}/unit.log)"
+        fi
+        while read -r linha; do
+            tipo="${linha%%:*}"
+            teste="${linha#*: }"
+            if [[ "${tipo}" == "FAIL" ]] && falha_explicada_pela_maquina "${teste}"; then
+                diga "NÃO MEDIDO nesta máquina: ${teste} — o AES-CCM do kernel (AF_ALG aead) está desligado aqui, e o teste não liga nada de profiles/input"
+                continue
+            fi
+            printf '%s\n' "${linha}" >&2
+            morra "${RC_UNIT}" "o unit/ do BlueZ reprovou (log em ${OBRA}/unit.log)"
+        done < <(grep -E '^(FAIL|ERROR): ' "${log}")
     fi
-    grep -E '^# (TOTAL|PASS|SKIP|XFAIL|FAIL|XPASS|ERROR):' "${ARVORE}/test-suite.log" || true
+    grep -E '^# (TOTAL|PASS|SKIP|XFAIL|FAIL|XPASS|ERROR):' "${log}" || true
 }
 
 debs_alvo() {
