@@ -7357,6 +7357,8 @@ class IpcHandlersMixin:
             result["radio_ar"] = self._ar_por_adaptador(entries)
         with contextlib.suppress(Exception):
             result["radio_governador"] = self._o_governador_publica()
+        with contextlib.suppress(Exception):
+            result["radio_central"] = self._a_central_publica(entries)
 
     @staticmethod
     def _hz_ou_none(valor: Any) -> float | None:
@@ -7563,6 +7565,65 @@ class IpcHandlersMixin:
             return {"status": "sem_governador", "uniq": uniq}
         ligou = await asyncio.to_thread(governador.ligar_aqui, uniq.strip())
         return {"status": "ok" if ligou else "sem_adaptador", "uniq": uniq}
+
+    # =================================================================
+    # MOVER-UM-POR-VEZ-01 (23/09/2026): a central do rádio
+    # =================================================================
+    #
+    # No fim da classe pela mesma razão dos blocos de cima: este arquivo é
+    # citado por número de linha.
+
+    def _a_central(self) -> Any:
+        """A central do rádio, que o daemon sobe no arranque — ou ``None``."""
+        return getattr(self.daemon, "_central_do_radio", None)
+
+    def _a_central_publica(self, entries: list[dict[str, Any]]) -> dict[str, Any]:
+        """``state_full["radio_central"]``: os movimentos (``esperando``,
+        ``chegou``, ``nao_chegou``) e a proposta do «Equilibrar», UMA ou nenhuma.
+
+        ``entries`` já passou pelo :meth:`_merge_radio`: cada controle traz o
+        ``adaptador`` do ``HID_PHYS`` e a ``ponte_do_radio`` — é o que a proposta
+        pesa. Nunca abre o dono do BlueZ nem espera o rádio: o tique não pode.
+        """
+        central = self._a_central()
+        if central is None:
+            return {}
+        publicado = central.publicar(entries)
+        return dict(publicado) if isinstance(publicado, dict) else {}
+
+    async def _handle_radio_mover(self, params: dict[str, Any]) -> dict[str, Any]:
+        """«Mover» um aparelho para um adaptador, ou o «Conectar» (D8).
+
+        ``aparelho``: o endereço (``aa:bb:…``) ou o ``uniq`` de 12 hex — o que o
+        «Equilibrar» publica em ``proposta.controle``. Sem ele, é o «Conectar»:
+        a janela abre no destino com mais vaga de ponte, e o controle que ela
+        segurar em PS + Create é o que chega. ``destino``: o endereço do
+        adaptador; sem ele, a D8 escolhe.
+
+        Volta assim que a trava do rádio vem — no máximo 5 s de espera, decisão
+        de quem coordena —, com o movimento «esperando»; o resto segue num fio e
+        chega pelo ``state_full["radio_central"]``. ``status: "ocupado"`` é a
+        recusa: o botão treme, sem recado, e nada mudou.
+        """
+        from hefesto_dualsense4unix.integrations.central_do_radio import MOTIVO_OCUPADO
+
+        aparelho = params.get("aparelho")
+        destino = params.get("destino")
+        if aparelho is not None and not isinstance(aparelho, str):
+            raise ValueError("radio.mover: `aparelho` é o endereço do aparelho")
+        if destino is not None and not isinstance(destino, str):
+            raise ValueError("radio.mover: `destino` é o endereço do adaptador")
+        central = self._a_central()
+        if central is None:
+            return {"status": "sem_central"}
+        if aparelho and aparelho.strip():
+            movimento = await asyncio.to_thread(
+                central.comecar_a_mover, aparelho.strip(), destino or None
+            )
+        else:
+            movimento = await asyncio.to_thread(central.comecar_a_conectar, destino or None)
+        status = "ocupado" if movimento.motivo == MOTIVO_OCUPADO else "ok"
+        return {"status": status, "movimento": movimento.publicar()}
 
 
 __all__ = ["DraftApplier", "IpcHandlersMixin"]

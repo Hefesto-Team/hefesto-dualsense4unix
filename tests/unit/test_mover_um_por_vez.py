@@ -647,3 +647,190 @@ def test_o_esquecer_da_origem_guarda_o_cache_sdp_do_bond_novo(tmp_path: Path) ->
     assert not (lib / varanda / "cache" / vermelho).exists(), "a sobra de scan sai"
     [lapide] = (tmp_path / ".lapides").read_text(encoding="utf-8").splitlines()
     assert lapide.split()[1:] == [sala, vermelho]
+
+
+# ---------------------------------------------------------------------------
+# 9. o IPC e o arranque: o parear é pelo daemon
+# ---------------------------------------------------------------------------
+
+
+def _handlers(daemon: Any) -> Any:
+    from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
+
+    class _Handlers(IpcHandlersMixin):
+        def __init__(self, alvo: Any) -> None:
+            self.daemon = alvo
+
+    return _Handlers(daemon)
+
+
+def _esperar(condicao: Any, teto: float = 5.0) -> bool:
+    import time
+
+    fim = time.monotonic() + teto
+    while time.monotonic() < fim:
+        if condicao():
+            return True
+        time.sleep(0.01)
+    return bool(condicao())
+
+
+@pytest.mark.asyncio
+async def test_o_ipc_radio_mover_move_pela_central(
+    diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
+) -> None:
+    """``radio.mover`` com o ``uniq`` que o «Equilibrar» publica: volta
+    «esperando» na hora, e o movimento segue no fio da central.
+
+    MORDIDA: faça o handler responder ``ok`` sem chamar a central — o vermelho
+    não sai da sala, e esta régua reprova.
+    """
+    from types import SimpleNamespace
+
+    central = _central(dono, mundo, relogio)
+    _ela_segura_ps_create(mundo, relogio, VERMELHO)
+    handlers = _handlers(SimpleNamespace(_central_do_radio=central))
+
+    pedido = {"aparelho": rm.uniq(VERMELHO), "destino": QUARTO}
+    resposta = await handlers._handle_radio_mover(pedido)
+
+    assert resposta["status"] == "ok"
+    assert resposta["movimento"]["aparelho"] == VERMELHO
+    assert resposta["movimento"]["estado"] in (cr.ESPERANDO, cr.CHEGOU)
+    assert _esperar(lambda: central.movimento_de(VERMELHO).estado == cr.CHEGOU)
+    assert mundo.onde_esta(rm.uniq(VERMELHO)) == QUARTO
+    central.fechar()
+
+
+@pytest.mark.asyncio
+async def test_o_ipc_sem_aparelho_e_o_conectar(
+    diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
+) -> None:
+    from types import SimpleNamespace
+
+    mundo.fisicos[VERDE] = rm.Fisico(VERDE, rm.CLASSE_DE_CONTROLE)
+    central = _central(dono, mundo, relogio)
+    _ela_segura_ps_create(mundo, relogio, VERDE)
+    handlers = _handlers(SimpleNamespace(_central_do_radio=central))
+
+    resposta = await handlers._handle_radio_mover({"destino": QUARTO})
+
+    assert resposta["status"] == "ok"
+    assert _esperar(lambda: (central.movimento_de(VERDE) or cr.Movimento("", "", "", "")).estado
+                    == cr.CHEGOU)
+    central.fechar()
+
+
+@pytest.mark.asyncio
+async def test_o_ipc_ocupado_e_a_recusa_e_o_parametro_torto_levanta(
+    diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
+) -> None:
+    from types import SimpleNamespace
+
+    central = _central(dono, mundo, relogio, prazo_da_trava_s=0.2)
+    handlers = _handlers(SimpleNamespace(_central_do_radio=central))
+
+    with diario_do_radio.trava_do_radio("vigia"):
+        resposta = await handlers._handle_radio_mover({"aparelho": VERMELHO, "destino": QUARTO})
+    assert resposta["status"] == "ocupado"
+    assert mundo.chamadas == []
+
+    with pytest.raises(ValueError):
+        await handlers._handle_radio_mover({"aparelho": 5})
+    with pytest.raises(ValueError):
+        await handlers._handle_radio_mover({"aparelho": VERMELHO, "destino": ["x"]})
+    sem = _handlers(SimpleNamespace(_central_do_radio=None))
+    assert await sem._handle_radio_mover({"aparelho": VERMELHO}) == {"status": "sem_central"}
+    central.fechar()
+
+
+def test_radio_mover_e_o_ultimo_metodo_da_tabela() -> None:
+    """Método IPC novo vai no FIM da tabela — regra da leva."""
+    fonte = (RAIZ / "src/hefesto_dualsense4unix/daemon/ipc_server.py").read_text(encoding="utf-8")
+    ultimo = fonte.index('"radio.mover": self._handle_radio_mover,')
+    fecha = fonte.index("\n        }\n", ultimo)
+    assert fonte[ultimo:fecha].count('": self._handle_') == 1, "radio.mover não é o último"
+
+
+@pytest.mark.asyncio
+async def test_o_state_full_publica_a_central(
+    diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
+) -> None:
+    """``state_full["radio_central"]`` sai do dono (a central), num suppress próprio.
+
+    MORDIDA: tire o bloco ``radio_central`` do ``_enriquecer_e_medir_o_ar`` — a
+    chave some e esta régua reprova.
+    """
+    import time
+
+    from hefesto_dualsense4unix.daemon.lifecycle import Daemon
+    from hefesto_dualsense4unix.testing import FakeController
+
+    daemon = Daemon(controller=FakeController(transport="bt"))
+    daemon.controller.describe_controllers = lambda: []  # type: ignore[attr-defined]
+    daemon._central_do_radio = _central(dono, mundo, relogio)
+
+    class _Estado(type(_handlers(daemon))):  # type: ignore[misc]
+        def __init__(self, alvo: Any) -> None:
+            self.daemon = alvo
+            self.store = alvo.store
+            self.controller = alvo.controller
+
+    handlers = _Estado(daemon)
+    handlers._afh_lido_em = time.monotonic()
+    payload = await handlers._handle_daemon_state_full({})
+
+    assert payload["radio_central"] == {"movimentos": [], "em_curso": False, "proposta": None}
+
+
+@pytest.mark.asyncio
+async def test_o_daemon_abre_o_dono_no_arranque_fora_do_laco(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O dono do BlueZ abre no arranque, num fio — nunca no laço, nunca na tela.
+
+    MORDIDA: tire o ``_start_central_do_radio`` do ``run()`` — esta régua
+    reprova pelo fonte; chame o ``ligar`` direto no laço — reprova pelo fio.
+    """
+    import inspect
+
+    from hefesto_dualsense4unix.daemon.lifecycle import Daemon
+    from hefesto_dualsense4unix.testing import FakeController
+
+    fios: list[str] = []
+    monkeypatch.setattr(
+        cr.CentralDoRadio, "ligar", lambda self: fios.append(threading.current_thread().name)
+    )
+    monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_FAKE", raising=False)
+    daemon = Daemon(controller=FakeController(transport="bt"))
+
+    await daemon._start_central_do_radio()
+
+    assert isinstance(daemon._central_do_radio, cr.CentralDoRadio)
+    assert fios and fios[0] != threading.main_thread().name
+    assert '"central_do_radio", self._start_central_do_radio' in inspect.getsource(Daemon.run)
+
+    monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_FAKE", "1")
+    falso = Daemon(controller=FakeController(transport="bt"))
+    await falso._start_central_do_radio()
+    assert falso._central_do_radio is None, "o daemon de fumaça não pareia nada"
+
+
+def test_o_movimento_da_central_vem_do_sensor_hub_do_ipc() -> None:
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.daemon.lifecycle import Daemon
+    from hefesto_dualsense4unix.testing import FakeController
+
+    perguntas: list[str] = []
+
+    def hz(uniq: str) -> float:
+        perguntas.append(uniq)
+        return 248.0
+
+    hub = SimpleNamespace(hz_do_movimento=hz)
+    daemon = Daemon(controller=FakeController(transport="bt"))
+    assert daemon._movimento_para_a_central("aabbcc000001") is None
+    daemon._ipc_server = SimpleNamespace(_garantir_sensor_hub=lambda: hub)
+    assert daemon._movimento_para_a_central("aabbcc000001") == 248.0
+    assert perguntas == ["aabbcc000001"]

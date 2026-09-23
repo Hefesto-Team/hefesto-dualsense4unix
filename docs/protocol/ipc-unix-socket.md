@@ -41,7 +41,7 @@ aparece contada.
 
 <!-- BLOCO GERADO por scripts/gerar-contrato-ipc.py — não edite à mão -->
 
-**47 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **20** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
+**48 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **20** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
 
 Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e é por isso que ele está aqui: escrito à mão, ele já saiu 15, 17, 18 e 14 em levantamentos do mesmo dia.
 
@@ -93,7 +93,8 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `machine.declare` | `daemon/ipc_handlers.py:7182` (`_handle_machine_declare`) | Grava no `maquina.json` o que ela DECLAROU sobre a mesa (CONFIG-03). | sim |
 | `plugin.list` | `daemon/ipc_handlers.py:7287` (`_handle_plugin_list`) | Lista plugins carregados no daemon (FEAT-PLUGIN-01). | **não** |
 | `plugin.reload` | `daemon/ipc_handlers.py:7299` (`_handle_plugin_reload`) | Recarrega plugins do disco (FEAT-PLUGIN-01). | **não** |
-| `radio.ponte.ligar_aqui` | `daemon/ipc_handlers.py:7550` (`_handle_radio_ponte_ligar_aqui`) | «Ligar aqui»: a ponte deste controle sobe além do limite do adaptador. | **não** |
+| `radio.ponte.ligar_aqui` | `daemon/ipc_handlers.py:7552` (`_handle_radio_ponte_ligar_aqui`) | «Ligar aqui»: a ponte deste controle sobe além do limite do adaptador. | **não** |
+| `radio.mover` | `daemon/ipc_handlers.py:7594` (`_handle_radio_mover`) | «Mover» um aparelho para um adaptador, ou o «Conectar» (D8). | sim |
 
 <!-- FIM DO BLOCO GERADO -->
 
@@ -497,6 +498,29 @@ sobrescrito**, e os bytes ficam intactos.
 A declaração **não** entra no `daemon.state_full`: aquilo é o tique de 20 Hz, e
 isto muda por gesto dela. O daemon lê o arquivo uma vez no boot
 (`daemon/lifecycle.py`, ao lado dos flags de sessão).
+
+### `radio.mover` — mover UM aparelho, ou conectar um novo (MOVER-UM-POR-VEZ-01)
+
+O motor é `integrations/central_do_radio.py`: pareia no destino, confere pelo
+`HID_PHYS` e pelo movimento chegando, e só então esquece a origem, com a lápide.
+
+| Método        | Parâmetros                                   | Retorno                                     |
+|---------------|----------------------------------------------|---------------------------------------------|
+| `radio.mover` | `{aparelho?: "aa:bb:…" ou uniq, destino?: "aa:bb:…"}` | `{status, movimento}` ou `{status: "sem_central"}` |
+
+Sem `aparelho` é o «Conectar»: a janela abre no adaptador que a D8 escolhe (mais
+vaga de ponte; no empate, menos controles; quem está varrendo por último), e o
+controle que ela segurar em PS + Create é o que chega. Sem `destino`, a D8 escolhe
+também no mover. `status: "ocupado"` é a recusa: outro motor segurou a trava do
+rádio por mais de 5 s, o botão treme, e nada mudou.
+
+A resposta volta assim que a trava vem, com o movimento em `esperando`; o resto
+chega por `daemon.state_full`, na chave `radio_central`:
+`{movimentos: [...], em_curso, proposta}`. Cada movimento tem `estado`
+(`esperando`, `chegou` ou `nao_chegou`), `passo`, `motivo`, `aparelho`, `destino`
+e `origens`. `proposta` é o «Equilibrar» — UM movimento, com `controle` e
+`destino`, que a tela aplica chamando `radio.mover` com esses dois —, ou `null`,
+e é sempre `null` enquanto um movimento está `esperando`.
 
 ## Perfil com seção `mouse` (FEAT-POINT-AND-CLICK-01)
 

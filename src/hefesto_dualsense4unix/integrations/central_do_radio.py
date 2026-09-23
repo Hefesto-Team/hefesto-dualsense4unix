@@ -412,6 +412,10 @@ class CentralDoRadio:
         self._adaptadores_em_cache: tuple[float, tuple[bluez_dbus.AdaptadorDoBluez, ...]] | None = (
             None
         )
+        self._refrescando = False
+        #: O dono já foi aberto? Antes disso o ``state_full`` não o abre: o
+        #: primeiro ``dono()`` paga o Gio de forma síncrona, e o tique não pode.
+        self._ligada = dono is not None
 
     # -- ciclo ----------------------------------------------------------------
 
@@ -426,6 +430,7 @@ class CentralDoRadio:
         """
         dono = self._dono()
         vivo = dono.pode_perguntar()
+        self._ligada = True
         logger.info("central_do_radio_ligada", vivo=vivo, pelo_dono=type(dono).__name__)
         return vivo
 
@@ -473,9 +478,12 @@ class CentralDoRadio:
         apagar o resto do estado.
         """
         proposta: dict[str, Any] | None = None
-        with contextlib.suppress(Exception):
-            ordem = self.propor(controles, ar=ar)
-            proposta = ordem.publicar() if ordem is not None else None
+        if controles is not None:
+            self.conhecer(controles)
+        if self._ligada:
+            with contextlib.suppress(Exception):
+                ordem = self.propor(ar=ar, esperar=False)
+                proposta = ordem.publicar() if ordem is not None else None
         return {
             "movimentos": [m.publicar() for m in self.movimentos()],
             "em_curso": self.em_curso,
@@ -484,21 +492,54 @@ class CentralDoRadio:
 
     # -- DECIDIR: a D8 e o «Equilibrar» ----------------------------------------
 
-    def _adaptadores(self) -> tuple[bluez_dbus.AdaptadorDoBluez, ...] | None:
+    def _adaptadores(
+        self, *, esperar: bool = True
+    ) -> tuple[bluez_dbus.AdaptadorDoBluez, ...] | None:
+        """Os adaptadores do dono, numa foto que vale :data:`VALIDADE_DOS_ADAPTADORES_S`.
+
+        ``esperar=False`` é o caminho do ``state_full``: com o dono vivo a foto
+        é memória e sai na hora; pelo caminho de reserva (``busctl``) ela custa
+        subprocessos, e então se refaz num fio e o tique leva a última que havia.
+        """
         agora = self._relogio()
         cache = self._adaptadores_em_cache
         if cache is not None and agora - cache[0] < VALIDADE_DOS_ADAPTADORES_S:
             return cache[1]
-        lidos = self._dono().adaptadores()
+        dono = self._dono()
+        if not esperar and not dono.atende_o_proprio_pareamento:
+            self._refrescar_os_adaptadores(dono)
+            return cache[1] if cache is not None else None
+        lidos = dono.adaptadores()
         if lidos is not None:
             self._adaptadores_em_cache = (agora, tuple(lidos))
         return lidos
 
-    def _planos(self, ar: Mapping[str, Any] | None = None) -> tuple[Any, frozenset[str] | None]:
+    def _refrescar_os_adaptadores(self, dono: bluez_dbus.LeitorDoBluez) -> None:
+        with self._tranca:
+            if self._refrescando:
+                return
+            self._refrescando = True
+
+        def rodar() -> None:
+            try:
+                lidos = dono.adaptadores()
+                if lidos is not None:
+                    self._adaptadores_em_cache = (self._relogio(), tuple(lidos))
+            except Exception:
+                logger.warning("central_adaptadores_nao_leu", exc_info=True)
+            finally:
+                with self._tranca:
+                    self._refrescando = False
+
+        threading.Thread(target=rodar, name="hefesto-central-adaptadores", daemon=True).start()
+
+    def _planos(
+        self, ar: Mapping[str, Any] | None = None, *, esperar: bool = True
+    ) -> tuple[Any, frozenset[str] | None]:
         """Os planos por adaptador (o dono é ``plano_de_radio``) e quem varre."""
         from hefesto_dualsense4unix.integrations import plano_de_radio
 
-        adaptadores = self._adaptadores()
+        adaptadores = self._adaptadores(esperar=esperar)
         varrendo = (
             frozenset(a.endereco for a in adaptadores if a.varrendo)
             if adaptadores is not None
@@ -517,6 +558,7 @@ class CentralDoRadio:
         controles: Iterable[Mapping[str, Any]] | None = None,
         *,
         ar: Mapping[str, Any] | None = None,
+        esperar: bool = True,
     ) -> Any:
         """O «Equilibrar» (R12): UM movimento, ou ``None``.
 
@@ -531,7 +573,7 @@ class CentralDoRadio:
             self.conhecer(controles)
         if self.em_curso:
             return None
-        planos, varrendo = self._planos(ar)
+        planos, varrendo = self._planos(ar, esperar=esperar)
         return plano_de_radio.ordem_de_redistribuicao(planos, varrendo=varrendo)
 
     def conhecer(self, controles: Iterable[Mapping[str, Any]]) -> None:
