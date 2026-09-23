@@ -201,7 +201,8 @@ class NomeDado:
 
     ``projetado`` é ``None`` quando não havia adaptador naquela porta (não há o
     que projetar), ``True`` quando o dono do D-Bus gravou o ``Alias``, e
-    ``False`` quando tentou e o BlueZ ou a trava recusaram.
+    ``False`` quando tentou e o BlueZ ou a trava recusaram — ou quando o BlueZ
+    não respondeu, e então não se sabe se havia adaptador ali.
     """
 
     lugar: str
@@ -679,7 +680,7 @@ def projetar_o_nome(
     lugar: str,
     nome: str,
     *,
-    adaptadores: Callable[[], Iterable[Any]] | None = None,
+    adaptadores: Callable[[], Iterable[Any] | None] | None = None,
     renomear: Callable[[str, str], Any] | None = None,
 ) -> Any:
     """O ``Alias`` do adaptador que está NESTE lugar passa a ser o nome dele.
@@ -688,8 +689,14 @@ def projetar_o_nome(
     ``apelido_do_dongle.renomear_o_dongle`` — que costura o prefixo Nintendo e
     escreve pelo ``bluez_dbus``, dentro da trava comum do rádio. ``None``
     quando não há adaptador neste lugar: não há o que projetar.
+
+    O dono devolve ``None`` quando NÃO DEU PARA PERGUNTAR, e isso não é "não
+    há adaptador": a volta é uma recusa (``aplicado=False``), para quem chama
+    saber que o ``Alias`` ficou com o nome velho (conferência, 23/09/2026).
     """
     lidos = adaptadores() if adaptadores is not None else _adaptadores_do_dono()
+    if lidos is None:
+        return _SemLeitura(lugar=lugar, nome=nome)
     alvo = next((a for a in lidos if getattr(a, "lugar", "") == lugar), None)
     if alvo is None:
         return None
@@ -700,11 +707,20 @@ def projetar_o_nome(
     return renomear_o_dongle(alvo.endereco, nome)
 
 
-def _adaptadores_do_dono() -> Iterable[Any]:
-    """Os adaptadores pelo dono do D-Bus — cada um com o seu ``lugar``."""
+def _adaptadores_do_dono() -> Iterable[Any] | None:
+    """Os adaptadores pelo dono do D-Bus — ``None`` = não deu para perguntar."""
     from hefesto_dualsense4unix.integrations import bluez_dbus
 
-    return bluez_dbus.dono().adaptadores() or ()
+    return bluez_dbus.dono().adaptadores()
+
+
+@dataclass(frozen=True)
+class _SemLeitura:
+    """A projeção que não aconteceu porque o BlueZ não respondeu."""
+
+    lugar: str
+    nome: str
+    aplicado: bool = False
 
 
 # ---------------------------------------------------------------------------

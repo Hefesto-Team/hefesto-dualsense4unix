@@ -1028,3 +1028,28 @@ def test_o_rotulo_do_rodape_diz_entrada_e_nunca_porta() -> None:
     }
     assert "lugares" in ipc_bridge._ROTULOS_SEM_SECAO
     assert not com_porta, f"rótulo de tela com a palavra «porta»: {com_porta}"
+
+
+def test_o_bluez_que_nao_responde_nao_vira_porta_sem_adaptador(disco: Path) -> None:
+    """``adaptadores()`` devolve ``None`` quando o dono do D-Bus não conseguiu
+    perguntar, e isso é "não sei" — nunca "não há adaptador neste lugar".
+
+    MORDIDA: ler ``dono().adaptadores() or ()`` — o nome é gravado, o ``Alias``
+    não, e a volta diz ``projetado=None`` («não havia o que projetar»): a tela
+    não teria como saber que o adaptador ficou com o nome velho.
+    """
+    lugar = f"pci-{PCI_A}-usb-0:3"
+
+    def renomear(_endereco: str, _nome: str) -> Any:
+        pytest.fail("sem leitura, não há a quem pedir o Alias")
+
+    feito = ee.dar_nome(
+        lugar,
+        "Sofá",
+        projetar=lambda qual, n: ee.projetar_o_nome(
+            qual, n, adaptadores=lambda: None, renomear=renomear
+        ),
+    )
+    assert feito.gravou, "o nome é nosso e vai ao disco de qualquer jeito"
+    assert feito.projetado is False, "o BlueZ calado foi lido como porta sem adaptador"
+    assert ee.projetar_o_nome(lugar, "Sofá", adaptadores=lambda: [], renomear=renomear) is None
