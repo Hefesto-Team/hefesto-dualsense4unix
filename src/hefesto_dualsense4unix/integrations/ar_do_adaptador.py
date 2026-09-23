@@ -33,11 +33,13 @@ AUSÊNCIA É RESPOSTA — o contrato do ``varredura_do_radio.py``
   não anda com enlace vivo é o instrumento (ou o adaptador) parado, e dizer
   «0 Hz» ali seria o medidor respondendo sobre outra coisa que não o ar;
 * adaptador SEM conexão e contador parado → ``0.0``. Isso é «ninguém no
-  rádio», que é verdade, e não «rádio ruim».
+  rádio», que é verdade, e não «rádio ruim». Mas só quando a lista de
+  conexões VEIO: sem ela, contador parado é «não sei» (``CONEXOES_ILEGIVEIS``).
 
 O contador é de 32 bits e dá a volta. Um salto negativo é VOLTA quando a taxa
-que ele implica é possível (:data:`TETO_DE_PACOTES_POR_S`); fora disso é o
-adaptador que reiniciou e zerou, e a janela vira «não sei».
+que ele implica é possível (:data:`TETO_DE_PACOTES_POR_S` para pacotes,
+:data:`TETO_DE_BYTES_POR_S` para bytes); fora disso é o adaptador que
+reiniciou e zerou, e a janela vira «não sei».
 
 O QUE ELE NÃO É
 ================
@@ -91,6 +93,15 @@ VOLTA_DO_CONTADOR = 1 << 32
 #: do BR/EDR é 1.600 fatias por segundo; 20.000 pacotes/s deixa folga de sobra
 #: para qualquer rádio e ainda separa volta de reinício.
 TETO_DE_PACOTES_POR_S = 20_000.0
+#: O mesmo teto para os contadores de BYTES, que não contam pacote: o
+#: ``btusb`` soma ali cada URB (evento e ACL) de um barramento USB full-speed,
+#: 12 Mbit/s = 1,5 MB/s. É o contador que MAIS dá a volta — a ~70 kB/s de um
+#: controle no rádio, uma vez a cada ~17 h —, e medi-lo com o teto de pacotes
+#: fazia toda volta dele virar «o adaptador reiniciou» e apagar a janela
+#: inteira (conferência da AR-MEDIDO-01, 23/09/2026).
+TETO_DE_BYTES_POR_S = 2_000_000.0
+#: Os contadores de bytes, que leem o teto acima em vez do de pacotes.
+_CONTADORES_DE_BYTES = frozenset({"byte_rx", "byte_tx"})
 
 #: Janela padrão de uma taxa: um segundo. O governador pede 0,25 s.
 JANELA_S = 1.0
@@ -122,6 +133,7 @@ ADAPTADOR_DESLIGADO = "o adaptador está desligado"
 PRIMEIRA_LEITURA = "primeira leitura: falta a segunda para haver taxa"
 CONTADOR_RECOMECOU = "o contador recomeçou: o adaptador reiniciou"
 CONTADOR_PARADO = "o contador não andou com conexão de pé"
+CONEXOES_ILEGIVEIS = "o contador não andou e o kernel não listou as conexões"
 
 Ioctl = Callable[[int, bytearray], None]
 
@@ -307,12 +319,14 @@ class LeitorDoKernel:
         return tuple(saida)
 
 
-def _delta(antes: int, depois: int, janela_s: float) -> int | None:
+def _delta(
+    antes: int, depois: int, janela_s: float, teto_por_s: float = TETO_DE_PACOTES_POR_S
+) -> int | None:
     """``depois - antes`` com a volta dos 32 bits; ``None`` = o contador zerou."""
     if depois >= antes:
         return depois - antes
     volta = depois + VOLTA_DO_CONTADOR - antes
-    if janela_s > 0 and volta / janela_s <= TETO_DE_PACOTES_POR_S:
+    if janela_s > 0 and volta / janela_s <= teto_por_s:
         return volta
     return None
 
@@ -358,13 +372,18 @@ def conferir(
     a, d = antes.contadores, depois.contadores
     deltas: dict[str, int] = {}
     for nome in ("acl_rx", "acl_tx", "byte_rx", "byte_tx", "err_rx", "err_tx"):
-        delta = _delta(getattr(a, nome), getattr(d, nome), janela)
+        teto = TETO_DE_BYTES_POR_S if nome in _CONTADORES_DE_BYTES else TETO_DE_PACOTES_POR_S
+        delta = _delta(getattr(a, nome), getattr(d, nome), janela, teto)
         if delta is None:
             return feito(CONTADOR_RECOMECOU, round(janela, 3))
         deltas[nome] = delta
     ha_enlace = any(c.tipo == TIPO_ACL for c in conexoes or ())
     if ha_enlace and deltas["acl_rx"] == 0:
         return feito(CONTADOR_PARADO, round(janela, 3))
+    # Sem a lista de conexões, contador parado não separa «ninguém no rádio»
+    # de «instrumento parado com enlace de pé» — e só o primeiro é zero.
+    if conexoes is None and deltas["acl_rx"] == 0:
+        return feito(CONEXOES_ILEGIVEIS, round(janela, 3))
     return feito(
         "",
         round(janela, 3),
@@ -627,6 +646,7 @@ __all__ = [
     "ADAPTADOR_DESLIGADO",
     "ADAPTADOR_SUMIU",
     "CANAIS_DO_BT",
+    "CONEXOES_ILEGIVEIS",
     "CONTADOR_PARADO",
     "CONTADOR_RECOMECOU",
     "IOCTL_FALHOU",

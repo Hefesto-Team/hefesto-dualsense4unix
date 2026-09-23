@@ -10,6 +10,11 @@ guarda do contador parado com enlace vivo faz
 ``test_contador_congelado_com_conexao_viva_responde_nao_sei`` reprovar com
 ``entrada_por_s == 0.0`` — o medidor dizendo «ninguém no rádio» sobre um
 controle conectado. Devolvida a guarda, md5 conferido.
+
+E DUAS DA CONFERÊNCIA, no mesmo dia: medir o contador de BYTES com o teto de
+pacotes faz ``test_o_contador_de_bytes_que_da_a_volta_…`` reprovar com «o
+contador recomeçou»; tirar a guarda da lista de conexões ilegível faz
+``test_sem_a_lista_de_conexoes_…`` reprovar com ``0.0``.
 """
 
 from __future__ import annotations
@@ -161,6 +166,40 @@ def test_o_contador_de_32_bits_que_da_a_volta_continua_sendo_taxa() -> None:
     relogio.agora += 1.0
     dado["c"]["acl_rx"] = 650
     assert medidor.amostrar()[ADAPTADOR_A].entrada_por_s == 750.0
+
+
+def test_o_contador_de_bytes_que_da_a_volta_nao_vira_adaptador_reiniciado() -> None:
+    """O de BYTES dá a volta a cada ~17 h com um controle no rádio (~70 kB/s).
+
+    Medido contra o teto de PACOTES, a volta dele virava «o adaptador
+    reiniciou» e apagava a janela inteira — conferência de 23/09/2026.
+    """
+    kernel, relogio = KernelDeMentira(), Relogio()
+    dado = kernel.por(0, ADAPTADOR_A)
+    dado["enlaces"] = [(12, CONTROLE_1, ar.TIPO_ACL)]
+    dado["c"].update(acl_rx=1_000, byte_rx=(1 << 32) - 30_000)
+    medidor = _medidor(kernel, relogio)
+    medidor.amostrar()
+    relogio.agora += 1.0
+    dado["c"].update(acl_rx=1_753, byte_rx=(1 << 32) - 30_000 + 753 * 87)
+    resposta = medidor.amostrar()[ADAPTADOR_A]
+    assert resposta.motivo == "", resposta.motivo
+    assert resposta.entrada_por_s == 753.0
+    assert resposta.bytes_entrada_por_s == 753.0 * 87
+
+
+def test_sem_a_lista_de_conexoes_o_contador_parado_e_nao_sei() -> None:
+    """Sem o ``HCIGETCONNLIST`` o parado não separa «ninguém» de «instrumento parado»."""
+    kernel, relogio = KernelDeMentira(), Relogio()
+    kernel.por(0, ADAPTADOR_A)["c"]["acl_rx"] = 40_000
+    kernel.falhar.add(ar.HCIGETCONNLIST)
+    medidor = _medidor(kernel, relogio)
+    medidor.amostrar()
+    relogio.agora += 1.0
+    resposta = medidor.amostrar()[ADAPTADOR_A]
+    assert resposta.entrada_por_s is None, (
+        f"contador parado sem saber das conexões virou número: {resposta.entrada_por_s!r}")
+    assert resposta.motivo == ar.CONEXOES_ILEGIVEIS
 
 
 def test_o_contador_que_zerou_e_nao_sei_e_nunca_uma_volta_inventada() -> None:
