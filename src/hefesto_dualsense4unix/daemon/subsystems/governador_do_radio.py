@@ -942,9 +942,17 @@ class GovernadorDoRadio:
     ) -> bool:
         """O déficit de uma janela e as duas bordas. Chamado com a trava.
 
-        Devolve ``True`` quando a janela MEDIDA provou que a fila ANDA: o
-        adaptador pôs pacote no ar e as pontes não estão cedendo. Janela de
+        Devolve ``True`` quando a janela MEDIDA provou que a fila ANDA: as
+        pontes escreveram nela ao menos o :data:`LIMIAR_DO_DEFICIT` — o que
+        faria o adaptador parado ceder — e a fila ficou na folga. Janela de
         «não sei» nunca prova nada.
+
+        CONFERÊNCIA DE 23/09/2026: a prova era «um pacote no ar e as pontes sem
+        ceder», e o contador é do ADAPTADOR inteiro. Num 2B com um fio de ar
+        alheio (um pacote por janela), a primeira janela de cada tentativa —
+        meia janela, dez escritas — passava por prova: 77 «fila voltou a andar»
+        em dez minutos, e a espera nunca saiu dos 5 s, que é o defeito que a
+        espera crescente existe para curar.
         """
         if ar is None or ar is estado.ultimo_ar:
             if ar is None:
@@ -967,7 +975,11 @@ class GovernadorDoRadio:
         estado.deficit_medido = True
         estado.fila = max(0.0, estado.fila + escritas - float(saida) * janela)
         self._as_bordas(estado, vagas, endereco, agora, janela, bordas)
-        return float(saida) * janela >= 1.0 and not estado.cedendo
+        return (
+            escritas >= LIMIAR_DO_DEFICIT
+            and estado.fila <= FOLGA_PARA_VOLTAR
+            and not estado.cedendo
+        )
 
     def _as_bordas(
         self,
@@ -1109,7 +1121,7 @@ class GovernadorDoRadio:
         """A fila do adaptador ANDA: acaba a espera crescente dele (item 3).
 
         Duas provas chegam aqui, e as duas são medida, nunca relógio: a janela do
-        medidor em que o adaptador pôs pacote no ar sem as pontes cederem
+        medidor em que as pontes escreveram o limiar e a fila ficou na folga
         (:meth:`_medir`), e a ponte que passou de
         :data:`ESCRITAS_QUE_PROVAM_QUE_A_FILA_ANDA` escritas aceitas
         (:meth:`Vaga.contar_escrita`). A próxima queda volta a esperar 5 s.

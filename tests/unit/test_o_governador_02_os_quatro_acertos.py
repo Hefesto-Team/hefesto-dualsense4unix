@@ -358,6 +358,64 @@ def test_a_janela_medida_que_poe_no_ar_acaba_a_espera() -> None:
     )
 
 
+def _o_2b_pelo_governador(
+    governador: gov.GovernadorDoRadio,
+    relogio: _Relogio,
+    *,
+    segundos: float,
+    primeira_janela: int = 23,
+) -> None:
+    """A ponte sob demanda num adaptador que não escoa, tique a tique.
+
+    A tentativa sobe no MEIO de uma janela — ``primeira_janela`` escritas antes
+    do primeiro tique — e depois escreve 23 por janela enquanto não cede. Cai
+    no teto, devolve a vaga no mesmo quadro, e a volta seguinte pede de novo.
+    """
+    fim = relogio.agora + segundos
+    vaga: gov.Vaga | None = None
+    while relogio.agora < fim:
+        if vaga is None:
+            pedida = governador.pedir_vaga(CONTROLE_1, "som")
+            if isinstance(pedida, gov.Vaga):
+                vaga = pedida
+                vaga.subiu("som")
+                for _ in range(primeira_janela):
+                    vaga.contar_escrita()
+        else:
+            for _ in range(23):
+                if not vaga.cedendo and not vaga.derrubar:
+                    vaga.contar_escrita()
+        relogio.agora += gov.PERIODO_S
+        governador.tique()
+        if vaga is not None and vaga.derrubar:
+            vaga.soltar(af.MOTIVO_FILA_PARADA)
+            vaga = None
+
+
+def test_um_pacote_alheio_na_meia_janela_nao_prova_que_a_fila_anda() -> None:
+    """O contador ``acl_tx`` é do ADAPTADOR inteiro: um pacote por janela pode
+    ser de qualquer aparelho, e a meia janela de uma tentativa escreve pouco.
+
+    CONFERÊNCIA DE 23/09/2026: a prova era «um pacote no ar e as pontes sem
+    ceder». A tentativa subia no meio da janela com dez escritas, a fila ficava
+    em nove, abaixo do limiar, e um pacote alheio bastava: 77 «fila voltou a
+    andar» em dez minutos, e a espera presa em 5 s — o 2B longo de antes.
+
+    MORDIDA: devolva o ``return float(saida) * janela >= 1.0 and not
+    estado.cedendo`` do ``_medir`` e a espera nunca cresce.
+    """
+    relogio, registro = _Relogio(), _Diario()
+    medidor = _MedidorDoAdaptador(saida_por_janela=1.0)
+    governador = _governador(relogio, registro, {}, medidor=medidor)
+    _o_2b_pelo_governador(governador, relogio, segundos=600.0, primeira_janela=10)
+
+    esperas = [p["depois"]["espera_s"] for p in registro.de(gov.FILA_PARADA)]
+    assert registro.de(gov.FILA_ANDOU) == [], (
+        f"a fila nunca andou e o diário diz que andou; esperas={esperas}"
+    )
+    assert esperas == [5.0, 10.0, 20.0, 40.0, 60.0], esperas
+
+
 # ---------------------------------------------------------------------------
 # 4. a frase da recusa diz o nome, nunca o endereço
 # ---------------------------------------------------------------------------
