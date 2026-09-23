@@ -717,6 +717,15 @@ _FERRAMENTAS = frozenset({"busctl", "bluetoothctl", "gdbus", "dbus-send"})
 #: Um nome D-Bus do BlueZ: o serviço ou uma interface dele.
 _NOME_DO_BLUEZ = re.compile(r"org\.bluez(\.[A-Za-z0-9_]+)*")
 
+#: O texto que COMEÇA falando com o BlueZ: a linha de comando inteira numa
+#: string só (``"busctl call org.bluez …"``, para ``shell=True``) e o pedaço de
+#: f-string (``f"org.bluez.{interface}"``). Achado na conferência: as duas
+#: formas passavam pelo ``fullmatch`` acima. Frase de tela que CITA o
+#: ``org.bluez`` no meio ("o `org.bluez` não respondeu") não começa com ele.
+_COMECA_FALANDO_COM_O_BLUEZ = re.compile(
+    r"^(?:busctl|bluetoothctl|gdbus|dbus-send)(?:\s|$)|^org\.bluez(?:\.|$)"
+)
+
 
 def _docstrings(arvore: ast.AST) -> set[int]:
     ids: set[int] = set()
@@ -739,7 +748,11 @@ def segundos_donos(fonte: str) -> list[tuple[int, str]]:
         if not isinstance(no, ast.Constant) or not isinstance(no.value, str) or id(no) in docs:
             continue
         valor = no.value.strip()
-        if valor in _FERRAMENTAS or _NOME_DO_BLUEZ.fullmatch(valor):
+        if (
+            valor in _FERRAMENTAS
+            or _NOME_DO_BLUEZ.fullmatch(valor)
+            or _COMECA_FALANDO_COM_O_BLUEZ.match(valor)
+        ):
             achados.append((no.lineno, valor))
     return achados
 
@@ -756,6 +769,22 @@ def test_a_regua_de_dono_morde_um_executor_novo() -> None:
     assert [v for _l, v in segundos_donos(novo)] == [
         "busctl", "org.bluez", "org.bluez.Device1"
     ]
+
+
+def test_a_regua_de_dono_morde_a_linha_inteira_e_a_f_string() -> None:
+    """As duas formas que o ``fullmatch`` deixava passar, achadas na conferência.
+
+    MORDIDA embutida: sem ``_COMECA_FALANDO_COM_O_BLUEZ`` a lista volta vazia.
+    E a frase que só CITA o serviço no meio continua fora — ela é tela, não ato.
+    """
+    novo = (
+        "import subprocess\n"
+        "SEM_BLUEZ = 'o `org.bluez` não respondeu no barramento'\n"
+        "def derrubar(caminho, interface):\n"
+        "    subprocess.run(f'busctl call org.bluez {caminho} Disconnect', shell=True)\n"
+        "    return f'org.bluez.{interface}'\n"
+    )
+    assert sorted(v for _l, v in segundos_donos(novo)) == ["busctl call org.bluez", "org.bluez."]
 
 
 def test_ninguem_fala_com_o_bluez_fora_do_dono() -> None:
