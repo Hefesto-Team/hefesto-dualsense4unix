@@ -3681,18 +3681,23 @@ check_bt_clone_ds4() {
 # este soft block, e desfazê-lo tiraria da pessoa o controle do próprio rádio.
 check_bt_rfkill() {
     local raiz="${HEFESTO_BT_SYSFS_ROOT:-/sys/class/bluetooth}"
-    local hci rf soft hard lidos=0 bloqueados=0 _hcis=()
+    local hci rf soft hard lido bloqueados=0 _hcis=() _lidos=() _sem_leitura=()
     mapfile -t _hcis < <(_bt_adaptadores)
     if [[ "${#_hcis[@]}" -eq 0 ]]; then
         info "nenhum adaptador Bluetooth presente — os controles só conectam pelo cabo (o dongle está na porta?)"
         return 0
     fi
+    # A contagem é POR ADAPTADOR, e só conta o que foi LIDO: um adaptador sem
+    # rfkill legível não é «ligado» — é «não sei». Somar os não lidos ao «ligado
+    # em N» afirmaria o estado de um rádio que ninguém olhou.
     for hci in "${_hcis[@]}"; do
+        lido=0
         for rf in "${raiz}/${hci}"/rfkill*; do
             [[ -r "${rf}/soft" && -r "${rf}/hard" ]] || continue
             soft="$(cat "${rf}/soft" 2>/dev/null)"
             hard="$(cat "${rf}/hard" 2>/dev/null)"
-            lidos=$((lidos + 1))
+            [[ "${soft}" =~ ^[01]$ && "${hard}" =~ ^[01]$ ]] || continue
+            lido=1
             if [[ "${hard}" == "1" ]]; then
                 bloqueados=$((bloqueados + 1))
                 warn "${hci} bloqueado pela chave física ou pela BIOS (rfkill hard) — nenhum controle conecta por ele até a chave voltar"
@@ -3701,11 +3706,17 @@ check_bt_rfkill() {
                 warn "${hci} desligado por software (rfkill soft) — parece «sem adaptador»: o controle não conecta e nada diz por quê. Ligue pelo botão de Bluetooth do painel ou: rfkill unblock bluetooth"
             fi
         done
+        if [[ "${lido}" -eq 1 ]]; then
+            _lidos+=("${hci}")
+        else
+            _sem_leitura+=("${hci}")
+        fi
     done
-    if [[ "${lidos}" -eq 0 ]]; then
-        info "não consegui ler o rfkill de nenhum adaptador (${_hcis[*]}) — não sei dizer se o rádio está bloqueado"
-    elif [[ "${bloqueados}" -eq 0 ]]; then
-        pass "rádio Bluetooth ligado em ${#_hcis[@]} adaptador(es) (rfkill sem bloqueio)"
+    if [[ "${#_sem_leitura[@]}" -gt 0 ]]; then
+        info "não consegui ler o rfkill de ${_sem_leitura[*]} — não sei dizer se esse rádio está bloqueado"
+    fi
+    if [[ "${#_lidos[@]}" -gt 0 && "${bloqueados}" -eq 0 ]]; then
+        pass "rádio Bluetooth ligado em ${#_lidos[@]} adaptador(es) (rfkill sem bloqueio)"
     fi
 }
 
@@ -6736,6 +6747,7 @@ check_wifi_usb() {
     local instalado="${HEFESTO_WIFI_INSTALADO:-/usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh}"
     local dispatcher="${HEFESTO_WIFI_DISPATCHER:-/etc/NetworkManager/dispatcher.d/90-hefesto-wifi-usb}"
     local script="" lista="" linha st_timer="" dono_modo="" diario="" n_reset=0 problema=0
+    local ultimo_estado="" onde_o_dispatcher="sem NetworkManager nesta máquina, sem dispatcher"
     # Do checkout quando há; senão o instalado. O doctor viaja em pacote sem o
     # script, e aí a pergunta fica sem quem responda — diz isso em vez de
     # adivinhar.
@@ -6769,6 +6781,7 @@ check_wifi_usb() {
         problema=1
     fi
     if [[ -d "$(dirname "$(dirname "${dispatcher}")")" ]]; then
+        onde_o_dispatcher="dispatcher do NetworkManager no lugar"
         if [[ ! -e "${dispatcher}" ]]; then
             if [[ -x "${instalado}" ]]; then
                 warn "o dispatcher ${dispatcher} não existe — cada associação nova nasce com o scan de fundo ligado até o próximo tique do vigia"
@@ -6796,17 +6809,28 @@ check_wifi_usb() {
     # O que o vigia disse neste boot. `-t` é o SyslogIdentifier da unit e o
     # `logger` do dispatcher; legível por quem está no grupo adm ou
     # systemd-journal.
+    #
+    # O «parei» vale pelo que veio DEPOIS dele: o vigia o repete a cada tique
+    # enquanto o rádio segue mudo, e para quando o roteador volta («o roteador
+    # voltou a responder», «curado depois de…» — o dongle que ela tirou e pôs de
+    # volta). Um «parei» de manhã seguido de uma cura à tarde não é defeito de
+    # agora; quem decide é a ÚLTIMA dessas linhas, não a existência de uma.
     if command -v journalctl >/dev/null 2>&1; then
         diario="$(journalctl -b -q --no-pager -t hefesto-wifi-usb 2>/dev/null || true)"
         n_reset="$(printf '%s\n' "${diario}" | grep -c 'reiniciada (' || true)"
-        if printf '%s\n' "${diario}" | grep -q 'parei. Tire e ponha o dongle'; then
+        ultimo_estado="$(printf '%s\n' "${diario}" \
+            | grep -E 'parei\. Tire e ponha o dongle|o roteador voltou a responder|curado depois de' \
+            | tail -n 1 || true)"
+        if [[ "${ultimo_estado}" == *"parei. Tire e ponha o dongle"* ]]; then
             warn "o vigia do Wi-Fi USB reiniciou a porta 3 vezes sem cura e PAROU neste boot — tire e ponha o dongle (de preferência noutra porta)"
             problema=1
+        elif [[ "${n_reset:-0}" -gt 0 && -n "${ultimo_estado}" ]]; then
+            info "o vigia reiniciou a porta do dongle ${n_reset}x neste boot, e o roteador voltou a responder depois"
         elif [[ "${n_reset:-0}" -gt 0 ]]; then
-            info "o vigia reiniciou a porta do dongle ${n_reset}x neste boot (travamento mudo curado)"
+            info "o vigia reiniciou a porta do dongle ${n_reset}x neste boot"
         fi
     fi
-    [[ "${problema}" -eq 0 ]] && pass "vigia do Wi-Fi USB de pé (${lista}): timer ativo, dispatcher do NetworkManager no lugar"
+    [[ "${problema}" -eq 0 ]] && pass "vigia do Wi-Fi USB de pé (${lista}): timer ativo, ${onde_o_dispatcher}"
     return 0
 }
 
