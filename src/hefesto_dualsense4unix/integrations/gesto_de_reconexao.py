@@ -224,13 +224,13 @@ def desconectar(mac: str, *, executar: Executar | None = None) -> Resultado:
     que impede a pessoa de esperar um controle que nunca vai cair.
     """
     mascara = mascarar(mac)
-    leitor = _leitor(executar)
-    caminho = _caminho(leitor, mac)
+    caminho = caminho_do_controle(mac, executar=executar)
     if caminho is None:
         logger.info("reconexao_sem_alvo_no_bluez", endereco=mascara)
         return Resultado(ESTADO_SEM_ALVO, FRASE_SEM_ALVO, mascara)
 
-    if _conectado(leitor, caminho) is False:
+    leitor = _leitor(executar)
+    if esta_conectado(mac, executar=executar) is False:
         logger.info("reconexao_ja_estava_fora", endereco=mascara)
         return Resultado(ESTADO_JA_ESTAVA_FORA, FRASE_JA_ESTAVA_FORA, mascara)
 
@@ -294,15 +294,15 @@ def reconectar(mac: str, *, executar: Executar | None = None) -> Resultado:
     from hefesto_dualsense4unix.integrations.diario_do_radio import TravaOcupadaError
 
     mascara = mascarar(mac)
-    leitor = _leitor(executar)
-    caminho = _caminho(leitor, mac)
+    caminho = caminho_do_controle(mac, executar=executar)
     if caminho is None:
         logger.info("reconexao_sem_alvo_no_bluez", endereco=mascara)
         return Resultado(ESTADO_SEM_ALVO, FRASE_SEM_ALVO, mascara)
 
+    leitor = _leitor(executar)
     try:
         with bluez_dbus.na_trava(QUEM):
-            if _conectado(leitor, caminho) is not False:
+            if esta_conectado(mac, executar=executar) is not False:
                 # O elo morto sai primeiro. Um `Connect` por cima dele responde
                 # "já está conectado" e não levanta sessão de entrada nenhuma —
                 # medido na mesa dela, quatro vezes, com o kernel sem HID.
