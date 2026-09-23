@@ -624,7 +624,13 @@ def _secao(resultado: str, teste: str) -> str:
         ("outro_fail", [("FAIL", "unit/test-mesh-crypto"), ("FAIL", "unit/test-hog")], False, 2, 8),
         ("mesh_com_aead", [("FAIL", "unit/test-mesh-crypto")], True, 2, 8),
         ("error_do_mesh", [("ERROR", "unit/test-mesh-crypto")], False, 2, 8),
-        ("xpass_ao_lado", [("FAIL", "unit/test-mesh-crypto"), ("XPASS", "unit/test-x")], False, 2, 8),
+        (
+            "xpass_ao_lado",
+            [("FAIL", "unit/test-mesh-crypto"), ("XPASS", "unit/test-x")],
+            False,
+            2,
+            8,
+        ),
         ("sem_log", None, False, 2, 8),
     ],
 )
