@@ -299,17 +299,21 @@ def _mesa_de_cinco_num_hub_so() -> dict[str, plano_de_radio.PlanoDoAdaptador]:
 
 
 def _cinco_apertados_mais_um_folgado() -> dict[str, plano_de_radio.PlanoDoAdaptador]:
-    """Cinco com microfone no "Hub 9" (1384/1600, Cheia) e um sozinho no "Hub 15".
+    """Cinco com microfone no "Hub 9" (três com ponte de som) e um no "Hub 15".
 
     É o cenário exato em que a ordem de serviço tem de nascer: a origem passou
-    do corte da "Apertada" e existe outro adaptador que continua fora da
-    "Cheia" depois de receber.
+    do limite de pontes (três de dois) e existe outro adaptador com vaga.
+
+    NOTA DATADA — 23/09/2026 (MOVER-UM-POR-VEZ-01): a ordem passou a pesar as
+    PONTES contra ``N_MAX_PONTES``, não a soma aditiva. Os cinco microfones
+    continuam aqui porque as linhas da vista aditiva ainda os leem; quem faz a
+    ordem nascer agora são as três pontes de som.
     """
     return plano_de_radio.plano_por_adaptador(
         [
-            _controle(P1, 1),
-            _controle(P2, 2),
-            _controle(P3, 3),
+            _controle(P1, 1, ponte_do_radio="som"),
+            _controle(P2, 2, ponte_do_radio="som"),
+            _controle(P3, 3, ponte_do_radio="som"),
             _controle(P4, 4),
             _controle(P5, 5),
             _controle(P6, 6),
@@ -394,14 +398,21 @@ def test_com_um_segundo_adaptador_a_ordem_nasce_e_aponta_para_ele() -> None:
 
 
 def test_a_ordem_calcula_o_ganho_e_nao_o_promete() -> None:
-    """O "Ganho esperado" nomeia as duas ocupações depois — sem adjetivo."""
+    """O "Ganho esperado" nomeia as PONTES dos dois lados depois — sem adjetivo.
+
+    NOTA DATADA — 23/09/2026: dizia as fatias aditivas de cada lado; desde a
+    MOVER-UM-POR-VEZ-01 a ordem conta pontes contra o limite, e a palavra
+    «fatia» não vai à tela (ordem dela).
+    """
     planos = _cinco_apertados_mais_um_folgado()
     ordem = plano_de_radio.ordem_de_redistribuicao(planos)
     assert ordem is not None
-    assert str(round(ordem.origem_depois.slots_total)) in ordem.ganho_esperado
-    assert str(round(ordem.destino_depois.slots_total)) in ordem.ganho_esperado
-    assert ordem.origem_depois.controles == 4
-    assert ordem.destino_depois.controles == 2
+    assert ordem.pontes_na_origem_depois == 2
+    assert ordem.pontes_no_destino_depois == 1
+    assert f"com 2 de {ordem.n_max}" in ordem.ganho_esperado
+    assert f"com 1 de {ordem.n_max}" in ordem.ganho_esperado
+    assert ordem.controle == _sem_dois_pontos(P3), "sai o último a chegar com ponte"
+    assert "fatia" not in ordem.ganho_esperado + ordem.o_que_eu_vi
     for palavra in ("melhor", "resolve", "conserta", "ideal"):
         assert palavra not in ordem.ganho_esperado.lower()
 
@@ -678,14 +689,17 @@ def test_a_secao_nomeia_o_adaptador_e_nunca_o_hci() -> None:
 
 
 def test_a_secao_mostra_a_ordem_quando_ha_para_onde_mover() -> None:
-    """A ordem chega à tela com as três linhas do formato `D-ORDEM-DE-SERVICO`."""
+    """A ordem chega à tela com as três linhas do formato `D-ORDEM-DE-SERVICO`.
+
+    Três pontes de som no Hub 9 (23/09/2026: a ordem pesa pontes).
+    """
     conta = _montar(
         _Host(
             {
                 "controllers": [
-                    _controle(P1, 1),
-                    _controle(P2, 2),
-                    _controle(P3, 3),
+                    _controle(P1, 1, ponte_do_radio="som"),
+                    _controle(P2, 2, ponte_do_radio="som"),
+                    _controle(P3, 3, ponte_do_radio="som"),
                     _controle(P4, 4),
                     _controle(P5, 5),
                     _controle(P6, 6),
@@ -771,13 +785,16 @@ def _mesa_de_cinco_mais_dois_destinos(varrendo: Any) -> Any:
     O destino mais folgado é o `HUB_B` (um controle); o `HUB_C` tem dois. Pelo
     critério de sempre o `HUB_B` ganha — e é ele que a régua põe varrendo. Montar
     o contrário daria um nó verde sobre nada.
+
+    Desde 23/09/2026 a ordem pesa pontes: três de som no `HUB_A` a fazem nascer,
+    e o empate de vaga entre `HUB_B` e `HUB_C` cai no de menos controles (D8).
     """
     host = _Host(
         {
             "controllers": [
-                _controle(P1, 1),
-                _controle(P2, 2),
-                _controle(P3, 3),
+                _controle(P1, 1, ponte_do_radio="som"),
+                _controle(P2, 2, ponte_do_radio="som"),
+                _controle(P3, 3, ponte_do_radio="som"),
                 _controle(P4, 4),
                 _controle(P5, 5),
                 _controle(P6, 6),

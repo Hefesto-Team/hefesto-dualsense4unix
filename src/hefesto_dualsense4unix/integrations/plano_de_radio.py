@@ -76,6 +76,25 @@ de 24/08. Este módulo **não a resolve**: ele mostra o preço dos dois lados
 (:func:`frase_do_preco_por_controle`) para que a conta esteja na mesa quando
 ela escolher. Quando a escolha vier, quem muda é o ``default`` daquele campo —
 e a frase desta tela acompanha sozinha, porque deriva dele.
+
+O «EQUILIBRAR» PESA PONTES, DESDE 23/09/2026 — MOVER-UM-POR-VEZ-01
+------------------------------------------------------------------
+
+A R12 dela manda o «Equilibrar» continuar nesta régua (:func:`ordem_de_redistribuicao`,
+dona desde 20/09), e a medição de 23/09 trocou o que ela pesa. A entrada do
+controle é ELÁSTICA (~750 relatórios/s sozinho, ~400 dividindo): somá-la como
+demanda fixa contra 1.600 era o erro. O que transborda um adaptador são as
+PONTES de som e de vibração, de ritmo fixo — e o limite é
+``radio_da_mesa.N_MAX_PONTES`` (dois, medido em 22/09: a terceira derrubou em
+11, 15 e 89 s). Então a régua passou a ler o ``OrcamentoDoAdaptador`` do dono
+(``radio_da_mesa.orcamento_por_adaptador``) e a palavra de
+``palavra_das_pontes``: nasce ordem quando um adaptador passa de ``n_max``
+pontes, e o destino é o da D8 (:func:`ordem_dos_destinos`).
+
+A vista aditiva (``agora``, ``planejada``, :func:`cabe_mais_um`, as linhas e o
+selo) FICA, e não é descuido: ela tem dois leitores de tela — a seção
+Desempenho (``secao_orcamento``) e a seção de rádio de hoje da aba 08 — e sai
+com eles, na TRANSPLANTE-DA-SECAO-01. Ela não decide mais movimento nenhum.
 """
 
 from __future__ import annotations
@@ -87,16 +106,21 @@ from typing import Any
 
 from hefesto_dualsense4unix.app.fala_do_mapa import formata_pt_br
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+from hefesto_dualsense4unix.integrations.conexao_zumbi import mac_limpo
 from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     HZ_AUDIO_COM_MIC,
     HZ_INPUT_COM_MIC,
     HZ_INPUT_SEM_MIC,
+    N_MAX_PONTES,
     SEM_ADAPTADOR,
     SLOTS_POR_RELATORIO,
     SLOTS_POR_SEGUNDO,
     Ocupacao,
+    OrcamentoDoAdaptador,
     adaptador_por_uniq,
+    orcamento_por_adaptador,
     palavra_da_ocupacao,
+    palavra_das_pontes,
 )
 
 #: O maior ensaio desta casa no rádio, em número de controles simultâneos
@@ -154,6 +178,38 @@ class PlanoDoAdaptador:
     com_mic_declarado: frozenset[str] = field(default_factory=frozenset)
     agora: Ocupacao = field(default_factory=Ocupacao)
     planejada: Ocupacao = field(default_factory=Ocupacao)
+    #: O ar deste adaptador pelo DONO (``radio_da_mesa.orcamento_por_adaptador``):
+    #: quem está nele, quais pontes estão de pé e o ``n_max``. É o que o
+    #: «Equilibrar» pesa desde 23/09 (MOVER-UM-POR-VEZ-01). ``None`` só em plano
+    #: montado à mão; :func:`plano_por_adaptador` sempre o preenche.
+    orcamento: OrcamentoDoAdaptador | None = None
+
+    @property
+    def pontes(self) -> int:
+        """Quantas pontes de som e vibração estão de pé neste adaptador."""
+        return len(self.orcamento.pontes) if self.orcamento is not None else 0
+
+    @property
+    def n_max(self) -> int:
+        """Quantas pontes o adaptador comporta — o do dono, nunca um digitado."""
+        return self.orcamento.n_max if self.orcamento is not None else N_MAX_PONTES
+
+    @property
+    def vaga_de_ponte(self) -> int:
+        """Quantas pontes ainda cabem aqui. Negativo quando já passou do limite."""
+        return self.n_max - self.pontes
+
+    @property
+    def no_ar(self) -> int:
+        """Quantos controles estão no rádio deste adaptador."""
+        if self.orcamento is not None:
+            return len(self.orcamento.controles)
+        return self.agora.controles
+
+    @property
+    def rotulo_das_pontes(self) -> str:
+        """Folgada, Apertada ou Cheia — pelas pontes, pela palavra do dono."""
+        return palavra_das_pontes(self.pontes, self.n_max)
 
     @property
     def nome_na_tela(self) -> str:
@@ -182,6 +238,16 @@ class Redistribuicao:
     Quem desenha a caixinha é a seção Conexões (Frente B); enquanto o desenho
     dela não existir, a seção Desempenho renderiza as três linhas com
     ``rotulo_de_apoio``. A troca do renderizador não muda nada aqui.
+
+    **UM movimento, e ela diz QUAL controle** (R12, 23/09/2026): ``controle`` é
+    o ``uniq`` (12 hex) do que carrega a ponte, e ``modo`` é a ponte dele
+    (``som``/``haptica``). A central move exatamente esse, com o PS + Create
+    dela, e só depois do «chegou» a régua propõe o próximo.
+
+    FATO SUBSTITUÍDO (23/09): aqui moravam ``origem_depois``/``destino_depois``
+    como :class:`Ocupacao` e ``move_com_microfone`` — a conta aditiva, que o
+    estudo de 23/09 mediu como errada para o ar. Agora a ordem diz as PONTES
+    antes e depois, contra ``n_max``.
     """
 
     origem: str
@@ -191,9 +257,23 @@ class Redistribuicao:
     o_que_eu_vi: str
     por_que_importa: str
     ganho_esperado: str
-    origem_depois: Ocupacao
-    destino_depois: Ocupacao
-    move_com_microfone: bool
+    controle: str
+    modo: str
+    pontes_na_origem_depois: int
+    pontes_no_destino_depois: int
+    n_max: int
+
+    def publicar(self) -> dict[str, Any]:
+        """O que viaja no ``state_full`` — só tipos de JSON."""
+        return {
+            "origem": self.origem,
+            "destino": self.destino,
+            "controle": self.controle,
+            "modo": self.modo,
+            "pontes_na_origem_depois": self.pontes_na_origem_depois,
+            "pontes_no_destino_depois": self.pontes_no_destino_depois,
+            "n_max": self.n_max,
+        }
 
 
 #: O que a tela diz quando o adaptador está apertado e NÃO há para onde mover.
@@ -203,11 +283,17 @@ FRASE_DO_ADAPTADOR_UNICO = (
     "Um segundo adaptador dividiria a fila."
 )
 
-#: A parte do "por que importa" da ordem de serviço. É ESPECIFICAÇÃO, e a
-#: frase não afirma nada sobre a qualidade de controle nenhum.
+#: A parte do "por que importa" da ordem de serviço. É MEDIÇÃO (22/09/2026: a
+#: terceira ponte num adaptador derrubou em 11, 15 e 89 s), e a frase não afirma
+#: nada sobre a qualidade de controle nenhum.
+#:
+#: FATO SUBSTITUÍDO (23/09): dizia *"o rádio de um adaptador é uma fila só.
+#: Passando do teto, os relatórios do controle atrasam"* — o teto aditivo, que o
+#: estudo de 23/09 derrubou: a entrada ocupa o ar que sobra, e quem transborda
+#: são as pontes.
 POR_QUE_IMPORTA = (
-    "o rádio de um adaptador é uma fila só. Passando do teto, os relatórios "
-    "do controle atrasam."
+    "cada ponte de som ou vibração ocupa o rádio sem parar, e acima do limite "
+    "o adaptador não comporta todas."
 )
 
 
@@ -270,29 +356,6 @@ def _somar(
     )
 
 
-def _subtrair(base: Ocupacao, *, com_mic: bool) -> Ocupacao:
-    """``base`` menos UM controle. Só a ordem de serviço usa.
-
-    Nunca desce abaixo de zero em nenhum campo: um adaptador com menos de um
-    controle não existe, e um número negativo na tela seria pior que nenhum.
-    """
-    if base.controles <= 0:
-        return base
-    if com_mic:
-        entrada = HZ_INPUT_COM_MIC * SLOTS_POR_RELATORIO
-        audio = HZ_AUDIO_COM_MIC * SLOTS_POR_RELATORIO
-    else:
-        entrada = HZ_INPUT_SEM_MIC * SLOTS_POR_RELATORIO
-        audio = 0.0
-    return Ocupacao(
-        slots_input=max(0.0, base.slots_input - entrada),
-        slots_audio=max(0.0, base.slots_audio - audio),
-        slots_teto=base.slots_teto,
-        controles=base.controles - 1,
-        com_microfone=max(0, base.com_microfone - (1 if com_mic else 0)),
-    )
-
-
 def apelido_por_endereco(dongles: Sequence[Any]) -> dict[str, str]:
     """``endereço minúsculo -> nome DELA``, só para quem tem nome.
 
@@ -321,6 +384,9 @@ def plano_por_adaptador(
     com_ponte_de_mic: Iterable[str] = (),
     mic_declarado: Iterable[str] = (),
     apelidos: Mapping[str, str] | None = None,
+    ar: Mapping[str, Any] | None = None,
+    n_max: int = N_MAX_PONTES,
+    adaptadores: Iterable[str] = (),
     raiz: str = "/sys/class/hidraw",
     listar: Callable[[str], list[str]] = os.listdir,
     ler: Callable[[str], str] | None = None,
@@ -336,36 +402,63 @@ def plano_por_adaptador(
     ``radio_da_mesa.ocupacao_por_adaptador``, e por isso não se reescrevem: quem
     não está em ``bt`` não toca o rádio, quem não tem endereço legível vai para
     o balde do "não sei", e a fração passa de 1,0 quando passa.
+
+    DESDE 23/09/2026 (MOVER-UM-POR-VEZ-01) cada plano leva o
+    ``OrcamentoDoAdaptador`` do dono — ``ar`` e ``n_max`` vão direto para
+    ``radio_da_mesa.orcamento_por_adaptador``. E o adaptador VAZIO passa a
+    existir: todo endereço que o ``ar`` mede ou que vem em ``adaptadores`` (o
+    que o BlueZ conhece) ganha plano, com zero controles. Era o ACHADO 2 da
+    medição das duas réguas (``test_as_duas_reguas_do_arranjo_divergem_onde``):
+    o dongle livre não existia para a régua, e ela mandava a frase do adaptador
+    único com um adaptador vazio na mesa.
+
+    O ``adaptador`` que o daemon já publica por controle (``_merge_radio``, do
+    ``HID_PHYS``) vale sem reler o sysfs; só quem chega sem ele é resolvido aqui
+    — a mesma regra do ``orcamento_por_adaptador``, e é ela que deixa esta conta
+    rodar no tique do ``state_full`` sem varrer ``/sys`` a cada volta.
     """
     conectados = [
         controle
         for controle in controles
         if controle.get("transport") == "bt" and controle.get("connected", True)
     ]
-    if not conectados:
+    conhecidos = {_mac_minusculo(e) for e in adaptadores} - {""}
+    if not conectados and not conhecidos and not ar:
         return {}
 
     uniqs = [_hex(str(c.get("uniq") or "")) for c in conectados]
-    enderecos = adaptador_por_uniq(
-        [u for u in uniqs if u], raiz=raiz, listar=listar, ler=ler
-    )
+    publicados = {
+        uniq: str(c.get("adaptador") or "").lower()
+        for c, uniq in zip(conectados, uniqs, strict=True)
+        if uniq and _mac_minusculo(str(c.get("adaptador") or ""))
+    }
+    faltam = [u for u in uniqs if u and u not in publicados]
+    enderecos = dict(publicados)
+    if faltam:
+        enderecos.update(adaptador_por_uniq(faltam, raiz=raiz, listar=listar, ler=ler))
     de_pe = {_hex(u) for u in com_ponte_de_mic if _hex(u)}
     declarados = {_hex(u) for u in mic_declarado if _hex(u)}
     nomes = {k.lower(): v for k, v in (apelidos or {}).items()}
+    orcamentos = orcamento_por_adaptador(
+        conectados, ar=ar, n_max=n_max, raiz=raiz, listar=listar, ler=ler
+    )
 
     juntos: dict[str, dict[str, Any]] = {}
+
+    def _vazio() -> dict[str, Any]:
+        return {
+            "jogadores": [],
+            "de_pe": set(),
+            "declarados": set(),
+            "agora": Ocupacao(),
+            "planejada": Ocupacao(),
+        }
+
+    for endereco in sorted(conhecidos | {e for e in orcamentos if e}):
+        juntos.setdefault(endereco, _vazio())
     for controle, uniq in zip(conectados, uniqs, strict=True):
-        endereco = enderecos.get(uniq, SEM_ADAPTADOR)
-        alvo = juntos.setdefault(
-            endereco,
-            {
-                "jogadores": [],
-                "de_pe": set(),
-                "declarados": set(),
-                "agora": Ocupacao(),
-                "planejada": Ocupacao(),
-            },
-        )
+        endereco = enderecos.get(uniq, SEM_ADAPTADOR) if uniq else SEM_ADAPTADOR
+        alvo = juntos.setdefault(endereco, _vazio())
         alvo["jogadores"].append(_inteiro(controle.get("player_slot")))
         com_mic_agora = bool(uniq) and uniq in de_pe
         com_mic_plano = bool(uniq) and uniq in declarados
@@ -385,9 +478,16 @@ def plano_por_adaptador(
             com_mic_declarado=frozenset(dados["declarados"]),
             agora=dados["agora"],
             planejada=dados["planejada"],
+            orcamento=orcamentos.get(endereco)
+            or OrcamentoDoAdaptador(adaptador=endereco, n_max=n_max),
         )
         for endereco, dados in juntos.items()
     }
+
+
+def _mac_minusculo(valor: str) -> str:
+    """``aa:bb:…`` minúsculo, ou ``""`` — pela régua ESTRITA de ``conexao_zumbi``."""
+    return mac_limpo(str(valor or "")) or ""
 
 
 def cabe_mais_um(ocupacao: Ocupacao, *, com_mic: bool) -> tuple[bool, Ocupacao]:
@@ -404,12 +504,64 @@ def cabe_mais_um(ocupacao: Ocupacao, *, com_mic: bool) -> tuple[bool, Ocupacao]:
     return palavra_da_ocupacao(depois.fracao_total) != PALAVRA_CHEIA, depois
 
 
+def ordem_dos_destinos(
+    planos: Mapping[str, PlanoDoAdaptador],
+    *,
+    varrendo: Iterable[str] | None = None,
+    exceto: str = "",
+) -> list[PlanoDoAdaptador]:
+    """A ordem dos destinos — a D8 dela, em UMA função.
+
+    **Mais vaga de ponte primeiro; no empate, o de menos controles; o que está
+    varrendo, por último.** É a regra de «onde parear» (D8: o adaptador só se
+    escolhe no PAREAR, porque o host não liga o controle) e é a mesma que o
+    «Equilibrar» usa para o destino de cada movimento: duas grafias da mesma
+    escolha divergiriam na primeira remedição.
+
+    Quem varre vai para o FIM, não para FORA — a razão é a de 20/09, escrita em
+    :func:`ordem_de_redistribuicao`: excluir mataria a máquina de um adaptador
+    só. ``varrendo`` ``None`` é *"não perguntei"*, e não penaliza ninguém.
+
+    O balde :data:`radio_da_mesa.SEM_ADAPTADOR` nunca é destino, e ``exceto``
+    (a origem) também não. O desempate final é o endereço, para a mesma mesa dar
+    sempre a mesma resposta.
+    """
+    em_busca = {_hex(e) for e in (varrendo or ()) if _hex(e)}
+    alvo_fora = _hex(exceto)
+    candidatos = [
+        p
+        for endereco, p in planos.items()
+        if endereco != SEM_ADAPTADOR and (not alvo_fora or _hex(endereco) != alvo_fora)
+    ]
+    return sorted(
+        candidatos,
+        # `False < True`: quem varre desce para o fim da fila, e continua NA fila.
+        key=lambda p: (_hex(p.endereco) in em_busca, -p.vaga_de_ponte, p.no_ar, p.endereco),
+    )
+
+
+def _quem_move(origem: PlanoDoAdaptador) -> tuple[str, str] | None:
+    """``(uniq, modo)`` do controle que sai da origem: o ÚLTIMO a chegar com ponte.
+
+    Só controle COM ponte alivia o adaptador — é a ponte que transborda, e mover
+    um sem ponte não muda a conta. Entre os que têm, o último da lista do dono:
+    quem já estava fica, e a mesma mesa dá sempre a mesma resposta.
+    """
+    if origem.orcamento is None:
+        return None
+    com_ponte = [c for c in origem.orcamento.controles if c.ponte and c.uniq]
+    if not com_ponte:
+        return None
+    escolhido = com_ponte[-1]
+    return escolhido.uniq, str(escolhido.ponte)
+
+
 def ordem_de_redistribuicao(
     planos: Mapping[str, PlanoDoAdaptador],
     *,
     varrendo: Iterable[str] | None = None,
 ) -> Redistribuicao | None:
-    """A ordem de serviço, ou ``None`` quando não há para onde mover.
+    """A ordem de serviço — UM movimento —, ou ``None`` quando não há o que mover.
 
     **Esta é a régua AUTORITATIVA do arranjo, por decisão dela de 20/09/2026**
     (``D-A-REGUA-DO-ARRANJO-SE-DECIDE-COM-A-DIVERGENCIA-NA-MAO``). Havia duas
@@ -417,7 +569,21 @@ def ordem_de_redistribuicao(
     divergiam; a palavra dela foi *"O motor (o que manda mover)"*. O
     ``arranjo_da_mesa.plano_dos_controles`` **aconselha**; quem emite ordem de
     serviço é esta função, e é aqui que filtro novo nasce. Uma régua só, uma
-    grafia só.
+    grafia só. A R12 de 23/09 a mantém dona do «Equilibrar»: ela propõe UM
+    movimento, a pessoa aperta PS + Create, a central confere, e só então esta
+    função é chamada de novo e propõe o próximo.
+
+    **O QUE ELA PESA MUDOU EM 23/09/2026 (MOVER-UM-POR-VEZ-01)**: as PONTES
+    contra ``n_max``, não o total aditivo de fatias. Ela nasce quando um
+    adaptador passa do limite de pontes, e o destino é o primeiro da D8
+    (:func:`ordem_dos_destinos`) que ainda tem vaga — nunca um que ficaria além
+    do limite ao receber (R3: a terceira ponte não sobe sem perguntar).
+
+    FATO SUBSTITUÍDO: até 23/09 esta função nascia quando a fração ADITIVA
+    passava de ``CORTE_APERTADA`` (0,85 de 1.600), movia o controle com
+    microfone, e a mesa cheia dela — quatro com microfone, 0,69 — nunca gerava
+    ordem. O estudo de 23/09 mediu por quê isso era a pergunta errada: a entrada
+    ocupa o ar que sobra, e quem derruba os controles são as pontes.
 
     ``varrendo`` são os **endereços** dos adaptadores em modo de busca agora
     (:func:`varredura_do_radio.quem_esta_varrendo`). Eles vão para o FIM da fila
@@ -429,87 +595,57 @@ def ordem_de_redistribuicao(
     * mandar um controle PARA um adaptador que varre é mandá-lo para onde se
       mede de 32,5% a 43,4% de queda de pacotes (19/09/2026). Se houver outro
       destino que caiba, ele ganha — e se não houver, o que varre continua
-      valendo, porque a fila dele é menor do que a da origem apertada.
+      valendo.
 
-    ``None`` é *"não perguntei"*, e é o padrão: sem a leitura, esta função
-    escolhe exatamente como escolhia antes de 20/09. **"Não sei" nunca vira
-    penalidade** — penalizar por ignorância moveria controle por palpite, e a
-    :class:`varredura_do_radio.Varredura` que não sabe chega aqui vazia de
-    propósito.
+    ``None`` é *"não perguntei"*, e é o padrão: **"não sei" nunca vira
+    penalidade** — penalizar por ignorância moveria controle por palpite.
 
-    Ela só nasce com as DUAS condições juntas:
-
-    * um adaptador passou do corte da "Apertada" (``CORTE_APERTADA``);
-    * existe OUTRO adaptador que continua fora da "Cheia" depois de receber.
-
-    Sem a segunda, a resposta não é uma ordem: é a
-    :data:`FRASE_DO_ADAPTADOR_UNICO`. Mandar mover um controle para o
-    adaptador em que ele já está é a tela dando trabalho e não informação — é
-    o nó ``test_a_ordem_so_nasce_quando_ha_para_onde_mover``.
-
-    **Qual controle move:** o que carrega microfone, quando há um. Ele é o mais
-    caro (``HZ_INPUT_COM_MIC + HZ_AUDIO_COM_MIC`` contra ``HZ_INPUT_SEM_MIC``),
-    então é o que mais alivia a origem — e mover o mais barato exigiria mover
-    dois para o mesmo efeito.
-
-    O texto NUNCA promete resultado: ele nomeia as duas ocupações depois da
-    mudança. "Ganho esperado" é aritmética, não promessa, e
-    :data:`radio_da_mesa.PALAVRAS_DE_CULPA` é varrida contra ele.
+    **Qual controle move:** o que carrega ponte, e entre eles o último a chegar
+    (:func:`_quem_move`). O texto NUNCA promete resultado: ele nomeia as pontes
+    dos dois lados depois da mudança. "Ganho esperado" é aritmética, não
+    promessa, e :data:`radio_da_mesa.PALAVRAS_DE_CULPA` é varrida contra ele.
     """
-    from hefesto_dualsense4unix.integrations.radio_da_mesa import CORTE_APERTADA
-
     reais = {
         endereco: plano
         for endereco, plano in planos.items()
         if endereco != SEM_ADAPTADOR
     }
-    apertados = sorted(
-        (p for p in reais.values() if p.agora.fracao_total > CORTE_APERTADA),
-        key=lambda p: p.agora.fracao_total,
-        reverse=True,
+    alem = sorted(
+        (p for p in reais.values() if p.pontes > p.n_max),
+        key=lambda p: (-(p.pontes - p.n_max), p.endereco),
     )
-    if not apertados:
+    if not alem:
         return None
-    origem = apertados[0]
-
-    move_com_mic = origem.agora.com_microfone > 0
-    # Os endereços chegam como o `HID_PHYS` os publica; normalizar os dois lados
-    # é o que faz `AA:BB:...` do BlueZ casar com `aa:bb:...` do uevent. Sem isto
-    # o filtro nunca casaria — e um filtro que não casa é um filtro que não
-    # filtra, verde e mudo.
-    em_busca = {_hex(e) for e in (varrendo or ()) if _hex(e)}
-    candidatos = sorted(
-        (p for p in reais.values() if p.endereco != origem.endereco),
-        # `False < True`: quem varre desce para o fim da fila, e continua NA
-        # fila. Ver a docstring — excluir mataria a máquina de um adaptador só.
-        key=lambda p: (_hex(p.endereco) in em_busca, p.agora.fracao_total),
-    )
-    for destino in candidatos:
-        cabe, destino_depois = cabe_mais_um(destino.agora, com_mic=move_com_mic)
-        if not cabe:
+    origem = alem[0]
+    quem = _quem_move(origem)
+    if quem is None:
+        return None
+    controle, modo = quem
+    for destino in ordem_dos_destinos(reais, varrendo=varrendo, exceto=origem.endereco):
+        if destino.pontes + 1 > destino.n_max:
             continue
-        origem_depois = _subtrair(origem.agora, com_mic=move_com_mic)
+        na_origem = origem.pontes - 1
+        no_destino = destino.pontes + 1
         return Redistribuicao(
             origem=origem.endereco,
             destino=destino.endereco,
             origem_na_tela=origem.nome_na_tela,
             destino_na_tela=destino.nome_na_tela,
             o_que_eu_vi=(
-                f"{origem.agora.controles} controles no mesmo adaptador, "
-                f"{round(origem.agora.slots_total)} de "
-                f"{origem.agora.slots_teto} fatias."
+                f"{origem.pontes} pontes de som e vibração num adaptador que "
+                f"comporta {origem.n_max}."
             ),
             por_que_importa=POR_QUE_IMPORTA,
             ganho_esperado=(
-                f'o "{origem.nome_na_tela}" cairia para '
-                f"{round(origem_depois.slots_total)} de "
-                f"{origem_depois.slots_teto}, e o "
-                f'"{destino.nome_na_tela}" subiria para '
-                f"{round(destino_depois.slots_total)}."
+                f'o "{origem.nome_na_tela}" ficaria com {na_origem} de '
+                f'{origem.n_max}, e o "{destino.nome_na_tela}" com {no_destino} '
+                f"de {destino.n_max}."
             ),
-            origem_depois=origem_depois,
-            destino_depois=destino_depois,
-            move_com_microfone=move_com_mic,
+            controle=controle,
+            modo=modo,
+            pontes_na_origem_depois=na_origem,
+            pontes_no_destino_depois=no_destino,
+            n_max=origem.n_max,
         )
     return None
 
@@ -760,6 +896,7 @@ __all__ = [
     "microfone_nasce_ligado",
     "nomes_dos_jogadores",
     "ordem_de_redistribuicao",
+    "ordem_dos_destinos",
     "plano_por_adaptador",
     "selo_da_especificacao",
     "selo_das_procedencias",
