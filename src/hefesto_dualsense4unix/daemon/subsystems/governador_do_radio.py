@@ -130,7 +130,18 @@ ADAPTADOR_CHEIO = "adaptador cheio"
 CEDEU_NA_FONTE = "cedeu na fonte"
 #: E voltaram a escrever (a borda de descida).
 VOLTOU_A_ESCREVER = "voltou a escrever"
-#: Ceder passou do teto: o adaptador não escoa. Família 2B.
+#: Ceder passou do teto: o adaptador não escoa. A FAMÍLIA DEPENDE DE QUEM
+#: MEDIU, e é o que :meth:`GovernadorDoRadio._fila_parada` escreve:
+#:
+#: * ``pelo="kernel"`` — o ``uhid`` com contrapressão devolveu ``EAGAIN`` por
+#:   mais que o teto: a fila do ``/dev/uhid`` cheia é o ``bluetoothd`` sem ler,
+#:   a família 2B, e é isso que o diário diz;
+#: * ``pelo="governador"`` — o ``acl_tx`` não andou. Isso não separa o
+#:   ``bluetoothd`` parado (2B) do controlador sem devolver crédito (o regime
+#:   que antecede o 2A): o diário diz o que foi medido, o adaptador que não pôs
+#:   no ar, na família 2 (enlace parado). Conferência de 23/09/2026: esta linha
+#:   dizia «Família 2B» para os dois, e o ramo do governador afirmava o
+#:   ``bluetoothd`` sem ter olhado para ele.
 FILA_PARADA = "fila parada"
 
 #: Os motivos de uma :class:`Recusa`.
@@ -645,13 +656,19 @@ class GovernadorDoRadio:
         )
         if ja_parado:
             return
+        onde = adaptador or "deste controle"
+        if pelo == "kernel":
+            por_que, familia = f"o bluetoothd não drena o adaptador {onde}", "2B"
+        else:
+            por_que = f"o adaptador {onde} não pôs no ar o que as pontes escreveram"
+            familia = "2"
         self._escrever(
             FILA_PARADA,
-            f"o bluetoothd não drena o adaptador {adaptador or 'deste controle'}",
+            por_que,
             depois={"cedeu_s": round(cedendo_s, 3), "pelo": pelo},
             adaptador=adaptador or None,
             controles=sorted(v.uniq for v in vagas),
-            familia="2B",
+            familia=familia,
             frase=FRASE_DA_FILA_PARADA,
         )
 

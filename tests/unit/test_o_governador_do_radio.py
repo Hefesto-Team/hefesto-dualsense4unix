@@ -371,8 +371,13 @@ def test_o_adaptador_que_nao_escoa_cai_no_teto_e_espera_para_religar() -> None:
     assert caiu, "o governador cedeu cinco segundos sem derrubar a ponte"
     assert bomba.fila_parada is True
     [parada] = registro.de(gov.FILA_PARADA)
-    assert (parada["adaptador"], parada["familia"]) == (ADAPTADOR_A, "2B")
-    assert "não drena o adaptador" in parada["por_que"]
+    # O governador mediu o acl_tx parado, e só isso: o bluetoothd parado (2B)
+    # e o controlador sem crédito dão a mesma leitura. O diário diz o medido.
+    assert (parada["adaptador"], parada["familia"]) == (ADAPTADOR_A, "2")
+    assert parada["por_que"] == (
+        f"o adaptador {ADAPTADOR_A} não pôs no ar o que as pontes escreveram"
+    )
+    assert "bluetoothd" not in parada["por_que"], "afirmou o bluetoothd sem olhar para ele"
     vaga.soltar(af.MOTIVO_FILA_PARADA)
     recusa = governador.pedir_vaga(CONTROLE_1, "som")
     assert isinstance(recusa, gov.Recusa) and recusa.motivo == gov.MOTIVO_PARADO
@@ -443,12 +448,17 @@ def test_o_escritor_que_so_devolve_eagain_derruba_a_ponte_em_dois_segundos(
         assert vaga.solta is True, "a ponte caiu e a vaga ficou ocupando o adaptador"
     finally:
         os.close(leitura)
-    o_que = [(e["o_que"], e.get("adaptador")) for e in diario.ler(caminhos=[caminho])]
+    entradas = diario.ler(caminhos=[caminho])
+    o_que = [(e["o_que"], e.get("adaptador")) for e in entradas]
     assert o_que == [
         (diario.PONTE_SUBIU, ADAPTADOR_A),
         (gov.FILA_PARADA, ADAPTADOR_A),
         (diario.PONTE_DESCEU, ADAPTADOR_A),
     ], o_que
+    # Pelo kernel é a fila do /dev/uhid cheia: o bluetoothd sem ler, a 2B.
+    [parada] = [e for e in entradas if e["o_que"] == gov.FILA_PARADA]
+    assert (parada["familia"], parada["depois"]["pelo"]) == ("2B", "kernel")
+    assert parada["por_que"] == f"o bluetoothd não drena o adaptador {ADAPTADOR_A}"
 
 
 # ---------------------------------------------------------------------------
