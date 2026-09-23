@@ -332,7 +332,26 @@ def _correr_a_ponte(argumentos: Sequence[str]) -> tuple[int, str]:
 def _janela_de_busca(
     destino: str, segundos: int, dono: bluez_dbus.LeitorDoBluez
 ) -> Janela:
+    """A janela no destino: a do dono vivo, ou a da ponte root quando ele não há.
+
+    A da ponte é ``sudo`` contra a ponte INSTALADA — o rádio dela, com a regra
+    do sudoers que dispensa senha. Sob a suíte ela recusa sem rodar nada, como
+    :func:`esquecer_pela_ponte`: o dono de mentira que não atende o próprio
+    pareamento cairia nela.
+    """
+    if not dono.atende_o_proprio_pareamento and bluez_dbus.a_suite_esta_rodando():
+        return JanelaDeBusca(
+            destino, segundos, abrir=_recusar_a_ponte_sob_a_suite, correr=_nao_correr_sob_a_suite
+        )
     return JanelaDeBusca(destino, segundos, dono=dono)
+
+
+def _recusar_a_ponte_sob_a_suite(_argumentos: Sequence[str]) -> subprocess.Popen[str]:
+    raise OSError("a suíte está no ar e esta é a ponte de verdade")
+
+
+def _nao_correr_sob_a_suite(_argumentos: Sequence[str]) -> tuple[int, str]:
+    return 1, "a suíte está no ar e esta é a ponte de verdade"
 
 
 # ---------------------------------------------------------------------------

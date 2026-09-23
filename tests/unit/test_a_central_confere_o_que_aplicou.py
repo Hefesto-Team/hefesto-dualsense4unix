@@ -17,10 +17,13 @@ O QUE ESTA RÉGUA COBRA:
    acaba → «não chegou»;
 3. ``HID_PHYS`` sem movimento não é chegada;
 4. o que não é controle (o fone) confere pelo ``Connected`` do destino;
-5. sem BlueZ é «não sei», e nada se escreve; a webcam não se move;
+5. sem BlueZ é «não sei», e nada se escreve; a webcam não se move; o
+   movimento em «não sei» não apaga a conexão viva do destino; um erro no meio
+   não deixa a central emperrada num «esperando»;
 6. sem o agente próprio, o piso atende o ``Pair`` (decisão de quem coordena);
 7. os estados publicados são só os três;
-8. o ``state_full`` não abre o dono nem espera a foto do rádio.
+8. o ``state_full`` não abre o dono nem espera a foto do rádio;
+9. sob a suíte, a ponte root de verdade não roda.
 """
 
 from __future__ import annotations
@@ -511,3 +514,58 @@ def _esperar(condicao: Any, teto: float = 3.0) -> bool:
             return True
         time.sleep(0.01)
     return bool(condicao())
+
+
+# ---------------------------------------------------------------------------
+# 9. sob a suíte, a ponte de verdade não roda
+# ---------------------------------------------------------------------------
+#
+# As duas saídas da central para a ponte root são `sudo -n` contra a ponte
+# INSTALADA, e o sudoers dela dispensa senha para `esquecer` e `descobrir`. Os
+# dublês abaixo só GRAVAM o pedido: nem com a guarda arrancada nada roda.
+
+
+def test_sob_a_suite_o_esquecer_nao_chama_a_ponte_de_verdade(
+    diario: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """MORDIDA: tire a guarda da suíte do ``esquecer_pela_ponte`` — o pedido
+    chega ao executor e esta régua reprova."""
+    pedidos: list[list[str]] = []
+
+    def correr(argumentos: Any) -> tuple[int, str]:
+        pedidos.append(list(argumentos))
+        return 0, ""
+
+    monkeypatch.setattr(cr, "_correr_a_ponte", correr)
+
+    fez, motivo = cr.esquecer_pela_ponte(SALA, VERMELHO)
+
+    assert fez is False and "suíte" in motivo
+    assert pedidos == []
+
+
+def test_sob_a_suite_a_janela_pela_ponte_nao_chama_sudo(
+    diario: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Sem o dono vivo, a janela da central é a da ponte (``sudo … descobrir``).
+
+    MORDIDA: tire a guarda do ``_janela_de_busca`` — o ``sudo`` chega ao
+    executor e esta régua reprova.
+    """
+    from hefesto_dualsense4unix.integrations import gesto_de_pareamento as gp
+
+    pedidos: list[list[str]] = []
+
+    def abrir(argumentos: Any) -> Any:
+        pedidos.append(list(argumentos))
+        raise OSError("dublê: nada roda")
+
+    monkeypatch.setattr(gp, "_abrir_de_verdade", abrir)
+    leitor = bd.pelo_executor(lambda _argumentos: None)
+    assert leitor.atende_o_proprio_pareamento is False
+    assert cr.CentralDoRadio()._abrir_janela is cr._janela_de_busca
+
+    janela = cr._janela_de_busca(QUARTO, 30, leitor)
+
+    assert janela.abrir_a_janela(), "a janela da ponte abriu sob a suíte"
+    assert pedidos == []
