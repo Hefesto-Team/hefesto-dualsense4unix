@@ -2296,7 +2296,7 @@ def selo_do_som(saida_muda: bool | None) -> str:
 # `dica_do_canal` MORREU EM 23/09/2026, pela mesma razão, e foi a última porta
 # por onde a palavra do servidor de som chegava à tela: ela escrevia `Canal de
 # áudio dormindo` na dica da pílula. O endereço da dica (`alto-canal-porque`)
-# continua na página publicada e recebe o marcador de nada — a pílula do
+# continua na página publicada e recebe o vazio, que apaga a dica — a pílula do
 # alto-falante fica como a do microfone, sem dica.
 
 
@@ -3486,7 +3486,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 ) if sono_do_canal(uniq) else NADA_A_DIZER),
                 # A DICA DA PÍLULA NÃO TEM MAIS O QUE DIZER — ver `selo_do_som`.
                 # O endereço fica enquanto a página publicada o tiver.
-                "alto-canal-porque": NADA_A_DIZER,
+                #
+                # VAZIO, E NÃO O MARCADOR: o alvo é `atributo`, e para atributo
+                # o vazio APAGA (`title` e `data-hef-dica`). O marcador ali vira
+                # TEXTO — medido no piloto em 23/09/2026: o `data-hef-dica`
+                # ficava `<i class="nada"></i>`, e a camada da dica o mostraria
+                # cru ao passar o ponteiro na pílula, que agora está sempre à
+                # vista. Enquanto a pílula sumia no rádio, ninguém passava por
+                # cima dele.
+                "alto-canal-porque": "",
             }),
         }
     # OS VALORES QUE VALEM PARA A PÁGINA INTEIRA, e não por card. Os três nasceram

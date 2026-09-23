@@ -326,7 +326,8 @@ class TestADicaDoCanal:
     VIROU RÓTULO EM 13/09/2026 (FRASES-E-DICAS-02) e SAIU EM 23/09/2026
     (O-ALTO-FALANTE-DIZ-ATIVO-01): ela dizia `Canal de áudio dormindo`, a última
     porta por onde a palavra do servidor de som chegava à tela. O endereço fica
-    na página publicada e recebe o marcador de nada; a pílula fica como a do
+    na página publicada e recebe o VAZIO, que apaga a dica — o alvo é
+    `atributo`, e ali o marcador de nada viraria texto; a pílula fica como a do
     microfone, sem dica.
     """
 
@@ -340,7 +341,7 @@ class TestADicaDoCanal:
         """MORDE: devolva a frase do canal ao `alto-canal-porque`."""
         sono_lido(sono)
         dita = _card(_entrada())["alto-canal-porque"]
-        assert dita == mod.NADA_A_DIZER
+        assert dita == ""
         for frase in (DICA_CANAL_ACORDADO, DICA_CANAL_DORMINDO,
                       DICA_CANAL_E_PADRAO, dica_canal_sem_a_regra()):
             assert frase not in dita, f"a dica do canal voltou a narrar: {dita!r}"
@@ -472,7 +473,7 @@ class TestOsSelosNoCartao:
         card = _card(_entrada())
         assert card["alto-selo"] == mod.NADA_A_DIZER
         assert card["alto-canal"] == mesa_viva.ATIVO
-        assert card["alto-canal-porque"] == mod.NADA_A_DIZER
+        assert card["alto-canal-porque"] == ""
 
     def test_a_saida_muda_acende_pelo_payload(self, sono_lido) -> None:
         """A camada 1 chega pelo `speaker.saida_muda`, lida pelo dono."""
@@ -488,8 +489,11 @@ class TestOsSelosNoCartao:
         o piloto escrever um travessão solto no rótulo da moldura.
         """
         card = _card(_entrada())
-        for campo in ("alto-selo", "alto-canal", "alto-canal-porque"):
+        for campo in ("alto-selo", "alto-canal"):
             assert card[campo] == mod.NADA_A_DIZER, campo
+        # A DICA É ATRIBUTO, e para atributo o nada é o VAZIO, que apaga — o
+        # marcador viraria texto (O-ALTO-FALANTE-DIZ-ATIVO-01, 23/09/2026).
+        assert card["alto-canal-porque"] == ""
 
     # `test_o_estado_e_o_porque_apagam_juntos` SAIU EM 23/09/2026: o porquê
     # (`alto-canal-porque`) não diz mais nada em estado nenhum — ver

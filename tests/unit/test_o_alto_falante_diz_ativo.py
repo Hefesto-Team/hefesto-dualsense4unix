@@ -124,7 +124,9 @@ def test_o_canal_parado_ou_tocando_e_ativo_nos_dois_transportes(canal: Any, sono
             f"canal {sono}")
         assert cartao["alto-selo"] == a02.NADA_A_DIZER, (
             f"{pref}: o alarme acendeu {cartao['alto-selo']!r} sobre um canal {sono}")
-        assert cartao["alto-canal-porque"] == a02.NADA_A_DIZER, pref
+        # A DICA É ATRIBUTO: o vazio apaga, e o marcador viraria texto na dica
+        # da casa — `<i class="nada"></i>` cru, com a pílula à vista.
+        assert cartao["alto-canal-porque"] == "", pref
 
 
 def test_calar_pelo_som_desliga_e_soltar_ativa(canal: Any) -> None:
