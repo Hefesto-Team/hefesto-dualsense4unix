@@ -8,7 +8,7 @@ Este arquivo mede a SEÇÃO MONTADA, com widgets de verdade. O que ele trava:
    `docs/usage/assets/` sem revisão humana. Nenhum portão de anonimato varre
    imagem, então a defesa tem de ser esta: a montagem não dispara leitura viva.
 2. **Selo verde nunca convive com linha vermelha.** A cicatriz está em
-   `scripts/doctor.sh:1586-1590` e a casa pagou por ela duas vezes em agosto
+   `scripts/doctor.sh:1647-1651` e a casa pagou por ela duas vezes em agosto
    (`6c86e295`, `c3d3518f`).
 3. **Nenhum texto da seção carrega `sudo`, `JSON` ou `systemd`** — nem na
    montagem, nem depois do exame. O `scripts/validar-palavra-de-tela.py` declara
@@ -314,7 +314,7 @@ def test_nem_depois_do_exame_com_todas_as_curas_na_tela() -> None:
     """O que o `validar-palavra-de-tela.py` não alcança: o texto de RUNTIME.
 
     As curas do doctor para estas mesmas cinco checagens são cheias de `sudo`
-    (`scripts/doctor.sh:2259`, `:3227`). Este teste roda as cinco checagens de
+    (`scripts/doctor.sh:2320`, `:3227`). Este teste roda as cinco checagens de
     verdade, em bancada falsa forçada ao pior caso, e exige que o que chega à
     tela esteja limpo — dica, porquê e cura.
     """

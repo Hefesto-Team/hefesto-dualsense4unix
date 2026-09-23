@@ -4,7 +4,7 @@ Defeito medido em 11/08/2026, na auditoria de "o que só existe nesta máquina":
 
 O `install.sh` e o `doctor.sh` mandavam quem estivesse sem o backport rodar
 `docs/process/estudos/...` — um ramo que não
-aparece em `git branch -a`. Pior: `install.sh:1638` já citava o documento pelo
+aparece em `git branch -a`. Pior: `install.sh:1728` já citava o documento pelo
 caminho da árvore, **como se ele estivesse aqui**, e ele não estava.
 
 O efeito prático é o pior possível para o objetivo dela de levar o produto para

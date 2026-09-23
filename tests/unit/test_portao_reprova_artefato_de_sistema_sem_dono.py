@@ -170,7 +170,7 @@ def test_diretorio_citado_com_o_nome_vindo_de_variavel_nao_conta(
 ) -> None:
     """O VÁCUO que esta seção não pode ter, e que o primeiro desenho tinha.
 
-    `install.sh:1733` instala `assets/systemd/${_btres_u}` — o diretório aparece
+    `install.sh:1834` instala `assets/systemd/${_btres_u}` — o diretório aparece
     inteiro no texto, mas quem escolhe o arquivo é a variável, e ela percorre
     uma lista de QUATRO nomes. Um `grep` de prefixo daria alcance de graça a
     todo arquivo de `assets/systemd/` — inclusive a unit que ninguém instala,

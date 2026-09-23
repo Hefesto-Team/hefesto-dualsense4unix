@@ -8,19 +8,19 @@ problema nunca foi a medição: é que ela só existe para quem abre terminal, q
 aba Conexões mostra na seção Check-up — uma linha por achado, sem teto.
 
 POR QUE UM MÓDULO PYTHON, E NÃO UM `doctor.sh --json`. O doctor NÃO viaja nos
-pacotes: o `install.sh:3064-3076` só copia o `storm_watch.sh`, a spec do Fedora
+pacotes: o `install.sh:3256-3268` só copia o `storm_watch.sh`, a spec do Fedora
 instala `install-host-udev.sh` e `dkms_lib.sh`, e o manifesto Flatpak não o
 menciona. Uma aba que dependesse dele nasceria VAZIA para quem instalou por
 pacote — que é a maioria futura. O padrão que a casa já usa três vezes é o
 inverso: o módulo viaja dentro do wheel e o doctor é que o consome
-(`sentinela_do_wrapper.py` ← `scripts/doctor.sh:1612`).
+(`sentinela_do_wrapper.py` ← `scripts/doctor.sh:1673`).
 
 A DISCIPLINA, herdada de `storm_doctor.py:1-9` e válida linha a linha aqui:
 
 - **Somente leitura.** Nenhuma função deste arquivo escreve em lugar nenhum.
 - **Sem root, nunca.** Checagem que precisaria de `sudo` devolve
   ``ESTADO_NAO_SEI`` — jamais falha. O `/var/lib/bluetooth` é proibido por
-  isso: `check_bt_bonds_persistidos` (`scripts/doctor.sh:3050-3053`) começa
+  isso: `check_bt_bonds_persistidos` (`scripts/doctor.sh:3111-3114`) começa
   com `sudo -n true` e desiste sem ele.
 - **Cada caminho entra por argumento**, com default igual ao sistema real. É o
   que permite testar com fixture e é o que permite ao retrato das abas montar
@@ -32,7 +32,7 @@ A DISCIPLINA, herdada de `storm_doctor.py:1-9` e válida linha a linha aqui:
 O QUE ESTE MÓDULO NÃO FAZ, e é deliberado: ele não devolve frase de tela
 pronta nem cor. Devolve chave, estado e um "porquê" curto em português —
 escrito AQUI, nunca copiado da mensagem do doctor. As mensagens de lá carregam
-`sudo` e carregam endereço de rádio (`scripts/doctor.sh:3227` imprime o MAC),
+`sudo` e carregam endereço de rádio (`scripts/doctor.sh:3288` imprime o MAC),
 e as duas coisas acabariam num PNG versionado pelo caminho do retrato das abas.
 """
 from __future__ import annotations
@@ -90,7 +90,7 @@ CHAVE_DAS_ORDENS = "ordens_da_mesa"
 #: propriedades `Paired`/`Bonded`. Sem a âncora, cada controle com áudio traria
 #: dois "não sei" a reboque e um pareamento inteiro poderia sair como
 #: "não deu para conferir". É o mesmo recorte de `_dbus_bt_device_paths`
-#: (`scripts/doctor.sh:2549-2551`), que termina o regex em `$`.
+#: (`scripts/doctor.sh:2610-2612`), que termina o regex em `$`.
 _CAMINHO_DE_DISPOSITIVO = re.compile(r"/org/bluez/hci[0-9]+/dev_[0-9A-Fa-f_]+")
 
 
@@ -169,7 +169,7 @@ def energia_do_radio(
     parametro: Path = Path("/sys/module/btusb/parameters/enable_autosuspend"),
     conf: Path = Path("/etc/modprobe.d/hefesto-btusb-no-autosuspend.conf"),
 ) -> Item:
-    """O rádio dos controles está proibido de dormir? (`doctor.sh:2340-2356`)
+    """O rádio dos controles está proibido de dormir? (`doctor.sh:2401-2417`)
 
     O `btusb` liga o autosuspend do adaptador no probe, por default do módulo;
     o conf do Hefesto corta na raiz e o esperado pós-boot é ``N``.
@@ -226,7 +226,7 @@ def energia_do_radio(
 def energia_das_portas(
     *, raiz: Path = Path("/sys/bus/usb/devices")
 ) -> Item:
-    """Nenhuma porta USB em economia de energia? (`doctor.sh:2240-2260`)
+    """Nenhuma porta USB em economia de energia? (`doctor.sh:2301-2321`)
 
     Um aparelho USB dormindo é queda na certa, e a regra 81 do Hefesto existe
     para manter todos em ``on``.
@@ -321,7 +321,7 @@ def suporte_ao_controle(
 def pareamentos(
     *, executar: Callable[[Sequence[str]], str | None] | None = None
 ) -> Item:
-    """Algum controle com pareamento pela metade? (`doctor.sh:3213-3231`)
+    """Algum controle com pareamento pela metade? (`doctor.sh:3274-3292`)
 
     "Pela metade" é `Paired: yes` com `Bonded: no` — o sistema lembra do
     controle e não guardou a chave, e o resultado é o controle cair logo depois
@@ -329,11 +329,11 @@ def pareamentos(
 
     SÓ pelo D-Bus, e a proibição é doutrina, não gosto: a prova de que o vínculo
     está em disco mora em `/var/lib/bluetooth`, que exige root
-    (`scripts/doctor.sh:3050-3053`), e a GUI é sudo-zero.
+    (`scripts/doctor.sh:3111-3114`), e a GUI é sudo-zero.
 
     Duas fontes de `nao_sei`, as duas honestas: sem `busctl` no caminho, nada
     foi medido; e em BlueZ anterior ao 5.65 a propriedade `Bonded` NEM EXISTE
-    (`scripts/doctor.sh:3157-3158`) — ausência dela não é "está tudo bem", é
+    (`scripts/doctor.sh:3218-3219`) — ausência dela não é "está tudo bem", é
     "esta máquina não sabe responder".
 
     A frase de saída nunca carrega o endereço do controle. O `fail` do doctor
@@ -431,7 +431,7 @@ def vizinhanca_das_portas(
     """Há aparelho encaixado na porta colada à de outro rádio?
 
     Esta é a única das cinco que NÃO tem origem no doctor: o que existe lá é o
-    `suggest_port` (`scripts/doctor.sh:4904`), um modo à parte que sai antes do
+    `suggest_port` (`scripts/doctor.sh:5137`), um modo à parte que sai antes do
     `main` e se declara "diagnóstico NEUTRO". A medição vem da seção "A mesa"
     da mesma aba (`integrations/mesa_de_radio.py:327`), e o contrato é o mínimo
     possível: uma sequência com uma entrada por par colado. Contar é tudo que
@@ -655,7 +655,7 @@ def veredito(itens: Sequence[Item]) -> str:
     """O selo do topo, derivado — e derivado em UM lugar só.
 
     Esta função é a resposta escrita ao commit `6c86e295` (16/08/2026), a
-    cicatriz que também está em `scripts/doctor.sh:1586-1590`: *"o dano não é
+    cicatriz que também está em `scripts/doctor.sh:1647-1651`: *"o dano não é
     errar um diagnóstico: é a tela ensinar que verde-e-vermelho juntos são
     normais por aqui, que é como um portão morre de descrédito"*. A casa pagou
     isso duas vezes em agosto. Por isso o selo NÃO é calculado na tela: um
@@ -703,11 +703,11 @@ def censo(itens: Sequence[Item] | None = None) -> dict[str, object]:
 #
 # O QUE FALTAVA, e não era medição: o `kernel-watch` já grava a porta em cada
 # linha `[USB-71]` desde que nasceu, e o `check_kernel_watch`
-# (`scripts/doctor.sh:3808`) só CONTAVA — *"33 vez(es) nos últimos 7 dias"*, sem
+# (`scripts/doctor.sh:3869`) só CONTAVA — *"33 vez(es) nos últimos 7 dias"*, sem
 # dizer onde. Quem lê isso não tem o que fazer com o número: -71 é `EPROTO`, e a
 # porta é a única coisa que separa "o cabo daquele controle" de "aquele hub".
 #
-# O que EXISTIA e não bastava: `check_usb_dropout` (`scripts/doctor.sh:6583`)
+# O que EXISTIA e não bastava: `check_usb_dropout` (`scripts/doctor.sh:6816`)
 # correlaciona, mas só sobre `journalctl -b -k` — o BOOT ATUAL. A queda de
 # terça-feira não está lá, e é justamente a que a pessoa quer explicar. O
 # `kernel-watch` guarda meses; era o log dele que ninguém cruzava com o `/sys`.
@@ -1090,7 +1090,7 @@ def storm_por_porta(
 def log_do_kernel_watch(lar: Path | None = None) -> Path | None:
     """O `kernel.log`, ou o `storm.log` antigo, ou ``None`` se não há nenhum.
 
-    A mesma escada de `scripts/doctor.sh:3820-3821`, portada para que a régua
+    A mesma escada de `scripts/doctor.sh:3881-3882`, portada para que a régua
     não precise adivinhar o caminho — e para que o dia em que o nome mudar
     mexa em um lugar só.
     """

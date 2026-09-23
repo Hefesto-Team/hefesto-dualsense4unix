@@ -29,7 +29,7 @@ Fonte única: a seção NÃO reimplementa checagem nenhuma. Toda medição vem d
 `integrations/exame_da_mesa.py`, e o SELO vem de `exame_da_mesa.veredito()` —
 nunca de uma conta feita aqui. Isso é regra, não estilo: a casa pagou duas
 vezes em agosto (`6c86e295`, `c3d3518f`) por uma tela que mostrava verde em
-cima de vermelho, e a cicatriz está escrita em `scripts/doctor.sh:1586-1590`.
+cima de vermelho, e a cicatriz está escrita em `scripts/doctor.sh:1647-1651`.
 Um segundo lugar decidindo a cor do topo é como aquilo volta.
 
 O QUE MORA AQUI E NÃO LÁ: a cor, o glifo, e o texto que a pessoa lê. O módulo

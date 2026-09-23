@@ -13,7 +13,7 @@ Medido em 22/08/2026 na bancada dela (systemd 255), reproduzindo o defeito de
     tem próximo disparo.
 
 O gatilho é o ciclo `uninstall.sh` -> `install.sh`: o uninstall apaga as
-unidades (`uninstall.sh:411-413`) e DEIXA o carimbo no disco; o install
+unidades (`uninstall.sh:417-419`) e DEIXA o carimbo no disco; o install
 recria — objeto de unidade novo, `last_trigger` zerado, carimbo velho vivo.
 
 A/B na bancada, mesmo roteiro, só a linha `Persistent=true` de diferença:

@@ -162,7 +162,7 @@ def test_todo_param_desarmado_e_rearmado_pelos_dois() -> None:
         "params que o uninstall.sh DESARMA e o scripts/install-host-udev.sh "
         f"NUNCA rearma: {orfaos_host}. Quem instalou por pacote (.deb/.rpm/"
         "Arch/Flatpak) fica sem a cura até o próximo boot — o doctor manda "
-        "rodar ESTE script (doctor.sh:3211 e :3271), e ele tem de curar tanto "
+        "rodar ESTE script (doctor.sh:3272 e :3271), e ele tem de curar tanto "
         "quanto o install.sh."
     )
 

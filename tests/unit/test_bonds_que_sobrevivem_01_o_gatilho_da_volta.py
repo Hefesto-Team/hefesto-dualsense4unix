@@ -576,7 +576,7 @@ class TestFiacao:
     def test_o_install_nao_promete_mais_restauro_manual(self) -> None:
         """A decisão dela de 08/08 contra a linha de `install.sh` que a contradizia.
 
-        `install.sh:1707` dizia *"restauração é MANUAL"*. As duas posições
+        `install.sh:1808` dizia *"restauração é MANUAL"*. As duas posições
         ficaram escritas lado a lado desde 08/08 (o mapa de 13/08 registra a
         contradição). Fato errado se SUBSTITUI — e este portão impede que ele
         volte por descuido.
