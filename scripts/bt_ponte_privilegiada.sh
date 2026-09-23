@@ -133,6 +133,8 @@
 #                           gancho, nenhuma lápide é escrita)
 #   HEFESTO_RADIO_DIARIO_ROOT  o diário do root (mesma regra)
 #   HEFESTO_SYSFS_RAIZ      raiz do /sys que o `reiniciar-travado` lê e escreve
+#   HEFESTO_SYSFS_BLUETOOTH raiz dos adaptadores que o `adaptadores` lê no degrau
+#                           do sysfs (default /sys/class/bluetooth)
 #   HEFESTO_BT_JOURNAL      arquivo lido no lugar do journal do kernel, na
 #                           forma do `journalctl -o short-unix` (epoch primeiro)
 #   HEFESTO_PONTE_STAMPS    onde mora o carimbo do último reinício por porta
@@ -146,7 +148,7 @@ if [[ -n "${SUDO_UID:-}" || -n "${SUDO_USER:-}" ]]; then
     unset HEFESTO_BT_LIB HEFESTO_PONTE_DRY_RUN HEFESTO_BT_LOG_DEST HEFESTO_BT_BIN \
         HEFESTO_BT_LAPIDES HEFESTO_RADIO_DIARIO_ROOT HEFESTO_SYSFS_RAIZ \
         HEFESTO_BT_JOURNAL HEFESTO_PONTE_STAMPS HEFESTO_USB_PAUSA_S \
-        HEFESTO_USB_ESPERA_S
+        HEFESTO_USB_ESPERA_S HEFESTO_SYSFS_BLUETOOTH
 fi
 
 #: `%/` normaliza a barra final: sem isso, uma raiz de teste terminada em

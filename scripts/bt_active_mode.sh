@@ -47,12 +47,12 @@ set -euo pipefail
 #   HEFESTO_BT_LIB          raiz da árvore de bonds (default /var/lib/bluetooth)
 #   HEFESTO_BT_LOG_DEST     vazio = journal · caminho = arquivo · none = nada
 #
-# Os dois de CAMINHO morrem sob sudo (mesma contenção do
-# `bt_ponte_privilegiada.sh`): o `env_reset` já os apagaria, e esta linha é o
-# cinto para a máquina que o desligou. O de LOG fica — ele não muda nada do que
-# o script DECIDE, só onde ele escreve o diário, e o uninstall depende dele.
+# Os de CAMINHO e os da TRAVA (HEFESTO_RADIO_TRAVA*, o root escreve nela) morrem
+# sob sudo, como na `bt_ponte_privilegiada.sh`: o `env_reset` já os apagaria, e
+# esta linha é o cinto para a máquina que o desligou. O de LOG fica — ele não
+# muda o que o script DECIDE, só onde ele escreve o diário (o uninstall o usa).
 if [[ -n "${SUDO_UID:-}" || -n "${SUDO_USER:-}" ]]; then
-    unset HEFESTO_SYS_BLUETOOTH HEFESTO_BT_LIB HEFESTO_MAQUINA_JSON
+    unset HEFESTO_SYS_BLUETOOTH HEFESTO_BT_LIB HEFESTO_MAQUINA_JSON HEFESTO_RADIO_TRAVA HEFESTO_RADIO_TRAVA_PRAZO_S
 fi
 SYS_BLUETOOTH="${HEFESTO_SYS_BLUETOOTH:-/sys/class/bluetooth}"
 SYS_BLUETOOTH="${SYS_BLUETOOTH%/}"
