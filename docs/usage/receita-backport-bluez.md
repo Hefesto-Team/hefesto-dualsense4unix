@@ -173,7 +173,11 @@ ele confere o `SHA256SUMS`, grava as versões anteriores em
 **NOTA DATADA — 23/09/2026.** O passo 3f ainda mira o `.3` e pula quando o
 bluetoothd em execução é ≥ 5.79 — então ele pularia o `.4` sobre o `.3`. O
 alvo e o portão são da onda 4 da leva do rádio: o install passa a comparar a
-versão INSTALADA do pacote `bluez` com a versão alvo completa.
+versão INSTALADA do pacote `bluez` com a versão alvo completa. E, sobre um
+`.3` já instalado, o `VERSOES-ANTERIORES.txt` gravaria o `.3` e o `.2` —
+versões que nenhum repositório serve (o `apt-cache policy` só oferece o
+5.72) —, e o restore do uninstall cairia no `apt-get`. Isso também é da
+onda 4.
 
 ---
 
