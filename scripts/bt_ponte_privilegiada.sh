@@ -806,12 +806,26 @@ verbo_desconectar() {
 # reinício ainda estão nela: sem contar só o que veio DEPOIS do carimbo da
 # porta, o adaptador que voltou são era acusado de ter travado de novo — «Tire
 # e ponha ele» no sino, sobre um aparelho bom.
+#
+# E O FREIO QUE PARA (GOVERNADOR-DO-RADIO-01, 23/09/2026). O intervalo de
+# 15 min só espaçava os reinícios: um adaptador que volta a travar depois de
+# cada um era reiniciado quatro vezes por hora, para sempre — e cada reinício
+# é o dongle sumindo e voltando na porta dela. Depois de MAX_REINICIOS_SEGUIDOS
+# reinícios sem cura (o laço voltou antes de JANELA_DA_CURA_S), o verbo PARA,
+# diz no diário UMA vez, e o sino fica com a frase de pôr a mão. Ele só volta
+# a reiniciar aquela porta depois que o laço sumir do journal — a mão dela
+# (tirar e pôr) ou o adaptador que se curou.
 LIMIAR_DO_LACO=5
 JANELA_DO_LACO_S=150
 #: Medido no kernel.log de 13/09: 24.990 intervalos entre timeouts, mediana
 #: 2 s, p99 3 s, o maior 25 s. Quinze segundos são cinco voltas do laço.
 LACO_VIVO_S=15
 INTERVALO_ENTRE_RESETS_S=900
+#: Quantos reinícios seguidos sem cura antes de parar.
+MAX_REINICIOS_SEGUIDOS=3
+#: Um reinício CUROU se o laço não voltou dentro disto. Quatro intervalos: o
+#: laço que volta em menos de uma hora não foi curado pelo reinício.
+JANELA_DA_CURA_S=3600
 _PORTA_FORMA='^[0-9]{1,3}-[0-9]{1,3}(\.[0-9]{1,3}){0,6}$'
 
 #: As linhas do kernel na janela, com o epoch na frente (`-o short-unix`). O
@@ -899,14 +913,43 @@ _ha_conexao() {
 
 _estampas() { printf '%s\n' "${HEFESTO_PONTE_STAMPS:-/run/hefesto-bt-ponte}"; }
 
+#: O FREIO SOLTA quando o laço some: para cada porta em que o verbo parou de
+#: reiniciar, se o adaptador que mora nela AGORA não tem um único «command tx
+#: timeout» na janela do journal (ou a porta está vazia), a mão dela curou — o
+#: freio e a contagem de reinícios seguidos saem, e o diário diz.
+_soltar_o_freio_curado() {
+    local marca porta hci h n _u curado
+    for marca in "$(_estampas)"/reset-*.desistiu; do
+        [[ -e "${marca}" ]] || continue
+        porta="${marca##*/reset-}"
+        porta="${porta%.desistiu}"
+        [[ "${porta}" =~ ${_PORTA_FORMA} ]] || continue
+        curado=1
+        hci="$(_hci_da_porta "${porta}" || true)"
+        if [[ -n "${hci}" ]]; then
+            while read -r h n _u; do
+                [[ "${h}" == "${hci}" && "${n}" =~ ^[0-9]+$ && "${n}" -gt 0 ]] && curado=0
+            done < <(_timeouts_por_hci 0)
+        fi
+        [[ "${curado}" -eq 1 ]] || continue
+        _seco && { _dizer_seco "soltaria o freio da porta ${porta}: o laço sumiu"; continue; }
+        rm -f -- "${marca}" "${marca%.desistiu}.seguidos" 2>/dev/null || true
+        _diario "bt-ponte" "soltou o freio do reinício" \
+            "o laço sumiu do journal: o adaptador da porta ${porta} voltou" \
+            null "{\"hci\": $(_json_texto "${hci}")}" \
+            "\"porta\": $(_json_texto "${porta}"), \"familia\": \"3\""
+    done
+}
+
 verbo_reiniciar_travado() {
     local hci quantos mais_novo porta agora_hci carimbo anterior agora pausa espera
-    local recusou=0 achou=0 volta frase
+    local recusou=0 achou=0 volta frase seguidos
     if [[ "${SYSFS}" == "${SYSFS_REAL}" && "$(id -u)" -ne 0 ]]; then
         _erro "'reiniciar-travado' requer root (é a ponte privilegiada)"
         exit 1
     fi
     agora="$(date +%s)"
+    _soltar_o_freio_curado
     while read -r hci quantos mais_novo; do
         [[ "${hci}" =~ ^hci[0-9]+$ ]] || continue
         [[ "${quantos}" =~ ^[0-9]+$ && "${mais_novo}" =~ ^[0-9]+$ ]] || continue
@@ -946,6 +989,13 @@ verbo_reiniciar_travado() {
             recusou=1
             continue
         fi
+        #: O FREIO QUE PARA: esta porta já levou MAX_REINICIOS_SEGUIDOS sem cura.
+        #: Segura calado — o diário já disse, uma vez, no tique em que parou.
+        if [[ -e "${carimbo}.desistiu" ]]; then
+            printf 'segurado\t%s\t%s\tparou depois de %s reinícios\n' \
+                "${porta}" "${hci}" "${MAX_REINICIOS_SEGUIDOS}"
+            continue
+        fi
         if (( agora - anterior < INTERVALO_ENTRE_RESETS_S )); then
             printf 'segurado\t%s\t%s\treiniciado há %ss\n' "${porta}" "${hci}" "$((agora - anterior))"
             #: UMA entrada por reinício: o watchdog pergunta a cada 2 min, e
@@ -957,6 +1007,27 @@ verbo_reiniciar_travado() {
                     "\"porta\": $(_json_texto "${porta}"), \"familia\": \"3\", \"frase\": $(_json_texto "O adaptador da porta ${porta} travou de novo. Tire e ponha ele.")"
                 _seco || printf '%s\n' "${anterior}" >"${carimbo}.dito" 2>/dev/null || true
             fi
+            continue
+        fi
+        #: Os reinícios SEGUIDOS: o anterior não curou se o laço voltou antes
+        #: de JANELA_DA_CURA_S. Longe disso, a conta recomeça.
+        seguidos="$(cat -- "${carimbo}.seguidos" 2>/dev/null || echo 0)"
+        [[ "${seguidos}" =~ ^[0-9]+$ ]] || seguidos=0
+        if (( anterior <= 0 || agora - anterior > JANELA_DA_CURA_S )); then
+            seguidos=0
+        fi
+        if (( seguidos >= MAX_REINICIOS_SEGUIDOS )); then
+            printf 'segurado\t%s\t%s\tparou depois de %s reinícios\n' \
+                "${porta}" "${hci}" "${seguidos}"
+            if _seco; then
+                _dizer_seco "pararia de reiniciar a porta ${porta}: ${seguidos} reinícios sem cura"
+                continue
+            fi
+            printf '%s\n' "${anterior}" >"${carimbo}.desistiu" 2>/dev/null || true
+            _diario "bt-ponte" "parou de reiniciar o adaptador" \
+                "${seguidos} reinícios seguidos e o laço voltou depois de cada um — reiniciar de novo só faria o adaptador sumir e voltar na porta" \
+                "{\"hci\": $(_json_texto "${hci}"), \"timeouts\": ${quantos}, \"reinicios\": ${seguidos}}" null \
+                "\"porta\": $(_json_texto "${porta}"), \"familia\": \"3\", \"frase\": $(_json_texto "O adaptador da porta ${porta} não se cura sozinho. Tire e ponha ele.")"
             continue
         fi
         if _seco; then
@@ -976,6 +1047,7 @@ verbo_reiniciar_travado() {
         #: O carimbo é a hora DEPOIS de reautorizar: toda linha do laço velho
         #: é anterior a ele, e o tique seguinte só conta o que vier depois.
         printf '%s\n' "$(date +%s)" >"${carimbo}" 2>/dev/null || true
+        printf '%s\n' "$((seguidos + 1))" >"${carimbo}.seguidos" 2>/dev/null || true
         #: A volta: o adaptador reaparece na MESMA porta, possivelmente com
         #: outro hciN. Esperar é o que separa «reiniciei» de «reiniciei e ele
         #: voltou».
