@@ -7355,6 +7355,8 @@ class IpcHandlersMixin:
         with contextlib.suppress(Exception):
             self._merge_radio(entries)
             result["radio_ar"] = self._ar_por_adaptador(entries)
+        with contextlib.suppress(Exception):
+            result["radio_governador"] = self._o_governador_publica()
 
     @staticmethod
     def _hz_ou_none(valor: Any) -> float | None:
@@ -7443,30 +7445,35 @@ class IpcHandlersMixin:
         """``state_full["radio_ar"]``: o orçamento de ar por adaptador.
 
         Sai de ``radio_da_mesa.orcamento_por_adaptador`` — o dono. Aqui só se
-        junta o que o daemon mede: as chaves de :meth:`_merge_radio`, o
-        ``MedidorDeAr`` e o AFH. No modo falso (a suíte, o smoke) o medidor
-        não nasce: nada aqui pergunta ao rádio de ninguém.
+        junta o que o daemon mede: as chaves de :meth:`_merge_radio`, a
+        amostra de ar e o AFH.
+
+        **O AMOSTRADOR TEM UM DONO — GOVERNADOR-DO-RADIO-01, 23/09/2026.** Até
+        esta data este método criava um ``MedidorDeAr`` próprio, e o daemon
+        passaria a ter DOIS — o daemon e o governador fotografando o mesmo
+        contador em janelas diferentes, cada um com a sua verdade. Agora a
+        amostra é a do governador (``AltoFalanteSubsystem.governador``), que
+        mede a cada 250 ms. Sem governador — ou no modo falso, onde ele não
+        mede — não há amostra: «não sei», nunca um segundo medidor.
+        ``_medidor_de_ar`` fica como porta da régua, que injeta um dublê.
         """
         from hefesto_dualsense4unix.integrations import radio_da_mesa
 
+        amostra: Any = None
         medidor = self._medidor_de_ar
-        if medidor is None:
-            from hefesto_dualsense4unix.utils.xdg_paths import fake_mode_enabled
-
-            if not fake_mode_enabled():
-                from hefesto_dualsense4unix.integrations.ar_do_adaptador import (
-                    MedidorDeAr,
-                )
-
-                medidor = MedidorDeAr()
-                self._medidor_de_ar = medidor
-        ar: dict[str, Any] = {}
         if medidor is not None:
-            ar = {e: a for e, a in dict(medidor.amostrar()).items() if e}
+            amostra = medidor.amostrar()
+        else:
+            governador = self._o_governador()
+            if governador is not None:
+                amostra = governador.ultima_amostra()
+        ar: dict[str, Any] | None = None
+        if amostra is not None:
+            ar = {e: a for e, a in dict(amostra).items() if e}
             self._talvez_ler_o_afh(ar)
         orcamento = radio_da_mesa.orcamento_por_adaptador(
             entries,
-            ar=ar if medidor is not None else None,
+            ar=ar,
             canais_evitados=dict(self._afh_evitados or {}),
         )
         return {endereco: o.publicar() for endereco, o in orcamento.items()}
@@ -7518,6 +7525,44 @@ class IpcHandlersMixin:
             threading.Thread(target=perguntar, name="radio-afh", daemon=True).start()
         except Exception:
             self._afh_em_voo = False
+
+    # =================================================================
+    # GOVERNADOR-DO-RADIO-01 (23/09/2026), R3 e R4 dela
+    # =================================================================
+    #
+    # No fim da classe pela mesma razão do bloco de cima: este arquivo é
+    # citado por número de linha, e código novo no meio deslocaria as âncoras.
+
+    def _o_governador(self) -> Any:
+        """O governador do rádio, que mora no subsystem do som — ou ``None``."""
+        subsystem = getattr(self.daemon, "_alto_falante_subsystem", None)
+        return getattr(subsystem, "governador", None)
+
+    def _o_governador_publica(self) -> dict[str, Any]:
+        """``state_full["radio_governador"]``: as pontes com a marca «além do
+        limite», quem está cedendo, e os pedidos que a tela tem de perguntar."""
+        governador = self._o_governador()
+        if governador is None:
+            return {}
+        publicado = governador.publicar()
+        return dict(publicado) if isinstance(publicado, dict) else {}
+
+    async def _handle_radio_ponte_ligar_aqui(self, params: dict[str, Any]) -> dict[str, Any]:
+        """«Ligar aqui»: a ponte deste controle sobe além do limite do adaptador.
+
+        É a resposta dela à pergunta da tela quando a terceira ponte pediu vaga
+        num adaptador cheio (R3), e a ponte sobe marcada «além do limite» (R4).
+        Vale para o controle NESTE adaptador; movido, a pergunta volta. A ponte
+        sobe em até meio segundo: o subsystem do som acorda a volta.
+        """
+        uniq = params.get("uniq")
+        if not isinstance(uniq, str) or not uniq.strip():
+            raise ValueError("radio.ponte.ligar_aqui pede `uniq` do controle")
+        governador = self._o_governador()
+        if governador is None:
+            return {"status": "sem_governador", "uniq": uniq}
+        ligou = await asyncio.to_thread(governador.ligar_aqui, uniq.strip())
+        return {"status": "ok" if ligou else "sem_adaptador", "uniq": uniq}
 
 
 __all__ = ["DraftApplier", "IpcHandlersMixin"]
