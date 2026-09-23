@@ -100,8 +100,8 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
     DICA_AUDIO_SEM_ENDERECO,
     L2_R2_THRESHOLD,
     ROTA_DO_CANAL,
-    # (a frase «sem endereço» saiu da moldura do alto-falante em 13/09/2026)
-    TEXTO_SELO_CANAL_DORMINDO,
+    # (a frase «sem endereço» saiu da moldura do alto-falante em 13/09/2026, e o
+    # selo «Canal dormindo» saiu da tela inteira em 23/09/2026)
     TEXTO_SELO_SAIDA_MUDA,
     _markup_xy,
     acao_mic,
@@ -2249,40 +2249,41 @@ def porques_do_som(entry: Any) -> dict[str, str]:
 
 
 # ---------------------------------------------------------------------------
-# OS TRÊS SELOS DO SOM — linhas 57, 89 e 90 da paridade
+# OS SELOS DO SOM — linhas 57, 89 e 90 da paridade
 # ---------------------------------------------------------------------------
 # Todos LIDOS de estado que já existe, e nenhum reescreve a regra do dono:
 #
-#   `selo_do_som`         a prioridade de `_aplicar_selo_do_som` na GTK
-#   `sufixo_do_canal`     o sufixo de `_titulo_do_speaker`
-#   `dica_do_canal`       o rótulo de estado do canal (as frases saíram em 13/09)
+#   `selo_do_som`                     o alarme `Saída muda` (a camada 1)
+#   `mesa_viva.selo_do_alto_falante`  a pílula ATIVO/DESLIGADO (o mudo do ♪)
 #
 # HOUVE UM QUARTO, e ele saiu da tela em 07/09/2026 — ver o bloco "O QUARTO
-# SELO SAIU DA TELA", algumas telas abaixo. Os três que ficam falam de ESTADO
-# (a saída muda, o canal dormindo, a rota em desacordo); o que saiu falava de
-# uma capacidade que ainda devemos, e é a linha que ela traçou.
+# SELO SAIU DA TELA", algumas telas abaixo.
+#
+# **E O SONO DO CANAL SAIU DA TELA INTEIRA EM 23/09/2026** — O-ALTO-FALANTE-
+# DIZ-ATIVO-01. Ele era o alarme laranja `Canal dormindo`, a dica `Canal de
+# áudio dormindo` e metade do DESLIGADO da pílula; a foto dela mostrou as duas
+# pílulas num alto-falante que ninguém calou. Canal parado toca quando o som
+# chega, e pelo rádio o nó do controle dorme sempre que ninguém toca (a ponte
+# sob demanda da RADIO-AFOGADO-01 não o lê parado): era um alarme aceso em todo
+# controle do rádio, o tempo todo. O sono continua LIDO (`sono_do_canal`), e
+# serve a uma pergunta só: se o canal deste controle existe.
 
 
-def selo_do_som(saida_muda: bool | None, sono: str) -> str:
-    """O selo do bloco: a camada 1 primeiro, o canal depois, nada por fim.
+def selo_do_som(saida_muda: bool | None) -> str:
+    """O alarme do bloco: `Saída muda`, ou nada.
 
-    A PRIORIDADE NÃO É ARBITRÁRIA, e é a mesma da GTK: ganha o fato que explica
-    o silêncio ANTES do outro. **Uma saída muda cala o som venha o canal de onde
-    vier; um canal dormindo só come o começo.** Dizer as duas coisas na mesma
-    linha seria trocar um alarme por dois avisos.
+    SÓ `True` ACENDE. `False` (a saída está aberta) e `None` (não sabemos)
+    mostram a mesma coisa — nada —, porque um selo "saída viva" seria ruído em
+    cima do que a barra já diz.
 
-    SÓ `True` ACENDE O PRIMEIRO. `False` (a saída está aberta) e `None` (não
-    sabemos) mostram a mesma coisa — nada —, porque um selo "saída viva" seria
-    ruído em cima do que a barra já diz.
+    E O SELO SÓ EXISTE NO ESTADO RUIM: um selo dizendo que está tudo bem em toda
+    sessão normal gastaria pixel para não informar nada.
 
-    E O SELO SÓ EXISTE NO ESTADO RUIM, ao contrário do sufixo: um selo dizendo
-    "acordado" em toda sessão normal gastaria pixel para não informar nada.
+    FATO ERRADO, SUBSTITUÍDO EM 23/09/2026: ele acendia também `Canal dormindo`
+    quando o canal estava parado. Canal parado não é estado ruim — ver o bloco
+    acima.
     """
-    if saida_muda is True:
-        return TEXTO_SELO_SAIDA_MUDA
-    if sono == audio_saida.CANAL_DORMINDO:
-        return TEXTO_SELO_CANAL_DORMINDO
-    return ""
+    return TEXTO_SELO_SAIDA_MUDA if saida_muda is True else ""
 
 
 # `sufixo_do_canal` MORREU AQUI — 19/09/2026, e é a segunda morte da mesma peça.
@@ -2290,27 +2291,13 @@ def selo_do_som(saida_muda: bool | None, sono: str) -> str:
 # rótulo da moldura. Por ordem dela, o chip virou SELO e passou a falar a língua
 # do microfone: *"Ativo e Desligado pros dois não seria melhor que dormindo?"*
 # <!-- noqa-acento: citação literal dela --> Quem responde agora é
-# `mesa_viva.selo_do_alto_falante`, que junta os DOIS fatos (o mudo e o sono)
-# numa palavra só — ver o campo `alto-canal` lá embaixo.
+# `mesa_viva.selo_do_alto_falante`.
 #
-# A PALAVRA DO DAEMON NÃO SUMIU, mudou de leitor: `audio_saida.estado_do_canal`
-# continua dizendo `acordado`/`dormindo`, e `dica_do_canal` (abaixo) a leva para
-# a DICA, que é onde esta casa põe o porquê desde 13/09.
-
-
-def dica_do_canal(sono: str) -> str:
-    """O rótulo de ESTADO do canal — ``"Canal de áudio dormindo"``. `""` sem leitura.
-
-    **ERA UMA FRASE LONGA ATÉ 13/09/2026 — FRASES-E-DICAS-02, §I.4.** A dica
-    juntava as frases do cartão da janela GTK (`controller_card.DICA_CANAL_*`):
-    o canal suspenso no servidor de som, o que foi medido com a orelha dela, e
-    a regra que falta com a instrução de rodar o instalador de novo. Era
-    jargão, medição e instrução numa dica flutuante, e a ordem dela de 13/09
-    deixa na tela só estado e ajuda. Fica o estado, com a palavra do dono
-    (`audio_saida.estado_do_canal`, a mesma do sufixo do rótulo). A regra
-    continua lida em :func:`_camada_1` e deixou de ir à tela.
-    """
-    return f"Canal de áudio {sono}" if sono else ""
+# `dica_do_canal` MORREU EM 23/09/2026, pela mesma razão, e foi a última porta
+# por onde a palavra do servidor de som chegava à tela: ela escrevia `Canal de
+# áudio dormindo` na dica da pílula. O endereço da dica (`alto-canal-porque`)
+# continua na página publicada e recebe o marcador de nada — a pílula do
+# alto-falante fica como a do microfone, sem dica.
 
 
 # ---------------------------------------------------------------------------
@@ -3475,33 +3462,31 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # velho sem a lista, controle fora da mesa) vira `""`, e o alvo
                 # `atributo` some com o `title` em vez de inventar um par.
                 "card-vpad": dica_do_titulo(c, getattr(ctx, "state", None) or {}) or "",
-                # O SELO, O SUFIXO E O PORQUÊ DO CANAL — linhas 89 e 90. Os três
-                # saem do mesmo par de fatos (`saida_muda` da camada 1 e o sono
-                # do sink), e os três são LEITURA: nenhum deles oferece botão.
-                "alto-selo": (selo_do_som(saida_muda_do_entry(c), sono_do_canal(uniq))
-                              or NADA_A_DIZER),
+                # O ALARME DO BLOCO — linha 89. LEITURA, sem botão: acende só
+                # com a saída muda (a camada 1). O sono do canal saiu daqui em
+                # 23/09/2026 — ver `selo_do_som`.
+                "alto-selo": selo_do_som(saida_muda_do_entry(c)) or NADA_A_DIZER,
                 # O SELO DO ALTO-FALANTE — 19/09/2026, e ele substituiu o chip
                 # que dizia `acordado`. A palavra é a do DONO
                 # (`mesa_viva.selo_do_alto_falante`), a mesma língua do selo do
                 # microfone, por ordem dela: *"Ativo e Desligado pros dois não
                 # seria melhor que dormindo?"*  <!-- noqa-acento: dela -->
                 #
-                # OS DOIS FATOS ENTRAM JUNTOS, e é o que o chip velho não fazia:
-                # o som não sai quando ela CALOU o alto-falante (o `muted` do
-                # sink, o mesmo que o botão `♪` lê) **ou** quando o canal está
-                # dormindo. Contar só o segundo, ao lado de um botão que conta
-                # só o primeiro, deixava as duas leituras se contradizerem no
-                # mesmo bloco.
+                # DESLIGADO É SÓ QUANDO ELA CALOU — O-ALTO-FALANTE-DIZ-ATIVO-01,
+                # 23/09/2026. O mudo é o `muted` que o botão `♪` lê, pelo mesmo
+                # `speaker_do_entry`; canal PARADO é ATIVO, nos dois transportes
+                # e nos quatro cartões.
                 #
-                # `sabemos` É O PAR DE `sono_do_canal`, e não do sink: sem
-                # leitura do canal não há o que afirmar — é o caso do rádio sem
-                # placa de som, e `""` faz a pílula sumir inteira pela folha.
+                # `sabemos` É SE O CANAL EXISTE: sem nó de som para este
+                # controle não há o que afirmar, e o marcador de nada faz a
+                # pílula sumir inteira pela folha.
                 "alto-canal": (mesa_viva.selo_do_alto_falante(
                     bool(sp_lido and sp_lido[1]),
-                    sono_do_canal(uniq) == audio_saida.CANAL_DORMINDO,
-                    bool(sono_do_canal(uniq)),
+                    True,
                 ) if sono_do_canal(uniq) else NADA_A_DIZER),
-                "alto-canal-porque": dica_do_canal(sono_do_canal(uniq)) or NADA_A_DIZER,
+                # A DICA DA PÍLULA NÃO TEM MAIS O QUE DIZER — ver `selo_do_som`.
+                # O endereço fica enquanto a página publicada o tiver.
+                "alto-canal-porque": NADA_A_DIZER,
             }),
         }
     # OS VALORES QUE VALEM PARA A PÁGINA INTEIRA, e não por card. Os três nasceram

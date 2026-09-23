@@ -8,6 +8,13 @@ A queixa dela, com a foto da aba Controles:
 
 Esta régua cobra as duas metades da sprint:
 
+0. **DESLIGADO SÓ QUANDO ELA CALOU.** Canal PARADO é ATIVO, no cabo e no
+   rádio, em qualquer cartão que não seja o P1 (a MATRIZ da sprint), e a
+   palavra do sono do canal não chega a campo nenhum do cartão. **As
+   mordidas:** devolva o sono do canal à pílula (`or dormindo`) e a seção 0
+   reprova com DESLIGADO num canal parado; devolva o `Canal dormindo` ao
+   alarme e ela reprova com o alarme aceso.
+
 1. **O PEDIDO DE VAGA NÃO DERRUBA A PONTE.** O ``pedir_vaga`` do governador roda
    o ``plano_de_radio`` sem ``try``, e o chamador em
    ``daemon/subsystems/alto_falante.py`` não protegia: a exceção subia até
@@ -27,15 +34,220 @@ from typing import Any, ClassVar
 
 import pytest
 
+from hefesto_dualsense4unix.app import audio_saida
 from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
 from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from hefesto_dualsense4unix.integrations import plano_de_radio
+from hefesto_dualsense4unix.interface import mesa_viva, onde
+from hefesto_dualsense4unix.interface import pacotes as pacotes_da_tela
+from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
 
 ADAPTADOR_A = "aa:bb:cc:00:00:a1"
 CONTROLE_2 = "aa:bb:cc:00:00:02"
 CONTROLE_3 = "aa:bb:cc:00:00:03"
 CONTROLE_4 = "aa:bb:cc:00:00:04"
+
+
+# ---------------------------------------------------------------------------
+# 0. a tela: DESLIGADO só quando ela calou
+# ---------------------------------------------------------------------------
+#: A MATRIZ DA SPRINT: um controle no cabo e dois no rádio, e nenhum no P1.
+MESA_DA_MATRIZ = (
+    (CONTROLE_2, 2, "usb"),
+    (CONTROLE_3, 3, "bluetooth"),
+    (CONTROLE_4, 4, "bluetooth"),
+)
+
+
+def _entrada(uniq: str, slot: int, transporte: str, *, calado: bool) -> dict[str, Any]:
+    """Um controle como o `state_full` o publica — o volume é nosso, e o mudo é o
+    que o ♪ lê."""
+    return {
+        "uniq": uniq, "player": slot, "player_slot": slot, "index": slot - 2,
+        "connected": True, "is_primary": slot == 2, "battery_pct": 80,
+        "transport": transporte, "inputs": {},
+        "audio": {"mic_mudo": False, "mic_mudo_desejado": None},
+        "speaker": {"volume": 102, "muted": calado, "rota": 0},
+    }
+
+
+@pytest.fixture
+def canal(monkeypatch: pytest.MonkeyPatch) -> Any:
+    """Escreve o sono de cada canal direto no cache — sem thread e sem `pactl`.
+
+    É o mesmo ponto de injeção que a régua irmã usa
+    (`test_o_cartao_diz_se_o_som_tem_para_onde_ir.sono_lido`), e o cache é o
+    que a `_camada_1` enche em produção com o `estado_do_canal` do dono.
+    """
+    monkeypatch.setattr(a02, "_SONO", {})
+
+    def por(sono: dict[str, str]) -> None:
+        a02._SONO.clear()
+        a02._SONO.update(sono)
+
+    return por
+
+
+def _cartoes(*, calados: frozenset[str] = frozenset()) -> dict[str, dict[str, Any]]:
+    """Os cartões da 02 que o pacote monta, por `pref` — a língua da tela."""
+    entradas = [
+        _entrada(uniq, slot, transporte, calado=uniq in calados)
+        for uniq, slot, transporte in MESA_DA_MATRIZ
+    ]
+    estado = {"controllers": entradas}
+    mesa = mesa_viva.mesa_do_estado(estado, {})
+    bruto = a02.pacote(pacotes_da_tela.Contexto(
+        state=estado, mesa=mesa, conectados=entradas))
+    pronto = pacotes_da_tela.normalizar(bruto, {m["uniq"]: m["pref"] for m in mesa})
+    return pronto["colunas"]
+
+
+def test_a_mesa_da_matriz_nao_usa_o_p1() -> None:
+    """A régua mede o que a sprint pede: cabo e rádio, fora do P1."""
+    cartoes = _cartoes()
+    assert sorted(cartoes) == ["p2", "p3", "p4"]
+
+
+@pytest.mark.parametrize("sono", [audio_saida.CANAL_DORMINDO, audio_saida.CANAL_ACORDADO])
+def test_o_canal_parado_ou_tocando_e_ativo_nos_dois_transportes(canal: Any, sono: str) -> None:
+    """Uma pílula só, ATIVO, com o alto-falante ligado — parado OU tocando.
+
+    MORDIDA: devolva o `or dormindo` à pílula e o canal parado reprova com
+    DESLIGADO; devolva o `Canal dormindo` ao `selo_do_som` e ele reprova com o
+    alarme aceso.
+    """
+    canal({uniq: sono for uniq, _, _ in MESA_DA_MATRIZ})
+    for pref, cartao in _cartoes().items():
+        assert cartao["alto-canal"] == mesa_viva.ATIVO, (
+            f"{pref}: o alto-falante ligado diz {cartao['alto-canal']!r} com o "
+            f"canal {sono}")
+        assert cartao["alto-selo"] == a02.NADA_A_DIZER, (
+            f"{pref}: o alarme acendeu {cartao['alto-selo']!r} sobre um canal {sono}")
+        assert cartao["alto-canal-porque"] == a02.NADA_A_DIZER, pref
+
+
+def test_calar_pelo_som_desliga_e_soltar_ativa(canal: Any) -> None:
+    """O `♪` é o único que desliga, e desliga SÓ o cartão que ela calou.
+
+    O cabo (P2) calado e os dois do rádio ligados, e depois o contrário: é a
+    matriz inteira, e a pílula segue o mudo em cada um.
+    """
+    canal({uniq: audio_saida.CANAL_DORMINDO for uniq, _, _ in MESA_DA_MATRIZ})
+    so_o_cabo = _cartoes(calados=frozenset({CONTROLE_2}))
+    assert so_o_cabo["p2"]["alto-canal"] == mesa_viva.DESLIGADO
+    assert so_o_cabo["p3"]["alto-canal"] == mesa_viva.ATIVO
+    assert so_o_cabo["p4"]["alto-canal"] == mesa_viva.ATIVO
+    so_o_radio = _cartoes(calados=frozenset({CONTROLE_3, CONTROLE_4}))
+    assert so_o_radio["p2"]["alto-canal"] == mesa_viva.ATIVO
+    assert so_o_radio["p3"]["alto-canal"] == mesa_viva.DESLIGADO
+    assert so_o_radio["p4"]["alto-canal"] == mesa_viva.DESLIGADO
+
+
+def test_sem_canal_a_pilula_some(canal: Any) -> None:
+    """Sem nó de som para o controle não há o que afirmar: o marcador de nada.
+
+    O «não sei» continua sendo o terceiro estado — a cura não fez o ATIVO nascer
+    da ausência.
+    """
+    canal({CONTROLE_2: audio_saida.CANAL_DORMINDO})
+    cartoes = _cartoes()
+    assert cartoes["p2"]["alto-canal"] == mesa_viva.ATIVO
+    assert cartoes["p3"]["alto-canal"] == a02.NADA_A_DIZER
+    assert cartoes["p4"]["alto-canal"] == a02.NADA_A_DIZER
+
+
+def test_a_palavra_do_sono_nao_chega_a_campo_nenhum_do_cartao(canal: Any) -> None:
+    """«dormindo» e «acordado» saem da tela INTEIRA, não só da pílula.
+
+    Varre TODO valor que o pacote manda para os três cartões, e não só os três
+    campos do alto-falante: o fato errado só sai se a lista for medida.
+    """
+    for sono in (audio_saida.CANAL_DORMINDO, audio_saida.CANAL_ACORDADO):
+        canal({uniq: sono for uniq, _, _ in MESA_DA_MATRIZ})
+        for pref, cartao in _cartoes().items():
+            for campo, valor in cartao.items():
+                texto = str(valor).lower()
+                assert "dormindo" not in texto and "acordado" not in texto, (
+                    f"{pref}.{campo} leva a palavra do sono: {valor!r}")
+
+
+def test_o_dono_do_selo_nao_pergunta_pelo_sono() -> None:
+    """O dono responde com DOIS fatos: o mudo e se há canal. O sono não entra.
+
+    A assinatura é o contrato: um terceiro parâmetro de sono é o caminho por
+    onde o `or dormindo` voltaria.
+    """
+    assert mesa_viva.selo_do_alto_falante(False, True) == mesa_viva.ATIVO
+    assert mesa_viva.selo_do_alto_falante(True, True) == mesa_viva.DESLIGADO
+    assert mesa_viva.selo_do_alto_falante(False, False) == mesa_viva.SEM_LEITOR
+    import inspect
+
+    assert list(inspect.signature(mesa_viva.selo_do_alto_falante).parameters) == [
+        "mudo", "sabemos"]
+
+
+def test_a_bancada_viva_nao_carrega_a_palavra_do_sono() -> None:
+    """O «Dormindo» do `controles_vivos.py` saiu, e o kwarg que o carregava.
+
+    O `estado_do_card` não pede mais o canal e não devolve mais o
+    `estado_alto`; o `aba02.bloco` não o recebe. Os três lados juntos, para não
+    repetir o `rota_pc` de 21/09 (a renomeação que alcançou um lado só).
+    """
+    import inspect
+
+    from hefesto_dualsense4unix.interface import aba02, controles_vivos
+
+    assert "canal" not in inspect.signature(mesa_viva.estado_do_card).parameters
+    assert "estado_alto" not in inspect.signature(aba02.bloco).parameters
+    entrada = _entrada(CONTROLE_2, 2, "usb", calado=False)
+    assert "estado_alto" not in mesa_viva.estado_do_card(entrada)
+    fonte = inspect.getsource(controles_vivos).lower()
+    assert '"dormindo"' not in fonte and '"acordado"' not in fonte
+
+
+def test_a_bancada_do_desenho_mostra_ativo_no_cabo_e_no_radio() -> None:
+    """O mockup acompanha pelo gerador: a pílula ATIVO nos dois transportes.
+
+    Lê a página da BANCADA (`mockup/`), que é o que ela aprova. A publicada só
+    muda quando ela mandar publicar a 02. O cartão é achado pela CASCA
+    (`class="ctl card…" data-controle=`), e não pelo primeiro `data-controle`
+    do arquivo: a folha de estilo cita os quatro antes do primeiro cartão, e uma
+    régua que achasse a folha mediria o P1 quatro vezes — foi o que a primeira
+    versão desta régua fez, e a mordida pegou.
+
+    MORDIDA: devolva a bancada de `ea4c9cd2d` (a cena de antes desta sprint) e o P2,
+    que é o do rádio, reprova sem a pílula.
+    """
+    import re
+
+    from hefesto_dualsense4unix.interface.monta import MESA as MESA_DO_DESENHO
+
+    doc = onde.pagina("02-controles.html").read_text(encoding="utf-8")
+    assert "dormindo" not in doc.lower()
+    cascas = {m.group(1): m.start() for m in re.finditer(
+        r'<div class="ctl card[^"]*" data-controle="(p[1-4])"', doc)}
+    assert sorted(cascas) == ["p1", "p2", "p3", "p4"], sorted(cascas)
+    ordem = [*sorted(cascas.values()), len(doc)]
+    vistos = set()
+    for c in MESA_DO_DESENHO:
+        pref = c["pref"]
+        ini = cascas[pref]
+        fim_do_cartao = ordem[ordem.index(ini) + 1]
+        moldura = doc.index('data-bloco="alto-falante"', ini)
+        assert moldura < fim_do_cartao, f"{pref}: a moldura achada é de outro cartão"
+        rotulo = doc[moldura: doc.index("</div>", moldura)]
+        palavra = re.search(
+            r'class="selo-palavra" data-campo="alto-canal" data-hef-alvo="html">(.*?)</span>',
+            rotulo)
+        assert palavra is not None, pref
+        if c.get("conectado", True):
+            vistos.add(c["transporte"])
+            assert 'class="selo-ativo no-rotulo on"' in rotulo, pref
+            assert palavra.group(1) == mesa_viva.ATIVO, (pref, palavra.group(1))
+        else:
+            assert palavra.group(1) == a02.NADA_A_DIZER, (pref, palavra.group(1))
+    assert vistos == {"usb", "bt"}, "a cena perdeu um dos transportes"
 
 
 # ---------------------------------------------------------------------------
