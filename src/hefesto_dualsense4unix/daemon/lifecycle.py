@@ -1213,13 +1213,13 @@ class Daemon:
             # na ordem inversa o som cai antes do IPC — o mesmo motivo do
             # `bt_mic`, do outro lado do áudio.
             await self._safe_start("alto_falante", self._start_alto_falante)
-            # CONEXAO-ZUMBI-01: o vigia do link que conecta e NÃO vira
-            # controle. Sobe depois do som porque não depende de nada do
-            # daemon — lê o sysfs e o BlueZ por conta própria — e porque, na
-            # ordem inversa, cai antes do IPC: o último a olhar a mesa não pode
-            # ser o primeiro a acordar num daemon que já está se desmontando.
-            # O nome do subsystem é ASCII, como o dos irmãos.
+            # CONEXAO-ZUMBI-01: o vigia do link que conecta e NÃO vira controle. Sobe
+            # depois do som porque lê o sysfs e o BlueZ por conta própria, e, na ordem
+            # inversa, cai antes do IPC: o último a olhar a mesa não pode ser o primeiro
+            # a acordar. Nome ASCII, como o dos irmãos. MOVER-UM-POR-VEZ-01: a central
+            # do rádio vem logo depois, e abre o dono do BlueZ no arranque.
             await self._safe_start("conexoes", self._start_conexoes)  # (noqa-acento): nome ASCII
+            await self._safe_start("central_do_radio", self._start_central_do_radio)
             await self._safe_start("plugins", self._start_plugins)
             # FEAT-METRICS-01: sobe o servidor de métricas Prometheus (gate
             # interno respeita metrics_enabled). Antes nunca era iniciado —
@@ -5973,6 +5973,42 @@ class Daemon:
             return
         self._input_ready_at = loop.time() + INPUT_GRACE_SEC
 
+    # =================================================================
+    # MOVER-UM-POR-VEZ-01 (23/09/2026): a central do rádio
+    # =================================================================
+    #
+    # No fim da classe porque este arquivo é citado por número de linha, e
+    # código novo no meio deslocaria as âncoras. O campo mora aqui pela mesma
+    # razão: num dataclass, um campo com default depois dos métodos é um campo.
+
+    #: CentralDoRadio (mover, parear, equilibrar e conferir) ou None — no modo
+    #: falso ela não sobe: um daemon de fumaça não pareia nada no rádio dela.
+    _central_do_radio: Any = None
+
+    async def _start_central_do_radio(self) -> None:
+        """Sobe a central e abre o dono do BlueZ — decisão de quem coordena, 23/09.
+
+        O primeiro ``bluez_dbus.dono()`` abre o Gio de forma síncrona (até ~5 s
+        no pior caso), e pagá-lo aqui, num fio, é o que impede o primeiro gesto
+        dela de pagá-lo. Um erro vira ``_failed_subsystems`` pelo ``_safe_start``.
+        """
+        if os.environ.get("HEFESTO_DUALSENSE4UNIX_FAKE") == "1":
+            return
+        from hefesto_dualsense4unix.integrations.central_do_radio import CentralDoRadio
+
+        central = CentralDoRadio(movimento=self._movimento_para_a_central)
+        self._central_do_radio = central
+        await asyncio.to_thread(central.ligar)
+
+    def _movimento_para_a_central(self, uniq: str) -> float | None:
+        """Os Hz do nó de movimento deste controle AGORA, pelo ``SensorHub`` do IPC
+        — o dono do número (AR-MEDIDO-01). ``None`` = não sei."""
+        servidor = self._ipc_server
+        garantir = getattr(servidor, "_garantir_sensor_hub", None)
+        if not callable(garantir):
+            return None
+        hz = garantir().hz_do_movimento(uniq)
+        return float(hz) if isinstance(hz, (int, float)) and not isinstance(hz, bool) else None
 
 
 __all__ = [

@@ -263,6 +263,10 @@ class IpcServer(IpcHandlersMixin):
             # da terceira ponte num adaptador cheio (R3) — «Ligar aqui», e a
             # ponte sobe marcada «além do limite» (R4). Nada é desligado.
             "radio.ponte.ligar_aqui": self._handle_radio_ponte_ligar_aqui,
+            # MOVER-UM-POR-VEZ-01 (23/09/2026): mover UM aparelho para UM
+            # adaptador, ou — sem `aparelho` — o «Conectar» no destino da D8.
+            # Volta em até ~6 s: «esperando», ou a recusa que faz o botão tremer.
+            "radio.mover": self._handle_radio_mover,
         }
 
     async def start(self) -> None:

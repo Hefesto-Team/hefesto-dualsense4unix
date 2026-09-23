@@ -109,7 +109,7 @@ class RadioDeMentira:
         self.pair_falha = False
         self.pair_mente = False
         self.exportar_da = True
-        #: ``(caminho, interface, metodo, argumentos)`` de toda chamada.
+        #: ``(caminho, interface, método, argumentos)`` de toda chamada.
         self.chamadas: list[tuple[str, str, str, tuple[Any, ...]]] = []
         #: ``(caminho, interface, nome, valor)`` de toda escrita de propriedade.
         self.escritas: list[tuple[str, str, str, Any]] = []

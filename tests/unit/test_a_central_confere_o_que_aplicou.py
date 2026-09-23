@@ -19,11 +19,14 @@ O QUE ESTA RÉGUA COBRA:
 4. o que não é controle (o fone) confere pelo ``Connected`` do destino;
 5. sem BlueZ é «não sei», e nada se escreve; a webcam não se move;
 6. sem o agente próprio, o piso atende o ``Pair`` (decisão de quem coordena);
-7. os estados publicados são só os três.
+7. os estados publicados são só os três;
+8. o ``state_full`` não abre o dono nem espera a foto do rádio.
 """
 
 from __future__ import annotations
 
+import threading
+import time
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -335,3 +338,69 @@ def test_o_publicado_so_tem_os_tres_estados_e_nenhum_texto_de_tela(
         assert set(movimento) == {
             "aparelho", "destino", "estado", "passo", "motivo", "origens", "controle", "quando"
         }
+
+
+# ---------------------------------------------------------------------------
+# 8. o state_full não espera o rádio
+# ---------------------------------------------------------------------------
+
+
+class _LeitorLento(bd.LeitorDoBluez):
+    """O caminho de reserva (``busctl``): cada foto custa subprocessos."""
+
+    def __init__(self) -> None:
+        self.solta = threading.Event()
+        self.fotos = 0
+
+    def pode_perguntar(self) -> bool:
+        return True
+
+    def adaptadores(self) -> tuple[bd.AdaptadorDoBluez, ...] | None:
+        self.fotos += 1
+        self.solta.wait(5)
+        return (bd.AdaptadorDoBluez("/org/bluez/hci8", "hci8", QUARTO),)
+
+
+def test_o_publicar_nao_abre_o_dono_antes_de_ligar(
+    diario: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O primeiro ``dono()`` paga o Gio de forma síncrona: o tique não o paga.
+
+    MORDIDA: tire o ``if self._ligada`` do ``publicar`` — o tique abre o dono,
+    e esta régua reprova.
+    """
+
+    def nao_abra() -> bd.LeitorDoBluez:
+        raise AssertionError("o state_full abriu o dono do BlueZ")
+
+    monkeypatch.setattr(bd, "dono", nao_abra)
+    central = cr.CentralDoRadio()
+
+    assert central.publicar([]) == {"movimentos": [], "em_curso": False, "proposta": None}
+
+
+def test_pelo_caminho_de_reserva_o_tique_nao_espera_a_foto(diario: Path) -> None:
+    """Sem o dono vivo, a foto dos adaptadores se refaz num fio; o tique segue.
+
+    MORDIDA: faça o ``_adaptadores`` sempre esperar — o ``publicar`` fica preso
+    na foto lenta, e esta régua reprova pelo relógio.
+    """
+    lento = _LeitorLento()
+    central = cr.CentralDoRadio(dono=lento, sysfs={"listar": lambda _p: [], "raiz": "/x"})
+    antes = time.monotonic()
+
+    central.publicar([])
+
+    assert time.monotonic() - antes < 1.0, "o tique esperou a foto do rádio"
+    lento.solta.set()
+    assert _esperar(lambda: central._adaptadores_em_cache is not None)
+    assert lento.fotos == 1
+
+
+def _esperar(condicao: Any, teto: float = 3.0) -> bool:
+    fim = time.monotonic() + teto
+    while time.monotonic() < fim:
+        if condicao():
+            return True
+        time.sleep(0.01)
+    return bool(condicao())
