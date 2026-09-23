@@ -69,7 +69,6 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 from hefesto_dualsense4unix.app import audio_saida
 from hefesto_dualsense4unix.app.widgets.controller_card import (
-    TEXTO_SELO_CANAL_DORMINDO,
     TEXTO_SELO_SAIDA_MUDA,
 )
 from hefesto_dualsense4unix.interface import mesa_viva, monta, onde
@@ -353,7 +352,9 @@ class TestACaixaNaoSobe:
 
     def test_a_caixa_alta_nao_alcanca_o_alarme(self, pagina: str) -> None:
         """A mesma pergunta para o vizinho, cujas palavras são FRASES."""
-        for frase in (TEXTO_SELO_SAIDA_MUDA, TEXTO_SELO_CANAL_DORMINDO):
+        # O `Canal dormindo` SAIU DO ALARME EM 23/09/2026 (O-ALTO-FALANTE-DIZ-
+        # ATIVO-01): canal parado não é estado ruim. Sobra uma frase.
+        for frase in (TEXTO_SELO_SAIDA_MUDA,):
             assert not frase.isupper(), (
                 f"{frase!r} virou caixa alta no dono — este caso guarda o "
                 f"contrário, releia-o")
@@ -399,9 +400,13 @@ class TestOChipVazio:
         # pílula inteira, contando profundidade — o mesmo jeito que o `_selos`
         # da régua irmã usa.
         com_marcador = _pilulas(pagina, canal)
+        # QUEM CARREGA O MARCADOR NA CENA MUDOU EM 23/09/2026: era o controle
+        # do rádio, que desde 10/09 tem o nó de som dele e passou a dizer ATIVO
+        # (O-ALTO-FALANTE-DIZ-ATIVO-01); na bancada é o LUGAR VAZIO, que não tem
+        # canal nenhum. A página publicada ainda traz o rádio até ela publicar.
         assert any(f'class="{marcador}"' in c for c in com_marcador), (
             "nenhum chip do canal carrega o marcador na página — a cena "
-            "perdeu o controle por rádio, e a regra de esconder deixou de "
+            "perdeu o lugar sem canal, e a regra de esconder deixou de "
             "guardar alguma coisa")
 
 
@@ -426,7 +431,7 @@ class TestOSeparador:
         # microfone por ordem dela. A REGRA É A MESMA: só a palavra do dono
         # entra na pílula, inteira e sozinha.
         palavras = (mesa_viva.ATIVO, mesa_viva.DESLIGADO, mesa_viva.SEM_LEITOR)
-        assert mesa_viva.selo_do_alto_falante(False, False, True) == mesa_viva.ATIVO
+        assert mesa_viva.selo_do_alto_falante(False, True) == mesa_viva.ATIVO
         canal = _classe_do_campo(pagina, CAMPO_DO_CHIP_DO_CANAL)
         escritos = _pilulas(pagina, canal)
         assert escritos, "o chip do canal sumiu da página"

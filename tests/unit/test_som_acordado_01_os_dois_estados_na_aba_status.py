@@ -94,7 +94,6 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
     DICA_SPEAKER_POSSE_NOSSA,
     SUFIXO_CANAL_ACORDADO,
     SUFIXO_CANAL_DORMINDO,
-    TEXTO_SELO_CANAL_DORMINDO,
     TEXTO_SELO_SAIDA_MUDA,
     TITULO_SPEAKER,
     ControllerCard,
@@ -487,39 +486,34 @@ def test_sem_leitura_do_canal_a_moldura_fica_calada() -> None:
     assert not sem_canal._speaker_selo_saida.get_visible()
 
 
-def test_o_selo_denuncia_o_canal_dormindo_e_a_saida_muda_vence() -> None:
-    """O selo é o ALARME, e só acende no estado ruim.
+def test_o_selo_nao_denuncia_o_canal_parado_e_a_saida_muda_acende() -> None:
+    """O selo é o ALARME, e canal PARADO não é alarme — 23/09/2026.
 
-    Ele não diz "acordado" em toda sessão normal: custaria 19px de altura para
-    não informar nada, e a altura é o recurso que este bloco não tem (ver o
-    teste de geometria abaixo). Quem diz o estado bom é o rótulo da moldura.
+    FATO ERRADO, SUBSTITUÍDO (O-ALTO-FALANTE-DIZ-ATIVO-01): este teste cobrava
+    `Canal dormindo` no selo. Na interface nova, que importava o mesmo texto,
+    isso virou a foto dela: duas pílulas num alto-falante que ninguém calou.
+    Canal parado toca quando o som chega. O sono continua dito no rótulo da
+    moldura e na dica do bloco — estado, e não alarme.
 
-    A prioridade não é arbitrária: uma saída muda cala o som venha o canal de
-    onde vier; um canal dormindo só come o começo. Ganha o fato que explica o
-    silêncio ANTES do outro.
-
-    Mordida: pôr o `elif dormindo` na frente do `if saida_muda` em
-    `_aplicar_selo_do_som`. A última asserção cai, e o selo passa a apontar
-    para a causa menor enquanto a maior fica escondida.
+    Mordida: devolver o `elif dormindo` a `_aplicar_selo_do_som`. A primeira
+    asserção cai: o selo volta a acender sobre um canal parado.
     """
     dormindo = _card(speaker=POSSE_100, canal=CANAL_DORMINDO, regra=True)
-    assert dormindo._speaker_selo_saida.get_visible()
-    assert dormindo._speaker_selo_saida.get_text() == TEXTO_SELO_CANAL_DORMINDO
-    # O selo diz QUE; a dica do bloco diz POR QUÊ, com a medição inteira. É a
-    # mesma disciplina do `Sem som`, e é o que mantém o selo curto o bastante
-    # para não decidir a largura do card.
+    assert not dormindo._speaker_selo_saida.get_visible()
+    # O selo cala; a dica do bloco continua dizendo o estado do canal.
     assert DICA_CANAL_DORMINDO in dormindo._speaker_box.get_tooltip_text()
 
     acordado = _card(speaker=POSSE_100, canal=CANAL_ACORDADO, regra=True)
     assert not acordado._speaker_selo_saida.get_visible()
 
-    os_dois = _card(
+    muda = _card(
         speaker=POSSE_100,
         canal=CANAL_DORMINDO,
         regra=True,
         mic=_LeituraMic(saida_muda=True),
     )
-    assert os_dois._speaker_selo_saida.get_text() == TEXTO_SELO_SAIDA_MUDA
+    assert muda._speaker_selo_saida.get_visible()
+    assert muda._speaker_selo_saida.get_text() == TEXTO_SELO_SAIDA_MUDA
 
 
 def test_a_dica_do_bloco_diz_que_e_o_padrao_so_com_a_regra_no_lugar() -> None:
@@ -615,26 +609,10 @@ def test_os_dois_estados_custam_zero_altura_no_card() -> None:
         assert larg_depois <= LARGURA_DE_PROJETO
 
 
-def test_o_selo_dormindo_cabe_no_teto_de_largura_do_selo() -> None:
-    """O terceiro informante do selo não pode decidir a largura do bloco.
-
-    O selo já tem teto (`_SELO_CHARS`) e o texto novo entra dentro dele — mas o
-    teto é calculado a partir dos textos, então um texto longo amanhã o
-    ALARGARIA em vez de ser cortado por ele. A asserção é sobre o efeito: o
-    selo aceso não muda a largura mínima do card.
-
-    Mordida: pôr a frase inteira do canal dormindo no selo em vez do rótulo
-    curto. Foi o que a SOM-04 mediu com a frase do recado: o mínimo do card
-    saltou de 1040 para 1223px, numa janela que abre com 1180.
-    """
-    for compact in (False, True):
-        antes = _card(compact=compact, speaker=POSSE_100, canal=CANAL_ACORDADO)
-        depois = _card(compact=compact, speaker=POSSE_100, canal=CANAL_DORMINDO)
-        assert depois.get_preferred_width()[0] == antes.get_preferred_width()[0], (
-            f"o selo do canal dormindo mexeu na largura mínima do card "
-            f"{'compacto' if compact else 'de um controle'}"
-        )
-        assert depois.get_preferred_width()[0] <= LARGURA_DE_PROJETO
+# `test_o_selo_dormindo_cabe_no_teto_de_largura_do_selo` SAIU EM 23/09/2026
+# com o selo que ele media (O-ALTO-FALANTE-DIZ-ATIVO-01). O teto `_SELO_CHARS`
+# continua medido pelos textos que sobram, e a guarda da largura com o canal
+# presente é `test_os_dois_estados_custam_zero_altura_no_card`, logo acima.
 
 
 # ---------------------------------------------------------------------------

@@ -874,24 +874,20 @@ TEXTO_SELO_SAIDA_MUDA: Final[str] = "Saída muda"
 #: custando ZERO largura.
 TEXTO_SELO_SEM_SOM: Final[str] = "Sem som"
 
-#: Selo do CANAL DORMINDO (SOM-ACORDADO-01, 16/08/2026). Terceiro informante
-#: desta mesma linha, pela mesma disciplina dos dois de cima: o selo diz QUE,
-#: a dica do bloco diz POR QUÊ, e ele só acende quando há defeito a denunciar.
-#:
-#: Ele é o par visível de :data:`SUFIXO_CANAL_DORMINDO` no rótulo da moldura.
-#: O rótulo é a leitura de relance e vale para os dois estados; o selo é o
-#: alarme, e por isso existe só no estado ruim — um selo que diz "acordado"
-#: em toda sessão normal gastaria os 19px de altura que ele custa
-#: (medido nesta bancada) para não informar nada.
-TEXTO_SELO_CANAL_DORMINDO: Final[str] = "Canal dormindo"
+#: O SELO DO CANAL DORMINDO SAIU — 23/09/2026, O-ALTO-FALANTE-DIZ-ATIVO-01.
+#: Ele era o terceiro informante desta linha (SOM-ACORDADO-01, 16/08/2026) e
+#: acendia `Canal dormindo` como ALARME sobre um canal PARADO. A foto dela de
+#: 23/09 mostrou o que isso fazia na interface nova, que o importava: duas
+#: pílulas num alto-falante que ninguém calou. Canal parado toca quando o som
+#: chega — é o que `audio_saida.acordar_sink` já dizia —, e o sono continua
+#: dito no rótulo da moldura e na dica deste card, que são estado e não alarme.
 
-#: Teto de largura do selo, em caracteres, medido pelo mais longo dos três
+#: Teto de largura do selo, em caracteres, medido pelo mais longo dos dois
 #: textos acima. Sem ele, um texto novo amanhã volta a decidir a largura do
 #: bloco — e daí a da janela — sem ninguém perceber.
 _SELO_CHARS: Final[int] = max(
     len(TEXTO_SELO_SAIDA_MUDA),
     len(TEXTO_SELO_SEM_SOM),
-    len(TEXTO_SELO_CANAL_DORMINDO),
 )
 
 # ---------------------------------------------------------------------------
@@ -4831,19 +4827,11 @@ if _GTK_DISPONIVEL:
             # bloco, logo abaixo, e é de lá que ela o lê quando quiser saber
             # por que o bipe não tocou.
             #
-            # SOM-ACORDADO-01 acrescenta o TERCEIRO informante, e a prioridade
-            # continua sendo a mesma regra: ganha o fato que explica o
-            # silêncio ANTES do outro. Uma saída muda cala o som venha o canal
-            # de onde vier; um canal dormindo só come o começo. Dizer as duas
-            # coisas na mesma linha seria trocar um alarme por dois avisos.
+            # O TERCEIRO INFORMANTE (o canal dormindo, SOM-ACORDADO-01) SAIU
+            # EM 23/09/2026 — O-ALTO-FALANTE-DIZ-ATIVO-01: canal parado não é
+            # alarme. O sono continua no rótulo da moldura e na dica do bloco.
             recado = self._speaker_recado_do_som
-            dormindo = self._speaker_canal_estado == SUFIXO_CANAL_DORMINDO
-            if self._speaker_saida_muda is True:
-                texto = TEXTO_SELO_SAIDA_MUDA
-            elif dormindo:
-                texto = TEXTO_SELO_CANAL_DORMINDO
-            else:
-                texto = ""
+            texto = TEXTO_SELO_SAIDA_MUDA if self._speaker_saida_muda is True else ""
             if texto:
                 self._speaker_selo_saida.set_text(texto)
                 self._speaker_selo_saida.show()
@@ -6061,7 +6049,6 @@ __all__ = [
     "TEXTO_MIC_ALVO_NAO_HONRADO",
     "TEXTO_MIC_AUSENTE",
     "TEXTO_MIC_SEM_MUTE",
-    "TEXTO_SELO_CANAL_DORMINDO",
     "TEXTO_SELO_SAIDA_MUDA",
     "TEXTO_SELO_SEM_SOM",
     "TEXTO_SPEAKER_SEM_DADO",

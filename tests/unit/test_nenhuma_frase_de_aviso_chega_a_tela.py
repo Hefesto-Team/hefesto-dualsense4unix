@@ -305,17 +305,19 @@ def test_a_cor_nao_lida_diz_o_nome_ou_nada() -> None:
 # --------------------------------------------------------------------------
 # 02 — o canal do alto-falante
 # --------------------------------------------------------------------------
-def test_a_dica_do_canal_e_rotulo_de_estado() -> None:
-    from hefesto_dualsense4unix.app import audio_saida
-    from hefesto_dualsense4unix.interface.pacotes import a02_controles as p2
-    from tests.unit.test_o_cartao_da_steam_nao_narra import _e_rotulo_de_estado
+def test_a_dica_do_canal_nao_chega_a_tela() -> None:
+    """A dica do canal SAIU EM 23/09/2026 — O-ALTO-FALANTE-DIZ-ATIVO-01.
 
-    assert p2.dica_do_canal("") == ""
-    for sono in (audio_saida.CANAL_ACORDADO, audio_saida.CANAL_DORMINDO):
-        dica = p2.dica_do_canal(sono)
-        assert not _achadas(dica), dica
-        assert "PipeWire" not in dica and "medido" not in dica, dica
-        assert sono in dica and _e_rotulo_de_estado(dica), dica
+    Ela era rótulo de estado desde 13/09 (`Canal de áudio dormindo`), e foi a
+    última porta por onde a palavra do servidor de som chegava à tela. O que o
+    endereço da dica recebe hoje é medido pelo pacote inteiro em
+    `test_o_alto_falante_diz_ativo.py`; aqui fica a porta fechada.
+
+    MORDE: devolva `dica_do_canal` ao pacote.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import a02_controles as p2
+
+    assert not hasattr(p2, "dica_do_canal")
 
 
 # O «07 — o sufixo das exceções do Steam Input» SAIU em 21/09/2026: a linha do

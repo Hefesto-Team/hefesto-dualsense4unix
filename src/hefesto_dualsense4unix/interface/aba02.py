@@ -1967,8 +1967,8 @@ SELO_MUDO = mesa_viva.selo_do_mic(True, True)
 #: AS DUAS PALAVRAS DO SELO DO ALTO-FALANTE, e elas saem do DONO pela mesma
 #: razão que as do microfone: digitá-las aqui seria a segunda gramática para o
 #: mesmo par, na mesma tela, a dois blocos de distância.
-SELO_SOM_ATIVO = mesa_viva.selo_do_alto_falante(False, False, True)
-SELO_SOM_DESLIGADO = mesa_viva.selo_do_alto_falante(True, False, True)
+SELO_SOM_ATIVO = mesa_viva.selo_do_alto_falante(False, True)
+SELO_SOM_DESLIGADO = mesa_viva.selo_do_alto_falante(True, True)
 
 #: O ATRIBUTO DOS TRÊS ESTADOS DO 🎙 — MIC-NA-TELA-01, 10/09/2026. Atributo e
 #: não classe, pela mesma razão do `data-som` do ♪: o dono do valor é o
@@ -2340,30 +2340,30 @@ def linha_de_volume(campo, razao=""):
 # ---------------------------------------------------------------------------
 # O SUFIXO DO CANAL — linha 90 da paridade, e ele é DOIS elementos
 # ---------------------------------------------------------------------------
-# A FORMA É A DO `giro-no-jogo` desta mesma aba: o de FORA veste o `title` (o
-# porquê inteiro), o de DENTRO recebe o texto curto. Um elemento aceita UM alvo,
-# e aqui há duas coisas a escrever sobre o mesmo fato — o estado e a razão.
+# A FORMA É A DO `giro-no-jogo` desta mesma aba: o de FORA veste o `title`, o
+# de DENTRO recebe o texto curto. Um elemento aceita UM alvo.
 #
-# **DOIS `data-campo` DIFERENTES PARA O MESMO FATO, e é de propósito**, ao
-# contrário do `giro-no-jogo`: o estado (`alto-canal`) e o porquê
-# (`alto-canal-porque`) são frases distintas com donos distintos —
-# `sufixo_do_canal` e `dica_do_canal` —, e a segunda cresce com a REGRA do
-# WirePlumber, que a primeira não conhece. O que não pode divergir é a
-# EXISTÊNCIA delas, e não pode: as duas nascem do mesmo `sono`, e a régua desta
-# sprint cobra que as duas apaguem juntas.
+# **O DE FORA (`alto-canal-porque`) NÃO TEM MAIS O QUE DIZER — 23/09/2026,
+# O-ALTO-FALANTE-DIZ-ATIVO-01.** Ele levava o sono do canal para a dica
+# (`Canal de áudio dormindo`), e a palavra saiu da tela inteira. O endereço
+# FICA, porque a página publicada o tem e o pacote o pinta com o marcador de
+# nada; o que ele fazia era a mesma coisa que o selo do microfone faz sem dica
+# nenhuma.
 #
-# A CENA DO DESENHO É O CASO NORMAL: no cabo o sink existe e o drop-in 54 o
-# mantém acordado, então o chip do canal aceso é o que ela vê na maioria das
-# sessões.
-# **No rádio não entra sufixo nenhum** — o DualSense não publica placa ALSA por
-# rádio (medido em 15/08/2026: a placa segue o transporte), e escrever
-# "acordado" a partir de ausência prometeria que o som sai inteiro num controle
-# que não tem por onde tocá-lo. Um desenho em que o controle do rádio dissesse
-# "acordado" ensinaria de volta exatamente essa mentira.
+# A CENA DO DESENHO É O CASO NORMAL, e ela vale NOS DOIS TRANSPORTES: todo
+# controle da mesa tem o nó de som dele (`hefesto_som_<hex6>`, que o produto
+# publica por controle desde 10/09/2026 e a ponte `0x35` leva ao aparelho pelo
+# rádio), e ninguém calou o alto-falante — então a pílula diz ATIVO. O lugar
+# VAZIO não tem nó, e a pílula dele some.
 #
-# O SELO É OUTRA COISA E NASCE APAGADO: ele é o ALARME (`Saída muda` /
-# `Canal dormindo`), e um alarme cravado no desenho acenderia sobre um controle
-# que ninguém mediu. O produto o acende no primeiro tique em que houver o quê.
+# FATO ERRADO, SUBSTITUÍDO EM 23/09/2026: aqui estava *"No rádio não entra
+# sufixo nenhum — o DualSense não publica placa ALSA por rádio"*. A primeira
+# metade continua exata; a conclusão caiu em 10/09, quando o nó por controle
+# passou a existir, e a foto dela de 23/09 mostra a pílula no controle do rádio.
+#
+# O SELO É OUTRA COISA E NASCE APAGADO: ele é o ALARME (`Saída muda`), e um
+# alarme cravado no desenho acenderia sobre um controle que ninguém mediu. O
+# produto o acende no primeiro tique em que houver o quê.
 def sufixo_do_canal(c):
     """O CHIP do canal no rótulo da moldura, na cena aprovada.
 
@@ -2374,26 +2374,23 @@ def sufixo_do_canal(c):
     `<span class="canal">` já tinha classe própria, `data-campo` com dono e
     alvo de pintura. O que mudou foi a pintura, e ela está no CSS lá em cima.
 
-    A PALAVRA VEM DO PRODUTO (`a02_controles.sufixo_do_canal`), não daqui — ver
-    o bloco acima. O que este arquivo decide é a CENA: qual controle aparece
-    com canal lido no desenho parado.
+    A PALAVRA VEM DO DONO (`mesa_viva.selo_do_alto_falante`), não daqui — ver
+    o bloco acima. O que este arquivo decide é a CENA: o que a pílula diz no
+    desenho parado.
     """
-    # A CENA: no cabo o canal está acordado e o som sai; é o único estado que o
-    # desenho parado pode afirmar. Sem placa de som — o caso do rádio — não há o
-    # que dizer, e o `.nada` faz a pílula sumir inteira.
-    lido = c.get("transporte") == "usb"
-    desligado = False
-    palavra = (mesa_viva.selo_do_alto_falante(False, False, True) if lido
+    # A CENA: o controle da mesa tem o nó de som dele e ninguém o calou — no
+    # cabo E no rádio (ver o bloco acima). O LUGAR VAZIO não tem controle, logo
+    # não tem canal: a pílula some pelo marcador, que é o que o produto faz com
+    # o controle cujo nó ainda não existe.
+    na_mesa = bool(c.get("conectado", True))
+    palavra = (mesa_viva.selo_do_alto_falante(False, True) if na_mesa
                else NADA_A_DIZER)
-    # A RAZÃO MORA NO INVÓLUCRO, e ele não é enfeite: a palavra do selo diz o
-    # ESTADO (`ATIVO`/`DESLIGADO`) e a dica diz POR QUÊ — que é onde esta casa
-    # põe o porquê desde 13/09. O ramo `classe` do piloto até escreve um
-    # atributo junto, mas só `true`/`false`; um `title` com frase precisa do
-    # alvo `atributo` num elemento próprio, que é exatamente o que o chip que
-    # este selo substituiu já fazia.
+    # O INVÓLUCRO NÃO É ENFEITE, mesmo sem frase: ele é o endereço que a página
+    # publicada tem, e o pacote o pinta com o marcador de nada — um `title` com
+    # frase precisaria do alvo `atributo` num elemento próprio, e é este.
     return ('<span data-campo="alto-canal-porque" data-hef-alvo="atributo"'
             ' data-hef-atributo="title"><span class="selo-ativo no-rotulo'
-            f'{"" if desligado or not lido else " on"}"'
+            f'{" on" if na_mesa else ""}"'
             ' data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="on"'
             f' data-hef-quando="{SELO_SOM_ATIVO}"'
             '><span class="mic-glifo"'
@@ -2402,7 +2399,8 @@ def sufixo_do_canal(c):
             f'>{ALTO_SVG}</span><span class="selo-palavra" data-campo="alto-canal"'
             # O ALVO `html` E NÃO O TEXTO IMPLÍCITO DO SELO DO MICROFONE, e a
             # diferença é o MARCADOR: este selo pode não ter o que dizer (o
-            # rádio sem placa de som), e o "não há" viaja como `<i class="nada">`
+            # controle cujo nó de som ainda não nasceu), e o "não há" viaja como
+            # `<i class="nada">`
             # — um ELEMENTO. Com o alvo de texto, `escrever()` trocaria o vazio
             # por travessão e deixaria um `—` solto no rótulo; e a guarda do
             # lugar vazio, que casa só a FOLHA (`[^<]*`), sairia da conta sem
@@ -2624,13 +2622,13 @@ DICA_MIC_NATIVO = ("O microfone deste controle entra sozinho, sem o Hefesto no "
 
 def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
           touch2=None, tocando2=False,
-          # `estado_alto` NÃO DESENHA NADA DESDE 04/09/2026 (decisão [09]): o
-          # `<span class="mudo" data-campo="alto-estado" hidden>` que o recebia
-          # saiu do desenho, e quem mostra o mudo do alto-falante é o próprio ♪,
-          # que passou a ACENDER por leitura. Ele fica na assinatura porque
-          # `mesa_viva.estado_do_card` — o dono dos kwargs, e de outra onda —
-          # ainda o monta; tirá-lo daqui quebraria a chamada sem ganhar nada.
-          giro, mic_v, mic_mudo, mic_vol, alto_v, rota_nada, estado_alto,
+          # `estado_alto` SAIU DA ASSINATURA EM 23/09/2026 — O-ALTO-FALANTE-DIZ-
+          # ATIVO-01. Não desenhava nada desde 04/09 (decisão [09]: o `<span
+          # class="mudo" data-campo="alto-estado" hidden>` saiu do desenho, e quem
+          # mostra o mudo do alto-falante é o próprio ♪) e só carregava a palavra
+          # do sono do canal, que saiu da tela. Saiu junto do dono dos kwargs,
+          # `mesa_viva.estado_do_card`, para não repetir o `rota_pc` de 21/09.
+          giro, mic_v, mic_mudo, mic_vol, alto_v, rota_nada,
           alto_mudo=False, alto_pode=True, mic_posse=False, tocando=True,
           mic_modo="virtual", accel=None, conectado=True,
           # O GANHO NASCE COM OPINIÃO, e ela é a de §6.3 da sprint: o topo da
@@ -3270,7 +3268,7 @@ PARADO = [("X", "  +0.0", "left:50%;width:1%;background:var(--border-forte)"),
           ("Z", "  +0.0", "left:50%;width:1%;background:var(--border-forte)")]
 
 ESTADO = {
-  "p1": dict(bat=100, carga="cheio", estado_alto="Acordado",
+  "p1": dict(bat=100, carga="cheio",
     mic_vol=80, glifos_on={"cross", "dpad_up", "l2"},
     l2=200, r2=40, touch=(62, 44), sticks=(60, 200, 180, 90),
     giro=[("X", "+143.2", "left:50%;width:22%;background:var(--red)"),
@@ -3291,7 +3289,7 @@ ESTADO = {
   # microfone MUDO: com a mesa cheia é o CONTRASTE que ensina a ler o card, e
   # sem um card assim a leitura nova diria "Tocando" nos quatro — inclusive nos
   # dois que estão no (50,50), que é posição de enfeite e não de dedo.
-  "p2": dict(bat=64, carga="carregando", estado_alto="Acordado", mic_vol=0,
+  "p2": dict(bat=64, carga="carregando", mic_vol=0,
     glifos_on=set(), tocando=False,
     l2=0, r2=0, touch=(50, 50), sticks=(128, 128, 128, 128),
     giro=PARADO,
@@ -3304,7 +3302,7 @@ ESTADO = {
     mic_v=[4, 6, 5, 4, 6, 5, 4, 5, 6, 4, 5, 4, 6, 5], mic_modo="desativado", mic_mudo=True,
     alto_v=[70, 52, 66, 44, 72, 58, 48, 64, 54, 70, 46, 60, 50, 68], rota_nada=True),
 
-  "p3": dict(bat=31, carga="descarregando", estado_alto="Acordado",
+  "p3": dict(bat=31, carga="descarregando",
     mic_vol=60, glifos_on={"circle"},
     l2=0, r2=18, touch=(38, 71), sticks=(128, 128, 141, 122),
     giro=[("X", " +11.4", "left:50%;width:3%;background:var(--cyan)"),
@@ -3321,7 +3319,7 @@ ESTADO = {
     mic_v=[18, 30, 22, 41, 28, 19, 35, 24, 30, 20, 38, 26, 22, 31], mic_modo="nativo", mic_mudo=False,
     alto_v=[55, 40, 62, 48, 58, 36, 50, 44, 60, 38, 52, 46, 42, 56], rota_nada=False),
 
-  "p4": dict(bat=88, carga="fora_de_faixa", estado_alto="Acordado",
+  "p4": dict(bat=88, carga="fora_de_faixa",
     mic_vol=75, glifos_on={"triangle", "r1"},
     l2=12, r2=255, touch=(50, 50), sticks=(128, 128, 96, 128),
     giro=[("X", "  −8.6", "left:48%;width:2%;background:var(--cyan)"),

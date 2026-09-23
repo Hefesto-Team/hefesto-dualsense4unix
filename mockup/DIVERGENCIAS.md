@@ -21,4 +21,11 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## 02-controles.html
+- **23/09/2026** — O-ALTO-FALANTE-DIZ-ATIVO-01, esperando a sessão dela. Na cena
+  parada, o controle do rádio (P2) passa a mostrar a pílula «ATIVO», como o do
+  cabo — desde 10/09 todo controle tem o nó de som dele —, e o lugar vazio (P4)
+  perde a pílula, porque lugar sem controle não tem canal. Enquanto ela não
+  publicar, o desenho parado continua o velho; a tela viva já pinta pelo
+  pacote: «ATIVO» no cabo e no rádio, «DESLIGADO» só com o ♪ calado, e sem o
+  «Canal dormindo».

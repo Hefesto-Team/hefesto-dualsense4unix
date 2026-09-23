@@ -29,8 +29,10 @@ AS MORDIDAS, todas feitas e devolvidas antes deste arquivo ser commitado:
 
 * tire a guarda de endereço de ``porques_do_som`` — ``TestAGuardaSemEndereco``
   reprova nas duas metades (a razão e o cinza);
-* faça ``selo_do_som`` responder pelo canal ANTES da saída muda — o caso dos
-  dois males ao mesmo tempo reprova;
+* devolva o sono do canal ao alarme (``selo_do_som``) ou à pílula
+  (``mesa_viva.selo_do_alto_falante``) — os casos do canal PARADO reprovam
+  (O-ALTO-FALANTE-DIZ-ATIVO-01, 23/09/2026; a régua dona é
+  ``test_o_alto_falante_diz_ativo.py``);
 * faça ``sufixo_do_canal("")`` devolver a palavra de acordado —
   ``test_sem_leitura_o_rotulo_nao_afirma_nada`` reprova;
 * tire o ``card-vpad`` do pacote — ``TestADicaDoTitulo`` reprova;
@@ -77,7 +79,6 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
     SUFIXO_CANAL_ACORDADO,
     SUFIXO_CANAL_DORMINDO,
     TEXTO_AUDIO_SEM_ENDERECO,
-    TEXTO_SELO_CANAL_DORMINDO,
     TEXTO_SELO_SAIDA_MUDA,
 )
 from hefesto_dualsense4unix.interface import onde
@@ -229,22 +230,16 @@ class TestALeituraDoSono:
 
 
 class TestOsSelos:
-    def test_a_saida_muda_ganha_do_canal_dormindo(self) -> None:
-        """Os dois males ao mesmo tempo dizem UMA coisa: a que cala o som.
+    """O alarme do bloco é UM: a saída muda (a camada 1).
 
-        Uma saída muda cala o som venha o canal de onde vier; um canal dormindo
-        só come o começo. Dizer as duas na mesma linha troca um alarme por dois
-        avisos.
+    O SEGUNDO INFORMANTE SAIU EM 23/09/2026 — O-ALTO-FALANTE-DIZ-ATIVO-01. O
+    alarme acendia também `Canal dormindo` num canal PARADO, e a foto dela
+    mostrou duas pílulas num alto-falante que ninguém calou. O caso que prova a
+    saída mora em `test_o_alto_falante_diz_ativo.py`, pelo pacote inteiro.
+    """
 
-        MORDE: inverta as duas perguntas de `selo_do_som` e este caso reprova.
-        """
-        assert mod.selo_do_som(True, audio_saida.CANAL_DORMINDO) == TEXTO_SELO_SAIDA_MUDA
-
-    def test_o_canal_dormindo_acende_sozinho(self) -> None:
-        assert mod.selo_do_som(False, audio_saida.CANAL_DORMINDO) == (
-            TEXTO_SELO_CANAL_DORMINDO)
-        assert mod.selo_do_som(None, audio_saida.CANAL_DORMINDO) == (
-            TEXTO_SELO_CANAL_DORMINDO)
+    def test_a_saida_muda_acende_o_alarme(self) -> None:
+        assert mod.selo_do_som(True) == TEXTO_SELO_SAIDA_MUDA
 
     @pytest.mark.parametrize("muda", [False, None])
     def test_so_true_acende_a_saida_muda(self, muda: bool | None) -> None:
@@ -253,11 +248,7 @@ class TestOsSelos:
         Um selo "saída viva" seria ruído em cima do que a barra já diz, e um
         selo aceso a partir de `None` seria alarme sobre o que ninguém mediu.
         """
-        assert mod.selo_do_som(muda, audio_saida.CANAL_ACORDADO) == ""
-
-    def test_o_selo_nao_existe_no_estado_bom(self) -> None:
-        assert mod.selo_do_som(False, audio_saida.CANAL_ACORDADO) == ""
-        assert mod.selo_do_som(None, "") == ""
+        assert mod.selo_do_som(muda) == ""
 
 
 class TestOSeloDoAltoFalante:
@@ -281,24 +272,29 @@ class TestOSeloDoAltoFalante:
         """
         import mesa_viva
 
-        assert mesa_viva.selo_do_alto_falante(False, False, True) == mesa_viva.ATIVO
-        assert mesa_viva.selo_do_alto_falante(True, False, True) == mesa_viva.DESLIGADO
+        assert mesa_viva.selo_do_alto_falante(False, True) == mesa_viva.ATIVO
+        assert mesa_viva.selo_do_alto_falante(True, True) == mesa_viva.DESLIGADO
         assert mesa_viva.ATIVO != mesa_viva.DESLIGADO
 
-    def test_o_canal_dormindo_desliga_o_selo(self) -> None:
-        """Os DOIS fatos entram na mesma palavra — é o que o chip não fazia.
+    def test_o_canal_parado_nao_desliga_o_selo(self, sono_lido) -> None:
+        """Canal PARADO é ATIVO; só o mudo do ♪ desliga — 23/09/2026.
 
-        O som não sai quando ela CALOU o alto-falante **ou** quando o canal está
-        dormindo. O chip velho só contava o segundo, ao lado de um botão `♪` que
-        só contava o primeiro: duas leituras parciais, no mesmo bloco, que podiam
-        se contradizer na cara dela.
+        FATO ERRADO, SUBSTITUÍDO: este teste cobrava o contrário (*"os DOIS
+        fatos entram na mesma palavra"*), e era a régua do defeito que ela
+        fotografou: todo controle no rádio nascia DESLIGADO, porque o nó dele
+        dorme sempre que ninguém toca. A régua dona agora é
+        `test_o_alto_falante_diz_ativo.py`.
 
-        MORDE: tire o `or dormindo` de `selo_do_alto_falante` e o canal dormindo
-        volta a aparecer como ATIVO ao lado de um alto-falante mudo.
+        MORDE: devolva o sono do canal à pílula e o canal parado volta a
+        aparecer como DESLIGADO ao lado de um ♪ ligado.
         """
         import mesa_viva
 
-        assert mesa_viva.selo_do_alto_falante(False, True, True) == mesa_viva.DESLIGADO
+        sono_lido(audio_saida.CANAL_DORMINDO)
+        parado = _card(_entrada(speaker={"volume": 60, "muted": False}))
+        assert parado["alto-canal"] == mesa_viva.ATIVO
+        calado = _card(_entrada(speaker={"volume": 60, "muted": True}))
+        assert calado["alto-canal"] == mesa_viva.DESLIGADO
 
     def test_sem_leitura_o_rotulo_nao_afirma_nada(self) -> None:
         """`sabemos=False` é NÃO SEI, e não "está tocando".
@@ -311,8 +307,8 @@ class TestOSeloDoAltoFalante:
         """
         import mesa_viva
 
-        assert mesa_viva.selo_do_alto_falante(False, False, False) == mesa_viva.SEM_LEITOR
-        assert mesa_viva.selo_do_alto_falante(True, True, False) == mesa_viva.SEM_LEITOR
+        assert mesa_viva.selo_do_alto_falante(False, False) == mesa_viva.SEM_LEITOR
+        assert mesa_viva.selo_do_alto_falante(True, False) == mesa_viva.SEM_LEITOR
 
     def test_o_cartao_cala_quando_o_canal_nao_foi_lido(self, sono_lido) -> None:
         """E no CARTÃO a ausência vira o marcador, não uma palavra.
@@ -325,29 +321,29 @@ class TestOSeloDoAltoFalante:
 
 
 class TestADicaDoCanal:
-    """A dica diz o ESTADO do canal, e só ele.
+    """A dica da pílula não fala do canal — 23/09/2026.
 
-    VIROU RÓTULO EM 13/09/2026 — FRASES-E-DICAS-02. Até aqui a dica juntava a
-    frase do dono (`controller_card.DICA_CANAL_*`) com a da regra do sono — «é o
-    padrão» ou «a regra … NÃO está instalada … Rode o install.sh» — e o estudo
-    a mediu na tela com «SUSPENSO no PipeWire». A ordem dela de 13/09
-    (`docs/process/sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`) tira da
-    tela o que avisa ou instrui sobre um estado: fica o estado.
+    VIROU RÓTULO EM 13/09/2026 (FRASES-E-DICAS-02) e SAIU EM 23/09/2026
+    (O-ALTO-FALANTE-DIZ-ATIVO-01): ela dizia `Canal de áudio dormindo`, a última
+    porta por onde a palavra do servidor de som chegava à tela. O endereço fica
+    na página publicada e recebe o marcador de nada; a pílula fica como a do
+    microfone, sem dica.
     """
 
-    def test_sem_leitura_nao_ha_frase(self) -> None:
-        assert mod.dica_do_canal("") == ""
+    def test_a_funcao_saiu_do_pacote(self) -> None:
+        """MORDE: devolva `dica_do_canal` ao pacote e esta linha reprova."""
+        assert not hasattr(mod, "dica_do_canal")
 
     @pytest.mark.parametrize(
-        "sono", [audio_saida.CANAL_ACORDADO, audio_saida.CANAL_DORMINDO])
-    def test_a_dica_e_o_estado_lido_e_nada_mais(self, sono: str) -> None:
-        """MORDE: devolva `DICA_CANAL_DORMINDO` ao `dica_do_canal` da 02."""
-        dita = mod.dica_do_canal(sono)
-        assert sono in dita
+        "sono", ["", audio_saida.CANAL_ACORDADO, audio_saida.CANAL_DORMINDO])
+    def test_a_dica_nao_narra_o_canal(self, sono_lido, sono: str) -> None:
+        """MORDE: devolva a frase do canal ao `alto-canal-porque`."""
+        sono_lido(sono)
+        dita = _card(_entrada())["alto-canal-porque"]
+        assert dita == mod.NADA_A_DIZER
         for frase in (DICA_CANAL_ACORDADO, DICA_CANAL_DORMINDO,
                       DICA_CANAL_E_PADRAO, dica_canal_sem_a_regra()):
             assert frase not in dita, f"a dica do canal voltou a narrar: {dita!r}"
-        assert "PipeWire" not in dita and "medido" not in dita
 
 
 # ---------------------------------------------------------------------------
@@ -464,23 +460,19 @@ class TestADicaDoTitulo:
 
 
 class TestOsSelosNoCartao:
-    def test_o_canal_dormindo_pinta_os_tres_campos(self, sono_lido) -> None:
-        sono_lido(audio_saida.CANAL_DORMINDO, False)
-        card = _card(_entrada())
-        assert card["alto-selo"] == TEXTO_SELO_CANAL_DORMINDO
-        # A PALAVRA MUDOU DE DONO EM 19/09/2026, por ordem dela: o chip que
-        # repetia a palavra do daemon (`dormindo`) virou SELO e fala a língua do
-        # microfone. O `dormindo` não some do produto — ele continua sendo o que
-        # `audio_saida.estado_do_canal` responde, e é o que a DICA carrega,
-        # medido duas linhas abaixo.
+    def test_o_canal_parado_pinta_ativo_e_cala_o_resto(self, sono_lido) -> None:
+        """O canal PARADO chega ao cartão como UMA pílula, ATIVO — 23/09/2026.
+
+        FATO ERRADO, SUBSTITUÍDO: este caso cobrava `Canal dormindo` no alarme e
+        DESLIGADO na pílula — as duas pílulas da foto dela.
+        """
         import mesa_viva
 
-        assert card["alto-canal"] == mesa_viva.DESLIGADO
-        # O TERCEIRO CAMPO É O RÓTULO DO ESTADO desde 13/09/2026 — ver
-        # `TestADicaDoCanal`. A regra do sono fora do lugar não chega à dica.
-        assert card["alto-canal-porque"] == mod.dica_do_canal(
-            audio_saida.CANAL_DORMINDO)
-        assert dica_canal_sem_a_regra() not in card["alto-canal-porque"]
+        sono_lido(audio_saida.CANAL_DORMINDO, False)
+        card = _card(_entrada())
+        assert card["alto-selo"] == mod.NADA_A_DIZER
+        assert card["alto-canal"] == mesa_viva.ATIVO
+        assert card["alto-canal-porque"] == mod.NADA_A_DIZER
 
     def test_a_saida_muda_acende_pelo_payload(self, sono_lido) -> None:
         """A camada 1 chega pelo `speaker.saida_muda`, lida pelo dono."""
@@ -499,18 +491,10 @@ class TestOsSelosNoCartao:
         for campo in ("alto-selo", "alto-canal", "alto-canal-porque"):
             assert card[campo] == mod.NADA_A_DIZER, campo
 
-    def test_o_estado_e_o_porque_apagam_juntos(self, sono_lido) -> None:
-        """Os dois nascem do mesmo `sono`: não há caminho para um sem o outro.
-
-        Um sufixo sem razão, ou uma razão sem sufixo, é o defeito que a forma de
-        dois elementos existe para não cometer.
-        """
-        for estado in ("", audio_saida.CANAL_ACORDADO, audio_saida.CANAL_DORMINDO):
-            sono_lido(estado, True)
-            card = _card(_entrada())
-            vazio_do_sufixo = card["alto-canal"] == mod.NADA_A_DIZER
-            vazio_da_razao = card["alto-canal-porque"] == mod.NADA_A_DIZER
-            assert vazio_do_sufixo == vazio_da_razao, estado
+    # `test_o_estado_e_o_porque_apagam_juntos` SAIU EM 23/09/2026: o porquê
+    # (`alto-canal-porque`) não diz mais nada em estado nenhum — ver
+    # `TestADicaDoCanal` —, e a régua de "os dois apagam juntos" passaria a
+    # cobrar que a pílula apagasse com uma dica que não existe.
 
 
 # ---------------------------------------------------------------------------
@@ -631,26 +615,38 @@ class TestODesenho:
         """O ALARME não se crava no desenho: acendê-lo sem medição é mentira."""
         doc = _bancada()
         assert TEXTO_SELO_SAIDA_MUDA not in doc
-        assert TEXTO_SELO_CANAL_DORMINDO not in doc
+        assert "Canal dormindo" not in doc
 
-    def test_o_cabo_mostra_ativo_e_o_radio_nao_mostra_nada(self) -> None:
-        """A cena é o caso normal, e o rádio não finge ter placa de som.
+    def test_os_dois_transportes_mostram_ativo(self) -> None:
+        """A cena é o caso normal, e ela vale no cabo E no rádio — 23/09/2026.
 
-        Um desenho em que o controle do RÁDIO dissesse que o som sai ensinaria
-        de volta a mentira que o `""` do canal existe para não contar.
+        FATO ERRADO, SUBSTITUÍDO: esta régua cobrava que o controle do rádio
+        não mostrasse pílula nenhuma, porque o DualSense não publica placa ALSA
+        por rádio. A conclusão caiu em 10/09/2026, quando o produto passou a
+        publicar o nó de som por controle (`hefesto_som_<hex6>`), e a foto dela
+        de 23/09 mostra a pílula no controle do rádio. A MATRIZ da sprint vale
+        para a cena também: a regra não é só do cabo.
 
-        MORDE: faça `aba02.sufixo_do_canal` responder ATIVO para todos.
+        MORDE: faça `aba02.sufixo_do_canal` voltar a depender do transporte.
         """
         from monta import MESA as MESA_DO_DESENHO
 
         import aba02
         import mesa_viva
 
-        no_cabo = [c for c in MESA_DO_DESENHO if c.get("transporte") == "usb"]
-        no_radio = [c for c in MESA_DO_DESENHO if c.get("transporte") == "bt"]
+        na_mesa = [c for c in MESA_DO_DESENHO if c.get("conectado", True)]
+        no_cabo = [c for c in na_mesa if c.get("transporte") == "usb"]
+        no_radio = [c for c in na_mesa if c.get("transporte") == "bt"]
         assert no_cabo and no_radio, "a cena precisa dos dois transportes"
-        assert all(mesa_viva.ATIVO in aba02.sufixo_do_canal(c) for c in no_cabo)
-        assert all(mod.NADA_A_DIZER in aba02.sufixo_do_canal(c) for c in no_radio)
+        for c in no_cabo + no_radio:
+            chip = aba02.sufixo_do_canal(c)
+            assert f">{mesa_viva.ATIVO}</span>" in chip, c["pref"]
+            assert 'class="selo-ativo no-rotulo on"' in chip, c["pref"]
+            assert mod.NADA_A_DIZER not in chip, c["pref"]
+        # O LUGAR VAZIO não tem controle, logo não tem canal: a pílula some.
+        vazios = [c for c in MESA_DO_DESENHO if not c.get("conectado", True)]
+        assert vazios, "a cena precisa de um lugar vazio"
+        assert all(mod.NADA_A_DIZER in aba02.sufixo_do_canal(c) for c in vazios)
 
     def test_a_palavra_do_sufixo_vem_do_produto(self) -> None:
         """O gerador não digita a palavra do canal: ele chama o dono.

@@ -1352,7 +1352,6 @@ class Janela:
             estados[c["uniq"]] = mesa_viva.estado_do_card(
                 entrada,
                 mic_vol=self.lento.get(c["uniq"], {}).get("mic_vol"),
-                canal=self.lento.get(c["uniq"], {}).get("canal", ""),
                 rota_nada=self.lento.get(c["uniq"], {}).get("rota_nada"),
                 onda_mic=self._onda(c["uniq"]),
             )
@@ -1564,15 +1563,11 @@ class Janela:
                 "posse": bool(eco.get("mic_posse", e["mic_posse"])),
             },
             "alto": {
-                "estado": (
-                    "· Não ajustado"
-                    if alto_pct is None
-                    else (
-                        f'· {alto_pct} % · {e["estado_alto"]}'
-                        if e["estado_alto"]
-                        else f"· {alto_pct} %"
-                    )
-                ),
+                # O SONO DO CANAL SAIU DAQUI EM 23/09/2026 — O-ALTO-FALANTE-DIZ-
+                # ATIVO-01: esta linha dizia `· 71 % · Dormindo` com o
+                # alto-falante ligado e parado. Canal parado não é estado a
+                # mostrar; quem diz se ele está calado é o ♪.
+                "estado": "· Não ajustado" if alto_pct is None else f"· {alto_pct} %",
                 # A ONDA DO ALTO-FALANTE NÃO TEM FONTE, e não é omissão: o
                 # produto desenha uma barra de VOLUME (`sensor_widgets.SpeakerBar`),
                 # e nível de saída ninguém lê — o mapa dá `audio.alto_falante`
@@ -1608,25 +1603,24 @@ class Janela:
 
     def _ler_pactl(self, alvos: list[str]) -> None:
         try:
-            from hefesto_dualsense4unix.app import audio_saida
             from hefesto_dualsense4unix.integrations.audio_control import volume_da_captura
 
-            lista = audio_saida.rodar_leitura(["pactl", "list", "sinks", "short"])
             # A SAÍDA PADRÃO SAIU DESTA FAIXA em 21/09/2026, e o `pactl info`
             # com ela: ela servia só ao `rota_pc`, que era o botão «Só no
             # controle» — e esse botão deixou a fileira. Uma leitura de
             # processo por tique lento para alimentar um campo que ninguém
             # mostra é custo sem entrega.
+            #
+            # E O `pactl list sinks short` SAIU EM 23/09/2026, pela mesma razão:
+            # ele servia só à palavra do sono do canal (`Acordado`/`Dormindo`),
+            # que saiu da tela — O-ALTO-FALANTE-DIZ-ATIVO-01.
             novo: dict[str, dict[str, Any]] = {}
             for uniq in alvos:
-                sink = self.mic.sink_de(uniq) if self.mic is not None else ""
-                canal = audio_saida.estado_do_canal(lista, sink) if sink else ""
                 fonte = ""
                 if self.mic is not None:
                     leitura = self.mic.leitura(uniq)
                     fonte = getattr(leitura, "fonte", "") if leitura else ""
                 novo[uniq] = {
-                    "canal": {"acordado": "Acordado", "dormindo": "Dormindo"}.get(canal, ""),
                     # **A FAIXA LENTA NÃO SABE O BYTE, e dizer que sabe é o
                     # defeito.** Ela lê o SERVIDOR DE SOM (`pactl`), e o que
                     # respondia aqui — *"a saída padrão é este controle?"* —

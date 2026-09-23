@@ -697,13 +697,16 @@ def selo_do_mic(mudo: bool, sabemos: bool) -> str:
 #: ainda era pior: descreve o SERVIDOR DE SOM suspender um nó, que é vocabulário
 #: de dentro, e ela já baniu esse tipo de palavra da tela.
 #:
-#: A RAZÃO NÃO SE PERDE, MUDA DE LUGAR: ela sai da palavra e vai para a dica
-#: (`dica_do_canal`), que é onde esta casa põe o porquê desde 13/09.
+#: **E A PALAVRA SAIU DA TELA INTEIRA EM 23/09/2026** — O-ALTO-FALANTE-DIZ-ATIVO-01.
+#: Ela tinha ido para a dica (`Canal de áudio dormindo`) e para um alarme
+#: laranja (`Canal dormindo`), e a foto dela mostrou o que isso fazia: duas
+#: pílulas num alto-falante que ninguém calou. Canal parado não é defeito — ver
+#: :func:`selo_do_alto_falante`.
 ATIVO = "ATIVO"
 DESLIGADO = "DESLIGADO"
 
 
-def selo_do_alto_falante(mudo: bool, dormindo: bool, sabemos: bool) -> str:
+def selo_do_alto_falante(mudo: bool, sabemos: bool) -> str:
     """O selo do alto-falante: `ATIVO`, `DESLIGADO`, ou `—` quando não se leu.
 
     **É A MESMA PERGUNTA QUE O SELO DO MICROFONE RESPONDE**, e por isso fala a
@@ -713,19 +716,26 @@ def selo_do_alto_falante(mudo: bool, dormindo: bool, sabemos: bool) -> str:
     <!-- noqa-acento: citação literal dela --> — e substituiu o chip cinza que
     dizia `acordado`.
 
-    DOIS FATOS, UMA PALAVRA, e é isso que o chip velho não fazia: o som não sai
-    quando ela CALOU o alto-falante **ou** quando o canal está dormindo no
-    servidor de som. O chip velho só contava o segundo, ao lado de um botão `♪`
-    que só contava o primeiro — duas leituras parciais, no mesmo bloco, que
-    podiam se contradizer na cara dela.
+    **`DESLIGADO` É SÓ QUANDO ELA CALOU** — o mudo que o `♪` lê. A queixa dela de
+    23/09/2026, com a foto: *"pq o autofalante do controle iniciou como canal
+    dormindo ao invés de ativo (esse dormindo deveria ser Desativado) tipo o
+    termo do botão"* <!-- noqa-acento: citação literal dela -->.
+
+    FATO ERRADO, SUBSTITUÍDO: esta função recebia também o sono do canal e
+    dizia `DESLIGADO` para um canal PARADO. Canal parado toca quando o som chega
+    — o dono do canal diz, em `audio_saida.acordar_sink`, que *"a suspensão não
+    é opinião sobre esse pedido, é ociosidade"*. Pelo rádio, medido na mesa dela
+    em 23/09: o nó do controle é um `null-sink` que dorme sempre que ninguém toca
+    (a ponte sob demanda da RADIO-AFOGADO-01 não o lê parado), então todo
+    controle no rádio nascia `DESLIGADO` com o alto-falante ligado.
 
     `sabemos` É O TERCEIRO ESTADO, pela mesma razão do microfone: sem leitura do
-    bloco de áudio, pintar `ATIVO` é o controle que acabou de cair anunciando
-    que está tocando.
+    canal, pintar `ATIVO` é o controle que acabou de cair anunciando que está
+    tocando.
     """
     if not sabemos:
         return SEM_LEITOR
-    return DESLIGADO if (mudo or dormindo) else ATIVO
+    return DESLIGADO if mudo else ATIVO
 
 
 #: As palavras dos TRÊS estados do botão 🎙 — MIC-NA-TELA-01, 10/09/2026.
@@ -854,7 +864,10 @@ def estado_do_card(
     *,
     mic: Any = None,
     mic_vol: int | None = None,
-    canal: str = "",
+    # O `canal` SAIU EM 23/09/2026 (O-ALTO-FALANTE-DIZ-ATIVO-01), e com ele o
+    # `estado_alto` que ele alimentava: a palavra do sono do canal não vai mais
+    # à tela, e o `aba02.bloco` não desenhava aquele valor desde 04/09.
+    #
     # **`rota_pc` VIROU `rota_nada` EM 21/09/2026**, e a troca não é de nome:
     # é de PERGUNTA. O `rota_pc` respondia *"a saída padrão do sistema é este
     # controle?"* — a camada 1 —, e acendia o botão «Só no controle». Aquele
@@ -996,7 +1009,6 @@ def estado_do_card(
         "mic_vol": mic_vol if mic_vol is not None else 0,
         "alto_v": [alto_pct if alto_pct is not None else 0] + [PISO_DA_ONDA] * (QUADROS_DA_ONDA - 1),
         "rota_nada": bool(rota_nada),
-        "estado_alto": canal or "",
         # `None` = NÃO SEI, e é diferente de zero. O DualSense não devolve o
         # volume que tem — a chave `speaker` só aparece depois de um
         # `speaker.set` NOSSO —, então antes disso o produto escreve
