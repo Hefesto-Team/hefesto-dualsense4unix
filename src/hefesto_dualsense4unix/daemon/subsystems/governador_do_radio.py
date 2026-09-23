@@ -733,7 +733,8 @@ class GovernadorDoRadio:
 
         controles: dict[str, dict[str, Any]] = {}
         for endereco, ar in (self._amostra or {}).items():
-            for enlace in getattr(ar, "conexoes", None) or ():
+            enlaces = getattr(ar, "conexoes", None)  # (noqa-acento): nome do campo
+            for enlace in enlaces or ():
                 chave = _chave(str(getattr(enlace, "endereco", "") or ""))
                 if chave and getattr(enlace, "tipo", None) == TIPO_ACL:
                     controles.setdefault(chave, {"uniq": chave, "adaptador": endereco})
