@@ -44,16 +44,16 @@
 #    sem cura (GOVERNADOR-DO-RADIO-01) — daí em diante o sino diz «tire e
 #    ponha», e o watchdog segue perguntando só para a ponte ver o laço sumir.
 #
-# A TRAVA E O DIÁRIO (O-DIARIO-DO-RADIO-01, 23/09/2026). Este watchdog é um dos
-# três motores que mexem no rádio — os outros são o vigia de zumbis e a central
-# do daemon —, e até aqui nenhum sabia do outro: o `Connect` daqui podia cair
-# no meio de um controle sendo movido. Agora o tique inteiro roda com a trava
-# comum na mão (`flock` em /run/hefesto-dualsense4unix/radio.lock, com prazo);
-# quem não a consegue no prazo pula o tique, e a espera e a desistência vão
-# para o diário do root (/var/lib/hefesto-dualsense4unix/radio-diario.jsonl),
-# no formato que `integrations/diario_do_radio.py` lê. As ações também.
+# A TRAVA E O DIÁRIO (O-DIARIO-DO-RADIO-01, 23/09/2026): um dos três motores do
+# rádio (os outros: o vigia de zumbis e a central do daemon). O tique inteiro
+# roda com a trava comum na mão (`flock` em /run/hefesto-dualsense4unix/radio.lock,
+# com prazo); a espera, a desistência e as ações vão para o diário do root
+# (/var/lib/hefesto-dualsense4unix/radio-diario.jsonl). Sob sudo os ganchos de
+# teste morrem (menos o de LOG), como na ponte: o root abre a trava e o diário.
 set -euo pipefail
-
+if [[ -n "${SUDO_UID:-}" || -n "${SUDO_USER:-}" ]]; then
+    unset HEFESTO_BT_SRC HEFESTO_BT_STAMP_DIR HEFESTO_HIDRAW_ROOT HEFESTO_RADIO_DIARIO_ROOT HEFESTO_RADIO_TRAVA HEFESTO_RADIO_TRAVA_PRAZO_S
+fi
 JANELA_MIN=10
 LIMIAR_RECUSAS=8
 # VIGIA-QUE-DERRUBA-01 (08/08/2026): quantos APARELHOS DISTINTOS precisam estar
