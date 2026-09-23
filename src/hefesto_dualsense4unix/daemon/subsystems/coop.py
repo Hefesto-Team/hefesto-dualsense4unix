@@ -76,6 +76,24 @@ logger = get_logger(__name__)
 #: tolerável; "sem controle" não é).
 _CALIB_PRAZO_S = 2.0
 
+#: STEAM-NO-FISICO-01 — quanto um jogador PRONTO espera pelo vpad de um número
+#: MENOR que ainda não nasceu, para o jogo ver a ordem P1→P4.
+#:
+#: A terceira obrigação da decisão dela de 23/09/2026: *"o P1 do Hefesto é o
+#: jogador 1 do jogo"*. O jogo numera pela ORDEM EM QUE OS VPADS NASCEM — lido
+#: no fonte: o SDL dá a cada joystick novo o menor índice livre
+#: (`SDL_joystick.c`, `SDL_PrivateJoystickAdded` → `SDL_FindFreePlayerIndex`),
+#: e a enumeração inicial do HIDAPI é a do `udev` (`linux/hid.c`,
+#: `udev_enumerate_scan_devices` sobre `hidraw`), ordenada pelo syspath — que
+#: num vpad uhid carrega o número de sequência do HID, ou seja, a ordem de
+#: criação. O winebus do Proton enumera pelo mesmo `udev`.
+#:
+#: O prazo cobre UM feature report por rádio (o `REPORT_REQ_TIMEOUT` de 3 s do
+#: BlueZ é o pior caso da calibração que adia a promoção) com folga. Passado
+#: ele, o jogador nasce fora de ordem: um número trocado no jogo se conserta
+#: reconectando, um jogador sem controle não se conserta sozinho.
+ESPERA_PELA_ORDEM_S = 4.0
+
 
 def secundarios_fora_da_mesa(
     sentados: Iterable[str], presentes: Iterable[str]
@@ -333,6 +351,9 @@ class CoopManager:
         # testes, reconstrução do backend): comparar por identidade re-liga o
         # aviso no backend novo, e um bool o deixaria mudo para sempre.
         self._backend_avisado: Any = None
+        # STEAM-NO-FISICO-01: identidade -> instante (monotonic) em que o
+        # jogador ficou PRONTO para ganhar vpad e passou a esperar a ordem.
+        self._pronto_desde: dict[str, float] = {}
 
     # -- estado / gate --------------------------------------------------
 
@@ -769,10 +790,14 @@ class CoopManager:
                 )
                 self._teardown_player(mac)
 
-        # hotplug-IN: cria secundários novos.
-        for mac, path in want.items():
+        # hotplug-IN: cria secundários novos — NA ORDEM DA CARTA
+        # (STEAM-NO-FISICO-01). `want` vem na ordem do `eventN`, que é a ordem
+        # em que o kernel viu os controles, e ela só coincide com o número da
+        # aba Controles por sorte (no boot com a mesa cheia, a carta é a
+        # gravada). O jogo numera pela ordem em que os vpads nascem.
+        for mac in self._na_ordem_da_carta(want):
             if mac not in self._players:
-                self._spawn_player(mac, path)
+                self._spawn_player(mac, want[mac])
 
         # FEAT-COOP-PLAYER-LED-01: (re)afirma o padrão por jogador ao final de
         # todo ciclo cheio — cobre ativação, spawn, node novo e o replug (o
@@ -1004,8 +1029,15 @@ class CoopManager:
         # roda fora do loop) já terminou quando a promoção precisar dela e o
         # adiamento nem chega a acontecer.
         self._prefetch_calibration(identity)
-        if reader.grab_state == "held":
+        if reader.grab_state == "held" and self._pode_nascer_na_ordem(player):
             self._promote_player(player)
+        elif reader.grab_state == "held":
+            logger.info(
+                "coop_player_espera_a_ordem",
+                identity=identity,
+                carta=self._numero_da_carta(identity),
+            )
+            self._armar_sossego_do_launch_env("jogador de co-op esperando a ordem")
         else:
             logger.info(
                 "coop_player_grab_pending",
@@ -1027,13 +1059,16 @@ class CoopManager:
         cada `sync`. Grab "failed" derruba o jogador SEM nunca ter criado o
         vpad e marca `_retry_spawn` (o próximo sync recria do zero).
         """
-        for identity in list(self._players):
+        # STEAM-NO-FISICO-01: na ordem da carta, e o maior espera o menor —
+        # ver `_pode_nascer_na_ordem`.
+        for identity in self._na_ordem_da_carta(self._players):
             player = self._players[identity]
             if player.vpad is not None:
                 continue
             state = player.reader.grab_state
             if state == "held":
-                self._promote_player(player)
+                if self._pode_nascer_na_ordem(player):
+                    self._promote_player(player)
             elif state == "failed":
                 logger.warning(
                     "coop_player_grab_failed_drop",
@@ -1548,6 +1583,7 @@ class CoopManager:
         # POSITIVO fica, porque o 0x05 é imutável por unidade.
         self._calib_prazo.pop(identity, None)
         self._calib_sem_leitura.discard(identity)
+        self._pronto_desde.pop(identity, None)
         # BROKER-01: restore do físico ANTES de soltar grab/reader/vpad — o
         # jogador está saindo e o nó dele não pode ficar 0600 sem dono.
         self._broker_restore_player(identity)
@@ -1793,7 +1829,20 @@ class CoopManager:
         muda em relação ao histórico. `usados` garante a última linha de
         defesa: número já tomado NESTA passada nunca acende duas vezes.
         """
-        numero: int | None = None
+        numero = self._numero_da_carta(identity)
+        if numero is None or numero in usados:
+            numero = fallback
+        while numero in usados:
+            numero += 1
+        return numero
+
+    def _numero_da_carta(self, identity: str) -> int | None:
+        """O número da carta deste controle, perguntado ao registro — ou None.
+
+        É a consulta que o `_numero_exibido` sempre fez, posta num lugar só
+        porque desde a STEAM-NO-FISICO-01 ela tem um segundo leitor: a ORDEM em
+        que os vpads nascem (`_na_ordem_da_carta`).
+        """
         registry = getattr(self._daemon, "identity_registry", None)
         # 27/08/2026: `numero_da_lampada` primeiro, `slot_for` só como degrau
         # de compatibilidade (dublê de teste / backend legado sem o método).
@@ -1811,12 +1860,67 @@ class CoopManager:
                 # da atribuição é o provider de cor / o `sync_connected`).
                 bruto = consulta(identity, assign=False)
                 if isinstance(bruto, int) and not isinstance(bruto, bool) and bruto >= 1:
-                    numero = bruto
-        if numero is None or numero in usados:
-            numero = fallback
-        while numero in usados:
-            numero += 1
-        return numero
+                    return bruto
+        return None
+
+    def _na_ordem_da_carta(self, identidades: Iterable[str]) -> list[str]:
+        """As identidades na ordem do número da carta; sem número, no fim.
+
+        STEAM-NO-FISICO-01. Empate e ausência de número mantêm a ordem de
+        entrada (`sorted` é estável) — sem registro de identidade (dublês,
+        backend legado) nada muda em relação ao histórico.
+        """
+        lista = list(identidades)
+        sem_numero = float("inf")
+        return sorted(
+            lista,
+            key=lambda mac: (
+                n if (n := self._numero_da_carta(mac)) is not None else sem_numero
+            ),
+        )
+
+    def _pode_nascer_na_ordem(self, player: _SecondaryPlayer) -> bool:
+        """Este jogador PRONTO pode ganhar o vpad agora sem furar a fila?
+
+        STEAM-NO-FISICO-01, terceira obrigação: *"os controles virtuais chegam
+        ao jogo na ordem P1→P4"*. O jogo dá a cada vpad NOVO o menor lugar
+        livre (ver `ESPERA_PELA_ORDEM_S`), então o vpad do jogador 3 que nasce
+        antes do do jogador 2 é o «jogador 2» do jogo para sempre naquela
+        partida. Quem ainda não tem vpad e tem carta MENOR passa na frente —
+        seja por grab pendente, seja por calibração adiada.
+
+        O prazo é o piso de acessibilidade: passado `ESPERA_PELA_ORDEM_S`
+        esperando, o jogador nasce assim mesmo e o diário diz.
+        """
+        carta = self._numero_da_carta(player.identity)
+        agora = time.monotonic()
+        desde = self._pronto_desde.setdefault(player.identity, agora)
+        if carta is None:
+            return True
+        na_frente = [
+            outro.identity
+            for outro in self._players.values()
+            if outro.identity != player.identity
+            and outro.vpad is None
+            and not outro.cedido_ao_primario
+            and outro.reader.grab_state != "failed"
+            and (n := self._numero_da_carta(outro.identity)) is not None
+            and n < carta
+        ]
+        if not na_frente:
+            self._pronto_desde.pop(player.identity, None)
+            return True
+        if agora - desde >= ESPERA_PELA_ORDEM_S:
+            logger.info(
+                "coop_ordem_nao_esperou",
+                identity=player.identity,
+                carta=carta,
+                na_frente=sorted(na_frente),
+                esperou_s=round(agora - desde, 2),
+            )
+            self._pronto_desde.pop(player.identity, None)
+            return True
+        return False
 
     def _publicar_camada_coop(
         self, padroes: dict[str, tuple[bool, bool, bool, bool, bool]]
@@ -2228,7 +2332,7 @@ def _numeros_sem_vpad(
 
     **POR QUE ESTE PARÁGRAFO MORA AQUI e não lá em cima**, que é onde ele
     seria lido primeiro: ``docs/data/mapa-controles.csv`` cita
-    ``coop.py:792-802``, ``:804`` e ``:819`` por FAIXA, e uma linha
+    ``coop.py:817-827``, ``:829`` e ``:844`` por FAIXA, e uma linha
     acrescentada antes delas apodrece as seis citações no portão
     ``citacoes-de-linha``. O mapa é da SPECS-A-PROCEDENCIA-01 e não se edita
     daqui — logo o topo deste arquivo está congelado para quem não o possui.
