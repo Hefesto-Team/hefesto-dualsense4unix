@@ -454,6 +454,86 @@ def test_mover_sem_destino_usa_a_d8_e_nunca_o_adaptador_de_agora(
     assert feito.destino != SALA
 
 
+def test_o_conectar_pareia_o_controle_novo_no_destino_da_d8(
+    diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
+) -> None:
+    """O «Conectar» sem destino: a D8 escolhe, e o controle que aparece é o dela.
+
+    A sala tem duas pontes; a varanda, um controle sem ponte; o quarto, nada —
+    ganha o quarto (mesma vaga que a varanda, menos controles). O fone da
+    vizinha em modo de pareamento aparece na mesma janela e fica de fora: não é
+    controle pela classe.
+    """
+    mundo.pareado(VARANDA, rm.ROXO)
+    mundo.fisicos[VERDE] = rm.Fisico(VERDE, rm.CLASSE_DE_CONTROLE)
+    mundo.fisicos[rm.FONE] = rm.Fisico(rm.FONE, rm.CLASSE_DE_FONE, pareando=True)
+    dono._fotografar()
+    central = _central(dono, mundo, relogio)
+    central.conhecer([
+        _controle(VERMELHO, SALA, "som"),
+        _controle(AZUL, SALA, "som"),
+        _controle(rm.ROXO, VARANDA),
+    ])
+    _ela_segura_ps_create(mundo, relogio, VERDE)
+
+    feito = central.conectar()
+
+    assert (feito.estado, feito.aparelho, feito.destino) == (cr.CHEGOU, VERDE, QUARTO)
+    assert feito.origens == ()
+    assert [c for c, _a in mundo.metodos("StartDiscovery")] == [rm.HCIS[QUARTO]]
+    assert [c for c, _a in mundo.metodos("Pair")] == [rm.no_de(QUARTO, VERDE)]
+    assert mundo.lapides == []
+    assert [m.aparelho for m in central.movimentos()] == [VERDE], "a chave vira o endereço"
+
+
+def test_o_conectar_de_quem_morava_em_outro_adaptador_e_um_mover(
+    diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
+) -> None:
+    central = _central(dono, mundo, relogio)
+    _ela_segura_ps_create(mundo, relogio, VERMELHO)
+
+    feito = central.conectar(QUARTO)
+
+    assert (feito.estado, feito.aparelho) == (cr.CHEGOU, VERMELHO)
+    assert feito.origens == (SALA,)
+    assert mundo.lapides == [(SALA, VERMELHO)]
+    assert mundo.objeto(SALA, AZUL) is not None
+
+
+def test_o_conectar_ignora_o_que_o_destino_ja_conhecia(
+    diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
+) -> None:
+    """Uma sobra de busca antiga no quarto não é quem ela está segurando.
+
+    MORDIDA: tire o ``endereco not in antes`` — o ``Pair`` vai para a sobra,
+    que não está pareando, e esta régua reprova.
+    """
+    sobra = rm.Fisico("aa:bb:cc:00:00:5a", rm.CLASSE_DE_CONTROLE)
+    mundo.fisicos[sobra.endereco] = sobra
+    mundo._achar(QUARTO, sobra)
+    mundo.fisicos[VERDE] = rm.Fisico(VERDE, rm.CLASSE_DE_CONTROLE)
+    central = _central(dono, mundo, relogio)
+    _ela_segura_ps_create(mundo, relogio, VERDE)
+
+    feito = central.conectar(QUARTO)
+
+    assert (feito.estado, feito.aparelho) == (cr.CHEGOU, VERDE)
+
+
+def test_o_conectar_sem_ninguem_na_janela_nao_chegou(
+    diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
+) -> None:
+    central = _central(dono, mundo, relogio)
+
+    feito = central.conectar(QUARTO)
+
+    assert (feito.estado, feito.motivo, feito.aparelho) == (
+        cr.NAO_CHEGOU, cr.MOTIVO_SEM_GESTO, cr.CONECTANDO
+    )
+    assert mundo.propriedade_do_adaptador(QUARTO, "Pairable") is False
+    assert mundo.metodos("Pair") == []
+
+
 def test_o_equilibrar_propoe_um_e_so_depois_do_chegou_o_proximo(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
