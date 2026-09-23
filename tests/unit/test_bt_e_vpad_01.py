@@ -134,7 +134,7 @@ def test_o_botao_do_mic_nao_muta_o_aparelho_de_terceiro() -> None:
     (`status[1]` BIT(2), `core/physical_report_reader.py:186`), não o botão.
     Fixar o `common[9]` cegaria o NOSSO leitor — e nem por completo, porque o
     keepalive é limitado à janela de confirmação de 2 s
-    (`core/backend_pydualsense.py:874-879`).
+    (`core/backend_pydualsense.py:934-939`).
 
     Mordida: repor `toggle_default_source_mute` no laço — esta régua reprova.
     """

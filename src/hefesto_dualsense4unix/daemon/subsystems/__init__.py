@@ -18,7 +18,7 @@ aqui NÃO o liga**: a lista e o `run()` têm de andar juntos, e o teste
 `tests/unit/test_bt_mic_subsystem_registrado.py` trava exatamente isso.
 
 SÃO **TRÊS** LUGARES, E ESTE AVISO DIZIA DOIS (medido em 07/09/2026). O
-desligamento não passa pela lista tampouco: `daemon/connection.py:1485,1530`
+desligamento não passa pela lista tampouco: `daemon/connection.py:1610,1530`
 chama `_stop_bt_mic` e `_stop_metrics` **pelo nome**. Quem seguir a receita de
 duas metades sobe o subsystem e nunca o para — e, no caso do som, o nó fica na
 lista de saída dela depois de o daemon morrer. A receita completa é: a lista

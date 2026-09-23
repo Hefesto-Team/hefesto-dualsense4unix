@@ -44,7 +44,7 @@ def _coop(derrubado: bool, secundarios: int, players: int = 1) -> dict[str, Any]
 
     `enabled=True` com `players=1` durante a queda NÃO é engano do teste: é o
     que `ipc_handlers.py:1613-1622` publica de verdade, porque `disable()` não
-    toca em `coop_enabled` (`coop.py:1337-1345`).
+    toca em `coop_enabled` (`coop.py:1372-1380`).
     """
     return {
         "enabled": True,

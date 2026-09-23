@@ -266,7 +266,7 @@ class Ensaio:
     #: um ensaio pode precisar de mais de um, e a casa pagou por supor que não:
     #: a vibração ficou muda na primeira folha com só o `COMPATIBLE_VIBRATION`
     #: ligado — ela reportou *"não funciona, mas na interface isso funciona"*, e
-    #: o produto liga QUATRO (`backend_pydualsense.py:1283-1304`).
+    #: o produto liga QUATRO (`backend_pydualsense.py:1343-1364`).
     autorizacoes: tuple[tuple[int, int], ...]
     flag_nome: str
     estado: str = "aberto"

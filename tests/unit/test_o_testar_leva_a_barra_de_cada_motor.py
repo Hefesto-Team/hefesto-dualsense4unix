@@ -181,7 +181,7 @@ def test_a_barra_direita_mexe_no_weak_e_nao_no_strong(pac, a05) -> None:
     """A INVERSÃO, que é a armadilha deste assunto — e ela tem de estar certa.
 
     `weak` é o motor da DIREITA (`d`) e `strong` o da ESQUERDA (`e`)
-    (`core/backend_pydualsense.py:3840`: `setLeftMotor(eff_strong)`). Uma troca
+    (`core/backend_pydualsense.py:3908`: `setLeftMotor(eff_strong)`). Uma troca
     aqui daria uma régua verde sobre um produto que reduz o punho errado — e a
     mão dela é o único instrumento que veria.
 

@@ -163,7 +163,7 @@ async def test_boot_real_ipc_switch_sobrevive_device_recriado(
     await daemon._ipc_server._handle_profile_switch({"name": "kbdprof"})
     kbd_antigo.set_bindings.assert_called_once()
 
-    # connection.py:233-236 anula no disconnect; reload recria outro device.
+    # connection.py:236-239 anula no disconnect; reload recria outro device.
     daemon._keyboard_device = None
     kbd_novo = MagicMock()
     daemon._keyboard_device = kbd_novo

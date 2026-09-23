@@ -21,7 +21,7 @@ a nomeie —, e é o que este arquivo transforma em portão. Quem "otimizar"
 sem tocar em nenhuma linha de cache. Arrancada a cura — `discover` passando a
 devolver o MESMO objeto —, os dois testes abaixo reprovam.
 
-Ver também `core/backend_pydualsense.py:2796` (item 4 do
+Ver também `core/backend_pydualsense.py:2864` (item 4 do
 `reescrever_lightbar_por_hidraw`), que já registra o `skip_cache` como
 AGRAVANTE e não como causa: o ``multi_intensity`` mostra o valor PEDIDO, nunca
 o ACESO.

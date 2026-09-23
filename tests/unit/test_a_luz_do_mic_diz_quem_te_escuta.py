@@ -232,7 +232,7 @@ async def _rodar(
     """Sobe o laço, deixa dar `voltas` consultas, e o derruba pelo cancelamento.
 
     O derrube é o do produto: `connection.shutdown` faz `task.cancel()` e
-    depois `await task` (`daemon/connection.py:1383-1387`). Testar com um
+    depois `await task` (`daemon/connection.py:1500-1504`). Testar com um
     `_parando = True` educado mediria um caminho que o daemon nunca toma.
 
     **Devolve o que foi escrito EM VOO**, tirado antes do cancelamento. A
@@ -539,7 +539,7 @@ async def test_o_nivel_chega_inteiro_pelo_caminho_que_carrega_o_nivel(
     """`2` e `3` saem como `2` e `3`, e `set_mic_led` NUNCA é chamado.
 
     Medido em 03/09/2026 nesta árvore: `set_mic_led` coage a `bool` duas vezes
-    em série (`core/backend_pydualsense.py:3995` e `:372`), e o `2` e o `3`
+    em série (`core/backend_pydualsense.py:4063` e `:372`), e o `2` e o `3`
     viram `1` sem erro e sem log — luz acesa fixa onde devia piscar, que se lê
     como *"a PEÇA B não está detectando som"*. O dublê expõe as DUAS portas de
     propósito: se alguém trocar o caminho, a lista errada é que enche.

@@ -143,7 +143,7 @@ class _Backend:
 
         `core/backend_pydualsense.describe_controllers` devolve uma entrada por
         HANDLE ABERTO e mantém o `uniq` preenchido quando o controle cai
-        (`backend_pydualsense.py:5298`). Quem lê só o `uniq` vê o controle na
+        (`backend_pydualsense.py:5492`). Quem lê só o `uniq` vê o controle na
         mesa; só quem exige o `connected` vê que ele saiu.
         """
         self.caidos.add(uniq)
@@ -857,7 +857,7 @@ async def test_o_dono_que_caiu_do_cabo_com_o_handle_aberto_nao_e_nomeado() -> No
     `test_o_eleito_que_saiu_da_mesa_nao_e_publicado_como_dono_de_agora` tira a
     entrada inteira do `describe_controllers`. **O backend real não faz isso.**
     Ele devolve uma entrada por HANDLE ABERTO e mantém o `uniq` preenchido com
-    `connected: False` (`core/backend_pydualsense.py:5298`) — o handle só
+    `connected: False` (`core/backend_pydualsense.py:5492`) — o handle só
     fecha quando alguém o fecha.
 
     E aí as DUAS leituras da mesa divergiam, no mesmo `state_full`:
