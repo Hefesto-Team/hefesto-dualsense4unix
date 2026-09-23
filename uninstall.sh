@@ -467,17 +467,17 @@ compgen -G '/var/lib/hefesto-dualsense4unix/radio-diario.jsonl*' >/dev/null 2>&1
 [[ -e /etc/modprobe.d/hefesto-hid-playstation.conf ]] && _NEEDS_SUDO=1
 [[ -e /etc/modprobe.d/hefesto-uhid.conf ]] && _NEEDS_SUDO=1
 command -v dkms >/dev/null 2>&1 \
-    && dkms status hefesto-hid-playstation 2>/dev/null | grep -q . \
+    && [[ -n "$(dkms status hefesto-hid-playstation 2>/dev/null)" ]] \
     && _NEEDS_SUDO=1
 command -v dkms >/dev/null 2>&1 \
-    && dkms status hefesto-hid-nintendo 2>/dev/null | grep -q . \
+    && [[ -n "$(dkms status hefesto-hid-nintendo 2>/dev/null)" ]] \
     && _NEEDS_SUDO=1
 # Onda W: DKMS rtw88_usb patchado (fantasma USB) — dkms remove é root; sem
 # conf em /etc/modprobe.d (mesma observação da Onda T: `dkms status` sem
 # sudo já lista o registro, então só a REMOÇÃO precisa de credencial). O
 # conf.d de powersave do NM (W2) também precisa root para remover.
 command -v dkms >/dev/null 2>&1 \
-    && dkms status hefesto-rtw88-usb 2>/dev/null | grep -q . \
+    && [[ -n "$(dkms status hefesto-rtw88-usb 2>/dev/null)" ]] \
     && _NEEDS_SUDO=1
 [[ -e /etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf ]] && _NEEDS_SUDO=1
 # O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01: o vigia do dongle Wi-Fi USB — script de
@@ -1303,7 +1303,7 @@ fi
 # params vivos a 0 via /sys (0644, sem reload — a conf que os ligou já saiu).
 # ---------------------------------------------------------------------------
 if command -v dkms >/dev/null 2>&1 \
-        && dkms status hefesto-hid-nintendo 2>/dev/null | grep -q .; then
+        && [[ -n "$(dkms status hefesto-hid-nintendo 2>/dev/null)" ]]; then
     if sudo -n true 2>/dev/null; then
         log "removendo patch DKMS do hid-nintendo (Onda T): dkms remove --all"
         # shellcheck source=scripts/dkms_lib.sh
@@ -1360,7 +1360,7 @@ fi
 # troca consciente no README do patch).
 # ---------------------------------------------------------------------------
 if command -v dkms >/dev/null 2>&1 \
-        && dkms status hefesto-rtw88-usb 2>/dev/null | grep -q .; then
+        && [[ -n "$(dkms status hefesto-rtw88-usb 2>/dev/null)" ]]; then
     if sudo -n true 2>/dev/null; then
         log "removendo patch DKMS do rtw88_usb (Onda W): dkms remove --all"
         # shellcheck source=scripts/dkms_lib.sh
@@ -1394,7 +1394,7 @@ fi
 # /sys (0644), que é lido a cada probe, então a próxima conexão já é vanilla.
 # ---------------------------------------------------------------------------
 if command -v dkms >/dev/null 2>&1 \
-        && dkms status hefesto-hid-playstation 2>/dev/null | grep -q .; then
+        && [[ -n "$(dkms status hefesto-hid-playstation 2>/dev/null)" ]]; then
     if sudo -n true 2>/dev/null; then
         log "removendo patch DKMS do hid-playstation (contenção BT): dkms remove --all"
         # shellcheck source=scripts/dkms_lib.sh
@@ -1440,7 +1440,7 @@ fi
 # controles, o teclado e o mouse sem fio de uma vez. O parâmetro volta a 0 A
 # QUENTE (é 0644 de propósito), o que já devolve o comportamento de fábrica na
 # hora; o módulo de fábrica volta no próximo boot.
-if dkms status 2>/dev/null | grep -q '^hefesto-uhid'; then
+if grep -q '^hefesto-uhid' <<<"$(dkms status 2>/dev/null)"; then
     if sudo -n true 2>/dev/null; then
         log "removendo o patch DKMS do uhid (hefesto-uhid)"
         sudo dkms remove hefesto-uhid/1.0.0 --all >/dev/null 2>&1 || true
