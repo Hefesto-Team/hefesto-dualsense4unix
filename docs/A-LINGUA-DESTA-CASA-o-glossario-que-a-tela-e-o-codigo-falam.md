@@ -54,7 +54,7 @@ se acrescenta aqui antes de entrar na tela.
 | **?** (a dica) | `title`, `data-hef-atributo="title"` | a explicação mora aqui; a tela não explica em linha |
 | **dizer as duas metades** | `AS-DUAS-ABAS-FALAM-01` | quando meio ato deu certo, a frase diz o que deu e o que não deu |
 | **chip** (a pílula de fundo cheio no rótulo) | `.selo-ativo`, `.rot .canal`, `.rot .selo-som` da `aba02` | um fato de UMA palavra que se lê de relance; a geometria é UMA declaração para os três, nunca cópia |
-| **acordado** · **dormindo** (o canal do alto-falante) | `audio_saida.CANAL_ACORDADO` / `CANAL_DORMINDO`, tradução do `RUNNING`/`IDLE` do `pactl` | a palavra é do daemon e não se reescreve; a tela só sobe a CAIXA, por `text-transform` |
+| **ATIVO** · **DESLIGADO** (a pílula do alto-falante) | `mesa_viva.selo_do_alto_falante`, o mudo que o `♪` lê | DESLIGADO só quando ela calou o `♪`; canal parado é ATIVO, no cabo e no rádio. O sono do canal (`audio_saida.CANAL_ACORDADO` / `CANAL_DORMINDO`) é palavra da CASA e não vai à tela — ordem dela, 23/09/2026 (O-ALTO-FALANTE-DIZ-ATIVO-01) |
 
 **Proibido em texto de tela:** `env`, `vdf`, `uinput`, `hidraw`, `MAC`, `uniq`,
 `wrapper_used`, `dedup`, "mesa", "janela do aplicativo", "linha de comando",
