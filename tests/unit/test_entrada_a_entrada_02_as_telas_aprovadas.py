@@ -103,6 +103,12 @@ class Gabinete:
     publica os NÓS de entrada dele, com o buraco vazio ou cheio — é o que a
     fase em pé conta. ``encaixe`` dá o ``connect_type`` de um nó; o padrão é
     ``hotplug``.
+
+    ``deslocamento`` é a mesa DELA: no ``0000:02:00.0`` o par de
+    ``usb2-port1`` é ``usb1-port5`` (medido no ``peer`` em 23/09), e não
+    ``usb1-port1``. Com ``deslocamento=2``, a entrada ``n`` da raiz 3.x é o
+    par da ``n + 2`` da raiz 2.0 — e os dois lados do buraco têm ``devpath``
+    diferente.
     """
 
     def __init__(
@@ -111,6 +117,7 @@ class Gabinete:
         barramentos: Mapping[int, str],
         *,
         encaixe: Mapping[str, str] | None = None,
+        deslocamento: int = 0,
     ) -> None:
         self.raiz = raiz
         self.lista = raiz / "bus" / "usb" / "devices"
@@ -136,7 +143,7 @@ class Gabinete:
         for bus in sorted(barramentos):
             if bus in RAPIDOS and bus - 1 in barramentos:
                 for n in range(1, PORTAS_DO_RAIZ_3X + 1):
-                    self._parear(f"usb{bus - 1}-port{n}", f"usb{bus}-port{n}")
+                    self._parear(f"usb{bus - 1}-port{n + deslocamento}", f"usb{bus}-port{n}")
 
     # -- a árvore ------------------------------------------------------------
 
@@ -575,6 +582,41 @@ def test_nao_alcanco_tira_da_conta_de_vez(vazia: Gabinete, disco: Path) -> None:
     assert foto["ultima"]["gravou"], foto
     declarado = carregar_maquina().lugares[_lugar(PCI_B, "5")]
     assert declarado.fora is None and declarado.entrada == foto["ultima"]["entrada"]
+
+
+def test_o_buraco_usb3_da_raiz_que_numera_diferente_tem_o_lugar_do_lado_20(
+    tmp_path: Path, disco: Path
+) -> None:
+    """A mesa DELA: no ``0000:02:00.0`` o par de ``usb2-port1`` é
+    ``usb1-port5`` (o ``peer``, medido em 23/09). Os dois lados do buraco têm
+    ``devpath`` diferente, e o lugar do buraco é o do lado 2.0 — o que o
+    DualSense ganha ali.
+
+    Exigir que os dois lados concordassem dava "não sei" a esses buracos: a
+    entrada aprendida de pé voltava para a conta ao sair o cabo, e o «Não
+    alcanço» não ia ao disco (a cerimônia de amanhã voltava a perguntar).
+
+    MORDIDA: devolva a ``_lugar_do_furo`` o "só quando os nós concordam" —
+    as duas metades reprovam.
+    """
+    deslocada = Gabinete(
+        tmp_path / "sys",
+        BOOT_1,
+        encaixe={"usb1-port3": "hardwired", "usb2-port1": "hardwired"},
+        deslocamento=2,
+    )
+    laco = _em_pe(deslocada)
+    total = laco.estado()["total"]
+    ds = deslocada.plugar(1, "4", DUALSENSE)  # usb1-port4, o par de usb2-port2
+    foto = laco.olhar()
+    assert foto["ultima"]["gravou"] and foto["ultima"]["lugar"] == _lugar(PCI_A, "4"), foto
+    deslocada.tirar(ds)
+    assert laco.olhar()["total"] == total, "a entrada aprendida voltou para a conta"
+
+    foto = laco.nao_alcanco()  # o primeiro a sair: usb1-port3 + usb2-port1
+    assert foto["ultima"]["gravou"], foto["ultima"]
+    assert carregar_maquina().lugares[_lugar(PCI_A, "3")].fora is True
+    assert _em_pe(deslocada).estado()["total"] == total - 2, "o Hefesto voltou a perguntar"
 
 
 def test_o_contador_em_pe_e_refeito_pela_leitura_de_agora(vazia: Gabinete, disco: Path) -> None:
