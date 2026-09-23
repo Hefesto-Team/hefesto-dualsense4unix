@@ -29,3 +29,12 @@ seção daqui**: a aba deixou de estar em trabalho.
   publicar, o desenho parado continua o velho; a tela viva já pinta pelo
   pacote: «ATIVO» no cabo e no rádio, «DESLIGADO» só com o ♪ calado, e sem o
   «Canal dormindo».
+
+## calibrar-sensores.html
+- **23/09/2026** — A-CALIBRACAO-TEM-O-TAMANHO-DO-PROGRAMA-01, esperando a sessão
+  dela. A caixa da Calibrar passa a ter o recuo, a largura e a altura da janela
+  das abas (lidos do `topo.html` pela `calibrar.moldura()`): na TV dela, de
+  1180 x 499 para 1600 x 808, igual à Controles. O que sobra de altura fica
+  entre os cartões e o rodapé, que desce para o fim da caixa como o das abas; e
+  o miolo rola por dentro quando a janela encolhe. Enquanto ela não publicar, o
+  produto continua com a caixa menor.

@@ -139,13 +139,18 @@ CSS = """
     --m:ui-monospace,"JetBrains Mono","Fira Mono","DejaVu Sans Mono",monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:#11121a;color:var(--fg);font-family:var(--f);padding:22px;
+  /* O RECUO DO `body` E O TAMANHO DA `.cx` NÃO MORAM AQUI — 23/09/2026: vêm
+     da `moldura()`, lidos do `topo.html`. A razão está acima de `calibrar.moldura`. */
+  body{background:#11121a;color:var(--fg);font-family:var(--f);
        display:flex;flex-direction:column;align-items:center;gap:16px}
   .mono{font-family:var(--m)}
-  .cx{width:1180px;max-width:100%;background:var(--app-bg);border-radius:11px;
-      border:1px solid var(--border-sutil);overflow:hidden}
+  /* COLUNA COMO A `.janela`: o cabeçalho fica, o `.corpo` rola por dentro
+     quando a vista encolhe, e a caixa nunca passa da tela. */
+  .cx{background:var(--app-bg);border-radius:11px;
+      border:1px solid var(--border-sutil);overflow:hidden;
+      display:flex;flex-direction:column}
   .topo{padding:15px 20px;border-bottom:1px solid var(--border-sutil);
-        position:relative;padding-left:132px}
+        position:relative;padding-left:132px;flex:0 0 auto}
   h1{font-size:18px;font-weight:700}
   h1 .p{color:var(--pink)}
   .sub{font-size:12.5px;color:var(--texto-mudo);margin-top:3px}
@@ -155,7 +160,8 @@ CSS = """
           color:var(--texto-suave);font-size:12px}
   .voltar:hover{border-color:var(--comment);color:var(--fg)}
 
-  .corpo{padding:18px 20px 20px;display:flex;flex-direction:column;gap:14px}
+  .corpo{padding:18px 20px 20px;display:flex;flex-direction:column;gap:14px;
+         flex:1;min-height:0;overflow-y:auto}
 
   /* ---------- OS TRÊS ESTADOS ----------
      Os rádios vêm ANTES de tudo o que reage a eles: o `~` do CSS só enxerga
@@ -253,7 +259,9 @@ CSS = """
   #e-medindo:checked ~ .rodape .barra > i{width:58%}
   #e-pronto:checked  ~ .rodape .barra > i{width:100%;background:var(--green)}
 
-  .rodape{display:flex;align-items:center;gap:13px}
+  /* O RODAPÉ DESCE PARA O FIM DA CAIXA, como o das abas: a altura que sobra
+     vira vão ENTRE os cartões e os botões, nunca abaixo do aviso. */
+  .rodape{display:flex;align-items:center;gap:13px;margin-top:auto}
   .rodape .barra{flex:1}
   /* A CONTA DE QUEM ESTÁ AQUI, e ela fica ao lado do botão de propósito: é a
      última coisa que a tela diz antes de ela apertar «Começar». Ver
@@ -277,6 +285,95 @@ CSS = """
   .aviso{font-size:12px;color:var(--texto-mudo);line-height:17px}
   .aviso b{color:var(--texto-suave);font-weight:600}
 """
+
+
+# A CAIXA TEM O TAMANHO DA JANELA DAS ABAS — 23/09/2026,
+# A-CALIBRACAO-TEM-O-TAMANHO-DO-PROGRAMA-01. Ela, com a foto da tela:
+#
+#     "na aba de calibração ela tem altura e largura de layout inferior sendo
+#      que deveria ser a mesma do programa."
+#
+# MEDIDO NO PILOTO ANTES DA CURA, na MESMA janela oculta, indo da Controles à
+# Calibrar pelo botão dela:
+#
+#     vista       02-controles `.janela`   calibrar `.cx`
+#     1212x809    1180 x 777               1168 x 499
+#     1918x840    1600 x 808               1180 x 499   <- a TV dela
+#     1212x700    1180 x 668               1168 x 499
+#
+# A vista era a mesma nas duas páginas, logo a janela hospeda as duas igual: a
+# causa era ESTA folha — `width:1180px` (a largura das abas antes de 08/09),
+# `body{padding:22px}` e a altura que o conteúdo desse.
+#
+# O TAMANHO TEM DONO, e é o `topo.html`: o recuo, o piso, o teto e a altura da
+# vista (`--recuo-do-corpo`, `--piso-da-vista`, `--teto-da-vista`,
+# `--alt-janela`) e as quatro propriedades de tamanho da `.janela`. Esta página
+# os LÊ de lá a cada geração; redigitá-los aqui foi exatamente como o 1180
+# ficou para trás quando as abas passaram a esticar.
+
+#: As variáveis do `:root` do `topo.html` que a `.janela` usa para se medir.
+VARIAVEIS_DA_MOLDURA = ("--recuo-do-corpo", "--piso-da-vista", "--teto-da-vista",
+                        "--alt-janela")
+
+#: As propriedades da `.janela` que são TAMANHO. A borda, o raio e a sombra são
+#: aparência, e esta página continua com a dela.
+TAMANHO_DA_JANELA = ("width", "height", "max-width", "max-height")
+
+
+def _folha_do_topo(topo: str) -> str:
+    """O CSS do `<style>` do esqueleto das abas, sem os comentários.
+
+    Sem comentário porque o `topo.html` CITA as próprias regras dentro deles —
+    `clamp(--piso-da-vista, …)` está escrito num comentário ao lado da regra
+    de verdade, e uma leitura que os visse acharia duas.
+    """
+    estilo = topo.split("<style>", 1)[1].split("</style>", 1)[0]
+    return re.sub(r"/\*.*?\*/", "", estilo, flags=re.S)
+
+
+def _regra(css: str, seletor: str) -> dict[str, str]:
+    """As declarações da ÚNICA regra `seletor{…}` da folha, por propriedade.
+
+    Zero ou duas é erro que PARA a geração: uma página que caísse num tamanho
+    de reserva ficaria menor que as abas de novo, calada.
+    """
+    achadas = re.findall(rf"(?<=[}}\s]){re.escape(seletor)}\s*\{{([^{{}}]*)\}}", css)
+    if len(achadas) != 1:
+        raise SystemExit(f"ERRO: o topo.html tem {len(achadas)} regra(s) "
+                         f"`{seletor}{{…}}`, e a calibração lê o tamanho das abas "
+                         f"de UMA só.")
+    declaracoes: dict[str, str] = {}
+    for linha in achadas[0].split(";"):
+        prop, sep, valor = linha.partition(":")
+        if sep and prop.strip():
+            declaracoes[prop.strip()] = " ".join(valor.split())
+    return declaracoes
+
+
+def moldura(topo: str | None = None) -> str:
+    """A folha que dá à `.cx` o recuo e o tamanho da `.janela` das dez abas.
+
+    Lida do `topo.html` (`monta.TOPO`) a cada geração. ``topo`` existe para a
+    régua trocar o esqueleto e ver esta página acompanhar.
+    """
+    css = _folha_do_topo(monta.TOPO if topo is None else topo)
+    variaveis: list[str] = []
+    for nome in VARIAVEIS_DA_MOLDURA:
+        achados = re.findall(rf"{re.escape(nome)}\s*:\s*([^;]+);", css)
+        if len(achados) != 1:
+            raise SystemExit(f"ERRO: o topo.html declara `{nome}` {len(achados)} "
+                             f"vez(es) — a calibração lê o tamanho das abas de lá.")
+        variaveis.append(f"{nome}:{' '.join(achados[0].split())}")
+    janela = _regra(css, ".janela")
+    corpo = _regra(css, "body")
+    faltam = [p for p in TAMANHO_DA_JANELA if p not in janela]
+    if faltam or "padding" not in corpo:
+        raise SystemExit(f"ERRO: o topo.html não diz mais {faltam or ['padding']} "
+                         f"— a calibração não sabe o tamanho das abas.")
+    tamanho = ";".join(f"{p}:{janela[p]}" for p in TAMANHO_DA_JANELA)
+    return (f"  :root{{{';'.join(variaveis)}}}\n"
+            f"  body{{padding:{corpo['padding']}}}\n"
+            f"  .cx{{{tamanho}}}\n")
 
 
 def _svg(c):
@@ -386,11 +483,12 @@ def controles(quem):
     return "\n".join(controle(c) for c in quem)
 
 
-def main():
-    # O ARQUIVO NASCE COM A BANCADA DO DESENHO, e o produto a substitui no
-    # primeiro tique — é o mesmo contrato das dez abas. O que mudou em 11/09 é
-    # que agora HÁ quem substitua: `pacotes/a11_calibrar_sensores.py`.
-    quem = monta.CONECTADOS
+def documento(quem):
+    """A página inteira, com os cartões de ``quem``, pronta para gravar.
+
+    PÚBLICA para a régua do tamanho medir a página com 1, 2 e 4 controles — a
+    MATRIZ dela — sem gravar arquivo; o `main()` grava a da bancada do desenho.
+    """
     # O PLURAL SAIU DA FRASE — 11/09/2026, aprovado por ela. A linha dizia
     # «dos dois controles» e caía em «dos 1 controles» com um controle só na
     # bancada: a contagem era do desenho, não de quem lê. «todos os controles
@@ -402,7 +500,7 @@ def main():
 <head>
 <meta charset="utf-8">
 <title>Hefesto — calibrar sensores de movimento</title>
-<style>{CSS}</style>
+<style>{CSS}{moldura()}</style>
 </head>
 <body>
 
@@ -478,8 +576,15 @@ def main():
 </body>
 </html>
 '''
-    saida = onde.pagina("calibrar-sensores.html")
-    saida.write_text("\n".join(l.rstrip() for l in html.split("\n")))
+    return "\n".join(l.rstrip() for l in html.split("\n"))
+
+
+def main():
+    # O ARQUIVO NASCE COM A BANCADA DO DESENHO, e o produto a substitui no
+    # primeiro tique — é o mesmo contrato das dez abas. O que mudou em 11/09 é
+    # que agora HÁ quem substitua: `pacotes/a11_calibrar_sensores.py`.
+    quem = monta.CONECTADOS
+    onde.pagina("calibrar-sensores.html").write_text(documento(quem))
     # O «s» ENTRE PARÊNTESES SAIU DAQUI TAMBÉM — 11/09/2026. Não é texto de
     # tela, mas é a mesma concordância, e a régua que a cobra lê este arquivo
     # inteiro — inclusive esta linha, que por isso não o escreve.
