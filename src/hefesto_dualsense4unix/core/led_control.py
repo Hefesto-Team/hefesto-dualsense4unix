@@ -417,7 +417,7 @@ def cor_escolhida(rgb: RGB | None) -> RGB | None:
     """A cor que a pessoa escolheu — ``None`` quando não houve escolha.
 
     **O PRETO É BANIDO COMO COR — 22/09/2026, ordem dela:** *"vamos banir esse
-    preto de aparecer independente do controle tambem"*. <!-- noqa-acento -->
+    preto de aparecer independente do controle tambem"*. <!-- noqa-acento: citação literal dela -->
 
     A QUEIXA QUE O REVELOU, e ela é de um controle só: *"pq o lightbar do
     starlight blue sempre desliga após conectar? mesmo o perfil atual não
