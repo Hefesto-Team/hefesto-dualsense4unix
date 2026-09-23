@@ -519,7 +519,9 @@ def test_o_laudo_de_hoje_sai_com_as_tres_medicoes(mi, capsys):
     for cabeca in ("MEDIÇÃO 1", "MEDIÇÃO 2", "MEDIÇÃO 3",
                    "O CUSTO DE CADA DEGRAU"):
         assert cabeca in saida
-    assert "D-COSTURA-BLUEZ" in saida, (
+    # 23/09/2026: era D-COSTURA-BLUEZ, que ganhou régua na ENTRADA-A-ENTRADA-02
+    # e saiu do balde — a melhora. A D-GESTO-DO-MAPA segue só no cabeçalho.
+    assert "D-GESTO-DO-MAPA" in saida, (
         "as citadas só no cabeçalho saem NOMEADAS — é a fila mais barata")
     assert "D-AUDIO-E-GIRO-NASCEM-LIGADOS" in saida
 

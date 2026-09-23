@@ -606,10 +606,16 @@ class TestOVigiaTravaSozinho:
         ]
 
     def test_o_terceiro_passo_do_vigia_e_o_manter(self) -> None:
-        """MORDIDA: tire a linha do `--manter` da unidade."""
+        """MORDIDA: tire a linha do `--manter` da unidade.
+
+        23/09/2026: eram três passos; o quarto, as opções de inicialização por
+        jogo (5075c2bb6, 21/09), entrou depois do pino e a régua ficou contando
+        o mundo de antes.
+        """
         execs = self._execstarts()
-        assert len(execs) == 3, execs
+        assert len(execs) == 4, execs
         assert execs[2] == "-/usr/bin/env python3 __PROTON_PIN__ --manter"
+        assert execs[3] == "-/usr/bin/env python3 __OPCOES_POR_JOGO__ --aplicar"
 
     def test_o_install_substitui_o_placeholder(self) -> None:
         assert "s#__PROTON_PIN__#${PROTON_PIN_PY}#g" in INSTALL
@@ -624,7 +630,7 @@ class TestOVigiaTravaSozinho:
             capture_output=True, text=True, check=True, timeout=30,
         )
         execs = [ln for ln in r.stdout.splitlines() if ln.startswith("ExecStart=")]
-        assert len(execs) == 2 and all("__PROTON_PIN__" not in e for e in execs), execs
+        assert len(execs) == 3 and all("__PROTON_PIN__" not in e for e in execs), execs
 
     def test_com_keep_steam_input_so_a_linha_do_steam_input_sai(self) -> None:
         """`--keep-steam-input` é opt-out SÓ do PSSupport: o atalho e o pino
@@ -638,14 +644,14 @@ class TestOVigiaTravaSozinho:
             return [ln for ln in r.stdout.splitlines() if ln.startswith("ExecStart=")]
 
         so_si = _execs("/^ExecStart=.*__SCRIPT__/d")
-        assert len(so_si) == 2 and "__SENTINELA__" in so_si[0], so_si
+        assert len(so_si) == 3 and "__SENTINELA__" in so_si[0], so_si
         assert so_si[1].endswith("__PROTON_PIN__ --manter"), so_si
         os_dois = _execs("/^ExecStart=.*__SCRIPT__/d", "/^ExecStart=.*__PROTON_PIN__/d")
-        assert len(os_dois) == 1 and "__SENTINELA__" in os_dois[0], os_dois
+        assert len(os_dois) == 2 and "__SENTINELA__" in os_dois[0], os_dois
 
     @pytest.mark.parametrize(
         ("keep", "no_pin", "esperado"),
-        [(0, 0, 3), (1, 0, 2), (0, 1, 2), (1, 1, 1)],
+        [(0, 0, 4), (1, 0, 3), (0, 1, 3), (1, 1, 2)],
         ids=["padrão", "keep-steam-input", "no-proton-pin", "os-dois"],
     )
     def test_o_trecho_do_install_renderiza_a_unidade_de_cada_escolha(
@@ -678,6 +684,7 @@ class TestOVigiaTravaSozinho:
                  "USER_UNIT_DIR": str(unidades),
                  "SENTINELA_PY": "/x/sentinela_do_wrapper.py",
                  "PROTON_PIN_PY": "/x/proton_pin.py",
+                 "OPCOES_POR_JOGO_PY": "/x/opcoes_por_jogo.py",
                  "KEEP_STEAM_INPUT": str(keep), "NO_PROTON_PIN": str(no_pin)},
         )
         assert r.returncode == 0, r.stdout + r.stderr
@@ -688,6 +695,7 @@ class TestOVigiaTravaSozinho:
         assert any("disable_steam_input.sh" in e for e in execs) is (keep == 0), execs
         assert any("proton_pin.py --manter" in e for e in execs) is (no_pin == 0), execs
         assert any("sentinela_do_wrapper.py" in e for e in execs), execs
+        assert any("opcoes_por_jogo.py --aplicar" in e for e in execs), execs
         assert not any(re.search(r"__[A-Z_]+__", e) for e in execs), execs
 
     def test_o_vigia_nao_mora_dentro_do_opt_out_do_pssupport(self) -> None:
