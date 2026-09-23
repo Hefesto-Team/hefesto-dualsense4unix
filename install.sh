@@ -2616,12 +2616,14 @@ install_censo_do_gabinete_host
 # LTS, 5.85) traz ~10 fixes de crash de input/uhid ausentes no 5.72 (família
 # upstream #815 + fixes de HIDP core).
 #
-# Este passo só CONSOME um build feito à parte (dget + dch --local +
-# mk-build-deps + dpkg-buildpackage — ver o estudo §3 item 1): .debs
-# versionados em ~/.cache/hefesto-dualsense4unix/bluez-backport/ com
-# SHA256SUMS. Sem o cache, avisamos como gerar e seguimos SEM falhar o
-# install (o backport é conveniência de resiliência, não requisito de
-# funcionamento — o controle já funciona no 5.72).
+# Este passo só CONSOME um build feito à parte, pelo
+# `scripts/construir_bluez_backport.sh` (a receita inteira, fixada por hash no
+# `assets/bluez-backport/BASELINE`): três .debs versionados em
+# ~/.cache/hefesto-dualsense4unix/bluez-backport/ com SHA256SUMS. Sem o cache,
+# avisamos como gerar e seguimos SEM falhar o install (o backport é conveniência
+# de resiliência, não requisito de funcionamento — o controle já funciona no
+# 5.72). O install NÃO constrói: são uns 3 minutos e 824 MB de obra, com as
+# dependências de build — decisão de quem coordena, 23/09/2026.
 #
 # EFEITO COLATERAL MEDIDO (documentado, não escondido):
 #   (a) o postinst do PRÓPRIO pacote bluez reinicia o bluetoothd ao trocar de
@@ -2634,137 +2636,217 @@ install_censo_do_gabinete_host
 #   (c) ≥5.73 muda o input BT para a via uhid (bluetoothd passa a ser dono do
 #       /dev/uhid do controle) — contingência documentada se aparecer
 #       regressão: UserspaceHID=false em /etc/bluetooth/input.conf.
+# O VEREDITO DO 3f É DO BINÁRIO, e não da versão (INSTALL-E-UNINSTALL-DO-RADIO-01,
+# 23/09/2026 — decisão de quem coordena sobre o relato da BLUETOOTHD-NAO-DERRUBA-01).
+#
+# O portão de antes perguntava `bluetoothd --version`, que imprime «5.86» para o
+# .3 e para o .4, e pulava por «já ≥ 5.79». O .4 traz o hefesto-0002 (o EAGAIN
+# do socket L2CAP deixa de derrubar a sessão HID) e nunca chegaria sobre o .3. E
+# comparar a versão do dpkg também não basta: um 5.86-0ubuntu0.1 OFICIAL passa
+# de qualquer ~hefesto na ordem do dpkg e não traz patch nenhum. Então a pergunta
+# vai ao BINÁRIO que o systemd executa: ele carrega a marca de cada patch
+# (`MARCA_hefesto-NNNN` do `assets/bluez-backport/BASELINE`, o dono do fato)?
+#
+# Imprime `<veredito>\t<detalhe>`, uma linha:
+#   curado        — o binário traz todas as marcas, e os três pacotes estão no alvo;
+#   atras         — o binário traz, mas bluez-cups/libbluetooth3 estão abaixo do alvo;
+#   fora-do-dpkg  — faltam marcas num binário que NÃO é do dpkg (tarball em /opt):
+#                   trocar o pacote não troca o que o systemd executa;
+#   precisa       — faltam marcas num binário do dpkg: o backport resolve;
+#   sem-binario   — não há bluetoothd a perguntar.
+# Função pura sobre o que recebe — a régua `tests/unit/test_o_portao_do_bluez_pergunta_ao_binario.py`
+# a roda com binários e `dpkg` de mentira.
+_bz_veredito() {
+    local vivo="$1" baseline="$2" alvo="$3"
+    local nome marca pkg ver do_dpkg=0
+    local faltam=() atras=()
+    if [[ -z "${vivo}" || ! -f "${vivo}" ]]; then
+        printf 'sem-binario\t\n'
+        return 0
+    fi
+    while IFS=$'\t' read -r nome marca; do
+        [[ -n "${marca}" ]] || continue
+        grep -a -q -F -- "${marca}" "${vivo}" 2>/dev/null || faltam+=("${nome}")
+    done < <(sed -n 's/^MARCA_\([^=]*\)=\(.*\)$/\1\t\2/p' "${baseline}" 2>/dev/null)
+    dpkg -S "${vivo}" >/dev/null 2>&1 && do_dpkg=1
+    if [[ "${#faltam[@]}" -gt 0 ]]; then
+        if [[ "${do_dpkg}" -eq 1 ]]; then
+            printf 'precisa\t%s\n' "${faltam[*]}"
+        else
+            printf 'fora-do-dpkg\t%s\n' "${faltam[*]}"
+        fi
+        return 0
+    fi
+    if [[ "${do_dpkg}" -eq 1 ]]; then
+        for pkg in bluez bluez-cups libbluetooth3; do
+            ver="$(dpkg-query -W -f='${Version}' "${pkg}" 2>/dev/null || true)"
+            [[ -n "${ver}" ]] || continue
+            if dpkg --compare-versions "${ver}" lt "${alvo}" 2>/dev/null; then
+                atras+=("${pkg}=${ver}")
+            fi
+        done
+    fi
+    if [[ "${#atras[@]}" -gt 0 ]]; then
+        printf 'atras\t%s\n' "${atras[*]}"
+    else
+        printf 'curado\t\n'
+    fi
+}
+
+# A maior versão que o ARCHIVE serve de um pacote, sem as nossas (~hefesto).
+# É o que o VERSOES-ANTERIORES.txt registra quando a versão de agora já é um
+# backport desta casa: gravar o .3 sobre o qual o .4 entra daria ao
+# `--restore-bluez` uma versão que repositório nenhum serve, e o `apt-get`
+# dele cairia. Vazio quando o archive não responde — e aí não se grava nada.
+_bz_maior_do_archive() {
+    local pkg="$1" linhas v maior=""
+    linhas="$(apt-cache madison "${pkg}" 2>/dev/null || true)"
+    while IFS= read -r v; do
+        [[ -n "${v}" && "${v}" != *~hefesto* ]] || continue
+        if [[ -z "${maior}" ]] || dpkg --compare-versions "${v}" gt "${maior}" 2>/dev/null; then
+            maior="${v}"
+        fi
+    done < <(awk -F'|' '{ gsub(/[[:space:]]/, "", $2); print $2 }' <<<"${linhas}")
+    printf '%s\n' "${maior}"
+}
+
 if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
    && command -v dpkg >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1; then
-    step "3f" "ONDA-R: BlueZ resiliente (backport 5.86 — crashes crônicos + heap do loop de reconexão)"
-    if ! sudo -n true 2>/dev/null; then
-        warn "sudo recusado — passo do backport bluez pulado (re-execute ./install.sh)"
-    else
-        # Alvo do backport (sprint 2026-07-21-sprint-pesquisa-bluez-estabilidade.md):
-        # 5.86 traz o retry-limit + backoff em loops de reconexão (upstream
-        # 17a227b7) — o retrato estrutural do gatilho do crash de heap medido
-        # em 21/07 no 5.85. 5.87 foi descartado (UAF novo em dev_disconnected,
-        # fix só em git HEAD sem release).
-        # 24.04.2 (22/07): patch hefesto-0001 — mantém o bond no Virtual Cable
-        # Unplug (Pro/8BitDo evaporavam o bond a cada queda no caminho uhid;
-        # ver docs/process/estudos/2026-07-22-pesquisa-pro-controller-bt-*.md).
-        # Alvo é a VERSÃO COMPLETA (não "5.86") para o compare-versions detectar
-        # o upgrade .1→.2 — senão o "já ≥5.86" pularia o patch novo.
-        _BZ_TARGET="5.86-0ubuntu0.1~hefesto24.04.3"
-        # Antes do pacote, o RÁDIO: quem cura o crash é o bluetoothd em
-        # execução. Quem subiu o 5.86 pelo tarball (drop-in da unit apontando
-        # /opt) tinha o dpkg dizendo 5.64 e ouvia deste passo que "o 5.72
-        # crônico segue ativo", com o 5.86 rodando na frente dele.
-        _bz_vivo="$(
-            systemctl show bluetooth.service -p ExecStart --value 2>/dev/null \
-                | grep -oE 'path=[^ ]+' | head -1 | cut -d= -f2
-        )" || true
-        _bz_ja_curado=0
-        if [[ -n "${_bz_vivo}" && -x "${_bz_vivo}" ]]; then
-            _bz_vv="$("${_bz_vivo}" --version 2>/dev/null | tr -d '[:space:]')" || true
-            if [[ -n "${_bz_vv}" ]] && dpkg --compare-versions "${_bz_vv}" ge 5.79 2>/dev/null; then
-                _bz_ja_curado=1
-            fi
-        fi
-        _bz_cur="$(dpkg-query -W -f='${Version}' bluez 2>/dev/null || true)"
-        if [[ "${_bz_ja_curado}" -eq 1 ]]; then
-            printf '      bluetoothd em execução já é %s (%s) — nada a fazer\n' \
-                "${_bz_vv}" "${_bz_vivo}"
-        elif [[ -z "${_bz_cur}" ]]; then
-            printf '      bluez não instalado via dpkg (sistema não-Debian?) — passo pulado\n'
-        elif dpkg --compare-versions "${_bz_cur}" ge "${_BZ_TARGET}" 2>/dev/null; then
-            printf '      bluez %s já ≥%s — nada a fazer\n' "${_bz_cur}" "${_BZ_TARGET}"
-        else
-            printf '      bluez %s < alvo %s (5.72: crashes crônicos de input/HIDP; 5.85: heap corruption no loop de reconexão — ver sprint 2026-07-21)\n' "${_bz_cur}" "${_BZ_TARGET}"
-            _bz_dir="${HOME}/.cache/hefesto-dualsense4unix/bluez-backport"
-            _bz_sums="${_bz_dir}/SHA256SUMS"
-            _bz_deb_bluez="$(ls -t "${_bz_dir}"/bluez_*.deb 2>/dev/null | head -1)" || true
-            _bz_deb_cups="$(ls -t "${_bz_dir}"/bluez-cups_*.deb 2>/dev/null | head -1)" || true
-            _bz_deb_libbt="$(ls -t "${_bz_dir}"/libbluetooth3_*.deb 2>/dev/null | head -1)" || true
-            if [[ ! -f "${_bz_sums}" || -z "${_bz_deb_bluez}" || -z "${_bz_deb_cups}" || -z "${_bz_deb_libbt}" ]]; then
-                # (d) .debs ausentes: NÃO falha o install, só orienta o build.
-                warn "backport não encontrado em ${_bz_dir} — bluetoothd 5.72 crônico segue ativo"
-                # A receita mora na ÁRVORE desde 11/08/2026. Antes esta linha
-                # mandava para `git show arquivo/processo-pre-1.0:...`, um ramo
-                # arquivado — e o `install.sh:1638` já citava o documento como se
-                # ele estivesse aqui. Quem levasse o produto para outra máquina
-                # lia uma instrução que não podia seguir.
-                printf '      como gerar: docs/usage/receita-backport-bluez.md, seção 3, caminho 1\n'
-                printf '      resumo: dget do .dsc do resolute -> dch --local -> mk-build-deps -ir -> dpkg-buildpackage -us -uc -b\n'
+    step "3f" "ONDA-R: BlueZ resiliente (backport 5.86 — crashes crônicos, o laço de reconexão e o EAGAIN que derrubava a sessão)"
+    # Alvo do backport (sprint 2026-07-21-sprint-pesquisa-bluez-estabilidade.md):
+    # 5.86 traz o retry-limit + backoff em loops de reconexão (upstream
+    # 17a227b7). 5.87 foi descartado (UAF novo em dev_disconnected, fix só em
+    # git HEAD sem release). A revisão é a ÚLTIMA do BASELINE (REVISAO_ULTIMA),
+    # que é o que o `scripts/construir_bluez_backport.sh` constrói — a régua
+    # `test_bt_resilience_assets.py` confere as duas contra o BASELINE.
+    #   .2 (22/07) hefesto-0001: mantém o bond no Virtual Cable Unplug;
+    #   .4 (23/09) hefesto-0002: o EAGAIN do socket L2CAP deixa de derrubar a
+    #      sessão HID dos controles (BLUETOOTHD-NAO-DERRUBA-01).
+    _BZ_TARGET="5.86-0ubuntu0.1~hefesto24.04.4"
+    _bz_baseline="${ROOT_DIR}/assets/bluez-backport/BASELINE"
+    _bz_dir="${HOME}/.cache/hefesto-dualsense4unix/bluez-backport"
+    # O binário que o systemd EXECUTA (o drop-in da unit pode tê-lo reapontado
+    # para um tarball em /opt); sem unit legível, o do pacote.
+    _bz_vivo="$(
+        systemctl show bluetooth.service -p ExecStart --value 2>/dev/null \
+            | grep -oE 'path=[^ ]+' | head -1 | cut -d= -f2
+    )" || true
+    if [[ -z "${_bz_vivo}" ]]; then
+        _bz_lista="$(dpkg -L bluez 2>/dev/null || true)"
+        _bz_vivo="$(grep -m1 '/bluetoothd$' <<<"${_bz_lista}" || true)"
+    fi
+    IFS=$'\t' read -r _bz_ver _bz_det <<<"$(_bz_veredito "${_bz_vivo}" "${_bz_baseline}" "${_BZ_TARGET}")"
+    case "${_bz_ver}" in
+        curado)
+            printf '      o bluetoothd em execução (%s) já traz as curas do backport — nada a fazer\n' "${_bz_vivo}"
+            ;;
+        sem-binario)
+            printf '      bluetoothd não encontrado (nem na unit, nem no pacote bluez) — passo pulado\n'
+            ;;
+        fora-do-dpkg)
+            warn "o bluetoothd em execução (${_bz_vivo}) não é do dpkg e não traz ${_bz_det} — trocar o pacote não troca o que o systemd executa; reconstrua esse binário com as curas (scripts/construir_bluez_backport.sh traz a receita) ou volte a unit para o do pacote"
+            ;;
+        precisa|atras)
+            if [[ "${_bz_ver}" == "precisa" ]]; then
+                printf '      o bluetoothd em execução (%s) não traz %s — o backport %s traz\n' \
+                    "${_bz_vivo}" "${_bz_det}" "${_BZ_TARGET}"
             else
-                # SHA256SUMS por basename (portátil — o arquivo pode ter sido
-                # gerado com caminho absoluto de outra máquina/usuário).
-                _bz_ok=1
-                while read -r _bz_sum _bz_path; do
-                    [[ -z "${_bz_sum}" ]] && continue
-                    _bz_bn="$(basename "${_bz_path}")"
-                    _bz_actual="$(sha256sum "${_bz_dir}/${_bz_bn}" 2>/dev/null | awk '{print $1}')"
-                    if [[ -z "${_bz_actual}" || "${_bz_actual}" != "${_bz_sum}" ]]; then
-                        _bz_ok=0
-                        break
-                    fi
-                done < "${_bz_sums}"
-                if [[ "${_bz_ok}" -eq 0 ]]; then
-                    warn "SHA256SUMS não bateu em ${_bz_dir} — backport ABORTADO (nunca instalo .deb não verificado)"
-                else
-                    # (c) AVISO ALTO pré-aplicação — sob --yes prossegue; interativo
-                    # tem Enter=sim (mesma filosofia de default-apply do install),
-                    # mas o texto dá ao usuário a chance de recusar vendo o custo.
-                    printf '\n      >>> AVISO: aplicar o backport do bluez REINICIA o bluetoothd\n'
-                    printf '          (os controles BT caem até reconectar) e a migração DESCARTA os\n'
-                    printf '          bonds antigos — reparei UMA VEZ os controles BT depois (PS+Create\n'
-                    printf '          no DualSense). É a ÚNICA exceção à regra de nunca reiniciar o\n'
-                    printf '          serviço: quem reinicia é o postinst do PRÓPRIO pacote bluez.\n\n'
-                    ask_yn "aplicar o backport agora?" "${AUTO_YES}" "y"
-                    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-                        _faria "gravar ${_bz_dir}/VERSOES-ANTERIORES.txt (o manifesto que o uninstall usa para devolver o BlueZ de origem)"
-                        _faria_root "instalar os .debs do backport do BlueZ (libbluetooth3, bluez, bluez-cups) — o postinst do PRÓPRIO pacote REINICIA o bluetoothd e a migração DESCARTA os bonds atuais"
-                    elif [[ "${REPLY,,}" =~ ^y ]]; then
-                        # (b) grava a versão anterior ANTES de trocar, SE ainda não
-                        # registrada (idempotente — não sobrescreve um registro que
-                        # já exista de uma execução anterior do install).
-                        if [[ ! -f "${_bz_dir}/VERSOES-ANTERIORES.txt" ]]; then
-                            # Arquitetura via dpkg --print-architecture (nunca hardcoded):
-                            # numa arquitetura != amd64 o "libbluetooth3:amd64" fixo faria
-                            # o dpkg-query falhar silenciosamente (stderr descartado, ||
-                            # true) e o registro sairia incompleto, deixando o restore do
-                            # uninstall sem cobrir libbluetooth3.
-                            _bz_arch="$(dpkg --print-architecture 2>/dev/null || echo amd64)"
-                            dpkg-query -W -f='${Package}\t${Version}\n' bluez bluez-cups "libbluetooth3:${_bz_arch}" \
-                                > "${_bz_dir}/VERSOES-ANTERIORES.txt" 2>/dev/null || true
-                            # O `>` CRIA O ARQUIVO MESMO QUANDO O `dpkg-query`
-                            # FALHA, e o `|| true` engole o erro. Pior: o guarda
-                            # `! -f` acima faz um arquivo VAZIO nunca ser
-                            # reescrito — o restore do BlueZ no uninstall ficaria
-                            # sem manifesto PARA SEMPRE, e a tela teria dito
-                            # "gravadas". Vazio some, e a falha sai em voz alta.
-                            if [[ -s "${_bz_dir}/VERSOES-ANTERIORES.txt" ]]; then
-                                printf '      versões anteriores gravadas em %s\n' "${_bz_dir}/VERSOES-ANTERIORES.txt"
-                            else
-                                rm -f "${_bz_dir}/VERSOES-ANTERIORES.txt"
-                                warn "não consegui registrar as versões anteriores do BlueZ — o restore do uninstall não vai cobrir bluez/libbluetooth3"
-                            fi
-                        fi
-                        # DEBIAN_FRONTEND=noninteractive + --force-confdef/--force-confold:
-                        # /etc/bluetooth/main.conf é conffile do dpkg e a esta altura JÁ
-                        # ESTÁ modificado por nós (bloco FastConnectable/JustWorks apensado
-                        # no passo 3d) — sem forçar, um dpkg interativo perguntaria o que
-                        # fazer com o conffile local; sob --yes (ou sem tty) isso pode travar
-                        # esperando resposta. Forçamos manter a versão atual (a nossa).
-                        if sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-downgrades \
-                                -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
-                                "${_bz_deb_libbt}" "${_bz_deb_bluez}" "${_bz_deb_cups}" >/dev/null 2>&1; then
-                            printf '      backport aplicado — reparei os controles BT UMA VEZ (bonds antigos foram descartados)\n'
+                printf '      o bluetoothd já traz as curas, mas %s está abaixo do alvo %s\n' \
+                    "${_bz_det}" "${_BZ_TARGET}"
+            fi
+            _bz_sums="${_bz_dir}/SHA256SUMS"
+            _bz_arch="$(dpkg --print-architecture 2>/dev/null || echo amd64)"
+            # OS NOMES EXATOS da versão alvo, e cada um TEM de estar no
+            # SHA256SUMS com o hash batendo. O `ls -t … | head -1` de antes
+            # escolhia o .deb mais novo do diretório, e um .deb fora do
+            # SHA256SUMS (velho, ou de uma construção pela metade) podia ser o
+            # instalado — o laço conferia só as linhas que o SHA256SUMS tinha.
+            _bz_debs=()
+            _bz_ok=1
+            for _bz_pkg in libbluetooth3 bluez bluez-cups; do
+                _bz_bn="${_bz_pkg}_${_BZ_TARGET}_${_bz_arch}.deb"
+                _bz_sum="$(awk -v bn="${_bz_bn}" '{ n = $2; sub(/^.*\//, "", n); if (n == bn) { print $1; exit } }' "${_bz_sums}" 2>/dev/null || true)"
+                _bz_actual="$(sha256sum "${_bz_dir}/${_bz_bn}" 2>/dev/null | awk '{print $1}' || true)"
+                if [[ -z "${_bz_sum}" || -z "${_bz_actual}" || "${_bz_sum}" != "${_bz_actual}" ]]; then
+                    _bz_ok=0
+                    break
+                fi
+                _bz_debs+=("${_bz_dir}/${_bz_bn}")
+            done
+            if [[ "${_bz_ok}" -eq 0 ]]; then
+                # NÃO falha o install: só orienta a construção, pelo topo da
+                # receita (o script baixa, confere cada hash, aplica a série,
+                # prova a mordida do hefesto-0002 e entrega os três .deb aqui).
+                warn "o backport ${_BZ_TARGET} não está inteiro (e conferido pelo SHA256SUMS) em ${_bz_dir} — o bluetoothd de agora segue"
+                printf '      como gerar: scripts/construir_bluez_backport.sh (uns 3 minutos; não instala nada — depois rode ./install.sh de novo)\n'
+            elif [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+                _faria "gravar ${_bz_dir}/VERSOES-ANTERIORES.txt (o manifesto que o uninstall usa para devolver o BlueZ de origem — com a versão que o archive SERVE)"
+                _faria_root "instalar os .debs do backport do BlueZ ${_BZ_TARGET} (libbluetooth3, bluez, bluez-cups) — o postinst do PRÓPRIO pacote REINICIA o bluetoothd e os controles por Bluetooth caem até reconectar"
+            elif ! sudo -n true 2>/dev/null; then
+                warn "sudo recusado — passo do backport bluez pulado (re-execute ./install.sh)"
+            else
+                # (c) AVISO ALTO pré-aplicação — sob --yes prossegue; interativo
+                # tem Enter=sim (mesma filosofia de default-apply do install),
+                # mas o texto dá ao usuário a chance de recusar vendo o custo.
+                printf '\n      >>> AVISO: aplicar o backport do bluez REINICIA o bluetoothd\n'
+                printf '          (os controles BT caem até reconectar; se algum não voltar,\n'
+                printf '          aperte o PS dele). Na migração 5.72 -> 5.8x os bonds antigos\n'
+                printf '          se perdiam (reparear uma vez); entre revisões do 5.86 não se\n'
+                printf '          mediu perda. É a ÚNICA exceção à regra de nunca reiniciar o\n'
+                printf '          serviço: quem reinicia é o postinst do PRÓPRIO pacote bluez.\n\n'
+                ask_yn "aplicar o backport agora?" "${AUTO_YES}" "y"
+                if [[ "${REPLY,,}" =~ ^y ]]; then
+                    # (b) grava a versão anterior ANTES de trocar, SE ainda não
+                    # registrada (idempotente — não sobrescreve um registro que
+                    # já exista de uma execução anterior do install).
+                    if [[ ! -f "${_bz_dir}/VERSOES-ANTERIORES.txt" ]]; then
+                        # QUANDO A VERSÃO DE AGORA JÁ É NOSSA (~hefesto), o
+                        # registro leva a maior versão que o ARCHIVE serve: o .3
+                        # sobre o qual o .4 entra não existe em repositório
+                        # nenhum, e o restauro do uninstall cairia no apt-get.
+                        # Sem resposta do archive, o pacote fica de fora do
+                        # registro — melhor um restauro parcial dito que um
+                        # restauro que falha.
+                        _bz_reg="$(
+                            for _bz_pkg in bluez bluez-cups "libbluetooth3:${_bz_arch}"; do
+                                _bz_v="$(dpkg-query -W -f='${Version}' "${_bz_pkg}" 2>/dev/null || true)"
+                                [[ -n "${_bz_v}" ]] || continue
+                                if [[ "${_bz_v}" == *~hefesto* ]]; then
+                                    _bz_v="$(_bz_maior_do_archive "${_bz_pkg%%:*}")"
+                                fi
+                                [[ -n "${_bz_v}" ]] && printf '%s\t%s\n' "${_bz_pkg}" "${_bz_v}"
+                            done
+                        )" || _bz_reg=""
+                        # O `>` de antes CRIAVA O ARQUIVO MESMO QUANDO O
+                        # `dpkg-query` FALHAVA, e o guarda `! -f` acima faria um
+                        # arquivo VAZIO nunca ser reescrito. Só se grava o que
+                        # tem conteúdo; a falha sai em voz alta.
+                        if [[ -n "${_bz_reg}" ]]; then
+                            printf '%s\n' "${_bz_reg}" > "${_bz_dir}/VERSOES-ANTERIORES.txt"
+                            printf '      versões anteriores gravadas em %s\n' "${_bz_dir}/VERSOES-ANTERIORES.txt"
                         else
-                            warn "apt-get install do backport falhou — rode manualmente com os .debs em ${_bz_dir}"
+                            warn "não consegui registrar as versões anteriores do BlueZ — o restore do uninstall não vai cobrir bluez/libbluetooth3"
                         fi
-                    else
-                        printf '      pulado a pedido — bluetoothd 5.72 crônico segue ativo\n'
                     fi
+                    # DEBIAN_FRONTEND=noninteractive + --force-confdef/--force-confold:
+                    # /etc/bluetooth/main.conf é conffile do dpkg e a esta altura JÁ
+                    # ESTÁ modificado por nós (bloco FastConnectable/JustWorks apensado
+                    # no passo 3d) — sem forçar, um dpkg interativo perguntaria o que
+                    # fazer com o conffile local; sob --yes (ou sem tty) isso pode travar
+                    # esperando resposta. Forçamos manter a versão atual (a nossa).
+                    if sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-downgrades \
+                            -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
+                            "${_bz_debs[@]}" >/dev/null 2>&1; then
+                        printf '      backport %s aplicado — o bluetoothd reiniciou; os controles BT voltam sozinhos ou com o PS\n' "${_BZ_TARGET}"
+                    else
+                        warn "apt-get install do backport falhou — rode manualmente com os .debs em ${_bz_dir}"
+                    fi
+                else
+                    printf '      pulado a pedido — o bluetoothd de agora segue\n'
                 fi
             fi
-        fi
-    fi
+            ;;
+    esac
 fi
 
 step "3g" "ONDA-R: agente de pareamento BT persistente (cura o bond meio-salvo)"

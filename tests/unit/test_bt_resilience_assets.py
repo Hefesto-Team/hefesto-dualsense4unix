@@ -377,7 +377,18 @@ class TestAlvoBluez586:
         assert re.search(r'_BZ_TARGET="5\.86', text), (
             "passo 3f deve mirar o BlueZ 5.86 (sprint 2026-07-21: retry-limit 17a227b7)"
         )
-        assert "hefesto24.04.3" in text, (
-            "o alvo do 3f deve ser a versão hefesto completa .3 (BOND-KEEP-02: "
-            "unplug não deixa device bonded temporário)"
+        # A REVISÃO É LIDA do BASELINE, que é o dono dela e o que o
+        # `scripts/construir_bluez_backport.sh` constrói (INSTALL-E-UNINSTALL-
+        # DO-RADIO-01, 23/09/2026): esta linha DIGITAVA o ".3", e o install
+        # seguiu mirando o .3 com o .4 — o do hefesto-0002 — pronto no cache.
+        baseline = (
+            Path(__file__).resolve().parents[2] / "assets" / "bluez-backport" / "BASELINE"
+        ).read_text(encoding="utf-8")
+        base = re.search(r"^VERSAO_BASE=(\S+)$", baseline, re.MULTILINE)
+        revisao = re.search(r"^REVISAO_ULTIMA=(\d+)$", baseline, re.MULTILINE)
+        assert base and revisao, "o BASELINE do backport perdeu VERSAO_BASE ou REVISAO_ULTIMA"
+        alvo = f"{base.group(1)}~hefesto24.04.{revisao.group(1)}"
+        assert f'_BZ_TARGET="{alvo}"' in text, (
+            f"o alvo do 3f tem de ser a ÚLTIMA revisão do BASELINE ({alvo}) — é "
+            "ela que o construir_bluez_backport.sh entrega no cache"
         )
