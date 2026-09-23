@@ -6719,6 +6719,97 @@ check_wifi_powersave() {
     fi
 }
 
+# O VIGIA DO DONGLE WI-FI USB (O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01, 23/09/2026).
+# Morava no self-heal do zsh dela; agora é do install, e esta é a pergunta
+# "está de pé?". Quem responde "há Wi-Fi USB?" e "divide hub com o Bluetooth?"
+# é o próprio `wifi_usb.sh` — o dono único da pergunta; o doctor só lê a
+# resposta. Sem root o `wpa_cli` recusa (o socket do wpa_supplicant é de root),
+# então o estado do scan de fundo NÃO se lê daqui: o `--status` diz isso na
+# própria linha, e o que o doctor confere é o que se lê sem privilégio — o
+# timer, o dispatcher (root e 755, senão o NetworkManager o recusa) e o que o
+# vigia disse no journal deste boot.
+#
+# Ganchos de teste: `HEFESTO_WIFI_INSTALADO` (o script instalado) e
+# `HEFESTO_WIFI_DISPATCHER` (o dispatcher) — o `wifi_usb.sh` lê os dele
+# (`HEFESTO_WIFI_SYSFS`…) pelo ambiente herdado.
+check_wifi_usb() {
+    local instalado="${HEFESTO_WIFI_INSTALADO:-/usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh}"
+    local dispatcher="${HEFESTO_WIFI_DISPATCHER:-/etc/NetworkManager/dispatcher.d/90-hefesto-wifi-usb}"
+    local script="" lista="" linha st_timer="" dono_modo="" diario="" n_reset=0 problema=0
+    # Do checkout quando há; senão o instalado. O doctor viaja em pacote sem o
+    # script, e aí a pergunta fica sem quem responda — diz isso em vez de
+    # adivinhar.
+    if [[ -x "${ROOT_DIR}/scripts/wifi_usb.sh" ]]; then
+        script="${ROOT_DIR}/scripts/wifi_usb.sh"
+    elif [[ -x "${instalado}" ]]; then
+        script="${instalado}"
+    fi
+    if [[ -z "${script}" ]]; then
+        info "vigia do Wi-Fi USB: o wifi_usb.sh não está nesta instalação — não sei dizer se há dongle Wi-Fi USB"
+        return 0
+    fi
+    lista="$(bash "${script}" --lista 2>/dev/null || true)"
+    if command -v systemctl >/dev/null 2>&1; then
+        st_timer="$(systemctl is-active hefesto-wifi-usb-vigia.timer 2>/dev/null || true)"
+    fi
+    if [[ -z "${lista}" ]]; then
+        if [[ "${st_timer}" == "active" ]]; then
+            pass "nenhum Wi-Fi USB agora — o vigia está armado e não faz nada"
+        else
+            info "nenhum Wi-Fi USB agora (o vigia do dongle não está ativo; só faz falta a quem tiver um)"
+        fi
+        return 0
+    fi
+    lista="$(printf '%s' "${lista}" | tr '\n' ' ' | sed 's/ $//')"
+    if [[ ! -x "${instalado}" ]]; then
+        warn "há Wi-Fi USB (${lista}) e o vigia do dongle não está instalado — o scan de fundo pode derrubá-lo de 5 em 5 min e um travamento mudo fica sem cura: $(conselho_de_instalacao)"
+        problema=1
+    elif [[ "${st_timer}" != "active" ]]; then
+        warn "o vigia do Wi-Fi USB está instalado e o timer não está ativo (${st_timer:-?}) — ligue: sudo systemctl enable --now hefesto-wifi-usb-vigia.timer"
+        problema=1
+    fi
+    if [[ -d "$(dirname "$(dirname "${dispatcher}")")" ]]; then
+        if [[ ! -e "${dispatcher}" ]]; then
+            if [[ -x "${instalado}" ]]; then
+                warn "o dispatcher ${dispatcher} não existe — cada associação nova nasce com o scan de fundo ligado até o próximo tique do vigia"
+                problema=1
+            fi
+        else
+            dono_modo="$(stat -c '%U %a' "${dispatcher}" 2>/dev/null || true)"
+            if [[ "${dono_modo}" != "root 755" ]]; then
+                warn "o dispatcher ${dispatcher} está '${dono_modo:-?}' e o NetworkManager só roda script de root, 755 — ele é ignorado. Reinstale: $(conselho_de_instalacao)"
+                problema=1
+            fi
+        fi
+    fi
+    # A linha do --status: porta, velocidade e o hub. Dividir hub com um
+    # adaptador Bluetooth é a pergunta que é do rádio dos controles.
+    while IFS= read -r linha; do
+        [[ -n "${linha}" ]] || continue
+        if [[ "${linha}" == *"AVISO: mesmo hub que o Bluetooth"* ]]; then
+            warn "Wi-Fi USB e Bluetooth no mesmo hub: ${linha} — afaste o dongle dos adaptadores (outra porta, outro hub)"
+            problema=1
+        else
+            info "wifi: ${linha}"
+        fi
+    done < <(bash "${script}" --status 2>/dev/null || true)
+    # O que o vigia disse neste boot. `-t` é o SyslogIdentifier da unit e o
+    # `logger` do dispatcher; legível por quem está no grupo adm ou
+    # systemd-journal.
+    if command -v journalctl >/dev/null 2>&1; then
+        diario="$(journalctl -b -q --no-pager -t hefesto-wifi-usb 2>/dev/null || true)"
+        n_reset="$(printf '%s\n' "${diario}" | grep -c 'reiniciada (' || true)"
+        if printf '%s\n' "${diario}" | grep -q 'parei. Tire e ponha o dongle'; then
+            warn "o vigia do Wi-Fi USB reiniciou a porta 3 vezes sem cura e PAROU neste boot — tire e ponha o dongle (de preferência noutra porta)"
+            problema=1
+        elif [[ "${n_reset:-0}" -gt 0 ]]; then
+            info "o vigia reiniciou a porta do dongle ${n_reset}x neste boot (travamento mudo curado)"
+        fi
+    fi
+    [[ "${problema}" -eq 0 ]] && pass "vigia do Wi-Fi USB de pé (${lista}): timer ativo, dispatcher do NetworkManager no lugar"
+    return 0
+}
+
 # FEAT-DOCTOR-USB-DROPOUT-DIAGNOSTIC-01.
 # Resolve o controlador PCI (xHCI) onde um device USB (sysfs path) está pendurado:
 # o último 0000:XX:YY.Z na cadeia antes do /usbN é o controlador.
@@ -7209,6 +7300,7 @@ main() {
     check_hefesto_rtw88_usb_dkms
     check_usb_fantasma
     check_wifi_powersave
+    check_wifi_usb
     hdr "USB / dropout"
     check_usb_dropout
 

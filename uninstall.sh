@@ -110,6 +110,14 @@
 #     módulo sair de fato no próximo boot). Também remove, se presente, o
 #     conf.d de powersave do NetworkManager (W2, opt-in/gateado por
 #     evidência) — sem flag nova, simetria "se instalado, some".
+#
+# O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01 (23/09/2026) — removidos por DEFAULT:
+#   - o vigia do dongle Wi-Fi USB: hefesto-wifi-usb-vigia.{service,timer}, o
+#     dispatcher 90-hefesto-wifi-usb do NetworkManager e o wifi_usb.sh. O scan
+#     de fundo não é religado (a próxima associação nasce com o default do
+#     NetworkManager);
+#   - o drop-in 10-hefesto-maquina.conf do watchdog do Bluetooth (o que lhe
+#     mostra o maquina.json de quem instalou).
 
 set -euo pipefail
 
@@ -375,6 +383,14 @@ command -v dkms >/dev/null 2>&1 \
     && dkms status hefesto-rtw88-usb 2>/dev/null | grep -q . \
     && _NEEDS_SUDO=1
 [[ -e /etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf ]] && _NEEDS_SUDO=1
+# O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01: o vigia do dongle Wi-Fi USB — script de
+# sistema, dispatcher do NetworkManager e as duas units, todos de root.
+[[ -e /etc/systemd/system/hefesto-wifi-usb-vigia.timer ]] && _NEEDS_SUDO=1
+[[ -e /etc/systemd/system/hefesto-wifi-usb-vigia.service ]] && _NEEDS_SUDO=1
+[[ -e /etc/NetworkManager/dispatcher.d/90-hefesto-wifi-usb ]] && _NEEDS_SUDO=1
+[[ -e /usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh ]] && _NEEDS_SUDO=1
+# E o drop-in que dá ao watchdog do Bluetooth o `maquina.json` de quem instalou.
+[[ -e /etc/systemd/system/hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf ]] && _NEEDS_SUDO=1
 remover_o_applet() {
     if [[ ! -e "${APPLET_BIN}" && ! -e "${APPLET_DESKTOP}" && ! -e "${APPLET_ICON}" \
           && ! -e "${APPLET_ICON_SYMB}" && ! -e "${APPLET_ICON_PNG}" ]]; then
@@ -787,6 +803,10 @@ if sudo -n true 2>/dev/null; then
     sudo rm -f /etc/systemd/system/hefesto-bt-bonds-snapshot.timer \
         /etc/systemd/system/hefesto-bt-health-watchdog.service \
         /etc/systemd/system/hefesto-bt-health-watchdog.timer 2>/dev/null || true
+    # O drop-in que mostra o `maquina.json` ao watchdog (O-QUE-E-DO-HEFESTO-
+    # SAI-DO-ZSH-01): sai com a unit que ele emenda, e o diretório `.d` junto.
+    sudo rm -f /etc/systemd/system/hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf 2>/dev/null || true
+    sudo rmdir /etc/systemd/system/hefesto-bt-health-watchdog.service.d 2>/dev/null || true
     if [[ -e /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf \
           || -e /etc/systemd/system/bluetooth.service.d/90-hefesto-debug.conf ]]; then
         log "removendo drop-ins do bluetooth.service (resiliência + debug forense)"
@@ -1018,6 +1038,35 @@ if [[ -e "${BROKER_SERVICE}" || -e "${BROKER_SOCKET}" || -e "${BROKER_BIN}" ]]; 
         log "  sudo systemctl disable --now hefesto-hidraw-broker.socket hefesto-hidraw-broker.service"
         log "  sudo ${BROKER_BIN} --restore-all-and-exit"
         log "  sudo rm -f ${BROKER_SERVICE} ${BROKER_SOCKET} ${BROKER_BIN} ${BROKER_OWNER_FILE}"
+    fi
+fi
+
+# O VIGIA DO DONGLE WI-FI USB (O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01, 23/09/2026) —
+# simétrico ao `install_wifi_usb_host`. Morava no zsh dela, cujo uninstall NÃO
+# desfazia nenhum dos quatro destinos; aqui eles saem todos, e ANTES do `rmdir`
+# da casa dos scripts de sistema logo abaixo.
+#
+# O scan de fundo NÃO é religado, e não há o que religar: a próxima associação
+# nasce com o default do NetworkManager. A associação de agora fica como está
+# até cair — mexer nela derrubaria a rede de quem está desinstalando.
+if [[ -e /etc/systemd/system/hefesto-wifi-usb-vigia.timer \
+      || -e /etc/systemd/system/hefesto-wifi-usb-vigia.service \
+      || -e /etc/NetworkManager/dispatcher.d/90-hefesto-wifi-usb \
+      || -e /usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh ]]; then
+    if sudo -n true 2>/dev/null; then
+        log "removendo o vigia do Wi-Fi USB (timer, unit, dispatcher do NetworkManager e script)"
+        sudo systemctl disable --now hefesto-wifi-usb-vigia.timer >/dev/null 2>&1 || true
+        sudo rm -f /etc/systemd/system/hefesto-wifi-usb-vigia.timer \
+            /etc/systemd/system/hefesto-wifi-usb-vigia.service \
+            /etc/NetworkManager/dispatcher.d/90-hefesto-wifi-usb \
+            /usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh 2>/dev/null || true
+        sudo rm -rf /run/hefesto-wifi-usb 2>/dev/null || true
+        sudo systemctl daemon-reload >/dev/null 2>&1 || true
+        log "  o scan de fundo não é religado: a próxima associação nasce com o default do NetworkManager"
+    else
+        log "sudo indisponível — o vigia do Wi-Fi USB NÃO foi removido"
+        log "  sudo systemctl disable --now hefesto-wifi-usb-vigia.timer"
+        log "  sudo rm -f /etc/systemd/system/hefesto-wifi-usb-vigia.timer /etc/systemd/system/hefesto-wifi-usb-vigia.service /etc/NetworkManager/dispatcher.d/90-hefesto-wifi-usb /usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh"
     fi
 fi
 

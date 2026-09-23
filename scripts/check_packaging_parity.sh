@@ -773,6 +773,66 @@ else
     echo "[ OK ] dkms rtw88-usb: assets/dkms/rtw88-usb/dkms.conf ausente — nada a checar"
 fi
 
+# O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01 (23/09/2026): o vigia do dongle Wi-Fi USB
+# veio do zsh dela, onde o uninstall NÃO desfazia nenhum dos quatro destinos —
+# o "o uninstall não desfaz" da sprint, medido pelo estudo. Aqui a família é
+# cobrada pelo NOME DE DESTINO (a razão está na seção "artefato de sistema sem
+# dono", logo abaixo): o install põe os quatro, o uninstall tira os quatro e
+# desabilita o timer, e o doctor tem a pergunta E a faz.
+#
+# E o drop-in que mostra o `maquina.json` ao watchdog do Bluetooth (o pedido da
+# onda 3a): um arquivo em /etc que o install escreve com o caminho da casa de
+# quem instalou, e que o uninstall tem de levar junto.
+echo "== vigia do Wi-Fi USB e o drop-in do watchdog (install × uninstall × doctor) =="
+if [[ -f assets/systemd/hefesto-wifi-usb-vigia.service ]]; then
+    missing=()
+    _wifi_lib="$(grep -v '^[[:space:]]*#' scripts/lib/camada_de_maquina.sh 2>/dev/null || true)"
+    _wifi_un="$(grep -v '^[[:space:]]*#' uninstall.sh 2>/dev/null || true)"
+    #: A REMOÇÃO é cobrada na linha que REMOVE, não em qualquer linha: o
+    #: caminho aparece também na guarda do `if`, no `_NEEDS_SUDO` e no recado de
+    #: "rode à mão" — e qualquer um deles bastaria a um grep solto, com o `rm`
+    #: arrancado (medido: a primeira versão desta seção passou assim). As
+    #: continuações de linha são juntadas, e linha de recado não conta.
+    _wifi_un_rm="$(sed -e :a -e '/\\$/N; s/\\\n[[:space:]]*/ /; ta' uninstall.sh 2>/dev/null \
+        | grep -v '^[[:space:]]*#' \
+        | grep -vE '^[[:space:]]*(log|echo|printf|warn|info)[[:space:]]' \
+        | grep -E '(^|[[:space:]])rm[[:space:]]+-f' || true)"
+    _wifi_inst="$(grep -v '^[[:space:]]*#' install.sh 2>/dev/null || true)"
+    _wifi_doc="$(grep -v '^[[:space:]]*#' scripts/doctor.sh 2>/dev/null || true)"
+    for _wifi_dest in /usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh \
+                      /etc/NetworkManager/dispatcher.d/90-hefesto-wifi-usb \
+                      hefesto-wifi-usb-vigia.service hefesto-wifi-usb-vigia.timer; do
+        grep -qF -- "${_wifi_dest}" <<<"${_wifi_lib}" \
+            || missing+=("scripts/lib/camada_de_maquina.sh(não instala ${_wifi_dest})")
+        grep -qF -- "${_wifi_dest}" <<<"${_wifi_un_rm}" \
+            || missing+=("uninstall.sh(não remove ${_wifi_dest})")
+    done
+    grep -qF 'enable --now hefesto-wifi-usb-vigia.timer' <<<"${_wifi_lib}" \
+        || missing+=("scripts/lib/camada_de_maquina.sh(não habilita o timer)")
+    grep -qF 'disable --now hefesto-wifi-usb-vigia.timer' <<<"${_wifi_un}" \
+        || missing+=("uninstall.sh(não desabilita o timer)")
+    grep -qE '^[[:space:]]*install_wifi_usb_host[[:space:]]*$' <<<"${_wifi_inst}" \
+        || missing+=("install.sh(não chama install_wifi_usb_host)")
+    grep -qE '^check_wifi_usb\(\)' <<<"${_wifi_doc}" \
+        || missing+=("scripts/doctor.sh(sem check_wifi_usb)")
+    grep -qE '^[[:space:]]+check_wifi_usb[[:space:]]*$' <<<"${_wifi_doc}" \
+        || missing+=("scripts/doctor.sh(o main não chama check_wifi_usb)")
+    grep -qF '10-hefesto-maquina.conf' <<<"${_wifi_lib}" \
+        || missing+=("scripts/lib/camada_de_maquina.sh(não escreve o drop-in do watchdog)")
+    grep -qF 'hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf' <<<"${_wifi_un_rm}" \
+        || missing+=("uninstall.sh(não remove o drop-in do watchdog)")
+    if [[ "${#missing[@]}" -eq 0 ]]; then
+        echo "[ OK ] vigia do Wi-Fi USB: o install põe os quatro destinos, o uninstall tira os quatro, o doctor pergunta; o drop-in do watchdog entra e sai"
+    else
+        echo "[FAIL] vigia do Wi-Fi USB: FALTANDO em: ${missing[*]}"
+        echo "       Peça que o install põe e o uninstall não tira é o defeito que tirou"
+        echo "       esta família do zsh dela: desinstalar deixava tudo de pé."
+        rc=1
+    fi
+else
+    echo "[ OK ] vigia do Wi-Fi USB: assets/systemd/hefesto-wifi-usb-vigia.service ausente — nada a checar"
+fi
+
 # Contenção BT (2026-07-25): o TERCEIRO módulo DKMS (hid-playstation, retry de
 # feature report na probe) ganhou os dois blocos irmãos acima mas NUNCA ganhou o
 # seu — e o furo era o pior dos três: o dkms.conf dele tem AUTOINSTALL="yes",
@@ -1293,8 +1353,13 @@ else
     #: desta seção é "alguém instala isto?", não "todo formato instala isto?" —
     #: essa é a pergunta das seções de paridade, e cada família que a merece já tem
     #: a sua. Aqui é o piso: artefato que NINGUÉM instala.
+    #: A `scripts/lib/camada_de_maquina.sh` ENTROU em 23/09/2026
+    #: (O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01): as curas de HOST moram lá desde
+    #: 31/08, e o `install.sh` só as CHAMA. Sem ela aqui, uma unit instalada
+    #: só pela lib — o vigia do Wi-Fi USB — era dada como órfã, e as da
+    #: resiliência do bluetoothd só passavam porque os empacotamentos as citam.
     _dono_arquivos=()
-    for _dono_cand in install.sh \
+    for _dono_cand in install.sh scripts/lib/camada_de_maquina.sh \
                       scripts/install_udev.sh scripts/install-host-udev.sh \
                       scripts/build_deb.sh \
                       scripts/build_appimage.sh scripts/build_appimage_gui.sh \

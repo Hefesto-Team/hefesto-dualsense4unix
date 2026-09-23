@@ -12,7 +12,14 @@ After=bluetooth.service
 Type=oneshot
 ExecStart=/usr/local/lib/hefesto-dualsense4unix/bt_health_watchdog.sh
 NoNewPrivileges=yes
-ProtectHome=yes
+# `tmpfs`, e não `yes` (O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01, pedido da onda 3a,
+# 23/09/2026): a casa continua fora do alcance — vira um tmpfs vazio e só
+# leitura —, mas agora dá para montar por cima UM arquivo. O install escreve o
+# drop-in `hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf` com o
+# `BindReadOnlyPaths=` do `maquina.json` de quem instalou, de onde o
+# `bt_active_mode.sh` lê o nome de cada lugar. Com `yes` o bind não tem onde
+# nascer, e o nome nunca chegava ao adaptador no tique do watchdog.
+ProtectHome=tmpfs
 PrivateTmp=yes
 RestrictRealtime=yes
 RestrictSUIDSGID=yes

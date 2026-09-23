@@ -399,6 +399,8 @@ modules:
           /app/share/hefesto-dualsense4unix/scripts/bt_bonds_autorestore.sh
       - install -Dm755 scripts/bt_health_watchdog.sh
           /app/share/hefesto-dualsense4unix/scripts/bt_health_watchdog.sh
+      - install -Dm755 scripts/wifi_usb.sh
+          /app/share/hefesto-dualsense4unix/scripts/wifi_usb.sh
       - install -Dm755 scripts/bt_rebind_orphans.sh
           /app/share/hefesto-dualsense4unix/scripts/bt_rebind_orphans.sh
       - install -Dm755 scripts/bt_bonds_snapshot.sh

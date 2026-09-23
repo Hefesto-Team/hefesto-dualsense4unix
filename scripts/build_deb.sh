@@ -230,6 +230,10 @@ install -Dm755 scripts/bt_bonds_autorestore.sh \
     "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/bt_bonds_autorestore.sh"
 install -Dm755 scripts/bt_health_watchdog.sh \
     "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/bt_health_watchdog.sh"
+# O vigia do Wi-Fi USB invoca o wifi_usb.sh; todo script que uma unit invoca
+# viaja em todo formato (O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01, 23/09/2026).
+install -Dm755 scripts/wifi_usb.sh \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/wifi_usb.sh"
 install -Dm755 scripts/bt_rebind_orphans.sh \
     "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/bt_rebind_orphans.sh"
 install -Dm755 scripts/bt_bonds_snapshot.sh \

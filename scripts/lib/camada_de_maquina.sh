@@ -59,6 +59,7 @@ declare -F step >/dev/null 2>&1 || step() { printf '\n[%s] %s\n' "$1" "$2"; }
 : "${NO_OSK:=0}"
 : "${NO_DKMS:=0}"
 : "${NO_UCM:=0}"
+: "${NO_WIFI_USB:=0}"
 : "${AUTO_YES:=0}"
 
 # Render das units do broker root hide-hidraw (BROKER-01/Onda S): substitui
@@ -244,6 +245,36 @@ install_broker_host() {
     rm -rf "${_broker_tmp}"
 }
 
+# O NOME DO LUGAR CHEGA AO WATCHDOG (pedido da onda 3a à O-QUE-E-DO-HEFESTO-
+# SAI-DO-ZSH-01, 23/09/2026). O `bt_active_mode.sh` dá ao adaptador o nome da
+# porta em que ele está, lido do `maquina.json` de quem instalou — e o watchdog
+# (que o chama de 2 em 2 min) rodava com `ProtectHome=yes`: a casa inteira
+# invisível, o nome nunca chegava. Decisão de quem coordena: a unit passa a
+# `ProtectHome=tmpfs` (a casa vira um tmpfs vazio e só leitura) e ESTE drop-in
+# monta por cima UM arquivo, só leitura. É o mais contido: o watchdog enxerga o
+# `maquina.json`, e nada mais da casa.
+#
+# O `-` do BindReadOnlyPaths é o que deixa o drop-in valer antes de o arquivo
+# existir: sem ele, a unit não subiria até alguém dar o primeiro nome a um lugar.
+# Casa com caractere que o systemd lê como separador (espaço, aspas) não vai:
+# sem o drop-in o watchdog só não vê o nome, e nada quebra — o bluetoothd, no
+# start, vê (o `+` do ExecStartPost no drop-in dele).
+#
+# Devolve 1 sem escrever nada utilizável se a casa não servir. Isolada de
+# propósito, como a `_render_broker_units`: testável sem sudo nem systemctl.
+_render_dropin_do_watchdog() {
+    local casa="$1" saida="$2"
+    [[ "${casa}" =~ ^/[A-Za-z0-9._@+/-]+$ && "${casa}" != "/" ]] || return 1
+    cat > "${saida}" <<DROPIN
+# instalado por hefesto-dualsense4unix (install.sh) — remoção: uninstall.sh
+# O watchdog do Bluetooth enxerga UM arquivo da casa de quem instalou: o
+# maquina.json, de onde o bt_active_mode.sh lê o nome de cada lugar. A unit
+# roda com ProtectHome=tmpfs; este bind é o único furo, e só de leitura.
+[Service]
+BindReadOnlyPaths=-${casa}/.config/hefesto-dualsense4unix/maquina.json
+DROPIN
+}
+
 # ---------------------------------------------------------------------------
 # ONDA-R2: resiliência do bluetoothd — DEFAULT EM TODO FORMATO
 # (camada 2 da sprint 2026-07-21-sprint-pesquisa-bluez-estabilidade.md)
@@ -317,6 +348,18 @@ install_bt_resilience_host() {
         sudo install -Dm644 "${ROOT_DIR}/assets/systemd/${_btres_u}" \
             "/etc/systemd/system/${_btres_u}" 2>/dev/null || _btres_ok=0
     done
+    # O `maquina.json` visível ao watchdog — ver `_render_dropin_do_watchdog`.
+    # Antes do daemon-reload abaixo, para o próximo tique já montar o arquivo.
+    local _btres_dropin
+    _btres_dropin="$(mktemp)"
+    if _render_dropin_do_watchdog "${HOME}" "${_btres_dropin}"; then
+        sudo install -Dm644 "${_btres_dropin}" \
+            /etc/systemd/system/hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf \
+            2>/dev/null || _btres_ok=0
+    else
+        warn "a casa '${HOME}' tem caractere que o systemd lê como separador — o watchdog do Bluetooth segue sem ver o nome dos lugares (o bluetoothd, no start, vê)"
+    fi
+    rm -f "${_btres_dropin}"
     sudo install -d -m700 /var/lib/hefesto-dualsense4unix/bt-bonds 2>/dev/null || true
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
     if sudo systemctl enable --now hefesto-bt-bonds-snapshot.timer \
@@ -883,6 +926,83 @@ install_dkms_rtw88_usb_host() {
     else
         printf '      rtw88_usb descarregado — o patchado entra sozinho no próximo plug do dongle\n'
     fi
+    return 0
+}
+
+# ---------------------------------------------------------------------------
+# O DONGLE WI-FI USB — O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01 (23/09/2026), DEFAULT
+# ---------------------------------------------------------------------------
+# Morava no self-heal do zsh dela (`aurora-wifi-usb.sh` e o vigia `aurora-`), e
+# veio por ordem dela: o que faz o Hefesto funcionar mora no Hefesto, com
+# install, uninstall, paridade e doctor. É da família da Onda W (o DKMS acima):
+# o scan de fundo que derrubava o dongle a cada 300 s sai a cada associação, e
+# o vigia reinicia a porta quando o rádio trava MUDO — o caso em que o driver
+# não vê a queda e o `hang_reset` do DKMS não tem o que fazer. O porquê inteiro
+# está no cabeçalho de `scripts/wifi_usb.sh`.
+#
+# Vale para a CLASSE — qualquer Wi-Fi USB — e instala mesmo sem dongle
+# plugado: dongle é hotplug, e o vigia sem Wi-Fi USB não faz nada. O modo USB2
+# NÃO entra (recusado por ela em 23/09: rede de 5 GHz, plano de 1 Gb).
+#
+# Três destinos e UM fonte: o mesmo `wifi_usb.sh` vai para a casa dos scripts
+# de sistema (o CLI e o ExecStart do vigia) e, como CÓPIA REAL de root 755,
+# para o dispatcher do NetworkManager — ele recusa script gravável por grupo ou
+# outros. Sem NetworkManager na máquina, o dispatcher não vai e o vigia faz o
+# reforço sozinho.
+#
+# Opt-out: `--no-wifi-usb` (como todo passo default da camada de máquina) e o
+# `--no-udev`, que pula tudo o que escreve em /etc. Chamada dos DOIS lados da
+# cerca do `install.sh` — `tests/unit/test_install_serve_os_dois_lados_da_cerca.py`.
+install_wifi_usb_host() {
+    if [[ "${NO_WIFI_USB}" -eq 1 ]]; then
+        printf '      pulado (--no-wifi-usb)\n'
+        return 0
+    fi
+    if [[ "${SKIP_UDEV}" -eq 1 ]]; then
+        printf '      pulado (--no-udev) — o dongle Wi-Fi USB fica com o scan de fundo do NetworkManager e sem vigia\n'
+        return 0
+    fi
+    if ! command -v sudo >/dev/null 2>&1; then
+        warn "sudo ausente — o vigia do Wi-Fi USB NÃO foi instalado"
+        return 0
+    fi
+    if ! sudo -n true 2>/dev/null; then
+        warn "sudo recusado — o vigia do Wi-Fi USB pulado (re-execute ./install.sh)"
+        return 0
+    fi
+    local _wifi_ok=1 _wifi_u _wifi_ifcs
+    sudo install -Dm755 "${ROOT_DIR}/scripts/wifi_usb.sh" \
+        /usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh 2>/dev/null || _wifi_ok=0
+    # `HEFESTO_NM_ETC` é gancho de teste: a régua não pode depender de a
+    # máquina que a roda ter NetworkManager.
+    if [[ -d "${HEFESTO_NM_ETC:-/etc/NetworkManager}" ]]; then
+        sudo install -Dm755 -o root -g root "${ROOT_DIR}/scripts/wifi_usb.sh" \
+            /etc/NetworkManager/dispatcher.d/90-hefesto-wifi-usb 2>/dev/null || _wifi_ok=0
+    else
+        printf '      sem NetworkManager nesta máquina — o dispatcher não vai; o vigia faz o reforço sozinho\n'
+    fi
+    for _wifi_u in hefesto-wifi-usb-vigia.service hefesto-wifi-usb-vigia.timer; do
+        sudo install -Dm644 "${ROOT_DIR}/assets/systemd/${_wifi_u}" \
+            "/etc/systemd/system/${_wifi_u}" 2>/dev/null || _wifi_ok=0
+    done
+    sudo systemctl daemon-reload >/dev/null 2>&1 || true
+    if sudo systemctl enable --now hefesto-wifi-usb-vigia.timer >/dev/null 2>&1; then
+        printf '      vigia do Wi-Fi USB ativo (1 em 1 min): scan de fundo desligado e a porta reiniciada no travamento mudo\n'
+    else
+        warn "enable do hefesto-wifi-usb-vigia.timer falhou — habilite: sudo systemctl enable --now hefesto-wifi-usb-vigia.timer"
+        _wifi_ok=0
+    fi
+    # Quem tem dongle AGORA ganha o reforço na hora: a associação que já estava
+    # de pé antes de o dispatcher existir ficaria com o scan de fundo até o
+    # primeiro tique do vigia (2 min depois do boot, ou 1 min daqui).
+    _wifi_ifcs="$(bash "${ROOT_DIR}/scripts/wifi_usb.sh" --lista 2>/dev/null || true)"
+    if [[ -z "${_wifi_ifcs}" ]]; then
+        printf '      nenhum Wi-Fi USB agora — o vigia fica armado e não faz nada\n'
+    else
+        { sudo /usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh --ensure 2>&1 || true; } \
+            | sed 's/^/      /' || true
+    fi
+    [[ "${_wifi_ok}" -eq 1 ]] || warn "vigia do Wi-Fi USB instalado PARCIALMENTE — confira as mensagens acima"
     return 0
 }
 
