@@ -474,13 +474,13 @@ _MENSAGENS_DA_VOLTA = (
 )
 
 
-def _laco_de_13_09(ultimo: int) -> str:
-    """Oito voltas do laço, a mais nova em ``ultimo``, e o timeout solto do vizinho."""
+def _laco_de_13_09(mais_novo: int) -> str:
+    """Oito voltas do laço, a mais nova em ``mais_novo``, e o timeout solto do vizinho."""
     return "".join(
-        f"{ultimo - 14 + s}.250000 maquina kernel: Bluetooth: hci0: {m}\n"
+        f"{mais_novo - 14 + s}.250000 maquina kernel: Bluetooth: hci0: {m}\n"
         for s in range(0, 15, 2)
         for m in _MENSAGENS_DA_VOLTA
-    ) + f"{ultimo - 5}.500000 maquina kernel: Bluetooth: hci1: command 0x0c03 tx timeout\n"
+    ) + f"{mais_novo - 5}.500000 maquina kernel: Bluetooth: hci1: command 0x0c03 tx timeout\n"
 
 
 def _mesa_sysfs(raiz: Path, adaptadores: dict[str, str]) -> Path:

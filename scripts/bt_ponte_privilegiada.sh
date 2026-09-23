@@ -842,9 +842,9 @@ _timeouts_por_hci() {
                 hci = substr(texto, RSTART, RLENGTH)
                 sub(/: command 0x$/, "", hci)
                 n[hci]++
-                if (!(hci in ultimo) || quando > ultimo[hci]) ultimo[hci] = quando
+                if (!(hci in mais_novo) || quando > mais_novo[hci]) mais_novo[hci] = quando
             }
-            END { for (h in n) print h, n[h], ultimo[h] }' \
+            END { for (h in n) print h, n[h], mais_novo[h] }' \
         | sort || true
 }
 
@@ -900,19 +900,19 @@ _ha_conexao() {
 _estampas() { printf '%s\n' "${HEFESTO_PONTE_STAMPS:-/run/hefesto-bt-ponte}"; }
 
 verbo_reiniciar_travado() {
-    local hci quantos ultimo porta agora_hci carimbo anterior agora pausa espera
+    local hci quantos mais_novo porta agora_hci carimbo anterior agora pausa espera
     local recusou=0 achou=0 volta
     if [[ "${SYSFS}" == "${SYSFS_REAL}" && "$(id -u)" -ne 0 ]]; then
         _erro "'reiniciar-travado' requer root (é a ponte privilegiada)"
         exit 1
     fi
     agora="$(date +%s)"
-    while read -r hci quantos ultimo; do
+    while read -r hci quantos mais_novo; do
         [[ "${hci}" =~ ^hci[0-9]+$ ]] || continue
-        [[ "${quantos}" =~ ^[0-9]+$ && "${ultimo}" =~ ^[0-9]+$ ]] || continue
+        [[ "${quantos}" =~ ^[0-9]+$ && "${mais_novo}" =~ ^[0-9]+$ ]] || continue
         #: O laço PAROU — ou o adaptador saiu da porta e o hciN do journal já
         #: pode ser outro aparelho. Silêncio: não há o que fazer agora.
-        (( agora - ultimo <= LACO_VIVO_S )) || continue
+        (( agora - mais_novo <= LACO_VIVO_S )) || continue
         achou=1
         if ! porta="$(_porta_do_hci "${hci}")"; then
             printf 'recusado\t-\t%s\tsem porta USB\n' "${hci}"
