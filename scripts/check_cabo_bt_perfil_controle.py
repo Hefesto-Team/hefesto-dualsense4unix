@@ -166,6 +166,44 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "vel-cursor": "a velocidade do cursor — é da emulação de mouse, global (decisão dela)",
     "vel-rolagem": "idem",
     "pronto": "aplica o efeito já escolhido — o ATO é o do gesto `modo` da 03",
+    # ---- a seção «Rádio e Adaptadores» (TRANSPLANTE-DA-SECAO-01, 23/09/2026) ----
+    # O desenho aprovado dela virou a cx8-3. Nenhum destes muda o DualSense:
+    # ou abrem e fecham o que a tela já pintou, ou mexem no RÁDIO DA MÁQUINA
+    # (qual adaptador, qual pareamento, o nome do lugar) — que é do BlueZ e do
+    # `maquina.json`, não do perfil nem do controle.
+    "abrir-adaptador": "abre um adaptador no acordeão — é da tela",
+    "adaptador-historico": "abre o sino de um adaptador — é leitura do diário do rádio",
+    "sugerir-alocacao": "mostra a sugestão da central para um adaptador — é da tela",
+    "aceitar-sugestao": "abre a pergunta de mover a partir do balão — é da tela; "
+                        "quem move é o `confirmar-mudanca`",
+    "trazer-para-ca": "abre a lista de quem pode vir para este adaptador — é da tela",
+    "cancelar-mudanca": "fecha a pergunta de mover — é da tela",
+    "escolher-adaptador": "escolhe o adaptador do próximo «Conectar» — é da tela",
+    "equilibrar-radio": "abre a proposta da central de rádio — é da tela",
+    "confirmar-mudanca": "move um aparelho de adaptador (`radio.mover`) — é o rádio "
+                         "da máquina: o controle continua o mesmo, com o mesmo perfil",
+    "conectar-aparelho": "abre a janela de pareamento num adaptador (`radio.mover` "
+                         "sem alvo) — é o rádio da máquina",
+    "parear-aparelho": "pareia um aparelho achado num adaptador — é o rádio da máquina",
+    "ligar-mesmo-assim": "sobe a ponte de som além do limite do adaptador "
+                         "(`radio.ponte.ligar_aqui`) — é do rádio da máquina, e o "
+                         "som em si responde pelas linhas do `rota` e do `volume`",
+    "adaptador-renomear": "dá nome ao LUGAR do adaptador no `maquina.json` — é da máquina",
+    "aparelho-renomear": "dá nome a um aparelho no BlueZ (`Alias`) — é da máquina",
+    "custo-som": "sem dono no produto (`a08_conexoes.SEM_GESTO`, com a razão): a "
+                 "ponte sobe quando o JOGO manda som, e não há interruptor por "
+                 "controle — o clique não muda nada",
+    "custo-vibracao": "idem ao `custo-som`: a vibração pelo rádio viaja na mesma "
+                      "ponte, e quem a sobe é o jogo",
+    "custo-luz": "sem dono no produto (`a08_conexoes.SEM_GESTO`): a barra de luz "
+                 "não custa rádio que se meça, e o interruptor dela é o da 04",
+    "entrada-comecar": "começa o «Mapear Entrada a Entrada» — é da máquina "
+                       "(as entradas do gabinete dela)",
+    "entrada-face": "grava a face de uma entrada no `maquina.json` — é da máquina",
+    "entrada-pular": "pula uma entrada da cerimônia — é da tela",
+    "entrada-levantar": "passa a cerimônia para a fase em pé — é da tela",
+    "entrada-nao-alcanco": "tira uma entrada da conta no `maquina.json` — é da máquina",
+    "entrada-parar": "fecha a cerimônia — é da tela",
 }
 
 #: OS GESTOS QUE SÃO FEATURE DE APARELHO, e as linhas do mapa que respondem
@@ -217,6 +255,9 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
     # transportes). O que este interruptor mexe é a INTENSIDADE daquele motor —
     # 0 desliga, 100 devolve —, que é o mesmo trilho do `barra:motor` ao lado.
     "lado": ("vibracao.rumble.esquerdo", "vibracao.rumble.direito"),
+    # O 🎙 DA LINHA DO CONTROLE na seção do rádio (TRANSPLANTE-DA-SECAO-01) é o
+    # MESMO ato do `mudo` da 02 — o gesto dela, chamado (`a08_conexoes.custo_mic`).
+    "custo-mic": ("audio.microfone.mudo",),
 }
 
 #: A DÍVIDA CONHECIDA — o gesto que HOJE não responde as quatro, com a sprint
@@ -285,6 +326,9 @@ NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
     # `uniq`, e o valor mora em `controllers[<uniq>].rumble` — o mesmo lugar do
     # arraste da barra, porque é o mesmo número.
     "lado": ("rumble", "rumble"),
+    # O 🎙 da seção do rádio grava pelo `mudo` da 02 (`_lembrar_do_som`), no
+    # mesmo `controllers[<uniq>].mic` — é o mesmo gesto, chamado.
+    "custo-mic": ("mic", "mic"),
 }
 
 

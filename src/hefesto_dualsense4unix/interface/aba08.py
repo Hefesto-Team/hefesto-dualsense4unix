@@ -3346,8 +3346,13 @@ def _cena_do_desenho() -> dict:
     tipo_do_desenho = {"teclado": "teclado", "mouse": "mouse", "wifi": "wifi"}
     vizinhos = [{"id": x["id"], "tipo": tipo_do_desenho.get(x["a"], ""), "nome": x["nome"],
                  "sugestao": ""} for x in linhas if x["tabela"] == "espectro"]
+    # «HUB DA MESA» NÃO CHEGA À TELA: `mesa` é palavra aposentada na tela (E3 da
+    # PALAVRA-01, decisão dela de 06/09), e o portão `palavra-de-tela` a acusa no
+    # `title` do grupo. O sinônimo é o que a própria cena usa na face «Na
+    # escrivaninha». Só o NOME do grupo muda; o desenho é o mesmo.
     portas = [{"id": x["id"], "caminho": x["a"], "usb": x["b"], "ocupa": x["c"],
-               "grupo": x["d"], "rotulo": x["a"]} for x in linhas if x["tabela"] == "porta"]
+               "grupo": re.sub(r"\bmesa\b", "escrivaninha", x["d"]), "rotulo": x["a"]}
+              for x in linhas if x["tabela"] == "porta"]
     perto = [{"id": x["id"], "nome": x["nome"], "tipo": x["tipo"], "forca": int(x["forca"]),
               "conhecido": x["conhecido"] == "sim"} for x in _csv_do_desenho("perto")]
     cheio = max(lugares, key=lambda lg: sum(1 for a in aparelhos
