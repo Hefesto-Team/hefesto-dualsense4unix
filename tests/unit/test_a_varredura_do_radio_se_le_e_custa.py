@@ -151,12 +151,15 @@ def _bancada(mapa: dict[str, str]) -> dict[str, Any]:
     }
 
 
-def _controle(uniq: str, slot: int | None = None) -> dict[str, Any]:
+def _controle(uniq: str, slot: int | None = None, *, ponte: str | None = None) -> dict[str, Any]:
+    """Um controle no rádio. ``ponte`` é a ponte de som/vibração DELE de pé —
+    é o que o «Equilibrar» pesa desde 23/09/2026 (MOVER-UM-POR-VEZ-01)."""
     return {
         "transport": "bt",
         "connected": True,
         "uniq": _sem_dois_pontos(uniq),
         "player_slot": slot,
+        "ponte_do_radio": ponte,
     }
 
 
@@ -171,16 +174,20 @@ def _mesa_apertada_com_dois_destinos() -> dict[str, plano_de_radio.PlanoDoAdapta
     Montar o contrário (o que varre já cheio) daria uma régua verde sobre nada:
     ela passaria com o filtro arrancado.
 
-    **E um adaptador sem controle nenhum não vira plano.** `plano_por_adaptador`
-    monta a mesa a partir dos CONTROLES, então um dongle vazio não é destino
-    possível hoje — medido ao escrever este arquivo, com uma primeira versão que
-    punha zero controles no `ADAPTADOR_FOLGADO` e via a ordem ignorá-lo.
+    **E um adaptador sem controle nenhum não vira plano** — quando ninguém diz
+    que ele existe. `plano_por_adaptador` monta a mesa a partir dos CONTROLES;
+    desde 23/09/2026 (MOVER-UM-POR-VEZ-01) o dongle vazio entra quando vem em
+    ``adaptadores=`` ou no ``ar=``, e esta mesa não passa nenhum dos dois de
+    propósito: o arranjo difícil é o de dois destinos OCUPADOS.
+
+    A ordem nasce por PONTES desde 23/09/2026: três de som no adaptador parado,
+    contra o limite de duas.
     """
     return plano_de_radio.plano_por_adaptador(
         [
-            _controle(P1, 1),
-            _controle(P2, 2),
-            _controle(P3, 3),
+            _controle(P1, 1, ponte="som"),
+            _controle(P2, 2, ponte="som"),
+            _controle(P3, 3, ponte="som"),
             _controle(P4, 4),
             _controle(P5, 5),
             _controle(P6, 6),
@@ -408,9 +415,9 @@ def test_o_unico_destino_possivel_continua_valendo_mesmo_varrendo() -> None:
     """
     planos = plano_de_radio.plano_por_adaptador(
         [
-            _controle(P1, 1),
-            _controle(P2, 2),
-            _controle(P3, 3),
+            _controle(P1, 1, ponte="som"),
+            _controle(P2, 2, ponte="som"),
+            _controle(P3, 3, ponte="som"),
             _controle(P4, 4),
             _controle(P5, 5),
             _controle(P6, 6),

@@ -63,6 +63,23 @@ três primeiros aparecem NA TELA DELA hoje**, e nenhum deles é opinião:
      (corte 85%) e ``PlanoDosControles.cabe`` responde ``True`` (corte 100%).
      Duas respostas para "cabe?" na mesma mesa, e é o caso da bancada 5.
 
+NOTA DATADA — 23/09/2026 (MOVER-UM-POR-VEZ-01). A régua da tela mudou o que
+PESA, por decisão de quem coordena tirada da onda 1 do rádio: ela conta as
+PONTES de som e vibração contra ``radio_da_mesa.N_MAX_PONTES`` (dois), e não
+mais a soma aditiva de fatias. As bancadas ganharam o campo ``ponte`` e as
+contagens da tela foram remedidas. O que isso fez com os quatro achados:
+
+  1. **a mesa dela** (quatro com microfone E com ponte de som, todos no
+     primeiro): a tela deixou de calar — ela propõe UM movimento, porque a R12
+     dela é um de cada vez, e o motor segue mandando mover dois;
+  2. **o adaptador vazio** passou a EXISTIR para a régua da tela: quem monta os
+     planos diz quais adaptadores a mesa tem (``adaptadores=``), e o dongle livre
+     vira destino. A frase do adaptador único que a seção Desempenho imprime
+     continua saindo pela conta aditiva DELA (``secao_orcamento._algum_apertado``),
+     que não é posse daquela frente nem desta;
+  3. e 4. continuam como estão: o nome vem do apelido, e a palavra aditiva é da
+     seção Desempenho.
+
 O LIMITE DESTA RÉGUA, DECLARADO: as bancadas são SINTÉTICAS. O ``/sys/class/
 hidraw`` é de mentira (``_sysfs_de_mentira``) justamente para o teste não medir
 a bancada de quem o roda — é a armadilha "medir contra a biblioteca errada"
@@ -112,12 +129,14 @@ CONTROLES = tuple(f"aa:bb:cc:00:00:{n:02d}" for n in range(1, 11))
 
 @dataclass(frozen=True)
 class Posto:
-    """Um controle, o adaptador em que ele JÁ está, e se o microfone está de pé."""
+    """Um controle, o adaptador em que ele JÁ está, se o microfone está de pé e
+    se a ponte de som dele está no ar (o que a régua da tela pesa desde 23/09)."""
 
     nome: str
     endereco: str
     onde: str
     mic: bool
+    ponte: bool = False
 
 
 @dataclass(frozen=True)
@@ -141,9 +160,11 @@ class Bancada:
     nota: str = ""
 
 
-def _postos(quantos: int, onde: str, *, mic: bool, desde: int = 0) -> tuple[Posto, ...]:
+def _postos(
+    quantos: int, onde: str, *, mic: bool, desde: int = 0, ponte: bool = False
+) -> tuple[Posto, ...]:
     return tuple(
-        Posto(nome=f"Jogador {i + 1}", endereco=CONTROLES[i], onde=onde, mic=mic)
+        Posto(nome=f"Jogador {i + 1}", endereco=CONTROLES[i], onde=onde, mic=mic, ponte=ponte)
         for i in range(desde, desde + quantos)
     )
 
@@ -159,12 +180,13 @@ BANCADAS: tuple[Bancada, ...] = (
             "microfone, todos no primeiro"
         ),
         adaptadores=(DONGLE_A, DONGLE_B, DONGLE_C),
-        postos=_postos(4, DONGLE_A, mic=True),
-        tela_move=0,
+        postos=_postos(4, DONGLE_A, mic=True, ponte=True),
+        tela_move=1,
         motor_move=2,
         nota=(
-            "a mesa cheia desta casa (co-op de quatro, microfone de pé em todos) "
-            "dá 1.106,8 de 1.600 fatias, fração 0,69 — ABAIXO do corte 0,85"
+            "a mesa cheia desta casa (co-op de quatro, microfone e som de pé em "
+            "todos): quatro pontes num adaptador que comporta duas, e a tela "
+            "propõe UM movimento de cada vez (R12)"
         ),
     ),
     Bancada(
@@ -186,7 +208,11 @@ BANCADAS: tuple[Bancada, ...] = (
             "microfone no primeiro, um no segundo"
         ),
         adaptadores=(DONGLE_A, DONGLE_B),
-        postos=_postos(6, DONGLE_A, mic=False) + _postos(1, DONGLE_B, mic=False, desde=6),
+        postos=(
+            _postos(3, DONGLE_A, mic=False, ponte=True)
+            + _postos(3, DONGLE_A, mic=False, desde=3)
+            + _postos(1, DONGLE_B, mic=False, desde=6)
+        ),
         tela_move=1,
         motor_move=2,
         nota="a única bancada em que a régua da tela MANDA mover — e manda menos",
@@ -198,19 +224,25 @@ BANCADAS: tuple[Bancada, ...] = (
             "adaptador, o segundo VAZIO"
         ),
         adaptadores=(DONGLE_A, DONGLE_B),
-        postos=_postos(6, DONGLE_A, mic=False),
-        tela_move=0,
+        postos=(
+            _postos(3, DONGLE_A, mic=False, ponte=True)
+            + _postos(3, DONGLE_A, mic=False, desde=3)
+        ),
+        tela_move=1,
         motor_move=3,
         nota=(
-            "adaptador sem controle NÃO existe para a régua da tela — e é aqui "
-            "que a tela publica a frase falsa do adaptador único"
+            "até 23/09 o adaptador sem controle NÃO existia para a régua da tela; "
+            "desde a MOVER-UM-POR-VEZ-01 ele é destino"
         ),
     ),
     Bancada(
         id="5-sem-ordem-possivel",
         titulo="sem ordem possível: seis controles e um adaptador só na mesa",
         adaptadores=(DONGLE_A,),
-        postos=_postos(6, DONGLE_A, mic=False),
+        postos=(
+            _postos(3, DONGLE_A, mic=False, ponte=True)
+            + _postos(3, DONGLE_A, mic=False, desde=3)
+        ),
         tela_move=0,
         motor_move=0,
         nota="as duas CONVERGEM: não há para onde mover, e as duas calam",
@@ -219,7 +251,12 @@ BANCADAS: tuple[Bancada, ...] = (
         id="6-dois-cheios",
         titulo="dois adaptadores, ambos na Cheia: cinco controles com microfone em cada",
         adaptadores=(DONGLE_A, DONGLE_B),
-        postos=_postos(5, DONGLE_A, mic=True) + _postos(5, DONGLE_B, mic=True, desde=5),
+        postos=(
+            _postos(3, DONGLE_A, mic=True, ponte=True)
+            + _postos(2, DONGLE_A, mic=True, desde=3)
+            + _postos(3, DONGLE_B, mic=True, desde=5, ponte=True)
+            + _postos(2, DONGLE_B, mic=True, desde=8)
+        ),
         tela_move=0,
         motor_move=0,
         nota=(
@@ -302,6 +339,7 @@ def veredito_da_tela(bancada: Bancada) -> Veredito:
             "connected": True,
             "uniq": _sem_dois_pontos(posto.endereco),
             "player_slot": i + 1,
+            "ponte_do_radio": "som" if posto.ponte else None,
         }
         for i, posto in enumerate(bancada.postos)
     ]
@@ -310,14 +348,14 @@ def veredito_da_tela(bancada: Bancada) -> Veredito:
         com_ponte_de_mic=[
             _sem_dois_pontos(p.endereco) for p in bancada.postos if p.mic
         ],
+        adaptadores=bancada.adaptadores,
         **_sysfs_de_mentira(bancada.postos),
     )
     ordem = plano_de_radio.ordem_de_redistribuicao(planos)
 
     vistos = tuple(
-        f'{_curto(e)}: {p.agora.controles} controle(s), '
-        f"{_num(p.agora.slots_total)} de {p.agora.slots_teto} fatias "
-        f"(fração {_num(p.agora.fracao_total * 100)}%, \"{p.agora.rotulo}\")"
+        f"{_curto(e)}: {p.no_ar} controle(s), {p.pontes} de {p.n_max} pontes "
+        f'("{p.rotulo_das_pontes}")'
         for e, p in sorted(planos.items())
     )
     invisiveis = tuple(a for a in bancada.adaptadores if a not in planos)
@@ -338,19 +376,19 @@ def veredito_da_tela(bancada: Bancada) -> Veredito:
         )
 
     if ordem is None:
+        alem = [p for p in planos.values() if p.pontes > p.n_max]
         if not planos:
             razao = "nenhum controle no rádio: não há o que arranjar"
-        elif not apertados:
-            maior = max(p.agora.fracao_total for p in planos.values())
+        elif not alem:
+            maior = max(p.pontes for p in planos.values())
             razao = (
-                f"nenhum adaptador passou do corte da \"Apertada\" "
-                f"({_num(CORTE_APERTADA * 100)}%): o mais carregado está em "
-                f"{_num(maior * 100)}%"
+                f"nenhum adaptador passou do limite de pontes: o mais carregado "
+                f"tem {maior}"
             )
         else:
             razao = (
-                "há adaptador acima do corte, mas nenhum OUTRO adaptador "
-                "conhecido continuaria fora da \"Cheia\" depois de receber"
+                "há adaptador além do limite de pontes, mas nenhum OUTRO "
+                "adaptador conhecido tem vaga para mais uma"
             )
         return Veredito("régua da tela", (), razao, vistos)
 
@@ -367,11 +405,7 @@ def veredito_da_tela(bancada: Bancada) -> Veredito:
         regua="régua da tela",
         movimentos=(
             Movimento(
-                quem=(
-                    "um controle COM microfone (o mais caro)"
-                    if ordem.move_com_microfone
-                    else "um controle SEM microfone"
-                ),
+                quem=f"um controle com ponte de {ordem.modo} (é a ponte que transborda)",
                 origem=ordem.origem,
                 destino=ordem.destino,
             ),
@@ -579,39 +613,41 @@ def test_a_divergencia_esta_nomeada() -> None:
     )
 
 
-def test_a_regua_da_tela_nao_enxerga_adaptador_vazio() -> None:
-    """O achado 2, isolado: um dongle livre não existe para a régua da tela.
+def test_a_regua_da_tela_enxerga_o_adaptador_vazio() -> None:
+    """O achado 2, CURADO em 23/09/2026 (MOVER-UM-POR-VEZ-01).
 
-    É o que faz a seção Desempenho publicar *"é o único que você tem"* com um
-    segundo adaptador na mesa. Conserto é em ``plano_de_radio.py`` e em
-    ``secao_orcamento.py``, que NÃO são posse desta frente: está relatado.
+    Até esta data um dongle livre não existia para a régua da tela — o que fazia
+    a seção Desempenho publicar *"é o único que você tem"* com um segundo
+    adaptador na mesa. Agora quem monta os planos diz os adaptadores da mesa
+    (``adaptadores=``) e o vazio é destino. O nó continua aqui, virado: se a
+    régua voltar a não ver o dongle livre, ele reprova.
     """
     bancada = next(b for b in BANCADAS if b.id == "4-buraco-livre-noutra-controladora")
     tela = veredito_da_tela(bancada)
     arranjo = veredito_do_motor(bancada)
 
-    assert tela.movimentos == (), (
-        "a régua da tela passou a ver o adaptador vazio — se isso é conserto, "
-        "atualize o achado 2 do cabeçalho em vez de apagar o teste"
-    )
-    assert any("ADAPTADOR QUE ELA NÃO VÊ" in e for e in tela.extras)
-    assert any(plano_de_radio.FRASE_DO_ADAPTADOR_UNICO in e for e in tela.extras), (
-        "a tela deixou de publicar a frase do adaptador único neste estado"
-    )
+    assert len(tela.movimentos) == 1, "o dongle livre voltou a não existir para a tela"
+    assert tela.movimentos[0].destino == DONGLE_B
+    assert not any("ADAPTADOR QUE ELA NÃO VÊ" in e for e in tela.extras)
     assert len(arranjo.movimentos) == 3, (
         "o motor do arranjo enxerga o dongle vazio e enche metade dele; se "
         "deixou de enxergar, a divergência mudou de forma"
     )
 
 
-def test_na_mesa_dela_a_tela_cala_e_o_motor_manda_mover() -> None:
-    """O achado 1, isolado: co-op de quatro com microfone não passa do corte."""
+def test_na_mesa_dela_a_tela_propoe_um_e_o_motor_manda_mover_dois() -> None:
+    """O achado 1, remedido em 23/09/2026: quatro pontes num adaptador de duas.
+
+    Até 23/09 a tela CALAVA aqui (a soma aditiva não passava do corte). Pesando
+    pontes, ela propõe UM movimento — a R12 dela é um de cada vez, e o próximo só
+    depois do «chegou» —, e o motor do arranjo segue mandando mover dois.
+    """
     bancada = next(b for b in BANCADAS if b.id == "1-a-mesa-dela")
     tela = veredito_da_tela(bancada)
     arranjo = veredito_do_motor(bancada)
 
-    assert tela.movimentos == ()
-    assert "corte" in tela.razao, tela.razao
+    assert len(tela.movimentos) == 1, tela.razao
+    assert tela.movimentos[0].origem == DONGLE_A
     assert len(arranjo.movimentos) == 2
     assert {m.destino for m in arranjo.movimentos} == {DONGLE_B, DONGLE_C}, (
         "o motor espalha os quatro pelos três dongles do hub dela"
