@@ -69,10 +69,14 @@ instante de cada queda).
 
 OS CINCO ACERTOS DA CONFERÊNCIA (GOVERNADOR-DO-RADIO-02, 23/09/2026)
 ====================================================================
-1. **«Ligar aqui» vale enquanto a ponte estiver de pé.** A R3 é *sempre pedir
-   mover*: a resposta dela autoriza AQUELA ponte, e quando ela desce a próxima
-   subida no adaptador cheio pergunta de novo. Uma vaga que nunca subiu não
-   gasta a resposta — ela respondeu e a ponte ainda não esteve no ar.
+1. **«Ligar aqui» vale enquanto o CONTROLE ficar naquele adaptador.** REVISTO
+   em 23/09 pela A-COSTURA-DA-ONDA-2-01, decisão de quem coordena: a
+   GOVERNADOR-02 dizia «enquanto a ponte estiver de pé», e o preço medido na
+   conferência foi perguntar a ela no meio da partida — cada controle tem uma
+   ponte só, a troca som → vibração derruba e sobe a ponte, e a ponte do som
+   sob demanda desce sempre que o som para. A R3 (*sempre pedir mover*) vale a
+   cada vez que o controle CHEGA ao adaptador cheio; a resposta dela cai quando
+   ele SAI — desconecta ou é movido (:meth:`GovernadorDoRadio.conferir_as_autorizacoes`).
 2. **A marca «além do limite» sai quando o adaptador volta a caber.** A cada
    descida, as :attr:`GovernadorDoRadio.n_max` primeiras vagas do adaptador,
    na ordem em que chegaram, cabem; só o resto segue marcado.
@@ -169,6 +173,12 @@ VALIDADE_DO_PEDIDO_S = 15.0
 #: exceção entre o pedido e a subida). O governador a recolhe, para ela não
 #: ocupar o adaptador para sempre.
 PRAZO_PARA_SUBIR_S = 30.0
+
+#: De quanto em quanto tempo o tique pergunta onde está cada controle que ela
+#: mandou «Ligar aqui» (A-COSTURA-DA-ONDA-2-01). Uma varredura do ``HID_PHYS``
+#: por controle autorizado — nenhuma quando não há resposta dela de pé, que é
+#: o caso comum. Um segundo é menos que um controle leva para cair e voltar.
+INTERVALO_DAS_AUTORIZACOES_S = 1.0
 
 #: Os dois tipos que o diário conhece (``diario_do_radio.PONTE_SUBIU``).
 TIPO_SOM = "som"
@@ -546,9 +556,11 @@ class GovernadorDoRadio:
         self._vagas: list[Vaga] = []
         self._estados: dict[str, _Estado] = {}
         self._pedidos: dict[str, _Pedido] = {}
-        #: ``(chave do controle, adaptador)`` que ela mandou «Ligar aqui». Sai
-        #: quando a ponte daquele controle naquele adaptador DESCE (item 1).
-        self._autorizados: set[tuple[str, str]] = set()
+        #: ``(chave do controle, adaptador)`` que ela mandou «Ligar aqui» → o
+        #: ``uniq`` como veio, que é o que o ``adaptador_de`` pergunta. Sai quando
+        #: o controle SAI daquele adaptador (item 1, revisto pela A-COSTURA).
+        self._autorizados: dict[tuple[str, str], str] = {}
+        self._autorizacoes_vistas_em = -math.inf
         self._parado_ate: dict[str, float] = {}
         #: A espera crescente de cada adaptador que parou de escoar (item 3).
         self._episodios: dict[str, _EpisodioDaFila] = {}
@@ -708,6 +720,10 @@ class GovernadorDoRadio:
                 # Sem casa não há adaptador a proteger: a ponte sobe como
                 # sempre subiu, e o diário a conta sem adaptador.
                 return self._conceder(uniq, "", tipo, alem=False, agora=agora)
+            # ELE ESTÁ EM OUTRO ADAPTADOR: a resposta que ela deu lá caiu (item 1,
+            # revisto pela A-COSTURA). Quando ele voltar, a R3 pergunta de novo.
+            for par in [p for p in self._autorizados if p[0] == chave and p[1] != adaptador]:
+                self._autorizados.pop(par, None)
             if self._parado_ate.get(adaptador, 0.0) > agora:
                 return Recusa(uniq, adaptador, tipo, MOTIVO_PARADO)
             ocupadas = [
@@ -771,13 +787,14 @@ class GovernadorDoRadio:
         return vaga
 
     def ligar_aqui(self, uniq: str) -> bool:
-        """«Ligar aqui» (R3 → R4): a próxima ponte deste controle sobe além do limite.
+        """«Ligar aqui» (R3 → R4): a ponte deste controle sobe além do limite.
 
-        Vale para o controle NESTE adaptador, e ENQUANTO A PONTE ESTIVER DE PÉ
-        (GOVERNADOR-DO-RADIO-02, item 1): quando ela desce, a próxima subida
-        naquele adaptador cheio pergunta de novo — a R3 é *sempre pedir mover*.
-        Movido, a pergunta volta no adaptador novo. ``False`` = o adaptador
-        dele não se lê.
+        Vale para o controle NESTE adaptador, ENQUANTO ELE FICAR NELE (item 1,
+        revisto pela A-COSTURA-DA-ONDA-2-01): a ponte que desce e sobe de novo
+        — o som que para, a troca som → vibração — não pergunta outra vez. Ele
+        desconecta ou é movido, a resposta cai (:meth:`conferir_as_autorizacoes`),
+        e na volta ao adaptador cheio a R3 pergunta de novo. ``False`` = o
+        adaptador dele não se lê.
         """
         chave = _chave(uniq)
         with self._trava:
@@ -791,7 +808,7 @@ class GovernadorDoRadio:
         if not adaptador:
             return False
         with self._trava:
-            self._autorizados.add((chave, adaptador))
+            self._autorizados[(chave, adaptador)] = uniq
         logger.info("governador_ligar_aqui", uniq=uniq, adaptador=adaptador)
         avisar = self.ao_autorizar
         if avisar is not None:
@@ -800,6 +817,42 @@ class GovernadorDoRadio:
             except Exception:  # quem escuta nunca desfaz a resposta dela
                 logger.debug("governador_aviso_falhou", uniq=uniq, exc_info=True)
         return True
+
+    def conferir_as_autorizacoes(self) -> int:
+        """O «Ligar aqui» cai do controle que SAIU do adaptador. Devolve quantos.
+
+        A-COSTURA-DA-ONDA-2-01, item 4: a resposta dela vale enquanto o controle
+        ficar naquele adaptador. Quem diz onde ele está é o ``HID_PHYS`` (o mesmo
+        ``adaptador_de`` da admissão): outro adaptador é «foi movido»; ``""`` é
+        «desconectou» — o nó do rádio sumiu ou ele foi para o cabo. Um erro de
+        leitura é «não sei», e a resposta dela fica. Chamado pelo tique, a cada
+        :data:`INTERVALO_DAS_AUTORIZACOES_S`, e fora da trava: ler o sysfs não
+        segura a admissão.
+        """
+        with self._trava:
+            autorizados = dict(self._autorizados)
+        if not autorizados:
+            return 0
+        sairam: list[tuple[tuple[str, str], str]] = []
+        for par, uniq in autorizados.items():
+            try:
+                onde = str(self._adaptador_de(uniq) or "").lower()
+            except Exception:  # sysfs que some sob a mão: não sei
+                logger.debug("governador_autorizacao_ilegivel", uniq=uniq, exc_info=True)
+                continue
+            if onde != par[1]:
+                sairam.append((par, onde))
+        with self._trava:
+            for par, _onde in sairam:
+                self._autorizados.pop(par, None)
+        for par, onde in sairam:
+            logger.info(
+                "governador_ligar_aqui_caiu",
+                uniq=autorizados[par],
+                adaptador=par[1],
+                agora_em=onde or None,
+            )
+        return len(sairam)
 
     # -- a ponte diz: subiu, desceu ------------------------------------------
 
@@ -860,12 +913,9 @@ class GovernadorDoRadio:
                     self._vagas.remove(vaga)
                 subiu = vaga.subiu_em is not None
                 calada = vaga._calada
-                if subiu:
-                    # ITEM 1: o «Ligar aqui» valia enquanto a ponte estava de pé.
-                    # Ela desceu: a próxima subida naquele adaptador cheio
-                    # pergunta de novo. A vaga que NUNCA subiu não gasta a
-                    # resposta dela.
-                    self._autorizados.discard((_chave(vaga.uniq), vaga.adaptador))
+                # A PONTE QUE DESCE NÃO GASTA O «LIGAR AQUI» (item 1, revisto pela
+                # A-COSTURA-DA-ONDA-2-01): quem o gasta é o controle SAIR do
+                # adaptador, e quem vê isso é :meth:`conferir_as_autorizacoes`.
                 self._recalcular_o_limite(vaga.adaptador)
             if subiu and not calada:
                 self._escrever(
@@ -949,6 +999,9 @@ class GovernadorDoRadio:
             self._a_fila_andou(endereco)
         for endereco, vagas, cedendo_s in paradas:
             self._fila_parada(endereco, vagas, cedendo_s, pelo="governador")
+        if agora - self._autorizacoes_vistas_em >= INTERVALO_DAS_AUTORIZACOES_S:
+            self._autorizacoes_vistas_em = agora
+            self.conferir_as_autorizacoes()
 
     def _medir(
         self,
@@ -1244,6 +1297,7 @@ __all__ = [
     "FILA_PARADA",
     "FOLGA_PARA_VOLTAR",
     "FRASE_DA_FILA_PARADA",
+    "INTERVALO_DAS_AUTORIZACOES_S",
     "INTERVALO_DAS_BORDAS_NO_DIARIO_S",
     "LIMIAR_DO_DEFICIT",
     "MOTIVO_CHEIO",

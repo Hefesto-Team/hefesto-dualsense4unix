@@ -371,3 +371,147 @@ async def test_o_desligamento_fecha_a_central_e_o_pairable_volta(
         assert mundo.escritas_no(VARANDA, "Pairable") == []
     finally:
         central.fechar()
+
+
+# ---------------------------------------------------------------------------
+# 4. o «Ligar aqui» vale enquanto o controle ficar naquele adaptador
+# ---------------------------------------------------------------------------
+
+ADAPTADOR_A = "aa:bb:cc:00:00:a1"
+ADAPTADOR_B = "aa:bb:cc:00:00:b2"
+ADAPTADOR_C = "aa:bb:cc:00:00:c3"
+CONTROLE_1 = "aa:bb:cc:00:00:01"
+CONTROLE_2 = "aa:bb:cc:00:00:02"
+CONTROLE_3 = "aa:bb:cc:00:00:03"
+CONTROLE_4 = "aa:bb:cc:00:00:04"
+
+
+class _Relogio:
+    def __init__(self) -> None:
+        self.agora = 100.0
+
+    def __call__(self) -> float:
+        return self.agora
+
+
+class _Diario:
+    def __init__(self) -> None:
+        self.entradas: list[dict[str, Any]] = []
+
+    def __call__(self, quem: str, o_que: str, por_que: str, **campos: Any) -> None:
+        self.entradas.append({"quem": quem, "o_que": o_que, "por_que": por_que, **campos})
+
+
+def _governador(onde: dict[str, str], relogio: _Relogio, **extra: Any) -> Any:
+    from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
+
+    def adaptador_de(uniq: str) -> str:
+        valor = onde[uniq]
+        if isinstance(valor, Exception):
+            raise valor
+        return valor
+
+    return gov.GovernadorDoRadio(
+        adaptador_de=adaptador_de, registrar=_Diario(), relogio=relogio, **extra
+    )
+
+
+def _ela_liga_aqui_o_terceiro(onde: dict[str, Any], relogio: _Relogio) -> Any:
+    """Dois no A, um no B: o terceiro do A pergunta, e ela responde «Ligar aqui»."""
+    from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
+
+    governador = _governador(onde, relogio)
+    for uniq in (CONTROLE_1, CONTROLE_2, CONTROLE_4):
+        vaga = governador.pedir_vaga(uniq, "som")
+        assert isinstance(vaga, gov.Vaga)
+        vaga.subiu("som")
+    assert isinstance(governador.pedir_vaga(CONTROLE_3, "som"), gov.Recusa)
+    assert governador.ligar_aqui(CONTROLE_3) is True
+    vaga = governador.pedir_vaga(CONTROLE_3, "som")
+    assert isinstance(vaga, gov.Vaga) and vaga.por_escolha_dela
+    vaga.subiu("som")
+    vaga.soltar("a fonte do som secou")
+    return governador
+
+
+@pytest.mark.parametrize("longe", [ADAPTADOR_C, ""], ids=["movido", "desconectou"])
+def test_o_ligar_aqui_cai_quando_o_controle_sai_do_adaptador(longe: str) -> None:
+    """Ele saiu do adaptador cheio — movido, ou desconectado —, e voltou: a R3
+    pergunta de novo. A ponte que desceu no meio NÃO gastou a resposta; quem a
+    gasta é a saída, e quem vê a saída é o tique, pelo ``HID_PHYS``.
+
+    MORDIDA: tire do ``GovernadorDoRadio.tique`` a chamada a
+    ``conferir_as_autorizacoes`` — ele volta ao A e a ponte sobe além do limite
+    sem perguntar, e esta régua reprova.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
+
+    onde: dict[str, Any] = {
+        CONTROLE_1: ADAPTADOR_A, CONTROLE_2: ADAPTADOR_A, CONTROLE_3: ADAPTADOR_A,
+        CONTROLE_4: ADAPTADOR_B,
+    }
+    relogio = _Relogio()
+    governador = _ela_liga_aqui_o_terceiro(onde, relogio)
+
+    # Enquanto ele fica no A, a resposta vale — o tique não a derruba.
+    relogio.agora += gov.INTERVALO_DAS_AUTORIZACOES_S
+    governador.tique()
+    vibracao = governador.pedir_vaga(CONTROLE_3, "haptica")
+    assert isinstance(vibracao, gov.Vaga) and vibracao.por_escolha_dela
+    vibracao.soltar("a vibração parou")
+
+    onde[CONTROLE_3] = longe
+    relogio.agora += gov.INTERVALO_DAS_AUTORIZACOES_S
+    governador.tique()
+    onde[CONTROLE_3] = ADAPTADOR_A
+    relogio.agora += gov.INTERVALO_DAS_AUTORIZACOES_S
+
+    de_volta = governador.pedir_vaga(CONTROLE_3, "som")
+    assert isinstance(de_volta, gov.Recusa), (
+        "ele saiu do adaptador e voltou, e a ponte subiu além do limite sem perguntar"
+    )
+    assert de_volta.motivo == gov.MOTIVO_CHEIO
+
+
+def test_pedir_vaga_em_outro_adaptador_tambem_derruba_a_resposta() -> None:
+    """Movido, ele pediu som no adaptador novo antes de o tique olhar: a
+    resposta do A cai ali mesmo, e na volta ao A a pergunta vem.
+
+    MORDIDA: tire do ``pedir_vaga`` o descarte das autorizações de outro
+    adaptador — sem tique no meio, ele volta ao A sem pergunta, e esta régua
+    reprova.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
+
+    onde: dict[str, Any] = {
+        CONTROLE_1: ADAPTADOR_A, CONTROLE_2: ADAPTADOR_A, CONTROLE_3: ADAPTADOR_A,
+        CONTROLE_4: ADAPTADOR_B,
+    }
+    governador = _ela_liga_aqui_o_terceiro(onde, _Relogio())
+
+    onde[CONTROLE_3] = ADAPTADOR_B
+    no_b = governador.pedir_vaga(CONTROLE_3, "som")
+    assert isinstance(no_b, gov.Vaga) and not no_b.alem_do_limite
+    no_b.soltar("a fonte do som secou")
+
+    onde[CONTROLE_3] = ADAPTADOR_A
+    assert isinstance(governador.pedir_vaga(CONTROLE_3, "som"), gov.Recusa)
+
+
+def test_nao_sei_onde_ele_esta_nao_derruba_a_resposta_dela() -> None:
+    """O sysfs que some sob a mão é «não sei», e «não sei» não decide nada."""
+    from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
+
+    onde: dict[str, Any] = {
+        CONTROLE_1: ADAPTADOR_A, CONTROLE_2: ADAPTADOR_A, CONTROLE_3: ADAPTADOR_A,
+        CONTROLE_4: ADAPTADOR_B,
+    }
+    relogio = _Relogio()
+    governador = _ela_liga_aqui_o_terceiro(onde, relogio)
+
+    onde[CONTROLE_3] = OSError("o hidraw sumiu no meio da leitura")
+    relogio.agora += gov.INTERVALO_DAS_AUTORIZACOES_S
+    assert governador.conferir_as_autorizacoes() == 0
+    onde[CONTROLE_3] = ADAPTADOR_A
+    vaga = governador.pedir_vaga(CONTROLE_3, "som")
+    assert isinstance(vaga, gov.Vaga) and vaga.por_escolha_dela
