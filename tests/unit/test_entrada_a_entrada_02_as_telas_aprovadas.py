@@ -1128,6 +1128,46 @@ def test_o_script_nao_reescreve_o_nome_que_ja_esta_la(tmp_path: Path) -> None:
     assert banca.aliases_escritos() == {}
 
 
+def test_sob_sudo_o_gancho_do_maquina_json_morre(tmp_path: Path) -> None:
+    """O script é root e lê o arquivo que ``HEFESTO_MAQUINA_JSON`` aponta — sem a
+    conferência de dono, que só vale para a casa achada pelo ``getent``. Sob
+    ``sudo`` o gancho morre junto com os outros dois de caminho: o
+    ``env_reset`` já o apagaria, e o ``unset`` é o cinto para a máquina que o
+    desligou.
+
+    Roda SÓ o prólogo do script (até a primeira raiz lida), com uma sonda no
+    fim: nenhum adaptador, nenhum ``/sys`` e nenhum ``busctl`` entram aqui.
+
+    MORDIDA: tire ``HEFESTO_MAQUINA_JSON`` do ``unset`` do bloco do ``SUDO_UID``
+    — sob sudo o gancho sobrevive e a sonda o imprime.
+    """
+    prologo, marca, _ = SCRIPT.read_text(encoding="utf-8").partition("\nSYS_BLUETOOTH=")
+    assert marca and "SUDO_UID" in prologo, "o prólogo do script mudou de forma"
+    sonda = prologo + '\nprintf "%s" "${HEFESTO_MAQUINA_JSON-morto}"\n'
+    ambiente = {
+        "PATH": "/usr/bin:/bin",
+        "HEFESTO_MAQUINA_JSON": str(tmp_path / "maquina.json"),
+    }
+
+    def rodar(**extra: str) -> str:
+        feito = subprocess.run(
+            ["bash", "-c", sonda],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+            env={**ambiente, **extra},
+        )
+        assert feito.returncode == 0, feito.stderr[-800:]
+        return feito.stdout
+
+    assert rodar(SUDO_UID="1000") == "morto", "o gancho do maquina.json sobreviveu ao sudo"
+    assert rodar(SUDO_USER="ela") == "morto"
+    #: A régua da sonda: sem sudo, o MESMO gancho chega. Sem esta metade, a de
+    #: cima passaria com a sonda quebrada.
+    assert rodar() == str(tmp_path / "maquina.json")
+
+
 def test_sob_a_suite_o_script_nao_le_o_maquina_json_dela(tmp_path: Path) -> None:
     """Com os ganchos de teste e sem ``HEFESTO_MAQUINA_JSON``, o script não
     procura a casa de ninguém: um teste não lê o ``maquina.json`` DELA.
