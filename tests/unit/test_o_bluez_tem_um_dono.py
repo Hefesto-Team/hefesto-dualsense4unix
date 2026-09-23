@@ -315,6 +315,32 @@ def test_sob_a_suite_o_dono_do_processo_nunca_e_o_vivo_do_sistema() -> None:
     assert bd.lugares_dos_adaptadores() == {}
 
 
+def test_sob_a_suite_o_gio_nao_abre_o_barramento_de_sistema(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A guarda do ``busctl`` cobria a leitura; a do Gio faltava.
+
+    Achado na conferência: ``bd.dono()`` nunca liga o vivo sob a suíte, mas um
+    ``BarramentoGio()`` construído por uma régua abria o barramento de sistema e
+    tirava a foto da mesa dela. O fio é trocado por um que não conecta nada, para
+    a mordida não alcançar o barramento de verdade.
+
+    MORDIDA: tire a guarda do começo de ``BarramentoGio.abrir`` — o fio nasce.
+    """
+    nasceram: list[str] = []
+
+    def viver_de_mentira(self: bd.BarramentoGio) -> None:
+        nasceram.append("fio")
+        self._pronto.set()
+
+    monkeypatch.setattr(bd.BarramentoGio, "_viver", viver_de_mentira)
+    barramento = bd.BarramentoGio()
+
+    assert barramento.abrir(espera=0.5) is False
+    assert "suíte" in barramento.erro
+    assert nasceram == [] and barramento._fio is None
+
+
 def test_a_porta_de_fuga_e_declarada(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(bd.RADIO_DE_VERDADE_NA_SUITE, "1")
     assert bd.a_suite_esta_rodando() is False
