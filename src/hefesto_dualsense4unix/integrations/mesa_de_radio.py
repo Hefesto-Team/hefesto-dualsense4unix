@@ -84,9 +84,9 @@ _HUB_RAIZ = re.compile(r"^usb[0-9]+$")
 _CLASSE_HUB = "09"
 
 #: O último ``0000:xx:xx.x`` da cadeia sysfs é o controlador xHCI onde o
-#: aparelho pendura. É o algoritmo de ``scripts/doctor.sh:4817``
+#: aparelho pendura. É o algoritmo de ``scripts/doctor.sh:5050``
 #: (``usb_pci_controller``), portado. O que NÃO se porta é o ``pci_label``
-#: (``doctor.sh:4823-4830``): ele traduz dois endereços PCI de uma máquina
+#: (``doctor.sh:5056-5063``): ele traduz dois endereços PCI de uma máquina
 #: específica, e endereço PCI de máquina é o oposto de universal.
 _CONTROLADOR_PCI = re.compile(r"0000:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]")
 

@@ -523,7 +523,7 @@ class TestOInstallLeCadaCodigo:
         assert f"systemctl --user start {unidades}" in corpo, corpo
 
     def test_o_conselho_de_falha_da_trava_pede_todos(self) -> None:
-        """install.sh:4055 dizia `--lock` sem `--todos`."""
+        """install.sh:4281 dizia `--lock` sem `--todos`."""
         bloco = _bloco('step "11c"', "Conferência final")
         for linha in bloco.splitlines():
             if "rode manualmente" in linha:

@@ -127,7 +127,7 @@ sudo install -Dm755 "${ROOT_DIR}/scripts/alfa.sh" /usr/local/lib/hefesto/alfa.sh
 """
 
 #: A outra forma que a árvore usa de verdade: o laço com variável
-#: (`install.sh:1720` e `scripts/build_deb.sh:216`), que um grep literal do nome
+#: (`install.sh:1821` e `scripts/build_deb.sh:216`), que um grep literal do nome
 #: NÃO vê. Se a seção perder este caso, ela fica cega justamente nos dois
 #: lugares onde o produto copia scripts hoje.
 INSTALL_LACO = """#!/usr/bin/env bash
@@ -166,7 +166,7 @@ class TestAMordidaDaSecao:
     def test_o_laco_com_variavel_nao_cega_a_secao(self, repo: Path) -> None:
         """A forma que a árvore usa de verdade tem de ser vista igual.
 
-        `install.sh:1720` e `scripts/build_deb.sh:216` copiam por
+        `install.sh:1821` e `scripts/build_deb.sh:216` copiam por
         `scripts/${VAR}` dentro de um `for`. Uma seção que só lê nome literal
         acharia que instalador nenhum copia script nenhum — e daria verde para
         a árvore inteira, calada.
@@ -202,7 +202,7 @@ class TestOsTresJeitosDeEstarCerto:
     def test_guarda_de_existencia_com_o_nome_literal_passa(self, repo: Path) -> None:
         """O idioma que a casa já usava antes desta seção existir.
 
-        `scripts/doctor.sh:4343` e `scripts/bt_health_watchdog.sh:215` testam a
+        `scripts/doctor.sh:4576` e `scripts/bt_health_watchdog.sh:215` testam a
         existência antes de chamar. Quem escreve a guarda está dizendo "sei que
         pode não estar aqui, e tratei" — e o portão acredita.
         """

@@ -305,9 +305,9 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
     "integrations/sentinela_do_wrapper.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/sentinela_do_wrapper.py",
-        "install.sh:3732 substitui __SENTINELA__ na unit, cujo ExecStart é "
+        "install.sh:3958 substitui __SENTINELA__ na unit, cujo ExecStart é "
         "`python3 __SENTINELA__ --reparar` "
-        "(assets/hefesto-steam-input-guard.service:29); o doctor.sh:1921 "
+        "(assets/hefesto-steam-input-guard.service:29); o doctor.sh:1982 "
         "(check_sentinela_wrapper, --censo) também o roda",
     ),
     "integrations/steam_input_ponte.py": (
@@ -315,24 +315,24 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "integrations/steam_input_ponte.py",
         "roda como `python3 ${PONTE_PY} --ligar` em "
         "scripts/disable_steam_input.sh:283+298, e esse roteiro é o ExecStart "
-        "de assets/hefesto-steam-input-guard.service:14 (install.sh:3733)",
+        "de assets/hefesto-steam-input-guard.service:14 (install.sh:3959)",
     ),
     "integrations/steam_launch_options.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/steam_launch_options.py",
-        "install.sh:3778 o roda com `--migrate`; uninstall.sh:1467 o roda para "
-        "tirar o wrapper; doctor.sh:2167 o publica como cura",
+        "install.sh:4004 o roda com `--migrate`; uninstall.sh:1582 o roda para "
+        "tirar o wrapper; doctor.sh:2228 o publica como cura",
     ),
     "integrations/proton_pin.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/proton_pin.py",
-        "install.sh:3950 (--ensure) e uninstall.sh:1444 o rodam; "
-        "doctor.sh:3995 (check_proton_pin, --report) também",
+        "install.sh:4176 (--ensure) e uninstall.sh:1559 o rodam; "
+        "doctor.sh:4056 (check_proton_pin, --report) também",
     ),
     "integrations/opcoes_por_jogo.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/opcoes_por_jogo.py",
-        "install.sh:4096 substitui __OPCOES_POR_JOGO__ na unit, cujo ExecStart "
+        "install.sh:4322 substitui __OPCOES_POR_JOGO__ na unit, cujo ExecStart "
         "é `python3 __OPCOES_POR_JOGO__ --aplicar` "
         "(assets/hefesto-steam-input-guard.service:54) — o mesmo caminho dos "
         "irmãos __SENTINELA__ e __PROTON_PIN__, que rodam na mesma unit",
@@ -340,24 +340,24 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
     "integrations/audio_ks_dualsense.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/audio_ks_dualsense.py",
-        "install.sh:3089 o copia para ~/.local/share/hefesto-dualsense4unix/"
+        "install.sh:3281 o copia para ~/.local/share/hefesto-dualsense4unix/"
         "bin/hefesto-audio-ks, e o assets/hefesto-launch.sh:511 "
-        "(curar_audio_ks) o roda a cada jogo lançado; uninstall.sh:1663 o "
+        "(curar_audio_ks) o roda a cada jogo lançado; uninstall.sh:1778 o "
         "roda com --remover-de-todos",
     ),
     "integrations/exame_da_mesa.py": (
         "scripts/doctor.sh",
         "src/hefesto_dualsense4unix/integrations/exame_da_mesa.py",
-        "scripts/doctor.sh:3917 (check_exame_da_mesa) o roda — e o "
-        "install.sh:4025 roda o doctor",
+        "scripts/doctor.sh:3978 (check_exame_da_mesa) o roda — e o "
+        "install.sh:4251 roda o doctor",
     ),
 }
 
 #: Roteiros de shell que EMBUTEM Python de produção. Não é caso de borda nem
 #: gambiarra: é a política desta casa — *"quem DECIDE é o módulo puro
 #: integrations/kernel_cmdline.py (100% stdlib, testável); aqui só traduzimos o
-#: plano"* (install.sh:1592-1593). O instalador e o desinstalador abrem um
-#: ``python3 - "${ROOT_DIR}" <<'PYEOF'`` (install.sh:1596, uninstall.sh:1150)
+#: plano"* (install.sh:1682-1683). O instalador e o desinstalador abrem um
+#: ``python3 - "${ROOT_DIR}" <<'PYEOF'`` (install.sh:1686, uninstall.sh:1249)
 #: que importa o módulo e chama as funções dele.
 #:
 #: Esse Python É produção: roda na máquina dela, com ``sudo``, mexendo na linha
@@ -1152,7 +1152,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
     # saiu em 13/08/2026 porque a classificação estava ERRADA, não porque o
     # símbolo mudou. A razão dizia "instrumento: o docstring diz `Guarda de
     # teste`" — e o instalador a chama em produção, dentro do heredoc de
-    # install.sh:1633 (`violations = kc.forbidden_reintroductions(actions)`),
+    # install.sh:1723 (`violations = kc.forbidden_reintroductions(actions)`),
     # para ABORTAR o passo do cmdline quando a guarda anti-reintrodução dispara.
     # Ela só parecia instrumento porque a varredura era cega a heredoc. O portão
     # cobrou o apagamento sozinho, que é exatamente o que ele existe para fazer.
@@ -2649,7 +2649,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # entrada afirmava "esse cuidado está escrito e nunca roda", pedindo como
     # cura que "o `uninstall.sh` chamar este caminho". SUBSTITUÍDO em
     # 13/08/2026, porque o fato era falso e não decisão a preservar: o
-    # `uninstall.sh` já chama, em uninstall.sh:1243 (`rest, changed =
+    # `uninstall.sh` já chama, em uninstall.sh:1342 (`rest, changed =
     # kc.strip_quirks_token(tok)`), dentro do heredoc que importa o módulo. Era
     # o PORTÃO que não enxergava — ver `_ROTEIROS_DE_PRODUCAO`. A entrada saiu
     # porque a varredura passou a alcançá-la, e não porque alguém a apagou à
@@ -2975,7 +2975,7 @@ def trechos_python_embutidos(roteiro: Path) -> list[str]:
     A varredura anterior era CEGA a isto, e a cegueira tinha consequência
     escrita: uma função chamada pelo desinstalar desde julho aparecia na lista
     de dívida. Ler o shell como texto solto não serve — o nome também aparece
-    nos comentários em prosa do próprio roteiro (uninstall.sh:1202 cita
+    nos comentários em prosa do próprio roteiro (uninstall.sh:1301 cita
     ``strip_quirks_token`` numa linha ``#``), e comentário não é chamada. O que
     vale é o corpo do heredoc, e ele é Python de verdade: sai daqui e entra em
     ``ast.parse``, pela MESMA régua que mede ``src/``.
@@ -4869,7 +4869,7 @@ class TestOPortaoMorde:
         assert chave in promessas_sem_caminho(copia), (
             "arrancada a chamada do heredoc, o portão NÃO voltou a acusar "
             f"{chave!r}. Ou ele está lendo o roteiro como texto solto (e o "
-            "COMENTÁRIO de uninstall.sh:1202 o satisfaz), ou ele parou de "
+            "COMENTÁRIO de uninstall.sh:1301 o satisfaz), ou ele parou de "
             "olhar o roteiro da CÓPIA e está medindo a árvore viva"
         )
         assert chave not in promessas_sem_caminho(), (
@@ -5165,10 +5165,10 @@ class TestOPortaoMorde:
         embutido = "\n".join(trechos_python_embutidos(_RAIZ / "uninstall.sh"))
         assert "kc.strip_quirks_token(tok)" in embutido, (
             "o extrator não achou a chamada dentro do heredoc de "
-            "uninstall.sh:1150 — o delimitador ou a linha de abertura mudaram"
+            "uninstall.sh:1249 — o delimitador ou a linha de abertura mudaram"
         )
         assert "IDs do hefesto (strip_quirks_token do módulo puro)" not in embutido, (
-            "o extrator engoliu o COMENTÁRIO de uninstall.sh:1202 junto com o "
+            "o extrator engoliu o COMENTÁRIO de uninstall.sh:1301 junto com o "
             "heredoc — ele está pegando texto demais, e menção viraria prova"
         )
 

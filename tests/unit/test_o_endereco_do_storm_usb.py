@@ -582,7 +582,7 @@ def test_o_laudo_sobrevive_ao_json(tmp_path: Path) -> None:
 
 
 def test_o_kernel_log_vem_antes_do_storm_log(tmp_path: Path) -> None:
-    """A mesma escada do `doctor.sh:3820-3821` — o nome novo ganha do antigo."""
+    """A mesma escada do `doctor.sh:3881-3882` — o nome novo ganha do antigo."""
     estado = tmp_path / ".local/state/hefesto-dualsense4unix"
     estado.mkdir(parents=True)
     (estado / "storm.log").write_text("", encoding="utf-8")

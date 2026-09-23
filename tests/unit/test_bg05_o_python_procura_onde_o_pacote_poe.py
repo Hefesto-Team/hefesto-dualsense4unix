@@ -169,7 +169,7 @@ class TestAListaDeBases:
     def test_o_share_do_usuario_entra(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        """`install.sh:3239` instala `storm_watch.sh` em `XDG_DATA_HOME`."""
+        """`install.sh:3431` instala `storm_watch.sh` em `XDG_DATA_HOME`."""
         monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "dados"))
         caminhos = [str(b) for b in repo_files.bases_de_instalacao()]
 

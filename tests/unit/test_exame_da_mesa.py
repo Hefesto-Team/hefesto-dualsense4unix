@@ -75,7 +75,7 @@ def test_energia_do_radio_pede_atencao_sem_a_regra_no_lugar(tmp_path: Path) -> N
 
     Mordida: trocar o `return` deste ramo por `ESTADO_CERTO` faz o teste
     reprovar em `estado == ESTADO_ATENCAO` — e é o ramo que o doctor marca
-    com `warn` (`scripts/doctor.sh:2355`).
+    com `warn` (`scripts/doctor.sh:2416`).
     """
     item = energia_do_radio(**_bancada_do_radio(tmp_path, "Y", com_conf=False))
 
@@ -122,7 +122,7 @@ def test_energia_das_portas_pede_atencao_com_uma_em_auto(tmp_path: Path) -> None
     """Uma porta em `auto` é queda na certa para o que estiver nela.
 
     E a frase conta QUANTAS, nunca QUAIS: o doctor imprime `idVendor` e nome do
-    produto (`scripts/doctor.sh:2250-2252`), e isto aqui vai para uma tela que o
+    produto (`scripts/doctor.sh:2311-2313`), e isto aqui vai para uma tela que o
     retrato das abas versiona.
     """
     _porta(tmp_path, "1-1", "on")
@@ -230,7 +230,7 @@ def test_pareamentos_nao_sabe_sem_a_ferramenta_e_nunca_reprova() -> None:
     """Sem `busctl` no caminho, o exame diz que não sabe — nunca `problema`.
 
     É o precedente do próprio doctor, que devolve `info` (não falha) quando o
-    `busctl` falta (`scripts/doctor.sh:3214`).
+    `busctl` falta (`scripts/doctor.sh:3275`).
     """
     item = pareamentos(executar=lambda _argumentos: None)
 
@@ -251,7 +251,7 @@ def test_pareamentos_acha_o_pela_metade_e_nao_mostra_o_endereco() -> None:
     """`Paired: yes` com `Bonded: no` é problema — e o MAC NÃO vai para a tela.
 
     Mordida verificada em 22/08/2026: pus o endereço dentro do `porque`, que é
-    o que o `fail` do doctor faz em `scripts/doctor.sh:3227`, e este teste
+    o que o `fail` do doctor faz em `scripts/doctor.sh:3288`, e este teste
     reprovou com `'AA:BB:CC:00:00:FF' not in ...`. Sem ele o endereço dela iria
     para a tela e, pelo retrato das abas, para um PNG versionado.
     """
@@ -309,7 +309,7 @@ def test_pareamentos_ignora_os_filhos_do_dispositivo_na_arvore() -> None:
 def test_pareamentos_nao_sabe_quando_o_bluez_nao_tem_bonded() -> None:
     """Em BlueZ anterior ao 5.65 a propriedade `Bonded` NEM EXISTE.
 
-    `scripts/doctor.sh:3157-3158` documenta isso. Ausência dela não é "está
+    `scripts/doctor.sh:3218-3219` documenta isso. Ausência dela não é "está
     tudo bem": é esta máquina não saber responder.
     """
     caminho = "/org/bluez/hci0/dev_" + MAC_DE_MENTIRA.replace(":", "_")
@@ -403,7 +403,7 @@ def test_um_unico_problema_derruba_o_selo_verde() -> None:
     """A MORDIDA. Um item em `problema` derruba o topo de verde para vermelho.
 
     Esta é a resposta escrita ao `6c86e295` e à cicatriz de
-    `scripts/doctor.sh:1586-1590`: *"o dano não é errar um diagnóstico: é a tela
+    `scripts/doctor.sh:1647-1651`: *"o dano não é errar um diagnóstico: é a tela
     ensinar que verde-e-vermelho juntos são normais por aqui"*. A casa pagou
     duas vezes em agosto.
 

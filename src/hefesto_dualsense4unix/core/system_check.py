@@ -110,7 +110,7 @@ def _dualsense_mic_intended() -> bool:
 
     O estado em que os dois se contradizem não é hipotético — é o que o próprio
     instalador produz. Quem roda `install.sh --keep-dualsense-mic` sai com a
-    marca do gesto gravada (`install.sh:3556`) e SEM o drop-in 51, e então:
+    marca do gesto gravada (`install.sh:3782`) e SEM o drop-in 51, e então:
 
         doctor.sh ....... [OK] microfone ativo é o DualSense (foi pedido)
         system_check .... WirePlumber fixou o DualSense — rode doctor.sh --fix

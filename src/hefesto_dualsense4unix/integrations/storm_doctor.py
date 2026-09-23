@@ -626,7 +626,7 @@ def check_quirk(quirks_text: str | None = None) -> tuple[str, str]:
     # A frase dizia *"quirk anti-storm AUSENTE do usbcore (storm pode reincidir
     # sob carga)"*: o quê e o porquê em linguagem de kernel, e nenhum
     # o-que-fazer. Aqui o gesto honesto é NADA, e isso não é evasiva — este
-    # quirk é o cinto extra (a alavanca A do `doctor.sh:837`), e a cura de raiz
+    # quirk é o cinto extra (a alavanca A do `doctor.sh:875`), e a cura de raiz
     # é a linha de cima, do `check_snd_quirk`. Mandar mexer no cmdline do
     # kernel quem já está curado seria trabalho inventado; o público desta tela
     # não tem PS5 nem guia de USB.
