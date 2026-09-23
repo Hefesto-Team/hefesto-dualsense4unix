@@ -355,6 +355,31 @@ BindReadOnlyPaths=-${casa}/.config/hefesto-dualsense4unix/maquina.json
 DROPIN
 }
 
+# O NOME DO LUGAR PRECISA DE TRÊS FERRAMENTAS NO PATH DO ROOT (INSTALL-E-
+# UNINSTALL-DO-RADIO-01, o P-14). O `bt_active_mode.sh` roda como root pelo
+# systemd (o `ExecStartPost` do bluetoothd e o watchdog) e acha a casa pelo
+# `getent`, lê o `maquina.json` pelo `python3` e o lugar do adaptador pelo
+# `udevadm`. Sem qualquer uma o alias fica como está, CALADO — ausência não
+# apaga nome de ninguém, mas também não avisa. Este passo avisa na hora.
+# O PATH é o que o systemd dá às units de sistema (`systemd-path
+# search-binaries-default`); sem ele, o de sempre. Imprime as que faltam, uma
+# por linha; nada quando estão todas. `$1` troca o PATH (a régua o usa).
+_ferramentas_que_faltam_ao_nome_do_lugar() {
+    local caminho="${1:-}" f d achou pastas=()
+    if [[ -z "${caminho}" ]]; then
+        caminho="$(systemd-path search-binaries-default 2>/dev/null || true)"
+        [[ -n "${caminho}" ]] || caminho=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    fi
+    IFS=: read -r -a pastas <<<"${caminho}"
+    for f in python3 udevadm getent; do
+        achou=0
+        for d in ${pastas[@]+"${pastas[@]}"}; do
+            [[ -n "${d}" && -x "${d}/${f}" ]] && { achou=1; break; }
+        done
+        [[ "${achou}" -eq 1 ]] || printf '%s\n' "${f}"
+    done
+}
+
 # ---------------------------------------------------------------------------
 # ONDA-R2: resiliência do bluetoothd — DEFAULT EM TODO FORMATO
 # (camada 2 da sprint 2026-07-21-sprint-pesquisa-bluez-estabilidade.md)
@@ -421,6 +446,11 @@ install_bt_resilience_host() {
     # 2026-07-22). Idempotente; o drop-in reaplica a cada start do
     # bluetoothd e o watchdog reafirma a cada 2 min.
     sudo /usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh 2>/dev/null || true
+    local _btres_falta
+    _btres_falta="$(_ferramentas_que_faltam_ao_nome_do_lugar | tr '\n' ' ')"
+    if [[ -n "${_btres_falta// /}" ]]; then
+        warn "falta ${_btres_falta% } no PATH do root — o nome do lugar não chega aos adaptadores (o resto da resiliência vale)"
+    fi
     sudo install -Dm644 "${ROOT_DIR}/assets/systemd/bluetooth-dropin-10-hefesto-resilience.conf" \
         /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf 2>/dev/null || _btres_ok=0
     for _btres_u in hefesto-bt-bonds-snapshot.service hefesto-bt-bonds-snapshot.timer \
