@@ -418,7 +418,9 @@ def test_a_regra_da_linhagem_e_a_mesma_do_dono_dela() -> None:
 
 def test_o_prefixo_e_o_teto_batem_com_o_outro_escritor() -> None:
     texto = SCRIPT.read_text(encoding="utf-8")
-    assert f'"{PREFIXO_NINTENDO} ${{ALIAS_ATUAL}}"' in texto, (
+    # A costura prefixa o nome do lugar OU o alias de hoje (ENTRADA-A-ENTRADA-02):
+    # o que a régua cobra é a CAIXA do prefixo, não o nome da variável.
+    assert re.search(rf'"{PREFIXO_NINTENDO} \$\{{[A-Z_]+\}}"', texto), (
         "a caixa do prefixo tem de ser a mesma dos dois lados, ou cada escritor "
         "re-prefixa o que o outro escreveu"
     )
