@@ -313,6 +313,23 @@ def test_cada_queda_diz_o_fato_das_pontes(tmp_path: Path) -> None:
     assert storm_doctor.o_fato_da_queda(queda, []) is None
 
 
+def test_a_queda_e_a_borda_e_nao_o_resumo() -> None:
+    """Os controles levam EAGAIN no mesmo segundo: é UMA queda, não duas.
+
+    ARRANQUE A CURA — faça ``quedas`` devolver também os resumos da rajada — e
+    o sino conta a mesma queda duas vezes. Medido na conferência de 23/09: o
+    log de mentira só tinha UMA linha de 2A, e a mordida passava verde.
+    """
+    linha = LINHAS_REAIS["2A"][0]
+    seguinte = linha.replace("14:58:40", "14:58:41")
+    eventos = storm_doctor.ler_eventos_do_radio(
+        _classificar(f"{linha}\n{linha}\n{seguinte}\n").splitlines()
+    )
+    assert [e.borda for e in eventos] == [True, False], eventos
+    assert sum(e.ocorrencias for e in eventos) == 3
+    assert len(storm_doctor.quedas(eventos)) == 1
+
+
 def test_o_fato_nao_usa_palavra_proibida_na_tela() -> None:
     """Regra 8 da leva: nunca a palavra «fatia» na tela."""
     texto = (RAIZ / "src/hefesto_dualsense4unix/integrations/storm_doctor.py").read_text(
