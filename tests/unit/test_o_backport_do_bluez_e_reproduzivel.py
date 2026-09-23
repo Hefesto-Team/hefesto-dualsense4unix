@@ -408,12 +408,37 @@ def test_com_os_debs_no_cache_a_corrida_nao_baixa_nem_compila(bancada):
     assert bancada["marca_curl"].exists()
 
 
+def _cache_do_install(env: dict[str, str]) -> Path:
+    """O cache que o install.sh lê: fixo em ``$HOME``, sem variável nenhuma."""
+    return Path(env["HOME"]) / ".cache" / "hefesto-dualsense4unix"
+
+
 @precisa_das_ferramentas
-def test_revisao_antiga_so_se_reconstroi_fora_do_cache_do_install(bancada):
+@pytest.mark.parametrize(
+    "como_aponta", ["sem_variavel", "o_caminho_escrito", "com_barra_dupla", "por_um_link"]
+)
+def test_revisao_antiga_so_se_reconstroi_fora_do_cache_do_install(bancada, tmp_path, como_aponta):
+    """A guarda pergunta pelo LUGAR, não pela variável.
+
+    Medido em 23/09/2026: ``HEFESTO_BLUEZ_CACHE`` escrito com o próprio caminho
+    do install passava pela guarda, e o ``--revisao 3`` seguia para a obra — com
+    as fontes no cache, o ``.3`` sobrescreveria o ``SHA256SUMS`` do ``.4``.
+    """
     env = dict(bancada["env"])
-    del env["HEFESTO_BLUEZ_CACHE"]
+    do_install = _cache_do_install(env)
+    if como_aponta == "sem_variavel":
+        del env["HEFESTO_BLUEZ_CACHE"]
+    elif como_aponta == "o_caminho_escrito":
+        env["HEFESTO_BLUEZ_CACHE"] = str(do_install)
+    elif como_aponta == "com_barra_dupla":
+        env["HEFESTO_BLUEZ_CACHE"] = f"{env['HOME']}//.cache/hefesto-dualsense4unix/"
+    else:
+        do_install.mkdir(parents=True, exist_ok=True)
+        link = tmp_path / "atalho-para-o-cache"
+        link.symlink_to(do_install)
+        env["HEFESTO_BLUEZ_CACHE"] = str(link)
     proc = subprocess.run(
-        ["bash", str(_script()), "--revisao", "3"],
+        ["bash", str(_script()), "--revisao", "3", "--preparar"],
         env=env,
         capture_output=True,
         text=True,
@@ -421,6 +446,19 @@ def test_revisao_antiga_so_se_reconstroi_fora_do_cache_do_install(bancada):
     )
     assert proc.returncode == 2, proc.stdout + proc.stderr
     assert "HEFESTO_BLUEZ_CACHE" in proc.stderr
+    assert not bancada["marca_curl"].exists(), "passou pela guarda e foi buscar a fonte"
+    assert not (do_install / "bluez-obra").exists()
+
+
+@precisa_das_ferramentas
+def test_revisao_antiga_fora_do_cache_do_install_monta_a_arvore_da_tres(bancada):
+    """O outro lado da guarda: num cache à parte, o ``.3`` se reconstrói."""
+    proc = _rodar(bancada, "--revisao", "3", "--preparar")
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert f"árvore pronta: {bancada['arvore']} (5.86-0ubuntu0.1~hefesto24.04.3)" in proc.stdout
+    assert "sem mordida a provar" in proc.stdout
+    device_c = bancada["arvore"] / "profiles" / "input" / "device.c"
+    assert _sha(device_c) == _baseline()["SHA256_DEVICE_C_R3"]
 
 
 def _perdoa(tmp_path: Path, teste: str, *, aead_disponivel: bool) -> bool:

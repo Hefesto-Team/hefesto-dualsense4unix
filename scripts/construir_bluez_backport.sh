@@ -54,6 +54,8 @@ CACHE="${HEFESTO_BLUEZ_CACHE:-${HOME}/.cache/hefesto-dualsense4unix}"
 FONTES="${CACHE}/bluez-fontes"
 OBRA="${CACHE}/bluez-obra"
 SAIDA="${CACHE}/bluez-backport"
+# Onde o install.sh (passo 3f) procura os .deb — fixo, sem HEFESTO_BLUEZ_CACHE.
+SAIDA_DO_INSTALL="${HOME}/.cache/hefesto-dualsense4unix/bluez-backport"
 # Paralelismo do build e do make check. O padrão é um núcleo por processador;
 # numa máquina em uso, com pouca memória livre, peça menos.
 JOBS="${HEFESTO_BLUEZ_JOBS:-$(nproc)}"
@@ -447,8 +449,12 @@ main() {
     revisao_ultima="$(ler REVISAO_ULTIMA)"
     REVISAO="${REVISAO:-${revisao_ultima}}"
     [[ "${REVISAO}" =~ ^[0-9]+$ ]] || morra "${RC_USO}" "revisão inválida: ${REVISAO}"
-    if [[ "${REVISAO}" != "${revisao_ultima}" && -z "${HEFESTO_BLUEZ_CACHE:-}" ]]; then
-        morra "${RC_USO}" "a revisão ${REVISAO} não é a última (${revisao_ultima}); ela só se reconstrói com HEFESTO_BLUEZ_CACHE apontando para FORA do cache que o install lê"
+    # A pergunta é pelo LUGAR, não pela variável: HEFESTO_BLUEZ_CACHE escrito
+    # com o próprio caminho do install (ou um link para ele) passava, e o .3
+    # sobrescrevia o SHA256SUMS que o install lê.
+    if [[ "${REVISAO}" != "${revisao_ultima}" ]] \
+            && [[ "$(realpath -m "${SAIDA}")" == "$(realpath -m "${SAIDA_DO_INSTALL}")" ]]; then
+        morra "${RC_USO}" "a revisão ${REVISAO} não é a última (${revisao_ultima}); ela só se reconstrói com HEFESTO_BLUEZ_CACHE apontando para FORA do cache que o install lê (${SAIDA_DO_INSTALL})"
     fi
     PATCHES="$(ler "PATCHES_R${REVISAO}")"
     ALVO="$(ler VERSAO_BASE)~hefesto24.04.${REVISAO}"
