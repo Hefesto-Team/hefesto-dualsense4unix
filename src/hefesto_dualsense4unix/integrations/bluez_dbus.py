@@ -493,12 +493,15 @@ def lugar_de(controlador_pci: str, devpath: str) -> str:
     sem o número do barramento, que é ordem de enumeração, e com a cadeia de
     portas, que é o metal. ``""`` quando não há controlador — "não sei onde".
 
-    A GRAFIA MORA EM ``utils/maquina.lugar_de`` (ENTRADA-A-ENTRADA-01): o
+    A GRAFIA MORA EM ``utils/lugar.lugar_de`` (ENTRADA-A-ENTRADA-01 e -02): o
     «Mapear Entrada a Entrada» grava por esta chave, e a tradução entre ela e
-    o caminho de barramento é de lá. O import é TARDIO porque este arquivo é
-    stdlib no import — o doctor chega aqui pelo ``exame_da_mesa``.
+    o caminho de barramento é de lá. Aquele módulo é SÓ biblioteca padrão, e
+    é isso que deixa esta chamada viva pelo ``python3`` do sistema: o doctor
+    chega aqui pelo ``exame_da_mesa``, e ali o pydantic é 1.10. Pedir a grafia
+    ao ``utils/maquina`` (pydantic 2) levantava ``ImportError`` NA CHAMADA, e
+    todo adaptador ficava sem lugar, calado (medido em 23/09).
     """
-    from hefesto_dualsense4unix.utils.maquina import lugar_de as _grafia
+    from hefesto_dualsense4unix.utils.lugar import lugar_de as _grafia
 
     return _grafia(controlador_pci, devpath)
 

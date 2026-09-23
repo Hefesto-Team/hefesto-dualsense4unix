@@ -16,8 +16,9 @@ O QUE ESTA RÉGUA COBRA:
    leem o que a cerimônia gravou; o conselho de porta do vigia diz o nome
    dela; o adaptador herda o nome da porta, e a projeção no ``Alias`` passa
    pelo dono do D-Bus, dentro da trava comum;
-4. **um dono:** a grafia do lugar mora em ``utils/maquina.py``, e os dois
-   módulos que o doctor carrega continuam stdlib no import.
+4. **um dono:** a grafia do lugar mora em ``utils/lugar.py`` (reexportada pelo
+   ``utils/maquina.py``), e os dois módulos que o doctor carrega continuam
+   stdlib no import — e, desde a ENTRADA-A-ENTRADA-02, também na chamada.
 
 O «udev falso» é uma árvore ``/sys`` de mentira no ``tmp_path``, lida pelo
 ``censo_do_barramento.ler_o_barramento`` DE VERDADE: um dublê que devolvesse o
@@ -51,6 +52,7 @@ from hefesto_dualsense4unix.integrations.censo_do_barramento import (
     Censo,
     ler_o_barramento,
 )
+from hefesto_dualsense4unix.utils import lugar as grafia
 from hefesto_dualsense4unix.utils import maquina
 from hefesto_dualsense4unix.utils.maquina import (
     MaquinaConfig,
@@ -762,13 +764,13 @@ def _literais(fonte: str) -> list[tuple[int, str]]:
 
 
 def test_a_grafia_do_lugar_tem_um_dono_so() -> None:
-    """Quem monta ``…-usb-0:…`` é ``utils/maquina.py``, e ninguém mais.
+    """Quem monta ``…-usb-0:…`` é ``utils/lugar.py``, e ninguém mais.
 
     MORDIDA: devolva ao ``bluez_dbus.lugar_de`` a montagem própria dele — ele
     volta a aparecer aqui, e a segunda grafia diverge da primeira no dia em que
     uma delas mudar.
     """
-    dono = SRC / "utils" / "maquina.py"
+    dono = SRC / "utils" / "lugar.py"
     fora: list[str] = []
     for arquivo in sorted(SRC.rglob("*.py")):
         if arquivo == dono:
@@ -780,7 +782,8 @@ def test_a_grafia_do_lugar_tem_um_dono_so() -> None:
 
 
 def test_os_leitores_perguntam_ao_dono(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(maquina, "lugar_de", lambda pci, devpath: f"DONO:{pci}:{devpath}")
+    assert maquina.lugar_de is grafia.lugar_de, "o maquina.py deixou de reexportar o dono"
+    monkeypatch.setattr(grafia, "lugar_de", lambda pci, devpath: f"DONO:{pci}:{devpath}")
     assert bd.lugar_de(PCI_A, "1") == f"DONO:{PCI_A}:1"
     adaptador = mesa_de_radio.Adaptador("hci9", no="x", busnum=3, devpath="1",
                                         controlador_pci=PCI_A)

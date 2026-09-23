@@ -446,13 +446,15 @@ def controladores_dos_barramentos(
 
 
 def _lugar(controlador_pci: str, devpath: str) -> str:
-    """A grafia do lugar, perguntada ao dono dela (``utils/maquina``).
+    """A grafia do lugar, perguntada ao dono dela (``utils/lugar``).
 
-    Import TARDIO: este módulo é stdlib no import, porque o doctor o carrega
-    pelo ``python3`` do sistema (``exame_da_mesa._vizinhancas_do_sistema``), e
-    o ``utils/maquina`` traz o pydantic. Só quem pergunta pelo lugar paga.
+    O doctor carrega este módulo pelo ``python3`` do sistema
+    (``exame_da_mesa._vizinhancas_do_sistema``), que tem pydantic 1.10. O dono
+    da grafia é só biblioteca padrão, e por isso a CHAMADA também vive ali —
+    perguntar ao ``utils/maquina`` (pydantic 2) levantava ``ImportError`` e o
+    adaptador ficava sem lugar (ENTRADA-A-ENTRADA-02).
     """
-    from hefesto_dualsense4unix.utils.maquina import lugar_de
+    from hefesto_dualsense4unix.utils.lugar import lugar_de
 
     return lugar_de(controlador_pci, devpath)
 

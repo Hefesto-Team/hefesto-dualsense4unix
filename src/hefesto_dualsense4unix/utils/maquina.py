@@ -92,6 +92,23 @@ from pydantic import (
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
+# A GRAFIA DO LUGAR mora em ``utils/lugar.py`` desde a ENTRADA-A-ENTRADA-02
+# (23/09/2026): lá ela é só biblioteca padrão, e o doctor a chama pelo
+# ``python3`` do sistema. Este módulo a REEXPORTA (o ``as`` repetido é a
+# reexportação explícita), e todo leitor que já perguntava aqui continua
+# perguntando — o dono é um só.
+from hefesto_dualsense4unix.utils.lugar import (
+    FORMA_DO_CAMINHO,
+    FORMA_DO_LUGAR,
+    FORMA_DO_NO,
+)
+from hefesto_dualsense4unix.utils.lugar import caminho_do_no as caminho_do_no
+from hefesto_dualsense4unix.utils.lugar import caminhos_do_lugar as caminhos_do_lugar
+from hefesto_dualsense4unix.utils.lugar import lugar_de as lugar_de
+from hefesto_dualsense4unix.utils.lugar import lugar_do_caminho as lugar_do_caminho
+from hefesto_dualsense4unix.utils.lugar import lugar_do_no as lugar_do_no
+from hefesto_dualsense4unix.utils.lugar import partes_do_lugar as partes_do_lugar
+
 logger = get_logger(__name__)
 
 #: Arquivo PRÓPRIO em ``config_dir()``, irmão do ``controllers.json`` e do
@@ -147,7 +164,7 @@ _CHAVE_DE_RADIO = re.compile(r"^[0-9a-f]{4}:[0-9a-f]{4}$")
 #: por uma medição: os adaptadores Bluetooth desta bancada são todos
 #: ``2357:0604``, e a pergunta "onde ele está" precisa de uma chave que os
 #: separe. Mesma lição do ``_CHAVE_DE_RADIO``: chave sem validador herda lixo.
-_CAMINHO_DE_BARRAMENTO = re.compile(r"^[0-9]+-[0-9]+(\.[0-9]+)*$")
+_CAMINHO_DE_BARRAMENTO = FORMA_DO_CAMINHO
 
 #: O número que ELA escreveu no gabinete: até três dígitos, e uma letra
 #: opcional para a entrada que nasce de uma extensão (``15a``). Sem o teto, um
@@ -166,7 +183,7 @@ _MAXIMO_DE_ENTRADAS = 64
 #: seja outra coisa que o ``_CAMINHO_DE_BARRAMENTO``: o caminho nomeia o
 #: APARELHO (``3-1.2``) e some quando ele sai; o nó nomeia o BURACO e responde
 #: com o buraco vazio.
-_NO_DE_ENTRADA = re.compile(r"^(?:usb[0-9]+|[0-9]+-[0-9]+(?:\.[0-9]+)*)-port[0-9]+$")
+_NO_DE_ENTRADA = FORMA_DO_NO
 
 #: Teto de nós por entrada. MEDIDO em 25/08/2026 nesta bancada: o ``peer`` do
 #: kernel é recíproco e sempre de DOIS — 38 nós, 19 pares, nenhuma cadeia de
@@ -197,16 +214,9 @@ _DOZE_HEX = re.compile(r"[0-9a-fA-F]{12}")
 
 #: O LUGAR de uma porta (D3), na grafia do ``ID_PATH`` do udev:
 #: ``pci-0000:0c:00.3-usb-0:4.1.4`` é o controlador PCI mais a cadeia de portas.
-#: É a chave do DONO do BlueZ (``bluez_dbus.lugar_de`` pergunta aqui) e a que o
-#: «Mapear Entrada a Entrada» grava. Não carrega o número do barramento, e é
-#: esse o ponto: o ``busnum`` é a ORDEM em que os dois xHCI sobem (medido em
-#: 23/09: ``usb1``/``usb2`` = ``0000:02:00.0``, ``usb3``/``usb4`` =
-#: ``0000:0c:00.3``), e um kernel novo ou uma placa a mais o troca calado.
-#: ``pci-<controlador>`` sem portas é o adaptador que não pendura em USB.
-_LUGAR = re.compile(
-    r"^pci-(?P<pci>[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f])"
-    r"(?:-usb-0:(?P<devpath>[0-9]+(?:\.[0-9]+)*))?$"
-)
+#: É a chave do DONO do BlueZ e a que o «Mapear Entrada a Entrada» grava. A
+#: forma e a razão moram em ``utils/lugar.py``.
+_LUGAR = FORMA_DO_LUGAR
 
 #: O nome que ela dá a um lugar. Sessenta caracteres: é o que cabe no topo do
 #: cartão do adaptador, e o ``Alias`` do BlueZ, para onde ele é projetado, tem
@@ -899,8 +909,8 @@ class MaquinaConfig(BaseModel):
         for chave in vivos:
             if not isinstance(chave, str) or not _LUGAR.match(chave):
                 raise ValueError(
-                    f"lugar {chave!r} não é 'pci-<controlador>-usb-0:<portas>' "
-                    "(a grafia do ID_PATH do udev)"
+                    f"lugar {chave!r} não está na grafia do ID_PATH do udev "
+                    "(o controlador PCI e as portas: utils/lugar.FORMA_DO_LUGAR)"
                 )
         return vivos
 
@@ -918,66 +928,11 @@ class MaquinaConfig(BaseModel):
 # segunda montagem da mesma string é como se produzem duas palavras que quase
 # batem.
 #
-# SÃO FUNÇÕES PURAS, e quem as chama no caminho do doctor (``bluez_dbus``,
-# ``mesa_de_radio``) as importa TARDE: aqueles dois são stdlib no import,
-# porque o doctor os carrega pelo ``python3`` do sistema.
-
-
-def lugar_de(controlador_pci: str, devpath: str) -> str:
-    """O LUGAR de uma porta: o controlador PCI e a cadeia de portas do USB.
-
-    ``lugar_de("0000:0c:00.3", "4.1.4")`` → ``pci-0000:0c:00.3-usb-0:4.1.4``.
-    ``""`` quando não há controlador — "não sei onde". Sem ``devpath``, só o
-    controlador: é o adaptador que não pendura em USB nenhum.
-    """
-    if not controlador_pci:
-        return ""
-    if not devpath:
-        return f"pci-{controlador_pci}"
-    return f"pci-{controlador_pci}-usb-0:{devpath}"
-
-
-def partes_do_lugar(lugar: str) -> tuple[str, str] | None:
-    """``(controlador, devpath)`` de um lugar — ``None`` se não é um lugar."""
-    casado = _LUGAR.match(lugar or "")
-    if casado is None:
-        return None
-    return casado.group("pci"), casado.group("devpath") or ""
-
-
-def lugar_do_caminho(caminho: str, controladores: Mapping[int, str]) -> str:
-    """O caminho de barramento vira lugar: ``3-4.1.4`` → ``pci-…-usb-0:4.1.4``.
-
-    ``controladores`` é ``{busnum: controlador PCI}`` DESTE boot — quem lê é
-    ``mesa_de_radio.controladores_dos_barramentos``. ``""`` quando o caminho
-    não tem a forma do kernel ou o barramento não está na leitura: "não sei",
-    nunca um lugar inventado.
-    """
-    if not caminho or not _CAMINHO_DE_BARRAMENTO.match(caminho):
-        return ""
-    busnum, _, devpath = caminho.partition("-")
-    controlador = controladores.get(int(busnum), "")
-    return lugar_de(controlador, devpath) if controlador else ""
-
-
-def caminhos_do_lugar(lugar: str, controladores: Mapping[int, str]) -> tuple[str, ...]:
-    """O inverso — e são ATÉ DOIS, e esta função não escolhe.
-
-    Um controlador xHCI publica dois barramentos, o lado 2.0 e o 3.x, e o
-    ``ID_PATH`` é o mesmo nos dois lados de um buraco (medido em 23/09: o hub
-    ``05e3`` desta bancada é ``3-4`` e ``4-4``). O DualSense e os dongles são
-    2.0 e enumeram sempre do lado 2.0; quem precisa de UM caminho olha qual
-    dos candidatos está no barramento agora.
-    """
-    partes = partes_do_lugar(lugar)
-    if partes is None or not partes[1]:
-        return ()
-    controlador, devpath = partes
-    return tuple(
-        f"{busnum}-{devpath}"
-        for busnum, dono in sorted(controladores.items())
-        if dono == controlador
-    )
+# AS QUATRO DA GRAFIA (``lugar_de``, ``partes_do_lugar``, ``lugar_do_caminho``
+# e ``caminhos_do_lugar``) moram em ``utils/lugar.py`` e são reexportadas no
+# topo deste arquivo: o ``bluez_dbus`` e o ``mesa_de_radio`` as chamam pelo
+# ``python3`` do sistema, que tem pydantic 1.10, e este arquivo não importa ali
+# (ENTRADA-A-ENTRADA-02). Aqui ficam as que leem o documento.
 
 
 def entradas_do_mapa(mapa: MapaDaMesa) -> frozenset[str]:
