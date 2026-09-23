@@ -259,6 +259,10 @@ class IpcServer(IpcHandlersMixin):
             "machine.declare": self._handle_machine_declare,
             "plugin.list": self._handle_plugin_list,
             "plugin.reload": self._handle_plugin_reload,
+            # GOVERNADOR-DO-RADIO-01 (23/09/2026): a resposta dela à pergunta
+            # da terceira ponte num adaptador cheio (R3) — «Ligar aqui», e a
+            # ponte sobe marcada «além do limite» (R4). Nada é desligado.
+            "radio.ponte.ligar_aqui": self._handle_radio_ponte_ligar_aqui,
         }
 
     async def start(self) -> None:

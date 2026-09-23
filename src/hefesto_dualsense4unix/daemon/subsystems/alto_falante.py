@@ -781,12 +781,26 @@ class AltoFalanteSubsystem:
     #: compartilhado por todas as instâncias.
     _jogando: frozenset[str] = frozenset()
 
+    #: O GOVERNADOR DO RÁDIO (GOVERNADOR-DO-RADIO-01, 23/09/2026): quem dá a
+    #: vaga de cada ponte, por adaptador, e manda ceder na fonte quando o
+    #: adaptador não escoa. Nasce no ``start()``; ``None`` num dublê montado
+    #: por ``__new__`` ou antes de subir, e aí a ponte sobe como sempre subiu.
+    #: O ``state_full`` lê a amostra de ar DELE — um medidor só no daemon.
+    governador: Any = None
+    #: ``(uniq, modo)`` de quem tem som esperando uma vaga que o governador
+    #: ainda não deu (o adaptador cheio, à espera da resposta dela; ou o
+    #: adaptador parado). Refeito a cada volta. O vigia do modo o lê como o
+    #: modo ATUAL daquele controle — sem isso, a mesma pergunta acordaria a
+    #: volta a cada 0,4 s enquanto ela não responde.
+    _esperando_vaga: frozenset[tuple[str, str]] = frozenset()
+
     def __init__(
         self,
         *,
         gerenciador: Any = None,
         fonte_de_controles: Any = None,
         daemon: Any = None,
+        governador: Any = None,
     ) -> None:
         #: O `Daemon`, e é por ele que o «Controle N» do nó chega ao mesmo
         #: número do cartão — ver `numero_do_assento` e
@@ -794,6 +808,7 @@ class AltoFalanteSubsystem:
         #: porque a fiação do `identity_registry` (`lifecycle._wire_identity_
         #: registry`) acontece DEPOIS deste `start()`.
         self._daemon: Any = daemon
+        self._governador_injetado = governador
         self._gerenciador_injetado = gerenciador
         self._gerenciador: Any = None
         #: UMA ponte por controle no rádio, pelo `uniq`.
@@ -1368,7 +1383,20 @@ class AltoFalanteSubsystem:
         jogando = self._quem_o_jogo_le(controles)
         self._jogando = frozenset(jogando)
 
+        governador = self.governador
+        esperando: set[tuple[str, str]] = set()
         for uniq, caminho in vivos.items():
+            # A PONTE QUE TERMINOU SOZINHA SAI DA LISTA — GOVERNADOR-DO-RADIO-01.
+            # A fonte secou, a escrita foi recusada, ou o teto de ceder a
+            # derrubou (o adaptador parou de escoar). Guardá-la aqui prenderia
+            # o controle a uma ponte morta: o `continue` do modo igual abaixo
+            # nunca a trocaria, e a ponte sob demanda não religaria.
+            morta = self._pontes.get(uniq)
+            terminou = getattr(morta, "terminou_sozinha", None)
+            if morta is not None and callable(terminou) and terminou() is True:
+                self._pontes.pop(uniq, None)
+                self._modo_da_ponte.pop(uniq, None)
+                logger.info("som_ponte_terminou_sozinha", uniq=uniq, motivo=morta.motivo)
             # O MODO PODE MUDAR COM A PONTE DE PÉ: o jogo abre o endpoint no
             # meio da partida, e é aí que a háptica passa a valer. Quem muda de
             # modo desce e sobe de novo — o escritor é UM SÓ, e trocar o
@@ -1423,10 +1451,27 @@ class AltoFalanteSubsystem:
                 logger.info("som_ponte_troca_de_modo", uniq=uniq, modo=modo)
             if not caminho:
                 continue
+            # A VAGA VEM ANTES DO GRAVADOR — GOVERNADOR-DO-RADIO-01. Até 2
+            # pontes por adaptador (R3); a terceira espera a resposta dela na
+            # tela, e o nó continua publicado (ela escolheu esta saída, e a
+            # pergunta não pode tirá-la). Pedir depois de subir o `pw-record`
+            # criaria e mataria um gravador a cada volta de espera.
+            vaga: Any = None
+            if governador is not None:
+                from hefesto_dualsense4unix.daemon.subsystems.governador_do_radio import (
+                    Recusa,
+                )
+
+                vaga = governador.pedir_vaga(uniq, modo)
+                if isinstance(vaga, Recusa):
+                    esperando.add((uniq, modo))
+                    continue
             fonte, gravador, motivo = fonte_do_monitor_do_no(
                 nome_do_sink(uniq), uniq=uniq, papel="som"
             )
             if fonte is None:
+                if vaga is not None:
+                    vaga.soltar("o som não teve fonte")
                 # Sem fonte não há ponte, e sem ponte ninguém derrubaria o
                 # processo que subiu: ele é colhido aqui mesmo.
                 if gravador is not None:
@@ -1480,6 +1525,8 @@ class AltoFalanteSubsystem:
                     if not sink_esta_tocando(nome_do_sink(uniq)):
                         if gravador is not None:
                             derrubar_leitor_de_pipe(gravador)
+                        if vaga is not None:
+                            vaga.soltar("a vibração não teve fonte")
                         self._descer_ponte_ociosa(uniq)
                         continue
             ponte = PonteDeSomPorRadio(
@@ -1491,6 +1538,7 @@ class AltoFalanteSubsystem:
                 arranjo=ARRANJO_HAPTICA_032 if modo == "haptica" else None,
                 fonte_de_haptica=fonte_h,
                 gravador_da_haptica=gravador_h,
+                vaga=vaga,
             )
             if ponte.subir():
                 self._pontes[uniq] = ponte
@@ -1504,6 +1552,19 @@ class AltoFalanteSubsystem:
                 # de engolir áudio. Ver :data:`RECUSA_DA_PONTE_S`.
                 self._ponte_recusada[uniq] = time.monotonic()
                 logger.info("som_ponte_nao_subiu", uniq=uniq, motivo=ponte.motivo)
+        self._esperando_vaga = frozenset(esperando)
+
+    def _esquecer_a_espera(self, uniq: str) -> None:
+        """Ela respondeu «Ligar aqui»: quem esperava vaga deixa de esperar.
+
+        Com o controle fora de :attr:`_esperando_vaga`, o vigia do modo vê som
+        sem ponte e acorda a volta em até :data:`VIGIA_DO_MODO_S` — a ponte
+        sobe logo, e não na volta seguinte, cinco segundos depois.
+        """
+        alvo = uniq.lower()
+        self._esperando_vaga = frozenset(
+            (u, m) for u, m in self._esperando_vaga if u.lower() != alvo
+        )
 
     def _descer_ponte_ociosa(self, uniq: str) -> None:
         """A ponte de quem não tem o que tocar desce. Idempotente.
@@ -1563,6 +1624,24 @@ class AltoFalanteSubsystem:
         # perfil por conta própria a cada tique, e a casa passaria a ter dois
         # leitores da mesma escolha dela.
         self._dizedor_anterior = registrar_dizedor_da_fonte(self._fonte_do_controle)
+        # O GOVERNADOR NASCE ANTES DA PRIMEIRA VOLTA: a primeira ponte já pede
+        # vaga a ele. Um governador que não sobe não pode calar o som — sem
+        # ele a ponte sobe como subia antes do GOVERNADOR-DO-RADIO-01.
+        if self.governador is None:
+            try:
+                if self._governador_injetado is not None:
+                    self.governador = self._governador_injetado
+                else:
+                    from hefesto_dualsense4unix.daemon.subsystems.governador_do_radio import (
+                        GovernadorDoRadio,
+                    )
+
+                    self.governador = GovernadorDoRadio.de_producao()
+                self.governador.ao_autorizar = self._esquecer_a_espera
+                self.governador.iniciar()
+            except Exception:
+                logger.warning("governador_do_radio_nao_subiu", exc_info=True)
+                self.governador = None
         self._parar.clear()
         self._thread = threading.Thread(
             target=self._loop, name="hefesto-som-sup", daemon=True
@@ -1604,6 +1683,11 @@ class AltoFalanteSubsystem:
             )
         for uniq, _ponte in pontes:
             self._pontes.pop(uniq, None)
+        # O governador para DEPOIS das pontes: elas devolvem a vaga ao descer.
+        governador, self.governador = self.governador, None
+        if governador is not None:
+            with contextlib.suppress(Exception):
+                await asyncio.to_thread(governador.parar)
         gerenciador = self._gerenciador
         if gerenciador is not None:
             with contextlib.suppress(Exception):
@@ -1736,6 +1820,7 @@ class AltoFalanteSubsystem:
             return False
         if tocando is None:
             return False  # servidor mudo não é "ninguém toca"
+        esperando = dict(self._esperando_vaga)
         for uniq, nome in nomes.items():
             if nome in tocando and uniq.lower() in self._jogando:
                 agora: str | None = "haptica"
@@ -1743,7 +1828,9 @@ class AltoFalanteSubsystem:
                 agora = "som"
             else:
                 agora = None
-            if self._modo_da_ponte.get(uniq) != agora:
+            # Quem espera vaga do governador já foi decidido nesta volta: a
+            # pergunta está com ela. Acordar a volta não muda a resposta.
+            if (self._modo_da_ponte.get(uniq) or esperando.get(uniq)) != agora:
                 logger.info(
                     "vigia_do_modo_acordou_a_volta", uniq=uniq, modo=agora or "nenhuma"
                 )

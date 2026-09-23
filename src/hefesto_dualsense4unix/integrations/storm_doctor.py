@@ -33,6 +33,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from hefesto_dualsense4unix.integrations.radio_da_mesa import N_MAX_PONTES
 from hefesto_dualsense4unix.utils.repo_files import (
     FRASE_DE_ATUALIZAR,
     esta_instalacao_e_um_checkout,
@@ -1078,10 +1079,13 @@ FAMILIAS_DO_RADIO: dict[str, tuple[str, str]] = {
 #: ``uhid_disconnect`` (dossiê de 23/09, os quatro episódios de 22/09).
 FAMILIA_DA_QUEDA = "2A"
 
-#: Quantas pontes de som ou vibração um adaptador aguenta. PROVISÓRIO, e a
-#: medida é da bancada dela (o índice da leva de 23/09: «2 pontes por
-#: adaptador» até o GOVERNADOR-DO-RADIO-01, que passa a ser o dono do número).
-LIMITE_DE_PONTES_POR_ADAPTADOR = 2
+#: Quantas pontes de som ou vibração um adaptador aguenta. O NÚMERO TEM UM
+#: DONO, e não é este arquivo: é o ``radio_da_mesa.N_MAX_PONTES``, que o
+#: orçamento publica e o governador usa na admissão (GOVERNADOR-DO-RADIO-01,
+#: 23/09/2026). Aqui ele era digitado de novo — dois 2 iguais por coincidência,
+#: que divergiriam na primeira medição da bancada dela. O nome fica, porque o
+#: sino o lê com este nome.
+LIMITE_DE_PONTES_POR_ADAPTADOR = N_MAX_PONTES
 
 #: O LOG DE ANTES DAS FAMÍLIAS. Até 23/09 o kernel-watch marcava o laço do
 #: Realtek e o enlace parado com a tag genérica ``[BT-HCI]`` (as 74.973 linhas
