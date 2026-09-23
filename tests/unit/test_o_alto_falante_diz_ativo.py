@@ -351,10 +351,21 @@ def test_o_governador_que_levanta_nao_derruba_a_ponte(som: Any) -> None:
 
     MORDIDA: tire o ``try`` em volta do ``pedir_vaga`` e a volta levanta
     ``RuntimeError: o plano do rádio caiu``.
+
+    E O PEDIDO QUE FALHA DEIXA RASTRO — a sprint diz «registra e segue»: um
+    ``except`` que só engolisse a exceção faria o governador sumir calado da
+    mesa inteira. MORDIDA (conferência de 23/09/2026): tire o
+    ``logger.warning`` do ``except`` e a contagem de avisos reprova.
     """
+    import structlog
+
     governador = _GovernadorQueLevanta()
     som.governador = governador
-    som._casar_as_pontes([_Controle(CONTROLE_2), _Controle(CONTROLE_3)])
+    with structlog.testing.capture_logs() as registros:
+        som._casar_as_pontes([_Controle(CONTROLE_2), _Controle(CONTROLE_3)])
+    avisos = [r for r in registros if r.get("event") == "governador_pedido_de_vaga_falhou"]
+    assert sorted(r.get("uniq") for r in avisos) == [CONTROLE_2, CONTROLE_3], registros
+    assert all(r.get("log_level") == "warning" for r in avisos), avisos
     assert sorted(som._pontes) == [CONTROLE_2, CONTROLE_3], (
         "o pedido de vaga que levanta derrubou a subida da ponte"
     )
