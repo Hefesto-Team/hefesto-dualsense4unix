@@ -502,15 +502,23 @@ def test_o_publicar_nao_abre_o_dono_antes_de_ligar(
 
     MORDIDA: tire o ``if self._ligada`` do ``publicar`` — o tique abre o dono,
     e esta régua reprova.
+
+    O dublê GRAVA o pedido em vez de levantar: o ``publicar`` engole exceção
+    (a tela lê isto a cada volta), e uma régua que levanta dentro dele passava
+    com a cura arrancada — a mordida de antes só reprovava arrancando também o
+    ``suppress``.
     """
+    pedidos: list[str] = []
 
     def nao_abra() -> bd.LeitorDoBluez:
-        raise AssertionError("o state_full abriu o dono do BlueZ")
+        pedidos.append(threading.current_thread().name)
+        return _LeitorLento()
 
     monkeypatch.setattr(bd, "dono", nao_abra)
     central = cr.CentralDoRadio()
 
     assert central.publicar([]) == {"movimentos": [], "em_curso": False, "proposta": None}
+    assert not _esperar(lambda: bool(pedidos), teto=0.3), "o state_full abriu o dono do BlueZ"
 
 
 def test_pelo_caminho_de_reserva_o_tique_nao_espera_a_foto(diario: Path) -> None:
@@ -529,6 +537,39 @@ def test_pelo_caminho_de_reserva_o_tique_nao_espera_a_foto(diario: Path) -> None
     lento.solta.set()
     assert _esperar(lambda: central._adaptadores_em_cache is not None)
     assert lento.fotos == 1
+
+
+def test_depois_de_ligar_o_tique_nao_reabre_o_dono(
+    diario: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O dono do arranque morreu (o barramento caiu): o ``state_full`` não o reabre.
+
+    O ``bluez_dbus.dono()`` sem dono vivo tenta o Gio de novo, de forma
+    síncrona — até ~5 s num barramento mudo —, e o ``state_full`` roda no laço
+    do daemon a 10 Hz. Depois do ``ligar`` o tique chamava o ``dono()`` direto;
+    agora ele usa o último dono que a central viu, se ainda pergunta, e senão
+    refaz a foto num fio.
+
+    MORDIDA: faça o tique pegar o dono pelo ``_dono()`` — o ``dono()`` roda no
+    fio de quem publica e esta régua reprova.
+    """
+    fios: list[str] = []
+    lento = _LeitorLento()
+    lento.solta.set()
+
+    def dono_que_abre() -> bd.LeitorDoBluez:
+        fios.append(threading.current_thread().name)
+        return lento
+
+    monkeypatch.setattr(bd, "dono", dono_que_abre)
+    central = cr.CentralDoRadio(sysfs={"listar": lambda _p: [], "raiz": "/x"})
+    central._ligada = True  # como depois de um ``ligar()`` cujo dono morreu
+
+    central.publicar([])
+
+    assert threading.current_thread().name not in fios, "o tique abriu o dono"
+    assert _esperar(lambda: central._adaptadores_em_cache is not None)
+    assert fios, "a foto não se refez no fio"
 
 
 def _esperar(condicao: Any, teto: float = 3.0) -> bool:
