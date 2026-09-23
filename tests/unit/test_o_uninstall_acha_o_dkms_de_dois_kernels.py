@@ -14,9 +14,12 @@ A régua roda o ensaio (`--dry-run`) num lar de mentira com um `dkms` que dá
 duas linhas com uma pausa entre elas, e exige o `dkms remove` dos quatro no
 plano.
 
+A mesma forma morava no `flatpak list --user --app | grep -q <id>`: com o
+aplicativo novo listado antes do antigo, o antigo nunca saía.
+
 A MORDIDA, medida: devolver o `| grep -q .` ao bloco do hid-nintendo (ou o
-`| grep -q '^hefesto-uhid'` ao do uhid) tira a linha dele do plano, e o teste
-reprova.
+`| grep -q '^hefesto-uhid'` ao do uhid, ou o `| grep -q` ao do Flatpak) tira a
+linha dele do plano, e o teste reprova.
 """
 
 from __future__ import annotations
@@ -44,16 +47,25 @@ exit 0
 """
 
 
-def test_o_plano_tira_os_quatro_modulos(tmp_path: Path) -> None:
+_FLATPAK_COM_OS_DOIS_IDS = """#!/bin/sh
+[ "$1" = "list" ] || exit 0
+printf 'Hefesto\\tio.github.hefesto_team.hefesto_dualsense4unix\\t1.0\\tstable\\tuser\\n'
+sleep 0.3
+printf 'Hefesto\\tbr.andrefarias.Hefesto\\t0.9\\tstable\\tuser\\n'
+exit 0
+"""
+
+
+def _ensaio(tmp_path: Path, **falsos: str) -> tuple[subprocess.CompletedProcess[str], str]:
     lar = tmp_path / "lar"
     casa = lar / "casa"
     casa.mkdir(parents=True)
     dubles = tmp_path / "dubles"
     diario = tmp_path / "dubles-chamados.log"
     _dublar(dubles, diario)
-    dkms = dubles / "dkms"
-    dkms.write_text(_DKMS_DE_DOIS_KERNELS, encoding="utf-8")
-    dkms.chmod(0o755)
+    for nome, corpo in falsos.items():
+        (dubles / nome).write_text(corpo, encoding="utf-8")
+        (dubles / nome).chmod(0o755)
     temporarios = tmp_path / "tmp"
     temporarios.mkdir()
     env = {
@@ -76,6 +88,13 @@ def test_o_plano_tira_os_quatro_modulos(tmp_path: Path) -> None:
         check=False,
     )
     assert r.returncode == 0, r.stderr[-3000:]
+    chamados = diario.read_text(encoding="utf-8") if diario.exists() else ""
+    assert chamados == "", "o ensaio chamou binário que escreve:\n" + chamados
+    return r, chamados
+
+
+def test_o_plano_tira_os_quatro_modulos(tmp_path: Path) -> None:
+    r, _ = _ensaio(tmp_path, dkms=_DKMS_DE_DOIS_KERNELS)
     faria = [linha for linha in r.stdout.splitlines() if "FARIA: (root) dkms remove" in linha]
     for pacote in (
         "hefesto-hid-nintendo",
@@ -87,5 +106,12 @@ def test_o_plano_tira_os_quatro_modulos(tmp_path: Path) -> None:
             f"o plano do uninstall não tira o {pacote} com o `dkms status` de duas "
             "linhas — o `| grep -q` sob pipefail voltou:\n" + "\n".join(faria)
         )
-    chamados = diario.read_text(encoding="utf-8") if diario.exists() else ""
-    assert chamados == "", "o ensaio chamou binário que escreve:\n" + chamados
+
+
+def test_o_plano_tira_os_dois_flatpaks(tmp_path: Path) -> None:
+    r, _ = _ensaio(tmp_path, flatpak=_FLATPAK_COM_OS_DOIS_IDS)
+    faria = [linha for linha in r.stdout.splitlines() if "FARIA: flatpak uninstall" in linha]
+    for app_id in ("io.github.hefesto_team.hefesto_dualsense4unix", "br.andrefarias.Hefesto"):
+        assert any(app_id in linha for linha in faria), (
+            f"o plano não desinstala o Flatpak {app_id} com os dois listados:\n" + "\n".join(faria)
+        )
