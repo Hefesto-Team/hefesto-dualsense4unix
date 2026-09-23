@@ -1876,16 +1876,41 @@ def _steam_input_da_tela(state: dict[str, Any]) -> str:
     usando os controladores da própria steam"*. A chave da Steam é indexada por
     appid (`UseSteamControllerConfig`), então um chip que acendesse para a
     MÁQUINA mentiria em 15 dos 16 jogos dela.
+
+    E SÓ PARA JOGO ABERTO — ver :func:`_o_jogo_no_steam_input`.
     """
-    dado = VIGIA_DO_STEAM_INPUT.agora()
-    if dado is None or not dado.lista:
-        # Sem leitura ainda, ou sem lista: não se sabe / não está ligado. Nos
-        # dois casos a tela não afirma nada — e o custo é ZERO tique.
+    return (CHIP_DO_STEAM_INPUT
+            if _o_jogo_no_steam_input(state, VIGIA_DO_STEAM_INPUT.agora())
+            else "")
+
+
+def _o_jogo_no_steam_input(state: dict[str, Any] | None,
+                           dado: _DoSteamInput | None,
+                           *, so_aberto: bool = True) -> str:
+    """O appid do jogo da vez se ele está sob o Steam Input — `""` se não está.
+
+    UM DONO PARA A TELA E PARA O CLIQUE: `_steam_input_da_tela` pergunta com a
+    leitura guardada (o tique não bloqueia), e os chips do Modo perguntam com a
+    leitura fresca (`VIGIA_DO_STEAM_INPUT.ler()`, o gesto roda em thread).
+
+    **JOGO FECHADO NÃO ACENDE — O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01, 22/09/2026.**
+    O terceiro degrau de `a_escada_do_jogo` responde pelo último jogo lançado
+    *"mesmo com o jogo já fechado"*, e é de propósito: o «Este jogo não
+    funciona» serve a quem já fechou. O Modo diz o caminho EM USO, e com o jogo
+    fechado não há caminho em uso para ele. Era a foto dela: ninguém jogando, o
+    «Steam Input» aceso por um jogo fechado e o «Sony DualSense» apagado.
+    `so_aberto=False` é a pergunta do «Sony DualSense» (:func:`_sair_do_steam_input`).
+    """
+    from .a07_lancadores import ABERTO
+
+    if dado is None or not dado.ligados:
+        # Sem leitura ainda, ou sem ponte de pé: não se sabe / não está ligado.
+        # Nos dois casos nada se afirma — e o custo é ZERO tique.
         return ""
-    appid, _quando = _qual_jogo(state)
-    if appid is None:
+    appid, quando = _qual_jogo(state)
+    if appid is None or (so_aberto and quando != ABERTO):
         return ""
-    return CHIP_DO_STEAM_INPUT if str(appid) in dado.ligados else ""
+    return str(appid) if str(appid) in dado.ligados else ""
 
 
 def _a_fileira_com_a_mesa(tela: dict[str, str], mesa: list[dict[str, Any]]) -> dict[str, str]:
@@ -1955,21 +1980,8 @@ def _estado_da_tela(state: dict[str, Any]) -> dict[str, str]:
     if not state:
         return {"hef-posicao": "", "modo-aceso": "", "steam-input-aceso": ""}
 
-    painel = _painel()
-    ligado = painel.hefesto_ligado(state)
-    modo = painel.modo_vivo(state)
-    caminho = painel.caminho_vivo(state)
-
-    aceso = ""
-    for chip in painel.CHIPS_DA_ESCADA:
-        if chip.modo:
-            if chip.modo == modo:
-                aceso = str(chip.chave)
-                break
-            continue
-        if modo == "gamepad" and caminho and chip.caminho == caminho:
-            aceso = str(chip.chave)
-            break
+    ligado = _painel().hefesto_ligado(state)
+    aceso = _chip_do_caminho(state)
 
     # A MÁSCARA DOS CARTÕES SAIU DAQUI — 03/09/2026. Ela era emitida como valor
     # DE PÁGINA, e o piloto escreve valor de página em TODO elemento com aquele
@@ -1977,7 +1989,7 @@ def _estado_da_tela(state: dict[str, Any]) -> dict[str, str]:
     # cartões, e dois controles com escolhas diferentes acendiam o mesmo chip.
     # Agora ela sai por cartão (ver `_mascara_do_cartao`); o que fica aqui é o
     # que de fato é da máquina — a posição do interruptor e o chip da fileira.
-    # Quem decide o `modo-aceso` é o `caminho` acima, nunca a máscara
+    # Quem decide o `modo-aceso` é o caminho (`_chip_do_caminho`), nunca a máscara
     # (MODO-DE-CONEXAO-01, 13/09/2026).
     #
     # UM ACESO SÓ — a D-2 da STEAM-INPUT-01, decidida por ela em 21/09/2026 com
@@ -2003,6 +2015,26 @@ def _estado_da_tela(state: dict[str, Any]) -> dict[str, str]:
         "modo-aceso": aceso,
         "steam-input-aceso": steam,
     }
+
+
+def _chip_do_caminho(state: dict[str, Any]) -> str:
+    """A chave do chip do CAMINHO vivo, sem o Steam Input — `""` se nenhum.
+
+    Separado de :func:`_estado_da_tela` porque o clique pergunta o mesmo: o
+    «Xbox» e a «Navegação» só tiram o jogo do Steam Input quando o Modo está
+    sobre o degrau 4 (:func:`_sair_do_steam_input`).
+    """
+    painel = _painel()
+    modo = painel.modo_vivo(state)
+    caminho = painel.caminho_vivo(state)
+    for chip in painel.CHIPS_DA_ESCADA:
+        if chip.modo:
+            if chip.modo == modo:
+                return str(chip.chave)
+            continue
+        if modo == "gamepad" and caminho and chip.caminho == caminho:
+            return str(chip.chave)
+    return ""
 
 
 def _mascara_da_sessao(state: dict[str, Any] | None) -> str | None:
@@ -2492,7 +2524,7 @@ def _plano(
     return plano
 
 
-def _aplicar(p: Any, plano: list[tuple[str, dict[str, Any]]]) -> None:
+def _aplicar(p: Any, plano: list[tuple[str, dict[str, Any]]]) -> bool:
     """Despacha o plano na ORDEM, pelo degrau 3 da ponte.
 
     NENHUM DESTES QUATRO MÉTODOS TEM FUNÇÃO NO `app/ipc_bridge.py` — conferido
@@ -2504,10 +2536,30 @@ def _aplicar(p: Any, plano: list[tuple[str, dict[str, Any]]]) -> None:
     `native.mode.set {enabled: false}` ANTES do `gamepad.emulation.set` porque,
     invertidos, *"o vpad nasceria com o físico ainda grabado pelo jogo"*.
 
-    O RETORNO NÃO VIRA ERRO, e o motivo está medido — ver `ACHADO_DO_TIMEOUT`.
+    DEVOLVE se o daemon CONFIRMOU todos os passos. Não levanta: quem chama
+    anota a pendência antes de dizer a falha — ver `ACHADO_DO_TIMEOUT`.
     """
+    confirmou = True
     for metodo, params in plano:
-        p.chamar(metodo, **params)
+        if not p.chamar(metodo, **params):
+            confirmou = False
+    return confirmou
+
+
+#: O QUE O BOTÃO DIZ QUANDO O DAEMON NÃO CONFIRMOU A TROCA — ver
+#: `ACHADO_DO_TIMEOUT`. Vai ao diário e à piscada de recusa; o chip aceso,
+#: lido do caminho vivo, continua sendo quem diz o que valeu.
+#: PROVISÓRIO — texto de tela é palavra dela.
+MODO_SEM_CONFIRMACAO = (
+    "O Hefesto demorou a responder, e a troca pode não ter acontecido. Se o "
+    "botão não acender, clique de novo."
+)
+
+
+def _dizer_se_nao_confirmou(confirmou: bool) -> None:
+    """Levanta com :data:`MODO_SEM_CONFIRMACAO` quando `_aplicar` voltou falso."""
+    if not confirmou:
+        raise RuntimeError(MODO_SEM_CONFIRMACAO)
 
 
 #: FATO CADUCO, SUBSTITUÍDO — 03/09/2026. Este bloco afirmava que
@@ -2531,13 +2583,22 @@ def _aplicar(p: Any, plano: list[tuple[str, dict[str, Any]]]) -> None:
 #: mantê-lo ao lado do certo obriga a próxima pessoa a escolher entre duas
 #: afirmações.
 #:
-#: O QUE CONTINUA VALENDO, e é o motivo de `_aplicar` não levantar com o retorno:
-#: a folga é 2,0 s, não infinito. Um `p.chamar("gamepad.emulation.set", …)` ainda
-#: pode voltar `False` com o modo aplicado se o daemon passar do prazo, e
-#: levantar aí reintroduziria o defeito que o `MODE_IPC_TIMEOUT_S` curou — a tela
-#: dizendo "não deu" sobre um gesto que deu. Quem responde por isso é a FAIXA
-#: LARANJA: uma pendência só nasce quando o daemon não alcançou o pedido, e ela
-#: some sozinha quando alcança.
+#: FATO SUBSTITUÍDO — O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01, 22/09/2026. Aqui se
+#: dizia que o retorno não virava erro porque a FAIXA LARANJA respondia pelo
+#: prazo estourado. A faixa não fala desde 13/09 (JOGAR-A-FAIXA-QUE-PULA-01): a
+#: pendência só vai ao diário, e o chip piscava VERDE sobre um `False`. Foi o
+#: «Xbox» dela no `interface.log` de 22/09 — `modo-xbox → aplicado`, depois
+#: `[daemon mudo] timed out` e `pendente: ● Vai mudar para: Xbox`.
+#:
+#: A PENDÊNCIA NÃO TEM RELÓGIO: `reconciliar_pendente` só a apaga quando o
+#: caminho vivo alcança o pedido, ou quando outro clique no mesmo eixo a
+#: sobrescreve. Um pedido que o daemon perdeu fica anotado para sempre, e calado.
+#:
+#: O QUE CONTINUA VALENDO: a folga é 2,0 s, e um `False` pode vir com o modo
+#: aplicado. Por isso o gesto anota a pendência ANTES de levantar (ela some
+#: sozinha se o daemon alcançar tarde), não grava o perfil sobre um pedido não
+#: confirmado, e a frase (:data:`MODO_SEM_CONFIRMACAO`) diz *pode não ter
+#: acontecido* — nunca *não aconteceu*.
 ACHADO_DO_TIMEOUT = (
     "ponte.TETOS dá 2,0 s aos cinco métodos desta aba, o mesmo valor de "
     "mode_transition.MODE_IPC_TIMEOUT_S; o teto de 250 ms é só o dos métodos "
@@ -2615,11 +2676,12 @@ def _hefesto_o_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise ValueError(
             "hefesto: o clique não disse qual posição do interruptor — o "
             "`data-modo` do rótulo não chegou")
-    _aplicar(p, _plano(chave))
+    confirmou = _aplicar(p, _plano(chave))
     # DEPOIS de despachar, nunca antes: `_plano` levanta para um botão sem
     # escritor, e anotar uma pendência que não chegou a sair prometeria uma
     # mudança que ninguém pediu ao daemon.
     _lembrar("modo", chave, str(o.get("texto") or ""))
+    _dizer_se_nao_confirmou(confirmou)
     # E A ESCOLHA ENTRA NO PERFIL ATIVO — Passo 1. Pela mesma razão de ordem:
     # gravar antes de o plano sair prometeria, no disco dela, um modo que o
     # daemon recusou. Ver `_gravar_o_modo`.
@@ -2684,7 +2746,7 @@ def _lembrar_do_chip(chave: str, o: dict[str, Any]) -> None:
 
 
 @gesto("01-jogar.html", "modo-dualsense", grava="gravar_o_modo_no_ativo")
-def modo_dualsense(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def modo_dualsense(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Sony DualSense": o Hefesto entrega o controle pelo canal do DualSense.
 
     É o CAMINHO `uhid` — o relatório do DualSense, por onde voltam do jogo
@@ -2697,14 +2759,81 @@ def modo_dualsense(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     (MODO-DE-CONEXAO-01, 13/09/2026): com máscara Xbox 360 no cartão este
     caminho fica escolhido e aceso, e o aparelho sai no canal comum — o `uhid`
     só se constrói com máscara DualSense (`virtual_pad.quer_uhid`).
+
+    E TIRA O JOGO DA VEZ DO STEAM INPUT — ver :func:`_o_chip_do_caminho`.
     """
-    _aplicar(p, _plano_do_chip("dualsense"))
-    _lembrar_do_chip("dualsense", o)
+    alvo = _o_chip_do_caminho(ctx, o, p, "dualsense")
     _gravar_o_modo_do_chip(ctx, "dualsense")
+    return _mudar_o_steam_input(p, alvo, ligar=False) if alvo else None
+
+
+def _o_chip_do_caminho(ctx: Contexto, o: dict[str, Any], p: Any, chave: str) -> str:
+    """O caminho de um dos três chips — e o jogo que ele tira do Steam Input.
+
+    Os três gestos («Sony DualSense», «Xbox», «Navegação») chamam isto, gravam
+    o perfil e, se voltou um appid, passam-no a :func:`_mudar_o_steam_input`.
+    A gravação fica no corpo do gesto para a régua das portas
+    (`test_todo_gesto_que_grava_esta_protegido`) achá-la dentro do teto dela.
+
+    **UM ACESO SÓ IMPLICA CLICAR NO OUTRO TROCA** — O-MODO-QUE-NAO-SAI-DO-
+    STEAM-INPUT-01, 22/09/2026. A queixa dela: *"eu saio clicando mas não muda
+    de fato."* A D-2 de 21/09 fez a fileira parecer um grupo de rádio, e o
+    «Sony DualSense» mandava só `caminho=dualsense`, que já era o caminho: o
+    daemon respondia, o piloto escrevia «aplicado», e o tique seguinte pintava
+    o Steam Input de novo. Agora o clique também tira o jogo do Steam Input
+    (:func:`_o_jogo_que_sai_do_steam_input`). A pergunta é feita ANTES do
+    plano, sobre o Modo de onde ela saiu; a escrita vem POR ÚLTIMO, porque o
+    caminho, a pendência e o perfil não dependem da Steam dela.
+    """
+    plano = _plano_do_chip(chave)
+    alvo = _o_jogo_que_sai_do_steam_input(ctx, chave)
+    confirmou = _aplicar(p, plano)
+    _lembrar_do_chip(chave, o)
+    _dizer_se_nao_confirmou(confirmou)
+    return alvo
+
+
+def _o_jogo_que_sai_do_steam_input(ctx: Contexto, chave: str) -> str:
+    """O appid que o chip clicado tira do Steam Input — `""` quando nenhum.
+
+    QUAL JOGO, POR CHIP — e a diferença é a escada:
+
+    * **«Sony DualSense»**: o jogo da vez, ABERTO OU FECHADO. É o caminho sobre
+      o qual o Steam Input senta (`CAMINHO_SOB_O_STEAM_INPUT`): deixar o jogo
+      na lista faria o «Steam Input» acender no lugar dele assim que o jogo
+      abrisse — o clique dela desfeito na próxima partida;
+    * **«Xbox» e «Navegação»**: só com o «Steam Input» ACESO — Modo sobre o
+      degrau 4, controle na mesa e jogo aberto. Sem esse recorte, entrar na
+      Navegação para usar o mouse tiraria da lista o último jogo que ela marcou,
+      sem ela ter visto o Steam Input.
+
+    QUEM ESCREVE É O RAMO DE :func:`modo_steam`, e não uma cópia:
+    :func:`_mudar_o_steam_input` (portão do jogo aberto, lista, recarga, vdf
+    relido). Com um jogo da Steam aberto o portão recusa com a frase do dono —
+    *"Feche o jogo e clique de novo. Nada foi mudado."* — e o «clique de novo»
+    vale, porque o «Sony DualSense» alcança o jogo fechado.
+
+    NO «XBOX» E NA «NAVEGAÇÃO» O PORTÃO NÃO RECUSA O CLIQUE: com o jogo da
+    Steam aberto o jogo fica na lista, calado. O caminho mudou (o chip
+    novo acende e o Steam Input apaga, que é o degrau de agora), e a recusa
+    diria *"Nada foi mudado"* sobre um caminho que mudou. A lista se resolve no
+    próximo «Sony DualSense», que é onde o Steam Input voltaria a acender.
+    """
+    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+    if not ctx.state:
+        return ""
+    if chave == CAMINHO_SOB_O_STEAM_INPUT:
+        return _o_jogo_no_steam_input(
+            ctx.state, VIGIA_DO_STEAM_INPUT.ler(), so_aberto=False)
+    if (ctx.mesa and _chip_do_caminho(ctx.state) == CAMINHO_SOB_O_STEAM_INPUT
+            and not slo.steam_game_running()):
+        return _o_jogo_no_steam_input(ctx.state, VIGIA_DO_STEAM_INPUT.ler())
+    return ""
 
 
 @gesto("01-jogar.html", "modo-xbox", grava="gravar_o_modo_no_ativo")
-def modo_xbox(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def modo_xbox(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Xbox": o canal comum, o do controle de Xbox — o SEGUNDO que o Hefesto tenta.
 
     ESTE CHIP NASCEU EM 31/08/2026 E É UMA DÍVIDA PAGA: `Ponte(gamepad, xbox)` é
@@ -2717,9 +2846,9 @@ def modo_xbox(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     agora pelo canal comum. Até 13/09 este chip mandava a máscara Xbox 360, e com
     máscara no cartão dizia «aplicado» sem mudar nada — a queixa dela.
     """
-    _aplicar(p, _plano_do_chip("xbox"))
-    _lembrar_do_chip("xbox", o)
+    alvo = _o_chip_do_caminho(ctx, o, p, "xbox")
     _gravar_o_modo_do_chip(ctx, "xbox")
+    return _mudar_o_steam_input(p, alvo, ligar=False) if alvo else None
 
 
 # ---------------------------------------------------------------------------
@@ -2962,12 +3091,16 @@ def modo_steam(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
     `PonteConfirmada.steam_input` —, e escrevê-lo no `mode` criaria o segundo
     dono de um valor que já tem um.
 
-    O CLIQUE É UM INTERRUPTOR, E O SENTIDO SAI DO QUE O CHIP MOSTRA: aceso
-    desliga, apagado liga. Quem responde é a vigia (:data:`VIGIA_DO_STEAM_INPUT`,
+    O CLIQUE É UM INTERRUPTOR, E O SENTIDO SAI DA PONTE DO JOGO DA VEZ: de pé
+    desliga, fora liga. Quem responde é a vigia (:data:`VIGIA_DO_STEAM_INPUT`,
     lida do disco e não da tela), pelo campo `ligados` — não pela lista sozinha.
     A diferença aparece no estado PENDENTE, em que a lista já diz sim e o vdf
-    ainda diz não: pela lista, o clique num chip apagado TIRARIA o jogo dela; pelo
-    que o chip mostra, ele completa a ponte, que é o que ela clicou.
+    ainda diz não: pela lista, o clique num chip apagado TIRARIA o jogo dela;
+    por `ligados`, ele completa a ponte, que é o que ela clicou.
+
+    FATO SUBSTITUÍDO — 22/09/2026: aqui se dizia que o sentido saía *do que o
+    chip mostra*. Desde a O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01 o chip só acende
+    para o jogo ABERTO, e o clique continua valendo para o fechado.
 
     AS DUAS METADES TÊM PREÇOS DIFERENTES, e só uma acontece sempre:
 
@@ -3011,23 +3144,40 @@ def modo_steam(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
     """
     from hefesto_dualsense4unix.app.actions.daemon_actions import (
         format_game_broken_result,
-        format_steam_janela_recusa,
     )
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    from .a07_lancadores import METODO_DA_RECARGA
 
     appid, _quando = _qual_jogo(ctx.state)
     if appid is None:
         raise RuntimeError(str(format_game_broken_result(status="sem_jogo")))
     alvo = str(appid)
 
-    # O SENTIDO SAI DO QUE O CHIP MOSTRA, e não da lista sozinha: quem acende é
-    # `ligados` (na lista **e** a ponte de pé). Clicar num chip APAGADO liga —
-    # mesmo no estado PENDENTE, em que a lista já diz sim e o vdf ainda diz não.
-    # Ler a lista aqui faria o clique num pendente TIRAR o jogo da lista dela,
-    # que é o contrário do que ela vê e do que ela clicou.
+    # O SENTIDO SAI DE `ligados` (na lista **e** a ponte de pé), e não da lista
+    # sozinha: clicar no PENDENTE — a lista já diz sim e o vdf ainda diz não —
+    # liga, em vez de TIRAR o jogo da lista dela.
+    #
+    # E DO JOGO DA VEZ, ABERTO OU FECHADO: desde 22/09 o chip só ACENDE para o
+    # jogo aberto (:func:`_o_jogo_no_steam_input`), mas o clique continua
+    # valendo para o fechado — é o que deixa ela desligar o Steam Input de um
+    # jogo que o portão abaixo recusaria com ele aberto.
     ligar = alvo not in VIGIA_DO_STEAM_INPUT.ler().ligados
+    return _mudar_o_steam_input(p, alvo, ligar)
+
+
+def _mudar_o_steam_input(p: Any, alvo: str, ligar: bool) -> dict[str, Any] | None:
+    """O RAMO DE ESCRITA do «Steam Input» — um dono, dois chamadores.
+
+    :func:`modo_steam` chama nos dois sentidos; os chips de caminho, só para
+    desligar (:func:`_o_chip_do_caminho`). É por aqui que o «Sony DualSense»
+    tira o jogo do Steam Input com o mesmo portão, a mesma recarga e o mesmo
+    veredito relido do vdf — uma segunda escrita seria o segundo dono.
+    """
+    from hefesto_dualsense4unix.app.actions.daemon_actions import (
+        format_game_broken_result,
+        format_steam_janela_recusa,
+    )
+    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+    from .a07_lancadores import METODO_DA_RECARGA
 
     # O PORTÃO DO JOGO ABERTO VEM ANTES DE TUDO — ordem do dono, e ela não é
     # negociável: com um jogo aberto, a escrita no vdf é adiada de qualquer
@@ -3208,7 +3358,7 @@ def mascara_do_controle(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
 
 @gesto("01-jogar.html", "modo-navegacao",
        grava="liga o mouse emulado e o ponteiro anda na tela dela")
-def modo_navegacao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def modo_navegacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Navegação": o controle vira teclado e mouse do computador.
 
     O CASO DO MEIO, e `painel` o explica melhor do que eu resumiria: a Navegação
@@ -3242,9 +3392,9 @@ def modo_navegacao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     entra pela MESMA porta deste clique. O que a Navegação não tem é degrau na
     `ESCADA` automática — que é outra pergunta, e é a de `chips_sem_degrau()`.
     """
-    _aplicar(p, _plano_do_chip("navegacao"))
-    _lembrar_do_chip("navegacao", o)
+    alvo = _o_chip_do_caminho(ctx, o, p, "navegacao")
     _gravar_o_modo_do_chip(ctx, "navegacao")
+    return _mudar_o_steam_input(p, alvo, ligar=False) if alvo else None
 
 
 @gesto("01-jogar.html", "cadeado", grava="autoswitch_lock_set")
