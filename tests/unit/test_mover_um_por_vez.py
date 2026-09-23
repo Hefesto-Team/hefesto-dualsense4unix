@@ -270,6 +270,24 @@ def test_o_pairable_que_ja_estava_ligado_fica_ligado(
     assert mundo.escritas_no(QUARTO, "Pairable") == []
 
 
+def test_o_pairable_em_nao_sei_nao_e_desfeito(
+    diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
+) -> None:
+    """Sem saber o ``Pairable`` de antes, devolver ``False`` poderia fechar o que
+    já estava aberto: quem não sabe não desfaz.
+
+    MORDIDA: tire o ``antes is None`` do ``_preparar_o_adaptador`` — o ``False``
+    é escrito na saída e esta régua reprova.
+    """
+    del mundo.mesa[rm.HCIS[QUARTO]][bd.ADAPTADOR]["Pairable"]
+    dono._fotografar()
+    central = _central(dono, mundo, relogio)
+    _ela_segura_ps_create(mundo, relogio, VERMELHO)
+
+    assert central.mover(VERMELHO, QUARTO).estado == cr.CHEGOU
+    assert mundo.escritas_no(QUARTO, "Pairable") == [True]
+
+
 # ---------------------------------------------------------------------------
 # 5. idempotência
 # ---------------------------------------------------------------------------
@@ -280,8 +298,11 @@ def test_mover_duas_vezes_nao_move_duas(
 ) -> None:
     """O segundo diff é vazio: nenhuma chamada e nenhuma escrita no rádio.
 
-    MORDIDA: tire o atalho do «já está lá» — o segundo mover abre outra janela
-    e esta régua reprova.
+    MORDIDA: tire o atalho do «já está lá» E o bloco «o kernel já o diz no
+    destino» do ``_mover_na_trava`` — o segundo mover abre outra janela e esta
+    régua reprova. Tirar só o atalho não morde AQUI (o controle tem ``HID_PHYS``,
+    e o bloco do kernel o segura); quem morde o atalho sozinho é a régua do fone,
+    ``test_o_fone_ja_conectado_no_destino_nao_se_move_de_novo``.
     """
     central = _central(dono, mundo, relogio)
     _ela_segura_ps_create(mundo, relogio, VERMELHO)
@@ -310,6 +331,52 @@ def test_ja_no_destino_com_bond_sobrando_so_esquece_a_sobra(
     assert feito.estado == cr.CHEGOU
     assert mundo.metodos("StartDiscovery") == []
     assert mundo.lapides == [(SALA, VERDE)]
+
+
+def test_o_segundo_toque_com_o_primeiro_esperando_nao_desfaz_o_pareamento(
+    diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
+) -> None:
+    """O primeiro mover pareou no quarto e ficou «esperando» a conferência — a
+    trava já está livre. Ela toca de novo: é o MESMO movimento, sem escrita.
+
+    Sem isto o segundo mover leria o bond recém-feito no quarto como a «conexão
+    velha» da R6, o esqueceria com lápide e abriria outra janela.
+
+    MORDIDA: faça o ``_o_mesmo_em_curso`` devolver sempre ``None`` — o quarto é
+    esquecido e esta régua reprova.
+    """
+    central = _central(dono, mundo, relogio)
+    mundo.pair_mente = True
+    _ela_segura_ps_create(mundo, relogio, VERMELHO)
+    primeiro = central.mover(VERMELHO, QUARTO)
+    assert (primeiro.estado, primeiro.passo) == (cr.ESPERANDO, cr.PASSO_CONFERINDO)
+    chamadas, escritas = len(mundo.chamadas), len(mundo.escritas)
+
+    de_novo = central.mover(VERMELHO, QUARTO)
+
+    assert de_novo == primeiro
+    assert mundo.chamadas[chamadas:] == [] and mundo.escritas[escritas:] == []
+    assert mundo.lapides == []
+    assert mundo.objeto(QUARTO, VERMELHO)["Paired"] is True
+
+
+def test_o_fone_ja_conectado_no_destino_nao_se_move_de_novo(
+    diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
+) -> None:
+    """O fone não tem ``HID_PHYS``: quem diz que ele já está lá é o ``Connected``.
+
+    MORDIDA: tire o atalho do «já está lá» — o bond do fone no quarto é
+    esquecido, outra janela abre e esta régua reprova.
+    """
+    mundo.pareado(QUARTO, rm.FONE, classe=rm.CLASSE_DE_FONE)
+    dono._fotografar()
+    central = _central(dono, mundo, relogio)
+
+    feito = central.mover(rm.FONE, QUARTO)
+
+    assert (feito.estado, feito.motivo) == (cr.CHEGOU, cr.MOTIVO_JA_ESTAVA)
+    assert mundo.chamadas == [] and mundo.escritas == []
+    assert mundo.lapides == []
 
 
 # ---------------------------------------------------------------------------
@@ -452,6 +519,28 @@ def test_mover_sem_destino_usa_a_d8_e_nunca_o_adaptador_de_agora(
     assert feito.estado == cr.CHEGOU
     assert feito.destino in (QUARTO, VARANDA)
     assert feito.destino != SALA
+
+
+def test_a_d8_nunca_escolhe_o_adaptador_em_que_ele_ja_esta(
+    diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
+) -> None:
+    """A sala é a de MAIS vaga (o vermelho sozinho, sem ponte) — e é onde ele
+    está. O mover sem destino não pode cair nela: seria um «já estava» mudo no
+    lugar de um movimento.
+
+    MORDIDA: tire o ``exceto`` do ``ordem_dos_destinos`` — a D8 devolve a sala e
+    esta régua reprova. (A régua de cima não morde: lá a sala é a mais cheia.)
+    """
+    central = _central(dono, mundo, relogio)
+    mesa = [
+        _controle(VERMELHO, SALA),
+        _controle(VERDE, QUARTO, "som"),
+        _controle(AZUL, VARANDA, "som"),
+        _controle(rm.ROXO, VARANDA, "haptica"),
+    ]
+
+    assert central.escolher_destino(controles=mesa) == SALA, "sem alvo, a sala ganha"
+    assert central.escolher_destino(VERMELHO, controles=mesa) == QUARTO
 
 
 def test_o_conectar_pareia_o_controle_novo_no_destino_da_d8(
