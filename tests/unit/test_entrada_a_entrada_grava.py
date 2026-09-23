@@ -474,8 +474,17 @@ def test_o_conselho_de_porta_do_vigia_diz_o_nome_dela() -> None:
                "frase": "Este adaptador mudou de porta."}
     assert ee.com_o_nome_dela(do_dono, maquina=documento)["porta_nome"] == "Entrada 3"
 
+    # SEM NOME E SEM NÚMERO, a porta se chama como o desenho aprovado mostra —
+    # «Entrada 4.1.4» (TRANSPLANTE-DA-SECAO-01, item 4). Antes a linha voltava
+    # como veio, e o caminho do sistema chegava cru ao sino.
     sem_mapa = ee.com_o_nome_dela(linha, maquina=MaquinaConfig(), controladores=BOOT_1)
-    assert sem_mapa == linha, "sem nome conhecido, a linha volta como veio"
+    assert sem_mapa["porta_nome"] == "Entrada 4.1.4"
+    assert "3-4.1.4" not in sem_mapa["frase"], "o caminho do sistema chegou cru à frase"
+
+    fora_de_forma = {**linha, "porta": "hci3", "frase": "O adaptador hci3 travou."}
+    assert ee.com_o_nome_dela(fora_de_forma, maquina=MaquinaConfig()) == fora_de_forma, (
+        "o que não é porta não ganha nome"
+    )
 
 
 def test_dar_nome_grava_e_apaga_o_nome_do_lugar(disco: Path) -> None:
