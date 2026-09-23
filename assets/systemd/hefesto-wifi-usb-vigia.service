@@ -21,3 +21,9 @@ StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=hefesto-wifi-usb
 Nice=10
+# Roda como root e não lê casa nenhuma: o wifi_usb.sh só olha o /sys, o /dev
+# do reset da porta, o `wpa_cli` e o próprio estado em /run/hefesto-wifi-usb.
+# Sem /home, /root e /run/user, um defeito nele não alcança o que é de alguém
+# (INSTALL-E-UNINSTALL-DO-RADIO-01, 23/09/2026; conferido com
+# `systemd-analyze verify`).
+ProtectHome=yes
