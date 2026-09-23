@@ -24,6 +24,7 @@ sequestrado.
 from __future__ import annotations
 
 import asyncio
+import itertools
 from types import SimpleNamespace
 from typing import Any
 
@@ -164,7 +165,7 @@ class TestOSequestroVisto:
                 reescritas.append(agora)
             agora = round(agora + ec.PASSO_DA_VIGIA_S, 6)
 
-        intervalos = [b - a for a, b in zip(reescritas, reescritas[1:], strict=False)]
+        intervalos = [b - a for a, b in itertools.pairwise(reescritas)]
         assert len(reescritas) >= 10
         assert max(intervalos) <= 1.0 + 1e-9, intervalos
         assert vigia.reescritas(NO_1) == len(reescritas)
@@ -454,7 +455,7 @@ class TestNoDaemon:
         assert eventos.count("sequestro_corrigido") == 1
         encerrado = [r for r in registros if r["event"] == "sequestro_encerrado"]
         assert encerrado and encerrado[0]["reescritas"] == 2
-        detectado = [r for r in registros if r["event"] == "sequestro_detectado"][0]
+        detectado = next(r for r in registros if r["event"] == "sequestro_detectado")
         assert detectado["pids"] == [JOGO]
         assert detectado["modo_nativo"] is True
 
