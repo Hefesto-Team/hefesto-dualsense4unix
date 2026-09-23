@@ -648,7 +648,7 @@ ignorado, viraria broadcast e o isolamento seria ilusão.**
 `_apply_por_uniq` (`daemon/ipc_handlers.py:821-840`) devolve `True` assim que
 chama `apply_output_for`, **sem conferir se aquele MAC está na mesa**. E do
 outro lado, `apply_output_for`
-(`core/backend_pydualsense.py:3384-3426`) trata controle desconectado por
+(`core/backend_pydualsense.py:3452-3494`) trata controle desconectado por
 desenho: registra o override no mapa em memória e, quando não há handle
 (linha **3417**), loga `apply_output_for_desconectado_registrado` e **retorna
 sem escrever no hardware** (linha **3423**). MAC que nem parece MAC cai antes,

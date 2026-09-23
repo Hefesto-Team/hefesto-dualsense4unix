@@ -63,7 +63,7 @@ MESA = [
 ]
 
 #: O CONTROLE DO CABO COMO O DAEMON O PUBLICA: `player` é `None` porque ele não
-#: é jogador do co-op — a condição está em `daemon/subsystems/coop.py:341-343`,
+#: é jogador do co-op — a condição está em `daemon/subsystems/coop.py:362-364`,
 #: e NÃO é o transporte, como o mapa chegou a afirmar.
 DO_CABO = {"uniq": "aa:bb:cc:00:00:02", "transport": "usb", "connected": True,
            "player": None, "player_slot": 2, "is_primary": False,

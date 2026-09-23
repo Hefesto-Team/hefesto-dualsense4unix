@@ -134,7 +134,7 @@ def test_o_hid_phys_de_um_controle_no_radio_e_o_endereco_do_adaptador() -> None:
 def test_uniq_com_e_sem_dois_pontos_casam() -> None:
     """Os dois lados escrevem o mesmo endereço de jeitos diferentes.
 
-    O estado do daemon dá 12 hex sem separador (`backend_pydualsense.py:4674`);
+    O estado do daemon dá 12 hex sem separador (`backend_pydualsense.py:4868`);
     o uevent dá MAC com dois-pontos. Sem normalizar os dois lados, o casamento
     falha em silêncio e a barra fica em zero com o rádio cheio.
     """
@@ -290,7 +290,7 @@ def test_controle_bt_sem_endereco_nao_pega_o_adaptador_do_vizinho() -> None:
 
 
 def test_uniq_nulo_cai_na_barra_de_nao_sei_sem_levantar() -> None:
-    """`controllers[].uniq` pode ser `None` (`backend_pydualsense.py:4664`)."""
+    """`controllers[].uniq` pode ser `None` (`backend_pydualsense.py:4858`)."""
     listar, ler = _bancada({})
 
     ocupacoes = ocupacao_por_adaptador([_controle(None)], listar=listar, ler=ler)

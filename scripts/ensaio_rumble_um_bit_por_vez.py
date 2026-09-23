@@ -9,7 +9,7 @@ Sabemos que o CONJUNTO funciona. Não sabemos **de quantos bits o aparelho
 precisa** — e essa é a poda que sobra (`docs/method/METODO-DE-ISOLAMENTO.md`,
 Passo 7).
 
-Os bits estão em `core/backend_pydualsense.py:761-767`::
+Os bits estão em `core/backend_pydualsense.py:821-827`::
 
     if not rumble_asserted:
         flag0 &= ~(COMPATIBLE_VIBRATION | HAPTICS_SELECT)   # 0x01 e 0x02

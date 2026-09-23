@@ -13,9 +13,9 @@ O CAMINHO, medido lendo o código (nenhum aparelho tocado):
         que delega a  <- evdev_buttons_once(daemon)   daemon/subsystems/poll.py:53
         que lê         <- daemon.controller._evdev.snapshot()
         onde  controller._evdev  é um  EvdevReader()  retargetado por
-        `self._evdev.retarget(self.primary_uniq)` (core/backend_pydualsense.py:2639)
+        `self._evdev.retarget(self.primary_uniq)` (core/backend_pydualsense.py:2699)
         e  `primary_uniq`  só resolve identidade de um handle DualSense
-        (core/backend_pydualsense.py:1719-1734 — o backend inteiro só abre
+        (core/backend_pydualsense.py:1779-1794 — o backend inteiro só abre
         hardware Sony via hidapi; não existe handle de SN30 aqui).
 
     Sem alvo (`_target_uniq is None`), `EvdevReader._locate()` cai em

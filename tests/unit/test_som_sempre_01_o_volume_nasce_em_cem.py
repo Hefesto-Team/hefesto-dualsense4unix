@@ -322,7 +322,7 @@ def test_o_controle_que_chega_numa_mesa_ja_online_tambem_nasce_em_cem(
     `reapply_speaker_after_connect` *"só corre na TRANSIÇÃO offline→online do
     daemon"* e que por isso o segundo controle "nascia mudo". A primeira metade
     caiu com a BORDA-DE-QUEDA-01: há um ramo POR ALVO
-    (`daemon/connection.py:704` → `anunciar_bordas_por_alvo` →
+    (`daemon/connection.py:707` → `anunciar_bordas_por_alvo` →
     `reapply_speaker_after_connect(uniq=…)`) que cobre a chave nova sem
     transição agregada. A segunda guarda — exigir a seção `speaker` GLOBAL —
     era real e foi o defeito da SOM-ROTA-03, curado em

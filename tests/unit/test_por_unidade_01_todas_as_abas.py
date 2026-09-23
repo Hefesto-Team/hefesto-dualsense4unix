@@ -256,7 +256,7 @@ def test_cada_peca_recebe_o_proprio_volume_na_ativacao() -> None:
     **FATO ERRADO, SUBSTITUÍDO — 03/09/2026.** Esta linha dizia que o global
     escrevia *"em todo mundo (``uniq=None`` = broadcast)"*. Medido:
     ``set_speaker_volume(uniq=None)`` chama ``_handle_for(None)``
-    (``core/backend_pydualsense.py:4148``), que devolve **o handle PRIMÁRIO**
+    (``core/backend_pydualsense.py:4216``), que devolve **o handle PRIMÁRIO**
     (``:4611-4623``) — um só. A família de áudio inteira compartilha esse
     ``_handle_for`` e não tem broadcast, ao contrário da luz e da vibração. A
     lista abaixo não muda: ela sempre mediu as CHAMADAS, e é o applier que
