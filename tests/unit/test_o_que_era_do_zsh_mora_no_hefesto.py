@@ -475,6 +475,16 @@ def test_o_doctor_passa_com_o_radio_ligado(tmp_path: Path) -> None:
     assert "[WARN]" not in saida
 
 
+def test_o_doctor_nao_conta_como_ligado_o_adaptador_que_nao_leu(tmp_path: Path) -> None:
+    """Dois adaptadores e UM rfkill legível: o «ligado em N» conta só o que foi
+    lido, e o outro vira «não sei» — nunca «ligado»."""
+    raiz = _bt_sysfs(tmp_path, {"hci0": ("0", "0")})
+    (raiz / "hci1").mkdir()
+    saida = _doctor_rfkill(tmp_path, raiz)
+    assert "[ OK ] rádio Bluetooth ligado em 1 adaptador(es)" in saida
+    assert "não consegui ler o rfkill de hci1" in saida
+
+
 def test_o_doctor_sem_adaptador_informa_e_nao_acusa(tmp_path: Path) -> None:
     raiz = tmp_path / "vazio"
     raiz.mkdir()
@@ -843,6 +853,25 @@ def test_o_doctor_acusa_o_vigia_que_parou_e_o_hub_do_bluetooth(tmp_path: Path) -
     )
     assert "PAROU neste boot — tire e ponha o dongle" in saida
     assert "[WARN] Wi-Fi USB e Bluetooth no mesmo hub" in saida
+
+
+def test_o_parei_de_manha_curado_depois_nao_e_defeito_de_agora(tmp_path: Path) -> None:
+    """O vigia repete o «parei» a cada tique enquanto o rádio segue mudo; o
+    dongle que ela tirou e pôs de volta cura, e o journal do boot guarda as
+    duas coisas. Quem decide é a ÚLTIMA — não a existência de um «parei»."""
+    amb = _mesa(tmp_path)
+    diario = "\n".join(
+        [
+            f"{IFC}: porta {PORTA} reiniciada (reset USB)",
+            f"{IFC}: 3 reinícios seguidos sem cura — parei. Tire e ponha o dongle.",
+            f"{IFC}: o roteador voltou a responder",
+            f"{IFC}: curado depois de 3 reinício(s)",
+        ]
+    )
+    saida = _doctor_wifi(tmp_path, amb, instalado=True, diario=diario)
+    assert "PAROU" not in saida
+    assert f"[ OK ] vigia do Wi-Fi USB de pé ({IFC})" in saida
+    assert "o roteador voltou a responder depois" in saida
 
 
 def test_o_doctor_sem_dongle_nao_acusa(tmp_path: Path) -> None:
