@@ -310,7 +310,7 @@ def test_o_afh_e_perguntado_numa_thread_e_so_de_tempos_em_tempos(
     handlers._ler_afh = ler  # type: ignore[attr-defined]
     leitura = ar_mod.ArDoAdaptador(
         hci=2, endereco=ADAPTADOR_A, entrada_por_s=700.0,
-        conexoes=(ar_mod.Conexao(12, "aa:bb:cc:00:00:01", ar_mod.TIPO_ACL, True, 1, 7),),
+        conexoes=(ar_mod.Enlace(12, "aa:bb:cc:00:00:01", ar_mod.TIPO_ACL, True, 1, 7),),
     )
     handlers._talvez_ler_o_afh({ADAPTADOR_A: leitura})  # type: ignore[attr-defined]
     prazo = time.monotonic() + 2.0
