@@ -337,8 +337,10 @@ unit_do_bluez() {
     diga "make check, o unit/ do próprio BlueZ (log em ${OBRA}/unit.log)"
     if ! (cd "${ARVORE}" && "${AMBIENTE_LIMPO[@]}" make -j"${JOBS}" check) \
             > "${OBRA}/unit.log" 2>&1; then
-        # Sem o test-suite.log o make check nem chegou a rodar os testes.
-        if [[ ! -f "${log}" ]] || ! grep -qE '^(FAIL|ERROR): ' "${log}"; then
+        # Sem o test-suite.log o make check nem chegou a rodar os testes. O
+        # XPASS também reprova o make check (automake), então entra na conta:
+        # sem ele, um XPASS ao lado do mesh-crypto perdoado passava calado.
+        if [[ ! -f "${log}" ]] || ! grep -qE '^(FAIL|ERROR|XPASS): ' "${log}"; then
             tail -n 40 "${OBRA}/unit.log" >&2
             morra "${RC_UNIT}" "o make check falhou antes de rodar os testes (log em ${OBRA}/unit.log)"
         fi
@@ -351,7 +353,7 @@ unit_do_bluez() {
             fi
             printf '%s\n' "${linha}" >&2
             morra "${RC_UNIT}" "o unit/ do BlueZ reprovou (log em ${OBRA}/unit.log)"
-        done < <(grep -E '^(FAIL|ERROR): ' "${log}")
+        done < <(grep -E '^(FAIL|ERROR|XPASS): ' "${log}")
     fi
     grep -E '^# (TOTAL|PASS|SKIP|XFAIL|FAIL|XPASS|ERROR):' "${log}" || true
 }

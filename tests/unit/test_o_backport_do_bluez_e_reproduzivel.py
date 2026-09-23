@@ -48,7 +48,11 @@ devolvida com md5 conferido):
   estava vazia → ``test_revisao_antiga_so_se_reconstroi_fora_do_cache_do_install``
   reprova em três dos quatro jeitos de apontar, com rc=4 (foi baixar);
 - tirar a comparação do ``ORIGEM.txt`` do ``ja_construido`` →
-  ``test_debs_feitos_com_outro_patch_mandam_reconstruir`` reprova nos dois casos.
+  ``test_debs_feitos_com_outro_patch_mandam_reconstruir`` reprova nos dois casos;
+- trocar o ``morra`` do laço do ``unit_do_bluez`` por ``continue`` →
+  ``test_o_laco_do_unit_so_deixa_passar_o_que_perdoou`` reprova em quatro casos;
+  tirar o ``[[ "${tipo}" == "FAIL" ]]`` → reprova o ``error_do_mesh``; tirar o
+  ``XPASS`` da conta → reprova o ``xpass_ao_lado``.
 """
 from __future__ import annotations
 
@@ -561,6 +565,93 @@ def test_o_unit_do_bluez_so_perdoa_a_falha_que_a_maquina_explica(tmp_path):
     assert _perdoa(tmp_path, "unit/test-mesh-crypto", aead_disponivel=False)
     assert not _perdoa(tmp_path, "unit/test-mesh-crypto", aead_disponivel=True)
     assert not _perdoa(tmp_path, "unit/test-hog", aead_disponivel=False)
+
+
+def _script_sem_main(tmp_path: Path) -> Path:
+    """O script inteiro, sem a última linha — as funções DE VERDADE, e nada roda.
+
+    Recortar função por função com ``sed`` por faixas duplica linhas quando uma
+    função cabe numa linha só (a ``diga``): a ``morra`` virava uma função
+    aninhada que não saía, e o dublê respondia verde sobre o próprio defeito.
+    """
+    linhas = _script().read_text(encoding="utf-8").rstrip("\n").split("\n")
+    assert linhas[-1] == 'main "$@"', (
+        f"a última linha do script mudou ({linhas[-1]!r}): carregá-lo rodaria o build"
+    )
+    destino = tmp_path / "construir_sem_main.sh"
+    destino.write_text("\n".join(linhas[:-1]) + "\n", encoding="utf-8")
+    return destino
+
+
+_CABECALHO_DO_LOG = """==================================
+   bluez 5.86: ./test-suite.log
+==================================
+
+# TOTAL: 38
+
+.. contents:: :depth: 2
+
+"""
+
+
+def _secao(resultado: str, teste: str) -> str:
+    return f"{resultado}: {teste}\n{'=' * (len(resultado) + len(teste) + 2)}\n\nsaída do teste\n\n"
+
+
+@pytest.mark.parametrize(
+    ("caso", "secoes", "aead_disponivel", "rc_do_make", "rc_esperado"),
+    [
+        ("so_o_mesh_sem_aead", [("FAIL", "unit/test-mesh-crypto")], False, 2, 0),
+        ("tudo_passa", [], True, 0, 0),
+        ("outro_fail", [("FAIL", "unit/test-mesh-crypto"), ("FAIL", "unit/test-hog")], False, 2, 8),
+        ("mesh_com_aead", [("FAIL", "unit/test-mesh-crypto")], True, 2, 8),
+        ("error_do_mesh", [("ERROR", "unit/test-mesh-crypto")], False, 2, 8),
+        ("xpass_ao_lado", [("FAIL", "unit/test-mesh-crypto"), ("XPASS", "unit/test-x")], False, 2, 8),
+        ("sem_log", None, False, 2, 8),
+    ],
+)
+def test_o_laco_do_unit_so_deixa_passar_o_que_perdoou(
+    tmp_path, caso, secoes, aead_disponivel, rc_do_make, rc_esperado
+):
+    """O ``unit_do_bluez`` inteiro, com um ``make`` de mentira.
+
+    A régua de cima prova o PREDICADO; esta prova o LAÇO que o aplica — sem
+    ela, trocar o ``morra`` do laço por ``continue`` perdoava qualquer teste
+    reprovado e as dezesseis réguas continuavam verdes (medido em 23/09/2026).
+    """
+    arvore = tmp_path / "arvore"
+    obra = tmp_path / "obra"
+    binarios = tmp_path / "bin"
+    for pasta in (arvore, obra, binarios):
+        pasta.mkdir()
+    log_sintetico = tmp_path / "test-suite.log"
+    if secoes is not None:
+        log_sintetico.write_text(
+            _CABECALHO_DO_LOG + "".join(_secao(r, t) for r, t in secoes), encoding="utf-8"
+        )
+    make = binarios / "make"
+    make.write_text(
+        f"#!/bin/sh\n[ -f '{log_sintetico}' ] && cp '{log_sintetico}' test-suite.log\n"
+        f"exit {rc_do_make}\n",
+        encoding="utf-8",
+    )
+    python3 = binarios / "python3"
+    python3.write_text(f"#!/bin/sh\nexit {0 if aead_disponivel else 1}\n", encoding="utf-8")
+    for exe in (make, python3):
+        exe.chmod(0o755)
+    programa = (
+        f"source '{_script_sem_main(tmp_path)}'\n"
+        f"ARVORE='{arvore}'; OBRA='{obra}'; JOBS=1; AMBIENTE_LIMPO=()\n"
+        "unit_do_bluez\n"
+    )
+    env = dict(os.environ)
+    env["PATH"] = f"{binarios}{os.pathsep}{env.get('PATH', '')}"
+    proc = subprocess.run(
+        ["bash", "-c", programa], env=env, capture_output=True, text=True, timeout=30
+    )
+    assert proc.returncode == rc_esperado, f"{caso}: {proc.stdout}{proc.stderr}"
+    if caso == "so_o_mesh_sem_aead":
+        assert "NÃO MEDIDO nesta máquina: unit/test-mesh-crypto" in proc.stdout
 
 
 def _sem_texto_entre_aspas(linha: str) -> str:
