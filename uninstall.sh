@@ -861,25 +861,6 @@ if sudo -n true 2>/dev/null; then
             /run/hefesto-dualsense4unix/radio.lock 2>/dev/null || true
         sudo rmdir /run/hefesto-dualsense4unix 2>/dev/null || true
     fi
-    # O DIÁRIO DO RÁDIO DO ROOT (`/var/lib/hefesto-dualsense4unix/radio-diario.jsonl`
-    # e o `.1` da rotação), escrito pela ponte e pelo watchdog. É HISTÓRICO,
-    # como o kernel.log da sessão, e segue a doutrina dos dados dela:
-    # preservado por padrão, apagado só com --purge-config. Preservado com o
-    # carimbo da desinstalação no nome — ao lado do acervo de bonds guardado —,
-    # e é o nome que importa: com o nome de antes, a próxima instalação o
-    # releria no arranque como se fosse desta vida.
-    for _diario_root in /var/lib/hefesto-dualsense4unix/radio-diario.jsonl \
-                        /var/lib/hefesto-dualsense4unix/radio-diario.jsonl.1; do
-        [[ -f "${_diario_root}" ]] || continue
-        if [[ "${KEEP_CONFIG}" -eq 1 ]]; then
-            _diario_guardado="${_diario_root%%.jsonl*}.pre-uninstall-$(date +%Y%m%d-%H%M%S).jsonl${_diario_root##*.jsonl}"
-            log "preservando o diário do rádio do root em ${_diario_guardado} (apagar de vez: --purge-config)"
-            sudo mv "${_diario_root}" "${_diario_guardado}" 2>/dev/null || true
-        else
-            log "removendo o diário do rádio do root ${_diario_root} (--purge-config)"
-            sudo rm -f "${_diario_root}" 2>/dev/null || true
-        fi
-    done
     # Os alvos das regras-cola 82 e 83, no mesmo gate das regras.
     if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
         sudo rm -f /etc/systemd/system/hefesto-bt-bonds-snapshot.service \
@@ -1011,6 +992,9 @@ for dele in (lugares.values() if isinstance(lugares, dict) else ()):
             log "nome do adaptador revertido para '${_base}' (tirado o prefixo Nintendo)"
         fi
     done
+    # O carimbo da desinstalação, um só: o acervo de bonds e o diário do rádio
+    # do root vão para a MESMA pasta (o porquê está no bloco do diário, abaixo).
+    _carimbo_do_acervo="$(date +%Y%m%d-%H%M%S)"
     if [[ -d /var/lib/hefesto-dualsense4unix/bt-bonds ]]; then
         # CICLO-QUE-PROVA-01 (08/08/2026) — MEDIDO no ciclo real, na máquina dela:
         # este bloco fazia `rm -rf` por default, sem flag e sem confirmação, e o
@@ -1030,7 +1014,7 @@ for dele in (lugares.values() if isinstance(lugares, dict) else ()):
         # carimbo de que é sobra de desinstalação, e o modo 700 do diretório-pai
         # continua valendo. Quem quiser o wipe de verdade tem a flag.
         if [[ "${KEEP_CONFIG}" -eq 1 ]]; then
-            _bonds_destino="/var/lib/hefesto-dualsense4unix/bt-bonds.pre-uninstall-$(date +%Y%m%d-%H%M%S)"
+            _bonds_destino="/var/lib/hefesto-dualsense4unix/bt-bonds.pre-uninstall-${_carimbo_do_acervo}"
             log "preservando snapshots de bonds (contêm LinkKeys) em ${_bonds_destino}"
             log "  para restaurar: sudo cp -a ${_bonds_destino}/. /var/lib/hefesto-dualsense4unix/bt-bonds/"
             log "  para apagar de vez: rode o uninstall com --purge-config"
@@ -1048,6 +1032,29 @@ for dele in (lugares.values() if isinstance(lugares, dict) else ()):
         # credenciais.
         if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
             sudo rmdir /var/lib/hefesto-dualsense4unix 2>/dev/null || true
+        fi
+    fi
+    # O DIÁRIO DO RÁDIO DO ROOT (`radio-diario.jsonl` e o `.1` da rotação,
+    # escritos pela ponte e pelo watchdog) vai JUNTO do acervo de bonds
+    # guardado, na mesma pasta carimbada — decisão de quem coordena
+    # (INSTALL-E-UNINSTALL-DO-RADIO-01, P-2.2): é o histórico que explica a mesa
+    # que os bonds descrevem, e não se apaga por padrão. Fora do caminho de
+    # antes, a próxima instalação não o relê no arranque como se fosse desta
+    # vida. Com --purge-config, que apaga os bonds a pedido, ele sai junto.
+    _diarios_root=()
+    for _diario_root in /var/lib/hefesto-dualsense4unix/radio-diario.jsonl \
+                        /var/lib/hefesto-dualsense4unix/radio-diario.jsonl.1; do
+        [[ -f "${_diario_root}" ]] && _diarios_root+=("${_diario_root}")
+    done
+    if [[ "${#_diarios_root[@]}" -gt 0 ]]; then
+        if [[ "${KEEP_CONFIG}" -eq 1 ]]; then
+            _bonds_destino="/var/lib/hefesto-dualsense4unix/bt-bonds.pre-uninstall-${_carimbo_do_acervo}"
+            log "guardando o diário do rádio do root junto dos bonds, em ${_bonds_destino}/"
+            sudo install -d -m700 "${_bonds_destino}" 2>/dev/null || true
+            sudo mv -f "${_diarios_root[@]}" "${_bonds_destino}/" 2>/dev/null || true
+        else
+            log "removendo o diário do rádio do root (--purge-config)"
+            sudo rm -f "${_diarios_root[@]}" 2>/dev/null || true
         fi
     fi
     sudo systemctl daemon-reload >/dev/null 2>&1 || true

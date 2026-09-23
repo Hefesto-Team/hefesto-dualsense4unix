@@ -121,7 +121,8 @@ def test_o_asset_diz_o_que_a_sprint_pediu() -> None:
         if linha.strip() and not linha.startswith("#")
     ]
     assert ["d", "/run/hefesto-dualsense4unix", "0755", "root", "root", "-"] in linhas, linhas
-    assert ["f", "/run/hefesto-dualsense4unix/radio.lock", "0660", "root", "hefesto", "-"] in linhas, (
+    trava = ["f", "/run/hefesto-dualsense4unix/radio.lock", "0660", "root", "hefesto", "-"]
+    assert trava in linhas, (
         "a trava tem de ser 0660 com o grupo hefesto — com leitura para «outros» qualquer "
         f"conta local seguraria a trava e o watchdog pularia todo tique: {linhas}"
     )
