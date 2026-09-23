@@ -52,6 +52,87 @@ PAGINA = RAIZ_DEV / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" /
 TITULO_ESPERADO = "aba CONEXÕES"
 TIQUE_MS = 100
 
+#: O OUVINTE DOS GESTOS, e ele é separado da pintura de propósito: o
+#: ``--prova-gesto`` roda com ``--sem-ponte`` (o gesto real mexe no rádio dela),
+#: e sem a pintura o ouvinte tinha de continuar lá — antes, ``--sem-ponte``
+#: saía antes de instalar qualquer coisa e a prova nunca rodava.
+#:
+#: O ENDEREÇO É ``data-gesto`` — 23/09/2026, TRANSPLANTE-DA-SECAO-01. O ouvinte
+#: procurava ``[data-g]`` e a página emite ``data-gesto`` desde a aba nova:
+#: todo clique caía em ``null`` e a prova da aba 08 estourava no primeiro.
+#: Curado aqui, no piloto — a página fala a língua das dez abas.
+OUVINTE = r"""
+(function(){
+  if(window.__hefOuvinte) return;
+  window.__hefOuvinte = true;
+  window.__hefErros = [];
+  function manda(o){
+    try { window.webkit.messageHandlers.hefesto.postMessage(JSON.stringify(o)); }
+    catch(e){}
+  }
+  // O ERRO DE JS É CONTADO, não só impresso: a prova sai com a conta dele.
+  window.addEventListener('error', ev => {
+    window.__hefErros.push(String(ev.message||ev));
+    manda({gesto:'erro-js', texto:String(ev.message||ev).slice(0,200)});
+  });
+  // Campo de texto e lista falam no `change`; o resto, no clique.
+  const DE_ESCREVER = el => el.matches('select,textarea,input:not([type=button]):not([type=submit]):not([type=checkbox]):not([type=radio])');
+  function dados(el, extra){
+    const o = Object.assign({}, el.dataset, extra||{});
+    o.texto = (el.textContent||'').trim().slice(0,80);
+    return o;
+  }
+  // UM OUVINTE SÓ, NO DOCUMENTO. Delegação em vez de um listener por elemento:
+  // a remontagem troca o innerHTML e levaria junto todo listener pendurado nos
+  // filhos — o botão ficaria desenhado, com cursor:pointer, e MUDO. É o defeito
+  // dos três botões de som da aba Controles, e aqui ele não pode nascer.
+  document.addEventListener('click', ev => {
+    const el = ev.target.closest('[data-gesto]');
+    if(!el || el.disabled || DE_ESCREVER(el)) return;
+    manda(dados(el, {evento:'click'}));
+  }, true);
+  document.addEventListener('change', ev => {
+    const el = ev.target.closest('[data-gesto]');
+    if(!el || !DE_ESCREVER(el)) return;
+    manda(dados(el, {evento:'change', valor: el.value}));
+  }, true);
+})();
+"""
+
+#: A PROVA DO GESTO, genérica: um toque em CADA nome de ``data-gesto`` da seção
+#: nova, o primeiro elemento de cada nome que não esteja cinza. Antes era uma
+#: lista de cinco seletores escritos à mão — e um gesto novo que ninguém
+#: escrevesse ali nunca era clicado, que é a prova mentindo por omissão.
+PROVA_DO_GESTO = r"""
+(function(){
+  const marco = document.getElementById('cx8-3');
+  const raiz = (marco && marco.closest('.quadro')) || document;
+  const nomes = [], cinzas = [];
+  const vistos = new Set();
+  for(const el of raiz.querySelectorAll('[data-gesto]')){
+    const n = el.dataset.gesto;
+    if(vistos.has(n)) continue;
+    const vivo = Array.from(raiz.querySelectorAll('[data-gesto="'+n+'"]')).find(e => !e.disabled);
+    vistos.add(n);
+    if(!vivo){ cinzas.push(n); continue; }
+    nomes.push(n);
+  }
+  window.webkit.messageHandlers.hefesto.postMessage(JSON.stringify(
+    {gesto:'prova-lista', nomes:nomes, cinzas:cinzas}));
+  nomes.forEach((n, i) => setTimeout(() => {
+    const el = Array.from(raiz.querySelectorAll('[data-gesto="'+n+'"]')).find(e => !e.disabled);
+    if(!el) return;
+    if(el.matches('select,textarea,input:not([type=button]):not([type=submit]):not([type=checkbox]):not([type=radio])')){
+      if(el.tagName === 'SELECT' && el.options.length > 1) el.selectedIndex = 1;
+      else if(el.tagName !== 'SELECT') el.value = (el.value || '') + ' ';
+      el.dispatchEvent(new Event('change', {bubbles:true}));
+    } else {
+      el.click();
+    }
+  }, 120 * i));
+})()
+"""
+
 #: O bootstrap da aba. As três escritas DEVOLVEM quantos valores escreveram — 0
 #: quando o endereço não existe —, e é isso que faz a conta do fim ser uma RÉGUA
 #: e não um enfeite: com `n++` cego, arrancar um endereço não mudava o número e a
@@ -137,32 +218,13 @@ window.HEF = (function(){
     return n;
   }
 
-  // UM OUVINTE SÓ, NO DOCUMENTO. Delegação em vez de um listener por elemento:
-  // a remontagem troca o innerHTML e levaria junto todo listener pendurado nos
-  // filhos — o botão ficaria desenhado, com cursor:pointer, e MUDO. É o defeito
-  // dos três botões de som da aba Controles, e aqui ele não pode nascer.
-  function ligarGestos(){
-    document.addEventListener('click', ev => {
-      const el = ev.target.closest('[data-g]');
-      if(!el || el.disabled) return;
-      if(el.tagName === 'SELECT') return;
-      manda({gesto: el.dataset.g, alvo: el.dataset.alvo || '',
-             texto: (el.textContent||'').trim().slice(0,80)});
-    }, true);
-    document.addEventListener('change', ev => {
-      const el = ev.target.closest('[data-g]');
-      if(!el || el.tagName !== 'SELECT') return;
-      manda({gesto: el.dataset.g, alvo: el.dataset.alvo || '', valor: el.value});
-    }, true);
-  }
-
-  ligarGestos();
   window.__hefN = -1;
   return {pinta: pinta,
           quem: function(){ return document.title + '|' + qa('.gc-item').length; }};
 })();
 'HEF-PRONTO'
 """
+BOOTSTRAP = OUVINTE + BOOTSTRAP
 
 
 def _ler_json(caminho: str | None) -> Any:
@@ -187,6 +249,23 @@ class _Anonimo:
         return ""
 
 
+def _dono_do_gesto(nome: str) -> str | None:
+    """Quem atende este gesto na aba 08 — o registro das dez abas, não uma lista.
+
+    ``"handler"`` quando há um ``@gesto`` para ele; ``"SEM_GESTO"`` quando o
+    pacote declara que ele ainda não tem dono, com a razão; ``None`` quando
+    ninguém sabe dele — e esse é o caso que a prova reprova.
+    """
+    from hefesto_dualsense4unix.interface import pacotes
+    from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
+
+    if pacotes.gesto_da_pagina(PAGINA.name, nome) is not None:
+        return "handler"
+    if nome in a08_conexoes.SEM_GESTO:
+        return "SEM_GESTO"
+    return None
+
+
 class Janela:
     def __init__(self, args: argparse.Namespace) -> None:
         self.args = args
@@ -197,6 +276,10 @@ class Janela:
         self.custos_tela: list[float] = []
         self.valores: list[int] = []
         self.gestos: list[dict[str, Any]] = []
+        self.sem_dono: list[str] = []
+        self.erros_js: list[str] = []
+        self.prova_nomes: list[str] = []
+        self.prova_cinzas: list[str] = []
         self.remontagens = 0
         self.chave: tuple[Any, ...] = ()
         self.rss: list[int] = []
@@ -229,9 +312,20 @@ class Janela:
         print(f"[fora da Conexões] {titulo} — o mockup estático; a pintura pausou.")
 
     def _instalar(self) -> None:
+        if self.args.secao:
+            # Abre a seção pedida antes de tudo — a foto e a prova olham para ela.
+            self.ponte.rodar(
+                f"(function(e){{if(e)e.checked=true;}})"
+                f"(document.getElementById({json.dumps(self.args.secao)}))"
+            )
         if self.args.sem_ponte:
             print("MORDIDA: a ponte está DESLIGADA — a tela fica na cena fixa do mockup.")
             self.pronto = True
+            if self.args.prova_gesto:
+                # Sem pintura, mas COM o ouvinte: a prova do gesto mede o
+                # caminho tela → Python, e ele não passa pela pintura.
+                self.ponte.rodar(OUVINTE)
+                self._marcar_gestos_de_mentira()
             self._agendar_saida()
             return
 
@@ -270,23 +364,11 @@ class Janela:
         """Cliques SINTÉTICOS: provam o caminho tela → Python, não o desenho.
 
         `el.click()` percorre o MESMO caminho de eventos do clique do rato — o
-        ouvinte delegado do bootstrap é o que responde. Clicar por coordenada é
-        a armadilha que esta casa já pagou duas vezes.
+        ouvinte delegado é o que responde. Clicar por coordenada é a armadilha
+        que esta casa já pagou duas vezes. O roteiro é :data:`PROVA_DO_GESTO`:
+        um toque por nome de gesto da seção, lido da página, nunca digitado.
         """
-        roteiro = [
-            (1200, "document.querySelector('[data-g=\"exame.reexaminar\"]').click()"),
-            (1500, "document.querySelector('[data-g=\"adaptador.renomear\"]').click()"),
-            (1800, "document.querySelector('[data-g=\"mesa.mapear-entradas\"]').click()"),
-            (2100, "document.querySelector('[data-g=\"controle.luz.nao-acende\"]').click()"),
-            (
-                2400,
-                "(function(s){s.selectedIndex=1;"
-                "s.dispatchEvent(new Event('change',{bubbles:true}));})"
-                "(document.querySelector('[data-g=\"vizinho.oque\"]'))",
-            ),
-        ]
-        for ms, script in roteiro:
-            GLib.timeout_add(ms, lambda s=script: (self.ponte.rodar(s), False)[1])
+        GLib.timeout_add(1200, lambda: (self.ponte.rodar(PROVA_DO_GESTO), False)[1])
 
     def _agendar_saida(self) -> None:
         foto = self.args.foto
@@ -372,19 +454,48 @@ class Janela:
 
     # -- os gestos ---------------------------------------------------------
     def _gesto(self, objeto: dict[str, Any]) -> None:
-        if objeto.get("gesto") == "pintou":
+        nome = str(objeto.get("gesto") or "")
+        if nome == "pintou":
             self.valores.append(int(objeto.get("n") or 0))
             return
-        if not aba_conexoes.gesto_valido(objeto):
+        if nome == "erro-js":
+            self.erros_js.append(str(objeto.get("texto") or ""))
+            print(f"ERRO DE JS: {objeto.get('texto')}", file=sys.stderr)
+            return
+        if nome == "prova-lista":
+            self.prova_nomes = [str(n) for n in objeto.get("nomes") or []]
+            self.prova_cinzas = [str(n) for n in objeto.get("cinzas") or []]
+            return
+        dono = _dono_do_gesto(nome)
+        if dono is None:
             # Recusar com motivo, nunca engolir. Um gesto que a tela manda e o
             # Python não conhece é defeito de um dos dois lados, e calar
             # esconderia qual.
-            print(f"gesto DESCONHECIDO, recusado: {objeto!r}", file=sys.stderr)
+            self.sem_dono.append(nome)
+            print(f"gesto SEM DONO, recusado: {objeto!r}", file=sys.stderr)
             return
         self.gestos.append(objeto)
         alvo = objeto.get("alvo") or "—"
         valor = objeto.get("valor") or objeto.get("texto") or ""
-        print(f"gesto: {objeto['gesto']} · alvo {alvo} · {valor}")
+        print(f"gesto: {nome} · {dono} · alvo {alvo} · {str(valor)[:40]}")
+
+    def relato_da_prova(self) -> tuple[bool, str]:
+        """``(passou, texto)`` — cada gesto da seção clicado chegou e tem dono."""
+        chegaram = {str(o.get("gesto")) for o in self.gestos}
+        faltam = [n for n in self.prova_nomes if n not in chegaram]
+        linhas = [
+            f"prova do gesto: {len(self.prova_nomes)} nomes clicados · "
+            f"{len(chegaram & set(self.prova_nomes))} chegaram com dono · "
+            f"{len(set(self.sem_dono))} sem dono · {len(self.erros_js)} erro(s) de JS",
+        ]
+        if self.prova_cinzas:
+            linhas.append(f"  cinzas (não se clica): {', '.join(self.prova_cinzas)}")
+        if faltam:
+            linhas.append(f"  NÃO CHEGARAM: {', '.join(faltam)}")
+        if self.sem_dono:
+            linhas.append(f"  SEM DONO: {', '.join(sorted(set(self.sem_dono)))}")
+        passou = bool(self.prova_nomes) and not faltam and not self.sem_dono and not self.erros_js
+        return passou, "\n".join(linhas)
 
     # -- o relato ----------------------------------------------------------
     def relato(self) -> str:
@@ -441,6 +552,7 @@ def main() -> int:
                    help="MORDIDA: apaga os data-v e prova que a pintura desaba")
     p.add_argument("--prova-gesto", action="store_true",
                    help="cliques sintéticos, e prova que o gesto chega ao Python")
+    p.add_argument("--secao", help="abre esta seção antes da foto (ex.: cx8-3)")
     p.add_argument("--duble", help="JSON com um state_full — em vez do daemon")
     p.add_argument("--mesa-duble", help="JSON com a mesa de rádio, o exame e a ordem")
     args = p.parse_args()
@@ -452,6 +564,12 @@ def main() -> int:
     j = Janela(args)
     Gtk.main()
     print("\n" + j.relato())
+    if args.prova_gesto:
+        passou, texto = j.relato_da_prova()
+        print(texto)
+        if not passou:
+            print("ERRO: a prova do gesto não fechou.", file=sys.stderr)
+            return 1
 
     # UMA BANCADA QUE NÃO DEU UMA VOLTA NÃO MEDIU NADA, E NÃO SAI VERDE — a
     # guarda que a `jogar_vivo.main` ganhou na `ONDA5-07-03`, estendida às cinco
