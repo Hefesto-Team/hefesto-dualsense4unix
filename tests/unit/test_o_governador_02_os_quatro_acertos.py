@@ -594,42 +594,65 @@ def test_sem_nome_a_frase_diz_este_adaptador_e_nunca_o_endereco() -> None:
 
 
 def test_o_nome_da_porta_pergunta_aos_donos(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``nome_da_porta``: o ``hciN`` do kernel (a amostra), o ``devpath`` do
-    ``mesa_de_radio`` e o número que ELA declarou (``mapa_das_portas``).
+    """``nome_da_porta``: o ``hciN`` do kernel (a amostra), o caminho do
+    ``mesa_de_radio`` e o NOME do dono do nome da porta (``entrada_a_entrada``).
 
-    MORDIDA: troque o ``porta_de(...)`` por ``None`` e a entrada que ela
-    declarou volta a se chamar pelo ``devpath``.
+    REVISTA EM 23/09 PELA A-COSTURA-DA-ONDA-2-01 (item 6): esta régua cobrava
+    «Entrada 4.1.4» — o ``devpath`` — para a porta que ela não mapeou, e era o
+    governador compondo um segundo nome. Agora o nome é do dono; porta sem
+    nome é ``""``, e a frase diz «este adaptador».
+
+    MORDIDA: volte a compor ``f"Entrada {devpath}"`` no governador — a porta
+    que ela não mapeou ganha um nome inventado e esta régua reprova.
     """
+    from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee
+
     # Sob a suíte, o dono não lê a mesa dela: «não sei».
     assert gov.nome_da_porta(ADAPTADOR_A) == ""
 
+    pci = "0000:0c:00.3"
     monkeypatch.setattr(bluez_dbus, "a_suite_esta_rodando", lambda: False)
     monkeypatch.setattr(bluez_dbus, "enderecos_pelo_kernel", lambda *_a, **_k: {})
     monkeypatch.setattr(
         mesa_de_radio,
         "adaptadores_bluetooth",
         lambda **_k: [
-            mesa_de_radio.Adaptador(interface="hci3", no="/x/3-4.1.4", busnum=3, devpath="4.1.4"),
+            mesa_de_radio.Adaptador(
+                interface="hci3", no="/x/3-4.1.4", busnum=3, devpath="4.1.4",
+                controlador_pci=pci,
+            ),
             mesa_de_radio.Adaptador(interface="hci5"),  # embutido: sem USB
         ],
     )
-    monkeypatch.setattr(maquina, "carregar_maquina", maquina.MaquinaConfig)
+    # Os barramentos DESTE boot, sem ler o /sys dela.
+    monkeypatch.setattr(ee, "_controladores_do_sistema", lambda: {3: pci})
+    monkeypatch.setattr(ee, "carregar_maquina", maquina.MaquinaConfig)
     amostra = {
         ADAPTADOR_A: ar.ArDoAdaptador(hci=3, endereco=ADAPTADOR_A),
         ADAPTADOR_B: ar.ArDoAdaptador(hci=5, endereco=ADAPTADOR_B),
     }
-    assert gov.nome_da_porta(ADAPTADOR_A, amostra=amostra) == "Entrada 4.1.4"
-    assert gov.nome_da_porta(ADAPTADOR_A.upper(), amostra=amostra) == "Entrada 4.1.4"
+    assert gov.nome_da_porta(ADAPTADOR_A, amostra=amostra) == "", (
+        "a porta que ela não mapeou ganhou um nome inventado"
+    )
     assert gov.nome_da_porta(ADAPTADOR_B, amostra=amostra) == "", "o embutido ganhou entrada"
     assert gov.nome_da_porta("aa:bb:cc:00:00:ee", amostra=amostra) == ""
 
     declarada = maquina.MaquinaConfig(
         mapa=maquina.MapaDaMesa(portas={"9": maquina.PortaDeclarada(caminho="3-4.1.4")})
     )
-    monkeypatch.setattr(maquina, "carregar_maquina", lambda: declarada)
+    monkeypatch.setattr(ee, "carregar_maquina", lambda: declarada)
     assert gov.nome_da_porta(ADAPTADOR_A, amostra=amostra) == "Entrada 9", (
         "ela declarou a entrada 9 e a frase inventou outro nome"
     )
+    assert gov.nome_da_porta(ADAPTADOR_A.upper(), amostra=amostra) == "Entrada 9"
+
+    # D3: o nome que ela deu ao LUGAR vence o número — é o dono quem diz.
+    com_nome = maquina.MaquinaConfig(
+        mapa=declarada.mapa,
+        lugares={maquina.lugar_de(pci, "4.1.4"): maquina.LugarDeclarado(nome="Sala")},
+    )
+    monkeypatch.setattr(ee, "carregar_maquina", lambda: com_nome)
+    assert gov.nome_da_porta(ADAPTADOR_A, amostra=amostra) == "Sala"
 
 
 # ---------------------------------------------------------------------------

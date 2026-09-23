@@ -641,3 +641,202 @@ def test_as_vagas_da_recusa_saem_na_ordem_da_d8_da_central(
     [pedido] = governador.publicar()[ADAPTADOR_A]["pedidos"]
     assert tuple(pedido["vagas"]) == esperada
     assert recusa.frase.endswith("Há vaga na Entrada 3 e na Entrada 2.")
+
+
+# ---------------------------------------------------------------------------
+# 6. um dono do nome da porta
+# ---------------------------------------------------------------------------
+
+
+class _DonoDoNome:
+    """O ``entrada_a_entrada.nome_da_porta`` de mentira: responde «Sala» e anota."""
+
+    def __init__(self, nomes: dict[str, str]) -> None:
+        self.nomes = nomes
+        self.perguntas: list[str] = []
+
+    def __call__(self, chave: str, **_k: Any) -> str | None:
+        self.perguntas.append(chave)
+        return self.nomes.get(chave)
+
+
+def test_o_governador_pergunta_o_nome_ao_dono_da_entrada(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A frase da recusa diz o nome que o DONO diz — o que ela deu à porta.
+
+    MORDIDA: volte o ``governador_do_radio.nome_da_porta`` a compor a palavra
+    com o número do mapa ou o ``devpath`` — a porta vira «Entrada 4.1.4» em vez
+    do nome dela, e esta régua reprova.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
+    from hefesto_dualsense4unix.integrations import ar_do_adaptador as ar
+    from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee
+    from hefesto_dualsense4unix.integrations import mesa_de_radio
+
+    dono_do_nome = _DonoDoNome({"3-4.1.4": "Sala"})
+    monkeypatch.setattr(ee, "nome_da_porta", dono_do_nome)
+    monkeypatch.setattr(bd, "a_suite_esta_rodando", lambda: False)
+    monkeypatch.setattr(bd, "enderecos_pelo_kernel", lambda *_a, **_k: {})
+    monkeypatch.setattr(
+        mesa_de_radio,
+        "adaptadores_bluetooth",
+        lambda **_k: [
+            mesa_de_radio.Adaptador(interface="hci3", no="/x/3-4.1.4", busnum=3, devpath="4.1.4"),
+            mesa_de_radio.Adaptador(interface="hci4", no="/x/3-1.4", busnum=3, devpath="1.4"),
+        ],
+    )
+    amostra = {
+        ADAPTADOR_A: ar.ArDoAdaptador(hci=3, endereco=ADAPTADOR_A),
+        ADAPTADOR_B: ar.ArDoAdaptador(hci=4, endereco=ADAPTADOR_B),
+    }
+
+    assert gov.nome_da_porta(ADAPTADOR_A, amostra=amostra) == "Sala"
+    # A porta que ela não nomeou não ganha nome inventado.
+    assert gov.nome_da_porta(ADAPTADOR_B, amostra=amostra) == ""
+    assert dono_do_nome.perguntas == ["3-4.1.4", "3-1.4"]
+
+    recusa = gov.Recusa(
+        CONTROLE_3, ADAPTADOR_A, "som", gov.MOTIVO_CHEIO, (ADAPTADOR_B,),
+        nomear=lambda e: gov.nome_da_porta(e, amostra=amostra),
+    )
+    assert recusa.frase == (
+        "O Sala já tem 2 controles com som ou vibração. Há vaga em outro adaptador."
+    )
+
+
+def test_a_secao_mesa_pergunta_o_nome_ao_dono_da_entrada(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A coluna «Onde está» diz o nome que o dono diz — e a procedência continua
+    no ``title``, com o número do mapa e o caminho do sistema.
+
+    MORDIDA: volte o ``_onde_esta_o_adaptador`` a compor «Entrada N» com o
+    número do mapa — a coluna ignora o dono, e esta régua reprova.
+    """
+    from tests.conftest import exigir_gi_real
+
+    exigir_gi_real("a coluna 'Onde está' da secao_mesa")
+    from hefesto_dualsense4unix.app.actions.config.secao_mesa import (
+        _onde_esta_o_adaptador,
+        _onde_esta_o_radio,
+    )
+    from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee
+    from hefesto_dualsense4unix.integrations.mesa_de_radio import Adaptador, RadioUsb
+    from hefesto_dualsense4unix.utils.maquina import MapaDaMesa, PortaDeclarada
+
+    dono_do_nome = _DonoDoNome({"3-1.2": "Sala", "4-4": "Rack da TV"})
+    monkeypatch.setattr(ee, "nome_da_porta", dono_do_nome)
+    mapa = MapaDaMesa(
+        portas={"9": PortaDeclarada(caminho="3-1.2"), "7": PortaDeclarada(caminho="4-4")}
+    )
+    adaptador = Adaptador(
+        interface="hci0", no="/mentira/3-1.2", vid="2357", pid="0604", busnum=3,
+        devpath="1.2", painel="right",
+    )
+    wifi = RadioUsb(no="/mentira/4-4", vid="2357", pid="012d", busnum=4, devpath="4")
+
+    texto, dica = _onde_esta_o_adaptador(adaptador, mapa)
+    assert texto == "Sala"
+    assert dica is not None and "entrada 9" in dica and "3-1.2" in dica
+    assert _onde_esta_o_radio(wifi, None, mapa) == "Rack da TV"
+    assert dono_do_nome.perguntas == ["3-1.2", "4-4"]
+    # Sem mapa, a seção nem pergunta: a frase de hoje, letra por letra.
+    assert _onde_esta_o_adaptador(adaptador) == ("Barramento 3, porta 1.2 · Direita", None)
+
+
+#: Quem pode compor o nome da porta, e por quê. Tudo o mais em ``src/`` que junte
+#: a palavra «Entrada» com um número é um segundo dono.
+_O_DONO = "integrations/entrada_a_entrada.py"
+_OS_QUE_PODEM = {
+    (_O_DONO, "define a palavra"): "é o dono (ENTRADA-A-ENTRADA-01)",
+    (_O_DONO, "compõe com a palavra"): "é o dono (ENTRADA-A-ENTRADA-01)",
+    ("app/widgets/calibrar_entradas.py", "define a palavra"): (
+        "a cópia que o gerador da aba 08 lê por AST — não importa do dono sem "
+        "quebrar o gerador; travada junto por test_entrada_a_entrada_grava.py"
+    ),
+    ("gui/aba_conexoes.py", "compõe uma f-string"): (
+        "html_dos_adaptadores diz «Entrada <painel do kernel>». ACHADO DA "
+        "A-COSTURA-DA-ONDA-2-01, fora da posse dela: o único chamador é o "
+        "interface/conexoes_vivas.py, da TRANSPLANTE-DA-SECAO-01, que substitui "
+        "a seção cx8-3 inteira. Quem a fechar tira esta linha."
+    ),
+}
+
+
+def _composicoes_da_palavra(raiz: Path) -> set[tuple[str, str]]:
+    """``(arquivo, forma)`` de toda string de CÓDIGO que junta «Entrada» a um valor.
+
+    Docstring não conta: prosa que descreve o padrão não é o padrão.
+    """
+    import ast
+    import re
+
+    palavra_no_fim = re.compile(r"\bEntrada\s*$")
+    achados: set[tuple[str, str]] = set()
+    for arquivo in sorted(raiz.rglob("*.py")):
+        arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
+        docstrings = {
+            id(no.body[0].value)
+            for no in ast.walk(arvore)
+            if isinstance(no, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+            and no.body
+            and isinstance(no.body[0], ast.Expr)
+            and isinstance(no.body[0].value, ast.Constant)
+        }
+        nome = str(arquivo.relative_to(raiz))
+        for no in ast.walk(arvore):
+            if isinstance(no, ast.JoinedStr):
+                partes = no.values
+                for atual, seguinte in zip(partes, partes[1:], strict=False):
+                    if (
+                        isinstance(atual, ast.Constant)
+                        and isinstance(atual.value, str)
+                        and palavra_no_fim.search(atual.value)
+                        and isinstance(seguinte, ast.FormattedValue)
+                    ):
+                        achados.add((nome, "compõe uma f-string"))
+                if any(
+                    isinstance(p, ast.FormattedValue)
+                    and isinstance(p.value, ast.Name)
+                    and p.value.id == "PALAVRA_DA_ENTRADA"
+                    for p in partes
+                ):
+                    achados.add((nome, "compõe com a palavra"))
+            elif (
+                isinstance(no, ast.Constant)
+                and isinstance(no.value, str)
+                and id(no) not in docstrings
+                and re.search(r"\bEntrada \{", no.value)
+            ):
+                achados.add((nome, "tem um modelo de .format"))
+            elif (
+                isinstance(no, ast.BinOp)
+                and isinstance(no.op, ast.Add)
+                and isinstance(no.left, ast.Constant)
+                and isinstance(no.left.value, str)
+                and palavra_no_fim.search(no.left.value)
+            ):
+                achados.add((nome, "compõe por soma"))
+            elif isinstance(no, (ast.Assign, ast.AnnAssign)):
+                alvos = no.targets if isinstance(no, ast.Assign) else [no.target]
+                if any(isinstance(a, ast.Name) and a.id == "PALAVRA_DA_ENTRADA" for a in alvos):
+                    achados.add((nome, "define a palavra"))
+    return achados
+
+
+def test_o_nome_da_porta_tem_um_dono_so() -> None:
+    """Um dono do nome da porta: o da ENTRADA. Havia três compositores — o
+    governador, a ``secao_mesa`` e o dono —, com três ``PALAVRA_DA_ENTRADA``.
+
+    A lista de quem pode é FECHADA nos dois sentidos: um compositor novo
+    reprova, e uma exceção que deixou de existir também (tire-a daqui).
+
+    MORDIDA: devolva ao governador a ``PALAVRA_DA_ENTRADA`` e a composição com o
+    ``devpath`` — esta régua reprova nomeando o arquivo.
+    """
+    achados = _composicoes_da_palavra(RAIZ / "src" / "hefesto_dualsense4unix")
+    intrusos = sorted(achados - set(_OS_QUE_PODEM))
+    caducos = sorted(set(_OS_QUE_PODEM) - achados)
+    assert not intrusos, f"um segundo dono do nome da porta: {intrusos}"
+    assert not caducos, f"a exceção deixou de existir — tire-a de _OS_QUE_PODEM: {caducos}"
