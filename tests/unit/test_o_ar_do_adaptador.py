@@ -46,7 +46,7 @@ class KernelDeMentira:
             "c": dict.fromkeys(
                 ("err_rx", "err_tx", "cmd_tx", "evt_rx", "acl_tx", "acl_rx",
                  "sco_tx", "sco_rx", "byte_rx", "byte_tx"), 0),
-            "conexoes": [],
+            "enlaces": [],
         }
         return self.adaptadores[hci]
 
@@ -76,7 +76,7 @@ class KernelDeMentira:
                 struct.pack_into("<I", buf, 52 + 4 * i, c[nome] % (1 << 32))
             return
         if pedido == ar.HCIGETCONNLIST:
-            conexoes = dado["conexoes"]
+            conexoes = dado["enlaces"]
             struct.pack_into("<H", buf, 2, len(conexoes))
             for i, (handle, endereco, tipo) in enumerate(conexoes):
                 base = 4 + 16 * i
@@ -118,7 +118,7 @@ def test_o_layout_do_kernel_tem_92_bytes_e_cada_campo_no_lugar() -> None:
 
 def test_a_lista_de_conexoes_traz_handle_endereco_papel_e_saida() -> None:
     kernel = KernelDeMentira()
-    kernel.por(0, ADAPTADOR_A)["conexoes"] = [(12, CONTROLE_1, ar.TIPO_ACL)]
+    kernel.por(0, ADAPTADOR_A)["enlaces"] = [(12, CONTROLE_1, ar.TIPO_ACL)]
     conexoes = ar.LeitorDoKernel(ioctl=kernel.ioctl).conexoes(0)
     assert conexoes is not None and len(conexoes) == 1
     (c,) = conexoes
@@ -137,7 +137,7 @@ def test_o_endereco_sai_na_forma_do_hid_phys() -> None:
 def test_a_taxa_e_o_delta_do_contador_na_janela() -> None:
     kernel, relogio = KernelDeMentira(), Relogio()
     dado = kernel.por(0, ADAPTADOR_A)
-    dado["conexoes"] = [(12, CONTROLE_1, ar.TIPO_ACL)]
+    dado["enlaces"] = [(12, CONTROLE_1, ar.TIPO_ACL)]
     medidor = _medidor(kernel, relogio)
     primeira = medidor.amostrar()[ADAPTADOR_A]
     assert not primeira.sei and primeira.motivo == ar.PRIMEIRA_LEITURA
@@ -154,7 +154,7 @@ def test_a_taxa_e_o_delta_do_contador_na_janela() -> None:
 def test_o_contador_de_32_bits_que_da_a_volta_continua_sendo_taxa() -> None:
     kernel, relogio = KernelDeMentira(), Relogio()
     dado = kernel.por(0, ADAPTADOR_A)
-    dado["conexoes"] = [(12, CONTROLE_1, ar.TIPO_ACL)]
+    dado["enlaces"] = [(12, CONTROLE_1, ar.TIPO_ACL)]
     dado["c"]["acl_rx"] = (1 << 32) - 100
     medidor = _medidor(kernel, relogio)
     medidor.amostrar()
@@ -181,7 +181,7 @@ def test_contador_congelado_com_conexao_viva_responde_nao_sei() -> None:
     """A MORDIDA da sprint: congelado com enlace de pé NUNCA é «0 Hz»."""
     kernel, relogio = KernelDeMentira(), Relogio()
     dado = kernel.por(0, ADAPTADOR_A)
-    dado["conexoes"] = [(12, CONTROLE_1, ar.TIPO_ACL)]
+    dado["enlaces"] = [(12, CONTROLE_1, ar.TIPO_ACL)]
     dado["c"]["acl_rx"] = 40_000
     medidor = _medidor(kernel, relogio)
     medidor.amostrar()
@@ -253,7 +253,7 @@ def test_o_adaptador_desligado_e_nao_sei() -> None:
 def test_entre_duas_janelas_o_medidor_repete_a_ultima_resposta() -> None:
     kernel, relogio = KernelDeMentira(), Relogio()
     dado = kernel.por(0, ADAPTADOR_A)
-    dado["conexoes"] = [(12, CONTROLE_1, ar.TIPO_ACL)]
+    dado["enlaces"] = [(12, CONTROLE_1, ar.TIPO_ACL)]
     medidor = _medidor(kernel, relogio)
     medidor.amostrar()
     relogio.agora += 1.0
@@ -277,7 +277,7 @@ def test_referencia_velha_recomeca_em_vez_de_publicar_media_velha() -> None:
 def test_a_janela_do_governador_e_um_parametro() -> None:
     kernel, relogio = KernelDeMentira(), Relogio()
     dado = kernel.por(0, ADAPTADOR_A)
-    dado["conexoes"] = [(12, CONTROLE_1, ar.TIPO_ACL)]
+    dado["enlaces"] = [(12, CONTROLE_1, ar.TIPO_ACL)]
     medidor = _medidor(kernel, relogio, janela_s=0.25)
     medidor.amostrar()
     relogio.agora += 0.25
@@ -400,8 +400,8 @@ def test_sem_enlace_o_afh_e_nao_sei() -> None:
 
 def test_os_mapas_do_adaptador_so_perguntam_pelos_enlaces_acl() -> None:
     conexoes = (
-        ar.Conexao(12, CONTROLE_1, ar.TIPO_ACL, True, 1, 7),
-        ar.Conexao(40, CONTROLE_2, 0x02, True, 1, 7),
+        ar.Enlace(12, CONTROLE_1, ar.TIPO_ACL, True, 1, 7),
+        ar.Enlace(40, CONTROLE_2, 0x02, True, 1, 7),
     )
     perguntados: list[tuple[int, int]] = []
 

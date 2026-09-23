@@ -156,7 +156,7 @@ class LeituraDoAdaptador:
 
 
 @dataclass(frozen=True)
-class Conexao:
+class Enlace:
     """Uma linha do ``HCIGETCONNLIST``."""
 
     handle: int
@@ -200,7 +200,7 @@ class ArDoAdaptador:
     bytes_entrada_por_s: float | None = None
     bytes_saida_por_s: float | None = None
     erros_por_s: float | None = None
-    conexoes: tuple[Conexao, ...] | None = None
+    conexoes: tuple[Enlace, ...] | None = None
     acl_mtu: int = 0
     acl_pkts: int = 0
     janela_s: float = 0.0
@@ -279,7 +279,7 @@ class LeitorDoKernel:
             instante=self._relogio(),
         )
 
-    def conexoes(self, hci: int) -> tuple[Conexao, ...] | None:
+    def conexoes(self, hci: int) -> tuple[Enlace, ...] | None:
         """``HCIGETCONNLIST`` — tupla vazia é «nenhuma conexão», não erro."""
         buf = bytearray(
             struct.pack("<HH", hci, MAX_CONEXOES) + bytes(TAMANHO_CONN_INFO * MAX_CONEXOES)
@@ -289,13 +289,13 @@ class LeitorDoKernel:
         except OSError:
             return None
         quantas = min(struct.unpack_from("<H", buf, 2)[0], MAX_CONEXOES)
-        saida: list[Conexao] = []
+        saida: list[Enlace] = []
         for i in range(quantas):
             handle, bdaddr, tipo, out, estado, link_mode = struct.unpack_from(
                 FORMATO_CONN_INFO, buf, 4 + TAMANHO_CONN_INFO * i
             )
             saida.append(
-                Conexao(
+                Enlace(
                     handle=int(handle),
                     endereco=endereco_do_kernel(bdaddr),
                     tipo=int(tipo),
@@ -320,7 +320,7 @@ def _delta(antes: int, depois: int, janela_s: float) -> int | None:
 def conferir(
     antes: LeituraDoAdaptador | None,
     depois: LeituraDoAdaptador | None,
-    conexoes: tuple[Conexao, ...] | None,
+    conexoes: tuple[Enlace, ...] | None,
 ) -> ArDoAdaptador:
     """O ar de uma janela entre duas fotos — o CONFERIR do medidor.
 
@@ -635,8 +635,8 @@ __all__ = [
     "PRIMEIRA_LEITURA",
     "SEM_BLUETOOTH",
     "ArDoAdaptador",
-    "Conexao",
     "Contadores",
+    "Enlace",
     "LeitorDoKernel",
     "LeituraDoAdaptador",
     "MapaAFH",
