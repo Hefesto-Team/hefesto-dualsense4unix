@@ -239,6 +239,78 @@ def test_o_adaptador_que_volta_a_escoar_devolve_a_escrita_e_a_borda_sai_uma_vez(
     assert len(registro.de(gov.VOLTOU_A_ESCREVER)) == 1
 
 
+class _AdaptadorQueEscoaDuas:
+    """O medidor de um adaptador que põe no ar até ``capacidade`` pacotes por
+    janela do que está na fila do host — a física da R4, sem o rádio."""
+
+    def __init__(self, capacidade: int = 47) -> None:
+        self.capacidade = capacidade
+        self.fila = 0
+        self.saiu = 0
+
+    def janela(self, escritas: int) -> None:
+        self.fila += escritas
+        self.saiu = min(self.fila, self.capacidade)
+        self.fila -= self.saiu
+
+    def amostrar(self) -> dict[str, ar.ArDoAdaptador]:
+        return {
+            ADAPTADOR_A: ar.ArDoAdaptador(
+                hci=0, endereco=ADAPTADOR_A, entrada_por_s=700.0,
+                saida_por_s=self.saiu / gov.PERIODO_S, janela_s=gov.PERIODO_S, conexoes=(),
+            )
+        }
+
+
+def test_tres_pontes_que_alternam_nao_enchem_o_diario() -> None:
+    """A R4 de verdade: três pontes num adaptador que escoa duas.
+
+    O governador alterna ceder e voltar a cada janela — é o engasgo que a R4
+    aceita. Só a borda no diário dava 240 linhas por minuto, e o diário de
+    meio mega girava em minutos, levando o ``PONTE_SUBIU`` que o fato da queda
+    lê. Um episódio por minuto entra; os outros são contados na linha seguinte.
+
+    MORDIDA: ``INTERVALO_DAS_BORDAS_NO_DIARIO_S = 0`` e o diário ganha as
+    seiscentas bordas de cinco minutos.
+    """
+    relogio, registro = _Relogio(), _Diario()
+    medidor = _AdaptadorQueEscoaDuas()
+    governador = gov.GovernadorDoRadio(
+        medidor=medidor, adaptador_de=lambda _u: ADAPTADOR_A,
+        registrar=registro, relogio=relogio,
+    )
+    vagas = []
+    for uniq in (CONTROLE_1, CONTROLE_2, CONTROLE_3):
+        vaga = governador.pedir_vaga(uniq, "som")
+        assert isinstance(vaga, gov.Vaga)
+        vaga.subiu()
+        vagas.append(vaga)
+    episodios, cedendo_antes, sobra = 0, False, 0.0
+    for _ in range(1200):  # cinco minutos
+        sobra += 23.4
+        por_ponte, sobra = int(sobra), sobra - int(sobra)
+        escritas = 0
+        for vaga in vagas:
+            if not vaga.cedendo:
+                for _ in range(por_ponte):
+                    vaga.contar_escrita()
+                escritas += por_ponte
+        medidor.janela(escritas)
+        relogio.agora += gov.PERIODO_S
+        governador.tique()
+        if vagas[0].cedendo and not cedendo_antes:
+            episodios += 1
+        cedendo_antes = vagas[0].cedendo
+    cedeu = registro.de(gov.CEDEU_NA_FONTE)
+    assert episodios > 100, f"o dublê não alternou ({episodios} episódios)"
+    assert len(cedeu) <= 6, f"{len(cedeu)} bordas em cinco minutos: o diário gira e perde o resto"
+    assert len(registro.de(gov.VOLTOU_A_ESCREVER)) in (len(cedeu), len(cedeu) - 1)
+    contados = sum(1 + e["antes"]["episodios_calados"] for e in cedeu)
+    calados_agora = governador._bordas_no_diario[ADAPTADOR_A].calados
+    assert contados + calados_agora == episodios, "episódio calado que o diário não contou"
+    assert not any(v.derrubar for v in vagas), "o engasgo da R4 virou queda"
+
+
 # ---------------------------------------------------------------------------
 # 2. «não sei» nunca é zero
 # ---------------------------------------------------------------------------
