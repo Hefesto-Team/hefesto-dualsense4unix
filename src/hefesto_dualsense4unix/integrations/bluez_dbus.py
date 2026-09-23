@@ -91,7 +91,7 @@ TRAVA_OCUPADA = "hefesto.TravaOcupada"
 QUEM_PADRAO = "hefesto"
 
 #: O ``o_que`` da linha que a borda deixa no diário comum a cada escrita que
-#: MUDA o rádio. Um só texto para todo motor, com o método ao lado: o leitor
+#: MUDA o rádio. Um só texto para todo motor, com a ``chamada`` ao lado: o leitor
 #: (o sino) procura por esta constante, e um sinônimo seria linha que ninguém acha.
 ESCREVEU_NO_BLUEZ = "escreveu no BlueZ"
 
@@ -281,7 +281,7 @@ def _no_diario(quem: str, metodo: str, caminho: str, escrita: Escrita) -> None:
             ESCREVEU_NO_BLUEZ,
             metodo,
             depois={"feita": escrita.feita, "erro": escrita.erro or None},
-            metodo=metodo,
+            chamada=metodo,
             hci=_hci_de(caminho) or _hci_de(caminho.rsplit("/dev_", 1)[0]) or None,
             controle=endereco_do_aparelho(caminho),
         )
@@ -1224,16 +1224,16 @@ class BarramentoGio:
         finally:
             self._contexto.pop_thread_default()
 
-    def _no_fio(self, funcao: Callable[[], Any], *, espera: float = 5.0) -> Any:
-        """Roda ``funcao`` no fio do barramento e devolve o resultado (``None`` no prazo)."""
+    def _no_fio(self, tarefa: Callable[[], Any], *, espera: float = 5.0) -> Any:
+        """Roda a ``tarefa`` no fio do barramento e devolve o resultado (``None`` no prazo)."""
         if threading.current_thread() is self._fio:
-            return funcao()
+            return tarefa()
         caixa: dict[str, Any] = {}
         feito = threading.Event()
 
         def rodar(*_dados: Any) -> bool:
             try:
-                caixa["valor"] = funcao()
+                caixa["valor"] = tarefa()
             except Exception as problema:
                 caixa["erro"] = problema
             feito.set()
@@ -1514,12 +1514,12 @@ class DonoVivo(LeitorDoBluez):
         self._barramento.fechar()
 
     @staticmethod
-    def _em_segundo_plano(funcao: Callable[[], Any]) -> None:
+    def _em_segundo_plano(tarefa: Callable[[], Any]) -> None:
         """Trabalho que o fio do barramento não pode fazer: ele entrega os sinais."""
 
         def rodar() -> None:
             try:
-                funcao()
+                tarefa()
             except Exception:
                 _registrar("bluez_trabalho_de_fundo_falhou", nivel="warning")
 

@@ -177,8 +177,8 @@ sem_barramento = pytest.mark.skipif(
 def test_pelo_gio_o_pair_e_nosso_e_o_padrao_continua_o_bt_agent(tmp_path: Path) -> None:
     """O caminho que o produto usa, de ponta a ponta: foto, sinal, agente, ``Pair``.
 
-    MORDIDAS: pedir ``RequestDefaultAgent`` em ``registrar`` põe o nosso nome em
-    ``padroes``; tirar o agente do ``DonoVivo.parear`` faz o bt-agent atender.
+    MORDIDAS: pedir ``RequestDefaultAgent`` em ``registrar`` põe o nosso nome na
+    pilha de padrões; tirar o agente do ``DonoVivo.parear`` faz o bt-agent atender.
     """
     with bm.BluezParticular(tmp_path) as bluez:
         barramento = bd.BarramentoGio(bluez.endereco)
