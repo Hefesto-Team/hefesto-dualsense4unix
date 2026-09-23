@@ -25,6 +25,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import threading
+
 import pytest
 
 from hefesto_dualsense4unix.daemon import launch_env
@@ -362,3 +364,44 @@ def test_o_tique_logo_depois_do_clique_ja_pinta_a_lista_nova(vdf, monkeypatch) -
     assert (depois["modo-aceso"], depois["steam-input-aceso"]) == ("dualsense", ""), (
         f"o tique depois do clique pintou {depois['modo-aceso']!r} / "
         f"{depois['steam-input-aceso']!r}: a leitura guardada era a de antes")
+
+
+def test_a_leitura_do_tique_em_curso_nao_desfaz_o_clique(vdf, monkeypatch) -> None:
+    """A thread da vigia que leu ANTES da escrita e termina DEPOIS não guarda nada.
+
+    O tique dispara a releitura quando o TTL vence, e ela pode estar no meio do
+    `localconfig.vdf` quando o gesto escreve. Sem a geração, ela termina depois
+    do `renovar()` e guarda o disco de antes por um TTL inteiro (20 s): o
+    «Steam Input» que ela desligou volta a acender.
+
+    A MORDIDA: em `_VigiaDoSteamInput.ler`, guarde sem comparar a geração e a
+    última asserção reprova com o «Steam Input» aceso.
+    """
+    _ponte_de_pe()
+    ctx = _ctx(aberto=True)
+    real = ponte.estado_da_ponte
+    leu, solta = threading.Event(), threading.Event()
+
+    def _lenta(*a: Any, **kw: Any) -> Any:
+        estado = real(*a, **kw)
+        if threading.current_thread().name == "hefesto-steam-input":
+            leu.set()
+            solta.wait(5)
+        return estado
+
+    monkeypatch.setattr(ponte, "estado_da_ponte", _lenta)
+    vigia = aba.VIGIA_DO_STEAM_INPUT
+    vigia._disparar()
+    assert leu.wait(5), "a thread da vigia não chegou a ler"
+
+    aba.modo_dualsense(ctx, {"texto": "Sony DualSense"}, PonteDeMentira())
+    solta.set()
+    for fio in threading.enumerate():
+        if fio.name == "hefesto-steam-input":
+            fio.join(5)
+
+    monkeypatch.setattr(vigia, "_disparar", lambda: None)
+    depois = aba.pacote(ctx)
+    assert (depois["modo-aceso"], depois["steam-input-aceso"]) == ("dualsense", ""), (
+        f"a leitura de antes da escrita terminou por último e pintou "
+        f"{depois['modo-aceso']!r} / {depois['steam-input-aceso']!r}")

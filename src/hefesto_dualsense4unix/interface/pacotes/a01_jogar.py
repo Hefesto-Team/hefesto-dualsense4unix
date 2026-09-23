@@ -1750,6 +1750,9 @@ class _VigiaDoSteamInput:
         self._quando = 0.0
         self._em_curso = False
         self._trava = threading.Lock()
+        #: Sobe a cada escrita do gesto (:meth:`renovar`). Uma leitura só
+        #: guarda o que leu se ninguém escreveu enquanto ela lia.
+        self._geracao = 0
 
     def agora(self) -> _DoSteamInput | None:
         """O que se sabe AGORA. Nunca bloqueia, nunca levanta."""
@@ -1795,7 +1798,14 @@ class _VigiaDoSteamInput:
         fez ANTES de escrever. O tique seguinte ao clique pintava o «Steam
         Input» que ela acabara de desligar. Se o disco falhar aqui, a escrita
         já valeu: cai para :meth:`esquecer`, e a thread tenta no tique.
+
+        E A THREAD DO TIQUE PODE ESTAR NO MEIO DE UMA LEITURA de antes da
+        escrita: terminando depois desta, ela guardaria o disco velho por um
+        TTL inteiro. A geração sobe aqui, e :meth:`ler` descarta o que começou
+        a ler antes dela.
         """
+        with self._trava:
+            self._geracao += 1
         try:
             self.ler()
         except Exception:
@@ -1803,6 +1813,7 @@ class _VigiaDoSteamInput:
 
     def ler(self) -> _DoSteamInput:
         """BLOQUEIA — lê o disco. Só de thread worker ou de gesto, nunca do tique."""
+        geracao = self._geracao
         ponte = _ponte_do_steam_input()
         lista = ponte.ler_allowlist()
         if not lista:
@@ -1819,8 +1830,10 @@ class _VigiaDoSteamInput:
                 pendentes=frozenset(p.appid for p in estado.pendentes),
                 frase=estado.frase(),
             )
-        self._dado = dado
-        self._quando = time.monotonic()
+        with self._trava:
+            if geracao == self._geracao:
+                self._dado = dado
+                self._quando = time.monotonic()
         return dado
 
 
@@ -1913,7 +1926,7 @@ def _o_jogo_no_steam_input(state: dict[str, Any] | None,
     funciona» serve a quem já fechou. O Modo diz o caminho EM USO, e com o jogo
     fechado não há caminho em uso para ele. Era a foto dela: ninguém jogando, o
     «Steam Input» aceso por um jogo fechado e o «Sony DualSense» apagado.
-    `so_aberto=False` é a pergunta do «Sony DualSense» (:func:`_sair_do_steam_input`).
+    `so_aberto=False` é a pergunta do «Sony DualSense» (:func:`_o_jogo_que_sai_do_steam_input`).
     """
     from .a07_lancadores import ABERTO
 
@@ -2036,7 +2049,7 @@ def _chip_do_caminho(state: dict[str, Any]) -> str:
 
     Separado de :func:`_estado_da_tela` porque o clique pergunta o mesmo: o
     «Xbox» e a «Navegação» só tiram o jogo do Steam Input quando o Modo está
-    sobre o degrau 4 (:func:`_sair_do_steam_input`).
+    sobre o degrau 4 (:func:`_o_jogo_que_sai_do_steam_input`).
     """
     painel = _painel()
     modo = painel.modo_vivo(state)
