@@ -620,3 +620,76 @@ def test_o_microfone_da_linha_e_o_gesto_da_aba_02(mesa: Any,
     assert pedidos == [{"uniq": U1, "mudo": "microfone"}]
     with pytest.raises(ValueError):
         _gesto("custo-mic")(ctx, {"alvo": "aabbcc0000ff"}, None)
+
+
+# ---------------------------------------------------------------------------
+# 11. A leitura de fundo não pisca depois de um gesto que grava
+# ---------------------------------------------------------------------------
+def _esperar_o_fio(mesa: Any, chave: str) -> None:
+    for _ in range(500):
+        if chave not in mesa._FUNDO_EM_VOO:
+            return
+        time.sleep(0.01)
+    raise AssertionError(f"a leitura de fundo `{chave}` não voltou")
+
+
+def test_depois_de_um_gesto_que_grava_a_sala_nao_pisca(
+        mesa: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """O tique logo depois do renomear pinta o nome de ANTES até a leitura nova
+    chegar — e não o campo em branco.
+
+    MORDIDA: volte o `_esquecer` a apagar a chave (`_FUNDO.pop(chave, None)`).
+    """
+    import threading
+
+    from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
+
+    assert 'value="Sala"' in _campos(mesa)["radio-sala"]
+    solta = threading.Event()
+
+    def ler_devagar() -> Any:
+        solta.wait(5)
+        return MaquinaConfig(lugares={LUGAR_1: {"nome": "Sala nova"}}), {3: PCI}
+
+    monkeypatch.setattr(mesa, "LER_NA_HORA", False)
+    monkeypatch.setattr(mesa, "_ler_a_maquina", ler_devagar)
+    try:
+        mesa._esquecer("maquina")
+        sala = _campos(mesa)["radio-sala"]
+        assert 'value="Sala"' in sala, (
+            "o tique logo depois do gesto pintou o nome em branco, com a leitura em voo")
+    finally:
+        solta.set()
+        _esperar_o_fio(mesa, "maquina")
+    assert 'value="Sala nova"' in _campos(mesa)["radio-sala"]
+
+
+def test_a_leitura_em_voo_durante_o_gesto_nasce_vencida(
+        mesa: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A leitura que começou ANTES de o gesto gravar leu o disco de antes: ela
+    não vale pela validade inteira, e o tique seguinte pede outra.
+
+    MORDIDA: carimbe sempre com `time.monotonic()` no `trabalhar` de
+    `_em_fundo` (tire a comparação da `_GERACAO`).
+    """
+    import threading
+
+    monkeypatch.setattr(mesa, "LER_NA_HORA", False)
+    solta = threading.Event()
+    lidas: list[str] = []
+
+    def ler() -> str:
+        solta.wait(5)
+        lidas.append("lida")
+        return "velha" if len(lidas) == 1 else "nova"
+
+    try:
+        assert mesa._em_fundo("prova-do-voo", ler, 60.0) is None
+        mesa._esquecer("prova-do-voo")
+    finally:
+        solta.set()
+        _esperar_o_fio(mesa, "prova-do-voo")
+    assert mesa._em_fundo("prova-do-voo", ler, 60.0) == "velha"
+    _esperar_o_fio(mesa, "prova-do-voo")
+    assert len(lidas) == 2, "a leitura de antes do gesto valeu pela validade inteira"
+    assert mesa._em_fundo("prova-do-voo", ler, 60.0) == "nova"
