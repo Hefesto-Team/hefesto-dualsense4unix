@@ -487,3 +487,411 @@ def test_a_funcao_nova_do_doctor_nao_roda_comando_de_radio(nome: str) -> None:
             rf"(^|[;&|(]|\$\(|\bthen\b|\bdo\b)\s*(sudo\s+)?{proibido}\b", codigo, re.M
         )
         assert not em_posicao_de_comando, f"{nome} RODA `{proibido}`: {em_posicao_de_comando.group(0)!r}"
+
+
+# ---------------------------------------------------------------------------
+# O par da peça A1: install faz, uninstall desfaz, paridade confere, doctor diz
+# ---------------------------------------------------------------------------
+
+ABERTURA_DA_CERCA = 'if [[ "${FORMAT}" != "native" ]]; then'
+DESTINOS_DO_WIFI = (
+    "/usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh",
+    "/etc/NetworkManager/dispatcher.d/90-hefesto-wifi-usb",
+    "/etc/systemd/system/hefesto-wifi-usb-vigia.service",
+    "/etc/systemd/system/hefesto-wifi-usb-vigia.timer",
+)
+
+
+def _codigo(texto: str) -> str:
+    return "\n".join(ln for ln in texto.splitlines() if not ln.strip().startswith("#"))
+
+
+def test_o_install_chama_o_vigia_dos_dois_lados_da_cerca() -> None:
+    """Mudança de SISTEMA é ortogonal ao formato: `--deb`/`--flatpak`/
+    `--appimage` saem pelo `exit 0` da cerca e têm de levar o vigia também."""
+    texto = _codigo(INSTALL.read_text(encoding="utf-8"))
+    ini = texto.index(ABERTURA_DA_CERCA)
+    saida = re.search(r"^\s+exit 0\s*$", texto[ini:], re.M)
+    assert saida is not None
+    formatos = texto[ini : ini + saida.start()]
+    nativo = texto[ini + saida.end() :]
+    for lado, bloco in (("formatos", formatos), ("nativo", nativo)):
+        assert re.search(r"^\s*install_wifi_usb_host\s*$", bloco, re.M), f"falta no lado {lado}"
+
+
+def test_a_saida_no_wifi_usb_esta_no_parser_no_help_e_no_ensaio() -> None:
+    texto = INSTALL.read_text(encoding="utf-8")
+    assert re.search(r"^\s+--no-wifi-usb\)\s+NO_WIFI_USB=1 ;;", texto, re.M)
+    cabecalho = texto[: texto.index("\nset -euo pipefail")]
+    assert "--no-wifi-usb" in cabecalho, "o --help lê o cabeçalho e tem de anunciar a saída"
+    assert '"install_wifi_usb_host:wifi-usb"' in texto, "sem a linha no ensaio, o --dry-run escreveria em /etc"
+    assert re.search(r"^\s+wifi-usb\)\s*$", texto, re.M), "o ensaio não descreve o que o vigia faria"
+
+
+def _roda_a_cura(tmp_path: Path, funcao: str, extra: dict[str, str]) -> tuple[str, str, Path]:
+    """Roda uma cura de HOST da lib com `sudo` de mentira, que só anota — e,
+    quando o verbo é `install`, guarda uma cópia do que seria instalado."""
+    captura = tmp_path / "captura"
+    captura.mkdir(exist_ok=True)
+    diario = tmp_path / "sudo.log"
+    bindir = tmp_path / "bin-sudo"
+    bindir.mkdir(exist_ok=True)
+    (bindir / "sudo").write_text(
+        "#!/bin/bash\n"
+        f'printf "%s\\n" "$*" >> "{diario}"\n'
+        '[ "$1" = "-n" ] && exit 0\n'
+        'if [ "$1" = "install" ] && [ "$#" -ge 3 ]; then\n'
+        '  eval "src=\\${$(( $# - 1 ))}"; eval "dst=\\${$#}"\n'
+        f'  [ -f "$src" ] && cp "$src" "{captura}/$(basename "$dst")"\n'
+        "fi\n"
+        "exit 0\n",
+        encoding="utf-8",
+    )
+    (bindir / "sudo").chmod(0o755)
+    env = {
+        "PATH": f"{bindir}:/usr/bin:/bin",
+        "HOME": str(tmp_path / "casa"),
+        "LC_ALL": "C.UTF-8",
+        "ROOT_DIR": str(RAIZ),
+    }
+    env.update(extra)
+    r = subprocess.run(
+        ["bash", "-c", f'set -euo pipefail; source "{LIB}"; {funcao}'],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+        env=env,
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    return r.stdout + r.stderr, diario.read_text(encoding="utf-8") if diario.exists() else "", captura
+
+
+def test_o_install_poe_os_quatro_destinos_e_liga_o_timer(tmp_path: Path) -> None:
+    amb = _mesa(tmp_path)
+    nm = tmp_path / "NetworkManager"
+    nm.mkdir()
+    saida, sudo, captura = _roda_a_cura(
+        tmp_path,
+        "install_wifi_usb_host",
+        {"HEFESTO_WIFI_SYSFS": amb["HEFESTO_WIFI_SYSFS"], "HEFESTO_NM_ETC": str(nm)},
+    )
+    for destino in DESTINOS_DO_WIFI:
+        assert destino in sudo, f"o install não pôs {destino}"
+    assert "install -Dm755 -o root -g root" in sudo, "o dispatcher tem de ser de root, 755"
+    assert "systemctl enable --now hefesto-wifi-usb-vigia.timer" in sudo
+    # Com dongle agora, o reforço vai na hora.
+    assert "/usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh --ensure" in sudo
+    assert (captura / "90-hefesto-wifi-usb").read_bytes() == WIFI.read_bytes(), "o dispatcher é CÓPIA do mesmo fonte"
+    assert "vigia do Wi-Fi USB ativo" in saida
+
+
+def test_sem_dongle_o_install_instala_e_diz_que_fica_armado(tmp_path: Path) -> None:
+    amb = _mesa(tmp_path, com_dongle=False)
+    nm = tmp_path / "NetworkManager"
+    nm.mkdir()
+    saida, sudo, _ = _roda_a_cura(
+        tmp_path,
+        "install_wifi_usb_host",
+        {"HEFESTO_WIFI_SYSFS": amb["HEFESTO_WIFI_SYSFS"], "HEFESTO_NM_ETC": str(nm)},
+    )
+    assert "nenhum Wi-Fi USB agora — o vigia fica armado e não faz nada" in saida
+    assert "enable --now hefesto-wifi-usb-vigia.timer" in sudo
+    assert "--ensure" not in sudo
+
+
+def test_sem_networkmanager_o_dispatcher_nao_vai(tmp_path: Path) -> None:
+    amb = _mesa(tmp_path, com_dongle=False)
+    saida, sudo, _ = _roda_a_cura(
+        tmp_path,
+        "install_wifi_usb_host",
+        {"HEFESTO_WIFI_SYSFS": amb["HEFESTO_WIFI_SYSFS"], "HEFESTO_NM_ETC": str(tmp_path / "nao-ha")},
+    )
+    assert "90-hefesto-wifi-usb" not in sudo
+    assert "sem NetworkManager nesta máquina" in saida
+    assert "hefesto-wifi-usb-vigia.timer" in sudo
+
+
+@pytest.mark.parametrize(
+    ("flag", "frase"),
+    [("NO_WIFI_USB", "pulado (--no-wifi-usb)"), ("SKIP_UDEV", "pulado (--no-udev)")],
+)
+def test_as_duas_saidas_nao_tocam_em_nada(tmp_path: Path, flag: str, frase: str) -> None:
+    saida, sudo, _ = _roda_a_cura(tmp_path, "install_wifi_usb_host", {flag: "1"})
+    assert frase in saida
+    assert sudo == "", f"com {flag}=1 o install ainda chamou o sudo: {sudo!r}"
+
+
+def test_o_uninstall_tira_os_quatro_antes_de_apagar_a_casa_dos_scripts() -> None:
+    texto = _codigo(UNINSTALL.read_text(encoding="utf-8"))
+    ini = texto.index("removendo o vigia do Wi-Fi USB")
+    bloco = texto[ini : texto.index("\nfi\n", ini)]
+    for destino in DESTINOS_DO_WIFI:
+        assert destino in bloco, f"o uninstall não tira {destino}"
+    assert "disable --now hefesto-wifi-usb-vigia.timer" in bloco
+    assert "rm -rf /run/hefesto-wifi-usb" in bloco
+    assert ini < texto.index("sudo rmdir /usr/local/lib/hefesto-dualsense4unix"), (
+        "o wifi_usb.sh tem de sair ANTES do rmdir da casa dos scripts de sistema"
+    )
+    # E o uninstall pede a credencial quando há o que tirar.
+    for destino in DESTINOS_DO_WIFI:
+        assert f"[[ -e {destino} ]] && _NEEDS_SUDO=1" in texto, destino
+
+
+def _paridade_numa_arvore(tmp_path: Path, muta: dict[str, tuple[str, str]] | None = None) -> str:
+    """O portão de paridade numa árvore sintética com só o que a família usa.
+
+    O portão faz `cd` para a pasta-mãe do PRÓPRIO arquivo, então ele viaja
+    junto — chamado de fora, mediria a árvore de verdade e a mordida passaria
+    verde sobre nada (foi o que a primeira versão deste teste fez).
+    """
+    arvore = tmp_path / "arvore"
+    for rel in (
+        "scripts/check_packaging_parity.sh",
+        "install.sh",
+        "uninstall.sh",
+        "scripts/lib/camada_de_maquina.sh",
+        "scripts/doctor.sh",
+        "scripts/wifi_usb.sh",
+        "assets/systemd/hefesto-wifi-usb-vigia.service",
+        "assets/systemd/hefesto-wifi-usb-vigia.timer",
+    ):
+        alvo = arvore / rel
+        alvo.parent.mkdir(parents=True, exist_ok=True)
+        texto = (RAIZ / rel).read_text(encoding="utf-8")
+        if muta and rel in muta:
+            velho, novo = muta[rel]
+            assert velho in texto, (rel, velho)
+            texto = texto.replace(velho, novo)
+        alvo.write_text(texto, encoding="utf-8")
+    r = subprocess.run(
+        ["bash", str(arvore / "scripts" / "check_packaging_parity.sh")],
+        cwd=arvore,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    return r.stdout + r.stderr
+
+
+def test_a_paridade_da_familia_passa_e_morde(tmp_path: Path) -> None:
+    saida = _paridade_numa_arvore(tmp_path / "a")
+    assert "[ OK ] vigia do Wi-Fi USB:" in saida, saida
+    # A MORDIDA embutida: o uninstall "esquece" o dispatcher.
+    saida = _paridade_numa_arvore(
+        tmp_path / "b",
+        {
+            "uninstall.sh": (
+                "            /etc/NetworkManager/dispatcher.d/90-hefesto-wifi-usb \\\n",
+                "",
+            )
+        },
+    )
+    assert "[FAIL] vigia do Wi-Fi USB" in saida
+    assert "uninstall.sh(não remove /etc/NetworkManager/dispatcher.d/90-hefesto-wifi-usb)" in saida
+
+
+# --- o doctor sabe dizer se está de pé ---------------------------------------
+
+
+def _doctor_wifi(
+    tmp_path: Path,
+    amb: dict[str, str],
+    *,
+    instalado: bool,
+    timer: str = "active",
+    dispatcher: str | None = "root 755",
+    diario: str = "",
+) -> str:
+    bindir = tmp_path / "bin-doctor-wifi"
+    bindir.mkdir(exist_ok=True)
+    (bindir / "systemctl").write_text(f'#!/bin/sh\necho "{timer}"\n', encoding="utf-8")
+    (bindir / "stat").write_text(f'#!/bin/sh\necho "{dispatcher or ""}"\n', encoding="utf-8")
+    (bindir / "journalctl").write_text(
+        f'#!/bin/sh\ncase "$*" in *hefesto-wifi-usb*) cat <<\'FIM\'\n{diario}\nFIM\n;; esac\nexit 0\n',
+        encoding="utf-8",
+    )
+    for nome in ("systemctl", "stat", "journalctl"):
+        (bindir / nome).chmod(0o755)
+    inst = tmp_path / "lib" / "wifi_usb.sh"
+    if instalado:
+        inst.parent.mkdir(exist_ok=True)
+        inst.write_bytes(WIFI.read_bytes())
+        inst.chmod(0o755)
+    nm = tmp_path / "etc-nm" / "dispatcher.d"
+    nm.mkdir(parents=True, exist_ok=True)
+    disp = nm / "90-hefesto-wifi-usb"
+    if dispatcher is not None:
+        disp.write_text("x", encoding="utf-8")
+    else:
+        disp.unlink(missing_ok=True)
+    env = {
+        "PATH": f"{bindir}:/usr/bin:/bin",
+        "HOME": str(tmp_path),
+        "LC_ALL": "C.UTF-8",
+        # O `wifi_usb.sh` que o doctor chama tem PATH fixo: sem o gancho, o
+        # `--status` leria o journal do kernel de quem roda a suíte.
+        "HEFESTO_WIFI_BIN": str(bindir),
+        "HEFESTO_WIFI_DEV": amb["HEFESTO_WIFI_DEV"],
+        "HEFESTO_WIFI_SYSFS": amb["HEFESTO_WIFI_SYSFS"],
+        "HEFESTO_WIFI_INSTALADO": str(inst),
+        "HEFESTO_WIFI_DISPATCHER": str(disp),
+    }
+    r = subprocess.run(
+        ["bash", "-c", f'source "{DOCTOR}"; check_wifi_usb'],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+        env=env,
+    )
+    return r.stdout + r.stderr
+
+
+def test_o_doctor_acusa_o_dongle_sem_vigia(tmp_path: Path) -> None:
+    amb = _mesa(tmp_path)
+    saida = _doctor_wifi(tmp_path, amb, instalado=False)
+    assert f"[WARN] há Wi-Fi USB ({IFC}) e o vigia do dongle não está instalado" in saida
+
+
+def test_o_doctor_passa_com_o_vigia_de_pe(tmp_path: Path) -> None:
+    amb = _mesa(tmp_path)
+    saida = _doctor_wifi(tmp_path, amb, instalado=True)
+    assert f"[ OK ] vigia do Wi-Fi USB de pé ({IFC})" in saida
+    assert "[WARN]" not in saida
+    # A linha do --status chega, e diz que o scan de fundo não se lê sem root.
+    assert "scan de fundo sem permissão para ler (só root)" in saida
+
+
+def test_o_doctor_acusa_o_timer_parado_e_o_dispatcher_que_o_networkmanager_recusa(tmp_path: Path) -> None:
+    amb = _mesa(tmp_path)
+    saida = _doctor_wifi(tmp_path, amb, instalado=True, timer="inactive")
+    assert "[WARN] o vigia do Wi-Fi USB está instalado e o timer não está ativo (inactive)" in saida
+    saida = _doctor_wifi(tmp_path, amb, instalado=True, dispatcher="vitoria 775")
+    assert "NetworkManager só roda script de root, 755" in saida
+    saida = _doctor_wifi(tmp_path, amb, instalado=True, dispatcher=None)
+    assert "não existe — cada associação nova nasce com o scan de fundo ligado" in saida
+
+
+def test_o_doctor_acusa_o_vigia_que_parou_e_o_hub_do_bluetooth(tmp_path: Path) -> None:
+    amb = _mesa(tmp_path, bt_no_mesmo_hub=True)
+    saida = _doctor_wifi(
+        tmp_path,
+        amb,
+        instalado=True,
+        diario=f"{IFC}: 3 reinícios seguidos sem cura — parei. Tire e ponha o dongle.",
+    )
+    assert "PAROU neste boot — tire e ponha o dongle" in saida
+    assert "[WARN] Wi-Fi USB e Bluetooth no mesmo hub" in saida
+
+
+def test_o_doctor_sem_dongle_nao_acusa(tmp_path: Path) -> None:
+    amb = _mesa(tmp_path, com_dongle=False)
+    assert "[ OK ] nenhum Wi-Fi USB agora — o vigia está armado" in _doctor_wifi(tmp_path, amb, instalado=True)
+    saida = _doctor_wifi(tmp_path, amb, instalado=False, timer="inactive")
+    assert "[WARN]" not in saida and "[FAIL]" not in saida
+
+
+def test_o_main_do_doctor_pergunta_pelo_vigia_na_secao_do_wifi() -> None:
+    main = _corpo_do_main()
+    secao = main[main.index('hdr "DKMS rtw88_usb / WiFi') : main.index('hdr "USB / dropout"')]
+    assert re.search(r"^\s*check_wifi_usb\s*$", secao, re.M)
+
+
+# ---------------------------------------------------------------------------
+# Os dois pedidos da onda 3a: o nome do lugar chega ao adaptador
+# ---------------------------------------------------------------------------
+
+#: O que o `bt_active_mode.sh` lê, derivado DELE — se o caminho mudar lá, esta
+#: régua acompanha em vez de conferir um caminho de ontem.
+def _o_que_o_modo_ativo_le() -> str:
+    achado = re.search(r'arquivo="\$\{casa\}(/[^"]+)"', MODO_ATIVO.read_text(encoding="utf-8"))
+    assert achado, "não achei no bt_active_mode.sh onde ele lê o maquina.json da casa"
+    return achado.group(1)
+
+
+def _render_dropin(tmp_path: Path, casa: str) -> tuple[int, str]:
+    saida = tmp_path / "dropin.conf"
+    r = subprocess.run(
+        ["bash", "-c", f'source "{LIB}"; _render_dropin_do_watchdog "$1" "$2"', "_", casa, str(saida)],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+        env={"PATH": "/usr/bin:/bin", "ROOT_DIR": str(RAIZ), "HOME": str(tmp_path)},
+    )
+    return r.returncode, saida.read_text(encoding="utf-8") if saida.exists() else ""
+
+
+def _visivel_no_sandbox(unit: str, dropin: str, caminho: str) -> bool:
+    """O que o systemd deixa a unit ver da casa — o modelo das duas diretivas.
+
+    `ProtectHome=yes` torna /home, /root e /run/user INACESSÍVEIS, e um bind
+    não tem onde nascer dentro deles; `tmpfs` monta um vazio só de leitura, e
+    cada `BindReadOnlyPaths=` abre por cima exatamente um caminho. Sem
+    `ProtectHome` a casa inteira é visível.
+    """
+    texto = unit + "\n" + dropin
+    valores = re.findall(r"^ProtectHome=(\S+)", texto, re.M)
+    protege = valores[-1] if valores else "no"
+    if protege in {"no", "false"}:
+        return True
+    if protege in {"yes", "true", "read-only"}:
+        return protege == "read-only"
+    binds = []
+    for linha in re.findall(r"^BindReadOnlyPaths=(.+)$", texto, re.M):
+        binds += [b.lstrip("-").split(":", 1)[0] for b in linha.split()]
+    return caminho in binds
+
+
+def test_o_watchdog_enxerga_o_maquina_json_e_so_ele(tmp_path: Path) -> None:
+    casa = "/home/pessoa"
+    rc, dropin = _render_dropin(tmp_path, casa)
+    assert rc == 0
+    unit = WATCHDOG.read_text(encoding="utf-8")
+    lido = casa + _o_que_o_modo_ativo_le()
+    assert _visivel_no_sandbox(unit, dropin, lido), (
+        f"o watchdog não enxerga {lido} — o nome do lugar não chega ao Alias no tique dele"
+    )
+    assert not _visivel_no_sandbox(unit, dropin, casa + "/.ssh/id_ed25519"), "a casa inteira ficou visível"
+    assert f"BindReadOnlyPaths=-{lido}" in dropin, "sem o `-`, a unit não sobe antes do primeiro nome"
+    # A mordida da decisão: sem o drop-in, o arquivo some do alcance.
+    assert not _visivel_no_sandbox(unit, "", lido)
+
+
+def test_casa_com_separador_do_systemd_nao_vira_drop_in(tmp_path: Path) -> None:
+    for casa in ("/home/nome com espaco", '/home/aspas"', "relativa/casa", "/"):
+        rc, dropin = _render_dropin(tmp_path, casa)
+        assert rc == 1 and dropin == "", casa
+
+
+def test_o_install_da_resiliencia_escreve_o_drop_in_com_a_casa_de_quem_instalou(tmp_path: Path) -> None:
+    _, sudo, captura = _roda_a_cura(tmp_path, "install_bt_resilience_host", {})
+    destino = "/etc/systemd/system/hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf"
+    assert destino in sudo
+    gravado = (captura / "10-hefesto-maquina.conf").read_text(encoding="utf-8")
+    assert f"BindReadOnlyPaths=-{tmp_path / 'casa'}{_o_que_o_modo_ativo_le()}" in gravado
+    # E ANTES do daemon-reload, para o próximo tique já montar o arquivo.
+    assert sudo.index(destino) < sudo.index("systemctl daemon-reload")
+
+
+def test_o_uninstall_leva_o_drop_in_do_watchdog() -> None:
+    texto = _codigo(UNINSTALL.read_text(encoding="utf-8"))
+    assert "sudo rm -f /etc/systemd/system/hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf" in texto
+    assert "sudo rmdir /etc/systemd/system/hefesto-bt-health-watchdog.service.d" in texto
+
+
+def test_o_modo_ativo_no_start_do_bluetoothd_roda_fora_do_sandbox() -> None:
+    """O `bluetooth.service` roda com `ProtectHome=true`, e o `ExecStartPost`
+    herda o sandbox; sem o `+`, o nome do lugar só chegava 2 min depois."""
+    linhas = [
+        ln
+        for ln in DROPIN_BT.read_text(encoding="utf-8").splitlines()
+        if ln.startswith("ExecStartPost=") and "bt_active_mode.sh" in ln
+    ]
+    assert len(linhas) == 1
+    prefixo = linhas[0].split("=", 1)[1].split("/", 1)[0]
+    assert "+" in prefixo, f"sem o `+` o gancho herda o ProtectHome do bluetoothd: {linhas[0]!r}"
+    assert "-" in prefixo, "o `-` continua: adaptador que não subiu no start não derruba o bluetoothd"
+    assert "!" not in prefixo, "`+` e `!` não se combinam no systemd"

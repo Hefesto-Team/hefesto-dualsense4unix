@@ -277,6 +277,7 @@ install -Dm755 -t %{buildroot}%{_datadir}/%{app_id}/scripts/ \
     scripts/bt_ponte_privilegiada.sh \
     scripts/bt_bonds_autorestore.sh \
     scripts/bt_health_watchdog.sh \
+    scripts/wifi_usb.sh \
     scripts/bt_rebind_orphans.sh \
     scripts/bt_bonds_snapshot.sh
 install -Dm644 -t %{buildroot}%{_datadir}/%{app_id}/systemd/ \
@@ -471,6 +472,7 @@ fi
 %{_datadir}/%{app_id}/scripts/bt_ponte_privilegiada.sh
 %{_datadir}/%{app_id}/scripts/bt_bonds_autorestore.sh
 %{_datadir}/%{app_id}/scripts/bt_health_watchdog.sh
+%{_datadir}/%{app_id}/scripts/wifi_usb.sh
 %{_datadir}/%{app_id}/scripts/bt_rebind_orphans.sh
 %{_datadir}/%{app_id}/scripts/bt_bonds_snapshot.sh
 %{_datadir}/%{app_id}/systemd/hefesto-bt-bonds-snapshot.service

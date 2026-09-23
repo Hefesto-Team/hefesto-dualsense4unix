@@ -140,10 +140,13 @@ class TestDropinResilience:
     def test_dropin_aplica_modo_ativo_nintendo_no_start(self) -> None:
         """BT-NINTENDO-ACTIVE-01: ExecStartPost aplica nome+link-policy a cada
         (re)start do bluetoothd. "-" prefixado = não-fatal (adaptador pode não
-        estar pronto no start; o watchdog reafirma)."""
+        estar pronto no start; o watchdog reafirma). O "+" (23/09/2026, pedido
+        da onda 3a) tira o gancho do sandbox do bluetoothd, para o nome do
+        lugar chegar no start — a régua dele mora em
+        `test_o_que_era_do_zsh_mora_no_hefesto.py`."""
         text = DROPIN.read_text(encoding="utf-8")
         assert re.search(
-            r"^ExecStartPost=-/usr/local/lib/hefesto-dualsense4unix/bt_active_mode\.sh",
+            r"^ExecStartPost=-\+/usr/local/lib/hefesto-dualsense4unix/bt_active_mode\.sh",
             text,
             re.M,
         )

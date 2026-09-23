@@ -134,6 +134,20 @@
 #                         WiFi ao vivo) — vale no próximo boot/replug do
 #                         dongle. Vale para TODO formato. Opt-out: --no-dkms
 #                         (mesma flag do hid-nintendo, acima).
+#   (DEFAULT) vigia do dongle Wi-Fi USB (O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01,
+#                         23/09/2026 — morava no zsh dela): o scan de fundo do
+#                         wpa_supplicant sai a cada associação (derrubava o
+#                         dongle de 300 em 300 s) e um vigia de minuto em
+#                         minuto reinicia a porta USB quando o rádio trava
+#                         MUDO (associado e o roteador sem ping nem ARP por
+#                         3 min; freios: um reinício a cada 10 min, e para
+#                         depois de 3 sem cura). Vale para qualquer Wi-Fi USB;
+#                         sem dongle, fica armado e não faz nada. Vai em
+#                         /usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh, no
+#                         dispatcher do NetworkManager (90-hefesto-wifi-usb) e
+#                         no hefesto-wifi-usb-vigia.timer. Vale para TODO
+#                         formato. --no-udev também pula.
+#   --no-wifi-usb         OPT-OUT do vigia do Wi-Fi USB (acima).
 #   --wifi-powersave-off  OPT-IN (W2 — gateado por evidência): instala
 #                         assets/NetworkManager/hefesto-wifi-powersave.conf em
 #                         /etc/NetworkManager/conf.d/ (wifi.powersave=2). Use
@@ -290,6 +304,10 @@ FORCE_XWAYLAND=0
 # desconhecido" e a operadora podia achar que a cura foi aplicada. Opt-in,
 # nasce desligada; só vira default quando a medição do medir_w2_lps.sh provar.
 WIFI_POWERSAVE_OFF=0
+# O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01 (23/09/2026): o vigia do dongle Wi-Fi USB é
+# DEFAULT, e todo passo default da camada de máquina tem saída — o produto é
+# para qualquer usuário (resposta 3 de quem coordena).
+NO_WIFI_USB=0
 AUTO_YES=0
 # ENSAIO-DO-INSTALL-01 (03/09/2026). Pedido dela ao rever o instalador antes de
 # rodá-lo: *"antes revisa o install. não roda agora."* São 3.4 mil linhas que
@@ -326,6 +344,7 @@ for arg in "$@"; do
         --no-proton-pin)      NO_PROTON_PIN=1 ;;
         --keep-steam-input)   KEEP_STEAM_INPUT=1 ;;
         --wifi-powersave-off) WIFI_POWERSAVE_OFF=1 ;;
+        --no-wifi-usb)        NO_WIFI_USB=1 ;;
         --force-xwayland)     FORCE_XWAYLAND=1 ;;
         --format=*)           FORMAT="${arg#*=}" ;;
         --native)             FORMAT="native" ;;
@@ -1249,6 +1268,7 @@ _ensaio_camada() {
             _faria_root "rodar bt_active_mode.sh AGORA (tira o Pro Controller do modo sniff — não reinicia o bluetoothd)"
             _faria_root "instalar /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf (Restart + WatchdogSec=0 + snapshot na parada)"
             _faria_root "instalar os timers hefesto-bt-bonds-snapshot e hefesto-bt-health-watchdog em /etc/systemd/system/ e habilitá-los"
+            _faria_root "gravar /etc/systemd/system/hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf (o watchdog enxerga só o ${HOME}/.config/hefesto-dualsense4unix/maquina.json, só leitura, para dar ao adaptador o nome do lugar)"
             _faria_root "criar /var/lib/hefesto-dualsense4unix/bt-bonds (modo 700) para os snapshots"
             ;;
         bt-agent)
@@ -1268,6 +1288,10 @@ _ensaio_camada() {
             ;;
         dkms-rtw88)
             _faria_root "compilar e instalar o módulo DKMS hefesto-rtw88-usb (cura do fantasma USB do dongle WiFi; sem conf em /etc/modprobe.d)"
+            ;;
+        wifi-usb)
+            _faria_root "instalar /usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh e a cópia dele em /etc/NetworkManager/dispatcher.d/90-hefesto-wifi-usb (root, 755) — o scan de fundo do Wi-Fi USB sai a cada associação"
+            _faria_root "instalar /etc/systemd/system/hefesto-wifi-usb-vigia.service e hefesto-wifi-usb-vigia.timer e habilitar o timer (reinicia a porta do dongle quando ele trava mudo; sem Wi-Fi USB, não faz nada)"
             ;;
         dkms-playstation)
             _faria_root "compilar e instalar o módulo DKMS hefesto-hid-playstation (retry de feature report na contenção BT)"
@@ -1317,6 +1341,7 @@ _ENSAIO_CURAS_DE_HOST=(
     "install_censo_do_gabinete_host:gabinete"
     "install_dkms_hid_nintendo_host:dkms-nintendo"
     "install_dkms_rtw88_usb_host:dkms-rtw88"
+    "install_wifi_usb_host:wifi-usb"
     "install_dkms_hid_playstation_host:dkms-playstation"
     "install_ucm_dualsense_host:ucm"
     "flush_initramfs_host:initramfs"
@@ -1655,6 +1680,11 @@ if [[ "${FORMAT}" != "native" ]]; then
     # passo 3j do fluxo native. Opt-out compartilhado: --no-dkms.
     step "dkms-w" "DKMS rtw88_usb patchado (Onda W — DEFAULT em todo formato)"
     install_dkms_rtw88_usb_host
+    # O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01: a outra metade do dongle Wi-Fi USB — o
+    # scan de fundo e o travamento mudo, que moravam no zsh dela. Mudança de
+    # SISTEMA, ortogonal ao formato: mesma função do passo 3j2 do nativo.
+    step "wifi-usb" "vigia do dongle Wi-Fi USB (DEFAULT em todo formato; opt-out --no-wifi-usb)"
+    install_wifi_usb_host
     # 3ª instância da mesma mudança de SISTEMA/kernel — mesma função do passo
     # 3k do fluxo native. Opt-out compartilhado: --no-dkms.
     step "dkms-p" "DKMS hid-playstation patchado (contenção BT — DEFAULT em todo formato)"
@@ -2682,6 +2712,17 @@ install_dkms_hid_nintendo_host
 # honesto, o in-tree segue valendo, o install NUNCA aborta por causa disto.
 step "3j" "Onda W: rtw88_usb patchado via DKMS (fantasma USB + teardown limpo)"
 install_dkms_rtw88_usb_host
+
+# ---------------------------------------------------------------------------
+# 3j2. O vigia do dongle Wi-Fi USB — DEFAULT, opt-out --no-wifi-usb
+# ---------------------------------------------------------------------------
+# O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01 (23/09/2026): morava no self-heal do zsh
+# dela. O DKMS acima cura a queda que o driver VÊ; este cuida das duas que ele
+# não vê: o scan de fundo que derruba o dongle e o rádio que trava mudo. O
+# corpo e o porquê moram em `install_wifi_usb_host` (camada de máquina) e no
+# cabeçalho de `scripts/wifi_usb.sh`.
+step "3j2" "vigia do dongle Wi-Fi USB (scan de fundo + travamento mudo)"
+install_wifi_usb_host
 
 # ---------------------------------------------------------------------------
 # 3k. DKMS hid-playstation patchado (contenção BT) — DEFAULT, opt-out --no-dkms

@@ -1,0 +1,23 @@
+[Unit]
+# O dongle Wi-Fi USB: o reforço do scan de fundo e o travamento mudo
+# (O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01, 23/09/2026 — veio do self-heal do zsh dela,
+# onde se chamava aurora-wifi-usb-vigia). O porquê inteiro está no cabeçalho do
+# scripts/wifi_usb.sh. Sem Wi-Fi USB na máquina, cada tique sai sem fazer nada.
+Description=Hefesto — vigia do dongle Wi-Fi USB (scan de fundo desligado e reinício da porta quando ele trava mudo)
+After=NetworkManager.service
+
+[Service]
+Type=oneshot
+# O ping leva no máximo ~3 s e o reset da porta outros poucos; o teto evita
+# sobreposição com o timer de 1 min.
+TimeoutStartSec=50
+# O `--vigiar` faz as duas coisas, nesta ordem: o reforço do dispatcher (o
+# `--ensure` de hora em hora que o self-heal do zsh fazia — sem ele, a
+# associação que o dispatcher perdeu ficaria com o scan de fundo ligado, e
+# ninguém cuidaria) e depois o travamento mudo. O reforço é calado quando não
+# há o que fazer.
+ExecStart=/usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh --vigiar
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hefesto-wifi-usb
+Nice=10
