@@ -1079,6 +1079,50 @@ def _entrada_pelo_devpath(devpath: str) -> str | None:
     return f"{PALAVRA_DA_ENTRADA} {devpath}" if devpath else None
 
 
+def rotulo_da_entrada(
+    lugar: str,
+    *,
+    maquina: MaquinaConfig | None = None,
+    controladores: Mapping[int, str] | None = None,
+) -> str | None:
+    """«Entrada 3», ou «Entrada 4.1.4» — o rótulo da porta SEM o nome dela.
+
+    É o que a seção do rádio põe ao lado do nome que ela deu (o campo editável
+    mostra o nome; a marca da face mostra a entrada). ``None`` = não é porta:
+    o lugar do adaptador embutido, que não pendura em entrada nenhuma.
+    """
+    partes = partes_do_lugar(lugar)
+    if partes is None:
+        return None
+    documento = maquina if maquina is not None else carregar_maquina()
+    barramentos = controladores if controladores is not None else _controladores_do_sistema()
+    numero = _numero_conhecido(documento, lugar, "", barramentos)
+    if numero is not None:
+        return f"{PALAVRA_DA_ENTRADA} {numero}"
+    return _entrada_pelo_devpath(partes[1])
+
+
+def face_do_lugar(
+    lugar: str,
+    *,
+    maquina: MaquinaConfig | None = None,
+    controladores: Mapping[int, str] | None = None,
+) -> str | None:
+    """A face do gabinete em que esta porta está («Atrás do gabinete»), ou ``None``.
+
+    Sai do ``mapa`` dela, pelo número que o lugar tem: sem número, não se sabe
+    a face — e a tela oferece o «Onde fica?».
+    """
+    if partes_do_lugar(lugar) is None:
+        return None
+    documento = maquina if maquina is not None else carregar_maquina()
+    barramentos = controladores if controladores is not None else _controladores_do_sistema()
+    numero = _numero_conhecido(documento, lugar, "", barramentos)
+    if numero is None:
+        return None
+    return next((f.nome for f in documento.mapa.faces if numero in f.portas), None)
+
+
 def nome_do_adaptador(
     adaptador: Any,
     *,
@@ -1304,8 +1348,10 @@ __all__ = [
     "PortaVista",
     "com_o_nome_dela",
     "dar_nome",
+    "face_do_lugar",
     "nome_da_porta",
     "nome_do_adaptador",
     "nome_do_lugar",
     "o_laco",
+    "rotulo_da_entrada",
 ]
