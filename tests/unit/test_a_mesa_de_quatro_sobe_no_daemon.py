@@ -181,10 +181,15 @@ async def _subir_o_daemon(mesa: dict[str, Any]) -> tuple[Any, list[str]]:
             break
         await asyncio.sleep(0.01)
     # Uma varredura do som já rodou no `start()`; o laço reconcilia sozinho.
+    # ESPERA OS QUATRO, e não o primeiro (conferência de 23/09/2026): os nós
+    # nascem um a um na mesma volta, e esperar «algum nó» deixava a régua
+    # conferir no meio da volta — 1 em 10 na base, 5 em 12 com o governador,
+    # que deslocou a volta alguns milissegundos. Medido com o carimbo de cada
+    # `load-module`: o vermelho era o nó 2 nascendo 0,7 ms depois da conferência.
     for _ in range(200):
         sub = getattr(daemon, "_alto_falante_subsystem", None)
         ger = getattr(sub, "_gerenciador", None) if sub is not None else None
-        if ger is not None and ger.nos:
+        if ger is not None and len(ger.nos) >= len(_MESA):
             break
         await asyncio.sleep(0.01)
     return daemon, run_task  # type: ignore[return-value]
