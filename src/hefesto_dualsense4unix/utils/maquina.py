@@ -567,13 +567,36 @@ class LugarDeclarado(BaseModel):
 
     ``nome`` é o nome do lugar («Extensor à esquerda»). O adaptador Bluetooth
     que estiver nesta porta HERDA este nome (D3); o ``Alias`` do BlueZ é só a
-    projeção dele, escrita pelo dono do D-Bus.
+    projeção dele, e quem a escreve é o ``bt_active_mode.sh``, lendo este
+    campo — o escritor do ``Alias`` é um só (ENTRADA-A-ENTRADA-02).
+
+    ``caminho`` é a TESTEMUNHA da amarra (ENTRADA-A-ENTRADA-02): o caminho de
+    barramento que o ``mapa`` dava a esta entrada quando a amarra nasceu. É
+    ela que deixa :func:`entrada_do_lugar` comparar pelo lugar INTEIRO sem
+    depender do boot em que o caminho foi escrito — ver lá.
+
+    ``fora`` é o «Não alcanço» da fase em pé: ela disse que não alcança este
+    lugar, e ele sai da conta DE VEZ (o texto da tela: *"o Hefesto não volta a
+    perguntar"*). ``None`` é "não disse"; o cabo que entra nele depois prova o
+    contrário, e o motor volta o campo a ``None``.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     entrada: str | None = None
     nome: str | None = None
+    caminho: str | None = None
+    fora: bool | None = None
+
+    @field_validator("caminho")
+    @classmethod
+    def _testemunha_e_o_nome_do_kernel(cls, valor: str | None) -> str | None:
+        if valor is not None and not _CAMINHO_DE_BARRAMENTO.match(valor):
+            raise ValueError(
+                f"caminho {valor!r} não é o nome do kernel "
+                "('3-1.1.4': barramento, traço, e a cadeia de portas)"
+            )
+        return valor
 
     @field_validator("entrada")
     @classmethod
@@ -942,7 +965,11 @@ def entradas_do_mapa(mapa: MapaDaMesa) -> frozenset[str]:
     return frozenset(numeros)
 
 
-def entrada_do_lugar(maquina: MaquinaConfig, lugar: str) -> str | None:
+def entrada_do_lugar(
+    maquina: MaquinaConfig,
+    lugar: str,
+    controladores: Mapping[int, str] | None = None,
+) -> str | None:
     """O número DELA para este lugar — ``None`` quando a amarra não vale mais.
 
     Três conferências, e cada uma é um jeito real de a amarra caducar:
@@ -951,9 +978,11 @@ def entrada_do_lugar(maquina: MaquinaConfig, lugar: str) -> str | None:
     * **outro lugar diz ser a mesma entrada** — só acontece com o arquivo
       editado à mão, e aí a resposta é "não sei", nunca um dos dois no chute;
     * **o desenho pôs outro aparelho nesta entrada depois** — o ``caminho``
-      do ``mapa`` passou a ter OUTRAS portas. A comparação é pelo ``devpath``,
-      que não depende da numeração do barramento: um caminho gravado antes de
-      uma troca de ``busnum`` continua batendo com o lugar.
+      do ``mapa`` deixou de ser deste lugar. Ver :func:`_o_caminho_e_do_lugar`:
+      a comparação é pelo ``ID_PATH`` INTEIRO, controlador e portas.
+
+    ``controladores`` é ``{busnum: controlador PCI}`` DESTE boot; sem ele, só a
+    testemunha da amarra responde.
     """
     declarado = maquina.lugares.get(lugar)
     if declarado is None or declarado.entrada is None:
@@ -966,18 +995,60 @@ def entrada_do_lugar(maquina: MaquinaConfig, lugar: str) -> str | None:
         for outro, dele in maquina.lugares.items()
     ):
         return None
-    partes = partes_do_lugar(lugar)
     porta = maquina.mapa.portas.get(numero)
     caminho = porta.caminho if porta is not None else None
-    if caminho and partes is not None and caminho.partition("-")[2] != partes[1]:
+    if caminho and not _o_caminho_e_do_lugar(
+        caminho, lugar, testemunha=declarado.caminho, controladores=controladores
+    ):
         return None
     return numero
 
 
-def lugar_da_entrada(maquina: MaquinaConfig, numero: str) -> str | None:
+def _o_caminho_e_do_lugar(
+    caminho: str,
+    lugar: str,
+    *,
+    testemunha: str | None,
+    controladores: Mapping[int, str] | None,
+) -> bool:
+    """O caminho do desenho ainda é deste lugar? Pelo ``ID_PATH`` inteiro.
+
+    ENTRADA-A-ENTRADA-02 (23/09/2026), o item 3 da sprint. A comparação era
+    pelo ``devpath`` sozinho — ``3-4`` batia com ``pci-B-usb-0:4`` —, e o
+    ``devpath`` sozinho confunde duas portas-raiz de mesmo número em
+    controladores diferentes: a porta 4 do controlador A e a porta 4 do B
+    diziam ser a mesma, e a amarra de uma sobrevivia ao desenho pôr a entrada
+    na outra.
+
+    O ``caminho`` carrega o número do barramento DO BOOT EM QUE FOI ESCRITO, e
+    esse número é ordem de subida dos xHCI. Por isso duas respostas, nesta
+    ordem, e as duas pelo lugar inteiro:
+
+    1. **a testemunha** — o caminho que o ``mapa`` tinha quando a amarra nasceu
+       (``LugarDeclarado.caminho``). Igual a ela, o desenho não mudou desde a
+       amarra, em qualquer boot: um caminho gravado antes de uma troca de
+       ``busnum`` continua valendo;
+    2. **a tradução deste boot** — o desenho mudou depois (a outra janela
+       escreveu), e então o caminho novo é deste boot: traduzido com os
+       controladores de agora, ele tem de dar ESTE lugar.
+
+    Sem testemunha que bata e sem controladores, "não sei" — nunca o chute.
+    """
+    if testemunha is not None and caminho == testemunha:
+        return True
+    if controladores:
+        return lugar_do_caminho(caminho, controladores) == lugar
+    return False
+
+
+def lugar_da_entrada(
+    maquina: MaquinaConfig,
+    numero: str,
+    controladores: Mapping[int, str] | None = None,
+) -> str | None:
     """O lugar amarrado a este número — o inverso de :func:`entrada_do_lugar`."""
     for lugar in sorted(maquina.lugares):
-        if entrada_do_lugar(maquina, lugar) == numero:
+        if entrada_do_lugar(maquina, lugar, controladores) == numero:
             return lugar
     return None
 
