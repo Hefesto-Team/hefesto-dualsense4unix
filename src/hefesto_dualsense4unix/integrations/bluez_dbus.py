@@ -1745,7 +1745,14 @@ class DonoVivo(LeitorDoBluez):
             return recusa
         agente = self._agente_pronto()
         if agente is None:
-            return Escrita(False, SEM_AGENTE, "o agente próprio não se registrou")
+            # SEM O AGENTE PRÓPRIO, O PISO (decisão de quem coordena, 23/09/2026,
+            # tirada da BLUEZ-UM-DONO-01). Aqui se devolvia ``SEM_AGENTE``, e o
+            # gesto dela morria como «não deu» com o ``hefesto-bt-agent`` de pé
+            # — que é o piso da R5 e atende o ``Pair`` de quem não tem agente
+            # (``agent_get(sender)`` cai no padrão). Mesma trava, mesmo
+            # ``Trusted``: o caminho de :class:`LeitorDoBluez`.
+            _registrar("bluez_parear_pelo_piso", nivel="warning")
+            return super().parear(caminho, espera=espera, quem=quem)
         try:
             with na_trava(quem), agente.esperando(caminho):
                 escrita = self.chamar(caminho, APARELHO, "Pair", espera=espera, quem=quem)
