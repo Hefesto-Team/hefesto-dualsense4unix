@@ -347,6 +347,64 @@ if command -v busctl >/dev/null 2>&1; then
         [[ -n "${END}" ]] && HCI_DE["${END^^}"]="${HCI}"
     done
     mapfile -t COM_NINTENDO < <(_hci_com_nintendo | sort -u)
+    # --- a trava do rádio (MOVER-UM-POR-VEZ-01, 23/09/2026) -------------------
+    # O Alias é escrita no rádio como qualquer outra, e vai DENTRO da trava
+    # comum: a mesma borda do dono do BlueZ no daemon (`bluez_dbus._na_borda`).
+    # Sem ela, o prefixo podia cair no meio de um controle sendo movido pela
+    # central. A escrita continua pelo `busctl`: este script é root, e root não
+    # roda o Python da casa (o venv é gravável por ela).
+    #
+    # Mora aqui, e não no topo, porque este arquivo é citado por número de
+    # linha até a altura do `mapfile` acima (`apelido_do_dongle.py`, o portão
+    # da casa-sabe). Sem os ganchos de teste a trava é a da máquina; com eles,
+    # só a de `HEFESTO_RADIO_TRAVA` — um teste não segura a trava DELA.
+    TRAVA_DO_RADIO="${HEFESTO_RADIO_TRAVA:-}"
+    if [[ -z "${TRAVA_DO_RADIO}" && -z "${HEFESTO_SYS_BLUETOOTH:-}" \
+        && -z "${HEFESTO_BT_LIB:-}" ]]; then
+        TRAVA_DO_RADIO="/run/hefesto-dualsense4unix/radio.lock"
+    fi
+    #: O prazo é o de um gesto, não o do tique: no `ExecStartPost` esperar
+    #: segura o `bluetooth.service` em «activating». Sem a trava, o alias
+    #: fica para o próximo tique do watchdog, dois minutos depois.
+    PRAZO_DA_TRAVA_S="${HEFESTO_RADIO_TRAVA_PRAZO_S:-5}"
+    [[ "${PRAZO_DA_TRAVA_S}" =~ ^[0-9]+$ ]] || PRAZO_DA_TRAVA_S=5
+    TRAVA_FD=""
+    TRAVA_E_MINHA=0
+    #: 0 = pode escrever (com a trava, ou sem trava comum nesta máquina);
+    #: 1 = outro motor a segurou o prazo inteiro.
+    _na_trava() {
+        local fd alvo
+        [[ -n "${TRAVA_FD}" || -z "${TRAVA_DO_RADIO}" ]] && return 0
+        [[ -d "${TRAVA_DO_RADIO%/*}" ]] || return 0
+        if [[ -L "${TRAVA_DO_RADIO}" ]]; then
+            log "recusando a trava do rádio: ${TRAVA_DO_RADIO} é link simbólico; sigo sem ela"
+            return 0
+        fi
+        # HERDADA: o watchdog roda o tique inteiro com a trava na mão e chama
+        # este script de dentro dele, e o descritor vem junto. `flock` no MESMO
+        # descritor aberto não espera por si; num descritor novo, esperaria o
+        # próprio pai até o prazo.
+        for fd in "/proc/$$/fd/"*; do
+            alvo="$(readlink -- "${fd}" 2>/dev/null || true)"
+            [[ "${alvo}" == "${TRAVA_DO_RADIO}" ]] || continue
+            if flock -n "${fd##*/}" 2>/dev/null; then
+                TRAVA_FD="${fd##*/}"
+                return 0
+            fi
+        done
+        if ! exec {TRAVA_FD}<>"${TRAVA_DO_RADIO}"; then
+            TRAVA_FD=""
+            return 0
+        fi
+        if ! flock -w "${PRAZO_DA_TRAVA_S}" "${TRAVA_FD}"; then
+            exec {TRAVA_FD}>&-
+            TRAVA_FD=""
+            return 1
+        fi
+        TRAVA_E_MINHA=1
+        printf 'bt-active-mode %s\n' "$$" 1>&"${TRAVA_FD}" 2>/dev/null || true
+        return 0
+    }
     for HCI in ${COM_NINTENDO[@]+"${COM_NINTENDO[@]}"}; do
         ADAPTER_OBJ="/org/bluez/${HCI}"
         ALIAS_ATUAL="$(_prop_adaptador "${HCI}" Alias)"
@@ -361,12 +419,21 @@ if command -v busctl >/dev/null 2>&1; then
             log "NÃO prefixei o alias de ${HCI}: 'Nintendo ' mais o nome de hoje passa de ${TETO_DE_BYTES} bytes, o teto do BlueZ — encurte o nome do adaptador pela aba do produto e o Pro volta a ficar protegido"
             continue
         fi
+        if ! _na_trava; then
+            log "NÃO prefixei o alias de ${HCI}: outro motor segura a trava do rádio há mais de ${PRAZO_DA_TRAVA_S} s — o watchdog re-tenta"
+            break
+        fi
         if busctl set-property org.bluez "${ADAPTER_OBJ}" org.bluez.Adapter1 Alias s "${NOVO}" 2>/dev/null; then
             log "alias do adaptador ${HCI} -> '${NOVO}' (tira o Pro do sniff frágil)"
         else
             log "falha ao setar alias de ${HCI} (adaptador não pronto?) — o watchdog re-tenta"
         fi
     done
+    # A trava sai com o último alias: a seção 2 é HCI, não BlueZ. A HERDADA
+    # fica — soltá-la aqui soltaria a do watchdog, que é o mesmo descritor.
+    if [[ "${TRAVA_E_MINHA}" -eq 1 ]]; then
+        exec {TRAVA_FD}>&-
+    fi
 fi
 
 # --- 2) LINK POLICY sem SNIFF — POR DISPOSITIVO (BT-SNIFF-PER-OUI-01) --------
