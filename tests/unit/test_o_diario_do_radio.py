@@ -505,15 +505,14 @@ def _reiniciar(
     journal = tmp_path / "journal.txt"
     if not journal.exists():
         journal.write_text(_laco_de_13_09(int(time.time()) - 1), encoding="utf-8")
-    env = _ambiente_da_ponte(
-        tmp_path,
-        HEFESTO_SYSFS_RAIZ=str(sysfs),
-        HEFESTO_BT_JOURNAL=str(journal),
-        HEFESTO_PONTE_STAMPS=str(tmp_path / "stamps"),
-        HEFESTO_USB_PAUSA_S="0",
-        HEFESTO_USB_ESPERA_S="0",
-        **extra,
-    )
+    ganchos = {
+        "HEFESTO_SYSFS_RAIZ": str(sysfs),
+        "HEFESTO_BT_JOURNAL": str(journal),
+        "HEFESTO_PONTE_STAMPS": str(tmp_path / "stamps"),
+        "HEFESTO_USB_PAUSA_S": "0",
+        "HEFESTO_USB_ESPERA_S": "0",
+    }
+    env = _ambiente_da_ponte(tmp_path, **{**ganchos, **extra})
     return subprocess.run(
         ["bash", str(PONTE), "reiniciar-travado", *args],
         capture_output=True,
@@ -546,6 +545,40 @@ def test_o_laco_de_13_09_reinicia_uma_porta_so_e_a_certa(tmp_path: Path) -> None
     assert entrada["familia"] == "3"
     assert entrada["antes"] == {"hci": "hci0", "timeouts": 8}
     assert entrada["depois"] == {"hci": "hci0", "voltou": True}
+
+
+def test_o_adaptador_que_nao_volta_nao_e_dito_reiniciado(tmp_path: Path) -> None:
+    """A frase do sino diz o que a espera mediu.
+
+    O adaptador some da porta durante o reinício e não reaparece: o diário diz
+    ``voltou: false`` — e a frase não pode dizer «foi reiniciado». ARRANQUE A
+    CURA — volte a frase fixa — e este teste reprova.
+    """
+    import threading
+
+    sysfs = _mesa_sysfs(tmp_path / "sys", {"hci0": "3-1.1.2"})
+    aparelho = sysfs / "devices" / "pci0000:00" / "usb" / "3-1.1.2"
+    autorizado = aparelho / "authorized"
+
+    def o_dongle_sai_da_porta() -> None:
+        fim = time.monotonic() + 20
+        while time.monotonic() < fim:
+            if autorizado.read_text(encoding="utf-8") == "0":
+                (sysfs / "class" / "bluetooth" / "hci0").unlink()
+                (aparelho / "3-1.1.2:1.0" / "bluetooth" / "hci0").rmdir()
+                return
+            time.sleep(0.02)
+
+    vigia = threading.Thread(target=o_dongle_sai_da_porta)
+    vigia.start()
+    try:
+        resultado = _reiniciar(tmp_path, sysfs, HEFESTO_USB_PAUSA_S="1")
+    finally:
+        vigia.join(timeout=30)
+    assert resultado.returncode == 0, resultado.stderr
+    [entrada] = diario.ler(caminhos=[tmp_path / "diario-root.jsonl"])
+    assert entrada["depois"] == {"hci": "", "voltou": False}
+    assert entrada["frase"] == "O adaptador da porta 3-1.1.2 travou e não voltou. Tire e ponha ele."
 
 
 def test_com_conexao_de_pe_o_reinicio_e_recusado(tmp_path: Path) -> None:

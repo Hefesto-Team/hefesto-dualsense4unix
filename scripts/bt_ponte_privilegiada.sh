@@ -901,7 +901,7 @@ _estampas() { printf '%s\n' "${HEFESTO_PONTE_STAMPS:-/run/hefesto-bt-ponte}"; }
 
 verbo_reiniciar_travado() {
     local hci quantos mais_novo porta agora_hci carimbo anterior agora pausa espera
-    local recusou=0 achou=0 volta
+    local recusou=0 achou=0 volta frase
     if [[ "${SYSFS}" == "${SYSFS_REAL}" && "$(id -u)" -ne 0 ]]; then
         _erro "'reiniciar-travado' requer root (é a ponte privilegiada)"
         exit 1
@@ -990,11 +990,18 @@ verbo_reiniciar_travado() {
         done
         printf 'reiniciado\t%s\t%s\t%s\n' "${porta}" "${hci}" "${quantos}"
         _registrar "adaptador da porta ${porta} (${hci}) reiniciado: ${quantos} «command tx timeout» seguidos"
+        #: A frase diz o que a espera mediu: «foi reiniciado» só quando o
+        #: adaptador VOLTOU à porta. Sem ele, o que resta é a mão dela.
+        if [[ -n "${volta}" ]]; then
+            frase="O adaptador da porta ${porta} travou e foi reiniciado."
+        else
+            frase="O adaptador da porta ${porta} travou e não voltou. Tire e ponha ele."
+        fi
         _diario "bt-ponte" "reiniciou o adaptador" \
             "${quantos} «command tx timeout» seguidos no ${hci}: o controlador travou em laço" \
             "{\"hci\": $(_json_texto "${hci}"), \"timeouts\": ${quantos}}" \
             "{\"hci\": $(_json_texto "${volta}"), \"voltou\": $([[ -n "${volta}" ]] && echo true || echo false)}" \
-            "\"porta\": $(_json_texto "${porta}"), \"familia\": \"3\", \"frase\": $(_json_texto "O adaptador da porta ${porta} travou e foi reiniciado.")"
+            "\"porta\": $(_json_texto "${porta}"), \"familia\": \"3\", \"frase\": $(_json_texto "${frase}")"
     done < <(_hcis_em_laco)
     [[ "${achou}" -eq 1 ]] || return 0
     [[ "${recusou}" -eq 0 ]] || exit 1
