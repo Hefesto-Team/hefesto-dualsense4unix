@@ -441,11 +441,28 @@ class CentralDoRadio:
         #: O dono já foi aberto? Antes disso o ``state_full`` não o abre: o
         #: primeiro ``dono()`` paga o Gio de forma síncrona, e o tique não pode.
         self._ligada = dono is not None
+        #: O último dono que :meth:`_dono` devolveu — é o que o tique usa, sem
+        #: abrir nada (:meth:`_dono_sem_abrir`).
+        self._dono_visto: bluez_dbus.LeitorDoBluez | None = dono
 
     # -- ciclo ----------------------------------------------------------------
 
     def _dono(self) -> bluez_dbus.LeitorDoBluez:
-        return self._dono_fixo if self._dono_fixo is not None else bluez_dbus.dono()
+        if self._dono_fixo is not None:
+            return self._dono_fixo
+        dono = bluez_dbus.dono()
+        self._dono_visto = dono
+        return dono
+
+    def _dono_sem_abrir(self) -> bluez_dbus.LeitorDoBluez | None:
+        """O último dono visto, se ainda pergunta — ``None`` sem abrir nada.
+
+        É o do tique: sem dono vivo, ``bluez_dbus.dono()`` tenta o Gio de novo
+        de forma síncrona (até ~5 s num barramento mudo), e o ``state_full``
+        roda no laço do daemon.
+        """
+        visto = self._dono_visto
+        return visto if visto is not None and visto.pode_perguntar() else None
 
     def ligar(self) -> bool:
         """Abre o dono do BlueZ — no arranque do daemon, fora de qualquer fio de tela.
@@ -538,22 +555,27 @@ class CentralDoRadio:
 
         ``esperar=False`` é o caminho do ``state_full``: com o dono vivo a foto
         é memória e sai na hora; pelo caminho de reserva (``busctl``) ela custa
-        subprocessos, e então se refaz num fio e o tique leva a última que havia.
+        subprocessos, e sem dono vivo abri-lo custa o Gio — nos dois casos ela
+        se refaz num fio e o tique leva a última que havia.
         """
         agora = self._relogio()
         cache = self._adaptadores_em_cache
         if cache is not None and agora - cache[0] < VALIDADE_DOS_ADAPTADORES_S:
             return cache[1]
-        dono = self._dono()
-        if not esperar and not dono.atende_o_proprio_pareamento:
-            self._refrescar_os_adaptadores(dono)
-            return cache[1] if cache is not None else None
+        if esperar:
+            dono = self._dono()
+        else:
+            vivo = self._dono_sem_abrir()
+            if vivo is None or not vivo.atende_o_proprio_pareamento:
+                self._refrescar_os_adaptadores()
+                return cache[1] if cache is not None else None
+            dono = vivo
         lidos = dono.adaptadores()
         if lidos is not None:
             self._adaptadores_em_cache = (agora, tuple(lidos))
         return lidos
 
-    def _refrescar_os_adaptadores(self, dono: bluez_dbus.LeitorDoBluez) -> None:
+    def _refrescar_os_adaptadores(self) -> None:
         with self._tranca:
             if self._refrescando:
                 return
@@ -561,7 +583,7 @@ class CentralDoRadio:
 
         def rodar() -> None:
             try:
-                lidos = dono.adaptadores()
+                lidos = self._dono().adaptadores()
                 if lidos is not None:
                     self._adaptadores_em_cache = (self._relogio(), tuple(lidos))
             except Exception:
