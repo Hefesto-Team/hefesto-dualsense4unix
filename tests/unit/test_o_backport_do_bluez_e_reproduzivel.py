@@ -42,8 +42,8 @@ devolvida com md5 conferido):
   ``curl`` de mentira é chamado;
 - trocar o ``! aead_do_kernel_disponivel`` do test-mesh-crypto por ``true`` →
   ``test_o_unit_do_bluez_so_perdoa_a_falha_que_a_maquina_explica`` reprova;
-- acrescentar ``sudo apt-get install`` ao script →
-  ``test_o_script_nao_instala_nada`` reprova;
+- acrescentar ``sudo apt-get install`` ao script, nu ou dentro de
+  ``bash -c "..."`` → ``test_o_script_nao_instala_nada`` reprova;
 - devolver a guarda da revisão antiga que só olhava se ``HEFESTO_BLUEZ_CACHE``
   estava vazia → ``test_revisao_antiga_so_se_reconstroi_fora_do_cache_do_install``
   reprova em três dos quatro jeitos de apontar, com rc=4 (foi baixar);
@@ -658,16 +658,32 @@ def _sem_texto_entre_aspas(linha: str) -> str:
     return re.sub(r"'[^']*'|\"[^\"]*\"", "''", linha)
 
 
+#: Uma linha que só IMPRIME texto para quem lê (o conselho do mk-build-deps
+#: com sudo, por exemplo) — e não encadeia comando nenhum depois.
+_SO_MENSAGEM = re.compile(r"^\s*(diga|morra|printf|echo)\b")
+_ENCADEIA = re.compile(r"\||;|&&|\$\(|`")
+
+
 def test_o_script_nao_instala_nada():
-    """O postinst do bluez reinicia o bluetoothd: instalar é do install.sh."""
+    """O postinst do bluez reinicia o bluetoothd: instalar é do install.sh.
+
+    O texto entre aspas CONTA, fora das linhas que só imprimem: medido em
+    23/09/2026, a régua anterior apagava tudo o que estava entre aspas antes de
+    procurar, e ``bash -c "sudo apt-get install -y bluez"`` passava verde.
+    """
     proibidos = re.compile(
-        r"\bsudo\b|\bsystemctl\b|\bapt-get\b|\bapt\s+install\b|\bdpkg\s+(-i|--install)\b"
+        r"\bsudo\b|\bpkexec\b|\bdoas\b|\bsystemctl\b|\bapt-get\b"
+        r"|\bapt\s+(install|remove|purge)\b|\bmk-build-deps\b"
+        r"|\bdpkg\s+(-i|--install|--unpack|-r|--remove|-P|--purge)\b"
     )
     achados = []
     for numero, linha in enumerate(_script().read_text(encoding="utf-8").splitlines(), 1):
         if linha.lstrip().startswith("#"):
             continue
-        if proibidos.search(_sem_texto_entre_aspas(linha)):
+        nua = _sem_texto_entre_aspas(linha)
+        if _SO_MENSAGEM.match(nua) and not _ENCADEIA.search(nua):
+            continue
+        if proibidos.search(linha):
             achados.append(f"{numero}: {linha.strip()}")
     assert not achados, f"o script de build executa instalação: {achados}"
 
