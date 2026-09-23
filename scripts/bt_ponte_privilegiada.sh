@@ -133,7 +133,8 @@
 #                           gancho, nenhuma lápide é escrita)
 #   HEFESTO_RADIO_DIARIO_ROOT  o diário do root (mesma regra)
 #   HEFESTO_SYSFS_RAIZ      raiz do /sys que o `reiniciar-travado` lê e escreve
-#   HEFESTO_BT_JOURNAL      arquivo lido no lugar do journal do kernel
+#   HEFESTO_BT_JOURNAL      arquivo lido no lugar do journal do kernel, na
+#                           forma do `journalctl -o short-unix` (epoch primeiro)
 #   HEFESTO_PONTE_STAMPS    onde mora o carimbo do último reinício por porta
 #   HEFESTO_USB_PAUSA_S     a pausa entre desautorizar e autorizar a porta
 #   HEFESTO_USB_ESPERA_S    quanto esperar o adaptador voltar
@@ -787,37 +788,78 @@ verbo_desconectar() {
 #      hciN na janela — uma ocorrência solta acontece em adaptador são;
 #   2. a PORTA, nunca o hciN: o hciN muda de número entre boots e entre
 #      replugs. Ele só serve para achar a porta NESTE instante; dali em diante
-#      quem manda é o caminho do barramento (`3-4.1.4`), e o hciN de agora
-#      tem de sair DELA e bater com o que o journal acusou;
+#      quem manda é o caminho do barramento (`3-4.1.4`). O que amarra o hciN
+#      do journal ao aparelho de AGORA é o laço estar VIVO (LACO_VIVO_S): um
+#      adaptador que saiu da porta para de repetir, e o número que ele deixou
+#      pode já ser de outro aparelho. Conferir que o hciN sai da porta que ele
+#      mesmo indicou não prova nada disso — é a mesma leitura duas vezes;
 #   3. NINGUÉM CONECTADO: com qualquer conexão de pé no adaptador (os nós
 #      `hciN:<handle>` do kernel), o verbo recusa. Um adaptador em laço não tem
 #      controle vivo — se tem, a leitura está errada, e errar aqui derruba a
 #      mesa dela.
 # E o freio: uma porta só é reiniciada uma vez a cada INTERVALO_ENTRE_RESETS_S.
-# Se o laço voltar depois disso, o verbo não insiste — o que resta é a mão
-# dela, e o diário diz qual porta.
+# Se o laço voltar dentro dele, o verbo não insiste — o que resta é a mão
+# dela, e o diário diz qual porta, UMA vez por reinício.
+#
+# O TIQUE SEGUINTE AO REINÍCIO (conferência de 23/09). A janela de 150 s
+# alcança o tique seguinte do watchdog (2 min), e as linhas de ANTES do
+# reinício ainda estão nela: sem contar só o que veio DEPOIS do carimbo da
+# porta, o adaptador que voltou são era acusado de ter travado de novo — «Tire
+# e ponha ele» no sino, sobre um aparelho bom.
 LIMIAR_DO_LACO=5
 JANELA_DO_LACO_S=150
+#: Medido no kernel.log de 13/09: 24.990 intervalos entre timeouts, mediana
+#: 2 s, p99 3 s, o maior 25 s. Quinze segundos são cinco voltas do laço.
+LACO_VIVO_S=15
 INTERVALO_ENTRE_RESETS_S=900
 _PORTA_FORMA='^[0-9]{1,3}-[0-9]{1,3}(\.[0-9]{1,3}){0,6}$'
 
-#: As linhas do kernel na janela. O `-k` é o transporte do kernel: é isso que
-#: impede alguém de fabricar um laço com `logger`.
+#: As linhas do kernel na janela, com o epoch na frente (`-o short-unix`). O
+#: `-k` é o transporte do kernel: é isso que impede alguém de fabricar um laço
+#: com `logger`.
 _linhas_do_kernel() {
     if [[ -n "${HEFESTO_BT_JOURNAL:-}" ]]; then
         cat -- "${HEFESTO_BT_JOURNAL}" 2>/dev/null || true
         return 0
     fi
     command -v journalctl >/dev/null 2>&1 || return 0
-    journalctl -k -b --since "-${JANELA_DO_LACO_S}s" -o cat --no-pager 2>/dev/null || true
+    journalctl -k -b --since "-${JANELA_DO_LACO_S}s" -o short-unix -q --no-pager 2>/dev/null || true
 }
 
-#: `hciN QUANTOS` de quem passou do limiar, um por linha.
-_hcis_em_laco() {
+#: `hciN QUANTOS ÚLTIMO` por hciN: quantos «command 0x.... tx timeout» com
+#: epoch MAIOR que $1 (0 = a janela inteira), e o epoch do mais novo. Sem
+#: limiar: quem decide é o verbo.
+_timeouts_por_hci() {
+    local desde="${1:-0}"
     _linhas_do_kernel \
-        | grep -oiE 'hci[0-9]+: command 0x[0-9a-f]{4} tx timeout' \
-        | cut -d: -f1 | sort | uniq -c \
-        | awk -v limiar="${LIMIAR_DO_LACO}" '$1 >= limiar { print $2, $1 }' || true
+        | grep -iE '^[0-9]+(\.[0-9]+)? .*hci[0-9]+: command 0x[0-9a-f]{4} tx timeout' \
+        | awk -v desde="${desde}" '
+            {
+                quando = int($1)
+                if (quando <= desde) next
+                texto = tolower($0)
+                if (!match(texto, /hci[0-9]+: command 0x/)) next
+                hci = substr(texto, RSTART, RLENGTH)
+                sub(/: command 0x$/, "", hci)
+                n[hci]++
+                if (!(hci in ultimo) || quando > ultimo[hci]) ultimo[hci] = quando
+            }
+            END { for (h in n) print h, n[h], ultimo[h] }' \
+        | sort || true
+}
+
+#: `hciN QUANTOS ÚLTIMO` de quem passou do limiar, um por linha.
+_hcis_em_laco() {
+    _timeouts_por_hci 0 | awk -v limiar="${LIMIAR_DO_LACO}" '$2 >= limiar' || true
+}
+
+#: Quantos timeouts o `hciN` teve DEPOIS do epoch `$2`.
+_timeouts_desde() {
+    local hci="$1" desde="$2" h n _u
+    while read -r h n _u; do
+        [[ "${h}" == "${hci}" ]] && { printf '%s\n' "${n}"; return 0; }
+    done < <(_timeouts_por_hci "${desde}")
+    printf '0\n'
 }
 
 #: hciN -> o caminho USB do adaptador (`3-4.1.4`). Falha se não for USB, ou se
@@ -858,14 +900,19 @@ _ha_conexao() {
 _estampas() { printf '%s\n' "${HEFESTO_PONTE_STAMPS:-/run/hefesto-bt-ponte}"; }
 
 verbo_reiniciar_travado() {
-    local linha hci quantos porta agora_hci carimbo anterior agora pausa espera
+    local hci quantos ultimo porta agora_hci carimbo anterior agora pausa espera
     local recusou=0 achou=0 volta
     if [[ "${SYSFS}" == "${SYSFS_REAL}" && "$(id -u)" -ne 0 ]]; then
         _erro "'reiniciar-travado' requer root (é a ponte privilegiada)"
         exit 1
     fi
-    while read -r hci quantos; do
+    agora="$(date +%s)"
+    while read -r hci quantos ultimo; do
         [[ "${hci}" =~ ^hci[0-9]+$ ]] || continue
+        [[ "${quantos}" =~ ^[0-9]+$ && "${ultimo}" =~ ^[0-9]+$ ]] || continue
+        #: O laço PAROU — ou o adaptador saiu da porta e o hciN do journal já
+        #: pode ser outro aparelho. Silêncio: não há o que fazer agora.
+        (( agora - ultimo <= LACO_VIVO_S )) || continue
         achou=1
         if ! porta="$(_porta_do_hci "${hci}")"; then
             printf 'recusado\t-\t%s\tsem porta USB\n' "${hci}"
@@ -882,6 +929,14 @@ verbo_reiniciar_travado() {
             recusou=1
             continue
         fi
+        carimbo="$(_estampas)/reset-${porta}"
+        anterior="$(cat -- "${carimbo}" 2>/dev/null || echo 0)"
+        [[ "${anterior}" =~ ^[0-9]+$ ]] || anterior=0
+        #: Depois de um reinício desta porta, só conta o que veio DEPOIS dele.
+        if (( anterior > 0 )); then
+            quantos="$(_timeouts_desde "${hci}" "${anterior}")"
+            (( quantos >= LIMIAR_DO_LACO )) || continue
+        fi
         if _ha_conexao "${hci}" "${porta}"; then
             printf 'recusado\t%s\t%s\thá conexão de pé\n' "${porta}" "${hci}"
             _diario "bt-ponte" "recusou reiniciar o adaptador" \
@@ -891,16 +946,17 @@ verbo_reiniciar_travado() {
             recusou=1
             continue
         fi
-        carimbo="$(_estampas)/reset-${porta}"
-        agora="$(date +%s)"
-        anterior="$(cat -- "${carimbo}" 2>/dev/null || echo 0)"
-        [[ "${anterior}" =~ ^[0-9]+$ ]] || anterior=0
         if (( agora - anterior < INTERVALO_ENTRE_RESETS_S )); then
             printf 'segurado\t%s\t%s\treiniciado há %ss\n' "${porta}" "${hci}" "$((agora - anterior))"
-            _diario "bt-ponte" "não insistiu no reinício" \
-                "o adaptador voltou a travar depois de reiniciado há $(( (agora - anterior) / 60 )) min — tire e ponha o adaptador da porta ${porta}" \
-                "{\"hci\": $(_json_texto "${hci}"), \"timeouts\": ${quantos}}" null \
-                "\"porta\": $(_json_texto "${porta}"), \"familia\": \"3\", \"frase\": $(_json_texto "O adaptador da porta ${porta} travou de novo. Tire e ponha ele.")"
+            #: UMA entrada por reinício: o watchdog pergunta a cada 2 min, e
+            #: o sino não pode repetir a mesma frase sete vezes.
+            if [[ "$(cat -- "${carimbo}.dito" 2>/dev/null || true)" != "${anterior}" ]]; then
+                _diario "bt-ponte" "não insistiu no reinício" \
+                    "o adaptador voltou a travar depois de reiniciado há $(( (agora - anterior) / 60 )) min — tire e ponha o adaptador da porta ${porta}" \
+                    "{\"hci\": $(_json_texto "${hci}"), \"timeouts\": ${quantos}}" null \
+                    "\"porta\": $(_json_texto "${porta}"), \"familia\": \"3\", \"frase\": $(_json_texto "O adaptador da porta ${porta} travou de novo. Tire e ponha ele.")"
+                _seco || printf '%s\n' "${anterior}" >"${carimbo}.dito" 2>/dev/null || true
+            fi
             continue
         fi
         if _seco; then
@@ -917,7 +973,9 @@ verbo_reiniciar_travado() {
         sleep "${pausa}"
         printf '1' >"${SYSFS}/bus/usb/devices/${porta}/authorized" 2>/dev/null || true
         install -d -m 700 "$(_estampas)" 2>/dev/null || true
-        printf '%s\n' "${agora}" >"${carimbo}" 2>/dev/null || true
+        #: O carimbo é a hora DEPOIS de reautorizar: toda linha do laço velho
+        #: é anterior a ele, e o tique seguinte só conta o que vier depois.
+        printf '%s\n' "$(date +%s)" >"${carimbo}" 2>/dev/null || true
         #: A volta: o adaptador reaparece na MESMA porta, possivelmente com
         #: outro hciN. Esperar é o que separa «reiniciei» de «reiniciei e ele
         #: voltou».
