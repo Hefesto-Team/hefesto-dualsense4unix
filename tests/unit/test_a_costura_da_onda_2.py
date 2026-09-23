@@ -430,6 +430,80 @@ async def test_o_desligamento_fecha_a_central_e_o_pairable_volta(
         central.fechar()
 
 
+def test_o_fechar_espera_o_fio_da_janela_mesmo_com_a_recusa_da_mesma_chave(
+    diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Dois «Conectar» quase juntos, e o daemon para com a janela aberta.
+
+    Os dois pedidos usam a MESMA chave (``CONECTANDO``) e passam os dois pela
+    primeira olhada. O primeiro abre a janela e o segundo recusa, já com a
+    trava, e morre na hora. O ``_no_fio`` guardava o segundo POR CIMA do
+    primeiro. O ``fechar()`` do desligamento esperava só o fio morto e voltava
+    na hora, e o ``Pairable`` do destino ficava ``true`` até o fio da janela
+    acordar sozinho. Se o processo saísse antes disso, ficava para sempre. É
+    o item 3 perdido pelo caminho do item 1.
+
+    MORDIDA: volte o ``_no_fio`` a guardar o fio por cima do que ainda vive —
+    o ``fechar()`` volta antes de a janela fechar e esta régua reprova.
+    """
+    central = cr.CentralDoRadio(
+        dono=dono,
+        onde_esta=mundo.onde_esta,
+        movimento=mundo.hz,
+        esquecer_na_ponte=mundo.esquecer_na_ponte,
+        sysfs={"listar": lambda _p: [], "raiz": "/nao/existe"},
+        segundos_da_janela=60,
+        prazo_da_trava_s=0.3,
+    )
+    de_verdade = bd.na_trava
+    chegaram = threading.Semaphore(0)
+    solta_o_primeiro = threading.Event()
+    ordem = iter(range(2))
+
+    @contextlib.contextmanager
+    def em_ordem(quem: str = bd.QUEM_PADRAO, *, prazo_s: float | None = None) -> Iterator[float]:
+        # Só as duas primeiras entradas são os dois pedidos; as de depois são
+        # as escritas do próprio fio da janela, que passam direto.
+        vez = next(ordem, None)
+        if vez is not None:
+            chegaram.release()
+        if vez == 0:
+            # O primeiro só pega a trava depois que o segundo passou pela
+            # primeira olhada: é a corrida, posta em fila.
+            assert solta_o_primeiro.wait(5)
+        elif vez == 1:
+            assert _esperar(lambda: central.em_curso), "o primeiro não abriu a janela"
+        with de_verdade(quem, prazo_s=prazo_s) as esperou:
+            yield esperou
+
+    monkeypatch.setattr(bd, "na_trava", em_ordem)
+    voltas: list[cr.Movimento] = []
+
+    def pedir() -> None:
+        voltas.append(central.comecar_a_conectar(QUARTO))
+
+    try:
+        primeiro = threading.Thread(target=pedir)
+        primeiro.start()
+        assert chegaram.acquire(timeout=5)
+        segundo = threading.Thread(target=pedir)
+        segundo.start()
+        assert chegaram.acquire(timeout=5)
+        solta_o_primeiro.set()
+        primeiro.join(timeout=10)
+        segundo.join(timeout=10)
+        assert sorted(m.motivo for m in voltas) == ["", cr.MOTIVO_OCUPADO], voltas
+        assert _esperar(lambda: mundo.propriedade_do_adaptador(QUARTO, "Pairable") is True)
+
+        central.fechar()
+
+        assert mundo.propriedade_do_adaptador(QUARTO, "Pairable") is False, (
+            "o fechar() voltou antes de o fio da janela devolver o Pairable"
+        )
+    finally:
+        central.fechar()
+
+
 # ---------------------------------------------------------------------------
 # 4. o «Ligar aqui» vale enquanto o controle ficar naquele adaptador
 # ---------------------------------------------------------------------------

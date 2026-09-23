@@ -756,8 +756,7 @@ class CentralDoRadio:
             self._vigiar_ate_resolver(fim.aparelho if fim is not None else chave)
 
         fio = threading.Thread(target=trabalhar, name="hefesto-central-mover", daemon=True)
-        with self._tranca:
-            self._fios[chave] = fio
+        self._guardar_o_fio(chave, fio)
         fio.start()
         pronto.wait(self._prazo_da_trava_s + 1.0)
         if "fim" in caixa and caixa["fim"].motivo == MOTIVO_OCUPADO:
@@ -765,6 +764,24 @@ class CentralDoRadio:
         return self._pela_chave(chave) or Movimento(
             chave, destino or "", ESPERANDO, PASSO_PREPARANDO, comecou=self._relogio()
         )
+
+    def _guardar_o_fio(self, chave: str, fio: threading.Thread) -> None:
+        """Guarda o fio para o :meth:`fechar` — sem tirar da lista um que ainda vive.
+
+        Conferência da A-COSTURA-DA-ONDA-2-01: dois pedidos quase juntos com a
+        MESMA chave (dois «Conectar», ou o mesmo aparelho para dois destinos)
+        passam os dois pela primeira olhada, e o segundo recusa já com a trava e
+        morre na hora. Guardado POR CIMA do primeiro, ele fazia o ``fechar()``
+        do desligamento esperar só o fio morto — e o que abriu a janela ficava
+        sem ninguém esperando o ``Pairable`` do destino voltar. O fio vivo fica,
+        e o novo entra ao lado, com a chave numerada.
+        """
+        with self._tranca:
+            rotulo, n = chave, 1
+            while (vivo := self._fios.get(rotulo)) is not None and vivo.is_alive():
+                n += 1
+                rotulo = f"{chave}#{n}"
+            self._fios[rotulo] = fio
 
     def _pela_chave(self, chave: str) -> Movimento | None:
         with self._tranca:
