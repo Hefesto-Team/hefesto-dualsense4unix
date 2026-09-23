@@ -23,10 +23,13 @@ O QUE ESTA RÉGUA COBRA:
 from __future__ import annotations
 
 import ast
+import contextlib
+import io
 import os
 import re
 import threading
 import time
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -34,6 +37,8 @@ import pytest
 
 from hefesto_dualsense4unix.integrations import bluez_dbus as bd
 from hefesto_dualsense4unix.integrations import diario_do_radio, varredura_do_radio
+from hefesto_dualsense4unix.integrations import gesto_de_pareamento as gp
+from hefesto_dualsense4unix.integrations import gesto_de_reconexao as reconexao
 from tests.unit import bluez_de_mentira as bm
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -362,6 +367,107 @@ def test_a_trava_e_reentrante_no_mesmo_fio(
         assert vivo.desconectar(bm.no_de(bm.CONTROLE)).feita
         assert vivo.conectar(bm.no_de(bm.CONTROLE)).feita
     assert barramento.metodos() == ["Disconnect", "Connect"]
+
+
+@pytest.fixture()
+def travas_pegas(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Quem pegou a trava do rádio de verdade — o atalho reentrante não conta."""
+    pegas: list[str] = []
+    original = diario_do_radio.trava_do_radio
+
+    @contextlib.contextmanager
+    def contando(quem: str, **kwargs: Any) -> Iterator[float]:
+        pegas.append(quem)
+        with original(quem, **kwargs) as espera:
+            yield espera
+
+    monkeypatch.setattr(diario_do_radio, "trava_do_radio", contando)
+    return pegas
+
+
+def test_o_reconectar_segura_uma_trava_so_do_disconnect_ao_connect(
+    trava_de_mentira: Path, travas_pegas: list[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Decisão de quem coordena: o «Reconectar controles» entra na trava — e o
+    gesto INTEIRO, para o watchdog não dar o Connect dele entre os nossos dois.
+
+    MORDIDA: tire o ``with bluez_dbus.na_trava(QUEM)`` de ``reconectar`` — a
+    borda pega a trava duas vezes, uma por escrita, e há uma fresta entre elas.
+    """
+    barramento = bm.BarramentoDeMentira()
+    barramento.mesa[bm.no_de(bm.CONTROLE)][bd.APARELHO]["Connected"] = True
+    dono = bd.DonoVivo(barramento)
+    assert dono.ligar()
+    monkeypatch.setattr(bd, "_DONO", dono)
+
+    desfecho = reconexao.reconectar(bm.CONTROLE)
+
+    assert desfecho.estado == reconexao.ESTADO_VOLTOU
+    assert barramento.metodos() == ["Disconnect", "Connect"]
+    assert travas_pegas == [reconexao.QUEM]
+
+
+def test_o_parear_pelo_dono_segura_uma_trava_so_do_pair_ao_trusted(
+    vivo: bd.DonoVivo,
+    barramento: bm.BarramentoDeMentira,
+    trava_de_mentira: Path,
+    travas_pegas: list[str],
+) -> None:
+    """MORDIDA: tire o ``na_trava`` de ``DonoVivo.parear`` — duas pegas, e o
+    registro do agente nunca pede a trava (ele não aparece aqui)."""
+    assert vivo.parear(bm.no_de(bm.CONTROLE), quem=gp.QUEM).feita
+    assert barramento.metodos() == ["RegisterAgent", "Pair"]
+    assert travas_pegas == [gp.QUEM]
+
+
+class _ProcessoVivo:
+    """A busca da ponte, de pé até alguém fechá-la."""
+
+    def __init__(self) -> None:
+        self.stdout = io.StringIO("")
+        self.stderr = io.StringIO("")
+        self._vivo = True
+
+    def poll(self) -> int | None:
+        return None if self._vivo else 0
+
+    def terminate(self) -> None:
+        self._vivo = False
+
+    kill = terminate
+
+    def wait(self, timeout: float | None = None) -> int:
+        return 0
+
+
+def test_o_parear_pela_ponte_espera_a_trava(
+    trava_de_mentira: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O piso também entra na fila: a ponte root não pareia no meio de outro motor.
+
+    MORDIDA: tire o ``na_trava`` do ``parear`` da ponte em ``JanelaDeBusca`` —
+    a ponte é chamada com a trava na mão de outro motor.
+    """
+    monkeypatch.setattr(diario_do_radio, "PRAZO_DA_TRAVA_S", 0.1)
+    corridas: list[Any] = []
+
+    def correr(argumentos: Any) -> tuple[int, str]:
+        corridas.append(argumentos)
+        return 0, ""
+
+    janela = gp.JanelaDeBusca(bm.ADAPTADOR, 5, abrir=lambda _a: _ProcessoVivo(), correr=correr)
+    assert not janela.pelo_dono
+    assert janela.abrir_a_janela() == ""
+    pronto = threading.Event()
+    outro = threading.Thread(target=_segurar_a_trava, args=(0.6, pronto, []))
+    outro.start()
+    assert pronto.wait(2)
+    desfecho = janela.parear(bm.CONTROLE)
+    outro.join()
+    janela.fechar()
+
+    assert desfecho.estado == gp.ESTADO_NAO_DEU
+    assert corridas == []
 
 
 # ---------------------------------------------------------------------------
