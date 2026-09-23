@@ -916,9 +916,11 @@ _estampas() { printf '%s\n' "${HEFESTO_PONTE_STAMPS:-/run/hefesto-bt-ponte}"; }
 #: O FREIO SOLTA quando o laço some: para cada porta em que o verbo parou de
 #: reiniciar, se o adaptador que mora nela AGORA não tem um único «command tx
 #: timeout» na janela do journal (ou a porta está vazia), a mão dela curou — o
-#: freio e a contagem de reinícios seguidos saem, e o diário diz.
+#: freio e a contagem de reinícios seguidos saem, e o diário diz O QUE MEDIU:
+#: a porta vazia é o adaptador fora dela, e não «voltou» (conferência de
+#: 23/09/2026 — o diário dizia «voltou» sobre uma porta sem aparelho).
 _soltar_o_freio_curado() {
-    local marca porta hci h n _u curado
+    local marca porta hci h n _u curado por_que
     for marca in "$(_estampas)"/reset-*.desistiu; do
         [[ -e "${marca}" ]] || continue
         porta="${marca##*/reset-}"
@@ -934,8 +936,13 @@ _soltar_o_freio_curado() {
         [[ "${curado}" -eq 1 ]] || continue
         _seco && { _dizer_seco "soltaria o freio da porta ${porta}: o laço sumiu"; continue; }
         rm -f -- "${marca}" "${marca%.desistiu}.seguidos" 2>/dev/null || true
+        if [[ -n "${hci}" ]]; then
+            por_que="o laço sumiu do journal: nenhum «command tx timeout» do ${hci} da porta ${porta} em ${JANELA_DO_LACO_S} s"
+        else
+            por_que="a porta ${porta} ficou sem adaptador: o laço saiu com ele"
+        fi
         _diario "bt-ponte" "soltou o freio do reinício" \
-            "o laço sumiu do journal: o adaptador da porta ${porta} voltou" \
+            "${por_que}" \
             null "{\"hci\": $(_json_texto "${hci}")}" \
             "\"porta\": $(_json_texto "${porta}"), \"familia\": \"3\""
     done

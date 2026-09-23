@@ -186,6 +186,30 @@ def test_o_freio_solta_quando_o_laco_some_e_volta_a_valer_depois(tmp_path: Path)
         "parou de reiniciar o adaptador",
         "soltou o freio do reinício",
     ]
+    assert _entradas(tmp_path)[-1]["por_que"] == (
+        f"o laço sumiu do journal: nenhum «command tx timeout» do hci0 da porta {PORTA} em 150 s"
+    )
+
+
+def test_a_porta_vazia_solta_o_freio_sem_dizer_que_o_adaptador_voltou(tmp_path: Path) -> None:
+    """Ela tirou o adaptador e ainda não o pôs de volta: a porta está VAZIA.
+
+    O freio solta — a mão dela agiu —, mas o diário diz o que foi medido: a
+    porta sem aparelho. Conferência de 23/09/2026: ele dizia «voltou».
+
+    MORDIDA: devolva o texto único de antes e a porta vazia vira «voltou».
+    """
+    agora = int(time.time())
+    sysfs = _mesa_sysfs(tmp_path / "sys", {"hci0": PORTA})
+    _carimbar(tmp_path, anterior=agora - 901, seguidos=3)
+    _reiniciar(tmp_path, sysfs, _laco(agora - 1))
+    vazia = _mesa_sysfs(tmp_path / "sys-vazio", {})
+    (vazia / "bus" / "usb" / "devices").mkdir(parents=True, exist_ok=True)
+    assert _reiniciar(tmp_path, vazia, "").returncode == 0
+    ultima = _entradas(tmp_path)[-1]
+    assert ultima["o_que"] == "soltou o freio do reinício"
+    assert ultima["por_que"] == f"a porta {PORTA} ficou sem adaptador: o laço saiu com ele"
+    assert "voltou" not in ultima["por_que"]
 
 
 def test_o_freio_nao_solta_com_o_laco_vivo_mas_espacado(tmp_path: Path) -> None:
