@@ -77,6 +77,11 @@ LINHAS_REAIS: dict[str, tuple[str, str]] = {
         "Read reg16 failed (-110)",
         "[BT-TRAVADO]",
     ),
+    "3-devcoredump": (
+        "2026-09-13T01:13:45-03:00 maquina kernel: Bluetooth: hci0: RTL: "
+        "Failed to generate devcoredump",
+        "[BT-TRAVADO]",
+    ),
     # 4 — a entrada descartada por CRC, 22/09 14:07:19.
     "4": (
         "2026-09-22T14:07:19-03:00 maquina kernel: playstation "
@@ -90,6 +95,27 @@ def _grep_union() -> str:
     casou = re.search(r'^GREP_UNION="(.+)"$', VIGIA.read_text(encoding="utf-8"), re.M)
     assert casou is not None, "GREP_UNION sumiu do storm_watch.sh"
     return casou.group(1)
+
+
+#: Os dois padrões GENÉRICOS do filtro. O do hci casa quase toda linha de
+#: família que começa com ``Bluetooth: hciN:`` — o «link tx timeout», as três
+#: linhas do laço do Realtek. Com ele no filtro, tirar o padrão PRÓPRIO de uma
+#: família não reprovava nada: a linha passava pelo genérico (medido na
+#: conferência de 23/09, as mordidas de «link tx timeout» e de «command
+#: 0x.... tx timeout» saíam verdes). A régua mede o que é DA FAMÍLIA.
+_GENERICOS = (
+    "bluetooth: hci[0-9].*(timeout|failed|error)",
+    "xhci_hcd.*(reset|died|timeout|halt)",
+)
+
+
+def _grep_da_familia() -> str:
+    """O ``GREP_UNION`` sem os genéricos — o que cada família escreveu por extenso."""
+    filtro = _grep_union()
+    for generico in _GENERICOS:
+        assert "|" + generico in filtro, f"o genérico {generico!r} mudou de forma"
+        filtro = filtro.replace("|" + generico, "")
+    return filtro
 
 
 def _mensagem(linha: str) -> str:
@@ -114,10 +140,13 @@ def _classificar(texto: str, **env_extra: str) -> str:
 
 @pytest.mark.parametrize("familia", sorted(LINHAS_REAIS))
 def test_a_linha_real_passa_pelo_filtro_do_journal(familia: str) -> None:
+    """ARRANQUE UM PADRÃO DE FAMÍLIA do ``GREP_UNION`` e a família dele reprova
+    aqui — inclusive as que o genérico ``bluetooth: hci…`` também casaria."""
     linha, _tag = LINHAS_REAIS[familia]
-    assert re.search(_grep_union(), _mensagem(linha), re.IGNORECASE), (
-        f"a família {familia} não passa pelo GREP_UNION — o journal nunca a "
-        "entregaria à vigia"
+    assert re.search(_grep_union(), _mensagem(linha), re.IGNORECASE)
+    assert re.search(_grep_da_familia(), _mensagem(linha), re.IGNORECASE), (
+        f"a família {familia} só passa pelo GREP_UNION por um padrão genérico — "
+        "tirar o genérico cegaria a vigia para ela"
     )
 
 
@@ -247,7 +276,7 @@ def test_o_storm_doctor_separa_as_quatro_familias() -> None:
     #: mesmo episódio: a rajada é contada pelo relógio.
     assert historico["2B"].rajadas == 1
     assert historico["3"].rajadas == 1
-    assert historico["3"].ocorrencias == 2
+    assert historico["3"].ocorrencias == 3
     assert historico["2A"].nome == "rádio afogado"
     assert historico["1"].primeira.startswith("2026-09-21")
 
