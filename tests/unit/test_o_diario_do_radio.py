@@ -460,19 +460,27 @@ def test_o_esquecer_a_seco_so_diz_a_lapide(tmp_path: Path) -> None:
 
 # --- o adaptador travado em laço (família 3) --------------------------------------
 #
-# O laço de 13/09, com as linhas reais (três por volta, a cada ~2,5 s), sobre
+# O laço de 13/09, com as linhas reais (três por volta, a cada ~2 s), sobre
 # uma mesa sysfs de mentira: o adaptador travado está na porta 3-1.1.2, e um
 # vizinho são, na 3-4.1.4, teve UM timeout solto — que acontece em adaptador são.
+# A forma é a do `journalctl -o short-unix` que o verbo lê: o epoch na frente,
+# porque o verbo pergunta QUANDO — o laço tem de estar vivo agora, e depois de
+# um reinício só conta o que veio depois dele.
 
-LACO_DE_13_09 = "".join(
-    f"2026-09-13T01:{13 + (s // 60):02d}:{s % 60:02d}-03:00 maquina kernel: Bluetooth: hci0: {m}\n"
-    for s in range(45, 60, 2)
-    for m in (
-        "command 0xfc61 tx timeout",
-        "RTL: RTL: Read reg16 failed (-110)",
-        "RTL: Failed to generate devcoredump",
-    )
-) + "2026-09-13T01:14:10-03:00 maquina kernel: Bluetooth: hci1: command 0x0c03 tx timeout\n"
+_MENSAGENS_DA_VOLTA = (
+    "command 0xfc61 tx timeout",
+    "RTL: RTL: Read reg16 failed (-110)",
+    "RTL: Failed to generate devcoredump",
+)
+
+
+def _laco_de_13_09(ultimo: int) -> str:
+    """Oito voltas do laço, a mais nova em ``ultimo``, e o timeout solto do vizinho."""
+    return "".join(
+        f"{ultimo - 14 + s}.250000 maquina kernel: Bluetooth: hci0: {m}\n"
+        for s in range(0, 15, 2)
+        for m in _MENSAGENS_DA_VOLTA
+    ) + f"{ultimo - 5}.500000 maquina kernel: Bluetooth: hci1: command 0x0c03 tx timeout\n"
 
 
 def _mesa_sysfs(raiz: Path, adaptadores: dict[str, str]) -> Path:
@@ -496,7 +504,7 @@ def _reiniciar(
 ) -> subprocess.CompletedProcess[str]:
     journal = tmp_path / "journal.txt"
     if not journal.exists():
-        journal.write_text(LACO_DE_13_09, encoding="utf-8")
+        journal.write_text(_laco_de_13_09(int(time.time()) - 1), encoding="utf-8")
     env = _ambiente_da_ponte(
         tmp_path,
         HEFESTO_SYSFS_RAIZ=str(sysfs),
@@ -556,23 +564,75 @@ def test_com_conexao_de_pe_o_reinicio_e_recusado(tmp_path: Path) -> None:
     assert entrada["o_que"] == "recusou reiniciar o adaptador"
 
 
-def test_o_freio_nao_reinicia_a_mesma_porta_duas_vezes(tmp_path: Path) -> None:
+def test_o_tique_seguinte_nao_acusa_o_laco_de_antes_do_reinicio(tmp_path: Path) -> None:
+    """O adaptador que voltou são não «travou de novo».
+
+    A janela de 150 s alcança o tique seguinte do watchdog, e as linhas de
+    ANTES do reinício continuam nela. ARRANQUE A CURA — tire a contagem depois
+    do carimbo da porta — e este tique acusa «travou de novo, tire e ponha»
+    sobre um adaptador bom (medido na conferência de 23/09: a régua antiga
+    ESPERAVA essa frase).
+    """
     sysfs = _mesa_sysfs(tmp_path / "sys", {"hci0": "3-1.1.2"})
     assert _reiniciar(tmp_path, sysfs).returncode == 0
     (sysfs / "bus" / "usb" / "devices" / "3-1.1.2" / "authorized").write_text(
         "semente", encoding="utf-8"
     )
     segundo = _reiniciar(tmp_path, sysfs)
-    assert segundo.returncode == 0
+    assert segundo.returncode == 0, segundo.stderr
+    assert segundo.stdout == ""
+    assert _autorizado(sysfs, "3-1.1.2") == "semente"
+    entradas = diario.ler(caminhos=[tmp_path / "diario-root.jsonl"])
+    assert [e["o_que"] for e in entradas] == ["reiniciou o adaptador"]
+
+
+def _carimbar(tmp_path: Path, porta: str, epoch: int) -> None:
+    estampas = tmp_path / "stamps"
+    estampas.mkdir(exist_ok=True)
+    (estampas / f"reset-{porta}").write_text(f"{epoch}\n", encoding="utf-8")
+
+
+def test_o_freio_nao_reinicia_a_mesma_porta_duas_vezes(tmp_path: Path) -> None:
+    """O laço VOLTOU depois do reinício de um minuto atrás: segura, e diz uma vez."""
+    agora = int(time.time())
+    sysfs = _mesa_sysfs(tmp_path / "sys", {"hci0": "3-1.1.2"})
+    _carimbar(tmp_path, "3-1.1.2", agora - 60)
+    segundo = _reiniciar(tmp_path, sysfs)
+    assert segundo.returncode == 0, segundo.stderr
     assert segundo.stdout.startswith("segurado\t3-1.1.2\thci0\t")
     assert _autorizado(sysfs, "3-1.1.2") == "semente", "reiniciou de novo dentro do freio"
+    terceiro = _reiniciar(tmp_path, sysfs)
+    assert terceiro.stdout.startswith("segurado\t3-1.1.2\thci0\t")
     frases = [e.get("frase") for e in diario.ler(caminhos=[tmp_path / "diario-root.jsonl"])]
-    assert "O adaptador da porta 3-1.1.2 travou de novo. Tire e ponha ele." in frases
+    assert frases == ["O adaptador da porta 3-1.1.2 travou de novo. Tire e ponha ele."], (
+        "o sino repete a mesma frase a cada tique do watchdog"
+    )
+
+
+def test_o_laco_que_parou_nao_reinicia_nada(tmp_path: Path) -> None:
+    """Um laço de um minuto atrás não é laço agora — e o hciN já pode ser outro.
+
+    O hciN do journal é amarrado ao aparelho de AGORA pelo laço estar vivo: o
+    adaptador que saiu da porta para de repetir, e o número dele pode ter ido
+    para o próximo que entrou. ARRANQUE A CURA — tire o ``LACO_VIVO_S`` — e a
+    porta de hoje do hci0 é reiniciada por linhas de outro aparelho.
+    """
+    sysfs = _mesa_sysfs(tmp_path / "sys", {"hci0": "3-4.1.4"})
+    (tmp_path / "journal.txt").write_text(
+        _laco_de_13_09(int(time.time()) - 60), encoding="utf-8"
+    )
+    resultado = _reiniciar(tmp_path, sysfs)
+    assert resultado.returncode == 0, resultado.stderr
+    assert resultado.stdout == ""
+    assert _autorizado(sysfs, "3-4.1.4") == "semente"
+    assert not (tmp_path / "diario-root.jsonl").exists()
 
 
 def test_sem_laco_nada_acontece(tmp_path: Path) -> None:
     sysfs = _mesa_sysfs(tmp_path / "sys", {"hci0": "3-1.1.2"})
-    (tmp_path / "journal.txt").write_text(LACO_DE_13_09.splitlines()[0] + "\n", encoding="utf-8")
+    (tmp_path / "journal.txt").write_text(
+        _laco_de_13_09(int(time.time()) - 1).splitlines()[-4] + "\n", encoding="utf-8"
+    )
     resultado = _reiniciar(tmp_path, sysfs)
     assert resultado.returncode == 0
     assert resultado.stdout == ""
