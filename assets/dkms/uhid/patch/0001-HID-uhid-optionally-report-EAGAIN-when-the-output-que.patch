@@ -1,0 +1,85 @@
+--- uhid-original.c	2026-09-22 18:00:33.987884141 -0300
++++ uhid-param.c	2026-09-22 18:08:09.170717781 -0300
+@@ -26,6 +26,29 @@
+ #define UHID_NAME	"uhid"
+ #define UHID_BUFSIZE	32
+ 
++/*
++ * HEFESTO/contrapressao: dizer a quem escreve que a fila de saida encheu.
++ *
++ * DESLIGADO POR PADRAO, e de proposito. Ligado, uhid_hid_output_raw() passa a
++ * devolver -EAGAIN em vez de mentir `count` quando o evento foi descartado —
++ * o que chega ao write(2) de quem escreve pelo caminho hidraw_write() ->
++ * hid_hw_output_report(). E' uma mudanca de semantica VISIVEL para TODO
++ * userspace que escreve report de saida num HID por Bluetooth (o Steam Input
++ * inclusive), e quem trata falha de escrita como "o aparelho sumiu" passaria a
++ * largar o controle no primeiro engasgo do radio. Por isso ela nao se impoe a
++ * ninguem: quem quiser o sinal liga com uhid.backpressure=1.
++ *
++ * O QUE ELA CURA, medido em 22/09/2026 numa mesa de quatro DualSense por
++ * radio: a ponte de audio escrevia 93,75 reports de 334 B por segundo por
++ * controle; o kernel descartava o excedente CALADO (3807 "Output queue is
++ * full" em um minuto) e o produtor, sem sinal nenhum, seguia inundando ate o
++ * bluetoothd levar EAGAIN no socket L2CAP e derrubar a sessao HID dos quatro.
++ */
++static bool backpressure;
++module_param(backpressure, bool, 0644);
++MODULE_PARM_DESC(backpressure,
++	"report -EAGAIN to the writer when the output queue is full (default: off)");
++
+ struct uhid_device {
+ 	struct mutex devlock;
+ 
+@@ -89,7 +112,8 @@
+ 	}
+ }
+ 
+-static void uhid_queue(struct uhid_device *uhid, struct uhid_event *ev)
++/* 0 = enfileirado; -EAGAIN = a fila esta cheia AGORA. */
++static int uhid_queue(struct uhid_device *uhid, struct uhid_event *ev)
+ {
+ 	__u8 newhead;
+ 
+@@ -99,10 +123,12 @@
+ 		uhid->outq[uhid->head] = ev;
+ 		uhid->head = newhead;
+ 		wake_up_interruptible(&uhid->waitq);
+-	} else {
+-		hid_warn(uhid->hid, "Output queue is full\n");
+-		kfree(ev);
++		return 0;
+ 	}
++
++	hid_warn(uhid->hid, "Output queue is full\n");
++	kfree(ev);
++	return -EAGAIN;
+ }
+ 
+ static int uhid_queue_event(struct uhid_device *uhid, __u32 event)
+@@ -350,6 +376,7 @@
+ 	__u8 rtype;
+ 	unsigned long flags;
+ 	struct uhid_event *ev;
++	int ret;
+ 
+ 	switch (report_type) {
+ 	case HID_FEATURE_REPORT:
+@@ -375,9 +402,17 @@
+ 	memcpy(ev->u.output.data, buf, count);
+ 
+ 	spin_lock_irqsave(&uhid->qlock, flags);
+-	uhid_queue(uhid, ev);
++	ret = uhid_queue(uhid, ev);
+ 	spin_unlock_irqrestore(&uhid->qlock, flags);
+ 
++	/*
++	 * HEFESTO/contrapressao: o `return count` incondicional era a mentira
++	 * inteira — o evento ia para o kfree e quem escreveu recebia sucesso.
++	 * Com o parametro desligado o comportamento e' byte a byte o de antes.
++	 */
++	if (backpressure && ret)
++		return ret;
++
+ 	return count;
+ }
+ 

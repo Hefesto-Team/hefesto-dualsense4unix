@@ -360,6 +360,7 @@ grep -qsF '# >>> hefesto JustWorksRepairing >>>' /etc/bluetooth/main.conf 2>/dev
 [[ -e /etc/modprobe.d/hefesto-hid-nintendo.conf ]] && _NEEDS_SUDO=1
 # Contenção BT: DKMS hid-playstation patchado — mesma justificativa da Onda T.
 [[ -e /etc/modprobe.d/hefesto-hid-playstation.conf ]] && _NEEDS_SUDO=1
+[[ -e /etc/modprobe.d/hefesto-uhid.conf ]] && _NEEDS_SUDO=1
 command -v dkms >/dev/null 2>&1 \
     && dkms status hefesto-hid-playstation 2>/dev/null | grep -q . \
     && _NEEDS_SUDO=1
@@ -1190,6 +1191,36 @@ if [[ -e /etc/modprobe.d/hefesto-hid-playstation.conf ]]; then
     else
         log "sudo indisponível — /etc/modprobe.d/hefesto-hid-playstation.conf NÃO removido"
         log "  sudo rm -f /etc/modprobe.d/hefesto-hid-playstation.conf"
+    fi
+fi
+
+# RADIO-AFOGADO-02 (22/09/2026): o uhid com contrapressão. Ele só está aqui se
+# alguém pediu (`./install.sh --uhid-contrapressao`), e sai pelo mesmo caminho
+# dos vizinhos. **O MÓDULO NUNCA É RECARREGADO**, e aqui a regra é a mais dura
+# da casa: o `uhid` é o dono de TODO HID por Bluetooth: um `rmmod` derruba os
+# controles, o teclado e o mouse sem fio de uma vez. O parâmetro volta a 0 A
+# QUENTE (é 0644 de propósito), o que já devolve o comportamento de fábrica na
+# hora; o módulo de fábrica volta no próximo boot.
+if dkms status 2>/dev/null | grep -q '^hefesto-uhid'; then
+    if sudo -n true 2>/dev/null; then
+        log "removendo o patch DKMS do uhid (hefesto-uhid)"
+        sudo dkms remove hefesto-uhid/1.0.0 --all >/dev/null 2>&1 || true
+    else
+        log "sudo indisponível — patch DKMS do uhid NÃO removido"
+        log "  sudo dkms remove hefesto-uhid/1.0.0 --all"
+    fi
+fi
+if [[ -e /etc/modprobe.d/hefesto-uhid.conf ]]; then
+    if sudo -n true 2>/dev/null; then
+        log "removendo a contrapressão do uhid (/etc/modprobe.d/hefesto-uhid.conf)"
+        sudo rm -f /etc/modprobe.d/hefesto-uhid.conf
+        if [[ -e /sys/module/uhid/parameters/backpressure ]]; then
+            printf '0' | sudo tee /sys/module/uhid/parameters/backpressure >/dev/null 2>&1 || true
+            log "backpressure do uhid devolvido a 0 — comportamento de fábrica JÁ VALE (NUNCA recarregamos o uhid)"
+        fi
+    else
+        log "sudo indisponível — /etc/modprobe.d/hefesto-uhid.conf NÃO removido"
+        log "  sudo rm -f /etc/modprobe.d/hefesto-uhid.conf"
     fi
 fi
 

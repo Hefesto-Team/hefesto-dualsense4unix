@@ -624,6 +624,27 @@ echo "== paridade da cura de raiz (assets/modprobe{,.d}/*.conf × instaladores) 
 for conf_path in assets/modprobe/*.conf assets/modprobe.d/*.conf; do
     [[ -f "${conf_path}" ]] || continue
     conf_name="$(basename "${conf_path}")"
+    # A DISPENSA MORA NO PRÓPRIO ARQUIVO, e tem de dizer POR QUÊ — mesma
+    # doutrina do `X-HefestoNaoEmpacotado` dos `.desktop` lá em cima, e pela
+    # mesma razão: cobrar de todo formato um arquivo que NÃO se deve empacotar
+    # é o gate exigindo o defeito. Nasceu com a RADIO-AFOGADO-02 (22/09/2026):
+    # a contrapressão do `uhid` é OPT-IN porque muda a semântica do `write(2)`
+    # para todo userspace que escreve em HID por Bluetooth, e mandá-la em
+    # .deb/.rpm/Arch/flatpak seria impô-la a quem nunca pediu.
+    #
+    # **MAS O UNINSTALL CONTINUA COBRADO**, e essa é a metade que importa:
+    # conf que alguém pode ter instalado à mão e ninguém sabe desfazer é lápide
+    # que envelhece sozinha.
+    if grep -q '^# X-HefestoNaoEmpacotado:' "${conf_path}" 2>/dev/null; then
+        _porque="$(sed -n 's/^# X-HefestoNaoEmpacotado: *//p' "${conf_path}" | head -1)"
+        if grep -qF "${conf_name}" uninstall.sh 2>/dev/null; then
+            echo "[ -- ] ${conf_name}: fora dos empacotamentos por declaração própria (${_porque}); uninstall.sh a desfaz"
+        else
+            echo "[FAIL] ${conf_name}: dispensada dos empacotamentos, mas o uninstall.sh NÃO a desfaz"
+            rc=1
+        fi
+        continue
+    fi
     missing=()
     grep -qF "${conf_name}" scripts/build_deb.sh 2>/dev/null \
         || missing+=("scripts/build_deb.sh")

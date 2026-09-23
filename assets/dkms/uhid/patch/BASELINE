@@ -1,0 +1,13 @@
+# Baseline do módulo DKMS hefesto-uhid (RADIO-AFOGADO-02, 22/09/2026)
+# O uhid.c deste diretório == vanilla v7.1 + o patch da lista PATCH abaixo.
+# Paridade verificável (reverte):
+#   patch -R -p0 uhid.c < patch/0001-*.patch   # PROVADO em 22/09/2026
+# deve reproduzir exatamente SHA256_VANILLA_C.
+#
+# A FONTE do vanilla, e ela é conferível sem baixar o tarball de 234 MB:
+#   curl -fsSL 'https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/drivers/hid/uhid.c?h=v7.1'
+KERNEL_BASE=v7.1
+KERNEL_TESTED=7.1.5-76070105-generic
+SHA256_VANILLA_C=fb05e46d4907ae94e95e523ffbca72a6c5ad84ff8c47777c6c15a2c466df8263
+SHA256_PATCHED_C=247bb6dc87102723f0072ed7d3e46faecb6b78454b28c0d489fb1f1a0d1b7630
+PATCH=0001-HID-uhid-optionally-report-EAGAIN-when-the-output-que.patch
