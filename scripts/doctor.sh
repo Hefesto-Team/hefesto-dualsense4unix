@@ -932,9 +932,16 @@ check_input_uaccess() {
 # FEAT-DSX-DEFINITIVE-FIX-01 §7.5 (Opção D): o quirk de boot
 # usbcore.quirks=054c:0ce6:gn,054c:0df2:gn é a alavanca do storm -71 que PRESERVA
 # o áudio do DualSense (ALTERNATIVA à regra 75, que desliga o áudio). É um
-# PARÂMETRO DE CMDLINE do kernel (NÃO é regra udev) e OPT-IN — por isso este check
-# é puramente informativo: NUNCA fail nem warn. Reporta ativo (/proc/cmdline),
-# agendado (config do bootloader), runtime (sysfs) ou ausente.
+# PARÂMETRO DE CMDLINE do kernel (NÃO é regra udev). Este check é puramente
+# informativo: NUNCA fail nem warn. Reporta ativo (/proc/cmdline), agendado
+# (config do bootloader), runtime (sysfs) ou ausente.
+#
+# NÃO É MAIS OPT-IN, e a frase de «ausente» dizia que era (O-QUE-E-DO-HEFESTO-
+# SAI-DO-ZSH-01, 23/09/2026): o passo 3e do install (cmdline gerenciado, com
+# MERGE e registro de dono) o aplica por DEFAULT há tempos; o `--with-usb-quirk`
+# só adianta o passo 3b. O conselho passa a ser o do passo que de fato o põe.
+# As duas portas para o mesmo token (3b e 3e) continuam sendo duas — fundi-las
+# é dívida declarada, fora desta sprint.
 check_usb_quirk() {
     local marker="054c:0ce6:gn"
     local active=0 scheduled=0 runtime=0
@@ -950,7 +957,7 @@ check_usb_quirk() {
     elif [[ "${runtime}" -eq 1 ]]; then
         info "quirk de áudio USB armado em runtime (sysfs) — vale no próximo replug; para persistir no cmdline: scripts/install_usb_quirk.sh"
     else
-        info "quirk de áudio USB ausente (opt-in) — alternativa que PRESERVA o áudio: scripts/install_usb_quirk.sh (ou regra 75 p/ áudio-off). Use uma OU outra."
+        info "quirk de áudio USB ausente — o install o põe por default (passo 3e, cmdline gerenciado); à mão: scripts/install_usb_quirk.sh. É a alavanca que PRESERVA o áudio (a regra 75 é a que o desliga): use uma OU outra."
     fi
     if [[ "${active}" -eq 1 || "${scheduled}" -eq 1 || "${runtime}" -eq 1 ]]; then
         info "  caveat: o quirk preserva o áudio no nível do KERNEL (sem storm); com os WP 52/53 o nó segue suprimido no PipeWire até removê-los ou definir DUALSENSE_MIC_INTENDED=1"
@@ -3658,6 +3665,48 @@ check_bt_clone_ds4() {
         fi
     done <<<"${paths}"
     [[ "${clone}" -eq 0 ]] && pass "nenhum clone DS4 (054C:05C4) pareado"
+}
+
+# O RÁDIO DESLIGADO POR SOFTWARE (O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01, 23/09/2026).
+# Morava no self-heal do zsh dela (`audit_bluetooth_rfkill`), uma linha por hora
+# num log que ninguém lê, e olhava só o primeiro adaptador. Veio para cá porque é
+# a resposta à pergunta que ninguém faz: com o adaptador soft-blocked, o
+# `bluetoothctl devices` vem vazio e tudo parece «sem adaptador» — o controle não
+# conecta e nada diz por quê. O `systemd-rfkill` lembra o bloqueio POR PORTA USB
+# (uma entrada por caminho em /var/lib/systemd/rfkill), então plugar o dongle na
+# porta errada o traz desligado.
+#
+# LÊ ARQUIVO, não roda `rfkill` (a regra do doctor, no cabeçalho), e olha TODO
+# adaptador. NUNCA desbloqueia: o botão de Bluetooth do painel faz exatamente
+# este soft block, e desfazê-lo tiraria da pessoa o controle do próprio rádio.
+check_bt_rfkill() {
+    local raiz="${HEFESTO_BT_SYSFS_ROOT:-/sys/class/bluetooth}"
+    local hci rf soft hard lidos=0 bloqueados=0 _hcis=()
+    mapfile -t _hcis < <(_bt_adaptadores)
+    if [[ "${#_hcis[@]}" -eq 0 ]]; then
+        info "nenhum adaptador Bluetooth presente — os controles só conectam pelo cabo (o dongle está na porta?)"
+        return 0
+    fi
+    for hci in "${_hcis[@]}"; do
+        for rf in "${raiz}/${hci}"/rfkill*; do
+            [[ -r "${rf}/soft" && -r "${rf}/hard" ]] || continue
+            soft="$(cat "${rf}/soft" 2>/dev/null)"
+            hard="$(cat "${rf}/hard" 2>/dev/null)"
+            lidos=$((lidos + 1))
+            if [[ "${hard}" == "1" ]]; then
+                bloqueados=$((bloqueados + 1))
+                warn "${hci} bloqueado pela chave física ou pela BIOS (rfkill hard) — nenhum controle conecta por ele até a chave voltar"
+            elif [[ "${soft}" == "1" ]]; then
+                bloqueados=$((bloqueados + 1))
+                warn "${hci} desligado por software (rfkill soft) — parece «sem adaptador»: o controle não conecta e nada diz por quê. Ligue pelo botão de Bluetooth do painel ou: rfkill unblock bluetooth"
+            fi
+        done
+    done
+    if [[ "${lidos}" -eq 0 ]]; then
+        info "não consegui ler o rfkill de nenhum adaptador (${_hcis[*]}) — não sei dizer se o rádio está bloqueado"
+    elif [[ "${bloqueados}" -eq 0 ]]; then
+        pass "rádio Bluetooth ligado em ${#_hcis[@]} adaptador(es) (rfkill sem bloqueio)"
+    fi
 }
 
 # Saúde do rádio 2.4 GHz: RSSI, Trusted, Discovering, contadores do adaptador
@@ -7102,6 +7151,7 @@ main() {
     check_bluez_fastconnectable
     check_bluez_justworks_repairing
     check_bt_clone_ds4
+    check_bt_rfkill
     check_bt_radio
     check_bt_crc_counters
     check_kernel_watch
