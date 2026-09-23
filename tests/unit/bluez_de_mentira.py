@@ -303,12 +303,12 @@ class _Fio:
         self.laco.run()
         self.contexto.pop_thread_default()
 
-    def no_fio(self, funcao: Callable[[], Any]) -> Any:
+    def no_fio(self, tarefa: Callable[[], Any]) -> Any:
         caixa: dict[str, Any] = {}
         feito = threading.Event()
 
         def rodar(*_dados: Any) -> bool:
-            caixa["v"] = funcao()
+            caixa["v"] = tarefa()
             feito.set()
             return False
 

@@ -485,7 +485,7 @@ def test_a_escrita_que_muda_o_radio_vai_ao_diario_e_o_nome_nao(
     assert len(linhas) == 1, linhas
     (linha,) = linhas
     assert linha["quem"] == "reconectar"
-    assert linha["metodo"] == "Disconnect"
+    assert linha["chamada"] == "Disconnect"
     assert linha["controle"] == bm.CONTROLE
     assert linha["hci"] == "hci9"
     assert linha["depois"]["feita"] is True
