@@ -114,6 +114,13 @@ echo 0 | sudo tee /sys/module/uhid/parameters/backpressure   # desliga
 - Código C e comentários do patch em **inglês**, como os vizinhos: a convenção
   do subsistema HID, visando o upstream.
 
+- **Só nos kernels conferidos** (`BUILD_EXCLUSIVE_KERNEL` do `dkms.conf`, a
+  mesma lista do `KERNELS_VALIDADOS` do `patch/BASELINE`). Este `uhid.c`
+  substitui o de fábrica; contra um kernel cujo `uhid.c` mudou, ele compilaria
+  limpo e devolveria o arquivo velho. Fora da lista o DKMS pula e o de fábrica
+  assume. O ritual para acrescentar um kernel está no `BASELINE`, e a régua é
+  `tests/unit/test_o_uhid_patchado_so_nos_kernels_conferidos.py`.
+
 ## Como reproduzir a medição
 
 O provador vive em `scripts/ensaios/uhid_contrapressao.py`. Ele cria e destrói
