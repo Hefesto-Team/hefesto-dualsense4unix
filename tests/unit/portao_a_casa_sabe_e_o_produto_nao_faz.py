@@ -1322,101 +1322,15 @@ _NAO_E_PROMESSA: dict[str, str] = {
 #: No dia em que o caminho nascer, a entrada deixa de bater com a árvore e
 #: ``test_a_lista_de_lacunas_nao_envelhece_calada`` cobra que ela seja apagada.
 _SEM_CAMINHO_HOJE: dict[str, str] = {
-    "integrations/gesto_de_pareamento.py::JanelaDeBusca":
-        "PONTE-SEM-CHAMADOR-01, 20/09/2026. O módulo nasceu para fechar "
-        "a lacuna mais cara desta casa: "
-        "`scripts/bt_ponte_privilegiada.sh` está instalado como root, o "
-        "`/etc/sudoers.d/49-hefesto-bt-ponte` dá `NOPASSWD` aos verbos "
-        "`descobrir` e `parear`, o `hefesto-bt-agent.service` está "
-        "ativo — e nenhum Python os chamava. ONDE O CAMINHO SE PERDE, e "
-        "é UM ponto só: os BOTÕES. A sprint diz, com todas as letras, "
-        "«deixando os botões para depois do OK» dela, porque parear "
-        "ESCREVE no rádio dela com quatro controles vivos em cima, e "
-        "porque o gesto de PS + Create não se automatiza — o botão vira "
-        "um passo a passo com estado, não um clique que aplica. O QUE O "
-        "FECHARIA: os dois botões em "
-        "`src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py`, "
-        "chamando a `JanelaDeBusca` do fio próprio que "
-        "`_pedir_o_exame_de_entrada` já abre nessa mesma aba, depois da "
-        "palavra dela. Esta é a peça central: abre a varredura num "
-        "subprocesso, colhe os candidatos em fluxo e pareia DENTRO da "
-        "janela.",
-    "integrations/gesto_de_pareamento.py::Candidato":
-        "PONTE-SEM-CHAMADOR-01, 20/09/2026. O módulo nasceu para fechar "
-        "a lacuna mais cara desta casa: "
-        "`scripts/bt_ponte_privilegiada.sh` está instalado como root, o "
-        "`/etc/sudoers.d/49-hefesto-bt-ponte` dá `NOPASSWD` aos verbos "
-        "`descobrir` e `parear`, o `hefesto-bt-agent.service` está "
-        "ativo — e nenhum Python os chamava. ONDE O CAMINHO SE PERDE, e "
-        "é UM ponto só: os BOTÕES. A sprint diz, com todas as letras, "
-        "«deixando os botões para depois do OK» dela, porque parear "
-        "ESCREVE no rádio dela com quatro controles vivos em cima, e "
-        "porque o gesto de PS + Create não se automatiza — o botão vira "
-        "um passo a passo com estado, não um clique que aplica. O QUE O "
-        "FECHARIA: os dois botões em "
-        "`src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py`, "
-        "chamando a `JanelaDeBusca` do fio próprio que "
-        "`_pedir_o_exame_de_entrada` já abre nessa mesma aba, depois da "
-        "palavra dela. Esta é a linha da lista: endereço, nome, se já "
-        "tem bond e a classe do aparelho, com a máscara pronta para a "
-        "tela.",
-    "integrations/gesto_de_pareamento.py::Resultado":
-        "PONTE-SEM-CHAMADOR-01, 20/09/2026. O módulo nasceu para fechar "
-        "a lacuna mais cara desta casa: "
-        "`scripts/bt_ponte_privilegiada.sh` está instalado como root, o "
-        "`/etc/sudoers.d/49-hefesto-bt-ponte` dá `NOPASSWD` aos verbos "
-        "`descobrir` e `parear`, o `hefesto-bt-agent.service` está "
-        "ativo — e nenhum Python os chamava. ONDE O CAMINHO SE PERDE, e "
-        "é UM ponto só: os BOTÕES. A sprint diz, com todas as letras, "
-        "«deixando os botões para depois do OK» dela, porque parear "
-        "ESCREVE no rádio dela com quatro controles vivos em cima, e "
-        "porque o gesto de PS + Create não se automatiza — o botão vira "
-        "um passo a passo com estado, não um clique que aplica. O QUE O "
-        "FECHARIA: os dois botões em "
-        "`src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py`, "
-        "chamando a `JanelaDeBusca` do fio próprio que "
-        "`_pedir_o_exame_de_entrada` já abre nessa mesma aba, depois da "
-        "palavra dela. Este é o que a tela mostra: o estado, a frase em "
-        "português e o quarto estado «não deu», que a aba precisa "
-        "distinguir de «ninguém».",
-    "integrations/gesto_de_pareamento.py::e_controle":
-        "PONTE-SEM-CHAMADOR-01, 20/09/2026. O módulo nasceu para fechar "
-        "a lacuna mais cara desta casa: "
-        "`scripts/bt_ponte_privilegiada.sh` está instalado como root, o "
-        "`/etc/sudoers.d/49-hefesto-bt-ponte` dá `NOPASSWD` aos verbos "
-        "`descobrir` e `parear`, o `hefesto-bt-agent.service` está "
-        "ativo — e nenhum Python os chamava. ONDE O CAMINHO SE PERDE, e "
-        "é UM ponto só: os BOTÕES. A sprint diz, com todas as letras, "
-        "«deixando os botões para depois do OK» dela, porque parear "
-        "ESCREVE no rádio dela com quatro controles vivos em cima, e "
-        "porque o gesto de PS + Create não se automatiza — o botão vira "
-        "um passo a passo com estado, não um clique que aplica. O QUE O "
-        "FECHARIA: os dois botões em "
-        "`src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py`, "
-        "chamando a `JanelaDeBusca` do fio próprio que "
-        "`_pedir_o_exame_de_entrada` já abre nessa mesma aba, depois da "
-        "palavra dela. Esta decide, pela classe que o aparelho anuncia, "
-        "quem entra na lista de controles — medida em 9480 na mesa "
-        "dela.",
-    "integrations/gesto_de_pareamento.py::ler_candidato":
-        "PONTE-SEM-CHAMADOR-01, 20/09/2026. O módulo nasceu para fechar "
-        "a lacuna mais cara desta casa: "
-        "`scripts/bt_ponte_privilegiada.sh` está instalado como root, o "
-        "`/etc/sudoers.d/49-hefesto-bt-ponte` dá `NOPASSWD` aos verbos "
-        "`descobrir` e `parear`, o `hefesto-bt-agent.service` está "
-        "ativo — e nenhum Python os chamava. ONDE O CAMINHO SE PERDE, e "
-        "é UM ponto só: os BOTÕES. A sprint diz, com todas as letras, "
-        "«deixando os botões para depois do OK» dela, porque parear "
-        "ESCREVE no rádio dela com quatro controles vivos em cima, e "
-        "porque o gesto de PS + Create não se automatiza — o botão vira "
-        "um passo a passo com estado, não um clique que aplica. O QUE O "
-        "FECHARIA: os dois botões em "
-        "`src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py`, "
-        "chamando a `JanelaDeBusca` do fio próprio que "
-        "`_pedir_o_exame_de_entrada` já abre nessa mesma aba, depois da "
-        "palavra dela. Esta lê a linha de TSV que a ponte devolve, e é "
-        "a única porta por onde um endereço vira argumento de comando "
-        "privilegiado.",
+    # CINCO LÁPIDES DA PONTE-SEM-CHAMADOR-01 SAÍRAM EM 23/09/2026, e quem mandou
+    # foi ESTE PORTÃO (`test_nenhuma_lapide_sobreviveu_a_propria_cura`): a
+    # `JanelaDeBusca`, o `Candidato`, o `Resultado`, o `e_controle` e o
+    # `ler_candidato` ganharam caminho pela central do rádio da
+    # MOVER-UM-POR-VEZ-01 (`integrations/central_do_radio.py`, que o daemon sobe
+    # em `_start_central_do_radio` e a tela chama por `radio.mover`). O que as
+    # lápides diziam dos BOTÕES continua valendo: o gesto da tela é da
+    # TRANSPLANTE-DA-SECAO-01. A do `segundos_ate` fica: a conta da janela é da
+    # tela, e a tela ainda não a chama.
     "integrations/gesto_de_pareamento.py::segundos_ate":
         "PONTE-SEM-CHAMADOR-01, 20/09/2026. O módulo nasceu para fechar "
         "a lacuna mais cara desta casa: "
