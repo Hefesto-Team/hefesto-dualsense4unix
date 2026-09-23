@@ -54,7 +54,7 @@ _dkms_initramfs_path() {
 # É uma linha de cópia, não um recurso: a GPL-2.0, seção 1, pede que a cópia da
 # licença acompanhe o fonte, e o `/usr/src/<pkg>-<ver>` é o fonte na máquina.
 # Sai sozinha na desinstalação — `dkms remove --all` apaga o diretório inteiro
-# (uninstall.sh:842-844), então a simetria não custa uma linha sequer lá.
+# (uninstall.sh:1316, no `dkms_remove_patched_module`), então a simetria não custa uma linha sequer lá.
 #
 # Ordem dos candidatos: o checkout git primeiro (é onde o install.sh nativo
 # roda), depois o layout dos pacotes, que põem `LICENSES/` DENTRO de `dkms/`

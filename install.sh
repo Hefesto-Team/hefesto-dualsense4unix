@@ -3593,7 +3593,7 @@ fi
 # 7a-bis. A UNIT DO DAEMON PRINCIPAL.
 #     BUG-INSTALL-NAO-INSTALA-A-UNIT-DO-DAEMON-01 (25/07): assimetria de
 #     primeira grandeza. O `uninstall.sh` para, desabilita e REMOVE
-#     ~/.config/systemd/user/hefesto-dualsense4unix.service (uninstall.sh:284-288),
+#     ~/.config/systemd/user/hefesto-dualsense4unix.service (uninstall.sh:535-537),
 #     e o install NUNCA a instalava — `grep -c assets/hefesto-dualsense4unix.service
 #     install.sh` dava ZERO. A unit só existia nas máquinas onde tinha
 #     sobrevivido de uma instalação antiga; quem fizesse o ciclo completo
