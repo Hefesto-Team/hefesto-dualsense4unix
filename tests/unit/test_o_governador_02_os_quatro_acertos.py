@@ -25,6 +25,7 @@ import functools
 import itertools
 import math
 import re
+import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -61,8 +62,13 @@ class _Relogio:
 @dataclass
 class _Diario:
     entradas: list[dict[str, Any]] = field(default_factory=list)
+    #: Chamado ANTES de cada linha entrar — a régua da ordem do par o usa para
+    #: derrubar uma ponte, noutra thread, no meio de uma escrita do governador.
+    ao_escrever: Any = None
 
     def __call__(self, quem: str, o_que: str, por_que: str, **campos: Any) -> None:
+        if self.ao_escrever is not None:
+            self.ao_escrever(o_que)
         self.entradas.append({"quem": quem, "o_que": o_que, "por_que": por_que, **campos})
 
     def de(self, o_que: str) -> list[dict[str, Any]]:
@@ -200,6 +206,29 @@ def test_a_marca_alem_do_limite_sai_de_quem_voltou_a_caber() -> None:
     assert len(publicado["pontes"]) == publicado["n_max"] == 2
     assert _alem(governador, ADAPTADOR_A) == {CONTROLE_3: False, CONTROLE_4: False}, (
         "a tela diria «além do limite» com 2 de 2"
+    )
+
+
+def test_a_vaga_esquecida_tambem_devolve_a_marca() -> None:
+    """A vaga concedida que nunca subiu ocupa lugar na admissão, e sai pelo
+    prazo (``_recolher``), não pelo ``_soltar``. Quem ficou volta a caber.
+
+    MORDIDA: tire do ``_recolher`` o ``_recalcular_o_limite`` e a tela mostra
+    «além do limite» com 2 de 2.
+    """
+    relogio, registro = _Relogio(), _Diario()
+    governador = _governador(relogio, registro, {})
+    esquecida = governador.pedir_vaga(CONTROLE_1, "som")
+    assert isinstance(esquecida, gov.Vaga)  # o gravador nunca subiu
+    _subir(governador, CONTROLE_2)
+    _subir(governador, CONTROLE_3)
+    assert _alem(governador, ADAPTADOR_A) == {CONTROLE_2: False, CONTROLE_3: True}
+
+    relogio.agora += gov.PRAZO_PARA_SUBIR_S + 1.0
+    publicado = governador.publicar()[ADAPTADOR_A]
+    assert len(publicado["pontes"]) == publicado["n_max"] == 2
+    assert _alem(governador, ADAPTADOR_A) == {CONTROLE_2: False, CONTROLE_3: False}, (
+        "a vaga esquecida saiu e a tela diria «além do limite» com 2 de 2"
     )
 
 
@@ -414,6 +443,66 @@ def test_um_pacote_alheio_na_meia_janela_nao_prova_que_a_fila_anda() -> None:
         f"a fila nunca andou e o diário diz que andou; esperas={esperas}"
     )
     assert esperas == [5.0, 10.0, 20.0, 40.0, 60.0], esperas
+
+
+def test_na_espera_crescente_o_ceder_de_cada_tentativa_nao_entra_no_diario() -> None:
+    """Pelo governador, cada tentativa cede antes de cair no teto. O CEDEU e o
+    VOLTOU dela são a TENTATIVA falhando de novo: contados, não escritos.
+
+    Com a espera no teto de 60 s, o intervalo das bordas (60 s) deixaria passar
+    um CEDEU por tentativa — uma linha por volta, que é o que o item 3 tira.
+
+    MORDIDA: tire do ``_as_bordas`` o ``endereco not in self._episodios`` e o
+    diário ganha um CEDEU por degrau.
+    """
+    relogio, registro = _Relogio(), _Diario()
+    governador = _governador(relogio, registro, {}, medidor=_MedidorDoAdaptador())
+    _o_2b_pelo_governador(governador, relogio, segundos=900.0)
+
+    degraus = registro.de(gov.FILA_PARADA)
+    assert len(degraus) == 5, degraus
+    cedeu = registro.de(gov.CEDEU_NA_FONTE)
+    assert len(cedeu) == 1, f"{len(cedeu)} CEDEU em {len(degraus)} degraus: cada tentativa virou linha"
+    assert registro.de(gov.VOLTOU_A_ESCREVER) == []
+
+
+def test_a_subida_que_a_fila_andou_devolve_nao_cai_depois_da_descida() -> None:
+    """O ``_a_fila_andou`` roda no tique (ou na bomba de OUTRA ponte), e a
+    tentativa calada cai na thread dela. Se ela cai entre o ``_calada = False``
+    e o SUBIU escrito, o diário ganhava DESCEU e depois SUBIU — e o
+    ``pontes_de_pe`` passava a contar, até o próximo arranque, uma ponte
+    fantasma criada em vida: o defeito do item 5, por outra porta.
+
+    MORDIDA: tire a trava do par do ``_soltar`` (ou do ``_a_fila_andou``) e a
+    descida passa na frente.
+    """
+    relogio, registro = _Relogio(), _Diario()
+    governador = _governador(relogio, registro, {})
+    _a_tentativa_que_cai(governador)  # abre o episódio pelo kernel
+    relogio.agora += gov.ESPERA_DA_FILA_PARADA_S
+    tentativa = _subir(governador, CONTROLE_1)
+    assert tentativa._calada
+
+    fios: list[threading.Thread] = []
+
+    def a_ponte_cai_no_meio(o_que: str) -> None:
+        if o_que == gov.FILA_ANDOU and not fios:
+            fio = threading.Thread(target=tentativa.soltar, args=("a fonte do som secou",))
+            fios.append(fio)
+            fio.start()
+            fio.join(timeout=0.3)  # com a trava do par, ela espera a subida
+
+    registro.ao_escrever = a_ponte_cai_no_meio
+    governador._a_fila_andou(ADAPTADOR_A)
+    for fio in fios:
+        fio.join(timeout=5.0)
+    assert fios and not fios[0].is_alive()
+
+    par = [e for e in registro.entradas if e["o_que"] in (diario.PONTE_SUBIU, diario.PONTE_DESCEU)]
+    carimbadas = [dict(e, carimbo=float(n)) for n, e in enumerate(par)]
+    assert diario.pontes_de_pe(carimbadas, math.inf) == {}, (
+        f"ponte fantasma criada em vida: {[e['o_que'] for e in par]}"
+    )
 
 
 # ---------------------------------------------------------------------------
