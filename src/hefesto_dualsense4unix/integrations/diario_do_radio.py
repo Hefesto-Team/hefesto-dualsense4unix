@@ -311,6 +311,13 @@ def pontes_de_pe(
     Reconstrói pelo diário: cada :data:`PONTE_SUBIU` acende, cada
     :data:`PONTE_DESCEU` apaga, até o instante pedido. Ponte sem adaptador
     conhecido cai em ``""`` — contada, mas sem casa.
+
+    A PONTE FANTASMA NÃO É ASSUNTO DAQUI (GOVERNADOR-DO-RADIO-02): o daemon que
+    morre sem ``stop()`` não escreve o ``PONTE_DESCEU``, e quem o escreve é o
+    governador do daemon seguinte, no arranque, com o motivo «o daemon
+    reiniciou» (``GovernadorDoRadio.fechar_as_pontes_fantasmas``). Esta dobra
+    fica pura de propósito: a regra do reinício tem UM dono, o único escritor de
+    ponte, e nenhum leitor do diário precisa repeti-la.
     """
     de_pe: dict[tuple[str, str], str] = {}
     for entrada in entradas:
