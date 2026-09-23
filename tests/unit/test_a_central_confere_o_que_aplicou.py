@@ -249,6 +249,30 @@ def test_o_fone_confere_pelo_connected_do_destino(
     assert mundo.lapides == [(SALA, FONE)]
 
 
+def test_o_fone_pareado_que_nao_conecta_no_destino_fica_esperando(
+    diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
+) -> None:
+    """O ``Pair`` do fone diz que deu, e o ``Connect`` no quarto falha: sem o
+    ``Connected`` do destino, não é «chegou», e a sala não se apaga.
+
+    MORDIDA: faça o ``_chegou`` do fone responder pelo objeto, sem o
+    ``Connected`` — ele diz «chegou», a sala sai, e esta régua reprova.
+    """
+    mundo.pareado(SALA, FONE, classe=rm.CLASSE_DE_FONE)
+    dono._fotografar()
+    mundo.pair_mente = True
+    central = _central(dono, mundo, relogio)
+    relogio.agendar(2.0, lambda: mundo.segurar_ps_create(FONE))
+
+    feito = central.mover(FONE, QUARTO)
+
+    assert mundo.objeto(QUARTO, FONE)["Paired"] is True, "o BlueZ disse que deu"
+    assert mundo.objeto(QUARTO, FONE)["Connected"] is False
+    assert (feito.estado, feito.motivo) == (cr.ESPERANDO, cr.MOTIVO_SEM_CONFIRMACAO)
+    assert mundo.objeto(SALA, FONE) is not None
+    assert mundo.lapides == []
+
+
 # ---------------------------------------------------------------------------
 # 5. não sei, e o que não é do rádio
 # ---------------------------------------------------------------------------
