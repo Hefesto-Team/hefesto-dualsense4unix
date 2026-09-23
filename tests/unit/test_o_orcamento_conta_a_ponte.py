@@ -210,6 +210,21 @@ def test_o_csv_tem_uma_linha_por_consumidor_com_a_procedencia() -> None:
             "pontes por adaptador (n_max)", "relatório de entrada (0x31)"} <= consumidores
 
 
+def test_o_ritmo_da_ponte_e_o_que_a_bomba_manda() -> None:
+    """``HZ_DA_PONTE`` pergunta ao DONO do ritmo, a bomba do rádio.
+
+    A régua do CSV compara o CSV com a constante, que nasceram juntos: se a
+    bomba passasse a mandar dois quadros por report (a camada do firmware do
+    estudo de 23/09), as duas continuariam iguais entre si e erradas.
+    """
+    from hefesto_dualsense4unix.integrations import alto_falante_bt as bomba
+
+    for arranjo in (bomba.ARRANJO_PADRAO, bomba.ARRANJO_HAPTICA_032):
+        intervalo = arranjo.intervalo_de_envio_s
+        assert intervalo is not None, arranjo.nome
+        assert rm.HZ_DA_PONTE == pytest.approx(1.0 / intervalo), arranjo.nome
+
+
 def test_o_csv_e_as_constantes_sao_o_mesmo_numero() -> None:
     conferidas = 0
     for linha in _linhas():
