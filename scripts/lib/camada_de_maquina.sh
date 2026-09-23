@@ -267,11 +267,13 @@ install_broker_host() {
 # (`scripts/install_udev.sh`, VPAD-09). Sem ele o `tmpfiles` recusaria a linha;
 # o passo diz isso e não grava nada.
 #
-# NÃO VAI PELO CAMINHO DO PACOTE (`install-host-udev.sh`), com a razão: lá não
-# há motor root que dispute o rádio — o watchdog, o drop-in do bluetoothd e a
-# regra do sudoers da ponte são deste instalador, o mesmo desenho dos timers da
-# resiliência. Sem motor root, a trava da sessão já põe em fila todos os
-# escritores que existem naquela máquina (vigia e central moram no daemon).
+# NÃO VAI PELO CAMINHO DO PACOTE (`install-host-udev.sh`), decisão de quem
+# coordena (P-2.9), com a razão: lá não há motor root que dispute o rádio — o
+# watchdog, o drop-in do bluetoothd e a regra do sudoers da ponte são deste
+# instalador, o mesmo desenho dos timers da resiliência. Sem motor root, a
+# trava da sessão já põe em fila todos os escritores que existem naquela
+# máquina (vigia e central moram no daemon), e o daemon diz no log que caiu
+# nela. O grupo não é o obstáculo: o pacote também cria o `hefesto`.
 install_trava_do_radio_host() {
     local _trava_fonte="${ROOT_DIR}/assets/tmpfiles.d/hefesto-dualsense4unix-radio.conf"
     local _trava_conf=/etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf

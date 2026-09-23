@@ -847,8 +847,25 @@ if [[ -f assets/systemd/hefesto-wifi-usb-vigia.service ]]; then
         || missing+=("scripts/lib/camada_de_maquina.sh(não escreve o drop-in do watchdog)")
     grep -qF 'hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf' <<<"${_wifi_un_rm}" \
         || missing+=("uninstall.sh(não remove o drop-in do watchdog)")
+    # O PACOTE NÃO LIGA O VIGIA (INSTALL-E-UNINSTALL-DO-RADIO-01, o P-15,
+    # decisão de quem coordena): o `install-host-udev.sh` não põe o timer, o
+    # dispatcher nem o drop-in do watchdog — o desenho dos timers da
+    # resiliência, e o drop-in precisa da casa de uma pessoa. A razão está no
+    # próprio helper, e o doctor diz a quem instalou por pacote como ligar.
+    # Aqui se cobra que a DECLARAÇÃO e o código digam a mesma coisa: um destino
+    # que entre no helper com a declaração intacta reprova.
+    if [[ -f scripts/install-host-udev.sh ]]; then
+        _wifi_ihu="$(grep -v '^[[:space:]]*#' scripts/install-host-udev.sh 2>/dev/null || true)"
+        for _wifi_dest in hefesto-wifi-usb-vigia 90-hefesto-wifi-usb 10-hefesto-maquina.conf; do
+            if grep -qF -- "${_wifi_dest}" <<<"${_wifi_ihu}"; then
+                missing+=("scripts/install-host-udev.sh(põe ${_wifi_dest}, e a declaração diz que o pacote não o liga)")
+            fi
+        done
+        grep -qF 'O VIGIA DO WI-FI USB NÃO VAI POR AQUI' scripts/install-host-udev.sh \
+            || missing+=("scripts/install-host-udev.sh(sem a declaração de por que o pacote não liga o vigia)")
+    fi
     if [[ "${#missing[@]}" -eq 0 ]]; then
-        echo "[ OK ] vigia do Wi-Fi USB: o install põe os quatro destinos, o uninstall tira os quatro, o doctor pergunta (e pergunta pelo rfkill); o drop-in do watchdog entra e sai"
+        echo "[ OK ] vigia do Wi-Fi USB: o install põe os quatro destinos, o uninstall tira os quatro, o doctor pergunta (e pergunta pelo rfkill); o drop-in do watchdog entra e sai; o pacote não liga o vigia, e diz por quê"
     else
         echo "[FAIL] vigia do Wi-Fi USB: FALTANDO em: ${missing[*]}"
         echo "       Peça que o install põe e o uninstall não tira é o defeito que tirou"
@@ -863,9 +880,13 @@ fi
 # UNINSTALL-DO-RADIO-01, 23/09/2026). Mesmo desenho da seção do vigia acima: o
 # destino é cobrado na linha que INSTALA (e o `tmpfiles --create` na que o
 # aplica), a remoção na linha que REMOVE, e o doctor por definição E chamada no
-# main. O caminho do pacote (`install-host-udev.sh`) fica de fora por decisão
-# escrita no `install_trava_do_radio_host`: sem motor root disputando o rádio,
-# a trava da sessão basta.
+# main. O caminho do pacote (`install-host-udev.sh`) fica de fora, decisão de
+# quem coordena (P-2.9): pelo pacote não há motor root disputando o rádio — o
+# watchdog, o drop-in do bluetoothd e o sudoers da ponte são do `install.sh` —,
+# e sem o tmpfiles o daemon cai na trava da sessão, que o diz no log. O grupo
+# não é o obstáculo (a trava usa o `hefesto`, que o pacote também cria); a
+# razão inteira está no `install_trava_do_radio_host`. A paridade cobra que o
+# helper do pacote siga sem a trava, e que a razão continue escrita lá.
 echo "== a trava comum do rádio (install × uninstall × doctor) =="
 if [[ -f assets/tmpfiles.d/hefesto-dualsense4unix-radio.conf ]]; then
     missing=()
@@ -898,8 +919,18 @@ if [[ -f assets/tmpfiles.d/hefesto-dualsense4unix-radio.conf ]]; then
         || missing+=("scripts/doctor.sh(sem check_trava_do_radio)")
     grep -qE '^[[:space:]]+check_trava_do_radio[[:space:]]*$' <<<"${_trava_doc}" \
         || missing+=("scripts/doctor.sh(o main não chama check_trava_do_radio)")
+    # Lido para variável, e nunca `grep | grep -q`: sob `pipefail` o `-q` que
+    # acha e fecha o cano devolve 141 ao pipe, e o achado passaria por ausente.
+    if [[ -f scripts/install-host-udev.sh ]]; then
+        _trava_ihu="$(grep -v '^[[:space:]]*#' scripts/install-host-udev.sh 2>/dev/null || true)"
+        if grep -qF 'hefesto-dualsense4unix-radio.conf' <<<"${_trava_ihu}"; then
+            missing+=("scripts/install-host-udev.sh(põe a trava, e a decisão é que o pacote não a põe — mude a razão no install_trava_do_radio_host junto)")
+        fi
+        grep -qF 'NÃO VAI PELO CAMINHO DO PACOTE' scripts/lib/camada_de_maquina.sh 2>/dev/null \
+            || missing+=("scripts/lib/camada_de_maquina.sh(sem a razão de a trava não ir pelo pacote)")
+    fi
     if [[ "${#missing[@]}" -eq 0 ]]; then
-        echo "[ OK ] trava comum do rádio: o install a cria e aplica, o uninstall a tira, o doctor pergunta"
+        echo "[ OK ] trava comum do rádio: o install a cria e aplica, o uninstall a tira, o doctor pergunta; o pacote não a põe, e diz por quê"
     else
         echo "[FAIL] trava comum do rádio: FALTANDO em: ${missing[*]}"
         echo "       Trava que o install cria e o uninstall não tira fica em /etc para sempre;"
