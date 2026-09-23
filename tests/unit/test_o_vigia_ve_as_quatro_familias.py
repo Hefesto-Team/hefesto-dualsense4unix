@@ -347,6 +347,25 @@ def test_nao_olhei_nao_e_zero() -> None:
     assert depois["3"].rajadas == 1
 
 
+def test_o_banner_da_vigia_de_hoje_diz_as_seis_familias() -> None:
+    """O ``medida_desde`` lê o banner que o ``storm_watch.sh`` escreve.
+
+    São dois donos da mesma frase: se o banner perder uma tag, a família dela
+    passa a constar como «não medida» sem ninguém ver. ARRANQUE UMA TAG do
+    banner do script e este teste reprova.
+    """
+    casou = re.search(
+        r'^echo "# \$\(date \'\+%F %T\'\) (kernel-watch iniciado \(padrões: [^"]+)" >>',
+        VIGIA.read_text(encoding="utf-8"),
+        re.M,
+    )
+    assert casou is not None, "o banner do kernel-watch mudou de forma"
+    banner = f"# 2026-09-23 03:00:00 {casou.group(1)}"
+    assert set(storm_doctor.classificar_o_historico([banner])) == {
+        "1", "2", "2A", "2B", "3", "4",
+    }
+
+
 def test_a_queda_e_a_borda_e_nao_o_resumo() -> None:
     """Os controles levam EAGAIN no mesmo segundo: é UMA queda, não duas.
 
