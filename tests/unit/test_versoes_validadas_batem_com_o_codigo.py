@@ -116,9 +116,11 @@ def test_o_kernel_testado_bate():
 def test_o_pino_do_rtw88_bate():
     """O kernel pinado do `rtw88-usb` aparece na página.
 
-    Este módulo é o único com `BUILD_EXCLUSIVE_KERNEL`, e isso é decisão: em
-    outro kernel ele não constrói de propósito, e o in-tree fica. Quem instala
-    noutra máquina precisa saber que aquele comportamento é esperado.
+    Este módulo tem `BUILD_EXCLUSIVE_KERNEL`, e isso é decisão: em outro
+    kernel ele não constrói de propósito, e o in-tree fica. Quem instala
+    noutra máquina precisa saber que aquele comportamento é esperado. (O
+    `uhid`, opt-in, também é pinado desde 23/09/2026 — a régua dele é
+    `test_o_uhid_patchado_so_nos_kernels_conferidos.py`.)
     """
     # `assets/dkms/` não entra em `_CONGELAR` (só `assets/bluetooth` entra), e
     # este arquivo é lido, nunca executado — então vem da árvore de trabalho.

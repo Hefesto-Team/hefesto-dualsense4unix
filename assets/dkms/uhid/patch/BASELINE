@@ -1,32 +1,48 @@
 # Baseline do módulo DKMS hefesto-uhid (RADIO-AFOGADO-02, 22/09/2026)
-# O uhid.c deste diretório == vanilla v7.1 + o patch da lista PATCH abaixo.
+# O uhid.c deste diretório == o de fábrica do STABLE v7.1.5 + o patch da lista
+# PATCH abaixo.
 # Paridade verificável (reverte):
-#   patch -R -p0 uhid.c < patch/0001-*.patch   # PROVADO em 22/09/2026
+#   patch -R -p0 uhid.c < patch/0001-*.patch
 # deve reproduzir exatamente SHA256_VANILLA_C.
 #
-# A FONTE do vanilla, e ela é conferível sem baixar o tarball de 234 MB:
-#   curl -fsSL 'https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/drivers/hid/uhid.c?h=v7.1'
+# A FONTE do de fábrica, e ela é conferível sem baixar o tarball de 234 MB. É
+# a árvore STABLE, e o tag é o da versão EXATA do kernel — nunca o do mainline:
+#   curl -fsSL 'https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/plain/drivers/hid/uhid.c?h=v7.1.5'
 #
-# CONFERIDO DE NOVO EM 23/09/2026 (GOVERNADOR-DO-RADIO-01), os três passos:
-#   - o `uhid.c` desta pasta dá SHA256_PATCHED_C, e o `patch -R` dá
-#     SHA256_VANILLA_C;
-#   - o `uhid.c` de fábrica dos tags v7.0 e v7.1 (a URL acima, `?h=v7.0` e
-#     `?h=v7.1`) dá SHA256_VANILLA_C nos DOIS — o arquivo não mudou entre eles;
-#   - `make -C /lib/modules/<kernel>/build M=<cópia> modules` compila limpo
-#     contra os headers dos dois kernels instalados na máquina dela
-#     (7.0.11-76070011 e 7.1.5-76070105), com o `parm: backpressure` no .ko.
+# FATO ERRADO, SUBSTITUÍDO EM 23/09/2026 (conferência da GOVERNADOR-DO-RADIO-01).
+# A base era o `uhid.c` do mainline v7.1, e o pino deixava construir para o
+# 7.1.5-76070105. O de fábrica do 7.1.5 NÃO é o do v7.1: o stable trocou, em
+# `uhid_dev_input` e `uhid_dev_input2`, o `hid_input_report` pelo
+# `hid_safe_input_report`, que recebe o tamanho do buffer. Construído ali, o
+# módulo DESFAZIA essa correção em silêncio — o defeito que o pino existia para
+# impedir. A conferência de antes comparou os tags do MAINLINE (v7.0 e v7.1),
+# que são mesmo iguais entre si, e não o kernel que a máquina roda.
+#
+# A PROVA QUE ESTÁ NO APARELHO, e não num tag: o `srcversion` do `.ko` de
+# fábrica é o hash que o modpost tira do `uhid.c` que o gerou. Medido em
+# 23/09/2026 com `modinfo -F srcversion` no `uhid.ko.zst` de fábrica e no
+# `.ko` do `uhid.c` do tag, compilado sem patch contra os headers do kernel:
+#   7.1.5-76070105  fábrica 4873D04A5BF04EDF44E1C53 · stable v7.1.5 idem
+#                   (o mainline v7.1 dá 553CF66B8F924EEA2B1428F: outro arquivo)
+#   7.0.11-76070011 fábrica 553CF66B8F924EEA2B1428F — o de fábrica dele é o
+#                   do v7.1, que não é a base de agora; por isso ele saiu do pino
+# E o patchado (este uhid.c) compila contra os headers do 7.1.5-76070105, com o
+# `parm: backpressure` no `.ko`.
 #
 # O RITUAL PARA ACRESCENTAR UM KERNEL ao BUILD_EXCLUSIVE_KERNEL do dkms.conf,
 # e nenhum passo é opcional:
-#   1. o `uhid.c` de fábrica do tag daquele kernel tem de dar SHA256_VANILLA_C.
-#      Se NÃO der, o patch é refeito sobre o arquivo novo e este BASELINE muda
-#      inteiro — nunca se acrescenta o kernel com o arquivo velho;
-#   2. o módulo compila contra os headers dele, com o `parm: backpressure`;
-#   3. só então o build entra na regex E em KERNELS_VALIDADOS abaixo — a
-#      mesma lista, nos dois lugares (é a forma do rtw88-usb).
-KERNEL_BASE=v7.1
+#   1. o `uhid.c` sem patch (o `patch -R` deste) compilado contra os headers
+#      daquele kernel tem de dar o MESMO `srcversion` do `uhid.ko` de fábrica
+#      dele. Se NÃO der, o patch é refeito sobre o `uhid.c` do stable daquele
+#      kernel e este BASELINE muda inteiro — nunca se acrescenta o kernel com o
+#      arquivo de outro;
+#   2. o patchado compila contra os headers dele, com o `parm: backpressure`;
+#   3. só então o build entra na regex, em KERNELS_VALIDADOS e em
+#      SRCVERSION_DE_FABRICA — a mesma lista nos três lugares.
+KERNEL_BASE=v7.1.5
 KERNEL_TESTED=7.1.5-76070105-generic
-KERNELS_VALIDADOS=7.0.11-76070011 7.1.5-76070105
-SHA256_VANILLA_C=fb05e46d4907ae94e95e523ffbca72a6c5ad84ff8c47777c6c15a2c466df8263
-SHA256_PATCHED_C=247bb6dc87102723f0072ed7d3e46faecb6b78454b28c0d489fb1f1a0d1b7630
+KERNELS_VALIDADOS=7.1.5-76070105
+SRCVERSION_DE_FABRICA=7.1.5-76070105:4873D04A5BF04EDF44E1C53
+SHA256_VANILLA_C=07eb905e156af79fec3bbda79110909114d1e288a107500f23de84a0c7f08cf7
+SHA256_PATCHED_C=7c23f821fde9ce7ec5efe67f53dd376f690d6b640f8af67aa55de6e60c922ddd
 PATCH=0001-HID-uhid-optionally-report-EAGAIN-when-the-output-que.patch

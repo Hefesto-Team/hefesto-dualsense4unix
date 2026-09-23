@@ -96,8 +96,8 @@ echo 0 | sudo tee /sys/module/uhid/parameters/backpressure   # desliga
 
 ## Proveniência
 
-- `uhid.c` = **vanilla v7.1** + `patch/0001-*.patch`. Nada além do patch —
-  invariante verificável, e ela foi PROVADA em 22/09/2026:
+- `uhid.c` = **o de fábrica do stable v7.1.5** + `patch/0001-*.patch`. Nada
+  além do patch — invariante verificável:
 
   ```bash
   cp uhid.c /tmp/prova.c
@@ -105,20 +105,29 @@ echo 0 | sudo tee /sys/module/uhid/parameters/backpressure   # desliga
   sha256sum /tmp/prova.c   # == SHA256_VANILLA_C de patch/BASELINE
   ```
 
-- O vanilla se confere sem baixar o tarball de 234 MB do fonte do kernel:
+- O de fábrica se confere sem baixar o tarball de 234 MB do fonte do kernel —
+  na árvore STABLE, e com o tag da versão EXATA do kernel, nunca o do mainline:
 
   ```bash
-  curl -fsSL 'https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/drivers/hid/uhid.c?h=v7.1'
+  curl -fsSL 'https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/plain/drivers/hid/uhid.c?h=v7.1.5'
   ```
+
+  **Fato errado, substituído em 23/09/2026:** a base era o mainline v7.1, e o
+  de fábrica do 7.1.5 não é ele — o stable passou a usar o
+  `hid_safe_input_report` em `uhid_dev_input`/`uhid_dev_input2`. Quem prova
+  qual arquivo gerou o módulo de fábrica é o `srcversion` do `.ko`; os números
+  medidos estão no `patch/BASELINE`.
 
 - Código C e comentários do patch em **inglês**, como os vizinhos: a convenção
   do subsistema HID, visando o upstream.
 
 - **Só nos kernels conferidos** (`BUILD_EXCLUSIVE_KERNEL` do `dkms.conf`, a
-  mesma lista do `KERNELS_VALIDADOS` do `patch/BASELINE`). Este `uhid.c`
-  substitui o de fábrica; contra um kernel cujo `uhid.c` mudou, ele compilaria
-  limpo e devolveria o arquivo velho. Fora da lista o DKMS pula e o de fábrica
-  assume. O ritual para acrescentar um kernel está no `BASELINE`, e a régua é
+  mesma lista do `KERNELS_VALIDADOS` do `patch/BASELINE`): hoje, só o
+  7.1.5-76070105. Este `uhid.c` substitui o de fábrica; contra um kernel cujo
+  `uhid.c` é outro, ele compilaria limpo e devolveria o arquivo errado. Fora da
+  lista o DKMS pula e o de fábrica assume — o 7.0.11-76070011 inclusive, cujo
+  de fábrica é o do v7.1. O ritual para acrescentar um kernel está no
+  `BASELINE`, e a régua é
   `tests/unit/test_o_uhid_patchado_so_nos_kernels_conferidos.py`.
 
 ## Como reproduzir a medição
