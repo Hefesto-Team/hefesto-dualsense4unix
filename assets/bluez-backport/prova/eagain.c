@@ -222,7 +222,7 @@ static long long descartados(struct input_device *idev)
 static void relatar(const char *nome, struct input_device *idev)
 {
 	printf("cenario=%s destruido=%d linhas=%d respostas_de_erro=%d "
-		"descartados=%lld ultima=\"%s\"\n", nome, destruidos,
+		"descartados=%lld ultima_linha=\"%s\"\n", nome, destruidos,
 		linhas_de_log, respostas_de_erro, descartados(idev),
 		ultima_linha);
 }

@@ -179,7 +179,7 @@ ajustar_empacotamento() {
 
 # As entradas hefesto do changelog até a revisão pedida, por cima do do resolute.
 escrever_changelog() {
-    local rev="$1" changelog="${ARVORE}/debian/changelog" versao
+    local rev="$1" changelog="${ARVORE}/debian/changelog" versao_lida
     {
         awk -v rev="${rev}" '
             /^bluez \(/ { n = $2; sub(/.*~hefesto24\.04\./, "", n); sub(/\).*/, "", n); manter = (n + 0 <= rev + 0) }
@@ -188,9 +188,9 @@ escrever_changelog() {
         cat "${changelog}"
     } > "${changelog}.novo"
     mv -f "${changelog}.novo" "${changelog}"
-    versao="$(dpkg-parsechangelog -l "${changelog}" -S Version)"
-    [[ "${versao}" == "${ALVO}" ]] \
-        || morra "${RC_PATCH}" "o changelog montado diz ${versao}, o alvo é ${ALVO}"
+    versao_lida="$(dpkg-parsechangelog -l "${changelog}" -S Version)"
+    [[ "${versao_lida}" == "${ALVO}" ]] \
+        || morra "${RC_PATCH}" "o changelog montado diz ${versao_lida}, o alvo é ${ALVO}"
 }
 
 preparar() {
@@ -410,7 +410,7 @@ entregar() {
 }
 
 main() {
-    local modo="construir" forcar=0 sem_unit=0 alvo_mordida="" ultima
+    local modo="construir" forcar=0 sem_unit=0 alvo_mordida="" revisao_ultima
     REVISAO=""
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -444,11 +444,11 @@ main() {
 
     [[ "${EUID}" -ne 0 ]] || morra "${RC_USO}" "não rode como root: o HOME vira /root e o install não acha o cache"
     [[ -f "${BASELINE}" ]] || morra "${RC_USO}" "não achei ${BASELINE}"
-    ultima="$(ler REVISAO_ULTIMA)"
-    REVISAO="${REVISAO:-${ultima}}"
+    revisao_ultima="$(ler REVISAO_ULTIMA)"
+    REVISAO="${REVISAO:-${revisao_ultima}}"
     [[ "${REVISAO}" =~ ^[0-9]+$ ]] || morra "${RC_USO}" "revisão inválida: ${REVISAO}"
-    if [[ "${REVISAO}" != "${ultima}" && -z "${HEFESTO_BLUEZ_CACHE:-}" ]]; then
-        morra "${RC_USO}" "a revisão ${REVISAO} não é a última (${ultima}); ela só se reconstrói com HEFESTO_BLUEZ_CACHE apontando para FORA do cache que o install lê"
+    if [[ "${REVISAO}" != "${revisao_ultima}" && -z "${HEFESTO_BLUEZ_CACHE:-}" ]]; then
+        morra "${RC_USO}" "a revisão ${REVISAO} não é a última (${revisao_ultima}); ela só se reconstrói com HEFESTO_BLUEZ_CACHE apontando para FORA do cache que o install lê"
     fi
     PATCHES="$(ler "PATCHES_R${REVISAO}")"
     ALVO="$(ler VERSAO_BASE)~hefesto24.04.${REVISAO}"

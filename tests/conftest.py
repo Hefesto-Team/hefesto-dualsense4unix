@@ -1675,6 +1675,8 @@ def _sessionfinish_das_guardas(session: Any) -> None:
 _CONGELAR: tuple[str, ...] = (
     "scripts",
     "assets/bluetooth",
+    # o scripts/construir_bluez_backport.sh lê os patches e o BASELINE daqui
+    "assets/bluez-backport",
     "flatpak",
     "packaging/arch",
     "packaging/debian",
