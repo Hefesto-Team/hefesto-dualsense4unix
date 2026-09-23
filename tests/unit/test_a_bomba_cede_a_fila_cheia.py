@@ -27,7 +27,10 @@ O QUE ESTA RÉGUA COBRA:
 3. o aviso sai na BORDA: a 93,75 escritas por segundo, um por quadro seria a
    enxurrada de volta, no journal em vez de no rádio;
 4. o quadro cedido tem contador PRÓPRIO, separado de `escritas_recusadas` —
-   os dois números respondem perguntas diferentes.
+   os dois números respondem perguntas diferentes;
+5. ceder tem TETO (GOVERNADOR-DO-RADIO-01, 23/09/2026): dois segundos sem uma
+   escrita aceita é consumidor parado, e a ponte cai com `fila_parada` —
+   antes, ela cedia para sempre sobre o `bluetoothd` que não drena.
 """
 
 from __future__ import annotations
@@ -193,3 +196,81 @@ def test_o_laco_da_bomba_atravessa_o_afogamento() -> None:
     assert contagem.reports_montados >= 15, contagem
     assert contagem.quadros_cedidos_por_fila_cheia >= 10, contagem
     assert contagem.escritas_recusadas == 0
+
+
+# ---------------------------------------------------------------------------
+# 5. ceder tem TETO — GOVERNADOR-DO-RADIO-01, 23/09/2026
+# ---------------------------------------------------------------------------
+class _Relogio:
+    """O relógio da bomba, que anda um quadro (10,667 ms) por escrita."""
+
+    def __init__(self) -> None:
+        self.agora = 50.0
+
+    def __call__(self) -> float:
+        return self.agora
+
+
+def _bomba_com_relogio(escritor: Any, relogio: _Relogio) -> Any:
+    return af.BombaDeSomPeloRadio(
+        arranjo=af.ARRANJO_035,
+        fonte=lambda n: b"\x00" * n,
+        escritor=escritor,
+        seco=False,
+        common=af.common_de_audio(),
+        relogio=relogio,
+    )
+
+
+def test_o_escritor_que_so_devolve_eagain_derruba_a_ponte_em_dois_segundos() -> None:
+    """Consumidor parado não é congestão: a ponte cai no teto, com o motivo.
+
+    É a ressalva do estudo de 23/09 à RADIO-AFOGADO-02: a fila cheia cedia
+    PARA SEMPRE sobre o `bluetoothd` que não drena (a família 2B), e a ponte
+    ficava de pé, muda, sem ninguém dizer por quê.
+
+    MORDIDA: tire o ramo `elif agora - self._cedendo_desde > TETO_DE_CEDER_S`
+    e a bomba cede os mil quadros (10,7 s) sem nunca devolver `False`.
+    """
+    relogio = _Relogio()
+    bomba = _bomba_com_relogio(_EscritorQueEnche(folga=0), relogio)
+    inicio = relogio.agora
+    caiu_em: float | None = None
+    for _ in range(1000):
+        if not bomba.escrever(b"\x35" + b"\x00" * 333):
+            caiu_em = relogio.agora - inicio
+            break
+        relogio.agora += 512 / 48000
+    assert caiu_em is not None, "a bomba cedeu 10 s seguidos sem derrubar a ponte"
+    assert af.TETO_DE_CEDER_S < caiu_em <= af.TETO_DE_CEDER_S + 0.02, caiu_em
+    assert bomba.fila_parada is True
+    assert bomba.contagem.escritas_recusadas == 0, (
+        "a fila parada foi contada como o aparelho sumindo — são perguntas diferentes"
+    )
+
+
+def test_uma_escrita_aceita_no_meio_zera_o_relogio_do_teto() -> None:
+    """O teto é de ceder CONTÍNUO: engasgos separados por uma escrita aceita
+    são congestão, e a ponte segue. Sem isto, três engasgos curtos num minuto
+    derrubariam a ponte de um jogo que está tocando."""
+    relogio = _Relogio()
+
+    class _EngasgaEVolta:
+        def __init__(self) -> None:
+            self.n = 0
+
+        def __call__(self, report: bytes) -> int:
+            self.n += 1
+            # 1,5 s cheia, uma aceita, 1,5 s cheia de novo, e assim por diante.
+            if self.n % 142 == 0:
+                return len(report)
+            raise OSError(errno.EAGAIN, "cheia")
+
+    bomba = _bomba_com_relogio(_EngasgaEVolta(), relogio)
+    for _ in range(600):
+        assert bomba.escrever(b"\x35" + b"\x00" * 333) is True, (
+            "a ponte caiu com escritas aceitas no meio"
+        )
+        relogio.agora += 512 / 48000
+    assert bomba.fila_parada is False
+    assert bomba.contagem.escritas_aceitas_pelo_kernel == 4

@@ -1791,6 +1791,20 @@ FILA_CHEIA_DO_KERNEL: frozenset[int] = frozenset(
     {_errno.EAGAIN, _errno.EWOULDBLOCK, _errno.ENOBUFS}
 )
 
+#: O TETO DE CEDER — GOVERNADOR-DO-RADIO-01, 23/09/2026. Ceder por mais que
+#: isto, SEM UMA escrita aceita no meio, não é congestão: é consumidor parado
+#: (o `bluetoothd` que não drena o `/dev/uhid`, a família 2B). Sem o teto a
+#: bomba cedia PARA SEMPRE sobre um aparelho mudo, lendo parada como engasgo —
+#: a ressalva do estudo de 23/09 à RADIO-AFOGADO-02. Passado o teto, a ponte
+#: cai com o motivo dito, e a ponte sob demanda a religa quando houver som.
+#:
+#: O MESMO número vale para o governador (`daemon/subsystems/
+#: governador_do_radio.py`), que cede NA FONTE: a física é uma só.
+TETO_DE_CEDER_S = 2.0
+
+#: O motivo da ponte que caiu pelo teto — o que a tela e o diário dizem.
+MOTIVO_FILA_PARADA = "o Bluetooth não drena o adaptador deste controle"
+
 
 @dataclass
 class ContagemDaBomba:
@@ -1821,6 +1835,11 @@ class ContagemDaBomba:
     #: em ZERO com o `uhid` de fábrica, que descarta calado: o número só
     #: existe onde o kernel tem voz.
     quadros_cedidos_por_fila_cheia: int = 0
+    #: Quadros que o GOVERNADOR mandou ceder NA FONTE, antes da fila do
+    #: kernel, porque o adaptador não estava escoando (GOVERNADOR-DO-RADIO-01).
+    #: Separado do de cima: aquele é o kernel dizendo «cheia»; este é o
+    #: contador do adaptador dizendo «não saiu».
+    quadros_cedidos_ao_governador: int = 0
     bytes_escritos: int = 0
     segundos: float = 0.0
     #: Blocos hápticos montados, e quantos deles saíram MUDOS (todas as
@@ -1905,6 +1924,8 @@ class BombaDeSomPeloRadio:
         com_microfone: bool | Callable[[], bool] = False,
         fonte_haptica: Callable[[int], bytes] | None = None,
         conversor: Any = None,
+        vaga: Any = None,
+        relogio: Callable[[], float] | None = None,
     ) -> None:
         # O `common` É OBRIGATÓRIO PARA O CORPO QUE O PRESERVA — 08/09/2026.
         #
@@ -1943,6 +1964,18 @@ class BombaDeSomPeloRadio:
         #: o aviso sair na BORDA — a 93,75 escritas por segundo, um aviso por
         #: quadro seria a enxurrada de volta, no journal em vez de no rádio.
         self._cedendo = False
+        #: Desde quando a fila cheia cede SEM uma escrita aceita no meio — o
+        #: relógio do :data:`TETO_DE_CEDER_S`. `None` fora de uma rajada.
+        self._cedendo_desde: float | None = None
+        self._relogio = relogio or time.monotonic
+        #: A VAGA do governador (`daemon/subsystems/governador_do_radio.Vaga`),
+        #: quando a ponte subiu por ele. Ela diz se é para ceder NA FONTE, e
+        #: conta as escritas aceitas — o lado «nosso» do déficit. `None` = sem
+        #: governador (o ensaio de bancada), e a bomba escreve como sempre.
+        self.vaga = vaga
+        #: A ponte caiu pelo teto: o adaptador parou de drenar. Quem lê é a
+        #: ponte, para dizer o motivo certo em vez de «escrita recusada».
+        self.fila_parada = False
         self._seq = 0
         #: QUADROS de áudio já mandados — não reports. O `[10]` do `0x35` conta
         #: quadros, e um arranjo de dois quadros avança de dois em dois.
@@ -2143,9 +2176,27 @@ class BombaDeSomPeloRadio:
         22/09/2026.** O valor devolvido responde *"a ponte segue?"*, nunca *"o
         byte chegou?"*, e a diferença passou a importar no dia em que o kernel
         ganhou voz: ver :data:`FILA_CHEIA_DO_KERNEL`.
+
+        **MAS CEDER TEM TETO — GOVERNADOR-DO-RADIO-01, 23/09/2026.** Ver
+        :data:`TETO_DE_CEDER_S`: passado ele sem uma escrita aceita, o `False`
+        volta, e a ponte cai com :attr:`fila_parada` ligado. E a :attr:`vaga`
+        do governador fala ANTES do kernel: com o adaptador sem escoar, o
+        quadro é cedido na fonte e nem chega à fila.
         """
         if self.seco or self.escritor is None:
             return True
+        vaga = self.vaga
+        if vaga is not None:
+            if vaga.derrubar:
+                # O governador mediu o adaptador parado por mais que o teto:
+                # consumidor parado, não congestão. A ponte cai aqui.
+                self.fila_parada = True
+                return False
+            if vaga.cedendo:
+                # O adaptador não está escoando o que já foi escrito: o quadro
+                # é cedido NA FONTE, antes de encher a fila do kernel.
+                self.contagem.quadros_cedidos_ao_governador += 1
+                return True
         try:
             escritos = int(self.escritor(report))
         except OSError as erro:
@@ -2156,21 +2207,40 @@ class BombaDeSomPeloRadio:
                 # volta. E ceder não custa ar nenhum — a escrita recusada não
                 # põe um byte no rádio, que é justamente o freio que faltava.
                 self.contagem.quadros_cedidos_por_fila_cheia += 1
-                if not self._cedendo:
+                agora = self._relogio()
+                if not self._cedendo or self._cedendo_desde is None:
                     self._cedendo = True
+                    self._cedendo_desde = agora
                     logger.info("som_radio_cedendo_a_fila_cheia", erro=str(erro))
+                elif agora - self._cedendo_desde > TETO_DE_CEDER_S:
+                    # O TETO: dois segundos sem uma escrita aceita não é
+                    # engasgo, é o `bluetoothd` sem drenar. Ceder para sempre
+                    # deixaria a ponte muda de pé — derruba e diz por quê.
+                    self.fila_parada = True
+                    cedendo_s = round(agora - self._cedendo_desde, 3)
+                    logger.warning(
+                        "som_radio_fila_parada",
+                        cedendo_s=cedendo_s,
+                        cedidos=self.contagem.quadros_cedidos_por_fila_cheia,
+                    )
+                    if vaga is not None:
+                        vaga.fila_parada(cedendo_s)
+                    return False
                 return True
             self.contagem.escritas_recusadas += 1
             logger.info("som_escrita_recusada", erro=str(erro))
             return False
         if self._cedendo:
             self._cedendo = False
+            self._cedendo_desde = None
             logger.info(
                 "som_radio_voltou_a_caber",
                 cedidos=self.contagem.quadros_cedidos_por_fila_cheia,
             )
         self.contagem.escritas_aceitas_pelo_kernel += 1
         self.contagem.bytes_escritos += escritos
+        if vaga is not None:
+            vaga.contar_escrita()
         return True
 
     def rodar(
@@ -2866,8 +2936,14 @@ class PonteDeSomPorRadio:
         gravador: Any | None = None,
         fonte_de_haptica: Callable[[int], bytes] | None = None,
         gravador_da_haptica: Any | None = None,
+        vaga: Any = None,
     ) -> None:
         self.uniq = uniq
+        #: A VAGA que o governador deu a esta ponte (GOVERNADOR-DO-RADIO-01).
+        #: A ponte diz a ele quando SUBIU e quando DESCEU — é o que o diário
+        #: conta por adaptador —, e a bomba a consulta a cada quadro. `None` =
+        #: sem governador, como no ensaio de bancada.
+        self._vaga = vaga
         self._abrir_hidraw = abrir_hidraw
         self._fonte = fonte_de_pcm
         #: A fonte da HÁPTICA, quando este controle tem endpoint publicado. Ela
@@ -2962,6 +3038,7 @@ class PonteDeSomPorRadio:
             seco=self._seco,
             com_microfone=self.com_microfone,
             fonte_haptica=self._fonte_da_haptica,
+            vaga=self._vaga,
         )
         # O fd e o sinal VÃO COM A THREAD, e é isso que impede a corrida velha
         # de escrever (ou de fechar) o descritor da corrida nova.
@@ -2973,6 +3050,10 @@ class PonteDeSomPorRadio:
         )
         self._thread.start()
         self.motivo = ""
+        if self._vaga is not None:
+            self._vaga.subiu(
+                "vibracao" if self.arranjo is ARRANJO_HAPTICA_032 else "som"
+            )
         logger.info(
             "som_radio_ponte_de_pe",
             uniq=self.uniq,
@@ -2991,15 +3072,27 @@ class PonteDeSomPorRadio:
         bomba = self._bomba
         if bomba is None:
             os.close(fd)
+            self._soltar_a_vaga("a ponte não montou a bomba")
             return
+        por_que = "a ponte desceu"
         try:
             while not parar.is_set():
                 report = bomba.um_report()
                 if report is None:
                     logger.info("som_radio_fonte_secou", uniq=self.uniq)
+                    por_que = "a fonte do som secou"
                     break
                 if report and not bomba.escrever(report):
-                    logger.info("som_radio_escrita_recusada", uniq=self.uniq)
+                    if bomba.fila_parada:
+                        # O TETO DE CEDER (GOVERNADOR-DO-RADIO-01): não é o
+                        # aparelho sumindo, é o adaptador sem drenar. O motivo
+                        # certo fica na ponte, e a ponte sob demanda a religa.
+                        self.motivo = MOTIVO_FILA_PARADA
+                        por_que = MOTIVO_FILA_PARADA
+                        logger.info("som_radio_ponte_caiu_na_fila_parada", uniq=self.uniq)
+                    else:
+                        por_que = "a escrita foi recusada"
+                        logger.info("som_radio_escrita_recusada", uniq=self.uniq)
                     break
         finally:
             # O FD É DESTA CORRIDA, e ela fecha o DELA. Fechar `self._fd` aqui
@@ -3009,6 +3102,35 @@ class PonteDeSomPorRadio:
                 os.close(fd)
             except OSError:
                 logger.debug("som_radio_fd_ja_fechado", uniq=self.uniq)
+            # A VAGA SAI COM A CORRIDA, e só com ela: enquanto a thread
+            # respira, a ponte ainda pode pôr bytes no ar.
+            self._soltar_a_vaga(por_que)
+
+    def _soltar_a_vaga(self, por_que: str) -> None:
+        """Devolve a vaga ao governador. Idempotente, nunca levanta."""
+        vaga = self._vaga
+        if vaga is None:
+            return
+        try:
+            vaga.soltar(por_que)
+        except Exception:  # o diário nunca derruba a ponte
+            logger.debug("som_radio_vaga_nao_saiu", uniq=self.uniq, exc_info=True)
+
+    def terminou_sozinha(self) -> bool:
+        """A corrida acabou SEM que alguém mandasse descer?
+
+        A fonte secou, a escrita foi recusada, ou o teto de ceder derrubou a
+        ponte (:data:`MOTIVO_FILA_PARADA`). O subsystem recolhe a ponte que
+        terminou sozinha para a ponte sob demanda poder subir de novo, em vez
+        de guardar para sempre uma ponte morta no lugar da viva.
+        """
+        thread = self._thread
+        parar = self._parar
+        return (
+            thread is not None
+            and not thread.is_alive()
+            and (parar is None or not parar.is_set())
+        )
 
     def descer(self, *, esperar_s: float = 1.0) -> bool:
         """Para o laço e espera a thread juntar. Idempotente.
@@ -3068,6 +3190,9 @@ class PonteDeSomPorRadio:
             )
 
         if thread is None:
+            # Nunca correu: a vaga, se havia, sai aqui — a corrida que a
+            # soltaria não existe.
+            self._soltar_a_vaga("a ponte não subiu")
             return True
         if thread.is_alive() and gravador is None:
             thread.join(timeout=esperar_s)
@@ -3673,6 +3798,7 @@ __all__ = [
     "HEX_DO_SUFIXO",
     "INTERVALO_DE_ENVIO_035",
     "LATENCIA_DO_GRAVADOR_MS",
+    "MOTIVO_FILA_PARADA",
     "MOTIVO_NO_SEM_ASSENTO",
     "MOTIVO_NO_SEM_PLACA_NO_CABO",
     "MOTIVO_NO_SEM_PONTE_NO_RADIO",
@@ -3688,6 +3814,7 @@ __all__ = [
     "PRIORIDADE_SESSAO_DO_SOM",
     "TAMANHO_DO_DEGRAU",
     "TAXA_DO_ENCODER",
+    "TETO_DE_CEDER_S",
     "TRANSPORTE_CABO",
     "TRANSPORTE_RADIO",
     "VOLTA_DA_SEQUENCIA",
