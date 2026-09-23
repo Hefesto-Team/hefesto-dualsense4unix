@@ -85,6 +85,16 @@ def test_a_palavra_nao_soma_entrada() -> None:
     assert a.rotulo == rm.PALAVRA_FOLGADA
 
 
+def test_controle_desconectado_nao_ocupa_ponte() -> None:
+    controles = [
+        _controle(1, adaptador=ADAPTADOR_A, ponte_do_radio="som"),
+        _controle(2, adaptador=ADAPTADOR_A, ponte_do_radio="som", connected=False),
+    ]
+    a = rm.orcamento_por_adaptador(controles, listar=_sem_sysfs)[ADAPTADOR_A]
+    assert [c.uniq for c in a.controles] == ["aabbcc000001"]
+    assert len(a.pontes) == 1 and a.rotulo == rm.PALAVRA_FOLGADA
+
+
 def test_modo_de_ponte_desconhecido_nao_e_ponte() -> None:
     controles = [_controle(1, adaptador=ADAPTADOR_A, ponte_do_radio="mic")]
     a = rm.orcamento_por_adaptador(controles, listar=_sem_sysfs)[ADAPTADOR_A]
