@@ -48,8 +48,16 @@ UNIQ_1 = "aabbcc000001"
 COR_DELA = (255, 255, 0)
 PADRAO_DELA = (True, False, False, False, False)
 
-#: O que o JOGO pinta: a paleta de jogador do SDL, a 0x40.
-COR_DO_JOGO = (0, 64, 0)
+#: O que o JOGO pinta: uma cor de GAMEPLAY, escolhida pelo jogo.
+#:
+#: STEAM-NO-FISICO-01 (23/09/2026): até ali esta régua usava a paleta de
+#: jogador do SDL, `(0, 64, 0)`, que foi o caso medido no Sackboy. Desde a
+#: decisão dela de 23/09 (*"Hefesto manda e controla sempre"*) aquela cor é
+#: NÚMERO, e o número é do Hefesto com ou sem perfil
+#: (`bp.numeracao_do_jogo`) — ela nem chega à peneira do perfil. A regra do
+#: perfil continua valendo para a cor que o jogo ESCOLHE, e é com ela que esta
+#: régua mede. O número do jogo (`PADRAO_DO_JOGO`) é recusado sempre.
+COR_DO_JOGO = (200, 60, 0)
 PADRAO_DO_JOGO = (True, False, True, False, True)
 
 #: Os onze bytes (modo + 10 parâmetros) de um trigger effect do jogo.
@@ -178,8 +186,13 @@ class TestOQueNaoEDelaContinuaSendoDoJogo:
             assert ctl._merged_desired_for_key(MAC_1).led == COR_DO_JOGO
 
     def test_a_defesa_e_por_campo_o_resto_passa(self) -> None:
-        """Ela escolheu a cor e não o número: o número continua sendo do jogo."""
-        ctl, no, _ = _controle(campos_dela={"led": COR_DELA})
+        """Ela escolheu o número e não a cor: a cor de gameplay continua do jogo.
+
+        STEAM-NO-FISICO-01 inverteu os papéis desta régua: até 23/09 ela
+        escolhia a cor e o NÚMERO passava; desde a decisão dela o número do
+        jogo nunca passa, então o campo que prova «por campo» é a cor.
+        """
+        ctl, no, _ = _controle(campos_dela={"player_leds": PADRAO_DELA})
 
         ctl.set_game_output_for(
             MAC_1, led=COR_DO_JOGO, player_leds=PADRAO_DO_JOGO
@@ -187,10 +200,10 @@ class TestOQueNaoEDelaContinuaSendoDoJogo:
 
         with ctl._io_lock:
             resolvido = ctl._merged_desired_for_key(MAC_1)
-        assert resolvido.led == COR_DELA
-        assert resolvido.player_leds == PADRAO_DO_JOGO
-        assert no.player_calls == [PADRAO_DO_JOGO]
-        assert COR_DO_JOGO not in no.rgb_calls
+        assert resolvido.led == COR_DO_JOGO
+        assert resolvido.player_leds == PADRAO_DELA
+        assert no.rgb_calls == [COR_DO_JOGO]
+        assert PADRAO_DO_JOGO not in no.player_calls
 
     def test_a_camada_do_jogo_guarda_so_o_que_passou(self) -> None:
         ctl, _no, _ = _controle(campos_dela={"led": COR_DELA})
@@ -199,9 +212,9 @@ class TestOQueNaoEDelaContinuaSendoDoJogo:
             MAC_1, led=COR_DO_JOGO, player_leds=PADRAO_DO_JOGO
         )
 
-        camada = ctl._game_output_by_uniq[UNIQ_1]
-        assert camada.led is None
-        assert camada.player_leds == PADRAO_DO_JOGO
+        # Nada passou: a cor era dela e o número é do Hefesto — a camada nem
+        # nasce (STEAM-NO-FISICO-01).
+        assert UNIQ_1 not in ctl._game_output_by_uniq
 
 
 class TestOGatilhoDelaNaoCede:
