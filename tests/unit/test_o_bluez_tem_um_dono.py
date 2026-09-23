@@ -27,6 +27,7 @@ import contextlib
 import io
 import os
 import re
+import socket
 import threading
 import time
 from collections.abc import Iterator
@@ -341,6 +342,31 @@ def test_o_busctl_so_escreve_de_dentro_da_borda(
     assert anotado.read_text(encoding="utf-8").split() == [
         "call", bd.SERVICO, no, bd.APARELHO, "Disconnect"
     ]
+
+
+@pytest.mark.skipif(not bm.ha_dbus_daemon(), reason="sem Gio nesta máquina")
+def test_o_barramento_mudo_nao_deixa_fio_pendurado(tmp_path: Path) -> None:
+    """Um barramento que aceita a conexão e não responde o aperto de mão.
+
+    Achado na conferência: o ``abrir`` desistia no prazo e o fio ficava preso
+    para sempre — e o ``dono()`` tenta de novo a cada minuto, um fio a mais por
+    tentativa. O soquete é particular: nada aqui toca o barramento dela.
+
+    MORDIDA: tire o ``self._cancelar.cancel()`` do ``abrir`` — o fio continua
+    vivo depois do prazo.
+    """
+    mudo = tmp_path / "mudo"
+    servidor = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    servidor.bind(str(mudo))
+    servidor.listen(1)
+    try:
+        barramento = bd.BarramentoGio(f"unix:path={mudo}")
+        assert barramento.abrir(espera=0.3) is False
+        assert barramento._fio is not None
+        barramento._fio.join(timeout=3)
+        assert not barramento._fio.is_alive(), "o fio ficou preso no barramento mudo"
+    finally:
+        servidor.close()
 
 
 def test_sob_a_suite_o_dono_do_processo_nunca_e_o_vivo_do_sistema() -> None:
