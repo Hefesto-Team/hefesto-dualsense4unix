@@ -481,7 +481,9 @@ def _mesa_sysfs(raiz: Path, adaptadores: dict[str, str]) -> Path:
     return raiz
 
 
-def _reiniciar(tmp_path: Path, sysfs: Path, *args: str, **extra: str) -> subprocess.CompletedProcess[str]:
+def _reiniciar(
+    tmp_path: Path, sysfs: Path, *args: str, **extra: str
+) -> subprocess.CompletedProcess[str]:
     journal = tmp_path / "journal.txt"
     if not journal.exists():
         journal.write_text(LACO_DE_13_09, encoding="utf-8")
@@ -584,3 +586,110 @@ def test_os_ganchos_do_reinicio_morrem_sob_sudo(tmp_path: Path) -> None:
     assert "requer root" in resultado.stderr
     assert _autorizado(sysfs, "3-1.1.2") == "semente"
     assert not (tmp_path / "diario-root.jsonl").exists()
+
+
+# --- o watchdog root na mesma trava e no mesmo diário ------------------------------
+
+WATCHDOG = RAIZ / "scripts" / "bt_health_watchdog.sh"
+
+
+def _watchdog(tmp_path: Path, *args: str, prazo: str = "5") -> subprocess.Popen[str]:
+    env = {
+        **os.environ,
+        "HEFESTO_BT_SRC": str(tmp_path / "bluetooth"),
+        "HEFESTO_BT_STAMP_DIR": str(tmp_path / "stamps"),
+        "HEFESTO_BT_LOG_DEST": "none",
+        "HEFESTO_RADIO_TRAVA": str(tmp_path / "radio.lock"),
+        "HEFESTO_RADIO_TRAVA_PRAZO_S": prazo,
+        "HEFESTO_RADIO_DIARIO_ROOT": str(tmp_path / "diario-root.jsonl"),
+    }
+    return subprocess.Popen(
+        ["bash", str(WATCHDOG), *args],
+        env=env,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+
+def test_o_watchdog_espera_a_trava_que_o_daemon_segura(tmp_path: Path) -> None:
+    """O shell root e o Python dela disputam o MESMO arquivo, e a espera vai
+    para o diário do root com a palavra que o leitor procura."""
+    primeiro = _motor(tmp_path, "central", 1.0)
+    try:
+        _espera_a_entrada(tmp_path / "radio-diario.jsonl", "central", "Connect")
+        watchdog = _watchdog(tmp_path, "--so-a-trava", "0")
+        saida = watchdog.communicate(timeout=30)
+    finally:
+        primeiro.communicate(timeout=30)
+    assert watchdog.returncode == 0, saida
+    [espera] = diario.ler(caminhos=[tmp_path / "diario-root.jsonl"])
+    assert espera["quem"] == "bt-watchdog"
+    assert espera["o_que"] == diario.ESPEROU_A_TRAVA
+    assert espera["antes"]["dono"].startswith("central ")
+    assert espera["depois"]["espera_s"] > 0.3
+    assert diario.dono_da_trava(tmp_path / "radio.lock").startswith("bt-watchdog ")
+
+
+def test_o_watchdog_pula_o_tique_quando_nao_consegue_a_trava(tmp_path: Path) -> None:
+    primeiro = _motor(tmp_path, "central", 4.0)
+    try:
+        _espera_a_entrada(tmp_path / "radio-diario.jsonl", "central", "Connect")
+        watchdog = _watchdog(tmp_path, "--so-a-trava", "0", prazo="1")
+        watchdog.communicate(timeout=30)
+    finally:
+        primeiro.communicate(timeout=30)
+    assert watchdog.returncode == 3
+    [desistencia] = diario.ler(caminhos=[tmp_path / "diario-root.jsonl"])
+    assert desistencia["o_que"] == diario.DESISTIU_DA_TRAVA
+
+
+def test_o_daemon_espera_a_trava_que_o_watchdog_segura(tmp_path: Path) -> None:
+    watchdog = _watchdog(tmp_path, "--so-a-trava", "1")
+    try:
+        fim = time.monotonic() + 15
+        while time.monotonic() < fim:
+            if diario.dono_da_trava(tmp_path / "radio.lock").startswith("bt-watchdog"):
+                break
+            time.sleep(0.05)
+        with diario.trava_do_radio(
+            "vigia-de-zumbis",
+            caminho=tmp_path / "radio.lock",
+            diario=tmp_path / "dela.jsonl",
+            prazo_s=10,
+        ) as espera:
+            assert espera > 0.3
+    finally:
+        watchdog.communicate(timeout=30)
+    [entrada] = diario.ler(caminhos=[tmp_path / "dela.jsonl"])
+    assert entrada["antes"]["dono"].startswith("bt-watchdog ")
+
+
+def _bloco_do_diario(texto: str) -> str:
+    return texto[texto.index("#: Texto -> string JSON.") : texto.index("_diario_escrever() {")] + (
+        texto[texto.index("_diario_escrever() {") :].split("\n}\n", 1)[0]
+    )
+
+
+def test_os_dois_escritores_root_do_diario_sao_a_mesma_copia() -> None:
+    """Sem ``source`` de propósito — então a igualdade tem de ser vigiada."""
+    ponte = _bloco_do_diario(PONTE.read_text(encoding="utf-8"))
+    watchdog = _bloco_do_diario(WATCHDOG.read_text(encoding="utf-8"))
+    assert ponte == watchdog, "as duas cópias do escritor root do diário divergiram"
+
+
+def test_a_linha_do_shell_com_aspas_e_acento_o_python_le(tmp_path: Path) -> None:
+    alvo = tmp_path / "root.jsonl"
+    roteiro = (
+        f'source <(sed -n "/^_json_texto() {{/,/^}}/p; /^_diario_escrever() {{/,/^}}/p" '
+        f'"{PONTE}")\n'
+        f'_diario_escrever "{alvo}" "bt-ponte" "reiniciou o adaptador" '
+        '"três \\"aspas\\" e uma \\\\ barra" "{\\"hci\\": \\"hci0\\"}" null '
+        '"\\"porta\\": \\"3-1.1.2\\""\n'
+    )
+    subprocess.run(["bash", "-c", roteiro], check=True, timeout=30)
+    [entrada] = diario.ler(caminhos=[alvo])
+    assert entrada["por_que"] == 'três "aspas" e uma \\ barra'
+    assert entrada["antes"] == {"hci": "hci0"}
+    assert entrada["depois"] is None
+    assert entrada["porta"] == "3-1.1.2"
