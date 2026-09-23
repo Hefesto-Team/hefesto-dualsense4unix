@@ -68,7 +68,7 @@
 # como root, pelo systemd e pelo NetworkManager), e o script lê o sysfs e abre
 # /dev/bus/usb direto. Sem ganchos, a suíte não conseguiria pôr dublês de
 # `wpa_cli`, `ping` e `ip` na frente — e leria o dongle DE VERDADE de quem roda.
-# Os quatro são resolvidos na CHAMADA:
+# Os cinco são resolvidos na CHAMADA:
 #   HEFESTO_WIFI_BIN      diretório de dublês, posto na FRENTE do PATH fixo;
 #   HEFESTO_WIFI_SYSFS    raiz do sysfs (default /sys);
 #   HEFESTO_WIFI_DEV      raiz do /dev (default /dev) — onde mora o nó do reset;
@@ -213,7 +213,7 @@ EOF
 }
 
 vigiar() {
-  local seco="$1" ifc gw falhas n ultimo agora base saida
+  local seco="$1" ifc gw falhas n reiniciou_em agora base saida
   mkdir -p "$ESTADO" 2>/dev/null
   for ifc in $(wifi_usb); do
     base="$ESTADO/$ifc"
@@ -246,10 +246,10 @@ vigiar() {
       echo "$ifc: $n reinícios seguidos sem cura — parei. Tire e ponha o dongle."
       continue
     fi
-    ultimo="$(ler_numero "$base.ultimo")"
+    reiniciou_em="$(ler_numero "$base.reiniciou_em")"
     agora="$(date +%s)"
-    if [ $(( agora - ultimo )) -lt "$INTERVALO_MINIMO_S" ]; then
-      echo "$ifc: o último reinício foi há $(( agora - ultimo )) s; espero dar $INTERVALO_MINIMO_S s"
+    if [ $(( agora - reiniciou_em )) -lt "$INTERVALO_MINIMO_S" ]; then
+      echo "$ifc: o último reinício foi há $(( agora - reiniciou_em )) s; espero dar $INTERVALO_MINIMO_S s"
       continue
     fi
     if [ "$seco" = 1 ]; then
@@ -258,7 +258,7 @@ vigiar() {
     fi
     reiniciar_o_dongle "$ifc"
     echo $(( n + 1 )) > "$base.reinicios"
-    echo "$agora" > "$base.ultimo"
+    echo "$agora" > "$base.reiniciou_em"
     echo 0 > "$base.falhas"
   done
 }
