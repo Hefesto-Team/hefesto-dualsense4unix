@@ -514,9 +514,24 @@ verbo_esquecer() {
     #: O cache SDP sai de TODOS os adaptadores, como no §6.3 do guia: o dongue
     #: de DESTINO também pode ter uma entrada velha desse controle, de um scan
     #: anterior, e é ela que faria o pareamento novo nascer com SDP vazio.
+    #:
+    #: MENOS O QUE MORA AO LADO DE UM BOND VIVO (MOVER-UM-POR-VEZ-01, 23/09/2026).
+    #: O mover de agora é parear no destino → conferir → esquecer na origem, e
+    #: quando este verbo roda o controle JÁ TEM bond novo no destino — com o
+    #: registro SDP daquele pareamento no cache do destino. É desse registro que
+    #: o `bluetoothd` tira o descritor HID ao reiniciar: apagá-lo seria fazer, de
+    #: propósito, o SDP-CACHE-01 que este verbo existe para curar. Cache ao lado
+    #: de bond com chave é do bond; cache sem bond é sobra de scan, e sai.
     for pasta_adap in "${LIB}"/*; do
         [[ -d "${pasta_adap}" ]] || continue
         [[ "${pasta_adap##*/}" =~ ${_MAC_FORMA} ]] || continue
+        #: O adaptador de ORIGEM nunca entra na exceção: o bond dele é o que este
+        #: verbo acabou de tirar (ou, a seco, tiraria).
+        if [[ "${pasta_adap##*/}" != "${adaptador}" ]] \
+            && _bond_com_chave "${pasta_adap}/${controle}"; then
+            _registrar "cache SDP de ${controle} mantido em ${pasta_adap##*/}: é do bond que mora lá"
+            continue
+        fi
         _apagar "${pasta_adap}/cache/${controle}" "cache SDP"
     done
     _enterrar "${adaptador}" "${controle}"
@@ -528,6 +543,15 @@ verbo_esquecer() {
             "\"adaptador\": $(_json_texto "${adaptador}"), \"controle\": $(_json_texto "${controle}"), \"pedido_por\": $(_json_texto "${SUDO_USER:-}")"
     fi
     return 0
+}
+
+#: Esta pasta é um bond VIVO — tem `info` com chave de pareamento? A mesma
+#: pergunta que o `bonds` faz para a coluna com-chave/sem-chave: `[LinkKey]` é o
+#: bond do BR/EDR (o DualSense), `[LongTermKey]` o do LE.
+_bond_com_chave() {
+    local pasta="$1"
+    [[ -f "${pasta}/info" && ! -L "${pasta}/info" ]] || return 1
+    grep -qE '^\[(LinkKey|LongTermKey)\]' "${pasta}/info" 2>/dev/null
 }
 
 #: A LÁPIDE (O-DIARIO-DO-RADIO-01). Quem esquece um bond de propósito escreve
