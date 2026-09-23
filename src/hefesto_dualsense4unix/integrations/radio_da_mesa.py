@@ -19,14 +19,13 @@ segundo** para tudo que aquele rádio carrega. Nenhum número deste parágrafo f
 medido aqui, e é por isso que a tela carrega o selo ``derivado da
 especificação``: ele não é enfeite, é a procedência.
 
-Falta a metade de baixo: **quantas fatias um relatório HID de 78 B consome não
-está escrito em lugar nenhum desta árvore** — nem no protocolo, nem nos ensaios
-(grep conferido em 22/08/2026 por ``625``, ``slot`` e "fatia de tempo" em
-``src/``, ``scripts/``, ``docs/protocol/`` e ``docs/data/``). A decisão R1 do PO
-fixou **um relatório = uma fatia**, que é a hipótese mais conservadora e a única
-que a palavra "derivado da especificação" consegue defender sozinha. O número
-real depende do tipo de pacote que o link negociou (2-DH1, 2-DH3), e o produto
-não observa isso.
+A metade de baixo — quantas fatias um relatório de 78 B consome — **foi MEDIDA
+em 23/09/2026** (``integrations/ar_do_adaptador.py``, ``HCIGETDEVINFO``, sem
+root): 87 B por pacote ACL recebido, que é o ``0x31`` de 83 B no ar mais 4 do
+cabeçalho HCI — cabe num 3-DH1, uma fatia, e o controle só fala na fatia
+seguinte a um POLL do mestre. **Cada relatório de entrada custa DUAS fatias**
+(:data:`FATIAS_POR_RELATORIO_DE_ENTRADA`). 752,8 pacotes/s vezes 4 fatias passaria
+de 1.600, o que é impossível — é o que fecha o 2.
 
 **A segunda metade é MEDIÇÃO, e é do projeto.** O A/B de 25/07/2026, mesmo
 controle, três janelas de 3 s
@@ -85,6 +84,11 @@ Duas consequências de projeto saem daí, e as duas estão no código:
 1. o medidor usa o **nominal do A/B**, nunca uma medição ao vivo. Uma barra
    alimentada pelo envelope de 157,8 a 402,9 Hz oscilaria 2,5 vezes sem ninguém
    ter mexido em nada, e ensinaria a desconfiar dela;
+
+   NOTA DATADA — 23/09/2026 (AR-MEDIDO-01): vale só para a vista aditiva
+   velha. A R10 dela manda Hz REAIS, e o orçamento de agora
+   (:func:`orcamento_por_adaptador`) os lê do nó de movimento, contado pelo
+   carimbo do kernel — não pelo laço de leitura que a nota de 23/08 acusou.
 2. o rótulo é **uma de três palavras sobre ocupação** e não aceita frase de
    causa. A tela pode dizer *"a mesa está cheia"*, que é aritmética de
    especificação. Não pode dizer *"por isso seu controle está ruim"*, porque a
@@ -110,9 +114,20 @@ from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 #: ESPECIFICAÇÃO, não medição desta máquina; ver o cabeçalho.
 SLOTS_POR_SEGUNDO = 1600
 
-#: Quantas fatias um relatório consome. Decisão R1 do PO (22/08/2026): a
-#: hipótese conservadora, porque a metade de baixo da conta não existe na
-#: árvore. Mudar este número muda a tela inteira, e só com medição por trás.
+#: Quantas fatias um relatório consome NA VISTA ADITIVA VELHA — decisão R1 do
+#: PO (22/08/2026).
+#:
+#: NOTA DATADA — 23/09/2026 (AR-MEDIDO-01): o 1 não é o lado conservador, é o
+#: OTIMISTA; o medido é 2 (:data:`FATIAS_POR_RELATORIO_DE_ENTRADA`). E a conta
+#: que o usa caducou para o rádio: a entrada é elástica e não entra em
+#: orçamento nenhum (R10, D-CONTA-ADITIVA-DO-RADIO) — o orçamento de agora é
+#: :func:`orcamento_por_adaptador`. O 1 fica porque o mockup APROVADO do
+#: arranjo (``mockup/mapa-das-portas.html``, ``CUSTO_SEM_MIC = 260.4``) e o
+#: motor que o espelha (``arranjo_da_mesa``) fazem ``HZ * SLOTS_POR_RELATORIO``
+#: e o portão da paridade reprova a divergência: trocar para 2 aqui mudaria o
+#: desenho dela sem o OK dela. Sai quando o último leitor da vista aditiva
+#: migrar (MOVER-UM-POR-VEZ-01 no ``plano_de_radio``, TRANSPLANTE-DA-SECAO-01
+#: na aba 08).
 SLOTS_POR_RELATORIO = 1
 
 #: A chave da linha de ``docs/data/mapa-controles.csv`` de onde as três
@@ -397,6 +412,196 @@ def ocupacao_por_adaptador(
     }
 
 
+# ============================================================================
+# O AR, DESDE 23/09/2026 — AR-MEDIDO-01, decisões R10 e R11 dela
+# ============================================================================
+#
+# A conta aditiva acima somava a ENTRADA de cada controle contra 1.600 fatias.
+# O estudo de 23/09 mediu que a entrada é ELÁSTICA: um controle sozinho num
+# adaptador dá ~750 relatórios/s, dois dividindo dão ~400 cada — ela ocupa o
+# ar que sobra, e somá-la como demanda fixa é o erro. O que transborda um
+# adaptador são as saídas de RITMO FIXO: as pontes de som (0x35) e de
+# vibração (0x32), 93,75 relatórios/s cada, que não cedem.
+#
+# Por isso o orçamento de agora conta PONTES contra :data:`N_MAX_PONTES`, e os
+# Hz que a tela mostra são MEDIDOS — o nó de movimento de cada controle e o
+# contador do adaptador (``ar_do_adaptador``). Nada somado, nada estimado
+# (D-CONTA-ADITIVA-DO-RADIO, 25/08). As procedências, uma por linha, estão em
+# ``docs/data/orcamento-de-ar.csv``, e a régua
+# ``test_o_orcamento_conta_a_ponte.py`` reprova quando o CSV e estas constantes
+# divergirem.
+
+#: Quantas pontes um adaptador comporta. MEDIDO: duas viveram 63 min no mesmo
+#: adaptador; a terceira derrubou em 11, 15 e 89 s (22/09/2026). Provisório até
+#: a bancada dela medir o k (a tabela «O QUE É DELA» do índice da leva).
+N_MAX_PONTES = 2
+
+#: Relatórios por segundo de UMA ponte — um quadro Opus de 10 ms e mais um
+#: pedaço, o ritmo da ``BombaDeSomPeloRadio``. Vale para o 0x35 e para o 0x32.
+HZ_DA_PONTE = 93.75
+
+#: Fatias por relatório de ponte (o k). PROVISÓRIO: o 0x35 de 339 B no ar cabe
+#: em 3 fatias (2-DH3/3-DH3) ou em 5 (DH5), e quem escolhe é o firmware do
+#: adaptador — não se observa por HCI. A bancada mede por deslocamento.
+FATIAS_DA_PONTE = 3
+
+#: Fatias por relatório de ENTRADA: 2, medido — ver o cabeçalho deste módulo.
+#: A entrada é elástica e não entra no orçamento; o número serve para ler o
+#: contador do adaptador em fração do ar (``acl_rx/s * 2 / 1.600``).
+FATIAS_POR_RELATORIO_DE_ENTRADA = 2
+
+#: Os dois modos de ponte que ocupam o ar em ritmo fixo.
+MODOS_DA_PONTE = frozenset({"som", "haptica"})
+
+
+def palavra_das_pontes(pontes: int, n_max: int = N_MAX_PONTES) -> str:
+    """As três palavras de sempre, agora lendo PONTES contra ``n_max``.
+
+    Abaixo do limite, Folgada; no limite, Apertada; além dele, Cheia — que é
+    reversível (basta mover um controle) e por isso nunca vermelho.
+    """
+    if pontes < n_max:
+        return PALAVRA_FOLGADA
+    if pontes == n_max:
+        return PALAVRA_APERTADA
+    return PALAVRA_CHEIA
+
+
+@dataclass(frozen=True)
+class ControleNoAr:
+    """Um controle no rádio, com os Hz MEDIDOS. ``None`` = não sei."""
+
+    uniq: str
+    hz_movimento: float | None = None
+    hz_voz: float | None = None
+    ponte: str | None = None
+
+
+@dataclass(frozen=True)
+class OrcamentoDoAdaptador:
+    """O ar de UM adaptador: quem está nele, quantas pontes, e o que se mediu."""
+
+    adaptador: str
+    controles: tuple[ControleNoAr, ...] = ()
+    n_max: int = N_MAX_PONTES
+    entrada_por_s: float | None = None
+    saida_por_s: float | None = None
+    canais_evitados: tuple[int, ...] | None = None
+    motivo_do_ar: str = ""
+
+    @property
+    def pontes(self) -> tuple[tuple[str, str], ...]:
+        """``(uniq, modo)`` de cada controle com ponte de pé neste adaptador."""
+        return tuple(
+            (c.uniq, c.ponte) for c in self.controles if c.ponte in MODOS_DA_PONTE
+        )
+
+    @property
+    def rotulo(self) -> str:
+        return palavra_das_pontes(len(self.pontes), self.n_max)
+
+    def publicar(self) -> dict[str, Any]:
+        """O dicionário que viaja no ``state_full`` — só tipos de JSON."""
+        return {
+            "controles": [
+                {
+                    "uniq": c.uniq,
+                    "hz_movimento": c.hz_movimento,
+                    "hz_voz": c.hz_voz,
+                    "ponte": c.ponte,
+                }
+                for c in self.controles
+            ],
+            "pontes": [{"uniq": u, "modo": m} for u, m in self.pontes],
+            "n_max": self.n_max,
+            "rotulo": self.rotulo,
+            "entrada_por_s": self.entrada_por_s,
+            "saida_por_s": self.saida_por_s,
+            "canais_evitados": (
+                list(self.canais_evitados) if self.canais_evitados is not None else None
+            ),
+            "motivo_do_ar": self.motivo_do_ar,
+        }
+
+
+def _numero_ou_none(valor: Any) -> float | None:
+    if isinstance(valor, bool) or not isinstance(valor, (int, float)):
+        return None
+    return float(valor)
+
+
+def orcamento_por_adaptador(
+    controles: Iterable[Mapping[str, Any]],
+    *,
+    ar: Mapping[str, Any] | None = None,
+    canais_evitados: Mapping[str, tuple[int, ...] | None] | None = None,
+    n_max: int = N_MAX_PONTES,
+    raiz: str = "/sys/class/hidraw",
+    listar: Callable[[str], list[str]] = os.listdir,
+    ler: Callable[[str], str] | None = None,
+) -> dict[str, OrcamentoDoAdaptador]:
+    """``{endereço do adaptador: OrcamentoDoAdaptador}`` — o P3 da R10.
+
+    ``controles`` é ``state["controllers"]``. Cada item pode trazer o que o
+    daemon publica por controle desde a AR-MEDIDO-01: ``adaptador`` (do
+    ``HID_PHYS``), ``hz_movimento``, ``hz_voz`` e ``ponte_do_radio``
+    (``"som"``/``"haptica"``/``None``). O ``adaptador`` ausente é resolvido
+    aqui pelo :func:`adaptador_por_uniq`, com a mesma regra de honestidade:
+    controle no rádio sem endereço legível vai para :data:`SEM_ADAPTADOR`.
+
+    ``ar`` é o ``MedidorDeAr.amostrar()`` (``integrations/ar_do_adaptador``):
+    todo adaptador que ele conhece aparece, com ou sem controle — o adaptador
+    vazio é «zero pontes», não ausência. ``canais_evitados`` é o AFH por
+    adaptador, já reduzido (``canais_evitados_pelo_adaptador``).
+    """
+    no_radio = [
+        c for c in controles
+        if c.get("transport") == "bt" and c.get("connected", True)
+    ]
+    sem_endereco = [
+        _hex(str(c.get("uniq") or ""))
+        for c in no_radio
+        if not _MAC_RE.match(str(c.get("adaptador") or "").lower())
+    ]
+    resolvidos = adaptador_por_uniq(
+        [u for u in sem_endereco if u], raiz=raiz, listar=listar, ler=ler
+    )
+    por_adaptador: dict[str, list[ControleNoAr]] = {}
+    for c in no_radio:
+        uniq = _hex(str(c.get("uniq") or ""))
+        publicado = str(c.get("adaptador") or "").lower()
+        endereco = publicado if _MAC_RE.match(publicado) else resolvidos.get(uniq, "")
+        ponte = c.get("ponte_do_radio")
+        por_adaptador.setdefault(endereco if uniq else SEM_ADAPTADOR, []).append(
+            ControleNoAr(
+                uniq=uniq,
+                hz_movimento=_numero_ou_none(c.get("hz_movimento")),
+                hz_voz=_numero_ou_none(c.get("hz_voz")),
+                ponte=ponte if ponte in MODOS_DA_PONTE else None,
+            )
+        )
+    medidos = dict(ar or {})
+    evitados = dict(canais_evitados or {})
+    enderecos = set(por_adaptador) | {e for e in medidos if e} | {e for e in evitados if e}
+    saida: dict[str, OrcamentoDoAdaptador] = {}
+    for endereco in sorted(enderecos):
+        leitura = medidos.get(endereco)
+        saida[endereco] = OrcamentoDoAdaptador(
+            adaptador=endereco,
+            controles=tuple(por_adaptador.get(endereco, ())),
+            n_max=n_max,
+            entrada_por_s=_numero_ou_none(getattr(leitura, "entrada_por_s", None)),
+            saida_por_s=_numero_ou_none(getattr(leitura, "saida_por_s", None)),
+            canais_evitados=evitados.get(endereco),
+            motivo_do_ar=(
+                str(getattr(leitura, "motivo", "") or "")
+                if leitura is not None
+                else ("" if endereco == SEM_ADAPTADOR else "o medidor não leu este adaptador")
+            ),
+        )
+    return saida
+
+
 def _valor_do_uevent(texto: str, marca: str) -> str:
     """O valor de uma chave do uevent — "" quando o nó não declara aquela chave."""
     for linha in texto.splitlines():
@@ -430,9 +635,14 @@ def _hex(valor: str) -> str:
 __all__ = [
     "CORTE_APERTADA",
     "CORTE_FOLGADA",
+    "FATIAS_DA_PONTE",
+    "FATIAS_POR_RELATORIO_DE_ENTRADA",
     "HZ_AUDIO_COM_MIC",
+    "HZ_DA_PONTE",
     "HZ_INPUT_COM_MIC",
     "HZ_INPUT_SEM_MIC",
+    "MODOS_DA_PONTE",
+    "N_MAX_PONTES",
     "PALAVRAS_DE_CULPA",
     "PALAVRA_APERTADA",
     "PALAVRA_CHEIA",
@@ -440,8 +650,12 @@ __all__ = [
     "SEM_ADAPTADOR",
     "SLOTS_POR_RELATORIO",
     "SLOTS_POR_SEGUNDO",
+    "ControleNoAr",
     "Ocupacao",
+    "OrcamentoDoAdaptador",
     "adaptador_por_uniq",
     "ocupacao_por_adaptador",
+    "orcamento_por_adaptador",
     "palavra_da_ocupacao",
+    "palavra_das_pontes",
 ]
