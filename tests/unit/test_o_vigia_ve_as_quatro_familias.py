@@ -313,6 +313,40 @@ def test_cada_queda_diz_o_fato_das_pontes(tmp_path: Path) -> None:
     assert storm_doctor.o_fato_da_queda(queda, []) is None
 
 
+#: Os banners reais do kernel-watch: o de 20/07 (o primeiro do kernel.log
+#: dela) e o desta sprint.
+BANNER_DE_20_07 = (
+    "# 2026-07-20 14:03:11 kernel-watch iniciado (padrões: USB-71 JOYCON BT-HCI "
+    "XHCI + contadores hci; preventivos ficam silenciosos até a 1ª ocorrência)"
+)
+BANNER_DAS_FAMILIAS = (
+    "# 2026-09-23 03:00:00 kernel-watch iniciado (padrões: USB-71 JOYCON JOYCON-PROBE "
+    "FILA-CHEIA BT-SOCKET ENLACE-PARADO BT-TRAVADO CRC BT-HCI XHCI + contadores hci; "
+    "preventivos ficam silenciosos até a 1ª ocorrência; rajada vira borda + resumo)"
+)
+
+
+def test_nao_olhei_nao_e_zero() -> None:
+    """A R2 dela: *«tiveram storm nos dias anteriores»*.
+
+    Até 23/09 a vigia não procurava a fila cheia, o EAGAIN nem o CRC. Um
+    histórico que respondesse «0 rajadas» para 22/09 afirmaria o que ninguém
+    olhou. ARRANQUE A CURA — trate todo banner como se procurasse todas as
+    famílias, ou deixe de pôr as famílias medidas e sem evento no dicionário —
+    e este teste reprova.
+    """
+    laco = "2026-09-13T01:14:00-03:00 [BT-HCI] Bluetooth: hci0: command 0xfc61 tx timeout"
+    antes = storm_doctor.classificar_o_historico([BANNER_DE_20_07, laco])
+    assert set(antes) == {"1", "2", "3"}, "a fila cheia, o EAGAIN e o CRC não eram medidos"
+    assert antes["3"].medida_desde == "2026-07-20T14:03:11"
+    assert (antes["1"].rajadas, antes["1"].medida_desde) == (0, "2026-07-20T14:03:11")
+
+    depois = storm_doctor.classificar_o_historico([BANNER_DE_20_07, laco, BANNER_DAS_FAMILIAS])
+    assert set(depois) == {"1", "2", "2A", "2B", "3", "4"}
+    assert (depois["2B"].rajadas, depois["2B"].medida_desde) == (0, "2026-09-23T03:00:00")
+    assert depois["3"].rajadas == 1
+
+
 def test_a_queda_e_a_borda_e_nao_o_resumo() -> None:
     """Os controles levam EAGAIN no mesmo segundo: é UMA queda, não duas.
 
