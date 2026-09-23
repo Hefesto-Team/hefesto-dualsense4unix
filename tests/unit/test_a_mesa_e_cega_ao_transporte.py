@@ -245,16 +245,16 @@ def test_toda_citacao_de_coop_py_no_mapa_nomeia_o_simbolo() -> None:
 @pytest.mark.parametrize(
     ("faixa", "simbolo"),
     [
-        ("1711-1769", "numeros_de_jogador"),
-        ("1771-1819", "_numero_exibido"),
-        ("854-864", "_next_player_index"),
-        ("1358-1432", "_start_player_motion_reader"),
-        ("1076-1122", "_make_player_replica_sinks"),
-        ("1046-1074", "_make_player_rumble_sink"),
-        ("971-1021", "_spawn_player"),
-        ("1124-1225", "_promote_player"),
-        ("339-345", "should_be_active"),
-        ("628-782", "sync"),
+        ("1747-1805", "numeros_de_jogador"),
+        ("1807-1837", "_numero_exibido"),
+        ("879-889", "_next_player_index"),
+        ("1393-1467", "_start_player_motion_reader"),
+        ("1111-1157", "_make_player_replica_sinks"),
+        ("1081-1109", "_make_player_rumble_sink"),
+        ("996-1053", "_spawn_player"),
+        ("1159-1260", "_promote_player"),
+        ("360-366", "should_be_active"),
+        ("649-807", "sync"),
     ],
 )
 def test_a_faixa_reapontada_ainda_e_a_funcao_prometida(
