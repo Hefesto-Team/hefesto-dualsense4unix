@@ -622,9 +622,10 @@ class GovernadorDoRadio:
             if self._fantasmas_fechadas:
                 return 0
             self._fantasmas_fechadas = True
-            nossas = {
-                (_chave(v.uniq), v.tipo) for v in self._vagas if v.subiu_em is not None
-            }
+            # A chave é a do ``pontes_de_pe`` — o texto do ``controle`` como foi
+            # escrito, e não os dígitos: uma subida velha grafada de outro jeito
+            # é OUTRA ponte para o leitor, e ficaria de pé para sempre.
+            nossas = {(v.uniq, v.tipo) for v in self._vagas if v.subiu_em is not None}
         try:
             de_pe = diario.pontes_de_pe(list(self._ler_o_diario()), math.inf)
         except Exception:  # diário ilegível: não há o que fechar, e o daemon sobe
@@ -633,7 +634,7 @@ class GovernadorDoRadio:
         fechadas = 0
         for adaptador, pontes in sorted(de_pe.items()):
             for controle, tipo in sorted(pontes):
-                if (_chave(controle), tipo) in nossas:
+                if (controle, tipo) in nossas:
                     continue
                 self._escrever(
                     diario.PONTE_DESCEU,
