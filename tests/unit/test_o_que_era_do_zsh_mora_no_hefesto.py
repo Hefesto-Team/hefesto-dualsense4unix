@@ -224,7 +224,7 @@ def test_cenario_3_o_freio_dos_dez_minutos(tmp_path: Path) -> None:
     estado.mkdir()
     (estado / f"{IFC}.falhas").write_text("2\n", encoding="utf-8")
     (estado / f"{IFC}.reinicios").write_text("1\n", encoding="utf-8")
-    (estado / f"{IFC}.ultimo").write_text(f"{int(time.time()) - 60}\n", encoding="utf-8")
+    (estado / f"{IFC}.reiniciou_em").write_text(f"{int(time.time()) - 60}\n", encoding="utf-8")
     r = _wifi(amb, "--vigiar")
     assert "espero dar 600 s" in r.stdout
     assert not (_fake(amb) / "reset").exists()
