@@ -796,6 +796,18 @@ class CentralDoRadio:
                 ))
             return self._esquecer_as_origens(movimento, dono)
 
+        # O KERNEL JÁ O DIZ NO DESTINO, e o movimento ainda é «não sei» (o
+        # ``SensorHub`` responde ``None`` até o nó fechar uma janela). A conexão
+        # do destino é a VIVA, não a «velha» da R6: esquecê-la e abrir a janela
+        # deixava o controle sem bond em lugar nenhum se ela não apertasse
+        # PS + Create. Nada se pareia nem se esquece aqui — só se confere, e o
+        # «esperando» segue para a vigia como depois de um parear.
+        if controle and self._onde_esta(_hex12(alvo)) == pedido:
+            conferindo = self._guardar(replace(movimento, passo=PASSO_CONFERINDO))
+            if self._conferir(conferindo, dono):
+                return self._esquecer_as_origens(conferindo, dono)
+            return self._guardar(replace(conferindo, motivo=MOTIVO_SEM_CONFIRMACAO))
+
         movimento = self._guardar(movimento)
         velho = foto.do_aparelho.get(pedido)
         if velho is not None:
@@ -1006,7 +1018,15 @@ class CentralDoRadio:
     def _esquecer_as_origens(
         self, movimento: Movimento, dono: bluez_dbus.LeitorDoBluez
     ) -> Movimento:
-        """O fim do mover: a conexão de cada ORIGEM sai, uma por uma, com lápide."""
+        """O fim do mover: a conexão de cada ORIGEM sai, uma por uma, com lápide.
+
+        Sem origem e sem parear nada, não houve movimento: ele já estava lá, e o
+        diário não ganha uma linha de «moveu».
+        """
+        if not movimento.origens and not movimento.pareou_no_destino:
+            return self._guardar(replace(
+                movimento, estado=CHEGOU, passo=PASSO_FIM, motivo=MOTIVO_JA_ESTAVA
+            ))
         movimento = self._guardar(replace(movimento, passo=PASSO_ESQUECENDO))
         sem_lapide = [
             origem for origem in movimento.origens
