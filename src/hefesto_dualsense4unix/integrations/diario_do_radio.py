@@ -68,9 +68,11 @@ NOME_DO_DIARIO = "radio-diario.jsonl"
 #: por ela.
 DIARIO_DO_ROOT = Path("/var/lib/hefesto-dualsense4unix") / NOME_DO_DIARIO
 
-#: A trava comum. O diretório nasce do ``tmpfiles.d`` do install, com o grupo
-#: dela, para que o root (watchdog, ponte) e ela (daemon) disputem o MESMO
-#: arquivo.
+#: A trava comum. Nasce do ``tmpfiles.d`` do install: o diretório é do root e
+#: não é gravável por ela, e o ARQUIVO tem o grupo dela — assim o root
+#: (watchdog) e ela (daemon) disputam o mesmo arquivo, ela escreve nele quem
+#: está com a trava, e ninguém troca o arquivo por um link para levar a escrita
+#: do root a outro lugar.
 TRAVA_COMUM = Path("/run/hefesto-dualsense4unix/radio.lock")
 
 #: Desvios explícitos — a suíte e quem medir à mão.
