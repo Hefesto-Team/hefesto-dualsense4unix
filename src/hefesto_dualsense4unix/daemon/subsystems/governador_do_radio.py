@@ -534,6 +534,15 @@ class GovernadorDoRadio:
             self._ler_o_diario = _nenhum_diario
         self._fantasmas_fechadas = False
         self._trava = threading.RLock()
+        #: A ORDEM DO PAR NO DIÁRIO. Quem decide um ``PONTE_SUBIU`` ou um
+        #: ``PONTE_DESCEU`` segura esta trava da decisão até a linha estar
+        #: escrita. Sem ela, a ponte que desce na thread dela ENQUANTO outra
+        #: thread escreve a subida da mesma ponte (o ``_a_fila_andou`` do
+        #: tique, o ``_subiu`` do subsystem) deixava no diário o DESCEU antes
+        #: do SUBIU — e o ``pontes_de_pe`` passava a contar, até o próximo
+        #: arranque, uma ponte fantasma criada em vida. Sempre por fora da
+        #: :attr:`_trava`: esta primeiro, aquela dentro.
+        self._trava_do_par = threading.RLock()
         self._vagas: list[Vaga] = []
         self._estados: dict[str, _Estado] = {}
         self._pedidos: dict[str, _Pedido] = {}
@@ -639,21 +648,28 @@ class GovernadorDoRadio:
         # leitura viu já está aqui. E a chave é a do ``pontes_de_pe`` — o texto
         # do ``controle`` como foi escrito, não os dígitos: uma subida velha
         # grafada de outro jeito é OUTRA ponte para o leitor, e ficaria de pé.
-        with self._trava:
-            nossas = {(v.uniq, v.tipo) for v in self._vagas if v.subiu_em is not None}
+        #
+        # E AS NOSSAS E AS DESCIDAS VÃO SOB A TRAVA DO PAR (conferência de
+        # 23/09/2026): uma subida que escrevesse o SUBIU entre a leitura das
+        # nossas e a linha do reinício seria apagada por ela — a ponte no ar, e
+        # o diário dizendo que desceu. A leitura do diário fica de fora: é a
+        # parte cara, e o que ela perde a leitura das nossas cobre.
         fechadas = 0
-        for adaptador, pontes in sorted(de_pe.items()):
-            for controle, tipo in sorted(pontes):
-                if (controle, tipo) in nossas:
-                    continue
-                self._escrever(
-                    diario.PONTE_DESCEU,
-                    MOTIVO_DO_REINICIO,
-                    adaptador=adaptador or None,
-                    controle=controle,
-                    tipo=tipo,
-                )
-                fechadas += 1
+        with self._trava_do_par:
+            with self._trava:
+                nossas = {(v.uniq, v.tipo) for v in self._vagas if v.subiu_em is not None}
+            for adaptador, pontes in sorted(de_pe.items()):
+                for controle, tipo in sorted(pontes):
+                    if (controle, tipo) in nossas:
+                        continue
+                    self._escrever(
+                        diario.PONTE_DESCEU,
+                        MOTIVO_DO_REINICIO,
+                        adaptador=adaptador or None,
+                        controle=controle,
+                        tipo=tipo,
+                    )
+                    fechadas += 1
         if fechadas:
             logger.info("governador_fechou_pontes_fantasmas", pontes=fechadas)
         return fechadas
@@ -788,24 +804,25 @@ class GovernadorDoRadio:
     # -- a ponte diz: subiu, desceu ------------------------------------------
 
     def _subiu(self, vaga: Vaga, tipo: str | None) -> None:
-        with self._trava:
-            if vaga.solta or vaga.subiu_em is not None:
-                return
-            if tipo:
-                vaga.tipo = _tipo(tipo)
-            vaga.subiu_em = self._relogio()
-            episodio = self._episodios.get(vaga.adaptador) if vaga.adaptador else None
-            if episodio is not None:
-                # UMA TENTATIVA DURANTE A ESPERA CRESCENTE (item 3): contada, não
-                # escrita. Se a fila andar, o `_a_fila_andou` escreve a subida.
-                vaga._calada = True
-                episodio.tentativas += 1
-                logger.debug(
-                    "governador_tentativa", adaptador=vaga.adaptador, n=episodio.tentativas
-                )
-                return
-            no_adaptador = self._pontes_no_adaptador(vaga.adaptador)
-        self._escrever_a_subida(vaga, no_adaptador)
+        with self._trava_do_par:
+            with self._trava:
+                if vaga.solta or vaga.subiu_em is not None:
+                    return
+                if tipo:
+                    vaga.tipo = _tipo(tipo)
+                vaga.subiu_em = self._relogio()
+                episodio = self._episodios.get(vaga.adaptador) if vaga.adaptador else None
+                if episodio is not None:
+                    # UMA TENTATIVA DURANTE A ESPERA CRESCENTE (item 3): contada,
+                    # não escrita. Se a fila andar, o `_a_fila_andou` a escreve.
+                    vaga._calada = True
+                    episodio.tentativas += 1
+                    logger.debug(
+                        "governador_tentativa", adaptador=vaga.adaptador, n=episodio.tentativas
+                    )
+                    return
+                no_adaptador = self._pontes_no_adaptador(vaga.adaptador)
+            self._escrever_a_subida(vaga, no_adaptador)
 
     def _pontes_no_adaptador(self, adaptador: str) -> int:
         """Quantas vagas o adaptador tem agora. Chamado com a trava."""
@@ -834,28 +851,30 @@ class GovernadorDoRadio:
         )
 
     def _soltar(self, vaga: Vaga, por_que: str) -> None:
-        with self._trava:
-            if vaga.solta:
-                return
-            vaga.solta = True
-            if vaga in self._vagas:
-                self._vagas.remove(vaga)
-            subiu = vaga.subiu_em is not None
-            calada = vaga._calada
-            if subiu:
-                # ITEM 1: o «Ligar aqui» valia enquanto a ponte estava de pé. Ela
-                # desceu: a próxima subida naquele adaptador cheio pergunta de
-                # novo. A vaga que NUNCA subiu não gasta a resposta dela.
-                self._autorizados.discard((_chave(vaga.uniq), vaga.adaptador))
-            self._recalcular_o_limite(vaga.adaptador)
-        if subiu and not calada:
-            self._escrever(
-                diario.PONTE_DESCEU,
-                por_que,
-                adaptador=vaga.adaptador or None,
-                controle=vaga.uniq,
-                tipo=vaga.tipo,
-            )
+        with self._trava_do_par:
+            with self._trava:
+                if vaga.solta:
+                    return
+                vaga.solta = True
+                if vaga in self._vagas:
+                    self._vagas.remove(vaga)
+                subiu = vaga.subiu_em is not None
+                calada = vaga._calada
+                if subiu:
+                    # ITEM 1: o «Ligar aqui» valia enquanto a ponte estava de pé.
+                    # Ela desceu: a próxima subida naquele adaptador cheio
+                    # pergunta de novo. A vaga que NUNCA subiu não gasta a
+                    # resposta dela.
+                    self._autorizados.discard((_chave(vaga.uniq), vaga.adaptador))
+                self._recalcular_o_limite(vaga.adaptador)
+            if subiu and not calada:
+                self._escrever(
+                    diario.PONTE_DESCEU,
+                    por_que,
+                    adaptador=vaga.adaptador or None,
+                    controle=vaga.uniq,
+                    tipo=vaga.tipo,
+                )
 
     def _recalcular_o_limite(self, adaptador: str) -> None:
         """ITEM 2: a marca «além do limite» sai de quem voltou a caber.
@@ -1132,34 +1151,37 @@ class GovernadorDoRadio:
         if not adaptador:
             return
         agora = self._relogio()
-        with self._trava:
-            episodio = self._episodios.pop(adaptador, None)
-            if episodio is None:
-                return
-            caladas = [
-                v
-                for v in self._vagas
-                if v.adaptador == adaptador and v._calada and v.subiu_em is not None
-            ]
+        with self._trava_do_par:
+            with self._trava:
+                episodio = self._episodios.pop(adaptador, None)
+                if episodio is None:
+                    return
+                caladas = [
+                    v
+                    for v in self._vagas
+                    if v.adaptador == adaptador and v._calada and v.subiu_em is not None
+                ]
+                for vaga in caladas:
+                    vaga._calada = False
+                no_adaptador = self._pontes_no_adaptador(adaptador)
+            parada_s = round(agora - episodio.desde, 3)
+            logger.info(
+                "governador_fila_andou",
+                adaptador=adaptador,
+                tentativas=episodio.tentativas,
+                parada_s=parada_s,
+            )
+            self._escrever(
+                FILA_ANDOU,
+                "o adaptador voltou a pôr no ar o que as pontes escrevem",
+                antes={"espera_s": episodio.espera_s},
+                depois={"tentativas": episodio.tentativas, "parada_s": parada_s},
+                adaptador=adaptador,
+            )
+            # SOB A TRAVA DO PAR: a tentativa que cai agora, na thread dela,
+            # espera esta subida estar escrita para escrever a descida.
             for vaga in caladas:
-                vaga._calada = False
-            no_adaptador = self._pontes_no_adaptador(adaptador)
-        parada_s = round(agora - episodio.desde, 3)
-        logger.info(
-            "governador_fila_andou",
-            adaptador=adaptador,
-            tentativas=episodio.tentativas,
-            parada_s=parada_s,
-        )
-        self._escrever(
-            FILA_ANDOU,
-            "o adaptador voltou a pôr no ar o que as pontes escrevem",
-            antes={"espera_s": episodio.espera_s},
-            depois={"tentativas": episodio.tentativas, "parada_s": parada_s},
-            adaptador=adaptador,
-        )
-        for vaga in caladas:
-            self._escrever_a_subida(vaga, no_adaptador)
+                self._escrever_a_subida(vaga, no_adaptador)
 
     # -- o que a tela lê -----------------------------------------------------
 
