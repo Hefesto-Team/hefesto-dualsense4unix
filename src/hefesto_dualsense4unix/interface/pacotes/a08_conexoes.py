@@ -2901,7 +2901,7 @@ def _endereco_do_adaptador(interface: str) -> str:
 def _e_radio(c: dict[str, object]) -> bool:
     """Este controle fala por rádio? Lê a chave CRUA, nunca a palavra da tela.
 
-    `transporte` é `"usb"`/`"bt"` e vem de `mesa_viva.py:385`; `via` carrega a
+    `transporte` é `"usb"`/`"bt"` e vem de `mesa_viva.py:509`; `via` carrega a
     PALAVRA da tela ("cabo"/"rádio"), que muda com o glossário. Comparar a palavra
     faria esta aba perder os controles do rádio na primeira vez que alguém
     traduzisse a tela — calado, sem log e sem régua vermelha.
@@ -2968,7 +2968,7 @@ def _regua_do_radio(ctx: Contexto) -> str:
     # A COMPARAÇÃO LÊ A CHAVE CRUA, NÃO A PALAVRA — costura da ONDA B, 06/09/2026.
     # A `via` passou a carregar a palavra da tela ("cabo"/"rádio"); quem agrupa por
     # adaptador compara `transporte` ("usb"/"bt"), que o item da mesa publica ao lado
-    # (`mesa_viva.py:385`). Sem esta troca, esta aba mostraria ZERO controles no rádio
+    # (`mesa_viva.py:509`). Sem esta troca, esta aba mostraria ZERO controles no rádio
     # com os dois no rádio — calado, sem log e sem régua vermelha. A S-10 mediu e
     # escreveu o caminho; ela não podia executá-lo porque este arquivo não era dela.
     no_radio = [c for c in todos if _e_radio(c)]
@@ -4468,7 +4468,7 @@ def mic_existe(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     QUEM CONSOME, e é por isso que o clique vale AGORA: o
     `_handle_machine_declare` relê o disco, rebinda `daemon._maquina` e SOBE OU
     DESCE o subsystem `bt_mic` no mesmo pedido — a nota está no próprio handler
-    (`ipc_handlers.py:7157`, QUATRO-MICROFONES-01): *"o 'Aplicar' tem de VALER
+    (`ipc_handlers.py:7182`, QUATRO-MICROFONES-01): *"o 'Aplicar' tem de VALER
     agora"*. Sem essa parte, a escolha dela só valeria no próximo início do
     daemon.
 
@@ -5043,7 +5043,7 @@ def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 # OS CINCO QUE GRAVAM SÃO **SEM ECO**, e isso foi MEDIDO em 02/09/2026, não
 # deduzido: as chaves de topo do `state_full` do daemon vivo são 47, e nenhuma
 # delas é `mapa` nem `maquina`. O caminho é `machine_declare` →
-# `_handle_machine_declare` (`daemon/ipc_handlers.py:7157`) → `maquina.json`, e
+# `_handle_machine_declare` (`daemon/ipc_handlers.py:7182`) → `maquina.json`, e
 # ali ele PARA. Nada volta pelo estado. Ver a nota do `SEM_ECO`, no fim deste
 # arquivo, para o que isso significa para quem lê a régua do piloto.
 

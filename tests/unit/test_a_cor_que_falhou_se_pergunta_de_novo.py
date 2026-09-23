@@ -208,7 +208,7 @@ def _tique(leitor: mesa_viva.LeitorDeCor, estado: dict[str, Any]) -> list[dict[s
     leitor.esquecer_ausentes({c["uniq"] for c in conectados})
     for uniq in leitor.pendentes(conectados):
         leitor.perguntar(uniq)
-    return mesa_viva.mesa_do_estado(estado, leitor.conhecidos())
+    return list(mesa_viva.mesa_do_estado(estado, leitor.conhecidos()))
 
 
 def test_a_fita_ganha_modelo_e_borda_depois_da_nova_tentativa() -> None:
@@ -255,6 +255,20 @@ def test_a_falha_nao_apaga_a_cor_que_ja_se_sabia() -> None:
     leitor.perguntar(UNIQ)  # uma pergunta avulsa que falhou
     assert leitor.conhecidos()[UNIQ].nome == "Galactic Purple"
 
+
+def test_a_janela_que_desistiu_pergunta_de_novo_quando_o_controle_volta() -> None:
+    """A desistência dura até o controle sair da mesa — e o `LeitorDeCor` é quem avisa a agenda."""
+    relogio = Relogio()
+    falso = LeitorQueFalhaUmaVez(falhas=99)
+    leitor = mesa_viva.LeitorDeCor(leitor=falso, agenda=cp.AgendaDaPergunta(relogio=relogio))
+    for _ in range(10 * 60 * 5):  # cinco minutos de tique
+        _tique(leitor, _estado())
+        relogio.agora += 0.1
+    assert falso.perguntas == 4, "a 1ª e as três novas tentativas"
+    _tique(leitor, {"controllers": []})  # saiu da mesa
+    relogio.agora += 0.1
+    _tique(leitor, _estado())  # voltou
+    assert falso.perguntas == 5, falso.perguntas
 
 def test_o_piloto_dela_pergunta_pelo_leitor_e_nao_por_trava_propria() -> None:
     """O lançador abre `hefesto_vivo`, e era ali a TERCEIRA cópia do defeito.
@@ -345,3 +359,68 @@ def test_o_daemon_nao_pergunta_de_novo_a_quem_nao_pode(
         handler._identidade_de_fabrica(UNIQ, {"uniq": UNIQ, "connected": True})
         relogio.agora += 0.1
     assert perguntas == [UNIQ]
+
+
+class _HandlerDaMesa(_Handler):
+    """O mesmo mixin, com o que o enriquecimento do `state_full` toca fora do assunto."""
+
+    controller = None
+
+    def _player_slot_for(self, _uniq: Any) -> None:
+        return None
+
+    def _lightbar_for_uniq(self, *_a: Any) -> tuple[None, bool, str]:
+        return (None, False, "desconhecida")
+
+    def _lightbar_disputada(self, *_a: Any) -> bool:
+        return False
+
+    def _nascimento_para(self, *_a: Any) -> None:
+        return None
+
+    def _coop_live_snapshots(self) -> dict[str, Any]:
+        return {}
+
+    def _coop_uniqs_com_leitor(self) -> set[str]:
+        return set()
+
+    def _coop_vpads_by_uniq(self) -> dict[str, Any]:
+        return {}
+
+    def _inputs_passivos(self, *_a: Any) -> None:
+        return None
+
+    def _merge_sensores(self, *_a: Any) -> None:
+        return None
+
+    def _merge_audio(self, *_a: Any) -> None:
+        return None
+
+
+def test_o_daemon_que_desistiu_pergunta_de_novo_quando_o_controle_volta(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Pelo caminho do `state_full`: é o enriquecimento que diz à agenda quem saiu."""
+    import threading
+
+    monkeypatch.setattr(threading, "Thread", _FioNaHora)
+    relogio = Relogio()
+    handler = _HandlerDaMesa(relogio)
+    perguntas: list[str] = []
+
+    def _falha(uniq: str) -> cp.IdentidadeDeFabrica:
+        perguntas.append(uniq)
+        return FALHA
+
+    monkeypatch.setattr(cp, "ler_identidade_pelo_cabo", _falha)
+
+    def tique(entradas: list[dict[str, Any]]) -> None:
+        handler._enrich_controllers_per_controller(entradas, None)
+        relogio.agora += 0.1
+
+    for _ in range(10 * 60 * 5):  # cinco minutos
+        tique([{"uniq": UNIQ, "connected": True}])
+    assert len(perguntas) == 4, "a 1ª e as três novas tentativas"
+    tique([])  # saiu da mesa
+    tique([{"uniq": UNIQ, "connected": True}])
+    assert len(perguntas) == 5, perguntas
