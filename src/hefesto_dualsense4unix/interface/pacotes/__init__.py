@@ -1172,7 +1172,8 @@ class _OLugarNoDesenho(html.parser.HTMLParser):
         d = {k: (v or "") for k, v in attrs}
         lugar = d.get("data-controle", "")
         lugar = lugar if _E_LUGAR.fullmatch(lugar) else ""
-        if lugar and d.get("data-conectado") == "nao" and lugar not in self.vazios:  # (noqa-acento) valor do atributo
+        vazio = d.get("data-conectado") == "nao"  # (noqa-acento) valor do atributo
+        if lugar and vazio and lugar not in self.vazios:
             self.vazios.append(lugar)
         dentro = next((q["lugar"] for q in reversed(self._pilha) if q["lugar"]), "")
         chave = d.get("data-campo") or d.get("data-papel") or d.get("data-hef") or ""

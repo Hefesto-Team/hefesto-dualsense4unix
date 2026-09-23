@@ -29,13 +29,14 @@ dez páginas. Fica no piloto, que é quem já tem a mesa na mão.
 """
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from typing import Any
 
 import argparse
 import contextlib
 import dataclasses
 import pathlib
+import re
 import sys
 import threading
 import time
@@ -2180,6 +2181,87 @@ def _com_dono(ctx: pacotes.Contexto) -> list[str]:
     return prefs
 
 
+# ---------------------------------------------------------------------------
+# A PROVA DO MOCKUP COBRA O LUGAR VAZIO — O-LUGAR-VAZIO-DIZ-O-QUE-O-DESENHO-DIZ-01
+# ---------------------------------------------------------------------------
+# O PONTO CEGO, medido em 23/09/2026: com a mesa vazia a `--prova-de-mockup`
+# classificava o nome `Sony • Player 1 • Cosmic Red • USB` do cartão vazio da
+# 08 como MOCKUP — o mesmo balde do `Player 3 • Desconectado` do P3, que é o
+# desenho CERTO de um lugar vazio. As duas coisas somavam na mesma conta, a
+# conta não tem teto por padrão, e a barra rosa do P1 passou pela régua com
+# zero controles na mesa. A foto dela é que acusou.
+#
+# O QUE FALTAVA É A PERGUNTA CERTA: não *"este campo ainda é o desenho?"*, e
+# sim *"este lugar SEM controle mostra o que o desenho pôs num lugar COM
+# controle?"*. Isso é defeito sempre, e reprova sem teto.
+
+#: Os alvos que a prova cobra no lugar vazio. `largura`, `altura`, `valor`,
+#: `classe` e `marcado` ficam de fora de propósito: o travessão não os atende e
+#: a folha de estilo os esconde num lugar vazio (`.ctl[data-conectado="nao"]
+#: .bat .cheio{width:0}`), então o número do desenho está no DOM e não na tela.
+_ALVOS_QUE_O_LUGAR_VAZIO_COBRA = frozenset(
+    {"texto", "html", "cor", "atributo", "plastico"})
+
+#: A tag de abertura de um lugar (`data-controle="pN"`), em qualquer ordem de
+#: atributos. Uma leitura PRÓPRIA do arquivo, e não a do despachante: a régua
+#: que confere a cura não pode ler pelo mesmo olho que a cura usa.
+_TAG_DO_LUGAR = re.compile(r'<[a-zA-Z][^>]*\bdata-controle="(p\d+)"[^>]*>')
+_ENDERECO_NA_TAG = re.compile(r'\bdata-(?:campo|papel|hef)="([^"]+)"')
+
+
+def _o_lugar_no_arquivo(texto: str) -> tuple[frozenset[str], frozenset[tuple[str, str]]]:
+    """Os lugares que o arquivo publica VAZIOS, e os endereços que SÃO o lugar.
+
+    O segundo conjunto é o do elemento que carrega o próprio `data-controle` —
+    a 06 põe o `plastico` nele. O `achar()` do piloto procura DENTRO do lugar e
+    nunca o alcança, e a folha da 06 o apaga pela classe `off`: cobrá-lo seria
+    cobrar do produto um endereço que ele não tem.
+    """
+    vazios: set[str] = set()
+    proprios: set[tuple[str, str]] = set()
+    for m in _TAG_DO_LUGAR.finditer(texto):
+        tag, pref = m.group(0), m.group(1)
+        if 'data-conectado="nao"' in tag:  # (noqa-acento) valor do atributo
+            vazios.add(pref)
+        proprios |= {(pref, chave) for chave in _ENDERECO_NA_TAG.findall(tag)}
+    return frozenset(vazios), frozenset(proprios)
+
+
+def _o_desenho_cheio_no_lugar_vazio(
+        cravados: list[regua_do_mockup._Campo],
+        vivos: list[str],
+        vazios_agora: Iterable[str],
+        texto: str) -> list[str]:
+    """Os campos de um lugar SEM controle que mostram o desenho de um lugar CHEIO.
+
+    `cravados` e `vivos` são as duas listas casadas do `_alinhar`; `vazios_agora`
+    são os lugares que o tique marcou sem dono (`carga["vazios"]`); `texto` é o
+    arquivo publicado. Um valor vazio ou o travessão nunca é acusado: não é o
+    desenho de ninguém. E um valor que o desenho põe também num lugar vazio (a
+    paleta da 04, igual nos quatro) é a palavra certa, não vazamento.
+    """
+    do_desenho, proprios = _o_lugar_no_arquivo(texto)
+    cheio: dict[tuple[str, str], set[str]] = {}
+    vazio: dict[tuple[str, str], set[str]] = {}
+    for c in cravados:
+        if c.dono not in pacotes.TODOS_OS_LUGARES:
+            continue
+        (vazio if c.dono in do_desenho else cheio).setdefault(
+            (c.chave, c.alvo), set()).add(c.valor)
+    agora = set(vazios_agora)
+    fora: list[str] = []
+    for c, vivo in zip(cravados, vivos, strict=True):
+        if (c.dono not in agora or c.rotulo
+                or c.alvo not in _ALVOS_QUE_O_LUGAR_VAZIO_COBRA
+                or (c.dono, c.chave) in proprios
+                or vivo in ("", pacotes.TRAVESSAO, regua_do_mockup.SUMIU)):
+            continue
+        k = (c.chave, c.alvo)
+        if vivo in cheio.get(k, ()) and vivo not in vazio.get(k, ()):
+            fora.append(f"{c.endereco} [{c.alvo}] = {vivo[:70]!r}")
+    return fora
+
+
 #: A ESCOLHA DA FITA — quem ela apontou no `Selecionar:`.
 #:
 #: `""` é *ninguém escolheu ainda*, e nele a fita segue derivando do primeiro da
@@ -3035,6 +3117,9 @@ class Piloto:
         #: Onde a régua não conseguiu ler o que prometeu ler. Uma linha aqui é
         #: a régua confessando, e ela reprova por isso.
         self.cegueiras: list[str] = []
+        #: Por aba, os campos de um lugar SEM controle que mostram o desenho de
+        #: um lugar CHEIO — ver `_o_desenho_cheio_no_lugar_vazio`. Reprova.
+        self.lugar_vazio_com_desenho: dict[str, list[str]] = {}
         self._fila_de_abas: list[str] = []
         self._voltas_da_aba = 0
         self._medindo = False
@@ -4324,7 +4409,8 @@ class Piloto:
             return
 
         arquivo = onde.pagina(pagina, publicado=True)
-        cravados = regua_do_mockup._campos_cravados(arquivo.read_text(encoding="utf-8"))
+        texto = arquivo.read_text(encoding="utf-8")
+        cravados = regua_do_mockup._campos_cravados(texto)
         self.cravados[pagina] = cravados
 
         # A GUARDA, E ELA É SOBRE O VIRGEM — não sobre a tela do fim. O DOM
@@ -4371,6 +4457,17 @@ class Piloto:
             print(f"[prova-de-mockup] {pagina}: {len(nasceram)} endereço(s) "
                   f"NASCERAM na tela (o produto trocou um bloco): "
                   f"{', '.join(f'{d}·{k}' if d else k for k, d in nasceram[:8])}")
+
+        # O LUGAR VAZIO COM O DESENHO DE UM LUGAR CHEIO — O-LUGAR-VAZIO-DIZ-O-
+        # QUE-O-DESENHO-DIZ-01. ANTES da mordida `--sem-cravado`, de propósito:
+        # ela troca o valor cravado, e esta conta precisa do arquivo de verdade.
+        vazaram = _o_desenho_cheio_no_lugar_vazio(
+            cravados, alinhados,
+            [str(p) for p in (self._carga_de_agora.get("vazios") or [])], texto)
+        if vazaram:
+            self.lugar_vazio_com_desenho[pagina] = vazaram
+            print(f"[prova-de-mockup] {pagina}: {len(vazaram)} campo(s) de lugar "
+                  f"SEM controle mostram o desenho de um lugar CHEIO")
 
         if self.args.sem_cravado:
             # A MORDIDA, e ela mora aqui porque é aqui que a cura mora: se o
@@ -4459,11 +4556,29 @@ class Piloto:
                   "separa\n'pintou igual' de 'não pintou', e a régua prefere dizer "
                   "quantos são\na inventar certeza.")
 
+        # O LUGAR VAZIO VEM ANTES DAS CEGUEIRAS, e sai inteiro mesmo quando elas
+        # reprovam: uma reprovação por cegueira que CALASSE esta seção era o
+        # ponto cego inteiro — a régua saía vermelha por outro motivo, e o
+        # cartão vazio afirmando um controle ficava sem nome no relato.
+        if self.lugar_vazio_com_desenho:
+            # SEM TETO, e é a diferença para a conta de MOCKUP logo abaixo:
+            # aquela mede o que ainda falta pintar; esta mede um lugar sem
+            # controle AFIRMANDO um controle — a foto dela de 23/09/2026.
+            print("\nREPROVA: lugar SEM controle mostrando o desenho de um lugar "
+                  "COM controle:")
+            for pagina in sorted(self.lugar_vazio_com_desenho):
+                for linha in self.lugar_vazio_com_desenho[pagina]:
+                    print(f"   · {pagina}: {linha}")
+        else:
+            print("\nNenhum lugar sem controle mostra o desenho de um lugar com "
+                  "controle.")
         if self.cegueiras:
             print(f"\nA RÉGUA NÃO ENXERGOU {len(self.cegueiras)} coisa(s) — e isso reprova, "
                   "porque\numa régua que não sabe o que está lendo mede o que quiser:")
             for cegueira in self.cegueiras:
                 print(f"   · {cegueira}")
+            raise SystemExit(1)
+        if self.lugar_vazio_com_desenho:
             raise SystemExit(1)
         if 0 <= self.args.teto_de_mockup < soma[r.MOCKUP]:
             print(f"\nREPROVA: {soma[r.MOCKUP]} campos no desenho, e o teto pedido "
