@@ -68,7 +68,7 @@ from hefesto_dualsense4unix.core.led_control import (
 from hefesto_dualsense4unix.core.speaker_scale import volume_do_percentual
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Callable, Iterable, Mapping
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -4455,10 +4455,6 @@ class PyDualSenseController(IController):
         rádio" ou "Modo Nativo" — resposta, não erro; best-effort por handle,
         e a falha de um nunca aborta os outros.
         """
-        from hefesto_dualsense4unix.core.lightbar_gatilho import (
-            build_bt_lightbar_report,
-        )
-
         with self._io_lock:
             if self._output_mute:
                 logger.info("gatilho_da_cor_no_op_modo_nativo")
@@ -4471,41 +4467,9 @@ class PyDualSenseController(IController):
             ]
         resultado: dict[str, bool] = {}
         for key, handle, desired in alvos:
-            cor = desired.led if desired.led is not None else KERNEL_DEFAULT_BLUE
-            # LIGHTBAR-ISOLAR-OS-PLAYERS-01: o instrumento de eliminação dela
-            # vale AQUI também — se ele está ligado, o número não sai, e o
-            # report vai só com a cor (o bit do jogador nem é autorizado).
-            players = desired.player_leds if pode_player else None
-            ok = False
-            try:
-                report = build_bt_lightbar_report(cor, players)
-                # LIGHTBAR-BT-RESET-03: pelo `writeReport` do handle, que
-                # carimba o `seq` do FLUXO daquele handle e recalcula o CRC.
-                # Escrever cru no `device` com seq 0 já matou uma cura desta
-                # casa uma vez — o firmware descarta o report fora de sequência
-                # e o log diz "escrito" com a barra apagada.
-                escritor = getattr(handle, "writeReport", None)
-                if callable(escritor):
-                    escrito = escritor(list(report))
-                else:
-                    device = getattr(handle, "device", handle)
-                    escrito = device.write(report)
-                # ESCRITA-QUE-NAO-MEDE-01 (19/09/2026): a conferência vale nos
-                # DOIS ramos. Era `ok = True` incondicional no ramo do
-                # `writeReport` — e handle BT toma SEMPRE esse ramo, então a
-                # única conferência que existia estava em código que o rádio
-                # nunca alcança. O log dizia `enviado=True` com a barra
-                # apagada, medido com o olho dela na noite de 19/09.
-                ok = _escrita_completa(escrito, len(report))
-                if not ok:
-                    logger.warning(
-                        "gatilho_da_cor_escrita_curta",
-                        key=key,
-                        pedidos=len(report),
-                        saidos=_bytes_que_sairam(escrito),
-                    )
-            except Exception as exc:
-                logger.warning("gatilho_da_cor_falhou", key=key, err=str(exc))
+            ok, cor, players = self._escrever_barra_e_numero_bt(
+                key, handle, desired, pode_player=pode_player, nome="gatilho_da_cor"
+            )
             resultado[key] = ok
             logger.info(
                 "gatilho_da_cor_escrito",
@@ -4515,6 +4479,168 @@ class PyDualSenseController(IController):
                 enviado=ok,
             )
         return resultado
+
+    def _escrever_barra_e_numero_bt(
+        self,
+        key: str,
+        handle: Any,
+        desired: _DesiredOutput,
+        *,
+        pode_player: bool,
+        nome: str,
+    ) -> tuple[bool, tuple[int, int, int], tuple[bool, ...] | None]:
+        """Escreve o `0x31` MÍNIMO (cor + número) num handle do rádio.
+
+        É o corpo que o `reescrever_lightbar_por_hidraw` sempre teve, posto
+        num lugar só porque desde a STEAM-NO-FISICO-01 ele tem DOIS chamadores
+        — o gatilho do fim da sequência e a vigia do sequestro
+        (`reafirmar_barra_e_numero`). Duas cópias do mesmo report seriam duas
+        verdades sobre o que sai no fio. ``nome`` é o prefixo dos avisos no
+        journal, para cada chamador continuar dizendo quem falhou.
+
+        Não loga a escrita bem-sucedida: quem chama decide a cadência (o
+        gatilho diz cada uma; a vigia, que pode escrever a cada segundo, não).
+        """
+        from hefesto_dualsense4unix.core.lightbar_gatilho import (
+            build_bt_lightbar_report,
+        )
+
+        cor = desired.led if desired.led is not None else KERNEL_DEFAULT_BLUE
+        # LIGHTBAR-ISOLAR-OS-PLAYERS-01: o instrumento de eliminação dela
+        # vale AQUI também — se ele está ligado, o número não sai, e o
+        # report vai só com a cor (o bit do jogador nem é autorizado).
+        players = desired.player_leds if pode_player else None
+        ok = False
+        try:
+            report = build_bt_lightbar_report(cor, players)
+            # LIGHTBAR-BT-RESET-03: pelo `writeReport` do handle, que
+            # carimba o `seq` do FLUXO daquele handle e recalcula o CRC.
+            # Escrever cru no `device` com seq 0 já matou uma cura desta
+            # casa uma vez — o firmware descarta o report fora de sequência
+            # e o log diz "escrito" com a barra apagada.
+            escritor = getattr(handle, "writeReport", None)
+            if callable(escritor):
+                escrito = escritor(list(report))
+            else:
+                device = getattr(handle, "device", handle)
+                escrito = device.write(report)
+            # ESCRITA-QUE-NAO-MEDE-01 (19/09/2026): a conferência vale nos
+            # DOIS ramos. Era `ok = True` incondicional no ramo do
+            # `writeReport` — e handle BT toma SEMPRE esse ramo, então a
+            # única conferência que existia estava em código que o rádio
+            # nunca alcança. O log dizia `enviado=True` com a barra
+            # apagada, medido com o olho dela na noite de 19/09.
+            ok = _escrita_completa(escrito, len(report))
+            if not ok:
+                logger.warning(
+                    f"{nome}_escrita_curta",
+                    key=key,
+                    pedidos=len(report),
+                    saidos=_bytes_que_sairam(escrito),
+                )
+        except Exception as exc:
+            logger.warning(f"{nome}_falhou", key=key, err=str(exc))
+        return ok, cor, players
+
+    def reafirmar_barra_e_numero(self, uniqs: Iterable[str]) -> dict[str, bool]:
+        """Reescreve a BARRA e o NÚMERO destes controles, e só isso.
+
+        STEAM-NO-FISICO-01 — a segunda obrigação da decisão dela de 23/09/2026:
+        *"steam sequestrou hefesto corrigiu ao no segundo após"*. Quem chama é a
+        vigia do sequestro (`daemon/connection.py`), a cada segundo, enquanto
+        outro processo segura o hidraw do físico — «quantas vezes for preciso».
+
+        TRÊS DIFERENÇAS do `reescrever_lightbar_por_hidraw`, todas deliberadas:
+
+        1. **É MIRADO.** Só os controles que alguém sequestrou; o gatilho
+           repinta a mesa inteira porque a rajada da Steam é da mesa inteira.
+        2. **Vale no Modo Nativo.** A regra dela de 23/09 (A MATRIZ): *"no
+           Nativo o jogo recebe o físico, e mesmo assim o número e a barra são
+           do Hefesto"*. O `_output_mute` continua calando TUDO o mais — o
+           `report_thread`, a vibração, os gatilhos, o áudio: o que sai daqui é
+           o report mínimo, com `valid_flag0` e `valid_flag2` zerados, e ele não
+           toca em nada do que o jogo é dono.
+        3. **Nos dois transportes.** Pelo rádio, o `0x31` mínimo (o mesmo do
+           gatilho, `_escrever_barra_e_numero_bt`); pelo cabo, a classe LED do
+           kernel, com o cache invalidado antes — o cache mede a cor PEDIDA, e
+           a escrita crua do sequestrador não o atualiza.
+
+        Não conta como pintura (`consumir_pinturas_de_lightbar`): se contasse,
+        cada reafirmação armaria o gatilho do fim da sequência de novo.
+
+        Devolve ``{key: escreveu?}``; o que não casa com handle fica de fora.
+        """
+        alvos_uniq = {u for u in (self._key_to_uniq(x) for x in uniqs) if u}
+        with self._io_lock:
+            pode_player = self._pode_escrever_player_leds()
+            alvos = []
+            for key, handle in self._handles.items():
+                if self._key_to_uniq(key) not in alvos_uniq:
+                    continue
+                no = self._sysfs.get(key) if isinstance(self._sysfs, dict) else None
+                alvos.append(
+                    (
+                        key,
+                        handle,
+                        no,
+                        self._detect_transport(handle) == "bt",
+                        self._merged_desired_for_key(key),
+                    )
+                )
+        resultado: dict[str, bool] = {}
+        for key, handle, no, radio, desired in alvos:
+            cor: tuple[int, int, int] | None
+            if radio:
+                ok, cor, players = self._escrever_barra_e_numero_bt(
+                    key, handle, desired, pode_player=pode_player,
+                    nome="vigia_do_sequestro",
+                )
+            else:
+                ok, cor, players = self._repintar_um_no_do_cabo(
+                    key, no, desired, pode_player=pode_player
+                )
+            resultado[key] = ok
+            logger.debug(
+                "vigia_do_sequestro_reafirmou",
+                key=key,
+                transporte="bt" if radio else "cabo",
+                cor=cor,
+                players=players,
+                enviado=ok,
+            )
+        return resultado
+
+    def _repintar_um_no_do_cabo(
+        self,
+        key: str,
+        no: Any,
+        desired: _DesiredOutput,
+        *,
+        pode_player: bool,
+    ) -> tuple[bool, tuple[int, int, int] | None, tuple[bool, ...] | None]:
+        """Cor e número de UM controle do cabo pela classe LED, sem cache.
+
+        Sem nó gravável (sem a regra 77) não há rota: devolve False, e o
+        controle segue o caminho degradado de sempre.
+        """
+        if no is None:
+            return False, desired.led, desired.player_leds
+        cor = desired.led
+        players = desired.player_leds if pode_player else None
+        ok = True
+        with contextlib.suppress(Exception):
+            no.invalidate_cache()
+        try:
+            if cor is not None:
+                ok = bool(no.set_rgb(*cor)) and ok
+                if ok:
+                    self.record_sysfs_write(key, cor)
+            if players is not None:
+                ok = bool(no.set_players(players)) and ok
+        except Exception as exc:
+            logger.warning("vigia_do_sequestro_falhou", key=key, err=str(exc))
+            ok = False
+        return ok, cor, players
 
     # --- aviso de modo na lightbar (AVISO-DE-MODO-01) --------------------
 
@@ -6579,8 +6705,9 @@ class PyDualSenseController(IController):
         manda e controla sempre"*. O journal diz a recusa uma vez por campo e
         por sessão (`game_output_recusado_o_hefesto_numera`).
 
-        PERFIL-MANDA-01 (16/09/2026) — A SEGUNDA PENEIRA: campo com dono declarado para este controle (`perfil`/`usuaria`,
-        o carimbo do R-20) é RECUSADO aqui — não vira camada, não vai ao HID e
+        PERFIL-MANDA-01 (16/09/2026) — A SEGUNDA PENEIRA: campo com dono
+        declarado para este controle (`perfil`/`usuaria`, o carimbo do R-20) é
+        RECUSADO aqui — não vira camada, não vai ao HID e
         não é retido. Ordem dela, com o Sackboy aberto: *"meu perfil manda"*.
         O predicado inteiro está em `_campos_do_perfil_locked`, com a medição
         que o fez nascer. Recusa dispara a defesa (NUMA-03, rate-limited), que

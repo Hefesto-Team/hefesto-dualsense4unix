@@ -108,6 +108,9 @@ def _backend(handles: dict[str, Any], **kw: Any) -> Any:
     alvo = _BackendMinimo(handles, **kw)
     for nome in (
         "reescrever_lightbar_por_hidraw",
+        # STEAM-NO-FISICO-01: o corpo da escrita mora num método só, que o
+        # gatilho e a vigia do sequestro dividem.
+        "_escrever_barra_e_numero_bt",
         "consumir_conexoes_bt_novas",
         "_pode_escrever_player_leds",
         "_detect_transport",

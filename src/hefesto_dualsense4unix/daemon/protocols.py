@@ -115,6 +115,11 @@ class DaemonProtocol(Protocol):
     # hotplug e guardado POR INSTÂNCIA (nunca global: instâncias travadas e sãs
     # convivem na mesma mesa). None até o 1º uso.
     _cartorio_do_nascimento: Any
+    # STEAM-NO-FISICO-01: `core.escritor_cru.VigiaDoSequestro` — quem outro
+    # processo segura AGORA e quando a barra e o número de cada um foram
+    # reescritos pela última vez. None até o 1º uso; criada sob demanda por
+    # `connection.vigia_do_sequestro_de` (o `Daemon` é dataclass sem slots).
+    _vigia_do_sequestro: Any
 
     # FEAT-KEYBOARD-EMULATOR-01: attrs adicionados em runtime pelo subsystem
     # keyboard (OSK + touchpad reader). Declarados aqui para mypy strict.

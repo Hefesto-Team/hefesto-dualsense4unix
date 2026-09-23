@@ -12,8 +12,11 @@ import time
 from collections.abc import Sequence
 
 from hefesto_dualsense4unix.core.escritor_cru import (
+    PASSO_DA_VIGIA_S,
+    PassoDaVigia,
     SentinelaDeEscritorCru,
     Veredito,
+    VigiaDoSequestro,
 )
 from hefesto_dualsense4unix.core.evdev_reader import InputDirWatch
 from hefesto_dualsense4unix.core.events import EventTopic
@@ -1199,6 +1202,120 @@ async def vigiar_escritor_cru(daemon: DaemonProtocol, *, forcar: bool) -> int:
     return armados
 
 
+def vigia_do_sequestro_de(daemon: DaemonProtocol) -> VigiaDoSequestro:
+    """A `VigiaDoSequestro` DESTE daemon, criada na primeira consulta.
+
+    STEAM-NO-FISICO-01. Única por daemon pela razão de sempre: a foto dos
+    sequestradores e o relógio das reescritas são estado, e duas vigias
+    reescreveriam a mesma barra em dobro.
+    """
+    vigia = getattr(daemon, "_vigia_do_sequestro", None)
+    if isinstance(vigia, VigiaDoSequestro):
+        return vigia
+    vigia = VigiaDoSequestro()
+    with contextlib.suppress(Exception):
+        daemon._vigia_do_sequestro = vigia
+    return vigia
+
+
+async def vigiar_o_sequestro(
+    daemon: DaemonProtocol, *, agora: float | None = None
+) -> int:
+    """Reescreve a barra e o número de quem outro processo sequestrou.
+
+    STEAM-NO-FISICO-01, a segunda obrigação da decisão dela de 23/09/2026:
+
+        *"Hefesto manda e controla sempre, steam sequestrou hefesto corrigiu ao
+        no segundo após e temos que fazer o jogo entender isso."*
+
+    Roda a cada fatia do laço de reconexão (`_wait_online_or_hotplug`), e a
+    fatia encolhe para `PASSO_DA_VIGIA_S` enquanto houver o que vigiar. O
+    `vigiar_escritor_cru` logo antes continua armando o gatilho do fim da
+    sequência (UMA reafirmação quando a rajada sossega); esta é a outra metade,
+    a que ela pediu: *"quantas vezes for preciso"*.
+
+    **VALE NO MODO NATIVO**, ao contrário do vigia irmão: a regra dela de
+    23/09 (A MATRIZ) diz que no Nativo o jogo recebe o físico e mesmo assim o
+    número e a barra são do Hefesto. O que sai é o report mínimo — a vibração,
+    os gatilhos e o áudio continuam do jogo.
+
+    **CUSTO EM REPOUSO: zero varredura.** Com a regra udev da cura
+    (O-NO-NASCE-FECHADO-01) o nó do físico é `0600 root` e ninguém da sessão
+    o abre; a vigia pergunta isso com um `access(2)` por nó (~0,4 µs) e não
+    varre `/proc`. Ela só acorda com nó alcançável ou sequestrador conhecido.
+
+    Devolve quantos controles tiveram a barra reescrita. Best-effort: nada
+    aqui pode derrubar o laço de reconexão.
+    """
+    vigia = vigia_do_sequestro_de(daemon)
+    nos_por_uniq: dict[str, str] = {}
+    mapear = getattr(daemon.controller, "nos_hidraw_por_uniq", None)
+    if callable(mapear):
+        with contextlib.suppress(Exception):
+            nos_por_uniq = dict(mapear() or {})
+    agora = time.monotonic() if agora is None else float(agora)
+    nos = sorted(set(nos_por_uniq.values()))
+    passo: PassoDaVigia
+    try:
+        sondar = vigia.quer_sondar(nos, agora)
+        if sondar:
+            # SÓ a varredura vai ao executor (ela lê `/proc`, ~11 ms); o resto
+            # do passo é memória, e um `access(2)` por nó.
+            def _passo() -> PassoDaVigia:
+                return vigia.passo(nos, agora, sondar=True)
+
+            passo = await daemon._run_blocking(_passo)
+        else:
+            passo = vigia.passo(nos, agora, sondar=False)
+    except Exception as exc:
+        logger.debug("vigia_do_sequestro_falhou", err=str(exc))
+        return 0
+    for no in passo.novos:
+        logger.info(
+            "sequestro_detectado",
+            no=no,
+            pids=list(passo.pids.get(no, ())),
+            modo_nativo=_modo_nativo(daemon),
+        )
+    for no in passo.soltos:
+        logger.info(
+            "sequestro_encerrado",
+            no=no,
+            pids=list(passo.pids.get(no, ())),
+            reescritas=vigia.encerrar(no),
+        )
+    if not passo.a_reafirmar:
+        return 0
+    alvos = set(passo.a_reafirmar)
+    uniqs = sorted(u for u, no in nos_por_uniq.items() if no in alvos)
+    reafirmar = getattr(daemon.controller, "reafirmar_barra_e_numero", None)
+    if not uniqs or not callable(reafirmar):
+        return 0
+
+    def _reafirmar() -> object:
+        return reafirmar(uniqs)
+
+    try:
+        resultado = await daemon._run_blocking(_reafirmar)
+    except Exception as exc:
+        logger.warning("vigia_do_sequestro_reafirmar_falhou", err=str(exc))
+        return 0
+    vigia.reafirmado(passo.a_reafirmar, agora)
+    if passo.novos:
+        # A PRIMEIRA reescrita de cada sequestro vai ao diário, com o que
+        # saiu; as seguintes (uma por segundo) só contam, e a conta sai no
+        # `sequestro_encerrado`.
+        logger.info("sequestro_corrigido", uniqs=uniqs, resultado=resultado)
+    return len(uniqs)
+
+
+def _modo_nativo(daemon: DaemonProtocol) -> bool:
+    """O daemon está em Modo Nativo? Só para o diário — não decide nada aqui."""
+    with contextlib.suppress(Exception):
+        return bool(daemon.is_native_mode())
+    return False
+
+
 def cartorio_do_nascimento_de(daemon: DaemonProtocol) -> CartorioDoNascimento:
     """O `CartorioDoNascimento` DESTE daemon, criado na primeira consulta.
 
@@ -1444,6 +1561,13 @@ async def _wait_online_or_hotplug(
         )
         if registro_de_gatilhos_de(daemon).algum_armado():
             step = min(step, PASSO_ENQUANTO_O_GATILHO_ESTA_ARMADO_SEC)
+        # STEAM-NO-FISICO-01: com um nó sequestrado (ou alcançável por
+        # qualquer processo da sessão) a fatia encolhe para meio segundo — é o
+        # que faz «corrigir em até um segundo» caber na conta. Em repouso, com
+        # o nó fechado pela regra udev, a vigia não pede nada e a fatia é a
+        # de sempre.
+        if vigia_do_sequestro_de(daemon).vigilante:
+            step = min(step, PASSO_DA_VIGIA_S)
         await _wait_or_stop(daemon, step)
         if daemon._is_stopping():
             return False
@@ -1454,6 +1578,7 @@ async def _wait_online_or_hotplug(
         # 5 s. Sem isto a reafirmação de um comando dela esperaria o tique de
         # 30 s, que é tarde demais para um gesto ter resposta.
         await vigiar_escritor_cru(daemon, forcar=False)
+        await vigiar_o_sequestro(daemon)
         await disparar_gatilhos_devidos(daemon)
         if watch.poll():
             return True
@@ -1661,5 +1786,7 @@ __all__ = [
     "restore_last_profile",
     "sentinela_de_escritor_cru_de",
     "shutdown",
+    "vigia_do_sequestro_de",
     "vigiar_escritor_cru",
+    "vigiar_o_sequestro",
 ]
