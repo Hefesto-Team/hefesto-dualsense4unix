@@ -1068,8 +1068,8 @@ def _aviso_do_servico_calado(ctx: Contexto) -> dict[str, str] | None:
     os números velhos na tela, ainda é mentira; só apagar, sem dizer, parece
     defeito"*. A metade de APAGAR já existe e não é desta aba —
     `pacotes.pacote_da_pagina` acrescenta o molde e
-    `pacotes.apagar_os_lugares_sem_dono` escreve travessão nos quatro lugares,
-    medido nesta árvore com o estado vazio. O que faltava era a metade de DIZER,
+    `pacotes.apagar_os_lugares_sem_dono` escreve nos quatro lugares o que o desenho
+    diz do vazio, medido nesta árvore com o estado vazio. O que faltava era a metade de DIZER,
     e é esta função.
 
     **O ESTADO VAZIO É O SINAL, e ele é o mesmo que a aba inteira já usa.**
