@@ -151,6 +151,31 @@ def test_o_nome_do_lugar_volta_ao_padrao_em_todo_adaptador(tmp_path: Path) -> No
     assert "devolvido ao padrão do sistema" in r.stdout
 
 
+def test_o_nome_de_fabrica_do_bluez_com_numero_volta_ao_padrao(tmp_path: Path) -> None:
+    """O « #N» que o BlueZ põe em cada adaptador não faz do nome uma escolha dela.
+
+    Medido no ensaio do uninstall na máquina dela (23/09): o hci0 tinha o Alias
+    «Nintendo MeowSystem #1» e o Name «MeowSystem»; o hci1, «Nintendo
+    MeowSystem» e «MeowSystem #2». O plugin `hostname` do BlueZ dá ao adaptador
+    padrão o nome da máquina e aos outros «<nome> #<índice+1>» — o número muda
+    quando a ordem dos adaptadores muda, e o prefixo guardou o de antes. Tirar
+    só o prefixo deixava os dois com um Alias fixo e trocado. A MORDIDA: voltar
+    a comparar o nome inteiro reprova os dois.
+    """
+    r = _mesa(
+        tmp_path,
+        {
+            "hci0": ("Nintendo MeowSystem #1", "MeowSystem"),
+            "hci1": ("Nintendo MeowSystem", "MeowSystem #2"),
+            "hci2": ("Nintendo Sala", "MeowSystem #3"),
+        },
+        [],
+    )
+    escritas = _escritas(r.stdout)
+    assert escritas.get("hci0") == "" and escritas.get("hci1") == "", r.stdout
+    assert escritas.get("hci2") == "Sala", r.stdout
+
+
 def test_sem_maquina_json_o_prefixo_ainda_sai(tmp_path: Path) -> None:
     """A casa sem nenhum lugar declarado: o comportamento de antes, intacto."""
     r = _mesa(tmp_path, {"hci0": ("Nintendo meowsystem", "outra")}, [])
