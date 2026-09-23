@@ -511,14 +511,19 @@ O motor é `integrations/central_do_radio.py`: pareia no destino, confere pelo
 Sem `aparelho` é o «Conectar»: a janela abre no adaptador que a D8 escolhe (mais
 vaga de ponte; no empate, menos controles; quem está varrendo por último), e o
 controle que ela segurar em PS + Create é o que chega. Sem `destino`, a D8 escolhe
-também no mover. `status: "ocupado"` é a recusa: outro motor segurou a trava do
-rádio por mais de 5 s, o botão treme, e nada mudou.
+também no mover. `status: "ocupado"` é a recusa, e ela tem duas causas: OUTRO
+movimento está em curso, ou outro motor segurou a trava do rádio por mais de 5 s.
+Um por vez vale também para o arrastar e para o «Conectar»
+(A-COSTURA-DA-ONDA-2-01). Nos dois casos o botão treme e nada mudou. O mesmo
+pedido feito de novo devolve o mesmo movimento, e não uma recusa.
 
 A resposta volta assim que a trava vem, com o movimento em `esperando`; o resto
 chega por `daemon.state_full`, na chave `radio_central`:
 `{movimentos: [...], em_curso, proposta}`. Cada movimento tem `estado`
-(`esperando`, `chegou` ou `nao_chegou`), `passo`, `motivo`, `aparelho`, `destino`
-e `origens`. `proposta` é o «Equilibrar» — UM movimento, com `controle` e
+(`esperando`, `chegou` ou `nao_chegou`), `passo`, `motivo`, `aparelho`, `destino`,
+`origens`, `e_controle` e `quando`. `e_controle` é um booleano: controle se confere
+pelo `HID_PHYS`, outro aparelho pelo `Connected`. `controle` só existe na `proposta`,
+e lá é o `uniq`. `proposta` é o «Equilibrar» — UM movimento, com `controle` e
 `destino`, que a tela aplica chamando `radio.mover` com esses dois —, ou `null`,
 e é sempre `null` enquanto um movimento está `esperando`.
 
