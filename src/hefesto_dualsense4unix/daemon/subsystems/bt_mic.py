@@ -687,6 +687,10 @@ class BtMicSubsystem:
         self._daemon: Any = daemon
         self._gerenciador_injetado = gerenciador
         self._gerenciador: Any = None
+        #: AR-MEDIDO-01: `uniq -> (instante, quadros, hz)` — a amostra de
+        #: referência de :meth:`hz_de_voz`. `hz` None = janela ainda aberta.
+        self._amostras_de_voz: dict[str, tuple[float, int, float | None]] = {}
+        self._relogio_da_voz: Any = None
         self._thread: threading.Thread | None = None
         self._parar = threading.Event()
         #: A config viva, guardada no `start` — o laço precisa reler a fonte a
@@ -923,6 +927,61 @@ class BtMicSubsystem:
                 continue
             return bool(getattr(ponte, "mic_no_ar", False))
         return False
+
+    #: A janela da taxa de voz, e a referência mais velha que ainda vira taxa
+    #: — os mesmos números do medidor de ar (`ar_do_adaptador`).
+    JANELA_DA_VOZ_S = 1.0
+    JANELA_MAXIMA_DA_VOZ_S = 5.0
+
+    def hz_de_voz(self, uniq: str) -> float | None:
+        """Quadros de VOZ por segundo que o rádio traz deste controle AGORA.
+
+        AR-MEDIDO-01 (23/09/2026), R10 dela: a linha do controle mostra os Hz
+        de movimento e os da voz. Quem conta é a ponte do microfone, que lê
+        todo relatório do hidraw e separa o de áudio pelo bit 1 do byte 1
+        (`quadros_audio` + `quadros_invalidos`: o inválido também ocupou o ar).
+
+        ``None`` = não sei: sem ponte para este controle, ou primeira amostra.
+        ``0.0`` = a ponte está de pé e ninguém está ouvindo — o 0x32 desligou
+        o microfone e a voz não viaja, que é o que a sob-demanda economiza.
+        """
+        chave = norm_mac(str(uniq)) or ""
+        ponte = None
+        gerenciador = self._gerenciador
+        if chave and gerenciador is not None:
+            with contextlib.suppress(Exception):
+                for candidata in gerenciador.pontes.values():
+                    dono = getattr(getattr(candidata, "no", None), "uniq", "")
+                    if norm_mac(str(dono)) == chave:
+                        ponte = candidata
+                        break
+        if ponte is None:
+            self._amostras_de_voz.pop(chave, None)
+            return None
+        try:
+            stats = ponte.estatistica()
+            quadros = int(stats.quadros_audio) + int(stats.quadros_invalidos)
+        except Exception:
+            return None
+        relogio = self._relogio_da_voz
+        if relogio is None:
+            import time
+
+            relogio = time.monotonic
+        agora = float(relogio())
+        antes = self._amostras_de_voz.get(chave)
+        if (
+            antes is None
+            or quadros < antes[1]
+            or agora - antes[0] > self.JANELA_MAXIMA_DA_VOZ_S
+        ):
+            self._amostras_de_voz[chave] = (agora, quadros, None)
+            return None
+        if agora - antes[0] < self.JANELA_DA_VOZ_S:
+            return antes[2]
+        hz = round((quadros - antes[1]) / (agora - antes[0]), 1)
+        self._amostras_de_voz[chave] = (agora, quadros, hz)
+        return hz
 
     def uniqs_com_ponte(self) -> frozenset[str]:
         """Os `uniq` cuja ponte está DE PÉ agora — o que o rádio carrega.

@@ -17,8 +17,6 @@ import os
 import select
 import threading
 import time
-from collections import deque
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, ClassVar
@@ -2304,7 +2302,11 @@ class MotionSensorReader(_EvdevReconnectLoop):
         super().__init__()  # HANG-01: self-pipe de wake (request_reopen/stop)
         self._target_uniq = target_uniq
         # AR-MEDIDO-01: os intervalos entre pacotes, no carimbo do KERNEL —
-        # ver `hz_do_movimento`. `(fim, dt)` de cada intervalo contíguo.
+        # ver `hz_do_movimento`. `(fim, dt)` de cada intervalo contíguo. O
+        # import é local: uma linha nova no topo deslocaria as âncoras que a
+        # casa cita por número neste arquivo.
+        from collections import deque
+
         self._taxa_intervalos: deque[tuple[float, float]] = deque()
         self._taxa_soma = 0.0
         self._taxa_ultimo_kernel: float | None = None
@@ -2313,7 +2315,7 @@ class MotionSensorReader(_EvdevReconnectLoop):
         self._taxa_perdeu = False
         #: O relógio do PROCESSO, para o silêncio e a abertura — injetável na
         #: régua. O ritmo dos pacotes vem do carimbo do kernel, não daqui.
-        self._relogio_da_taxa: Callable[[], float] = time.monotonic
+        self._relogio_da_taxa: Any = time.monotonic
         self._device_path = device_path or self._locate()
         self._lock = threading.RLock()
         self._thread: threading.Thread | None = None
@@ -2373,7 +2375,7 @@ class MotionSensorReader(_EvdevReconnectLoop):
         ``None`` = não sei: nó fechado, ou aberto há menos de uma janela.
         ``0.0`` = o nó está aberto e nada chegou numa janela inteira.
         """
-        agora = self._relogio_da_taxa()
+        agora = float(self._relogio_da_taxa())
         janela = self._JANELA_DA_TAXA_S
         with self._lock:
             aberto_em = self._taxa_aberto_em
@@ -2397,7 +2399,7 @@ class MotionSensorReader(_EvdevReconnectLoop):
         with self._lock:
             anterior = self._taxa_ultimo_kernel
             self._taxa_ultimo_kernel = carimbo
-            self._taxa_ultimo_mono = self._relogio_da_taxa()
+            self._taxa_ultimo_mono = float(self._relogio_da_taxa())
             perdeu, self._taxa_perdeu = self._taxa_perdeu, False
             if anterior is not None and not perdeu:
                 dt = carimbo - anterior
@@ -2420,7 +2422,7 @@ class MotionSensorReader(_EvdevReconnectLoop):
             self._taxa_ultimo_kernel = None
             self._taxa_ultimo_mono = None
             self._taxa_perdeu = False
-            self._taxa_aberto_em = self._relogio_da_taxa() if aberto else None
+            self._taxa_aberto_em = float(self._relogio_da_taxa()) if aberto else None
 
     def snapshot(self) -> GyroSnapshot:
         """Última velocidade angular conhecida (cópia sob lock)."""

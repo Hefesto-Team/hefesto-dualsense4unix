@@ -2916,8 +2916,8 @@ class IpcHandlersMixin:
             # defensiva por conta própria.
             if isinstance(controllers, list):
                 with contextlib.suppress(Exception):
-                    self._enrich_controllers_per_controller(
-                        [c for c in controllers if isinstance(c, dict)], state
+                    self._enriquecer_e_medir_o_ar(
+                        result, [c for c in controllers if isinstance(c, dict)], state
                     )
 
         # DEDUP-06 (achado NOVO da revisão): físico em BT + Modo Nativo é
@@ -7317,6 +7317,207 @@ class IpcHandlersMixin:
         )
         total = ps.reload(ctx)
         return {"status": "ok", "total": total}
+
+    # =================================================================
+    # AR-MEDIDO-01 (23/09/2026), R10 e R11 dela — o ar no `state_full`
+    # =================================================================
+    #
+    # MORA NO FIM DA CLASSE DE PROPÓSITO: este arquivo é citado por NÚMERO DE
+    # LINHA em mais de cem lugares da casa, e código novo no meio dele
+    # deslocaria todas as âncoras de baixo. O gancho no `state_full` é uma
+    # troca linha por linha (`_enriquecer_e_medir_o_ar`).
+
+    #: O medidor de ar dos adaptadores (`integrations/ar_do_adaptador`), o
+    #: cache do `HID_PHYS` por controle e o do AFH. Mesmo padrão do
+    #: `_sensor_hub`: class attribute com shadow por instância no primeiro uso;
+    #: a régua os injeta.
+    _medidor_de_ar: Any = None
+    _adaptadores_em_cache: tuple[float, frozenset[str], dict[str, str]] | None = None
+    _afh_evitados: dict[str, tuple[int, ...] | None] | None = None
+    _afh_lido_em: float = float("-inf")
+    _afh_em_voo: bool = False
+    _ler_afh: Any = None
+
+    def _enriquecer_e_medir_o_ar(
+        self, result: dict[str, Any], entries: list[dict[str, Any]], state: Any
+    ) -> None:
+        """O enriquecimento POR CONTROLE e, depois dele, o ar.
+
+        STATUS-01 + COR-05 + BT-03: `_enrich_controllers_per_controller` — slot
+        de sessão, cor da lightbar, inputs ao vivo, backend do vpad. AR-MEDIDO-01:
+        :meth:`_merge_radio` (os Hz MEDIDOS de cada controle) e o
+        ``result["radio_ar"]`` (as pontes contra o limite e o AFH, por
+        adaptador). Cada metade no SEU suppress: um defeito no rádio não pode
+        apagar o enriquecimento, nem o contrário.
+        """
+        with contextlib.suppress(Exception):
+            self._enrich_controllers_per_controller(entries, state)
+        with contextlib.suppress(Exception):
+            self._merge_radio(entries)
+            result["radio_ar"] = self._ar_por_adaptador(entries)
+
+    @staticmethod
+    def _hz_ou_none(valor: Any) -> float | None:
+        """Um Hz publicável, ou ``None`` — bool e texto não são taxa."""
+        if isinstance(valor, bool) or not isinstance(valor, (int, float)):
+            return None
+        return float(valor)
+
+    #: O `HID_PHYS` muda só quando um controle troca de adaptador; reler o
+    #: sysfs a cada tique de 10 Hz seria custo sem notícia.
+    _ADAPTADOR_TTL_S = 2.0
+    #: O AFH é um comando ao rádio (de leitura). Um a cada dez segundos por
+    #: enlace é o bastante para uma régua que muda com o Wi-Fi da casa.
+    _AFH_PERIODO_S = 10.0
+
+    def _merge_radio(self, entries: list[dict[str, Any]]) -> None:
+        """Quatro chaves por controle, SEMPRE presentes, ``None`` = não sei.
+
+        - ``adaptador``: o endereço do adaptador, do ``HID_PHYS`` do hidraw
+          (``radio_da_mesa.adaptador_por_uniq``); ``None`` no cabo ou sem
+          endereço legível;
+        - ``hz_movimento``: pacotes/s do nó de movimento AGORA
+          (``SensorHub.hz_do_movimento``), nos dois transportes;
+        - ``hz_voz``: quadros de voz/s da ponte do microfone no rádio
+          (``BtMicSubsystem.hz_de_voz``);
+        - ``ponte_do_radio``: ``"som"``/``"haptica"`` quando a ponte daquele
+          controle está NO AR (``AltoFalanteSubsystem.pontes_de_pe``).
+        """
+        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+        def chave(valor: Any) -> str:
+            return (norm_mac(str(valor)) or "") if isinstance(valor, str) else ""
+
+        no_radio = [
+            e["uniq"] for e in entries
+            if e.get("transport") == "bt" and isinstance(e.get("uniq"), str) and e["uniq"]
+        ]
+        enderecos = self._adaptadores_do_radio(no_radio)
+        hub = self._sensor_hub
+        if hub is None:
+            from hefesto_dualsense4unix.utils.xdg_paths import fake_mode_enabled
+
+            if not fake_mode_enabled():
+                hub = self._garantir_sensor_hub()
+        voz = getattr(getattr(self.daemon, "_bt_mic_subsystem", None), "hz_de_voz", None)
+        pontes: dict[str, str] = {}
+        pontes_fn = getattr(
+            getattr(self.daemon, "_alto_falante_subsystem", None), "pontes_de_pe", None
+        )
+        if callable(pontes_fn):
+            with contextlib.suppress(Exception):
+                pontes = {chave(u): m for u, m in dict(pontes_fn()).items() if chave(u)}
+        perguntar_hz = getattr(hub, "hz_do_movimento", None)
+        for entry in entries:
+            uniq = entry.get("uniq") if isinstance(entry.get("uniq"), str) else None
+            radio = entry.get("transport") == "bt"
+            vivo = bool(uniq) and entry.get("connected", True) is not False
+            entry["adaptador"] = (enderecos.get(uniq) or None) if radio and uniq else None
+            hz: Any = None
+            if vivo and callable(perguntar_hz):
+                with contextlib.suppress(Exception):
+                    hz = perguntar_hz(uniq)
+            entry["hz_movimento"] = self._hz_ou_none(hz)
+            hz_voz: Any = None
+            if vivo and radio and callable(voz):
+                with contextlib.suppress(Exception):
+                    hz_voz = voz(uniq)
+            entry["hz_voz"] = self._hz_ou_none(hz_voz)
+            modo = pontes.get(chave(uniq)) if radio and uniq else None
+            entry["ponte_do_radio"] = modo if modo in ("som", "haptica") else None
+
+    def _adaptadores_do_radio(self, uniqs: list[str]) -> dict[str, str]:
+        """``{uniq: endereço do adaptador | ""}``, relido no máximo a cada 2 s."""
+        from hefesto_dualsense4unix.integrations import radio_da_mesa
+
+        agora = time.monotonic()
+        alvo = frozenset(uniqs)
+        cache = self._adaptadores_em_cache
+        if cache is not None and cache[1] == alvo and agora - cache[0] < self._ADAPTADOR_TTL_S:
+            return cache[2]
+        enderecos = radio_da_mesa.adaptador_por_uniq(sorted(alvo)) if alvo else {}
+        self._adaptadores_em_cache = (agora, alvo, dict(enderecos))
+        return dict(enderecos)
+
+    def _ar_por_adaptador(self, entries: list[dict[str, Any]]) -> dict[str, Any]:
+        """``state_full["radio_ar"]``: o orçamento de ar por adaptador.
+
+        Sai de ``radio_da_mesa.orcamento_por_adaptador`` — o dono. Aqui só se
+        junta o que o daemon mede: as chaves de :meth:`_merge_radio`, o
+        ``MedidorDeAr`` e o AFH. No modo falso (a suíte, o smoke) o medidor
+        não nasce: nada aqui pergunta ao rádio de ninguém.
+        """
+        from hefesto_dualsense4unix.integrations import radio_da_mesa
+
+        medidor = self._medidor_de_ar
+        if medidor is None:
+            from hefesto_dualsense4unix.utils.xdg_paths import fake_mode_enabled
+
+            if not fake_mode_enabled():
+                from hefesto_dualsense4unix.integrations.ar_do_adaptador import (
+                    MedidorDeAr,
+                )
+
+                medidor = MedidorDeAr()
+                self._medidor_de_ar = medidor
+        ar: dict[str, Any] = {}
+        if medidor is not None:
+            ar = {e: a for e, a in dict(medidor.amostrar()).items() if e}
+            self._talvez_ler_o_afh(ar)
+        orcamento = radio_da_mesa.orcamento_por_adaptador(
+            entries,
+            ar=ar if medidor is not None else None,
+            canais_evitados=dict(self._afh_evitados or {}),
+        )
+        return {endereco: o.publicar() for endereco, o in orcamento.items()}
+
+    def _talvez_ler_o_afh(self, ar: dict[str, Any]) -> None:
+        """Pergunta o AFH de cada enlace numa thread, no máximo a cada 10 s.
+
+        O ``Read AFH Channel Map`` espera o ``Command Complete`` do rádio, e
+        esperar dentro deste handler seguraria o laço do daemon — daí a
+        thread, uma em voo por vez. O resultado entra no próximo tique.
+        """
+        agora = time.monotonic()
+        if self._afh_em_voo or agora - self._afh_lido_em < self._AFH_PERIODO_S:
+            return
+        ler = self._ler_afh
+        if ler is None:
+            from hefesto_dualsense4unix.utils.xdg_paths import fake_mode_enabled
+
+            if fake_mode_enabled():
+                return
+            from hefesto_dualsense4unix.integrations.ar_do_adaptador import ler_mapa_afh
+
+            ler = ler_mapa_afh
+        self._afh_em_voo = True
+        self._afh_lido_em = agora
+        leituras = dict(ar)
+
+        def perguntar() -> None:
+            from hefesto_dualsense4unix.integrations.ar_do_adaptador import (
+                canais_evitados_pelo_adaptador,
+                mapas_afh_do_adaptador,
+            )
+
+            evitados: dict[str, tuple[int, ...] | None] = {}
+            try:
+                for endereco, leitura in leituras.items():
+                    evitados[endereco] = canais_evitados_pelo_adaptador(
+                        mapas_afh_do_adaptador(leitura, ler=ler)
+                    )
+                self._afh_evitados = evitados
+            except Exception:  # pragma: no cover - defensivo, jamais derruba o daemon
+                logger.debug("radio_afh_nao_lido", exc_info=True)
+            finally:
+                self._afh_em_voo = False
+
+        try:
+            import threading
+
+            threading.Thread(target=perguntar, name="radio-afh", daemon=True).start()
+        except Exception:
+            self._afh_em_voo = False
 
 
 __all__ = ["DraftApplier", "IpcHandlersMixin"]

@@ -262,6 +262,12 @@ class TestPlayerPorControle:
         # só saem do `None` depois que a leitura em thread voltar do aparelho
         # (aqui não há aparelho), e o `nome_declarado` depende de a usuária ter
         # nomeado o controle no `maquina.json` (aqui o daemon é dublê).
+        #
+        # NOTA DATADA — 23/09/2026 (AR-MEDIDO-01, R10 dela). Entraram
+        # `adaptador`, `hz_movimento`, `hz_voz` e `ponte_do_radio`: os Hz
+        # MEDIDOS de cada controle e a ponte que ocupa o ar. `None` nos quatro
+        # é a resposta desta bancada — controle no cabo (sem adaptador, sem
+        # voz, sem ponte de rádio) e sem nó de movimento para contar.
         assert result["controllers"] == [
             {"index": 0, "connected": True, "transport": "usb",
              "is_primary": True, "uniq": "aabbcc001100", "player": None,
@@ -270,7 +276,9 @@ class TestPlayerPorControle:
              "lightbar_rgb": None, "lightbar_on": False,
              "lightbar_source": "desconhecida", "lightbar_disputada": False,
              "nascimento": None,
-             "inputs": None, "vpad_backend": None, "vpad_motivo": None},
+             "inputs": None, "vpad_backend": None, "vpad_motivo": None,
+             "adaptador": None, "hz_movimento": None, "hz_voz": None,
+             "ponte_do_radio": None},
         ]
 
     @pytest.mark.asyncio

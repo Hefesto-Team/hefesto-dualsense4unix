@@ -24,8 +24,9 @@ em 23/09/2026** (``integrations/ar_do_adaptador.py``, ``HCIGETDEVINFO``, sem
 root): 87 B por pacote ACL recebido, que é o ``0x31`` de 83 B no ar mais 4 do
 cabeçalho HCI — cabe num 3-DH1, uma fatia, e o controle só fala na fatia
 seguinte a um POLL do mestre. **Cada relatório de entrada custa DUAS fatias**
-(:data:`FATIAS_POR_RELATORIO_DE_ENTRADA`). 752,8 pacotes/s vezes 4 fatias passaria
-de 1.600, o que é impossível — é o que fecha o 2.
+(:data:`FATIAS_POR_RELATORIO_DE_ENTRADA`). 752,8 pacotes/s vezes 4 fatias
+passaria de 1.600, o que é impossível — é o que fecha o 2. O 1 da conta
+aditiva abaixo é o lado otimista; ver «O AR, DESDE 23/09/2026».
 
 **A segunda metade é MEDIÇÃO, e é do projeto.** O A/B de 25/07/2026, mesmo
 controle, três janelas de 3 s
@@ -84,11 +85,6 @@ Duas consequências de projeto saem daí, e as duas estão no código:
 1. o medidor usa o **nominal do A/B**, nunca uma medição ao vivo. Uma barra
    alimentada pelo envelope de 157,8 a 402,9 Hz oscilaria 2,5 vezes sem ninguém
    ter mexido em nada, e ensinaria a desconfiar dela;
-
-   NOTA DATADA — 23/09/2026 (AR-MEDIDO-01): vale só para a vista aditiva
-   velha. A R10 dela manda Hz REAIS, e o orçamento de agora
-   (:func:`orcamento_por_adaptador`) os lê do nó de movimento, contado pelo
-   carimbo do kernel — não pelo laço de leitura que a nota de 23/08 acusou.
 2. o rótulo é **uma de três palavras sobre ocupação** e não aceita frase de
    causa. A tela pode dizer *"a mesa está cheia"*, que é aritmética de
    especificação. Não pode dizer *"por isso seu controle está ruim"*, porque a
@@ -114,20 +110,9 @@ from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 #: ESPECIFICAÇÃO, não medição desta máquina; ver o cabeçalho.
 SLOTS_POR_SEGUNDO = 1600
 
-#: Quantas fatias um relatório consome NA VISTA ADITIVA VELHA — decisão R1 do
-#: PO (22/08/2026).
-#:
-#: NOTA DATADA — 23/09/2026 (AR-MEDIDO-01): o 1 não é o lado conservador, é o
-#: OTIMISTA; o medido é 2 (:data:`FATIAS_POR_RELATORIO_DE_ENTRADA`). E a conta
-#: que o usa caducou para o rádio: a entrada é elástica e não entra em
-#: orçamento nenhum (R10, D-CONTA-ADITIVA-DO-RADIO) — o orçamento de agora é
-#: :func:`orcamento_por_adaptador`. O 1 fica porque o mockup APROVADO do
-#: arranjo (``mockup/mapa-das-portas.html``, ``CUSTO_SEM_MIC = 260.4``) e o
-#: motor que o espelha (``arranjo_da_mesa``) fazem ``HZ * SLOTS_POR_RELATORIO``
-#: e o portão da paridade reprova a divergência: trocar para 2 aqui mudaria o
-#: desenho dela sem o OK dela. Sai quando o último leitor da vista aditiva
-#: migrar (MOVER-UM-POR-VEZ-01 no ``plano_de_radio``, TRANSPLANTE-DA-SECAO-01
-#: na aba 08).
+#: Fatias por relatório NA VISTA ADITIVA VELHA (R1 do PO, 22/08). O medido é 2
+#: e o 1 é o lado otimista; «O AR, DESDE 23/09/2026», no fim deste módulo, diz
+#: por que ele fica (o mockup aprovado do arranjo o espelha) e quando sai.
 SLOTS_POR_RELATORIO = 1
 
 #: A chave da linha de ``docs/data/mapa-controles.csv`` de onde as três
@@ -430,6 +415,21 @@ def ocupacao_por_adaptador(
 # ``docs/data/orcamento-de-ar.csv``, e a régua
 # ``test_o_orcamento_conta_a_ponte.py`` reprova quando o CSV e estas constantes
 # divergirem.
+#
+# NOTAS DATADAS — 23/09/2026, sobre a vista aditiva que fica lá em cima:
+#
+# * ``SLOTS_POR_RELATORIO = 1`` era chamado de «hipótese conservadora». É o
+#   lado OTIMISTA: o medido é 2 (:data:`FATIAS_POR_RELATORIO_DE_ENTRADA`). O 1
+#   fica porque o mockup APROVADO do arranjo (``mockup/mapa-das-portas.html``,
+#   ``CUSTO_SEM_MIC = 260.4``) e o motor que o espelha (``arranjo_da_mesa``)
+#   fazem ``HZ * SLOTS_POR_RELATORIO``, e o portão da paridade reprova a
+#   divergência: trocar para 2 mudaria o desenho dela sem o OK dela. Sai
+#   quando o último leitor da vista aditiva migrar (MOVER-UM-POR-VEZ-01 no
+#   ``plano_de_radio``, TRANSPLANTE-DA-SECAO-01 na aba 08).
+# * A consequência 1 do cabeçalho («o nominal do A/B, nunca uma medição ao
+#   vivo») vale só para aquela vista. A R10 dela manda Hz REAIS, e este
+#   orçamento os lê do nó de movimento, contado pelo carimbo do kernel — não
+#   pelo laço de leitura que a nota de 23/08 acusou.
 
 #: Quantas pontes um adaptador comporta. MEDIDO: duas viveram 63 min no mesmo
 #: adaptador; a terceira derrubou em 11, 15 e 89 s (22/09/2026). Provisório até

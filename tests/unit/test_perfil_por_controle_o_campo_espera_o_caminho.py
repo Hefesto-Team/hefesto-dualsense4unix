@@ -627,10 +627,13 @@ def test_o_interruptor_de_sensor_existe_e_e_por_peca() -> None:
     # AS DUAS PORTAS DA MIRA POR MOVIMENTO entraram em 21/09/2026
     # (MOVIMENTO-EM-QUALQUER-MASCARA-01, E4): `angulo_do_movimento` drena o
     # ângulo integrado no ritmo do nó, `velocidade_do_movimento` só lê.
+    # E `hz_do_movimento` em 23/09/2026 (AR-MEDIDO-01, R10 dela): os pacotes
+    # por segundo que o nó recebe AGORA — leitura, não interruptor.
     assert publicos == {
         "angulo_do_movimento",
         "entradas",
         "grab_do_movimento",
+        "hz_do_movimento",
         "leitura",
         "reconciliar",
         "stop_all",

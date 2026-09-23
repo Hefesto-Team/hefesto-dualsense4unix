@@ -214,3 +214,47 @@ def test_o_csv_e_as_constantes_sao_o_mesmo_numero() -> None:
             f"{linha['consumidor']}: o CSV diz {linha['numero']} e {dono} diz {valor}")
         conferidas += 1
     assert conferidas >= 8
+
+
+# ---------------------------------------------------------------- quem sabe das pontes
+
+
+class _PonteDoSom:
+    def __init__(self, de_pe: bool) -> None:
+        self._de_pe = de_pe
+
+    def esta_de_pe(self) -> bool:
+        return self._de_pe
+
+
+def test_as_pontes_de_pe_sao_o_efeito_e_nao_o_pedido() -> None:
+    """A ponte sob demanda que desceu por silêncio não ocupa o ar."""
+    from hefesto_dualsense4unix.daemon.subsystems.alto_falante import AltoFalanteSubsystem
+
+    sub = AltoFalanteSubsystem()
+    sub._pontes = {
+        "aabbcc000001": _PonteDoSom(True),
+        "aabbcc000002": _PonteDoSom(False),
+        "aabbcc000003": _PonteDoSom(True),
+        "aabbcc000004": _PonteDoSom(True),
+    }
+    sub._modo_da_ponte = {
+        "aabbcc000001": "som",
+        "aabbcc000002": "som",
+        "aabbcc000003": "haptica",
+        "aabbcc000004": "outro",
+    }
+    assert sub.pontes_de_pe() == {"aabbcc000001": "som", "aabbcc000003": "haptica"}
+
+
+def test_ponte_que_levanta_ao_ser_perguntada_fica_de_fora() -> None:
+    from hefesto_dualsense4unix.daemon.subsystems.alto_falante import AltoFalanteSubsystem
+
+    class _Quebrada:
+        def esta_de_pe(self) -> bool:
+            raise RuntimeError("fd sumiu")
+
+    sub = AltoFalanteSubsystem()
+    sub._pontes = {"aabbcc000001": _Quebrada()}
+    sub._modo_da_ponte = {"aabbcc000001": "som"}
+    assert sub.pontes_de_pe() == {}

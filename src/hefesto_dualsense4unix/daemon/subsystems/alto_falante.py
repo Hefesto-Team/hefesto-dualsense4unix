@@ -935,6 +935,32 @@ class AltoFalanteSubsystem:
             logger.debug("som_nos_ilegiveis", exc_info=True)
             return frozenset()
 
+    def pontes_de_pe(self) -> dict[str, str]:
+        """``{uniq: "som" | "haptica"}`` das pontes do rádio NO AR agora.
+
+        AR-MEDIDO-01 (23/09/2026): é o que o orçamento de ar conta (R10 dela,
+        «pontes de som e vibração: N de 2»). LEITURA pura, do mesmo jeito que
+        :meth:`uniqs_com_no`: o efeito, não o pedido — a ponte sob demanda
+        que desceu por silêncio não ocupa o ar, e não entra.
+        """
+        try:
+            pontes = dict(self._pontes)
+            modos = dict(self._modo_da_ponte)
+        except RuntimeError:  # o dicionário mudou no meio da cópia: não sei
+            return {}
+        saida: dict[str, str] = {}
+        for uniq, ponte in pontes.items():
+            modo = modos.get(uniq)
+            if modo not in ("som", "haptica"):
+                continue
+            try:
+                de_pe = bool(ponte.esta_de_pe())
+            except Exception:  # best-effort: o relato nunca derruba o state_full
+                continue
+            if de_pe:
+                saida[uniq] = modo
+        return saida
+
     # -----------------------------------------------------------------
     # SFX-POR-CONTROLE-01 (10/09/2026) — a fonte de CADA controle
     # -----------------------------------------------------------------
