@@ -309,6 +309,40 @@ def test_sob_a_suite_o_busctl_do_sistema_nao_responde_nem_a_leitura(
     assert bd.busctl(["call", bd.SERVICO, bm.HCI, bd.ADAPTADOR, "StartDiscovery"]) is None
 
 
+def test_o_busctl_so_escreve_de_dentro_da_borda(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, trava_de_mentira: Path
+) -> None:
+    """Um executor novo que chamasse ``bd.busctl(["call", …])`` direto pularia a
+    trava e o diário — e a régua de dono não o via, porque ele não escreve
+    ``busctl`` nem ``org.bluez``: usa as constantes do dono.
+
+    A suíte já recusa toda escrita pelo ``busctl``; para medir a BORDA, a régua
+    desliga a guarda da suíte e deixa NO ``PATH`` SÓ um ``busctl`` de mentira,
+    que anota o que recebe. O do sistema não é alcançável daqui.
+
+    MORDIDA: tire a conferência de ``_POR_FIO.na_borda`` de ``bd.busctl`` — a
+    chamada direta chega ao ``busctl``.
+    """
+    pasta = tmp_path / "bin"
+    pasta.mkdir()
+    anotado = tmp_path / "chamadas.txt"
+    falso = pasta / bd.FERRAMENTA
+    falso.write_text(f"#!/bin/sh\necho \"$*\" >> '{anotado}'\n", encoding="utf-8")
+    falso.chmod(0o755)
+    monkeypatch.setenv("PATH", str(pasta))
+    monkeypatch.setattr(bd, "a_suite_esta_rodando", lambda: False)
+    no = bm.no_de(bm.CONTROLE)
+
+    assert bd.busctl(["call", bd.SERVICO, no, bd.APARELHO, "Disconnect"]) is None
+    assert not anotado.exists(), "a escrita direta saiu sem trava e sem diário"
+
+    escrita = bd.PeloBusctl().desconectar(no, quem="régua")
+    assert escrita.feita, escrita
+    assert anotado.read_text(encoding="utf-8").split() == [
+        "call", bd.SERVICO, no, bd.APARELHO, "Disconnect"
+    ]
+
+
 def test_sob_a_suite_o_dono_do_processo_nunca_e_o_vivo_do_sistema() -> None:
     assert isinstance(bd.dono(), bd.PeloBusctl)
     assert bd.enderecos_pelo_kernel() is None
