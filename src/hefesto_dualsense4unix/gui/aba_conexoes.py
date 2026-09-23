@@ -756,13 +756,24 @@ def html_dos_adaptadores(
     **O ``hciN`` nunca entra.** Ele inverte entre boots, e a decisão M1 desta
     casa o proíbe na tela; o que endereça a linha é o ``caminho`` de barramento
     (``3-1.1.4``), que é a palavra comum entre este módulo, o censo e o mapa.
+
+    O «Onde está» é do DONO do nome da porta (``entrada_a_entrada``): o nome
+    que ela deu, o número do mapa, ou «Entrada 4.1.4». Esta coluna escrevia
+    «Entrada <painel do kernel>» — «Entrada back» — e era o quarto compositor
+    do nome (A-COSTURA-DA-ONDA-2-01; curado na TRANSPLANTE-DA-SECAO-01).
     """
+    from hefesto_dualsense4unix.integrations.entrada_a_entrada import nome_da_porta
+
     nomes = dict(apelidos or {})
     linhas = []
     for a in adaptadores:
         caminho = str(a.caminho) or str(a.interface)
         apelido = nomes.get(caminho, "")
-        onde = f"Entrada {a.painel}" if a.painel else ("Interno" if not a.caminho else TRACO)
+        try:
+            porta = nome_da_porta(str(a.caminho)) if a.caminho else None
+        except Exception:  # o nome nunca derruba a tabela: sem ele, o traço
+            porta = None
+        onde = porta or ("Interno" if not a.caminho else TRACO)
         modelo = f"{a.vid}:{a.pid}" if a.vid else TRACO
         mudo = "" if apelido else ' class="mudo"'
         linhas.append(

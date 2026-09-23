@@ -1016,12 +1016,6 @@ _OS_QUE_PODEM = {
         "a cópia que o gerador da aba 08 lê por AST — não importa do dono sem "
         "quebrar o gerador; travada junto por test_entrada_a_entrada_grava.py"
     ),
-    ("gui/aba_conexoes.py", "compõe uma f-string"): (
-        "html_dos_adaptadores diz «Entrada <painel do kernel>». ACHADO DA "
-        "A-COSTURA-DA-ONDA-2-01, fora da posse dela: o único chamador é o "
-        "interface/conexoes_vivas.py, da TRANSPLANTE-DA-SECAO-01, que substitui "
-        "a seção cx8-3 inteira. Quem a fechar tira esta linha."
-    ),
 }
 
 
