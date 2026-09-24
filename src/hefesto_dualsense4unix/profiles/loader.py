@@ -103,9 +103,9 @@ SEED_MARKER_NAME = ".seeded_presets"
 # Deixa ou Meu Perfil ou Personalizado. acho esse melhor."*
 #
 # O nome `meu_perfil` era um SLUG aparecendo cru na lista da aba Perfis — ela
-# lê o `Profile.name`, e o asset de fábrica gravava o slug ali. O padrão passa
-# a nascer com nome de gente: "Personalizado", que slugifica para
-# `personalizado.json`.
+# lê o `Profile.name`, e o asset de fábrica gravava o slug ali. O padrão passou
+# a nascer com nome de gente: "Personalizado" — e, desde 24/09/2026,
+# «Freestyle» (O-MODO-FREESTYLE-02, o bloco logo abaixo das constantes).
 #
 # O disco de quem já usa o produto é o centro do risco. Medido na máquina dela
 # em 05/09: 33 perfis, e SÓ DOIS são catch-all (`fallback` prio 0 e
@@ -119,13 +119,26 @@ SEED_MARKER_NAME = ".seeded_presets"
 #   1. `migrate_default_profile_name` renomeia o arquivo DELA, preservando o
 #      conteúdo e guardando o antigo — one-shot, com marker próprio.
 #   2. os dois semeadores (aqui e `scripts/install_profiles.sh`) recusam
-#      copiar `personalizado.json` enquanto `meu_perfil.json` existir no
-#      destino. É a rede embaixo da migração: se ela não tiver rodado ainda
-#      (install.sh chama o shell antes de qualquer processo Python carregar
-#      perfil), o pior caso é ela continuar com o nome velho — nunca com dois.
-NOME_DO_PADRAO = "Personalizado"
+#      copiar o preset de fábrica enquanto o slot dela existir sob um nome
+#      antigo no destino. É a rede embaixo da migração: se ela não tiver rodado
+#      ainda (install.sh chama o shell antes de qualquer processo Python
+#      carregar perfil), o pior caso é ela continuar com o nome velho — nunca
+#      com dois.
+#
+# --- O-MODO-FREESTYLE-02 (24/09/2026) — o perfil de fora do jogo é «Freestyle»
+# A decisão, por delegação dela (`D-2409-O-PERFIL-DE-FORA-DO-JOGO-VIRA-FREESTYLE`):
+# o perfil que vale quando nenhum jogo casa FICA, com os ajustes dela, e passa a
+# se chamar «Freestyle» — a palavra dela *"Personalizado sai"* vale para o nome
+# e para o preset. A migração do disco é `o_personalizado_vira_freestyle`.
+NOME_DO_PADRAO = "Freestyle"
+ARQUIVO_DO_PADRAO = "freestyle.json"
+#: O slug do padrão — nome da pasta dele no `.historico`.
+SLUG_DO_PADRAO = "freestyle"
+#: O nome de 05/09 a 24/09/2026. Só as migrações o leem.
+NOME_DO_PERSONALIZADO = "Personalizado"
+ARQUIVO_DO_PERSONALIZADO = "personalizado.json"
+SLUG_DO_PERSONALIZADO = "personalizado"
 NOME_ANTIGO_DO_PADRAO = "meu_perfil"
-ARQUIVO_DO_PADRAO = "personalizado.json"
 ARQUIVO_ANTIGO_DO_PADRAO = "meu_perfil.json"
 
 #: O arquivo antigo não é apagado: vira este nome. Não termina em `.json`, e
@@ -272,22 +285,12 @@ def seed_default_presets(
             # Já semeado antes → respeita a decisão da usuária (inclusive deletar).
             if fname in seeded:
                 continue
-            # O-MODO-FREESTYLE-01: o preset SAIU da fábrica, e o arquivo ainda
-            # está na pasta só porque o install o empacota. Registra sem copiar:
-            # o marker é o contrato com `scripts/install_profiles.sh`, e com a
-            # linha escrita o shell também deixa de trazê-lo de volta.
-            if (fname in PRESETS_QUE_SAIRAM
-                    and not O_PERSONALIZADO_ESPERA_A_SESSAO_DELA):
-                new_entries.append(fname)
-                continue
-            # PERFIL-PADRAO-PERSONALIZADO-01: o slot dela JÁ EXISTE sob o nome
-            # antigo. Copiar o asset aqui criaria um SEGUNDO catch-all — e o
+            # PERFIL-PADRAO-PERSONALIZADO-01: o slot dela JÁ EXISTE sob um nome
+            # antigo (`meu_perfil.json` até 05/09, `personalizado.json` até
+            # 24/09). Copiar o asset aqui criaria um SEGUNDO catch-all — e o
             # segundo catch-all é o defeito que `profiles.sanidade` existe
             # para acusar. Registra sem copiar: a migração renomeia o dela.
-            if (
-                fname == ARQUIVO_DO_PADRAO
-                and (directory / ARQUIVO_ANTIGO_DO_PADRAO).exists()
-            ):
+            if fname == ARQUIVO_DO_PADRAO and _o_slot_dela_tem_nome_antigo(directory):
                 new_entries.append(fname)
                 continue
             dest = directory / fname
@@ -379,9 +382,12 @@ def migrate_default_profile_name(dest_dir: Path | None = None) -> str | None:
     quatro casos, e cada recusa tem teste:
 
     - `meu_perfil.json` ausente — máquina nova, nada a migrar (o semeador
-      entrega o `personalizado.json` de fábrica).
-    - `personalizado.json` já existe — ela própria criou um perfil com esse
-      nome. Sobrescrever seria destruir configuração dela; o velho fica.
+      entrega o `freestyle.json` de fábrica).
+    - `freestyle.json` já existe e não é o de fábrica intocado — ela própria
+      criou um perfil com esse nome. Sobrescrever seria destruir configuração
+      dela; o velho fica. O de fábrica intocado NÃO é dela: é o que o
+      `install_profiles.sh` copiou antes de qualquer Python rodar
+      (`_e_o_de_fabrica_intocado`), e ele cede o lugar.
     - o JSON não abre, ou o `name` lá dentro não é exatamente `meu_perfil` —
       ela já renomeou o perfil na mão, e a identidade é dela.
     - o marker já existe — a migração é one-shot, como as vizinhas.
@@ -401,8 +407,9 @@ def migrate_default_profile_name(dest_dir: Path | None = None) -> str | None:
     with FileLock(str(_lock_path(marker))):
         if marker.exists():
             return None
-        if novo.exists() and antigo.is_file():
-            desfecho = "personalizado_ja_existe"
+        if (novo.exists() and antigo.is_file()
+                and not _e_o_de_fabrica_intocado(novo)):
+            desfecho = "padrao_ja_existe"
         elif antigo.is_file():
             dados: object = None
             try:
@@ -413,6 +420,7 @@ def migrate_default_profile_name(dest_dir: Path | None = None) -> str | None:
             if isinstance(dados, dict):
                 if dados.get("name") == NOME_ANTIGO_DO_PADRAO:
                     dados["name"] = NOME_DO_PADRAO
+                    _o_freestyle_vale_fora_do_jogo(dados)
                     fd, tmp = tempfile.mkstemp(
                         dir=str(directory), prefix=".personalizado_"
                     )
@@ -448,86 +456,112 @@ def migrate_default_profile_name(dest_dir: Path | None = None) -> str | None:
     return renomeado
 
 
-# --- O-MODO-FREESTYLE-01 (24/09/2026) — o «Personalizado» sai --------------
+# --- O-MODO-FREESTYLE-02 (24/09/2026) — o «Personalizado» vira «Freestyle» -----
 # A palavra dela, 23/09/2026, com a aba Jogar dizendo «Perfil ativo
 # Personalizado» no topo: *"Personalizado sai e o botão Trava o perfil Ativo na
 # aba jogar. Vira Modo Freestyle o botão. (…) O trava perfil ativo já faz
 # isso."*  (noqa-acento: citação literal dela)
 #
-# MEDIDO ANTES DO CÓDIGO, com o `restore_last_profile`, o `AutoSwitcher` e o
-# `ProfileManager` reais (`tests/unit/test_o_modo_freestyle.py` guarda a
-# tabela): com a trava ligada, nenhuma janela comum põe o Personalizado de volta
-# depois de um jogo — essa metade a trava já fazia. A outra metade ela NÃO faz:
-# o restauro de boot ignora o cadeado (`test_autoswitch_lock`) e reativa o
-# Personalizado pela sessão, e ele vale do boot até o primeiro jogo.
+# NOTA DATADA — o que caducou. A O-MODO-FREESTYLE-01 escreveu um motor que TIRAVA
+# o Personalizado (`aposentar_o_personalizado`) e o deixou dormente atrás de
+# `O_PERSONALIZADO_ESPERA_A_SESSAO_DELA`, porque a conferência mediu o preço de
+# tirá-lo sem substituto: do boot ao primeiro jogo nenhum perfil vale, as abas
+# 02 a 08 recusam o ajuste com "não há perfil ativo", e os ajustes dos quatro
+# controles deixam de valer no boot. A decisão por delegação dela
+# (`D-2409-O-PERFIL-DE-FORA-DO-JOGO-VIRA-FREESTYLE`) trocou a SAÍDA pela
+# RENOMEAÇÃO, e o motor dormente, a espera e a lista `PRESETS_QUE_SAIRAM`
+# saíram em 24/09/2026. A medição que os derrubou é régua em
+# `tests/unit/test_o_perfil_freestyle.py`.
 #
-# SEM ELE, QUANDO NENHUM JOGO CASA: nada troca. O `select_for_window_ex`
-# devolve `(None, "sem_candidato")` e o autoswitch não ativa ninguém sem
-# candidato — o perfil que estava continua valendo, e o topo diz o nome dele.
-# Do boot ao primeiro jogo não há perfil nenhum: o topo diz «—», e as abas que
-# gravam no perfil ativo (02 a 08) recusam o ajuste com "não há perfil ativo".
-# É por isso que a saída espera a sessão dela
-# (`O_PERSONALIZADO_ESPERA_A_SESSAO_DELA`, logo abaixo).
+# O QUE A MIGRAÇÃO FAZ, e o que ela não perde:
+#   * os BYTES do `personalizado.json` vão para `.historico/personalizado/`
+#     ANTES de qualquer escrita — `restaurar_do_historico("personalizado")` os
+#     devolve inteiros;
+#   * o conteúdo inteiro dela vai para `freestyle.json`, inclusive os ajustes
+#     por controle (`controllers[<uniq>]`); muda o `name`, e só;
+#   * `session.json` e `active_profile.txt` passam a apontar o «Freestyle», e o
+#     boot o restaura;
+#   * one-shot, pela marca: a segunda corrida não faz nada.
 #
-# DUAS PEÇAS, e as duas moram aqui:
-#   1. o semeador em tempo de execução não copia o que está em
-#      `PRESETS_QUE_SAIRAM`, e registra o nome no `.seeded_presets` — o marker
-#      é contrato com `scripts/install_profiles.sh`, que passa a respeitar a
-#      saída também;
-#   2. `aposentar_o_personalizado` tira o arquivo que JÁ está no disco, com a
-#      cópia em `.historico/personalizado/` — o mesmo lugar do
-#      `delete_profile`, e de onde `restaurar_do_historico("personalizado")`
-#      o devolve inteiro, byte a byte.
-#
-# O ASSET CONTINUA NA ÁRVORE, e é medido, não esquecimento: o `install.sh`
-# (passo 4c) roda `scripts/install_profiles.sh`, que copia
-# `assets/profiles_default/*.json` e sai com erro se a pasta sumir, e o Flatpak
-# e o AppImage empacotam a mesma pasta pelo mesmo glob. Tirar o arquivo é
-# pedido para quem coordena o install; até lá, a peça 2 recolhe o que o shell
-# semear numa máquina nova, uma vez.
+# A EXCEÇÃO DO `match`, e ela foi medida no disco dela em 11/09/2026: o
+# «Detectar» gravou a janela do PRÓPRIO Hefesto na regra do Personalizado
+# (`Hefesto-Dualsense4Unix`). Com essa regra o perfil é "de janela": o restauro
+# de boot o PULA (`connection.restore_last_profile._escopado_a_janela`) e o
+# autoswitch nunca o escolhe (a nossa janela é `OWN_GUI_WM_CLASSES`). O
+# «Freestyle» é, por definição, o perfil de fora do jogo — então a regra que só
+# aponta a nossa janela vira `any`, e toda outra regra é dela e fica
+# (`_o_freestyle_vale_fora_do_jogo`).
 
-#: Os presets que saíram da fábrica e continuam na pasta só porque o install os
-#: empacota. A lista é FECHADA: um perfil que ela crie depois com esse nome é
-#: dela, e nenhum semeador o toca.
-PRESETS_QUE_SAIRAM: frozenset[str] = frozenset({ARQUIVO_DO_PADRAO})
-
-#: A SAÍDA ESPERA A SESSÃO DELA (conferente, 24/09/2026). As duas peças estão
-#: prontas e medidas, e não ligam antes de ela aprovar a aba 01: tirar o
-#: Personalizado muda o que o topo diz e deixa as abas sem perfil onde guardar
-#: do boot ao primeiro jogo (a medição do bloco acima) — e o que o topo diz
-#: nesse trecho é, pela própria decisão, o que o desenho propõe e ela aprova.
-#: Enquanto `True`, o produto é o de 23/09: o semeador entrega o preset e o
-#: disco dela fica como está. **TEM PRAZO:** quem publicar a 01 decide a linha
-#: com a resposta dela no mesmo commit, e
-#: `test_o_modo_freestyle.test_a_saida_espera_a_sessao_dela` reprova até isso.
-O_PERSONALIZADO_ESPERA_A_SESSAO_DELA: bool = True
-
-#: O slug do perfil que sai — nome da pasta dele no `.historico`.
-SLUG_DO_PADRAO = "personalizado"
-
-_PERSONALIZADO_SAIU_MARKER = ".personalizado_saiu"
+_PERSONALIZADO_VIROU_FREESTYLE_MARKER = ".personalizado_virou_freestyle"
 
 
-def _e_o_padrao(nome: object) -> bool:
-    """O nome guardado na sessão aponta o Personalizado? Por slug, sem levantar."""
+def _o_slot_dela_tem_nome_antigo(directory: Path) -> bool:
+    """O padrão dela ainda mora sob `meu_perfil.json` ou `personalizado.json`?"""
+    return any((directory / nome).exists()
+               for nome in (ARQUIVO_ANTIGO_DO_PADRAO, ARQUIVO_DO_PERSONALIZADO))
+
+
+def _e_o_de_fabrica_intocado(path: Path) -> bool:
+    """`freestyle.json` é a cópia de fábrica, sem nenhum ajuste dela?
+
+    É o caso que o `install_profiles.sh` cria: ele roda ANTES de qualquer Python
+    e copia o preset para um disco onde o padrão dela ainda tem o nome antigo.
+    Esse arquivo não é dela, e ceder o lugar a ele deixaria DOIS padrões
+    disputando. Compara o JSON lido, não os bytes: um empacotador que reformate
+    o asset não pode transformar a fábrica em "configuração dela".
+
+    Sem o asset (nenhuma fonte instalada) não há como provar — responde `False`,
+    e a migração recusa, que é o lado que não sobrescreve nada.
+    """
+    asset = _seed_source_file(ARQUIVO_DO_PADRAO)
+    if asset is None:
+        return False
+    try:
+        return bool(json.loads(path.read_text(encoding="utf-8"))
+                    == json.loads(asset.read_text(encoding="utf-8")))
+    except (OSError, ValueError):
+        return False
+
+
+def _o_freestyle_vale_fora_do_jogo(dados: dict[str, object]) -> None:
+    """A regra que só aponta a janela do PRÓPRIO Hefesto vira `any` — no lugar.
+
+    Ver a EXCEÇÃO DO `match` no bloco acima. Só essa forma é reescrita: um
+    `criteria` sem título nem processo, cuja lista de classes é toda
+    `OWN_GUI_WM_CLASSES`. Qualquer outra regra é escolha dela, e fica.
+    """
+    match = dados.get("match")
+    if not isinstance(match, dict) or match.get("type") != "criteria":
+        return
+    if match.get("window_title_regex") or match.get("process_name"):
+        return
+    classes = match.get("window_class")
+    if not isinstance(classes, list) or not classes:
+        return
+    from hefesto_dualsense4unix.profiles.autoswitch import OWN_GUI_WM_CLASSES
+
+    if all(isinstance(c, str) and c.strip().casefold() in OWN_GUI_WM_CLASSES
+           for c in classes):
+        dados["match"] = {"type": "any"}
+
+
+def _e_o_personalizado(nome: object) -> bool:
+    """O nome guardado aponta o Personalizado? Por slug, sem levantar."""
     if not isinstance(nome, str) or not nome.strip():
         return False
     try:
-        return slugify(nome) == SLUG_DO_PADRAO
+        return slugify(nome) == SLUG_DO_PERSONALIZADO
     except ValueError:
         return False
 
 
-def _soltar_a_sessao_do_padrao() -> None:
-    """`session.json` e `active_profile.txt` deixam de apontar o que saiu.
+def _repontar_a_sessao_do_personalizado() -> None:
+    """`session.json` e `active_profile.txt` passam a apontar o «Freestyle».
 
     Os dois guardam o NOME do último perfil que ela ativou na mão, e o boot e o
     topo leem por esse nome (`resolve_boot_profile`, `perfil_que_ela_ativou`).
-    Apontando um arquivo que não existe mais, o topo diria «Personalizado» sobre
-    nada, e o boot logaria `last_profile_restore_failed`. Vazio é a forma que
-    os dois leitores já entendem como "não há" — nenhum arquivo é apagado.
-
-    Só mexe no que apontava o Personalizado; outro nome é escolha dela e fica.
+    Sem isto, o boot procuraria um arquivo que virou outro e ficaria sem perfil.
+    Só reescreve o que apontava o Personalizado; outro nome é escolha dela.
     """
     from hefesto_dualsense4unix.utils.session import (
         load_last_profile,
@@ -537,65 +571,94 @@ def _soltar_a_sessao_do_padrao() -> None:
     )
 
     with contextlib.suppress(Exception):
-        if _e_o_padrao(load_last_profile()):
-            save_last_profile("")
+        if _e_o_personalizado(load_last_profile()):
+            save_last_profile(NOME_DO_PADRAO)
     with contextlib.suppress(Exception):
-        if _e_o_padrao(read_active_marker()):
-            save_active_marker("")
+        if _e_o_personalizado(read_active_marker()):
+            save_active_marker(NOME_DO_PADRAO)
 
 
-def aposentar_o_personalizado(dest_dir: Path | None = None) -> Path | None:
-    """One-shot: o `personalizado.json` sai da lista, com a cópia no histórico.
+def o_personalizado_vira_freestyle(dest_dir: Path | None = None) -> Path | None:
+    """One-shot: o `personalizado.json` vira o `freestyle.json`, com a cópia.
 
-    O-MODO-FREESTYLE-01 (ver o bloco acima). Devolve o caminho da cópia quando
-    tirou o arquivo; `None` em todo outro desfecho.
+    O-MODO-FREESTYLE-02 (ver o bloco acima). Devolve o caminho da cópia dos
+    bytes dela no `.historico` quando renomeou; `None` em todo outro desfecho.
 
-    O ARQUIVO DELA NÃO SE PERDE, e a ordem é o que garante: os bytes vão para
-    `.historico/personalizado/<carimbo>.json` ANTES de o `.json` sair da pasta.
-    Se a cópia falhar (disco cheio, permissão), o arquivo FICA e a marca não
-    é escrita — a próxima carga tenta de novo. Apagar sem volta é o único
-    desfecho que esta função não tem.
+    A ORDEM É O QUE GARANTE QUE NADA SE PERDE: a cópia, depois o `freestyle.json`
+    (escrita atômica), e só então o `personalizado.json` sai. Sem a cópia (disco
+    cheio, permissão), nada muda e a marca não nasce — a próxima carga tenta de
+    novo.
 
-    One-shot como as vizinhas: com a marca no disco, um `personalizado.json`
-    que ela crie depois é dela, e fica.
+    RECUSA, e cada recusa tem régua:
+    - sem `personalizado.json` — máquina nova ou já migrada (a marca nasce);
+    - o `name` lá dentro não é o Personalizado — ela o renomeou, e é dela;
+    - `freestyle.json` já existe e não é o de fábrica intocado — é dela.
     """
     directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
-    marker = directory / _PERSONALIZADO_SAIU_MARKER
+    marker = directory / _PERSONALIZADO_VIROU_FREESTYLE_MARKER
     if marker.exists():
         return None
-    alvo = directory / ARQUIVO_DO_PADRAO
+    antigo = directory / ARQUIVO_DO_PERSONALIZADO
+    novo = directory / ARQUIVO_DO_PADRAO
     copia: Path | None = None
     desfecho = "sem_personalizado"
     with FileLock(str(_lock_path(marker))):
         if marker.exists():
             return None
-        if alvo.is_file():
-            with FileLock(str(_lock_path(alvo))):
-                bruto = _bytes_se_existe(alvo)
-                if bruto is not None:
-                    copia = _arquivar_versao(SLUG_DO_PADRAO, bruto, raiz=directory)
-                    if copia is None:
-                        desfecho = "sem_copia"
-                    else:
-                        alvo.unlink()
-                        desfecho = "aposentado"
-            if copia is not None:
-                # O `.lock` sai FORA do `with`, pela razão da Z4/T15 escrita em
-                # `delete_profile`: apagar o lock enquanto o segura é convite
-                # para outro processo achar que destravou algo que não existe.
-                _lock_path(alvo).unlink(missing_ok=True)
+        bruto = _bytes_se_existe(antigo) if antigo.is_file() else None
+        dados: object = None
+        if bruto is not None:
+            try:
+                dados = json.loads(bruto.decode("utf-8"))
+            except (UnicodeDecodeError, ValueError) as exc:
+                desfecho = "ilegivel"
+                logger.warning("personalizado_ilegivel", err=str(exc))
+        if isinstance(dados, dict):
+            if not _e_o_personalizado(dados.get("name")):
+                desfecho = "nome_mudado_pela_usuaria"
+            elif novo.exists() and not _e_o_de_fabrica_intocado(novo):
+                desfecho = "freestyle_ja_existe"
+            elif bruto is not None:  # sempre, aqui: `dados` saiu de `bruto`
+                copia = _arquivar_versao(SLUG_DO_PERSONALIZADO, bruto,
+                                         raiz=directory)
+                if copia is None:
+                    desfecho = "sem_copia"
+                else:
+                    dados["name"] = NOME_DO_PADRAO
+                    _o_freestyle_vale_fora_do_jogo(dados)
+                    _atomic_write_json(novo, dados)
+                    antigo.unlink()
+                    # O `.lock` sai depois, pela razão da Z4/T15 de
+                    # `delete_profile`: nunca se apaga um lock que se segura.
+                    _lock_path(antigo).unlink(missing_ok=True)
+                    desfecho = "renomeado"
         if desfecho != "sem_copia":
             with contextlib.suppress(Exception):
                 marker.write_text("done\n", encoding="utf-8")
     if copia is not None:
-        _soltar_a_sessao_do_padrao()
+        _repontar_a_sessao_do_personalizado()
     logger.info(
-        "personalizado_aposentado",
+        "personalizado_virou_freestyle",
         desfecho=desfecho,
         copia=str(copia) if copia is not None else None,
     )
     return copia
 
+
+def o_perfil_de_fora_do_jogo() -> str | None:
+    """O nome do «Freestyle» quando ele está no disco; `None` quando não.
+
+    É o que o boot restaura quando ela nunca ativou um perfil na mão
+    (`connection.restore_last_profile`): numa máquina nova a sessão está vazia,
+    e sem isto o boot ficaria sem perfil até o autoswitch achar uma janela — e
+    com o Modo Freestyle ligado, ou sem leitor de janela, não acharia nunca.
+    Pergunta ao disco depois da semeadura, que é quem o põe lá.
+    """
+    _maybe_seed_presets()
+    with contextlib.suppress(Exception):
+        if (profiles_dir() / ARQUIVO_DO_PADRAO).is_file():
+            return NOME_DO_PADRAO
+    return None
 
 
 #: R-12 (auditoria 23/07): marker da migração do `match` inalcançável do
@@ -1074,25 +1137,18 @@ def _maybe_seed_presets() -> None:
         return
     _seed_attempted = True
     try:
-        # PERFIL-PADRAO-PERSONALIZADO-01: ANTES da semeadura, e a ordem é o
-        # ponto. Depois da renomeação o `personalizado.json` dela já existe no
-        # destino, então o semeador cai no ramo "presente na 1ª execução" e
-        # REGISTRA sem copiar — o asset de fábrica nunca encosta no arquivo
-        # dela. Invertida, a ordem faria o semeador entregar o preset nu e a
-        # migração recusar por "personalizado_ja_existe", deixando os dois.
+        # AS DUAS RENOMEAÇÕES VÊM ANTES DA SEMEADURA, e a ordem é o ponto.
+        # Depois delas o `freestyle.json` dela já existe no destino, então o
+        # semeador cai no ramo "presente na 1ª execução" e REGISTRA sem copiar
+        # — o asset de fábrica nunca encosta no arquivo dela. Invertida, a
+        # ordem faria o semeador entregar o preset nu e as migrações recusarem
+        # por "já existe", deixando os dois. A de 05/09 (`meu_perfil`) roda
+        # primeiro; a de 24/09 (`personalizado`, O-MODO-FREESTYLE-02) depois.
         with contextlib.suppress(Exception):
             migrate_default_profile_name()
+        with contextlib.suppress(Exception):
+            o_personalizado_vira_freestyle()
         seed_default_presets()
-        # O-MODO-FREESTYLE-01: DEPOIS da renomeação e da semeadura, e a ordem é
-        # o ponto. A renomeação ainda leva o `meu_perfil` de um disco velho para
-        # `personalizado.json`; esta o recolhe no mesmo processo, com a cópia.
-        # E o que o `install_profiles.sh` semear numa máquina nova sai aqui,
-        # na primeira carga — uma vez, pela marca.
-        # Enquanto a saída espera a sessão dela, esta linha não roda — ver
-        # `O_PERSONALIZADO_ESPERA_A_SESSAO_DELA`.
-        if not O_PERSONALIZADO_ESPERA_A_SESSAO_DELA:
-            with contextlib.suppress(Exception):
-                aposentar_o_personalizado()
         # MASCARA-QUE-GRUDA-01 (22/08/2026): aqui rodava a
         # `migrate_game_presets_to_xbox`. Nenhuma migração escreve máscara em
         # perfil — o motivo inteiro está na nota acima do bloco que a substituiu.
