@@ -24,7 +24,7 @@ O QUE ELE NÃO É
 Não entrega o **endereço** (MAC) do adaptador. Medido nesta bancada em
 22/08/2026, kernel 7.0.11-76070011-generic: ``/sys/class/bluetooth/hci0/`` não
 tem arquivo ``address`` — o ``_adapter_addresses`` do próprio projeto
-(``broker/hidraw_broker.py:193``) devolve ``set()`` sobre ``/sys``. O endereço
+(``broker/hidraw_broker.py:232``) devolve ``set()`` sobre ``/sys``. O endereço
 existe pelo BlueZ no D-Bus de sistema, que hoje o produto não abre em lugar
 nenhum e que o manifesto Flatpak não permite
 (``flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml``:
