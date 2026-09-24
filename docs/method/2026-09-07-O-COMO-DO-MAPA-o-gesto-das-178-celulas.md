@@ -1793,37 +1793,38 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que cada botão de um controle ligado por cabo acende na tela do Hefesto quando você aperta, e acende só no cartão daquele controle.
 
-**Onde olhar.** Na aba Controles. Clique no chip Todos, na fita do topo, para abrir os quatro cartões de uma vez. Dentro de cada cartão fica o desenho do controle, e apertar uma peça acende o desenho dela. São dezesseis desenhos que acendem: Cruz, Círculo, Quadrado, Triângulo, as quatro direções do direcional, L1, R1, L2, R2, Share, Options, PS e Touchpad. Os cliques dos analógicos não acendem no desenho — eles são as palavras L3 e R3, ao lado de Analógico esquerdo e Analógico direito, e ganham colchetes quando você aperta: [L3] e [R3]. O botão do microfone não tem desenho que acenda; quem responde por ele é o selo Microfone do mesmo cartão, que diz ATIVO, MUDO ou um traço.
+**Onde olhar.** Na aba Controles. Clique no chip Todos, na fita do topo, para abrir os quatro cartões de uma vez: eles ficam na ordem P1, P2, P3 e P4, de cima para baixo, e o cabeçalho de cada um diz a cor e USB ou BT. Com os quatro abertos a aba rola — os de baixo se veem rolando. No meio de cada cartão fica a grade de dezesseis desenhos: Cruz, Círculo, Quadrado, Triângulo, as quatro direções do direcional, L1, R1, L2, R2, Share, Options, PS e Touchpad; apertar a peça acende o desenho dela. Os cliques dos analógicos não estão na grade: são as letras L3 e R3, dentro do círculo de cada analógico (Analógico esquerdo e Analógico direito), e elas ganham colchetes quando você aperta: [L3] e [R3]. O dedo apoiado no touchpad aparece no bloco Touchpad, à esquerda do cartão: um ponto e a palavra 1 toque. O botão do microfone não tem desenho; quem responde por ele é o selo ao lado da palavra Microfone, no bloco Microfone, que diz ATIVO, DESLIGADO ou um traço.
 
 **Os passos.**
 
 1. Clique na aba Controles.
 2. Clique no chip Todos, na fita do topo.
 3. Confira que há quatro cartões abertos, um por controle.
-4. Confira que os cartões do P1 e do P2 terminam com a palavra cabo, e os do P3 e do P4 com a palavra rádio.
-5. Largue o P2, o P3 e o P4 na mesa e pegue só o P1.
-6. Aperte cada uma das catorze peças do P1 que acendem no desenho, uma por vez, segurando dois segundos antes de soltar: Cruz, Círculo, Quadrado, Triângulo, as quatro direções do direcional, L1, R1, L2, R2, Share e Options.
+4. Confira que os cartões do P1 e do P2 dizem USB ao lado da cor, e os do P3 e do P4 dizem BT.
+5. Deixe o P2, o P3 e o P4 parados e pegue só o P1.
+6. Aperte cada uma das catorze peças do P1 que acendem na grade, uma por vez, segurando dois segundos antes de soltar: Cruz, Círculo, Quadrado, Triângulo, as quatro direções do direcional, L1, R1, L2, R2, Share e Options.
 7. Confira, a cada peça, que o desenho dela acendeu no cartão do P1 e apagou quando você soltou.
-8. Confira, a cada peça, que nada acendeu junto nos cartões do P2, do P3 e do P4.
+8. Segure uma das peças e role a aba pelos cartões do P2, do P3 e do P4: nada pode ter acendido neles.
 9. Aperte o PS do P1 e feche a Steam se ela vier para a frente.
 10. Confira que o desenho do PS acendeu no cartão do P1.
-11. Encoste um dedo no touchpad do P1 e, em seguida, aperte cada analógico para baixo até clicar, um de cada vez.
-12. Confira que o desenho do Touchpad acendeu e que as palavras L3 e R3 ganharam colchetes, cada uma no clique do seu analógico.
-13. Aperte o botão do microfone do P1 duas vezes, para trocar e devolver.
-14. Confira que o selo Microfone do cartão do P1 trocou de palavra no primeiro aperto e voltou no segundo.
-15. Largue o P1, pegue o P2 e refaça nele tudo o que você fez no P1, do Cruz ao botão do microfone.
-16. Confira quais peças não acenderam, e em qual dos dois controles do cabo — é isso que se anota.
+11. Encoste um dedo no touchpad do P1 e confira que o bloco Touchpad do cartão dele mostrou o ponto e a palavra 1 toque.
+12. Aperte o touchpad do P1 até estalar e anote se o desenho Touchpad da grade acendeu.
+13. Aperte cada analógico do P1 para baixo até clicar, um de cada vez, e confira que L3 e R3 ganharam colchetes, cada um no clique do seu analógico.
+14. Aperte o botão do microfone do P1 duas vezes, com uma pausa entre elas.
+15. Confira que o selo do bloco Microfone do P1 trocou de palavra no primeiro aperto e voltou no segundo.
+16. Largue o P1, pegue o P2 e refaça nele tudo, do Cruz ao botão do microfone.
+17. Anote quais peças não acenderam, e em qual dos dois controles do cabo.
 
-**Passa quando.** Nos dois controles do cabo, cada um dos dezesseis desenhos acende quando você aperta a peça correspondente e apaga quando solta; as palavras L3 e R3 ganham colchetes no clique e os perdem ao soltar; e o selo Microfone troca a cada aperto do botãozinho de mudo. Em nenhum momento um aperto no P1 acende alguma coisa no cartão do P2, do P3 ou do P4 — nem o contrário.
+**Passa quando.** Nos dois controles do cabo, os quinze desenhos de peça da grade — todos menos o Touchpad — acendem quando você aperta e apagam quando solta; o dedo no touchpad acende o ponto do bloco Touchpad; L3 e R3 ganham colchetes no clique e os perdem ao soltar; e o selo do Microfone troca a cada aperto do botãozinho de mudo. Em nenhum momento um aperto no P1 acende alguma coisa no cartão do P2, do P3 ou do P4 — nem o contrário. O desenho Touchpad da grade, no clique, é anotado: acender ou não acender é a resposta que este teste traz.
 
 **Por controle.**
 
-* **P1** — No cabo, e é o primeiro a ser apertado inteiro: as dezoito peças, uma por vez, com os outros três largados na mesa. Só o cartão dele pode reagir.
+* **P1** — No cabo, e é o primeiro a ser apertado inteiro: as peças uma por vez, com os outros três parados. Só o cartão dele pode reagir.
 * **P2** — No cabo, e é o segundo a ser apertado inteiro. Enquanto você aperta o P1, ele é testemunha do próprio cabo: nada no cartão dele pode acender sozinho.
 * **P3** — No rádio, e você não encosta nele em momento nenhum. É a testemunha de fora do cabo: se um aperto no P1 acender uma peça no cartão do P3, o Hefesto está misturando controles.
-* **P4** — No rádio, e você também não encosta. Segunda testemunha, e a que mais nasce sem leitura: se o cartão dele mostrar um traço no lugar de L3 e R3, anote isso — é ausência de leitura, não botão solto.
+* **P4** — No rádio, e você também não encosta. Segunda testemunha: se o cartão dele mostrar um traço no lugar de L3 e R3, anote — é ausência de leitura, não botão solto.
 
-**A armadilha.** Três, e a primeira já custou tempo nesta casa. Um toque no botão PS ABRE A STEAM — é o que esse botão faz de fábrica. Ele vai acender o desenho do PS e trazer a Steam para a frente; feche a Steam e siga, não é defeito. Segunda: o botão do microfone não tem desenho que acenda, e procurar um faz você reprovar um produto correto — a resposta dele é o selo Microfone do cartão. Terceira, e é a que produz falso vermelho: um cartão que mostra um traço no lugar de L3 e R3 não está dizendo botão solto, está dizendo que o Hefesto não conseguiu ler aquele controle. Cartão sem leitura mostra os gatilhos parados em 0 / 255 e os analógicos no meio para sempre, o que se parece com um controle que ninguém está tocando. Antes de reprovar, aperte qualquer botão e veja se ALGUMA coisa naquele cartão se mexe; se nada nunca se mexe, o achado é a falta de leitura, e é isso que se anota.
+**A armadilha.** Quatro. O PS sozinho, no controle que diz Navega o PC na aba Navegação, é a linha 6 da tabela Os gestos do controle — Abrir a Steam —, então ele acende o desenho e traz a Steam para a frente: feche-a e siga, não é defeito. Nos outros três controles o PS só acende o desenho. Segunda: o botão do microfone não tem desenho na grade, e procurar um faz você reprovar um produto correto — a resposta dele é o selo do bloco Microfone. Terceira: o dedo apoiado no touchpad não acende a grade, acende o ponto do bloco Touchpad; o clique, que estala, é outra coisa. Quarta, e é a que produz falso vermelho: um cartão com traço no lugar de L3 e R3 está dizendo que o Hefesto não conseguiu ler aquele controle. Cartão sem leitura mostra os gatilhos parados em 0 / 255 e os analógicos no meio, parados, o que se parece com um controle que ninguém está tocando. Antes de reprovar, aperte qualquer botão e veja se ALGUMA coisa naquele cartão se mexe; se nada se mexe nunca, o achado é a falta de leitura, e é isso que se anota.
 
 ---
 
@@ -1833,41 +1834,39 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que cada botão de um controle ligado por rádio acende na tela do Hefesto quando você aperta, e acende só no cartão daquele controle.
 
-**Onde olhar.** Na aba Controles. Clique no chip Todos, na fita do topo, para abrir os quatro cartões de uma vez. Dentro de cada cartão fica o desenho do controle, e apertar uma peça acende o desenho dela. São dezesseis desenhos que acendem: Cruz, Círculo, Quadrado, Triângulo, as quatro direções do direcional, L1, R1, L2, R2, Share, Options, PS e Touchpad. Os cliques dos analógicos não acendem no desenho — eles são as palavras L3 e R3, ao lado de Analógico esquerdo e Analógico direito, e ganham colchetes quando você aperta: [L3] e [R3]. O botão do microfone não tem desenho que acenda; quem responde por ele é o selo Microfone do mesmo cartão. E, no alto de qualquer aba, a contagem dos ligados — hoje ela diz 4 controles: 2 USB · 2 BT.
+**Onde olhar.** Na aba Controles. Clique no chip Todos, na fita do topo, para abrir os quatro cartões de uma vez: eles ficam na ordem P1, P2, P3 e P4, de cima para baixo, e o cabeçalho de cada um diz a cor e USB ou BT. Com os quatro abertos a aba rola — os de baixo se veem rolando. No meio de cada cartão fica a grade de dezesseis desenhos: Cruz, Círculo, Quadrado, Triângulo, as quatro direções do direcional, L1, R1, L2, R2, Share, Options, PS e Touchpad. Os cliques dos analógicos são as letras L3 e R3, dentro do círculo de cada analógico, e ganham colchetes quando você aperta: [L3] e [R3]. O dedo no touchpad aparece no bloco Touchpad, à esquerda: um ponto e a palavra 1 toque. O botão do microfone responde pelo selo do bloco Microfone. E, no alto de qualquer aba, à direita, a contagem dos ligados: com os quatro na bancada ela diz 2 USB · 2 BT.
 
 **Os passos.**
 
 1. Clique na aba Controles.
 2. Clique no chip Todos, na fita do topo, para abrir os quatro cartões.
-3. Leia a contagem no alto e anote o que ela diz.
-4. Confira que os cartões do P3 e do P4 terminam com a palavra rádio.
-5. Largue o P1, o P2 e o P4 na mesa e pegue só o P3.
+3. Leia a contagem no alto, à direita, e anote o que ela diz.
+4. Confira que os cartões do P3 e do P4 dizem BT ao lado da cor.
+5. Deixe o P1, o P2 e o P4 parados e pegue só o P3.
 6. Aperte o Cruz do P3, segure dois segundos e solte.
 7. Confira que o desenho do Cruz acendeu no cartão do P3 e apagou quando você soltou.
-8. Confira que nada acendeu junto nos cartões do P1, do P2 e do P4.
+8. Segure o Cruz de novo e role a aba pelos cartões do P1, do P2 e do P4: nada pode ter acendido neles.
 9. Repita esse mesmo aperto, uma peça por vez, no Círculo, no Quadrado, no Triângulo, nas quatro direções do direcional, no L1, no R1, no L2, no R2, no Share, no Options e no PS do P3.
-10. Confira, a cada peça, que só o desenho dela acendeu no cartão do P3 e que os outros três cartões ficaram parados.
-11. Confira que o desenho do PS acendeu como os outros; se a Steam vier para a frente, feche-a e siga.
-12. Encoste um dedo no touchpad do P3 e tire.
-13. Confira que o desenho do Touchpad acendeu enquanto o dedo estava lá.
-14. Aperte até clicar cada um dos dois analógicos do P3, um por vez.
-15. Confira que as palavras L3 e R3 ganharam colchetes no clique — [L3] e [R3].
-16. Aperte o botão do microfone do P3 duas vezes, com uma pausa entre elas.
-17. Confira que o selo Microfone do cartão dele trocou de palavra no primeiro aperto e voltou ao que estava no segundo.
-18. Leia a contagem no alto de novo e confira que ela continua dizendo quatro controles.
-19. Largue o P3, pegue o P4 e refaça nele tudo, do Cruz ao microfone.
-20. Confira, no fim, se alguma peça deixou de acender, e anote qual e em qual dos dois controles do rádio.
+10. Confira, a cada peça, que só o desenho dela acendeu no cartão do P3.
+11. Encoste um dedo no touchpad do P3 e confira o ponto e a palavra 1 toque no bloco Touchpad do cartão dele.
+12. Aperte o touchpad do P3 até estalar e anote se o desenho Touchpad da grade acendeu.
+13. Aperte até clicar cada um dos dois analógicos do P3, um por vez, e confira que L3 e R3 ganharam colchetes no clique.
+14. Aperte o botão do microfone do P3 duas vezes, com uma pausa entre elas.
+15. Confira que o selo do bloco Microfone do P3 trocou de palavra no primeiro aperto e voltou ao que estava no segundo.
+16. Leia a contagem no alto de novo e confira que ela continua dizendo 2 USB · 2 BT.
+17. Largue o P3, pegue o P4 e refaça nele tudo, do Cruz ao botão do microfone.
+18. Anote se alguma peça deixou de acender, qual, e em qual dos dois controles do rádio.
 
-**Passa quando.** Nos dois controles do rádio, cada um dos dezesseis desenhos acende quando você aperta a peça correspondente e apaga quando solta; as palavras L3 e R3 ganham colchetes no clique; e o selo Microfone troca a cada aperto. Em nenhum momento um aperto no P3 acende alguma coisa no cartão do P4, do P1 ou do P2. E a contagem do alto continua dizendo quatro controles do começo ao fim — sem isso, o que você mediu foi uma queda de conexão, não os botões.
+**Passa quando.** Nos dois controles do rádio, os quinze desenhos de peça da grade — todos menos o Touchpad — acendem quando você aperta e apagam quando solta; o dedo no touchpad acende o ponto do bloco Touchpad; L3 e R3 ganham colchetes no clique; e o selo do Microfone troca a cada aperto. Em nenhum momento um aperto no P3 acende alguma coisa no cartão do P4, do P1 ou do P2. E a contagem do alto continua dizendo 2 USB · 2 BT do começo ao fim — sem isso, o que você mediu foi uma queda de conexão, não os botões.
 
 **Por controle.**
 
 * **P1** — No cabo, e você não encosta nele. É testemunha: se um aperto no P3 acender uma peça no cartão do P1, o Hefesto está misturando controles — e o defeito atravessou de um transporte para o outro, que é o pior caso.
 * **P2** — No cabo, e você também não encosta. Segunda testemunha do cabo, com a mesma conferência do P1.
-* **P3** — No rádio, e é o primeiro a ser apertado inteiro: as dezoito peças, uma por vez, com os outros três largados na mesa.
+* **P3** — No rádio, e é o primeiro a ser apertado inteiro: as peças uma por vez, com os outros três parados.
 * **P4** — No rádio, e é o segundo a ser apertado inteiro. Ele é o último a entrar na fila do Hefesto e o primeiro a ficar mudo quando alguma coisa desmonta — se três controles responderem e ele não, anote que o que falhou foi o quarto lugar da fila, e não o rádio.
 
-**A armadilha.** Quatro. Um toque no botão PS ABRE A STEAM: é o que esse botão faz de fábrica, e não é defeito — feche-a e siga o teste. O botão do microfone não tem desenho que acenda — quem responde por ele é o selo Microfone do cartão. Cartão que mostra um traço no lugar de L3 e R3 está dizendo que o Hefesto não leu aquele controle, e não que o botão está solto: os gatilhos ficam parados em 0 / 255 e os analógicos no meio, o que se parece com um controle largado. E a que é só do rádio: se um cartão inteiro parar de responder no meio do teste, olhe a contagem no alto ANTES de reprovar — se ela passou a dizer três controles, o que caiu foi a conexão, e o teste se refaz do começo. O mapa desta casa prova que os botões chegam pelos dois caminhos; ele nunca mediu QUANDO chegam. Se um aperto responder com atraso visível, isso é achado — anote em qual controle e quantas vezes em quantas.
+**A armadilha.** Cinco. O PS sozinho só abre a Steam no controle que diz Navega o PC na aba Navegação; se ela vier para a frente, feche-a e siga — não é defeito. O botão do microfone não tem desenho na grade: quem responde por ele é o selo do bloco Microfone. Cartão que mostra um traço no lugar de L3 e R3 está dizendo que o Hefesto não leu aquele controle, e não que o botão está solto: os gatilhos ficam parados em 0 / 255 e os analógicos no meio, o que se parece com um controle largado. A que é só do rádio: se um cartão inteiro parar de responder no meio do teste, olhe a contagem no alto ANTES de reprovar — se ela passou a dizer 2 USB · 1 BT, o que caiu foi a conexão, e o teste se refaz do começo. E a que é do rádio com o microfone no ar: um desenho que acende sem dedo nenhum, com o selo do Microfone em ATIVO, é a entrada fantasma — o som do microfone lido como botão. Ela foi curada em 10/09; se voltar, anote qual desenho, em qual controle, e se o selo estava em ATIVO. O mapa desta casa prova que os botões chegam pelos dois caminhos; ele nunca mediu QUANDO chegam. Se um aperto responder com atraso visível, isso é achado — anote em qual controle e quantas vezes em quantas.
 
 ---
 
@@ -1877,29 +1876,28 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o gatilho de um controle no cabo entrega o quanto ele foi apertado, e não apenas apertado ou solto.
 
-**Onde olhar.** Na aba Controles, dentro do cartão de cada controle, no bloco Giroscópio — a dica dele chama isso de leitura viva do aparelho, dez vezes por segundo. A última linha desse bloco chama-se Gatilhos e traz L2 e R2, cada um com um número escrito na forma 0 / 255. Ao lado do desenho ficam Analógico esquerdo e Analógico direito, com X: e Y:, também em números. E no desenho ficam os riscos de L2 e R2, que acendem.
+**Onde olhar.** Na aba Controles, dentro do cartão de cada controle. À direita do cartão ficam três blocos — Giroscópio, Acelerômetro e Gatilhos —, e o último traz L2 e R2, cada um com uma barra e um número escrito na forma 0 / 255. No meio do cartão ficam Analógico esquerdo e Analógico direito, com X: e Y: em números, e a grade de desenhos, em que os de L2 e R2 acendem.
 
 **Os passos.**
 
 1. Ligue o P1 e o P2 pelo cabo e o P3 e o P4 pelo rádio.
 2. Abra o Hefesto e clique na aba Controles.
 3. Clique no chip Todos, na fita do topo, para abrir os quatro cartões.
-4. Confira que os cartões do P1 e do P2 terminam com a palavra cabo.
-5. Largue os quatro controles na mesa, sem encostar em gatilho nenhum.
-6. Leia a linha Gatilhos dos quatro cartões e confirme que os oito números estão perto de 0.
+4. Confira que os cartões do P1 e do P2 dizem USB ao lado da cor.
+5. Deixe os quatro controles parados, sem encostar em gatilho nenhum.
+6. Leia o bloco Gatilhos dos quatro cartões e confirme que os oito números estão perto de 0.
 7. Pegue o P1.
-8. Aperte o L2 do P1 bem devagar, um pouquinho por vez, até o fim do curso.
-9. Acompanhe o número do L2 no cartão do P1 enquanto o dedo desce.
-10. Confirme que ele passou por valores no meio do caminho, e não pulou de 0 direto para 255.
-11. Confirme que ele chegou a 255 com o gatilho no fundo.
-12. Repare em que altura do curso o risco do L2 acendeu no desenho.
-13. Solte o L2 e confirme que o número voltou para perto de 0 e o risco apagou.
-14. Repita os seis passos acima com o R2 do P1.
-15. Olhe os cartões do P2, do P3 e do P4 durante os apertos e confirme que os números deles ficaram parados.
-16. Largue o P1, pegue o P2 e refaça o L2 e o R2 do mesmo jeito.
-17. Anote o maior número que cada gatilho alcançou, nos dois controles do cabo.
+8. Aperte o L2 do P1 bem devagar, um pouquinho por vez, até o fim do curso, acompanhando o número do L2 no bloco Gatilhos do cartão dele.
+9. Confirme que ele passou por valores no meio do caminho, e não pulou de 0 direto para 255.
+10. Confirme que ele chegou a 255 com o gatilho no fundo.
+11. Repare em que altura do curso o desenho do L2 acendeu na grade.
+12. Solte o L2 e confirme que o número voltou para perto de 0 e o desenho apagou.
+13. Faça o mesmo com o R2 do P1.
+14. Segure um gatilho do P1 apertado e role a aba pelos cartões do P2, do P3 e do P4: os números deles ficaram parados.
+15. Largue o P1, pegue o P2 e refaça o L2 e o R2 do mesmo jeito.
+16. Anote o maior número que cada gatilho alcançou, nos dois controles do cabo.
 
-**Passa quando.** Nos dois controles do cabo, o número do gatilho sobe aos poucos com o dedo, passa por valores no meio do caminho, chega a 255 com o gatilho no fundo e volta para perto de 0 quando você solta. O risco do gatilho no desenho acende só depois que o número passa de 30 — não desde o primeiro milímetro. E os números dos cartões que você não está tocando ficam parados o tempo todo.
+**Passa quando.** Nos dois controles do cabo, o número do gatilho sobe aos poucos com o dedo, passa por valores no meio do caminho, chega a 255 com o gatilho no fundo e volta para perto de 0 quando você solta. O desenho do gatilho na grade acende só depois que o número passa de 30 — não desde o primeiro milímetro. E os números dos cartões que você não está tocando ficam parados o tempo todo.
 
 **Por controle.**
 
@@ -1908,7 +1906,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e você não encosta nele. Testemunha: se o número do gatilho dele andar enquanto o seu dedo está no P1, o Hefesto está lendo um controle e escrevendo no cartão de outro.
 * **P4** — No rádio, e você também não encosta. Segunda testemunha, com a mesma conferência do P3.
 
-**A armadilha.** Três. O número e o risco aceso são duas coisas diferentes: o risco só acende acima de 30, então existe um começo de curso em que o número já anda e o desenho ainda está apagado — isso é o produto certo, e quem esperar os dois juntos reprova sem haver defeito. Segunda: um cartão que nunca leu aquele controle mostra os gatilhos parados em 0 / 255, exatamente como um gatilho solto; antes de reprovar, aperte o Cruz do mesmo controle e veja se o desenho dele acende — se nem isso acontece, o achado é a falta de leitura naquele cartão. Terceira, e é sobre o alcance desta prova: no mapa desta casa esta linha está provada só até o Hefesto MONTAR a leitura e pô-la na tela. Ninguém provou daqui para a frente que um jogo recebe esse número. Não peça ao jogo para reagir — a resposta deste teste é a tela.
+**A armadilha.** Quatro. O número e o desenho aceso são duas coisas diferentes: o desenho só acende acima de 30, então existe um começo de curso em que o número já anda e o desenho ainda está apagado — isso é o produto certo, e quem esperar os dois juntos reprova sem haver defeito. Segunda: um gatilho que está duro na sua mão trava o número junto; é um efeito da aba Gatilhos guardado para aquele controle, e não a leitura quebrando — anote qual, e meça o outro. Terceira: um cartão que nunca leu aquele controle mostra os gatilhos parados em 0 / 255, exatamente como um gatilho solto; antes de reprovar, aperte o Cruz do mesmo controle e veja se o desenho dele acende — se nem isso acontece, o achado é a falta de leitura naquele cartão. Quarta, e é sobre o alcance desta prova: no mapa desta casa esta linha está provada só até o Hefesto MONTAR a leitura e pô-la na tela. Ninguém provou daqui para a frente que um jogo recebe esse número. Não peça ao jogo para reagir — a resposta deste teste é a tela.
 
 ---
 
@@ -1918,31 +1916,30 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o gatilho de um controle no rádio entrega o quanto ele foi apertado, e não apenas apertado ou solto.
 
-**Onde olhar.** Na aba Controles, dentro do cartão de cada controle, no bloco Giroscópio — a leitura viva do aparelho. A última linha desse bloco chama-se Gatilhos e traz L2 e R2, cada um com um número escrito na forma 0 / 255. Ao lado do desenho ficam Analógico esquerdo e Analógico direito, com X: e Y:. No desenho ficam os riscos de L2 e R2, que acendem. E no alto de qualquer aba, a contagem dos ligados: 4 controles: 2 USB · 2 BT.
+**Onde olhar.** Na aba Controles, dentro do cartão de cada controle. À direita do cartão ficam três blocos — Giroscópio, Acelerômetro e Gatilhos —, e o último traz L2 e R2, cada um com uma barra e um número escrito na forma 0 / 255. No meio do cartão ficam Analógico esquerdo e Analógico direito, com X: e Y:, e a grade de desenhos, em que os de L2 e R2 acendem. E no alto de qualquer aba, à direita, a contagem dos ligados: 2 USB · 2 BT.
 
 **Os passos.**
 
 1. Ligue o P1 e o P2 pelo cabo e o P3 e o P4 pelo rádio.
 2. Abra o Hefesto e clique na aba Controles.
 3. Clique no chip Todos, na fita do topo, para abrir os quatro cartões.
-4. Leia a contagem no alto e anote o que ela diz.
-5. Confira que os cartões do P3 e do P4 terminam com a palavra rádio.
-6. Largue os quatro controles na mesa, sem encostar em gatilho nenhum.
-7. Leia a linha Gatilhos dos quatro cartões e confirme que os oito números estão perto de 0.
+4. Leia a contagem no alto, à direita, e anote o que ela diz.
+5. Confira que os cartões do P3 e do P4 dizem BT ao lado da cor.
+6. Deixe os quatro controles parados, sem encostar em gatilho nenhum.
+7. Leia o bloco Gatilhos dos quatro cartões e confirme que os oito números estão perto de 0.
 8. Pegue o P3.
-9. Aperte o L2 do P3 bem devagar, um pouquinho por vez, até o fim do curso.
-10. Acompanhe o número do L2 no cartão do P3 enquanto o dedo desce.
-11. Confirme que ele passou por valores no meio do caminho, e não pulou de 0 direto para 255.
-12. Confirme que ele chegou a 255 com o gatilho no fundo.
-13. Repare em que altura do curso o risco do L2 acendeu no desenho.
-14. Solte o L2 e confirme que o número voltou para perto de 0 e o risco apagou.
-15. Repita os seis passos acima com o R2 do P3.
-16. Olhe os cartões do P1, do P2 e do P4 durante os apertos e confirme que os números deles ficaram parados.
-17. Leia a contagem no alto de novo e confirme que ela continua dizendo quatro controles.
-18. Largue o P3, pegue o P4 e refaça o L2 e o R2 do mesmo jeito.
-19. Anote o maior número que cada gatilho alcançou, nos dois controles do rádio.
+9. Aperte o L2 do P3 bem devagar, um pouquinho por vez, até o fim do curso, acompanhando o número do L2 no bloco Gatilhos do cartão dele.
+10. Confirme que ele passou por valores no meio do caminho, e não pulou de 0 direto para 255.
+11. Confirme que ele chegou a 255 com o gatilho no fundo.
+12. Repare em que altura do curso o desenho do L2 acendeu na grade.
+13. Solte o L2 e confirme que o número voltou para perto de 0 e o desenho apagou.
+14. Faça o mesmo com o R2 do P3.
+15. Segure um gatilho do P3 apertado e role a aba pelos cartões do P1, do P2 e do P4: os números deles ficaram parados.
+16. Leia a contagem no alto de novo e confirme que ela continua dizendo 2 USB · 2 BT.
+17. Largue o P3, pegue o P4 e refaça o L2 e o R2 do mesmo jeito.
+18. Anote o maior número que cada gatilho alcançou, nos dois controles do rádio.
 
-**Passa quando.** Nos dois controles do rádio, o número do gatilho sobe aos poucos com o dedo, passa por valores no meio, chega a 255 no fundo do curso e volta para perto de 0 ao soltar — igualzinho ao que os dois do cabo fazem. O risco do gatilho acende só depois que o número passa de 30. Os números dos cartões que você não está tocando ficam parados. E a contagem do alto continua dizendo quatro controles do começo ao fim.
+**Passa quando.** Nos dois controles do rádio, o número do gatilho sobe aos poucos com o dedo, passa por valores no meio, chega a 255 no fundo do curso e volta para perto de 0 ao soltar — igualzinho ao que os dois do cabo fazem. O desenho do gatilho acende só depois que o número passa de 30. Os números dos cartões que você não está tocando ficam parados. E a contagem do alto continua dizendo 2 USB · 2 BT do começo ao fim.
 
 **Por controle.**
 
@@ -1951,7 +1948,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio. Aperte o L2 e o R2 devagar, um de cada vez, e leia o número subindo no cartão dele. É o primeiro dos dois a medir.
 * **P4** — No rádio. Mesma medição do P3, feita depois. É o último da fila do Hefesto: se o número dele for o único que não anda, o achado é do quarto lugar, e não do rádio.
 
-**A armadilha.** Quatro. O número e o risco aceso são duas coisas: o risco só acende acima de 30, então há um começo de curso em que o número já anda e o desenho ainda está apagado — produto certo. Cartão que nunca leu aquele controle mostra os gatilhos parados em 0 / 255, igual a um gatilho solto: antes de reprovar, aperte o Cruz do mesmo controle e veja se o desenho acende. Se um cartão inteiro parar de responder no meio, olhe a contagem no alto — se ela passou a dizer três controles, o que caiu foi a conexão, e o teste se refaz em vez de reprovar. E o alcance: no mapa desta casa esta linha está provada só até o Hefesto MONTAR a leitura e pô-la na tela; ninguém provou daqui para a frente que um jogo recebe esse número. Não peça ao jogo para reagir — a resposta é a tela.
+**A armadilha.** Cinco. O número e o desenho aceso são duas coisas: o desenho só acende acima de 30, então há um começo de curso em que o número já anda e o desenho ainda está apagado — produto certo. Um gatilho duro na sua mão trava o número junto: é um efeito da aba Gatilhos guardado para aquele controle, não a leitura. Cartão que nunca leu aquele controle mostra os gatilhos parados em 0 / 255, igual a um gatilho solto: antes de reprovar, aperte o Cruz do mesmo controle e veja se o desenho acende. Se um cartão inteiro parar de responder no meio, olhe a contagem no alto — se ela passou a dizer 2 USB · 1 BT, o que caiu foi a conexão, e o teste se refaz em vez de reprovar. E o alcance: no mapa desta casa esta linha está provada só até o Hefesto MONTAR a leitura e pô-la na tela; ninguém provou daqui para a frente que um jogo recebe esse número. Não peça ao jogo para reagir — a resposta é a tela.
 
 ---
 
@@ -1959,31 +1956,30 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `entrada.combo.ponte @ cabo`
 
-**O que isto prova.** Prova que segurar o PS e clicar o analógico direito, num controle ligado por cabo, troca a forma como o jogo enxerga o controle — e que só o controle que navega o PC faz isso.
+**O que isto prova.** Prova que segurar o PS e clicar o analógico direito, num controle ligado por cabo, troca o Modo — a forma como o jogo recebe o controle — e que só o controle que navega o PC faz isso.
 
-**Onde olhar.** Em dois lugares. No aparelho: a barra de luz, as duas tiras ao lado do touchpad, pisca a cor da forma que ficou de pé — rosa é a máscara DualSense, verde é a Xbox e laranja é mouse e teclado. Na tela: aba Jogar, quadro Modo, a fileira de cartões (Sony DualSense, Xbox, Steam Input, Point And Click e Navegação), em que um fica aceso; e o interruptor Status, logo acima, que tem de estar em Ligado. Quem é o controle que faz o gesto se lê na aba Navegação, nos cartões do alto: um deles diz Navega o PC e os outros dizem Só a janela.
+**Onde olhar.** Em dois lugares. No aparelho: a barra de luz, as duas tiras ao lado do touchpad, pisca três vezes rápido, nos quatro controles, na cor do Modo que ficou de pé — verde é Xbox, laranja é Navegação e rosa é Sony DualSense — e depois volta à cor de cada jogador. Na tela: aba Jogar, quadro Modo, a fileira de quatro cartões (Sony DualSense, Xbox, Steam Input e Navegação), em que um fica aceso; e o Status, logo acima, que tem de estar em Ligado. Quem faz o gesto se lê na aba Navegação: nos cartões do alto, um diz Navega o PC e os outros dizem Só a janela. Na mesma aba, a tabela Os gestos do controle diz o que cada combinação faz: a linha 4, PS + R3, tem de dizer Próximo Modo.
 
 **Os passos.**
 
 1. Abra o Hefesto e clique na aba Jogar.
-2. Confira que o interruptor Status está em Ligado.
-3. Leia qual cartão do quadro Modo está aceso e anote.
+2. Confira que o Status está em Ligado.
+3. Confira que o cartão aceso do quadro Modo é Sony DualSense; se não for, clique nele e espere a barra de luz piscar rosa.
 4. Abra a aba Navegação.
 5. Leia a linha de cada cartão do alto e ache o que diz Navega o PC.
-6. Confira que quem diz Navega o PC é o P1 ou o P2 — um dos do cabo; se for um do rádio, este teste não é este, é o do rádio.
-7. Volte à aba Jogar.
-8. Pegue na mão o controle que navega o PC.
-9. Segure o botão PS dele e, sem soltar, aperte o analógico direito para baixo até clicar, mantendo os dois juntos por um segundo inteiro.
-10. Solte os dois.
-11. Confira a barra de luz dos controles e anote a cor que ela piscou.
-12. Leia de novo qual cartão do quadro Modo está aceso e compare com o que você anotou no começo.
-13. Repita o mesmo gesto no mesmo controle mais duas vezes, anotando a cor e o cartão em cada uma delas.
-14. Confira que na terceira volta o cartão aceso voltou a ser o do começo.
-15. Faça o mesmo gesto em cada um dos outros três controles, um por vez, sempre segurando por um segundo.
-16. Confira que nenhum deles piscou a barra nem mudou o cartão aceso.
-17. Confira o que aconteceu em cada uma das voltas e anote tudo, inclusive as voltas em que nada aconteceu.
+6. Confira que a linha dele diz USB — é o P1 ou o P2; se disser BT, este teste não é este, é o do rádio.
+7. Confira que a linha 4 da tabela Os gestos do controle, PS + R3, diz Próximo Modo.
+8. Volte à aba Jogar.
+9. Pegue na mão o controle que navega o PC.
+10. Segure o botão PS dele e, sem soltar, aperte o analógico direito para baixo até clicar, mantendo os dois juntos por um segundo inteiro; solte os dois.
+11. Anote a cor que a barra de luz piscou e qual cartão do quadro Modo acendeu.
+12. Repita o mesmo gesto no mesmo controle mais duas vezes, anotando a cor e o cartão em cada uma.
+13. Confira que na terceira volta o cartão aceso voltou a ser Sony DualSense.
+14. Faça o mesmo gesto em cada um dos outros três controles, um por vez, sempre segurando por um segundo.
+15. Confira que nenhum deles piscou a barra nem mudou o cartão aceso.
+16. Anote o que aconteceu em cada uma das voltas, inclusive as voltas em que nada aconteceu.
 
-**Passa quando.** Os três gestos no controle que diz Navega o PC andam o ciclo inteiro e voltam ao começo: a barra de luz pisca rosa, depois verde, depois laranja, e o cartão aceso no quadro Modo acompanha essa mudança. O mesmo gesto nos outros três controles não pisca nada e não muda o cartão aceso.
+**Passa quando.** Os três gestos no controle que diz Navega o PC andam o ciclo inteiro e voltam ao começo: primeiro a barra pisca verde e o cartão Xbox acende; depois laranja e Navegação; depois rosa e Sony DualSense. O mesmo gesto nos outros três controles não pisca nada e não muda o cartão aceso.
 
 **Por controle.**
 
@@ -1992,7 +1988,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e é testemunha. Faça o gesto nele uma vez e confirme que nada muda — não é defeito, é o produto: o gesto sai de um controle só.
 * **P4** — No rádio, e é a segunda testemunha. Mesmo gesto, mesma confirmação de que nada muda.
 
-**A armadilha.** Cinco, e as duas primeiras produzem falso vermelho. O gesto tem tempo: os dois botões têm de ficar segurados JUNTOS por mais de 0,15 s — um toque rápido conta como dois toques separados, e o PS sozinho abre a Steam. E o gesto sai de um controle só, o que diz Navega o PC na aba Navegação; nos outros três ele não faz nada, e isso é o produto certo. Terceira: o cartão Steam Input NUNCA acende, porque o ciclo do gesto não passa por ele e a tela não tem como saber — quem esperar vê-lo aceso vai reprovar um teste bom. Quarta: a barra de luz pisca em TODOS os controles, e não só no que fez o gesto — ela diz que o gesto pegou, não quem o fez; e dois pulsos vermelhos antes da cor querem dizer isto pode derrubar o controle dentro de um jogo, que é aviso e não erro. Quinta, e é sobre o alcance: no mapa desta casa esta linha está provada só até o Hefesto DESPACHAR o gesto por dentro. Ninguém, até hoje, apertou PS mais analógico direito num controle de verdade e viu a forma trocar. Este teste é exatamente o que fecha essa lacuna — anote tudo, inclusive o nada.
+**A armadilha.** Seis, e as duas primeiras produzem falso vermelho. O gesto tem tempo: os dois botões têm de ficar segurados JUNTOS por mais de 0,15 s — um toque rápido conta como dois toques separados, e o PS sozinho abre a Steam. E o gesto sai de um controle só, o que diz Navega o PC; nos outros três ele não faz nada, e isso é o produto certo. Terceira: o cartão Steam Input NUNCA acende por este gesto, porque o ciclo passa só por Sony DualSense, Xbox e Navegação — quem esperar vê-lo aceso vai reprovar um teste bom. Quarta: a barra de luz pisca em TODOS os controles, e não só no que fez o gesto — ela diz que o gesto pegou, não quem o fez; dois pulsos vermelhos antes da cor querem dizer que há um jogo aberto e a troca pode derrubar o controle dentro dele, o que não deve acontecer aqui, com o jogo fechado. Quinta: o gesto grava o Modo no perfil ativo, e é por isso que as três voltas terminam em Sony DualSense; se você parar no meio, clique em Sony DualSense na aba Jogar antes de seguir. Na segunda volta o controle vira mouse e teclado — não encoste no analógico esquerdo, senão o cursor anda. Sexta, e é sobre o alcance: no mapa desta casa esta linha está provada só até o Hefesto DESPACHAR o gesto por dentro. Ninguém, até hoje, apertou PS mais analógico direito num controle de verdade e viu o Modo trocar. Este teste é exatamente o que fecha essa lacuna — anote tudo, inclusive o nada.
 
 ---
 
@@ -2000,43 +1996,42 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `entrada.combo.ponte @ rádio`
 
-**O que isto prova.** Prova que segurar o PS e clicar o analógico direito, num controle ligado por rádio, troca a forma como o jogo enxerga o controle — e que só o controle que navega o PC faz isso.
+**O que isto prova.** Prova que segurar o PS e clicar o analógico direito, num controle ligado por rádio, troca o Modo — a forma como o jogo recebe o controle — e que só o controle que navega o PC faz isso.
 
-**Onde olhar.** Em dois lugares. No aparelho: a barra de luz, as duas tiras ao lado do touchpad, pisca a cor da forma que ficou de pé — rosa é a máscara DualSense, verde é a Xbox e laranja é mouse e teclado. Na tela: aba Jogar, quadro Modo, a fileira de cartões (Sony DualSense, Xbox, Steam Input, Point And Click e Navegação), em que um fica aceso; e o interruptor Status, logo acima, que tem de estar em Ligado. Quem é o controle que faz o gesto se lê na aba Navegação, nos cartões do alto: um deles diz Navega o PC e os outros dizem Só a janela.
+**Onde olhar.** Em dois lugares. No aparelho: a barra de luz pisca três vezes rápido, nos controles ligados, na cor do Modo que ficou de pé — verde é Xbox, laranja é Navegação e rosa é Sony DualSense. Na tela: aba Jogar, quadro Modo, a fileira de quatro cartões (Sony DualSense, Xbox, Steam Input e Navegação), em que um fica aceso; e o Status, logo acima, em Ligado. Quem faz o gesto se lê na aba Navegação: nos cartões do alto, um diz Navega o PC e os outros dizem Só a janela, e cada cartão tem a cor do plástico do controle. Na mesma aba, a linha 4 da tabela Os gestos do controle, PS + R3, tem de dizer Próximo Modo.
 
 **Os passos.**
 
-1. Abra o Hefesto e clique na aba Navegação.
-2. Leia a linha de cada cartão do alto e ache o que diz Navega o PC.
-3. Puxe o cabo do P1 e o cabo do P2, se quem navega o PC for um deles — os dois vão se apagar, e é isso mesmo.
-4. Conte até cinco.
-5. Leia os cartões de novo e confira que agora quem diz Navega o PC é o P3 ou o P4.
-6. Confira, antes de seguir, se algum dos dois do rádio assumiu o Navega o PC: se nenhum assumir, pare aqui e anote — sem isso este teste não roda hoje, e essa é a resposta dele.
-7. Abra a aba Jogar.
-8. Confira que o interruptor Status está em Ligado.
-9. Leia qual cartão do quadro Modo está aceso e anote.
+1. Abra o Hefesto e clique na aba Jogar.
+2. Confira que o Status está em Ligado e que o cartão aceso do quadro Modo é Sony DualSense; se não for, clique nele e espere a barra de luz piscar rosa.
+3. Abra a aba Navegação.
+4. Confira que a linha 4 da tabela Os gestos do controle, PS + R3, diz Próximo Modo.
+5. Puxe o cabo do P1 e o cabo do P2.
+6. Conte até cinco e leia os cartões do alto de novo.
+7. Ache o cartão que diz Navega o PC e confira que a linha dele diz BT; se nenhum cartão com BT disser Navega o PC, pare aqui e anote — sem isso este teste não roda hoje, e essa é a resposta dele.
+8. Anote a cor desse cartão: é por ela, e não pelo número, que você sabe qual controle pegar.
+9. Volte à aba Jogar.
 10. Pegue na mão o controle do rádio que navega o PC.
 11. Segure o botão PS dele e, sem soltar, aperte o analógico direito para baixo até clicar; mantenha os dois juntos por um segundo inteiro e solte.
-12. Repare a cor que a barra de luz piscou e anote-a.
-13. Leia de novo qual cartão do quadro Modo está aceso e compare com o que você tinha anotado.
-14. Repita o mesmo gesto mais duas vezes no mesmo controle, anotando a cor e o cartão de cada vez.
-15. Confira que na terceira vez tudo voltou ao que era no começo.
-16. Conte quantas vezes o gesto pegou de primeira e quantas você teve de repetir.
-17. Faça o mesmo gesto no outro controle do rádio.
-18. Confira que nada mudou nele: nem a barra de luz, nem o cartão aceso do quadro Modo.
-19. Encaixe os dois cabos de volta no P1 e no P2.
-20. Confira que os dois voltaram para a fita do topo, cada um com o número que tinha.
+12. Anote a cor que a barra de luz piscou e qual cartão do quadro Modo acendeu.
+13. Repita o mesmo gesto mais duas vezes no mesmo controle, anotando a cor e o cartão de cada vez.
+14. Confira que na terceira vez o cartão aceso voltou a ser Sony DualSense.
+15. Conte quantas vezes o gesto pegou de primeira e quantas você teve de repetir.
+16. Faça o mesmo gesto no outro controle do rádio e confira que nada mudou nele: nem a barra de luz, nem o cartão aceso.
+17. Encaixe os dois cabos de volta no P1 e no P2.
+18. Confira na fita do topo que os dois voltaram com USB e com o número que tinham.
+19. Abra a aba Navegação e leia quem diz Navega o PC: se ainda for um cartão com BT, segure o PS do P3 e do P4 até apagarem, espere meio minuto e ligue os dois de novo com um toque no PS — se a Steam vier para a frente, feche-a.
 
-**Passa quando.** Os três gestos no controle do rádio que diz Navega o PC andam o ciclo inteiro e voltam ao começo: a barra pisca rosa, depois verde, depois laranja, e o cartão aceso no quadro Modo acompanha. O gesto no outro controle do rádio não muda nada. E cada gesto pega na primeira tentativa — se você tiver de repetir, anote quantas vezes em quantas: é isso que separa este caminho do caminho do cabo.
+**Passa quando.** Os três gestos no controle do rádio que diz Navega o PC andam o ciclo inteiro e voltam ao começo: primeiro a barra pisca verde e o cartão Xbox acende; depois laranja e Navegação; depois rosa e Sony DualSense. O gesto no outro controle do rádio não muda nada. E cada gesto pega na primeira tentativa — se você tiver de repetir, anote quantas vezes em quantas: é isso que separa este caminho do caminho do cabo.
 
 **Por controle.**
 
-* **P1** — No cabo, e sai do teste: o cabo dele é puxado para que um controle do rádio assuma o Navega o PC. No fim, encaixe o cabo de volta e confirme que ele voltou para a fita do topo com o número que tinha.
-* **P2** — No cabo, e sai do teste pelo mesmo motivo do P1. No fim, encaixe o cabo de volta e confirme que ele voltou com o número que tinha.
+* **P1** — No cabo, e sai do teste: o cabo dele é puxado para que um controle do rádio assuma o Navega o PC. Enquanto ele está fora, os que ficam contam de 1 em diante na tela — o P3 aparece como P1 e o P4 como P2 —, e é por isso que o controle se reconhece pela cor. No fim, encaixe o cabo de volta e confirme que ele voltou como P1, com USB.
+* **P2** — No cabo, e sai do teste pelo mesmo motivo do P1. No fim, encaixe o cabo de volta e confirme que ele voltou como P2, com USB.
 * **P3** — No rádio. Se for ele quem passar a dizer Navega o PC, é nele que o gesto se faz, três vezes.
 * **P4** — No rádio. Se o Navega o PC ficar com o P4, o gesto é nele; se ficar com o P3, o P4 é a testemunha — o gesto feito nele não pode mudar nada, e isso não é defeito.
 
-**A armadilha.** Seis. O gesto tem tempo: os dois botões têm de ficar segurados JUNTOS por mais de 0,15 s — toque rápido conta como dois toques separados, e o PS sozinho abre a Steam. O gesto sai de um controle só, o que diz Navega o PC; nos outros ele não faz nada, e isso é o produto certo. O cartão Steam Input nunca acende — quem esperar vê-lo aceso reprova um teste bom. A barra de luz pisca em TODOS os controles, então ela diz que o gesto pegou, não quem o fez; dois pulsos vermelhos antes da cor são aviso de que a troca pode derrubar o controle dentro de um jogo. Quinta, e é a que este teste existe para pegar: o mapa desta casa registra que os dois botões CHEGAM pelo rádio, mas nunca mediu QUANDO chegam — se o gesto pegar às vezes e falhar outras, o achado é esse atraso contra os 0,15 s do combo, e ele só vale escrito com número: tantas vezes em tantas tentativas. Sexta, o alcance: esta linha está provada só até o Hefesto despachar o gesto por dentro; ninguém apertou isto num controle de verdade até hoje.
+**A armadilha.** Sete. O gesto tem tempo: os dois botões têm de ficar segurados JUNTOS por mais de 0,15 s — toque rápido conta como dois toques separados, e o PS sozinho abre a Steam. O gesto sai de um controle só, o que diz Navega o PC; nos outros ele não faz nada, e isso é o produto certo. O cartão Steam Input nunca acende por este gesto — o ciclo passa só por Sony DualSense, Xbox e Navegação. A barra de luz pisca em TODOS os controles, então ela diz que o gesto pegou, não quem o fez; dois pulsos vermelhos antes da cor só aparecem com um jogo aberto. O gesto grava o Modo no perfil ativo: se parar no meio, clique em Sony DualSense na aba Jogar. Sexta: um controle que perde o cabo pode voltar sozinho pelo rádio — o chip dele volta dizendo BT —, e aí ele mesmo serve: o que este teste pede é que quem navega esteja no BT; e quem assume o Navega o PC fica com ele, porque controle que volta depois de meio minuto entra no fim da fila — é por isso que o último passo existe. Sétima, e é a que este teste existe para pegar: o mapa desta casa registra que os dois botões CHEGAM pelo rádio, mas nunca mediu QUANDO chegam — se o gesto pegar às vezes e falhar outras, o achado é esse atraso contra os 0,15 s do combo, e ele só vale escrito com número: tantas vezes em tantas tentativas. O alcance: esta linha está provada só até o Hefesto despachar o gesto por dentro; ninguém apertou isto num controle de verdade até hoje.
 
 ---
 
@@ -2046,27 +2041,27 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, com um controle no cabo navegando o computador, o analógico esquerdo move o cursor e o direito rola a página.
 
-**Onde olhar.** Na aba Navegação. Nos cartões do alto, um por controle, a linha diz USB • Navega o PC ou BT • Só a janela — só quem diz Navega o PC mexe no cursor. O interruptor Status do Modo tem de estar em Ligado, com a frase verde Pronto para usar como mouse abaixo dele. Mais abaixo ficam Velocidade de cursor, com um número de 1 a 12 (o padrão é 6), e Velocidade da rolagem, de 1 a 5 (o padrão é 1). Na tabela Definições Controle e Mouse, a linha L3 Direção tem de mostrar Movimento do cursor e a linha R3 Direção, Rolagem vertical e horizontal. A prova é o cursor andando na tela do computador — e, para a rolagem, deixe aberta antes de começar uma página longa, que precise rolar.
+**Onde olhar.** Na aba Navegação. Nos cartões do alto, um por controle, a linha diz USB • Navega o PC ou BT • Só a janela — só quem diz Navega o PC mexe no cursor. Em As opções de ativação: o Status do Modo, que tem de dizer Ligado, e, logo abaixo das opções, a frase verde Pronto para usar como mouse; Velocidade de cursor, de 1 a 12 (o padrão é 6), e Velocidade da rolagem, de 1 a 5 (o padrão é 1). No pé da aba, o botão Definições Controle e Mouse abre a tabela Botão do controle / O que ele faz: a linha L3 Direção tem de mostrar Movimento do cursor e a linha R3 Direção, Rolagem vertical e horizontal. A prova é o cursor andando na tela do computador — e, para a rolagem, deixe aberta antes de começar uma página longa, que precise rolar.
 
 **Os passos.**
 
 1. Clique na aba Jogar.
-2. Clique no cartão Navegação, do quadro Modo.
+2. Clique no cartão Navegação, do quadro Modo, e espere a barra de luz piscar laranja.
 3. Abra a aba Navegação.
 4. Leia os cartões do alto e ache o que diz Navega o PC.
-5. Confira que é o P1 ou o P2 — um dos dois do cabo.
-6. Clique no interruptor Status do Modo para deixá-lo em Ligado.
+5. Confira que a linha dele diz USB — é o P1 ou o P2.
+6. Leia o Status do Modo: ele tem de dizer Ligado; se disser Desligado, clique nele uma vez.
 7. Confira que apareceu, em verde, a frase Pronto para usar como mouse.
-8. Leia a linha L3 Direção da tabela e confira que ela diz Movimento do cursor.
-9. Leia a linha R3 Direção e confira que ela diz Rolagem vertical e horizontal.
+8. Clique no botão Definições Controle e Mouse, no pé da aba.
+9. Confira que a linha L3 Direção diz Movimento do cursor e a linha R3 Direção diz Rolagem vertical e horizontal, e feche a tabela no ×.
 10. Empurre o analógico esquerdo do controle que navega o PC até o fim, um sentido de cada vez — direita, esquerda, cima e baixo —, soltando entre um e outro.
 11. Confira que o cursor acompanha os quatro sentidos, e que ele para onde estava assim que você solta.
-12. Arraste a barra da Velocidade da rolagem até 5.
+12. Anote o número da Velocidade da rolagem e arraste a barra dela até 5.
 13. Empurre o analógico direito do mesmo controle até o fim para baixo, e depois até o fim para cima.
 14. Confira que a página longa rolou para os dois lados.
 15. Empurre os dois analógicos de cada um dos outros três controles, um por vez.
 16. Confira que o cursor não anda e a página não rola com nenhum deles.
-17. Desfaça o teste: devolva a Velocidade da rolagem ao 1, volte à aba Jogar e clique no cartão Sony DualSense.
+17. Desfaça o teste: devolva a Velocidade da rolagem ao número anotado, volte à aba Jogar e clique no cartão Sony DualSense.
 
 **Passa quando.** O analógico esquerdo do controle do cabo que navega o PC leva o cursor pelos quatro sentidos, e o cursor para assim que você solta. O analógico direito rola a página nos dois sentidos. E os analógicos dos outros três controles não mexem no cursor nem rolam nada.
 
@@ -2077,7 +2072,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e é testemunha. Empurre os dois analógicos dele e confira que o cursor não anda — não é defeito, é o produto: o cursor do PC é um só e sai de um controle só.
 * **P4** — No rádio, e é a segunda testemunha. Mesmo empurrão, mesma conferência de que nada acontece.
 
-**A armadilha.** Cinco. Zona morta: o analógico esquerdo só começa a mover o cursor depois de um sexto do curso, e o direito só começa a rolar depois de quase um terço — o direito precisa de um empurrão bem maior que o esquerdo, e empurrão de leve nos dois parece analógico morto. A rolagem nasce na velocidade 1, a mais lenta que existe: antes de dizer que não rola, ponha a Velocidade da rolagem no 5, que é o ato 5. O cursor é um só e sai de um controle só, o que diz Navega o PC — os outros três não mexerem nele é o produto certo, e a própria aba avisa que o cursor, a rolagem e o teclado valem para todos os controles ligados, e não só para o escolhido na fita de cima. Não confunda com a Navegação Interna, que é outra coisa: ela serve para andar dentro da janela do Hefesto, e hoje não tem quem a atenda no produto. E o mapa carrega uma observação dela de 11 de agosto dizendo que pelo rádio o analógico e o gatilho NÃO moviam o cursor, e que pelo cabo funcionavam; em 5 de setembro os dois caminhos foram medidos e responderam. Se hoje o cabo falhar, é defeito novo — anote com essa palavra.
+**A armadilha.** Seis. Zona morta: o analógico esquerdo só começa a mover o cursor depois de um sexto do curso, e o direito só começa a rolar depois de quase um terço — o direito precisa de um empurrão bem maior que o esquerdo, e empurrão de leve nos dois parece analógico morto. A rolagem nasce na velocidade 1, a mais lenta que existe: antes de dizer que não rola, ponha a Velocidade da rolagem no 5. O cursor é um só e sai de um controle só, o que diz Navega o PC — os outros três não mexerem nele é o produto certo. Se o Status do Modo estiver cinza e a borda dele piscar em laranja quando você clica, o Modo ainda não é Navegação: o ? ao lado dele diz que o mouse e o teclado só se ligam fora do jogo — volte à aba Jogar e clique em Navegação. Entrar em Navegação derruba o controle virtual: com um jogo aberto ele perde os controles, e é por isso que a bancada começa sem jogo nenhum e o teste se desfaz no fim clicando Sony DualSense — o clique no cartão e a barra da rolagem gravam no perfil ativo, e deixar pela metade é deixar gravado. Não mexa na Navegação Interna: ela é sobre andar dentro da janela do Hefesto e não entra neste teste. E o mapa carrega uma observação dela de 11 de agosto dizendo que pelo rádio o analógico e o gatilho NÃO moviam o cursor, e que pelo cabo funcionavam; em 5 de setembro os dois caminhos foram medidos e responderam. Se hoje o cabo falhar, é defeito novo — anote com essa palavra.
 
 ---
 
@@ -2087,39 +2082,38 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, com um controle no rádio navegando o computador, o analógico esquerdo move o cursor e o direito rola a página.
 
-**Onde olhar.** Na aba Navegação. Nos cartões do alto, um por controle, a linha diz USB • Navega o PC ou BT • Só a janela — só quem diz Navega o PC mexe no cursor. O interruptor Status do Modo tem de estar em Ligado, com a frase verde Pronto para usar como mouse abaixo dele. Mais abaixo ficam Velocidade de cursor, com um número de 1 a 12 (o padrão é 6), e Velocidade da rolagem, de 1 a 5 (o padrão é 1). Na tabela Definições Controle e Mouse, a linha L3 Direção tem de mostrar Movimento do cursor e a linha R3 Direção, Rolagem vertical e horizontal. A prova é o cursor andando na tela do computador.
+**Onde olhar.** Na aba Navegação. Nos cartões do alto, um por controle e na cor do plástico dele, a linha diz USB • Navega o PC, BT • Navega o PC ou BT • Só a janela — só quem diz Navega o PC mexe no cursor. Em As opções de ativação: o Status do Modo, que tem de dizer Ligado, e, logo abaixo das opções, a frase verde Pronto para usar como mouse; Velocidade de cursor, de 1 a 12 (o padrão é 6), e Velocidade da rolagem, de 1 a 5 (o padrão é 1). No pé da aba, o botão Definições Controle e Mouse abre a tabela em que a linha L3 Direção tem de mostrar Movimento do cursor e a linha R3 Direção, Rolagem vertical e horizontal. A prova é o cursor andando na tela do computador.
 
 **Os passos.**
 
-1. Abra o Hefesto e clique na aba Navegação.
-2. Puxe o cabo do P1 e o cabo do P2 — se quem navega o PC for um deles, é assim que um controle do rádio assume; os dois vão se apagar, e é isso mesmo.
-3. Conte até cinco e leia os cartões do alto: quem diz Navega o PC agora tem de ser o P3 ou o P4.
-4. Na aba Jogar, clique no cartão Navegação, do quadro Modo.
-5. Volte à aba Navegação e ponha o interruptor Status do Modo em Ligado.
-6. Confira que apareceu, em verde, a frase Pronto para usar como mouse.
-7. Leia a linha L3 Direção da tabela: ela tem de dizer Movimento do cursor.
-8. Leia a linha R3 Direção: ela tem de dizer Rolagem vertical e horizontal.
+1. Clique na aba Jogar.
+2. Clique no cartão Navegação, do quadro Modo, e espere a barra de luz piscar laranja.
+3. Puxe o cabo do P1 e o cabo do P2.
+4. Abra a aba Navegação, conte até cinco e leia os cartões do alto.
+5. Ache o cartão que diz Navega o PC, confira que a linha dele diz BT e anote a cor dele; se nenhum cartão com BT disser Navega o PC, pare aqui e anote — é a resposta deste teste hoje, e não uma falha sua.
+6. Leia o Status do Modo: ele tem de dizer Ligado; se disser Desligado, clique nele uma vez.
+7. Confira que apareceu, em verde, a frase Pronto para usar como mouse.
+8. Clique no botão Definições Controle e Mouse, confira que a linha L3 Direção diz Movimento do cursor e a R3 Direção diz Rolagem vertical e horizontal, e feche no ×.
 9. Empurre o analógico esquerdo do controle do rádio que navega o PC até o fim, para cada um dos quatro lados, um de cada vez, soltando entre eles.
 10. Confira que o cursor atravessa a tela para o lado de cada empurrão e que ele para onde estava assim que você solta.
-11. Arraste a barra da Velocidade da rolagem até 5 e abra uma página longa, que precise rolar.
+11. Anote o número da Velocidade da rolagem, arraste a barra dela até 5 e abra uma página longa, que precise rolar.
 12. Empurre o analógico direito do mesmo controle para baixo e depois para cima.
 13. Confira que a página rola nos dois sentidos.
-14. Empurre os dois analógicos do outro controle do rádio.
-15. Confira que o cursor não anda e a página não rola.
-16. Devolva a Velocidade da rolagem ao 1 e, na aba Jogar, clique no cartão Sony DualSense, para desfazer o teste.
-17. Encaixe os dois cabos de volta no P1 e no P2.
-18. Confira que os dois voltaram para a fita do topo, com o número que tinham.
+14. Empurre os dois analógicos do outro controle do rádio e confira que o cursor não anda e a página não rola.
+15. Devolva a Velocidade da rolagem ao número anotado e, na aba Jogar, clique no cartão Sony DualSense.
+16. Encaixe os dois cabos de volta no P1 e no P2 e confira na fita do topo que os dois voltaram com USB e com o número que tinham.
+17. Abra a aba Navegação e leia quem diz Navega o PC: se ainda for um cartão com BT, segure o PS do P3 e do P4 até apagarem, espere meio minuto e ligue os dois de novo com um toque no PS — se a Steam vier para a frente, feche-a.
 
 **Passa quando.** O analógico esquerdo do controle do rádio que navega o PC leva o cursor pelos quatro sentidos e o cursor para assim que você solta; o analógico direito rola a página nos dois sentidos. É a mesma resposta que o cabo dá, e é exatamente esse empate que este teste procura. O outro controle do rádio não mexe no cursor.
 
 **Por controle.**
 
-* **P1** — No cabo, e sai do teste: o cabo dele é puxado para que um controle do rádio assuma o Navega o PC. No fim, encaixe o cabo de volta e confirme que ele voltou para a fita com o número que tinha.
-* **P2** — No cabo, e sai do teste pelo mesmo motivo. No fim, encaixe o cabo de volta e confirme que ele voltou com o número que tinha.
+* **P1** — No cabo, e sai do teste: o cabo dele é puxado para que um controle do rádio assuma o Navega o PC. Enquanto ele está fora, os que ficam contam de 1 em diante na tela, e é pela cor que você reconhece cada um. No fim, encaixe o cabo de volta e confirme que ele voltou como P1, com USB.
+* **P2** — No cabo, e sai do teste pelo mesmo motivo. No fim, encaixe o cabo de volta e confirme que ele voltou como P2, com USB.
 * **P3** — No rádio. Se for ele quem passar a dizer Navega o PC, é o analógico esquerdo dele que leva o cursor e o direito que rola a página.
 * **P4** — No rádio. Se o Navega o PC ficar com o P4, o teste é nele; se ficar com o P3, o P4 é a testemunha — os analógicos dele não podem mexer no cursor, e isso não é defeito.
 
-**A armadilha.** Seis, e a última é o motivo de este teste existir. Zona morta: o analógico esquerdo só começa a mover o cursor depois de um sexto do curso, e o direito só começa a rolar depois de quase um terço — empurrão de leve parece analógico morto. A rolagem nasce na velocidade 1, a mais lenta: ponha a Velocidade da rolagem no 5 antes de dizer que não rola. O cursor é um só e sai de um controle só — o outro do rádio não mexer nele é o produto certo. Não confunda com a Navegação Interna, que serve para andar dentro da janela do Hefesto e hoje não tem quem a atenda no produto. Se, com os dois cabos fora, nenhum controle do rádio assumir o Navega o PC, pare aqui: não há como medir isto hoje, e escrever exatamente isso é a resposta do teste, não falha sua. E a sexta: o mapa carrega uma observação dela de 11 de agosto dizendo que pelo rádio o analógico e o gatilho NÃO moviam o cursor, e que pelo cabo funcionavam; em 5 de setembro os dois caminhos foram medidos e responderam. Se hoje o rádio falhar, é aquele defeito de volta — e é o achado mais valioso desta linha. Sobre o tamanho: nove atos, um a mais que o alvo, porque este teste tem de desmontar a bancada antes de medir — tirar os dois cabos para forçar o rádio a assumir o cursor — e remontá-la depois. Sem esses dois atos de bancada ele mediria o cabo, que é outra célula.
+**A armadilha.** Sete, e a última é o motivo de este teste existir. Zona morta: o analógico esquerdo só começa a mover o cursor depois de um sexto do curso, e o direito só começa a rolar depois de quase um terço — empurrão de leve parece analógico morto. A rolagem nasce na velocidade 1, a mais lenta: ponha a Velocidade da rolagem no 5 antes de dizer que não rola. O cursor é um só e sai de um controle só — o outro do rádio não mexer nele é o produto certo. Se o Status do Modo estiver cinza e a borda dele piscar em laranja quando você clica, o Modo ainda não é Navegação — volte à aba Jogar e clique em Navegação. Um controle que perde o cabo pode voltar sozinho pelo rádio, com o chip dizendo BT; se for ele que passar a dizer Navega o PC, ele serve — o que se pede é que quem navega esteja no BT. Quem assume o Navega o PC fica com ele, porque controle que volta depois de meio minuto entra no fim da fila — é por isso que o último passo existe. E a sétima: o mapa carrega uma observação dela de 11 de agosto dizendo que pelo rádio o analógico e o gatilho NÃO moviam o cursor, e que pelo cabo funcionavam; em 5 de setembro os dois caminhos foram medidos e responderam. Se hoje o rádio falhar, é aquele defeito de volta — e é o achado mais valioso desta linha.
 
 ---
 
@@ -2129,27 +2123,26 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, com um controle no cabo navegando o computador, o L2 clica como o botão esquerdo do mouse e o R2 como o botão direito.
 
-**Onde olhar.** Na aba Navegação. Nos cartões do alto, um por controle, a linha diz USB • Navega o PC ou BT • Só a janela — só quem diz Navega o PC mexe no cursor. O interruptor Status do Modo tem de estar em Ligado, e logo abaixo dele tem de aparecer, em verde, a frase Pronto para usar como mouse. Na tabela Definições Controle e Mouse, a linha marcada L2 tem de mostrar Botão esquerdo e a linha marcada R2, Botão direito. A prova, porém, é na tela do computador: o clique tem de acontecer.
+**Onde olhar.** Na aba Navegação. Nos cartões do alto, um por controle, a linha diz USB • Navega o PC ou BT • Só a janela — só quem diz Navega o PC mexe no cursor. Em As opções de ativação, o Status do Modo tem de dizer Ligado, e logo abaixo das opções tem de aparecer, em verde, a frase Pronto para usar como mouse. No pé da aba, o botão Definições Controle e Mouse abre a tabela Botão do controle / O que ele faz, em que a linha L2 tem de mostrar Botão esquerdo e a linha R2, Botão direito. A prova, porém, é na tela do computador: o clique tem de acontecer.
 
 **Os passos.**
 
-1. Abra a aba Navegação.
+1. Clique na aba Navegação.
 2. Leia os cartões do alto e ache o que diz Navega o PC.
-3. Confira que quem diz Navega o PC é o P1 ou o P2 — um dos do cabo; se for um do rádio, este teste não é este, é o do rádio.
-4. Abra a aba Jogar e clique no cartão Navegação, do quadro Modo.
-5. Volte à aba Navegação e clique no interruptor Status do Modo para deixá-lo em Ligado.
+3. Confira que a linha dele diz USB — é o P1 ou o P2; se disser BT, este teste não é este, é o do rádio.
+4. Abra a aba Jogar e clique no cartão Navegação, do quadro Modo; espere a barra de luz piscar laranja.
+5. Volte à aba Navegação e leia o Status do Modo: ele tem de dizer Ligado; se disser Desligado, clique nele uma vez.
 6. Confira que apareceu, em verde, a frase Pronto para usar como mouse.
-7. Leia a linha L2 da tabela Definições Controle e Mouse e confira que ela diz Botão esquerdo.
-8. Leia a linha R2 e confira que ela diz Botão direito.
-9. Abra uma pasta de arquivos e deixe-a na frente da tela.
-10. Com o cursor em cima de um arquivo, aperte o L2 do controle que navega o PC até o fundo do curso.
+7. Clique no botão Definições Controle e Mouse, no pé da aba.
+8. Confira que a linha L2 diz Botão esquerdo e a linha R2 diz Botão direito, e feche a tabela no ×.
+9. Abra uma pasta de arquivos e deixe-a na frente da tela, com o cursor em cima de um arquivo.
+10. Aperte o L2 do controle que navega o PC até o fundo do curso.
 11. Confira que o arquivo ficou selecionado, como num clique do botão esquerdo.
 12. Aperte o R2 do mesmo controle até o fundo do curso.
-13. Confira que abriu o menu do botão direito.
-14. Feche o menu.
-15. Aperte o L2 e o R2 de cada um dos outros três controles, um por vez, sempre até o fundo.
-16. Confira que nenhum deles clicou nada.
-17. Volte à aba Jogar e clique no cartão Sony DualSense, para desfazer o teste.
+13. Confira que abriu o menu do botão direito, e feche o menu.
+14. Aperte o L2 e o R2 de cada um dos outros três controles, um por vez, sempre até o fundo.
+15. Confira que nenhum deles clicou nada.
+16. Volte à aba Jogar e clique no cartão Sony DualSense, para desfazer o teste.
 
 **Passa quando.** O L2 do controle do cabo que navega o PC seleciona o arquivo, como o botão esquerdo do mouse, e o R2 abre o menu do botão direito. Os gatilhos dos outros três controles não clicam nada. E as duas linhas da tabela dizem, antes disso, Botão esquerdo e Botão direito.
 
@@ -2160,7 +2153,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e é testemunha. Aperte o L2 e o R2 dele até o fundo e confirme que o cursor não clica — não é defeito, é o produto: o cursor do PC é um só, e sai de um controle só.
 * **P4** — No rádio, e é a segunda testemunha. Mesmo aperto, mesma confirmação de que nada acontece.
 
-**A armadilha.** Cinco. O gatilho tem de passar de um quarto do curso: abaixo disso o Hefesto não conta como aperto, e meia pressão parece gatilho morto. Só um controle mexe no cursor, e a tela diz qual — os outros três não clicarem é o produto certo, e é justamente a testemunha deste teste, não a reprovação dele. Entrar em Navegação derruba o controle virtual: com um jogo aberto ele perde os controles, e é por isso que a bancada começa sem jogo nenhum aberto e o teste se desfaz no fim clicando Sony DualSense. Se o interruptor recusar e aparecer uma frase laranja dizendo que o mouse e o teclado só se ligam fora do jogo, o degrau ainda está no jogo — troque no quadro Modo da aba Jogar antes de insistir. E a que dá o nome a este teste: o mapa carrega uma observação dela de 11 de agosto dizendo que pelo rádio o gatilho e o analógico NÃO moviam o cursor, e que pelo cabo funcionavam; em 5 de setembro os dois caminhos foram medidos e responderam. Se hoje falhar, é aquele defeito de volta — anote em qual transporte, porque é isso que o mapa está esperando.
+**A armadilha.** Cinco. O gatilho tem de passar de um quarto do curso: abaixo disso o Hefesto não conta como aperto, e meia pressão parece gatilho morto. Só um controle mexe no cursor, e a tela diz qual — os outros três não clicarem é o produto certo, e é justamente a testemunha deste teste, não a reprovação dele. Entrar em Navegação derruba o controle virtual: com um jogo aberto ele perde os controles, e é por isso que a bancada começa sem jogo nenhum aberto e o teste se desfaz no fim clicando Sony DualSense — o clique no cartão grava o Modo no perfil ativo. Se o Status do Modo estiver cinza e a borda dele piscar em laranja quando você clica, o Modo ainda não é Navegação: o ? ao lado dele diz que o mouse e o teclado só se ligam fora do jogo — troque no quadro Modo da aba Jogar antes de insistir. E a que dá o nome a este teste: o mapa carrega uma observação dela de 11 de agosto dizendo que pelo rádio o gatilho e o analógico NÃO moviam o cursor, e que pelo cabo funcionavam; em 5 de setembro os dois caminhos foram medidos e responderam. Se hoje falhar, é aquele defeito de volta — anote em qual transporte, porque é isso que o mapa está esperando.
 
 ---
 
@@ -2170,38 +2163,37 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, com um controle no rádio navegando o computador, o L2 clica como o botão esquerdo do mouse e o R2 como o botão direito.
 
-**Onde olhar.** Na aba Navegação. Nos cartões do alto, um por controle, a linha diz USB • Navega o PC ou BT • Só a janela — só quem diz Navega o PC mexe no cursor. O interruptor Status do Modo tem de estar em Ligado, e logo abaixo dele tem de aparecer, em verde, a frase Pronto para usar como mouse. Na tabela Definições Controle e Mouse, a linha marcada L2 tem de mostrar Botão esquerdo e a linha marcada R2, Botão direito. A prova é na tela do computador: o clique tem de acontecer.
+**Onde olhar.** Na aba Navegação. Nos cartões do alto, um por controle e na cor do plástico dele, a linha diz se ele está no USB ou no BT e se Navega o PC ou fica Só a janela — só quem diz Navega o PC mexe no cursor. Em As opções de ativação, o Status do Modo tem de dizer Ligado, e logo abaixo das opções tem de aparecer, em verde, a frase Pronto para usar como mouse. No pé da aba, o botão Definições Controle e Mouse abre a tabela em que a linha L2 tem de mostrar Botão esquerdo e a linha R2, Botão direito. A prova é na tela do computador: o clique tem de acontecer.
 
 **Os passos.**
 
-1. Abra o Hefesto e clique na aba Navegação.
-2. Leia os cartões do alto e ache o que diz Navega o PC.
-3. Puxe o cabo do P1 e o cabo do P2 — os dois vão se apagar, e é isso mesmo.
-4. Conte até cinco e leia os cartões de novo: quem diz Navega o PC agora tem de ser o P3 ou o P4. Se nenhum dos dois do rádio assumir, pare aqui e escreva exatamente isso — é a resposta deste teste hoje, e não uma falha sua.
-5. Na aba Jogar, clique no cartão Navegação, do quadro Modo.
-6. Volte à aba Navegação e clique no interruptor Status do Modo para deixá-lo em Ligado.
+1. Clique na aba Jogar.
+2. Clique no cartão Navegação, do quadro Modo, e espere a barra de luz piscar laranja.
+3. Puxe o cabo do P1 e o cabo do P2.
+4. Abra a aba Navegação, conte até cinco e leia os cartões do alto.
+5. Ache o cartão que diz Navega o PC, confira que a linha dele diz BT e anote a cor dele; se nenhum cartão com BT disser Navega o PC, pare aqui e escreva exatamente isso — é a resposta deste teste hoje, e não uma falha sua.
+6. Leia o Status do Modo: ele tem de dizer Ligado; se disser Desligado, clique nele uma vez.
 7. Confira que apareceu, em verde, a frase Pronto para usar como mouse.
-8. Leia a linha L2 e a linha R2 da tabela Definições Controle e Mouse: têm de dizer Botão esquerdo e Botão direito.
+8. Clique no botão Definições Controle e Mouse, confira que a linha L2 diz Botão esquerdo e a R2 diz Botão direito, e feche no ×.
 9. Abra uma pasta de arquivos e leve o cursor até cima de um arquivo.
 10. Aperte o L2 do controle do rádio que navega o PC, até o fundo do curso.
 11. Confira que o arquivo ficou selecionado, como num clique do botão esquerdo.
-12. Aperte o R2 do mesmo controle até o fundo do curso, e feche o menu que abrir.
-13. Confira que o que abriu foi o menu do botão direito.
-14. Aperte o L2 e o R2 do OUTRO controle do rádio.
-15. Confira que ele não clica nada — isso é o produto certo, e não defeito.
-16. Desfaça o teste: volte à aba Jogar, clique no cartão Sony DualSense e encaixe os dois cabos de volta no P1 e no P2.
-17. Confira que os dois voltaram para a fita do topo com os números que tinham.
+12. Aperte o R2 do mesmo controle até o fundo do curso e confira que abriu o menu do botão direito; feche o menu.
+13. Aperte o L2 e o R2 do OUTRO controle do rádio e confira que ele não clica nada — isso é o produto certo, e não defeito.
+14. Volte à aba Jogar e clique no cartão Sony DualSense.
+15. Encaixe os dois cabos de volta no P1 e no P2 e confira na fita do topo que os dois voltaram com USB e com o número que tinham.
+16. Abra a aba Navegação e leia quem diz Navega o PC: se ainda for um cartão com BT, segure o PS do P3 e do P4 até apagarem, espere meio minuto e ligue os dois de novo com um toque no PS — se a Steam vier para a frente, feche-a.
 
 **Passa quando.** O L2 do controle do rádio que navega o PC seleciona o arquivo, como o botão esquerdo do mouse, e o R2 abre o menu do botão direito — a mesma resposta que o cabo dá. O outro controle do rádio não clica nada. E as duas linhas da tabela dizem, antes disso, Botão esquerdo e Botão direito.
 
 **Por controle.**
 
-* **P1** — No cabo, e sai do teste: o cabo dele é puxado para que um controle do rádio assuma o Navega o PC. No fim, encaixe o cabo de volta e confirme que ele voltou para a fita com o número que tinha.
-* **P2** — No cabo, e sai do teste pelo mesmo motivo. No fim, encaixe o cabo de volta e confirme que ele voltou com o número que tinha.
+* **P1** — No cabo, e sai do teste: o cabo dele é puxado para que um controle do rádio assuma o Navega o PC. Enquanto ele está fora, os que ficam contam de 1 em diante na tela, e é pela cor que você reconhece cada um. No fim, encaixe o cabo de volta e confirme que ele voltou como P1, com USB.
+* **P2** — No cabo, e sai do teste pelo mesmo motivo. No fim, encaixe o cabo de volta e confirme que ele voltou como P2, com USB.
 * **P3** — No rádio. Se for ele quem passar a dizer Navega o PC, é nele que o L2 e o R2 são apertados até o fundo.
 * **P4** — No rádio. Se o Navega o PC ficar com o P4, o teste é nele; se ficar com o P3, o P4 é a testemunha — o L2 e o R2 dele não podem clicar nada, e isso não é defeito.
 
-**A armadilha.** Este teste tem DEZ atos, acima dos oito do alvo porque ele desmonta a mesa e monta de volta: puxar os dois cabos é o único jeito de um controle do rádio assumir o cursor, e os atos 2 e 8 são a ida e a volta do modo. Cortar o ato 8 deixa a mesa dela em Navegação, sem controle virtual. Seis cuidados, e o último é o motivo de este teste existir. O gatilho tem de passar de um quarto do curso; abaixo disso o Hefesto não conta como aperto. Só um controle mexe no cursor — o outro do rádio não clicar é o produto certo. Entrar em Navegação derruba o controle virtual, e por isso o jogo tem de estar fechado antes de começar, e o teste se desfaz no fim clicando Sony DualSense. Se o interruptor recusar com uma frase laranja dizendo que o mouse e o teclado só se ligam fora do jogo, o degrau ainda está no jogo — troque no quadro Modo da aba Jogar. Se, com os dois cabos fora, nenhum controle do rádio assumir o Navega o PC, não há como medir isto hoje: escreva exatamente isso, é uma resposta e não uma falha sua. E a sexta: o mapa carrega uma observação dela de 11 de agosto dizendo que pelo rádio o gatilho e o analógico NÃO moviam o cursor, e que pelo cabo funcionavam; em 5 de setembro os dois caminhos foram medidos e responderam. Se hoje o rádio falhar, é aquele defeito de volta, e é o achado mais valioso desta linha.
+**A armadilha.** Este teste passa do tamanho de sempre porque ele desmonta a bancada e a monta de volta: puxar os dois cabos é o jeito de um controle do rádio assumir o cursor, e a ida e a volta do Modo são dois cliques que não se cortam — cortar a volta deixa o Modo em Navegação, gravado no perfil ativo, sem controle virtual. Seis cuidados, e o último é o motivo de este teste existir. O gatilho tem de passar de um quarto do curso; abaixo disso o Hefesto não conta como aperto. Só um controle mexe no cursor — o outro do rádio não clicar é o produto certo. Entrar em Navegação derruba o controle virtual, e por isso o jogo tem de estar fechado antes de começar. Se o Status do Modo estiver cinza e a borda dele piscar em laranja quando você clica, o Modo ainda não é Navegação — troque no quadro Modo da aba Jogar. Um controle que perde o cabo pode voltar sozinho pelo rádio, com o chip dizendo BT; se for ele que passar a dizer Navega o PC, ele serve. Quem assume o Navega o PC fica com ele, porque controle que volta depois de meio minuto entra no fim da fila — é por isso que o último passo existe. E a sexta: o mapa carrega uma observação dela de 11 de agosto dizendo que pelo rádio o gatilho e o analógico NÃO moviam o cursor, e que pelo cabo funcionavam; em 5 de setembro os dois caminhos foram medidos e responderam. Se hoje o rádio falhar, é aquele defeito de volta, e é o achado mais valioso desta linha.
 
 ---
 
@@ -2211,13 +2203,13 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que os dois analógicos de um controle no cabo entregam a posição real do polegar, e que o repouso deles é lido do aparelho em vez de inventado.
 
-**Onde olhar.** Na aba Controles, dentro do cartão de cada controle, ao lado do desenho. Ficam ali Analógico esquerdo, com a marca L3, e Analógico direito, com a marca R3. Cada um tem um círculo com um pontinho dentro e dois números: X: e Y:. O pontinho anda dentro do círculo acompanhando o polegar, e cada número vai de 0 a 255.
+**Onde olhar.** Na aba Controles, no meio do cartão de cada controle. Ficam ali Analógico esquerdo, com a marca L3 dentro do círculo, e Analógico direito, com a marca R3. Cada um tem um círculo com um pontinho dentro e dois números embaixo: X: e Y:. O pontinho anda dentro do círculo acompanhando o polegar, e cada número vai de 0 a 255.
 
 **Os passos.**
 
 1. Clique na aba Controles.
 2. Clique no chip Todos, na fita do topo, para abrir os quatro cartões.
-3. Largue os quatro controles na mesa, sem encostar em analógico nenhum.
+3. Deixe os quatro controles parados, sem encostar em analógico nenhum.
 4. Leia e anote num papel os quatro números de repouso do P1 — X e Y do esquerdo, X e Y do direito — e depois os quatro do P2, do mesmo jeito.
 5. Empurre o analógico esquerdo do P1 devagar até o fim, um sentido de cada vez — direita, esquerda, cima e baixo —, soltando entre um e outro.
 6. Confira que o número X vai a um extremo num lado e ao outro extremo no lado oposto, e que o Y faz o mesmo em cima e embaixo.
@@ -2225,7 +2217,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 8. Confira que, ao soltar, os dois números voltam para perto do que você anotou.
 9. Empurre o analógico direito do P1 do mesmo jeito, um sentido de cada vez.
 10. Confira nele as mesmas três coisas que conferiu no analógico esquerdo.
-11. Confira, durante os empurrões, que os pontinhos dos cartões do P2, do P3 e do P4 ficaram parados.
+11. Segure um analógico do P1 empurrado e role a aba pelos cartões do P2, do P3 e do P4: os pontinhos deles ficaram parados.
 12. Largue o P1 e pegue o P2.
 13. Empurre os dois analógicos do P2 do mesmo jeito, um sentido de cada vez.
 14. Confira no P2 as mesmas coisas que conferiu no P1.
@@ -2240,7 +2232,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e você não encosta nele. Testemunha: se o pontinho dele andar enquanto o seu polegar está no P1, o Hefesto está lendo um controle e desenhando no cartão de outro.
 * **P4** — No rádio, e você também não encosta. Segunda testemunha, com a mesma conferência do P3.
 
-**A armadilha.** A maior é esperar 128 no repouso. O centro NÃO é 128, e isso está medido nesta bancada: os centros ficam entre 124 e 130, cada aparelho tem o seu, e um deles ainda passeia um ponto ao longo de minutos. Quem reprovar porque não voltou para 128 reprova um produto certo — e o Hefesto foi consertado justamente para LER o repouso do aparelho em vez de escrever 128. A segunda é o contrário e é mais perigosa: um cartão sem leitura mostra os dois analógicos exatamente no meio e parados para sempre, e um número plausível e congelado se parece com um controle que ninguém está tocando. A diferença se vê apertando o Cruz do mesmo controle: se o desenho do Cruz acende e o analógico continua parado, o achado é do analógico; se nada acende, o achado é a falta de leitura naquele cartão. E não confunda com o pontinho do touchpad, que fica no desenho do touchpad e só aparece quando há dedo encostado.
+**A armadilha.** A maior é esperar 128 no repouso. O centro NÃO é 128, e isso está medido nesta bancada: os centros ficam entre 124 e 130, cada aparelho tem o seu, e um deles ainda passeia um ponto ao longo de minutos. Quem reprovar porque não voltou para 128 reprova um produto certo — e o Hefesto foi consertado justamente para LER o repouso do aparelho em vez de escrever 128. A segunda é o contrário e é mais perigosa: um cartão sem leitura mostra os dois analógicos exatamente no meio e parados para sempre, e um número plausível e congelado se parece com um controle que ninguém está tocando. A diferença se vê apertando o Cruz do mesmo controle: se o desenho do Cruz acende e o analógico continua parado, o achado é do analógico; se nada acende, o achado é a falta de leitura naquele cartão. E não confunda com o pontinho do touchpad, que fica no bloco Touchpad, à esquerda, e só aparece quando há dedo encostado.
 
 ---
 
@@ -2250,14 +2242,14 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que os dois analógicos de um controle no rádio entregam a posição real do polegar, e que o repouso deles é lido do aparelho em vez de inventado.
 
-**Onde olhar.** Na aba Controles, dentro do cartão de cada controle, ao lado do desenho. Ficam ali Analógico esquerdo, com a marca L3, e Analógico direito, com a marca R3. Cada um tem um círculo com um pontinho dentro e dois números: X: e Y:. O pontinho anda dentro do círculo acompanhando o polegar, e cada número vai de 0 a 255. E no alto de qualquer aba, a contagem dos ligados: 4 controles: 2 USB · 2 BT.
+**Onde olhar.** Na aba Controles, no meio do cartão de cada controle. Ficam ali Analógico esquerdo, com a marca L3 dentro do círculo, e Analógico direito, com a marca R3. Cada um tem um círculo com um pontinho dentro e dois números embaixo: X: e Y:. O pontinho anda dentro do círculo acompanhando o polegar, e cada número vai de 0 a 255. E no alto de qualquer aba, à direita, a contagem dos ligados: 2 USB · 2 BT.
 
 **Os passos.**
 
 1. Abra o Hefesto e clique na aba Controles.
 2. Clique no chip Todos, na fita do topo, para abrir os quatro cartões.
-3. Leia a contagem no alto e anote o que ela diz.
-4. Largue os quatro controles na mesa, sem encostar em analógico nenhum, e anote num papel os quatro números de repouso do P3 e os quatro do P4: X e Y do esquerdo, X e Y do direito.
+3. Leia a contagem no alto, à direita, e anote o que ela diz.
+4. Deixe os quatro controles parados, sem encostar em analógico nenhum, e anote num papel os quatro números de repouso do P3 e os quatro do P4: X e Y do esquerdo, X e Y do direito.
 5. Pegue o P3 e empurre o analógico esquerdo devagar até o fim, para um lado e depois para o outro, acompanhando o número X.
 6. Confira que o número X foi a um extremo de cada vez e que o pontinho encostou na borda do círculo do mesmo lado do seu polegar.
 7. Empurre o mesmo analógico até o fim para cima e depois até o fim para baixo, acompanhando o número Y.
@@ -2265,11 +2257,11 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 9. Solte o analógico.
 10. Confira que o pontinho voltou ao meio e que os dois números voltaram para perto do que você anotou.
 11. Repita esses mesmos três gestos com o analógico DIREITO do P3: os dois lados, cima e baixo, e soltar.
-12. Veja os cartões do P1, do P2 e do P4 durante os empurrões: os pontinhos deles têm de ficar parados.
+12. Segure um analógico do P3 empurrado e role a aba pelos cartões do P1, do P2 e do P4: os pontinhos deles têm de ficar parados.
 13. Largue o P3, pegue o P4 e refaça nele os dois analógicos do mesmo jeito.
-14. Leia a contagem no alto de novo: ela tem de continuar dizendo quatro controles.
+14. Leia a contagem no alto de novo: ela tem de continuar dizendo 2 USB · 2 BT.
 
-**Passa quando.** Empurrando um analógico até um extremo, o número daquele eixo vai até perto de 0 de um lado e perto de 255 do outro, e o pontinho encosta na borda do círculo do mesmo lado para onde o seu polegar foi. Soltando, o pontinho volta ao meio e os números voltam para o que você anotou. Isso nos dois analógicos do P3 e nos dois do P4 — sem atraso visível entre o polegar e o pontinho. E a contagem do alto continua dizendo quatro controles do começo ao fim. Se algum eixo não alcançar os extremos, anote qual é ele e em qual dos dois controles do rádio: é esse o achado que o teste devolve.
+**Passa quando.** Empurrando um analógico até um extremo, o número daquele eixo vai até perto de 0 de um lado e perto de 255 do outro, e o pontinho encosta na borda do círculo do mesmo lado para onde o seu polegar foi. Soltando, o pontinho volta ao meio e os números voltam para o que você anotou. Isso nos dois analógicos do P3 e nos dois do P4 — sem atraso visível entre o polegar e o pontinho. E a contagem do alto continua dizendo 2 USB · 2 BT do começo ao fim. Se algum eixo não alcançar os extremos, anote qual é ele e em qual dos dois controles do rádio: é esse o achado que o teste devolve.
 
 **Por controle.**
 
@@ -2278,7 +2270,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio. Anote os quatro números de repouso dele ANTES de tocar em qualquer coisa, e compare no fim. Os dois analógicos vão aos extremos, um eixo de cada vez.
 * **P4** — No rádio. Mesma medição do P3, feita depois. É o último da fila do Hefesto: se o pontinho dele for o único parado, o achado é do quarto lugar, e não do rádio.
 
-**A armadilha.** A maior é esperar 128 no repouso. O centro NÃO é 128, e isso está medido nesta bancada nos dois transportes: os centros ficam entre 124 e 130, cada aparelho tem o seu, e um deles passeia um ponto ao longo de minutos. Reprovar porque não voltou para 128 é reprovar um produto certo. A segunda: cartão sem leitura mostra os dois analógicos exatamente no meio e parados para sempre — um número plausível e congelado se parece com um controle largado. A diferença se vê apertando o Cruz do mesmo controle: se o Cruz acende e o analógico não anda, o achado é do analógico; se nada acende, é falta de leitura. Terceira, só do rádio: se um cartão inteiro parar no meio do teste, olhe a contagem no alto antes de reprovar — três controles quer dizer que a conexão caiu, e o teste se refaz. E não confunda com o pontinho do touchpad, que fica no desenho do touchpad e só aparece com dedo encostado.
+**A armadilha.** A maior é esperar 128 no repouso. O centro NÃO é 128, e isso está medido nesta bancada nos dois transportes: os centros ficam entre 124 e 130, cada aparelho tem o seu, e um deles passeia um ponto ao longo de minutos. Reprovar porque não voltou para 128 é reprovar um produto certo. A segunda: cartão sem leitura mostra os dois analógicos exatamente no meio e parados para sempre — um número plausível e congelado se parece com um controle largado. A diferença se vê apertando o Cruz do mesmo controle: se o Cruz acende e o analógico não anda, o achado é do analógico; se nada acende, é falta de leitura. Terceira, só do rádio: se um cartão inteiro parar no meio do teste, olhe a contagem no alto antes de reprovar — 2 USB · 1 BT quer dizer que a conexão caiu, e o teste se refaz. Quarta, também do rádio: com o microfone do controle no ar, um pontinho que pula sozinho, sem polegar nenhum, é a entrada fantasma — o som do microfone lido como analógico; ela foi curada em 10/09, e se voltar é achado: anote em qual controle. E não confunda com o pontinho do touchpad, que fica no bloco Touchpad, à esquerda, e só aparece com dedo encostado.
 
 ---
 
@@ -2288,36 +2280,35 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o L2 e o R2 do mesmo controle ficam duros AO MESMO TEMPO nos dois controles do cabo, sem um lado apagar o outro.
 
-**Onde olhar.** Na aba Gatilhos, dentro do quadro "Seleção de Gatilho". Cada controle é uma coluna, com o chip dele no alto: o número, a cor do plástico e a palavra cabo ou rádio. A coluna da esquerda nomeia as linhas: primeiro "Controle" e depois duas seções, cada uma titulada por um desenho — o de cima é o L2, o de baixo é o R2. Dentro de cada seção vêm três linhas: "Modo", "Efeito pronto" e "Ajustes". Mas quem responde este teste é a sua mão, e não a tela: o DualSense não devolve em que efeito ele está, então o campo "Modo" mostra o que foi PEDIDO, nunca o que está no aparelho. O único sinal que a tela dá é o campo piscar em verde por cerca de um segundo e meio quando o comando chega ao controle — e piscar quer dizer "saiu daqui", não "o gatilho está duro agora".
+**Onde olhar.** Na aba Gatilhos, no quadro Gatilhos. Cada controle é uma coluna, com o chip dele no alto: o número, a cor do plástico e USB ou BT. A coluna da esquerda nomeia as linhas: primeiro Controle e depois duas seções, cada uma titulada por um desenho — o de cima é o L2, o de baixo é o R2 —, com Modo e Efeito pronto dentro de cada uma. Mas quem responde este teste é a sua mão, e não a tela: o DualSense não devolve em que efeito ele está, então o campo Modo mostra o que foi PEDIDO, nunca o que está no aparelho. O único sinal que a tela dá é o campo piscar em verde por cerca de um segundo e meio quando o comando chega ao controle — e piscar quer dizer que o comando saiu daqui, não que o gatilho está duro agora.
 
 **Os passos.**
 
 1. Abra a aba Gatilhos.
-2. Aperte o L2 e o R2 dos quatro controles até o fundo, um controle por vez, e guarde na mão como cada um está agora.
-3. Confira que a coluna do P1 e a do P2 terminam, no alto, na palavra cabo.
-4. Abra o campo "Modo" da seção de CIMA (a do desenho L2), na coluna do P1, e escolha «Rígido».
-5. Veja o campo piscar em verde.
-6. Aperte o L2 do P1 e depois o R2 do mesmo controle, um de cada vez.
-7. Confira que o L2 trava duro do começo ao fim do curso e que o R2 continua leve — o efeito pegou um lado só.
-8. Abra o campo "Modo" da seção de BAIXO (a do desenho R2), na mesma coluna do P1, e escolha «Rígido».
-9. Aperte o L2 e o R2 do P1 ao mesmo tempo, com dois dedos; depois solte e aperte de novo um de cada vez.
-10. Confira que os dois estão duros e que nenhum amoleceu quando o outro foi ligado.
-11. Repita na coluna do P2 tudo o que você fez na do P1, do «Rígido» no L2 até os dois gatilhos apertados juntos.
-12. Aperte o L2 e o R2 do P3 e depois os do P4.
-13. Compare com o que você sentiu no começo: os quatro têm de estar iguais ao que estavam.
-14. Escolha «Desligado» no "Modo" das duas seções da coluna do P1 e das duas da coluna do P2, e aperte os quatro gatilhos do P1 e do P2 de novo.
-15. Confira que todos voltaram a ficar leves.
+2. Confira que o chip no alto da coluna do P1 e o da coluna do P2 dizem USB.
+3. Anote no papel o que está escrito no Modo das duas seções da coluna do P1 e das duas da coluna do P2 — é o que você devolve no fim.
+4. Escolha «Desligado» no Modo das duas seções da coluna do P1 e das duas da coluna do P2.
+5. Aperte o L2 e o R2 dos quatro controles até o fundo, um controle por vez, e guarde na mão como cada um está agora: os do P1 e do P2 têm de estar leves.
+6. Escolha «Rígido» no Modo da seção de CIMA (a do desenho L2), na coluna do P1, e veja o campo piscar em verde.
+7. Aperte o L2 do P1 e depois o R2 do mesmo controle, um de cada vez.
+8. Confira que o L2 trava duro do começo ao fim do curso e que o R2 continua leve — o efeito pegou um lado só.
+9. Escolha «Rígido» no Modo da seção de BAIXO (a do desenho R2), na mesma coluna do P1.
+10. Aperte o L2 e o R2 do P1 ao mesmo tempo, com dois dedos; depois solte e aperte de novo um de cada vez.
+11. Confira que os dois estão duros e que nenhum amoleceu quando o outro foi ligado.
+12. Repita na coluna do P2 tudo o que você fez na do P1, do «Rígido» no L2 até os dois gatilhos apertados juntos.
+13. Aperte o L2 e o R2 do P3 e depois os do P4, e compare com o que guardou na mão: os quatro têm de estar iguais ao que estavam.
+14. Devolva o Modo das duas seções da coluna do P1 e das duas da coluna do P2 ao que você anotou no papel.
 
-**Passa quando.** No P1 e no P2 — os dois do cabo — o L2 e o R2 ficam duros ao mesmo tempo, e continuam duros quando você aperta um de cada vez: ligar o segundo lado não soltou o primeiro. Os gatilhos do P3 e do P4 continuam exatamente como estavam antes, nenhum endureceu. E, ao escolher «Desligado» nas duas seções dos dois controles, os quatro gatilhos voltam a ficar leves na sua mão.
+**Passa quando.** No P1 e no P2 — os dois do cabo — o L2 e o R2 ficam duros ao mesmo tempo, e continuam duros quando você aperta um de cada vez: ligar o segundo lado não soltou o primeiro. Os gatilhos do P3 e do P4 continuam exatamente como estavam antes, nenhum endureceu. E, com «Desligado» nas duas seções, os quatro gatilhos do P1 e do P2 estavam leves na sua mão antes do «Rígido».
 
 **Por controle.**
 
-* **P1** — No CABO, e é o primeiro em que você mexe. Ponha «Rígido» no "Modo" da seção de cima (L2), sinta só o L2 travar, depois ponha «Rígido» na seção de baixo (R2) e sinta os dois travados ao mesmo tempo, com dois dedos. No fim, «Desligado» nas duas seções.
+* **P1** — No CABO, e é o primeiro em que você mexe. Ponha «Rígido» no Modo da seção de cima (L2), sinta só o L2 travar, depois ponha «Rígido» na seção de baixo (R2) e sinta os dois travados ao mesmo tempo, com dois dedos.
 * **P2** — No CABO, e é o segundo. Os mesmos gestos, na coluna dele. Ele é quem separa "o cabo funciona" de "aquele controle funciona": se der certo no P1 e não no P2, o defeito é do aparelho, não do transporte.
 * **P3** — No RÁDIO, testemunha. Não toque na coluna dele. Aperte o L2 e o R2 antes e depois; têm de estar iguais nas duas vezes. Se ele endurecer junto, o comando pegou todo mundo em vez do controle escolhido.
 * **P4** — No RÁDIO, segunda testemunha. Não toque na coluna dele. Aperte o L2 e o R2 antes e depois. Se o P3 ficou intacto e o P4 endureceu, o comando não vazou pelo transporte — foi parar no controle errado, que é outro defeito.
 
-**A armadilha.** Não use «Desligado» como o efeito do teste. Ele é a escolha que SOLTA o gatilho: se ela vazar para os quatro controles você não vê nada, porque os outros já estavam soltos. O efeito tem de ser um que ENDUREÇA, porque endurecer é o que a mão sente. E não julgue pela tela: o campo "Modo" continua mostrando «Rígido» mesmo se um jogo escrever por cima e o gatilho estiver leve no seu dedo — o campo mostra o pedido, nunca o aparelho. Duas coisas mais, e as duas já foram medidas nesta casa. A primeira: o efeito NÃO é eterno. Alguns MINUTOS depois de aplicado ele amanhece solto sozinho, sem ninguém tocar, e até hoje ninguém achou quem o apaga; então sinta LOGO depois de escolher, e se você voltar meia hora depois e estiver leve, isso é o defeito conhecido e não erro seu. A segunda: aplicar qualquer efeito de gatilho PAUSA a troca automática de perfil, e é o «Desligado» do fim que a devolve — deixar o teste pela metade deixa o Hefesto sem trocar de perfil sozinho, e isso vai parecer outro defeito mais tarde. Por fim, onde a prova desta linha parou: em O APARELHO OBEDECEU, medido com os quatro controles na mesa em 11/08 — o dedo é o degrau certo aqui, e o jogo é o degrau seguinte, que ninguém mediu. Não conclua nada sobre gatilho olhando um jogo.
+**A armadilha.** Não use «Desligado» como o efeito do teste. Ele é a escolha que SOLTA o gatilho: se ela vazar para os quatro controles você não vê nada, porque os outros já estavam soltos. O efeito tem de ser um que ENDUREÇA, porque endurecer é o que a mão sente. E não julgue pela tela: o campo Modo continua mostrando «Rígido» mesmo se um jogo escrever por cima e o gatilho estiver leve no seu dedo — o campo mostra o pedido, nunca o aparelho. Duas coisas mais. A escolha GRAVA: o Modo fica guardado no perfil daquele controle, e é por isso que o terceiro passo anota o que estava lá e o último devolve — deixar o teste pela metade deixa «Rígido» gravado, e o gatilho nasce duro no próximo jogo. E, em agosto, mediu-se o efeito amanhecendo solto alguns MINUTOS depois de aplicado, sem ninguém tocar, e ninguém achou quem o apaga; então sinta LOGO depois de escolher, e se você voltar mais tarde e estiver leve, anote a hora e o nome que aparece ao lado de Perfil ativo, no alto. Por fim, onde a prova desta linha parou: em O APARELHO OBEDECEU, medido com os quatro controles em 11/08 — o dedo é o degrau certo aqui, e o jogo é o degrau seguinte, que ninguém mediu. Não conclua nada sobre gatilho olhando um jogo.
 
 ---
 
@@ -2325,40 +2316,40 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `gatilho.adaptativo @ rádio`
 
-**O que isto prova.** Prova que o L2 e o R2 do mesmo controle ficam duros AO MESMO TEMPO nos dois controles do rádio, igual aos do cabo.
+**O que isto prova.** Prova que o L2 e o R2 do mesmo controle ficam duros AO MESMO TEMPO nos dois controles do rádio, igual aos do cabo — e que o efeito volta com o controle quando ele cai e reconecta.
 
-**Onde olhar.** Na aba Gatilhos, no quadro "Seleção de Gatilho". Cada controle é uma coluna, com o chip no alto — o número, a cor do plástico e a palavra cabo ou rádio; a do P3 e a do P4 têm de terminar em rádio. A coluna da esquerda nomeia as linhas: "Controle" e depois duas seções tituladas por um desenho, o L2 em cima e o R2 embaixo, cada uma com "Modo", "Efeito pronto" e "Ajustes". No pé de cada coluna há um botãozinho redondo com uma seta girando (↻): ele manda de novo ao controle o L2 e o R2 que estão naquela coluna, e existe justamente para quando o controle volta do rádio. A prova, porém, é a sua mão: o controle não devolve em que efeito está, e o campo "Modo" mostra o que foi pedido. A tela só pisca em verde por cerca de um segundo e meio quando o comando sai.
+**Onde olhar.** Na aba Gatilhos, no quadro Gatilhos. Cada controle é uma coluna, com o chip no alto — o número, a cor do plástico e USB ou BT; o da coluna do P3 e o da do P4 têm de dizer BT. A coluna da esquerda nomeia as linhas: Controle e depois duas seções tituladas por um desenho, o L2 em cima e o R2 embaixo, cada uma com Modo e Efeito pronto. As colunas seguem a ordem dos chips e se renumeram quando um controle sai. A prova, porém, é a sua mão: o controle não devolve em que efeito está, e o campo Modo mostra o que foi pedido. A tela só pisca em verde por cerca de um segundo e meio quando o comando sai.
 
 **Os passos.**
 
 1. Abra a aba Gatilhos.
-2. Aperte o L2 e o R2 dos quatro controles até o fundo, um controle por vez, e guarde na mão como cada um está agora.
-3. Confira que a coluna do P3 e a do P4 terminam, no alto, na palavra rádio.
-4. Ponha «Rígido» no campo "Modo" da seção de CIMA (a do desenho L2), na coluna do P3.
-5. Veja o campo piscar em verde.
-6. Aperte o L2 do P3 e depois o R2 do mesmo controle, um de cada vez.
-7. Confira que o L2 travou duro do começo ao fim do curso e que o R2 continua leve — o efeito pegou um lado só.
-8. Ponha «Rígido» no campo "Modo" da seção de BAIXO (a do desenho R2), na mesma coluna do P3.
+2. Confira que o chip no alto da coluna do P3 e o da coluna do P4 dizem BT.
+3. Anote no papel o que está escrito no Modo das duas seções da coluna do P3 e das duas da coluna do P4.
+4. Escolha «Desligado» no Modo das duas seções da coluna do P3 e das duas da coluna do P4.
+5. Aperte o L2 e o R2 dos quatro controles até o fundo, um controle por vez, e guarde na mão como cada um está agora: os do P3 e do P4 têm de estar leves.
+6. Escolha «Rígido» no Modo da seção de CIMA (a do desenho L2), na coluna do P3, e veja o campo piscar em verde.
+7. Aperte o L2 do P3 e depois o R2 do mesmo controle, um de cada vez, e confira que só o L2 travou.
+8. Escolha «Rígido» no Modo da seção de BAIXO (a do desenho R2), na mesma coluna do P3.
 9. Aperte o L2 e o R2 do P3 ao mesmo tempo, com dois dedos; depois solte e aperte de novo um de cada vez.
 10. Confira que os dois estão duros e que ligar o segundo lado não soltou o primeiro.
-11. Repita na coluna do P4 tudo o que você fez na do P3, do «Rígido» no L2 até os dois gatilhos apertados juntos com dois dedos.
-12. Aperte o L2 e o R2 do P1 e depois os do P2.
-13. Compare com o que você guardou na mão no começo: os quatro têm de estar iguais.
-14. Clique no botãozinho da seta girando (↻) no pé da coluna do P3 e aperte o L2 e o R2 dele de novo.
-15. Confira que os dois continuam duros depois do reenvio.
-16. Ponha «Desligado» no "Modo" das duas seções da coluna do P3 e das duas da coluna do P4, e aperte os quatro gatilhos de novo.
-17. Confira que todos voltaram a ficar leves.
+11. Repita na coluna do P4 tudo o que você fez na do P3, do «Rígido» no L2 até os dois gatilhos apertados juntos.
+12. Aperte o L2 e o R2 do P1 e depois os do P2, e compare com o que guardou na mão: têm de estar iguais.
+13. Segure o PS do P3 até as luzes dele apagarem, e confira que a coluna do P4 passou a dizer P3 no chip.
+14. Dê um toque no PS do P3 e espere o chip dele voltar ao alto de uma coluna.
+15. Aperte o L2 e o R2 do P3 sem escolher nada: os dois têm de estar duros de novo.
+16. Se voltaram leves, anote, e escolha «Desligado» e depois «Rígido» nas duas seções do P3 para mandar o efeito de novo.
+17. Devolva o Modo das duas seções da coluna do P3 e das duas da coluna do P4 ao que você anotou no papel.
 
-**Passa quando.** No P3 e no P4 — os dois do rádio — o L2 e o R2 ficam duros ao mesmo tempo, e continuam duros quando você aperta um de cada vez. A sensação é a mesma que os controles do cabo dão: sem fio não pode ser mais fraco nem chegar depois. Os gatilhos do P1 e do P2 continuam exatamente como estavam. E «Desligado» nas duas seções solta os quatro gatilhos.
+**Passa quando.** No P3 e no P4 — os dois do rádio — o L2 e o R2 ficam duros ao mesmo tempo, e continuam duros quando você aperta um de cada vez. A sensação é a mesma que os controles do cabo dão: sem fio não pode ser mais fraco nem chegar depois. Os gatilhos do P1 e do P2 continuam exatamente como estavam. E, depois de cair e voltar, o P3 volta com os dois gatilhos duros sem você escolher nada de novo.
 
 **Por controle.**
 
 * **P1** — No CABO, testemunha. Não toque na coluna dele. Aperte o L2 e o R2 antes e depois; têm de estar iguais. Se ele endurecer junto, o comando pegou todo mundo em vez do controle escolhido.
 * **P2** — No CABO, segunda testemunha. Não toque na coluna dele. Aperte o L2 e o R2 antes e depois. Se o P1 ficou intacto e o P2 endureceu, o comando foi parar no controle errado.
-* **P3** — No RÁDIO, e é o primeiro em que você mexe. Ponha «Rígido» na seção de cima (L2), sinta só ele travar, depois ponha «Rígido» na de baixo (R2) e sinta os dois duros com dois dedos. É nele que você também clica na seta girando (↻), para ver se o reenvio mantém o efeito.
-* **P4** — No RÁDIO, e é o segundo. Os mesmos gestos, na coluna dele. Ele separa "o rádio funciona" de "aquele controle funciona": se o P3 obedecer e o P4 não, o defeito é do aparelho, não do sem fio.
+* **P3** — No RÁDIO, e é o primeiro em que você mexe. Ponha «Rígido» na seção de cima (L2), sinta só ele travar, depois ponha «Rígido» na de baixo (R2) e sinta os dois duros com dois dedos. É ele que cai e volta, para ver se o efeito volta junto.
+* **P4** — No RÁDIO, e é o segundo. Os mesmos gestos, na coluna dele. Ele separa "o rádio funciona" de "aquele controle funciona": se o P3 obedecer e o P4 não, o defeito é do aparelho, não do sem fio. Enquanto o P3 está fora, a coluna dele diz P3 — é a tela contando só os presentes, e ele volta a dizer P4 quando o P3 volta.
 
-**A armadilha.** Não use «Desligado» como o efeito do teste: ele é a escolha que SOLTA, e vazar solto num gatilho já solto não se enxerga. E não julgue pela tela — o campo "Modo" mostra o pedido, não o aparelho; a piscada verde diz que o comando saiu, não que o gatilho está duro. Três avisos que valem especialmente aqui. Primeiro: o efeito NÃO é eterno, e isso já foi medido — alguns MINUTOS depois ele amanhece solto sozinho, sem ninguém tocar, e ninguém achou ainda quem o apaga; sinta LOGO depois de escolher. Segundo: se um controle do rádio cair e voltar no meio do teste, o efeito não volta com ele — o botãozinho da seta girando (↻) no pé da coluna é o caminho de mandá-lo de novo, e é por isso que ele está nos passos. Terceiro: aplicar qualquer efeito PAUSA a troca automática de perfil, e é o «Desligado» do fim que a devolve. Onde a prova parou: em O APARELHO OBEDECEU, medido em 11/08 com dois controles no rádio na mesa — o dedo é o degrau certo. O jogo é o degrau seguinte e ninguém o mediu, então não tente concluir nada sobre gatilho por dentro de um jogo. E a razão de este teste ter NOVE atos, um a mais que o alvo de oito: o excedente é o botãozinho da seta girando (↻), que só existe deste lado — no gêmeo do cabo não há reenvio a testar. Tirá-lo daqui apagaria justamente o passo que responde ao controle que cai e volta, que é o defeito próprio do rádio.
+**A armadilha.** Não use «Desligado» como o efeito do teste: ele é a escolha que SOLTA, e vazar solto num gatilho já solto não se enxerga. E não julgue pela tela — o campo Modo mostra o pedido, não o aparelho; a piscada verde diz que o comando saiu, não que o gatilho está duro. Três avisos que valem especialmente aqui. Primeiro: a escolha GRAVA no perfil daquele controle, e é por isso que o terceiro passo anota e o último devolve. Segundo: a queda e a volta do P3 são o motivo de este teste ter mais passos que o do cabo — o efeito gravado para aquele controle deve voltar sozinho quando ele reconecta, e isso é o defeito próprio do rádio; se não voltar, o achado é esse. Para mandar de novo, escolher o mesmo nome que já está no campo não faz nada: é por isso que o passo passa por «Desligado» antes do «Rígido». Terceiro: em agosto, mediu-se o efeito amanhecendo solto alguns MINUTOS depois, sem ninguém tocar, e ninguém achou quem o apaga; sinta LOGO depois de escolher, e se estiver leve quando você voltar, anote a hora e o nome ao lado de Perfil ativo, no alto. Onde a prova parou: em O APARELHO OBEDECEU, medido em 11/08 com dois controles no rádio — o dedo é o degrau certo. O jogo é o degrau seguinte e ninguém o mediu, então não tente concluir nada sobre gatilho por dentro de um jogo.
 
 ---
 
@@ -2368,37 +2359,35 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o Hefesto lê o CURSO do L2 e do R2 dos dois controles do cabo — o quanto o dedo apertou, e não só apertou ou não apertou.
 
-**Onde olhar.** Na aba Controles. Clique na linha de um controle para abrir o cartão dele — é um acordeão, então abrir um fecha o anterior; para ver os quatro abertos ao mesmo tempo, clique no chip "Todos" da fita do topo. Dentro do cartão, no canto de baixo, há um quadro chamado "Gatilhos" com duas linhas, L2 e R2. Cada linha tem uma barra que enche e um número escrito assim: "200 / 255". É esse número que responde este teste. Mais acima, no mesmo cartão, fica a grade dos dezesseis desenhos de botão, e os desenhos L2 e R2 acendem — mas só depois de o número passar de 30.
+**Onde olhar.** Na aba Controles. Clique no chip Todos, na fita do topo, para os quatro cartões ficarem abertos ao mesmo tempo. À direita de cada cartão há um bloco chamado Gatilhos com duas linhas, L2 e R2. Cada linha tem uma barra que enche e um número escrito assim: 200 / 255. É esse número que responde este teste. No meio do mesmo cartão fica a grade dos dezesseis desenhos de botão, e os desenhos L2 e R2 acendem — mas só depois de o número passar de 30.
 
 **Os passos.**
 
-1. Abra a aba Controles.
-2. Clique no chip "Todos" da fita do topo, para os quatro cartões ficarem abertos ao mesmo tempo.
-3. Confira que a linha do P1 e a do P2 dizem cabo.
-4. Vá à aba Gatilhos e ponha o "Modo" das duas seções do P1 e do P2 em «Desligado» — senão você mede o efeito, e não o curso.
-5. Volte à aba Controles.
-6. Leia o número da linha L2 no quadro "Gatilhos" do cartão do P1, com o dedo fora do gatilho: tem de ser 0 / 255.
+1. Clique na aba Controles.
+2. Clique na aba Gatilhos, anote no papel o Modo das duas seções da coluna do P1 e das duas da coluna do P2, e escolha «Desligado» nas quatro — senão você mede o efeito, e não o curso.
+3. Volte à aba Controles.
+4. Clique no chip Todos, na fita do topo.
+5. Confira que o cartão do P1 e o do P2 dizem USB ao lado da cor.
+6. Leia o número da linha L2 no bloco Gatilhos do cartão do P1, com o dedo fora do gatilho: tem de ser 0 / 255.
 7. Aperte o L2 do P1 bem devagar, do ponto solto até a metade do curso, e pare com o dedo ali.
 8. Veja o número subir junto com o dedo e parar num valor do meio, sem pular direto para 255.
-9. Empurre o L2 do P1 até o fundo e solte.
-10. Confira que o número chega a 255 no fundo e volta a 0 quando você solta.
-11. Repita esses dois apertos no R2 do P1 e nos dois gatilhos do P2.
-12. Veja os números do P3 e do P4 durante todos esses apertos: nenhum deles pode se mexer.
-13. Encoste levemente no L2 do P1, só o suficiente para o número sair do zero sem passar de 30.
-14. Confira que o desenho do L2 lá em cima ainda NÃO acendeu.
-15. Aperte mais fundo o L2 do P1.
-16. Confira que agora o desenho acende.
+9. Empurre o L2 do P1 até o fundo e solte, e confira que o número chega a 255 no fundo e volta a 0 quando você solta.
+10. Repita esses apertos no R2 do P1 e nos dois gatilhos do P2.
+11. Role a aba pelos cartões do P3 e do P4 durante um aperto: os números deles não podem se mexer.
+12. Encoste levemente no L2 do P1, só o suficiente para o número sair do zero sem passar de 30, e confira que o desenho do L2 na grade ainda NÃO acendeu.
+13. Aperte mais fundo o L2 do P1 e confira que agora o desenho acende.
+14. Volte à aba Gatilhos e devolva os quatro Modos ao que você anotou.
 
-**Passa quando.** No P1 e no P2, o número da linha do gatilho que você está apertando caminha por valores do meio entre 0 e 255 — ele não pula de 0 para 255 —, sobe conforme você aperta mais fundo, chega a 255 no fim do curso e volta a 0 quando você solta. Os números do P3 e do P4 não se mexem em momento nenhum. E o desenho do L2 lá em cima só acende depois que o número passa de 30.
+**Passa quando.** No P1 e no P2, o número da linha do gatilho que você está apertando caminha por valores do meio entre 0 e 255 — ele não pula de 0 para 255 —, sobe conforme você aperta mais fundo, chega a 255 no fim do curso e volta a 0 quando você solta. Os números do P3 e do P4 não se mexem em momento nenhum. E o desenho do L2 na grade só acende depois que o número passa de 30.
 
 **Por controle.**
 
-* **P1** — No CABO, e é o primeiro. Aperte o L2 e depois o R2, devagar, parando na metade, e leia os dois números do quadro "Gatilhos" do cartão dele.
+* **P1** — No CABO, e é o primeiro. Aperte o L2 e depois o R2, devagar, parando na metade, e leia os dois números do bloco Gatilhos do cartão dele.
 * **P2** — No CABO, e é o segundo. Os mesmos gestos, no cartão dele. Ele separa "o cabo lê o curso" de "aquele controle lê o curso": se o P1 andar e o P2 ficar parado, o defeito é do aparelho, não do transporte.
 * **P3** — No RÁDIO, testemunha. Não encoste nele. Os números do L2 e do R2 no cartão dele têm de ficar parados em 0 enquanto você aperta os do cabo. Se andarem junto, a tela está mostrando o controle errado.
 * **P4** — No RÁDIO, segunda testemunha. Não encoste nele. Mesma conferência: números parados. Se o P3 ficou parado e o P4 andou, o problema não é do rádio — é de alguma coisa apontando o número para o cartão errado.
 
-**A armadilha.** O falso vermelho mais fácil é medir com efeito ligado: um gatilho em «Rígido» trava num ponto do curso e o número trava junto, e você conclui que a leitura quebrou quando quem travou foi o gatilho — por isso as duas seções do P1 e do P2 vão para «Desligado» na aba Gatilhos antes de começar. Dois outros que parecem defeito e não são: com o cartão FECHADO o quadro "Gatilhos" não aparece, então um cartão fechado não é leitura falhando, é cartão fechado; e o desenho do L2 lá em cima acende só depois de 30 de 255, então um toque leve mexe o número sem acender o desenho — isso é o limiar, não um erro. O falso verde é olhar um número só: se os quatro números ficarem congelados no MESMO valor o tempo todo, ninguém leu nada. Onde a prova desta linha parou, e isto é o mais importante: o mapa NÃO registra grau para esta célula — ninguém anotou até onde a prova chegou. O que existe é leitura de código mais três documentações externas que concordam sobre qual byte carrega o curso. Então o número na tela do Hefesto é exatamente o degrau que este teste alcança: não tente provar o curso do gatilho por dentro de um jogo, porque ninguém mediu esse degrau.
+**A armadilha.** O falso vermelho mais fácil é medir com efeito ligado: um gatilho em «Rígido» trava num ponto do curso e o número trava junto, e você conclui que a leitura quebrou quando quem travou foi o gatilho — por isso as duas seções do P1 e do P2 vão para «Desligado» na aba Gatilhos antes de começar, e voltam ao que eram no fim, porque a escolha fica gravada no perfil daquele controle. Outro que parece defeito e não é: o desenho do L2 acende só depois de 30 de 255, então um toque leve mexe o número sem acender o desenho — isso é o limiar, não um erro. O falso verde é o cartão sem leitura: ele mostra os gatilhos parados em 0 / 255, exatamente como um gatilho solto, e um traço no lugar de L3 e R3; se os números ficarem congelados o tempo todo, aperte o Cruz do mesmo controle e veja se o desenho dele acende — se nem isso, ninguém leu nada. Onde a prova desta linha parou, e isto é o mais importante: o mapa NÃO registra grau para esta célula — ninguém anotou até onde a prova chegou. O que existe é leitura de código mais três documentações externas que concordam sobre qual byte carrega o curso. Então o número na tela do Hefesto é exatamente o degrau que este teste alcança: não tente provar o curso do gatilho por dentro de um jogo, porque ninguém mediu esse degrau.
 
 ---
 
@@ -2408,25 +2397,24 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o Hefesto lê o CURSO do L2 e do R2 dos dois controles do rádio, com a mesma fidelidade dos do cabo.
 
-**Onde olhar.** Na aba Controles. Clique na linha de um controle para abrir o cartão dele — abrir um fecha o anterior; para ver os quatro abertos ao mesmo tempo, clique no chip "Todos" da fita do topo. Dentro do cartão há um quadro chamado "Gatilhos", com duas linhas, L2 e R2, cada uma com uma barra que enche e um número no formato "200 / 255". É esse número que responde. Mais acima, no mesmo cartão, a grade dos dezesseis desenhos de botão: os desenhos L2 e R2 acendem, mas só depois de o número passar de 30.
+**Onde olhar.** Na aba Controles. Clique no chip Todos, na fita do topo, para os quatro cartões ficarem abertos ao mesmo tempo. À direita de cada cartão há um bloco chamado Gatilhos, com duas linhas, L2 e R2, cada uma com uma barra que enche e um número no formato 200 / 255. É esse número que responde. No meio do mesmo cartão, a grade dos dezesseis desenhos de botão: os desenhos L2 e R2 acendem, mas só depois de o número passar de 30.
 
 **Os passos.**
 
-1. Abra a aba Controles.
-2. Clique no chip "Todos" da fita do topo, para os quatro cartões ficarem abertos ao mesmo tempo.
-3. Confira que a linha do P3 e a do P4 dizem rádio.
-4. Abra a aba Gatilhos e confira que o "Modo" das duas seções do P3 e do P4 está em «Desligado» — se não estiver, ponha, senão você mede o efeito e não o curso.
-5. Volte à aba Controles.
-6. Ache o quadro "Gatilhos" dentro do cartão do P3 e leia o número da linha L2 com o dedo fora do gatilho: tem de ser 0 / 255.
-7. Aperte o L2 do P3 bem devagar, do ponto solto até o fundo, olhando o número subir.
-8. Pare com o dedo na metade do curso e leia o número: tem de parar num valor do meio, e não pular direto para 255.
-9. Empurre até o fundo e confirme que o número chega a 255.
-10. Solte o L2 e confirme que o número volta a 0.
-11. Repita os passos 6 a 10 com o R2 do P3.
-12. Repita os passos 6 a 11 com o P4.
-13. Olhe os números do P1 e do P2 durante todos esses apertos e confirme que nenhum deles se mexeu.
-14. Compare a subida do número no P3 com a que você viu num controle do cabo: tem de ser o mesmo caminho de 0 a 255, sem degraus grandes nem atraso visível.
-15. Encoste levemente no L2 do P3, só até o número sair do zero sem passar de 30, e confira que o desenho do L2 lá em cima ainda NÃO acendeu.
+1. Clique na aba Controles.
+2. Clique na aba Gatilhos, anote no papel o Modo das duas seções da coluna do P3 e das duas da coluna do P4, e escolha «Desligado» nas quatro — senão você mede o efeito, e não o curso.
+3. Volte à aba Controles.
+4. Clique no chip Todos, na fita do topo.
+5. Confira que o cartão do P3 e o do P4 dizem BT ao lado da cor.
+6. Leia o número da linha L2 no bloco Gatilhos do cartão do P3, com o dedo fora do gatilho: tem de ser 0 / 255.
+7. Aperte o L2 do P3 bem devagar e pare com o dedo na metade do curso: o número tem de parar num valor do meio, e não pular direto para 255.
+8. Empurre até o fundo e confirme que o número chega a 255; solte e confirme que ele volta a 0.
+9. Repita a metade, o fundo e o soltar com o R2 do P3.
+10. Repita tudo, L2 e R2, no P4.
+11. Role a aba pelos cartões do P1 e do P2 durante um aperto: os números deles não podem se mexer.
+12. Compare a subida do número no P3 com a que você viu num controle do cabo: tem de ser o mesmo caminho de 0 a 255, sem degraus grandes nem atraso visível.
+13. Encoste levemente no L2 do P3, só até o número sair do zero sem passar de 30, e confira que o desenho do L2 na grade ainda NÃO acendeu.
+14. Volte à aba Gatilhos e devolva os quatro Modos ao que você anotou.
 
 **Passa quando.** No P3 e no P4, o número da linha do gatilho que você está apertando caminha por valores do meio entre 0 e 255, sobe conforme você aperta mais fundo, chega a 255 no fundo e volta a 0 quando você solta — do mesmo jeito que num controle do cabo. Os números do P1 e do P2 não se mexem em momento nenhum.
 
@@ -2434,10 +2422,10 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 * **P1** — No CABO, testemunha. Não encoste nele. Os números do L2 e do R2 no cartão dele têm de ficar parados em 0 enquanto você aperta os do rádio.
 * **P2** — No CABO, segunda testemunha. Não encoste nele. Mesma conferência. Se o P1 ficou parado e o P2 andou, alguma coisa está escrevendo o número no cartão errado.
-* **P3** — No RÁDIO, e é o primeiro. Aperte o L2 e depois o R2, devagar, parando na metade, e leia os dois números do quadro "Gatilhos" do cartão dele. É aqui que se compara com o cabo.
+* **P3** — No RÁDIO, e é o primeiro. Aperte o L2 e depois o R2, devagar, parando na metade, e leia os dois números do bloco Gatilhos do cartão dele. É aqui que se compara com o cabo.
 * **P4** — No RÁDIO, e é o segundo. Os mesmos gestos, no cartão dele. Ele separa "o rádio lê o curso" de "aquele controle lê o curso": se o P3 andar e o P4 ficar parado, o defeito é do aparelho, não do sem fio.
 
-**A armadilha.** O falso vermelho mais fácil é medir com efeito ligado: um gatilho em «Rígido» trava num ponto do curso e o número trava junto — por isso o passo 4 manda pôr as duas seções em «Desligado» antes de começar. Outros dois que parecem defeito e não são: com o cartão fechado o quadro "Gatilhos" não aparece; e o desenho do L2 acende só depois de 30 de 255, então um toque leve mexe o número sem acender o desenho. E há uma armadilha que é só do rádio, declarada na fonte: pelo sem fio o DualSense fala em DOIS desenhos de mensagem, um curto que ele emite antes de entrar no modo completo e o completo, e o curso do gatilho não fica no mesmo lugar nos dois — é o único dado de entrada que muda de posição entre os dois desenhos. A fonte não diz que sintoma isso produz na tela; então, se o número do P3 ou do P4 vier congelado ou visivelmente errado logo depois de o controle voltar ao rádio, anote com a hora, porque é exatamente o ponto onde o mapa avisa que os dois desenhos discordam. Onde a prova parou: o mapa NÃO registra grau para esta célula — ninguém anotou até onde a prova chegou; o que existe é leitura de código e três documentações externas que concordam sobre o byte. O número na tela do Hefesto é o degrau que este teste alcança; não tente provar o curso por dentro de um jogo.
+**A armadilha.** O falso vermelho mais fácil é medir com efeito ligado: um gatilho em «Rígido» trava num ponto do curso e o número trava junto — por isso os Modos vão para «Desligado» antes de começar, e voltam ao que eram no fim, porque a escolha fica gravada no perfil daquele controle. Outro que parece defeito e não é: o desenho do L2 acende só depois de 30 de 255, então um toque leve mexe o número sem acender o desenho. Cartão sem leitura mostra os gatilhos parados em 0 / 255 e um traço no lugar de L3 e R3 — antes de reprovar, aperte o Cruz do mesmo controle e veja se o desenho dele acende. E há uma armadilha que é só do rádio, declarada na fonte: pelo sem fio o DualSense fala em DOIS desenhos de mensagem, um curto que ele emite antes de entrar no modo completo e o completo, e o curso do gatilho não fica no mesmo lugar nos dois — é o único dado de entrada que muda de posição entre os dois desenhos. A fonte não diz que sintoma isso produz na tela; então, se o número do P3 ou do P4 vier congelado ou visivelmente errado logo depois de o controle voltar ao rádio, anote com a hora, porque é exatamente o ponto onde o mapa avisa que os dois desenhos discordam. Onde a prova parou: o mapa NÃO registra grau para esta célula — ninguém anotou até onde a prova chegou; o que existe é leitura de código e três documentações externas que concordam sobre o byte. O número na tela do Hefesto é o degrau que este teste alcança; não tente provar o curso por dentro de um jogo.
 
 ---
 
@@ -2447,27 +2435,25 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que um efeito posto no gatilho DIREITO endurece só o R2 dos controles do cabo, e deixa o L2 do mesmo controle solto.
 
-**Onde olhar.** Na aba Gatilhos, quadro "Seleção de Gatilho". A coluna da esquerda nomeia as linhas, e a seção de BAIXO é a do R2 — ela é titulada pelo desenho R2, e dentro dela vêm "Modo", "Efeito pronto" e "Ajustes". A seção de cima, a do L2, não se toca neste teste. Em "Ajustes", com «Rígido» escolhido, aparecem duas barras com nome e número: "Posição" e "Força"; numa coluna que tem controle elas são arrastáveis, e a alavanca é invisível — arrasta-se em cima da linha da própria barra. Quem responde o teste, porém, é a sua mão: o controle não devolve em que efeito ele está, e o campo "Modo" mostra só o que foi pedido. A tela apenas pisca em verde por cerca de um segundo e meio quando o comando sai.
+**Onde olhar.** Na aba Gatilhos, quadro Gatilhos. A coluna da esquerda nomeia as linhas, e a seção de BAIXO é a do R2 — ela é titulada pelo desenho R2, e dentro dela vêm Modo e Efeito pronto. A seção de cima, a do L2, não se toca neste teste. Clicar no desenho R2 da coluna da esquerda abre a linha Ajustes daquele gatilho (só uma fica aberta por vez); com «Rígido» escolhido, ela mostra duas barras com nome e número: Posição e Força. Numa coluna que tem controle elas são arrastáveis, e a alavanca é invisível — arrasta-se em cima da linha da própria barra. Quem responde o teste, porém, é a sua mão: o controle não devolve em que efeito ele está, e o campo Modo mostra só o que foi pedido. A tela apenas pisca em verde por cerca de um segundo e meio quando o comando sai.
 
 **Os passos.**
 
 1. Abra a aba Gatilhos.
-2. Aperte o L2 e o R2 dos quatro controles até o fundo, um controle por vez, e guarde na mão como cada um está.
-3. Confira que a coluna do P1 e a do P2 terminam, no alto, na palavra cabo.
-4. Abra o campo "Modo" da seção de BAIXO (a do desenho R2), na coluna do P1, e escolha «Rígido».
-5. Veja o campo piscar em verde.
+2. Confira que o chip no alto da coluna do P1 e o da coluna do P2 dizem USB.
+3. Anote no papel o Modo das duas seções da coluna do P1 e das duas da coluna do P2, e escolha «Desligado» nas quatro.
+4. Aperte o L2 e o R2 dos quatro controles até o fundo, um controle por vez, e guarde na mão como cada um está.
+5. Escolha «Rígido» no Modo da seção de BAIXO (a do desenho R2), na coluna do P1, e veja o campo piscar em verde.
 6. Aperte o R2 do P1 e depois o L2 do mesmo controle, na mesma mão, um de cada vez.
 7. Confira que o R2 trava duro do começo ao fim do curso e que o L2 continua leve.
-8. Arraste a barra "Força" dos "Ajustes" do R2 do P1 até o fim da direita, em cima da linha da barra.
-9. Aperte o R2 do P1 de novo.
+8. Clique no desenho R2 da coluna da esquerda para abrir a linha Ajustes.
+9. Arraste a barra Força do P1 até o fim da direita, em cima da linha da barra, e aperte o R2 do P1 de novo.
 10. Confira que a trava ficou mais firme do que estava.
-11. Repita na coluna do P2 o que você fez na do P1 antes da "Força": «Rígido» na seção de baixo, e o R2 e o L2 apertados um de cada vez.
-12. Aperte o R2 e o L2 do P3 e depois os do P4.
-13. Compare com o que você sentiu no começo: os quatro têm de estar iguais ao que estavam.
-14. Escolha «Desligado» no "Modo" da seção de baixo (R2) da coluna do P1 e da coluna do P2, e aperte os dois R2 de novo.
-15. Confira que os dois voltaram a ficar leves.
+11. Repita na coluna do P2 o que você fez na do P1 antes da Força: «Rígido» na seção de baixo, e o R2 e o L2 apertados um de cada vez.
+12. Aperte o R2 e o L2 do P3 e depois os do P4, e compare com o que guardou na mão: têm de estar iguais ao que estavam.
+13. Devolva os quatro Modos do P1 e do P2 ao que você anotou.
 
-**Passa quando.** O R2 do P1 e o do P2 ficam duros, e o L2 dos MESMOS controles continua leve — o comando agiu num lado só e não vazou para o outro lado da mesma mão. Os gatilhos do P3 e do P4 continuam exatamente como estavam. Puxar a "Força" até o fim deixa a trava mais firme do que estava. E «Desligado» na seção do R2 solta os dois R2.
+**Passa quando.** O R2 do P1 e o do P2 ficam duros, e o L2 dos MESMOS controles continua leve — o comando agiu num lado só e não vazou para o outro lado da mesma mão. Os gatilhos do P3 e do P4 continuam exatamente como estavam. E puxar a Força até o fim deixa a trava mais firme do que estava.
 
 **Por controle.**
 
@@ -2476,7 +2462,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No RÁDIO, testemunha. Não toque na coluna dele. Aperte o R2 e o L2 antes e depois; têm de estar iguais. Se o R2 dele endurecer, o comando pegou todo mundo em vez do controle escolhido.
 * **P4** — No RÁDIO, segunda testemunha. Não toque na coluna dele. Mesma conferência. Se o P3 ficou intacto e o R2 do P4 endureceu, o comando foi para o controle errado.
 
-**A armadilha.** A armadilha maior deste teste é apertar o gatilho errado. O R2 é o de baixo do lado DIREITO do controle, e a seção da tela é a de BAIXO, titulada pelo desenho R2. Quem mexe na seção de cima e aperta o R2 conclui que o produto errou de lado quando quem errou foi o gesto — confira o desenho que titula a seção antes de abrir o campo. Não use «Desligado» como o efeito do teste: ele SOLTA, e um vazamento de solto não se enxerga. Não julgue pela tela: o campo "Modo" mostra o pedido, e a piscada verde diz que o comando saiu, não que o gatilho está duro. E a medição que sustenta esta linha exercitou UM modo só, «Rígido», com um único jogo de números — nenhum dos outros dezoito foi tocado por lá, e é por isso que o teste pede «Rígido». Duas coisas medidas que parecem erro seu e não são: o efeito NÃO é eterno, e alguns MINUTOS depois ele amanhece solto sozinho sem ninguém tocar; e aplicar qualquer efeito PAUSA a troca automática de perfil, que só volta com o «Desligado» do fim. Onde a prova parou: em O APARELHO OBEDECEU, medido em 11/08 com os quatro na mesa e o lado ocioso servindo de controle negativo — o dedo é o degrau certo. O jogo é o degrau seguinte e ninguém o mediu.
+**A armadilha.** A armadilha maior deste teste é apertar o gatilho errado. O R2 é o de baixo do lado DIREITO do controle, e a seção da tela é a de BAIXO, titulada pelo desenho R2. Quem mexe na seção de cima e aperta o R2 conclui que o produto errou de lado quando quem errou foi o gesto — confira o desenho que titula a seção antes de abrir o campo. Não use «Desligado» como o efeito do teste: ele SOLTA, e um vazamento de solto não se enxerga. Não julgue pela tela: o campo Modo mostra o pedido, e a piscada verde diz que o comando saiu, não que o gatilho está duro. A escolha e a barra GRAVAM no perfil daquele controle, e é por isso que o teste anota o que estava lá e devolve no fim. E a medição que sustenta esta linha exercitou UM modo só, «Rígido», com um único jogo de números — nenhum dos outros dezoito foi tocado por lá, e é por isso que o teste pede «Rígido». Em agosto mediu-se o efeito amanhecendo solto alguns MINUTOS depois, sem ninguém tocar: sinta logo depois de escolher, e se estiver leve quando voltar, anote a hora e o nome ao lado de Perfil ativo, no alto. Onde a prova parou: em O APARELHO OBEDECEU, medido em 11/08 com os quatro controles e o lado ocioso servindo de controle negativo — o dedo é o degrau certo. O jogo é o degrau seguinte e ninguém o mediu.
 
 ---
 
@@ -2486,38 +2472,34 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que um efeito posto no gatilho DIREITO endurece só o R2 dos controles do rádio, e deixa o L2 do mesmo controle solto.
 
-**Onde olhar.** Na aba Gatilhos, quadro "Seleção de Gatilho". A coluna do P3 e a do P4 têm de terminar, no alto, na palavra rádio. A seção de BAIXO da coluna da esquerda é a do R2, titulada pelo desenho R2, com "Modo", "Efeito pronto" e "Ajustes"; a de cima é a do L2 e não se toca. Em "Ajustes", com «Rígido» escolhido, aparecem as barras "Posição" e "Força", arrastáveis em cima da própria linha da barra. No pé de cada coluna há um botãozinho redondo com uma seta girando (↻), que manda de novo ao controle o L2 e o R2 daquela coluna — ele existe justamente para quando o controle volta do rádio. A prova é a sua mão: o controle não devolve em que efeito está, e o campo "Modo" mostra só o pedido; a tela pisca em verde por cerca de um segundo e meio quando o comando sai.
+**Onde olhar.** Na aba Gatilhos, quadro Gatilhos. O chip no alto da coluna do P3 e o da do P4 têm de dizer BT. A seção de BAIXO da coluna da esquerda é a do R2, titulada pelo desenho R2, com Modo e Efeito pronto; a de cima é a do L2 e não se toca. As colunas seguem a ordem dos chips e se renumeram quando um controle sai. A prova é a sua mão: o controle não devolve em que efeito está, e o campo Modo mostra só o pedido; a tela pisca em verde por cerca de um segundo e meio quando o comando sai.
 
 **Os passos.**
 
 1. Abra a aba Gatilhos.
-2. Confira que a coluna do P3 e a do P4 terminam, no alto, na palavra rádio.
-3. Aperte o L2 e o R2 dos quatro controles até o fundo e guarde na mão como cada um está hoje.
-4. Escolha «Rígido» no campo "Modo" da seção de BAIXO (a do desenho R2), na coluna do P3.
-5. Veja o campo piscar em verde.
+2. Confira que o chip no alto da coluna do P3 e o da coluna do P4 dizem BT.
+3. Anote no papel o Modo das duas seções da coluna do P3 e das duas da coluna do P4, e escolha «Desligado» nas quatro.
+4. Aperte o L2 e o R2 dos quatro controles até o fundo e guarde na mão como cada um está.
+5. Escolha «Rígido» no Modo da seção de BAIXO (a do desenho R2), na coluna do P3, e veja o campo piscar em verde.
 6. Aperte o R2 do P3 e, no mesmo controle e na mesma mão, o L2 dele.
 7. Confira que o R2 trava duro do começo ao fim do curso e que o L2 continua leve.
-8. Compare a firmeza do R2 do P3 com a de um controle do cabo que você já tenha sentido em «Rígido»: pelo rádio não pode ser mais fraco nem demorar mais a chegar.
-9. Refaça os atos 2 e 3 na coluna do P4.
-10. Clique no botãozinho da seta girando (↻) no pé da coluna do P3.
-11. Aperte o R2 e o L2 do P3 de novo.
-12. Confira que o R2 continua duro e que o L2 continua leve.
-13. Aperte o R2 e o L2 do P1 e os do P2.
-14. Compare com o que você guardou no ato 1: os gatilhos das duas testemunhas têm de estar exatamente como estavam.
-15. Escolha «Desligado» no "Modo" da seção de baixo (R2) das colunas do P3 e do P4.
-16. Aperte o R2 do P3 e o do P4.
-17. Confira que os dois voltaram a ficar leves.
+8. Compare a firmeza do R2 do P3 com a de um controle do cabo que você já tenha sentido em «Rígido»: pelo rádio não pode ser mais fraca nem demorar mais a chegar.
+9. Repita na coluna do P4 o «Rígido» na seção de baixo e os dois apertos.
+10. Segure o PS do P3 até as luzes dele apagarem; depois dê um toque no PS e espere o chip dele voltar ao alto de uma coluna.
+11. Aperte o R2 e o L2 do P3 sem escolher nada, e confira que o R2 voltou duro e o L2 continua leve; se o R2 voltou leve, anote, e escolha «Desligado» e depois «Rígido» na seção de baixo para mandar de novo.
+12. Aperte o R2 e o L2 do P1 e os do P2, e compare com o que guardou na mão: os gatilhos das duas testemunhas têm de estar exatamente como estavam.
+13. Devolva os quatro Modos do P3 e do P4 ao que você anotou.
 
-**Passa quando.** O R2 do P3 e o do P4 ficam duros, e o L2 dos MESMOS controles continua leve — o comando agiu num lado só, pelo sem fio, e não vazou para o outro lado da mesma mão. A firmeza é a mesma que um controle do cabo dá. Os gatilhos do P1 e do P2 continuam exatamente como estavam. E «Desligado» na seção do R2 solta os dois R2.
+**Passa quando.** O R2 do P3 e o do P4 ficam duros, e o L2 dos MESMOS controles continua leve — o comando agiu num lado só, pelo sem fio, e não vazou para o outro lado da mesma mão. A firmeza é a mesma que um controle do cabo dá. Os gatilhos do P1 e do P2 continuam exatamente como estavam. E, depois de cair e voltar, o P3 volta com o R2 duro e o L2 leve, sem você escolher nada de novo.
 
 **Por controle.**
 
 * **P1** — No CABO, testemunha. Não toque na coluna dele. Aperte o R2 e o L2 antes e depois; têm de estar iguais. Se o R2 dele endurecer, o comando pegou todo mundo.
 * **P2** — No CABO, segunda testemunha. Não toque na coluna dele. Mesma conferência. Se o P1 ficou intacto e o R2 do P2 endureceu, o comando foi para o controle errado.
-* **P3** — No RÁDIO, e é o primeiro. Mexe-se só na seção de BAIXO (R2) da coluna dele. O R2 endurece; o L2 do mesmo controle é a testemunha na mesma mão. É nele que você clica na seta girando (↻), para ver se o reenvio mantém o efeito e continua respeitando o lado.
-* **P4** — No RÁDIO, e é o segundo. Os mesmos gestos, na coluna dele. Ele separa "o rádio funciona" de "aquele controle funciona": se o R2 do P3 endurecer e o do P4 não, o defeito é do aparelho, não do sem fio.
+* **P3** — No RÁDIO, e é o primeiro. Mexe-se só na seção de BAIXO (R2) da coluna dele. O R2 endurece; o L2 do mesmo controle é a testemunha na mesma mão. É ele que cai e volta, para ver se o efeito volta junto e continua respeitando o lado.
+* **P4** — No RÁDIO, e é o segundo. Os mesmos gestos, na coluna dele. Ele separa "o rádio funciona" de "aquele controle funciona": se o R2 do P3 endurecer e o do P4 não, o defeito é do aparelho, não do sem fio. Enquanto o P3 está fora, a coluna dele diz P3; ela volta a dizer P4 quando o P3 volta.
 
-**A armadilha.** Este teste tem NOVE atos de propósito: ele mede o mesmo dedo em três momentos — antes do efeito, com o efeito posto e depois de desfeito — nos quatro controles, e ainda prova o botão de reenvio; tirar qualquer um dos três momentos deixa o teste sem o antes ou sem o depois, e ele passa a dar verde sem prova. A armadilha maior é apertar o gatilho errado: o R2 é o de baixo do lado DIREITO, e a seção da tela é a de BAIXO, titulada pelo desenho R2 — quem mexe na seção de cima e aperta o R2 conclui que o produto errou de lado quando quem errou foi o gesto. Não use «Desligado» como o efeito do teste, e não julgue pela tela: o campo "Modo" mostra o pedido e a piscada verde diz que o comando saiu, nada mais. A medição que sustenta esta linha exercitou UM modo só, «Rígido», com um único jogo de números; os outros dezoito não foram tocados por lá. Duas coisas já medidas que parecem erro seu e não são: se o controle do rádio cair e voltar no meio do teste, o efeito não volta com ele — o botãozinho da seta girando (↻) é o caminho de mandá-lo de novo, e por isso está nos atos; e o efeito NÃO é eterno, amanhecendo solto sozinho depois de alguns MINUTOS, sem ninguém tocar. Aplicar qualquer efeito também PAUSA a troca automática de perfil, que só volta com o «Desligado» do fim. Onde a prova parou: em O APARELHO OBEDECEU, medido em 11/08 com dois controles no rádio na mesa — o dedo é o degrau certo, e o jogo é o degrau seguinte, que ninguém mediu.
+**A armadilha.** Este teste mede o mesmo dedo em três momentos — antes do efeito, com o efeito posto e depois de o controle cair e voltar — nos quatro controles; tirar qualquer um dos três deixa o teste sem o antes ou sem o depois, e ele passa a dar verde sem prova. A armadilha maior é apertar o gatilho errado: o R2 é o de baixo do lado DIREITO, e a seção da tela é a de BAIXO, titulada pelo desenho R2 — quem mexe na seção de cima e aperta o R2 conclui que o produto errou de lado quando quem errou foi o gesto. Não use «Desligado» como o efeito do teste, e não julgue pela tela: o campo Modo mostra o pedido e a piscada verde diz que o comando saiu, nada mais. A escolha GRAVA no perfil daquele controle: por isso o teste anota e devolve. A medição que sustenta esta linha exercitou UM modo só, «Rígido», com um único jogo de números; os outros dezoito não foram tocados por lá. O efeito gravado para aquele controle deve voltar sozinho quando ele reconecta pelo rádio — se não voltar, é o achado; e para mandar de novo, escolher o mesmo nome que já está no campo não faz nada, por isso o passo passa por «Desligado». Em agosto mediu-se o efeito amanhecendo solto alguns MINUTOS depois, sem ninguém tocar: sinta logo depois de escolher, e se estiver leve quando voltar, anote a hora e o nome ao lado de Perfil ativo, no alto. Onde a prova parou: em O APARELHO OBEDECEU, medido em 11/08 com dois controles no rádio — o dedo é o degrau certo, e o jogo é o degrau seguinte, que ninguém mediu.
 
 ---
 
@@ -2527,28 +2509,25 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que um efeito posto no gatilho ESQUERDO endurece só o L2 dos controles do cabo, e deixa o R2 do mesmo controle solto.
 
-**Onde olhar.** Na aba Gatilhos, quadro "Seleção de Gatilho". A coluna da esquerda nomeia as linhas, e a seção de CIMA é a do L2 — titulada pelo desenho L2, com "Modo", "Efeito pronto" e "Ajustes" dentro dela. A seção de baixo, a do R2, não se toca neste teste. Em "Ajustes", com «Rígido» escolhido, aparecem duas barras com nome e número: "Posição" e "Força"; numa coluna que tem controle elas são arrastáveis, e a alavanca é invisível — arrasta-se em cima da linha da própria barra. Quem responde é a sua mão: o controle não devolve em que efeito está, e o campo "Modo" mostra só o pedido. A tela pisca em verde por cerca de um segundo e meio quando o comando sai.
+**Onde olhar.** Na aba Gatilhos, quadro Gatilhos. A coluna da esquerda nomeia as linhas, e a seção de CIMA é a do L2 — titulada pelo desenho L2, com Modo e Efeito pronto dentro dela. A seção de baixo, a do R2, não se toca neste teste. Clicar no desenho L2 da coluna da esquerda abre a linha Ajustes daquele gatilho (só uma fica aberta por vez); com «Rígido» escolhido, ela mostra duas barras com nome e número: Posição e Força. Numa coluna que tem controle elas são arrastáveis, e a alavanca é invisível — arrasta-se em cima da linha da própria barra. Quem responde é a sua mão: o controle não devolve em que efeito está, e o campo Modo mostra só o pedido. A tela pisca em verde por cerca de um segundo e meio quando o comando sai.
 
 **Os passos.**
 
 1. Abra a aba Gatilhos.
-2. Confira que a coluna do P1 e a do P2 terminam, no alto, na palavra cabo.
-3. Aperte o L2 e o R2 dos quatro controles até o fundo, um controle de cada vez, e guarde na mão como cada um está.
-4. Abra o campo "Modo" da seção de CIMA — a do desenho L2 — na coluna do P1 e escolha «Rígido».
-5. Veja o campo piscar em verde: é o comando saindo.
-6. Aperte o L2 do P1.
-7. Confira que ele trava duro do começo ao fim do curso.
-8. Aperte o R2 do P1, no mesmo controle e na mesma mão.
-9. Confira que ele continua leve — é a testemunha do outro lado da mesma mão.
-10. Arraste a barra "Força" dos "Ajustes" do L2 do P1 até o fim da direita, em cima da linha da barra.
-11. Aperte o L2 do P1 de novo.
-12. Confira se a trava ficou mais firme.
-13. Repita os atos 2 a 4 na coluna do P2.
-14. Confira, apertando o L2 e o R2 do P3 e depois os do P4, que os quatro gatilhos estão como você guardou no ato 1.
-15. Escolha «Desligado» no "Modo" da seção de cima (L2) da coluna do P1 e no da mesma seção da coluna do P2.
-16. Confira, apertando o L2 dos dois, que voltaram a ficar leves.
+2. Confira que o chip no alto da coluna do P1 e o da coluna do P2 dizem USB.
+3. Anote no papel o Modo das duas seções da coluna do P1 e das duas da coluna do P2, e escolha «Desligado» nas quatro.
+4. Aperte o L2 e o R2 dos quatro controles até o fundo, um controle de cada vez, e guarde na mão como cada um está.
+5. Escolha «Rígido» no Modo da seção de CIMA (a do desenho L2), na coluna do P1, e veja o campo piscar em verde: é o comando saindo.
+6. Aperte o L2 do P1 e confira que ele trava duro do começo ao fim do curso.
+7. Aperte o R2 do P1, no mesmo controle e na mesma mão, e confira que ele continua leve — é a testemunha do outro lado da mesma mão.
+8. Clique no desenho L2 da coluna da esquerda para abrir a linha Ajustes.
+9. Arraste a barra Força do P1 até o fim da direita, em cima da linha da barra, e aperte o L2 do P1 de novo.
+10. Confira se a trava ficou mais firme.
+11. Repita na coluna do P2 o que você fez na do P1 antes da Força: «Rígido» na seção de cima, e o L2 e o R2 apertados um de cada vez.
+12. Aperte o L2 e o R2 do P3 e depois os do P4, e confira que os quatro gatilhos estão como você guardou na mão.
+13. Devolva os quatro Modos do P1 e do P2 ao que você anotou.
 
-**Passa quando.** O L2 do P1 e o do P2 ficam duros, e o R2 dos MESMOS controles continua leve — o comando agiu num lado só e não vazou para o outro lado da mesma mão. Os gatilhos do P3 e do P4 continuam exatamente como estavam. Puxar a "Força" até o fim deixa a trava mais firme. E «Desligado» na seção do L2 solta os dois L2.
+**Passa quando.** O L2 do P1 e o do P2 ficam duros, e o R2 dos MESMOS controles continua leve — o comando agiu num lado só e não vazou para o outro lado da mesma mão. Os gatilhos do P3 e do P4 continuam exatamente como estavam. E puxar a Força até o fim deixa a trava mais firme.
 
 **Por controle.**
 
@@ -2557,7 +2536,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No RÁDIO, testemunha. Não toque na coluna dele. Aperte o L2 e o R2 antes e depois; têm de estar iguais. Se o L2 dele endurecer, o comando pegou todo mundo em vez do controle escolhido.
 * **P4** — No RÁDIO, segunda testemunha. Não toque na coluna dele. Mesma conferência. Se o P3 ficou intacto e o L2 do P4 endureceu, o comando foi para o controle errado.
 
-**A armadilha.** A armadilha maior deste teste é apertar o gatilho errado. O L2 é o de baixo do lado ESQUERDO do controle, e a seção da tela é a de CIMA, titulada pelo desenho L2. Quem mexe na seção de baixo e aperta o L2 conclui que o produto errou de lado quando quem errou foi o gesto — confira o desenho que titula a seção antes de abrir o campo. Não use «Desligado» como o efeito do teste: ele SOLTA, e um vazamento de solto não se enxerga. Não julgue pela tela: o campo "Modo" mostra o pedido, e a piscada verde diz que o comando saiu, não que o gatilho está duro. E a medição que sustenta esta linha exercitou UM modo só, «Rígido», com um único jogo de números — nenhum dos outros dezoito foi tocado por lá, e é por isso que o teste pede «Rígido». Duas coisas medidas que parecem erro seu e não são: o efeito NÃO é eterno, e alguns MINUTOS depois ele amanhece solto sozinho; e aplicar qualquer efeito PAUSA a troca automática de perfil, que só volta com o «Desligado» do fim. Onde a prova parou: em O APARELHO OBEDECEU, medido em 11/08 com os quatro na mesa e o lado ocioso servindo de controle negativo na mesma mão — o dedo é o degrau certo, e o jogo é o degrau seguinte, que ninguém mediu.
+**A armadilha.** A armadilha maior deste teste é apertar o gatilho errado. O L2 é o de baixo do lado ESQUERDO do controle, e a seção da tela é a de CIMA, titulada pelo desenho L2. Quem mexe na seção de baixo e aperta o L2 conclui que o produto errou de lado quando quem errou foi o gesto — confira o desenho que titula a seção antes de abrir o campo. Não use «Desligado» como o efeito do teste: ele SOLTA, e um vazamento de solto não se enxerga. Não julgue pela tela: o campo Modo mostra o pedido, e a piscada verde diz que o comando saiu, não que o gatilho está duro. A escolha e a barra GRAVAM no perfil daquele controle, e é por isso que o teste anota o que estava lá e devolve no fim. E a medição que sustenta esta linha exercitou UM modo só, «Rígido», com um único jogo de números — nenhum dos outros dezoito foi tocado por lá, e é por isso que o teste pede «Rígido». Em agosto mediu-se o efeito amanhecendo solto alguns MINUTOS depois, sem ninguém tocar: sinta logo depois de escolher, e se estiver leve quando voltar, anote a hora e o nome ao lado de Perfil ativo, no alto. Onde a prova parou: em O APARELHO OBEDECEU, medido em 11/08 com os quatro controles e o lado ocioso servindo de controle negativo na mesma mão — o dedo é o degrau certo, e o jogo é o degrau seguinte, que ninguém mediu.
 
 ---
 
@@ -2567,42 +2546,34 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que um efeito posto no gatilho ESQUERDO endurece só o L2 dos controles do rádio, e deixa o R2 do mesmo controle solto.
 
-**Onde olhar.** Na aba Gatilhos, quadro "Seleção de Gatilho". A coluna do P3 e a do P4 têm de terminar, no alto, na palavra rádio. A seção de CIMA da coluna da esquerda é a do L2, titulada pelo desenho L2, com "Modo", "Efeito pronto" e "Ajustes"; a de baixo é a do R2 e não se toca. Em "Ajustes", com «Rígido» escolhido, aparecem as barras "Posição" e "Força", arrastáveis em cima da própria linha da barra. No pé de cada coluna há um botãozinho redondo com uma seta girando (↻), que manda de novo ao controle o L2 e o R2 daquela coluna — ele existe justamente para quando o controle volta do rádio. A prova é a sua mão: o controle não devolve em que efeito está, e o campo "Modo" mostra só o pedido; a tela pisca em verde por cerca de um segundo e meio quando o comando sai.
+**Onde olhar.** Na aba Gatilhos, quadro Gatilhos. O chip no alto da coluna do P3 e o da do P4 têm de dizer BT. A seção de CIMA da coluna da esquerda é a do L2, titulada pelo desenho L2, com Modo e Efeito pronto; a de baixo é a do R2 e não se toca. As colunas seguem a ordem dos chips e se renumeram quando um controle sai. A prova é a sua mão: o controle não devolve em que efeito está, e o campo Modo mostra só o pedido; a tela pisca em verde por cerca de um segundo e meio quando o comando sai.
 
 **Os passos.**
 
 1. Abra a aba Gatilhos.
-2. Confira que a coluna do P3 e a do P4 terminam, no alto, na palavra rádio.
-3. Aperte o L2 e o R2 dos quatro controles até o fundo, um controle de cada vez, e guarde na mão como cada um está — o P1 e o P2 são as testemunhas.
-4. Abra o campo "Modo" da seção de CIMA — a do desenho L2 — na coluna do P3 e escolha «Rígido».
-5. Veja o campo piscar em verde: é o comando saindo.
-6. Aperte o L2 do P3 até o fundo do curso.
-7. Confira que a trava é dura do começo ao fim do curso.
-8. Compare essa firmeza com a de um controle do cabo que você já tenha sentido em «Rígido»: pelo rádio não pode ser mais fraca nem demorar mais a chegar.
-9. Aperte o R2 do P3, no mesmo controle e na mesma mão.
-10. Confira que ele continua leve — é a testemunha do outro lado da mesma mão.
-11. Repita a abertura do "Modo" e a escolha de «Rígido» na seção de CIMA (L2) da coluna do P4.
-12. Aperte o L2 e depois o R2 do P4, do mesmo jeito.
-13. Confira que o L2 do P4 ficou duro e que o R2 dele continua leve.
-14. Aperte o L2 e o R2 do P1 e depois os do P2.
-15. Confira que os quatro gatilhos das testemunhas estão como você guardou no começo.
-16. Clique no botãozinho da seta girando (↻) no pé da coluna do P3.
-17. Aperte o L2 e o R2 do P3 outra vez.
-18. Confira que o L2 continua duro e o R2 continua leve depois do reenvio.
-19. Escolha «Desligado» no "Modo" da seção de cima (L2) da coluna do P3 e no da mesma seção da coluna do P4.
-20. Aperte o L2 do P3 e o do P4.
-21. Confira que os dois voltaram a ficar leves.
+2. Confira que o chip no alto da coluna do P3 e o da coluna do P4 dizem BT.
+3. Anote no papel o Modo das duas seções da coluna do P3 e das duas da coluna do P4, e escolha «Desligado» nas quatro.
+4. Aperte o L2 e o R2 dos quatro controles até o fundo, um controle de cada vez, e guarde na mão como cada um está — o P1 e o P2 são as testemunhas.
+5. Escolha «Rígido» no Modo da seção de CIMA (a do desenho L2), na coluna do P3, e veja o campo piscar em verde.
+6. Aperte o L2 do P3 até o fundo do curso e confira que a trava é dura do começo ao fim.
+7. Compare essa firmeza com a de um controle do cabo que você já tenha sentido em «Rígido»: pelo rádio não pode ser mais fraca nem demorar mais a chegar.
+8. Aperte o R2 do P3, no mesmo controle e na mesma mão, e confira que ele continua leve.
+9. Repita na coluna do P4 o «Rígido» na seção de cima e os dois apertos, e confira que o L2 do P4 ficou duro e o R2 dele continua leve.
+10. Segure o PS do P3 até as luzes dele apagarem; depois dê um toque no PS e espere o chip dele voltar ao alto de uma coluna.
+11. Aperte o L2 e o R2 do P3 sem escolher nada, e confira que o L2 voltou duro e o R2 continua leve; se o L2 voltou leve, anote, e escolha «Desligado» e depois «Rígido» na seção de cima para mandar de novo.
+12. Aperte o L2 e o R2 do P1 e depois os do P2, e confira que estão como você guardou na mão.
+13. Devolva os quatro Modos do P3 e do P4 ao que você anotou.
 
-**Passa quando.** O L2 do P3 e o do P4 ficam duros, e o R2 dos MESMOS controles continua leve — o comando agiu num lado só, pelo sem fio, e não vazou para o outro lado da mesma mão. A firmeza é a mesma que um controle do cabo dá. Os gatilhos do P1 e do P2 continuam exatamente como estavam. E «Desligado» na seção do L2 solta os dois L2.
+**Passa quando.** O L2 do P3 e o do P4 ficam duros, e o R2 dos MESMOS controles continua leve — o comando agiu num lado só, pelo sem fio, e não vazou para o outro lado da mesma mão. A firmeza é a mesma que um controle do cabo dá. Os gatilhos do P1 e do P2 continuam exatamente como estavam. E, depois de cair e voltar, o P3 volta com o L2 duro e o R2 leve, sem você escolher nada de novo.
 
 **Por controle.**
 
 * **P1** — No CABO, testemunha. Não toque na coluna dele. Aperte o L2 e o R2 antes e depois; têm de estar iguais. Se o L2 dele endurecer, o comando pegou todo mundo.
 * **P2** — No CABO, segunda testemunha. Não toque na coluna dele. Mesma conferência. Se o P1 ficou intacto e o L2 do P2 endureceu, o comando foi para o controle errado.
-* **P3** — No RÁDIO, e é o primeiro. Mexe-se só na seção de CIMA (L2) da coluna dele. O L2 endurece; o R2 do mesmo controle é a testemunha na mesma mão. É nele que você clica na seta girando (↻), para ver se o reenvio mantém o efeito e continua respeitando o lado.
-* **P4** — No RÁDIO, e é o segundo. Os mesmos gestos, na coluna dele. Ele separa "o rádio funciona" de "aquele controle funciona": se o L2 do P3 endurecer e o do P4 não, o defeito é do aparelho, não do sem fio.
+* **P3** — No RÁDIO, e é o primeiro. Mexe-se só na seção de CIMA (L2) da coluna dele. O L2 endurece; o R2 do mesmo controle é a testemunha na mesma mão. É ele que cai e volta, para ver se o efeito volta junto e continua respeitando o lado.
+* **P4** — No RÁDIO, e é o segundo. Os mesmos gestos, na coluna dele. Ele separa "o rádio funciona" de "aquele controle funciona": se o L2 do P3 endurecer e o do P4 não, o defeito é do aparelho, não do sem fio. Enquanto o P3 está fora, a coluna dele diz P3; ela volta a dizer P4 quando o P3 volta.
 
-**A armadilha.** A armadilha maior é apertar o gatilho errado: o L2 é o de baixo do lado ESQUERDO, e a seção da tela é a de CIMA, titulada pelo desenho L2 — quem mexe na seção de baixo e aperta o L2 conclui que o produto errou de lado quando quem errou foi o gesto. Não use «Desligado» como o efeito do teste, e não julgue pela tela: o campo "Modo" mostra o pedido e a piscada verde diz que o comando saiu, nada mais. Sem o aperto dos quatro gatilhos no começo — o do P3, o do P4 e os das duas testemunhas — este teste não mede nada: é essa mão guardada que vira a régua de tudo o que vem depois, e ela é o primeiro ato de propósito. A medição que sustenta esta linha exercitou UM modo só, «Rígido», com um único jogo de números; os outros dezoito não foram tocados por lá. Duas coisas já medidas que parecem erro seu e não são: se o controle do rádio cair e voltar no meio do teste, o efeito não volta com ele — o botãozinho da seta girando (↻) é o caminho de mandá-lo de novo, e por isso está nos passos; e o efeito NÃO é eterno, amanhecendo solto sozinho depois de alguns MINUTOS, sem ninguém tocar. Aplicar qualquer efeito também PAUSA a troca automática de perfil, que só volta com o «Desligado» do fim. Onde a prova parou: em O APARELHO OBEDECEU, medido em 11/08 com dois controles no rádio na mesa e o lado ocioso servindo de controle negativo — o dedo é o degrau certo, e o jogo é o degrau seguinte, que ninguém mediu. Este teste passa dos oito atos — são doze —, e a razão é o dedo: cada aperto é de um gatilho só, num controle só, e é o único instrumento que existe aqui; juntar dois apertos num passo só faria você julgar dois gatilhos com uma lembrança só, que é exatamente o erro que a armadilha maior descreve.
+**A armadilha.** A armadilha maior é apertar o gatilho errado: o L2 é o de baixo do lado ESQUERDO, e a seção da tela é a de CIMA, titulada pelo desenho L2 — quem mexe na seção de baixo e aperta o L2 conclui que o produto errou de lado quando quem errou foi o gesto. Não use «Desligado» como o efeito do teste, e não julgue pela tela: o campo Modo mostra o pedido e a piscada verde diz que o comando saiu, nada mais. Sem o aperto dos quatro controles no começo este teste não mede nada: é essa mão guardada que vira a régua de tudo o que vem depois. A escolha GRAVA no perfil daquele controle: por isso o teste anota e devolve. A medição que sustenta esta linha exercitou UM modo só, «Rígido», com um único jogo de números; os outros dezoito não foram tocados por lá. O efeito gravado para aquele controle deve voltar sozinho quando ele reconecta pelo rádio — se não voltar, é o achado; e escolher o mesmo nome que já está no campo não manda nada, por isso o passo passa por «Desligado». Em agosto mediu-se o efeito amanhecendo solto alguns MINUTOS depois, sem ninguém tocar: sinta logo depois de escolher, e se estiver leve quando voltar, anote a hora e o nome ao lado de Perfil ativo, no alto. Onde a prova parou: em O APARELHO OBEDECEU, medido em 11/08 com dois controles no rádio e o lado ocioso servindo de controle negativo — o dedo é o degrau certo, e o jogo é o degrau seguinte, que ninguém mediu. Cada aperto é de um gatilho só, num controle só, porque o dedo é o único instrumento que existe aqui; juntar dois apertos numa lembrança só é exatamente o erro que a armadilha maior descreve.
 
 ---
 
@@ -2612,26 +2583,25 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Passa a mão pelos dezenove efeitos da lista, nos dois controles do cabo, para ver quais fazem alguma coisa de verdade e quais não fazem nada.
 
-**Onde olhar.** Na aba Gatilhos, quadro "Seleção de Gatilho". O campo "Modo", dentro da seção de cima (a do desenho L2), abre uma lista com dezenove escolhas — de «Desligado» a «Montar do zero». Logo abaixo, a linha "Ajustes" muda de barras conforme o efeito escolhido: alguns têm duas barras, outros seis, outros nenhuma, e nesse caso aparece a frase "Este modo não tem o que ajustar.". Parar o mouse em cima do campo mostra uma explicação de uma linha do efeito escolhido. Mas o que responde este teste é o SEU DEDO, e o instrumento é um papel com os dezenove nomes copiados: o DualSense não devolve em que efeito está, então nem o campo nem as barras provam nada sobre o aparelho. A tela só pisca em verde por cerca de um segundo e meio quando o comando sai.
+**Onde olhar.** Na aba Gatilhos, quadro Gatilhos. O campo Modo, dentro da seção de cima (a do desenho L2), abre uma lista com dezenove escolhas — de «Desligado» a «Montar do zero». Clicar no desenho L2 da coluna da esquerda abre a linha Ajustes, que muda de barras conforme o efeito escolhido: alguns têm duas barras, outros mais, outros nenhuma, e nesse caso ela diz Sem ajustes. Parar o mouse em cima do campo mostra uma explicação de uma linha do efeito escolhido. Mas o que responde este teste é o SEU DEDO, e o instrumento é um papel com os dezenove nomes copiados: o DualSense não devolve em que efeito está, então nem o campo nem as barras provam nada sobre o aparelho. A tela só pisca em verde por cerca de um segundo e meio quando o comando sai.
 
 **Os passos.**
 
 1. Abra a aba Gatilhos.
-2. Confira que a coluna do P1 e a do P2 terminam, no alto, na palavra cabo.
-3. Aperte o L2 e o R2 do P3 e do P4 e anote no papel como eles estão — são as testemunhas, e não podem mudar em momento nenhum.
-4. Abra o campo "Modo" da seção de cima (a do desenho L2), na coluna do P1, e copie para o papel os dezenove nomes da lista, na ordem em que aparecem.
-5. Escolha «Desligado» nesse campo e aperte o L2 do P1: esta é a sua referência de gatilho solto.
-6. Escolha o nome seguinte da lista e aperte o L2 do P1 do começo ao fundo do curso, primeiro devagar e depois rápido.
-7. Veja o campo piscar em verde.
-8. Escreva ao lado daquele nome o que a sua mão sentiu de diferente do «Desligado»: nada, duro do começo ao fim, duro a partir de um ponto, um estalo, tremendo, ou outra coisa.
-9. Conte quantas barras a linha "Ajustes" passou a mostrar, ou repare se apareceu a frase de que não há o que ajustar, e anote também.
-10. Repita o ato 4 para cada um dos dezenove nomes da lista, até o último.
-11. Volte a «Disparo (Weapon)» e depois a «Vibração», apertando o L2 do P1 com atenção em cada um dos dois, e anote de novo o que sentiu.
-12. Escolha «Desligado» na coluna do P1, por último.
-13. Confira que o L2 do P1 voltou a ficar leve.
-14. Repita os atos 2 a 7 na coluna do P2, o outro controle do cabo.
-15. Compare a tabela do P2 com a do P1, nome por nome.
-16. Compare, no fim de tudo, o L2 e o R2 do P3 e do P4 com o que você anotou no ato 1: têm de estar iguais.
+2. Confira que o chip no alto da coluna do P1 e o da coluna do P2 dizem USB.
+3. Anote no papel o Modo das duas seções do P1 e do P2 — é o que você devolve no fim.
+4. Aperte o L2 e o R2 do P3 e do P4 e anote como eles estão — são as testemunhas, e não podem mudar em momento nenhum.
+5. Clique no desenho L2 da coluna da esquerda, para a linha Ajustes ficar à vista.
+6. Abra o campo Modo da seção de cima, na coluna do P1, e copie para o papel os dezenove nomes da lista, na ordem em que aparecem.
+7. Escolha «Desligado» nesse campo e aperte o L2 do P1: esta é a sua referência de gatilho solto.
+8. Escolha o nome seguinte da lista, veja o campo piscar em verde e aperte o L2 do P1 do começo ao fundo do curso, primeiro devagar e depois rápido.
+9. Escreva ao lado daquele nome o que a sua mão sentiu de diferente do «Desligado»: nada, duro do começo ao fim, duro a partir de um ponto, um estalo, tremendo, ou outra coisa.
+10. Anote também quantas barras a linha Ajustes passou a mostrar, ou se ela passou a dizer Sem ajustes.
+11. Repita a escolha, o aperto e as duas anotações para cada nome que sobra na lista, até o último.
+12. Volte a «Disparo» e depois a «Vibração», apertando o L2 do P1 com atenção em cada um dos dois, e anote de novo o que sentiu.
+13. Faça a volta inteira pelos dezenove nomes também na coluna do P2, o outro controle do cabo, e compare a tabela dele com a do P1, nome por nome.
+14. Compare, no fim de tudo, o L2 e o R2 do P3 e do P4 com o que você anotou no começo: têm de estar iguais.
+15. Devolva o Modo das duas seções do P1 e do P2 ao que você anotou no começo.
 
 **Passa quando.** Cada nome da lista produz na sua mão uma sensação diferente da do «Desligado», e a MESMA sensação nos dois controles do cabo: o que o P1 fez, o P2 fez igual. Um nome que não muda nada em relação ao «Desligado» é achado do teste e não erro seu — anote e siga. E o P3 e o P4 não podem ter mudado de sensação em momento nenhum do teste.
 
@@ -2642,7 +2612,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No RÁDIO, testemunha. Não toque na coluna dele. Aperte o L2 e o R2 no começo e no fim; têm de estar iguais. Se ele mudar de sensação no meio da volta, algum dos dezenove escapou para o transporte inteiro.
 * **P4** — No RÁDIO, segunda testemunha. Não toque na coluna dele. Mesma conferência. Se o P3 ficou intacto e o P4 mudou, o efeito foi parar no controle errado.
 
-**A armadilha.** Este teste tem DEZ atos, acima dos oito do alvo, e o trabalho real é maior do que a lista deixa ver: os atos 4 e 5 são UM ato repetido dezenove vezes, e o ato 8 repete tudo no segundo controle. A lista foi encurtada; o teste não. Este é também o teste em que "nada aconteceu" é resposta legítima e prevista: o mapa registra esta linha como PARCIAL, e a medição que existe é dela mesma, pelo TATO, em 01/08 — na época SETE das escolhas não faziam nada (três mandavam ao aparelho o número do desligado; quatro mandavam o número certo sem dizer quais zonas do gatilho usar). Aquelas foram consertadas, e este teste é o que confere se ficaram. Dois nomes, porém, continuam com divergência VIVA declarada no mapa: «Disparo (Weapon)» e «Vibração» mandam ao aparelho, cada um, o número de OUTRO efeito, e ninguém mediu se eles fazem alguma coisa — por isso eles têm ato próprio. Se derem sensação estranha, ou nenhuma, é o achado, e está previsto. O falso verde daqui é julgar pela tela: o campo "Modo" e a caixa "Ajustes" mudam SEMPRE, porque quem os desenha é o produto e nunca o aparelho — o DualSense não devolve em que efeito está. Só o dedo responde. Dois cuidados de tempo: dezenove escolhas levam um bom tempo, e já foi medido que o efeito NÃO é eterno — ele amanhece solto sozinho depois de alguns MINUTOS —, então sinta LOGO depois de escolher e não volte a conferir o efeito de dez atrás. E «Desligado» tem de ser a última escolha nos dois controles: qualquer efeito aplicado PAUSA a troca automática de perfil, e só o «Desligado» a devolve. Onde a prova parou: o mapa NÃO registra grau para esta célula. O degrau que este teste alcança é o seu dedo; o jogo está fora, e ninguém o mediu.
+**A armadilha.** O trabalho real é maior do que a lista deixa ver: a escolha, o aperto e as anotações são UM ato repetido dezenove vezes, e a volta inteira se repete no segundo controle. A lista foi encurtada; o teste não. Este é também o teste em que "nada aconteceu" é resposta legítima e prevista: o mapa registra esta linha como PARCIAL, e a medição que existe é dela mesma, pelo TATO, em 01/08 — na época SETE das escolhas não faziam nada (três mandavam ao aparelho o número do desligado; quatro mandavam o número certo sem dizer quais zonas do gatilho usar). Aquelas foram consertadas, e este teste é o que confere se ficaram. Dois nomes, porém, continuam com divergência VIVA declarada no mapa: «Disparo» e «Vibração» mandam ao aparelho, cada um, o número de OUTRO efeito, e ninguém mediu se eles fazem alguma coisa — por isso eles têm passo próprio. Se derem sensação estranha, ou nenhuma, é o achado, e está previsto. O falso verde daqui é julgar pela tela: o campo Modo e a linha Ajustes mudam SEMPRE, porque quem os desenha é o produto e nunca o aparelho — o DualSense não devolve em que efeito está. Só o dedo responde. Dois cuidados. Cada escolha GRAVA no perfil daquele controle, e é por isso que o último passo devolve o que estava lá — parar no meio deixa o último efeito da lista gravado, e o gatilho nasce com ele no próximo jogo. E dezenove escolhas levam um bom tempo: em agosto mediu-se o efeito amanhecendo solto sozinho alguns MINUTOS depois, então sinta LOGO depois de escolher e não volte a conferir o efeito de dez nomes atrás. Onde a prova parou: o mapa NÃO registra grau para esta célula. O degrau que este teste alcança é o seu dedo; o jogo está fora, e ninguém o mediu.
 
 ---
 
@@ -2652,29 +2622,26 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Passa a mão pelos dezenove efeitos da lista, nos dois controles do rádio, para ver quais fazem alguma coisa e se o sem fio responde igual ao cabo.
 
-**Onde olhar.** Na aba Gatilhos, quadro "Seleção de Gatilho". A coluna do P3 e a do P4 têm de terminar, no alto, na palavra rádio. O campo "Modo", dentro da seção de cima (a do desenho L2), abre uma lista com dezenove escolhas — de «Desligado» a «Montar do zero». Logo abaixo, a linha "Ajustes" muda de barras conforme o efeito escolhido, e quando o efeito não tem o que ajustar aparece a frase "Este modo não tem o que ajustar.". Parar o mouse no campo mostra uma explicação de uma linha do efeito. No pé de cada coluna há um botãozinho redondo com uma seta girando (↻), que manda de novo ao controle o que está na coluna. Mas quem responde este teste é o SEU DEDO: nem o campo nem as barras dizem nada sobre o aparelho, porque o DualSense não devolve em que efeito está. A tela apenas pisca em verde por cerca de um segundo e meio quando o comando sai. Tenha papel e caneta à mão antes de começar: a saída deste teste é uma tabela de dezenove linhas por controle — um nome, uma sensação.
+**Onde olhar.** Na aba Gatilhos, quadro Gatilhos. O chip no alto da coluna do P3 e o da do P4 têm de dizer BT. O campo Modo, dentro da seção de cima (a do desenho L2), abre uma lista com dezenove escolhas — de «Desligado» a «Montar do zero». Clicar no desenho L2 da coluna da esquerda abre a linha Ajustes, que muda de barras conforme o efeito escolhido, e quando o efeito não tem o que ajustar ela diz Sem ajustes. Parar o mouse no campo mostra uma explicação de uma linha do efeito. Mas quem responde este teste é o SEU DEDO: nem o campo nem as barras dizem nada sobre o aparelho, porque o DualSense não devolve em que efeito está. A tela apenas pisca em verde por cerca de um segundo e meio quando o comando sai. Tenha papel e caneta à mão antes de começar: a saída deste teste é uma tabela de dezenove linhas por controle — um nome, uma sensação.
 
 **Os passos.**
 
 1. Abra a aba Gatilhos.
-2. Confira que a coluna do P3 e a do P4 terminam, no alto, na palavra rádio.
-3. Aperte o L2 e o R2 do P1 e do P2 até o fundo e anote como estão — eles são as testemunhas e não podem mudar em momento nenhum.
-4. Abra o campo "Modo" da seção de cima (a do desenho L2), na coluna do P3, e copie para o papel os dezenove nomes da lista, na ordem.
-5. Escolha «Desligado» nesse campo.
-6. Aperte o L2 do P3 do começo ao fundo do curso: esta é a sua referência de gatilho solto.
-7. Escolha o próximo nome da lista no mesmo campo.
-8. Veja o campo piscar em verde.
-9. Aperte o L2 do P3 do começo ao fundo do curso, primeiro devagar e depois rápido.
-10. Escreva no papel, ao lado daquele nome, o que a sua mão sentiu: nada, duro do começo ao fim, duro a partir de um ponto, um estalo, tremendo, ou outra coisa.
-11. Repare se a sensação demorou visivelmente mais a chegar do que chegaria por cabo, e anote isso ao lado.
-12. Repita a escolha, o aperto do L2 e a anotação para cada nome que sobra na lista, até o último.
-13. Volte a «Disparo (Weapon)» e depois a «Vibração», um de cada vez, apertando o L2 do P3 com atenção em cada um, e anote de novo o que a sua mão sentiu.
-14. Escolha «Desligado» na coluna do P3.
-15. Aperte o L2 do P3 e confirme que ele voltou a ficar leve.
-16. Refaça a volta inteira na coluna do P4, o outro controle do rádio, terminando nela também em «Desligado».
-17. Compare nome por nome a tabela do P4 com a do P3 — e com a do cabo, se você a tiver.
-18. Aperte de novo o L2 e o R2 do P1 e do P2.
-19. Confira que os quatro gatilhos das testemunhas estão iguais ao que você anotou no começo.
+2. Confira que o chip no alto da coluna do P3 e o da coluna do P4 dizem BT.
+3. Anote no papel o Modo das duas seções do P3 e do P4 — é o que você devolve no fim.
+4. Aperte o L2 e o R2 do P1 e do P2 até o fundo e anote como estão — eles são as testemunhas e não podem mudar em momento nenhum.
+5. Abra o campo Modo da seção de cima (a do desenho L2), na coluna do P3, e copie para o papel os dezenove nomes da lista, na ordem.
+6. Escolha «Desligado» nesse campo e aperte o L2 do P3 do começo ao fundo do curso: esta é a sua referência de gatilho solto.
+7. Escolha o próximo nome da lista no mesmo campo e veja o campo piscar em verde.
+8. Aperte o L2 do P3 do começo ao fundo do curso, primeiro devagar e depois rápido.
+9. Escreva no papel, ao lado daquele nome, o que a sua mão sentiu: nada, duro do começo ao fim, duro a partir de um ponto, um estalo, tremendo, ou outra coisa.
+10. Repare se a sensação demorou visivelmente mais a chegar do que chegaria por cabo, e anote isso ao lado.
+11. Repita a escolha, o aperto do L2 e a anotação para cada nome que sobra na lista, até o último.
+12. Volte a «Disparo» e depois a «Vibração», um de cada vez, apertando o L2 do P3 com atenção em cada um, e anote de novo o que a sua mão sentiu.
+13. Refaça a volta inteira na coluna do P4, o outro controle do rádio.
+14. Compare nome por nome a tabela do P4 com a do P3 — e com a do cabo, se você a tiver.
+15. Aperte de novo o L2 e o R2 do P1 e do P2, e confira que estão iguais ao que você anotou no começo.
+16. Devolva o Modo das duas seções do P3 e do P4 ao que você anotou no começo.
 
 **Passa quando.** Cada nome da lista produz na sua mão uma sensação diferente da do «Desligado», e a MESMA sensação nos dois controles do rádio — e a mesma que o cabo dá, se você tiver a tabela do cabo ao lado. Nenhuma escolha pode chegar visivelmente mais tarde pelo sem fio. Um nome que não muda nada em relação ao «Desligado» é achado do teste, não erro seu: anote e siga. E o P1 e o P2 não podem ter mudado de sensação em momento nenhum.
 
@@ -2682,10 +2649,10 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 * **P1** — No CABO, testemunha. Não toque na coluna dele. Aperte o L2 e o R2 no começo e no fim; têm de estar iguais. Se ele mudar de sensação no meio da volta, algum dos dezenove escapou para todo mundo.
 * **P2** — No CABO, segunda testemunha. Não toque na coluna dele. Mesma conferência. Se o P1 ficou intacto e o P2 mudou, o efeito foi parar no controle errado.
-* **P3** — No RÁDIO, e é onde você faz a volta inteira pelos dezenove nomes, no L2. Ele produz a sua tabela do sem fio: um nome, uma sensação. Se um controle cair e voltar no meio, use o botãozinho da seta girando (↻) antes de continuar.
+* **P3** — No RÁDIO, e é onde você faz a volta inteira pelos dezenove nomes, no L2. Ele produz a sua tabela do sem fio: um nome, uma sensação.
 * **P4** — No RÁDIO, e é a conferência. Faça a mesma volta na coluna dele e compare nome por nome com a tabela do P3. Onde os dois discordarem, o problema é do aparelho e não do sem fio — é para isso que são dois no rádio.
 
-**A armadilha.** Este é o teste em que "nada aconteceu" é resposta legítima e prevista: o mapa registra esta linha como PARCIAL, e a medição que existe é dela mesma, pelo TATO, em 01/08 — na época SETE das escolhas não faziam nada (três mandavam ao aparelho o número do desligado; quatro mandavam o número certo sem dizer quais zonas do gatilho usar). Aquelas foram consertadas, e este teste confere se ficaram. Dois nomes continuam com divergência VIVA declarada no mapa: «Disparo (Weapon)» e «Vibração» mandam ao aparelho, cada um, o número de OUTRO efeito, e ninguém mediu se fazem alguma coisa — por isso têm passo próprio. Se derem sensação estranha, ou nenhuma, é o achado. O falso verde é julgar pela tela: o campo "Modo" e a caixa "Ajustes" mudam SEMPRE, porque quem os desenha é o produto e nunca o aparelho. Só o dedo responde. Três cuidados que são do rádio: se um controle cair e voltar, o efeito não volta com ele, e o botãozinho da seta girando (↻) no pé da coluna é o caminho de mandá-lo de novo — sem isso, um punhado de nomes seguidos vai aparecer como "não fez nada" por causa de UMA queda; a volta pelos dezenove leva um bom tempo, e já foi medido que o efeito NÃO é eterno, amanhecendo solto sozinho depois de alguns MINUTOS, então aperte o L2 LOGO depois de escolher; e «Desligado» tem de ser a última escolha nos dois controles, porque qualquer efeito aplicado PAUSA a troca automática de perfil e só o «Desligado» a devolve. Este teste passa dos oito atos — são catorze —, e a razão é a lista: o aperto do L2 é o teste inteiro e se repete dezenove vezes em cada controle, com uma escolha e uma anotação em volta de cada aperto; cortar a volta pela metade não responderia a pergunta. Onde a prova parou: o mapa NÃO registra grau para esta célula. O degrau que este teste alcança é o seu dedo; o jogo está fora, e ninguém o mediu.
+**A armadilha.** Este é o teste em que "nada aconteceu" é resposta legítima e prevista: o mapa registra esta linha como PARCIAL, e a medição que existe é dela mesma, pelo TATO, em 01/08 — na época SETE das escolhas não faziam nada (três mandavam ao aparelho o número do desligado; quatro mandavam o número certo sem dizer quais zonas do gatilho usar). Aquelas foram consertadas, e este teste confere se ficaram. Dois nomes continuam com divergência VIVA declarada no mapa: «Disparo» e «Vibração» mandam ao aparelho, cada um, o número de OUTRO efeito, e ninguém mediu se fazem alguma coisa — por isso têm passo próprio. Se derem sensação estranha, ou nenhuma, é o achado. O falso verde é julgar pela tela: o campo Modo e a linha Ajustes mudam SEMPRE, porque quem os desenha é o produto e nunca o aparelho. Só o dedo responde. Três cuidados que são do rádio. Se um controle cair e voltar no meio da volta, o efeito gravado para ele deve voltar junto — mas se uma sequência de nomes seguidos aparecer como "não fez nada", confira na fita se o chip daquele controle sumiu e voltou, porque uma queda só explicaria todos eles; para mandar de novo, escolha outro nome e volte ao que estava, já que escolher o mesmo nome não manda nada. A volta pelos dezenove leva um bom tempo, e em agosto mediu-se o efeito amanhecendo solto sozinho alguns MINUTOS depois, então aperte o L2 LOGO depois de escolher. E cada escolha GRAVA no perfil daquele controle: por isso o último passo devolve o que estava lá. O aperto do L2 é o teste inteiro e se repete dezenove vezes em cada controle, com uma escolha e uma anotação em volta de cada aperto; cortar a volta pela metade não responderia a pergunta. Onde a prova parou: o mapa NÃO registra grau para esta célula. O degrau que este teste alcança é o seu dedo; o jogo está fora, e ninguém o mediu.
 
 ---
 
@@ -2695,30 +2662,26 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o Hefesto pergunta ao aparelho, pelo cabo, qual é a cor de fábrica do plástico — e escreve na tela o nome certo dos dois controles do cabo.
 
-**Onde olhar.** Três lugares dizem a mesma coisa e é bom conferir os três. Primeiro, a fita do topo, a linha que começa com "Selecionar:": cada controle é um chip com o número, o nome da cor e a palavra do transporte, e a BORDA do chip é pintada nessa cor. Segundo, a aba Controles: o cabeçalho de cada cartão diz "P1 · nome da cor · cabo". Terceiro, a aba Conexões, quadro Gestão de Controles: a linha diz "Sony · Player 1 · nome da cor · cabo", com uma barrinha colorida à esquerda. Quando a cor NÃO foi lida, os dois primeiros põem um travessão no lugar do nome, e a linha da aba Conexões simplesmente omite o nome — não escreve nada ali.
+**Onde olhar.** Três lugares dizem a mesma coisa e é bom conferir os três. Primeiro, a fita do topo, a linha que começa com Selecionar: cada controle é um chip com o número, o nome da cor e USB ou BT, e a BORDA do chip é pintada na cor do plástico. Segundo, a aba Controles: o cabeçalho de cada cartão diz o número, o nome da cor e USB ou BT. Terceiro, a aba Conexões, quadro Gestão de Controles, que nasce recolhido e se abre clicando no título: a linha diz Sony • Player 1 • nome da cor • USB, com uma barrinha colorida à esquerda. Quando a cor NÃO foi lida, o chip e o cartão põem um travessão no lugar do nome, e a linha da aba Conexões simplesmente omite o nome — não escreve nada ali.
 
 **Os passos.**
 
-1. Desligue os quatro controles e desencaixe os dois cabos.
-2. Ponha os quatro na mesa, com o plástico à vista.
-3. Anote num papel a cor de cada um, na ordem em que você vai ligá-los.
-4. Abra o Hefesto.
-5. Encaixe o cabo no primeiro controle e depois no PC.
-6. Encaixe o segundo cabo no segundo controle e depois no PC.
-7. Dê um toque curto no botão PS do terceiro controle.
-8. Dê um toque curto no botão PS do quarto controle.
-9. Clique na aba Controles.
-10. Leia o nome da cor no cabeçalho do cartão do P1 e compare com o plástico que está na sua mão.
-11. Leia o nome da cor no cabeçalho do cartão do P2 e faça a mesma comparação.
-12. Confira que a palavra ao lado do nome, nos dois, é cabo.
-13. Olhe a borda do chip do P1 na fita do topo e compare o tom com o plástico dele.
-14. Olhe a borda do chip do P2 e compare o tom com o plástico dele.
-15. Abra a aba Conexões.
-16. Leia a linha do P1 no quadro Gestão de Controles e confira que o nome da cor está escrito ali, entre o Player e a palavra do transporte.
-17. Leia a linha do P2 e faça a mesma conferência.
-18. Anote o que os cartões do P3 e do P4 mostram no lugar da cor — este teste não se decide por eles, mas a anotação importa.
+1. Clique na aba Controles.
+2. Desencaixe os dois cabos e segure o PS de cada um dos quatro controles até as luzes dele apagarem.
+3. Confira que a contagem no alto, à direita, diz Nenhum controle.
+4. Ponha os quatro com o plástico à vista e anote num papel a cor de cada um, na ordem em que você vai ligá-los.
+5. Clique na aba Sistema, clique em Reiniciar o serviço e espere a janela voltar — é isso que faz o Hefesto esquecer as cores que já perguntou.
+6. Encaixe o cabo no primeiro controle e depois no PC; faça o mesmo com o segundo.
+7. Dê um toque curto no PS do terceiro controle e depois no do quarto.
+8. Volte à aba Controles e espere a contagem no alto dizer 2 USB · 2 BT.
+9. Leia o nome da cor no cabeçalho do cartão do P1 e compare com o plástico dele; faça o mesmo com o P2.
+10. Confira que ao lado do nome, nos dois, está escrito USB.
+11. Compare a borda do chip do P1 e a do P2, na fita do topo, com o plástico de cada um.
+12. Abra a aba Conexões, clique no título Gestão de Controles e confira que as linhas do P1 e do P2 trazem o nome da cor entre o Player e o USB.
+13. Se algum dos dois mostrar travessão, espere dois minutos e meio e leia de novo, anotando as duas leituras.
+14. Anote o que os cartões do P3 e do P4 mostram no lugar da cor — este teste não se decide por eles, mas a anotação importa.
 
-**Passa quando.** Os dois controles do cabo aparecem com o nome da cor de fábrica escrito por extenso, e esse nome é a cor do plástico que você tem na mão. A borda do chip de cada um está pintada nesse tom, e a palavra ao lado é cabo. Nenhum dos dois mostra travessão no lugar do nome.
+**Passa quando.** Os dois controles do cabo aparecem com o nome da cor de fábrica escrito por extenso, e esse nome é a cor do plástico que você tem na mão. A borda do chip de cada um está pintada nesse tom, e ao lado está escrito USB. Nenhum dos dois termina a espera de dois minutos e meio com travessão no lugar do nome.
 
 **Por controle.**
 
@@ -2727,7 +2690,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, testemunha. Só anote o que o cartão dele diz. Se ele mostrar a MESMA cor de um dos dois do cabo e o plástico dele for outro, a resposta de um controle está vazando para os outros — e esse é o achado.
 * **P4** — No rádio, testemunha, mesma anotação. Se o P3 e o P4 mostram a mesma cor e os plásticos deles são diferentes, é o mesmo achado, e agora com duas provas.
 
-**A armadilha.** O desenho da tela vem com dois chips prontos, "P1 · Cosmic Red" e "P2 · Starlight Blue", e é fácil tomá-los por leitura de verdade. O que os denuncia é a palavra do transporte: no chip vivo está escrito cabo ou rádio; no chip do desenho está escrito USB ou BT. Se você vir USB ou BT dentro de um chip, ninguém leu nada e o teste não passou nem reprovou. (A contagem lá no alto é o contrário: ali USB e BT estão certos, por decisão sua.) Segunda armadilha, e ela dá falso vermelho: a cor é perguntada UMA VEZ por aparelho, no instante em que ele entra, e a resposta fica guardada até você fechar a janela. Desplugar e replugar o cabo não faz o Hefesto perguntar de novo — se saiu travessão, o único jeito de refazer a pergunta é fechar a janela pelo X e abri-la com o controle já ligado. Terceira: travessão é resposta honesta, não mentira; quer dizer que a pergunta não voltou. Anote como reprova, mas não confunda com o Hefesto inventando uma cor.
+**A armadilha.** Quatro. O desenho da tela nasce com dois chips de exemplo, P1 · Cosmic Red · USB e P2 · Starlight Blue · BT, e é fácil tomá-los por leitura de verdade: conte os chips na fita — os seus são quatro. Se houver dois, com esses nomes, você está olhando o desenho, e o teste não passou nem reprovou. Segunda, e ela dá falso verde: o Hefesto guarda a cor que já leu até o serviço reiniciar. Desplugar e replugar um controle só não faz perguntar de novo — o nome reaparece sem pergunta nenhuma. É por isso que o teste começa com os quatro desligados e Reiniciar o serviço. Terceira: quando a pergunta não volta, o Hefesto pergunta de novo depois de 5 segundos, de 30 e de 120, e só então desiste até o controle sair e voltar. Um travessão lido no primeiro minuto ainda não é a resposta; o de depois dos dois minutos e meio é. E travessão é resposta honesta, não mentira: anote como reprova, mas não confunda com o Hefesto inventando uma cor. Quarta: uma cor declarada à mão para um controle, na configuração do computador, vence a leitura. Neste computador, hoje, nenhum controle tem cor declarada.
 
 ---
 
@@ -2737,36 +2700,34 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o Hefesto consegue perguntar a cor de fábrica do plástico também pelo rádio, e escreve o nome certo dos dois controles sem fio.
 
-**Onde olhar.** Os mesmos três lugares do teste do cabo, agora nas linhas do P3 e do P4. Na fita do topo, o chip "P3 · nome da cor · rádio", com a borda pintada nessa cor. Na aba Controles, o cabeçalho do cartão. Na aba Conexões, quadro Gestão de Controles, a linha "Sony · Player 3 · nome da cor · rádio", com a barrinha colorida à esquerda. Sem leitura, o cabeçalho do cartão e o chip põem um travessão, e a linha da aba Conexões omite o nome.
+**Onde olhar.** Os mesmos três lugares do teste do cabo, agora no P3 e no P4. Na fita do topo, o chip com o número, o nome da cor e BT, com a borda pintada nessa cor. Na aba Controles, o cabeçalho do cartão. Na aba Conexões, quadro Gestão de Controles (clique no título para abrir), a linha Sony • Player 3 • nome da cor • BT, com a barrinha colorida à esquerda. Sem leitura, o cabeçalho do cartão e o chip põem um travessão, e a linha da aba Conexões omite o nome.
 
 **Os passos.**
 
-1. Desligue os quatro controles e desencaixe os dois cabos.
-2. Feche a janela do Hefesto pelo X e abra-a de novo — fechando a janela ele esquece as cores que já perguntou.
-3. Ponha os quatro na mesa e anote num papel a cor do plástico de cada um.
-4. Encaixe o cabo no primeiro controle e depois no PC.
-5. Encaixe o segundo cabo no segundo controle e depois no PC.
-6. Dê um toque curto no botão PS do terceiro controle e espere o chip dele aparecer na fita do topo.
-7. Dê um toque curto no botão PS do quarto controle e espere o chip dele aparecer.
-8. Clique na aba Controles.
-9. Leia o cabeçalho do cartão do P3 e compare o nome da cor com o plástico daquele controle na sua mão.
-10. Leia o cabeçalho do cartão do P4 e faça a mesma comparação.
-11. Confira que a palavra ao lado do nome, nos dois, é rádio.
-12. Olhe a borda do chip do P3 e a do P4 na fita do topo e compare os tons com os plásticos.
-13. Abra a aba Conexões e leia as linhas do P3 e do P4 no quadro Gestão de Controles.
-14. Confira que o nome da cor está escrito nas duas linhas e que a barrinha da esquerda de cada uma está pintada.
-15. Leia também as linhas do P1 e do P2 e confira que a cor deles não trocou quando os do rádio entraram.
+1. Clique na aba Controles.
+2. Desencaixe os dois cabos e segure o PS de cada um dos quatro controles até as luzes dele apagarem.
+3. Confira que a contagem no alto, à direita, diz Nenhum controle, e anote num papel a cor do plástico de cada um.
+4. Clique na aba Sistema, clique em Reiniciar o serviço e espere a janela voltar — sem isso o Hefesto mostra a cor que já tinha lido pelo cabo, sem perguntar nada pelo rádio.
+5. Encaixe o cabo no primeiro controle e depois no PC; faça o mesmo com o segundo.
+6. Dê um toque curto no PS do terceiro controle e espere o chip dele aparecer na fita do topo; depois faça o mesmo com o quarto.
+7. Volte à aba Controles.
+8. Leia o cabeçalho do cartão do P3 e compare o nome da cor com o plástico daquele controle; faça o mesmo com o P4.
+9. Confira que ao lado do nome, nos dois, está escrito BT.
+10. Compare a borda do chip do P3 e a do P4, na fita do topo, com os plásticos.
+11. Abra a aba Conexões, clique no título Gestão de Controles e confira que as linhas do P3 e do P4 trazem o nome da cor e a barrinha da esquerda pintada.
+12. Se algum dos dois mostrar travessão, espere dois minutos e meio e leia de novo, anotando as duas leituras.
+13. Leia também as linhas do P1 e do P2 e confira que a cor deles não trocou quando os do rádio entraram.
 
-**Passa quando.** Os dois controles do rádio aparecem com o nome da cor de fábrica escrito por extenso, e o nome bate com o plástico na sua mão. A palavra ao lado é rádio nos dois, e a borda do chip está pintada. E os dois do cabo continuam com as cores que já tinham antes de os do rádio entrarem.
+**Passa quando.** Os dois controles do rádio aparecem com o nome da cor de fábrica escrito por extenso, e o nome bate com o plástico na sua mão. Ao lado está escrito BT nos dois, e a borda do chip está pintada. E os dois do cabo continuam com as cores que já tinham antes de os do rádio entrarem.
 
 **Por controle.**
 
 * **P1** — No cabo, testemunha. Anote a cor dele ANTES de ligar os do rádio e confira depois: ela não pode trocar quando um controle sem fio entra.
 * **P2** — No cabo, testemunha, mesma conferência antes e depois.
-* **P3** — No rádio, e é um dos dois que têm de responder. Ele precisa entrar pelo rádio numa janela recém-aberta — se este mesmo aparelho passou pelo cabo depois de você abrir a janela, o teste não mede o rádio.
+* **P3** — No rádio, e é um dos dois que têm de responder. Ele precisa entrar pelo rádio depois do Reiniciar o serviço sem ter passado pelo cabo — se este mesmo aparelho passou pelo cabo depois do reinício, o teste não mede o rádio.
 * **P4** — No rádio, o segundo que tem de responder, e é ele que dá o tamanho da resposta. A leitura pelo rádio só foi provada em DOIS aparelhos até hoje; estes são o terceiro e o quarto. Um deles ficando em travessão é achado — e é justamente o achado que este teste existe para procurar.
 
-**A armadilha.** O falso verde mais fácil é o da memória do Hefesto: ele pergunta a cor UMA VEZ por aparelho por sessão e guarda a resposta pelo endereço do controle, que é o mesmo no cabo e no rádio. Se aquele controle já tinha respondido pelo CABO nesta mesma janela, o nome aparece na tela sem que uma única pergunta tenha saído pelo rádio, e o teste dá verde sobre nada. É por isso que o segundo passo é fechar e abrir a janela. Segunda: pelo rádio o pedido vai assinado, e essa leitura só está provada em duas unidades desta bancada, não nas quatro. Um travessão no P3 ou no P4 pode ser exatamente isso e não é erro seu — anote qual controle recusou e qual é a cor do plástico dele, porque esse par é o dado. Terceira: se a palavra dentro do chip for USB ou BT em vez de cabo ou rádio, a fita está mostrando o desenho e não os seus controles.
+**A armadilha.** O falso verde mais fácil é o da memória do Hefesto: ele guarda a cor de cada aparelho pelo endereço do controle, que é o mesmo no cabo e no rádio, até o serviço reiniciar. Se aquele controle já tinha respondido pelo CABO depois do último reinício, o nome aparece na tela sem que uma única pergunta tenha saído pelo rádio, e o teste dá verde sobre nada. É por isso que os quatro saem e o serviço reinicia antes de tudo. Segunda: pelo rádio o pedido vai assinado, e essa leitura só está provada em duas unidades desta bancada, não nas quatro. Um travessão no P3 ou no P4 pode ser exatamente isso e não é erro seu — anote qual controle recusou e qual é a cor do plástico dele, porque esse par é o dado. Terceira: uma pergunta que não volta é feita de novo depois de 5 segundos, de 30 e de 120; um travessão que vira nome nesse meio-tempo é o produto funcionando, e as duas leituras vão para o papel. Quarta: se a fita mostrar só dois chips, com os nomes Cosmic Red e Starlight Blue, você está olhando o desenho de exemplo, e não os seus controles.
 
 ---
 
@@ -2776,35 +2737,33 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o crachá de um controle que está no cabo é o mesmo aparelho de sempre — ele sai para o rádio e volta ao cabo sem trocar de nome.
 
-**Onde olhar.** O crachá é o conjunto que nomeia o controle, e ele aparece em três lugares: na aba Conexões, quadro Gestão de Controles, a linha "Sony · Player 1 · cor · cabo"; na fita do topo, o chip "P1 · cor · cabo", com a borda pintada na cor; e na aba Controles, o cabeçalho do cartão. As três partes que têm de SOBREVIVER são a marca, a cor e o número do jogador. A quarta, a palavra do transporte, é justamente a que TEM de mudar. O endereço do aparelho, que é o que faz o crachá funcionar por dentro, não aparece na tela — a fonte diz que ele é chave interna e não vocabulário de tela.
+**Onde olhar.** O crachá é o conjunto que nomeia o controle, e ele aparece em três lugares: na aba Conexões, quadro Gestão de Controles (clique no título para abrir), a linha Sony • Player 1 • cor • USB; na fita do topo, o chip com o número, a cor e USB ou BT, com a borda pintada na cor; e na aba Controles, o cabeçalho do cartão. As três partes que têm de SOBREVIVER são a marca, a cor e o número do jogador. A quarta, USB ou BT, é justamente a que TEM de mudar. O endereço do aparelho, que é o que faz o crachá funcionar por dentro, não aparece na tela — ele é chave interna, e não vocabulário de tela.
 
 **Os passos.**
 
-1. Ligue o P1 e o P2 pelo cabo e o P3 e o P4 pelo rádio.
-2. Confira que o P1 e o P2 já foram pareados por rádio nesta máquina alguma vez — sem isso o teste não roda.
-3. Abra o Hefesto na aba Conexões.
-4. Anote a linha inteira do P1 e a do P2, palavra por palavra.
-5. Anote também as linhas do P3 e do P4, para conferir no fim.
-6. Puxe o cabo de dentro do P1.
-7. Dê um toque no botão PS do P1, sem demorar — do puxão ao toque tem de passar menos de trinta segundos.
-8. Espere o chip do P1 voltar à fita do topo.
-9. Leia a linha dele agora: a marca, a cor e o número têm de ser os mesmos, e só a palavra do transporte pode ter virado rádio.
-10. Encaixe o cabo de novo no P1 e depois no PC.
-11. Espere o chip dele voltar à fita.
-12. Leia a linha dele outra vez e compare, palavra por palavra, com a que você anotou no começo.
-13. Repita os passos 6 a 12 com o P2.
-14. Leia as linhas do P3 e do P4 e confira que estão como você anotou.
+1. Clique na aba Conexões.
+2. Clique no título Gestão de Controles para abrir o quadro.
+3. Confira que o P1 e o P2 já foram pareados pelo rádio neste computador alguma vez — sem isso o teste não roda.
+4. Anote a linha inteira de cada um dos quatro controles, palavra por palavra.
+5. Puxe o cabo de dentro do P1.
+6. Confira que, enquanto ele está fora, os de trás subiram um número: quem era Player 2 passa a dizer Player 1, e assim por diante.
+7. Dê um toque no PS do P1, se ele não voltar sozinho, e espere o chip dele voltar à fita do topo.
+8. Leia a linha dele: a marca, a cor e o número têm de ser os mesmos de antes, e só o USB pode ter virado BT.
+9. Encaixe o cabo de novo no P1 e depois no PC, e espere o chip dele voltar à fita.
+10. Leia a linha dele outra vez e compare, palavra por palavra, com a que você anotou no começo.
+11. Refaça no P2 a ida ao rádio e a volta ao cabo, do puxão do cabo até a leitura final.
+12. Leia as linhas do P3 e do P4 e confira que estão como você anotou.
 
-**Passa quando.** O P1 e o P2 atravessam a ida ao rádio e a volta ao cabo com a mesma marca, a mesma cor e o mesmo número de jogador. A única coisa do crachá que muda é a palavra do transporte, e ela volta ao que era quando o cabo volta. Nenhuma linha nova aparece para eles em momento nenhum, e o P3 e o P4 ficam parados.
+**Passa quando.** O P1 e o P2 atravessam a ida ao rádio e a volta ao cabo com a mesma marca, a mesma cor e o mesmo número de jogador. A única coisa do crachá que muda é o USB, que vira BT no rádio e volta a ser USB quando o cabo volta. Nenhuma linha nova aparece para eles em momento nenhum, e o P3 e o P4 terminam como começaram.
 
 **Por controle.**
 
-* **P1** — No cabo, e é o primeiro a atravessar. Puxe o cabo, traga-o pelo rádio com um toque no PS e devolva-o ao cabo. Marca, cor e número têm de sair iguais dos dois lados.
+* **P1** — No cabo, e é o primeiro a atravessar. Puxe o cabo, traga-o pelo rádio e devolva-o ao cabo. Marca, cor e número têm de sair iguais dos dois lados.
 * **P2** — No cabo, o segundo a atravessar. Ele existe porque o crachá tem de valer para os dois — com um só, um acerto pode ser sorte.
-* **P3** — No rádio, testemunha. A linha dele não pode sumir nem trocar de número em instante nenhum da travessia.
-* **P4** — No rádio, testemunha, e é a que mais importa: enquanto o P1 está no rádio há TRÊS controles sem fio ao mesmo tempo, e é aí que um crachá frouxo confunde dois aparelhos. Olhe a linha dele durante a travessia, não só depois.
+* **P3** — No rádio, testemunha. Enquanto um dos do cabo está fora, a linha dele sobe um número, e volta ao dela quando ele volta; ela não pode sumir nem trocar de cor em instante nenhum.
+* **P4** — No rádio, testemunha, e a que mais importa: enquanto o P1 está no rádio há TRÊS controles sem fio ao mesmo tempo, e é aí que um crachá frouxo confunde dois aparelhos. Olhe a linha dele durante a travessia, não só depois.
 
-**A armadilha.** O verde deste teste é fácil de conseguir por engano, e vale saber por quê: o Hefesto pergunta a cor do plástico uma vez por APARELHO por sessão e guarda a resposta pelo endereço, que é o mesmo no cabo e no rádio. Se o crachá funcionar, o nome da cor reaparece no rádio SEM nova pergunta — e é isso que este teste quer ver. Mas o contrário também vale: este teste NÃO prova que a leitura da cor pelo rádio funciona; quem prova isso é o teste próprio dela, e para ele a janela tem de ser aberta do zero. Segunda: são trinta segundos entre puxar o cabo e apertar o PS. Passando disso ele volta com outro número, e isso é o prazo do lugar guardado, não crachá quebrado — refaça mais rápido. Terceira: o número do jogador não é parte do aparelho; é o lugar na fila, e a fila o devolve porque guardou o lugar. Se o número mudar depois dos trinta segundos, o achado é do relógio. Quarta: até hoje isto foi medido em quatro aparelhos, e é amostra — o que sustenta a generalização é o mecanismo, não a contagem.
+**A armadilha.** O verde deste teste é fácil de conseguir por engano, e vale saber por quê: o Hefesto guarda a cor do plástico de cada APARELHO pelo endereço, que é o mesmo no cabo e no rádio. Se o crachá funcionar, o nome da cor reaparece no rádio SEM nova pergunta — e é isso que este teste quer ver. Mas o contrário também vale: este teste NÃO prova que a leitura da cor pelo rádio funciona; quem prova isso é o teste próprio dela. Segunda: enquanto um controle está fora, a tela conta só os presentes, e os de trás sobem um número; isso não é crachá quebrado. O número de quem volta é o de antes a qualquer tempo, enquanto o serviço estiver de pé; o que reprova é o P1 VOLTAR com outro número. Terceira: as lampadinhas embaixo do touchpad levam cerca de meio minuto para acompanhar a tela; olhe a tela, não o aparelho. Quarta: se o P1 era o que diz Navega o PC na aba Navegação e ficar mais de meio minuto fora, o posto fica com outro controle — confira no fim e anote, porque os testes de navegação dependem disso. Quinta: até hoje isto foi medido em quatro aparelhos, e é amostra — o que sustenta a generalização é o mecanismo, não a contagem.
 
 ---
 
@@ -2814,36 +2773,32 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o crachá de um controle que está no rádio também é o mesmo aparelho de sempre — ele vai para o cabo e volta ao rádio sem trocar de nome.
 
-**Onde olhar.** Os mesmos três lugares, agora nas peças do P3 e do P4: a linha "Sony · Player 3 · cor · rádio" no quadro Gestão de Controles, da aba Conexões; o chip "P3 · cor · rádio" na fita do topo, com a borda pintada; e o cabeçalho do cartão na aba Controles. A marca, a cor e o número têm de sobreviver à travessia; só a palavra do transporte muda. O endereço do aparelho não aparece na tela — a fonte diz que ele é chave de dentro do produto.
+**Onde olhar.** Os mesmos três lugares, agora no P3 e no P4: a linha Sony • Player 3 • cor • BT no quadro Gestão de Controles, da aba Conexões (clique no título para abrir); o chip do P3 na fita do topo, com a borda pintada; e o cabeçalho do cartão na aba Controles. A marca, a cor e o número têm de sobreviver à travessia; só o BT muda. O endereço do aparelho não aparece na tela — ele é chave de dentro do produto.
 
 **Os passos.**
 
-1. Ligue o P1 e o P2 pelo cabo e o P3 e o P4 pelo rádio.
-2. Abra o Hefesto na aba Conexões.
-3. Anote a linha inteira do P3 e a do P4, palavra por palavra.
-4. Anote também as linhas do P1 e do P2, para conferir no fim.
-5. Segure o botão PS do P3 até todas as luzes dele apagarem.
-6. Encaixe um cabo no P3 e depois no PC, sem demorar — do apagar ao encaixe tem de passar menos de trinta segundos.
-7. Dê um toque no botão PS do P3 se ele não acender sozinho ao ser plugado.
-8. Espere o chip dele voltar à fita do topo.
-9. Leia a linha dele agora: a marca, a cor e o número têm de ser os mesmos, e só a palavra do transporte pode ter virado cabo.
-10. Desencaixe o cabo do P3.
-11. Dê um toque no botão PS do P3 para trazê-lo de volta pelo rádio.
-12. Espere o chip dele voltar à fita.
-13. Leia a linha dele outra vez e compare, palavra por palavra, com a que você anotou no começo.
-14. Repita os passos 5 a 13 com o P4.
-15. Leia as linhas do P1 e do P2 e confira que estão como você anotou.
+1. Clique na aba Conexões.
+2. Clique no título Gestão de Controles para abrir o quadro.
+3. Anote a linha inteira de cada um dos quatro controles, palavra por palavra.
+4. Segure o PS do P3 até todas as luzes dele apagarem.
+5. Confira que, enquanto ele está fora, a linha do P4 passou a dizer Player 3.
+6. Encaixe um cabo no P3 e depois no PC; dê um toque no PS dele se ele não acender sozinho.
+7. Espere o chip dele voltar à fita do topo e leia a linha dele: marca, cor e número iguais aos de antes, e só o BT pode ter virado USB.
+8. Desencaixe o cabo do P3 e dê um toque no PS para trazê-lo de volta pelo rádio.
+9. Espere o chip dele voltar à fita e compare a linha, palavra por palavra, com a que você anotou no começo.
+10. Refaça no P4 tudo o que fez no P3, do apagar até a leitura final.
+11. Leia as linhas do P1 e do P2 e confira que estão como você anotou.
 
-**Passa quando.** O P3 e o P4 atravessam a ida ao cabo e a volta ao rádio com a mesma marca, a mesma cor e o mesmo número de jogador. A única coisa do crachá que muda é a palavra do transporte, e ela volta a dizer rádio no fim. Nenhuma linha nova aparece para eles, e o P1 e o P2 ficam parados nos números e nas cores deles.
+**Passa quando.** O P3 e o P4 atravessam a ida ao cabo e a volta ao rádio com a mesma marca, a mesma cor e o mesmo número de jogador. A única coisa do crachá que muda é o BT, que vira USB no cabo e volta a ser BT no fim. Nenhuma linha nova aparece para eles, e o P1 e o P2 ficam parados nos números e nas cores deles.
 
 **Por controle.**
 
 * **P1** — No cabo, testemunha. A linha dele não pode sumir nem trocar de número enquanto o P3 e o P4 atravessam — e é durante a travessia que se olha, não só depois.
 * **P2** — No cabo, testemunha, mesma vigilância. Enquanto o P3 está no fio há TRÊS controles no cabo ao mesmo tempo, e é aí que um crachá frouxo confunde dois aparelhos.
 * **P3** — No rádio, e é o primeiro a atravessar: apaga, vai para o cabo, volta pelo rádio. Marca, cor e número têm de sair iguais dos dois lados.
-* **P4** — No rádio, o segundo a atravessar. Ele é o mais propenso a perder o crachá, porque é o último da fila — se o P3 volta certo e ele não, o achado é do quarto lugar, não do transporte.
+* **P4** — No rádio, o segundo a atravessar. Enquanto o P3 está apagado, ele aparece como Player 3, e volta a Player 4 quando o P3 volta. Ele é o último da fila — se o P3 volta certo e ele não, o achado é do quarto lugar, não do transporte.
 
-**A armadilha.** A armadilha própria deste lado é o sono do controle: um controle que dormiu não reaparece sozinho quando você pluga o cabo — já foi medido nesta casa. Se ele não acender ao ser plugado, dê um toque no PS; sem isso você anotaria "sumiu no cabo" sobre um aparelho que está apenas dormindo. Segunda: o nome da cor pode APARECER só depois de ele ir para o cabo e nunca antes. Isso não é o crachá falhando — é a leitura da cor pelo rádio, que só está provada em duas unidades e tem teste próprio. O que reprova AQUI é a cor MUDAR entre os dois transportes, ou o número trocar. Terceira: são trinta segundos entre apagar e voltar; passando disso ele volta com outro número, e isso é o prazo do lugar guardado. Quarta: não segure o PS por tempo demais ao religar — com uns cinco segundos de botão o aperto é lido como um toque e a Steam abre; se abrir, feche-a e refaça.
+**A armadilha.** A armadilha própria deste lado é o sono do controle: um controle que dormiu não reaparece sozinho quando você pluga o cabo — já foi medido nesta casa. Se ele não acender ao ser plugado, dê um toque no PS; sem isso você anotaria "sumiu no cabo" sobre um aparelho que está apenas dormindo. Segunda: o nome da cor pode APARECER só depois de ele ir para o cabo e nunca antes. Isso não é o crachá falhando — é a leitura da cor pelo rádio, que só está provada em duas unidades e tem teste próprio. O que reprova AQUI é a cor MUDAR entre os dois transportes, ou o número de quem voltou ser outro. Terceira: enquanto um controle está fora, a tela conta só os presentes e os de trás sobem um número; o número de quem volta é o de antes a qualquer tempo, enquanto o serviço estiver de pé. As lampadinhas do aparelho levam cerca de meio minuto para acompanhar a tela. Quarta: não segure o PS por tempo demais ao religar — se a Steam vier para a frente, feche-a e refaça.
 
 ---
 
@@ -2853,26 +2808,22 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o Hefesto não promete atualizar o firmware dos controles pelo cabo — não há botão, não há número de versão, e nenhuma tela finge que existe.
 
-**Onde olhar.** Em nenhum campo, e é isso que se prova. Percorra as dez abas, olhando com atenção os três lugares onde uma coisa dessas caberia: a aba Controles, que é onde mora tudo o que é de um controle só (o cartão de cada um, aberto); a aba Conexões, quadro Gestão de Controles, onde cada controle abre uma linha; e a aba Sistema, onde ficam os botões que mexem no Hefesto e a lista do exame. A palavra firmware APARECE na tela em um lugar só, e não é atualização: é a explicação do botão de microfone, dentro do cartão da aba Controles, que fala em calar o microfone no firmware do controle.
+**Onde olhar.** Em nenhum campo, e é isso que se prova. Percorra as dez abas, olhando com atenção os três lugares onde uma coisa dessas caberia: a aba Controles, que é onde mora tudo o que é de um controle só (o cartão de cada um, aberto); a aba Conexões, com o quadro Gestão de Controles, onde cada controle abre uma linha, e a seção Rádio e Adaptadores; e a aba Sistema, com os botões do alto (Retomar, Reiniciar o serviço, Atualizar e Parar o serviço) e as seções O exame de hoje, Preparar os jogos e Avançado. A palavra firmware não aparece em aba nenhuma.
 
 **Os passos.**
 
-1. Ligue o P1 e o P2 pelo cabo e o P3 e o P4 pelo rádio.
-2. Abra o Hefesto.
-3. Abra a aba Controles.
-4. Clique na linha do P1 para abrir o cartão dele.
-5. Leia o cartão de cima a baixo, procurando um número de versão ou um botão de atualizar.
-6. Clique na linha do P2 e leia o cartão dele do mesmo jeito.
-7. Abra a aba Conexões.
-8. Clique na linha do P1 no quadro Gestão de Controles e leia tudo o que ela mostra aberta.
-9. Clique na linha do P2 e faça a mesma leitura.
-10. Abra a aba Sistema.
-11. Leia os botões do alto e a lista do exame, procurando qualquer coisa que fale em atualizar o controle.
-12. Percorra as outras sete abas, uma de cada vez, procurando o mesmo.
-13. Anote qualquer campo que fale em versão de controle ou em atualizar controle, dizendo em que aba ele está.
-14. Anote onde você encontrou a palavra firmware, se encontrou, e o que a frase inteira dizia.
+1. Clique na aba Controles.
+2. Clique no chip Todos e leia os cartões do P1 e do P2 de cima a baixo, procurando um número de versão ou um botão de atualizar.
+3. Abra a aba Conexões e clique no título Gestão de Controles.
+4. Clique na linha do P1 e leia tudo o que ela mostra aberta; depois faça o mesmo com a do P2.
+5. Leia também a seção Rádio e Adaptadores, da mesma aba.
+6. Abra a aba Sistema e leia os botões do alto e as seções O exame de hoje, Preparar os jogos e Avançado.
+7. Pare o mouse em cima do botão Atualizar, sem clicar, e leia a explicação inteira.
+8. Percorra as outras abas, uma de cada vez, procurando o mesmo.
+9. Anote qualquer campo que fale em versão de controle ou em atualizar controle, dizendo em que aba ele está.
+10. Anote onde você encontrou a palavra firmware, se encontrou, e o que a frase inteira dizia.
 
-**Passa quando.** Nenhuma das dez abas oferece atualizar o firmware de um controle, e nenhuma mostra um número de versão de controle — nem para o P1, nem para o P2, que são os dois do cabo e seriam os únicos por onde uma atualização poderia passar. A única vez que a palavra firmware aparece é na explicação do botão de microfone, e ali ela fala de calar o microfone, não de atualizar nada.
+**Passa quando.** Nenhuma das dez abas oferece atualizar o firmware de um controle, e nenhuma mostra um número de versão de controle — nem para o P1, nem para o P2, que são os dois do cabo e seriam os únicos por onde uma atualização poderia passar. A palavra firmware não aparece em tela nenhuma. E a explicação do botão Atualizar diz que ele relê os atalhos e reescreve os arquivos que a Steam usa — não fala em controle nenhum.
 
 **Por controle.**
 
@@ -2881,7 +2832,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, testemunha. Confira que ele também não mostra versão nenhuma e, sobretudo, que não aparece nele uma frase do tipo "ligue no cabo para atualizar" — uma frase dessas é o produto prometendo o que não faz.
 * **P4** — No rádio, testemunha, mesma conferência e o mesmo cuidado com convites a ligar no cabo.
 
-**A armadilha.** Achar a palavra firmware e concluir que existe atualização. Ela está na tela, dentro do cartão da aba Controles, na explicação do botão de microfone, e ali ela diz que o mudo é aplicado no firmware do controle — é outra coisa. Segunda: os botões da aba Sistema (Reiniciar o serviço, Reaplicar ajustes, Parar o serviço) mexem no Hefesto, não no controle; nenhum deles manda um byte ao aparelho. Terceira: existem programas de fora e o próprio console da Sony que atualizam o DualSense pelo cabo — o que este teste mede é o HEFESTO, e o registro é claro: ele nunca mandou um byte de atualização a aparelho nenhum, por transporte nenhum, e essa metade do assunto não tem nem um degrau de prova, porque nunca foi tentada. Se você encontrar um botão, isso é o achado e vale mais que o teste inteiro.
+**A armadilha.** A maior é o botão Atualizar, da aba Sistema: o nome sugere atualização, e ele não manda um byte ao controle — a explicação dele diz que o serviço relê os atalhos do controle e reescreve os arquivos de ambiente que a Steam usa para lançar os jogos. É por isso que o passo manda ler a explicação antes de anotar qualquer coisa. Os outros botões do alto (Retomar, Reiniciar o serviço, Parar o serviço) mexem no Hefesto, não no controle. Segunda: o painel de Detalhes técnicos, em Avançado, é o registro cru do Hefesto; uma linha de registro com a palavra firmware ali não é oferta de nada. Terceira: existem programas de fora e o próprio console da Sony que atualizam o DualSense pelo cabo — o que este teste mede é o HEFESTO, e o registro é claro: ele nunca mandou um byte de atualização a aparelho nenhum, por transporte nenhum, e essa metade do assunto não tem nem um degrau de prova, porque nunca foi tentada. Se você encontrar um botão, isso é o achado e vale mais que o teste inteiro.
 
 ---
 
@@ -2891,22 +2842,20 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o Hefesto também não promete nada sobre firmware para os dois controles do rádio — nem versão, nem convite a ligar o cabo para atualizar.
 
-**Onde olhar.** Nos mesmos lugares do lado do cabo, agora nas peças do P3 e do P4: o cartão de cada um na aba Controles, aberto; a linha de cada um no quadro Gestão de Controles, na aba Conexões, aberta; e a lista do exame na aba Sistema. Repare também na coluna de cada um nas abas Iluminação, Gatilhos e Vibração, onde o cabeçalho traz o número, a cor e a palavra rádio — é ali que uma ressalva sobre transporte apareceria, se houvesse.
+**Onde olhar.** Nos mesmos lugares do lado do cabo, agora no P3 e no P4: o cartão de cada um na aba Controles, aberto; a linha de cada um no quadro Gestão de Controles, na aba Conexões, aberta, e a seção Rádio e Adaptadores; e as seções O exame de hoje e Preparar os jogos, na aba Sistema. Repare também em onde cada aba nomeia o P3 e o P4 — o chip no alto da coluna da aba Gatilhos, a linha Modelo nas abas Iluminação e Vibração —, que diz o número, a cor e BT: é ali que uma ressalva sobre transporte apareceria, se houvesse.
 
 **Os passos.**
 
-1. Ligue o P1 e o P2 pelo cabo e o P3 e o P4 pelo rádio.
-2. Abra o Hefesto.
-3. Abra a aba Controles.
-4. Clique na linha do P3 para abrir o cartão dele e leia de cima a baixo.
-5. Clique na linha do P4 e leia o cartão dele do mesmo jeito.
-6. Compare o que os cartões do P3 e do P4 mostram com o que os cartões do P1 e do P2 mostram: procure qualquer campo que exista num par e não exista no outro.
-7. Abra a aba Conexões e abra a linha do P3 no quadro Gestão de Controles.
-8. Leia a linha aberta inteira, procurando versão ou convite a atualizar.
-9. Abra a linha do P4 e faça a mesma leitura.
-10. Abra a aba Sistema e leia a lista do exame, procurando qualquer item que fale em atualizar controle.
-11. Percorra as outras abas e leia o cabeçalho da coluna do P3 e do P4 em cada uma.
-12. Anote qualquer frase que sugira que ligar o cabo destravaria uma atualização.
+1. Clique na aba Controles.
+2. Clique no chip Todos e leia os cartões do P3 e do P4 de cima a baixo.
+3. Compare com os cartões do P1 e do P2: procure qualquer campo que exista num par e não exista no outro.
+4. Abra a aba Conexões, clique no título Gestão de Controles e abra a linha do P3.
+5. Leia a linha aberta inteira, procurando versão ou convite a atualizar, e pare o mouse em cima do botão A luz não acende para ler a explicação.
+6. Abra a linha do P4 e faça a mesma leitura.
+7. Leia a seção Rádio e Adaptadores, da mesma aba.
+8. Abra a aba Sistema e leia O exame de hoje e Preparar os jogos, procurando qualquer item que fale em atualizar controle.
+9. Percorra as outras abas e leia o que cada uma diz ao lado do P3 e do P4.
+10. Anote qualquer frase que sugira que ligar o cabo destravaria uma atualização.
 
 **Passa quando.** O P3 e o P4 não mostram número de versão em lugar nenhum, e nenhuma tela sugere que ligar o cabo permitiria atualizar alguma coisa. O que os cartões do rádio mostram é o mesmo que os cartões do cabo mostram: os dois pares não diferem em nada que fale de firmware.
 
@@ -2917,7 +2866,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e é um dos dois que este teste examina. Leia o cartão e a linha dele inteiros. Um convite a ligar o cabo, aqui, seria o achado.
 * **P4** — No rádio, o segundo examinado. Mesma leitura. Ele importa porque é o último a entrar, e campos que nascem torto costumam nascer torto no último.
 
-**A armadilha.** A tentação aqui é o contrário da do cabo: como se sabe que atualização de firmware, quando existe, é coisa de fio, é fácil ler qualquer frase que mencione o cabo como se fosse uma promessa de atualização. Leia a frase inteira antes de anotar — na aba Conexões há avisos legítimos sobre o cabo que falam de luz, de som e de reconexão, e nenhum deles é firmware. Segunda: a palavra firmware que existe na tela está no cartão, na explicação do botão de microfone, e ela vale igual para os do rádio; não é atualização. Terceira, e é o limite honesto deste teste: sobre atualizar firmware não há degrau de prova nenhum registrado, por transporte nenhum — nunca se tentou, nem pelo cabo nem pelo rádio. O que este teste pode afirmar é só o que a tela diz; ele não prova nada sobre o que o aparelho aceitaria.
+**A armadilha.** A tentação aqui é o contrário da do cabo: como se sabe que atualização de firmware, quando existe, é coisa de fio, é fácil ler qualquer frase que mencione o cabo como se fosse uma promessa de atualização. Leia a frase inteira antes de anotar — a explicação do botão A luz não acende fala do cabo e do rádio, e é sobre a barra de luz voltar a obedecer, não firmware. Segunda: o botão Atualizar da aba Sistema não é atualização de controle — ele relê os atalhos e reescreve os arquivos que a Steam usa, e vale igual para os quatro. Terceira, e é o limite honesto deste teste: sobre atualizar firmware não há degrau de prova nenhum registrado, por transporte nenhum — nunca se tentou, nem pelo cabo nem pelo rádio. O que este teste pode afirmar é só o que a tela diz; ele não prova nada sobre o que o aparelho aceitaria.
 
 ---
 
@@ -2925,35 +2874,34 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `identidade.leitura_de_feature @ cabo`
 
-**O que isto prova.** Prova que, quando o Hefesto pergunta uma coisa ao aparelho pelo cabo e a resposta não vem, ele diz que não sabe em vez de escrever um valor bonito.
+**O que isto prova.** Prova que, quando o Hefesto pergunta uma coisa ao aparelho pelo cabo e a resposta não vem, ele diz que não sabe em vez de escrever um valor bonito — e que, quando ela vem, é sempre a mesma.
 
 **Onde olhar.** A única pergunta desse tipo que chega à tela hoje é a da cor de fábrica do plástico. Ela aparece no cabeçalho do cartão de cada controle, na aba Controles, no chip da fita do topo e na linha do quadro Gestão de Controles, na aba Conexões. Quando a resposta não vem, o cabeçalho do cartão e o chip põem um travessão, e a linha da aba Conexões omite o nome. Sobre as outras coisas que o aparelho sabe responder, a fonte não diz onde se leriam — o produto não as mostra em campo nenhum.
 
 **Os passos.**
 
-1. Ligue o P1 e o P2 pelo cabo e o P3 e o P4 pelo rádio.
-2. Abra o Hefesto na aba Controles.
-3. Leia o cabeçalho do cartão do P1 e anote o que está no lugar da cor: um nome, ou um travessão.
-4. Leia o cabeçalho do cartão do P2 e anote do mesmo jeito.
-5. Compare os dois nomes com os plásticos que estão na sua mão.
-6. Abra a aba Conexões e confira que as linhas do P1 e do P2 dizem o mesmo nome que os cartões.
-7. Feche a janela do Hefesto pelo X.
-8. Abra a janela de novo.
-9. Volte à aba Controles e leia os mesmos dois cabeçalhos.
-10. Anote a resposta desta segunda volta, para cada um dos dois.
-11. Repita o fecha-e-abre mais três vezes, anotando os dois cabeçalhos a cada volta.
-12. Conte, no papel, quantas das quatro voltas trouxeram nome e quantas trouxeram travessão, para o P1 e para o P2.
+1. Clique na aba Controles.
+2. Leia o cabeçalho do cartão do P1 e o do P2 e anote o que está no lugar da cor: um nome, ou um travessão.
+3. Compare os dois nomes com os plásticos que estão na sua mão.
+4. Abra a aba Conexões, clique no título Gestão de Controles e confira que as linhas do P1 e do P2 dizem o mesmo nome que os cartões.
+5. Abra a aba Sistema, clique em Reiniciar o serviço e espere a janela voltar; se ela não fechar e abrir sozinha, feche-a pelo X e abra de novo.
+6. Espere a contagem no alto voltar a dizer 2 USB · 2 BT.
+7. Volte à aba Controles, leia os cabeçalhos do P1 e do P2 e anote a resposta desta volta.
+8. Espere dois minutos e meio, leia de novo e anote ao lado.
+9. Repita o reinício e as duas leituras mais três vezes.
+10. Conte, no papel, quantas das quatro voltas trouxeram nome e quantas trouxeram travessão, para o P1 e para o P2, na primeira leitura e na segunda.
+11. Anote também, a cada volta, o que o P3 e o P4 mostraram.
 
-**Passa quando.** Nas quatro voltas o P1 e o P2 responderam a mesma coisa: ou o nome da cor, sempre o mesmo e sempre o do plástico na sua mão, ou o travessão. O que reprova é o nome MUDAR de uma volta para outra, ou aparecer um nome que não é a cor daquele plástico — isso é o Hefesto aceitando como boa uma resposta que não era a que ele pediu.
+**Passa quando.** Nas quatro voltas o P1 e o P2 terminam respondendo a mesma coisa: ou o nome da cor, sempre o mesmo e sempre o do plástico na sua mão, ou o travessão. O que reprova é o nome MUDAR de uma volta para outra, ou aparecer um nome que não é a cor daquele plástico — isso é o Hefesto aceitando como boa uma resposta que não era a que ele pediu.
 
 **Por controle.**
 
-* **P1** — No cabo. Leia o cabeçalho dele nas quatro voltas e escreva a resposta de cada uma, em ordem.
+* **P1** — No cabo. Leia o cabeçalho dele nas quatro voltas, duas vezes em cada uma, e escreva a resposta de cada leitura, em ordem.
 * **P2** — No cabo, e é a segunda amostra. Se um responde sempre e o outro nunca, o achado é daquele aparelho, não do caminho — e essa distinção só existe porque são dois.
 * **P3** — No rádio, testemunha. Anote a resposta dele nas quatro voltas também. Ela é o que separa "o cabo falhou" de "o Hefesto não perguntou a ninguém nesta volta".
 * **P4** — No rádio, testemunha, mesma anotação. Quatro travessões nos quatro controles em todas as voltas é um resultado diferente de dois travessões só no cabo, e a anotação é o que permite dizer qual dos dois aconteceu.
 
-**A armadilha.** O fecha-e-abre é o gesto do teste, e sem ele o teste vira uma foto: a pergunta é feita uma vez por aparelho por sessão, então ler quatro vezes seguidas na mesma janela é ler quatro vezes a mesma resposta guardada. Segunda, e é o defeito que este teste procura: o Hefesto não confere se a resposta que voltou é a resposta da pergunta que ele fez, e não tenta de novo quando ela não vem — numa medição desta casa um controle devolveu uma resposta trocada. Um nome de cor que muda entre voltas, ou que não é a cor do plástico, é exatamente esse defeito aparecendo. Terceira: travessão em todas as voltas, nos quatro, não prova defeito sozinho — pode ser a porta do aparelho fechada nesta máquina. Anote como "ninguém respondeu" e não como "o Hefesto errou". Quarta, e é o limite: esta linha do mapa não tem degrau de prova preenchido. O que já saiu no fio e voltou é a leitura da cor; tudo o mais que o aparelho sabe responder foi lido por instrumento de fora, nunca pelo produto, e nunca chegou à tela.
+**A armadilha.** O reinício é o gesto do teste, e sem ele o teste vira uma foto: o Hefesto guarda a resposta boa até o serviço reiniciar, então ler quatro vezes seguidas é ler quatro vezes a mesma resposta guardada. Reinicie sem jogo aberto: o reinício derruba e levanta os controles que o jogo enxerga. Segunda: a leitura da cor confere se a resposta que voltou é a da pergunta que ela fez, e pergunta de novo depois de 5 segundos, de 30 e de 120 quando a resposta não vem. Um travessão na primeira leitura que vira nome na segunda é o produto funcionando, e a contagem das duas é o dado. Um nome de cor que muda entre voltas, ou que não é a cor do plástico, é resposta trocada aceita como boa — foi esse defeito que se mediu nesta casa com um controle, e é ele que este teste procura. Terceira: travessão em todas as voltas, nos quatro, não prova defeito sozinho — pode ser a porta do aparelho fechada neste computador. Anote como "ninguém respondeu" e não como "o Hefesto errou". Quarta, e é o limite: esta linha do mapa não tem degrau de prova preenchido. A leitura da cor é a única que chega à tela e a única que confere a resposta; tudo o mais que o aparelho sabe responder continua sem conferência e sem nova tentativa, foi lido só por instrumento de fora, e nunca chegou à tela.
 
 ---
 
@@ -2967,21 +2915,18 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **Os passos.**
 
-1. Ligue o P1 e o P2 pelo cabo.
-2. Dê um toque no PS do terceiro controle e espere o chip dele aparecer.
-3. Dê um toque no PS do quarto controle e espere o chip dele aparecer.
-4. Abra o Hefesto na aba Controles.
-5. Leia o cabeçalho do cartão do P3 e anote: nome, ou travessão.
-6. Leia o cabeçalho do cartão do P4 e anote do mesmo jeito.
-7. Compare os dois nomes, se houver, com os plásticos que estão na sua mão.
-8. Feche a janela do Hefesto pelo X.
-9. Abra a janela de novo, sem mexer em nenhum controle.
-10. Leia os cabeçalhos do P3 e do P4 outra vez e anote.
-11. Repita o fecha-e-abre mais três vezes, anotando os dois a cada volta.
-12. Anote também, a cada volta, o que o P1 e o P2 responderam.
-13. Conte no papel quantas voltas trouxeram nome e quantas trouxeram travessão, controle por controle.
+1. Clique na aba Controles.
+2. Leia o cabeçalho do cartão do P3 e o do P4 e anote: nome, ou travessão.
+3. Compare os dois nomes, se houver, com os plásticos que estão na sua mão.
+4. Abra a aba Sistema, clique em Reiniciar o serviço e espere a janela voltar; se ela não fechar e abrir sozinha, feche-a pelo X e abra de novo, sem mexer em nenhum controle.
+5. Espere a contagem no alto voltar a dizer 2 USB · 2 BT.
+6. Volte à aba Controles, leia os cabeçalhos do P3 e do P4 e anote.
+7. Espere dois minutos e meio, leia de novo e anote ao lado.
+8. Repita o reinício e as duas leituras mais três vezes.
+9. Anote também, a cada volta, o que o P1 e o P2 responderam.
+10. Conte no papel quantas voltas trouxeram nome e quantas trouxeram travessão, controle por controle, na primeira leitura e na segunda.
 
-**Passa quando.** Nas quatro voltas o P3 e o P4 responderam a mesma coisa: ou o nome da cor, sempre o mesmo e sempre o do plástico na sua mão, ou o travessão. Um nome que muda entre voltas, ou que não é a cor daquele plástico, reprova. Uma volta com nome e outra com travessão no MESMO controle não reprova sozinha — é o que este teste está medindo, e o número de vezes é o dado.
+**Passa quando.** Nas quatro voltas o P3 e o P4 terminam respondendo a mesma coisa: ou o nome da cor, sempre o mesmo e sempre o do plástico na sua mão, ou o travessão. Um nome que muda entre voltas, ou que não é a cor daquele plástico, reprova. Uma volta com nome e outra com travessão no MESMO controle não reprova sozinha — é o que este teste está medindo, e o número de vezes é o dado.
 
 **Por controle.**
 
@@ -2990,7 +2935,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e é um dos dois medidos. Conte quantas das quatro voltas trouxeram nome. Se trouxe em algumas e travessão em outras, escreva quantas de quantas — esse número É o resultado.
 * **P4** — No rádio, o segundo medido. Mesma contagem. Os dois juntos dizem se a falha é de um aparelho ou do caminho sem fio.
 
-**A armadilha.** A intuição erra o sentido aqui, e vale saber antes: pelo rádio essas perguntas foram medidas MAIS RÁPIDAS que pelo cabo — centésimos de segundo contra dois décimos. Então lentidão não é o esperado. O que existe é um limite do sistema: quando uma resposta sem fio demora demais, ela é abandonada perto dos três segundos, e o Hefesto não tenta de novo — uma falha só já vira travessão até a próxima janela. Por isso as quatro voltas: uma volta só mede um instante. Segunda: o fecha-e-abre é obrigatório, porque a pergunta é feita uma vez por aparelho por sessão; sem ele você lê quatro vezes a mesma resposta guardada. Terceira: se um controle do rádio dormir e cair no meio das voltas, a volta seguinte não mede nada — confira que os quatro chips estão na fita antes de cada leitura. Quarta, e é o limite: esta linha do mapa não tem degrau de prova preenchido, e o que se leu pelo rádio até hoje foi lido por instrumento de fora, com o Hefesto de pé — não pelo produto.
+**A armadilha.** A intuição erra o sentido aqui, e vale saber antes: pelo rádio essas perguntas foram medidas MAIS RÁPIDAS que pelo cabo — centésimos de segundo contra dois décimos. Então lentidão não é o esperado. O que existe é um limite do sistema: quando uma resposta sem fio demora demais, ela é abandonada perto dos três segundos. A leitura da cor pergunta de novo depois de 5 segundos, de 30 e de 120, e só então desiste até o controle sair e voltar — é por isso que cada volta tem duas leituras, e as quatro voltas existem porque uma volta só mede um instante. Segunda: o reinício é obrigatório, porque o Hefesto guarda a resposta boa até o serviço reiniciar; sem ele você lê quatro vezes a mesma resposta guardada. Reinicie sem jogo aberto. Terceira: se um controle do rádio dormir e cair no meio das voltas, a volta seguinte não mede nada — confira que os quatro chips estão na fita antes de cada leitura. Quarta, e é o limite: esta linha do mapa não tem degrau de prova preenchido, e tudo o que se leu pelo rádio além da cor foi lido por instrumento de fora, com o Hefesto de pé — não pelo produto.
 
 ---
 
@@ -3000,27 +2945,24 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, com o controle no cabo, o Hefesto recusa o gesto de refazer a conexão sem fio — e diz por quê, em vez de fingir que fez.
 
-**Onde olhar.** Aba Conexões, quadro Gestão de Controles. Cada controle ligado é uma linha, e clicar na linha abre. Dentro da linha aberta há um botão escrito "A luz não acende". Na linha de um controle que está no cabo ele nasce APAGADO, num cinza diferente dos botões que funcionam, e a explicação aparece ao parar o mouse em cima: ela diz que aquilo só funciona com o controle no rádio e que este controle está no cabo. Não existe botão de parear em aba nenhuma — o Hefesto não pareia e não desemparelha, isso é do sistema.
+**Onde olhar.** Aba Conexões, quadro Gestão de Controles, que nasce recolhido e se abre clicando no título. Cada controle ligado é uma linha, e clicar na linha abre só ela: dentro vêm Microfone e botões, Limite da vibração e um botão escrito A luz não acende. Na linha de um controle que está no cabo esse botão nasce APAGADO, num cinza diferente dos botões que funcionam, e a explicação aparece ao parar o mouse em cima: ela diz que ele só vale no rádio. Parear um aparelho NOVO mora em outra seção da mesma aba, Rádio e Adaptadores, com Conectar e Parear ao lado de cada aparelho que o Hefesto achou por perto; esquecer um controle já pareado não existe em aba nenhuma.
 
 **Os passos.**
 
-1. Ligue o P1 e o P2 pelo cabo e o P3 e o P4 pelo rádio.
-2. Abra o Hefesto e vá para a aba Conexões.
-3. Leia a contagem no alto do quadro Gestão de Controles e confira que ela diz quatro controles, dois no cabo e dois no rádio.
-4. Confira que as linhas do P1 e do P2 terminam com a palavra cabo.
-5. Clique na linha do P1 para abri-la.
-6. Ache o botão "A luz não acende" dentro dela.
-7. Repare que ele está apagado, num tom diferente dos botões que funcionam.
-8. Pare o mouse em cima do botão, sem clicar, e leia a explicação inteira.
-9. Anote a explicação no papel.
-10. Clique no botão mesmo assim.
-11. Olhe o P1 na mesa e confirme que ele não apagou e não caiu.
-12. Confira que a linha dele não passou a mostrar contagem de segundos nem o botão "Cancelar".
-13. Repita os passos 5 a 12 na linha do P2.
-14. Clique na linha do P3 para abri-la e confira que ali o mesmo botão está no tom normal, e não apagado — não clique nele.
-15. Percorra as dez abas e anote se encontrou em alguma delas um botão de parear ou de esquecer um controle.
+1. Clique na aba Conexões.
+2. Clique no título Gestão de Controles para abrir o quadro.
+3. Leia a contagem no alto do quadro e confira que ela diz 4 controles, 2 no cabo e 2 no rádio.
+4. Confira que as linhas do P1 e do P2 terminam com USB.
+5. Clique na linha do P1 para abri-la e ache o botão A luz não acende.
+6. Repare que ele está apagado, num tom diferente dos botões que funcionam.
+7. Pare o mouse em cima do botão, sem clicar, e anote a explicação inteira.
+8. Clique no botão mesmo assim e olhe a borda dele: ela pisca em laranja.
+9. Olhe o P1 e confirme que ele não apagou e não caiu, e que a linha dele não passou a pedir o PS nem mostrou o botão Cancelar.
+10. Repita na linha do P2, da abertura da linha até a conferência do P2 aceso.
+11. Clique na linha do P3 e confira que ali o mesmo botão está no tom normal, e não apagado — não clique nele.
+12. Leia a seção Rádio e Adaptadores e anote se existe, para um controle já ligado, algum botão de esquecer ou de desparear.
 
-**Passa quando.** Nas duas linhas dos controles do cabo o botão está apagado, a explicação diz que aquilo só vale no rádio e nomeia o cabo como a razão, e clicar não derruba o controle nem muda nada na tela. Na linha de um controle do rádio o mesmo botão está no tom normal. E em nenhuma das dez abas existe um botão de parear ou de esquecer um controle.
+**Passa quando.** Nas duas linhas dos controles do cabo o botão está apagado, a explicação diz que ele só vale no rádio, e clicar não derruba o controle — a borda do botão só pisca em laranja. Na linha de um controle do rádio o mesmo botão está no tom normal. E em nenhuma aba existe um botão de esquecer um controle já pareado.
 
 **Por controle.**
 
@@ -3029,7 +2971,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, testemunha, e é a contraprova do teste: se o botão estiver apagado NELE também, a recusa não está olhando o transporte de cada controle — está desligada para todo mundo, e o verde do cabo veio por acaso.
 * **P4** — No rádio, segunda testemunha, e o mesmo olhar: o botão dele tem de estar no tom normal. Não clique em nenhum dos dois.
 
-**A armadilha.** A recusa que interessa é a que EXPLICA. Um botão apagado sem explicação nenhuma passaria neste teste sem merecer, e por isso o passo é parar o mouse em cima e ler a frase inteira ANTES de clicar. Segunda: não clique no botão do P3 nem no do P4 para conferir se funciona — ali ele derruba o controle do rádio de verdade, e isso é outro teste. Terceira: o Hefesto não guarda o pareamento dentro do controle. O que existe é um salva-vidas que copia o pareamento do lado do computador; ele é de linha de comando, pede senha de administrador, e a volta é feita à mão. Nada disso é produto e nada disso aparece nesta tela — se você procurar um botão para isso e não achar, achou o certo. Quarta: a porta que escreveria o pareamento dentro do aparelho existe e só existe pelo cabo, e ela nunca foi usada nesta casa, de propósito — mal formada, ela reescreve o pareamento de um controle que você está usando.
+**A armadilha.** A recusa que interessa é a que EXPLICA, e a explicação mora no próprio botão: por isso o passo é parar o mouse em cima e ler a frase inteira ANTES de clicar. Depois do clique a tela não escreve nada — a resposta é a borda piscar em laranja, que é como toda recusa desta interface se mostra; não procure recado. Segunda: não clique no botão do P3 nem no do P4 para conferir se funciona — ali ele derruba o controle do rádio de verdade, e isso é outro teste. Terceira: o Parear da seção Rádio e Adaptadores é para um aparelho novo que o Hefesto achou por perto, e não é este teste; não clique nele aqui. Quarta: o Hefesto não guarda o pareamento dentro do controle. O que existe é um salva-vidas que copia o pareamento do lado do computador; ele é de linha de comando, pede senha de administrador, e a volta é feita à mão — nada disso é tela. Quinta: a porta que escreveria o pareamento dentro do aparelho existe e só existe pelo cabo, e ela nunca foi usada nesta casa, de propósito — mal formada, ela reescreve o pareamento de um controle que você está usando.
 
 ---
 
@@ -3039,36 +2981,33 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, com o controle no rádio, o Hefesto derruba a conexão sem fio, pede o PS e devolve o controle ao mesmo lugar — sem abrir um segundo assento para ele.
 
-**Onde olhar.** Aba Conexões, quadro Gestão de Controles: a contagem no alto ("4 controles · 2 no cabo · 2 no rádio"), a linha de cada controle ("Sony · Player 3 · cor · rádio") e, dentro da linha aberta, o botão "A luz não acende". No instante do clique aparece no cartão dele um recado dizendo que o controle foi desconectado e pedindo o PS, o botão vira "Cancelar" e os segundos correm para trás até sessenta. No aparelho: a fileira de cinco lampadinhas brancas embaixo do touchpad, que é o que diz o número do jogador.
+**Onde olhar.** Aba Conexões, quadro Gestão de Controles, que se abre clicando no título: a contagem no alto (4 controles • 2 no cabo • 2 no rádio), a linha de cada controle (Sony • Player 3 • cor • BT) e, dentro da linha aberta, o botão A luz não acende, cuja explicação diz que ele derruba o controle do rádio e que o PS é seu. Depois do clique, a espera se escreve na linha do controle: ▲ Aperte PS no controle · procurando…, com os segundos correndo a partir de 60, e o mesmo botão passa a dizer Cancelar. No aparelho: a fileira de cinco lampadinhas brancas embaixo do touchpad, que é o que diz o número do jogador.
 
 **Os passos.**
 
-1. Ligue o P1 e o P2 pelo cabo e o P3 e o P4 pelo rádio.
-2. Abra o Hefesto e vá para a aba Conexões.
-3. Anote a contagem no alto do quadro Gestão de Controles.
-4. Anote o número de Player das quatro linhas.
-5. Confira que a linha do P3 termina com a palavra rádio.
-6. Clique na linha do P3 para abri-la.
-7. Clique no botão "A luz não acende".
-8. Olhe o P3 na mesa e confirme que ele apagou e caiu.
-9. Leia o recado que apareceu no cartão dele e anote a frase inteira.
-10. Confira que o botão passou a dizer "Cancelar" e que os segundos estão correndo para trás.
-11. Aperte uma vez o botão PS do P3.
-12. Espere o chip dele voltar à fita do topo.
-13. Leia de novo a contagem do alto do quadro e as quatro linhas.
-14. Vire o P3 para cima e conte quais das cinco lampadinhas embaixo do touchpad estão acesas.
-15. Repita os passos 6 a 14 no P4.
+1. Clique na aba Conexões.
+2. Clique no título Gestão de Controles para abrir o quadro.
+3. Anote a contagem no alto do quadro e o número de Player das quatro linhas.
+4. Confira que a linha do P3 termina com BT, e clique nela para abri-la.
+5. Pare o mouse em cima do botão A luz não acende, leia a explicação e clique nele.
+6. Olhe o P3 e confirme que ele apagou e caiu.
+7. Anote o que a tela mostra agora: se o pedido de PS com os segundos correndo e o botão Cancelar estão à vista, e em qual linha.
+8. Confira que a linha que era do P4 passou a dizer Player 3, e que as do P1 e do P2 não mudaram.
+9. Aperte uma vez o botão PS do P3 e espere o chip dele voltar à fita do topo.
+10. Leia de novo a contagem e as quatro linhas: o P3 voltou como Player 3, e o P4 voltou a ser Player 4.
+11. Espere meio minuto, vire o P3 para cima e conte quais das cinco lampadinhas embaixo do touchpad estão acesas.
+12. Refaça no P4, da abertura da linha até as lampadinhas.
 
-**Passa quando.** O P3 cai de verdade — ele apaga na mesa —, a tela avisa que o desconectou e pede o PS com os segundos correndo, e depois do PS ele volta na mesma linha, com o mesmo número de Player, sem que nenhuma linha nova apareça para o mesmo controle. A contagem do alto volta ao número de antes. O P4 faz o mesmo quando chega a vez dele. E o P1 e o P2 não se mexem em momento nenhum.
+**Passa quando.** O P3 cai de verdade — ele apaga —, e depois do PS ele volta com o mesmo número de Player, sem que nenhuma linha nova apareça para o mesmo controle. A contagem do alto volta ao número de antes, e as lampadinhas dele, meio minuto depois, mostram o número dele. O P4 faz o mesmo quando chega a vez dele. E o P1 e o P2 não se mexem em momento nenhum.
 
 **Por controle.**
 
-* **P1** — No cabo, testemunha. Anote o número de Player dele antes, e olhe a linha dele DURANTE a ausência do P3, não só no fim — já se mediu, nesta casa, um controle trocando de número enquanto o vizinho estava fora e voltando ao certo depois.
+* **P1** — No cabo, testemunha. Anote o número de Player dele antes, e olhe a linha dele DURANTE a ausência do P3, não só no fim: ele está na frente do P3 na fila, e não pode mudar.
 * **P2** — No cabo, testemunha, mesma vigilância durante a ausência.
-* **P3** — No rádio, e é ESTE primeiro. Abra a linha dele, clique em "A luz não acende", veja o controle apagar na mesa, aperte o PS uma vez e espere voltar.
-* **P4** — No rádio, e é ele que fecha o teste: o segundo do mesmo transporte, feito depois. Se o P3 volta certo e o P4 não, o achado é do quarto lugar na fila, não do rádio.
+* **P3** — No rádio, e é ESTE primeiro. Abra a linha dele, clique em A luz não acende, veja o controle apagar, aperte o PS uma vez e espere voltar.
+* **P4** — No rádio, e é ele que fecha o teste: o segundo do mesmo transporte, feito depois. Enquanto o P3 está fora ele aparece como Player 3, e volta a Player 4 quando o P3 volta. Se o P3 volta certo e o P4 não, o achado é do quarto lugar na fila, não do rádio.
 
-**A armadilha.** O falso verde tem frase própria e é fácil de ler por cima: se a tela responder que o controle não chegou a cair do rádio e que ele continua pareado, nada foi derrubado e nada foi reconectado — o teste não provou coisa nenhuma, refaça. Olhe o controle na mesa: se ele não apagou, não caiu. Segunda, e dá falso vermelho: são sessenta segundos para você apertar o PS, mas o LUGAR do controle fica guardado por trinta. Passando dos trinta ele pode voltar com outro número, e isso é a regra do produto funcionando. Terceira: "Cancelar" não religa nada — se você clicar nele, o controle fica fora do rádio até você apertar o PS por conta própria. Quarta: este gesto refaz a conexão de um controle que JÁ está pareado nesta máquina. O Hefesto não escreve o pareamento dentro do aparelho; se aquele controle nunca foi pareado aqui, o PS não o traz de volta e o teste não roda.
+**A armadilha.** O falso verde é olhar só a tela: se a borda do botão piscar em laranja e o controle não apagar, nada foi derrubado e nada foi reconectado — o teste não provou coisa nenhuma, refaça. Olhe o controle: se ele não apagou, não caiu. Segunda: enquanto o P3 está fora, a tela conta só os presentes e o P4 sobe para Player 3; isso é a regra do produto, e não o defeito. O número do P3 volta a qualquer tempo enquanto o serviço estiver de pé — o que reprova é ele voltar com outro número ou aparecer uma linha a mais. As lampadinhas do aparelho levam cerca de meio minuto para acompanhar a tela, e é por isso que o passo espera antes de contar. Terceira: Cancelar não religa nada — se você clicar nele, o controle fica fora do rádio até você apertar o PS por conta própria. Quarta: este gesto refaz a conexão de um controle que JÁ está pareado neste computador. Parear um aparelho novo é na seção Rádio e Adaptadores, e não é este teste; se aquele controle nunca foi pareado aqui, o PS não o traz de volta e o teste não roda.
 
 ---
 
@@ -3078,37 +3017,33 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o Hefesto distingue cada controle do cabo pelo endereço do próprio aparelho, e não pelo cabo nem pela porta — trocar de porta não cria um controle novo, e trocar os cabos não troca as identidades.
 
-**Onde olhar.** A contagem no alto de qualquer aba ("4 controles: 2 USB · 2 BT"). A fita do topo, com um chip por controle. A aba Controles, com um cartão por controle. E, sobretudo, a aba Conexões, quadro Gestão de Controles: a contagem do quadro diz quantos estão no cabo e quantos no rádio, e cada controle é uma linha que começa com a marca — Sony — seguida do Player, da cor do plástico e da palavra do transporte. O endereço do aparelho em si não aparece em campo nenhum da tela, e isso é decisão registrada: ele é chave de dentro do produto, não vocabulário de tela. O que você vê é a consequência dele.
+**Onde olhar.** A contagem no alto de qualquer aba (2 USB · 2 BT). A fita do topo, com um chip por controle. A aba Controles, com um cartão por controle. E, sobretudo, a aba Conexões, quadro Gestão de Controles (clique no título para abrir): a contagem do quadro diz quantos estão no cabo e quantos no rádio, e cada controle é uma linha que começa com a marca — Sony — seguida do Player, da cor do plástico e de USB ou BT. O endereço do aparelho em si não aparece em campo nenhum da tela, e isso é decisão registrada: ele é chave de dentro do produto, não vocabulário de tela. O que você vê é a consequência dele.
 
 **Os passos.**
 
-1. Ligue o P1 e o P2 pelo cabo e o P3 e o P4 pelo rádio.
-2. Abra o Hefesto na aba Conexões.
-3. Leia a contagem no alto do quadro Gestão de Controles e anote.
-4. Conte as linhas do quadro: têm de ser quatro, uma por controle.
-5. Anote as quatro linhas inteiras, palavra por palavra.
-6. Confira que cada linha começa com a marca Sony.
-7. Desencaixe do PC o cabo do P1 e encaixe-o numa porta USB diferente.
-8. Espere o chip do P1 voltar à fita do topo.
-9. Leia de novo a contagem e as quatro linhas.
-10. Confira que continuam quatro linhas e que nenhuma linha nova apareceu para o P1.
-11. Confira que o P1 voltou com a mesma cor e a mesma marca de antes.
-12. Desencaixe os DOIS cabos do PC ao mesmo tempo.
-13. Espere a contagem do quadro cair para dois controles.
-14. Encaixe os dois cabos de novo, TROCADOS: o cabo que estava no P1 vai para o P2, e o do P2 vai para o P1.
-15. Espere os dois voltarem à fita e leia as quatro linhas outra vez.
-16. Compare a cor de cada linha com o plástico do controle que está na sua mão.
+1. Clique na aba Conexões.
+2. Clique no título Gestão de Controles para abrir o quadro.
+3. Leia a contagem no alto do quadro, conte as linhas — têm de ser quatro — e anote as quatro linhas inteiras, palavra por palavra.
+4. Desencaixe do PC o cabo do P1 e encaixe-o numa porta USB diferente.
+5. Espere o chip do P1 voltar à fita do topo.
+6. Confira que continuam quatro linhas, que nenhuma linha nova apareceu para o P1, e que ele voltou com o mesmo número, a mesma cor e a mesma marca.
+7. Desencaixe os DOIS cabos do PC ao mesmo tempo; se o P1 ou o P2 voltar sozinho pelo BT, segure o PS dele até apagar.
+8. Espere a contagem no alto da janela mostrar só os dois do BT.
+9. Encaixe os dois cabos de novo, TROCADOS: o cabo que estava no P1 vai para o P2, e o do P2 vai para o P1.
+10. Espere os dois voltarem à fita e leia as quatro linhas outra vez.
+11. Compare a cor e o número de cada linha com o plástico do controle que está na sua mão.
+12. Abra a aba Navegação e leia quem diz Navega o PC: se for um controle do BT, segure o PS do P3 e do P4 até apagarem, espere meio minuto e ligue os dois de novo com um toque no PS — se a Steam vier para a frente, feche-a.
 
-**Passa quando.** Com quatro controles ligados há sempre quatro linhas, quatro cartões e quatro chips — nunca três, nunca cinco. Trocar o P1 de porta USB não cria uma linha nova nem apaga a dele. E depois de trocar os dois cabos entre si, cada controle continua carregando a cor do plástico DELE: o Hefesto seguiu o aparelho, e não o cabo nem a porta.
+**Passa quando.** Com quatro controles ligados há sempre quatro linhas, quatro cartões e quatro chips — nunca três, nunca cinco. Trocar o P1 de porta USB não cria uma linha nova nem apaga a dele. E depois de trocar os dois cabos entre si, cada controle continua carregando a cor do plástico DELE e o número dele: o Hefesto seguiu o aparelho, e não o cabo nem a porta.
 
 **Por controle.**
 
-* **P1** — No cabo. É ele que muda de porta USB e depois troca de cabo com o P2. Tem de voltar sempre com a mesma cor e a mesma marca.
-* **P2** — No cabo, e é ele que denuncia o defeito: recebe o cabo do P1 na segunda metade. Se depois da troca ele aparecer com a cor do P1, o Hefesto está identificando o CABO e não o aparelho.
-* **P3** — No rádio, testemunha. A linha dele não pode sumir nem trocar de cor enquanto você mexe nos cabos, e a contagem do quadro tem de continuar dizendo dois no rádio o tempo todo.
+* **P1** — No cabo. É ele que muda de porta USB e depois troca de cabo com o P2. Tem de voltar sempre com a mesma cor, o mesmo número e a mesma marca.
+* **P2** — No cabo, e é ele que denuncia o defeito: recebe o cabo do P1 na segunda metade. Se depois da troca ele aparecer com a cor ou o número do P1, o Hefesto está identificando o CABO e não o aparelho.
+* **P3** — No rádio, testemunha. Enquanto os do cabo estão fora, a linha dele sobe na lista e volta ao lugar quando eles voltam; ela não pode sumir nem trocar de cor, e a contagem do quadro tem de continuar dizendo dois no rádio o tempo todo.
 * **P4** — No rádio, testemunha, mesma conferência. Se os dois do rádio piscarem para fora do quadro quando você desencaixa os dois cabos, o achado é outro e vale anotar à parte.
 
-**A armadilha.** Não procure o endereço do controle na tela: ele não está lá, e não é esquecimento — foi decidido que na tela um controle fala por número, cor e marca, e que o endereço é chave de dentro. Um teste que mandasse achar o endereço mandaria você caçar um campo que não existe. Segunda: trocar de porta ou desencaixar os dois cabos pode mudar o NÚMERO do jogador, e isso não é o defeito daqui — o que este teste olha é se uma linha se DUPLICA e se a cor muda de dono. Terceira: se um controle passar dos trinta segundos fora, ele volta com outro número, porque o lugar guardado vence — faça a troca dos cabos rápido, e se demorar, refaça em vez de anotar reprovação. Quarta: se um dos dois do cabo aparecer sem nome de cor depois da troca, isso é a leitura da cor não tendo respondido, e tem teste próprio; o que reprova AQUI é a cor aparecer no controle errado.
+**A armadilha.** Não procure o endereço do controle na tela: ele não está lá, e não é esquecimento — foi decidido que na tela um controle fala por número, cor e marca, e que o endereço é chave de dentro. Um teste que mandasse achar o endereço mandaria você caçar um campo que não existe. Segunda: enquanto um controle está fora, a tela conta só os presentes, e os de trás sobem um número; quando ele volta, cada um recupera o seu, a qualquer tempo, enquanto o serviço estiver de pé. Então o número no fim é prova, e não ruído: o P1 voltar com o número do P2 é o Hefesto seguindo o cabo. Terceira: um controle que perde o cabo pode voltar sozinho pelo BT; se isso acontecer antes do cabo trocado, apague-o pelo PS, senão ele entra pelo rádio e o teste mede outra coisa. Quarta: o posto de Navega o PC não volta com o número — com os dois do cabo fora por mais de meio minuto, ele fica com um controle do BT, e o último passo existe para devolvê-lo. Quinta: se um dos dois do cabo aparecer sem nome de cor depois da troca, isso é a leitura da cor não tendo respondido, e tem teste próprio; o que reprova AQUI é a cor aparecer no controle errado.
 
 ---
 
@@ -3116,35 +3051,33 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `identidade.req_dev_info @ rádio`
 
-**O que isto prova.** Prova que o Hefesto reconhece cada controle do rádio pelo aparelho, e não pela ordem de chegada — ligar os dois na ordem invertida não faz a cor trocar de dono.
+**O que isto prova.** Prova que o Hefesto reconhece cada controle do rádio pelo aparelho, e não pela ordem de chegada — ligar os dois na ordem invertida não faz a cor nem o número trocarem de dono.
 
-**Onde olhar.** Aba Conexões, quadro Gestão de Controles: a contagem no alto e a linha de cada controle, "Sony · Player 3 · cor · rádio". Também a fita do topo, com um chip por controle, e a aba Controles, com um cartão por controle. O endereço do aparelho não aparece em campo nenhum — a fonte diz que ele é chave de dentro do produto. O que se vê é a consequência: quem é quem depois de todo mundo sair e voltar fora de ordem.
+**Onde olhar.** Aba Conexões, quadro Gestão de Controles (clique no título para abrir): a contagem no alto e a linha de cada controle, Sony • Player 3 • cor • BT. Também a fita do topo, com um chip por controle, e a aba Controles, com um cartão por controle. O endereço do aparelho não aparece em campo nenhum — ele é chave de dentro do produto. O que se vê é a consequência: quem é quem depois de todo mundo sair e voltar fora de ordem.
 
 **Os passos.**
 
-1. Abra o Hefesto e clique na aba Conexões.
-2. Leia as quatro linhas do quadro Gestão de Controles e copie-as num papel, palavra por palavra.
-3. Confira qual plástico está na sua mão para cada uma das quatro linhas, e anote ao lado.
-4. Segure o botão PS do P3 até todas as luzes dele apagarem.
-5. Segure o botão PS do P4 até todas as luzes dele apagarem.
-6. Confira que a contagem do quadro caiu para dois controles antes de religar qualquer um.
-7. Dê um toque no PS do controle que ANTES era o P4 — agora ele entra primeiro.
-8. Veja o chip dele aparecer na fita.
-9. Dê um toque no PS do controle que antes era o P3.
-10. Veja o chip dele aparecer na fita.
-11. Leia as quatro linhas de novo e compare a COR de cada uma com o plástico que está na sua mão.
-12. Conte as linhas e confira que continuam quatro, sem nenhum controle repetido.
+1. Clique na aba Conexões.
+2. Clique no título Gestão de Controles para abrir o quadro.
+3. Copie as quatro linhas num papel, palavra por palavra, e anote ao lado de cada uma qual plástico ela é.
+4. Segure o PS do P3 até todas as luzes dele apagarem, e depois o do P4.
+5. Confira que a contagem no alto da janela passou a mostrar só os dois do USB antes de religar qualquer um.
+6. Dê um toque no PS do controle que ANTES era o P4 — agora ele entra primeiro — e veja o chip dele aparecer na fita.
+7. Leia a linha dele e anote: enquanto ele está sozinho no BT, ele aparece como Player 3.
+8. Dê um toque no PS do controle que antes era o P3 e veja o chip dele aparecer.
+9. Leia as quatro linhas de novo e compare a COR e o NÚMERO de cada uma com o que você anotou no começo.
+10. Conte as linhas e confira que continuam quatro, sem nenhum controle repetido.
 
-**Passa quando.** Cada um dos dois controles do rádio voltou carregando a cor do plástico DELE, mesmo tendo entrado na ordem invertida. O número do jogador pode ter trocado entre os dois — isso é a ordem de entrada, e é esperado —, mas a cor não pode seguir a posição. E continuam quatro linhas, sem nenhuma sobrando e sem nenhum controle aparecendo duas vezes.
+**Passa quando.** Cada um dos dois controles do rádio voltou carregando a cor do plástico DELE, mesmo tendo entrado na ordem invertida. Enquanto só o antigo P4 estava de volta ele aparecia como Player 3, e, com os dois de volta, cada um recuperou o próprio número. E continuam quatro linhas, sem nenhuma sobrando e sem nenhum controle aparecendo duas vezes.
 
 **Por controle.**
 
-* **P1** — No cabo, testemunha. A linha dele não pode sumir nem trocar de cor enquanto os do rádio saem e voltam.
+* **P1** — No cabo, testemunha. A linha dele não pode sumir nem trocar de cor ou de número enquanto os do rádio saem e voltam.
 * **P2** — No cabo, testemunha, mesma conferência. Os dois do cabo juntos provam que a bagunça, se houver, ficou no rádio.
 * **P3** — No rádio. Sai primeiro e volta por último — o inverso da ordem em que entrou no começo.
-* **P4** — No rádio, e é ele que denuncia o defeito: sai por último e volta primeiro. Se ele voltar com a cor que estava na terceira posição, o nome está vindo do LUGAR e não do aparelho — isso já aconteceu nesta casa e é exatamente o que este teste caça.
+* **P4** — No rádio, e é ele que denuncia o defeito: sai por último e volta primeiro. Se, com os dois de volta, ele ficar com a cor ou o número que estavam na terceira posição, o nome está vindo do LUGAR e não do aparelho — isso já aconteceu nesta casa e é exatamente o que este teste caça.
 
-**A armadilha.** A ordem de partida é a da faixa fixa do topo da página: o P1 e o P2 já estão no cabo, e pelo rádio o P3 entrou ANTES do P4. É essa ordem que você inverte no meio do teste, e é por isso que a primeira coisa a fazer é copiar as quatro linhas — se você não tiver certeza de quem entrou primeiro, o papel do começo é quem responde. O número do jogador VAI trocar entre os dois, e isso não é o defeito: quem manda no número é a ordem de entrada, e você inverteu a ordem de propósito. Confundir as duas coisas reprova um produto que está certo — o que este teste olha é a COR, que tem de seguir o plástico. Segunda: se um dos dois voltar sem nome de cor, a linha simplesmente não traz o nome, e isso é achado da leitura da cor pelo rádio, que tem teste próprio; aqui o que reprova é a cor TROCAR DE DONO. Terceira: espere a contagem cair para dois antes de religar. Religar com o Hefesto ainda contando quatro mede outra coisa, e o lugar guardado por trinta segundos pode devolver os números antigos e esconder o defeito. Quarta: não plugue cabo em nenhum dos dois durante o teste — pelo cabo a identidade tem outro caminho, e uma passagem pelo fio no meio embaralharia o resultado.
+**A armadilha.** A ordem de partida importa, e é por isso que a primeira coisa a fazer é copiar as quatro linhas — se você não tiver certeza de quem entrou primeiro, o papel do começo é quem responde. O número na tela é contado só entre os presentes, pela ordem em que cada controle chegou pela primeira vez desde que o serviço subiu: enquanto o antigo P3 está fora, o antigo P4 aparece como Player 3, e isso não é defeito; com os dois de volta, cada um tem de recuperar o seu. Não reinicie o serviço no meio do teste — o reinício apaga essa ordem, e aí os números passam a seguir a ordem de entrada. As lampadinhas do aparelho levam cerca de meio minuto para acompanhar a tela; olhe a tela. Segunda: se um dos dois voltar sem nome de cor, a linha simplesmente não traz o nome, e isso é achado da leitura da cor pelo rádio, que tem teste próprio; aqui o que reprova é a cor TROCAR DE DONO. Terceira: espere a contagem cair antes de religar — religar com o Hefesto ainda contando quatro mede outra coisa. Quarta: não plugue cabo em nenhum dos dois durante o teste — pelo cabo a identidade tem outro caminho, e uma passagem pelo fio no meio embaralharia o resultado.
 
 ---
 
@@ -3154,33 +3087,29 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o Hefesto nunca nomeia um controle do cabo por um número de placa — o crachá na tela é o número do jogador, a cor e a marca, e mais nada.
 
-**Onde olhar.** Em nenhum campo, e é isso que se prova. Os lugares onde um controle é NOMEADO na tela são quatro: o chip da fita do topo (número, cor e transporte); o cabeçalho do cartão na aba Controles; o cabeçalho da coluna nas abas Iluminação, Gatilhos, Vibração, Navegação e Jogar; e a linha do quadro Gestão de Controles, na aba Conexões (marca, Player, cor, transporte). Em nenhum deles deve aparecer um número de placa, uma sigla de revisão ou um número em hexadecimal — aqueles que começam com zero-x.
+**Onde olhar.** Em nenhum campo, e é isso que se prova. Os lugares onde um controle é NOMEADO na tela são estes: o chip da fita do topo (número, cor e USB ou BT); o cabeçalho do cartão na aba Controles; o cartão dele em O controle é visto como:, na aba Jogar; os cartões do alto da aba Navegação; o chip no alto da coluna dele na aba Gatilhos; a linha Modelo nas abas Iluminação e Vibração; a linha do quadro Gestão de Controles, na aba Conexões (marca, Player, cor, USB ou BT); e o nome de cada aparelho na seção Rádio e Adaptadores, da mesma aba. Em nenhum deles deve aparecer um número de placa, uma sigla de revisão ou um número em hexadecimal — aqueles que começam com zero-x.
 
 **Os passos.**
 
-1. Ligue o P1 e o P2 pelo cabo e o P3 e o P4 pelo rádio.
-2. Abra o Hefesto.
-3. Leia os quatro chips da fita do topo e escreva no papel exatamente o que cada um diz.
-4. Abra a aba Controles e leia o cabeçalho do cartão do P1 e o do P2.
-5. Clique na linha do P1 para abrir o cartão e leia tudo o que está dentro, procurando um número de placa ou de revisão.
-6. Clique na linha do P2 e faça a mesma leitura.
-7. Abra a aba Conexões e leia as linhas do P1 e do P2 no quadro Gestão de Controles.
-8. Abra as duas linhas e leia o que aparece dentro de cada uma.
-9. Abra as abas Iluminação, Gatilhos, Vibração e Navegação e leia o cabeçalho das colunas do P1 e do P2 em cada uma.
-10. Anote qualquer número que apareça e que não seja bateria, volume, brilho ou porcentagem.
-11. Se algum número aparecer, anote em que aba, em que campo e qual controle.
-12. Compare o número anotado do P1 com o do P2: se forem diferentes, anote isso também.
+1. Clique na aba Controles.
+2. Leia os quatro chips da fita do topo e escreva no papel exatamente o que cada um diz.
+3. Clique no chip Todos e leia os cartões do P1 e do P2 inteiros, procurando um número de placa ou de revisão.
+4. Abra a aba Conexões, clique no título Gestão de Controles e leia as linhas do P1 e do P2, abertas.
+5. Leia também os nomes dos aparelhos na seção Rádio e Adaptadores.
+6. Abra as abas Jogar, Gatilhos, Iluminação, Vibração e Navegação e leia, em cada uma, onde o P1 e o P2 são nomeados.
+7. Anote qualquer número que apareça junto do nome de um controle e que não seja bateria, volume, brilho, porcentagem ou o código de cor que começa com #.
+8. Se algum número aparecer, anote em que aba, em que campo e qual controle, e compare o do P1 com o do P2.
 
-**Passa quando.** Em nenhum lugar da tela o P1 ou o P2 é nomeado por um número de placa, uma revisão ou um número em hexadecimal. O que os nomeia é o número do jogador, a cor do plástico, a marca e a palavra do transporte.
+**Passa quando.** Em nenhum lugar da tela o P1 ou o P2 é nomeado por um número de placa, uma revisão ou um número em hexadecimal. O que os nomeia é o número do jogador, a cor do plástico, a marca e USB ou BT.
 
 **Por controle.**
 
-* **P1** — No cabo. Leia os quatro lugares onde ele é nomeado: o chip, o cabeçalho do cartão, o cabeçalho da coluna nas outras abas e a linha da aba Conexões.
-* **P2** — No cabo, e ele importa por uma razão precisa: a placa dele é DIFERENTE da do P1 nesta mesa. Se algum campo mostrasse a placa, os dois números apareceriam diferentes e seria fácil confundir isso com identidade de verdade.
-* **P3** — No rádio, testemunha. A mesma varredura nos quatro lugares, para o caso de o número aparecer só de um lado.
+* **P1** — No cabo. Leia todos os lugares onde ele é nomeado: o chip, o cabeçalho do cartão, os cartões e colunas das outras abas e a linha da aba Conexões.
+* **P2** — No cabo, e ele importa por uma razão precisa: a placa dele é DIFERENTE da do P1 nesta bancada. Se algum campo mostrasse a placa, os dois números apareceriam diferentes e seria fácil confundir isso com identidade de verdade.
+* **P3** — No rádio, testemunha. A mesma varredura em todos os lugares, para o caso de o número aparecer só de um lado.
 * **P4** — No rádio, testemunha, mesma varredura.
 
-**A armadilha.** Este número existe, o computador o lê de graça, sem senha e sem atrapalhar nada, e os quatro controles desta mesa têm valores diferentes — o que o faz PARECER um bom crachá. Ele não é, e a decisão de não usá-lo está registrada: ele diz a revisão da PLACA, e os quatro só se distinguem porque foram comprados em lotes diferentes. Dois controles da mesma cor comprados juntos teriam o mesmo número, e quem nomeasse jogador por ele veria dois "controles iguais" no dia da compra. Segunda: não confunda com o nome do modelo do aparelho, que é outra coisa e pode aparecer legitimamente. Terceira, e vale como aviso e não como reprovação: se um número de placa aparecer na tela, ele pode estar IGUAL nos quatro — o controle de mentira que o Hefesto cria para o jogo carrega gravada a placa de um dos controles dela. Um número igual nos quatro não é sinal de que a leitura funciona; é sinal do contrário.
+**A armadilha.** Este número existe, o computador o lê de graça, sem senha e sem atrapalhar nada, e os quatro controles desta bancada têm valores diferentes — o que o faz PARECER um bom crachá. Ele não é, e a decisão de não usá-lo está registrada: ele diz a revisão da PLACA, e os quatro só se distinguem porque foram comprados em lotes diferentes. Dois controles da mesma cor comprados juntos teriam o mesmo número, e quem nomeasse jogador por ele veria dois "controles iguais" no dia da compra. Segunda: o código ao lado de Barra de luz, no cartão da aba Controles — algo como #7EB8D4 —, é a cor que o Hefesto pinta na barra daquele jogador, e não placa. Terceira: não confunda com o nome de fábrica da cor, como Cosmic Red, que o Hefesto tira do aparelho e aparece legitimamente. Quarta, e vale como aviso e não como reprovação: se um número de placa aparecer na tela, ele pode estar IGUAL nos quatro — o controle de mentira que o Hefesto cria para o jogo carrega gravada a placa de um dos controles desta bancada. Um número igual nos quatro não é sinal de que a leitura funciona; é sinal do contrário.
 
 ---
 
@@ -3190,35 +3119,31 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o Hefesto também não nomeia um controle do rádio por número de placa — nem quando ele cai e volta, que é quando um produto desesperado se agarraria a qualquer número.
 
-**Onde olhar.** Os mesmos quatro lugares onde um controle é nomeado: o chip da fita do topo, o cabeçalho do cartão na aba Controles, o cabeçalho da coluna nas abas Iluminação, Gatilhos, Vibração, Navegação e Jogar, e a linha do quadro Gestão de Controles, na aba Conexões. Nenhum deles deve trazer número de placa, sigla de revisão ou número em hexadecimal — nem com os controles estáveis, nem no instante em que um deles reaparece.
+**Onde olhar.** Os mesmos lugares onde um controle é nomeado: o chip da fita do topo, o cabeçalho do cartão na aba Controles, o cartão em O controle é visto como: na aba Jogar, os cartões do alto da aba Navegação, o chip no alto da coluna na aba Gatilhos, a linha Modelo nas abas Iluminação e Vibração, a linha do quadro Gestão de Controles e o nome de cada aparelho em Rádio e Adaptadores, na aba Conexões. Nenhum deles deve trazer número de placa, sigla de revisão ou número em hexadecimal — nem com os controles estáveis, nem no instante em que um deles reaparece.
 
 **Os passos.**
 
-1. Ligue o P1 e o P2 pelo cabo e o P3 e o P4 pelo rádio.
-2. Abra o Hefesto.
-3. Leia os chips do P3 e do P4 na fita do topo e escreva no papel o que cada um diz.
-4. Abra a aba Controles e leia o cabeçalho do cartão do P3 e o do P4.
-5. Abra os dois cartões e leia tudo o que está dentro, procurando número de placa ou de revisão.
-6. Abra a aba Conexões e abra as linhas do P3 e do P4 no quadro Gestão de Controles.
-7. Leia as duas linhas abertas inteiras.
-8. Abra as abas Iluminação, Gatilhos, Vibração e Navegação e leia o cabeçalho das colunas do P3 e do P4.
-9. Segure o botão PS do P3 até todas as luzes dele apagarem.
-10. Espere a contagem do quadro cair para três controles.
-11. Aperte o PS do P3 uma vez para religá-lo.
-12. Olhe a linha dele na aba Conexões no instante em que ela reaparece e leia o que está escrito.
-13. Abra o cartão do P3 na aba Controles e leia de novo, procurando qualquer número que não estivesse lá antes.
-14. Anote qualquer número que apareça, dizendo em que aba, em que campo e em que momento.
+1. Clique na aba Controles.
+2. Leia os chips do P3 e do P4 na fita do topo e escreva no papel o que cada um diz.
+3. Clique no chip Todos e leia os cartões do P3 e do P4 inteiros, procurando número de placa ou de revisão.
+4. Abra a aba Conexões, clique no título Gestão de Controles e leia as linhas do P3 e do P4, abertas, e os nomes dos aparelhos na seção Rádio e Adaptadores.
+5. Abra as abas Jogar, Gatilhos, Iluminação, Vibração e Navegação e leia, em cada uma, onde o P3 e o P4 são nomeados.
+6. Volte à aba Conexões e segure o PS do P3 até todas as luzes dele apagarem.
+7. Espere a contagem do quadro Gestão de Controles cair para três controles.
+8. Aperte o PS do P3 uma vez para religá-lo, e leia a linha dele no instante em que ela reaparece.
+9. Abra o cartão do P3 na aba Controles e leia de novo, procurando qualquer número que não estivesse lá antes.
+10. Anote qualquer número que apareça, dizendo em que aba, em que campo e em que momento.
 
-**Passa quando.** Nem com os quatro parados, nem no instante em que o P3 reaparece, nenhum campo mostra um número de placa, uma revisão ou um número em hexadecimal. O P3 e o P4 continuam nomeados por número de jogador, cor, marca e a palavra rádio — antes e depois da queda.
+**Passa quando.** Nem com os quatro parados, nem no instante em que o P3 reaparece, nenhum campo mostra um número de placa, uma revisão ou um número em hexadecimal. O P3 e o P4 continuam nomeados por número de jogador, cor, marca e BT — antes e depois da queda.
 
 **Por controle.**
 
 * **P1** — No cabo, testemunha. Leia o cabeçalho do cartão dele antes e depois da queda do P3: nenhum número novo pode nascer ali por causa do vizinho.
 * **P2** — No cabo, testemunha, mesma leitura antes e depois.
 * **P3** — No rádio, e é ESTE que cai e volta. O instante do reaparecimento é o momento do teste: é aí que um produto que não sabe quem chegou se agarraria a um número de placa para decidir.
-* **P4** — No rádio, testemunha, e a que mais importa: é o outro do mesmo transporte. Se um número aparecer nele enquanto o P3 está fora, o achado é do rádio ficar sozinho, não da volta.
+* **P4** — No rádio, testemunha, e a que mais importa: é o outro do mesmo transporte. Enquanto o P3 está fora ele aparece como Player 3 — é a tela contando só os presentes. Se um número de placa aparecer nele nesse meio-tempo, o achado é do rádio ficar sozinho, não da volta.
 
-**A armadilha.** A leitura deste número não muda com o transporte: ela sai do mesmo lugar no computador, de graça, esteja o controle no cabo ou no rádio. Então não espere ver uma diferença entre este teste e o do cabo — o que muda aqui é o MOMENTO em que se olha, e o momento é o da volta. Segunda: os quatro controles desta mesa têm placas diferentes, e isso é acaso de lote, não identidade; dois da mesma cor comprados juntos teriam o mesmo número. Terceira: se um número de placa aparecer, confira se ele é IGUAL nos quatro antes de comemorar — o controle de mentira que o Hefesto cria para o jogo carrega gravada a placa de um dos aparelhos dela, e um número igual nos quatro é sinal de que ninguém leu nada. Quarta: se o P3 demorar mais de trinta segundos para voltar, ele volta com outro número de jogador, e isso é a regra do produto, não a placa mandando na identidade.
+**A armadilha.** A leitura deste número não muda com o transporte: ela sai do mesmo lugar no computador, de graça, esteja o controle no cabo ou no rádio. Então não espere ver uma diferença entre este teste e o do cabo — o que muda aqui é o MOMENTO em que se olha, e o momento é o da volta. Segunda: os quatro controles desta bancada têm placas diferentes, e isso é acaso de lote, não identidade; dois da mesma cor comprados juntos teriam o mesmo número. Terceira: o código ao lado de Barra de luz, no cartão — algo como #7EB8D4 —, é a cor da barra daquele jogador, e não placa. Quarta: se um número de placa aparecer, confira se ele é IGUAL nos quatro antes de comemorar — o controle de mentira que o Hefesto cria para o jogo carrega gravada a placa de um dos aparelhos desta bancada, e um número igual nos quatro é sinal de que ninguém leu nada. Quinta: enquanto o P3 está fora, o P4 aparece como Player 3 e volta a Player 4 quando o P3 volta; isso é a tela contando os presentes, e não a placa mandando na identidade.
 
 ---
 
