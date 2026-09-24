@@ -34,6 +34,10 @@ SCRIPTS_DE_ROOT = {
     "bt_active_mode.sh": {"HEFESTO_BT_LOG_DEST"},
     "bt_health_watchdog.sh": {"HEFESTO_BT_LOG_DEST"},
     "bt_ponte_privilegiada.sh": set(),
+    # STORM-USB-01 (conferência de 24/09): o ramo do cabo escreve no
+    # `usbhid/bind` de `HEFESTO_USB_DRIVERS_DIR` — gancho de DESTINO num script
+    # que o watchdog roda como root e o doctor manda rodar com sudo.
+    "bt_rebind_orphans.sh": {"HEFESTO_BT_LOG_DEST"},
 }
 
 _GUARDA = re.compile(
