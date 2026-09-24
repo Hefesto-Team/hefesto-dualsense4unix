@@ -923,6 +923,35 @@ def test_o_minus_71_de_outro_boot_e_lido_pelo_lugar(tmp_path: Path) -> None:
     assert laudo.sem_endereco == 0
 
 
+def test_dos_dois_lados_da_entrada_usb3_fica_o_que_tem_aparelho(tmp_path: Path) -> None:
+    """O lugar é o mesmo nos lados 2.0 e 3.x de uma entrada; o caminho de hoje é
+    o do lado que tem aparelho agora — e, sem nenhum, o 2.0.
+
+    A MORDIDA: tire a preferência por quem está presente no ``_porta_de_hoje`` e
+    o -71 de ontem cai no lado 2.0 vazio, com o aparelho de hoje no 3.x.
+    """
+    raiz = tmp_path / "sys" / "bus" / "usb" / "devices"
+    raiz.mkdir(parents=True)
+    for bus, pci in ((1, PCI_DO_HUB), (2, PCI_DO_HUB), (3, PCI_DO_RADIO), (4, PCI_DO_RADIO)):
+        alvo = tmp_path / "sys" / "devices" / "pci0000:00" / PONTE_PCI / pci / f"usb{bus}"
+        alvo.mkdir(parents=True)
+        os.symlink(alvo, raiz / f"usb{bus}")
+    linha = (
+        "2026-09-23T21:00:00-03:00 [USB-71] usb 3-4: device descriptor read/64, error -71"
+        f" · lugar pci-{PCI_DO_HUB}-usb-0:4"
+    )
+
+    def porta_do_laudo() -> list[str]:
+        laudo = storm_por_porta(
+            linhas=[linha], hoje=datetime.date(2026, 9, 24), raiz_usb=raiz, nomear=em._sem_nome
+        )
+        return [p.porta for p in laudo.portas]
+
+    assert porta_do_laudo() == ["1-4"], "sem aparelho em nenhum dos lados, vale o 2.0"
+    (raiz / "2-4").mkdir()
+    assert porta_do_laudo() == ["2-4"], "o aparelho de hoje está no lado 3.x"
+
+
 # --- a ponte: o verbo novo ------------------------------------------------------
 
 
