@@ -944,8 +944,14 @@ def test_a_unit_do_vigia_deixa_o_sudo_funcionar() -> None:
 
 
 def test_o_servico_passa_pelo_anotar() -> None:
+    """O serviço de verdade põe o ``anotar`` depois do ``classify``, com a trava volátil.
+
+    A trava mora no diretório de execução (que o uninstall apaga inteiro), e
+    não no estado: um arquivo que sobrasse ali seguraria o ``rmdir`` do estado.
+    """
     texto = VIGIA.read_text(encoding="utf-8")
-    assert '| classify | anotar "${STATE_DIR}/kernel-watch.religar" >>"${LOG}"' in texto
+    assert '| classify | anotar "${TRAVA_DO_RELIGAR}" >>"${LOG}"' in texto
+    assert 'TRAVA_DO_RELIGAR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hefesto-dualsense4unix"' in texto
 
 
 # --- o religar: o orçamento do aviso -------------------------------------------

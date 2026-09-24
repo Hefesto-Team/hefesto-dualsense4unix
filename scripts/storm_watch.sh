@@ -497,6 +497,16 @@ mkdir -p "${STATE_DIR}"
 LOG="${STATE_DIR}/kernel.log"
 LEGACY_LOG="${STATE_DIR}/storm.log"
 
+# A TRAVA DO RELIGAR (STORM-USB-02) é volátil como o que ela guarda: mora no
+# diretório de execução do usuário, que some no fim da sessão e que o uninstall
+# apaga inteiro. Só no estado, que persiste, se aquele não existir.
+TRAVA_DO_RELIGAR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hefesto-dualsense4unix"
+if mkdir -p "${TRAVA_DO_RELIGAR}" 2>/dev/null && [[ -w "${TRAVA_DO_RELIGAR}" ]]; then
+    TRAVA_DO_RELIGAR="${TRAVA_DO_RELIGAR}/kernel-watch.religar"
+else
+    TRAVA_DO_RELIGAR="${STATE_DIR}/kernel-watch.religar"
+fi
+
 # Compat: storm.log preservado se for arquivo real; symlink se não existir.
 if [[ ! -e "${LEGACY_LOG}" && ! -L "${LEGACY_LOG}" ]]; then
     ln -s "kernel.log" "${LEGACY_LOG}" 2>/dev/null || true
@@ -535,10 +545,10 @@ trap 'kill "${BT_LOOP_PID}" 2>/dev/null' EXIT INT TERM
 # «BT socket write error» da família 2A.
 # --case-sensitive=false: sem smartcase surpresa ("Bluetooth: hci" tem maiúscula).
 # O `anotar` vem DEPOIS do `classify` (STORM-USB-02): põe o lugar na linha do -71
-# e chama o religar na probe perdida, com a trava do religar no estado dela.
+# e chama o religar na probe perdida, segurando a trava do religar.
 journalctl -f "${DESDE[@]}" -o short-iso --case-sensitive=false --grep="${GREP_UNION}" \
     _TRANSPORT=kernel + _SYSTEMD_UNIT=bluetooth.service \
-    2>>"${LOG}" | classify | anotar "${STATE_DIR}/kernel-watch.religar" >>"${LOG}"
+    2>>"${LOG}" | classify | anotar "${TRAVA_DO_RELIGAR}" >>"${LOG}"
 
 echo "# $(date '+%F %T') kernel-watch terminou inesperadamente (journalctl caiu?) — a unit re-tenta" >>"${LOG}"
 exit 1
