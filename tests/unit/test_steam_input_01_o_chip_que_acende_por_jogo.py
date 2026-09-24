@@ -649,6 +649,31 @@ def test_o_segundo_clique_que_nao_pode_recusa_com_a_frase_do_dono(
     assert steam.aberta, "a Steam ficou fechada depois da recusa"
 
 
+def test_com_a_ponte_de_pe_o_segundo_clique_nao_fecha_a_steam_por_nada(
+        lar, monkeypatch) -> None:
+    """A ponte subiu entre os dois cliques: o segundo não fecha a Steam.
+
+    O caso é real: ela fecha a Steam sozinha depois do primeiro clique, o
+    guarda do vdf liga o jogo na saída, e ela reabre a Steam dentro dos 20 s.
+    O rótulo ainda diz «Fechar a Steam?», e fechá-la de novo seria por nada.
+
+    A MORDIDA: tire o `if _o_que_o_vdf_diz(alvo) == ponte.LIGADO` de
+    `a01_jogar._fechar_a_steam_e_ligar` e a Steam fecha aqui.
+    """
+    steam = SteamDeMentira(monkeypatch)
+    aba.modo_steam(_ctx(), {"texto": "Steam Input"}, PonteDeMentira())
+    steam.aberta = False
+    ponte.garantir_ponte(allowlist=[APPID])       # o guarda, na saída da Steam
+    steam.aberta = True
+    assert _valor(lar, APPID) == ponte.LIGADO
+
+    resposta = aba.modo_steam(_ctx(), _o_segundo_clique(), PonteDeMentira())
+
+    assert steam.fechou == 0, "a ponte já estava de pé e a Steam fechou assim mesmo"
+    assert resposta == {"blocos": {
+        f'[data-gesto="{aba.GESTO_DO_STEAM_INPUT}"]': "Steam Input"}}
+
+
 def test_outro_chip_desarma_o_steam_input(lar, monkeypatch) -> None:
     """Armado o «Steam Input», clicar em outro chip desarma — e o rótulo volta.
 

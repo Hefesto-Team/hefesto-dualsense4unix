@@ -3490,6 +3490,10 @@ def _fechar_a_steam_e_ligar(alvo: str) -> dict[str, Any]:
     if status in ("appid_invalido", "erro"):
         raise RuntimeError(str(format_game_broken_result(status=status, appid=alvo)))
     try:
+        # A PONTE JÁ SUBIU ENTRE OS DOIS CLIQUES (ela fechou a Steam sozinha, e
+        # o guarda do vdf completou): fechar a Steam agora seria por nada.
+        if _o_que_o_vdf_diz(alvo) == ponte.LIGADO:
+            return {"blocos": _o_rotulo_do_chip(None)}
         janela, _resultado = slo.with_steam_closed(
             lambda: ponte.garantir_ponte(allowlist=[alvo]))
         recusa = format_steam_janela_recusa(janela)
