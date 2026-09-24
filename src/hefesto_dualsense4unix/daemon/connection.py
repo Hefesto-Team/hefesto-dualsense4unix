@@ -383,13 +383,16 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
     """
     from functools import partial
 
+    from hefesto_dualsense4unix.profiles.loader import o_perfil_de_fora_do_jogo
     from hefesto_dualsense4unix.profiles.manager import ProfileManager, _canal_do_ps
     from hefesto_dualsense4unix.utils.session import (
         load_last_profile,
         resolve_boot_profile,
     )
 
-    name = resolve_boot_profile()
+    # O-MODO-FREESTYLE-02 (24/09/2026): sem escolha dela na sessão, vale o
+    # perfil de fora do jogo — o boot não fica sem perfil até o primeiro jogo.
+    name = resolve_boot_profile() or o_perfil_de_fora_do_jogo()
     if not name:
         return
     # FEAT-NATIVE-MODE-01: em Modo Nativo o controle fica SOLTO para o jogo — não
