@@ -87,36 +87,34 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o som sai mesmo pelo alto-falante dos dois controles do USB, um de cada vez, e que os dois do BT não tocam junto.
 
-**Onde olhar.** Na aba Controles, no cartão de cada controle — clique na linha dele e o cartão abre; os outros fecham. Dentro do cartão, o bloco Alto-falante: a pílula ATIVO no rótulo, a barrinha de ondas (ela mexe com o som que o computador está mandando para aquele controle), o deslizante de volume com o número e o ♪, e, um sobre o outro, os botões «Efeitos do Jogo no Controle, Áudio da TV na TV», «Efeitos do Jogo e Áudio da TV no Controle» e «Tudo na TV e Nada no Controle». Mas quem responde é o seu OUVIDO, encostado no alto-falante do controle: os nove furinhos em duas fileiras, na frente do DualSense, entre os dois analógicos.
+**Onde olhar.** Na aba Controles, no cartão de cada controle — clique na linha dele e o cartão abre; os outros fecham. Dentro do cartão, o bloco Alto-falante: a pílula ATIVO no rótulo, a barrinha de ondas (ela mexe com o som que o computador está mandando para aquele controle), o deslizante de volume com o número e o ♪, e os quatro botões — «Efeitos do Jogo no Controle, Áudio do PC no PC» e «Efeitos do Jogo e Áudio do PC no Controle», um sobre o outro, e embaixo, lado a lado, «Tudo no PC e Nada no Controle» e «Tudo no Controle e Nada no PC». «PC», nos botões, é a saída do computador — na bancada, a TV. Mas quem responde é o seu OUVIDO, encostado no alto-falante do controle: os nove furinhos em duas fileiras, na frente do DualSense, entre os dois analógicos.
 
 **Os passos.**
 
 1. Clique na aba Controles.
 2. Ponha uma música que se repita para tocar no computador.
-3. Abaixe o volume da TV pelo controle remoto da própria TV até não ouvir mais a música, sem mexer no volume do computador.
-4. Clique na linha do P1 para abrir o cartão dele.
-5. Encoste o ouvido nos nove furinhos do P1 e deixe-o ali pela rodada inteira dele.
-6. Arraste o deslizante de volume do bloco Alto-falante do P1 até 80 e solte.
-7. Confira que saiu pelo P1 um som curto de confirmação.
-8. Clique em «Efeitos do Jogo e Áudio da TV no Controle», no bloco Alto-falante do P1.
-9. Confira que a música passou a sair pelo P1 e que a barrinha de ondas do bloco Alto-falante dele se mexe.
-10. Clique em «Tudo na TV e Nada no Controle», no bloco do P1.
-11. Confira que o P1 emudeceu e que a pílula do bloco continua dizendo ATIVO.
-12. Clique em «Efeitos do Jogo no Controle, Áudio da TV na TV», no bloco do P1, para deixá-lo como estava.
-13. Clique na linha do P2 e refaça nele a mesma rodada, do ouvido encostado até a volta ao botão de cima.
-14. Encoste o ouvido no P3 e depois no P4 e confirme que os dois ficaram mudos o tempo todo.
-15. Devolva o volume da TV pelo controle remoto dela.
+3. Clique na linha do P1 para abrir o cartão dele.
+4. Encoste o ouvido nos nove furinhos do P1 e deixe-o ali pela rodada inteira dele.
+5. Arraste o deslizante de volume do bloco Alto-falante do P1 até 80 e solte.
+6. Confira que saiu pelo P1 um som curto de confirmação.
+7. Clique em «Tudo no Controle e Nada no PC», no bloco Alto-falante do P1.
+8. Confira que a música passou a sair só pelo P1, que a TV calou e que a barrinha de ondas do bloco Alto-falante dele se mexe.
+9. Clique em «Tudo no PC e Nada no Controle», no bloco do P1.
+10. Confira que o P1 emudeceu, que a música voltou para a TV e que a pílula do bloco continua dizendo ATIVO.
+11. Clique em «Efeitos do Jogo no Controle, Áudio do PC no PC», no bloco do P1, para deixá-lo como estava.
+12. Clique na linha do P2 e refaça nele a mesma rodada, do ouvido encostado até a volta ao botão de cima.
+13. Encoste o ouvido no P3 e depois no P4 e confirme que os dois ficaram mudos o tempo todo.
 
-**Passa quando.** No P1 e no P2 sai o som curto depois do arrasto, a música sai com o botão do meio aceso, e o controle emudece com «Tudo na TV e Nada no Controle». A pílula continua ATIVO nos três botões. O P3 e o P4 ficam mudos do começo ao fim.
+**Passa quando.** No P1 e no P2 sai o som curto depois do arrasto, a música sai só no controle com «Tudo no Controle e Nada no PC» aceso — e a TV cala —, e o controle emudece com «Tudo no PC e Nada no Controle», com a música de volta na TV. A pílula continua ATIVO nos quatro botões. O P3 e o P4 ficam mudos do começo ao fim.
 
 **Por controle.**
 
-* **P1** — No USB, e é o primeiro a tocar: o som curto no arrasto, a música com o botão do meio, o silêncio com o de baixo. No fim, volte ao botão de cima.
+* **P1** — No USB, e é o primeiro a tocar: o som curto no arrasto, a música só nele com «Tudo no Controle e Nada no PC», o silêncio com «Tudo no PC e Nada no Controle». No fim, volte ao botão de cima.
 * **P2** — No USB, e faz a mesma rodada depois do P1. É a segunda prova do USB: se só um dos dois tocar, o defeito é daquele controle — anote qual.
 * **P3** — No BT, e é TESTEMUNHA: você não toca nele. Se ele tocar junto com o P1, o comando pegou mais de um controle, e isso é achado.
 * **P4** — No BT, e é a segunda testemunha. Mesmo gesto do P3: ouvido encostado, nenhum clique.
 
-**A armadilha.** O botão do meio manda ao controle o MESMO som que vai para a TV — por isso a TV fica baixa, e baixa pelo controle remoto dela: o volume do computador fica parado para a régua não mudar no meio do teste. O som curto de confirmação não sai se outro ainda estiver tocando: solte o deslizante e espere antes do próximo arrasto. A pílula ATIVO não quer dizer que sai som — ela diz que o canal daquele controle existe e que ninguém calou o ♪, e é por isso que não muda com «Tudo na TV e Nada no Controle». Se aparecer «Saída muda» ao lado dela, o canal daquele controle está mudo no sistema, e o silêncio não é do Hefesto. Com um fone plugado no controle o som vai para o fone e o alto-falante cala — tire o fone antes. E o degrau: esta célula já chegou a «o aparelho obedeceu», com o seu ouvido; o que esta rodada confere é que ele continua obedecendo nos três botões de hoje.
+**A armadilha.** «Tudo no Controle e Nada no PC» leva a saída do computador inteira para aquele controle, e é por isso que a TV não precisa mais ser abaixada pelo controle remoto dela: ela cala sozinha. Mas a saída é UMA — vale para um controle por vez, e o último clique decide. A rodada passa por «Tudo no PC e Nada no Controle» e termina no botão de cima, e os dois devolvem a música à TV; se a rodada parar no quarto, o computador continua tocando só no controle. O som curto de confirmação não sai se outro ainda estiver tocando: solte o deslizante e espere antes do próximo arrasto. A pílula ATIVO não quer dizer que sai som — ela diz que o canal daquele controle existe e que ninguém calou o ♪, e é por isso que não muda com «Tudo no PC e Nada no Controle». Se aparecer «Saída muda» ao lado dela, o canal daquele controle está mudo no sistema, e o silêncio não é do Hefesto. Com um fone plugado no controle o som vai para o fone e o alto-falante cala — tire o fone antes. E o degrau: esta célula já chegou a «o aparelho obedeceu», com o seu ouvido; o que esta rodada confere é que ele continua obedecendo nos quatro botões de hoje.
 
 ---
 
@@ -126,26 +124,24 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o volume do alto-falante dos dois controles do USB muda de verdade ao longo de TODO o curso do deslizante, sem trecho morto — quem abre esse curso é o reforço de ganho, que viaja junto com o volume.
 
-**Onde olhar.** Na aba Controles, no bloco Alto-falante do cartão aberto: o deslizante de volume e o número ao lado dele. O reforço de ganho NÃO tem campo na tela — ele sai na mesma mensagem que o volume —, e o que se lê é o efeito, com o ouvido encostado nos nove furinhos da frente do controle, entre os dois analógicos.
+**Onde olhar.** Na aba Controles, no bloco Alto-falante do cartão aberto: o deslizante de volume e o número ao lado dele, e, embaixo, o botão «Tudo no Controle e Nada no PC», que põe o som do computador só naquele controle. O reforço de ganho NÃO tem campo na tela — ele sai na mesma mensagem que o volume —, e o que se lê é o efeito, com o ouvido encostado nos nove furinhos da frente do controle, entre os dois analógicos.
 
 **Os passos.**
 
 1. Clique na aba Controles.
 2. Ponha uma música que se repita para tocar no computador, e não mexa mais no volume do computador até o fim.
-3. Abaixe o volume da TV pelo controle remoto da própria TV até não ouvir mais a música.
-4. Clique na linha do P1 para abrir o cartão dele.
-5. Clique em «Efeitos do Jogo e Áudio da TV no Controle», no bloco Alto-falante do P1.
-6. Encoste o ouvido nos nove furinhos do P1 e deixe-o ali pela rodada inteira dele.
-7. Arraste o volume do Alto-falante do P1 até 20, solte e escute.
-8. Arraste até 40, solte e confira que ficou mais alto que em 20.
-9. Arraste até 60, solte e confira que ficou mais alto que em 40.
-10. Arraste até 80, solte e confira que ficou mais alto que em 60.
-11. Arraste até 100, solte e confira que ficou mais alto que em 80.
-12. Arraste até 0, solte e confira que o P1 ficou em silêncio.
-13. Clique em «Efeitos do Jogo no Controle, Áudio da TV na TV», no bloco do P1, e devolva o volume dele a 100.
-14. Clique na linha do P2 e refaça nele a mesma rodada, do botão do meio até a volta, com as mesmas seis paradas.
-15. Encoste o ouvido no P3 e depois no P4 e confirme que os dois ficaram mudos o tempo todo.
-16. Devolva o volume da TV pelo controle remoto dela.
+3. Clique na linha do P1 para abrir o cartão dele.
+4. Clique em «Tudo no Controle e Nada no PC», no bloco Alto-falante do P1, e confira que a TV calou.
+5. Encoste o ouvido nos nove furinhos do P1 e deixe-o ali pela rodada inteira dele.
+6. Arraste o volume do Alto-falante do P1 até 20, solte e escute.
+7. Arraste até 40, solte e confira que ficou mais alto que em 20.
+8. Arraste até 60, solte e confira que ficou mais alto que em 40.
+9. Arraste até 80, solte e confira que ficou mais alto que em 60.
+10. Arraste até 100, solte e confira que ficou mais alto que em 80.
+11. Arraste até 0, solte e confira que o P1 ficou em silêncio.
+12. Clique em «Efeitos do Jogo no Controle, Áudio do PC no PC», no bloco do P1, e devolva o volume dele a 100.
+13. Clique na linha do P2 e refaça nele a mesma rodada, do «Tudo no Controle e Nada no PC» até a volta, com as mesmas seis paradas.
+14. Encoste o ouvido no P3 e depois no P4 e confirme que os dois ficaram mudos o tempo todo.
 
 **Passa quando.** Em cada parada — 20, 40, 60, 80 e 100 — o P1 e o P2 soam audivelmente mais alto que na anterior: não há trecho em que arrastar não muda nada, nem trecho em que já saturou. Em 0 é silêncio. O P3 e o P4 ficam mudos do começo ao fim.
 
@@ -156,7 +152,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No BT, e é TESTEMUNHA. Não mexa nele. Se ele soar quando você arrasta o volume do P1, o comando pegou mais de um controle.
 * **P4** — No BT, e é a segunda testemunha. Mesmo gesto do P3: ouvido encostado, nada arrastado.
 
-**A armadilha.** A cada parada sai também o som curto de confirmação — compare a música, não o som curto. O reforço de ganho não se desliga pela tela, então não existe «com e sem» para comparar: o que se mede é só se o curso é útil de ponta a ponta. Um número velho anda por aí — «mudo até 38, satura em 102» —, levantado sem o reforço e na escala crua do aparelho, que não é o 0 a 100 do deslizante; não o use para julgar esta tela. E a prova desta célula parou em «montou»: o produto manda o reforço junto com o volume, e ninguém ouviu o efeito dele no aparelho — esta rodada é essa escuta.
+**A armadilha.** A cada parada sai também o som curto de confirmação — compare a música, não o som curto. Com «Tudo no Controle e Nada no PC» aceso a TV cala sozinha, sem o controle remoto dela, e o volume do computador passa a ser o do próprio controle: é por isso que ele não se mexe até o fim — mexer nele muda a régua no meio. Esse botão vale para um controle por vez: a rodada do P2 começa depois que o P1 voltou ao botão de cima. O reforço de ganho não se desliga pela tela, então não existe «com e sem» para comparar: o que se mede é só se o curso é útil de ponta a ponta. Um número velho anda por aí — «mudo até 38, satura em 102» —, levantado sem o reforço e na escala crua do aparelho, que não é o 0 a 100 do deslizante; não o use para julgar esta tela. E a prova desta célula parou em «montou»: o produto manda o reforço junto com o volume, e ninguém ouviu o efeito dele no aparelho — esta rodada é essa escuta.
 
 ---
 
@@ -166,26 +162,24 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o volume do alto-falante dos dois controles do BT muda de verdade ao longo de todo o curso do deslizante, com o som chegando pelo próprio fio do BT.
 
-**Onde olhar.** Na aba Controles, no cartão do P3 e no do P4, bloco Alto-falante: o deslizante de volume e o número ao lado. O reforço de ganho não tem campo na tela; o que se lê é o efeito, com o ouvido encostado nos nove furinhos da frente do controle. No BT, quem leva o som até o controle é o Hefesto, pelo mesmo fio por onde passam os botões.
+**Onde olhar.** Na aba Controles, no cartão do P3 e no do P4, bloco Alto-falante: o deslizante de volume e o número ao lado, e, embaixo, o botão «Tudo no Controle e Nada no PC», que põe o som do computador só naquele controle. O reforço de ganho não tem campo na tela; o que se lê é o efeito, com o ouvido encostado nos nove furinhos da frente do controle. No BT, quem leva o som até o controle é o Hefesto, pelo mesmo fio por onde passam os botões.
 
 **Os passos.**
 
 1. Clique na aba Controles.
 2. Ponha uma música que se repita para tocar no computador, e não mexa mais no volume do computador até o fim.
-3. Abaixe o volume da TV pelo controle remoto da própria TV até não ouvir mais a música.
-4. Clique na linha do P3 para abrir o cartão dele.
-5. Clique em «Efeitos do Jogo e Áudio da TV no Controle», no bloco Alto-falante do P3.
-6. Encoste o ouvido nos nove furinhos do P3 e confirme que a música sai por ali.
-7. Arraste o volume do Alto-falante do P3 até 20, solte e escute.
-8. Arraste até 40, solte e confira que ficou mais alto que em 20.
-9. Arraste até 60, solte e confira que ficou mais alto que em 40.
-10. Arraste até 80, solte e confira que ficou mais alto que em 60.
-11. Arraste até 100, solte e confira que ficou mais alto que em 80.
-12. Arraste até 0, solte e confira que o P3 ficou em silêncio.
-13. Clique em «Efeitos do Jogo no Controle, Áudio da TV na TV», no bloco do P3, e devolva o volume dele a 100.
-14. Clique na linha do P4 e refaça nele a mesma rodada, do botão do meio até a volta, com as mesmas seis paradas.
-15. Encoste o ouvido no P1 e depois no P2 e confirme que os dois ficaram mudos o tempo todo.
-16. Devolva o volume da TV pelo controle remoto dela.
+3. Clique na linha do P3 para abrir o cartão dele.
+4. Clique em «Tudo no Controle e Nada no PC», no bloco Alto-falante do P3, e confira que a TV calou.
+5. Encoste o ouvido nos nove furinhos do P3 e confirme que a música sai por ali.
+6. Arraste o volume do Alto-falante do P3 até 20, solte e escute.
+7. Arraste até 40, solte e confira que ficou mais alto que em 20.
+8. Arraste até 60, solte e confira que ficou mais alto que em 40.
+9. Arraste até 80, solte e confira que ficou mais alto que em 60.
+10. Arraste até 100, solte e confira que ficou mais alto que em 80.
+11. Arraste até 0, solte e confira que o P3 ficou em silêncio.
+12. Clique em «Efeitos do Jogo no Controle, Áudio do PC no PC», no bloco do P3, e devolva o volume dele a 100.
+13. Clique na linha do P4 e refaça nele a mesma rodada, do «Tudo no Controle e Nada no PC» até a volta, com as mesmas seis paradas.
+14. Encoste o ouvido no P1 e depois no P2 e confirme que os dois ficaram mudos o tempo todo.
 
 **Passa quando.** Em cada parada o P3 e o P4 soam audivelmente mais alto que na anterior, sem trecho morto nem trecho saturado, e em 0 é silêncio. O P1 e o P2 ficam mudos do começo ao fim.
 
@@ -196,7 +190,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No BT, e é o primeiro. As seis paradas são nele, com a mesma música e o ouvido no mesmo lugar.
 * **P4** — No BT, e faz as mesmas seis paradas. É a segunda prova do BT: se o curso for útil num e morto no outro, anote qual.
 
-**A armadilha.** No BT o som leva um instante a mais para chegar: depois de soltar, espere a música assentar antes de comparar uma parada com a outra. No BT a queda e a volta são rotina: se o P3 cair e voltar no meio, a música some e volta e o volume pode voltar ao de antes — anote a hora e refaça aquela parada. O som curto de confirmação também pode sair a cada parada; compare a música, não ele. E a prova desta célula parou em «montou»: o produto manda o reforço de ganho pelo BT, e ninguém ouviu o efeito — esta rodada é essa escuta.
+**A armadilha.** No BT o som leva um instante a mais para chegar: depois de soltar, espere a música assentar antes de comparar uma parada com a outra. No BT a queda e a volta são rotina: se o P3 cair e voltar no meio, a música some e volta e o volume pode voltar ao de antes — anote a hora e refaça aquela parada. Com «Tudo no Controle e Nada no PC» aceso a TV cala sozinha, sem o controle remoto dela, e o volume do computador passa a ser o do próprio controle: não mexa nele até o fim. Esse botão vale para um controle por vez — a rodada do P4 começa depois que o P3 voltou ao botão de cima. O som curto de confirmação também pode sair a cada parada; compare a música, não ele. E a prova desta célula parou em «montou»: o produto manda o reforço de ganho pelo BT, e ninguém ouviu o efeito — esta rodada é essa escuta.
 
 ---
 
@@ -204,9 +198,9 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.alto_falante.rota @ cabo`
 
-**O que isto prova.** Prova que cada um dos três botões do alto-falante, nos dois controles do USB, faz o que o nome dele diz, e que trocar de botão não mata o microfone do mesmo controle.
+**O que isto prova.** Prova que cada um dos quatro botões do alto-falante, nos dois controles do USB, faz o que o nome dele diz, e que trocar de botão não mata o microfone do mesmo controle.
 
-**Onde olhar.** Na aba Controles, dois blocos do mesmo cartão. No bloco Alto-falante, os três botões, um sobre o outro, com um aceso: «Efeitos do Jogo no Controle, Áudio da TV na TV» (o controle toca só o que for mandado para ele; o som do computador fica na TV), «Efeitos do Jogo e Áudio da TV no Controle» (o som do computador sai também no controle, e continua na TV) e «Tudo na TV e Nada no Controle» (o controle para de tocar). No bloco Microfone, a pílula ao lado da palavra Microfone (ATIVO, DESLIGADO ou um travessão) e a barrinha de ondas, que mexe com o som que entra agora. O ouvido encostado nos nove furinhos do controle é quem confirma para onde o som foi.
+**Onde olhar.** Na aba Controles, dois blocos do mesmo cartão. No bloco Alto-falante, os quatro botões, com um aceso — dois um sobre o outro e, embaixo, dois lado a lado: «Efeitos do Jogo no Controle, Áudio do PC no PC» (o controle toca só o que for mandado para ele; o som do computador fica no PC), «Efeitos do Jogo e Áudio do PC no Controle» (o som do computador sai também no controle, e continua no PC), «Tudo no PC e Nada no Controle» (o controle para de tocar) e «Tudo no Controle e Nada no PC» (o som do computador sai só no controle, e o PC cala). «PC», nos botões, é a saída do computador — na bancada, a TV. No bloco Microfone, a pílula ao lado da palavra Microfone (ATIVO, DESLIGADO ou um travessão) e a barrinha de ondas, que mexe com o som que entra agora. O ouvido encostado nos nove furinhos do controle é quem confirma para onde o som foi.
 
 **Os passos.**
 
@@ -215,29 +209,33 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 3. Abaixe o volume da TV pelo controle remoto da própria TV até não ouvir mais o vídeo.
 4. Clique na linha do P1 para abrir o cartão dele.
 5. Encoste o ouvido nos nove furinhos do P1 e deixe-o ali pela rodada inteira dele.
-6. Clique em «Efeitos do Jogo no Controle, Áudio da TV na TV», no bloco Alto-falante do P1.
+6. Clique em «Efeitos do Jogo no Controle, Áudio do PC no PC», no bloco Alto-falante do P1.
 7. Confira que o P1 deu só o som curto de confirmação, sem o som do vídeo.
 8. Fale perto do P1 e confira que a barrinha de ondas do bloco Microfone dele mexe e que a pílula do Microfone diz ATIVO.
-9. Clique em «Efeitos do Jogo e Áudio da TV no Controle», no bloco do P1.
+9. Clique em «Efeitos do Jogo e Áudio do PC no Controle», no bloco do P1.
 10. Confira que o som do vídeo passou a sair pelo P1.
-11. Clique em «Tudo na TV e Nada no Controle», no bloco do P1.
+11. Clique em «Tudo no PC e Nada no Controle», no bloco do P1.
 12. Confira que o P1 emudeceu.
 13. Fale perto do P1 e confira de novo que a barrinha do Microfone mexe e que a pílula continua ATIVO.
-14. Clique em «Efeitos do Jogo no Controle, Áudio da TV na TV», no bloco do P1, para deixá-lo como estava.
-15. Clique na linha do P2 e refaça nele a mesma rodada, do ouvido encostado até a volta ao botão de cima.
-16. Clique em «Todos», na fita do topo, e confira que o botão aceso do P3 e o do P4 não mudaram.
-17. Devolva o volume da TV pelo controle remoto dela.
+14. Devolva o volume da TV pelo controle remoto dela e confira que o vídeo sai nela.
+15. Clique em «Tudo no Controle e Nada no PC», no bloco do P1.
+16. Confira que o som do vídeo passou a sair só pelo P1 e que a TV calou, com o volume dela no lugar.
+17. Pause o vídeo, fale perto do P1 e confira pela terceira vez que a barrinha do Microfone mexe e que a pílula continua ATIVO.
+18. Solte o vídeo e clique em «Efeitos do Jogo no Controle, Áudio do PC no PC», no bloco do P1, para deixá-lo como estava.
+19. Confira que o vídeo voltou para a TV.
+20. Clique na linha do P2 e refaça nele a mesma rodada, do volume da TV abaixado até o vídeo de volta na TV.
+21. Clique em «Todos», na fita do topo, e confira que o botão aceso do P3 e o do P4 não mudaram.
 
-**Passa quando.** No P1 e no P2 o botão aceso segue o clique, e o som vai para onde o nome dele diz: com o de cima, só o som curto — o vídeo fica fora do controle; com o do meio, o vídeo sai também no controle; com o de baixo, o controle cala. O microfone do mesmo controle continua vivo depois das trocas: a barrinha mexe quando você fala e a pílula não sai de ATIVO. O botão aceso do P3 e do P4 não trocou.
+**Passa quando.** No P1 e no P2 o botão aceso segue o clique, e o som vai para onde o nome dele diz: com «Efeitos do Jogo no Controle, Áudio do PC no PC», só o som curto — o vídeo fica fora do controle; com «Efeitos do Jogo e Áudio do PC no Controle», o vídeo sai também no controle; com «Tudo no PC e Nada no Controle», o controle cala; com «Tudo no Controle e Nada no PC», o vídeo sai só no controle e a TV cala, mesmo com o volume dela de volta — e o botão de cima o devolve à TV. O microfone do mesmo controle continua vivo depois das trocas: a barrinha mexe quando você fala e a pílula não sai de ATIVO. O botão aceso do P3 e do P4 não trocou.
 
 **Por controle.**
 
-* **P1** — No USB, e é ELE que troca de botão primeiro. As duas conferências do microfone, depois do botão de cima e depois do de baixo, são o teste tanto quanto o som que sai.
-* **P2** — No USB, e faz a mesma rodada, inclusive as duas conferências do microfone. Se o microfone morrer num e não no outro, anote em qual — é o que separa um defeito do aparelho de um defeito do comando.
+* **P1** — No USB, e é ELE que troca de botão primeiro. As três conferências do microfone — depois do botão de cima, do «Tudo no PC e Nada no Controle» e do «Tudo no Controle e Nada no PC» — são o teste tanto quanto o som que sai.
+* **P2** — No USB, e faz a mesma rodada, inclusive as três conferências do microfone. Se o microfone morrer num e não no outro, anote em qual — é o que separa um defeito do aparelho de um defeito do comando.
 * **P3** — No BT, e é TESTEMUNHA. Não clique em botão nenhum dele. Se o botão aceso dele trocou junto, o comando pegou mais de um controle.
 * **P4** — No BT, e é a segunda testemunha. Mesma conferência do P3, e nenhum clique.
 
-**A armadilha.** As duas conferências do microfone são metade do teste: pedir a rota escreve no mesmo byte do aparelho que carrega o caminho do microfone, e em 02/08/2026 isso levou o microfone daquele controle a zero. Foi curado, e esta conferência é o que o mantém curado. Ela é feita com o alto-falante daquele controle calado de propósito: com o vídeo tocando ao lado do microfone, a barrinha mexeria com o vídeo, e não com a sua voz. O «efeito do jogo» é o som que um jogo manda para aquele controle; sem jogo aberto, o único som endereçado ao controle é o som curto de confirmação, e por isso o vídeo NÃO pode sair nele com o botão de cima. A pílula do Alto-falante fica ATIVO nos três botões: ela fala do canal, não do botão. E o degrau: o botão de cima já obedeceu ao seu ouvido; o do meio e o de baixo são mais novos, e esta rodada é a medição deles.
+**A armadilha.** As conferências do microfone são metade do teste: pedir a rota escreve no mesmo byte do aparelho que carrega o caminho do microfone, e em 02/08/2026 isso levou o microfone daquele controle a zero. Foi curado, e esta conferência é o que o mantém curado. Ela é feita sem som saindo daquele controle, de propósito: com o vídeo tocando ao lado do microfone, a barrinha mexeria com o vídeo, e não com a sua voz — é por isso que, com «Tudo no Controle e Nada no PC», o vídeo é pausado antes de você falar. O «efeito do jogo» é o som que um jogo manda para aquele controle; sem jogo aberto, o único som endereçado ao controle é o som curto de confirmação, e por isso o vídeo NÃO pode sair nele com o botão de cima. «Tudo no Controle e Nada no PC» leva a saída do computador inteira para aquele controle, e ela é uma só: vale para um controle por vez. Comece com o P3 e o P4 fora dele — se um dos dois estiver com ele aceso, o clique do P1 tira a saída de lá e apaga o botão daquele controle, e isso é o desenho, não o comando pegando dois controles. A pílula do Alto-falante fica ATIVO nos quatro botões: ela fala do canal, não do botão. E o degrau: o botão de cima já obedeceu ao seu ouvido; os outros três são mais novos — o quarto voltou em 24/09 —, e esta rodada é a medição deles.
 
 ---
 
@@ -245,9 +243,9 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.alto_falante.rota @ rádio`
 
-**O que isto prova.** Prova que cada um dos três botões do alto-falante, nos dois controles do BT, faz o que o nome dele diz, que trocar de botão não apaga o microfone do mesmo controle, e que nada disso vaza para os dois do USB.
+**O que isto prova.** Prova que cada um dos quatro botões do alto-falante, nos dois controles do BT, faz o que o nome dele diz, que trocar de botão não apaga o microfone do mesmo controle, e que nada disso vaza para os dois do USB.
 
-**Onde olhar.** Na aba Controles, no cartão do P3 e no do P4. No bloco Alto-falante, os três botões, um sobre o outro, com um aceso: «Efeitos do Jogo no Controle, Áudio da TV na TV», «Efeitos do Jogo e Áudio da TV no Controle» e «Tudo na TV e Nada no Controle» — cada um diz no nome para onde o som vai. No bloco Microfone do mesmo cartão, a pílula ao lado da palavra Microfone e a barrinha de ondas. No BT, quem leva o som até o controle é o Hefesto, pelo próprio fio do BT; o ouvido encostado nos nove furinhos confirma para onde ele foi.
+**Onde olhar.** Na aba Controles, no cartão do P3 e no do P4. No bloco Alto-falante, os quatro botões, com um aceso — «Efeitos do Jogo no Controle, Áudio do PC no PC» e «Efeitos do Jogo e Áudio do PC no Controle», um sobre o outro, e embaixo, lado a lado, «Tudo no PC e Nada no Controle» e «Tudo no Controle e Nada no PC» — cada um diz no nome para onde o som vai. «PC», nos botões, é a saída do computador — na bancada, a TV. No bloco Microfone do mesmo cartão, a pílula ao lado da palavra Microfone e a barrinha de ondas. No BT, quem leva o som até o controle é o Hefesto, pelo próprio fio do BT; o ouvido encostado nos nove furinhos confirma para onde ele foi.
 
 **Os passos.**
 
@@ -256,29 +254,33 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 3. Abaixe o volume da TV pelo controle remoto da própria TV até não ouvir mais o vídeo.
 4. Clique na linha do P3 para abrir o cartão dele.
 5. Encoste o ouvido nos nove furinhos do P3 e deixe-o ali pela rodada inteira dele.
-6. Clique em «Efeitos do Jogo no Controle, Áudio da TV na TV», no bloco Alto-falante do P3.
+6. Clique em «Efeitos do Jogo no Controle, Áudio do PC no PC», no bloco Alto-falante do P3.
 7. Confira que o som do vídeo não sai pelo P3, e anote se saiu um som curto de confirmação.
 8. Fale perto do P3 e confira que a barrinha de ondas do bloco Microfone dele mexe e que a pílula do Microfone diz ATIVO.
-9. Clique em «Efeitos do Jogo e Áudio da TV no Controle», no bloco do P3.
+9. Clique em «Efeitos do Jogo e Áudio do PC no Controle», no bloco do P3.
 10. Confira que o som do vídeo passou a sair pelo P3.
-11. Clique em «Tudo na TV e Nada no Controle», no bloco do P3.
+11. Clique em «Tudo no PC e Nada no Controle», no bloco do P3.
 12. Confira que o P3 emudeceu.
 13. Fale perto do P3 e confira de novo que a barrinha do Microfone mexe e que a pílula continua ATIVO.
-14. Clique em «Efeitos do Jogo no Controle, Áudio da TV na TV», no bloco do P3, para deixá-lo como estava.
-15. Clique na linha do P4 e refaça nele a mesma rodada, do ouvido encostado até a volta ao botão de cima.
-16. Clique em «Todos», na fita do topo, e confira que o botão aceso do P1 e o do P2 não mudaram.
-17. Devolva o volume da TV pelo controle remoto dela.
+14. Devolva o volume da TV pelo controle remoto dela e confira que o vídeo sai nela.
+15. Clique em «Tudo no Controle e Nada no PC», no bloco do P3.
+16. Confira que o som do vídeo passou a sair só pelo P3 e que a TV calou, com o volume dela no lugar.
+17. Pause o vídeo, fale perto do P3 e confira pela terceira vez que a barrinha do Microfone mexe e que a pílula continua ATIVO.
+18. Solte o vídeo e clique em «Efeitos do Jogo no Controle, Áudio do PC no PC», no bloco do P3, para deixá-lo como estava.
+19. Confira que o vídeo voltou para a TV.
+20. Clique na linha do P4 e refaça nele a mesma rodada, do volume da TV abaixado até o vídeo de volta na TV.
+21. Clique em «Todos», na fita do topo, e confira que o botão aceso do P1 e o do P2 não mudaram.
 
-**Passa quando.** No P3 e no P4 o botão aceso segue o clique, e o som vai para onde o nome dele diz: com o de cima, o vídeo fica fora do controle; com o do meio, o vídeo sai também no controle; com o de baixo, o controle cala. O microfone do mesmo controle continua vivo depois das trocas, com a pílula em ATIVO. O botão aceso do P1 e do P2 não trocou.
+**Passa quando.** No P3 e no P4 o botão aceso segue o clique, e o som vai para onde o nome dele diz: com «Efeitos do Jogo no Controle, Áudio do PC no PC», o vídeo fica fora do controle; com «Efeitos do Jogo e Áudio do PC no Controle», o vídeo sai também no controle; com «Tudo no PC e Nada no Controle», o controle cala; com «Tudo no Controle e Nada no PC», o vídeo sai só no controle, pelo BT, e a TV cala mesmo com o volume dela de volta — e o botão de cima o devolve à TV. O microfone do mesmo controle continua vivo depois das trocas, com a pílula em ATIVO. O botão aceso do P1 e do P2 não trocou.
 
 **Por controle.**
 
 * **P1** — No USB, e é TESTEMUNHA. Não clique em nada nele. Se o botão aceso dele trocou, o comando pegou mais de um controle.
 * **P2** — No USB, e é a segunda testemunha. Mesma conferência do P1. Um dos dois trocando e o outro não já diz que a mira do comando está errada — anote qual.
-* **P3** — No BT, e é ELE que troca de botão primeiro, com o ouvido encostado e as duas conferências do microfone.
+* **P3** — No BT, e é ELE que troca de botão primeiro, com o ouvido encostado e as três conferências do microfone.
 * **P4** — No BT, e faz a mesma rodada. É a segunda prova do BT: se um obedecer e o outro não, anote qual.
 
-**A armadilha.** No BT o começo de um som curto pode ser comido enquanto o fio acorda — por isso o som de confirmação aqui é anotado, e não cobrado; o que decide é o vídeo, que é contínuo. No BT a queda e a volta são rotina: se o P3 cair e voltar no meio, o botão aceso pode voltar sozinho ao que era, e isso é a reconexão, não o seu clique — anote a hora e refaça. As conferências do microfone existem porque pedir a rota já apagou o microfone do mesmo controle, no USB, em 02/08/2026; elas são feitas com o alto-falante calado para a barrinha mexer com a sua voz e não com o vídeo. E a prova desta célula parou em «montou» pelo BT: o produto manda a rota, e ninguém ouviu o controle obedecer — esta rodada é essa escuta.
+**A armadilha.** No BT o começo de um som curto pode ser comido enquanto o fio acorda — por isso o som de confirmação aqui é anotado, e não cobrado; o que decide é o vídeo, que é contínuo. No BT a queda e a volta são rotina: se o P3 cair e voltar no meio, o botão aceso pode voltar sozinho ao que era, e isso é a reconexão, não o seu clique — anote a hora e refaça. As conferências do microfone existem porque pedir a rota já apagou o microfone do mesmo controle, no USB, em 02/08/2026; elas são feitas sem som saindo daquele controle para a barrinha mexer com a sua voz e não com o vídeo — por isso, com «Tudo no Controle e Nada no PC», o vídeo é pausado antes de você falar. Esse botão leva a saída do computador inteira para aquele controle, e ela é uma só: vale para um controle por vez. Comece com o P1 e o P2 fora dele — se um dos dois estiver com ele aceso, o clique do P3 tira a saída de lá e apaga o botão daquele controle, e isso é o desenho, não o comando pegando dois controles. E a prova desta célula parou em «montou» pelo BT: o produto manda a rota, e ninguém ouviu o controle obedecer — esta rodada é essa escuta.
 
 ---
 
@@ -288,26 +290,24 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o deslizante de volume manda no som dos dois controles do USB, e que o ♪ cala e devolve o alto-falante sem perder o número.
 
-**Onde olhar.** Na aba Controles, no bloco Alto-falante do cartão aberto: a pílula ATIVO no rótulo (ela só vira DESLIGADO enquanto o ♪ está calado), o deslizante de volume, o número ao lado e o ♪. O som em si é do seu ouvido, encostado nos nove furinhos da frente do controle, entre os dois analógicos.
+**Onde olhar.** Na aba Controles, no bloco Alto-falante do cartão aberto: a pílula ATIVO no rótulo (ela só vira DESLIGADO enquanto o ♪ está calado), o deslizante de volume, o número ao lado e o ♪, e, embaixo, o botão «Tudo no Controle e Nada no PC», que põe o som do computador só naquele controle. O som em si é do seu ouvido, encostado nos nove furinhos da frente do controle, entre os dois analógicos.
 
 **Os passos.**
 
 1. Clique na aba Controles.
 2. Ponha uma música que se repita para tocar no computador.
-3. Abaixe o volume da TV pelo controle remoto da própria TV até não ouvir mais a música.
-4. Clique na linha do P1 para abrir o cartão dele.
-5. Confira que o ♪ do bloco Alto-falante está aceso, e anote o número ao lado do deslizante.
-6. Clique em «Efeitos do Jogo e Áudio da TV no Controle», no bloco Alto-falante do P1.
-7. Encoste o ouvido nos nove furinhos do P1 e deixe-o ali pela rodada inteira dele.
-8. Arraste o volume do P1 até 60, solte e escute.
-9. Arraste até 100, solte e confira que ficou mais alto que em 60.
-10. Arraste até 10, solte e confira que ficou mais baixo que em 60.
-11. Clique no ♪ do P1 e confira que o som morreu no ato e que a pílula ao lado da palavra Alto-falante passou a dizer DESLIGADO.
-12. Clique no ♪ de novo e confira que o som voltou baixo, como estava, com a pílula em ATIVO e o número ainda em 10.
-13. Clique em «Todos», na fita do topo, e confira que os números de volume do P2, do P3 e do P4 não se mexeram.
-14. Clique em «Efeitos do Jogo no Controle, Áudio da TV na TV», no bloco do P1, e devolva o volume dele ao número que você anotou.
-15. Clique na linha do P2 e refaça nele a mesma rodada, do ♪ aceso até a volta.
-16. Devolva o volume da TV pelo controle remoto dela.
+3. Clique na linha do P1 para abrir o cartão dele.
+4. Confira que o ♪ do bloco Alto-falante está aceso, e anote o número ao lado do deslizante.
+5. Clique em «Tudo no Controle e Nada no PC», no bloco Alto-falante do P1, e confira que a TV calou.
+6. Encoste o ouvido nos nove furinhos do P1 e deixe-o ali pela rodada inteira dele.
+7. Arraste o volume do P1 até 60, solte e escute.
+8. Arraste até 100, solte e confira que ficou mais alto que em 60.
+9. Arraste até 10, solte e confira que ficou mais baixo que em 60.
+10. Clique no ♪ do P1 e confira que o som morreu no ato e que a pílula ao lado da palavra Alto-falante passou a dizer DESLIGADO.
+11. Clique no ♪ de novo e confira que o som voltou baixo, como estava, com a pílula em ATIVO e o número ainda em 10.
+12. Clique em «Todos», na fita do topo, e confira que os números de volume do P2, do P3 e do P4 não se mexeram.
+13. Clique em «Efeitos do Jogo no Controle, Áudio do PC no PC», no bloco do P1, e devolva o volume dele ao número que você anotou.
+14. Clique na linha do P2 e refaça nele a mesma rodada, do ♪ aceso até a volta.
 
 **Passa quando.** No P1 e no P2 o ♪ já estava aceso, o número acompanha o arrasto e o quanto se ouve acompanha o número. O ♪ cala e traz de volta sem perder o número, e a pílula diz DESLIGADO só enquanto ele está calado. Os números dos outros três não se mexem enquanto você arrasta o de um.
 
@@ -318,7 +318,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No BT, e é TESTEMUNHA. Não arraste nada nele. Se o número dele andar quando você mexe no P1, o comando pegou mais de um controle.
 * **P4** — No BT, e é a segunda testemunha. Mesma leitura do P3, com o deslizante intocado.
 
-**A armadilha.** O ♪ nasce aceso porque o Hefesto põe o volume de todo controle em 100 assim que ele chega — decisão sua, de 16/08. Se ele estiver cinza, pare o mouse no «?» ao lado: a frase manda arrastar o volume uma vez, e o arrasto o destrava; anote que ele nasceu cinza, porque não devia. O número na tela é o que o produto PEDIU; só o ouvido diz o que saiu — marcar verde olhando o número é medir a tela contra ela mesma. Calar e trazer de volta são dois cliques separados porque o que se escuta é o silêncio ENTRE eles. O ♪ não mexe no microfone. E a prova desta célula parou em «montou»; o número velho «mudo até 38, satura em 102» é de outra escala e de antes do reforço de ganho, e não serve para julgar este deslizante.
+**A armadilha.** O ♪ nasce aceso porque o Hefesto põe o volume de todo controle em 100 assim que ele chega — decisão sua, de 16/08. Se ele estiver cinza, pare o mouse no «?» ao lado: a frase manda arrastar o volume uma vez, e o arrasto o destrava; anote que ele nasceu cinza, porque não devia. Com «Tudo no Controle e Nada no PC» aceso a TV cala sozinha, sem o controle remoto dela, e o volume do computador passa a ser o do próprio controle — não mexa nele, ou a régua muda no meio. Esse botão vale para um controle por vez: termine a rodada do P1 no botão de cima, que devolve a música à TV, antes de começar a do P2. O número na tela é o que o produto PEDIU; só o ouvido diz o que saiu — marcar verde olhando o número é medir a tela contra ela mesma. Calar e trazer de volta são dois cliques separados porque o que se escuta é o silêncio ENTRE eles. O ♪ não mexe no microfone. E a prova desta célula parou em «montou»; o número velho «mudo até 38, satura em 102» é de outra escala e de antes do reforço de ganho, e não serve para julgar este deslizante.
 
 ---
 
@@ -328,26 +328,24 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o deslizante de volume manda no som dos dois controles do BT — com o som saindo pelo próprio fio do BT —, que o ♪ cala e devolve sem perder o número, e que nada disso vaza para os dois do USB.
 
-**Onde olhar.** Na aba Controles, no cartão do P3 e no do P4, bloco Alto-falante: a pílula ATIVO no rótulo, o deslizante de volume, o número ao lado e o ♪. O som é do seu ouvido, encostado nos nove furinhos da frente do controle. No BT, quem leva o som até o controle é o Hefesto, pelo mesmo fio por onde passam os botões.
+**Onde olhar.** Na aba Controles, no cartão do P3 e no do P4, bloco Alto-falante: a pílula ATIVO no rótulo, o deslizante de volume, o número ao lado e o ♪, e, embaixo, o botão «Tudo no Controle e Nada no PC», que põe o som do computador só naquele controle. O som é do seu ouvido, encostado nos nove furinhos da frente do controle. No BT, quem leva o som até o controle é o Hefesto, pelo mesmo fio por onde passam os botões.
 
 **Os passos.**
 
 1. Clique na aba Controles.
 2. Ponha uma música que se repita para tocar no computador.
-3. Abaixe o volume da TV pelo controle remoto da própria TV até não ouvir mais a música.
-4. Clique na linha do P3 para abrir o cartão dele.
-5. Confira que o ♪ do bloco Alto-falante está aceso, e anote o número ao lado do deslizante.
-6. Clique em «Efeitos do Jogo e Áudio da TV no Controle», no bloco Alto-falante do P3.
-7. Encoste o ouvido nos nove furinhos do P3 e confirme que a música sai por ali.
-8. Arraste o volume do P3 até 60, solte e escute.
-9. Arraste até 100, solte e confira que ficou mais alto que em 60.
-10. Arraste até 10, solte e confira que ficou mais baixo que em 60.
-11. Clique no ♪ do P3 e confira que o som morreu e que a pílula ao lado da palavra Alto-falante passou a dizer DESLIGADO.
-12. Clique no ♪ de novo e confira que o som voltou baixo, como estava, com a pílula em ATIVO e o número ainda em 10.
-13. Clique em «Todos», na fita do topo, e confira que os números de volume do P1, do P2 e do P4 não se mexeram.
-14. Clique em «Efeitos do Jogo no Controle, Áudio da TV na TV», no bloco do P3, e devolva o volume dele ao número que você anotou.
-15. Clique na linha do P4 e refaça nele a mesma rodada, do ♪ aceso até a volta.
-16. Devolva o volume da TV pelo controle remoto dela.
+3. Clique na linha do P3 para abrir o cartão dele.
+4. Confira que o ♪ do bloco Alto-falante está aceso, e anote o número ao lado do deslizante.
+5. Clique em «Tudo no Controle e Nada no PC», no bloco Alto-falante do P3, e confira que a TV calou.
+6. Encoste o ouvido nos nove furinhos do P3 e confirme que a música sai por ali.
+7. Arraste o volume do P3 até 60, solte e escute.
+8. Arraste até 100, solte e confira que ficou mais alto que em 60.
+9. Arraste até 10, solte e confira que ficou mais baixo que em 60.
+10. Clique no ♪ do P3 e confira que o som morreu e que a pílula ao lado da palavra Alto-falante passou a dizer DESLIGADO.
+11. Clique no ♪ de novo e confira que o som voltou baixo, como estava, com a pílula em ATIVO e o número ainda em 10.
+12. Clique em «Todos», na fita do topo, e confira que os números de volume do P1, do P2 e do P4 não se mexeram.
+13. Clique em «Efeitos do Jogo no Controle, Áudio do PC no PC», no bloco do P3, e devolva o volume dele ao número que você anotou.
+14. Clique na linha do P4 e refaça nele a mesma rodada, do ♪ aceso até a volta.
 
 **Passa quando.** No P3 e no P4 o ♪ já estava aceso, o número acompanha o arrasto e o quanto se ouve acompanha o número. O ♪ cala e traz de volta sem perder o número, com a pílula em DESLIGADO só enquanto ele está calado. Os números do P1 e do P2 ficam parados.
 
@@ -358,7 +356,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No BT, e é o primeiro a mexer: o ♪ aceso, as três paradas com o ouvido encostado, o calar e o trazer de volta.
 * **P4** — No BT, e faz a mesma rodada. É a segunda prova do BT: o volume e o ♪ dele têm de responder igual aos do P3.
 
-**A armadilha.** No BT a queda e a volta são rotina: se o ♪ mudar sozinho, ou o número voltar ao que era sem você fazer nada, anote a HORA — é exatamente a perda silenciosa que este teste consegue enxergar, e vale mais que o resto do resultado. No BT o som leva um instante a mais para chegar: depois de soltar, espere a música assentar antes de comparar. O número na tela é o que o produto PEDIU; só o ouvido diz o que saiu. E a prova desta célula parou em «montou»: o produto manda o volume pelo BT, e ninguém ouviu o controle obedecer — esta rodada é essa escuta.
+**A armadilha.** No BT a queda e a volta são rotina: se o ♪ mudar sozinho, ou o número voltar ao que era sem você fazer nada, anote a HORA — é exatamente a perda silenciosa que este teste consegue enxergar, e vale mais que o resto do resultado. No BT o som leva um instante a mais para chegar: depois de soltar, espere a música assentar antes de comparar. Com «Tudo no Controle e Nada no PC» aceso a TV cala sozinha, sem o controle remoto dela, e o volume do computador passa a ser o do próprio controle — não mexa nele até o fim. Esse botão vale para um controle por vez: termine a rodada do P3 no botão de cima antes de começar a do P4. O número na tela é o que o produto PEDIU; só o ouvido diz o que saiu. E a prova desta célula parou em «montou»: o produto manda o volume pelo BT, e ninguém ouviu o controle obedecer — esta rodada é essa escuta.
 
 ---
 
@@ -377,16 +375,16 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 3. Ponha uma música que se repita para tocar no computador.
 4. Abaixe o volume da TV pelo controle remoto da própria TV até não ouvir mais a música.
 5. Clique na linha do P1 para abrir o cartão dele.
-6. Clique em «Efeitos do Jogo e Áudio da TV no Controle», no bloco Alto-falante do P1.
+6. Clique em «Efeitos do Jogo e Áudio do PC no Controle», no bloco Alto-falante do P1.
 7. Encoste o ouvido nos nove furinhos do P1 e confirme que a música sai por ali.
-8. Anote qual dos três botões do bloco Alto-falante do P1 está aceso.
+8. Anote qual dos quatro botões do bloco Alto-falante do P1 está aceso.
 9. Plugue o fone na entrada da borda de baixo do P1 e ponha-o num ouvido.
 10. Confira que a música passou para o fone.
 11. Encoste o outro ouvido nos furinhos do P1 e confira que o alto-falante emudeceu.
 12. Olhe o bloco Alto-falante do P1 e anote se o botão aceso mudou.
 13. Tire o fone e confira, com o ouvido nos furinhos, que a música voltou para o alto-falante do P1.
-14. Clique em «Efeitos do Jogo no Controle, Áudio da TV na TV», no bloco do P1.
-15. Clique na linha do P2 e refaça nele a mesma rodada, do botão do meio até a volta, com o mesmo fone.
+14. Clique em «Efeitos do Jogo no Controle, Áudio do PC no PC», no bloco do P1.
+15. Clique na linha do P2 e refaça nele a mesma rodada, do «Efeitos do Jogo e Áudio do PC no Controle» até a volta, com o mesmo fone.
 16. Encoste o ouvido no P3 e depois no P4 e confirme que os dois ficaram mudos do começo ao fim.
 17. Devolva o volume da TV pelo controle remoto dela.
 
@@ -399,7 +397,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No BT, e é TESTEMUNHA. Não plugue nada nele. Se ele começar a soar quando o fone entra no P1, alguma coisa pegou mais de um controle.
 * **P4** — No BT, e é a segunda testemunha. Mesmo gesto do P3.
 
-**A armadilha.** Não há campo na tela para ler, e por isso, se o som não mudar de lugar, não conclua logo que a detecção falhou: pode ser o fone — é por isso que ele é provado antes. Se o fone tocar igual nos dois lados, ou só de um, anote: três das quatro rotas do aparelho saem mono no fone, medido por você em 09/09. O botão aceso mudar quando o fone entra não é defeito nem acerto — é anotação; o que decide é o ouvido. E a prova desta célula parou em «montou»: o produto lê o aviso de fone plugado, e ninguém ainda pôs e tirou um fone olhando — esta rodada é a primeira.
+**A armadilha.** Não há campo na tela para ler, e por isso, se o som não mudar de lugar, não conclua logo que a detecção falhou: pode ser o fone — é por isso que ele é provado antes. Se o fone tocar igual nos dois lados, ou só de um, anote: três das quatro rotas do aparelho saem mono no fone, medido por você em 09/09. Use «Efeitos do Jogo e Áudio do PC no Controle», e não «Tudo no Controle e Nada no PC», embora o segundo dispensasse abaixar a TV: ele pede ao controle a rota «só no alto-falante», que pelo nome tira o fone do caminho, e o teste deixaria de medir a troca que ele mede. O botão aceso mudar quando o fone entra não é defeito nem acerto — é anotação; o que decide é o ouvido. E a prova desta célula parou em «montou»: o produto lê o aviso de fone plugado, e ninguém ainda pôs e tirou um fone olhando — esta rodada é a primeira.
 
 ---
 
@@ -418,14 +416,14 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 3. Ponha uma música que se repita para tocar no computador.
 4. Abaixe o volume da TV pelo controle remoto da própria TV até não ouvir mais a música.
 5. Clique na linha do P3 para abrir o cartão dele.
-6. Clique em «Efeitos do Jogo e Áudio da TV no Controle», no bloco Alto-falante do P3.
+6. Clique em «Efeitos do Jogo e Áudio do PC no Controle», no bloco Alto-falante do P3.
 7. Encoste o ouvido nos nove furinhos do P3 e confirme que a música sai por ali.
 8. Plugue o fone na entrada da borda de baixo do P3 e ponha-o num ouvido.
 9. Anote se a música passou para o fone, se continuou no alto-falante, ou se sumiu dos dois.
 10. Olhe o cartão do P3 e anote se alguma coisa no bloco Alto-falante mudou quando o fone entrou.
 11. Tire o fone e confira, com o ouvido nos furinhos, que a música voltou para o alto-falante do P3.
-12. Clique em «Efeitos do Jogo no Controle, Áudio da TV na TV», no bloco do P3.
-13. Clique na linha do P4 e refaça nele a mesma rodada, do botão do meio até a volta, com o mesmo fone.
+12. Clique em «Efeitos do Jogo no Controle, Áudio do PC no PC», no bloco do P3.
+13. Clique na linha do P4 e refaça nele a mesma rodada, do «Efeitos do Jogo e Áudio do PC no Controle» até a volta, com o mesmo fone.
 14. Encoste o ouvido no P1 e depois no P2 e confirme que os dois ficaram mudos do começo ao fim.
 15. Devolva o volume da TV pelo controle remoto dela.
 
@@ -438,7 +436,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No BT, e é ELE que recebe o fone primeiro: a música no alto-falante, o fone plugado, a anotação, o fone fora.
 * **P4** — No BT, e recebe o mesmo fone depois. É a segunda prova do BT: a resposta dele tem de ser anotada tanto quanto a do P3.
 
-**A armadilha.** No USB o fone manda por cima do alto-falante — está medido, e é o que o teste irmão do USB confere. No BT ninguém sabe: o caminho do fone que o sistema conhece só existe no USB, e o som que o Hefesto leva pelo BT vai endereçado ao alto-falante. Por isso aqui não há resposta errada — «o fone ficou mudo e o alto-falante continuou» é resultado tão válido quanto «o som passou para o fone»; escreva o que ouviu. Prove o fone antes: sem isso, um fone ruim e o BT dão o mesmo silêncio. E a prova desta célula parou em «montou»: o produto lê o aviso de fone plugado também pelo BT, e ninguém plugou um fone para ver.
+**A armadilha.** No USB o fone manda por cima do alto-falante — está medido, e é o que o teste irmão do USB confere. No BT ninguém sabe: o caminho do fone que o sistema conhece só existe no USB, e o som que o Hefesto leva pelo BT vai endereçado ao alto-falante. Por isso aqui não há resposta errada — «o fone ficou mudo e o alto-falante continuou» é resultado tão válido quanto «o som passou para o fone»; escreva o que ouviu. Use «Efeitos do Jogo e Áudio do PC no Controle», e não «Tudo no Controle e Nada no PC», embora o segundo dispensasse abaixar a TV: ele pede ao controle a rota «só no alto-falante», e o teste passaria a medir essa rota em vez da mesma do irmão do USB. Prove o fone antes: sem isso, um fone ruim e o BT dão o mesmo silêncio. E a prova desta célula parou em «montou»: o produto lê o aviso de fone plugado também pelo BT, e ninguém plugou um fone para ver.
 
 ---
 
@@ -456,7 +454,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 2. Ponha uma música que se repita para tocar no computador, e não mexa mais no volume do computador até o fim.
 3. Abaixe o volume da TV pelo controle remoto da própria TV até não ouvir mais a música.
 4. Clique na linha do P1 para abrir o cartão dele.
-5. Clique em «Efeitos do Jogo e Áudio da TV no Controle», no bloco Alto-falante do P1.
+5. Clique em «Efeitos do Jogo e Áudio do PC no Controle», no bloco Alto-falante do P1.
 6. Plugue o fone na entrada da borda de baixo do P1 e ponha-o no ouvido.
 7. Arraste o volume do P1 até 20, solte e escute no fone.
 8. Arraste até 50, solte e confira que o fone ficou mais alto.
@@ -464,8 +462,8 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 10. Arraste até 0, solte e confira que o fone ficou em silêncio.
 11. Arraste de volta até 50 e clique no ♪: o fone tem de calar.
 12. Clique no ♪ de novo: a música tem de voltar ao fone.
-13. Tire o fone e clique em «Efeitos do Jogo no Controle, Áudio da TV na TV», no bloco do P1.
-14. Clique na linha do P2 e refaça nele a mesma rodada, do botão do meio até a volta, com o mesmo fone.
+13. Tire o fone e clique em «Efeitos do Jogo no Controle, Áudio do PC no PC», no bloco do P1.
+14. Clique na linha do P2 e refaça nele a mesma rodada, do «Efeitos do Jogo e Áudio do PC no Controle» até a volta, com o mesmo fone.
 15. Clique em «Todos», na fita do topo, e confira que os números de volume do P3 e do P4 não se mexeram.
 16. Devolva o volume da TV pelo controle remoto dela.
 
@@ -478,7 +476,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No BT, e é TESTEMUNHA. Não plugue nem arraste nada nele. Se o número dele andar, o comando pegou mais de um controle.
 * **P4** — No BT, e é a segunda testemunha. Mesma leitura do P3.
 
-**A armadilha.** O fone não tem deslizante próprio na tela: o do Alto-falante vai para os dois, e o som mudar no fone prova que esse único campo alcança o fone — não que exista um campo do fone. A licença para mexer no volume do fone não está no sistema: veio de fonte de comunidade, e a curva do deslizante foi levantada no alto-falante, nunca no fone. Se acima da metade o fone parar de subir, é ACHADO, e o passo do 100 existe para você anotar onde. Se o fone tocar só de um lado, anote qual. E a prova desta célula parou em «montou»: ninguém desta casa plugou um fone e arrastou este deslizante.
+**A armadilha.** O fone não tem deslizante próprio na tela: o do Alto-falante vai para os dois, e o som mudar no fone prova que esse único campo alcança o fone — não que exista um campo do fone. A licença para mexer no volume do fone não está no sistema: veio de fonte de comunidade, e a curva do deslizante foi levantada no alto-falante, nunca no fone. Use «Efeitos do Jogo e Áudio do PC no Controle», e não «Tudo no Controle e Nada no PC», embora o segundo dispensasse abaixar a TV: ele pede ao controle a rota «só no alto-falante», que pelo nome tira o fone do caminho. Se acima da metade o fone parar de subir, é ACHADO, e o passo do 100 existe para você anotar onde. Se o fone tocar só de um lado, anote qual. E a prova desta célula parou em «montou»: ninguém desta casa plugou um fone e arrastou este deslizante.
 
 ---
 
@@ -497,14 +495,14 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 3. Ponha uma música que se repita para tocar no computador, e não mexa mais no volume do computador até o fim.
 4. Abaixe o volume da TV pelo controle remoto da própria TV até não ouvir mais a música.
 5. Clique na linha do P3 para abrir o cartão dele.
-6. Clique em «Efeitos do Jogo e Áudio da TV no Controle», no bloco Alto-falante do P3.
+6. Clique em «Efeitos do Jogo e Áudio do PC no Controle», no bloco Alto-falante do P3.
 7. Plugue o fone na entrada da borda de baixo do P3 e ponha-o no ouvido.
 8. Anote se a música sai no fone.
 9. Arraste o volume do P3 até 20, solte e escute no fone.
 10. Arraste até 50, solte e escute de novo.
 11. Arraste até 100, solte e escute de novo.
-12. Tire o fone e clique em «Efeitos do Jogo no Controle, Áudio da TV na TV», no bloco do P3.
-13. Clique na linha do P4 e refaça nele a mesma rodada, do botão do meio até a volta, com o mesmo fone.
+12. Tire o fone e clique em «Efeitos do Jogo no Controle, Áudio do PC no PC», no bloco do P3.
+13. Clique na linha do P4 e refaça nele a mesma rodada, do «Efeitos do Jogo e Áudio do PC no Controle» até a volta, com o mesmo fone.
 14. Clique em «Todos», na fita do topo, e confira que os números de volume do P1 e do P2 não se mexeram.
 15. Devolva o volume da TV pelo controle remoto dela.
 
@@ -517,7 +515,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No BT, e é o primeiro a receber o fone: a anotação de onde a música sai, e as três paradas com o fone no ouvido.
 * **P4** — No BT, e recebe o mesmo fone depois. É a segunda prova do BT: a resposta dele tem de ser anotada tanto quanto a do P3.
 
-**A armadilha.** Prove o fone antes: sem isso, um fone ruim e o BT dão exatamente o mesmo silêncio. O som que o Hefesto leva pelo BT vai endereçado ao alto-falante, e ninguém sabe se o controle o desvia para o fone — se o fone ficar mudo e a música continuar nos furinhos, isso é resultado, não erro seu. No BT a queda e a volta são rotina: se o número voltar sozinho ao que era enquanto você testa, anote a HORA. E lembre-se de que o que você arrasta é o deslizante do alto-falante, que carrega os dois.
+**A armadilha.** Prove o fone antes: sem isso, um fone ruim e o BT dão exatamente o mesmo silêncio. O som que o Hefesto leva pelo BT vai endereçado ao alto-falante, e ninguém sabe se o controle o desvia para o fone — se o fone ficar mudo e a música continuar nos furinhos, isso é resultado, não erro seu. Use «Efeitos do Jogo e Áudio do PC no Controle», e não «Tudo no Controle e Nada no PC», embora o segundo dispensasse abaixar a TV: ele pede ao controle a rota «só no alto-falante», e o fone deixaria de ser o que se mede. No BT a queda e a volta são rotina: se o número voltar sozinho ao que era enquanto você testa, anote a HORA. E lembre-se de que o que você arrasta é o deslizante do alto-falante, que carrega os dois.
 
 ---
 
@@ -749,9 +747,9 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.saida_dedicada @ cabo`
 
-**O que isto prova.** Prova que cada controle do USB tem uma saída de som PRÓPRIA — uma por controle, com o número certo —, e que o exame do Hefesto conta as placas de som dos dois.
+**O que isto prova.** Prova que cada controle do USB tem uma saída de som PRÓPRIA — uma por controle, com o número certo —, que o exame do Hefesto conta as placas de som dos dois, e que o «Tudo no Controle e Nada no PC» de cada cartão escolhe essa mesma saída com um clique.
 
-**Onde olhar.** Na aba Sistema, na seção «O exame de hoje»: a linha que começa com «áudio presente», que conta as placas de som dos controles no USB; a que começa com «regra áudio-off», que diz se o microfone e o fone deles estão liberados — as duas são cortadas na tela, então pare o mouse em cima para ler a frase inteira —; e a que começa com «Som do sistema», que diz por onde o som do computador está saindo. Fora do Hefesto, a lista de saídas das configurações de Som do sistema, onde cada controle tem a sua saída «Alto-falante do Controle N», com o número do jogador.
+**Onde olhar.** Na aba Sistema, na seção «O exame de hoje»: a linha que começa com «áudio presente», que conta as placas de som dos controles no USB; a que começa com «regra áudio-off», que diz se o microfone e o fone deles estão liberados — as duas são cortadas na tela, então pare o mouse em cima para ler a frase inteira —; e a que começa com «Som do sistema», que diz por onde o som do computador está saindo. Fora do Hefesto, a lista de saídas das configurações de Som do sistema, onde cada controle tem a sua saída «Alto-falante do Controle N», com o número do jogador. E, na aba Controles, o bloco Alto-falante de cada cartão, com o botão «Tudo no Controle e Nada no PC» — «PC», nos botões, é a saída do computador; na bancada, a TV.
 
 **Os passos.**
 
@@ -759,24 +757,27 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 2. Na seção «O exame de hoje», pare o mouse na linha que começa com «áudio presente» e leia a frase inteira.
 3. Confira que ela conta os 2 controles do USB.
 4. Pare o mouse na linha que começa com «regra áudio-off» e leia a frase inteira.
-5. Clique na aba Controles e confira que o P1 e o P2 estão com «Efeitos do Jogo no Controle, Áudio da TV na TV» aceso.
+5. Clique na aba Controles e confira que o P1 e o P2 estão com «Efeitos do Jogo no Controle, Áudio do PC no PC» aceso.
 6. Abra as configurações de Som do sistema e escolha como saída a que começa com «Alto-falante do Controle 1».
 7. Toque uma música no computador e confira, com o ouvido, que ela sai pelo P1 e não sai na TV nem no P2.
 8. Escolha como saída a que começa com «Alto-falante do Controle 2» e confira que a música passou para o P2, e só para ele.
 9. Encoste o ouvido no P3 e depois no P4 e confirme que os dois estão mudos.
 10. Clique na aba Sistema e confira que a linha que começa com «Som do sistema» diz, em poucos segundos, que o som sai em «Alto-falante do Controle 2».
 11. Devolva a saída do sistema para a TV e confira que a música voltou para ela e que o P1 e o P2 emudeceram.
+12. Clique na aba Controles, abra o cartão do P2 e clique em «Tudo no Controle e Nada no PC», no bloco Alto-falante dele.
+13. Confira que a música sai só pelo P2 e que, nas configurações de Som do sistema, a saída escolhida passou a ser a que começa com «Alto-falante do Controle 2».
+14. Clique em «Efeitos do Jogo no Controle, Áudio do PC no PC», no bloco do P2, e confira que a música voltou para a TV.
 
-**Passa quando.** A linha «áudio presente» conta os 2 controles do USB e a da regra de áudio diz que eles estão liberados. Escolhida a saída «Alto-falante do Controle 1», a música sai só no P1; escolhida a do 2, só no P2; a aba Sistema diz para onde o som foi; e, devolvida a saída para a TV, os dois emudecem. O P3 e o P4 ficam mudos.
+**Passa quando.** A linha «áudio presente» conta os 2 controles do USB e a da regra de áudio diz que eles estão liberados. Escolhida a saída «Alto-falante do Controle 1», a música sai só no P1; escolhida a do 2, só no P2; a aba Sistema diz para onde o som foi; e, devolvida a saída para a TV, os dois emudecem. E o «Tudo no Controle e Nada no PC» do P2 escolhe sozinho a mesma saída «Alto-falante do Controle 2», com a música só no P2, e o botão de cima a devolve à TV. O P3 e o P4 ficam mudos.
 
 **Por controle.**
 
 * **P1** — No USB, e é o primeiro a receber a saída do sistema. A música tem de sair nele e em nenhum outro.
-* **P2** — No USB, e recebe a saída depois. É ele que prova que o número não está trocado: o «2» tem de tocar no P2, e não no P1.
+* **P2** — No USB, e recebe a saída depois, pela lista e pelo botão do cartão dele. É ele que prova que o número não está trocado: o «2» tem de tocar no P2, e não no P1.
 * **P3** — No BT, e é TESTEMUNHA. Não entra na conta do exame e fica mudo o tempo todo.
 * **P4** — No BT, e é a segunda testemunha. Mesma conferência do P3.
 
-**A armadilha.** As frases do exame são cortadas, e no caso da regra de áudio o corte inverte o sentido: o que sobra ao lado do selo se lê como problema, e o «estão liberados» fica escondido — pare sempre o mouse em cima. As duas placas DualSense do USB têm o mesmo nome e não dizem qual é qual: é por isso que existe «Alto-falante do Controle N», e o que este teste mede é o número cair no controle certo. O número do nome só se renova com aquele controle em silêncio: se o «2» tocar no P1 logo depois de os jogadores trocarem de lugar, pare a música, espere uns segundos e escolha a saída de novo antes de reprovar. Deixe o P1 e o P2 no botão de cima: com o do meio, o outro controle também receberia a música mandada ao primeiro, e o teste não diria mais de onde ela veio. Devolva a saída para a TV no fim — se esquecer, o computador continua tocando só no controle. E a prova desta célula parou em «montou», e está marcada como parcial.
+**A armadilha.** As frases do exame são cortadas, e no caso da regra de áudio o corte inverte o sentido: o que sobra ao lado do selo se lê como problema, e o «estão liberados» fica escondido — pare sempre o mouse em cima. As duas placas DualSense do USB têm o mesmo nome e não dizem qual é qual: é por isso que existe «Alto-falante do Controle N», e o que este teste mede é o número cair no controle certo. O número do nome só se renova com aquele controle em silêncio: se o «2» tocar no P1 logo depois de os jogadores trocarem de lugar, pare a música, espere uns segundos e escolha a saída de novo antes de reprovar. Deixe o P1 e o P2 no botão de cima: com «Efeitos do Jogo e Áudio do PC no Controle», o outro controle também receberia a música mandada ao primeiro, e o teste não diria mais de onde ela veio. O botão de cima só devolve à TV a saída que o próprio «Tudo no Controle e Nada no PC» levou: a que você escolheu pela lista do sistema, você devolve pela lista. Devolva a saída para a TV no fim — se esquecer, o computador continua tocando só no controle. E a prova desta célula parou em «montou», e está marcada como parcial.
 
 ---
 
@@ -784,14 +785,14 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.saida_dedicada @ rádio`
 
-**O que isto prova.** Prova que cada controle do BT também tem uma saída de som PRÓPRIA, criada pelo Hefesto, e que o som mandado a ela sai só naquele controle, pelo fio do BT.
+**O que isto prova.** Prova que cada controle do BT também tem uma saída de som PRÓPRIA, criada pelo Hefesto, que o som mandado a ela sai só naquele controle, pelo fio do BT, e que o «Tudo no Controle e Nada no PC» de cada cartão escolhe essa mesma saída com um clique.
 
-**Onde olhar.** Fora do Hefesto, a lista de saídas das configurações de Som do sistema: cada controle do BT tem ali a sua saída «Alto-falante do Controle N», com o número do jogador, e nenhuma placa DualSense — pelo BT o controle não publica placa de som, e quem leva o som até ele é o Hefesto. Na aba Sistema, em «O exame de hoje», a linha que começa com «Som do sistema» diz por onde o som do computador está saindo. E o ouvido encostado nos nove furinhos da frente do controle.
+**Onde olhar.** Fora do Hefesto, a lista de saídas das configurações de Som do sistema: cada controle do BT tem ali a sua saída «Alto-falante do Controle N», com o número do jogador, e nenhuma placa DualSense — pelo BT o controle não publica placa de som, e quem leva o som até ele é o Hefesto. Na aba Sistema, em «O exame de hoje», a linha que começa com «Som do sistema» diz por onde o som do computador está saindo. Na aba Controles, o bloco Alto-falante de cada cartão, com o botão «Tudo no Controle e Nada no PC» — «PC», nos botões, é a saída do computador; na bancada, a TV. E o ouvido encostado nos nove furinhos da frente do controle.
 
 **Os passos.**
 
 1. Clique na aba Controles.
-2. Confira na fita do topo que P3 e P4 dizem BT, e que os dois estão com «Efeitos do Jogo no Controle, Áudio da TV na TV» aceso.
+2. Confira na fita do topo que P3 e P4 dizem BT, e que os dois estão com «Efeitos do Jogo no Controle, Áudio do PC no PC» aceso.
 3. Abra as configurações de Som do sistema e confira que há uma saída que começa com «Alto-falante do Controle 3» e outra com «Alto-falante do Controle 4».
 4. Escolha como saída a que começa com «Alto-falante do Controle 3».
 5. Toque uma música no computador e confira, com o ouvido, que ela sai pelo P3 e não sai na TV nem no P4.
@@ -799,17 +800,20 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 7. Encoste o ouvido no P1 e depois no P2 e confirme que os dois estão mudos.
 8. Clique na aba Sistema e confira que a linha que começa com «Som do sistema» diz, em poucos segundos, que o som sai em «Alto-falante do Controle 4».
 9. Devolva a saída do sistema para a TV e confira que a música voltou para ela e que o P3 e o P4 emudeceram.
+10. Clique na aba Controles, abra o cartão do P4 e clique em «Tudo no Controle e Nada no PC», no bloco Alto-falante dele.
+11. Confira que a música sai só pelo P4 e que, nas configurações de Som do sistema, a saída escolhida passou a ser a que começa com «Alto-falante do Controle 4».
+12. Clique em «Efeitos do Jogo no Controle, Áudio do PC no PC», no bloco do P4, e confira que a música voltou para a TV.
 
-**Passa quando.** A lista de saídas do sistema tem uma saída própria para o P3 e outra para o P4. Escolhida uma delas, a música sai só naquele controle, pelo BT; a aba Sistema diz para onde o som foi; e, devolvida a saída para a TV, os dois emudecem. O P1 e o P2 ficam mudos.
+**Passa quando.** A lista de saídas do sistema tem uma saída própria para o P3 e outra para o P4. Escolhida uma delas, a música sai só naquele controle, pelo BT; a aba Sistema diz para onde o som foi; e, devolvida a saída para a TV, os dois emudecem. E o «Tudo no Controle e Nada no PC» do P4 escolhe sozinho a mesma saída «Alto-falante do Controle 4», com a música só no P4, e o botão de cima a devolve à TV. O P1 e o P2 ficam mudos.
 
 **Por controle.**
 
 * **P1** — No USB, e é TESTEMUNHA. Não mexa nele. Se ele tocar a música mandada ao P3, o som pegou o controle errado.
 * **P2** — No USB, e é a segunda testemunha. Mesma conferência do P1.
 * **P3** — No BT, e é o primeiro a receber a saída do sistema. A música tem de sair nele e em nenhum outro.
-* **P4** — No BT, e recebe a saída depois. É ele que prova que o número não está trocado: o «4» tem de tocar no P4, e não no P3.
+* **P4** — No BT, e recebe a saída depois, pela lista e pelo botão do cartão dele. É ele que prova que o número não está trocado: o «4» tem de tocar no P4, e não no P3.
 
-**A armadilha.** A página pode chegar com «nada» já marcado nesta célula: é a pré-marca herdada do mapa, que ainda guarda a medição de antes de 10/09, quando pelo BT o som não saía. Troque-a pelo que você ouviu. O número do nome só se renova com aquele controle em silêncio: se o «4» tocar no P3 logo depois de os jogadores trocarem de lugar, pare a música, espere uns segundos e escolha a saída de novo antes de reprovar. Deixe o P3 e o P4 no botão de cima: com o do meio, o outro controle também receberia a música mandada ao primeiro. No BT o começo da música pode demorar um instante enquanto o fio acorda — espere antes de concluir que não saiu. Devolva a saída para a TV no fim; se esquecer, o computador continua tocando só no controle. E ninguém desta casa pode escrever que «descobriu o som pelo BT» a partir de um canal que responde: o que decide é o ouvido, com o som saindo do controle certo e de nenhum outro.
+**A armadilha.** A página pode chegar com «nada» já marcado nesta célula: é a pré-marca herdada do mapa, que ainda guarda a medição de antes de 10/09, quando pelo BT o som não saía. Troque-a pelo que você ouviu. O número do nome só se renova com aquele controle em silêncio: se o «4» tocar no P3 logo depois de os jogadores trocarem de lugar, pare a música, espere uns segundos e escolha a saída de novo antes de reprovar. Deixe o P3 e o P4 no botão de cima: com «Efeitos do Jogo e Áudio do PC no Controle», o outro controle também receberia a música mandada ao primeiro. No BT o começo da música pode demorar um instante enquanto o fio acorda — espere antes de concluir que não saiu. O botão de cima só devolve à TV a saída que o próprio «Tudo no Controle e Nada no PC» levou: a que você escolheu pela lista do sistema, você devolve pela lista. Devolva a saída para a TV no fim; se esquecer, o computador continua tocando só no controle. E ninguém desta casa pode escrever que «descobriu o som pelo BT» a partir de um canal que responde: o que decide é o ouvido, com o som saindo do controle certo e de nenhum outro.
 
 ---
 
@@ -6948,7 +6952,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o som do computador sai mesmo pelo alto-falante dos dois controles que estão no rádio — o caminho que existe nesta casa desde 10/09/2026 — e entrega as duas metades que faltam para o mapa fechar esta célula: o negativo de rota e a escuta cega. A primeira metade já foi feita e não se repete: o som saiu do plástico por rádio, setenta segundos contínuos, com o seu ouvido. O que falta é provar que ele saiu de LÁ e não de outro lugar.
 
-**Onde olhar.** Na aba Controles do Hefesto. Clique na linha de um controle e o cartão dele abre (o que estava aberto fecha sozinho). Dentro do cartão, o bloco Alto-falante: o selo ATIVO ao lado do nome, as barrinhas que se mexem quando entra som naquele controle, o deslizante de volume com o número ao lado, o botão ♪ — que CALA o alto-falante —, e os três botões de rota: «Efeitos do Jogo no Controle, Áudio da TV na TV» (o de sempre: só o que o jogo mandar para aquele controle), «Efeitos do Jogo e Áudio da TV no Controle» (tudo o que a máquina toca cai também no controle, e continua saindo na TV) e «Tudo na TV e Nada no Controle» (o alto-falante do controle para de tocar). Mas quem responde este teste é o seu OUVIDO, encostado no alto-falante do próprio controle: são nove furinhos em duas fileiras, na frente do DualSense, logo abaixo e entre os dois analógicos. E quem responde a segunda metade é outra pessoa: alguém precisa clicar por você, sem dizer o que clicou.
+**Onde olhar.** Na aba Controles do Hefesto. Clique na linha de um controle e o cartão dele abre (o que estava aberto fecha sozinho). Dentro do cartão, o bloco Alto-falante: o selo ATIVO ao lado do nome, as barrinhas que se mexem quando entra som naquele controle, o deslizante de volume com o número ao lado, o botão ♪ — que CALA o alto-falante —, e os quatro botões de rota: «Efeitos do Jogo no Controle, Áudio do PC no PC» (o de sempre: só o que o jogo mandar para aquele controle), «Efeitos do Jogo e Áudio do PC no Controle» (tudo o que a máquina toca cai também no controle, e continua saindo no PC), e embaixo, lado a lado, «Tudo no PC e Nada no Controle» (o alto-falante do controle para de tocar) e «Tudo no Controle e Nada no PC» (o som do computador sai só no controle, e o PC cala). «PC», nos botões, é a saída do computador — na bancada, a TV. Mas quem responde este teste é o seu OUVIDO, encostado no alto-falante do próprio controle: são nove furinhos em duas fileiras, na frente do DualSense, logo abaixo e entre os dois analógicos. E quem responde a segunda metade é outra pessoa: alguém precisa clicar por você, sem dizer o que clicou.
 
 **Os passos.**
 
@@ -6957,19 +6961,19 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 3. Clique na linha do P3 para abrir o cartão dele.
 4. Arraste o deslizante de volume do bloco Alto-falante do P3 até o fim da direita.
 5. Confira que o número ao lado dele diz 100.
-6. Clique em «Efeitos do Jogo e Áudio da TV no Controle» no bloco do P3.
+6. Clique em «Efeitos do Jogo e Áudio do PC no Controle» no bloco do P3.
 7. Toque no computador um som bem marcado e curto, que se reconheça de ouvido — um toque de aviso, não uma música.
 8. Encoste o ouvido no P3 e escute se o som sai por ali.
 9. Encoste o ouvido no P4, depois no P1 e no P2, e confirme que os três estão mudos.
-10. Agora o NEGATIVO DE ROTA, e ele é o coração deste teste: clique em «Tudo na TV e Nada no Controle» no bloco do P3.
+10. Agora o NEGATIVO DE ROTA, e ele é o coração deste teste: clique em «Tudo no PC e Nada no Controle» no bloco do P3.
 11. Toque o MESMO som e encoste o ouvido no P3: ele sai na TV, e o P3 tem de ficar MUDO.
-12. Clique de novo em «Efeitos do Jogo e Áudio da TV no Controle» e toque o mesmo som, para confirmar que ele voltou a sair do P3.
-13. Chame outra pessoa e peça que ela faça, sem você ver a tela e sem falar nada, seis passadas em ordem embaralhada: três com «Efeitos do Jogo e Áudio da TV no Controle» aceso no P3 e três com «Tudo na TV e Nada no Controle», tocando o mesmo som em cada uma.
+12. Clique de novo em «Efeitos do Jogo e Áudio do PC no Controle» e toque o mesmo som, para confirmar que ele voltou a sair do P3.
+13. Chame outra pessoa e peça que ela faça, sem você ver a tela e sem falar nada, seis passadas em ordem embaralhada: três com «Efeitos do Jogo e Áudio do PC no Controle» aceso no P3 e três com «Tudo no PC e Nada no Controle», tocando o mesmo som em cada uma.
 14. A cada passada, com o ouvido no P3, diga em voz alta «controle» ou «só TV», e peça que ela anote a sua resposta ao lado do botão que estava aceso.
-15. Clique em «Efeitos do Jogo no Controle, Áudio da TV na TV» no bloco do P3, para devolvê-lo ao de sempre — não pule este passo.
+15. Clique em «Efeitos do Jogo no Controle, Áudio do PC no PC» no bloco do P3, para devolvê-lo ao de sempre — não pule este passo.
 16. Clique na linha do P4 e faça nele a mesma volta — volume em 100, o som no controle, o negativo de rota e a devolução ao botão de sempre —, com o P3 agora de testemunha muda.
 
-**Passa quando.** Sai som pelo alto-falante do P3 e pelo do P4, os dois que estão no rádio. O mesmo som, com «Tudo na TV e Nada no Controle», sai na TV e NÃO sai de nenhum dos dois — esse é o negativo de rota, e sem ele o teste não passa mesmo que você tenha ouvido o som cem vezes. E as seis passadas cegas batem SEIS de seis: você acertou onde o som estava tocando sem saber o que a outra pessoa clicou. Cinco de seis já não passa: uma errada é ruído ou é vazamento, e nos dois casos a resposta é repetir.
+**Passa quando.** Sai som pelo alto-falante do P3 e pelo do P4, os dois que estão no rádio. O mesmo som, com «Tudo no PC e Nada no Controle», sai na TV e NÃO sai de nenhum dos dois — esse é o negativo de rota, e sem ele o teste não passa mesmo que você tenha ouvido o som cem vezes. E as seis passadas cegas batem SEIS de seis: você acertou onde o som estava tocando sem saber o que a outra pessoa clicou. Cinco de seis já não passa: uma errada é ruído ou é vazamento, e nos dois casos a resposta é repetir.
 
 **Por controle.**
 
@@ -6978,7 +6982,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P1** — No cabo, e é TESTEMUNHA: você não mexe no bloco dele. O som do P3 não pode sair dele.
 * **P2** — No cabo, e é a segunda testemunha. Mesmo gesto do P1.
 
-**A armadilha.** O selo ATIVO do alto-falante NÃO apaga com «Tudo na TV e Nada no Controle», e isso é decisão dela: o selo fala do canal, não da rota. Quem responde o negativo de rota é o seu ouvido. O ♪ não é confirmação: ele CALA o alto-falante, e as barrinhas ficam no chão com ele calado — se você clicou nele sem querer, clique de novo antes de concluir que o rádio não toca. Segunda, e é regra desta casa com nome: ninguém pode concluir, de um canal responder, que ele FAZ o que a gente esperava dele. O canal do rádio aceitava bytes muito antes de tocar um som, e foi por isso que a casa mirou no report errado durante semanas. Terceira: «Efeitos do Jogo e Áudio da TV no Controle» deixa o som da máquina saindo também pelo controle até alguém voltar ao botão de sempre — esquecer disso faz o próximo teste ouvir o PC no controle e parece defeito sem ser. Não dispare vibração no P3 ou no P4 enquanto testa: pelo rádio o som e a vibração disputam o mesmo fio. E quarta, que é a razão das seis passadas cegas: você SABE o que quer ouvir, e ouvido que sabe o que quer ouvir ouve. A escuta cega existe porque a sua própria expectativa é a fonte de erro mais provável deste teste — e ela já derrubou uma medição desta casa antes.
+**A armadilha.** O selo ATIVO do alto-falante NÃO apaga com «Tudo no PC e Nada no Controle», e isso é decisão dela: o selo fala do canal, não da rota. Quem responde o negativo de rota é o seu ouvido. O ♪ não é confirmação: ele CALA o alto-falante, e as barrinhas ficam no chão com ele calado — se você clicou nele sem querer, clique de novo antes de concluir que o rádio não toca. Segunda, e é regra desta casa com nome: ninguém pode concluir, de um canal responder, que ele FAZ o que a gente esperava dele. O canal do rádio aceitava bytes muito antes de tocar um som, e foi por isso que a casa mirou no report errado durante semanas. Terceira: «Efeitos do Jogo e Áudio do PC no Controle» deixa o som da máquina saindo também pelo controle até alguém voltar ao botão de sempre — esquecer disso faz o próximo teste ouvir o PC no controle e parece defeito sem ser. E as passadas cegas usam ele, e não «Tudo no Controle e Nada no PC», de propósito: com o quarto a TV cala, e o silêncio da TV entregaria a resposta sem o seu ouvido no controle. Não dispare vibração no P3 ou no P4 enquanto testa: pelo rádio o som e a vibração disputam o mesmo fio. E quarta, que é a razão das seis passadas cegas: você SABE o que quer ouvir, e ouvido que sabe o que quer ouvir ouve. A escuta cega existe porque a sua própria expectativa é a fonte de erro mais provável deste teste — e ela já derrubou uma medição desta casa antes.
 
 ---
 
@@ -6988,25 +6992,23 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o que viaja DENTRO do canal do rádio é som de verdade — não que o canal aceitou bytes. São duas perguntas diferentes, e confundi-las custou semanas a esta casa: o aparelho respondia de bom grado a um report que não carregava áudio nenhum. Este teste separa as duas ouvindo o CONTEÚDO: um som que você reconhece sem hesitar, saindo com a forma que você mandou.
 
-**Onde olhar.** Na aba Controles, no cartão do P3 e no do P4, bloco Alto-falante: o volume com o número ao lado, o ♪ — que cala o alto-falante — e os três botões de rota, dos quais este teste usa dois: «Efeitos do Jogo e Áudio da TV no Controle», que põe o som da máquina no controle sem tirá-lo da TV, e «Efeitos do Jogo no Controle, Áudio da TV na TV», o de sempre. O conteúdo do que viaja não tem tela e não vai ter — ele se prova com o ouvido, comparando o que saiu com o que foi mandado. Como o som continua saindo na TV, a TV tem de estar calada pelo controle remoto dela, senão o seu ouvido entende a frase pela TV e não pelo controle.
+**Onde olhar.** Na aba Controles, no cartão do P3 e no do P4, bloco Alto-falante: o volume com o número ao lado, o ♪ — que cala o alto-falante — e os quatro botões de rota, dos quais este teste usa dois: «Tudo no Controle e Nada no PC», que põe o som do computador só no controle e cala a TV, e «Efeitos do Jogo no Controle, Áudio do PC no PC», o de sempre, que devolve o som à TV. «PC», nos botões, é a saída do computador — na bancada, a TV. O conteúdo do que viaja não tem tela e não vai ter — ele se prova com o ouvido, comparando o que saiu com o que foi mandado. Com o quarto botão a TV fica calada sem o controle remoto dela, e é isso que garante que a frase que você entende veio do controle, e não da TV.
 
 **Os passos.**
 
 1. Clique na aba Controles.
 2. Confira na fita do topo que o P3 e o P4 dizem BT.
 3. Escolha TRÊS sons bem diferentes um do outro: um grave longo, um agudo curto e uma voz falando uma frase que você reconheça.
-4. Abaixe o volume da própria TV até zero, pelo controle remoto dela.
-5. Clique na linha do P3 e arraste o volume do bloco Alto-falante até 100.
-6. Clique em «Efeitos do Jogo e Áudio da TV no Controle» no bloco do P3.
-7. Toque o grave longo e escute com o ouvido no P3.
-8. Toque o agudo curto e escute com o ouvido no P3.
-9. Toque a voz e escute com o ouvido no P3: você tem de entender a frase, não só ouvir que tem som.
-10. Anote, para cada um dos três, se o que saiu era o MESMO som — e não um estalo, um chiado ou um pedaço dele.
-11. Arraste o volume do P3 até 30 e toque a voz de novo: ela tem de sair mais baixa e continuar compreensível.
-12. Arraste o volume do P3 de volta a 100 e deixe a voz tocando por dois minutos seguidos, escutando o fim: ela não pode ter engasgado, cortado nem virado chiado no meio do caminho.
-13. Clique em «Efeitos do Jogo no Controle, Áudio da TV na TV» no bloco do P3.
-14. Clique na linha do P4 e faça nele a mesma volta: volume em 100, o som no controle, os três sons, o volume em 30, os dois minutos e a devolução ao botão de sempre.
-15. Devolva o volume da TV ao de antes.
+4. Clique na linha do P3 e arraste o volume do bloco Alto-falante até 100.
+5. Clique em «Tudo no Controle e Nada no PC» no bloco do P3.
+6. Toque o grave longo, confira que a TV não toca, e escute com o ouvido no P3.
+7. Toque o agudo curto e escute com o ouvido no P3.
+8. Toque a voz e escute com o ouvido no P3: você tem de entender a frase, não só ouvir que tem som.
+9. Anote, para cada um dos três, se o que saiu era o MESMO som — e não um estalo, um chiado ou um pedaço dele.
+10. Arraste o volume do P3 até 30 e toque a voz de novo: ela tem de sair mais baixa e continuar compreensível.
+11. Arraste o volume do P3 de volta a 100 e deixe a voz tocando por dois minutos seguidos, escutando o fim: ela não pode ter engasgado, cortado nem virado chiado no meio do caminho.
+12. Clique em «Efeitos do Jogo no Controle, Áudio do PC no PC» no bloco do P3.
+13. Clique na linha do P4 e faça nele a mesma volta: volume em 100, o «Tudo no Controle e Nada no PC», os três sons, o volume em 30, os dois minutos e a devolução ao botão de sempre.
 
 **Passa quando.** Os três sons saem reconhecíveis pelos dois controles do rádio, e a voz é COMPREENSÍVEL — não basta sair barulho. O volume em 30 abaixa o som sem quebrá-lo. E os dois minutos seguidos terminam sem engasgo: um caminho que entrega dez segundos e morre no terceiro minuto não entregou o conteúdo, entregou uma amostra.
 
@@ -7017,7 +7019,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P1** — No cabo, e é testemunha muda. No cabo o som é uma saída comum do computador e não passa por este canal: se ele tocar junto, o que está tocando não é o que este teste mede.
 * **P2** — No cabo, e é a segunda testemunha. Mesma leitura do P1.
 
-**A armadilha.** A pergunta desta linha NÃO é «o canal responde» — é «o que viaja dentro dele é som». Duas fontes de fora descrevem o formato deste conteúdo byte a byte, e as duas DIVERGEM entre si; e as duas erraram o report. Por isso a leitura de fonte não vale como resposta aqui, por mais detalhada que seja: só o ouvido responde. Segunda: a voz é o som que decide, e não por gosto — um estalo, um chiado e um engasgo todos soam como «tem som saindo», e só a fala mostra se o que chegou foi o som ou um pedaço dele. Terceira: com a TV só com o volume baixo, e não zerado, a frase que você entende pode ter vindo dela — zere pelo controle remoto da TV, e não pelo volume do computador: o som que chega ao controle sai da mesma saída, e mexer nela mede outra coisa. Quarta: dois minutos parecem exagero e não são; um trecho longo é o que deixa uma falha de cadência aparecer. Não dispare vibração no P3 ou no P4 durante o teste: pelo rádio o som e a vibração disputam o mesmo fio.
+**A armadilha.** A pergunta desta linha NÃO é «o canal responde» — é «o que viaja dentro dele é som». Duas fontes de fora descrevem o formato deste conteúdo byte a byte, e as duas DIVERGEM entre si; e as duas erraram o report. Por isso a leitura de fonte não vale como resposta aqui, por mais detalhada que seja: só o ouvido responde. Segunda: a voz é o som que decide, e não por gosto — um estalo, um chiado e um engasgo todos soam como «tem som saindo», e só a fala mostra se o que chegou foi o som ou um pedaço dele. Terceira: com «Tudo no Controle e Nada no PC» aceso a TV cala, e não é preciso zerá-la pelo controle remoto; mas o volume do computador passa a ser o do próprio controle — não mexa nele: o som que chega ao controle sai por ele, e mexer nele mede outra coisa. Esse botão vale para um controle por vez: a volta do P4 começa depois que o P3 voltou ao botão de sempre. Quarta: dois minutos parecem exagero e não são; um trecho longo é o que deixa uma falha de cadência aparecer. Não dispare vibração no P3 ou no P4 durante o teste: pelo rádio o som e a vibração disputam o mesmo fio.
 
 ---
 
