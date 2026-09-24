@@ -13,16 +13,13 @@ que o código cita e o sandbox NÃO deve ganhar está em :data:`NAO_SE_EXPOE`, c
 o porquê. Um caminho novo de /run no código, sem linha e sem decisão, reprova.
 Um caminho de /run MONTADO POR PARTES (`Path("/run") / …`) o varredor não lê, e
 por isso reprova também. O barramento de SISTEMA mora em /run/dbus e o `Gio` o
-abre sem texto de caminho: ele é cobrado pelo `BusType.SYSTEM`, junto com o
-diário do root, em :data:`SEGUE_SEM_ALCANCAR` — o que a página diz que o
-Flatpak não alcança, o manifesto de fato não dá.
+abre sem texto de caminho: o varredor o acha pelo `BusType.SYSTEM`, e quem cobra
+a linha dele (e a do diário do root) é `test_o_flatpak_alcanca_o_bluez.py`.
 
 A MORDIDA, medida: tirar a linha do broker reprova o teste da cobertura e o do
 modo; pôr `:ro` na da trava reprova o do modo e o da escrita; tirar a do udev
 reprova o da cobertura; `Path("/run") / "x"` no código reprova o das partes;
-`--system-talk-name=org.bluez` ou o diário do root no manifesto, sem a página
-mudar, reprovam o do que segue sem alcançar; uma linha de /run que a página
-diz e o manifesto não tem reprova o da página.
+uma linha de /run que a página diz e o manifesto não tem reprova o da página.
 """
 
 from __future__ import annotations
@@ -260,64 +257,4 @@ def test_a_pagina_do_flatpak_diz_cada_linha_de_run() -> None:
     )
     assert na_pagina <= no_manifesto, (
         f"{sorted(na_pagina - no_manifesto)} está na docs/usage/flatpak.md e o manifesto não tem"
-    )
-
-
-def _secao_do_run(pagina: str) -> str:
-    """O texto da seção «O que o daemon alcança em `/run`» da página."""
-    titulo = "### O que o daemon alcança em `/run`"
-    assert titulo in pagina, "a docs/usage/flatpak.md perdeu a seção do /run"
-    return re.split(r"\n(?:---|## )", pagina.split(titulo, 1)[1], maxsplit=1)[0]
-
-
-def test_o_que_a_pagina_diz_que_segue_sem_alcancar_o_manifesto_nao_da() -> None:
-    """Os dois buracos que a página declara existem, e a página os declara.
-
-    O BlueZ mora no barramento de SISTEMA (o socket é /run/dbus), que o `Gio`
-    abre sem texto de caminho; o diário do root mora em /var/lib. O manifesto
-    não dá nenhum dos dois, e a página diz isso. Quem abrir um deles mede, e
-    muda a página, o docstring do `apelido_do_dongle` e esta trava juntos.
-    """
-    from hefesto_dualsense4unix.integrations.diario_do_radio import DIARIO_DO_ROOT
-
-    assert BARRAMENTO_DE_SISTEMA, (
-        "controle: o varredor não achou o `BusType.SYSTEM` do BlueZ. Ou o código "
-        "deixou de abrir o barramento de sistema, e a página tem de mudar, ou a "
-        "régua ficou cega"
-    )
-    args = yaml.safe_load(MANIFESTO.read_text(encoding="utf-8"))["finish-args"]
-    secao = _secao_do_run(PAGINA.read_text(encoding="utf-8"))
-    assert "continua sem alcançar" in secao, "a seção do /run perdeu o que o Flatpak não alcança"
-    sem_alcancar = secao.split("continua sem alcançar", 1)[1]
-
-    barramento = [
-        a
-        for a in args
-        if a.startswith(("--socket=system-bus", "--system-talk-name=", "--system-own-name="))
-    ]
-    assert not barramento, (
-        f"o manifesto abre o barramento de sistema ({barramento}), e a página diz "
-        "que o BlueZ não chega ao Flatpak"
-    )
-    assert "BlueZ" in sem_alcancar and "barramento de SISTEMA" in sem_alcancar, (
-        "a página deixou de dizer que o BlueZ não chega ao Flatpak, e o manifesto "
-        "segue sem o barramento de sistema"
-    )
-
-    diario = str(DIARIO_DO_ROOT.parent)
-    montam = []
-    for a in args:
-        if not a.startswith("--filesystem="):
-            continue
-        caminho = a.removeprefix("--filesystem=").partition(":")[0]
-        absoluto = caminho.startswith("/")
-        if caminho == "host" or (absoluto and _debaixo_de(diario, caminho.rstrip("/"))):
-            montam.append(a)
-    assert not montam, (
-        f"o manifesto monta o diário do root ({montam}), e a página diz que ele "
-        "não chega ao Flatpak"
-    )
-    assert f"`{diario}`" in sem_alcancar, (
-        "a página deixou de dizer que o diário do root não chega ao Flatpak, e o "
-        "manifesto segue sem montá-lo"
     )
