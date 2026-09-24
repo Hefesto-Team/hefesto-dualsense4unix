@@ -36,7 +36,7 @@ se acrescenta aqui antes de entrar na tela.
 | **Status: Ligado / Desligado** | `gamepad_emulation.enabled` | o Hefesto no meio, ou fora |
 | **Modo**: *Jogar pelo Hefesto* · *Conexão Nativa (Sony)* · *Controlar o PC* · *Não mexer no modo* | `mode_kind`, `native_mode`, `mouse_emulation` | como o controle chega ao jogo. Os quatro rótulos são dela (06/08) |
 | **O controle é visto como**: *DualSense* · *Xbox 360* · *Nintendo Pro* | `flavor`, `mascara` | como o JOGO vê o controle. **A máscara não custa feature** (10-Q6): o Hefesto constrói o mecanismo, não descreve a limitação |
-| **perfil** · **Personalizado** (o padrão) | `Profile`, `personalizado.json`, `active_profile` | o arquivo com o que ela tocou; **clicar já aplica e já grava** (D1/D2), e cinco coisas ficam globais (D3) |
+| **perfil** · **Freestyle** (o padrão, o de fora do jogo) | `Profile`, `freestyle.json`, `active_profile` | o arquivo com o que ela tocou; **clicar já aplica e já grava** (D1/D2), e cinco coisas ficam globais (D3) |
 | **Estilo de Jogo** | `estilos_de_jogo/` (receitas), motor a construir | gatilho + vibração + luz prontos para um tipo de jogo. **Não é perfil**: ação, aventura, corrida saem da lista de perfis (06/09) |
 | **Funciona em** (o ambiente do perfil) | `match`, `simple_match`, `steam_app_<id>` | quando o perfil entra sozinho: um jogo, uma janela, todos |
 | **atalho de inicialização** | `hefesto-launch`, o wrapper, `LaunchOptions` | a linha que faz o jogo enxergar o controle pelo Hefesto; **reposta de carona** ao Salvar/Aplicar |
