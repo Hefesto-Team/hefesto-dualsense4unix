@@ -9,7 +9,7 @@ Ela respondeu na página da sessão dos desenhos, em 24/09/2026 às 03h14
 2. **no Modo Nativo o chip fica cinza e não grava** — *"A exceção do nativo
    todo o resto deve ter mira Virtual"*. A guarda mora no daemon (`mira.set`
    recusa), não só na tela; e em todo outro modo e caminho a Mira funciona,
-   no cabo e no BT, do P1 ao P4;  <!-- noqa-acento: citação literal dela -->
+   no cabo e no BT, do P1 ao P4;
 3. **«Só enquanto eu segurar» e «Inverter» entram na tela**, no bloco da Mira
    da Calibrar, por controle, nascendo desligados.
 
@@ -637,7 +637,7 @@ def test_a_ponte_leva_o_sempre_como_null(monkeypatch: pytest.MonkeyPatch) -> Non
 # A MATRIZ DO ITEM 2 — fora do Nativo, a Mira do CHIP anda em todo caminho
 # ---------------------------------------------------------------------------
 # *"todas as decisões e funcionalidades nunca é pensada só em um modo, rota,
-# forma de conexão se cabo ou se bt, ou só pro player 1."*  <!-- noqa-acento: citação literal dela -->
+# forma de conexão se cabo ou se bt, ou só pro player 1."*  <!-- noqa-acento: dela -->
 #
 # OS MODOS QUE EXISTEM, medidos em 24/09/2026 (`mode_transition.MODES` e
 # `ProfileModeConfig`): `gamepad` (o Hefesto ligado, com o CAMINHO `dualsense`
@@ -723,7 +723,7 @@ def test_fora_do_nativo_a_mira_do_chip_anda_do_p1_ao_p4(
     perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
     caminho: str, transporte: str,
 ) -> None:
-    """Os dois caminhos × os dois transportes × os quatro jogadores: o chip
+    """Os dois caminhos, os dois transportes e os quatro jogadores: o chip
     acende a mira de cada um, e o analógico direito que o JOGO recebe anda.
 
     MORDIDAS, as três conferidas em 24/09/2026: faça o `mira.set` recusar
