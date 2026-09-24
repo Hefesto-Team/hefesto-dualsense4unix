@@ -29,7 +29,9 @@ que o posto carrega estão na bancada honesta da volta tardia
 
 AS MORDIDAS (24/09/2026, cada uma devolvida com o md5 conferido):
 
-- no dublê: sem a checagem da lista do driver reprovam 2; sem o ``ps_remove``, 2;
+- no dublê: sem a checagem da lista do driver reprovam 2; sem o ``ps_remove``, 8
+  (os dois do dublê, a mesa cheia e as cinco reconexões: o driver seguiria
+  guardando o MAC de quem já saiu);
 - ``vestir`` vestindo o pedido sem olhar quem veste: 20;
 - a propriedade ``mac`` ignorando o vestido (o 0x09 leva o pedido): 19;
 - ``despir`` que não devolve: 7;
