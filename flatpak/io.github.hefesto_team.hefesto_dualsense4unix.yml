@@ -123,6 +123,27 @@ finish-args:
   - --filesystem=/run/hefesto-hidraw-broker:ro
   - --filesystem=/run/hefesto-dualsense4unix
   - --filesystem=/run/udev/data:ro
+  # O BLUEZ (O-FLATPAK-ALCANCA-O-BLUEZ-01, 24/09/2026). O daemon fala com o
+  # BlueZ pelo barramento de SISTEMA (`integrations/bluez_dbus.py`): parear,
+  # reconectar, remover, mover de adaptador e dar nome ao adaptador. Sem esta
+  # linha o sandbox não tem barramento de sistema, e o Flatpak ficava só com o
+  # controle que o sistema pareou. É o `org.bluez` e só ele, não o
+  # `--socket=system-bus`: o código não fala com outro serviço de sistema, e o
+  # xdg-dbus-proxy esconde os outros (medido: `ServiceUnknown`).
+  # Medido em 24/09 com o flatpak 1.18.1, num sandbox do org.gnome.Platform//47
+  # com o `src/` do produto, contra um bluetoothd de mentira num barramento de
+  # sistema de mentira: o agente próprio (R5) atravessa o proxy nos dois
+  # sentidos — o `RegisterAgent` e o `Pair` saem com o mesmo remetente, e as
+  # chamadas do bluetoothd ao `Agent1` chegam e voltam. Quem cobra é
+  # `tests/unit/test_o_flatpak_alcanca_o_bluez.py`.
+  - --system-talk-name=org.bluez
+  # O DIÁRIO DOS SERVIÇOS DO SISTEMA, só leitura. O watchdog e a ponte (root)
+  # escrevem em /var/lib/hefesto-dualsense4unix/radio-diario.jsonl, e o daemon
+  # só LÊ (`diario_do_radio.ler`). É a PASTA, e não o arquivo, porque o diário
+  # gira por renomeação (`.1`) e pode nascer depois do Hefesto aberto. O DAC
+  # continua valendo lá dentro: o `bt-bonds` (0700 do root) responde
+  # «Permissão negada» no sandbox (medido).
+  - --filesystem=/var/lib/hefesto-dualsense4unix:ro
 
 modules:
   # Módulo 1: todas as dependências Python do Hefesto - DualSense4Unix num único pip install.

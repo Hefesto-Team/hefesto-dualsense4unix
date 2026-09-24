@@ -127,12 +127,18 @@ exibe o Hefesto - DualSense4Unix após instalação).
 
 ## Localização dos perfis e configurações
 
-Dentro do sandbox Flatpak, os caminhos XDG são redirecionados:
+Dentro do sandbox Flatpak, a configuração é redirecionada e a pasta de execução
+não é:
 
 | Caminho original (nativo)    | Caminho dentro do Flatpak                                      |
 |------------------------------|----------------------------------------------------------------|
 | `~/.config/hefesto-dualsense4unix/`         | `~/.var/app/io.github.hefesto_team.hefesto_dualsense4unix/config/hefesto-dualsense4unix/`            |
-| `$XDG_RUNTIME_DIR/hefesto-dualsense4unix/`  | `$XDG_RUNTIME_DIR/app/io.github.hefesto_team.hefesto_dualsense4unix/hefesto-dualsense4unix/`         |
+| `$XDG_RUNTIME_DIR/hefesto-dualsense4unix/`  | `$XDG_RUNTIME_DIR/hefesto-dualsense4unix/`, a mesma pasta do host |
+
+A linha `xdg-run/hefesto-dualsense4unix:create` monta a pasta do host no mesmo
+caminho, e o `$XDG_RUNTIME_DIR` do sandbox é o mesmo `/run/user/<uid>` (medido
+em 24/09/2026, flatpak 1.18.1): o que o sandbox escreve ali, o host vê. Se a
+pasta não existe, o Flatpak a cria ao abrir.
 
 Para copiar perfis criados fora do Flatpak:
 
@@ -263,6 +269,8 @@ O manifest `flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml` declara a
 | `--filesystem=/run/hefesto-hidraw-broker:ro` | O socket do broker, a porta do DualSense físico quando o nó nasce fechado |
 | `--filesystem=/run/hefesto-dualsense4unix` | A trava comum do rádio, disputada com os serviços do sistema |
 | `--filesystem=/run/udev/data:ro`           | A base do udev: quem é o dono do cursor, e o ContainerId da vibração |
+| `--system-talk-name=org.bluez`             | Parear, reconectar, remover e mover de adaptador pelo Hefesto: o BlueZ mora no barramento de sistema |
+| `--filesystem=/var/lib/hefesto-dualsense4unix:ro` | O diário dos serviços do sistema, só de leitura |
 
 > **Por que `--socket=x11` e não `--socket=fallback-x11`.** O `fallback-x11` só
 > monta o socket X11 quando **não** há Wayland — e no COSMIC há. Como esta
@@ -293,14 +301,28 @@ Um caminho que não existe na máquina é pulado em silêncio. **O Flatpak só m
 esses caminhos ao abrir o Hefesto:** depois de rodar o `install-host-udev.sh`,
 feche o Hefesto por inteiro, inclusive na bandeja, e abra de novo.
 
+### O BlueZ e o diário dos serviços do sistema
+
+O daemon fala com o BlueZ pelo barramento de SISTEMA do D-Bus. A linha
+`--system-talk-name=org.bluez` abre esse barramento só para o BlueZ: o sandbox
+não vê outro serviço de sistema. Com ela, parear, reconectar, remover e mover de
+adaptador pelo Hefesto funcionam no Flatpak como fora dele. O pareamento é
+atendido pelo agente do próprio Hefesto, e ele atravessa o proxy do Flatpak nos
+dois sentidos (medido em 24/09/2026, flatpak 1.18.1, com um BlueZ de mentira).
+O proxy entrega ao agente a chamada de qualquer remetente; quem recusa o que
+não vem do BlueZ é o próprio agente.
+
+O diário dos serviços do sistema (`/var/lib/hefesto-dualsense4unix`) entra só
+de leitura, e o diário do rádio mostra os dois lados, como fora do sandbox. A
+pasta dos pareamentos guardados (`bt-bonds`, só do root) continua fechada lá
+dentro.
+
 O que **continua sem alcançar**, e fica aqui escrito:
 
-- **o diário dos serviços do sistema** (`/var/lib/hefesto-dualsense4unix`). No
-  Flatpak, o diário do rádio mostra só o lado da sessão;
-- **o BlueZ.** Ele mora no barramento de SISTEMA do D-Bus, e este manifesto não
-  abre esse barramento: de dentro do sandbox, os gestos do Hefesto que falam
-  com o BlueZ não o alcançam. O controle pareado pelo sistema continua
-  aparecendo.
+- **a ponte do root** (`bt_ponte_privilegiada.sh`, pelo `sudo`), que não existe
+  no sandbox. Sem ela, o Hefesto do Flatpak não derruba o link morto de um
+  controle, e o controle esquecido num adaptador não ganha a lápide que impede
+  o restauro automático de pareamentos de trazê-lo de volta.
 
 ---
 
@@ -312,10 +334,9 @@ O que **continua sem alcançar**, e fica aqui escrito:
 2. **Daemon sem systemd**: o daemon não é gerenciado pelo systemd do usuário
    dentro do Flatpak. Autostart depende do ambiente gráfico.
 
-3. **Bluetooth**: o controle pareado pelo sistema chega ao daemon pelo hidraw,
-   como o do cabo. O que não chega é o BlueZ, que mora no barramento de SISTEMA
-   do D-Bus (ver «O que o daemon alcança em `/run`», acima). O `--talk-name`
-   fala com o barramento de SESSÃO, e um override com ele não muda isso.
+3. **Bluetooth**: o controle chega ao daemon pelo hidraw, como o do cabo, e o
+   pareamento pelo Hefesto passa pelo BlueZ (ver «O BlueZ e o diário dos
+   serviços do sistema», acima). O que não chega é a ponte do root.
 
 4. **Flathub**: o Hefesto - DualSense4Unix não está publicado no Flathub ainda. A instalação é
    via bundle local ou build a partir do código-fonte.
