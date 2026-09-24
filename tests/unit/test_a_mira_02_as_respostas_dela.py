@@ -728,8 +728,11 @@ def test_a_ponte_leva_o_sempre_como_null(monkeypatch: pytest.MonkeyPatch) -> Non
 # (`mira.set`), e o analógico direito lido na SAÍDA de cada vpad de verdade —
 # o report `0x01` do `uhid` e o `ABS_RX` do `uinput`. O `desktop` não entra:
 # nele não há gamepad virtual (o `dispatch_gamepad` volta no `device is None`)
-# e o analógico direito vira a roda do mouse (`uinput_mouse.dispatch`); a
-# decisão de o chip ficar ou não cinza ali é dela, e está no relatório.
+# e o analógico direito vira a roda do mouse (`uinput_mouse.dispatch`).
+# NOTA DATADA — 24/09/2026: a decisão veio
+# (`D-2409-NA-NAVEGACAO-O-GIRO-VIRA-CURSOR`) — na Navegação o giro vira o
+# cursor, e a matriz dela (P1 a P4, USB e BT, com o `UinputMouseDevice` do
+# produto) mora em `test_a_mira_na_navegacao.py`, seção 1.
 #
 # E O QUARTO CHIP DA FILEIRA, o «Steam Input», NÃO É UMA LINHA A MAIS — medido
 # na conferência, em `a01_jogar.o_que_o_chip_faz`: ele é `gamepad` com o
