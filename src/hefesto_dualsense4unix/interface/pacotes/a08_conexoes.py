@@ -2,7 +2,7 @@
 """O pacote da aba `08` Conexões.
 
 O QUE TEM DONO: a contagem da mesa por transporte, e é o que o cabeçalho desta
-aba promete (`2 na mesa · 1 no cabo · 1 no rádio`). Sai de `controllers[]`, e a
+aba promete (`2 controles • 1 USB • 1 BT`). Sai de `controllers[]`, e a
 mesma regra das outras: conta os CONECTADOS.
 
 O EXAME NÃO TEM DONO NO `state_full`, e é honesto dizer por quê: as linhas do
@@ -1885,8 +1885,8 @@ _PONTO = ' <span class="pt">•</span> '
 def html_da_conta(frase: str) -> str:
     """A frase da contagem, com o separador que o desenho dela usa.
 
-    O DONO DA FRASE É `gui.aba_conexoes.texto_da_contagem` — *"2 na mesa • 1 no
-    cabo • 1 no rádio"* —, e ele escreve o `•` cru porque nasceu para um rótulo
+    O DONO DA FRASE É `gui.aba_conexoes.texto_da_contagem` — *"2 controles • 1
+    USB • 1 BT"* —, e ele escreve o `•` cru porque nasceu para um rótulo
     do GTK. Esta função é só a tradução para o HTML dela; nenhuma palavra e
     nenhum número nascem aqui.
 
