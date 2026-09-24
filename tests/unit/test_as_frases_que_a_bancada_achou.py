@@ -307,3 +307,134 @@ def test_o_pacote_e_a_gestao_dizem_a_mesma_frase_do_microfone(via: str) -> None:
     assert c.texto_do_microfone == f"Ligado, {do_pacote}", (
         f"a Gestão diz {c.texto_do_microfone!r} e a repintura {do_pacote!r}")
     assert do_pacote.startswith(f"pelo {palavra(via)} •")
+
+
+@pytest.mark.parametrize("via", ["usb", "bt"])
+def test_a_dica_do_microfone_no_pacote_nao_volta_a_dizer_pelo_cabo(via: str) -> None:
+    """A dica que o pacote pinta a cada tique fala a palavra do dono — as DUAS
+    frases dela, a do caminho e a do custo.
+
+    A frase do custo (`_MIC_NAO_CUSTA_RADIO`, *"Pelo USB ele não custa turno de
+    rádio nenhum"*) mudou nesta sprint e nenhuma régua a lia: a da página só
+    procura o `<b>pelo …</b>`. «Turno de rádio» fica — ali o rádio é o recurso
+    que a barra «Rádio em uso» mede, não a palavra do transporte.
+
+    MORDIDA: devolva *"Pelo cabo ele não custa…"* ao `_MIC_NAO_CUSTA_RADIO` —
+    reprova no USB.
+    """
+    from pacotes import a08_conexoes
+
+    dica = html.unescape(a08_conexoes.dica_do_microfone(via))
+    assert f"<b>pelo {palavra(via)}</b>" in dica, dica[:120]
+    velha = re.search(r"\b[Pp]elo (cabo|rádio)\b", dica)
+    assert not velha, (
+        f"a dica do microfone no {palavra(via)} voltou a dizer {velha.group(0)!r} "
+        f"— a palavra do transporte é USB/BT desde 21/09: {dica!r}")
+
+
+# ---------------------------------------------------------------------------
+# 4. O mapa — a mesa pré-marca o que o PRODUTO faz (a §2 da sprint)
+# ---------------------------------------------------------------------------
+#: As quatro células que a §2 mexeu, pelo `id` que a mesa lhes dá.
+_SOM_PELO_RADIO = ("mapa-audio.saida_dedicada-radio",
+                   "mapa-audio.saida_dedicada.payload_do_degrau-radio")
+_BRILHO_DAS_LAMPADAS = ("mapa-luz.led_jogador.brilho-cabo",
+                        "mapa-luz.led_jogador.brilho-radio")
+
+
+@pytest.fixture(scope="module")
+def pre_marcas() -> dict[str, str]:
+    """`{id da célula: a resposta que a mesa pré-marca}` — perguntada à mesa."""
+    sys.path.insert(0, str(RAIZ / "scripts"))
+    import mesa_de_medicao as med
+
+    testes = med.testes_do_mapa(med.vocabulario_das_pecas())
+    fora = {t.id: t.resposta_do_mapa for t in testes}
+    faltam = [i for i in (*_SOM_PELO_RADIO, *_BRILHO_DAS_LAMPADAS) if i not in fora]
+    assert not faltam, f"a mesa não tem mais as células {faltam} — a régua ficou cega"
+    return fora
+
+
+def _handle_sem_aparelho(*, led_gravavel: bool) -> Any:
+    """Um handle da pydualsense sem device — só o estado que o `_build_common` lê.
+
+    `led_gravavel` é o `_suppress_leds`: o produto instalado tem o nó de LED do
+    kernel gravável, e aí o fluxo é LED-neutro (no rádio, sempre).
+    """
+    from pydualsense.pydualsense import DSAudio, DSLight, DSTrigger
+
+    from hefesto_dualsense4unix.core.backend_pydualsense import _PinnedPyDualSense
+
+    h = _PinnedPyDualSense.__new__(_PinnedPyDualSense)
+    h.audio = DSAudio()
+    h.light = DSLight()
+    h.triggerL = DSTrigger()
+    h.triggerR = DSTrigger()
+    h.leftMotor = 0
+    h.rightMotor = 0
+    h._suppress_leds = led_gravavel
+    h._volumes_audio = [None, None, None, None]
+    h._mic_mute_desejado = None
+    h._raw_trigger_left = None
+    h._raw_trigger_right = None
+    return h
+
+
+def test_o_som_pelo_radio_nao_chega_a_bancada_pre_marcado_nada(
+        pre_marcas: dict[str, str]) -> None:
+    """O produto leva o som de cada controle do rádio pelo `0x35` desde 10/09
+    (os `teste_que_morde` das duas linhas), e a mesa pré-marcava «nada» a
+    partir de uma célula de antes disso — a resposta errada, já marcada.
+
+    MORDIDA: devolva `radio_aciona = não` (e o degrau vazio) a
+    `audio.saida_dedicada` no CSV — reprova com a pré-marca «nada».
+    """
+    for celula in _SOM_PELO_RADIO:
+        assert pre_marcas[celula] != "nada", (
+            f"a mesa pré-marca «nada» em {celula}, e o produto monta o som do "
+            f"rádio desde 10/09 — o mapa voltou a dizer o que o produto não faz")
+
+
+def test_o_brilho_das_lampadas_e_o_que_o_build_common_manda(
+        pre_marcas: dict[str, str]) -> None:
+    """A célula do brilho pergunta ao PRODUTO, não ao ensaio de 09/09.
+
+    O ensaio mediu o APARELHO (com o bit, os três degraus mudam as lâmpadas).
+    O mapa mede o produto, e o `_build_common` responde duas coisas:
+
+    * com o nó de LED gravável — o produto instalado, e o rádio sempre — o
+      `flag2` bit0 sai DESLIGADO: nada chega às lâmpadas, e a mesa não pode
+      pré-marcar «obedeceu»;
+    * no cabo sem nó gravável o bit sai LIGADO, herdado do `ledOption` da
+      pydualsense, com o `common[42]` no padrão dela (o degrau baixo) — é o
+      `estado_hoje` da linha, e esta régua o prende: quando isso mudar, a
+      célula muda junto.
+
+    MORDIDAS: (1) tire a `VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE` do
+    `&= ~(…)` da supressão no `_build_common` — reprova na primeira metade;
+    (2) devolva `O APARELHO OBEDECEU` e `aciona = sim` à linha do CSV —
+    reprova com a pré-marca «obedeceu».
+    """
+    from pydualsense.enums import Brightness
+
+    from hefesto_dualsense4unix.core import ds_output_report as rep
+
+    bit = rep.VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE
+    instalado = _handle_sem_aparelho(led_gravavel=True)._build_common(rumble_asserted=False)
+    assert instalado[rep.COMMON_VALID_FLAG2] & bit == 0, (
+        "com o nó de LED gravável o `flag2` bit0 saiu LIGADO: o produto passou a "
+        "mandar o brilho das lâmpadas, e `luz.led_jogador.brilho` no mapa tem de "
+        "mudar junto")
+    for celula in _BRILHO_DAS_LAMPADAS:
+        assert pre_marcas[celula] != "obedeceu", (
+            f"a mesa pré-marca «obedeceu» em {celula}, e o produto instalado não "
+            f"liga o bit que autoriza o byte — «obedeceu» é o ensaio, não o produto")
+
+    h = _handle_sem_aparelho(led_gravavel=False)
+    sem_no = h._build_common(rumble_asserted=False)
+    assert sem_no[rep.COMMON_VALID_FLAG2] & bit == int(h.light.ledOption.value) & bit, (
+        "no cabo sem nó gravável o bit0 deixou de vir do `ledOption` — o "
+        "`estado_hoje` de `luz.led_jogador.brilho` descreve outro produto")
+    assert sem_no[42] == int(Brightness.low), (
+        f"o `common[42]` saiu {sem_no[42]}, e o `estado_hoje` diz que ninguém "
+        f"escolhe o brilho das lâmpadas (o padrão da pydualsense, o degrau baixo)")
