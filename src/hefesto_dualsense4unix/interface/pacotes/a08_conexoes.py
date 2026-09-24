@@ -1904,12 +1904,19 @@ def html_da_conta(frase: str) -> str:
 #: DERIVADO do transporte. Pelo CABO o DualSense expõe placa USB Audio própria e
 #: o PipeWire a publica sozinho; pelo RÁDIO não existe placa nenhuma e o áudio
 #: vem em Opus dentro do HID 0x31, trazido pela ponte do Hefesto.
-_CAMINHO_DO_MIC = {"bt": ("pelo rádio", "Pela ponte"),
-                   "usb": ("pelo cabo", "Placa do controle")}
+#:
+#: A PALAVRA DO TRANSPORTE É USB E BT DESDE 24/09/2026
+#: (AS-FRASES-QUE-A-BANCADA-ACHOU-01). Era «pelo cabo»/«pelo rádio», de antes da
+#: decisão dela de 21/09 (a I9 revogada). O dono da palavra é
+#: `home_actions._PALAVRA_DO_TRANSPORTE`, que este módulo não importa no topo
+#: (o gerador da 08 o chama sem o `structlog`): quem prende as duas grafias é
+#: `tests/unit/test_as_frases_que_a_bancada_achou.py`, que pergunta ao dono.
+_CAMINHO_DO_MIC = {"bt": ("pelo BT", "Pela ponte"),
+                   "usb": ("pelo USB", "Placa do controle")}
 
 
 def caminho_do_microfone(via: str) -> str:
-    """*"pelo rádio • Pela ponte"* ou *"pelo cabo • Placa do controle"*.
+    """*"pelo BT • Pela ponte"* ou *"pelo USB • Placa do controle"*.
 
     **UM DONO SÓ PARA OS DOIS LADOS**, mesmo molde de :func:`rotulo_do_controle`
     e :func:`html_da_conta`: o gerador chama isto com a mesa da BANCADA, o
@@ -1938,13 +1945,18 @@ def caminho_do_microfone(via: str) -> str:
 #: a rota é consequência, exatamente como a chavinha *"pelo cabo / pelo rádio"*
 #: que saiu desta aba porque *"oferecia uma escolha que o transporte já tinha
 #: feito"*. A frase do custo entra derivada, logo abaixo.
+#:
+#: A PALAVRA DO TRANSPORTE SEGUE A DA LINHA (:data:`_CAMINHO_DO_MIC`) desde
+#: 24/09/2026: a dica e a linha que ela explica diziam «pelo cabo» onde a linha
+#: ao lado diz USB. «Turno de rádio» fica: ali o rádio é o recurso que a barra
+#: «Rádio em uso» mede, não a palavra do transporte.
 _DICA_DO_MIC = {
     "bt": (
-        "O microfone deste controle chega <b>pelo rádio</b>, pela ponte do "
+        "O microfone deste controle chega <b>pelo BT</b>, pela ponte do "
         "Hefesto — o DualSense não tem canal de áudio Bluetooth próprio."
     ),
     "usb": (
-        "O microfone deste controle chega <b>pelo cabo</b>, pela placa de áudio "
+        "O microfone deste controle chega <b>pelo USB</b>, pela placa de áudio "
         "do próprio aparelho."
     ),
 }
@@ -1952,7 +1964,7 @@ _DICA_DO_MIC = {
 #: O que se diz do custo quando ele não existe. Pelo cabo o microfone não passa
 #: pelo rádio, então não há fatia a contar — e dizer "0 turnos" seria um número
 #: onde não há conta.
-_MIC_NAO_CUSTA_RADIO = "Pelo cabo ele não custa turno de rádio nenhum."
+_MIC_NAO_CUSTA_RADIO = "Pelo USB ele não custa turno de rádio nenhum."
 
 
 def dica_do_microfone(via: str) -> str:
@@ -2894,7 +2906,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         colunas[uniq] = {
             "via": (c.get("transport") or "").upper(),
             # A BATERIA COMO A TELA A ESCREVE — `Controle.texto_da_bateria`, o
-            # dono (`gui/aba_conexoes.py:245`), que põe o TRAVESSÃO quando
+            # dono (em `gui.aba_conexoes`), que põe o TRAVESSÃO quando
             # ninguém leu em vez de um número herdado. Ela era o `battery_pct`
             # CRU, e um inteiro num endereço de texto escreveria `100` onde o
             # desenho promete `100%` — e `null` onde ele promete `—`.

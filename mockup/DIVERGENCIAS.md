@@ -56,3 +56,23 @@ seção daqui**: a aba deixou de estar em trabalho.
   publicar, a dica da publicada diz a frase velha; a tira em cor no Nativo já
   vale na publicada, porque quem a pinta é o pacote, e a bancada parada não
   tem cena de Nativo.
+
+## 05-vibracao.html
+- **24/09/2026** — AS-FRASES-QUE-A-BANCADA-ACHOU-01, esperando quem coordena
+  publicar (delegação dela de 24/09). O «?» do «Testar agora» deixa de
+  prometer meio segundo: desde 07/09 o Testar fica ligado até o Parar, segue
+  as barras ao vivo, e o de outro controle encerra este
+  (`a05_vibracao.testar`, `_EM_TESTE`). Só o texto da dica muda; nada sai do
+  lugar.
+
+## 08-conexoes.html
+- **24/09/2026** — AS-FRASES-QUE-A-BANCADA-ACHOU-01, esperando quem coordena
+  publicar. A palavra do transporte vira USB/BT (decisão dela de 21/09, a I9
+  revogada) em três frases da Gestão de Controles: a contagem («2 controles •
+  1 USB • 1 BT»; o transporte sem controle some, como no canto de cima desde
+  17/09), a linha do Microfone («pelo USB • Placa do controle» / «pelo BT •
+  Pela ponte») com a dica dela, e o «?» do Ligado/Desligado. A contagem, a
+  linha e a dica do microfone são pintadas a cada tique pelos donos
+  (`gui.aba_conexoes.texto_da_contagem`, `a08_conexoes.caminho_do_microfone`
+  e `dica_do_microfone`): o produto diz USB/BT desde o primeiro tique, e o que
+  espera o `--publicar` é o primeiro quadro e o «?» do microfone.
