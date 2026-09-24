@@ -884,12 +884,11 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     # CORRIGIDAS no lugar (`core/rumble.py`, `a02_controles.py` e duas em
     # `a08_conexoes.py`): fora do `nao_toca:`, o número se reescreve.
     "interface/pacotes/a06_navegacao.py::core/acoes_de_botao.py:285",
-    # TRANSPLANTE-DA-SECAO-01 (23/09/2026) — A QUE A SEÇÃO DO RÁDIO DESLOCOU, e
-    # ela mora em `a09_sistema.py`, pacote de outra aba (fora da posse da
-    # sprint). A âncora CONTINUA EXISTINDO: o `"blocos": {".mm-faces": …}` do
-    # mapa do gabinete. O NÚMERO CERTO JÁ ESTÁ MEDIDO por `grep -n '"blocos"'`:
-    #   a09_sistema.py:1848  `a08_conexoes.py:3781`  -> `:3001`
-    "interface/pacotes/a09_sistema.py::a08_conexoes.py:3781",
+    # A DA TRANSPLANTE-DA-SECAO-01 SAIU DAQUI EM 24/09/2026: a
+    # AS-FRASES-QUE-A-BANCADA-ACHOU-01 deslocou o `a08_conexoes.py` e a linha
+    # velha deixou de estar em branco, então a pendência passou a "conferir" por
+    # acaso. Ela reapontou `a09_sistema.py` pelo símbolo (`a08_conexoes.pacote`),
+    # num commit isolado, porque o arquivo é da FREESTYLE-02.
     # A DA A-SUITE-NAO-PERGUNTA-AO-SOM-01 SAIU DAQUI NA COSTURA (23/09/2026): quem
     # coordena reapontou `a10_perfis.py` pelo símbolo — `SKIP_PRESET_SEED` e
     # `HEFESTO_CARONA_WRAPPER` de `_hefesto_fake_env` (`conftest.py:2209` e `:2254`).
