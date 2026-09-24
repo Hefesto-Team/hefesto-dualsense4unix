@@ -20,7 +20,7 @@ salta aos olhos.
 
 Sem uma linha de script: o cruzamento é `:has()`.
 
-    python3 mapa.py      -> layout/mapa-do-controle.html
+    python3 mapa.py      -> mockup/mapa-do-controle.html (a bancada; ver `SAIDA`)
 """
 import csv, json, pathlib, re, sys
 
@@ -52,6 +52,7 @@ CSV_CORES = DADOS_DO_REPO / "cores-do-dualsense.csv"
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 sys.path.insert(0, str(R / "src"))
 import onde  # noqa: E402
+import caixa_da_janela  # noqa: E402
 from hefesto_dualsense4unix.core.led_control import (  # noqa: E402
     player_led_pattern,
     player_slot_color,
@@ -690,12 +691,21 @@ def main():
     --m:ui-monospace,"JetBrains Mono","Fira Mono","DejaVu Sans Mono",monospace;
   }}
   *{{box-sizing:border-box;margin:0;padding:0}}
-  body{{background:#11121a;color:var(--fg);font-family:var(--f);padding:22px;
+  /* O RECUO DO `body` E O TAMANHO DA `.cx` VÊM DA JANELA DAS ABAS — 24/09/2026,
+     decisão dela: o mapa segue a caixa da janela, como a Calibrar. */
+  body{{background:#11121a;color:var(--fg);font-family:var(--f);
         display:flex;flex-direction:column;align-items:center;gap:16px}}
   .mono{{font-family:var(--m)}}
-  .cx{{width:1800px;max-width:100%;background:var(--app-bg);border-radius:11px;
-       border:1px solid var(--border-sutil);overflow:hidden}}
-  .topo{{padding:15px 20px;border-bottom:1px solid var(--border-sutil)}}
+  /* COLUNA COMO A `.janela`: o cabeçalho fica e o `.corpo` rola por dentro
+     quando a vista encolhe. `.cx > .corpo`, e não `.corpo` solto: o desenho
+     do controle tem peças com essa classe. */
+  .cx{{background:var(--app-bg);border-radius:11px;
+       border:1px solid var(--border-sutil);overflow:hidden;
+       display:flex;flex-direction:column}}
+  .cx > .topo{{flex:0 0 auto}}
+  .cx > .corpo{{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column}}
+  .cx > .corpo > .mapa{{flex:1 0 auto}}
+{caixa_da_janela.moldura()}  .topo{{padding:15px 20px;border-bottom:1px solid var(--border-sutil)}}
   h1{{font-size:18px;font-weight:700}}
   h1 .p{{color:var(--pink)}}
   .sub{{font-family:var(--m);font-size:11.5px;color:var(--comment);margin-top:3px}}
@@ -950,6 +960,7 @@ def main():
          não precisava da frase. -->
   </div>
 
+  <div class="corpo">
 {provas}
   <div class="mapa">
     <div class="lado-ds">
@@ -965,13 +976,17 @@ def main():
     <span><b>{len([p for p in pecas if p["glifo"] != "-"])}</b> com glifo · <b>{len(sem_glifo)}</b> sem</span>
     <span><b>{len(cores_do_csv())}</b> modelos de cor · <b>{len(ZONAS_NA_PROVA)}</b> zonas</span>
   </div>
+  </div>
 </div>
 
 {script_provas}
 </body>
 </html>
 '''
-    SAIDA.write_text(html)
+    # SEM ESPAÇO NO FIM DA LINHA, como a `calibrar.py`: o gancho de commit
+    # dela os tira do arquivo gravado, e sem isto o gerador e o disco
+    # divergiam em 126 linhas que ninguém via.
+    SAIDA.write_text("\n".join(linha.rstrip() for linha in html.split("\n")))
     print(f"mapa-do-controle.html: {len(pecas)} peças, {len(regras)} regras de cruzamento")
     if faltam:
         print("  sem desenho no SVG: " + ", ".join(p["id"] for p in faltam))
