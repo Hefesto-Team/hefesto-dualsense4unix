@@ -435,16 +435,8 @@ ESPERA_DICA = (
 #: *"o botão Trava o perfil Ativo na aba jogar. Vira Modo Freestyle o botão."*
 #: O que o botão FAZ não mudou — é o mesmo `autoswitch.lock`, e a dica abaixo
 #: continua a razão dele. O que mudou foi o nome, a letra e a altura, e os três
-#: estão no DESENHO (`aba01.py`), esperando a sessão dela.
+#: estão no DESENHO (`aba01.py`), publicado em 24/09/2026 por delegação dela.
 CADEADO_ROTULO = "Modo Freestyle"
-#: A PALAVRA QUE A PÁGINA PUBLICADA AINDA DIZ, enquanto o desenho espera a
-#: sessão dela — os desenhos novos se aprovam todos juntos (ordem dela, 23/09).
-#: O piloto não pinta o rótulo (o alvo da pílula é só a `classe`), então o
-#: produto segue dizendo esta até o `--publicar 01`. **TEM PRAZO:** no dia em
-#: que a publicada disser `CADEADO_ROTULO`, a régua
-#: `test_o_modo_freestyle.test_a_palavra_de_ontem_tem_prazo` reprova até esta
-#: linha sair, no mesmo commit do `--publicar`.
-CADEADO_ROTULO_ESPERANDO_A_SESSAO_DELA = "Trava o perfil ativo"
 #: «Desmarque» virou «Desligue» em 24/09/2026 (O-MODO-FREESTYLE-02): a caixa
 #: virou pílula em 19/09, e pílula se liga e se desliga. A gêmea da GTK foi junto.
 CADEADO_DICA = (

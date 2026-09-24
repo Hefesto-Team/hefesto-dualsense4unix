@@ -36,18 +36,12 @@ CHROME = pathlib.Path("/usr/bin/google-chrome")
 
 
 def _altura_esperada(rotulo: str) -> int:
-    """Os 17 px da palavra de ontem, ou a altura do gerador para a de hoje.
+    """A altura do «Modo Freestyle», lida no dono (`aba01.py`), nunca digitada.
 
-    O PRAZO DOS 17 PX: eles valem enquanto a página disser
-    `CADEADO_ROTULO_ESPERANDO_A_SESSAO_DELA`. No commit do `--publicar 01` a
-    constante sai (`test_o_modo_freestyle.test_a_palavra_de_ontem_tem_prazo`) e
-    este ramo sai junto. A de hoje é lida no dono (`aba01.py`), nunca digitada —
-    é a decisão `D-2409-O-BOTAO-FREESTYLE-TEM-26-PX`.
+    É a decisão `D-2409-O-BOTAO-FREESTYLE-TEM-26-PX`. Os 17 px da palavra de
+    ontem saíram no `--publicar 01` de 24/09/2026. O `rotulo` fica na assinatura
+    porque os chamadores o passam.
     """
-    from hefesto_dualsense4unix.interface.pacotes import a01_jogar as p
-
-    if rotulo == p.CADEADO_ROTULO_ESPERANDO_A_SESSAO_DELA:
-        return 17
     fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/aba01.py").read_text(
         encoding="utf-8")
     achado = re.search(r"\.cadeado\{(?:[^}]*;)?height:(\d+)px", fonte)

@@ -137,29 +137,6 @@ def test_o_desenho_diz_modo_freestyle() -> None:
     assert _rotulo_do_botao(onde.pagina("01-jogar.html").read_text()) == CADEADO_ROTULO
 
 
-def test_a_palavra_de_ontem_tem_prazo() -> None:
-    """A isenção morre no `--publicar 01`, e esta régua é o prazo dela.
-
-    Enquanto a publicada disser a palavra de ontem, a constante que a declara
-    tem de existir e casar com ela. No dia em que a publicada disser «Modo
-    Freestyle», esta régua reprova até a constante sair — no mesmo commit.
-    """
-    from hefesto_dualsense4unix.interface import onde
-    from hefesto_dualsense4unix.interface.pacotes import a01_jogar as aba
-
-    publicado = _rotulo_do_botao(onde.pagina("01-jogar.html", publicado=True).read_text())
-    assert publicado != aba.CADEADO_ROTULO, (
-        "a aba 01 foi publicada com «Modo Freestyle»: apague "
-        "`a01_jogar.CADEADO_ROTULO_ESPERANDO_A_SESSAO_DELA` e, no mesmo commit, "
-        "os ramos que a importam — a isenção de "
-        "`test_o_cadeado_mora_no_canto_do_bloco.test_a_palavra_e_a_da_janela_antiga`, "
-        "os 17 px de `test_o_cadeado_nao_empurrou_a_linha_do_titulo` e de "
-        "`test_a_trava_e_a_pilula_dos_sensores._altura_esperada`, o «maior que "
-        "hoje» de `test_o_botao_do_desenho_tem_letra_e_altura_maiores` —, a seção "
-        "da 01 no `mockup/DIVERGENCIAS.md` (o `--publicar` a tira), e esta régua")
-    assert publicado == aba.CADEADO_ROTULO_ESPERANDO_A_SESSAO_DELA
-
-
 _MEDE = """() => {
   const cad = document.querySelector('.cadeado');
   const cs = getComputedStyle(cad), b = cad.getBoundingClientRect();
@@ -218,20 +195,13 @@ def test_o_botao_do_desenho_tem_letra_e_altura_maiores(
     MORDE: devolva o `height:17px`/`font-size:10.5px` ao `.cadeado` do
     `aba01.py`, regere o desenho, e esta régua reprova.
 
-    O PRAZO — O-MODO-FREESTYLE-02: "maior que hoje" só se mede enquanto a
-    publicada disser a palavra de ontem. Depois do `--publicar 01` as duas são a
-    mesma página, e a régua passa a conferir que o desenho CHEGOU inteiro.
+    Desde o `--publicar 01` de 24/09/2026 as duas são a mesma página, e a
+    régua confere que o desenho CHEGOU inteiro ao produto.
     """
-    from hefesto_dualsense4unix.interface.pacotes import a01_jogar as aba
-
     desenho, hoje = as_duas_paginas["desenho"], as_duas_paginas["publicada"]
-    if hoje["rotulo"] == aba.CADEADO_ROTULO_ESPERANDO_A_SESSAO_DELA:
-        assert desenho["fonte"] > hoje["fonte"], (desenho, hoje)
-        assert desenho["altura"] > hoje["altura"], (desenho, hoje)
-    else:
-        assert (desenho["fonte"], desenho["altura"]) == (hoje["fonte"], hoje["altura"]), (
-            f"a publicada diz {hoje['rotulo']!r} e não tem a letra e a altura do "
-            f"desenho: {hoje} contra {desenho}")
+    assert (desenho["fonte"], desenho["altura"]) == (hoje["fonte"], hoje["altura"]), (
+        f"a publicada diz {hoje['rotulo']!r} e não tem a letra e a altura do "
+        f"desenho: {hoje} contra {desenho}")
     # Menor que um botão de escolha: da altura dos chips de modo ele voltaria
     # a ler como um quinto modo (o motivo de ter subido ao canto em 08/09).
     assert desenho["altura"] < desenho["escolha"], desenho
