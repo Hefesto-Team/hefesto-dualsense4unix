@@ -481,6 +481,21 @@ def test_o_produto_le_o_vigia_que_o_install_deixou(vdf) -> None:
         assert aba.o_guarda_liga_o_steam_input() is False, como
 
 
+def test_so_a_linha_que_aplica_conta_como_quem_liga(vdf) -> None:
+    """O mesmo script numa linha que só lê (`--status`) não liga nada.
+
+    MORDE: tire a exigência do `--apply-quiet` de `o_guarda_liga_o_steam_input`
+    e uma unidade que só relata passa a prometer a faixa.
+    """
+    casa = pathlib.Path(__import__("os").environ["HOME"])
+    unidade = casa / ".config" / "systemd" / "user" / "hefesto-steam-input-guard.service"
+    texto = unidade.read_text(encoding="utf-8")
+    assert "disable_steam_input.sh --apply-quiet" in texto, "o lar perdeu o vigia padrão"
+    unidade.write_text(texto.replace("--apply-quiet", "--status"), encoding="utf-8")
+
+    assert aba.o_guarda_liga_o_steam_input() is False
+
+
 @pytest.mark.parametrize("como", ["keep", "desligado", "pacote"])
 def test_sem_o_vigia_a_faixa_nao_promete(vdf, monkeypatch, como) -> None:
     """Com a Steam aberta, o «Steam Input» PENDENTE: a faixa só fala se é verdade.
