@@ -462,8 +462,8 @@ def enderecos_pelo_kernel(leitor: Any = None) -> dict[str, str] | None:
     uid 1000 e não dependem do ``bluetoothd``. Escrever um segundo leitor do
     mesmo ioctl aqui seria a segunda verdade sobre o mesmo número.
 
-    ``None`` é "não deu": sem ``AF_BLUETOOTH`` neste Python, socket recusado
-    (Flatpak), ou a suíte no ar — a suíte não lê a mesa dela por aqui.
+    ``None`` é "não deu": sem ``AF_BLUETOOTH`` neste Python, socket recusado (um
+    sandbox sem ``--allow=bluetooth``), ou a suíte no ar, que não lê a mesa dela.
     """
     if leitor is None and a_suite_esta_rodando():
         return None
