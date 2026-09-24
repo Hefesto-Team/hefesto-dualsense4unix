@@ -4346,6 +4346,13 @@ check_bluez_curas_do_backport() {
         info "não achei o bluetoothd que o systemd executa — pulo a conferência das curas do backport"
         return
     fi
+    # O BACKPORT DESTA CASA É .deb (conferência da INSTALL-E-UNINSTALL-DO-
+    # RADIO-01): o passo 3f só existe onde há dpkg. Numa distro sem ele, o
+    # aviso de baixo mandaria rodar um install que não entrega nada ali.
+    if ! command -v "${HEFESTO_DOCTOR_DPKG:-dpkg}" >/dev/null 2>&1; then
+        info "sem dpkg nesta distro — o backport do BlueZ desta casa é .deb (Debian/Ubuntu), e não há o que conferir aqui"
+        return
+    fi
     while IFS=$'\t' read -r nome marca; do
         [[ -n "${marca}" ]] || continue
         if grep -a -q -F -- "${marca}" "${vivo}" 2>/dev/null; then
@@ -4358,6 +4365,10 @@ check_bluez_curas_do_backport() {
         pass "o bluetoothd em execução traz as curas do backport desta casa (${tem[*]})"
     elif [[ "${#faltam[@]}" -gt 0 ]]; then
         warn "o bluetoothd em execução (${vivo}) não traz ${faltam[*]} — sem o hefesto-0002, o rádio cheio (EAGAIN) derruba a sessão dos controles por Bluetooth: $(conselho_de_instalacao)$(so_no_checkout "(o passo 3f instala o backport que estiver no cache; sem ele: scripts/construir_bluez_backport.sh)")"
+    else
+        # Nenhuma linha MARCA_ no BASELINE: não houve pergunta, e o silêncio
+        # daqui se leria como «nada a dizer». É «não sei».
+        info "não sei conferir as curas do backport do BlueZ: ${baseline} não traz nenhuma linha MARCA_"
     fi
 }
 

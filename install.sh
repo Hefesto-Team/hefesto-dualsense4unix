@@ -2653,12 +2653,14 @@ install_censo_do_gabinete_host
 #   fora-do-dpkg  — faltam marcas num binário que NÃO é do dpkg (tarball em /opt):
 #                   trocar o pacote não troca o que o systemd executa;
 #   precisa       — faltam marcas num binário do dpkg: o backport resolve;
-#   sem-binario   — não há bluetoothd a perguntar.
+#   sem-binario   — não há bluetoothd a perguntar;
+#   sem-marcas    — o BASELINE não deu marca nenhuma (ausente, ou sem as
+#                   linhas `MARCA_`): «não sei», e «não sei» não é «curado».
 # Função pura sobre o que recebe — a régua `tests/unit/test_o_portao_do_bluez_pergunta_ao_binario.py`
 # a roda com binários e `dpkg` de mentira.
 _bz_veredito() {
     local vivo="$1" baseline="$2" alvo="$3"
-    local nome marca pkg ver do_dpkg=0
+    local nome marca pkg ver do_dpkg=0 perguntadas=0
     local faltam=() atras=()
     if [[ -z "${vivo}" || ! -f "${vivo}" ]]; then
         printf 'sem-binario\t\n'
@@ -2666,8 +2668,17 @@ _bz_veredito() {
     fi
     while IFS=$'\t' read -r nome marca; do
         [[ -n "${marca}" ]] || continue
+        perguntadas=$((perguntadas + 1))
         grep -a -q -F -- "${marca}" "${vivo}" 2>/dev/null || faltam+=("${nome}")
     done < <(sed -n 's/^MARCA_\([^=]*\)=\(.*\)$/\1\t\2/p' "${baseline}" 2>/dev/null)
+    # SEM MARCA NENHUMA NÃO HÁ PERGUNTA (conferência da INSTALL-E-UNINSTALL-
+    # DO-RADIO-01): o laço vazio deixava `faltam` vazio, e um 5.86 oficial —
+    # que passa de qualquer ~hefesto no dpkg — saía «curado» sem ter sido
+    # perguntado. É o «não sei» respondido como zero.
+    if [[ "${perguntadas}" -eq 0 ]]; then
+        printf 'sem-marcas\t%s\n' "${baseline}"
+        return 0
+    fi
     dpkg -S "${vivo}" >/dev/null 2>&1 && do_dpkg=1
     if [[ "${#faltam[@]}" -gt 0 ]]; then
         if [[ "${do_dpkg}" -eq 1 ]]; then
@@ -2742,6 +2753,9 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
             ;;
         sem-binario)
             printf '      bluetoothd não encontrado (nem na unit, nem no pacote bluez) — passo pulado\n'
+            ;;
+        sem-marcas)
+            warn "não sei conferir as curas do backport: ${_bz_det} não traz nenhuma linha MARCA_ — passo pulado (o bluetoothd de agora segue)"
             ;;
         fora-do-dpkg)
             warn "o bluetoothd em execução (${_bz_vivo}) não é do dpkg e não traz ${_bz_det} — trocar o pacote não troca o que o systemd executa; reconstrua esse binário com as curas (scripts/construir_bluez_backport.sh traz a receita) ou volte a unit para o do pacote"
