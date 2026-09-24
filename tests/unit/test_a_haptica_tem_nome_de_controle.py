@@ -48,7 +48,9 @@ AS MORDIDAS, uma por afirmação, e cada uma foi vista reprovar:
 10. tire o ``not self.rotulo`` de ``_rotulo_novo`` → o nó herdado de rótulo
     ilegível é derrubado;
 11. tire o ``self._endpoints.pop`` do fim de ``_renovar_o_rotulo_da_haptica`` →
-    o controle cujo nó não voltou fica sem háptica até reconectar.
+    o controle cujo nó não voltou fica sem háptica até reconectar;
+12. troque o corpo de ``_ha_jogo_aberto`` por ``return True`` → a guarda diz
+    «há jogo» para sempre e o rótulo nunca mais se renova.
 """
 
 from __future__ import annotations
@@ -619,6 +621,28 @@ def test_com_jogo_aberto_o_rotulo_espera(mesa: _Mesa, assentos: _Assentos) -> No
     mesa.jogo_aberto = False
     mesa.volta()
     assert mesa.rotulo(_P3) == f"{_HAPTICA} 1{_SONY}"
+
+
+def test_o_jogo_aberto_e_a_pergunta_de_quem_vibra(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A guarda pergunta «há jogo?» ao dono dessa resposta, e só a ele.
+
+    O ``mesa`` acima troca ``_ha_jogo_aberto`` inteiro, e com razão: o
+    ``/proc`` de quem roda a suíte não decide nada. Mas aí nenhuma régua via
+    a guarda de verdade — um corpo que diga «há jogo» sempre, ou um import
+    errado que o ``except`` de quem chama engole, e o rótulo nunca mais se
+    renova, com tudo verde.
+    Aqui a pergunta vai a ``quem_o_jogo_le.pids_de_jogo``, o mesmo dono que
+    decide quem vibra, com o ``/proc`` trocado por um dublê.
+
+    MORDIDA: troque o corpo de ``_ha_jogo_aberto`` por ``return True``.
+    """
+    from hefesto_dualsense4unix.integrations import quem_o_jogo_le as qjl
+
+    sub = mod.AltoFalanteSubsystem(fonte_de_controles=list)
+    monkeypatch.setattr(qjl, "pids_de_jogo", lambda *_a, **_k: set())
+    assert sub._ha_jogo_aberto() is False, "sem jogo nenhum, a guarda viu um"
+    monkeypatch.setattr(qjl, "pids_de_jogo", lambda *_a, **_k: {4242})
+    assert sub._ha_jogo_aberto() is True
 
 
 def test_com_o_jogo_tocando_no_no_o_rotulo_espera(mesa: _Mesa, assentos: _Assentos) -> None:
