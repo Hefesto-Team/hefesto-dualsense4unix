@@ -124,6 +124,7 @@ def _rodar(
     com_sys: bool = True,
     python: str | None = None,
     montar: Callable[[pathlib.Path], None] | None = None,
+    vigia: str = "active",
 ) -> str:
     """Escreve um `kernel.log` e um `/sys` de mentira; devolve o que o bloco imprime."""
     import tempfile
@@ -149,6 +150,9 @@ def _rodar(
             TMPPYTHON=(python if python is not None else sys.executable),
             HEFESTO_DOCTOR_JANELA_DIAS=str(janela),
             HEFESTO_DOCTOR_RAIZ_USB=str(raiz_usb),
+            # O estado do timer do watchdog, pelo gancho: a régua não pergunta
+            # ao systemd de quem a roda.
+            HEFESTO_DOCTOR_VIGIA_DO_REBIND=vigia,
         )
         r = subprocess.run(
             ["bash", "-c", _roteiro()],
@@ -430,6 +434,30 @@ def test_o_controle_sem_hid_vira_aviso_com_o_gesto() -> None:
     assert linhas, f"o controle parado não foi dito:\n{saida}"
     assert linhas[0].startswith("WARN Entrada 4.1.3 (3-4.1.3): o controle está nela"), linhas[0]
     assert "O Hefesto tenta religá-lo sozinho a cada 2 minutos" in linhas[0], linhas[0]
+    assert "tire e ponha o cabo desse controle" in linhas[0], linhas[0]
+
+
+def test_sem_a_vigia_o_doctor_nao_promete_o_religar() -> None:
+    """Com o timer do watchdog parado, a linha não diz que o Hefesto religa sozinho.
+
+    Conferência de 24/09: o «tenta religá-lo sozinho a cada 2 minutos» saía
+    sem perguntar se a vigia que faz isso estava de pé — o órfão do rádio, no
+    mesmo doctor, já perguntava. A MORDIDA: tire o `if` do estado da vigia e
+    deixe só a frase de sempre, e esta régua reprova.
+    """
+    saida = _rodar(
+        [
+            "# 2026-07-20 kernel-watch iniciado",
+            _linha(1, "usbhid 3-4.1.3:1.3: can't add hid device: -71"),
+        ],
+        montar=_interface_hid_sem_driver,
+        vigia="inactive",
+    )
+    linhas = [linha for linha in saida.splitlines() if "sem o HID" in linha]
+    assert linhas, f"o controle parado não foi dito:\n{saida}"
+    assert linhas[0].startswith("WARN "), linhas[0]
+    assert "tenta religá-lo sozinho" not in linhas[0], linhas[0]
+    assert "hefesto-bt-health-watchdog.timer) está inactive" in linhas[0], linhas[0]
     assert "tire e ponha o cabo desse controle" in linhas[0], linhas[0]
 
 

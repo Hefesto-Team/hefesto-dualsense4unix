@@ -4019,9 +4019,9 @@ check_bt_crc_counters() {
 # leva todos os controles dele quando cai. E a entrada em que o kernel DESISTIU
 # vira WARN com o gesto: o controle encaixado sem o HID, ou a entrada largada
 # vazia. As duas não voltam sozinhas pelo kernel, e é por isso que viram aviso.
-# A primeira o Hefesto religa (o ramo do cabo do `bt_rebind_orphans.sh`, a cada
-# tique do watchdog root); a segunda pede um reset de porta que o produto ainda
-# não tem, e o gesto é dela.
+# A primeira o Hefesto religa (o `bt_rebind_orphans.sh` no tique do watchdog
+# root; a linha só promete com o timer dele de pé, gancho da régua em
+# `HEFESTO_DOCTOR_VIGIA_DO_REBIND`); a segunda pede um reset de porta que falta.
 _o_endereco_do_storm() {
     local log="${1}" dias="${2}"
     local py arquivo raiz_usb
@@ -4075,12 +4075,12 @@ if sobra > 0:
         info "NÃO SEI em qual porta esses -71 aconteceram: o cruzamento com a topologia do /sys não devolveu nada — o módulo não respondeu"
         return
     fi
-    local marca texto
+    local marca texto vigia=""
     while IFS=$'\t' read -r marca texto; do
         [[ -n "${texto}" ]] || continue
         case "${marca}" in
             porta) info "  -71 em ${texto}" ;;
-            parada_hid) warn "${texto}. O Hefesto tenta religá-lo sozinho a cada 2 minutos, até três vezes; se esta linha continuar, tire e ponha o cabo desse controle, e se ele cair de novo ali, troque de entrada" ;;
+            parada_hid) vigia="${vigia:-${HEFESTO_DOCTOR_VIGIA_DO_REBIND:-$(systemctl is-active hefesto-bt-health-watchdog.timer 2>/dev/null || true)}}"; if [[ "${vigia}" == "active" ]]; then warn "${texto}. O Hefesto tenta religá-lo sozinho a cada 2 minutos, até três vezes; se esta linha continuar, tire e ponha o cabo desse controle, e se ele cair de novo ali, troque de entrada"; else warn "${texto}. A vigia que o religaria sozinha (hefesto-bt-health-watchdog.timer) está ${vigia:-ausente}: tire e ponha o cabo desse controle, e se ele cair de novo ali, troque de entrada; para o Hefesto voltar a religá-lo sozinho, ligue: sudo systemctl enable --now hefesto-bt-health-watchdog.timer"; fi ;;
             parada_vazia) warn "${texto}. Se o controle ou o adaptador BT ainda está encaixado nela, tire e ponha: o kernel só volta a olhar essa entrada quando algo é encaixado de novo" ;;
             hub) warn "${texto}. É o suspeito a trocar primeiro: tire um dos aparelhos desse hub e ligue direto numa entrada do computador, ou troque o hub (de preferência um com fonte própria)" ;;
             naosei) info "${texto}" ;;
