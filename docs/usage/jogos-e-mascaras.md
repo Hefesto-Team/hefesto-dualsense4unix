@@ -54,6 +54,13 @@ dispositivo por jogador. Para um jogo que pede o Steam Input ligado, o chip
 a marca que ele deixa impede o guarda (`scripts/disable_steam_input.sh`) de
 **desligar** o Steam Input dele.
 
+Com a Steam aberta, a escolha espera: a Steam regrava o arquivo dela ao sair.
+A faixa de baixo da aba diz **«Liga quando a Steam fechar»**, e o chip passa a
+perguntar **«Fechar a Steam?»** por 20 segundos — um segundo clique fecha a
+Steam, liga o Steam Input daquele jogo e a abre de novo. Sem o segundo clique,
+ele liga sozinho na próxima vez que a Steam fechar. Com um jogo aberto o chip
+não pergunta: fechar a Steam fecharia o jogo.
+
 O botão «Este jogo não funciona», que fazia a mesma marca pela aba Lançadores,
 saiu em 21/09/2026. No lugar dele entrou o «Adicionar à lista de exclusão», que
 é o contrário: o jogo escolhido passa a ver o controle **como se o Hefesto não
