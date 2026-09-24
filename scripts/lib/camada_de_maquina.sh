@@ -238,6 +238,39 @@ install_broker_host() {
                     printf '%s=%s\n' "${_bp}" "$(sha256sum "${_bp}" 2>/dev/null | awk '{print $1}')"
                 done
             } > "${_broker_owner_file}"
+            # O .SERVICE NO BOOT — HIDE-SO-O-HIDRAW-02, 24/09/2026. Só com o
+            # .socket, o DualSense no cabo durante o boot nasce ABERTO: o
+            # coldplug roda antes do sockets.target, o TEST da regra 72 falha,
+            # e o nó fica assim até a primeira conexão do daemon — tempo de a
+            # Steam do login pegar o evdev do físico. A unit já diz
+            # WantedBy=multi-user.target; o uninstall desliga os dois.
+            if sudo systemctl enable hefesto-hidraw-broker.service >/dev/null 2>&1; then
+                printf '      hefesto-hidraw-broker.service habilitado no boot\n'
+            else
+                warn "enable do hefesto-hidraw-broker.service falhou — o físico no cabo nasce aberto no boot até o daemon conectar"
+            fi
+            # O REINÍCIO QUE NÃO ABRE — HIDE-SO-O-HIDRAW-02, 24/09/2026. O
+            # binário novo em disco não vale enquanto o processo velho estiver
+            # na memória: medido em 24/09, o serviço rodava desde 22/09 e dois
+            # installs seguidos não o trocaram. Um restart puro roda o
+            # ExecStopPost (--restore-all-and-exit), que ABRE os nós, e a Steam
+            # aberta pega o físico nessa janela. O marcador diz ao binário
+            # NOVO (que é quem roda o ExecStopPost) para não abrir; o SIGKILL
+            # vem antes porque o processo velho pode não conhecer o marcador.
+            # Tem de rodar AQUI, antes do restart do daemon (7a): um daemon que
+            # renasce com o broker velho recebe reject_bad_path e fica cego.
+            if sudo systemctl is-active --quiet hefesto-hidraw-broker.service; then
+                _marca=/run/hefesto-hidraw-broker/reinicio-sem-abrir
+                if sudo install -Dm0644 -o root -g root /dev/null "${_marca}" 2>/dev/null \
+                   && sudo systemctl kill -s SIGKILL hefesto-hidraw-broker.service >/dev/null 2>&1 \
+                   && sudo systemctl restart hefesto-hidraw-broker.service >/dev/null 2>&1; then
+                    printf '      hefesto-hidraw-broker reiniciado com o binário novo, sem abrir os nós\n'
+                else
+                    warn "o reinício do broker falhou — o piso abre os nós e o doctor diz o gesto"
+                    sudo "${_broker_bin_dst}" --restore-all-and-exit >/dev/null 2>&1 || true
+                fi
+                sudo rm -f "${_marca}"
+            fi
         else
             warn "enable --now do hefesto-hidraw-broker.socket falhou — habilite manualmente"
         fi
