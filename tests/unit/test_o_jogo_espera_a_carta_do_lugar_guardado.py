@@ -73,6 +73,7 @@ from hefesto_dualsense4unix.daemon.subsystems.identity import (
     prazo_do_lugar_guardado,
     relogio_do_lugar_guardado,
 )
+from hefesto_dualsense4unix.integrations.uhid_gamepad import vpad_mac
 from tests.unit.test_coop_bancada_de_queda_do_primario import (
     _FakeHandle,
     _LeitorDeSecundario,
@@ -265,8 +266,20 @@ class MesaDoJogo:
         # Hermético: NUNCA o /sys/class/leds real.
         monkeypatch.setattr("hefesto_dualsense4unix.core.sysfs_leds.discover", lambda: {})
 
-    def _nascer_vpad(self, _flavor: Any, *, player: int = 1, **_kw: Any) -> _VpadFalso:
+    def _nascer_vpad(
+        self, _flavor: Any, *, player: int = 1, identity: str | None = None, **_kw: Any
+    ) -> _VpadFalso:
+        """O vpad da bancada com o MAC do PRODUTO: o do aparelho, não o do número.
+
+        O ``_VpadFalso`` da bancada de queda tira o MAC do NÚMERO do jogador, e
+        é mais frouxo que o real onde esta régua mais mede — a mesa que se
+        refaz: um vpad que renasce com o antigo ainda de pé passaria pela
+        invariante «sem MAC repetido» sempre que os dois números fossem
+        diferentes (conferência da O-ASSENTO-GUARDADO-NAO-ANDA-03).
+        """
         vpad = _VpadFalso(player)
+        vpad.mac = vpad_mac(identity, player)
+        vpad.identidade = identity  # type: ignore[attr-defined]
         self.vpads.append(vpad)
         return vpad
 
