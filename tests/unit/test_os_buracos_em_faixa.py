@@ -64,7 +64,8 @@ arrancadas as duas, nenhuma das 6,4 milhões de mesas de até cinco sentados
 muda de plano (medido). A exigência do boneco já deixa de fora quem está
 certo, e a faixa vazia é o plano de nenhuma recriação, que o sufixo já pesou.
 O desempate a favor do sufixo também não se mede: nessas mesas, nenhuma faixa
-diferente empata com ele.
+diferente empata com ele. E o ``not compacta`` não morde (sem jogo, faixa
+nenhuma bate o sufixo): fica porque a faixa só sabe olhar o jogo aberto.
 
 Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5 zerados.
 """
