@@ -58,3 +58,33 @@ seção daqui**: a aba deixou de estar em trabalho.
   ao `controles_vivos.ROTEIRO_DA_PROVA_DE_GESTO`** (antes do `jogo`, que
   devolve a saída): hoje a régua do roteiro lê o publicado e reprovaria o
   passo antes da hora.
+
+## mapa-do-controle.html
+- **24/09/2026** — AS-PAGINAS-AVULSAS-TEM-A-CAIXA-DA-JANELA-01, esperando a
+  sessão dos desenhos. A palavra dela, 24/09 às 02h03: «Sim, segue a caixa da
+  janela». O mapa deixa a caixa de 1800 px com recuo de 22 px e ganha a caixa
+  da janela das abas, pedida ao mesmo dono da Calibrar
+  (`caixa_da_janela.moldura`): na TV dela (1918x840) vai de 1800 x 778 @ 59,22
+  para 1600 x 808 @ 159,16, igual à `.janela` da Controles; no piso, de
+  1168 x 756 para 1180 x 777. O cabeçalho fica, e o resto (a barra de provas,
+  o desenho com a lista e o rodapé) rola por dentro quando a janela é baixa —
+  antes, a 1212x700, a página inteira rolava 100 px. Na TV dela nada rola.
+  Vem junto a dica dos dois motores sem o nome da variável do nosso código
+  («No código do produto é `strong`»), que ela aprovou em 11/09 na aba 05 e que
+  nunca tinha chegado a este mapa. Enquanto ela não publicar, o produto mostra
+  o mapa de 1800 px. Depois do OK dela:
+  `scripts/check_o_desenho_aprovado.py --publicar mapa-do-controle.html` (com o
+  `.html`: sem ele o script não acha a página).
+
+## mapa-das-portas.html
+- **24/09/2026** — AS-PAGINAS-AVULSAS-TEM-A-CAIXA-DA-JANELA-01, esperando a
+  sessão dos desenhos. A palavra dela, 24/09: «Vira caixa da janela, rolando
+  por dentro». A página de documento (1180 px de largura, rolando inteira:
+  2195 px de altura) vira a caixa da janela das abas, pedida ao mesmo dono
+  (`caixa_da_janela.moldura`): 1600 x 808 na TV dela, 1180 x 777 no piso. O
+  cabeçalho («← Voltar», o título e a data) fica; os botões, o gabinete, os
+  controles e o rodapé rolam por dentro da caixa. O fundo de dentro, as cores,
+  os textos e os botões não mudam. A cura entrou pelo gerador
+  (`pagina_do_mapa.EDICOES`, três edições novas). Enquanto ela não publicar, o
+  produto mostra a página de 1180 px rolando inteira. Depois do OK dela:
+  `scripts/check_o_desenho_aprovado.py --publicar mapa-das-portas.html`.
