@@ -1849,11 +1849,11 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         common[rep.COMMON_VALID_FLAG2] = flag2
         if not suppress_leds:
             common[41] = int(self.light.pulseOptions.value) & 0xFF
-            # DÍVIDA NOMEADA EM 09/09/2026 (BRILHO-DE-HARDWARE-01): este byte é o
-            # brilho dos LEDS DE JOGADOR, não o da barra — medido por ela nos dois
-            # transportes. O valor que entra aqui é o da BARRA, e só não faz estrago
-            # porque nada liga o `flag2` bit0. Quem ligar o bit sem trocar a fonte
-            # atenua as lâmpadas de numeração achando que escurece a lightbar.
+            # ESTE BYTE É O BRILHO DOS LEDS DE JOGADOR, não o da barra — medido por
+            # ela nos dois transportes (BRILHO-DE-HARDWARE-01, 09/09/2026). Ninguém o
+            # escolhe: nada escreve `light.brightness`, e vai o padrão da pydualsense
+            # (2, o degrau baixo). O `flag2` bit0 que o autoriza só sai ligado aqui,
+            # sem supressão, herdado do `ledOption` — ver `luz.led_jogador.brilho`.
             common[42] = int(self.light.brightness.value) & 0xFF
             common[43] = int(self.light.playerNumber.value) & 0xFF
             common[44] = int(self.light.TouchpadColor[0]) & 0xFF

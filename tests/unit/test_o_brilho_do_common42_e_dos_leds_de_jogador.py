@@ -14,10 +14,10 @@ BRILHO-DE-HARDWARE-01. A fonte externa já dizia o certo e ninguém tinha olhado
 
 O QUE ESTE TESTE GUARDA, e por que ele é DE DÍVIDA e não de feature
 -------------------------------------------------------------------
-`backend_pydualsense` escreve `common[42] = self.light.brightness.value` — o
-brilho da BARRA — e **nunca liga** o `flag2` bit0. Hoje isso é inerte: sem o
-bit, o firmware ignora o byte. O risco é do dia seguinte: alguém liga o bit
-para "fazer o brilho funcionar", e o que escurece são as lâmpadas de numeração.
+`backend_pydualsense` escreve `common[42] = self.light.brightness.value`, e o
+bit0 do `flag2` só sai ligado sem a supressão de LED (o cabo sem nó gravável),
+herdado do `ledOption`; o produto instalado o desliga. Esta régua não vê esse
+caminho: quem o prende é `test_as_frases_que_a_bancada_achou.py` (24/09/2026).
 
 Então a régua tem DUAS metades, e a segunda é a que morde:
 

@@ -34,20 +34,20 @@ reversível numa frase — ``docs/data/decisoes-dela.csv:213``):
 2. **no cabo ele não vira saída padrão.** ``priority.session`` baixa
    (``integrations.alto_falante_bt.PRIORIDADE_SESSAO_DO_SOM``). Publicar o nó
    é uma coisa; mandar o som do sistema para ele é outra, e a segunda é dela;
-3. **a escolha entre ``0x32`` e ``0x39`` só depois do D5**, com o número de
-   banda na mesa. Este subsystem **não escreve no rádio** e por isso não
-   escolhe degrau nenhum.
+3. **a escolha entre ``0x32`` e ``0x39`` caiu em 10/09/2026**: o som saiu pelo
+   ``0x35`` (a orelha dela, 70 s), e é esse degrau que a ``PonteDeSomPorRadio``
+   que este subsystem sobe por controle no rádio escreve (``ARRANJO_035``).
 
 O QUE ELE NÃO FAZ, E É METADE DO VALOR DE LER ISTO
 ---------------------------------------------------
-* **não escreve um byte no aparelho.** Ele publica e derruba nós do PipeWire,
-  e mais nada. Quem escreve no rádio é o ensaio de bancada
-  (``scripts/ensaios/o_som_que_sai.py``), com a orelha dela do outro lado —
-  e o mapa proíbe, com todas as letras, concluir daí que a ponte funciona —
-  a forma de erro tem nome e é a **FALÁCIA DO CANAL QUE RESPONDE**: concluir
-  que, porque um canal responde, ele FAZ o que a gente esperava dele. O
-  honesto é o par: *o canal responde, e o conteúdo vai pelos dois arranjos
-  candidatos*;
+* **não escreve no aparelho do cabo.** No cabo o som é da placa USB do
+  próprio controle; no rádio, :meth:`AltoFalanteSubsystem._casar_as_pontes`
+  sobe uma ``PonteDeSomPorRadio`` por controle, e é ela que escreve o
+  ``0x35`` no hidraw. A régua que fica é a da
+  **FALÁCIA DO CANAL QUE RESPONDE** — concluir que, porque um canal
+  responde, ele FAZ o que se esperava dele: o mapa segura o degrau em
+  ``MONTOU`` até a orelha dela ouvir o caminho inteiro do produto
+  (``audio.saida_dedicada@dualsense``, AS-FRASES-QUE-A-BANCADA-ACHOU-01);
 * **PASSOU A LIGAR — 09/09/2026, SOM-POR-CONTROLE-01.** Esta linha dizia *"não
   liga o monitor ao sink USB do controle no cabo"*, e era verdade: o
   ``module-loopback`` e o casamento por dispositivo USB estavam fora da posse
