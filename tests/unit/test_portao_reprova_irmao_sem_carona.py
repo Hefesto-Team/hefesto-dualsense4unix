@@ -202,7 +202,7 @@ class TestOsTresJeitosDeEstarCerto:
     def test_guarda_de_existencia_com_o_nome_literal_passa(self, repo: Path) -> None:
         """O idioma que a casa já usava antes desta seção existir.
 
-        `scripts/doctor.sh:4576` e `scripts/bt_health_watchdog.sh:215` testam a
+        `scripts/doctor.sh:4619` e `scripts/bt_health_watchdog.sh:215` testam a
         existência antes de chamar. Quem escreve a guarda está dizendo "sei que
         pode não estar aqui, e tratei" — e o portão acredita.
         """

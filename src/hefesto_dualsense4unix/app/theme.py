@@ -320,7 +320,7 @@ def adotar_o_tema_da_sessao() -> str:
     A CORRENTE, medida inteira:
 
     1. O ``.desktop`` instalado lança com ``env GDK_BACKEND=x11``
-       (``install.sh:2998``), e o ``app/main._force_xwayland_on_cosmic`` faz o
+       (``install.sh:3202``), e o ``app/main._force_xwayland_on_cosmic`` faz o
        mesmo no arranque. A razão está escrita lá e é boa: no cosmic-comp
        nativo os popups de ``GtkComboBox``/``GtkMenu`` abrem **com fundo claro**,
        mal posicionados e com o grab quebrado.

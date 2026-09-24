@@ -47,7 +47,7 @@ from hefesto_dualsense4unix.app.ambiente import (
     mensagem_da_bandeja,
 )
 
-#: O id literal da extensão, como `install.sh:3296` e a documentação de socorro
+#: O id literal da extensão, como `install.sh:3310` e a documentação de socorro
 #: o escrevem. Está aqui em vez de dentro da asserção porque é ELE o conteúdo
 #: que a instrução precisa carregar — sem o id, a frase manda a pessoa procurar.
 EXTENSAO_DO_GNOME = "ubuntu-appindicators@ubuntu.com"

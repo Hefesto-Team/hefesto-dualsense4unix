@@ -9,7 +9,7 @@ respondia com UM — uma variável de ambiente que o daemon **nunca recebe**::
     Environment=PYTHONUNBUFFERED=1
 
 E o estado em que os dois se contradizem é o que o PRÓPRIO INSTALADOR produz.
-`install.sh --keep-dualsense-mic` grava a marca do gesto (`install.sh:3782`) e
+`install.sh --keep-dualsense-mic` grava a marca do gesto (`install.sh:4039`) e
 não instala o drop-in 51. A partir daí, a cada boot do daemon::
 
     doctor.sh ....... [OK] microfone ativo é o DualSense (foi pedido)
