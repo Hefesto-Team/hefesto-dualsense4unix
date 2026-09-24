@@ -11,10 +11,18 @@ de texto do pacote, fora as docstrings e fora o `broker/`, que roda como root
 no host) e cobra, no manifesto, a linha que o monta — com o modo decidido. O
 que o código cita e o sandbox NÃO deve ganhar está em :data:`NAO_SE_EXPOE`, com
 o porquê. Um caminho novo de /run no código, sem linha e sem decisão, reprova.
+Um caminho de /run MONTADO POR PARTES (`Path("/run") / …`) o varredor não lê, e
+por isso reprova também. O barramento de SISTEMA mora em /run/dbus e o `Gio` o
+abre sem texto de caminho: ele é cobrado pelo `BusType.SYSTEM`, junto com o
+diário do root, em :data:`SEGUE_SEM_ALCANCAR` — o que a página diz que o
+Flatpak não alcança, o manifesto de fato não dá.
 
 A MORDIDA, medida: tirar a linha do broker reprova o teste da cobertura e o do
 modo; pôr `:ro` na da trava reprova o do modo e o da escrita; tirar a do udev
-reprova o da cobertura.
+reprova o da cobertura; `Path("/run") / "x"` no código reprova o das partes;
+`--system-talk-name=org.bluez` ou o diário do root no manifesto, sem a página
+mudar, reprovam o do que segue sem alcançar; uma linha de /run que a página
+diz e o manifesto não tem reprova o da página.
 """
 
 from __future__ import annotations
@@ -61,9 +69,19 @@ def _docstrings(arvore: ast.AST) -> set[int]:
     return ids
 
 
-def caminhos_de_run_no_codigo() -> dict[str, list[str]]:
-    """``{caminho: ["arquivo:linha", …]}`` de toda constante de texto com /run."""
-    achados: dict[str, list[str]] = {}
+def _ler_o_codigo() -> tuple[dict[str, list[str]], list[str], list[str]]:
+    """Uma volta pelo pacote: ``(caminhos, partes, barramento de sistema)``.
+
+    - ``caminhos``: ``{caminho: ["arquivo:linha", …]}`` de toda constante de
+      texto com /run;
+    - ``partes``: onde um texto é só ``/run`` ou ``/run/`` — o começo de um
+      caminho montado por partes, que o varredor não consegue ler inteiro;
+    - ``barramento de sistema``: onde o código pede o ``BusType.SYSTEM``, que
+      abre o socket de /run/dbus sem texto de caminho.
+    """
+    caminhos: dict[str, list[str]] = {}
+    partes: list[str] = []
+    barramento: list[str] = []
     for arquivo in sorted(PACOTE.rglob("*.py")):
         relativo = arquivo.relative_to(PACOTE)
         if relativo.parts[0] in FORA_DO_SANDBOX:
@@ -71,15 +89,25 @@ def caminhos_de_run_no_codigo() -> dict[str, list[str]]:
         arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
         docs = _docstrings(arvore)
         for no in ast.walk(arvore):
+            if (
+                isinstance(no, ast.Attribute)
+                and no.attr == "SYSTEM"
+                and isinstance(no.value, ast.Attribute)
+                and no.value.attr == "BusType"
+            ):
+                barramento.append(f"{relativo}:{no.lineno}")
+                continue
             if not (isinstance(no, ast.Constant) and isinstance(no.value, str)):
                 continue
             if id(no) in docs:
                 continue
+            if no.value.strip() in ("/run", "/run/"):
+                partes.append(f"{relativo}:{no.lineno}")
             for casado in _RE_RUN.finditer(no.value):
-                achados.setdefault(casado.group(0).rstrip("/"), []).append(
+                caminhos.setdefault(casado.group(0).rstrip("/"), []).append(
                     f"{relativo}:{no.lineno}"
                 )
-    return achados
+    return caminhos, partes, barramento
 
 
 def linhas_de_run_do_manifesto() -> dict[str, str]:
@@ -119,7 +147,7 @@ def _debaixo_de(caminho: str, pasta: str) -> bool:
     return caminho == pasta or caminho.startswith(pasta + "/")
 
 
-CAMINHOS = caminhos_de_run_no_codigo()
+CAMINHOS, PARTES, BARRAMENTO_DE_SISTEMA = _ler_o_codigo()
 
 
 def test_a_leitura_do_codigo_enxerga_os_tres_donos() -> None:
@@ -212,12 +240,84 @@ def test_a_trava_do_radio_escreve_e_por_isso_a_linha_nao_e_ro(
     )
 
 
+def test_nenhum_caminho_de_run_se_monta_por_partes() -> None:
+    assert not PARTES, (
+        f"um caminho de /run montado por partes ({', '.join(PARTES)}): o varredor só "
+        "lê o texto inteiro, e este caminho passaria sem linha no manifesto. Escreva "
+        "o caminho inteiro numa constante"
+    )
+
+
 def test_a_pagina_do_flatpak_diz_cada_linha_de_run() -> None:
+    """Nos dois sentidos: a linha que a página diz e o manifesto não tem é fato velho."""
     pagina = PAGINA.read_text(encoding="utf-8")
     args = yaml.safe_load(MANIFESTO.read_text(encoding="utf-8"))["finish-args"]
-    for arg in args:
-        if arg.startswith("--filesystem=/run/"):
-            assert f"`{arg}`" in pagina, (
-                f"{arg} está no manifesto e não na tabela de permissões de "
-                "docs/usage/flatpak.md"
-            )
+    no_manifesto = {arg for arg in args if arg.startswith("--filesystem=/run/")}
+    na_pagina = set(re.findall(r"`(--filesystem=/run/[^`]+)`", pagina))
+    assert no_manifesto <= na_pagina, (
+        f"{sorted(no_manifesto - na_pagina)} está no manifesto e não na tabela de "
+        "permissões de docs/usage/flatpak.md"
+    )
+    assert na_pagina <= no_manifesto, (
+        f"{sorted(na_pagina - no_manifesto)} está na docs/usage/flatpak.md e o manifesto não tem"
+    )
+
+
+def _secao_do_run(pagina: str) -> str:
+    """O texto da seção «O que o daemon alcança em `/run`» da página."""
+    titulo = "### O que o daemon alcança em `/run`"
+    assert titulo in pagina, "a docs/usage/flatpak.md perdeu a seção do /run"
+    return re.split(r"\n(?:---|## )", pagina.split(titulo, 1)[1], maxsplit=1)[0]
+
+
+def test_o_que_a_pagina_diz_que_segue_sem_alcancar_o_manifesto_nao_da() -> None:
+    """Os dois buracos que a página declara existem, e a página os declara.
+
+    O BlueZ mora no barramento de SISTEMA (o socket é /run/dbus), que o `Gio`
+    abre sem texto de caminho; o diário do root mora em /var/lib. O manifesto
+    não dá nenhum dos dois, e a página diz isso. Quem abrir um deles mede, e
+    muda a página, o docstring do `apelido_do_dongle` e esta trava juntos.
+    """
+    from hefesto_dualsense4unix.integrations.diario_do_radio import DIARIO_DO_ROOT
+
+    assert BARRAMENTO_DE_SISTEMA, (
+        "controle: o varredor não achou o `BusType.SYSTEM` do BlueZ. Ou o código "
+        "deixou de abrir o barramento de sistema, e a página tem de mudar, ou a "
+        "régua ficou cega"
+    )
+    args = yaml.safe_load(MANIFESTO.read_text(encoding="utf-8"))["finish-args"]
+    secao = _secao_do_run(PAGINA.read_text(encoding="utf-8"))
+    assert "continua sem alcançar" in secao, "a seção do /run perdeu o que o Flatpak não alcança"
+    sem_alcancar = secao.split("continua sem alcançar", 1)[1]
+
+    barramento = [
+        a
+        for a in args
+        if a.startswith(("--socket=system-bus", "--system-talk-name=", "--system-own-name="))
+    ]
+    assert not barramento, (
+        f"o manifesto abre o barramento de sistema ({barramento}), e a página diz "
+        "que o BlueZ não chega ao Flatpak"
+    )
+    assert "BlueZ" in sem_alcancar and "barramento de SISTEMA" in sem_alcancar, (
+        "a página deixou de dizer que o BlueZ não chega ao Flatpak, e o manifesto "
+        "segue sem o barramento de sistema"
+    )
+
+    diario = str(DIARIO_DO_ROOT.parent)
+    montam = []
+    for a in args:
+        if not a.startswith("--filesystem="):
+            continue
+        caminho = a.removeprefix("--filesystem=").partition(":")[0]
+        absoluto = caminho.startswith("/")
+        if caminho == "host" or (absoluto and _debaixo_de(diario, caminho.rstrip("/"))):
+            montam.append(a)
+    assert not montam, (
+        f"o manifesto monta o diário do root ({montam}), e a página diz que ele "
+        "não chega ao Flatpak"
+    )
+    assert f"`{diario}`" in sem_alcancar, (
+        "a página deixou de dizer que o diário do root não chega ao Flatpak, e o "
+        "manifesto segue sem montá-lo"
+    )
