@@ -22,9 +22,10 @@ plano de sufixo tiraria do jogo quem não precisava sair (um lugar ainda
 guardado atrás do buraco que venceu); esses casos ficam como eram.
 
 **O dublê do vpad tira o MAC como o produto tira** (``vpad_mac``, pela
-identidade do aparelho). O da bancada de queda o tira do NÚMERO, e é mais
-frouxo que o real justamente na volta tardia do P1 — ver
-:class:`TestAVoltaTardiaDoP1`.
+identidade do aparelho — ``MesaDoJogo._nascer_vpad``). O da bancada de queda o
+tira do NÚMERO, e é mais frouxo que o real justamente na volta tardia do P1 —
+ver :class:`TestAVoltaTardiaDoP1`. A conferência passou o dublê honesto para a
+bancada da O-ASSENTO-02, e as réguas dela também medem com ele.
 
 AS MORDIDAS (24/09/2026, cada uma devolvida com o md5 conferido):
 
@@ -65,7 +66,6 @@ from hefesto_dualsense4unix.daemon.subsystems.coop import (
 )
 from hefesto_dualsense4unix.daemon.subsystems.identity import prazo_do_lugar_guardado
 from hefesto_dualsense4unix.integrations.uhid_gamepad import vpad_mac
-from tests.unit.test_coop_bancada_de_queda_do_primario import _VpadFalso
 from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (  # noqa: F401
     P1,
     P2,
@@ -91,22 +91,6 @@ MATRIZ = pytest.mark.parametrize(
     [(n, t) for n in (2, 3, 4) for t in TRANSPORTES],
     ids=[f"{n}-controles-{t}" for n in (2, 3, 4) for t in TRANSPORTES],
 )
-
-
-def _nascer_como_o_produto(
-    self: MesaDoJogo, _flavor: Any, *, player: int = 1, identity: str | None = None, **_kw: Any
-) -> _VpadFalso:
-    """O vpad da bancada com o MAC do PRODUTO: o do aparelho, não o do número."""
-    vpad = _VpadFalso(player)
-    vpad.mac = vpad_mac(identity, player)
-    vpad.identidade = identity  # type: ignore[attr-defined]
-    self.vpads.append(vpad)
-    return vpad
-
-
-@pytest.fixture(autouse=True)
-def mac_do_aparelho(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(MesaDoJogo, "_nascer_vpad", _nascer_como_o_produto)
 
 
 def _nascidos(bancada: MesaDoJogo, desde: int, uniq: str) -> list[Any]:
