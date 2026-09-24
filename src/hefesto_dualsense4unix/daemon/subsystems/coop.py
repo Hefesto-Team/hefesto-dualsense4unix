@@ -2885,6 +2885,59 @@ def _fora_do_boneco(depois: Mapping[int, str], cartas: Mapping[str, int]) -> int
     return sum(1 for lugar, chave in depois.items() if lugar != cartas[chave] - 1)
 
 
+def _a_faixa(
+    mesa: Mapping[int, str],
+    cartas: Mapping[str, int],
+    nascer: Sequence[str],
+    fixos: frozenset[str],
+    melhor: tuple[int, list[str], bool],
+) -> tuple[int, list[str], bool]:
+    """O plano por FAIXA de cartas, para quando o sufixo deixa gente fora do boneco.
+
+    O-ASSENTO-GUARDADO-NAO-ANDA-04. O sufixo recria todo mundo a partir de uma
+    carta; a faixa recria só as cartas de ``piso`` a ``teto``, e quem vem
+    depois do ``teto`` fica onde está. É o que fecha o buraco que venceu À
+    FRENTE de um lugar ainda guardado (dois controles fora, com prazos
+    diferentes): quem está atrás do buraco renasce no boneco do número novo, e
+    quem espera o lugar guardado não se mexe. Recriá-lo o jogaria DENTRO do
+    lugar guardado, porque o jogo dá a quem nasce o menor lugar livre.
+
+    Uma faixa só vale se:
+
+    - ninguém dela já está no boneco da própria carta (a O-ASSENTO-03: quem
+      está certo não sai para fechar o buraco de ninguém), e nenhum fixo;
+    - TODO mundo dela renasce no boneco da própria carta: o ~1 s sem controle
+      é só de quem de fato chega aonde a lâmpada diz;
+    - a ordem continua valendo;
+    - e ela bate o sufixo: menos gente fora do boneco, ou a mesma conta com
+      menos recriações. No empate fica o sufixo.
+
+    Só na mesa que já está EM ORDEM como está (ninguém recriado): a carta
+    renumerada e a menor que chega depois da maior são ordem a consertar, e
+    isso é do sufixo (STEAM-NO-FISICO-01).
+    """
+    parada = _a_mesa_depois(mesa, [], nascer, cartas, compacta=False)
+    if not _em_ordem([cartas[c] for c in parada.values() if c not in fixos]):
+        return melhor
+    sentados = [c for _lugar, c in sorted(mesa.items())]
+    lugar_de = {c: lugar for lugar, c in mesa.items()}
+    limites = sorted({*(cartas[c] for c in sentados), *(cartas[c] for c in nascer)})
+    for i, piso in enumerate(limites):
+        for teto in limites[i:]:
+            faixa = [c for c in sentados if piso <= cartas[c] <= teto and c not in fixos]
+            if not faixa or any(lugar_de[c] == cartas[c] - 1 for c in faixa):
+                continue
+            depois = _a_mesa_depois(mesa, faixa, nascer, cartas, compacta=False)
+            if any(lugar != cartas[c] - 1 for lugar, c in depois.items() if c in faixa):
+                continue
+            if not _em_ordem([cartas[c] for c in depois.values() if c not in fixos]):
+                continue
+            fora = _fora_do_boneco(depois, cartas)
+            if (fora, len(faixa)) < (melhor[0], len(melhor[1])):
+                melhor = (fora, faixa, _em_ordem([cartas[c] for c in depois.values()]))
+    return melhor
+
+
 def planejar_a_ordem(
     mesa: Mapping[int, str],
     cartas: Mapping[str, int],
@@ -2929,8 +2982,16 @@ def planejar_a_ordem(
     (``{0: p1=1, 2: b=2, 3: c=3, 4: d=5}``, o 4 guardado), recriar a partir
     da carta 2 fecharia o buraco do ``b`` e do ``c`` e poria o ``d`` no lugar
     guardado — tirando do jogo, e do boneco certo, quem não precisava sair.
-    Além do plano de antes (a ordem), só se recria quem está fora do boneco;
-    esses casos ficam como eram.
+    Além do plano de antes (a ordem), só se recria quem está fora do boneco.
+
+    **E O BURACO FECHA MESMO ASSIM, PELA FAIXA (O-ASSENTO-GUARDADO-NAO-ANDA-04).**
+    Nesses 60 arranjos o sufixo deixava o jogo como estava. Quando o sufixo
+    deixa alguém fora do boneco, :func:`_a_faixa` tenta recriar só uma faixa de
+    cartas: na mesa de cima, o ``b`` e o ``c`` renascem nos bonecos 2 e 3, o
+    lugar 3 do jogo fica guardado para o 4, e o ``d`` não se mexe. Quem espera
+    um lugar ainda guardado também não se mexe quando está fora do boneco:
+    recriá-lo o poria no lugar guardado. O caso que já fechava não passa por
+    lá, então não muda.
     """
     sentados = [c for _lugar, c in sorted(mesa.items())]
     lugar_de = {c: lugar for lugar, c in mesa.items()}
@@ -2952,6 +3013,10 @@ def planejar_a_ordem(
             melhor = (fora, recriar, _em_ordem([cartas[c] for c in depois.values()]))
     if melhor is None:
         return [], False
+    if melhor[0] and not compacta:
+        # Sem jogo não há lugar guardado no jogo: quem abrir depois enumera
+        # os vpads na ordem em que nasceram.
+        melhor = _a_faixa(mesa, cartas, nascer, fixos, melhor)
     return melhor[1], melhor[2]
 
 
