@@ -81,7 +81,7 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 <!-- TABELA-DA-PARIDADE -->
 | aba | feats | IGUAL | DIFER | FALTA | SO_HTML | ? | paridade |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 01-jogar | 42 | 12 | 23 | 2 | 4 | 1 | 29% |
+| 01-jogar | 42 | 11 | 24 | 2 | 4 | 1 | 26% |
 | 02-controles | 50 | 16 | 24 | 6 | 4 | 0 | 32% |
 | 03-gatilhos | 31 | 15 | 9 | 1 | 5 | 1 | 48% |
 | 04-iluminacao | 35 | 9 | 12 | 6 | 7 | 1 | 26% |
@@ -91,7 +91,7 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | 08-conexoes | 49 | 16 | 26 | 5 | 2 | 0 | 33% |
 | 09-sistema | 38 | 12 | 19 | 1 | 6 | 0 | 32% |
 | 10-perfis | 50 | 14 | 20 | 7 | 9 | 0 | 28% |
-| TODAS | 395 | 131 | 172 | 32 | 57 | 3 | 33% |<!-- /TABELA-DA-PARIDADE -->
+| TODAS | 395 | 130 | 173 | 32 | 57 | 3 | 33% |<!-- /TABELA-DA-PARIDADE -->
 
 A tabela é **gerada da contagem do CSV** e conferida pelo portão (regra
 `numero-publicado`): quem mexer no dado e não regerar esta seção é barrado
@@ -632,3 +632,27 @@ funciona") passaram a ter o escopo do sinal em `a01_jogar.py`.
 
 **A MORDIDA:** com a tabela devolvida à contagem velha, o portão reprova em
 `numero-publicado` nomeando `07-lancadores` e `TODAS`.
+
+## Nota de verificação — 24/09/2026, o recibo do «Reconectar» cala o sucesso
+
+`A-FRASE-DO-RECONECTAR-SAI-01`. A linha **`01-jogar` · "O recibo do 'Reconectar'
+— quantos jogadores voltaram, se a numeração compactou"** foi de `IGUAL` para
+**`DIFERENTE`**, e a tabela acima foi **recontada do CSV**: `01-jogar` vai de
+`12 IGUAL · 23 DIFER · 29%` para `11 · 24 · 26%`, e `TODAS` de `131 · 172` para
+`130 · 173`. **A paridade desce por decisão dela, não por defeito.**
+
+**A razão:** `D-2409-O-RECONECTAR-NAO-DIZ-NADA` — *«Nada: o número novo aparece
+no próprio cartão»*. A GTK diz no toast quantos jogadores voltaram e o que a
+numeração fez; o HTML diz só as duas falhas do passo 2 (`painel._NAO_CONFERIU`,
+`painel._NAO_COMPACTOU`). O `IGUAL` já estava velho antes desta cura: a JOGAR-02
+(09/09) calou o «já estava compacta» e a recusa por jogo aberto, a
+TELA-CALADA-01 (13/09) mandou a frase para o diário da janela, e a linha
+continuou dizendo que os desfechos da janela chegam à tela.
+
+**Fato substituído na mesma linha:** o `html_faz` dizia que o desfecho era o
+recado verde de 6 s no cartão; agora diz o que o gesto faz hoje. Os quatro
+endereços foram medidos de novo — os dois do HTML abriam em docstring de outra
+função.
+
+**A MORDIDA:** com a tabela devolvida à contagem velha, o portão reprova em
+`numero-publicado` nomeando `01-jogar` e `TODAS`.
