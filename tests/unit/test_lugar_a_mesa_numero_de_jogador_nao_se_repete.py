@@ -68,7 +68,10 @@ from hefesto_dualsense4unix.daemon.subsystems.external_identity import (
     ExternalIdentityRegistry,
     ExternalLedSync,
 )
-from hefesto_dualsense4unix.daemon.subsystems.identity import ControllerIdentityRegistry
+from hefesto_dualsense4unix.daemon.subsystems.identity import (
+    ControllerIdentityRegistry,
+    prazo_do_lugar_guardado,
+)
 from hefesto_dualsense4unix.integrations.uhid_gamepad import UhidDualSense
 
 # --- os aparelhos da mesa dela, mascarados ---------------------------------
@@ -273,9 +276,15 @@ def montar_mesa(
     receber um lugar que um externo já detém. Fica parametrizável porque o
     `FakeController` roda sem ele — e um teste que só medisse o caminho fiado
     não veria a mesa de quem usa o outro.
+
+    **QUEM NÃO ESTÁ EM ``presentes`` ESTÁ DESLIGADO HÁ TEMPO** (O-ASSENTO-
+    GUARDADO-NAO-ANDA-01): a fila nasce ligando todo mundo, e quem sai no fim
+    deixaria o lugar guardado pelo prazo. As mesas daqui são fotos de uma fila
+    gravada, então o relógio passa do prazo antes de a mesa ser lida.
     """
-    ds = ControllerIdentityRegistry()
-    ext = ExternalIdentityRegistry()
+    agora = [1000.0]
+    ds = ControllerIdentityRegistry(clock=lambda: agora[0])
+    ext = ExternalIdentityRegistry(clock=lambda: agora[0])
     daemon = _DaemonFalso(ds, primario)
     sync = ExternalLedSync.__new__(ExternalLedSync)
     sync._daemon = daemon
@@ -294,6 +303,7 @@ def montar_mesa(
             ext.slot_for(identidade, reserve=sync._ds_reserve())
     ds.sync_connected([i for i, e in fila if e == "dualsense" and i in presentes])
     ext.sync_connected([i for i, e in fila if e != "dualsense" and i in presentes])
+    agora[0] += prazo_do_lugar_guardado() + 1.0
     mesa = Mesa(ds=ds, ext=ext, sync=sync, coop=coop)
     mesa.secundarios = dict(secundarios or {})  # type: ignore[attr-defined]
     return mesa

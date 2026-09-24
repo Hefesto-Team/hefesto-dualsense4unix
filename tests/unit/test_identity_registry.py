@@ -58,6 +58,20 @@ UNIQ_B = "aabbcc000002"
 UNIQ_C = "aabbcc000003"
 
 
+class _Relogio:
+    """Relógio monotônico de mentira — o prazo do lugar guardado sem `sleep`."""
+
+    def __init__(self) -> None:
+        self.agora = 1000.0
+
+    def __call__(self) -> float:
+        return self.agora
+
+    def passar_o_prazo(self) -> None:
+        """O lugar de quem saiu deixa de estar guardado (O-ASSENTO-GUARDADO-NAO-ANDA-01)."""
+        self.agora += identity.prazo_do_lugar_guardado() + 1.0
+
+
 @pytest.fixture
 def isolated_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """config_dir isolado + boot_id fixo — registro 100% hermético."""
@@ -219,10 +233,14 @@ class TestReservaDeSessao:
         na mesa conta 1..N sem contar o ausente, então B é 1 e C é 2 — e
         nunca existe um jogador 2 sem jogador 1.
         """
-        reg = ControllerIdentityRegistry()
+        relogio = _Relogio()
+        reg = ControllerIdentityRegistry(clock=relogio)
         reg.slot_for(UNIQ_A)
         reg.slot_for(UNIQ_B)
         reg.sync_connected({UNIQ_B})  # A desconectou (o lugar 1 continua dele)
+        # O-ASSENTO-GUARDADO-NAO-ANDA-01: dentro do prazo B continua 2; a
+        # NUM-01 que esta régua mede é a de depois do prazo.
+        relogio.passar_o_prazo()
         assert reg.slot_for(UNIQ_C) == 2  # exibição: B=1, C=2
         assert reg.snapshot() == {UNIQ_A: 1, UNIQ_B: 2, UNIQ_C: 3}
         assert reg.slot_for(UNIQ_B) == 1
@@ -258,10 +276,12 @@ class TestReservaDeSessao:
         Antes deste ajuste a asserção do meio era `slot_for(UNIQ_B) == 2` com
         um controle só ligado, que é o defeito relatado.
         """
-        reg = ControllerIdentityRegistry()
+        relogio = _Relogio()
+        reg = ControllerIdentityRegistry(clock=relogio)
         assert reg.slot_for(UNIQ_A) == 1
         assert reg.slot_for(UNIQ_B) == 2
         reg.sync_connected(set())  # os dois desligaram (a fila fica)
+        relogio.passar_o_prazo()  # O-ASSENTO: e os lugares se liberaram
         assert reg.snapshot() == {UNIQ_A: 1, UNIQ_B: 2}
         # Volta o B sozinho: ele é o jogador 1 (naturalidade), sem perder o
         # lugar de A na fila.

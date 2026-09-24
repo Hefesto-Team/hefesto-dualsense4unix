@@ -108,6 +108,15 @@ class Relogio:
         self.agora += segundos
 
 
+def passar_o_prazo(relogio: Relogio) -> None:
+    """O lugar de quem saiu deixa de estar guardado (O-ASSENTO-GUARDADO-NAO-ANDA-01).
+
+    Dentro do prazo ninguém anda; as réguas daqui medem a mesa DEPOIS dele,
+    quando a NUM-01 volta e a contagem fecha sem o ausente.
+    """
+    relogio.avancar(id_mod.prazo_do_lugar_guardado() + 1.0)
+
+
 @pytest.fixture
 def config_isolado(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """`config_dir` em tmp — nenhum teste daqui toca o `controllers.json` dela."""
@@ -316,6 +325,7 @@ class TestAusenteNaoAcendeNumero:
         relogio = Relogio()
         reg = mesa_de_quatro(relogio)
         reg.sync_connected([SEGUNDO, TERCEIRO, QUARTO])
+        passar_o_prazo(relogio)
 
         # Quem está na mesa acende 1..3 — a contagem fecha sem o ausente.
         assert reg.numero_da_lampada(SEGUNDO, assign=False) == 1
@@ -374,6 +384,7 @@ class TestONumeroENaMesaEUnico:
         relogio = Relogio()
         reg = mesa_de_quatro(relogio)
         reg.sync_connected([SEGUNDO, TERCEIRO, QUARTO])
+        passar_o_prazo(relogio)
 
         tabela = reg.numeros_da_mesa()
 

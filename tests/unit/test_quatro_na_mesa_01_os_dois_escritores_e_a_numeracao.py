@@ -161,8 +161,17 @@ def o_tique_viu_tres(reg: ControllerIdentityRegistry) -> None:
     `info.get("connected")` do `describe_controllers` — e o handle do que
     piscou CONTINUA aberto (o `connect()` só o recolhe em ≤30 s). É essa
     diferença entre "tem handle" e "está conectado" que abre a janela.
+
+    **E O RELÓGIO PASSA DO PRAZO DO LUGAR GUARDADO** (O-ASSENTO-GUARDADO-NAO-
+    ANDA-01, 24/09/2026). Dentro do prazo o lugar do terceiro fica guardado e
+    o quarto é 4 com ou sem a readmissão — a régua do defeito 1 não
+    distinguiria a cura da falta dela. Depois do prazo a NUM-01 volta, o
+    quarto é 3, e uma readmissão indevida o empurra para 4 de novo.
     """
     reg.sync_connected([PRIMEIRO, SEGUNDO, QUARTO])
+    relogio = getattr(reg, "_clock", None)
+    assert isinstance(relogio, Relogio), "a mesa de quatro nasce com relógio de mentira"
+    relogio.avancar(id_mod.prazo_do_lugar_guardado() + 1.0)
 
 
 def backend_com_os_quatro() -> PyDualSenseController:

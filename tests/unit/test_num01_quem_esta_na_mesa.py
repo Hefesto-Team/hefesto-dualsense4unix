@@ -82,14 +82,52 @@ def _fila(tmp: Path, kind: str = id_mod.KIND_DUALSENSE) -> dict[str, int]:
     }
 
 
+class _Relogio:
+    """Relógio monotônico de mentira — o prazo do lugar guardado sem `sleep`."""
+
+    def __init__(self) -> None:
+        self.agora = 1000.0
+
+    def __call__(self) -> float:
+        return self.agora
+
+
+def _registro() -> ControllerIdentityRegistry:
+    """O registro dos DualSense, com relógio de mentira."""
+    return ControllerIdentityRegistry(clock=_Relogio())
+
+
+def _registro_externo() -> ExternalIdentityRegistry:
+    """O registro dos externos, com relógio de mentira."""
+    return ExternalIdentityRegistry(clock=_Relogio())
+
+
+def _passar_o_prazo(*registros: object) -> None:
+    """O lugar de quem saiu deixa de estar guardado — O-ASSENTO-GUARDADO-NAO-ANDA-01.
+
+    Dentro do prazo ninguém anda (a linha 17 dela, com régua própria em
+    ``test_o_assento_guardado_nao_anda.py``). A NUM-01 que ESTE arquivo mede é
+    a de depois do prazo, e é por aqui que ela continua mordendo.
+    """
+    for registro in registros:
+        relogio = getattr(registro, "_clock", None)
+        assert isinstance(relogio, _Relogio), "registro sem relógio de mentira"
+        relogio.agora += id_mod.prazo_do_lugar_guardado() + 1.0
+
+
 def _mesa(reg: ControllerIdentityRegistry, *uniqs: str) -> dict[str, int | None]:
     """Números EXIBIDOS depois de reconciliar a mesa com ``uniqs``.
 
     Espelha o que o lifecycle faz a cada tick lento (``sync_connected`` com a
     ordem de ``describe_controllers``) e depois consulta como o provider de
-    cor consulta — leitura pura, para a consulta não mexer na presença.
+    cor consulta — leitura pura, para a consulta não mexer na presença. Quem
+    saiu nesta olhada está fora há mais que o prazo do lugar guardado; sem
+    saída, o relógio não anda (quem chega junto continua na mesma onda, D-30).
     """
+    antes = reg.snapshot_connected()
     reg.sync_connected(list(uniqs))
+    if antes - reg.snapshot_connected():
+        _passar_o_prazo(reg)
     return {uniq: reg.slot_for(uniq, assign=False) for uniq in uniqs}
 
 
@@ -104,14 +142,14 @@ class TestOsSeisCenariosDaSprint:
     def test_1_o_controle_sozinho_na_mesa_e_o_jogador_1(
         self, config_isolado: Path
     ) -> None:
-        reg = ControllerIdentityRegistry()
+        reg = _registro()
         assert _mesa(reg, UNIQ_B) == {UNIQ_B: 1}
 
     def test_2_ligar_o_outro_nao_faz_ninguem_piscar(
         self, config_isolado: Path
     ) -> None:
         """B já estava na mesa; A chega e entra ATRÁS — B continua 1."""
-        reg = ControllerIdentityRegistry()
+        reg = _registro()
         _mesa(reg, UNIQ_B)
         assert _mesa(reg, UNIQ_B, UNIQ_A) == {UNIQ_B: 1, UNIQ_A: 2}
 
@@ -120,7 +158,7 @@ class TestOsSeisCenariosDaSprint:
     ) -> None:
         """A lacuna se fecha sozinha: é a "compactação automática" da sprint,
         que aqui não é um passo — é consequência de contar só os presentes."""
-        reg = ControllerIdentityRegistry()
+        reg = _registro()
         _mesa(reg, UNIQ_B, UNIQ_A)
         assert _mesa(reg, UNIQ_A) == {UNIQ_A: 1}
 
@@ -129,7 +167,7 @@ class TestOsSeisCenariosDaSprint:
     ) -> None:
         """A ordem de preferência não mudou em nenhum dos passos acima: com
         os dois de volta, cada um recupera o número que era dele."""
-        reg = ControllerIdentityRegistry()
+        reg = _registro()
         _mesa(reg, UNIQ_B, UNIQ_A)
         _mesa(reg, UNIQ_A)  # B saiu; A virou 1
         assert _mesa(reg, UNIQ_A, UNIQ_B) == {UNIQ_A: 2, UNIQ_B: 1}
@@ -137,10 +175,10 @@ class TestOsSeisCenariosDaSprint:
 
     def test_5_restart_do_daemon_mantem_a_ordem(self, config_isolado: Path) -> None:
         """Restart = instância nova + ``load()``. R-23 continua de pé."""
-        reg = ControllerIdentityRegistry()
+        reg = _registro()
         _mesa(reg, UNIQ_B, UNIQ_A)
 
-        reiniciado = ControllerIdentityRegistry()
+        reiniciado = _registro()
         reiniciado.load()
         assert _mesa(reiniciado, UNIQ_A, UNIQ_B) == {UNIQ_A: 2, UNIQ_B: 1}
         # E com um só ligado depois do restart ele é o jogador 1 — o
@@ -151,11 +189,11 @@ class TestOsSeisCenariosDaSprint:
         self, config_isolado: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Âncora diferente = outro boot. Ela ANOTA, nunca decide (R-23)."""
-        reg = ControllerIdentityRegistry()
+        reg = _registro()
         _mesa(reg, UNIQ_B, UNIQ_A)
 
         monkeypatch.setattr(id_mod, "_read_boot_id", lambda: "outro-boot")
-        depois_do_reboot = ControllerIdentityRegistry()
+        depois_do_reboot = _registro()
         depois_do_reboot.load()
         assert depois_do_reboot.snapshot() == {UNIQ_B: 1, UNIQ_A: 2}
         assert _mesa(depois_do_reboot, UNIQ_A, UNIQ_B) == {UNIQ_A: 2, UNIQ_B: 1}
@@ -169,10 +207,10 @@ class TestOsDoisRequisitosJuntos:
     """
 
     def _com_fila_ab(self, tmp: Path) -> ControllerIdentityRegistry:
-        semente = ControllerIdentityRegistry()
+        semente = _registro()
         semente.sync_connected([UNIQ_A, UNIQ_B])  # A chegou primeiro
         assert _fila(tmp) == {UNIQ_A: 1, UNIQ_B: 2}
-        reg = ControllerIdentityRegistry()
+        reg = _registro()
         reg.load()
         return reg
 
@@ -213,8 +251,12 @@ class TestNuncaJogador2SemJogador1:
         presentes_ds: list[str],
         presentes_ext: list[str],
     ) -> list[int]:
+        saiu = ds.snapshot_connected() - set(presentes_ds)
+        saiu |= ext.snapshot_connected() - set(presentes_ext)
         ds.sync_connected(presentes_ds)
         ext.sync_connected(presentes_ext)
+        if saiu:
+            _passar_o_prazo(ds, ext)
         piso = max(ds.snapshot().values(), default=0)
         numeros = [ds.slot_for(u, assign=False) for u in presentes_ds]
         numeros += [ext.slot_for(u, reserve=piso) for u in presentes_ext]
@@ -230,8 +272,8 @@ class TestNuncaJogador2SemJogador1:
         deixava a mesa exibindo 2 e 3 — "não existe Controle 1", medido ao
         vivo no arquivo dela.
         """
-        ds = ControllerIdentityRegistry()
-        ext = ExternalIdentityRegistry()
+        ds = _registro()
+        ext = _registro_externo()
         ds.set_external_reserve_provider(lambda: set(ext.snapshot().values()))
         # Fiação de produção da EXIBIÇÃO: é o `ExternalLedSync` que casa os
         # dois registros nos dois sentidos (`_wire_presence_providers`).
@@ -261,8 +303,8 @@ class TestNuncaJogador2SemJogador1:
     ) -> None:
         """Vale para o Pro Nintendo/8BitDo também: ninguém aceita ser o
         jogador 2 de si mesmo, nem quem não é DualSense."""
-        ds = ControllerIdentityRegistry()
-        ext = ExternalIdentityRegistry()
+        ds = _registro()
+        ext = _registro_externo()
         ExternalLedSync(SimpleNamespace(identity_registry=ds), ext)
         ds.sync_connected([UNIQ_A, UNIQ_B])
         piso = max(ds.snapshot().values())
@@ -270,6 +312,7 @@ class TestNuncaJogador2SemJogador1:
 
         ds.sync_connected([])  # os dois DualSense saíram
         ext.sync_connected([MAC_EXTERNO])
+        _passar_o_prazo(ds, ext)
         assert ext.peek(MAC_EXTERNO) == 1
         assert ext.snapshot() == {MAC_EXTERNO: 3}, "o lugar na fila é o mesmo"
 
@@ -292,7 +335,7 @@ class TestRenumerarAgoraNaoEstragaOAusente:
     ) -> None:
         from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
 
-        ds = ControllerIdentityRegistry()
+        ds = _registro()
         ds.sync_connected([UNIQ_A, UNIQ_B])  # fila [A, B]
         ds.sync_connected([UNIQ_B])  # A saiu; B exibe 1
 
@@ -313,7 +356,7 @@ class TestRenumerarAgoraNaoEstragaOAusente:
         """D2 continua de pé: o ausente perde a fila, nunca a entrada."""
         from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
 
-        ds = ControllerIdentityRegistry()
+        ds = _registro()
         ds.sync_connected([UNIQ_A, UNIQ_B])
         ds.sync_connected([UNIQ_B])
         IpcHandlersMixin._renumber_locked(ds, None)
@@ -342,9 +385,9 @@ class TestMigracaoDoArquivoReal:
             ),
             encoding="utf-8",
         )
-        ds = ControllerIdentityRegistry()
+        ds = _registro()
         ds.load()
-        ext = ExternalIdentityRegistry()
+        ext = _registro_externo()
         ext.load()
         assert ds.snapshot() == {} and ext.snapshot() == {}
 
@@ -361,6 +404,6 @@ class TestMigracaoDoArquivoReal:
     def test_a_casa_sem_arquivo_nenhum_nasce_no_1(
         self, config_isolado: Path
     ) -> None:
-        ds = ControllerIdentityRegistry()
+        ds = _registro()
         ds.load()  # não existe arquivo — não levanta
         assert _mesa(ds, UNIQ_B) == {UNIQ_B: 1}

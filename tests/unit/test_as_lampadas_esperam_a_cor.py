@@ -33,6 +33,12 @@ E há a metade que prova o que JÁ funcionava: a TELA continua se refazendo na
 hora (``numeros_da_mesa`` não espera nada), a estreia não espera, e a tabela
 vazia responde exatamente como antes desta sprint.
 
+**O LUGAR GUARDADO, 24/09/2026** (O-ASSENTO-GUARDADO-NAO-ANDA-01): dentro do
+prazo o lugar do P3 fica guardado e o P4 continua 4 na tela E nas lâmpadas.
+Estas réguas medem DEPOIS do prazo (``passar_o_prazo``), quando a NUM-01 volta
+e a mesa muda de verdade — sem isso o primeiro teste passaria pelo lugar
+guardado, e não pela espera das lâmpadas.
+
 Nenhum endereço real: faixa forjada ``aa:bb:cc:…`` com os octetos 4 e 5
 zerados, a mesma allowlist de ``tests/unit/test_anonimato_de_fixtures.py``.
 """
@@ -71,6 +77,11 @@ class Relogio:
 
     def avancar(self, segundos: float) -> None:
         self.agora += segundos
+
+
+def passar_o_prazo(relogio: Relogio) -> None:
+    """O lugar de quem saiu deixa de estar guardado: a NUM-01 volta."""
+    relogio.avancar(id_mod.prazo_do_lugar_guardado() + 1.0)
 
 
 @pytest.fixture
@@ -119,6 +130,7 @@ class TestOAparelhoNaoSeContradiz:
         assert numeros_das_lampadas(reg)[QUARTO] == 4
 
         reg.sync_connected(list(SOBRAM))  # o tique de 2 s viu o P3 sair
+        passar_o_prazo(relogio)
 
         assert numeros_das_lampadas(reg)[QUARTO] == 4, (
             "as lâmpadas do P4 andaram sem a cor — é a contradição de 20/09")
@@ -131,6 +143,7 @@ class TestOAparelhoNaoSeContradiz:
         reg = mesa_de_quatro(relogio)
         reg.liberar_as_lampadas()
         reg.sync_connected(list(SOBRAM))
+        passar_o_prazo(relogio)
 
         assert reg.liberar_as_lampadas() is True
         assert numeros_das_lampadas(reg)[QUARTO] == 3, (
@@ -153,6 +166,7 @@ class TestOAparelhoNaoSeContradiz:
         reg = mesa_de_quatro(relogio)
         reg.liberar_as_lampadas()
         reg.sync_connected(list(SOBRAM))
+        passar_o_prazo(relogio)
 
         provider = id_mod.make_auto_output_provider(reg)
         saida = provider(QUARTO)
@@ -182,6 +196,7 @@ class TestOQueJaFuncionavaContinua:
         reg = mesa_de_quatro(relogio)
         reg.liberar_as_lampadas()
         reg.sync_connected(list(SOBRAM))
+        passar_o_prazo(relogio)
 
         assert reg.numeros_da_mesa() == {
             "aabbcc000001": 1, "aabbcc000002": 2, "aabbcc000004": 3}
@@ -195,6 +210,7 @@ class TestOQueJaFuncionavaContinua:
         relogio = Relogio()
         reg = mesa_de_quatro(relogio)
         reg.sync_connected(list(SOBRAM))
+        passar_o_prazo(relogio)
         assert numeros_das_lampadas(reg)[QUARTO] == 3
 
     def test_quem_estreia_nao_espera(self) -> None:
@@ -226,7 +242,7 @@ class TestOQueJaFuncionavaContinua:
         assert reg.numero_da_lampada(SEGUNDO, assign=False) == 2
 
         reg.sync_connected([SEGUNDO])            # o P1 saiu
-        relogio.avancar(id_mod.JANELA_DE_ONDA_SEC * 2)
+        passar_o_prazo(relogio)                  # e o lugar dele se liberou
         reg.sync_connected([SEGUNDO, TERCEIRO])  # e o novo chegou antes do gatilho
 
         vistos = [n for n in numeros_das_lampadas(reg).values() if n is not None]
@@ -250,6 +266,7 @@ class TestAMordida:
         reg = mesa_de_quatro(relogio)
         reg.liberar_as_lampadas()
         reg.sync_connected(list(SOBRAM))
+        passar_o_prazo(relogio)
 
         # Com a cura no lugar: o aparelho não se contradiz.
         assert reg.numero_da_lampada(QUARTO, assign=False) == 4
