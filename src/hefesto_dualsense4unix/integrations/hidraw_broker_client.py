@@ -112,11 +112,23 @@ class HidrawBrokerClient:
     # -- API pública -----------------------------------------------------
 
     def hide(self, node: str) -> bool:
-        """Esconde `node` do uid da sessão. False = não escondeu (best-effort)."""
+        """Esconde `node` do uid da sessão. False = não escondeu (best-effort).
+
+        HIDE-SO-O-HIDRAW-03: `ok` não quer dizer escondido. Com o nó exposto
+        por outra conexão viva (o Modo Nativo), o broker registra a lease e
+        ADIA o fs (`state: "exposed"`): o nó segue aberto até o pedido de
+        exposição morrer. O diário diz o que o broker respondeu, e não
+        «hidden» sobre um nó aberto.
+        """
         response = self._request({"cmd": "hide", "node": node})
         ok = bool(response is not None and response.get("ok"))
         if ok:
-            self._logar_transicao("hidraw_broker_hidden", node, "hidden")
+            if response is not None and response.get("state") == "exposed":
+                self._logar_transicao(
+                    "hidraw_broker_hide_adiado", node, "exposed", state="exposed"
+                )
+            else:
+                self._logar_transicao("hidraw_broker_hidden", node, "hidden")
         else:
             self._log_falha("hide", node, response)
         return ok
