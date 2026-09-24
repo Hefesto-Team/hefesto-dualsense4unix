@@ -1153,13 +1153,14 @@ def _maybe_seed_presets() -> None:
         return
     _seed_attempted = True
     try:
-        # AS DUAS RENOMEAÇÕES VÊM ANTES DA SEMEADURA, e a ordem é o ponto.
-        # Depois delas o `freestyle.json` dela já existe no destino, então o
-        # semeador cai no ramo "presente na 1ª execução" e REGISTRA sem copiar
-        # — o asset de fábrica nunca encosta no arquivo dela. Invertida, a
-        # ordem faria o semeador entregar o preset nu e as migrações recusarem
-        # por "já existe", deixando os dois. A de 05/09 (`meu_perfil`) roda
-        # primeiro; a de 24/09 (`personalizado`, O-MODO-FREESTYLE-02) depois.
+        # AS DUAS RENOMEAÇÕES VÊM ANTES DA SEMEADURA. Depois delas o
+        # `freestyle.json` dela já existe no destino, e o semeador cai no ramo
+        # "presente na 1ª execução": REGISTRA sem copiar. A ordem NÃO é a
+        # guarda (medido em 24/09/2026: invertida, nenhuma régua reprova): o
+        # semeador recusa a fábrica enquanto o slot dela tiver nome antigo
+        # (`_o_slot_dela_tem_nome_antigo`), e a fábrica que o shell já copiou
+        # cede o lugar (`_e_o_de_fabrica_intocado`). A de 05/09 (`meu_perfil`)
+        # roda primeiro; a de 24/09 (`personalizado`, O-MODO-FREESTYLE-02) depois.
         with contextlib.suppress(Exception):
             migrate_default_profile_name()
         with contextlib.suppress(Exception):
