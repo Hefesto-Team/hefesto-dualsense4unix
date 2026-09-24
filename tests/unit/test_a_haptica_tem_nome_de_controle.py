@@ -40,7 +40,15 @@ AS MORDIDAS, uma por afirmação, e cada uma foi vista reprovar:
    conta volta a dar quatro;
 7. tire o ``device.product.id`` de ``propriedades_do_endpoint`` → o gravador do
    device KS (``audio_ks_dualsense.endpoints_de_mentira``) deixa de achar o
-   endpoint, com o rótulo, o nome e a âncora todos certos.
+   endpoint, com o rótulo, o nome e a âncora todos certos;
+8. tire a guarda da ponte em modo háptica de ``_a_haptica_esta_em_uso`` → o
+   endpoint renasce debaixo da ponte que lê o monitor dele;
+9. troque o ``na_duvida=True`` da guarda por ``False`` → com o servidor mudo
+   sobre os streams, o nó cai;
+10. tire o ``not self.rotulo`` de ``_rotulo_novo`` → o nó herdado de rótulo
+    ilegível é derrubado;
+11. tire o ``self._endpoints.pop`` do fim de ``_renovar_o_rotulo_da_haptica`` →
+    o controle cujo nó não voltou fica sem háptica até reconectar.
 """
 
 from __future__ import annotations
@@ -99,9 +107,12 @@ def _ancora(i: int) -> eh.Ancora:
 
 _ANCORAS = [_ancora(i) for i in range(4)]
 
+#: O numerador de mentira: ``uniq`` → o número do jogador (``None`` = não sei).
+_Assentos = dict[str, int | None]
+
 
 @pytest.fixture
-def assentos() -> Iterator[dict[str, int | None]]:
+def assentos() -> Iterator[_Assentos]:
     """O numerador de assento, respondendo pelo dicionário — e o de antes volta."""
     tabela: dict[str, int | None] = dict(_ASSENTO)
     anterior = mic.registrar_numerador_de_assento(lambda u: tabela.get(u))
@@ -157,6 +168,9 @@ class _Servidor:
         self.recusar_cargas = 0
         #: nomes de sink com um stream de JOGO tocando (sink-input)
         self.jogo_em: set[str] = set()
+        #: O servidor que não responde sobre os streams (prazo estourado): o
+        #: ``pactl`` sai com erro, e quem pergunta recebe ``None`` — «não sei».
+        self.mudo_nos_streams = False
         self._proximo = 500
 
     # -- o estado de partida -------------------------------------------------
@@ -217,6 +231,8 @@ class _Servidor:
                 for i, s in self.sinks.items()
             )
         if argv[:4] == ["pactl", "list", "short", "sink-inputs"]:
+            if self.mudo_nos_streams:
+                return None
             return "\n".join(
                 f"9{i}\t{i}\t12\tprotocol-native.c\tfloat32le 4ch 48000Hz"
                 for i, s in self.sinks.items()
@@ -613,6 +629,45 @@ def test_com_o_jogo_tocando_no_no_o_rotulo_espera(mesa: _Mesa, assentos) -> None
     assert mesa.rotulo(_P4) == f"{_HAPTICA} 2{_SONY}"
 
 
+def test_a_ponte_em_modo_haptica_segura_o_rotulo(mesa: _Mesa, assentos: _Assentos) -> None:
+    """A ponte deste controle mandando a háptica segura o nó — ela lê o monitor dele.
+
+    Pode não haver stream à vista nem jogo achado em ``/proc`` naquele instante,
+    e a ponte ainda estar lendo o monitor do endpoint: derrubá-lo ali deixa a
+    leitura pendurada, com a vibração no meio.
+
+    MORDIDA: tire a guarda da ponte de ``_a_haptica_esta_em_uso``.
+    """
+    mesa.volta()
+    mesa.sub._pontes[_P3] = _PonteDeMentira(uniq=_P3)
+    mesa.sub._modo_da_ponte[_P3] = "haptica"
+    assentos[_P1], assentos[_P3] = 3, 1
+    mesa.volta()
+    assert mesa.rotulo(_P3) == f"{_HAPTICA} 3{_SONY}", "o endpoint renasceu debaixo da ponte"
+    assert mesa.servidor.quedas == []
+    # A ponte sem jogo desce naquela mesma volta, pelo laço de sempre; e o nome segue.
+    mesa.volta()
+    assert mesa.rotulo(_P3) == f"{_HAPTICA} 1{_SONY}"
+
+
+def test_o_servidor_mudo_sobre_os_streams_segura_o_rotulo(
+    mesa: _Mesa, assentos: _Assentos
+) -> None:
+    """«Não sei se o jogo toca» vale como «toca»: o nó fica, e o nome espera.
+
+    MORDIDA: troque o ``na_duvida=True`` da guarda por ``False``.
+    """
+    mesa.volta()
+    assentos[_P2], assentos[_P4] = 4, 2
+    mesa.servidor.mudo_nos_streams = True
+    mesa.volta()
+    assert mesa.rotulo(_P4) == f"{_HAPTICA} 4{_SONY}", "o endpoint caiu com o servidor mudo"
+    assert mesa.servidor.quedas == []
+    mesa.servidor.mudo_nos_streams = False
+    mesa.volta()
+    assert mesa.rotulo(_P4) == f"{_HAPTICA} 2{_SONY}"
+
+
 def test_perder_o_numero_nao_republica(mesa: _Mesa, assentos) -> None:
     """O numerador que pisca (subsystem descendo, mesa vazia por uma volta) não conta."""
     mesa.volta()
@@ -656,6 +711,53 @@ def test_o_no_herdado_com_o_nome_de_antes_renasce_uma_vez(mesa: _Mesa) -> None:
     cargas = len(mesa.servidor.cargas)
     mesa.volta()
     assert len(mesa.servidor.cargas) == cargas
+
+
+def test_o_no_herdado_de_rotulo_ilegivel_nao_se_toca(mesa: _Mesa) -> None:
+    """O rótulo que o servidor não diz é «não sei», e «não sei» não derruba nó.
+
+    Um nó herdado cujo argumento não traz o ``device.description='…'`` desta
+    casa fica como está até o controle reconectar — a mesma recusa do nó do
+    alto-falante sem rótulo legível (``AltoFalanteSubsystem._o_rotulo_envelheceu``).
+
+    MORDIDA: tire o ``not self.rotulo`` de ``EndpointDeHaptica._rotulo_novo``.
+    """
+    mesa.servidor.modulo_herdado([
+        "module-null-sink", f"sink_name={eh.nome_do_endpoint(_P3)}",
+        "format=float32le", "rate=48000", "channels=4",
+        "channel_map=front-left,front-right,rear-left,rear-right",
+        'sink_properties="device.bus=usb device.vendor.id=054c device.product.id=0ce6 '
+        f'sysfs.path={_ANCORAS[0].declarado} priority.session=0"',
+    ])
+    mesa.volta()
+    mesa.volta()
+    assert mesa.servidor.quedas == [], "o nó de rótulo ilegível foi derrubado"
+    assert mesa.servidor.cargas == [eh.nome_do_endpoint(_P4)], "o herdado foi recarregado"
+
+
+def test_o_no_que_nem_com_o_rotulo_velho_volta_renasce_na_volta_seguinte(
+    mesa: _Mesa, assentos: _Assentos
+) -> None:
+    """O servidor que recusa as duas cargas não deixa o controle sem háptica.
+
+    O rótulo novo não subiu, e o velho também não: o nó está fora do servidor,
+    e o subsystem o esquece. A volta seguinte o publica pelo caminho de
+    sempre. Guardá-lo com o ``module_id`` vazio o deixaria de fora até o
+    controle reconectar — o laço só cria endpoint para quem não tem.
+
+    MORDIDA: tire o ``self._endpoints.pop`` do fim de
+    ``_renovar_o_rotulo_da_haptica``.
+    """
+    mesa.volta()
+    assentos[_P1], assentos[_P3] = 3, 1
+    mesa.servidor.recusar_cargas = 2
+    mesa.volta()
+    assert mesa.servidor.do_nome(eh.nome_do_endpoint(_P3)) == []
+    mesa.volta()
+    publicados = mesa.servidor.do_nome(eh.nome_do_endpoint(_P3))
+    assert len(publicados) == 1, "o controle ficou sem a háptica até reconectar"
+    assert mesa.servidor.descricao(publicados[0]) == f"{_HAPTICA} 1{_SONY}"
+    assert mesa.rotulo(_P4) == f"{_HAPTICA} 4{_SONY}"
 
 
 def test_o_rotulo_novo_que_nao_sobe_devolve_o_velho(assentos) -> None:
