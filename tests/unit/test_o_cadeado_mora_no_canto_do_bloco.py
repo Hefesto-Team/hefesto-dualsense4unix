@@ -246,30 +246,17 @@ def test_o_cadeado_nao_empurrou_a_linha_do_titulo(medido: dict) -> None:
     conta velha (`altura ÷ lineHeight`) devolvia `NaN` desde que a trava virou
     `<button>`, porque o `lineHeight` de um botão é `normal`.
 
-    O PRAZO DOS 17 PX — O-MODO-FREESTYLE-02, 24/09/2026. O «Modo Freestyle»
-    cresceu para 26 px por decisão (`D-2409-O-BOTAO-FREESTYLE-TEM-26-PX`), e a
-    conta foi paga no desenho: a linha do título cresce 9 px e a aba não rola
-    (`test_o_modo_freestyle`). Quem diz qual regra vale é a PALAVRA da página:
-    com a de ontem, os 17 px; com «Modo Freestyle», a altura do gerador,
-    centrada no título. **No commit do `--publicar 01`** a palavra de ontem sai
-    (`test_a_palavra_de_ontem_tem_prazo`), e o ramo dos 17 px sai junto — ele
-    importa a constante que morre.
+    OS 26 PX — O-MODO-FREESTYLE-02, 24/09/2026. O «Modo Freestyle» cresceu
+    para 26 px por decisão (`D-2409-O-BOTAO-FREESTYLE-TEM-26-PX`), e a conta
+    foi paga no desenho: a linha do título cresce 9 px e a aba não rola
+    (`test_o_modo_freestyle`). A regra é a altura do gerador, centrada no
+    título; os 17 px da palavra de ontem saíram no `--publicar 01`.
     """
-    from hefesto_dualsense4unix.interface.pacotes.a01_jogar import (
-        CADEADO_ROTULO_ESPERANDO_A_SESSAO_DELA,
-    )
-
-    if medido["rotulo"] == CADEADO_ROTULO_ESPERANDO_A_SESSAO_DELA:
-        assert medido["altura_do_cadeado"] <= medido["altura_do_titulo"], (
-            f"o cadeado ({medido['altura_do_cadeado']}px) é mais alto que o "
-            f"título ({medido['altura_do_titulo']}px) e empurra a linha inteira "
-            f"para baixo.")
-    else:
-        assert medido["altura_do_cadeado"] == _altura_do_desenho(), (
-            f"o «Modo Freestyle» mede {medido['altura_do_cadeado']}px e o "
-            f"gerador diz {_altura_do_desenho()}px")
-        assert medido["desvio_vertical_do_titulo"] == 0, (
-            "o botão saiu do centro da linha do título")
+    assert medido["altura_do_cadeado"] == _altura_do_desenho(), (
+        f"o «Modo Freestyle» mede {medido['altura_do_cadeado']}px e o "
+        f"gerador diz {_altura_do_desenho()}px")
+    assert medido["desvio_vertical_do_titulo"] == 0, (
+        "o botão saiu do centro da linha do título")
     assert medido["linhas_de_texto"] == 1, (
         f"o rótulo do cadeado quebrou em {medido['linhas_de_texto']} linhas — "
         f"duas linhas aqui estouram a altura do título e derrubam o bloco.")
@@ -339,17 +326,11 @@ def test_a_palavra_e_a_da_janela_antiga(medido: dict) -> None:
     `Gtk.CheckButton` de `home_actions._build_home`. Texto NOVO de tela é decisão
     dela; texto que ela já leu, não.
     """
-    from hefesto_dualsense4unix.interface.pacotes.a01_jogar import (
-        CADEADO_ROTULO,
-        CADEADO_ROTULO_ESPERANDO_A_SESSAO_DELA,
-    )
+    from hefesto_dualsense4unix.interface.pacotes.a01_jogar import CADEADO_ROTULO
 
-    # A PALAVRA DE ONTEM É ACEITA SÓ ENQUANTO O DESENHO ESPERA A SESSÃO DELA —
-    # O-MODO-FREESTYLE-01, 24/09/2026. O dono passou a dizer «Modo Freestyle» e
-    # o desenho também; a página publicada muda no `--publicar 01`. O prazo
-    # desta isenção é régua própria (`test_o_modo_freestyle`), não esta linha.
-    assert medido["rotulo"] in (CADEADO_ROTULO,
-                                CADEADO_ROTULO_ESPERANDO_A_SESSAO_DELA), (
+    # A palavra dela de 23/09, «Modo Freestyle», publicada em 24/09/2026: a
+    # isenção da palavra de ontem saiu no `--publicar 01`.
+    assert medido["rotulo"] == CADEADO_ROTULO, (
         f"o rótulo na tela é {medido['rotulo']!r} e o dono diz "
         f"{CADEADO_ROTULO!r}")
     assert medido["tem_dica"], "o cadeado ficou sem a razão na dica"
