@@ -1072,7 +1072,7 @@ def _bloco_do_speaker(entry: Any) -> dict[str, Any] | None:
     """O bloco `speaker` cru do controle, nas DUAS posições em que ele chega.
 
     ELE É A SEGUNDA LEITURA DA MESMA REGRA, e isso está declarado em vez de
-    escondido: o dono é `speaker_do_entry` (`controller_card.py:2081`), que
+    escondido: o dono é `speaker_do_entry` (`controller_card.py:2091`), que
     conhece as duas posições — `entry["speaker"]` e `entry["inputs"]["speaker"]`
     — mas devolve só `(volume, muted)`. A ROTA não passa por ele, e alargar a
     assinatura do widget da GTK a partir daqui não é trabalho desta aba.
@@ -4374,7 +4374,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         # que o deslizante do volume já faz, e a resposta vem do MESMO dono.
         #
         # A FRASE É DO PRODUTO, e nenhuma nasce aqui: `frase_do_alvo_do_mic`
-        # (`app/widgets/controller_card.py:2336`) é a dona dos três estados, e
+        # (`app/widgets/controller_card.py:2346`) é a dona dos três estados, e
         # `alvo_honrado` (`app/ipc_bridge.py:1168`) é quem os lê do corpo. Os
         # dois devolvem "nada a dizer" para `True` e para `None` de propósito —
         # *"não sei" não é "não honrei"*, e inventar a confissão por ausência de
