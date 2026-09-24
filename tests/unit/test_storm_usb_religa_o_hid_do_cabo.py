@@ -38,6 +38,12 @@ AS MORDIDAS (arranque a cura, veja reprovar, devolva):
   watchdog, ou devolva a definição dela para depois das guardas, e ela
   reprova: numa máquina sem adaptador o tique saía antes da vigia 4, e o cabo
   nunca era religado.
+* :func:`test_o_doctor_e_o_religar_leem_a_mesma_orfa` (conferência de 24/09)
+  — a regra da HID órfã do cabo tem DOIS leitores (o ``exame_da_mesa``, que
+  faz o doctor dizer «o Hefesto religa sozinho», e este script, que religa).
+  Mude a regra de um lado só (tire a guarda do ``authorized`` do exame, ou a
+  do ``054c`` do script) e ela reprova: a linha prometeria um religar que não
+  vem, ou calaria sobre um que vem.
 """
 
 from __future__ import annotations
@@ -384,5 +390,48 @@ def test_a_vigia_existe_antes_das_guardas_e_roda_depois_delas() -> None:
     chamadas = [i for i, linha in enumerate(codigo) if linha.strip() == "vigia_rebind_orfaos"]
     assert chamadas and min(chamadas) > max(guardas), (
         "o tique da máquina com rádio perdeu a chamada da vigia 4"
+    )
+
+
+# --- os dois leitores da mesma órfã ----------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("caso", "vid", "classe", "com_driver", "authorized"),
+    [
+        ("a HID do DualSense sem driver", "054c", "03", False, None),
+        ("o vid em maiúsculas", "054C", "03", False, None),
+        ("a HID com driver", "054c", "03", True, None),
+        ("a HID desligada de propósito", "054c", "03", False, "0"),
+        ("a HID autorizada por escrito", "054c", "03", False, "1"),
+        ("o áudio sem driver", "054c", "01", False, None),
+        ("o teclado com a HID órfã", "258a", "03", False, None),
+    ],
+)
+def test_o_doctor_e_o_religar_leem_a_mesma_orfa(
+    tmp_path: Path,
+    caso: str,
+    vid: str,
+    classe: str,
+    com_driver: bool,
+    authorized: str | None,
+) -> None:
+    """O mesmo ``/sys`` de mentira, os dois leitores reais, a mesma resposta.
+
+    O doctor diz «o Hefesto tenta religá-lo sozinho» quando o
+    ``exame_da_mesa`` acha a HID órfã; quem religa é este script. Se os dois
+    discordarem, a linha promete uma cura que não vem — o mesmo cuidado que a
+    CONTROLE-QUE-NAO-ENTROU-01 tem com o órfão do rádio.
+    """
+    from hefesto_dualsense4unix.integrations.exame_da_mesa import aparelho_da_porta
+
+    usb = _bancada(tmp_path)
+    _aparelho(usb, PORTA, vid=vid)
+    _interface(usb, INTERFACE, classe=classe, com_driver=com_driver, authorized=authorized)
+    o_doctor_acusa = aparelho_da_porta(PORTA, raiz_usb=usb / "devices").hid_sem_driver
+    r = _roda(tmp_path, "--dry-run")
+    o_script_religa = f"faria: echo '{INTERFACE}' > " in r.stdout
+    assert o_doctor_acusa == o_script_religa, (
+        f"{caso}: o doctor diz {o_doctor_acusa}, o religar faz {o_script_religa}\n{r.stdout}"
     )
 
