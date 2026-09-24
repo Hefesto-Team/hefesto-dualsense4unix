@@ -73,8 +73,14 @@ from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
     texto_eixo_g,
 )
 
-from . import Contexto, registrar
-from .a02_controles import meias_da_barra
+from . import Contexto, gesto, registrar
+from .a02_controles import (
+    MIRA_NO_MODO_NATIVO,
+    MIRA_SEM_O_CONTROLE,
+    _corpo,
+    _uniq,
+    meias_da_barra,
+)
 
 #: A PÁGINA, escrita uma vez. É o nome do arquivo, que é o que o `load-changed`
 #: do WebView entrega ao despachante.
@@ -95,6 +101,51 @@ SENSORES = (
     ("giro", gyro_do_inputs, ESCALA_GYRO_GRAUS_S, texto_eixo),
     ("accel", accel_do_inputs, ESCALA_ACCEL_G, texto_eixo_g),
 )
+
+#: O BLOCO DA MIRA VIRTUAL — 24/09/2026, A-MIRA-POR-MOVIMENTO-NA-TELA-01. É o
+#: `data-bloco="miras"` do gerador, e ele só é remontado (e só se pinta dentro
+#: dele) quando a página PUBLICADA o tiver: o desenho novo espera o OK dela, e
+#: emitir para um endereço que a página não tem é pintar no vazio.
+BLOCO_DAS_MIRAS = '[data-bloco="miras"]'
+
+_TEM_A_MIRA: bool | None = None
+
+
+def _a_pagina_tem_a_mira() -> bool:
+    """A página PUBLICADA já tem o bloco da mira? Lido uma vez por processo."""
+    global _TEM_A_MIRA
+    if _TEM_A_MIRA is None:
+        from hefesto_dualsense4unix.interface import onde
+
+        try:
+            doc = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
+        except OSError:
+            doc = ""
+        _TEM_A_MIRA = BLOCO_DAS_MIRAS.strip("[]") in doc
+    return _TEM_A_MIRA
+
+
+def _campos_da_mira(entrada: dict[str, Any]) -> dict[str, Any]:
+    """A posição dos dois deslizantes e os dois números, pelo bloco `mira`.
+
+    O bloco é o que o `daemon.state_full` publica por controle
+    (`ipc_handlers._merge_mira`) — os números que o tique DESTE controle usa.
+    Sem ele, travessão nos números e o trilho onde está: escrever uma posição
+    de palpite moveria o polegar dela para um valor que ninguém leu.
+    """
+    bloco = entrada.get("mira")
+    b: dict[str, Any] = bloco if isinstance(bloco, dict) else {}
+    campos: dict[str, Any] = {}
+    for campo, chave in (("mira-sensibilidade", "sensibilidade"),
+                         ("mira-tremor", "zona_morta_graus_s")):
+        valor = b.get(chave)
+        if isinstance(valor, (int, float)) and not isinstance(valor, bool):
+            campos[campo] = str(round(valor))
+            campos[f"{campo}-num"] = str(round(valor))
+        else:
+            campos[f"{campo}-num"] = calibrar.SEM_LEITURA
+    return campos
+
 
 #: O QUE A PÁGINA OFERECE E O PRODUTO NÃO FAZ — e ele é declarado aqui para que
 #: a `cobertura` não passe por completa. Ver a última seção da docstring.
@@ -142,13 +193,20 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     casar de volta o que este mesmo pacote já sabe.
     """
     colunas: dict[str, dict[str, Any]] = {}
+    tem_a_mira = _a_pagina_tem_a_mira()
     for item in ctx.mesa:
         pref = str(item.get("pref") or "")
         if not pref:
             continue
-        colunas[pref] = _eixos_do_controle(ctx.por_uniq(str(item.get("uniq") or "")))
+        dele = ctx.por_uniq(str(item.get("uniq") or ""))
+        colunas[pref] = _eixos_do_controle(dele)
+        if tem_a_mira:
+            colunas[pref].update(_campos_da_mira(dele))
+    blocos = {BLOCO_DOS_CONTROLES: calibrar.controles(ctx.mesa)}
+    if tem_a_mira:
+        blocos[BLOCO_DAS_MIRAS] = calibrar.miras(ctx.mesa)
     return {
-        "blocos": {BLOCO_DOS_CONTROLES: calibrar.controles(ctx.mesa)},
+        "blocos": blocos,
         "quantos": calibrar.contagem(len(ctx.mesa)),
         "colunas": colunas,
         "cobertura": {"pintados": sum(len(v) for v in colunas.values()) + 1,
@@ -160,3 +218,76 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # devolvem as duas coisas.
         "sem_dono": {chave: "" for chave in SEM_DONO},
     }
+
+
+# ---------------------------------------------------------------------------
+# OS DOIS DESLIZANTES DA MIRA — 24/09/2026, A-MIRA-POR-MOVIMENTO-NA-TELA-01
+# ---------------------------------------------------------------------------
+def _pedir_a_mira(p: Any, uniq: str, **campo: Any) -> None:
+    """Manda UM campo da mira ao daemon e diz no cartão o que não alcançou.
+
+    AS FRASES SÃO AS DO CHIP da aba Controles (`a02_controles.mira`), que é o
+    mesmo pedido: duas redações para a mesma recusa seriam a tela explicando o
+    mesmo fato de duas maneiras.
+    """
+    corpo = _corpo(p.mira_set_detalhado(uniq=uniq, **campo))
+    if corpo is None:
+        raise RuntimeError(
+            "o Hefesto não confirmou a mira: ou ele parou, ou este controle se "
+            "desligou")
+    if corpo.get("status") != "ok":
+        raise RuntimeError(MIRA_SEM_O_CONTROLE)
+    alcance = corpo.get("alcance")
+    if isinstance(alcance, dict) and alcance.get("tique") == "nao_se_aplica":
+        raise RuntimeError(MIRA_NO_MODO_NATIVO)
+
+
+def _numero_do_deslizante(o: dict[str, Any], nome: str, faixa: tuple[int, int, int]) -> int | None:
+    """O número que o polegar marca, ou `None` quando o evento é o `click` repetido.
+
+    O `click` QUE VEM DEPOIS DO `change` NÃO É UM SEGUNDO PEDIDO — a mesma
+    guarda do deslizante de volume da aba Controles, e pela mesma razão: um
+    `<input type="range">` clicado na pista dispara `change` e `click`.
+    """
+    if (str(o.get("tipo") or "").lower() == "input"
+            and str(o.get("evento") or "").lower() == "click"):
+        return None
+    cru = str(o.get("valor") or o.get("v") or "").strip()
+    try:
+        n = int(float(cru))
+    except (TypeError, ValueError):
+        raise ValueError(f"{nome}: o deslizante mandou {cru!r}, que não é um "
+                         f"número") from None
+    minimo, maximo, _ = faixa
+    if not minimo <= n <= maximo:
+        raise ValueError(f"{nome}: {n} está fora de {minimo}-{maximo}")
+    return n
+
+
+@gesto(PAGINA, "mira-sensibilidade", grava="mira_set_detalhado")
+def mira_sensibilidade(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """«O quanto um gesto anda» — a sensibilidade da mira DESTE controle.
+
+    UM CAMPO SÓ: mexer aqui não acende nem apaga o chip, e não mexe no tremor.
+    """
+    uniq = _uniq(o)
+    if not uniq:
+        raise ValueError("mira-sensibilidade: o clique não disse em qual controle")
+    n = _numero_do_deslizante(o, "mira-sensibilidade", calibrar.SENSIBILIDADE)
+    if n is not None:
+        _pedir_a_mira(p, uniq, sensibilidade=n)
+
+
+@gesto(PAGINA, "mira-tremor", grava="mira_set_detalhado")
+def mira_tremor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """«Ignorar tremor até» — o giro abaixo disto não move a mira, em graus/s.
+
+    É o campo de acessibilidade desta tela: um tremor essencial mora em 15 a 30
+    graus/s, muito acima do que a curva da mira corta sozinha (§3 da sprint).
+    """
+    uniq = _uniq(o)
+    if not uniq:
+        raise ValueError("mira-tremor: o clique não disse em qual controle")
+    n = _numero_do_deslizante(o, "mira-tremor", calibrar.TREMOR)
+    if n is not None:
+        _pedir_a_mira(p, uniq, zona_morta_graus_s=float(n))

@@ -3265,6 +3265,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                     for campo, qual_do_campo in (("giro-ligado", "giroscopio"),
                                                  ("accel-ligado", "acelerometro"))
                 },
+                # O CHIP «Mira Virtual» — 24/09/2026, A-MIRA-POR-MOVIMENTO-NA-
+                # TELA-01. As mesmas três respostas do par de cima, pelo bloco
+                # `mira` que o `daemon.state_full` publica por controle
+                # (`ipc_handlers._merge_mira`): sem ele, travessão.
+                "mira-ligada": _selo_do_sensor(_mira_ligada(c)),
                 # O RETÂNGULO DA BARRA DE LUZ — o desenho que CONTRADIZ o campo
                 # ao lado dele. Fotografado em 02/09/2026 às 19h: o `luz-hex`
                 # dizia `#0000FF` (a cor viva do P1) e o retângulo logo abaixo
@@ -3697,6 +3702,22 @@ def _sensor_ligado(dele: dict[str, Any], qual: str) -> bool | None:
     if not isinstance(bloco, dict):
         return None
     valor = bloco.get(f"{qual}_ligado")
+    return valor if isinstance(valor, bool) else None
+
+
+def _mira_ligada(dele: dict[str, Any]) -> bool | None:
+    """`True`/`False` do chip «Mira Virtual» deste controle; `None` = ninguém leu.
+
+    A CHAVE É `mira`, e ela é do daemon (`ipc_handlers._merge_mira`, 24/09/2026):
+    o `ligada` que o tique deste controle está usando AGORA — a opinião da peça
+    por cima da mira do perfil, a mesma conta de `roteador_de_movimento.da_peca`.
+    Pela mesma razão do `_sensor_ligado`, a falta do bloco não é `False`: é
+    falta de leitura, e o gesto recusa em vez de chutar o oposto.
+    """
+    bloco = dele.get("mira")
+    if not isinstance(bloco, dict):
+        return None
+    valor = bloco.get("ligada")
     return valor if isinstance(valor, bool) else None
 
 
@@ -4763,6 +4784,72 @@ def sensor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(frase)
 
 
+#: A RECUSA DO CHIP DA MIRA SEM LEITURA — a mesma disciplina do interruptor de
+#: sensor, logo acima: sem o bloco `mira` do daemon, alternar é chutar o oposto.
+SEM_LEITURA_DA_MIRA = (
+    "a leitura ainda não chegou deste controle, e o botão da mira não sabe "
+    "para que lado ir."
+)
+
+#: `mira.set` respondeu sem `ok`: o controle saiu, ou a peça não tem o endereço
+#: que a mira grava no perfil. As duas pedem a mesma coisa dela.
+MIRA_SEM_O_CONTROLE = (
+    "este controle não respondeu à mira: conecte-o de novo e tente outra vez."
+)
+
+#: O Modo Nativo GRAVA e não alcança: o jogo lê o controle direto, sem o
+#: analógico nosso onde a mira escreve. É aviso, não erro — a escolha fica.
+MIRA_NO_MODO_NATIVO = (
+    "Em Modo Nativo o jogo lê este controle direto, e a mira não chega até ele. "
+    "A escolha fica guardada e vale quando o modo voltar a Virtual ou Xbox."
+)
+
+
+@gesto("02-controles.html", "mira", grava="mira_set_detalhado")
+def mira(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O chip «Mira Virtual» — o movimento DESTE controle vira o analógico R dele.
+
+    Palavra dela, 23/09/2026: *"Cria um botão virtual ao lado de giroscopio e
+    acelerometro chamado Mira Virtual"*.  <!-- noqa-acento: citação literal dela -->
+
+    O QUE ESTE GESTO FAZ, na ordem do interruptor de sensor (`sensor`, acima):
+
+    1. **LÊ o estado** do bloco `mira` do `daemon.state_full` — o que o tique
+       deste controle está usando agora. Sem ele, RECUSA
+       (:data:`SEM_LEITURA_DA_MIRA`) em vez de chutar;
+    2. **CHAMA `mira.set` com UM campo só**, o `ligada`. A sensibilidade e o
+       «Ignorar tremor até» são da tela Calibrar sensores, e mandar os três
+       aqui reafirmaria os números dela a cada clique;
+    3. **DIZ QUANDO NÃO ALCANÇA.** Em Modo Nativo o jogo lê o controle físico,
+       e não há analógico nosso para mover: o daemon grava a escolha e devolve
+       `alcance.tique = "nao_se_aplica"`, e :data:`MIRA_NO_MODO_NATIVO` vai ao
+       cartão daquele controle como aviso.
+
+    ELE GRAVA NO PERFIL DELA, e por isso declara `grava=`: o chip é a opinião
+    DESTE controle (`ControllerOverrides.movimento`), e `mira.set` a leva ao
+    disco no mesmo pedido em que ela passa a valer no tique.
+    """
+    uniq = _uniq(o)
+    if not uniq:
+        raise ValueError("mira: o clique não disse em qual controle")
+    agora = _mira_ligada(ctx.por_uniq(uniq))
+    if agora is None:
+        raise RuntimeError(SEM_LEITURA_DA_MIRA)
+    corpo = _corpo(p.mira_set_detalhado(ligada=not agora, uniq=uniq))
+    if corpo is None:
+        raise RuntimeError(
+            "o Hefesto não confirmou a mira: ou ele parou, ou este controle se "
+            "desligou")
+    # AS FRASES SÃO DESTA TELA, e não o `motivo` do daemon repassado: o recado
+    # que chega ao cartão tem de passar pelas réguas de língua, e texto vindo
+    # do outro lado do soquete não passa por nenhuma.
+    if corpo.get("status") != "ok":
+        raise RuntimeError(MIRA_SEM_O_CONTROLE)
+    alcance = corpo.get("alcance")
+    if isinstance(alcance, dict) and alcance.get("tique") == "nao_se_aplica":
+        raise RuntimeError(MIRA_NO_MODO_NATIVO)
+
+
 @gesto("02-controles.html", "ganho-mic", grava="save_profile")
 def ganho_mic(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O deslizante do ganho de entrada — **o ato que faltava ao número**.
@@ -5152,8 +5239,12 @@ def mic_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 #: carrega o `alcance` e a `ressalva` — o `bool` da irmã estreita apagaria
 #: justamente a metade que diz que em Modo Nativo o giro continua chegando ao
 #: jogo pelo `hidraw` do físico.
+#: **`mira_set_detalhado` ENTROU — 24/09/2026**, com o chip «Mira Virtual»
+#: (A-MIRA-POR-MOVIMENTO-NA-TELA-01), e pela mesma razão do sensor: é a variante
+#: que carrega a `ressalva` do Modo Nativo.
 PONTE = {"mic_canal_set_detalhado", "speaker_set", "machine_declare",
-         "mic_volume_set_detalhado", "sensor_set_detalhado"}
+         "mic_volume_set_detalhado", "sensor_set_detalhado",
+         "mira_set_detalhado"}
 #: VAZIO, e o vazio é uma AFIRMAÇÃO: os TRÊS métodos desta aba têm função no
 #: `ipc_bridge`, então nenhum gesto precisa do degrau cru do `p.chamar`.
 METODOS: set[str] = set()
@@ -5203,7 +5294,10 @@ SEM_ECO = ("mic-modo",)
 #: O `mudo` atende o 🎙 e o ♪ (mesmo `data-mudo`), o `mic-modo` atende o Virtual
 #: e o Nativo, o `rota` atende os dois do alto-falante, o `sensor` atende os dois
 #: interruptores e o `volume` atende os dois deslizantes.
-PISO_DA_ABA = 5
+#:
+#: **SEIS DESDE 24/09/2026:** entrou a `mira`, o chip «Mira Virtual» de cada
+#: controle (A-MIRA-POR-MOVIMENTO-NA-TELA-01).
+PISO_DA_ABA = 6
 #: OS DOIS BOTÕES DE CALAR SAÍRAM DESTA LISTA EM 02/09/2026, e a razão é da
 #: FIXTURE, não deles. O controle da régua compartilhada é
 #: `test_os_botoes_tem_dono.FALSO`, e ele traz `audio: {}` e `speaker: {}` — um
@@ -5291,4 +5385,8 @@ PROVAS = [
 #: Esta lista existe para que a próxima pessoa não leia a ausência do `sensor`
 #: em `PROVAS` como "botão sem dono" — foi assim que os quatro passaram uma leva
 #: inteira despercebidos.
-SEM_CHAMADA = ("sensor",)
+#:
+#: **A `mira` ENTROU AQUI PELA MESMA RAZÃO — 24/09/2026.** O `FALSO` não traz o
+#: bloco `mira`, e sem ele o gesto recusa (`SEM_LEITURA_DA_MIRA`); as duas pernas
+#: moram em `tests/unit/test_a_mira_por_movimento_na_tela.py`.
+SEM_CHAMADA = ("sensor", "mira")

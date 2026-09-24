@@ -89,6 +89,38 @@ FAMILIAS = (("giro", "Giroscópio"), ("accel", "Acelerômetro"))
 SEM_CONTROLE = ("Nenhum controle conectado. Ligue um pelo cabo ou pelo rádio "
                 "e ele aparece aqui.")
 
+# ---------------------------------------------------------------------------
+# A MIRA VIRTUAL — 24/09/2026, A-MIRA-POR-MOVIMENTO-NA-TELA-01
+# ---------------------------------------------------------------------------
+# Palavra dela, 23/09: o chip «Mira Virtual» mora no cartão de cada controle, na
+# aba Controles, e *"a sensibilidade e o «Ignorar tremor até» ficam na tela
+# Calibrar sensores"*. São dois deslizantes POR CONTROLE, numa coluna embaixo do
+# cartão daquele controle.
+#
+# UM BLOCO PRÓPRIO, E NÃO DENTRO DO CARTÃO — e a razão é o produto: o
+# `pacotes/a11_calibrar_sensores` REMONTA o bloco dos cartões a cada mudança de
+# bancada, pelo `controle()` deste arquivo. Um deslizante dentro do cartão
+# chegaria à janela dela no primeiro tique, antes de ela aprovar o desenho.
+#
+# OS NÚMEROS SÃO DO ESQUEMA (`profiles/schema.ProfileMovimentoConfig`), e estão
+# escritos aqui porque este gerador roda sem o pacote instalado — a régua
+# `test_a_mira_por_movimento_na_tela.py` confere que são os mesmos. O mínimo do
+# tremor é 1, e não o 0 que o esquema aceita: é a faixa da sprint, e o 0 não
+# ignora tremor nenhum.
+#
+# O RÓTULO DO TREMOR NÃO DIZ «zona morta»: a palavra técnica esconde para que
+# o campo serve, e ele é o campo de acessibilidade desta tela (§3 da sprint).
+ROTULO_DA_MIRA = "Mira Virtual"
+ROTULO_SENSIBILIDADE = "O quanto um gesto anda"
+ROTULO_TREMOR = "Ignorar tremor até"
+UNIDADE_DO_TREMOR = "graus/s"
+SENSIBILIDADE = (1, 12, 6)   # mínimo, máximo, o de nascença
+TREMOR = (1, 60, 3)          # idem, em graus/s
+#: A linha que liga os deslizantes ao chip. Sem ela os dois números flutuam na
+#: página de calibração sem dizer a que servem.
+DE_ONDE_VEM_A_MIRA = ("Valem para o controle com a Mira Virtual acesa, na aba "
+                      "Controles.")
+
 
 def plural(quantos: int, um: str, muitos: str) -> str:
     """Uma das duas palavras, pela contagem. ``0`` usa o plural, como em português.
@@ -288,6 +320,31 @@ CSS = """
   #e-pronto:checked  ~ .rodape .btn.fazer .t3{display:inline}
   #e-medindo:checked ~ .rodape .btn.fazer{border-color:var(--orange);color:var(--orange)}
 
+  /* A MIRA VIRTUAL — 24/09/2026. As colunas repetem o `gap` e o `flex:1` dos
+     cartões, e por isso cada uma cai embaixo do cartão do mesmo controle. */
+  .mira-cx{border-top:1px solid var(--border-sutil);padding-top:11px;
+           display:flex;flex-direction:column;gap:8px}
+  .mira-cx:empty{display:none}
+  .mira-topo{font-size:13px}
+  .mira-topo b{font-weight:600}
+  .mira-topo .d{font-size:12px;color:var(--texto-mudo);margin-left:6px}
+  .miras{display:flex;gap:11px}
+  .mira{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;
+        padding:9px 12px;border-radius:9px;border:1px solid var(--border-sutil);
+        background:var(--panel)}
+  .mira .quem{font-size:11px;color:var(--texto-mudo)}
+  /* O RÓTULO E O NÚMERO EM CIMA, O TRILHO EMBAIXO, na largura inteira da
+     coluna. Lado a lado, com quatro controles numa janela de 1180px, sobravam
+     ~23px de trilho por coluna; empilhado, o trilho é a coluna. */
+  .desl{display:grid;grid-template-columns:1fr auto;align-items:center;
+        column-gap:8px;row-gap:3px;font-size:12px}
+  .desl .r{color:var(--texto-suave);white-space:nowrap;overflow:hidden;
+           text-overflow:ellipsis;min-width:0}
+  .desl .n{grid-row:1;grid-column:2;font-family:var(--m);font-size:11px;
+           color:var(--fg);white-space:nowrap}
+  .desl .un{color:var(--texto-mudo)}
+  .desl .trilho{grid-row:2;grid-column:1 / -1;width:100%;margin:0;
+                accent-color:var(--purple)}
   .aviso{font-size:12px;color:var(--texto-mudo);line-height:17px}
   .aviso b{color:var(--texto-suave);font-weight:600}
 """
@@ -489,6 +546,55 @@ def controles(quem):
     return "\n".join(controle(c) for c in quem)
 
 
+def _deslizante(gesto, rotulo, faixa, campo, unidade=""):
+    """Uma linha de deslizante da mira: o rótulo, o trilho e o número.
+
+    DOIS ENDEREÇOS, porque um elemento aceita UM alvo: o trilho recebe o
+    `valor` (a posição do polegar) e o número recebe o texto. O número nasce no
+    valor de nascença do esquema — é o que um perfil novo tem, e não uma
+    leitura inventada: ninguém mediu nada para ele existir.
+    """
+    minimo, maximo, nasce = faixa
+    un = f' <span class="un">{unidade}</span>' if unidade else ""
+    return (f'              <label class="desl"><span class="r">{rotulo}</span>'
+            f'<input class="trilho" type="range" min="{minimo}" max="{maximo}"'
+            f' step="1" value="{nasce}" data-gesto="{gesto}"'
+            f' data-campo="{campo}" data-hef-alvo="valor" aria-label="{rotulo}">'
+            f'<span class="n"><span data-campo="{campo}-num">{nasce}</span>{un}'
+            f'</span></label>')
+
+
+def mira(c):
+    """A coluna da mira de UM controle — os dois deslizantes dele.
+
+    PÚBLICA pelo mesmo motivo do `controle()`: o `pacotes/a11_calibrar_sensores`
+    a remonta quando a página publicada tiver o bloco. O `data-controle` é o do
+    cartão de cima, e é ele que leva o clique ao controle certo.
+    """
+    jogador = c.get("jogador") or SEM_LEITURA
+    return (f'          <div class="mira" data-controle="{c.get("pref") or ""}">\n'
+            f'            <span class="quem">Player {jogador}</span>\n'
+            f'{_deslizante("mira-sensibilidade", ROTULO_SENSIBILIDADE, SENSIBILIDADE, "mira-sensibilidade")}\n'
+            f'{_deslizante("mira-tremor", ROTULO_TREMOR, TREMOR, "mira-tremor", UNIDADE_DO_TREMOR)}\n'
+            f'          </div>')
+
+
+def miras(quem):
+    """O miolo do bloco `[data-bloco="miras"]`: o título e uma coluna por controle.
+
+    SEM CONTROLE, NADA — nem o título. A frase de quem falta já está no bloco
+    dos cartões, logo acima, e dizê-la duas vezes seria a tela narrando. O
+    vazio é VAZIO DE VERDADE (sem quebra de linha), porque é o `:empty` da
+    folha que some com a moldura do bloco.
+    """
+    if not quem:
+        return ""
+    colunas = "\n".join(mira(c) for c in quem)
+    return (f'\n      <div class="mira-topo"><b>{ROTULO_DA_MIRA}</b>'
+            f' <span class="d">{DE_ONDE_VEM_A_MIRA}</span></div>\n'
+            f'      <div class="miras">\n{colunas}\n      </div>\n    ')
+
+
 def documento(quem):
     """A página inteira, com os cartões de ``quem``, pronta para gravar.
 
@@ -554,6 +660,11 @@ def documento(quem):
     <div class="controles" data-bloco="controles">
 {controles(quem)}
     </div>
+
+    <!-- A MIRA VIRTUAL, uma coluna por controle embaixo do cartão dele — ver o
+         bloco `A MIRA VIRTUAL` no topo deste arquivo. O bloco é outro de
+         propósito: o dos cartões o produto remonta a cada tique. -->
+    <div class="mira-cx" data-bloco="miras">{miras(quem)}</div>
 
     <div class="rodape">
       <button class="btn fazer"><span class="t1">Começar</span><span class="t2">Medindo…</span><span class="t3">Calibrar de novo</span></button>

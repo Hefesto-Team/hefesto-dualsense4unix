@@ -1655,6 +1655,15 @@ ABRE_O_CARD = "Clique para abrir este controle — os outros fecham."
 LUGAR_VAZIO_AQUI = "Lugar vazio: nenhum controle conectado aqui."
 
 
+#: O NOME E A DICA DO CHIP DA MIRA — 24/09/2026, a palavra dela de 23/09, com a
+#: grafia corrigida (a digitação dela está citada em `sensores_da_peca`). Moram
+#: aqui porque o pacote da aba e as réguas os LEEM: digitados em dois lugares,
+#: divergiriam no dia em que ela trocar uma vírgula.
+ROTULO_DA_MIRA_VIRTUAL = "Mira Virtual"
+DICA_DA_MIRA_VIRTUAL = ("Usar os movimentos do controle como mira (analógico R), "
+                        "para pessoas com deficiência motora.")
+
+
 def sensores_da_peca(c):
     """OS DOIS INTERRUPTORES DE SENSOR, UM PAR POR CONTROLE.
 
@@ -1696,14 +1705,24 @@ def sensores_da_peca(c):
     de CATÁLOGO — igual para todo controle e todo momento — ao lado da taxa
     VIVA que o `giro-no-jogo` publica neste mesmo cabeçalho. A medição está na
     canônica (`docs/protocol/dualsense-referencia-canonica.md`, §5).
+
+    **E O TERCEIRO, «Mira Virtual» — 24/09/2026, A-MIRA-POR-MOVIMENTO-NA-TELA-01.**
+    Palavra dela, 23/09: *"Cria um botão virtual ao lado de giroscopio e
+    acelerometro chamado Mira Virtual"*.  <!-- noqa-acento: citação literal dela -->
+    Ligado, o movimento DESTE controle vira o analógico direito dele; os outros
+    dois não mudam — o Giroscópio continua ligando o sensor e mandando o giro
+    ao jogo. Ele NASCE APAGADO (o `off` do desenho é o estado de nascença, e o
+    alvo `classe` o tira quando o daemon disser `LIGADO`), e responde a
+    `pacotes/a02_controles.mira`. A dica é a frase dela em português correto
+    (:data:`DICA_DA_MIRA_VIRTUAL`). A grade dá aos três a largura do maior, e
+    eles só aparecem no cartão aberto, como o par já aparecia.
     """
-    # SEM `f` — a última chave deste bloco saiu com a taxa de catálogo
-    # (A3-032/A3-033, 11/09/2026), e `ruff` reprova um `f` que não interpola
-    # nada. O argumento `c` fica: ele é a assinatura do dono, e a próxima
-    # peça deste par volta a lê-lo.
-    return '''          <span class="sensores-peca">
+    # O ARGUMENTO `c` fica: ele é a assinatura do dono, e a próxima peça deste
+    # grupo volta a lê-lo.
+    return f'''          <span class="sensores-peca">
             <button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe o giro deste controle."><span class="p"></span>Giroscópio</button>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
+            <button class="sw off" data-gesto="mira" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="{DICA_DA_MIRA_VIRTUAL}"><span class="p"></span>{ROTULO_DA_MIRA_VIRTUAL}</button>
           </span>'''
 
 
@@ -3739,6 +3758,11 @@ MIOLO = f'''
 # que é como o título da página que ele abre já se escrevia.)
 
 LEGENDA = f'''<div class="nota">
+  <h2>O que mudou em 24/09</h2>
+  <ul>
+    <li><b>Cada controle ganhou o botão «{ROTULO_DA_MIRA_VIRTUAL}»</b>, ao lado de <b>Giroscópio</b> e <b>Acelerômetro</b>, como você pediu: <i>"Cria um botão virtual ao lado de giroscopio e acelerometro chamado Mira Virtual"</i>. Aceso, virar aquele controle move o <b>analógico direito</b> dele — e só dele. Ele nasce <b>apagado</b>, a dica é a sua frase (<i>{DICA_DA_MIRA_VIRTUAL}</i>), e o <b>Giroscópio</b> não mudou: continua mandando o giro ao jogo. O quanto um gesto anda e o «Ignorar tremor até» ficam na tela <b>Calibrar sensores de movimento</b>.</li>
+  </ul>
+
   <h2>O que mudou em 20/09</h2>
   <ul>
     <li><b>Os dois primeiros botões do alto-falante têm os nomes que você escreveu</b> — <b>{ROTULO_SO_OS_EFEITOS}</b> e <b>{ROTULO_EFEITOS_MAIS_A_TV}</b>. Você derrubou o enunciado anterior e o que você derrubou era conceito, não palavra: <i>"não gosto do termo jogo pra se referir ao canal especifico pro sfx do controle, pq hdmi tecnicamente é jogo que manda pra lá também"</i>. Os dois não são duas fontes — são dois modos do <b>mesmo</b> alto-falante: um deixa entrar só o que o jogo endereçar a este controle, o outro derrama tudo o que a máquina toca, sem tirar o som da TV.</li>
@@ -3875,7 +3899,7 @@ TERMOS_DA_TELA = (
     "Calibrar sensores de movimento", "Mapa do controle", "Dispositivos conectados",
     "Sem toque", "Tocando", "LED do jogador", "Barra de luz", "Touchpad",
     "Microfone", "Alto-falante", "Gatilhos", "Giroscópio",
-    "Acelerômetro", "Virtual", "Nativo",
+    "Acelerômetro", "Virtual", "Nativo", ROTULO_DA_MIRA_VIRTUAL,
 )
 
 
@@ -4561,6 +4585,23 @@ def _conferir(doc):
     exigir(corpo.count('data-gesto="sensor"') == 2 * len(MESA),
            f"os {2 * len(MESA)} interruptores de sensor não têm "
            f"`data-gesto` — o clique volta a morrer no stderr")
+    # 2e'. O CHIP DA MIRA — 24/09/2026, A-MIRA-POR-MOVIMENTO-NA-TELA-01. Um por
+    #     controle, com a dica dela inteira, e NASCENDO APAGADO: a mira acesa no
+    #     desenho parado diria que ela liga sozinha. MORDE: tire o `off` do
+    #     chip, ou troque a dica, e o gerador para.
+    miras = re.findall(r'<button class="([^"]*)" data-gesto="mira"[^>]*title="([^"]*)"',
+                       corpo)
+    exigir(len(miras) == len(MESA),
+           f"o chip «{ROTULO_DA_MIRA_VIRTUAL}» tem de estar nos {len(MESA)} "
+           f"controles, e está em {len(miras)}")
+    # O LUGAR VAZIO PERDE O `off`, e é o produto: o travessão não é
+    # `DESLIGADO`, o piloto apaga a classe e quem pinta o cinza é a folha do
+    # `.ctl[data-conectado="nao"]` (ver `_so_o_travessao`). Os conectados, não.
+    exigir(sum("off" in cls.split() for cls, _ in miras) == len(CONECTADOS),
+           "o chip da mira nasceu aceso no desenho de um controle conectado — "
+           "ela nasce desligada")
+    exigir(all(dica == DICA_DA_MIRA_VIRTUAL for _, dica in miras),
+           "a dica do chip da mira não é mais a frase dela")
 
     # 2f. OS DOIS DESLIZANTES (D-08 dela). Um por bloco, dois por card, e cada
     #     um diz de QUAL volume fala — sem o `data-volume` o gesto não sabe se

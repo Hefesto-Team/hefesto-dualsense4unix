@@ -158,6 +158,31 @@
   #e-pronto:checked  ~ .rodape .btn.fazer .t3{display:inline}
   #e-medindo:checked ~ .rodape .btn.fazer{border-color:var(--orange);color:var(--orange)}
 
+  /* A MIRA VIRTUAL — 24/09/2026. As colunas repetem o `gap` e o `flex:1` dos
+     cartões, e por isso cada uma cai embaixo do cartão do mesmo controle. */
+  .mira-cx{border-top:1px solid var(--border-sutil);padding-top:11px;
+           display:flex;flex-direction:column;gap:8px}
+  .mira-cx:empty{display:none}
+  .mira-topo{font-size:13px}
+  .mira-topo b{font-weight:600}
+  .mira-topo .d{font-size:12px;color:var(--texto-mudo);margin-left:6px}
+  .miras{display:flex;gap:11px}
+  .mira{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;
+        padding:9px 12px;border-radius:9px;border:1px solid var(--border-sutil);
+        background:var(--panel)}
+  .mira .quem{font-size:11px;color:var(--texto-mudo)}
+  /* O RÓTULO E O NÚMERO EM CIMA, O TRILHO EMBAIXO, na largura inteira da
+     coluna. Lado a lado, com quatro controles numa janela de 1180px, sobravam
+     ~23px de trilho por coluna; empilhado, o trilho é a coluna. */
+  .desl{display:grid;grid-template-columns:1fr auto;align-items:center;
+        column-gap:8px;row-gap:3px;font-size:12px}
+  .desl .r{color:var(--texto-suave);white-space:nowrap;overflow:hidden;
+           text-overflow:ellipsis;min-width:0}
+  .desl .n{grid-row:1;grid-column:2;font-family:var(--m);font-size:11px;
+           color:var(--fg);white-space:nowrap}
+  .desl .un{color:var(--texto-mudo)}
+  .desl .trilho{grid-row:2;grid-column:1 / -1;width:100%;margin:0;
+                accent-color:var(--purple)}
   .aviso{font-size:12px;color:var(--texto-mudo);line-height:17px}
   .aviso b{color:var(--texto-suave);font-weight:600}
   :root{--recuo-do-corpo:16px;--piso-da-vista:777px;--teto-da-vista:855px;--alt-janela:clamp(var(--piso-da-vista), calc(100dvh - var(--recuo-do-corpo) * 2), var(--teto-da-vista))}
@@ -989,6 +1014,25 @@
               <div class="lin" data-eixo="accel-z"><span class="r"></span><span class="v" data-campo="accel-z">—</span><span class="g" data-campo="accel-z-cor" data-hef-alvo="cor" style="color:var(--border-forte)"><i class="neg" data-campo="accel-z-neg" data-hef-alvo="largura" style="width:0%"></i><i class="pos" data-campo="accel-z-pos" data-hef-alvo="largura" style="width:0%"></i></span></div>
             </div>
           </div>
+    </div>
+
+    <!-- A MIRA VIRTUAL, uma coluna por controle embaixo do cartão dele — ver o
+         bloco `A MIRA VIRTUAL` no topo deste arquivo. O bloco é outro de
+         propósito: o dos cartões o produto remonta a cada tique. -->
+    <div class="mira-cx" data-bloco="miras">
+      <div class="mira-topo"><b>Mira Virtual</b> <span class="d">Valem para o controle com a Mira Virtual acesa, na aba Controles.</span></div>
+      <div class="miras">
+          <div class="mira" data-controle="p1">
+            <span class="quem">Player 1</span>
+              <label class="desl"><span class="r">O quanto um gesto anda</span><input class="trilho" type="range" min="1" max="12" step="1" value="6" data-gesto="mira-sensibilidade" data-campo="mira-sensibilidade" data-hef-alvo="valor" aria-label="O quanto um gesto anda"><span class="n"><span data-campo="mira-sensibilidade-num">6</span></span></label>
+              <label class="desl"><span class="r">Ignorar tremor até</span><input class="trilho" type="range" min="1" max="60" step="1" value="3" data-gesto="mira-tremor" data-campo="mira-tremor" data-hef-alvo="valor" aria-label="Ignorar tremor até"><span class="n"><span data-campo="mira-tremor-num">3</span> <span class="un">graus/s</span></span></label>
+          </div>
+          <div class="mira" data-controle="p2">
+            <span class="quem">Player 2</span>
+              <label class="desl"><span class="r">O quanto um gesto anda</span><input class="trilho" type="range" min="1" max="12" step="1" value="6" data-gesto="mira-sensibilidade" data-campo="mira-sensibilidade" data-hef-alvo="valor" aria-label="O quanto um gesto anda"><span class="n"><span data-campo="mira-sensibilidade-num">6</span></span></label>
+              <label class="desl"><span class="r">Ignorar tremor até</span><input class="trilho" type="range" min="1" max="60" step="1" value="3" data-gesto="mira-tremor" data-campo="mira-tremor" data-hef-alvo="valor" aria-label="Ignorar tremor até"><span class="n"><span data-campo="mira-tremor-num">3</span> <span class="un">graus/s</span></span></label>
+          </div>
+      </div>
     </div>
 
     <div class="rodape">

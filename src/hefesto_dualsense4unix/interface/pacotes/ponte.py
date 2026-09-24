@@ -113,6 +113,11 @@ speaker_set_detalhado = _b.speaker_set_detalhado
 #: a tela dizer "aplicado" sobre um sensor que não parou de chegar ao jogo.
 sensor_set_detalhado = _b.sensor_set_detalhado
 
+#: A MIRA VIRTUAL DE CADA CONTROLE (A-MIRA-POR-MOVIMENTO-NA-TELA-01, 24/09/2026):
+#: o chip da aba Controles e os dois deslizantes da Calibrar. A `_detalhado`
+#: pela mesma razão do sensor: o `alcance` diz quando o Modo Nativo não alcança.
+mira_set_detalhado = _b.mira_set_detalhado
+
 profile_list = _b.profile_list
 profile_switch = _b.profile_switch
 apply_draft_detalhado = _b.apply_draft_detalhado
