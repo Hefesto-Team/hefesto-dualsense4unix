@@ -58,15 +58,19 @@ do aparelho: é dele que o Wine tira o id do endpoint, e é ele que sobrevive à
 reconexão.
 
 **O que o jogo lê não mudou, e isso foi medido no código** — o GE-Proton11-7
-com os 182 patches ``proton-ds5-haptic`` aplicados em ordem. A descrição chega
-ao Wine como o nome amigável (``get_device_name`` → ``drv_id`` → ``Speakers
-(…)``), e os casamentos do ``mmdevapi`` sobre ele dão o MESMO resultado para o
-rótulo velho e para o novo: «DualSense» presente (``is_dualsense_endpoint_name``,
-o 0187 inclusive), «… Speaker» e «Internal Mono Speaker» ausentes
+com os 182 patches ``proton-ds5-haptic`` aplicados em ordem. A descrição vira
+o ``drv_id`` do endpoint no ``mmdevapi`` (``get_device_name``), e é só ali que
+ela pesa: os casamentos sobre ele dão o MESMO resultado para o rótulo velho e
+para o novo — «DualSense» presente (``is_dualsense_endpoint_name``, o 0187
+inclusive), «… Speaker» e «Internal Mono Speaker» ausentes
 (``is_dualsense_audioendpoint_name``, o mono), «Direct Wireless Controller»
-ausente. O id do endpoint sai do NOME, e a âncora do ``ContainerId`` — o que a
-RE Engine casa com o device KS — sai do ``sysfs.path``. Nenhum dos dois mudou.
-A régua é ``tests/unit/test_a_haptica_tem_nome_de_controle.py``.
+ausente. O nome que o JOGO lê (``DEVPKEY_Device_FriendlyName``) nem passa pela
+descrição: o nó declara USB ``054c:0ce6``, e o ``find_product_name_override``
+do ``mmdevapi`` o troca por «Speakers (DualSense Wireless Controller)», antes e
+depois desta cura. O id do endpoint sai do NOME, e a âncora do
+``ContainerId`` — o que a RE Engine casa com o device KS — sai do
+``sysfs.path``. Nenhum dos dois mudou. A régua é
+``tests/unit/test_a_haptica_tem_nome_de_controle.py``.
 """
 
 from __future__ import annotations
@@ -385,8 +389,9 @@ def propriedades_do_endpoint(
         # O NOME da Sony, do mesmo dono do nó do alto-falante. O que pesa aqui
         # é o `device.product.name`: o monitor deste nó se chama «Monitor of
         # Háptica do Controle N (…)», 64 caracteres, e acima dos 62 do Wine é
-        # dele que o `get_device_name` monta o nome — sem ele, o comprido chega
-        # inteiro ao jogo.
+        # dele que o `get_device_name` monta o `drv_id` do monitor — sem ele, o
+        # comprido fica inteiro ali. O nome que o jogo LÊ não sai daqui: o USB
+        # `054c:0ce6` acima faz o `mmdevapi` trocá-lo pelo do produto.
         *campos_do_nome(),
         f"device.description='{rotulo}'",
         f"priority.session={PRIORIDADE_DA_SESSAO}",
