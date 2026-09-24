@@ -2044,11 +2044,21 @@ fi
 # - o DIÁRIO do rádio da sessão (`radio-diario.jsonl` e o `.1`): histórico, com
 #   a mesma regra do diário do root lá em cima — guardado com o carimbo da
 #   desinstalação no nome (a próxima instalação não o relê no arranque), e
-#   apagado só com --purge-config.
-for _diario_sessao in "${ESTADO_DO_RADIO}/radio-diario.jsonl" "${ESTADO_DO_RADIO}/radio-diario.jsonl.1"; do
+#   apagado só com --purge-config. O --purge-config apaga também os que um
+#   uninstall ANTERIOR guardou: é o que a fala «apagar de vez» promete, e sem
+#   isto o `.pre-uninstall-*` ficava para sempre (conferência da INSTALL-E-
+#   UNINSTALL-DO-RADIO-01). Um carimbo só para o par, como no diário do root.
+_carimbo_do_diario="$(date +%Y%m%d-%H%M%S)"
+_diarios_da_sessao=("${ESTADO_DO_RADIO}/radio-diario.jsonl" "${ESTADO_DO_RADIO}/radio-diario.jsonl.1")
+if [[ "${KEEP_CONFIG}" -eq 0 ]]; then
+    for _diario_sessao in "${ESTADO_DO_RADIO}"/radio-diario.pre-uninstall-*.jsonl*; do
+        [[ -f "${_diario_sessao}" ]] && _diarios_da_sessao+=("${_diario_sessao}")
+    done
+fi
+for _diario_sessao in "${_diarios_da_sessao[@]}"; do
     [[ -f "${_diario_sessao}" ]] || continue
     if [[ "${KEEP_CONFIG}" -eq 1 ]]; then
-        _diario_guardado="${_diario_sessao%%.jsonl*}.pre-uninstall-$(date +%Y%m%d-%H%M%S).jsonl${_diario_sessao##*.jsonl}"
+        _diario_guardado="${_diario_sessao%%.jsonl*}.pre-uninstall-${_carimbo_do_diario}.jsonl${_diario_sessao##*.jsonl}"
         log "preservando o diário do rádio em ${_diario_guardado} (apagar de vez: --purge-config)"
         mv -f "${_diario_sessao}" "${_diario_guardado}" 2>/dev/null || true
     else
