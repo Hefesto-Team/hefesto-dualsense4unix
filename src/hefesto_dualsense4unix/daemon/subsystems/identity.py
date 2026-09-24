@@ -989,7 +989,9 @@ class ControllerIdentityRegistry:
         cujo lugar na fila é o terceiro exibe 1 quando é o único ligado, e
         volta a exibir 3 quando os dois da frente acordam. Era o mesmo
         inteiro até a versão 2 do schema, e é por isso que o único DualSense
-        ligado da mantenedora nascia jogador 2.
+        ligado da mantenedora nascia jogador 2. Quem saiu há menos de
+        :func:`prazo_do_lugar_guardado` ainda conta: o lugar dele fica vazio e
+        ninguém anda (O-ASSENTO-GUARDADO-NAO-ANDA-01).
 
         LAZY por decisão (D1): a primeira consulta de um uniq válido (feita
         pelo provider de cor dentro do reconcile do backend, ou por quem
@@ -1569,7 +1571,9 @@ class ControllerIdentityRegistry:
         o ausente segurava um NÚMERO, e era essa reserva que fazia o controle
         sozinho na mesa exibir 2. Agora ele segura só o LUGAR NA FILA: quem
         está presente conta 1..N sem ele e, quando ele volta, cada um recupera
-        a sua colocação. As duas promessas passam a caber juntas.
+        a sua colocação. As duas promessas passam a caber juntas. (Desde a
+        O-ASSENTO-GUARDADO-NAO-ANDA-01, a conta sem ele começa depois do prazo
+        do lugar guardado; dentro dele, ninguém anda.)
 
         D-30 acrescentou a SEGUNDA metade da promessa: além do lugar gravado,
         o ausente mantém a ONDA DE CHEGADA desta sessão. Sem isso, "ordem de
@@ -1598,9 +1602,11 @@ class ControllerIdentityRegistry:
         - quem chegou SEM lugar entra no fim da fila, na ORDEM em que o
           chamador entrega (R-24 — ver abaixo), e entra também na FILA DO
           MOMENTO, todos os desta olhada na MESMA onda (D-30 — ver abaixo);
-        - quem saiu do conjunto mantém o LUGAR (D2), e a exibição dos que
-          ficaram fecha a lacuna sozinha (NUM-01 — a "compactação automática"
-          não é um passo, é consequência de contar só os presentes);
+        - quem saiu do conjunto mantém o LUGAR (D2) e, pelo prazo do lugar
+          guardado, também o assento: ninguém anda (O-ASSENTO-GUARDADO-NAO-
+          ANDA-01). Passado o prazo, a exibição dos que ficaram fecha a lacuna
+          sozinha (NUM-01 — a "compactação automática" não é um passo, é
+          consequência de contar só os presentes);
         - persiste (atômico) quando o mapa mudou desde o último save. É o
           ÚNICO ponto de escrita em disco fora do ``load()`` — nunca no
           caminho quente por evento.

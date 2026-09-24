@@ -603,7 +603,8 @@ class ExternalIdentityRegistry:
         ``reserve``, o piso dos DualSense — EXT-04); o que se devolve é a
         colocação entre os controles PRESENTES da mesa, DualSense inclusive.
         Com dois DualSense ligados o primeiro externo exibe 3; com um deles
-        desligado, exibe 2 — sem que o lugar dele na fila mude.
+        desligado além do prazo do lugar guardado (O-ASSENTO-GUARDADO-NAO-
+        ANDA-01), exibe 2 — sem que o lugar dele na fila mude.
 
         ``assign=False`` é leitura pura (não atribui, não marca conectado) —
         é o modo da rota IPC. SEM I/O de disco (a persistência fica com
@@ -648,7 +649,7 @@ class ExternalIdentityRegistry:
         """Reconcilia com os uniqs presentes AGORA (tick ~2s) e persiste.
 
         Quem saiu vira RESERVA (slot preso ao uniq — replug recupera o
-        número). Diferente do registro DualSense, não há expiração por
+        número) e, pelo prazo do lugar guardado, segura o assento. Diferente do registro DualSense, não há expiração por
         sessão-esvaziou: um externo BT que dorme não pode perder o número
         (era exatamente o sintoma). ÚNICO ponto de escrita em disco fora do
         ``load()``.
