@@ -83,6 +83,11 @@
 #                                        sem argumento nenhum: quem escolhe a
 #                                        porta é o journal do kernel, nunca
 #                                        quem chama
+#   religar-orfaos                       religa NA HORA o controle que perdeu a
+#                                        probe — o do cabo no -71, o do rádio
+#                                        na contenção (STORM-USB-02). Sem
+#                                        argumento: quem escolhe é o /sys, pelas
+#                                        guardas do bt_rebind_orphans.sh
 #   regra-sudo <USUARIA>                 imprime o /etc/sudoers.d (não instala)
 #
 # A TRAVA DO RÁDIO É DE QUEM CHAMA (O-DIARIO-DO-RADIO-01). Os motores que mexem
@@ -102,6 +107,8 @@
 #   bonds       -> MAC \t NOME \t com-chave|sem-chave
 #   descobrir   -> MAC \t NOME \t novo|pareado \t CLASSE
 #   reiniciar-travado -> reiniciado|recusado|segurado \t PORTA \t hciN \t DETALHE
+#   religar-orfaos -> as frases do bt_rebind_orphans.sh, uma por controle que ele
+#                  tocou (as mesmas do journal); nada quando não havia órfão
 # A CLASSE é o `Class` do BlueZ em decimal (a *class of device* do
 # Bluetooth), e sai crua de propósito: quem decide se um candidato é
 # controle é quem chama, não esta ponte. Vazia quando o BlueZ não a
@@ -140,6 +147,10 @@
 #   HEFESTO_PONTE_STAMPS    onde mora o carimbo do último reinício por porta
 #   HEFESTO_USB_PAUSA_S     a pausa entre desautorizar e autorizar a porta
 #   HEFESTO_USB_ESPERA_S    quanto esperar o adaptador voltar
+#   HEFESTO_HID_DEVICES_DIR / HEFESTO_USB_DEVICES_DIR  as raízes do
+#                           `bt_rebind_orphans.sh` (que o `religar-orfaos` roda):
+#                           com uma delas desviada o verbo roda sem root, contra
+#                           a mesa de mentira da régua
 set -euo pipefail
 
 #: Sob sudo os ganchos não existem. O `env_reset` do sudo já os apagaria; esta
@@ -148,7 +159,8 @@ if [[ -n "${SUDO_UID:-}" || -n "${SUDO_USER:-}" ]]; then
     unset HEFESTO_BT_LIB HEFESTO_PONTE_DRY_RUN HEFESTO_BT_LOG_DEST HEFESTO_BT_BIN \
         HEFESTO_BT_LAPIDES HEFESTO_RADIO_DIARIO_ROOT HEFESTO_SYSFS_RAIZ \
         HEFESTO_BT_JOURNAL HEFESTO_PONTE_STAMPS HEFESTO_USB_PAUSA_S \
-        HEFESTO_USB_ESPERA_S HEFESTO_SYSFS_BLUETOOTH
+        HEFESTO_USB_ESPERA_S HEFESTO_SYSFS_BLUETOOTH \
+        HEFESTO_HID_DEVICES_DIR HEFESTO_USB_DEVICES_DIR
 fi
 
 #: `%/` normaliza a barra final: sem isso, uma raiz de teste terminada em
@@ -267,6 +279,7 @@ uso: bt_ponte_privilegiada.sh <verbo> [argumentos]
   parear     <MAC_ADAPTADOR> <MAC_CONTROLE>
   desconectar <MAC_ADAPTADOR> <MAC_CONTROLE>
   reiniciar-travado
+  religar-orfaos
   regra-sudo <USUARIA>
 
   --dry-run como PRIMEIRO argumento: não muda nada, imprime o que faria.
@@ -1113,6 +1126,71 @@ verbo_reiniciar_travado() {
     return 0
 }
 
+# --- O RELIGAR NA HORA (STORM-USB-02, 24/09/2026) ---------------------------
+#
+# A palavra dela de 23/09 é «nomear e religar»: o controle que cai por -71 volta
+# sozinho, COM O MESMO NÚMERO. O religar existia (o `bt_rebind_orphans.sh`, no
+# tique de 2 min do watchdog), mas o lugar guardado de quem saiu vale 30 s — e
+# no tique o controle voltava fora do prazo em ~3 de cada 4 quedas. Este verbo
+# é o mesmo religar chamado pelo kernel-watch NA HORA do aviso do kernel.
+#
+# SEM ARGUMENTO, como o `reiniciar-travado`: quem escolhe O QUE religar é o /sys,
+# pelas guardas do `bt_rebind_orphans.sh` (a HID de um Sony sem driver, no cabo;
+# o device HID de um Sony no barramento do rádio, sem driver). A regra do
+# sudoers não tem argumento a casar, e o pior que alguém consegue por aqui é
+# pedir, antes da hora, o que o watchdog faria sozinho no tique seguinte — com
+# o teto de três por controle, que é do script e não de quem chama.
+#
+# O RELIGAR NÃO MORA AQUI, E É DE PROPÓSITO. A regra de quem é órfão tem um dono
+# (o `bt_rebind_orphans.sh`, que o doctor espelha e a régua cruza); uma segunda
+# cópia nesta ponte divergiria no primeiro conserto. Rodar o irmão instalado ao
+# lado é o que o watchdog root já faz a cada tique, com o mesmo arquivo — e por
+# isso a guarda abaixo: como root, o irmão tem de ser do root e não gravável
+# por mais ninguém, ou o verbo recusa.
+#
+# A TRAVA DO RÁDIO NÃO É PEDIDA, e não por esquecimento: religar não mexe no
+# rádio (não pareia, não conecta, não reinicia nada) — ele pede ao driver que
+# refaça a probe de um aparelho que JÁ está ligado.
+
+#: O `bt_rebind_orphans.sh` ao lado desta ponte — o instalado ao lado do
+#: instalado, o da árvore ao lado do da árvore. Vazio (e retorno 1) quando ele
+#: não está lá ou, como root, quando não é só do root.
+_o_religar() {
+    local aqui alvo modo
+    aqui="$(readlink -f -- "${BASH_SOURCE[0]}" 2>/dev/null)" || return 1
+    alvo="${aqui%/*}/bt_rebind_orphans.sh"
+    [[ -f "${alvo}" && ! -L "${alvo}" ]] || return 1
+    if [[ "$(id -u)" -eq 0 ]]; then
+        [[ "$(stat -c %u -- "${alvo}" 2>/dev/null)" == "0" ]] || return 1
+        modo="$(stat -c %a -- "${alvo}" 2>/dev/null)" || return 1
+        [[ "${modo}" =~ ^[0-7]{3,4}$ ]] || return 1
+        (( (8#${modo} & 8#022) == 0 )) || return 1
+    fi
+    printf '%s\n' "${alvo}"
+}
+
+verbo_religar_orfaos() {
+    local religar
+    #: Root só é exigido contra o /sys de verdade: com a raiz de teste desviada
+    #: (os ganchos do próprio religar, que morrem sob sudo), root não acrescenta
+    #: nada — e exigi-lo tornaria o verbo intestável. O mesmo idioma do
+    #: `_exige_root` e do `reiniciar-travado`.
+    if [[ -z "${HEFESTO_HID_DEVICES_DIR:-}" && -z "${HEFESTO_USB_DEVICES_DIR:-}" \
+          && "$(id -u)" -ne 0 ]]; then
+        _erro "'religar-orfaos' requer root (é a ponte privilegiada)"
+        exit 1
+    fi
+    if ! religar="$(_o_religar)"; then
+        _erro "o religar (bt_rebind_orphans.sh) não está ao lado desta ponte, ou não é só do root — nada foi feito"
+        exit 1
+    fi
+    if _seco; then
+        bash "${religar}" --dry-run --evento --quiet
+        return 0
+    fi
+    bash "${religar}" --evento --quiet
+}
+
 #: DONO ÚNICO da regra do sudoers. O `install.sh` só canaliza a saída daqui
 #: para o `visudo -c`. Verbo novo no `case` lá embaixo tem de aparecer aqui, ou
 #: a janela não consegue chamá-lo — que é o sentido certo da falha.
@@ -1143,6 +1221,7 @@ Cmnd_Alias HEFESTO_BT_PONTE = \\
     ${ALVO_INSTALADO} parear ${m} ${m}, \\
     ${ALVO_INSTALADO} desconectar ${m} ${m}, \\
     ${ALVO_INSTALADO} reiniciar-travado, \\
+    ${ALVO_INSTALADO} religar-orfaos, \\
     ${ALVO_INSTALADO} descobrir ${m} [0-9], \\
     ${ALVO_INSTALADO} descobrir ${m} [0-9][0-9], \\
     ${ALVO_INSTALADO} descobrir ${m} [0-9][0-9][0-9]
@@ -1204,6 +1283,10 @@ case "${VERBO}" in
     reiniciar-travado)
         [[ $# -eq 0 ]] || _recusar "reiniciar-travado não recebe argumento (quem escolhe a porta é o kernel)"
         verbo_reiniciar_travado
+        ;;
+    religar-orfaos)
+        [[ $# -eq 0 ]] || _recusar "religar-orfaos não recebe argumento (quem escolhe o controle é o /sys)"
+        verbo_religar_orfaos
         ;;
     regra-sudo)
         [[ $# -eq 1 ]] || _recusar "regra-sudo recebe exatamente 1 argumento (nome da usuária)"

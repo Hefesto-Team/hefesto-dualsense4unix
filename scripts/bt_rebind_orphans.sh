@@ -86,10 +86,27 @@
 # O contador é por interface E por `devnum`: tirar e pôr o cabo dá outro
 # `devnum`, e o orçamento recomeça, como no rádio.
 #
+# ─── O religar NA HORA (STORM-USB-02, 24/09/2026) ────────────────────────────
+# O tique do watchdog passa a cada 2 min (medido no journal dela: 5.671
+# intervalos, mediana 120 s, o maior 126 s), e o lugar guardado de quem saiu
+# vale 30 s (`identity.prazo_do_lugar_guardado`). Religado no tique, o controle
+# volta depois do prazo em ~3 de cada 4 quedas, e os outros já trocaram de
+# número. Por isso o kernel-watch (`storm_watch.sh`) chama este mesmo script
+# NA HORA do aviso do kernel, pelo verbo `religar-orfaos` da ponte privilegiada,
+# com `--evento`:
+#   - as guardas são AS MESMAS (é o mesmo laço, não uma cópia dele);
+#   - o orçamento é OUTRO: `evento-<chave>`, com o mesmo teto. O tique não perde
+#     as três tentativas dele, espaçadas de 2 em 2 min, para as três do aviso,
+#     que cabem em 20 s — uma contenção que dure mais que isso ainda tem o
+#     tique. E o aviso que se esgota fica calado: quem diz a desistência, UMA
+#     vez, continua sendo o tique;
+#   - quem religa limpa os dois contadores.
+#
 # Uso:
 #   bt_rebind_orphans.sh              cura (requer root p/ escrever no sysfs)
 #   bt_rebind_orphans.sh --dry-run    só relata o que faria (não requer root)
 #   bt_rebind_orphans.sh --quiet      só fala quando age ou falha
+#   bt_rebind_orphans.sh --evento     a passada do aviso do kernel (ver acima)
 set -euo pipefail
 # Sob sudo os ganchos de teste morrem (menos o de LOG), como no watchdog e na
 # ponte (STORM-USB-01, conferência de 24/09): o ramo do cabo deu a este script
@@ -123,20 +140,33 @@ USB_DRIVERS="${HEFESTO_USB_DRIVERS_DIR:-/sys/bus/usb/drivers}"
 
 DRY_RUN=0
 QUIET=0
+EVENTO=0
 for arg in "$@"; do
     case "${arg}" in
         --dry-run) DRY_RUN=1 ;;
         --quiet)   QUIET=1 ;;
+        --evento)  EVENTO=1 ;;
         -h|--help)
             sed -n '2,60p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
         *)
-            printf 'uso: %s [--dry-run] [--quiet]\n' "$(basename "$0")" >&2
+            printf 'uso: %s [--dry-run] [--quiet] [--evento]\n' "$(basename "$0")" >&2
             exit 2
             ;;
     esac
 done
+
+# O contador de cada passada: o do tique é o nome da chave; o do aviso do
+# kernel leva `evento-` na frente (ver «O religar NA HORA», no cabeçalho).
+PREFIXO=""
+DE_NOVO="nova tentativa na próxima passagem do watchdog"
+QUAL=""
+if [[ "${EVENTO}" -eq 1 ]]; then
+    PREFIXO="evento-"
+    DE_NOVO="o kernel-watch tenta de novo em segundos, e depois o watchdog"
+    QUAL=", na hora do aviso do kernel"
+fi
 
 # DIÁRIO-QUE-NAO-MENTE-01 (15/08/2026): vazio = journal (produção); caminho =
 # arquivo; `none` = nada. Existe porque a suíte roda estes scripts DE VERDADE e
@@ -206,14 +236,15 @@ for dev in "${HID_DEVICES}"/*; do
     fi
 
     # Guarda contra laço: contador por device, zerado naturalmente a cada
-    # reconexão (o id muda). Depois do teto, loga UMA vez e desiste.
-    stamp="${STAMP_DIR}/${id}"
+    # reconexão (o id muda). Depois do teto, loga UMA vez e desiste — e quem
+    # diz é o tique: o aviso do kernel que se esgota fica calado.
+    stamp="${STAMP_DIR}/${PREFIXO}${id}"
     tentativas=0
     [[ -f "${stamp}" ]] && tentativas="$(cat "${stamp}" 2>/dev/null || printf '0')"
     [[ "${tentativas}" =~ ^[0-9]+$ ]] || tentativas=0
 
     if [[ "${tentativas}" -ge "${MAX_TENTATIVAS}" ]]; then
-        if [[ ! -f "${stamp}.desisti" ]]; then
+        if [[ "${EVENTO}" -eq 0 && ! -f "${stamp}.desisti" ]]; then
             [[ "${DRY_RUN}" -eq 0 ]] && : > "${stamp}.desisti" 2>/dev/null || true
             log "DESISTINDO de ${id} após ${MAX_TENTATIVAS} rebinds sem sucesso — não é a contenção transiente de probe (essa cura de primeira); provável controle travado ou link ruim. Cura manual: desligue o controle (PS 10 s), reconecte; se insistir, 'bluetoothctl remove <MAC>' e re-pareie"
         fi
@@ -222,7 +253,7 @@ for dev in "${HID_DEVICES}"/*; do
     fi
 
     if [[ "${DRY_RUN}" -eq 1 ]]; then
-        log "[dry-run] faria: echo '${id}' > ${bind} (tentativa $((tentativas + 1))/${MAX_TENTATIVAS})"
+        log "[dry-run] faria: echo '${id}' > ${bind} (tentativa $((tentativas + 1))/${MAX_TENTATIVAS}${QUAL})"
         curados=$((curados + 1))
         continue
     fi
@@ -233,11 +264,11 @@ for dev in "${HID_DEVICES}"/*; do
     # O write falha (ENODEV/EBUSY) se o driver não casar ou o device sumir —
     # guardado, porque o script roda com set -e.
     if printf '%s' "${id}" > "${bind}" 2>/dev/null && [[ -e "${dev}/driver" ]]; then
-        log "controle órfão RECUPERADO por rebind: ${id} (perdeu a probe por contenção de canal de controle; o device estava íntegro)"
-        rm -f "${stamp}" "${stamp}.desisti" 2>/dev/null || true
+        log "controle órfão RECUPERADO por rebind${QUAL}: ${id} (perdeu a probe por contenção de canal de controle; o device estava íntegro)"
+        rm -f "${STAMP_DIR}/${id}" "${STAMP_DIR}/${id}.desisti" "${STAMP_DIR}/evento-${id}" 2>/dev/null || true
         curados=$((curados + 1))
     else
-        log "rebind de ${id} NÃO pegou (tentativa $((tentativas + 1))/${MAX_TENTATIVAS}) — nova tentativa na próxima passagem do watchdog"
+        log "rebind de ${id} NÃO pegou (tentativa $((tentativas + 1))/${MAX_TENTATIVAS}${QUAL}) — ${DE_NOVO}"
         falhados=$((falhados + 1))
     fi
 done
@@ -283,13 +314,14 @@ if [[ -n "${USB_DEVICES}" ]]; then
 
         devnum="$(cat "${USB_DEVICES}/${porta}/devnum" 2>/dev/null || true)"
         [[ "${devnum}" =~ ^[0-9]+$ ]] || devnum=0
-        stamp="${STAMP_DIR}/cabo-${nome}-${devnum}"
+        chave="cabo-${nome}-${devnum}"
+        stamp="${STAMP_DIR}/${PREFIXO}${chave}"
         tentativas=0
         [[ -f "${stamp}" ]] && tentativas="$(cat "${stamp}" 2>/dev/null || printf '0')"
         [[ "${tentativas}" =~ ^[0-9]+$ ]] || tentativas=0
 
         if [[ "${tentativas}" -ge "${MAX_TENTATIVAS}" ]]; then
-            if [[ ! -f "${stamp}.desisti" ]]; then
+            if [[ "${EVENTO}" -eq 0 && ! -f "${stamp}.desisti" ]]; then
                 [[ "${DRY_RUN}" -eq 0 ]] && : > "${stamp}.desisti" 2>/dev/null || true
                 log "DESISTINDO do controle do cabo em ${porta} após ${MAX_TENTATIVAS} religadas da HID sem sucesso — não é a probe perdida por um -71 solto; o cabo ou a entrada seguem falhando. Tire e ponha o cabo; se voltar a cair ali, troque de entrada"
             fi
@@ -298,7 +330,7 @@ if [[ -n "${USB_DEVICES}" ]]; then
         fi
 
         if [[ "${DRY_RUN}" -eq 1 ]]; then
-            log "[dry-run] faria: echo '${nome}' > ${bind} (tentativa $((tentativas + 1))/${MAX_TENTATIVAS})"
+            log "[dry-run] faria: echo '${nome}' > ${bind} (tentativa $((tentativas + 1))/${MAX_TENTATIVAS}${QUAL})"
             curados=$((curados + 1))
             continue
         fi
@@ -310,11 +342,11 @@ if [[ -n "${USB_DEVICES}" ]]; then
         # `driver` já existe ou a probe caiu de novo (-71 outra vez, ENODEV se o
         # aparelho saiu). Guardado, porque o script roda com set -e.
         if printf '%s' "${nome}" > "${bind}" 2>/dev/null && [[ -e "${intf}/driver" ]]; then
-            log "controle do cabo RELIGADO em ${porta}: a HID (${nome}) tinha perdido a probe no -71; o aparelho estava inteiro"
-            rm -f "${stamp}" "${stamp}.desisti" 2>/dev/null || true
+            log "controle do cabo RELIGADO em ${porta}${QUAL}: a HID (${nome}) tinha perdido a probe no -71; o aparelho estava inteiro"
+            rm -f "${STAMP_DIR}/${chave}" "${STAMP_DIR}/${chave}.desisti" "${STAMP_DIR}/evento-${chave}" 2>/dev/null || true
             curados=$((curados + 1))
         else
-            log "religar a HID de ${nome} NÃO pegou (tentativa $((tentativas + 1))/${MAX_TENTATIVAS}) — nova tentativa na próxima passagem do watchdog"
+            log "religar a HID de ${nome} NÃO pegou (tentativa $((tentativas + 1))/${MAX_TENTATIVAS}${QUAL}) — ${DE_NOVO}"
             falhados=$((falhados + 1))
         fi
     done
@@ -323,12 +355,14 @@ fi
 
 # Limpeza dos contadores de devices que não existem mais (reconexão troca o id;
 # sem isto o /run acumularia stamp morto até o reboot). O do cabo vive enquanto
-# a interface existir com o MESMO devnum.
+# a interface existir com o MESMO devnum. O do aviso do kernel (`evento-`) segue
+# a mesma regra do contador do tique da mesma chave.
 if [[ "${DRY_RUN}" -eq 0 && -d "${STAMP_DIR}" ]]; then
     shopt -s nullglob
     for stamp in "${STAMP_DIR}"/*; do
         alvo="$(basename "${stamp}")"
         alvo="${alvo%.desisti}"
+        alvo="${alvo#evento-}"
         case "${alvo}" in
             cabo-*) _cabo_do_stamp_vive "${alvo}" || rm -f "${stamp}" 2>/dev/null || true ;;
             *) [[ -e "${HID_DEVICES}/${alvo}" ]] || rm -f "${stamp}" 2>/dev/null || true ;;
