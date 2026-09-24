@@ -1141,3 +1141,37 @@ def test_sem_controle_na_mesa_nenhum_botao_do_modo_acende(lar) -> None:
         vias = [c["via"] for c in mesa]
         assert com["steam-input-aceso"] == "steam", (
             f"com {vias} na mesa o Steam Input não acendeu: {com['steam-input-aceso']!r}")
+
+
+@pytest.mark.parametrize(("mesa", "caminho", "desktop"), [
+    ([], "dualsense", False),
+    (MESA_DE_QUATRO, "xbox", False),
+    (MESA_DE_QUATRO, "dualsense", True),
+], ids=["mesa-vazia", "sobre-o-xbox", "na-navegacao"])
+def test_a_faixa_so_fala_com_o_chip_aceso(lar, mesa, caminho, desktop) -> None:
+    """«Liga quando a Steam fechar» diz o que FALTA ao chip aceso — e só a ele.
+
+    O ARRANJO É O DIFÍCIL DE PROPÓSITO: o jogo está PENDENTE (na lista, o vdf
+    em `"0"`), que é o único caso em que a frase existe. Com a ponte de pé a
+    faixa calaria por outro motivo, e a régua passaria com a guarda arrancada
+    — foi o que a primeira mordida mediu, com a mesa vazia e a ponte de pé.
+
+    A MORDIDA: tire a guarda `steam-input-aceso` de `a01_jogar._o_que_o_chip_diz`
+    e os três casos reprovam — a faixa fala de um botão que a tela não acende.
+    """
+    slo.add_appid_to_steam_input_allowlist(APPID)
+    aba.VIGIA_DO_STEAM_INPUT.esquecer()
+    aba.VIGIA_DO_STEAM_INPUT.ler()
+    assert aba._a_ponte_que_falta(_ctx().state), "o arranjo não ficou PENDENTE"
+
+    ctx = _com_o_caminho(caminho, modo_desktop=desktop)
+    ctx.mesa.extend(dict(c) for c in mesa)
+    fora = aba.pacote(ctx)
+    assert fora["steam-input-aceso"] == ""
+    assert (fora["pendente"], fora["pendente-ha"]) == ("", ""), (
+        f"a faixa falou sem o chip aceso: {fora['pendente']!r}")
+
+    # O CONTROLE DA RÉGUA: o mesmo PENDENTE, com o chip aceso, fala.
+    aceso = _ctx()
+    aceso.mesa.extend(dict(c) for c in MESA_DE_QUATRO)
+    assert aba.pacote(aceso)["pendente"] == f"● {aba.STEAM_INPUT_ESPERA}"
