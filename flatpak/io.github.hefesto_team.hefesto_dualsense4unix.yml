@@ -96,6 +96,33 @@ finish-args:
   # passa a ter rede, e o produto é para qualquer um — inclusive quem usa Flatpak.
   - --allow=bluetooth
   - --share=network
+  # O QUE O INSTALL CRIA EM /run (O-FLATPAK-ALCANCA-O-BROKER-01, 24/09/2026).
+  # O /run do sandbox é um tmpfs próprio: sem as três linhas abaixo, os três
+  # caminhos respondem ENOENT lá dentro. Medido em 24/09 com o flatpak 1.18.1
+  # e estes finish-args, num sandbox do org.freedesktop.Platform. Quem cobra é
+  # `tests/unit/test_o_flatpak_alcanca_o_broker.py`, que lê no código cada
+  # caminho de /run que o daemon abre.
+  #   - O broker. Com a 70 e a 72 fechando o hidraw e os nós de entrada do
+  #     físico, o fd do controle vem dele por SCM_RIGHTS; sem o socket o daemon
+  #     fica sem o controle. `:ro` basta: o `connect` atravessa montagem só de
+  #     leitura, e o SO_PEERCRED que o broker confere vê o uid de fora (medido:
+  #     1000). É a PASTA, e não o arquivo, porque o socket renasce a cada
+  #     restart da socket unit e só a pasta acompanha.
+  #   - A trava comum do rádio, SEM `:ro`. O daemon abre o `radio.lock` com
+  #     O_RDWR para escrever quem está com ela, e em montagem só de leitura isso
+  #     volta EROFS (medido), que o recuo de `_abrir_a_trava` (só
+  #     PermissionError) não pega. A pasta é do root e não gravável por ela; o
+  #     que se escreve é só o arquivo, 0660 do grupo `hefesto` (medido: o grupo
+  #     vale dentro do sandbox).
+  #   - A base do udev, `:ro`. O `evdev_reader` pergunta a ela quem é o dono do
+  #     cursor, e o `audio_ks_dualsense` lê o USEC_INITIALIZED do ContainerId da
+  #     háptica nos jogos da RE Engine.
+  # Caminho que não existe (broker não instalado, trava sem o install.sh) é
+  # pulado em silêncio, e o daemon faz o que fazia. O Flatpak só monta no
+  # INÍCIO: depois do install-host-udev.sh, o Hefesto aberto tem de ser reaberto.
+  - --filesystem=/run/hefesto-hidraw-broker:ro
+  - --filesystem=/run/hefesto-dualsense4unix
+  - --filesystem=/run/udev/data:ro
 
 modules:
   # Módulo 1: todas as dependências Python do Hefesto - DualSense4Unix num único pip install.
