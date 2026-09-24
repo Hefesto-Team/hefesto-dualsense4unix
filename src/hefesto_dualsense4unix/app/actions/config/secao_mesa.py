@@ -33,7 +33,7 @@ O MEDIDOR DE RÁDIO (CONFIG-04)
 O limite que CONFIG-02 escreveu — *"o que amarra controle a adaptador é o bond,
 em `/var/lib/bluetooth`, árvore 700, e a janela é sudo-zero"* — estava FALSO, e
 foi derrubado em 22/08/2026: o uevent do nó hidraw publica `HID_PHYS` = MAC do
-adaptador para BT real (`broker/hidraw_broker.py:281`), e
+adaptador para BT real (`broker/hidraw_broker.py:316`), e
 `/sys/class/hidraw/*/device/uevent` abre como uid 1000. É por aí que o medidor
 sabe qual controle está em qual adaptador, sem tocar em `sudo`.
 

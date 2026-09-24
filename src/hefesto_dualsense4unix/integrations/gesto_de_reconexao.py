@@ -242,7 +242,7 @@ def desconectar(mac: str, *, executar: Executar | None = None) -> Resultado:
 
 
 #: O par do DualSense FÍSICO, escrito como o `Modalias` do BlueZ o entrega.
-#: Os números são os mesmos do broker (`broker/hidraw_broker.py:97`,
+#: Os números são os mesmos do broker (`broker/hidraw_broker.py:98`,
 #: `PHYS_PRODUCT`), e a pergunta é por PROPRIEDADE, nunca pelo `Alias`: o nome
 #: é editável e a mesa dela tem quatro aparelhos com o mesmo, que é a doença
 #: que esta casa já pagou casando nó de som por rótulo.

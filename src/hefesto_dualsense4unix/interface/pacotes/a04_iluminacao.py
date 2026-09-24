@@ -2292,7 +2292,7 @@ def _escrever_a_cor(ctx: Contexto, p: Any, uniq: str,
     recusasse a escrita levaria junto a aplicação, que não tem nada a ver.
 
     ELE É O `_aplicar_cor_no_controle` DA GTK, no que esta tela pode ter
-    (`app/actions/lightbar_actions.py:881`). Duas coisas que faltavam, e as duas
+    (`app/actions/lightbar_actions.py:886`). Duas coisas que faltavam, e as duas
     estavam medidas:
 
     **1. O BRILHO VIAJA JUNTO.** A linha era `p.led_set(rgb, uniq=uniq)`, sem o

@@ -591,7 +591,7 @@ def _aplicar_ponte(daemon: DaemonProtocol, alvo: str) -> bool:
     aberto, e a casa já decidiu por escrito que "trocar de máscara com o jogo
     aberto é uma escolha legítima dela; a última palavra é sempre da usuária".
     O kwarg é chamado por `getattr` porque o `DaemonProtocol` ainda não o
-    declara (existe no Daemon real — `lifecycle.py:1695`) e o Protocol é
+    declara (existe no Daemon real — `lifecycle.py:1701`) e o Protocol é
     arquivo de outra frente nesta leva.
     """
     setter = getattr(daemon, "set_gamepad_emulation", None)
@@ -1994,7 +1994,7 @@ async def _eleger_ou_devolver(
             # `connected`** — a lista dele vai para a ELEIÇÃO, e lá a pergunta
             # é outra. O backend real devolve uma entrada POR HANDLE e mantém
             # o `uniq` preenchido com `connected: False`
-            # (`core/backend_pydualsense.py:7118`), então o controle que saiu
+            # (`core/backend_pydualsense.py:7110`), então o controle que saiu
             # DE VERDADE continuava na lista e o dono não caía.
             #
             # Medido com o laço deste arquivo e um backend que faz o que o real

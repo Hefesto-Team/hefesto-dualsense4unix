@@ -1333,7 +1333,7 @@ def test_a_frase_da_recusa_e_a_do_motor_e_nao_uma_reescrita(monkeypatch):
     """A frase é `lightbar_actions._AVISO_HEFESTO_DESLIGADO`, LIDA do motor.
 
     LEI 0 desta casa: *"não temos que recriar nada"*. A janela GTK diz esta
-    frase neste MESMO evento (`lightbar_actions.py:950-951` —
+    frase neste MESMO evento (`lightbar_actions.py:955-956` —
     `mensagem_de_secao_fora(resposta) or _AVISO_HEFESTO_DESLIGADO`, no ramo em
     que o `led.set` por `uniq` volta sem corpo). Escrever outra aqui criaria a
     segunda verdade que esta casa persegue: as duas telas diriam coisas

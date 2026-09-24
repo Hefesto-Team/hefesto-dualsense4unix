@@ -763,7 +763,7 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 > | campo | onde é escrito | grau |
 > |---|---|---|
 > | volume, `common[5]` | o laço dos quatro bytes de áudio — `_AUDIO_COMMON_OFFSETS` em `core/backend_pydualsense.py:323-325` | **ALTA** — lido no código |
-> | pré-amp, `common[37]` | `core/backend_pydualsense.py:1801-1808`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1804-1806`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:197` | **ALTA** — lido no código |
+> | pré-amp, `common[37]` | `core/backend_pydualsense.py:1809-1816`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1812-1814`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:197` | **ALTA** — lido no código |
 <!-- ENDEREÇOS REAPONTADOS em 20/09/2026: a O-NO-NASCE-FECHADO-01 acrescentou a
      exposição do nó sob pedido ao `backend_pydualsense.py` e ao `lifecycle.py`
      (o `hidapi` não aceita fd, e com o nó nascendo `0600 root` o handle de
@@ -1541,10 +1541,10 @@ começa pela esquerda ou pela direita?"* não muda nenhuma das cinco, e por isso
 >
 > - **fora de supressão (cabo):** o `flag2` sai com setup **e** brilho
 >   ligados em TODO report, e o `common[41]` vai sempre zero
->   (`core/backend_pydualsense.py:932`) — escolha deliberada, travada por
+>   (`core/backend_pydualsense.py:940`) — escolha deliberada, travada por
 >   teste;
 > - **sob supressão (rádio):** o bit de setup é **explicitamente limpo**
->   (`core/backend_pydualsense.py:886-891`), porque reengatá-lo em regime
+>   (`core/backend_pydualsense.py:894-899`), porque reengatá-lo em regime
 >   trava a exibição no firmware — é a `LIGHTBAR-BT-KEEPALIVE-01`.
 >
 > E o perigo registrado, que esta página não carregava: a

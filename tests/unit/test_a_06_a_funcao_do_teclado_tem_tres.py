@@ -16,7 +16,7 @@ já existe, e é o `suppress_desktop_emulation`"*. **Os dois estão invertidos.*
 O perfil é ativado quando o JOGO casa; logo a supressão vale DURANTE o jogo, e o
 teclado sobra FORA dele. E, sem perfil nenhum a dizer o contrário, o daemon já
 cala a emulação de desktop quando um jogo assume — `_jogo_no_controle_do_desktop`
-(`daemon/lifecycle.py:2263`, a cura da queixa dela de 29/07: *"aperto r1 e ele
+(`daemon/lifecycle.py:2269`, a cura da queixa dela de 29/07: *"aperto r1 e ele
 muda de app ao invés de funcionar no jogo"*) e o `gamepad_dispatched` do laço
 (`:4780`).
 

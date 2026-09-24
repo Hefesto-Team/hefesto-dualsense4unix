@@ -493,7 +493,7 @@ class TestSoltarOParEsqueceODono:
 # remendo no «Parar»:
 #
 #   * o «Parar» resgata NA HORA (parar quer dizer «cale o que está vibrando»);
-#   * o poll loop resgata a cada tick — `lifecycle.py:3953` marca
+#   * o poll loop resgata a cada tick — `lifecycle.py:3959` marca
 #     `tick_started + 0.200`, cinco ticks por segundo —, e é a rede que apanha
 #     as outras portas, inclusive as que não estão nesta cerca.
 #

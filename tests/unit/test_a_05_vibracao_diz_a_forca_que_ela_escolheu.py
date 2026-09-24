@@ -21,7 +21,7 @@ dois controles na mesa (um no cabo, um por rádio).
    promete *"Balanceado 100%, como o jogo pediu"*. A tela se contradizia sozinha,
    e o ``Máx`` nunca acendia nem no "Máximo".
 
-   O produto já sabia por escrito: ``daemon/lifecycle.py:3459-3468`` conta que
+   O produto já sabia por escrito: ``daemon/lifecycle.py:3465-3474`` conta que
    ``_last_auto_mult`` fica **preso no default 0.7** em passthrough ocioso e que
    isso *"parecia atenuação real do rumble do jogo"*. A aba publicava
    exatamente essa aparência.

@@ -71,7 +71,7 @@ DEFAULT_SCROLL_SPEED = 1
 
 # AS DUAS FAIXAS, e elas ganharam nome em 01/09/2026. Os números viviam como
 # LITERAIS em dois lugares — `set_speed()` logo abaixo e
-# `daemon/lifecycle.py:1439-1431` —, e a tela da aba Navegação escrevia um
+# `daemon/lifecycle.py:1445-1437` —, e a tela da aba Navegação escrevia um
 # TERCEIRO: a dica dizia *"De 1 a 10"* nas duas linhas, e nas duas estava errada.
 # Três cópias de um fato é o defeito que esta casa persegue; agora há uma, e a
 # tela a LÊ em vez de digitar.

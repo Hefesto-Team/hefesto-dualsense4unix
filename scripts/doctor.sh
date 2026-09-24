@@ -811,7 +811,7 @@ check_hid_playstation_probe_abortado() {
 # LED se declarava cego. Só quem usa CABO chegava a ver este check rodar.
 #
 # O critério certo é a IDENTIDADE, não o caminho: o vpad anuncia
-# `HID_PHYS=hefesto-vpad` (a mesma marca que `broker/hidraw_broker.py:91`,
+# `HID_PHYS=hefesto-vpad` (a mesma marca que `broker/hidraw_broker.py:92`,
 # `integrations/cor_do_plastico.py:176` e `integrations/uhid_gamepad.py:576`
 # usam). Controle de verdade — cabo ou rádio — nunca tem esse `phys`.
 # Teste que morde: tests/unit/test_o_doctor_enxerga_a_luz_do_radio.py

@@ -54,7 +54,7 @@ Armando MUDO, a corrida ganha dois degraus:
 O `release` entre o armar e o medir não é detalhe: com posse do registrador o
 daemon manda `POWER_SAVE_CONTROL_ENABLE` com `common[9]` a 60 Hz e escreveria
 por cima do que o `0x32` fizesse (AUDIO-OWNER-01,
-`core/backend_pydualsense.py:1098`, `:1142`). O `release` devolve a posse ao
+`core/backend_pydualsense.py:1106`, `:1150`). O `release` devolve a posse ao
 kernel, o bit de autorização CAI, e o firmware conserva o mudo que recebeu — o
 que este instrumento **verifica**, numa janela própria, antes de medir.
 

@@ -21,7 +21,7 @@ E O QUARTO, que é de ESCRITA e o pior deles: o gesto `cor` chamava
 campo quando ele é passado, e o `led.set` do daemon diz *"Ausente ou inválido ->
 assume 1.0"*. Ou seja: a coluna mostrava `50%` e o fio levava 100% — um clique
 num tom DESFAZIA o brilho que ela tinha escolhido na janela GTK, sem uma palavra
-na tela. A GTK manda o brilho em toda escrita (`lightbar_actions.py:944`).
+na tela. A GTK manda o brilho em toda escrita (`lightbar_actions.py:949`).
 
 O QUE ESTES TESTES COBREM, cada um com a mordida escrita:
 
