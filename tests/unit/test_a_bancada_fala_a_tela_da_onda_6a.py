@@ -118,12 +118,19 @@ def test_as_dicas_do_giroscopio_citadas_sao_as_do_pacote() -> None:
 
     MORDIDA: tire da bancada a citação da dica nova e a régua reprova («ninguém
     confere»); troque uma palavra dela e reprova («não é a do pacote»).
+
+    NOTA DATADA — 24/09/2026 (A-MIRA-NA-NAVEGACAO-01): com a Mira acesa a dica
+    passou a seguir o destino — o analógico direito, o esquerdo, ou o cursor na
+    Navegação —, e a bancada cita a do cursor. As três são do pacote; a régua
+    continua exigindo a frase letra por letra, agora contra as três.
     """
     import pacotes.a02_controles as a02
 
     donos = {
-        "Ligado: o jogo recebe o giro": a02.DICA_DO_GIRO,
-        "Com a Mira Virtual acesa": a02.DICA_DO_GIRO_COM_A_MIRA,
+        "Ligado: o jogo recebe o giro": {a02.DICA_DO_GIRO},
+        "Com a Mira Virtual acesa": {a02.DICA_DO_GIRO_COM_A_MIRA,
+                                     a02.DICA_DO_GIRO_NO_ESQUERDO,
+                                     a02.DICA_DO_GIRO_NO_CURSOR},
     }
     vistas = {inicio: 0 for inicio in donos}
     erradas = []
@@ -132,7 +139,7 @@ def test_as_dicas_do_giroscopio_citadas_sao_as_do_pacote() -> None:
             for inicio, dono in donos.items():
                 if citado.startswith(inicio):
                     vistas[inicio] += 1
-                    if citado != dono:
+                    if citado not in dono:
                         erradas.append((titulo.split(" — ")[0], citado))
     assert not erradas, f"dicas citadas que não são as do pacote: {erradas}"
     assert vistas["Com a Mira Virtual acesa"] >= 2, (
