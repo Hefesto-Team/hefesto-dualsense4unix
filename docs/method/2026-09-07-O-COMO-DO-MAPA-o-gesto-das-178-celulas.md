@@ -787,7 +787,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que cada controle do BT também tem uma saída de som PRÓPRIA, criada pelo Hefesto, que o som mandado a ela sai só naquele controle, pelo fio do BT, e que o «Tudo no Controle e Nada no PC» de cada cartão escolhe essa mesma saída com um clique.
 
-**Onde olhar.** Fora do Hefesto, a lista de saídas das configurações de Som do sistema: cada controle do BT tem ali a sua saída «Alto-falante do Controle N (DualSense Wireless Controller)», com o número do jogador, e nenhuma placa DualSense — pelo BT o controle não publica placa de som, e quem leva o som até ele é o Hefesto. Na aba Sistema, em «O exame de hoje», a linha que começa com «Som do sistema» diz por onde o som do computador está saindo. Na aba Controles, o bloco Alto-falante de cada cartão, com o botão «Tudo no Controle e Nada no PC» — «PC», nos botões, é a saída do computador; na bancada, a TV. E o ouvido encostado nos nove furinhos da frente do controle.
+**Onde olhar.** Fora do Hefesto, a lista de saídas das configurações de Som do sistema: cada controle do BT tem ali a sua saída «Alto-falante do Controle N (DualSense Wireless Controller)», com o número do jogador, e nenhuma placa de som do próprio controle — pelo BT o controle não publica placa de som, e quem leva o som até ele é o Hefesto. Na aba Sistema, em «O exame de hoje», a linha que começa com «Som do sistema» diz por onde o som do computador está saindo. Na aba Controles, o bloco Alto-falante de cada cartão, com o botão «Tudo no Controle e Nada no PC» — «PC», nos botões, é a saída do computador; na bancada, a TV. E o ouvido encostado nos nove furinhos da frente do controle.
 
 **Os passos.**
 
