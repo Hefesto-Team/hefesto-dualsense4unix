@@ -174,7 +174,10 @@ def test_o_doctor_diz_a_porta_e_o_aparelho() -> None:
     # `test_log_limpo_nao_ganha_bloco_de_endereco`, e só pela AUSÊNCIA. Mudar o
     # texto do `porta)` deixava as duas verdes — a régua do log limpo passaria a
     # afirmar a ausência de uma frase que já não existe em lugar nenhum.
-    assert "-71 em 3-4.1.3" in saida, f"o prefixo do bloco mudou:\n{saida}"
+    # E A ENTRADA PELO DONO DO NOME (24/09, «nomear e religar»): com a bancada
+    # injetada, os nomes que ela deu não valem — é outra máquina — e sobra o
+    # que o desenho dá a qualquer um, «Entrada 4.1.3», com o caminho junto.
+    assert "-71 em Entrada 4.1.3 (3-4.1.3)" in saida, f"o prefixo do bloco mudou:\n{saida}"
 
 
 def test_o_doctor_diz_o_hub_no_caminho() -> None:
@@ -186,7 +189,7 @@ def test_o_doctor_diz_o_hub_no_caminho() -> None:
         ]
     )
     assert "atrás de 2 hubs" in saida, saida
-    assert "3-4.1 (USB2.1 Hub" in saida, saida
+    assert "Entrada 4.1 (3-4.1): USB2.1 Hub" in saida, saida
 
 
 def test_a_porta_que_nao_existe_mais_nao_ganha_aparelho() -> None:
@@ -222,7 +225,7 @@ def test_o_hub_em_comum_e_aviso_e_nao_nota_de_rodape() -> None:
         ]
     )
     linhas_do_hub = [
-        linha for linha in saida.splitlines() if "está no caminho de 2 portas" in linha
+        linha for linha in saida.splitlines() if "está no caminho de 2 entradas" in linha
     ]
     assert linhas_do_hub, f"o hub em comum não foi nomeado:\n{saida}"
     assert linhas_do_hub[0].startswith("WARN "), linhas_do_hub[0]
@@ -285,7 +288,9 @@ def test_a_janela_do_doctor_e_a_do_modulo_sao_uma_so() -> None:
         janela=30,
     )
     assert "nos últimos 30 dias" in saida, saida
-    assert "-71 em 3-4.1.3" in saida, f"a janela do módulo não é a do doctor:\n{saida}"
+    assert "-71 em Entrada 4.1.3 (3-4.1.3)" in saida, (
+        f"a janela do módulo não é a do doctor:\n{saida}"
+    )
     assert "não respondeu" not in saida, saida
 
 

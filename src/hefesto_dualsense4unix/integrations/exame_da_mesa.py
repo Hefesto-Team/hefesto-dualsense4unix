@@ -43,12 +43,13 @@ import json
 import re
 import sys
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover - só para o verificador de tipos
     from hefesto_dualsense4unix.integrations.ordens_da_mesa import Leitura, Ordem
+    from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
 
 #: Os quatro estados de uma linha do exame. O quarto não é enfeite: é o que a
 #: checagem devolve quando a resposta exigiria root, ou quando a ferramenta de
@@ -731,6 +732,32 @@ def censo(itens: Sequence[Item] | None = None) -> dict[str, object]:
 # responde: um hub que está no caminho de DUAS OU MAIS portas que deram -71 é o
 # fator comum, e :func:`storm_por_porta` o nomeia. Uma porta só nunca acusa o
 # hub dela: isso seria trocar a causa pelo endereço.
+#
+# A PALAVRA DELA DE 23/09 — «NOMEAR E RELIGAR» (24/09/2026). O laudo de 20/09
+# dizia o caminho do kernel (`3-4.1.3`), e a palavra dela pede três coisas a mais:
+#
+# 1. **a ENTRADA, com o nome da seção do rádio.** O dono do nome é
+#    `integrations/entrada_a_entrada.nome_da_porta` — o que ela deu, «Entrada 3»
+#    pelo desenho, ou «Entrada 4.1.3» pelo `devpath` —, e este módulo PERGUNTA a
+#    ele (:func:`_nomeador`), nunca compõe a palavra. Sem o pacote ao alcance (o
+#    `python3` do sistema, sem pydantic 2), sobra o caminho do kernel, como antes;
+# 2. **o CONTROLE**, e a matriz dela: o -71 não é só do cabo. Os adaptadores BT
+#    também são USB, e o -71 num deles derruba todos os controles dele — medido
+#    no `kernel.log` dela: os 26 eventos em `1-4` de 13/09 são o TP-Link UB500 no
+#    laço de reinícios, e não um DualSense. :attr:`Aparelho.papel` diz qual dos
+#    dois está na entrada;
+# 3. **o que ficou PARADO.** Duas das formas acima são o kernel DESISTINDO, e
+#    nelas o controle não volta sozinho: `unable to enumerate USB device` (a
+#    entrada fica vazia — a 3-4.4 da mesa dela, no arranque de 24/09) e `can't
+#    add hid device` (o controle fica encaixado sem o HID, mudo para o jogo — a
+#    3-4.4 de 16/09, 15 s até a queda seguinte). :attr:`PortaDoStorm.parada` junta
+#    o desfecho do log com a leitura de AGORA e diz qual das duas ficou.
+#
+# O RELIGAR NÃO MORA AQUI: este módulo é só leitura. O controle que fica sem o
+# HID é religado pelo vigia root do Bluetooth (`scripts/bt_rebind_orphans.sh`, o
+# ramo do cabo); a entrada que o kernel largou vazia pede um reset de porta que
+# nenhum caminho root do produto tem hoje — está escrito na sprint, em «O que o
+# install precisa».
 # ---------------------------------------------------------------------------
 
 #: A tag que o `storm_watch.sh:classify` põe na linha do storm.
@@ -743,6 +770,37 @@ RAIZ_USB = Path("/sys/bus/usb/devices")
 #: repetido e não importado pela mesma razão daquele arquivo: este módulo é
 #: carregado pelo `python3` do sistema e não pode arrastar o pacote inteiro.
 CLASSE_DE_HUB = "09"
+
+#: O `idVendor` da Sony: só um aparelho dela vira CONTROLE numa frase deste
+#: laudo. Mesmo valor de `integrations/entrada_a_entrada._VID_DA_SONY`, repetido
+#: pela razão do :data:`CLASSE_DE_HUB`.
+VID_DA_SONY = "054c"
+
+#: A tripla do adaptador BT (classe, subclasse, protocolo), a mesma que
+#: `censo_do_barramento._especie` lê como «Bluetooth». O TP-Link UB500 da mesa
+#: dela publica `e0` já no descritor do APARELHO (medido em 24/09); o adaptador
+#: composto a publica só na interface 0, e as duas leituras valem.
+TRIPLA_DO_ADAPTADOR = ("e0", "01", "01")
+
+#: A classe de interface HID. O DualSense no cabo tem as de áudio (`01`) e a
+#: HID (`03`); é a `03` que o -71 da probe deixa sem driver.
+CLASSE_HID = "03"
+
+#: Os dois desfechos em que o kernel DESISTE e não tenta de novo sozinho.
+DESFECHO_ENTRADA_LARGADA = "entrada_largada"
+DESFECHO_SEM_HID = "sem_hid"
+
+#: `usb 3-4-port4: unable to enumerate USB device` — depois do próprio ciclo de
+#: energia (`attempt power cycle`, no journal da mesa dela em 24/09) o kernel
+#: larga a entrada e não enumera mais nada nela até alguém tirar e pôr.
+_ENTRADA_LARGADA = re.compile(r"unable to enumerate usb device", re.IGNORECASE)
+
+#: `usbhid 3-4.4:1.3: can't add hid device: -71` e a linha irmã da probe. O
+#: aparelho enumerou, a interface HID ficou sem driver, e o driver não refaz a
+#: probe sozinho.
+_PROBE_DO_HID = re.compile(
+    r"can.t add hid device|probe with driver usbhid failed", re.IGNORECASE
+)
 
 #: `<driver> <alvo>: <mensagem>` — a forma de TODA linha do kernel sobre USB.
 #: O `\S+?` é preguiçoso de propósito: em `usbhid 3-4.1.3:1.3: can't add…` ele
@@ -830,6 +888,43 @@ class Aparelho:
     pid: str = ""
     nome: str = ""
     e_hub: bool = False
+    #: A tripla ``e0/01/01`` no aparelho ou na interface 0 — o adaptador BT.
+    e_adaptador: bool = False
+    #: Um controle Sony com a interface HID SEM driver, lido agora: o desfecho
+    #: da probe que caiu com -71 (``can't add hid device``).
+    hid_sem_driver: bool = False
+    #: O nome da ENTRADA, perguntado ao dono (:func:`_nomeador`). Vazio quando
+    #: o dono não está ao alcance — aí a frase fica com o caminho do kernel.
+    nome_da_entrada: str = ""
+
+    @property
+    def onde(self) -> str:
+        """«Entrada 3 (3-4.1.3)»: o nome da seção do rádio e o caminho do kernel.
+
+        O caminho fica junto, e não é segundo nome: é o que o suporte procura no
+        journal, e o que separa duas entradas que ela chamou igual.
+        """
+        if self.nome_da_entrada and self.nome_da_entrada != self.porta:
+            return f"{self.nome_da_entrada} ({self.porta})"
+        return self.porta
+
+    @property
+    def e_controle(self) -> bool:
+        """Um aparelho da Sony, encaixado agora — o controle desta entrada."""
+        return self.presente and self.vid.lower() == VID_DA_SONY
+
+    @property
+    def papel(self) -> str:
+        """O que ele é para quem joga — o controle ou o adaptador. ``""`` no resto.
+
+        É a MATRIZ dela escrita numa palavra: o -71 do cabo derruba UM controle;
+        o do adaptador derruba todos os que estão nele.
+        """
+        if self.e_controle:
+            return "um controle, pelo USB"
+        if self.presente and self.e_adaptador:
+            return "um adaptador BT: quando ele cai, caem todos os controles dele"
+        return ""
 
     @property
     def identidade(self) -> str:
@@ -862,8 +957,60 @@ class Aparelho:
             "pid": self.pid,
             "nome": self.nome,
             "e_hub": self.e_hub,
+            "e_adaptador": self.e_adaptador,
+            "hid_sem_driver": self.hid_sem_driver,
+            "nome_da_entrada": self.nome_da_entrada,
+            "onde": self.onde,
+            "papel": self.papel,
             "identidade": self.identidade,
         }
+
+
+def _interfaces_da_porta(porta: str, raiz_usb: Path) -> list[Path]:
+    """As interfaces do nó (``3-4.4:1.0``, ``3-4.4:1.3``…), em ordem. Somente leitura.
+
+    O prefixo é ``f"{porta}:"`` e é exato: ``3-4:*`` não casa ``3-4.1:1.0``.
+    """
+    try:
+        return sorted(raiz_usb.glob(f"{porta}:*"))
+    except OSError:
+        return []
+
+
+def _tripla(no: Path, prefixo: str) -> tuple[str, str, str]:
+    """``(classe, subclasse, protocolo)`` de um nó ou interface, em minúsculas."""
+    classe, subclasse, protocolo = (
+        (_texto_de(no / f"{prefixo}{campo}") or "").lower()
+        for campo in ("Class", "SubClass", "Protocol")
+    )
+    return classe, subclasse, protocolo
+
+
+def _e_adaptador(no: Path, interfaces: Sequence[Path]) -> bool:
+    """A tripla do adaptador BT no descritor do aparelho OU na interface 0."""
+    if _tripla(no, "bDevice") == TRIPLA_DO_ADAPTADOR:
+        return True
+    zero = [i for i in interfaces if i.name.endswith(".0")]
+    return bool(zero) and _tripla(zero[0], "bInterface") == TRIPLA_DO_ADAPTADOR
+
+
+def _hid_sem_driver(interfaces: Sequence[Path]) -> bool:
+    """Alguma interface HID sem driver, e que ninguém desligou de propósito?
+
+    ``authorized`` em ``0`` é escolha de alguém (a regra 75 faz isso com o áudio
+    do DualSense), e não é o -71: essa interface não entra na conta.
+    """
+    for interface in interfaces:
+        if (_texto_de(interface / "bInterfaceClass") or "").lower() != CLASSE_HID:
+            continue
+        if (_texto_de(interface / "authorized") or "1") == "0":
+            continue
+        try:
+            if not (interface / "driver").exists():
+                return True
+        except OSError:
+            continue
+    return False
 
 
 def aparelho_da_porta(porta: str, *, raiz_usb: Path = RAIZ_USB) -> Aparelho:
@@ -884,56 +1031,84 @@ def aparelho_da_porta(porta: str, *, raiz_usb: Path = RAIZ_USB) -> Aparelho:
         presente = False
     if not presente:
         return Aparelho(porta=porta)
+    vid = _texto_de(no / "idVendor") or ""
+    interfaces = _interfaces_da_porta(porta, raiz_usb)
     return Aparelho(
         porta=porta,
         presente=True,
-        vid=(_texto_de(no / "idVendor") or ""),
+        vid=vid,
         pid=(_texto_de(no / "idProduct") or ""),
         nome=(_texto_de(no / "product") or ""),
         e_hub=(_texto_de(no / "bDeviceClass") or "") == CLASSE_DE_HUB,
+        e_adaptador=_e_adaptador(no, interfaces),
+        hid_sem_driver=(
+            vid.lower() == VID_DA_SONY and _hid_sem_driver(interfaces)
+        ),
     )
 
 
 @dataclass(frozen=True)
 class PortaDoStorm:
-    """Uma porta que deu -71 na janela, com quantos, quando e o que há nela."""
+    """Uma entrada que deu -71 na janela: quantos, quando, o que há nela e o que parou."""
 
     porta: str
     quantos: int
     ultimo: str
     aparelho: Aparelho
     hubs: tuple[Aparelho, ...] = ()
+    #: O desfecho do evento MAIS NOVO desta entrada no log — um dos
+    #: ``DESFECHO_*``, ou ``""`` quando o kernel seguiu tentando.
+    desfecho: str = ""
+
+    @property
+    def parada(self) -> str:
+        """O que ficou parado NESTA entrada, lido AGORA — ``""`` quando nada ficou.
+
+        Junta os dois tempos, e cada um diz a sua parte: o log diz COMO o kernel
+        desistiu; o ``/sys`` diz se continua assim. Uma entrada vazia sem a
+        desistência no log não entra aqui: o aparelho pode ter saído pela mão
+        dela, e dizer "parou" sobre isso seria inventar a queda.
+        """
+        if self.aparelho.hid_sem_driver:
+            return "o controle está nela sem o HID, e o jogo não o vê"
+        if self.desfecho == DESFECHO_ENTRADA_LARGADA and not self.aparelho.presente:
+            return "o kernel desistiu dela no -71, e ela segue vazia"
+        return ""
 
     @property
     def porque(self) -> str:
         """A MEDIÇÃO em uma frase — o mesmo contrato do ``porque`` de `Item`.
 
         DOIS TEMPOS VERBAIS NUMA LINHA SÓ, e eles não se misturam: a contagem e
-        a data são do PASSADO (saem do log); quem está na porta é do PRESENTE
+        a data são do PASSADO (saem do log); quem está na entrada é do PRESENTE
         (sai do ``/sys`` neste instante). O "AGORA" existe para que ninguém leia
         *"o TP-Link deu -71 vinte e sete vezes"* — o que a medição sustenta é
-        *"esta porta deu -71 vinte e sete vezes, e hoje há um TP-Link nela"*.
+        *"esta entrada deu -71 vinte e sete vezes, e hoje há um TP-Link nela"*.
         """
         quando = f"{self.ultimo[8:10]}/{self.ultimo[5:7]}" if self.ultimo else "?"
         eventos = "1 evento" if self.quantos == 1 else f"{self.quantos} eventos"
         if self.hubs:
             caminho = ", depois ".join(
-                f"{hub.porta} ({hub.identidade})" for hub in self.hubs
+                f"{hub.onde}: {hub.identidade}" for hub in self.hubs
             )
             quantos_hubs = "1 hub" if len(self.hubs) == 1 else f"{len(self.hubs)} hubs"
-            onde = f"atrás de {quantos_hubs}: {caminho}"
+            onde = f"atrás de {quantos_hubs} — {caminho}"
         else:
             onde = "direto numa entrada do próprio computador, sem hub no caminho"
+        papel = f" — {self.aparelho.papel}" if self.aparelho.papel else ""
         return (
-            f"{self.porta} — {eventos}, o último em {quando}; nesta porta "
-            f"AGORA: {self.aparelho.identidade}; {onde}"
+            f"{self.aparelho.onde} — {eventos}, o último em {quando}; nela "
+            f"AGORA: {self.aparelho.identidade}{papel}; {onde}"
         )
 
     def como_dicionario(self) -> dict[str, object]:
         return {
             "porta": self.porta,
+            "entrada": self.aparelho.onde,
             "quantos": self.quantos,
             "ultimo": self.ultimo,  # (noqa-acento): chave de máquina, ASCII por contrato
+            "desfecho": self.desfecho,
+            "parada": self.parada,
             "aparelho": self.aparelho.como_dicionario(),
             "hubs": [hub.como_dicionario() for hub in self.hubs],
             "porque": self.porque,
@@ -942,24 +1117,28 @@ class PortaDoStorm:
 
 @dataclass(frozen=True)
 class HubEmComum:
-    """Um hub no caminho de DUAS OU MAIS portas que deram -71 na janela."""
+    """Um hub no caminho de DUAS OU MAIS entradas que deram -71 na janela."""
 
     hub: Aparelho
     portas: tuple[str, ...]
+    #: As entradas de baixo com o nome do dono, na ordem de ``portas``.
+    entradas: tuple[str, ...] = ()
 
     @property
     def porque(self) -> str:
+        abaixo = self.entradas or self.portas
         return (
-            f"o hub em {self.hub.porta} está no caminho de "
-            f"{len(self.portas)} portas que deram -71 "
-            f"({', '.join(self.portas)}) — é o fator comum que a topologia "
-            f"aponta; nesta porta AGORA: {self.hub.identidade}"
+            f"o hub em {self.hub.onde} está no caminho de "
+            f"{len(self.portas)} entradas que deram -71 "
+            f"({', '.join(abaixo)}) — é o fator comum que a topologia "
+            f"aponta; nela AGORA: {self.hub.identidade}"
         )
 
     def como_dicionario(self) -> dict[str, object]:
         return {
             "hub": self.hub.como_dicionario(),
             "portas": list(self.portas),
+            "entradas": list(self.entradas),
             "porque": self.porque,
         }
 
@@ -995,6 +1174,64 @@ class LaudoDoStorm:
         }
 
 
+def _sem_nome(_porta: str) -> str | None:
+    """O nomeador de quando o dono do nome não está ao alcance."""
+    return None
+
+
+def _nomeador(
+    raiz_usb: Path, *, maquina: MaquinaConfig | None = None
+) -> Callable[[str], str | None]:
+    """Quem dá o nome a uma entrada — o DONO, `entrada_a_entrada.nome_da_porta`.
+
+    A palavra dela de 23/09: *o nome da entrada é o da seção do rádio, e não se
+    inventa outro*. Por isso este módulo não compõe «Entrada N»: pergunta.
+
+    OS BARRAMENTOS SÃO OS DA RAIZ LIDA, nunca os do ``/sys`` de quem roda — é a
+    mesma regra do ``--raiz-usb``: com o retrato de OUTRA máquina, traduzir o
+    caminho pelos controladores desta daria o lugar errado. E o ``maquina.json``
+    é DESTA máquina: com uma raiz que não é a do sistema, os nomes que ela deu
+    não valem, e sobra o que o desenho dá a qualquer um («Entrada 4.1.3»).
+
+    Nunca levanta. O import falha no ``python3`` do sistema (o dono usa
+    pydantic 2), e aí a frase fica com o caminho do kernel, como antes de 24/09.
+    """
+    try:
+        from hefesto_dualsense4unix.integrations.entrada_a_entrada import nome_da_porta
+        from hefesto_dualsense4unix.integrations.mesa_de_radio import (
+            controladores_dos_barramentos,
+        )
+        from hefesto_dualsense4unix.utils.maquina import (
+            MaquinaConfig as _Maquina,
+        )
+        from hefesto_dualsense4unix.utils.maquina import carregar_maquina
+    except Exception:  # qualquer falha de import é "sem o dono"
+        return _sem_nome
+    try:
+        barramentos = controladores_dos_barramentos(raiz_usb=str(raiz_usb))
+        if maquina is None:
+            maquina = carregar_maquina() if raiz_usb == RAIZ_USB else _Maquina()
+    except Exception:  # a leitura do nome não derruba o laudo
+        return _sem_nome
+
+    def nomear(porta: str) -> str | None:
+        try:
+            return nome_da_porta(porta, maquina=maquina, controladores=barramentos)
+        except Exception:  # idem: o nome nunca derruba o laudo
+            return None
+
+    return nomear
+
+
+def _desfecho(mensagem: str) -> str:
+    """O kernel desistiu nesta linha? Um dos ``DESFECHO_*``, ou ``""``."""
+    if _ENTRADA_LARGADA.search(mensagem):
+        return DESFECHO_ENTRADA_LARGADA
+    if _PROBE_DO_HID.search(mensagem):
+        return DESFECHO_SEM_HID
+    return ""
+
+
 def storm_por_porta(
     *,
     linhas: Sequence[str] | None = None,
@@ -1002,8 +1239,9 @@ def storm_por_porta(
     dias: int = 7,
     hoje: datetime.date | None = None,
     raiz_usb: Path = RAIZ_USB,
+    nomear: Callable[[str], str | None] | None = None,
 ) -> LaudoDoStorm:
-    """Cada -71 da janela com a PORTA e o APARELHO — a entrega da STORM-USB-01.
+    """Cada -71 da janela com a ENTRADA e o CONTROLE — a entrega da STORM-USB-01.
 
     A janela é a mesma do `check_kernel_watch` e pelo mesmo cálculo: data ISO
     comparada como TEXTO contra ``hoje - dias``, sem aritmética por linha. Se
@@ -1013,6 +1251,9 @@ def storm_por_porta(
     ``linhas`` existe para a régua; ``log`` é o caminho real. Sem nenhum dos
     dois e sem o arquivo, ``porque_nao`` diz por que não houve medição — nunca
     uma lista vazia, que se leria como "nenhum -71".
+
+    ``nomear`` dá o nome de cada entrada; sem ele, pergunta-se ao dono
+    (:func:`_nomeador`) com os barramentos da ``raiz_usb``.
     """
     if linhas is None:
         if log is None:
@@ -1028,6 +1269,12 @@ def storm_por_porta(
 
     quantos: dict[str, int] = {}
     ultimo: dict[str, str] = {}
+    #: O carimbo inteiro do evento mais novo de cada entrada, e o desfecho dele.
+    #: ``>=`` de propósito: o kernel escreve a desistência no MESMO segundo das
+    #: tentativas (`not accepting address` e `unable to enumerate`, medido em
+    #: 24/09), e a ordem do log é a ordem em que ele escreveu.
+    carimbo: dict[str, str] = {}
+    desfecho: dict[str, str] = {}
     sem_endereco = 0
     for linha in linhas:
         if TAG_DO_STORM not in linha:
@@ -1043,12 +1290,21 @@ def storm_por_porta(
         quantos[porta] = quantos.get(porta, 0) + 1
         if data > ultimo.get(porta, ""):
             ultimo[porta] = data
+        instante = linha[:19]
+        if instante >= carimbo.get(porta, ""):
+            carimbo[porta] = instante
+            desfecho[porta] = _desfecho(mensagem)
 
+    if nomear is None:
+        nomear = _nomeador(raiz_usb) if quantos else _sem_nome
     conhecidos: dict[str, Aparelho] = {}
 
     def _aparelho(porta: str) -> Aparelho:
         if porta not in conhecidos:
-            conhecidos[porta] = aparelho_da_porta(porta, raiz_usb=raiz_usb)
+            conhecidos[porta] = replace(
+                aparelho_da_porta(porta, raiz_usb=raiz_usb),
+                nome_da_entrada=nomear(porta) or "",
+            )
         return conhecidos[porta]
 
     portas: list[PortaDoStorm] = []
@@ -1061,6 +1317,7 @@ def storm_por_porta(
                 ultimo=ultimo[porta],
                 aparelho=_aparelho(porta),
                 hubs=tuple(_aparelho(degrau) for degrau in caminho[:-1]),
+                desfecho=desfecho.get(porta, ""),
             )
         )
     # Mais eventos primeiro; empate desempatado pelo nome, para a saída do
@@ -1075,7 +1332,11 @@ def storm_por_porta(
         for degrau in cadeia_da_porta(p.porta)[:-1]:
             sob_o_hub.setdefault(degrau, []).append(p.porta)
     hubs_em_comum = tuple(
-        HubEmComum(hub=_aparelho(degrau), portas=tuple(sorted(abaixo)))
+        HubEmComum(
+            hub=_aparelho(degrau),
+            portas=tuple(sorted(abaixo)),
+            entradas=tuple(_aparelho(porta).onde for porta in sorted(abaixo)),
+        )
         for degrau, abaixo in sorted(sob_o_hub.items())
         if len(abaixo) >= 2
     )
