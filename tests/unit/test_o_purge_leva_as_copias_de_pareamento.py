@@ -30,6 +30,9 @@ levaria a cópia desta vida); tirar a linha da senha, o da senha; tirar o aviso
 sem root, o do aviso; tirar do snapshot o `chmod -R go-rwx` ou o `-m 700` do
 acervo, o do acervo; tirar o `-m700` da pasta guardada, os dois da cópia — o
 `install -d` sem modo abre para 0755 até a pasta que o `mv` trouxe fechada.
+E da conferência: tirar o `sudo` do `rm` do laço reprova só o do ensaio (a
+pasta de mentira é da usuária, e o `rm` sozinho apagaria aqui); tirar o `-L` da
+guarda, ou trocar o `-e` por `-d`, reprova o do link (o quebrado ficaria).
 """
 
 from __future__ import annotations
@@ -241,19 +244,28 @@ def test_o_purge_so_leva_o_prefixo_que_o_uninstall_escreve(tmp_path: Path) -> No
 
 
 def test_um_link_com_o_nome_da_copia_sai_sem_levar_o_alvo(tmp_path: Path) -> None:
+    """O link quebrado também sai: é o caso que o `-L` da guarda existe para pegar."""
     raiz = _mesa_do_root(tmp_path, com_bonds=False, com_diario=False)
     fora = tmp_path / "fora-da-pasta"
     _um_acervo(fora)
     retrato_de_fora = _retrato(fora)
     (raiz / "bt-bonds.pre-uninstall-20260901-000000").symlink_to(fora)
+    (raiz / "bt-bonds.pre-uninstall-20260902-000000").symlink_to(tmp_path / "nao-existe")
     r = _rodar(tmp_path, BLOCO_DOS_BONDS, purge=True)
     assert r.returncode == 0, r.stderr
     assert not (raiz / "bt-bonds.pre-uninstall-20260901-000000").is_symlink()
+    assert not (raiz / "bt-bonds.pre-uninstall-20260902-000000").is_symlink(), (
+        "o link quebrado com o nome da cópia ficou"
+    )
     assert _retrato(fora) == retrato_de_fora, "o purge seguiu o link para fora da pasta"
 
 
 def test_o_ensaio_diz_cada_copia_que_apagaria_e_nao_apaga_nenhuma(tmp_path: Path) -> None:
-    """O `--dry-run` é como quem coordena olha o uninstall na máquina dela."""
+    """O `--dry-run` é como quem coordena olha o uninstall na máquina dela.
+
+    O «(root)» é a parte que morde: a pasta de mentira é da usuária, e um `rm`
+    sem `sudo` passaria em todos os outros testes daqui — na máquina dela a
+    pasta é de root e ele não apagaria nada."""
     raiz = _mesa_do_root(tmp_path)
     antes = _retrato(raiz)
     r = _rodar(tmp_path, BLOCO_DO_ENSAIO + BLOCO_DOS_BONDS, purge=True, antes="DRY_RUN=1\n")
@@ -261,8 +273,8 @@ def test_o_ensaio_diz_cada_copia_que_apagaria_e_nao_apaga_nenhuma(tmp_path: Path
     assert _retrato(raiz) == antes, "o ensaio mexeu na pasta do root"
     faria = [linha for linha in r.stdout.splitlines() if "FARIA:" in linha]
     for nome in ANTIGAS:
-        assert any(f"rm -rf -- {raiz}/{nome}" in linha for linha in faria), (
-            f"o ensaio não disse que apagaria {nome}:\n" + "\n".join(faria)
+        assert any(f"(root) rm -rf -- {raiz}/{nome}" in linha for linha in faria), (
+            f"o ensaio não disse que apagaria {nome} como root:\n" + "\n".join(faria)
         )
 
 
