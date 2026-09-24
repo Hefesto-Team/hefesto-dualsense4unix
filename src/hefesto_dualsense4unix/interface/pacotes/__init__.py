@@ -1457,7 +1457,9 @@ def topo(ctx: Contexto) -> dict[str, Any]:
         # SEM PERFIL ATIVO NÃO SE INVENTA NOME: o texto cai para "no perfil
         # ativo", que é o mesmo que o desenho já traz congelado — dizer "no
         # perfil —" seria pior do que não dizer.
-        "rodape.salvar": _dica_do_salvar(ativo),
+        # Sem perfil ativo, o Salvar grava no «Freestyle» (O-MODO-FREESTYLE-02),
+        # e a dica diz onde — o dono é `rodape.perfil_do_salvar`.
+        "rodape.salvar": _dica_do_salvar(ativo or _onde_o_salvar_grava()),
         "rodape.exportar": _dica_do_exportar(ativo),
     }
 
@@ -1478,6 +1480,13 @@ def _dica_do_salvar(ativo: str) -> str:
     onde = f"no perfil {ativo}" if ativo else _SEM_PERFIL
     return (f"Grava {onde}. É onde a mudança vai cair: o que você salvar aqui "
             "volta sozinho toda vez que este jogo abrir.")
+
+
+def _onde_o_salvar_grava() -> str:
+    """O perfil em que o «Salvar Perfil» grava sem perfil ativo — do dono."""
+    from hefesto_dualsense4unix.interface.pacotes.rodape import perfil_do_salvar
+
+    return perfil_do_salvar({})
 
 
 def _dica_do_exportar(ativo: str) -> str:

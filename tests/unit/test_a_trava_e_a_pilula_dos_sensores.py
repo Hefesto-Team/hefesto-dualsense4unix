@@ -29,7 +29,30 @@ import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 PAGINA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/01-jogar.html"
+#: O DESENHO, medido junto — O-MODO-FREESTYLE-02, 24/09/2026: é ele que o
+#: `--publicar 01` leva ao produto.
+DESENHO = RAIZ / "mockup/01-jogar.html"
 CHROME = pathlib.Path("/usr/bin/google-chrome")
+
+
+def _altura_esperada(rotulo: str) -> int:
+    """Os 17 px da palavra de ontem, ou a altura do gerador para a de hoje.
+
+    O PRAZO DOS 17 PX: eles valem enquanto a página disser
+    `CADEADO_ROTULO_ESPERANDO_A_SESSAO_DELA`. No commit do `--publicar 01` a
+    constante sai (`test_o_modo_freestyle.test_a_palavra_de_ontem_tem_prazo`) e
+    este ramo sai junto. A de hoje é lida no dono (`aba01.py`), nunca digitada —
+    é a decisão `D-2409-O-BOTAO-FREESTYLE-TEM-26-PX`.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import a01_jogar as p
+
+    if rotulo == p.CADEADO_ROTULO_ESPERANDO_A_SESSAO_DELA:
+        return 17
+    fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/aba01.py").read_text(
+        encoding="utf-8")
+    achado = re.search(r"\.cadeado\{(?:[^}]*;)?height:(\d+)px", fonte)
+    assert achado, "o `.cadeado` do gerador perdeu a altura — a régua ficaria cega"
+    return int(achado.group(1))
 
 
 def _bootstrap() -> str:
@@ -68,8 +91,9 @@ def test_o_gesto_ouve_click_porque_um_botao_nao_emite_change() -> None:
 
 
 @pytest.mark.skipif(not CHROME.exists(), reason="sem o Chrome do sistema")
-def test_a_pilula_acende_apaga_e_nao_afirma_sobre_o_travessao() -> None:
-    """Os TRÊS estados na página publicada, lidos do CSS calculado."""
+@pytest.mark.parametrize("pagina", [PAGINA, DESENHO], ids=["publicada", "desenho"])
+def test_a_pilula_acende_apaga_e_nao_afirma_sobre_o_travessao(pagina: pathlib.Path) -> None:
+    """Os TRÊS estados na página publicada e no desenho, lidos do CSS calculado."""
     from playwright.sync_api import sync_playwright
 
     from hefesto_dualsense4unix.interface.folha_da_casa import FOLHA_DA_CASA
@@ -79,7 +103,7 @@ def test_a_pilula_acende_apaga_e_nao_afirma_sobre_o_travessao() -> None:
         nav = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"])
         try:
             pg = nav.new_page(viewport={"width": 1180, "height": 780})
-            pg.goto(PAGINA.as_uri())
+            pg.goto(pagina.as_uri())
             pg.add_style_tag(content=FOLHA_DA_CASA)
             pg.evaluate("window.__recebido=[];window.webkit={messageHandlers:"
                         "{hefesto:{postMessage:function(s){window.__recebido.push(s)}}}};")
@@ -91,7 +115,8 @@ def test_a_pilula_acende_apaga_e_nao_afirma_sobre_o_travessao() -> None:
                     const ps = getComputedStyle(b.querySelector('.p'));
                     return {tag: b.tagName, acesa: b.classList.contains('ligada'),
                             brilho: ps.boxShadow !== 'none',
-                            alt: Math.round(b.getBoundingClientRect().height)}}""")
+                            alt: Math.round(b.getBoundingClientRect().height),
+                            rotulo: (b.textContent || '').trim()}}""")
 
             assert olhar()["tag"] == "BUTTON", (
                 "a trava voltou a ser `<input>`/`<label>` — ela pediu o botão "
@@ -114,11 +139,12 @@ def test_a_pilula_acende_apaga_e_nao_afirma_sobre_o_travessao() -> None:
                 f"acontece — a tela afirma uma escolha dela sobre um estado que "
                 f"ninguém leu.")
 
-            # A ALTURA, que é a trava cara desta linha.
-            assert mudo["alt"] == 17, (
-                f"a pílula mede {mudo['alt']}px e o `.quadro-topo` é "
-                f"`align-items:center`: o modelo `.sw` tem 26px, e copiá-lo "
-                f"derruba as caixas da aba — a porta da Navegação já pagou "
+            # A ALTURA, que é a trava cara desta linha — e que tem PRAZO: ver
+            # `_altura_esperada`.
+            assert mudo["alt"] == _altura_esperada(mudo["rotulo"]), (
+                f"a pílula mede {mudo['alt']}px com a palavra {mudo['rotulo']!r}. "
+                f"O `.quadro-topo` é `align-items:center`: a altura da pílula é a "
+                f"da linha do título inteira, e a porta da Navegação já pagou "
                 f"esse preço com 2px.")
 
             # E O CLIQUE SAI, uma vez só.

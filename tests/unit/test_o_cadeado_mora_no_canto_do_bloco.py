@@ -74,6 +74,25 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
 
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 JOGAR = INTERFACE / "paginas" / "01-jogar.html"  # (noqa-acento) nome de PASTA
+#: O DESENHO, medido junto — O-MODO-FREESTYLE-02, 24/09/2026. É ele que o
+#: `--publicar 01` leva ao produto, e as réguas desta posição têm de valer nele
+#: ANTES da publicação, não depois dela.
+DESENHO = RAIZ / "mockup" / "01-jogar.html"
+PAGINAS = {"publicada": JOGAR, "desenho": DESENHO}
+
+
+def _altura_do_desenho() -> int:
+    """A altura que o gerador dá ao `.cadeado`, LIDA no dono (`aba01.py`).
+
+    É a decisão `D-2409-O-BOTAO-FREESTYLE-TEM-26-PX`; digitá-la aqui seria a
+    régua copiando o que devia ler.
+    """
+    import re
+
+    fonte = (INTERFACE / "aba01.py").read_text(encoding="utf-8")
+    achado = re.search(r"\.cadeado\{(?:[^}]*;)?height:(\d+)px", fonte)
+    assert achado, "o `.cadeado` do gerador perdeu a altura — a régua ficaria cega"
+    return int(achado.group(1))
 
 #: A pergunta ao motor. Tudo aqui é medida ou endereço; nenhuma coordenada
 #: esperada está escrita — as comparações são entre elementos da MESMA página.
@@ -150,14 +169,16 @@ O_CAMINHO_DO_CLIQUE = """() => {
 }"""
 
 
-@pytest.fixture(scope="module")
-def medido() -> dict:
-    """O que o Chrome desenha na aba Jogar PUBLICADA — a que o produto carrega."""
+@pytest.fixture(scope="module", params=sorted(PAGINAS))
+def medido(request: pytest.FixtureRequest) -> dict:
+    """O que o Chrome desenha na aba Jogar — a PUBLICADA, que o produto carrega,
+    e o DESENHO, que o `--publicar 01` leva até ela."""
     if not CHROME.exists():
         pytest.skip("sem o Chrome do sistema — a régua não tem motor")
-    assert JOGAR.is_file(), (
-        f"{JOGAR} não existe — a aba Jogar publicada é o alvo desta régua, e "
-        f"sem ela todos os casos passariam por ausência")
+    pagina = PAGINAS[request.param]
+    assert pagina.is_file(), (
+        f"{pagina} não existe — a aba Jogar é o alvo desta régua, e sem ela "
+        f"todos os casos passariam por ausência")
 
     from playwright.sync_api import sync_playwright
 
@@ -165,7 +186,7 @@ def medido() -> dict:
         nav = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"])
         try:
             pg = nav.new_page(viewport={"width": 1600, "height": 900})
-            pg.goto(JOGAR.as_uri())
+            pg.goto(pagina.as_uri())
             pg.wait_for_load_state("networkidle")
             saida = pg.evaluate(O_QUE_O_MOTOR_DESENHA)
         finally:
@@ -224,10 +245,31 @@ def test_o_cadeado_nao_empurrou_a_linha_do_titulo(medido: dict) -> None:
     A QUEBRA DE LINHA SE MEDE NO NÓ DE TEXTO, pelas caixas de um `Range` — a
     conta velha (`altura ÷ lineHeight`) devolvia `NaN` desde que a trava virou
     `<button>`, porque o `lineHeight` de um botão é `normal`.
+
+    O PRAZO DOS 17 PX — O-MODO-FREESTYLE-02, 24/09/2026. O «Modo Freestyle»
+    cresceu para 26 px por decisão (`D-2409-O-BOTAO-FREESTYLE-TEM-26-PX`), e a
+    conta foi paga no desenho: a linha do título cresce 9 px e a aba não rola
+    (`test_o_modo_freestyle`). Quem diz qual regra vale é a PALAVRA da página:
+    com a de ontem, os 17 px; com «Modo Freestyle», a altura do gerador,
+    centrada no título. **No commit do `--publicar 01`** a palavra de ontem sai
+    (`test_a_palavra_de_ontem_tem_prazo`), e o ramo dos 17 px sai junto — ele
+    importa a constante que morre.
     """
-    assert medido["altura_do_cadeado"] <= medido["altura_do_titulo"], (
-        f"o cadeado ({medido['altura_do_cadeado']}px) é mais alto que o título "
-        f"({medido['altura_do_titulo']}px) e empurra a linha inteira para baixo.")
+    from hefesto_dualsense4unix.interface.pacotes.a01_jogar import (
+        CADEADO_ROTULO_ESPERANDO_A_SESSAO_DELA,
+    )
+
+    if medido["rotulo"] == CADEADO_ROTULO_ESPERANDO_A_SESSAO_DELA:
+        assert medido["altura_do_cadeado"] <= medido["altura_do_titulo"], (
+            f"o cadeado ({medido['altura_do_cadeado']}px) é mais alto que o "
+            f"título ({medido['altura_do_titulo']}px) e empurra a linha inteira "
+            f"para baixo.")
+    else:
+        assert medido["altura_do_cadeado"] == _altura_do_desenho(), (
+            f"o «Modo Freestyle» mede {medido['altura_do_cadeado']}px e o "
+            f"gerador diz {_altura_do_desenho()}px")
+        assert medido["desvio_vertical_do_titulo"] == 0, (
+            "o botão saiu do centro da linha do título")
     assert medido["linhas_de_texto"] == 1, (
         f"o rótulo do cadeado quebrou em {medido['linhas_de_texto']} linhas — "
         f"duas linhas aqui estouram a altura do título e derrubam o bloco.")

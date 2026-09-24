@@ -445,9 +445,11 @@ CADEADO_ROTULO = "Modo Freestyle"
 #: `test_o_modo_freestyle.test_a_palavra_de_ontem_tem_prazo` reprova até esta
 #: linha sair, no mesmo commit do `--publicar`.
 CADEADO_ROTULO_ESPERANDO_A_SESSAO_DELA = "Trava o perfil ativo"
+#: «Desmarque» virou «Desligue» em 24/09/2026 (O-MODO-FREESTYLE-02): a caixa
+#: virou pílula em 19/09, e pílula se liga e se desliga. A gêmea da GTK foi junto.
 CADEADO_DICA = (
     "O perfil ativo continua valendo mesmo quando você abre outro jogo. "
-    "Desmarque para o Hefesto voltar a escolher sozinho."
+    "Desligue para o Hefesto voltar a escolher sozinho."
 )
 
 #: O QUE A TELA DIZ QUANDO O SERVIÇO NÃO CONFIRMOU O CADEADO — e a frase é da

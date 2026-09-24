@@ -1916,11 +1916,11 @@ LEGENDA = f'''<div class="nota">
       a altura, de 17 para <b>26 px</b>, a do botão de giroscópio no dia em que você o apontou como
       modelo. O que ele faz não mudou: ligado, o perfil que está valendo continua valendo; só o
       perfil próprio de um jogo entra por cima, como já era.</li>
-    <li><b>O "Personalizado" sai</b> — <span class="marca">"O trava perfil ativo já faz isso"</span>:
-      ligado, o botão segura o perfil que está valendo, e janela nenhuma o troca. O que o Personalizado
-      fazia a mais é o trecho entre ligar o computador e o primeiro jogo: sem ele, ali não há perfil
-      valendo, <b>o topo diz —</b> e o que você ajustar nas outras abas não tem onde ficar. Depois do
-      primeiro jogo, o topo diz o perfil que está valendo. O seu arquivo vai para o histórico, inteiro.</li>
+    <li><b>O "Personalizado" virou <span class="marca">Freestyle</span></b> — é o perfil de fora do
+      jogo, com os seus ajustes dos quatro controles; mudou só o nome. Do ligar o computador ao
+      primeiro jogo <b>o topo diz Freestyle</b>, e o que você ajustar nas outras abas cai nele. O jogo
+      com perfil próprio entra por cima, com o botão ligado ou não; com ele desligado, fechar o jogo
+      devolve o Freestyle. O arquivo de antes fica no histórico, inteiro.</li>
     <li><b>A fileira plana virou DOIS NÍVEIS</b> — sua palavra, 31/08:
       <span class="marca">"vamos desconfundir isso que tal? Hefesto Ligado/Desligado (…) Modo
       Hefesto se Ligado Abre as seções de Modo"</span>. A pergunta que abriu isto também é sua
