@@ -183,6 +183,11 @@ estável por endereço MAC (replugar recupera o mesmo número).
 >
 > **Se isso é o desejado é DECISÃO DELA**, e está registrada como aberta: num
 > co-op em andamento, o jogador 4 virar 3 troca quem é quem no meio da partida.
+>
+> **24/09/2026 — decidido** (`D-2409-O-ASSENTO-GUARDADO-NAO-ANDA`): enquanto o
+> lugar de quem saiu está guardado — trinta segundos, o mesmo prazo do posto de
+> Jogador 1 —, os outros não trocam de número, nos quatro lugares, no cabo e no
+> rádio. Passado o prazo, a fila se fecha.
 
 Controles externos (Nintendo Pro; 8BitDo em modo Switch no cabo ou em modo
 DirectInput/PS4 por Bluetooth — ver
