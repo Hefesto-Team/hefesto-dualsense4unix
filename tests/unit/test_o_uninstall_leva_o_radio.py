@@ -335,7 +335,9 @@ BLOCO_DOS_BONDS = _recorte(
 )
 
 
-def _acervo(tmp_path: Path, *, purge: bool, com_bonds: bool = True) -> Path:
+def _acervo(
+    tmp_path: Path, *, purge: bool, com_bonds: bool = True, remove_udev: bool = False
+) -> Path:
     raiz = tmp_path / "var-lib"
     raiz.mkdir()
     if com_bonds:
@@ -357,7 +359,7 @@ def _acervo(tmp_path: Path, *, purge: bool, com_bonds: bool = True) -> Path:
     script = (
         "set -uo pipefail\n"
         'log() { printf "[uninstall] %s\\n" "$*"; }\n'
-        f"KEEP_CONFIG={0 if purge else 1}\nREMOVE_UDEV=0\n" + bloco
+        f"KEEP_CONFIG={0 if purge else 1}\nREMOVE_UDEV={1 if remove_udev else 0}\n" + bloco
     )
     r = subprocess.run(
         [BASH, "-c", script],
@@ -395,3 +397,18 @@ def test_sem_bonds_o_diario_ainda_e_guardado(tmp_path: Path) -> None:
 def test_com_purge_config_bonds_e_diario_saem_juntos(tmp_path: Path) -> None:
     raiz = _acervo(tmp_path, purge=True)
     assert sorted(p.name for p in raiz.iterdir()) == []
+
+
+def test_com_purge_config_a_pasta_do_root_sai_inteira(tmp_path: Path) -> None:
+    """Com --purge-config e as regras saindo, /var/lib/hefesto-dualsense4unix
+    não fica para trás. O `rmdir` do pai rodava ANTES do diário do root sair, e
+    a pasta ficava vazia na máquina. MORDIDA: devolver o `rmdir` para dentro do
+    bloco dos bonds (antes do diário) reprova.
+    """
+    raiz = _acervo(tmp_path, purge=True, remove_udev=True)
+    assert not raiz.exists(), sorted(p.name for p in raiz.iterdir())
+
+
+def test_por_padrao_a_pasta_do_root_fica_com_o_acervo(tmp_path: Path) -> None:
+    raiz = _acervo(tmp_path, purge=False, remove_udev=True)
+    assert [p.name.startswith("bt-bonds.pre-uninstall-") for p in raiz.iterdir()] == [True]

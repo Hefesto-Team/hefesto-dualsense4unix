@@ -1136,14 +1136,6 @@ for dele in (lugares.values() if isinstance(lugares, dict) else ()):
             log "  (contêm LinkKeys — wipe pedido explicitamente)"
             sudo rm -rf /var/lib/hefesto-dualsense4unix/bt-bonds
         fi
-        # O diretório-pai só sai junto com a unit de snapshot: ela declara
-        # ReadWritePaths=/var/lib/hefesto-dualsense4unix sem o prefixo `-`, e o
-        # systemd RECUSA iniciar a unit se o caminho não existir. Preservada a
-        # unit (--keep-udev, alvo da regra 83), o pai fica — vazio, já sem as
-        # credenciais.
-        if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
-            sudo rmdir /var/lib/hefesto-dualsense4unix 2>/dev/null || true
-        fi
     fi
     # O DIÁRIO DO RÁDIO DO ROOT (`radio-diario.jsonl` e o `.1` da rotação,
     # escritos pela ponte e pelo watchdog) vai JUNTO do acervo de bonds
@@ -1167,6 +1159,16 @@ for dele in (lugares.values() if isinstance(lugares, dict) else ()):
             log "removendo o diário do rádio do root (--purge-config)"
             sudo rm -f "${_diarios_root[@]}" 2>/dev/null || true
         fi
+    fi
+    # O diretório-pai só sai junto com a unit de snapshot: ela declara
+    # ReadWritePaths=/var/lib/hefesto-dualsense4unix sem o prefixo `-`, e o
+    # systemd RECUSA iniciar a unit se o caminho não existir. Preservada a
+    # unit (--keep-udev, alvo da regra 83), o pai fica — vazio, já sem as
+    # credenciais. E ele sai DEPOIS do diário do root (conferência da
+    # INSTALL-E-UNINSTALL-DO-RADIO-01): antes, o `rmdir` rodava com o diário
+    # ainda dentro, e o --purge-config deixava a pasta vazia em /var/lib.
+    if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
+        sudo rmdir /var/lib/hefesto-dualsense4unix 2>/dev/null || true
     fi
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
 elif [[ -e /etc/systemd/system/hefesto-bt-bonds-snapshot.timer \
