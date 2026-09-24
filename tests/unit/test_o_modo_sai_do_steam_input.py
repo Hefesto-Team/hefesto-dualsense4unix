@@ -324,8 +324,12 @@ def test_o_chip_clicado_e_o_que_acende(vdf, monkeypatch, de, para, jogo_aberto,
       «Steam Input» — a terceira coluna da tabela;
     * com a Steam fechada o `localconfig.vdf` concorda; com ela aberta ele não
       é tocado (a Steam regrava o arquivo ao sair) — e o «Steam Input» acende
-      mesmo assim, PENDENTE, com a frase do dono na faixa de pendência;
+      mesmo assim, PENDENTE: a faixa diz «Liga quando a Steam fechar» (a frase
+      dela, D-2309-STEAM-INPUT-A-FRASE-E-O-CLIQUE) e o diário leva a do dono;
     * o clique responde com a piscada verde (`None`): nem recusa, nem recado.
+      A EXCEÇÃO É A ESCOLHA DELA (24/09/2026): o «Steam Input» com a Steam
+      aberta e nenhum jogo ARMA — o rótulo vira «Fechar a Steam?», e o segundo
+      clique fecha. Com jogo aberto nada arma: fecharia o jogo.
 
     AS CINCO MORDIDAS DA SPRINT, e cada uma reprova aqui pela razão dela:
 
@@ -363,9 +367,13 @@ def test_o_chip_clicado_e_o_que_acende(vdf, monkeypatch, de, para, jogo_aberto,
         f"{'entra' if quer else 'sai'}."
         + (" Com ele na lista a Steam pegaria o controle por baixo do chip aceso"
            if na_lista else " Sem ele na lista o «Steam Input» não tem o que ligar"))
-    assert resposta is None, (
-        f"de «{de}» para «{para}»: o clique respondeu {resposta!r} em vez da "
-        f"piscada verde")
+    arma = quer and steam_aberta and not jogo_aberto
+    esperada = ({"blocos": {f'[data-gesto="{aba.GESTO_DO_STEAM_INPUT}"]':
+                            aba.STEAM_INPUT_ARMADO}} if arma else None)
+    assert resposta == esperada, (
+        f"de «{de}» para «{para}» (jogo aberto={jogo_aberto}, Steam "
+        f"aberta={steam_aberta}): o clique respondeu {resposta!r}, e esperava "
+        f"{esperada!r}")
 
     if steam_aberta:
         assert _valor(vdf, APPID) == antes, (
@@ -384,8 +392,12 @@ def test_o_chip_clicado_e_o_que_acende(vdf, monkeypatch, de, para, jogo_aberto,
             f"o «Steam Input» PENDENTE não levou a frase do dono à faixa:\n"
             f"  faixa {falta!r}\n  dono  {dono!r}")
         assert dono in aba._faixa_do_pendente(ctx.state)[0]
+        assert aba.pacote(ctx)["pendente"] == f"● {aba.STEAM_INPUT_ESPERA}", (
+            "o «Steam Input» PENDENTE não disse, na faixa, a frase dela")
     else:
         assert falta == "", f"sobrou pendência do Steam Input depois de «{para}»: {falta!r}"
+        assert aba.pacote(ctx)["pendente"] == "", (
+            f"a faixa falou depois de «{para}» sem o Steam Input esperando")
 
 
 @pytest.mark.parametrize("para", CHIPS)

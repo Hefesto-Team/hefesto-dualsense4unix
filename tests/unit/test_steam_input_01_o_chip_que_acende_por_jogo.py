@@ -23,8 +23,9 @@ AS QUATRO MORDIDAS, e cada teste diz a sua no docstring:
    e o vdf fica em `"0"`. É o `excecao_inerte` voltando pela porta da régua:
    *"a lista só preserva o que já estava ligado — ela nunca liga"*;
 2. arranque o gate da Steam → há escrita com a Steam viva, e a Steam regrava o
-   arquivo ao sair: a edição some. **O gesto nunca fecha a Steam dela** — um
-   `<span>` não tem como perguntar, e o guarda do vdf completa quando ela sai;
+   arquivo ao sair: a edição some. **O primeiro clique nunca fecha a Steam
+   dela**: ele avisa (o rótulo vira «Fechar a Steam?»), e só o segundo fecha
+   — escolha dela de 23/09/2026 (`D-2309-STEAM-INPUT-A-FRASE-E-O-CLIQUE`);
 3. arranque o filtro por appid → um segundo jogo muda de valor e ninguém pediu.
    É a `CAMINHO-CONTAGIO-01` com outro campo;
 4. volte a acender só com a ponte de pé (`dado.ligados`) → o PENDENTE apaga, e
@@ -65,7 +66,7 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
 
 from hefesto_dualsense4unix.integrations import steam_input_ponte as ponte
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-from hefesto_dualsense4unix.interface.pacotes import Contexto
+from hefesto_dualsense4unix.interface.pacotes import Contexto, confirmacao
 from hefesto_dualsense4unix.interface.pacotes import a01_jogar as aba
 from hefesto_dualsense4unix.interface.pacotes.a07_lancadores import METODO_DA_RECARGA
 
@@ -75,10 +76,32 @@ from hefesto_dualsense4unix.interface.pacotes.a07_lancadores import METODO_DA_RE
 # construtor de vdf nesta casa."*
 from tests.unit.test_ponte_steam_input_01_a_lista_que_so_preservava import _vdf
 
+#: O `with_steam_closed` DE VERDADE, guardado antes de qualquer dublê: é ele que
+#: :class:`SteamDeMentira` roda, com os portões dele — o dublê troca só o
+#: processo (`stop_steam`, `reopen_steam`), e por isso não é mais frouxo que o
+#: produto.
+_WITH_STEAM_CLOSED_DE_VERDADE = slo.with_steam_closed
+
 #: OS DOIS APPIDS SÃO SINTÉTICOS, e o segundo existe só para a MORDIDA 3: ele é
 #: o "outro jogo" que um gesto sem filtro por appid arrastaria junto.
 APPID = "999000001"
 OUTRO = "999000002"
+
+#: A MESA DA MATRIZ — regra dela de 23/09/2026: *"nunca é pensada só em um
+#: modo, rota, forma de conexão se cabo ou se bt, ou só pro player 1."* Quatro
+#: controles, dois no USB e dois no BT. Uniq em faixa FORJADA (`aa:bb:cc`).
+MESA_DE_QUATRO = [
+    {"pref": f"p{n}", "jogador": n, "uniq": f"aa:bb:cc:00:00:0{n}",
+     "transporte": transporte, "via": via, "cor": "", "nome": ""}
+    for n, (transporte, via) in enumerate(
+        [("usb", "USB"), ("bt", "BT"), ("usb", "USB"), ("bt", "BT")], start=1)
+]
+UM_CONTROLE = MESA_DE_QUATRO[0]
+
+#: A RESPOSTA DO PRIMEIRO CLIQUE com a Steam aberta: o chip ARMADO, na forma do
+#: `blocos:` que o piloto pinta. O rótulo e o gesto vêm dos donos.
+_ARMADO_NA_TELA = {"blocos": {
+    f'[data-gesto="{aba.GESTO_DO_STEAM_INPUT}"]': aba.STEAM_INPUT_ARMADO}}
 
 #: A conta da Steam no lar de mentira. Um número qualquer: o que importa é o
 #: LAYOUT (`<raiz>/userdata/<conta>/config/localconfig.vdf`), que é o que
@@ -139,7 +162,10 @@ def _steam_fechada(monkeypatch):
     que esta casa já pagou — *"from-import copia a referência"*.
 
     E o `with_steam_closed` é dublado por segurança em todo teste: o de verdade
-    escala para `pkill -TERM`/`-KILL` na Steam DELA.
+    escala para `pkill -TERM`/`-KILL` na Steam DELA. `stop_steam` e
+    `reopen_steam` também: a régua que usa o `with_steam_closed` DE VERDADE
+    (:class:`SteamDeMentira`) troca só esses dois, e um que escapasse cairia
+    aqui em vez de na Steam dela.
     """
     for dono in (slo, ponte):
         monkeypatch.setattr(dono, "steam_running", lambda: False)
@@ -148,20 +174,24 @@ def _steam_fechada(monkeypatch):
     def _nunca(*a: Any, **kw: Any) -> Any:
         raise AssertionError("o gesto tentou FECHAR a Steam sem a régua mandar")
 
-    monkeypatch.setattr(slo, "with_steam_closed", _nunca)
+    for mata_steam in ("with_steam_closed", "stop_steam", "reopen_steam"):
+        monkeypatch.setattr(slo, mata_steam, _nunca)
 
 
 @pytest.fixture(autouse=True)
 def _vigia_limpa():
-    """A vigia é de MÓDULO — dois testes se contaminam.
+    """A vigia e o relógio são de MÓDULO — dois testes se contaminam.
 
-    Sem isto, o cache de um teste responde pelo lar de outro.
+    Sem isto, o cache de um teste responde pelo lar de outro, e o chip armado
+    por um teste vira o consentimento do seguinte.
     """
     aba.VIGIA_DO_STEAM_INPUT._dado = None
     aba.VIGIA_DO_STEAM_INPUT._quando = 0.0
+    confirmacao.desarmar()
     yield
     aba.VIGIA_DO_STEAM_INPUT._dado = None
     aba.VIGIA_DO_STEAM_INPUT._quando = 0.0
+    confirmacao.desarmar()
 
 
 class PonteDeMentira:
@@ -387,21 +417,17 @@ def test_com_a_steam_aberta_o_gesto_grava_a_vontade_e_nao_toca_no_vdf(
     sair e roda `disable_steam_input.sh --apply-quiet`, que liga os jogos da
     lista e desliga os de fora.
 
-    **E O GESTO NÃO FECHA A STEAM DELA.** A sprint pedia o consentimento de dois
-    tempos da aba 07; ele não alcança um chip. O botão da 07 é redesenhado a
-    cada tique e TROCA de rótulo para «Fechar e continuar»; o chip é um `<span>`
-    estático, e o segundo guarda daquele consentimento (saiu em 21/09) exigia um
-    `data-v` que **só existe no cartão já armado**. Um consentimento que ela não
-    LÊ não é consentimento. O dublê de `with_steam_closed` desta régua levanta
-    se alguém tentar.
+    **E O PRIMEIRO CLIQUE NÃO FECHA A STEAM DELA: ele AVISA** — escolha dela,
+    23/09/2026 (`D-2309-STEAM-INPUT-A-FRASE-E-O-CLIQUE`): *"o primeiro clique
+    avisa, o segundo fecha"*. A resposta é o rótulo armado do chip, e o dublê
+    de `with_steam_closed` desta régua levanta se o primeiro clique o alcançar.
     """
     monkeypatch.setattr(slo, "steam_running", lambda: True)
     monkeypatch.setattr(ponte, "steam_running", lambda: True)
     ctx = _ctx()
 
-    assert aba.modo_steam(ctx, {}, PonteDeMentira()) is None, (
-        "o clique com a Steam aberta respondeu com recusa ou recado — o que "
-        "falta aplicar é pendência, não recusa (O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01)")
+    assert aba.modo_steam(ctx, {}, PonteDeMentira()) == _ARMADO_NA_TELA, (
+        "o primeiro clique com a Steam aberta não avisou que o segundo a fecha")
 
     assert APPID in _lista(), (
         f"a vontade dela se perdeu no clique em que ela a fez: {_lista()}. O "
@@ -409,17 +435,22 @@ def test_com_a_steam_aberta_o_gesto_grava_a_vontade_e_nao_toca_no_vdf(
     assert _valor(lar, APPID) == "0", (
         f"houve escrita no vdf com a Steam VIVA: o valor virou "
         f"{_valor(lar, APPID)!r}, e a Steam regrava o arquivo ao sair")
-    # O CHIP ACENDE PELA ESCOLHA DELA, e a FRASE É A DO DONO na faixa de
-    # pendência — `Estado.frase()`, que NOMEIA o jogo e já diz quando.
+    # O CHIP ACENDE PELA ESCOLHA DELA. Na TELA vai a frase curta dela; no
+    # DIÁRIO, a do dono — `Estado.frase()`, que NOMEIA o jogo e já diz quando.
     assert aba._estado_da_tela(ctx.state)["steam-input-aceso"] == "steam", (
         "o clique com a Steam aberta voltou e o chip não acendeu — é o "
         "«cliquei e nada acendeu» da queixa dela")
     esperada = ponte.estado_da_ponte(allowlist=[APPID]).frase()
-    faixa = aba._faixa_do_pendente(ctx.state)[0]
-    assert esperada in faixa, (
-        f"a faixa de pendência não leva a frase do dono:\n"
-        f"  faixa   {faixa!r}\n  esperava {esperada!r}")
-    assert "Ligo assim que a Steam fechar" in faixa
+    diario = aba._faixa_do_pendente(ctx.state)[0]
+    assert esperada in diario, (
+        f"o diário não leva a frase do dono:\n"
+        f"  diário   {diario!r}\n  esperava {esperada!r}")
+    assert "Ligo assim que a Steam fechar" in diario
+    ctx.mesa.append(dict(UM_CONTROLE))
+    tela = aba.pacote(ctx)
+    assert (tela["pendente"], tela["pendente-ha"]) == (f"● {aba.STEAM_INPUT_ESPERA}", "1"), (
+        f"a faixa não disse a frase dela: {tela['pendente']!r} "
+        f"(ha={tela['pendente-ha']!r})")
 
 
 def test_desligar_com_a_steam_aberta_tira_da_lista_e_diz_quando(
@@ -458,13 +489,194 @@ def test_desligar_com_a_steam_aberta_tira_da_lista_e_diz_quando(
         f"a tela piscou verde ou digitou outra coisa: {resposta!r}")
 
 
+# ---------------------------------------------------------------------------
+# 3b. OS DOIS CLIQUES — «Fechar a Steam?», escolha dela de 23/09/2026
+# ---------------------------------------------------------------------------
+class SteamDeMentira:
+    """A Steam aberta, e o `with_steam_closed` DE VERDADE por cima dela.
+
+    O DUBLÊ É SÓ O PROCESSO: `stop_steam` vira a bandeira e conta, e
+    `reopen_steam` a devolve. A ORDEM DOS PORTÕES (jogo aberto antes de tudo, a
+    Steam que resiste não é editada, a reabertura no `finally`) é a do produto,
+    porque a função que roda é a do produto. Com `resiste=True` o `stop_steam`
+    devolve `False`, como a Steam que não fecha em 30 s.
+    """
+
+    def __init__(self, monkeypatch: Any, *, jogo_aberto: bool = False,
+                 resiste: bool = False) -> None:
+        self.aberta = True
+        self.jogo_aberto = jogo_aberto
+        self.resiste = resiste
+        self.fechou = 0
+        self.reabriu = 0
+        for dono in (slo, ponte):
+            monkeypatch.setattr(dono, "steam_running", lambda: self.aberta)
+            monkeypatch.setattr(dono, "steam_game_running",
+                                lambda: self.jogo_aberto)
+        monkeypatch.setattr(slo, "with_steam_closed", _WITH_STEAM_CLOSED_DE_VERDADE)
+        monkeypatch.setattr(slo, "stop_steam", self._parar)
+        monkeypatch.setattr(slo, "reopen_steam", self._reabrir)
+
+    def _parar(self, *a: Any, **kw: Any) -> bool:
+        if self.resiste:
+            return False
+        self.fechou += 1
+        self.aberta = False
+        return True
+
+    def _reabrir(self, *a: Any, **kw: Any) -> None:
+        self.reabriu += 1
+        self.aberta = True
+
+
+def _o_segundo_clique() -> dict[str, str]:
+    """O `o` do clique no chip ARMADO — o `texto` é o que o piloto manda."""
+    return {"texto": aba.STEAM_INPUT_ARMADO}
+
+
+def test_o_primeiro_clique_avisa_e_o_segundo_fecha_liga_e_reabre(
+        lar, monkeypatch) -> None:
+    """A escolha dela, inteira: *"o primeiro clique avisa, o segundo fecha"*.
+
+    `D-2309-STEAM-INPUT-A-FRASE-E-O-CLIQUE`, 23/09/2026. Com a Steam aberta e
+    nenhum jogo:
+
+    1. o primeiro clique grava a vontade, NÃO fecha a Steam, e ARMA: o rótulo do
+       chip vira «Fechar a Steam?», e a faixa diz «Liga quando a Steam fechar»;
+    2. o tique mantém o rótulo armado enquanto o relógio corre;
+    3. o segundo clique traz o rótulo armado, fecha a Steam UMA vez, liga o
+       jogo no vdf e a reabre — e o rótulo volta a «Steam Input», a faixa cala.
+
+    A MORDIDA: faça `_armar_se_a_steam_segura` devolver `None` sem armar e a
+    primeira asserção reprova — o primeiro clique voltaria calado, e o segundo
+    não teria o que confirmar.
+    """
+    steam = SteamDeMentira(monkeypatch)
+    ctx = _ctx()
+    ctx.mesa.extend(dict(c) for c in MESA_DE_QUATRO)
+
+    assert aba.modo_steam(ctx, {"texto": "Steam Input"}, PonteDeMentira()) == _ARMADO_NA_TELA
+    assert (steam.fechou, _valor(lar, APPID)) == (0, "0"), (
+        "o PRIMEIRO clique fechou a Steam ou escreveu no vdf — ele só avisa")
+    tela = aba.pacote(ctx)
+    assert tela["blocos"] == _ARMADO_NA_TELA["blocos"], (
+        f"o tique não manteve o chip armado: {tela['blocos']!r}")
+    assert tela["pendente"] == f"● {aba.STEAM_INPUT_ESPERA}"
+
+    resposta = aba.modo_steam(ctx, _o_segundo_clique(), PonteDeMentira())
+
+    assert (steam.fechou, steam.reabriu, steam.aberta) == (1, 1, True), (
+        f"o segundo clique não fechou e reabriu a Steam uma vez: fechou="
+        f"{steam.fechou} reabriu={steam.reabriu} aberta={steam.aberta}")
+    assert _valor(lar, APPID) == ponte.LIGADO, (
+        f"a Steam fechou e o vdf continua {_valor(lar, APPID)!r}")
+    assert APPID in _lista()
+    em_repouso = {f'[data-gesto="{aba.GESTO_DO_STEAM_INPUT}"]': "Steam Input"}
+    assert resposta == {"blocos": em_repouso}, f"o chip não voltou ao repouso: {resposta!r}"
+    depois = aba.pacote(ctx)
+    assert (depois["blocos"], depois["pendente"], depois["steam-input-aceso"]) == (
+        em_repouso, "", "steam"), (
+        f"depois do segundo clique: blocos={depois['blocos']!r} "
+        f"faixa={depois['pendente']!r} aceso={depois['steam-input-aceso']!r}")
+
+
+def test_o_clique_sem_o_rotulo_armado_nao_fecha_a_steam(lar, monkeypatch) -> None:
+    """O relógio armado SEM o rótulo não é consentimento — rearma e não fecha.
+
+    É o primeiro guarda da aba 09 (`a09_sistema._confirmado`): o rótulo que
+    **só existe no chip armado**. Um clique que chega com «Steam Input» — a
+    prova automática, um tique que ainda não repintou — é um primeiro clique.
+
+    A MORDIDA: em `a01_jogar._o_clique_que_confirma`, confirme só pelo relógio
+    (tire a comparação com `STEAM_INPUT_ARMADO`) e a Steam fecha aqui.
+    """
+    steam = SteamDeMentira(monkeypatch)
+    aba.modo_steam(_ctx(), {"texto": "Steam Input"}, PonteDeMentira())
+    assert aba.modo_steam(_ctx(), {"texto": "Steam Input"}, PonteDeMentira()) == _ARMADO_NA_TELA
+    assert (steam.fechou, _valor(lar, APPID)) == (0, "0"), (
+        "o clique sem o rótulo armado fechou a Steam dela")
+
+
+def test_o_rotulo_armado_fora_do_prazo_recusa_e_nao_fecha(lar, monkeypatch) -> None:
+    """A pergunta venceu: o rótulo sozinho não fecha a Steam, e o clique recusa.
+
+    É o segundo guarda, o relógio de `pacotes/confirmacao`.
+
+    A MORDIDA: em `a01_jogar._o_clique_que_confirma`, confirme só pelo rótulo
+    (tire a comparação com `confirmacao.armado_agora()`) e a Steam fecha aqui.
+    """
+    steam = SteamDeMentira(monkeypatch)
+    aba.modo_steam(_ctx(), {"texto": "Steam Input"}, PonteDeMentira())
+    confirmacao.ARMADO["ate"] -= confirmacao.SEGUNDOS_PARA_CONFIRMAR + 1
+
+    with pytest.raises(RuntimeError) as erro:
+        aba.modo_steam(_ctx(), _o_segundo_clique(), PonteDeMentira())
+
+    assert str(erro.value) == aba.STEAM_INPUT_A_PERGUNTA_VENCEU
+    assert (steam.fechou, _valor(lar, APPID)) == (0, "0")
+    assert aba._o_rotulo_do_chip(_ctx().state)[
+        f'[data-gesto="{aba.GESTO_DO_STEAM_INPUT}"]'] == "Steam Input", (
+        "a pergunta venceu e o chip continua dizendo «Fechar a Steam?»")
+
+
+@pytest.mark.parametrize(("jogo_aberto", "resiste", "janela"), [
+    (True, False, "jogo_aberto"),
+    (False, True, "nao_fechou"),
+], ids=["jogo-abriu-entre-os-cliques", "a-steam-nao-fechou"])
+def test_o_segundo_clique_que_nao_pode_recusa_com_a_frase_do_dono(
+        lar, monkeypatch, jogo_aberto, resiste, janela) -> None:
+    """Jogo aberto entre os dois cliques, ou a Steam que resiste: nada muda.
+
+    Os portões são os de `with_steam_closed`, e a frase é a do dono
+    (`daemon_actions.format_steam_janela_recusa`). O vdf sai idêntico: com um
+    jogo aberto fechar a Steam o mataria, e com ela viva a edição some.
+    """
+    from hefesto_dualsense4unix.app.actions.daemon_actions import (
+        format_steam_janela_recusa,
+    )
+
+    steam = SteamDeMentira(monkeypatch)
+    aba.modo_steam(_ctx(), {"texto": "Steam Input"}, PonteDeMentira())
+    steam.jogo_aberto = jogo_aberto
+    steam.resiste = resiste
+    antes = lar.read_text(encoding="utf-8")
+
+    with pytest.raises(RuntimeError) as erro:
+        aba.modo_steam(_ctx(), _o_segundo_clique(), PonteDeMentira())
+
+    assert str(erro.value) == format_steam_janela_recusa(janela)
+    assert lar.read_text(encoding="utf-8") == antes, "o vdf mudou num clique recusado"
+    assert steam.aberta, "a Steam ficou fechada depois da recusa"
+
+
+def test_outro_chip_desarma_o_steam_input(lar, monkeypatch) -> None:
+    """Armado o «Steam Input», clicar em outro chip desarma — e o rótulo volta.
+
+    Sem isto o chip seguiria dizendo «Fechar a Steam?» com o «Sony DualSense»
+    aceso, e o clique nele fecharia a Steam por um jogo que acabou de sair da
+    lista.
+
+    A MORDIDA: tire o `_desarmar_o_chip()` de `a01_jogar._o_clique_da_fileira`
+    e o relógio continua armado — esta linha reprova.
+    """
+    SteamDeMentira(monkeypatch)
+    aba.modo_steam(_ctx(), {"texto": "Steam Input"}, PonteDeMentira())
+    assert confirmacao.armado_agora()
+
+    aba.modo_dualsense(_ctx(), {"texto": "Sony DualSense"}, PonteDeMentira())
+
+    assert confirmacao.armado_agora() == "", (
+        "o «Sony DualSense» não desarmou o «Fechar a Steam?» do chip vizinho")
+
+
 #: OS AJUDANTES QUE O GESTO PRECISA ALCANÇAR, no MÍNIMO. É a trava da trava:
 #: a varredura de :func:`_alcance_do_gesto` é DERIVADA, e uma derivação que
 #: quebra devolve só o gesto e deixa a régua verde sobre tudo. Esta lista não é
 #: a varredura — é o piso dela.
 _AJUDANTES_DO_CHIP = {
     "modo_steam", "_reconciliar_o_vdf", "_os_que_ficam", "_o_que_o_vdf_diz",
-    "_qual_jogo",
+    "_qual_jogo", "_o_clique_que_confirma", "_armar_se_a_steam_segura",
+    "_fechar_a_steam_e_ligar",
 }
 
 
@@ -507,23 +719,26 @@ def _alcance_do_gesto(fn: Any, _visto: frozenset[str] = frozenset(),
     return achados
 
 
-def test_o_gesto_nunca_fecha_a_steam_dela(lar, monkeypatch) -> None:
-    """Nem ligando, nem desligando, nem com a Steam aberta. **Por árvore.**
+def test_so_o_segundo_clique_alcanca_o_fechar_a_steam() -> None:
+    """UMA função do alcance do gesto fecha a Steam, e é a do segundo clique.
 
-    A MORDIDA: devolva um `slo.with_steam_closed(...)` ao gesto **ou a qualquer
-    ajudante dele** e esta régua reprova nomeando a função — sem depender de um
-    clique chegar até lá.
+    A escolha dela, 23/09/2026 (`D-2309-STEAM-INPUT-A-FRASE-E-O-CLIQUE`): *"o
+    primeiro clique avisa, o segundo fecha"*. O gesto alcança
+    `with_steam_closed` — e só por :func:`a01_jogar._fechar_a_steam_e_ligar`,
+    que `modo_steam` só chama depois de `_o_clique_que_confirma`.
+
+    FATO SUBSTITUÍDO — esta régua se chamava «o gesto nunca fecha a Steam dela»
+    e reprovava qualquer `with_steam_closed` no alcance: um `<span>` não tinha
+    como perguntar. O `blocos:` troca o rótulo do chip, e a pergunta é ele.
 
     ELA LÊ A ÁRVORE, e não o texto: um `grep` casaria a docstring que EXPLICA
-    por que o gesto não fecha a Steam, e essa é a forma de defeito que esta casa
-    mais paga — *o aviso vira a primeira ocorrência do que ele descreve*.
+    quando o gesto fecha a Steam — *o aviso vira a primeira ocorrência do que
+    ele descreve*. E O ALCANCE É DERIVADO (conferência de 20/09/2026): com a
+    lista digitada, um `with_steam_closed` dentro de `_o_que_o_vdf_diz` passava.
 
-    **E O ALCANCE É DERIVADO — conferência de 20/09/2026.** A primeira versão
-    digitava TRÊS funções (`modo_steam`, `_reconciliar_o_vdf`, `_os_que_ficam`),
-    e com um `with_steam_closed` dentro de `_o_que_o_vdf_diz` — o ajudante que
-    RELÊ o vdf a cada clique, nos dois sentidos, e o lugar mais natural para
-    alguém pensar *"a Steam está aberta, deixa eu fechá-la e ler de novo"* — a
-    régua passava com **14 verdes**. Ver :func:`_alcance_do_gesto`.
+    A MORDIDA: devolva um `slo.with_steam_closed(...)` a qualquer outro
+    ajudante — `_o_que_o_vdf_diz`, `_reconciliar_o_vdf`, `_armar_se_a_steam_segura`
+    — e esta régua reprova nomeando a função.
     """
     alcance = _alcance_do_gesto(aba.modo_steam)
     faltam = sorted(_AJUDANTES_DO_CHIP - set(alcance))
@@ -532,19 +747,19 @@ def test_o_gesto_nunca_fecha_a_steam_dela(lar, monkeypatch) -> None:
         f"que encolhe deixa esta régua verde sobre o que ela não vê. O piso "
         f"está em `_AJUDANTES_DO_CHIP`")
 
-    fonte = "".join(
-        textwrap.dedent(inspect.getsource(fn)) for fn in alcance.values())
-    chamadas = {
-        no.func.attr if isinstance(no.func, ast.Attribute) else
-        getattr(no.func, "id", "")
-        for no in ast.walk(ast.parse(fonte)) if isinstance(no, ast.Call)
-    }
-    for mata_steam in ("with_steam_closed", "stop_steam", "reopen_steam"):
-        assert mata_steam not in chamadas, (
-            f"o chip da aba Jogar passou a chamar `{mata_steam}` — ele fecha a "
-            f"Steam DELA (escala para `pkill -TERM`/`-KILL`) e um `<span>` não "
-            f"tem como perguntar antes. A varredura alcançou "
-            f"{sorted(alcance)}")
+    fecham = []
+    for nome, fn in alcance.items():
+        arvore = ast.parse(textwrap.dedent(inspect.getsource(fn)))
+        chamadas = {
+            no.func.attr if isinstance(no.func, ast.Attribute) else
+            getattr(no.func, "id", "")
+            for no in ast.walk(arvore) if isinstance(no, ast.Call)
+        }
+        if chamadas & {"with_steam_closed", "stop_steam", "reopen_steam"}:
+            fecham.append(nome)
+    assert fecham == ["_fechar_a_steam_e_ligar"], (
+        f"quem fecha a Steam DELA no alcance do chip: {sorted(fecham)}. Só o "
+        f"segundo clique pode — ele escala para `pkill -TERM`/`-KILL`")
 
 
 def test_com_o_jogo_aberto_a_lista_e_gravada_e_o_vdf_espera(lar, monkeypatch) -> None:
@@ -581,6 +796,11 @@ def test_com_o_jogo_aberto_a_lista_e_gravada_e_o_vdf_espera(lar, monkeypatch) ->
     assert aba._estado_da_tela(ctx.state)["steam-input-aceso"] == "steam"
     assert "Ligo assim que o jogo e a Steam fecharem" in (
         aba._faixa_do_pendente(ctx.state)[0])
+    # COM JOGO ABERTO NADA ARMA: o segundo clique fecharia a Steam com o jogo
+    # dentro. A faixa diz a mesma frase curta.
+    assert confirmacao.armado_agora() == "", "o chip armou com um jogo aberto"
+    ctx.mesa.append(dict(UM_CONTROLE))
+    assert aba.pacote(ctx)["pendente"] == f"● {aba.STEAM_INPUT_ESPERA}"
 
 
 # ---------------------------------------------------------------------------
@@ -795,40 +1015,35 @@ def _arvore(modulo: Any) -> Any:
     return ast.parse(inspect.getsource(modulo))
 
 
-#: QUEM FECHA A STEAM DELA COM RELÓGIO PRÓPRIO — dívida NOMEADA, medida, e
-#: anterior a esta leva. A isenção é do ARQUIVO, com a razão do lado; é o mesmo
-#: contrato de `test_todo_gesto_que_grava_esta_protegido.ISENTOS`.
-
-
-def test_so_uma_aba_fecha_a_steam_dela_com_relogio_proprio() -> None:
+def test_toda_aba_que_fecha_a_steam_usa_o_relogio_de_confirmacao() -> None:
     """Dois relógios sobre a MESMA Steam deixam dois consentimentos pendurados.
 
     **A HISTÓRIA, e ela é curta.** Em 20/09/2026 a conferência mediu que armar
     a aba 07 e a aba 09 deixava os DOIS consentimentos de pé ao mesmo tempo —
-    cada uma com o seu `_ARMADO`, as duas chamando `with_steam_closed`. A régua
-    de então exigia o relógio de `pacotes/confirmacao` e declarava a 09 como
-    dívida. Em 21/09/2026 os botões da 07 que fechavam a Steam saíram (*"a
-    ideia é termos os mesmos botões pra todos os lançadores. sempre."*), e a
-    dívida acabou por construção: sobra UM relógio sobre a Steam dela, o da 09.
+    cada uma com o seu `_ARMADO`, as duas chamando `with_steam_closed`. Em 21/09
+    os botões da 07 saíram e sobrou um relógio, o da 09. Em 24/09 o chip
+    «Steam Input» da aba Jogar passou a fechar a Steam em dois cliques
+    (`D-2309-STEAM-INPUT-A-FRASE-E-O-CLIQUE`), e o relógio voltou a morar num
+    dono só: `pacotes/confirmacao.ARMADO`, que a 09 usa pelo mesmo objeto.
 
-    O QUE ELA COBRA AGORA: no máximo UMA aba alcança `with_steam_closed` com
-    um `_ARMADO` de módulo. A varredura é sobre os arquivos, não sobre uma
+    O QUE ELA COBRA: toda aba que alcança `with_steam_closed` arma no relógio
+    de `confirmacao` — ou não tem `_ARMADO` próprio, ou o `_ARMADO` dela É o
+    `confirmacao.ARMADO`. A varredura é sobre os arquivos, não sobre uma
     lista: a aba que nascer amanhã entra sozinha.
 
     **O RECORTE É "QUEM FECHA A STEAM", e não "quem tem `_ARMADO`."**
     `a10_perfis` tem o dela e está CERTO: ela arma o «Remover perfil», que não
     toca a Steam de ninguém.
 
-    A MORDIDA: dê a uma segunda aba um `_ARMADO` de módulo **e** uma chamada a
-    `with_steam_closed`, e ela reprova nomeando as duas. E a outra ponta: se
-    nenhuma aba fechar mais a Steam, ela reprova por não medir nada — é a hora
-    de apagá-la junto.
+    A MORDIDA: dê à 09 um `_ARMADO: dict = {}` próprio (ou à 01 um relógio
+    dela) e esta régua reprova nomeando a aba.
     """
     import importlib
     import pathlib as _pathlib
 
     pasta = _pathlib.Path(aba.__file__).parent
-    com_relogio: list[str] = []
+    fecham: list[str] = []
+    com_relogio_proprio: list[str] = []
     for arquivo in sorted(pasta.glob("a[0-9][0-9]_*.py")):
         mod = importlib.import_module(
             f"hefesto_dualsense4unix.interface.pacotes.{arquivo.stem}")
@@ -840,44 +1055,44 @@ def test_so_uma_aba_fecha_a_steam_dela_com_relogio_proprio() -> None:
                     and no.func.id == "with_steam_closed"))
             for no in ast.walk(ast.parse(inspect.getsource(mod)))
         )
-        if fecha and hasattr(mod, "_ARMADO"):
-            com_relogio.append(arquivo.name)
+        if not fecha:
+            continue
+        fecham.append(arquivo.name)
+        if getattr(mod, "_ARMADO", confirmacao.ARMADO) is not confirmacao.ARMADO:
+            com_relogio_proprio.append(arquivo.name)
 
-    assert len(com_relogio) <= 1, (
-        f"abas que fecham a Steam DELA, cada uma com o seu relógio de "
-        f"consentimento: {com_relogio}. Dois relógios sobre a MESMA Steam "
-        f"deixam dois consentimentos pendurados ao mesmo tempo")
-    assert com_relogio, (
-        "nenhuma aba fecha mais a Steam com consentimento — esta régua não "
-        "mede nada; apague-a no mesmo commit")
+    assert not com_relogio_proprio, (
+        f"abas que fecham a Steam DELA com relógio PRÓPRIO: {com_relogio_proprio}. "
+        f"Dois relógios sobre a MESMA Steam deixam dois consentimentos "
+        f"pendurados ao mesmo tempo — o relógio é `pacotes/confirmacao.ARMADO`")
+    assert {"a01_jogar.py", "a09_sistema.py"} <= set(fecham), (
+        f"as abas que fecham a Steam mudaram ({fecham}) — esta régua conta com "
+        f"a 01 e a 09; se uma saiu, reescreva-a no mesmo commit")
 
 
+def test_o_chip_e_a_aba_09_dividem_um_relogio(lar, monkeypatch) -> None:
+    """Armar o chip desarma o botão armado da 09, e vice-versa.
 
-
-def test_a_aba_jogar_nao_fecha_a_steam_porque_nao_tem_onde_perguntar(lar) -> None:
-    """**O CHIP NÃO FECHA A STEAM, e isso é medido — não esquecimento.**
-
-    A sprint (§4.2) pedia o consentimento de dois tempos também na aba Jogar.
-    Ele não alcança um chip: o chip é um `<span>` ESTÁTICO da fileira, sem
-    rótulo para trocar para «Fechar e continuar» e sem o `data-v` que só um
-    botão já armado carrega — um consentimento que ela não LÊ não é
-    consentimento.
-
-    **E NÃO PRECISA:** quem completa o vdf é o `hefesto-steam-input-guard.path`,
-    medido **active** e **enabled** na máquina dela em 20/09/2026.
-
-    A MORDIDA: chame `with_steam_closed` de qualquer ponto de `a01_jogar` e
-    esta régua reprova — a árvore do fonte é lida, não a docstring.
+    A MORDIDA: dê à 09 um `_ARMADO` próprio e a segunda metade reprova — o
+    chip armado deixa de desarmar o «Aplicar aos jogos da Steam».
     """
-    chamadas = [
-        no.lineno for no in ast.walk(_arvore(aba))
-        if isinstance(no, ast.Call) and (
-            (isinstance(no.func, ast.Attribute) and no.func.attr == "with_steam_closed")
-            or (isinstance(no.func, ast.Name) and no.func.id == "with_steam_closed"))
-    ]
-    assert not chamadas, (
-        f"a aba Jogar passou a fechar a Steam (linhas {chamadas}) — e ela não "
-        f"tem onde mostrar a pergunta nem como carregar o consentimento")
+    from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
+
+    monkeypatch.setattr(slo, "steam_running", lambda: True)
+    monkeypatch.setattr(ponte, "steam_running", lambda: True)
+    a09._ARMADO.update(gesto="aplicar-aos-jogos", ate=float("inf"))
+    assert a09._armado_agora() == "aplicar-aos-jogos"
+
+    assert aba.modo_steam(_ctx(), {}, PonteDeMentira()) == _ARMADO_NA_TELA
+    assert a09._armado_agora() != "aplicar-aos-jogos", (
+        "o chip armou e o «Aplicar aos jogos da Steam» continuou armado — dois "
+        "consentimentos pendurados sobre a mesma Steam")
+
+    a09._ARMADO.clear()
+    a09._ARMADO.update(gesto="aplicar-aos-jogos", ate=float("inf"))
+    assert aba._o_rotulo_do_chip(_ctx().state) == {
+        f'[data-gesto="{aba.GESTO_DO_STEAM_INPUT}"]': "Steam Input"}, (
+        "a 09 armou e o chip continuou dizendo «Fechar a Steam?»")
 
 
 def test_o_gesto_esta_registrado_e_declara_o_que_grava() -> None:
@@ -916,10 +1131,13 @@ def test_sem_controle_na_mesa_nenhum_botao_do_modo_acende(lar) -> None:
     assert vazio["steam-input-aceso"] == "" and vazio["modo-aceso"] == "", (
         f"sem controle na mesa o Modo acendeu: steam={vazio['steam-input-aceso']!r} "
         f"modo={vazio['modo-aceso']!r}")
+    assert vazio["pendente"] == "", "a faixa falou de um chip que a tela não acende"
 
-    ctx = _ctx()
-    ctx.mesa.append({"pref": "p1", "jogador": 1, "uniq": "aa:bb:cc:00:00:01",
-                     "transporte": "usb", "via": "USB", "cor": "", "nome": ""})
-    com_um = aba.pacote(ctx)
-    assert com_um["steam-input-aceso"] == "steam", (
-        f"com um controle na mesa o Steam Input não acendeu: {com_um['steam-input-aceso']!r}")
+    # A MATRIZ (regra dela, 23/09/2026): um no USB, um no BT, e os quatro.
+    for mesa in (MESA_DE_QUATRO[:1], MESA_DE_QUATRO[1:2], MESA_DE_QUATRO):
+        ctx = _ctx()
+        ctx.mesa.extend(dict(c) for c in mesa)
+        com = aba.pacote(ctx)
+        vias = [c["via"] for c in mesa]
+        assert com["steam-input-aceso"] == "steam", (
+            f"com {vias} na mesa o Steam Input não acendeu: {com['steam-input-aceso']!r}")

@@ -24,7 +24,7 @@ import threading
 import time
 from typing import Any, NamedTuple
 
-from . import TRAVESSAO, Contexto, jogador_de, registrar
+from . import TRAVESSAO, Contexto, confirmacao, jogador_de, registrar
 
 #: O ENDEREÇO DA RESSALVA DO CADEADO — 07/09/2026, achado pela conferência desta
 #: leva.
@@ -743,10 +743,16 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 
     # A FAIXA LARANJA NÃO FALA MAIS — 13/09/2026, JOGAR-A-FAIXA-QUE-PULA-01 §3.2.
     # A pendência continua medida pela dona (`_faixa_do_pendente`) e vai para o
-    # diário da janela; a tela recebe VAZIO nos três endereços. Os três seguem
-    # saindo em TODO tique, porque o que estava cravado na página é uma frase,
-    # e uma frase só se apaga escrevendo por cima.
+    # diário da janela. Os três endereços seguem saindo em TODO tique, porque o
+    # que estava cravado na página é uma frase, e uma frase só se apaga
+    # escrevendo por cima.
+    #
+    # A ÚNICA FRASE QUE ELA FALA é a do «Steam Input» que espera a Steam fechar
+    # — 24/09/2026, a escolha dela (`D-2309-STEAM-INPUT-A-FRASE-E-O-CLIQUE`):
+    # *"frase curta"*, e não *"sem frase"*. Ver :func:`_o_que_o_chip_diz`.
     _relatar_a_pendencia(_faixa_do_pendente(ctx.state)[0])
+    tela = _a_fileira_com_a_mesa(_estado_da_tela(ctx.state), ctx.mesa)
+    espera = _o_que_o_chip_diz(ctx.state, tela)
 
     fora: dict[str, Any] = {
         # A FRASE DA MESA e a RESSALVA DA MÁSCARA — as duas saem SEMPRE,
@@ -765,13 +771,18 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "cartoes": cartoes,
         # O INTERRUPTOR E A FILEIRA, VIVOS — 03/09/2026. Ver `_estado_da_tela`;
         # e a fileira apaga com a mesa vazia, ver `_a_fileira_com_a_mesa`.
-        **_a_fileira_com_a_mesa(_estado_da_tela(ctx.state), ctx.mesa),
-        "pendente": "",
+        **tela,
+        "pendente": espera,
         "pendente-alvo": "",
-        # O INTERRUPTOR DA FAIXA FICA APAGADO, e é ele que esconde a caixa
-        # tracejada: sem `.ha` o travessão que o piloto escreve no vazio não
-        # aparece (medido em 02/09/2026). O espaço continua reservado.
-        "pendente-ha": "",
+        # O INTERRUPTOR DA FAIXA, e é ele que esconde a caixa tracejada: sem
+        # `.ha` o travessão que o piloto escreve no vazio não aparece (medido
+        # em 02/09/2026). O espaço continua reservado, então o «Reconectar
+        # controles» não anda quando a frase acende.
+        "pendente-ha": "1" if espera else "",
+        # O RÓTULO DO CHIP «STEAM INPUT» — ele muda enquanto está armado. Ver
+        # :func:`_o_rotulo_do_chip`; sai em TODO tique para REPOR o rótulo
+        # quando o relógio vence.
+        "blocos": _o_rotulo_do_chip(ctx.state),
         # OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01. Ver
         # :func:`_html_dos_externos`.
         "externos": _html_dos_externos(ctx),
@@ -1949,7 +1960,7 @@ def _steam_input_da_tela(state: dict[str, Any]) -> str:
     | **LIGADO** | o jogo da vez está na lista dela **e** o vdf vivo diz
       diferente de `"0"` | chip aceso |
     | **PENDENTE** | na lista dela, e o vdf ainda diz `"0"` | chip **aceso**, e
-      a frase do dono na faixa de pendência (:func:`_a_ponte_que_falta`) |
+      «Liga quando a Steam fechar» na faixa (:func:`_o_que_o_chip_diz`) |
     | **DESLIGADO** | não está na lista | chip apagado |
     | **NÃO SE SABE** | sem appid, ou a vigia ainda não voltou | chip apagado |
 
@@ -1959,8 +1970,8 @@ def _steam_input_da_tela(state: dict[str, Any]) -> str:
     PONTE-STEAM-INPUT-01). Na fileira que é grupo de rádio, o chip aceso é o que
     ela ESCOLHEU: com a Steam aberta o clique no «Steam Input» voltava apagado,
     e o «cliquei e nada acendeu» é a queixa dela. A ponte que ainda não subiu
-    não some da tela — ela vai para a faixa de pendência, com a frase do dono
-    (`ponte.Estado.frase`), e o guarda do vdf completa quando a Steam fechar.
+    não some da tela — ela vai para a faixa, com a frase curta dela, e o
+    guarda do vdf completa quando a Steam fechar.
 
     E O QUARTO NÃO É BURACO: é a mesma honestidade de `painel.degrau_vivo`,
     *"acender um chip por padrão seria afirmar uma escolha que ninguém fez."*
@@ -2001,11 +2012,11 @@ def _o_jogo_na_lista(state: dict[str, Any] | None,
 def _a_ponte_que_falta(state: dict[str, Any] | None) -> str:
     """A frase do dono quando o jogo da vez está na lista e o vdf ainda não.
 
-    É o PENDENTE de :func:`_steam_input_da_tela`: o chip acende pela escolha
-    dela, e o que falta aplicar vai à faixa de pendência
-    (:func:`_faixa_do_pendente`). A frase é `ponte.Estado.frase`, guardada pela
-    vigia — ela NOMEIA o jogo e diz quando (*"Ligo assim que a Steam
-    fechar"*). Nunca bloqueia: lê o que a vigia tem.
+    É o PENDENTE de :func:`_steam_input_da_tela`, dito ao DIÁRIO da janela
+    (:func:`_faixa_do_pendente`): a frase é `ponte.Estado.frase`, guardada pela
+    vigia, e ela NOMEIA o jogo — é o que quem depura precisa ler. Na TELA vai a
+    frase curta dela (:func:`_o_que_o_chip_diz`). Nunca bloqueia: lê o que a
+    vigia tem.
     """
     dado = VIGIA_DO_STEAM_INPUT.agora()
     if dado is None or not dado.pendentes:
@@ -2014,6 +2025,37 @@ def _a_ponte_que_falta(state: dict[str, Any] | None) -> str:
     if appid is None or str(appid) not in dado.pendentes:
         return ""
     return dado.frase
+
+
+#: O QUE O CHIP DIZ ENQUANTO ESPERA — 23/09/2026, escolha dela entre «frase
+#: curta», «frase longa» e «sem frase» (`D-2309-STEAM-INPUT-A-FRASE-E-O-CLIQUE`).
+#: A longa era a do dono (`ponte.Estado.frase`), que nomeia o jogo; ela ficou no
+#: diário. Esta é a da tela, palavra por palavra.
+STEAM_INPUT_ESPERA = "Liga quando a Steam fechar"
+
+
+def _o_que_o_chip_diz(state: dict[str, Any] | None, tela: dict[str, str]) -> str:
+    """A faixa de baixo com a frase dela — `""` quando o chip não está esperando.
+
+    ELA SÓ FALA COM O CHIP ACESO, e a razão é a da própria faixa: ela diz o que
+    FALTA ao que está marcado. Com a mesa vazia a fileira apaga
+    (:func:`_a_fileira_com_a_mesa`), e fora do degrau 4 o chip não acende
+    (:func:`_estado_da_tela`) — nos dois casos a frase falaria de um botão que
+    a tela não mostra aceso. Por isso ela lê a `tela` JÁ decidida, e não o
+    disco de novo.
+
+    O QUE ELA ESPERA é o `localconfig.vdf`: o jogo está na lista dela e a Steam
+    ainda diz `"0"` para ele (:func:`_a_ponte_que_falta`). O `hefesto-steam-
+    input-guard.path` completa quando a Steam sai — ou o segundo clique no chip
+    (:func:`modo_steam`), que fecha a Steam e liga na hora.
+    """
+    if tela.get("steam-input-aceso") != CHIP_DO_STEAM_INPUT:
+        return ""
+    if not _a_ponte_que_falta(state):
+        return ""
+    from hefesto_dualsense4unix.app.actions.relancar import MARCADOR_PENDENTE
+
+    return f"{MARCADOR_PENDENTE} {STEAM_INPUT_ESPERA}"
 
 
 def _a_fileira_com_a_mesa(tela: dict[str, str], mesa: list[dict[str, Any]]) -> dict[str, str]:
@@ -2580,8 +2622,8 @@ from . import gesto  # noqa: E402
 #: (`steam_launch_options:1744`). O gesto é :func:`modo_steam`.
 #:
 #: A SEGUNDA METADE ERA VERDADE E VIROU DESENHO: ligar exige a Steam fechada, e
-#: com ela aberta o dono ADIA a escrita — o clique não pergunta nem a fecha (a
-#: razão medida está em :func:`_reconciliar_o_vdf`).
+#: com ela aberta o dono ADIA a escrita — o primeiro clique avisa, e o segundo
+#: fecha a Steam (:func:`_fechar_a_steam_e_ligar`, escolha dela de 23/09/2026).
 #:
 #: O DICIONÁRIO FICA DE PÉ, como o `a05_vibracao.SEM_DONO` vazio: ele é a
 #: gramática desta casa para *"botão que aparece e diz que ainda não tem quem o
@@ -2944,6 +2986,10 @@ def _o_clique_da_fileira(ctx: Contexto, o: dict[str, Any], p: Any,
     from .a07_lancadores import METODO_DA_RECARGA
 
     linha = o_que_o_chip_faz(chave)
+    # TODO CLIQUE NA FILEIRA DESARMA O «FECHAR A STEAM?» — o consentimento era
+    # sobre o «Steam Input» daquele jogo; outro chip é outra escolha, e um
+    # rótulo armado sobrando ali fecharia a Steam por um jogo que saiu da lista.
+    _desarmar_o_chip()
     appid, _quando = _qual_jogo(ctx.state)
     if linha.steam_input and appid is None:
         raise RuntimeError(str(format_game_broken_result(status="sem_jogo")))
@@ -3048,8 +3094,8 @@ def modo_xbox(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None
 #     steam_input_ponte.garantir_ponte                       ligar no vdf
 #     steam_input_ponte.garantir_fora_da_lista_desligado     desligar no vdf
 #     steam_input_ponte.estado_da_ponte                      ler sem tocar
-#     steam_input_ponte.Estado.frase                         a frase da tela
-#     (o consentimento de dois tempos da 07 saiu em 21/09/2026)
+#     steam_input_ponte.Estado.frase                         a frase do diário
+#     pacotes/confirmacao                                    o relógio dos dois cliques
 #     a07_lancadores.METODO_DA_RECARGA                       valer AGORA
 #
 # A confissão que ficou meses no fonte do dono
@@ -3063,12 +3109,16 @@ def modo_xbox(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None
 #      para um ato reversível ensina que todo botão pede consentimento, e aí o
 #      consentimento que importa deixa de ser lido."*
 #   3. A PONTE — reescreve o `localconfig.vdf` DELA, e para isso a Steam tem de
-#      estar fechada (ela regrava o arquivo ao sair). **Não pergunta e não fecha
-#      a Steam**: com ela aberta o dono ADIA, e o guarda do vdf completa quando
-#      ela sai (a razão medida está em `_reconciliar_o_vdf`).
+#      estar fechada (ela regrava o arquivo ao sair). Com ela aberta o dono
+#      ADIA, a faixa diz «Liga quando a Steam fechar», e o chip ARMA: o rótulo
+#      vira «Fechar a Steam?» e o SEGUNDO clique fecha a Steam, liga e a reabre.
+#      Sem o segundo clique, o guarda do vdf completa quando ela sair.
 #
-# ELA DISSE *"Pode fechar a steam"*, e isso é consentimento para a VALIDAÇÃO
-# desta leva — não licença permanente do produto.
+# FATO SUBSTITUÍDO — 24/09/2026. Aqui se dizia que o chip *"não pergunta e não
+# fecha a Steam"*, porque um `<span>` estático não tinha rótulo para trocar. Ele
+# tem: o `blocos:` troca o miolo dele como troca o dos botões armados da aba 09.
+# A decisão é dela (`D-2309-STEAM-INPUT-A-FRASE-E-O-CLIQUE`, 23/09): *"o
+# primeiro clique avisa, o segundo fecha"*.
 # ---------------------------------------------------------------------------
 #: A nota que acompanha o appid na lista dela. Ela distingue, no arquivo, o que
 #: ELA escolheu na aba Jogar do que o «Este jogo não funciona» marcou porque
@@ -3171,29 +3221,15 @@ def _reconciliar_o_vdf(alvo: str, ligar: bool) -> str:
     (`steam_input_ponte`). Nada disso se reescreve aqui, e a ORDEM DOS PORTÕES é
     a dele: jogo aberto, Steam aberta, e só então a escrita.
 
-    **ESTE GESTO NUNCA FECHA A STEAM DELA — e a razão é MEDIDA, não de gosto.**
-    A sprint pedia o consentimento de dois tempos da aba 07 (primeiro clique
-    arma, segundo fecha a Steam e escreve). Ele não alcança esta tela, e o
-    motivo está no desenho do chip (o botão da 07 saiu em 21/09/2026):
-
-    * o chip é um ``<span>`` ESTÁTICO da fileira. O botão armável é
-      redesenhado a cada tique e TROCA de rótulo para «Fechar e continuar»;
-      um chip não troca — e um consentimento que ela não LÊ não é
-      consentimento;
-    * o segundo guarda daquele consentimento exigia que o clique trouxesse
-      o ``data-v`` que **só existe no cartão já armado**. O piloto manda
-      `v: d.v || ''` (`hefesto_vivo`, o `manda_do_alvo`), lido do atributo — e
-      um ``data-v`` cravado no chip valeria para o PRIMEIRO clique, que é o
-      contrário do que o guarda existe para fazer.
-
-    **E NÃO PRECISA, porque o produto já completa sozinho.** Medido na máquina
-    dela em 20/09/2026: `hefesto-steam-input-guard.path` está **active** e
-    **enabled**, com `PathChanged=%h/.steam/steam/userdata` — ele acorda
-    exatamente quando a Steam acaba de sair, que é o único instante em que a
-    escrita sobrevive, e roda `disable_steam_input.sh --apply-quiet`. Esse
-    script zera o `UseSteamControllerConfig` de todo jogo FORA da lista dela e
-    chama `steam_input_ponte.py --ligar` para os que estão nela. **Os dois
-    sentidos, sem ninguém clicar de novo.**
+    **ESTA FUNÇÃO NUNCA FECHA A STEAM DELA.** Com a Steam aberta o dono ADIA, e
+    quem pode fechá-la é só o segundo clique no chip, já armado
+    (:func:`_fechar_a_steam_e_ligar`). Sem ele, o produto completa sozinho:
+    `hefesto-steam-input-guard.path` (**active** e **enabled** na máquina dela
+    em 20/09/2026, `PathChanged=%h/.steam/steam/userdata`) acorda quando a
+    Steam acaba de sair, que é o único instante em que a escrita sobrevive, e
+    roda `disable_steam_input.sh --apply-quiet`: ele zera o
+    `UseSteamControllerConfig` de todo jogo FORA da lista dela e liga os que
+    estão nela. **Os dois sentidos, sem ninguém clicar de novo.**
 
     **O QUE A STEAM AINDA NÃO FEZ NÃO É RECUSA** — O-MODO-QUE-NAO-SAI-DO-STEAM-
     INPUT-01, 23/09/2026. Até aqui o adiamento levantava, e a tela piscava
@@ -3279,17 +3315,24 @@ def modo_steam(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
        primeiro clique não pegou;
     2. **a ponte** — reescreve o `localconfig.vdf` DELA, e para isso a Steam tem
        de estar FECHADA (ela regrava o arquivo ao sair e engole a edição). Com
-       a Steam aberta o dono ADIA; o chip acende pela escolha dela, e a frase
-       do dono vai à faixa de pendência.
+       a Steam aberta o dono ADIA; o chip acende pela escolha dela, e a faixa
+       diz «Liga quando a Steam fechar» (:func:`_o_que_o_chip_diz`).
 
-    **ESTE GESTO NÃO FECHA A STEAM DELA, e é recuo MEDIDO** — a razão inteira
-    está em :func:`_reconciliar_o_vdf`, e o resumo é: um chip é um ``<span>``
-    estático, não tem rótulo para trocar nem ``data-v`` para carregar, e um
-    consentimento que ela não LÊ não é consentimento. Quem completa é o
-    `hefesto-steam-input-guard.path` — **active** e **enabled** na máquina dela
-    em 20/09/2026 —, que acorda quando a Steam sai e roda o
-    `disable_steam_input.sh --apply-quiet`: ele liga os jogos da lista e desliga
-    os de fora. **Os dois sentidos, sem ela clicar de novo.**
+    **O PRIMEIRO CLIQUE AVISA, O SEGUNDO FECHA** — escolha dela, 23/09/2026
+    (`D-2309-STEAM-INPUT-A-FRASE-E-O-CLIQUE`). Com a Steam aberta, sem jogo
+    aberto e o jogo ainda em `"0"`, o primeiro clique ARMA
+    (:func:`_armar_se_a_steam_segura`): o rótulo do chip vira
+    «Fechar a Steam?» por `confirmacao.SEGUNDOS_PARA_CONFIRMAR`. O segundo
+    clique traz esse rótulo — ele só existe no chip armado — e fecha a Steam,
+    liga e a reabre (:func:`_fechar_a_steam_e_ligar`). Com jogo aberto nada
+    arma: fechar a Steam derrubaria o jogo, e o guarda do vdf completa quando
+    os dois saírem.
+
+    FATO SUBSTITUÍDO — 24/09/2026. Aqui se dizia que este gesto *"não fecha a
+    Steam dela"*, por recuo medido: *"um chip é um `<span>` estático, não tem
+    rótulo para trocar"*. O `blocos:` troca o miolo dele como troca o dos
+    botões armados da aba 09 (:func:`_o_rotulo_do_chip`), e é esse rótulo, lido
+    de volta no clique, que prova que ela LEU a pergunta.
 
     **O VEREDITO É O ARQUIVO.** Nenhum desfecho verde sai daqui sem
     :func:`_o_que_o_vdf_diz` reler o vdf e confirmar. Um `status` de sucesso
@@ -3304,9 +3347,159 @@ def modo_steam(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
     do lado do clique — *não sei* dito com todas as letras, em vez de escolher
     um jogo qualquer.
     """
+    confirmado = _o_clique_que_confirma(ctx, o)
+    if confirmado:
+        return _fechar_a_steam_e_ligar(confirmado)
     recado = _o_clique_da_fileira(ctx, o, p, CHIP_DO_STEAM_INPUT)
     _gravar_o_modo_do_chip(ctx, CHIP_DO_STEAM_INPUT)
-    return recado
+    return recado or _armar_se_a_steam_segura(ctx)
+
+
+# ---------------------------------------------------------------------------
+# OS DOIS CLIQUES — 24/09/2026, D-2309-STEAM-INPUT-A-FRASE-E-O-CLIQUE
+#
+# O RELÓGIO É O DE `pacotes/confirmacao`, o mesmo da aba 09: armar o chip
+# desarma o botão armado de lá, e vice-versa. A CHAVE leva o jogo — o
+# consentimento dela é para AQUELE jogo, e o chip armado para um não fecha a
+# Steam por outro.
+# ---------------------------------------------------------------------------
+#: O RÓTULO DO CHIP ARMADO. Ele AVISA o que o segundo clique faz, na forma dos
+#: botões armados da aba 09 (`a09_sistema.CONFIRMA`, «Confirma?»), com o verbo.
+STEAM_INPUT_ARMADO = "Fechar a Steam?"
+
+
+def _chave_do_chip(appid: object) -> str:
+    """A chave do chip «Steam Input» armado para AQUELE jogo."""
+    return confirmacao.chave(PAGINA, GESTO_DO_STEAM_INPUT, appid)
+
+
+def _desarmar_o_chip() -> None:
+    """Desarma o chip, e SÓ ele: o botão armado da aba 09 não é desta fileira."""
+    if confirmacao.armado_agora().startswith(_chave_do_chip("")):
+        confirmacao.desarmar()
+
+
+def _o_rotulo_do_chip(state: dict[str, Any] | None) -> dict[str, str]:
+    """O `blocos:` do chip — «Fechar a Steam?» armado, «Steam Input» em repouso.
+
+    SAI EM TODO TIQUE, como os botões da aba 09 (`a09_sistema.blocos_dos_botoes`):
+    o gesto arma e o tique REPÕE o rótulo quando o relógio vence. O piloto só
+    reescreve o miolo quando ele muda, então o tique em repouso não custa nada
+    na página. E SÓ PERGUNTA QUAL É O JOGO QUANDO HÁ ALGO ARMADO nesta fileira —
+    em repouso, zero disco.
+
+    O RÓTULO EM REPOUSO É O DE `painel.CHIPS_DA_ESCADA` (:func:`_rotulo_do_chip`),
+    o mesmo que o gerador escreve; digitá-lo aqui seria a segunda cópia.
+    """
+    rotulo = _rotulo_do_chip(CHIP_DO_STEAM_INPUT)
+    armado = confirmacao.armado_agora()
+    if armado.startswith(_chave_do_chip("")):
+        appid, _quando = _qual_jogo(state)
+        if appid is not None and armado == _chave_do_chip(appid):
+            rotulo = STEAM_INPUT_ARMADO
+    return {f'[data-gesto="{GESTO_DO_STEAM_INPUT}"]': html.escape(rotulo)}
+
+
+def _armar_se_a_steam_segura(ctx: Contexto) -> dict[str, Any] | None:
+    """O PRIMEIRO CLIQUE AVISA — arma o chip se só a Steam aberta segura a ponte.
+
+    ARMA COM AS TRÊS CONDIÇÕES, e cada uma é pergunta ao dono, na hora:
+
+    * o vdf diz `"0"` para o jogo (:func:`_o_que_o_vdf_diz`) — a ponte ainda
+      não subiu, e fechar a Steam a faria subir. Sem o jogo no vdf (`None`),
+      fechar a Steam não muda nada, e não se oferece;
+    * a Steam está aberta (`steam_running`) — é ela que segura a escrita;
+    * NENHUM jogo aberto (`steam_game_running`) — fechar a Steam mataria o
+      jogo, e `with_steam_closed` recusaria de qualquer jeito. Oferecer um
+      segundo clique que só pode recusar é pedir consentimento para nada.
+
+    Devolve o `blocos:` com o rótulo armado, para a troca ser INSTANTÂNEA; o
+    tique também o põe (:func:`_o_rotulo_do_chip`). `None` quando não arma: a
+    piscada verde diz que a escolha dela foi anotada.
+    """
+    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+    appid, _quando = _qual_jogo(ctx.state)
+    if appid is None:
+        return None
+    alvo = str(appid)
+    if _o_que_o_vdf_diz(alvo) != _ponte_do_steam_input().DESLIGADO:
+        return None
+    if not slo.steam_running() or slo.steam_game_running():
+        return None
+    confirmacao.armar(_chave_do_chip(alvo))
+    return {"blocos": _o_rotulo_do_chip(ctx.state)}
+
+
+def _o_clique_que_confirma(ctx: Contexto, o: dict[str, Any]) -> str:
+    """O appid, se ESTE clique é o segundo — `""` se é um primeiro clique.
+
+    OS DOIS GUARDAS SÃO OS DA ABA 09 (`a09_sistema._confirmado`), e são
+    independentes:
+
+    1. o clique traz o rótulo ARMADO em `o["texto"]` — o piloto manda o
+       `textContent` do chip clicado, e «Fechar a Steam?» só existe nele depois
+       de armado. É o que prova que ela LEU a pergunta;
+    2. o relógio de `pacotes/confirmacao` está armado para ESTE jogo.
+
+    O RÓTULO SEM O RELÓGIO LEVANTA, em vez de agir ou de rearmar calado: a
+    pergunta venceu (ou o jogo da vez mudou), e o segundo clique não pode valer
+    por um consentimento que já não existe. O tique repõe «Steam Input».
+    """
+    if str(o.get("texto") or "").strip() != STEAM_INPUT_ARMADO:
+        return ""
+    appid, _quando = _qual_jogo(ctx.state)
+    armado = confirmacao.armado_agora()
+    confirmacao.desarmar()
+    if appid is None or armado != _chave_do_chip(appid):
+        raise RuntimeError(STEAM_INPUT_A_PERGUNTA_VENCEU)
+    return str(appid)
+
+
+#: A RECUSA DO SEGUNDO CLIQUE FORA DO PRAZO — a mesma forma da aba 09. Vai ao
+#: diário (TELA-CALADA-01), e o chip pisca a recusa. O número é o do relógio.
+STEAM_INPUT_A_PERGUNTA_VENCEU = (
+    f"Passaram-se mais de {int(confirmacao.SEGUNDOS_PARA_CONFIRMAR)} segundos "
+    "desde a pergunta — não fechei a Steam. Clique de novo para começar.")
+
+
+def _fechar_a_steam_e_ligar(alvo: str) -> dict[str, Any]:
+    """O SEGUNDO CLIQUE: fecha a Steam, liga o jogo no vdf e a reabre.
+
+    **NADA AQUI É MECANISMO NOVO.** `with_steam_closed` é o mesmo fluxo que o
+    «Aplicar aos jogos da Steam» da aba 09 usa: o portão de JOGO aberto vem
+    antes de tudo (fechar a Steam com jogo aberto o mata), a Steam que não fecha
+    não é editada, e a reabertura é `finally`. A escrita é `garantir_ponte`,
+    com o filtro por appid (`allowlist=[alvo]`), a mesma do primeiro clique.
+    A recusa é a frase do dono (`daemon_actions.format_steam_janela_recusa`).
+
+    A LISTA É GARANTIDA ANTES: o primeiro clique já a gravou, e um segundo
+    `add_…` devolve `ja_estava`. Sem ela, o guarda do vdf desligaria o jogo na
+    próxima saída da Steam.
+
+    **O VEREDITO É O ARQUIVO**, como no primeiro clique (:func:`_o_que_o_vdf_diz`).
+    """
+    from hefesto_dualsense4unix.app.actions.daemon_actions import (
+        format_game_broken_result,
+        format_steam_janela_recusa,
+    )
+    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+    ponte = _ponte_do_steam_input()
+    status = slo.add_appid_to_steam_input_allowlist(alvo, nota=NOTA_DA_ESCOLHA)
+    if status in ("appid_invalido", "erro"):
+        raise RuntimeError(str(format_game_broken_result(status=status, appid=alvo)))
+    try:
+        janela, _resultado = slo.with_steam_closed(
+            lambda: ponte.garantir_ponte(allowlist=[alvo]))
+        recusa = format_steam_janela_recusa(janela)
+        if recusa is not None:
+            raise RuntimeError(recusa)
+        if _o_que_o_vdf_diz(alvo) != ponte.LIGADO:
+            raise RuntimeError(STEAM_INPUT_NAO_MUDOU_O_ARQUIVO)
+    finally:
+        VIGIA_DO_STEAM_INPUT.renovar()
+    return {"blocos": _o_rotulo_do_chip(None)}
 
 
 #: O QUE A TELA DIZ QUANDO A MÁSCARA VALE E NÃO FICA GUARDADA — as duas metades
