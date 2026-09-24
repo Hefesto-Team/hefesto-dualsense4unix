@@ -86,11 +86,15 @@ def _ler_o_codigo() -> tuple[dict[str, list[str]], list[str], list[str]]:
         arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
         docs = _docstrings(arvore)
         for no in ast.walk(arvore):
+            # `Gio.BusType.SYSTEM` e também `BusType.SYSTEM`, do `BusType`
+            # importado pelo nome (a conferência de 24/09 viu este passar).
             if (
                 isinstance(no, ast.Attribute)
                 and no.attr == "SYSTEM"
-                and isinstance(no.value, ast.Attribute)
-                and no.value.attr == "BusType"
+                and (
+                    (isinstance(no.value, ast.Attribute) and no.value.attr == "BusType")
+                    or (isinstance(no.value, ast.Name) and no.value.id == "BusType")
+                )
             ):
                 barramento.append(f"{relativo}:{no.lineno}")
                 continue
