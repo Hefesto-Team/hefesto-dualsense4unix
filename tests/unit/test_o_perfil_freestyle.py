@@ -392,11 +392,12 @@ def test_o_install_profiles_de_hoje_roda_antes_e_o_dela_vence(
 ) -> None:
     """A MEDIDA DO ITEM 4: o `install.sh` chama o shell antes de qualquer Python.
 
-    O shell de hoje não conhece o nome novo: ele copia o `freestyle.json` de
-    fábrica AO LADO do `personalizado.json` dela. A primeira carga do Python
-    resolve — a fábrica intocada cede o lugar — e a lista abre com UM Freestyle,
-    o dela. O que o shell precisa para nem chegar a copiar está no relatório da
-    sprint, para quem coordena o install.
+    Desde a integração da 6c (24/09/2026) o shell recusa a fábrica quando o
+    slot dela ainda tem um nome antigo (a régua é
+    `test_o_shell_recusa_a_fabrica_ao_lado_do_nome_antigo`). Esta cena continua
+    valendo para o shell de ANTES, que ainda roda em quem atualiza por cima: a
+    primeira carga do Python resolve — a fábrica intocada cede o lugar — e a
+    lista abre com UM Freestyle, o dela.
     """
     home = tmp_path / "home"
     pasta = home / ".config" / "hefesto-dualsense4unix" / "profiles"
@@ -463,9 +464,8 @@ def test_o_install_profiles_de_hoje_no_disco_de_antes_de_05_09(
 ) -> None:
     """O shell de hoje copia a fábrica ao lado do `meu_perfil.json` também.
 
-    A recusa do shell olha só o `personalizado.json` ao lado do `meu_perfil`,
-    e o arquivo de hoje é outro. A primeira carga do Python resolve pelo mesmo
-    caminho da cena de 23/09: a fábrica intocada cede, e o dela vence.
+    Com o shell de hoje a fábrica nem é copiada (ele recusa ao ver o
+    `meu_perfil.json`); a primeira carga do Python renomeia o dela, e ele vence.
 
     MORDE: tire o `_e_o_de_fabrica_intocado` de `migrate_default_profile_name`
     e a renomeação recusa por "já existe", deixando DOIS padrões na lista.
@@ -482,6 +482,35 @@ def test_o_install_profiles_de_hoje_no_disco_de_antes_de_05_09(
     assert [p.name for p in loader.load_all_profiles()] == ["Freestyle"]
     assert _freestyle(pasta)["controllers"] == QUATRO
     assert (pasta / loader.BACKUP_DO_PADRAO).is_file()
+
+
+@pytest.mark.parametrize("nome_antigo", ["meu_perfil.json", "personalizado.json"])
+def test_o_shell_recusa_a_fabrica_ao_lado_do_nome_antigo(
+    tmp_path: Path, nome_antigo: str,
+) -> None:
+    """O `install_profiles.sh` espelha o `loader._o_slot_dela_tem_nome_antigo`.
+
+    Com o padrão dela ainda sob um nome antigo, a fábrica `freestyle.json` não é
+    copiada: fica registrada no `.seeded_presets` e quem renomeia é o Python.
+    Sem a recusa, um padrão que ela RENOMEOU (o desfecho
+    `nome_mudado_pela_usuaria`) ganharia um Freestyle de fábrica ao lado.
+
+    MORDE: devolva ao shell a recusa só do `personalizado.json` ao lado do
+    `meu_perfil.json` e as duas células reprovam.
+    """
+    home = tmp_path / "home"
+    pasta = home / ".config" / "hefesto-dualsense4unix" / "profiles"
+    pasta.mkdir(parents=True)
+    (pasta / nome_antigo).write_text(
+        json.dumps(dict(PERFIL_DELA, name="Sofá"), ensure_ascii=False) + "\n",
+        encoding="utf-8")
+
+    feito = _install_profiles(home)
+
+    assert feito.returncode == 0, feito.stderr
+    assert not (pasta / loader.ARQUIVO_DO_PADRAO).exists(), feito.stdout
+    assert loader.ARQUIVO_DO_PADRAO in (pasta / ".seeded_presets").read_text(
+        encoding="utf-8").splitlines()
 
 
 def test_o_personalizado_que_ela_renomeou_nao_ganha_um_freestyle_ao_lado(

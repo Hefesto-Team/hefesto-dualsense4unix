@@ -5,9 +5,10 @@
 #   - Se o diretório de perfis estiver VAZIO (primeira instalação), copia
 #     todos os JSONs de assets/profiles_default/.
 #   - Se já houver perfis (reinstalação), NÃO sobrescreve nenhum existente.
-#   - EXCEÇÃO: personalizado.json é sempre copiado SE AUSENTE (slot do usuário
+#   - EXCEÇÃO: freestyle.json é sempre copiado SE AUSENTE (slot do usuário
 #     deve sempre existir), mas nunca sobrescrito se já existe — e nunca
-#     copiado quando o meu_perfil.json antigo ainda ocupa o slot dela.
+#     copiado quando um nome antigo (meu_perfil.json, personalizado.json) ainda
+#     ocupa o slot dela.
 #
 # Uso:
 #   ./scripts/install_profiles.sh [ROOT_DIR]
@@ -54,12 +55,13 @@ for src in "${SRC_DIR}"/*.json; do
     if grep -qxF "${fname}" "${MARKER}"; then
         continue
     fi
-    # PERFIL-PADRAO-PERSONALIZADO-01: o slot dela já existe sob o nome antigo.
-    # Copiar aqui daria a ela DOIS catch-all disputando o controle. Registra
-    # sem copiar; quem renomeia é `loader.migrate_default_profile_name`.
-    # Espelha a mesma recusa em `profiles/loader.py:seed_default_presets` — o
-    # marker é contrato compartilhado entre os dois semeadores.
-    if [[ "${fname}" == "personalizado.json" && -f "${DEST_DIR}/meu_perfil.json" ]]; then
+    # PERFIL-PADRAO-PERSONALIZADO-01 e O-MODO-FREESTYLE-02: o slot dela já
+    # existe sob um nome antigo. Copiar aqui daria a ela DOIS catch-all
+    # disputando o controle. Registra sem copiar; quem renomeia é
+    # `loader.migrate_default_profile_name`. Espelha a mesma recusa em
+    # `profiles/loader.py:_o_slot_dela_tem_nome_antigo` — o marker é contrato
+    # compartilhado entre os dois semeadores.
+    if [[ "${fname}" == "freestyle.json" && ( -f "${DEST_DIR}/meu_perfil.json" || -f "${DEST_DIR}/personalizado.json" ) ]]; then
         printf '%s\n' "${fname}" >> "${MARKER}"
         continue
     fi
@@ -70,8 +72,8 @@ for src in "${SRC_DIR}"/*.json; do
     fi
     cp -f "${src}" "${dest}"
     printf '%s\n' "${fname}" >> "${MARKER}"
-    if [[ "${fname}" == "personalizado.json" ]]; then
-        printf '      copiado: personalizado.json (slot do usuário criado)\n'
+    if [[ "${fname}" == "freestyle.json" ]]; then
+        printf '      copiado: freestyle.json (slot do usuário criado)\n'
     else
         printf '      copiado: %s\n' "${fname}"
     fi
