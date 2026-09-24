@@ -37,3 +37,22 @@ seção daqui**: a aba deixou de estar em trabalho.
   há perfil valendo do boot ao primeiro jogo — o topo diz «—» e as abas 02 a 08
   recusam o ajuste. Quem publicar decide essa linha com a resposta dela no mesmo
   commit (`test_o_modo_freestyle.test_a_saida_espera_a_sessao_dela`).
+
+## 02-controles.html
+- **24/09/2026** — A-MIRA-NA-NAVEGACAO-01, esperando a sessão dela. O chip
+  «Mira Virtual» (no Nativo) e o «Nativo» do microfone (no BT) passam a avisar
+  o leitor de tela quando ficam cinza (`aria-disabled`); o aceso de cada um
+  desceu para um invólucro sem caixa, e nenhum pixel muda (medido contra a
+  publicada, número a número). A legenda ganha três itens de 24/09. Enquanto
+  ela não publicar, o produto continua cinza só para quem enxerga; a dica do
+  Giroscópio com o cursor, o «fluindo» que some com o Giroscópio desligado e a
+  cor no Nativo já valem na publicada, porque quem os pinta é o pacote.
+
+## 04-iluminacao.html
+- **24/09/2026** — A-MIRA-NA-NAVEGACAO-01, esperando a sessão dela. A dica do
+  «Jogador» troca «Um jogo em co-op pode mandar o próprio número por cima.»
+  por «O número é do Hefesto: se um jogo o trocar, ele volta em até um
+  segundo.» (a STEAM-NO-FISICO-01 derrubou o fato), e a bancada parada nasce
+  com a tira do Nativo em cor. Enquanto ela não publicar, a dica da publicada
+  diz a frase velha; a tira em cor no Nativo já vale na publicada, porque quem
+  a pinta é o pacote.
