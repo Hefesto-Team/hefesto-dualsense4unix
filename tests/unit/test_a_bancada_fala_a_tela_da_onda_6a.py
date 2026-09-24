@@ -218,6 +218,84 @@ class _NoDeLed:
         return None
 
 
+def _controle_com_o_jogo() -> bp.PyDualSenseController:
+    """Um controle de verdade do backend, com o jogo na autoridade e o nó de mentira."""
+    ctl = bp.PyDualSenseController()
+    ctl._handles = {_MAC: SimpleNamespace(
+        triggerL=DSTrigger(), triggerR=DSTrigger(), light=DSLight(), audio=DSAudio(),
+        _raw_trigger_left=None, _raw_trigger_right=None)}
+    ctl._sysfs = {_MAC: _NoDeLed()}
+    ctl.set_game_authority_provider(lambda: "game")
+    return ctl
+
+
+def _replicas() -> dict[str, str]:
+    replicas = {t: c for t, c in _secoes().items() if t.startswith("mapa-luz.replica_output_jogo-")}
+    assert len(replicas) == 2, f"as duas células da réplica sumiram: {sorted(replicas)}"
+    return replicas
+
+
+def test_o_perfil_novo_ativado_a_mao_devolve_a_barra_ao_jogo() -> None:
+    """O gesto novo da réplica PODE passar — pela ativação de verdade.
+
+    A régua de baixo prova que o gesto velho nunca passaria; esta prova a outra
+    metade. A cor que ela clicou na coluna (a camada da usuária) só se solta com
+    a troca MANUAL de perfil (`ProfileManager.apply`, `origin="manual"`), e o
+    perfil que nasce do «Novo» (`a10_perfis._nascer`: nome, regra e prioridade,
+    mais nada) não traz cor própria em controle nenhum. Com as duas coisas, a
+    cor do jogo passa. Por isso o gesto ATIVA o perfil novo antes de abrir o
+    jogo — deixar a troca automática fazê-lo manteria a cor clicada.
+
+    MORDIDA (premissa): troque `origin="manual"` por `"auto"` e a régua
+    reprova. MORDIDA (gesto): tire o «Ativar» de antes do «Abra o jogo».
+    """
+    from hefesto_dualsense4unix.profiles.manager import ProfileManager
+    from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
+
+    ctl = _controle_com_o_jogo()
+    ctl.apply_output_for(_UNIQ, OutputSpec(led=_AMARELO))
+    ProfileManager(controller=ctl).apply(
+        Profile(name="Teste da réplica", match=MatchAny(), priority=11),
+        origin="manual")
+    ctl.set_game_output_for(_MAC, led=_COR_DO_JOGO)
+    with ctl._io_lock:
+        assert ctl._merged_desired_for_key(_MAC).led == _COR_DO_JOGO, (
+            "o perfil novo ativado à mão não devolveu a barra ao jogo — a premissa "
+            "do gesto da réplica caiu")
+
+    erradas = []
+    for titulo, corpo in _replicas().items():
+        antes = _campo(corpo, "Os passos.").split("Abra o jogo", 1)[0]
+        depois_do_novo = antes.split("«Novo»", 1)[-1]
+        if "«Novo»" not in antes or "«Ativar»" not in depois_do_novo:
+            erradas.append(titulo.split(" — ")[0])
+    assert not erradas, f"réplicas que não ativam o perfil novo antes do jogo: {erradas}"
+
+
+def test_a_replica_termina_apagando_o_perfil_novo_de_verdade() -> None:
+    """O «Remover» pergunta antes, e o gesto manda dar o segundo clique.
+
+    O perfil do «Novo» vale para tudo e nasce ACIMA dos que valem sempre
+    (`_prioridade_acima_dos_catch_all`): esquecido no disco, ele passa a valer
+    no lugar do perfil dela em toda janela sem jogo. O primeiro clique no
+    «Remover» só ARMA; quem apaga é o segundo, dentro do prazo do dono
+    (`a10_perfis.SEGUNDOS_PARA_CONFIRMAR`).
+
+    MORDIDA: tire o «clique nele de novo» do último passo e a régua reprova.
+    """
+    import pacotes.a10_perfis as a10
+
+    assert a10.SEGUNDOS_PARA_CONFIRMAR > 0, (
+        "o «Remover» deixou de perguntar — a premissa desta régua caiu")
+    erradas = []
+    for titulo, corpo in _replicas().items():
+        passos = [p for p in _campo(corpo, "Os passos.").splitlines() if p.strip()]
+        ultimo = passos[-1] if passos else ""
+        if "«Remover»" not in ultimo or "de novo" not in ultimo:
+            erradas.append(titulo.split(" — ")[0])
+    assert not erradas, f"réplicas que deixam o perfil novo no disco: {erradas}"
+
+
 def test_a_replica_nao_escolhe_antes_a_cor_do_controle_que_mede() -> None:
     """A réplica da cor do jogo se mede num controle cuja cor ninguém escolheu.
 
@@ -231,12 +309,7 @@ def test_a_replica_nao_escolhe_antes_a_cor_do_controle_que_mede() -> None:
     MORDIDA: devolva à réplica o «Clique no quadradinho amarelo» antes do
     «Abra o jogo» e a régua reprova com a célula.
     """
-    ctl = bp.PyDualSenseController()
-    ctl._handles = {_MAC: SimpleNamespace(
-        triggerL=DSTrigger(), triggerR=DSTrigger(), light=DSLight(), audio=DSAudio(),
-        _raw_trigger_left=None, _raw_trigger_right=None)}
-    ctl._sysfs = {_MAC: _NoDeLed()}
-    ctl.set_game_authority_provider(lambda: "game")
+    ctl = _controle_com_o_jogo()
     ctl.apply_output_for(_UNIQ, OutputSpec(led=_AMARELO))
     ctl.set_game_output_for(_MAC, led=_COR_DO_JOGO)
     with ctl._io_lock:
@@ -244,10 +317,8 @@ def test_a_replica_nao_escolhe_antes_a_cor_do_controle_que_mede() -> None:
             "a cor do jogo venceu a cor clicada — a premissa desta régua caiu, e a "
             "réplica pode voltar a partir de uma cor escolhida")
 
-    replicas = {t: c for t, c in _secoes().items() if t.startswith("mapa-luz.replica_output_jogo-")}
-    assert len(replicas) == 2, f"as duas células da réplica sumiram: {sorted(replicas)}"
     erradas = []
-    for titulo, corpo in replicas.items():
+    for titulo, corpo in _replicas().items():
         passos = _campo(corpo, "Os passos.")
         antes = passos.split("Abra o jogo", 1)[0]
         if "Abra o jogo" not in passos or "quadradinho" in antes or "«Novo»" not in antes:
