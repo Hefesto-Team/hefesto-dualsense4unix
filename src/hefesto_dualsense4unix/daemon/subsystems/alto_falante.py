@@ -1159,6 +1159,75 @@ class AltoFalanteSubsystem:
             return None
         return lambda: True
 
+    def _renovar_o_rotulo_da_haptica(self, uniq: str, endpoint: Any) -> None:
+        """O «Háptica do Controle N» segue o assento — e NUNCA com jogo aberto.
+
+        A-HAPTICA-TEM-NOME-DE-CONTROLE-01, 24/09/2026. A regra de QUANDO o
+        rótulo envelhece é a do alto-falante
+        (``dualsense_bt_audio.rotulo_envelheceu``), e renomear é republicar
+        (``EndpointDeHaptica.renovar_o_rotulo``). O que muda aqui é a guarda, e
+        ela é mais dura que a do nó do som, porque este nó é o que a háptica do
+        jogo usa:
+
+        * **o jogo tocando no nó**, ou a ponte deste controle em modo háptica —
+          a mesma guarda da troca de âncora, com o servidor mudo contando como
+          *"toca"*;
+        * **qualquer jogo aberto na máquina** (``quem_o_jogo_le.pids_de_jogo``).
+          Republicar tira o endpoint e o devolve, e o GE conta cada entrada e
+          saída de endpoint Sony como hotplug — o gatilho que remira a háptica
+          do jogo aberto (``vestido_de_dualsense``, patch 0015). Entre o jogo
+          enumerar o endpoint e abrir o primeiro stream não há sink-input para
+          ver, e é a janela que a troca de âncora declara como limite. Um nome
+          uma partida atrasado custa um número velho numa lista; o endpoint
+          sumindo debaixo do jogo custa a vibração.
+
+        Nunca levanta, e só pergunta alguma coisa ao servidor ou ao ``/proc``
+        quando o rótulo de fato envelheceu — o caso raro, no assento que anda.
+        """
+        envelheceu = getattr(endpoint, "rotulo_envelheceu", None)
+        renovar = getattr(endpoint, "renovar_o_rotulo", None)
+        if not callable(envelheceu) or not callable(renovar):
+            return
+        try:
+            if not envelheceu():
+                return
+            if self._a_haptica_esta_em_uso(uniq, endpoint):
+                logger.debug("haptica_rotulo_velho_espera_o_jogo_fechar", uniq=uniq)
+                return
+            renovar()
+        except Exception:  # nunca derruba a volta
+            logger.debug("haptica_rotulo_nao_renovou", uniq=uniq, exc_info=True)
+        # NEM A VOLTA SUBIU: o nó não está no servidor, e quem nasce é a
+        # próxima volta, pelo caminho de sempre — guardá-lo aqui o deixaria de
+        # fora para sempre, porque o laço só cria endpoint para quem não tem.
+        if getattr(endpoint, "module_id", "") is None:
+            self._endpoints.pop(uniq, None)
+
+    def _a_haptica_esta_em_uso(self, uniq: str, endpoint: Any) -> bool:
+        """Há jogo usando — ou podendo usar — o endpoint de háptica agora?"""
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import (
+            sink_esta_tocando,
+        )
+
+        if uniq in self._pontes and self._modo_da_ponte.get(uniq) == "haptica":
+            return True
+        if sink_esta_tocando(str(getattr(endpoint, "nome", "") or ""), na_duvida=True):
+            return True
+        return self._ha_jogo_aberto()
+
+    def _ha_jogo_aberto(self) -> bool:
+        """Algum processo da máquina é um jogo, pelo ambiente e não pelo nome.
+
+        É a pergunta de ``quem_o_jogo_le.pids_de_jogo`` — a mesma que decide quem
+        vibra —, e ela não depende de lista de jogos nem de lançador.
+        """
+        from hefesto_dualsense4unix.integrations.quem_o_jogo_le import pids_de_jogo
+
+        try:
+            return bool(pids_de_jogo())
+        except Exception:  # pragma: no cover - defensivo: na dúvida, há jogo
+            return True
+
     def _avisar_ancoras_que_faltam(self, faltam: int, controles: int) -> None:
         """O controle no rádio sem âncora USB fica sem vibração — e diz isso.
 
@@ -1308,7 +1377,14 @@ class AltoFalanteSubsystem:
             posta = postas.get(uniq)
             atual = self._endpoints.get(uniq)
             if atual is not None:
-                if posta is None or posta.syspath == atual.ancora.syspath:
+                if posta is None:
+                    continue
+                if posta.syspath == atual.ancora.syspath:
+                    # A ÂNCORA É A MESMA, E O RÓTULO PODE TER ENVELHECIDO —
+                    # A-HAPTICA-TEM-NOME-DE-CONTROLE-01, 24/09/2026: o
+                    # «Háptica do Controle N» acompanha o assento, e só renasce
+                    # sem jogo aberto (`_renovar_o_rotulo_da_haptica`).
+                    self._renovar_o_rotulo_da_haptica(uniq, atual)
                     continue
                 # O APARELHO DA ÂNCORA SAIU DO BARRAMENTO: o nó declara um
                 # caminho que o Wine já não resolve, e o próximo jogo não casa
