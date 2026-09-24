@@ -707,6 +707,39 @@ def no_alcancavel(no: str) -> bool:
         return True
 
 
+def firma_do_no(no: str) -> tuple[int, int] | None:
+    """A FIRMA do nó: ``(st_ino, st_ctime_ns)``, ou ``None`` se ele não existe.
+
+    **POR QUE `no_alcancavel` NÃO BASTA** (conferência de 23/09/2026). O
+    `access(2)` responde *"alguém consegue abrir este nó AGORA?"*, e a pergunta
+    da vigia é outra: *"alguém SEGURA este nó?"*. A sprint mediu a diferença,
+    e ela é o defeito inteiro: *"Esconder depois (tirar a ACL) não fecha um
+    descritor já aberto"*. A Steam que abre o nó na janela em que ele está
+    exposto (a regra udev desligada por ``--no-fechar-o-no``, ou a exposição
+    que o `_open_one` pede para o `hidapi`) continua com o fd depois que o
+    broker fecha — e o nó fechado responde "inalcançável". Uma vigia que só
+    varresse com o nó alcançável nunca veria esse sequestro.
+
+    O ``ctime`` é o que fecha o buraco sem pagar varredura em regime: todo
+    fechamento e toda exposição do broker é um ``chmod`` + ``xattr`` NO NÓ, e os
+    dois mexem no ``ctime``; nó recriado (replug, mesmo ``hidrawN``) ganha
+    inode e ``ctime`` novos. Logo, **todo fd aberto numa janela foi aberto
+    antes da mudança de firma que fechou a janela**, e uma varredura depois
+    dela o vê. Medido em 23/09/2026 na máquina dela, só com ``stat``: o
+    ``ctime`` do ``/dev/hidraw5`` anda a cada 30 s (o ``rehide`` de cada
+    reconciliação) e fica parado entre dois — escrever e ler no nó não o move.
+
+    Custa um ``stat`` (sem abrir o nó, sem permissão sobre ele). Nó que não
+    existe devolve ``None``: ninguém segura um nó que não está lá, e a vigia
+    não varre por ele.
+    """
+    try:
+        st = os.stat(no)
+    except OSError:
+        return None
+    return (int(st.st_ino), int(st.st_ctime_ns))
+
+
 @dataclass(frozen=True)
 class PassoDaVigia:
     """O que um passo da vigia viu — uma FOTO, como o `Veredito`."""
@@ -743,15 +776,25 @@ class VigiaDoSequestro:
     de rádio, contra ~800 reports/s de uma mesa cheia), e ele só existe
     enquanto houver sequestrador.
 
-    **QUANDO ELA VARRE.** Nó fechado e nenhum sequestrador conhecido: nunca —
-    ninguém da sessão consegue abrir um nó `0600 root`. Nó alcançável: a cada
-    `INTERVALO_DA_SONDA_S`. Sequestro conhecido: a cada
-    `INTERVALO_DA_SONDA_COM_SEQUESTRO_S`, só para saber quando acabou; entre
-    duas varreduras, o PID que morreu solta o nó na hora (um `stat`).
+    **QUANDO ELA VARRE.** Uma vez a cada mudança de FIRMA do nó
+    (:func:`firma_do_no`): o nó que a vigia ainda não viu, o nó recriado, e
+    todo nó cuja permissão o broker mexeu — é assim que o fd aberto numa
+    janela de exposição é visto depois de a janela fechar, com o nó já
+    `0600 root`. Nó alcançável: a cada `INTERVALO_DA_SONDA_S`. Sequestro
+    conhecido: a cada `INTERVALO_DA_SONDA_COM_SEQUESTRO_S`, só para saber
+    quando acabou; entre duas varreduras, o PID que morreu solta o nó na hora
+    (um `stat`). Nó fechado, firma parada e ninguém segurando: nunca.
+
+    **CORREÇÃO DE FATO (conferência de 23/09/2026).** A primeira versão dizia
+    "nó fechado e nenhum sequestrador conhecido: nunca" e só varria com o nó
+    alcançável — e ficava cega exatamente ao mecanismo da sprint, a Steam que
+    abriu o nó ANTES de o broker fechar. Com a firma, o preço em regime é o da
+    cadência do broker: na máquina dela, uma varredura (~11 ms) por
+    reconciliação de 30 s.
 
     Não lê relógio nem `/proc` por conta própria: tudo entra por injeção
-    (`sonda`, `alcancavel`, `vivo`), como no sentinela. É o que deixa exercitar
-    minutos de vigia em microssegundos de teste.
+    (`sonda`, `alcancavel`, `vivo`, `firma`), como no sentinela. É o que deixa
+    exercitar minutos de vigia em microssegundos de teste.
     """
 
     def __init__(
@@ -760,6 +803,7 @@ class VigiaDoSequestro:
         sonda: Sonda | None = None,
         alcancavel: Callable[[str], bool] | None = None,
         vivo: Callable[[int], bool] | None = None,
+        firma: Callable[[str], object | None] | None = None,
         intervalo_da_sonda_s: float = INTERVALO_DA_SONDA_S,
         intervalo_com_sequestro_s: float = INTERVALO_DA_SONDA_COM_SEQUESTRO_S,
         intervalo_da_reafirmacao_s: float = INTERVALO_DA_REAFIRMACAO_S,
@@ -767,6 +811,13 @@ class VigiaDoSequestro:
         self._sonda: Sonda = sonda if sonda is not None else escritores_crus_alheios
         self._alcancavel = alcancavel if alcancavel is not None else no_alcancavel
         self._vivo = vivo if vivo is not None else processo_vivo
+        self._firma: Callable[[str], object | None] = (
+            firma if firma is not None else firma_do_no
+        )
+        #: nó -> a firma que ele tinha quando a última varredura BEM-SUCEDIDA
+        #: começou. Firma diferente = a permissão mudou ou o nó é outro, e um fd
+        #: pode ter entrado pela janela: vale uma varredura.
+        self._firma_sondada: dict[str, object] = {}
         self._intervalo_da_sonda_s = float(intervalo_da_sonda_s)
         self._intervalo_com_sequestro_s = float(intervalo_com_sequestro_s)
         self._intervalo_da_reafirmacao_s = float(intervalo_da_reafirmacao_s)
@@ -810,6 +861,8 @@ class VigiaDoSequestro:
             n for n in alvos if n not in self._por_no and self._alcancavel(n)
         ]
         self._vigilante = bool(abertos_sem_dono or self._por_no)
+        if self._firmas_mudaram(alvos):
+            return True
         if not self._vigilante:
             return False
         if self._sondado_em is None:
@@ -835,6 +888,9 @@ class VigiaDoSequestro:
         alvos = sorted({str(n) for n in nos if n})
         sondou = False
         if sondar and alvos:
+            # A firma é lida ANTES da varredura: se o broker mexer no nó durante
+            # ela, a firma gravada é a velha e o passo seguinte varre de novo.
+            firmas = {n: self._firma(n) for n in alvos}
             try:
                 bruto = self._sonda(alvos)
             except Exception as exc:  # sonda é best-effort por contrato
@@ -842,6 +898,9 @@ class VigiaDoSequestro:
             else:
                 sondou = True
                 self._sondado_em = agora
+                self._firma_sondada = {
+                    n: f for n, f in firmas.items() if f is not None
+                }
                 self._por_no = {
                     str(no): tuple(p for p in (int(x) for x in pids) if self._vivo(p))
                     for no, pids in dict(bruto).items()
@@ -889,12 +948,22 @@ class VigiaDoSequestro:
         }
         self._por_no = {no: pids for no, pids in vivos.items() if pids}
 
+    def _firmas_mudaram(self, alvos: set[str]) -> bool:
+        """Algum nó existente mudou de firma desde a última varredura? Um `stat` cada."""
+        for no in alvos:
+            firma = self._firma(no)
+            if firma is not None and firma != self._firma_sondada.get(no):
+                return True
+        return False
+
     def _esquecer_fora(self, alvos: set[str]) -> None:
         """Nó que saiu da mesa (desconexão, replug com outro número) sai da foto."""
         for no in [n for n in self._por_no if n not in alvos]:
             del self._por_no[no]
         for no in [n for n in self._reafirmado_em if n not in alvos]:
             del self._reafirmado_em[no]
+        for no in [n for n in self._firma_sondada if n not in alvos]:
+            del self._firma_sondada[no]
 
 
 __all__ = [
@@ -914,6 +983,7 @@ __all__ = [
     "Veredito",
     "VigiaDoSequestro",
     "escritores_crus_alheios",
+    "firma_do_no",
     "holders_de_hidraw",
     "holders_de_hidraw_de_qualquer_um",
     "invalidar_pids_da_steam",

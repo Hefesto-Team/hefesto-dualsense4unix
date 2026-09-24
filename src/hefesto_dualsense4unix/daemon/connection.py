@@ -1239,10 +1239,10 @@ async def vigiar_o_sequestro(
     número e a barra são do Hefesto. O que sai é o report mínimo — a vibração,
     os gatilhos e o áudio continuam do jogo.
 
-    **CUSTO EM REPOUSO: zero varredura.** Com a regra udev da cura
-    (O-NO-NASCE-FECHADO-01) o nó do físico é `0600 root` e ninguém da sessão
-    o abre; a vigia pergunta isso com um `access(2)` por nó (~0,4 µs) e não
-    varre `/proc`. Ela só acorda com nó alcançável ou sequestrador conhecido.
+    **CUSTO EM REPOUSO: um `stat` e um `access(2)` por nó**, e UMA varredura
+    de `/proc` (~11 ms) a cada mudança de permissão do nó — o fd aberto numa
+    janela de exposição é visto depois de ela fechar (`firma_do_no`). Na
+    máquina dela, é uma por reconciliação de 30 s, a do `rehide`.
 
     Devolve quantos controles tiveram a barra reescrita. Best-effort: nada
     aqui pode derrubar o laço de reconexão.
@@ -1553,6 +1553,10 @@ async def _wait_online_or_hotplug(
     reafirmar uma cor não é motivo para reconciliar hotplug, e devolver True
     aqui faria o chamador logar uma mudança de `/dev/input` que não houve.
     """
+    # STEAM-NO-FISICO-01: a vigia olha UMA vez antes de dormir. O rehide acabou
+    # de mexer na permissão do nó (a firma mudou), e o fd que entrou pela janela
+    # de exposição é visto agora — não depois da primeira fatia de 2 s.
+    await vigiar_o_sequestro(daemon)
     elapsed = 0.0
     while elapsed < RECONNECT_ONLINE_CHECK_INTERVAL_SEC:
         step = min(
@@ -1561,11 +1565,7 @@ async def _wait_online_or_hotplug(
         )
         if registro_de_gatilhos_de(daemon).algum_armado():
             step = min(step, PASSO_ENQUANTO_O_GATILHO_ESTA_ARMADO_SEC)
-        # STEAM-NO-FISICO-01: com um nó sequestrado (ou alcançável por
-        # qualquer processo da sessão) a fatia encolhe para meio segundo — é o
-        # que faz «corrigir em até um segundo» caber na conta. Em repouso, com
-        # o nó fechado pela regra udev, a vigia não pede nada e a fatia é a
-        # de sempre.
+        # E a fatia encolhe para meio segundo com nó sequestrado ou alcançável.
         if vigia_do_sequestro_de(daemon).vigilante:
             step = min(step, PASSO_DA_VIGIA_S)
         await _wait_or_stop(daemon, step)

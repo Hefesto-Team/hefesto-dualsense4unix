@@ -19,7 +19,9 @@ AS MORDIDAS, exercidas uma a uma e devolvidas: (1) a vigia sem a reescrita
 periódica (só na borda) deixa um buraco de mais de um segundo; (2) o
 `reafirmar_barra_e_numero` com o portão do `_output_mute` cala o Modo Nativo;
 (3) a fatia que não encolhe deixa o laço dormir dois segundos com o nó
-sequestrado.
+sequestrado; (4) sem a FIRMA do nó, a vigia que só varre com o nó alcançável
+nunca vê o fd que a Steam abriu ANTES de o broker fechar — o mecanismo inteiro
+da sprint (conferência de 23/09/2026).
 """
 from __future__ import annotations
 
@@ -73,6 +75,9 @@ class _Mesa:
         self.vivos: set[int] = set()
         self.sondas = 0
         self.falhar = False
+        #: nó -> firma (inode, ctime). Todo nó da mesa existe e nasce com uma;
+        #: `mexer` é o broker fechando/expondo (o `chmod` anda o ctime).
+        self.firmas: dict[str, tuple[int, int]] = {}
 
     def sonda(self, nos: Any) -> dict[str, list[int]]:
         self.sondas += 1
@@ -86,6 +91,13 @@ class _Mesa:
     def vivo(self, pid: int) -> bool:
         return pid in self.vivos
 
+    def firma(self, no: str) -> tuple[int, int]:
+        return self.firmas.setdefault(no, (int(no.rsplit("hidraw", 1)[-1]), 0))
+
+    def mexer(self, no: str) -> None:
+        ino, ctime = self.firma(no)
+        self.firmas[no] = (ino, ctime + 1)
+
     def segurar(self, no: str, pid: int) -> None:
         self.donos.setdefault(no, []).append(pid)
         self.vivos.add(pid)
@@ -96,7 +108,7 @@ class _Mesa:
 
 def _vigia(mesa: _Mesa) -> ec.VigiaDoSequestro:
     return ec.VigiaDoSequestro(
-        sonda=mesa.sonda, alcancavel=mesa.alcancavel, vivo=mesa.vivo
+        sonda=mesa.sonda, alcancavel=mesa.alcancavel, vivo=mesa.vivo, firma=mesa.firma
     )
 
 
@@ -108,8 +120,9 @@ def _passo(vigia: ec.VigiaDoSequestro, nos: list[str], agora: float) -> ec.Passo
 
 
 class TestEmRepousoNaoCustaNada:
-    def test_no_fechado_e_ninguem_segurando_nao_varre(self) -> None:
-        """Com a regra udev da cura, o nó é `0600 root`: ninguém NOVO entra."""
+    def test_no_fechado_e_ninguem_segurando_varre_uma_vez_so(self) -> None:
+        """Com a regra udev da cura, o nó é `0600 root`: ninguém NOVO entra.
+        A vigia olha UMA vez, na primeira vista, e depois só com a firma nova."""
         mesa = _Mesa()
         vigia = _vigia(mesa)
 
@@ -117,8 +130,36 @@ class TestEmRepousoNaoCustaNada:
             passo = _passo(vigia, [NO_1, NO_2], passo_n * 2.0)
             assert passo.a_reafirmar == ()
 
-        assert mesa.sondas == 0
+        assert mesa.sondas == 1
         assert vigia.vigilante is False
+
+    def test_no_que_nao_existe_nao_custa_varredura(self) -> None:
+        """Firma `None` (o nó sumiu): ninguém segura o que não está lá."""
+        mesa = _Mesa()
+        vigia = ec.VigiaDoSequestro(
+            sonda=mesa.sonda, alcancavel=mesa.alcancavel, vivo=mesa.vivo,
+            firma=lambda _no: None,
+        )
+
+        for passo_n in range(5):
+            _passo(vigia, [NO_1], passo_n * 2.0)
+
+        assert mesa.sondas == 0
+
+    def test_a_firma_real_anda_com_o_chmod(self, tmp_path: Any) -> None:
+        """`firma_do_no` pergunta ao kernel (`stat`): o `chmod` do broker anda
+        o ctime, e o nó que não existe não tem firma."""
+        no = tmp_path / "hidraw-de-mentira"
+        no.write_bytes(b"")
+        antes = ec.firma_do_no(str(no))
+        assert antes is not None
+        assert ec.firma_do_no(str(no)) == antes
+        no.chmod(0o600)
+        depois = ec.firma_do_no(str(no))
+        assert depois is not None and depois[0] == antes[0]
+        if depois == antes:
+            pytest.skip("o relógio do sistema de arquivos não andou entre os dois stat")
+        assert ec.firma_do_no(str(tmp_path / "nao-existe")) is None
 
     def test_no_real_fechado_e_inalcancavel(self, tmp_path: Any) -> None:
         """`no_alcancavel` pergunta ao kernel (`access(2)`), sem abrir nada."""
@@ -169,6 +210,38 @@ class TestOSequestroVisto:
         assert len(reescritas) >= 10
         assert max(intervalos) <= 1.0 + 1e-9, intervalos
         assert vigia.reescritas(NO_1) == len(reescritas)
+
+    def test_o_fd_aberto_antes_de_o_no_fechar_e_visto_na_primeira_olhada(
+        self,
+    ) -> None:
+        """A MORDIDA (4), e é o mecanismo da sprint: a Steam abriu o nó na janela
+        em que ele estava exposto, o broker fechou (`0600`), e a vigia olha só
+        DEPOIS. `access(2)` responde «inalcançável» — e a Steam segura o fd."""
+        mesa = _Mesa()
+        mesa.segurar(NO_1, STEAM)  # o fd entrou pela janela; o nó já fechou
+
+        vigia = _vigia(mesa)
+        passo = _passo(vigia, [NO_1], 0.0)
+
+        assert passo.novos == (NO_1,)
+        assert passo.a_reafirmar == (NO_1,)
+        assert _passo(vigia, [NO_1], 1.0).a_reafirmar == (NO_1,)
+
+    def test_a_janela_que_abre_e_fecha_depois_da_primeira_olhada(self) -> None:
+        """O `_open_one` expõe o nó para o `hidapi` e fecha — ou o `rehide` da
+        reconciliação. A firma anda, e a vigia varre UMA vez: vê quem entrou."""
+        mesa = _Mesa()
+        vigia = _vigia(mesa)
+        _passo(vigia, [NO_1], 0.0)
+        _passo(vigia, [NO_1], 2.0)
+        assert mesa.sondas == 1
+
+        mesa.segurar(NO_1, STEAM)  # entrou pela janela...
+        mesa.mexer(NO_1)  # ...que o broker fechou
+        passo = _passo(vigia, [NO_1], 4.0)
+
+        assert mesa.sondas == 2
+        assert passo.a_reafirmar == (NO_1,)
 
     def test_o_no_fechado_com_dono_antigo_continua_vigiado(self) -> None:
         """O descritor aberto ANTES de o nó fechar (a Steam das quatro noites)
@@ -463,7 +536,8 @@ class TestNoDaemon:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A MORDIDA (3): sem a fatia curta, o laço dorme 2 s com o nó
-        sequestrado, e «em até um segundo» vira «em até dois»."""
+        sequestrado, e «em até um segundo» vira «em até dois». E a vigia olha
+        ANTES da primeira fatia: a primeira já nasce curta."""
         mesa = _Mesa()
         mesa.abertos.add(NO_1)
         mesa.segurar(NO_1, STEAM)
@@ -484,8 +558,8 @@ class TestNoDaemon:
 
         asyncio.run(conn._wait_online_or_hotplug(daemon, watch))
 
-        assert passos[0] == conn.RECONNECT_HOTPLUG_POLL_INTERVAL_SEC
-        assert set(passos[1:]) == {ec.PASSO_DA_VIGIA_S}
+        assert set(passos) == {ec.PASSO_DA_VIGIA_S}
+        assert controle.reescritos[0] == [UNIQ_1]
 
     def test_em_repouso_a_fatia_e_a_de_sempre(self, monkeypatch: pytest.MonkeyPatch) -> None:
         mesa = _Mesa()  # nó fechado, ninguém segurando
@@ -507,5 +581,5 @@ class TestNoDaemon:
         asyncio.run(conn._wait_online_or_hotplug(daemon, watch))
 
         assert set(passos) == {conn.RECONNECT_HOTPLUG_POLL_INTERVAL_SEC}
-        assert mesa.sondas == 0
+        assert mesa.sondas == 1  # a primeira vista do nó, e nenhuma depois
         assert controle.reescritos == []
