@@ -455,6 +455,13 @@ grep -qsF '# >>> hefesto JustWorksRepairing >>>' /etc/bluetooth/main.conf 2>/dev
 [[ -e /etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf ]] && _NEEDS_SUDO=1
 [[ -e /run/hefesto-dualsense4unix || -e /run/hefesto-bt-ponte ]] && _NEEDS_SUDO=1
 compgen -G '/var/lib/hefesto-dualsense4unix/radio-diario.jsonl*' >/dev/null 2>&1 && _NEEDS_SUDO=1
+# AS CÓPIAS DE PAREAMENTO DE UNINSTALLS ANTERIORES (O-PURGE-LEVA-AS-COPIAS-DE-
+# PAREAMENTO-01): com --purge-config elas saem, e a pasta é de root. Sem esta
+# linha, quem seguiu o «para apagar de vez» num segundo uninstall com
+# --keep-udev não tinha a senha pedida, e as cópias ficavam caladas.
+[[ "${KEEP_CONFIG}" -eq 0 ]] \
+    && compgen -G '/var/lib/hefesto-dualsense4unix/bt-bonds.pre-uninstall-*' >/dev/null 2>&1 \
+    && _NEEDS_SUDO=1
 # Onda S: broker root hide-hidraw (BROKER-01) — unit de sistema, precisa root.
 [[ -e /etc/systemd/system/hefesto-hidraw-broker.service ]] && _NEEDS_SUDO=1
 [[ -e /etc/systemd/system/hefesto-hidraw-broker.socket ]] && _NEEDS_SUDO=1
@@ -1160,11 +1167,28 @@ for dele in (lugares.values() if isinstance(lugares, dict) else ()):
             sudo rm -f "${_diarios_root[@]}" 2>/dev/null || true
         fi
     fi
+    # AS CÓPIAS DE UNINSTALLS ANTERIORES (O-PURGE-LEVA-AS-COPIAS-DE-PAREAMENTO-01,
+    # decisão dela de 24/09, D-2409-AS-COPIAS-DE-PAREAMENTO-SAEM-NO-PURGE). Todo
+    # uninstall sem --purge-config deixa uma pasta carimbada com as LinkKeys e
+    # diz «para apagar de vez: rode o uninstall com --purge-config» — e o
+    # --purge-config só levava o acervo DESTA vida. As cópias de antes ficavam
+    # para sempre, e o `rmdir` do pai, logo abaixo, falhava calado por causa
+    # delas. Sem --purge-config nada muda. Só sai o prefixo que este script
+    # escreve: o resto da pasta não é dele.
+    if [[ "${KEEP_CONFIG}" -eq 0 ]]; then
+        for _copia_antiga in /var/lib/hefesto-dualsense4unix/bt-bonds.pre-uninstall-*; do
+            [[ -e "${_copia_antiga}" || -L "${_copia_antiga}" ]] || continue
+            log "removendo a cópia de pareamento de um uninstall anterior (--purge-config): ${_copia_antiga}"
+            sudo rm -rf -- "${_copia_antiga}" 2>/dev/null \
+                || log "  ela FICOU — apague à mão: sudo rm -rf ${_copia_antiga}"
+        done
+    fi
     # O diretório-pai só sai junto com a unit de snapshot: ela declara
     # ReadWritePaths=/var/lib/hefesto-dualsense4unix sem o prefixo `-`, e o
     # systemd RECUSA iniciar a unit se o caminho não existir. Preservada a
-    # unit (--keep-udev, alvo da regra 83), o pai fica — vazio, já sem as
-    # credenciais. E ele sai DEPOIS do diário do root (conferência da
+    # unit (--keep-udev, alvo da regra 83), o pai fica — sem credencial
+    # nenhuma com --purge-config; por padrão, com a cópia guardada dentro. E
+    # ele sai DEPOIS do diário do root (conferência da
     # INSTALL-E-UNINSTALL-DO-RADIO-01): antes, o `rmdir` rodava com o diário
     # ainda dentro, e o --purge-config deixava a pasta vazia em /var/lib.
     if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
@@ -1184,6 +1208,14 @@ elif [[ -e /etc/systemd/system/hefesto-bt-bonds-snapshot.timer \
         log "  e a ponte privilegiada FICOU: é privilégio de root pendurado, remova à mão —"
         log "  sudo rm /etc/sudoers.d/49-hefesto-bt-ponte /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh"
     fi
+fi
+# SEM ROOT, AS CÓPIAS DE ANTES FICAM (O-PURGE-LEVA-AS-COPIAS-DE-PAREAMENTO-01):
+# o --purge-config pediu que saíssem, e a pasta é de root. O mínimo é dizer
+# que ficaram, e como tirá-las.
+if [[ "${KEEP_CONFIG}" -eq 0 ]] && ! sudo -n true 2>/dev/null \
+    && compgen -G '/var/lib/hefesto-dualsense4unix/bt-bonds.pre-uninstall-*' >/dev/null 2>&1; then
+    log "sudo indisponível — as cópias de pareamento de uninstalls anteriores FICARAM (têm LinkKeys):"
+    log "  sudo rm -rf /var/lib/hefesto-dualsense4unix/bt-bonds.pre-uninstall-*"
 fi
 
 # Agente de pareamento persistente (bt-agent --capability=NoInputNoOutput via
