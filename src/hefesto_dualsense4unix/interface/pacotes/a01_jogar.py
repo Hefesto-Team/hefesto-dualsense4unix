@@ -1801,6 +1801,9 @@ class _DoSteamInput:
     pendentes: frozenset[str] = frozenset()
     #: A frase do dono (`ponte.Estado.frase`), lida — nunca digitada de novo.
     frase: str = ""
+    #: O vigia do vdf liga sozinho quando a Steam fecha? (:func:`o_guarda_liga_o_steam_input`)
+    #: `False` por padrão: ausência de leitura não promete nada.
+    o_guarda_liga: bool = False
 
 
 class _VigiaDoSteamInput:
@@ -1905,6 +1908,7 @@ class _VigiaDoSteamInput:
                 ligados=frozenset(estado.ligados),
                 pendentes=frozenset(p.appid for p in estado.pendentes),
                 frase=estado.frase(),
+                o_guarda_liga=o_guarda_liga_o_steam_input(),
             )
         with self._trava:
             if geracao == self._geracao:
@@ -2029,6 +2033,54 @@ def _a_ponte_que_falta(state: dict[str, Any] | None) -> str:
     return dado.frase
 
 
+#: A UNIDADE DO VIGIA DO VDF — o nome sai do dono do timer
+#: (`daemon_actions.GUARDA_STEAM_INPUT_TIMER`), nunca digitado aqui.
+def _unidade_do_guarda() -> str:
+    from hefesto_dualsense4unix.app.actions.daemon_actions import (
+        GUARDA_STEAM_INPUT_TIMER,
+    )
+
+    return GUARDA_STEAM_INPUT_TIMER.rsplit(".", 1)[0]
+
+
+def o_guarda_liga_o_steam_input() -> bool:
+    """O vigia do vdf vai ligar (e desligar) o Steam Input quando a Steam fechar?
+
+    O-MODO-FREESTYLE-02, item 6 — achado da conferência da STEAM-INPUT-01. A
+    faixa «Liga quando a Steam fechar» e as frases do desligar prometiam o que o
+    guarda faz sozinho, e numa máquina instalada com `--keep-steam-input` ele
+    não faz: o `install.sh` tira da unidade a linha
+    `disable_steam_input.sh --apply-quiet` (a mesma forma do `--no-proton-pin`,
+    que o `doctor.sh` já lê em `_o_vigia_recusou_o_pino`). Os pacotes (.deb,
+    AppImage, Flatpak) nem instalam o vigia (`build_deb.sh`), e quem o desliga
+    à mão (`troubleshooting-8bitdo.md`) também fica sem ele.
+
+    O RASTRO É O DISCO, e é o mesmo que o `install.sh` escreve: a unidade
+    `.service` com a linha, e o `.path` ou o `.timer` habilitados (o `enable`
+    deixa o atalho em `default.target.wants`/`timers.target.wants`). Sem os
+    dois, `False` — e a tela só diz o que vai acontecer.
+
+    Lê disco: chame da vigia (thread) ou de um gesto, nunca do tique.
+    NUNCA LEVANTA.
+    """
+    import os
+
+    from hefesto_dualsense4unix.daemon.service_install import user_unit_dir
+
+    try:
+        base = _unidade_do_guarda()
+        pasta = user_unit_dir()
+        texto = (pasta / f"{base}.service").read_text(encoding="utf-8")
+        habilitado = any(os.path.lexists(pasta / quer / f"{base}.{tipo}")
+                         for quer, tipo in (("default.target.wants", "path"),
+                                            ("timers.target.wants", "timer")))
+    except Exception:
+        return False
+    liga = any(linha.startswith("ExecStart=") and "disable_steam_input.sh" in linha
+               and "--apply-quiet" in linha for linha in texto.splitlines())
+    return liga and habilitado
+
+
 #: O QUE O CHIP DIZ ENQUANTO ESPERA — 23/09/2026, escolha dela entre «frase
 #: curta», «frase longa» e «sem frase» (`D-2309-STEAM-INPUT-A-FRASE-E-O-CLIQUE`).
 #: A longa era a do dono (`ponte.Estado.frase`), que nomeia o jogo; ela ficou no
@@ -2054,6 +2106,13 @@ def _o_que_o_chip_diz(state: dict[str, Any] | None, tela: dict[str, str]) -> str
     if tela.get("steam-input-aceso") != CHIP_DO_STEAM_INPUT:
         return ""
     if not _a_ponte_que_falta(state):
+        return ""
+    # SÓ PROMETE O QUE VAI ACONTECER — O-MODO-FREESTYLE-02, item 6. Sem o
+    # vigia que liga (`--keep-steam-input`, pacote, vigia desligado), fechar a
+    # Steam não liga nada: só o segundo clique, e o chip já pergunta
+    # «Fechar a Steam?». A faixa cala em vez de prometer.
+    dado = VIGIA_DO_STEAM_INPUT.agora()
+    if dado is None or not dado.o_guarda_liga:
         return ""
     from hefesto_dualsense4unix.app.actions.relancar import MARCADOR_PENDENTE
 
@@ -3214,9 +3273,14 @@ STEAM_INPUT_NAO_MUDOU_O_ARQUIVO = (
 #: 21/09 com os outros do cartão da Steam — é o mesmo defeito do «Consertar»
 #: da aba 07. Quem desliga hoje é o guarda do vdf (`hefesto-steam-input-guard`:
 #: o `.timer` de 30 min e o `.path`, que acorda quando a Steam grava ao sair).
+#: SEM O VIGIA QUE DESLIGA (O-MODO-FREESTYLE-02, item 6), a frase para no que
+#: é verdade: ninguém tira a Steam de lá sozinho (:func:`o_guarda_liga_o_steam_input`).
+STEAM_INPUT_SAIU_E_A_STEAM_CONTINUA = (
+    "Tirei este jogo da lista, mas a Steam continua no comando dele."
+)
 STEAM_INPUT_SAIU_MAS_CONTINUA = (
-    "Tirei este jogo da lista, mas a Steam continua no comando dele. O Hefesto "
-    "a tira de lá em até meia hora, ou na próxima vez que a Steam fechar."
+    f"{STEAM_INPUT_SAIU_E_A_STEAM_CONTINUA} O Hefesto a tira de lá em até meia "
+    "hora, ou na próxima vez que a Steam fechar."
 )
 
 
@@ -3276,6 +3340,8 @@ def _reconciliar_o_vdf(alvo: str, ligar: bool) -> str:
         raise RuntimeError(STEAM_INPUT_NAO_MUDOU_O_ARQUIVO)
     if atual in (None, ponte.DESLIGADO):
         return ""
+    if not o_guarda_liga_o_steam_input():
+        return STEAM_INPUT_SAIU_E_A_STEAM_CONTINUA
     return STEAM_INPUT_SAIU_E_A_STEAM_ESTA_ABERTA if adiado else STEAM_INPUT_SAIU_MAS_CONTINUA
 
 

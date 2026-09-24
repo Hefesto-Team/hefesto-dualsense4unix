@@ -443,6 +443,98 @@ def test_a_origem_que_a_primeira_cura_deixava(vdf, monkeypatch, origem, para) ->
             f"{resposta!r}")
 
 
+# ---------------------------------------------------------------------------
+# 2b. SEM O VIGIA QUE LIGA — O-MODO-FREESTYLE-02, item 6
+# ---------------------------------------------------------------------------
+def _sem_o_vigia_que_liga(vdf: pathlib.Path, como: str) -> None:
+    """Reinstala o vigia no lar como cada máquina o deixa sem a linha que liga.
+
+    * `keep`: `install.sh --keep-steam-input` — a unidade SEM a linha do
+      `disable_steam_input.sh`;
+    * `desligado`: o vigia instalado e desabilitado à mão (o
+      `troubleshooting-8bitdo.md` ensina o `disable --now`);
+    * `pacote`: o .deb, o AppImage e o Flatpak, que nem instalam o vigia.
+    """
+    import shutil
+
+    from tests.unit.test_steam_input_01_o_chip_que_acende_por_jogo import instalar_o_vigia
+
+    casa = pathlib.Path(__import__("os").environ["HOME"])
+    shutil.rmtree(casa / ".config" / "systemd", ignore_errors=True)
+    if como == "keep":
+        instalar_o_vigia(casa, manter_steam_input=True)
+    elif como == "desligado":
+        instalar_o_vigia(casa, habilitado=False)
+    aba.VIGIA_DO_STEAM_INPUT.esquecer()
+
+
+def test_o_produto_le_o_vigia_que_o_install_deixou(vdf) -> None:
+    """A medida: o rastro do `--keep-steam-input` é a linha que falta na unidade.
+
+    O mesmo rastro que o `doctor.sh` lê para o `--no-proton-pin`
+    (`_o_vigia_recusou_o_pino`). Os três jeitos de não ter quem ligue respondem
+    `False`; o install padrão, `True`.
+    """
+    assert aba.o_guarda_liga_o_steam_input() is True
+    for como in ("keep", "desligado", "pacote"):
+        _sem_o_vigia_que_liga(vdf, como)
+        assert aba.o_guarda_liga_o_steam_input() is False, como
+
+
+@pytest.mark.parametrize("como", ["keep", "desligado", "pacote"])
+def test_sem_o_vigia_a_faixa_nao_promete(vdf, monkeypatch, como) -> None:
+    """Com a Steam aberta, o «Steam Input» PENDENTE: a faixa só fala se é verdade.
+
+    Com `--keep-steam-input` ninguém liga o jogo quando a Steam fecha — só o
+    segundo clique, e o chip armado já pergunta «Fechar a Steam?». A faixa cala
+    em vez de prometer. O diário continua levando a frase do dono.
+
+    MORDE: tire o `dado.o_guarda_liga` de `_o_que_o_chip_diz` e a faixa volta a
+    dizer «Liga quando a Steam fechar» numa máquina onde isso não acontece.
+    """
+    _sem_o_vigia_que_liga(vdf, como)
+    _a_maquina(monkeypatch, jogo_aberto=False, steam_aberta=True)
+    ctx = _ctx(aberto=False, caminho="xbox")
+    daemon = DaemonDeMentira(ctx.state)
+    _parar_a_vigia(monkeypatch)
+
+    resposta = _clicar("steam", ctx, daemon)
+
+    assert resposta == {"blocos": {f'[data-gesto="{aba.GESTO_DO_STEAM_INPUT}"]':
+                                   aba.STEAM_INPUT_ARMADO}}, (
+        "sem o vigia, o segundo clique é o único caminho — o chip tem de armar")
+    assert _aceso(ctx) == aba.CHIP_DO_STEAM_INPUT
+    assert aba._a_ponte_que_falta(ctx.state), "o diário perdeu a frase do dono"
+    assert aba.pacote(ctx)["pendente"] == "", (
+        f"a faixa prometeu o que o vigia não faz nesta máquina ({como})")
+
+
+@pytest.mark.parametrize("jogo_aberto", [False, True], ids=["jogo-fechado", "jogo-aberto"])
+def test_sem_o_vigia_o_desligar_diz_so_o_que_fica(vdf, monkeypatch, jogo_aberto) -> None:
+    """O «Sony DualSense» com a Steam aberta e sem o vigia: o recado sem promessa.
+
+    Com o vigia, a frase diz que a Steam sai quando fechar
+    (:data:`a01_jogar.STEAM_INPUT_SAIU_E_A_STEAM_ESTA_ABERTA`). Sem ele, isso
+    não acontece: a frase para no que é verdade.
+
+    MORDE: tire o `o_guarda_liga_o_steam_input()` de `_reconciliar_o_vdf` e o
+    recado volta a prometer.
+    """
+    _ponte_de_pe()
+    _sem_o_vigia_que_liga(vdf, "keep")
+    _a_maquina(monkeypatch, jogo_aberto=jogo_aberto, steam_aberta=True)
+    ctx = _ctx(aberto=jogo_aberto)
+    daemon = DaemonDeMentira(ctx.state, jogo_aberto=jogo_aberto)
+    _parar_a_vigia(monkeypatch)
+
+    resposta = _clicar("dualsense", ctx, daemon)
+
+    assert resposta == {"recado": aba.STEAM_INPUT_SAIU_E_A_STEAM_CONTINUA}
+    assert "fechar" not in aba.STEAM_INPUT_SAIU_E_A_STEAM_CONTINUA
+    assert aba.STEAM_INPUT_SAIU_MAS_CONTINUA.startswith(
+        aba.STEAM_INPUT_SAIU_E_A_STEAM_CONTINUA), "as duas frases divergiram"
+
+
 def test_o_gesto_dos_quatro_chips_passa_pelo_mesmo_clique() -> None:
     """Os quatro gestos chamam `_o_clique_da_fileira` — UM dono do clique.
 

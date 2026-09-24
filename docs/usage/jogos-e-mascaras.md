@@ -61,6 +61,11 @@ Steam, liga o Steam Input daquele jogo e a abre de novo. Sem o segundo clique,
 ele liga sozinho na próxima vez que a Steam fechar. Com um jogo aberto o chip
 não pergunta: fechar a Steam fecharia o jogo.
 
+Quem liga sozinho é o vigia da Steam (`hefesto-steam-input-guard`). Numa
+instalação com `install.sh --keep-steam-input` ele não mexe no Steam Input, e
+os pacotes (.deb, AppImage, Flatpak) não o instalam. Nessas máquinas só o
+segundo clique liga, e a faixa não diz nada: ela só fala do que vai acontecer.
+
 O botão «Este jogo não funciona», que fazia a mesma marca pela aba Lançadores,
 saiu em 21/09/2026. No lugar dele entrou o «Adicionar à lista de exclusão», que
 é o contrário: o jogo escolhido passa a ver o controle **como se o Hefesto não

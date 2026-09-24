@@ -123,6 +123,40 @@ def _configset(*appids: str) -> str:
     return f'"controller_config"\n{{\n{corpo}\n}}\n'
 
 
+def instalar_o_vigia(casa: pathlib.Path, *, manter_steam_input: bool = False,
+                     habilitado: bool = True) -> pathlib.Path:
+    """O vigia do vdf como o `install.sh` o deixa no lar — O-MODO-FREESTYLE-02.
+
+    O MESMO ASSET e as MESMAS trocas do passo 11 do `install.sh`: os
+    marcadores viram caminho, e o `--keep-steam-input` apaga SÓ a linha do
+    `__SCRIPT__`. O `enable` deixa um atalho em `default.target.wants` (o
+    `.path`) e em `timers.target.wants` (o `.timer`). Escrever uma unidade à mão
+    seria a régua medindo o próprio dublê.
+    """
+    import re
+
+    pasta = casa / ".config" / "systemd" / "user"
+    pasta.mkdir(parents=True, exist_ok=True)
+    texto = (RAIZ / "assets" / "hefesto-steam-input-guard.service").read_text(
+        encoding="utf-8")
+    if manter_steam_input:
+        texto = re.sub(r"(?m)^ExecStart=.*__SCRIPT__.*\n", "", texto)
+    for marcador, caminho in (("__SCRIPT__", "scripts/disable_steam_input.sh"),
+                              ("__SENTINELA__", "sentinela_do_wrapper.py"),
+                              ("__PROTON_PIN__", "proton_pin.py"),
+                              ("__OPCOES_POR_JOGO__", "opcoes_por_jogo.py")):
+        texto = texto.replace(marcador, str(RAIZ / caminho))
+    (pasta / "hefesto-steam-input-guard.service").write_text(texto, encoding="utf-8")
+    for tipo, quer in (("path", "default.target.wants"), ("timer", "timers.target.wants")):
+        unidade = pasta / f"hefesto-steam-input-guard.{tipo}"
+        unidade.write_bytes(
+            (RAIZ / "assets" / f"hefesto-steam-input-guard.{tipo}").read_bytes())
+        if habilitado:
+            (pasta / quer).mkdir(exist_ok=True)
+            (pasta / quer / unidade.name).symlink_to(unidade)
+    return pasta
+
+
 @pytest.fixture
 def lar(tmp_path, monkeypatch):
     """Um HOME de mentira com uma Steam inteira dentro. Nada toca a máquina.
@@ -149,6 +183,9 @@ def lar(tmp_path, monkeypatch):
 
     monkeypatch.setenv("HOME", str(casa))
     monkeypatch.setenv("XDG_CONFIG_HOME", str(casa / ".config"))
+    # A MÁQUINA INSTALADA SEM OPT-OUT, que é o padrão do `install.sh`: o vigia
+    # que liga quando a Steam fecha está lá (O-MODO-FREESTYLE-02, item 6).
+    instalar_o_vigia(casa)
     return vdf
 
 
