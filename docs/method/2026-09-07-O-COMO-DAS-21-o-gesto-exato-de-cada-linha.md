@@ -596,7 +596,7 @@ roteiro.
 
 **O que isto prova.** Prova que, depois de o jogo ganhar o atalho do Hefesto e um perfil próprio, abrir esse jogo troca o perfil sozinho e os quatro controles continuam funcionando dentro dele.
 
-**Onde olhar.** O nome do perfil que está valendo se lê no alto de qualquer aba, em «Perfil ativo» — é ali que a troca sozinha aparece. Na aba Jogar, no canto direito do quadro «Modo», o «Trava o perfil ativo». Na aba Lançadores, o botão «Detectar o jogo aberto» e o cartão da Steam, cujo texto passa a dizer o nome do jogo e se ele abre pelo atalho do Hefesto. Na aba Perfis, a lista «Perfis salvos» à esquerda, com o botão «Novo» embaixo, e o quadro «Editar» à direita, com «Nome:», «Funciona em:», «Nome do Jogo:» com o botão «Detectar» ao lado, e o botão «Ativar». No aparelho, a barra de luz do P1. E dentro do jogo, os quatro respondendo.
+**Onde olhar.** O nome do perfil que está valendo se lê no alto de qualquer aba, em «Perfil ativo» — é ali que a troca sozinha aparece. Na aba Jogar, no canto direito do quadro «Modo», o «Trava o perfil ativo». Na aba Lançadores, o botão «Detectar o jogo aberto» e o cartão da Steam, com a lista, embaixo dos botões, dos jogos que não abrem pelo atalho do Hefesto. Na aba Perfis, a lista «Perfis salvos» à esquerda, com o botão «Novo» embaixo, e o quadro «Editar» à direita, com «Nome:», «Funciona em:», «Nome do Jogo:» com o botão «Detectar» ao lado, e o botão «Ativar». No aparelho, a barra de luz do P1. E dentro do jogo, os quatro respondendo.
 
 **Os passos.**
 
@@ -605,7 +605,7 @@ roteiro.
 2. Abra pela Steam o jogo que você quer testar.
 3. Volte ao Hefesto com Alt+Tab e clique na aba Lançadores.
 4. Clique em «Detectar o jogo aberto».
-5. Leia a frase que aparece no cartão da Steam: ela diz o nome do jogo e se ele abre ou não pelo atalho do Hefesto.
+5. Olhe a lista embaixo dos botões do cartão da Steam: se o seu jogo está nela, ele NÃO abre pelo atalho do Hefesto; se não está, abre.
 6. Clique na aba Perfis e clique em «Novo», com o jogo ainda aberto.
 7. Preencha o campo «Nome:» com o nome do jogo.
 8. Confira que o «Nome do Jogo:» traz o seu jogo e que o «Funciona em:» diz «Steam» — se não, clique em «Detectar», ao lado do «Nome do Jogo:», e confira de novo.
@@ -613,7 +613,7 @@ roteiro.
 10. Clique na aba Iluminação e clique no amarelo, o quinto tom da linha «Cor», na coluna do P1.
 11. Confira que a barra de luz do P1 ficou amarela.
 12. Feche o jogo agora.
-13. Se a frase do passo 5 disse que o jogo NÃO abre pelo atalho do Hefesto, vá à aba Sistema e clique em «Aplicar aos jogos da Steam», em Avançado, e clique de novo no mesmo botão para confirmar — ele fecha a Steam por uns 20 segundos.
+13. Se no passo 5 o seu jogo estava na lista do cartão da Steam, vá à aba Sistema e clique em «Aplicar aos jogos da Steam», em Avançado, e clique de novo no mesmo botão para confirmar — ele fecha a Steam por uns 20 segundos.
 14. Clique na aba Perfis, escolha outro perfil qualquer da lista e clique em «Ativar».
 15. Confira que o alto da tela passou a mostrar esse outro nome em «Perfil ativo» e que a barra de luz do P1 deixou de ser amarela.
 16. Abra pela Steam o mesmo jogo outra vez.
@@ -634,7 +634,7 @@ roteiro.
 
 **A espera.** O jogo leva minutos para chegar ao menu, nas duas vezes em que você o abre, e você não precisa ficar olhando. Deixe-o carregando e vá fazer outra coisa; volte quando ouvir o som do menu. A troca de perfil acontece sozinha e continua feita quando você voltar — nada se desfaz por você ter saído da frente. Ao voltar da segunda vez, o primeiro lugar a olhar é a barra de luz do P1; se ela já apagou o amarelo, confirme pelo nome em «Perfil ativo», com Alt+Tab para o Hefesto.
 
-**A armadilha.** O «Trava o perfil ativo», na aba Jogar, desliga a troca automática inteira: aceso, o perfil nunca troca e o teste reprova sem haver defeito. Confira que ele está apagado antes de começar. Trocar de perfil pelo «Ativar» segura a troca automática por trinta segundos — o jogo leva mais que isso para abrir, mas não reabra o jogo no mesmo instante. Perfil que «Funciona em» «Qualquer jogo» nunca conta como o perfil daquele jogo — a troca só acontece com um perfil que nomeia o jogo. Quando o jogo não tem o atalho, a frase do cartão da Steam termina em «o atalho volta quando a Steam fechar»: o Hefesto o repõe sozinho quando a Steam fecha, e o passo 13 é o jeito de não esperar — o «Aplicar aos jogos da Steam», da aba Sistema, precisa do jogo fechado. O amarelo é para não esbarrar num tom com X: o verde é a cor automática do P3. E se, ao abrir o jogo, a barra de luz do P1 piscar amarela e apagar, olhe a Steam antes de reprovar: com ela aberta, quem escreve por último na luz ganha — nesse caso confie no nome em «Perfil ativo», não na luz. Por fim, o tamanho: este é o teste mais longo dos 21, e é longo de propósito. Ele encadeia quatro coisas que só provam juntas — ver se o jogo tem o atalho, criar o perfil que nomeia o jogo, marcar esse perfil com uma cor que se enxerga de dentro da partida, e só então fechar tudo e abrir de novo para ver a troca acontecer sem a sua mão.
+**A armadilha.** O «Trava o perfil ativo», na aba Jogar, desliga a troca automática inteira: aceso, o perfil nunca troca e o teste reprova sem haver defeito. Confira que ele está apagado antes de começar. Trocar de perfil pelo «Ativar» segura a troca automática por trinta segundos — o jogo leva mais que isso para abrir, mas não reabra o jogo no mesmo instante. Perfil que «Funciona em» «Qualquer jogo» nunca conta como o perfil daquele jogo — a troca só acontece com um perfil que nomeia o jogo. O jogo sem o atalho ganha o atalho sozinho quando a Steam fecha, e o passo 13 é o jeito de não esperar — o «Aplicar aos jogos da Steam», da aba Sistema, precisa do jogo fechado. A frase que o «Detectar» escreve no cartão da Steam aparece só por um instante; a lista fica, e é ela que o passo 5 lê. O amarelo é para não esbarrar num tom com X: o verde é a cor automática do P3. E se, ao abrir o jogo, a barra de luz do P1 piscar amarela e apagar, olhe a Steam antes de reprovar: com ela aberta, quem escreve por último na luz ganha — nesse caso confie no nome em «Perfil ativo», não na luz. Por fim, o tamanho: este é o teste mais longo dos 21, e é longo de propósito. Ele encadeia quatro coisas que só provam juntas — ver se o jogo tem o atalho, criar o perfil que nomeia o jogo, marcar esse perfil com uma cor que se enxerga de dentro da partida, e só então fechar tudo e abrir de novo para ver a troca acontecer sem a sua mão.
 
 ---
 
