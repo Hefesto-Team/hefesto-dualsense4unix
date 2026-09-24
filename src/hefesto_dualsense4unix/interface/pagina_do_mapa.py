@@ -833,6 +833,23 @@ EDICOES: tuple[Edicao, ...] = (
             "vivos em cima."
         ),
     ),
+)
+
+
+#: ══ AS EDIÇÕES QUE ESPERAM A SESSÃO DOS DESENHOS — 24/09/2026 ════════════
+#:
+#: A tela para no mockup até o OK dela (ordem de 23/09), e esta página tem DUAS
+#: casas que o gerador responde: a bancada, que o `main()` grava, e a cópia do
+#: produto, que só muda pelo `--publicar`. As edições daqui entram na bancada e
+#: ficam FORA da conta da cópia do produto (`pagina(com_as_que_esperam=False)`)
+#: — é isso que deixa a régua da igualdade (`test_arranjo_invariantes`) verde
+#: enquanto o desenho espera por ela.
+#:
+#: QUEM PUBLICAR, no mesmo commit do `--publicar mapa-das-portas.html`, junta
+#: as edições daqui ao fim de `EDICOES` e deixa esta tupla vazia. A régua da
+#: igualdade reprova dizendo isto se a cópia do produto receber o desenho e as
+#: edições continuarem aqui.
+EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
     # ═══ A CAIXA DA JANELA — 24/09/2026 (ver `CAIXA_DA_JANELA`) ═══════════
     Edicao(
         antes=(
@@ -869,8 +886,12 @@ EDICOES: tuple[Edicao, ...] = (
 )
 
 
-def pagina() -> str:
-    """A página do produto: a origem congelada mais as :data:`EDICOES`.
+def pagina(com_as_que_esperam: bool = True) -> str:
+    """A página: a origem congelada mais as :data:`EDICOES`.
+
+    Com ``com_as_que_esperam`` (o padrão, e é a BANCADA), vêm também as
+    :data:`EDICOES_ESPERANDO_A_SESSAO_DELA`; sem ele, sai a cópia que o produto
+    tem hoje.
 
     Cada troca é cobrada: `antes` tem de aparecer uma vez e só uma. É o que
     impede uma edição de envelhecer calada — `str.replace` de um pedaço que não
@@ -878,7 +899,8 @@ def pagina() -> str:
     casas divergiram em treze pedaços sem ninguém ver.
     """
     texto = ORIGEM.read_text(encoding="utf-8")
-    for numero, edicao in enumerate(EDICOES, 1):
+    edicoes = EDICOES + (EDICOES_ESPERANDO_A_SESSAO_DELA if com_as_que_esperam else ())
+    for numero, edicao in enumerate(edicoes, 1):
         quantas = texto.count(edicao.antes)
         if quantas != 1:
             raise SystemExit(
@@ -895,7 +917,8 @@ def main(argv: list[str] | None = None) -> int:
     novo = pagina()
     antes = DESTINO.read_text(encoding="utf-8") if DESTINO.exists() else ""
     DESTINO.write_text(novo, encoding="utf-8")
-    print(f"mapa-das-portas: {len(EDICOES)} edições sobre a origem congelada · "
+    print(f"mapa-das-portas: {len(EDICOES)} edições sobre a origem congelada"
+          f" + {len(EDICOES_ESPERANDO_A_SESSAO_DELA)} esperando a sessão dela · "
           f"{len(novo.splitlines())} linhas · "
           f"{'mudou' if novo != antes else 'já estava igual'}")
     print(f"  escrito em {DESTINO}")
