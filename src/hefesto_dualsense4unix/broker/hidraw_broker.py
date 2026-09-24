@@ -1619,6 +1619,7 @@ class BrokerState:
                 entry_exp.refcount -= 1
                 continue
             del self.expostos[canon]
+        ja_no_repouso: set[str] = set()
         for canon in sorted(self.by_conn.get(conn_id, set())):
             entry = self.hidden.get(canon)
             if entry is None:
@@ -1628,21 +1629,34 @@ class BrokerState:
                 continue
             base_do_no = canon.rsplit("/", 1)[-1]
             self.by_conn.get(conn_id, set()).discard(canon)
+            ja_no_repouso.add(canon)
             response = self._repouso(canon, base_do_no, cmd="restore")
             if response.get("ok"):
                 del self.hidden[canon]
                 restored.append(canon)
             else:
                 failed.append(canon)  # rastreado; belts cobrem
-        # Os nós que esta conexão só EXPÔS (nunca escondeu) também têm de
-        # voltar ao repouso — senão o Modo Nativo de um daemon que morreu
-        # deixaria o físico aberto para a Steam pegar no próximo replug.
+        # Os nós que esta conexão EXPÔS também voltam ao repouso — senão o
+        # Modo Nativo de um daemon que morreu deixaria o físico aberto para a
+        # Steam pegar no próximo replug.
+        #
+        # HIDE-SO-O-HIDRAW-03: inclusive o nó que OUTRA lease viva esconde. O
+        # `hide` que chegou com ele exposto foi adiado
+        # (`hide_adiado_por_exposicao`), e este laço pulava todo nó em
+        # `hidden`: o hidraw seguia aberto, com o `status` dizendo «hidden»,
+        # até o próximo `hide` do daemon — o rehide de 30 s, a janela em que a
+        # Steam aberta pega o físico. O destino é o do `_repouso`, que já sabe
+        # os três: aberto se outra conexão viva o expõe, fechado se alguma
+        # lease o esconde, o de nascimento se ninguém o quer.
         for canon in expostos_da_conn:
-            if canon in self.expostos or canon in self.hidden:
+            if canon in self.expostos or canon in ja_no_repouso:
                 continue
+            adiado = canon in self.hidden and self._lease_holders(canon) > 0
             resposta = self._repouso(canon, canon.rsplit("/", 1)[-1], cmd="unexpose")
             if resposta.get("ok"):
                 restored.append(canon)
+                if adiado:
+                    self._log("hide_adiado_cumprido", node=canon, conn=conn_id)
             else:
                 failed.append(canon)
         self.by_conn.pop(conn_id, None)
