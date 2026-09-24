@@ -173,6 +173,130 @@ def dispatch_mouse(daemon: DaemonProtocol, state: Any, buttons_pressed: frozense
                 device.emit_touchpad_move(dx, dy)
         except Exception as exc:
             logger.warning("touchpad_move_dispatch_failed", err=str(exc))
+    # A-MIRA-NA-NAVEGACAO-01: a Mira de cada controle, no cursor.
+    mover_o_cursor_pelo_giro(daemon, buttons_pressed)
+
+
+def mover_o_cursor_pelo_giro(daemon: DaemonProtocol, botoes_do_primario: frozenset[str]) -> None:
+    """Na Navegação, o giro de quem está com a Mira acesa move o cursor.
+
+    A-MIRA-NA-NAVEGACAO-01 (24/09/2026), pela frase dela: *"A exceção do nativo
+    todo o resto deve ter mira Virtual"*.  <!-- noqa-acento: citação literal dela -->
+    Na Navegação não há controle virtual — o `dispatch_gamepad` volta no
+    `device is None` — e o chip da Mira acendia sem mover nada, com o daemon
+    respondendo `alcance: aplicado`. Aqui é o único tique da Navegação, e é
+    daqui que o giro vai ao cursor.
+
+    O MOTOR É O MESMO, chamado e não copiado: `gamepad.aplicar_o_movimento`
+    com ``na_navegacao=True``. A sensibilidade, o «Ignorar tremor até», o «Só
+    enquanto eu segurar» e os dois «Inverter» da Calibrar valem igual, e o
+    interruptor do Giroscópio de cada controle também.
+
+    QUEM É DONO DO CURSOR NA NAVEGAÇÃO, medido: o PRIMÁRIO. O `state` que chega
+    a `dispatch_mouse` é só o dele — o analógico esquerdo move, o direito rola,
+    os botões clicam. Os outros controles não mexem no cursor por analógico.
+    A Mira é por controle e vale para os quatro: cada peça com o chip aceso soma
+    o próprio giro ao MESMO cursor, porque o mouse é um só — dois controles com
+    a Mira movem o cursor juntos, e os deslocamentos se somam, como duas mãos no
+    mesmo mouse. Cada peça drena o PRÓPRIO leitor, então nenhum giro é contado
+    duas vezes.
+
+    QUAIS PEÇAS: o primário, as peças com o chip aceso e, quando a mira é do
+    perfil inteiro, os controles conectados que o registro de identidade conhece
+    (o mesmo conjunto que o tique lento reconcilia a cada 2 s). Os botões do
+    «Só enquanto eu segurar» de quem não é o primário vêm do leitor de entradas
+    do hub, sem grab — o mesmo que o cartão da tela lê; sem leitura, o botão
+    está solto e a mira fica parada.
+
+    Sem mira em peça nenhuma, o custo é o do `roteador.ativo`: dois `getattr`.
+    NUNCA LEVANTA — o tique da Navegação leva o cursor, os cliques e o teclado.
+    """
+    try:
+        from hefesto_dualsense4unix.core import roteador_de_movimento as roteador
+
+        store = getattr(daemon, "store", None)
+        arranjo = roteador.ativo(store)
+        if arranjo is None:
+            return
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+            aplicar_o_movimento,
+            primary_identity,
+        )
+
+        primario = primary_identity(daemon)
+        centro = roteador.CENTRO_DO_EIXO
+        for uniq in _pecas_da_navegacao(daemon, store, arranjo, primario):
+            botoes = (
+                botoes_do_primario
+                if primario and roteador.chave_de_sensor(primario) == uniq
+                else _botoes_da_peca(daemon, store, arranjo, uniq)
+            )
+            aplicar_o_movimento(
+                daemon,
+                arranjo,
+                uniq=uniq,
+                lx=centro,
+                ly=centro,
+                rx=centro,
+                ry=centro,
+                botoes=botoes,
+                na_navegacao=True,
+            )
+    except Exception as exc:
+        logger.warning("mira_na_navegacao_falhou", err=str(exc))
+
+
+def _pecas_da_navegacao(
+    daemon: DaemonProtocol, store: Any, arranjo: Any, primario: str | None
+) -> list[str]:
+    """As chaves das peças que PODEM mirar agora, o primário primeiro, sem repetir.
+
+    A peça que não mira sai do motor no portão da peça (`roteador.da_peca`), e
+    só drena quando a mesa inteira mira — a regra de sempre.
+    """
+    from hefesto_dualsense4unix.core import roteador_de_movimento as roteador
+
+    vistas: dict[str, None] = {}
+    if primario:
+        vistas[roteador.chave_de_sensor(primario)] = None
+    for chave in roteador.pecas_que_miram(store):
+        vistas.setdefault(chave, None)
+    if arranjo.ligado:
+        # A MIRA DO PERFIL INTEIRO: toda peça conectada mira, e quem sabe quais
+        # estão conectadas sem pagar `describe_controllers` a cada tique é o
+        # registro de identidade — o conjunto que o tique lento já reconcilia.
+        registro = getattr(daemon, "identity_registry", None)
+        conectados = getattr(registro, "snapshot_connected", None)
+        if callable(conectados):
+            for uniq in sorted(str(u) for u in conectados()):
+                chave = roteador.chave_de_sensor(uniq)
+                if chave:
+                    vistas.setdefault(chave, None)
+    return [chave for chave in vistas if chave]
+
+
+def _botoes_da_peca(daemon: DaemonProtocol, store: Any, arranjo: Any, uniq: str) -> frozenset[str]:
+    """Os botões apertados AGORA num controle que não é o primário.
+
+    Só se pergunta quando o botão importa — a peça com «Só enquanto eu
+    segurar» —, e a pergunta é ao leitor de entradas do hub, que abre o nó de
+    gamepad SEM grab (o jogo e o computador continuam vendo o controle). A
+    primeira pergunta não tem resposta ainda (o leitor nasce na volta seguinte
+    da manutenção do hub): até lá o botão está solto, e a mira fica parada em
+    vez de andar sem o botão que ela escolheu.
+    """
+    from hefesto_dualsense4unix.core import roteador_de_movimento as roteador
+
+    peca = roteador.da_peca(store, uniq, arranjo)
+    if peca is None or peca.gatilho is None:
+        return frozenset()
+    garantir = getattr(daemon, "_garantir_sensor_hub", None)
+    if garantir is None:
+        return frozenset()
+    entradas = getattr(garantir(), "entradas", None)
+    leitura = entradas(uniq) if callable(entradas) else None
+    botoes = leitura.get("buttons") if isinstance(leitura, dict) else None
+    return frozenset(str(b) for b in botoes) if isinstance(botoes, list) else frozenset()
 
 
 def discard_touchpad_motion(daemon: DaemonProtocol) -> None:
