@@ -336,10 +336,37 @@ def test_o_detectar_nao_diz_aberto_sobre_um_jogo_fechado(a07, monkeypatch):
     assert "já fechou" in diz and "Um Jogo" in diz
 
 
+#: O APPID DAS DUAS RÉGUAS DE BAIXO É SINTÉTICO — a regra da sprint
+#: STEAM-INPUT-01 (§5.3): régua nova não embarca appid de jogo real.
+JOGO_DE_TESTE = 999000001
+
+
+def _detectar_com(a07, monkeypatch, *, agora, ler=None) -> str:
+    """A frase do cartão da Steam depois do «Detectar», com a vigia dublada.
+
+    `agora` é o que a vigia já tem; `ler` é o que o DONO responde quando
+    perguntado. Sem `ler`, a leitura bloqueante levanta — a régua reprova se o
+    gesto a alcançar sem precisar.
+    """
+    from hefesto_dualsense4unix.daemon import launch_env
+    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+    def _nao_pergunte():
+        raise AssertionError("o «Detectar» releu o disco com a leitura na mão")
+
+    monkeypatch.setattr(launch_env, "launch_session_appid", lambda **kw: None)
+    monkeypatch.setattr(launch_env, "read_last_run_marker",
+                        lambda *a, **kw: (JOGO_DE_TESTE, 1))
+    monkeypatch.setattr(slo, "rotulo_do_jogo", lambda a: "Um Jogo")
+    monkeypatch.setattr(a07.VIGIA, "agora", lambda: agora)
+    monkeypatch.setattr(a07.VIGIA, "ler", (lambda: ler) if ler is not None else _nao_pergunte)
+    return _gesto("detectar")(_ctx(), {}, None)["mesa"]["steam-diz"]
+
+
 @pytest.mark.parametrize(("onde", "promete"), [
     ("reparaveis", True),
     ("recusados", False),
-    ("sem-leitura", False),
+    ("sem-leitura", True),
 ])
 def test_o_detectar_nao_manda_a_um_botao_que_saiu(a07, desenho, monkeypatch,
                                                   onde, promete):
@@ -350,33 +377,47 @@ def test_o_detectar_nao_manda_a_um_botao_que_saiu(a07, desenho, monkeypatch,
     e a Steam fechados"*, e a página publicada não tem botão «Consertar»
     nenhum. Quem repõe é o vigia de fora quando a Steam fecha, e a frase diz
     isso — só para o jogo que ele repõe (`Leitura.reparaveis`). O que ELA tirou
-    (`recusados`) fica sem o atalho de propósito, e sem leitura não se promete.
+    (`recusados`) fica sem o atalho de propósito. Sem leitura na vigia, o gesto
+    pergunta ao dono (`VIGIA.ler`), e a resposta é a dele.
 
     A MORDIDA: devolva o «clique em Consertar…» à frase e a primeira asserção
     reprova; prometa a volta a todo jogo sem o atalho (tire o filtro por
     `reparaveis` de `_quem_repoe_o_atalho`) e o caso `recusados` reprova.
     """
-    from hefesto_dualsense4unix.daemon import launch_env
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    monkeypatch.setattr(launch_env, "launch_session_appid", lambda **kw: None)
-    monkeypatch.setattr(launch_env, "read_last_run_marker",
-                        lambda *a, **kw: (3357650, 1))
-    monkeypatch.setattr(slo, "rotulo_do_jogo", lambda a: "Um Jogo")
-    lida = {
-        "reparaveis": desenho.Leitura(reparaveis=(("3357650", "Um Jogo", "—"),)),
-        "recusados": desenho.Leitura(recusados=(("3357650", "Um Jogo"),)),
-        "sem-leitura": None,
+    reparavel = desenho.Leitura(reparaveis=((str(JOGO_DE_TESTE), "Um Jogo", "—"),))
+    agora, ler = {
+        "reparaveis": (reparavel, None),
+        "recusados": (desenho.Leitura(recusados=((str(JOGO_DE_TESTE), "Um Jogo"),)), None),
+        "sem-leitura": (None, reparavel),
     }[onde]
-    monkeypatch.setattr(a07.VIGIA, "agora", lambda: lida)
 
-    diz = _gesto("detectar")(_ctx(), {}, None)["mesa"]["steam-diz"]
+    diz = _detectar_com(a07, monkeypatch, agora=agora, ler=ler)
 
     assert "Consertar" not in diz, (
         f"a frase manda clicar num botão que saiu da aba: {diz!r}")
     assert "não abre pelo atalho do Hefesto" in diz
-    volta = "volta quando a Steam fechar" in diz
+    volta = "o atalho volta quando a Steam fechar" in diz
     assert volta is promete, (
         f"({onde}) a frase {'promete' if volta else 'não promete'} a volta do "
         f"atalho, e quem o repõe {'repõe' if promete else 'não repõe'} este "
         f"jogo: {diz!r}")
+
+
+def test_sem_leitura_o_detectar_pergunta_ao_dono_e_nao_diz_nao(a07, desenho,
+                                                               monkeypatch):
+    """«Não sei» não é «não»: sem leitura, o «Detectar» pergunta ao dono.
+
+    Conferência da STEAM-INPUT-01, 24/09/2026. `VIGIA.agora()` devolve `None`
+    na primeira volta, e a frase dizia «não abre pelo atalho do Hefesto» sobre
+    um jogo que ninguém tinha lido — com o atalho no lugar. O gesto roda em
+    thread, e o contrato da vigia manda quem precisa do valor chamar `ler()`.
+
+    A MORDIDA: tire o `if lida is None: lida = VIGIA.ler()` de
+    `a07_lancadores.detectar` e esta régua reprova.
+    """
+    com_o_atalho = desenho.Leitura(com_wrapper=(str(JOGO_DE_TESTE),))
+
+    diz = _detectar_com(a07, monkeypatch, agora=None, ler=com_o_atalho)
+
+    assert "<b>abre pelo atalho do Hefesto</b>" in diz, (
+        f"sem leitura na vigia, o «Detectar» respondeu sem perguntar ao dono: {diz!r}")

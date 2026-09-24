@@ -1394,8 +1394,16 @@ def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
         raise RuntimeError(
             "Nenhum jogo aberto agora. Abra o jogo, volte aqui e clique de "
             "novo.")
+    # SEM LEITURA AINDA, O GESTO PERGUNTA AO DONO — conferência da
+    # STEAM-INPUT-01, 24/09/2026. `agora()` devolve `None` na primeira volta da
+    # vigia, e o `tem` caía em falso: a tela dizia «não abre pelo atalho do
+    # Hefesto» sobre um jogo que ninguém tinha lido. O gesto roda em thread
+    # (`hefesto_vivo._gesto`), e o contrato da vigia é esse: quem precisa do
+    # valor chama `ler()`.
     lida = VIGIA.agora()
-    tem = lida is not None and str(appid) in lida.com_wrapper
+    if lida is None:
+        lida = VIGIA.ler()
+    tem = str(appid) in lida.com_wrapper
     nome = f"<b>{desenho._e(slo.rotulo_do_jogo(appid))}</b>"
     abertura = (f"{nome} está aberto agora e " if quando == ABERTO else
                 f"{nome} foi o último jogo que passou pelo atalho do Hefesto, e "
@@ -1416,7 +1424,11 @@ def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 #: do PRAGMATA sem clique nenhum na noite de 21/09. A frase diz isso, curta, na
 #: forma da escolha dela para o chip «Steam Input» (*"Liga quando a Steam
 #: fechar"*) — e não aponta botão nenhum, porque não há o que clicar.
-REPOE_QUANDO_A_STEAM_FECHAR = " — ele volta quando a Steam fechar."
+#:
+#: «O ATALHO», E NÃO «ELE» — conferência de 24/09/2026. O sujeito da frase é o
+#: jogo (*"<jogo> está aberto agora e não abre pelo atalho…"*), e um «ele volta»
+#: se lia como o JOGO voltando. Uma palavra a mais tira a dúvida.
+REPOE_QUANDO_A_STEAM_FECHAR = " — o atalho volta quando a Steam fechar."
 
 
 def _quem_repoe_o_atalho(lida: desenho.Leitura | None, appid: int) -> str:
