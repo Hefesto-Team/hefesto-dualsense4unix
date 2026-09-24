@@ -626,3 +626,94 @@ def test_reservado_que_ninguem_explica_nao_entra() -> None:
         "só se reserva o que está no domínio: reservar palavra de fora seria "
         "inventar vocabulário pela porta dos fundos"
     )
+
+
+# ── as respostas dela de 24/09/2026 ─────────────────────────────────────────
+
+#: As doze linhas que ela respondeu em 24/09/2026, na página «Decisões do
+#: Hefesto» (O-MAPA-OUVE-AS-RESPOSTAS-DE-24-09-01). Onze são o veto de 19/07 —
+#: a família do SN30 e o `tres_na_mesa@pro`, medidas por grep de «veto de
+#: 19/07» com `so-ela-decide` — e uma é a calibração dos analógicos. Saíram de
+#: `so-ela-decide` para `decisao-tomada`, e cada uma cita a decisão pelo id.
+#:
+#: A LISTA É DIGITADA AQUI, e não lida do mapa: derivada do CSV, uma linha que
+#: voltasse a `so-ela-decide` sairia da lista junto com o defeito — a trava
+#: medida contra a própria saída. Quando a pergunta voltar (o veto é «até o
+#: release»), a decisão deixa de estar `decidida` e esta régua reprova até
+#: alguém mover as linhas de propósito.
+VETO_DOS_EXTERNOS = "D-2409-O-VETO-DOS-EXTERNOS-SEGUE-ATE-O-RELEASE"
+NUNCA_GRAVA_A_CALIBRACAO = "D-2409-O-HEFESTO-NUNCA-GRAVA-A-CALIBRACAO"
+RESPONDIDAS_POR_ELA: dict[str, str] = {
+    "combinacao.rumble_simultaneo@sn30": VETO_DOS_EXTERNOS,
+    "combinacao.tres_na_mesa@pro": VETO_DOS_EXTERNOS,
+    "combinacao.tres_na_mesa@sn30": VETO_DOS_EXTERNOS,
+    "entrada.bruta@sn30": VETO_DOS_EXTERNOS,
+    "entrada.combo.ponte@sn30": VETO_DOS_EXTERNOS,
+    "entrada.stick@sn30": VETO_DOS_EXTERNOS,
+    "movimento.acelerometro@sn30": VETO_DOS_EXTERNOS,
+    "movimento.giroscopio@sn30": VETO_DOS_EXTERNOS,
+    "plataforma.adocao@sn30": VETO_DOS_EXTERNOS,
+    "vibracao.rumble.ff@sn30": VETO_DOS_EXTERNOS,
+    "vibracao.rumble.passthrough@sn30": VETO_DOS_EXTERNOS,
+    "entrada.stick.calibracao@dualsense": NUNCA_GRAVA_A_CALIBRACAO,
+}
+DECISOES_DELA = RAIZ / "docs" / "data" / "decisoes-dela.csv"
+
+
+def respostas_que_voltaram(mapa: Path | str, decisoes: Path | str) -> list[str]:
+    """O que desfaz uma resposta dela, por linha. Lista vazia: nada voltou.
+
+    Três perguntas por linha: a decisão continua `decidida` no arquivo dela; a
+    causa de todo lado que não aciona é `decisao-tomada`; e a linha cita a
+    decisão pelo id e não diz mais `so-ela-decide` em célula nenhuma.
+    """
+    linhas = {_celula(linha, "id"): linha for linha in _linhas(mapa)}
+    decididas = {
+        _celula(linha, "id")
+        for linha in _linhas(decisoes)
+        if _celula(linha, "estado") == "decidida"
+    }
+    achados: list[str] = []
+    for ident, decisao in RESPONDIDAS_POR_ELA.items():
+        if decisao not in decididas:
+            achados.append(f"{ident}: `{decisao}` não está `decidida` em {Path(decisoes).name}")
+        linha = linhas.get(ident)
+        if linha is None:
+            achados.append(f"{ident}: a linha sumiu do mapa")
+            continue
+        for lado in LADOS:
+            if _celula(linha, f"{lado}_aciona") != ACIONA_NAO:
+                continue
+            causa = _celula(linha, f"{lado}_{SUFIXO}")
+            if causa != DECISAO:
+                achados.append(f"{ident} ({lado}): `{SUFIXO}` = {causa!r}, e ela respondeu")
+        texto = " ".join(valor or "" for valor in linha.values())
+        if decisao not in texto:
+            achados.append(f"{ident}: nenhuma célula cita `{decisao}`")
+        if SO_ELA_DECIDE in texto:
+            achados.append(f"{ident}: alguma célula ainda diz `{SO_ELA_DECIDE}`")
+    return achados
+
+
+def test_a_resposta_dela_nao_volta_a_ser_pergunta() -> None:
+    """MORDE: devolva `so-ela-decide` a uma das doze, ou apague o id dela."""
+    voltaram = respostas_que_voltaram(MAPA, DECISOES_DELA)
+    assert not voltaram, (
+        f"{len(voltaram)} achado(s) nas linhas que ela respondeu em 24/09/2026: "
+        + "; ".join(voltaram)
+        + ". A pergunta tem resposta: a causa é `decisao-tomada` e a linha cita a "
+        "decisão pelo id. Se a pergunta voltou, a decisão sai de `decidida` no "
+        "arquivo dela e a linha sai de `RESPONDIDAS_POR_ELA` no mesmo gesto"
+    )
+
+
+def test_a_regua_das_respostas_ve_uma_que_volta() -> None:
+    """Uma célula devolvida a `so-ela-decide` num CSV de mentira tem de ser VISTA."""
+    import tempfile
+
+    alvo = ("entrada.stick.calibracao@dualsense", "radio")
+    with tempfile.TemporaryDirectory() as pasta:
+        falso = _csv_de_mentira(Path(pasta) / "mapa.csv", trocas={alvo: SO_ELA_DECIDE})
+        voltaram = respostas_que_voltaram(falso, DECISOES_DELA)
+    assert any(achado.startswith(f"{alvo[0]} ({alvo[1]})") for achado in voltaram), voltaram
+    assert any(SO_ELA_DECIDE in achado for achado in voltaram), voltaram

@@ -387,8 +387,11 @@ CELULAS_ESPERADAS: dict[str, dict[str, str]] = {
         "cabo_aceita": "sim",
         "cabo_aciona": "não",
         "radio_aciona": "não",
-        "cabo_por_que_nao_aciona": "so-ela-decide",
-        "radio_por_que_nao_aciona": "so-ela-decide",
+        # 24/09/2026: ela respondeu a pergunta que a causa guardava —
+        # `D-2409-O-HEFESTO-NUNCA-GRAVA-A-CALIBRACAO` (o desvio se corrige no
+        # computador) —, e a causa saiu da fila dela para `decisao-tomada`.
+        "cabo_por_que_nao_aciona": "decisao-tomada",
+        "radio_por_que_nao_aciona": "decisao-tomada",
     },
     "luz.recursos_proprios@dualsense": {
         "cabo_aciona": "não",
