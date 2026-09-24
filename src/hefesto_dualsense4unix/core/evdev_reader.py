@@ -329,6 +329,173 @@ def libinput_ignora_device(event_path: Path | str | None) -> bool:
     return False
 
 
+# ---------------------------------------------------------------------------
+# HIDE-SO-O-HIDRAW-02 (24/09/2026) — o nó de entrada do físico abre pelo broker
+# ---------------------------------------------------------------------------
+#
+# A palavra dela de 23/09, «Esconder tudo»: os nós de entrada do DualSense
+# físico nascem `0600 root` (`assets/72-hefesto-touchpad-motion-uaccess.rules`)
+# e somem para todos menos para o Hefesto, como o hidraw já sumia. O daemon lê
+# o gamepad, o touchpad e os sensores de movimento por estes nós — sem outra
+# porta, os três cartões ficariam cegos. A porta é a mesma do hidraw: o `open`
+# do broker, que devolve o fd por SCM_RIGHTS.
+#
+# A ordem não muda: primeiro o caminho, como sempre (numa máquina sem a cura,
+# ou no Modo Nativo, o nó está aberto e o broker nem é consultado); o broker
+# só quando o caminho responde «sem permissão» E o sysfs diz que o nó é de
+# DualSense. Nó de teclado, de mouse, de outro controle, nunca vai ao broker.
+
+#: Quem pede o fd ao broker: `(caminho) -> fd | None`. None aqui = o cliente
+#: padrão (`HidrawBrokerClient`, conexão própria, criada na primeira vez). Os
+#: testes trocam este atributo; o daemon não precisa trocar nada — o `open` do
+#: broker não mexe em lease, e uma conexão só para ele é inofensiva.
+_ABRIDOR_DO_BROKER: Any = None
+_ABRIDOR_LOCK = threading.Lock()
+_CLIENTE_DO_BROKER: Any = None
+#: Raiz do sysfs dos nós de entrada que os três filtros abaixo leem. Só a
+#: suíte a desvia, para uma árvore de mentira.
+SYS_CLASS_INPUT = "/sys/class/input"
+
+
+def _abridor_do_broker() -> Any:
+    """O `open_fd` do cliente do broker, criado uma vez por processo."""
+    global _CLIENTE_DO_BROKER
+    if _ABRIDOR_DO_BROKER is not None:
+        return _ABRIDOR_DO_BROKER
+    with _ABRIDOR_LOCK:
+        if _CLIENTE_DO_BROKER is None:
+            from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+                HidrawBrokerClient,
+            )
+
+            _CLIENTE_DO_BROKER = HidrawBrokerClient()
+        return _CLIENTE_DO_BROKER.open_fd
+
+
+def _no_de_dualsense_no_sysfs(caminho: str) -> bool:
+    """O sysfs diz que o nó de entrada é de um DualSense (054c:0ce6/0df2)?
+
+    Só leitura de dois arquivos do sysfs, sem abrir o nó. Nó ilegível é False:
+    na dúvida, o broker não é incomodado e o `PermissionError` sobe como antes.
+    """
+    base = os.path.basename(caminho)
+    try:
+        with open(f"{SYS_CLASS_INPUT}/{base}/device/id/vendor", encoding="ascii") as fh:
+            vendor = int(fh.read().strip(), 16)
+        with open(f"{SYS_CLASS_INPUT}/{base}/device/id/product", encoding="ascii") as fh:
+            product = int(fh.read().strip(), 16)
+    except (OSError, ValueError):
+        return False
+    return vendor == DUALSENSE_VENDOR and product in DUALSENSE_PIDS
+
+
+def _nome_no_sysfs(caminho: str) -> str:
+    """O `name` do input device de um nó, pelo sysfs ("" se ilegível)."""
+    base = os.path.basename(caminho)
+    return _read_input_attr(f"{SYS_CLASS_INPUT}/{base}/device", "name")
+
+
+#: BTN_GAMEPAD == BTN_SOUTH == 0x130, o botão que separa o nó do gamepad dos
+#: nós auxiliares (touchpad, movimento, fone) na descoberta.
+_BTN_GAMEPAD = 0x130
+
+
+def _sysfs_tem_tecla(caminho: str, codigo: int) -> bool:
+    """O bitmap `capabilities/key` do sysfs tem o bit `codigo`?
+
+    O kernel imprime o bitmap como palavras `unsigned long` em hexadecimal, da
+    mais alta para a mais baixa, sem zeros à esquerda. Ilegível é True: na
+    dúvida, quem decide é a leitura das capacidades pelo fd, como sempre.
+    """
+    import struct
+
+    base = os.path.basename(caminho)
+    try:
+        with open(
+            f"{SYS_CLASS_INPUT}/{base}/device/capabilities/key", encoding="ascii"
+        ) as fh:
+            palavras = fh.read().split()
+    except OSError:
+        return True
+    bits = struct.calcsize("l") * 8
+    indice, deslocamento = divmod(codigo, bits)
+    palavras = list(reversed(palavras))
+    if indice >= len(palavras):
+        return False
+    try:
+        return bool((int(palavras[indice], 16) >> deslocamento) & 1)
+    except ValueError:
+        return True
+
+
+def _input_device_do_fd(fd: int, caminho: str) -> Any:
+    """Um `evdev.InputDevice` em volta de um fd que o broker serviu.
+
+    O `InputDevice(caminho)` abre o nó por conta própria, e reabrir por
+    `/proc/self/fd/N` refaz a checagem de permissão no inode — com o nó
+    `0600 root`, é o mesmo `EACCES`. Então o objeto nasce aqui com
+    exatamente os campos que o `__init__` da biblioteca preenche, na mesma
+    ordem e pelas mesmas chamadas; a régua
+    `test_o_input_device_do_fd_espelha_o_da_biblioteca` compara a lista com o
+    `__init__` instalado e reprova na primeira versão que mudar.
+    """
+    from evdev import InputDevice, _input
+    from evdev.device import DeviceInfo
+
+    os.set_blocking(fd, False)
+    dev = InputDevice.__new__(InputDevice)
+    dev.path = caminho
+    dev.fd = fd
+    try:
+        info_res = _input.ioctl_devinfo(fd)
+        dev.info = DeviceInfo(*info_res[:4])
+        dev.name = info_res[4]
+        dev.phys = info_res[5]
+        dev.uniq = info_res[6]
+        dev.version = _input.ioctl_EVIOCGVERSION(fd)
+        dev._rawcapabilities = _input.ioctl_capabilities(fd)
+        dev.ff_effects_count = _input.ioctl_EVIOCGEFFECTS(fd)
+    except Exception:
+        with contextlib.suppress(Exception):
+            dev.close()
+        raise
+    return dev
+
+
+def abrir_input_device(
+    path: Path | str, *, pede_ao_broker: Any = None
+) -> Any:
+    """Abre um nó evdev pelo caminho e, se ele estiver FECHADO, pelo broker.
+
+    HIDE-SO-O-HIDRAW-02. `pede_ao_broker` é um filtro opcional sobre o
+    caminho, avaliado só depois do `PermissionError`: a descoberta o usa para
+    ir ao broker SÓ pelo nó que ela procura (o do gamepad, o do touchpad, o
+    dos sensores), em vez de pedir o fd de todo nó do controle a cada
+    hotplug — cada pedido é uma linha no diário do broker.
+
+    O broker ausente, ou que recusa, devolve o `PermissionError` original:
+    o chamador trata como sempre tratou.
+    """
+    from evdev import InputDevice
+
+    caminho = str(path)
+    try:
+        return InputDevice(caminho)
+    except PermissionError:
+        if not _no_de_dualsense_no_sysfs(caminho):
+            raise
+        if pede_ao_broker is not None and not pede_ao_broker(caminho):
+            raise
+        fd: int | None = None
+        with contextlib.suppress(Exception):
+            fd = _abridor_do_broker()(caminho)
+        if fd is None:
+            raise
+        dev = _input_device_do_fd(fd, caminho)
+        logger.debug("evdev_aberto_pelo_broker", path=caminho)
+        return dev
+
+
 def _event_num(path: Path) -> int:
     """Número do node evdev (`event12` → 12) para ordenação determinística."""
     import re
@@ -704,7 +871,7 @@ def discover_gamepads(*, com_sysfs: bool = True) -> list[GamepadDescoberto]:
     aparelho na mesa.
     """
     try:
-        from evdev import InputDevice, ecodes, list_devices
+        from evdev import ecodes, list_devices
     except ImportError:
         return []
     from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
@@ -714,7 +881,13 @@ def discover_gamepads(*, com_sysfs: bool = True) -> list[GamepadDescoberto]:
         if _is_virtual_evdev(path):
             continue
         try:
-            dev = InputDevice(path)
+            # HIDE-SO-O-HIDRAW-02: o nó do físico está FECHADO; ao broker vai
+            # só o do gamepad (os auxiliares cairiam no filtro de caps logo
+            # abaixo, e cada pedido é uma linha no diário do broker).
+            dev = abrir_input_device(
+                path,
+                pede_ao_broker=lambda c: _sysfs_tem_tecla(c, _BTN_GAMEPAD),
+            )
             try:
                 vendor = int(dev.info.vendor)
                 product = int(dev.info.product)
@@ -1243,7 +1416,7 @@ class _EvdevReconnectLoop:
     def _run(self) -> None:
         """Loop com auto-reconnect; ENODEV/erro real dispara reset + reabrir."""
         try:
-            from evdev import InputDevice, ecodes
+            from evdev import ecodes
         except ImportError:
             logger.warning("evdev_module_missing")
             return
@@ -1266,7 +1439,9 @@ class _EvdevReconnectLoop:
                 backoff = min(backoff * 2, 5.0)
                 continue
             try:
-                dev = InputDevice(str(path))
+                # HIDE-SO-O-HIDRAW-02: o nó do físico nasce fechado, e a porta
+                # dele é o broker, como a do hidraw.
+                dev = abrir_input_device(path)
             except Exception as exc:
                 logger.warning(f"{prefix}_open_failed", err=str(exc), path=str(path))
                 self._device_path = None
@@ -1750,7 +1925,7 @@ def _discover_dualsense_por_nome(marcador: str) -> dict[str, Path]:
     saída.
     """
     try:
-        from evdev import InputDevice, list_devices
+        from evdev import list_devices
     except ImportError:
         return {}
     from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
@@ -1760,7 +1935,11 @@ def _discover_dualsense_por_nome(marcador: str) -> dict[str, Path]:
         if _is_virtual_evdev(path):
             continue
         try:
-            dev = InputDevice(path)
+            # HIDE-SO-O-HIDRAW-02: ao broker só vai o nó cujo nome já diz o
+            # que se procura — o touchpad, ou os sensores de movimento.
+            dev = abrir_input_device(
+                path, pede_ao_broker=lambda c: marcador in _nome_no_sysfs(c)
+            )
             try:
                 if (
                     dev.info.vendor == DUALSENSE_VENDOR
