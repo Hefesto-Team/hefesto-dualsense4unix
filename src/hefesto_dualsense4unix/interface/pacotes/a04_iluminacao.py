@@ -705,13 +705,14 @@ def cor_escolhida(efetiva: Any, brilho: float | None) -> Any:
     está no plástico, que é o honesto; inventar um pedido seria afirmar uma
     escolha que ninguém fez.
 
-    O CASAMENTO TEM DE SER ÚNICO — 24/09/2026, A-MARCA-DA-COR-NAO-SOME-01. A
-    varredura devolvia o PRIMEIRO tom que casasse, e a 0% os catorze acendem
-    `(0, 0, 0)`: o primeiro da tabela é o `#0000FF`, e a coluna de quem ela
-    apagou pelo trilho passava a dizer azul — a borda pulava para o azul, o X
-    da cor dele sumia dos outros três, e o P1 ganhava um X na PRÓPRIA cor.
-    Medido no piloto, com o clique. Quem casa com mais de um tom não diz de
-    qual pedido veio (ver `_o_tom_que_acende`).
+    O PRETO NÃO CASA, E O CASAMENTO TEM DE SER ÚNICO — 24/09/2026,
+    A-MARCA-DA-COR-NAO-SOME-01. A varredura devolvia o PRIMEIRO tom que
+    casasse, e a 0% os catorze acendem `(0, 0, 0)`: o primeiro da tabela é o
+    `#0000FF`, e a coluna de quem ela apagou pelo trilho passava a dizer azul
+    — a borda pulava para o azul, o X da cor dele sumia dos outros três, e o
+    P1 ganhava um X na PRÓPRIA cor. Medido no piloto, com o clique. A luz
+    apagada e a que casa com mais de um tom não dizem de qual pedido vieram
+    (ver `_o_tom_que_acende`), e aí a efetiva volta inteira.
 
     :param efetiva: o `lightbar_rgb` do daemon, ou `None`/vazio quando não há.
     :param brilho: `brilho_do_controle`. `None` ou `1.0` devolvem a efetiva sem
@@ -734,20 +735,25 @@ def _o_tom_que_acende(efetiva: Any,
     se a luz acesa DISSE a cor ou não, porque é aí que a escada de
     `_a_cor_de_agora` desce um degrau.
 
-    `None` EM TRÊS CASOS, e os três foram medidos no piloto em 24/09/2026:
+    `None` EM TRÊS CASOS, e os dois primeiros o piloto mediu com o clique em
+    24/09/2026:
 
     * **nenhum tom casa** — a luz publicada é de OUTRO brilho. O gesto
       `brilho` grava o número novo no disco antes de o daemon publicar a luz
       nova (o `state_full` guarda a leitura do nó por 1 s), e por meio segundo
       cada tique invertia a luz velha com o brilho novo;
-    * **mais de um tom casa** — a 0% os catorze acendem preto;
-    * **a luz está apagada** — o `#000000` é tom da casa, e com qualquer
-      brilho acima de zero ele é o ÚNICO que acende preto. Subindo o trilho a
-      partir de 0%, o disco já diz 70% e o daemon ainda publica o preto dos
-      0%, e a coluna inteira virava preta por meio segundo. Luz apagada não
-      diz cor — é a ordem dela de 22/09 que `led_control.cor_escolhida`
-      guarda, *o preto é banido como cor* —, e quem apagou pelo «Desligar»
-      tem o preto GRAVADO: é o degrau seguinte da escada que o devolve.
+    * **a luz está apagada** — a 0% os catorze tons acendem preto, e acima de
+      0% o `#000000` é o ÚNICO que acende preto: subindo o trilho a partir de
+      0%, o disco já diz 70% e o daemon ainda publica o preto dos 0%, e a
+      coluna inteira virava preta por meio segundo. Luz apagada não diz cor —
+      é a ordem dela de 22/09 que `led_control.cor_escolhida` guarda, *o
+      preto é banido como cor* —, e quem apagou pelo «Desligar» tem o preto
+      GRAVADO: é o degrau seguinte da escada que o devolve;
+    * **mais de um tom casa** — de 0,4% a 0,7% de brilho o vermelho, o rosa
+      e o laranja acendem todos `(1, 0, 0)`, e há trios iguais no azul e no
+      verde. O trilho anda de 1 em 1% e não chega lá; um perfil gravado por
+      outra porta chega, e devolver o primeiro da tabela seria escolher por
+      ela.
 
     A 100% (ou sem brilho) não há conta a desfazer: a luz é o tom se ela for
     um dos catorze.
