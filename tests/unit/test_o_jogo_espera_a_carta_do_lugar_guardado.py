@@ -45,6 +45,7 @@ Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5 zerados.
 """
 from __future__ import annotations
 
+import contextlib
 import time
 from pathlib import Path
 from types import SimpleNamespace
@@ -807,3 +808,98 @@ class TestOTopoDoEstadoNaVaga:
                 "com o P1 fora, a vibração «auto» do P2, do P3 e do P4 caiu — "
                 "o degrau leu a bateria 0 do posto vago"
             )
+
+
+class TestOP1QueVoltaJogaNaHora:
+    """O leitor do P1 reabre o nó assim que ele volta — não dorme no backoff.
+
+    A conferência (24/09/2026) mediu com o `EvdevReader` de verdade (o open é
+    dublê): antes da vaga, o leitor do P1 seguia o P2 e voltava ao P1 em 0,1 s,
+    pelo `retarget`, que acorda o `select`. Com o posto vago, o leitor fica SEM
+    nó e entra no backoff (0,5 → 1 → 2 → 4 → 5 s), e a espera do backoff era um
+    `Event.wait` que nada acordava além do `stop()`: o P1 voltava, a lâmpada e a
+    tela diziam 1, e o boneco 1 ficava parado por até 4,7 s. O mesmo valia para
+    uma mesa de UM controle só.
+    """
+
+    def test_o_no_que_volta_acorda_o_leitor_em_backoff(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import errno
+        import os
+        import threading
+
+        from hefesto_dualsense4unix.core import evdev_reader as er
+
+        aberturas: list[float] = []
+        nos: list[Any] = []
+
+        class _No:
+            """O nó de evdev: um pipe, para o `select` de verdade ter um fd."""
+
+            def __init__(self) -> None:
+                self.r, self.w = os.pipe()
+                self.fd = self.r
+                self.name = "dublê"
+
+            def read(self) -> Any:
+                os.read(self.r, 64)
+                raise OSError(errno.ENODEV, "No such device")  # o nó sumiu
+
+            def close(self) -> None:
+                for fd in (self.r, self.w):
+                    with contextlib.suppress(OSError):
+                        os.close(fd)
+
+            def capabilities(self, **_kw: Any) -> dict[Any, Any]:
+                return {}
+
+        def abrir(_path: Any, *_a: Any, **_kw: Any) -> _No:
+            no = _No()
+            nos.append(no)  # antes do carimbo: quem espera lê o carimbo
+            aberturas.append(time.monotonic())
+            return no
+
+        monkeypatch.setattr(er, "abrir_input_device", abrir)
+        sem_no = threading.Semaphore(0)
+
+        class _Leitor(er.EvdevReader):
+            no: Path | None = Path("/dev/input/event-dubl")
+
+            def _locate(self) -> Path | None:
+                if self.no is None:
+                    sem_no.release()
+                return self.no
+
+            def _o_kernel_discorda(self, dev: Any, ecodes: Any) -> dict[str, Any]:
+                return {}
+
+        leitor = _Leitor(target_uniq=P1)
+        try:
+            assert leitor.start()
+            limite = time.monotonic() + 5
+            while not aberturas and time.monotonic() < limite:
+                time.sleep(0.005)
+            assert aberturas, "o leitor nem abriu o primeiro nó"
+            leitor.no = None
+            os.write(nos[0].w, b"x")
+            # Três buscas sem nó: o leitor entrou na espera de 2 s do backoff.
+            for _ in range(3):
+                assert sem_no.acquire(timeout=10)
+            leitor.no = Path("/dev/input/event-dubl")
+            volta = time.monotonic()
+            # O que o `_recompute_primary` faz quando o P1 retoma o posto.
+            leitor.retarget(P1)
+            leitor.refresh_device()
+            leitor.start()
+            while len(aberturas) < 2 and time.monotonic() - volta < 5:
+                time.sleep(0.005)
+            assert len(aberturas) == 2, "o leitor não reabriu o nó do P1"
+            assert aberturas[1] - volta < 1.0, (
+                f"o P1 voltou e o leitor dele levou {aberturas[1] - volta:.2f} s "
+                "para reabrir o nó — o backoff não acordou"
+            )
+        finally:
+            leitor.stop()
+            for no in nos:
+                no.close()

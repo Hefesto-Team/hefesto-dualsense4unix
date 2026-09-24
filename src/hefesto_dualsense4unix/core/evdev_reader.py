@@ -1319,7 +1319,7 @@ class _EvdevReconnectLoop:
         (re)conexão para fechar essa janela (BUG-DAEMON-EVDEV-HOTPLUG-CACHE-01).
         """
         if self._device_path is None:
-            self._device_path = self._find_device()
+            self._device_path = _o_no_que_voltou(self, self._find_device())
         return self._device_path is not None
 
     def is_stale(self) -> bool:
@@ -1487,7 +1487,7 @@ class _EvdevReconnectLoop:
             if path is None:
                 if prefix == "evdev":
                     logger.debug("evdev_device_not_found_retry", backoff=backoff)
-                if self._stop_flag.wait(backoff):
+                if _esperar_o_backoff(self, backoff):
                     break
                 backoff = min(backoff * 2, 5.0)
                 continue
@@ -2811,6 +2811,47 @@ class MotionSensorReader(_EvdevReconnectLoop):
             for eixo in ("x", "y", "z"):
                 valor = self._angulo[eixo] + self._eixos[eixo] * dt
                 self._angulo[eixo] = max(-teto, min(teto, valor))
+
+
+
+# O-ASSENTO-GUARDADO-NAO-ANDA-02, conferência de 24/09/2026 — a espera do
+# backoff SEM NÓ acorda quando o nó volta. As duas funções moram aqui, no fim
+# do módulo, porque o mapa de canais cita este arquivo por linha; lá em cima
+# são duas trocas de uma linha cada (o `_run` e o `refresh_device`).
+#
+# O defeito, medido com o `EvdevReader` de verdade e o open dublê: a espera do
+# backoff (0,5 → 1 → 2 → 4 → 5 s) era um `Event.wait` que só o `stop()`
+# acordava. O `retarget`, o `request_reopen` e o `refresh_device` não
+# alcançavam o leitor ali — o self-pipe só acordava o `select` do nó aberto.
+# Com o posto de P1 vago, o leitor do P1 fica sem nó e entra no backoff, e o P1
+# que voltava dentro do prazo ficava até 4,7 s sem mover o boneco 1 (antes da
+# vaga, o leitor seguia o P2 e voltava ao P1 em 0,1 s). Uma mesa de UM
+# controle só já pagava o mesmo preço a cada volta.
+
+
+def _esperar_o_backoff(leitor: _EvdevReconnectLoop, segundos: float) -> bool:
+    """Espera o backoff sem nó, acordando no wake. Devolve se é para PARAR.
+
+    O `select` no self-pipe é o mesmo mecanismo do `_read_until_signaled`
+    (HANG-01): o `stop()` e o `request_reopen()` já escrevem nele, e o
+    :func:`_o_no_que_voltou` também. Sem pipe (fechado na corrida de um
+    `stop()`, ou um dublê montado por `__new__`), volta a espera de antes.
+    """
+    try:
+        pronto, _, _ = select.select([getattr(leitor, "_wake_r", -1)], [], [], segundos)
+    except (OSError, ValueError):
+        return leitor._stop_flag.wait(segundos)
+    if pronto:
+        leitor._drain_wake()
+    return leitor._stop_flag.is_set()
+
+
+def _o_no_que_voltou(leitor: _EvdevReconnectLoop, caminho: Path | None) -> Path | None:
+    """O nó que o `refresh_device` achou — e o leitor em backoff acorda para abri-lo."""
+    if caminho is not None:
+        with contextlib.suppress(AttributeError):  # dublê sem self-pipe
+            leitor._wake()
+    return caminho
 
 
 __all__ = [
