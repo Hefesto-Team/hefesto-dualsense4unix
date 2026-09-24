@@ -216,7 +216,7 @@ roteiro.
 * **P3** — É ESTE que desliga, e é o único que você toca. Está no rádio. Segure o botão PS até todas as luzes dele apagarem, solte e deixe-o parado na mesa pelos vinte segundos. Se ele estava vibrando pelo jogo na hora em que apagou, ele tem de voltar parado na linha 5.
 * **P4** — Fica ligado, no rádio. Não toque nele. É o vizinho de rádio do que caiu, então é nele que uma bagunça costuma aparecer primeiro: confira número e cor antes e depois, e veja se ele não se mudou para o lugar do P3.
 
-**A armadilha.** Soltar o botão PS cedo demais. Aí o controle não desliga e o teste mede o seu gesto, não o produto — e há um efeito colateral já visto nesta casa: com cerca de cinco segundos de botão, o Hefesto lê o aperto como um toque no PS e abre a Steam. Segure até as luzes apagarem; se a Steam abrir, feche-a e refaça a linha. E o prazo: o lugar do P3 fica guardado por trinta segundos, contados de quando a coluna dele passa a dizer «P3 • Desconectado». Se o P4 descer para 3 dentro dos vinte segundos desta linha — lâmpadas do jogador 3 e a barra na cor do 3 —, é defeito: anote com a hora. Passados os trinta segundos sem o P3, a fila se fecha de propósito, e o P4 desce para 3.
+**A armadilha.** Soltar o botão PS cedo demais. Aí o controle não desliga e o teste mede o seu gesto, não o produto. Segure até as luzes apagarem: segurar o PS não dispara nada no Hefesto, e só o toque curto — menos de 0,7 s — num controle ligado abre a Steam. Se a Steam abrir, o aperto foi curto: feche-a e refaça a linha. E o prazo: o lugar do P3 fica guardado por trinta segundos, contados de quando a coluna dele passa a dizer «P3 • Desconectado». Se o P4 descer para 3 dentro dos vinte segundos desta linha — lâmpadas do jogador 3 e a barra na cor do 3 —, é defeito: anote com a hora. Passados os trinta segundos sem o P3, a fila se fecha de propósito, e o P4 desce para 3.
 
 ---
 
@@ -253,7 +253,7 @@ roteiro.
 * **P3** — É ESTE que religa, e é o único que você toca. Está no rádio. Um toque curto no PS, espere a barra de luz acender e ponha-o de volta na mesa. Tem de voltar como jogador 3.
 * **P4** — Não pode mudar de posto. Está no rádio. Não toque nele. É aqui que se vê se alguém tomou o lugar do P3 enquanto ele estava fora — olhe as lâmpadas dele com atenção.
 
-**A armadilha.** Religar pelo cabo é outro teste, com resposta possivelmente diferente — ninguém mediu essa ainda. Religue pelo botão PS, com um toque curto: segurar o PS não dispara nada no Hefesto, e só o toque curto no PS de um controle já ligado abre a Steam. O prazo de trinta segundos do Hefesto é o do posto de Jogador 1; o número do P3 é guardado pelo endereço dele e não vence enquanto o Hefesto estiver de pé — se ele voltar com outro número, isso é achado, não demora sua. E se a Steam estiver aberta, a barra e as lâmpadas do P3 continuam as do Hefesto: o controle de verdade nasce escondido dela, e o Hefesto devolve a cor e o número a quem pintar por cima em até um segundo.
+**A armadilha.** Religar pelo cabo é outro teste, com resposta possivelmente diferente — ninguém mediu essa ainda. Religue pelo botão PS, com um toque curto: segurar o PS não dispara nada no Hefesto, e só o toque curto no PS de um controle já ligado abre a Steam. O lugar do P3 fica guardado por trinta segundos — o prazo vale para os quatro lugares, não só para o Jogador 1 —, e dentro dele ninguém troca de número. Se você passar dos trinta, o P4 terá descido para 3; quando o P3 voltar, os dois voltam ao seu, porque quem volta recupera o dele enquanto o Hefesto estiver de pé. Se o P3 voltar com outro número, isso é achado, não demora sua. E se a Steam estiver aberta, a barra e as lâmpadas do P3 continuam as do Hefesto: o controle de verdade nasce escondido dela, e o Hefesto devolve a cor e o número a quem pintar por cima em até um segundo.
 
 ---
 
@@ -646,7 +646,7 @@ roteiro.
 
 **O que isto prova.** Prova que mandar um controle que já está pareado voltar pelo rádio, pela própria aba Conexões, mostra a espera pelo PS com a contagem, devolve ele ao mesmo lugar — sem abrir um segundo assento para o mesmo controle — e que o «Cancelar» obedece.
 
-**Onde olhar.** Na aba Conexões do Hefesto, na seção «Gestão de Controles», que abre com um clique no nome dela. Três coisas ali: a conta no canto da seção (por exemplo «4 controles • 2 no cabo • 2 no rádio»), a linha de cada controle («Sony • Player 4 • nome • BT» — o fim da linha diz USB para cabo e BT para rádio) e, dentro da linha aberta de um controle, o botão «A luz não acende». Durante a espera, o mesmo botão passa a dizer «Cancelar», e aparece no cartão dele a linha «▲ Aperte PS no controle · procurando…» com os segundos correndo para trás, a partir de 60.
+**Onde olhar.** Na aba Conexões do Hefesto, na seção «Gestão de Controles», que abre com um clique no nome dela. Três coisas ali: a conta no canto da seção (por exemplo «4 controles • 2 USB • 2 BT»), a linha de cada controle («Sony • Player 4 • nome • BT» — o fim da linha diz USB para cabo e BT para rádio) e, dentro da linha aberta de um controle, o botão «A luz não acende». Durante a espera, o mesmo botão passa a dizer «Cancelar», e aparece no cartão dele a linha «▲ Aperte PS no controle · procurando…» com os segundos correndo para trás, a partir de 60.
 
 **Os passos.**
 
