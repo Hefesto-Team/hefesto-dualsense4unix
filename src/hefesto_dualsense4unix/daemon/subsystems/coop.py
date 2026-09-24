@@ -2986,7 +2986,7 @@ def planejar_a_ordem(
     Nesses 60 arranjos o sufixo deixava o jogo como estava. Quando o sufixo
     deixa alguém fora do boneco, :func:`_a_faixa` tenta recriar só uma faixa de
     cartas: na mesa de cima, o ``b`` e o ``c`` renascem nos bonecos 2 e 3, o
-    lugar 3 do jogo fica guardado para o 4, e o ``d`` não se mexe. Quem espera
+    boneco 4 fica guardado para a carta 4, e o ``d`` não se mexe. Quem espera
     um lugar ainda guardado também não se mexe quando está fora do boneco:
     recriá-lo o poria no lugar guardado. O caso que já fechava não passa por
     lá, então não muda.
