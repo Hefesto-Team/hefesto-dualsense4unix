@@ -16,12 +16,15 @@ que o Flatpak deriva do manifesto, na frente do BlueZ de mentira da bancada
 Sem ``xdg-dbus-proxy`` na máquina essa parte pula; a leitura do manifesto e da
 página roda sempre.
 
-A MORDIDA, medida: tirar o ``--system-talk-name=org.bluez`` reprova o do nome,
-o do pareamento pelo proxy e o da página; trocá-lo por ``--socket=system-bus``
-reprova o do nome; tirar a linha do diário, ou o ``:ro`` dela, reprova o do
-diário; o daemon passando a escrever no diário do root reprova o da leitura;
-tirar a checagem do remetente do agente reprova o do intruso; a linha da pasta
-de execução voltando a dizer ``app/<id>`` reprova o da página.
+A MORDIDA, medida: tirar o ``--system-talk-name=org.bluez``, ou trocá-lo por
+``--socket=system-bus``, reprova o do nome, o do pareamento pelo proxy, o do
+intruso e o da página; pôr o ``--socket=system-bus`` AO LADO dela, ou o curinga
+``org.bluez.*``, reprova o do nome; tirar a linha do diário, ou o ``:ro`` dela,
+reprova o do diário e o da página; o daemon passando a escrever no diário do
+root (pelo dono ou pelo caminho escrito à mão) reprova o da leitura; um
+``BusType.SYSTEM`` fora do ``bluez_dbus`` reprova o do barramento; tirar a
+checagem do remetente do agente reprova o do intruso; a linha da pasta de
+execução voltando a dizer ``app/<id>`` reprova o da pasta.
 """
 
 from __future__ import annotations
@@ -165,8 +168,40 @@ def _referencias(nome: str) -> list[tuple[str, str]]:
     return achadas
 
 
+def _textos_com(trecho: str) -> list[str]:
+    """``["arquivo:linha"]`` de cada texto do pacote com ``trecho`` (fora das
+    docstrings e do broker): o caminho escrito à mão, fora do dono."""
+    achados: list[str] = []
+    for arquivo in sorted(PACOTE.rglob("*.py")):
+        relativo = arquivo.relative_to(PACOTE)
+        if relativo.parts[0] == "broker":
+            continue
+        arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
+        docstrings = {
+            id(no.value)
+            for no in ast.walk(arvore)
+            if isinstance(no, ast.Expr) and isinstance(no.value, ast.Constant)
+        }
+        achados.extend(
+            f"{relativo}:{no.lineno}"
+            for no in ast.walk(arvore)
+            if isinstance(no, ast.Constant)
+            and isinstance(no.value, str)
+            and id(no) not in docstrings
+            and trecho in no.value
+        )
+    return achados
+
+
 def test_o_daemon_so_le_o_diario_do_root() -> None:
     """É o que sustenta o ``:ro``: o caminho do root só serve ao ``ler``."""
+    pasta = str(diario_do_radio.DIARIO_DO_ROOT.parent)
+    escrito = _textos_com(pasta)
+    assert len(escrito) == 1 and escrito[0].startswith("integrations/diario_do_radio.py:"), (
+        f"a pasta do diário do root está escrita à mão em {escrito}: fora do "
+        "`DIARIO_DO_ROOT`, um segundo dono do caminho escapa da régua abaixo, e se "
+        "ele escrever ali a montagem `:ro` volta EROFS no Flatpak"
+    )
     donos = set(_referencias("caminho_do_diario_do_root"))
     assert donos == {("integrations/diario_do_radio.py", "ler")}, (
         f"o caminho do diário do root é usado em {sorted(donos)}: se alguém passou a "
