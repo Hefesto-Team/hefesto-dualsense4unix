@@ -569,6 +569,27 @@ def test_a_copia_de_fabrica_antiga_vira_a_de_hoje_e_tem_volta(
         "a volta que ela pediu foi desfeita pela migração")
 
 
+@pytest.mark.parametrize("arquivo_antigo", ["meu_perfil.json", "personalizado.json"])
+def test_a_fabrica_de_antes_com_o_nome_de_antes_chega_a_de_hoje_numa_carga(
+    semeadura_ligada: None, arquivo_antigo: str,
+) -> None:
+    """A cadeia inteira: a cópia de fábrica ainda com o nome antigo, numa carga só.
+
+    As duas renomeações trocam o nome e mais nada; a fábrica nova vem DEPOIS
+    delas no `_maybe_seed_presets`, e por isso alcança o que elas acabaram de
+    renomear — a máquina de quem nunca mexeu no padrão sai com o gatilho ligado.
+    """
+    pasta = profiles_dir(ensure=True)
+    nome_antigo = "meu_perfil" if arquivo_antigo == "meu_perfil.json" else "Personalizado"
+    velha = dict(loader._FABRICAS_ANTERIORES_DO_FREESTYLE[4], name=nome_antigo)
+    (pasta / arquivo_antigo).write_text(json.dumps(velha, indent=2), encoding="utf-8")
+
+    assert [p.name for p in loader.load_all_profiles()] == ["Freestyle"]
+
+    assert (pasta / loader.ARQUIVO_DO_PADRAO).read_bytes() == ASSET.read_bytes()
+    assert not (pasta / arquivo_antigo).exists()
+
+
 def _o_freestyle_dela() -> dict[str, Any]:
     """A fábrica de 24/09 com UM ajuste dela: a cor do P1 por controle."""
     dela = json.loads(json.dumps(loader._FABRICAS_ANTERIORES_DO_FREESTYLE[4]))
