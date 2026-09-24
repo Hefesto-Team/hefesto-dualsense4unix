@@ -6,7 +6,7 @@ Hefesto» (`D-2409-O-RECONECTAR-NAO-DIZ-NADA`): *«Nada: o número novo aparece 
 próprio cartão»*. É o fim da proposta da JOGAR-02 (09/09/2026), que esperava o
 olho dela.
 
-O QUE ESTA RÉGUA COBRA, em quatro metades:
+O QUE ESTA RÉGUA COBRA, em quatro partes:
 
 1. **a numeração que mudou não vira recado** — o gesto volta `None`, que é a
    piscada verde do botão, com o `renumbered` cheio ou vazio;
