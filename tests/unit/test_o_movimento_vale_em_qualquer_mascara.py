@@ -353,6 +353,28 @@ class _Hub:
         return self._angulo
 
 
+def _daemon_do_tamanho_do_real(hub: Any, **campos: Any) -> SimpleNamespace:
+    """O daemon dublado com o CAMINHO DO HUB do `Daemon` de verdade.
+
+    A-MIRA-POR-MOVIMENTO-NA-TELA-01 (24/09/2026). Os três dublês desta régua
+    penduravam ``_garantir_sensor_hub=lambda: hub`` direto no daemon — um método
+    que o `Daemon` real (`daemon/lifecycle.py`) NÃO tinha. As dezessete réguas
+    que passam por eles davam verde, e a mira nunca andou no produto.
+
+    Agora o hub mora onde mora no produto (o `IpcServer`, em ``_ipc_server``) e
+    quem responde é o método DA CLASSE REAL, ligado a este objeto: arranque
+    ``Daemon._garantir_sensor_hub`` e as dezessete reprovam na montagem.
+    """
+    from types import MethodType
+
+    from hefesto_dualsense4unix.daemon.lifecycle import Daemon
+
+    daemon = SimpleNamespace(
+        _ipc_server=SimpleNamespace(_garantir_sensor_hub=lambda: hub), **campos)
+    daemon._garantir_sensor_hub = MethodType(Daemon._garantir_sensor_hub, daemon)
+    return daemon
+
+
 _UNIQ = "aa:bb:cc:00:00:01"
 _ESTADO = SimpleNamespace(raw_lx=128, raw_ly=128, raw_rx=128, raw_ry=128,
                           l2_raw=0, r2_raw=0)
@@ -372,9 +394,8 @@ def _despachar(monkeypatch: pytest.MonkeyPatch, *, arranjo: Any, hub: _Hub,
     store = SimpleNamespace(udp_trigger_thresholds=(0, 0))
     rot.definir_ativo(store, arranjo)
     dev = _Device()
-    daemon = SimpleNamespace(store=store, _gamepad_device=dev,
-                             _mouse_device=mouse,
-                             _garantir_sensor_hub=lambda: hub)
+    daemon = _daemon_do_tamanho_do_real(hub, store=store, _gamepad_device=dev,
+                                        _mouse_device=mouse)
     gp.dispatch_gamepad(daemon, estado, botoes)
     return dev
 
@@ -488,9 +509,9 @@ def test_o_gatilho_le_o_botao_original(monkeypatch: pytest.MonkeyPatch) -> None:
     rot.definir_ativo(store, _arranjo(sensibilidade=12, gatilho="l2"))
     dev = _Device()
     gp.dispatch_gamepad(
-        SimpleNamespace(store=store, _gamepad_device=dev, _mouse_device=None,
-                        _garantir_sensor_hub=lambda: _Hub(
-                            velocidade=(0.0, 300.0, 0.0))),
+        _daemon_do_tamanho_do_real(_Hub(velocidade=(0.0, 300.0, 0.0)),
+                                   store=store, _gamepad_device=dev,
+                                   _mouse_device=None),
         _ESTADO, frozenset({remap.GATILHOS["l2"]}))
     assert dev.analog[0]["rx"] != 128, (
         "com o remapeamento ativo a mira deixou de ligar pelo botão que a mão "
@@ -867,8 +888,8 @@ def _mesa_de_quatro(monkeypatch: pytest.MonkeyPatch, *, arranjo: Any,
 
     store = SimpleNamespace(udp_trigger_thresholds=(0, 0))
     rot.definir_ativo(store, arranjo)
-    daemon = SimpleNamespace(store=store, _mouse_device=None,
-                             _garantir_sensor_hub=lambda: _HubPorControle())
+    daemon = _daemon_do_tamanho_do_real(_HubPorControle(), store=store,
+                                        _mouse_device=None)
 
     gerente = CoopManager.__new__(CoopManager)
     gerente._daemon = daemon  # type: ignore[attr-defined]
