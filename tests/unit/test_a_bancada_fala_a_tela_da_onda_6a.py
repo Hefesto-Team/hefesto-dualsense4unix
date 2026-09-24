@@ -30,7 +30,7 @@ from hefesto_dualsense4unix.core.controller import OutputSpec
 
 _RAIZ = Path(__file__).resolve().parents[2]
 _INTERFACE = _RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
-_PAGINAS = _INTERFACE / "paginas"
+_PAGINAS = _INTERFACE / "paginas"  # noqa-acento: nome de PASTA; caminho não leva acento
 _GESTOS = (
     _RAIZ / "docs/method/2026-09-07-O-COMO-DO-MAPA-o-gesto-das-178-celulas.md",
     _RAIZ / "docs/method/2026-09-07-O-COMO-DAS-21-o-gesto-exato-de-cada-linha.md",
