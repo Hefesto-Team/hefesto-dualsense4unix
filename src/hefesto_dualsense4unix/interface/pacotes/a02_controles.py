@@ -141,7 +141,9 @@ from hefesto_dualsense4unix.integrations import (
 from hefesto_dualsense4unix.interface.monta import luzinhas
 
 from . import (
+    LUGAR_VAZIO,
     NOME_SEM_LEITURA,
+    TRAVESSAO,
     Contexto,
     identidade_de,
     poda,
@@ -3531,6 +3533,14 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "fita-via": [str(m.get("via") or "") for m in ctx.mesa],
     })
     return {"cards": cards, "mesa": da_pagina, "sem_dono": {},
+            # O LUGAR SEM CONTROLE NÃO TEM CANAL, então não diz «ATIVO» — 24/09/2026.
+            # O `alto-canal` é `classe` num elemento e `html` noutro, e por isso o
+            # desenho não diz o lugar vazio dele (`o_que_o_desenho_diz_do_lugar_vazio`
+            # só serve campo de UM alvo). Com a O-ALTO-FALANTE-DIZ-ATIVO-01 publicada,
+            # o P1 e o P2 do desenho dizem «ATIVO» e o P3 e o P4 não dizem nada; sem
+            # esta linha, a mesa vazia mostrava o «ATIVO» do desenho num lugar sem
+            # controle (`test_as_sete_paginas_com_a_mesa_vazia[02-controles.html]`).
+            LUGAR_VAZIO: {"alto-canal": TRAVESSAO},
             "cobertura": {"pintados": sum(len(v) for v in cards.values()) + len(da_pagina),
                           "sem_dono": 0}}
 
