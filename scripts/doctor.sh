@@ -4435,14 +4435,29 @@ check_bt_agent_service() {
 #   3. o arquivo é arquivo, 0660, grupo `hefesto`?
 #   4. a sessão consegue escrever nele? (sem o grupo nos processos dela — quem
 #      acabou de entrar no grupo —, a trava funciona só para ler).
+# SEM MOTOR ROOT, A FALTA DA TRAVA NÃO É DEFEITO (conferência da INSTALL-E-
+# UNINSTALL-DO-RADIO-01, a decisão P-2.9 de quem coordena): quem instalou por
+# pacote, ou com `--no-udev`, não tem o watchdog, o drop-in do bluetoothd nem a
+# ponte — os três motores root que disputam o rádio com o daemon —, e a trava
+# da sessão já põe em fila todos os escritores daquela máquina. Mandar essa
+# pessoa «atualizar pelo mesmo caminho» era mandar repetir o que não entrega.
 # Os ganchos `HEFESTO_DOCTOR_TRAVA_*` existem para a régua não depender do /run
-# de quem a roda.
+# nem do /etc de quem a roda.
 check_trava_do_radio() {
     local conf="${HEFESTO_DOCTOR_TRAVA_CONF:-/etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf}"
     local pasta="${HEFESTO_DOCTOR_TRAVA_DIR:-/run/hefesto-dualsense4unix}"
+    local motores="${HEFESTO_DOCTOR_TRAVA_MOTORES:-/etc/systemd/system/hefesto-bt-health-watchdog.timer:/etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf:/usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh}"
     local trava="${pasta}/radio.lock"
-    local modo grupo
+    local modo grupo um com_motor=0 _motores_da_trava=()
     if [[ ! -f "${conf}" ]]; then
+        IFS=: read -r -a _motores_da_trava <<<"${motores}"
+        for um in ${_motores_da_trava[@]+"${_motores_da_trava[@]}"}; do
+            [[ -n "${um}" && -e "${um}" ]] && com_motor=1
+        done
+        if [[ "${com_motor}" -eq 0 ]]; then
+            info "sem a trava comum do rádio, e sem motor root que a dispute (o watchdog do Bluetooth, o modo ativo e a ponte não estão instalados): o daemon põe os próprios motores em fila pela trava da sessão"
+            return
+        fi
         warn "a trava comum do rádio não está instalada — o watchdog do Bluetooth (root) e o daemon mexem no rádio sem se enxergar: $(conselho_de_instalacao)$(so_no_checkout "(o passo 3e-trava a cria)")"
         return
     fi
