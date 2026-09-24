@@ -45,7 +45,7 @@ abertas e aparecem aqui como ESTADO HONESTO, nunca como escolha silenciosa:
    NÃO viram "Todos": estão DECLARADOS em :data:`FORA_DO_DESENHO` e caem no
    estado :data:`AMBIENTE_QUE_A_TELA_NAO_MOSTRA`, com a regra do disco intacta.
    Abrir dizendo "Todos" é o defeito R-12 pelo avesso, e o estrago dele já
-   aconteceu nesta casa (``profiles/loader.py:1229-1237``);
+   aconteceu nesta casa (``profiles/loader.py:841-847``, o R-12 do coop_local);
 **AS DUAS PERGUNTAS QUE ERAM 2 E 3 FECHARAM — 03/09/2026, e as duas por decisão
 dela.** Ficam escritas porque a forma delas é a que se repete:
 
