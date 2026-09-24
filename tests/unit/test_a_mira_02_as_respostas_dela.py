@@ -380,6 +380,47 @@ def test_o_nativo_que_o_daemon_recusa_volta_pela_mesma_frase() -> None:
     assert p.chamadas == [{"ligada": True, "uniq": "aa:bb:cc:00:00:01"}]
 
 
+@pytest.mark.parametrize(("entrada", "jogador"), [
+    ({"is_primary": True}, 1),        # o primário, fora do co-op
+    ({"player": 3}, 3),               # um secundário do co-op
+])
+def test_com_a_mira_acesa_o_cartao_nao_diz_que_o_giroscopio_flui(
+    entrada: dict[str, Any], jogador: int,
+) -> None:
+    """O MESMO FATO DA RESPOSTA 1, na linha de cima do cartão: com a Mira acesa
+    o filtro do report tira o giroscópio da janela daquele controle
+    (`virtual_motion.REGISTRO.filtrar`), e o `motion_streaming` do vpad segue
+    ligado pelo acelerômetro. «Giroscópio: fluindo para o jogo» ao lado da dica
+    nova seria a tela dizendo as duas coisas sobre o mesmo giro.
+
+    O Nativo e a máscara Xbox continuam com a frase deles — as duas seguem
+    verdadeiras com a Mira acesa.
+
+    MORDIDA: tire a guarda `mira.ligada` do `controller_card.texto_motion` e
+    este teste reprova, no P1 e no P3.
+    """
+    import pacotes.a02_controles as a02
+
+    from hefesto_dualsense4unix.app.widgets.controller_card import texto_motion
+
+    estado: dict[str, Any] = {"rumble_ff": {"per_vpad": [
+        {"player": jogador, "motion_streaming": True, "motion_hz": 250.0}]}}
+    apagada = {**entrada, "mira": {"ligada": False}}
+    acesa = {**entrada, "mira": {"ligada": True}}
+    assert texto_motion(apagada, estado) == "Giroscópio: fluindo para o jogo (~250 Hz)"
+    assert texto_motion(acesa, estado) is None
+    nativo = texto_motion(acesa, {**estado, "native_mode": True})
+    assert nativo and "direto com o controle" in nativo, nativo
+    # E pelo pacote da aba, que é quem leva a linha à tela: o vazio a esconde.
+    dele = {"uniq": _P2, "transport": "usb", "connected": True, "inputs": {},
+            "audio": {}, "speaker": {}, **acesa}
+    import pacotes
+
+    ctx = pacotes.Contexto(state=estado, mesa=[], conectados=[dele], estados={})
+    cards = a02.pacote(ctx)["cards"]
+    assert [c["giro-no-jogo"] for c in cards.values()] == [""], cards
+
+
 def test_a_bancada_tem_a_dica_e_o_cinza_em_cada_controle() -> None:
     """O desenho: a dica do Giroscópio no invólucro sem caixa, o botão SEM
     `title` próprio (ele calaria a dica que muda), e o cinza do chip da Mira

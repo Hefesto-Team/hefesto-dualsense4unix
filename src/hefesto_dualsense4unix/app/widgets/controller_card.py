@@ -1275,11 +1275,25 @@ def texto_motion(entry: dict[str, Any], state_global: dict[str, Any]) -> str | N
       físico e recebe tudo, inclusive o giroscópio.
 
     Nos dois casos a frase EXPLICA; nos demais o silêncio continua.
+
+    **A PEÇA QUE MIRA NÃO MANDA O GIRO COMO GIROSCÓPIO** — 24/09/2026,
+    A-MIRA-POR-MOVIMENTO-NA-TELA-02. Com a Mira Virtual acesa (o bloco `mira`
+    do `state_full`, `ipc_handlers._merge_mira`), o filtro do report tira o
+    giroscópio da janela daquele controle (`virtual_motion.REGISTRO.filtrar`):
+    o giro chega ao jogo pelo analógico direito, e o `motion_streaming` do vpad
+    continua ligado pelo acelerômetro. «Fluindo para o jogo» seria a tela
+    afirmando o que não acontece, ao lado da dica do chip Giroscópio que ela
+    aprovou (`D-2409-A-DICA-DO-GIROSCOPIO-MUDA-COM-A-MIRA`). A linha some,
+    como some em todo caso sem frase; o Nativo e a máscara Xbox vêm antes
+    porque as duas frases continuam verdadeiras com a Mira acesa.
     """
     if bool(state_global.get("native_mode")):
         return f"Giroscópio: {_FRASE_NATIVO}"
     if _mascara_e_xbox(state_global, entry):
         return f"Giroscópio: {_FRASE_MASCARA_XBOX['giroscopio']}"
+    mira = entry.get("mira")
+    if isinstance(mira, dict) and mira.get("ligada") is True:
+        return None
     rumble_ff = state_global.get("rumble_ff")
     per_vpad = rumble_ff.get("per_vpad") if isinstance(rumble_ff, dict) else None
     if not isinstance(per_vpad, list):
