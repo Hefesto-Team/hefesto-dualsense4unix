@@ -306,11 +306,12 @@ feche o Hefesto por inteiro, inclusive na bandeja, e abra de novo.
 O daemon fala com o BlueZ pelo barramento de SISTEMA do D-Bus. A linha
 `--system-talk-name=org.bluez` abre esse barramento só para o BlueZ: o sandbox
 não vê outro serviço de sistema. Com ela, parear, reconectar, remover e mover de
-adaptador pelo Hefesto funcionam no Flatpak como fora dele. O pareamento é
-atendido pelo agente do próprio Hefesto, e ele atravessa o proxy do Flatpak nos
-dois sentidos (medido em 24/09/2026, flatpak 1.18.1, com um BlueZ de mentira).
-O proxy entrega ao agente a chamada de qualquer remetente; quem recusa o que
-não vem do BlueZ é o próprio agente.
+adaptador pelo Hefesto funcionam no Flatpak, menos a lápide (abaixo). O
+pareamento é atendido pelo agente do próprio Hefesto, e ele atravessa o proxy do
+Flatpak nos dois sentidos, também depois de o `bluetoothd` reiniciar (medido em
+24/09/2026, flatpak 1.18.1, com um BlueZ de mentira). O proxy entrega ao agente
+a chamada de qualquer remetente; quem recusa o que não vem do BlueZ é o próprio
+agente.
 
 O diário dos serviços do sistema (`/var/lib/hefesto-dualsense4unix`) entra só
 de leitura, e o diário do rádio mostra os dois lados, como fora do sandbox. A
