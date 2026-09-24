@@ -4758,7 +4758,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 1. Confira na fita do topo que os chips do P1 e do P2 terminam em USB e os do P3 e do P4 em BT.
 * Abra a aba Jogar.
-2. Confira que a linha «Status» está em «Ligado» e que, no quadro «Modo», o chip aceso é «Sony DualSense» ou «Xbox».
+2. Confira que a linha «Status» está em «Ligado» e que, no quadro «Modo», o chip aceso é «Sony DualSense» ou «Xbox» — se for «Steam Input», feche a Steam, clique em «Sony DualSense» e abra a Steam de novo: com ele, quem entrega os comandos ao jogo é a Steam, e o teste passaria a medir a Steam, não o Hefesto.
 3. Leia os quatro cartões do quadro «O controle é visto como:» e anote qual chip está aceso em cada um.
 4. Abra o jogo com os quatro jogadores dentro da partida.
 5. Anote como o jogo desenha os botões de cada um dos quatro jogadores.
@@ -4797,7 +4797,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 1. Confira na fita do topo que os chips do P3 e do P4 terminam em BT e os do P1 e do P2 em USB.
 2. Anote o nome da cor do plástico do P3 e o do P4, que estão nos chips da fita — é por eles que você vai seguir o P3 quando ele sair.
 3. Abra a aba Jogar.
-4. Confira que a linha «Status» está em «Ligado» e que, no quadro «Modo», o chip aceso é «Sony DualSense» ou «Xbox».
+4. Confira que a linha «Status» está em «Ligado» e que, no quadro «Modo», o chip aceso é «Sony DualSense» ou «Xbox» — se for «Steam Input», feche a Steam, clique em «Sony DualSense» e abra a Steam de novo: com ele, quem entrega os comandos ao jogo é a Steam, e o teste passaria a medir a Steam, não o Hefesto.
 5. Leia os quatro cartões do quadro «O controle é visto como:» e anote qual chip está aceso em cada um.
 6. Abra o jogo com os quatro jogadores dentro da partida e anote como ele desenha os botões de cada um.
 7. Volte ao Hefesto e clique no chip «Xbox 360» do cartão do P3.
