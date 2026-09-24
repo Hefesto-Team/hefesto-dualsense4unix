@@ -6292,8 +6292,10 @@ class PyDualSenseController(IController):
           ``"registrado"`` já significa: **fica guardado e vale quando o evento
           que o segura passar** — hotplug num caso, desmute no outro. A LUZ e
           o NÚMERO saem na hora desde 23/09/2026
-          (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`): pedido só
-          deles no Nativo responde ``"escreveu"``.
+          (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`) por FORA do
+          fluxo mudo — a classe LED (o nó) ou o `0x31` do rádio: pedido só
+          deles no Nativo responde ``"escreveu"``. O cabo SEM nó não tem essa
+          rota (a cor espera o `report_thread`) e segue ``"registrado"``.
         * **escrita que LEVANTOU**: `_write_partial_output` engole a exceção
           (log `reapply_perfil_no_hotplug_falhou`), e o caminho seguia para
           "escreveu". Agora ela devolve ``False`` e isto vira ``"falhou"`` —
@@ -6322,6 +6324,13 @@ class PyDualSenseController(IController):
             handle = self._handles.get(key) if key is not None else None
             node = self._sysfs.get(key) if key is not None else None
             muted = self._output_mute
+            # A luz e o número só saem no Nativo por FORA do fluxo mudo: a
+            # classe LED (o nó da regra 77) ou o `0x31` mínimo do rádio. O cabo
+            # sem nó cai no `handle.light`, que espera o `report_thread` — mudo
+            # (conferência de 24/09/2026).
+            por_fora = handle is not None and (
+                node is not None or self._detect_transport(handle) == "bt"
+            )
         if handle is None:
             logger.debug(
                 "apply_output_for_desconectado_registrado",
@@ -6336,8 +6345,11 @@ class PyDualSenseController(IController):
             return "falhou"
         # A luz e o número saem no Modo Nativo (`D-2309-NO-NATIVO-A-LUZ-E-O-
         # NUMERO-SAO-DO-HEFESTO`); o resto (gatilhos, LED do mic) fica
-        # guardado para o desmute. «escreveu» só quando TUDO saiu.
-        guardados = sorted(set(fields) - _CAMPOS_QUE_O_NATIVO_ESCREVE)
+        # guardado para o desmute. «escreveu» só quando TUDO saiu — e a luz do
+        # cabo sem nó não saiu (`por_fora`, logo acima).
+        guardados = sorted(
+            set(fields) - (_CAMPOS_QUE_O_NATIVO_ESCREVE if por_fora else frozenset())
+        )
         if muted and guardados:
             logger.debug(
                 "apply_output_for_modo_nativo_registrado",

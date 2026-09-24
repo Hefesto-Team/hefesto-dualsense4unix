@@ -213,13 +213,25 @@ class TestConserto13OQueDizEscreveuSemByteNenhum:
         HEFESTO` (STEAM-NO-FISICO-01) — no Modo Nativo o Hefesto escreve a
         barra e o número sempre. Pedido misto diz "registrado": dizer
         "escreveu" prometeria o gatilho que só vale no desmute.
+
+        CORREÇÃO DE FATO (conferência de 24/09/2026): a luz sai «na hora» só
+        por FORA do fluxo mudo — a classe LED (o nó) ou o `0x31` do rádio. Este
+        teste afirmava «escreveu» sobre um handle USB SEM nó, em que a cor cai
+        no `handle.light` e espera o `report_thread` calado: zero byte no fio.
+        Agora o nó entra, e o cabo sem nó diz «registrado», que é a verdade.
         """
         backend = _backend_com_um_conectado()
         backend.set_output_mute(True)
         efeito = build_from_name("Rigid", [5, 200])
         assert backend.apply_output_for(NA_MESA, OutputSpec(led=(9, 8, 7))) == (
+            "registrado"
+        ), "o cabo sem nó não tem por onde a cor sair no Modo Nativo"
+        node = _FakeNodeSysfs()
+        backend._sysfs = {_key_de(NA_MESA): node}  # type: ignore[dict-item]
+        assert backend.apply_output_for(NA_MESA, OutputSpec(led=(9, 8, 7))) == (
             "escreveu"
         ), "no Modo Nativo a barra é do Hefesto: a cor sai na hora"
+        assert node.cores == [(9, 8, 7)]
         assert backend.apply_output_for(
             NA_MESA, OutputSpec(trigger_left=efeito)
         ) == "registrado", "no Modo Nativo o gatilho é do jogo"
