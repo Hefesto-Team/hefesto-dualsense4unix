@@ -67,22 +67,24 @@ def test_a_semeadura_nao_entrega_genero_nenhum(tmp_path: Path) -> None:
 
     MORDE: devolver qualquer um dos oito gêneros a `assets/profiles_default/`.
 
-    ATÉ 24/09/2026 ESTE CASO ESPERAVA UM ARQUIVO, o `personalizado.json`. A
-    decisão dela de 23/09 (D-2309-O-MODO-FREESTYLE, *"Personalizado sai"*)
-    tirou o preset da semeadura — o arquivo fica na pasta porque o install o
-    empacota, e o semeador o registra sem copiar. O que esta régua guarda
-    continua o mesmo: gênero não é perfil.
+    O QUE SOBRA É O PERSONALIZADO, E QUEM DIZ SE ELE SOBRA É O DONO. A decisão
+    dela de 23/09 (D-2309-O-MODO-FREESTYLE, *"Personalizado sai"*) tira o
+    preset da semeadura, e a saída espera a sessão dela
+    (`loader.O_PERSONALIZADO_ESPERA_A_SESSAO_DELA`): enquanto espera, sai UM
+    arquivo; depois, nenhum. O que esta régua guarda continua o mesmo: gênero
+    não é perfil.
     """
     destino = tmp_path / "perfis"
+    esperado = ([loader.ARQUIVO_DO_PADRAO]
+                if loader.O_PERSONALIZADO_ESPERA_A_SESSAO_DELA else [])
 
     copiados = loader.seed_default_presets(dest_dir=destino, source_dirs=[FABRICA])
 
-    assert copiados == [], (
-        "a semeadura de fábrica entregou perfil: "
-        f"{copiados} — gênero não é perfil (decisão dela, 06/09/2026), e o "
-        "Personalizado saiu (decisão dela, 23/09/2026)"
+    assert copiados == esperado, (
+        "a semeadura de fábrica entregou mais que o dono diz: "
+        f"{copiados} — gênero não é perfil (decisão dela, 06/09/2026)"
     )
-    assert sorted(p.name for p in destino.glob("*.json")) == []
+    assert sorted(p.name for p in destino.glob("*.json")) == esperado
 
 
 def test_os_oito_estilos_sairam_da_fabrica_e_moram_na_casa_deles() -> None:
