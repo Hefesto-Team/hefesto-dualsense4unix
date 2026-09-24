@@ -4084,9 +4084,24 @@ check_kernel_watch() {
         fi
     }
 
+    # AS OCORRÊNCIAS, e não as linhas (o P-4 da O-DIARIO-DO-RADIO-01, feito na
+    # conferência da INSTALL-E-UNINSTALL-DO-RADIO-01). Desde 23/09 o kernel-watch
+    # grava o [BT-HCI] e o [XHCI] como rajada: a borda (uma linha inteira) e os
+    # resumos «repetiu +N» / «segue +N». O `grep -c` contava LINHAS, e uma
+    # rajada de cem virava «BT-HCI=2». Aqui a borda soma um e o resumo soma o
+    # N dele — o mesmo número que o log de antes, linha a linha, dava.
+    _ocorrencias_no_log() {  # <tag>
+        awk -v tag="[$1]" '
+            index($0, tag) {
+                if (match($0, / (repetiu|segue) \+[0-9]+ \(/)) {
+                    s = substr($0, RSTART, RLENGTH); gsub(/[^0-9]/, "", s); n += s
+                } else n++
+            }
+            END { print n + 0 }' "${log}" 2>/dev/null || echo 0
+    }
     local tag n resumo="" n_joycon=0 n_joycon_probe=0 n_usb71=0 n_bterr=0
     for tag in USB-71 JOYCON JOYCON-PROBE BT-HCI XHCI BT-ERR; do
-        n="$(grep -cF "[${tag}]" "${log}" 2>/dev/null || true)"; n="${n:-0}"
+        n="$(_ocorrencias_no_log "${tag}")"; n="${n:-0}"
         resumo+=" ${tag}=${n}"
         case "${tag}" in
             JOYCON) n_joycon="${n}" ;;
