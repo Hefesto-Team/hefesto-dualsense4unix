@@ -913,7 +913,7 @@ def aviso_da_origem_do_modo(state: dict[str, Any] | None) -> str | None:
 #: importado por quem não é aquela janela.
 #:
 #: **O VERBO MUDOU PORQUE O BOTÃO MUDOU.** A legenda desta aba registra a troca:
-#: *"'Reconciliar jogadores' virou 'Reconectar Controles'"* (`aba01.py:1673`).
+#: *"'Reconciliar jogadores' virou 'Reconectar Controles'"* (`aba01.py:2025`).
 #: Uma recusa que usa o verbo de um botão que não existe mais manda a pessoa
 #: procurar o que não está lá, que é o que o glossário proíbe.
 #:
