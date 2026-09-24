@@ -262,11 +262,33 @@ def test_o_gesto_do_modo_invalida_a_leitura_em_cache(a02, monkeypatch):
 #: e a fileira passou a ser jogo · junto · nada. A régua cobrava um botão `pc`
 #: que a página não tem, e **reprovava a decisão dela em vez de um defeito**.
 #: `BOTOES_DA_FILEIRA_DO_SOM` é o dono da pergunta certa.
-def _pares(a02) -> dict[str, list[str]]:
+#:
+#: **E O `pc` VOLTOU À FILEIRA EM 24/09/2026** — o quarto botão, decisão dela
+#: de 23/09. O desenho novo para no mockup e quem coordena publica; enquanto a
+#: 02 estiver declarada em trabalho no `mockup/DIVERGENCIAS.md`, o publicado é
+#: o desenho de ontem e não tem o quarto. A licença é a MESMA do portão
+#: `desenho-aprovado` (`declaradas()`), e morre no `--publicar 02`.
+def _pares(a02, onde=None) -> dict[str, list[str]]:
+    rota = sorted(a02.BOTOES_DA_FILEIRA_DO_SOM)
+    if onde == PUBLICADO and _a_02_esta_em_trabalho():
+        rota = [v for v in rota if v != a02.ROTA_TUDO_NO_CONTROLE]
     return {
-        "alto-rota": sorted(a02.BOTOES_DA_FILEIRA_DO_SOM),
+        "alto-rota": rota,
         "mic-modo-aceso": ["nativo", "virtual"],
     }
+
+
+def _a_02_esta_em_trabalho() -> bool:
+    """A 02 declarada em trabalho, perguntado ao portão — ver `_pares`."""
+    import importlib.util
+
+    alvo = RAIZ / "scripts/check_o_desenho_aprovado.py"
+    spec = importlib.util.spec_from_file_location("check_desenho_dos_acesos", alvo)
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["check_desenho_dos_acesos"] = mod
+    spec.loader.exec_module(mod)
+    return "02-controles.html" in mod.declaradas()
 
 
 @pytest.mark.parametrize("onde", [BANCADA, PUBLICADO], ids=["bancada", "publicado"])
@@ -292,7 +314,7 @@ def test_os_quatro_botoes_dizem_quem_sao_no_desenho(a02, onde):
     # parâmetro medem, cada um, a mesa que a sua página tem.
     cards = len(re.findall(r'class="ctl card[^"]*"', doc))
     assert cards >= 2, "o desenho precisa de mais de um card para esta régua morder"
-    for campo, valores in _pares(a02).items():
+    for campo, valores in _pares(a02, onde).items():
         for valor in valores:
             achados = re.findall(
                 rf'data-campo="{campo}" data-hef-alvo="classe" data-hef-quando="{valor}"',

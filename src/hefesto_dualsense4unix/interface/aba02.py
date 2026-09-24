@@ -1297,11 +1297,16 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
 
      O `white-space:normal` VALE PARA OS QUATRO, e é a decisão dela de 12/09
      aplicada aqui: numa janela menor que o desenho o rótulo QUEBRA em vez de
-     cortar. O preço é altura, e só onde aperta. */
-  .moldura[data-bloco="alto-falante"] .rota{gap:1px}
-  .moldura[data-bloco="alto-falante"] .rota button{height:auto;min-height:17px;
-    white-space:normal;line-height:11px;padding:0}
-  .rota .par{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1px 3px}
+     cortar. O preço é altura, e só onde aperta.
+
+     A CLASSE `quatro` E NÃO O `data-bloco`: toda regra que casa a moldura do
+     alto-falante pelo endereço dela é a guarda do cinza (`data-apagado`), e a
+     régua da onda dois cobra exatamente isso. */
+  .rota.quatro{gap:1px}
+  .rota.quatro button{height:auto;min-height:17px;white-space:normal;
+    line-height:11px;padding:0}
+  .rota.quatro .par{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:1px 3px}
   /* O MODO DO MICROFONE CONTINUA DEITADO, e agora precisa dizê-lo — 20/09/2026.
      Enquanto as duas fileiras eram a mesma, o `.mic-modo` não tinha uma linha
      própria de estilo, e o bloco de comentário mais acima registra por quê. A
@@ -3199,7 +3204,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                  quebra em duas linhas; da janela de 1440 para cima cabem numa
                  só. A gramática não muda: mesmo gesto, mesmo endereço, cada
                  botão com o seu valor. -->
-            <div class="rota">
+            <div class="rota quatro">
               <button class="{'on' if not rota_nada else ''}" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">{ROTULO_SO_OS_EFEITOS}</button>
               <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="{DICA_OUVIR_JUNTO}">{ROTULO_EFEITOS_MAIS_O_PC}</button>
               <span class="par">
