@@ -46,7 +46,7 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-from hefesto_dualsense4unix.integrations.alto_falante_bt import (  # noqa: E402
+from hefesto_dualsense4unix.integrations.alto_falante_bt import (
     nome_do_sink,
 )
 
@@ -395,4 +395,5 @@ def test_quem_e_saida_de_controle(sink: str, e_de_controle: bool) -> None:
     """
     from hefesto_dualsense4unix.app.audio_saida import e_saida_de_controle
 
-    assert e_saida_de_controle(sink, ServidorDeSom()(["pactl", "list", "sinks", "short"])) is e_de_controle
+    lista_viva = ServidorDeSom()(["pactl", "list", "sinks", "short"])
+    assert e_saida_de_controle(sink, lista_viva) is e_de_controle

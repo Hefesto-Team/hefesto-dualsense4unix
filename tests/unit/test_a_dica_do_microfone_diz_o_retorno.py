@@ -102,7 +102,7 @@ def test_o_interrogacao_e_o_botao_contam_a_mesma_historia(alvo: pathlib.Path) ->
     titulos = _titulos_do_botao(doc)
     dicas = _dicas_do_microfone(doc)
     assert titulos and len(titulos) == len(dicas), (titulos, dicas)
-    for titulo, dica in zip(titulos, dicas):
+    for titulo, dica in zip(titulos, dicas, strict=True):
         for fato in ("retorno", "botão do próprio controle"):
             assert (fato in titulo) == (fato in dica), (
                 f"o botão e o «?» discordam sobre {fato!r}:\n  title: {titulo}\n"
