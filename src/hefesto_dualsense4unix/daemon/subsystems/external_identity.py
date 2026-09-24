@@ -95,7 +95,6 @@ from hefesto_dualsense4unix.daemon.subsystems.identity import (
     _read_machine_id,
     merged_order_payload,
     order_entries,
-    prazo_do_lugar_guardado,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -671,6 +670,10 @@ class ExternalIdentityRegistry:
             # guardado (só MAC de hardware — a identidade volátil não tem
             # promessa a honrar, MODO-01), quem voltou o retoma, e o prazo
             # vencido sai da tabela e deixa a linha no diário.
+            from hefesto_dualsense4unix.daemon.subsystems.identity import (
+                prazo_do_lugar_guardado,
+            )
+
             agora = self._clock()
             for key in [k for k, ate in self._guardados.items() if ate <= agora]:
                 del self._guardados[key]
