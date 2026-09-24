@@ -2211,7 +2211,8 @@ class CoopManager:
         self._fio_do_laco = threading.get_ident()
         if self._ordem_pendente:
             self._ordem_pendente = False
-            self._corrigir_a_ordem()
+            if self.should_be_active():
+                self._corrigir_a_ordem()
         self._recolher_os_cedidos()
         self._promote_pending()
         # F1-REMAPEAR (13/09/2026): a mesma troca do primário
@@ -2332,7 +2333,11 @@ class CoopManager:
 
     def _compactar(self) -> None:
         """Sem jogo aberto, o lugar de cada vpad é a ordem em que ele nasceu."""
-        ordem = sorted(self._mesa_do_jogo.values(), key=self._nascido_em.__getitem__)
+        # `.get`: a renumeração pode sentar alguém pelo worker no meio desta
+        # conta, e a ordem de escrita de `_assentar` põe a data antes do lugar.
+        ordem = sorted(
+            self._mesa_do_jogo.values(), key=lambda c: self._nascido_em.get(c, 0)
+        )
         self._mesa_do_jogo = dict(enumerate(ordem))
 
     def _acompanhar_o_p1(self) -> None:
@@ -2395,10 +2400,24 @@ class CoopManager:
         não vale para ELE. Então o P1 fica parado enquanto o jogo manda, os
         secundários se acertam entre si, e o P1 renasce no lugar quando o jogo
         devolver a autoridade. O diário diz, uma vez por episódio.
+
+        Nunca propaga exceção (a regra do módulo: o poll loop não cai): a
+        falha vai ao diário, e quem ia nascer nasce como sempre nasceu.
         """
         if not self._no_fio_do_laco():
             self._ordem_pendente = True
             return
+        try:
+            self._ordenar(nascer)
+        except Exception as exc:
+            logger.warning("coop_ordem_falhou", err=str(exc))
+            if nascer is not None and nascer.vpad is None and (
+                self._players.get(nascer.identity) is nascer
+            ):
+                self._promote_player(nascer)
+
+    def _ordenar(self, nascer: _SecondaryPlayer | None) -> None:
+        """O corpo de `_corrigir_a_ordem`, já na thread do laço."""
         self._acompanhar_o_p1()
         autoridade = self._jogo_com_a_autoridade()
         if not autoridade:
