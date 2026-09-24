@@ -466,8 +466,12 @@ class TestImportarERestaurar:
         ):
             janela.on_restore_default()
 
-        assert janela._active_profile_name == "Personalizado"
-        assert janela.draft.source_name == "Personalizado"
+        # O NOME É DO DONO (`loader.NOME_DO_PADRAO`): «Freestyle» desde
+        # 24/09/2026, O-MODO-FREESTYLE-02. Digitado aqui, ele envelheceu.
+        from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
+
+        assert janela._active_profile_name == NOME_DO_PADRAO
+        assert janela.draft.source_name == NOME_DO_PADRAO
 
 
 # ---------------------------------------------------------------------------
