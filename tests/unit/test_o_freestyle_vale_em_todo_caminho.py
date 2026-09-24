@@ -321,19 +321,24 @@ def test_o_jogo_entra_por_cima_do_freestyle_com_o_modo_ligado(
     assert _o_estado_do_boot(store) == (JOGO, None)
 
 
+@pytest.mark.parametrize("caminho", ["sessao-vazia", "sessao-com-perfil-de-janela"])
 def test_o_freestyle_nao_entra_por_cima_do_jogo_que_ja_vale(
-    semeadura_ligada: None, fabrica_de_bancada: Any,
+    semeadura_ligada: None, fabrica_de_bancada: Any, caminho: str,
 ) -> None:
     """O daemon reiniciado no meio da partida: o jogo já vale antes do controle chegar.
 
     O autoswitch roda antes do primeiro controle, e pode ter posto o Sackboy.
     O boot não troca isso pelo Freestyle — seria uma troca no meio do jogo,
     desfeita um tique depois pelo próprio autoswitch —, e não escreve nada no fio.
+    Vale nos dois caminhos em que o Freestyle entra como o de fora do jogo, e
+    não como escolha dela: a sessão com o perfil de janela e a sessão VAZIA, que
+    é a da máquina que nunca ativou perfil na mão.
 
-    MORDIDA: tire o `if isinstance(ja_vale, str) and ja_vale:` de
-    `_o_de_fora_do_jogo_enquanto_espera` e o Freestyle entra por cima.
+    MORDIDAS: tire o `if isinstance(ja_vale, str) and ja_vale:` de
+    `_o_de_fora_do_jogo_enquanto_espera` e as duas células reprovam; tire o
+    `if not sessao:` de `restore_last_profile` e a `sessao-vazia` reprova.
     """
-    _prepara_a_sessao("sessao-com-perfil-de-janela")
+    _prepara_a_sessao(caminho)
     controle, pecas = _mesa_de_quatro(fabrica_de_bancada)
     store = StateStore()
     store.set_active_profile(JOGO)

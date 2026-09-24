@@ -388,7 +388,9 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
     fallback do session.json que também não ativa. Com o Modo Freestyle ligado,
     ou sem leitor de janela, o autoswitch não trocava por janela comum, e o
     trecho não acabava nunca. Nos três vale o perfil de fora do jogo enquanto o
-    jogo não abre — ver `_o_de_fora_do_jogo_enquanto_espera`, logo abaixo.
+    jogo não abre — ver `_o_de_fora_do_jogo_enquanto_espera`, logo abaixo. A
+    sessão vazia, em que ele vale desde a O-MODO-FREESTYLE-02, passa pela mesma
+    função e pelas mesmas guardas.
     """
     from functools import partial
 
@@ -403,7 +405,8 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
     # O-MODO-FREESTYLE-02 (24/09/2026): sem escolha dela na sessão, vale o
     # perfil de fora do jogo — o boot não fica sem perfil até o primeiro jogo.
     fora_do_jogo = o_perfil_de_fora_do_jogo()
-    name = resolve_boot_profile() or fora_do_jogo
+    sessao = resolve_boot_profile()
+    name = sessao or fora_do_jogo
     if not name:
         return
     # FEAT-NATIVE-MODE-01: em Modo Nativo o controle fica SOLTO para o jogo — não
@@ -554,7 +557,8 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
         O perfil de janela continua fora do boot (RESTORE-ESCOPO-01): ele pinta
         a barra e cala a paleta com o jogo fechado. O que muda é o que vale
         ENQUANTO o jogo não abre — o «Freestyle», o mesmo que o boot restaura
-        com a sessão vazia desde a O-MODO-FREESTYLE-02. O jogo, quando abrir,
+        com a sessão vazia desde a O-MODO-FREESTYLE-02, e que nesse caso entra
+        por AQUI também (`tentados` vazio). O jogo, quando abrir,
         entra por cima pelo autoswitch, com o Modo Freestyle ligado ou não
         (`D-2409-COM-O-FREESTYLE-O-JOGO-ENTRA-POR-CIMA`).
 
@@ -586,6 +590,15 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
 
     if pulado:
         await _o_de_fora_do_jogo_enquanto_espera([name], "perfil_de_janela")
+        return
+    if not sessao:
+        # A SESSÃO VAZIA É O MESMO CASO (conferência da O-MODO-FREESTYLE-03):
+        # sem escolha dela, o Freestyle entra como o de fora do jogo, não como
+        # escolha, e passa pelas MESMAS guardas — a que pesa é a de não entrar
+        # por cima do jogo que o autoswitch já pôs. Sem isto a guarda valia
+        # para quem ativou um perfil de jogo na mão, e não para a máquina que
+        # nunca ativou perfil nenhum, que é a de todo mundo depois do install.
+        await _o_de_fora_do_jogo_enquanto_espera([], "sessao_vazia")
         return
     if await _ativar(name):
         return
