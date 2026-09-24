@@ -712,9 +712,9 @@ roteiro.
 
 ## Linha 18 — Modo Nativo com dois controles no jogo
 
-**O que isto prova.** Prova que, com o Hefesto fora do meio, um jogo de co-op de sofá enxerga os dois controles como DualSense de verdade — dois jogadores, nenhum fantasma, e o movimento do controle respondendo.
+**O que isto prova.** Prova que, com o Hefesto fora do meio, um jogo de co-op de sofá enxerga os dois controles como DualSense de verdade — dois jogadores, nenhum fantasma, e o movimento do controle respondendo. E que o Modo Nativo é a ÚNICA porta que devolve o aparelho inteiro ao jogo: fora dele, o botão, o toque e o movimento do DualSense ficam escondidos de todo programa menos o Hefesto.
 
-**Onde olhar.** O resultado se lê na tela do JOGO, não na do Hefesto: quantos jogadores ele mostra, se ele pede "aperte um botão para entrar", e se girar o controle mexe alguma coisa. No Hefesto você confere só que o modo está de pé, na aba Jogar: a linha «Status» tem de estar em «Desligado», e o quadro «Modo» tem de mostrar «Modo Nativo · o controle sem o Hefesto no meio». E a conta no canto de cima à direita tem de dizer «2 USB» — com os dois do rádio desligados, o BT some da conta. A fonte não diz onde se lê o giroscópio dentro do Hefesto neste modo — a prova do movimento é no jogo, girando o controle na mão.
+**Onde olhar.** O resultado se lê na tela do JOGO, não na do Hefesto: quantos jogadores ele mostra, se ele pede "aperte um botão para entrar", e se girar o controle mexe alguma coisa. No Hefesto você confere só que o modo está de pé, na aba Jogar: a linha «Status» tem de estar em «Desligado», e o quadro «Modo» tem de mostrar «Modo Nativo · o controle sem o Hefesto no meio». E a conta no canto de cima à direita tem de dizer «2 USB» — com os dois do rádio desligados, o BT some da conta. Na aba Controles, o chip «Mira Virtual» de cada cartão fica cinza neste modo: o movimento vai inteiro ao jogo, sem a Mira no meio. A prova do movimento é no jogo, girando o controle na mão.
 
 **Os passos.**
 
@@ -728,12 +728,13 @@ roteiro.
 8. Aperte um botão no P1 e confirme que o jogo responde.
 9. Aperte um botão no P2 e veja se o jogo mostra um segundo jogador ou pede para ele entrar.
 10. Gire cada um dos dois controles na mão e veja se o jogo responde ao movimento.
-11. Anote o nome do jogo e o que apareceu na tela dele.
-12. Faça a contraprova: feche o jogo, volte à aba Jogar e clique em «Ligado».
-13. Abra o MESMO jogo de novo, com os mesmos dois controles.
-14. Repita o aperto de botão de cada um e o giro dos dois, e anote a diferença.
+11. Se o jogo usa o touchpad, passe o dedo no do P1 e veja se ele responde.
+12. Anote o nome do jogo e o que apareceu na tela dele.
+13. Faça a contraprova: feche o jogo, volte à aba Jogar e clique em «Ligado».
+14. Abra o MESMO jogo de novo, com os mesmos dois controles.
+15. Repita o aperto de botão de cada um e o giro dos dois, e anote a diferença.
 
-**Passa quando.** No Modo Nativo o jogo mostra os dois jogadores — nem um a menos, nem um terceiro fantasma — e responde ao movimento dos dois. A contraprova é o que fecha o teste: se com o Hefesto Ligado o mesmo jogo mostrar dois jogadores e no Modo Nativo mostrar um só, o problema é do modo; se mostrar um nos dois casos, o jogo é que não tem co-op de sofá e o teste não vale.
+**Passa quando.** No Modo Nativo o jogo mostra os dois jogadores — nem um a menos, nem um terceiro fantasma — e responde ao movimento dos dois. Um jogo que, no Nativo, responde aos botões e não ao movimento recebeu o aparelho pela metade: anote o nome dele. A contraprova é o que fecha o teste: se com o Hefesto Ligado o mesmo jogo mostrar dois jogadores e no Modo Nativo mostrar um só, o problema é do modo; se mostrar um nos dois casos, o jogo é que não tem co-op de sofá e o teste não vale.
 
 **Por controle.**
 
@@ -742,7 +743,7 @@ roteiro.
 * **P3** — Fica fora. Desligue-o antes de começar, segurando o PS até apagar, e confira na conta do canto de cima à direita que o BT sumiu.
 * **P4** — Fica fora. Desligue-o antes de começar, do mesmo jeito, e não o religue no meio do teste — religar muda a conta que o jogo faz no meio da medição.
 
-**A armadilha.** Sem a contraprova este teste mente: um jogo que simplesmente não tem dois jogadores locais reprovaria o Modo Nativo sem culpa nenhuma. Segunda armadilha: a troca de modo só vale para o PRÓXIMO jogo que abrir — se o jogo já estava aberto quando você clicou, você vai medir o modo anterior; feche e abra de novo. Terceira: o Modo Nativo não é por controle, ele vale para a máquina inteira — por isso "ficar fora" aqui quer dizer desligado, e por isso a conta do canto de cima precisa dizer «2 USB» e nada de BT. E não julgue este teste pelas lampadinhas de número: neste modo o Hefesto não escreve nada no aparelho, então o que estiver aceso ali foi o sistema que pôs.
+**A armadilha.** Sem a contraprova este teste mente: um jogo que simplesmente não tem dois jogadores locais reprovaria o Modo Nativo sem culpa nenhuma. Segunda armadilha: a troca de modo só vale para o PRÓXIMO jogo que abrir — se o jogo já estava aberto quando você clicou, você vai medir o modo anterior; feche e abra de novo. Terceira: o Modo Nativo não é por controle, ele vale para a máquina inteira — por isso "ficar fora" aqui quer dizer desligado, e por isso a conta do canto de cima precisa dizer «2 USB» e nada de BT. E não julgue este teste pelas lampadinhas de número nem pela cor da barra: desde 24/09 as duas são do Hefesto também neste modo e mostram o número da aba, mesmo com o jogo falando direto com o controle; se o jogo acender outra coisa, o Hefesto devolve a dele em até um segundo.
 
 ---
 
