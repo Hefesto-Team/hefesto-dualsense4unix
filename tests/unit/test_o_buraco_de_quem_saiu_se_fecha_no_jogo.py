@@ -21,11 +21,14 @@ sprint: a varredura de todas as mesas de até quatro lugares achou 60 em que o
 plano de sufixo tiraria do jogo quem não precisava sair (um lugar ainda
 guardado atrás do buraco que venceu); esses casos ficam como eram.
 
-**O dublê do vpad tira o MAC como o produto tira** (``vpad_mac``, pela
+**O dublê do vpad tira o MAC como o produto PEDE** (``vpad_mac``, pela
 identidade do aparelho — ``MesaDoJogo._nascer_vpad``). O da bancada de queda o
-tira do NÚMERO, e é mais frouxo que o real justamente na volta tardia do P1 —
-ver :class:`TestAVoltaTardiaDoP1`. A conferência passou o dublê honesto para a
-bancada da O-ASSENTO-02, e as réguas dela também medem com ele.
+tira do NÚMERO, e é mais frouxo que o real justamente na volta tardia do P1. A
+conferência passou o dublê honesto para a bancada da O-ASSENTO-02, e as réguas
+dela também medem com ele. **A volta tardia mede com a** :class:`MesaHonesta`
+(O-VPAD-DO-P1-NAO-REPETE-O-MAC-01): cada vpad nasce pela fábrica e pela classe
+REAIS contra um kernel de mentira que recusa MAC repetido com ``-EEXIST``, e o
+MAC é o que o dono dos vivos VESTE — ver :class:`TestAVoltaTardiaDoP1`.
 
 **E o JOGO é visto de fora** (``JogoPorFora``, na bancada da O-ASSENTO-02): o
 lugar de cada vpad sai da ordem em que ele nasce e morre, e não da mesa que o
@@ -50,14 +53,18 @@ AS MORDIDAS (24/09/2026, cada uma devolvida com o md5 conferido):
   ``test_a_vaga_nao_diz_que_o_p1_voltou_ao_boneco_dele``; e a carta
   emprestada ao P1 ausente no diário reprova a primeira classe inteira. A
   carta emprestada trocada por 99 passa tudo: com o jogo na autoridade ela
-  não escolhe plano nenhum, que é o que a cura afirma.
+  não escolhe plano nenhum, que é o que a cura afirma;
+- (O-VPAD-DO-P1-NAO-REPETE-O-MAC-01) ``_MacsDosVpadsVivos.vestir`` vestindo o
+  MAC pedido sem olhar quem já o veste reprova as 18 da volta tardia pela
+  :class:`MesaHonesta`, cada uma com o kernel recusando o MAC de quem o posto
+  carrega (``Duplicate device found for MAC address``).
 
 Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5 zerados.
 """
 from __future__ import annotations
 
 import itertools
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from typing import Any
 
 import pytest
@@ -74,9 +81,9 @@ from hefesto_dualsense4unix.daemon.subsystems.gamepad import vpad_vivo
 from hefesto_dualsense4unix.daemon.subsystems.identity import prazo_do_lugar_guardado
 from hefesto_dualsense4unix.integrations import virtual_pad
 from hefesto_dualsense4unix.integrations.uhid_gamepad import vpad_mac
-from tests.unit.test_dois_vpads_nunca_tem_o_mesmo_mac import (  # noqa: F401
+from tests.unit.test_dois_vpads_nunca_tem_o_mesmo_mac import (
     KernelDoHidPlaystation,
-    kernel,
+    kernel_de_mentira,
 )
 from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (  # noqa: F401
     P1,
@@ -128,6 +135,13 @@ def _atras_e_na_frente(quantos: int, quem: int) -> tuple[tuple[str, ...], tuple[
     if quem == 0:
         return UNIQS[2:quantos], ()
     return UNIQS[quem + 1 : quantos], UNIQS[1:quem]
+
+
+@pytest.fixture
+def kernel(monkeypatch: pytest.MonkeyPatch) -> Iterator[KernelDoHidPlaystation]:
+    """O kernel de mentira da régua irmã, com a recusa do ``hid_playstation``."""
+    with kernel_de_mentira(monkeypatch) as k:
+        yield k
 
 
 class MesaHonesta(MesaDoJogo):
@@ -209,6 +223,39 @@ def montar_honesto(
     assert bancada.a_tela() == {UNIQS[n]: n + 1 for n in range(quantos)}
     assert all(getattr(v, "backend", None) == "uhid" for v in bancada.vpads)
     return bancada
+
+
+def _sai_e_volta_tarde(bancada: MesaDoJogo, uniq: str) -> None:
+    """``uniq`` sai, o prazo do lugar guardado vence, e ele volta com o jogo aberto."""
+    via = bancada.mesa.transporte_de(uniq)
+    bancada.mesa.levantar(uniq)
+    for _ in range(_ticks_ate_o_fim_do_prazo(0.0)):
+        bancada.tique()
+    bancada.mesa.sentar(uniq, transporte=via)
+    bancada.tique()
+    bancada.tique()
+
+
+def _volta_movendo_um_boneco_de_verdade(bancada: MesaHonesta, uniq: str) -> None:
+    """Quem voltou dirige um boneco pelo vpad ``uhid`` que o kernel ACEITOU.
+
+    Boneco só não basta: recusado, o produto cai no ``uinput``, e o jogo ainda
+    vê um controle — sem vibração, giroscópio, gatilho nem luz. O vpad dele
+    está de pé no driver, com um MAC que só ele veste, e o posto segue vivo.
+    """
+    vpad = bancada.vpad_de(uniq)
+    assert vpad is not None and getattr(vpad, "backend", None) == "uhid", (
+        f"{uniq} voltou num vpad degradado: {vpad!r}"
+    )
+    assert vpad_vivo(vpad), f"o kernel derrubou o vpad de {uniq}"
+    assert bancada.vpad_do_p1.vivo and vpad.mac != bancada.vpad_do_p1.mac
+    assert uniq in bancada.o_jogo_ve().values(), f"{uniq} voltou e não move boneco nenhum"
+    vivos = sorted(
+        v.mac for v in bancada.vpads if v.vivo and getattr(v, "backend", None) == "uhid"
+    )
+    no_driver = bancada.kernel.macs_na_lista()
+    assert no_driver == vivos, f"o driver guarda {no_driver}, e os vpads vivos vestem {vivos}"
+    assert bancada.kernel.recusas == []
 
 
 def trocar_a_mascara_do_p1(bancada: MesaHonesta) -> None:
@@ -409,15 +456,6 @@ class TestAVoltaTardiaDoP1:
         assert bancada.coop._p1_espera_o_jogo is True
         assert [r for r in registros if r["event"] == "coop_ordem_do_p1_espera_o_jogo"]
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason=(
-            "PENDENTE (O-VPAD-DO-P1-NAO-REPETE-O-MAC-01): o vpad do posto que "
-            "renasceu com a identidade do P1 e o vpad do P1 que volta tardio "
-            "pedem o MESMO MAC (vpad_mac pela identidade), e o kernel recusa o "
-            "segundo com -EEXIST."
-        ),
-    )
     @MATRIZ
     def test_o_vpad_do_p1_que_volta_nao_repete_o_mac_do_posto(
         self,
@@ -426,25 +464,66 @@ class TestAVoltaTardiaDoP1:
         quantos: int,
         transporte: str,
     ) -> None:
-        """A bancada honesta: a fábrica e a classe REAIS contra o kernel que recusa.
+        """O xfail estrito da O-ASSENTO-03, virado régua (O-VPAD-DO-P1-NAO-REPETE-O-MAC-01).
 
-        A troca de máscara com o jogo aberto (o gesto dela, que a R-04 nunca
-        barra) faz o vpad do posto renascer com a identidade do P1; o P1 sai,
-        o prazo vence, o P2 assume o posto, e o P1 volta com o jogo aberto.
+        A bancada honesta: a fábrica e a classe REAIS contra o kernel que
+        recusa. A troca de máscara com o jogo aberto (o gesto dela, que a R-04
+        nunca barra) faz o vpad do posto renascer com a identidade do P1; o P1
+        sai, o prazo vence, o P2 assume o posto, e o P1 volta com o jogo
+        aberto. Medido antes da cura: o kernel recusava o MAC do P1 com
+        ``-EEXIST`` e ele voltava num vpad ``uinput`` degradado.
+
+        A MORDIDA: ``_MacsDosVpadsVivos.vestir`` devolvendo sempre o
+        ``vpad_mac`` pedido reprova os nove — ``Duplicate device found``.
         """
         bancada = montar_honesto(monkeypatch, kernel, quantos, transporte)
         trocar_a_mascara_do_p1(bancada)
         assert bancada.vpad_do_p1.mac == vpad_mac(P1, 1), "o posto nasceu com o MAC do P1"
 
-        self._p1_sai_e_volta_tarde(bancada)  # cada tique confere o kernel
+        _sai_e_volta_tarde(bancada, P1)  # cada tique confere o kernel
 
-        vpad = bancada.vpad_de(P1)
-        assert vpad is not None and getattr(vpad, "backend", None) == "uhid", (
-            f"o P1 voltou num vpad degradado: {vpad!r}"
-        )
-        assert vpad_vivo(vpad) and vpad.mac != bancada.vpad_do_p1.mac
-        assert P1 in bancada.o_jogo_ve().values(), "o P1 voltou e não move boneco nenhum"
-        assert kernel.recusas == []
+        _volta_movendo_um_boneco_de_verdade(bancada, P1)
+        assert bancada.inst.primary_uniq == P2, "controle que volta nunca rouba o posto"
+        assert bancada.dono_do_vpad_do_p1() == P2
+
+    @pytest.mark.parametrize(
+        ("quantos", "transporte", "quem"),
+        [
+            pytest.param(n, t, q, id=f"{n}-controles-{t}-o-posto-carrega-p{q + 1}")
+            for n in (3, 4)
+            for t in TRANSPORTES
+            for q in range(1, n - 1)
+        ],
+    )
+    def test_quem_o_posto_carrega_volta_tarde_sem_repetir_o_mac(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        kernel: KernelDoHidPlaystation,
+        quantos: int,
+        transporte: str,
+        quem: int,
+    ) -> None:
+        """Não é só o P1: o posto carrega a identidade de quem era o primário quando nasceu.
+
+        Os que vêm antes de ``quem`` saem e o prazo de cada um vence (a NUM-01
+        passa o posto adiante); a troca de máscara faz o posto renascer com a
+        identidade de ``quem``, que sai, deixa o prazo vencer e volta. É a mesma
+        colisão com outro dono — a do P1 é só a primeira da fila.
+        """
+        bancada = montar_honesto(monkeypatch, kernel, quantos, transporte)
+        for antes in UNIQS[:quem]:
+            bancada.mesa.levantar(antes)
+            for _ in range(_ticks_ate_o_fim_do_prazo(0.0)):
+                bancada.tique()
+        uniq = UNIQS[quem]
+        assert bancada.inst.primary_uniq == uniq
+        trocar_a_mascara_do_p1(bancada)
+        assert bancada.vpad_do_p1.mac == vpad_mac(uniq, 1)
+
+        _sai_e_volta_tarde(bancada, uniq)
+
+        _volta_movendo_um_boneco_de_verdade(bancada, uniq)
+        assert bancada.inst.primary_uniq == UNIQS[quem + 1]
 
 
 #: Quanto o OUTRO já está fora quando o P1 sai: o prazo dele vence com o do P1
