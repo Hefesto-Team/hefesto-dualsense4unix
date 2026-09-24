@@ -2654,9 +2654,9 @@ class _MacsDosVpadsVivos:
     e o `ps_devices_list_add` do driver o recusa com `-EEXIST`. Na bancada
     honesta (a classe real contra um kernel que recusa), o P1 voltava num vpad
     `uinput` degradado (`uhid_bind_falhou`): boneco sem vibração, giroscópio,
-    gatilho e luz. Não só o P1 — qualquer um que tenha sido o primário quando
-    o posto nasceu, e também dois secundários sem identidade de aparelho cujo
-    número de nome coincida.
+    gatilho e luz. Não só o P1: qualquer um que fosse o primário quando o
+    posto nasceu (medido com o P2 e o P3 também), e dois vpads sem identidade
+    de aparelho que peçam o mesmo número (o piso :func:`player_mac`).
 
     **A CURA MORA NO DONO DO MAC.** A máscara (o que o jogo vê do aparelho) e
     o MAC (o que o kernel usa para não duplicar) são perguntas diferentes, e só
