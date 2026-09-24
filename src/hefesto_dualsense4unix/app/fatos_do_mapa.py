@@ -1071,7 +1071,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
         'radio': {
             'aceita': 'parcial',
@@ -1079,7 +1079,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'afirmado-no-doc',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
     },
     'combinacao.slot_jogador.estabilidade@dualsense': {
@@ -1166,7 +1166,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
         'radio': {
             'aceita': 'parcial',
@@ -1174,7 +1174,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'afirmado-no-doc',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
     },
     'combinacao.tres_na_mesa@sn30': {
@@ -1185,7 +1185,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
         'radio': {
             'aceita': 'desconhecido',
@@ -1193,7 +1193,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'incerto',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
     },
     'energia.bateria.degraus@dualsense': {
@@ -1584,7 +1584,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
         'radio': {
             'aceita': '',
@@ -1592,7 +1592,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
     },
     'entrada.combo.ponte@dualsense': {
@@ -1641,7 +1641,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
         'radio': {
             'aceita': '',
@@ -1649,7 +1649,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
     },
     'entrada.emulacao_mouse.analogico@dualsense': {
@@ -1698,7 +1698,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'afirmado-no-doc',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
         'radio': {
             'aceita': 'desconhecido',
@@ -1706,7 +1706,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'afirmado-no-doc',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
     },
     'entrada.stick.calibracao@pro': {
@@ -1793,7 +1793,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'evdev',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
         'radio': {
             'aceita': 'parcial',
@@ -1801,7 +1801,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'evdev',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
     },
     'gatilho.adaptativo@dualsense': {
@@ -3522,7 +3522,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'evdev',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
         'radio': {
             'aceita': 'sim',
@@ -3530,7 +3530,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'evdev',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
     },
     'movimento.giroscopio.jogo@dualsense': {
@@ -3693,7 +3693,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'evdev',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
         'radio': {
             'aceita': 'sim',
@@ -3701,7 +3701,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'evdev',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
     },
     'movimento.imu.calibracao@dualsense': {
@@ -3921,7 +3921,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'uhid',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
         'radio': {
             'aceita': 'sim',
@@ -3929,7 +3929,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'uhid',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
     },
     'plataforma.camera_ir@dualsense': {
@@ -5802,7 +5802,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'evdev',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
         'radio': {
             'aceita': 'parcial',
@@ -5810,7 +5810,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'evdev',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
     },
     'vibracao.rumble.frequencia@dualsense': {
@@ -5973,7 +5973,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'evdev',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
         'radio': {
             'aceita': 'sim',
@@ -5981,7 +5981,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'evdev',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
     },
 }
