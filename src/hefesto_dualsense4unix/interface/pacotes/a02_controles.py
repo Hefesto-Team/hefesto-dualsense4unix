@@ -3790,7 +3790,7 @@ def mira_fora(nativo: bool) -> str:
     """`NATIVO` quando o chip da Mira fica cinza, `""` quando não fica.
 
     Palavra dela, 24/09/2026 (`D-2409-NO-NATIVO-A-MIRA-FICA-CINZA`): *"A
-    exceção do nativo todo o resto deve ter mira Virtual"*.  <!-- noqa-acento: citação literal dela -->
+    exceção do nativo todo o resto deve ter mira Virtual"*.  <!-- noqa-acento: dela -->
     O cinza vale para os quatro controles de uma vez porque o Modo Nativo é
     do daemon inteiro — e não mexe no aceso/apagado do chip, que continua
     sendo o `mira-ligada`.
