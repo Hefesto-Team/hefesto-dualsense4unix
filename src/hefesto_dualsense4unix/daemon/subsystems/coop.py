@@ -620,7 +620,7 @@ class CoopManager:
 
         É a metade do co-op da cura do "Jogador 2 que dura dois segundos".
         Chamada pelo backend de dentro de `_recompute_primary`
-        (`set_primary_change_observer`), **na thread do `connect()` e sob o
+        (`set_primary_change_observer`), **no executor do `connect()`/`read_state()`, sob o
         `_io_lock` do backend**. Daí as três regras do que se pode fazer aqui:
 
         1. **solta o grab, e só.** É o que impede o `EBUSY`: um `ungrab` é um

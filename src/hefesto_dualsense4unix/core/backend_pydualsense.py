@@ -3977,10 +3977,10 @@ class PyDualSenseController(IController):
         # publica estado vazio para CLI/GUI/IPC.
         if ds is None:
             return ControllerState(
-                battery_pct=0,
+                **self._carga_do_posto_vago(),
                 l2_raw=0,
                 r2_raw=0,
-                connected=False,
+                connected=self._posto_vago_de is not None,
                 transport=self._transport,
                 raw_lx=128,
                 raw_ly=128,
@@ -3995,7 +3995,7 @@ class PyDualSenseController(IController):
         # stale, fazendo a CLI/GUI mostrarem o transporte errado por horas.
         # Custo: 1 getattr + 1 string check por tick (~60Hz) — desprezível.
         self._transport = self._detect_transport(ds)
-        battery, carga = self._read_battery_raw(ds), self._read_battery_state_opt(ds)
+        battery, carga = self._ler_a_carga_do_posto(ds)
         # HOTFIX-2: evdev é fonte primária de input quando disponível.
         if self._evdev.is_available():
             snap = self._evdev.snapshot()
@@ -7609,7 +7609,7 @@ class PyDualSenseController(IController):
         prazo passa, a mesa se refaz (gente nova, o «Renumerar agora») ou o jogo
         solta a autoridade. O `connect()` só roda a cada ~30 s com a mesa
         parada, então quem confere é o `read_state` — o tique que decide o que o
-        vpad do P1 recebe, na mesma thread de executor do `connect()`. Custo
+        vpad do P1 recebe, no executor do `connect()` e sob o mesmo lock. Custo
         durante a vaga: o `_io_lock` e uma pergunta de memória por tique; fora
         dela, uma comparação com None.
         """
@@ -7621,6 +7621,39 @@ class PyDualSenseController(IController):
                 # a vaga acabou, e o tique não paga mais o `_io_lock` por ela.
                 self._posto_vago_de = None
             return self._ds
+
+    #: A última carga lida do dono do posto de P1, `(battery_pct, battery_state)`
+    #: — o que o topo do estado mostra durante a vaga. Default de CLASSE: a
+    #: suíte monta backend por `__new__`.
+    _carga_do_posto: tuple[int, str | None] = (0, None)
+
+    def _ler_a_carga_do_posto(self, ds: pydualsense) -> tuple[int, str | None]:
+        """A carga do primário, lida no tique do `read_state` e guardada para a vaga.
+
+        As duas metades num par só (BATERIA-PARADA-01), no contrato legado do
+        topo: `battery_pct` sempre `int`, 0 enquanto o controle não reportou.
+        Guardar custa uma atribuição por tique.
+        """
+        carga = (self._read_battery_raw(ds), self._read_battery_state_opt(ds))
+        self._carga_do_posto = carga
+        return carga
+
+    def _carga_do_posto_vago(self) -> dict[str, Any]:
+        """A carga do topo quando o `read_state` não tem primário.
+
+        Conferência de 24/09/2026. Sem primário por falta de controle (a mesa
+        vazia), é o 0 de sempre, e o laço do daemon nem publica. Com o posto
+        VAGO há outros controles jogando, e o laço publica este estado no store
+        a cada tique: o 0 chegava à política «auto» da vibração, que lê a
+        bateria dali, e o `_game_rumble_mult` descia a 0,3 a vibração que o jogo
+        manda ao P2, ao P3 e ao P4 — um «não sei» respondido como zero
+        (BATERIA-QUE-PULA-01). O posto é do P1 (`primary_uniq`), e a última
+        leitura dele é a resposta honesta até ele voltar ou o prazo passar.
+        """
+        if self._posto_vago_de is None:
+            return {"battery_pct": 0, "battery_state": None}
+        battery, carga = self._carga_do_posto
+        return {"battery_pct": battery, "battery_state": carga}
 
 
 #: O nibble ALTO do byte de bateria (`status[0]`), traduzido — BATERIA-PARADA-01.

@@ -674,3 +674,83 @@ class TestORelogioEUmSo:
             "o CLOCK_BOOTTIME ficou atrás do CLOCK_MONOTONIC — ele soma a "
             "suspensão, nunca a subtrai"
         )
+
+
+@pytest.mark.usefixtures("config_isolado")
+class TestOTopoDoEstadoNaVaga:
+    """Com o posto vago, o estado do topo não diz «desconectado» nem «bateria 0».
+
+    A conferência (24/09/2026) mediu: com o posto vago, o `read_state()` caía no
+    ramo da mesa VAZIA — `connected=False` e `battery_pct=0` — com três
+    controles jogando. O laço do daemon publica esse estado no store a cada
+    tique, e a política «auto» da vibração lê a bateria DALI: com 0, o
+    `_game_rumble_mult` desce a 0,3 e enfraquece a vibração que o jogo manda
+    ao P2, ao P3 e ao P4 enquanto o P1 está fora. Antes da vaga esse ramo só
+    rodava sem controle nenhum, e o laço nem chamava o `read_state()`.
+
+    O `connected` do topo é o AGREGADO (`is_connected()`, o mesmo do ramo de
+    sempre), e a bateria é a última leitura do dono do posto — o «não sei»
+    nunca vira zero (BATERIA-QUE-PULA-01).
+    """
+
+    @staticmethod
+    def _carga_no_p1(bancada: MesaDoJogo, nivel: int, estado: int) -> None:
+        # O `DSBattery` que o report_thread da pydualsense preenche.
+        handle = bancada.inst._handles[CHAVE_DE[P1]]
+        handle.battery = SimpleNamespace(Level=nivel, State=estado)
+
+    @pytest.mark.parametrize("transporte", list(TRANSPORTES))
+    def test_o_topo_segue_conectado_com_a_carga_do_dono_do_posto(
+        self, monkeypatch: pytest.MonkeyPatch, transporte: str
+    ) -> None:
+        bancada = montar(monkeypatch, 3, transporte)
+        self._carga_no_p1(bancada, 75, 0x1)
+        antes = bancada.inst.read_state()
+        assert (antes.connected, antes.battery_pct, antes.battery_state) == (
+            True, 75, "carregando",
+        )
+
+        bancada.mesa.levantar(P1)
+        for _ in range(int(VINTE_SEGUNDOS / TIQUE)):
+            bancada.tique()
+            estado = bancada.inst.read_state()
+            assert bancada.dono_do_vpad_do_p1() is None
+            assert estado.connected is True, (
+                "com três controles jogando, o topo disse desconectado"
+            )
+            assert (estado.battery_pct, estado.battery_state) == (75, "carregando"), (
+                f"a vaga respondeu {estado.battery_pct}/{estado.battery_state} — "
+                "o «não sei» virou zero"
+            )
+            assert (estado.raw_lx, estado.raw_ly, estado.buttons_pressed) == (
+                128, 128, frozenset(),
+            )
+
+    def test_a_vibracao_auto_dos_outros_nao_cai_com_o_p1_fora(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O consumidor: a política «auto» lê a bateria do store que o laço alimenta."""
+        from hefesto_dualsense4unix.daemon.state_store import StateStore
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import _game_rumble_mult
+
+        bancada = montar(monkeypatch, 4)
+        self._carga_no_p1(bancada, 75, 0x0)
+        bancada.daemon.config = DaemonConfig(coop_enabled=True, rumble_policy="auto")
+        bancada.daemon.store = StateStore()
+        agora = 0.0
+
+        def tique_do_laco() -> float:
+            # O que o `_poll_loop` faz: publica o `read_state()` no store, e o
+            # rumble do jogo (o de qualquer jogador) lê o degrau dali.
+            bancada.daemon.store.update_controller_state(bancada.inst.read_state())
+            return _game_rumble_mult(bancada.daemon, agora)  # type: ignore[arg-type]
+
+        assert tique_do_laco() == 1.0
+        bancada.mesa.levantar(P1)
+        for _ in range(int(VINTE_SEGUNDOS / TIQUE)):
+            bancada.tique()
+            agora += TIQUE
+            assert tique_do_laco() == 1.0, (
+                "com o P1 fora, a vibração «auto» do P2, do P3 e do P4 caiu — "
+                "o degrau leu a bateria 0 do posto vago"
+            )
