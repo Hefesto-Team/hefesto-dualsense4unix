@@ -49,11 +49,17 @@ INSTALL_UDEV = RAIZ / "scripts" / "install_udev.sh"
 
 UID = 1000
 
-#: Os dois casamentos do DualSense standard (054c:0ce6) — USB e Bluetooth. São
-#: ESTES que a cura fecha. O Edge (0df2) fica de fora de propósito: é o PID do
-#: nosso vpad uhid, e fechá-lo pela mesma linha calaria o controle que o
-#: Hefesto ENTREGA ao jogo.
-CASAMENTOS_DO_FISICO = ('ATTRS{idProduct}=="0ce6"', 'KERNELS=="0005:054C:0CE6.*"')
+#: Os casamentos do DualSense FÍSICO — o standard (054c:0ce6) e, desde a
+#: STEAM-NO-FISICO-01 (24/09/2026), o Edge (054c:0df2), cada um pelo cabo e
+#: pelo rádio. São ESTES que a cura fecha. O 0df2 é também o PID do nosso vpad
+#: uhid, e a linha dele é separada pelo `DEVPATH` — ver
+#: `TestOEdgeFisicoFechaEOVpadNao`.
+CASAMENTOS_DO_FISICO = (
+    'ATTRS{idProduct}=="0ce6"',
+    'KERNELS=="0005:054C:0CE6.*"',
+    'ATTRS{idProduct}=="0df2"',
+    'KERNELS=="0005:054C:0DF2.*"',
+)
 
 
 def linhas_de_regra() -> list[str]:
@@ -114,6 +120,9 @@ class TestARegraFechaONo:
         linha = linha_do_casamento('KERNELS=="0003:054C:0DF2.*"')
         assert 'TAG+="uaccess"' in linha, linha
         assert 'MODE="0660"' in linha, linha
+        # STEAM-NO-FISICO-01: sem o DEVPATH, esta linha casaria também o Edge
+        # FÍSICO pelo cabo (`0003:054C:0DF2`) e o reabriria depois de fechado.
+        assert 'DEVPATH=="/devices/virtual/misc/uhid/*"' in linha, linha
 
     def test_o_arquivo_corre_antes_do_73_seat_late(self) -> None:
         """Quem transforma a TAG em ACL é o `73-seat-late.rules`.
@@ -136,6 +145,134 @@ class TestARegraFechaONo:
         assert "Hefesto tem que ter prioridade em tudo" in texto
         assert "não fecha descritor já aberto" in texto
         assert "--no-fechar-o-no" in texto
+
+
+class _Aparelho:
+    """Um hidraw como o udev o vê: o próprio nó e a corrente de pais.
+
+    `pais` é a lista (kernel, attrs) do nó para cima; o `KERNELS`/`ATTRS` de
+    uma regra casa em QUALQUER elo, mas todos os do mesmo tipo-pai de uma
+    linha têm de casar no MESMO elo — a regra do udev.
+    """
+
+    def __init__(self, devpath: str, pais: list[tuple[str, dict[str, str]]]) -> None:
+        self.devpath = devpath
+        self.kernel = devpath.rsplit("/", 1)[-1]
+        self.pais = [(self.kernel, {}), *pais]
+        # Como o `steam-devices` o deixa: um 60-* já pôs `uaccess` e 0660.
+        self.mode = "0660"
+        self.owner = "root"
+        self.tags = {"uaccess"}
+
+
+def _casa(padrao: str, valor: str) -> bool:
+    import fnmatch
+
+    return fnmatch.fnmatchcase(valor, padrao)
+
+
+def _aplicar_a_regra(aparelho: _Aparelho) -> _Aparelho:
+    """Roda as linhas do asset, em ordem, sobre um aparelho — o udev de bolso."""
+    termo = re.compile(r'(\w+(?:\{[^}]*\})?)\s*(==|!=|\+=|-=|=)\s*"([^"]*)"')
+    for linha in linhas_de_regra():
+        termos = termo.findall(linha)
+        casou = True
+        de_pai: list[tuple[str, str]] = []
+        for chave, op, valor in termos:
+            if op not in ("==", "!="):
+                continue
+            if chave == "KERNEL":
+                ok = _casa(valor, aparelho.kernel)
+            elif chave == "SUBSYSTEM":
+                ok = valor == "hidraw"
+            elif chave == "DEVPATH":
+                ok = _casa(valor, aparelho.devpath)
+            elif chave == "KERNELS" or chave.startswith("ATTRS{"):
+                de_pai.append((chave, valor))
+                continue
+            else:
+                ok = False
+            if (op == "==") != ok:
+                casou = False
+        if casou and de_pai:
+            casou = any(
+                all(
+                    _casa(valor, kernel)
+                    if chave == "KERNELS"
+                    else _casa(valor, attrs.get(chave[6:-1], "\0"))
+                    for chave, valor in de_pai
+                )
+                for kernel, attrs in aparelho.pais
+            )
+        if not casou:
+            continue
+        for chave, op, valor in termos:
+            if chave == "MODE" and op == "=":
+                aparelho.mode = valor
+            elif chave == "OWNER" and op == "=":
+                aparelho.owner = valor
+            elif chave == "TAG" and op == "+=":
+                aparelho.tags.add(valor)
+            elif chave == "TAG" and op == "-=":
+                aparelho.tags.discard(valor)
+    return aparelho
+
+
+def _pelo_cabo(pid: str, hid: str) -> _Aparelho:
+    return _Aparelho(
+        f"/devices/pci0000:00/0000:00:14.0/usb1/1-4/1-4:1.3/{hid}/hidraw/hidraw7",
+        [
+            (hid, {}),
+            ("1-4:1.3", {}),
+            ("1-4", {"idVendor": "054c", "idProduct": pid}),
+            ("usb1", {}),
+        ],
+    )
+
+
+def _pelo_uhid(hid: str) -> _Aparelho:
+    """O rádio pelo BlueZ ≥5.73 E o nosso vpad moram na mesma subárvore."""
+    return _Aparelho(
+        f"/devices/virtual/misc/uhid/{hid}/hidraw/hidraw8",
+        [(hid, {}), ("uhid", {})],
+    )
+
+
+class TestOEdgeFisicoFechaEOVpadNao:
+    """STEAM-NO-FISICO-01, 24/09/2026 — o Edge físico nasce fechado, e o vpad não.
+
+    O Edge (0df2) ficou aberto em 20/09 porque o 0df2 é o PID do nosso vpad.
+    Aberto, ele era a mesma janela da Steam, e a vigia do sequestro varria o
+    `/proc` a cada 0,5 s para sempre por causa dele. O que separa os dois é a
+    TOPOLOGIA, e esta classe roda o asset linha a linha sobre os cinco
+    aparelhos, com a regra do udev de que os pais de uma linha casam no mesmo
+    elo.
+
+    A MORDIDA: tire o `DEVPATH` da linha do vpad e o Edge físico pelo cabo sai
+    daqui ABERTO — a linha do vpad casa o `0003:054C:0DF2` dele também.
+    """
+
+    @pytest.mark.parametrize(
+        "aparelho",
+        [
+            pytest.param(lambda: _pelo_cabo("0ce6", "0003:054C:0CE6.0005"), id="standard-cabo"),
+            pytest.param(lambda: _pelo_uhid("0005:054C:0CE6.0006"), id="standard-radio"),
+            pytest.param(lambda: _pelo_cabo("0df2", "0003:054C:0DF2.0007"), id="edge-cabo"),
+            pytest.param(lambda: _pelo_uhid("0005:054C:0DF2.0009"), id="edge-radio"),
+        ],
+    )
+    def test_o_fisico_nasce_fechado_nos_dois_transportes(self, aparelho: Any) -> None:
+        feito = _aplicar_a_regra(aparelho())
+
+        assert feito.mode == "0600"
+        assert feito.owner == "root"
+        assert "uaccess" not in feito.tags
+
+    def test_o_vpad_continua_aberto(self) -> None:
+        feito = _aplicar_a_regra(_pelo_uhid("0003:054C:0DF2.001A"))
+
+        assert feito.mode == "0660"
+        assert "uaccess" in feito.tags
 
 
 # ---------------------------------------------------------------------------
