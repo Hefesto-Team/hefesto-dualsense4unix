@@ -2232,10 +2232,10 @@ class StatusActionsMixin(WidgetAccessMixin):
     def _sync_modo_nativo_manda_no_output(self, state: dict[str, Any]) -> None:
         """Publica ``_modo_nativo_ligado`` para as abas Gatilhos e Lightbar.
 
-        MESA-CHEIA-09 (conserto 1.3). Em Modo Nativo o backend muta toda
-        escrita de output (`_output_mute`) — a rota sysfs do LED é desabilitada,
-        o `0x31` avulso é pulado e o `report_thread` não escreve nada. O ajuste
-        fica GUARDADO e vale no desmute, e é isso que os toasts precisam dizer.
+        MESA-CHEIA-09 (conserto 1.3). Em Modo Nativo o `report_thread` não
+        escreve nada (`_output_mute`): gatilho, vibração e LED do mic ficam
+        GUARDADOS e valem no desmute, e é isso que os toasts deles dizem. A luz
+        e o número saem na hora desde 23/09/2026 (`nativo_aplica=False`).
 
         Só guarda o flag: ao contrário do co-op, nenhuma moldura muda de
         desenho por causa dele, e repintar a aba a 0,5 Hz custaria sem motivo.
