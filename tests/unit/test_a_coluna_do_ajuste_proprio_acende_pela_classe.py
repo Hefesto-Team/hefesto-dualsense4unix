@@ -299,6 +299,10 @@ def test_cada_secao_guardada_acende_a_sua_celula_e_so_a_dela(
         # em 05/09, com esta régua VERMELHA no `dev` no meio. `{}` basta —
         # `ControllerSensoresOverride.giroscopio`/`.acelerometro` nascem `None`.
         "sensores": {},
+        # O `movimento` é o OITAVO desde 24/09/2026 (A-MIRA-POR-MOVIMENTO-NA-
+        # TELA-01). `{}` basta: `ProfileMovimentoConfig` nasce com a mira
+        # desligada, e a coluna pergunta pela SEÇÃO.
+        "movimento": {},
     }
     faltando = set(perfis_web.SECOES_POR_CONTROLE) - set(menor_corpo)
     assert not faltando, (
@@ -306,10 +310,15 @@ def test_cada_secao_guardada_acende_a_sua_celula_e_so_a_dela(
         f"corpo mínimo dessa seção — acrescente-o a `menor_corpo`, senão a coluna "
         f"nova atravessa este arquivo sem ser medida (foi o que aconteceu com "
         f"o `mic` em 03/09/2026)")
-    quantas = len(perfis_web.SECOES_POR_CONTROLE)
-    for posicao, secao in enumerate(perfis_web.SECOES_POR_CONTROLE):
+    # A POSIÇÃO É A DA COLUNA QUE O PACOTE DISTRIBUI (`SECOES_DA_COLUNA`), e a
+    # seção do esquema que espera a sessão dela não acende NADA: a página
+    # publicada não tem a célula, e acender uma vizinha é o defeito que esta
+    # régua existe para pegar.
+    colunas = a10_perfis.SECOES_DA_COLUNA
+    quantas = len(colunas)
+    for secao in perfis_web.SECOES_POR_CONTROLE:
         fora = _emitidos(**{secao: menor_corpo[secao]})
-        esperado = ["sim" if i == posicao else "" for i in range(quantas)]
+        esperado = ["sim" if s == secao else "" for s in colunas]
         # As três linhas que sobram da tabela vêm vazias — ver a nota no teste
         # acima, 05/09/2026.
         esperado += [""] * quantas * (a10_perfis.LUGARES_DA_TABELA - 1)

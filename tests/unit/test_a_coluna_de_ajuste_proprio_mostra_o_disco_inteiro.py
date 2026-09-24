@@ -82,7 +82,7 @@ MESA = [
 #: objeto —, e por isso o tipo deste mapa é `Any` e não `dict`.
 MENOR_CORPO: dict[str, Any] = {
     "leds": {}, "triggers": {}, "rumble": {}, "speaker": {"volume": 40},
-    "mic": {}, "sensores": {}, "mascara": "xbox",
+    "mic": {}, "sensores": {}, "mascara": "xbox", "movimento": {},
 }
 
 #: O QUE O PILOTO FAZ COM UMA LISTA, e é a linha que se mede aqui:
@@ -181,7 +181,10 @@ def test_toda_secao_do_esquema_tem_celula_na_pagina() -> None:
     """
     html = onde.pagina("10-perfis.html", publicado=True).read_text(encoding="utf-8")
     na_pagina = {m for m in re.findall(r'data-hef-secao="([^"]+)"', html)}
-    faltando = [s for s in perfis_web.SECOES_POR_CONTROLE if s not in na_pagina]
+    # A ÚNICA EXCEÇÃO É DECLARADA E TEM PRAZO: a seção que o esquema já guarda
+    # e cuja coluna espera a sessão dela (`SECOES_ESPERANDO_A_SESSAO_DELA`).
+    faltando = [s for s in perfis_web.SECOES_POR_CONTROLE if s not in na_pagina
+                and s not in perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA]
     assert not faltando, (
         f"o perfil guarda {faltando} por controle e a página publicada não tem "
         f"célula para essas seções — ajuste guardado no disco que a tela esconde. "
@@ -259,6 +262,13 @@ def test_uma_secao_guardada_acende_uma_celula_so_e_na_linha_dela(
 
     acesas = [(i, nome) for i, celulas in enumerate(linhas)
               for nome, on in celulas if on]
+    # A SEÇÃO QUE ESPERA A SESSÃO DELA não tem célula na página publicada, e
+    # por isso não acende NENHUMA — acender uma vizinha é o defeito medido aqui.
+    if secao in perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA:
+        assert acesas == [], (
+            f"`{secao}` espera a sessão dela e acendeu {acesas} na página "
+            f"publicada — a distribuição casou a célula com uma vizinha")
+        return
     assert acesas == [(linha, secao)], (
         f"com só `{secao}` guardado do controle da linha {linha}, a tela acendeu "
         f"{acesas} — o esperado é exatamente [({linha}, {secao!r})]. "
@@ -294,8 +304,10 @@ def test_o_cabecalho_e_a_dica_da_linha_contam_o_mesmo_numero() -> None:
     # mudou de lugar**: continua por extenso, na dica do cabeçalho. O que se
     # cobra aqui é o número; a forma da frase é dela.
     extenso = {1: "um", 2: "dois", 3: "três", 4: "quatro", 5: "cinco",
-               6: "seis", 7: "sete"}
-    quantas = len(perfis_web.SECOES_POR_CONTROLE)
+               6: "seis", 7: "sete", 8: "oito"}
+    # A CONTA É A DA PÁGINA PUBLICADA (`SECOES_NA_TELA`): a seção que espera a
+    # sessão dela (24/09/2026, o `movimento`) ainda não tem célula ali.
+    quantas = len(perfis_web.SECOES_NA_TELA)
     esperado = extenso.get(quantas, str(quantas))
     assert f"São {esperado}:" in html, (
         f"o esquema guarda {quantas} seções por controle e a dica do cabeçalho "

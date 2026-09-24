@@ -1,4 +1,4 @@
-"""QUEM-E-QUEM-03 (29/08/2026) — as nove features têm dono, e a conta sai da mão.
+"""QUEM-E-QUEM-03 (29/08/2026) — as features têm dono, e a conta sai da mão.
 
 O DEFEITO, NUMA FRASE
 ----------------------
@@ -16,7 +16,7 @@ sido. Este arquivo é o que faz a conta parar de depender de alguém lembrar.
 
 O QUE ESTE PORTÃO É, E O QUE ELE NÃO É
 ---------------------------------------
-Ele é o **CENSO**: as NOVE features que a tela oferece por controle, e, para
+Ele é o **CENSO**: as DEZ features que a tela oferece por controle, e, para
 cada uma, onde ela mora hoje (por controle · global · ausente), o que
 ``None`` significa, quem responde no lugar, e **a sprint dona da entrega**. Ele
 compara o censo com ``ControllerOverrides.model_fields`` nos DOIS sentidos.
@@ -34,14 +34,14 @@ vermelho apontando o caminho, em vez do silêncio.
 
 A LINHA SEM DONO, e ela fica sem dono de propósito
 ---------------------------------------------------
-Oito das nove têm dono. O **touchpad** não tem, e não é esquecimento: nenhuma
+Nove das dez têm dono. O **touchpad** não tem, e não é esquecimento: nenhuma
 tela aprovada oferece interruptor para ele (na aba Controles ele é leitura
 viva, e as 27 menções da página são glifo e moldura, nenhuma é interruptor), e
 o mapa de canais fecha o outro lado — ``toque.touchpad.escrita`` tem
 ``existe=nao-tem``: **o aparelho não tem por onde receber uma escrita de
 touchpad**. Inventar o campo aqui seria feature nova.
 
-Por isso o censo tem NOVE linhas e a nona diz ``dono=None`` com o motivo. Uma
+Por isso o censo tem DEZ linhas e a do touchpad diz ``dono=None`` com o motivo. Uma
 tabela que some quando ninguém olha é o esquecimento que este arquivo existe
 para impedir — então feature sem dono **passa** e é impressa. Ausência de dono
 é fato do projeto, não defeito do código; o portão a torna visível, não ilegal.
@@ -60,14 +60,14 @@ do mundo. O ``uniq`` sintético do teste da parcialidade vem da faixa da casa.
 MORDIDAS (o que arrancar para ver reprovar)
 --------------------------------------------
 1. acrescente um campo a ``ControllerOverrides`` sem tocar no censo — reprova
-   nomeando o campo, **e** o teste da conta reprova dizendo SEIS contra SETE;
+   nomeando o campo, **e** o teste da conta reprova dizendo OITO contra NOVE;
 2. remova ``speaker`` do censo — reprova no outro sentido;
 3. apague a frase de ``sem_opiniao`` de um campo presente — reprova;
 4. troque a prova da parcialidade por um ``model_dump()`` denso — os campos não
    escritos aparecem, que é em letra a regressão R-20 de 23/07;
 5. dê um dono falso ao touchpad, ou apague a linha dele — reprova pelas duas
-   pontas (a contagem de nove, e a identidade da única sem dono);
-6. troque ``SEIS`` por ``CINCO`` no comentário de ``schema.py`` — reprova.
+   pontas (a contagem de dez, e a identidade da única sem dono);
+6. troque ``OITO`` por ``SETE`` no comentário de ``schema.py`` — reprova.
 """
 from __future__ import annotations
 
@@ -86,7 +86,7 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 
 # ---------------------------------------------------------------------------
-# O CENSO — nove linhas, e a nona é a que não pode sumir
+# O CENSO — dez linhas, e a do touchpad é a que não pode sumir
 # ---------------------------------------------------------------------------
 
 #: Onde a feature mora HOJE. Não é opinião sobre onde ela deveria morar.
@@ -95,7 +95,7 @@ NIVEIS = ("por-controle", "global", "ausente")
 
 @dataclass(frozen=True)
 class LinhaDoCenso:
-    """Uma das nove features que a tela oferece por controle."""
+    """Uma das dez features que a tela oferece por controle."""
 
     #: o nome na língua da casa (docs/A-LINGUA-DESTA-CASA...), não o do código.
     feature: str
@@ -117,12 +117,14 @@ class LinhaDoCenso:
     mora_em: str
 
 
-#: NOVE LINHAS, SEMPRE NOVE. A tela oferece nove ajustes por controle; o perfil
-#: carrega SETE deles desde 08/09/2026 — a `mascara` entrou com a decisão dela
-#: (MASCARA-NO-PERFIL-01: *"pode entrar sim"*), e a linha dela deixou de dizer
-#: *"NÃO no perfil, por medição"*. As duas restantes estão declaradas onde
-#: estão, com a razão medida — que é o que impede a tabela de virar ficção
-#: quando alguém olhar daqui a um mês.
+#: DEZ LINHAS. A tela oferece dez ajustes por controle desde 24/09/2026 — o
+#: décimo é o chip «Mira Virtual» que ela pediu no cartão de cada controle
+#: (A-MIRA-POR-MOVIMENTO-NA-TELA-01), desenhado no mockup e à espera da sessão
+#: dela. O perfil carrega OITO deles: a `mascara` entrou em 08/09/2026 com a
+#: decisão dela (MASCARA-NO-PERFIL-01: *"pode entrar sim"*) e o `movimento` em
+#: 24/09/2026, com o chip. As duas restantes estão declaradas onde estão, com a
+#: razão medida — que é o que impede a tabela de virar ficção quando alguém
+#: olhar daqui a um mês.
 CENSO: tuple[LinhaDoCenso, ...] = (
     LinhaDoCenso(
         feature="barra de luz",
@@ -232,6 +234,21 @@ CENSO: tuple[LinhaDoCenso, ...] = (
         mora_em="",
     ),
     LinhaDoCenso(
+        feature="mira virtual",
+        nivel="por-controle",
+        campo="movimento",
+        subcampo=None,
+        sem_opiniao="esta peça segue a mira do perfil, que por padrão não existe",
+        quem_responde=(
+            "a seção global `Profile.movimento`, campo a campo "
+            "(`roteador_de_movimento.arranjo_da_peca`); sem ela a mira fica "
+            "DESLIGADA — é arranjo, e arranjo nasce desligado"
+        ),
+        dono="A-MIRA-POR-MOVIMENTO-NA-TELA-01",
+        chave_do_mapa="movimento.giroscopio",
+        mora_em="",
+    ),
+    LinhaDoCenso(
         feature="touchpad",
         nivel="ausente",
         campo=None,
@@ -251,13 +268,13 @@ CENSO: tuple[LinhaDoCenso, ...] = (
 )
 
 #: A feature sem dono é UMA, e é esta. Escrito à parte de propósito: se um dia
-#: alguém apagar a linha do censo, a contagem reprova por nove; se alguém lhe
+#: alguém apagar a linha do censo, a contagem reprova por dez; se alguém lhe
 #: der um dono falso, esta constante reprova por identidade.
 FEATURE_SEM_DONO = "touchpad"
 
 #: Quantas a TELA oferece por controle. É o segundo número do comentário de
 #: `ControllerOverrides`, e o tamanho do censo.
-FEATURES_NA_TELA = 9
+FEATURES_NA_TELA = 10
 
 
 # ---------------------------------------------------------------------------
@@ -349,8 +366,8 @@ def test_o_censo_cobre_o_esquema_nos_dois_sentidos() -> None:
     )
 
 
-def test_o_censo_tem_nove_linhas_e_nenhuma_repetida() -> None:
-    """A tela oferece nove, e o censo conta nove. Sempre nove."""
+def test_o_censo_tem_uma_linha_por_feature_e_nenhuma_repetida() -> None:
+    """A tela oferece dez, e o censo conta dez."""
     assert len(CENSO) == FEATURES_NA_TELA, (
         f"o censo tem {len(CENSO)} linhas e a tela oferece {FEATURES_NA_TELA}. "
         "Se a tela passou a oferecer outro número, mude FEATURES_NA_TELA e o "
@@ -430,8 +447,8 @@ def _contas_do_comentario() -> list[tuple[str, str]]:
     diferença entre uma régua e um segundo lugar onde o mesmo número mora.
     """
     fonte = inspect.getsource(ControllerOverrides)
-    # Maiúsculas por conta da casa: hoje o comentário escreve `SÃO SEIS` em
-    # caixa alta e `nove` em minúscula, e nenhuma das duas grafias é contrato.
+    # Maiúsculas por conta da casa: hoje o comentário escreve `SÃO OITO` em
+    # caixa alta e `dez` em minúscula, e nenhuma das duas grafias é contrato.
     return [(a.upper(), b.upper()) for a, b in _FORMA_DA_CONTA.findall(fonte)]
 
 
@@ -443,8 +460,8 @@ def test_a_conta_escrita_no_esquema_acompanha_os_campos() -> None:
     alguém lembrar. A partir daqui, quem acrescentar o sétimo campo sem mexer
     no comentário leva vermelho com os dois números na mensagem.
 
-    MORDIDA: troque ``SEIS`` por ``CINCO`` em ``profiles/schema.py`` e veja
-    reprovar dizendo `o comentário diz 5 e a classe tem 6 campos`.
+    MORDIDA: troque ``OITO`` por ``SETE`` em ``profiles/schema.py`` e veja
+    reprovar dizendo `o comentário diz 7 e a classe tem 8 campos`.
     """
     contas = _contas_do_comentario()
     assert len(contas) == 1, (
@@ -587,7 +604,7 @@ def test_existe_exatamente_uma_feature_sem_dono_e_ela_e_o_touchpad(
     visível, não ilegal. O que ele proíbe é ela sumir em silêncio.
 
     MORDIDA: dê um dono falso ao touchpad e veja reprovar por contagem; apague a
-    linha dele do censo e veja reprovar pelas nove.
+    linha dele do censo e veja reprovar pelas dez.
     """
     sem_dono = features_sem_dono(CENSO)
     assert sem_dono == [FEATURE_SEM_DONO], (
@@ -613,8 +630,8 @@ def test_existe_exatamente_uma_feature_sem_dono_e_ela_e_o_touchpad(
     assert "SEM DONO" in capsys.readouterr().out
 
 
-def test_as_oito_com_dono_nomeiam_a_sprint() -> None:
-    """As outras oito dizem QUEM entregou, e o nome não é vazio."""
+def test_as_que_tem_dono_nomeiam_a_sprint() -> None:
+    """As outras nove dizem QUEM entregou, e o nome não é vazio."""
     com_dono = [linha for linha in CENSO if linha.dono is not None]
     assert len(com_dono) == FEATURES_NA_TELA - 1
     for linha in com_dono:

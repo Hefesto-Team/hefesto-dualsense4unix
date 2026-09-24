@@ -537,19 +537,40 @@ def _linhas_da_lista(
     ]
 
 
+#: AS SEÇÕES QUE O ESQUEMA JÁ GUARDA E A PÁGINA PUBLICADA AINDA NÃO MOSTRA — e
+#: a razão é uma regra dela, não uma dívida: *os desenhos novos se aprovam
+#: TODOS JUNTOS, numa sessão* (23/09/2026). O ``movimento`` (o chip «Mira
+#: Virtual», A-MIRA-POR-MOVIMENTO-NA-TELA-01) entrou em ``ControllerOverrides``
+#: em 24/09/2026 e a coluna dele está no desenho da aba 10 (``mockup/``),
+#: esperando o olho dela. Até ela publicar, a página do produto tem uma célula a
+#: menos por linha, e a distribuição de ``guarda.secao`` é POSICIONAL: o pacote
+#: não pode mandar a oitava, nem a frase da linha pode contá-la.
+#:
+#: É O AVESSO de ``a10_perfis.ESPERANDO_O_ESQUEMA`` (coluna antes do campo), e
+#: tem prazo do mesmo jeito: ``test_a_coluna_de_ajuste_proprio_da_aba10_e_dado``
+#: reprova no dia em que a página publicada ganhar a célula e o nome continuar
+#: aqui.
+SECOES_ESPERANDO_A_SESSAO_DELA: frozenset[str] = frozenset({"movimento"})
+
+#: O que a coluna da página PUBLICADA mostra, na ordem do esquema. É daqui que
+#: sai a conta da frase da linha — ela diz o que o olho conta ao lado dela.
+SECOES_NA_TELA: tuple[str, ...] = tuple(
+    s for s in SECOES_POR_CONTROLE if s not in SECOES_ESPERANDO_A_SESSAO_DELA
+)
+
 #: O NÚMERO POR EXTENSO, para a frase da linha nunca discordar da lista. Ela
 #: dizia *"herda os quatro ajustes do perfil"* com a palavra digitada, e por um
 #: dia a tela mostrou cinco glifos ao lado da palavra "quatro". Sai de
-#: ``len(SECOES_POR_CONTROLE)``, como o ``QUANTAS_SECOES`` do gerador.
+#: ``len(SECOES_NA_TELA)``, como o ``QUANTAS_SECOES`` do gerador.
 _EXTENSO: dict[int, str] = {
     1: "um", 2: "dois", 3: "três", 4: "quatro", 5: "cinco", 6: "seis",
-    7: "sete",
+    7: "sete", 8: "oito",
 }
 
 
 def _quantos_ajustes_por_extenso() -> str:
     """``"cinco"`` — e o número cru quando a lista passar do que se escreve."""
-    return _EXTENSO.get(len(SECOES_POR_CONTROLE), str(len(SECOES_POR_CONTROLE)))
+    return _EXTENSO.get(len(SECOES_NA_TELA), str(len(SECOES_NA_TELA)))
 
 
 def _secoes_do_controle(overrides: Any) -> dict[str, bool]:
@@ -572,8 +593,8 @@ def _linhas_da_guarda(mesa: list[dict[str, Any]], profile: Any) -> list[dict[str
     for controle in mesa:
         uniq = str(controle.get("uniq") or "")
         secoes = _secoes_do_controle(controllers.get(uniq))
-        quantos = sum(1 for ligada in secoes.values() if ligada)
-        total = len(SECOES_POR_CONTROLE)
+        quantos = sum(1 for secao in SECOES_NA_TELA if secoes.get(secao))
+        total = len(SECOES_NA_TELA)
         quanto = (
             f"{quantos} de {total} ajustes só deste controle"
             if quantos
@@ -636,7 +657,8 @@ def pacote_da_aba(
 
     mesa_de_agora = list(mesa or [])
     guarda = _linhas_da_guarda(mesa_de_agora, alvo) if alvo is not None else []
-    com_ajuste = sum(1 for linha in guarda if any(linha["secoes"].values()))
+    com_ajuste = sum(
+        1 for linha in guarda if any(linha["secoes"].get(s) for s in SECOES_NA_TELA))
 
     if mesa is None and not daemon_vivo:
         guarda_vazia = GUARDA_SEM_DAEMON

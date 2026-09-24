@@ -1945,6 +1945,49 @@ class DraftConfig(BaseModel):
             "controllers": self._controllers_to_ipc(),
         }
 
+    # NO FIM DA CLASSE DE PROPÓSITO: este arquivo é citado por número de linha
+    # nas planilhas de `docs/data/`, e um método no meio dele deslocaria as
+    # âncoras de baixo.
+    def with_controller_movimento(
+        self, uniq: str, *,
+        ligada: bool | None = None,
+        sensibilidade: int | None = None,
+        zona_morta_graus_s: float | None = None,
+    ) -> DraftConfig:
+        """Novo draft com a MIRA POR MOVIMENTO de ``uniq`` — o chip «Mira Virtual».
+
+        A-MIRA-POR-MOVIMENTO-NA-TELA-01 (24/09/2026). Os três campos são os que
+        a tela oferece: o chip (``ligada`` vira o destino ``analogico_direito``
+        ou ``nenhum``) e os dois deslizantes da Calibrar. É o mesmo contrato do
+        ``mira.set`` do IPC: ``None`` é *sem opinião* e NÃO mexe no que a peça
+        já tinha — campo omitido não é campo zerado. Os três ``None`` limpam a
+        seção inteira, e a peça volta a seguir a mira do perfil.
+        """
+        from hefesto_dualsense4unix.core.roteador_de_movimento import (
+            DESTINO_ANALOGICO_DIREITO,
+            DESTINO_NENHUM,
+        )
+        from hefesto_dualsense4unix.profiles.schema import ProfileMovimentoConfig
+
+        campos: dict[str, Any] = {}
+        if ligada is not None:
+            campos["destino"] = DESTINO_ANALOGICO_DIREITO if ligada else DESTINO_NENHUM
+        if sensibilidade is not None:
+            campos["sensibilidade"] = int(sensibilidade)
+        if zona_morta_graus_s is not None:
+            campos["zona_morta_graus_s"] = float(zona_morta_graus_s)
+        if not campos:
+            # A seção inteira sai — `_with_override_scalar_cleared` põe `None`
+            # nela e tira a entrada do mapa se ela esvaziar.
+            return self._with_override_scalar_cleared(uniq, "movimento")
+        atual = getattr(self.controller_override(uniq), "movimento", None)
+        if atual is not None:
+            escritos = {n: getattr(atual, n) for n in atual.model_fields_set}
+            campos = {**escritos, **campos}
+        return self._with_override_section(
+            uniq, "movimento", ProfileMovimentoConfig(**campos)
+        )
+
 
 # ---------------------------------------------------------------------------
 # Registro do ALTO-FALANTE no rascunho (SOM-02/E4 — a fiação que faltava)

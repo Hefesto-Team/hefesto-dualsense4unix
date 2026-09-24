@@ -289,35 +289,23 @@ def pixels(
     return horizontal * fator, vertical * fator
 
 
-def resolver(secao: object) -> ArranjoDeMovimento | None:
-    """A seção do perfil vira arranjo — ou `None`, que é *"sem opinião"*.
+def montar(secao: object) -> ArranjoDeMovimento:
+    """A seção do perfil vira arranjo SEMPRE — inclusive com o destino `nenhum`.
 
-    `None` e o destino `nenhum` viram os dois `None`: o tique não paga nem um
-    `getattr` a mais no caso normal, que é o caso de quase todo perfil.
+    A-MIRA-POR-MOVIMENTO-NA-TELA-01 (24/09/2026): substituiu o `resolver`, que
+    devolvia `None` para o desligado. Os deslizantes da Calibrar mostram a
+    sensibilidade e o «Ignorar tremor até» de um controle cuja mira está
+    DESLIGADA, e o número que ela ajustou não pode sumir só porque a mira não
+    está andando. O arranjo `nenhum` guarda os parâmetros e não move nada:
+    `ligado` é falso, `ativo()` não o entrega ao tique, e `deflexao`/`pixels`
+    devolvem zero.
 
     LEVANTA `ArranjoRecusadoError` no que o esquema deixaria passar mas o motor
     não sabe fazer — destino desconhecido, eixo desconhecido, teto abaixo da
-    zona morta. Quem chama (`ProfileManager.apply_movimento`) trata a recusa
-    desligando só esta seção: as luzes e os gatilhos dela não pagam por uma
-    linha torta, que é o contrato do `apply_remapeamento`.
-    """
-    if secao is None:
-        return None
-    arranjo = montar(secao)
-    return arranjo if arranjo.ligado else None
-
-
-def montar(secao: object) -> ArranjoDeMovimento:
-    """A seção vira arranjo SEMPRE — inclusive com o destino `nenhum`.
-
-    É o `resolver` sem o atalho do desligado, e existe por causa da tela
-    (A-MIRA-POR-MOVIMENTO-NA-TELA-01): os deslizantes da Calibrar mostram a
-    sensibilidade e o «Ignorar tremor até» de um controle cuja mira está
-    DESLIGADA, e o número que ela ajustou não pode sumir só porque a mira não
-    está andando. O arranjo `nenhum` guarda os parâmetros e não move nada
-    (`ligado` é falso, e `deflexao`/`pixels` devolvem zero).
-
-    Levanta `ArranjoRecusadoError` nas mesmas três formas do `resolver`.
+    zona morta. Quem chama (`ProfileManager.apply_movimento` e
+    `arranjo_da_peca`) trata a recusa desligando só aquela seção: as luzes e os
+    gatilhos dela não pagam por uma linha torta, que é o contrato do
+    `apply_remapeamento`.
     """
     destino = str(getattr(secao, "destino", DESTINO_NENHUM) or DESTINO_NENHUM)
     if destino not in DESTINOS:
@@ -603,6 +591,5 @@ __all__ = [
     "parametros_da_peca",
     "pixels",
     "por_peca",
-    "resolver",
     "sincronizar_o_filtro",
 ]

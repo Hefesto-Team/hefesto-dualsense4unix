@@ -21,4 +21,12 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## 10-perfis.html
+- **24/09/2026** — A-MIRA-POR-MOVIMENTO-NA-TELA-01, esperando a sessão dela. A
+  coluna «Status» (o ajuste próprio de cada controle) ganha a oitava célula, a
+  da Mira Virtual, com o glifo do analógico direito, e a dica do cabeçalho passa
+  a contar oito. O campo já está no perfil (`ControllerOverrides.movimento`);
+  enquanto ela não publicar, o produto distribui sete células por linha e a
+  frase da linha conta sete (`perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA`). Quem
+  publicar move o `movimento` de lá para `a10_perfis.SECOES_DA_COLUNA` no mesmo
+  commit — a régua reprova até isso.

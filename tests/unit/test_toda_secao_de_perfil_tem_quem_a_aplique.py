@@ -200,7 +200,7 @@ _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
     "movimento": SecaoDireta(
         razao=(
             "MOVIMENTO-EM-QUALQUER-MASCARA-01 (21/09/2026). `apply_movimento` "
-            "resolve o arranjo (`core/roteador_de_movimento.resolver`) e o "
+            "monta o arranjo (`core/roteador_de_movimento.montar`) e o "
             "DEPOSITA no `store` do gerente — sempre, inclusive `None`, para a "
             "mira do jogo anterior não contagiar o seguinte. Nada é escrito no "
             "controle. Quem obedece são os dois laços por tique "
