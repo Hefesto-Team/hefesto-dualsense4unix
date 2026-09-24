@@ -156,7 +156,7 @@ def test_o_teto_acompanha_a_realidade_e_nunca_sobra() -> None:
 def test_a_divida_maior_das_afirmacoes_sem_prova_nao_cresce() -> None:
     """As 105 que afirmam forte e ninguém provou — com ou sem ressalva.
 
-    **80 delas dizem `inferido-do-codigo`**, que é ler o código e não tocar o
+    **82 delas dizem `inferido-do-codigo`**, que é ler o código e não tocar o
     aparelho. Elas descem uma a uma, na bancada dela.
 
     **OS DOIS TETOS DESCERAM UM, EM 09/09/2026**, e desceram pela mesma linha:
