@@ -1420,10 +1420,10 @@ def apply_game_player_leds(
     *,
     target_uniq: str | None = None,
 ) -> None:
-    """Aplica no físico os player-LEDs que o JOGO acendeu no vpad (REPLICA-03).
+    """Oferece ao físico os player-LEDs que o JOGO acendeu no vpad (REPLICA-03).
 
-    É a cura do P3 para DualSense por construção: o número NO CONTROLE passa a
-    ser o número que o JOGO atribuiu, não o dos nossos registries.
+    CADUCOU em 23/09/2026 o «o número NO CONTROLE é o que o JOGO atribuiu»: por
+    decisão dela o número é do Hefesto, e `set_game_output_for` o recusa.
     """
     fn: Any = getattr(daemon.controller, "set_game_output_for", None)
     if target_uniq is None or not callable(fn):
