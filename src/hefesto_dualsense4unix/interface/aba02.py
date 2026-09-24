@@ -53,6 +53,11 @@ from pacotes.a02_controles import texto_do_xy as _texto_do_xy
 # viva diriam coisas diferentes na primeira edição de uma das duas.
 from pacotes.a02_controles import (DICA_ALTO_SEM_POSSE,
                                    DICA_DA_LUZ as DE_QUEM_E_A_LUZ)
+# A DICA DO GIROSCÓPIO E O CINZA DA MIRA NO NATIVO — 24/09/2026, pela mesma
+# lei: o produto pinta a dica (`dica_do_giro`) e o cinza (`mira_fora`) a cada
+# tique, e o desenho escreve a MESMA frase e o MESMO valor de gatilho do cinza.
+from pacotes.a02_controles import (DICA_DO_GIRO, DICA_DO_GIRO_COM_A_MIRA,
+                                   MIRA_NO_NATIVO)
 # O SUFIXO DO CANAL, pela mesma lei: `sufixo_do_canal` é quem o produto chama a
 # cada tique, e a cena do desenho tem de dizer a MESMA coisa. Digitar
 # a palavra do canal aqui seria a segunda gramática do mesmo fato — e ela
@@ -1375,6 +1380,22 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
                         box-shadow:0 0 6px var(--green)}
   .sensores-peca .sw.off{border-color:var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
   .sensores-peca .sw.off .p{background:var(--border-forte);box-shadow:none}
+  /* A DICA DO GIROSCÓPIO MORA NUM INVÓLUCRO SEM CAIXA — 24/09/2026,
+     A-MIRA-POR-MOVIMENTO-NA-TELA-02. `display:contents` tira o invólucro da
+     grade: quem ocupa a coluna continua sendo o botão, e a largura dos três
+     não muda um pixel. O `title` dele é o que muda com a Mira acesa. */
+  .sensores-peca .dica-do-giro{display:contents}
+  /* NO MODO NATIVO O CHIP DA MIRA FICA CINZA — decisão dela, 24/09/2026:
+     *"fica cinza no Nativo, sem gravar"*. A cara é a do cinza da casa
+     (`.btn.apagado`, `monta.py`): a borda sutil, o texto mudo e o cursor que
+     recusa — e ela vence o aceso e o apagado do chip, porque no Nativo nenhum
+     dos dois vale. Cor explícita, nada de `opacity`. */
+  .sensores-peca.sem-mira .sw[data-gesto="mira"],
+  .sensores-peca.sem-mira .sw[data-gesto="mira"]:hover{
+    border-color:var(--border-sutil);background:var(--app-bg);color:var(--texto-mudo);
+    cursor:not-allowed}
+  .sensores-peca.sem-mira .sw[data-gesto="mira"] .p{
+    background:var(--border-sutil);box-shadow:none}
 """
 
 # ---------------------------------------------------------------------------
@@ -1716,11 +1737,27 @@ def sensores_da_peca(c):
     `pacotes/a02_controles.mira`. A dica é a frase dela em português correto
     (:data:`DICA_DA_MIRA_VIRTUAL`). A grade dá aos três a largura do maior, e
     eles só aparecem no cartão aberto, como o par já aparecia.
+
+    **E DUAS RESPOSTAS DELA DE 24/09/2026 — A-MIRA-POR-MOVIMENTO-NA-TELA-02.**
+
+    * A DICA DO GIROSCÓPIO MUDA COM A MIRA ACESA
+      (`D-2409-A-DICA-DO-GIROSCOPIO-MUDA-COM-A-MIRA`): o chip Giroscópio não
+      muda, a dica dele sim. Ela sai do botão para um invólucro de
+      `display:contents` — um elemento aceita UM alvo, e o do botão já é o
+      `giro-ligado` —, na forma do `giro-no-jogo` desta aba (*o de FORA veste o
+      `title`*). O invólucro não tem caixa: a grade dos três continua medindo o
+      botão, e a dica sobe do botão até ele como sobe em todo `title`.
+    * NO MODO NATIVO O CHIP DA MIRA FICA CINZA
+      (`D-2409-NO-NATIVO-A-MIRA-FICA-CINZA`). O endereço mora no GRUPO, pela
+      mesma razão e na forma do «Nativo» do microfone (`.mic-modo.sem-nativo`):
+      o alvo do botão já é o `mira-ligada`. O `classe` só liga e desliga um nome
+      no grupo — não toca no conteúdo —, e a folha pinta o cinza só no chip da
+      Mira. Sem recado: o cinza é a resposta inteira.
     """
     # O ARGUMENTO `c` fica: ele é a assinatura do dono, e a próxima peça deste
     # grupo volta a lê-lo.
-    return f'''          <span class="sensores-peca">
-            <button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe o giro deste controle."><span class="p"></span>Giroscópio</button>
+    return f'''          <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="{MIRA_NO_NATIVO}">
+            <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="{DICA_DO_GIRO}"><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
             <button class="sw off" data-gesto="mira" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="{DICA_DA_MIRA_VIRTUAL}"><span class="p"></span>{ROTULO_DA_MIRA_VIRTUAL}</button>
           </span>'''
@@ -3761,6 +3798,8 @@ LEGENDA = f'''<div class="nota">
   <h2>O que mudou em 24/09</h2>
   <ul>
     <li><b>Cada controle ganhou o botão «{ROTULO_DA_MIRA_VIRTUAL}»</b>, ao lado de <b>Giroscópio</b> e <b>Acelerômetro</b>, como você pediu: <i>"Cria um botão virtual ao lado de giroscopio e acelerometro chamado Mira Virtual"</i>. Aceso, virar aquele controle move o <b>analógico direito</b> dele — e só dele. Ele nasce <b>apagado</b>, a dica é a sua frase (<i>{DICA_DA_MIRA_VIRTUAL}</i>), e o <b>Giroscópio</b> não mudou. Uma coisa muda com a mira acesa no modo <b>Virtual</b>: o jogo deixa de receber o giro daquele controle como giroscópio e passa a recebê-lo só pelo analógico direito, para a câmera não andar em dobro. O quanto um gesto anda e o «Ignorar tremor até» ficam na tela <b>Calibrar sensores de movimento</b>.</li>
+    <li><b>A dica do Giroscópio muda quando a {ROTULO_DA_MIRA_VIRTUAL} está acesa</b> naquele controle, como você escolheu: passa a dizer <i>«{DICA_DO_GIRO_COM_A_MIRA}»</i> Com ela apagada, continua a de sempre, e cada controle diz a sua.</li>
+    <li><b>No Modo Nativo o botão «{ROTULO_DA_MIRA_VIRTUAL}» fica cinza e não grava</b>, como você escreveu: <i>"A exceção do nativo todo o resto deve ter mira Virtual"</i>. Em todo outro modo ele funciona, no USB e no BT, nos quatro controles. O «Só enquanto eu segurar» e o «Inverter» entraram na tela <b>Calibrar sensores de movimento</b>.</li>
   </ul>
 
   <h2>O que mudou em 20/09</h2>
@@ -4602,6 +4641,37 @@ def _conferir(doc):
            "ela nasce desligada")
     exigir(all(dica == DICA_DA_MIRA_VIRTUAL for _, dica in miras),
            "a dica do chip da mira não é mais a frase dela")
+    # 2e''. AS DUAS RESPOSTAS DELA DE 24/09 NO CARTÃO — A-MIRA-POR-MOVIMENTO-NA-
+    #     TELA-02. A dica do Giroscópio mora no invólucro, e o BOTÃO NÃO PODE
+    #     TER `title` PRÓPRIO: a dica sobe do botão até o primeiro `title` que
+    #     achar, e um `title` no botão calaria a do invólucro para sempre — a
+    #     frase da Mira acesa nunca apareceria. MORDE: devolva o `title` ao
+    #     botão do Giroscópio e o gerador para.
+    #     O LUGAR VAZIO PERDE A DICA, como perde todo alvo `atributo`: é o
+    #     travessão do produto (`_so_o_travessao`), e a dica de um sensor num
+    #     assento sem controle afirmaria o que não existe.
+    dicas_do_giro = re.findall(
+        r'<span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" '
+        r'data-hef-atributo="title"(?: title="([^"]*)")?>'
+        r'<button ([^>]*data-sensor="giroscopio"[^>]*)>',
+        corpo)
+    exigir(len(dicas_do_giro) == len(MESA),
+           f"a dica do Giroscópio tem de estar nos {len(MESA)} controles, no "
+           f"invólucro com endereço, e está em {len(dicas_do_giro)}")
+    exigir(sorted(dica for dica, _ in dicas_do_giro if dica)
+           == [DICA_DO_GIRO] * len(CONECTADOS),
+           "a dica do Giroscópio no desenho não é a de hoje nos controles "
+           "conectados — ela só muda com a Mira acesa, e o desenho nasce com a "
+           "Mira apagada")
+    exigir(not any("title=" in botao for _, botao in dicas_do_giro),
+           "o botão do Giroscópio ganhou `title` próprio — ele calaria a dica do "
+           "invólucro, e a frase da Mira acesa nunca apareceria")
+    # O cinza da Mira no Nativo: o endereço no GRUPO dos três, um por controle.
+    exigir(corpo.count(
+        f'<span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" '
+        f'data-hef-classe="sem-mira" data-hef-quando="{MIRA_NO_NATIVO}">') == len(MESA),
+        f"o grupo dos chips perdeu o endereço do cinza da Mira em algum dos "
+        f"{len(MESA)} controles — no Nativo o chip continuaria clicável")
 
     # 2f. OS DOIS DESLIZANTES (D-08 dela). Um por bloco, dois por card, e cada
     #     um diz de QUAL volume fala — sem o `data-volume` o gesto não sabe se

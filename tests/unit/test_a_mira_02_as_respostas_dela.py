@@ -36,9 +36,13 @@ from hefesto_dualsense4unix.profiles.schema import (
     ProfileMovimentoConfig,
 )
 from tests.unit.test_a_mira_por_movimento_na_tela import (
+    _OK,
     _P2,
     _P3,
     _P4,
+    _RAIZ,
+    _o_gesto,
+    _PonteDaMira,
     _servidor_com_perfil,
 )
 
@@ -240,3 +244,180 @@ def test_a_leitura_de_volta_traz_os_tres(perfis: Path, tmp_path: Path) -> None:
     assert entradas[1]["mira"]["ligada"] is False
     assert entradas[1]["mira"]["gatilho"] == "square"
     assert entradas[1]["mira"]["inverter_vertical"] is True
+
+
+# ---------------------------------------------------------------------------
+# A TELA 02 — a dica do Giroscópio (resposta 1) e o chip cinza (resposta 2)
+# ---------------------------------------------------------------------------
+# O desenho mora na BANCADA (`mockup/02-controles.html`) e espera o OK dela; o
+# pacote já sabe pintar, e só pinta no dia em que a página publicada tiver o
+# endereço.
+
+#: AS PALAVRAS DELA, escritas aqui POR EXTENSO e não lidas do pacote: a régua
+#: confere o pacote contra a decisão dela, não contra ele mesmo.
+_DICA_DE_HOJE = "Ligado: o jogo recebe o giro deste controle."
+_DICA_COM_A_MIRA = ("Com a Mira Virtual acesa, o giro deste controle vai ao jogo "
+                    "pelo analógico direito.")
+
+
+def _bancada_02() -> str:
+    return (_RAIZ / "mockup/02-controles.html").read_text(encoding="utf-8")
+
+
+def _ctx(nativo: bool = False, **miras: Any) -> Any:
+    """Um `Contexto` com um controle por jogador, no cabo e no rádio.
+
+    `miras` é `{uniq: bloco mira ou None}`; `None` = o daemon não publicou.
+    """
+    import pacotes
+
+    conectados = []
+    for n, (uniq, mira) in enumerate(miras.items()):
+        dele: dict[str, Any] = {
+            "uniq": uniq, "transport": "usb" if n % 2 == 0 else "bluetooth",
+            "connected": True, "inputs": {}, "audio": {}, "speaker": {}}
+        if mira is not None:
+            dele["mira"] = mira
+        conectados.append(dele)
+    estado = {"native_mode": True} if nativo else {}
+    return pacotes.Contexto(state=estado, mesa=[], conectados=conectados, estados={})
+
+
+def _cards(monkeypatch: pytest.MonkeyPatch, ctx: Any) -> dict[str, dict[str, Any]]:
+    import pacotes.a02_controles as a02
+
+    monkeypatch.setattr(a02, "_so_se_a_pagina_tiver", lambda campos: campos)
+    cards = a02.pacote(ctx)["cards"]
+    assert cards, "o pacote não montou card nenhum — régua cega"
+    return cards
+
+
+def test_a_dica_do_giroscopio_muda_so_com_a_mira_acesa(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`D-2409-A-DICA-DO-GIROSCOPIO-MUDA-COM-A-MIRA`, POR CONTROLE: o P2 com a
+    Mira acesa diz a frase nova; o P3 apagado e o P4 sem leitura dizem a de hoje.
+
+    MORDIDA: devolva sempre `DICA_DO_GIRO` em `dica_do_giro` e o P2 reprova;
+    devolva sempre a nova e o P3 reprova.
+    """
+    cards = _cards(monkeypatch, _ctx(**{
+        "aa:bb:cc:00:00:02": {"ligada": True},
+        "aa:bb:cc:00:00:03": {"ligada": False},
+        "aa:bb:cc:00:00:04": None,
+    }))
+    dicas = {u[-1]: c["giro-dica"] for u, c in cards.items()}
+    assert dicas == {"2": _DICA_COM_A_MIRA, "3": _DICA_DE_HOJE, "4": _DICA_DE_HOJE}, dicas
+
+
+def test_no_nativo_a_dica_de_hoje_volta_mesmo_com_a_mira_acesa(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """No Nativo o jogo lê o controle físico — o giro chega como giroscópio, e
+    a frase da Mira afirmaria o que não acontece.
+
+    MORDIDA: tire o `and not nativo` de `dica_do_giro` e este teste reprova.
+    """
+    cards = _cards(monkeypatch, _ctx(nativo=True, **{"aa:bb:cc:00:00:02": {"ligada": True}}))
+    assert next(iter(cards.values()))["giro-dica"] == _DICA_DE_HOJE
+
+
+def test_no_nativo_o_chip_da_mira_fica_cinza_nos_quatro(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`D-2409-NO-NATIVO-A-MIRA-FICA-CINZA`: o cinza acende em todo controle no
+    Nativo, e em nenhum fora dele. O valor é o que o desenho espera.
+
+    MORDIDA: devolva sempre `""` em `mira_fora` e o caso Nativo reprova.
+    """
+    import re
+
+    esperado = re.findall(r'data-campo="mira-fora" data-hef-alvo="classe" '
+                          r'data-hef-classe="sem-mira" data-hef-quando="([^"]+)"',
+                          _bancada_02())
+    assert esperado and set(esperado) == {"NATIVO"}, esperado
+    miras = {f"aa:bb:cc:00:00:0{n}": {"ligada": n % 2 == 0} for n in (1, 2, 3, 4)}
+    for nativo, valor in ((True, "NATIVO"), (False, "")):
+        cards = _cards(monkeypatch, _ctx(nativo=nativo, **miras))
+        assert {c["mira-fora"] for c in cards.values()} == {valor}, (nativo, cards)
+        assert len(cards) == 4
+
+
+def test_no_nativo_o_clique_no_chip_nao_chega_ao_daemon() -> None:
+    """O chip cinza não pede nada: recusa antes da ponte, e a frase vai ao
+    diário (o botão pisca a recusa; recado na tela, nenhum).
+
+    MORDIDA: tire o `if _nativo(ctx)` do gesto `mira` e este teste reprova —
+    o clique voltaria a chegar ao daemon.
+    """
+    import pacotes.a02_controles as a02
+
+    p = _PonteDaMira(_OK)
+    with pytest.raises(RuntimeError) as erro:
+        _o_gesto("02-controles.html", "mira")(
+            _ctx(nativo=True, **{"aa:bb:cc:00:00:01": {"ligada": False}}),
+            {"uniq": "aa:bb:cc:00:00:01"}, p)
+    assert str(erro.value) == a02.MIRA_CINZA_NO_NATIVO
+    assert p.chamadas == [], "o chip cinza pediu ao daemon"
+
+
+def test_o_nativo_que_o_daemon_recusa_volta_pela_mesma_frase() -> None:
+    """A tela leu o estado um tique atrás: se o Nativo ligou no meio, quem
+    recusa é o daemon (`status: "nativo"`), e a frase é a mesma do cinza —
+    não a do controle que sumiu.
+
+    MORDIDA: apague o ramo `status == "nativo"` do gesto e a frase vira
+    `MIRA_SEM_O_CONTROLE`.
+    """
+    import pacotes.a02_controles as a02
+
+    p = _PonteDaMira({"status": "nativo", "uniq": "aa:bb:cc:00:00:01", "motivo": "x"})
+    with pytest.raises(RuntimeError) as erro:
+        _o_gesto("02-controles.html", "mira")(
+            _ctx(**{"aa:bb:cc:00:00:01": {"ligada": False}}),
+            {"uniq": "aa:bb:cc:00:00:01"}, p)
+    assert str(erro.value) == a02.MIRA_CINZA_NO_NATIVO
+    assert p.chamadas == [{"ligada": True, "uniq": "aa:bb:cc:00:00:01"}]
+
+
+def test_a_bancada_tem_a_dica_e_o_cinza_em_cada_controle() -> None:
+    """O desenho: a dica do Giroscópio no invólucro sem caixa, o botão SEM
+    `title` próprio (ele calaria a dica que muda), e o cinza do chip da Mira
+    na folha, com o cursor que recusa.
+
+    MORDIDA: devolva o `title` ao botão do Giroscópio no `aba02.py` e o gerador
+    para; tire a regra `.sem-mira` da folha e este teste reprova.
+    """
+    import re
+
+    doc = _bancada_02()
+    invol = re.findall(r'<span class="dica-do-giro" data-campo="giro-dica" '
+                       r'data-hef-alvo="atributo" data-hef-atributo="title"'
+                       r'(?: title="([^"]*)")?><button ([^>]*)>', doc)
+    assert len(invol) == 4, invol
+    assert sorted(t for t, _ in invol if t) == [_DICA_DE_HOJE] * 2
+    assert not any("title=" in b for _, b in invol)
+    assert ".sensores-peca .dica-do-giro{display:contents}" in doc
+    folha = re.search(r'\.sensores-peca\.sem-mira \.sw\[data-gesto="mira"\],\s*'
+                      r'\.sensores-peca\.sem-mira \.sw\[data-gesto="mira"\]:hover\{([^}]*)\}',
+                      doc)
+    assert folha and "cursor:not-allowed" in folha.group(1), "o cinza sumiu da folha"
+    assert "var(--red)" not in folha.group(1), "cinza, nunca vermelho"
+
+
+def test_antes_do_ok_dela_o_produto_nao_pinta_o_desenho_novo() -> None:
+    """A página PUBLICADA não tem os dois endereços, e o pacote não emite para
+    o vazio: o desenho novo só chega à janela dela depois do `--publicar`.
+
+    MORDIDA: tire `giro-dica` e `mira-fora` de dentro do
+    `_so_se_a_pagina_tiver` e este teste reprova.
+    """
+    import pacotes.a02_controles as a02
+
+    publicado = (_RAIZ / "src/hefesto_dualsense4unix/interface/paginas/"
+                 "02-controles.html").read_text(encoding="utf-8")
+    if 'data-campo="giro-dica"' in publicado:
+        pytest.skip("a 02 já foi publicada com a dica — a guarda cumpriu o papel")
+    cards = a02.pacote(_ctx(**{"aa:bb:cc:00:00:02": {"ligada": True}}))["cards"]
+    campos = next(iter(cards.values()))
+    assert "giro-dica" not in campos and "mira-fora" not in campos
