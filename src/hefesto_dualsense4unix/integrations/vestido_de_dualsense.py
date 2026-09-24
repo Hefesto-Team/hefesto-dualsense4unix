@@ -10,11 +10,13 @@ num nó de áudio — e são duas metades, com riscos diferentes:
   (``/sys/bus/usb/devices/*/product``, medido em 21/09/2026). A decisão dela de
   23/09/2026 é a FORMA A: *«Alto-falante do Controle N (DualSense Wireless
   Controller)»* — o nome dela na frente, igual para o microfone, os quatro
-  controles, o cabo e o BT. Quem monta é :func:`com_o_nome_da_sony`;
+  controles, o cabo e o BT. Quem monta é :func:`com_o_nome_da_sony`, e os
+  campos que acompanham o nome no nó do alto-falante são :func:`campos_do_nome`;
 * **a IDENTIDADE** — ``device.bus``, VID, PID e ``sysfs.path``: o que o
   ``winepulse.drv`` usa para classificar o aparelho e calcular o
-  ``ContainerId`` (``fill_device_info`` e ``get_container_id``). É o que o
-  endpoint de háptica veste desde 18/09 (:mod:`integrations.endpoint_de_haptica`).
+  ``ContainerId`` (``fill_device_info`` e ``get_container_id``). Quem a veste
+  é o endpoint de háptica (:mod:`integrations.endpoint_de_haptica`), desde
+  18/09, e ele a lê daqui (:func:`campos_da_identidade`).
 
 **POR QUE O NÓ DO ALTO-FALANTE VESTE SÓ O NOME** (decisão desta frente, pelo
 padrão dela — o caminho mais reversível): o GE-Proton pinado dela chama de
@@ -22,12 +24,14 @@ padrão dela — o caminho mais reversível): o GE-Proton pinado dela chama de
 proplist (``proton-ds5-haptic``, patch 0013, ``is_dualsense_audio_device``), e
 cada nó assim que entra ou sai soma um ``g_haptic_hotplug_generation`` (patch
 0015) — o gatilho que remira a háptica do jogo aberto. O nó do alto-falante é
-republicado quando o assento anda e quando o controle pisca. E o PRAGMATA
-escolhe o endpoint pelo ``ContainerId`` (a memória de 17/09): dois endpoints
-no mesmo contêiner, um de dois canais, é a porta para a háptica que já vibra
-abrir no nó errado. Nada disso se mede sem um jogo aberto, então a metade da
-identidade fica pronta aqui (:func:`campos_do_vestido`) e não é vestida no nó
-do som até que um jogo prove que ela não rouba a háptica.
+republicado quando o assento anda e quando o controle pisca. E o endpoint de
+háptica existe justamente para ser O nó que o jogo acha sozinho — *"só este
+casa com o teste, então o jogo não se confunde entre os dois"*
+(``EndpointDeHaptica``). Dois nós com a identidade da Sony para o mesmo
+controle, um de dois canais, é a porta para a háptica que já vibra abrir no nó
+errado. Nada disso se mede sem um jogo aberto, então a identidade fica com o
+endpoint de háptica, e o nó do alto-falante só veste o nome — até que um jogo
+prove que os dois podem ser um só (a pergunta do §8 da sprint).
 """
 
 from __future__ import annotations
@@ -44,18 +48,28 @@ NOME_USB_DA_SONY = "DualSense Wireless Controller"
 FABRICANTE_USB = "Sony Interactive Entertainment"
 
 #: O teto do nome no Wine (``MAX_DEVICE_NAME_LEN``, ``pulse.c``). Acima dele o
-#: ``get_device_name`` troca a descrição pelo ``device.product.name`` — e o jogo
-#: perderia «Controle N», que é o que diz qual dos quatro é qual.
+#: ``get_device_name`` troca a descrição inteira pelo ``device.product.name`` —
+#: e o jogo perderia «Controle N», que é o que diz qual dos quatro é qual.
 TETO_DO_NOME_NO_WINE = 62
 
-_ABRE = " ("
-_FECHA = ")"
+_SUFIXO = f" ({NOME_USB_DA_SONY})"
 
 
 def com_o_nome_da_sony(rotulo: str) -> str:
-    """A forma A: «<rótulo> (DualSense Wireless Controller)». Idempotente."""
+    """A forma A: «<rótulo> (DualSense Wireless Controller)». Idempotente.
+
+    **O número vale mais que o sufixo.** Se o rótulo com o sufixo passar do
+    :data:`TETO_DO_NOME_NO_WINE`, o Wine jogaria fora a frase inteira e o jogo
+    mostraria só «DualSense Wireless Controller» — quatro controles com o mesmo
+    nome. Nesse caso o rótulo dela sai sem o sufixo. Os rótulos desta casa
+    («Alto-falante do Controle 4», «Microfone do Controle 4») cabem com folga;
+    a guarda é para quem mudar a frase depois.
+    """
     base = sem_o_nome_da_sony(rotulo)
-    return f"{base}{_ABRE}{NOME_USB_DA_SONY}{_FECHA}" if base else ""
+    if not base:
+        return ""
+    vestido = f"{base}{_SUFIXO}"
+    return vestido if len(vestido) <= TETO_DO_NOME_NO_WINE else base
 
 
 def sem_o_nome_da_sony(rotulo: str) -> str:
@@ -66,19 +80,23 @@ def sem_o_nome_da_sony(rotulo: str) -> str:
     fim, a última palavra seria ``Controller)`` e todo nó perderia o número.
     """
     texto = str(rotulo or "").strip()
-    sufixo = f"{_ABRE}{NOME_USB_DA_SONY}{_FECHA}"
-    if texto.endswith(sufixo):
-        return texto[: -len(sufixo)].rstrip()
+    if texto.endswith(_SUFIXO):
+        return texto[: -len(_SUFIXO)].rstrip()
     return texto
 
 
 def campos_do_nome() -> tuple[str, ...]:
     """A metade do NOME, em ``chave=valor`` para o ``sink_properties=``.
 
-    O ``node.nick`` é o da placa de verdade (``DualSense Wireless Controller``,
-    medido em 21/09/2026 no nó do cabo) e NÃO leva o endereço do controle: um
-    pedaço do MAC na lista de som da máquina é o defeito que a descrição do
-    microfone já pagou em 09/09.
+    Os três são os da placa de verdade, medidos em 21/09/2026 no nó do cabo, e
+    nenhum leva o endereço do controle: um pedaço do MAC na lista de som da
+    máquina é o defeito que a descrição do microfone já pagou em 09/09.
+
+    O que o Wine faz com eles: o ``device.product.name`` é o nome de RESERVA do
+    ``get_device_name`` quando a descrição passa do teto — e o monitor do nó
+    («Monitor of Alto-falante do Controle 1 (…)», 69 caracteres) passa. Sem ele
+    o nome do monitor chegaria ao jogo com 69, que é o comprimento que derruba
+    os aplicativos que o teto existe para proteger.
     """
     return (
         f"device.vendor.name='{FABRICANTE_USB}'",
@@ -90,9 +108,9 @@ def campos_do_nome() -> tuple[str, ...]:
 def campos_da_identidade(sysfs_declarado: str) -> tuple[str, ...]:
     """A metade da IDENTIDADE: barramento, VID, PID e a âncora do ``ContainerId``.
 
-    ``()`` sem âncora: sem ``sysfs.path`` o Wine zera o ``ContainerId``, e um
-    nó que diz «sou USB da Sony» sem dizer de qual aparelho é pior que um nó
-    que não diz nada.
+    ``()`` sem âncora: sem ``sysfs.path`` o Wine zera o ``ContainerId`` — e
+    zerado é o valor de toda saída que não é USB, então um nó que diz «sou USB
+    da Sony» sem dizer de qual aparelho é pior que um nó que não diz nada.
     """
     caminho = str(sysfs_declarado or "").strip()
     if not caminho:
@@ -105,12 +123,6 @@ def campos_da_identidade(sysfs_declarado: str) -> tuple[str, ...]:
     )
 
 
-def campos_do_vestido(sysfs_declarado: str) -> tuple[str, ...]:
-    """As duas metades juntas — ``()`` sem âncora, pela razão de :func:`campos_da_identidade`."""
-    identidade = campos_da_identidade(sysfs_declarado)
-    return (*identidade, *campos_do_nome()) if identidade else ()
-
-
 __all__ = [
     "FABRICANTE_USB",
     "NOME_USB_DA_SONY",
@@ -119,7 +131,6 @@ __all__ = [
     "VID_SONY",
     "campos_da_identidade",
     "campos_do_nome",
-    "campos_do_vestido",
     "com_o_nome_da_sony",
     "sem_o_nome_da_sony",
 ]

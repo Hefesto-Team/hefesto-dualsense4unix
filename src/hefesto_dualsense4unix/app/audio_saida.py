@@ -94,6 +94,7 @@ from hefesto_dualsense4unix.integrations.alto_falante_bt import (
     monitor_da_saida_padrao,
     nome_do_sink,
     propriedades_do_sink,
+    rotulo_do_alto_falante,
 )
 from hefesto_dualsense4unix.integrations.alto_falante_bt import (
     MOTIVO_NO_SEM_ASSENTO as _MOTIVO_NO_SEM_ASSENTO,
@@ -1637,8 +1638,8 @@ TRANSPORTE_RADIO: Final[str] = _TRANSPORTE_RADIO
 def nome_do_alto_falante(assento: str) -> str:
     """O que aparece na lista de saída do sistema — ``""`` para assento inválido.
 
-    «Alto-falante do Controle 1». O número é o ASSENTO (o jogador), nunca o
-    aparelho: decisão dela de 09/09/2026 (*"4a"*,
+    «Alto-falante do Controle 1 (DualSense Wireless Controller)». O número é o
+    ASSENTO (o jogador), nunca o aparelho: decisão dela de 09/09/2026 (*"4a"*,
     ``D-0909-OS-NOS-SE-CHAMAM-ALTO-FALANTE-E-MICROFONE-DO-CONTROLE-N``).
 
     **FATO SUBSTITUÍDO:** até 09/09 esta função devolvia ``Alto-falante · P1``,
@@ -1659,10 +1660,6 @@ def nome_do_alto_falante(assento: str) -> str:
     Controle 1 (DualSense Wireless Controller)». Montar a f-string aqui
     deixaria a janela publicando o nome sem o sufixo que o jogo procura.
     """
-    from hefesto_dualsense4unix.integrations.alto_falante_bt import (
-        rotulo_do_alto_falante,
-    )
-
     if assento not in ASSENTOS:
         return ""
     return rotulo_do_alto_falante(int(assento[1:]))
