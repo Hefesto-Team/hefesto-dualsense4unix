@@ -951,7 +951,8 @@ def test_o_servico_passa_pelo_anotar() -> None:
     """
     texto = VIGIA.read_text(encoding="utf-8")
     assert '| classify | anotar "${TRAVA_DO_RELIGAR}" >>"${LOG}"' in texto
-    assert 'TRAVA_DO_RELIGAR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hefesto-dualsense4unix"' in texto
+    volatil = 'TRAVA_DO_RELIGAR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hefesto-dualsense4unix"'
+    assert volatil in texto
 
 
 # --- o religar: o orçamento do aviso -------------------------------------------
