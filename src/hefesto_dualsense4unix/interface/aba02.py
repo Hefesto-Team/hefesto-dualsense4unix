@@ -1278,6 +1278,30 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .rota button{flex:0 0 auto;height:17px;border-radius:5px;font-size:10.5px;white-space:nowrap;font-family:inherit;
     border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);cursor:pointer}
   .rota button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
+  /* A FILEIRA DA SAÍDA DE SOM TEM QUATRO — 24/09/2026, O-TERCEIRO-NOME-DELA-01,
+     e o preço foi medido antes de escrito (Chrome headless, cartão aberto).
+
+     QUATRO EMPILHADOS CUSTAVAM 19 PX (mais um botão de 17 e um vão de 2), e o
+     cartão tinha 1,4 px de folga: 326,6 contra os 328 de `PARA_O_CARD`. Lado a
+     lado em grade de dois os dois primeiros não cabem — o mais longo pede
+     239 px e a meia coluna dá 128 — e quebrariam em TRÊS linhas.
+
+     O QUE CABE É O ESPELHO: os dois primeiros continuam inteiros, cada um numa
+     linha, e os dois últimos dividem a de baixo (`.par`). Na janela do
+     produto (1180) e na de 1120 cada um deles quebra em duas linhas de 11 px
+     (24 com a borda); de 1440 para cima eles cabem numa linha só e a fileira
+     fica com a altura de antes. A conta, a 1180: 17 + 17 + 24 com dois vãos
+     de 1 dá 60, contra os 55 de três empilhados, e os 5 px voltam do rótulo
+     do alto-falante, que virou linha como o do microfone (4,6 px). O cartão
+     fica em 327.
+
+     O `white-space:normal` VALE PARA OS QUATRO, e é a decisão dela de 12/09
+     aplicada aqui: numa janela menor que o desenho o rótulo QUEBRA em vez de
+     cortar. O preço é altura, e só onde aperta. */
+  .moldura[data-bloco="alto-falante"] .rota{gap:1px}
+  .moldura[data-bloco="alto-falante"] .rota button{height:auto;min-height:17px;
+    white-space:normal;line-height:11px;padding:0}
+  .rota .par{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1px 3px}
   /* O MODO DO MICROFONE CONTINUA DEITADO, e agora precisa dizê-lo — 20/09/2026.
      Enquanto as duas fileiras eram a mesma, o `.mic-modo` não tinha uma linha
      própria de estilo, e o bloco de comentário mais acima registra por quê. A
@@ -2277,8 +2301,12 @@ DICA_MIC_TESTAR = ("Liga o retorno: você se ouve enquanto ele estiver aceso, "
 #: PRÓPRIO RÓTULO («No controle e na TV», decisão dela). O que sobra para a
 #: dica é o que o rótulo não cabe: para que serve. Sem nome de nó, sem comando,
 #: sem jargão — as três proibições da língua desta casa para texto de tela.
+#:
+#: **«TV» SAIU DA DICA EM 24/09/2026**, pela mesma regra que a tirou do rótulo
+#: (`D-2309-TV-VIRA-PC`, ver `ROTULO_SO_OS_EFEITOS`): quem usa fone ou monitor
+#: não tem televisão, e a dica dizia a ela onde o som continua saindo.
 DICA_OUVIR_JUNTO = ("O som do PC sai no alto-falante deste controle e continua "
-                    "saindo na TV. Serve para jogar acompanhado: cada um ouve "
+                    "saindo no PC. Serve para jogar acompanhado: cada um ouve "
                     "no próprio controle.")
 
 # ---------------------------------------------------------------------------
@@ -2307,9 +2335,17 @@ DICA_OUVIR_JUNTO = ("O som do PC sai no alto-falante deste controle e continua "
 #: O nome velho — «Efeitos do Jogo» — dizia O QUE entra e calava ONDE cada
 #: coisa sai, e os outros dois da fileira dizem as duas metades. Os três
 #: passam a ser lidos na mesma gramática: **o que vai para o controle, e o
-#: que fica na TV**.
-ROTULO_SO_OS_EFEITOS = "Efeitos do Jogo no Controle, Áudio da TV na TV"
-ROTULO_EFEITOS_MAIS_A_TV = "Efeitos do Jogo e Áudio da TV no Controle"
+#: que fica no PC**.
+#:
+#: **«TV» VIROU «PC» EM 23/09/2026** — decisão dela, `D-2309-TV-VIRA-PC`,
+#: escolhida entre *trocar por PC · manter TV · o nome real da saída*: «TV» não
+#: é verdade para quem usa fone ou monitor. A troca é de palavra e não de ato:
+#: «Áudio da TV» vira «Áudio do PC», «na TV» vira «no PC», nos quatro botões.
+#: Os nomes de 21/09 (`…Áudio da TV na TV`, `…Áudio da TV no Controle`, `Tudo
+#: na TV e Nada no Controle`) ficam como lápide na régua dos nomes, que os
+#: recusa na tela.
+ROTULO_SO_OS_EFEITOS = "Efeitos do Jogo no Controle, Áudio do PC no PC"
+ROTULO_EFEITOS_MAIS_O_PC = "Efeitos do Jogo e Áudio do PC no Controle"
 
 #: **O TERCEIRO NOME É DELA, e o ATO mudou para caber nele** — 21/09/2026,
 #: fechando a O-TERCEIRO-NOME-DELA-01. A decisão, com as duas leituras na mão:
@@ -2329,15 +2365,44 @@ ROTULO_EFEITOS_MAIS_A_TV = "Efeitos do Jogo e Áudio da TV no Controle"
 #: A ESCALA QUE ELA DESENHOU, lendo os três nomes juntos — **pouco · tudo ·
 #: nada** —, é o que torna a fileira uma pergunta só com três respostas que se
 #: excluem. E o «nada» é o `rota=0`: estéreo para o FONE, com o alto-falante
-#: do controle fora do caminho, mais a saída padrão devolvida à televisão.
-ROTULO_NADA_NO_CONTROLE = "Tudo na TV e Nada no Controle"
+#: do controle fora do caminho, mais a saída padrão devolvida ao PC.
+ROTULO_NADA_NO_CONTROLE = "Tudo no PC e Nada no Controle"
 
 #: A DICA DO TERCEIRO diz o que ele faz dos DOIS lados — o que sai do controle
-#: e o que volta para a televisão —, porque o nome dela já diz os dois e um
-#: `title` que repetisse só metade contradiria o botão.
+#: e o que volta para o PC —, porque o nome dela já diz os dois e um `title`
+#: que repetisse só metade contradiria o botão. O «inclusive o deste controle»
+#: é a ordem dela de 21/09 (`som_do_controle_na_tv`): o que o jogo endereça ao
+#: controle também vai para o PC.
 DICA_NADA_NO_CONTROLE = (
-    "O som do computador volta todo para a televisão, e o alto-falante deste "
+    "Todo o som, inclusive o deste controle, sai no PC, e o alto-falante deste "
     "controle para de tocar. O microfone e a vibração não mudam.")
+
+#: **O QUARTO BOTÃO VOLTA — decisão dela de 23/09/2026**
+#: (`D-2309-O-QUARTO-BOTAO-VOLTA`), respondendo à pergunta que a sprint deixou
+#: aberta em 20/09 (*"a capacidade fica sem porta na tela?"*):
+#:
+#:     "Gostaria de voltar o botão o 4 mas acho que quebraria o layout
+#:     vertical. Na real temos que encaixar ele. Mas fazer isso certo com
+#:     mockup antes."
+#:     <!-- noqa-acento: citação literal dela -->
+#:
+#: É a capacidade «som do PC só no controle» que perdeu o botão em 20/09 e
+#: nunca saiu do produto: `rota=3` (só o alto-falante) mais a saída padrão do
+#: sistema mandada para este controle (`audio_saida.mandar_o_som_do_pc`). O
+#: gesto é o `rota` de sempre, com `data-rota="pc"` — o valor que o IPC, a CLI
+#: e o perfil já falam. **O nome é o espelho do terceiro**, e a fileira lê,
+#: de cima para baixo, **pouco · tudo · nada · só aqui**. O nome «a aprovar no
+#: mockup» é o que a sprint propôs; quem coordena o aprova olhando a foto, por
+#: delegação dela de 24/09.
+ROTULO_TUDO_NO_CONTROLE = "Tudo no Controle e Nada no PC"
+
+#: A DICA DO QUARTO diz os dois lados, como a do terceiro, e diz o que só ele
+#: tem: a saída do PC é UMA, então vale para um controle por vez — e é o
+#: último clique que decide (`D-2109-QUEM-GANHA-QUANDO-OS-DOIS-ESCREVEM`).
+DICA_TUDO_NO_CONTROLE = (
+    "Todo o som do PC sai só no alto-falante deste controle, e o PC fica em "
+    "silêncio. Vale para um controle por vez. O microfone e a vibração não "
+    "mudam.")
 
 DICA_ALTO_MUDO = ("Cala o alto-falante do controle, sem perder o volume "
                   "guardado. A partir daqui quem guarda esse volume é o "
@@ -2969,8 +3034,9 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
             <div class="rot rot-linha">Microfone
               {selo_do_mic}
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> cala o
-                microfone e apaga a luz vermelha do controle.<br><br>
+                A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> liga o
+                retorno: você se ouve como o jogo te ouve. Para calar o
+                microfone, use o botão do próprio controle.<br><br>
                 A luz <b>acesa</b> quer dizer que o microfone está ligado —
                 não que alguém esteja ouvindo. Ela <b>pisca</b> quando um
                 programa está gravando e entra som; a linha abaixo diz qual.
@@ -3089,13 +3155,20 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
           </div>
           <div class="moldura" style="margin-top:9px" data-bloco="alto-falante"
                data-campo="alto-apagado" data-hef-alvo="atributo" data-hef-atributo="data-apagado">
-            <div class="rot">Alto-falante
+            <!-- O RÓTULO DO ALTO-FALANTE VIROU LINHA, COMO O DO MICROFONE —
+                 24/09/2026, O-TERCEIRO-NOME-DELA-01. Ele era caixa INLINE, e
+                 o ponto de interrogação, com o vertical-align de menos 3 px,
+                 esticava a linha: 21,6 px contra os 17 do irmão de cima,
+                 medido no Chrome a 1180. Em linha flexível os dois têm a
+                 mesma altura, e os 4,6 px que sobram pagam o quarto botão. -->
+            <div class="rot rot-linha">Alto-falante
               {sufixo_do_canal(c)}
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html">{NADA_A_DIZER}</span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
                 <b>{ROTULO_SO_OS_EFEITOS}</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
-                <b>{ROTULO_EFEITOS_MAIS_A_TV}</b>: tudo o que a máquina toca cai aqui também, e continua saindo na TV.
-                <b>{ROTULO_NADA_NO_CONTROLE}</b>: o alto-falante deste controle para de tocar, e o som do PC volta todo para a TV.
+                <b>{ROTULO_EFEITOS_MAIS_O_PC}</b>: tudo o que a máquina toca cai aqui também, e continua saindo no PC.
+                <b>{ROTULO_NADA_NO_CONTROLE}</b>: o alto-falante deste controle para de tocar, e todo o som, inclusive o dele, sai no PC.
+                <b>{ROTULO_TUDO_NO_CONTROLE}</b>: todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio.
               </span></span>
             </div>
             {onda(alto_v, lado="alto")}
@@ -3117,10 +3190,22 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                  terceiro não custa uma linha de folha nem uma altura a mais:
                  um par novo abaixo seria a segunda gramática que o gerador já
                  recusou uma vez. -->
+            <!-- O QUARTO BOTÃO VOLTA, E OS DOIS ÚLTIMOS FICAM LADO A LADO —
+                 24/09/2026, decisão dela de 23/09: voltar o quarto, encaixado
+                 pelo desenho, sem quebrar a altura do cartão. Os dois de baixo
+                 são o espelho um do outro, e é por isso que dividem a linha:
+                 «Tudo no PC e Nada no Controle» à esquerda, «Tudo no Controle e
+                 Nada no PC» à direita. Na janela do produto (1180) cada um
+                 quebra em duas linhas; da janela de 1440 para cima cabem numa
+                 só. A gramática não muda: mesmo gesto, mesmo endereço, cada
+                 botão com o seu valor. -->
             <div class="rota">
               <button class="{'on' if not rota_nada else ''}" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">{ROTULO_SO_OS_EFEITOS}</button>
-              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="{DICA_OUVIR_JUNTO}">{ROTULO_EFEITOS_MAIS_A_TV}</button>
-              <button class="{'on' if rota_nada else ''}" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" title="{DICA_NADA_NO_CONTROLE}">{ROTULO_NADA_NO_CONTROLE}</button>
+              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="{DICA_OUVIR_JUNTO}">{ROTULO_EFEITOS_MAIS_O_PC}</button>
+              <span class="par">
+                <button class="{'on' if rota_nada else ''}" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" title="{DICA_NADA_NO_CONTROLE}">{ROTULO_NADA_NO_CONTROLE}</button>
+                <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" title="{DICA_TUDO_NO_CONTROLE}">{ROTULO_TUDO_NO_CONTROLE}</button>
+              </span>
             </div>
           </div>
         </div>
@@ -3800,13 +3885,16 @@ LEGENDA = f'''<div class="nota">
     <li><b>Cada controle ganhou o botão «{ROTULO_DA_MIRA_VIRTUAL}»</b>, ao lado de <b>Giroscópio</b> e <b>Acelerômetro</b>, como você pediu: <i>"Cria um botão virtual ao lado de giroscopio e acelerometro chamado Mira Virtual"</i>. Aceso, virar aquele controle move o <b>analógico direito</b> dele — e só dele. Ele nasce <b>apagado</b>, a dica é a sua frase (<i>{DICA_DA_MIRA_VIRTUAL}</i>), e o <b>Giroscópio</b> não mudou. Uma coisa muda com a mira acesa no modo <b>Virtual</b>: o jogo deixa de receber o giro daquele controle como giroscópio e passa a recebê-lo só pelo analógico direito, para a câmera não andar em dobro. O quanto um gesto anda e o «Ignorar tremor até» ficam na tela <b>Calibrar sensores de movimento</b>.</li>
     <li><b>A dica do Giroscópio muda quando a {ROTULO_DA_MIRA_VIRTUAL} está acesa</b> naquele controle, como você escolheu: passa a dizer <i>«{DICA_DO_GIRO_COM_A_MIRA}»</i> Com ela apagada, continua a de sempre, e cada controle diz a sua.</li>
     <li><b>No Modo Nativo o botão «{ROTULO_DA_MIRA_VIRTUAL}» fica cinza e não grava</b>, como você escreveu: <i>"A exceção do nativo todo o resto deve ter mira Virtual"</i>. Com o <b>Sony DualSense</b> e o <b>Xbox</b> ele funciona, no USB e no BT, nos quatro controles. O «Só enquanto eu segurar» e o «Inverter» entraram na tela <b>Calibrar sensores de movimento</b>.</li>
+    <li><b>O quarto botão do alto-falante voltou</b> — <b>{ROTULO_TUDO_NO_CONTROLE}</b> —, como você pediu: <i>"Gostaria de voltar o botão o 4 mas acho que quebraria o layout vertical. Na real temos que encaixar ele. Mas fazer isso certo com mockup antes."</i> Ele manda todo o som do PC para o alto-falante daquele controle e deixa o PC em silêncio. Vale para um controle por vez: o último clique decide, e clicar no de outro controle passa o som para ele. Para caber sem o cartão crescer, os dois de baixo dividem a mesma linha — um é o espelho do outro — e o rótulo do <b>Alto-falante</b> ficou da altura do rótulo do <b>Microfone</b>.</li>
+    <li><b>«TV» virou «PC» nos botões do alto-falante</b>, como você decidiu: quem usa fone ou monitor não tem televisão. Os três de antes passaram a dizer <b>{ROTULO_SO_OS_EFEITOS}</b>, <b>{ROTULO_EFEITOS_MAIS_O_PC}</b> e <b>{ROTULO_NADA_NO_CONTROLE}</b>, e o que cada um faz não mudou.</li>
+    <li><b>O «?» do Microfone diz o que o 🎙 faz hoje</b>: ele liga o retorno, e você se ouve como o jogo te ouve. A frase de antes dizia que ele calava o microfone e apagava a luz vermelha, e isso deixou de ser verdade em 21/09 — quem cala é o botão do próprio controle.</li>
   </ul>
 
   <h2>O que mudou em 20/09</h2>
   <ul>
-    <li><b>Os dois primeiros botões do alto-falante têm os nomes que você escreveu</b> — <b>{ROTULO_SO_OS_EFEITOS}</b> e <b>{ROTULO_EFEITOS_MAIS_A_TV}</b>. Você derrubou o enunciado anterior e o que você derrubou era conceito, não palavra: <i>"não gosto do termo jogo pra se referir ao canal especifico pro sfx do controle, pq hdmi tecnicamente é jogo que manda pra lá também"</i>. Os dois não são duas fontes — são dois modos do <b>mesmo</b> alto-falante: um deixa entrar só o que o jogo endereçar a este controle, o outro derrama tudo o que a máquina toca, sem tirar o som da TV.</li>
-    <li><b>A fileira empilhou, e o cartão não cresceu por isso.</b> Os nomes não cabem lado a lado na coluna onde ela vive, então os três botões passaram a ficar um sobre o outro — e os pixels que isso custaria voltaram das alturas vizinhas (o par do microfone, o botão de calar, os dois dos sensores e o respiro das molduras). O cartão ficou <b>mais baixo</b> do que era, e agora existe uma régua que reprova qualquer mudança futura que o faça crescer.</li>
-    <li><b>O terceiro botão ganhou o nome que você escreveu</b> — <b>{ROTULO_NADA_NO_CONTROLE}</b> —, e ganhou porque o <b>ato</b> mudou primeiro. Ele esperou dois dias: o nome descrevia o oposto do que o botão fazia, e pôr o nome novo sem trocar o ato seria a mentira que esta tela existe para não contar. Agora ele faz os dois lados do próprio nome: devolve todo o som do computador à televisão <b>e</b> tira o alto-falante deste controle do caminho.</li>
+    <li class="foi"><b>Os dois primeiros botões do alto-falante ganharam os nomes que você escreveu</b> — <b>Efeitos do Jogo no Controle, Áudio da TV na TV</b> e <b>Efeitos do Jogo e Áudio da TV no Controle</b>. Em 24/09 «TV» virou «PC» nos dois, por decisão sua. Você derrubou o enunciado anterior e o que você derrubou era conceito, não palavra: <i>"não gosto do termo jogo pra se referir ao canal especifico pro sfx do controle, pq hdmi tecnicamente é jogo que manda pra lá também"</i>. Os dois não são duas fontes — são dois modos do <b>mesmo</b> alto-falante: um deixa entrar só o que o jogo endereçar a este controle, o outro derrama tudo o que a máquina toca, sem tirar o som do PC.</li>
+    <li class="foi"><b>A fileira empilhou, e o cartão não cresceu por isso.</b> Os nomes não cabem lado a lado na coluna onde ela vive, então os três botões passaram a ficar um sobre o outro — e os pixels que isso custaria voltaram das alturas vizinhas (o par do microfone, o botão de calar, os dois dos sensores e o respiro das molduras). O cartão ficou <b>mais baixo</b> do que era, e agora existe uma régua que reprova qualquer mudança futura que o faça crescer. Em 24/09, com o quarto botão, os dois de baixo passaram a dividir uma linha.</li>
+    <li class="foi"><b>O terceiro botão ganhou o nome que você escreveu</b> — <b>Tudo na TV e Nada no Controle</b> —, e ganhou porque o <b>ato</b> mudou primeiro. Ele esperou dois dias: o nome descrevia o oposto do que o botão fazia, e pôr o nome novo sem trocar o ato seria a mentira que esta tela existe para não contar. Ele faz os dois lados do próprio nome: devolve todo o som do computador ao PC <b>e</b> tira o alto-falante deste controle do caminho. Em 24/09 ele passou a se chamar <b>{ROTULO_NADA_NO_CONTROLE}</b>.</li>
   </ul>
 
   <h2>O que mudou em 11/09</h2>
@@ -3934,7 +4022,9 @@ LEGENDA = f'''<div class="nota">
 # ela lê o que está escrito na tela.
 TERMOS_DA_TELA = (
     "Liberar", "Efeitos do Jogo no Controle, Áudio da TV na TV", "Efeitos do Jogo e Áudio da TV no Controle",
-    "Só no controle",
+    "Só no controle", "Tudo na TV e Nada no Controle",
+    ROTULO_SO_OS_EFEITOS, ROTULO_EFEITOS_MAIS_O_PC, ROTULO_NADA_NO_CONTROLE,
+    ROTULO_TUDO_NO_CONTROLE,
     "Calibrar sensores de movimento", "Mapa do controle", "Dispositivos conectados",
     "Sem toque", "Tocando", "LED do jogador", "Barra de luz", "Touchpad",
     "Microfone", "Alto-falante", "Gatilhos", "Giroscópio",
@@ -4512,14 +4602,22 @@ def _conferir(doc):
     #      alto-falante fora do caminho, mais a saída padrão devolvida), e a
     #      régua segue o ato. **O `data-rota` mudou junto** — `pc` continua
     #      existindo no gesto, no IPC e na CLI, mas fora da fileira.
-    for rota, palavra_dela in (("jogo", "Efeitos do Jogo no Controle, Áudio da TV na TV"),
-                               ("junto", "Efeitos do Jogo e Áudio da TV no Controle"),
-                               ("nada", "Tudo na TV e Nada no Controle")):
+    #
+    #      **E O `pc` VOLTOU À FILEIRA EM 24/09/2026, com nome próprio** — a
+    #      decisão dela de 23/09 (`D-2309-O-QUARTO-BOTAO-VOLTA`) e, no mesmo
+    #      dia, «TV» virou «PC» nos rótulos (`D-2309-TV-VIRA-PC`). A escala
+    #      passou a ser pouco · tudo · nada · só aqui, e o quarto é o ESPELHO
+    #      do terceiro: o nome dele é o do terceiro com os dois lados trocados.
+    for rota, palavra_dela in (("jogo", "Efeitos do Jogo no Controle, Áudio do PC no PC"),
+                               ("junto", "Efeitos do Jogo e Áudio do PC no Controle"),
+                               ("nada", "Tudo no PC e Nada no Controle"),
+                               ("pc", "Tudo no Controle e Nada no PC")):
         vistos = re.findall(rf'data-rota="{rota}"[^>]*>([^<]*)</button>', corpo)
         exigir(vistos == [palavra_dela] * len(MESA),
                f"o botão `{rota}` da rota do som diz {sorted(set(vistos)) or '[]'} "
-               f"e a palavra dela é {palavra_dela!r} — os três nomes são uma "
-               f"escala de QUANTO SOM ENTRA NO CONTROLE: pouco · tudo · nada")
+               f"e a palavra dela é {palavra_dela!r} — os quatro nomes são uma "
+               f"escala de QUANTO SOM ENTRA NO CONTROLE: pouco · tudo · nada · "
+               f"só aqui")
 
     # 2c. A BATERIA TEM ENDEREÇO, os DOIS. Sem eles o número e a barra ficam
     #     nos 100% / 64% que este gerador desenhou, com o controle dela em
@@ -4759,7 +4857,10 @@ def _conferir(doc):
     #    qualquer mudança nele. Duas coisas erradas numa linha — a palavra
     #    medida e a frase que a explicava. Agora ela mede o que o item 2.3
     #    tirou, e PERGUNTA a unidade ao dono em vez de digitá-la.
-    rotulos_do_alto = re.findall(r'<div class="rot">Alto-falante.*?</div>',
+    # O `rot-linha` ENTROU EM 24/09/2026 (O-TERCEIRO-NOME-DELA-01): o rótulo
+    # virou linha flexível, como o do microfone. A régua casa as duas formas
+    # porque o que ela mede é o CONTEÚDO do rótulo, não a caixa dele.
+    rotulos_do_alto = re.findall(r'<div class="rot(?: rot-linha)?">Alto-falante.*?</div>',
                                  corpo, flags=re.S)
     # UM POR CARD, E OS VAZIOS TAMBÉM TÊM — desde 07/09 o lugar vazio é o mesmo
     # cartão do cheio. A régua é sobre o CONTEÚDO do rótulo, não sobre a conta.
