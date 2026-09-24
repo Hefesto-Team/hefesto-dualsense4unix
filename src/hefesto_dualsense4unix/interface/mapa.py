@@ -983,10 +983,10 @@ def main():
 </body>
 </html>
 '''
-    # SEM ESPAÇO NO FIM DA LINHA, como a `calibrar.py`: o gancho de commit
-    # dela os tira do arquivo gravado, e sem isto o gerador e o disco
-    # divergiam em 126 linhas que ninguém via.
-    SAIDA.write_text("\n".join(linha.rstrip() for linha in html.split("\n")))
+    # A ESCRITA TEM DONO, o `onde.gravar`, que tira o espaço do fim da linha.
+    # O gancho de commit dela o tira do arquivo gravado, e com o `write_text`
+    # cru o gerador e o disco divergiam em 126 linhas que ninguém via.
+    onde.gravar(SAIDA.name, html)
     print(f"mapa-do-controle.html: {len(pecas)} peças, {len(regras)} regras de cruzamento")
     if faltam:
         print("  sem desenho no SVG: " + ", ".join(p["id"] for p in faltam))
