@@ -65,7 +65,7 @@ class ClienteDeMentira:
     def __init__(self, atos: list[tuple[str, str]]) -> None:
         self.atos = atos
 
-    def expor(self, no: str) -> bool:
+    def expor(self, no: str, *, entradas: bool = False) -> bool:
         self.atos.append(("expor", no))
         return True
 

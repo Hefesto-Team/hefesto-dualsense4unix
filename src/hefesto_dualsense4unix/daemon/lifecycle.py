@@ -5087,9 +5087,23 @@ class Daemon:
         que expôs» de «o nó está aberto»: num replug o `/dev/hidrawN` renasce
         `0600 root` pela regra udev, e se o número for o mesmo a contabilidade
         do broker continua dizendo «exposto» sobre um nó que já não está.
+
+        HIDE-SO-O-HIDRAW-02 (24/09/2026): no Modo Nativo o jogo recebe os
+        QUATRO nós de entrada também (o evdev e o joydev do aparelho), e eles
+        renascem fechados pela regra 72 do mesmo jeito. O nó só está aberto
+        quando o hidraw E cada nó de entrada respondem.
         """
+        from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+            nos_de_entrada_do_hidraw,
+        )
+
         try:
-            return os.access(no, os.R_OK | os.W_OK)
+            if not os.access(no, os.R_OK | os.W_OK):
+                return False
+            return all(
+                os.access(entrada, os.R_OK | os.W_OK)
+                for entrada in nos_de_entrada_do_hidraw(no)
+            )
         except OSError:
             return False
 
@@ -5192,7 +5206,9 @@ class Daemon:
                 dois.
                 """
                 if expor:
-                    return lambda: client.expor(no_alvo)
+                    # HIDE-SO-O-HIDRAW-02: «só o Modo Nativo devolve» — o
+                    # pedido dele leva os nós de entrada junto com o hidraw.
+                    return lambda: client.expor(no_alvo, entradas=True)
                 return lambda: client.desexpor(no_alvo)
 
             # O conjunto vivo passa a ser o alvo ANTES dos pedidos: os pedidos

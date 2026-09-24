@@ -597,7 +597,7 @@ class TestOModoNativoPede:
         atos: list[tuple[str, str]] = []
 
         class ClienteDeMentira:
-            def expor(self, no: str) -> bool:
+            def expor(self, no: str, *, entradas: bool = False) -> bool:
                 atos.append(("expor", no))
                 return True
 

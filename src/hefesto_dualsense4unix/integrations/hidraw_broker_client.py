@@ -132,7 +132,7 @@ class HidrawBrokerClient:
             self._log_falha("restore", node, response)
         return ok
 
-    def expor(self, node: str) -> bool:
+    def expor(self, node: str, *, entradas: bool = False) -> bool:
         """«Mantenha `node` ABERTO enquanto esta lease viver.» False = não deu.
 
         O-NO-NASCE-FECHADO-01 (20/09/2026). Com a regra udev da cura, o nó do
@@ -140,12 +140,22 @@ class HidrawBrokerClient:
         o `hidapi.Device(path=...)` do nosso próprio handle de controle, que
         não aceita fd. Este é o pedido que põe a ACL de volta.
 
+        HIDE-SO-O-HIDRAW-02 (24/09/2026): `entradas=True` pede também os nós
+        de entrada do aparelho (o evdev e o joydev), que nascem fechados como
+        o hidraw. É o pedido do Modo Nativo — «só o Modo Nativo devolve» — e
+        de mais ninguém: o `with exposicao` do handle de controle quer o
+        hidraw e mais nada. O campo só viaja quando é verdade, e um broker
+        antigo o ignora (expõe o hidraw, como antes).
+
         Best-effort como todo o resto: broker ausente ⇒ False, e o chamador
         segue. Num mundo sem a cura instalada, o nó já está aberto e o False
         não custa nada; num mundo COM a cura e SEM broker, nada abriria de
         qualquer forma.
         """
-        response = self._request({"cmd": "expose", "node": node})
+        pedido: dict[str, Any] = {"cmd": "expose", "node": node}
+        if entradas:
+            pedido["entradas"] = True
+        response = self._request(pedido)
         ok = bool(response is not None and response.get("ok"))
         if ok:
             estado = str(response.get("state") or "exposed") if response else "exposed"
@@ -438,6 +448,49 @@ class HidrawBrokerClient:
             node=node,
             error=(response or {}).get("error"),
         )
+
+
+def nos_de_entrada_do_hidraw(
+    no: str,
+    *,
+    sys_class_hidraw: str = "/sys/class/hidraw",
+    dev_input_root: str = "/dev/input",
+) -> list[str]:
+    """Os nós de entrada (`eventN`, `jsN`) do MESMO aparelho de um hidraw.
+
+    HIDE-SO-O-HIDRAW-02 (24/09/2026). Só leitura do sysfs, e o mesmo
+    critério do broker (`FsAclOps.entradas_do_no`): os filhos de
+    `<device HID>/input/input*`, menos o `jsN` dos sensores de movimento,
+    que a regra 80 fecha para todos. Quem pergunta é o daemon — «o que o
+    broker abriu para o jogo no Modo Nativo continua aberto?» — e sysfs
+    ilegível devolve lista vazia.
+    """
+    base = os.path.basename(no)
+    try:
+        hid = os.path.realpath(f"{sys_class_hidraw}/{base}/device")
+        pastas = sorted(os.listdir(f"{hid}/input"))
+    except OSError:
+        return []
+    saida: list[str] = []
+    for pasta in pastas:
+        if not pasta.startswith("input"):
+            continue
+        input_dir = f"{hid}/input/{pasta}"
+        try:
+            with open(f"{input_dir}/name", encoding="utf-8", errors="replace") as fh:
+                nome = fh.read().strip()
+            filhos = sorted(os.listdir(input_dir))
+        except OSError:
+            continue
+        for filho in filhos:
+            if not (filho.startswith("event") or filho.startswith("js")):
+                continue
+            if not filho[2 if filho.startswith("js") else 5:].isdigit():
+                continue
+            if filho.startswith("js") and nome.endswith("Motion Sensors"):
+                continue
+            saida.append(f"{dev_input_root}/{filho}")
+    return saida
 
 
 def broker_client_for(daemon: Any) -> Any:
