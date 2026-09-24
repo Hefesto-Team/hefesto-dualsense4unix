@@ -109,28 +109,30 @@ roteiro.
 
 **O que isto prova.** Prova que, com os quatro dentro do jogo, o jogo vê cada um deles — cada controle move o boneco dele e nenhum move o de outra pessoa — e que nenhum dos quatro some nos dois primeiros minutos.
 
-**Onde olhar.** O lugar que decide é o JOGO: os quatro bonecos na tela. Qual boneco pertence a qual controle quem decide é o jogo, e a fonte não diz — por isso o primeiro passo é você anotar a dupla antes de mexer em qualquer coisa. Se algum boneco errado se mexer, o desempate está no Hefesto, aba Controles, com o chip "Todos" escolhido na fita: os quatro cartões abrem, e dentro de cada um o analógico tem um pontinho que anda quando você mexe no do aparelho e o desenho do botão acende quando você aperta. O cartão que reagir é o dono do movimento.
+**Onde olhar.** O lugar que decide é o JOGO: os quatro bonecos na tela. O Hefesto entrega os quatro ao jogo na ordem da aba Controles — o P1 é o primeiro controle que o jogo vê —, mas qual boneco o jogo dá a cada controle quem decide é ele, e a fonte não diz: por isso você anota a dupla antes de mexer em qualquer coisa. Se algum boneco errado se mexer, o desempate está no Hefesto, aba Controles, com o chip "Todos" escolhido na fita: os quatro cartões abrem, e dentro de cada um o analógico tem um pontinho que anda quando você mexe no do aparelho e o desenho do botão acende quando você aperta. O cartão que reagir é o dono do movimento.
 
 **Os passos.**
 
-1. Abra o jogo em modo de quatro jogadores, com os quatro bonecos na tela.
-2. Anote qual boneco é de qual controle, antes de mexer em nada.
-3. Largue os quatro controles na mesa e pegue só o P1.
-4. Empurre o analógico esquerdo do P1 para um lado e depois para o outro.
-5. Veja o jogo: só o boneco 1 pode se mexer.
-6. Solte o P1 e pegue só o P2.
-7. Empurre o analógico direito do P2 para um lado e depois para o outro.
-8. Veja o jogo: só o boneco 2 pode responder.
-9. Solte o P2 e pegue só o P3.
-10. Aperte as quatro direções do direcional do P3, uma de cada vez: cima, baixo, esquerda e direita.
-11. Veja o jogo: só o boneco 3 pode responder.
-12. Solte o P3 e pegue só o P4.
-13. Aperte os quatro botões de face do P4 (✕, ○, □ e △), um de cada vez, no meio da partida e não num menu.
-14. Veja o jogo: só o boneco 4 pode responder.
-15. Jogue dois minutos com os quatro juntos, cada controle no gesto dele, do jeito que se joga mesmo.
-16. Repare se algum boneco sai da partida, trava ou troca de dono no meio.
-17. Se algum boneco errado tiver se mexido, vá ao Hefesto, aba Controles, clique no chip "Todos" da fita e mexa de novo no controle suspeito.
-18. Veja em qual cartão o pontinho anda ou o botão acende — o cartão diz de qual aparelho veio o movimento.
+1. Na aba Controles, confira que a «Mira Virtual» dos quatro está apagada; se alguma estiver acesa, anote qual e apague-a.
+2. Abra o jogo em modo de quatro jogadores, com os quatro bonecos na tela.
+3. Anote qual boneco é de qual controle, antes de mexer em nada.
+4. Largue os quatro controles na mesa e pegue só o P1.
+5. Empurre o analógico esquerdo do P1 para um lado e depois para o outro.
+6. Veja o jogo: só o boneco 1 pode se mexer.
+7. Solte o P1 e pegue só o P2.
+8. Empurre o analógico direito do P2 para um lado e depois para o outro.
+9. Veja o jogo: só o boneco 2 pode responder.
+10. Solte o P2 e pegue só o P3.
+11. Aperte as quatro direções do direcional do P3, uma de cada vez: cima, baixo, esquerda e direita.
+12. Veja o jogo: só o boneco 3 pode responder.
+13. Solte o P3 e pegue só o P4.
+14. Aperte os quatro botões de face do P4 (✕, ○, □ e △), um de cada vez, no meio da partida e não num menu.
+15. Veja o jogo: só o boneco 4 pode responder.
+16. Jogue dois minutos com os quatro juntos, cada controle no gesto dele, do jeito que se joga mesmo.
+17. Repare se algum boneco sai da partida, trava ou troca de dono no meio.
+18. Se algum boneco errado tiver se mexido, vá ao Hefesto, aba Controles, clique no chip "Todos" da fita e mexa de novo no controle suspeito.
+19. Veja em qual cartão o pontinho anda ou o botão acende — o cartão diz de qual aparelho veio o movimento.
+20. Acenda de novo a «Mira Virtual» que você apagou no primeiro passo, se apagou alguma.
 
 **Passa quando.** O jogo vê os quatro: em cada uma das quatro voltas respondeu o boneco do controle que estava na sua mão, e só ele; nenhum boneco continuou andando depois que você soltou. E nos dois minutos com os quatro jogando juntos nenhum sumiu da partida nem trocou de boneco.
 
@@ -141,7 +143,7 @@ roteiro.
 * **P3** — Só o direcional, com os outros três largados na mesa. Só o boneco 3 pode responder — e ele está no rádio, que é onde este defeito costuma aparecer.
 * **P4** — Só os botões de face, com os outros três largados na mesa. Só o boneco 4 pode responder — este é o último a entrar e o mais propenso a nascer sem dono.
 
-**A armadilha.** Mexer em dois controles ao mesmo tempo esconde exatamente o defeito que este teste procura. Quando um aparelho está alimentando dois jogadores, os dois bonecos andam JUNTOS — e com as duas mãos ocupadas isso parece que cada dono mexeu no seu. Um de cada vez, com os outros três largados na mesa, é o que revela. E se você mexer no P1 e o boneco 3 responder, não conclua nada olhando só o jogo: pode ser o jogo que embaralhou a ordem dos jogadores, não o Hefesto. Quem separa os dois é o cartão da aba Controles, e é para isso que ele está nos passos. O analógico direito, em muito jogo, mexe a câmera e não o boneco — conta como resposta do boneco 2 se for a câmera DELE que girou. E os botões de face num menu fazem o menu andar (o ○ costuma voltar), o que parece defeito sem ser: aperte-os com a partida rodando.
+**A armadilha.** Mexer em dois controles ao mesmo tempo esconde exatamente o defeito que este teste procura. Quando um aparelho está alimentando dois jogadores, os dois bonecos andam JUNTOS — e com as duas mãos ocupadas isso parece que cada dono mexeu no seu. Um de cada vez, com os outros três largados na mesa, é o que revela. E se você mexer no P1 e o boneco 3 responder, não conclua nada olhando só o jogo: o Hefesto entrega os quatro na ordem P1→P4, mas o jogo pode dar os bonecos por quem apertou primeiro. Quem separa os dois é o cartão da aba Controles, e é para isso que ele está nos passos. O analógico direito, em muito jogo, mexe a câmera e não o boneco — conta como resposta do boneco 2 se for a câmera DELE que girou. E os botões de face num menu fazem o menu andar (o ○ costuma voltar), o que parece defeito sem ser: aperte-os com a partida rodando. Por último, a «Mira Virtual»: acesa num controle, girá-lo move o analógico direito dele no jogo, e a câmera anda sem polegar nenhum — parece o P2 respondendo pelo controle errado. É por isso que o primeiro passo confere que os quatro começam com ela apagada.
 
 ---
 
