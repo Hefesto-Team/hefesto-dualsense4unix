@@ -5860,7 +5860,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — BT, testemunha. O número dele não muda enquanto um do cabo está fora.
 * **P4** — BT, testemunha. Mesma conferência.
 
-**A armadilha.** Duas. Primeira: o número só se guarda por meio minuto. Nesta mesa a falha pode levar quase isso para aparecer, porque o computador sobe o som do controle antes do resto; se ele voltar depois do prazo, os outros três terão descido um número e voltam quando ele volta — anote os segundos, é o limite desta cura. Segunda: se ele não voltar em três minutos, tire e ponha o cabo, e anote: a entrada pode ter ficado vazia para o computador, e ali o gesto é seu.
+**A armadilha.** Duas. Primeira: o número só se guarda por meio minuto. Nesta mesa a falha pode levar quase isso para aparecer, porque o computador sobe o som do controle antes do resto; se ele voltar depois do prazo, os que vinham depois dele terão descido um número, e voltam ao deles quando ele volta — anote os segundos, é o limite desta cura. Segunda: se ele não voltar em três minutos, tire e ponha o cabo, e anote: a entrada pode ter ficado vazia para o computador, e ali o gesto é seu.
 
 ---
 
@@ -5876,14 +5876,14 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 1. Confira que os quatro estão ligados e anote o nome da cor do plástico e o número de cada um.
 2. Abra a aba Conexões, clique no título «Rádio e Adaptadores» e confira, abrindo o ▶ de cada adaptador, se o P3 e o P4 estão no MESMO adaptador; anote a resposta.
-3. Segure o botão PS do P3 até todas as luzes dele apagarem, e solte; faça o mesmo com o P4.
+3. Com um controle em cada mão, segure o botão PS do P3 e o do P4 AO MESMO TEMPO, até todas as luzes dos dois apagarem, e solte.
 4. Conte até cinco, devagar.
-5. Com um controle em cada mão, dê um toque curto no PS dos dois AO MESMO TEMPO, e comece a contar os segundos.
+5. Dê um toque curto no PS dos dois AO MESMO TEMPO, e comece a contar os segundos.
 6. Anote se algum dos dois ficou com a barra de luz acesa e sem chip na fita, e por quantos segundos.
-7. Anote em quantos segundos cada chip voltou à fita, e com qual número.
+7. Anote em quantos segundos cada chip voltou à fita, e com qual número — e, se um voltou antes do outro, com qual número ele apareceu enquanto o outro ainda estava fora.
 8. Repita os passos 3 a 7 mais duas vezes.
 
-**Passa quando.** Nas três voltas, os dois voltam à fita em menos de meio minuto desde o toque — o P3 como P3, o P4 como P4 —, e o P1 e o P2 não trocam de número. O que ficou aceso e sem chip entrou sozinho, sem você tocar em nada.
+**Passa quando.** Nas três voltas, os dois voltam à fita sozinhos, sem você tocar em nada depois do toque, em menos de meio minuto desde ele, e cada um com o número DELE — o P3 como P3 e o P4 como P4, inclusive o que volta primeiro enquanto o outro ainda está fora. O P1 e o P2 não trocam de número.
 
 **Por controle.**
 
@@ -5892,7 +5892,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — BT, um dos dois que sobem juntos.
 * **P4** — BT, o outro. Quem volta primeiro volta com o número DELE, e não com o do que ainda está fora.
 
-**A armadilha.** Três. Primeira: a disputa não acontece toda vez, e é mais provável com os dois no mesmo adaptador; uma volta em que os dois entram limpos também passa — o que interessa é anotar em quais voltas um ficou aceso e sem chip, e quanto tempo levou para entrar. Segunda: não use o «Reconectar controles» durante este teste; ele derruba o elo e mede outra coisa, e o ponto aqui é ver o controle entrar sem ninguém tocar nele. Terceira: um aperto solto no PS abre a Steam; se ela abrir, feche-a e refaça a volta.
+**A armadilha.** Quatro. Primeira: a disputa não acontece toda vez, e é mais provável com os dois no mesmo adaptador; uma volta em que os dois entram limpos também passa — o que interessa é anotar em quais voltas um ficou aceso e sem chip, e quanto tempo levou para entrar. Segunda: não use o «Reconectar controles» durante este teste; ele derruba o elo e mede outra coisa, e o ponto aqui é ver o controle entrar sem ninguém tocar nele. Terceira: um aperto solto no PS abre a Steam; se ela abrir, feche-a e refaça a volta. Quarta: desligue os dois JUNTOS, como diz o passo 3. O número de quem sai fica guardado por meio minuto, contado de quando as luzes apagam; desligando um e depois o outro, o primeiro gasta metade do prazo antes do toque, e o teste passa a medir o seu gesto, não o produto.
 
 ---
 
