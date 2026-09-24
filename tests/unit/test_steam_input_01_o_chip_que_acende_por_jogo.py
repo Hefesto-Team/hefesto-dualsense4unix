@@ -694,6 +694,125 @@ def test_outro_chip_desarma_o_steam_input(lar, monkeypatch) -> None:
         "o «Sony DualSense» não desarmou o «Fechar a Steam?» do chip vizinho")
 
 
+def test_o_consentimento_e_para_aquele_jogo(lar, monkeypatch) -> None:
+    """Armado para um jogo, o segundo clique não fecha a Steam por OUTRO.
+
+    Conferência de 24/09/2026. A chave do relógio leva o appid
+    (`_chave_do_chip`) porque o consentimento dela é para o jogo da pergunta:
+    se o jogo da vez muda entre os dois cliques (outra janela em foco, outro
+    jogo no marcador), o rótulo «Fechar a Steam?» ainda pode estar na tela, e
+    o clique nele não pode valer pelo jogo novo.
+
+    A MORDIDA: faça `_chave_do_chip` ignorar o appid e a Steam fecha aqui pelo
+    `OUTRO` — um jogo sobre o qual ela nunca foi perguntada.
+    """
+    steam = SteamDeMentira(monkeypatch)
+    assert aba.modo_steam(_ctx(), {"texto": "Steam Input"}, PonteDeMentira()) == _ARMADO_NA_TELA
+
+    outro = _ctx()
+    outro.state["window_detect_last_class"] = f"steam_app_{OUTRO}"
+    assert aba._o_rotulo_do_chip(outro.state) == {
+        f'[data-gesto="{aba.GESTO_DO_STEAM_INPUT}"]': "Steam Input"}, (
+        "o tique pintou «Fechar a Steam?» para um jogo que não foi perguntado")
+    antes = lar.read_text(encoding="utf-8")
+
+    with pytest.raises(RuntimeError) as erro:
+        aba.modo_steam(outro, _o_segundo_clique(), PonteDeMentira())
+
+    assert str(erro.value) == aba.STEAM_INPUT_A_PERGUNTA_VENCEU
+    assert steam.fechou == 0, "o consentimento de um jogo fechou a Steam por outro"
+    assert lar.read_text(encoding="utf-8") == antes
+
+
+def test_com_a_ponte_de_pe_o_clique_no_chip_nao_pergunta(lar, monkeypatch) -> None:
+    """Com o jogo já ligado no vdf, o clique no «Steam Input» não arma.
+
+    Conferência de 24/09/2026. O primeiro clique só pergunta quando fechar a
+    Steam MUDA alguma coisa — o vdf em `"0"` para o jogo. Com a ponte de pé
+    (`"2"`), a pergunta pediria um consentimento para nada, e o segundo clique
+    fecharia a Steam dela à toa.
+
+    A MORDIDA: tire de `_armar_se_a_steam_segura` a pergunta ao vdf e o chip
+    arma aqui.
+    """
+    ponte.garantir_ponte(allowlist=[APPID])          # a Steam ainda fechada
+    assert _valor(lar, APPID) == ponte.LIGADO
+    slo.add_appid_to_steam_input_allowlist(APPID)
+    steam = SteamDeMentira(monkeypatch)
+
+    resposta = aba.modo_steam(_ctx(), {"texto": "Steam Input"}, PonteDeMentira())
+
+    assert resposta is None, f"o chip perguntou com a ponte já de pé: {resposta!r}"
+    assert confirmacao.armado_agora() == "", "o relógio armou sem nada a fechar"
+    assert steam.fechou == 0
+
+
+def _texto_visivel_das_abas() -> str:
+    """O texto que as dez abas PUBLICADAS mostram, sem a nota do rodapé.
+
+    Sai o que não é tela: comentários, `<script>`, `<style>`, as tags (e com
+    elas os atributos) e a `<div class="nota">` do fim, que é a história da aba
+    — ela cita botões que saíram, de propósito, e contaria como tela.
+    """
+    import html as _html
+    import re
+
+    pasta = pathlib.Path(aba.__file__).parents[1] / "paginas"
+    pedacos = []
+    for pagina in sorted(pasta.glob("[01][0-9]-*.html")):
+        texto = pagina.read_text(encoding="utf-8")
+        texto = re.sub(r"<!--.*?-->", " ", texto, flags=re.S)
+        texto = re.sub(r"<(script|style)\b.*?</\1>", " ", texto, flags=re.S)
+        nota = texto.find('<div class="nota">')
+        if nota >= 0:
+            texto = texto[:nota]
+        pedacos.append(_html.unescape(re.sub(r"<[^>]+>", " ", texto)))
+    assert len(pedacos) == 10, f"esperava as dez abas publicadas, achei {len(pedacos)}"
+    return re.sub(r"\s+", " ", " ".join(pedacos))
+
+
+def test_as_frases_do_chip_e_do_detectar_so_nomeiam_o_que_a_tela_tem() -> None:
+    """Toda «coisa» que uma frase da 01 ou da 07 nomeia existe na tela publicada.
+
+    Conferência de 24/09/2026. O acréscimo da sprint achou o «Consertar» na
+    frase do «Detectar»; a mesma forma morava no chip: a frase do desligar que
+    não pegou mandava usar «Desligar o Steam Input», na aba Lançadores — botão
+    que saiu em 21/09 junto com o «Consertar». Curar só o que foi apontado
+    deixaria a segunda cópia viva.
+
+    A régua lê a ÁRVORE (as strings do código, sem as docstrings) e não uma
+    lista de frases: a que nascer amanhã entra sozinha.
+
+    A MORDIDA: devolva «Desligar o Steam Input» a `STEAM_INPUT_SAIU_MAS_CONTINUA`
+    e esta régua reprova nomeando o arquivo e a linha.
+    """
+    import re
+
+    from hefesto_dualsense4unix.interface.pacotes import a07_lancadores
+
+    tela = _texto_visivel_das_abas()
+    orfaos = []
+    for modulo in (aba, a07_lancadores):
+        arvore = ast.parse(inspect.getsource(modulo))
+        docstrings = {
+            id(no.body[0].value) for no in ast.walk(arvore)
+            if isinstance(no, (ast.Module, ast.ClassDef, ast.FunctionDef,
+                               ast.AsyncFunctionDef))
+            and no.body and isinstance(no.body[0], ast.Expr)
+            and isinstance(no.body[0].value, ast.Constant)
+        }
+        for no in ast.walk(arvore):
+            if (isinstance(no, ast.Constant) and isinstance(no.value, str)
+                    and id(no) not in docstrings):
+                for nome in re.findall(r"«([^»]+)»", no.value):
+                    if nome not in tela:
+                        orfaos.append(f"{pathlib.Path(modulo.__file__).name}:"
+                                      f"{no.lineno} «{nome}»")
+    assert not orfaos, (
+        f"frases que nomeiam o que a tela publicada não tem: {orfaos}. Botão "
+        f"que saiu da tela sai da frase junto")
+
+
 #: OS AJUDANTES QUE O GESTO PRECISA ALCANÇAR, no MÍNIMO. É a trava da trava:
 #: a varredura de :func:`_alcance_do_gesto` é DERIVADA, e uma derivação que
 #: quebra devolve só o gesto e deixa a régua verde sobre tudo. Esta lista não é

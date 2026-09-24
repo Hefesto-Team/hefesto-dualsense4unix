@@ -3207,9 +3207,14 @@ STEAM_INPUT_NAO_MUDOU_O_ARQUIVO = (
     "Anotei este jogo, mas a Steam ainda não mudou de lado para ele. Abra-o "
     "uma vez pela Steam e clique aqui de novo."
 )
+#: FATO SUBSTITUÍDO — conferência da STEAM-INPUT-01, 24/09/2026. Esta frase
+#: mandava usar «Desligar o Steam Input», na aba Lançadores, e o botão saiu em
+#: 21/09 com os outros do cartão da Steam — é o mesmo defeito do «Consertar»
+#: da aba 07. Quem desliga hoje é o guarda do vdf (`hefesto-steam-input-guard`:
+#: o `.timer` de 30 min e o `.path`, que acorda quando a Steam grava ao sair).
 STEAM_INPUT_SAIU_MAS_CONTINUA = (
-    "Tirei este jogo da lista, mas a Steam continua no comando dele. Use "
-    "«Desligar o Steam Input», na aba Lançadores."
+    "Tirei este jogo da lista, mas a Steam continua no comando dele. O Hefesto "
+    "a tira de lá em até meia hora, ou na próxima vez que a Steam fechar."
 )
 
 
