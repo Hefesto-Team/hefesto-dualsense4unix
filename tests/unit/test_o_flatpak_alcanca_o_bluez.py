@@ -23,8 +23,9 @@ intruso e o da página; pôr o ``--socket=system-bus`` AO LADO dela, ou o curing
 reprova o do diário e o da página; o daemon passando a escrever no diário do
 root (pelo dono ou pelo caminho escrito à mão) reprova o da leitura; um
 ``BusType.SYSTEM`` fora do ``bluez_dbus`` reprova o do barramento; tirar a
-checagem do remetente do agente reprova o do intruso; a linha da pasta de
-execução voltando a dizer ``app/<id>`` reprova o da pasta.
+checagem do remetente do agente reprova o do intruso; o ``DonoVivo`` deixando de
+refotografar no ``NameOwnerChanged`` reprova o do ``bluetoothd`` que reinicia; a
+linha da pasta de execução voltando a dizer ``app/<id>`` reprova o da pasta.
 """
 
 from __future__ import annotations
@@ -343,6 +344,36 @@ def test_o_agente_proprio_atravessa_o_proxy_do_flatpak(tmp_path: Path) -> None:
                 lambda: dono.propriedade(DISPOSITIVO, bd.APARELHO, "Paired") is True
             ), "o PropertiesChanged do BlueZ não atravessou o proxy"
             assert bluez.mesa[DISPOSITIVO][bd.APARELHO]["Trusted"] is True
+        finally:
+            dono.fechar()
+
+
+@pede_o_proxy
+def test_o_bluetoothd_que_reinicia_chega_de_novo_pelo_proxy(tmp_path: Path) -> None:
+    """O ``NameOwnerChanged`` do ``org.bluez`` atravessa o proxy: o agente passa
+    a aceitar SÓ o ``bluetoothd`` novo, e o ``Pair`` seguinte registra de novo e
+    é atendido por ele. Sem o sinal, o agente seguiria esperando o nome velho e
+    recusaria o pareamento. É o caminho de todo restart do ``bluetoothd``."""
+    with (
+        bm.BluezParticular(tmp_path) as bluez,
+        _pelo_proxy(bluez, tmp_path, nomes_de_sistema()) as endereco,
+    ):
+        dono = _dono(endereco)
+        try:
+            assert dono.parear(DISPOSITIVO).feita
+            velho = bluez.nome_do_bluez
+            assert dono.dono_do_bluez() == velho
+            bluez.reiniciar()
+            novo = bluez.nome_do_bluez
+            assert novo != velho
+            assert bm.esperar(lambda: dono.dono_do_bluez() == novo, teto=5.0), (
+                "o NameOwnerChanged do org.bluez não atravessou o proxy: o agente segue "
+                f"esperando {dono.dono_do_bluez()!r}, e o bluetoothd novo é {novo!r}"
+            )
+            escrita = dono.parear(bm.no_de(bm.OUTRO))
+            assert escrita.feita, escrita
+            assert bluez.o_padrao_atendeu == []
+            assert list(dono._agente.historico).count(("RequestConfirmation", True)) == 2
         finally:
             dono.fechar()
 
