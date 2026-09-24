@@ -705,22 +705,60 @@ def cor_escolhida(efetiva: Any, brilho: float | None) -> Any:
     está no plástico, que é o honesto; inventar um pedido seria afirmar uma
     escolha que ninguém fez.
 
+    O CASAMENTO TEM DE SER ÚNICO — 24/09/2026, A-MARCA-DA-COR-NAO-SOME-01. A
+    varredura devolvia o PRIMEIRO tom que casasse, e a 0% os catorze acendem
+    `(0, 0, 0)`: o primeiro da tabela é o `#0000FF`, e a coluna de quem ela
+    apagou pelo trilho passava a dizer azul — a borda pulava para o azul, o X
+    da cor dele sumia dos outros três, e o P1 ganhava um X na PRÓPRIA cor.
+    Medido no piloto, com o clique. Quem casa com mais de um tom não diz de
+    qual pedido veio (ver `_o_tom_que_acende`).
+
     :param efetiva: o `lightbar_rgb` do daemon, ou `None`/vazio quando não há.
     :param brilho: `brilho_do_controle`. `None` ou `1.0` devolvem a efetiva sem
         varrer nada — a 100% as duas escalas são a mesma, e varrer só gastaria.
     """
-    import monta  # o `pacotes/__init__` põe `interface/` no `sys.path`
-
     if not efetiva:
         return efetiva
     if brilho is None or brilho >= 1.0:
         return efetiva
-    alvo = tuple(efetiva)[:3]
+    tom = _o_tom_que_acende(efetiva, brilho)
+    return efetiva if tom is None else tom
+
+
+def _o_tom_que_acende(efetiva: Any,
+                      brilho: float | None) -> tuple[int, int, int] | None:
+    """O tom da casa que, COM ESTE BRILHO, acende a cor publicada — ou `None`.
+
+    É a varredura de `cor_escolhida`, com a conta do dono (`_com_o_brilho`), e
+    ela responde `None` em vez de devolver a efetiva: quem chama precisa saber
+    se a luz acesa DISSE a cor ou não, porque é aí que a escada de
+    `_a_cor_de_agora` desce um degrau.
+
+    `None` EM DOIS CASOS, e os dois foram medidos no piloto em 24/09/2026:
+
+    * **nenhum tom casa** — a luz publicada é de OUTRO brilho. O gesto
+      `brilho` grava o número novo no disco antes de o daemon publicar a luz
+      nova (o `state_full` guarda a leitura do nó por 1 s), e por meio segundo
+      cada tique invertia a luz velha com o brilho novo;
+    * **mais de um tom casa** — a 0% os catorze acendem preto.
+
+    A 100% (ou sem brilho) não há conta a desfazer: a luz é o tom se ela for
+    um dos catorze.
+    """
+    import monta  # o `pacotes/__init__` põe `interface/` no `sys.path`
+
+    if not efetiva:
+        return None
+    r, g, b = (int(c) for c in tuple(efetiva)[:3])
+    alvo = (r, g, b)
+    if brilho is None or brilho >= 1.0:
+        return alvo if _hex(alvo) in monta.TOM_DA_CASA else None
+    casados = []
     for h in monta.TOM_DA_CASA:
         tom = (int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16))
         if _com_o_brilho(tom, brilho) == alvo:
-            return tom
-    return efetiva
+            casados.append(tom)
+    return casados[0] if len(casados) == 1 else None
 
 
 #: A TIRA APAGADA — e ela é um ESTILO EXPLÍCITO, nunca a ausência de um.
@@ -1720,10 +1758,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # com o valor já escurecido diria "livre" sobre a cor que o vizinho está
     # acendendo, e a tela ofereceria o que o gesto recusa — as duas metades da
     # mesma regra discordando na mesma tela.
-    cru_do_perfil = perfil.ativo(ctx.state.get("active_profile"))
+    #
+    # E ELA É A MESMA DA BORDA DA PRÓPRIA COLUNA — 24/09/2026,
+    # A-MARCA-DA-COR-NAO-SOME-01: uma resposta por controle por tique, lida do
+    # MESMO perfil (`p`, e não uma segunda leitura do disco que o gesto do
+    # trilho pode ter regravado no meio). A borda de um e o X dos outros não têm
+    # como discordar sobre a cor do mesmo controle.
+    cor_de = [_a_cor_de_agora(ctx, p, c) for c in ctx.conectados]
     tons_tomados: dict[str, dict[str, str]] = {}
-    for c in ctx.conectados:
-        rgb = _a_cor_de_agora(ctx, cru_do_perfil, c)
+    for c, rgb in zip(ctx.conectados, cor_de, strict=True):
         if rgb == (0, 0, 0):
             # BARRA APAGADA NÃO TOMA COR DE NINGUÉM — é a mesma isenção que
             # `cores_sem_colisao` dá ao preto: ausência de cor não é identidade.
@@ -1740,7 +1783,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     #: e só recebe quem tem controle: `folha_da_luz` APAGA todo lugar que não
     #: aparecer aqui, que é como o `--luz` do mockup morre num lugar vazio.
     luz_do_desenho: dict[str, tuple[str, int | None]] = {}
-    for c in ctx.conectados:
+    for c, cor_dele in zip(ctx.conectados, cor_de, strict=True):
         uniq = str(c.get("uniq") or "")
         crua = cor_do_swatch(c)
         b = brilho_do_controle(p, uniq)
@@ -1775,7 +1818,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         #: contrato do daemon, e esta aba o tratava como pré-escala: com o
         #: brilho abaixo de 100% a caixa mostrava uma cor que ela nunca pediu,
         #: a marca dos oito tons apagava e a tira escurecia duas vezes.
-        pedida = cor_escolhida(crua, b)
+        #:
+        #: E ELA É A DO DONO DA MARCA — `_a_cor_de_agora`, a mesma do X nas
+        #: outras colunas (24/09/2026, A-MARCA-DA-COR-NAO-SOME-01). Com o motor
+        #: sem cor nenhuma (`crua` vazia) a caixa continua no travessão: a
+        #: queda para a cor do número serve à recusa, não à caixa que diz a cor.
+        pedida = cor_dele if crua else None
         #: QUAL DOS TRÊS ESTADOS A TIRA DESENHA — decisão 9 dela. Ele sai do
         #: MESMO primeiro retorno que decide `acesa`, e não de uma segunda
         #: leitura: "apagada" e "não sei" só se separam pela frase do motor.
@@ -2882,9 +2930,9 @@ def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 
     OS TRÊS TEMPOS, E A ORDEM IMPORTA:
 
-        1. a COR PEDIDA sai da tela com o brilho VELHO — `cor_escolhida` inverte
-           a escala do daemon (D8: o `lightbar_rgb` é PÓS-escala), e invertê-la
-           com o brilho NOVO devolveria uma cor que ela nunca pediu;
+        1. a COR PEDIDA sai da tela com o brilho VELHO — `_a_cor_de_agora`
+           inverte a escala do daemon (D8: o `lightbar_rgb` é PÓS-escala), e
+           invertê-la com o brilho NOVO devolveria uma cor que ela nunca pediu;
         2. o DISCO recebe o número novo. Ele é a promessa do gesto, e é o que
            sobrevive a um `profile.switch`;
         3. o APARELHO recebe a mesma cor com o brilho NOVO, passado no
@@ -2951,20 +2999,18 @@ def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
             "não há perfil ativo agora, e o brilho da barra é do perfil — não "
             "da máquina. Escolha um perfil na aba Perfis.")
 
-    #: A COR PEDIDA COM O BRILHO VELHO — ver o tempo 1 da docstring.
-    from hefesto_dualsense4unix.app.widgets.controller_card import (
-        cor_do_swatch,
-        rotulo_lightbar,
-    )
+    #: A COR PEDIDA COM O BRILHO VELHO — ver o tempo 1 da docstring. O perfil
+    #: lido AQUI, antes da gravação, é o que acendeu a luz que o daemon
+    #: publica; é com ele que `_a_cor_de_agora` desfaz a escala.
+    from hefesto_dualsense4unix.app.widgets.controller_card import rotulo_lightbar
 
     dele = next((c for c in ctx.conectados if str(c.get("uniq") or "") == uniq), None)
     if dele is None:
         raise RuntimeError(
             "este controle não está ligado agora — não há barra em que "
             "aplicar o brilho.")
-    velho = brilho_do_controle(perfil.ativo(nome), uniq)
+    antes = perfil.ativo(nome)
     recado, _base = rotulo_lightbar(dele, ctx.state)
-    pedida = cor_escolhida(cor_do_swatch(dele), velho)
 
     loader = perfil._com_o_src()
     novo = _com_o_brilho_gravado(loader.load_profile(nome), uniq, pct)
@@ -3005,9 +3051,13 @@ def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     #
     # A cor GUARDADA não adivinha nada, e existe desde que `_escrever_a_cor`
     # grava a escolha dela; ver `_guardar_a_cor_no_perfil`.
-    alvo = (_a_cor_guardada(perfil.ativo(nome), uniq)
-            or (tuple(pedida)[:3] if pedida
-                else _a_cor_de_agora(ctx, perfil.ativo(nome), dele)))
+    #
+    # E O RESTO DA ESCADA É A DO DONO DA MARCA — 24/09/2026,
+    # A-MARCA-DA-COR-NAO-SOME-01. Aqui morava `cor_escolhida(...)` com a luz
+    # acesa, e a 0% ela devolvia o PRIMEIRO tom da tabela: subir o trilho de um
+    # controle na cor do número depois do zero o acendia AZUL. Quem sabe a cor
+    # quando a luz não diz é `_a_cor_de_agora` — a do número, pela paleta.
+    alvo = _a_cor_guardada(antes, uniq) or _a_cor_de_agora(ctx, antes, dele)
     _escrever_a_cor(ctx, p, uniq, alvo, brilho=_fracao_do_disco(pct))
     if recado is not None:
         # A ressalva NÃO some: ela diz que o motor não afirma a cor, e isso
@@ -3033,6 +3083,26 @@ def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
     preto aqui apagaria a barra dela por um clique num interruptor; um branco
     inventaria uma cor que ninguém escolheu.
 
+    ELA É O DONO DA MARCA DA FILEIRA — 24/09/2026, A-MARCA-DA-COR-NAO-SOME-01.
+    Queixa dela: *"quando eu abaixo o volume do lightbar,. o X não permanece
+    no seletor dos demais controles"*. <!-- noqa-acento: citação literal dela -->
+    A borda na fileira do controle, o X nas fileiras dos outros, a recusa do
+    tom tomado e a cor que o trilho reenvia saem TODOS daqui, e a escada é:
+
+        1. a luz acesa, quando ela diz o tom (`_o_tom_que_acende`);
+        2. a cor que ela escolheu para ESTE controle, gravada no perfil;
+        3. a luz acesa como está, com a paleta automática desligada;
+        4. a cor do número, que é a da paleta automática.
+
+    O DEGRAU 1 SOZINHO NÃO SEGURAVA A MARCA, e o piloto mediu os dois buracos
+    com o clique: por meio segundo depois de SOLTAR o trilho o disco já tem o
+    brilho novo e o daemon ainda publica a luz velha, e a 0% todo tom acende
+    preto. Nos dois a luz não diz o tom — e a cor do controle não mudou,
+    porque brilho não é cor. Quem sabe a cor nessa hora é o disco (a escolha
+    dela) ou a paleta (quem nunca escolheu acende a cor do número). A luz
+    continua vindo PRIMEIRO: ela é o que o plástico mostra, inclusive quando
+    a cor gravada é um fóssil que o daemon trocou pela do número.
+
     :param cru: o perfil como DICIONÁRIO (`perfil.ativo`), e não o `Profile` do
         pydantic: `brilho_do_controle` lê o JSON cru, e um modelo passado aqui
         devolveria `None` em silêncio — o brilho sumiria da inversão de escala e
@@ -3042,9 +3112,19 @@ def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
     from hefesto_dualsense4unix.core.led_control import player_slot_color
 
     uniq = str(c.get("uniq") or "")
-    pedida = cor_escolhida(cor_do_swatch(c), brilho_do_controle(cru, uniq))
-    if pedida:
-        r, g, b = tuple(pedida)[:3]
+    efetiva = cor_do_swatch(c)
+    tom = _o_tom_que_acende(efetiva, brilho_do_controle(cru, uniq))
+    if tom is not None:
+        return tom
+    guardada = _a_cor_guardada(cru, uniq)
+    if guardada is not None:
+        return guardada
+    #: SEM A PALETA, a luz que não casou é o global do perfil (ou uma cor que
+    #: não é da guia): ela volta como está, que é o que a coluna sempre mostrou.
+    #: O preto não entra: preto que não casou é o brilho a 0%, e ele não diz cor.
+    if (efetiva and tuple(efetiva)[:3] != (0, 0, 0)
+            and not automatico_do_perfil(cru)):
+        r, g, b = tuple(efetiva)[:3]
         return (int(r), int(g), int(b))
     return player_slot_color(_numero(ctx, c))
 
