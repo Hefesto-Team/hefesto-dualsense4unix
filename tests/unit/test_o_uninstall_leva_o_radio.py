@@ -239,7 +239,7 @@ BLOCO_DA_SESSAO = _recorte(
 
 def _estado(tmp_path: Path, *, purge: bool) -> tuple[Path, subprocess.CompletedProcess[str]]:
     estado = tmp_path / "estado" / "hefesto-dualsense4unix"
-    estado.mkdir(parents=True)
+    estado.mkdir(parents=True, exist_ok=True)
     for nome in (
         "lugares-dos-adaptadores.json",
         "radio-diario.jsonl",
@@ -281,12 +281,23 @@ def test_por_padrao_o_estado_sai_e_o_historico_fica_com_carimbo(tmp_path: Path) 
     )
     guardados = [n for n in sobra if n.startswith("radio-diario.pre-uninstall-")]
     assert len(guardados) == 2, f"o diário tem de ficar guardado com carimbo: {sobra}"
+    assert len({n.split(".")[1] for n in guardados}) == 1, f"o par ganhou dois carimbos: {sobra}"
     assert "kernel.log" in sobra and "kernel-watch.boot" in sobra, (
         "o kernel.log e a marca do boot andam juntos e ficam por padrão: " + ", ".join(sobra)
     )
 
 
 def test_com_purge_config_o_historico_sai_inteiro(tmp_path: Path) -> None:
+    """Inclusive o diário que um uninstall ANTERIOR guardou com carimbo: a fala
+    daquele uninstall prometeu «apagar de vez: --purge-config». MORDIDA: tirar
+    o laço dos `.pre-uninstall-*` deixa os dois guardados na pasta."""
+    antigo = tmp_path / "estado" / "hefesto-dualsense4unix"
+    antigo.mkdir(parents=True)
+    for nome in (
+        "radio-diario.pre-uninstall-20260801-101010.jsonl",
+        "radio-diario.pre-uninstall-20260801-101010.jsonl.1",
+    ):
+        (antigo / nome).write_text("x\n", encoding="utf-8")
     estado, r = _estado(tmp_path, purge=True)
     assert r.returncode == 0, r.stderr
     assert not estado.exists() or not any(estado.iterdir()), (
