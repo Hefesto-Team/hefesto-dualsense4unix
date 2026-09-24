@@ -183,30 +183,24 @@ def mover_o_cursor_pelo_giro(daemon: DaemonProtocol, botoes_do_primario: frozens
     A-MIRA-NA-NAVEGACAO-01 (24/09/2026), pela frase dela: *"A exceção do nativo
     todo o resto deve ter mira Virtual"*.  <!-- noqa-acento: citação literal dela -->
     Na Navegação não há controle virtual — o `dispatch_gamepad` volta no
-    `device is None` — e o chip da Mira acendia sem mover nada, com o daemon
-    respondendo `alcance: aplicado`. Aqui é o único tique da Navegação, e é
-    daqui que o giro vai ao cursor.
+    `device is None` —, e o chip da Mira acendia sem mover nada. Este é o único
+    tique da Navegação, e é daqui que o giro vai ao cursor.
 
     O MOTOR É O MESMO, chamado e não copiado: `gamepad.aplicar_o_movimento`
     com ``na_navegacao=True``. A sensibilidade, o «Ignorar tremor até», o «Só
-    enquanto eu segurar» e os dois «Inverter» da Calibrar valem igual, e o
-    interruptor do Giroscópio de cada controle também.
+    enquanto eu segurar», os dois «Inverter» e o interruptor do Giroscópio de
+    cada controle valem igual.
 
     QUEM É DONO DO CURSOR NA NAVEGAÇÃO, medido: o PRIMÁRIO. O `state` que chega
-    a `dispatch_mouse` é só o dele — o analógico esquerdo move, o direito rola,
-    os botões clicam. Os outros controles não mexem no cursor por analógico.
-    A Mira é por controle e vale para os quatro: cada peça com o chip aceso soma
-    o próprio giro ao MESMO cursor, porque o mouse é um só — dois controles com
-    a Mira movem o cursor juntos, e os deslocamentos se somam, como duas mãos no
-    mesmo mouse. Cada peça drena o PRÓPRIO leitor, então nenhum giro é contado
-    duas vezes.
+    aqui é só o dele — o analógico esquerdo move, o direito rola, os botões
+    clicam —, e os outros controles não mexem no cursor por analógico. A Mira é
+    por controle e vale nos quatro: cada peça com a Mira acesa SOMA o próprio
+    giro ao MESMO cursor, porque o mouse é um só, como duas mãos no mesmo
+    mouse. Cada peça drena o PRÓPRIO leitor, e nenhum giro conta duas vezes.
 
-    QUAIS PEÇAS: o primário, as peças com o chip aceso e, quando a mira é do
-    perfil inteiro, os controles conectados que o registro de identidade conhece
-    (o mesmo conjunto que o tique lento reconcilia a cada 2 s). Os botões do
-    «Só enquanto eu segurar» de quem não é o primário vêm do leitor de entradas
-    do hub, sem grab — o mesmo que o cartão da tela lê; sem leitura, o botão
-    está solto e a mira fica parada.
+    QUAIS PEÇAS: ver `_pecas_da_navegacao`. Os botões do «Só enquanto eu
+    segurar» de quem não é o primário vêm do leitor de entradas do hub, sem
+    grab; sem leitura, o botão está solto e a mira fica parada.
 
     Sem mira em peça nenhuma, o custo é o do `roteador.ativo`: dois `getattr`.
     NUNCA LEVANTA — o tique da Navegação leva o cursor, os cliques e o teclado.
@@ -228,7 +222,7 @@ def mover_o_cursor_pelo_giro(daemon: DaemonProtocol, botoes_do_primario: frozens
         for uniq in _pecas_da_navegacao(daemon, store, arranjo, primario):
             botoes = (
                 botoes_do_primario
-                if primario and roteador.chave_de_sensor(primario) == uniq
+                if uniq == primario
                 else _botoes_da_peca(daemon, store, arranjo, uniq)
             )
             aplicar_o_movimento(
@@ -249,30 +243,44 @@ def mover_o_cursor_pelo_giro(daemon: DaemonProtocol, botoes_do_primario: frozens
 def _pecas_da_navegacao(
     daemon: DaemonProtocol, store: Any, arranjo: Any, primario: str | None
 ) -> list[str]:
-    """As chaves das peças que PODEM mirar agora, o primário primeiro, sem repetir.
+    """As peças que PODEM mirar agora: o primário primeiro, uma vez cada.
 
-    A peça que não mira sai do motor no portão da peça (`roteador.da_peca`), e
-    só drena quando a mesa inteira mira — a regra de sempre.
+    O PRIMÁRIO VAI COM O `uniq` DO BACKEND, como o `dispatch_gamepad` o passa;
+    os outros vão pela chave da peça (`chave_de_sensor`, os 12 hex), que é a
+    grafia com que o hub os conhece (`discover_dualsense_motion_evdevs`, MAC
+    normalizado) e com que o registro de identidade guarda os conectados.
+
+    Entram as peças com a Mira acesa e, quando a mira é do perfil inteiro,
+    todo controle conectado. Com o registro de identidade de pé, só o
+    CONECTADO entra: uma peça com a Mira acesa no perfil e fora da mesa
+    pediria ao hub, a cada tique, um leitor que não há. Sem registro (o
+    `FakeController`), vale a lista das peças.
+
+    A peça que não mira sai no portão da peça (`roteador.da_peca`), e só drena
+    quando a mesa inteira mira — a regra de sempre.
     """
     from hefesto_dualsense4unix.core import roteador_de_movimento as roteador
+    from hefesto_dualsense4unix.core.virtual_motion import chave_de_sensor
 
-    vistas: dict[str, None] = {}
-    if primario:
-        vistas[roteador.chave_de_sensor(primario)] = None
-    for chave in roteador.pecas_que_miram(store):
-        vistas.setdefault(chave, None)
-    if arranjo.ligado:
-        # A MIRA DO PERFIL INTEIRO: toda peça conectada mira, e quem sabe quais
-        # estão conectadas sem pagar `describe_controllers` a cada tique é o
-        # registro de identidade — o conjunto que o tique lento já reconcilia.
-        registro = getattr(daemon, "identity_registry", None)
-        conectados = getattr(registro, "snapshot_connected", None)
-        if callable(conectados):
-            for uniq in sorted(str(u) for u in conectados()):
-                chave = roteador.chave_de_sensor(uniq)
-                if chave:
-                    vistas.setdefault(chave, None)
-    return [chave for chave in vistas if chave]
+    registro = getattr(daemon, "identity_registry", None)
+    perguntar = getattr(registro, "snapshot_connected", None)
+    conectados: set[str] | None = None
+    if callable(perguntar):
+        conectados = {chave_de_sensor(str(u)) for u in perguntar()}
+
+    candidatas = list(roteador.pecas_que_miram(store))
+    if arranjo.ligado and conectados is not None:
+        candidatas.extend(sorted(conectados))
+    vistas = {chave_de_sensor(primario)} if primario else set()
+    pecas = [primario] if primario else []
+    for chave in candidatas:
+        if not chave or chave in vistas:
+            continue
+        if conectados is not None and chave not in conectados:
+            continue
+        vistas.add(chave)
+        pecas.append(chave)
+    return pecas
 
 
 def _botoes_da_peca(daemon: DaemonProtocol, store: Any, arranjo: Any, uniq: str) -> frozenset[str]:
