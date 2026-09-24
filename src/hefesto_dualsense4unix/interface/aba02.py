@@ -57,7 +57,7 @@ from pacotes.a02_controles import (DICA_ALTO_SEM_POSSE,
 # lei: o produto pinta a dica (`dica_do_giro`) e o cinza (`mira_fora`) a cada
 # tique, e o desenho escreve a MESMA frase e o MESMO valor de gatilho do cinza.
 from pacotes.a02_controles import (DICA_DO_GIRO, DICA_DO_GIRO_COM_A_MIRA,
-                                   MIRA_NO_NATIVO)
+                                   DICA_DO_GIRO_NO_CURSOR, MIRA_NO_NATIVO)
 # O SUFIXO DO CANAL, pela mesma lei: `sufixo_do_canal` é quem o produto chama a
 # cada tique, e a cena do desenho tem de dizer a MESMA coisa. Digitar
 # a palavra do canal aqui seria a segunda gramática do mesmo fato — e ela
@@ -1277,7 +1277,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .rota{display:flex;flex-direction:column;gap:2px;margin-top:5px}
   .rota button{flex:0 0 auto;height:17px;border-radius:5px;font-size:10.5px;white-space:nowrap;font-family:inherit;
     border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);cursor:pointer}
-  .rota button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
+  .rota button.on,.rota .aceso-do-mic.on>button{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
   /* A FILEIRA DA SAÍDA DE SOM TEM QUATRO — 24/09/2026, O-TERCEIRO-NOME-DELA-01,
      e o preço foi medido antes de escrito (Chrome headless, cartão aberto).
 
@@ -1317,6 +1317,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      do bloco, e abaixo de 19 o texto do «Virtual» encosta na borda. */
   .rota.mic-modo{flex-direction:row;flex-wrap:wrap;gap:5px}
   .rota.mic-modo button{flex:1;height:19px}
+  .rota.mic-modo .aceso-do-mic{display:contents}
   /* O «NATIVO» FORA DE ALCANCE — 20/09/2026, decisão dela, verbatim: *"Fica os
      dois botões. Mas no rádio o botão fica cinza sem ser ativado"*.
 
@@ -1335,8 +1336,11 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      apagava os dois botões em 01/09 era o alvo `texto`, que faz
      `el.textContent = t`; este é `classe`, que só liga e desliga um nome
      (`hefesto_vivo.escrever`, ramo `classe`, que retorna antes de tocar em
-     conteúdo). O botão não pode carregá-lo porque `data-hef-alvo` é UM por
-     elemento e o dele já é o `on` do par — está escrito no próprio piloto.
+     conteúdo). O botão não podia carregá-lo porque `data-hef-alvo` é UM por
+     elemento e o dele era o `on` do par. Desde 24/09/2026
+     (A-MIRA-NA-NAVEGACAO-01) o `on` mora no invólucro `aceso-do-mic`, sem
+     caixa, e o botão leva o MESMO campo com o `aria-disabled`: o leitor de
+     tela ouve o cinza que a folha pinta.
      UM CAMPO SÓ alimenta o cinza e a razão do `?`, como na peça das dez: com
      dois, seria possível pintar cinza sem razão, ou razão sem cinza. */
   .mic-modo.sem-nativo button[data-mic-modo="nativo"],
@@ -1407,13 +1411,18 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   }
   .sensores-peca .sw .p{width:6px;height:6px;border-radius:50%;background:var(--green);
                         box-shadow:0 0 6px var(--green)}
-  .sensores-peca .sw.off{border-color:var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
-  .sensores-peca .sw.off .p{background:var(--border-forte);box-shadow:none}
+  .sensores-peca .sw.off,.sensores-peca .chip-da-mira.off>.sw{border-color:var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
+  .sensores-peca .sw.off .p,.sensores-peca .chip-da-mira.off>.sw .p{background:var(--border-forte);box-shadow:none}
   /* A DICA DO GIROSCÓPIO MORA NUM INVÓLUCRO SEM CAIXA — 24/09/2026,
      A-MIRA-POR-MOVIMENTO-NA-TELA-02. `display:contents` tira o invólucro da
      grade: quem ocupa a coluna continua sendo o botão, e a largura dos três
      não muda um pixel. O `title` dele é o que muda com a Mira acesa. */
   .sensores-peca .dica-do-giro{display:contents}
+  /* O CINZA QUE O LEITOR DE TELA OUVE — A-MIRA-NA-NAVEGACAO-01, 24/09/2026. O
+     `aria-disabled` só vale no próprio botão, e um elemento aceita UM alvo: o
+     aceso da Mira desceu para este invólucro sem caixa, e o botão ficou com o
+     cinza (`mira-fora`) e o `aria-disabled` que o piloto deriva dele. */
+  .sensores-peca .chip-da-mira{display:contents}
   /* NO MODO NATIVO O CHIP DA MIRA FICA CINZA — decisão dela, 24/09/2026:
      *"fica cinza no Nativo, sem gravar"*. A cara é a do cinza da casa
      (`.btn.apagado`, `monta.py`): a borda sutil, o texto mudo e o cursor que
@@ -1777,18 +1786,23 @@ def sensores_da_peca(c):
       `title`*). O invólucro não tem caixa: a grade dos três continua medindo o
       botão, e a dica sobe do botão até ele como sobe em todo `title`.
     * NO MODO NATIVO O CHIP DA MIRA FICA CINZA
-      (`D-2409-NO-NATIVO-A-MIRA-FICA-CINZA`). O endereço mora no GRUPO, pela
-      mesma razão e na forma do «Nativo» do microfone (`.mic-modo.sem-nativo`):
-      o alvo do botão já é o `mira-ligada`. O `classe` só liga e desliga um nome
-      no grupo — não toca no conteúdo —, e a folha pinta o cinza só no chip da
+      (`D-2409-NO-NATIVO-A-MIRA-FICA-CINZA`). O endereço mora no GRUPO, na
+      forma do «Nativo» do microfone (`.mic-modo.sem-nativo`): o `classe` só
+      liga e desliga um nome no grupo, e a folha pinta o cinza só no chip da
       Mira. Sem recado: o cinza é a resposta inteira.
+
+    **E O CINZA CHEGA AO LEITOR DE TELA — A-MIRA-NA-NAVEGACAO-01, 24/09/2026.**
+    O botão leva o MESMO `mira-fora` com `data-hef-atributo="aria-disabled"`
+    (a peça `monta.botao_cinza`), e o aceso (`mira-ligada`) desceu para o
+    invólucro `chip-da-mira`, de `display:contents` como o da dica: a grade
+    continua medindo o botão, e nenhum pixel muda.
     """
     # O ARGUMENTO `c` fica: ele é a assinatura do dono, e a próxima peça deste
     # grupo volta a lê-lo.
     return f'''          <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="{MIRA_NO_NATIVO}">
             <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="{DICA_DO_GIRO}"><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
-            <button class="sw off" data-gesto="mira" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="{DICA_DA_MIRA_VIRTUAL}"><span class="p"></span>{ROTULO_DA_MIRA_VIRTUAL}</button>
+            <span class="chip-da-mira off" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="{MIRA_NO_NATIVO}" data-hef-atributo="aria-disabled" title="{DICA_DA_MIRA_VIRTUAL}"><span class="p"></span>{ROTULO_DA_MIRA_VIRTUAL}</button></span>
           </span>'''
 
 
@@ -3119,13 +3133,15 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
               <!-- O «NATIVO» FICA CINZA ONDE ELE NÃO ALCANÇA — 20/09/2026,
                    decisão dela: *"Fica os dois botões. Mas no rádio o botão
                    fica cinza sem ser ativado"*. A razão vai no `?` ao lado, e
-                   o porquê de o endereço morar no CONTAINER (e não no botão)
-                   está no bloco `.mic-modo` do CSS. -->
+                   o porquê de o endereço morar no CONTAINER está no bloco
+                   `.mic-modo` do CSS. O botão leva o mesmo campo com o
+                   `aria-disabled` (24/09/2026, A-MIRA-NA-NAVEGACAO-01), e o
+                   aceso dele desceu para o invólucro `aceso-do-mic`. -->
               <span class="rota mic-modo" data-campo="mic-nativo-fora" data-hef-alvo="classe" data-hef-classe="sem-nativo">
                 <button class="{'on' if mic_modo == 'virtual' else ''}" data-gesto="mic-modo" data-mic-modo="virtual" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="virtual"
                   title="{DICA_MIC_VIRTUAL}">Virtual</button>
-                <button class="{'on' if mic_modo == 'nativo' else ''}" data-gesto="mic-modo" data-mic-modo="nativo" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="nativo"
-                  title="{DICA_MIC_NATIVO}">Nativo</button>{ponto_de_interrogacao("mic-nativo-fora")}
+                <span class="aceso-do-mic{' on' if mic_modo == 'nativo' else ''}" data-campo="mic-modo-aceso" data-hef-alvo="classe" data-hef-quando="nativo"><button data-gesto="mic-modo" data-mic-modo="nativo" data-campo="mic-nativo-fora" data-hef-alvo="classe" data-hef-classe="sem-nativo" data-hef-atributo="aria-disabled"
+                  title="{DICA_MIC_NATIVO}">Nativo</button></span>{ponto_de_interrogacao("mic-nativo-fora")}
               </span>
             <!-- QUEM ESTÁ TE OUVINDO — 19/09/2026, decisão dela na
                  `A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01`, e ela escolheu as DUAS
@@ -3890,6 +3906,9 @@ LEGENDA = f'''<div class="nota">
     <li><b>Cada controle ganhou o botão «{ROTULO_DA_MIRA_VIRTUAL}»</b>, ao lado de <b>Giroscópio</b> e <b>Acelerômetro</b>, como você pediu: <i>"Cria um botão virtual ao lado de giroscopio e acelerometro chamado Mira Virtual"</i>. Aceso, virar aquele controle move o <b>analógico direito</b> dele — e só dele. Ele nasce <b>apagado</b>, a dica é a sua frase (<i>{DICA_DA_MIRA_VIRTUAL}</i>), e o <b>Giroscópio</b> não mudou. Uma coisa muda com a mira acesa no modo <b>Virtual</b>: o jogo deixa de receber o giro daquele controle como giroscópio e passa a recebê-lo só pelo analógico direito, para a câmera não andar em dobro. O quanto um gesto anda e o «Ignorar tremor até» ficam na tela <b>Calibrar sensores de movimento</b>.</li>
     <li><b>A dica do Giroscópio muda quando a {ROTULO_DA_MIRA_VIRTUAL} está acesa</b> naquele controle, como você escolheu: passa a dizer <i>«{DICA_DO_GIRO_COM_A_MIRA}»</i> Com ela apagada, continua a de sempre, e cada controle diz a sua.</li>
     <li><b>No Modo Nativo o botão «{ROTULO_DA_MIRA_VIRTUAL}» fica cinza e não grava</b>, como você escreveu: <i>"A exceção do nativo todo o resto deve ter mira Virtual"</i>. Com o <b>Sony DualSense</b> e o <b>Xbox</b> ele funciona, no USB e no BT, nos quatro controles. O «Só enquanto eu segurar» e o «Inverter» entraram na tela <b>Calibrar sensores de movimento</b>.</li>
+    <li><b>Na Navegação, a {ROTULO_DA_MIRA_VIRTUAL} acesa move o cursor.</b> Virar aquele controle anda o ponteiro, com a mesma sensibilidade, o mesmo «Ignorar tremor até», o «Só enquanto eu segurar» e o «Inverter». Vale nos quatro controles, no USB e no BT, e dois controles com a mira acesa somam o movimento. A dica do <b>Giroscópio</b> passa a dizer <i>«{DICA_DO_GIRO_NO_CURSOR}»</i></li>
+    <li><b>Com o Giroscópio desligado, o cartão não diz mais que o giro está indo para o jogo.</b> E no <b>Modo Nativo</b> a <b>Barra de luz</b> mostra a cor que está no controle, e não mais «Jogo»: quem pinta a barra continua sendo o Hefesto.</li>
+    <li><b>Os botões cinza avisam o leitor de tela</b>: o «{ROTULO_DA_MIRA_VIRTUAL}» no Modo Nativo e o «Nativo» do microfone no BT são anunciados como indisponíveis. Na tela, nada mudou de lugar.</li>
     <li><b>O quarto botão do alto-falante voltou</b> — <b>{ROTULO_TUDO_NO_CONTROLE}</b> —, como você pediu: <i>"Gostaria de voltar o botão o 4 mas acho que quebraria o layout vertical. Na real temos que encaixar ele. Mas fazer isso certo com mockup antes."</i> Ele manda todo o som do PC para o alto-falante daquele controle e deixa o PC em silêncio. Vale para um controle por vez: o último clique decide, e clicar no de outro controle passa o som para ele. Para caber sem o cartão crescer, os dois de baixo dividem a mesma linha — um é o espelho do outro — e o rótulo do <b>Alto-falante</b> ficou da altura do rótulo do <b>Microfone</b>.</li>
     <li><b>«TV» virou «PC» nos botões do alto-falante</b>, como você decidiu: quem usa fone ou monitor não tem televisão. Os três de antes passaram a dizer <b>{ROTULO_SO_OS_EFEITOS}</b>, <b>{ROTULO_EFEITOS_MAIS_O_PC}</b> e <b>{ROTULO_NADA_NO_CONTROLE}</b>, e o que cada um faz não mudou.</li>
     <li><b>O «?» do Microfone diz o que o 🎙 faz hoje</b>: ele liga o retorno, e você se ouve como o jogo te ouve. A frase de antes dizia que ele calava o microfone e apagava a luz vermelha, e isso deixou de ser verdade em 21/09 — quem cala é o botão do próprio controle.</li>
@@ -4731,7 +4750,11 @@ def _conferir(doc):
     #     controle, com a dica dela inteira, e NASCENDO APAGADO: a mira acesa no
     #     desenho parado diria que ela liga sozinha. MORDE: tire o `off` do
     #     chip, ou troque a dica, e o gerador para.
-    miras = re.findall(r'<button class="([^"]*)" data-gesto="mira"[^>]*title="([^"]*)"',
+    #     O `off` MORA NO INVÓLUCRO desde 24/09/2026 (A-MIRA-NA-NAVEGACAO-01):
+    #     o botão ficou com o cinza e o `aria-disabled`, e um elemento aceita
+    #     UM alvo.
+    miras = re.findall(r'<span class="chip-da-mira([^"]*)" data-campo="mira-ligada"[^>]*>'
+                       r'<button class="sw" data-gesto="mira"[^>]*title="([^"]*)"',
                        corpo)
     exigir(len(miras) == len(MESA),
            f"o chip «{ROTULO_DA_MIRA_VIRTUAL}» tem de estar nos {len(MESA)} "
@@ -4775,6 +4798,26 @@ def _conferir(doc):
         f'data-hef-classe="sem-mira" data-hef-quando="{MIRA_NO_NATIVO}">') == len(MESA),
         f"o grupo dos chips perdeu o endereço do cinza da Mira em algum dos "
         f"{len(MESA)} controles — no Nativo o chip continuaria clicável")
+    # 2e'''. O CINZA QUE O LEITOR DE TELA OUVE — A-MIRA-NA-NAVEGACAO-01,
+    #     24/09/2026. Os dois botões que ficam cinza nesta aba (a Mira no
+    #     Nativo, o «Nativo» do microfone no BT) levam o MESMO campo do cinza
+    #     com `data-hef-atributo="aria-disabled"`: o piloto deriva o atributo da
+    #     classe, no mesmo elemento. MORDE: tire o `data-hef-atributo` de um
+    #     dos dois e o gerador para.
+    exigir(len(re.findall(
+        r'<button class="sw" data-gesto="mira" data-campo="mira-fora" '
+        r'data-hef-alvo="classe" data-hef-classe="sem-mira" '
+        rf'data-hef-quando="{MIRA_NO_NATIVO}" data-hef-atributo="aria-disabled"',
+        corpo)) == len(MESA),
+        "o chip da Mira perdeu o `aria-disabled` em algum controle — no Nativo "
+        "ele fica cinza e o leitor de tela o anuncia como clicável")
+    exigir(len(re.findall(
+        r'<button data-gesto="mic-modo" data-mic-modo="nativo" '
+        r'data-campo="mic-nativo-fora" data-hef-alvo="classe" '
+        r'data-hef-classe="sem-nativo" data-hef-atributo="aria-disabled"',
+        corpo)) == len(MESA),
+        "o «Nativo» do microfone perdeu o `aria-disabled` em algum controle — "
+        "no BT ele fica cinza e o leitor de tela o anuncia como clicável")
 
     # 2f. OS DOIS DESLIZANTES (D-08 dela). Um por bloco, dois por card, e cada
     #     um diz de QUAL volume fala — sem o `data-volume` o gesto não sabe se

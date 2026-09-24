@@ -987,16 +987,24 @@ def test_o_chip_da_mira_esta_em_cada_controle_com_a_dica_dela() -> None:
     Um chip por cartão, os quatro assentos, ao lado dos dois de sensor; o
     conectado nasce APAGADO (o lugar vazio perde o `off` como todo alvo
     `classe` — o travessão não é `DESLIGADO` — e fica cinza pela folha).
+
+    NOTA DATADA — 24/09/2026 (A-MIRA-NA-NAVEGACAO-01): o aceso (`mira-ligada`,
+    com o `off`) desceu para o invólucro `chip-da-mira`, de `display:contents`,
+    e o botão ficou com o cinza do Nativo (`mira-fora`) e o `aria-disabled` —
+    um elemento aceita UM alvo. A régua lê os dois andares.
     """
     for abertura, miolo in _cartoes_da_bancada():
-        chips = re.findall(r'<button class="([^"]*)" data-gesto="mira"([^>]*)>'
-                           r'<span class="p"></span>([^<]*)</button>', miolo)
+        chips = re.findall(r'<span class="chip-da-mira([^"]*)"([^>]*)>'
+                           r'<button class="sw" data-gesto="mira"([^>]*)>'
+                           r'<span class="p"></span>([^<]*)</button></span>', miolo)
         assert len(chips) == 1, f"{abertura}: {len(chips)} chip(s) da mira"
-        classe, atributos, rotulo = chips[0]
+        classe, involucro, atributos, rotulo = chips[0]
         assert rotulo == "Mira Virtual", rotulo
         assert f'title="{_DICA_DELA}"' in atributos, atributos
-        assert 'data-campo="mira-ligada"' in atributos
-        assert 'data-hef-quando="DESLIGADO"' in atributos
+        assert 'data-campo="mira-ligada"' in involucro
+        assert 'data-hef-quando="DESLIGADO"' in involucro
+        assert 'data-campo="mira-fora"' in atributos
+        assert 'data-hef-atributo="aria-disabled"' in atributos
         if 'data-conectado="nao"' not in abertura:
             assert "off" in classe.split(), (
                 f"{abertura}: o chip da mira nasceu aceso — ela nasce desligada")
