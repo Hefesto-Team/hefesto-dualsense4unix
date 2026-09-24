@@ -29,10 +29,11 @@ Cinco dos 33 perfis dela têm gatilho configurado. Mostrar `—` ali era apagar 
 tela uma escolha que ela salvou.
 
 O QUE AINDA NÃO TEM DONO, e agora a lista é honesta: nada desta aba. O que muda
-é a NATUREZA do valor — ele é o que está **salvo no perfil**, não o que está
-**aceso no plástico**, e essas são coisas diferentes. Como o aparelho não
+é a NATUREZA do valor — ele é o que o **perfil manda ao controle**, não o que
+está **aceso no plástico**, e essas são coisas diferentes. Como o aparelho não
 devolve a segunda, a primeira é a melhor verdade disponível, e a tela diz de
-qual está falando.
+qual está falando. No lado que o perfil não escreve, o que ele manda é o
+nascimento do esquema (24/09/2026, ver `_o_que_o_controle_recebe`).
 """
 from __future__ import annotations
 
@@ -750,6 +751,101 @@ def _lembrar_o_aplicado(perfil: str, uniq: str, disco: str,
 def _do_rascunho(uniq: str, disco: str) -> dict[str, Any] | None:
     """O que esta sessão aplicou naquele gatilho, ou `None` se não aplicou nada."""
     return _RASCUNHO.get(_chave_do_rascunho(uniq, disco))
+
+
+# ---------------------------------------------------------------------------
+# O QUE O CONTROLE RECEBE — A-ABA-GATILHOS-DIZ-O-QUE-VAI-AO-CONTROLE-01, 24/09/2026.
+#
+# O DEFEITO, achado na conferência da O-MODO-FREESTYLE-03 e medido pelo clique
+# no piloto, num lar de mentira com os quatro controles (P1 e P2 no USB, P3 e P4
+# no BT): com o Sackboy ativo — perfil de jogo sem a seção `triggers` — a aba
+# dizia «Desligado» nos oito lados, e o daemon mandava «Rígido» aos quatro. A
+# pintura fazia `trig.get(disco) or {}`, e o `{}` virava `Off`; o esquema lê a
+# mesma ausência como o nascimento do gatilho (NASCE-LIGADO-01), e é o
+# nascimento que o `ProfileManager.apply` manda.
+#
+# A MENTIRA NÃO FICAVA NA TELA. Sem os ajustes do `Rígido`, a Força não tinha
+# alavanca; e o «Guardar» do P2, que lê a coluna, gravou `Off` nos dois lados do
+# override dele — na ativação seguinte, o controle perdia o gatilho que o
+# perfil dava.
+#
+# E A MEDIÇÃO ACHOU UMA SEGUNDA: o override era procurado pelo `uniq` cru. O
+# daemon publica doze hexa e o esquema aceita a chave em qualquer grafia (e a
+# canoniza ao carregar): um perfil editado à mão com `aa:bb:…` tinha o override
+# aplicado pelo daemon e ignorado pela aba.
+# ---------------------------------------------------------------------------
+
+
+def _chave_no_perfil(uniq: str) -> str:
+    """O `uniq` na grafia do mapa `controllers` — doze hexa, ou `""`.
+
+    O DONO É `core.sysfs_leds.norm_mac`, o MESMO que
+    `Profile._validate_controllers_keys` usa para canonizar a chave ao carregar.
+    Os dois lados passam por ele: o `uniq` da mesa e a chave crua do disco.
+    """
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    return norm_mac(str(uniq or "").strip()) or ""
+
+
+def _o_lado_que_o_perfil_cala(disco: str) -> dict[str, Any]:
+    """O gatilho com que o esquema preenche o lado que o perfil não escreve.
+
+    PERGUNTADO AO DONO, NUNCA COPIADO: é o `TriggersConfig()` de
+    `profiles/schema.py`, o mesmo que o `loader` põe no perfil que cala a seção
+    (ou um lado dela) e que o `ProfileManager.apply` manda ao controle. O modo e
+    os números não se digitam aqui; no dia em que o nascimento mudar, a aba
+    muda junto.
+
+    `{}` SÓ QUANDO O ESQUEMA NÃO ABRE — e aí o daemon também não abriria.
+    """
+    try:
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.profiles.schema import TriggersConfig
+
+        lado = getattr(TriggersConfig(), disco)
+        return {"mode": str(lado.mode), "params": list(lado.params)}
+    except Exception:
+        return {}
+
+
+def _o_que_o_controle_recebe(p: dict[str, Any] | None, uniq: str,
+                             disco: str) -> dict[str, Any]:
+    """O gatilho que aquele controle RECEBE daquele lado — `{"mode", "params"}`.
+
+    A ORDEM É A DO DAEMON, e é a única que a pintura e os gestos consultam:
+
+    1. o RASCUNHO — o que esta sessão aplicou, mais novo que o disco (é a ordem
+       da GTK: `_refresh_triggers_from_draft` repinta do draft);
+    2. o lado ESCRITO no override daquele controle —
+       `manager._controllers_to_specs` só põe no `OutputSpec` o lado que está
+       no `model_fields_set`, e o merge por campo do backend faz o resto;
+    3. o lado ESCRITO na seção global do perfil;
+    4. o NASCIMENTO do esquema, no lado que o perfil cala —
+       :func:`_o_lado_que_o_perfil_cala`.
+
+    SEM PERFIL NENHUM, `{}`, como antes desta sprint: sem perfil não há
+    silêncio do disco a ler, e o que o controle recebe aí o esquema não sabe.
+    """
+    seu = _do_rascunho(uniq, disco)
+    if seu:
+        return seu
+    if not p:
+        return {}
+    alvo = _chave_no_perfil(uniq)
+    controles = p.get("controllers")
+    for chave, dele in (controles.items() if isinstance(controles, dict) else ()):
+        if not alvo or _chave_no_perfil(str(chave)) != alvo or not isinstance(dele, dict):
+            continue
+        seus = dele.get("triggers")
+        escrito = seus.get(disco) if isinstance(seus, dict) else None
+        if isinstance(escrito, dict) and escrito:
+            return escrito
+    globais = p.get("triggers")
+    escrito = globais.get(disco) if isinstance(globais, dict) else None
+    if isinstance(escrito, dict) and escrito:
+        return escrito
+    return _o_lado_que_o_perfil_cala(disco)
 
 
 # ---------------------------------------------------------------------------
@@ -1915,8 +2011,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     """
     specs = _specs()
     p = perfil.ativo(ctx.state.get("active_profile"))
-    trig = (p.get("triggers") or {}) if p else {}
-    overrides = (p.get("controllers") or {}) if p else {}
     tem_endereco = _enderecos_da_pagina()
 
     # AS DUAS PODAS DO RASCUNHO, e elas rodam ANTES de qualquer leitura dele:
@@ -1926,7 +2020,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     _o_rascunho_e_de_quem_esta_na_mesa(
         {_chave_do_rascunho(str(c.get("uniq") or ""), "")[0] for c in ctx.conectados})
 
-    lados = {sig: _do_lado(trig.get(disco) or {}, specs) for sig, disco in LADOS.items()}
     #: O `pref` DE CADA CONTROLE, e ele é obrigatório para o `blocos`: a chave
     #: de `colunas` é traduzida por `pacotes.normalizar`, mas um SELETOR CSS vai
     #: cru para o `document.querySelector` do piloto — e a página endereça as
@@ -1941,20 +2034,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         entradas = c.get("inputs") or {}
         l2, r2 = entradas.get("l2_raw"), entradas.get("r2_raw")
 
-        #: O OVERRIDE POR CONTROLE VENCE O PERFIL, e é o que o produto faz —
-        #: `ControllerOverrides.triggers` existe no schema desde antes desta aba.
-        #:
-        #: E O RASCUNHO VENCE OS DOIS, que é a cura de 03/09/2026: o que ela
-        #: acabou de aplicar é mais novo do que o que está gravado, e a tela tem
-        #: de mostrar o gatilho de AGORA. É a ordem da GTK —
-        #: `_refresh_triggers_from_draft` repinta do draft, não do perfil.
-        meu = overrides.get(uniq) or {}
-        seus = (meu.get("triggers") or {}) if isinstance(meu, dict) else {}
-        cfgs = {sig: (_do_rascunho(uniq, disco)
-                      or seus.get(disco) or trig.get(disco) or {})
+        #: O GATILHO DA COLUNA É O QUE O CONTROLE RECEBE, na ordem do daemon:
+        #: rascunho, override do controle, seção global e, no lado que o perfil
+        #: cala, o nascimento do esquema. Ver `_o_que_o_controle_recebe`.
+        cfgs = {sig: _o_que_o_controle_recebe(p, uniq, disco)
                 for sig, disco in LADOS.items()}
-        deste = {sig: (_do_lado(cfgs[sig], specs) if cfgs[sig] else lados[sig])
-                 for sig in LADOS}
+        deste = {sig: _do_lado(cfgs[sig], specs) for sig in LADOS}
 
         chip, plastico = _cabecalho_vivo(ctx, c)
         col: dict[str, object] = {
@@ -3505,20 +3590,15 @@ def _blocos_do_pronto(ctx: Contexto) -> dict[str, str]:
 
 
 def _modo_de_agora(ctx: Contexto, uniq: str, disco: str) -> str:
-    """O modo em que aquele gatilho está, na MESMA ordem que a tela pinta.
+    """O modo em que aquele gatilho está, pela MESMA função que a tela pinta.
 
-    Rascunho (o que esta sessão aplicou) → override do controle → seção global
-    do perfil → `Off`. Uma quinta cópia dessa ordem seria a quinta chance de ela
-    divergir da pintura; esta é a única que os gestos consultam.
+    Ele tinha a ordem escrita por conta própria (rascunho → override → seção
+    global → `Off`), e com ela os dois defeitos da pintura: o lado que o perfil
+    cala saía `Off` e o override de chave em outra grafia não era achado. A
+    ordem mora num lugar só, :func:`_o_que_o_controle_recebe`.
     """
-    seu = _do_rascunho(uniq, disco)
-    if seu:
-        return str(seu.get("mode") or "Off")
     p = perfil.ativo(ctx.state.get("active_profile")) or {}
-    meu = (p.get("controllers") or {}).get(uniq) or {}
-    seus = (meu.get("triggers") or {}) if isinstance(meu, dict) else {}
-    cfg = seus.get(disco) or (p.get("triggers") or {}).get(disco) or {}
-    return str(cfg.get("mode") or "Off")
+    return str(_o_que_o_controle_recebe(p, uniq, disco).get("mode") or "Off")
 
 
 def _ajustes_da_coluna(forma: dict[str, Any], sigla: str, modo: str) -> list[int]:
