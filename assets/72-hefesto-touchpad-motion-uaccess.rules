@@ -153,8 +153,13 @@ ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ATTRS{id/vendor}=="0
 # fd, e fechar estes nós seria matar o gamepad inteiro (o daemon lê a entrada
 # por eles). Os pacotes de distro que não instalam o broker, e a máquina em
 # que ele foi desinstalado, ficam no mundo de antes, com a ACL da sessão. O
-# controle que conecta antes de o socket existir (o cabo no boot) nasce aberto
-# e o broker o fecha ao subir (`--fechar-tudo-e-sair`).
+# controle que conecta antes de o socket existir (o cabo no boot: o coldplug
+# roda antes do `sockets.target`) nasce aberto e o broker o fecha ao subir
+# (`--fechar-tudo-e-sair`). Por isso o `.service` tem de subir no BOOT
+# (`WantedBy=multi-user.target`, habilitado pelo install), e não só na
+# primeira conexão do daemon: até ela, o nó do cabo é de quem abrir primeiro
+# — a Steam que abre no login, por exemplo —, e um fd já aberto não se fecha
+# com `chmod`.
 #
 # O `jsN` dos sensores de movimento casa aqui também, e a `80-motion-joydev-
 # hide.rules`, que corre depois, o põe em `MODE="0000"` — ela continua dona.
