@@ -2335,7 +2335,7 @@ class PyDualSenseController(IController):
 
     @property
     def primary_uniq(self) -> str | None:
-        """MAC normalizado do controle PRIMÁRIO (None se sem serial/offline).
+        """MAC do dono do posto de P1: o primário, ou quem a vaga espera (None sem serial).
 
         FEAT-DSX-CONTROLLER-IDENTITY-01: identidade universal do controle —
         a mesma usada pelo `discover_dualsense_evdevs` (uniq do evdev) e pelo
@@ -2348,7 +2348,7 @@ class PyDualSenseController(IController):
         jogador secundário NO PRÓPRIO controle do primário. Com None, o guard
         adia o spawn até o MAC real resolver — como a docstring sempre prometeu.
         """
-        return self._key_to_uniq(self._primary_key) if self._primary_key else None
+        return self._uniq_do_dono_do_posto()
 
     # --- compat: `_ds` == handle primário -------------------------------
 
@@ -3644,7 +3644,7 @@ class PyDualSenseController(IController):
         Primário = 1ª chave de inserção ainda presente (`next(iter(...))`).
         Controles novos entram no fim, então nunca roubam o primário de um já
         conectado; se o primário cai, promove o próximo mais antigo. Chamado sob
-        `_io_lock`.
+        `_io_lock`. A vaga com o jogo aberto é de `_quem_senta_no_posto`.
 
         COOP-QUE-NAO-DESMONTA-01 / E2(a) — **com UMA exceção à regra da 1ª
         chave**: o controle que ERA o primário e voltou dentro de
@@ -3666,11 +3666,11 @@ class PyDualSenseController(IController):
         prev = self._primary_key
         retomada = self._posto_reservado_de_volta()
         if retomada is not None:
-            self._primary_key = retomada
+            self._primary_key, self._posto_vago_de = retomada, None
             self._primario_deposto = None
             logger.info("primario_retomou_o_posto", key=retomada)
         elif self._primary_key is None or self._primary_key not in self._handles:
-            self._primary_key = next(iter(self._handles), None)
+            self._primary_key = self._quem_senta_no_posto()
         if self._primary_key is None or self._primary_key == prev:
             return
         # E1: o co-op precisa SOLTAR o node do controle que virou primário
@@ -3971,7 +3971,7 @@ class PyDualSenseController(IController):
     def read_state(self) -> ControllerState:
         # INPUT vem SEMPRE do controle PRIMÁRIO (`self._ds`). Emulação de
         # mouse/teclado/gamepad é, portanto, single-controller por construção.
-        ds = self._ds
+        ds = self._ds if self._posto_vago_de is None else self._ds_depois_da_vaga()
         # BUG-DAEMON-NO-DEVICE-FATAL-01: quando offline, devolve snapshot
         # neutro em vez de levantar. Daemon segue rodando o poll_loop e
         # publica estado vazio para CLI/GUI/IPC.
@@ -7510,6 +7510,117 @@ class PyDualSenseController(IController):
         except ValueError:
             logger.warning("trigger_mode_fora_do_enum_mantendo_raw", mode=mode)
             return mode
+
+    # --- a vaga do posto de P1 (O-ASSENTO-GUARDADO-NAO-ANDA-02) ----------
+    #
+    # MORA NO FIM DA CLASSE pela razão do `ESTADO_DE_CARGA` logo abaixo: o mapa
+    # de canais cita este arquivo por linha, e as três edições lá em cima (o
+    # `primary_uniq`, o `_recompute_primary` e o `read_state`) são líquidas em
+    # zero linhas de propósito.
+
+    #: A key do primário que caiu e cujo posto ESPERA por ele; None fora da
+    #: vaga. Default de CLASSE: a suíte monta backend por `__new__`.
+    _posto_vago_de: str | None = None
+    #: Quem responde se o posto do primário que caiu espera por ele
+    #: (`set_espera_do_posto`). None = ninguém pendurou, e vale a regra de
+    #: sempre: o próximo mais antigo assume na hora.
+    _espera_do_posto: Callable[[str], bool] | None = None
+
+    def set_espera_do_posto(self, pergunta: Callable[[str], bool] | None) -> None:
+        """Pendura quem decide se o posto do primário que caiu ESPERA por ele.
+
+        `D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO`, por delegação dela. Quem
+        pendura é o co-op (`CoopManager._pendurar_a_espera_do_posto`), no mesmo
+        ponto em que pendura o aviso de troca de primário: é ele quem sabe se
+        cada controle tem o próprio vpad. A pergunta roda SOB o `_io_lock`, na
+        thread do `connect()` ou do `read_state()` — só memória, sem I/O.
+        """
+        with self._io_lock:
+            self._espera_do_posto = pergunta
+
+    def _uniq_do_dono_do_posto(self) -> str | None:
+        """O MAC do dono do posto de P1: o primário, ou quem a vaga espera.
+
+        É o que o `primary_uniq` responde. Durante a vaga, o vpad do P1 continua
+        sendo DO P1: o rumble e a cor que o jogo manda para ele miram o endereço
+        do P1 ausente e são descartados com log (BROADCAST-PROIBIDO-01), em vez
+        de cair em broadcast nos três que ficaram; a máscara dele segue com
+        ele; e o co-op não senta o P1 como secundário quando ele volta.
+        """
+        chave = self._primary_key or self._posto_vago_de
+        return self._key_to_uniq(chave) if chave else None
+
+    def _quem_senta_no_posto(self) -> str | None:
+        """Quem ocupa o posto de P1 que ficou vazio — ou None, se ele ESPERA.
+
+        Chamado pelo `_recompute_primary`, sob o `_io_lock`, quando o primário
+        não está na mesa.
+
+        **A DECISÃO (24/09/2026, por delegação dela,
+        `D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO`):** o jogo também espera a carta
+        1. Com o P1 fora dentro do prazo, o P2 virava primário na hora e passava
+        a dirigir o vpad do jogador 1 do jogo enquanto a lâmpada e a tela
+        diziam 2 — um número que a lâmpada mostra e o jogo não segue, o defeito
+        que a STEAM-NO-FISICO-01 curou. Agora o posto fica VAGO: o vpad do P1
+        segue de pé e parado (o `read_state` devolve o neutro), o P2 continua no
+        vpad 2, e quem chega de volta dentro do prazo retoma o posto pelo
+        caminho de sempre (`_posto_reservado_de_volta`).
+
+        Vaga só quando as duas partes dizem que sim:
+
+        - **a reserva do posto** (`_primario_deposto`, `PRIMARIO_RESERVA_SEC`, no
+          relógio único `relogio_do_prazo`) — passado o prazo, vale a NUM-01 e
+          o próximo mais antigo assume;
+        - **a pergunta pendurada** (`set_espera_do_posto`): o co-op de pé, o jogo
+          com a autoridade e o lugar dele guardado na mesa. Sem pergunta, ou
+          com ela dizendo não, é a regra de sempre — e é o gesto dela de
+          desligar um controle e seguir com o outro, fora do co-op.
+
+        Nunca deixa a mesa sem ninguém à toa: sem handle nenhum não há vaga a
+        guardar (o posto fica vazio porque ninguém está na mesa).
+        """
+        reserva = self._primario_deposto
+        pergunta = self._espera_do_posto
+        if reserva is not None and pergunta is not None and self._handles:
+            chave = reserva[0]
+            uniq = self._key_to_uniq(chave)
+            if uniq is not None and chave not in self._handles:
+                try:
+                    espera = bool(pergunta(uniq))
+                except Exception as exc:  # a pergunta nunca derruba a eleição
+                    logger.warning("posto_do_p1_pergunta_falhou", err=str(exc))
+                    espera = False
+                if espera:
+                    if self._posto_vago_de != chave:
+                        self._posto_vago_de = chave
+                        logger.info(
+                            "posto_do_p1_espera", key=chave, transporte=self._transport
+                        )
+                    return None
+        if self._posto_vago_de is not None:
+            logger.info("posto_do_p1_liberado", key=self._posto_vago_de)
+            self._posto_vago_de = None
+        return next(iter(self._handles), None)
+
+    def _ds_depois_da_vaga(self) -> pydualsense | None:
+        """O handle do P1 para o `read_state` enquanto o posto está vago.
+
+        A vaga acaba em três momentos, e nenhum deles mexe em `/dev/input`: o
+        prazo passa, a mesa se refaz (gente nova, o «Renumerar agora») ou o jogo
+        solta a autoridade. O `connect()` só roda a cada ~30 s com a mesa
+        parada, então quem confere é o `read_state` — o tique que decide o que o
+        vpad do P1 recebe, na mesma thread de executor do `connect()`. Custo
+        durante a vaga: o `_io_lock` e uma pergunta de memória por tique; fora
+        dela, uma comparação com None.
+        """
+        with self._io_lock:
+            if self._primary_key is None and self._posto_vago_de is not None:
+                self._recompute_primary()
+            elif self._primary_key is not None:
+                # Alguém sentou por fora da eleição (o `_ds.setter` da suíte):
+                # a vaga acabou, e o tique não paga mais o `_io_lock` por ela.
+                self._posto_vago_de = None
+            return self._ds
 
 
 #: O nibble ALTO do byte de bateria (`status[0]`), traduzido — BATERIA-PARADA-01.

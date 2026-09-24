@@ -613,7 +613,7 @@ class CoopManager:
             return
         fn(self.ceder_ao_primario)
         self._backend_avisado = ctrl
-        logger.debug("coop_aviso_de_primario_ligado")
+        self._pendurar_a_espera_do_posto(ctrl)
 
     def ceder_ao_primario(self, anterior: str | None, novo: str | None) -> None:
         """O controle `novo` virou o primário — solte-o AGORA, antes do retarget.
@@ -2547,6 +2547,53 @@ class CoopManager:
 
     # Alias semântico para o shutdown do daemon.
     stop_all = disable
+
+    # -- a vaga do posto de P1 (O-ASSENTO-GUARDADO-NAO-ANDA-02) ---------
+    # No fim da classe pela razão dos imports do F1-REMAPEAR logo abaixo: o
+    # mapa de canais cita os métodos desta classe por número de linha.
+
+    def _pendurar_a_espera_do_posto(self, ctrl: Any) -> None:
+        """A segunda metade do `_garantir_aviso_de_primario`: a pergunta da vaga.
+
+        Pendurada no MESMO ponto do aviso de troca de primário e pela mesma
+        razão: este manager nasce sob demanda, e é ele quem sabe se cada
+        controle tem o próprio vpad. Backend sem `set_espera_do_posto` (dublê,
+        legado) segue com a regra de sempre — o próximo assume na hora.
+        """
+        pendurar = getattr(ctrl, "set_espera_do_posto", None)
+        if callable(pendurar):
+            pendurar(self.o_posto_do_p1_espera)
+        logger.debug("coop_aviso_de_primario_ligado")
+
+    def o_posto_do_p1_espera(self, uniq: str) -> bool:
+        """O posto do P1 que caiu ESPERA por ele? — a decisão de 24/09/2026.
+
+        `D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO`, por delegação dela: com o P1
+        fora dentro do prazo, o vpad do jogador 1 fica parado à espera dele e o
+        P2 continua no vpad 2. São três as decisões dela que já diziam isso —
+        *o primário espera a carta 1* e *o Hefesto manda no número, sempre*
+        (23/09), e a linha 17, *os outros três não trocam de número*.
+
+        O backend pergunta sob o `_io_lock` (`_quem_senta_no_posto`), então as
+        três perguntas são de memória:
+
+        1. **o co-op está de pé** (`should_be_active`): cada controle tem o
+           próprio vpad. Fora do co-op o outro controle é a RESERVA e assume na
+           hora — é o gesto dela de desligar um e seguir jogando com o outro;
+        2. **o jogo está com a autoridade** (o sinal pegajoso da R-04): sem
+           jogo, o dono do posto de P1 também navega o PC (a aba Navegação), e
+           parar o posto tiraria o mouse de quem ficou por até 30 s sem nenhum
+           jogo do outro lado para seguir o número;
+        3. **o lugar dele espera na mesa**
+           (`ControllerIdentityRegistry.o_lugar_espera`): o prazo, a gente nova
+           que refaz a mesa e o «Renumerar agora» são do registro, o mesmo dono
+           do número que a tela e a lâmpada mostram.
+        """
+        if not self.should_be_active() or not self._jogo_com_a_autoridade():
+            return False
+        registry = getattr(self._daemon, "identity_registry", None)
+        pergunta = getattr(registry, "o_lugar_espera", None)
+        return callable(pergunta) and bool(pergunta(uniq))
 
 
 # F1-REMAPEAR (13/09/2026): o import da troca de botões mora AQUI, depois da

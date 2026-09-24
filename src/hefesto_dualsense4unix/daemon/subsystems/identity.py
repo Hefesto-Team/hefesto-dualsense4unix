@@ -382,12 +382,12 @@ def prazo_do_lugar_guardado() -> float:
     fechava na hora, na tela, e nas lâmpadas no batimento seguinte. E o
     RELÓGIO também é um só, e anda na suspensão (:func:`relogio_do_lugar_guardado`).
 
-    **O que o lugar guardado NÃO muda**, medido antes de mudar: o jogo. O vpad
-    de quem ficou não é recriado (``coop.planejar_a_ordem`` só exige cartas em
-    ordem, e um buraco na carta continua em ordem), e com o jogo aberto o SDL
-    não renumera quem ficou. Com o P1 fora, o backend passa o vpad do
-    P1 ao próximo controle na hora (COOP-QUE-NAO-DESMONTA-01), e isso segue
-    igual: o jogo nunca fica sem o controle de quem ficou.
+    **O jogo segue o lugar guardado.** O vpad de quem ficou não é recriado
+    (``coop.planejar_a_ordem`` só exige cartas em ordem, e um buraco continua
+    em ordem), e com o jogo aberto o SDL não renumera quem ficou. Com o P1 fora
+    e o jogo aberto, o vpad do P1 fica parado à espera dele e o P2 segue no
+    vpad 2 (O-ASSENTO-GUARDADO-NAO-ANDA-02, :meth:`o_lugar_espera`); sem jogo,
+    o backend passa o vpad do P1 ao próximo na hora, como sempre.
 
     Import tardio pela razão de sempre deste módulo: ele não carrega o backend
     (e o ``pydualsense``) só por ser importado.
@@ -2198,6 +2198,42 @@ class ControllerIdentityRegistry:
                 logger.debug("identity_fila_salva", ordem=payload[ORDER_FIELD])
         except Exception as exc:
             logger.debug("identity_save_falhou", err=str(exc))
+
+    # ------------------------------------------------------------------
+    # O JOGO ESPERA O LUGAR GUARDADO (O-ASSENTO-GUARDADO-NAO-ANDA-02)
+    # ------------------------------------------------------------------
+    # No fim da classe porque o mapa de canais cita este arquivo por linha.
+
+    def o_lugar_espera(self, uniq: str | None) -> bool:
+        """O lugar de ``uniq`` ainda está na mesa? — ligado, ou guardado no prazo.
+
+        É a pergunta que o posto de P1 faz ao registro, pelo co-op
+        (``CoopManager.o_posto_do_p1_espera``), quando o primário cai com o
+        jogo aberto: enquanto o lugar dele espera, o vpad do P1 fica parado e
+        ninguém dirige o jogador 1 do jogo no lugar dele
+        (``D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO``). O registro é o dono da
+        resposta porque é o dono do número que a tela e a lâmpada mostram: o
+        prazo, a gente nova que refaz a mesa e o «Renumerar agora» já moram
+        aqui, e o vpad passa a seguir os três sem uma regra a mais.
+
+        **LIGADO CONTA.** O backend vê a queda no ``connect()`` e o registro só
+        no tique lento (``sync_connected``, ~2 s); nesse vão o registro ainda o
+        tem na mesa, e a resposta certa é *"espera"*. No tique, o lugar vira
+        guardado — ou não, e a vaga acaba: identidade volátil não guarda lugar
+        (MODO-01), e gente nova refaz a mesa.
+
+        Leitura pura, sem I/O: o backend pergunta sob o ``_io_lock`` dele, a
+        mesma hierarquia do provider de cor.
+        """
+        if not uniq or not isinstance(uniq, str):
+            return False
+        key, _persistable = self._chave(uniq)
+        if not key:
+            return False
+        with self._lock:
+            if key not in self._ordem:
+                return False
+            return key in self._connected or key in self._guardados_locked()
 
 
 def make_auto_output_provider(
