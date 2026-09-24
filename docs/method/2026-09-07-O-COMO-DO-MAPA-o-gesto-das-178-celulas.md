@@ -105,7 +105,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 12. Clique na linha do P2 e refaça nele a mesma rodada, do ouvido encostado até a volta ao botão de cima.
 13. Encoste o ouvido no P3 e depois no P4 e confirme que os dois ficaram mudos o tempo todo.
 
-**Passa quando.** No P1 e no P2 sai o som curto depois do arrasto, a música sai só no controle com «Tudo no Controle e Nada no PC» aceso — e a TV cala —, e o controle emudece com «Tudo no PC e Nada no Controle», com a música de volta na TV. A pílula continua ATIVO nos quatro botões. O P3 e o P4 ficam mudos do começo ao fim.
+**Passa quando.** No P1 e no P2 sai o som curto depois do arrasto, a música sai só no controle com «Tudo no Controle e Nada no PC» aceso — e a TV cala —, e o controle emudece com «Tudo no PC e Nada no Controle», com a música de volta na TV. A pílula continua ATIVO nos três botões da rodada. O P3 e o P4 ficam mudos do começo ao fim.
 
 **Por controle.**
 
@@ -114,7 +114,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No BT, e é TESTEMUNHA: você não toca nele. Se ele tocar junto com o P1, o comando pegou mais de um controle, e isso é achado.
 * **P4** — No BT, e é a segunda testemunha. Mesmo gesto do P3: ouvido encostado, nenhum clique.
 
-**A armadilha.** «Tudo no Controle e Nada no PC» leva a saída do computador inteira para aquele controle, e é por isso que a TV não precisa mais ser abaixada pelo controle remoto dela: ela cala sozinha. Mas a saída é UMA — vale para um controle por vez, e o último clique decide. A rodada passa por «Tudo no PC e Nada no Controle» e termina no botão de cima, e os dois devolvem a música à TV; se a rodada parar no quarto, o computador continua tocando só no controle. O som curto de confirmação não sai se outro ainda estiver tocando: solte o deslizante e espere antes do próximo arrasto. A pílula ATIVO não quer dizer que sai som — ela diz que o canal daquele controle existe e que ninguém calou o ♪, e é por isso que não muda com «Tudo no PC e Nada no Controle». Se aparecer «Saída muda» ao lado dela, o canal daquele controle está mudo no sistema, e o silêncio não é do Hefesto. Com um fone plugado no controle o som vai para o fone e o alto-falante cala — tire o fone antes. E o degrau: esta célula já chegou a «o aparelho obedeceu», com o seu ouvido; o que esta rodada confere é que ele continua obedecendo nos quatro botões de hoje.
+**A armadilha.** «Tudo no Controle e Nada no PC» leva a saída do computador inteira para aquele controle, e é por isso que a TV não precisa mais ser abaixada pelo controle remoto dela: ela cala sozinha. Mas a saída é UMA — vale para um controle por vez, e o último clique decide. A rodada passa por «Tudo no PC e Nada no Controle» e termina no botão de cima, e os dois devolvem a música à TV; se a rodada parar no quarto, o computador continua tocando só no controle. O som curto de confirmação não sai se outro ainda estiver tocando: solte o deslizante e espere antes do próximo arrasto. A pílula ATIVO não quer dizer que sai som — ela diz que o canal daquele controle existe e que ninguém calou o ♪, e é por isso que não muda com «Tudo no PC e Nada no Controle». Se aparecer «Saída muda» ao lado dela, o canal daquele controle está mudo no sistema, e o silêncio não é do Hefesto. Com um fone plugado no controle o som vai para o fone e o alto-falante cala — tire o fone antes. E o degrau: esta célula já chegou a «o aparelho obedeceu», com o seu ouvido; o que esta rodada confere é que ele continua obedecendo com a fileira de hoje; o «Efeitos do Jogo e Áudio do PC no Controle» se mede na célula da rota.
 
 ---
 
@@ -747,7 +747,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.saida_dedicada @ cabo`
 
-**O que isto prova.** Prova que cada controle do USB tem uma saída de som PRÓPRIA — uma por controle, com o número certo —, que o exame do Hefesto conta as placas de som dos dois, e que o «Tudo no Controle e Nada no PC» de cada cartão escolhe essa mesma saída com um clique.
+**O que isto prova.** Prova que cada controle do USB tem uma saída de som PRÓPRIA — uma por controle, com o número certo —, que o exame do Hefesto conta as placas de som dos dois, e que o «Tudo no Controle e Nada no PC» de cada cartão põe o som do computador naquele controle, e só nele, com um clique.
 
 **Onde olhar.** Na aba Sistema, na seção «O exame de hoje»: a linha que começa com «áudio presente», que conta as placas de som dos controles no USB; a que começa com «regra áudio-off», que diz se o microfone e o fone deles estão liberados — as duas são cortadas na tela, então pare o mouse em cima para ler a frase inteira —; e a que começa com «Som do sistema», que diz por onde o som do computador está saindo. Fora do Hefesto, a lista de saídas das configurações de Som do sistema, onde cada controle tem a sua saída «Alto-falante do Controle N», com o número do jogador. E, na aba Controles, o bloco Alto-falante de cada cartão, com o botão «Tudo no Controle e Nada no PC» — «PC», nos botões, é a saída do computador; na bancada, a TV.
 
@@ -765,10 +765,10 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 10. Clique na aba Sistema e confira que a linha que começa com «Som do sistema» diz, em poucos segundos, que o som sai em «Alto-falante do Controle 2».
 11. Devolva a saída do sistema para a TV e confira que a música voltou para ela e que o P1 e o P2 emudeceram.
 12. Clique na aba Controles, abra o cartão do P2 e clique em «Tudo no Controle e Nada no PC», no bloco Alto-falante dele.
-13. Confira que a música sai só pelo P2 e que, nas configurações de Som do sistema, a saída escolhida passou a ser a que começa com «Alto-falante do Controle 2».
+13. Confira que a música sai só pelo P2 e que, nas configurações de Som do sistema, a saída escolhida passou a ser uma placa DualSense — no USB o botão escolhe a placa de som do próprio controle, e não o «Alto-falante do Controle 2».
 14. Clique em «Efeitos do Jogo no Controle, Áudio do PC no PC», no bloco do P2, e confira que a música voltou para a TV.
 
-**Passa quando.** A linha «áudio presente» conta os 2 controles do USB e a da regra de áudio diz que eles estão liberados. Escolhida a saída «Alto-falante do Controle 1», a música sai só no P1; escolhida a do 2, só no P2; a aba Sistema diz para onde o som foi; e, devolvida a saída para a TV, os dois emudecem. E o «Tudo no Controle e Nada no PC» do P2 escolhe sozinho a mesma saída «Alto-falante do Controle 2», com a música só no P2, e o botão de cima a devolve à TV. O P3 e o P4 ficam mudos.
+**Passa quando.** A linha «áudio presente» conta os 2 controles do USB e a da regra de áudio diz que eles estão liberados. Escolhida a saída «Alto-falante do Controle 1», a música sai só no P1; escolhida a do 2, só no P2; a aba Sistema diz para onde o som foi; e, devolvida a saída para a TV, os dois emudecem. E o «Tudo no Controle e Nada no PC» do P2 põe a música só no P2 com um clique, pela placa de som dele, e o botão de cima a devolve à TV. O P3 e o P4 ficam mudos.
 
 **Por controle.**
 
@@ -777,7 +777,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No BT, e é TESTEMUNHA. Não entra na conta do exame e fica mudo o tempo todo.
 * **P4** — No BT, e é a segunda testemunha. Mesma conferência do P3.
 
-**A armadilha.** As frases do exame são cortadas, e no caso da regra de áudio o corte inverte o sentido: o que sobra ao lado do selo se lê como problema, e o «estão liberados» fica escondido — pare sempre o mouse em cima. As duas placas DualSense do USB têm o mesmo nome e não dizem qual é qual: é por isso que existe «Alto-falante do Controle N», e o que este teste mede é o número cair no controle certo. O número do nome só se renova com aquele controle em silêncio: se o «2» tocar no P1 logo depois de os jogadores trocarem de lugar, pare a música, espere uns segundos e escolha a saída de novo antes de reprovar. Deixe o P1 e o P2 no botão de cima: com «Efeitos do Jogo e Áudio do PC no Controle», o outro controle também receberia a música mandada ao primeiro, e o teste não diria mais de onde ela veio. O botão de cima só devolve à TV a saída que o próprio «Tudo no Controle e Nada no PC» levou: a que você escolheu pela lista do sistema, você devolve pela lista. Devolva a saída para a TV no fim — se esquecer, o computador continua tocando só no controle. E a prova desta célula parou em «montou», e está marcada como parcial.
+**A armadilha.** As frases do exame são cortadas, e no caso da regra de áudio o corte inverte o sentido: o que sobra ao lado do selo se lê como problema, e o «estão liberados» fica escondido — pare sempre o mouse em cima. As duas placas DualSense do USB têm o mesmo nome e não dizem qual é qual: é por isso que existe «Alto-falante do Controle N», e o que este teste mede é o número cair no controle certo. O número do nome só se renova com aquele controle em silêncio: se o «2» tocar no P1 logo depois de os jogadores trocarem de lugar, pare a música, espere uns segundos e escolha a saída de novo antes de reprovar. Deixe o P1 e o P2 no botão de cima: com «Efeitos do Jogo e Áudio do PC no Controle», o outro controle também receberia a música mandada ao primeiro, e o teste não diria mais de onde ela veio. O «Tudo no Controle e Nada no PC» não passa por esse nome: no USB ele escolhe a placa do próprio controle, onde o «Alto-falante do Controle N» também termina, e como as duas placas têm o mesmo nome, quem diz se ele acertou o P2 é o ouvido. O botão de cima só devolve à TV a saída que o próprio «Tudo no Controle e Nada no PC» levou: a que você escolheu pela lista do sistema, você devolve pela lista. Devolva a saída para a TV no fim — se esquecer, o computador continua tocando só no controle. E a prova desta célula parou em «montou», e está marcada como parcial.
 
 ---
 
