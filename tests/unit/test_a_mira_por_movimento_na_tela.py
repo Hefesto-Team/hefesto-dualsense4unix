@@ -583,13 +583,19 @@ def test_o_rascunho_grava_a_mira_da_peca_sem_apagar_o_resto() -> None:
 
 def _mesa_de_quatro_de_verdade(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, transporte: str,
-    perfil: Profile,
+    perfil: Profile, *, antes: Profile | None = None, hub: SensorHub | None = None,
 ) -> dict[str, _Vpad]:
     """O `Daemon` real, o P1 pelo `dispatch_gamepad` e os P2 a P4 pelo co-op,
-    todos girando o controle igual; o perfil decide quem mira."""
+    todos girando o controle igual; o perfil decide quem mira.
+
+    `antes` é o perfil do jogo ANTERIOR, ativado primeiro pelo mesmo gerente —
+    é o que mede o contágio de um jogo para o outro pelo caminho do produto.
+    """
     giros = {_P1: _GIRO, _P2: _GIRO, _P3: _GIRO, _P4: _GIRO}
-    hub = _hub(giros)
+    hub = hub or _hub(giros)
     daemon, servidor = _mesa_de_verdade(tmp_path, transporte, hub)
+    if antes is not None:
+        servidor.profile_manager.apply_movimento(antes)
     servidor.profile_manager.apply_movimento(perfil)
     gerente = co.CoopManager(daemon)
     vpads: dict[str, _Vpad] = {}
@@ -659,6 +665,99 @@ def test_a_peca_que_apagou_o_chip_nao_mira_pela_mira_do_perfil(
     vpads = _mesa_de_quatro_de_verdade(monkeypatch, tmp_path, "bt", perfil)
     assert _quem_mirou(vpads) == [_P2, _P3], (
         f"com o chip apagado no P1 e no P4, miraram {_quem_mirou(vpads)}")
+
+
+@pytest.mark.parametrize("transporte", ["usb", "bt"])
+def test_o_jogo_seguinte_nao_herda_a_mira_nem_o_giro_cortado(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, transporte: str
+) -> None:
+    """O CAMINHO-CONTAGIO-01 POR PEÇA, pela ATIVAÇÃO — e não pelo ajudante.
+
+    O jogo de ontem tinha o chip aceso no P3; o de hoje não tem mira nenhuma.
+    Nos quatro jogadores ninguém mira, e o giro do P3 VOLTA ao jogo pela janela
+    de motion: um filtro que guardasse a resposta de ontem deixaria o jogo de
+    hoje sem giroscópio naquele controle, calado e sem aviso.
+
+    A régua do motor (`test_o_perfil_sem_mira_por_peca_apaga_a_do_anterior`)
+    mede o `definir_por_peca` direto; esta mede o `apply_movimento`, que é quem
+    tem de chamá-lo no jogo sem mira.
+
+    MORDIDA: faça o `apply_movimento` só depositar o mapa, ou só sincronizar o
+    filtro, quando alguma peça mira — e este teste reprova.
+    """
+    ontem = _perfil_com_miras(aabbcc000003={"destino": "analogico_direito"})
+    hoje = Profile(name="sem mira", match=MatchAny(type="any"))
+    vpads = _mesa_de_quatro_de_verdade(
+        monkeypatch, tmp_path, transporte, hoje, antes=ontem)
+    assert _quem_mirou(vpads) == [], (
+        f"o jogo de hoje não tem mira e miraram {_quem_mirou(vpads)} — a mira "
+        f"do jogo de ontem contagiou")
+    janela = _janela_viva()
+    assert REGISTRO.filtrar(_P3, janela) is janela, (
+        "o jogo de hoje não tem mira e o P3 continua sem giroscópio no jogo — "
+        "o filtro ficou com a resposta do jogo de ontem")
+
+
+class _LeitorQueConta(_LeitorDoNo):
+    """O leitor do nó que CONTA as drenagens do acumulador de ângulo."""
+
+    def __init__(self, giro: tuple[float, float, float]) -> None:
+        super().__init__(giro)
+        self.drenagens = 0
+
+    def consume_angulo(self) -> tuple[float, float, float]:
+        self.drenagens += 1
+        return (0.0, 0.0, 0.0)
+
+
+def test_a_peca_que_apagou_o_chip_ainda_drena_o_angulo(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A DRENAGEM VEM ANTES DE TODO PORTÃO — inclusive o da peça.
+
+    Perfil com a mira no CURSOR (o destino que consome ÂNGULO), e o P4 com o
+    chip apagado. O P4 não mira, e o ângulo dele tem de ser DESCARTADO a cada
+    tique, como o dos outros três é consumido: guardado atrás do portão da
+    peça, ele cresceria enquanto o chip estivesse apagado e viraria um salto de
+    cursor no dia em que a peça voltasse a seguir o perfil — a armadilha do
+    acumulador atrás de um `return` cedo, que o docstring do motor já nomeia.
+
+    Conta as drenagens, não o efeito.
+
+    MORDIDA: ponha o `return` da peça que não mira ANTES da drenagem em
+    `gamepad.aplicar_o_movimento` e este teste reprova pelo P4.
+    """
+    from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
+
+    leitores: dict[str, _LeitorQueConta] = {}
+
+    def _abrir(uniq: str, node: Any) -> _LeitorQueConta:
+        leitores[uniq] = _LeitorQueConta(_GIRO)
+        return leitores[uniq]
+
+    todos = (_P1, _P2, _P3, _P4)
+    hub = SensorHub(
+        motion_factory=_abrir,
+        touch_factory=lambda uniq, node: _LeitorDoNo((0.0, 0.0, 0.0)),
+        gamepad_factory=lambda uniq, node: _LeitorDoNo((0.0, 0.0, 0.0)),
+        descobrir_motion=lambda: {u: Path(f"/dev/input/event-{u}") for u in todos},
+        descobrir_touch=dict,
+        descobrir_gamepad=dict,
+        auto_manutencao=False,
+    )
+    hub._watch = SimpleNamespace(poll=lambda: False)
+    perfil = Profile(
+        name="mesa no cursor",
+        match=MatchAny(type="any"),
+        movimento=ProfileMovimentoConfig(destino="mouse"),
+        controllers={"aabbcc000004": ControllerOverrides(
+            movimento=ProfileMovimentoConfig(destino="nenhum"))},
+    )
+    _mesa_de_quatro_de_verdade(monkeypatch, tmp_path, "bt", perfil, hub=hub)
+    drenagens = {u: (leitores[u].drenagens if u in leitores else 0) for u in todos}
+    assert drenagens[_P2] >= 1, f"nem a peça que mira drenou — régua cega: {drenagens}"
+    assert drenagens[_P4] == drenagens[_P2], (
+        f"a peça de chip apagado não descartou o ângulo: {drenagens}")
 
 
 # ---------------------------------------------------------------------------
@@ -781,6 +880,42 @@ def test_o_chip_apagado_vence_a_mira_do_perfil_e_a_tela_ve(
     assert entradas[0]["mira"]["ligada"] is True, "o P2 calado não seguiu o perfil"
     assert entradas[1]["mira"]["ligada"] is False, "o chip apagado do P4 não pegou"
     assert REGISTRO.roteado(_P2) and not REGISTRO.roteado(_P4)
+
+
+def test_o_deslizante_da_peca_calada_segue_a_mira_do_perfil(
+    perfis: Path, tmp_path: Path
+) -> None:
+    """O perfil tem a mira na mesa, com a sensibilidade 9; ela mexe só no
+    «Ignorar tremor até» do P2, que nunca teve opinião. O P2 CONTINUA mirando,
+    com a sensibilidade do perfil — AGORA, e não só depois de o perfil
+    recarregar.
+
+    O VIVO E O DISCO DÃO A MESMA RESPOSTA: `mira.set` monta a peça por cima da
+    mira do perfil que grava, que é a mesma conta que o `_controllers_to_miras`
+    faz na próxima ativação. Duas contas diferentes seriam a mira apagando ao
+    mexer no deslizante e voltando sozinha na troca de perfil.
+
+    MORDIDA: monte o arranjo do `mira.set` sem a mesa
+    (`rot.arranjo_da_peca(None, secao)`) e este teste reprova.
+    """
+    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+
+    perfil = Profile(
+        name="Bancada",
+        match=MatchAny(type="any"),
+        movimento=ProfileMovimentoConfig(destino="analogico_direito", sensibilidade=9),
+    )
+    servidor = _servidor_com_perfil(tmp_path, perfil)
+    corpo = _mira_set(servidor, uniq=_P2, zona_morta_graus_s=20.0)
+    assert corpo["ligada"] is True and corpo["sensibilidade"] == 9, corpo
+    store = servidor.store
+    vivo = rot.da_peca(store, _P2, rot.ativo(store))
+    assert vivo is not None and (vivo.sensibilidade, vivo.zona_morta_graus_s) == (9, 20.0), (
+        f"mexer no tremor do P2 mudou a mira dele para {vivo}")
+    servidor.profile_manager.apply_movimento(load_profile("Bancada"))
+    assert rot.da_peca(store, _P2, rot.ativo(store)) == vivo, (
+        "a próxima ativação, lendo o disco, dá outra mira ao P2 que a do vivo")
 
 
 def test_em_modo_nativo_a_resposta_diz_o_que_nao_alcanca(
