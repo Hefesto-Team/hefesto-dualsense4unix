@@ -985,8 +985,9 @@ PAR_DE_TESTE = (160, 220)
 #: ao vivo comigo. E se eu clicar em Parar ele para de testar"*. Sem pulso não
 #: há duração a declarar — quem termina o teste é o "Parar".
 #:
-#: A DICA DA TELA AINDA PROMETE MEIO SEGUNDO (`aba05.py`), e isso é dívida
-#: desta mesma leva: a frase publicada tem de deixar de falar em duração.
+#: A DICA DA TELA DEIXOU DE PROMETER MEIO SEGUNDO em 24/09/2026
+#: (AS-FRASES-QUE-A-BANCADA-ACHOU-01): o `?` do "Testar agora" (`aba05.py`)
+#: diz que o teste vai até o "Parar" e que o de outra coluna encerra este.
 _O_PULSO_SAIU = "07/09/2026 — o Testar virou estado; ver `_EM_TESTE`"
 
 #: O TESTE EM CURSO, para que o seguinte o CANCELE — 03/09/2026.
@@ -1259,7 +1260,7 @@ def _uniq(o: dict[str, Any]) -> str:
 
     `""` NÃO vira "todos": sem alvo o `rumble.set` faz BROADCAST, e um "Testar"
     sem dono sacudiria a mesa inteira. O desenho promete o contrário — *"Testar
-    faz aquele controle tremer meio segundo"*.
+    faz este controle tremer até o Parar"*.
 
     **ELE PASSOU A SABER A DIFERENÇA ENTRE DOIS FATOS — 05/09/2026, e a decisão
     é dela na `05-Q6`:** *"Parece erro. Não deveria ocorrer ajuste de gambiarra
@@ -1390,8 +1391,8 @@ def _mirar(ctx: Contexto, o: dict[str, Any], p: Any) -> str:
     mira FALHAVA e o gesto seguia adiante para o `rumble.set`, **que sem alvo
     escolhido é BROADCAST** (`ipc_handlers.py:4533`). O "Testar" da coluna do
     P2 sacudia os quatro controles, e a tela não dizia uma palavra. É o
-    contrário do que o desenho promete — *"Testar faz aquele controle tremer
-    meio segundo"* — e é pior que não fazer nada: faz na mesa inteira.
+    contrário do que o desenho promete — *"Testar faz este controle tremer até
+    o Parar"* — e é pior que não fazer nada: faz na mesa inteira.
 
     RECUSAR É MAIS HONESTO QUE ACERTAR POR ACASO: quando a mira não vai, nada
     é mandado e a frase diz por quê. O par `_minha_vez()`/`_mirar()` continua na
