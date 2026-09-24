@@ -2436,7 +2436,7 @@ class HomeActionsMixin(WidgetAccessMixin):
         # `test_a_palavra_do_cadeado_e_a_que_ela_ja_leu` cobra as duas iguais.
         lock_check.set_tooltip_text(
             "O perfil ativo continua valendo mesmo quando você abre outro "
-            "jogo. Desmarque para o Hefesto voltar a escolher sozinho."
+            "jogo. Desligue para o Hefesto voltar a escolher sozinho."
         )
         lock_check.connect("toggled", self._on_home_autoswitch_lock_toggled)
         self._home_autoswitch_lock = lock_check

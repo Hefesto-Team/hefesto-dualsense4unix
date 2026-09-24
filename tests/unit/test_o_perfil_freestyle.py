@@ -614,3 +614,62 @@ def test_o_topo_diz_freestyle(semeadura_ligada: None) -> None:
 
     ctx = Contexto(state={"active_profile": None, "controllers": []})
     assert topo(ctx)["perfil"] == "Freestyle"
+
+
+class _PonteDoRodape:
+    """O bastante para o «Salvar Perfil», e nada mais frouxo que a real."""
+
+    def __init__(self) -> None:
+        self.chamadas: list[tuple[str, tuple[Any, ...]]] = []
+
+    def apply_draft_detalhado(self, payload: dict[str, Any]) -> tuple[bool, None]:
+        self.chamadas.append(("apply_draft_detalhado", (payload,)))
+        return True, None
+
+
+def _ctx_sem_perfil() -> Any:
+    """O daemon não diz quem está ativo, e a sessão está vazia."""
+    from hefesto_dualsense4unix.interface.pacotes import Contexto
+
+    return Contexto(state={"connected": True, "active_profile": None},
+                    mesa=[], conectados=[], estados={})
+
+
+def test_o_salvar_sem_perfil_ativo_grava_no_freestyle(semeadura_ligada: None) -> None:
+    """Sem perfil valendo, o Salvar grava onde o boot restauraria: o Freestyle.
+
+    Antes ele recusava (*"salvar: não há perfil ativo. Escolha um na aba
+    Perfis."*), e ela teria de ir à aba Perfis ativar o perfil de fora do jogo
+    para voltar e salvar. A dica do botão diz o mesmo nome.
+
+    MORDE: tire o `o_perfil_de_fora_do_jogo()` de `rodape.perfil_do_salvar` e
+    o gesto volta a recusar.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import rodape, topo
+
+    loader.load_all_profiles()
+    arquivo = profiles_dir() / loader.ARQUIVO_DO_PADRAO
+    antes = arquivo.read_bytes()
+    ctx = _ctx_sem_perfil()
+
+    rodape.salvar(ctx, {}, _PonteDoRodape())
+
+    assert json.loads(arquivo.read_text(encoding="utf-8"))["name"] == "Freestyle"
+    assert [c.read_bytes() for c in sorted(
+        (profiles_dir() / loader.HISTORICO_DIR_NAME / loader.SLUG_DO_PADRAO).glob("*.json")
+    )] == [antes], "o Salvar não guardou a versão de antes no histórico"
+    assert "no perfil Freestyle" in topo(ctx)["rodape.salvar"]
+
+
+def test_sem_freestyle_no_disco_o_salvar_continua_recusando(semeadura_ligada: None) -> None:
+    """Sem o arquivo (ela o apagou), o gesto não inventa perfil: recusa dizendo."""
+    from hefesto_dualsense4unix.interface.pacotes import rodape, topo
+
+    loader.load_all_profiles()
+    (profiles_dir() / loader.ARQUIVO_DO_PADRAO).unlink()
+    ctx = _ctx_sem_perfil()
+
+    with pytest.raises(ValueError, match="não há perfil ativo"):
+        rodape.salvar(ctx, {}, _PonteDoRodape())
+    assert "no perfil ativo" in topo(ctx)["rodape.salvar"]
+    assert list(profiles_dir().glob("*.json")) == []

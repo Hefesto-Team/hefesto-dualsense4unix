@@ -390,8 +390,13 @@ def salvar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     ESCREVE NO DISCO DELA. É o único gesto desta leva que escreve, e por isso
     ele exige perfil ativo em vez de escolher um: gravar no perfil errado é o
     tipo de estrago que não se desfaz por engano.
+
+    SEM PERFIL ATIVO, GRAVA NO «FREESTYLE» — O-MODO-FREESTYLE-02, 24/09/2026.
+    Não é escolher um: nenhum perfil valendo quer dizer a sessão vazia e o
+    daemon calado, e é o Freestyle que o boot restaura nesse caso
+    (:func:`perfil_do_salvar`). A recusa fica para a máquina sem ele no disco.
     """
-    nome = perfil.nome_do_ativo(ctx.state)
+    nome = perfil_do_salvar(ctx.state)
     # O `ctx` VAI JUNTO: é o que faz o Salvar gravar o que ESTÁ VALENDO, e não
     # o que já estava no disco.
     draft = _draft_do_ativo(nome, ctx)
@@ -405,6 +410,29 @@ def salvar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
                  origem="interface-nova")
     _recado(perfil.com_a_carona())
     return None
+
+
+def perfil_do_salvar(state: Any) -> str:
+    """Onde o «Salvar Perfil» grava: o perfil ativo, ou o de fora do jogo.
+
+    O-MODO-FREESTYLE-02, 24/09/2026. `perfil.nome_do_ativo` responde as duas
+    pernas (o daemon, depois a sessão no disco); quando as duas dizem "ninguém",
+    vale o que o boot restauraria — `loader.o_perfil_de_fora_do_jogo`, o
+    «Freestyle» quando ele está no disco. `""` quando nem ele está: a recusa do
+    gesto continua dizendo o que fazer.
+
+    NUNCA LEVANTA: a dica do rodapé pergunta o mesmo a cada tique.
+    """
+    nome = perfil.nome_do_ativo(state)
+    if nome:
+        return nome
+    try:
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.profiles.loader import o_perfil_de_fora_do_jogo
+
+        return o_perfil_de_fora_do_jogo() or ""
+    except Exception:
+        return ""
 
 
 @gesto("*", "exportar")

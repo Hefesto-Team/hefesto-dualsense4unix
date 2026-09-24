@@ -150,8 +150,13 @@ def test_a_palavra_de_ontem_tem_prazo() -> None:
     publicado = _rotulo_do_botao(onde.pagina("01-jogar.html", publicado=True).read_text())
     assert publicado != aba.CADEADO_ROTULO, (
         "a aba 01 foi publicada com «Modo Freestyle»: apague "
-        "`a01_jogar.CADEADO_ROTULO_ESPERANDO_A_SESSAO_DELA`, a isenção em "
-        "`test_o_cadeado_mora_no_canto_do_bloco`, e esta régua")
+        "`a01_jogar.CADEADO_ROTULO_ESPERANDO_A_SESSAO_DELA` e, no mesmo commit, "
+        "os ramos que a importam — a isenção de "
+        "`test_o_cadeado_mora_no_canto_do_bloco.test_a_palavra_e_a_da_janela_antiga`, "
+        "os 17 px de `test_o_cadeado_nao_empurrou_a_linha_do_titulo` e de "
+        "`test_a_trava_e_a_pilula_dos_sensores._altura_esperada`, o «maior que "
+        "hoje» de `test_o_botao_do_desenho_tem_letra_e_altura_maiores` —, a seção "
+        "da 01 no `mockup/DIVERGENCIAS.md` (o `--publicar` a tira), e esta régua")
     assert publicado == aba.CADEADO_ROTULO_ESPERANDO_A_SESSAO_DELA
 
 
@@ -162,6 +167,7 @@ _MEDE = """() => {
   const r = document.createRange(); r.selectNodeContents(texto);
   const jan = document.querySelector('.janela');
   return {fonte: parseFloat(cs.fontSize), altura: b.height,
+          rotulo: texto ? texto.textContent.trim() : '',
           escolha: parseFloat(getComputedStyle(document.documentElement)
                               .getPropertyValue('--h-escolha')),
           linhas: r.getClientRects().length,
@@ -211,10 +217,21 @@ def test_o_botao_do_desenho_tem_letra_e_altura_maiores(
 
     MORDE: devolva o `height:17px`/`font-size:10.5px` ao `.cadeado` do
     `aba01.py`, regere o desenho, e esta régua reprova.
+
+    O PRAZO — O-MODO-FREESTYLE-02: "maior que hoje" só se mede enquanto a
+    publicada disser a palavra de ontem. Depois do `--publicar 01` as duas são a
+    mesma página, e a régua passa a conferir que o desenho CHEGOU inteiro.
     """
+    from hefesto_dualsense4unix.interface.pacotes import a01_jogar as aba
+
     desenho, hoje = as_duas_paginas["desenho"], as_duas_paginas["publicada"]
-    assert desenho["fonte"] > hoje["fonte"], (desenho, hoje)
-    assert desenho["altura"] > hoje["altura"], (desenho, hoje)
+    if hoje["rotulo"] == aba.CADEADO_ROTULO_ESPERANDO_A_SESSAO_DELA:
+        assert desenho["fonte"] > hoje["fonte"], (desenho, hoje)
+        assert desenho["altura"] > hoje["altura"], (desenho, hoje)
+    else:
+        assert (desenho["fonte"], desenho["altura"]) == (hoje["fonte"], hoje["altura"]), (
+            f"a publicada diz {hoje['rotulo']!r} e não tem a letra e a altura do "
+            f"desenho: {hoje} contra {desenho}")
     # Menor que um botão de escolha: da altura dos chips de modo ele voltaria
     # a ler como um quinto modo (o motivo de ter subido ao canto em 08/09).
     assert desenho["altura"] < desenho["escolha"], desenho
