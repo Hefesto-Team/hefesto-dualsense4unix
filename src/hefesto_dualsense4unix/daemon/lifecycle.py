@@ -6010,6 +6010,58 @@ class Daemon:
         hz = garantir().hz_do_movimento(uniq)
         return float(hz) if isinstance(hz, (int, float)) and not isinstance(hz, bool) else None
 
+    def _garantir_sensor_hub(self) -> Any:
+        """O ``SensorHub`` da sessão — o MESMO do IPC —, para a mira do tique.
+
+        A-MIRA-POR-MOVIMENTO-NA-TELA-01, 23/09/2026. **A MIRA NUNCA ANDOU NO
+        PRODUTO, e a causa é esta ausência.** O motor
+        (`gamepad.aplicar_o_movimento`) pergunta
+        ``getattr(daemon, "_garantir_sensor_hub", None)`` e, sem resposta,
+        devolve os quatro eixos intactos. Quem chama o motor são os dois laços
+        do tique — `dispatch_gamepad(self, …)` e `CoopManager.forward_all` —, e
+        os dois passam ESTE objeto. O método só existia no `IpcServer`. Três
+        dublês de daemon, em dezessete réguas da MOVIMENTO-EM-QUALQUER-MASCARA-01,
+        penduravam `SimpleNamespace(_garantir_sensor_hub=lambda: hub)`: o dublê
+        tinha o que o daemon real não tem, e a mira ficou verde sem nunca mover
+        um eixo. A régua que monta o `Daemon` real é
+        `tests/unit/test_a_mira_por_movimento_na_tela.py`.
+
+        UM HUB SÓ POR SESSÃO, e é o do IPC: dois hubs abririam dois leitores no
+        mesmo nó «Motion Sensors» e duas máquinas de `EVIOCGRAB` brigando pelo
+        interruptor de sensor dela. O irmão logo acima
+        (`_movimento_para_a_central`) já pergunta ao mesmo dono.
+
+        SEM SERVIDOR (o instante antes de o IPC subir, ou um IPC que caiu) a
+        resposta é :data:`HUB_AUSENTE`: as duas torneiras dele dizem ``None``,
+        que para o motor é *"sem movimento desta peça"*, e os eixos saem como
+        entraram. Devolver ``None`` faria o motor tropeçar em
+        ``None.velocidade_do_movimento`` e registrar um aviso por tique — 60 por
+        segundo no journal dela.
+        """
+        garantir = getattr(self._ipc_server, "_garantir_sensor_hub", None)
+        if not callable(garantir):
+            return HUB_AUSENTE
+        return garantir()
+
+
+class _HubAusente:
+    """O hub que ainda não há: as duas torneiras do roteador respondem ``None``.
+
+    ``None`` é a resposta que o `SensorHub` já dá a *"não há leitor para esta
+    peça"* (`velocidade_do_movimento`, `angulo_do_movimento`), e é por isso que
+    o motor a trata sem um `if` a mais.
+    """
+
+    def velocidade_do_movimento(self, uniq: str) -> None:
+        return None
+
+    def angulo_do_movimento(self, uniq: str) -> None:
+        return None
+
+
+#: Um só, sem estado: é resposta, não recurso.
+HUB_AUSENTE = _HubAusente()
+
 
 __all__ = [
     "AUTO_DEBOUNCE_SEC",
