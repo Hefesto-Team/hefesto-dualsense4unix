@@ -19,7 +19,8 @@ recria menos. Só quem ficou atrás do buraco renasce, uma vez cada. **E quem j�
 está no boneco certo não sai para fechar o buraco de ninguém** — o item 3 da
 sprint: a varredura de todas as mesas de até quatro lugares achou 60 em que o
 plano de sufixo tiraria do jogo quem não precisava sair (um lugar ainda
-guardado atrás do buraco que venceu); esses casos ficam como eram.
+guardado atrás do buraco que venceu). Desde a O-ASSENTO-GUARDADO-NAO-ANDA-04
+esses fecham pela faixa de cartas (``test_os_buracos_em_faixa.py``).
 
 **O dublê do vpad tira o MAC como o produto PEDE** (``vpad_mac``, pela
 identidade do aparelho — ``MesaDoJogo._nascer_vpad``). O da bancada de queda o
@@ -41,9 +42,11 @@ AS MORDIDAS (24/09/2026, cada uma devolvida com o md5 conferido):
 - ``_fora_do_boneco`` devolvendo sempre 0 (a regra de antes, só a ordem)
   reprova :class:`TestPassadoOPrazoOJogoFechaOBuraco`,
   :class:`TestORenumerarAgoraFechaNaHora` e as linhas do plano;
-- sem a guarda de quem já está no boneco certo, reprovam
+- sem a guarda de quem já está no boneco certo, reprovavam
   ``test_quem_esta_no_boneco_certo_nao_sai_para_fechar_o_buraco_de_ninguem`` e
-  a varredura;
+  a varredura; com a faixa da O-ASSENTO-GUARDADO-NAO-ANDA-04 o plano sai o
+  mesmo sem ela em toda mesa de até quatro, e a mordida mora numa mesa de
+  cinco, em ``test_os_buracos_em_faixa.py``;
 - a carta do co-op lida da TELA (``numeros_da_mesa``) em vez da lâmpada
   reprova ``test_o_jogo_muda_junto_com_a_lampada_e_nao_antes`` nos seis casos
   com alguém atrás do buraco: o jogo correria na frente da lâmpada;
@@ -732,12 +735,13 @@ class TestOPlano:
 
         Recriar a partir da carta 2 fecharia o buraco do ``b`` e do ``c`` e
         poria o ``d`` (carta 5, no boneco 5) no lugar 3 do jogo — o do 4 que
-        ainda pode voltar. Fica como era.
+        ainda pode voltar. O ``d`` fica, e o buraco fecha pela faixa: só o
+        ``b`` e o ``c`` renascem (O-ASSENTO-GUARDADO-NAO-ANDA-04).
         """
         mesa = {0: "p1", 2: "b", 3: "c", 4: "d"}
         assert planejar_a_ordem(
             mesa, {"p1": 1, "b": 2, "c": 3, "d": 5}, fixos=self.FIXO
-        ) == ([], True)
+        ) == (["b", "c"], True)
 
     def test_sem_jogo_nada_muda(self) -> None:
         """Sem jogo, o que abrir depois enumera na ordem de nascimento."""
