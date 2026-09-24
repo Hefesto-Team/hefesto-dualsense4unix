@@ -33,6 +33,10 @@ AS MORDIDAS, uma por régua (arranque a cura, veja reprovar, devolva):
 * :func:`test_o_log_fora_de_ordem_nao_engana_o_desfecho` — troque o carimbo por
   "a última linha manda" e a tentativa antiga, escrita depois, apaga a
   desistência.
+* :func:`test_o_hub_em_comum_diz_as_entradas_pelo_dono` (conferência de 24/09)
+  — dê ao ``HubEmComum`` o caminho do kernel em vez do ``onde`` do hub, ou
+  deixe as ``entradas`` de baixo vazias, e ela reprova. As duas mordidas
+  passavam verdes antes dela.
 """
 
 from __future__ import annotations
@@ -262,6 +266,32 @@ def test_hub_de_uma_porta_nao_casa_as_interfaces_do_vizinho(tmp_path: Path) -> N
     _no(raiz, "3-4", vid="054c", pid="0ce6", nome="DualSense")
     _interface(raiz, "3-4.1:1.3", tripla=("03", "00", "00"))
     assert aparelho_da_porta("3-4", raiz_usb=raiz).hid_sem_driver is False
+
+
+def test_o_hub_em_comum_diz_as_entradas_pelo_dono(tmp_path: Path) -> None:
+    """O fator comum sai com o nome do hub e o das entradas de baixo, pelo dono.
+
+    A pergunta 1 da sprint é «é a porta, o cabo ou o hub?», e a resposta que a
+    topologia dá — o hub no caminho de duas entradas — tem de falar a mesma
+    língua das linhas de cima: quem leu «Frente (3-4.1.3)» numa linha não pode
+    ler só «3-4.1.3» na outra.
+    """
+    nomes = {"3-4": "Entrada 4", "3-4.1.3": "Frente", "3-4.4": "Atrás"}
+    laudo = storm_por_porta(
+        linhas=[
+            _linha("usb 3-4.1.3: device descriptor read/all, error -71"),
+            _linha("usb 3-4.4: device descriptor read/64, error -71"),
+        ],
+        hoje=HOJE,
+        raiz_usb=tmp_path / "sys",
+        nomear=nomes.get,
+    )
+    assert len(laudo.hubs_em_comum) == 1, laudo.hubs_em_comum
+    porque = laudo.hubs_em_comum[0].porque
+    assert porque.startswith(
+        "o hub em Entrada 4 (3-4) está no caminho de 2 entradas que deram -71 "
+        "(Frente (3-4.1.3), Atrás (3-4.4))"
+    ), porque
 
 
 # --- o que ficou parado --------------------------------------------------------
