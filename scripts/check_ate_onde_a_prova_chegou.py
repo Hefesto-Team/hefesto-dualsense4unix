@@ -182,6 +182,16 @@ CUSTOS = {
 #:   também, pedindo que a linha saia. Sem isso a lista vira propaganda no dia
 #:   seguinte à primeira cura.
 A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
+    "mira": (
+        "médio",
+        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio-com-ela.md",
+        "a Mira Virtual lê o giro, e `movimento.giroscopio@dualsense` está em MONTOU "
+        "nos dois transportes. A matriz da A-MIRA-POR-MOVIMENTO-NA-TELA-02 (24/09) "
+        "provou o analógico direito saindo dos dois controles virtuais (uhid e "
+        "uinput), no USB e no BT, do P1 ao P4, com o fd real; falta o jogo aberto "
+        "virar a câmera com o controle na mão dela, e a sensibilidade e o eixo "
+        "(yaw ou roll) que só a mão decide. É da MESA-DE-QUATRO-01",
+    ),
     "ganho-mic": (
         "médio",
         "2026-09-20-O-GANHO-DO-MIC-TEM-DONO-01.md",
