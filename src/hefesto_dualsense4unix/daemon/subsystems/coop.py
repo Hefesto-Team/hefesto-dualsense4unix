@@ -43,8 +43,10 @@ DAQUELE jogador (targeting por MAC via `apply_game_rumble`); o
 from __future__ import annotations
 
 import contextlib
+import threading
 import time
 from dataclasses import dataclass
+from itertools import pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -311,6 +313,12 @@ class CoopManager:
     exceção para não derrubar o poll loop.
     """
 
+    # STEAM-NO-FISICO-01: o que o `forward_all` lê a CADA tique tem default de
+    # CLASSE — a suíte monta gerente por `__new__`, sem `__init__`, e o tique
+    # não pode levantar nele. O `__init__` repete os dois por clareza.
+    _fio_do_laco: int | None = None
+    _ordem_pendente: bool = False
+
     def __init__(self, daemon: DaemonProtocol) -> None:
         self._daemon = daemon
         self._players: dict[str, _SecondaryPlayer] = {}
@@ -354,6 +362,30 @@ class CoopManager:
         # STEAM-NO-FISICO-01: identidade -> instante (monotonic) em que o
         # jogador ficou PRONTO para ganhar vpad e passou a esperar a ordem.
         self._pronto_desde: dict[str, float] = {}
+        # STEAM-NO-FISICO-01, as respostas dela de 23/09/2026 sobre a ORDEM
+        # (`D-2309-O-PRIMARIO-ESPERA-A-CARTA-1`, `D-2309-FORA-DE-ORDEM-SE-
+        # RECRIA-NA-HORA`): a mesa como o JOGO a vê — lugar do jogo -> chave
+        # (`_CHAVE_DO_P1` para o vpad do primário, o MAC para os secundários).
+        # Ver `planejar_a_ordem` e `_corrigir_a_ordem`.
+        self._mesa_do_jogo: dict[int, str] = {}
+        # chave -> ordem de nascimento do vpad, que é a ordem em que o jogo que
+        # abrir depois o enumera (o syspath do uhid, e o do uinput, crescem).
+        self._nascido_em: dict[str, int] = {}
+        self._nascimentos = 0
+        # O vpad do P1 da última vez que a mesa foi olhada: a troca de máscara,
+        # a promoção uhid e a suspensão também o recriam, e a mesa tem de saber.
+        self._vpad_do_p1_visto: Any = None
+        # A thread do poll loop (a do `forward_all`). A renumeração da aba
+        # Controles roda o `sync(force=True)` num worker, e recriar vpad fora
+        # do laço disputaria o `forward_all`: o worker só deixa o recado.
+        self._fio_do_laco: int | None = None
+        self._ordem_pendente = False
+        # Anti-laço: a assinatura da última recriação. A mesma desordem logo
+        # depois de recriar quer dizer que o modelo e o jogo discordam, e
+        # recriar de novo arrancaria o controle dela em laço.
+        self._ultima_recriacao: tuple[Any, ...] | None = None
+        self._ordem_travada = False
+        self._p1_espera_o_jogo = False
 
     # -- estado / gate --------------------------------------------------
 
@@ -686,6 +718,10 @@ class CoopManager:
         # cima deixa o ciclo com uma verdade só sobre quem está na mesa.
         self._recolher_os_cedidos()
         self._promote_pending()
+        # STEAM-NO-FISICO-01: a renumeração da aba Controles, o P1 que esperou
+        # o jogo fechar — a ordem se confere a cada `sync` (~2 s), antes do
+        # portão do ciclo cheio, porque trocar um número não muda /dev/input.
+        self._corrigir_a_ordem()
         retry_needed = self._retry_spawn
         self._retry_spawn = False
         grab_degraded = any(
@@ -1030,7 +1066,7 @@ class CoopManager:
         # adiamento nem chega a acontecer.
         self._prefetch_calibration(identity)
         if reader.grab_state == "held" and self._pode_nascer_na_ordem(player):
-            self._promote_player(player)
+            self._nascer_na_ordem(player)
         elif reader.grab_state == "held":
             logger.info(
                 "coop_player_espera_a_ordem",
@@ -1068,7 +1104,7 @@ class CoopManager:
             state = player.reader.grab_state
             if state == "held":
                 if self._pode_nascer_na_ordem(player):
-                    self._promote_player(player)
+                    self._nascer_na_ordem(player)
             elif state == "failed":
                 logger.warning(
                     "coop_player_grab_failed_drop",
@@ -1220,6 +1256,8 @@ class CoopManager:
             self._retry_spawn = True
             return
         player.vpad = vpad
+        # STEAM-NO-FISICO-01: o vpad sentou num lugar do jogo.
+        self._assentar(player.identity)
         # GYRO-01 (co-op): o gyro/touchpad do físico deste jogador flui pelo
         # espelho de report — um reader POR JOGADOR, no hidraw por-uniq.
         self._start_player_motion_reader(player)
@@ -1334,6 +1372,12 @@ class CoopManager:
         # Prazo estourado: a leitura ainda pode voltar depois (e o cache a
         # aproveita num respawn futuro), mas ESTE jogador nasce agora.
         self._calib_prazo.pop(identity, None)
+        # STEAM-NO-FISICO-01: o prazo estourado é resposta, e ela fica — sem a
+        # marca, a pergunta seguinte reagendava a leitura e devolvia «ainda
+        # não sei», e o vpad que renasce para o jogo ver a ordem esperaria mais
+        # um prazo inteiro sem controle. Uma leitura que chegue tarde entra no
+        # cache e vence a marca (o cache é olhado antes); o teardown a limpa.
+        self._calib_sem_leitura.add(identity)
         logger.warning("coop_calibracao_prazo_estourado", identity=identity)
         return True, None
 
@@ -1603,6 +1647,8 @@ class CoopManager:
         if player.vpad is not None:
             with contextlib.suppress(Exception):
                 player.vpad.stop()
+        # STEAM-NO-FISICO-01: o lugar dele no jogo ficou livre.
+        self._levantar(identity)
         # FEAT-COOP-PLAYER-LED-01: devolve ESTE controle ao padrão do perfil.
         # Best-effort: em hotplug-out o nó sysfs já sumiu junto com o controle
         # (nada a escrever); em teardown-com-respawn (node novo / retry de
@@ -2158,7 +2204,14 @@ class CoopManager:
         aqui, no tick (~10 ms) e não no sync (~2 s). O caminho é este e não o
         `sync` porque o jogador cedido já está com o físico solto: cada tick a
         mais com o vpad de pé é um tick a mais de mesa desequilibrada.
+
+        STEAM-NO-FISICO-01: é também quem diz QUAL é a thread do laço, e quem
+        cumpre o recado de ordem que um `sync` de worker deixou.
         """
+        self._fio_do_laco = threading.get_ident()
+        if self._ordem_pendente:
+            self._ordem_pendente = False
+            self._corrigir_a_ordem()
         self._recolher_os_cedidos()
         self._promote_pending()
         # F1-REMAPEAR (13/09/2026): a mesma troca do primário
@@ -2231,6 +2284,226 @@ class CoopManager:
                     pump()
             except Exception as exc:  # nunca derruba o poll loop
                 logger.warning("coop_forward_failed", evdev=player.evdev_path, err=str(exc))
+
+    # -- a ordem do jogo (STEAM-NO-FISICO-01) ---------------------------
+
+    def _jogo_com_a_autoridade(self) -> bool:
+        """O jogo está com a autoridade (o mesmo sinal STICKY da R-04)."""
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+            _autoridade_do_jogo,
+        )
+
+        return _autoridade_do_jogo(self._daemon)
+
+    def _no_fio_do_laco(self) -> bool:
+        """Estamos na thread do poll loop (ou ele ainda não rodou: dublês)?"""
+        fio = self._fio_do_laco
+        return fio is None or fio == threading.get_ident()
+
+    def _assentar(self, chave: str) -> None:
+        """Um vpad nasceu: ele toma um lugar no jogo.
+
+        Com o jogo aberto, o menor lugar livre (o `SDL_FindFreePlayerIndex`);
+        sem jogo, o fim da fila — o jogo que abrir depois enumera os vpads na
+        ordem em que nasceram.
+        """
+        if chave != _CHAVE_DO_P1:
+            # O P1 nasce no boot, antes de qualquer secundário: a mesa o
+            # conhece ANTES de sentar o primeiro deles.
+            self._acompanhar_o_p1()
+        self._levantar(chave)
+        self._nascimentos += 1
+        self._nascido_em[chave] = self._nascimentos
+        if self._jogo_com_a_autoridade():
+            lugar = 0
+            while lugar in self._mesa_do_jogo:
+                lugar += 1
+        else:
+            self._compactar()
+            lugar = len(self._mesa_do_jogo)
+        self._mesa_do_jogo[lugar] = chave
+
+    def _levantar(self, chave: str) -> None:
+        """O vpad de `chave` morreu: o lugar dele fica livre. Idempotente."""
+        for lugar, quem in list(self._mesa_do_jogo.items()):
+            if quem == chave:
+                del self._mesa_do_jogo[lugar]
+        self._nascido_em.pop(chave, None)
+
+    def _compactar(self) -> None:
+        """Sem jogo aberto, o lugar de cada vpad é a ordem em que ele nasceu."""
+        ordem = sorted(self._mesa_do_jogo.values(), key=self._nascido_em.__getitem__)
+        self._mesa_do_jogo = dict(enumerate(ordem))
+
+    def _acompanhar_o_p1(self) -> None:
+        """Senta, levanta ou re-senta o vpad do P1 conforme o objeto vivo hoje."""
+        atual = getattr(self._daemon, "_gamepad_device", None)
+        if atual is self._vpad_do_p1_visto:
+            return
+        self._vpad_do_p1_visto = atual
+        if atual is None:
+            self._levantar(_CHAVE_DO_P1)
+        else:
+            self._assentar(_CHAVE_DO_P1)
+
+    def _carta_da_chave(self, chave: str) -> int | None:
+        """A carta de quem está (ou vai estar) no lugar: o P1 é o primário."""
+        if chave != _CHAVE_DO_P1:
+            return self._numero_da_carta(chave)
+        primario = self._primary_identity()
+        if primario is None or primario.startswith("path:"):
+            return None
+        return self._numero_da_carta(primario)
+
+    def _nascer_na_ordem(self, player: _SecondaryPlayer) -> None:
+        """Dá o vpad a `player` — recriando ANTES quem ficaria fora de ordem.
+
+        Fora da thread do laço (o `sync` do worker da renumeração) nasce como
+        sempre nasceu e deixa o recado: o `forward_all` confere a ordem no
+        tique seguinte. Calibração ainda pendente também nasce como sempre —
+        o `_promote_player` adia sozinho, e recriar alguém para um jogador
+        que nem vai nascer agora seria arrancar controle por nada.
+        """
+        if not self._no_fio_do_laco():
+            self._promote_player(player)
+            self._ordem_pendente = True
+            return
+        if not self._calibration_pronta(player.identity)[0]:
+            self._promote_player(player)
+            return
+        self._corrigir_a_ordem(nascer=player)
+
+    def _corrigir_a_ordem(self, nascer: _SecondaryPlayer | None = None) -> None:
+        """Faz o jogo ver a carta: recria quem ficou fora de ordem, e nasce `nascer`.
+
+        As duas respostas dela de 23/09/2026, 22h, pela recomendada:
+
+        - **o controle virtual do PRIMÁRIO espera a carta 1**
+          (`D-2309-O-PRIMARIO-ESPERA-A-CARTA-1`). O vpad do P1 nasce no boot,
+          antes de o daemon saber qual controle é o primário — então «esperar»
+          é nascer de novo DEPOIS do vpad da carta 1, que é o que o jogo
+          enumera. Quem é o primário não muda: «controle novo nunca rouba o
+          posto» fica;
+        - **controle fora de ordem com o jogo aberto se recria na hora**
+          (`D-2309-FORA-DE-ORDEM-SE-RECRIA-NA-HORA`): a carta renumerada na
+          aba Controles, a carta menor que chega depois da maior, e o buraco
+          que um controle que saiu deixou para o próximo que chega.
+
+        **O LIMITE, e ele é a R-04 medida em 23/07:** recriar o vpad do P1 com
+        o jogo na autoridade mata aquele controle até o fim da sessão (a Steam
+        não reabre o hidraw dele) — a premissa «perde por cerca de um segundo»
+        não vale para ELE. Então o P1 fica parado enquanto o jogo manda, os
+        secundários se acertam entre si, e o P1 renasce no lugar quando o jogo
+        devolver a autoridade. O diário diz, uma vez por episódio.
+        """
+        if not self._no_fio_do_laco():
+            self._ordem_pendente = True
+            return
+        self._acompanhar_o_p1()
+        autoridade = self._jogo_com_a_autoridade()
+        if not autoridade:
+            self._compactar()
+        chaves_novas = [nascer.identity] if nascer is not None else []
+        cartas: dict[str, int] = {}
+        for chave in [*self._mesa_do_jogo.values(), *chaves_novas]:
+            carta = self._carta_da_chave(chave)
+            if carta is None:
+                # Sem carta não há ordem a obedecer (dublê, backend legado,
+                # primário sem MAC): o de sempre.
+                if nascer is not None:
+                    self._promote_player(nascer)
+                return
+            cartas[chave] = carta
+        recriar, inteira = planejar_a_ordem(
+            self._mesa_do_jogo,
+            cartas,
+            chaves_novas,
+            fixos=frozenset({_CHAVE_DO_P1}) if autoridade else frozenset(),
+            compacta=not autoridade,
+        )
+        if inteira != (not self._p1_espera_o_jogo):
+            self._p1_espera_o_jogo = not inteira
+            logger.info(
+                "coop_ordem_do_p1_espera_o_jogo"
+                if not inteira
+                else "coop_ordem_do_p1_voltou",
+                cartas={_rotulo(c): n for c, n in cartas.items()},
+            )
+        if recriar:
+            assinatura = (tuple(sorted(cartas.items())), tuple(recriar))
+            if assinatura == self._ultima_recriacao:
+                # A MESMA desordem logo depois de recriar: o modelo e o jogo
+                # discordam. Recriar de novo seria arrancar o controle dela em
+                # laço — fica parado, e o diário diz UMA vez.
+                if not self._ordem_travada:
+                    self._ordem_travada = True
+                    logger.warning(
+                        "coop_ordem_nao_convergiu",
+                        recriar=[_rotulo(c) for c in recriar],
+                    )
+                recriar = []
+            else:
+                self._ultima_recriacao = assinatura
+                logger.info(
+                    "coop_ordem_recriada",
+                    recriar=[_rotulo(c) for c in recriar],
+                    cartas={_rotulo(c): n for c, n in cartas.items()},
+                    jogo=autoridade,
+                )
+        elif not chaves_novas:
+            self._ultima_recriacao = None
+            self._ordem_travada = False
+        for chave in recriar:
+            self._derrubar_para_renascer(chave)
+        for chave in sorted([*recriar, *chaves_novas], key=cartas.__getitem__):
+            if chave == _CHAVE_DO_P1:
+                self._reerguer_o_p1()
+                continue
+            jogador = self._players.get(chave)
+            if jogador is not None and jogador.vpad is None:
+                self._promote_player(jogador)
+
+    def _derrubar_para_renascer(self, chave: str) -> None:
+        """Derruba SÓ o vpad de `chave`: o físico segue preso e escondido.
+
+        O leitor evdev, o grab e o esconderijo do broker ficam — o jogador
+        não sai da mesa, só o controle virtual dele renasce no lugar certo.
+        A ordem é a do `_teardown_player`: o espelho de movimento antes do
+        vpad, e o motor parado antes de o sink de FF morrer.
+        """
+        if chave == _CHAVE_DO_P1:
+            from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                stop_gamepad_emulation,
+            )
+
+            # Os mesmos dois `False` da troca de máscara: não é parada, é passo.
+            stop_gamepad_emulation(self._daemon, persist=False, release_grab=False)
+            self._acompanhar_o_p1()
+            return
+        jogador = self._players.get(chave)
+        if jogador is None or jogador.vpad is None:
+            return
+        if jogador.motion_reader is not None:
+            with contextlib.suppress(Exception):
+                jogador.motion_reader.stop()
+            jogador.motion_reader = None
+        self._zerar_rumble_do_jogador(chave)
+        with contextlib.suppress(Exception):
+            jogador.vpad.stop()
+        jogador.vpad = None
+        self._levantar(chave)
+
+    def _reerguer_o_p1(self) -> None:
+        """O vpad do P1 nasce de novo, com a máscara e o caminho de antes."""
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+            start_gamepad_emulation,
+        )
+
+        # `origin="profile"`: é manutenção interna, não gesto dela (ORIGEM-
+        # QUE-MENTE-01) — e `flavor=None` lê a máscara da sessão, intacta.
+        if not start_gamepad_emulation(self._daemon, origin="profile"):
+            logger.warning("coop_ordem_o_p1_nao_voltou")
+        self._acompanhar_o_p1()
 
     # -- ciclo de vida --------------------------------------------------
 
@@ -2445,6 +2718,83 @@ def numero_do_nome_do_primario(daemon: Any, fallback: int = 1) -> int:
         return fallback
 
 
+# STEAM-NO-FISICO-01: a ordem do jogo, pura. Mora no fim do módulo pela mesma
+# razão dos imports do F1-REMAPEAR acima: o mapa de canais cita os métodos da
+# classe por número de linha. Os métodos só leem estes nomes quando rodam.
+
+#: A chave do vpad do PRIMÁRIO na mesa do jogo. Não é um MAC de propósito: o
+#: vpad do P1 é um só enquanto o primário troca de aparelho
+#: (`ceder_ao_primario`), e a carta dele é sempre a do primário de agora.
+_CHAVE_DO_P1 = "<p1>"
+
+
+def _rotulo(chave: str) -> str:
+    return "p1" if chave == _CHAVE_DO_P1 else chave
+
+
+def _a_mesa_depois(
+    mesa: Mapping[int, str],
+    recriar: Sequence[str],
+    nascer: Sequence[str],
+    cartas: Mapping[str, int],
+    *,
+    compacta: bool,
+) -> list[str]:
+    """As chaves na ordem de lugar depois de derrubar `recriar` e nascer o resto."""
+    restam = {lugar: c for lugar, c in mesa.items() if c not in recriar}
+    if compacta:
+        restam = dict(enumerate(c for _lugar, c in sorted(restam.items())))
+    livre = 0
+    for chave in sorted([*recriar, *nascer], key=cartas.__getitem__):
+        while livre in restam:
+            livre += 1
+        restam[livre] = chave
+    return [c for _lugar, c in sorted(restam.items())]
+
+
+def _em_ordem(numeros: Sequence[int]) -> bool:
+    return all(a <= b for a, b in pairwise(numeros))
+
+
+def planejar_a_ordem(
+    mesa: Mapping[int, str],
+    cartas: Mapping[str, int],
+    nascer: Sequence[str] = (),
+    *,
+    fixos: frozenset[str] = frozenset(),
+    compacta: bool = False,
+) -> tuple[list[str], bool]:
+    """Quem recriar para o jogo ver as cartas em ordem — e se a ordem fecha inteira.
+
+    STEAM-NO-FISICO-01. ``mesa`` é lugar do jogo -> chave; ``cartas`` dá o
+    número de cada chave (as sentadas e as de ``nascer``). O modelo é o do
+    fonte do SDL, medido nesta sprint: um vpad que nasce toma o MENOR lugar
+    livre, e um que morre libera o dele. ``compacta`` é o caso sem jogo
+    aberto: o jogo que abrir depois enumera os vpads na ordem em que nasceram,
+    então quem renasce vai para o fim.
+
+    A escolha é pela MENOR perturbação, e ela tem uma forma só: recriar todo
+    mundo a partir de uma carta ``t`` (quem tem carta menor fica onde está).
+    Tenta-se o ``t`` mais alto primeiro — nenhuma recriação — e desce-se até a
+    mesa ficar em ordem; recriar todos sempre fecha. Carta repetida (registro
+    degenerado) conta como em ordem: não há ordem a impor entre as duas.
+
+    ``fixos`` são as chaves que não podem ser recriadas agora (o vpad do P1
+    com o jogo na autoridade, a R-04): elas ficam onde estão, a ordem é
+    conferida SEM elas, e o segundo valor diz se a mesa fechou inteira mesmo
+    assim.
+    """
+    sentados = [c for _lugar, c in sorted(mesa.items())]
+    limites = sorted({*(cartas[c] for c in sentados), *(cartas[c] for c in nascer)})
+    candidatos = [max(limites, default=0) + 1, *reversed(limites)]
+    for t in candidatos:
+        recriar = [c for c in sentados if cartas[c] >= t and c not in fixos]
+        depois = _a_mesa_depois(mesa, recriar, nascer, cartas, compacta=compacta)
+        if _em_ordem([cartas[c] for c in depois if c not in fixos]):
+            return recriar, _em_ordem([cartas[c] for c in depois])
+    return [], False
+
+
 __all__ = [
     "CoopManager",
     # R-22: público de propósito — o caminho do P1 (`gamepad`) compartilha o
@@ -2454,6 +2804,7 @@ __all__ = [
     # A-MESMA-LINGUA-01: o caminho do P1 (`gamepad`) pergunta o número do nome
     # AQUI, para que a fila continue com um dono só.
     "numero_do_nome_do_primario",
+    "planejar_a_ordem",
     "player_led_pattern",
     "resolve_player_numbers",
     # AVISO-FALSO-DO-COOP-01: a regra do aviso é pura e mora aqui, longe do
