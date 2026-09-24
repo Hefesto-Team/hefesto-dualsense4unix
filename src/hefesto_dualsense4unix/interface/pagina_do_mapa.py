@@ -53,7 +53,7 @@ import json
 import sys
 from typing import Any, NamedTuple
 
-from hefesto_dualsense4unix.interface import onde
+from hefesto_dualsense4unix.interface import caixa_da_janela, onde
 
 #: A ESPECIFICAÇÃO EXECUTÁVEL. Congelada por decisão: reescrevê-la reescreveria
 #: o ouro de 120 cenários, e apagaria o registro de como o motor falava em
@@ -306,6 +306,41 @@ ABRE_A_PORTA = """\
   };
 
 """
+
+
+#: ══ A CAIXA DA JANELA — 24/09/2026 ═════════════════════════════════════════
+#:
+#: A palavra dela, na página da sessão dos desenhos: *«Vira caixa da janela,
+#: rolando por dentro»*. Até aqui esta era uma página de DOCUMENTO — a
+#: `.pagina` com `max-width:1180px` (a largura das abas antes de 08/09) e a
+#: página inteira rolando: na TV dela, 1180 x 2195 ao lado de uma janela de
+#: 1600 x 808. O recuo e o tamanho vêm do dono comum das três páginas avulsas
+#: (`caixa_da_janela.moldura`), lidos do esqueleto das abas.
+#:
+#: O CABEÇALHO FICA E O RESTO ROLA, como na Calibrar e no «Mapa do controle».
+#: O `.corpo` vai até a borda da caixa — a barra de rolagem com ele — e o
+#: recuo do texto volta pelo `padding`, para nada mudar de lugar lá dentro.
+#: O fundo de dentro continua o `--color-paper` desta página: os painéis
+#: dela são `--color-paper-2`, e no fundo das abas eles sumiriam.
+CAIXA_DA_JANELA = (
+    "  /* A CAIXA DA JANELA — 24/09/2026, decisão dela: «vira caixa da janela,\n"
+    "     rolando por dentro». O recuo e o tamanho são os das abas (as três\n"
+    "     linhas no fim deste bloco); o cabeçalho fica e o `.corpo` rola. */\n"
+    "  body {\n"
+    "    margin: 0; background: #11121a; color: var(--color-ink);\n"
+    "    font-family: var(--font-corpo); font-size: var(--text-base); line-height: 1.55;\n"
+    "    -webkit-font-smoothing: antialiased;\n"
+    "    display: flex; flex-direction: column; align-items: center;\n"
+    "  }\n"
+    "  .pagina { background: var(--color-paper); border: 1px solid var(--color-paper-3);\n"
+    "            border-radius: 11px; overflow: hidden; display: flex; flex-direction: column;\n"
+    "            padding: var(--space-md) var(--space-sm) 0; }\n"
+    "  .pagina > .topo { flex: 0 0 auto; }\n"
+    "  .pagina > .corpo { flex: 1; min-height: 0; overflow-y: auto;\n"
+    "                     margin: 0 calc(-1 * var(--space-sm));\n"
+    "                     padding: 0 var(--space-sm) var(--space-lg); }\n"
+    + caixa_da_janela.moldura(caixa=".pagina")
+)
 
 
 EDICOES: tuple[Edicao, ...] = (
@@ -797,6 +832,39 @@ EDICOES: tuple[Edicao, ...] = (
             "depois do OK dela — parear escreve no rádio dela com quatro controles "
             "vivos em cima."
         ),
+    ),
+    # ═══ A CAIXA DA JANELA — 24/09/2026 (ver `CAIXA_DA_JANELA`) ═══════════
+    Edicao(
+        antes=(
+            "  body {\n"
+            "    margin: 0; background: var(--color-paper); color: var(--color-ink);\n"
+            "    font-family: var(--font-corpo); font-size: var(--text-base); "
+            "line-height: 1.55;\n"
+            "    -webkit-font-smoothing: antialiased;\n"
+            "  }\n"
+            "  .pagina { max-width: 1180px; margin: 0 auto; padding: var(--space-md) "
+            "var(--space-sm) var(--space-lg); }\n"
+        ),
+        depois=CAIXA_DA_JANELA,
+        porque=(
+            "AS-PAGINAS-AVULSAS-TEM-A-CAIXA-DA-JANELA-01, 24/09/2026, a palavra "
+            "dela: «Vira caixa da janela, rolando por dentro». A página tinha a "
+            "largura das abas de antes de 08/09 e rolava inteira (1180 x 2195 na "
+            "TV dela, contra a janela de 1600 x 808)."
+        ),
+    ),
+    Edicao(
+        antes='  </header>\n\n  <div class="modos" id="modos"></div>\n',
+        depois='  </header>\n\n  <div class="corpo">\n  <div class="modos" id="modos"></div>\n',
+        porque=(
+            "24/09/2026 — o `.corpo` que rola por dentro da caixa abre logo depois "
+            "do cabeçalho, que fica."
+        ),
+    ),
+    Edicao(
+        antes="  </footer>\n</div>\n\n<script>\n",
+        depois="  </footer>\n  </div>\n</div>\n\n<script>\n",
+        porque="24/09/2026 — e fecha depois do rodapé, que rola junto com o resto.",
     ),
 )
 
