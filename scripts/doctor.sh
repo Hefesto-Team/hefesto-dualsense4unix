@@ -5497,15 +5497,15 @@ GESTO_DE_REINICIAR_O_BROKER="sudo touch /run/hefesto-hidraw-broker/reinicio-sem-
 #: $2 = mtime do binário instalado (epoch; vazio = ilegível);
 #: $3 = o `NeedDaemonReload` do systemd para a unit ("yes"/"no"/vazio).
 _veredito_do_broker_em_memoria() {
-    local inicio="$1" binario="$2" recarregar="$3"
+    local inicio="$1" instalado="$2" recarregar="$3"
     if [[ "${recarregar}" == "yes" ]]; then
         warn "a unit do broker mudou no disco e o systemd ainda segue a de antes — rode: sudo systemctl daemon-reload && ${GESTO_DE_REINICIAR_O_BROKER}"
     fi
-    if [[ -z "${inicio}" || -z "${binario}" ]]; then
+    if [[ -z "${inicio}" || -z "${instalado}" ]]; then
         return
     fi
-    if (( binario > inicio )); then
-        warn "o broker em memória é de antes do binário instalado (subiu em $(date -d "@${inicio}" '+%d/%m %H:%M'), o binário é de $(date -d "@${binario}" '+%d/%m %H:%M')) — o código novo só vale depois de reiniciar, e este reinício não abre o físico: ${GESTO_DE_REINICIAR_O_BROKER}"
+    if (( instalado > inicio )); then
+        warn "o broker em memória é de antes do binário instalado (subiu em $(date -d "@${inicio}" '+%d/%m %H:%M'), o binário é de $(date -d "@${instalado}" '+%d/%m %H:%M')) — o código novo só vale depois de reiniciar, e este reinício não abre o físico: ${GESTO_DE_REINICIAR_O_BROKER}"
         return
     fi
     pass "o broker em memória é o binário instalado (subiu depois dele)"
@@ -5533,7 +5533,7 @@ _veredito_do_open_de_entrada() {
 #: As três medidas do veredito acima, lidas do systemd e do /proc. Separada
 #: para o veredito ser testável sem systemd.
 _medir_o_broker_em_memoria() {
-    local pid idade inicio="" binario recarregar
+    local pid idade inicio="" instalado recarregar
     pid="$(systemctl show -p MainPID --value hefesto-hidraw-broker.service 2>/dev/null || true)"
     if [[ "${pid}" =~ ^[0-9]+$ && "${pid}" -gt 0 ]]; then
         idade="$(ps -o etimes= -p "${pid}" 2>/dev/null | tr -d ' ' || true)"
@@ -5541,9 +5541,9 @@ _medir_o_broker_em_memoria() {
             inicio=$(( $(date +%s) - idade ))
         fi
     fi
-    binario="$(stat -c %Y /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker 2>/dev/null || true)"
+    instalado="$(stat -c %Y /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker 2>/dev/null || true)"
     recarregar="$(systemctl show -p NeedDaemonReload --value hefesto-hidraw-broker.service 2>/dev/null || true)"
-    _veredito_do_broker_em_memoria "${inicio}" "${binario}" "${recarregar}"
+    _veredito_do_broker_em_memoria "${inicio}" "${instalado}" "${recarregar}"
 }
 
 # BROKER-01 (Onda S — fd-injection): o broker root que esconde o hidraw

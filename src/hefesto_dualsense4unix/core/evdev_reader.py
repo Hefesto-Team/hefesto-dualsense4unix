@@ -400,8 +400,8 @@ def _nome_no_sysfs(caminho: str) -> str:
 _BTN_GAMEPAD = 0x130
 
 
-def _sysfs_tem_tecla(caminho: str, codigo: int) -> bool:
-    """O bitmap `capabilities/key` do sysfs tem o bit `codigo`?
+def _sysfs_tem_tecla(caminho: str, tecla: int) -> bool:
+    """O bitmap `capabilities/key` do sysfs tem o bit `tecla`?
 
     O kernel imprime o bitmap como palavras `unsigned long` em hexadecimal, da
     mais alta para a mais baixa, sem zeros à esquerda. Ilegível é True: na
@@ -418,7 +418,7 @@ def _sysfs_tem_tecla(caminho: str, codigo: int) -> bool:
     except OSError:
         return True
     bits = struct.calcsize("l") * 8
-    indice, deslocamento = divmod(codigo, bits)
+    indice, deslocamento = divmod(tecla, bits)
     palavras = list(reversed(palavras))
     if indice >= len(palavras):
         return False
