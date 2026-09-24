@@ -1298,7 +1298,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `combinacao.slot_jogador.estabilidade @ cabo`
 
-**O que isto prova.** Prova que tirar e devolver um controle do cabo pode remexer os números de jogador, mas que os quatro voltam exatamente aos números de antes.
+**O que isto prova.** Prova que tirar um controle do cabo e devolvê-lo em menos de trinta segundos não mexe no número de ninguém — nem durante a ausência — e que o que saiu volta com o dele.
 
 **Onde olhar.** Em três lugares. Na fita do topo do Hefesto, a linha que começa com «Selecionar:», onde cada controle é um chip com o número, a cor do plástico e a palavra USB ou BT. Na aba Conexões, seção «Gestão de Controles» (abre clicando no título), onde cada linha começa com «Sony», o «Player» e o número, a cor do plástico e USB ou BT. E nos aparelhos, a fileira de cinco lampadinhas brancas embaixo do touchpad: o número não se conta da esquerda para a direita, ele é o CONJUNTO aceso — jogador 1 é só a do meio; jogador 2 são a segunda e a quarta; jogador 3 são as duas das pontas e a do meio; jogador 4 são as quatro, com a do meio apagada.
 
@@ -1310,26 +1310,26 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 3. Anote também o que cada chip da fita do topo mostra: o número, a cor do plástico e a palavra USB ou BT.
 4. Olhe as cinco lampadinhas embaixo do touchpad dos quatro e confira que a figura de cada um bate com o número da tela.
 5. Puxe do PC a ponta do cabo do P2 — este é o que sai, e ele está no cabo.
-6. Olhe a fita na hora e anote o número que cada um dos três que ficaram mostra agora, reconhecendo cada um pela cor do plástico.
-7. Leia a lista da «Gestão de Controles» e anote os números dela também.
-8. Olhe as lampadinhas dos três que ficaram e anote a figura de cada um.
-9. Encaixe a ponta do cabo do P2 de volta, sem demorar.
+6. Olhe a fita na hora e confira que cada um dos três que ficaram mostra o mesmo número de antes, reconhecendo cada um pela cor do plástico.
+7. Leia a lista da «Gestão de Controles» e confira os números dela também.
+8. Olhe as lampadinhas dos três que ficaram e confira que a figura de cada um não mudou.
+9. Encaixe a ponta do cabo do P2 de volta, em menos de trinta segundos.
 10. Espere o chip dele reaparecer na fita.
 11. Leia de novo os quatro números, primeiro na fita e depois na lista.
 12. Olhe as lampadinhas dos quatro aparelhos.
 13. Compare tudo com o que você anotou nos passos 2, 3 e 4.
 14. Refaça os passos 5 a 13 puxando o cabo do P1 em vez do do P2, e devolvendo-o em menos de trinta segundos.
 
-**Passa quando.** A saída de um controle do cabo pode renumerar quem ficou — isso é o combinado, a ordem é a de conexão daquele momento e não um defeito. O que tem de acontecer é a volta: quando o que saiu é devolvido, os quatro voltam exatamente aos números que você anotou no começo. Nenhum controle fica com o número de outro, nenhum número aparece repetido, nenhum some, e a figura das cinco lampadinhas concorda com a tela nos quatro aparelhos.
+**Passa quando.** Enquanto o que saiu está fora, os três que ficaram mostram o mesmo número de antes — na fita, na lista e nas lampadinhas. Quando ele volta, os quatro estão exatamente nos números que você anotou no começo. Nenhum controle fica com o número de outro, nenhum número aparece repetido, e a figura das cinco lampadinhas concorda com a tela nos quatro aparelhos.
 
 **Por controle.**
 
-* **P1** — No cabo. Na primeira volta ele não se toca: anote o número dele antes, durante a ausência do P2 e depois, e escreva se ele mudou no meio. Na segunda volta é ELE que sai — puxe o cabo dele e devolva em menos de trinta segundos.
-* **P2** — No cabo, e é o primeiro a sair. Puxe a ponta do cabo dele do PC, olhe os outros três durante a ausência e devolva o cabo sem demorar. Ele tem de voltar com o número que tinha no passo 2.
-* **P3** — No rádio, e não se toca nele em volta nenhuma. É testemunha: anote o número dele antes, olhe durante a ausência do que saiu, e confira no fim. Enquanto um do cabo está fora, ele sobe um número — é a regra —, e tem de voltar ao dele quando o outro volta.
-* **P4** — No rádio, e também não se toca. Segunda testemunha, e é o último da fila, o que mais se mexe quando alguém de antes dele sai. Confira o número dele na tela e a figura das lampadinhas antes, durante e depois.
+* **P1** — No cabo. Na primeira volta ele não se toca: anote o número dele antes, durante a ausência do P2 e depois — tem de ser o mesmo nas três. Na segunda volta é ELE que sai — puxe o cabo dele e devolva em menos de trinta segundos.
+* **P2** — No cabo, e é o primeiro a sair. Puxe a ponta do cabo dele do PC, olhe os outros três durante a ausência e devolva o cabo em menos de trinta segundos. Ele tem de voltar com o número que tinha no passo 2.
+* **P3** — No rádio, e não se toca nele em volta nenhuma. É testemunha: anote o número dele antes, olhe durante a ausência do que saiu, e confira no fim. Ele continua P3 o tempo todo.
+* **P4** — No rádio, e também não se toca. Segunda testemunha, e é o último da fila. Confira o número dele na tela e a figura das lampadinhas antes, durante e depois: continua P4.
 
-**A armadilha.** Renumerar NÃO é defeito, e quem não souber disso reprova um produto que está fazendo o combinado: a ordem dos números é a ordem de conexão daquele momento, por decisão sua. O que reprova é não voltar — e quem sai e volta na mesma sessão recupera o lugar na fila de chegada, e com ele o número; não entra no fim. Segunda: o P1 tem uma regra a mais, a do primeiro controle, cujo posto fica guardado para ele só por trinta segundos depois que o Hefesto percebe a queda — por isso o passo 14 pede a volta dentro desse tempo; voltar depois disso é outra pergunta. Terceira: as cinco lampadinhas não se contam da esquerda para a direita — o número é o conjunto aceso, e quem lê «a terceira acesa» como jogador 3 reprova um produto certo. Quarta: a tela e a lâmpada podem discordar, e o motivo é um JOGO aberto: um jogo em co-op pode mandar o próprio número por cima, como a dica da linha «Jogador» da aba Iluminação avisa. A Steam aberta sozinha não mexe nas lâmpadas — medido —, e por isso o que a bancada exige aqui é nenhum jogo aberto. Quinta: olhe os outros três DURANTE a ausência, e não só no fim; já foi medido, no cabo, um controle mudar de número enquanto o vizinho estava fora e voltar ao certo depois — que é exatamente a regra funcionando. Sexta: o lado do RÁDIO desta linha nunca foi medido — se você fizer o mesmo gesto desligando um controle do rádio, o que sair dali é achado novo, não repetição.
+**A armadilha.** Passar do prazo. O lugar de quem sai fica guardado por trinta segundos, contados de quando o chip dele some da fita — vale para os quatro, e não só para o P1. Passado esse tempo sem ele voltar, a fila se fecha de propósito: quem vinha depois desce um número, na tela na hora e nas lampadinhas junto com a cor da barra. Por isso cada volta tem de caber em trinta segundos; o que sai e volta depois disso continua recuperando o dele, mas o meio do teste é outro. Segunda: as cinco lampadinhas não se contam da esquerda para a direita — o número é o conjunto aceso, e quem lê «a terceira acesa» como jogador 3 reprova um produto certo. Terceira: o número é do Hefesto, sempre — nem a Steam nem um jogo aberto mudam as lampadinhas; tela e lampadinhas discordando é achado. A dica da linha «Jogador» da aba Iluminação ainda diz que um jogo pode mandar o número por cima: essa frase caducou. Quarta: o lado do RÁDIO desta linha nunca foi medido — se você fizer o mesmo gesto desligando um controle do rádio, o que sair dali é achado novo, não repetição.
 
 ---
 
@@ -5812,26 +5812,26 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 3. Olhe as lampadinhas de cada um dos quatro aparelhos e confira que a figura bate com o número que a tela mostra.
 4. Anote em qual entrada USB do PC está o cabo do P1.
 5. Puxe o cabo do P1 de dentro do PC — do lado do PC, nunca do lado do controle.
-6. Olhe a fita enquanto ele está fora e anote o número com que cada um dos três que ficaram aparece.
-7. Encaixe esse mesmo cabo numa entrada USB DIFERENTE do PC, sem demorar.
+6. Olhe a fita enquanto ele está fora e confira que cada um dos três que ficaram continua com o número que você anotou.
+7. Encaixe esse mesmo cabo numa entrada USB DIFERENTE do PC, em menos de trinta segundos.
 8. Conte até dez, devagar, olhando a fita do topo.
 9. Leia o chip com o plástico do P1: tem de dizer P1 e terminar em USB.
-10. Confira que os outros três voltaram aos números que você anotou no passo 2.
+10. Confira que os outros três continuam com os números que você anotou no passo 2.
 11. Olhe as lampadinhas do P1 e confira que continuam no desenho do jogador 1.
 12. Repita os passos 4 a 11 com o cabo do P2, levando-o para uma terceira entrada USB.
 13. Abra a aba Conexões, clique no título «Gestão de Controles» e leia os quatro «Player N».
 14. Olhe as lampadinhas dos quatro aparelhos uma última vez e compare com o que você anotou no papel.
 
-**Passa quando.** Cada um dos dois controles do cabo volta com exatamente o mesmo número de jogador que tinha antes de trocar de entrada USB, na tela e nas lampadinhas do aparelho. No fim, os quatro têm os números do começo, e a contagem volta a «● 2 USB · 2 BT». Enquanto um cabo está fora, os que vêm depois dele descem um número e voltam quando ele volta — isso é o produto; o que reprova é o número do fim, não o do meio.
+**Passa quando.** Cada um dos dois controles do cabo volta com exatamente o mesmo número de jogador que tinha antes de trocar de entrada USB, na tela e nas lampadinhas do aparelho. Enquanto um cabo está fora, ninguém troca de número. No fim, os quatro têm os números do começo, e a contagem volta a «● 2 USB · 2 BT».
 
 **Por controle.**
 
 * **P1** — USB, e é o primeiro a mudar de entrada. Anote o número dele e a entrada USB antes de puxar o cabo. Tem de voltar como o mesmo jogador, com as mesmas lampadinhas acesas, numa entrada que ele nunca tinha visto.
 * **P2** — USB, e é o segundo a mudar de entrada. Mesmo gesto, uma entrada ainda diferente. Faça um de cada vez: com os dois cabos fora ao mesmo tempo você não sabe qual dos dois causou o que aparecer.
-* **P3** — BT, e é testemunha. Não encoste nele. O chip dele não pode sumir da fita. Enquanto o P1 está fora ele aparece como P2, e tem de voltar a P3 quando o P1 volta.
-* **P4** — BT, e é a segunda testemunha. Não encoste nele. Enquanto o P1 está fora ele aparece como P3; no fim, confira número e lampadinhas.
+* **P3** — BT, e é testemunha. Não encoste nele. O chip dele não pode sumir da fita, e ele continua P3 enquanto o P1 ou o P2 está fora.
+* **P4** — BT, e é a segunda testemunha. Não encoste nele. Continua P4 o tempo todo; no fim, confira número e lampadinhas.
 
-**A armadilha.** As cinco lampadinhas não se contam da esquerda para a direita — o número é o CONJUNTO aceso, e quem lê «a terceira lampadinha acesa» como jogador 3 reprova um produto que está certo. Segunda: a numeração nunca deixa buraco — enquanto um controle está fora, quem vem depois dele desce um número, na tela e nas lâmpadas, e volta quando ele volta. Isso foi medido em 12/08 e é o produto de hoje; se é o desejado num co-op em andamento é decisão sua, registrada como aberta. Por isso a conferência que decide é a do FIM. Terceira: não há prazo para a volta — o controle recupera o número dele enquanto o serviço estiver de pé, demore o que demorar. E há uma coisa que o mapa já declara e que muda o veredito: o DualSense NÃO SABE que número ele é. O número é invenção do Hefesto e não tem canal nenhum no aparelho; o que o aparelho mostra são as lampadinhas. Se a tela disser um número e as lampadinhas disserem outro, quem quebrou foi a metade que EXIBE, e é esse o achado a anotar.
+**A armadilha.** As cinco lampadinhas não se contam da esquerda para a direita — o número é o CONJUNTO aceso, e quem lê «a terceira lampadinha acesa» como jogador 3 reprova um produto que está certo. Segunda: o lugar de quem sai fica guardado por trinta segundos, contados de quando o chip dele some da fita; passado esse tempo, a fila se fecha de propósito e quem vem depois desce um número. Por isso cada troca de entrada tem de caber em trinta segundos. Terceira: o controle que volta recupera o número dele enquanto o serviço estiver de pé, demore o que demorar — o prazo decide só o que os outros mostram no meio. E há uma coisa que o mapa já declara e que muda o veredito: o DualSense NÃO SABE que número ele é. O número é invenção do Hefesto e não tem canal nenhum no aparelho; o que o aparelho mostra são as lampadinhas. Se a tela disser um número e as lampadinhas disserem outro, quem quebrou foi a metade que EXIBE, e é esse o achado a anotar.
 
 ---
 
@@ -5853,24 +5853,24 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 6. Confira que a contagem passou a «● 2 USB» e que só os chips do P1 e do P2 ficaram na fita.
 7. Dê um toque curto no botão PS do P4 — o QUARTO controle, e ele volta PRIMEIRO.
 8. Conte até cinco, devagar, olhando a fita.
-9. Leia o chip com o plástico do P4: com o P3 ainda fora, ele aparece como P3 — a numeração não deixa buraco.
+9. Leia o chip com o plástico do P4: com o P3 ainda fora, ele volta como P4 — o lugar do P3 continua guardado.
 10. Dê um toque curto no botão PS do P3.
 11. Conte até cinco, devagar.
-12. Leia os dois chips: o do plástico do P3 tem de dizer P3, e o do plástico do P4 tem de ter voltado a P4.
-13. Olhe as lampadinhas do P3 e do P4 e confira que cada um voltou ao desenho do próprio número.
+12. Leia os dois chips: o do plástico do P3 tem de dizer P3, e o do plástico do P4 continua P4.
+13. Olhe as lampadinhas do P3 e do P4 e confira que cada um está no desenho do próprio número.
 14. Leia a contagem, de volta a «● 2 USB · 2 BT», e as quatro linhas de «Gestão de Controles».
 15. Confira que o P1 e o P2 continuam com os números que você anotou no papel.
 
-**Passa quando.** No fim, o P3 é o jogador 3 e o P4 é o jogador 4 — na tela e nas lampadinhas —, mesmo o P3 tendo sido o ÚLTIMO a religar. Se o P3 voltasse como jogador 4, o número estaria seguindo a ordem de chegada em vez de seguir o controle, e isso reprova. O P4 aparecer como P3 enquanto está sozinho no rádio é a regra do produto, não defeito. E os dois do cabo terminam com os números do começo.
+**Passa quando.** No fim, o P3 é o jogador 3 e o P4 é o jogador 4 — na tela e nas lampadinhas —, mesmo o P3 tendo sido o ÚLTIMO a religar. Se o P3 voltasse como jogador 4, o número estaria seguindo a ordem de chegada em vez de seguir o controle, e isso reprova. E os dois do cabo terminam com os números do começo.
 
 **Por controle.**
 
 * **P1** — USB, e é testemunha. Não encoste nele. Anote o número antes e confira depois: tem de ser o mesmo, com as mesmas lampadinhas.
 * **P2** — USB, e é a segunda testemunha. Não encoste nele. Mesma conferência do P1.
 * **P3** — BT, e é o que sai PRIMEIRO e volta POR ÚLTIMO. Segure o PS até apagar; depois, quando chegar a vez dele, um toque curto no PS. Tem de voltar como jogador 3, com as duas lampadinhas das pontas e a do meio acesas.
-* **P4** — BT, e é o que sai POR ÚLTIMO e volta PRIMEIRO. É nele que o meio do teste se lê: sozinho no rádio ele aparece como P3; quando o P3 volta, ele tem de voltar a ser jogador 4, com as quatro lampadinhas acesas e a do meio apagada.
+* **P4** — BT, e é o que sai POR ÚLTIMO e volta PRIMEIRO. É nele que o meio do teste se lê: mesmo com o P3 fora, ele volta como jogador 4, com as quatro lampadinhas acesas e a do meio apagada.
 
-**A armadilha.** A numeração nunca deixa buraco, e é isso que engana no meio: com o P3 fora, o P4 aparece como P3 — na tela e nas lâmpadas — e volta a P4 quando o P3 chega. Isso foi medido em 12/08 e é o produto de hoje; se é o desejado num co-op em andamento é decisão sua, registrada como aberta. O que se julga é o FIM. Segunda: não há prazo — o controle que volta recupera o número dele enquanto o serviço estiver de pé, demore o que demorar entre desligar e religar. Terceira: as cinco lampadinhas não se contam da esquerda para a direita; o número é o conjunto aceso. Quarta: um aperto solto no PS abre a Steam; se ela abrir, feche-a. E o que o mapa já declara: o DualSense não sabe que número ele é — o número é do Hefesto e não tem canal nenhum no aparelho, e o que o aparelho mostra são as lampadinhas. Tela e lampadinhas discordando é a metade que EXIBE quebrada, e é isso que se anota.
+**A armadilha.** O prazo. O lugar do P3 fica guardado por trinta segundos, contados de quando o chip dele some da fita. Se passar disso entre desligar o P3 e religar o P4, o P4 volta como P3 até o P3 voltar — é a fila se fechando depois do prazo, não defeito; o que se julga é o FIM. Segunda: o controle que volta recupera o número dele enquanto o serviço estiver de pé, demore o que demorar. Terceira: as cinco lampadinhas não se contam da esquerda para a direita; o número é o conjunto aceso. Quarta: um aperto solto no PS abre a Steam; se ela abrir, feche-a. E o que o mapa já declara: o DualSense não sabe que número ele é — o número é do Hefesto e não tem canal nenhum no aparelho, e o que o aparelho mostra são as lampadinhas. Tela e lampadinhas discordando é a metade que EXIBE quebrada, e é isso que se anota.
 
 ---
 
