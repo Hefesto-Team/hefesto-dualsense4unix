@@ -1308,7 +1308,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "que corrigiu a premissa: ela parecia alcançada, e o que a alcançava era "
         "um nome PLANO num dos quatro módulos que saíram com a janela. Quem a "
         "chama de verdade são os GERADORES — `interface/aba01.py:67`, "
-        "`aba04.py:5`, `aba06.py:42` e `interface/calibrar.py:217` —, que se "
+        "`aba04.py:5`, `aba06.py:42` e `interface/calibrar.py::_svg` —, que se "
         "rodam à mão para PUBLICAR as páginas e não são carregados pelo piloto. "
         "É o mesmo estatuto de `scripts/`: constrói o produto, não é o produto."
     ),
