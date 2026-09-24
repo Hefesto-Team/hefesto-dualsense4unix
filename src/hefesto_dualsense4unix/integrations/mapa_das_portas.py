@@ -36,9 +36,9 @@ O QUE ELE NÃO FAZ
 aba (o texto desta aba tem dono único, e não é este módulo).
 
 **Não vai buscar endereço de Bluetooth.** :func:`porta_do_adaptador` RECEBE os
-endereços que o BlueZ já reportou, em vez de abrir D-Bus: ``integrations/`` não
-pode passar a depender do barramento de sistema, que o manifesto Flatpak não
-permite.
+endereços que o BlueZ já reportou, em vez de abrir D-Bus: quem fala com o
+barramento de sistema é o ``bluez_dbus``, e só ele (o dono do BlueZ,
+BLUEZ-UM-DONO-01).
 
 **Não guarda serial em lugar nenhum.** O serial USB dos adaptadores TP-Link
 desta bancada É o endereço Bluetooth deles (medido em 24/08/2026, três

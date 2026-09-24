@@ -10,7 +10,7 @@ executor de cinco. Este módulo é o dono:
   ``NameOwnerChanged``). A leitura sai de uma foto em memória — zero
   subprocesso por pergunta;
 * **CAI** no ``busctl --json=short`` quando o Gio não alcança o barramento
-  (Flatpak sem ``--socket=system-bus``, ``gi`` ausente), com o desembrulho que
+  (um sandbox sem o ``org.bluez``, ``gi`` ausente), com o desembrulho que
   não mutila nome com espaço — o de ``apelido_do_dongle``, que mora aqui agora;
 * **ESCREVE** ``Alias``, ``Connect``, ``Disconnect``, ``RemoveDevice``,
   ``Pair``, ``Trusted`` e ``StartDiscovery``/``StopDiscovery`` do NOSSO
@@ -122,7 +122,7 @@ ESPERA_DO_PAIR_S = 45.0
 ESPERA_DA_FOTO_S = 3.0
 
 #: Depois de o Gio falhar, quanto tempo o dono espera para tentar de novo. Sem
-#: isto, uma máquina sem barramento (Flatpak) pagaria a tentativa a cada leitura.
+#: isto, uma máquina sem barramento de sistema pagaria a tentativa a cada leitura.
 TENTAR_O_GIO_DE_NOVO_S = 60.0
 
 #: Depois de uma foto que NÃO veio com o ``bluetoothd`` de pé (o

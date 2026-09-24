@@ -258,10 +258,10 @@ def test_sem_busctl_a_resposta_e_nao_sei_e_nunca_nenhum(
 ) -> None:
     """MORDIDA 2. Sem ferramenta para perguntar, a resposta é "não sei".
 
-    Um `PATH` sem `busctl` é o caso real do Flatpak, que não monta o barramento
-    de sistema. Devolver `varrendo=set()` sem motivo faria a tela e o motor
-    lerem "nenhum adaptador está varrendo" sobre uma máquina em que ninguém
-    olhou — a assinatura das dez réguas que caíram em 20/09.
+    Um `PATH` sem `busctl` e sem o Gio é o caso de um sandbox sem o `org.bluez`
+    (o runtime do Flatpak não traz o `busctl`). Devolver `varrendo=set()` sem
+    motivo faria a tela e o motor lerem "nenhum adaptador está varrendo" sobre
+    uma máquina em que ninguém olhou — a assinatura das dez réguas de 20/09.
     """
     vazio = tmp_path / "path-sem-busctl"
     vazio.mkdir()
