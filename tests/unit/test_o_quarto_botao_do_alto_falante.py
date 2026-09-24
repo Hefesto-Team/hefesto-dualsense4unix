@@ -414,9 +414,9 @@ def test_no_cabo_o_quarto_escolhe_a_placa_e_a_volta_pergunta_ao_dono() -> None:
     E a volta vale a partir da placa, não do nó: a saída que ela escolheu pela
     lista, no nó, é ela quem devolve pela lista.
 
-    MORDIDA: no bloco do `de` de `devolver_o_som_do_pc`, troque
-    `padrao != deste` por `False` — o nó escolhido pela lista passa a ser
-    devolvido pelo botão de cima.
+    MORDIDA: no bloco do `de` de `devolver_o_som_do_pc`, troque por `False` a
+    comparação da saída do sistema com a deste controle — o nó escolhido pela
+    lista passa a ser devolvido pelo botão de cima.
     """
     from hefesto_dualsense4unix.app import audio_saida
 
