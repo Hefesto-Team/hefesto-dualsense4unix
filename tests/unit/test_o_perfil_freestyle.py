@@ -664,12 +664,23 @@ def test_com_o_freestyle_as_abas_tem_onde_guardar(semeadura_ligada: None) -> Non
 
     No disco dela, depois da migração, o ajuste tem alvo — o Freestyle, pela
     sessão — e o brilho só recusa porque o controle da cena não está ligado.
+
+    O ALVO SE MEDE PELO NOME, e o nome tem de abrir um perfil: só a ausência da
+    frase «não há perfil ativo» passava com a migração arrancada inteira (a
+    sessão seguia dizendo «Personalizado», e o brilho recusava por outro motivo).
+    MORDE: tire o `_repontar_a_sessao_do_personalizado` ou a chamada da
+    migração em `_maybe_seed_presets`, e esta régua reprova.
     """
+    from hefesto_dualsense4unix.interface.pacotes import perfil
+
     _grava_dela(profiles_dir(ensure=True))
     session.save_last_profile("Personalizado")
     session.save_active_marker("Personalizado")
     loader.load_all_profiles()
 
+    alvo = perfil.nome_do_ativo({"active_profile": None, "controllers": []})
+    assert alvo == "Freestyle", f"as abas gravariam em {alvo!r}"
+    assert loader.load_profile(alvo).model_dump()["controllers"].keys() == QUATRO.keys()
     assert "não há perfil ativo" not in _brilho_sem_daemon()
 
 
