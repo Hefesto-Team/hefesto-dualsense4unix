@@ -122,23 +122,46 @@ def test_o_diario_do_root_se_monta_so_de_leitura() -> None:
     )
 
 
+class _Usos(ast.NodeVisitor):
+    """Cada uso de um nome, com a função MAIS DE DENTRO que o contém."""
+
+    def __init__(self, nome: str) -> None:
+        self.nome = nome
+        self.pilha = ["<módulo>"]
+        self.achadas: list[str] = []
+
+    def _funcao(self, no: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+        self.pilha.append(no.name)
+        self.generic_visit(no)
+        self.pilha.pop()
+
+    visit_FunctionDef = _funcao  # noqa: N815
+    visit_AsyncFunctionDef = _funcao  # noqa: N815
+
+    def visit_Name(self, no: ast.Name) -> None:
+        # Só a LEITURA do nome: a definição da constante não é um uso.
+        if no.id == self.nome and isinstance(no.ctx, ast.Load):
+            self.achadas.append(self.pilha[-1])
+
+    def visit_Attribute(self, no: ast.Attribute) -> None:
+        if no.attr == self.nome:
+            self.achadas.append(self.pilha[-1])
+        self.generic_visit(no)
+
+
 def _referencias(nome: str) -> list[tuple[str, str]]:
-    """``[(arquivo, função)]`` de cada uso de ``nome`` no pacote (fora do broker)."""
+    """``[(arquivo, função)]`` de cada uso de ``nome`` no pacote (fora do broker).
+
+    O que é usado fora de função sai como ``<módulo>``.
+    """
     achadas: list[tuple[str, str]] = []
     for arquivo in sorted(PACOTE.rglob("*.py")):
         relativo = arquivo.relative_to(PACOTE)
         if relativo.parts[0] == "broker":
             continue
-        arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
-        for funcao in ast.walk(arvore):
-            if not isinstance(funcao, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                continue
-            for no in ast.walk(funcao):
-                usa = (isinstance(no, ast.Name) and no.id == nome) or (
-                    isinstance(no, ast.Attribute) and no.attr == nome
-                )
-                if usa:
-                    achadas.append((str(relativo), funcao.name))
+        usos = _Usos(nome)
+        usos.visit(ast.parse(arquivo.read_text(encoding="utf-8")))
+        achadas.extend((str(relativo), funcao) for funcao in usos.achadas)
     return achadas
 
 
