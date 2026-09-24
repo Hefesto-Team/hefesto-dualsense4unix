@@ -578,19 +578,52 @@ def _repontar_a_sessao_do_personalizado() -> None:
             save_active_marker(NOME_DO_PADRAO)
 
 
+def _trocar_o_personalizado(directory: Path) -> tuple[str, Path | None]:
+    """O miolo da troca, com os dois locks já tomados. Devolve `(desfecho, cópia)`.
+
+    A ORDEM É O QUE GARANTE QUE NADA SE PERDE: a cópia dos bytes no
+    `.historico`, depois o `freestyle.json` (escrita atômica), e só então o
+    `personalizado.json` sai. Sem a cópia nada muda. Se a escrita do novo
+    falhar, o antigo fica e a cópia sobra no histórico — sobra, nunca falta.
+    """
+    antigo = directory / ARQUIVO_DO_PERSONALIZADO
+    novo = directory / ARQUIVO_DO_PADRAO
+    bruto = _bytes_se_existe(antigo)
+    if bruto is None:
+        return "sem_personalizado", None
+    try:
+        dados = json.loads(bruto.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError) as exc:
+        logger.warning("personalizado_ilegivel", err=str(exc))
+        return "ilegivel", None
+    if not isinstance(dados, dict):
+        return "ilegivel", None
+    if not _e_o_personalizado(dados.get("name")):
+        return "nome_mudado_pela_usuaria", None
+    if novo.exists() and not _e_o_de_fabrica_intocado(novo):
+        return "freestyle_ja_existe", None
+    copia = _arquivar_versao(SLUG_DO_PERSONALIZADO, bruto, raiz=directory)
+    if copia is None:
+        return "sem_copia", None
+    dados["name"] = NOME_DO_PADRAO
+    _o_freestyle_vale_fora_do_jogo(dados)
+    _atomic_write_json(novo, dados)
+    antigo.unlink()
+    return "renomeado", copia
+
+
 def o_personalizado_vira_freestyle(dest_dir: Path | None = None) -> Path | None:
     """One-shot: o `personalizado.json` vira o `freestyle.json`, com a cópia.
 
     O-MODO-FREESTYLE-02 (ver o bloco acima). Devolve o caminho da cópia dos
     bytes dela no `.historico` quando renomeou; `None` em todo outro desfecho.
 
-    A ORDEM É O QUE GARANTE QUE NADA SE PERDE: a cópia, depois o `freestyle.json`
-    (escrita atômica), e só então o `personalizado.json` sai. Sem a cópia (disco
-    cheio, permissão), nada muda e a marca não nasce — a próxima carga tenta de
-    novo.
+    A ORDEM mora em `_trocar_o_personalizado`. Sem a cópia (disco cheio,
+    permissão), nada muda e a marca não nasce — a próxima carga tenta de novo.
 
-    RECUSA, e cada recusa tem régua:
+    RECUSA, e cada recusa tem régua (`tests/unit/test_o_perfil_freestyle.py`):
     - sem `personalizado.json` — máquina nova ou já migrada (a marca nasce);
+    - o JSON não abre — o arquivo fica como está;
     - o `name` lá dentro não é o Personalizado — ela o renomeou, e é dela;
     - `freestyle.json` já existe e não é o de fábrica intocado — é dela.
     """
@@ -599,39 +632,22 @@ def o_personalizado_vira_freestyle(dest_dir: Path | None = None) -> Path | None:
     if marker.exists():
         return None
     antigo = directory / ARQUIVO_DO_PERSONALIZADO
-    novo = directory / ARQUIVO_DO_PADRAO
     copia: Path | None = None
     desfecho = "sem_personalizado"
     with FileLock(str(_lock_path(marker))):
         if marker.exists():
             return None
-        bruto = _bytes_se_existe(antigo) if antigo.is_file() else None
-        dados: object = None
-        if bruto is not None:
-            try:
-                dados = json.loads(bruto.decode("utf-8"))
-            except (UnicodeDecodeError, ValueError) as exc:
-                desfecho = "ilegivel"
-                logger.warning("personalizado_ilegivel", err=str(exc))
-        if isinstance(dados, dict):
-            if not _e_o_personalizado(dados.get("name")):
-                desfecho = "nome_mudado_pela_usuaria"
-            elif novo.exists() and not _e_o_de_fabrica_intocado(novo):
-                desfecho = "freestyle_ja_existe"
-            elif bruto is not None:  # sempre, aqui: `dados` saiu de `bruto`
-                copia = _arquivar_versao(SLUG_DO_PERSONALIZADO, bruto,
-                                         raiz=directory)
-                if copia is None:
-                    desfecho = "sem_copia"
-                else:
-                    dados["name"] = NOME_DO_PADRAO
-                    _o_freestyle_vale_fora_do_jogo(dados)
-                    _atomic_write_json(novo, dados)
-                    antigo.unlink()
-                    # O `.lock` sai depois, pela razão da Z4/T15 de
-                    # `delete_profile`: nunca se apaga um lock que se segura.
-                    _lock_path(antigo).unlink(missing_ok=True)
-                    desfecho = "renomeado"
+        if antigo.is_file():
+            # O LOCK DO ARQUIVO DELA, o mesmo que o `save_profile` toma: um
+            # processo que ainda grave o «Personalizado» (o daemon de antes do
+            # install, por exemplo) espera a troca terminar, em vez de gravar
+            # no meio dela.
+            with FileLock(str(_lock_path(antigo))):
+                desfecho, copia = _trocar_o_personalizado(directory)
+            if copia is not None:
+                # O `.lock` sai FORA do `with`, pela razão da Z4/T15 escrita em
+                # `delete_profile`: nunca se apaga um lock que se segura.
+                _lock_path(antigo).unlink(missing_ok=True)
         if desfecho != "sem_copia":
             with contextlib.suppress(Exception):
                 marker.write_text("done\n", encoding="utf-8")
@@ -2798,6 +2814,8 @@ __all__ = [
     "migrar_generos_para_estilos_de_jogo",
     "migrate_coop_local_match",
     "migrate_default_profile_name",
+    "o_perfil_de_fora_do_jogo",
+    "o_personalizado_vira_freestyle",
     "perfis_de_jogo_semeados",
     "perfis_que_casam_com_o_cliente_steam",
     "reapontar_perfis_com_chave_de_executavel",

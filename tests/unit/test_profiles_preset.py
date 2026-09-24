@@ -5,11 +5,11 @@ trigger são reconhecidos por build_from_name. Cobre os 9 arquivos de fábrica
 depois da poda de 26/08/2026, da renomeação de 05/09/2026 e da mudança de casa
 de 06/09/2026:
   acao.json, aventura.json, corrida.json, esportes.json, fallback.json,
-  fps.json, navegacao.json, personalizado.json, point_and_click.json.
+  fps.json, navegacao.json, freestyle.json, point_and_click.json.
 
 ONDE ELES MORAM DESDE 06/09/2026 (PERFIS-SAO-PERFIS-01)
 --------------------------------------------------------
-Só o `personalizado.json` ficou em `assets/profiles_default/`, que é o que a
+Só o `freestyle.json` ficou em `assets/profiles_default/`, que é o que a
 semeadura copia. Os outros oito foram para `assets/estilos_de_jogo/` por
 decisão dela — *"ação, aventura, corrida. Isso não é perfil, isso é estilo de
 jogo"* —, e de lá **não são semeados**: somem da lista dela, os arquivos ficam.
@@ -22,6 +22,10 @@ O `meu_perfil.json` VIROU `personalizado.json` em 05/09/2026, por decisão dela:
 Personalizado. acho esse melhor."* A migração one-shot que renomeia o arquivo
 no disco DELA — e repõe o `session.json` e o `active_profile.txt` para o nome
 novo — é `loader.migrate_default_profile_name`.
+
+E o `personalizado.json` VIROU `freestyle.json` em 24/09/2026
+(O-MODO-FREESTYLE-02): o perfil de fora do jogo fica, com os ajustes dela, e se
+chama «Freestyle». A migração do disco é `loader.o_personalizado_vira_freestyle`.
 
 A PODA DE 26/08/2026
 ---------------------
@@ -48,7 +52,7 @@ from hefesto_dualsense4unix.profiles.schema import Profile
 
 #: PERFIS-SAO-PERFIS-01 (06/09/2026): o dado de fábrica passou a morar em DUAS
 #: casas. `assets/profiles_default/` é o que a semeadura copia — e ficou só com
-#: o `personalizado.json`; `assets/estilos_de_jogo/` guarda os oito gêneros, que
+#: o `freestyle.json`; `assets/estilos_de_jogo/` guarda os oito gêneros, que
 #: por decisão dela **não são perfil** e não são mais semeados.
 #:
 #: Os arquivos são os MESMOS: o conteúdo que este arquivo mede não mudou uma
@@ -138,8 +142,8 @@ EXPECTED_PRESETS = {
         "lightbar": (200, 20, 20),
         "lightbar_brightness": 0.9,
     },
-    "personalizado": {
-        "name": "Personalizado",
+    "freestyle": {
+        "name": "Freestyle",
         "priority": 1,
         "triggers_left_mode": "Off",
         "triggers_right_mode": "Off",
@@ -257,12 +261,12 @@ class TestPresetValida:
         assert p.version == 1
 
 
-class TestPresetPersonalizado:
+class TestPresetFreestyle:
     def test_match_any(self) -> None:
-        """personalizado.json deve ter match type=any (slot universal)."""
+        """freestyle.json deve ter match type=any (o perfil de fora do jogo)."""
         from hefesto_dualsense4unix.profiles.schema import MatchAny
-        p = _load_preset("personalizado")
-        assert isinstance(p.match, MatchAny), "Personalizado deve ter MatchAny"
+        p = _load_preset("freestyle")
+        assert isinstance(p.match, MatchAny), "o Freestyle deve ter MatchAny"
 
     def test_nome_nao_e_slug(self) -> None:
         """PERFIL-PADRAO-PERSONALIZADO-01: o asset traz NOME DE GENTE.
@@ -270,19 +274,20 @@ class TestPresetPersonalizado:
         Decisão dela, 05/09/2026: *"Meu_perfil como perfil default nao deveria  noqa-acento
         existir. Deixa ou Meu Perfil ou Personalizado. acho esse melhor."* O
         `Profile.name` é o que a aba Perfis MOSTRA — o asset gravava o slug
-        `meu_perfil` ali, e era isso que ela lia na lista.
+        `meu_perfil` ali, e era isso que ela lia na lista. Desde 24/09/2026 o
+        nome é «Freestyle» (O-MODO-FREESTYLE-02).
         """
-        p = _load_preset("personalizado")
-        assert p.name == "Personalizado"
+        p = _load_preset("freestyle")
+        assert p.name == "Freestyle"
 
     def test_priority_acima_do_fallback(self) -> None:
-        """personalizado.json deve ter priority=1 (catch-all pessoal acima do fallback nu).
+        """freestyle.json deve ter priority=1 (catch-all pessoal acima do fallback nu).
 
-        Empata-quebra: Personalizado (priority 1) vence o fallback.json
+        Empata-quebra: o Freestyle (priority 1) vence o fallback.json
         (priority 0) e auto-ativa como slot universal; perfis de jogo
         (priority 10-70) ainda ganham de ambos.
         """
-        p = _load_preset("personalizado")
+        p = _load_preset("freestyle")
         assert p.priority == 1
 
     def test_brightness_100_por_cento(self) -> None:
@@ -290,7 +295,7 @@ class TestPresetPersonalizado:
         destoava em 0.4 (queixa "brightness deveria ser 100% e não é") —
         decisão de produto: alinhar o asset ao default (falha-sem: antes
         deste fix o asset tinha 0.4)."""
-        p = _load_preset("personalizado")
+        p = _load_preset("freestyle")
         assert abs(p.leds.lightbar_brightness - 1.0) < 1e-6
 
 
@@ -569,8 +574,10 @@ class TestOsPodadosNaoVoltam:
             # O `meu_perfil.json` ESTAVA AQUI e virou este, em 05/09/2026, por
             # decisão dela: *"Meu_perfil como perfil default não deveria
             # existir. Deixa ou Meu Perfil ou Personalizado. acho esse
-            # melhor."* Foi renomeação, não poda.
-            "personalizado.json",
+            # melhor."* Foi renomeação, não poda. E o `personalizado.json`
+            # virou este em 24/09/2026 (O-MODO-FREESTYLE-02) — renomeação de
+            # novo, com os ajustes dela migrando junto.
+            "freestyle.json",
         ], f"a semeadura mudou de tamanho sem passar por aqui: {semeados}"
 
         estilos = sorted(p.name for p in ESTILOS_DIR.glob("*.json"))

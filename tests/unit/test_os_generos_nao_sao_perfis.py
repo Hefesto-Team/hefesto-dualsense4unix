@@ -67,16 +67,13 @@ def test_a_semeadura_nao_entrega_genero_nenhum(tmp_path: Path) -> None:
 
     MORDE: devolver qualquer um dos oito gêneros a `assets/profiles_default/`.
 
-    O QUE SOBRA É O PERSONALIZADO, E QUEM DIZ SE ELE SOBRA É O DONO. A decisão
-    dela de 23/09 (D-2309-O-MODO-FREESTYLE, *"Personalizado sai"*) tira o
-    preset da semeadura, e a saída espera a sessão dela
-    (`loader.O_PERSONALIZADO_ESPERA_A_SESSAO_DELA`): enquanto espera, sai UM
-    arquivo; depois, nenhum. O que esta régua guarda continua o mesmo: gênero
-    não é perfil.
+    O QUE SOBRA É O PERFIL DE FORA DO JOGO, e o nome dele é do dono: o
+    «Freestyle» desde 24/09/2026 (O-MODO-FREESTYLE-02, decisão por delegação
+    dela `D-2409-O-PERFIL-DE-FORA-DO-JOGO-VIRA-FREESTYLE`). O que esta régua
+    guarda continua o mesmo: gênero não é perfil.
     """
     destino = tmp_path / "perfis"
-    esperado = ([loader.ARQUIVO_DO_PADRAO]
-                if loader.O_PERSONALIZADO_ESPERA_A_SESSAO_DELA else [])
+    esperado = [loader.ARQUIVO_DO_PADRAO]
 
     copiados = loader.seed_default_presets(dest_dir=destino, source_dirs=[FABRICA])
 
@@ -288,12 +285,13 @@ def test_o_arquivo_enxuto_carrega_o_mesmo_perfil_de_antes(tmp_path: Path) -> Non
 def test_o_perfil_que_nao_e_de_jogo_nao_e_tocado(tmp_path: Path) -> None:
     """O `match` decide, e ele tem de ser UM `steam_app_<n>` e nada mais.
 
-    O `personalizado` (catch-all) e um perfil com `process_name` junto ficam
-    inteiros: o segundo é regra que ela escreveu à mão.
+    O perfil de fora do jogo (catch-all, o «Freestyle» desde 24/09/2026) e um
+    perfil com `process_name` junto ficam inteiros: o segundo é regra que ela
+    escreveu à mão.
     """
     destino = tmp_path / "perfis"
-    _escrever(destino / "personalizado.json", json.loads(
-        (FABRICA / "personalizado.json").read_text(encoding="utf-8")
+    _escrever(destino / loader.ARQUIVO_DO_PADRAO, json.loads(
+        (FABRICA / loader.ARQUIVO_DO_PADRAO).read_text(encoding="utf-8")
     ))
     dela = _molde_de_jogo("Faith", "1179080")
     dela["match"] = {**dela["match"], "process_name": ["faith.exe"]}

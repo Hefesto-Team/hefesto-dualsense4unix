@@ -201,8 +201,12 @@ def test_a_sessao_que_aponta_outro_perfil_nao_e_tocada(
 
 
 def test_recusa_quando_ela_ja_tem_um_perfil_personalizado(disco: Path) -> None:
-    """Ela mesma criou um "Personalizado". Sobrescrever seria destruir dado."""
-    dela = {"name": "Personalizado", "version": 1, "match": {"type": "any"},
+    """Ela mesma criou um perfil com o nome do padrão. Sobrescrever destruiria dado.
+
+    O nome do padrão é «Freestyle» desde 24/09/2026 (O-MODO-FREESTYLE-02); o
+    nome deste caso é o de 05/09, e a recusa que ele mede não mudou.
+    """
+    dela = {"name": NOME_DO_PADRAO, "version": 1, "match": {"type": "any"},
             "priority": 42}
     _grava(disco, ARQUIVO_ANTIGO_DO_PADRAO, PERFIL_DELA)
     _grava(disco, ARQUIVO_DO_PADRAO, dela)
@@ -291,21 +295,19 @@ def test_o_semeador_nao_entrega_o_segundo_catch_all(
     assert ARQUIVO_DO_PADRAO in marker
 
 
-def test_maquina_nova_recebe_o_preset_de_fabrica_enquanto_a_saida_espera(
-    disco: Path, tmp_path: Path
-) -> None:
+def test_maquina_nova_recebe_o_preset_de_fabrica(disco: Path, tmp_path: Path) -> None:
     """Par da recusa acima: sem o arquivo antigo, o preset novo É semeado.
 
     Esta é a metade que a recusa poderia matar por engano — um `continue`
-    largo demais deixaria toda máquina nova sem perfil padrão nenhum. Vale
-    enquanto a saída do Personalizado espera a sessão dela
-    (`loader.O_PERSONALIZADO_ESPERA_A_SESSAO_DELA`); o par de baixo é o dia
-    seguinte.
-    """
-    from hefesto_dualsense4unix.profiles import loader
+    largo demais deixaria toda máquina nova sem perfil padrão nenhum.
 
-    if not loader.O_PERSONALIZADO_ESPERA_A_SESSAO_DELA:
-        pytest.skip("a saída do Personalizado já foi decidida — vale o par de baixo")
+    NOTA DATADA — 24/09/2026. Aqui moravam dois casos: este, que valia
+    "enquanto a saída do Personalizado espera a sessão dela", e o par dele, que
+    media a máquina nova SEM o preset. A decisão por delegação dela
+    (`D-2409-O-PERFIL-DE-FORA-DO-JOGO-VIRA-FREESTYLE`) trocou a saída pela
+    renomeação: o perfil de fora do jogo FICA e se chama «Freestyle», e a
+    máquina nova volta a recebê-lo sempre. O par saiu com a espera.
+    """
     copiados = seed_default_presets(
         dest_dir=disco, source_dirs=(_fonte_de_fabrica(tmp_path),)
     )
@@ -315,31 +317,6 @@ def test_maquina_nova_recebe_o_preset_de_fabrica_enquanto_a_saida_espera(
         (disco / ARQUIVO_DO_PADRAO).read_text(encoding="utf-8")
     )
     assert semeado["name"] == NOME_DO_PADRAO
-
-
-def test_maquina_nova_nao_recebe_mais_o_preset_de_fabrica(
-    disco: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """O par de cima no dia em que a saída deixar de esperar (O-MODO-FREESTYLE-01).
-
-    A decisão dela de 23/09 (D-2309-O-MODO-FREESTYLE: *"Personalizado sai"*)
-    revoga o padrão: a máquina nova não recebe mais o preset, e o nome fica
-    registrado no marker — que é o contrato com o `install_profiles.sh`.
-    """
-    from hefesto_dualsense4unix.profiles import loader
-
-    monkeypatch.setattr(loader, "O_PERSONALIZADO_ESPERA_A_SESSAO_DELA", False)
-    fonte = _fonte_de_fabrica(tmp_path)
-    copiados = seed_default_presets(dest_dir=disco, source_dirs=(fonte,))
-
-    assert copiados == []
-    assert not (disco / ARQUIVO_DO_PADRAO).exists()
-    marker = (disco / SEED_MARKER_NAME).read_text(encoding="utf-8").splitlines()
-    assert ARQUIVO_DO_PADRAO in marker
-    # O asset de fábrica continua com o nome de gente — é ele que o install
-    # ainda empacota, e é dele que o «Restaurar de fábrica» da aba Sistema lê.
-    fabrica = json.loads((fonte / ARQUIVO_DO_PADRAO).read_text(encoding="utf-8"))
-    assert fabrica["name"] == NOME_DO_PADRAO
 
 
 def test_depois_da_migracao_o_semeador_nao_sobrescreve_o_dela(
