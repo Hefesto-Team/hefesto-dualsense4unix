@@ -21,4 +21,92 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## 01-jogar.html
+- **24/09/2026** — O-MODO-FREESTYLE-03: a dica congelada do «Salvar Perfil»
+  (o rodapé, `fim.html`) perde a promessa *"o que você salvar aqui volta
+  sozinho toda vez que este jogo abrir"*, falsa para o Freestyle, e fica
+  *"Grava no perfil ativo. É onde a mudança vai cair."*. Até publicar, o
+  produto continua com a frase velha só no instante antes da primeira
+  pintura: a pintura (`pacotes._dica_do_salvar`) já diz a promessa do perfil
+  ativo. Nada muda na foto; a mudança é do `title`.
+
+## 02-controles.html
+- **24/09/2026** — O-MODO-FREESTYLE-03: a dica congelada do «Salvar Perfil»
+  (o rodapé, `fim.html`) perde a promessa *"o que você salvar aqui volta
+  sozinho toda vez que este jogo abrir"*, falsa para o Freestyle, e fica
+  *"Grava no perfil ativo. É onde a mudança vai cair."*. Até publicar, o
+  produto continua com a frase velha só no instante antes da primeira
+  pintura: a pintura (`pacotes._dica_do_salvar`) já diz a promessa do perfil
+  ativo. Nada muda na foto; a mudança é do `title`.
+
+## 03-gatilhos.html
+- **24/09/2026** — O-MODO-FREESTYLE-03: a dica congelada do «Salvar Perfil»
+  (o rodapé, `fim.html`) perde a promessa *"o que você salvar aqui volta
+  sozinho toda vez que este jogo abrir"*, falsa para o Freestyle, e fica
+  *"Grava no perfil ativo. É onde a mudança vai cair."*. Até publicar, o
+  produto continua com a frase velha só no instante antes da primeira
+  pintura: a pintura (`pacotes._dica_do_salvar`) já diz a promessa do perfil
+  ativo. Nada muda na foto; a mudança é do `title`.
+
+## 04-iluminacao.html
+- **24/09/2026** — O-MODO-FREESTYLE-03: a dica congelada do «Salvar Perfil»
+  (o rodapé, `fim.html`) perde a promessa *"o que você salvar aqui volta
+  sozinho toda vez que este jogo abrir"*, falsa para o Freestyle, e fica
+  *"Grava no perfil ativo. É onde a mudança vai cair."*. Até publicar, o
+  produto continua com a frase velha só no instante antes da primeira
+  pintura: a pintura (`pacotes._dica_do_salvar`) já diz a promessa do perfil
+  ativo. Nada muda na foto; a mudança é do `title`.
+
+## 05-vibracao.html
+- **24/09/2026** — O-MODO-FREESTYLE-03: a dica congelada do «Salvar Perfil»
+  (o rodapé, `fim.html`) perde a promessa *"o que você salvar aqui volta
+  sozinho toda vez que este jogo abrir"*, falsa para o Freestyle, e fica
+  *"Grava no perfil ativo. É onde a mudança vai cair."*. Até publicar, o
+  produto continua com a frase velha só no instante antes da primeira
+  pintura: a pintura (`pacotes._dica_do_salvar`) já diz a promessa do perfil
+  ativo. Nada muda na foto; a mudança é do `title`.
+
+## 06-navegacao.html
+- **24/09/2026** — O-MODO-FREESTYLE-03: a dica congelada do «Salvar Perfil»
+  (o rodapé, `fim.html`) perde a promessa *"o que você salvar aqui volta
+  sozinho toda vez que este jogo abrir"*, falsa para o Freestyle, e fica
+  *"Grava no perfil ativo. É onde a mudança vai cair."*. Até publicar, o
+  produto continua com a frase velha só no instante antes da primeira
+  pintura: a pintura (`pacotes._dica_do_salvar`) já diz a promessa do perfil
+  ativo. Nada muda na foto; a mudança é do `title`.
+
+## 07-lancadores.html
+- **24/09/2026** — O-MODO-FREESTYLE-03: a dica congelada do «Salvar Perfil»
+  (o rodapé, `fim.html`) perde a promessa *"o que você salvar aqui volta
+  sozinho toda vez que este jogo abrir"*, falsa para o Freestyle, e fica
+  *"Grava no perfil ativo. É onde a mudança vai cair."*. Até publicar, o
+  produto continua com a frase velha só no instante antes da primeira
+  pintura: a pintura (`pacotes._dica_do_salvar`) já diz a promessa do perfil
+  ativo. Nada muda na foto; a mudança é do `title`.
+
+## 08-conexoes.html
+- **24/09/2026** — O-MODO-FREESTYLE-03: a dica congelada do «Salvar Perfil»
+  (o rodapé, `fim.html`) perde a promessa *"o que você salvar aqui volta
+  sozinho toda vez que este jogo abrir"*, falsa para o Freestyle, e fica
+  *"Grava no perfil ativo. É onde a mudança vai cair."*. Até publicar, o
+  produto continua com a frase velha só no instante antes da primeira
+  pintura: a pintura (`pacotes._dica_do_salvar`) já diz a promessa do perfil
+  ativo. Nada muda na foto; a mudança é do `title`.
+
+## 09-sistema.html
+- **24/09/2026** — O-MODO-FREESTYLE-03: a dica congelada do «Salvar Perfil»
+  (o rodapé, `fim.html`) perde a promessa *"o que você salvar aqui volta
+  sozinho toda vez que este jogo abrir"*, falsa para o Freestyle, e fica
+  *"Grava no perfil ativo. É onde a mudança vai cair."*. Até publicar, o
+  produto continua com a frase velha só no instante antes da primeira
+  pintura: a pintura (`pacotes._dica_do_salvar`) já diz a promessa do perfil
+  ativo. Nada muda na foto; a mudança é do `title`.
+
+## 10-perfis.html
+- **24/09/2026** — O-MODO-FREESTYLE-03: a dica congelada do «Salvar Perfil»
+  (o rodapé, `fim.html`) perde a promessa *"o que você salvar aqui volta
+  sozinho toda vez que este jogo abrir"*, falsa para o Freestyle, e fica
+  *"Grava no perfil ativo. É onde a mudança vai cair."*. Até publicar, o
+  produto continua com a frase velha só no instante antes da primeira
+  pintura: a pintura (`pacotes._dica_do_salvar`) já diz a promessa do perfil
+  ativo. Nada muda na foto; a mudança é do `title`.
