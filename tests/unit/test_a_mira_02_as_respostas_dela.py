@@ -421,3 +421,213 @@ def test_antes_do_ok_dela_o_produto_nao_pinta_o_desenho_novo() -> None:
     cards = a02.pacote(_ctx(**{"aa:bb:cc:00:00:02": {"ligada": True}}))["cards"]
     campos = next(iter(cards.values()))
     assert "giro-dica" not in campos and "mira-fora" not in campos
+
+
+# ---------------------------------------------------------------------------
+# A CALIBRAR — «Só enquanto eu segurar» e «Inverter» (resposta 3)
+# ---------------------------------------------------------------------------
+
+#: OS BOTÕES QUE O ESQUEMA ACEITA, com os nomes que a troca de botões da aba
+#: Navegação já mostra — escritos aqui por extenso, e não lidos do gerador.
+_BOTOES_DA_LISTA = [
+    ("cross", "Cruz"), ("circle", "Círculo"), ("square", "Quadrado"),
+    ("triangle", "Triângulo"), ("l1", "L1"), ("r1", "R1"), ("l2", "L2"),
+    ("r2", "R2"), ("l3", "L3"), ("r3", "R3"), ("dpad_up", "D-pad Cima"),
+    ("dpad_down", "D-pad Baixo"), ("dpad_left", "D-pad Esquerda"),
+    ("dpad_right", "D-pad Direita"), ("options", "Options"), ("create", "Share"),
+]
+
+
+def _bancada_calibrar() -> str:
+    return (_RAIZ / "mockup/calibrar-sensores.html").read_text(encoding="utf-8")
+
+
+def _colunas_da_mira() -> list[str]:
+    import re
+
+    doc = _bancada_calibrar()
+    return re.findall(r'<div class="mira" data-controle="p\d">(.*?)\n          </div>',
+                      doc, re.S)
+
+
+def test_a_lista_do_segurar_e_a_do_esquema_e_nasce_sempre() -> None:
+    """Cada coluna tem a lista: «Sempre» escolhido de nascença, e depois os
+    dezesseis botões que o esquema aceita, na ordem dele — nenhum PS.
+
+    MORDIDA: acrescente `"ps"` à lista do gerador, ou tire o `selected` do
+    «Sempre», e este teste reprova.
+    """
+    import re
+
+    from hefesto_dualsense4unix.core.remapeamento_de_botao import REMAPEAVEIS
+
+    assert [b for b, _ in _BOTOES_DA_LISTA] == list(REMAPEAVEIS), (
+        "o esquema mudou a lista — releia a decisão antes de corrigir a régua")
+    colunas = _colunas_da_mira()
+    assert len(colunas) == 2, "a bancada do desenho tem dois controles"
+    for coluna in colunas:
+        lista = re.findall(r'<label class="desl"><span class="r">Só enquanto eu segurar'
+                           r'</span><select class="lista" data-gesto="mira-segurar" '
+                           r'data-campo="mira-segurar" data-hef-alvo="valor"[^>]*>(.*?)</select>',
+                           coluna)
+        assert len(lista) == 1, coluna
+        opcoes = re.findall(r'<option value="([^"]*)"( selected)?>([^<]*)</option>', lista[0])
+        assert opcoes[0] == ("sempre", " selected", "Sempre")
+        assert [(v, r) for v, _, r in opcoes[1:]] == _BOTOES_DA_LISTA
+        assert not any(s for _, s, _ in opcoes[1:]), "outro botão nasceu escolhido"
+
+
+def test_os_dois_inverter_nascem_apagados_e_dizem_o_ato() -> None:
+    """Dois interruptores por coluna, cada lado por si, APAGADOS de nascença,
+    e o nome acessível diz o ato inteiro («Inverter cima e baixo»).
+
+    MORDIDA: tire o `off` do gerador e este teste reprova.
+    """
+    import re
+
+    for coluna in _colunas_da_mira():
+        botoes = re.findall(r'<button class="([^"]*)" data-gesto="mira-inverter" '
+                            r'data-inverter="([^"]*)" data-campo="([^"]*)"[^>]*'
+                            r'aria-label="([^"]*)"><span class="p"></span>([^<]*)</button>',
+                            coluna)
+        assert [(q, c, a, r) for _, q, c, a, r in botoes] == [
+            ("lado", "mira-inverter-lado", "Inverter esquerda e direita",
+             "Esquerda e direita"),
+            ("cima-baixo", "mira-inverter-cima-baixo", "Inverter cima e baixo",
+             "Cima e baixo"),
+        ], botoes
+        assert all("off" in classe.split() for classe, *_ in botoes)
+        assert '<span class="r">Inverter</span>' in coluna
+
+
+def test_o_bloco_nao_tem_vermelho_nem_recado() -> None:
+    """Os dois ajustes não trazem frase nova nem cor de alarme — só o rótulo."""
+    doc = _bancada_calibrar()
+    folha = doc.split("<style>", 1)[1].split("</style>", 1)[0]
+    trecho = folha.split("«SÓ ENQUANTO EU SEGURAR» E «INVERTER»", 1)[1]
+    assert "--red" not in trecho and "--orange" not in trecho
+
+
+def _ctx_calibrar(**mira: Any) -> Any:
+    import pacotes
+
+    mesa = [{"pref": "p1", "uniq": "aa:bb:cc:00:00:01", "jogador": 1,
+             "cor": "cosmic-red", "nome": "Cosmic Red", "via": "USB"}]
+    dele = {"uniq": "aa:bb:cc:00:00:01", "transport": "usb", "connected": True,
+            "inputs": {}, "mira": mira}
+    return pacotes.Contexto(state={}, mesa=mesa, conectados=[dele], estados={})
+
+
+def test_a_calibrar_pinta_o_segurar_e_o_inverter(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A lista recebe o botão da peça (`sempre` quando é `None`) e os dois
+    interruptores as três respostas: aceso, apagado e o travessão.
+
+    MORDIDA: pinte o `None` como vazio e a lista nunca volta a «Sempre».
+    """
+    import mesa_viva
+    from pacotes import a11_calibrar_sensores as a11
+
+    import pacotes.a02_controles as a02
+
+    monkeypatch.setattr(a11, "_TEM_A_MIRA", True)
+    campos = a11.pacote(_ctx_calibrar(gatilho=None, inverter_horizontal=True,
+                                      inverter_vertical=False))["colunas"]["p1"]
+    assert campos["mira-segurar"] == "sempre"
+    assert campos["mira-inverter-lado"] == a02.SENSOR_LIGADO
+    assert campos["mira-inverter-cima-baixo"] == a02.SENSOR_DESLIGADO
+    campos = a11.pacote(_ctx_calibrar(gatilho="l2"))["colunas"]["p1"]
+    assert campos["mira-segurar"] == "l2"
+    assert campos["mira-inverter-lado"] == mesa_viva.SEM_LEITOR
+    # Sem a chave, a lista fica onde está; um botão que ela não oferece, também.
+    for mira in ({}, {"gatilho": "ps"}):
+        assert "mira-segurar" not in a11.pacote(_ctx_calibrar(**mira))["colunas"]["p1"]
+
+
+def test_escolher_o_botao_manda_um_campo_so() -> None:
+    """A escolha vai ao `mira.set` sozinha; «Sempre» manda o vazio (que a ponte
+    leva como `null`); o `click` de abrir a lista não é escolha.
+
+    MORDIDA: trate o `click` como escolha e a lista regrava o perfil a cada vez
+    que ela a abre para olhar.
+    """
+    gesto = _o_gesto("calibrar-sensores.html", "mira-segurar")
+    for valor, esperado in (("l2", "l2"), ("sempre", "")):
+        p = _PonteDaMira(_OK)
+        gesto(_ctx_calibrar(), {"uniq": "aa:bb:cc:00:00:01", "valor": valor,
+                                "tipo": "select", "evento": "change"}, p)
+        assert p.chamadas == [{"uniq": "aa:bb:cc:00:00:01", "gatilho": esperado}]
+    p = _PonteDaMira(_OK)
+    gesto(_ctx_calibrar(), {"uniq": "aa:bb:cc:00:00:01", "valor": "l2",
+                            "tipo": "select", "evento": "click"}, p)
+    assert p.chamadas == [], "abrir a lista virou escolha"
+
+
+@pytest.mark.parametrize("torto", ["ps", "", "touchpad"])
+def test_o_ps_nao_passa_pela_lista(torto: str) -> None:
+    """O PS é a saída de emergência dela: nem chega ao daemon."""
+    p = _PonteDaMira(_OK)
+    with pytest.raises(ValueError):
+        _o_gesto("calibrar-sensores.html", "mira-segurar")(
+            _ctx_calibrar(), {"uniq": "aa:bb:cc:00:00:01", "valor": torto,
+                              "evento": "change"}, p)
+    assert p.chamadas == []
+
+
+def test_inverter_alterna_um_lado_pelo_que_o_daemon_diz() -> None:
+    """Cada botão alterna O SEU lado, pelo estado lido — e só ele vai ao daemon.
+
+    MORDIDA: mande `True` fixo e o segundo caso reprova; troque as chaves dos
+    dois lados e o primeiro reprova.
+    """
+    gesto = _o_gesto("calibrar-sensores.html", "mira-inverter")
+    for qual, chave in (("lado", "inverter_horizontal"),
+                        ("cima-baixo", "inverter_vertical")):
+        for agora in (False, True):
+            p = _PonteDaMira(_OK)
+            gesto(_ctx_calibrar(**{chave: agora}),
+                  {"uniq": "aa:bb:cc:00:00:01", "inverter": qual}, p)
+            assert p.chamadas == [{"uniq": "aa:bb:cc:00:00:01", chave: not agora}]
+
+
+def test_inverter_sem_leitura_recusa_sem_chutar() -> None:
+    """Sem o bloco, alternar é chutar o oposto: recusa e não chama."""
+    import pacotes.a02_controles as a02
+
+    p = _PonteDaMira(_OK)
+    with pytest.raises(RuntimeError) as erro:
+        _o_gesto("calibrar-sensores.html", "mira-inverter")(
+            _ctx_calibrar(), {"uniq": "aa:bb:cc:00:00:01", "inverter": "lado"}, p)
+    assert str(erro.value) == a02.SEM_LEITURA_DA_MIRA
+    assert p.chamadas == []
+
+
+def test_no_nativo_a_calibrar_grava_calada() -> None:
+    """O ajuste no Nativo grava (`alcance: nao_se_aplica`) e não vira recusa:
+    o aviso «grava e avisa» saiu com a decisão dela.
+
+    MORDIDA: devolva o ramo `nao_se_aplica` ao `_pedir_a_mira` e reprova.
+    """
+    p = _PonteDaMira({"status": "ok", "alcance": {"tique": "nao_se_aplica"},
+                      "ressalva": "Modo Nativo"})
+    _o_gesto("calibrar-sensores.html", "mira-tremor")(
+        _ctx_calibrar(), {"uniq": "aa:bb:cc:00:00:01", "valor": "20"}, p)
+    assert p.chamadas == [{"uniq": "aa:bb:cc:00:00:01", "zona_morta_graus_s": 20.0}]
+
+
+def test_a_ponte_leva_o_sempre_como_null(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A ponte da tela: `gatilho=""` sai como `null` no pedido, e `None` não sai.
+
+    MORDIDA: trate o `""` como `None` na ponte e «Sempre» vira pedido vazio.
+    """
+    from hefesto_dualsense4unix.app import ipc_bridge
+
+    enviados: list[tuple[str, dict[str, Any]]] = []
+    monkeypatch.setattr(ipc_bridge, "_corpo_do_daemon",
+                        lambda metodo, params: enviados.append((metodo, params)) or {})
+    ipc_bridge.mira_set_detalhado(gatilho="", uniq="aa:bb:cc:00:00:01")
+    ipc_bridge.mira_set_detalhado(inverter_vertical=False, uniq="aa:bb:cc:00:00:01")
+    assert ipc_bridge.mira_set_detalhado(gatilho=None) is None
+    assert enviados == [
+        ("mira.set", {"gatilho": None, "uniq": "aa:bb:cc:00:00:01"}),
+        ("mira.set", {"inverter_vertical": False, "uniq": "aa:bb:cc:00:00:01"}),
+    ]

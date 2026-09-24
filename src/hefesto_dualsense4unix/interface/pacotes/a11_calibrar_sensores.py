@@ -76,7 +76,9 @@ from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
 from . import Contexto, gesto, registrar
 from .a02_controles import (
     MIRA_SEM_O_CONTROLE,
+    SEM_LEITURA_DA_MIRA,
     _corpo,
+    _selo_do_sensor,
     _uniq,
     meias_da_barra,
 )
@@ -143,6 +145,23 @@ def _campos_da_mira(entrada: dict[str, Any]) -> dict[str, Any]:
             campos[f"{campo}-num"] = str(round(valor))
         else:
             campos[f"{campo}-num"] = calibrar.SEM_LEITURA
+    # «SÓ ENQUANTO EU SEGURAR» E «INVERTER» — A-MIRA-POR-MOVIMENTO-NA-TELA-02.
+    # A lista recebe o botão que a peça usa, e `sempre` quando é `None`; sem a
+    # chave no bloco, a lista fica onde está, pela razão do trilho acima. Um
+    # botão que a lista não oferece também não se escreve: o `<select>` não o
+    # mostraria, e o piloto contaria uma pintura que não aconteceu.
+    if "gatilho" in b:
+        gatilho = b.get("gatilho")
+        if gatilho is None:
+            campos["mira-segurar"] = calibrar.SEMPRE
+        elif gatilho in calibrar.REMAPEAVEIS:
+            campos["mira-segurar"] = str(gatilho)
+    # Os dois interruptores, com as TRÊS respostas do chip de sensor: aceso,
+    # apagado e o travessão de quem não leu.
+    for qual, _rotulo, chave in calibrar.INVERTER:
+        valor = b.get(chave)
+        campos[f"mira-inverter-{qual}"] = _selo_do_sensor(
+            valor if isinstance(valor, bool) else None)
     return campos
 
 
@@ -293,3 +312,62 @@ def mira_tremor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     n = _numero_do_deslizante(o, "mira-tremor", calibrar.TREMOR)
     if n is not None:
         _pedir_a_mira(p, uniq, zona_morta_graus_s=float(n))
+
+
+# ---------------------------------------------------------------------------
+# «SÓ ENQUANTO EU SEGURAR» E «INVERTER» — 24/09/2026, A-MIRA-POR-MOVIMENTO-NA-TELA-02
+# ---------------------------------------------------------------------------
+# Palavra dela (`D-2409-SEGURAR-E-INVERTER-ENTRAM-NA-TELA`): «entram as duas».
+# Cada gesto manda UM campo só ao `mira.set`, pelo mesmo `_pedir_a_mira` dos
+# deslizantes: escolher o botão não acende o chip, e inverter um lado não mexe
+# no outro.
+
+
+@gesto(PAGINA, "mira-segurar", grava="mira_set_detalhado")
+def mira_segurar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """«Só enquanto eu segurar» — a mira DESTE controle só anda com o botão
+    escolhido apertado; «Sempre» a devolve a andar sem botão.
+
+    O `click` DA LISTA NÃO É ESCOLHA: abrir a lista dispara `click` com o valor
+    de antes, e só o `change` traz o que ela escolheu. Mandar no `click`
+    regravaria o perfil a cada vez que ela abrisse a lista para olhar.
+
+    A lista oferece o que o esquema aceita (`calibrar.REMAPEAVEIS`); um valor
+    fora dela é DOM adulterado, e recusa aqui — o PS, que é a saída de
+    emergência dela, nem chega ao daemon.
+    """
+    uniq = _uniq(o)
+    if not uniq:
+        raise ValueError("mira-segurar: o clique não disse em qual controle")
+    if str(o.get("evento") or "").lower() == "click":
+        return
+    escolha = str(o.get("valor") or "").strip()
+    if escolha == calibrar.SEMPRE:
+        _pedir_a_mira(p, uniq, gatilho="")
+        return
+    if escolha not in calibrar.REMAPEAVEIS:
+        raise ValueError(f"mira-segurar: {escolha!r} não é um botão da lista")
+    _pedir_a_mira(p, uniq, gatilho=escolha)
+
+
+@gesto(PAGINA, "mira-inverter", grava="mira_set_detalhado")
+def mira_inverter(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """«Inverter» — um lado de cada vez: o `data-inverter` diz qual.
+
+    LÊ o estado do bloco `mira` do `state_full`, como o chip da aba Controles:
+    sem a leitura, alternar é chutar o oposto, e o gesto recusa
+    (:data:`a02_controles.SEM_LEITURA_DA_MIRA`) em vez de chutar.
+    """
+    uniq = _uniq(o)
+    if not uniq:
+        raise ValueError("mira-inverter: o clique não disse em qual controle")
+    qual = str(o.get("inverter") or "")
+    chave = next((c for q, _r, c in calibrar.INVERTER if q == qual), None)
+    if chave is None:
+        raise ValueError(f"mira-inverter: não conheço o lado {qual!r} — a página "
+                         f"manda 'lado' ou 'cima-baixo'")
+    bloco = ctx.por_uniq(uniq).get("mira")
+    agora = bloco.get(chave) if isinstance(bloco, dict) else None
+    if not isinstance(agora, bool):
+        raise RuntimeError(SEM_LEITURA_DA_MIRA)
+    _pedir_a_mira(p, uniq, **{chave: not agora})
