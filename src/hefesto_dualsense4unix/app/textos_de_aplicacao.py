@@ -24,11 +24,11 @@ elas são diferentes na tela porque são diferentes no mundo:
    Lightbar já dizia isso três centímetros abaixo do toast que dizia o
    contrário: era a tela se contradizendo sozinha;
 3. **o Modo Nativo está ligado** — o JOGO é o dono do `hidraw`, e o backend
-   muta TODA escrita de output (`_output_mute`). Esta é a terceira linha da
-   tabela de mentiras da MESA-CHEIA-09, e a única que sobreviveu à primeira
-   leva: o backend devolvia "escreveu" mutado, e o toast dizia "aplicado" com
-   zero byte no fio. Ao desmutar, o desejado é re-escrito — então é
-   *guardado*, exatamente como o do controle que saiu da mesa.
+   cala o `report_thread` (`_output_mute`). Esta é a terceira linha da tabela
+   de mentiras da MESA-CHEIA-09: o backend devolvia "escreveu" mutado, e o
+   toast dizia "aplicado" com zero byte no fio. Ao desmutar, o desejado é
+   re-escrito — *guardado*, como o do controle que saiu da mesa. A luz e o
+   número saem no Nativo desde 23/09/2026 (`nativo_aplica`, abaixo).
 
 **As razões se ACUMULAM, e a frase tem de acumular junto** (conserto 1.5).
 Duas delas valendo ao mesmo tempo é o estado NORMAL da mesa dela: o co-op fica

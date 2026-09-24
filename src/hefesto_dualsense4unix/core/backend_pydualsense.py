@@ -3468,9 +3468,9 @@ class PyDualSenseController(IController):
         # do reassert). Best-effort: falha = sintoma antigo, sem regressão.
         new_keys = {k for k, _ in new_handles}
         with self._io_lock:
-            # Modo Nativo (output mutado): o JOGO é dono do LED — não reenviar o
-            # 0x08 (mesmo gate do reassert, que é no-op sob mute). Sem isso, um
-            # wake em nativo escreveria no firmware por baixo do jogo.
+            # Modo Nativo (output mutado): sem avaliação. Desde a LIGHTBAR-BT-
+            # CULPADO-01 este bloco só LOGA (o 0x08 saiu), e a luz do Nativo é
+            # reescrita pelo reassert logo abaixo, que vale sob o mute (23/09).
             reclaim_candidates = (
                 []
                 if self._output_mute
@@ -3567,8 +3567,8 @@ class PyDualSenseController(IController):
         # `connect()` roda a cada `backend_hotplug_reconcile`, então este
         # reassert converge o físico ao resolvido (explícita > automática >
         # global) sozinho. É idempotente (reescreve a MESMA cor), pega o
-        # `_io_lock` por conta própria e já é no-op em Modo Nativo (output
-        # mutado — o jogo é dono do LED).
+        # `_io_lock` por conta própria e vale no Modo Nativo também (a luz é
+        # do Hefesto ali, `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`).
         self.reassert_resolved_outputs()
 
     def _close_handles(self, keep: set[str]) -> None:

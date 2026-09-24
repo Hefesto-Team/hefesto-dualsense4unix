@@ -2709,9 +2709,9 @@ def _avisar_troca_de_modo(daemon: DaemonProtocol) -> None:
     - **sem vpad** (mouse+teclado e Modo Nativo): o fim do
       `stop_gamepad_emulation`, que é por onde os dois entram — o Modo Nativo
       inclusive, porque `lifecycle._release_controller_to_game` desliga a
-      emulação ANTES de mutar a saída (`set_output_mute(True)`). Essa ordem é
-      o que faz o branco do Modo Nativo conseguir sair: depois do mute o
-      backend não escreve mais nada, e o aviso seria no-op. A guarda de lá
+      emulação ANTES de mutar a saída (`set_output_mute(True)`). Até 23/09/2026
+      essa ordem era o que deixava o branco do Nativo sair; hoje a luz sai sob o
+      mute (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`). A guarda de lá
       (`release_grab`, não `persist`) está explicada no próprio ponto.
 
     `suppress(Exception)` largo: um aviso NUNCA pode derrubar o dispatch do
