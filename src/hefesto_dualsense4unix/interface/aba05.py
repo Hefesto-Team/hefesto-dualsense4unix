@@ -1875,9 +1875,9 @@ MIOLO = f'''
                      barras ao vivo, e o Testar de outra coluna encerra o
                      anterior (`_EM_TESTE`, um teste só). Medido no daemon de
                      mentira: nenhum `rumble.stop` sai sem o Parar. -->
-                <b>Testar</b> faz este controle tremer até o <b>Parar</b>, com os
-                valores das barras da coluna, que valem ao vivo. <b>Parar</b> corta e
-                devolve a vibração ao jogo. Testar outro controle encerra este.<br><br>
+                <b>Testar</b> treme este controle até o <b>Parar</b>, seguindo ao vivo
+                as barras da coluna. <b>Parar</b> corta e devolve a vibração ao jogo.
+                Testar outro controle encerra este.<br><br>
                 <!-- A NOTA DOS VALORES QUE PASSAM VOLTOU PARA CÁ — 05-Q2 dela,
                      05/09/2026: *"As duas na dica."* Ela é a única frase desta
                      aba que explica um resultado que a PRÓPRIA TELA produz (por

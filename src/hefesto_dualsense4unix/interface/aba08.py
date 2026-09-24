@@ -1994,9 +1994,14 @@ LUZ_NO_RADIO = ("Desliga este controle do rádio. Aperte PS para ele voltar, e a
 # E O `title` DESTE RESUMO DEIXOU DE SER DÍVIDA no mesmo dia: ele ganhou
 # `data-campo="mic-dica"` com alvo `atributo`, então segue o transporte VIVO em
 # vez de congelar o da cena.
+#
+# O TRANSPORTE É USB OU BT DESDE 24/09/2026 (AS-FRASES-QUE-A-BANCADA-ACHOU-01):
+# a linha ao lado, que esta frase manda ler, passou a dizer «pelo USB»/«pelo
+# BT», e a dica que a explica não pode falar outra língua (decisão dela de
+# 21/09, a I9 revogada).
 MIC_LIGADO_DICA = (
     "Liga o microfone deste controle. Desligado, nenhum programa o ouve — nem o jogo, nem a "
-    "chamada. Por onde ele chega quem decide é o cabo ou o rádio; a linha ao lado diz qual.")
+    "chamada. Por onde ele chega quem decide é o USB ou o BT; a linha ao lado diz qual.")
 #: O `?` DO BLOCO DO MICROFONE, segunda metade — e ela deixou de DECIDIR em
 #: 04/09/2026. A frase dizia *"Decide se o botão físico … cala só ele ou o
 #: computador inteiro"*, e a tela oferecia a escolha por controle enquanto o

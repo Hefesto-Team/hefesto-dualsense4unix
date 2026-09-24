@@ -20,7 +20,7 @@ A CURA É PONTE, e o inventário é este — quatro donos que já existiam e que
 produto não chamava:
 
     `secao_exame.reexaminar` / `app.py:1180`   o exame COMPLETO ao ENTRAR na aba
-    `gui.aba_conexoes.texto_da_contagem`       "2 controles • 1 no cabo • 1 no rádio"
+    `gui.aba_conexoes.texto_da_contagem`       "2 controles • 1 USB • 1 BT"
     `gui.aba_conexoes.Controle.texto_da_bateria`  o `%` e o travessão
     `secao_mesa._linha_declarada:671`          pré-selecionar o que ela gravou
     `secao_exame._desenhar_o_que_fazer`        as ordens vêm antes das conferências
@@ -407,7 +407,15 @@ def test_a_contagem_da_gestao_e_do_dono_com_o_separador_do_desenho() -> None:
         {"connected": True, "uniq": "aa:bb:cc:00:00:03", "transport": "bt",
          "player": 3, "battery_pct": 10}]}
     frase = tela.texto_da_contagem(tela.controles_do_estado(estado))
-    assert frase == "3 controles • 1 no cabo • 2 no rádio", (
+    # A PALAVRA DO TRANSPORTE SE PERGUNTA AO DONO, nunca se digita — 24/09/2026,
+    # AS-FRASES-QUE-A-BANCADA-ACHOU-01. Esta linha digitava «no cabo»/«no
+    # rádio», e foi ela que teria de mudar de novo na próxima troca de palavra.
+    from hefesto_dualsense4unix.app.actions.home_actions import (
+        palavra_do_transporte as palavra,
+    )
+
+    esperada = f"3 controles • 1 {palavra('usb')} • 2 {palavra('bt')}"
+    assert frase == esperada, (
         f"o dono mudou a frase da contagem: {frase!r}")
 
     saiu = p.html_da_conta(frase)
