@@ -548,18 +548,25 @@ def test_escolher_o_botao_manda_um_campo_so() -> None:
     leva como `null`); o `click` de abrir a lista não é escolha.
 
     MORDIDA: trate o `click` como escolha e a lista regrava o perfil a cada vez
-    que ela a abre para olhar.
+    que ela a abre para olhar; devolva `None` no `click` e a lista pisca o
+    verde de «aplicado» só por ter sido aberta (o `armou` é o pouso sem
+    piscada, `hefesto_vivo.CHAVE_DO_CLIQUE_QUE_SO_ARMOU`).
     """
     gesto = _o_gesto("calibrar-sensores.html", "mira-segurar")
     for valor, esperado in (("l2", "l2"), ("sempre", "")):
         p = _PonteDaMira(_OK)
-        gesto(_ctx_calibrar(), {"uniq": "aa:bb:cc:00:00:01", "valor": valor,
-                                "tipo": "select", "evento": "change"}, p)
+        assert gesto(_ctx_calibrar(), {"uniq": "aa:bb:cc:00:00:01", "valor": valor,
+                                       "tipo": "select", "evento": "change"}, p) is None
         assert p.chamadas == [{"uniq": "aa:bb:cc:00:00:01", "gatilho": esperado}]
     p = _PonteDaMira(_OK)
-    gesto(_ctx_calibrar(), {"uniq": "aa:bb:cc:00:00:01", "valor": "l2",
-                            "tipo": "select", "evento": "click"}, p)
+    volta = gesto(_ctx_calibrar(), {"uniq": "aa:bb:cc:00:00:01", "valor": "l2",
+                                    "tipo": "select", "evento": "click"}, p)
     assert p.chamadas == [], "abrir a lista virou escolha"
+    import hefesto_vivo as hv
+
+    assert volta == {hv.CHAVE_DO_CLIQUE_QUE_SO_ARMOU: True}, (
+        "abrir a lista voltou sem o `armou` — o piloto pisca «aplicado» sobre "
+        "um clique que não aplicou nada")
 
 
 @pytest.mark.parametrize("torto", ["ps", "", "touchpad"])

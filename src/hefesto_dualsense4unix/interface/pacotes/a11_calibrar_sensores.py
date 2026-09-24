@@ -324,13 +324,16 @@ def mira_tremor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 
 @gesto(PAGINA, "mira-segurar", grava="mira_set_detalhado")
-def mira_segurar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def mira_segurar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """«Só enquanto eu segurar» — a mira DESTE controle só anda com o botão
     escolhido apertado; «Sempre» a devolve a andar sem botão.
 
     O `click` DA LISTA NÃO É ESCOLHA: abrir a lista dispara `click` com o valor
     de antes, e só o `change` traz o que ela escolheu. Mandar no `click`
-    regravaria o perfil a cada vez que ela abrisse a lista para olhar.
+    regravaria o perfil a cada vez que ela abrisse a lista para olhar. E ele
+    volta com `armou` (o contrato de `hefesto_vivo.CHAVE_DO_CLIQUE_QUE_SO_ARMOU`):
+    voltar com `None` faria a lista piscar o verde de «aplicado» só por ter sido
+    aberta — a tela afirmando o que não aconteceu.
 
     A lista oferece o que o esquema aceita (`calibrar.REMAPEAVEIS`); um valor
     fora dela é DOM adulterado, e recusa aqui — o PS, que é a saída de
@@ -340,14 +343,15 @@ def mira_segurar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if not uniq:
         raise ValueError("mira-segurar: o clique não disse em qual controle")
     if str(o.get("evento") or "").lower() == "click":
-        return
+        return {"armou": True}
     escolha = str(o.get("valor") or "").strip()
     if escolha == calibrar.SEMPRE:
         _pedir_a_mira(p, uniq, gatilho="")
-        return
+        return None
     if escolha not in calibrar.REMAPEAVEIS:
         raise ValueError(f"mira-segurar: {escolha!r} não é um botão da lista")
     _pedir_a_mira(p, uniq, gatilho=escolha)
+    return None
 
 
 @gesto(PAGINA, "mira-inverter", grava="mira_set_detalhado")
