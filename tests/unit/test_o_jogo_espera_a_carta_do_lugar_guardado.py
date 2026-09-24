@@ -34,7 +34,12 @@ AS MORDIDAS (24/09/2026, cada uma devolvida com o md5 conferido):
 - ``_quem_senta_no_posto`` sem a vaga (o próximo assume na hora) reprova
   :class:`TestOP1ForaPorVinteSegundos`;
 - ``_RELOGIO_DOS_PRAZOS`` no ``CLOCK_MONOTONIC`` reprova
-  :class:`TestOPrazoAtravessaASuspensao`.
+  :class:`TestOPrazoAtravessaASuspensao`;
+- o leitor do P1 seguindo o P2 com o posto vago reprova pela metade dos
+  BOTÕES (``evdev_buttons_once``) — a régua que lia só o ``read_state()``
+  passava 47 de 47 sobre ela (conferência de 24/09/2026);
+- o topo da vaga de volta a ``battery_pct=0`` reprova
+  :class:`TestOTopoDoEstadoNaVaga`.
 
 Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5 zerados.
 """
@@ -306,12 +311,24 @@ class MesaDoJogo:
     # -- a leitura --------------------------------------------------------
 
     def dono_do_vpad_do_p1(self) -> str | None:
-        """Quem o `read_state()` entrega ao vpad do P1 agora (None = parado)."""
-        estado = self.inst.read_state()
-        return next(
-            (b[len(_MARCA):] for b in estado.buttons_pressed if b.startswith(_MARCA)),
-            None,
+        """Quem alimenta o vpad do P1 agora (None = parado), pelas DUAS metades.
+
+        O laço do daemon (`dispatch_gamepad`) manda ao vpad do P1 os analógicos
+        do `read_state()` e os BOTÕES do `poll.evdev_buttons_once`, que lê o
+        leitor do P1 direto, sem passar pelo `read_state()`. Medir só a
+        primeira metade deixaria de fora um leitor que seguisse outro controle
+        com o posto vago (conferência de 24/09/2026). As duas têm de dizer o
+        mesmo dono.
+        """
+        from hefesto_dualsense4unix.daemon.subsystems.poll import evdev_buttons_once
+
+        metades = (
+            self.inst.read_state().buttons_pressed,
+            evdev_buttons_once(self.daemon),
         )
+        donos = {b[len(_MARCA):] for metade in metades for b in metade if b.startswith(_MARCA)}
+        assert len(donos) <= 1, f"o vpad do P1 recebe de dois controles: {donos}"
+        return next(iter(donos), None)
 
     def o_jogo_ve(self) -> dict[int, str | None]:
         """Jogador N do jogo → o controle que alimenta o vpad daquele lugar."""
@@ -674,6 +691,42 @@ class TestORelogioEUmSo:
             "o CLOCK_BOOTTIME ficou atrás do CLOCK_MONOTONIC — ele soma a "
             "suspensão, nunca a subtrai"
         )
+
+
+@pytest.mark.usefixtures("config_isolado")
+class TestAVoltaPeloOutroTransporte:
+    """A linha 3 da bancada dela: o P1 sai do cabo e volta pelo rádio (e o inverso).
+
+    A régua de cima devolve o P1 no MESMO transporte em que ele caiu; o gesto
+    que a bancada cobra é o da troca. A key do handle é o MAC nos dois
+    transportes, e é por ela que a vaga reconhece quem voltou.
+    """
+
+    @pytest.mark.parametrize(
+        ("de", "para"), [("usb", "bt"), ("bt", "usb")], ids=["cabo-para-radio", "radio-para-cabo"]
+    )
+    @pytest.mark.parametrize("quantos", [2, 4])
+    def test_o_p1_volta_pelo_outro_transporte_ao_vpad_dele(
+        self, monkeypatch: pytest.MonkeyPatch, quantos: int, de: str, para: str
+    ) -> None:
+        bancada = montar(monkeypatch, quantos, "usb" if de == "usb" else "bt")
+        ficaram = UNIQS[1:quantos]
+        vpads_de_antes = {u: bancada.vpad_de(u) for u in ficaram}
+
+        bancada.mesa.levantar(P1)
+        for _ in range(3):
+            bancada.tique()
+            assert bancada.dono_do_vpad_do_p1() is None
+        bancada.mesa.sentar(P1, transporte=para)
+        bancada.tique()
+
+        assert bancada.dono_do_vpad_do_p1() == P1
+        assert bancada.inst.get_transport() == para
+        for uniq in ficaram:
+            assert bancada.vpad_de(uniq) is vpads_de_antes[uniq]
+        assert bancada.a_tela()[P1] == 1
+        assert bancada.o_jogo_ve() == {n + 1: UNIQS[n] for n in range(quantos)}
+        bancada.o_jogo_segue_a_tela()
 
 
 @pytest.mark.usefixtures("config_isolado")
