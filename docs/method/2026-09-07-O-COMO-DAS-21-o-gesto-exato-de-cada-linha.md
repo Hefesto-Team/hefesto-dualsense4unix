@@ -149,9 +149,9 @@ roteiro.
 
 ## Linha 3 — Tira o P1 do cabo e põe no rádio, no meio da partida
 
-**O que isto prova.** Prova que tirar o P1 do cabo e trazê-lo de volta pelo rádio, no meio da partida, não derruba os outros três e devolve a ele o mesmo número de antes.
+**O que isto prova.** Prova que tirar o P1 do cabo e trazê-lo de volta pelo rádio, no meio da partida, não derruba os outros três, não entrega o boneco 1 a outro controle enquanto ele está fora, e devolve a ele o mesmo número de antes.
 
-**Onde olhar.** Três lugares, e o principal não é o controle que você está mexendo. Primeiro, a fita do topo do Hefesto: os chips dos outros três não podem sumir em momento nenhum, e o chip do que voltou tem de dizer P1 de novo, agora terminando em BT no lugar de USB. Segundo, o JOGO: os bonecos 2, 3 e 4. Terceiro, o próprio aparelho que voltou — as cinco lâmpadas brancas em fileira, embaixo do touchpad: elas dizem o número do jogador pelo CONJUNTO que fica aceso.
+**Onde olhar.** Três lugares, e o principal não é o controle que você está mexendo. Primeiro, a fita do topo do Hefesto: os chips dos outros três não podem sumir em momento nenhum, e o chip do que voltou tem de dizer P1 de novo, agora terminando em BT no lugar de USB. Segundo, o JOGO: o boneco 1 fica parado enquanto o P1 está fora, e os bonecos 2, 3 e 4 seguem com os donos deles. Terceiro, o próprio aparelho que voltou — as cinco lâmpadas brancas em fileira, embaixo do touchpad: elas dizem o número do jogador pelo CONJUNTO que fica aceso.
 
 **Os passos.**
 
@@ -159,24 +159,26 @@ roteiro.
 2. Abra o jogo com os quatro jogadores dentro da partida.
 3. Leia a fita do Hefesto e anote o número dos quatro, antes de mexer em nada.
 4. Puxe o cabo de dentro do controle do P1.
-5. Dê um toque no botão PS desse mesmo controle, sem demorar — do puxão do cabo até o toque tem de passar menos de trinta segundos.
-6. Olhe a fita durante a troca: os chips dos outros três não podem sumir em nenhum instante.
-7. Olhe o jogo: os bonecos 2, 3 e 4 não podem travar, sumir nem parar de responder.
-8. Espere o chip do controle que voltou reaparecer na fita e leia o que está escrito nele.
-9. Vire para cima o controle que voltou e olhe as cinco lâmpadas brancas embaixo do touchpad.
-10. Empurre o analógico esquerdo do controle que voltou e confira que ele move o boneco 1 de novo.
-11. Mexa nos outros três, um de cada vez, e confira que cada um continua movendo o boneco dele.
+5. Pegue o P2 e empurre o analógico esquerdo dele para um lado e depois para o outro.
+6. Veja o jogo: tem de responder o boneco 2, e o boneco 1 tem de ficar parado.
+7. Largue o P2 e dê um toque no botão PS do P1 — do puxão do cabo até o toque tem de passar menos de trinta segundos.
+8. Olhe a fita durante a troca: os chips dos outros três não podem sumir em nenhum instante.
+9. Olhe o jogo: os bonecos 2, 3 e 4 não podem travar, sumir nem parar de responder.
+10. Espere o chip do controle que voltou reaparecer na fita e leia o que está escrito nele.
+11. Vire para cima o controle que voltou e olhe as cinco lâmpadas brancas embaixo do touchpad.
+12. Empurre o analógico esquerdo do controle que voltou e confira que ele move o boneco 1 de novo.
+13. Mexa nos outros três, um de cada vez, e confira que cada um continua movendo o boneco dele.
 
-**Passa quando.** Do puxão do cabo até o fim, os chips dos outros três continuaram na fita e os bonecos 2, 3 e 4 continuaram respondendo — ninguém mais caiu. O controle que trocou voltou à fita como P1 — o mesmo número que tinha antes —, agora terminando em BT. As lâmpadas dele mostram o desenho do jogador 1: só a do meio acesa. E ele volta a mover o boneco 1.
+**Passa quando.** Do puxão do cabo até o fim, os chips dos outros três continuaram na fita e os bonecos 2, 3 e 4 continuaram respondendo — ninguém mais caiu. Com o P1 fora, o P2 moveu o boneco 2, e o boneco 1 ficou parado. O controle que trocou voltou à fita como P1 — o mesmo número que tinha antes —, agora terminando em BT. As lâmpadas dele mostram o desenho do jogador 1: só a do meio acesa. E ele volta a mover o boneco 1.
 
 **Por controle.**
 
 * **P1** — É ESTE que troca: puxe o cabo e devolva-o pelo rádio com um toque no PS, em menos de trinta segundos. Tem de voltar como P1, agora terminando em BT, com só a lâmpada do meio acesa, e tem de voltar a mover o boneco 1.
-* **P2** — Não encoste nele durante a troca. O chip dele não pode sumir da fita, e depois da troca ele tem de continuar movendo o boneco 2.
+* **P2** — É o único que você mexe durante a troca, e só o analógico esquerdo: com o P1 fora, ele tem de mover o boneco 2, nunca o 1. O chip dele não pode sumir da fita, e depois da troca ele tem de continuar movendo o boneco 2.
 * **P3** — Não encoste nele durante a troca. Ele está no rádio, que é onde a queda em cadeia costuma aparecer: o chip dele não pode piscar para fora da fita, e depois ele tem de continuar movendo o boneco 3.
 * **P4** — Não encoste nele durante a troca. Também está no rádio e é o último da fila, o primeiro a cair quando alguma coisa desmonta: chip na fita o tempo todo, e o boneco 4 respondendo depois.
 
-**A armadilha.** Três, e todas fazem você julgar errado. A primeira é a leitura das lâmpadas: as cinco do DualSense não se contam da esquerda para a direita — o número é o CONJUNTO aceso. Jogador 1 é só a do meio. Jogador 2 são a segunda e a quarta. Jogador 3 são a primeira, a do meio e a última. Jogador 4 são as quatro das pontas, com a do meio apagada. Quem lê "a terceira lâmpada acesa" como jogador 3 reprova um produto que está certo. A segunda é o relógio: o posto de Jogador 1 fica guardado por trinta segundos para o P1 que caiu. Se você demorar mais que isso entre puxar o cabo e tocar o PS, ele volta com outro número — e isso é a regra do produto funcionando, não defeito. Refaça mais rápido. A terceira: enquanto o P1 está fora, o produto fecha a fila, e os outros podem descer um número (o P2 acender como 1) e voltar ao seu quando o P1 volta. Anote se vir — o que esta linha cobra é que ninguém caia e que o P1 volte P1. Dentro do jogo as lâmpadas continuam do Hefesto — desde 23/09 o jogo não troca o número de ninguém, nem em co-op —, então o desenho do 1 no controle que voltou é o Hefesto escrevendo, e não o jogo. E o erro de mira: a tentação é ficar olhando o controle que você está mexendo. Este teste se decide nos OUTROS TRÊS.
+**A armadilha.** Três, e todas fazem você julgar errado. A primeira é a leitura das lâmpadas: as cinco do DualSense não se contam da esquerda para a direita — o número é o CONJUNTO aceso. Jogador 1 é só a do meio. Jogador 2 são a segunda e a quarta. Jogador 3 são a primeira, a do meio e a última. Jogador 4 são as quatro das pontas, com a do meio apagada. Quem lê "a terceira lâmpada acesa" como jogador 3 reprova um produto que está certo. A segunda é o relógio: o posto de Jogador 1 fica guardado por trinta segundos para o P1 que caiu. Passado esse tempo, a fila fecha: o P2 vira 1 e passa a mover o boneco 1; quando o P1 volta, a fita o devolve ao 1, mas no jogo ele fica com o boneco 2 até o jogo fechar, porque refazer o controle do jogador 1 com o jogo aberto o derrubaria — é a regra do produto funcionando, não defeito. Refaça mais rápido. A terceira é o boneco 1 parado, que parece defeito e é a regra de 24/09: com o jogo aberto, o posto do P1 espera por ele — ninguém desce de número e nenhum outro controle assume o boneco 1 enquanto ele está fora. Se o P2 mover o boneco 1 dentro dos trinta segundos, anote a hora: é defeito. Com o jogo fechado é outra coisa, e de propósito: o P2 assume na hora, porque sem jogo o P1 também move o mouse do PC. Dentro do jogo as lâmpadas continuam do Hefesto — desde 23/09 o jogo não troca o número de ninguém, nem em co-op —, então o desenho do 1 no controle que voltou é o Hefesto escrevendo, e não o jogo. E o erro de mira: a tentação é ficar olhando o controle que você está mexendo. Este teste se decide nos OUTROS TRÊS.
 
 ---
 
