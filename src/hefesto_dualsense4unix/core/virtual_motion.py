@@ -84,6 +84,7 @@ sensor desligado se paga o `bytearray` de 25 bytes.
 from __future__ import annotations
 
 import threading
+from collections.abc import Mapping
 from typing import NamedTuple
 
 #: Faixa do GIROSCÓPIO dentro da janela de 25 B (``payload[15:40]`` do report
@@ -191,6 +192,14 @@ class RegistroDeSensores:
     def __init__(self) -> None:
         self._lock = threading.RLock()
         self._estado: dict[str, EstadoDosSensores] = {}
+        #: AS PEÇAS QUE MIRAM — A-MIRA-POR-MOVIMENTO-NA-TELA-01. O giro delas
+        #: vai ao jogo como ANALÓGICO (o roteador de movimento), e por isso
+        #: deixa a janela de motion: sem isto, no caminho `uhid`, a câmera do
+        #: jogo que lê o giro nativo andaria em dobro. Quem escreve é
+        #: `roteador_de_movimento.sincronizar_o_filtro`, que é onde o arranjo
+        #: mora; aqui só se guarda a resposta, para a thread do report.
+        self._roteado_padrao = False
+        self._roteado: dict[str, bool] = {}
 
     def definir(
         self,
@@ -233,17 +242,44 @@ class RegistroDeSensores:
     def filtrar(self, uniq: str | None, janela: bytes) -> bytes:
         """A janela como ela deve SAIR para a peça `uniq`.
 
-        O caminho quente inteiro: um `dict.get` sob lock e, no caso normal, o
-        mesmo objeto de volta.
+        O caminho quente inteiro: dois `dict.get` sob lock e, no caso normal,
+        o mesmo objeto de volta. Pergunta a `estado()` e não ao dicionário
+        direto de propósito: é por ele que as réguas dublam o interruptor, e
+        um atalho aqui faria o filtro fugir do dublê.
+
+        A PEÇA QUE MIRA PERDE O GIROSCÓPIO DA JANELA, e só ele (ver
+        :meth:`definir_roteados`). O interruptor dela continua dizendo o que
+        ela escolheu — `estado()` não muda —, porque o sensor segue LIGADO: é
+        ele que move a mira.
         """
         estado = self.estado(uniq)
-        if estado.tudo_ligado:
+        giro = estado.giroscopio and not self.roteado(uniq)
+        if giro and estado.acelerometro:
             return janela
         return janela_com_sensores(
             janela,
-            giroscopio=estado.giroscopio,
+            giroscopio=giro,
             acelerometro=estado.acelerometro,
         )
+
+    def definir_roteados(self, *, padrao: bool, por_peca: Mapping[str, bool]) -> None:
+        """Quais peças mandam o giro à MIRA em vez de ao jogo. TROCA tudo.
+
+        `padrao` é a peça sem opinião (a mira do perfil, para a mesa inteira);
+        `por_peca` é quem tem o chip «Mira Virtual» próprio. Chamado só por
+        `roteador_de_movimento.sincronizar_o_filtro`.
+        """
+        limpo = {chave_de_sensor(k): bool(v) for k, v in por_peca.items() if chave_de_sensor(k)}
+        with self._lock:
+            self._roteado_padrao = bool(padrao)
+            self._roteado = limpo
+
+    def roteado(self, uniq: str | None) -> bool:
+        """Esta peça está mirando — o giro dela vai ao analógico, não ao jogo?"""
+        if not uniq:
+            return False
+        with self._lock:
+            return self._roteado.get(chave_de_sensor(uniq), self._roteado_padrao)
 
     def desligados(self) -> dict[str, EstadoDosSensores]:
         """Cópia de quem tem sensor desligado — a lista que o hub consulta.
@@ -260,6 +296,8 @@ class RegistroDeSensores:
         """Esquece tudo (fim de sessão/teste). Idempotente."""
         with self._lock:
             self._estado.clear()
+            self._roteado_padrao = False
+            self._roteado = {}
 
 
 def chave_de_sensor(uniq: str) -> str:
