@@ -13,10 +13,11 @@ número do jogador, republicado quando o número muda. A régua lê a decisão, 
 o dono: mude o dono sem mudar a decisão e ela reprova.
 
 O QUE O JOGO LÊ NÃO PODE MUDAR, e a medição está na seção 3: os casamentos do
-GE-Proton11-7 sobre o nome amigável do endpoint, transcritos do fonte com os
-182 patches ``proton-ds5-haptic`` aplicados, dão o mesmo resultado para o
-rótulo velho e para o novo. A identidade (nome do nó, VID, PID, âncora) é a
-mesma.
+GE-Proton11-7 sobre o ``drv_id`` do endpoint (a descrição), transcritos do
+fonte com os 182 patches ``proton-ds5-haptic`` aplicados, dão o mesmo
+resultado para o rótulo velho e para o novo. A identidade (nome do nó, VID,
+PID, âncora) é a mesma — e é o USB ``054c:0ce6`` dela que faz o nome que o jogo
+lê ser o do produto, com qualquer rótulo.
 
 Nada aqui toca o servidor de som de ninguém: o ``pactl`` é um dublê com estado,
 MAIS estrito que o ``pactl`` de mentira da bancada de tela (aquele aceita tudo
@@ -27,8 +28,8 @@ AS MORDIDAS, uma por afirmação, e cada uma foi vista reprovar:
 1. devolva ``device.description='DualSense {marca} (háptica)'`` em
    ``propriedades_do_endpoint`` → o endereço volta ao rótulo e a bancada conta
    quatro;
-2. tire ``*campos_do_nome()`` de ``propriedades_do_endpoint`` → o monitor
-   chega ao Wine com 64 caracteres e sem nome de reserva;
+2. tire ``*campos_do_nome()`` de ``propriedades_do_endpoint`` → o ``drv_id``
+   do monitor fica com 64 caracteres, sem nome de reserva;
 3. tire a chamada a ``_renovar_o_rotulo_da_haptica`` da volta do rádio → o
    número fica o de quando o nó nasceu;
 4. tire ``self._ha_jogo_aberto()`` de ``_a_haptica_esta_em_uso`` → o endpoint
@@ -297,8 +298,10 @@ def test_o_rotulo_cabe_no_teto_e_o_monitor_tem_reserva(assentos) -> None:
     """O rótulo cabe nos 62 do Wine; o monitor passa, e o ``product.name`` o salva.
 
     O ``pipewire-pulse`` chama o monitor de «Monitor of <descrição>»: com a
-    forma A isso dá 64. Acima do teto o Wine monta o nome a partir do
-    ``device.product.name`` — sem ele, o comprido chega inteiro ao jogo.
+    forma A isso dá 64. Acima do teto o ``get_device_name`` monta o ``drv_id``
+    a partir do ``device.product.name`` — sem ele, o comprido fica inteiro ali.
+    O nome que o JOGO lê não passa por aqui: é o do produto, pelo USB
+    ``054c:0ce6`` (:func:`test_a_identidade_do_no_fica_intacta`).
 
     MORDIDA 2: tire ``*campos_do_nome()`` de ``propriedades_do_endpoint``.
     """
@@ -309,7 +312,7 @@ def test_o_rotulo_cabe_no_teto_e_o_monitor_tem_reserva(assentos) -> None:
         assert len(_MONITOR_DE + rotulo) > _TETO_DO_WINE
         props = _como_o_servidor_le(eh.propriedades_do_endpoint(_P3, _ANCORAS[0]))
         reserva = props.get("device.product.name", "")
-        assert reserva, "o monitor do endpoint chega ao Wine sem nome de reserva"
+        assert reserva, "o monitor do endpoint fica sem nome de reserva no Wine"
         assert len(_MONITOR_DE + reserva) <= _TETO_DO_WINE
 
 
@@ -318,7 +321,9 @@ def test_a_identidade_do_no_fica_intacta(assentos) -> None:
 
     O id do endpoint no Wine sai do nome do sink, e o ``ContainerId`` que a RE
     Engine casa com o device KS sai do ``sysfs.path``. Nenhum dos dois pode
-    mudar por causa de um rótulo.
+    mudar por causa de um rótulo. E o USB ``054c:0ce6`` é o que faz o
+    ``find_product_name_override`` do ``mmdevapi`` dar ao endpoint o nome do
+    produto — o rótulo nunca chega ao nome que o jogo lê.
     """
     ancora = _ANCORAS[2]
     props = _como_o_servidor_le(eh.propriedades_do_endpoint(_P3, ancora))
@@ -374,10 +379,12 @@ def test_o_rotulo_do_no_adotado_se_le_do_argumento_do_modulo() -> None:
 # GE-Proton11-7 (`proton-hefesto/fonte`, commit `c191f35`), com os 182 patches de
 # `patches/proton-ds5-haptic/` aplicados em ordem sobre o `wine` dele — 179
 # entram limpos; 0022, 0109 e 0150 falham em trechos de formato e de include,
-# longe do nome. A descrição do nó chega ao `mmdevapi` como o nome amigável
-# (`get_device_name` → `MMDevice.drv_id`, e `L"%ls (%ls)"` com «Speakers» ou
-# «Microphone» no `DEVPKEY_Device_FriendlyName`). Os predicados que LEEM esse
-# nome, de `dlls/mmdevapi/devenum.c`, transcritos um a um:
+# longe do nome. A descrição do nó chega ao `mmdevapi` como o `drv_id`
+# (`get_device_name` → `MMDevice.drv_id`). O `DEVPKEY_Device_FriendlyName` que
+# o jogo lê NÃO sai dela: o nó declara USB `054c:0ce6`, e o
+# `find_product_name_override` troca o nome por «Speakers (DualSense Wireless
+# Controller)», com o rótulo velho e com o novo. Os predicados que LEEM o
+# `drv_id`, de `dlls/mmdevapi/devenum.c`, transcritos um a um:
 
 
 def _ge_dualsense(n: str) -> bool:  # is_dualsense_endpoint_name (e o 0187)
@@ -409,7 +416,7 @@ _CASAMENTOS_DO_GE: tuple[Callable[[str], bool], ...] = (
 
 
 def _o_que_o_ge_ve(nome_amigavel: str) -> list[tuple[str, tuple[bool, ...]]]:
-    """Cada forma do nome que um predicado do GE lê, com os cinco resultados."""
+    """Os cinco resultados sobre o ``drv_id`` cru — e, por folga, sobre «Speakers (…)»."""
     formas = (nome_amigavel, f"Speakers ({nome_amigavel})")
     return [(f, tuple(p(f) for p in _CASAMENTOS_DO_GE)) for f in formas]
 
