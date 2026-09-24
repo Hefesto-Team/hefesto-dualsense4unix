@@ -762,7 +762,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 7. Toque uma música no computador e confira, com o ouvido, que ela sai pelo P1 e não sai na TV nem no P2.
 8. Escolha como saída a que começa com «Alto-falante do Controle 2» e confira que a música passou para o P2, e só para ele.
 9. Encoste o ouvido no P3 e depois no P4 e confirme que os dois estão mudos.
-10. Clique na aba Sistema e confira que a linha que começa com «Som do sistema» diz, em poucos segundos, que o som sai em «Alto-falante do Controle 2 (DualSense Wireless Controller)».
+10. Clique na aba Sistema, pare o mouse na linha que começa com «Som do sistema» e confira que a frase inteira diz, em poucos segundos, que o som sai em «Alto-falante do Controle 2 (DualSense Wireless Controller)» — a linha é cortada na tela, e o número aparece antes do corte.
 11. Devolva a saída do sistema para a TV e confira que a música voltou para ela e que o P1 e o P2 emudeceram.
 12. Clique na aba Controles, abra o cartão do P2 e clique em «Tudo no Controle e Nada no PC», no bloco Alto-falante dele.
 13. Confira que a música sai só pelo P2 e que, nas configurações de Som do sistema, a saída escolhida passou a ser uma placa DualSense das que não começam com «Alto-falante do Controle» — no USB o botão escolhe a placa de som do próprio controle, e não o «Alto-falante do Controle 2 (DualSense Wireless Controller)».
@@ -798,7 +798,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 5. Toque uma música no computador e confira, com o ouvido, que ela sai pelo P3 e não sai na TV nem no P4.
 6. Escolha como saída a que começa com «Alto-falante do Controle 4» e confira que a música passou para o P4, e só para ele.
 7. Encoste o ouvido no P1 e depois no P2 e confirme que os dois estão mudos.
-8. Clique na aba Sistema e confira que a linha que começa com «Som do sistema» diz, em poucos segundos, que o som sai em «Alto-falante do Controle 4 (DualSense Wireless Controller)».
+8. Clique na aba Sistema, pare o mouse na linha que começa com «Som do sistema» e confira que a frase inteira diz, em poucos segundos, que o som sai em «Alto-falante do Controle 4 (DualSense Wireless Controller)» — a linha é cortada na tela, e o número aparece antes do corte.
 9. Devolva a saída do sistema para a TV e confira que a música voltou para ela e que o P3 e o P4 emudeceram.
 10. Clique na aba Controles, abra o cartão do P4 e clique em «Tudo no Controle e Nada no PC», no bloco Alto-falante dele.
 11. Confira que a música sai só pelo P4 e que, nas configurações de Som do sistema, a saída escolhida passou a ser a que começa com «Alto-falante do Controle 4».
