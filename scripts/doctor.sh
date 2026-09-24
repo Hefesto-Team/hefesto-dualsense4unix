@@ -906,9 +906,14 @@ check_input_uaccess() {
         fail "${regra} ausente — o touchpad e o giroscópio só funcionam para quem está no grupo 'input' por fora do produto (numa máquina nova, não funcionam). Rode: sudo bash scripts/install_udev.sh"
         return
     fi
-    local node base nome vid dev_real eu classe
+    local node base nome vid pid uniq dev_real eu classe
     local vistos_fis=0 vistos_virt=0
     local sem_acesso=() so_pelo_grupo=() sem_acesso_virt=() so_grupo_virt=()
+    # HIDE-SO-O-HIDRAW-02 (24/09/2026): com o broker de pé, a regra 72 FECHA
+    # os nós de entrada do DualSense físico (0600 root) e o daemon os lê pelo
+    # broker. Fechado ali é a cura, não a falta dela; aberto é o que acusa.
+    local sock_do_broker="/run/hefesto-hidraw-broker/broker.sock"
+    local fechados_pelo_hefesto=() nasceu_aberto=()
     eu="$(id -un 2>/dev/null || true)"
     for node in /dev/input/event*; do
         [[ -e "${node}" ]] || continue
@@ -927,12 +932,30 @@ check_input_uaccess() {
             *) continue ;;
         esac
         dev_real="$(readlink -f "/sys/class/input/${base}/device" 2>/dev/null || true)"
-        if [[ "${dev_real}" == */devices/virtual/* ]]; then
+        # FATO QUE CAIU, SUBSTITUÍDO — 24/09/2026. O teste era só
+        # `/devices/virtual/`, e desde o BlueZ 5.73 o DualSense FÍSICO pelo
+        # rádio mora em `/devices/virtual/misc/uhid/`, ao lado do vpad: o
+        # controle dela pelo BT era contado como «gamepad VIRTUAL». Quem
+        # separa os dois ali é a identidade do vpad (o `uniq` 02:fe), como em
+        # `core/evdev_reader.py:_is_virtual_evdev`.
+        uniq="$(cat "/sys/class/input/${base}/device/uniq" 2>/dev/null || true)"
+        if [[ "${dev_real}" == */devices/virtual/* \
+              && ( "${dev_real}" != */misc/uhid/* || -z "${uniq}" || "${uniq,,}" == 02:fe:* ) ]]; then
             classe="virt"
             vistos_virt=$((vistos_virt + 1))
         else
             classe="fis"
             vistos_fis=$((vistos_fis + 1))
+        fi
+        pid="$(cat "/sys/class/input/${base}/device/id/product" 2>/dev/null || true)"
+        if [[ "${classe}" == "fis" && "${vid}" == "054c" \
+              && ( "${pid}" == "0ce6" || "${pid}" == "0df2" ) && -e "${sock_do_broker}" ]]; then
+            if [[ -r "${node}" ]]; then
+                nasceu_aberto+=("${base}")
+            else
+                fechados_pelo_hefesto+=("${base}")
+            fi
+            continue
         fi
         if [[ ! -r "${node}" ]]; then
             [[ "${classe}" == "fis" ]] && sem_acesso+=("${base}") || sem_acesso_virt+=("${base}")
@@ -956,15 +979,24 @@ check_input_uaccess() {
         fi
         return
     fi
+    if [[ "${#nasceu_aberto[@]}" -gt 0 ]]; then
+        warn "o broker está de pé e ${#nasceu_aberto[@]} nó(s) de touchpad/movimento do controle FÍSICO seguem abertos (${nasceu_aberto[*]}) — quem enumera /dev/input acha o controle dobrado. Nasceram antes do broker, ou o broker em memória é o de antes da cura: reconecte o controle; se persistir, veja o check do broker em memória"
+        return
+    fi
+    if [[ "${#fechados_pelo_hefesto[@]}" -eq "${vistos_fis}" ]]; then
+        pass "touchpad e giroscópio do controle físico fechados para todos menos o Hefesto em ${vistos_fis} nó(s) (${fechados_pelo_hefesto[*]}) — o daemon os lê pelo broker"
+        return
+    fi
+    local vistos_com_acl=$((vistos_fis - ${#fechados_pelo_hefesto[@]}))
     if [[ "${#sem_acesso[@]}" -gt 0 ]]; then
-        fail "sem permissão de leitura em ${#sem_acesso[@]} de ${vistos_fis} nó(s) FÍSICOS de touchpad/movimento (${sem_acesso[*]}) — o daemon engole o EACCES e relata 'sem sensor'. A ACL nasce no (re)add do device: desconecte e reconecte o controle; se persistir, rode: sudo bash scripts/install_udev.sh"
+        fail "sem permissão de leitura em ${#sem_acesso[@]} de ${vistos_com_acl} nó(s) FÍSICOS de touchpad/movimento (${sem_acesso[*]}) — o daemon engole o EACCES e relata 'sem sensor'. A ACL nasce no (re)add do device: desconecte e reconecte o controle; se persistir, rode: sudo bash scripts/install_udev.sh"
         return
     fi
     if [[ "${#so_pelo_grupo[@]}" -gt 0 ]]; then
-        warn "${#so_pelo_grupo[@]} de ${vistos_fis} nó(s) FÍSICOS de touchpad/movimento legíveis só pelo GRUPO do nó (${so_pelo_grupo[*]}), sem a ACL da sessão — funciona NESTA máquina (você está no grupo 'input') e NÃO funcionaria numa limpa. Reconecte o controle para a ${regra} pegar."
+        warn "${#so_pelo_grupo[@]} de ${vistos_com_acl} nó(s) FÍSICOS de touchpad/movimento legíveis só pelo GRUPO do nó (${so_pelo_grupo[*]}), sem a ACL da sessão — funciona NESTA máquina (você está no grupo 'input') e NÃO funcionaria numa limpa. Reconecte o controle para a ${regra} pegar."
         return
     fi
-    pass "touchpad e giroscópio com ACL da sessão em ${vistos_fis} nó(s) do controle físico — sem depender do grupo 'input'"
+    pass "touchpad e giroscópio com ACL da sessão em ${vistos_com_acl} nó(s) do controle físico — sem depender do grupo 'input'"
 }
 
 # FEAT-DSX-DEFINITIVE-FIX-01 §7.5 (Opção D): o quirk de boot
@@ -5229,10 +5261,11 @@ PY
 # dobrado" — o terceiro controle dela — começava lendo um verde.
 #
 # CONFERE E NÃO CURA, e aqui a regra é dura: nenhuma destas funções escreve
-# permissão nenhuma. QUAL das três saídas o produto vai tomar (EVIOCGRAB no
-# evdev, estender o `hide` a evdev/joydev, ou seguir só na env do wrapper) é
-# decisão DELA — a E2 da sprint, com o preço de cada caminho na mesa. O
-# instrumento só para de mentir.
+# permissão nenhuma. A saída que o produto tomou foi escolhida por ela em
+# 23/09/2026, entre as três da E2 da sprint: estender o `hide` a evdev e
+# joydev («Esconder tudo»). A regra 72 faz os nós de entrada do físico
+# nascerem fechados e o broker os fecha e abre junto com o hidraw
+# (HIDE-SO-O-HIDRAW-02); o instrumento continua medindo, agora contra a cura.
 
 #: Os nós de `/dev/input` (evdev e joydev) do MESMO device HID de um nó hidraw.
 #: Um basename por linha; NADA se o sysfs não souber responder — e "nada" é
@@ -5265,8 +5298,14 @@ _entrada_alcancavel_pelo_jogo() {
     case "${modo: -1}" in
         [4567]) return 0 ;;
     esac
+    # HIDE-SO-O-HIDRAW-02 (24/09/2026): a entrada nomeada só vale o que a
+    # MÁSCARA deixa. O nó que o broker fecha para 0600 depois de o login lhe
+    # dar `user:ela:rw` guarda a linha, e o getfacl a mostra como
+    # `user:ela:rw-<TAB>#effective:---` (medido num arquivo com a ACL nomeada
+    # e a máscara zerada) — ler a linha sem o `#effective` chamava de
+    # alcançável um nó que ninguém abre.
     if command -v getfacl >/dev/null 2>&1 \
-       && getfacl -p "${no}" 2>/dev/null | grep -Eq '^user:[^:]+:r'; then
+       && getfacl -p "${no}" 2>/dev/null | grep -E '^user:[^:]+:r' | grep -vq '#effective:-'; then
         return 0
     fi
     case "${modo: -2:1}" in
@@ -5419,7 +5458,12 @@ _veredito_do_hide() {
     fi
     [[ "${TRES_SUP_SEM_MAPA}" -gt 0 ]] && info "${TRES_SUP_SEM_MAPA} nó(s) escondido(s) sem mapa no sysfs — ficaram fora do veredito abaixo"
     if [[ -n "${TRES_SUP_ABERTOS}" ]]; then
-        warn "o hide cobre SÓ o hidraw: ${TRES_SUP_ESCONDIDOS} de ${TRES_SUP_CONTROLES} controle(s) escondido(s) do jogo — o FÍSICO segue alcançável em ${TRES_SUP_N_ABERTOS} nó(s) de entrada (${TRES_SUP_ABERTOS}), e quem enumerar /dev/input em vez de hidraw acha o controle dobrado. O que separa os dois hoje é a env do wrapper (SDL_GAMECONTROLLER_IGNORE_DEVICES/PROTON_DISABLE_HIDRAW) — veja o check do wrapper de launch acima; estender o hide a evdev/joydev é decisão em aberto (ESCONDE-SÓ-O-HIDRAW-01, E2)"
+        # HIDE-SO-O-HIDRAW-02 (24/09/2026): a E2 da ESCONDE-SÓ-O-HIDRAW-01 foi
+        # decidida por ela em 23/09 («Esconder tudo») e o broker fecha os nós
+        # de entrada junto com o hidraw. Nó de entrada aberto com o hidraw
+        # escondido deixou de ser «decisão em aberto» e passou a ser um broker
+        # que não fechou: o de antes da cura, ainda na memória.
+        warn "o hide não fechou os nós de entrada: ${TRES_SUP_ESCONDIDOS} de ${TRES_SUP_CONTROLES} controle(s) escondido(s) do jogo — o FÍSICO segue alcançável em ${TRES_SUP_N_ABERTOS} nó(s) de entrada (${TRES_SUP_ABERTOS}), e quem enumerar /dev/input em vez de hidraw acha o controle dobrado. O broker fecha os quatro junto com o hidraw desde a HIDE-SO-O-HIDRAW-02; se ele não fechou, o que roda é o de antes da cura (veja o check do broker em memória acima). Reinicie sem abrir o físico: sudo touch /run/hefesto-hidraw-broker/reinicio-sem-abrir && sudo systemctl restart hefesto-hidraw-broker.service"
         return
     fi
     # A conta é sobre o que foi MEDIDO, não sobre o que entrou na varredura.
@@ -5435,6 +5479,71 @@ _veredito_do_hide() {
         return
     fi
     pass "broker escondendo ${hidden_count} nó(s) físico(s), e as TRÊS superfícies dos ${medidos} controle(s) fechadas (hidraw + evdev + joydev) — o jogo só vê o vpad (giroscópio sobrevive via fd-injection)"
+}
+
+#: O GESTO que reinicia o broker SEM abrir o físico (HIDE-SO-O-HIDRAW-02). O
+#: broker que sai abre todo físico — é o piso de recuperação —, e num
+#: reinício isso entregava o nó à Steam aberta no segundo em que o novo ainda
+#: não subiu. O arquivo `reinicio-sem-abrir` (do root, recente) diz ao broker
+#: que sai que o próximo já vem.
+GESTO_DE_REINICIAR_O_BROKER="sudo touch /run/hefesto-hidraw-broker/reinicio-sem-abrir && sudo systemctl restart hefesto-hidraw-broker.service"
+
+#: O broker em memória é o binário instalado? HIDE-SO-O-HIDRAW-02 — o achado
+#: do install de 24/09/2026: o install copiou o binário novo para
+#: /usr/local/lib/hefesto-dualsense4unix/ e NÃO reiniciou o serviço, que
+#: rodava desde 22/09 com o código velho na memória. Nada acusava: o socket
+#: estava ativo, o ping respondia, e a cura nova simplesmente não valia.
+#: $1 = início do processo (epoch; vazio = o serviço não roda agora);
+#: $2 = mtime do binário instalado (epoch; vazio = ilegível);
+#: $3 = o `NeedDaemonReload` do systemd para a unit ("yes"/"no"/vazio).
+_veredito_do_broker_em_memoria() {
+    local inicio="$1" binario="$2" recarregar="$3"
+    if [[ "${recarregar}" == "yes" ]]; then
+        warn "a unit do broker mudou no disco e o systemd ainda segue a de antes — rode: sudo systemctl daemon-reload && ${GESTO_DE_REINICIAR_O_BROKER}"
+    fi
+    if [[ -z "${inicio}" || -z "${binario}" ]]; then
+        return
+    fi
+    if (( binario > inicio )); then
+        warn "o broker em memória é de antes do binário instalado (subiu em $(date -d "@${inicio}" '+%d/%m %H:%M'), o binário é de $(date -d "@${binario}" '+%d/%m %H:%M')) — o código novo só vale depois de reiniciar, e este reinício não abre o físico: ${GESTO_DE_REINICIAR_O_BROKER}"
+        return
+    fi
+    pass "o broker em memória é o binário instalado (subiu depois dele)"
+}
+
+#: O `open` do nó de ENTRADA do físico (HIDE-SO-O-HIDRAW-02).
+#: $1 = ok | velho | fail | skip; $2 = o nó, ou o nó e o erro.
+_veredito_do_open_de_entrada() {
+    local resultado="$1" detalhe="$2"
+    case "${resultado}" in
+        ok)
+            pass "cmd open serviu o nó de ENTRADA do físico (${detalhe}) — o gamepad, o touchpad e o giroscópio chegam ao daemon com os nós fechados"
+            ;;
+        velho)
+            warn "o broker em memória não conhece os nós de entrada (recusou ${detalhe} como caminho) — é o de antes da HIDE-SO-O-HIDRAW-02, e com a regra 72 nova o daemon fica sem o gamepad, o touchpad e o giroscópio do físico até ele reiniciar: ${GESTO_DE_REINICIAR_O_BROKER}"
+            ;;
+        fail)
+            fail "cmd open do nó de ENTRADA falhou (${detalhe}) — o daemon fica sem o gamepad, o touchpad e o giroscópio do físico; confira DeviceAllow=char-input rw em /etc/systemd/system/hefesto-hidraw-broker.service e rode: sudo systemctl daemon-reload && ${GESTO_DE_REINICIAR_O_BROKER}"
+            ;;
+        *)
+            ;;
+    esac
+}
+
+#: As três medidas do veredito acima, lidas do systemd e do /proc. Separada
+#: para o veredito ser testável sem systemd.
+_medir_o_broker_em_memoria() {
+    local pid idade inicio="" binario recarregar
+    pid="$(systemctl show -p MainPID --value hefesto-hidraw-broker.service 2>/dev/null || true)"
+    if [[ "${pid}" =~ ^[0-9]+$ && "${pid}" -gt 0 ]]; then
+        idade="$(ps -o etimes= -p "${pid}" 2>/dev/null | tr -d ' ' || true)"
+        if [[ "${idade}" =~ ^[0-9]+$ ]]; then
+            inicio=$(( $(date +%s) - idade ))
+        fi
+    fi
+    binario="$(stat -c %Y /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker 2>/dev/null || true)"
+    recarregar="$(systemctl show -p NeedDaemonReload --value hefesto-hidraw-broker.service 2>/dev/null || true)"
+    _veredito_do_broker_em_memoria "${inicio}" "${binario}" "${recarregar}"
 }
 
 # BROKER-01 (Onda S — fd-injection): o broker root que esconde o hidraw
@@ -5456,6 +5565,7 @@ check_hidraw_broker() {
         return
     fi
     pass "hefesto-hidraw-broker.socket ativo"
+    _medir_o_broker_em_memoria
 
     if ! command -v python3 >/dev/null 2>&1; then
         warn "python3 ausente — não dá para pingar o broker"
@@ -5553,6 +5663,59 @@ for node in candidatos:
     break
 print(f"open={resultado}")
 print(f"open_detalhe={detalhe}")
+
+# HIDE-SO-O-HIDRAW-02 (24/09/2026): o `open` do nó de ENTRADA do físico. Com
+# os nós de entrada nascendo 0600 root, é por aqui que o daemon lê o gamepad,
+# o touchpad e o giroscópio — e só este teste prova o DeviceAllow=char-input
+# e um broker que conhece os nós de entrada (o de antes responde
+# reject_bad_path, que é a assinatura de «o install não reiniciou o broker»).
+resultado_e = "skip"
+detalhe_e = ""
+for classe in sorted(glob.glob("/sys/class/input/event*")):
+    try:
+        with open(classe + "/device/id/vendor", encoding="ascii") as fh:
+            vendor = fh.read().strip().lower()
+        with open(classe + "/device/id/product", encoding="ascii") as fh:
+            produto = fh.read().strip().lower()
+    except OSError:
+        continue
+    if vendor != "054c" or produto not in ("0ce6", "0df2"):
+        continue
+    node = "/dev/input/" + os.path.basename(classe)
+    s.sendall(json.dumps({"cmd": "open", "node": node}).encode("utf-8") + b"\n")
+    buf = b""
+    fds = []
+    while not buf.endswith(b"\n"):
+        chunk, anc, _flags, _addr = s.recvmsg(65536, espaco)
+        for nivel, tipo, dados in anc:
+            if nivel == socket.SOL_SOCKET and tipo == socket.SCM_RIGHTS:
+                n = len(dados) // tam_fd
+                fds.extend(struct.unpack(f"{n}i", dados[: n * tam_fd]))
+        if not chunk:
+            raise SystemExit(1)
+        buf += chunk
+    resp = json.loads(buf.decode("utf-8"))
+    for fd in fds:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+    if resp.get("ok") and fds:
+        resultado_e = "ok"
+        detalhe_e = node
+        break
+    erro = resp.get("error") or ""
+    if erro == "reject_not_physical_dualsense":
+        continue  # o vpad: nem falha nem sucesso
+    if erro == "reject_bad_path":
+        resultado_e = "velho"
+        detalhe_e = node
+        break
+    resultado_e = "fail"
+    detalhe_e = f"{node} erro={erro} errno={resp.get('errno')}"
+    break
+print(f"open_entrada={resultado_e}")
+print(f"open_entrada_detalhe={detalhe_e}")
 PYEOF
 )"; then
         warn "broker não respondeu no socket (/run/hefesto-hidraw-broker/broker.sock) — verifique: systemctl status hefesto-hidraw-broker.service"
@@ -5602,6 +5765,9 @@ PYEOF
             info "cmd open não testado (nenhum hidraw físico de DualSense visível agora)"
             ;;
     esac
+    _veredito_do_open_de_entrada \
+        "$(sed -n 's/^open_entrada=//p' <<<"${ping_out}")" \
+        "$(sed -n 's/^open_entrada_detalhe=//p' <<<"${ping_out}")"
 
     # Coerência escondidos x daemon ativo x Modo Nativo — só cruza se o
     # daemon responde IPC (sem ele não há campo native_mode pra cruzar).

@@ -574,7 +574,13 @@ class TestAMordidaDaCuraArrancada:
         `event21` desta bancada. Arrancado o ramo, o instrumento jura que o
         controle está escondido — e o evdev dela continua aberto."""
         corpo = _extrai_funcao_bash(DOCTOR, "_entrada_alcancavel_pelo_jogo")
-        alvo = "getfacl -p \"${no}\" 2>/dev/null | grep -Eq '^user:[^:]+:r'"
+        # HIDE-SO-O-HIDRAW-02 (24/09/2026): o ramo passou a descontar a linha
+        # que a máscara anula (`#effective:---`); a mordida arranca o ramo
+        # inteiro, como antes.
+        alvo = (
+            "getfacl -p \"${no}\" 2>/dev/null | grep -E '^user:[^:]+:r' "
+            "| grep -vq '#effective:-'"
+        )
         assert alvo in corpo, "o ramo da ACL mudou de forma"
         arrancado = DOCTOR.replace(alvo, "false")
         cena: dict[str, list[Entrada] | None] = {
