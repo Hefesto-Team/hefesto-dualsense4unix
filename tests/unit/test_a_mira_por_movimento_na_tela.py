@@ -270,3 +270,182 @@ def test_sem_servidor_os_eixos_saem_como_entraram(
     assert vpad.analog and vpad.analog[-1]["rx"] == 128
     avisos = [e for e in logs if e.get("event") == "roteador_de_movimento_falhou"]
     assert not avisos, f"o tique sem servidor registrou {len(avisos)} aviso(s): {avisos}"
+
+
+# ---------------------------------------------------------------------------
+# 2. O MOTOR POR PEÇA — `core/roteador_de_movimento.py` e o filtro do report
+# ---------------------------------------------------------------------------
+#
+# A mira era UM arranjo por perfil (`D-0809-A-NAVEGACAO-E-GLOBAL-NO-PERFIL`); o
+# chip «Mira Virtual» mora no cartão de CADA controle. A regra de decisão é uma
+# só, a do `leds` e do `rumble` por controle: a peça que tem opinião usa a dela,
+# campo a campo por cima da do perfil; a peça calada segue a do perfil.
+
+
+def _mira(**kw: Any) -> Any:
+    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+
+    base: dict[str, Any] = {"destino": rot.DESTINO_ANALOGICO_DIREITO}
+    base.update(kw)
+    return rot.ArranjoDeMovimento(**base)
+
+
+def test_o_arranjo_desligado_nao_move_nada() -> None:
+    """O arranjo `nenhum` guarda os números dos deslizantes e não move o eixo.
+
+    MORDIDA: tire o ``if not arranjo.ligado`` de `deflexao` e este teste
+    reprova — o `SO_NAS_PECAS` que o tique recebe moveria o analógico direito
+    de TODA a mesa como se fosse uma mira ligada.
+    """
+    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+
+    desligado = _mira(destino=rot.DESTINO_NENHUM, sensibilidade=12)
+    assert rot.deflexao((0.0, 200.0, 0.0), desligado) == (0, 0)
+    assert rot.pixels((0.0, 30.0, 0.0), desligado) == (0.0, 0.0)
+    assert rot.deflexao((0.0, 200.0, 0.0), rot.SO_NAS_PECAS) == (0, 0)
+
+
+def test_o_arranjo_desligado_guarda_os_numeros_dela() -> None:
+    """`montar` devolve o arranjo mesmo com a mira apagada; `resolver`, não.
+
+    O «Ignorar tremor até» que ela ajustou num controle de mira apagada não
+    pode sumir só porque a mira não está andando.
+    """
+    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+
+    secao = ProfileMovimentoConfig(destino="nenhum", zona_morta_graus_s=25.0)
+    assert rot.resolver(secao) is None
+    montado = rot.montar(secao)
+    assert montado.zona_morta_graus_s == 25.0 and not montado.ligado
+
+
+def test_so_uma_peca_mira_e_o_tique_ainda_chama_o_motor() -> None:
+    """Sem mira no perfil e com o chip aceso no P3, o `ativo()` NÃO pode dizer
+    `None`: os dois laços do tique só chamam o motor quando ele responde.
+
+    MORDIDA: devolva `None` no lugar de `SO_NAS_PECAS` e este teste reprova —
+    o P3 ficaria calado junto com a mesa.
+    """
+    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+
+    store = SimpleNamespace()
+    rot.definir_ativo(store, None)
+    assert rot.ativo(store) is None, "sem mira nenhuma o tique pagou o motor"
+    rot.definir_por_peca(store, {_P3: _mira()})
+    assert rot.ativo(store) is rot.SO_NAS_PECAS
+    rot.definir_por_peca(store, {_P3: _mira(destino=rot.DESTINO_NENHUM)})
+    assert rot.ativo(store) is None, "a peça de mira APAGADA acordou o motor"
+
+
+def test_a_peca_com_opiniao_manda_e_a_calada_segue_o_perfil() -> None:
+    """A ordem de decisão, nos dois sentidos.
+
+    MORDIDA: faça `da_peca` ignorar o mapa e este teste reprova pelo P3; faça-o
+    ignorar a mesa e ele reprova pelo P2.
+    """
+    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+
+    store = SimpleNamespace()
+    mesa = _mira(sensibilidade=4)
+    rot.definir_ativo(store, mesa)
+    rot.definir_por_peca(store, {
+        _P3: _mira(sensibilidade=11),
+        _P4: _mira(destino=rot.DESTINO_NENHUM),
+    })
+    ativo = rot.ativo(store)
+    assert rot.da_peca(store, _P2, ativo) is mesa, "o P2 calado não seguiu o perfil"
+    assert rot.da_peca(store, _P3, ativo).sensibilidade == 11, (
+        "o P3 tem a mira dele e recebeu a do perfil")
+    assert rot.da_peca(store, _P4, ativo) is None, (
+        "o P4 APAGOU o chip e mira assim mesmo, pela mira do perfil")
+    # As DUAS grafias da mesma peça (com e sem dois-pontos) são a mesma peça.
+    assert rot.da_peca(store, "aabbcc000003", ativo).sensibilidade == 11
+
+
+def test_a_peca_sobrepoe_o_perfil_campo_a_campo() -> None:
+    """A peça que só escreveu o destino HERDA do perfil a sensibilidade e o
+    tremor — é o `model_fields_set` que separa escrito de padrão.
+
+    MORDIDA: troque `_campos_escritos` por todos os campos da seção e este
+    teste reprova: o destino da peça apagaria o tremor que ela ajustou no
+    perfil com o padrão 3,0.
+    """
+    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+
+    perfil = ProfileMovimentoConfig(destino="nenhum", zona_morta_graus_s=30.0,
+                                    sensibilidade=9)
+    peca = ProfileMovimentoConfig(destino="analogico_direito")
+    arranjo = rot.arranjo_da_peca(perfil, peca)
+    assert arranjo.ligado
+    assert arranjo.zona_morta_graus_s == 30.0 and arranjo.sensibilidade == 9
+
+
+def test_o_perfil_sem_mira_por_peca_apaga_a_do_anterior() -> None:
+    """O CAMINHO-CONTAGIO-01 por peça: o P3 do jogo de ontem não mira no de hoje."""
+    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+
+    store = SimpleNamespace()
+    rot.definir_por_peca(store, {_P3: _mira()})
+    rot.definir_por_peca(store, {})
+    assert rot.por_peca(store) == {}
+    assert rot.ativo(store) is None
+
+
+def _janela_viva() -> bytes:
+    """Uma janela de motion com giro, aceleração e um dedo no touchpad."""
+    from hefesto_dualsense4unix.core.virtual_motion import TAMANHO_DA_JANELA
+
+    janela = bytearray(range(1, TAMANHO_DA_JANELA + 1))
+    return bytes(janela)
+
+
+def test_a_camera_nao_anda_em_dobro_no_caminho_virtual() -> None:
+    """A PEÇA QUE MIRA PERDE O GIROSCÓPIO da janela do vpad, e SÓ ele.
+
+    Ordem dela, 23/09/2026: *na mira, a câmera não pode andar em dobro*. No
+    caminho `uhid` o jogo recebe o giro nativo pela janela de motion; com a
+    mira ligada o mesmo gesto chegaria DUAS vezes — pelo giroscópio e pelo
+    analógico direito. O acelerômetro, o carimbo de tempo e o touchpad seguem.
+
+    MORDIDA: tire o ``and not self.roteado(uniq)`` do `filtrar` e este teste
+    reprova.
+    """
+    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+    from hefesto_dualsense4unix.core.virtual_motion import (
+        FAIXA_ACELEROMETRO,
+        FAIXA_GIROSCOPIO,
+    )
+
+    store = SimpleNamespace()
+    rot.definir_ativo(store, None)
+    rot.definir_por_peca(store, {_P3: _mira()})
+    rot.sincronizar_o_filtro(store)
+    janela = _janela_viva()
+    do_p3 = REGISTRO.filtrar(_P3, janela)
+    assert do_p3[FAIXA_GIROSCOPIO] == bytes(6), "o P3 mira e o jogo ainda recebe o giro"
+    assert do_p3[FAIXA_ACELEROMETRO] == janela[FAIXA_ACELEROMETRO]
+    assert do_p3[12:] == janela[12:], "a mira apagou o carimbo ou o touchpad"
+    assert REGISTRO.filtrar(_P2, janela) is janela, "o P2 não mira e perdeu o giro"
+    # O INTERRUPTOR DELA CONTINUA DIZENDO O QUE ELA ESCOLHEU: o sensor segue
+    # LIGADO, porque é ele que move a mira.
+    assert REGISTRO.estado(_P3).giroscopio is True
+
+
+def test_a_mira_do_perfil_tira_o_giro_de_quem_nao_tem_opiniao() -> None:
+    """Com a mira no PERFIL, toda peça calada mira — e perde o giro nativo; a
+    peça que APAGOU o chip continua mandando o giro ao jogo."""
+    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+    from hefesto_dualsense4unix.core.virtual_motion import FAIXA_GIROSCOPIO
+
+    store = SimpleNamespace()
+    rot.definir_ativo(store, _mira())
+    rot.definir_por_peca(store, {_P4: _mira(destino=rot.DESTINO_NENHUM)})
+    rot.sincronizar_o_filtro(store)
+    janela = _janela_viva()
+    assert REGISTRO.filtrar(_P2, janela)[FAIXA_GIROSCOPIO] == bytes(6)
+    assert REGISTRO.filtrar(_P4, janela) is janela
+    # E o perfil seguinte, sem mira, devolve o giro a todo mundo.
+    rot.definir_ativo(store, None)
+    rot.definir_por_peca(store, {})
+    rot.sincronizar_o_filtro(store)
+    assert REGISTRO.filtrar(_P2, janela) is janela

@@ -33,8 +33,12 @@ não recebe canal nenhum da fábrica — mas TODAS passam `store=daemon.store`.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, fields
+from types import MappingProxyType
 from typing import Final
+
+from hefesto_dualsense4unix.core.virtual_motion import REGISTRO, chave_de_sensor
 
 #: Os destinos que o roteador conhece. `nenhum` existe para o perfil poder
 #: dizer "desligado" sem apagar o resto do arranjo dela.
@@ -225,7 +229,17 @@ def deflexao(
     Devolve `(dh, dv)` em unidades de eixo (-127..127), já com a curva, a zona
     morta, o teto e a sensibilidade aplicados. `(0, 0)` é resposta legítima e
     frequente: é o controle parado na mesa.
+
+    O ARRANJO DESLIGADO NÃO MOVE NADA — A-MIRA-POR-MOVIMENTO-NA-TELA-01. Até
+    23/09 o destino não entrava na conta, e um arranjo `nenhum` que chegasse
+    aqui movia o analógico direito como se fosse ele. Não chegava, porque o
+    `ativo()` o barrava; desde que a mira passou a ser POR PEÇA, o `ativo()`
+    devolve :data:`SO_NAS_PECAS` (que é `nenhum`) para a mesa em que só alguns
+    controles miram, e é esta linha que o torna inerte em qualquer motor que
+    ainda não pergunte pela peça.
     """
+    if not arranjo.ligado:
+        return 0, 0
     horizontal, vertical = _componentes(giro, arranjo)
     fator = _fator_radial(horizontal, vertical, arranjo)
     if fator <= 0.0:
@@ -268,6 +282,8 @@ def pixels(
     lento virar zero para sempre — o defeito que o carry do cursor do stick já
     curou uma vez nesta casa.
     """
+    if not arranjo.ligado:
+        return 0.0, 0.0
     horizontal, vertical = _componentes(angulo, arranjo)
     fator = arranjo.pixels_por_grau * (arranjo.sensibilidade / SENSIBILIDADE_PADRAO)
     return horizontal * fator, vertical * fator
@@ -287,9 +303,23 @@ def resolver(secao: object) -> ArranjoDeMovimento | None:
     """
     if secao is None:
         return None
+    arranjo = montar(secao)
+    return arranjo if arranjo.ligado else None
+
+
+def montar(secao: object) -> ArranjoDeMovimento:
+    """A seção vira arranjo SEMPRE — inclusive com o destino `nenhum`.
+
+    É o `resolver` sem o atalho do desligado, e existe por causa da tela
+    (A-MIRA-POR-MOVIMENTO-NA-TELA-01): os deslizantes da Calibrar mostram a
+    sensibilidade e o «Ignorar tremor até» de um controle cuja mira está
+    DESLIGADA, e o número que ela ajustou não pode sumir só porque a mira não
+    está andando. O arranjo `nenhum` guarda os parâmetros e não move nada
+    (`ligado` é falso, e `deflexao`/`pixels` devolvem zero).
+
+    Levanta `ArranjoRecusadoError` nas mesmas três formas do `resolver`.
+    """
     destino = str(getattr(secao, "destino", DESTINO_NENHUM) or DESTINO_NENHUM)
-    if destino == DESTINO_NENHUM:
-        return None
     if destino not in DESTINOS:
         raise ArranjoRecusadoError(
             f"destino desconhecido: {destino!r} (conhecidos: {', '.join(DESTINOS)})"
@@ -336,7 +366,7 @@ def definir_ativo(dono: object, arranjo: ArranjoDeMovimento | None) -> None:
 
 
 def ativo(dono: object) -> ArranjoDeMovimento | None:
-    """O arranjo ativo, ou `None`. Custo de um `getattr` no caminho do jogo.
+    """O arranjo ativo, ou `None`. Custo de dois `getattr` no caminho do jogo.
 
     SÓ UM `ArranjoDeMovimento` DE VERDADE VALE: um dublê feito de `MagicMock`
     responde qualquer atributo com outro mock, e um mock no caminho do jogo
@@ -345,12 +375,202 @@ def ativo(dono: object) -> ArranjoDeMovimento | None:
     mesmo susto.
     """
     valor = getattr(dono, _ATRIBUTO_DO_ATIVO, None)
-    if type(valor) is not ArranjoDeMovimento:
-        return None
-    return valor if valor.ligado else None
+    if type(valor) is ArranjoDeMovimento and valor.ligado:
+        return valor
+    # A MESA EM QUE SÓ ALGUNS CONTROLES MIRAM — A-MIRA-POR-MOVIMENTO-NA-TELA-01.
+    # Os dois laços do tique (`gamepad.dispatch_gamepad` e
+    # `coop.CoopManager.forward_all`) só chamam o motor quando esta função
+    # devolve alguma coisa. Sem mira no perfil e com o chip «Mira Virtual»
+    # aceso no P3, um `None` aqui calaria o P3 junto com a mesa. Quem decide
+    # QUAL peça mira é o `da_peca`, chamado pelo motor com o `uniq` na mão.
+    if any(_ligado(v) for v in por_peca(dono).values()):
+        return SO_NAS_PECAS
+    return None
+
+
+# ---------------------------------------------------------------------------
+# A MIRA POR PEÇA — A-MIRA-POR-MOVIMENTO-NA-TELA-01, 23/09/2026
+# ---------------------------------------------------------------------------
+#
+# A palavra dela, a segunda do dia: *"Cria um botão virtual ao lado de
+# giroscopio e acelerometro chamado Mira Virtual"* — no cartão de CADA
+# controle. A primeira entrega deste módulo guardava UM arranjo por perfil
+# (`D-0809-A-NAVEGACAO-E-GLOBAL-NO-PERFIL`), e a própria sprint-mãe deixou a
+# porta escrita: *"o override por controle entra em `ControllerOverrides` sem
+# migração: os campos são os mesmos"*. Entrou.  <!-- noqa-acento: citação literal dela -->
+#
+# A ORDEM DE DECISÃO É UMA SÓ: a peça que tem opinião usa a dela, campo a
+# campo por cima da do perfil; a peça calada segue a do perfil. É a mesma
+# regra do `leds` e do `rumble` por controle (PERFIL-01, merge POR CAMPO).
+#
+# O MAPA MORA NO `StateStore`, ao lado do arranjo da mesa, pelo mesmo motivo
+# medido do `_ATRIBUTO_DO_ATIVO`: todas as rotas de ativação passam `store`.
+# Ele viaja em `MappingProxyType` e é TROCADO inteiro, nunca editado: o tique
+# o lê noutra thread, e a troca de uma referência é atômica.
+
+#: Nome do atributo do mapa por peça no `StateStore`.
+_ATRIBUTO_POR_PECA: Final = "_roteador_de_movimento_por_peca"
+
+#: A mesa sem mira no perfil e com mira em alguma peça — ver `ativo()`. É um
+#: arranjo `nenhum`: se um motor que ainda não pergunta pela peça o receber,
+#: ele não move nada (`deflexao` e `pixels` devolvem zero para o desligado).
+SO_NAS_PECAS: Final = ArranjoDeMovimento()
+
+#: Os nove campos do arranjo, na língua do esquema — são os mesmos nomes em
+#: `ProfileMovimentoConfig`, e é isso que deixa a peça sobrepor a mesa campo a
+#: campo sem tradução nenhuma.
+CAMPOS: Final[tuple[str, ...]] = tuple(f.name for f in fields(ArranjoDeMovimento))
+
+_VAZIO: Final[Mapping[str, ArranjoDeMovimento | None]] = MappingProxyType({})
+
+
+def _ligado(valor: object) -> bool:
+    """Só um `ArranjoDeMovimento` de verdade, e ligado — a trava do `ativo()`."""
+    return type(valor) is ArranjoDeMovimento and valor.ligado
+
+
+def _campos_escritos(secao: object) -> dict[str, object]:
+    """Os campos que a seção DIZ — só os escritos, quando ela sabe distinguir.
+
+    Um modelo do pydantic sabe (`model_fields_set`): o override da peça que só
+    escreveu a sensibilidade não pode apagar o destino do perfil com o default
+    `nenhum`. Qualquer outra coisa (o arranjo da mesa, um `SimpleNamespace`)
+    responde por todos os campos que tiver.
+    """
+    if secao is None:
+        return {}
+    escritos = getattr(secao, "model_fields_set", None)
+    nomes = CAMPOS if escritos is None else tuple(n for n in CAMPOS if n in escritos)
+    return {n: getattr(secao, n) for n in nomes if hasattr(secao, n)}
+
+
+class _Secao:
+    """Uma seção montada à mão: só atributos, na forma que `montar` lê."""
+
+    def __init__(self, campos: Mapping[str, object]) -> None:
+        self.__dict__.update(campos)
+
+
+def arranjo_da_peca(secao_da_mesa: object, secao_da_peca: object) -> ArranjoDeMovimento:
+    """O arranjo de UMA peça: a seção dela campo a campo por cima da do perfil.
+
+    Devolve SEMPRE um arranjo (o `montar`), inclusive desligado: é o que guarda
+    a sensibilidade e o tremor que ela ajustou num controle cuja mira está
+    apagada. Levanta `ArranjoRecusadoError` como o `montar`.
+    """
+    campos = _campos_escritos(secao_da_mesa)
+    campos.update(_campos_escritos(secao_da_peca))
+    return montar(_Secao(campos))
+
+
+def por_peca(dono: object) -> Mapping[str, ArranjoDeMovimento | None]:
+    """O mapa `{chave da peça: arranjo}` — vazio quando ninguém tem opinião."""
+    valor = getattr(dono, _ATRIBUTO_POR_PECA, None)
+    return valor if isinstance(valor, Mapping) else _VAZIO
+
+
+def definir_por_peca(
+    dono: object, mapa: Mapping[str, ArranjoDeMovimento | None] | None
+) -> None:
+    """TROCA o mapa inteiro. `None` ou vazio = nenhuma peça tem opinião.
+
+    Vazio É METADE DO CONTRATO, como o `None` do `definir_ativo`: o perfil sem
+    mira por peça APAGA a do perfil anterior. Sem isso o P3 do jogo de ontem
+    continuaria mirando no jogo de hoje — a forma do CAMINHO-CONTAGIO-01.
+
+    `None` como VALOR é legítimo e quer dizer *"esta peça tem opinião e ela é
+    desligada"* — o arranjo que o motor recusou, por exemplo.
+    """
+    if dono is None:
+        return
+    limpo = {chave_de_sensor(k): v for k, v in (mapa or {}).items() if chave_de_sensor(k)}
+    setattr(dono, _ATRIBUTO_POR_PECA, MappingProxyType(limpo))
+
+
+def definir_da_peca(
+    dono: object, uniq: str, arranjo: ArranjoDeMovimento | None, *, tem_opiniao: bool = True
+) -> None:
+    """Troca a opinião de UMA peça, e só dela — o gesto do chip, ao vivo.
+
+    `tem_opiniao=False` tira a peça do mapa: ela volta a seguir o perfil.
+    """
+    chave = chave_de_sensor(uniq)
+    if dono is None or not chave:
+        return
+    novo = dict(por_peca(dono))
+    if tem_opiniao:
+        novo[chave] = arranjo
+    else:
+        novo.pop(chave, None)
+    setattr(dono, _ATRIBUTO_POR_PECA, MappingProxyType(novo))
+
+
+def da_peca(
+    dono: object, uniq: str | None, arranjo_da_mesa: object
+) -> ArranjoDeMovimento | None:
+    """O arranjo que vale para a peça `uniq` AGORA, ou `None` (ela não mira).
+
+    É a pergunta que o motor faz com o `uniq` na mão, uma vez por tique e por
+    controle: a opinião da peça, se ela tem; senão, o arranjo da mesa que o
+    laço do tique já leu (`arranjo_da_mesa`, o que o `ativo()` devolveu). Com a
+    mesa em :data:`SO_NAS_PECAS`, a peça calada não mira.
+
+    Custo no caso comum (ninguém com opinião): um `getattr` e um `len`.
+    """
+    mapa = por_peca(dono)
+    if mapa and uniq:
+        chave = chave_de_sensor(uniq)
+        if chave in mapa:
+            valor = mapa[chave]
+            return valor if _ligado(valor) else None
+    return arranjo_da_mesa if _ligado(arranjo_da_mesa) else None  # type: ignore[return-value]
+
+
+def parametros_da_peca(dono: object, uniq: str | None) -> ArranjoDeMovimento:
+    """O arranjo desta peça MESMO DESLIGADO — o que os deslizantes mostram.
+
+    A peça com opinião mostra a dela; a calada mostra a do perfil (o arranjo da
+    mesa, guardado inteiro pelo `ProfileManager.apply_movimento`, ligado ou
+    não); sem nenhum dos dois, os padrões deste módulo.
+    """
+    mapa = por_peca(dono)
+    if uniq:
+        valor = mapa.get(chave_de_sensor(uniq))
+        if type(valor) is ArranjoDeMovimento:
+            return valor
+    mesa = getattr(dono, _ATRIBUTO_DO_ATIVO, None)
+    if type(mesa) is ArranjoDeMovimento:
+        return mesa
+    return ArranjoDeMovimento()
+
+
+def sincronizar_o_filtro(dono: object) -> None:
+    """Diz ao braço do REPORT quais peças estão mirando — o giro nativo sai delas.
+
+    **A CÂMERA NÃO ANDA EM DOBRO** — ordem dela, 23/09/2026. No caminho `uhid`
+    o jogo recebe o giro nativo pela janela de motion do vpad, e o jogo que o
+    lê (o PRAGMATA) veria o mesmo gesto DUAS vezes: pelo giroscópio e pelo
+    analógico direito. A decisão, medida pela régua que monta a janela: a peça
+    que mira deixa de mandar o GIROSCÓPIO ao jogo como giroscópio — ele passa a
+    chegar como analógico. O acelerômetro e o touchpad seguem intocados.
+
+    O filtro roda na thread do report (~250 Hz) e não enxerga o `store`; por
+    isso a conta é feita AQUI, de onde o arranjo mora, e o resultado desce ao
+    `virtual_motion.REGISTRO`, que é o dono do filtro. Quem chama esta função
+    é quem acabou de mexer no arranjo: o `apply_movimento` do gerente e o
+    `mira.set` do IPC — nunca o tique.
+    """
+    if dono is None:
+        return
+    mesa = getattr(dono, _ATRIBUTO_DO_ATIVO, None)
+    REGISTRO.definir_roteados(
+        padrao=_ligado(mesa),
+        por_peca={chave: _ligado(v) for chave, v in por_peca(dono).items()},
+    )
 
 
 __all__ = [
+    "CAMPOS",
     "CENTRO_DO_EIXO",
     "DEFLEXAO_MAXIMA",
     "DESTINOS",
@@ -366,14 +586,23 @@ __all__ = [
     "SENSIBILIDADE_MAX",
     "SENSIBILIDADE_MIN",
     "SENSIBILIDADE_PADRAO",
+    "SO_NAS_PECAS",
     "TETO_PADRAO_GRAUS_S",
     "ZONA_MORTA_PADRAO_GRAUS_S",
     "ArranjoDeMovimento",
     "ArranjoRecusadoError",
+    "arranjo_da_peca",
     "ativo",
+    "da_peca",
     "definir_ativo",
+    "definir_da_peca",
+    "definir_por_peca",
     "deflexao",
     "misturar",
+    "montar",
+    "parametros_da_peca",
     "pixels",
+    "por_peca",
     "resolver",
+    "sincronizar_o_filtro",
 ]
