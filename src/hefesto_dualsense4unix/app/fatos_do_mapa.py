@@ -608,7 +608,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
         },
     },
     'audio.saida_dedicada.payload_do_degrau@dualsense': {
-        'existe': 'desconhecido',
+        'existe': 'tem',
         'cabo': {
             'aceita': 'não',
             'aciona': 'não',
@@ -618,12 +618,12 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'por_que_nao_aciona': 'nada-a-acionar',
         },
         'radio': {
-            'aceita': 'desconhecido',
-            'aciona': 'não',
-            'ate_onde_foi': '',
+            'aceita': 'sim',
+            'aciona': 'sim',
+            'ate_onde_foi': 'MONTOU',
             'canal': 'hidraw',
             'de_onde_sei': 'medido',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': '',
         },
     },
     'audio.saida_dedicada@dualsense': {
@@ -637,12 +637,12 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'por_que_nao_aciona': '',
         },
         'radio': {
-            'aceita': 'desconhecido',
-            'aciona': 'não',
-            'ate_onde_foi': '',
+            'aceita': 'sim',
+            'aciona': 'sim',
+            'ate_onde_foi': 'MONTOU',
             'canal': 'hidraw',
             'de_onde_sei': 'medido',
-            'por_que_nao_aciona': 'divida',
+            'por_que_nao_aciona': '',
         },
     },
     'audio.saida_dedicada@pro': {
@@ -2511,19 +2511,19 @@ FATOS: Final[dict[str, dict[str, object]]] = {
         'existe': 'tem',
         'cabo': {
             'aceita': '',
-            'aciona': 'sim',
-            'ate_onde_foi': 'O APARELHO OBEDECEU',
+            'aciona': 'não',
+            'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'medido',
-            'por_que_nao_aciona': '',
+            'por_que_nao_aciona': 'so-ela-decide',
         },
         'radio': {
             'aceita': '',
-            'aciona': 'sim',
-            'ate_onde_foi': 'O APARELHO OBEDECEU',
+            'aciona': 'não',
+            'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'medido',
-            'por_que_nao_aciona': '',
+            'por_que_nao_aciona': 'so-ela-decide',
         },
     },
     'luz.led_jogador.brilho@pro': {

@@ -341,7 +341,16 @@ DOMINIO = _DOMINIO_DO_PORTAO["por_que_nao_aciona"]
 #: antes dele — e o `test_o_teto_e_um_numero_deste_arquivo_e_nao_do_csv`
 #: reprovou na suíte seguinte, que é exatamente o serviço dele. Nenhuma célula
 #: entrou.
-TETO_DA_DIVIDA = 23
+#:
+#: ─────────────────────────────────────────────────────────────────────────
+#: DESCEU PARA 22 EM 24/09/2026 — a dívida do som pelo rádio, paga
+#: ─────────────────────────────────────────────────────────────────────────
+#: SAIU `audio.saida_dedicada@dualsense`, rádio (AS-FRASES-QUE-A-BANCADA-
+#: ACHOU-01). Era uma das três de 24/08: o conteúdo foi identificado em
+#: 10/09 (o `0x35`, com a orelha dela) e o produto passou a levar o som de
+#: cada «Alto-falante do Controle N» ao aparelho pela ponte. A célula dizia
+#: `divida` e «NÃO ENCONTRAMOS O CAMINHO DO ÁUDIO» até hoje. Nenhuma entrou.
+TETO_DA_DIVIDA = 22
 
 
 def _linhas(caminho: Path | str) -> list[dict[str, str]]:
