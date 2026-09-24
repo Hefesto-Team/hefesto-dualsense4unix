@@ -7359,6 +7359,8 @@ class IpcHandlersMixin:
             result["radio_governador"] = self._o_governador_publica()
         with contextlib.suppress(Exception):
             result["radio_central"] = self._a_central_publica(entries)
+        with contextlib.suppress(Exception):
+            self._merge_mira(entries)
 
     @staticmethod
     def _hz_ou_none(valor: Any) -> float | None:
@@ -7629,6 +7631,211 @@ class IpcHandlersMixin:
             movimento = await asyncio.to_thread(central.comecar_a_conectar, destino or None)
         status = "ocupado" if movimento.motivo == MOTIVO_OCUPADO else "ok"
         return {"status": status, "movimento": movimento.publicar()}
+
+    # =================================================================
+    # A-MIRA-POR-MOVIMENTO-NA-TELA-01 (24/09/2026): o chip «Mira Virtual»
+    # =================================================================
+    #
+    # No fim da classe porque este arquivo é citado por número de linha em
+    # mais de cem lugares, e código novo no meio deslocaria as âncoras.
+
+    #: O que `mira.set` aceita além do `uniq`: o chip e os dois deslizantes, e
+    #: NADA MAIS. O resto do arranjo (gatilho, inverter, eixo, teto) mora no
+    #: perfil; o IPC não abre uma porta que a tela não tem.
+    _CAMPOS_DA_MIRA = ("ligada", "sensibilidade", "zona_morta_graus_s")
+
+    def _merge_mira(self, entries: list[dict[str, Any]]) -> None:
+        """``entry["mira"]`` de cada controle: o chip e os dois deslizantes.
+
+        ``{ligada, destino, sensibilidade, zona_morta_graus_s}`` do que vale
+        AGORA para aquela peça — a MESMA pergunta que o tique faz
+        (`roteador_de_movimento.da_peca`), e não uma segunda leitura do disco:
+        duas leituras podem divergir, e a tela pintaria o que o motor não usa.
+        Os números vêm de `parametros_da_peca`, que responde também com a mira
+        APAGADA — o «Ignorar tremor até» dela não some quando o chip apaga.
+        Controle sem endereço fica sem a chave.
+        """
+        from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+
+        store = getattr(self, "store", None)
+        mesa = rot.ativo(store)
+        for entry in entries:
+            uniq = entry.get("uniq")
+            if not isinstance(uniq, str) or not uniq:
+                continue
+            vale = rot.da_peca(store, uniq, mesa)
+            numeros = rot.parametros_da_peca(store, uniq)
+            entry["mira"] = {
+                "ligada": vale is not None,
+                "destino": vale.destino if vale is not None else rot.DESTINO_NENHUM,
+                "sensibilidade": numeros.sensibilidade,
+                "zona_morta_graus_s": numeros.zona_morta_graus_s,
+            }
+
+    async def _handle_mira_set(self, params: dict[str, Any]) -> dict[str, Any]:
+        """`mira.set` — o chip «Mira Virtual» e os dois deslizantes, POR CONTROLE.
+
+        Params: ``{uniq?: str, ligada?: bool, sensibilidade?: 1-12,
+        zona_morta_graus_s?: 0-60}``. `uniq` omitido = o alvo de saída, e sem
+        ele o primário (`_uniq_do_primario`); campo omitido = **não mexe
+        naquele campo**. A palavra dela, 23/09/2026: *"Usar os movimentos do
+        controle como mira (analógico R), pra pessoas com deficiência motora"* —
+        ``ligada`` é o destino ``analogico_direito``, e ``false`` o apaga com
+        opinião (``nenhum``): a peça que apagou o chip não mira nem pela mira do
+        perfil.
+
+        AS DUAS ESCRITAS, e a ordem é o contrato do `sensor.set`:
+
+        1. **o perfil** (`ControllerOverrides.movimento`, só os campos escritos)
+           — é o que faz a escolha sobreviver ao replug e à troca de perfil. Sem
+           perfil a escolha ainda VALE, só não sobrevive, e a resposta diz
+           ``gravado: false``;
+        2. **o vivo** — o mapa por peça do `store` (`definir_da_peca`) e o
+           filtro do report (`sincronizar_o_filtro`): no próximo quadro o tique
+           mira por esta peça, e o giro nativo sai da janela dela.
+
+        EM MODO NATIVO NÃO HÁ GAMEPAD VIRTUAL onde a mira escreva — o jogo lê o
+        controle físico direto. A escolha fica guardada e o ``alcance`` diz
+        ``nao_se_aplica``; a tela não confessa isso (ordem dela, 07/09).
+        """
+        from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+        from hefesto_dualsense4unix.profiles.schema import (
+            ControllerOverrides,
+            ProfileMovimentoConfig,
+        )
+
+        desconhecidos = sorted(set(params) - {"uniq", *self._CAMPOS_DA_MIRA})
+        if desconhecidos:
+            raise ValueError(
+                f"mira.set não conhece {desconhecidos}: a tela oferece o chip "
+                "(`ligada`) e os dois deslizantes (`sensibilidade`, "
+                "`zona_morta_graus_s`), e o resto do arranjo mora no perfil"
+            )
+        pedidos: dict[str, Any] = {}
+        if "ligada" in params:
+            ligada = params["ligada"]
+            if not isinstance(ligada, bool):
+                raise ValueError(
+                    "mira.set: 'ligada' precisa ser boolean — true acende a mira "
+                    "no analógico direito, false a apaga"
+                )
+            pedidos["destino"] = (
+                rot.DESTINO_ANALOGICO_DIREITO if ligada else rot.DESTINO_NENHUM
+            )
+        if "sensibilidade" in params:
+            valor = params["sensibilidade"]
+            if isinstance(valor, bool) or not isinstance(valor, int):
+                raise ValueError("mira.set: 'sensibilidade' é um inteiro de 1 a 12")
+            pedidos["sensibilidade"] = valor
+        if "zona_morta_graus_s" in params:
+            valor = params["zona_morta_graus_s"]
+            if isinstance(valor, bool) or not isinstance(valor, (int, float)):
+                raise ValueError(
+                    "mira.set: 'zona_morta_graus_s' é o «Ignorar tremor até», "
+                    "em graus por segundo"
+                )
+            pedidos["zona_morta_graus_s"] = float(valor)
+        if not pedidos:
+            raise ValueError(
+                "mira.set exige ao menos um de 'ligada', 'sensibilidade' ou "
+                "'zona_morta_graus_s' — campo omitido NÃO mexe na mira"
+            )
+        uniq = params.get("uniq")
+        if uniq is not None and not isinstance(uniq, str):
+            raise ValueError("mira.set: 'uniq' precisa ser string ou omitido")
+
+        alvo = uniq or self._uniq_do_primario()
+        if not alvo:
+            return {
+                "status": "sem_controle",
+                "uniq": None,
+                "motivo": (
+                    "não há controle na mesa para mirar — a mira é POR PEÇA, e "
+                    "cair no primeiro da lista faria a mesa cheia mirar sempre "
+                    "com o mesmo controle"
+                ),
+            }
+        chave = self._chave_de_peca_que_grava(alvo)
+        if not chave:
+            return {
+                "status": "sem_endereco",
+                "uniq": alvo,
+                "motivo": (
+                    f"{alvo!r} não é um endereço de rádio de uma peça de "
+                    "plástico — sem MAC não há como mirar por um controle"
+                ),
+            }
+
+        # A BORDA É O ESQUEMA, e ela vem ANTES de qualquer escrita: a faixa de
+        # cada campo, e o teto acima do tremor. Nada vai ao disco torto.
+        nome = self._perfil_que_grava()
+        perfil: Any = None
+        escritos: dict[str, Any] = {}
+        if nome:
+            from hefesto_dualsense4unix.profiles.loader import load_profile
+
+            perfil = load_profile(nome)
+            dele = (perfil.controllers or {}).get(chave)
+            antes = getattr(dele, "movimento", None)
+            escritos = dict(antes.model_dump(exclude_unset=True)) if antes else {}
+        campos = {**escritos, **pedidos}
+        try:
+            secao = ProfileMovimentoConfig.model_validate(campos)
+            # A peça por cima da MESMA mira da mesa que a ativação vai usar:
+            # a do perfil que grava; sem perfil, o que já vale para ela.
+            mesa = (perfil.movimento if perfil is not None
+                    else rot.parametros_da_peca(self.store, chave))
+            arranjo = rot.arranjo_da_peca(mesa, secao)
+        except ValueError as exc:  # `ValidationError` e `ArranjoRecusadoError`
+            raise ValueError(f"mira.set recusado: {exc}") from exc
+
+        # (1) O PERFIL. Nada mudou = não regrava — um `save_profile` troca a
+        # data do arquivo e faz o daemon reaplicar o perfil no meio da partida.
+        gravado = False
+        if perfil is not None and escritos != campos:
+            from hefesto_dualsense4unix.profiles.loader import save_profile
+
+            atuais = dict(perfil.controllers or {})
+            dele = atuais.get(chave) or ControllerOverrides()
+            atuais[chave] = dele.model_copy(update={"movimento": secao})
+            save_profile(perfil.model_copy(update={"controllers": atuais}))
+            gravado = True
+
+        # (2) O VIVO: o mapa por peça e o filtro do report.
+        rot.definir_da_peca(self.store, chave, arranjo)
+        rot.sincronizar_o_filtro(self.store)
+
+        nativo = bool(
+            self.daemon is not None and getattr(self.daemon, "is_native_mode", bool)()
+        )
+        ressalva: str | None = None
+        if nativo and arranjo.ligado:
+            ressalva = (
+                "Modo Nativo: o jogo lê o controle FÍSICO direto e não há gamepad "
+                "virtual onde a mira escreva. A escolha fica guardada e vale "
+                "quando o modo voltar a Virtual ou Xbox."
+            )
+        logger.info(
+            "mira_set",
+            uniq=chave,
+            perfil=nome,
+            gravado=gravado,
+            ligada=arranjo.ligado,
+            sensibilidade=arranjo.sensibilidade,
+            zona_morta_graus_s=arranjo.zona_morta_graus_s,
+            nativo=nativo,
+        )
+        return {
+            "status": "ok",
+            "uniq": alvo,
+            "perfil": nome if isinstance(nome, str) else None,
+            "gravado": gravado,
+            "ligada": arranjo.ligado,
+            "sensibilidade": arranjo.sensibilidade,
+            "zona_morta_graus_s": arranjo.zona_morta_graus_s,
+            "alcance": {"tique": "nao_se_aplica" if nativo else "aplicado"},
+            "ressalva": ressalva,
+        }
 
 
 __all__ = ["DraftApplier", "IpcHandlersMixin"]

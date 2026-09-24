@@ -486,6 +486,9 @@ def test_a_mira_nasce_desligada() -> None:
     )
 
     assert ControllerOverrides().movimento is None
+    assert ProfileMovimentoConfig().destino == "nenhum", (
+        "a seção de mira nasce LIGADA — o perfil que só escreveu o tremor "
+        "moveria a câmera")
     assert "ControllerOverrides.movimento" in NASCIMENTO_DOS_CAMPOS
     store = SimpleNamespace()
     gerente = ProfileManager.__new__(ProfileManager)
@@ -654,3 +657,150 @@ def test_a_peca_que_apagou_o_chip_nao_mira_pela_mira_do_perfil(
     vpads = _mesa_de_quatro_de_verdade(monkeypatch, tmp_path, "bt", perfil)
     assert _quem_mirou(vpads) == [_P2, _P3], (
         f"com o chip apagado no P1 e no P4, miraram {_quem_mirou(vpads)}")
+
+
+# ---------------------------------------------------------------------------
+# 5. O IPC — `mira.set` e a leitura de volta no `state_full`
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def perfis(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Diretório de perfis isolado — o molde do `test_o_sensor_desliga_de_verdade`."""
+    from hefesto_dualsense4unix.profiles import loader as loader_module
+
+    alvo = tmp_path / "profiles"
+    alvo.mkdir()
+
+    def _dir(ensure: bool = False) -> Path:
+        if ensure:
+            alvo.mkdir(parents=True, exist_ok=True)
+        return alvo
+
+    monkeypatch.setattr(loader_module, "profiles_dir", _dir)
+    return alvo
+
+
+def _servidor_com_perfil(tmp_path: Path, perfil: Profile | None = None) -> IpcServer:
+    """O `IpcServer` real sobre o `Daemon` real, com um perfil ATIVO no disco."""
+    from hefesto_dualsense4unix.profiles.loader import save_profile
+
+    perfil = perfil or Profile(name="Bancada", match=MatchAny(type="any"))
+    save_profile(perfil)
+    _daemon, servidor = _mesa_de_verdade(tmp_path, "usb", _hub({}))
+    servidor.profile_manager.apply_movimento(perfil)
+    servidor.store.set_active_profile(perfil.name)
+    return servidor
+
+
+def _mira_set(servidor: IpcServer, **params: Any) -> dict[str, Any]:
+    import asyncio
+
+    return asyncio.run(servidor._handlers["mira.set"](params))
+
+
+def test_o_que_ela_escolhe_chega_ao_disco(perfis: Path, tmp_path: Path) -> None:
+    """O chip grava NO PERFIL daquela peça, e só o que ela mexeu.
+
+    MORDIDA (§5 da sprint): arranque o `save_profile` do `mira.set` e este
+    teste reprova — é a queixa *"o perfil não carrega"* pela enésima vez, e ela
+    sempre foi um campo que não grava.
+    """
+    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+
+    servidor = _servidor_com_perfil(tmp_path)
+    corpo = _mira_set(servidor, uniq=_P3, ligada=True)
+    assert corpo["status"] == "ok" and corpo["gravado"] is True and corpo["ligada"]
+    dele = load_profile("Bancada").controllers["aabbcc000003"].movimento
+    assert dele is not None and dele.destino == "analogico_direito"
+    assert dele.model_fields_set == {"destino"}, (
+        "o chip gravou campos que ela não mexeu — a peça deixaria de herdar do "
+        "perfil")
+    # O deslizante NÃO apaga o chip: campo omitido não mexe no que já estava.
+    corpo = _mira_set(servidor, uniq=_P3, zona_morta_graus_s=22.0)
+    dele = load_profile("Bancada").controllers["aabbcc000003"].movimento
+    assert dele.destino == "analogico_direito" and dele.zona_morta_graus_s == 22.0
+    # E vale AGORA, sem esperar a próxima ativação: o tique e o filtro sabem.
+    store = servidor.store
+    assert rot.da_peca(store, _P3, rot.ativo(store)).zona_morta_graus_s == 22.0
+    assert REGISTRO.roteado(_P3) and not REGISTRO.roteado(_P2)
+
+
+def test_a_tela_nao_liga_a_mira_sozinha(perfis: Path, tmp_path: Path) -> None:
+    """Mexer no deslizante de um controle de mira apagada NÃO a acende.
+
+    MORDIDA (§5 da sprint): troque o padrão `nenhum` do destino em
+    `roteador_de_movimento.montar` por `analogico_direito` e este teste reprova
+    — ajustar o tremor moveria a câmera de todo jogo dela. (É o padrão do
+    MOTOR que decide aqui, e não o do esquema: a peça só leva os campos que ela
+    escreveu. O do esquema é guardado por `test_a_mira_nasce_desligada`.)
+    """
+    servidor = _servidor_com_perfil(tmp_path)
+    corpo = _mira_set(servidor, uniq=_P2, sensibilidade=9)
+    assert corpo["status"] == "ok" and corpo["ligada"] is False
+    assert not REGISTRO.roteado(_P2)
+    entradas: list[dict[str, Any]] = [{"uniq": _P1}, {"uniq": _P2}]
+    servidor._merge_mira(entradas)
+    assert [e["mira"]["ligada"] for e in entradas] == [False, False]
+    assert entradas[1]["mira"]["sensibilidade"] == 9, (
+        "o número que ela ajustou com a mira apagada sumiu da leitura de volta")
+
+
+def test_o_ps_nunca_vira_gatilho_pela_tela(perfis: Path, tmp_path: Path) -> None:
+    """A tela oferece o chip e os dois deslizantes, e o IPC não abre a porta
+    que a tela não tem: `gatilho` é recusado — e com ele o PS, que é a saída de
+    emergência dela.
+
+    MORDIDA: aceite qualquer chave no `mira.set` e este teste reprova.
+    """
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+
+    servidor = _servidor_com_perfil(tmp_path)
+    with pytest.raises(ValueError, match="gatilho"):
+        _mira_set(servidor, uniq=_P3, ligada=True, gatilho="ps")
+    assert not load_profile("Bancada").controllers, "a recusa gravou alguma coisa"
+
+
+def test_o_chip_apagado_vence_a_mira_do_perfil_e_a_tela_ve(
+    perfis: Path, tmp_path: Path
+) -> None:
+    """Perfil com mira na mesa, e ela apaga o chip do P4: o P4 não mira, e o
+    `state_full` diz isso pela mesma pergunta que o tique faz."""
+    perfil = Profile(
+        name="Bancada",
+        match=MatchAny(type="any"),
+        movimento=ProfileMovimentoConfig(destino="analogico_direito"),
+    )
+    servidor = _servidor_com_perfil(tmp_path, perfil)
+    _mira_set(servidor, uniq=_P4, ligada=False)
+    entradas: list[dict[str, Any]] = [{"uniq": _P2}, {"uniq": _P4}]
+    servidor._enriquecer_e_medir_o_ar({}, entradas, None)
+    assert entradas[0]["mira"]["ligada"] is True, "o P2 calado não seguiu o perfil"
+    assert entradas[1]["mira"]["ligada"] is False, "o chip apagado do P4 não pegou"
+    assert REGISTRO.roteado(_P2) and not REGISTRO.roteado(_P4)
+
+
+def test_em_modo_nativo_a_resposta_diz_o_que_nao_alcanca(
+    perfis: Path, tmp_path: Path
+) -> None:
+    """Sem gamepad virtual não há onde a mira escreva — a RESPOSTA diz, e a
+    escolha fica guardada. A tela não confessa (ordem dela, 07/09)."""
+    servidor = _servidor_com_perfil(tmp_path)
+    servidor.daemon._native_mode = True
+    corpo = _mira_set(servidor, uniq=_P3, ligada=True)
+    assert corpo["alcance"] == {"tique": "nao_se_aplica"}
+    assert "Nativo" in (corpo["ressalva"] or "")
+    assert corpo["gravado"] is True
+
+
+def test_o_metodo_esta_no_dispatcher() -> None:
+    """A tela chama pelo NOME; sem a linha no `_handlers`, o chip responde
+    `method not found`."""
+    import inspect
+
+    from hefesto_dualsense4unix.app import ipc_bridge
+
+    fonte = inspect.getsource(IpcServer.__post_init__)
+    assert '"mira.set": self._handle_mira_set' in fonte
+    assert "mira_set_detalhado" in ipc_bridge.__all__
