@@ -429,7 +429,8 @@ def test_o_controle_sem_hid_vira_aviso_com_o_gesto() -> None:
     linhas = [linha for linha in saida.splitlines() if "sem o HID" in linha]
     assert linhas, f"o controle parado não foi dito:\n{saida}"
     assert linhas[0].startswith("WARN Entrada 4.1.3 (3-4.1.3): o controle está nela"), linhas[0]
-    assert "Tire e ponha o cabo desse controle" in linhas[0], linhas[0]
+    assert "O Hefesto tenta religá-lo sozinho a cada 2 minutos" in linhas[0], linhas[0]
+    assert "tire e ponha o cabo desse controle" in linhas[0], linhas[0]
 
 
 def test_o_controle_com_hid_nao_vira_aviso() -> None:

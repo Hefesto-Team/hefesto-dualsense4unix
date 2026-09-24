@@ -4019,6 +4019,9 @@ check_bt_crc_counters() {
 # leva todos os controles dele quando cai. E a entrada em que o kernel DESISTIU
 # vira WARN com o gesto: o controle encaixado sem o HID, ou a entrada largada
 # vazia. As duas não voltam sozinhas pelo kernel, e é por isso que viram aviso.
+# A primeira o Hefesto religa (o ramo do cabo do `bt_rebind_orphans.sh`, a cada
+# tique do watchdog root); a segunda pede um reset de porta que o produto ainda
+# não tem, e o gesto é dela.
 _o_endereco_do_storm() {
     local log="${1}" dias="${2}"
     local py arquivo raiz_usb
@@ -4077,7 +4080,7 @@ if sobra > 0:
         [[ -n "${texto}" ]] || continue
         case "${marca}" in
             porta) info "  -71 em ${texto}" ;;
-            parada_hid) warn "${texto}. Tire e ponha o cabo desse controle na mesma entrada; se ele cair de novo ali, troque de entrada" ;;
+            parada_hid) warn "${texto}. O Hefesto tenta religá-lo sozinho a cada 2 minutos, até três vezes; se esta linha continuar, tire e ponha o cabo desse controle, e se ele cair de novo ali, troque de entrada" ;;
             parada_vazia) warn "${texto}. Se o controle ou o adaptador BT ainda está encaixado nela, tire e ponha: o kernel só volta a olhar essa entrada quando algo é encaixado de novo" ;;
             hub) warn "${texto}. É o suspeito a trocar primeiro: tire um dos aparelhos desse hub e ligue direto numa entrada do computador, ou troque o hub (de preferência um com fonte própria)" ;;
             naosei) info "${texto}" ;;
