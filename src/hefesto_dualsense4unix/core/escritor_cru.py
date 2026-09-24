@@ -915,12 +915,23 @@ class VigiaDoSequestro:
         self._anunciados = dict(self._por_no)
         for no in soltos:
             self._reafirmado_em.pop(no, None)
+        # O SOLTO GANHA UMA REESCRITA FINAL (conferência de 23/09/2026). Quem
+        # larga o nó pode ter escrito depois da última reescrita — o jogo que
+        # pinta e fecha, a Steam que sai —, e sem esta o último a escrever no
+        # físico seria ELE, para sempre: no Modo Nativo nada mais reafirma.
+        # Só o nó que continua na mesa; o que saiu não tem a quem escrever.
+        presentes = set(alvos)
         a_reafirmar = tuple(
-            n
-            for n in sorted(self._por_no)
-            if n in novos
-            or (agora - self._reafirmado_em.get(n, float("-inf")))
-            >= self._intervalo_da_reafirmacao_s
+            sorted(
+                {
+                    n
+                    for n in self._por_no
+                    if n in novos
+                    or (agora - self._reafirmado_em.get(n, float("-inf")))
+                    >= self._intervalo_da_reafirmacao_s
+                }
+                | {n for n in soltos if n in presentes}
+            )
         )
         self._vigilante = self._vigilante or bool(self._por_no)
         return PassoDaVigia(
@@ -932,10 +943,16 @@ class VigiaDoSequestro:
         )
 
     def reafirmado(self, nos: Iterable[str], agora: float) -> None:
-        """Marca que a barra e o número destes nós acabaram de ser reescritos."""
-        for no in nos:
-            self._reafirmado_em[str(no)] = float(agora)
-            self._reescritas[str(no)] = self._reescritas.get(str(no), 0) + 1
+        """Marca que a barra e o número destes nós acabaram de ser reescritos.
+
+        A reescrita FINAL de um sequestro que acabou não conta: o nó já saiu da
+        foto, e contá-la abriria a conta do próximo sequestro com uma a mais.
+        """
+        for no in (str(n) for n in nos):
+            if no not in self._por_no:
+                continue
+            self._reafirmado_em[no] = float(agora)
+            self._reescritas[no] = self._reescritas.get(no, 0) + 1
 
     def encerrar(self, no: str) -> int:
         """Zera a conta de um sequestro que acabou; devolve quantas reescritas."""

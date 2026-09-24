@@ -284,7 +284,11 @@ class TestOSequestroAcaba:
 
         assert passo.soltos == (NO_1,)
         assert passo.pids[NO_1] == (STEAM,)
-        assert passo.a_reafirmar == ()
+        # A MORDIDA (5): a reescrita FINAL. Quem larga o nó pode ter escrito
+        # depois da última reescrita; sem esta, o último a escrever é ele.
+        assert passo.a_reafirmar == (NO_1,)
+        assert _passo(vigia, [NO_1], 3.0).a_reafirmar == ()
+        assert vigia.encerrar(NO_1) == 1  # a final não entra na conta
 
     def test_o_processo_que_morre_solta_sem_esperar_a_varredura(self) -> None:
         mesa = _Mesa()
@@ -298,7 +302,7 @@ class TestOSequestroAcaba:
         passo = _passo(vigia, [NO_1], 0.5)
 
         assert passo.soltos == (NO_1,)
-        assert passo.a_reafirmar == ()
+        assert passo.a_reafirmar == (NO_1,)  # a reescrita final
         assert vigia.vigilante is False
 
     def test_o_controle_que_sai_da_mesa_sai_da_vigia(self) -> None:
@@ -311,6 +315,7 @@ class TestOSequestroAcaba:
         passo = _passo(vigia, [], 0.5)
 
         assert passo.soltos == (NO_1,)
+        assert passo.a_reafirmar == ()  # saiu da mesa: não há a quem escrever
         assert vigia.sequestrados == {}
 
     def test_sonda_que_falha_nao_vira_ninguem_segura(self) -> None:
@@ -522,7 +527,8 @@ class TestNoDaemon:
 
         registros = asyncio.run(_roteiro())
 
-        assert controle.reescritos == [[UNIQ_1], [UNIQ_1]]
+        # Duas durante o sequestro e a FINAL, quando o jogo larga o nó.
+        assert controle.reescritos == [[UNIQ_1], [UNIQ_1], [UNIQ_1]]
         eventos = [r["event"] for r in registros]
         assert eventos.count("sequestro_detectado") == 1
         assert eventos.count("sequestro_corrigido") == 1
