@@ -52,7 +52,7 @@ seção daqui**: a aba deixou de estar em trabalho.
 - **24/09/2026** — A-MIRA-NA-NAVEGACAO-01, esperando a sessão dela. A dica do
   «Jogador» troca «Um jogo em co-op pode mandar o próprio número por cima.»
   por «O número é do Hefesto: se um jogo o trocar, ele volta em até um
-  segundo.» (a STEAM-NO-FISICO-01 derrubou o fato), e a bancada parada nasce
-  com a tira do Nativo em cor. Enquanto ela não publicar, a dica da publicada
-  diz a frase velha; a tira em cor no Nativo já vale na publicada, porque quem
-  a pinta é o pacote.
+  segundo.» (a STEAM-NO-FISICO-01 derrubou o fato). Enquanto ela não
+  publicar, a dica da publicada diz a frase velha; a tira em cor no Nativo já
+  vale na publicada, porque quem a pinta é o pacote, e a bancada parada não
+  tem cena de Nativo.
