@@ -280,7 +280,9 @@ class _Servidor:
 
 
 @pytest.mark.parametrize("numero", [1, 2, 3, 4, None])
-def test_o_rotulo_e_a_forma_a_com_o_numero_do_jogador(assentos, numero: int | None) -> None:
+def test_o_rotulo_e_a_forma_a_com_o_numero_do_jogador(
+    assentos: _Assentos, numero: int | None
+) -> None:
     """O número vem do DONO (o numerador), e sem número não se inventa número."""
     assentos[_P3] = numero
     sufixo = "" if numero is None else f" {numero}"
@@ -294,7 +296,7 @@ def _campos_de_gente(props: dict[str, str]) -> dict[str, str]:
 
 
 @pytest.mark.parametrize("uniq", [_P1, _P2, _P3, _P4])
-def test_nenhum_hex_do_endereco_chega_ao_rotulo(assentos, uniq: str) -> None:
+def test_nenhum_hex_do_endereco_chega_ao_rotulo(assentos: _Assentos, uniq: str) -> None:
     """Nem os seis do rabo, nem par nenhum do endereço, em campo que alguém lê.
 
     MORDIDA 1: devolva ``'DualSense {marca} (háptica)'`` e o rabo volta.
@@ -310,7 +312,7 @@ def test_nenhum_hex_do_endereco_chega_ao_rotulo(assentos, uniq: str) -> None:
     assert props["device.description"] == f"{_HAPTICA} {_ASSENTO[uniq]}{_SONY}"
 
 
-def test_o_rotulo_cabe_no_teto_e_o_monitor_tem_reserva(assentos) -> None:
+def test_o_rotulo_cabe_no_teto_e_o_monitor_tem_reserva(assentos: _Assentos) -> None:
     """O rótulo cabe nos 62 do Wine; o monitor passa, e o ``product.name`` o salva.
 
     O ``pipewire-pulse`` chama o monitor de «Monitor of <descrição>»: com a
@@ -332,7 +334,7 @@ def test_o_rotulo_cabe_no_teto_e_o_monitor_tem_reserva(assentos) -> None:
         assert len(_MONITOR_DE + reserva) <= _TETO_DO_WINE
 
 
-def test_a_identidade_do_no_fica_intacta(assentos) -> None:
+def test_a_identidade_do_no_fica_intacta(assentos: _Assentos) -> None:
     """O NOME segue pela marca e a identidade é a de antes — é o que o jogo lê.
 
     O id do endpoint no Wine sai do nome do sink, e o ``ContainerId`` que a RE
@@ -352,7 +354,7 @@ def test_a_identidade_do_no_fica_intacta(assentos) -> None:
     assert eh.nome_do_endpoint(_P3) == eh.MOLDE_DO_NOME.format(marca=eh.marca_do_controle(_P3))
 
 
-def test_o_no_publicado_diz_o_controle(assentos) -> None:
+def test_o_no_publicado_diz_o_controle(assentos: _Assentos) -> None:
     """O que a lista de som MOSTRA, lido do servidor depois do ``load-module``."""
     servidor = _Servidor()
     no = eh.EndpointDeHaptica(uniq=_P4, ancora=_ANCORAS[1], runner=servidor)
@@ -438,7 +440,7 @@ def _o_que_o_ge_ve(nome_amigavel: str) -> list[tuple[str, tuple[bool, ...]]]:
 
 
 @pytest.mark.parametrize("numero", [1, 2, 3, 4, None])
-def test_os_casamentos_do_ge_dao_o_mesmo_resultado(assentos, numero: int | None) -> None:
+def test_os_casamentos_do_ge_dao_o_mesmo_resultado(assentos: _Assentos, numero: int | None) -> None:
     """O rótulo novo cai em cada casamento do GE exatamente como o velho caía.
 
     Se uma forma futura do rótulo ganhar «Speaker» (e virar o alto-falante mono
@@ -522,7 +524,7 @@ class _Mesa:
 
 
 @pytest.fixture
-def mesa(monkeypatch: pytest.MonkeyPatch, assentos) -> _Mesa:
+def mesa(monkeypatch: pytest.MonkeyPatch, assentos: _Assentos) -> _Mesa:
     from hefesto_dualsense4unix.integrations import hidraw_broker_client as broker
 
     _PonteDeMentira.criadas = []
@@ -579,7 +581,9 @@ def test_so_os_controles_do_bt_ganham_a_haptica(mesa: _Mesa) -> None:
     assert mesa.servidor.do_nome(eh.nome_do_endpoint(_P2)) == []
 
 
-def test_o_rotulo_segue_o_assento_e_nada_que_o_jogo_le_muda(mesa: _Mesa, assentos) -> None:
+def test_o_rotulo_segue_o_assento_e_nada_que_o_jogo_le_muda(
+    mesa: _Mesa, assentos: _Assentos
+) -> None:
     """P3 e P4 trocam de lugar: os dois rótulos seguem, o nome e a âncora não.
 
     MORDIDA 3: tire a chamada a ``_renovar_o_rotulo_da_haptica`` da volta.
@@ -601,7 +605,7 @@ def test_o_rotulo_segue_o_assento_e_nada_que_o_jogo_le_muda(mesa: _Mesa, assento
     assert mesa.servidor.quedas == quedas, "o nó renasceu sem o assento ter andado"
 
 
-def test_com_jogo_aberto_o_rotulo_espera(mesa: _Mesa, assentos) -> None:
+def test_com_jogo_aberto_o_rotulo_espera(mesa: _Mesa, assentos: _Assentos) -> None:
     """Republicar é hotplug de endpoint Sony: com jogo aberto, o nome espera.
 
     MORDIDA 4: tire ``self._ha_jogo_aberto()`` de ``_a_haptica_esta_em_uso``.
@@ -617,7 +621,7 @@ def test_com_jogo_aberto_o_rotulo_espera(mesa: _Mesa, assentos) -> None:
     assert mesa.rotulo(_P3) == f"{_HAPTICA} 1{_SONY}"
 
 
-def test_com_o_jogo_tocando_no_no_o_rotulo_espera(mesa: _Mesa, assentos) -> None:
+def test_com_o_jogo_tocando_no_no_o_rotulo_espera(mesa: _Mesa, assentos: _Assentos) -> None:
     """Um stream no endpoint (sink-input) segura o nó — mesmo sem jogo reconhecido."""
     mesa.volta()
     assentos[_P4] = 2
@@ -668,7 +672,7 @@ def test_o_servidor_mudo_sobre_os_streams_segura_o_rotulo(
     assert mesa.rotulo(_P4) == f"{_HAPTICA} 2{_SONY}"
 
 
-def test_perder_o_numero_nao_republica(mesa: _Mesa, assentos) -> None:
+def test_perder_o_numero_nao_republica(mesa: _Mesa, assentos: _Assentos) -> None:
     """O numerador que pisca (subsystem descendo, mesa vazia por uma volta) não conta."""
     mesa.volta()
     assentos[_P3] = None
@@ -760,7 +764,7 @@ def test_o_no_que_nem_com_o_rotulo_velho_volta_renasce_na_volta_seguinte(
     assert mesa.rotulo(_P4) == f"{_HAPTICA} 4{_SONY}"
 
 
-def test_o_rotulo_novo_que_nao_sobe_devolve_o_velho(assentos) -> None:
+def test_o_rotulo_novo_que_nao_sobe_devolve_o_velho(assentos: _Assentos) -> None:
     """Um rótulo velho é melhor que endpoint nenhum — a ordem do nó do som."""
     servidor = _Servidor()
     no = eh.EndpointDeHaptica(uniq=_P3, ancora=_ANCORAS[0], runner=servidor)
@@ -789,7 +793,7 @@ def _o_passo_que_conta() -> str:
     campos = dict(med.como_do_mapa()[_CELULA])
     passos = [p.strip() for p in campos["os passos"].split("\n") if p.strip()]
     (conta,) = [p for p in passos if p.startswith("Conte as saídas")]
-    return conta
+    return str(conta)
 
 
 def test_a_bancada_conta_duas_placas(mesa: _Mesa) -> None:
@@ -824,7 +828,7 @@ _CITADO = re.compile(r"«(Háptica do Controle ([1-4N]))([^»]*)»")
 _PELO_COMECO = re.compile(r"(começa com|começam com|outra com|nem com|ou com) $")
 
 
-def test_o_gesto_cita_a_haptica_como_a_lista_mostra(assentos) -> None:
+def test_o_gesto_cita_a_haptica_como_a_lista_mostra(assentos: _Assentos) -> None:
     """O irmão de ``test_a_bancada_fala_a_forma_a`` para o terceiro nó do controle.
 
     Um gesto que manda achar «Háptica do Controle 3» pelo nome inteiro tem de
