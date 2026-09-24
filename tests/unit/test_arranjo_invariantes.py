@@ -615,7 +615,7 @@ _CASAS_VERSIONADAS = (_ORIGEM_CONGELADA, _COPIA_DO_PRODUTO)
 
 
 def _o_que_o_gerador_escreve() -> str:
-    """A página do produto como `pagina_do_mapa` a escreve, agora.
+    """A BANCADA como `pagina_do_mapa` a escreve, agora.
 
     Importada aqui dentro e não no topo: o import roda `_bloco_do_censo`, que LÊ
     a origem congelada do disco. No topo, uma árvore sem aquele arquivo
@@ -627,10 +627,29 @@ def _o_que_o_gerador_escreve() -> str:
     return pagina_do_mapa.pagina()
 
 
+def _o_que_o_produto_recebe() -> str:
+    """A cópia do PRODUTO como o gerador a responde: sem as edições que esperam.
+
+    DUAS CASAS, DUAS RESPOSTAS — 24/09/2026, AS-PAGINAS-AVULSAS-TEM-A-CAIXA-DA-
+    JANELA-01. Desde 23/09 a tela para no mockup até o OK dela, e o desenho novo
+    desta página mora em `pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DELA`: ele
+    entra na bancada e fica fora da cópia do produto até o `--publicar`.
+    """
+    from hefesto_dualsense4unix.interface import pagina_do_mapa
+
+    return pagina_do_mapa.pagina(com_as_que_esperam=False)
+
+
 def _edicoes() -> tuple[Any, ...]:
     from hefesto_dualsense4unix.interface import pagina_do_mapa
 
     return tuple(pagina_do_mapa.EDICOES)
+
+
+def _esperando() -> tuple[Any, ...]:
+    from hefesto_dualsense4unix.interface import pagina_do_mapa
+
+    return tuple(pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DELA)
 
 
 #: Toda `porque` de edição tem de trazer a DATA. É o que separa uma mudança
@@ -696,8 +715,18 @@ def test_as_duas_casas_versionadas_do_mockup_nao_andam_sozinhas() -> None:
     sempre teve — reprova aqui, nomeando o comando que a devolve ao lugar.
     """
     raiz = _FONTE_DO_MOTOR.parents[3]
-    esperado = _o_que_o_gerador_escreve()
-    for caminho in (_COPIA_DO_PRODUTO, _REFERENCIA_DO_DESENHO):
+    bancada = _o_que_o_gerador_escreve()
+    produto = _o_que_o_produto_recebe()
+    no_produto = (raiz / _COPIA_DO_PRODUTO).read_text(encoding="utf-8")
+    # A SESSÃO APROVOU E A CONTA FICOU PARA TRÁS: o `--publicar` levou o
+    # desenho à cópia do produto e as edições continuam esperando. É um passo
+    # de quem publica, e a régua diz qual.
+    assert not (_esperando() and no_produto == bancada and bancada != produto), (
+        "a cópia do produto já recebeu o desenho que espera a sessão dela — no "
+        "mesmo commit do `--publicar mapa-das-portas.html`, junte as edições de "
+        "`pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DELA` ao fim de `EDICOES` e "
+        "deixe aquela tupla vazia")
+    for caminho, esperado in ((_COPIA_DO_PRODUTO, produto), (_REFERENCIA_DO_DESENHO, bancada)):
         arquivo = raiz / caminho
         assert arquivo.exists(), (
             f"{caminho} não está nesta árvore — mas é versionado. Sem ele a "
@@ -724,16 +753,21 @@ def test_toda_edicao_do_gerador_acha_o_seu_alvo_uma_vez() -> None:
     raiz = _FONTE_DO_MOTOR.parents[3]
     origem = (raiz / _ORIGEM_CONGELADA).read_text(encoding="utf-8")
     produto = (raiz / _COPIA_DO_PRODUTO).read_text(encoding="utf-8")
+    bancada = (raiz / _REFERENCIA_DO_DESENHO).read_text(encoding="utf-8")
     edicoes = _edicoes()
     assert edicoes, "nenhuma edição — a régua passaria por vacuidade"
-    for numero, edicao in enumerate(edicoes, 1):
+    # AS QUE ESPERAM A SESSÃO DELA SÃO COBRADAS NA BANCADA, que é a única casa
+    # que as recebe antes do `--publicar`.
+    casas = [(edicao, produto, "cópia do produto") for edicao in edicoes]
+    casas += [(edicao, bancada, "bancada") for edicao in _esperando()]
+    for numero, (edicao, casa, nome_da_casa) in enumerate(casas, 1):
         assert origem.count(edicao.antes) == 1, (
             f"edição {numero}: o pedaço aparece {origem.count(edicao.antes)} "
             f"vez(es) na origem congelada, e tem de aparecer UMA.\n"
             f"  motivo declarado: {edicao.porque}")
-        assert produto.count(edicao.depois) == 1, (
+        assert casa.count(edicao.depois) == 1, (
             f"edição {numero}: o que ela escreve aparece "
-            f"{produto.count(edicao.depois)} vez(es) na cópia do produto. "
+            f"{casa.count(edicao.depois)} vez(es) na {nome_da_casa}. "
             "Ou a página não foi regerada, ou duas edições escrevem a mesma "
             f"coisa.\n  motivo declarado: {edicao.porque}")
         assert _DATA_NA_RAZAO.search(edicao.porque), (
@@ -774,8 +808,9 @@ def test_a_regua_da_igualdade_sabe_recusar() -> None:
     exatamente o gesto que ela existe para impedir.
     """
     raiz = _FONTE_DO_MOTOR.parents[3]
-    esperado = _o_que_o_gerador_escreve()
+    esperado = _o_que_o_produto_recebe()
     produto = (raiz / _COPIA_DO_PRODUTO).read_text(encoding="utf-8")
+    bancada = (raiz / _REFERENCIA_DO_DESENHO).read_text(encoding="utf-8")
     assert produto == esperado
 
     # 1. uma letra a mais na página reprova
@@ -789,12 +824,24 @@ def test_a_regua_da_igualdade_sabe_recusar() -> None:
     for fora in range(len(inteiras)):
         pagina_do_mapa.EDICOES = inteiras[:fora] + inteiras[fora + 1:]
         try:
-            sem_uma = pagina_do_mapa.pagina()
+            sem_uma = pagina_do_mapa.pagina(com_as_que_esperam=False)
         finally:
             pagina_do_mapa.EDICOES = inteiras
         assert sem_uma != produto, (
             f"arrancar a edição {fora + 1} não mudou a página — ela não faz nada, "
             f"e uma edição que não muda nada é um perdão morto: {inteiras[fora].porque}")
+
+    # 3. o mesmo para as que esperam a sessão dela, medidas na bancada
+    esperando = pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DELA
+    for fora in range(len(esperando)):
+        pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DELA = esperando[:fora] + esperando[fora + 1:]
+        try:
+            sem_uma = pagina_do_mapa.pagina()
+        finally:
+            pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DELA = esperando
+        assert sem_uma != bancada, (
+            f"arrancar a edição que espera {fora + 1} não mudou a bancada — ela "
+            f"não faz nada: {esperando[fora].porque}")
 
 
 def test_a_palavra_que_ela_baniu_nao_esta_na_tela_do_mapa() -> None:

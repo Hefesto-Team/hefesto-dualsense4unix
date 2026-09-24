@@ -85,6 +85,9 @@ seção daqui**: a aba deixou de estar em trabalho.
   cabeçalho («← Voltar», o título e a data) fica; os botões, o gabinete, os
   controles e o rodapé rolam por dentro da caixa. O fundo de dentro, as cores,
   os textos e os botões não mudam. A cura entrou pelo gerador
-  (`pagina_do_mapa.EDICOES`, três edições novas). Enquanto ela não publicar, o
-  produto mostra a página de 1180 px rolando inteira. Depois do OK dela:
-  `scripts/check_o_desenho_aprovado.py --publicar mapa-das-portas.html`.
+  (`pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DELA`, três edições novas, que
+  entram na bancada e ficam fora da cópia do produto). Enquanto ela não
+  publicar, o produto mostra a página de 1180 px rolando inteira. Depois do OK
+  dela: `scripts/check_o_desenho_aprovado.py --publicar mapa-das-portas.html`
+  e, no mesmo commit, as três edições vão para o fim de `EDICOES` e a tupla que
+  espera fica vazia — sem isso `test_arranjo_invariantes` reprova dizendo isto.
