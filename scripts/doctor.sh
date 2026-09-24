@@ -5516,7 +5516,7 @@ _veredito_do_hide() {
         # de entrada junto com o hidraw. Nó de entrada aberto com o hidraw
         # escondido deixou de ser «decisão em aberto» e passou a ser um broker
         # que não fechou: o de antes da cura, ainda na memória.
-        warn "o hide não fechou os nós de entrada: ${TRES_SUP_ESCONDIDOS} de ${TRES_SUP_CONTROLES} controle(s) escondido(s) do jogo — o FÍSICO segue alcançável em ${TRES_SUP_N_ABERTOS} nó(s) de entrada (${TRES_SUP_ABERTOS}), e quem enumerar /dev/input em vez de hidraw acha o controle dobrado. O broker fecha os quatro junto com o hidraw desde a HIDE-SO-O-HIDRAW-02; se ele não fechou, o que roda é o de antes da cura (veja o check do broker em memória acima). Reinicie sem abrir o físico: sudo touch /run/hefesto-hidraw-broker/reinicio-sem-abrir && sudo systemctl restart hefesto-hidraw-broker.service"
+        warn "o hide não fechou os nós de entrada: ${TRES_SUP_ESCONDIDOS} de ${TRES_SUP_CONTROLES} controle(s) escondido(s) do jogo — o FÍSICO segue alcançável em ${TRES_SUP_N_ABERTOS} nó(s) de entrada (${TRES_SUP_ABERTOS}), e quem enumerar /dev/input em vez de hidraw acha o controle dobrado. O broker fecha os quatro junto com o hidraw desde a HIDE-SO-O-HIDRAW-02; se ele não fechou, o que roda é o de antes da cura (veja o check do broker em memória acima). Reinicie sem abrir o físico: ${GESTO_DE_REINICIAR_O_BROKER}"
         return
     fi
     # A conta é sobre o que foi MEDIDO, não sobre o que entrou na varredura.
@@ -5539,7 +5539,15 @@ _veredito_do_hide() {
 #: reinício isso entregava o nó à Steam aberta no segundo em que o novo ainda
 #: não subiu. O arquivo `reinicio-sem-abrir` (do root, recente) diz ao broker
 #: que sai que o próximo já vem.
-GESTO_DE_REINICIAR_O_BROKER="sudo touch /run/hefesto-hidraw-broker/reinicio-sem-abrir && sudo systemctl restart hefesto-hidraw-broker.service"
+#:
+#: O `kill -s SIGKILL`, e não o `restart` puro, achado pela conferência: o
+#: caso que este gesto cura é o broker de ANTES da cura na memória, e esse não
+#: conhece o arquivo — o SIGTERM do `restart` roda o `restore_everything`
+#: dele, que abre todo nó escondido (o diário de 22/09 23:27 tem o
+#: `shutdown_restored` de dois hidraw). O SIGKILL não deixa o processo velho
+#: abrir nada; quem roda depois é o ExecStopPost do binário NOVO, que lê o
+#: arquivo e não abre, e o ExecStartPre do novo fecha o que houver.
+GESTO_DE_REINICIAR_O_BROKER="sudo touch /run/hefesto-hidraw-broker/reinicio-sem-abrir && sudo systemctl kill -s SIGKILL hefesto-hidraw-broker.service && sudo systemctl restart hefesto-hidraw-broker.service"
 
 #: O broker em memória é o binário instalado? HIDE-SO-O-HIDRAW-02 — o achado
 #: do install de 24/09/2026: o install copiou o binário novo para

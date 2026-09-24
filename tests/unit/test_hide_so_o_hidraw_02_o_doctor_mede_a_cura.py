@@ -108,6 +108,26 @@ class TestOBrokerEmMemoria:
         assert "[WARN]" in saida, saida
         assert "daemon-reload" in saida
 
+    def test_o_gesto_nao_deixa_o_broker_velho_abrir(self) -> None:
+        """O gesto cura o broker de ANTES da cura na memória, que não conhece
+        o `reinicio-sem-abrir`: o SIGTERM de um `restart` puro roda o
+        `restore_everything` dele e abre todo nó escondido. A MORDIDA
+        (conferência): volte o gesto ao `touch && restart` e esta régua
+        reprova. A ordem também é a cura: o arquivo antes do SIGKILL (o
+        ExecStopPost do binário novo o lê), e o `restart` por último."""
+        gesto = _gesto()
+        toque = gesto.index("reinicio-sem-abrir")
+        morte = gesto.index("systemctl kill -s SIGKILL hefesto-hidraw-broker.service")
+        volta = gesto.index("systemctl restart hefesto-hidraw-broker.service")
+        assert toque < morte < volta, gesto
+
+    def test_o_gesto_tem_um_dono_so(self) -> None:
+        """Os avisos que mandam reiniciar leem a MESMA variável — uma cópia
+        escrita à mão envelheceria sozinha, como a do `_veredito_do_hide`,
+        que a conferência achou com o `restart` puro."""
+        assert DOCTOR.count("sudo systemctl kill -s SIGKILL hefesto-hidraw-broker") == 1
+        assert "${GESTO_DE_REINICIAR_O_BROKER}" in _funcao("_veredito_do_hide")
+
     def test_servico_parado_nao_afirma_nada(self, tmp_path: Path) -> None:
         saida = self._roda(tmp_path, "", "1790248632", "no")
         assert "[PASS]" not in saida and "[WARN]" not in saida, saida
