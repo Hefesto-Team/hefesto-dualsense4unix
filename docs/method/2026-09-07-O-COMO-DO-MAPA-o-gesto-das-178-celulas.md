@@ -69,9 +69,9 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **Por controle.**
 
-* **P1** — No USB: tem as duas entradas, a do Hefesto e a placa do próprio controle. A vibração dele viaja pela placa, e por isso não há «Háptica do Controle 1».
+* **P1** — No USB: tem as duas entradas, a do Hefesto e a placa do próprio controle. A vibração dele viaja pela placa, e por isso nenhuma saída começa com «Háptica do Controle 1».
 * **P2** — No USB: a mesma coisa. Se só uma placa DualSense aparecer, um dos dois do USB está sem som próprio — anote.
-* **P3** — No BT: só as entradas do Hefesto, a «Alto-falante do Controle 3» e a «Háptica do Controle 3». É o CONTRASTE: o som dele viaja pelo fio do BT, e é esse fio que a pergunta desta linha examina.
+* **P3** — No BT: só as entradas do Hefesto, a que começa com «Alto-falante do Controle 3» e a que começa com «Háptica do Controle 3». É o CONTRASTE: o som dele viaja pelo fio do BT, e é esse fio que a pergunta desta linha examina.
 * **P4** — No BT, e é o segundo contraste. Mesma leitura do P3, com o número 4.
 
 **A armadilha.** Do lado do USB esta pergunta não tem objeto: o conteúdo que viaja pelo fio do BT não passa por aqui, e não há o que clicar além de conferir o contraste. As duas placas DualSense têm o mesmo nome e não dizem qual é qual — não é defeito, é a razão de o Hefesto criar as saídas com o número do jogador. As saídas do Hefesto também terminam com «(DualSense Wireless Controller)», e por isso a conta separa pelo começo do nome: o que começa com «Alto-falante do Controle» ou com «Háptica do Controle» é do Hefesto, e não entra. Uma saída «Alto-falante do Controle» SEM número é de um controle que já passou por aqui e saiu: o Hefesto a mantém para não tirar o dispositivo debaixo de um jogo que o tinha escolhido, e ela não entra na conta. O número da «Háptica do Controle» só se renova com nenhum jogo aberto: se ele não bater logo depois de os jogadores trocarem de lugar, espere uns segundos antes de reprovar. E se ainda aparecer uma saída «DualSense … (háptica)», é o nome de antes desta versão — espere uns segundos com os jogos fechados, e o Hefesto a renomeia para «Háptica do Controle»; ela não é placa, e não entra na conta.
