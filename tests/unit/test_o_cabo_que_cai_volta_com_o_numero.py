@@ -151,6 +151,13 @@ TIQUE = _tique_do_watchdog()
 #: leva 15 s de mediana nas 43 enumerações que deram certo. A régua usa a
 #: menor; a de 30 s passa do prazo mesmo com o religar na hora, e está escrita
 #: no relatório como o limite desta cura.
+#:
+#: DUAS RESSALVAS, DECLARADAS (a conferência, 24/09/2026). O número é contado
+#: da RE-ENUMERAÇÃO, e não da queda — antes dela o kernel ainda tenta o
+#: endereço —, então é o melhor caso do cabo, não o típico. E no RÁDIO ninguém
+#: mediu o tempo da queda do adaptador até a probe perdida de quem reconecta: a
+#: régua do adaptador usa este mesmo número como palpite, e a prova de verdade é
+#: a célula ``mapa-plataforma.religar-radio`` da bancada.
 ATRASO_DO_KERNEL = 23.0
 
 #: O sudo, a ponte, o religar e a probe do ``hid-playstation`` que o ``bind``
