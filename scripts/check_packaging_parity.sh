@@ -1444,7 +1444,7 @@ fi
 # `bluetooth-dropin-10-hefesto-resilience.conf` é removido pelo nome de DESTINO
 # (`/etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf`,
 # uninstall.sh:910) e o `proton-pin.conf` é desfeito pelo `proton_pin.py
-# --unlock` (uninstall.sh:1887), que não cita arquivo nenhum. O nome no disco
+# --unlock` (uninstall.sh:1909), que não cita arquivo nenhum. O nome no disco
 # dela não é o nome no repositório, e um portão que finge o contrário reprova
 # quem está certo. A remoção continua cobrada por família, onde o nome de
 # destino é conhecido (udev, modprobe, DKMS, broker, BlueZ, teclado na tela).
@@ -1692,7 +1692,7 @@ fi
 # pode citar script ausente; é o ofício dele.
 #
 # A GUARDA DE EXISTÊNCIA É A SAÍDA DECLARADA, e ela já era o idioma da casa
-# antes desta seção: `doctor.sh:4576` testa `[[ -x "${ROOT_DIR}/scripts/
+# antes desta seção: `doctor.sh:4619` testa `[[ -x "${ROOT_DIR}/scripts/
 # disable_steam_input.sh" ]]` antes de chamar, e `bt_health_watchdog.sh:215`
 # testa `[[ -x "${_ACTIVE}" ]]`. Quem escreve a guarda está dizendo "sei que
 # pode não estar aqui, e tratei" — e o portão acredita. Quem chama sem guarda

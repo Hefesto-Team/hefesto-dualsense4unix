@@ -4873,7 +4873,7 @@ check_bond_dobrado() {
 # linha é o único lugar em que o módulo da aba roda numa máquina de verdade e
 # publica o que concluiu, lado a lado com as checagens de onde ele veio.
 #
-# O módulo é que viaja nos pacotes, não este script (`install.sh:3256-3268` só
+# O módulo é que viaja nos pacotes, não este script (`install.sh:3778-3780` só
 # copia o `storm_watch.sh`) — por isso a direção é esta, e não um
 # `doctor.sh --json` que a aba consumiria.
 #

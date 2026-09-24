@@ -8,7 +8,7 @@ problema nunca foi a medição: é que ela só existe para quem abre terminal, q
 aba Conexões mostra na seção Check-up — uma linha por achado, sem teto.
 
 POR QUE UM MÓDULO PYTHON, E NÃO UM `doctor.sh --json`. O doctor NÃO viaja nos
-pacotes: o `install.sh:3256-3268` só copia o `storm_watch.sh`, a spec do Fedora
+pacotes: o `install.sh:3778-3780` só copia o `storm_watch.sh`, a spec do Fedora
 instala `install-host-udev.sh` e `dkms_lib.sh`, e o manifesto Flatpak não o
 menciona. Uma aba que dependesse dele nasceria VAZIA para quem instalou por
 pacote — que é a maioria futura. O padrão que a casa já usa três vezes é o
@@ -431,7 +431,7 @@ def vizinhanca_das_portas(
     """Há aparelho encaixado na porta colada à de outro rádio?
 
     Esta é a única das cinco que NÃO tem origem no doctor: o que existe lá é o
-    `suggest_port` (`scripts/doctor.sh:5137`), um modo à parte que sai antes do
+    `suggest_port` (`scripts/doctor.sh:7211`), um modo à parte que sai antes do
     `main` e se declara "diagnóstico NEUTRO". A medição vem da seção "A mesa"
     da mesma aba (`integrations/mesa_de_radio.py:327`), e o contrato é o mínimo
     possível: uma sequência com uma entrada por par colado. Contar é tudo que
@@ -707,7 +707,7 @@ def censo(itens: Sequence[Item] | None = None) -> dict[str, object]:
 # dizer onde. Quem lê isso não tem o que fazer com o número: -71 é `EPROTO`, e a
 # porta é a única coisa que separa "o cabo daquele controle" de "aquele hub".
 #
-# O que EXISTIA e não bastava: `check_usb_dropout` (`scripts/doctor.sh:6816`)
+# O que EXISTIA e não bastava: `check_usb_dropout` (`scripts/doctor.sh:7145`)
 # correlaciona, mas só sobre `journalctl -b -k` — o BOOT ATUAL. A queda de
 # terça-feira não está lá, e é justamente a que a pessoa quer explicar. O
 # `kernel-watch` guarda meses; era o log dele que ninguém cruzava com o `/sys`.
