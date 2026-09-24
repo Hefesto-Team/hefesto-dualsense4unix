@@ -33,6 +33,8 @@ AS MORDIDAS, uma por régua (arranque a cura, veja reprovar, devolva):
 * :func:`test_o_log_fora_de_ordem_nao_engana_o_desfecho` — troque o carimbo por
   "a última linha manda" e a tentativa antiga, escrita depois, apaga a
   desistência.
+* :func:`test_o_controle_de_outro_fabricante_tambem_e_controle` (conferência de
+  24/09) — volte o ``e_controle`` a ler só o ``054c`` e ela reprova.
 * :func:`test_o_hub_em_comum_diz_as_entradas_pelo_dono` (conferência de 24/09)
   — dê ao ``HubEmComum`` o caminho do kernel em vez do ``onde`` do hub, ou
   deixe as ``entradas`` de baixo vazias, e ela reprova. As duas mordidas
@@ -221,6 +223,30 @@ def test_o_controle_no_cabo_se_diz_controle(tmp_path: Path) -> None:
     assert "DualSense Wireless Controller (054c:0ce6) — um controle, pelo USB" in (
         laudo.portas[0].porque
     )
+
+
+def test_o_controle_de_outro_fabricante_tambem_e_controle(tmp_path: Path) -> None:
+    """O Pro Controller no cabo é «um controle», e a HID órfã dele não é acusada.
+
+    Conferência de 24/09: o papel lia só a Sony, e um Pro Controller, um 8BitDo
+    ou um Xbox no cabo saía sem papel — o produto é para qualquer controle. O
+    religar segue só Sony (o escopo do script de root), e por isso a HID sem
+    driver de outro fabricante não vira «parada»: o doctor não pode prometer o
+    religar que o script não faz.
+    """
+    raiz = tmp_path / "sys"
+    _no(raiz, "3-4.2", vid="057e", pid="2009", nome="Pro Controller")
+    _interface(raiz, "3-4.2:1.0", tripla=("03", "00", "00"))
+    aparelho = aparelho_da_porta("3-4.2", raiz_usb=raiz)
+    assert aparelho.papel == "um controle, pelo USB"
+    assert aparelho.hid_sem_driver is False
+
+
+def test_os_fabricantes_de_controle_sao_os_da_secao_do_radio() -> None:
+    """Uma lista só em espírito, duas no texto: a régua as mantém iguais."""
+    from hefesto_dualsense4unix.integrations import mesa_de_radio
+
+    assert em.VIDS_DE_CONTROLE == mesa_de_radio._VIDS_DE_CONTROLE
 
 
 def test_o_adaptador_que_se_declara_no_aparelho(tmp_path: Path) -> None:
