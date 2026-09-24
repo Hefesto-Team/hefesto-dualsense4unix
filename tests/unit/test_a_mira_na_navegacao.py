@@ -637,6 +637,31 @@ def test_o_giroscopio_desligado_nao_diz_que_flui(entrada: dict[str, Any], jogado
     assert texto_motion(desligado, estado) is None
 
 
+def test_na_mascara_xbox_o_giroscopio_desligado_nao_diz_que_segue_ativo() -> None:
+    """A frase da máscara Xbox termina em «no Hefesto ele segue ativo», e ao
+    lado do chip Giroscópio DESLIGADO ela contradiz o que ela acabou de
+    desligar. Com o Giroscópio ligado a frase fica — com a Mira acesa também,
+    porque aí o giro é do Hefesto de verdade.
+
+    Conferência de 24/09/2026: a Xbox vinha antes do interruptor, e a
+    docstring afirmava que a frase seguia verdadeira com ele desligado.
+
+    MORDIDA: devolva o ramo `_mascara_e_xbox` para antes da guarda
+    `giroscopio_ligado is False` e o caso desligado reprova.
+    """
+    from hefesto_dualsense4unix.app.widgets.controller_card import (
+        _FRASE_MASCARA_XBOX,
+        texto_motion,
+    )
+
+    xbox = {**_com_espelho(1), "gamepad_emulation": {"enabled": True, "flavor": "xbox"}}
+    frase = f"Giroscópio: {_FRASE_MASCARA_XBOX['giroscopio']}"
+    base = {"is_primary": True}
+    assert texto_motion({**base, "sensores": {"giroscopio_ligado": True}}, xbox) == frase
+    assert texto_motion({**base, "mira": {"ligada": True}}, xbox) == frase
+    assert texto_motion({**base, "sensores": {"giroscopio_ligado": False}}, xbox) is None
+
+
 def test_o_giroscopio_desligado_apaga_a_linha_do_cartao() -> None:
     """Pelo pacote da aba 02, que é quem leva a linha à tela: o vazio a esconde."""
     import pacotes
