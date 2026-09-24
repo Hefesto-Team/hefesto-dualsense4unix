@@ -297,9 +297,17 @@ def test_a_palavra_e_a_da_janela_antiga(medido: dict) -> None:
     `Gtk.CheckButton` de `home_actions._build_home`. Texto NOVO de tela é decisão
     dela; texto que ela já leu, não.
     """
-    from hefesto_dualsense4unix.interface.pacotes.a01_jogar import CADEADO_ROTULO
+    from hefesto_dualsense4unix.interface.pacotes.a01_jogar import (
+        CADEADO_ROTULO,
+        CADEADO_ROTULO_ESPERANDO_A_SESSAO_DELA,
+    )
 
-    assert medido["rotulo"] == CADEADO_ROTULO, (
+    # A PALAVRA DE ONTEM É ACEITA SÓ ENQUANTO O DESENHO ESPERA A SESSÃO DELA —
+    # O-MODO-FREESTYLE-01, 24/09/2026. O dono passou a dizer «Modo Freestyle» e
+    # o desenho também; a página publicada muda no `--publicar 01`. O prazo
+    # desta isenção é régua própria (`test_o_modo_freestyle`), não esta linha.
+    assert medido["rotulo"] in (CADEADO_ROTULO,
+                                CADEADO_ROTULO_ESPERANDO_A_SESSAO_DELA), (
         f"o rótulo na tela é {medido['rotulo']!r} e o dono diz "
         f"{CADEADO_ROTULO!r}")
     assert medido["tem_dica"], "o cadeado ficou sem a razão na dica"

@@ -21,6 +21,18 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
+## 01-jogar.html
+- **24/09/2026** — O-MODO-FREESTYLE-01, esperando a sessão dela. O botão do
+  canto do bloco Modo passa de «Trava o perfil ativo» a «Modo Freestyle» (a
+  palavra dela de 23/09), com a letra de 10,5 para 12,5 px e a altura de 17
+  para 26 px. A linha do título cresce 9 px e o resto da aba desce junto; a
+  página continua sem rolar a 1212x809 e na vista dela (1918x840). O gesto, o
+  campo e a pílula verde não mudam. Enquanto ela não publicar, o produto diz a
+  palavra de ontem (`a01_jogar.CADEADO_ROTULO_ESPERANDO_A_SESSAO_DELA`); quem
+  publicar apaga essa constante e ajusta as duas réguas que medem os 17 px da
+  publicada (`test_a_trava_e_a_pilula_dos_sensores`,
+  `test_o_cadeado_mora_no_canto_do_bloco`) no mesmo commit.
+
 ## 02-controles.html
 - **24/09/2026** — A-MIRA-POR-MOVIMENTO-NA-TELA-01, esperando a sessão dela. O
   cartão de cada controle ganha o chip «Mira Virtual» ao lado de Giroscópio e

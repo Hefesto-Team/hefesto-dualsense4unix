@@ -106,7 +106,7 @@ MUDA_NA_HORA: Final[frozenset[str]] = frozenset(
         "vibracao",
         "microfone",
         "audio_do_controle",
-        # O cadeado "Trava o perfil ativo" não escreve no aparelho.
+        # O «Modo Freestyle» (o cadeado da troca de perfil) não escreve no aparelho.
         "cadeado_do_autoswitch",
         # Salvar/renomear perfil SEM mexer na seção `mode`.
         "perfil_sem_modo",
