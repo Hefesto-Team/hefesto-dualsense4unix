@@ -225,7 +225,7 @@ def _e_o_nosso_vpad(uevent: dict[str, str], hid_parent: str, bus: int) -> bool:
     `validate_physical_node`:
 
     - D1: USB sob `/devices/virtual/misc/uhid/` — o cabo real nunca é uhid; o
-      vpad é BUS_USB criado por uhid;
+      vpad é BUS_USB que nasce no uhid;
     - D2: o `phys` (`hefesto-vpad*`) ou o `uniq` (prefixo 02:fe) do vpad.
     """
     if "/misc/uhid/" in hid_parent and bus != BUS_BT:
