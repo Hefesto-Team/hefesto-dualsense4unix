@@ -511,6 +511,22 @@ class TestAOrdemNaoAtropelaOLaco:
 
         assert nascimentos == [P2, P3, P4, P4, P3, P2]
 
+    def test_a_ordem_que_falha_nao_derruba_o_laco(
+        self, nascimentos: list[str], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A regra do módulo: o poll loop não cai. Se a recriação do P1
+        levantar, o diário diz, e quem ia nascer nasce assim mesmo."""
+
+        def _quebra(daemon: Any, **_kw: Any) -> None:
+            raise OSError("uhid sumiu")
+
+        monkeypatch.setattr(gamepad_mod, "stop_gamepad_emulation", _quebra)
+        mgr = CoopManager(_daemon(cartas={P1: 2, P2: 1, P3: 3, P4: 4}))
+
+        mgr.sync()
+
+        assert nascimentos == [P2, P3, P4]
+
     def test_o_tique_nao_pergunta_a_carta(self, nascimentos: list[str]) -> None:
         """O `forward_all` roda a cada ~10 ms: a ordem não pode custar uma ida
         ao registro por tique."""
