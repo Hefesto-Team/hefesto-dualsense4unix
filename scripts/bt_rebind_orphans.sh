@@ -91,6 +91,14 @@
 #   bt_rebind_orphans.sh --dry-run    só relata o que faria (não requer root)
 #   bt_rebind_orphans.sh --quiet      só fala quando age ou falha
 set -euo pipefail
+# Sob sudo os ganchos de teste morrem (menos o de LOG), como no watchdog e na
+# ponte (STORM-USB-01, conferência de 24/09): o ramo do cabo deu a este script
+# de root um gancho que é DESTINO de escrita (`HEFESTO_USB_DRIVERS_DIR`, onde
+# ele escreve no `usbhid/bind`), e com o `env_reset` desligado o caminho viria
+# do ambiente de quem chamou o `sudo` que o doctor manda rodar.
+if [[ -n "${SUDO_UID:-}" || -n "${SUDO_USER:-}" ]]; then
+    unset HEFESTO_REBIND_MAX_TENTATIVAS HEFESTO_REBIND_STAMP_DIR HEFESTO_HID_DEVICES_DIR HEFESTO_HID_DRIVERS_DIR HEFESTO_USB_DEVICES_DIR HEFESTO_USB_DRIVERS_DIR
+fi
 
 # Raízes parametrizáveis (defaults == sistema real). Existem como COSTURA DE
 # TESTE: a suíte exercita órfão-no-escopo, órfão-fora-do-escopo e o teto de
