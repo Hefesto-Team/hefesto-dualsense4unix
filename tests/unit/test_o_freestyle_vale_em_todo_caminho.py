@@ -209,7 +209,7 @@ def test_o_boot_deixa_o_freestyle_valendo_nos_quatro_com_os_gatilhos_ligados(
     assert no_fio == esperado, f"{caminho}: o gatilho que chegou ao fio"
 
 
-@pytest.mark.parametrize("sessao", [
+@pytest.mark.parametrize("sessao", [  # (noqa-acento): nome de parâmetro
     ("Apagado", "Apagado"),   # a sessão e o marcador apontam um perfil que ela apagou
     ("Sumido", "Apagado"),    # os dois divergem, e nenhum dos dois existe
     (JOGO, "Apagado"),        # o marcador órfão, e o session.json num perfil de janela
@@ -516,7 +516,7 @@ def _copias(pasta: Path) -> list[bytes]:
     return [c.read_bytes() for c in sorted(historico.glob("*.json"))]
 
 
-@pytest.mark.parametrize("versao", range(5), ids=[
+@pytest.mark.parametrize("versao", range(5), ids=[  # (noqa-acento): nome de parâmetro
     "22-04-974c55869", "22-04-c2bd10f8e", "23-04-099e4f839",
     "28-06-00eb5eeb9", "20-07-4a9bb696e"])
 def test_a_copia_de_fabrica_antiga_vira_a_de_hoje_e_tem_volta(
@@ -742,7 +742,11 @@ def test_o_rodape_congelado_diz_o_mesmo_que_a_tela_pinta_sem_perfil() -> None:
     assert PROMETE_O_JOGO not in congelado
 
 
-@pytest.mark.parametrize("pagina", [f"{n:02d}-" for n in range(1, 11)])
+#: As dez abas, pelo prefixo do arquivo.
+DEZ = [f"{n:02d}-" for n in range(1, 11)]
+
+
+@pytest.mark.parametrize("pagina", DEZ)  # (noqa-acento): nome de parâmetro
 def test_a_bancada_das_dez_traz_o_rodape_novo(pagina: str) -> None:
     """O desenho de HOJE das dez abas: o rodapé regerado, sem a promessa do jogo.
 
