@@ -1,7 +1,8 @@
 """Dois BlueZ de mentira para as réguas do dono do D-Bus — BLUEZ-UM-DONO-01.
 
-**Este módulo não é um arquivo de teste** — é a bancada que dois arquivos de
-teste usam (`test_o_bluez_tem_um_dono.py` e `test_o_agente_proprio.py`).
+**Este módulo não é um arquivo de teste** — é a bancada que três arquivos de
+teste usam (`test_o_bluez_tem_um_dono.py`, `test_o_agente_proprio.py` e
+`test_o_flatpak_alcanca_o_bluez.py`, que põe o proxy do Flatpak na frente).
 
 1. :class:`BarramentoDeMentira` — em processo, sem D-Bus nenhum. Implementa a
    costura ``bluez_dbus.Barramento`` e deixa a régua EMITIR sinais à mão.
@@ -380,7 +381,17 @@ class BluezParticular:
         assert self._processo.stdout is not None
         self.endereco = self._processo.stdout.readline().strip()
         assert self.endereco, "o dbus-daemon particular não disse o endereço"
-        self.bluez = _Fio(self.endereco, "bluez-de-mentira")
+        self._subir_o_bluez("bluez-de-mentira")
+        # O bt-agent de mentira: registra e pede para ser o PADRÃO, como o
+        # `hefesto-bt-agent.service` faz na máquina dela.
+        self.bt_agent = _Fio(self.endereco, "bt-agent-de-mentira")
+        self._fios.append(self.bt_agent)
+        self.bt_agent.exportar("/btagent", _XML_DO_AGENTE, self._atender_o_bt_agent)
+        self._registrar_o_bt_agent()
+        return self
+
+    def _subir_o_bluez(self, nome: str) -> None:
+        self.bluez = _Fio(self.endereco, nome)
         self._fios.append(self.bluez)
         self.bluez.chamar(
             bd.BARRAMENTO_DBUS, "/org/freedesktop/DBus", bd.BARRAMENTO_DBUS, "RequestName",
@@ -388,17 +399,29 @@ class BluezParticular:
         )
         for caminho in ("/", *self.mesa):
             self.bluez.exportar(caminho, _XML_DO_BLUEZ, self._atender)
-        # O bt-agent de mentira: registra e pede para ser o PADRÃO, como o
-        # `hefesto-bt-agent.service` faz na máquina dela.
-        self.bt_agent = _Fio(self.endereco, "bt-agent-de-mentira")
-        self._fios.append(self.bt_agent)
-        self.bt_agent.exportar("/btagent", _XML_DO_AGENTE, self._atender_o_bt_agent)
+
+    def _registrar_o_bt_agent(self) -> None:
         variante = self.bt_agent.GLib.Variant
         self.bt_agent.chamar(bd.SERVICO, "/org/bluez", bd.GERENTE_DE_AGENTES, "RegisterAgent",
                              variante("(os)", ("/btagent", "NoInputNoOutput")))
         self.bt_agent.chamar(bd.SERVICO, "/org/bluez", bd.GERENTE_DE_AGENTES,
                              "RequestDefaultAgent", variante("(o)", ("/btagent",)))
-        return self
+
+    def reiniciar(self) -> None:
+        """O ``bluetoothd`` reinicia: o ``org.bluez`` troca de nome único, e o
+        novo não conhece agente nenhum. O ``bt-agent`` de mentira volta a se
+        registrar e a pedir o padrão, como o serviço do sistema."""
+        self._fios.remove(self.bluez)
+        self.bluez.fechar()
+        self.agentes.clear()
+        self.padroes.clear()
+        self.dono_da_busca = ""
+        self._subir_o_bluez("bluez-de-mentira-de-novo")
+        self._registrar_o_bt_agent()
+
+    @property
+    def nome_do_bluez(self) -> str:
+        return str(self.bluez.conexao.get_unique_name())
 
     def __exit__(self, *_: object) -> None:
         for fio in reversed(self._fios):
