@@ -4167,7 +4167,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, quando o jogo pinta a luz do controle que ele enxerga, a barra do controle de verdade ligado por cabo acende igual — por cima da cor automática do número, que é a única que o jogo pode trocar.
 
-**Onde olhar.** Na aba Jogar: a linha «Status» em «Ligado»; o quadro «Modo» com o cartão «Sony DualSense» aceso — é o caminho por onde a luz volta do jogo ao controle —; o «Trava o perfil ativo», no canto do quadro «Modo»; e o quadro «O controle é visto como:», onde cada controle escolhe entre «DualSense», «Xbox 360» e «Nintendo Pro». Para o jogo pintar a luz, o controle tem de ser visto como «DualSense»: um «Xbox 360» não tem barra de luz. Na aba Perfis, a lista «Perfis salvos», com «Novo», «Ativar» e «Remover», e o nome em «Perfil ativo», no alto de qualquer aba. A prova é a barra no aparelho. A fonte não diz qual jogo pinta a barra: escolha um que você saiba que pinta e anote o nome.
+**Onde olhar.** Na aba Jogar: a linha «Status» em «Ligado»; o quadro «Modo» com o cartão «Sony DualSense» aceso — é o caminho por onde a luz volta do jogo ao controle —; o «Modo Freestyle», no canto do quadro «Modo»; e o quadro «O controle é visto como:», onde cada controle escolhe entre «DualSense», «Xbox 360» e «Nintendo Pro». Para o jogo pintar a luz, o controle tem de ser visto como «DualSense»: um «Xbox 360» não tem barra de luz. Na aba Perfis, a lista «Perfis salvos», com «Novo», «Ativar» e «Remover», e o nome em «Perfil ativo», no alto de qualquer aba. A prova é a barra no aparelho. A fonte não diz qual jogo pinta a barra: escolha um que você saiba que pinta e anote o nome.
 
 **Os passos.**
 
@@ -4175,7 +4175,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 2. Clique em «Novo», escreva «Teste da réplica» no campo «Nome:», clique nele na lista «Perfis salvos» e clique em «Ativar».
 3. Confira que a barra do P1 ficou azul e a do P2 vermelha — a cor do número, a única que o jogo pode trocar.
 4. Abra a aba Jogar e confira que o «Status» está em «Ligado» e que o cartão «Sony DualSense» do quadro «Modo» está aceso.
-5. Acenda o «Trava o perfil ativo», no canto do quadro «Modo».
+5. Acenda o «Modo Freestyle», no canto do quadro «Modo».
 6. Clique em «DualSense» no cartão do P1 e no do P2, no quadro «O controle é visto como:».
 7. Anote a cor das barras do P3 e do P4.
 8. Abra o jogo que você escolheu e deixe-o carregar.
@@ -4185,7 +4185,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 12. Entre na partida com o P2 também.
 13. Confira que a barra do P2 mudou, e que as do P3 e do P4 continuam nas cores anotadas.
 14. Anote o nome do jogo e a cor que ele pôs em cada um.
-15. Feche o jogo e apague o «Trava o perfil ativo», na aba Jogar.
+15. Feche o jogo e apague o «Modo Freestyle», na aba Jogar.
 16. Na aba Perfis, escolha o perfil que você anotou e clique em «Ativar».
 17. Escolha «Teste da réplica» na lista, clique em «Remover» e, quando o botão perguntar, clique nele de novo.
 
@@ -4200,7 +4200,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **A espera.** O jogo leva minutos para chegar ao menu, e nenhum deles é para ficar olhando. Deixe-o carregando e volte quando ouvir o som do menu: a cor do número continua nas barras até o jogo pintar por cima. Ao voltar, olhe primeiro a barra do P1, antes de entrar na partida — se ela já deixou o azul sem ninguém ter entrado, isso é achado e vale anotar a hora.
 
-**A armadilha.** Seis, e três delas deixam a barra parada sem haver defeito. (1) A COR QUE VOCÊ ESCOLHEU VENCE A DO JOGO — ordem sua de 16/09, «meu perfil manda»: um controle com cor escolhida na aba Iluminação, ou gravada no perfil, não troca de cor pelo jogo. É por isso que o teste roda num perfil novo, que nasce sem cor própria em controle nenhum, e com o «Trava o perfil ativo» aceso, para o jogo não trocar de perfil. (2) O NÚMERO É DO HEFESTO: o jogo que só numera os jogadores manda as cores de número (azul, vermelho, verde e rosa escuros), e o Hefesto as recusa desde 23/09 — a barra fica na cor do número, e isso é o produto certo. Escolha um jogo que pinta a barra de propósito, por vida, dano ou cena. (3) MÁSCARA ERRADA MATA O TESTE SEM HAVER DEFEITO: visto como «Xbox 360», o controle não tem barra do lado do jogo. (4) O CAMINHO TAMBÉM: com o cartão «Xbox» do quadro «Modo» aceso, o jogo vê o DualSense pelo canal comum, e por ele a luz não volta. (5) NO MODO NATIVO NÃO HÁ O QUE COPIAR, e a barra continua do Hefesto: o jogo que escreve direto no controle é corrigido em até um segundo. (6) Se o jogo escolhido nunca pintar, o resultado não é vermelho, é «não mediu»: troque de jogo e anote qual usou. A Steam não disputa mais a barra — o controle de verdade nasce escondido dela —, e não julgue pela tela: a prova é o plástico.
+**A armadilha.** Seis, e três delas deixam a barra parada sem haver defeito. (1) A COR QUE VOCÊ ESCOLHEU VENCE A DO JOGO — ordem sua de 16/09, «meu perfil manda»: um controle com cor escolhida na aba Iluminação, ou gravada no perfil, não troca de cor pelo jogo. É por isso que o teste roda num perfil novo, que nasce sem cor própria em controle nenhum, e com o «Modo Freestyle» aceso, para o jogo não trocar de perfil. (2) O NÚMERO É DO HEFESTO: o jogo que só numera os jogadores manda as cores de número (azul, vermelho, verde e rosa escuros), e o Hefesto as recusa desde 23/09 — a barra fica na cor do número, e isso é o produto certo. Escolha um jogo que pinta a barra de propósito, por vida, dano ou cena. (3) MÁSCARA ERRADA MATA O TESTE SEM HAVER DEFEITO: visto como «Xbox 360», o controle não tem barra do lado do jogo. (4) O CAMINHO TAMBÉM: com o cartão «Xbox» do quadro «Modo» aceso, o jogo vê o DualSense pelo canal comum, e por ele a luz não volta. (5) NO MODO NATIVO NÃO HÁ O QUE COPIAR, e a barra continua do Hefesto: o jogo que escreve direto no controle é corrigido em até um segundo. (6) Se o jogo escolhido nunca pintar, o resultado não é vermelho, é «não mediu»: troque de jogo e anote qual usou. A Steam não disputa mais a barra — o controle de verdade nasce escondido dela —, e não julgue pela tela: a prova é o plástico.
 
 ---
 
@@ -4210,7 +4210,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, quando o jogo pinta a luz do controle que ele enxerga, a barra do controle de verdade ligado por rádio acende igual — por cima da cor automática do número — e anota se o gatilho pedido pelo jogo também chega.
 
-**Onde olhar.** Na aba Jogar: «Status» em «Ligado»; o cartão «Sony DualSense» aceso no quadro «Modo» — é o caminho por onde luz e gatilho voltam do jogo —; o «Trava o perfil ativo», no canto do quadro «Modo»; e o quadro «O controle é visto como:», com «DualSense» escolhido. Na aba Perfis, a lista «Perfis salvos», com «Novo», «Ativar» e «Remover», e o nome em «Perfil ativo», no alto de qualquer aba. A prova é o aparelho: a barra de luz e a resistência que a sua mão sente no L2 e no R2. Escolha um jogo que você saiba que pinta a barra e anote o nome.
+**Onde olhar.** Na aba Jogar: «Status» em «Ligado»; o cartão «Sony DualSense» aceso no quadro «Modo» — é o caminho por onde luz e gatilho voltam do jogo —; o «Modo Freestyle», no canto do quadro «Modo»; e o quadro «O controle é visto como:», com «DualSense» escolhido. Na aba Perfis, a lista «Perfis salvos», com «Novo», «Ativar» e «Remover», e o nome em «Perfil ativo», no alto de qualquer aba. A prova é o aparelho: a barra de luz e a resistência que a sua mão sente no L2 e no R2. Escolha um jogo que você saiba que pinta a barra e anote o nome.
 
 **Os passos.**
 
@@ -4218,7 +4218,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 2. Clique em «Novo», escreva «Teste da réplica» no campo «Nome:», clique nele na lista «Perfis salvos» e clique em «Ativar».
 3. Confira que a barra do P3 ficou verde e a do P4 rosa — a cor do número, a única que o jogo pode trocar; se nem ela pegar, o teste não roda.
 4. Abra a aba Jogar e confira que o «Status» está em «Ligado» e que o cartão «Sony DualSense» do quadro «Modo» está aceso.
-5. Acenda o «Trava o perfil ativo», no canto do quadro «Modo».
+5. Acenda o «Modo Freestyle», no canto do quadro «Modo».
 6. Clique em «DualSense» no cartão do P3 e no do P4, no quadro «O controle é visto como:».
 7. Aperte o L2 e o R2 do P3 até o fundo e guarde na mão como eles estão agora.
 8. Anote a cor das barras do P1 e do P2.
@@ -4231,7 +4231,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 15. Entre na partida com o P4 também.
 16. Confira que a barra do P4 mudou, e que as do P1 e do P2 continuam nas cores anotadas.
 17. Anote o nome do jogo, a cor que ele pôs em cada um e o que a sua mão sentiu no gatilho.
-18. Feche o jogo e apague o «Trava o perfil ativo», na aba Jogar.
+18. Feche o jogo e apague o «Modo Freestyle», na aba Jogar.
 19. Na aba Perfis, escolha o perfil que você anotou e clique em «Ativar».
 20. Escolha «Teste da réplica» na lista, clique em «Remover» e, quando o botão perguntar, clique nele de novo.
 
@@ -4246,7 +4246,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **A espera.** O jogo leva minutos para chegar ao menu, e nenhum deles é para ficar olhando. Deixe-o carregando e volte quando ouvir o som do menu: a cor do número continua nas barras até o jogo pintar por cima. Ao voltar, olhe primeiro as barras do P3 e do P4, ANTES de entrar na partida — se alguma já deixou a cor do número sem ninguém ter entrado, anote a hora.
 
-**A armadilha.** Sete. (1) A COR E O GATILHO QUE VOCÊ ESCOLHEU VENCEM OS DO JOGO — ordem sua de 16/09, «meu perfil manda»: um controle com cor escolhida na aba Iluminação, ou gravada no perfil, não troca de cor nem de gatilho pelo jogo. É por isso que o teste roda num perfil novo, que nasce sem cor nem gatilho próprios em controle nenhum, e com o «Trava o perfil ativo» aceso, para o jogo não trocar de perfil. (2) O NÚMERO É DO HEFESTO: o jogo que só numera os jogadores manda as cores de número (azul, vermelho, verde e rosa escuros), e o Hefesto as recusa desde 23/09 — a barra fica na cor do número, e isso é o produto certo. Escolha um jogo que pinta a barra de propósito, por vida, dano ou cena. (3) Máscara «Xbox 360» não tem barra do lado do jogo: o teste morre sem defeito. (4) Com o cartão «Xbox» do quadro «Modo» aceso a luz não volta pelo canal comum. (5) No Modo Nativo não há cópia, e a barra continua do Hefesto: o jogo que escreve direto no controle é corrigido em até um segundo. (6) UMA CONEXÃO DE RÁDIO PODE NASCER COM A BARRA TRAVADA, sem nada avisar: por isso o passo da cor do número existe — se nem ela pegar, clique em «Reiniciar o serviço», na aba Sistema, e refaça. (7) Se o jogo nunca pintar, o resultado é «não mediu», não vermelho. A Steam não disputa mais a barra — o controle de verdade nasce escondido dela. E não some as duas metades: luz e gatilho vêm pelo mesmo caminho, mas são medidas separadas.
+**A armadilha.** Sete. (1) A COR E O GATILHO QUE VOCÊ ESCOLHEU VENCEM OS DO JOGO — ordem sua de 16/09, «meu perfil manda»: um controle com cor escolhida na aba Iluminação, ou gravada no perfil, não troca de cor nem de gatilho pelo jogo. É por isso que o teste roda num perfil novo, que nasce sem cor nem gatilho próprios em controle nenhum, e com o «Modo Freestyle» aceso, para o jogo não trocar de perfil. (2) O NÚMERO É DO HEFESTO: o jogo que só numera os jogadores manda as cores de número (azul, vermelho, verde e rosa escuros), e o Hefesto as recusa desde 23/09 — a barra fica na cor do número, e isso é o produto certo. Escolha um jogo que pinta a barra de propósito, por vida, dano ou cena. (3) Máscara «Xbox 360» não tem barra do lado do jogo: o teste morre sem defeito. (4) Com o cartão «Xbox» do quadro «Modo» aceso a luz não volta pelo canal comum. (5) No Modo Nativo não há cópia, e a barra continua do Hefesto: o jogo que escreve direto no controle é corrigido em até um segundo. (6) UMA CONEXÃO DE RÁDIO PODE NASCER COM A BARRA TRAVADA, sem nada avisar: por isso o passo da cor do número existe — se nem ela pegar, clique em «Reiniciar o serviço», na aba Sistema, e refaça. (7) Se o jogo nunca pintar, o resultado é «não mediu», não vermelho. A Steam não disputa mais a barra — o controle de verdade nasce escondido dela. E não some as duas metades: luz e gatilho vêm pelo mesmo caminho, mas são medidas separadas.
 
 ---
 

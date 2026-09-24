@@ -32,11 +32,16 @@ seção daqui**: a aba deixou de estar em trabalho.
   publicar apaga essa constante e ajusta as duas réguas que medem os 17 px da
   publicada (`test_a_trava_e_a_pilula_dos_sensores`,
   `test_o_cadeado_mora_no_canto_do_bloco`) no mesmo commit.
-  **O motor espera junto:** o Personalizado continua no produto enquanto
-  `loader.O_PERSONALIZADO_ESPERA_A_SESSAO_DELA` for `True`, porque sem ele não
-  há perfil valendo do boot ao primeiro jogo — o topo diz «—» e as abas 02 a 08
-  recusam o ajuste. Quem publicar decide essa linha com a resposta dela no mesmo
-  commit (`test_o_modo_freestyle.test_a_saida_espera_a_sessao_dela`).
+- **24/09/2026** — O-MODO-FREESTYLE-02. O motor não espera mais: o
+  «Personalizado» virou «Freestyle» no produto (a migração do disco, com a
+  cópia no histórico), e o boot o restaura quando a sessão está vazia. O desenho
+  muda a legenda (o «Personalizado» virou «Freestyle», e fora do jogo o topo diz
+  Freestyle) e a dica do botão («Desligue», não «Desmarque»). Enquanto ela não
+  publicar, o produto mostra a palavra e a dica de ontem na tela e o topo já diz
+  «Freestyle», que é o nome do perfil no disco. As réguas dos 17 px medem a
+  publicada e o desenho, e a regra de altura sai da palavra da página: no
+  commit do `--publicar 01`, só `test_a_palavra_de_ontem_tem_prazo` reprova, e a
+  mensagem dela lista os ramos que saem junto.
 
 ## 02-controles.html
 - **24/09/2026** — A-MIRA-NA-NAVEGACAO-01, esperando a sessão dela. O chip
