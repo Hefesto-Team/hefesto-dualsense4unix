@@ -2049,7 +2049,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, com um controle no cabo navegando o computador, o analógico esquerdo move o cursor e o direito rola a página.
 
-**Onde olhar.** Na aba Navegação. Nos cartões do alto, um por controle, a linha diz USB • Navega o PC ou BT • Só a janela — só quem diz Navega o PC mexe no cursor. Em As opções de ativação: o Status do Modo, que tem de dizer Ligado, e, logo abaixo das opções, a frase verde Pronto para usar como mouse; Velocidade de cursor, de 1 a 12 (o padrão é 6), e Velocidade da rolagem, de 1 a 5 (o padrão é 1). No pé da aba, o botão Definições Controle e Mouse abre a tabela Botão do controle / O que ele faz: a linha L3 Direção tem de mostrar Movimento do cursor e a linha R3 Direção, Rolagem vertical e horizontal. A prova é o cursor andando na tela do computador — e, para a rolagem, deixe aberta antes de começar uma página longa, que precise rolar.
+**Onde olhar.** Na aba Navegação. Nos cartões do alto, um por controle, a linha diz USB • Navega o PC ou BT • Só a janela — só quem diz Navega o PC mexe no cursor pelos analógicos. Em As opções de ativação: o Status do Modo, que tem de dizer Ligado, e, logo abaixo das opções, a frase verde Pronto para usar como mouse; Velocidade de cursor, de 1 a 12 (o padrão é 6), e Velocidade da rolagem, de 1 a 5 (o padrão é 1). No pé da aba, o botão Definições Controle e Mouse abre a tabela Botão do controle / O que ele faz: a linha L3 Direção tem de mostrar Movimento do cursor e a linha R3 Direção, Rolagem vertical e horizontal. A prova é o cursor andando na tela do computador — e, para a rolagem, deixe aberta antes de começar uma página longa, que precise rolar.
 
 **Os passos.**
 
@@ -2093,7 +2093,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, com um controle no rádio navegando o computador, o analógico esquerdo move o cursor e o direito rola a página.
 
-**Onde olhar.** Na aba Navegação. Nos cartões do alto, um por controle e na cor do plástico dele, a linha diz USB • Navega o PC, BT • Navega o PC ou BT • Só a janela — só quem diz Navega o PC mexe no cursor. Em As opções de ativação: o Status do Modo, que tem de dizer Ligado, e, logo abaixo das opções, a frase verde Pronto para usar como mouse; Velocidade de cursor, de 1 a 12 (o padrão é 6), e Velocidade da rolagem, de 1 a 5 (o padrão é 1). No pé da aba, o botão Definições Controle e Mouse abre a tabela em que a linha L3 Direção tem de mostrar Movimento do cursor e a linha R3 Direção, Rolagem vertical e horizontal. A prova é o cursor andando na tela do computador.
+**Onde olhar.** Na aba Navegação. Nos cartões do alto, um por controle e na cor do plástico dele, a linha diz USB • Navega o PC, BT • Navega o PC ou BT • Só a janela — só quem diz Navega o PC mexe no cursor pelos analógicos. Em As opções de ativação: o Status do Modo, que tem de dizer Ligado, e, logo abaixo das opções, a frase verde Pronto para usar como mouse; Velocidade de cursor, de 1 a 12 (o padrão é 6), e Velocidade da rolagem, de 1 a 5 (o padrão é 1). No pé da aba, o botão Definições Controle e Mouse abre a tabela em que a linha L3 Direção tem de mostrar Movimento do cursor e a linha R3 Direção, Rolagem vertical e horizontal. A prova é o cursor andando na tela do computador.
 
 **Os passos.**
 
