@@ -335,8 +335,8 @@ def test_o_freestyle_nao_entra_por_cima_do_jogo_que_ja_vale(
     é a da máquina que nunca ativou perfil na mão.
 
     MORDIDAS: tire o `if isinstance(ja_vale, str) and ja_vale:` de
-    `_o_de_fora_do_jogo_enquanto_espera` e as duas células reprovam; tire o
-    `if not sessao:` de `restore_last_profile` e a `sessao-vazia` reprova.
+    `_o_de_fora_do_jogo_enquanto_espera` e as duas células reprovam; tire de
+    `restore_last_profile` o ramo da sessão vazia e a célula dela reprova.
     """
     _prepara_a_sessao(caminho)
     controle, pecas = _mesa_de_quatro(fabrica_de_bancada)
