@@ -360,6 +360,27 @@ def test_a_mira_do_perfil_inteiro_move_com_os_quatro_conectados(
     assert _P[4] not in nav.mesa.movimento, "o P4 fora da mesa ganhou leitor"
 
 
+def test_o_chip_aceso_de_quem_saiu_da_mesa_nao_pede_leitor(
+    perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O chip é opinião GRAVADA no perfil e sobrevive à saída do controle: o P4
+    acendeu a Mira e saiu da mesa. O tique segue movendo o cursor pelo P2, e
+    não pede ao hub, sessenta vezes por segundo, o leitor de quem não está lá.
+
+    Conferência de 24/09/2026: a régua de cima só pergunta pela mira do PERFIL,
+    e o filtro dos conectados passava sem mordida pelo caminho do CHIP.
+
+    MORDIDA: tire o `chave not in conectados` de `_pecas_da_navegacao` e o P4
+    ganha leitor.
+    """
+    nav = _navegacao(tmp_path, monkeypatch, "bt")
+    for n in (2, 4):
+        _mira_set(nav.servidor, uniq=_P[n], ligada=True)
+    nav.daemon.identity_registry = _RegistroDeIdentidade({_P[1], _P[2], _P[3]})
+    assert _ate_andar(nav) == (_PX_POR_TIQUE, 0)
+    assert _P[4] not in nav.mesa.movimento, "o chip de quem saiu pediu leitor"
+
+
 def test_na_navegacao_o_destino_e_o_cursor_nunca_o_analogico(
     perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -417,13 +438,22 @@ def test_so_enquanto_eu_segurar_vale_no_primario_e_nos_outros(
     O primário pergunta aos botões do tique; o P3 pergunta ao leitor de
     entradas do hub, sem grab.
 
-    MORDIDA: devolva sempre o vazio em `_botoes_da_peca` e o P3 nunca anda.
+    CADA UM SÓ NA SUA FONTE (conferência de 24/09/2026): o L2 do P1 aperta SÓ
+    no tique, e o leitor passivo do hub segue solto para ele — o primário não
+    é pergunta do hub (a recusa A-09 do `ipc_handlers._inputs_passivos`: dois
+    números para o mesmo controle no mesmo tique). A primeira redação apertava
+    os dois, e o P1 passava igual lendo o hub.
+
+    MORDIDA: devolva sempre o vazio em `_botoes_da_peca` e o P3 nunca anda;
+    faça o primário perguntar ao hub (`_botoes_da_peca` para todos) e o P1
+    nunca anda.
     """
     nav = _navegacao(tmp_path, monkeypatch, "bt")
     _mira_set(nav.servidor, uniq=_P[jogador], ligada=True, gatilho="l2")
     assert _ate_andar(nav) == (0, 0), "a mira andou com o botão solto"
     apertado = frozenset({"l2_btn"})
-    nav.mesa.entradas[_P[jogador]].botoes = apertado
+    if jogador != 1:
+        nav.mesa.entradas[_P[jogador]].botoes = apertado
     antes = _andou(nav.mouse, nav.no)
     _tique(nav, apertado if jogador == 1 else frozenset())
     _tique(nav, apertado if jogador == 1 else frozenset())
