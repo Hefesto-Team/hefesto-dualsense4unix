@@ -2276,6 +2276,22 @@
                         box-shadow:0 0 6px var(--green)}
   .sensores-peca .sw.off{border-color:var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
   .sensores-peca .sw.off .p{background:var(--border-forte);box-shadow:none}
+  /* A DICA DO GIROSCÓPIO MORA NUM INVÓLUCRO SEM CAIXA — 24/09/2026,
+     A-MIRA-POR-MOVIMENTO-NA-TELA-02. `display:contents` tira o invólucro da
+     grade: quem ocupa a coluna continua sendo o botão, e a largura dos três
+     não muda um pixel. O `title` dele é o que muda com a Mira acesa. */
+  .sensores-peca .dica-do-giro{display:contents}
+  /* NO MODO NATIVO O CHIP DA MIRA FICA CINZA — decisão dela, 24/09/2026:
+     *"fica cinza no Nativo, sem gravar"*. A cara é a do cinza da casa
+     (`.btn.apagado`, `monta.py`): a borda sutil, o texto mudo e o cursor que
+     recusa — e ela vence o aceso e o apagado do chip, porque no Nativo nenhum
+     dos dois vale. Cor explícita, nada de `opacity`. */
+  .sensores-peca.sem-mira .sw[data-gesto="mira"],
+  .sensores-peca.sem-mira .sw[data-gesto="mira"]:hover{
+    border-color:var(--border-sutil);background:var(--app-bg);color:var(--texto-mudo);
+    cursor:not-allowed}
+  .sensores-peca.sem-mira .sw[data-gesto="mira"] .p{
+    background:var(--border-sutil);box-shadow:none}
 
   .bat .carga-i[data-carga="Carregando"] .g-raio{display:block;color:var(--green)}
   .bat .carga-i[data-carga="Cheio"] .g-cheio{display:block;color:var(--green)}
@@ -2771,9 +2787,10 @@
           <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
                 data-hef-atributo="aria-label" aria-label="Giroscópio: fluindo para o jogo (~250 Hz)"><span
                 class="no-jogo-t" data-campo="giro-no-jogo">Giroscópio: fluindo para o jogo (~250 Hz)</span></span>
-          <span class="sensores-peca">
-            <button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe o giro deste controle."><span class="p"></span>Giroscópio</button>
+          <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO">
+            <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Ligado: o jogo recebe o giro deste controle."><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
+            <button class="sw off" data-gesto="mira" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Usar os movimentos do controle como mira (analógico R), para pessoas com deficiência motora."><span class="p"></span>Mira Virtual</button>
           </span>
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
@@ -3310,9 +3327,10 @@
           <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
                 data-hef-atributo="aria-label" aria-label="Giroscópio: fluindo para o jogo (~250 Hz)"><span
                 class="no-jogo-t" data-campo="giro-no-jogo">Giroscópio: fluindo para o jogo (~250 Hz)</span></span>
-          <span class="sensores-peca">
-            <button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe o giro deste controle."><span class="p"></span>Giroscópio</button>
+          <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO">
+            <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Ligado: o jogo recebe o giro deste controle."><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
+            <button class="sw off" data-gesto="mira" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Usar os movimentos do controle como mira (analógico R), para pessoas com deficiência motora."><span class="p"></span>Mira Virtual</button>
           </span>
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
@@ -3849,9 +3867,10 @@
           <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
                 data-hef-atributo="aria-label"><span
                 class="no-jogo-t" data-campo="giro-no-jogo">—</span></span>
-          <span class="sensores-peca">
-            <button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe o giro deste controle."><span class="p"></span>Giroscópio</button>
+          <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO">
+            <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title"><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
+            <button class="sw" data-gesto="mira" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Usar os movimentos do controle como mira (analógico R), para pessoas com deficiência motora."><span class="p"></span>Mira Virtual</button>
           </span>
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
@@ -4388,9 +4407,10 @@
           <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
                 data-hef-atributo="aria-label"><span
                 class="no-jogo-t" data-campo="giro-no-jogo">—</span></span>
-          <span class="sensores-peca">
-            <button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe o giro deste controle."><span class="p"></span>Giroscópio</button>
+          <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO">
+            <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title"><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
+            <button class="sw" data-gesto="mira" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Usar os movimentos do controle como mira (analógico R), para pessoas com deficiência motora."><span class="p"></span>Mira Virtual</button>
           </span>
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
@@ -4892,6 +4912,13 @@
 
 <!-- ================= LEGENDA DO MOCKUP ================= -->
 <div class="nota">
+  <h2>O que mudou em 24/09</h2>
+  <ul>
+    <li><b>Cada controle ganhou o botão «Mira Virtual»</b>, ao lado de <b>Giroscópio</b> e <b>Acelerômetro</b>, como você pediu: <i>"Cria um botão virtual ao lado de giroscopio e acelerometro chamado Mira Virtual"</i>. Aceso, virar aquele controle move o <b>analógico direito</b> dele — e só dele. Ele nasce <b>apagado</b>, a dica é a sua frase (<i>Usar os movimentos do controle como mira (analógico R), para pessoas com deficiência motora.</i>), e o <b>Giroscópio</b> não mudou. Uma coisa muda com a mira acesa no modo <b>Virtual</b>: o jogo deixa de receber o giro daquele controle como giroscópio e passa a recebê-lo só pelo analógico direito, para a câmera não andar em dobro. O quanto um gesto anda e o «Ignorar tremor até» ficam na tela <b>Calibrar sensores de movimento</b>.</li>
+    <li><b>A dica do Giroscópio muda quando a Mira Virtual está acesa</b> naquele controle, como você escolheu: passa a dizer <i>«Com a Mira Virtual acesa, o giro deste controle vai ao jogo pelo analógico direito.»</i> Com ela apagada, continua a de sempre, e cada controle diz a sua.</li>
+    <li><b>No Modo Nativo o botão «Mira Virtual» fica cinza e não grava</b>, como você escreveu: <i>"A exceção do nativo todo o resto deve ter mira Virtual"</i>. Com o <b>Sony DualSense</b> e o <b>Xbox</b> ele funciona, no USB e no BT, nos quatro controles. O «Só enquanto eu segurar» e o «Inverter» entraram na tela <b>Calibrar sensores de movimento</b>.</li>
+  </ul>
+
   <h2>O que mudou em 20/09</h2>
   <ul>
     <li><b>Os dois primeiros botões do alto-falante têm os nomes que você escreveu</b> — <b>Efeitos do Jogo no Controle, Áudio da TV na TV</b> e <b>Efeitos do Jogo e Áudio da TV no Controle</b>. Você derrubou o enunciado anterior e o que você derrubou era conceito, não palavra: <i>"não gosto do termo jogo pra se referir ao canal especifico pro sfx do controle, pq hdmi tecnicamente é jogo que manda pra lá também"</i>. Os dois não são duas fontes — são dois modos do <b>mesmo</b> alto-falante: um deixa entrar só o que o jogo endereçar a este controle, o outro derrama tudo o que a máquina toca, sem tirar o som da TV.</li>

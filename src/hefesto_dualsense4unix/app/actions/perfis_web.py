@@ -550,7 +550,7 @@ def _linhas_da_lista(
 #: tem prazo do mesmo jeito: ``test_a_coluna_de_ajuste_proprio_da_aba10_e_dado``
 #: reprova no dia em que a página publicada ganhar a célula e o nome continuar
 #: aqui.
-SECOES_ESPERANDO_A_SESSAO_DELA: frozenset[str] = frozenset({"movimento"})
+SECOES_ESPERANDO_A_SESSAO_DELA: frozenset[str] = frozenset()
 
 #: O que a coluna da página PUBLICADA mostra, na ordem do esquema. É daqui que
 #: sai a conta da frase da linha — ela diz o que o olho conta ao lado dela.

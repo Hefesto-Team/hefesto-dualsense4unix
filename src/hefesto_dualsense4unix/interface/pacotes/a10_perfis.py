@@ -190,7 +190,8 @@ SEM_DONO: dict[str, str] = {}
 #: coluna cujo campo no esquema não é uma seção, e sim um valor só; para a
 #: distribuição isso é indiferente, porque ela casa por NOME.
 SECOES_DA_COLUNA: tuple[str, ...] = (
-    "leds", "triggers", "rumble", "speaker", "mic", "sensores", "mascara")
+    "leds", "triggers", "rumble", "speaker", "mic", "sensores", "mascara",
+    "movimento")
 
 #: AS COLUNAS QUE A TELA JÁ MOSTRA E O ESQUEMA AINDA NÃO GUARDA.
 #:
