@@ -59,10 +59,12 @@ AS MORDIDAS (24/09/2026, cada uma devolvida com o md5 conferido):
   34.790 mesas de até quatro; quem ainda a mede é
   :meth:`TestOs60.test_a_guarda_da_03_continua_valendo_numa_mesa_de_cinco`.
 
-Duas guardas que a faixa tinha saíram por não morderem em mesa nenhuma de até
-cinco sentados (6,4 milhões, medido): excluir quem está certo (a exigência do
-boneco já o exclui) e o empate a favor do sufixo (não há empate de faixa
-diferente).
+Saíram da faixa a exclusão de quem já está certo e o pulo da faixa vazia:
+arrancadas as duas, nenhuma das 6,4 milhões de mesas de até cinco sentados
+muda de plano (medido). A exigência do boneco já deixa de fora quem está
+certo, e a faixa vazia é o plano de nenhuma recriação, que o sufixo já pesou.
+O desempate a favor do sufixo também não se mede: nessas mesas, nenhuma faixa
+diferente empata com ele.
 
 Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5 zerados.
 """
