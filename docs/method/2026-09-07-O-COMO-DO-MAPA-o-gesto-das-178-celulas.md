@@ -2069,7 +2069,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 14. Confira que a página longa rolou para os dois lados.
 15. Empurre os dois analógicos de cada um dos outros três controles, um por vez.
 16. Confira que o cursor não anda e a página não rola com nenhum deles.
-17. Na aba Controles, acenda a «Mira Virtual» do controle que navega o PC, volte à tela do cursor e gire esse controle devagar, no ar, para os lados.
+17. Na aba Controles, acenda a «Mira Virtual» do controle que navega o PC, volte à página longa e gire esse controle devagar, no ar, para os lados.
 18. Anote se o cursor andou com o giro, e apague a «Mira Virtual» dele de novo.
 19. Desfaça o teste: devolva a Velocidade da rolagem ao número anotado, volte à aba Jogar e clique no cartão Sony DualSense.
 
@@ -2110,7 +2110,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 12. Empurre o analógico direito do mesmo controle para baixo e depois para cima.
 13. Confira que a página rola nos dois sentidos.
 14. Empurre os dois analógicos do outro controle do rádio e confira que o cursor não anda e a página não rola.
-15. Na aba Controles, acenda a «Mira Virtual» do controle que navega o PC, volte à tela do cursor e gire esse controle devagar, no ar, para os lados.
+15. Na aba Controles, acenda a «Mira Virtual» do controle que navega o PC, volte à página longa e gire esse controle devagar, no ar, para os lados.
 16. Anote se o cursor andou com o giro, e apague a «Mira Virtual» dele de novo.
 17. Devolva a Velocidade da rolagem ao número anotado e, na aba Jogar, clique no cartão Sony DualSense.
 18. Encaixe os dois cabos de volta no P1 e no P2 e confira na fita do topo que os dois voltaram com USB e com o número que tinham.
@@ -3321,7 +3321,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 4. Desencaixe o cabo do P1.
 5. Espere cinco segundos.
 6. Encaixe o cabo de volta, olhando as lâmpadas do P1.
-7. Anote o primeiro desenho que acende e o desenho em que as lâmpadas ficam três segundos depois.
+7. Anote o primeiro desenho que acende e o desenho em que as lâmpadas ficam dez segundos depois.
 8. Abra a aba Iluminação.
 9. Anote o desenho da linha «LEDs» e o número aceso na linha «Jogador», na coluna do P1.
 10. Abra a aba Controles.
@@ -3361,7 +3361,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 4. Segure o botão PS do P3 até todas as luzes dele apagarem, e solte.
 5. Espere cinco segundos.
 6. Dê um toque curto no botão PS do P3, olhando as lâmpadas dele.
-7. Anote o primeiro desenho que acende e o desenho em que as lâmpadas ficam três segundos depois.
+7. Anote o primeiro desenho que acende e o desenho em que as lâmpadas ficam dez segundos depois.
 8. Abra a aba Iluminação.
 9. Anote o desenho da linha «LEDs» e o número aceso na linha «Jogador», na coluna do P3.
 10. Abra a aba Controles.
@@ -3874,7 +3874,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 12. Confira que as barras do P1 e do P2 continuam amarela e ciano, e que as tiras da linha «LEDs» deles estão lisas, não tracejadas.
 13. Abra a Steam e espere ela terminar de abrir.
 14. Desencaixe o cabo do P1, espere cinco segundos e encaixe de volta.
-15. Confira que, em até um segundo depois de acender, a barra do P1 volta amarela e as lâmpadas dele mostram o desenho do 1.
+15. Confira que, em poucos segundos, a barra do P1 volta amarela e as lâmpadas dele mostram o desenho do 1, e que ficam assim.
 16. Feche a Steam de novo, por inteiro.
 17. Na aba Jogar, anote o cartão aceso do quadro «Modo» e clique em «Desligado», na linha «Status».
 18. Volte à aba Iluminação e clique no quadradinho laranja (o sétimo) da coluna do P2.
@@ -3882,7 +3882,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 20. Na aba Jogar, clique em «Ligado» e no cartão que você anotou.
 21. Volte à aba Iluminação e clique no quadradinho da cor do número de cada um para devolver: o primeiro no P1, o segundo no P2.
 
-**Passa quando.** As barras dos dois controles do cabo acendem na cor clicada, no instante do clique, e continuam nela um minuto depois. Pintar um nunca muda a cor do outro, e as barras dos dois do rádio ficam exatamente como estavam. Com a Steam aberta, o P1 reencaixado volta amarelo e no desenho do 1 em até um segundo; e no Modo Nativo o P2 também acende a cor clicada.
+**Passa quando.** As barras dos dois controles do cabo acendem na cor clicada, no instante do clique, e continuam nela um minuto depois. Pintar um nunca muda a cor do outro, e as barras dos dois do rádio ficam exatamente como estavam. Com a Steam aberta, o P1 reencaixado volta amarelo e no desenho do 1 em poucos segundos, e fica assim; e no Modo Nativo o P2 também acende a cor clicada.
 
 **Por controle.**
 
@@ -3919,7 +3919,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 12. Confira que as barras do P3 e do P4 continuam amarela e ciano, e que as tiras da linha «LEDs» deles estão lisas, não tracejadas.
 13. Abra a Steam e espere ela terminar de abrir.
 14. Segure o PS do P3 até todas as luzes dele apagarem, espere cinco segundos e dê um toque curto no PS.
-15. Confira que, em até um segundo depois de acender, a barra do P3 volta amarela e as lâmpadas dele mostram o desenho do 3.
+15. Confira que, em poucos segundos, a barra do P3 volta amarela e as lâmpadas dele mostram o desenho do 3, e que ficam assim.
 16. Feche a Steam de novo, por inteiro.
 17. Na aba Jogar, anote o cartão aceso do quadro «Modo» e clique em «Desligado», na linha «Status».
 18. Volte à aba Iluminação e clique no quadradinho laranja (o sétimo) da coluna do P4.
@@ -3927,7 +3927,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 20. Na aba Jogar, clique em «Ligado» e no cartão que você anotou.
 21. Volte à aba Iluminação e clique no quadradinho da cor do número de cada um para devolver: o terceiro no P3, o quarto no P4.
 
-**Passa quando.** As barras dos dois controles do rádio acendem na cor clicada, no instante do clique, e continuam nela um minuto depois. Pintar um nunca muda a cor do outro, e as barras dos dois do cabo ficam exatamente como estavam. Com a Steam aberta antes da volta, o P3 volta amarelo e no desenho do 3 em até um segundo; e no Modo Nativo o P4 também acende a cor clicada.
+**Passa quando.** As barras dos dois controles do rádio acendem na cor clicada, no instante do clique, e continuam nela um minuto depois. Pintar um nunca muda a cor do outro, e as barras dos dois do cabo ficam exatamente como estavam. Com a Steam aberta antes da volta, o P3 volta amarelo e no desenho do 3 em poucos segundos, e fica assim; e no Modo Nativo o P4 também acende a cor clicada.
 
 **Por controle.**
 
@@ -4185,7 +4185,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 14. Anote o nome do jogo e a cor que ele pôs em cada um.
 15. Feche o jogo e apague o «Trava o perfil ativo», na aba Jogar.
 16. Na aba Perfis, escolha o perfil que você anotou e clique em «Ativar».
-17. Escolha «Teste da réplica» na lista e clique em «Remover».
+17. Escolha «Teste da réplica» na lista, clique em «Remover» e, quando o botão perguntar, clique nele de novo.
 
 **Passa quando.** Nos dois controles do cabo a barra troca da cor do número para a cor que o jogo mandou, sozinha, sem você tocar em nada no Hefesto. E os dois do rádio, fora da partida, não mudam de cor.
 
@@ -4231,7 +4231,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 17. Anote o nome do jogo, a cor que ele pôs em cada um e o que a sua mão sentiu no gatilho.
 18. Feche o jogo e apague o «Trava o perfil ativo», na aba Jogar.
 19. Na aba Perfis, escolha o perfil que você anotou e clique em «Ativar».
-20. Escolha «Teste da réplica» na lista e clique em «Remover».
+20. Escolha «Teste da réplica» na lista, clique em «Remover» e, quando o botão perguntar, clique nele de novo.
 
 **Passa quando.** Nos dois controles do rádio a barra troca da cor do número para a cor que o jogo mandou, sozinha — e os dois do cabo, fora da partida, não mudam. A resistência do L2 e do R2 é achado a anotar: se a luz chegar e o gatilho não, essa é a metade que o mapa ainda dá como incompleta neste lado.
 
@@ -5938,7 +5938,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — BT, e é testemunha. Anote o número dele sem tocar em nada: ele é a comparação com a linha do rádio deste mesmo par.
 * **P4** — BT, a segunda testemunha. Mesma coisa. Os quatro juntos mostram que cada cartão fala do controle virtual DELE, e não de um só para todos.
 
-**A armadilha.** O número NÃO é a taxa do controle. Ele é a velocidade com que o Hefesto entrega o movimento ao controle virtual que o jogo vê, e essa entrega tem um TETO de 250 por segundo. Por isso 250 no cabo é o esperado e é também o teto: um controle que entregasse mais apareceria exatamente igual. Segunda: a frase muda de texto, ou some, e isso é o certo, em quatro casos. No Modo Nativo ela diz «Giroscópio: o jogo fala direto com o controle». Com a máscara Xbox 360 ela diz que essa API não leva giroscópio e que no Hefesto ele segue ativo. Com a máscara Nintendo Pro ela some — esse controle virtual não leva giroscópio nenhum —, e ela some também no controle com a «Mira Virtual» acesa, porque ali o giro vai ao jogo pelo analógico direito. Confira o Status, a máscara e a Mira que você anotou antes de reprovar por ausência. Terceira: os botões «Giroscópio» e «Mira Virtual» não são o instrumento desta linha — ele corta o giro no que vai ao jogo, e a frase mede a entrega do movimento, que segue; não o use para fazer a frase sumir. Quarta: nada aqui prova que o jogo usou aquele giro; o número mede a entrega ao controle virtual, e o mapa não registra medição do outro lado.
+**A armadilha.** O número NÃO é a taxa do controle. Ele é a velocidade com que o Hefesto entrega o movimento ao controle virtual que o jogo vê, e essa entrega tem um TETO de 250 por segundo. Por isso 250 no cabo é o esperado e é também o teto: um controle que entregasse mais apareceria exatamente igual. Segunda: a frase muda de texto, ou some, e isso é o certo, em quatro casos. No Modo Nativo ela diz «Giroscópio: o jogo fala direto com o controle». Com a máscara Xbox 360 ela diz que essa API não leva giroscópio e que no Hefesto ele segue ativo. Com a máscara Nintendo Pro ela some — esse controle virtual não leva giroscópio nenhum —, e ela some também no controle com a «Mira Virtual» acesa, porque ali o giro vai ao jogo pelo analógico direito. Confira o Status, a máscara e a Mira que você anotou antes de reprovar por ausência. Terceira: os botões «Giroscópio» e «Mira Virtual» não são o instrumento desta linha, e nenhum dos dois se clica aqui — o «Giroscópio» corta o giro no que vai ao jogo e a frase segue, porque ela mede a entrega do movimento; a «Mira Virtual» acesa faz a frase sumir. Quarta: nada aqui prova que o jogo usou aquele giro; o número mede a entrega ao controle virtual, e o mapa não registra medição do outro lado.
 
 ---
 
