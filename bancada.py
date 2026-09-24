@@ -195,10 +195,17 @@ _ESTADO_IMU_PERDA = (
     'o contador que ele nunca teve e ao rádio um que mede perda de verdade, em vez do '
     '`bt_drops`, que conta o que o PRODUTO descartou.'
 )
+#: AS-FRASES-QUE-A-BANCADA-ACHOU-01 (24/09/2026): a prosa dizia «nunca liga o
+#: bit», e o `_build_common` o liga no cabo sem nó gravável. Transcrita de novo.
 _ESTADO_BRILHO_INERTE = (
-    'o produto escreve `common[42]` com o valor do brilho da BARRA '
-    '(backend_pydualsense.py:1432) e nunca liga o bit: hoje é inerte, e o valor '
-    'que ele manda é de outra grandeza. Ver BRILHO-DE-HARDWARE-01.'
+    'o produto não dá a ninguém o brilho das lâmpadas: nada escreve o '
+    '`light.brightness`, e o `common[42]` leva o padrão da pydualsense (2, o '
+    'degrau baixo). Com o nó de LED do kernel gravável — o produto instalado — o '
+    'fluxo é LED-neutro e o `flag2` bit0 sai desligado nos dois transportes; no '
+    'rádio, sempre. Só no cabo sem nó gravável o `flag2` herda o `ledOption` da '
+    'pydualsense (0x03) e o bit sai LIGADO com o 2: as lâmpadas ficam no degrau '
+    'baixo sem escolha de ninguém (medido no `_build_common` em 24/09/2026). Ver '
+    'BRILHO-DE-HARDWARE-01.'
 )
 ESTADOS = ["", "funciona", "regrediu", "nunca funcionou",
            "não implementado", "impossível",
