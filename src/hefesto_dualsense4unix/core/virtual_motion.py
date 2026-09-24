@@ -198,7 +198,7 @@ class RegistroDeSensores:
         #: jogo que lê o giro nativo andaria em dobro. Quem escreve é
         #: `roteador_de_movimento.sincronizar_o_filtro`, que é onde o arranjo
         #: mora; aqui só se guarda a resposta, para a thread do report.
-        self._roteado_padrao = False
+        self._roteado_sem_chip = False
         self._roteado: dict[str, bool] = {}
 
     def definir(
@@ -262,16 +262,16 @@ class RegistroDeSensores:
             acelerometro=estado.acelerometro,
         )
 
-    def definir_roteados(self, *, padrao: bool, por_peca: Mapping[str, bool]) -> None:
+    def definir_roteados(self, *, sem_chip: bool, por_peca: Mapping[str, bool]) -> None:
         """Quais peças mandam o giro à MIRA em vez de ao jogo. TROCA tudo.
 
-        `padrao` é a peça sem opinião (a mira do perfil, para a mesa inteira);
+        `sem_chip` vale para a peça sem opinião (a mira do perfil, para todos);
         `por_peca` é quem tem o chip «Mira Virtual» próprio. Chamado só por
         `roteador_de_movimento.sincronizar_o_filtro`.
         """
         limpo = {chave_de_sensor(k): bool(v) for k, v in por_peca.items() if chave_de_sensor(k)}
         with self._lock:
-            self._roteado_padrao = bool(padrao)
+            self._roteado_sem_chip = bool(sem_chip)
             self._roteado = limpo
 
     def roteado(self, uniq: str | None) -> bool:
@@ -279,7 +279,7 @@ class RegistroDeSensores:
         if not uniq:
             return False
         with self._lock:
-            return self._roteado.get(chave_de_sensor(uniq), self._roteado_padrao)
+            return self._roteado.get(chave_de_sensor(uniq), self._roteado_sem_chip)
 
     def desligados(self) -> dict[str, EstadoDosSensores]:
         """Cópia de quem tem sensor desligado — a lista que o hub consulta.
@@ -296,7 +296,7 @@ class RegistroDeSensores:
         """Esquece tudo (fim de sessão/teste). Idempotente."""
         with self._lock:
             self._estado.clear()
-            self._roteado_padrao = False
+            self._roteado_sem_chip = False
             self._roteado = {}
 
 

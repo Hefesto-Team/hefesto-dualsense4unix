@@ -134,7 +134,7 @@ def test_o_arranjo_desligado_nao_e_arranjo() -> None:
     reprova: guardar a calibração dela com a mira DESLIGADA é o que permite
     experimentar sem perder o ajuste — e o arranjo guardado não chega ao tique.
 
-    O `resolver` que este teste media saiu em 24/09/2026
+    O `resolver` que este teste cobrava saiu em 24/09/2026
     (A-MIRA-POR-MOVIMENTO-NA-TELA-01): o `montar` guarda o arranjo desligado
     inteiro, e é o `ativo()` que não o entrega.
     """
