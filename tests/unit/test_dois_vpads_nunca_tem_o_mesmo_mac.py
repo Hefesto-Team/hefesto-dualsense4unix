@@ -27,6 +27,7 @@ import errno
 import os
 import struct
 from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -256,7 +257,15 @@ class KernelDoHidPlaystation:
         E o vpad ``uinput`` do recuo nasce sobre um device de mentira: o
         ``UinputGamepad.start`` roda inteiro, mas o ``UInput`` do python-evdev
         (o ``/dev/uinput`` de verdade) nunca é chamado.
+
+        Um kernel novo é uma máquina nova: o dono dos MACs vestidos também
+        nasce vazio. Sem isto, os vpads das bancadas de testes anteriores (que
+        ninguém para, e que os ciclos de referência mantêm vivos até o coletor
+        passar) seguiriam vestindo os MACs deste teste.
         """
+        monkeypatch.setattr(
+            uhid_gamepad, "_MACS_DOS_VPADS_VIVOS", uhid_gamepad._MacsDosVpadsVivos()
+        )
         monkeypatch.setattr(uhid_gamepad, "os", _OsDoKernel(self))
         monkeypatch.setattr(
             uinput_gamepad.UinputGamepad,
@@ -314,9 +323,14 @@ class _UinputDeMentira:
         return None
 
 
-@pytest.fixture
-def kernel(monkeypatch: pytest.MonkeyPatch) -> Iterator[KernelDoHidPlaystation]:
-    """O kernel de mentira no lugar do ``/dev/uhid``, com o registro de máscaras zerado."""
+@contextmanager
+def kernel_de_mentira(monkeypatch: pytest.MonkeyPatch) -> Iterator[KernelDoHidPlaystation]:
+    """O kernel de mentira no lugar do ``/dev/uhid``, com o registro de máscaras zerado.
+
+    Um gerenciador de contexto, e não só a fixture: a régua da volta tardia
+    (``test_o_buraco_de_quem_saiu_se_fecha_no_jogo.py``) monta a fixture dela
+    com ele, sem importar o nome ``kernel`` (que ela sombrearia).
+    """
     from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
         _zerar_registro_de_mascaras,
     )
@@ -324,8 +338,16 @@ def kernel(monkeypatch: pytest.MonkeyPatch) -> Iterator[KernelDoHidPlaystation]:
     _zerar_registro_de_mascaras()
     k = KernelDoHidPlaystation()
     k.instalar(monkeypatch)
-    yield k
-    _zerar_registro_de_mascaras()
+    try:
+        yield k
+    finally:
+        _zerar_registro_de_mascaras()
+
+
+@pytest.fixture
+def kernel(monkeypatch: pytest.MonkeyPatch) -> Iterator[KernelDoHidPlaystation]:
+    with kernel_de_mentira(monkeypatch) as k:
+        yield k
 
 
 # ---------------------------------------------------------------------------

@@ -58,7 +58,7 @@ import re
 import struct
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -656,11 +656,11 @@ def vpad_mac(identity: str | None, player: int) -> str:
     sintoma seria idêntico ao defeito que estamos curando — o jogo vendo um
     controle novo onde está o mesmo plástico.
 
-    Colisão: 31 bits úteis (o bit alto é reservado, ver
-    :data:`_VPAD_MAC_BIT_DERIVADO`). Com os quatro controles do alvo desta casa
-    são seis pares, ~2,8e-9 de chance de dois vpads nascerem com o mesmo MAC —
-    e o efeito, se acontecesse, é o -EEXIST barulhento do probe, não corrupção
-    silenciosa.
+    Este é o MAC que o vpad PEDE, não o que ele veste: o vpad do posto nasce
+    com a identidade do primário, o primário que sai e volta tarde pede o
+    MESMO, e o `-EEXIST` do driver o recusava. Quem veste é o dono dos vivos,
+    no fim do módulo — e o seguinte do mesmo aparelho quando este já está
+    vestido (O-VPAD-DO-P1-NAO-REPETE-O-MAC-01, `vpad_macs_do_aparelho`).
     """
     digitos = _somente_hex(identity)
     if len(digitos) != 12:
@@ -1230,12 +1230,12 @@ class UhidDualSense:
     def mac(self) -> str:
         """O `uniq` que o vpad carimba no feature 0x09 e o kernel republica.
 
-        COOP-QUE-NÃO-DESMONTA-01/E3: segue o APARELHO (`identity`), não o número
-        do jogador. Sem identidade cai em `player_mac(self.player)`, que é o
-        comportamento histórico — e é por isso que `UhidDualSense(player=N).mac`
-        continua sendo `02:fe:00:00:00:0N`.
+        E3: o do APARELHO (`identity`), e sem identidade o do número
+        (`player_mac`). Vivo, é o que o `start` lhe VESTIU: o do aparelho, ou o
+        próximo dele quando outro vpad vivo já veste aquele — ver
+        `_MacsDosVpadsVivos`, no fim do módulo (O-VPAD-DO-P1-NAO-REPETE-O-MAC-01).
         """
-        return vpad_mac(self.identity, self.player)
+        return _MACS_DOS_VPADS_VIVOS.vestido_por(self) or vpad_mac(self.identity, self.player)
 
     @property
     def ff_last_sent(self) -> tuple[int, int]:
@@ -1492,8 +1492,8 @@ class UhidDualSense:
 
     # --- ciclo de vida ---------------------------------------------------
 
-    def start(self) -> bool:
-        """Cria o device HID. False = indisponível (o chamador cai no uinput)."""
+    def _criar_o_device(self) -> bool:
+        """O corpo do `start` (que mora no fim da classe): False = indisponível."""
         if self._fd is not None:
             return True
         if self.blueprint is None:
@@ -1573,7 +1573,7 @@ class UhidDualSense:
                 )
         return features
 
-    def stop(self) -> None:
+    def _destruir_o_device(self) -> None:
         # Sob o lock: o poll loop pode estar em send_report/pump_ff nesta hora, e
         # fechar o fd por baixo dele faria o write cair num fd já RECICLADO por
         # outra thread (escrita de 4 KB num destino aleatório).
@@ -2563,6 +2563,172 @@ class UhidDualSense:
             os.write(self._fd,
                      struct.pack("<IIH", UHID_SET_REPORT_REPLY, request_id, 0))
 
+    # -- o MAC vestido: O-VPAD-DO-P1-NAO-REPETE-O-MAC-01 (24/09/2026) ---------
+    #
+    # O `start` e o `stop` moram no FIM da classe pela razão de sempre: os
+    # documentos e o mapa de canais citam este arquivo por número de linha. Os
+    # corpos de antes ficaram onde estavam, com nome novo (`_criar_o_device` e
+    # `_destruir_o_device`); o que estes dois acrescentam é o MAC.
+
+    def start(self) -> bool:
+        """Cria o device HID vestindo um MAC que nenhum outro vpad vivo veste.
+
+        False = indisponível (o chamador cai no uinput). O MAC é vestido ANTES
+        do 0x09 e do `UHID_CREATE2`, que o carimbam, e fica com este vpad até o
+        :meth:`stop`. Um `start` que falha o devolve na hora: vpad que não
+        nasceu não segura MAC nenhum.
+        """
+        if self._fd is not None:
+            return True
+        _MACS_DOS_VPADS_VIVOS.vestir(self)
+        if self._criar_o_device():
+            return True
+        _MACS_DOS_VPADS_VIVOS.despir(self)
+        return False
+
+    def stop(self) -> None:
+        """Destrói o device e só DEPOIS devolve o MAC.
+
+        A ordem é a do kernel: o `ps_remove` tira o MAC da lista do
+        `hid_playstation` no `UHID_DESTROY`. Devolver antes deixaria um vpad
+        novo vestir o MAC que o driver ainda guarda para este.
+        """
+        self._destruir_o_device()
+        _MACS_DOS_VPADS_VIVOS.despir(self)
+
+
+# ---------------------------------------------------------------------------
+# O-VPAD-DO-P1-NAO-REPETE-O-MAC-01 (24/09/2026) — dois vpads vivos nunca vestem
+# o mesmo MAC. No fim do módulo pela mesma razão do `start` e do `stop` acima.
+# ---------------------------------------------------------------------------
+
+#: Quantos MACs o dono tenta por aparelho antes de desistir. Na mesa de quatro
+#: o segundo basta (o posto e o secundário do MESMO controle); o teto existe
+#: para o laço terminar, e não por uma mesa que o precise.
+_MACS_POR_APARELHO = 64
+
+
+def vpad_macs_do_aparelho(identity: str | None, player: int) -> Iterator[str]:
+    """Os MACs que o vpad deste aparelho pode vestir, na ordem em que o dono os tenta.
+
+    O primeiro é sempre o de :func:`vpad_mac` — o do aparelho (E3), o de
+    sempre, e o que o resto da casa deriva
+    (`quem_o_jogo_le.dono_do_vpad_pela_forja`). Os seguintes só são vestidos
+    quando um vpad VIVO já veste o anterior, e saem do mesmo lugar que o
+    primeiro:
+
+    - com identidade de aparelho, do MESMO aparelho: quatro octetos de
+      `blake2b` de ``<dígitos>/<n>`` com o bit :data:`_VPAD_MAC_BIT_DERIVADO`
+      — o espaço derivado, disjunto do piso por construção;
+    - sem ela (``dev:``, ``path:``, None), do número: ``02:fe:00:00:<n>:<N>``,
+      fora do piso ``02:fe:00:00:00:0N`` (o quinto octeto nunca é zero) e fora
+      do derivado (o terceiro é zero).
+
+    Todos seguem no prefixo :data:`VPAD_MAC_PREFIXO`: os espelhos que
+    reconhecem um vpad pelo prefixo e a regra 76 do udev
+    (``ATTRS{uniq}=="02:fe:*"``) continuam vendo cada um deles.
+    """
+    import hashlib
+
+    yield vpad_mac(identity, player)
+    digitos = _somente_hex(identity)
+    for n in range(1, _MACS_POR_APARELHO):
+        if len(digitos) == 12:
+            bruto = bytearray(
+                hashlib.blake2b(f"{digitos}/{n}".encode("ascii"), digest_size=4).digest()
+            )
+            bruto[0] |= _VPAD_MAC_BIT_DERIVADO
+            yield f"{VPAD_MAC_PREFIXO}:" + ":".join(f"{b:02x}" for b in bruto)
+        else:
+            yield f"{VPAD_MAC_PREFIXO}:00:00:{n:02x}:{player:02x}"
+
+
+class _MacsDosVpadsVivos:
+    """Quem veste cada MAC agora — o espelho, deste lado, da lista do `hid_playstation`.
+
+    **O DEFEITO (medido em 24/09/2026).** O vpad do posto nasce com a
+    identidade do primário DE QUANDO NASCEU (troca de máscara, de caminho, o
+    `_reerguer_o_p1` do co-op), e o primário muda embaixo dele sem ele
+    renascer: com o jogo aberto, a R-04 não deixa. O primário que sai e volta
+    depois do prazo ganha um vpad secundário que pede o MESMO :func:`vpad_mac`,
+    e o `ps_devices_list_add` do driver o recusa com `-EEXIST`. Na bancada
+    honesta (a classe real contra um kernel que recusa), o P1 voltava num vpad
+    `uinput` degradado (`uhid_bind_falhou`): boneco sem vibração, giroscópio,
+    gatilho e luz. Não só o P1 — qualquer um que tenha sido o primário quando
+    o posto nasceu, e também dois secundários sem identidade de aparelho cujo
+    número de nome coincida.
+
+    **A CURA MORA NO DONO DO MAC.** A máscara (o que o jogo vê do aparelho) e
+    o MAC (o que o kernel usa para não duplicar) são perguntas diferentes, e só
+    este objeto vê todos os vpads vivos de uma vez. Cada vpad veste, no
+    `start`, o primeiro de :func:`vpad_macs_do_aparelho` que nenhum outro vivo
+    veste, e o devolve no `stop`. Sem colisão — o caso de sempre — é o MAC do
+    aparelho, byte a byte o de antes: o Steam Input e o jogo seguem
+    reconhecendo cada controle, e o MAC de cada lugar é o mesmo a cada
+    reconexão. Com colisão é o seguinte do MESMO aparelho, e a mesma mesa o
+    devolve do mesmo jeito.
+
+    **Por que não tirar a identidade do MAC do posto.** O posto passaria a
+    vestir o MAC do número, o mesmo para quem quer que sente nele: a E3
+    perderia o que tem de melhor (um controle, um MAC, no posto e fora dele),
+    e a háptica pelo rádio deixaria de achar o dono do posto pela forja.
+
+    **Referência FRACA ao vpad:** um vpad que some sem `stop` (fd vazado) não
+    segura o MAC para sempre deste lado. O kernel, esse sim, segura — e o
+    `-EEXIST` volta a ser o aviso, como era antes desta cura.
+    """
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        #: MAC → referência fraca ao vpad que o veste.
+        self._vestido_por: dict[str, Any] = {}
+
+    def vestir(self, pad: UhidDualSense) -> str:
+        """Veste em `pad` o primeiro MAC do aparelho dele que ninguém veste."""
+        import weakref
+
+        pedido = vpad_mac(pad.identity, pad.player)
+        with self._lock:
+            ja = self._de(pad)
+            if ja is not None:
+                return ja
+            for mac in vpad_macs_do_aparelho(pad.identity, pad.player):
+                dono = self._vestido_por.get(mac)
+                if dono is None or dono() is None:
+                    self._vestido_por[mac] = weakref.ref(pad)
+                    break
+            else:
+                logger.warning("uhid_mac_sem_alternativa_livre", pedido=pedido,
+                               player=pad.player)
+                return pedido
+        if mac != pedido:
+            # O journal diz a troca: sem esta linha, «o jogo viu um controle
+            # novo» não teria de onde sair quando ela perguntar.
+            logger.info("uhid_mac_do_aparelho_ja_vestido", pedido=pedido, vestido=mac,
+                        player=pad.player)
+        return mac
+
+    def despir(self, pad: UhidDualSense) -> None:
+        """Devolve o MAC que `pad` veste. Idempotente."""
+        with self._lock:
+            for mac, dono in list(self._vestido_por.items()):
+                if dono() is pad or dono() is None:
+                    del self._vestido_por[mac]
+
+    def vestido_por(self, pad: UhidDualSense) -> str | None:
+        """O MAC que `pad` veste agora, ou None (parado, ou nunca nasceu)."""
+        with self._lock:
+            return self._de(pad)
+
+    def _de(self, pad: UhidDualSense) -> str | None:
+        return next(
+            (mac for mac, dono in self._vestido_por.items() if dono() is pad), None
+        )
+
+
+#: O dono, um só por processo — como a lista do driver é uma só no kernel.
+_MACS_DOS_VPADS_VIVOS = _MacsDosVpadsVivos()
+
 
 __all__ = [
     "UHID_NODE",
@@ -2574,4 +2740,5 @@ __all__ = [
     "player_mac",
     "uhid_available",
     "vpad_mac",
+    "vpad_macs_do_aparelho",
 ]
