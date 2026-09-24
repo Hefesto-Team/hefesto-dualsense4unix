@@ -610,10 +610,10 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 6. Fale perto do P1 e confira que a sua voz sai na TV.
 7. Aperte o botão de microfone no plástico do P1 e confira que a sua voz parou de sair na TV.
 8. Aperte o botão do P1 de novo, espere a pílula voltar a ATIVO, e apague o 🎙 se ele ainda estiver verde.
-9. Abra um programa que ouça microfone — um gravador ou uma chamada de voz — e escolha como entrada a do P1: «Microfone do Controle 1», ou, se ela não estiver na lista, a do DualSense.
+9. Abra um programa que ouça microfone — um gravador ou uma chamada de voz — e escolha como entrada a do P1: «Microfone do Controle 1 (DualSense Wireless Controller)», ou, se ela não estiver na lista, a placa DualSense do próprio controle, a que não começa com «Microfone do Controle».
 10. Fale e confira que o programa te ouve, que a luz do botão do P1 pisca enquanto você fala, e que o cartão do P1 diz que esse programa está te ouvindo.
 11. Feche o programa.
-12. Clique na linha do P2 e refaça nele a mesma rodada, da pílula ATIVO até fechar o programa, com «Microfone do Controle 2».
+12. Clique na linha do P2 e refaça nele a mesma rodada, da pílula ATIVO até fechar o programa, com «Microfone do Controle 2 (DualSense Wireless Controller)».
 13. Clique na aba Conexões, abra «Gestão de Controles» e confira que as linhas do P1 e do P2 dizem «Microfone Ligado, pelo USB • Placa do controle».
 
 **Passa quando.** No P1 e no P2 a pílula diz ATIVO, a luz está acesa e a barrinha segue a sua voz. Com o 🎙 verde a voz sai na TV, e para quando o botão do plástico cala aquele controle. Um programa de fora te ouve pela entrada daquele controle, com a luz piscando e o cartão dizendo o nome dele. E a aba Conexões diz, nos dois, que o microfone chega pelo cabo, pela placa do controle.
@@ -649,9 +649,9 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 8. Fale perto do P3 e depois perto do P4, e confira que a sua voz sai na TV nas duas vezes.
 9. Aperte o botão de microfone no plástico do P3 e confira que a pílula do P3 passou a DESLIGADO, a do P4 continuou ATIVO, e você continua se ouvindo na TV pelo P4.
 10. Aperte o botão do P3 de novo, espere a pílula voltar a ATIVO, e apague o 🎙 do P3 e o do P4 que ainda estiverem verdes.
-11. Abra um programa que ouça microfone e escolha como entrada «Microfone do Controle 3».
+11. Abra um programa que ouça microfone e escolha como entrada «Microfone do Controle 3 (DualSense Wireless Controller)».
 12. Fale e confira que o programa te ouve, que a luz do botão do P3 pisca enquanto você fala, e que o cartão do P3 diz que esse programa está te ouvindo.
-13. Troque a entrada do programa para «Microfone do Controle 4» e confira o mesmo no P4.
+13. Troque a entrada do programa para «Microfone do Controle 4 (DualSense Wireless Controller)» e confira o mesmo no P4.
 14. Feche o programa.
 15. Clique na aba Conexões, abra «Gestão de Controles» e confira que as linhas do P3 e do P4 dizem «Microfone Ligado, pelo BT • Pela ponte».
 
@@ -749,7 +749,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que cada controle do USB tem uma saída de som PRÓPRIA — uma por controle, com o número certo —, que o exame do Hefesto conta as placas de som dos dois, e que o «Tudo no Controle e Nada no PC» de cada cartão põe o som do computador naquele controle, e só nele, com um clique.
 
-**Onde olhar.** Na aba Sistema, na seção «O exame de hoje»: a linha que começa com «áudio presente», que conta as placas de som dos controles no USB; a que começa com «regra áudio-off», que diz se o microfone e o fone deles estão liberados — as duas são cortadas na tela, então pare o mouse em cima para ler a frase inteira —; e a que começa com «Som do sistema», que diz por onde o som do computador está saindo. Fora do Hefesto, a lista de saídas das configurações de Som do sistema, onde cada controle tem a sua saída «Alto-falante do Controle N», com o número do jogador. E, na aba Controles, o bloco Alto-falante de cada cartão, com o botão «Tudo no Controle e Nada no PC» — «PC», nos botões, é a saída do computador; na bancada, a TV.
+**Onde olhar.** Na aba Sistema, na seção «O exame de hoje»: a linha que começa com «áudio presente», que conta as placas de som dos controles no USB; a que começa com «regra áudio-off», que diz se o microfone e o fone deles estão liberados — as duas são cortadas na tela, então pare o mouse em cima para ler a frase inteira —; e a que começa com «Som do sistema», que diz por onde o som do computador está saindo. Fora do Hefesto, a lista de saídas das configurações de Som do sistema, onde cada controle tem a sua saída «Alto-falante do Controle N (DualSense Wireless Controller)», com o número do jogador. E, na aba Controles, o bloco Alto-falante de cada cartão, com o botão «Tudo no Controle e Nada no PC» — «PC», nos botões, é a saída do computador; na bancada, a TV.
 
 **Os passos.**
 
@@ -762,13 +762,13 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 7. Toque uma música no computador e confira, com o ouvido, que ela sai pelo P1 e não sai na TV nem no P2.
 8. Escolha como saída a que começa com «Alto-falante do Controle 2» e confira que a música passou para o P2, e só para ele.
 9. Encoste o ouvido no P3 e depois no P4 e confirme que os dois estão mudos.
-10. Clique na aba Sistema e confira que a linha que começa com «Som do sistema» diz, em poucos segundos, que o som sai em «Alto-falante do Controle 2».
+10. Clique na aba Sistema e confira que a linha que começa com «Som do sistema» diz, em poucos segundos, que o som sai em «Alto-falante do Controle 2 (DualSense Wireless Controller)».
 11. Devolva a saída do sistema para a TV e confira que a música voltou para ela e que o P1 e o P2 emudeceram.
 12. Clique na aba Controles, abra o cartão do P2 e clique em «Tudo no Controle e Nada no PC», no bloco Alto-falante dele.
-13. Confira que a música sai só pelo P2 e que, nas configurações de Som do sistema, a saída escolhida passou a ser uma placa DualSense — no USB o botão escolhe a placa de som do próprio controle, e não o «Alto-falante do Controle 2».
+13. Confira que a música sai só pelo P2 e que, nas configurações de Som do sistema, a saída escolhida passou a ser uma placa DualSense das que não começam com «Alto-falante do Controle» — no USB o botão escolhe a placa de som do próprio controle, e não o «Alto-falante do Controle 2 (DualSense Wireless Controller)».
 14. Clique em «Efeitos do Jogo no Controle, Áudio do PC no PC», no bloco do P2, e confira que a música voltou para a TV.
 
-**Passa quando.** A linha «áudio presente» conta os 2 controles do USB e a da regra de áudio diz que eles estão liberados. Escolhida a saída «Alto-falante do Controle 1», a música sai só no P1; escolhida a do 2, só no P2; a aba Sistema diz para onde o som foi; e, devolvida a saída para a TV, os dois emudecem. E o «Tudo no Controle e Nada no PC» do P2 põe a música só no P2 com um clique, pela placa de som dele, e o botão de cima a devolve à TV. O P3 e o P4 ficam mudos.
+**Passa quando.** A linha «áudio presente» conta os 2 controles do USB e a da regra de áudio diz que eles estão liberados. Escolhida a saída «Alto-falante do Controle 1 (DualSense Wireless Controller)», a música sai só no P1; escolhida a do 2, só no P2; a aba Sistema diz para onde o som foi; e, devolvida a saída para a TV, os dois emudecem. E o «Tudo no Controle e Nada no PC» do P2 põe a música só no P2 com um clique, pela placa de som dele, e o botão de cima a devolve à TV. O P3 e o P4 ficam mudos.
 
 **Por controle.**
 
@@ -777,7 +777,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No BT, e é TESTEMUNHA. Não entra na conta do exame e fica mudo o tempo todo.
 * **P4** — No BT, e é a segunda testemunha. Mesma conferência do P3.
 
-**A armadilha.** As frases do exame são cortadas, e no caso da regra de áudio o corte inverte o sentido: o que sobra ao lado do selo se lê como problema, e o «estão liberados» fica escondido — pare sempre o mouse em cima. As duas placas DualSense do USB têm o mesmo nome e não dizem qual é qual: é por isso que existe «Alto-falante do Controle N», e o que este teste mede é o número cair no controle certo. O número do nome só se renova com aquele controle em silêncio: se o «2» tocar no P1 logo depois de os jogadores trocarem de lugar, pare a música, espere uns segundos e escolha a saída de novo antes de reprovar. Deixe o P1 e o P2 no botão de cima: com «Efeitos do Jogo e Áudio do PC no Controle», o outro controle também receberia a música mandada ao primeiro, e o teste não diria mais de onde ela veio. O «Tudo no Controle e Nada no PC» não passa por esse nome: no USB ele escolhe a placa do próprio controle, onde o «Alto-falante do Controle N» também termina, e como as duas placas têm o mesmo nome, quem diz se ele acertou o P2 é o ouvido. O botão de cima só devolve à TV a saída que o próprio «Tudo no Controle e Nada no PC» levou: a que você escolheu pela lista do sistema, você devolve pela lista. Devolva a saída para a TV no fim — se esquecer, o computador continua tocando só no controle. E a prova desta célula parou em «montou», e está marcada como parcial.
+**A armadilha.** As frases do exame são cortadas, e no caso da regra de áudio o corte inverte o sentido: o que sobra ao lado do selo se lê como problema, e o «estão liberados» fica escondido — pare sempre o mouse em cima. As duas placas DualSense do USB têm o mesmo nome e não dizem qual é qual: é por isso que existe «Alto-falante do Controle N (DualSense Wireless Controller)», e o que este teste mede é o número cair no controle certo. O número do nome só se renova com aquele controle em silêncio: se o «2» tocar no P1 logo depois de os jogadores trocarem de lugar, pare a música, espere uns segundos e escolha a saída de novo antes de reprovar. Deixe o P1 e o P2 no botão de cima: com «Efeitos do Jogo e Áudio do PC no Controle», o outro controle também receberia a música mandada ao primeiro, e o teste não diria mais de onde ela veio. O «Tudo no Controle e Nada no PC» não passa por esse nome: no USB ele escolhe a placa do próprio controle, onde o «Alto-falante do Controle N (DualSense Wireless Controller)» também termina, e como as duas placas têm o mesmo nome, quem diz se ele acertou o P2 é o ouvido. O botão de cima só devolve à TV a saída que o próprio «Tudo no Controle e Nada no PC» levou: a que você escolheu pela lista do sistema, você devolve pela lista. Devolva a saída para a TV no fim — se esquecer, o computador continua tocando só no controle. E a prova desta célula parou em «montou», e está marcada como parcial.
 
 ---
 
@@ -787,7 +787,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que cada controle do BT também tem uma saída de som PRÓPRIA, criada pelo Hefesto, que o som mandado a ela sai só naquele controle, pelo fio do BT, e que o «Tudo no Controle e Nada no PC» de cada cartão escolhe essa mesma saída com um clique.
 
-**Onde olhar.** Fora do Hefesto, a lista de saídas das configurações de Som do sistema: cada controle do BT tem ali a sua saída «Alto-falante do Controle N», com o número do jogador, e nenhuma placa DualSense — pelo BT o controle não publica placa de som, e quem leva o som até ele é o Hefesto. Na aba Sistema, em «O exame de hoje», a linha que começa com «Som do sistema» diz por onde o som do computador está saindo. Na aba Controles, o bloco Alto-falante de cada cartão, com o botão «Tudo no Controle e Nada no PC» — «PC», nos botões, é a saída do computador; na bancada, a TV. E o ouvido encostado nos nove furinhos da frente do controle.
+**Onde olhar.** Fora do Hefesto, a lista de saídas das configurações de Som do sistema: cada controle do BT tem ali a sua saída «Alto-falante do Controle N (DualSense Wireless Controller)», com o número do jogador, e nenhuma placa DualSense — pelo BT o controle não publica placa de som, e quem leva o som até ele é o Hefesto. Na aba Sistema, em «O exame de hoje», a linha que começa com «Som do sistema» diz por onde o som do computador está saindo. Na aba Controles, o bloco Alto-falante de cada cartão, com o botão «Tudo no Controle e Nada no PC» — «PC», nos botões, é a saída do computador; na bancada, a TV. E o ouvido encostado nos nove furinhos da frente do controle.
 
 **Os passos.**
 
@@ -798,13 +798,13 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 5. Toque uma música no computador e confira, com o ouvido, que ela sai pelo P3 e não sai na TV nem no P4.
 6. Escolha como saída a que começa com «Alto-falante do Controle 4» e confira que a música passou para o P4, e só para ele.
 7. Encoste o ouvido no P1 e depois no P2 e confirme que os dois estão mudos.
-8. Clique na aba Sistema e confira que a linha que começa com «Som do sistema» diz, em poucos segundos, que o som sai em «Alto-falante do Controle 4».
+8. Clique na aba Sistema e confira que a linha que começa com «Som do sistema» diz, em poucos segundos, que o som sai em «Alto-falante do Controle 4 (DualSense Wireless Controller)».
 9. Devolva a saída do sistema para a TV e confira que a música voltou para ela e que o P3 e o P4 emudeceram.
 10. Clique na aba Controles, abra o cartão do P4 e clique em «Tudo no Controle e Nada no PC», no bloco Alto-falante dele.
 11. Confira que a música sai só pelo P4 e que, nas configurações de Som do sistema, a saída escolhida passou a ser a que começa com «Alto-falante do Controle 4».
 12. Clique em «Efeitos do Jogo no Controle, Áudio do PC no PC», no bloco do P4, e confira que a música voltou para a TV.
 
-**Passa quando.** A lista de saídas do sistema tem uma saída própria para o P3 e outra para o P4. Escolhida uma delas, a música sai só naquele controle, pelo BT; a aba Sistema diz para onde o som foi; e, devolvida a saída para a TV, os dois emudecem. E o «Tudo no Controle e Nada no PC» do P4 escolhe sozinho a mesma saída «Alto-falante do Controle 4», com a música só no P4, e o botão de cima a devolve à TV. O P1 e o P2 ficam mudos.
+**Passa quando.** A lista de saídas do sistema tem uma saída própria para o P3 e outra para o P4. Escolhida uma delas, a música sai só naquele controle, pelo BT; a aba Sistema diz para onde o som foi; e, devolvida a saída para a TV, os dois emudecem. E o «Tudo no Controle e Nada no PC» do P4 escolhe sozinho a mesma saída «Alto-falante do Controle 4 (DualSense Wireless Controller)», com a música só no P4, e o botão de cima a devolve à TV. O P1 e o P2 ficam mudos.
 
 **Por controle.**
 
@@ -7213,7 +7213,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o número ao lado do trilho Volume do microfone é o volume REAL do canal daquele controle, lido do sistema, e não um número do desenho — e que ele é de um controle só. Até 12/09/2026 a tela mostrava o 80 do desenho para sempre, fizesse o sistema o que fizesse.
 
-**Onde olhar.** Na aba Controles, no cartão de um controle ligado pelo cabo — na fita do topo, o chip dele diz USB. Dentro do cartão, o bloco Microfone: as barrinhas que se mexem com a voz, e o trilho Volume com o número ao lado. Fora do Hefesto, o painel de som do sistema, na lista de ENTRADAS: cada controle tem a sua, «Microfone do Controle 1» para o P1, «Microfone do Controle 2» para o P2.
+**Onde olhar.** Na aba Controles, no cartão de um controle ligado pelo cabo — na fita do topo, o chip dele diz USB. Dentro do cartão, o bloco Microfone: as barrinhas que se mexem com a voz, e o trilho Volume com o número ao lado. Fora do Hefesto, o painel de som do sistema, na lista de ENTRADAS: cada controle tem a sua, «Microfone do Controle 1 (DualSense Wireless Controller)» para o P1, «Microfone do Controle 2 (DualSense Wireless Controller)» para o P2.
 
 **Os passos.**
 
@@ -7221,14 +7221,14 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 2. Confira na fita do topo que o P1 e o P2 dizem USB.
 3. Clique na linha do P1 para abrir o cartão dele.
 4. Anote o número do Volume do microfone do P1.
-5. Abra o painel de som do sistema e ache, nas entradas, o «Microfone do Controle 1».
+5. Abra o painel de som do sistema e ache, nas entradas, o «Microfone do Controle 1 (DualSense Wireless Controller)».
 6. Mude o volume dessa entrada para 30.
 7. Volte ao Hefesto sem clicar em nada e espere dois segundos.
 8. Confira que o número do Volume do P1 foi para 30 e que o trilho acompanhou.
 9. Clique na linha do P2 e confira que o Volume dele não mudou.
 10. Volte ao cartão do P1 e arraste o Volume de volta ao número anotado.
-11. Confira no painel de som que o «Microfone do Controle 1» acompanhou.
-12. Faça no P2 a mesma volta, com o «Microfone do Controle 2».
+11. Confira no painel de som que o «Microfone do Controle 1 (DualSense Wireless Controller)» acompanhou.
+12. Faça no P2 a mesma volta, com o «Microfone do Controle 2 (DualSense Wireless Controller)».
 
 **Passa quando.** O número do Volume acompanha, em poucos segundos, o que você mudou no painel do sistema, sem você clicar em nada no Hefesto; o outro controle não se mexe; e o arrasto de volta no Hefesto aparece no painel. Se o número ficar parado no valor antigo, a leitura não está chegando; se ele mostrar um número que o sistema não tem, a tela está inventando.
 
@@ -7249,7 +7249,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** O mesmo que a linha do cabo, pelo outro transporte — e aqui a pergunta tem uma metade a mais, porque pelo rádio o canal do microfone não é uma placa que o sistema publica sozinho: ele sobe pela ponte do Hefesto. Provar o volume no rádio é provar que a leitura atravessa essa ponte, e que o trilho muda a voz que chega ao PC — o que ninguém mediu pelo rádio até hoje.
 
-**Onde olhar.** Na aba Controles, no cartão de um controle ligado pelo rádio — na fita do topo, o chip dele diz BT. Dentro do cartão, o bloco Microfone: o selo ATIVO ou DESLIGADO ao lado do nome, as barrinhas que se mexem com a voz, o trilho Volume com o número e o 🎙 ao lado. O 🎙 é o retorno: aceso em verde, você se ouve pela saída de som do computador, com o volume do cartão já aplicado, e ele assim FICA até o clique seguinte. Fora do Hefesto, o painel de som do sistema, nas ENTRADAS: «Microfone do Controle 3» para o P3, «Microfone do Controle 4» para o P4.
+**Onde olhar.** Na aba Controles, no cartão de um controle ligado pelo rádio — na fita do topo, o chip dele diz BT. Dentro do cartão, o bloco Microfone: o selo ATIVO ou DESLIGADO ao lado do nome, as barrinhas que se mexem com a voz, o trilho Volume com o número e o 🎙 ao lado. O 🎙 é o retorno: aceso em verde, você se ouve pela saída de som do computador, com o volume do cartão já aplicado, e ele assim FICA até o clique seguinte. Fora do Hefesto, o painel de som do sistema, nas ENTRADAS: «Microfone do Controle 3 (DualSense Wireless Controller)» para o P3, «Microfone do Controle 4 (DualSense Wireless Controller)» para o P4.
 
 **Os passos.**
 
@@ -7258,7 +7258,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 3. Clique na linha do P3 para abrir o cartão dele.
 4. Confira que o selo do Microfone do P3 diz ATIVO — se disser DESLIGADO, aperte o botão de microfone no próprio P3.
 5. Anote o número do Volume do microfone do P3.
-6. No painel de som do sistema, mude o volume da entrada «Microfone do Controle 3» para 30.
+6. No painel de som do sistema, mude o volume da entrada «Microfone do Controle 3 (DualSense Wireless Controller)» para 30.
 7. Volte ao Hefesto sem clicar em nada e espere dois segundos.
 8. Confira que o número do Volume do P3 foi para 30.
 9. Clique no 🎙 do P3.
@@ -7268,7 +7268,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 13. Clique no 🎙 de novo.
 14. Confira que ele apagou e que o retorno calou.
 15. Arraste o Volume do P3 de volta ao número anotado.
-16. Faça no P4 a mesma volta, com o «Microfone do Controle 4».
+16. Faça no P4 a mesma volta, com o «Microfone do Controle 4 (DualSense Wireless Controller)».
 
 **Passa quando.** O número acompanha o painel do sistema, igual ao do cabo — a leitura atravessa a ponte. A voz no retorno sobe quando o trilho sobe. E o 🎙 fica verde e assim FICA — ele é uma trava, como a do Discord, e só o clique seguinte o apaga.
 
