@@ -40,6 +40,7 @@ from types import ModuleType
 from typing import Any
 
 import pytest
+import structlog.testing
 
 from hefesto_dualsense4unix.broker import hidraw_broker as hb
 from hefesto_dualsense4unix.broker.hidraw_broker import (
@@ -517,6 +518,38 @@ class TestPontaAPonta:
             assert status["hidden"] == sorted(mesa.nos)
             assert status["expostos"] == []
             assert sum(1 for e, _ in diario if e == "hide_adiado_cumprido") == 4
+        finally:
+            nativo.close()
+            outra.close()
+
+    def test_o_diario_do_daemon_nao_diz_escondido_sobre_no_aberto(
+        self, mesa: Mesa, broker_vivo: Any
+    ) -> None:
+        """O `hide` adiado responde `ok` com `state: "exposed"`: o nó segue
+        aberto. O diário do daemon dizia `hidraw_broker_hidden` assim mesmo,
+        e o `hidraw_broker_hidden` de verdade, depois do EOF, virava
+        reafirmação em `debug` — sumia do journal justamente a transição.
+        A MORDIDA: devolva o `hidraw_broker_hidden` incondicional ao `hide`
+        do cliente e esta régua reprova."""
+        caminho, _st, _diario = broker_vivo
+        nativo = HidrawBrokerClient(caminho)
+        outra = HidrawBrokerClient(caminho)
+        no = mesa.no("hidraw7")
+        try:
+            assert nativo.expor(no, entradas=True)
+            with structlog.testing.capture_logs() as adiado:
+                assert outra.hide(no)
+            assert _aberto_para_ela(no)
+            eventos = [r["event"] for r in adiado]
+            assert "hidraw_broker_hidden" not in eventos, eventos
+            assert "hidraw_broker_hide_adiado" in eventos, eventos
+
+            nativo.close()
+            assert _espera(lambda: _fechado(no))
+            with structlog.testing.capture_logs() as depois:
+                assert outra.hide(no)  # o rehide do daemon, já sem o Nativo
+            info = [r["event"] for r in depois if r.get("log_level") == "info"]
+            assert "hidraw_broker_hidden" in info, depois
         finally:
             nativo.close()
             outra.close()
