@@ -2817,8 +2817,13 @@ def _a_mesa_depois(
     cartas: Mapping[str, int],
     *,
     compacta: bool,
-) -> list[str]:
-    """As chaves na ordem de lugar depois de derrubar `recriar` e nascer o resto."""
+) -> dict[int, str]:
+    """Lugar do jogo -> chave depois de derrubar `recriar` e nascer o resto.
+
+    Devolve o LUGAR, e não só a ordem (O-ASSENTO-GUARDADO-NAO-ANDA-03): a lista
+    em ordem de lugar escondia o buraco, e é o lugar que diz qual boneco o
+    jogo dá a cada um.
+    """
     restam = {lugar: c for lugar, c in mesa.items() if c not in recriar}
     if compacta:
         restam = dict(enumerate(c for _lugar, c in sorted(restam.items())))
@@ -2827,11 +2832,22 @@ def _a_mesa_depois(
         while livre in restam:
             livre += 1
         restam[livre] = chave
-    return [c for _lugar, c in sorted(restam.items())]
+    return dict(sorted(restam.items()))
 
 
 def _em_ordem(numeros: Sequence[int]) -> bool:
     return all(a <= b for a, b in pairwise(numeros))
+
+
+def _fora_do_boneco(depois: Mapping[int, str], cartas: Mapping[str, int]) -> int:
+    """Quantos o jogo mexe num boneco que não é o número da carta deles.
+
+    O lugar ``N - 1`` do jogo é o jogador ``N`` — o boneco que a lâmpada e a
+    tela prometem. É a conta que a ordem sozinha não fazia: com o buraco de
+    quem saiu, o P3 com a carta 2 no lugar 2 do jogo está EM ORDEM e no boneco
+    errado.
+    """
+    return sum(1 for lugar, chave in depois.items() if lugar != cartas[chave] - 1)
 
 
 def planejar_a_ordem(
@@ -2861,16 +2877,47 @@ def planejar_a_ordem(
     com o jogo na autoridade, a R-04): elas ficam onde estão, a ordem é
     conferida SEM elas, e o segundo valor diz se a mesa fechou inteira mesmo
     assim.
+
+    **O BURACO DE QUEM SAIU SE FECHA (O-ASSENTO-GUARDADO-NAO-ANDA-03).** A
+    ordem não basta: passado o prazo do lugar guardado, o P3 fica com a carta
+    2 no lugar 2 do jogo — em ordem, e no boneco 3, com a tela e a lâmpada
+    dizendo 2. Entre os planos em ordem vale o que deixa MENOS gente fora do
+    boneco da própria carta (:func:`_fora_do_boneco`), e no empate o de ``t``
+    mais alto, que recria menos. Então só renasce quem tem para onde descer:
+    dentro do prazo o buraco é o lugar guardado e ninguém sai do boneco; sem
+    jogo (``compacta``) todo plano em ordem dá os mesmos lugares e nada muda;
+    e o fixo não se mexe, então a volta tardia do P1 não o recria.
+
+    **E QUEM JÁ ESTÁ NO BONECO DA CARTA NÃO SAI PARA FECHAR O BURACO DE
+    NINGUÉM** — o item 3 da sprint, medido na varredura de todas as mesas de
+    até quatro lugares: com um lugar ainda guardado ATRÁS do buraco que venceu
+    (``{0: p1=1, 2: b=2, 3: c=3, 4: d=5}``, o 4 guardado), recriar a partir
+    da carta 2 fecharia o buraco do ``b`` e do ``c`` e poria o ``d`` no lugar
+    guardado — tirando do jogo, e do boneco certo, quem não precisava sair.
+    Além do plano de antes (a ordem), só se recria quem está fora do boneco;
+    esses casos ficam como eram.
     """
     sentados = [c for _lugar, c in sorted(mesa.items())]
+    lugar_de = {c: lugar for lugar, c in mesa.items()}
     limites = sorted({*(cartas[c] for c in sentados), *(cartas[c] for c in nascer)})
     candidatos = [max(limites, default=0) + 1, *reversed(limites)]
+    melhor: tuple[int, list[str], bool] | None = None
     for t in candidatos:
         recriar = [c for c in sentados if cartas[c] >= t and c not in fixos]
+        if melhor is not None and any(
+            lugar_de[c] == cartas[c] - 1 for c in recriar if c not in melhor[1]
+        ):
+            # Os `t` menores recriam este também: a busca acaba aqui.
+            break
         depois = _a_mesa_depois(mesa, recriar, nascer, cartas, compacta=compacta)
-        if _em_ordem([cartas[c] for c in depois if c not in fixos]):
-            return recriar, _em_ordem([cartas[c] for c in depois])
-    return [], False
+        if not _em_ordem([cartas[c] for c in depois.values() if c not in fixos]):
+            continue
+        fora = _fora_do_boneco(depois, cartas)
+        if melhor is None or fora < melhor[0]:
+            melhor = (fora, recriar, _em_ordem([cartas[c] for c in depois.values()]))
+    if melhor is None:
+        return [], False
+    return melhor[1], melhor[2]
 
 
 __all__ = [
