@@ -562,10 +562,19 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
         apontava), quando ela o apagou, ou quando ELA pôs nele uma regra de
         janela — aí ele é de janela também, e a regra de cima vale para ele.
         `origin="system"`: a sessão continua dizendo o que ela escolheu.
+
+        E NÃO ENTRA POR CIMA DO QUE JÁ VALE: com o daemon reiniciado no meio
+        da partida, o autoswitch pode ter posto o perfil do jogo antes de o
+        primeiro controle chegar — o Freestyle ali seria uma troca no meio do
+        jogo, desfeita um tique depois.
         """
         if not fora_do_jogo or any(mesmo_slug(fora_do_jogo, t) for t in tentados):
             return
         if _escopado_a_janela(fora_do_jogo):
+            return
+        ja_vale = getattr(getattr(daemon, "store", None), "active_profile", None)
+        if isinstance(ja_vale, str) and ja_vale:
+            logger.info("perfil_de_fora_do_jogo_nao_entra_por_cima", name=ja_vale)
             return
         logger.info(
             "perfil_de_fora_do_jogo_vale_enquanto_espera",

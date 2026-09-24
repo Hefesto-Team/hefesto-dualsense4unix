@@ -321,6 +321,29 @@ def test_o_jogo_entra_por_cima_do_freestyle_com_o_modo_ligado(
     assert _o_estado_do_boot(store) == (JOGO, None)
 
 
+def test_o_freestyle_nao_entra_por_cima_do_jogo_que_ja_vale(
+    semeadura_ligada: None, fabrica_de_bancada: Any,
+) -> None:
+    """O daemon reiniciado no meio da partida: o jogo já vale antes do controle chegar.
+
+    O autoswitch roda antes do primeiro controle, e pode ter posto o Sackboy.
+    O boot não troca isso pelo Freestyle — seria uma troca no meio do jogo,
+    desfeita um tique depois pelo próprio autoswitch —, e não escreve nada no fio.
+
+    MORDIDA: tire o `if isinstance(ja_vale, str) and ja_vale:` de
+    `_o_de_fora_do_jogo_enquanto_espera` e o Freestyle entra por cima.
+    """
+    _prepara_a_sessao("sessao-com-perfil-de-janela")
+    controle, pecas = _mesa_de_quatro(fabrica_de_bancada)
+    store = StateStore()
+    store.set_active_profile(JOGO)
+
+    _boot(controle, store)
+
+    assert store.active_profile == JOGO
+    assert all(h.device.quadros == [] for h, _ in pecas)
+
+
 def test_o_freestyle_com_regra_de_janela_dela_espera_como_os_outros(
     semeadura_ligada: None, fabrica_de_bancada: Any,
 ) -> None:
