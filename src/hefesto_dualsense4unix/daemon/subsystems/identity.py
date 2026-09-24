@@ -651,6 +651,14 @@ class ControllerIdentityRegistry:
         #: identidade estável guarda lugar — a volátil não tem promessa a
         #: honrar (D9/MODO-01). Ver :func:`prazo_do_lugar_guardado`.
         self._guardados: dict[str, float] = {}
+        #: E quem chega NOVO refaz a mesa (conferência de 24/09/2026): cada
+        #: entrada em ``_connected`` ganha um número de ordem, e o tique lento
+        #: guarda até onde já tinha visto. Quem entrou depois disso e não é
+        #: dono de lugar guardado é gente nova — ver
+        #: :meth:`_quem_chega_novo_refaz_a_mesa_locked`.
+        self._entrada: dict[str, int] = {}
+        self._entradas = 0
+        self._entradas_no_ultimo_tique = 0
         #: mapa mudou desde o último save (o sync persiste no tick lento).
         self._dirty = False
         self._loaded = False
@@ -686,8 +694,9 @@ class ControllerIdentityRegistry:
         #: controles com o mesmo número.
         self._external_present: Callable[[], set[int]] | None = None
         #: O-ASSENTO-GUARDADO-NAO-ANDA-01: quem solta o lugar guardado dos
-        #: EXTERNOS quando o gesto dela solta o daqui (a fila é uma só).
-        #: Fiado por ``ExternalLedSync``; None = só este lado.
+        #: EXTERNOS quando a mesa se refaz daqui — o "Renumerar agora" ou
+        #: gente nova chegando (a fila é uma só). Fiado por
+        #: ``ExternalLedSync``; None = só este lado.
         self._soltar_os_externos: Callable[[], object] | None = None
         # -- estado do automático (COR-03, configurado pelo ProfileManager) --
         # R-14: dois eixos INDEPENDENTES (ver docstring do módulo). Cor é o
@@ -967,9 +976,11 @@ class ControllerIdentityRegistry:
     ) -> None:
         """Injeta quem solta o lugar guardado dos externos (O-ASSENTO-GUARDADO-NAO-ANDA-01).
 
-        O gesto dela de numerar (``identity.number.set``) passa por este
-        registro antes de qualquer outro; com a fila única, um externo com o
-        lugar guardado no meio faria o número pedido não ser o mostrado.
+        Quando a mesa se refaz deste lado — o "Renumerar agora"
+        (:meth:`compact`) ou gente nova chegando
+        (:meth:`_quem_chega_novo_refaz_a_mesa_locked`) —, o externo com o
+        lugar guardado também cede: a fila é única, e um lugar guardado do
+        outro lado seguraria o buraco que este lado acabou de fechar.
         """
         with self._lock:
             self._soltar_os_externos = provider
@@ -1025,6 +1036,7 @@ class ControllerIdentityRegistry:
                     self._vpad_logged.add(key)
                     logger.warning("identity_slot_vpad_ignorado", uniq=key)
             return None
+        chegou_gente_nova = False
         with self._lock:
             self._avaliar_mesa_locked()
             estreia = key not in self._ordem
@@ -1037,11 +1049,19 @@ class ControllerIdentityRegistry:
                 and key not in self._connected
                 and (autoridade_de_presenca or estreia)
             ):
+                dono_de_lugar = key in self._guardados_locked()
                 self._connected.add(key)
                 self._mesa_mexeu_locked()
                 self._marcar_chegada_locked(key)
+                self._entrou_na_mesa_locked(key)
                 self._retomar_o_lugar_locked(key)
-            return self._posicao_locked(key)
+                if not dono_de_lugar:
+                    chegou_gente_nova = True
+                    self._quem_chega_novo_refaz_a_mesa_locked()
+            numero = self._posicao_locked(key)
+        if chegou_gente_nova:
+            self._soltar_os_lugares_dos_externos()
+        return numero
 
     def _assign_locked(self, key: str, persistable: bool) -> int:
         """Põe ``key`` no FIM da fila (já sob ``self._lock``). Fonte ÚNICA.
@@ -1148,7 +1168,7 @@ class ControllerIdentityRegistry:
         self._congelar_locked()
         return True
 
-    def _congelar_locked(self) -> None:
+    def _congelar_locked(self, na_mesa: list[str] | None = None) -> None:
         """Grava a ordem do momento na FILA GRAVADA — CONGELAR (já sob o lock).
 
         A operação inteira é uma PERMUTAÇÃO: os ``rank`` que os presentes já
@@ -1163,8 +1183,16 @@ class ControllerIdentityRegistry:
         persiste em disco aqui: marca ``_dirty`` e o ``sync_connected`` (tick
         lento) salva, porque este método também roda no caminho quente do
         provider de cor, onde I/O é proibido.
+
+        ``na_mesa`` é o gesto dela (:meth:`alinhar_gravado_com_a_tela`): os
+        presentes E os lugares guardados, porque é essa a mesa que ela vê. A
+        mesa estável que congela sozinha continua com os presentes só.
         """
-        presentes = [k for k in self._connected if k in self._ordem]
+        presentes = (
+            [k for k in self._connected if k in self._ordem]
+            if na_mesa is None
+            else na_mesa
+        )
         if len(presentes) < 2:
             return
         postos = sorted(self._ordem[k] for k in presentes)
@@ -1248,27 +1276,72 @@ class ControllerIdentityRegistry:
             del self._guardados[key]
             logger.info("lugar_guardado_venceu", uniq=key)
 
-    def soltar_os_lugares_guardados(self) -> bool:
-        """Solta todo lugar guardado — o gesto de numerar à mão. Devolve se havia.
+    def soltar_os_lugares_guardados(self, *, motivo: str = "renumerar") -> bool:
+        """Solta todo lugar guardado, dos dois registros. Devolve se havia.
 
-        A máquina dá o padrão, a escolha dela sobrepõe: quem pede um número na
-        aba (``identity.number.set``) ou renumera a mesa (``identity.renumber``)
-        escolhe entre os números de quem está ligado, e um lugar guardado no
-        meio deles faria o número pedido não ser o número mostrado. Quem chama
-        são os dois métodos que só esses gestos alcançam —
-        :meth:`alinhar_gravado_com_a_tela` e :meth:`compact` —, e daqui o
-        gesto chega ao registro dos externos também.
+        Dois chamadores, e os dois refazem a mesa inteira:
+
+        - o **"Renumerar agora"** (``identity.renumber`` → :meth:`compact`):
+          renumerar é fechar a fila agora, por vontade dela;
+        - **gente nova chegando pelo lado dos externos** (a ponte que o
+          ``ExternalLedSync`` fia) — ver
+          :meth:`_quem_chega_novo_refaz_a_mesa_locked` para o lado daqui.
+
+        O ``identity.number.set`` NÃO solta (conferência de 24/09/2026): o
+        clique dela é uma TROCA sobre o que ela vê, e o que ela vê tem o
+        buraco — ver :meth:`alinhar_gravado_com_a_tela`.
         """
         with self._lock:
             havia = bool(self._guardados)
             self._guardados.clear()
-            externos = self._soltar_os_externos
         if havia:
-            logger.info("lugares_guardados_soltos_pelo_gesto")
-        if externos is not None:
-            with contextlib.suppress(Exception):
-                havia = bool(externos()) or havia
-        return havia
+            logger.info("lugares_guardados_soltos", motivo=motivo)
+        return self._soltar_os_lugares_dos_externos() or havia
+
+    def _soltar_os_lugares_dos_externos(self) -> bool:
+        """O mesmo, do lado dos externos — SEMPRE fora do ``_lock``.
+
+        A hierarquia de locks é DualSense → externos, e quem chama isto já
+        soltou o daqui: o registro dos externos pode estar, na mesma hora,
+        pedindo os lugares dos DualSense.
+        """
+        externos = self._soltar_os_externos
+        if externos is None:
+            return False
+        with contextlib.suppress(Exception):
+            return bool(externos())
+        return False
+
+    def _entrou_na_mesa_locked(self, key: str) -> None:
+        """Carimba a ENTRADA de ``key`` em ``_connected`` (sob o lock)."""
+        self._entradas += 1
+        self._entrada[key] = self._entradas
+
+    def _quem_chega_novo_refaz_a_mesa_locked(self) -> bool:
+        """Gente NOVA chegou: todo lugar guardado se solta (sob o lock).
+
+        Conferência de 24/09/2026. O lugar guardado existe para quem SAIU e
+        volta; quem chega e não é dono de lugar nenhum não tem para onde
+        andar, e segurá-lo atrás do buraco era pior que a regra de antes:
+
+        - com os quatro na mesa, o P2 sai e outro controle chega — o novo
+          nascia **5**, com as cinco lâmpadas e a barra amarela, numa mesa de
+          quatro, e a tela, que tem quatro cartões, voltava a contar por
+          POSIÇÃO (``mesa_viva._lugares_da_mesa``): o P3 no cartão do P2;
+        - com três, o novo nascia 4 e virava 3 no fim do prazo — o número de
+          quem ACABOU de chegar mudando no meio da partida.
+
+        E o caso mais comum dos dois é o mesmo jogador: a bateria do P2
+        acabou e ele pegou outro controle. A sprint manda, quando o lugar
+        vazio quebra o que a NUM-01 protegia, não mudar: gente nova refaz a
+        mesa como antes (um até N). Quem só VOLTA não é gente nova — ele
+        retoma o lugar dele e ninguém anda.
+        """
+        if not self._guardados:
+            return False
+        self._guardados.clear()
+        logger.info("lugares_guardados_soltos", motivo="chegou_gente_nova")
+        return True
 
     def guardados(self) -> dict[str, float]:
         """Cópia de quem tem o lugar guardado agora → segundos que faltam.
@@ -1680,17 +1753,33 @@ class ControllerIdentityRegistry:
             # a mesa que estava estável, não a que este tick acabou de mudar).
             self._avaliar_mesa_locked()
             anteriores = self._connected
+            donos_de_lugar = set(self._guardados_locked())
             self._connected = vistos
             if vistos != anteriores:
                 self._mesa_mexeu_locked()
+            for key in vistos - anteriores:
+                self._entrou_na_mesa_locked(key)
             # O-ASSENTO-GUARDADO-NAO-ANDA-01: o prazo vencido sai primeiro,
             # quem saiu agora ganha o lugar guardado, e quem está na mesa
-            # não tem lugar guardado nenhum.
+            # não tem lugar guardado nenhum. GENTE NOVA desde o tique anterior
+            # — quem entrou agora, ou pelo provider de cor entre os dois tiques,
+            # e não é dono de lugar — refaz a mesa: nenhum lugar fica guardado
+            # (ver `_quem_chega_novo_refaz_a_mesa_locked`). É o controle que
+            # substitui o que saiu no MESMO tique que viu a saída.
             self._vencer_os_guardados_locked()
-            for key in anteriores - vistos:
-                self._guardar_o_lugar_locked(key)
+            chegou_gente_nova = any(
+                key not in donos_de_lugar
+                and self._entrada.get(key, 0) > self._entradas_no_ultimo_tique
+                for key in vistos
+            )
+            if chegou_gente_nova:
+                self._quem_chega_novo_refaz_a_mesa_locked()
+            else:
+                for key in anteriores - vistos:
+                    self._guardar_o_lugar_locked(key)
             for key in vistos:
                 self._retomar_o_lugar_locked(key)
+            self._entradas_no_ultimo_tique = self._entradas
             for key, persistable in vivos:
                 if key not in self._ordem:
                     self._assign_locked(key, persistable)
@@ -1706,6 +1795,9 @@ class ControllerIdentityRegistry:
             if self._dirty:
                 self._save_locked()
                 self._dirty = False
+        if chegou_gente_nova:
+            # A mesa é uma só: o lugar guardado de um externo também cede.
+            self._soltar_os_lugares_dos_externos()
 
     def snapshot(self) -> dict[str, int]:
         """Cópia do mapa key→LUGAR NA FILA (presentes + ausentes). Leitura pura.
@@ -1850,15 +1942,21 @@ class ControllerIdentityRegistry:
 
         Devolve ``True`` quando algo mudou de lugar.
 
-        O-ASSENTO-GUARDADO-NAO-ANDA-01: e ele SOLTA o lugar guardado, porque o
-        clique dela escolhe entre os números de quem está ligado (os dois
-        registros — ver :meth:`soltar_os_lugares_guardados`). As recusas do
-        comando vêm antes desta chamada: gesto recusado não solta nada.
+        O-ASSENTO-GUARDADO-NAO-ANDA-01: o que ela vê tem o BURACO de quem
+        saiu dentro do prazo — o P3 continua 3 com o P2 fora —, então o lugar
+        guardado entra no alinhamento e NÃO se solta. Soltá-lo (a primeira
+        escrita desta sprint) fechava a fila no instante do clique, e a troca
+        saía sobre outra mesa: pedir o 3 para o P4 mandava o P3 para o 2, e
+        não para o 4 — contra a regra dela de 28/08, *"os dois trocam, os
+        outros não se mexem"* —, e o 4 que a aba oferecia era recusado como
+        fora da mesa. Conferência de 24/09/2026.
         """
-        self.soltar_os_lugares_guardados()
         with self._lock:
             antes = dict(self._ordem)
-            self._congelar_locked()
+            self._congelar_locked(
+                [k for k in self._connected if k in self._ordem]
+                + self._guardados_locked()
+            )
             if self._ordem == antes:
                 return False
             self._save_locked()
@@ -1910,7 +2008,10 @@ class ControllerIdentityRegistry:
 
         Ausente não é tocado (só os presentes entram na redistribuição), e o
         replug devolve a onda que a escolha deu — ``mark_disconnected``
-        preserva a marca de chegada de propósito (D2/R-15).
+        preserva a marca de chegada de propósito (D2/R-15). A exceção é o
+        LUGAR GUARDADO (O-ASSENTO-GUARDADO-NAO-ANDA-01): ele é parte da mesa
+        que ela vê, a troca pode ser com ele, e sem a onda junto a exibição o
+        poria de volta onde estava.
         """
         with self._lock:
             changed = False
@@ -1920,7 +2021,7 @@ class ControllerIdentityRegistry:
                     changed = True
             presentes = [
                 k
-                for k in self._connected
+                for k in [*self._connected, *self._guardados_locked()]
                 if k in self._ordem and k in self._chegada
             ]
             if len(presentes) >= 2:

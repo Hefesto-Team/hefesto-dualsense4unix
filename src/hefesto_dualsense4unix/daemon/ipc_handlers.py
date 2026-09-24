@@ -2124,14 +2124,14 @@ class IpcHandlersMixin:
                 raise _RenumberAuthorityChangedError()
 
             def _mesa_presente() -> list[tuple[int, int, str, Any]]:
-                """Os PRESENTES dos dois registros, ordenados por lugar."""
+                """Os ASSENTOS dos dois registros (ligados e guardados), por lugar."""
                 mesa: list[tuple[int, int, str, Any]] = []
                 for ordem_kind, registry in enumerate(
                     (identity_registry, external_registry)
                 ):
                     if registry is None:
                         continue
-                    conectados = IpcHandlersMixin._connected_keys(registry)
+                    conectados = _chaves_dos_assentos(registry)
                     mesa.extend(
                         (lugar, ordem_kind, key, registry)
                         for key, lugar in registry.snapshot().items()
@@ -2145,7 +2145,7 @@ class IpcHandlersMixin:
             # AS DUAS RECUSAS VÊM ANTES DE QUALQUER ESCRITA, e é de propósito:
             # nenhuma delas depende da ORDEM. "O alvo está na mesa?" é
             # pertinência e "o número cabe?" é contagem — e o alinhamento
-            # abaixo é uma permutação ENTRE OS PRESENTES, que não muda nem o
+            # abaixo é uma permutação ENTRE OS ASSENTOS, que não muda nem o
             # conjunto nem o tamanho. Validar aqui é o que mantém a promessa
             # da docstring: comando recusado não toca o `controllers.json`.
             #
@@ -2154,10 +2154,10 @@ class IpcHandlersMixin:
             # `numero_fora_da_mesa` E gravava o arquivo do zero — o arquivo
             # saía de INEXISTENTE para `{Blue: 1, Cosmic: 2}` numa chamada que
             # a casa acabara de recusar.
-            if not any(e[2] == alvo for e in presentes):
+            if not any(e[2] == alvo and _ligado(e) for e in presentes):
                 raise _NumeroAlvoAusenteError()
-            if numero > len(presentes):
-                raise _NumeroForaDaMesaError(len(presentes))
+            if _fora_da_mesa(presentes, numero):
+                raise _NumeroForaDaMesaError(sum(1 for e in presentes if _ligado(e)))
 
             # TROCA-DE-PLAYER-01: o plano é calculado sobre O QUE ELA VÊ. O
             # lugar GRAVADO e a FILA DO MOMENTO podem discordar (D-30 — quem
@@ -7895,6 +7895,63 @@ class IpcHandlersMixin:
             "alcance": {"tique": "nao_se_aplica" if nativo else "aplicado"},
             "ressalva": ressalva,
         }
+
+
+# ---------------------------------------------------------------------------
+# A MESA QUE ELA VÊ, para a troca do `identity.number.set`
+# (O-ASSENTO-GUARDADO-NAO-ANDA-01, conferência de 24/09/2026).
+#
+# MORAM AQUI EMBAIXO DE PROPÓSITO: o corpo do `_set_number_locked` mudou três
+# linhas no lugar, e nenhuma linha andou — mais de cem citações `arquivo:linha`
+# deste arquivo moram em planilhas e pacotes de outras frentes.
+# ---------------------------------------------------------------------------
+
+
+def _chaves_dos_assentos(registry: Any) -> set[str]:
+    """As chaves com ASSENTO na mesa de ``registry``: as ligadas e as guardadas.
+
+    TROCA-DE-PLAYER-01 já dizia que o plano é calculado sobre O QUE ELA VÊ, e
+    com um lugar guardado ela vê um buraco: o P2 fora, o P3 continua 3. Um
+    plano só com os ligados indexava ``numero - 1`` numa mesa fechada — pedir
+    o 3 para o P4 mandava o P3 para 2, e não para 4 —, e recusava o 4 que a
+    aba oferecia como troca. Com o assento guardado na lista, o índice É o
+    número da tela, e a troca é com quem tem o número pedido, mesmo que seja o
+    lugar de quem saiu.
+
+    O lugar guardado se lê pela API pública dos dois registros
+    (``lugares_da_mesa`` são os postos dos ligados e dos guardados). Registro
+    sem ela — dublê, versão anterior — fica com os ligados, que é a regra de
+    antes.
+    """
+    ligados = IpcHandlersMixin._connected_keys(registry)
+    lugares = getattr(registry, "lugares_da_mesa", None)
+    if not callable(lugares):
+        return ligados
+    try:
+        na_mesa = {int(r) for r in lugares()}
+        postos = registry.snapshot().items()
+    except Exception:
+        return ligados
+    return ligados | {str(k) for k, r in postos if r in na_mesa}
+
+
+def _ligado(entrada: tuple[int, int, str, Any]) -> bool:
+    """A entrada da mesa é de um controle LIGADO (e não de um lugar guardado)."""
+    return entrada[2] in IpcHandlersMixin._connected_keys(entrada[3])
+
+
+def _fora_da_mesa(mesa: list[tuple[int, int, str, Any]], numero: int) -> bool:
+    """O número pedido não cabe — a MESMA conta do botão cinza da aba 04.
+
+    A aba desenha o número como fora da mesa quando ele passa da quantidade de
+    ligados E ninguém ligado o tem (``a04_iluminacao.um_botao_de_player``). Um
+    número acima da conta que um ligado tem é troca; um que só um lugar
+    guardado tem, ou que ninguém tem, é recusa — o daemon e a tela dizem a
+    mesma coisa.
+    """
+    if numero <= sum(1 for e in mesa if _ligado(e)):
+        return False
+    return numero > len(mesa) or not _ligado(mesa[numero - 1])
 
 
 __all__ = ["DraftApplier", "IpcHandlersMixin"]
