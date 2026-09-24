@@ -2823,6 +2823,11 @@ def aplicar_o_movimento(
         hub = garantir()
         from hefesto_dualsense4unix.core import roteador_de_movimento as roteador
 
+        # A PEÇA DECIDE — A-MIRA-POR-MOVIMENTO-NA-TELA-01: o chip «Mira Virtual»
+        # de cada controle, por cima da mira do perfil. `None` = esta não mira.
+        arranjo = roteador.da_peca(getattr(daemon, "store", None), uniq, arranjo)
+        if arranjo is None:
+            return lx, ly, rx, ry
         # A DRENAGEM, ANTES DE TUDO. Ver o parágrafo do docstring.
         angulo = hub.angulo_do_movimento(uniq) if arranjo.quer_angulo else None
 

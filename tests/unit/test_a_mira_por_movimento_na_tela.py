@@ -564,3 +564,93 @@ def test_o_rascunho_grava_a_mira_da_peca_sem_apagar_o_resto() -> None:
     d = d.with_controller_movimento("aabbcc000003")
     assert d.controller_override("aabbcc000003") is None, (
         "os três `None` não devolveram a peça ao perfil")
+
+
+# ---------------------------------------------------------------------------
+# 4. O GANCHO DO TIQUE — cada jogador pergunta pela PRÓPRIA peça
+# ---------------------------------------------------------------------------
+#
+# `gamepad.aplicar_o_movimento` recebe o arranjo que o laço leu UMA vez por
+# tique (`ativo()`) e troca-o pelo da peça (`da_peca`) com o `uniq` na mão. Sem
+# essa troca, a mesa em que só o P3 mira (`SO_NAS_PECAS`, desligado) não move
+# ninguém, e a peça que APAGOU o chip mira pela mira do perfil.
+
+
+def _mesa_de_quatro_de_verdade(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, transporte: str,
+    perfil: Profile,
+) -> dict[str, _Vpad]:
+    """O `Daemon` real, o P1 pelo `dispatch_gamepad` e os P2 a P4 pelo co-op,
+    todos girando o controle igual; o perfil decide quem mira."""
+    giros = {_P1: _GIRO, _P2: _GIRO, _P3: _GIRO, _P4: _GIRO}
+    hub = _hub(giros)
+    daemon, servidor = _mesa_de_verdade(tmp_path, transporte, hub)
+    servidor.profile_manager.apply_movimento(perfil)
+    gerente = co.CoopManager(daemon)
+    vpads: dict[str, _Vpad] = {}
+    for n, uniq in enumerate((_P2, _P3, _P4), start=2):
+        vpads[uniq] = _Vpad()
+        gerente._players[uniq] = co._SecondaryPlayer(
+            identity=uniq,
+            evdev_path=f"/dev/input/event{n}",
+            reader=SimpleNamespace(
+                snapshot=lambda: SimpleNamespace(
+                    lx=128, ly=128, rx=128, ry=128, l2_raw=0, r2_raw=0,
+                    buttons_pressed=frozenset()),
+                grab_state="held",
+            ),
+            player_index=n,
+            vpad=vpads[uniq],
+        )
+    monkeypatch.setattr(gp, "_reconciliar_launch", lambda d: None)
+    monkeypatch.setattr(gp, "_avisar_troca_de_modo", lambda d: None)
+    vpads[_P1] = _Vpad()
+    daemon._gamepad_device = vpads[_P1]
+    for _ in range(2):  # a demanda abre o leitor; a segunda volta lê o giro
+        gp.dispatch_gamepad(daemon, _estado(transporte), frozenset())
+        gerente.forward_all()
+        hub.reconciliar()
+    return vpads
+
+
+def _quem_mirou(vpads: dict[str, _Vpad]) -> list[str]:
+    return sorted(u for u, v in vpads.items() if v.analog and v.analog[-1]["rx"] != 128)
+
+
+@pytest.mark.parametrize("transporte", ["usb", "bt"])
+def test_so_o_p3_acendeu_o_chip_e_so_o_p3_mira(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, transporte: str
+) -> None:
+    """O chip de UMA peça, num perfil sem mira: só ela mira, nos dois transportes.
+
+    MORDIDA: arranque as duas linhas do gancho em `aplicar_o_movimento` e este
+    teste reprova — a mesa recebe `SO_NAS_PECAS`, que é desligado, e o P3 fica
+    parado junto com todo mundo.
+    """
+    perfil = _perfil_com_miras(aabbcc000003={"destino": "analogico_direito"})
+    vpads = _mesa_de_quatro_de_verdade(monkeypatch, tmp_path, transporte, perfil)
+    assert _quem_mirou(vpads) == [_P3], (
+        f"com o chip aceso só no P3, miraram {_quem_mirou(vpads)}")
+
+
+def test_a_peca_que_apagou_o_chip_nao_mira_pela_mira_do_perfil(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Mira no PERFIL, e o P1 (o primário) e o P4 apagaram o chip: miram o P2 e
+    o P3, e os dois que apagaram ficam como estavam.
+
+    MORDIDA: arranque o gancho e este teste reprova — o P1 e o P4 mirariam pela
+    mira do perfil, contra o que ela escolheu no cartão deles.
+    """
+    from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
+
+    apagado = ControllerOverrides(movimento=ProfileMovimentoConfig(destino="nenhum"))
+    perfil = Profile(
+        name="mesa com mira",
+        match=MatchAny(type="any"),
+        movimento=ProfileMovimentoConfig(destino="analogico_direito"),
+        controllers={"aabbcc000001": apagado, "aabbcc000004": apagado},
+    )
+    vpads = _mesa_de_quatro_de_verdade(monkeypatch, tmp_path, "bt", perfil)
+    assert _quem_mirou(vpads) == [_P2, _P3], (
+        f"com o chip apagado no P1 e no P4, miraram {_quem_mirou(vpads)}")
