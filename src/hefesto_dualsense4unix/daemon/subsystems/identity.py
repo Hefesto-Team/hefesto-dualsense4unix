@@ -382,12 +382,12 @@ def prazo_do_lugar_guardado() -> float:
     fechava na hora, na tela, e nas lâmpadas no batimento seguinte. E o
     RELÓGIO também é um só, e anda na suspensão (:func:`relogio_do_lugar_guardado`).
 
-    **O jogo segue o lugar guardado.** O vpad de quem ficou não é recriado
-    (``coop.planejar_a_ordem`` só exige cartas em ordem, e um buraco continua
-    em ordem), e com o jogo aberto o SDL não renumera quem ficou. Com o P1 fora
-    e o jogo aberto, o vpad do P1 fica parado à espera dele e o P2 segue no
-    vpad 2 (O-ASSENTO-GUARDADO-NAO-ANDA-02, :meth:`o_lugar_espera`); sem jogo,
-    o backend passa o vpad do P1 ao próximo na hora, como sempre.
+    **O jogo segue o lugar guardado.** Dentro do prazo o buraco é o lugar de
+    quem saiu, ninguém está fora do boneco da própria carta e o co-op não recria
+    ninguém (``coop.planejar_a_ordem``); passado o prazo, quem ficou atrás renasce
+    no boneco do número novo (O-ASSENTO-GUARDADO-NAO-ANDA-03). Com o P1 fora e o
+    jogo aberto, o vpad do P1 fica parado à espera dele e o P2 segue no vpad 2
+    (O-ASSENTO-02, :meth:`o_lugar_espera`); sem jogo, o backend o passa na hora.
 
     Import tardio pela razão de sempre deste módulo: ele não carrega o backend
     (e o ``pydualsense``) só por ser importado.
