@@ -95,12 +95,14 @@ def test_sem_ninguem_no_cabo_e_no_op() -> None:
         "reafirmou sem ninguém no cabo — é escrita periódica disfarçada")
 
 
-def test_modo_nativo_nao_pinta_nada() -> None:
-    """Regra dela: no Modo Nativo o dono do LED é o jogo."""
+def test_modo_nativo_pinta_o_cabo_tambem() -> None:
+    """Era «no Modo Nativo o dono do LED é o jogo» — no-op. Caducou em
+    23/09/2026: `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`
+    (STEAM-NO-FISICO-01), a luz e o número são do Hefesto no Nativo."""
     b, nos = _backend_com({"p1": "usb"})
     b._output_mute = True
-    assert b.repintar_o_cabo_por_sysfs() == {}
-    assert nos["p1"].invalidado == 0
+    assert b.repintar_o_cabo_por_sysfs() != {}
+    assert nos["p1"].invalidado == 1
 
 
 class _Daemon(SimpleNamespace):

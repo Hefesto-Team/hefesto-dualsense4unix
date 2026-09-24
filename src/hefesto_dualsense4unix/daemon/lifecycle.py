@@ -5418,9 +5418,10 @@ class Daemon:
         # `launch_env`), então é aqui que se ARMA. Quem espera a sequência
         # sossegar e escreve é o `reconnect_loop`, com o MESMO debounce das
         # conexões — um só gatilho, uma só repintura por rajada.
-        # Sem gate próprio de Modo Nativo: o portão mora na escrita
-        # (`reescrever_lightbar_por_hidraw` é no-op sob `_output_mute`), que é
-        # o único lugar onde ele não pode ser esquecido.
+        # Sem gate de Modo Nativo, e nem na escrita desde 23/09/2026: a luz e o
+        # número são do Hefesto no Nativo também
+        # (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`), e o
+        # `reescrever_lightbar_por_hidraw` escreve sob o `_output_mute`.
         with contextlib.suppress(Exception):
             from hefesto_dualsense4unix.daemon.connection import (
                 armar_gatilho_da_cor_por_evento,

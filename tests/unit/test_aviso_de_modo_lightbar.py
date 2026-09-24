@@ -194,12 +194,20 @@ def test_um_controle_que_nao_obedece_nao_derruba_os_outros() -> None:
     assert node.escritas, "a falha de um controle calou o outro"
 
 
-def test_em_modo_nativo_a_piscada_e_no_op() -> None:
-    """Regra dela: no Modo Nativo o dono do aparelho é o jogo. Zero escrita."""
+def test_em_modo_nativo_a_piscada_tambem_sai() -> None:
+    """No Modo Nativo a barra é do Hefesto também — o aviso pinta.
+
+    Era «zero escrita» até 23/09/2026. A decisão dela
+    `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO` (STEAM-NO-FISICO-01)
+    revogou o «zero write» do Nativo para a luz e o número; e o par que devolve
+    a cor depois da piscada (`restaurar_lightbar_do_perfil`) ficava mudo sob o
+    mute, deixando a barra na cor do aviso.
+    """
     inst, _cabo, radio, node = _backend_com_dois()
     inst._output_mute = True
-    assert inst.pintar_lightbar_sem_lembrar((1, 2, 3)) == 0
-    assert not node.escritas and not radio.reports
+    assert inst.pintar_lightbar_sem_lembrar((1, 2, 3)) == 2
+    assert node.escritas and radio.reports
+    assert inst.restaurar_lightbar_do_perfil() == 2
 
 
 # --- 2. modo vigente --------------------------------------------------------

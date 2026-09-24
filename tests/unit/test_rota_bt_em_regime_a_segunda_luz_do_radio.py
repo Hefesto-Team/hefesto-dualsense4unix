@@ -191,7 +191,6 @@ def test_o_perfil_e_o_hotplug_tambem_usam_a_segunda_rota() -> None:
     backend._write_partial_output(
         handle,
         None,
-        False,
         _DesiredOutput(led=(0, 255, 0), player_leds=(True, False, False, False, True)),
         what="teste_perfil",
     )
@@ -217,17 +216,27 @@ def test_pelo_cabo_nada_sai_porque_pelo_cabo_a_barra_obedece() -> None:
     assert handle.reports == [], "escreveu no cabo, onde não há defeito"
 
 
-def test_modo_nativo_nao_escreve_nada() -> None:
-    """*"no modo nativo devolvemos o controle pra steam"* — regra dela, literal."""
+def test_modo_nativo_escreve_a_luz_pelo_radio() -> None:
+    """Era *"no modo nativo devolvemos o controle pra steam"* — zero escrita.
+
+    Caducou em 23/09/2026 para a luz e o número: decisão dela
+    `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO` (STEAM-NO-FISICO-01),
+    *"no Modo Nativo, o Hefesto escreve a barra e o número SEMPRE"*. O report
+    é o mesmo estreito de sempre — sem vibração, sem gatilho, sem áudio.
+    """
     handle = _Handle("bt")
     backend = _backend({"aa:bb": handle}, mute=True)
 
     backend.set_led((255, 0, 255))
     backend._write_partial_output(
-        handle, None, True, _DesiredOutput(led=(1, 2, 3)), what="teste_mudo"
+        handle, None, _DesiredOutput(led=(1, 2, 3)), what="teste_mudo"
     )
 
-    assert handle.reports == [], "pisou no hidraw do jogo em Modo Nativo"
+    assert len(handle.reports) == 2
+    assert [(r[POS_R], r[POS_G], r[POS_B]) for r in handle.reports] == [
+        (255, 0, 255),
+        (1, 2, 3),
+    ]
 
 
 def test_o_report_nao_carrega_o_0x08_nem_o_setup_da_lightbar() -> None:

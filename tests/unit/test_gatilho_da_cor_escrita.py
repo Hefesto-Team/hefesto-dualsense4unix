@@ -239,21 +239,22 @@ def test_sem_cor_resolvida_usa_o_azul_default_do_kernel() -> None:
     assert (report[POS_R], report[POS_G], report[POS_B]) == KERNEL_DEFAULT_BLUE
 
 
-def test_em_modo_nativo_nao_escreve_nada() -> None:
-    """O PORTÃO. Regra dela, e ela vale para os dois modos com o mesmo nome interno.
+def test_em_modo_nativo_escreve_a_barra_e_o_numero() -> None:
+    """O portão do Modo Nativo SAIU daqui em 23/09/2026.
 
-    *"no modo nativo devolvemos o controle pra steam e no modo conexão também,
-    todo o resto é o hefesto"*. "Modo Nativo" e "Conexão Nativa (Sony)" são a
-    MESMA coisa por dentro (`FEAT-NATIVE-MODE-01`; o segundo é o rótulo que ela
-    escolheu para a tela), e os dois chegam aqui como `_output_mute`.
+    Até então valia a regra *"no modo nativo devolvemos o controle pra steam e
+    no modo conexão também, todo o resto é o hefesto"*, e o gatilho era no-op
+    sob `_output_mute`. A decisão dela
+    `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO` (STEAM-NO-FISICO-01) a
+    revogou SÓ para a luz e o número — e este report só carrega os dois.
     """
     handle = _Handle("bt")
     backend = _backend({"aa:bb": handle}, mute=True)
 
     resultado = backend.reescrever_lightbar_por_hidraw()
 
-    assert resultado == {}
-    assert handle.reports == [], "escreveu por baixo do jogo em Modo Nativo"
+    assert resultado == {"aa:bb": True}
+    assert len(handle.reports) == 1
 
 
 def test_o_instrumento_de_isolar_players_tira_o_numero_e_mantem_a_cor() -> None:

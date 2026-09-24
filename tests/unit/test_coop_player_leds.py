@@ -458,24 +458,25 @@ def test_revert_single_com_identidade_path_nao_escreve(
     assert chamadas == []  # nem consultou o sysfs — identidade sem MAC é ignorada
 
 
-def test_revert_em_modo_nativo_respeita_output_mute(
+def test_revert_em_modo_nativo_devolve_o_numero_na_hora(
     patched: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """D12: mutado (Modo Nativo), o revert NÃO escreve LED nenhum via sysfs —
-    o estado desejado fica no backend e o unmute re-aplica o resolvido."""
+    """No Modo Nativo o revert escreve o número resolvido de cada controle.
+
+    Era o D12 ao contrário («mutado, o revert não escreve nada e o unmute
+    re-aplica»). Caducou em 23/09/2026 com a decisão dela
+    `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO` (STEAM-NO-FISICO-01):
+    o número é do Hefesto no Nativo também, e o controle que saía do co-op
+    ficava mostrando o desenho do co-op até o desmute."""
     nodes, backend, daemon = _cenario_com_override(monkeypatch)
     mgr = CoopManager(daemon)
     mgr.sync()
 
     backend.set_output_mute(True)
-    escritas_1 = len(nodes[MAC1].patterns)
-    escritas_2 = len(nodes[MAC2].patterns)
     daemon.config.coop_enabled = False
-    mgr.sync()  # disable → reverts com o gate do mute
+    mgr.sync()  # disable → revert, agora sem o gate do mute
 
-    assert len(nodes[MAC1].patterns) == escritas_1
-    assert len(nodes[MAC2].patterns) == escritas_2
-    # O override segue guardado para o unmute restaurar.
+    assert nodes[MAC2].patterns[-1] == OVERRIDE_BITS
     assert backend._desired_by_uniq[MAC2].player_leds == OVERRIDE_BITS
 
 

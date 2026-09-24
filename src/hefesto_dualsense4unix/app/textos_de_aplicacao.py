@@ -319,6 +319,7 @@ def frase_do_desfecho(
     host: object,
     *,
     coop_aplica: bool = False,
+    nativo_aplica: bool = True,
 ) -> str:
     """A frase de um gesto de aplicação, com o CORPO do daemon como autoridade.
 
@@ -357,7 +358,16 @@ def frase_do_desfecho(
     ``True``. Ignorar isso atribuiria ao co-op uma recusa que é do Modo Nativo
     ou do alvo fora da mesa, num assunto que o co-op nunca governou — o mesmo
     defeito de frase errada, só que com a palavra certa por engano.
+
+    ``nativo_aplica`` é o irmão do de cima, e nasceu da decisão dela de
+    23/09/2026 (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`,
+    STEAM-NO-FISICO-01): no Modo Nativo o Hefesto escreve a barra e o número
+    SEMPRE. O Modo Nativo segue governando gatilho, vibração e áudio — o
+    padrão ``True`` —, e quem fala da LUZ ou do NÚMERO passa ``False``: pôr
+    *"em Modo Nativo quem manda no controle é o jogo"* num gesto de cor seria
+    dar como pendência o que já saiu no fio.
     """
+    nativo = nativo_aplica and modo_nativo_manda_no_output(host)
     if isinstance(corpo, dict):
         motivo = corpo.get("motivo")
         if isinstance(motivo, str) and motivo:
@@ -383,7 +393,7 @@ def frase_do_desfecho(
                     assunto,
                     alvo_ausente=alvo_fora_da_mesa(host),
                     coop=coop_aplica and coop_manda_nas_luzes(host),
-                    nativo=modo_nativo_manda_no_output(host),
+                    nativo=nativo,
                 )
                 or f"{assunto} — {GUARDADO}"
             )
@@ -391,15 +401,16 @@ def frase_do_desfecho(
         # diz o PORQUÊ apenas quando a janela o conhece — a mesma ordem do
         # ramo 4, e pela mesma razão. O daemon colapsa cinco caminhos neste
         # par vazio; a janela enxerga dois deles e cala sobre os outros três.
-        if modo_nativo_manda_no_output(host):
+        if nativo:
             return f"{assunto} — {NADA_ACONTECEU_NATIVO}"
         if mesa_vazia(host):
             return f"{assunto} — {NADA_ACONTECEU_MESA_VAZIA}"
         return f"{assunto} — {NADA_ACONTECEU}"
     # Corpo ausente: a heurística de hoje é o que sobra, porque não há
     # resposta do daemon a ler. Mesma ordem de sempre — o dono de AGORA
-    # (Modo Nativo, depois co-op quando aplica) antes da ausência do alvo.
-    if modo_nativo_manda_no_output(host):
+    # (Modo Nativo quando aplica, depois co-op quando aplica) antes da
+    # ausência do alvo.
+    if nativo:
         return guardado_ate_o_nativo_sair(assunto)
     if coop_aplica and coop_manda_nas_luzes(host):
         return guardado_ate_o_coop_sair(assunto)

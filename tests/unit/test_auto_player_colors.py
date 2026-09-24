@@ -312,11 +312,16 @@ class TestHotplugPintaCorDoSlot:
         assert node1.colors[-1] == AZUL
         assert node2.colors[-1] == VERMELHO
 
-    def test_mutado_nao_escreve_cor_auto_no_no(
+    def test_mutado_escreve_a_cor_auto_no_no(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """D12: em Modo Nativo o reassert de nó novo NÃO toca o hardware —
-        o gate existente cobre a camada automática também."""
+        """No Modo Nativo o nó novo recebe a cor da camada automática também.
+
+        Era o D12 ao contrário («mutado, nada escrito»). Caducou em 23/09/2026
+        pela decisão dela `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`
+        (STEAM-NO-FISICO-01): *"no Modo Nativo, o Hefesto escreve a barra e o
+        número SEMPRE"* — o controle que conectava no meio do jogo nascia
+        apagado até o desmute."""
         from hefesto_dualsense4unix.core import sysfs_leds
 
         inst, _h1, _h2 = _backend_com_dois()
@@ -327,12 +332,13 @@ class TestHotplugPintaCorDoSlot:
         node = _FakeLedNode()
         monkeypatch.setattr(sysfs_leds, "discover", lambda: {UNIQ_1: node})
         inst._refresh_sysfs_leds()
-        assert node.colors == []  # nada escrito mutado
-        assert node.patterns == []
+        assert node.colors == [AZUL]
 
-    def test_reapply_mutado_nao_escreve_no_no_sysfs(self) -> None:
-        """D12 no hotplug: com mute, o nó sysfs do controle não recebe a cor
-        automática (o estado interno do handle fica coerente p/ o unmute)."""
+    def test_reapply_mutado_escreve_no_no_sysfs(self) -> None:
+        """No hotplug em Modo Nativo o nó sysfs recebe a cor automática.
+
+        O D12 dizia o contrário; caducou com a
+        `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO` (23/09/2026)."""
         inst, _h1, h2 = _backend_com_dois()
         inst.set_auto_output_provider(
             _provider_fixo({UNIQ_2: _DesiredOutput(led=VERMELHO)})
@@ -341,7 +347,7 @@ class TestHotplugPintaCorDoSlot:
         inst._sysfs = {KEY_2: node}
         inst.set_output_mute(True)
         inst._reapply_desired(KEY_2, h2)
-        assert node.colors == []  # rota sysfs gateada pelo mute
+        assert node.colors == [VERMELHO]
 
     def test_unmute_reasserta_a_cor_auto(self) -> None:
         """Sair do Modo Nativo re-aplica o resolvido POR-KEY (com a camada
@@ -675,12 +681,14 @@ class TestAtivacaoReassertaResolvido:
         assert n1.colors[-1] == (129, 61, 156)
         assert n2.colors[-1] == (129, 61, 156)
 
-    def test_reassert_e_no_op_em_modo_nativo(self) -> None:
+    def test_reassert_escreve_em_modo_nativo(self) -> None:
+        """Era no-op sob o mute (D12); desde 23/09/2026 a luz e o número são do
+        Hefesto no Nativo (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`)."""
         inst, n1, _n2 = self._backend_com_nos()
         inst._output_mute = True
         antes = list(n1.colors)
         inst.reassert_resolved_outputs()
-        assert n1.colors == antes  # D12: mutado, o jogo é dono do LED
+        assert len(n1.colors) == len(antes) + 1
 
     def test_apply_draft_chama_o_reassert(self) -> None:
         """O caminho do "Aplicar" da GUI converge o físico ao resolvido."""
