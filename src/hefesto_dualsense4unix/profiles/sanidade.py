@@ -92,8 +92,7 @@ VOCABULARIO_GENERICO: frozenset[str] = frozenset(
         "filme",
         "musica",  # (noqa-acento): slug, sempre ASCII
         "meu_perfil",  # nome antigo do padrão, ainda vivo em disco velho
-        "personalizado",  # o nome do padrão de 05/09 a 24/09/2026
-        "freestyle",  # o padrão desde 24/09/2026 (O-MODO-FREESTYLE-02)
+        "personalizado", "freestyle",  # o padrão de 05/09 a 24/09, e o de hoje
         "perfil_padrao",
         "teste",
     }
