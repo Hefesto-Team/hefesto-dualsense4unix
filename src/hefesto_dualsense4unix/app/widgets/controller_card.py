@@ -1280,19 +1280,19 @@ def texto_motion(entry: dict[str, Any], state_global: dict[str, Any]) -> str | N
     janela daquele controle (`virtual_motion.REGISTRO.filtrar`), e o
     `motion_streaming` segue ligado pelo acelerômetro: «fluindo para o jogo»
     seria fato errado, e a linha some. Sem o bloco, ninguém leu, e a linha
-    segue a telemetria. O Nativo e a máscara Xbox vêm antes: as duas frases
-    continuam verdadeiras com a Mira acesa e com o Giroscópio desligado (no
-    Nativo o jogo lê o `hidraw` do físico, e o interruptor não o alcança).
+    segue a telemetria. O Nativo vem antes (o jogo lê o `hidraw` do físico, e o
+    interruptor não o alcança); a Xbox, entre os dois: com o Giroscópio desligado
+    o «no Hefesto ele segue ativo» dela contradiria o chip na mesma linha.
     """
     if bool(state_global.get("native_mode")):
         return f"Giroscópio: {_FRASE_NATIVO}"
+    sensores = entry.get("sensores")
+    if isinstance(sensores, dict) and sensores.get("giroscopio_ligado") is False:
+        return None
     if _mascara_e_xbox(state_global, entry):
         return f"Giroscópio: {_FRASE_MASCARA_XBOX['giroscopio']}"
     mira = entry.get("mira")
     if isinstance(mira, dict) and mira.get("ligada") is True:
-        return None
-    sensores = entry.get("sensores")
-    if isinstance(sensores, dict) and sensores.get("giroscopio_ligado") is False:
         return None
     rumble_ff = state_global.get("rumble_ff")
     per_vpad = rumble_ff.get("per_vpad") if isinstance(rumble_ff, dict) else None
