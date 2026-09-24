@@ -91,8 +91,8 @@ def test_o_gesto_ouve_click_porque_um_botao_nao_emite_change() -> None:
 
 
 @pytest.mark.skipif(not CHROME.exists(), reason="sem o Chrome do sistema")
-@pytest.mark.parametrize("pagina", [PAGINA, DESENHO], ids=["publicada", "desenho"])
-def test_a_pilula_acende_apaga_e_nao_afirma_sobre_o_travessao(pagina: pathlib.Path) -> None:
+@pytest.mark.parametrize("arquivo", [PAGINA, DESENHO], ids=["publicada", "desenho"])
+def test_a_pilula_acende_apaga_e_nao_afirma_sobre_o_travessao(arquivo: pathlib.Path) -> None:
     """Os TRÊS estados na página publicada e no desenho, lidos do CSS calculado."""
     from playwright.sync_api import sync_playwright
 
@@ -103,7 +103,7 @@ def test_a_pilula_acende_apaga_e_nao_afirma_sobre_o_travessao(pagina: pathlib.Pa
         nav = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"])
         try:
             pg = nav.new_page(viewport={"width": 1180, "height": 780})
-            pg.goto(pagina.as_uri())
+            pg.goto(arquivo.as_uri())
             pg.add_style_tag(content=FOLHA_DA_CASA)
             pg.evaluate("window.__recebido=[];window.webkit={messageHandlers:"
                         "{hefesto:{postMessage:function(s){window.__recebido.push(s)}}}};")

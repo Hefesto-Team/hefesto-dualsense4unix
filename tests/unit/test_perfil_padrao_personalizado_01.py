@@ -303,7 +303,7 @@ def test_maquina_nova_recebe_o_preset_de_fabrica(disco: Path, tmp_path: Path) ->
 
     NOTA DATADA — 24/09/2026. Aqui moravam dois casos: este, que valia
     "enquanto a saída do Personalizado espera a sessão dela", e o par dele, que
-    media a máquina nova SEM o preset. A decisão por delegação dela
+    conferia a máquina nova SEM o preset. A decisão por delegação dela
     (`D-2409-O-PERFIL-DE-FORA-DO-JOGO-VIRA-FREESTYLE`) trocou a saída pela
     renomeação: o perfil de fora do jogo FICA e se chama «Freestyle», e a
     máquina nova volta a recebê-lo sempre. O par saiu com a espera.
