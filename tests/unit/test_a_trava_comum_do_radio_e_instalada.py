@@ -133,7 +133,12 @@ def test_o_asset_diz_o_que_a_sprint_pediu() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _doctor(tmp_path: Path, conf: Path, pasta: Path) -> str:
+def _doctor(tmp_path: Path, conf: Path, pasta: Path, *, com_motor_root: bool = True) -> str:
+    # O motor root (watchdog, drop-in do bluetoothd, ponte) é desviado para o
+    # berço: a régua não depende do /etc de quem a roda.
+    motor = tmp_path / "motor-root"
+    if com_motor_root:
+        motor.write_text("", encoding="utf-8")
     r = subprocess.run(
         [BASH, "-c", f'source "{DOCTOR}"; check_trava_do_radio'],
         capture_output=True,
@@ -145,6 +150,7 @@ def _doctor(tmp_path: Path, conf: Path, pasta: Path) -> str:
             "HOME": str(tmp_path),
             "HEFESTO_DOCTOR_TRAVA_CONF": str(conf),
             "HEFESTO_DOCTOR_TRAVA_DIR": str(pasta),
+            "HEFESTO_DOCTOR_TRAVA_MOTORES": f"{tmp_path / 'nao-ha'}:{motor}",
         },
     )
     return r.stdout + r.stderr
@@ -154,6 +160,16 @@ class TestODoctor:
     def test_sem_o_tmpfiles_avisa_que_nao_esta_instalada(self, tmp_path: Path) -> None:
         saida = _doctor(tmp_path, tmp_path / "nao-existe.conf", tmp_path / "run")
         assert "[WARN] a trava comum do rádio não está instalada" in saida, saida
+
+    def test_sem_motor_root_a_falta_da_trava_nao_e_aviso(self, tmp_path: Path) -> None:
+        """Pacote ou `--no-udev`: sem watchdog, drop-in nem ponte, a trava da
+        sessão basta (P-2.9), e mandar «atualizar» era mandar repetir o que não
+        entrega. MORDIDA: tirar o ramo `com_motor` volta o WARN."""
+        saida = _doctor(
+            tmp_path, tmp_path / "nao-existe.conf", tmp_path / "run", com_motor_root=False
+        )
+        assert "[WARN]" not in saida, saida
+        assert "sem motor root que a dispute" in saida, saida
 
     def test_pasta_gravavel_pela_sessao_e_falha(self, tmp_path: Path) -> None:
         conf = tmp_path / "radio.conf"
