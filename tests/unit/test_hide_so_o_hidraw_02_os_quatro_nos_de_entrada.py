@@ -895,6 +895,18 @@ class TestOReinicioPedidoNaoAbre:
         assert "/dev/hidraw3" not in ops.fechados
         assert ops.aberta("hidraw3")
 
+    def test_o_broker_que_para_abre_as_entradas_do_no_so_exposto(self) -> None:
+        """O nó que a conexão só EXPÔS (o `with` transitório do handle) tem o
+        hidraw aberto e as entradas fechadas. O broker que para de verdade
+        abre as entradas dele também. A MORDIDA (conferência): tire o laço dos
+        `expostos` do `restore_everything` e elas ficam fechadas sem broker."""
+        st, ops, _ = _estado(no_nasce_fechado=True, reinicio_sem_abrir=lambda: False)
+        _pede(st, 1, {"cmd": "expose", "node": "/dev/hidraw3"})
+        assert not ops.aberta("hidraw3")
+
+        st.restore_everything()
+        assert ops.aberta("hidraw3")
+
     def test_no_mundo_historico_o_pedido_nao_muda_nada(self) -> None:
         """Sem a cura instalada o nó nasce aberto, e abrir ao parar é só
         voltar ao estado de nascimento."""
