@@ -274,6 +274,11 @@ class TestPlayerPorControle:
         # Calibrar, pela mesma pergunta que o tique faz. Aqui ela nasce
         # DESLIGADA, com os números padrão do motor — a mira é arranjo, e
         # arranjo não se liga sem o gesto dela.
+        #
+        # NOTA DATADA — 24/09/2026 (A-MIRA-POR-MOVIMENTO-NA-TELA-02). Entraram
+        # `gatilho` e os dois `inverter_*`: o «Só enquanto eu segurar» e os
+        # «Inverter» que ela mandou pôr na tela. Nascem desligados — sem botão
+        # (a mira anda sempre) e sem inversão.
         assert result["controllers"] == [
             {"index": 0, "connected": True, "transport": "usb",
              "is_primary": True, "uniq": "aabbcc001100", "player": None,
@@ -286,7 +291,9 @@ class TestPlayerPorControle:
              "adaptador": None, "hz_movimento": None, "hz_voz": None,
              "ponte_do_radio": None,
              "mira": {"ligada": False, "destino": "nenhum",
-                      "sensibilidade": 6, "zona_morta_graus_s": 3.0}},
+                      "sensibilidade": 6, "zona_morta_graus_s": 3.0,
+                      "gatilho": None, "inverter_horizontal": False,
+                      "inverter_vertical": False}},
         ]
 
     @pytest.mark.asyncio

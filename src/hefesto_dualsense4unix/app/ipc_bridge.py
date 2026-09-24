@@ -1588,15 +1588,24 @@ def mira_set_detalhado(
     sensibilidade: int | None = None,
     zona_morta_graus_s: float | None = None,
     uniq: str | None = None,
+    gatilho: str | None = None,
+    inverter_horizontal: bool | None = None,
+    inverter_vertical: bool | None = None,
 ) -> dict[str, Any] | None:
-    """``mira.set`` com a RESPOSTA inteira — o chip «Mira Virtual» e os deslizantes.
+    """``mira.set`` com a RESPOSTA inteira — o chip «Mira Virtual» e a Calibrar.
 
     A-MIRA-POR-MOVIMENTO-NA-TELA-01 (24/09/2026). Campo ``None`` **não é
     enviado**, e por isso não mexe naquele campo — o mesmo contrato do
     ``sensor_set_detalhado``: mexer no deslizante do tremor não pode acender ou
     apagar o chip pelas costas dela. O corpo traz ``status``, o que passou a
-    valer (``ligada``, ``sensibilidade``, ``zona_morta_graus_s``), ``gravado``
-    e ``alcance``. ``None`` = daemon não respondeu, ou nada foi pedido.
+    valer (``ligada``, ``sensibilidade``, ``zona_morta_graus_s``, ``gatilho``,
+    ``inverter_*``), ``gravado`` e ``alcance``. ``None`` = daemon não
+    respondeu, ou nada foi pedido.
+
+    O ``gatilho`` e os dois ``inverter_*`` entraram na
+    A-MIRA-POR-MOVIMENTO-NA-TELA-02. **O ``gatilho`` vazio (``""``) É ENVIADO**,
+    como ``null``: é a opção «Sempre» da lista, e é a única forma de a peça
+    voltar a mirar sem botão — ``None`` continua sendo *"não mexe"*.
     """
     payload: dict[str, Any] = {}
     if ligada is not None:
@@ -1605,6 +1614,12 @@ def mira_set_detalhado(
         payload["sensibilidade"] = int(sensibilidade)
     if zona_morta_graus_s is not None:
         payload["zona_morta_graus_s"] = float(zona_morta_graus_s)
+    if gatilho is not None:
+        payload["gatilho"] = gatilho or None
+    if inverter_horizontal is not None:
+        payload["inverter_horizontal"] = bool(inverter_horizontal)
+    if inverter_vertical is not None:
+        payload["inverter_vertical"] = bool(inverter_vertical)
     if not payload:
         return None
     if uniq:

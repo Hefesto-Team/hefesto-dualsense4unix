@@ -849,11 +849,16 @@ def test_a_tela_nao_liga_a_mira_sozinha(perfis: Path, tmp_path: Path) -> None:
 
 
 def test_o_ps_nunca_vira_gatilho_pela_tela(perfis: Path, tmp_path: Path) -> None:
-    """A tela oferece o chip e os dois deslizantes, e o IPC não abre a porta
-    que a tela não tem: `gatilho` é recusado — e com ele o PS, que é a saída de
-    emergência dela.
+    """O PS é a saída de emergência dela, e nenhum pedido da tela o torna
+    gatilho da mira.
 
-    MORDIDA: aceite qualquer chave no `mira.set` e este teste reprova.
+    FATO SUBSTITUÍDO EM 24/09/2026 (A-MIRA-POR-MOVIMENTO-NA-TELA-02): aqui o
+    `gatilho` inteiro era recusado, porque a tela não o tinha. Ela mandou o
+    «Só enquanto eu segurar» entrar (`D-2409-SEGURAR-E-INVERTER-ENTRAM-NA-TELA`),
+    o `mira.set` passou a aceitá-lo, e quem recusa o PS agora é o esquema.
+
+    MORDIDA: tire o validador de `ProfileMovimentoConfig.gatilho` e este teste
+    reprova.
     """
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
@@ -921,11 +926,19 @@ def test_o_deslizante_da_peca_calada_segue_a_mira_do_perfil(
 def test_em_modo_nativo_a_resposta_diz_o_que_nao_alcanca(
     perfis: Path, tmp_path: Path
 ) -> None:
-    """Sem gamepad virtual não há onde a mira escreva — a RESPOSTA diz, e a
-    escolha fica guardada. A tela não confessa (ordem dela, 07/09)."""
+    """Sem gamepad virtual não há onde a mira escreva — a RESPOSTA diz. A tela
+    não confessa (ordem dela, 07/09).
+
+    FATO SUBSTITUÍDO EM 24/09/2026 (A-MIRA-POR-MOVIMENTO-NA-TELA-02): aqui o
+    CHIP gravava no Nativo e a resposta avisava. Ela escolheu o contrário —
+    *"fica cinza no Nativo, sem gravar"* (`D-2409-NO-NATIVO-A-MIRA-FICA-CINZA`)
+    —, e a recusa do chip é medida em `test_a_mira_02_as_respostas_dela.py`. O
+    que continua gravando no Nativo é o ajuste da Calibrar, e é ele que esta
+    régua pede.
+    """
     servidor = _servidor_com_perfil(tmp_path)
     servidor.daemon._native_mode = True
-    corpo = _mira_set(servidor, uniq=_P3, ligada=True)
+    corpo = _mira_set(servidor, uniq=_P3, sensibilidade=8)
     assert corpo["alcance"] == {"tique": "nao_se_aplica"}
     assert "Nativo" in (corpo["ressalva"] or "")
     assert corpo["gravado"] is True

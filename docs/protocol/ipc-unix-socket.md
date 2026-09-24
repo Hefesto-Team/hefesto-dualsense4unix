@@ -95,7 +95,7 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `plugin.reload` | `daemon/ipc_handlers.py:7299` (`_handle_plugin_reload`) | Recarrega plugins do disco (FEAT-PLUGIN-01). | **não** |
 | `radio.ponte.ligar_aqui` | `daemon/ipc_handlers.py:7554` (`_handle_radio_ponte_ligar_aqui`) | «Ligar aqui»: a ponte deste controle sobe além do limite do adaptador. | **não** |
 | `radio.mover` | `daemon/ipc_handlers.py:7596` (`_handle_radio_mover`) | «Mover» um aparelho para um adaptador, ou o «Conectar» (D8). | sim |
-| `mira.set` | `daemon/ipc_handlers.py:7675` (`_handle_mira_set`) | `mira.set` — o chip «Mira Virtual» e os dois deslizantes, POR CONTROLE. | sim |
+| `mira.set` | `daemon/ipc_handlers.py:7683` (`_handle_mira_set`) | `mira.set` — o chip «Mira Virtual» e os ajustes da Calibrar, POR CONTROLE. | sim |
 
 <!-- FIM DO BLOCO GERADO -->
 
@@ -536,28 +536,34 @@ Acelerômetro, no cartão de cada controle — o movimento do controle vira o
 
 | Método     | Parâmetros                                                                 | Retorno                                                                                    |
 |------------|----------------------------------------------------------------------------|--------------------------------------------------------------------------------------------|
-| `mira.set` | `{uniq?: str, ligada?: bool, sensibilidade?: 1-12, zona_morta_graus_s?: 0-60}` | `{status, uniq, perfil, gravado, ligada, sensibilidade, zona_morta_graus_s, alcance, ressalva}` |
+| `mira.set` | `{uniq?: str, ligada?: bool, sensibilidade?: 1-12, zona_morta_graus_s?: 0-60, gatilho?: str \| null, inverter_horizontal?: bool, inverter_vertical?: bool}` | `{status, uniq, perfil, gravado, ligada, sensibilidade, zona_morta_graus_s, gatilho, inverter_horizontal, inverter_vertical, alcance, ressalva}` |
 
 `ligada: true` grava o destino `analogico_direito` na peça, e `false` grava
 `nenhum` — com opinião: a peça que apagou o chip não mira nem pela mira do
 perfil. `sensibilidade` e `zona_morta_graus_s` são os dois deslizantes da tela
-Calibrar sensores («O quanto um gesto anda» e «Ignorar tremor até»). **Campo
-omitido não mexe naquele campo**, e qualquer outra chave é recusada: o resto do
-arranjo (gatilho, inverter, eixo, teto) mora no perfil, e o IPC não abre uma
-porta que a tela não tem. Sem `uniq` vale o alvo de saída e, sem ele, o
-primário.
+Calibrar sensores («O quanto um gesto anda» e «Ignorar tremor até»); `gatilho`
+é o «Só enquanto eu segurar» (um botão de `REMAPEAVEIS`, ou `null` para a mira
+andar sempre — o PS é recusado), e `inverter_horizontal`/`inverter_vertical`
+são os dois «Inverter» (A-MIRA-POR-MOVIMENTO-NA-TELA-02). **Campo omitido não
+mexe naquele campo**, e qualquer outra chave é recusada: o resto do arranjo
+(eixo, teto, pixels por grau) mora no perfil, e o IPC não abre uma porta que a
+tela não tem. Sem `uniq` vale o alvo de saída e, sem ele, o primário.
 
 As duas escritas, na ordem: o **perfil** (`controllers[uniq].movimento`, só os
 campos escritos — nada mudou = `gravado: false`) e o **vivo** (o mapa por peça
 do `store`, que o tique pergunta com o `uniq` de cada jogador, e o filtro do
 report, que tira o giroscópio nativo da janela de quem mira — a câmera não anda
-em dobro no caminho Virtual). `alcance.tique` é `"nao_se_aplica"` em Modo Nativo,
-onde não há gamepad virtual onde a mira escreva, e a `ressalva` diz isso; a
-escolha fica guardada. `status` pode ser `"ok"`, `"sem_controle"` ou
-`"sem_endereco"`, os dois últimos com `motivo`.
+em dobro no caminho Virtual). **Em Modo Nativo o pedido com `ligada` é
+recusado inteiro**, sem escrita nenhuma, com `status: "nativo"` — palavra dela
+de 24/09/2026 (`D-2409-NO-NATIVO-A-MIRA-FICA-CINZA`): no Nativo o chip fica
+cinza e não grava. Os ajustes sem `ligada` gravam também no Nativo, com
+`alcance.tique = "nao_se_aplica"` e a `ressalva` dizendo que valem quando o
+modo voltar. `status` pode ser `"ok"`, `"nativo"`, `"sem_controle"` ou
+`"sem_endereco"`, os três últimos com `motivo`.
 
 **A leitura de volta é o `state_full`**: cada controle traz `mira: {ligada,
-destino, sensibilidade, zona_morta_graus_s}` — o que vale AGORA para aquela peça,
+destino, sensibilidade, zona_morta_graus_s, gatilho, inverter_horizontal,
+inverter_vertical}` — o que vale AGORA para aquela peça,
 pela mesma pergunta que o tique faz (`roteador_de_movimento.da_peca`), e os
 números mesmo com a mira apagada.
 
