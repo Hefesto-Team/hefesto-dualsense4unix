@@ -754,3 +754,51 @@ def test_a_dica_segue_o_destino_que_o_daemon_publica(
     """
     dicas = _dicas(monkeypatch, _VIRTUAL, {3: {"ligada": True, "destino": destino}})
     assert dicas == {3: esperada}
+
+
+# ---------------------------------------------------------------------------
+# 8. A DICA DO JOGADOR PROMETE O QUE A VIGIA CUMPRE — aba 04
+# ---------------------------------------------------------------------------
+def _dica_do_jogador() -> str:
+    """O texto da dica do rótulo «Jogador» na bancada da 04, sem comentário."""
+    import re
+
+    pagina = (_RAIZ / "mockup" / "04-iluminacao.html").read_text(encoding="utf-8")
+    bloco = pagina.split('<div class="sec-rot">Jogador', 1)[1]
+    bloco = bloco.split('<span class="dica">', 1)[1].split("</span></span>", 1)[0]
+    bloco = re.sub(r"<!--.*?-->", "", bloco, flags=re.S)
+    return " ".join(re.sub(r"<[^>]+>", " ", bloco).split())
+
+
+def test_a_dica_do_jogador_nao_diz_que_o_jogo_manda_no_numero() -> None:
+    """MORDIDA: devolva «Um jogo em co-op pode mandar o próprio número por
+    cima.» ao `aba04.py`, regere a bancada, e reprova.
+
+    A STEAM-NO-FISICO-01 recusa o número que o jogo manda ao controle virtual
+    (`numeracao_do_jogo`) e reescreve em até um segundo o que chega por fora
+    (`VigiaDoSequestro`). A dica que dizia o contrário ensinava a pessoa a não
+    confiar no número que o Hefesto dá.
+    """
+    texto = _dica_do_jogador()
+    assert "por cima" not in texto, texto
+    assert "volta em até um segundo" in texto, texto
+
+
+def test_o_segundo_da_dica_e_a_conta_da_vigia() -> None:
+    """A dica promete UM segundo, e a promessa é a conta do dono.
+
+    MORDIDA: suba o `INTERVALO_DA_REAFIRMACAO_S` para 1,2 s e reprova — a dica
+    passaria a prometer o que a vigia não cumpre. E o número do jogo tem de
+    continuar recusado no controle virtual, que é a outra metade da frase.
+    """
+    import math
+
+    from hefesto_dualsense4unix.core import escritor_cru
+    from hefesto_dualsense4unix.core.backend_pydualsense import numeracao_do_jogo
+
+    passo = escritor_cru.PASSO_DA_VIGIA_S
+    reescrita = math.ceil(escritor_cru.INTERVALO_DA_REAFIRMACAO_S / passo) * passo
+    assert reescrita <= 1.0, (
+        f"a vigia reescreve a cada {reescrita} s e a dica promete um segundo")
+    assert "player_leds" in numeracao_do_jogo(
+        {"player_leds": (True, False, False, False, False)})
