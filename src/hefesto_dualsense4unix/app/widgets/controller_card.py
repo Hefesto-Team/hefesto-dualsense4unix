@@ -87,8 +87,8 @@ Contratos honrados (sprint status-por-controle, itens 6-9 do desenho):
   fonte conhecida e apagada → "Lightbar: apagada"; ``"desconhecida"`` →
   "Lightbar: cor desconhecida" (NUNCA "apagada" — o 0,0,0 da classe LED sem
   escrita nossa pode ser o azul-kernel brilhando agora, refutação 1 do
-  sprint); ``native_mode`` global → "em Nativo o jogo é dono do LED" com a
-  última cor conhecida. Sem cor conhecida, os traços usam o accent neutro
+  sprint); o Modo Nativo segue as mesmas regras desde 24/09/2026 (a barra é
+  do Hefesto nele também). Sem cor conhecida, os traços usam o accent neutro
   (``ACCENT_NEUTRO``) ajustado.
 * BT-03: ``vpad_backend == "uinput"`` com ``vpad_motivo`` preenchido acende
   uma linha visível de degradação com o motivo em palavras leigas
