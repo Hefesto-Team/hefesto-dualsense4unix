@@ -70,8 +70,14 @@ from hefesto_dualsense4unix.daemon.subsystems.coop import (
     _fora_do_boneco,
     planejar_a_ordem,
 )
+from hefesto_dualsense4unix.daemon.subsystems.gamepad import vpad_vivo
 from hefesto_dualsense4unix.daemon.subsystems.identity import prazo_do_lugar_guardado
+from hefesto_dualsense4unix.integrations import virtual_pad
 from hefesto_dualsense4unix.integrations.uhid_gamepad import vpad_mac
+from tests.unit.test_dois_vpads_nunca_tem_o_mesmo_mac import (  # noqa: F401
+    KernelDoHidPlaystation,
+    kernel,
+)
 from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (  # noqa: F401
     P1,
     P2,
@@ -79,9 +85,14 @@ from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (  # noqa: F
     TRANSPORTES,
     UNIQS,
     MesaDoJogo,
+    Relogio,
     config_isolado,
     montar,
 )
+
+#: A fábrica REAL dos vpads, guardada antes de qualquer bancada trocá-la pelo
+#: dublê (a bancada da O-ASSENTO-02 põe o ``_nascer_vpad`` dela no lugar).
+_FABRICA_REAL = virtual_pad.make_virtual_pad
 
 #: O gesto da linha 17: fora vinte segundos — ainda dentro do prazo.
 VINTE_SEGUNDOS = 20.0
@@ -117,6 +128,116 @@ def _atras_e_na_frente(quantos: int, quem: int) -> tuple[tuple[str, ...], tuple[
     if quem == 0:
         return UNIQS[2:quantos], ()
     return UNIQS[quem + 1 : quantos], UNIQS[1:quem]
+
+
+class MesaHonesta(MesaDoJogo):
+    """A bancada da O-ASSENTO-02 com os vpads da fábrica REAL, contra o kernel de mentira.
+
+    O-VPAD-DO-P1-NAO-REPETE-O-MAC-01. O ``_VpadDaMesa`` da bancada recebe o MAC
+    de uma conta feita pela régua e nasce sempre: um vpad que o kernel recusaria
+    seguia movendo boneco, e a colisão só aparecia porque a invariante a
+    procurava. Aqui cada vpad — o do posto e os dos secundários — nasce por
+    ``virtual_pad.make_virtual_pad``, com o ``_try_uhid`` e o
+    ``UhidDualSense.start`` de verdade, e quem diz se ele fica de pé é o
+    :class:`KernelDoHidPlaystation`. Recusado, o produto cai no ``uinput``, como
+    cairia na mesa dela, e a cada tique a bancada confere que o kernel não
+    recusou ninguém.
+    """
+
+    def __init__(
+        self, monkeypatch: pytest.MonkeyPatch, *, kernel: KernelDoHidPlaystation, **kw: Any
+    ) -> None:
+        self.kernel = kernel
+        super().__init__(monkeypatch, **kw)
+        # O vpad do P1 da bancada nasceu de mentira: ele sai e o do BOOT nasce
+        # pela fábrica — sem identidade, porque o daemon ainda não conhece o
+        # primário (a invariante VPAD-03/BT-01).
+        self.vpad_do_p1.stop()
+        self.vpads = []
+        posto = self._nascer_vpad("dualsense", player=1, identity=None, allow_uhid=True)
+        self.vpad_do_p1 = self.daemon._gamepad_device = posto
+
+    def _nascer_vpad(
+        self, flavor: Any, *, player: int = 1, identity: str | None = None, **kw: Any
+    ) -> Any:
+        pad = _FABRICA_REAL(flavor, player=player, identity=identity, **kw)
+        if pad is None:
+            return None
+        if getattr(pad, "backend", None) != "uhid":
+            pad.player = player  # o uinput não carrega número no nome
+        pad.identidade = identity
+        pad.vivo = True
+        self.jogo.nasceu(pad)
+        parar = pad.stop
+
+        def _stop() -> None:
+            if pad.vivo:
+                pad.vivo = False
+                self.jogo.morreu(pad)
+            parar()
+
+        pad.stop = _stop
+        self.vpads.append(pad)
+        return pad
+
+    def conferir_invariantes(self) -> None:
+        """As da bancada, sobre os vpads que TÊM MAC — e o kernel não recusou ninguém."""
+        todos = self.vpads
+        self.vpads = [v for v in todos if getattr(v, "backend", None) == "uhid"]
+        try:
+            super().conferir_invariantes()
+        finally:
+            self.vpads = todos
+        assert not self.kernel.recusas, f"o kernel recusou: {self.kernel.recusas}"
+
+
+def montar_honesto(
+    monkeypatch: pytest.MonkeyPatch,
+    kernel: KernelDoHidPlaystation,
+    quantos: int,
+    transporte: str = "mista",
+) -> MesaHonesta:
+    """O ``montar`` da O-ASSENTO-02, com a :class:`MesaHonesta` e o jogo aberto."""
+    relogio = Relogio()
+    bancada = MesaHonesta(monkeypatch, kernel=kernel, relogio=relogio, tempo=relogio)
+    for uniq, via in zip(UNIQS[:quantos], TRANSPORTES[transporte][:quantos], strict=True):
+        bancada.mesa.sentar(uniq, transporte=via)
+    for _ in range(3):
+        bancada.tique()
+    assert bancada.dono_do_vpad_do_p1() == P1
+    assert bancada.o_jogo_ve() == {n + 1: UNIQS[n] for n in range(quantos)}
+    assert bancada.a_tela() == {UNIQS[n]: n + 1 for n in range(quantos)}
+    assert all(getattr(v, "backend", None) == "uhid" for v in bancada.vpads)
+    return bancada
+
+
+def trocar_a_mascara_do_p1(bancada: MesaHonesta) -> None:
+    """O vpad do posto renasce com a identidade do primário DE AGORA.
+
+    É o que ``gamepad.start_gamepad_emulation_desfecho`` faz numa troca de
+    máscara ou de caminho (e o ``_reerguer_o_p1`` do co-op): para o vpad velho
+    e chama a fábrica com ``primary_identity`` e ``numero_do_nome_do_primario``
+    — as mesmas duas perguntas, aos mesmos donos. Com o jogo aberto só o gesto
+    dela chega aqui (a R-04 barra o automático), e ela pode trocar a máscara
+    no meio da partida.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.coop import numero_do_nome_do_primario
+    from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+        controller_allows_uhid,
+        primary_identity,
+    )
+
+    daemon = bancada.daemon
+    daemon._gamepad_device.stop()
+    daemon._gamepad_device = None
+    novo = virtual_pad.make_virtual_pad(
+        "dualsense",
+        identity=primary_identity(daemon),
+        player=numero_do_nome_do_primario(daemon),
+        allow_uhid=controller_allows_uhid(daemon),
+    )
+    assert novo is not None
+    bancada.vpad_do_p1 = daemon._gamepad_device = novo
 
 
 @pytest.mark.usefixtures("config_isolado")
@@ -291,23 +412,39 @@ class TestAVoltaTardiaDoP1:
     @pytest.mark.xfail(
         strict=True,
         reason=(
-            "PENDENTE (O-ASSENTO-GUARDADO-NAO-ANDA-03): o vpad do posto que "
-            "nasceu com a identidade do P1 e o vpad do P1 que volta tardio saem "
-            "com o MESMO MAC (vpad_mac pela identidade), e o hid_playstation "
-            "recusa o segundo com -EEXIST. Anterior a esta cura (E3 de 06/09); "
-            "a identidade do make_virtual_pad serve à máscara E ao MAC."
+            "PENDENTE (O-VPAD-DO-P1-NAO-REPETE-O-MAC-01): o vpad do posto que "
+            "renasceu com a identidade do P1 e o vpad do P1 que volta tardio "
+            "pedem o MESMO MAC (vpad_mac pela identidade), e o kernel recusa o "
+            "segundo com -EEXIST."
         ),
     )
+    @MATRIZ
     def test_o_vpad_do_p1_que_volta_nao_repete_o_mac_do_posto(
-        self, monkeypatch: pytest.MonkeyPatch
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        kernel: KernelDoHidPlaystation,
+        quantos: int,
+        transporte: str,
     ) -> None:
-        bancada = montar(monkeypatch, 3, "mista")
-        # O vpad do posto que nasceu DEPOIS de o P1 ser o primário (troca de
-        # máscara, de caminho, `_reerguer_o_p1`); o do boot nasce sem
-        # identidade e sai com o MAC do número.
-        bancada.vpad_do_p1.mac = vpad_mac(P1, 1)
+        """A bancada honesta: a fábrica e a classe REAIS contra o kernel que recusa.
 
-        self._p1_sai_e_volta_tarde(bancada)  # o `tique` confere o MAC repetido
+        A troca de máscara com o jogo aberto (o gesto dela, que a R-04 nunca
+        barra) faz o vpad do posto renascer com a identidade do P1; o P1 sai,
+        o prazo vence, o P2 assume o posto, e o P1 volta com o jogo aberto.
+        """
+        bancada = montar_honesto(monkeypatch, kernel, quantos, transporte)
+        trocar_a_mascara_do_p1(bancada)
+        assert bancada.vpad_do_p1.mac == vpad_mac(P1, 1), "o posto nasceu com o MAC do P1"
+
+        self._p1_sai_e_volta_tarde(bancada)  # cada tique confere o kernel
+
+        vpad = bancada.vpad_de(P1)
+        assert vpad is not None and getattr(vpad, "backend", None) == "uhid", (
+            f"o P1 voltou num vpad degradado: {vpad!r}"
+        )
+        assert vpad_vivo(vpad) and vpad.mac != bancada.vpad_do_p1.mac
+        assert P1 in bancada.o_jogo_ve().values(), "o P1 voltou e não move boneco nenhum"
+        assert kernel.recusas == []
 
 
 #: Quanto o OUTRO já está fora quando o P1 sai: o prazo dele vence com o do P1
