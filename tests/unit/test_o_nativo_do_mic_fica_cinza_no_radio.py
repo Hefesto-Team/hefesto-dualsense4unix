@@ -254,6 +254,60 @@ class TestODesenhoTemOndeOProdutoEscrever:
         assert tem == a02.A_PAGINA_APAGA_O_NATIVO
 
 
+class TestNoCaboONativoNaoNasceCinza:
+    """O VALOR QUE A TELA RECEBE, lido com a régua do PILOTO — conferência da
+    A-MIRA-POR-MOVIMENTO-NA-TELA-02, 24/09/2026.
+
+    As réguas acima medem `nativo_fora_de_alcance`, e ela sempre respondeu
+    certo (`""` no cabo). O defeito morava UM PASSO DEPOIS, no pacote: `""`
+    virava `NADA_A_DIZER` (`<i class="nada"></i>`), e o alvo `classe` do
+    container acende quando o valor é "ligado" pela conta do piloto
+    (`hefesto_vivo.escrever`, função `ligado`) — e o marcador não é nenhum dos
+    valores que ela apaga. Medido na tela, no piloto oculto e num lar de
+    mentira: o «Nativo» do P2 no USB com `sem-nativo` e `cursor: not-allowed`,
+    contra a decisão dela de 20/09 (*"no rádio o botão fica cinza"*).
+    """
+
+    @staticmethod
+    def _apagados_pelo_piloto() -> set[str]:
+        """Os valores que o alvo `classe` lê como APAGADOS — lidos do piloto."""
+        import re
+
+        piloto = (RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
+                  ).read_text(encoding="utf-8")
+        inicio = piloto.index("function ligado(t){")
+        corpo = piloto[inicio:piloto.index("}", inicio)]
+        apagados = set(re.findall(r"b === '([^']*)'", corpo))
+        assert "" in apagados and "—" in apagados, apagados
+        return apagados
+
+    @pytest.mark.parametrize("transporte", ["usb", "bt"])
+    def test_o_valor_da_chave_segue_o_aparelho(self, a02: Any,
+                                              monkeypatch: pytest.MonkeyPatch,
+                                              transporte: str) -> None:
+        """Alcança: a chave vai num valor que o piloto APAGA; não alcança: vai
+        a razão, que ele ACENDE. O transporte não entra na conta — quem
+        responde é o aparelho.
+
+        MORDIDA: devolva o `or NADA_A_DIZER` à chave `mic-nativo-fora` no
+        `pacote` da aba e o caso «alcança» reprova, no USB e no BT.
+        """
+        from pacotes import Contexto
+
+        apagados = self._apagados_pelo_piloto()
+        monkeypatch.setattr(a02, "A_PAGINA_APAGA_O_NATIVO", True)
+        dele = {"uniq": UNIQ, "transport": transporte, "connected": True,
+                "inputs": {}, "audio": {}, "speaker": {}}
+        for razao, apagado in (("", True), (a02.RAZAO_DO_NATIVO_FORA, False)):
+            monkeypatch.setattr(a02, "nativo_fora_de_alcance", lambda uniq, r=razao: r)
+            ctx = Contexto(state={}, mesa=[], conectados=[dele], estados={})
+            valor = next(iter(a02.pacote(ctx)["cards"].values()))["mic-nativo-fora"]
+            assert (str(valor).strip().lower() in apagados) is apagado, (
+                f"{transporte}: com o aparelho dizendo {razao!r}, a chave foi "
+                f"{valor!r} — o «Nativo» ficaria "
+                f"{'cinza' if apagado else 'aceso'} contra o aparelho")
+
+
 class TestAMordida:
     """Arranque a recusa e veja o rádio voltar a gravar."""
 

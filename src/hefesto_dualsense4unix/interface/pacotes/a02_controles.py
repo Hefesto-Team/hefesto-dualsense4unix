@@ -3370,12 +3370,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # frase continua de pé para o ensaio `a_rota_do_som_vai_e_volta`.
                 "mic-modo-aceso": modo_do_mic(norm_mac(uniq) or ""),
                 # O «NATIVO» CINZA — 20/09/2026, decisão dela: *"Fica os dois
-                # botões. Mas no rádio o botão fica cinza sem ser ativado"*.
-                # A chave vai em TODO tique (é o que faz o cinza SAIR quando o
-                # cabo entra), e só enquanto a página publicada souber recebê-la
-                # — ver `_a_pagina_tem_o_alcance_do_nativo`.
-                **({"mic-nativo-fora": nativo_fora_de_alcance(uniq)
-                    or NADA_A_DIZER} if A_PAGINA_APAGA_O_NATIVO else {}),
+                # botões. Mas no rádio o botão fica cinza sem ser ativado"*. Vai
+                # em TODO tique, com a página publicada sabendo recebê-la, e o
+                # vazio vai VAZIO: o `NADA_A_DIZER` acendia o `sem-nativo` do
+                # alvo `classe` também no cabo (conferência da A-MIRA-02, 24/09).
+                **({"mic-nativo-fora": nativo_fora_de_alcance(uniq)}
+                   if A_PAGINA_APAGA_O_NATIVO else {}),
                 # A DEGRADAÇÃO DA MÁSCARA SAIU DA TELA — 13/09/2026,
                 # A-MARCA-DA-DEGRADACAO-01. Era `mascara-degradou`: o asterisco
                 # colado ao nome da máscara, com a frase de
