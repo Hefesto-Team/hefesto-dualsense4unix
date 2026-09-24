@@ -189,6 +189,10 @@ estável por endereço MAC (replugar recupera o mesmo número).
 > Jogador 1 —, os outros não trocam de número, nos quatro lugares, no cabo e no
 > rádio. Passado o prazo, a fila se fecha. Um controle NOVO que chega nesse
 > meio refaz a mesa na hora, como antes: ele nunca nasce atrás do lugar vazio.
+> E o JOGO espera junto (`D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO`): com um jogo
+> aberto, o controle virtual do Jogador 1 fica parado enquanto o P1 está fora,
+> e o P2 segue no dele; sem jogo, o P2 assume na hora, porque o P1 também move
+> o mouse do PC. O prazo conta o tempo em que o computador dormiu.
 
 Controles externos (Nintendo Pro; 8BitDo em modo Switch no cabo ou em modo
 DirectInput/PS4 por Bluetooth — ver
