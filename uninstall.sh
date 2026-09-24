@@ -1039,6 +1039,26 @@ for dele in (lugares.values() if isinstance(lugares, dict) else ()):
         print(nome.strip())
 ' "${_maquina_json}" 2>/dev/null || true)
     fi
+    # O NOME DO ADAPTADOR LIDO COMO ELE É (conferência da INSTALL-E-UNINSTALL-
+    # DO-RADIO-01, 23/09/2026). O `busctl get-property` sem `--json` escapa em C
+    # todo byte fora do ASCII: «Nintendo Sofá» sai «Nintendo Sof\303\241» —
+    # medido num barramento privado com o systemd 255 dela. Comparado com o nome
+    # do `maquina.json`, um lugar com acento nunca casava e ficava no rádio; e o
+    # ramo do prefixo GRAVAVA de volta o texto escapado, trocando o nome por
+    # «Sof\303\241». O `--json=short` (depois do verbo, que é o que o ensaio
+    # reconhece como leitura) entrega o texto em UTF-8. Sem ele (systemd
+    # antigo), vale a forma de antes só quando ela não tem barra; o que ainda
+    # vier com barra (aspas, controle) é «não sei», e «não sei» não se escreve.
+    _texto_do_adaptador() {  # $1 = hciN · $2 = Alias | Name
+        local bruto
+        bruto="$(busctl get-property org.bluez "/org/bluez/$1" org.bluez.Adapter1 "$2" --json=short 2>/dev/null || true)"
+        bruto="$(sed -nE 's/^.*"data":"(.*)"\}$/\1/p' <<<"${bruto}")"
+        if [[ -z "${bruto}" ]]; then
+            bruto="$(busctl get-property org.bluez "/org/bluez/$1" org.bluez.Adapter1 "$2" 2>/dev/null | sed -E 's/^s "?//; s/"?$//' || true)"
+        fi
+        [[ "${bruto}" == *\\* ]] && return 0
+        printf '%s\n' "${bruto}"
+    }
     for _hci in ${_hcis[@]+"${_hcis[@]}"}; do
         # ATENÇÃO: `hciconfig lp` exige a lista separada por VÍRGULA. Com
         # espaços ele lê só o primeiro token e a reversão vira NO-OP
@@ -1064,9 +1084,9 @@ for dele in (lugares.values() if isinstance(lugares, dict) else ()):
             log "  rode: sudo hciconfig ${_hci} lp rswitch,hold,sniff,park"
         fi
         command -v busctl >/dev/null 2>&1 || continue
-        _alias="$(busctl get-property org.bluez "/org/bluez/${_hci}" org.bluez.Adapter1 Alias 2>/dev/null | sed -E 's/^s "?//; s/"?$//' || true)"
+        _alias="$(_texto_do_adaptador "${_hci}" Alias)"
         [[ -n "${_alias}" ]] || continue
-        _nome_do_sistema="$(busctl get-property org.bluez "/org/bluez/${_hci}" org.bluez.Adapter1 Name 2>/dev/null | sed -E 's/^s "?//; s/"?$//' || true)"
+        _nome_do_sistema="$(_texto_do_adaptador "${_hci}" Name)"
         _base="${_alias#Nintendo }"
         _e_do_hefesto=0
         for _um_nome in ${_nomes_do_hefesto[@]+"${_nomes_do_hefesto[@]}"}; do
