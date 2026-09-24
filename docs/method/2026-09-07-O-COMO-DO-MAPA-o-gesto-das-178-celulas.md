@@ -614,7 +614,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 10. Fale e confira que o programa te ouve, que a luz do botão do P1 pisca enquanto você fala, e que o cartão do P1 diz que esse programa está te ouvindo.
 11. Feche o programa.
 12. Clique na linha do P2 e refaça nele a mesma rodada, da pílula ATIVO até fechar o programa, com «Microfone do Controle 2».
-13. Clique na aba Conexões, abra «Gestão de Controles» e confira que as linhas do P1 e do P2 dizem «Microfone Ligado, pelo cabo • Placa do controle».
+13. Clique na aba Conexões, abra «Gestão de Controles» e confira que as linhas do P1 e do P2 dizem «Microfone Ligado, pelo USB • Placa do controle».
 
 **Passa quando.** No P1 e no P2 a pílula diz ATIVO, a luz está acesa e a barrinha segue a sua voz. Com o 🎙 verde a voz sai na TV, e para quando o botão do plástico cala aquele controle. Um programa de fora te ouve pela entrada daquele controle, com a luz piscando e o cartão dizendo o nome dele. E a aba Conexões diz, nos dois, que o microfone chega pelo cabo, pela placa do controle.
 
@@ -653,7 +653,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 12. Fale e confira que o programa te ouve, que a luz do botão do P3 pisca enquanto você fala, e que o cartão do P3 diz que esse programa está te ouvindo.
 13. Troque a entrada do programa para «Microfone do Controle 4» e confira o mesmo no P4.
 14. Feche o programa.
-15. Clique na aba Conexões, abra «Gestão de Controles» e confira que as linhas do P3 e do P4 dizem «Microfone Ligado, pelo rádio • Pela ponte».
+15. Clique na aba Conexões, abra «Gestão de Controles» e confira que as linhas do P3 e do P4 dizem «Microfone Ligado, pelo BT • Pela ponte».
 
 **Passa quando.** No P3 e no P4 a pílula diz ATIVO e a barrinha segue a voz; com os dois 🎙 verdes ao mesmo tempo a voz sai na TV pelos dois, e calar um pelo plástico deixa o outro no ar. Um programa de fora te ouve pela entrada de cada um, com a luz piscando e o cartão dizendo o nome dele. O «Nativo» está cinza, com a razão no «?». E a aba Conexões diz que o microfone dos dois chega pelo rádio, pela ponte.
 
@@ -813,7 +813,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No BT, e é o primeiro a receber a saída do sistema. A música tem de sair nele e em nenhum outro.
 * **P4** — No BT, e recebe a saída depois, pela lista e pelo botão do cartão dele. É ele que prova que o número não está trocado: o «4» tem de tocar no P4, e não no P3.
 
-**A armadilha.** A página pode chegar com «nada» já marcado nesta célula: é a pré-marca herdada do mapa, que ainda guarda a medição de antes de 10/09, quando pelo BT o som não saía. Troque-a pelo que você ouviu. O número do nome só se renova com aquele controle em silêncio: se o «4» tocar no P3 logo depois de os jogadores trocarem de lugar, pare a música, espere uns segundos e escolha a saída de novo antes de reprovar. Deixe o P3 e o P4 no botão de cima: com «Efeitos do Jogo e Áudio do PC no Controle», o outro controle também receberia a música mandada ao primeiro. No BT o começo da música pode demorar um instante enquanto o fio acorda — espere antes de concluir que não saiu. O botão de cima só devolve à TV a saída que o próprio «Tudo no Controle e Nada no PC» levou: a que você escolheu pela lista do sistema, você devolve pela lista. Devolva a saída para a TV no fim; se esquecer, o computador continua tocando só no controle. E ninguém desta casa pode escrever que «descobriu o som pelo BT» a partir de um canal que responde: o que decide é o ouvido, com o som saindo do controle certo e de nenhum outro.
+**A armadilha.** A página chega sem resposta marcada nesta célula: o mapa sabe que o produto monta a saída de cada controle e o report que tocou, e quem fecha o caminho inteiro é o seu ouvido. O número do nome só se renova com aquele controle em silêncio: se o «4» tocar no P3 logo depois de os jogadores trocarem de lugar, pare a música, espere uns segundos e escolha a saída de novo antes de reprovar. Deixe o P3 e o P4 no botão de cima: com «Efeitos do Jogo e Áudio do PC no Controle», o outro controle também receberia a música mandada ao primeiro. No BT o começo da música pode demorar um instante enquanto o fio acorda — espere antes de concluir que não saiu. O botão de cima só devolve à TV a saída que o próprio «Tudo no Controle e Nada no PC» levou: a que você escolheu pela lista do sistema, você devolve pela lista. Devolva a saída para a TV no fim; se esquecer, o computador continua tocando só no controle. E ninguém desta casa pode escrever que «descobriu o som pelo BT» a partir de um canal que responde: o que decide é o ouvido, com o som saindo do controle certo e de nenhum outro.
 
 ---
 
@@ -2995,7 +2995,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, com o controle no rádio, o Hefesto derruba a conexão sem fio, pede o PS e devolve o controle ao mesmo lugar — sem abrir um segundo assento para ele.
 
-**Onde olhar.** Aba Conexões, quadro Gestão de Controles, que se abre clicando no título: a contagem no alto (4 controles • 2 no cabo • 2 no rádio), a linha de cada controle (Sony • Player 3 • cor • BT) e, dentro da linha aberta, o botão A luz não acende, cuja explicação diz que ele derruba o controle do rádio e que o PS é seu. Depois do clique, a espera se escreve na linha do controle: ▲ Aperte PS no controle · procurando…, com os segundos correndo a partir de 60, e o mesmo botão passa a dizer Cancelar. No aparelho: a fileira de cinco lampadinhas brancas embaixo do touchpad, que é o que diz o número do jogador.
+**Onde olhar.** Aba Conexões, quadro Gestão de Controles, que se abre clicando no título: a contagem no alto (4 controles • 2 USB • 2 BT), a linha de cada controle (Sony • Player 3 • cor • BT) e, dentro da linha aberta, o botão A luz não acende, cuja explicação diz que ele derruba o controle do rádio e que o PS é seu. Depois do clique, a espera se escreve na linha do controle: ▲ Aperte PS no controle · procurando…, com os segundos correndo a partir de 60, e o mesmo botão passa a dizer Cancelar. No aparelho: a fileira de cinco lampadinhas brancas embaixo do touchpad, que é o que diz o número do jogador.
 
 **Os passos.**
 
@@ -5023,7 +5023,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o que o controle oferece muda com o BRAÇO em que ele está, e não com o aparelho — e que pelo cabo ele entrega uma coisa que o rádio não tem: a placa de som do próprio controle.
 
-**Onde olhar.** Na aba Conexões, no quadro «Gestão de Controles», que abre clicando no título: uma linha por controle — «Sony • Player N • <o nome da cor do plástico> • USB» ou «• BT». Na mesma linha vem o campo «Microfone», e é ele que muda com o transporte: pelo cabo ele diz «Ligado, pelo cabo • Placa do controle»; pelo rádio, «Ligado, pelo rádio • Pela ponte». Ao lado do título, a contagem, no formato «4 controles • 2 no cabo • 2 no rádio». O tamanho do que cada transporte declara não aparece em tela nenhuma, porque não há campo para ele.
+**Onde olhar.** Na aba Conexões, no quadro «Gestão de Controles», que abre clicando no título: uma linha por controle — «Sony • Player N • <o nome da cor do plástico> • USB» ou «• BT». Na mesma linha vem o campo «Microfone», e é ele que muda com o transporte: pelo cabo ele diz «Ligado, pelo USB • Placa do controle»; pelo rádio, «Ligado, pelo BT • Pela ponte». Ao lado do título, a contagem, no formato «4 controles • 2 USB • 2 BT». O tamanho do que cada transporte declara não aparece em tela nenhuma, porque não há campo para ele.
 
 **Os passos.**
 
@@ -5036,9 +5036,9 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 7. Puxe o cabo de dentro do controle do P1.
 8. Dê um toque no botão PS desse mesmo aparelho.
 9. Ache a linha com o plástico do P1: ela tem de terminar em BT agora, com o mesmo nome de cor.
-10. Leia o campo «Microfone» dessa linha: ele tem de ter virado «pelo rádio • Pela ponte».
+10. Leia o campo «Microfone» dessa linha: ele tem de ter virado «pelo BT • Pela ponte».
 11. Encaixe o cabo de volta no mesmo aparelho.
-12. Leia a linha mais uma vez: ela volta a terminar em USB, e o «Microfone» volta para «pelo cabo • Placa do controle».
+12. Leia a linha mais uma vez: ela volta a terminar em USB, e o «Microfone» volta para «pelo USB • Placa do controle».
 13. Confira que as linhas do P2, do P3 e do P4 terminam como no começo — mesmo plástico, mesmo USB ou BT, mesmo «Microfone».
 14. Leia a contagem de novo e compare com a que você anotou.
 
@@ -5047,7 +5047,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 **Por controle.**
 
 * **P1** — É ESTE que atravessa: sai do cabo, volta pelo rádio com um toque no PS, e depois volta ao cabo. O que tem de mudar na linha dele são duas coisas e só duas: USB ou BT, e o caminho do microfone.
-* **P2** — USB, e não sai de lá. É a comparação parada: a linha dele tem de dizer «pelo cabo • Placa do controle» do começo ao fim.
+* **P2** — USB, e não sai de lá. É a comparação parada: a linha dele tem de dizer «pelo USB • Placa do controle» do começo ao fim.
 * **P3** — BT, testemunha. Não toque nele. A linha dele não pode sumir do quadro enquanto o P1 atravessa.
 * **P4** — BT, segunda testemunha. Mesma conferência.
 
@@ -5061,7 +5061,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o rádio oferece um caminho próprio, que só existe enquanto o aparelho está no ar — e que ele some assim que o mesmo aparelho entra no fio.
 
-**Onde olhar.** Na aba Conexões, em dois quadros que abrem pelo título, um de cada vez. No «Gestão de Controles»: uma linha por controle, terminando em USB ou BT, e o campo «Microfone», que pelo rádio diz «pelo rádio • Pela ponte» e pelo cabo diz «pelo cabo • Placa do controle». No «Rádio e Adaptadores»: ao lado do título, a contagem no formato «2 controles · 3 adaptadores», que conta só os controles do rádio; e um bloco por adaptador Bluetooth, com o nome da entrada em que ele está (por exemplo «Entrada 4.1.4») e um ▶ que abre a lista do que está nele — cada controle do rádio aparece ali com o nome «Player N» e a cor do plástico. Um controle no cabo nunca aparece nessa seção. O tamanho do caminho que cada transporte anuncia não aparece em tela nenhuma.
+**Onde olhar.** Na aba Conexões, em dois quadros que abrem pelo título, um de cada vez. No «Gestão de Controles»: uma linha por controle, terminando em USB ou BT, e o campo «Microfone», que pelo rádio diz «pelo BT • Pela ponte» e pelo cabo diz «pelo USB • Placa do controle». No «Rádio e Adaptadores»: ao lado do título, a contagem no formato «2 controles · 3 adaptadores», que conta só os controles do rádio; e um bloco por adaptador Bluetooth, com o nome da entrada em que ele está (por exemplo «Entrada 4.1.4») e um ▶ que abre a lista do que está nele — cada controle do rádio aparece ali com o nome «Player N» e a cor do plástico. Um controle no cabo nunca aparece nessa seção. O tamanho do caminho que cada transporte anuncia não aparece em tela nenhuma.
 
 **Os passos.**
 
@@ -5071,11 +5071,11 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 4. Clique no ▶ de cada adaptador e anote em qual deles estão o P3 e o P4.
 5. Clique no título «Gestão de Controles» e anote o campo «Microfone» das quatro linhas.
 6. Encaixe um cabo no controle do P3, sem desligá-lo.
-7. Leia de novo a linha dele: ela tem de terminar em USB, e o «Microfone» tem de virar «pelo cabo • Placa do controle».
+7. Leia de novo a linha dele: ela tem de terminar em USB, e o «Microfone» tem de virar «pelo USB • Placa do controle».
 8. Clique no título «Rádio e Adaptadores»: a contagem tem de ter caído um, e o P3 tem de ter saído da lista do adaptador dele.
 9. Confira que o P4 continua na lista do adaptador dele.
 10. Puxe o cabo do P3; se ele não voltar ao rádio sozinho, dê um toque curto no PS dele.
-11. Em «Gestão de Controles», confira que a linha dele volta a terminar em BT, com o «Microfone» em «pelo rádio • Pela ponte».
+11. Em «Gestão de Controles», confira que a linha dele volta a terminar em BT, com o «Microfone» em «pelo BT • Pela ponte».
 12. Em «Rádio e Adaptadores», confira que ele voltou à lista de um adaptador e que a contagem voltou.
 13. Repita todos os passos acima com o P4.
 14. Confira, no fim, que o P1 e o P2 nunca apareceram em «Rádio e Adaptadores».
@@ -5084,7 +5084,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **Por controle.**
 
-* **P1** — USB, testemunha. Não toque nele. A linha dele tem de dizer «pelo cabo • Placa do controle» do começo ao fim, e ele nunca pode aparecer num adaptador de «Rádio e Adaptadores».
+* **P1** — USB, testemunha. Não toque nele. A linha dele tem de dizer «pelo USB • Placa do controle» do começo ao fim, e ele nunca pode aparecer num adaptador de «Rádio e Adaptadores».
 * **P2** — USB, segunda testemunha. Mesma conferência.
 * **P3** — BT, e é ESTE que atravessa primeiro. Entra no fio, sai do fio. O que tem de sumir e voltar com ele é a presença no adaptador e o microfone pela ponte.
 * **P4** — BT, e é o segundo a atravessar. Enquanto o P3 está no fio, é ele quem prova que o adaptador continua vivo com um só: ele não pode sumir da lista por causa do vizinho.
@@ -5318,13 +5318,13 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o comando cru que a tela ainda aciona — o que põe o microfone do rádio no ar — nunca vai para os dois controles do cabo, e que eles seguem obedecendo depois.
 
-**Onde olhar.** Na aba Conexões, no quadro «Gestão de Controles» (abre pelo título): a linha de cada controle diz por onde o microfone dele chega — nos do cabo, «pelo cabo • Placa do controle»; nos do rádio, «pelo rádio • Pela ponte». A ponte é o caminho cru, e ela só existe no rádio. Clicando na linha de um controle, ela abre e mostra, abaixo de «Microfone e botões», o campo com «Ligado» e «Desligado». Na aba Controles, no cartão de cada controle, o bloco «Microfone» tem uma barrinha que mexe com o som que está entrando agora. E na aba Iluminação, a linha «Cor» da coluna de cada controle e, no aparelho, a barra de luz. Não existe na tela nenhum campo que diga «o comando cru saiu».
+**Onde olhar.** Na aba Conexões, no quadro «Gestão de Controles» (abre pelo título): a linha de cada controle diz por onde o microfone dele chega — nos do cabo, «pelo USB • Placa do controle»; nos do rádio, «pelo BT • Pela ponte». A ponte é o caminho cru, e ela só existe no rádio. Clicando na linha de um controle, ela abre e mostra, abaixo de «Microfone e botões», o campo com «Ligado» e «Desligado». Na aba Controles, no cartão de cada controle, o bloco «Microfone» tem uma barrinha que mexe com o som que está entrando agora. E na aba Iluminação, a linha «Cor» da coluna de cada controle e, no aparelho, a barra de luz. Não existe na tela nenhum campo que diga «o comando cru saiu».
 
 **Os passos.**
 
 1. Confira na fita do topo que os chips do P1 e do P2 terminam em USB.
 * Abra a aba Conexões.
-2. Clique no título «Gestão de Controles» e leia o que as linhas do P1 e do P2 dizem sobre o microfone: tem de estar escrito «pelo cabo • Placa do controle».
+2. Clique no título «Gestão de Controles» e leia o que as linhas do P1 e do P2 dizem sobre o microfone: tem de estar escrito «pelo USB • Placa do controle».
 3. Abra a aba Controles, clique na linha do P1 para abrir o cartão dele e fale perto dele: a barrinha do bloco «Microfone» tem de mexer.
 4. Volte à aba Conexões, clique na linha do P1 para abri-la e escolha «Desligado» no campo do microfone.
 5. Volte à aba Controles e fale perto do P1 de novo: a barrinha tem de continuar mexendo, porque no cabo o microfone não passa pela ponte.
@@ -5334,13 +5334,13 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 9. Faça o mesmo na coluna do P2.
 10. Clique no primeiro quadradinho da coluna do P1 e no segundo da do P2 — a cor do número de cada um —, para desfazer.
 
-**Passa quando.** As linhas do P1 e do P2 dizem «pelo cabo • Placa do controle» do começo ao fim, nunca «Pela ponte». Desligar a ponte de um controle do cabo não cala o microfone dele, e depois de tudo os dois continuam obedecendo à cor.
+**Passa quando.** As linhas do P1 e do P2 dizem «pelo USB • Placa do controle» do começo ao fim, nunca «Pela ponte». Desligar a ponte de um controle do cabo não cala o microfone dele, e depois de tudo os dois continuam obedecendo à cor.
 
 **Por controle.**
 
 * **P1** — USB, e é um dos dois que provam que o caminho cru não os alcança. Microfone pela placa do próprio controle, antes e depois de mexer na ponte.
 * **P2** — USB, o segundo. Mesma conferência. Se um dos dois do cabo se comportar diferente do outro, o achado é daquele aparelho e não do transporte — anote qual.
-* **P3** — BT, testemunha. Não toque nele. A linha dele tem de continuar dizendo «pelo rádio • Pela ponte» enquanto você mexe nos do cabo.
+* **P3** — BT, testemunha. Não toque nele. A linha dele tem de continuar dizendo «pelo BT • Pela ponte» enquanto você mexe nos do cabo.
 * **P4** — BT, testemunha. Mesma coisa. Se a ponte dele cair quando você desliga a do P1, a escolha foi para o controle errado, e isso é o achado.
 
 **A armadilha.** Três. (1) Este teste prova menos do que o nome da linha, e dizer isso é metade do valor dele: o outro comando cru da casa, o que devolve a barra de luz ao jogo, varre todos os controles, inclusive os do cabo — e ele não tem botão em tela nenhuma: só o instrumento de terminal da casa o manda, e a sua mão não alcança essa metade. (2) O que já está medido é que a escrita SAI e que o sistema a aceita — nunca que o aparelho a executou; é por isso que os passos 8 e 9 conferem que os controles seguem obedecendo depois. (3) O «Desligado» do campo do microfone fica guardado no controle e vale quando ele for para o rádio: se você esquecer o passo 6, o P1 chega ao rádio sem microfone. Devolva «Ligado» sempre.
@@ -5353,14 +5353,14 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o comando que o Hefesto escreve direto no aparelho para pôr o microfone no ar sai pelos dois controles do rádio — e que ele sobe e desce a ponte de cada um sem mexer no vizinho.
 
-**Onde olhar.** Na aba Conexões, no quadro «Gestão de Controles» (abre pelo título): a linha de cada controle diz por onde o microfone dele chega — nos do rádio, «pelo rádio • Pela ponte»; nos do cabo, «pelo cabo • Placa do controle». A ponte é o caminho cru, que só existe no rádio. Clicando na linha de um controle, ela abre e mostra, abaixo de «Microfone e botões», o campo com «Ligado» e «Desligado» — é ele que sobe e desce a ponte. Na aba Controles, no cartão de cada controle, o bloco «Microfone» tem uma barrinha que mexe com o som que está entrando agora, e é ela que mostra a ponte de pé.
+**Onde olhar.** Na aba Conexões, no quadro «Gestão de Controles» (abre pelo título): a linha de cada controle diz por onde o microfone dele chega — nos do rádio, «pelo BT • Pela ponte»; nos do cabo, «pelo USB • Placa do controle». A ponte é o caminho cru, que só existe no rádio. Clicando na linha de um controle, ela abre e mostra, abaixo de «Microfone e botões», o campo com «Ligado» e «Desligado» — é ele que sobe e desce a ponte. Na aba Controles, no cartão de cada controle, o bloco «Microfone» tem uma barrinha que mexe com o som que está entrando agora, e é ela que mostra a ponte de pé.
 
 **Os passos.**
 
 * Abra a aba Conexões.
 1. Confira na fita do topo que os chips do P3 e do P4 terminam em BT.
-2. Clique no título «Gestão de Controles» e leia o que as linhas do P3 e do P4 dizem sobre o microfone: tem de estar escrito «pelo rádio • Pela ponte».
-3. Leia a mesma coisa nas linhas do P1 e do P2: nelas tem de estar escrito «pelo cabo • Placa do controle».
+2. Clique no título «Gestão de Controles» e leia o que as linhas do P3 e do P4 dizem sobre o microfone: tem de estar escrito «pelo BT • Pela ponte».
+3. Leia a mesma coisa nas linhas do P1 e do P2: nelas tem de estar escrito «pelo USB • Placa do controle».
 4. Abra a aba Controles, clique na linha do P3 para abrir o cartão dele e fale perto dele: a barrinha do bloco «Microfone» tem de mexer.
 5. Volte à aba Conexões, clique na linha do P3 para abri-la e escolha «Desligado» no campo do microfone.
 6. Volte à aba Controles e fale perto do P3: a barrinha dele tem de parar de mexer, e o bloco «Microfone» dele fica cinza.
@@ -5373,7 +5373,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **Por controle.**
 
-* **P1** — USB, testemunha — e é ela que prova a divisão. A linha dele tem de dizer que o microfone vem pelo cabo, pela placa do próprio controle. Se disser «Pela ponte», o caminho que devia ser só do rádio vazou para o cabo, e esse é o achado.
+* **P1** — USB, testemunha — e é ela que prova a divisão. A linha dele tem de dizer «pelo USB • Placa do controle». Se disser «Pela ponte», o caminho que devia ser só do rádio vazou para o cabo, e esse é o achado.
 * **P2** — USB, a segunda testemunha. Mesma leitura da linha.
 * **P3** — BT, é um dos dois que recebem. Fale perto dele, desça a ponte, confira o silêncio só nele, e suba de novo.
 * **P4** — BT, o segundo que recebe. Mesmos gestos. Se um dos dois do rádio responder e o outro não, o achado é daquele aparelho ou da distância dele até o adaptador, não do transporte — anote qual.
@@ -5990,7 +5990,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o Hefesto acerta, para os dois controles do cabo, por onde eles estão falando — e que a resposta não muda quando o cabo troca de entrada USB.
 
-**Onde olhar.** Quatro lugares, e eles têm de concordar. Na fita do topo, a linha que começa com «Selecionar:»: cada chip termina em USB ou em BT. No canto de cima, à direita, a contagem, no formato «● 2 USB · 2 BT». Na aba Conexões, o quadro «Gestão de Controles» (abre pelo título): cada linha termina em USB ou em BT, e o canto do quadro diz «4 controles • 2 no cabo • 2 no rádio». E, na aba Controles, o cabeçalho do cartão de cada controle, onde, logo depois da cor do plástico, aparece de novo USB ou BT.
+**Onde olhar.** Quatro lugares, e eles têm de concordar. Na fita do topo, a linha que começa com «Selecionar:»: cada chip termina em USB ou em BT. No canto de cima, à direita, a contagem, no formato «● 2 USB · 2 BT». Na aba Conexões, o quadro «Gestão de Controles» (abre pelo título): cada linha termina em USB ou em BT, e o canto do quadro diz «4 controles • 2 USB • 2 BT». E, na aba Controles, o cabeçalho do cartão de cada controle, onde, logo depois da cor do plástico, aparece de novo USB ou BT.
 
 **Os passos.**
 
@@ -6609,7 +6609,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — Está no RÁDIO e é testemunha e contraste: parado enquanto o Testar é do P1 ou do P2, e, com as duas barras em 100, os dois punhos dele têm de tremer quando o Testar é dele.
 * **P4** — Também no rádio, testemunha: não mexa nas barras dele, e ele não pode tremer em momento nenhum deste teste. Se tremer junto com o P1, a vibração perdeu o endereço e foi para os quatro.
 
-**A armadilha.** O Testar mudou duas vezes, e as duas mudanças importam aqui. Desde 07/09, por pedido dela, ele NÃO é mais um pulso de meio segundo: fica ligado até você clicar em Parar — é isso que deixa você clicar e só depois pegar o controle com as duas mãos. A ajuda do «Testar agora» ainda fala em meio segundo; vale o que a mão sente. E desde 09/09 o Testar obedece às barras da coluna: com a barra do Motor esquerdo em 0, o punho esquerdo tem de ficar parado também no Testar — se ele tremer, isso é o defeito. Começar o Testar noutra coluna encerra o da anterior, e trocar de aba também o desliga. Se o botão piscar laranja em vez de verde, o Testar foi recusado: confira na aba Jogar se o Status está em Ligado — em Desligado quem manda nos motores é o jogo. O tremor viaja pelo casco: com o controle apoiado na mesa, ou apertado com força, o punho mudo parece tremer também — segure leve. A barra grava no perfil ativo no instante em que você a solta, e fica gravada: por isso os números se anotam antes e se devolvem no fim. O ícone ao lado da barra acende sozinho quando ela passa de 0; clicar nele liga o motor em 100 ou o desliga em 0, e não lembra o número de antes. O «diga em voz alta de olhos fechados» é passo próprio de propósito: falar o punho antes de olhar o desenho é a defesa contra sentir o lado que a tela mostrou. No mapa esta célula chegou até o aparelho obedecer, num teste às cegas com o jogo; aqui é a confirmação pelo Testar, sem jogo — que a barra também vale para a vibração do jogo é o que o teste do rumble por amplitude mede.
+**A armadilha.** O Testar mudou duas vezes, e as duas mudanças importam aqui. Desde 07/09, por pedido dela, ele NÃO é mais um pulso de meio segundo: fica ligado até você clicar em Parar — é isso que deixa você clicar e só depois pegar o controle com as duas mãos. E desde 09/09 o Testar obedece às barras da coluna: com a barra do Motor esquerdo em 0, o punho esquerdo tem de ficar parado também no Testar — se ele tremer, isso é o defeito. Começar o Testar noutra coluna encerra o da anterior, e trocar de aba também o desliga. Se o botão piscar laranja em vez de verde, o Testar foi recusado: confira na aba Jogar se o Status está em Ligado — em Desligado quem manda nos motores é o jogo. O tremor viaja pelo casco: com o controle apoiado na mesa, ou apertado com força, o punho mudo parece tremer também — segure leve. A barra grava no perfil ativo no instante em que você a solta, e fica gravada: por isso os números se anotam antes e se devolvem no fim. O ícone ao lado da barra acende sozinho quando ela passa de 0; clicar nele liga o motor em 100 ou o desliga em 0, e não lembra o número de antes. O «diga em voz alta de olhos fechados» é passo próprio de propósito: falar o punho antes de olhar o desenho é a defesa contra sentir o lado que a tela mostrou. No mapa esta célula chegou até o aparelho obedecer, num teste às cegas com o jogo; aqui é a confirmação pelo Testar, sem jogo — que a barra também vale para a vibração do jogo é o que o teste do rumble por amplitude mede.
 
 ---
 
@@ -6648,7 +6648,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — Está no RÁDIO e é um dos dois que têm de reagir. Barra esquerda em 0, direita em 100: só o punho direito treme, e só o lado direito acende no desenho.
 * **P4** — Também no rádio, mesma configuração. Se ele responder diferente do P3, anote qual dos dois — dois controles no mesmo transporte discordando aponta para o aparelho, não para o caminho.
 
-**A armadilha.** O Testar NÃO é mais um pulso de meio segundo: desde 07/09, por pedido dela, ele fica ligado até você clicar em Parar — a ajuda do «Testar agora» ainda fala em meio segundo, e vale o que a mão sente. E desde 09/09 ele obedece às barras da coluna: com a barra esquerda em 0, o punho esquerdo tem de ficar parado também no Testar — se ele tremer, isso é o defeito. Começar o Testar noutra coluna encerra o da anterior, e trocar de aba também o desliga. Se o botão piscar laranja em vez de verde, o Testar foi recusado: confira na aba Jogar se o Status está em Ligado. Segunda, e é do rádio: o comando vai numerado e conferido, e um comando que chegue fora de ordem o próprio controle joga fora, sem avisar ninguém. O sintoma é uma vibração que falha de vez em quando, e ele não aparece em campo nenhum da tela — se acontecer, refaça a rodada antes de concluir qualquer coisa. Não deixe o alto-falante do P3 ou do P4 tocando durante o teste: pelo rádio o som e a vibração disputam o mesmo fio. Terceira: a medição de quatro controles na mesa não achou diferença nenhuma entre cabo e rádio nesta família; se aqui os dois do rádio se comportarem diferente dos dois do cabo, isso é informação nova e vale anotar com todas as letras. Quarta: a barra grava no perfil ativo assim que você a solta — escreva os oito números antes, devolva depois. E o «diga em voz alta de olhos fechados» é passo próprio de propósito: falar o punho antes de olhar o desenho é a defesa contra sentir o lado que a tela mostrou.
+**A armadilha.** O Testar NÃO é mais um pulso de meio segundo: desde 07/09, por pedido dela, ele fica ligado até você clicar em Parar. E desde 09/09 ele obedece às barras da coluna: com a barra esquerda em 0, o punho esquerdo tem de ficar parado também no Testar — se ele tremer, isso é o defeito. Começar o Testar noutra coluna encerra o da anterior, e trocar de aba também o desliga. Se o botão piscar laranja em vez de verde, o Testar foi recusado: confira na aba Jogar se o Status está em Ligado. Segunda, e é do rádio: o comando vai numerado e conferido, e um comando que chegue fora de ordem o próprio controle joga fora, sem avisar ninguém. O sintoma é uma vibração que falha de vez em quando, e ele não aparece em campo nenhum da tela — se acontecer, refaça a rodada antes de concluir qualquer coisa. Não deixe o alto-falante do P3 ou do P4 tocando durante o teste: pelo rádio o som e a vibração disputam o mesmo fio. Terceira: a medição de quatro controles na mesa não achou diferença nenhuma entre cabo e rádio nesta família; se aqui os dois do rádio se comportarem diferente dos dois do cabo, isso é informação nova e vale anotar com todas as letras. Quarta: a barra grava no perfil ativo assim que você a solta — escreva os oito números antes, devolva depois. E o «diga em voz alta de olhos fechados» é passo próprio de propósito: falar o punho antes de olhar o desenho é a defesa contra sentir o lado que a tela mostrou.
 
 ---
 
