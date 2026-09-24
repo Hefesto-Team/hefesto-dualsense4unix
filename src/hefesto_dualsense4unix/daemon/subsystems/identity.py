@@ -685,6 +685,10 @@ class ControllerIdentityRegistry:
         #: CONSERVADOR: no pior caso deixa um buraco na numeração, nunca dois
         #: controles com o mesmo número.
         self._external_present: Callable[[], set[int]] | None = None
+        #: O-ASSENTO-GUARDADO-NAO-ANDA-01: quem solta o lugar guardado dos
+        #: EXTERNOS quando o gesto dela solta o daqui (a fila é uma só).
+        #: Fiado por ``ExternalLedSync``; None = só este lado.
+        self._soltar_os_externos: Callable[[], object] | None = None
         # -- estado do automático (COR-03, configurado pelo ProfileManager) --
         # R-14: dois eixos INDEPENDENTES (ver docstring do módulo). Cor é o
         # campo antigo do perfil; numeração nasce ligada e não tem campo no
@@ -957,6 +961,18 @@ class ControllerIdentityRegistry:
         """
         with self._lock:
             self._external_present = provider
+
+    def set_external_release_provider(
+        self, provider: Callable[[], object] | None
+    ) -> None:
+        """Injeta quem solta o lugar guardado dos externos (O-ASSENTO-GUARDADO-NAO-ANDA-01).
+
+        O gesto dela de numerar (``identity.number.set``) passa por este
+        registro antes de qualquer outro; com a fila única, um externo com o
+        lugar guardado no meio faria o número pedido não ser o mostrado.
+        """
+        with self._lock:
+            self._soltar_os_externos = provider
 
     def slot_for(
         self,
@@ -1236,13 +1252,20 @@ class ControllerIdentityRegistry:
         A máquina dá o padrão, a escolha dela sobrepõe: quem pede um número na
         aba (``identity.number.set``) ou renumera a mesa (``identity.renumber``)
         escolhe entre os números de quem está ligado, e um lugar guardado no
-        meio deles faria o número pedido não ser o número mostrado.
+        meio deles faria o número pedido não ser o número mostrado. Quem chama
+        são os dois métodos que só esses gestos alcançam —
+        :meth:`alinhar_gravado_com_a_tela` e :meth:`compact` —, e daqui o
+        gesto chega ao registro dos externos também.
         """
         with self._lock:
             havia = bool(self._guardados)
             self._guardados.clear()
+            externos = self._soltar_os_externos
         if havia:
             logger.info("lugares_guardados_soltos_pelo_gesto")
+        if externos is not None:
+            with contextlib.suppress(Exception):
+                havia = bool(externos()) or havia
         return havia
 
     def guardados(self) -> dict[str, float]:
@@ -1777,7 +1800,11 @@ class ControllerIdentityRegistry:
         replug seguinte, que é o defeito de ORDEM DE WAKE de R-15. O que o
         botão "Renumerar agora" deve significar depois de D-30 é decisão da
         E3, não desta função.
+
+        O-ASSENTO-GUARDADO-NAO-ANDA-01: renumerar é fechar a fila agora, por
+        vontade dela — o lugar guardado não sobrevive ao gesto.
         """
+        self.soltar_os_lugares_guardados()
         with self._lock:
             changed = False
             for key, novo_rank in mapping.items():
@@ -1816,7 +1843,13 @@ class ControllerIdentityRegistry:
         INTACTA; o que muda é só o momento em que ela é gravada.
 
         Devolve ``True`` quando algo mudou de lugar.
+
+        O-ASSENTO-GUARDADO-NAO-ANDA-01: e ele SOLTA o lugar guardado, porque o
+        clique dela escolhe entre os números de quem está ligado (os dois
+        registros — ver :meth:`soltar_os_lugares_guardados`). As recusas do
+        comando vêm antes desta chamada: gesto recusado não solta nada.
         """
+        self.soltar_os_lugares_guardados()
         with self._lock:
             antes = dict(self._ordem)
             self._congelar_locked()
