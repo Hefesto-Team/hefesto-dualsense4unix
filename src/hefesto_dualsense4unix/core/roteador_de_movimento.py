@@ -34,7 +34,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Mapping
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, replace
 from types import MappingProxyType
 from typing import Final
 
@@ -557,6 +557,100 @@ def sincronizar_o_filtro(dono: object) -> None:
     )
 
 
+# ---------------------------------------------------------------------------
+# A MIRA NA NAVEGAÇÃO — A-MIRA-NA-NAVEGACAO-01, 24/09/2026
+# ---------------------------------------------------------------------------
+#
+# A frase dela é *"A exceção do nativo todo o resto deve ter mira Virtual"*, e
+# a decisão (`D-2409-NA-NAVEGACAO-O-GIRO-VIRA-CURSOR`) é a leitura literal: na
+# Navegação não há controle virtual, e o giro de quem está com a Mira acesa
+# move o cursor do computador. O motor já sabia o destino «mouse»; o que falta
+# é dizer que, na Navegação, TODO destino ligado é o cursor — porque o
+# analógico que ele escolheria é, ali, a roda e o cursor do próprio mouse.
+
+
+def para_o_cursor(arranjo: ArranjoDeMovimento) -> ArranjoDeMovimento:
+    """O mesmo arranjo, com o cursor por destino — o que a Navegação faz com ele.
+
+    A sensibilidade, o «Ignorar tremor até», o «Só enquanto eu segurar» e os
+    dois «Inverter» ficam como ela os deixou: só o destino muda. O arranjo
+    desligado continua desligado — a peça de chip apagado não passa a mirar
+    por estar na Navegação.
+    """
+    if not arranjo.ligado or arranjo.destino == DESTINO_MOUSE:
+        return arranjo
+    return replace(arranjo, destino=DESTINO_MOUSE)
+
+
+def pecas_que_miram(dono: object) -> tuple[str, ...]:
+    """As chaves das peças cuja OPINIÃO acende a mira — o chip de cada controle.
+
+    Na Navegação não há laço de secundários (o co-op só existe com o controle
+    virtual de pé), e quem pergunta pelo giro dos P2 a P4 precisa saber quais
+    peças pedir. As peças sem opinião seguem a mira do perfil, e essas vêm da
+    lista de conectados — não daqui.
+    """
+    return tuple(chave for chave, valor in por_peca(dono).items() if _ligado(valor))
+
+
+#: A DRENAGEM QUE VEM DEPOIS DE UM SILÊNCIO NÃO É MOVIMENTO, em segundos.
+#:
+#: O acumulador de ângulo do leitor (`MotionSensorReader`) integra o giro a
+#: cada pacote, e só zera quando alguém drena. Com o giro no cursor, o dono da
+#: drenagem é o tique — e o tique para de drenar em três casos reais: a Mira
+#: apagada (a peça não pede ângulo), o modo com controle virtual (o destino é o
+#: analógico, que não pede ângulo) e a pausa ou o grace do laço. O leitor segue
+#: aberto em todos, porque o cartão da tela lê o giro a 10 Hz.
+#:
+#: A PRIMEIRA DRENAGEM DEPOIS DISSO é o percurso inteiro do intervalo — com a
+#: deriva de 0,72 graus/s medida no controle dela parado, dez minutos são
+#: 430 graus, e a 12 px por grau o cursor saltaria cinco mil pixels no primeiro
+#: gesto. É o defeito que o touchpad já pagou (`discard_touchpad_motion`, o
+#: SALTO de cursor quando a emulação voltava) e que o teto do leitor
+#: (`_TETO_DO_ANGULO_GRAUS`, cem voltas) não evita.
+#:
+#: MEIO SEGUNDO é trinta tiques de 60 Hz: um tique atrasado pelo laço não perde
+#: movimento, e o que se descarta na volta de um silêncio é no máximo o giro de
+#: meio segundo — sob a deriva, 0,4 grau.
+SILENCIO_DA_DRENAGEM_S: Final = 0.5
+
+#: O mapa `{chave da peça: instante da última drenagem}`, no `StateStore`. Só o
+#: tique o toca (o `dispatch_gamepad`, o `forward_all` e o `dispatch_mouse`
+#: rodam todos no laço do daemon), e por isso é um `dict` comum.
+_ATRIBUTO_DA_DRENAGEM: Final = "_roteador_de_movimento_ultima_drenagem"
+
+
+def angulo_do_tique(
+    dono: object,
+    uniq: str,
+    angulo: tuple[float, float, float],
+    agora: float,
+) -> tuple[float, float, float] | None:
+    """O ângulo que a peça acabou de drenar, ou `None` se ele é um acumulado.
+
+    `None` quando a drenagem anterior desta peça foi há mais de
+    :data:`SILENCIO_DA_DRENAGEM_S` (ou nunca houve): o ângulo drenado é o que
+    se juntou enquanto ninguém drenava, e vira nada em vez de um salto. A
+    drenagem em si já aconteceu — quem chama drena ANTES de perguntar —, então
+    o tique seguinte começa do zero.
+
+    Sem dono (o `store` que não há) a resposta é o próprio ângulo: sem onde
+    guardar o relógio não há como saber, e é o comportamento de antes.
+    """
+    if dono is None:
+        return angulo
+    chave = chave_de_sensor(uniq)
+    mapa = getattr(dono, _ATRIBUTO_DA_DRENAGEM, None)
+    if not isinstance(mapa, dict):
+        mapa = {}
+        setattr(dono, _ATRIBUTO_DA_DRENAGEM, mapa)
+    anterior = mapa.get(chave)
+    mapa[chave] = agora
+    if anterior is None or agora - anterior > SILENCIO_DA_DRENAGEM_S:
+        return None
+    return angulo
+
+
 __all__ = [
     "CAMPOS",
     "CENTRO_DO_EIXO",
@@ -574,11 +668,13 @@ __all__ = [
     "SENSIBILIDADE_MAX",
     "SENSIBILIDADE_MIN",
     "SENSIBILIDADE_PADRAO",
+    "SILENCIO_DA_DRENAGEM_S",
     "SO_NAS_PECAS",
     "TETO_PADRAO_GRAUS_S",
     "ZONA_MORTA_PADRAO_GRAUS_S",
     "ArranjoDeMovimento",
     "ArranjoRecusadoError",
+    "angulo_do_tique",
     "arranjo_da_peca",
     "ativo",
     "da_peca",
@@ -588,7 +684,9 @@ __all__ = [
     "deflexao",
     "misturar",
     "montar",
+    "para_o_cursor",
     "parametros_da_peca",
+    "pecas_que_miram",
     "pixels",
     "por_peca",
     "sincronizar_o_filtro",

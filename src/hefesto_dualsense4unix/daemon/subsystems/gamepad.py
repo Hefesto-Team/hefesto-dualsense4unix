@@ -2753,6 +2753,7 @@ def aplicar_o_movimento(
     rx: int,
     ry: int,
     botoes: frozenset[str],
+    na_navegacao: bool = False,
 ) -> tuple[int, int, int, int]:
     """O giroscópio do físico vira deslocamento no que o jogo já lê.
 
@@ -2805,6 +2806,19 @@ def aplicar_o_movimento(
     3. **A fonte.** Sem identidade do primário (`primary_identity` devolve
        `None` no boot, no `--fake` e no fallback por path) ou sem reader de
        motion, não há movimento: os eixos voltam intactos.
+
+    **NA NAVEGAÇÃO TODO DESTINO É O CURSOR** — A-MIRA-NA-NAVEGACAO-01,
+    24/09/2026 (`D-2409-NA-NAVEGACAO-O-GIRO-VIRA-CURSOR`). ``na_navegacao`` é
+    o `mouse.dispatch_mouse` perguntando: ali não há controle virtual, e o
+    analógico que a mira escolheria é a roda e o cursor do próprio mouse. O
+    arranjo da peça e o da mesa passam pelo `roteador.para_o_cursor`, e o resto
+    é ESTE motor, na ordem de sempre — a drenagem antes dos portões, o gatilho,
+    o sensor dela, a zona morta medida na velocidade.
+
+    **E O ÂNGULO DE UM SILÊNCIO NÃO É MOVIMENTO** (`roteador.angulo_do_tique`):
+    a primeira drenagem depois de meio segundo sem drenar é o acumulado de
+    quando ninguém drenava, e sai como nada. Vale para os dois chamadores do
+    cursor — este e o destino «mouse» do perfil.
     """
     try:
         if not uniq:
@@ -2825,12 +2839,20 @@ def aplicar_o_movimento(
 
         # A PEÇA DECIDE — A-MIRA-POR-MOVIMENTO-NA-TELA-01: o chip «Mira Virtual»
         # de cada controle, por cima da mira do perfil. `None` = esta não mira.
-        peca = roteador.da_peca(getattr(daemon, "store", None), uniq, arranjo)
+        store = getattr(daemon, "store", None)
+        peca = roteador.da_peca(store, uniq, arranjo)
+        if na_navegacao:
+            # A NAVEGAÇÃO: o mesmo arranjo, com o cursor por destino — ver o
+            # docstring. Antes da drenagem, porque é o destino que a pede.
+            arranjo = roteador.para_o_cursor(arranjo)
+            peca = roteador.para_o_cursor(peca) if peca is not None else None
         # A DRENAGEM, ANTES DE TUDO — inclusive do portão da peça. Ver o
         # parágrafo do docstring: a peça de chip apagado numa mesa de cursor
         # DESCARTA o ângulo, em vez de guardá-lo para um salto.
         quer_angulo = arranjo.quer_angulo or (peca is not None and peca.quer_angulo)
         angulo = hub.angulo_do_movimento(uniq) if quer_angulo else None
+        if angulo is not None:
+            angulo = roteador.angulo_do_tique(store, uniq, angulo, time.monotonic())
         if peca is None:
             return lx, ly, rx, ry
         arranjo = peca
