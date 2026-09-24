@@ -147,6 +147,29 @@ def test_o_total_do_log_continua_dito() -> None:
     assert "log INTEIRO" in saida, saida
 
 
+def test_a_rajada_conta_as_ocorrencias_e_nao_as_linhas() -> None:
+    """Desde 23/09 o [BT-HCI] e o [XHCI] chegam em rajada: borda + resumo.
+
+    O P-4 da O-DIARIO-DO-RADIO-01 (feito na conferência da INSTALL-E-UNINSTALL-
+    DO-RADIO-01): uma rajada de cem linhas do kernel vira no log UMA borda e
+    resumos «segue +N» / «repetiu +N». O `grep -c` do resumo contava LINHAS e
+    dizia «BT-HCI=2» — o mesmo log, lido linha a linha antes de 23/09, dizia
+    cem. A MORDIDA: voltar ao `grep -cF` faz a conta cair para 3 e 1.
+    """
+    hoje = datetime.date.today().isoformat()
+    saida = _rodar([
+        "# 2026-07-20 kernel-watch iniciado",
+        f"{hoje}T12:00:00-03:00 [BT-HCI] Bluetooth: hci0: Opcode 0x2042 failed: -19",
+        f"{hoje}T12:01:00-03:00 [BT-HCI] segue +59 (60 desde {hoje}T12:00:00-03:00, 60 s):"
+        " Bluetooth: hci0: Opcode 0x2042 failed: -19",
+        f"{hoje}T12:01:40-03:00 [BT-HCI] repetiu +40 (100 desde {hoje}T12:00:00-03:00, 100 s):"
+        " Bluetooth: hci0: Opcode 0x2042 failed: -19",
+        f"{hoje}T13:00:00-03:00 [XHCI] xhci_hcd 0000:00:14.0: HC died",
+    ])
+    assert "BT-HCI=100" in saida, saida
+    assert "XHCI=1" in saida, saida
+
+
 def test_log_limpo_nao_diz_nada() -> None:
     """Sem evento nenhum, nem aviso nem histórico — só o resumo."""
     saida = _rodar(["# 2026-07-20 kernel-watch iniciado"])
