@@ -84,6 +84,9 @@ class _Broker:
         self.servidos = servidos
         self.pedidos: list[str] = []
         self.escritas: dict[str, int] = {}
+        #: De que nó é cada fd servido — o `ioctl_devinfo` de mentira responde
+        #: a identidade DAQUELE aparelho, e dois controles não viram um só.
+        self.caminho_do_fd: dict[int, str] = {}
 
     def __call__(self, caminho: str) -> int | None:
         self.pedidos.append(caminho)
@@ -91,6 +94,7 @@ class _Broker:
             return None
         leitura, escrita = os.pipe()
         self.escritas[caminho] = escrita
+        self.caminho_do_fd[leitura] = caminho
         return leitura
 
     def fechar(self) -> None:
@@ -119,8 +123,12 @@ def mesa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Any:
     from evdev import _input
 
     def _devinfo(fd: int) -> tuple[Any, ...]:
+        # O `uniq` é o do aparelho do nó: o do NO_TOUCHPAD é o `…:07` que as
+        # réguas conferem; os outros ganham o final do próprio número.
+        base = Path(broker.caminho_do_fd.get(fd, NO_TOUCHPAD)).name
+        final = "07" if base == Path(NO_TOUCHPAD).name else f"{int(base[5:]) % 100:02d}"
         return (0x0005, 0x054C, 0x0CE6, 0x8111, "DualSense Wireless Controller Touchpad",
-                "", "e8:47:3a:00:00:07")
+                "", f"e8:47:3a:00:00:{final}")
 
     monkeypatch.setattr(_input, "ioctl_devinfo", _devinfo)
     monkeypatch.setattr(_input, "ioctl_EVIOCGVERSION", lambda fd: 0x010001)
@@ -254,6 +262,27 @@ class TestADescobertaAchaOFisicoFechado:
         # O touchpad não tem BTN_GAMEPAD no sysfs: não foi pedido ao broker.
         assert broker.pedidos == [dev_input[NO_GAMEPAD]]
 
+    def test_os_dois_do_radio_entram_cada_um_no_seu(
+        self, mesa: Any, dev_input: dict[str, str], tmp_path: Path
+    ) -> None:
+        """Nunca só o P1: o P3 e o P4 no rádio, os dois com o touchpad
+        fechado, entram no mapa com a identidade de cada um."""
+        broker, recusa = mesa
+        segundo = "/dev/input/event9031"
+        _sysfs(tmp_path / "sys-class-input", segundo, vendor="054c", product="0ce6",
+               nome="DualSense Wireless Controller Touchpad", teclas=_TECLAS_DO_TOUCHPAD)
+        arquivo = tmp_path / "dev-input" / Path(segundo).name
+        arquivo.write_text("", encoding="ascii")
+        arquivo.chmod(0o000)
+        recusa.fechados.add(str(arquivo))
+        broker.servidos.add(str(arquivo))
+
+        mapa = er.discover_dualsense_touchpad_evdevs()
+        assert mapa == {
+            "e8473a000007": Path(dev_input[NO_TOUCHPAD]),
+            "e8473a000031": Path(str(arquivo)),
+        }
+
     def test_sem_broker_o_no_fechado_fica_de_fora(
         self, mesa: Any, dev_input: dict[str, str], monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
@@ -342,7 +371,13 @@ class TestONativoPedeOsQuatro:
 
         class Controller:
             def nos_hidraw_por_uniq(self) -> dict[str, str]:
-                return {"aabbcc000001": "/dev/hidraw3"}
+                # A mesa inteira: dois no cabo e dois no rádio.
+                return {
+                    "aabbcc000001": "/dev/hidraw3",
+                    "aabbcc000002": "/dev/hidraw4",
+                    "aabbcc000003": "/dev/hidraw7",
+                    "aabbcc000004": "/dev/hidraw8",
+                }
 
         monkeypatch.setattr(cli, "broker_client_for", lambda _d: Cliente())
         monkeypatch.setattr(cli, "broker_call_nonblocking", lambda _d, chamada: chamada())
@@ -350,9 +385,11 @@ class TestONativoPedeOsQuatro:
         daemon.controller = Controller()  # type: ignore[assignment]
         daemon._exposicao_do_modo_nativo(True)
         daemon._exposicao_do_modo_nativo(False)
-        assert pedidos == [
-            ("expor", "/dev/hidraw3", True),
-            ("desexpor", "/dev/hidraw3", False),
+        # Os quatro, cada um com o SEU nó e os nós de entrada junto — nunca
+        # só o P1 (a MORDIDA da conferência: corte o laço no primeiro).
+        nos = ["/dev/hidraw3", "/dev/hidraw4", "/dev/hidraw7", "/dev/hidraw8"]
+        assert pedidos == [("expor", no, True) for no in nos] + [
+            ("desexpor", no, False) for no in nos
         ]
 
     def test_o_payload_so_leva_o_campo_quando_e_verdade(self) -> None:
