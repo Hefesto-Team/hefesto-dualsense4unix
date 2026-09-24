@@ -341,18 +341,22 @@ def _o_que_e_da_mesa_inteira(draft: Any, ctx: Contexto) -> Any:
     return draft
 
 
-# OS TRÊS GESTOS DESTE RODAPÉ PERGUNTAM O PERFIL ATIVO A `perfil.nome_do_ativo`,
-# e nenhum dos três lê `ctx.state["active_profile"]` cru. A-PERNA-QUE-FALTA-01,
-# 11/09/2026.
+# OS TRÊS GESTOS DESTE RODAPÉ PERGUNTAM O PERFIL A `perfil_do_rodape`, e nenhum
+# dos três lê `ctx.state["active_profile"]` cru. A-PERNA-QUE-FALTA-01,
+# 11/09/2026, e O-MODO-FREESTYLE-03, 24/09/2026.
 #
-# A PERGUNTA TEM UM DONO E ELE RESOLVE EM DUAS PERNAS — o daemon primeiro, o
+# A PERGUNTA TEM UM DONO E ELE RESOLVE EM TRÊS PERNAS — o daemon primeiro, o
 # marcador em disco depois (`profiles_actions.perfil_que_esta_valendo`, e deste
-# lado `perfil.nome_do_ativo`). O estado cru só tem a primeira.
+# lado `perfil.nome_do_ativo`), e, quando os dois calam, o perfil de fora do
+# jogo (`loader.o_perfil_de_fora_do_jogo`). O estado cru só tem a primeira.
 #
 # E A SEGUNDA PERNA NÃO É HIPÓTESE: `nome_do_ativo` documenta, medido em
 # 06/09/2026 na máquina dela, o daemon respondendo `active_profile: null` com um
 # perfil valendo no disco. Sob esse estado os três levantavam — *"não há perfil
 # ativo. Escolha um na aba Perfis."* — em cima de um perfil que ESTAVA escolhido.
+# A TERCEIRA chegou ao Salvar na O-MODO-FREESTYLE-02 e só a ele; o Aplicar e o
+# Exportar seguiam recusando com o Freestyle no disco, e a conferência daquela
+# sprint achou a assimetria. Agora é uma linha igual nos três.
 #
 # Três linhas iguais e nenhum `if`: quem decide é a função dona, e um segundo
 # `or ""` aqui seria a terceira leitura de uma pergunta que já tem resposta.
@@ -366,8 +370,11 @@ def aplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     O QUE ESTA VERSÃO AINDA NÃO FAZ, e é honesto dizer: o "depois" (modo e
     máscara) da janela estável vem de uma escolha PENDENTE da aba Início, que a
     interface nova ainda não guarda. Aqui vai só o "agora".
+
+    SEM PERFIL ATIVO, MANDA O «FREESTYLE» — o mesmo que o Salvar grava e o boot
+    restaura (:func:`perfil_do_rodape`).
     """
-    nome = perfil.nome_do_ativo(ctx.state)
+    nome = perfil_do_rodape(ctx.state)
     draft = _draft_do_ativo(nome)
     if draft is None:
         raise ValueError(
@@ -394,9 +401,9 @@ def salvar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     SEM PERFIL ATIVO, GRAVA NO «FREESTYLE» — O-MODO-FREESTYLE-02, 24/09/2026.
     Não é escolher um: nenhum perfil valendo quer dizer a sessão vazia e o
     daemon calado, e é o Freestyle que o boot restaura nesse caso
-    (:func:`perfil_do_salvar`). A recusa fica para a máquina sem ele no disco.
+    (:func:`perfil_do_rodape`). A recusa fica para a máquina sem ele no disco.
     """
-    nome = perfil_do_salvar(ctx.state)
+    nome = perfil_do_rodape(ctx.state)
     # O `ctx` VAI JUNTO: é o que faz o Salvar gravar o que ESTÁ VALENDO, e não
     # o que já estava no disco.
     draft = _draft_do_ativo(nome, ctx)
@@ -412,16 +419,19 @@ def salvar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     return None
 
 
-def perfil_do_salvar(state: Any) -> str:
-    """Onde o «Salvar Perfil» grava: o perfil ativo, ou o de fora do jogo.
+def perfil_do_rodape(state: Any) -> str:
+    """O perfil dos três gestos do rodapé: o ativo, ou o de fora do jogo.
 
-    O-MODO-FREESTYLE-02, 24/09/2026. `perfil.nome_do_ativo` responde as duas
-    pernas (o daemon, depois a sessão no disco); quando as duas dizem "ninguém",
-    vale o que o boot restauraria — `loader.o_perfil_de_fora_do_jogo`, o
-    «Freestyle» quando ele está no disco. `""` quando nem ele está: a recusa do
-    gesto continua dizendo o que fazer.
+    O-MODO-FREESTYLE-02, 24/09/2026, e O-MODO-FREESTYLE-03 no dia seguinte:
+    nasceu `perfil_do_salvar` e servia só ao Salvar, e o Aplicar e o Exportar
+    recusavam sem perfil ativo com o Freestyle no disco. Agora os três perguntam
+    aqui. `perfil.nome_do_ativo` responde as duas pernas (o daemon, depois a
+    sessão no disco); quando as duas dizem "ninguém", vale o que o boot
+    restauraria — `loader.o_perfil_de_fora_do_jogo`, o «Freestyle» quando ele
+    está no disco. `""` quando nem ele está: a recusa de cada gesto continua
+    dizendo o que fazer.
 
-    NUNCA LEVANTA: a dica do rodapé pergunta o mesmo a cada tique.
+    NUNCA LEVANTA: as dicas do rodapé perguntam o mesmo a cada tique.
     """
     nome = perfil.nome_do_ativo(state)
     if nome:
@@ -449,8 +459,10 @@ def exportar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     Copia o arquivo do disco em vez de reserializar o perfil: o que ela leva
     para outra máquina é byte a byte o que está aqui — sem passar pelo pydantic,
     que normalizaria campos e mudaria o arquivo sem ninguém pedir.
+
+    SEM PERFIL ATIVO, EXPORTA O «FREESTYLE» (:func:`perfil_do_rodape`).
     """
-    nome = perfil.nome_do_ativo(ctx.state)
+    nome = perfil_do_rodape(ctx.state)
     if not nome:
         raise ValueError("exportar: não há perfil ativo para exportar.")
     pasta = perfil.pasta()
