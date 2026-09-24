@@ -1861,7 +1861,11 @@
 
        acesa     a cor conhecida, com halo        `background:{tinta}`
        apagada   fonte NOSSA, barra desligada     `TIRA_APAGADA` — lisa e vazia
-       incerta   Nativo · Steam · cor ignorada    ESTA REGRA — tracejada
+       incerta   Steam · cor ignorada             ESTA REGRA — tracejada
+
+     O NATIVO SAIU DA LINHA DE BAIXO em 24/09/2026
+     (`D-2409-NO-NATIVO-A-TELA-MOSTRA-A-COR`): no Nativo a barra é do
+     Hefesto, e a tira desenha a cor como em todo modo.
 
      CONTORNO, E NUNCA COR NOVA — ordem dela. Nesta aba tudo o que é CHEIO de
      cor é LUZ (as duas tiras, as cinco lâmpadas, os oito tons da guia): uma
@@ -2592,7 +2596,15 @@
                        pacote reescreve a cada tique com a mesa viva. -->
                   Dar um número que já é de outro faz <b>os dois trocarem</b>: ninguém
                   repete e ninguém fica sem.<br><br>
-                  Um jogo em co-op pode mandar o próprio número por cima.
+                  <!-- O JOGO NÃO MANDA NO NÚMERO — 24/09/2026, A-MIRA-NA-NAVEGACAO-01.
+                       Aqui estava *"Um jogo em co-op pode mandar o próprio
+                       número por cima"*, e a STEAM-NO-FISICO-01 derrubou o fato:
+                       o número que o jogo manda ao controle virtual é RECUSADO
+                       sempre (`backend_pydualsense.numeracao_do_jogo`), e o que
+                       chega por fora é reescrito pela vigia do sequestro
+                       (`escritor_cru.VigiaDoSequestro`) em até um segundo. -->
+                  O número é do Hefesto: se um jogo o trocar, ele <b>volta em até
+                  um segundo</b>.
                 </span></span>
               </div>
             </div>
