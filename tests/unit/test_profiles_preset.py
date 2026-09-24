@@ -145,8 +145,10 @@ EXPECTED_PRESETS = {
     "freestyle": {
         "name": "Freestyle",
         "priority": 1,
-        "triggers_left_mode": "Off",
-        "triggers_right_mode": "Off",
+        # O-MODO-FREESTYLE-03 (24/09/2026): o Freestyle de fábrica nasce com os
+        # gatilhos de nascimento do produto — a ordem dela de 17/09. Era `Off`.
+        "triggers_left_mode": "Rigid",
+        "triggers_right_mode": "Rigid",
         "lightbar": (40, 80, 180),
         # ONDA-U (U9-brightness): 0.4→1.0 — o default de código já é 1.0; o
         # asset destoava (queixa "brightness não é 100%"). navegacao.json é

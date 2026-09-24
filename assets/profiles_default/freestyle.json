@@ -4,8 +4,8 @@
   "match": {"type": "any"},
   "priority": 1,
   "triggers": {
-    "left":  {"mode": "Off", "params": []},
-    "right": {"mode": "Off", "params": []}
+    "left":  {"mode": "Rigid", "params": [5, 200]},
+    "right": {"mode": "Rigid", "params": [5, 200]}
   },
   "leds": {
     "lightbar": [40, 80, 180],
