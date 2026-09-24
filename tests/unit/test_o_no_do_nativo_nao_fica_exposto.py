@@ -112,9 +112,20 @@ class _StatQueAceitaArquivo(ModuleType):
 
 
 class _OpsDeArquivo(FsAclOps):
-    """O `FsAclOps` de produção; o «é char device?» das entradas aceita arquivo."""
+    """O `FsAclOps` de produção; o «é char device?» das entradas aceita arquivo.
+
+    `falhar_o_hide` só existe para fabricar o nó ÓRFÃO do Achado Onda S #3 (o
+    fs que falha no EOF da lease): desligado, que é o padrão, o `hide` é o de
+    produção.
+    """
 
     _e_char_device = staticmethod(stat.S_ISREG)
+    falhar_o_hide = False
+
+    def hide(self, node: str, base: str) -> None:
+        if self.falhar_o_hide:
+            raise PermissionError(node)
+        super().hide(node, base)
 
 
 def _montar(raiz: Path) -> Mesa:
@@ -351,8 +362,12 @@ class TestACuraNaoFechaDemais:
         assert _fechado(no)
 
     def test_quem_morre_primeiro_e_o_hide(self, mesa: Mesa) -> None:
-        """O Nativo segue de pé: o nó segue aberto para o jogo."""
-        st = _estado(mesa, [])
+        """O Nativo segue de pé: o nó segue aberto para o jogo. Quando ele
+        morre depois, não sobra hide nenhum a cumprir: o nó fecha pelo
+        repouso, e o diário não diz «hide adiado cumprido». A MORDIDA: faça
+        o `adiado` do `on_conn_closed` valer sempre e a linha sai aqui."""
+        diario: list[tuple[str, dict[str, Any]]] = []
+        st = _estado(mesa, diario)
         no = mesa.no("hidraw7")
         _pede(st, NATIVO, {"cmd": "expose", "node": no, "entradas": True})
         _pede(st, OUTRA, {"cmd": "hide", "node": no})
@@ -360,6 +375,33 @@ class TestACuraNaoFechaDemais:
         assert _aberto_para_ela(no)
         st.on_conn_closed(NATIVO)
         assert _fechado(no)
+        assert not any(e == "hide_adiado_cumprido" for e, _ in diario)
+
+    def test_o_orfao_que_o_nativo_expos_volta_ao_repouso(self, mesa: Mesa) -> None:
+        """Um nó ÓRFÃO — a lease que o escondeu morreu com o fs falho e ele
+        ficou em `hidden` sem dono (Achado Onda S #3) — que o Nativo expôs.
+        Sem lease de hide viva, o destino é o de nascimento: fechado com a
+        regra da cura. Antes o laço pulava todo nó em `hidden`, e o órfão
+        ficava aberto sem ninguém que o fechasse (o daemon no Nativo não
+        esconde). E ele não é hide adiado: o diário não diz «cumprido».
+        As MORDIDAS: pule o órfão no laço e o nó fica à mostra; conte o
+        órfão como adiado e a linha do diário mente."""
+        diario: list[tuple[str, dict[str, Any]]] = []
+        st = _estado(mesa, diario)
+        ops = st._ops
+        assert isinstance(ops, _OpsDeArquivo)
+        no = mesa.no("hidraw5")
+        _pede(st, OUTRA, {"cmd": "hide", "node": no})
+        ops.falhar_o_hide = True
+        st.on_conn_closed(OUTRA)  # o fs falha: o nó fica órfão em `hidden`
+        ops.falhar_o_hide = False
+        assert no in st.hidden and st._lease_holders(no) == 0
+        _pede(st, NATIVO, {"cmd": "expose", "node": no, "entradas": True})
+        assert _aberto_para_ela(no)
+        st.on_conn_closed(NATIVO)
+        assert _fechado(no), "o órfão que o Nativo expôs ficou à mostra"
+        assert all(_fechado(e) for e in mesa.entradas("hidraw5"))
+        assert not any(e == "hide_adiado_cumprido" for e, _ in diario)
 
     def test_o_no_que_sumiu_nao_vira_cumprido(self, mesa: Mesa) -> None:
         """O controle saiu da mesa antes do EOF: não há o que fechar, e o
@@ -460,11 +502,16 @@ class TestPontaAPonta:
 
             nativo.close()
 
-            assert _espera(lambda: all(_fechado(no) for no in mesa.nos)), [
-                no for no in mesa.nos if not _fechado(no)
+            # O fio do broker fecha os quatro hidraw e SÓ DEPOIS os nós de
+            # entrada (o laço final do `on_conn_closed`): a espera cobre os
+            # dois, senão a régua lê as entradas no meio do EOF e reprova o
+            # produto certo quando o fio perde a vez entre um e outro.
+            todos = [Path(no) for no in mesa.nos] + [
+                e for base, *_ in CONTROLES for e in mesa.entradas(base)
             ]
-            for base, *_ in CONTROLES:
-                assert all(_fechado(e) for e in mesa.entradas(base)), base
+            assert _espera(lambda: all(_fechado(n) for n in todos)), [
+                str(n) for n in todos if not _fechado(n)
+            ]
             status = outra.status()
             assert status is not None
             assert status["hidden"] == sorted(mesa.nos)
