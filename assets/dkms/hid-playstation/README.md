@@ -34,9 +34,12 @@ Bluetooth ele sobe, no cabo ele morre.
 > ainda é **hipótese fundamentada**, não fato medido.
 >
 > **Isso vale só para o `0001`.** Para o clone no cabo (`0002`) **não existe
-> cura de primeira linha**: o `bt_rebind_orphans.sh` só toca barramento `0005`
-> (Bluetooth), e rebind não ajudaria de qualquer forma — a resposta curta é
-> determinística, o próximo probe falha igual.
+> cura de primeira linha**: o ramo HID do `bt_rebind_orphans.sh` só toca
+> barramento `0005` (Bluetooth), e rebind não ajudaria de qualquer forma — a
+> resposta curta é determinística, o próximo probe falha igual. (O ramo do CABO
+> que o script ganhou em 24/09, na STORM-USB-01, é outra camada: ele religa a
+> interface USB que perdeu a probe do `usbhid` num -71, e no clone a interface
+> tem o `usbhid` — quem falha nele é o `playstation`, e o ramo não o toca.)
 
 ## Proveniência
 
