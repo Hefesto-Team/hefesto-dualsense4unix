@@ -5834,6 +5834,68 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 ---
 
+## mapa-plataforma.religar-cabo — Religar o controle que perdeu a probe (o -71 do cabo, a disputa do rádio) · cabo
+
+*Célula:* `plataforma.religar @ cabo`
+
+**O que isto prova.** Prova que o controle do cabo que o computador largou sem o HID numa falha da entrada — ele fica encaixado, com a luz acesa, e some da fita — volta sozinho em segundos, com o número dele, e que ninguém troca de número enquanto ele está fora.
+
+**Onde olhar.** A fita do topo, com um chip por controle — «P1 • <nome da cor do plástico> • USB». A contagem no canto de cima, à direita, no formato «● 2 USB · 2 BT». E na aba Conexões, o quadro «Gestão de Controles», que abre pelo título: o lugar de quem está fora diz «Player N • Desconectado».
+
+**Os passos.**
+
+1. Confira que os quatro estão ligados — os chips do P1 e do P2 terminando em USB, os do P3 e do P4 em BT — e anote o nome da cor do plástico e o número de cada um.
+2. Siga a bancada com os quatro na mesa. Este teste não se provoca: ele espera uma entrada do cabo falhar sozinha, e fica aberto a sessão inteira.
+3. Se um controle do cabo sumir da fita sem você puxar nada, anote a hora e comece a contar os segundos.
+4. Abra a aba Conexões, clique no título «Gestão de Controles» e confira que o lugar que diz «Desconectado» é o DELE, e que os outros três seguem com os números do começo.
+5. Anote em quantos segundos o chip dele volta à fita, e com qual número.
+6. Confira que a contagem voltou a «● 2 USB · 2 BT».
+
+**Passa quando.** O controle do cabo que caiu sozinho volta sozinho em menos de meio minuto, com o número dele, e os outros três não trocaram de número em momento nenhum. Se nenhum controle do cabo cair durante a sessão, o teste fica sem resposta — é achado quando acontece.
+
+**Por controle.**
+
+* **P1** — USB, um dos dois que podem cair. Se for ele, os passos 3 a 6 são nele.
+* **P2** — USB, o outro. Mesma conferência.
+* **P3** — BT, testemunha. O número dele não muda enquanto um do cabo está fora.
+* **P4** — BT, testemunha. Mesma conferência.
+
+**A armadilha.** Duas. Primeira: o número só se guarda por meio minuto. Nesta mesa a falha pode levar quase isso para aparecer, porque o computador sobe o som do controle antes do resto; se ele voltar depois do prazo, os outros três terão descido um número e voltam quando ele volta — anote os segundos, é o limite desta cura. Segunda: se ele não voltar em três minutos, tire e ponha o cabo, e anote: a entrada pode ter ficado vazia para o computador, e ali o gesto é seu.
+
+---
+
+## mapa-plataforma.religar-radio — Religar o controle que perdeu a probe (o -71 do cabo, a disputa do rádio) · rádio
+
+*Célula:* `plataforma.religar @ rádio`
+
+**O que isto prova.** Prova que, quando dois controles do rádio sobem juntos no mesmo adaptador e um deles perde a subida na disputa — ele fica aceso, pareado, e não aparece —, o Hefesto o religa sozinho em segundos, e cada um volta com o número dele.
+
+**Onde olhar.** A fita do topo, com um chip por controle — «P3 • <nome da cor do plástico> • BT» —, e a contagem no canto de cima, à direita («● 2 USB · 2 BT»). Na aba Conexões, a seção «Rádio e Adaptadores», que abre pelo título: cada adaptador tem um ▶ que abre a lista dos controles que estão nele. E a barra de luz de cada controle do rádio: acesa e sem chip na fita é o controle que perdeu a subida.
+
+**Os passos.**
+
+1. Confira que os quatro estão ligados e anote o nome da cor do plástico e o número de cada um.
+2. Abra a aba Conexões, clique no título «Rádio e Adaptadores» e confira, abrindo o ▶ de cada adaptador, se o P3 e o P4 estão no MESMO adaptador; anote a resposta.
+3. Segure o botão PS do P3 até todas as luzes dele apagarem, e solte; faça o mesmo com o P4.
+4. Conte até cinco, devagar.
+5. Com um controle em cada mão, dê um toque curto no PS dos dois AO MESMO TEMPO, e comece a contar os segundos.
+6. Anote se algum dos dois ficou com a barra de luz acesa e sem chip na fita, e por quantos segundos.
+7. Anote em quantos segundos cada chip voltou à fita, e com qual número.
+8. Repita os passos 3 a 7 mais duas vezes.
+
+**Passa quando.** Nas três voltas, os dois voltam à fita em menos de meio minuto desde o toque — o P3 como P3, o P4 como P4 —, e o P1 e o P2 não trocam de número. O que ficou aceso e sem chip entrou sozinho, sem você tocar em nada.
+
+**Por controle.**
+
+* **P1** — USB, testemunha. Não toque nele; o número dele não muda.
+* **P2** — USB, testemunha. Mesma conferência.
+* **P3** — BT, um dos dois que sobem juntos.
+* **P4** — BT, o outro. Quem volta primeiro volta com o número DELE, e não com o do que ainda está fora.
+
+**A armadilha.** Três. Primeira: a disputa não acontece toda vez, e é mais provável com os dois no mesmo adaptador; uma volta em que os dois entram limpos também passa — o que interessa é anotar em quais voltas um ficou aceso e sem chip, e quanto tempo levou para entrar. Segunda: não use o «Reconectar controles» durante este teste; ele derruba o elo e mede outra coisa, e o ponto aqui é ver o controle entrar sem ninguém tocar nele. Terceira: um aperto solto no PS abre a Steam; se ela abrir, feche-a e refaça a volta.
+
+---
+
 ## mapa-plataforma.slot_jogador-cabo — Slot / número de jogador atribuído pelo Hefesto · cabo
 
 *Célula:* `plataforma.slot_jogador @ cabo`
