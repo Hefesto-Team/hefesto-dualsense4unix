@@ -272,6 +272,13 @@ def seed_default_presets(
             # Já semeado antes → respeita a decisão da usuária (inclusive deletar).
             if fname in seeded:
                 continue
+            # O-MODO-FREESTYLE-01: o preset SAIU da fábrica, e o arquivo ainda
+            # está na pasta só porque o install o empacota. Registra sem copiar:
+            # o marker é o contrato com `scripts/install_profiles.sh`, e com a
+            # linha escrita o shell também deixa de trazê-lo de volta.
+            if fname in PRESETS_QUE_SAIRAM:
+                new_entries.append(fname)
+                continue
             # PERFIL-PADRAO-PERSONALIZADO-01: o slot dela JÁ EXISTE sob o nome
             # antigo. Copiar o asset aqui criaria um SEGUNDO catch-all — e o
             # segundo catch-all é o defeito que `profiles.sanidade` existe
@@ -438,6 +445,140 @@ def migrate_default_profile_name(dest_dir: Path | None = None) -> str | None:
         backup=BACKUP_DO_PADRAO if renomeado else None,
     )
     return renomeado
+
+
+# --- O-MODO-FREESTYLE-01 (24/09/2026) — o «Personalizado» sai --------------
+# A palavra dela, 23/09/2026, com a aba Jogar dizendo «Perfil ativo
+# Personalizado» no topo: *"Personalizado sai e o botão Trava o perfil Ativo na
+# aba jogar. Vira Modo Freestyle o botão. (…) O trava perfil ativo já faz
+# isso."*  (noqa-acento: citação literal dela)
+#
+# MEDIDO ANTES DO CÓDIGO, com o `AutoSwitcher` e o `ProfileManager` reais
+# (`tests/unit/test_o_modo_freestyle.py` guarda a tabela): com a trava ligada o
+# Personalizado NUNCA entra — o desktop fica com o perfil que estava —, e é o
+# mesmo desfecho de não haver Personalizado nenhum. A frase dela é literal.
+#
+# SEM ELE, QUANDO NENHUM JOGO CASA: nada troca. O `select_for_window_ex`
+# devolve `(None, "sem_candidato")` e o autoswitch não ativa ninguém sem
+# candidato — o perfil que estava continua valendo, e o topo diz o nome dele.
+# Antes do primeiro jogo depois do boot não há perfil nenhum, e o topo diz «—»,
+# que é o que ele já dizia para esse estado.
+#
+# DUAS PEÇAS, e as duas moram aqui:
+#   1. o semeador em tempo de execução não copia o que está em
+#      `PRESETS_QUE_SAIRAM`, e registra o nome no `.seeded_presets` — o marker
+#      é contrato com `scripts/install_profiles.sh`, que passa a respeitar a
+#      saída também;
+#   2. `aposentar_o_personalizado` tira o arquivo que JÁ está no disco, com a
+#      cópia em `.historico/personalizado/` — o mesmo lugar do
+#      `delete_profile`, e de onde `restaurar_do_historico("personalizado")`
+#      o devolve inteiro, byte a byte.
+#
+# O ASSET CONTINUA NA ÁRVORE, e é medido, não esquecimento: o `install.sh`
+# (passo 4c) roda `scripts/install_profiles.sh`, que copia
+# `assets/profiles_default/*.json` e sai com erro se a pasta sumir, e o Flatpak
+# e o AppImage empacotam a mesma pasta pelo mesmo glob. Tirar o arquivo é
+# pedido para quem coordena o install; até lá, a peça 2 recolhe o que o shell
+# semear numa máquina nova, uma vez.
+
+#: Os presets que saíram da fábrica e continuam na pasta só porque o install os
+#: empacota. A lista é FECHADA: um perfil que ela crie depois com esse nome é
+#: dela, e nenhum semeador o toca.
+PRESETS_QUE_SAIRAM: frozenset[str] = frozenset({ARQUIVO_DO_PADRAO})
+
+#: O slug do perfil que sai — nome da pasta dele no `.historico`.
+SLUG_DO_PADRAO = "personalizado"
+
+_PERSONALIZADO_SAIU_MARKER = ".personalizado_saiu"
+
+
+def _e_o_padrao(nome: object) -> bool:
+    """O nome guardado na sessão aponta o Personalizado? Por slug, sem levantar."""
+    if not isinstance(nome, str) or not nome.strip():
+        return False
+    try:
+        return slugify(nome) == SLUG_DO_PADRAO
+    except ValueError:
+        return False
+
+
+def _soltar_a_sessao_do_padrao() -> None:
+    """`session.json` e `active_profile.txt` deixam de apontar o que saiu.
+
+    Os dois guardam o NOME do último perfil que ela ativou na mão, e o boot e o
+    topo leem por esse nome (`resolve_boot_profile`, `perfil_que_ela_ativou`).
+    Apontando um arquivo que não existe mais, o topo diria «Personalizado» sobre
+    nada, e o boot logaria `last_profile_restore_failed`. Vazio é a forma que
+    os dois leitores já entendem como "não há" — nenhum arquivo é apagado.
+
+    Só mexe no que apontava o Personalizado; outro nome é escolha dela e fica.
+    """
+    from hefesto_dualsense4unix.utils.session import (
+        load_last_profile,
+        read_active_marker,
+        save_active_marker,
+        save_last_profile,
+    )
+
+    with contextlib.suppress(Exception):
+        if _e_o_padrao(load_last_profile()):
+            save_last_profile("")
+    with contextlib.suppress(Exception):
+        if _e_o_padrao(read_active_marker()):
+            save_active_marker("")
+
+
+def aposentar_o_personalizado(dest_dir: Path | None = None) -> Path | None:
+    """One-shot: o `personalizado.json` sai da lista, com a cópia no histórico.
+
+    O-MODO-FREESTYLE-01 (ver o bloco acima). Devolve o caminho da cópia quando
+    tirou o arquivo; `None` em todo outro desfecho.
+
+    O ARQUIVO DELA NÃO SE PERDE, e a ordem é o que garante: os bytes vão para
+    `.historico/personalizado/<carimbo>.json` ANTES de o `.json` sair da pasta.
+    Se a cópia falhar (disco cheio, permissão), o arquivo FICA e a marca não
+    é escrita — a próxima carga tenta de novo. Apagar sem volta é o único
+    desfecho que esta função não tem.
+
+    One-shot como as vizinhas: com a marca no disco, um `personalizado.json`
+    que ela crie depois é dela, e fica.
+    """
+    directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
+    marker = directory / _PERSONALIZADO_SAIU_MARKER
+    if marker.exists():
+        return None
+    alvo = directory / ARQUIVO_DO_PADRAO
+    copia: Path | None = None
+    desfecho = "sem_personalizado"
+    with FileLock(str(_lock_path(marker))):
+        if marker.exists():
+            return None
+        if alvo.is_file():
+            with FileLock(str(_lock_path(alvo))):
+                bruto = _bytes_se_existe(alvo)
+                if bruto is not None:
+                    copia = _arquivar_versao(SLUG_DO_PADRAO, bruto, raiz=directory)
+                    if copia is None:
+                        desfecho = "sem_copia"
+                    else:
+                        alvo.unlink()
+                        desfecho = "aposentado"
+            if copia is not None:
+                # O `.lock` sai FORA do `with`, pela razão da Z4/T15 escrita em
+                # `delete_profile`: apagar o lock enquanto o segura é convite
+                # para outro processo achar que destravou algo que não existe.
+                _lock_path(alvo).unlink(missing_ok=True)
+        if desfecho != "sem_copia":
+            with contextlib.suppress(Exception):
+                marker.write_text("done\n", encoding="utf-8")
+    if copia is not None:
+        _soltar_a_sessao_do_padrao()
+    logger.info(
+        "personalizado_aposentado",
+        desfecho=desfecho,
+        copia=str(copia) if copia is not None else None,
+    )
+    return copia
 
 
 
@@ -926,6 +1067,13 @@ def _maybe_seed_presets() -> None:
         with contextlib.suppress(Exception):
             migrate_default_profile_name()
         seed_default_presets()
+        # O-MODO-FREESTYLE-01: DEPOIS da renomeação e da semeadura, e a ordem é
+        # o ponto. A renomeação ainda leva o `meu_perfil` de um disco velho para
+        # `personalizado.json`; esta o recolhe no mesmo processo, com a cópia.
+        # E o que o `install_profiles.sh` semear numa máquina nova sai aqui,
+        # na primeira carga — uma vez, pela marca.
+        with contextlib.suppress(Exception):
+            aposentar_o_personalizado()
         # MASCARA-QUE-GRUDA-01 (22/08/2026): aqui rodava a
         # `migrate_game_presets_to_xbox`. Nenhuma migração escreve máscara em
         # perfil — o motivo inteiro está na nota acima do bloco que a substituiu.
@@ -2180,16 +2328,27 @@ def _podar_historico(destino: Path, manter: int) -> list[Path]:
     return apagadas
 
 
-def _arquivar_versao(slug: str, bruto: bytes) -> Path | None:
+def _arquivar_versao(
+    slug: str, bruto: bytes, *, raiz: Path | None = None
+) -> Path | None:
     """Guarda os BYTES da versão atual do perfil no histórico.
 
     Best-effort por contrato, e a razão é a hierarquia de danos: uma falha ao
     arquivar (disco cheio, permissão) não pode impedir a usuária de SALVAR o
     perfil dela. Loga warning e devolve None — o `profile_salvo` do journal
     registra `backup=None`, então a ausência fica visível em vez de silenciosa.
+
+    `raiz` é o diretório de perfis quando quem chama já o recebeu injetado (as
+    migrações one-shot aceitam `dest_dir`); sem ela, é o `profiles_dir()` de
+    sempre. O histórico mora DENTRO da raiz nos dois casos.
     """
     try:
-        destino = historico_dir(slug, ensure=True)
+        if raiz is None:
+            destino = historico_dir(slug, ensure=True)
+        else:
+            _reject_traversal(slug)
+            destino = raiz / HISTORICO_DIR_NAME / slug
+            destino.mkdir(parents=True, exist_ok=True)
         alvo = destino / f"{_carimbo_de_versao()}.json"
         # Dois saves no MESMO microssegundo são inverossímeis, mas o desempate
         # é barato e evita perder uma versão por colisão de nome.

@@ -59,23 +59,30 @@ def _escrever(path: Path, dados: dict) -> None:
 
 
 # =============================================================================
-# PASSO 1 — a semeadura só conhece o Personalizado
+# PASSO 1 — a semeadura não entrega gênero nenhum
 # =============================================================================
 
-def test_a_semeadura_so_conhece_o_personalizado(tmp_path: Path) -> None:
-    """Semear num diretório vazio, com a fábrica de hoje, produz UM arquivo.
+def test_a_semeadura_nao_entrega_genero_nenhum(tmp_path: Path) -> None:
+    """Semear num diretório vazio, com a fábrica de hoje, não produz gênero.
 
     MORDE: devolver qualquer um dos oito gêneros a `assets/profiles_default/`.
+
+    ATÉ 24/09/2026 ESTE CASO ESPERAVA UM ARQUIVO, o `personalizado.json`. A
+    decisão dela de 23/09 (D-2309-O-MODO-FREESTYLE, *"Personalizado sai"*)
+    tirou o preset da semeadura — o arquivo fica na pasta porque o install o
+    empacota, e o semeador o registra sem copiar. O que esta régua guarda
+    continua o mesmo: gênero não é perfil.
     """
     destino = tmp_path / "perfis"
 
     copiados = loader.seed_default_presets(dest_dir=destino, source_dirs=[FABRICA])
 
-    assert copiados == ["personalizado.json"], (
-        "a semeadura de fábrica entregou mais que o Personalizado: "
-        f"{copiados} — gênero não é perfil (decisão dela, 06/09/2026)"
+    assert copiados == [], (
+        "a semeadura de fábrica entregou perfil: "
+        f"{copiados} — gênero não é perfil (decisão dela, 06/09/2026), e o "
+        "Personalizado saiu (decisão dela, 23/09/2026)"
     )
-    assert sorted(p.name for p in destino.glob("*.json")) == ["personalizado.json"]
+    assert sorted(p.name for p in destino.glob("*.json")) == []
 
 
 def test_os_oito_estilos_sairam_da_fabrica_e_moram_na_casa_deles() -> None:
