@@ -71,10 +71,12 @@
 #      hid device`) ou o [PROBE-PERDIDA] do rádio — chama o religar pela ponte
 #      privilegiada (`sudo -n <ponte> religar-orfaos`), três vezes, com esperas
 #      que cabem no lugar guardado de quem saiu (30 s): o controle volta com o
-#      número dele. O tique do watchdog passa de 2 em 2 min (medido no journal
-#      dela: mediana 120 s), e religado só ali ele voltava fora do prazo em ~3
-#      de cada 4 quedas. Sem a regra do sudo (o install sem senha, o Flatpak),
-#      nada muda: o tique continua religando, como antes.
+#      número dele — e o aviso de OUTRO controle que chega no meio do trabalho
+#      ganha mais uma volta das três (`religar_em_fundo`). O tique do watchdog
+#      passa de 2 em 2 min (medido no journal dela: mediana 120 s), e religado
+#      só ali ele voltava fora do prazo em ~3 de cada 4 quedas. Sem a regra do
+#      sudo (o install sem senha, o Flatpak), nada muda: o tique continua
+#      religando, como antes.
 #
 # Log: ~/.local/state/hefesto-dualsense4unix/kernel.log (novo nome). O antigo
 # storm.log é PRESERVADO se existir (histórico); se não existir, vira symlink
@@ -417,17 +419,44 @@ pede_religar() {
 #: O religar, EM FUNDO, para não segurar o log. Uma rajada, um trabalho: quem
 #: chega com um de pé é absorvido por ele (o `flock`), e cada passada da ponte
 #: religa o que houver de órfão naquela hora. Sem a regra do sudo, sai calado.
+#:
+#: O AVISO QUE CHEGA NO MEIO DO TRABALHO (a conferência, 24/09/2026). Os
+#: controles de um adaptador que caiu reconectam cada um no seu tempo, e o
+#: segundo pode perder a probe depois da primeira passada do trabalho do
+#: primeiro: absorvido, ele ficava só com o resto das passadas — uma, ou
+#: nenhuma se chegasse na última. Por isso cada aviso deixa um byte no arquivo
+#: da trava ANTES de tentá-la; o trabalho esvazia o arquivo logo antes da
+#: primeira passada de cada volta (o que chegou até ali, ela cobre) e, se no fim
+#: da volta ele tiver byte, dá outra volta inteira. Até RELIGAR_VOLTAS voltas;
+#: depois, a rede é o tique do watchdog.
+RELIGAR_VOLTAS=3
 religar_em_fundo() {
     local trava="$1"
+    printf '.' >>"${trava}" 2>/dev/null || true
+    # O MESMO arquivo é a trava (o `flock` no descritor 9) e o pedido (os
+    # bytes): esvaziá-lo e lê-lo com ele aberto é o desenho, não descuido.
+    # shellcheck disable=SC2094
     (
         if command -v flock >/dev/null 2>&1; then
             flock -n 9 || exit 0
         fi
         [[ -x "${PONTE}" ]] || exit 0
         "${SUDO}" -n -l "${PONTE}" religar-orfaos >/dev/null 2>&1 || exit 0
-        for espera in ${RELIGAR_ESPERAS}; do
-            sleep "${espera}"
-            timeout 60 "${SUDO}" -n "${PONTE}" religar-orfaos >/dev/null 2>&1 || true
+        volta=1
+        while :; do
+            esvaziar=1
+            for espera in ${RELIGAR_ESPERAS}; do
+                sleep "${espera}"
+                if (( esvaziar )); then
+                    : >"${trava}" 2>/dev/null || true
+                    esvaziar=0
+                fi
+                timeout 60 "${SUDO}" -n "${PONTE}" religar-orfaos >/dev/null 2>&1 || true
+            done
+            if [[ ! -s "${trava}" ]] || (( volta >= RELIGAR_VOLTAS )); then
+                break
+            fi
+            volta=$((volta + 1))
         done
     ) 9>>"${trava}" </dev/null >/dev/null 2>&1 &
 }
