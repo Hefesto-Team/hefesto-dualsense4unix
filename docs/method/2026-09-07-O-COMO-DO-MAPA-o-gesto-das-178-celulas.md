@@ -5108,24 +5108,24 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 3. Leia as linhas do exame, uma a uma, e anote o que cada uma diz.
 4. Puxe o cabo de dentro do controle do P1.
 5. Leia a contagem no alto: ela tem de passar a «● 1 USB · 2 BT».
-6. Confira na fita que o chip com o plástico do P1 saiu e que ficaram três chips, com os outros três plásticos.
-7. Abra a aba Conexões, clique no título «Gestão de Controles» e confira que a última linha passou a dizer «Player 4 • Desconectado».
+6. Confira na fita que o chip com o plástico do P1 saiu e que ficaram três chips, com os outros três plásticos, cada um com o número do começo — nos primeiros trinta segundos com ele fora, ninguém troca de número.
+7. Abra a aba Conexões, clique no título «Gestão de Controles» e confira que o lugar do P1 diz «Player 1 • Desconectado». Se já passou meio minuto desde que você puxou o cabo, a fila se fechou: os que vinham depois dele desceram um número e é a última linha, «Player 4 • Desconectado», que fica vazia — anote qual das duas você viu, e quantos segundos tinham passado.
 8. Volte à aba Sistema e leia o exame de novo.
 9. Confira que nenhuma linha NOVA nasceu falando de rádio, de Bluetooth ou de controle sumido.
 10. Encaixe o cabo de volta no P1.
-11. Confira que a contagem volta a «● 2 USB · 2 BT» e que o chip com o plástico do P1 volta a ser o P1, com os outros três de volta aos números do começo.
+11. Confira que a contagem volta a «● 2 USB · 2 BT» e que os quatro terminam com os números do começo — o P1 volta como P1 mesmo depois do prazo.
 12. Repita os passos 4 a 11 com o P2.
 
-**Passa quando.** Puxar o cabo de um controle aparece como o que é — a queda de um controle do CABO: a contagem perde um USB, o chip dele sai da fita, e um lugar passa a dizer «Desconectado». O exame da aba Sistema não ganha linha nova por causa disso, e não diz uma palavra sobre rádio. Com o cabo de volta, os quatro terminam com os números do começo.
+**Passa quando.** Puxar o cabo de um controle aparece como o que é — a queda de um controle do CABO: a contagem perde um USB, o chip dele sai da fita, e um lugar passa a dizer «Desconectado» — o dele, nos primeiros trinta segundos; o último, depois do prazo. O exame da aba Sistema não ganha linha nova por causa disso, e não diz uma palavra sobre rádio. Com o cabo de volta, os quatro terminam com os números do começo.
 
 **Por controle.**
 
 * **P1** — USB, e é o primeiro a cair. Puxe o cabo dele, leia as três telas, e devolva o cabo antes de passar ao P2.
 * **P2** — USB, e é o segundo a cair. Um de cada vez: dois fora ao mesmo tempo esconde quem fez o quê.
-* **P3** — BT, testemunha. Não toque nele. O chip dele não pode sumir da fita. Enquanto o P1 está fora ele desce um número e volta ao 3 quando o P1 volta — isso é o produto.
-* **P4** — BT, segunda testemunha. Mesma conferência. É ele quem aparece como P3 durante a ausência, e o lugar «Player 4» fica «Desconectado» por isso.
+* **P3** — BT, testemunha. Não toque nele. O chip dele não pode sumir da fita. Nos primeiros trinta segundos com o P1 fora, ele segue como P3; passado o prazo, desce a P2 e volta a P3 quando o P1 volta — isso é o produto.
+* **P4** — BT, segunda testemunha. Mesma conferência: P4 nos primeiros trinta segundos, P3 depois do prazo, até o P1 voltar — e é por isso que, passado o prazo, o lugar «Player 4» fica «Desconectado».
 
-**A armadilha.** Esta célula do mapa é uma AUSÊNCIA declarada: o diagnóstico de que ela fala é o da morte por RÁDIO, e pelo cabo não há o que diagnosticar por esse caminho. A morte do cabo tem caminho próprio, medido em 24/09: quando a entrada falha sozinha, sem ninguém puxar nada, o controle pode ficar encaixado e mudo para o jogo, e o Hefesto o religa sozinho em cerca de dois minutos. Então, se durante este teste um controle do cabo sumir sem você puxar nada, anote a hora em que ele sumiu e, se voltar sozinho, a hora em que voltou; se não voltar em três minutos, tire e ponha o cabo. É achado, e não é este teste. Segunda: o lugar que fica «Desconectado» é o ÚLTIMO, e não o do P1 — enquanto um controle está fora, os que vêm depois dele descem um número e voltam quando ele volta, e é por isso que os passos seguem cada um pelo plástico. Terceira: não confunda o exame da aba Sistema com diagnóstico de rádio — ele é da máquina e não fala de rádio, e não falar não é falha dele. Uma linha que já existia e conta controles (a do áudio, por exemplo) pode mudar o número quando o cabo sai; isso é a conta. O que reprovaria aqui é uma linha NOVA aparecendo, por causa de um cabo puxado, a falar de rádio.
+**A armadilha.** Esta célula do mapa é uma AUSÊNCIA declarada: o diagnóstico de que ela fala é o da morte por RÁDIO, e pelo cabo não há o que diagnosticar por esse caminho. A morte do cabo tem caminho próprio, medido em 24/09: quando a entrada falha sozinha, sem ninguém puxar nada, o controle pode ficar encaixado e mudo para o jogo, e o Hefesto o religa sozinho em segundos, na hora em que o computador avisa a falha. Então, se durante este teste um controle do cabo sumir sem você puxar nada, anote a hora em que ele sumiu e a hora em que voltou; se não voltar em três minutos, tire e ponha o cabo. É achado, e não é este teste. Segunda: o lugar que fica «Desconectado» depende do relógio. Nos primeiros trinta segundos é o do P1, e ninguém troca de número; passado meio minuto a fila se fecha de propósito, os que vinham depois dele descem um número e o vazio vai para o último lugar. Quando ele volta, os quatro voltam aos números do começo — e é por isso que os passos seguem cada um pelo plástico. Terceira: não confunda o exame da aba Sistema com diagnóstico de rádio — ele é da máquina e não fala de rádio, e não falar não é falha dele. Uma linha que já existia e conta controles (a do áudio, por exemplo) pode mudar o número quando o cabo sai; isso é a conta. O que reprovaria aqui é uma linha NOVA aparecendo, por causa de um cabo puxado, a falar de rádio.
 
 ---
 
