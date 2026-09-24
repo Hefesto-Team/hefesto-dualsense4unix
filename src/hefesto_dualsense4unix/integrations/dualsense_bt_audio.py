@@ -1924,7 +1924,7 @@ _DIRS_PIPEWIRE = (
 # envelhece a citação inteira. Há portão que reprova: `citacoes-de-linha`.
 # ---------------------------------------------------------------------------
 
-#: O rótulo que a pessoa lê na lista de ENTRADA do sistema, sem o número.
+#: O rótulo da lista de ENTRADA do sistema, sem o número e sem o sufixo da Sony (forma A).
 #:
 #: **Decisão DELA, 09/09/2026** — `D-0909-OS-NOS-SE-CHAMAM-ALTO-FALANTE-E-
 #: MICROFONE-DO-CONTROLE-N`, palavra dela: *"4a"*. As outras duas opções na
