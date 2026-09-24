@@ -27,11 +27,12 @@ A PALETA E O ESQUELETO SÃO OS DO `mapa.py`, copiados de propósito: as duas sã
 páginas que abrem POR FORA das dez abas, e uma segunda gramática de página
 avulsa na mesma janela seria uma a mais.
 
-**O ESQUELETO SE PARTIU EM 23/09/2026** (A-CALIBRACAO-TEM-O-TAMANHO-DO-PROGRAMA-01):
-a caixa desta página passou a ter o tamanho da janela das abas, lido do
-`topo.html` pela :func:`moldura`, porque ela pediu a Calibrar do tamanho do
-programa. O `mapa.py` continua com o recuo de 22 px e a caixa de 1800 px — são
-duas gramáticas de página avulsa até alguém decidir se o Mapa do controle segue.
+**A CAIXA É A DA JANELA DAS ABAS** desde 23/09/2026
+(A-CALIBRACAO-TEM-O-TAMANHO-DO-PROGRAMA-01), lida do `topo.html`, porque ela
+pediu a Calibrar do tamanho do programa. Em 24/09/2026 ela decidiu que o «Mapa
+do controle» e o mapa das portas seguem a mesma caixa, e as três avulsas
+passaram a pedi-la ao mesmo dono, `caixa_da_janela.py`
+(AS-PAGINAS-AVULSAS-TEM-A-CAIXA-DA-JANELA-01).
 
 OS CONTROLES SÃO DE QUEM ABRE A PÁGINA — 11/09/2026, F3-CALIBRAR
 -----------------------------------------------------------------
@@ -64,6 +65,7 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import onde  # noqa: E402
 import monta  # noqa: E402
+import caixa_da_janela  # noqa: E402
 
 #: Quanto tempo a medição leva. NÃO é chute: é o que o `--calibrate` do
 #: `hefesto-dualsense4unix` já usa como janela de repouso. Escrito aqui uma vez,
@@ -467,70 +469,13 @@ CSS = """
 # `--alt-janela`) e as quatro propriedades de tamanho da `.janela`. Esta página
 # os LÊ de lá a cada geração; redigitá-los aqui foi exatamente como o 1180
 # ficou para trás quando as abas passaram a esticar.
-
-#: As variáveis do `:root` do `topo.html` que a `.janela` usa para se medir.
-VARIAVEIS_DA_MOLDURA = ("--recuo-do-corpo", "--piso-da-vista", "--teto-da-vista",
-                        "--alt-janela")
-
-#: As propriedades da `.janela` que são TAMANHO. A borda, o raio e a sombra são
-#: aparência, e esta página continua com a dela.
-TAMANHO_DA_JANELA = ("width", "height", "max-width", "max-height")
-
-
-def _folha_do_topo(topo: str) -> str:
-    """O CSS do `<style>` do esqueleto das abas, sem os comentários.
-
-    Sem comentário porque o `topo.html` CITA as próprias regras dentro deles —
-    `clamp(--piso-da-vista, …)` está escrito num comentário ao lado da regra
-    de verdade, e uma leitura que os visse acharia duas.
-    """
-    estilo = topo.split("<style>", 1)[1].split("</style>", 1)[0]
-    return re.sub(r"/\*.*?\*/", "", estilo, flags=re.S)
-
-
-def _regra(css: str, seletor: str) -> dict[str, str]:
-    """As declarações da ÚNICA regra `seletor{…}` da folha, por propriedade.
-
-    Zero ou duas é erro que PARA a geração: uma página que caísse num tamanho
-    de reserva ficaria menor que as abas de novo, calada.
-    """
-    achadas = re.findall(rf"(?<=[}}\s]){re.escape(seletor)}\s*\{{([^{{}}]*)\}}", css)
-    if len(achadas) != 1:
-        raise SystemExit(f"ERRO: o topo.html tem {len(achadas)} regra(s) "
-                         f"`{seletor}{{…}}`, e a calibração lê o tamanho das abas "
-                         f"de UMA só.")
-    declaracoes: dict[str, str] = {}
-    for linha in achadas[0].split(";"):
-        prop, sep, valor = linha.partition(":")
-        if sep and prop.strip():
-            declaracoes[prop.strip()] = " ".join(valor.split())
-    return declaracoes
-
-
-def moldura(topo: str | None = None) -> str:
-    """A folha que dá à `.cx` o recuo e o tamanho da `.janela` das dez abas.
-
-    Lida do `topo.html` (`monta.TOPO`) a cada geração. ``topo`` existe para a
-    régua trocar o esqueleto e ver esta página acompanhar.
-    """
-    css = _folha_do_topo(monta.TOPO if topo is None else topo)
-    variaveis: list[str] = []
-    for nome in VARIAVEIS_DA_MOLDURA:
-        achados = re.findall(rf"{re.escape(nome)}\s*:\s*([^;]+);", css)
-        if len(achados) != 1:
-            raise SystemExit(f"ERRO: o topo.html declara `{nome}` {len(achados)} "
-                             f"vez(es) — a calibração lê o tamanho das abas de lá.")
-        variaveis.append(f"{nome}:{' '.join(achados[0].split())}")
-    janela = _regra(css, ".janela")
-    corpo = _regra(css, "body")
-    faltam = [p for p in TAMANHO_DA_JANELA if p not in janela]
-    if faltam or "padding" not in corpo:
-        raise SystemExit(f"ERRO: o topo.html não diz mais {faltam or ['padding']} "
-                         f"— a calibração não sabe o tamanho das abas.")
-    tamanho = ";".join(f"{p}:{janela[p]}" for p in TAMANHO_DA_JANELA)
-    return (f"  :root{{{';'.join(variaveis)}}}\n"
-            f"  body{{padding:{corpo['padding']}}}\n"
-            f"  .cx{{{tamanho}}}\n")
+#
+# O LEITOR MUDOU DE CASA EM 24/09/2026 (AS-PAGINAS-AVULSAS-TEM-A-CAIXA-DA-
+# JANELA-01): ele mora em `caixa_da_janela.py`, porque o «Mapa do controle» e o
+# mapa das portas passaram a pedir a mesma caixa, e o mapa das portas é
+# importado pelo produto por um caminho que não alcança este arquivo. O nome
+# `moldura` fica aqui para quem já o chamava.
+moldura = caixa_da_janela.moldura
 
 
 def _svg(c):
