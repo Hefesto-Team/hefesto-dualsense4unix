@@ -589,3 +589,35 @@ class TestNoDaemon:
         assert set(passos) == {conn.RECONNECT_HOTPLUG_POLL_INTERVAL_SEC}
         assert mesa.sondas == 1  # a primeira vista do nó, e nenhuma depois
         assert controle.reescritos == []
+
+
+class TestAVigiaTemLugarNoDaemon:
+    """O campo `_vigia_do_sequestro` é DECLARADO no `Daemon` e no protocolo.
+
+    Nasceu por `setattr` (com `noqa: B010`) enquanto o `lifecycle.py` era de
+    outra sprint; a MOVER-UM-POR-VEZ-01 o soltou em 24/09. Declarado, o mypy vê
+    o campo e a vigia é a MESMA para quem sonda e para quem pergunta.
+    """
+
+    def test_o_daemon_declara_o_campo_e_nasce_sem_vigia(self) -> None:
+        import dataclasses
+
+        from hefesto_dualsense4unix.daemon.lifecycle import Daemon
+
+        campos = {c.name: c for c in dataclasses.fields(Daemon)}
+        assert "_vigia_do_sequestro" in campos
+        assert campos["_vigia_do_sequestro"].default is None
+
+    def test_o_protocolo_declara_o_campo(self) -> None:
+        from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
+
+        assert "_vigia_do_sequestro" in DaemonProtocol.__annotations__
+
+    def test_a_primeira_consulta_cria_e_a_segunda_devolve_a_mesma(self) -> None:
+        daemon = SimpleNamespace(_vigia_do_sequestro=None)
+
+        primeira = conn.vigia_do_sequestro_de(daemon)
+
+        assert isinstance(primeira, ec.VigiaDoSequestro)
+        assert daemon._vigia_do_sequestro is primeira
+        assert conn.vigia_do_sequestro_de(daemon) is primeira

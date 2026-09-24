@@ -1206,15 +1206,15 @@ def vigia_do_sequestro_de(daemon: DaemonProtocol) -> VigiaDoSequestro:
     """A `VigiaDoSequestro` DESTE daemon, criada na primeira consulta.
 
     STEAM-NO-FISICO-01. Única por daemon: duas vigias reescreveriam a barra em
-    dobro. Nasce por `setattr` porque o campo no `Daemon` (`lifecycle.py`, da
-    MOVER-UM-POR-VEZ-01 nesta leva) ainda não existe; declará-lo é o passo seguinte.
+    dobro. O campo é declarado no `Daemon` e no `DaemonProtocol`, como o do
+    cartório abaixo; a consulta é defensiva porque os dublês da suíte não o têm.
     """
     vigia = getattr(daemon, "_vigia_do_sequestro", None)
     if isinstance(vigia, VigiaDoSequestro):
         return vigia
     vigia = VigiaDoSequestro()
     with contextlib.suppress(Exception):
-        setattr(daemon, "_vigia_do_sequestro", vigia)  # noqa: B010
+        daemon._vigia_do_sequestro = vigia
     return vigia
 
 
