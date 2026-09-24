@@ -1667,7 +1667,15 @@ MIOLO = f'''
                        pacote reescreve a cada tique com a mesa viva. -->
                   Dar um número que já é de outro faz <b>os dois trocarem</b>: ninguém
                   repete e ninguém fica sem.<br><br>
-                  Um jogo em co-op pode mandar o próprio número por cima.
+                  <!-- O JOGO NÃO MANDA NO NÚMERO — 24/09/2026, A-MIRA-NA-NAVEGACAO-01.
+                       Aqui estava *"Um jogo em co-op pode mandar o próprio
+                       número por cima"*, e a STEAM-NO-FISICO-01 derrubou o fato:
+                       o número que o jogo manda ao controle virtual é RECUSADO
+                       sempre (`backend_pydualsense.numeracao_do_jogo`), e o que
+                       chega por fora é reescrito pela vigia do sequestro
+                       (`escritor_cru.VigiaDoSequestro`) em até um segundo. -->
+                  O número é do Hefesto: se um jogo o trocar, ele <b>volta em até
+                  um segundo</b>.
                 </span></span>
               </div>
             </div>

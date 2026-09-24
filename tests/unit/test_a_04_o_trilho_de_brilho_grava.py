@@ -519,11 +519,17 @@ def test_sem_cor_conhecida_o_brilho_aplica_e_a_ressalva_fica(pac):
     A MORDIDA: faça o gesto voltar a recusar e este teste reprova por não
     acender; apague a ressalva e ele reprova por calar sobre o que o motor não
     sabe.
+
+    NOTA DATADA — 24/09/2026 (A-MIRA-NA-NAVEGACAO-01): o estado de ressalva
+    daqui era o Modo Nativo, e o Nativo deixou de ser ressalva
+    (`D-2409-NO-NATIVO-A-TELA-MOSTRA-A-COR`: a barra é do Hefesto nele, e a
+    tela mostra a cor). O estado passou a ser a Steam segurando o controle
+    (`lightbar_disputada`), que continua sendo "o motor não afirma a cor".
     """
     arquivo = _semear("regua")
     p = PonteDeMentira()
     fn = pac.gesto_da_pagina(PAGINA, "brilho")
-    saiu = fn(_ctx(pac, state={"native_mode": True}),
+    saiu = fn(_ctx(pac, aceso={"lightbar_disputada": True}),
               {"uniq": UNIQ, "valor": "30", "evento": "change"}, p)
 
     assert p.chamadas, (
