@@ -2515,13 +2515,25 @@ class CoopManager:
     def _reerguer_o_p1(self) -> None:
         """O vpad do P1 nasce de novo, com a máscara e o caminho de antes."""
         from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
-            start_gamepad_emulation,
+            DESFECHOS_EMULACAO_ATIVA,
+            start_gamepad_emulation_desfecho,
         )
 
         # `origin="profile"`: é manutenção interna, não gesto dela (ORIGEM-
         # QUE-MENTE-01) — e `flavor=None` lê a máscara da sessão, intacta.
-        if not start_gamepad_emulation(self._daemon, origin="profile"):
-            logger.warning("coop_ordem_o_p1_nao_voltou")
+        #
+        # O CAMINHO VAI EXPLÍCITO (conferência de 24/09/2026). Um start sem
+        # opinião não herda caminho de lugar nenhum, por ordem dela
+        # (`gamepad._caminho_a_herdar`, CAMINHO-CONTAGIO-01), e o
+        # `_guardar_o_caminho` LIMPA o slot da sessão: sem esta linha, a mesa no
+        # Modo Xbox via o P1 voltar DualSense e a tela e os secundários perdiam
+        # a escolha dela. O slot lido é o mesmo que os secundários leem
+        # (`_caminho`), e o `stop` do passo anterior não o toca.
+        desfecho = start_gamepad_emulation_desfecho(
+            self._daemon, origin="profile", caminho=self._caminho()
+        )
+        if desfecho not in DESFECHOS_EMULACAO_ATIVA:
+            logger.warning("coop_ordem_o_p1_nao_voltou", desfecho=desfecho)
         self._acompanhar_o_p1()
 
     # -- ciclo de vida --------------------------------------------------
