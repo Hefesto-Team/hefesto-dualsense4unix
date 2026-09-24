@@ -94,6 +94,12 @@ AmbientCapabilities=
 # servido pelo cmd open é O_RDWR — `r` faria o open falhar com EPERM.
 DevicePolicy=closed
 DeviceAllow=char-hidraw rw
+# HIDE-SO-O-HIDRAW-02 (24/09/2026): os nós de ENTRADA do DualSense físico
+# (`/dev/input/eventN`) nascem `0600 root` como o hidraw, e o daemon lê o
+# gamepad, o touchpad e os sensores de movimento pelo fd que o broker serve.
+# Sem esta linha o open(2) do broker volta EPERM e o controle fica mudo. O
+# `char-input` é o grupo do major 13 em /proc/devices, pelo nome.
+DeviceAllow=char-input rw
 
 [Install]
 WantedBy=multi-user.target
