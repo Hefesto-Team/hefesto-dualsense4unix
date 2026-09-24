@@ -19,9 +19,9 @@ pelo histórico: só dois escritores do produto põem chave nessa pasta — o
 `bt_bonds_snapshot.sh` (o acervo) e o `uninstall.sh` (as cópias). Os outros
 escrevem sem chave: o diário do rádio (0644 de propósito, porque o daemon o
 lê), a lápide da ponte e o livro do autorestore (0600, só endereços). As
-capturas de Bluetooth de 22/07 e a `bt-bonds-protegidos` de 04/08 foram feitas
-à mão, sem script nenhum. Os dois escritores rodam aqui sob `umask 000`, a pior
-máscara, com a fonte do BlueZ frouxa de propósito.
+capturas de Bluetooth de 22/07 e a `bt-bonds-protegidos` de 04/08, na máquina
+dela, não têm escritor no repositório nem no histórico. Os dois escritores rodam
+aqui sob `umask 000`, a pior máscara, com a fonte do BlueZ frouxa de propósito.
 
 A MORDIDA, medida: tirar o laço das cópias reprova os cinco testes do purge e o
 do ensaio; alargar o padrão para `bt-bonds*` reprova o da vizinha; tirar o
@@ -227,7 +227,7 @@ def test_sem_purge_config_as_copias_de_antes_ficam_intactas(tmp_path: Path) -> N
 
 def test_o_purge_so_leva_o_prefixo_que_o_uninstall_escreve(tmp_path: Path) -> None:
     """A vizinha de nome parecido fica. A `bt-bonds-protegidos` é a que existe na
-    máquina dela desde 04/08 (feita à mão, sem script): ela não é cópia de
+    máquina dela desde 04/08, sem escritor no repositório: ela não é cópia de
     uninstall, e o uninstall não decide por ela. O pai, com ela dentro, fica."""
     raiz = _mesa_do_root(tmp_path)
     _um_acervo(raiz / "bt-bonds-protegidos")
