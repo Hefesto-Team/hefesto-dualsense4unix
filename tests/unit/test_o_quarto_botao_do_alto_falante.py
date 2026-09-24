@@ -450,3 +450,46 @@ def test_no_cabo_o_quarto_escolhe_a_placa_e_a_volta_pergunta_ao_dono() -> None:
     assert not desfecho.ok and Motor.voltas == 1, (
         "o botão de cima devolveu uma saída que o quarto não levou — ela a "
         "escolheu pela lista")
+
+
+# ===========================================================================
+# 6. A prova de gesto clica TODOS os botões da fileira que a tela publicada tem
+# ===========================================================================
+
+
+def test_a_prova_de_gesto_clica_cada_botao_da_fileira_publicada() -> None:
+    """O quarto só entra no `controles_vivos.ROTEIRO_DA_PROVA_DE_GESTO` junto
+    com o `--publicar 02` (antes disso o passo bateria em `null` no publicado,
+    e `test_a_prova_de_gesto_nao_clica_no_vazio` reprova). Esta é a outra
+    metade da mesma trava: publicada a fileira de quatro, um roteiro que não
+    clica o quarto reprova aqui. É o caso de 29/08 — a prova dava verde sobre
+    botões que ela nunca clicava.
+
+    Lê o roteiro por AST (importar o piloto puxaria GTK e WebKit) e a fileira
+    na página que o piloto abre.
+
+    MORDIDA: tire do roteiro o passo do `nada`; ou publique a 02 sem acrescentar
+    o passo do `pc`.
+    """
+    import ast
+    import re
+
+    fonte = RAIZ / "src/hefesto_dualsense4unix/interface/controles_vivos.py"
+    publicado = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/02-controles.html"
+    passos: tuple[tuple[Any, ...], ...] = ()
+    for no in ast.walk(ast.parse(fonte.read_text(encoding="utf-8"))):
+        if (isinstance(no, ast.AnnAssign) and isinstance(no.target, ast.Name)
+                and no.target.id == "ROTEIRO_DA_PROVA_DE_GESTO" and no.value is not None):
+            passos = ast.literal_eval(no.value)
+    assert passos, "o roteiro da prova de gesto sumiu do fonte do piloto"
+    clicados = {str(p[1]) for p in passos if len(p) < 3 or p[2] != "so-existe"}
+
+    na_tela = set(re.findall(r'data-gesto="rota" data-rota="([a-z]+)"',
+                             publicado.read_text(encoding="utf-8")))
+    assert na_tela, "a fileira do som sumiu da página publicada"
+    faltam = sorted(r for r in na_tela
+                    if f'.rota button[data-rota="{r}"]' not in clicados)
+    assert not faltam, (
+        f"a página publicada tem os botões {faltam} na fileira do som e a "
+        f"prova de gesto não os clica — acrescente o passo ao roteiro no mesmo "
+        f"commit do `--publicar`")
