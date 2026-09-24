@@ -1072,7 +1072,7 @@ def _mesa_com_rotulo(mesa: list[dict[str, Any]]) -> list[dict[str, Any]]:
     FATO ERRADO, SUBSTITUÍDO — 02/09/2026. A docstring de
     `perfis_web.pacote_da_aba` afirma que a mesa vem *"no formato que
     ``mesa_viva.mesa_do_estado`` devolve mais ``rotulo`` e ``plastico``"*, e o
-    `_linhas_da_guarda` lê `controle.get("rotulo")` (`perfis_web.py:588`).
+    `_linhas_da_guarda` lê `controle.get("rotulo")` (`perfis_web.py:609`).
     **`mesa_do_estado` não devolve nenhum dos dois** — os campos dela são
     `pref`, `uniq`, `jogador`, `cor`, `nome`, `via`, `transporte`, `alvo`,
     `mascara` (`mesa_viva.py:493-514`). Medido: `guarda.nome` saía `["", ""]`
@@ -1091,7 +1091,7 @@ def _mesa_com_rotulo(mesa: list[dict[str, Any]]) -> list[dict[str, Any]]:
     `rotulo` e `plastico` —, não o conteúdo.
 
     O `plastico` ENTROU EM 03/09/2026, e o fato acima valia para ele também:
-    `_linhas_da_guarda` lê `controle.get("plastico")` (`perfis_web.py:587`) e
+    `_linhas_da_guarda` lê `controle.get("plastico")` (`perfis_web.py:608`) e
     recebia `""` para todo controle, porque ninguém o punha aqui. Ver `_plastico`.
     """
     return [{**c, "rotulo": _rotulo_curto(c), "plastico": _plastico(c)}
@@ -2005,7 +2005,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         ativo = _valendo(ctx, todos)
         # O `editado` FALTAVA, e o editor mostrava o perfil ERRADO — corrigido
         # em 01/09/2026, ao ligar os campos. Sem ele `pacote_da_aba` cai no
-        # ativo (`perfis_web.py:623`), então clicar numa linha mudava o alvo dos
+        # ativo (`perfis_web.py:644`), então clicar numa linha mudava o alvo dos
         # botões e o editor ao lado continuava pintando OUTRO perfil. Enquanto
         # nenhum campo tinha gesto isso era só uma tela desalinhada; com o Nome
         # e o Nome do Jogo ligados, seria ela renomear um perfil olhando para o
