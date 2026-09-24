@@ -80,7 +80,7 @@ FIM = """() => {
   miolo.scrollTop = miolo.scrollHeight;
   const r = c.getBoundingClientRect(), u = miolo.lastElementChild.getBoundingClientRect();
   return {alcancavel: u.bottom <= r.bottom + 1 && u.top >= r.top - 1,
-          ultimo: miolo.lastElementChild.className, embaixo: Math.round(u.bottom),
+          bloco_do_fim: miolo.lastElementChild.className, embaixo: Math.round(u.bottom),
           caixa_embaixo: Math.round(r.bottom),
           rola_por_dentro: miolo.scrollHeight > miolo.clientHeight};
 }"""
@@ -127,41 +127,41 @@ def medido() -> dict[str, dict[str, Any]]:
     return fora
 
 
-CASOS = [(v, p) for v in VISTAS for p in AVULSAS]
+CASOS = [(v, n) for v in VISTAS for n in AVULSAS]
 
 
-@pytest.mark.parametrize(("vista", "pagina"), CASOS)
+@pytest.mark.parametrize(("vista", "nome"), CASOS)
 def test_a_caixa_da_avulsa_e_a_da_janela(medido: dict[str, Any], vista: str,
-                                         pagina: str) -> None:
+                                         nome: str) -> None:
     """Largura, altura, vão dos lados e sobra embaixo: os da `.janela`, ±2 px."""
-    aba, avulsa = medido[vista][ABA], medido[vista][pagina]
+    aba, avulsa = medido[vista][ABA], medido[vista][nome]
     assert "erro" not in aba and "erro" not in avulsa, (aba, avulsa)
     assert aba["caixa"] == "janela", f"a {ABA} não mediu a `.janela`: {aba}"
     difere = {k: (avulsa[k], aba[k]) for k in ("larg", "alt", "vao_dos_lados", "morto_abaixo")
               if abs(avulsa[k] - aba[k]) > FOLGA}
     assert not difere, (
-        f"na vista {vista}, a caixa `.{avulsa['caixa']}` de {pagina} difere da "
+        f"na vista {vista}, a caixa `.{avulsa['caixa']}` de {nome} difere da "
         f"`.janela` da {ABA} em {difere} (avulsa, aba). A palavra dela, 24/09: "
         f"*«segue a caixa da janela»*. A caixa mora no `topo.html`, e as "
         f"avulsas a pedem a `caixa_da_janela.moldura()`.")
 
 
-@pytest.mark.parametrize(("vista", "pagina"), CASOS)
-def test_a_avulsa_rola_por_dentro(medido: dict[str, Any], vista: str, pagina: str) -> None:
+@pytest.mark.parametrize(("vista", "nome"), CASOS)
+def test_a_avulsa_rola_por_dentro(medido: dict[str, Any], vista: str, nome: str) -> None:
     """A página não rola; o `.corpo` rola, e o rodapé se alcança.
 
     MORDE na vista `baixa`: tire o `overflow-y:auto` do `.corpo` e o rodapé
     fica cortado pela borda da caixa, sem rolagem que o traga.
     """
-    avulsa = medido[vista][pagina]
+    avulsa = medido[vista][nome]
     assert avulsa["passa_da_dobra"] == 0 and not avulsa["rolagem_lateral"], (
-        f"na vista {vista}, {pagina} rola a PÁGINA ({avulsa['passa_da_dobra']} px "
+        f"na vista {vista}, {nome} rola a PÁGINA ({avulsa['passa_da_dobra']} px "
         f"abaixo da dobra, lateral={avulsa['rolagem_lateral']}). A palavra dela: "
         f"*«rolando por dentro»* — quem rola é o `.corpo` da caixa.")
     fim = avulsa["fim"]
-    assert "erro" not in fim, f"{pagina}: {fim['erro']}"
+    assert "erro" not in fim, f"{nome}: {fim['erro']}"
     assert fim["alcancavel"], (
-        f"na vista {vista}, o fim de {pagina} (`.{fim['ultimo']}`) termina em "
+        f"na vista {vista}, o fim de {nome} (`.{fim['bloco_do_fim']}`) termina em "
         f"{fim['embaixo']} e a caixa em {fim['caixa_embaixo']}, mesmo com o "
         f"`.corpo` rolado até o fim")
 
