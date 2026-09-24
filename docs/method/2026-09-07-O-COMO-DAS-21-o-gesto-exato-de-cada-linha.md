@@ -212,7 +212,7 @@ roteiro.
 * **P3** — É ESTE que desliga, e é o único que você toca. Está no rádio. Segure o botão PS até todas as luzes dele apagarem, solte e deixe-o parado na mesa pelos vinte segundos. Se ele estava vibrando pelo jogo na hora em que apagou, ele tem de voltar parado na linha 5.
 * **P4** — Fica ligado, no rádio. Não toque nele. É o vizinho de rádio do que caiu, então é nele que uma bagunça costuma aparecer primeiro: confira número e cor antes e depois, e veja se ele não se mudou para o lugar do P3.
 
-**A armadilha.** Soltar o botão PS cedo demais. Aí o controle não desliga e o teste mede o seu gesto, não o produto — e há um efeito colateral já visto nesta casa: com cerca de cinco segundos de botão, o Hefesto lê o aperto como um toque no PS e abre a Steam. Segure até as luzes apagarem; se a Steam abrir, feche-a e refaça a linha. E se o P4 descer para 3 enquanto o P3 está fora — lâmpadas do jogador 3 e a barra na cor do 3 —, anote como vir: é o produto fechando a fila, e é exatamente o que esta linha existe para mostrar.
+**A armadilha.** Soltar o botão PS cedo demais. Aí o controle não desliga e o teste mede o seu gesto, não o produto — e há um efeito colateral já visto nesta casa: com cerca de cinco segundos de botão, o Hefesto lê o aperto como um toque no PS e abre a Steam. Segure até as luzes apagarem; se a Steam abrir, feche-a e refaça a linha. E o prazo: o lugar do P3 fica guardado por trinta segundos, contados de quando a coluna dele passa a dizer «P3 • Desconectado». Se o P4 descer para 3 dentro dos vinte segundos desta linha — lâmpadas do jogador 3 e a barra na cor do 3 —, é defeito: anote com a hora. Passados os trinta segundos sem o P3, a fila se fecha de propósito, e o P4 desce para 3.
 
 ---
 
@@ -678,7 +678,7 @@ roteiro.
 
 ## Linha 17 — Reserva do posto: desliga o P2 por 20 segundos e religa
 
-**O que isto prova.** Prova que o lugar de um controle fica guardado enquanto ele está desligado: o P2 sai por 20 segundos, volta como P2, e os outros três não trocam de número.
+**O que isto prova.** Prova que o lugar de um controle fica guardado enquanto ele está desligado: o P2 sai por 20 segundos, volta como P2, e os outros três não trocam de número — nem no fim, nem durante a ausência.
 
 **Onde olhar.** Em dois lugares ao mesmo tempo. Na tela do Hefesto: a fita do topo, a linha que começa com "Selecionar:", onde cada controle é um chip («P2 • Starlight Blue • BT»), e a seção «Gestão de Controles», na aba Conexões, onde cada linha traz «Player 1», «Player 2» e assim por diante. No aparelho: a fileira de lampadinhas brancas embaixo do touchpad, que é o que diz o número — Player 1 acende só a do meio; Player 2 acende a segunda e a quarta; Player 3 acende as duas pontas e a do meio; Player 4 acende quatro, com a do meio apagada.
 
@@ -691,22 +691,22 @@ roteiro.
 5. Confira que a linha do P2 termina em BT — este teste é com ele no rádio.
 6. Segure o botão PS do P2 até as luzes dele apagarem.
 7. Comece a contar os 20 segundos a partir do momento em que o chip do P2 sai da fita do topo, e não de quando você soltou o botão.
-8. Anote o que a lista mostra enquanto ele está fora.
-9. Olhe os outros três durante a ausência — na tela e nas lampadinhas — e anote se algum trocou de número.
+8. Confira na fita que os chips que ficaram continuam dizendo P1, P3 e P4.
+9. Olhe os outros três durante a ausência — na lista e nas lampadinhas — e confira que nenhum trocou de número.
 10. Aos 20 segundos, aperte o botão PS do P2 uma vez para religá-lo.
 11. Espere o chip dele reaparecer na fita do topo.
 12. Leia os quatro números de novo, primeiro na tela e depois nas lampadinhas dos quatro aparelhos.
 
-**Passa quando.** O P2 volta como Player 2 — na tela e nas lampadinhas embaixo do touchpad. P1, P3 e P4 terminam com o mesmo número com que começaram.
+**Passa quando.** O P2 volta como Player 2 — na tela e nas lampadinhas embaixo do touchpad. P1, P3 e P4 mostram o mesmo número do começo ao fim, inclusive durante os 20 segundos em que o P2 está fora.
 
 **Por controle.**
 
-* **P1** — Não se toca nele. Anote o número dele antes; ele tem de terminar com o mesmo, e a figura das lampadinhas tem de continuar a mesma.
+* **P1** — Não se toca nele. Anote o número dele antes; ele tem de ficar com o mesmo o tempo todo, e a figura das lampadinhas também.
 * **P2** — É este, e ele tem de estar no rádio. Segure PS até apagar, conte 20 segundos a partir de quando o chip dele some da fita, e aperte PS uma vez para religar. No fim ele tem de voltar Player 2, com a segunda e a quarta lampadinhas acesas.
-* **P3** — Não se toca nele. Testemunha: anote o número antes, olhe durante a ausência do P2, e confira no fim.
-* **P4** — Não se toca nele. Testemunha: anote o número antes, olhe durante a ausência do P2, e confira no fim — as quatro lampadinhas acesas com a do meio apagada.
+* **P3** — Não se toca nele. Testemunha: anote o número antes e confira durante a ausência do P2 — ele continua P3, com as duas pontas e a do meio acesas — e no fim.
+* **P4** — Não se toca nele. Testemunha: anote o número antes e confira durante a ausência e no fim — as quatro lampadinhas acesas com a do meio apagada, o tempo todo.
 
-**A armadilha.** Olhe os outros três DURANTE a ausência, não só no fim: o produto de hoje fecha a fila enquanto alguém está fora — o P3 pode acender como 2 e o P4 como 3 até o P2 voltar, e cada um voltar ao seu depois. Se acontecer, anote com a hora: é exatamente a diferença entre "o assento fica reservado" e "ele volta P2", e é isso que este teste mostra. O prazo de trinta segundos do Hefesto é só o do posto de Jogador 1; o número do P2 é guardado pelo endereço dele, e um P2 que volte com outro número depois dos 20 segundos é achado, não demora sua. Na aba Conexões a linha de um controle desligado some da lista e a conta da seção cai — isso é a lista dizendo quem está ligado, não o lugar sendo perdido.
+**A armadilha.** Passar do prazo. O lugar do P2 fica guardado por trinta segundos, contados de quando o chip dele some da fita; passado esse tempo sem ele voltar, a fila se fecha de propósito — o P3 vira 2 e o P4 vira 3, na tela na hora e nas lampadinhas junto com a cor da barra. Por isso a contagem começa no chip e o P2 volta aos 20. Se algum dos três trocar de número antes dos trinta segundos, anote com a hora: é defeito. Na aba Conexões a linha de um controle desligado some da lista e a conta da seção cai — isso é a lista dizendo quem está ligado, não o lugar sendo perdido.
 
 ---
 
