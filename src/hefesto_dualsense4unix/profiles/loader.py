@@ -276,7 +276,8 @@ def seed_default_presets(
             # está na pasta só porque o install o empacota. Registra sem copiar:
             # o marker é o contrato com `scripts/install_profiles.sh`, e com a
             # linha escrita o shell também deixa de trazê-lo de volta.
-            if fname in PRESETS_QUE_SAIRAM:
+            if (fname in PRESETS_QUE_SAIRAM
+                    and not O_PERSONALIZADO_ESPERA_A_SESSAO_DELA):
                 new_entries.append(fname)
                 continue
             # PERFIL-PADRAO-PERSONALIZADO-01: o slot dela JÁ EXISTE sob o nome
@@ -453,16 +454,20 @@ def migrate_default_profile_name(dest_dir: Path | None = None) -> str | None:
 # aba jogar. Vira Modo Freestyle o botão. (…) O trava perfil ativo já faz
 # isso."*  (noqa-acento: citação literal dela)
 #
-# MEDIDO ANTES DO CÓDIGO, com o `AutoSwitcher` e o `ProfileManager` reais
-# (`tests/unit/test_o_modo_freestyle.py` guarda a tabela): com a trava ligada o
-# Personalizado NUNCA entra — o desktop fica com o perfil que estava —, e é o
-# mesmo desfecho de não haver Personalizado nenhum. A frase dela é literal.
+# MEDIDO ANTES DO CÓDIGO, com o `restore_last_profile`, o `AutoSwitcher` e o
+# `ProfileManager` reais (`tests/unit/test_o_modo_freestyle.py` guarda a
+# tabela): com a trava ligada, nenhuma janela comum põe o Personalizado de volta
+# depois de um jogo — essa metade a trava já fazia. A outra metade ela NÃO faz:
+# o restauro de boot ignora o cadeado (`test_autoswitch_lock`) e reativa o
+# Personalizado pela sessão, e ele vale do boot até o primeiro jogo.
 #
 # SEM ELE, QUANDO NENHUM JOGO CASA: nada troca. O `select_for_window_ex`
 # devolve `(None, "sem_candidato")` e o autoswitch não ativa ninguém sem
 # candidato — o perfil que estava continua valendo, e o topo diz o nome dele.
-# Antes do primeiro jogo depois do boot não há perfil nenhum, e o topo diz «—»,
-# que é o que ele já dizia para esse estado.
+# Do boot ao primeiro jogo não há perfil nenhum: o topo diz «—», e as abas que
+# gravam no perfil ativo (02 a 08) recusam o ajuste com "não há perfil ativo".
+# É por isso que a saída espera a sessão dela
+# (`O_PERSONALIZADO_ESPERA_A_SESSAO_DELA`, logo abaixo).
 #
 # DUAS PEÇAS, e as duas moram aqui:
 #   1. o semeador em tempo de execução não copia o que está em
@@ -485,6 +490,17 @@ def migrate_default_profile_name(dest_dir: Path | None = None) -> str | None:
 #: empacota. A lista é FECHADA: um perfil que ela crie depois com esse nome é
 #: dela, e nenhum semeador o toca.
 PRESETS_QUE_SAIRAM: frozenset[str] = frozenset({ARQUIVO_DO_PADRAO})
+
+#: A SAÍDA ESPERA A SESSÃO DELA (conferente, 24/09/2026). As duas peças estão
+#: prontas e medidas, e não ligam antes de ela aprovar a aba 01: tirar o
+#: Personalizado muda o que o topo diz e deixa as abas sem perfil onde guardar
+#: do boot ao primeiro jogo (a medição do bloco acima) — e o que o topo diz
+#: nesse trecho é, pela própria decisão, o que o desenho propõe e ela aprova.
+#: Enquanto `True`, o produto é o de 23/09: o semeador entrega o preset e o
+#: disco dela fica como está. **TEM PRAZO:** quem publicar a 01 decide a linha
+#: com a resposta dela no mesmo commit, e
+#: `test_o_modo_freestyle.test_a_saida_espera_a_sessao_dela` reprova até isso.
+O_PERSONALIZADO_ESPERA_A_SESSAO_DELA: bool = True
 
 #: O slug do perfil que sai — nome da pasta dele no `.historico`.
 SLUG_DO_PADRAO = "personalizado"
@@ -1072,8 +1088,11 @@ def _maybe_seed_presets() -> None:
         # `personalizado.json`; esta o recolhe no mesmo processo, com a cópia.
         # E o que o `install_profiles.sh` semear numa máquina nova sai aqui,
         # na primeira carga — uma vez, pela marca.
-        with contextlib.suppress(Exception):
-            aposentar_o_personalizado()
+        # Enquanto a saída espera a sessão dela, esta linha não roda — ver
+        # `O_PERSONALIZADO_ESPERA_A_SESSAO_DELA`.
+        if not O_PERSONALIZADO_ESPERA_A_SESSAO_DELA:
+            with contextlib.suppress(Exception):
+                aposentar_o_personalizado()
         # MASCARA-QUE-GRUDA-01 (22/08/2026): aqui rodava a
         # `migrate_game_presets_to_xbox`. Nenhuma migração escreve máscara em
         # perfil — o motivo inteiro está na nota acima do bloco que a substituiu.

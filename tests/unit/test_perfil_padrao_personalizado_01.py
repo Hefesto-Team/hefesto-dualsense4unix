@@ -291,18 +291,44 @@ def test_o_semeador_nao_entrega_o_segundo_catch_all(
     assert ARQUIVO_DO_PADRAO in marker
 
 
-def test_maquina_nova_nao_recebe_mais_o_preset_de_fabrica(
+def test_maquina_nova_recebe_o_preset_de_fabrica_enquanto_a_saida_espera(
     disco: Path, tmp_path: Path
 ) -> None:
-    """Par da recusa acima — e ele MUDOU DE LADO em 24/09/2026.
+    """Par da recusa acima: sem o arquivo antigo, o preset novo É semeado.
 
-    Até a O-MODO-FREESTYLE-01 este caso cobrava o contrário: sem o arquivo
-    antigo, o `personalizado.json` de fábrica ERA semeado, para que um
-    `continue` largo demais não deixasse máquina nova sem perfil padrão. A
-    decisão dela de 23/09 (D-2309-O-MODO-FREESTYLE: *"Personalizado sai"*)
-    revogou o padrão: a máquina nova não recebe mais o preset, e o nome fica
+    Esta é a metade que a recusa poderia matar por engano — um `continue`
+    largo demais deixaria toda máquina nova sem perfil padrão nenhum. Vale
+    enquanto a saída do Personalizado espera a sessão dela
+    (`loader.O_PERSONALIZADO_ESPERA_A_SESSAO_DELA`); o par de baixo é o dia
+    seguinte.
+    """
+    from hefesto_dualsense4unix.profiles import loader
+
+    if not loader.O_PERSONALIZADO_ESPERA_A_SESSAO_DELA:
+        pytest.skip("a saída do Personalizado já foi decidida — vale o par de baixo")
+    copiados = seed_default_presets(
+        dest_dir=disco, source_dirs=(_fonte_de_fabrica(tmp_path),)
+    )
+
+    assert copiados == [ARQUIVO_DO_PADRAO]
+    semeado = json.loads(
+        (disco / ARQUIVO_DO_PADRAO).read_text(encoding="utf-8")
+    )
+    assert semeado["name"] == NOME_DO_PADRAO
+
+
+def test_maquina_nova_nao_recebe_mais_o_preset_de_fabrica(
+    disco: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O par de cima no dia em que a saída deixar de esperar (O-MODO-FREESTYLE-01).
+
+    A decisão dela de 23/09 (D-2309-O-MODO-FREESTYLE: *"Personalizado sai"*)
+    revoga o padrão: a máquina nova não recebe mais o preset, e o nome fica
     registrado no marker — que é o contrato com o `install_profiles.sh`.
     """
+    from hefesto_dualsense4unix.profiles import loader
+
+    monkeypatch.setattr(loader, "O_PERSONALIZADO_ESPERA_A_SESSAO_DELA", False)
     fonte = _fonte_de_fabrica(tmp_path)
     copiados = seed_default_presets(dest_dir=disco, source_dirs=(fonte,))
 
