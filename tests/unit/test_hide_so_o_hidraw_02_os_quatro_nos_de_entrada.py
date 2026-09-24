@@ -725,8 +725,13 @@ class TestAsEntradasSeguemALease:
         _pede(st, 1, {"cmd": "expose", "node": "/dev/hidraw3", "entradas": True})
         _pede(st, 2, {"cmd": "hide", "node": "/dev/hidraw3"})
         assert ops.aberta("hidraw3")
+        assert "/dev/hidraw3" not in ops.fechados
         st.on_conn_closed(1)
         assert not ops.aberta("hidraw3")
+        # HIDE-SO-O-HIDRAW-03: o hidraw fecha junto com as entradas. Esta
+        # linha conferia só as entradas, e passava com o hidraw aberto até o
+        # rehide de 30 s.
+        assert "/dev/hidraw3" in ops.fechados
 
     def test_no_mundo_historico_o_restore_devolve_os_nos(self) -> None:
         """`--no-fechar-o-no`: o repouso é aberto, e os nós voltam com o
