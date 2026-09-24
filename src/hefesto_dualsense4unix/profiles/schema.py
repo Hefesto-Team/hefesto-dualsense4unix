@@ -459,10 +459,12 @@ class ProfileMovimentoConfig(BaseModel):
     IMU nativa já chega ao jogo, ela criaria DOIS giros e a câmera andaria em
     dobro. O arranjo é de quem usa.
 
-    GLOBAL NO PERFIL, e não por controle: é o precedente do `remapeamento`
-    (`D-0809-A-NAVEGACAO-E-GLOBAL-NO-PERFIL` — *um mapa só por perfil*). Se ela
-    decidir o contrário, o override por controle entra em `ControllerOverrides`
-    sem migração: os campos são os mesmos.
+    NO PERFIL E POR CONTROLE — A-MIRA-POR-MOVIMENTO-NA-TELA-01 (23/09/2026).
+    Esta seção nasceu só global, pelo precedente do `remapeamento`; a palavra
+    dela pôs o chip «Mira Virtual» no cartão de CADA controle, e o override
+    entrou em `ControllerOverrides.movimento` com ESTA mesma classe, sem
+    migração. A peça sobrepõe o perfil campo a campo — só os campos que ela
+    escreveu (`roteador_de_movimento.arranjo_da_peca`).
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -1465,6 +1467,11 @@ class ControllerOverrides(BaseModel):
       daquela peça no registro que ``external_mask.mascara_efetiva`` consulta na
       criação de cada gamepad virtual, e é o perfil que passa a mandar (ver o
       item 3 da fila abaixo, que dizia o contrário até 08/09).
+    - ``movimento``, desde A-MIRA-POR-MOVIMENTO-NA-TELA-01 (24/09/2026, a
+      palavra dela: o chip «Mira Virtual» no cartão de cada controle):
+      ``manager._controllers_to_miras`` monta o arranjo daquela peça por cima
+      do do perfil, e o tique o pergunta com o ``uniq`` de cada jogador
+      (``roteador_de_movimento.da_peca``).
 
     Fora por decisão, e não por falta de caminho:
     - ``label`` — identidade visível é outra frente (4P-03);
@@ -1590,13 +1597,14 @@ class ControllerOverrides(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    # SÃO SETE, e a tela oferece nove. O que falta, e o CAMINHO que cada um
+    # SÃO OITO, e a tela oferece dez. O que falta, e o CAMINHO que cada um
     # espera antes de poder entrar, está na fila da docstring acima — ordenada
     # por custo. O `mic` entrou em 03/09/2026 pelo `muted`, que é o campo dele
     # cuja escada carrega o `uniq` em todo degrau; o `sensores` entrou em
     # 04/09/2026, quando o interruptor que ele prometia passou a existir; a
     # `mascara` entrou em 08/09/2026, por decisão dela — e é a primeira que não
-    # é uma SEÇÃO, e sim um valor só.
+    # é uma SEÇÃO, e sim um valor só; o `movimento` entrou em 24/09/2026, com o
+    # chip «Mira Virtual» que ela pediu no cartão de cada controle.
     leds: LedsConfig | None = None
     triggers: TriggersConfig | None = None
     rumble: ControllerRumbleOverride | None = None
@@ -1631,6 +1639,17 @@ class ControllerOverrides(BaseModel):
     #: ``tests/unit/test_a_mascara_nintendo_pro_atravessa_a_casa.py``, então
     #: uma máscara nova não precisa ser declarada aqui de novo.
     mascara: MascaraDeGamepad | None = None
+    #: A MIRA POR MOVIMENTO desta peça — A-MIRA-POR-MOVIMENTO-NA-TELA-01
+    #: (24/09/2026), o chip «Mira Virtual» do cartão dela e os dois deslizantes
+    #: da Calibrar. A classe é a do perfil (`ProfileMovimentoConfig`), e só os
+    #: campos ESCRITOS valem: a peça que só escreveu o destino herda do perfil
+    #: a sensibilidade e o tremor. ``None`` = sem opinião — a peça segue a mira
+    #: do perfil, que por padrão não existe.
+    #:
+    #: Quem lê por peça é ``manager._controllers_to_miras``, e o caminho até o
+    #: jogo é ``roteador_de_movimento.da_peca``, perguntado pelo motor do tique
+    #: com o ``uniq`` de cada jogador.
+    movimento: ProfileMovimentoConfig | None = None
 
 
 # Regex para tokens aceitos em `Profile.key_bindings` values (FEAT-KEYBOARD-PERSISTENCE-01).
@@ -2594,6 +2613,13 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "(decisão dela, 09/09), e o padrão é `dualsense`. O controle não "
         "declarado perde a máscara própria em vez de mantê-la.",
         dono="hefesto_dualsense4unix.daemon.subsystems.external_mask:mascara_efetiva",
+    ),
+    "ControllerOverrides.movimento": Nascimento(
+        E_CONTRATO,
+        "Seção ausente = esta peça segue a mira do perfil, e a do perfil não "
+        "existe por padrão. É ARRANJO, como o `Profile.movimento`: ligada sem o "
+        "gesto dela no chip «Mira Virtual», a câmera andaria com o controle na "
+        "mesa.",
     ),
     # -- o perfil --------------------------------------------------------
     "Profile.name": Nascimento(E_OBRIGATORIO, "Não há perfil sem nome."),

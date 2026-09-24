@@ -814,26 +814,38 @@ class ProfileManager:
         from hefesto_dualsense4unix.core.roteador_de_movimento import (
             ArranjoRecusadoError,
             definir_ativo,
-            resolver,
+            definir_por_peca,
+            montar,
+            sincronizar_o_filtro,
         )
 
+        # O ARRANJO DA MESA É GUARDADO INTEIRO, LIGADO OU NÃO — A-MIRA-POR-
+        # MOVIMENTO-NA-TELA-01. O `ativo()` continua devolvendo `None` para o
+        # desligado (o tique não muda), e a sensibilidade que o perfil escreveu
+        # com a mira apagada passa a ter onde morar: é dela que a peça calada
+        # herda, e é o que os deslizantes da Calibrar mostram.
         arranjo = None
         try:
-            arranjo = resolver(profile.movimento)
+            arranjo = montar(profile.movimento) if profile.movimento is not None else None
         except ArranjoRecusadoError as exc:
             logger.warning("movimento_recusado", profile=profile.name, err=str(exc))
             if relatorio is not None:
                 relatorio["movimento"] = "falhou"
         definir_ativo(self.store, arranjo)
+        # A MIRA POR PEÇA, SEMPRE DEPOSITADA — o mapa vazio apaga a do perfil
+        # anterior, pela mesma razão do `None` logo acima.
+        por_peca = _controllers_to_miras(
+            profile.controllers, profile.movimento, relatorio=relatorio
+        )
+        definir_por_peca(self.store, por_peca)
+        # A CÂMERA NÃO ANDA EM DOBRO: o braço do report fica sabendo quais
+        # peças miram, e tira o giroscópio nativo da janela delas. Ver
+        # `roteador_de_movimento.sincronizar_o_filtro`.
+        sincronizar_o_filtro(self.store)
+        ligado = arranjo is not None and arranjo.ligado
         if relatorio is not None and "movimento" not in relatorio:
-            relatorio["movimento"] = "aplicado" if arranjo else "desligado"
-        if arranjo is not None:
-            # O DIAGNÓSTICO QUE A RESSALVA PEDE: no caminho `uhid` o jogo pode
-            # estar recebendo a IMU nativa E a mira traduzida ao mesmo tempo, e
-            # a câmera andaria em dobro. Não é erro — pode ser exatamente o que
-            # ela quer num jogo que ignora o giro nativo —, mas tem de ser
-            # visível a quem for medir. Evento, não frase na tela: a tela nunca
-            # confessa dívida nossa (ordem dela, 07/09).
+            relatorio["movimento"] = "aplicado" if ligado else "desligado"
+        if ligado and arranjo is not None:
             logger.info(
                 "roteador_de_movimento_ligado",
                 profile=profile.name,
@@ -3127,6 +3139,47 @@ def gerente_do_daemon(
         ),
     )
     return ProfileManager(**argumentos)
+
+
+def _controllers_to_miras(
+    controllers: dict[str, Any] | None,
+    movimento_do_perfil: Any,
+    *,
+    relatorio: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    """A mira por movimento de CADA peça que tem opinião — `{chave: arranjo}`.
+
+    A-MIRA-POR-MOVIMENTO-NA-TELA-01 (23/09/2026). O chip «Mira Virtual» mora no
+    cartão de cada controle, e o que ele grava é ``ControllerOverrides.
+    movimento``; esta função é quem o LÊ por peça (e a régua
+    `test_perfil_por_controle_o_campo_espera_o_caminho` a cobra por isso).
+
+    CAMPO A CAMPO POR CIMA DO PERFIL: a peça que só escreveu o destino herda do
+    perfil a sensibilidade e o tremor (`roteador_de_movimento.arranjo_da_peca`).
+
+    O VALOR É O ARRANJO INTEIRO, inclusive desligado — é ele que guarda os
+    números dos deslizantes. Um arranjo que o motor recusa vira ``None`` para
+    AQUELA peça (desligada, com o motivo no journal e ``"falhou"`` no
+    relatório): as outras três não pagam por uma linha torta.
+    """
+    from hefesto_dualsense4unix.core.roteador_de_movimento import (
+        ArranjoRecusadoError,
+        arranjo_da_peca,
+    )
+
+    mapa: dict[str, Any] = {}
+    for uniq, cfg in (controllers or {}).items():
+        secao = getattr(cfg, "movimento", None)
+        if secao is None:
+            continue
+        try:
+            mapa[str(uniq)] = arranjo_da_peca(movimento_do_perfil, secao)
+        except ArranjoRecusadoError as exc:
+            logger.warning("movimento_da_peca_recusado", uniq=str(uniq), err=str(exc))
+            mapa[str(uniq)] = None
+            if relatorio is not None:
+                relatorio[f"movimento:{uniq}"] = "falhou"
+    return mapa
 
 
 def _avisa_secoes_sem_applier(

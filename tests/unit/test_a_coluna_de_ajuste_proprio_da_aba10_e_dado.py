@@ -246,13 +246,22 @@ def test_a_ordem_das_celulas_e_a_do_desenho() -> None:
     """
     secoes = [re.search(r'data-hef-secao="([^"]+)"', c).group(1)
               for c in _celulas(publicado=False)]
-    largura = len(a10_perfis.SECOES_DA_COLUNA)
-    assert secoes[:largura] == list(a10_perfis.SECOES_DA_COLUNA), (
+    # O DESENHO PODE ESTAR UMA SESSÃO À FRENTE DO PRODUTO, e só no fim da
+    # linha: a coluna que espera o olho dela (`SECOES_ESPERANDO_A_SESSAO_DELA`)
+    # vem DEPOIS das que o pacote já distribui, na ordem do esquema — é o que
+    # deixa o `--publicar` virar a distribuição sem trocar nenhuma célula de
+    # lugar.
+    do_desenho = list(a10_perfis.SECOES_DA_COLUNA) + [
+        s for s in perfis_web.SECOES_POR_CONTROLE
+        if s in perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA]
+    largura = len(do_desenho)
+    assert secoes[:largura] == do_desenho, (
         f"a primeira linha do desenho traz {secoes[:largura]} e o pacote "
-        f"distribui na ordem {list(a10_perfis.SECOES_DA_COLUNA)}")
+        f"distribui na ordem {list(a10_perfis.SECOES_DA_COLUNA)}, com "
+        f"{sorted(perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA)} esperando a sessão")
     # E TODA LINHA REPETE A MESMA ORDEM: o bloco de N valores só vale se as
     # linhas forem iguais entre si.
-    assert secoes == list(a10_perfis.SECOES_DA_COLUNA) * (len(secoes) // largura), (
+    assert secoes == do_desenho * (len(secoes) // largura), (
         "as linhas da tabela não repetem a mesma ordem de seções")
 
 
@@ -264,7 +273,8 @@ def test_nenhum_campo_do_perfil_fica_sem_coluna() -> None:
     que aquele controle tem opinião própria. O sentido contrário (coluna sem
     campo) é legítimo e declarado: ver `ESPERANDO_O_ESQUEMA`.
     """
-    faltando = set(perfis_web.SECOES_POR_CONTROLE) - set(a10_perfis.SECOES_DA_COLUNA)
+    faltando = (set(perfis_web.SECOES_POR_CONTROLE) - set(a10_perfis.SECOES_DA_COLUNA)
+                - perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA)
     assert not faltando, (
         f"o perfil guarda {sorted(faltando)} por controle e a coluna `Ajuste "
         f"próprio` não os mostra — ajuste guardado que a tela esconde")
@@ -377,11 +387,48 @@ def test_a_frase_da_linha_sem_ajuste_conta_os_ajustes_certos() -> None:
 
     # DIGITADO AQUI DE PROPÓSITO — é a segunda opinião sobre o número, e ler a
     # tabela do produto faria a régua concordar com ele por construção. O
-    # `sete` entrou em 08/09/2026, com a `mascara` (MASCARA-NO-PERFIL-01).
-    esperado = {4: "quatro", 5: "cinco", 6: "seis", 7: "sete"}[
-        len(perfis_web.SECOES_POR_CONTROLE)]
+    # `sete` entrou em 08/09/2026, com a `mascara` (MASCARA-NO-PERFIL-01); o
+    # `oito` espera a sessão dela (o `movimento`, A-MIRA-POR-MOVIMENTO-NA-TELA-01).
+    # A conta é a da PÁGINA PUBLICADA — o que o olho conta ao lado da frase.
+    esperado = {4: "quatro", 5: "cinco", 6: "seis", 7: "sete", 8: "oito"}[
+        len(perfis_web.SECOES_NA_TELA)]
     sem_nada = Profile(name="sem nada", match=MatchAny(), controllers={})
     linhas = perfis_web._linhas_da_guarda([dict(MESA[0])], sem_nada)
     assert f"herda os {esperado} ajustes do perfil" in linhas[0]["dica"], (
         f"a linha sem ajuste próprio não diz `herda os {esperado} ajustes`; "
         f"a dica é {linhas[0]['dica']!r}")
+
+
+def test_a_secao_que_espera_a_sessao_dela_ainda_nao_esta_publicada() -> None:
+    """A isenção de `SECOES_ESPERANDO_A_SESSAO_DELA` tem PRAZO, e é este teste.
+
+    A-MIRA-POR-MOVIMENTO-NA-TELA-01 (24/09/2026): o `movimento` entrou no
+    esquema antes de a coluna dele chegar à página publicada, porque os desenhos
+    novos se aprovam todos juntos (regra dela, 23/09). Enquanto isso, o pacote
+    distribui sete valores por linha — a página tem sete células.
+
+    NO DIA EM QUE ELA PUBLICAR a aba 10 com a célula nova, este teste reprova:
+    o nome sai da isenção e entra em `a10_perfis.SECOES_DA_COLUNA`, no mesmo
+    commit do `--publicar`. Uma isenção que não reprova quando caduca é uma
+    isenção eterna — foi assim que a coluna do microfone ficou apagada à força.
+    """
+    publicadas = {re.search(r'data-hef-secao="([^"]+)"', c).group(1)
+                  for c in _celulas(publicado=True)}
+    desenhadas = {re.search(r'data-hef-secao="([^"]+)"', c).group(1)
+                  for c in _celulas(publicado=False)}
+    for secao in perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA:
+        assert secao in desenhadas, (
+            f"`{secao}` espera a sessão dela e o DESENHO não tem a célula — não "
+            f"há o que ela aprovar; regere `interface/aba10.py`")
+        assert secao in perfis_web.SECOES_POR_CONTROLE, (
+            f"`{secao}` espera a sessão dela e não está no esquema — é uma "
+            f"isenção sobre um campo que não existe")
+        assert secao not in publicadas, (
+            f"a página publicada já tem a célula de `{secao}`: tire o nome de "
+            f"`perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA` e ponha-o em "
+            f"`a10_perfis.SECOES_DA_COLUNA`, na ordem do desenho")
+        assert secao not in a10_perfis.SECOES_DA_COLUNA, (
+            f"`{secao}` está na distribuição do pacote e a página publicada não "
+            f"tem a célula dele — a distribuição é POSICIONAL, e o P2 passaria "
+            f"a mostrar o estado do P1")
+

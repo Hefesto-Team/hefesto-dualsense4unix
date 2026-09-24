@@ -130,11 +130,19 @@ def test_a_mistura_nao_estoura_o_byte_do_analogico() -> None:
 
 
 def test_o_arranjo_desligado_nao_e_arranjo() -> None:
-    """ARRANQUE o ramo `nenhum` de `resolver` e este teste reprova: guardar a
-    calibração dela com a mira DESLIGADA é o que permite experimentar sem
-    perder o ajuste."""
-    assert rot.resolver(ProfileMovimentoConfig(destino="nenhum")) is None
-    assert rot.resolver(None) is None
+    """ARRANQUE o ramo `nenhum` de `ArranjoDeMovimento.ligado` e este teste
+    reprova: guardar a calibração dela com a mira DESLIGADA é o que permite
+    experimentar sem perder o ajuste — e o arranjo guardado não chega ao tique.
+
+    O `resolver` que este teste media saiu em 24/09/2026
+    (A-MIRA-POR-MOVIMENTO-NA-TELA-01): o `montar` guarda o arranjo desligado
+    inteiro, e é o `ativo()` que não o entrega.
+    """
+    guardado = rot.montar(ProfileMovimentoConfig(destino="nenhum"))
+    assert not guardado.ligado
+    store = SimpleNamespace()
+    rot.definir_ativo(store, guardado)
+    assert rot.ativo(store) is None
 
 
 # ---------------------------------------------------------------------------

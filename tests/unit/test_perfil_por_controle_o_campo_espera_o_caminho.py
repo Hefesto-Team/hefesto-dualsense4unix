@@ -147,6 +147,13 @@ _CONSUMIDOR: dict[str, ConsumidorPorUnidade] = {
             "vpad daquela peça nasce (ou é recriado) com o VID/PID dela"
         ),
     ),
+    "movimento": ConsumidorPorUnidade(
+        funcao="_controllers_to_miras",
+        chega_em=(
+            "{uniq: arranjo}, depositado no store por definir_por_peca e "
+            "perguntado pelo tique com o uniq de cada jogador (da_peca)"
+        ),
+    ),
 }
 
 
@@ -195,6 +202,7 @@ def test_a_regua_sabe_recusar() -> None:
     assert _consumidores_orfaos(sintetico, _CONSUMIDOR) == [
         "mascara",
         "mic",
+        "movimento",
         "rumble",
         "sensores",
         "speaker",
@@ -372,6 +380,43 @@ def _prova_mascara(uniq: str) -> object:
         _zerar_registro_de_mascaras()
 
 
+def _prova_movimento(uniq: str) -> object:
+    """A mira escrita para UMA peça vale só nela (A-MIRA-POR-MOVIMENTO-NA-TELA-01).
+
+    O ENDEREÇO É O TESTE: o chip «Mira Virtual» aceso no controle que o perfil
+    nomeia, e a vizinha — sem opinião, num perfil sem mira — não mira.
+    """
+    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+    from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
+    from hefesto_dualsense4unix.profiles.schema import ProfileMovimentoConfig
+
+    store = _StoreSemTrava()
+    gerente = ProfileManager(
+        controller=object(),  # type: ignore[arg-type]
+        store=store,  # type: ignore[arg-type]
+    )
+    perfil = Profile(
+        name="uma_peca_so",
+        match=MatchAny(),
+        controllers={
+            uniq: ControllerOverrides(
+                movimento=ProfileMovimentoConfig(destino="analogico_direito")
+            )
+        },
+    )
+    try:
+        gerente.apply_movimento(perfil)
+        mesa = rot.ativo(store)
+        return (
+            rot.da_peca(store, uniq, mesa) is not None
+            and rot.da_peca(store, "aa:bb:cc:00:00:ff", mesa) is None
+        ) or None
+    finally:
+        # O filtro do report é do PROCESSO (`virtual_motion.REGISTRO`): a peça
+        # que esta prova pôs a mirar não pode sair daqui mirando.
+        REGISTRO.limpar()
+
+
 _PROVAS = {
     "leds": _prova_leds,
     "triggers": _prova_triggers,
@@ -380,6 +425,7 @@ _PROVAS = {
     "mic": _prova_mic,
     "sensores": _prova_sensores,
     "mascara": _prova_mascara,
+    "movimento": _prova_movimento,
 }
 
 

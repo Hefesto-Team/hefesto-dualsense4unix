@@ -306,7 +306,8 @@ def test_o_arranjo_desligado_nao_move_nada() -> None:
 
 
 def test_o_arranjo_desligado_guarda_os_numeros_dela() -> None:
-    """`montar` devolve o arranjo mesmo com a mira apagada; `resolver`, não.
+    """`montar` devolve o arranjo mesmo com a mira apagada, e o `ativo()` não o
+    entrega ao tique.
 
     O «Ignorar tremor até» que ela ajustou num controle de mira apagada não
     pode sumir só porque a mira não está andando.
@@ -314,9 +315,12 @@ def test_o_arranjo_desligado_guarda_os_numeros_dela() -> None:
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
 
     secao = ProfileMovimentoConfig(destino="nenhum", zona_morta_graus_s=25.0)
-    assert rot.resolver(secao) is None
     montado = rot.montar(secao)
     assert montado.zona_morta_graus_s == 25.0 and not montado.ligado
+    store = SimpleNamespace()
+    rot.definir_ativo(store, montado)
+    assert rot.ativo(store) is None
+    assert rot.parametros_da_peca(store, _P1).zona_morta_graus_s == 25.0
 
 
 def test_so_uma_peca_mira_e_o_tique_ainda_chama_o_motor() -> None:
@@ -449,3 +453,114 @@ def test_a_mira_do_perfil_tira_o_giro_de_quem_nao_tem_opiniao() -> None:
     rot.definir_por_peca(store, {})
     rot.sincronizar_o_filtro(store)
     assert REGISTRO.filtrar(_P2, janela) is janela
+
+
+# ---------------------------------------------------------------------------
+# 3. O PERFIL POR CONTROLE — `ControllerOverrides.movimento`
+# ---------------------------------------------------------------------------
+
+
+def _perfil_com_miras(**por_uniq: Any) -> Profile:
+    from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
+
+    return Profile(
+        name="miras",
+        match=MatchAny(type="any"),
+        controllers={
+            uniq: ControllerOverrides(movimento=ProfileMovimentoConfig(**campos))
+            for uniq, campos in por_uniq.items()
+        },
+    )
+
+
+def test_a_mira_nasce_desligada() -> None:
+    """O perfil novo, o controle novo e o perfil sem a seção: NINGUÉM mira.
+
+    MORDIDA: dê a `ControllerOverrides.movimento` um padrão ligado e este teste
+    reprova — abrir a aba moveria a câmera de todo jogo dela.
+    """
+    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+    from hefesto_dualsense4unix.profiles.schema import (
+        NASCIMENTO_DOS_CAMPOS,
+        ControllerOverrides,
+    )
+
+    assert ControllerOverrides().movimento is None
+    assert "ControllerOverrides.movimento" in NASCIMENTO_DOS_CAMPOS
+    store = SimpleNamespace()
+    gerente = ProfileManager.__new__(ProfileManager)
+    gerente.store = store  # type: ignore[attr-defined]
+    gerente.apply_movimento(Profile(name="nada", match=MatchAny(type="any")))
+    assert rot.ativo(store) is None
+    assert not REGISTRO.roteado(_P1), "o perfil calado tirou o giro do jogo"
+
+
+def test_o_perfil_leva_a_mira_de_cada_peca_ao_tique() -> None:
+    """A ativação deposita o mapa por peça, e cada uma decide a sua.
+
+    MORDIDA: tire o `definir_por_peca` do `apply_movimento` e este teste
+    reprova — o chip gravaria no disco e o tique nunca saberia.
+    """
+    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+
+    store = SimpleNamespace()
+    gerente = ProfileManager.__new__(ProfileManager)
+    gerente.store = store  # type: ignore[attr-defined]
+    gerente.apply_movimento(_perfil_com_miras(**{
+        "aabbcc000003": {"destino": "analogico_direito", "sensibilidade": 10},
+        "aabbcc000004": {"destino": "nenhum", "zona_morta_graus_s": 25.0},
+    }))
+    ativo = rot.ativo(store)
+    assert ativo is rot.SO_NAS_PECAS
+    assert rot.da_peca(store, _P3, ativo).sensibilidade == 10
+    assert rot.da_peca(store, _P4, ativo) is None
+    assert rot.da_peca(store, _P2, ativo) is None
+    # O número que ela ajustou com a mira APAGADA continua guardado.
+    assert rot.parametros_da_peca(store, _P4).zona_morta_graus_s == 25.0
+    # E a peça que mira perde o giro nativo; as outras não.
+    assert REGISTRO.roteado(_P3) and not REGISTRO.roteado(_P4)
+
+
+def test_uma_peca_torta_nao_derruba_as_outras() -> None:
+    """Só um `model_copy` sem validação chega aqui torto — e ele cala UMA peça."""
+    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+
+    perfil = _perfil_com_miras(**{
+        "aabbcc000002": {"destino": "analogico_direito"},
+        "aabbcc000003": {"destino": "analogico_direito"},
+    })
+    object.__setattr__(perfil.controllers["aabbcc000002"].movimento,
+                       "destino", "destino_que_nao_existe")
+    store = SimpleNamespace()
+    gerente = ProfileManager.__new__(ProfileManager)
+    gerente.store = store  # type: ignore[attr-defined]
+    relatorio: dict[str, str] = {}
+    gerente.apply_movimento(perfil, relatorio=relatorio)
+    assert relatorio.get("movimento:aabbcc000002") == "falhou"
+    ativo = rot.ativo(store)
+    assert rot.da_peca(store, _P2, ativo) is None
+    assert rot.da_peca(store, _P3, ativo) is not None, "a peça certa pagou pela torta"
+
+
+def test_o_rascunho_grava_a_mira_da_peca_sem_apagar_o_resto() -> None:
+    """`DraftConfig.with_controller_movimento`: o que ela mexeu, e só isso.
+
+    MORDIDA: troque a fusão com os campos já escritos por uma seção nova e este
+    teste reprova — mexer no deslizante apagaria o chip.
+    """
+    from hefesto_dualsense4unix.app.draft_config import DraftConfig
+
+    d = DraftConfig.default().with_controller_movimento("aabbcc000003", ligada=True)
+    secao = d.controller_override("aabbcc000003").movimento
+    assert secao.destino == "analogico_direito"
+    assert secao.model_fields_set == {"destino"}, (
+        "o chip materializou campos que ela não escreveu — a peça deixaria de "
+        "herdar a sensibilidade do perfil")
+    d = d.with_controller_movimento("aabbcc000003", zona_morta_graus_s=20.0)
+    secao = d.controller_override("aabbcc000003").movimento
+    assert secao.destino == "analogico_direito" and secao.zona_morta_graus_s == 20.0
+    perfil = d.to_profile("com mira")
+    assert perfil.controllers["aabbcc000003"].movimento.zona_morta_graus_s == 20.0
+    d = d.with_controller_movimento("aabbcc000003")
+    assert d.controller_override("aabbcc000003") is None, (
+        "os três `None` não devolveram a peça ao perfil")

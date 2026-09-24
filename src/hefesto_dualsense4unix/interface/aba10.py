@@ -151,6 +151,13 @@ from hefesto_dualsense4unix.profiles.simple_match import (  # noqa: E402
 # `ps` porque é o botão que carrega a marca do console, e é o mais próximo de
 # "de que console este controle diz ser". Se ela preferir outro glifo, muda-se
 # esta linha e a página se regenera — nada mais depende dela.
+#
+# A OITAVA NASCEU EM 24/09/2026, com a palavra dela: o chip «Mira Virtual» no
+# cartão de cada controle (A-MIRA-POR-MOVIMENTO-NA-TELA-01), e o `movimento`
+# entrou em `ControllerOverrides`. O glifo é o do ANALÓGICO DIREITO, que é o
+# que a mira move — a dica do chip diz *"(analógico R)"*. A coluna está no
+# DESENHO e espera a sessão dela: até a aba 10 ser publicada, o produto não a
+# distribui (`perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA`).
 SECOES = [
     ("leds", ("lightbar", "led-jogador")),
     ("triggers", ("l2", "r2")),
@@ -159,6 +166,7 @@ SECOES = [
     ("mic", ("mic",)),
     ("sensores", ("giroscopio", "acelerometro")),
     ("mascara", ("ps",)),
+    ("movimento", ("stick_r",)),
 ]
 
 #: COMO CADA SEÇÃO SE CHAMA NA DICA DO CABEÇALHO, e por que ela não é digitada
@@ -177,6 +185,8 @@ NOME_DA_SECAO = {
     # "máscara" é a palavra que a aba Jogar já usa no chip de cada cartão
     # (`data-gesto="mascara"`) — não é vocabulário novo de tela.
     "mascara": "máscara",
+    # O nome do chip que ela pediu, em minúscula no meio da frase.
+    "movimento": "mira virtual",
 }
 
 
@@ -191,7 +201,7 @@ def _lista_das_secoes() -> str:
 #: contagem de `NAO_PINTAVEIS` divergiu no primeiro dia. Sai daqui, de
 #: `len(SECOES)`, e muda sozinha quando a lista mudar.
 _EXTENSO = {1: "um", 2: "dois", 3: "três", 4: "quatro", 5: "cinco", 6: "seis",
-            7: "sete"}
+            7: "sete", 8: "oito"}
 QUANTAS_SECOES = _EXTENSO[len(SECOES)]
 
 # O ESTADO DESTE PERFIL, controle a controle. Um mockup que acende TODAS as
@@ -205,7 +215,10 @@ QUANTAS_SECOES = _EXTENSO[len(SECOES)]
 # o `sensores`, que chegou em 05/09, entra pela mesma regra, no P2 para não
 # empilhar as duas colunas novas na mesma linha.
 GUARDA = {
-    "p1": {"leds", "triggers", "rumble", "mic"},
+    # O `movimento` (a Mira Virtual, 24/09/2026) entra aceso no P1 pela mesma
+    # regra: aceso em um, apagado em três, e fora das linhas do `sensores` e da
+    # `mascara`, para as colunas novas não empilharem.
+    "p1": {"leds", "triggers", "rumble", "mic", "movimento"},
     "p2": {"leds", "rumble", "sensores"},
     # A `mascara` entra no P3 pela MESMA regra do `sensores`: acesa em um,
     # apagada em três. E no P3, e não no P2, para as duas colunas novas não
