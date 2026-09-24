@@ -55,9 +55,11 @@ AS MORDIDAS (24/09/2026, cada uma devolvida com o md5 conferido):
   carta emprestada trocada por 99 passa tudo: com o jogo na autoridade ela
   não escolhe plano nenhum, que é o que a cura afirma;
 - (O-VPAD-DO-P1-NAO-REPETE-O-MAC-01) ``_MacsDosVpadsVivos.vestir`` vestindo o
-  MAC pedido sem olhar quem já o veste reprova as 18 da volta tardia pela
-  :class:`MesaHonesta`, cada uma com o kernel recusando o MAC de quem o posto
-  carrega (``Duplicate device found for MAC address``).
+  MAC pedido sem olhar quem já o veste reprova as 24 da volta tardia pela
+  :class:`MesaHonesta` (as 18 da matriz e as seis da volta pelo outro
+  transporte, da conferência), cada uma com o kernel recusando o MAC de quem
+  o posto carrega (``Duplicate device found for MAC address``); ``despir``
+  que não devolve reprova as seis na segunda volta, com o MAC do lugar andando.
 
 Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5 zerados.
 """
@@ -225,9 +227,13 @@ def montar_honesto(
     return bancada
 
 
-def _sai_e_volta_tarde(bancada: MesaDoJogo, uniq: str) -> None:
-    """``uniq`` sai, o prazo do lugar guardado vence, e ele volta com o jogo aberto."""
-    via = bancada.mesa.transporte_de(uniq)
+def _sai_e_volta_tarde(bancada: MesaDoJogo, uniq: str, *, para: str | None = None) -> None:
+    """``uniq`` sai, o prazo do lugar guardado vence, e ele volta com o jogo aberto.
+
+    ``para`` é o transporte da volta (a linha 3: sai do cabo, volta pelo rádio);
+    sem ele, volta pelo mesmo em que caiu.
+    """
+    via = para if para is not None else bancada.mesa.transporte_de(uniq)
     bancada.mesa.levantar(uniq)
     for _ in range(_ticks_ate_o_fim_do_prazo(0.0)):
         bancada.tique()
@@ -524,6 +530,51 @@ class TestAVoltaTardiaDoP1:
 
         _volta_movendo_um_boneco_de_verdade(bancada, uniq)
         assert bancada.inst.primary_uniq == UNIQS[quem + 1]
+
+    @pytest.mark.parametrize(
+        ("de", "para"), [("usb", "bt"), ("bt", "usb")], ids=["cabo-para-radio", "radio-para-cabo"]
+    )
+    @pytest.mark.parametrize("quantos", [2, 3, 4])
+    def test_a_volta_tardia_pelo_outro_transporte_e_o_mac_que_nao_anda(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        kernel: KernelDoHidPlaystation,
+        quantos: int,
+        de: str,
+        para: str,
+    ) -> None:
+        """A linha 3 como ela a faz: o P1 sai do cabo e volta pelo rádio (e o inverso).
+
+        Conferência da O-VPAD-DO-P1-NAO-REPETE-O-MAC-01 (24/09/2026): as duas
+        réguas de cima devolvem quem saiu pelo MESMO transporte, e o gesto da
+        linha 3 é a troca. O MAC pedido sai da identidade do aparelho, a mesma
+        nos dois transportes: com o posto carregando o P1, a volta tardia pelo
+        outro transporte pede o MAC do posto, e o dono veste o seguinte. E o MAC
+        de um lugar não anda: o P1 sai de novo, volta, e veste o mesmo de antes
+        — o Steam Input e o jogo lembram dele.
+
+        MORDIDA: ``vestir`` sem olhar quem veste reprova as seis pelo
+        ``-EEXIST``; ``despir`` que não devolve reprova a segunda volta.
+        """
+        bancada = montar_honesto(monkeypatch, kernel, quantos, de)
+        trocar_a_mascara_do_p1(bancada)
+        assert bancada.vpad_do_p1.mac == vpad_mac(P1, 1), "o posto nasceu com o MAC do P1"
+
+        _sai_e_volta_tarde(bancada, P1, para=para)
+
+        assert bancada.mesa.transporte_de(P1) == para
+        _volta_movendo_um_boneco_de_verdade(bancada, P1)
+        mac_da_volta = bancada.vpad_de(P1).mac
+
+        bancada.mesa.levantar(P1)
+        for _ in range(3):
+            bancada.tique()
+        bancada.mesa.sentar(P1, transporte=para)
+        bancada.tique()
+        bancada.tique()
+
+        _volta_movendo_um_boneco_de_verdade(bancada, P1)
+        assert bancada.vpad_de(P1).mac == mac_da_volta, "o MAC do lugar andou na reconexão"
 
 
 #: Quanto o OUTRO já está fora quando o P1 sai: o prazo dele vence com o do P1
