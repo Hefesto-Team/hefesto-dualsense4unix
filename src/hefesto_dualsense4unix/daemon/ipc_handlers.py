@@ -7639,21 +7639,26 @@ class IpcHandlersMixin:
     # No fim da classe porque este arquivo é citado por número de linha em
     # mais de cem lugares, e código novo no meio deslocaria as âncoras.
 
-    #: O que `mira.set` aceita além do `uniq`: o chip e os dois deslizantes, e
-    #: NADA MAIS. O resto do arranjo (gatilho, inverter, eixo, teto) mora no
-    #: perfil; o IPC não abre uma porta que a tela não tem.
-    _CAMPOS_DA_MIRA = ("ligada", "sensibilidade", "zona_morta_graus_s")
+    #: O que `mira.set` aceita além do `uniq`: o chip, os dois deslizantes e,
+    #: desde a A-MIRA-POR-MOVIMENTO-NA-TELA-02 (palavra dela de 24/09/2026,
+    #: «entram as duas»), o «Só enquanto eu segurar» e os dois «Inverter». O
+    #: resto do arranjo (eixo, teto, pixels por grau) mora no perfil: o IPC não
+    #: abre uma porta que a tela não tem.
+    _CAMPOS_DA_MIRA = ("ligada", "sensibilidade", "zona_morta_graus_s",
+                       "gatilho", "inverter_horizontal", "inverter_vertical")
 
     def _merge_mira(self, entries: list[dict[str, Any]]) -> None:
-        """``entry["mira"]`` de cada controle: o chip e os dois deslizantes.
+        """``entry["mira"]`` de cada controle: o chip e o bloco da Calibrar.
 
-        ``{ligada, destino, sensibilidade, zona_morta_graus_s}`` do que vale
-        AGORA para aquela peça — a MESMA pergunta que o tique faz
+        ``{ligada, destino, sensibilidade, zona_morta_graus_s, gatilho,
+        inverter_horizontal, inverter_vertical}`` do que vale AGORA para aquela
+        peça — a MESMA pergunta que o tique faz
         (`roteador_de_movimento.da_peca`), e não uma segunda leitura do disco:
         duas leituras podem divergir, e a tela pintaria o que o motor não usa.
-        Os números vêm de `parametros_da_peca`, que responde também com a mira
+        Os ajustes vêm de `parametros_da_peca`, que responde também com a mira
         APAGADA — o «Ignorar tremor até» dela não some quando o chip apaga.
-        Controle sem endereço fica sem a chave.
+        `gatilho` é `None` quando a mira anda sempre. Controle sem endereço
+        fica sem a chave.
         """
         from hefesto_dualsense4unix.core import roteador_de_movimento as rot
 
@@ -7670,19 +7675,26 @@ class IpcHandlersMixin:
                 "destino": vale.destino if vale is not None else rot.DESTINO_NENHUM,
                 "sensibilidade": numeros.sensibilidade,
                 "zona_morta_graus_s": numeros.zona_morta_graus_s,
+                "gatilho": numeros.gatilho,
+                "inverter_horizontal": numeros.inverter_horizontal,
+                "inverter_vertical": numeros.inverter_vertical,
             }
 
     async def _handle_mira_set(self, params: dict[str, Any]) -> dict[str, Any]:
-        """`mira.set` — o chip «Mira Virtual» e os dois deslizantes, POR CONTROLE.
+        """`mira.set` — o chip «Mira Virtual» e os ajustes da Calibrar, POR CONTROLE.
 
         Params: ``{uniq?: str, ligada?: bool, sensibilidade?: 1-12,
-        zona_morta_graus_s?: 0-60}``. `uniq` omitido = o alvo de saída, e sem
-        ele o primário (`_uniq_do_primario`); campo omitido = **não mexe
-        naquele campo**. A palavra dela, 23/09/2026: *"Usar os movimentos do
-        controle como mira (analógico R), pra pessoas com deficiência motora"* —
-        ``ligada`` é o destino ``analogico_direito``, e ``false`` o apaga com
-        opinião (``nenhum``): a peça que apagou o chip não mira nem pela mira do
-        perfil.
+        zona_morta_graus_s?: 0-60, gatilho?: str | null,
+        inverter_horizontal?: bool, inverter_vertical?: bool}``. `uniq` omitido
+        = o alvo de saída, e sem ele o primário (`_uniq_do_primario`); campo
+        omitido = **não mexe naquele campo**. A palavra dela, 23/09/2026:
+        *"Usar os movimentos do controle como mira (analógico R), pra pessoas
+        com deficiência motora"* — ``ligada`` é o destino
+        ``analogico_direito``, e ``false`` o apaga com opinião (``nenhum``): a
+        peça que apagou o chip não mira nem pela mira do perfil. ``gatilho`` é
+        o «Só enquanto eu segurar» (``null`` = a mira anda sempre; o PS é
+        recusado pelo esquema), e os dois ``inverter_*`` são os «Inverter» —
+        A-MIRA-POR-MOVIMENTO-NA-TELA-02, palavra dela de 24/09/2026.
 
         AS DUAS ESCRITAS, e a ordem é o contrato do `sensor.set`:
 
@@ -7694,9 +7706,17 @@ class IpcHandlersMixin:
            filtro do report (`sincronizar_o_filtro`): no próximo quadro o tique
            mira por esta peça, e o giro nativo sai da janela dela.
 
-        EM MODO NATIVO NÃO HÁ GAMEPAD VIRTUAL onde a mira escreva — o jogo lê o
-        controle físico direto. A escolha fica guardada e o ``alcance`` diz
-        ``nao_se_aplica``; a tela não confessa isso (ordem dela, 07/09).
+        EM MODO NATIVO O CHIP NÃO GRAVA — palavra dela de 24/09/2026
+        (`D-2409-NO-NATIVO-A-MIRA-FICA-CINZA`): *"A exceção do nativo todo o
+        resto deve ter mira Virtual"*.  <!-- noqa-acento: citação literal dela -->
+        No Nativo não há gamepad virtual onde a mira escreva — o jogo lê o
+        controle físico direto —, e o pedido que traz ``ligada`` é RECUSADO
+        inteiro, sem escrita nenhuma, com ``status: "nativo"``. A guarda mora
+        AQUI, e não só no cinza da tela: o chip lê o estado de um tique atrás, e
+        qualquer outro cliente do soquete fala direto com esta função. Os
+        ajustes sem ``ligada`` (os da Calibrar) continuam gravando no Nativo —
+        não acendem mira nenhuma e valem quando o modo voltar —, e o
+        ``alcance`` diz ``nao_se_aplica``.
         """
         from hefesto_dualsense4unix.core import roteador_de_movimento as rot
         from hefesto_dualsense4unix.profiles.schema import (
@@ -7708,8 +7728,9 @@ class IpcHandlersMixin:
         if desconhecidos:
             raise ValueError(
                 f"mira.set não conhece {desconhecidos}: a tela oferece o chip "
-                "(`ligada`) e os dois deslizantes (`sensibilidade`, "
-                "`zona_morta_graus_s`), e o resto do arranjo mora no perfil"
+                "(`ligada`), os dois deslizantes (`sensibilidade`, "
+                "`zona_morta_graus_s`), o `gatilho` e os dois `inverter_*`, e o "
+                "resto do arranjo mora no perfil"
             )
         pedidos: dict[str, Any] = {}
         if "ligada" in params:
@@ -7735,10 +7756,27 @@ class IpcHandlersMixin:
                     "em graus por segundo"
                 )
             pedidos["zona_morta_graus_s"] = float(valor)
+        if "gatilho" in params:
+            valor = params["gatilho"]
+            if valor is not None and not isinstance(valor, str):
+                raise ValueError(
+                    "mira.set: 'gatilho' é o botão do «Só enquanto eu segurar», "
+                    "ou null para a mira andar sempre"
+                )
+            # O VAZIO É O `null`: a lista da tela manda "" na opção «Sempre».
+            # Quem diz se o botão serve é o esquema, logo abaixo — e ele recusa
+            # o PS, que é a saída de emergência dela.
+            pedidos["gatilho"] = valor or None
+        for lado in ("inverter_horizontal", "inverter_vertical"):
+            if lado in params:
+                valor = params[lado]
+                if not isinstance(valor, bool):
+                    raise ValueError(f"mira.set: '{lado}' precisa ser boolean")
+                pedidos[lado] = valor
         if not pedidos:
             raise ValueError(
-                "mira.set exige ao menos um de 'ligada', 'sensibilidade' ou "
-                "'zona_morta_graus_s' — campo omitido NÃO mexe na mira"
+                f"mira.set exige ao menos um de {', '.join(self._CAMPOS_DA_MIRA)} "
+                "— campo omitido NÃO mexe na mira"
             )
         uniq = params.get("uniq")
         if uniq is not None and not isinstance(uniq, str):
@@ -7763,6 +7801,24 @@ class IpcHandlersMixin:
                 "motivo": (
                     f"{alvo!r} não é um endereço de rádio de uma peça de "
                     "plástico — sem MAC não há como mirar por um controle"
+                ),
+            }
+
+        # O NATIVO RECUSA O CHIP, e ANTES de qualquer escrita — ver a docstring.
+        # O pedido inteiro volta sem tocar no disco nem no vivo: gravar os
+        # outros campos e recusar só o chip deixaria uma resposta que diz
+        # "recusei" com metade escrita.
+        nativo = bool(
+            self.daemon is not None and getattr(self.daemon, "is_native_mode", bool)()
+        )
+        if nativo and "ligada" in params:
+            logger.info("mira_set_recusado_no_nativo", uniq=chave)
+            return {
+                "status": "nativo",
+                "uniq": alvo,
+                "motivo": (
+                    "Modo Nativo: o jogo lê o controle físico direto e não há "
+                    "gamepad virtual onde a mira escreva — o chip não grava"
                 ),
             }
 
@@ -7805,14 +7861,11 @@ class IpcHandlersMixin:
         rot.definir_da_peca(self.store, chave, arranjo)
         rot.sincronizar_o_filtro(self.store)
 
-        nativo = bool(
-            self.daemon is not None and getattr(self.daemon, "is_native_mode", bool)()
-        )
         ressalva: str | None = None
-        if nativo and arranjo.ligado:
+        if nativo:
             ressalva = (
                 "Modo Nativo: o jogo lê o controle FÍSICO direto e não há gamepad "
-                "virtual onde a mira escreva. A escolha fica guardada e vale "
+                "virtual onde a mira escreva. Os ajustes ficam guardados e valem "
                 "quando o modo voltar a Virtual ou Xbox."
             )
         logger.info(
@@ -7823,6 +7876,9 @@ class IpcHandlersMixin:
             ligada=arranjo.ligado,
             sensibilidade=arranjo.sensibilidade,
             zona_morta_graus_s=arranjo.zona_morta_graus_s,
+            gatilho=arranjo.gatilho,
+            inverter_horizontal=arranjo.inverter_horizontal,
+            inverter_vertical=arranjo.inverter_vertical,
             nativo=nativo,
         )
         return {
@@ -7833,6 +7889,9 @@ class IpcHandlersMixin:
             "ligada": arranjo.ligado,
             "sensibilidade": arranjo.sensibilidade,
             "zona_morta_graus_s": arranjo.zona_morta_graus_s,
+            "gatilho": arranjo.gatilho,
+            "inverter_horizontal": arranjo.inverter_horizontal,
+            "inverter_vertical": arranjo.inverter_vertical,
             "alcance": {"tique": "nao_se_aplica" if nativo else "aplicado"},
             "ressalva": ressalva,
         }
