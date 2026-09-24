@@ -27,6 +27,8 @@ Endereços de rádio: a faixa SINTÉTICA da casa (``aa:bb:cc``), nunca um OUI re
 
 from __future__ import annotations
 
+import re
+import sys
 from collections.abc import Iterator
 from pathlib import Path
 from types import SimpleNamespace
@@ -804,3 +806,258 @@ def test_o_metodo_esta_no_dispatcher() -> None:
     fonte = inspect.getsource(IpcServer.__post_init__)
     assert '"mira.set": self._handle_mira_set' in fonte
     assert "mira_set_detalhado" in ipc_bridge.__all__
+
+
+
+# ---------------------------------------------------------------------------
+# 6. A TELA — o chip na aba Controles e os deslizantes na Calibrar
+# ---------------------------------------------------------------------------
+# O desenho mora na BANCADA (`mockup/`) e espera a sessão dela; o que já vai ao
+# produto é o gesto e a pintura, que só acendem no dia em que ela publicar.
+
+_RAIZ = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_RAIZ / "src" / "hefesto_dualsense4unix" / "interface"))
+
+#: A DICA DELA, em português correto — escrita aqui POR EXTENSO, e não lida do
+#: gerador: a régua confere o gerador contra a palavra dela, não contra si mesmo.
+_DICA_DELA = ("Usar os movimentos do controle como mira (analógico R), para "
+              "pessoas com deficiência motora.")
+
+
+def _cartoes_da_bancada() -> list[tuple[str, str]]:
+    """`(abertura, miolo)` de cada cartão da aba Controles, na bancada."""
+    doc = (_RAIZ / "mockup/02-controles.html").read_text(encoding="utf-8")
+    doc = doc.split('<div class="nota">', 1)[0]
+    partes = re.split(r'(?=<div class="ctl card)', doc)[1:]
+    assert partes, "a bancada não tem cartão de controle — régua cega"
+    return [(parte.split(">", 1)[0], parte) for parte in partes]
+
+
+def test_o_chip_da_mira_esta_em_cada_controle_com_a_dica_dela() -> None:
+    """MORDIDA: troque uma vírgula da dica no gerador, ou tire o `off`, e reprova.
+
+    Um chip por cartão, os quatro assentos, ao lado dos dois de sensor; o
+    conectado nasce APAGADO (o lugar vazio perde o `off` como todo alvo
+    `classe` — o travessão não é `DESLIGADO` — e fica cinza pela folha).
+    """
+    for abertura, miolo in _cartoes_da_bancada():
+        chips = re.findall(r'<button class="([^"]*)" data-gesto="mira"([^>]*)>'
+                           r'<span class="p"></span>([^<]*)</button>', miolo)
+        assert len(chips) == 1, f"{abertura}: {len(chips)} chip(s) da mira"
+        classe, atributos, rotulo = chips[0]
+        assert rotulo == "Mira Virtual", rotulo
+        assert f'title="{_DICA_DELA}"' in atributos, atributos
+        assert 'data-campo="mira-ligada"' in atributos
+        assert 'data-hef-quando="DESLIGADO"' in atributos
+        if 'data-conectado="nao"' not in abertura:
+            assert "off" in classe.split(), (
+                f"{abertura}: o chip da mira nasceu aceso — ela nasce desligada")
+        grupo = miolo.split('<span class="sensores-peca">', 1)[1].split("</span>\n", 1)[0]
+        assert grupo.index('data-sensor="acelerometro"') < grupo.index(
+            'data-gesto="mira"'), "o chip não está ao lado dos dois de sensor"
+
+
+def test_o_chip_giroscopio_nao_mudou() -> None:
+    """A palavra dela: *o chip Giroscópio NÃO muda* — liga o sensor e manda o giro."""
+    for abertura, miolo in _cartoes_da_bancada():
+        giro = re.findall(r'<button class="sw[^"]*" data-gesto="sensor" '
+                          r'data-sensor="giroscopio"[^>]*title="([^"]*)"', miolo)
+        assert giro == ["Ligado: o jogo recebe o giro deste controle."], (
+            abertura, giro)
+
+
+def test_o_rotulo_do_tremor_nao_diz_zona_morta() -> None:
+    """§5 da sprint: a palavra técnica esconde para que o campo serve."""
+    import calibrar
+
+    assert calibrar.ROTULO_TREMOR == "Ignorar tremor até"
+    doc = (_RAIZ / "mockup/calibrar-sensores.html").read_text(encoding="utf-8")
+    visivel = re.sub(r"<style>.*?</style>|<!--.*?-->", "", doc, flags=re.S)
+    assert "zona morta" not in visivel.lower()
+    assert calibrar.ROTULO_TREMOR in visivel
+
+
+def _faixa_do_esquema(campo: str) -> tuple[float, float, float]:
+    info = ProfileMovimentoConfig.model_fields[campo]
+    ge = next(m.ge for m in info.metadata if hasattr(m, "ge"))
+    le = next(m.le for m in info.metadata if hasattr(m, "le"))
+    return ge, le, info.default
+
+
+def test_os_numeros_dos_deslizantes_sao_os_do_esquema() -> None:
+    """O gerador roda sem o pacote e escreve os números; o dono é o esquema.
+
+    O mínimo do tremor é 1 e não o 0 do esquema, pela faixa da sprint (§3).
+    """
+    import calibrar
+
+    escrito = calibrar.SENSIBILIDADE
+    assert escrito == _faixa_do_esquema("sensibilidade")
+    ge, le, nasce = _faixa_do_esquema("zona_morta_graus_s")
+    assert (ge, le, nasce) == (0.0, 60.0, 3.0), "o esquema mudou — releia a sprint"
+    escrito = calibrar.TREMOR
+    assert escrito == (1, le, nasce)
+
+
+def test_a_calibrar_tem_os_dois_deslizantes_de_cada_controle() -> None:
+    """Uma coluna por cartão, com o MESMO `data-controle` — é ele que leva o
+    arrasto ao controle certo."""
+    import calibrar
+
+    doc = (_RAIZ / "mockup/calibrar-sensores.html").read_text(encoding="utf-8")
+    cartoes = re.findall(r'<div class="ctr"[^>]*\s+data-controle="(p\d)"', doc)
+    colunas = re.findall(r'<div class="mira" data-controle="(p\d)">', doc)
+    assert cartoes and colunas == cartoes, (cartoes, colunas)
+    for gesto, (minimo, maximo, nasce) in (("mira-sensibilidade", calibrar.SENSIBILIDADE),
+                                           ("mira-tremor", calibrar.TREMOR)):
+        trilhos = re.findall(rf'<input class="trilho" type="range" min="{minimo}" '
+                             rf'max="{maximo}" step="1" value="{nasce}" '
+                             rf'data-gesto="{gesto}"', doc)
+        assert len(trilhos) == len(cartoes), (gesto, len(trilhos))
+
+
+class _PonteDaMira:
+    """O dublê ESTRITO da ponte: devolve o corpo do daemon, como a real."""
+
+    def __init__(self, corpo: dict[str, Any] | None) -> None:
+        self.corpo = corpo
+        self.chamadas: list[dict[str, Any]] = []
+
+    def mira_set_detalhado(self, **kw: Any) -> dict[str, Any] | None:
+        self.chamadas.append(kw)
+        return self.corpo
+
+
+_OK = {"status": "ok", "alcance": {"tique": "aplicado"}, "ressalva": None}
+
+
+def _ctx_da_aba(**entrada: Any) -> Any:
+    import pacotes
+
+    dele = {"uniq": _P1, "transport": "usb", "connected": True, "inputs": {},
+            "audio": {}, "speaker": {}, **entrada}
+    return pacotes.Contexto(state={}, mesa=[], conectados=[dele], estados={})
+
+
+def _o_gesto(pagina: str, nome: str) -> Any:
+    import pacotes
+
+    fn = pacotes.gesto_da_pagina(pagina, nome)
+    assert fn is not None, f"{pagina}:{nome} não tem dono"
+    return fn
+
+
+def test_o_chip_alterna_pelo_que_o_daemon_diz() -> None:
+    """MORDIDA: mande `ligada=True` fixo e o segundo caso reprova.
+
+    UM CAMPO SÓ: o clique no chip não reafirma a sensibilidade nem o tremor.
+    """
+    for agora in (False, True):
+        p = _PonteDaMira(_OK)
+        _o_gesto("02-controles.html", "mira")(
+            _ctx_da_aba(mira={"ligada": agora, "sensibilidade": 6}),
+            {"uniq": _P1}, p)
+        assert p.chamadas == [{"ligada": not agora, "uniq": _P1}]
+
+
+def test_sem_leitura_o_chip_recusa_dizendo() -> None:
+    """Sem o bloco `mira`, alternar é chutar o oposto: recusa e não chama."""
+    import pacotes.a02_controles as a02
+
+    p = _PonteDaMira(_OK)
+    with pytest.raises(RuntimeError) as erro:
+        _o_gesto("02-controles.html", "mira")(_ctx_da_aba(), {"uniq": _P1}, p)
+    assert str(erro.value) == a02.SEM_LEITURA_DA_MIRA
+    assert p.chamadas == []
+
+
+def test_no_modo_nativo_o_chip_grava_e_avisa() -> None:
+    """O Nativo grava e não alcança: a tela diz, e não diz «aplicado»."""
+    import pacotes.a02_controles as a02
+
+    p = _PonteDaMira({"status": "ok", "alcance": {"tique": "nao_se_aplica"}})
+    with pytest.raises(RuntimeError) as erro:
+        _o_gesto("02-controles.html", "mira")(
+            _ctx_da_aba(mira={"ligada": False}), {"uniq": _P1}, p)
+    assert str(erro.value) == a02.MIRA_NO_MODO_NATIVO
+    assert p.chamadas, "avisou sem ter pedido"
+    p = _PonteDaMira({"status": "sem_controle", "motivo": "texto do daemon"})
+    with pytest.raises(RuntimeError) as erro:
+        _o_gesto("02-controles.html", "mira")(
+            _ctx_da_aba(mira={"ligada": False}), {"uniq": _P1}, p)
+    assert str(erro.value) == a02.MIRA_SEM_O_CONTROLE
+
+
+def test_o_chip_pinta_pelo_que_o_daemon_diz(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Três estados: aceso, apagado e o travessão de quem não leu.
+
+    MORDIDA: emita `bool(...)` no lugar do selo e o terceiro caso vira apagado.
+    """
+    import mesa_viva
+
+    import pacotes.a02_controles as a02
+
+    monkeypatch.setattr(a02, "_so_se_a_pagina_tiver", lambda campos: campos)
+
+    def _campo(**entrada: Any) -> Any:
+        cards = a02.pacote(_ctx_da_aba(**entrada))["cards"]
+        assert cards, "o pacote não montou card nenhum — régua cega"
+        return next(iter(cards.values()))["mira-ligada"]
+
+    assert _campo(mira={"ligada": True}) == a02.SENSOR_LIGADO
+    assert _campo(mira={"ligada": False}) == a02.SENSOR_DESLIGADO
+    assert _campo() == mesa_viva.SEM_LEITOR
+
+
+def test_os_deslizantes_mandam_um_campo_so() -> None:
+    """O arrasto na Calibrar não acende o chip nem mexe no outro deslizante."""
+    for gesto, valor, esperado in (
+        ("mira-sensibilidade", "9", {"sensibilidade": 9}),
+        ("mira-tremor", "25", {"zona_morta_graus_s": 25.0}),
+    ):
+        p = _PonteDaMira(_OK)
+        _o_gesto("calibrar-sensores.html", gesto)(
+            _ctx_da_aba(), {"uniq": _P1, "valor": valor}, p)
+        assert p.chamadas == [{"uniq": _P1, **esperado}], (gesto, p.chamadas)
+        # o `click` que vem depois do `change` não é um segundo pedido
+        _o_gesto("calibrar-sensores.html", gesto)(
+            _ctx_da_aba(), {"uniq": _P1, "valor": valor, "tipo": "input",
+                            "evento": "click"}, p)
+        assert len(p.chamadas) == 1
+    with pytest.raises(ValueError):
+        _o_gesto("calibrar-sensores.html", "mira-tremor")(
+            _ctx_da_aba(), {"uniq": _P1, "valor": "61"}, _PonteDaMira(_OK))
+
+
+def test_a_calibrar_so_pinta_a_mira_quando_a_pagina_publicada_tem(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Antes de ela publicar, o produto não remonta nem pinta o bloco novo.
+
+    MORDIDA: tire a guarda `tem_a_mira` do pacote e o primeiro caso reprova —
+    o desenho novo chegaria à janela dela sem o OK.
+    """
+    import pacotes
+    from pacotes import a11_calibrar_sensores as a11
+
+    mesa = [{"pref": "p1", "uniq": _P1, "jogador": 1, "cor": "cosmic-red",
+             "nome": "Cosmic Red", "via": "USB"}]
+    dele = {"uniq": _P1, "transport": "usb", "connected": True, "inputs": {},
+            "mira": {"ligada": True, "sensibilidade": 9,
+                     "zona_morta_graus_s": 25.0}}
+    ctx = pacotes.Contexto(state={}, mesa=mesa, conectados=[dele], estados={})
+
+    monkeypatch.setattr(a11, "_TEM_A_MIRA", False)
+    carga = a11.pacote(ctx)
+    assert a11.BLOCO_DAS_MIRAS not in carga["blocos"]
+    assert not any(k.startswith("mira-") for k in carga["colunas"]["p1"])
+
+    monkeypatch.setattr(a11, "_TEM_A_MIRA", True)
+    carga = a11.pacote(ctx)
+    html = carga["blocos"][a11.BLOCO_DAS_MIRAS]
+    campos = carga["colunas"]["p1"]
+    assert campos["mira-sensibilidade"] == "9"
+    assert campos["mira-tremor-num"] == "25"
+    for chave in campos:
+        if chave.startswith("mira-"):
+            assert f'data-campo="{chave}"' in html, chave

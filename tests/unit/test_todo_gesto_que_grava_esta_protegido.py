@@ -115,6 +115,9 @@ ESCREVEM = {
     "responder",
     "nao_alcanco",
     "mic_canal_set_detalhado",  # liga ou cala o microfone dela, ao vivo
+    # O CHIP «Mira Virtual» — A-MIRA-POR-MOVIMENTO-NA-TELA-01, 24/09/2026:
+    # `mira.set` grava a mira DAQUELE controle no perfil ativo dela.
+    "mira_set_detalhado",
     "rumble_motores_set",      # grava a barra de cada motor no perfil dela
     "rumble_policy_set_checked",  # muda o degrau de vibração de TODOS, ao vivo
     "set_text",                # `Gtk.Clipboard.set_text` — a área dela
