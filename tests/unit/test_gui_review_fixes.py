@@ -169,6 +169,10 @@ def test_restore_dialog_nao_cita_navegacao(monkeypatch: pytest.MonkeyPatch) -> N
     # PERFIL-PADRAO-PERSONALIZADO-01: a régua exigia o nome que ela mandou
     # aposentar. Invertida — o diálogo tem de citar o perfil pelo nome que
     # ela LÊ na lista, e o slug antigo passa a ser motivo de reprovação.
-    assert "Personalizado" in secundario
+    # O-MODO-FREESTYLE-03: o nome é LIDO do dono, e os dois aposentados reprovam.
+    from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
+
+    assert f"'{NOME_DO_PADRAO}'" in secundario
+    assert "Personalizado" not in secundario
     assert "meu_perfil" not in secundario
     assert "aplica-se a todos os apps" in secundario

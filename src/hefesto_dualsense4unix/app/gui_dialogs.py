@@ -707,16 +707,20 @@ def confirm_restore_default(parent: Gtk.Window) -> bool:
         text=_("Restaurar perfil original?"),
     )
     _apply_app_theme(dialog)
+    # O NOME VEM DO DONO — O-MODO-FREESTYLE-03, 24/09/2026. A frase o digitava,
+    # e digitou dois nomes aposentados em seguida: 'meu_perfil' e, depois da
+    # O-MODO-FREESTYLE-02, 'Personalizado', que ninguém mais lê na lista.
+    from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
+
     dialog.format_secondary_text(
         # BUG-RESTORE-DIALOG-WRONG-PROFILE-01: citava 'Navegação' (outro asset,
         # navegacao.json); o restore aplica o asset do perfil padrão
-        # (match: any). PERFIL-PADRAO-PERSONALIZADO-01: e o nome dele passou a
-        # ser 'Personalizado' — a frase cita o que ela vê na lista.
+        # (match: any) — a frase cita o nome que ela vê na lista.
         _(
-            "Isso vai restaurar o 'Personalizado' para a configuração padrão "
+            "Isso vai restaurar o '{nome}' para a configuração padrão "
             "de fábrica (aplica-se a todos os apps). As suas alterações serão "
             "perdidas. Continuar?"
-        )
+        ).format(nome=NOME_DO_PADRAO)
     )
     dialog.add_button(_("Cancelar"), Gtk.ResponseType.CANCEL)
     dialog.add_button(_("Restaurar"), Gtk.ResponseType.OK)
