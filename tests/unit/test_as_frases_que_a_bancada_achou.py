@@ -129,7 +129,9 @@ def _ctx(pac: Any) -> Any:
         ],
         conectados=[
             {"uniq": P1, "connected": True, "transport": "usb", "index": 0, "player": 1},
-            {"uniq": P2, "connected": True, "transport": "bluetooth", "index": 1,
+            # "bt", e não "bluetooth": é a palavra que o daemon publica
+            # (`_detect_transport`), e o dublê não pode ser mais frouxo que ele.
+            {"uniq": P2, "connected": True, "transport": "bt", "index": 1,
              "player": 2},
         ],
         estados={})
