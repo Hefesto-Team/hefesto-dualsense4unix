@@ -1655,7 +1655,7 @@ class BrokerState:
             resposta = self._repouso(canon, canon.rsplit("/", 1)[-1], cmd="unexpose")
             if resposta.get("ok"):
                 restored.append(canon)
-                if adiado:
+                if adiado and resposta.get("state") == "fechado":
                     self._log("hide_adiado_cumprido", node=canon, conn=conn_id)
             else:
                 failed.append(canon)

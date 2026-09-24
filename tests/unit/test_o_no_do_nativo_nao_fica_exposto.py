@@ -361,6 +361,19 @@ class TestACuraNaoFechaDemais:
         st.on_conn_closed(NATIVO)
         assert _fechado(no)
 
+    def test_o_no_que_sumiu_nao_vira_cumprido(self, mesa: Mesa) -> None:
+        """O controle saiu da mesa antes do EOF: não há o que fechar, e o
+        diário não diz que fechou. A MORDIDA: tire o `state == "fechado"` do
+        `hide_adiado_cumprido` e ele sai para um nó que nem existe."""
+        diario: list[tuple[str, dict[str, Any]]] = []
+        st = _estado(mesa, diario)
+        no = mesa.no("hidraw9")
+        _pede(st, NATIVO, {"cmd": "expose", "node": no, "entradas": True})
+        _pede(st, OUTRA, {"cmd": "hide", "node": no})
+        os.unlink(no)
+        st.on_conn_closed(NATIVO)
+        assert not any(e == "hide_adiado_cumprido" for e, _ in diario)
+
     def test_cada_no_vai_ao_repouso_uma_vez(self, mesa: Mesa) -> None:
         """A MESMA conexão expôs e escondeu: o EOF devolve o nó UMA vez. A
         MORDIDA: tire o `ja_no_repouso` e ele sai duas vezes na lista (e no
