@@ -1173,7 +1173,7 @@ def sufixo_do_sink_do_som(nome: str) -> str:
     return resto
 
 
-def propriedades_do_sink(descricao: str, vestido: tuple[str, ...] = ()) -> str:
+def propriedades_do_sink(descricao: str) -> str:
     """O argumento ``sink_properties=`` do ``load-module`` — ENTRE ASPAS DUPLAS.
 
     **AS ASPAS SÃO A CURA**, e a lição é da metade de entrada, paga em
@@ -1187,10 +1187,20 @@ def propriedades_do_sink(descricao: str, vestido: tuple[str, ...] = ()) -> str:
     padrão do servidor (2000 medido lá) e o alto-falante do controle poderia
     virar a saída do sistema sozinho — exatamente o que a decisão dela recusa.
 
-    O ``vestido`` (``integrations.vestido_de_dualsense``) é VAZIO por padrão de
-    propósito: sem ele o nó continua nascendo, mudo sobre quem é, em vez de não
-    nascer — nó que falta é o som dela que some (A-FORJA-VALIDA-O-SOM-01).
+    **E O NÓ VESTE O NOME DA SONY** (A-FORJA-VALIDA-O-SOM-01, 24/09/2026):
+    fabricante, produto e apelido da placa de verdade, de
+    ``integrations.vestido_de_dualsense.campos_do_nome``. Estão AQUI, e não num
+    parâmetro de quem chama, porque são dois os que publicam este nó — o
+    ``SinkVirtualPipeWire`` do daemon e o plano da janela
+    (``app/audio_saida.argv_para_publicar_o_no``) — e um parâmetro esquecido por
+    um deles publicaria dois nós diferentes com o mesmo nome. A identidade
+    (barramento, VID, PID, âncora) NÃO vai: a razão está no docstring daquele
+    módulo.
     """
+    from hefesto_dualsense4unix.integrations.vestido_de_dualsense import (
+        campos_do_nome,
+    )
+
     return (
         'sink_properties="'
         + " ".join(
@@ -1198,7 +1208,7 @@ def propriedades_do_sink(descricao: str, vestido: tuple[str, ...] = ()) -> str:
                 f"device.description='{descricao}'",
                 f"priority.session={PRIORIDADE_SESSAO_DO_SOM}",
                 "device.icon_name=audio-speakers",
-                *vestido,
+                *campos_do_nome(),
             )
         )
         + '"'
@@ -1327,7 +1337,7 @@ class SinkVirtualPipeWire:
                 "format=s16le",
                 f"rate={self.taxa_hz}",
                 f"channels={self.canais}",
-                propriedades_do_sink(self.descricao, _vestido_do_no_de_som()),
+                propriedades_do_sink(self.descricao),
             ]
         )
         linhas = [ln.strip() for ln in (saida or "").splitlines() if ln.strip()]
@@ -3693,20 +3703,6 @@ def rotulo_do_alto_falante(numero: int | None) -> str:
     if isinstance(numero, int) and not isinstance(numero, bool) and numero > 0:
         base = f"{base} {numero}"
     return com_o_nome_da_sony(base)
-
-
-def _vestido_do_no_de_som() -> tuple[str, ...]:
-    """O que o nó do alto-falante veste: só a metade do NOME.
-
-    A metade da identidade (barramento, VID, PID, âncora) NÃO vai, e a razão
-    medida no fonte do GE-Proton pinado dela está no docstring de
-    :mod:`integrations.vestido_de_dualsense`.
-    """
-    from hefesto_dualsense4unix.integrations.vestido_de_dualsense import (
-        campos_do_nome,
-    )
-
-    return campos_do_nome()
 
 
 # ---------------------------------------------------------------------------
