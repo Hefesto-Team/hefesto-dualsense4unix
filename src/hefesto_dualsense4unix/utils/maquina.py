@@ -137,7 +137,7 @@ VERSION_FIELD = "version"
 MAQUINA_FILE_LOCK = threading.Lock()
 
 #: A chave de ``controles`` é a SAÍDA de ``ExternalIdentityRegistry._canonical``
-#: (``daemon/subsystems/external_identity.py:457``): doze hex MINÚSCULOS, sem
+#: (``daemon/subsystems/external_identity.py:469``): doze hex MINÚSCULOS, sem
 #: separador. Casar com a entrada ``_MAC_RE`` (``:106-108``, que aceita
 #: ``aa:bb:cc:...`` também) faria o daemon gravar ``aabbcc001122`` e o schema
 #: exigir outra coisa.
