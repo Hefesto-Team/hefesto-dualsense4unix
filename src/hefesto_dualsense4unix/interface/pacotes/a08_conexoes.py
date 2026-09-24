@@ -2516,7 +2516,7 @@ def _teto_do_controle(
     A CHAVE É O `uniq` NORMALIZADO — doze hexa minúsculos sem separador, e a
     normalização é do :func:`_so_hex` deste arquivo, nunca escrita de novo. É o
     que `Profile._validate_controllers_keys` canoniza ao carregar
-    (`profiles/schema.py:1880-1941`), logo é o que está no disco; procurar por
+    (`profiles/schema.py:1899-1960`), logo é o que está no disco; procurar por
     `aa:bb:…` não acharia nada e a tela mostraria "Segue o global" para sempre.
     A cópia que morava aqui tinha perdido o `.strip()` do helper, e um `uniq`
     com espaço ou quebra fazia a gravação cair numa chave e a pintura procurar
@@ -2851,7 +2851,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # — corrigido em 01/09/2026, e foi o defeito que segurou esta leva:
     #
     #   perfil.rumble.policy   o DENOMINADOR do fator por peça
-    #                          (`profiles/manager.py:2893`)
+    #                          (`profiles/manager.py:2905`)
     #   state['rumble_policy'] o que MULTIPLICA no funil do motor
     #                          (`daemon/ipc_handlers.py:2923` → `_effective_mult`)
     #   maquina.json           o teto por CIMA da viva, com `min`
@@ -3636,7 +3636,7 @@ def _chave_no_perfil(ctx: Contexto, uniq: str) -> str:
     """A chave deste controle em ``Profile.controllers`` — doze hexa, ou ``""``.
 
     DUAS RÉGUAS, E AS DUAS TÊM DE CONCORDAR. A do PERFIL é `norm_mac` do
-    esquema (`profiles/schema.py:1885`), que canoniza `aa:bb:…` em `aabbcc…`; a
+    esquema (`profiles/schema.py:1904`), que canoniza `aa:bb:…` em `aabbcc…`; a
     do `maquina.json` é `app.actions.external_controllers.chave_de_maquina`, que
     faz o mesmo e ainda RECUSA o MAC forjado que começa em `02` — o que o
     `usb_probe_degrade` inventa somando VID, PID e bus, e que dois clones do
@@ -3674,7 +3674,7 @@ def _com_o_teto(prof: Any, chave: str, policy: str | None) -> Any:
 
     "SEGUE O GLOBAL" APAGA A SEÇÃO INTEIRA (``rumble=None``), e não grava
     ``policy=None``. `_controllers_to_rumble_scales` tem DOIS desvios seguidos:
-    `cfg.rumble is None` (`profiles/manager.py:2880`) e `"policy" not in
+    `cfg.rumble is None` (`profiles/manager.py:2892`) e `"policy" not in
     model_fields_set` (`:2481`). O primeiro é o que o esquema chama de "campo
     não escrito = sem opinião", e é o que o merge POR CAMPO promete
     (`ControllerRumbleOverride`, docstring). O segundo existe para um override
@@ -3686,7 +3686,7 @@ def _com_o_teto(prof: Any, chave: str, policy: str | None) -> Any:
     `app/draft_config.with_controller_rumble:1193-1223` já decidiu que
     "intensidade igual à global não vira override". A razão é aritmética:
     `_controllers_to_rumble_scales` calcula `mult / base` e DESCARTA o fator
-    1,0 (`profiles/manager.py:2863-2913`) — guardar o override só deixaria no
+    1,0 (`profiles/manager.py:2875-2925`) — guardar o override só deixaria no
     disco uma opinião que o motor ignora.
     """
     from hefesto_dualsense4unix.profiles.schema import (
@@ -3711,7 +3711,7 @@ def _com_o_teto(prof: Any, chave: str, policy: str | None) -> Any:
         # `model_validate` E NÃO O CONSTRUTOR: quem decide se a política é
         # aceitável é a BORDA do esquema, não o tipo estático de quem chama —
         # é ela que recusa o `auto` por unidade COM a frase que explica
-        # (`profiles/schema.py:848-859`). Construir com `policy=` obrigaria a
+        # (`profiles/schema.py:850-861`). Construir com `policy=` obrigaria a
         # repetir aqui a lista de quatro literais, que é a segunda grafia que
         # esta leva inteira existe para matar.
         novo = ControllerRumbleOverride.model_validate({"policy": policy})
@@ -3743,7 +3743,7 @@ def teto_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     e este gesto não grava nada — a frase que falta é dela.
 
     É DO PERFIL, NÃO DA MÁQUINA. Sem perfil ativo não há onde guardar a força
-    de um controle (`profiles/schema.py:831`), e a recusa diz em que aba
+    de um controle (`profiles/schema.py:833`), e a recusa diz em que aba
     escolher um.
 
     FATO ERRADO, SUBSTITUÍDO no mesmo dia: esta linha dizia *"medido no daemon

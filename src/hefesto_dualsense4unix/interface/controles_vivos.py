@@ -290,7 +290,7 @@ DONOS_DOS_GESTOS = {
     # DOIS voltavam com *"SEM LINHA na tabela de donos — este gesto chegou de
     # um endereço que o gerador não escreve. Nada foi aplicado."*
     #
-    # E OS DOIS TINHAM DONO. `pacotes/a02_controles.py:4436` registra
+    # E OS DOIS TINHAM DONO. `pacotes/a02_controles.py:4457` registra
     # `@gesto("02-controles.html", "rota", grava="save_profile")`, e o corpo
     # aceita `jogo`, `junto`, `nada` e `pc` — recusando qualquer outra com
     # `ValueError`. O instrumento é que tinha ficado para trás.

@@ -53,7 +53,7 @@ class RumbleCommand:
 #: ``balanceado`` e ``max`` porque a dica delas promete, palavra por palavra,
 #: *"tudo como o jogo pedir, sem teto"*; ``auto`` porque o teto dele seria
 #: MÓVEL — muda a cada tique com a bateria —, e a casa já decidiu não prometer
-#: número móvel na tela (`profiles/manager.py:1870-1876`, o pulo com log
+#: número móvel na tela (`profiles/manager.py:1882-1888`, o pulo com log
 #: `escala_de_vibracao_pulada_base_movel`).
 #: PONTEIRO CORRIGIDO em 01/09/2026: ele dizia `:1556-1567`, que é o
 #: `carimbar_ponte` — assunto inteiramente diferente, e quem o seguisse
@@ -110,7 +110,7 @@ def _sob_o_teto(mult: float, teto: float | None) -> float:
     número escrito na tela.
 
     E ``min`` preserva o denominador de ``_controllers_to_rumble_scales``
-    (`profiles/manager.py:2863-2913`): o valor que chega ao backend já vem
+    (`profiles/manager.py:2875-2925`): o valor que chega ao backend já vem
     escalado pela política global, então o fator por unidade é RELATIVO — um
     produto mexeria na base daquela conta sem ninguém saber.
 

@@ -121,7 +121,7 @@ SEM_FONTE: tuple[tuple[str, str, str], ...] = (
     (
         "controle.*.vibracao.sem-teto",
         "'Sem teto' é a única das TRÊS opções sem representação possível: "
-        "`ControllerRumbleOverride` (`profiles/schema.py:1090`) só diz QUAL "
+        "`ControllerRumbleOverride` (`profiles/schema.py:1092`) só diz QUAL "
         "política a peça usa, nunca 'esta peça ignora o teto do orçamento'; e o "
         "`min` que imporia um teto de verdade vive em "
         "`core.rumble._effective_mult`, que não conhece `uniq` e roda antes de a "
@@ -477,7 +477,7 @@ def rotulo_da_politica(policy: str | None) -> str | None:
     por controle, ela traduziria `balanceado` e `max` — os dois — como "Sem
     teto", que é justamente a opção sem tradução. Aqui a pergunta é outra: das
     quatro políticas que `ControllerRumbleOverride` aceita
-    (`profiles/schema.py:1090`), **uma só** tem opção no campo.
+    (`profiles/schema.py:1092`), **uma só** tem opção no campo.
     """
     from hefesto_dualsense4unix.core.rumble import _ORCAMENTO_COM_TETO
 
@@ -502,7 +502,7 @@ class Vibracao:
     :param do_controle: ``controllers[uniq].rumble.policy`` do perfil — o
         override desta peça, ``None`` quando ela não sobrepõe nada.
     :param do_perfil: ``Profile.rumble.policy`` — **o DENOMINADOR**. O fator por
-        peça é RELATIVO a ele (`profiles/manager.py:2893`), e não à política que
+        peça é RELATIVO a ele (`profiles/manager.py:2905`), e não à política que
         multiplica. Sem opinião, o produto assume ``balanceado``.
     :param a_viva: ``state['rumble_policy']`` — **o que MULTIPLICA**, e é o único
         "global" que o motor sente (`daemon/ipc_handlers.py:2923` publica o

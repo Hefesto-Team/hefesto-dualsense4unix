@@ -10,7 +10,7 @@ o gesto ainda mandava LIGAR o teclado.
 
 O produto já tinha as duas peças e ninguém as chamava:
 
-    ponte.resultado                          traz o corpo (`ponte.py:152`)
+    ponte.resultado                          traz o corpo (`ponte.py:157`)
     mouse_actions.frase_da_recusa_do_mouse   traduz cinco motivos, desde 25/08
     emulation_actions.descrever_teclado_emulado   idem, do lado do teclado
 

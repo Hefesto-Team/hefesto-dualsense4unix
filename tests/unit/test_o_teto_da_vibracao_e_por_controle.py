@@ -253,7 +253,7 @@ def test_segue_o_global_limpa_o_override(pac, tela, gesto, disco) -> None:
     MORDIDA: faça `_com_o_teto` gravar `ControllerRumbleOverride(policy=None)`
     em vez de `rumble=None`. O primeiro `assert` reprova: o campo `rumble` deixa
     de ser `None`, `_controllers_to_rumble_scales` não cai mais no desvio de
-    `cfg.rumble is None` (`profiles/manager.py:1861`), e o "sem opinião" que o
+    `cfg.rumble is None` (`profiles/manager.py:1873`), e o "sem opinião" que o
     merge POR CAMPO promete vira uma opinião escrita.
     """
     estado, gravados = disco
@@ -286,7 +286,7 @@ def test_igual_ao_global_do_perfil_tambem_limpa(pac, tela, gesto, disco) -> None
 
     `app/draft_config.with_controller_rumble:1193-1223` já decidiu isso, e a
     razão é aritmética: `_controllers_to_rumble_scales` calcula `mult / base` e
-    DESCARTA o fator 1,0 (`profiles/manager.py:1878-1879`).
+    DESCARTA o fator 1,0 (`profiles/manager.py:1890-1891`).
 
     MORDIDA: tire o desvio `policy == global_` de `_com_o_teto` — o perfil passa
     a guardar um override que o motor ignora, e este caso reprova.

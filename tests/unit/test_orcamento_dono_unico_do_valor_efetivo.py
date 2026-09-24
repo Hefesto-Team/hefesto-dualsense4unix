@@ -112,7 +112,7 @@ def test_em_auto_a_linha_cala_porque_o_teto_e_movel() -> None:
     """MORDIDA 1. Em Auto o teto muda a cada tique com a bateria.
 
     A casa já enfrentou este caso e escolheu não prometer percentual
-    (`profiles/manager.py:1556-1567`, o pulo com log
+    (`profiles/manager.py:1568-1579`, o pulo com log
     `escala_de_vibracao_pulada_base_movel`). Um "limitado a 100%" que vira 30%
     no minuto seguinte ensina a desconfiar da tela inteira.
     """

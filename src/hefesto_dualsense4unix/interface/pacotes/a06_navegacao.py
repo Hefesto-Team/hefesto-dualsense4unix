@@ -2237,7 +2237,7 @@ def _recusa_do_mouse(resposta: Any) -> str:
     `_call_checked_detalhado`, que é o único que entrega o corpo"*, e por isso
     um `{"status": "failed", "bloqueio": "sem_device"}` voltava como sucesso e a
     tela dela ficava sem uma palavra. A ponte entrega o corpo desde 01/09:
-    `ponte.resultado` (`interface/pacotes/ponte.py:236`) devolve o `result` do
+    `ponte.resultado` (`interface/pacotes/ponte.py:241`) devolve o `result` do
     daemon e levanta quando ninguém responde. Era um caminho que já existia e
     esta aba não chamava.
 
@@ -2602,7 +2602,7 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     *"'Só dentro do jogo' já existe, e é o `suppress_desktop_emulation`"*. **Os
     dois estão invertidos**, e a medição é de três leituras:
 
-    1. `Profile.suppress_desktop_emulation` (`profiles/schema.py:1238`) diz, no
+    1. `Profile.suppress_desktop_emulation` (`profiles/schema.py:1240`) diz, no
        próprio comentário: *"True = ativar o perfil suprime a emulação de
        mouse/teclado no desktop (jogos de GAMEPAD que leem o controle cru)"*.
        O perfil é ativado quando o jogo casa; logo a supressão vale **durante o
@@ -3445,7 +3445,7 @@ def padrao_definicoes(ctx: Contexto, o: dict[str, Any],
 
     O QUE ELE FAZ: grava `key_bindings = None` no perfil ATIVO e manda o daemon
     reaplicá-lo. `None` não é "vazio" — o esquema o define como *"herda
-    `DEFAULT_BUTTON_BINDINGS` do core"* (`profiles/schema.py:1177`), e `{}` é
+    `DEFAULT_BUTTON_BINDINGS` do core"* (`profiles/schema.py:1179`), e `{}` é
     outra coisa (teclado silencioso). Escrever `{}` aqui devolveria um controle
     MUDO com o botão dizendo "de fábrica".
 
