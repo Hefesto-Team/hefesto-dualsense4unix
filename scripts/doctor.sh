@@ -4197,9 +4197,9 @@ for tag, (familia, nome) in FAMILIAS_DO_RADIO.items():
         continue
     recente = janela.get(familia)
     dia = conta.ultima[:10]
-    ultima = f"{dia[8:10]}/{dia[5:7]}" if len(dia) == 10 else "?"
+    quando = f"{dia[8:10]}/{dia[5:7]}" if len(dia) == 10 else "?"
     print(
-        f"familia\t{tag}\t{nome}\t{conta.rajadas}\t{recente.rajadas if recente else 0}\t{ultima}"
+        f"familia\t{tag}\t{nome}\t{conta.rajadas}\t{recente.rajadas if recente else 0}\t{quando}"
     )
 PY
 )" || saida=""
@@ -4207,8 +4207,8 @@ PY
         info "NÃO SEI ler as famílias do rádio no kernel-watch: o storm_doctor não está ao alcance do python ${py}"
         return
     fi
-    local marca tag nome total recentes ultima cura naoolhei=()
-    while IFS=$'\t' read -r marca tag nome total recentes ultima; do
+    local marca tag nome total recentes quando cura naoolhei=()
+    while IFS=$'\t' read -r marca tag nome total recentes quando; do
         if [[ "${marca}" == "naoolhei" ]]; then
             naoolhei+=("${nome} ${tag}")
             continue
@@ -4222,9 +4222,9 @@ PY
             *) cura="" ;;
         esac
         if [[ "${recentes:-0}" -gt 0 ]]; then
-            warn "rádio: ${nome} ${tag} — ${recentes} vez(es) nos últimos ${dias} dias (a última em ${ultima}); ${total} no log inteiro. ${cura}"
+            warn "rádio: ${nome} ${tag} — ${recentes} vez(es) nos últimos ${dias} dias (a última em ${quando}); ${total} no log inteiro. ${cura}"
         elif [[ "${total:-0}" -gt 0 ]]; then
-            info "rádio: ${nome} ${tag} não aconteceu nos últimos ${dias} dias. O log guarda ${total}, a última em ${ultima} — histórico, não o estado de agora"
+            info "rádio: ${nome} ${tag} não aconteceu nos últimos ${dias} dias. O log guarda ${total}, a última em ${quando} — histórico, não o estado de agora"
         fi
     done <<<"${saida}"
     if [[ "${#naoolhei[@]}" -gt 0 ]]; then

@@ -61,11 +61,11 @@ def _finish_args() -> list[str]:
     return re.findall(r"^\s*-\s+(--\S+)", bloco, re.MULTILINE)
 
 
-@pytest.mark.parametrize("permissao", ["--allow=bluetooth", "--share=network"])
-def test_o_flatpak_deixa_o_daemon_medir_o_ar(permissao: str) -> None:
+@pytest.mark.parametrize("diretiva", ["--allow=bluetooth", "--share=network"])
+def test_o_flatpak_deixa_o_daemon_medir_o_ar(diretiva: str) -> None:
     args = _finish_args()
     assert "--device=all" in args, "controle: o bloco de finish-args não foi lido"
-    assert permissao in args, (
-        f"sem {permissao} no finish-args, o daemon dentro do sandbox não abre o socket "
+    assert diretiva in args, (
+        f"sem {diretiva} no finish-args, o daemon dentro do sandbox não abre o socket "
         "de Bluetooth e o medidor do ar responde «não sei» em todo adaptador"
     )

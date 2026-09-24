@@ -80,12 +80,12 @@ def _portoes_lidos(texto: str) -> set[str]:
     return {p for p in PORTOES if re.search(r"\$\{" + p + r"(?::-[^}]*)?\}", sem_comentario)}
 
 
-@pytest.mark.parametrize(("funcao", "rotulo"), _tabela())
-def test_o_ramo_do_ensaio_le_os_mesmos_portoes_da_cura(funcao: str, rotulo: str) -> None:
-    na_cura = _portoes_lidos(_corpo_na_lib(funcao))
+@pytest.mark.parametrize(("cura", "rotulo"), _tabela())
+def test_o_ramo_do_ensaio_le_os_mesmos_portoes_da_cura(cura: str, rotulo: str) -> None:
+    na_cura = _portoes_lidos(_corpo_na_lib(cura))
     no_ensaio = _portoes_lidos(_ramo_do_ensaio(rotulo))
     assert na_cura == no_ensaio, (
-        f"`{funcao}` lê os portões {sorted(na_cura)}, e o ramo `{rotulo}` do "
+        f"`{cura}` lê os portões {sorted(na_cura)}, e o ramo `{rotulo}` do "
         f"`_ensaio_camada` lê {sorted(no_ensaio)}. O `--dry-run` imprimiria o "
         "plano de OUTRA linha de comando: faltam no ensaio "
         f"{sorted(na_cura - no_ensaio)}, sobram {sorted(no_ensaio - na_cura)}."
