@@ -95,6 +95,7 @@ from hefesto_dualsense4unix.daemon.subsystems.identity import (
     _read_machine_id,
     merged_order_payload,
     order_entries,
+    prazo_do_lugar_guardado,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -285,11 +286,16 @@ def _present_ranks_of(registry: Any) -> set[int]:
        numeração é aceitável; dois controles com o mesmo número, não).
 
     Nunca levanta: sem nada legível devolve conjunto vazio.
+
+    O-ASSENTO-GUARDADO-NAO-ANDA-01: antes dos três, ``lugares_da_mesa()`` — os
+    presentes E os guardados. Um DualSense que saiu dentro do prazo continua
+    segurando o lugar, e o externo depois dele não anda.
     """
-    fn = getattr(registry, "present_ranks", None)
-    if callable(fn):
-        with contextlib.suppress(Exception):
-            return {int(r) for r in fn()}
+    for nome in ("lugares_da_mesa", "present_ranks"):
+        fn = getattr(registry, nome, None)
+        if callable(fn):
+            with contextlib.suppress(Exception):
+                return {int(r) for r in fn()}
     snap = getattr(registry, "snapshot", None)
     if not callable(snap):
         return set()
@@ -430,8 +436,15 @@ class ExternalIdentityRegistry:
     ``ControllerIdentityRegistry`` e um dos dois namespaces sumia do disco.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, clock: Callable[[], float] | None = None) -> None:
         self._lock = threading.RLock()
+        #: O-ASSENTO-GUARDADO-NAO-ANDA-01: relógio MONOTÔNICO do lugar
+        #: guardado — injetável só para o teste mover o tempo sem dormir.
+        self._clock: Callable[[], float] = clock or time.monotonic
+        #: key de quem SAIU → instante em que o lugar dele se libera. O MESMO
+        #: prazo dos DualSense (``identity.prazo_do_lugar_guardado``): a mesa
+        #: é uma só, e um externo fora dentro do prazo não faz ninguém andar.
+        self._guardados: dict[str, float] = {}
         #: NUM-01: key canônica → LUGAR NA FILA global (não o número
         #: exibido; esse sai de ``slot_for``, que conta os presentes).
         self._ordem: dict[str, int] = {}
@@ -503,6 +516,34 @@ class ExternalIdentityRegistry:
                 if key in self._connected
             }
 
+    def _guardados_locked(self) -> set[str]:
+        """Quem tem o lugar guardado AGORA (sob o lock). Espelho do DualSense."""
+        agora = self._clock()
+        return {
+            key
+            for key, ate in self._guardados.items()
+            if ate > agora and key in self._ordem and key not in self._connected
+        }
+
+    def lugares_da_mesa(self) -> set[int]:
+        """Lugares que CONTAM na mesa: os presentes e os guardados.
+
+        Espelho de ``ControllerIdentityRegistry.lugares_da_mesa`` — é o que o
+        lado DualSense conta (O-ASSENTO-GUARDADO-NAO-ANDA-01).
+        """
+        with self._lock:
+            chaves = self._connected | self._guardados_locked()
+            return {self._ordem[k] for k in chaves if k in self._ordem}
+
+    def soltar_os_lugares_guardados(self) -> bool:
+        """Solta todo lugar guardado — o gesto de numerar à mão (ver o DualSense)."""
+        with self._lock:
+            havia = bool(self._guardados)
+            self._guardados.clear()
+        if havia:
+            logger.info("external_lugares_guardados_soltos_pelo_gesto")
+        return havia
+
     def _ds_present_ranks(self, reserve: int = 0) -> set[int]:
         """Lugares dos DualSense que contam na exibição (NUM-01).
 
@@ -544,9 +585,11 @@ class ExternalIdentityRegistry:
         rank = self._ordem.get(key)
         if rank is None:
             return None
+        # O-ASSENTO-GUARDADO-NAO-ANDA-01: quem saiu dentro do prazo segura o
+        # lugar — conta como se estivesse na mesa.
         antes = sum(
             1
-            for outra in self._connected
+            for outra in self._connected | self._guardados_locked()
             if outra != key and self._ordem.get(outra, rank + 1) < rank
         )
         antes += sum(1 for r in ds_presentes if r <= rank)
@@ -595,6 +638,7 @@ class ExternalIdentityRegistry:
                 )
             if assign:
                 self._connected.add(key)
+                self._guardados.pop(key, None)
             return self._posicao_locked(key, ds_presentes)
 
     def peek(self, uniq: str | None) -> int | None:
@@ -623,6 +667,20 @@ class ExternalIdentityRegistry:
             key, _ = self._canonical(uniq)
             vivos.add(key)
         with self._lock:
+            # O-ASSENTO-GUARDADO-NAO-ANDA-01: quem saiu agora ganha o lugar
+            # guardado (só MAC de hardware — a identidade volátil não tem
+            # promessa a honrar, MODO-01), quem voltou o retoma, e o prazo
+            # vencido sai da tabela e deixa a linha no diário.
+            agora = self._clock()
+            for key in [k for k, ate in self._guardados.items() if ate <= agora]:
+                del self._guardados[key]
+                logger.info("external_lugar_guardado_venceu", uniq=key)
+            for key in self._connected - vivos:
+                if key in self._ordem and key not in self._volatile:
+                    self._guardados[key] = agora + prazo_do_lugar_guardado()
+                    logger.info("external_lugar_guardado", uniq=key)
+            for key in vivos:
+                self._guardados.pop(key, None)
             self._connected = vivos
             self._prune_volatile_locked(vivos)
             if self._dirty:
@@ -1120,7 +1178,8 @@ class ExternalLedSync:
         set_ext = getattr(ds, "set_external_presence_provider", None)
         if callable(set_ext):
             with contextlib.suppress(Exception):
-                set_ext(externo.present_ranks)
+                # O-ASSENTO-GUARDADO-NAO-ANDA-01: os presentes E os guardados.
+                set_ext(externo.lugares_da_mesa)
         set_ds = getattr(externo, "set_dualsense_presence_provider", None)
         if callable(set_ds):
             with contextlib.suppress(Exception):
