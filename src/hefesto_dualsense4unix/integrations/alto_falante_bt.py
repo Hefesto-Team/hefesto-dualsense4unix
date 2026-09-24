@@ -1176,31 +1176,16 @@ def sufixo_do_sink_do_som(nome: str) -> str:
 def propriedades_do_sink(descricao: str) -> str:
     """O argumento ``sink_properties=`` do ``load-module`` — ENTRE ASPAS DUPLAS.
 
-    **AS ASPAS SÃO A CURA**, e a lição é da metade de entrada, paga em
-    06/09/2026: o parser do ``pipewire-pulse`` corta o valor no primeiro ESPAÇO
-    quando ele não vem entre aspas duplas, e este argumento tem três
-    propriedades separadas por espaço — só a primeira chegava, pela metade. O
-    efeito medido lá foi a ``priority.session`` NUNCA chegar ao nó, com a régua
-    dando verde porque lia o argv em vez do nó.
-
-    Aqui a mesma armadilha seria pior: sem a prioridade, o nó nasceria com o
-    padrão do servidor (2000 medido lá) e o alto-falante do controle poderia
-    virar a saída do sistema sozinho — exatamente o que a decisão dela recusa.
-
-    **E O NÓ VESTE O NOME DA SONY** (A-FORJA-VALIDA-O-SOM-01, 24/09/2026):
-    fabricante, produto e apelido da placa de verdade, de
-    ``integrations.vestido_de_dualsense.campos_do_nome``. Estão AQUI, e não num
-    parâmetro de quem chama, porque são dois os que publicam este nó — o
-    ``SinkVirtualPipeWire`` do daemon e o plano da janela
-    (``app/audio_saida.argv_para_publicar_o_no``) — e um parâmetro esquecido por
-    um deles publicaria dois nós diferentes com o mesmo nome. A identidade
-    (barramento, VID, PID, âncora) NÃO vai: a razão está no docstring daquele
-    módulo.
+    **AS ASPAS SÃO A CURA**, e a lição é da metade de entrada, paga em 06/09/2026: o
+    parser do ``pipewire-pulse`` corta o valor no primeiro ESPAÇO quando ele não vem entre
+    aspas duplas — só a primeira propriedade chegava, pela metade, e a ``priority.session``
+    NUNCA chegava ao nó, com a régua dando verde porque lia o argv em vez do nó. Aqui seria
+    pior: sem a prioridade o nó nasceria com o padrão do servidor (2000 medido lá) e o
+    alto-falante do controle viraria a saída do sistema sozinho — o que a decisão dela recusa.
+    O nome da Sony (``vestido_de_dualsense.campos_do_nome``, a forma A) mora AQUI, e não em
+    quem chama, porque são dois os que publicam o nó: um que o esquecesse daria dois nós.
     """
-    from hefesto_dualsense4unix.integrations.vestido_de_dualsense import (
-        campos_do_nome,
-    )
-
+    from hefesto_dualsense4unix.integrations.vestido_de_dualsense import campos_do_nome
     return (
         'sink_properties="'
         + " ".join(
