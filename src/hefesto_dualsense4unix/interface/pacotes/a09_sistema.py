@@ -95,6 +95,7 @@ from . import (
     poda,
     registrar,
 )
+from . import confirmacao as _confirmacao
 
 #: CORRIGIDO EM 01/09/2026. "versoes" e "consertos" tinham dono e viraram  # (noqa-acento) id
 #: pintura. **"plugins" continua sem dono NA TELA, e a razão não é minha** — a
@@ -2683,7 +2684,13 @@ def _rotulo_do_desenho(gesto: str) -> str:
 #: O QUE ESTÁ ARMADO AGORA: `{"gesto": …, "ate": <time.monotonic>}`. Vazio =
 #: nada armado. Uma coisa só de cada vez — armar o segundo desarma o primeiro,
 #: e o tique repõe o rótulo daquele.
-_ARMADO: dict[str, Any] = {}
+#:
+#: **É O RELÓGIO DE `pacotes/confirmacao`, o MESMO objeto — 24/09/2026,
+#: STEAM-INPUT-01.** O chip «Steam Input» da aba Jogar passou a fechar a Steam
+#: em dois cliques (`D-2309-STEAM-INPUT-A-FRASE-E-O-CLIQUE`), e dois relógios
+#: sobre a mesma Steam deixariam dois consentimentos pendurados. Com um só,
+#: armar o chip desarma o botão armado daqui, e vice-versa.
+_ARMADO: dict[str, Any] = _confirmacao.ARMADO
 
 
 def segundos_para_confirmar() -> float:
@@ -2706,10 +2713,12 @@ def _armado_agora() -> str:
     O relógio é lido aqui, e não guardado num `bool`: um `bool` armado por um
     clique que ninguém confirmou continuaria armado depois de a janela passar, e
     o segundo clique de dez minutos depois valeria como consentimento.
+
+    A CONTA É DO DONO DO RELÓGIO (`confirmacao.armado_agora`), e não se repete
+    aqui: são o mesmo dicionário, e duas contas sobre ele divergiriam no dia
+    em que uma mudasse.
     """
-    if _ARMADO and time.monotonic() >= float(_ARMADO.get("ate") or 0.0):
-        _ARMADO.clear()
-    return str(_ARMADO.get("gesto") or "")
+    return _confirmacao.armado_agora()
 
 
 def _rotulo_de_agora(gesto: str, de_pe: bool) -> str:
