@@ -1653,10 +1653,19 @@ def nome_do_alto_falante(assento: str) -> str:
     ``integrations/alto_falante_bt.descricao_do_alto_falante``. As palavras são
     as mesmas porque a constante é a mesma; duas grafias do rótulo poriam dois
     nomes diferentes para o mesmo nó, um por caminho de código.
+
+    **E A FORMA TEM UM DONO desde 23/09/2026** — a forma A dela, com o sufixo
+    da Sony (``alto_falante_bt.rotulo_do_alto_falante``): «Alto-falante do
+    Controle 1 (DualSense Wireless Controller)». Montar a f-string aqui
+    deixaria a janela publicando o nome sem o sufixo que o jogo procura.
     """
+    from hefesto_dualsense4unix.integrations.alto_falante_bt import (
+        rotulo_do_alto_falante,
+    )
+
     if assento not in ASSENTOS:
         return ""
-    return f"{NOME_DO_ALTO_FALANTE_DO_CONTROLE} {assento[1:]}"
+    return rotulo_do_alto_falante(int(assento[1:]))
 
 
 @dataclass(frozen=True)

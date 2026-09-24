@@ -1120,8 +1120,8 @@ PRIORIDADE_SESSAO_DO_SOM = 10
 #: ``D-0909-OS-NOS-SE-CHAMAM-ALTO-FALANTE-E-MICROFONE-DO-CONTROLE-N``), e o
 #: provisório virou o nome: «Alto-falante do Controle N», com o número do
 #: ASSENTO. Quem monta o rótulo com número é :func:`descricao_do_alto_falante`,
-#: no fim deste módulo; esta constante é a metade SEM número, que é a resposta
-#: honesta quando ninguém sabe dizer o assento.
+#: no fim deste módulo; esta constante é a metade SEM número e sem o sufixo da
+#: Sony, que :func:`rotulo_do_alto_falante` acrescenta (forma A, 23/09/2026).
 #:
 #: O par com «Microfone do Controle N»
 #: (``dualsense_bt_audio.NOME_DO_MICROFONE_DO_CONTROLE``) está em
@@ -1173,7 +1173,7 @@ def sufixo_do_sink_do_som(nome: str) -> str:
     return resto
 
 
-def propriedades_do_sink(descricao: str) -> str:
+def propriedades_do_sink(descricao: str, vestido: tuple[str, ...] = ()) -> str:
     """O argumento ``sink_properties=`` do ``load-module`` — ENTRE ASPAS DUPLAS.
 
     **AS ASPAS SÃO A CURA**, e a lição é da metade de entrada, paga em
@@ -1186,6 +1186,10 @@ def propriedades_do_sink(descricao: str) -> str:
     Aqui a mesma armadilha seria pior: sem a prioridade, o nó nasceria com o
     padrão do servidor (2000 medido lá) e o alto-falante do controle poderia
     virar a saída do sistema sozinho — exatamente o que a decisão dela recusa.
+
+    O ``vestido`` (``integrations.vestido_de_dualsense``) é VAZIO por padrão de
+    propósito: sem ele o nó continua nascendo, mudo sobre quem é, em vez de não
+    nascer — nó que falta é o som dela que some (A-FORJA-VALIDA-O-SOM-01).
     """
     return (
         'sink_properties="'
@@ -1194,6 +1198,7 @@ def propriedades_do_sink(descricao: str) -> str:
                 f"device.description='{descricao}'",
                 f"priority.session={PRIORIDADE_SESSAO_DO_SOM}",
                 "device.icon_name=audio-speakers",
+                *vestido,
             )
         )
         + '"'
@@ -1322,7 +1327,7 @@ class SinkVirtualPipeWire:
                 "format=s16le",
                 f"rate={self.taxa_hz}",
                 f"channels={self.canais}",
-                propriedades_do_sink(self.descricao),
+                propriedades_do_sink(self.descricao, _vestido_do_no_de_som()),
             ]
         )
         linhas = [ln.strip() for ln in (saida or "").splitlines() if ln.strip()]
@@ -3629,7 +3634,10 @@ def argv_das_rotas(id_do_no: str, rota: RotaDoNo) -> tuple[tuple[str, ...], ...]
 
 
 def descricao_do_alto_falante(uniq: str) -> str:
-    """«Alto-falante do Controle N» — e SEM o endereço dela, com número ou sem.
+    """«Alto-falante do Controle N (DualSense Wireless Controller)», sem o endereço dela.
+
+    A forma — com o sufixo da Sony desde 23/09/2026 — é de
+    :func:`rotulo_do_alto_falante`; aqui só se resolve o assento.
 
     Gêmea de ``dualsense_bt_audio.descricao_do_microfone``, e o gêmeo não é
     coincidência: o assento vem do MESMO numerador
@@ -3656,9 +3664,49 @@ def descricao_do_alto_falante(uniq: str) -> str:
     )
 
     numero = numero_do_assento(str(uniq or ""))
-    if numero is None:
-        return NOME_DO_ALTO_FALANTE_DO_CONTROLE
-    return f"{NOME_DO_ALTO_FALANTE_DO_CONTROLE} {numero}"
+    return rotulo_do_alto_falante(numero)
+
+
+def rotulo_do_alto_falante(numero: int | None) -> str:
+    """A FORMA A — «Alto-falante do Controle N (DualSense Wireless Controller)».
+
+    **Decisão dela de 23/09/2026** (A-FORJA-VALIDA-O-SOM-01, E6): o nome dela
+    fica na frente, e o sufixo é o ``iProduct`` da Sony, a string que um jogo
+    procura. Sob Proton esta string É o nome do endpoint
+    (``winepulse.drv/pulse.c``, ``get_device_name``); sem o sufixo o nó existe e
+    jogo nenhum o reconhece. A mesma forma vale para o microfone
+    (``dualsense_bt_audio.descricao_do_microfone``), os quatro controles, o
+    cabo e o BT.
+
+    UM DONO para os dois caminhos que nomeiam o nó: :func:`descricao_do_alto_falante`
+    (o daemon, pelo ``uniq``) e ``app/audio_saida.nome_do_alto_falante`` (a
+    janela, pelo assento). Duas grafias seriam dois nomes para o mesmo nó.
+
+    ``None``, ``bool`` e número que não seja positivo valem como *"não sei o
+    assento"*: sem número não se inventa número.
+    """
+    from hefesto_dualsense4unix.integrations.vestido_de_dualsense import (
+        com_o_nome_da_sony,
+    )
+
+    base = NOME_DO_ALTO_FALANTE_DO_CONTROLE
+    if isinstance(numero, int) and not isinstance(numero, bool) and numero > 0:
+        base = f"{base} {numero}"
+    return com_o_nome_da_sony(base)
+
+
+def _vestido_do_no_de_som() -> tuple[str, ...]:
+    """O que o nó do alto-falante veste: só a metade do NOME.
+
+    A metade da identidade (barramento, VID, PID, âncora) NÃO vai, e a razão
+    medida no fonte do GE-Proton pinado dela está no docstring de
+    :mod:`integrations.vestido_de_dualsense`.
+    """
+    from hefesto_dualsense4unix.integrations.vestido_de_dualsense import (
+        campos_do_nome,
+    )
+
+    return campos_do_nome()
 
 
 # ---------------------------------------------------------------------------
@@ -3856,6 +3904,7 @@ __all__ = [
     "propriedades_do_sink",
     "rodar_pactl",
     "rota_do_no",
+    "rotulo_do_alto_falante",
     "rotulo_do_gravador",
     "serial_do_no",
     "sink_do_controle",

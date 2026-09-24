@@ -60,13 +60,19 @@ from hefesto_dualsense4unix.integrations.alto_falante_bt import (
     rodar_pactl,
     so_hex,
 )
+from hefesto_dualsense4unix.integrations.vestido_de_dualsense import (
+    FABRICANTE_USB,
+    PID_DUALSENSE,
+    VID_SONY,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: O VID/PID que o GE exige NO PROPLIST — não no aparelho.
-VID_SONY = "054c"
-PID_DUALSENSE = "0ce6"
+# O VID/PID que o GE exige NO PROPLIST — não no aparelho — e o fabricante: o
+# DONO é `vestido_de_dualsense` desde 24/09/2026, porque o nó do alto-falante
+# veste as mesmas strings. `VID_SONY` e `PID_DUALSENSE` seguem no `__all__`
+# daqui para quem já os importava deste módulo.
 
 TAXA_DO_ENDPOINT = 48000
 
@@ -296,7 +302,7 @@ def propriedades_do_endpoint(uniq: str, ancora: Ancora) -> str:
         f"device.vendor.id={VID_SONY}",
         f"device.product.id={PID_DUALSENSE}",
         f"sysfs.path={ancora.declarado}",
-        "device.vendor.name='Sony Interactive Entertainment'",
+        f"device.vendor.name='{FABRICANTE_USB}'",
         f"device.description='DualSense {marca} (háptica)'",
         f"priority.session={PRIORIDADE_DA_SESSAO}",
         "device.icon_name=audio-speakers",

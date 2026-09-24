@@ -2023,7 +2023,14 @@ def numero_do_assento(uniq: str) -> int | None:
 
 
 def descricao_do_microfone(uniq: str) -> str:
-    """«Microfone do Controle N» — e SEM o endereço dela, com número ou sem.
+    """«Microfone do Controle N (DualSense Wireless Controller)», sem o endereço dela.
+
+    **A FORMA A, decisão dela de 23/09/2026** (A-FORJA-VALIDA-O-SOM-01): o
+    nome dela na frente e o ``iProduct`` da Sony atrás — a string que um jogo
+    procura quando pede o microfone do controle por nome. Igual ao
+    alto-falante (``alto_falante_bt.rotulo_do_alto_falante``), os quatro
+    controles, o cabo e o BT; quem monta o sufixo é
+    ``vestido_de_dualsense.com_o_nome_da_sony``.
 
     **O QUE ISTO SUBSTITUIU, e eram dois defeitos numa linha só.** Até
     09/09/2026 a ponte batizava o nó com
@@ -2053,10 +2060,14 @@ def descricao_do_microfone(uniq: str) -> str:
     supervisor em ``daemon/subsystems/bt_mic``. A regra de quando isso vale
     está em :func:`rotulo_envelheceu`.
     """
+    from hefesto_dualsense4unix.integrations.vestido_de_dualsense import (
+        com_o_nome_da_sony,
+    )
+
     numero = numero_do_assento(uniq)
     if numero is None:
-        return NOME_DO_MICROFONE_DO_CONTROLE
-    return f"{NOME_DO_MICROFONE_DO_CONTROLE} {numero}"
+        return com_o_nome_da_sony(NOME_DO_MICROFONE_DO_CONTROLE)
+    return com_o_nome_da_sony(f"{NOME_DO_MICROFONE_DO_CONTROLE} {numero}")
 
 
 def numero_do_rotulo(rotulo: str) -> int | None:
@@ -2070,8 +2081,19 @@ def numero_do_rotulo(rotulo: str) -> int | None:
     Só dígitos ASCII contam. Um dígito arábico-índico (``U+0661`` e os irmãos)
     é dígito para o Python — ``isdigit()`` diz sim e ``int()`` aceita —, e um
     rótulo assim viria de outro escritor, nunca desta casa.
+
+    **O SUFIXO DA SONY SAI ANTES DA CONTA** (forma A, 23/09/2026): com
+    «(DualSense Wireless Controller)» no fim, a última palavra seria
+    ``Controller)``, todo nó perderia o número, e :func:`rotulo_envelheceu`
+    nunca mais republicaria nada — o rótulo voltaria a ser a fotografia do
+    assento de quando o nó nasceu, que é o defeito de 20/09. Os nós que estão
+    no ar com a forma de antes (sem sufixo) continuam lidos igual.
     """
-    ultimo = str(rotulo or "").rsplit(" ", 1)[-1]
+    from hefesto_dualsense4unix.integrations.vestido_de_dualsense import (
+        sem_o_nome_da_sony,
+    )
+
+    ultimo = sem_o_nome_da_sony(rotulo).rsplit(" ", 1)[-1]
     if not ultimo.isascii() or not ultimo.isdigit():
         return None
     numero = int(ultimo)

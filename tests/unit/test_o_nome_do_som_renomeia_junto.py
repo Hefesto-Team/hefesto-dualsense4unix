@@ -59,6 +59,11 @@ from hefesto_dualsense4unix.integrations import alto_falante_bt as som
 from hefesto_dualsense4unix.integrations import canal_do_microfone as canal
 from hefesto_dualsense4unix.integrations import dualsense_bt_audio as mic
 
+#: A FORMA A, decisão dela de 23/09/2026 (A-FORJA-VALIDA-O-SOM-01): o nome dela
+#: na frente e o ``iProduct`` da Sony atrás. Digitado aqui DE PROPÓSITO — a
+#: régua lê a decisão, não o dono (``vestido_de_dualsense.com_o_nome_da_sony``).
+_SONY = " (DualSense Wireless Controller)"
+
 # A MESA DELA DE 20/09/2026, com endereços SINTÉTICOS: a faixa `aa:bb:cc` é a
 # desta casa para fixture, e nunca se deriva um endereço de teste do real —
 # nem mascarado. O que é fiel aqui são os ASSENTOS e a troca entre eles.
@@ -125,13 +130,13 @@ def test_perder_o_numero_nunca_conta_como_envelhecer() -> None:
     `rotulo_envelheceu` e a primeira asserção vira `True`.
     """
     assert not mic.rotulo_envelheceu(
-        "Alto-falante do Controle 3", "Alto-falante do Controle"
+        "Alto-falante do Controle 3" + _SONY, "Alto-falante do Controle" + _SONY
     )
     # E o caminho inverso CONTA: o nó que nasceu sem assento sabido ganha nome
     # assim que a mesa souber dizer — é o `hefesto_mic_…` dela de 20/09, que
     # estava no ar como «Microfone do Controle», sem número.
     assert mic.rotulo_envelheceu(
-        "Microfone do Controle", "Microfone do Controle 2"
+        "Microfone do Controle" + _SONY, "Microfone do Controle 2" + _SONY
     )
 
 
@@ -143,13 +148,13 @@ def test_a_troca_entre_dois_rotulos_e_envelhecimento() -> None:
     falso que esta sprint proibiu.
     """
     assert mic.rotulo_envelheceu(
-        "Alto-falante do Controle 1", "Alto-falante do Controle 3"
+        "Alto-falante do Controle 1" + _SONY, "Alto-falante do Controle 3" + _SONY
     )
     assert mic.rotulo_envelheceu(
-        "Alto-falante do Controle 3", "Alto-falante do Controle 1"
+        "Alto-falante do Controle 3" + _SONY, "Alto-falante do Controle 1" + _SONY
     )
     assert not mic.rotulo_envelheceu(
-        "Alto-falante do Controle 2", "Alto-falante do Controle 2"
+        "Alto-falante do Controle 2" + _SONY, "Alto-falante do Controle 2" + _SONY
     )
 
 
@@ -160,7 +165,7 @@ def test_a_regua_fraca_da_verde_sobre_a_troca() -> None:
     substitua a bijeção por uma contagem achando que é a mesma coisa.
     """
     no_ar = {
-        uniq: f"Alto-falante do Controle {n}"
+        uniq: f"Alto-falante do Controle {n}" + _SONY
         for uniq, n in _ASSENTOS_DO_NOME.items()
     }
     # A régua fraca: todo rótulo tem número...
@@ -170,7 +175,7 @@ def test_a_regua_fraca_da_verde_sobre_a_troca() -> None:
 
     # A régua que MORDE: para cada `uniq`, o rótulo diz o assento DAQUELE uniq.
     de_agora = {
-        uniq: f"Alto-falante do Controle {n}"
+        uniq: f"Alto-falante do Controle {n}" + _SONY
         for uniq, n in _ASSENTOS_DE_AGORA.items()
     }
     velhos = [u for u in no_ar if mic.rotulo_envelheceu(no_ar[u], de_agora[u])]
@@ -249,7 +254,7 @@ def test_o_no_nasce_dizendo_o_assento(
     ger = GerenciadorDeNosDeSom()
     ger.reconciliar(_controles())
     assert _rotulos(ger) == {
-        uniq: f"Alto-falante do Controle {n}"
+        uniq: f"Alto-falante do Controle {n}" + _SONY
         for uniq, n in _ASSENTOS_DE_AGORA.items()
     }
 
@@ -277,10 +282,10 @@ def test_a_renumeracao_chega_ao_rotulo_do_no_vivo(
     ger.reconciliar(_controles())
 
     assert _rotulos(ger) == {
-        _P2: "Alto-falante do Controle 2",
-        _P4: "Alto-falante do Controle 4",
-        _P3: "Alto-falante do Controle 1",
-        _P1: "Alto-falante do Controle 3",
+        _P2: "Alto-falante do Controle 2" + _SONY,
+        _P4: "Alto-falante do Controle 4" + _SONY,
+        _P3: "Alto-falante do Controle 1" + _SONY,
+        _P1: "Alto-falante do Controle 3" + _SONY,
     }
     # E SÓ OS DOIS RENASCERAM: quem não mudou de assento não perde o nó.
     assert ger.nos[_P2] is antes[_P2]
@@ -371,7 +376,7 @@ def test_o_numerador_calado_nao_derruba_nada(
     ger.reconciliar(_controles())
     assert all(ger.nos[u] is antes[u] for u in antes)
     assert _rotulos(ger) == {
-        uniq: f"Alto-falante do Controle {n}"
+        uniq: f"Alto-falante do Controle {n}" + _SONY
         for uniq, n in _ASSENTOS_DE_AGORA.items()
     }
 
@@ -439,10 +444,10 @@ def test_o_canal_do_microfone_renasce_com_o_assento_de_agora(
     quatro rótulos ficam onde estavam — inclusive o que nunca teve número.
     """
     # O estado de 20/09: um sem número, um com o número de outro, dois certos.
-    _abrir(_P2, "Microfone do Controle")
-    _abrir(_P4, "Microfone do Controle 2")
-    _abrir(_P3, "Microfone do Controle 1")
-    _abrir(_P1, "Microfone do Controle 3")
+    _abrir(_P2, "Microfone do Controle" + _SONY)
+    _abrir(_P4, "Microfone do Controle 2" + _SONY)
+    _abrir(_P3, "Microfone do Controle 1" + _SONY)
+    _abrir(_P1, "Microfone do Controle 3" + _SONY)
 
     novos = {
         uniq: canal.renomear(uniq, mic.descricao_do_microfone(uniq))
@@ -450,10 +455,10 @@ def test_o_canal_do_microfone_renasce_com_o_assento_de_agora(
     }
 
     assert {u: s.descricao for u, s in canal._DE_PE.items()} == {
-        _P2: "Microfone do Controle 2",
-        _P4: "Microfone do Controle 4",
-        _P3: "Microfone do Controle 3",
-        _P1: "Microfone do Controle 1",
+        _P2: "Microfone do Controle 2" + _SONY,
+        _P4: "Microfone do Controle 4" + _SONY,
+        _P3: "Microfone do Controle 3" + _SONY,
+        _P1: "Microfone do Controle 1" + _SONY,
     }
     # Os quatro estavam errados de algum jeito, então os quatro renasceram.
     assert all(novo is not None for novo in novos.values())
@@ -467,7 +472,7 @@ def test_o_canal_certo_nao_e_republicado(
     MORDIDA: chame `fechar`/`abrir` sem consultar `rotulo_envelheceu` e o nó
     do controle que não mudou de assento cai na varredura seguinte.
     """
-    antes = _abrir(_P2, "Microfone do Controle 2")
+    antes = _abrir(_P2, "Microfone do Controle 2" + _SONY)
     # O RETORNO É O CANAL DE PÉ, sempre — e aqui ele é o MESMO objeto, que é
     # como quem chama sabe que nada mudou sem ter de adivinhar o que `None`
     # queria dizer. Ver o contrato em `canal_do_microfone.renomear`.
@@ -488,7 +493,7 @@ def test_a_fonte_do_cabo_volta_com_o_canal(
     MORDIDA: leia a fonte de `_ALIMENTANDO` e esta asserção cai — e na mesa
     dela o microfone do cabo fica mudo depois de uma renumeração.
     """
-    _abrir(_P3, "Microfone do Controle 1", fonte="alsa_input.usb-DualSense")
+    _abrir(_P3, "Microfone do Controle 1" + _SONY, fonte="alsa_input.usb-DualSense")
     assert _P3 not in canal._ALIMENTANDO  # o alimentador não subiu, de propósito
 
     argvs: list[list[str]] = []
@@ -549,20 +554,20 @@ def test_o_supervisor_delega_o_canal_do_radio_a_ponte(
     do_radio = _PonteFalsa(_P1)
     sub = BtMicSubsystem()
     sub._gerenciador = _GerenciadorFalso(do_radio)
-    _abrir(_P3, "Microfone do Controle 1")
+    _abrir(_P3, "Microfone do Controle 1" + _SONY)
     sub._canais_do_cabo[_P3] = canal.nome_do_canal(_P3)
     # O canal da PONTE também está de pé, e com o rótulo velho: é ele que o
     # supervisor não pode tocar.
-    da_ponte = _abrir(_P1, "Microfone do Controle 3")
+    da_ponte = _abrir(_P1, "Microfone do Controle 3" + _SONY)
 
     renomeados = sub._renomear_os_canais_velhos()
 
     assert do_radio.chamada == 1
     assert _P3 in renomeados
-    assert canal._DE_PE[_P3].descricao == "Microfone do Controle 3"
+    assert canal._DE_PE[_P3].descricao == "Microfone do Controle 3" + _SONY
     # O SUPERVISOR NÃO ENCOSTOU NO CANAL DA PONTE.
     assert canal.canal_de_pe(_P1) is da_ponte
-    assert da_ponte.descricao == "Microfone do Controle 3"
+    assert da_ponte.descricao == "Microfone do Controle 3" + _SONY
     assert da_ponte.parada is False
 
 
@@ -583,18 +588,18 @@ def test_a_ponte_so_renomeia_o_canal_que_ela_abriu(
     canal do outro dono, que continua anunciando de pé um objeto morto.
     """
     # Quem abriu foi OUTRO (o supervisor, pelo cabo). A ponte sobe depois.
-    do_outro = _abrir(_P1, "Microfone do Controle 3")
+    do_outro = _abrir(_P1, "Microfone do Controle 3" + _SONY)
     no = mic.NoDualSenseBT(caminho="/dev/hidraw9", uniq=_P1, produto=0x0CE6)
     ponte = mic.PonteMicBluetooth(no)
     # A POSSE É LIDA DO CAMINHO DE PRODUÇÃO, não digitada: é o
     # `_abrir_o_canal_por_controle` que decide, e ele vê o canal já de pé.
-    ponte._source = ponte._abrir_o_canal_por_controle("Microfone do Controle 3")
+    ponte._source = ponte._abrir_o_canal_por_controle("Microfone do Controle 3" + _SONY)
     assert ponte._source is do_outro
     assert ponte.uniq_do_canal_proprio == ""
 
     assert ponte.renomear_a_source() is False
     assert canal.canal_de_pe(_P1) is do_outro
-    assert do_outro.descricao == "Microfone do Controle 3"
+    assert do_outro.descricao == "Microfone do Controle 3" + _SONY
     assert do_outro.parada is False
 
 
@@ -661,8 +666,8 @@ def test_o_no_nao_some_quando_a_rota_nao_resolve(
     assert all(ger.nos[u] is antes[u] for u in antes)
     assert all(not no.parado for no in antes.values())
     # E o rótulo velho continua no ar, esperando a próxima varredura.
-    assert _rotulos(ger)[_P3] == "Alto-falante do Controle 3"
-    assert _rotulos(ger)[_P1] == "Alto-falante do Controle 1"
+    assert _rotulos(ger)[_P3] == "Alto-falante do Controle 3" + _SONY
+    assert _rotulos(ger)[_P1] == "Alto-falante do Controle 1" + _SONY
 
 
 def test_o_no_volta_com_o_rotulo_velho_quando_o_renascimento_nao_sobe(
@@ -690,8 +695,8 @@ def test_o_no_volta_com_o_rotulo_velho_quando_o_renascimento_nao_sobe(
         monkeypatch,
         sink=_sink_que_recusa(
             {
-                (_P3, "Alto-falante do Controle 1"),
-                (_P1, "Alto-falante do Controle 3"),
+                (_P3, "Alto-falante do Controle 1" + _SONY),
+                (_P1, "Alto-falante do Controle 3" + _SONY),
             }
         ),
     )
@@ -704,8 +709,8 @@ def test_o_no_volta_com_o_rotulo_velho_quando_o_renascimento_nao_sobe(
     # O objeto é outro — o velho foi parado —, mas o RÓTULO é o de antes.
     assert ger.nos[_P3] is not antes[_P3]
     assert antes[_P3].parado is True
-    assert _rotulos(ger)[_P3] == "Alto-falante do Controle 3"
-    assert _rotulos(ger)[_P1] == "Alto-falante do Controle 1"
+    assert _rotulos(ger)[_P3] == "Alto-falante do Controle 3" + _SONY
+    assert _rotulos(ger)[_P1] == "Alto-falante do Controle 1" + _SONY
     # E quem não mudou de assento não foi tocado.
     assert ger.nos[_P2] is antes[_P2]
 
@@ -721,17 +726,17 @@ def test_o_canal_volta_com_o_rotulo_velho_quando_o_renascimento_nao_sobe(
     MORDIDA: tire o `de_volta = abrir(uniq, no_ar, ...)` de
     `canal_do_microfone.renomear` e `canal_de_pe` devolve `None`.
     """
-    _abrir(_P3, "Microfone do Controle 1")
+    _abrir(_P3, "Microfone do Controle 1" + _SONY)
 
     class _RecusaONomeNovo(_SourceEspia):
         def iniciar(self) -> bool:
-            return self.descricao != "Microfone do Controle 3"
+            return self.descricao != "Microfone do Controle 3" + _SONY
 
     monkeypatch.setattr(canal, "SourceVirtualPipeWire", _RecusaONomeNovo)
     de_pe = canal.renomear(_P3, mic.descricao_do_microfone(_P3))
 
     assert de_pe is not None, "o microfone dela SUMIU para trocar de nome"
-    assert de_pe.descricao == "Microfone do Controle 1"
+    assert de_pe.descricao == "Microfone do Controle 1" + _SONY
     assert canal.canal_de_pe(_P3) is de_pe
 
 
@@ -746,7 +751,7 @@ def test_o_canal_que_nem_a_volta_ergue_devolve_none(
     MORDIDA: faça `renomear` devolver `ja` (a source velha) neste caminho e a
     segunda asserção cai — quem chama guardaria um objeto PARADO.
     """
-    velha = _abrir(_P3, "Microfone do Controle 1")
+    velha = _abrir(_P3, "Microfone do Controle 1" + _SONY)
 
     class _NuncaSobe(_SourceEspia):
         def iniciar(self) -> bool:
@@ -789,7 +794,7 @@ def test_a_ponte_troca_a_referencia_para_o_canal_que_renasceu(
     MORDIDA: tire `self._source = novo` de `renomear_a_source` e a asserção da
     referência cai — a ponte fica apontando para a source PARADA.
     """
-    ponte = _ponte_com_canal_proprio(_P1, "Microfone do Controle 3")
+    ponte = _ponte_com_canal_proprio(_P1, "Microfone do Controle 3" + _SONY)
     velha = ponte._source
     assert velha is not None
     assert ponte.uniq_do_canal_proprio == _P1  # o canal é DELA
@@ -799,7 +804,7 @@ def test_a_ponte_troca_a_referencia_para_o_canal_que_renasceu(
     novo = canal.canal_de_pe(_P1)
     assert novo is not None
     assert novo is not velha
-    assert novo.descricao == "Microfone do Controle 1"
+    assert novo.descricao == "Microfone do Controle 1" + _SONY
     assert velha.parada is True
     # A LINHA QUE O CONFERENTE ARRANCOU:
     assert ponte._source is novo
@@ -814,7 +819,7 @@ def test_a_ponte_solta_a_referencia_quando_o_canal_some(
     de uma source PARADA — e o `escrever` dela entrega PCM a um nó que não
     existe mais, sem erro nenhum.
     """
-    ponte = _ponte_com_canal_proprio(_P1, "Microfone do Controle 3")
+    ponte = _ponte_com_canal_proprio(_P1, "Microfone do Controle 3" + _SONY)
     velha = ponte._source
 
     class _NuncaSobe(_SourceEspia):
@@ -839,18 +844,18 @@ def test_a_ponte_fica_com_o_canal_que_voltou_com_o_rotulo_velho(
     MORDIDA: devolva `True` quando o rótulo voltou velho e o supervisor
     reportaria um renomeado que não houve.
     """
-    ponte = _ponte_com_canal_proprio(_P1, "Microfone do Controle 3")
+    ponte = _ponte_com_canal_proprio(_P1, "Microfone do Controle 3" + _SONY)
     velha = ponte._source
 
     class _RecusaONomeNovo(_SourceEspia):
         def iniciar(self) -> bool:
-            return self.descricao != "Microfone do Controle 1"
+            return self.descricao != "Microfone do Controle 1" + _SONY
 
     monkeypatch.setattr(canal, "SourceVirtualPipeWire", _RecusaONomeNovo)
     assert ponte.renomear_a_source() is False
     assert ponte._source is not None
     assert ponte._source is not velha
-    assert ponte._source.descricao == "Microfone do Controle 3"
+    assert ponte._source.descricao == "Microfone do Controle 3" + _SONY
     assert ponte._source is canal.canal_de_pe(_P1)
 
 
@@ -946,7 +951,7 @@ def test_o_laco_do_daemon_renomeia_os_canais_velhos(
     monkeypatch.setattr(mic, "nos_dualsense_bluetooth", lambda: [])
     assert sub._registro.pedir(_P3) is True
 
-    _abrir(_P3, "Microfone do Controle 1")
+    _abrir(_P3, "Microfone do Controle 1" + _SONY)
     sub._canais_do_cabo[_P3] = canal.nome_do_canal(_P3)
 
     engolidas = _uma_volta_do_laco(sub, monkeypatch, supervisor)
@@ -954,7 +959,7 @@ def test_o_laco_do_daemon_renomeia_os_canais_velhos(
     assert engolidas == [], f"o laço engoliu uma exceção: {engolidas}"
     de_pe = canal.canal_de_pe(_P3)
     assert de_pe is not None
-    assert de_pe.descricao == "Microfone do Controle 3"
+    assert de_pe.descricao == "Microfone do Controle 3" + _SONY
 
 
 def test_o_canal_sem_dono_ainda_tem_quem_o_renomeie(
@@ -979,13 +984,13 @@ def test_o_canal_sem_dono_ainda_tem_quem_o_renomeie(
     sub._gerenciador = _GerenciadorSemPonte()
     # De pé, sem número, e SEM dono: não está em `_canais_do_cabo` nem há
     # ponte que o reclame.
-    _abrir(_P2, "Microfone do Controle")
+    _abrir(_P2, "Microfone do Controle" + _SONY)
     assert sub._canais_do_cabo == {}
 
     assert sub._renomear_os_canais_velhos() == [_P2]
     de_pe = canal.canal_de_pe(_P2)
     assert de_pe is not None
-    assert de_pe.descricao == "Microfone do Controle 2"
+    assert de_pe.descricao == "Microfone do Controle 2" + _SONY
 
 
 def test_o_supervisor_solta_o_canal_do_cabo_que_sumiu(
@@ -1004,7 +1009,7 @@ def test_o_supervisor_solta_o_canal_do_cabo_que_sumiu(
 
     sub = BtMicSubsystem()
     sub._gerenciador = _GerenciadorSemPonte()
-    _abrir(_P3, "Microfone do Controle 1")
+    _abrir(_P3, "Microfone do Controle 1" + _SONY)
     sub._canais_do_cabo[_P3] = canal.nome_do_canal(_P3)
 
     class _NuncaSobe(_SourceEspia):
