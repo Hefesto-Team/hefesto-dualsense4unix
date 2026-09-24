@@ -734,13 +734,20 @@ def _o_tom_que_acende(efetiva: Any,
     se a luz acesa DISSE a cor ou não, porque é aí que a escada de
     `_a_cor_de_agora` desce um degrau.
 
-    `None` EM DOIS CASOS, e os dois foram medidos no piloto em 24/09/2026:
+    `None` EM TRÊS CASOS, e os três foram medidos no piloto em 24/09/2026:
 
     * **nenhum tom casa** — a luz publicada é de OUTRO brilho. O gesto
       `brilho` grava o número novo no disco antes de o daemon publicar a luz
       nova (o `state_full` guarda a leitura do nó por 1 s), e por meio segundo
       cada tique invertia a luz velha com o brilho novo;
-    * **mais de um tom casa** — a 0% os catorze acendem preto.
+    * **mais de um tom casa** — a 0% os catorze acendem preto;
+    * **a luz está apagada** — o `#000000` é tom da casa, e com qualquer
+      brilho acima de zero ele é o ÚNICO que acende preto. Subindo o trilho a
+      partir de 0%, o disco já diz 70% e o daemon ainda publica o preto dos
+      0%, e a coluna inteira virava preta por meio segundo. Luz apagada não
+      diz cor — é a ordem dela de 22/09 que `led_control.cor_escolhida`
+      guarda, *o preto é banido como cor* —, e quem apagou pelo «Desligar»
+      tem o preto GRAVADO: é o degrau seguinte da escada que o devolve.
 
     A 100% (ou sem brilho) não há conta a desfazer: a luz é o tom se ela for
     um dos catorze.
@@ -751,6 +758,8 @@ def _o_tom_que_acende(efetiva: Any,
         return None
     r, g, b = (int(c) for c in tuple(efetiva)[:3])
     alvo = (r, g, b)
+    if alvo == (0, 0, 0):
+        return None
     if brilho is None or brilho >= 1.0:
         return alvo if _hex(alvo) in monta.TOM_DA_CASA else None
     casados = []
@@ -3094,10 +3103,11 @@ def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
         3. a luz acesa como está, com a paleta automática desligada;
         4. a cor do número, que é a da paleta automática.
 
-    O DEGRAU 1 SOZINHO NÃO SEGURAVA A MARCA, e o piloto mediu os dois buracos
+    O DEGRAU 1 SOZINHO NÃO SEGURAVA A MARCA, e o piloto mediu os três buracos
     com o clique: por meio segundo depois de SOLTAR o trilho o disco já tem o
-    brilho novo e o daemon ainda publica a luz velha, e a 0% todo tom acende
-    preto. Nos dois a luz não diz o tom — e a cor do controle não mudou,
+    brilho novo e o daemon ainda publica a luz velha; a 0% todo tom acende
+    preto; e subindo de 0% a luz velha ainda é o preto. Nos três a luz não
+    diz o tom — e a cor do controle não mudou,
     porque brilho não é cor. Quem sabe a cor nessa hora é o disco (a escolha
     dela) ou a paleta (quem nunca escolheu acende a cor do número). A luz
     continua vindo PRIMEIRO: ela é o que o plástico mostra, inclusive quando
@@ -3121,7 +3131,7 @@ def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
         return guardada
     #: SEM A PALETA, a luz que não casou é o global do perfil (ou uma cor que
     #: não é da guia): ela volta como está, que é o que a coluna sempre mostrou.
-    #: O preto não entra: preto que não casou é o brilho a 0%, e ele não diz cor.
+    #: O preto não entra: luz apagada é brilho, e brilho não diz cor.
     if (efetiva and tuple(efetiva)[:3] != (0, 0, 0)
             and not automatico_do_perfil(cru)):
         r, g, b = tuple(efetiva)[:3]
