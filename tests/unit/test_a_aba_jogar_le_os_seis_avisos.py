@@ -421,8 +421,16 @@ def _ctx() -> Contexto:
     return Contexto(state=_mesa(), mesa=[], conectados=[], estados={})
 
 
-def test_o_recibo_diz_quantos_voltaram_e_o_que_a_numeracao_fez() -> None:
-    """Os dois passos respondem, e a frase é a de `reconciliar_toast`."""
+def test_os_dois_passos_vao_na_ordem_e_o_numero_novo_nao_vira_recado() -> None:
+    """Os dois passos respondem, na ordem — e a numeração que mudou cala.
+
+    **A FRASE SAIU — 24/09/2026, A-FRASE-DO-RECONECTAR-SAI-01.** Até aqui esta
+    régua exigia a frase que a JOGAR-02 propôs (09/09) para quando um número
+    mudasse, nomeando os assentos. Ela respondeu *«Nada: o número novo aparece
+    no próprio cartão»* (`D-2409-O-RECONECTAR-NAO-DIZ-NADA`), e a frase entrou
+    na lista das banidas. A régua inteira da decisão, com as falhas e o rádio
+    que ficam, é `test_o_reconectar_nao_diz_nada.py`.
+    """
     p = _PonteQueResponde({
         "coop.sync": {"status": "ok", "players": 3, "active": True},
         "identity.renumber": {"ok": True, "renumbered": {UNIQ: 1, "bb": 2}},
@@ -431,20 +439,9 @@ def test_o_recibo_diz_quantos_voltaram_e_o_que_a_numeracao_fez() -> None:
     assert p.chamadas == ["coop.sync", "identity.renumber"], (
         "a ORDEM é a entrega: renumerar antes de reconciliar compactaria uma "
         "lista que ainda não está completa")
-    #: **A FRASE MUDOU DE DONO E DE LÍNGUA — JOGAR-02, 09/09/2026.** Era
-    #: `home_actions.reconciliar_toast`, a frase da JANELA GTK, e ela dizia
-    #: *"Jogadores reconciliados — 3 jogador(es). Numeração compactada em 2
-    #: controle(s)."* — a língua de dentro (`CoopManager.sync`,
-    #: `identity.compact`) escrita na tela dela, e o número de CONTROLES sem
-    #: dizer QUAIS.
-    #:
-    #: Agora a frase nomeia o assento, que é a palavra que esta tela já usa, e
-    #: a régua a lê do dono novo (`painel._RENUMEROU`) em vez de digitá-la.
-    assert fora["recado"] == painel._RENUMEROU.format(quais="P1, P2"), (
-        "o recibo deixou de ser a frase do dono e virou texto deste arquivo")
-    assert "P1" in fora["recado"] and "P2" in fora["recado"], (
-        "o recibo não disse QUAIS controles foram renumerados — um número "
-        "sozinho obriga ela a descobrir quais")
+    assert fora is None, (
+        f"a numeração mudou e o gesto voltou com {fora!r} — o número novo "
+        f"aparece no cartão, e a decisão dela é não dizer nada")
 
 
 def test_a_recusa_por_jogo_aberto_nao_e_falha_nem_recado() -> None:
@@ -456,7 +453,7 @@ def test_a_recusa_por_jogo_aberto_nao_e_falha_nem_recado() -> None:
     verde no botão — que é como esta casa diz "deu certo" desde a 03-Q4.
 
     **A MORDIDA:** tire `sessao_de_jogo_aberta` de `painel._sem_noticia` e o
-    gesto volta a pousar uma caixa verde em cima da identidade do cartão.
+    gesto volta com um recado de falha sobre um passo que não falhou.
     """
     p = _PonteQueResponde({
         "coop.sync": {"players": 2},
@@ -473,7 +470,8 @@ def test_a_numeracao_ja_compacta_nao_vira_recado() -> None:
         Jogadores reconciliados — 2 jogador(es). A numeração já estava compacta.
 
     **A MORDIDA:** faça `_sem_noticia` devolver `False` para o `renumbered`
-    vazio e a frase volta, em cima do cartão do P1.
+    vazio e o gesto volta com um recado — de falha, desde 24/09/2026, porque o
+    sucesso não tem mais frase nenhuma.
     """
     p = _PonteQueResponde({
         "coop.sync": {"players": 2},

@@ -5,9 +5,13 @@ incorreta"*. A regra que sobrou é curta e vale para a interface inteira:
 
     **NENHUM ALARME SEM MEDIÇÃO.**
 
-As três frases abaixo alarmavam sobre número que **ensaio nenhum deste
-repositório mede**. Não são erro de gosto: uma frase que assusta sem medir
-custa a confiança dela em todas as outras.
+As três primeiras frases abaixo alarmavam sobre número que **ensaio nenhum
+deste repositório mede**. Não são erro de gosto: uma frase que assusta sem
+medir custa a confiança dela em todas as outras.
+
+A QUARTA É DE OUTRA FAMÍLIA — 24/09/2026, A-FRASE-DO-RECONECTAR-SAI-01. Ela
+não alarma: NARRA o que a tela já mostra. A razão está ao lado dela, em
+:data:`FRASES_BANIDAS`.
 
 POR QUE ESTE MÓDULO EXISTE — e é o OITAVO CONFLITO da leva de 04/09/2026,
 achado pela frente da aba 01 e da mesma família dos sete do `O-PO-DECIDE`:
@@ -99,10 +103,26 @@ from functools import cache
 #: medição viraria o alarme sem medição. Medido em 06/09/2026 com
 #: ``grep -rn "gatilhos ficam duros" src/``: duas ocorrências, as duas a frase
 #: banida; ``grep -rn "como no PS5" src/``: quatro, uma delas inocente.
+#:
+#: **O QUARTO TRECHO ENTROU EM 24/09/2026** (A-FRASE-DO-RECONECTAR-SAI-01), e
+#: ele não alarma: NARRA o que a tela já mostra. Era a frase que a JOGAR-02
+#: propôs, em 09/09, para o «Reconectar controles» quando algum número mudasse
+#: — *"Os controles foram renumerados: P1, P2."* —, e ela respondeu
+#: *«Nada: o número novo aparece no próprio cartão»*
+#: (`D-2409-O-RECONECTAR-NAO-DIZ-NADA`). O trecho é o miolo que a frase tinha
+#: no produto: pega a mesma frase com outros assentos e não pega frase
+#: inocente. Medido em 24/09/2026, antes da cura, com
+#: ``git grep -n "foram renumerad" -- src/ mockup/``: UMA ocorrência, a
+#: constante que a guardava (`painel._RENUMEROU`); nenhuma nas páginas.
+#:
+#: **O ÍNDICE DE CADA TRECHO É ENDEREÇO**: o comentário do `_MODE_DESCRIPTIONS`
+#: de `home_actions` aponta os índices 0 e 2, e a régua do terceiro trecho lê
+#: ``FRASES_BANIDAS[2]``. Trecho novo entra no FIM.
 FRASES_BANIDAS: tuple[str, ...] = (
     "derrubam o controle",
     "resultado é ZERO",
     "gatilhos ficam duros",
+    "foram renumerados",
 )
 
 
@@ -120,8 +140,8 @@ FRASES_BANIDAS: tuple[str, ...] = (
 #: duas são a LÍNGUA DE DENTRO: `CoopManager.sync` e `identity.compact`
 #: escritos na tela dela. A frase que ela mandou remover era
 #: *"Jogadores reconciliados — 2 jogador(es). A numeração já estava
-#: compacta."*, e o que entra no lugar nomeia o assento: *"Os controles foram
-#: renumerados: P1, P2."*
+#: compacta."* O que entrou no lugar nomeava os assentos, e saiu em 24/09/2026
+#: pela decisão dela — está em :data:`FRASES_BANIDAS`, o quarto trecho.
 #:
 #: **`compactada` E NÃO `compacta`:** a segunda é raiz de `compactar`, que é o
 #: verbo certo em código e em comentário, e a régua casa por BORDA DE PALAVRA —
