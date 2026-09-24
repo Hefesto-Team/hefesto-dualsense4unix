@@ -192,6 +192,7 @@ async def test_o_perfil_renomeado_continua_voltando_no_boot(lar: Path) -> None:
     from hefesto_dualsense4unix.daemon.connection import restore_last_profile
     from hefesto_dualsense4unix.daemon.state_store import StateStore
     from hefesto_dualsense4unix.profiles.loader import (
+        ARQUIVO_DO_PADRAO,
         NOME_DO_PADRAO,
         migrate_default_profile_name,
         profiles_dir,
@@ -210,7 +211,7 @@ async def test_o_perfil_renomeado_continua_voltando_no_boot(lar: Path) -> None:
 
     perfis = profiles_dir()
     assert json.loads(
-        (perfis / "personalizado.json").read_text(encoding="utf-8")
+        (perfis / ARQUIVO_DO_PADRAO).read_text(encoding="utf-8")
     )["name"] == NOME_DO_PADRAO
 
     controle = FakeController()

@@ -113,7 +113,7 @@ def stub_mixin(profiles_dir_isolado: Path) -> FooterActionsMixin:
 def _perfil_modificado() -> dict:  # type: ignore[type-arg]
     """Retorna um dict de perfil com priority diferente do asset (99)."""
     return {
-        "name": "Personalizado",
+        "name": "Freestyle",
         "version": 1,
         "match": {"type": "any"},
         "priority": 99,
@@ -143,8 +143,10 @@ class TestRestoreDefault:
         asset_content: dict,  # type: ignore[type-arg]
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Conteúdo de personalizado.json em profiles_dir volta ao asset."""
-        destino = profiles_dir_isolado / "personalizado.json"
+        """Conteúdo do perfil padrão em profiles_dir volta ao asset."""
+        from hefesto_dualsense4unix.profiles.loader import ARQUIVO_DO_PADRAO
+
+        destino = profiles_dir_isolado / ARQUIVO_DO_PADRAO
         destino.write_text(json.dumps(_perfil_modificado()), encoding="utf-8")
 
         import hefesto_dualsense4unix.profiles.loader as loader_mod
@@ -196,8 +198,12 @@ class TestRestoreDefault:
 
         PERFIL-PADRAO-PERSONALIZADO-01: a régua exigia a palavra `meu_perfil`
         no toast — o nome que ela mandou aposentar. Invertida: agora ela
-        GUARDA que o toast cita `Personalizado`, e reprova se o slug voltar.
+        GUARDA que o toast cita o nome do padrão, e reprova se o slug voltar.
+        O nome é «Freestyle» desde 24/09/2026 (O-MODO-FREESTYLE-02), e a régua
+        o pergunta ao dono.
         """
+        from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
+
         import hefesto_dualsense4unix.profiles.loader as loader_mod
 
         monkeypatch.setattr(
@@ -210,8 +216,9 @@ class TestRestoreDefault:
         with patch("hefesto_dualsense4unix.app.actions.footer_actions.gui_dialogs", mock_dialogs):
             stub_mixin.on_restore_default()
 
-        assert any("Personalizado" in msg for msg in stub_mixin._toasted)
+        assert any(NOME_DO_PADRAO in msg for msg in stub_mixin._toasted)
         assert not any("meu_perfil" in msg for msg in stub_mixin._toasted)
+        assert not any("Personalizado" in msg for msg in stub_mixin._toasted)
 
 
 # ---------------------------------------------------------------------------
@@ -330,11 +337,13 @@ class TestRestoreDefaultEmInstalacaoEmpacotada:
 
     @staticmethod
     def _cascata_empacotada(
-        monkeypatch: pytest.MonkeyPatch, tmp_path: Path, com_preset: int
+        monkeypatch: pytest.MonkeyPatch, tmp_path: Path, com_preset: int,
+        arquivo: str | None = None,
     ) -> Path:
         """Planta o preset no candidato `com_preset` (1=prefixo, 2=/usr/share).
 
         O candidato 0 (repositório) NÃO existe — é a instalação empacotada.
+        `arquivo` é o nome com que o pacote o guarda: o de hoje por padrão.
         """
         import hefesto_dualsense4unix.profiles.loader as loader_mod
 
@@ -347,7 +356,7 @@ class TestRestoreDefaultEmInstalacaoEmpacotada:
         destino.mkdir(parents=True)
         conteudo = _perfil_modificado()
         conteudo["priority"] = 42
-        (destino / "personalizado.json").write_text(
+        (destino / (arquivo or loader_mod.ARQUIVO_DO_PADRAO)).write_text(
             json.dumps(conteudo), encoding="utf-8"
         )
         monkeypatch.setattr(
@@ -377,7 +386,49 @@ class TestRestoreDefaultEmInstalacaoEmpacotada:
         with patch("hefesto_dualsense4unix.app.actions.footer_actions.gui_dialogs", mock_dialogs):
             stub_mixin.on_restore_default()
 
-        destino = profiles_dir_isolado / "personalizado.json"
+        destino = profiles_dir_isolado / loader_mod.ARQUIVO_DO_PADRAO
         assert destino.is_file(), "o botão morre em instalação não-editável"
         assert json.loads(destino.read_text(encoding="utf-8"))["priority"] == 42
         assert not any("não encontrado" in msg for msg in stub_mixin._toasted)
+
+    @pytest.mark.parametrize("arquivo", ["personalizado.json", "meu_perfil.json"])
+    def test_o_pacote_de_antes_restaura_para_o_nome_de_hoje(
+        self,
+        arquivo: str,
+        stub_mixin: FooterActionsMixin,
+        profiles_dir_isolado: Path,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """O `/usr/share` de uma versão anterior guarda o preset com o nome velho.
+
+        O-MODO-FREESTYLE-02, 24/09/2026: o preset virou `freestyle.json`, e um
+        pacote de antes ainda traz o `personalizado.json` (05/09 a 24/09) ou o
+        `meu_perfil.json` (até 05/09). O botão acha qualquer um dos três e grava
+        SEMPRE no nome de hoje — nunca de volta no nome que saiu, que seria o
+        segundo catch-all ao lado do Freestyle dela.
+
+        MORDE: tire `ARQUIVO_DO_PERSONALIZADO` da cascata de
+        `footer_actions._meu_perfil_asset` e o caso `personalizado.json` cai no
+        toast de preset ausente.
+        """
+        import hefesto_dualsense4unix.profiles.loader as loader_mod
+
+        self._cascata_empacotada(monkeypatch, tmp_path, 2, arquivo=arquivo)
+        monkeypatch.setattr(
+            loader_mod, "profiles_dir", lambda ensure=False: profiles_dir_isolado
+        )
+
+        mock_dialogs = MagicMock()
+        mock_dialogs.confirm_restore_default.return_value = True
+
+        with patch("hefesto_dualsense4unix.app.actions.footer_actions.gui_dialogs", mock_dialogs):
+            stub_mixin.on_restore_default()
+
+        destino = profiles_dir_isolado / loader_mod.ARQUIVO_DO_PADRAO
+        assert destino.is_file(), f"o pacote com {arquivo} deixou o botão sem preset"
+        gravado = json.loads(destino.read_text(encoding="utf-8"))
+        assert gravado["name"] == loader_mod.NOME_DO_PADRAO
+        assert gravado["priority"] == 42
+        assert sorted(p.name for p in profiles_dir_isolado.glob("*.json")) == [
+            loader_mod.ARQUIVO_DO_PADRAO]

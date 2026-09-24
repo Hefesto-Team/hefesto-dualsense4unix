@@ -47,6 +47,7 @@ from hefesto_dualsense4unix.integrations.lugar_declarado import declarar_a_maqui
 from hefesto_dualsense4unix.profiles.loader import (
     ARQUIVO_ANTIGO_DO_PADRAO,
     ARQUIVO_DO_PADRAO,
+    ARQUIVO_DO_PERSONALIZADO,
     NOME_DO_PADRAO,
     _seed_source_file,
     load_all_profiles,
@@ -113,12 +114,12 @@ def frase_do_restauro(caminho: object = None) -> str:
 def _meu_perfil_asset() -> Path | None:
     """Acha o preset do perfil padrão; ``None`` quando não há em lugar nenhum.
 
-    Tenta o nome de hoje (`personalizado.json`) e cai no antigo
-    (`meu_perfil.json`): numa máquina com o `/usr/share` de uma versão
-    anterior o asset ainda está lá sob o nome velho, e o botão tem de
+    Tenta o nome de hoje (`freestyle.json`) e cai nos antigos
+    (`personalizado.json`, depois `meu_perfil.json`): num `/usr/share` de uma
+    versão anterior o asset ainda está lá sob o nome velho, e o botão tem de
     continuar funcionando. Quem normaliza a IDENTIDADE do que sai daí é
     `on_restore_default`, que reescreve o `name` — assim o botão restaura
-    sempre PARA o `Personalizado`, venha o asset de onde vier.
+    sempre PARA o «Freestyle», venha o asset de onde vier.
 
     JANELA-FIEL-01/E3: este caminho era `ROOT_DIR / "assets" / ...`, e
     `ROOT_DIR` é `parents[3]` do módulo — a raiz do repositório SÓ em instalação
@@ -133,9 +134,8 @@ def _meu_perfil_asset() -> Path | None:
     caminho duplicado aqui, o botão passa a achar o arquivo onde ele realmente
     está.
     """
-    return _seed_source_file(ARQUIVO_DO_PADRAO) or _seed_source_file(
-        ARQUIVO_ANTIGO_DO_PADRAO
-    )
+    return (_seed_source_file(ARQUIVO_DO_PADRAO) or _seed_source_file(
+        ARQUIVO_DO_PERSONALIZADO) or _seed_source_file(ARQUIVO_ANTIGO_DO_PADRAO))
 
 
 # APLICAR-VERDADE-01: nome de cada seção do contrato IPC na língua da janela.
@@ -1542,7 +1542,7 @@ class FooterActionsMixin(ProfileWriterMixin):
     def on_restore_default(self, _btn: Any = None) -> None:
         """Restaura o perfil padrão ao estado do asset original.
 
-        Confirma com usuária, copia asset -> profiles_dir/personalizado.json,
+        Confirma com usuária, copia asset -> profiles_dir/freestyle.json,
         recarrega DraftConfig e dispara refresh de todas as abas.
         """
         from hefesto_dualsense4unix.app.draft_config import DraftConfig
@@ -1567,8 +1567,8 @@ class FooterActionsMixin(ProfileWriterMixin):
         def _construir() -> Profile:
             raw = json.loads(asset.read_text(encoding="utf-8"))
             # PERFIL-PADRAO-PERSONALIZADO-01: a IDENTIDADE é decidida aqui, não
-            # pelo arquivo achado. O asset pode ser o de hoje ("Personalizado")
-            # ou o de uma versão anterior ainda no `/usr/share` ("meu_perfil"),
+            # pelo arquivo achado. O asset pode ser o de hoje («Freestyle»)
+            # ou o de uma versão anterior no `/usr/share` («Personalizado»),
             # e o segundo faria o botão GRAVAR de volta o nome que ela mandou
             # aposentar — e num arquivo à parte, criando o segundo catch-all
             # que a migração existe para evitar.

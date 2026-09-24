@@ -3132,9 +3132,9 @@ def restaurar_de_fabrica(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, 
 
     A IDENTIDADE É DECIDIDA AQUI, e não pelo arquivo achado — é a
     PERFIL-PADRAO-PERSONALIZADO-01, e a razão está no dono: o asset pode ser o
-    de hoje (`personalizado.json`) ou o de uma versão anterior ainda no
-    `/usr/share` (`meu_perfil.json`), e o segundo faria o botão gravar de volta
-    o nome que ela mandou aposentar, num arquivo à parte.
+    de hoje (`freestyle.json`) ou o de uma versão anterior ainda no `/usr/share`
+    (`personalizado.json`, `meu_perfil.json`), e esses fariam o botão gravar de
+    volta um nome que saiu, num arquivo à parte. O nome é «Freestyle» (24/09).
 
     O `era=` É O QUE FAZ ELE ADOTAR COMO ATIVO, e não um detalhe:
     `gravar_e_reaplicar` só manda `profile.switch` quando o perfil gravado é o
