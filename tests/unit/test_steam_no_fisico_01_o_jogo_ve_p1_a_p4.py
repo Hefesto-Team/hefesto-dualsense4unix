@@ -354,7 +354,9 @@ class TestOPrimarioEsperaACarta1:
         assert vpad_do_p1 == []
         assert mgr._p1_espera_o_jogo is True
 
-        daemon.display_authority = "desktop"
+        # O vocabulário do `GameSignal` é game/daemon/unknown: «daemon» é a
+        # evidência positiva de que o jogo largou (conferência de 24/09).
+        daemon.display_authority = "daemon"
         mgr.sync()
 
         # Sem jogo, o jogo que abrir enumera na ordem de nascimento: a carta 1
