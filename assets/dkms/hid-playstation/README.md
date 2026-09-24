@@ -161,18 +161,18 @@ Por isso o rebind é a cura de primeira linha, e está automatizado em
 - **nunca carrega/descarrega módulo** — recarregar `hid_playstation`
   derrubaria todos os DualSense, inclusive os por Bluetooth.
 
-Roda sozinho pela vigia 4 do `bt_health_watchdog.sh` (timer de 2 min, já
-existente). À mão:
+Roda sozinho em dois tempos: na hora do aviso do kernel (o kernel-watch chama
+o verbo `religar-orfaos` da ponte, STORM-USB-02) e no tique de 2 min. À mão:
 
 ```bash
 sudo /usr/local/lib/hefesto-dualsense4unix/bt_rebind_orphans.sh          # cura
 scripts/bt_rebind_orphans.sh --dry-run                                  # só relata
 ```
 
-**Limite conhecido:** o watchdog passa a cada 2 min, então no pior caso o
-controle fica órfão por até 2 min antes da cura automática. Se isso incomodar
-com 4 jogadores, o degrau seguinte é uma regra udev reagindo ao `add` do HID —
-o script já é idempotente e seguro para ser chamado dali.
+**Limite conhecido:** sem a regra do sudo do verbo, a cura fica só no tique de
+2 min, e o controle fica órfão por até 2 min. Com ela, vem 3, 10 e 20 s depois
+da linha do kernel (24/09/2026: o degrau que esta nota pedia, uma regra udev no
+`add` do HID, saiu pelo aviso do kernel, que já diz QUEM perdeu a probe).
 
 ## A cura: `feature_retries` (opt-in, default == vanilla)
 
