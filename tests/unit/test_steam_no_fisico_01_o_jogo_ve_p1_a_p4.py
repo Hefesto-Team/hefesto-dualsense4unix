@@ -217,3 +217,30 @@ class TestQuemAtrasaNaoPerdeOLugar:
         mgr.sync()
 
         assert nascimentos == [P2, P3, P4, P3]
+
+
+class TestOTiqueNaoPagaAOrdem:
+    def test_com_todos_nascidos_o_tique_nao_pergunta_a_carta(
+        self, nascimentos: list[str]
+    ) -> None:
+        """O `_promote_pending` roda a cada tique do poll loop (~10 ms). Com
+        todos os vpads de pé não há fila a ordenar, e ele não pode ir ao
+        registro por carta — seriam centenas de idas por segundo sob o lock
+        dele. A ordem só custa enquanto alguém espera nascer."""
+        consultas: list[str] = []
+
+        def _carta(mac: str, assign: bool = False) -> int | None:
+            consultas.append(mac)
+            return CARTAS.get(mac)
+
+        daemon = _daemon()
+        daemon.identity_registry = SimpleNamespace(numero_da_lampada=_carta)
+        mgr = CoopManager(daemon)
+        mgr.sync()
+        assert nascimentos == [P2, P3, P4]
+
+        consultas.clear()
+        for _ in range(100):
+            mgr._promote_pending()
+
+        assert consultas == []

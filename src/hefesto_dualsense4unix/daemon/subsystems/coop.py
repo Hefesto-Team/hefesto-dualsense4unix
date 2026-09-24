@@ -1059,11 +1059,11 @@ class CoopManager:
         cada `sync`. Grab "failed" derruba o jogador SEM nunca ter criado o
         vpad e marca `_retry_spawn` (o próximo sync recria do zero).
         """
-        # STEAM-NO-FISICO-01: na ordem da carta, e o maior espera o menor —
-        # ver `_pode_nascer_na_ordem`.
-        for identity in self._na_ordem_da_carta(self._players):
-            player = self._players[identity]
-            if player.vpad is not None:
+        # STEAM-NO-FISICO-01: na ordem da carta, só quem ainda espera o vpad.
+        pendentes = [i for i, p in self._players.items() if p.vpad is None]
+        for identity in self._na_ordem_da_carta(pendentes):
+            player = self._players.get(identity)
+            if player is None or player.vpad is not None:
                 continue
             state = player.reader.grab_state
             if state == "held":
