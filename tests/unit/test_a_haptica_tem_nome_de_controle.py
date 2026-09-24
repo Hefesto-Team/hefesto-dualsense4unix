@@ -36,7 +36,10 @@ AS MORDIDAS, uma por afirmação, e cada uma foi vista reprovar:
 5. tire a leitura de ``rotulo_no_ar`` da adoção → o nó que o restart herdou
    nunca perde o nome de antes;
 6. devolva o passo da bancada que só nomeia «Alto-falante do Controle» → a
-   conta volta a dar quatro.
+   conta volta a dar quatro;
+7. tire o ``device.product.id`` de ``propriedades_do_endpoint`` → o gravador do
+   device KS (``audio_ks_dualsense.endpoints_de_mentira``) deixa de achar o
+   endpoint, com o rótulo, o nome e a âncora todos certos.
 """
 
 from __future__ import annotations
@@ -53,6 +56,7 @@ import pytest
 
 from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
 from hefesto_dualsense4unix.integrations import alto_falante_bt as som
+from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
 from hefesto_dualsense4unix.integrations import dualsense_bt_audio as mic
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 
@@ -533,6 +537,16 @@ def mesa(monkeypatch: pytest.MonkeyPatch, assentos) -> _Mesa:
     return m
 
 
+def _o_que_o_ks_le(servidor: _Servidor) -> list[tuple[int, str]]:
+    """Os endpoints que o gravador do device KS acha — pelo leitor DELE, não por uma cópia.
+
+    ``audio_ks_dualsense.endpoints_de_mentira`` é quem acha cada endpoint para
+    gravar no prefixo o device KS que a RE Engine casa pelo ``ContainerId``. Ele
+    lê o VID, o PID e o ``sysfs.path`` do nó, e nunca a descrição.
+    """
+    return sorted(ks.endpoints_de_mentira(servidor))
+
+
 def test_so_os_controles_do_bt_ganham_a_haptica(mesa: _Mesa) -> None:
     """No USB a vibração viaja pela placa do controle; o endpoint é só do BT."""
     mesa.volta()
@@ -546,14 +560,18 @@ def test_o_rotulo_segue_o_assento_e_nada_que_o_jogo_le_muda(mesa: _Mesa, assento
     """P3 e P4 trocam de lugar: os dois rótulos seguem, o nome e a âncora não.
 
     MORDIDA 3: tire a chamada a ``_renovar_o_rotulo_da_haptica`` da volta.
+    MORDIDA 7: tire o ``device.product.id`` do nó.
     """
     mesa.volta()
     antes = {u: (mesa.ancora(u), eh.nome_do_endpoint(u)) for u in (_P3, _P4)}
+    o_ks_antes = _o_que_o_ks_le(mesa.servidor)
+    assert len(o_ks_antes) == 2, f"o gravador do device KS não achou os dois: {o_ks_antes}"
     assentos[_P3], assentos[_P4] = 4, 3
     mesa.volta()
     assert mesa.rotulo(_P3) == f"{_HAPTICA} 4{_SONY}"
     assert mesa.rotulo(_P4) == f"{_HAPTICA} 3{_SONY}"
     assert {u: (mesa.ancora(u), eh.nome_do_endpoint(u)) for u in (_P3, _P4)} == antes
+    assert _o_que_o_ks_le(mesa.servidor) == o_ks_antes, "o device KS perdeu o endpoint renomeado"
     # E uma volta a mais não mexe em nada: o rótulo certo não envelhece.
     quedas = list(mesa.servidor.quedas)
     mesa.volta()
@@ -620,11 +638,14 @@ def test_o_no_herdado_com_o_nome_de_antes_renasce_uma_vez(mesa: _Mesa) -> None:
     mesa.volta()
     assert mesa.servidor.cargas == [], "o restart recarregou um nó vivo em vez de adotá-lo"
     assert mesa.rotulo(_P3) == f"DualSense {eh.marca_do_controle(_P3)} (háptica)"
+    o_ks_antes = _o_que_o_ks_le(mesa.servidor)
+    assert len(o_ks_antes) == 2, f"o gravador do device KS não achou os dois: {o_ks_antes}"
     mesa.volta()
     assert mesa.rotulo(_P3) == f"{_HAPTICA} 3{_SONY}"
     assert mesa.rotulo(_P4) == f"{_HAPTICA} 4{_SONY}"
     assert mesa.ancora(_P3) == _ANCORAS[2].declarado
     assert mesa.ancora(_P4) == _ANCORAS[3].declarado
+    assert _o_que_o_ks_le(mesa.servidor) == o_ks_antes, "o device KS perdeu o endpoint renomeado"
     cargas = len(mesa.servidor.cargas)
     mesa.volta()
     assert len(mesa.servidor.cargas) == cargas
