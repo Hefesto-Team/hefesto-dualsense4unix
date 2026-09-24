@@ -2904,13 +2904,14 @@ def _a_faixa(
 
     Uma faixa só vale se:
 
-    - ninguém dela já está no boneco da própria carta (a O-ASSENTO-03: quem
-      está certo não sai para fechar o buraco de ninguém), e nenhum fixo;
     - TODO mundo dela renasce no boneco da própria carta: o ~1 s sem controle
-      é só de quem de fato chega aonde a lâmpada diz;
-    - a ordem continua valendo;
+      é só de quem de fato chega aonde a lâmpada diz. Isso já deixa de fora
+      quem está certo (a O-ASSENTO-03: ele não sai para fechar o buraco de
+      ninguém) — recriado, ele cai no lugar que outro da faixa deixou, ou
+      volta ao mesmo boneco sem ganhar nada;
+    - a ordem continua valendo, e o fixo não entra;
     - e ela bate o sufixo: menos gente fora do boneco, ou a mesma conta com
-      menos recriações. No empate fica o sufixo.
+      menos recriações.
 
     Só na mesa que já está EM ORDEM como está (ninguém recriado): a carta
     renumerada e a menor que chega depois da maior são ordem a consertar, e
@@ -2920,13 +2921,10 @@ def _a_faixa(
     if not _em_ordem([cartas[c] for c in parada.values() if c not in fixos]):
         return melhor
     sentados = [c for _lugar, c in sorted(mesa.items())]
-    lugar_de = {c: lugar for lugar, c in mesa.items()}
     limites = sorted({*(cartas[c] for c in sentados), *(cartas[c] for c in nascer)})
     for i, piso in enumerate(limites):
         for teto in limites[i:]:
             faixa = [c for c in sentados if piso <= cartas[c] <= teto and c not in fixos]
-            if not faixa or any(lugar_de[c] == cartas[c] - 1 for c in faixa):
-                continue
             depois = _a_mesa_depois(mesa, faixa, nascer, cartas, compacta=False)
             if any(lugar != cartas[c] - 1 for lugar, c in depois.items() if c in faixa):
                 continue
