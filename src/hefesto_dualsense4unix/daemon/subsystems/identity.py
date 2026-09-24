@@ -363,6 +363,40 @@ JANELA_DE_ONDA_SEC = 0.5
 #: poder ser declarada estável.
 JANELA_MESA_ESTAVEL_SEC = 4.0
 
+
+def prazo_do_lugar_guardado() -> float:
+    """Por quanto tempo o lugar de quem saiu fica guardado — O-ASSENTO-GUARDADO-NAO-ANDA-01.
+
+    **A decisão (24/09/2026, por delegação dela, ``D-2409-O-ASSENTO-GUARDADO-
+    NAO-ANDA``):** dentro deste prazo ninguém troca de número — o lugar de quem
+    saiu fica vazio e não se fecha; passado o prazo, a NUM-01 volta (um até N).
+    É a linha 17 dela (*"o P2 sai por 20 segundos, volta como P2, e os outros
+    três não trocam de número"*) e a D-2309 (*"o Hefesto manda no número,
+    sempre"*): quem joga não vê o próprio número mudar porque outra pessoa
+    desligou o controle.
+
+    **O prazo tem UM dono, e é o posto de primário** (``PRIMARIO_RESERVA_SEC``,
+    ``core/backend_pydualsense.py``): o posto do P1 e o lugar dos quatro são a
+    mesma promessa, medida na mesma janela — uma piscada de rádio cabe nela, e
+    guardar mais atrapalharia quem desliga o controle e segue jogando com o
+    outro. Antes desta sprint só o P1 tinha prazo; o número dos outros se
+    fechava na hora, na tela, e nas lâmpadas no batimento seguinte.
+
+    **O que o lugar guardado NÃO muda**, medido antes de mudar: o jogo. O vpad
+    de quem ficou não é recriado (``coop.planejar_a_ordem`` só exige cartas em
+    ordem, e um buraco na carta continua em ordem), e com o jogo aberto o SDL
+    não renumera quem ficou. Com o P1 fora, o backend passa o vpad do
+    P1 ao próximo controle na hora (COOP-QUE-NAO-DESMONTA-01), e isso segue
+    igual: o jogo nunca fica sem o controle de quem ficou.
+
+    Import tardio pela razão de sempre deste módulo: ele não carrega o backend
+    (e o ``pydualsense``) só por ser importado.
+    """
+    from hefesto_dualsense4unix.core.backend_pydualsense import PRIMARIO_RESERVA_SEC
+
+    return float(PRIMARIO_RESERVA_SEC)
+
+
 #: R-23: fallbacks da âncora de sessão quando ``/proc`` não está montado
 #: (contêiner/Flatpak). machine-id não é por-boot, e tudo bem: depois do R-23
 #: a âncora é DIAGNÓSTICO, não gate — só precisa ser estável e barata.
@@ -611,6 +645,12 @@ class ControllerIdentityRegistry:
         #: Ver :meth:`_numeros_das_lampadas_locked` para o mecanismo e
         #: :meth:`liberar_as_lampadas` para quem o solta.
         self._lampadas: dict[str, int] = {}
+        #: O-ASSENTO-GUARDADO-NAO-ANDA-01: key de quem SAIU → instante (no
+        #: ``_clock``) em que o lugar dele se libera. Enquanto vale, o lugar
+        #: conta na mesa sem número para ninguém: os outros não andam. Só
+        #: identidade estável guarda lugar — a volátil não tem promessa a
+        #: honrar (D9/MODO-01). Ver :func:`prazo_do_lugar_guardado`.
+        self._guardados: dict[str, float] = {}
         #: mapa mudou desde o último save (o sync persiste no tick lento).
         self._dirty = False
         self._loaded = False
@@ -982,6 +1022,7 @@ class ControllerIdentityRegistry:
                 self._connected.add(key)
                 self._mesa_mexeu_locked()
                 self._marcar_chegada_locked(key)
+                self._retomar_o_lugar_locked(key)
             return self._posicao_locked(key)
 
     def _assign_locked(self, key: str, persistable: bool) -> int:
@@ -1139,6 +1180,80 @@ class ControllerIdentityRegistry:
         with self._lock:
             return self._mesa_congelada
 
+    # ------------------------------------------------------------------
+    # O LUGAR GUARDADO (O-ASSENTO-GUARDADO-NAO-ANDA-01, 24/09/2026)
+    # ------------------------------------------------------------------
+
+    def _guardar_o_lugar_locked(self, key: str) -> None:
+        """``key`` saiu da mesa: o lugar dele fica guardado (já sob o lock).
+
+        Chamado nos DOIS pontos em que alguém sai de ``_connected`` (o
+        ``sync_connected`` e o ``mark_disconnected``). Identidade volátil não
+        guarda lugar: sem chave estável, quem volta pode ser outro aparelho, e
+        guardar empurraria o próximo que chega para cima (o defeito do
+        MODO-01, do lado dos externos).
+        """
+        if key not in self._ordem or key in self._volatile:
+            return
+        prazo = prazo_do_lugar_guardado()
+        self._guardados[key] = self._clock() + prazo
+        logger.info("lugar_guardado", uniq=key, prazo_s=prazo)
+
+    def _retomar_o_lugar_locked(self, key: str) -> None:
+        """``key`` voltou para a mesa: o lugar deixa de estar guardado."""
+        if self._guardados.pop(key, None) is not None:
+            logger.info("lugar_guardado_retomado", uniq=key)
+
+    def _guardados_locked(self) -> list[str]:
+        """Quem tem o lugar guardado AGORA. Leitura pura, sob o lock.
+
+        O prazo é conferido aqui, a cada leitura, e não só no tique: é o que
+        faz a NUM-01 voltar no instante em que o prazo passa, sem esperar
+        ninguém entrar nem sair.
+        """
+        agora = self._clock()
+        return [
+            key
+            for key, ate in self._guardados.items()
+            if ate > agora and key in self._ordem and key not in self._connected
+        ]
+
+    def _vencer_os_guardados_locked(self) -> None:
+        """Esquece o lugar guardado cujo prazo passou (tique lento, sob o lock).
+
+        A leitura já não o conta; isto só limpa a tabela e deixa no diário o
+        desfecho alternativo — como a caducidade do posto de primário, que é
+        ``info`` para o journal poder medir o prazo pelos dois lados.
+        """
+        agora = self._clock()
+        for key in [k for k, ate in self._guardados.items() if ate <= agora]:
+            del self._guardados[key]
+            logger.info("lugar_guardado_venceu", uniq=key)
+
+    def soltar_os_lugares_guardados(self) -> bool:
+        """Solta todo lugar guardado — o gesto de numerar à mão. Devolve se havia.
+
+        A máquina dá o padrão, a escolha dela sobrepõe: quem pede um número na
+        aba (``identity.number.set``) ou renumera a mesa (``identity.renumber``)
+        escolhe entre os números de quem está ligado, e um lugar guardado no
+        meio deles faria o número pedido não ser o número mostrado.
+        """
+        with self._lock:
+            havia = bool(self._guardados)
+            self._guardados.clear()
+        if havia:
+            logger.info("lugares_guardados_soltos_pelo_gesto")
+        return havia
+
+    def guardados(self) -> dict[str, float]:
+        """Cópia de quem tem o lugar guardado agora → segundos que faltam.
+
+        Diagnóstico e testes. Leitura pura.
+        """
+        with self._lock:
+            agora = self._clock()
+            return {k: self._guardados[k] - agora for k in self._guardados_locked()}
+
     def _external_present_ranks_locked(self) -> set[int]:
         """Lugares dos externos que contam para a exibição (já sob o lock).
 
@@ -1176,15 +1291,36 @@ class ControllerIdentityRegistry:
         aritmética aqui é a mesma — o que muda é haver UMA tabela por leitura
         da mesa, que é o que permite provar a unicidade e o que o resto da
         casa consome (``numeros_da_mesa``, ``numero_da_lampada``).
+
+        **O LUGAR GUARDADO senta na conta e não leva número** (O-ASSENTO-
+        GUARDADO-NAO-ANDA-01): quem saiu dentro do prazo entra no ``zip`` com
+        a onda e o posto dele, e a linha dele é descartada no fim. É isso que
+        faz o P3 continuar 3 com o P2 fora, e a unicidade continua estrutural —
+        descartar linha nunca repete número.
         """
-        presentes = [k for k in self._connected if k in self._ordem]
-        if not presentes:
+        return {
+            chave: numero
+            for chave, numero in self._assentos_locked().items()
+            if chave in self._connected
+        }
+
+    def _assentos_locked(self) -> dict[str, int]:
+        """O número de cada ASSENTO da mesa — os presentes e os guardados.
+
+        A conta de sempre (a fila do momento contra os postos ordenados, mais
+        os externos que vêm antes), sobre quem está na mesa E sobre quem saiu
+        há menos de :func:`prazo_do_lugar_guardado`. Passado o prazo, o
+        guardado sai da conta e a NUM-01 volta: um até N entre os presentes.
+        """
+        na_mesa = [k for k in self._connected if k in self._ordem]
+        na_mesa += self._guardados_locked()
+        if not na_mesa:
             return {}
-        postos = sorted(self._ordem[k] for k in presentes)
+        postos = sorted(self._ordem[k] for k in na_mesa)
         externos = self._external_present_ranks_locked()
         numeros: dict[str, int] = {}
         for posicao, (chave, posto) in enumerate(
-            zip(self._ordem_do_momento_locked(presentes), postos, strict=True)
+            zip(self._ordem_do_momento_locked(na_mesa), postos, strict=True)
         ):
             numeros[chave] = posicao + sum(1 for r in externos if r < posto) + 1
         return numeros
@@ -1384,13 +1520,16 @@ class ControllerIdentityRegistry:
         rank = self._ordem.get(key)
         if rank is None:
             return None
-        numero = self._numeros_da_mesa_locked().get(key)
+        # O-ASSENTO-GUARDADO-NAO-ANDA-01: quem saiu dentro do prazo responde
+        # pelo assento que está guardado para ele.
+        numero = self._assentos_locked().get(key)
         if numero is not None:
             return numero
         # Ausente: não está na fila do momento (não chegou), então a
         # pergunta só pode ser respondida pelo gravado — comportamento
         # idêntico ao de antes de D-30.
         presentes = [k for k in self._connected if k in self._ordem]
+        presentes += self._guardados_locked()
         antes = sum(1 for k in presentes if self._ordem[k] < rank)
         antes += sum(1 for r in self._external_present_ranks_locked() if r < rank)
         return antes + 1
@@ -1426,6 +1565,7 @@ class ControllerIdentityRegistry:
             if key in self._connected:
                 self._connected.discard(key)
                 self._mesa_mexeu_locked()
+                self._guardar_o_lugar_locked(key)
             # A marca de chegada FICA (D2/R-15): quem volta recupera a onda
             # que tinha, e com ela o mesmo número.
 
@@ -1514,6 +1654,14 @@ class ControllerIdentityRegistry:
             self._connected = vistos
             if vistos != anteriores:
                 self._mesa_mexeu_locked()
+            # O-ASSENTO-GUARDADO-NAO-ANDA-01: o prazo vencido sai primeiro,
+            # quem saiu agora ganha o lugar guardado, e quem está na mesa
+            # não tem lugar guardado nenhum.
+            self._vencer_os_guardados_locked()
+            for key in anteriores - vistos:
+                self._guardar_o_lugar_locked(key)
+            for key in vistos:
+                self._retomar_o_lugar_locked(key)
             for key, persistable in vivos:
                 if key not in self._ordem:
                     self._assign_locked(key, persistable)
@@ -1556,6 +1704,18 @@ class ControllerIdentityRegistry:
                 for key, rank in self._ordem.items()
                 if key in self._connected
             }
+
+    def lugares_da_mesa(self) -> set[int]:
+        """Lugares da fila que CONTAM na mesa agora: os presentes e os guardados.
+
+        O-ASSENTO-GUARDADO-NAO-ANDA-01: é isto, e não ``present_ranks``, que o
+        registro dos externos conta — com um DualSense fora dentro do prazo, o
+        externo que vem depois dele também não anda. ``present_ranks`` segue
+        dizendo só quem está ligado.
+        """
+        with self._lock:
+            chaves = [*self._connected, *self._guardados_locked()]
+            return {self._ordem[k] for k in chaves if k in self._ordem}
 
     def snapshot_connected(self) -> set[str]:
         """Keys CONECTADAS agora (subconjunto de ``snapshot()``). Leitura pura.
