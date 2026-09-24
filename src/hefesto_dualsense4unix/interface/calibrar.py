@@ -27,6 +27,12 @@ A PALETA E O ESQUELETO SÃO OS DO `mapa.py`, copiados de propósito: as duas sã
 páginas que abrem POR FORA das dez abas, e uma segunda gramática de página
 avulsa na mesma janela seria uma a mais.
 
+**O ESQUELETO SE PARTIU EM 23/09/2026** (A-CALIBRACAO-TEM-O-TAMANHO-DO-PROGRAMA-01):
+a caixa desta página passou a ter o tamanho da janela das abas, lido do
+`topo.html` pela :func:`moldura`, porque ela pediu a Calibrar do tamanho do
+programa. O `mapa.py` continua com o recuo de 22 px e a caixa de 1800 px — são
+duas gramáticas de página avulsa até alguém decidir se o Mapa do controle segue.
+
 OS CONTROLES SÃO DE QUEM ABRE A PÁGINA — 11/09/2026, F3-CALIBRAR
 -----------------------------------------------------------------
 
