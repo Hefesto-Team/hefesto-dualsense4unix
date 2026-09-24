@@ -776,6 +776,13 @@ CLASSE_DE_HUB = "09"
 #: pela razão do :data:`CLASSE_DE_HUB`.
 VID_DA_SONY = "054c"
 
+#: Os fabricantes de CONTROLE — quem vira «um controle» na frase. O mesmo
+#: conjunto de `integrations/mesa_de_radio._VIDS_DE_CONTROLE`, repetido pela
+#: razão do :data:`CLASSE_DE_HUB`, e a régua confere os dois. O produto é para
+#: qualquer controle no cabo, não só o dela; o RELIGAR é que segue só Sony
+#: (:data:`VID_DA_SONY`), porque é o escopo do script de root.
+VIDS_DE_CONTROLE = frozenset({"054c", "057e", "045e", "2dc8", "0f0d", "20d6", "28de"})
+
 #: A tripla do adaptador BT (classe, subclasse, protocolo), a mesma que
 #: `censo_do_barramento._especie` lê como «Bluetooth». O TP-Link UB500 da mesa
 #: dela publica `e0` já no descritor do APARELHO (medido em 24/09); o adaptador
@@ -910,8 +917,8 @@ class Aparelho:
 
     @property
     def e_controle(self) -> bool:
-        """Um aparelho da Sony, encaixado agora — o controle desta entrada."""
-        return self.presente and self.vid.lower() == VID_DA_SONY
+        """Um aparelho de fabricante de controle, encaixado agora."""
+        return self.presente and self.vid.lower() in VIDS_DE_CONTROLE
 
     @property
     def papel(self) -> str:
