@@ -767,7 +767,9 @@ class ExternalIdentityRegistry:
 
         NUM-01: os valores de ``mapping`` são LUGARES NA FILA, não números
         exibidos (o exibido pode nem mudar — ele já contava só os presentes).
+        O-ASSENTO-GUARDADO-NAO-ANDA-01: o gesto solta o lugar guardado.
         """
+        self.soltar_os_lugares_guardados()
         with self._lock:
             changed = False
             for key, novo_rank in mapping.items():
@@ -1180,6 +1182,11 @@ class ExternalLedSync:
             with contextlib.suppress(Exception):
                 # O-ASSENTO-GUARDADO-NAO-ANDA-01: os presentes E os guardados.
                 set_ext(externo.lugares_da_mesa)
+        soltar = getattr(ds, "set_external_release_provider", None)
+        if callable(soltar):
+            with contextlib.suppress(Exception):
+                # E o gesto dela que solta o lugar guardado alcança os dois.
+                soltar(externo.soltar_os_lugares_guardados)
         set_ds = getattr(externo, "set_dualsense_presence_provider", None)
         if callable(set_ds):
             with contextlib.suppress(Exception):

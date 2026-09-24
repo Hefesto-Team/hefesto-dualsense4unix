@@ -370,6 +370,18 @@ class TestOGestoDelaSolta:
 
         assert mesa.tela() == {P1: 1, P3: 2, P4: 3}
 
+    def test_o_gesto_solta_tambem_o_lugar_do_externo(self) -> None:
+        """A fila é uma só: o externo guardado no meio também sai do caminho."""
+        relogio = Relogio()
+        ds, ext = TestAMesaMista._mista(relogio)
+        ds.sync_connected([P1, P2, P3])  # o P3 chega depois do externo
+        ext.sync_connected([])  # e o externo sai
+        assert ds.numeros_da_mesa()[P3] == 4
+
+        IpcHandlersMixin._set_number_locked(ds, ext, P3, 3)
+
+        assert ds.numeros_da_mesa()[P3] == 3, "ela pediu o 3 e a tela mostra outro"
+
 
 @pytest.mark.usefixtures("config_isolado")
 class TestOJogoNaoPerdeOControleDeQuemFicou:
