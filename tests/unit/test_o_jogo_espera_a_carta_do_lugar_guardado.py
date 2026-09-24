@@ -21,8 +21,9 @@ node que ele lê.
 1. o P1 fora por 20 s: o vpad dele de pé e sem dono, cada um que ficou no
    PRÓPRIO vpad (o mesmo objeto de antes), e o jogo vendo o número da tela;
 2. a volta dele: o P1 no vpad 1 de novo, ninguém recriado;
-3. depois do prazo: a NUM-01 — o P2 no vpad 1 com o número 1, e ninguém que
-   ficou perde o controle;
+3. depois do prazo: a NUM-01 — o P2 no vpad 1 com o número 1, ninguém que
+   ficou perde o controle, e quem ficou atrás renasce no boneco do número
+   novo (O-ASSENTO-GUARDADO-NAO-ANDA-03);
 4. o prazo atravessando uma suspensão simulada pelo relógio do kernel: o
    ``CLOCK_BOOTTIME`` anda, o ``CLOCK_MONOTONIC`` não.
 
@@ -461,13 +462,14 @@ class TestOP1ForaPorVinteSegundos:
     ) -> None:
         """Passado o prazo, o P2 assume o vpad do P1 com o número 1, e ninguém fica sem controle.
 
-        Quem ficou atrás do P2 NÃO é recriado: o jogo não perde o controle de
-        ninguém, e as cartas seguem em ordem de lugar (a regra do
-        ``planejar_a_ordem``, que só exige ordem).
+        Quem ficou atrás do P2 renasce no boneco do número novo, e o jogo
+        segue a tela (O-ASSENTO-GUARDADO-NAO-ANDA-03; a régua inteira dessa
+        cura é ``test_o_buraco_de_quem_saiu_se_fecha_no_jogo.py``). Esta
+        linha dizia que eles NÃO eram recriados, porque o ``planejar_a_ordem``
+        só exigia ordem — e era o P3 no boneco 3 com a tela dizendo 2.
         """
         bancada = montar(monkeypatch, quantos, transporte)
-        atras = UNIQS[2:quantos]
-        vpads_de_antes = {u: bancada.vpad_de(u) for u in atras}
+        vpad_do_p1 = bancada.vpad_do_p1
 
         bancada.mesa.levantar(P1)
         passos = int((max(PRIMARIO_RESERVA_SEC, prazo_do_lugar_guardado()) + TIQUE) / TIQUE)
@@ -475,18 +477,16 @@ class TestOP1ForaPorVinteSegundos:
             bancada.tique()
 
         assert bancada.dono_do_vpad_do_p1() == P2
+        assert bancada.daemon._gamepad_device is vpad_do_p1, "a R-04: o vpad do P1 fica"
+        assert vpad_do_p1.vivo
         tela = bancada.a_tela()
         assert tela == {u: n + 1 for n, u in enumerate(UNIQS[1:quantos])}
-        for uniq in atras:
-            assert bancada.vpad_de(uniq) is vpads_de_antes[uniq]
-            assert bancada.vpad_de(uniq).vivo
         jogo = bancada.o_jogo_ve()
         donos = [dono for dono in jogo.values() if dono is not None]
         assert sorted(donos) == sorted(UNIQS[1:quantos]), (
             f"alguém ficou sem controle (ou com dois) depois do prazo: {jogo}"
         )
-        numeros_por_lugar = [tela[jogo[lugar]] for lugar in sorted(jogo) if jogo[lugar]]
-        assert numeros_por_lugar == sorted(numeros_por_lugar)
+        bancada.o_jogo_segue_a_tela()
 
 
 @pytest.mark.usefixtures("config_isolado")
