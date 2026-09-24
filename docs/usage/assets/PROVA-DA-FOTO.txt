@@ -5,7 +5,7 @@
 # idênticas, e sem este recibo o portão das fotos ficaria vermelho
 # para sempre.
 
-ensaio:  2026-09-23 18:41
+ensaio:  2026-09-24 03:19
 abas:    10
 modo:    --todas --publicado --doc
 origem:  src/hefesto_dualsense4unix/interface/paginas
@@ -19,7 +19,7 @@ vista:   recorte da .janela
 # soma sha256 de cada foto, em ordem alfabética
 f9c987db499630eb72f8f78c291ce1e19aed44b541458275279a586e557ba43b  aba-01-jogar.png
 3e1c98757278bab1e545d8090ab704698dcfa1c7b398c199e11e1da6fc57bfd4  aba-02-controles.png
-31ca84eb1a0ee8cd8d892860bde61442d4612253cde727e1108b4b7612f5a6bb  aba-03-gatilhos.png
+bdde59cde54aa35748410bf14f14078404a2bfaa731c1ceb63bd272e314b3faa  aba-03-gatilhos.png
 404e806f930319f2c2a126f16729621539c2d0c433cd52437cdd5dde6e1064d0  aba-04-iluminacao.png
 c4a39cc3ac85e9c2a6faf33539330aef656ca36f2f09dd30407aabfb6b5fca35  aba-05-vibracao.png
 a41abaf839f2d6e4cc1f934a2c1681ae824ae22a9827f6851c1de84c7581f7f9  aba-06-navegacao.png
