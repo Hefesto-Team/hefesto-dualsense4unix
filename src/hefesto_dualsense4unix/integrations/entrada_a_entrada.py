@@ -1043,7 +1043,10 @@ def nome_da_porta(
     coordena). Com o mapa dela vazio, a frase da recusa caía para «Este
     adaptador já tem…» e a seção nova não tinha como dizer ONDE. ``None`` fica
     para o que não é porta: chave vazia, fora das duas formas, ou o lugar do
-    adaptador embutido, que não pendura em entrada nenhuma.
+    adaptador embutido, que não pendura em entrada nenhuma. E a entrada do
+    próprio computador, numa máquina com dois controladores USB, leva o
+    barramento — «Entrada 1-4» e «Entrada 3-4», e não duas «Entrada 4»
+    (:func:`_rotulo_de_reserva`, STORM-USB-02).
 
     ``so_o_declarado=True`` devolve ``None`` em vez do ``devpath``: é para quem
     tem um texto próprio e mais rico para a porta sem nome — a coluna «Onde
@@ -1057,7 +1060,11 @@ def nome_da_porta(
         nome = nome_do_lugar(chave, maquina=documento, controladores=controladores)
         if nome or so_o_declarado:
             return nome
-        return rotulo_do_numero(partes[1])
+        return _rotulo_de_reserva(
+            partes[0],
+            partes[1],
+            controladores if controladores is not None else _controladores_do_sistema(),
+        )
     barramentos = (
         controladores if controladores is not None else _controladores_do_sistema()
     )
@@ -1071,7 +1078,8 @@ def nome_da_porta(
         return f"{PALAVRA_DA_ENTRADA} {numero}"
     if so_o_declarado or not FORMA_DO_CAMINHO.match(chave):
         return None
-    return rotulo_do_numero(chave.partition("-")[2])
+    busnum, _, devpath = chave.partition("-")
+    return _rotulo_de_reserva(barramentos.get(int(busnum), ""), devpath, barramentos)
 
 
 def rotulo_do_numero(numero: str) -> str | None:
@@ -1085,6 +1093,34 @@ def rotulo_do_numero(numero: str) -> str | None:
     return f"{PALAVRA_DA_ENTRADA} {numero}" if numero else None
 
 
+def _rotulo_de_reserva(
+    controlador: str, devpath: str, controladores: Mapping[int, str]
+) -> str | None:
+    """O rótulo da porta sem nome e sem número — e o DESEMPATE — STORM-USB-02.
+
+    O rótulo de reserva é o ``devpath``, como o desenho aprovado mostra
+    («Entrada 4.1.4», TRANSPLANTE-DA-SECAO-01). Mas a entrada do PRÓPRIO
+    computador — o ``devpath`` de um número só — se repete em todo controlador
+    USB: cada hub-raiz numera as entradas dele a partir de 1. Na mesa dela, com
+    dois controladores, o ``1-4`` (o adaptador do rádio) e o ``3-4`` (o hub)
+    saíam os dois «Entrada 4», no doctor e na seção do rádio.
+
+    O DONO DO NOME DESEMPATA: numa máquina com mais de um controlador, a entrada
+    do computador leva o barramento na frente — «Entrada 1-4», «Entrada 3-4»,
+    o caminho que o kernel dá (o do lado 2.0, onde o DualSense e os adaptadores
+    enumeram: o ``4-4`` do lado 3.x é a mesma entrada que o ``3-4``). Atrás de
+    um hub a cadeia já separa, e o rótulo continua o do desenho. Com UM
+    controlador, ou sem saber de qual é, nada muda.
+    """
+    if not devpath:
+        return None
+    if "." not in devpath and len(set(controladores.values())) > 1:
+        barramentos = sorted(n for n, dono in controladores.items() if dono == controlador)
+        if barramentos:
+            return rotulo_do_numero(f"{barramentos[0]}-{devpath}")
+    return rotulo_do_numero(devpath)
+
+
 def rotulo_da_entrada(
     lugar: str,
     *,
@@ -1095,7 +1131,8 @@ def rotulo_da_entrada(
 
     É o que a seção do rádio põe ao lado do nome que ela deu (o campo editável
     mostra o nome; a marca da face mostra a entrada). ``None`` = não é porta:
-    o lugar do adaptador embutido, que não pendura em entrada nenhuma.
+    o lugar do adaptador embutido, que não pendura em entrada nenhuma. O
+    rótulo de reserva desempata como o do :func:`nome_da_porta`.
     """
     partes = partes_do_lugar(lugar)
     if partes is None:
@@ -1105,7 +1142,7 @@ def rotulo_da_entrada(
     numero = _numero_conhecido(documento, lugar, "", barramentos)
     if numero is not None:
         return f"{PALAVRA_DA_ENTRADA} {numero}"
-    return rotulo_do_numero(partes[1])
+    return _rotulo_de_reserva(partes[0], partes[1], barramentos)
 
 
 def face_do_lugar(
