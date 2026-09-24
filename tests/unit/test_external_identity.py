@@ -75,6 +75,20 @@ def _hermetico(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return target
 
 
+class _Relogio:
+    """Relógio monotônico de mentira — o prazo do lugar guardado sem `sleep`."""
+
+    def __init__(self) -> None:
+        self.agora = 1000.0
+
+    def __call__(self) -> float:
+        return self.agora
+
+    def passar_o_prazo(self) -> None:
+        """O lugar de quem saiu deixa de estar guardado (O-ASSENTO-GUARDADO-NAO-ANDA-01)."""
+        self.agora += id_mod.prazo_do_lugar_guardado() + 1.0
+
+
 def _arquivo(tmp_path: Path) -> Path:
     return tmp_path / "config" / "controllers.json"
 
@@ -710,11 +724,15 @@ def test_poda_nao_toca_reserva_de_mac_de_hardware() -> None:
     "A config que eu deixo nunca é respeitada" é queixa antiga; a poda vale só
     para identidade VOLÁTIL, que não identifica aparelho nenhum.
     """
-    r = ExternalIdentityRegistry()
+    relogio = _Relogio()
+    r = ExternalIdentityRegistry(clock=relogio)
     assert r.slot_for(MAC_A, reserve=2) == 3
     for _ in range(20):
         r.sync_connected([])
     assert r.snapshot() == {_KEY_A: 3}, "MAC de hardware ausente mantém o lugar"
+    # O-ASSENTO-GUARDADO-NAO-ANDA-01: dentro do prazo o lugar de A fica
+    # guardado e B nasce 4; a régua de baixo mede depois do prazo.
+    relogio.passar_o_prazo()
     # NUM-01: o que ninguém herda é o LUGAR (B entra no 4). O NÚMERO exibido
     # de B é 3 justamente porque A não está na mesa — antes desta frente o
     # ausente segurava o número e empurrava o presente para cima, que é o
@@ -731,11 +749,13 @@ def test_dois_aparelhos_do_mesmo_oui_nunca_se_fundem() -> None:
     número — a queixa "dois player 1" por outro caminho. A cura desta frente
     não olha OUI nenhum, e este caso trava isso.
     """
-    r = ExternalIdentityRegistry()
+    relogio = _Relogio()
+    r = ExternalIdentityRegistry(clock=relogio)
     assert MAC_A[:8] == MAC_B[:8], "mesma OUI, aparelhos distintos"
     assert r.slot_for(MAC_A, reserve=2) == 3
     r.sync_connected([MAC_A])
     r.sync_connected([])  # o primeiro dorme
+    relogio.passar_o_prazo()  # e o lugar dele deixou de estar guardado
     assert r.slot_for(MAC_B, reserve=2) == 3, "B é o 3 porque A não está na mesa"
     assert r.snapshot() == {_KEY_A: 3, MAC_B.replace(":", ""): 4}, (
         "o segundo NÃO herda o lugar 3 do primeiro"

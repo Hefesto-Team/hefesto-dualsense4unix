@@ -371,7 +371,10 @@ class TestAEscolhaSobreviveAoTempo:
 
         ds.mark_disconnected(PURPLE)
         relogio.anda(JANELA_DE_ONDA_SEC + 0.1)
-        assert ds.numeros_da_mesa() == {BLUE: 1, COSMIC: 2}
+        # O-ASSENTO-GUARDADO-NAO-ANDA-01 (24/09/2026): dentro do prazo o lugar
+        # 1, que a escolha deu ao Purple, fica guardado — ninguém anda. Era
+        # `{BLUE: 1, COSMIC: 2}` quando a fila se fechava na hora.
+        assert ds.numeros_da_mesa() == {BLUE: 2, COSMIC: 3}
         ds.sync_connected([COSMIC, BLUE, PURPLE])
         relogio.anda(JANELA_MESA_ESTAVEL_SEC + 0.1)
         ds.numeros_da_mesa()

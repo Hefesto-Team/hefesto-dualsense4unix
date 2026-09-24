@@ -424,8 +424,13 @@ class TestQuemCaiEVolta:
 
         É a pergunta que a sprint deixou para ela (*"o que acontece com um
         replug no meio da partida?"*) respondida em código: nada acontece.
-        E, enquanto o azul está fora, os três que ficaram fecham 1..3 sem
-        buraco — a compactação automática do NUM-01 continua valendo.
+
+        TROCA DELIBERADA DE CONTRATO, 24/09/2026 (O-ASSENTO-GUARDADO-NAO-ANDA-01,
+        ``D-2409-O-ASSENTO-GUARDADO-NAO-ANDA``): esta régua dizia que, enquanto
+        o azul (o P2) está fora, os três que ficaram fecham 1..3. Agora, dentro
+        do prazo do lugar guardado, NINGUÉM anda — é a linha 17 dela. A
+        compactação do NUM-01 continua valendo, DEPOIS do prazo, e a segunda
+        metade desta régua a mede.
         """
         gravar_a_fila_dela(config_isolado)
         relogio = Relogio()
@@ -436,11 +441,19 @@ class TestQuemCaiEVolta:
         reg.sync_connected(list(ORDEM_DE_CONEXAO))
 
         sobraram = [VERMELHO, BRANCO, ROXO]
-        reg.sync_connected(sobraram)  # o azul caiu
-        assert numeros(reg, *sobraram) == {VERMELHO: 1, BRANCO: 2, ROXO: 3}
+        reg.sync_connected(sobraram)  # o azul (o P2) caiu
+        assert numeros(reg, *sobraram) == {VERMELHO: 1, BRANCO: 3, ROXO: 4}
 
         relogio.avancar(20.0)
         reg.sync_connected(list(ORDEM_DE_CONEXAO))  # e voltou
+        assert numeros(reg, *ORDEM_DE_CONEXAO) == O_QUE_ELA_PEDIU
+
+        # Passado o prazo, a NUM-01 volta: os três fecham 1..3 sem buraco…
+        reg.sync_connected(sobraram)
+        relogio.avancar(id_mod.prazo_do_lugar_guardado() + 1.0)
+        assert numeros(reg, *sobraram) == {VERMELHO: 1, BRANCO: 2, ROXO: 3}
+        # …e o azul que volta, mesmo depois do prazo, recupera o dele (D2).
+        reg.sync_connected(list(ORDEM_DE_CONEXAO))
         assert numeros(reg, *ORDEM_DE_CONEXAO) == O_QUE_ELA_PEDIU
 
     def test_volta_recupera_o_lugar_mesmo_sem_a_mesa_ter_congelado(
