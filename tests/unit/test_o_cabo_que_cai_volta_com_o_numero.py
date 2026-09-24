@@ -65,7 +65,10 @@ AS MORDIDAS (arranque a cura, veja reprovar, devolva):
 * :func:`test_quem_religa_limpa_os_dois_contadores` — volte o ``rm`` a apagar
   só o contador da passada;
 * :func:`test_o_minus_71_de_outro_boot_e_lido_pelo_lugar` — tire a tradução
-  do ``_porta_de_hoje`` e o -71 de ontem cai na entrada errada.
+  do ``_porta_de_hoje`` e o -71 de ontem cai na entrada errada;
+* :func:`test_como_root_a_ponte_so_roda_o_religar_que_e_so_do_root` — tire a
+  guarda de dono (ou a de modo) do ``_o_religar`` e o religar gravável por
+  outra conta passa a rodar como root.
 
 Nada aqui toca o aparelho dela: nenhum ``/sys`` de verdade, nenhum sudo de
 verdade, nenhum journal (o log do religar vai para um arquivo do ``tmp_path``).
@@ -976,6 +979,75 @@ def test_sem_o_religar_ao_lado_a_ponte_recusa(tmp_path: Path) -> None:
     feito = _ponte(Bancada(tmp_path), "religar-orfaos", ponte=sozinha)
     assert feito.returncode == 1
     assert "não está ao lado desta ponte" in feito.stderr
+
+
+#: O root de mentira: o ``id -u`` diz 0, e o ``stat -c %u`` diz o dono que a
+#: régua pede (``HEFESTO_TESTE_DONO``); o resto vai para os de verdade.
+ID_DE_MENTIRA = '#!/usr/bin/env bash\n[[ "${1:-}" == "-u" ]] && { echo 0; exit 0; }\nexec /usr/bin/id "$@"\n'
+STAT_DE_MENTIRA = (
+    "#!/usr/bin/env bash\n"
+    'if [[ "${1:-}" == "-c" && "${2:-}" == "%u" && -n "${HEFESTO_TESTE_DONO:-}" ]]; then\n'
+    '    echo "${HEFESTO_TESTE_DONO}"; exit 0\n'
+    "fi\n"
+    'exec /usr/bin/stat "$@"\n'
+)
+
+
+@pytest.mark.parametrize(
+    ("dono", "modo", "roda"),
+    [("1000", 0o755, False), ("0", 0o775, False), ("0", 0o757, False), ("0", 0o755, True)],
+    ids=["de-outra-conta", "gravavel-pelo-grupo", "gravavel-por-todos", "so-do-root"],
+)
+def test_como_root_a_ponte_so_roda_o_religar_que_e_so_do_root(
+    tmp_path: Path, dono: str, modo: int, roda: bool
+) -> None:
+    """A regra do sudo abre o verbo sem senha, e o que ele RODA é o arquivo ao lado.
+
+    Um religar que outra conta pode gravar seria root para quem o gravasse: como
+    root, a ponte só o roda se ele for do root e ninguém mais puder escrever
+    nele. O root aqui é de mentira (o ``id`` e o ``stat`` no PATH), e o par
+    ponte-religar é uma cópia com o modo que a régua pede — o do disco é da conta
+    de quem roda a suíte.
+
+    A MORDIDA: tire a guarda de dono e de modo do ``_o_religar`` e as três
+    recusas viram religar.
+    """
+    bancada = Bancada(tmp_path)
+    bancada.cai_o_cabo(P2)
+    lib = tmp_path / "lib"
+    lib.mkdir()
+    ponte = lib / PONTE.name
+    ponte.write_text(PONTE.read_text(encoding="utf-8"), encoding="utf-8")
+    religar = lib / RELIGAR.name
+    religar.write_text(RELIGAR.read_text(encoding="utf-8"), encoding="utf-8")
+    religar.chmod(modo)
+    falsos = tmp_path / "bin-de-root"
+    falsos.mkdir()
+    for nome, texto in (("id", ID_DE_MENTIRA), ("stat", STAT_DE_MENTIRA)):
+        (falsos / nome).write_text(texto, encoding="utf-8")
+        (falsos / nome).chmod(0o755)
+    env = {
+        **bancada.ambiente(),
+        "PATH": f"{falsos}{os.pathsep}{os.environ.get('PATH', '/usr/bin:/bin')}",
+        "HEFESTO_TESTE_DONO": dono,
+        "BASH_ENV": str(bancada.kernel),
+    }
+    feito = subprocess.run(
+        ["bash", str(ponte), "religar-orfaos"],
+        capture_output=True,
+        text=True,
+        check=False,
+        env=env,
+        timeout=60,
+    )
+    if roda:
+        assert feito.returncode == 0, feito.stderr
+        assert P2 in bancada.ligados(), " | ".join(bancada.frases())
+    else:
+        assert feito.returncode == 1, feito.stdout + feito.stderr
+        assert "não é só do root" in feito.stderr
+        assert P2 not in bancada.ligados()
+        assert bancada.frases() == []
 
 
 def test_a_regra_do_sudo_tem_o_verbo_sem_argumento() -> None:
