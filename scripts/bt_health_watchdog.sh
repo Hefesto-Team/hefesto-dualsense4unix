@@ -375,8 +375,40 @@ _pegar_a_trava || exit 0
 _ACTIVE=/usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh
 [[ -x "${_ACTIVE}" ]] && "${_ACTIVE}" --quiet 2>/dev/null || true
 
-command -v busctl >/dev/null 2>&1 || { log "busctl ausente — nada a vigiar"; exit 0; }
-systemctl is-active --quiet bluetooth.service || { log "bluetooth.service inativo — nada a vigiar"; exit 0; }
+# --- vigia 4, a definição: controle ÓRFÃO por probe perdida (REBIND-PROBE-01) ---
+# Quando dois controles sobem quase juntos no mesmo adaptador, o segundo pode
+# perder o canal de controle L2CAP: o GET_REPORT expira no BlueZ
+# (REPORT_REQ_TIMEOUT = 3 s), o uhid entrega -EIO ao driver e a probe morre. O
+# device fica em /sys/bus/hid/devices SEM driver — sem hidraw, sem input, sem
+# LED. É contenção TRANSIENTE: passada a janela, um rebind no driver VANILLA
+# ressuscita o controle (provado ao vivo 25/07 12:06). Com o alvo de 4
+# controles por Bluetooth, isso deixa de ser exceção.
+# A lógica (escopo estreito + guarda contra laço) fica toda no script
+# dedicado; aqui só chamamos. --quiet: em passagem normal não há órfão e o
+# watchdog não deve virar ruído de 2 em 2 min.
+#
+# O CABO (STORM-USB-01, 24/09/2026): o script ganhou o ramo do controle do cabo
+# que perde a HID num -71, e esse ramo não depende de rádio. Por isso a função
+# nasce ANTES das duas guardas abaixo, e cada guarda a chama antes de sair:
+# numa máquina sem adaptador (o `bluetooth.service` fica inativo pela condição
+# dele) ou sem `busctl`, o tique saía aqui, e o controle do cabo nunca voltava
+# sozinho — a cura valia só para quem tem Bluetooth.
+vigia_rebind_orfaos() {
+    local _s
+    for _s in \
+        /usr/local/lib/hefesto-dualsense4unix/bt_rebind_orphans.sh \
+        "$(dirname "$(readlink -f "$0")")/bt_rebind_orphans.sh" \
+    ; do
+        if [[ -x "${_s}" ]]; then
+            "${_s}" --quiet || true
+            return 0
+        fi
+    done
+    return 0
+}
+
+command -v busctl >/dev/null 2>&1 || { log "busctl ausente — nada a vigiar no rádio"; vigia_rebind_orfaos; exit 0; }
+systemctl is-active --quiet bluetooth.service || { log "bluetooth.service inativo — nada a vigiar no rádio"; vigia_rebind_orfaos; exit 0; }
 
 # --- vigia 1: estado doente ---------------------------------------------------
 # Recusa SÓ conta como doença quando o MAC recusado EXISTE como objeto no
@@ -536,30 +568,8 @@ done <<<"${DEVICE_PATHS}"
 vigia_sdp_cache
 
 # --- vigia 4: controle ÓRFÃO por probe perdida (REBIND-PROBE-01, 25/07) ------
-# Quando dois controles sobem quase juntos no mesmo adaptador, o segundo pode
-# perder o canal de controle L2CAP: o GET_REPORT expira no BlueZ
-# (REPORT_REQ_TIMEOUT = 3 s), o uhid entrega -EIO ao driver e a probe morre. O
-# device fica em /sys/bus/hid/devices SEM driver — sem hidraw, sem input, sem
-# LED. É contenção TRANSIENTE: passada a janela, um rebind no driver VANILLA
-# ressuscita o controle (provado ao vivo 25/07 12:06). Com o alvo de 4
-# controles por Bluetooth, isso deixa de ser exceção.
-# A lógica (escopo estreito + guarda contra laço) fica toda no script
-# dedicado; aqui só chamamos. --quiet: em passagem normal não há órfão e o
-# watchdog não deve virar ruído de 2 em 2 min.
-vigia_rebind_orfaos() {
-    local _s
-    for _s in \
-        /usr/local/lib/hefesto-dualsense4unix/bt_rebind_orphans.sh \
-        "$(dirname "$(readlink -f "$0")")/bt_rebind_orphans.sh" \
-    ; do
-        if [[ -x "${_s}" ]]; then
-            "${_s}" --quiet || true
-            return 0
-        fi
-    done
-    return 0
-}
-
+# A função mora lá em cima, antes das guardas do Bluetooth: o ramo do CABO dela
+# vale também sem rádio nenhum (STORM-USB-01).
 vigia_rebind_orfaos
 
 # --- vigia 5: adaptador travado em laço (O-DIARIO-DO-RADIO-01) ---------------
