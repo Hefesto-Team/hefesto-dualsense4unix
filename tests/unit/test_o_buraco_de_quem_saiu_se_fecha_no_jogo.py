@@ -27,6 +27,12 @@ tira do NÚMERO, e é mais frouxo que o real justamente na volta tardia do P1 �
 ver :class:`TestAVoltaTardiaDoP1`. A conferência passou o dublê honesto para a
 bancada da O-ASSENTO-02, e as réguas dela também medem com ele.
 
+**E o JOGO é visto de fora** (``JogoPorFora``, na bancada da O-ASSENTO-02): o
+lugar de cada vpad sai da ordem em que ele nasce e morre, e não da mesa que o
+co-op guarda, que é a saída do próprio produto. Medido na conferência: com o
+co-op só reescrevendo a própria anotação, sem recriar vpad nenhum, as 56
+réguas da O-ASSENTO-02 passavam todas.
+
 AS MORDIDAS (24/09/2026, cada uma devolvida com o md5 conferido):
 
 - ``_fora_do_boneco`` devolvendo sempre 0 (a regra de antes, só a ordem)

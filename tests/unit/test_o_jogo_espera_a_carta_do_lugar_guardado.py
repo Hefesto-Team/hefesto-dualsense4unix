@@ -40,7 +40,11 @@ AS MORDIDAS (24/09/2026, cada uma devolvida com o md5 conferido):
   BOTÕES (``evdev_buttons_once``) — a régua que lia só o ``read_state()``
   passava 47 de 47 sobre ela (conferência de 24/09/2026);
 - o topo da vaga de volta a ``battery_pct=0`` reprova
-  :class:`TestOTopoDoEstadoNaVaga`.
+  :class:`TestOTopoDoEstadoNaVaga`;
+- (conferência da O-ASSENTO-GUARDADO-NAO-ANDA-03) o co-op reescrevendo a
+  própria mesa sem recriar vpad nenhum reprova 9 desta régua, entre elas as
+  seis de ``test_depois_do_prazo_vale_a_num01``: o jogo agora é lido de fora
+  (:class:`JogoPorFora`), e com ele lido da mesa guardada as 56 passavam.
 
 Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5 zerados.
 """
@@ -48,6 +52,7 @@ from __future__ import annotations
 
 import contextlib
 import time
+from collections.abc import Callable
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -204,6 +209,71 @@ def config_isolado(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return tmp_path
 
 
+class JogoPorFora:
+    """O jogo visto de FORA do co-op: o lugar de cada vpad pela ordem em que ele nasce e morre.
+
+    É o modelo do fonte do SDL que a STEAM-NO-FISICO-01 mediu, aplicado ao
+    ciclo de vida dos vpads da bancada, e não à mesa que o co-op GUARDA
+    (``_mesa_do_jogo``), que é a saída do próprio produto (conferência da
+    O-ASSENTO-GUARDADO-NAO-ANDA-03). Uma régua que lesse a mesa guardada
+    passava com o co-op reescrevendo a própria anotação sem recriar vpad
+    nenhum: medido, as 56 desta régua passavam assim.
+
+    Com o jogo aberto, o vpad que nasce toma o menor lugar livre e o que morre
+    libera o dele; sem jogo, o que abrir depois enumera os vivos na ordem em
+    que nasceram. ``aberto`` é perguntado a cada evento, e o jogo que abre
+    enumera quem já está de pé.
+    """
+
+    def __init__(self, aberto: Callable[[], bool]) -> None:
+        self._aberto = aberto
+        self._estava_aberto = False
+        self.vivos: list[_VpadFalso] = []
+        self.lugares: dict[int, _VpadFalso] = {}
+
+    def _acompanhar(self) -> bool:
+        aberto = self._aberto()
+        if not aberto or not self._estava_aberto:
+            self.lugares = dict(enumerate(self.vivos))
+        self._estava_aberto = aberto
+        return aberto
+
+    def nasceu(self, vpad: _VpadFalso) -> None:
+        self._acompanhar()
+        self.vivos.append(vpad)
+        lugar = 0
+        while lugar in self.lugares:
+            lugar += 1
+        self.lugares[lugar] = vpad
+        self._acompanhar()
+
+    def morreu(self, vpad: _VpadFalso) -> None:
+        self._acompanhar()
+        self.vivos = [v for v in self.vivos if v is not vpad]
+        for lugar, quem in list(self.lugares.items()):
+            if quem is vpad:
+                del self.lugares[lugar]
+        self._acompanhar()
+
+    def ve(self) -> tuple[bool, dict[int, _VpadFalso]]:
+        """(o jogo está aberto?, lugar -> vpad) agora."""
+        return self._acompanhar(), dict(self.lugares)
+
+
+class _VpadDaMesa(_VpadFalso):
+    """O vpad da bancada de queda que avisa o jogo quando nasce e quando morre."""
+
+    def __init__(self, player: int, jogo: JogoPorFora) -> None:
+        super().__init__(player)
+        self._jogo = jogo
+        jogo.nasceu(self)
+
+    def stop(self) -> None:
+        if self.vivo:
+            self._jogo.morreu(self)
+        super().stop()
+
+
 class MesaDoJogo:
     """Backend real + co-op real + registro de identidade real, e um jogo aberto.
 
@@ -230,7 +300,11 @@ class MesaDoJogo:
         # A leitura do 0x05 é hidraw de verdade e não tem nada a ver com a vaga.
         self.inst.read_calibration = lambda _uniq=None: None  # type: ignore[assignment]
         self.reg = ControllerIdentityRegistry(clock=relogio)
-        self.vpad_do_p1 = _VpadFalso(1)
+        # O vpad do P1 nasce antes do daemon de mentira: até lá, jogo fechado.
+        self.jogo = JogoPorFora(
+            lambda: getattr(getattr(self, "daemon", None), "display_authority", None) == "game"
+        )
+        self.vpad_do_p1 = _VpadDaMesa(1, self.jogo)
         self.vpads: list[_VpadFalso] = [self.vpad_do_p1]
         self.daemon = SimpleNamespace(
             # A configuração de verdade do daemon, com os padrões dela.
@@ -277,7 +351,7 @@ class MesaDoJogo:
         invariante «sem MAC repetido» sempre que os dois números fossem
         diferentes (conferência da O-ASSENTO-GUARDADO-NAO-ANDA-03).
         """
-        vpad = _VpadFalso(player)
+        vpad = _VpadDaMesa(player, self.jogo)
         vpad.mac = vpad_mac(identity, player)
         vpad.identidade = identity  # type: ignore[attr-defined]
         self.vpads.append(vpad)
@@ -318,10 +392,37 @@ class MesaDoJogo:
         self.conferir_invariantes()
 
     def conferir_invariantes(self) -> None:
-        """As duas da bancada de queda, em TODO instante: sem EBUSY, sem MAC repetido."""
+        """As duas da bancada de queda, em TODO instante: sem EBUSY, sem MAC repetido.
+
+        E a terceira (conferência da O-ASSENTO-03): a mesa que o co-op guarda é a
+        que o jogo vê por fora — o co-op planeja em cima dela, e uma anotação
+        que não corresponde a vpad nenhum faria o plano mirar um jogo que não
+        existe.
+        """
         assert not self.mesa.ebusy, "; ".join(self.mesa.ebusy)
         macs = [v.mac for v in self.vpads if v.vivo]
         assert len(macs) == len(set(macs)), f"dois vpads vivos com o mesmo MAC: {macs}"
+        if not self.coop.should_be_active():
+            return  # sem co-op o co-op não guarda mesa nenhuma
+        guardada = {
+            lugar: (
+                self.daemon._gamepad_device
+                if chave == _CHAVE_DO_P1
+                else getattr(self.coop._players.get(chave), "vpad", None)
+            )
+            for lugar, chave in self.coop._mesa_do_jogo.items()
+        }
+        aberto, por_fora = self.jogo.ve()
+        if not aberto:
+            # Sem jogo o lugar é só a ordem, e o co-op compacta no `sync`.
+            guardada = dict(enumerate(v for _lugar, v in sorted(guardada.items())))
+        assert {lugar: id(v) for lugar, v in guardada.items()} == {
+            lugar: id(v) for lugar, v in por_fora.items()
+        }, (
+            "a mesa que o co-op guarda não é a que o jogo vê: guardada "
+            f"{ {lugar: getattr(v, 'identidade', v) for lugar, v in guardada.items()} }, "
+            f"por fora { {lugar: getattr(v, 'identidade', v) for lugar, v in por_fora.items()} }"
+        )
 
     # -- a leitura --------------------------------------------------------
 
@@ -346,20 +447,25 @@ class MesaDoJogo:
         return next(iter(donos), None)
 
     def o_jogo_ve(self) -> dict[int, str | None]:
-        """Jogador N do jogo → o controle que alimenta o vpad daquele lugar."""
+        """Jogador N do jogo → o controle que alimenta o vpad daquele lugar.
+
+        O lugar vem do :class:`JogoPorFora` — o ciclo de vida dos vpads —, e não
+        da mesa que o co-op guarda (conferência da O-ASSENTO-03).
+        """
         fora: dict[int, str | None] = {}
-        for lugar, chave in sorted(self.coop._mesa_do_jogo.items()):
-            if chave == _CHAVE_DO_P1:
-                fora[lugar + 1] = self.dono_do_vpad_do_p1() if self.vpad_do_p1.vivo else None
+        for lugar, vpad in sorted(self.jogo.ve()[1].items()):
+            if vpad is self.daemon._gamepad_device:
+                fora[lugar + 1] = self.dono_do_vpad_do_p1()
                 continue
-            jogador = self.coop._players.get(chave)
-            vivo = (
-                jogador is not None
-                and jogador.vpad is not None
-                and bool(getattr(jogador.vpad, "vivo", False))
-                and not jogador.cedido_ao_primario
+            dono = next(
+                (
+                    chave
+                    for chave, jogador in self.coop._players.items()
+                    if jogador.vpad is vpad and not jogador.cedido_ao_primario
+                ),
+                None,
             )
-            fora[lugar + 1] = chave if vivo else None
+            fora[lugar + 1] = dono
         return fora
 
     def a_tela(self) -> dict[str, int]:
