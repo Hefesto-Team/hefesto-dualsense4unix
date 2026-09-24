@@ -33,13 +33,22 @@ AS MORDIDAS (arranque a cura, veja reprovar, devolva):
 * :func:`test_a_arvore_de_25_07_nao_varre_o_cabo_de_quem_roda` — tire o ramo
   que zera a raiz do cabo quando só o HID foi desviado (morde pelo texto; o
   porquê está nela).
+* :func:`test_sem_radio_o_tique_ainda_religa_o_cabo` (conferência de 24/09) —
+  tire o ``vigia_rebind_orfaos`` de uma das duas guardas do Bluetooth no
+  watchdog, ou devolva a definição dela para depois das guardas, e ela
+  reprova: numa máquina sem adaptador o tique saía antes da vigia 4, e o cabo
+  nunca era religado.
 """
 
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
+import textwrap
 from pathlib import Path
+
+import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = REPO_ROOT / "scripts" / "bt_rebind_orphans.sh"
@@ -280,3 +289,100 @@ def test_o_religar_anda_pelo_caminho_root_que_ja_existe() -> None:
     assert "/usr/local/lib/hefesto-dualsense4unix/bt_rebind_orphans.sh" in (
         UNINSTALL.read_text(encoding="utf-8")
     )
+
+
+# --- o tique sem rádio -----------------------------------------------------------
+
+
+def _codigo_do_watchdog() -> list[str]:
+    """As linhas de CÓDIGO do watchdog, do fonte — comentário vira linha vazia."""
+    return [
+        "" if linha.lstrip().startswith("#") else linha
+        for linha in WATCHDOG.read_text(encoding="utf-8").splitlines()
+    ]
+
+
+def _as_guardas_do_radio() -> list[str]:
+    """As duas guardas do Bluetooth do watchdog, copiadas do FONTE a cada corrida."""
+    guardas = [
+        linha
+        for linha in _codigo_do_watchdog()
+        if linha.startswith(("command -v busctl ", "systemctl is-active --quiet bluetooth.service"))
+    ]
+    assert len(guardas) == 2, f"as duas guardas do rádio mudaram de forma: {guardas}"
+    return guardas
+
+
+@pytest.mark.parametrize("falta", ["o busctl", "o bluetooth.service"])
+def test_sem_radio_o_tique_ainda_religa_o_cabo(tmp_path: Path, falta: str) -> None:
+    """Numa máquina sem Bluetooth, o tique ainda chama a vigia que religa o cabo.
+
+    Achado da conferência (24/09): as duas guardas do watchdog (``busctl``
+    ausente, ``bluetooth.service`` inativo — o estado de todo computador sem
+    adaptador) saíam com ``exit 0`` ANTES da vigia 4. O ramo do cabo morava num
+    script que, nessa máquina, nunca rodava — a cura só valia para quem tem
+    rádio, e a matriz dela diz que nenhuma decisão é só de um transporte.
+
+    Roda as guardas DO FONTE, com a vigia trocada por um eco: o tique de
+    verdade chamaria o ``bt_active_mode.sh`` instalado e falaria com o rádio
+    dela, e isso nenhuma régua faz.
+    """
+    roteiro = textwrap.dedent(
+        """
+        set -euo pipefail
+        log() { :; }
+        vigia_rebind_orfaos() { echo CHAMOU-A-VIGIA; }
+        """
+    )
+    if falta == "o bluetooth.service":
+        roteiro += "busctl() { :; }\nsystemctl() { return 3; }\n"
+    roteiro += "\n".join(_as_guardas_do_radio()) + "\necho PASSOU-DAS-GUARDAS\n"
+    bash = shutil.which("bash") or "/bin/bash"
+    r = subprocess.run(
+        [bash, "-c", roteiro],
+        capture_output=True,
+        text=True,
+        check=False,
+        env={"PATH": str(tmp_path)},  # vazio: sem busctl, sem systemctl de verdade
+    )
+    assert r.returncode == 0, r.stderr
+    assert "PASSOU-DAS-GUARDAS" not in r.stdout, "controle: a guarda tinha de fechar o tique"
+    assert "CHAMOU-A-VIGIA" in r.stdout, (
+        f"sem {falta}, o tique sai sem religar o controle do cabo:\n{r.stdout}"
+    )
+
+
+def test_com_radio_as_guardas_deixam_o_tique_seguir(tmp_path: Path) -> None:
+    """O controle do lado de lá: com o rádio de pé, as guardas não chamam nada."""
+    roteiro = textwrap.dedent(
+        """
+        set -euo pipefail
+        log() { :; }
+        vigia_rebind_orfaos() { echo CHAMOU-A-VIGIA; }
+        busctl() { :; }
+        systemctl() { return 0; }
+        """
+    ) + "\n".join(_as_guardas_do_radio()) + "\necho PASSOU-DAS-GUARDAS\n"
+    r = subprocess.run(
+        [shutil.which("bash") or "/bin/bash", "-c", roteiro],
+        capture_output=True,
+        text=True,
+        check=False,
+        env={"PATH": str(tmp_path)},
+    )
+    assert "PASSOU-DAS-GUARDAS" in r.stdout, r.stdout + r.stderr
+    assert "CHAMOU-A-VIGIA" not in r.stdout, r.stdout
+
+
+def test_a_vigia_existe_antes_das_guardas_e_roda_depois_delas() -> None:
+    """A função nasce ANTES das guardas (senão a guarda chamaria um nome que não
+    existe), e a chamada de sempre continua depois delas, para a máquina com rádio."""
+    codigo = _codigo_do_watchdog()
+    definicao = codigo.index("vigia_rebind_orfaos() {")
+    guardas = [i for i, linha in enumerate(codigo) if linha in _as_guardas_do_radio()]
+    assert definicao < min(guardas), "a vigia 4 é definida depois das guardas que a chamam"
+    chamadas = [i for i, linha in enumerate(codigo) if linha.strip() == "vigia_rebind_orfaos"]
+    assert chamadas and min(chamadas) > max(guardas), (
+        "o tique da máquina com rádio perdeu a chamada da vigia 4"
+    )
+
