@@ -898,7 +898,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e é a vítima possível — é ele que este lado do teste mede. A cor tem de acender no ato e o tremor tem de vir, com os dois do cabo em rajada ao lado. Se falhar, anote em qual posição do adaptador foi.
 * **P4** — No rádio, a segunda vítima possível. Mesmos gestos do P3, com cor bem diferente. Se um dos dois do rádio falhar e o outro não, anote qual — a diferença entre os dois aparelhos do mesmo lado já apareceu em medição antes, e é dado, não ruído.
 
-**A armadilha.** A pergunta é a COMPARAÇÃO de duas posições do adaptador, então a rodada dos passos 6 a 11 é feita duas vezes, uma de cada lado do gabinete; cortar uma delas apaga a pergunta inteira. Desencaixar o adaptador DERRUBA o P3 e o P4 — isso é o esperado, não é o defeito; enquanto eles estão fora os números se reorganizam, e cada um recupera o seu quando volta. Se o P3 ou o P4 voltarem para dentro do cartão de OUTRO adaptador, você mediu a entrada errada: anote e refaça com os dois no mesmo cartão. A Steam tem de continuar fechada quando os dois voltam: um controle que se conecta pelo rádio com a Steam aberta volta com a barra apagada, fechar a Steam depois não cura, e o que cura é reconectar — o botão «A luz não acende», na linha dele na «Gestão de Controles», faz isso. Se o cartão disser que o adaptador é de dentro da máquina, ele não sai do lugar, e este teste roda só mudando os cabos de entrada. O que está escrito no mapa desta linha é que o dano NÃO foi acionado, o que é diferente de «isto não existe»: a topologia existe e foi medida, o adaptador e os dois cabos penduram no mesmo controlador da máquina. A única carga que já se experimentou foi captura de microfone, não o vaivém de comandos de um jogo, e a prova parou no fio: nada nesta linha diz o que o jogo recebeu. Por fim, a linha do «Check-up» mede entradas COLADAS, e não controlador compartilhado — verde nela não fecha esta pergunta, e é por isso que ela é anotada como contexto e não como veredito.
+**A armadilha.** A pergunta é a COMPARAÇÃO de duas posições do adaptador, então a rodada dos passos 6 a 11 é feita duas vezes, uma de cada lado do gabinete; cortar uma delas apaga a pergunta inteira. Desencaixar o adaptador DERRUBA o P3 e o P4 — isso é o esperado, não é o defeito; enquanto eles estão fora os números se reorganizam, e cada um recupera o seu quando volta. Se o P3 ou o P4 voltarem para dentro do cartão de OUTRO adaptador, você mediu a entrada errada: anote e refaça com os dois no mesmo cartão. Se a Steam estiver aberta quando os dois voltam, a barra deles continua do Hefesto — o controle de verdade nasce escondido dela, e o Hefesto devolve a cor e o número a quem pintar por cima em até um segundo; barra apagada depois disso é achado, e vale a hora. Se o cartão disser que o adaptador é de dentro da máquina, ele não sai do lugar, e este teste roda só mudando os cabos de entrada. O que está escrito no mapa desta linha é que o dano NÃO foi acionado, o que é diferente de «isto não existe»: a topologia existe e foi medida, o adaptador e os dois cabos penduram no mesmo controlador da máquina. A única carga que já se experimentou foi captura de microfone, não o vaivém de comandos de um jogo, e a prova parou no fio: nada nesta linha diz o que o jogo recebeu. Por fim, a linha do «Check-up» mede entradas COLADAS, e não controlador compartilhado — verde nela não fecha esta pergunta, e é por isso que ela é anotada como contexto e não como veredito.
 
 ---
 
@@ -1019,7 +1019,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e aqui ele é carga: recebe cor na rajada e recebe «Testar» para o rádio estar trabalhando enquanto o cabo é medido. Deixe-o na mesa; você não precisa senti-lo.
 * **P4** — No rádio, a segunda carga. Mesmo papel do P3. Os dois no ar recebendo comando é o que faz este teste ser sobre companhia — sem eles, o P1 e o P2 estariam sozinhos e nada seria medido.
 
-**A armadilha.** O «Testar» fica ligado até o «Parar», e o Hefesto testa um controle por vez: o «Testar» de outra coluna encerra o da anterior, então cada controle treme só na vez dele. Segure na mão os dois que você está medindo, e termine no «Parar» — sem ele o último continua tremendo e a vibração não volta ao jogo. Este teste é com os QUATRO ligados: a peça do Hefesto que divide o esforço entre os controles muda de conta conforme quantos estão ligados, então uma rodada com três não se compara com uma rodada com quatro. A Steam fica fechada durante a bancada, e o motivo não é ela escrever na luz — medido, quem escreve somos nós; o que ela faz é pegar o controle do RÁDIO que se conecta com ela aberta, e aí a barra dele fica apagada. No cabo isso não acontece. E lembre de onde este teste vem: o defeito antigo era um controle NO CABO matando a saída do controle NO RÁDIO — a vítima esperada é a do outro lado. Verde aqui é o resultado previsto e não fecha a pergunta; quem fecha é a rodada do rádio. Por último, a tela mostra a cor que o Hefesto pediu, não a que acendeu: julgue pela faixa acesa no plástico, sempre.
+**A armadilha.** O «Testar» fica ligado até o «Parar», e o Hefesto testa um controle por vez: o «Testar» de outra coluna encerra o da anterior, então cada controle treme só na vez dele. Segure na mão os dois que você está medindo, e termine no «Parar» — sem ele o último continua tremendo e a vibração não volta ao jogo. Este teste é com os QUATRO ligados: a peça do Hefesto que divide o esforço entre os controles muda de conta conforme quantos estão ligados, então uma rodada com três não se compara com uma rodada com quatro. A Steam fica fechada durante a bancada. Mesmo aberta, ela não apaga mais a barra de ninguém, no cabo nem no rádio: o controle de verdade nasce escondido dela, e o Hefesto devolve a cor e o número a quem pintar por cima em até um segundo. E lembre de onde este teste vem: o defeito antigo era um controle NO CABO matando a saída do controle NO RÁDIO — a vítima esperada é a do outro lado. Verde aqui é o resultado previsto e não fecha a pergunta; quem fecha é a rodada do rádio. Por último, a tela mostra a cor que o Hefesto pediu, não a que acendeu: julgue pela faixa acesa no plástico, sempre.
 
 ---
 
@@ -1058,7 +1058,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e é a vítima principal deste teste — foi um controle no rádio que ficou mudo, no defeito antigo. Cor no ato, tremor no «Testar», com o cabo em rajada ao lado.
 * **P4** — No rádio, a segunda vítima possível. Mesmos comandos, cor bem diferente. Se um dos dois do rádio falhar e o outro não, anote qual: dois aparelhos do mesmo lado já foram medidos respondendo bem diferente um do outro, e isso é dado, não ruído.
 
-**A armadilha.** Se a barra do P3 ou do P4 não acende em cor NENHUMA desde o primeiro clique, a causa conhecida não é este teste: é a Steam ter sido aberta antes de aquele controle se conectar pelo rádio. Fechar a Steam depois não cura — o que cura é reconectar, e o botão «A luz não acende», na linha dele na aba Conexões, faz exatamente isso; reconecte, e só então comece. O «Testar» fica ligado até o «Parar», e o de outra coluna encerra o da anterior: cada controle treme só na vez dele. Segure na mão o controle que está sendo medido, e termine no «Parar», senão o último continua tremendo e a vibração não volta ao jogo. Faça este teste com os QUATRO ligados: a peça do Hefesto que divide o esforço entre os controles muda de conta conforme quantos estão ligados, e uma rodada com três não se compara com uma com quatro. Não julgue pela tela: ela mostra a cor que o Hefesto pediu, não a que acendeu no plástico. E saiba o peso do que você está fazendo: este é o lado do defeito de origem desta família — vermelho aqui é o achado mais valioso deste roteiro, e vale anotar a hora exata e o que estava acontecendo no cabo naquele instante.
+**A armadilha.** Se a barra do P3 ou do P4 não acende em cor NENHUMA desde o primeiro clique, anote a hora antes de seguir: a Steam aberta antes da conexão, a causa conhecida até 23/09, não apaga mais a barra — o controle de verdade nasce escondido dela, e o Hefesto devolve a cor e o número a quem pintar por cima em até um segundo. O que sobra é a conexão de rádio que nasce com a barra travada, ignorando toda escrita: clique em «Reiniciar o serviço», na aba Sistema, e refaça. O «Testar» fica ligado até o «Parar», e o de outra coluna encerra o da anterior: cada controle treme só na vez dele. Segure na mão o controle que está sendo medido, e termine no «Parar», senão o último continua tremendo e a vibração não volta ao jogo. Faça este teste com os QUATRO ligados: a peça do Hefesto que divide o esforço entre os controles muda de conta conforme quantos estão ligados, e uma rodada com três não se compara com uma com quatro. Não julgue pela tela: ela mostra a cor que o Hefesto pediu, não a que acendeu no plástico. E saiba o peso do que você está fazendo: este é o lado do defeito de origem desta família — vermelho aqui é o achado mais valioso deste roteiro, e vale anotar a hora exata e o que estava acontecendo no cabo naquele instante.
 
 ---
 
@@ -1212,7 +1212,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e é um dos dois medidos — o A, enquanto os do cabo estão fora. Recebe cor própria, entra na rajada e treme no «Testar», com você segurando-o na mão.
 * **P4** — No rádio, o outro medido — o B —, e é ele que fecha o sentido da linha: a pergunta é se DOIS no rádio cabem juntos. Mesmos comandos, cor bem diferente da do P3. Se um obedecer e o outro não, anote qual.
 
-**A armadilha.** Se a barra de um dos dois não acende em cor NENHUMA desde o primeiro clique, a causa conhecida é a Steam ter sido aberta antes de aquele controle se conectar; fechar a Steam depois não cura — reconectar cura, e o botão «A luz não acende», na linha dele na aba Conexões, faz isso. O «Testar» fica ligado até o «Parar», e o de outra coluna encerra o da anterior: segure na mão o controle que está sendo medido, e não esqueça o «Parar» no fim. Saiba o peso deste teste: ele é a CONTRAPROVA do teste do cabo com rádio. Se a saída morrer aqui também, com ninguém no cabo, então a causa não é o controlador da máquina — é a fila do adaptador de rádio. Um vermelho aqui vale mais que um vermelho lá, porque ele separa duas explicações que ninguém separou ainda. Segunda: com dois controles ligados o Hefesto divide o esforço de um jeito e com quatro de outro, então não compare a rodada de dois com a de quatro para julgar «piorou»; a última rodada é só para você ver as duas cenas. Terceira: o P1 e o P2 são desligados, e não só desplugados, porque um controle já pareado por rádio nesta máquina pode voltar pelo rádio sem o cabo. Quarta: com os do cabo fora, os números dos que ficam mudam — é a ordem de conexão, não defeito, e eles voltam aos de antes quando os cabos voltam. E do lado do cabo não há o que medir nesta linha: a pergunta é sobre dois no rádio, e a pergunta do fio mora no teste de um no cabo com um no rádio.
+**A armadilha.** Se a barra de um dos dois não acende em cor NENHUMA desde o primeiro clique, anote a hora antes de seguir: a Steam aberta antes da conexão, a causa conhecida até 23/09, não apaga mais a barra — o controle de verdade nasce escondido dela, e o Hefesto devolve a cor e o número a quem pintar por cima em até um segundo. O que sobra é a conexão de rádio que nasce com a barra travada, ignorando toda escrita: clique em «Reiniciar o serviço», na aba Sistema, e refaça. O «Testar» fica ligado até o «Parar», e o de outra coluna encerra o da anterior: segure na mão o controle que está sendo medido, e não esqueça o «Parar» no fim. Saiba o peso deste teste: ele é a CONTRAPROVA do teste do cabo com rádio. Se a saída morrer aqui também, com ninguém no cabo, então a causa não é o controlador da máquina — é a fila do adaptador de rádio. Um vermelho aqui vale mais que um vermelho lá, porque ele separa duas explicações que ninguém separou ainda. Segunda: com dois controles ligados o Hefesto divide o esforço de um jeito e com quatro de outro, então não compare a rodada de dois com a de quatro para julgar «piorou»; a última rodada é só para você ver as duas cenas. Terceira: o P1 e o P2 são desligados, e não só desplugados, porque um controle já pareado por rádio nesta máquina pode voltar pelo rádio sem o cabo. Quarta: com os do cabo fora, os números dos que ficam mudam — é a ordem de conexão, não defeito, e eles voltam aos de antes quando os cabos voltam. E do lado do cabo não há o que medir nesta linha: a pergunta é sobre dois no rádio, e a pergunta do fio mora no teste de um no cabo com um no rádio.
 
 ---
 
@@ -1373,7 +1373,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e fica ligado o tempo todo: é ele que faz serem TRÊS em vez de dois. Recebe cor própria também, e é isso que o põe para trabalhar enquanto o cabo é medido.
 * **P4** — Fica DESLIGADO na primeira metade — segure o PS dele até apagar — e entra só perto do fim. Ele é a comparação: se o P1 e o P2 respondiam bem com três e passam a falhar quando ele entra, o achado é o quarto lugar.
 
-**A armadilha.** A medição que existe mediu PRESENÇA, não partida: os controles estavam parados, sem jogo aberto e sem ninguém apertando nada. O custo dentro de um JOGO — com a Steam aberta, com o espelho que ela faz de cada controle, e com quatro pessoas apertando ao mesmo tempo — é justamente o que continua sem medida, e é como você joga. Segunda, e é um susto conhecido: a Steam faz uma cópia de cada controle que enxerga, inclusive do controle que o próprio Hefesto cria — então três ligados podem virar seis para o jogo. Se ao abrir um jogo aparecerem jogadores a mais, ou um jogador fantasma, isso é a Steam, não o Hefesto; por isso a bancada pede a Steam fechada por inteiro antes de começar. E ela tem de continuar fechada quando o P4 volta: um controle que se conecta pelo rádio com a Steam aberta volta com a barra apagada. Terceira: desligar o P4 não muda o número de ninguém — ele é o último da fila —, e ele volta como P4. Quarta: o «Testar» fica ligado até o «Parar», e o de outra coluna encerra o da anterior — segure na mão o controle que está sendo medido. Quinta: a prova desta linha parou no fio, então nada aqui diz o que o jogo recebeu; o que você prova aqui é que os aparelhos obedecem. E este teste é longo de propósito: ele mede a mesma coisa DUAS vezes — com três ligados e com quatro —, e é a comparação entre as duas rodadas que é a entrega; sem a segunda rodada não há com o que comparar.
+**A armadilha.** A medição que existe mediu PRESENÇA, não partida: os controles estavam parados, sem jogo aberto e sem ninguém apertando nada. O custo dentro de um JOGO — com a Steam aberta, com o espelho que ela faz de cada controle, e com quatro pessoas apertando ao mesmo tempo — é justamente o que continua sem medida, e é como você joga. Segunda: a bancada começa com a Steam fechada, e aqui ela não entra — mas, se ela estiver aberta quando o P4 volta, a barra e as lâmpadas dele continuam sendo do Hefesto: o controle de verdade nasce escondido dela, e o Hefesto devolve a cor e o número a quem pintar por cima em até um segundo. Barra apagada ou número errado depois disso é achado; anote a hora. Terceira: desligar o P4 não muda o número de ninguém — ele é o último da fila —, e ele volta como P4. Quarta: o «Testar» fica ligado até o «Parar», e o de outra coluna encerra o da anterior — segure na mão o controle que está sendo medido. Quinta: a prova desta linha parou no fio, então nada aqui diz o que o jogo recebeu; o que você prova aqui é que os aparelhos obedecem. E este teste é longo de propósito: ele mede a mesma coisa DUAS vezes — com três ligados e com quatro —, e é a comparação entre as duas rodadas que é a entrega; sem a segunda rodada não há com o que comparar.
 
 ---
 
@@ -1412,7 +1412,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e é um dos dois medidos — o A, enquanto o P2 está fora. Recebe cor própria, é lido no cartão — analógicos, botões e touchpad — e treme no «Testar», com três ligados e depois com quatro.
 * **P4** — No rádio, o outro medido — o B. Mesmos gestos, com cor bem diferente da do P3. Se um dos dois do rádio responder pior que o outro, anote qual: dois aparelhos do mesmo lado já foram medidos respondendo bem diferente um do outro, e isso é dado, não ruído.
 
-**A armadilha.** A medição que existe mediu PRESENÇA, não partida: os controles estavam parados, sem jogo aberto e sem ninguém apertando nada. O custo dentro de um JOGO — com a Steam aberta e quatro pessoas apertando ao mesmo tempo — é o que continua sem medida, e é como você joga. Segunda: a Steam faz uma cópia de cada controle que enxerga, inclusive do controle que o próprio Hefesto cria, então três ligados podem virar seis para o jogo — feche-a por inteiro antes de começar; jogador a mais na tela do jogo é isso, e não defeito do Hefesto. Terceira: o P2 é desligado, e não só desplugado, porque um controle já pareado por rádio nesta máquina pode voltar pelo rádio sem o cabo — e aí seriam três no rádio, outra pergunta. Quarta: tirar o P2 muda o número dos dois do rádio enquanto ele está fora — é a ordem de conexão, não defeito —, e é por isso que os passos os chamam de A e B. Quinta: um cartão do rádio sem movimento e sem touchpad não é um controle esperando cor para acordar: o sistema já o põe no modo completo quando o reconhece; anote como achado. E a prova desta linha parou no fio — o que você prova aqui é que os aparelhos obedecem, e não o que o jogo recebeu.
+**A armadilha.** A medição que existe mediu PRESENÇA, não partida: os controles estavam parados, sem jogo aberto e sem ninguém apertando nada. O custo dentro de um JOGO — com a Steam aberta e quatro pessoas apertando ao mesmo tempo — é o que continua sem medida, e é como você joga. Segunda: a bancada começa com a Steam fechada; se ela estiver aberta quando o P2 volta, a barra e as lâmpadas dele continuam sendo do Hefesto — o controle de verdade nasce escondido dela, e o Hefesto devolve a cor e o número a quem pintar por cima em até um segundo. Barra apagada ou número errado depois disso é achado. Terceira: o P2 é desligado, e não só desplugado, porque um controle já pareado por rádio nesta máquina pode voltar pelo rádio sem o cabo — e aí seriam três no rádio, outra pergunta. Quarta: tirar o P2 muda o número dos dois do rádio enquanto ele está fora — é a ordem de conexão, não defeito —, e é por isso que os passos os chamam de A e B. Quinta: um cartão do rádio sem movimento e sem touchpad não é um controle esperando cor para acordar: o sistema já o põe no modo completo quando o reconhece; anote como achado. E a prova desta linha parou no fio — o que você prova aqui é que os aparelhos obedecem, e não o que o jogo recebeu.
 
 ---
 
@@ -1524,7 +1524,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e é testemunha. Não mexa nele. Anote o número dele no Hefesto e o que a lista de fora diz — ele serve para você ver se o de fora está repetindo o mesmo valor para todo mundo.
 * **P4** — No rádio, e é a segunda testemunha. Mesma coisa. Quatro controles com quatro números diferentes no Hefesto e um único número igual lá fora é a assinatura do valor inventado.
 
-**A armadilha.** A PROVA DESTA LINHA PAROU NO MONTOU: o número é montado e escrito no gamepad virtual, e ninguém nunca o viu chegar do outro lado. Por isso a cilada aqui é o valor de fábrica — quando o Hefesto não tem o dado, ele manda «cheio e carregando». Então «100% carregando» nos quatro, para sempre, é o FALSO VERDE deste teste, não a aprovação: é o que o produto diz quando não sabe. Some a isso uma coisa já medida nesta casa: o gamepad virtual tem um registro de bateria próprio no sistema que diz «carregando» eternamente. O Hefesto deixou de ler esses registros em 06/09, mas qualquer outro programa que os leia vê um número que NUNCA muda. Se a linha disser a máscara de Xbox, anote «máscara de Xbox» para aquele controle e siga só com o outro; se a dica disser que ele ainda não alimenta gamepad virtual nenhum, anote isso — é o Modo Nativo, e não há o que espelhar. E cuidado com nome repetido: cada controle físico pode aparecer uma vez na lista de fora e o gamepad virtual dele outra. Se você comparar o físico com o físico, o teste não mediu o caminho até o jogo — foi por isso que os passos mandam anotar a dica primeiro. Por último, feche a Steam ao terminar: com ela aberta, um controle do rádio que se reconectar depois volta com a barra apagada.
+**A armadilha.** A PROVA DESTA LINHA PAROU NO MONTOU: o número é montado e escrito no gamepad virtual, e ninguém nunca o viu chegar do outro lado. Por isso a cilada aqui é o valor de fábrica — quando o Hefesto não tem o dado, ele manda «cheio e carregando». Então «100% carregando» nos quatro, para sempre, é o FALSO VERDE deste teste, não a aprovação: é o que o produto diz quando não sabe. Some a isso uma coisa já medida nesta casa: o gamepad virtual tem um registro de bateria próprio no sistema que diz «carregando» eternamente. O Hefesto deixou de ler esses registros em 06/09, mas qualquer outro programa que os leia vê um número que NUNCA muda. Se a linha disser a máscara de Xbox, anote «máscara de Xbox» para aquele controle e siga só com o outro; se a dica disser que ele ainda não alimenta gamepad virtual nenhum, anote isso — é o Modo Nativo, e não há o que espelhar. E cuidado com nome repetido: o controle de verdade nasce escondido do jeito que a Steam o lia, então o esperado é a lista trazer só os gamepads virtuais; se um controle aparecer duas vezes, anote os dois nomes e compare só o que a dica deu — comparar o de verdade com ele mesmo não mede o caminho até o jogo. Por último, feche a Steam ao terminar: a bancada segue com ela fechada.
 
 ---
 
@@ -1562,7 +1562,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e é um dos dois que este teste mede. Anote o número no Hefesto, o que a dica diz do gamepad virtual dele, e o que a lista de fora mostra.
 * **P4** — No rádio, e é o segundo que este teste mede. Mesma sequência. Se ele for o único mudo dos quatro, o problema é do quarto lugar na fila, não do rádio.
 
-**A armadilha.** A PROVA DESTA LINHA PAROU NO MONTOU, e do lado do rádio ela parou antes ainda: a régua automática que vigia este caminho só exercita o CABO — o rádio não é tocado por teste nenhum desta casa. O que você anotar aqui é a primeira medição que existe desta metade, inclusive um «não há onde ler». A cilada é o valor de fábrica: sem dado, o Hefesto manda «cheio e carregando», então «100% carregando» no P3 e no P4 enquanto o Hefesto mostra os números deles caindo é o falso verde clássico — e é o resultado mais provável. Junte a isso o registro de bateria do gamepad virtual, que já foi medido dizendo «carregando» para sempre: o Hefesto deixou de lê-lo em 06/09, mas outro programa que o leia vê um número imóvel. Se a linha disser a máscara de Xbox, anote «máscara de Xbox» para aquele controle e siga só com o outro. Não compare o controle físico com ele mesmo: procure na lista o gamepad VIRTUAL, que é o que a dica do cartão lhe deu. E feche a Steam ao terminar: com ela aberta, um controle do rádio que se reconectar depois volta com a barra apagada.
+**A armadilha.** A PROVA DESTA LINHA PAROU NO MONTOU, e do lado do rádio ela parou antes ainda: a régua automática que vigia este caminho só exercita o CABO — o rádio não é tocado por teste nenhum desta casa. O que você anotar aqui é a primeira medição que existe desta metade, inclusive um «não há onde ler». A cilada é o valor de fábrica: sem dado, o Hefesto manda «cheio e carregando», então «100% carregando» no P3 e no P4 enquanto o Hefesto mostra os números deles caindo é o falso verde clássico — e é o resultado mais provável. Junte a isso o registro de bateria do gamepad virtual, que já foi medido dizendo «carregando» para sempre: o Hefesto deixou de lê-lo em 06/09, mas outro programa que o leia vê um número imóvel. Se a linha disser a máscara de Xbox, anote «máscara de Xbox» para aquele controle e siga só com o outro. O controle de verdade nasce escondido da Steam, então o esperado é a lista trazer só os gamepads virtuais; se aparecer um a mais, anote o nome e compare só o que a dica do cartão lhe deu. E feche a Steam ao terminar: a bancada segue com ela fechada.
 
 ---
 
@@ -1638,7 +1638,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e não se toca nele. Anote os três números. Enquanto o P4 está fora, a bateria do P3 não pode sumir nem virar travessão — vizinho de rádio caindo junto é o defeito que este teste procura.
 * **P4** — No rádio, e é o único em que você toca. Anote os três números dele, desligue-o pelo PS longo, religue com um toque no PS e leia o número assim que ele voltar.
 
-**A armadilha.** Pelo rádio o Hefesto só aceita a leitura depois de conferir o quadro que o controle mandou, e o pedaço da bateria fica UMA posição adiante da que fica no cabo. Isso foi medido no aparelho em 06/09, e o jeito como ele erra é conhecido: lendo na posição do cabo, o estado de carga sai como um valor que não existe no aparelho. Ou seja, o sintoma do defeito do rádio não é um número um pouco errado — é travessão, ou um estado de carga sem sentido. Segunda: os gamepads virtuais que o Hefesto cria têm registro de bateria próprio no sistema, que diz «carregando» para sempre; desde 06/09 o Hefesto não os lê, e o número destas três telas vem do próprio controle — quatro números iguais e parados não provam registro errado. Terceira: quem sai é o P4, e não o P3, de propósito — ele é o último da fila, e a saída dele não renumera ninguém; se o P3 saísse, o P4 subiria para 3 enquanto o outro estivesse fora, e isso é a ordem de conexão, não defeito. Quarta: a Steam tem de estar fechada quando o P4 volta — um controle que se conecta pelo rádio com ela aberta volta com a barra apagada. E segurar o PS por mais de um segundo não dispara nada no Hefesto; só o toque curto, com o controle ligado, abre a Steam.
+**A armadilha.** Pelo rádio o Hefesto só aceita a leitura depois de conferir o quadro que o controle mandou, e o pedaço da bateria fica UMA posição adiante da que fica no cabo. Isso foi medido no aparelho em 06/09, e o jeito como ele erra é conhecido: lendo na posição do cabo, o estado de carga sai como um valor que não existe no aparelho. Ou seja, o sintoma do defeito do rádio não é um número um pouco errado — é travessão, ou um estado de carga sem sentido. Segunda: os gamepads virtuais que o Hefesto cria têm registro de bateria próprio no sistema, que diz «carregando» para sempre; desde 06/09 o Hefesto não os lê, e o número destas três telas vem do próprio controle — quatro números iguais e parados não provam registro errado. Terceira: quem sai é o P4, e não o P3, de propósito — ele é o último da fila, e a saída dele não renumera ninguém; se o P3 saísse, o P4 subiria para 3 enquanto o outro estivesse fora, e isso é a ordem de conexão, não defeito. Quarta: segurar o PS por mais de um segundo não dispara nada no Hefesto; só o toque curto, com o controle ligado, abre a Steam.
 
 ---
 
@@ -1787,7 +1787,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e não se toca nele. É o vizinho de rádio do que sai, então é nele que uma bagunça aparece primeiro: confira o chip, o número e as cinco lâmpadas dele antes e depois.
 * **P4** — No rádio, e é o único em que você toca. Primeiro pelo botão da tela, depois pelo dedo, e nas duas vezes religue com um toque no PS. Ele tem de voltar com o número 4.
 
-**A armadilha.** NÃO CLIQUE em «Parar o serviço» — ele derruba o Hefesto inteiro; se clicar sem querer, ele pergunta antes, e é só responder que não. O «A luz não acende» derruba e NÃO religa: o Hefesto não reconecta sozinho, o PS é seu; se o botão da linha virar «Cancelar» enquanto espera, clicar nele só desiste da espera e não traz o controle de volta. Quem sai é o P4, e não o P3, de propósito: ele é o último da fila, e a saída dele não renumera ninguém; se o P3 saísse, o P4 subiria para 3 enquanto o outro estivesse fora — é a ordem de conexão, não defeito. A Steam tem de estar fechada: um controle que se conecta pelo rádio com ela aberta volta com a barra apagada, e fechar a Steam depois não cura. Segurar o PS por mais de um segundo não dispara nada no Hefesto; o toque CURTO no PS de um controle ligado abre a Steam, e por isso os toques de religar só vêm com o P4 apagado. Cuidado ao ler as cinco lâmpadas: elas não se contam da esquerda para a direita — o número é o CONJUNTO aceso. Jogador 1 é só a do meio; jogador 2 são a segunda e a quarta; jogador 3 são as duas pontas e a do meio; jogador 4 são as quatro pontas com a do meio apagada. Onde a prova parou: o comando de desligar por software nunca foi localizado nem medido nesta casa; a faixa de perguntas que o aparelho responde foi varrida em 15/08 e nada de energia voltou, e ESCREVER no aparelho para desligá-lo nunca foi tentado — no rádio, os degraus altos desse caminho nunca foram enviados a aparelho nenhum. O «A luz não acende» é outro mecanismo: ele corta a conversa pelo lado do computador, e o que o aparelho faz quando isso acontece é justamente o que o passo 8 mede pela primeira vez.
+**A armadilha.** NÃO CLIQUE em «Parar o serviço» — ele derruba o Hefesto inteiro; se clicar sem querer, ele pergunta antes, e é só responder que não. O «A luz não acende» derruba e NÃO religa: o Hefesto não reconecta sozinho, o PS é seu; se o botão da linha virar «Cancelar» enquanto espera, clicar nele só desiste da espera e não traz o controle de volta. Quem sai é o P4, e não o P3, de propósito: ele é o último da fila, e a saída dele não renumera ninguém; se o P3 saísse, o P4 subiria para 3 enquanto o outro estivesse fora — é a ordem de conexão, não defeito. Segurar o PS por mais de um segundo não dispara nada no Hefesto; o toque CURTO no PS de um controle ligado abre a Steam, e por isso os toques de religar só vêm com o P4 apagado. Cuidado ao ler as cinco lâmpadas: elas não se contam da esquerda para a direita — o número é o CONJUNTO aceso. Jogador 1 é só a do meio; jogador 2 são a segunda e a quarta; jogador 3 são as duas pontas e a do meio; jogador 4 são as quatro pontas com a do meio apagada. Onde a prova parou: o comando de desligar por software nunca foi localizado nem medido nesta casa; a faixa de perguntas que o aparelho responde foi varrida em 15/08 e nada de energia voltou, e ESCREVER no aparelho para desligá-lo nunca foi tentado — no rádio, os degraus altos desse caminho nunca foram enviados a aparelho nenhum. O «A luz não acende» é outro mecanismo: ele corta a conversa pelo lado do computador, e o que o aparelho faz quando isso acontece é justamente o que o passo 8 mede pela primeira vez.
 
 ---
 
@@ -1832,7 +1832,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e você não encosta nele em momento nenhum. É a testemunha de fora do cabo: se um aperto no P1 acender uma peça no cartão do P3, o Hefesto está misturando controles.
 * **P4** — No rádio, e você também não encosta. Segunda testemunha: se o cartão dele mostrar um traço no lugar de L3 e R3, anote — é ausência de leitura, não botão solto.
 
-**A armadilha.** Quatro. O PS sozinho, no controle que diz Navega o PC na aba Navegação, é a linha 6 da tabela Os gestos do controle — Abrir a Steam —, então ele acende o desenho e traz a Steam para a frente: feche-a e siga, não é defeito. Nos outros três controles o PS só acende o desenho. Segunda: o botão do microfone não tem desenho na grade, e procurar um faz você reprovar um produto correto — a resposta dele é o selo do bloco Microfone. Terceira: o dedo apoiado no touchpad não acende a grade, acende o ponto do bloco Touchpad; o clique, que estala, é outra coisa. Quarta, e é a que produz falso vermelho: um cartão com traço no lugar de L3 e R3 está dizendo que o Hefesto não conseguiu ler aquele controle. Cartão sem leitura mostra os gatilhos parados em 0 / 255 e os analógicos no meio, parados, o que se parece com um controle que ninguém está tocando. Antes de reprovar, aperte qualquer botão e veja se ALGUMA coisa naquele cartão se mexe; se nada se mexe nunca, o achado é a falta de leitura, e é isso que se anota.
+**A armadilha.** Quatro. O PS sozinho, no controle que diz Navega o PC na aba Navegação, é a linha 6 da tabela Os gestos do controle — Abrir a Steam —, então ele acende o desenho e traz a Steam para a frente: feche-a e siga, não é defeito. Nos outros três controles o PS só acende o desenho. E abrir a Steam no meio da bancada não apaga barra nem troca número de ninguém: se alguma barra apagar ou alguma lâmpada mudar de desenho por mais de um segundo depois do PS, anote. Segunda: o botão do microfone não tem desenho na grade, e procurar um faz você reprovar um produto correto — a resposta dele é o selo do bloco Microfone. Terceira: o dedo apoiado no touchpad não acende a grade, acende o ponto do bloco Touchpad; o clique, que estala, é outra coisa. Quarta, e é a que produz falso vermelho: um cartão com traço no lugar de L3 e R3 está dizendo que o Hefesto não conseguiu ler aquele controle. Cartão sem leitura mostra os gatilhos parados em 0 / 255 e os analógicos no meio, parados, o que se parece com um controle que ninguém está tocando. Antes de reprovar, aperte qualquer botão e veja se ALGUMA coisa naquele cartão se mexe; se nada se mexe nunca, o achado é a falta de leitura, e é isso que se anota.
 
 ---
 
@@ -3267,9 +3267,9 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `luz.led_jogador.escrita_hefesto @ rádio`
 
-**O que isto prova.** Prova que, quando um controle volta pelo rádio, o Hefesto escreve nas cinco lâmpadas dele o desenho do número que ele tem — e mede o ponto em que o rádio pode perder: a volta do «Status» de «Desligado» para «Ligado», com e sem a Steam aberta.
+**O que isto prova.** Prova que, quando um controle volta pelo rádio, o Hefesto escreve nas cinco lâmpadas dele o desenho do número que ele tem — no Modo Nativo também, e com a Steam aberta antes da volta, que era o ponto em que o rádio perdia.
 
-**Onde olhar.** No aparelho: as cinco lâmpadas brancas entre o touchpad e o botão PS. Na aba Iluminação: a linha «Jogador» (o número de cada coluna) e a linha «LEDs». Na aba Jogar: a linha «Status», com «Ligado» e «Desligado». Os desenhos: 3 é as duas pontas e a do meio; 4 é as quatro de fora, com a do meio apagada.
+**Onde olhar.** No aparelho: as cinco lâmpadas brancas entre o touchpad e o botão PS, e a barra de luz. Na aba Iluminação: a linha «Jogador» (o número de cada coluna) e a linha «LEDs». Na aba Jogar: a linha «Status», com «Ligado» e «Desligado». Os desenhos: 3 é as duas pontas e a do meio; 4 é as quatro de fora, com a do meio apagada.
 
 **Os passos.**
 
@@ -3283,24 +3283,25 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 8. Confira que as lâmpadas do P4 assentam no desenho do número dele.
 9. Abra a aba Jogar.
 10. Clique em «Desligado», na linha «Status».
-11. Espere dez segundos.
-12. Clique em «Ligado», na mesma linha.
-13. Anote, nos quatro aparelhos, quem ficou no desenho do próprio número e quem não ficou.
-14. Abra a Steam e espere ela terminar de abrir.
-15. Volte ao Hefesto e clique em «Desligado» e, dez segundos depois, em «Ligado».
-16. Anote de novo, nos quatro aparelhos, quem ficou no desenho do próprio número.
-17. Feche a Steam de novo, por inteiro.
+11. Espere dez segundos e anote, nos quatro aparelhos, quem ficou no desenho do próprio número.
+12. Clique em «Ligado», na mesma linha, e anote de novo.
+13. Abra a Steam e espere ela terminar de abrir.
+14. Segure o PS do P3 até apagar, espere cinco segundos e dê um toque curto, com a Steam aberta.
+15. Confira que, em poucos segundos, as lâmpadas do P3 assentam no desenho do número dele e a barra dele acende.
+16. Volte ao Hefesto, clique em «Desligado» e, dez segundos depois, em «Ligado».
+17. Anote de novo, nos quatro aparelhos, quem ficou no desenho do próprio número.
+18. Feche a Steam de novo, por inteiro.
 
-**Passa quando.** Os dois do rádio voltam pelo PS e assentam no desenho do próprio número, como os do cabo. E depois de cada volta do «Status», os quatro estão no desenho do próprio número. Se os do cabo mantiverem e os do rádio não — sobretudo na volta com a Steam aberta —, o teste achou exatamente o que veio procurar: anote «os do rádio perderam» e em qual volta.
+**Passa quando.** Os dois do rádio voltam pelo PS e assentam no desenho do próprio número, como os do cabo — também com a Steam aberta antes da volta, e com a barra acesa. E com o «Status» em «Desligado», e depois em «Ligado», os quatro seguem no desenho do próprio número. Se os do cabo mantiverem e os do rádio não — sobretudo com a Steam aberta —, o teste achou o que veio procurar: anote «os do rádio perderam» e em qual volta.
 
 **Por controle.**
 
-* **P1** — Cabo, e aqui ele é o CONTROLE DE COMPARAÇÃO nas duas voltas do «Status». Sem ele você não sabe se quem falhou foi o rádio ou o gesto inteiro.
+* **P1** — Cabo, e aqui ele é o CONTROLE DE COMPARAÇÃO em cada volta do «Status». Sem ele você não sabe se quem falhou foi o rádio ou o gesto inteiro.
 * **P2** — Cabo, testemunha. Não toque. As lâmpadas dele ficam no desenho do número dele do começo ao fim.
-* **P3** — Rádio, e é ESTE. É o primeiro a desligar e voltar pelo PS, e é nele que se olha primeiro depois de cada volta do «Status».
-* **P4** — Rádio, e é o segundo alvo. Faz a mesma volta pelo PS.
+* **P3** — Rádio, e é ESTE. Volta pelo PS duas vezes, a segunda com a Steam aberta, e é nele que se olha primeiro depois de cada volta do «Status».
+* **P4** — Rádio, e é o segundo alvo. Faz a volta pelo PS com a Steam fechada.
 
-**A armadilha.** Quatro. (1) Enquanto o «Status» está em «Desligado» o Hefesto não escreve nada, e o que estiver aceso é do sistema: a leitura que vale é a de DEPOIS de voltar a «Ligado». (2) O mapa segura o rádio desta linha em PARCIAL por uma razão só, e ela é a volta com a Steam aberta: depois do «Desligado» o número é reescrito por um caminho que perde quando outro programa segura o controle. Você viu as lâmpadas acenderem em 09/09, mas aquele ensaio não exercitou essa disputa — este passo é a primeira medição dela. (3) Soltar o PS cedo demais não desliga o controle, e aí você não religou nada: segure até TODAS as luzes apagarem. (4) O controle precisa já estar pareado nesta máquina, senão o toque no PS não o traz de volta.
+**A armadilha.** Quatro. (1) Até 23/09 o «Desligado» deixava as lâmpadas para o sistema; desde a sua decisão daquele dia, a luz e o número são do Hefesto também no Modo Nativo, e os quatro têm de ficar no próprio número com o «Status» em «Desligado» — quem sair dele ali é o achado. (2) O mapa segura o rádio desta linha em PARCIAL por uma razão só, a volta com a Steam aberta: ela pegava o controle que se conectava e escrevia o número dela. Desde 23/09 o controle de verdade nasce escondido da Steam, e o Hefesto devolve o número a quem escrever por cima em até um segundo — o que você anotar aqui é a primeira medição disso com a mão, e é o que pode tirar a linha do PARCIAL. (3) Soltar o PS cedo demais não desliga o controle, e aí você não religou nada: segure até TODAS as luzes apagarem. (4) O controle precisa já estar pareado nesta máquina, senão o toque no PS não o traz de volta.
 
 ---
 
@@ -3308,9 +3309,9 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `luz.led_jogador.leitura @ cabo`
 
-**O que isto prova.** Prova que a tela desenha as cinco lâmpadas a partir do NÚMERO do controle e não lê o plástico: quando um controle do cabo mostra outro desenho, a tela não acompanha.
+**O que isto prova.** Prova que a tela desenha as cinco lâmpadas a partir do NÚMERO do controle, e que o plástico de um controle do cabo termina no mesmo desenho em todo modo — inclusive no Modo Nativo, onde desde 23/09 o número também é do Hefesto.
 
-**Onde olhar.** Três desenhos das mesmas cinco lâmpadas. No aparelho: a fileira entre o touchpad e o botão PS. Na aba Iluminação: a linha «LEDs» da coluna do controle, ao lado do número aceso na linha «Jogador». Na aba Controles: o bloco «LED do jogador», dentro do card aberto do controle. Para o plástico mostrar um desenho que não é o do Hefesto, o gesto é tirar o Hefesto do meio (o «Status» em «Desligado», na aba Jogar) e reencaixar o cabo: aí quem acende as lâmpadas é o Linux.
+**Onde olhar.** Três desenhos das mesmas cinco lâmpadas. No aparelho: a fileira entre o touchpad e o botão PS. Na aba Iluminação: a linha «LEDs» da coluna do controle, ao lado do número aceso na linha «Jogador». Na aba Controles: o bloco «LED do jogador», dentro do card aberto do controle. O gesto que põe o plástico à prova é o «Status» em «Desligado», na aba Jogar — o Modo Nativo —, e reencaixar o cabo: por um instante o Linux acende o desenho dele, e em seguida o Hefesto escreve o do número.
 
 **Os passos.**
 
@@ -3319,28 +3320,28 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 3. Confira que o quadro «Modo» passou a mostrar «Modo Nativo».
 4. Desencaixe o cabo do P1.
 5. Espere cinco segundos.
-6. Encaixe o cabo de volta.
-7. Anote o desenho que as lâmpadas do P1 acendem.
+6. Encaixe o cabo de volta, olhando as lâmpadas do P1.
+7. Anote o primeiro desenho que acende e o desenho em que as lâmpadas ficam três segundos depois.
 8. Abra a aba Iluminação.
 9. Anote o desenho da linha «LEDs» e o número aceso na linha «Jogador», na coluna do P1.
 10. Abra a aba Controles.
 11. Clique na linha do P1 para abrir o card dele.
 12. Anote o desenho do bloco «LED do jogador».
 13. Desencaixe o cabo do P2, espere cinco segundos e encaixe de novo.
-14. Anote o desenho do plástico do P2, o da linha «LEDs» da coluna dele na aba Iluminação e o do bloco «LED do jogador» do card dele.
+14. Anote o primeiro desenho e o desenho final do plástico do P2, o da linha «LEDs» da coluna dele na aba Iluminação e o do bloco «LED do jogador» do card dele.
 15. Abra a aba Jogar e clique em «Ligado», na linha «Status».
-16. Anote se as lâmpadas do P1 e do P2 voltaram ao desenho do número deles.
+16. Anote se as lâmpadas do P1 e do P2 continuam no desenho do número deles.
 
-**Passa quando.** Os dois desenhos da tela — a linha «LEDs» e o bloco «LED do jogador» — mostram o desenho do NÚMERO do controle, o mesmo de antes, mesmo quando o plástico mostra outro. Os dois discordarem do plástico é o resultado ESPERADO: é a prova de que a tela não lê o aparelho. Se o plástico acender justamente o desenho do número, esta volta não mediu nada — anote e siga para o P2.
+**Passa quando.** Os dois desenhos da tela — a linha «LEDs» e o bloco «LED do jogador» — mostram o desenho do NÚMERO do controle, o mesmo de antes, e o plástico do P1 e do P2 termina nesse mesmo desenho em poucos segundos, com o «Status» em «Desligado» e depois em «Ligado». O primeiro desenho que acende no reencaixe pode ser outro — é o do Linux, e ele é anotação, não critério.
 
 **Por controle.**
 
-* **P1** — Cabo, e é ESTE. Reencaixe com o Hefesto fora do meio e compare os três desenhos.
-* **P2** — Cabo, segunda volta. Serve para separar «a tela não lê» de «a tela não leu deste controle» — e dá uma segunda chance de o Linux acender um desenho diferente do número.
+* **P1** — Cabo, e é ESTE. Reencaixe no Modo Nativo e compare os três desenhos: o do plástico, depois de assentar, é o mesmo dos dois da tela.
+* **P2** — Cabo, segunda volta. Serve para separar «o Hefesto escreveu» de «o Linux acertou por acaso» — o contador do Linux pode coincidir com o número.
 * **P3** — Rádio, testemunha. Não toque. O plástico e os dois desenhos de tela dele não podem mudar.
 * **P4** — Rádio, segunda testemunha. Não toque. Confira também o bloco «LED do jogador» do card dele: ele sai do número e não pode mudar.
 
-**A armadilha.** Três. (1) A discordância entre tela e plástico é o achado, não defeito de pintura. Defeito seria a tela desenhar outra coisa que não o número. (2) Quem escolhe o desenho do Linux é um contador que conta todo aparelho de PlayStation da máquina, e ele pode coincidir com o número: por isso são dois controles. (3) Enquanto o «Status» está em «Desligado» o Hefesto não escreve nas lâmpadas; o último passo mede se ele as reescreve ao voltar, e a resposta é anotação, não critério deste teste. Esta linha foi respondida por leitura de código: o que você anotar é a primeira medição.
+**A armadilha.** Três. (1) Até 23/09 o Modo Nativo deixava no plástico o desenho do Linux, e a tela discordava dele de propósito; desde a sua decisão daquele dia, a luz e o número são do Hefesto também no Nativo, e o plástico tem de terminar no desenho do número. Um plástico que FICA noutro desenho no Nativo é o achado. (2) Quem escolhe o desenho do Linux, no instante do reencaixe, é um contador que conta todo aparelho de PlayStation da máquina, e ele pode coincidir com o número: por isso são dois controles, e o primeiro desenho é só anotado. (3) A tela não lê o aparelho: ela desenha a partir do número, e é por isso que o plástico se confere com o olho. Esta linha foi respondida por leitura de código: o que você anotar é a primeira medição.
 
 ---
 
@@ -3348,9 +3349,9 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `luz.led_jogador.leitura @ rádio`
 
-**O que isto prova.** Prova que, num controle do rádio, a tela também desenha as cinco lâmpadas a partir do número e não lê o plástico.
+**O que isto prova.** Prova que, num controle do rádio, a tela também desenha as cinco lâmpadas a partir do número, e que o plástico termina no mesmo desenho em todo modo — inclusive no Modo Nativo.
 
-**Onde olhar.** Os mesmos três lugares do irmão do cabo: as lâmpadas do aparelho, entre o touchpad e o botão PS; a linha «LEDs» da coluna do controle na aba Iluminação, ao lado do número na linha «Jogador»; e o bloco «LED do jogador» do card aberto, na aba Controles. O gesto que põe no plástico um desenho que não é do Hefesto é o «Status» em «Desligado», na aba Jogar, e desligar e religar o controle pelo PS.
+**Onde olhar.** Os mesmos três lugares do irmão do cabo: as lâmpadas do aparelho, entre o touchpad e o botão PS; a linha «LEDs» da coluna do controle na aba Iluminação, ao lado do número na linha «Jogador»; e o bloco «LED do jogador» do card aberto, na aba Controles. O gesto que põe o plástico à prova é o «Status» em «Desligado», na aba Jogar, e desligar e religar o controle pelo PS: por um instante o Linux acende o desenho dele, e em seguida o Hefesto escreve o do número.
 
 **Os passos.**
 
@@ -3359,28 +3360,28 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 3. Confira que o quadro «Modo» passou a mostrar «Modo Nativo».
 4. Segure o botão PS do P3 até todas as luzes dele apagarem, e solte.
 5. Espere cinco segundos.
-6. Dê um toque curto no botão PS do P3.
-7. Anote o desenho que as lâmpadas do P3 acendem.
+6. Dê um toque curto no botão PS do P3, olhando as lâmpadas dele.
+7. Anote o primeiro desenho que acende e o desenho em que as lâmpadas ficam três segundos depois.
 8. Abra a aba Iluminação.
 9. Anote o desenho da linha «LEDs» e o número aceso na linha «Jogador», na coluna do P3.
 10. Abra a aba Controles.
 11. Clique na linha do P3 para abrir o card dele.
 12. Anote o desenho do bloco «LED do jogador».
 13. Desligue o P4 segurando o PS até apagar, espere cinco segundos e dê um toque curto no PS.
-14. Anote o desenho do plástico do P4, o da linha «LEDs» da coluna dele na aba Iluminação e o do bloco «LED do jogador» do card dele.
+14. Anote o primeiro desenho e o desenho final do plástico do P4, o da linha «LEDs» da coluna dele na aba Iluminação e o do bloco «LED do jogador» do card dele.
 15. Abra a aba Jogar e clique em «Ligado», na linha «Status».
-16. Anote se as lâmpadas do P3 e do P4 voltaram ao desenho do número deles.
+16. Anote se as lâmpadas do P3 e do P4 continuam no desenho do número deles.
 
-**Passa quando.** A resposta é a MESMA do cabo: os dois desenhos da tela mostram o desenho do número, o mesmo de antes, mesmo com o plástico mostrando outro. Se pelo rádio alguma das duas telas se comportar diferente da do cabo, anote a diferença — é para isso que existem os dois testes irmãos.
+**Passa quando.** A resposta é a MESMA do cabo: os dois desenhos da tela mostram o desenho do número, o mesmo de antes, e o plástico do P3 e do P4 termina nesse desenho em poucos segundos, no «Desligado» e no «Ligado». Se pelo rádio o plástico demorar mais ou ficar noutro desenho, anote a diferença — é para isso que existem os dois testes irmãos.
 
 **Por controle.**
 
 * **P1** — Cabo, testemunha e comparação. Não toque. No fim, o bloco «LED do jogador» do card dele continua no desenho do número dele.
 * **P2** — Cabo, testemunha. Não toque. Nada dele pode mudar.
-* **P3** — Rádio, e é ESTE. Religue pelo PS com o Hefesto fora do meio e compare os três desenhos.
+* **P3** — Rádio, e é ESTE. Religue pelo PS no Modo Nativo e compare os três desenhos.
 * **P4** — Rádio, segunda volta: é ele que diz se a resposta é do transporte ou daquele aparelho.
 
-**A armadilha.** Três. (1) A discordância é o esperado; se o Linux acender o próprio desenho do número, a volta não mediu nada. (2) Soltar o PS cedo demais não desliga o controle — segure até TODAS as luzes apagarem —, e ele precisa estar pareado para voltar com o toque. (3) Se o chip do controle sumir e voltar da fita do topo fora da hora, ele caiu e voltou sozinho: refaça. Aqui não há diferença de transporte esperada: nenhum caminho pergunta ao aparelho o que está aceso. Esta linha foi respondida por leitura de código.
+**A armadilha.** Três. (1) Desde 23/09 a luz e o número são do Hefesto também no Modo Nativo: um plástico que FICA no desenho do Linux é o achado; o primeiro desenho, no instante da volta, é só anotado. (2) Soltar o PS cedo demais não desliga o controle — segure até TODAS as luzes apagarem —, e ele precisa estar pareado para voltar com o toque. (3) Se o chip do controle sumir e voltar da fita do topo fora da hora, ele caiu e voltou sozinho: refaça. Esta linha foi respondida por leitura de código.
 
 ---
 
@@ -3390,35 +3391,35 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova qual desenho de lâmpadas o Linux acende sozinho no instante em que um controle entra pelo cabo, com o Hefesto fora do meio.
 
-**Onde olhar.** O APARELHO, e só ele: as cinco lâmpadas entre o touchpad e o botão PS, no primeiro segundo depois de encaixar o cabo. Esse desenho de partida não aparece em campo nenhum da tela — existe só no plástico, por um instante. Na tela ficam o antes e o depois: a aba Jogar, linha «Status» («Ligado» / «Desligado»), com o quadro «Modo» logo abaixo; e a fita do topo, onde cada chip diz o número que o Hefesto dá (P1, P2…). Os desenhos: 1 é só a do meio; 2 é a segunda e a quarta; 3 é as pontas e o meio; 4 é as quatro de fora; 5 é as cinco.
+**Onde olhar.** O APARELHO, e só ele: as cinco lâmpadas entre o touchpad e o botão PS, no primeiro segundo depois de encaixar o cabo. Esse desenho de partida não aparece em campo nenhum da tela — existe só no plástico, por um instante. Na tela ficam o antes e o depois: na aba Sistema, o botão «Parar o serviço», que pergunta antes e, com o serviço parado, passa a dizer «Ativar o serviço»; e a fita do topo, onde cada chip diz o número que o Hefesto dá (P1, P2…). Os desenhos: 1 é só a do meio; 2 é a segunda e a quarta; 3 é as pontas e o meio; 4 é as quatro de fora; 5 é as cinco.
 
 **Os passos.**
 
-1. Abra a aba Jogar.
-2. Clique em «Desligado», na linha «Status».
-3. Confira que o quadro «Modo» passou a mostrar «Modo Nativo».
-4. Desencaixe o cabo do P1.
-5. Espere cinco segundos.
-6. Encaixe o cabo de volta, olhando as cinco lâmpadas do P1.
-7. Anote o PRIMEIRO desenho que acende, e se ele surge de uma vez ou sobe devagar.
-8. Desencaixe o cabo do P2.
-9. Espere cinco segundos.
-10. Encaixe o cabo de volta, olhando as lâmpadas do P2.
-11. Anote o primeiro desenho que acende nele.
-12. Clique em «Ligado», na linha «Status».
-13. Anote o número que a fita do topo dá a cada um dos dois.
-14. Compare, controle por controle, o desenho que o Linux acendeu com o desenho do número que o Hefesto deu.
+* Abra a aba Sistema.
+1. Clique em «Parar o serviço», leia a pergunta e clique nele de novo para confirmar.
+2. Confira que o botão passou a dizer «Ativar o serviço».
+3. Desencaixe o cabo do P1.
+4. Espere cinco segundos.
+5. Encaixe o cabo de volta, olhando as cinco lâmpadas do P1.
+6. Anote o PRIMEIRO desenho que acende, e se ele surge de uma vez ou sobe devagar.
+7. Desencaixe o cabo do P2.
+8. Espere cinco segundos.
+9. Encaixe o cabo de volta, olhando as lâmpadas do P2.
+10. Anote o primeiro desenho que acende nele.
+11. Clique em «Ativar o serviço» e espere os quatro chips voltarem à fita do topo.
+12. Anote o número que a fita do topo dá a cada um dos dois.
+13. Compare, controle por controle, o desenho que o Linux acendeu com o desenho do número que o Hefesto deu.
 
 **Passa quando.** Cada controle do cabo acende sozinho um dos cinco desenhos conhecidos assim que entra, sem o Hefesto no meio, e ele SOBE DEVAGAR em vez de aparecer de uma vez. A entrega é a comparação do último passo: se o desenho de partida não for o do número que o Hefesto dá depois, anote os dois lado a lado — é exatamente isso que se quer medir.
 
 **Por controle.**
 
-* **P1** — Cabo, e é o primeiro a religar. Anote o desenho que ele acende antes de o Hefesto dizer qualquer coisa.
+* **P1** — Cabo, e é o primeiro a religar. Anote o desenho que ele acende com o serviço parado.
 * **P2** — Cabo, e religue-o DEPOIS do P1. É ele que mostra se o Linux avança na fila ou repete o desenho do anterior.
 * **P3** — Rádio, testemunha. Não toque. Desencaixar cabo não pode mexer em quem está no rádio.
-* **P4** — Rádio, testemunha. Não toque. No fim, as lâmpadas dele têm de estar como estavam.
+* **P4** — Rádio, testemunha. Não toque. Depois do «Ativar o serviço», as lâmpadas dele têm de estar no desenho do número dele.
 
-**A armadilha.** Três. (1) Não espere que o desenho de partida bata com o número do Hefesto: quem escolhe é um contador do Linux que conta QUALQUER aparelho de PlayStation da máquina, virtuais inclusive, e dá a volta a cada cinco. Divergir aqui é o fato, não a falha. (2) A subida devagar é do próprio Linux, e não lentidão da máquina. (3) Com o «Status» em «Ligado» o Hefesto escreve por cima quase na hora e você mediria o Hefesto: o «Desligado» é o primeiro passo, e não sugestão. A prova desta linha veio de leitura do driver; o que você anotar é a primeira medição.
+**A armadilha.** Quatro. (1) O «Desligado» da aba Jogar NÃO tira mais o Hefesto do meio: desde 23/09 ele escreve as lâmpadas também no Modo Nativo, quase na hora, e você mediria o Hefesto. Só com o serviço parado quem acende é o Linux — por isso o «Parar o serviço» vem primeiro. (2) Não espere que o desenho de partida bata com o número do Hefesto: quem escolhe é um contador do Linux que conta QUALQUER aparelho de PlayStation da máquina e dá a volta a cada cinco; com o serviço parado, os controles virtuais do Hefesto somem, e a conta muda. Divergir aqui é o fato, não a falha. (3) A subida devagar é do próprio Linux, e não lentidão da máquina. (4) Não siga para o próximo teste sem o «Ativar o serviço»: com o serviço parado os quatro viram gamepads comuns, e a tela para de ler os controles. A prova desta linha veio de leitura do driver; o que você anotar é a primeira medição.
 
 ---
 
@@ -3428,24 +3429,24 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova qual desenho de lâmpadas o Linux acende sozinho no instante em que um controle volta pelo rádio, com o Hefesto fora do meio.
 
-**Onde olhar.** O APARELHO, e só ele: as cinco lâmpadas entre o touchpad e o botão PS, no primeiro segundo depois de o controle voltar. Esse desenho não aparece em campo nenhum da tela. Na tela ficam o antes e o depois: a aba Jogar, linha «Status», com o quadro «Modo»; e a fita do topo, onde cada chip diz o número que o Hefesto dá e termina em BT para quem está no rádio.
+**Onde olhar.** O APARELHO, e só ele: as cinco lâmpadas entre o touchpad e o botão PS, no primeiro segundo depois de o controle voltar. Esse desenho não aparece em campo nenhum da tela. Na tela ficam o antes e o depois: na aba Sistema, o botão «Parar o serviço», que pergunta antes e, com o serviço parado, passa a dizer «Ativar o serviço»; e a fita do topo, onde cada chip diz o número que o Hefesto dá e termina em BT para quem está no rádio.
 
 **Os passos.**
 
-1. Abra a aba Jogar.
-2. Clique em «Desligado», na linha «Status».
-3. Confira que o quadro «Modo» passou a mostrar «Modo Nativo».
-4. Segure o botão PS do P3 até todas as luzes dele apagarem, e solte.
-5. Espere cinco segundos.
-6. Dê um toque curto no botão PS do P3, olhando as cinco lâmpadas dele.
-7. Anote o PRIMEIRO desenho que acende, e se ele surge de uma vez ou sobe devagar.
-8. Segure o botão PS do P4 até todas as luzes dele apagarem, e solte.
-9. Espere cinco segundos.
-10. Dê um toque curto no botão PS do P4, olhando as lâmpadas dele.
-11. Anote o primeiro desenho que acende nele.
-12. Clique em «Ligado», na linha «Status».
-13. Anote o número que a fita do topo dá a cada um dos dois.
-14. Compare, controle por controle, o desenho que o Linux acendeu com o desenho do número que o Hefesto deu.
+* Abra a aba Sistema.
+1. Clique em «Parar o serviço», leia a pergunta e clique nele de novo para confirmar.
+2. Confira que o botão passou a dizer «Ativar o serviço».
+3. Segure o botão PS do P3 até todas as luzes dele apagarem, e solte.
+4. Espere cinco segundos.
+5. Dê um toque curto no botão PS do P3, olhando as cinco lâmpadas dele.
+6. Anote o PRIMEIRO desenho que acende, e se ele surge de uma vez ou sobe devagar.
+7. Segure o botão PS do P4 até todas as luzes dele apagarem, e solte.
+8. Espere cinco segundos.
+9. Dê um toque curto no botão PS do P4, olhando as lâmpadas dele.
+10. Anote o primeiro desenho que acende nele.
+11. Clique em «Ativar o serviço» e espere os quatro chips voltarem à fita do topo.
+12. Anote o número que a fita do topo dá a cada um dos dois.
+13. Compare, controle por controle, o desenho que o Linux acendeu com o desenho do número que o Hefesto deu.
 
 **Passa quando.** Cada controle do rádio acende sozinho um dos cinco desenhos conhecidos assim que volta, sem o Hefesto no meio, e ele sobe devagar. A entrega é a comparação do último passo, anotada lado a lado para os dois.
 
@@ -3456,7 +3457,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — Rádio, e é o primeiro a desligar e religar.
 * **P4** — Rádio, e religue-o DEPOIS do P3: é ele que diz se o Linux avança na fila ou repete o desenho do anterior.
 
-**A armadilha.** Quatro. (1) Soltar o PS cedo demais não desliga o controle, e você mede o seu gesto, não o produto — segure até TODAS as luzes apagarem. (2) O desenho de partida não tem de bater com o número do Hefesto: o contador do Linux conta todo aparelho de PlayStation, virtuais inclusive, e dá a volta a cada cinco. (3) Com o «Status» em «Ligado» você mediria o Hefesto: o «Desligado» é obrigatório. (4) O controle precisa já estar pareado nesta máquina, senão o toque no PS não o traz de volta. A prova desta linha veio de leitura do driver.
+**A armadilha.** Cinco. (1) Soltar o PS cedo demais não desliga o controle, e você mede o seu gesto, não o produto — segure até TODAS as luzes apagarem. (2) O «Desligado» da aba Jogar NÃO tira mais o Hefesto do meio: desde 23/09 ele escreve as lâmpadas também no Modo Nativo, e você mediria o Hefesto; só com o serviço parado quem acende é o Linux. (3) O desenho de partida não tem de bater com o número do Hefesto: o contador do Linux conta todo aparelho de PlayStation e dá a volta a cada cinco, e com o serviço parado os controles virtuais do Hefesto saem da conta. (4) O controle precisa já estar pareado nesta máquina, senão o toque no PS não o traz de volta. (5) Não siga para o próximo teste sem o «Ativar o serviço»: com o serviço parado os quatro viram gamepads comuns, e a tela para de ler os controles. A prova desta linha veio de leitura do driver.
 
 ---
 
@@ -3725,7 +3726,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e AQUI A TESTEMUNHA NÃO FICA QUIETA: o aviso é para todos, por pedido seu. Anote se ele piscou.
 * **P4** — No rádio, a mesma coisa. Se os do cabo piscarem e os do rádio não, o achado é esse — os dois lados acendem por caminhos diferentes.
 
-**A armadilha.** Cinco. (1) OS QUATRO TÊM DE PISCAR — palavra sua: «o lightbar de todos pisca 3 vezes rápido». Reprovar porque os do rádio piscaram junto seria reprovar o produto certo. (2) A piscada inteira dura pouco mais de meio segundo: olhe as barras ANTES de clicar. (3) O Modo Nativo é caso à parte: ENTRAR nele pisca branco, mas de dentro dele o Hefesto não escreve na barra, e as piscadas seguintes não saem — faça as trocas com o «Status» em «Ligado». (4) Ligar o Hefesto não pisca: a primeira leitura do modo só memoriza. (5) Esta linha foi construída sem controle na mão: o produto sabe que MANDOU a piscada, não que ela acendeu. O seu olho é o que fecha isto. Com a Steam aberta ganha quem escreve por último, e é por isso que ela começa fechada.
+**A armadilha.** Cinco. (1) OS QUATRO TÊM DE PISCAR — palavra sua: «o lightbar de todos pisca 3 vezes rápido». Reprovar porque os do rádio piscaram junto seria reprovar o produto certo. (2) A piscada inteira dura pouco mais de meio segundo: olhe as barras ANTES de clicar. (3) O Modo Nativo pisca branco ao ENTRAR, e desde 23/09 a barra continua do Hefesto lá dentro; as trocas de modo se fazem com o «Status» em «Ligado», porque clicar num cartão tira do Nativo. (4) Ligar o Hefesto não pisca: a primeira leitura do modo só memoriza. (5) Esta linha foi construída sem controle na mão: o produto sabe que MANDOU a piscada, não que ela acendeu. O seu olho é o que fecha isto. A volta com a Steam aberta está na linha do rádio, onde os quatro são olhados.
 
 ---
 
@@ -3766,7 +3767,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e é um dos dois desta célula. A piscada dele sai por um caminho feito para pintar mesmo com outro programa segurando o controle, e esse caminho nunca foi visto acendendo durante uma piscada. É o que você vai ver.
 * **P4** — No rádio, e é o outro. Se os do cabo piscarem e os do rádio ficarem mudos, esse é o formato conhecido do defeito que este teste procura.
 
-**A armadilha.** Cinco. (1) OS QUATRO TÊM DE PISCAR, de propósito — palavra sua. (2) A piscada dura pouco mais de meio segundo: olhe as barras antes de clicar. (3) UMA CONEXÃO DE RÁDIO PODE NASCER COM A BARRA TRAVADA, ignorando toda escrita, e nada avisa. Antes de reprovar, vá à aba Iluminação e clique no quadradinho amarelo da coluna do P3: se nem a cor pegar, você mediu a barra travada, não o aviso — clique em «Reiniciar o serviço», na aba Sistema, e refaça. (4) De dentro do Modo Nativo as piscadas não saem; ligar o Hefesto também não pisca. (5) Esta linha foi construída sem controle na mão: o produto sabe que mandou, não que acendeu.
+**A armadilha.** Cinco. (1) OS QUATRO TÊM DE PISCAR, de propósito — palavra sua. (2) A piscada dura pouco mais de meio segundo: olhe as barras antes de clicar. (3) UMA CONEXÃO DE RÁDIO PODE NASCER COM A BARRA TRAVADA, ignorando toda escrita, e nada avisa. Antes de reprovar, vá à aba Iluminação e clique no quadradinho amarelo da coluna do P3: se nem a cor pegar, você mediu a barra travada, não o aviso — clique em «Reiniciar o serviço», na aba Sistema, e refaça. (4) O Modo Nativo pisca branco ao entrar, e a barra continua do Hefesto lá dentro; ligar o Hefesto não pisca. (5) Esta linha foi construída sem controle na mão: o produto sabe que mandou, não que acendeu.
 
 ---
 
@@ -3871,18 +3872,26 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 10. Confira que a barra do P1 continua amarela.
 11. Espere um minuto sem mexer em nada.
 12. Confira que as barras do P1 e do P2 continuam amarela e ciano, e que as tiras da linha «LEDs» deles estão lisas, não tracejadas.
-13. Clique no quadradinho da cor do número de cada um para devolver: o primeiro no P1, o segundo no P2.
+13. Abra a Steam e espere ela terminar de abrir.
+14. Desencaixe o cabo do P1, espere cinco segundos e encaixe de volta.
+15. Confira que, em até um segundo depois de acender, a barra do P1 volta amarela e as lâmpadas dele mostram o desenho do 1.
+16. Feche a Steam de novo, por inteiro.
+17. Na aba Jogar, anote o cartão aceso do quadro «Modo» e clique em «Desligado», na linha «Status».
+18. Volte à aba Iluminação e clique no quadradinho laranja (o sétimo) da coluna do P2.
+19. Confira no plástico que a barra do P2 ficou laranja.
+20. Na aba Jogar, clique em «Ligado» e no cartão que você anotou.
+21. Volte à aba Iluminação e clique no quadradinho da cor do número de cada um para devolver: o primeiro no P1, o segundo no P2.
 
-**Passa quando.** As barras dos dois controles do cabo acendem na cor clicada, no instante do clique, e continuam nela um minuto depois. Pintar um nunca muda a cor do outro, e as barras dos dois do rádio ficam exatamente como estavam.
+**Passa quando.** As barras dos dois controles do cabo acendem na cor clicada, no instante do clique, e continuam nela um minuto depois. Pintar um nunca muda a cor do outro, e as barras dos dois do rádio ficam exatamente como estavam. Com a Steam aberta, o P1 reencaixado volta amarelo e no desenho do 1 em até um segundo; e no Modo Nativo o P2 também acende a cor clicada.
 
 **Por controle.**
 
-* **P1** — No CABO, e é um dos dois que têm de obedecer. Amarelo, na hora, até o fim.
-* **P2** — No CABO, e é o outro. Ciano. No instante em que você o pinta, olhe o P1: ele não pode mudar.
+* **P1** — No CABO, e é um dos dois que têm de obedecer. Amarelo, na hora, até o fim — e é ele que volta pelo cabo com a Steam aberta.
+* **P2** — No CABO, e é o outro. Ciano. No instante em que você o pinta, olhe o P1: ele não pode mudar. É ele que recebe cor no Modo Nativo.
 * **P3** — No RÁDIO, testemunha. Não toque na coluna dele. Se a barra dele mudar quando você pinta um do cabo, o clique pegou o transporte inteiro.
 * **P4** — No RÁDIO, segunda testemunha. A cor antes e depois tem de ser a mesma.
 
-**A armadilha.** Quatro. (1) A TELA NÃO É A PROVA: o código e o desenho mostram a cor PEDIDA; já se mediu o mesmo valor com a barra verde e com ela apagada. Quem responde é o plástico. (2) USE UMA COR QUE NINGUÉM MAIS QUEIRA: amarelo e ciano são dos números 5 e 6, e ninguém aqui tem esses números. Azul no P1 seria o pior teste — é a cor que o produto já dá ao 1. Se a barra voltar sozinha à cor de antes em menos de um minuto, anote: o seu clique não ficou. (3) Um quadradinho com X é a cor de outro controle: o clique nele é recusado, com a borda piscando laranja — escolha sua de 09/09. (4) Com a Steam aberta ganha quem escreve por último, e as tiras ficam tracejadas: por isso ela começa fechada, e tira tracejada aqui quer dizer que o teste não mede nada naquele momento.
+**A armadilha.** Cinco. (1) A TELA NÃO É A PROVA: o código e o desenho mostram a cor PEDIDA; já se mediu o mesmo valor com a barra verde e com ela apagada. Quem responde é o plástico. (2) USE UMA COR QUE NINGUÉM MAIS QUEIRA: amarelo e ciano são dos números 5 e 6, e ninguém aqui tem esses números. Azul no P1 seria o pior teste — é a cor que o produto já dá ao 1. Se a barra voltar sozinha à cor de antes em menos de um minuto, anote: o seu clique não ficou. (3) Um quadradinho com X é a cor de outro controle: o clique nele é recusado, com a borda piscando laranja — escolha sua de 09/09. (4) A Steam não disputa mais a barra: o controle de verdade nasce escondido dela, e o Hefesto devolve a cor a quem pintar por cima em até um segundo — é o que os passos da Steam medem, e uma barra que fica apagada ou noutra cor depois disso é o achado. A tira tracejada na linha «LEDs» quer dizer que o Hefesto não afirma a cor daquele instante: com a Steam aberta, anote; no Modo Nativo, julgue só pelo plástico. (5) Desde 23/09 a luz é do Hefesto também no Modo Nativo, no cabo e no rádio: se a barra do P2 não mudar ali, anote.
 
 ---
 
@@ -3908,18 +3917,26 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 10. Confira que a barra do P3 continua amarela.
 11. Espere um minuto sem mexer em nada.
 12. Confira que as barras do P3 e do P4 continuam amarela e ciano, e que as tiras da linha «LEDs» deles estão lisas, não tracejadas.
-13. Clique no quadradinho da cor do número de cada um para devolver: o terceiro no P3, o quarto no P4.
+13. Abra a Steam e espere ela terminar de abrir.
+14. Segure o PS do P3 até todas as luzes dele apagarem, espere cinco segundos e dê um toque curto no PS.
+15. Confira que, em até um segundo depois de acender, a barra do P3 volta amarela e as lâmpadas dele mostram o desenho do 3.
+16. Feche a Steam de novo, por inteiro.
+17. Na aba Jogar, anote o cartão aceso do quadro «Modo» e clique em «Desligado», na linha «Status».
+18. Volte à aba Iluminação e clique no quadradinho laranja (o sétimo) da coluna do P4.
+19. Confira no plástico que a barra do P4 ficou laranja.
+20. Na aba Jogar, clique em «Ligado» e no cartão que você anotou.
+21. Volte à aba Iluminação e clique no quadradinho da cor do número de cada um para devolver: o terceiro no P3, o quarto no P4.
 
-**Passa quando.** As barras dos dois controles do rádio acendem na cor clicada, no instante do clique, e continuam nela um minuto depois. Pintar um nunca muda a cor do outro, e as barras dos dois do cabo ficam exatamente como estavam.
+**Passa quando.** As barras dos dois controles do rádio acendem na cor clicada, no instante do clique, e continuam nela um minuto depois. Pintar um nunca muda a cor do outro, e as barras dos dois do cabo ficam exatamente como estavam. Com a Steam aberta antes da volta, o P3 volta amarelo e no desenho do 3 em até um segundo; e no Modo Nativo o P4 também acende a cor clicada.
 
 **Por controle.**
 
 * **P1** — No CABO, testemunha. Não toque. Se a barra dele mudar quando você pinta um do rádio, o clique pegou mais do que o controle escolhido.
 * **P2** — No CABO, testemunha e comparação. Se NADA obedecer no rádio, pinte o P2 de roxo (o oitavo) e veja se ele obedece: se obedecer, o defeito é do rádio; se nem ele, não é do transporte. Devolva a cor dele no fim.
-* **P3** — No RÁDIO, e é um dos dois que têm de obedecer. Amarelo, igual ao que chega a quem está no cabo.
-* **P4** — No RÁDIO, e é o outro. Ciano.
+* **P3** — No RÁDIO, e é um dos dois que têm de obedecer. Amarelo, igual ao que chega a quem está no cabo — e é ele que volta pelo rádio com a Steam aberta, que é o caso em que a barra apagava até 23/09.
+* **P4** — No RÁDIO, e é o outro. Ciano. É ele que recebe cor no Modo Nativo.
 
-**A armadilha.** Quatro. (1) A TELA NÃO É A PROVA: quem responde é o plástico. (2) UMA CONEXÃO DE RÁDIO PODE NASCER COM A BARRA TRAVADA, ignorando toda escrita, e o produto não tem como saber — nada na tela avisa. Se o P3 e o P4 não obedecerem a nada e o P2 obedecer, o suspeito é esse; o que já foi medido devolvendo a barra é «Reiniciar o serviço», na aba Sistema, não desligar o controle. (3) Não conclua que a culpa é de ter reconectado: «reconectar cura» já caiu nesta casa mais de uma vez. (4) Use cor que ninguém mais queira: verde no P3 seria o pior teste, porque é a cor que o produto já dá ao 3.
+**A armadilha.** Cinco. (1) A TELA NÃO É A PROVA: quem responde é o plástico. (2) UMA CONEXÃO DE RÁDIO PODE NASCER COM A BARRA TRAVADA, ignorando toda escrita, e o produto não tem como saber — nada na tela avisa. Se o P3 e o P4 não obedecerem a nada e o P2 obedecer, o suspeito é esse; o que já foi medido devolvendo a barra é «Reiniciar o serviço», na aba Sistema, não desligar o controle. (3) Não conclua que a culpa é de ter reconectado: «reconectar cura» já caiu nesta casa mais de uma vez. (4) Use cor que ninguém mais queira: verde no P3 seria o pior teste, porque é a cor que o produto já dá ao 3. (5) A Steam aberta antes da conexão, a causa conhecida da barra apagada até 23/09, não apaga mais nada: o controle de verdade nasce escondido dela, e o Hefesto devolve a cor e o número a quem pintar por cima em até um segundo. Se na volta com a Steam aberta a barra do P3 não acender cor nenhuma, refaça a volta com a Steam fechada: se ela continuar apagada, é a barra travada do item 2, e não a Steam. No Modo Nativo, julgue só pelo plástico.
 
 ---
 
@@ -4146,40 +4163,42 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `luz.replica_output_jogo @ cabo`
 
-**O que isto prova.** Prova que, quando o jogo pinta a luz do controle que ele enxerga, a barra do controle de verdade ligado por cabo acende igual.
+**O que isto prova.** Prova que, quando o jogo pinta a luz do controle que ele enxerga, a barra do controle de verdade ligado por cabo acende igual — por cima da cor automática do número, que é a única que o jogo pode trocar.
 
-**Onde olhar.** Na aba Jogar: a linha «Status» em «Ligado»; o quadro «Modo» com o cartão «Sony DualSense» aceso — é o caminho por onde a luz volta do jogo ao controle —; e o quadro «O controle é visto como:», onde cada controle escolhe entre «DualSense», «Xbox 360» e «Nintendo Pro». Para o jogo pintar a luz, o controle tem de ser visto como «DualSense»: um «Xbox 360» não tem barra de luz. Na aba Iluminação, a linha «Cor» para pôr uma cor de partida. A prova é a barra no aparelho. A fonte não diz qual jogo pinta a barra: escolha um que você saiba que pinta e anote o nome.
+**Onde olhar.** Na aba Jogar: a linha «Status» em «Ligado»; o quadro «Modo» com o cartão «Sony DualSense» aceso — é o caminho por onde a luz volta do jogo ao controle —; o «Trava o perfil ativo», no canto do quadro «Modo»; e o quadro «O controle é visto como:», onde cada controle escolhe entre «DualSense», «Xbox 360» e «Nintendo Pro». Para o jogo pintar a luz, o controle tem de ser visto como «DualSense»: um «Xbox 360» não tem barra de luz. Na aba Perfis, a lista «Perfis salvos», com «Novo», «Ativar» e «Remover», e o nome em «Perfil ativo», no alto de qualquer aba. A prova é a barra no aparelho. A fonte não diz qual jogo pinta a barra: escolha um que você saiba que pinta e anote o nome.
 
 **Os passos.**
 
-1. Abra a aba Jogar.
-2. Confira que o «Status» está em «Ligado» e que o cartão «Sony DualSense» do quadro «Modo» está aceso.
-3. Clique em «DualSense» no cartão do P1 e no do P2, no quadro «O controle é visto como:».
-4. Abra a aba Iluminação.
-5. Clique no quadradinho amarelo (o quinto) da linha «Cor», na coluna do P1 e na do P2.
-6. Confira que as duas barras ficaram amarelas — o ponto de partida, numa cor que jogo nenhum pediria.
+1. Abra a aba Perfis e anote o nome que está em «Perfil ativo».
+2. Clique em «Novo», escreva «Teste da réplica» no campo «Nome:», clique nele na lista «Perfis salvos» e clique em «Ativar».
+3. Confira que a barra do P1 ficou azul e a do P2 vermelha — a cor do número, a única que o jogo pode trocar.
+4. Abra a aba Jogar e confira que o «Status» está em «Ligado» e que o cartão «Sony DualSense» do quadro «Modo» está aceso.
+5. Acenda o «Trava o perfil ativo», no canto do quadro «Modo».
+6. Clique em «DualSense» no cartão do P1 e no do P2, no quadro «O controle é visto como:».
 7. Anote a cor das barras do P3 e do P4.
 8. Abra o jogo que você escolheu e deixe-o carregar.
 9. Entre na partida SÓ com o P1, deixando os outros três fora.
-10. Confira que a barra do P1 deixou de ser amarela e passou à cor que o jogo pediu.
+10. Confira que a barra do P1 deixou o azul e passou à cor que o jogo pediu.
 11. Confira que as barras do P2, do P3 e do P4 continuam como estavam.
 12. Entre na partida com o P2 também.
 13. Confira que a barra do P2 mudou, e que as do P3 e do P4 continuam nas cores anotadas.
 14. Anote o nome do jogo e a cor que ele pôs em cada um.
-15. Feche o jogo e clique, na aba Iluminação, no quadradinho da cor do número do P1 (o primeiro) e do P2 (o segundo).
+15. Feche o jogo e apague o «Trava o perfil ativo», na aba Jogar.
+16. Na aba Perfis, escolha o perfil que você anotou e clique em «Ativar».
+17. Escolha «Teste da réplica» na lista e clique em «Remover».
 
-**Passa quando.** Nos dois controles do cabo a barra troca do amarelo para a cor que o jogo mandou, sozinha, sem você tocar em nada no Hefesto. E os dois do rádio, fora da partida, não mudam de cor.
+**Passa quando.** Nos dois controles do cabo a barra troca da cor do número para a cor que o jogo mandou, sozinha, sem você tocar em nada no Hefesto. E os dois do rádio, fora da partida, não mudam de cor.
 
 **Por controle.**
 
-* **P1** — No CABO, e é um dos dois desta célula. Amarelo, e entra na partida sozinho.
-* **P2** — No CABO, e é o outro. Entra depois do P1. Se o P1 virar e o P2 não, o defeito é do segundo lugar na fila, não do transporte.
+* **P1** — No CABO, e é um dos dois desta célula. Começa azul, a cor do número 1, e entra na partida sozinho.
+* **P2** — No CABO, e é o outro. Começa vermelho e entra depois do P1. Se o P1 virar e o P2 não, o defeito é do segundo lugar na fila, não do transporte.
 * **P3** — No RÁDIO, testemunha. Ligado e FORA da partida. Se a barra dele mudar sem ele ter entrado, a cópia está indo para quem não pediu.
 * **P4** — No RÁDIO, segunda testemunha, também fora da partida.
 
-**A espera.** O jogo leva minutos para chegar ao menu, e nenhum deles é para ficar olhando. Deixe-o carregando e volte quando ouvir o som do menu: o amarelo continua nas barras até o jogo pintar por cima. Ao voltar, olhe primeiro a barra do P1, antes de entrar na partida — se ela já deixou de ser amarela sem ninguém ter entrado, isso é achado e vale anotar a hora.
+**A espera.** O jogo leva minutos para chegar ao menu, e nenhum deles é para ficar olhando. Deixe-o carregando e volte quando ouvir o som do menu: a cor do número continua nas barras até o jogo pintar por cima. Ao voltar, olhe primeiro a barra do P1, antes de entrar na partida — se ela já deixou o azul sem ninguém ter entrado, isso é achado e vale anotar a hora.
 
-**A armadilha.** Cinco, e três delas acendem a barra sem provar nada. (1) MÁSCARA ERRADA MATA O TESTE SEM HAVER DEFEITO: visto como «Xbox 360», o controle não tem barra do lado do jogo. (2) O CAMINHO TAMBÉM: com o cartão «Xbox» do quadro «Modo» aceso, o jogo vê o DualSense pelo canal comum, e por ele a luz não volta. (3) NO MODO NATIVO NÃO HÁ O QUE COPIAR: o jogo fala direto com o controle, e a luz que acende é dele, não uma cópia. (4) A Steam escreve na barra por conta própria e ganha quem escreve por último — por isso ela começa fechada. (5) Se o jogo escolhido nunca pintar, o resultado não é vermelho, é «não mediu»: troque de jogo e anote qual usou. Não julgue pela tela: a prova é o plástico.
+**A armadilha.** Seis, e três delas deixam a barra parada sem haver defeito. (1) A COR QUE VOCÊ ESCOLHEU VENCE A DO JOGO — ordem sua de 16/09, «meu perfil manda»: um controle com cor escolhida na aba Iluminação, ou gravada no perfil, não troca de cor pelo jogo. É por isso que o teste roda num perfil novo, que nasce sem cor própria em controle nenhum, e com o «Trava o perfil ativo» aceso, para o jogo não trocar de perfil. (2) O NÚMERO É DO HEFESTO: o jogo que só numera os jogadores manda as cores de número (azul, vermelho, verde e rosa escuros), e o Hefesto as recusa desde 23/09 — a barra fica na cor do número, e isso é o produto certo. Escolha um jogo que pinta a barra de propósito, por vida, dano ou cena. (3) MÁSCARA ERRADA MATA O TESTE SEM HAVER DEFEITO: visto como «Xbox 360», o controle não tem barra do lado do jogo. (4) O CAMINHO TAMBÉM: com o cartão «Xbox» do quadro «Modo» aceso, o jogo vê o DualSense pelo canal comum, e por ele a luz não volta. (5) NO MODO NATIVO NÃO HÁ O QUE COPIAR, e a barra continua do Hefesto: o jogo que escreve direto no controle é corrigido em até um segundo. (6) Se o jogo escolhido nunca pintar, o resultado não é vermelho, é «não mediu»: troque de jogo e anote qual usou. A Steam não disputa mais a barra — o controle de verdade nasce escondido dela —, e não julgue pela tela: a prova é o plástico.
 
 ---
 
@@ -4187,43 +4206,45 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `luz.replica_output_jogo @ rádio`
 
-**O que isto prova.** Prova que, quando o jogo pinta a luz do controle que ele enxerga, a barra do controle de verdade ligado por rádio acende igual — e anota se o gatilho pedido pelo jogo também chega.
+**O que isto prova.** Prova que, quando o jogo pinta a luz do controle que ele enxerga, a barra do controle de verdade ligado por rádio acende igual — por cima da cor automática do número — e anota se o gatilho pedido pelo jogo também chega.
 
-**Onde olhar.** Na aba Jogar: «Status» em «Ligado»; o cartão «Sony DualSense» aceso no quadro «Modo» — é o caminho por onde luz e gatilho voltam do jogo —; e o quadro «O controle é visto como:», com «DualSense» escolhido. Na aba Iluminação, a linha «Cor» para a cor de partida. A prova é o aparelho: a barra de luz e a resistência que a sua mão sente no L2 e no R2. Escolha um jogo que você saiba que pinta a barra e anote o nome.
+**Onde olhar.** Na aba Jogar: «Status» em «Ligado»; o cartão «Sony DualSense» aceso no quadro «Modo» — é o caminho por onde luz e gatilho voltam do jogo —; o «Trava o perfil ativo», no canto do quadro «Modo»; e o quadro «O controle é visto como:», com «DualSense» escolhido. Na aba Perfis, a lista «Perfis salvos», com «Novo», «Ativar» e «Remover», e o nome em «Perfil ativo», no alto de qualquer aba. A prova é o aparelho: a barra de luz e a resistência que a sua mão sente no L2 e no R2. Escolha um jogo que você saiba que pinta a barra e anote o nome.
 
 **Os passos.**
 
-1. Abra a aba Jogar.
-2. Confira que o «Status» está em «Ligado» e que o cartão «Sony DualSense» do quadro «Modo» está aceso.
-3. Clique em «DualSense» no cartão do P3 e no do P4, no quadro «O controle é visto como:».
-4. Aperte o L2 e o R2 do P3 até o fundo e guarde na mão como eles estão agora.
-5. Abra a aba Iluminação.
-6. Clique no quadradinho amarelo (o quinto) da linha «Cor», na coluna do P3 e na do P4.
-7. Confira que as duas barras ficaram amarelas — se nem o amarelo pegar, o teste não roda.
+1. Abra a aba Perfis e anote o nome que está em «Perfil ativo».
+2. Clique em «Novo», escreva «Teste da réplica» no campo «Nome:», clique nele na lista «Perfis salvos» e clique em «Ativar».
+3. Confira que a barra do P3 ficou verde e a do P4 rosa — a cor do número, a única que o jogo pode trocar; se nem ela pegar, o teste não roda.
+4. Abra a aba Jogar e confira que o «Status» está em «Ligado» e que o cartão «Sony DualSense» do quadro «Modo» está aceso.
+5. Acenda o «Trava o perfil ativo», no canto do quadro «Modo».
+6. Clique em «DualSense» no cartão do P3 e no do P4, no quadro «O controle é visto como:».
+7. Aperte o L2 e o R2 do P3 até o fundo e guarde na mão como eles estão agora.
 8. Anote a cor das barras do P1 e do P2.
 9. Abra o jogo que você escolheu e deixe-o carregar.
 10. Entre na partida SÓ com o P3, deixando os outros três fora.
-11. Confira que a barra do P3 deixou de ser amarela e passou à cor que o jogo pediu.
+11. Confira que a barra do P3 deixou o verde e passou à cor que o jogo pediu.
 12. Aperte o L2 e o R2 do P3 até o fundo, dentro do jogo.
 13. Anote se a resistência mudou em relação à que você guardou na mão.
 14. Confira que as barras do P1, do P2 e do P4 continuam como estavam.
 15. Entre na partida com o P4 também.
 16. Confira que a barra do P4 mudou, e que as do P1 e do P2 continuam nas cores anotadas.
 17. Anote o nome do jogo, a cor que ele pôs em cada um e o que a sua mão sentiu no gatilho.
-18. Feche o jogo e clique, na aba Iluminação, no quadradinho da cor do número do P3 (o terceiro) e do P4 (o quarto).
+18. Feche o jogo e apague o «Trava o perfil ativo», na aba Jogar.
+19. Na aba Perfis, escolha o perfil que você anotou e clique em «Ativar».
+20. Escolha «Teste da réplica» na lista e clique em «Remover».
 
-**Passa quando.** Nos dois controles do rádio a barra troca do amarelo para a cor que o jogo mandou, sozinha — e os dois do cabo, fora da partida, não mudam. A resistência do L2 e do R2 é achado a anotar: se a luz chegar e o gatilho não, essa é a metade que o mapa ainda dá como incompleta neste lado.
+**Passa quando.** Nos dois controles do rádio a barra troca da cor do número para a cor que o jogo mandou, sozinha — e os dois do cabo, fora da partida, não mudam. A resistência do L2 e do R2 é achado a anotar: se a luz chegar e o gatilho não, essa é a metade que o mapa ainda dá como incompleta neste lado.
 
 **Por controle.**
 
 * **P1** — No CABO, testemunha e comparação. Fora da partida. Se as barras do P3 e do P4 não mudarem, entre com o P1: se a dele mudar, o defeito é do rádio; se nem a dele, o jogo não está pintando e o teste não mediu nada.
 * **P2** — No CABO, segunda testemunha. Fora da partida, e a barra não muda.
-* **P3** — No RÁDIO, e é um dos dois desta célula. Amarelo, entra sozinho, e é nele que se aperta o gatilho.
-* **P4** — No RÁDIO, e é o outro. Entra depois do P3.
+* **P3** — No RÁDIO, e é um dos dois desta célula. Começa verde, entra sozinho, e é nele que se aperta o gatilho.
+* **P4** — No RÁDIO, e é o outro. Começa rosa e entra depois do P3.
 
-**A espera.** O jogo leva minutos para chegar ao menu, e nenhum deles é para ficar olhando. Deixe-o carregando e volte quando ouvir o som do menu: o amarelo continua nas barras até o jogo pintar por cima. Ao voltar, olhe primeiro as barras do P3 e do P4, ANTES de entrar na partida — se alguma já deixou de ser amarela sem ninguém ter entrado, anote a hora.
+**A espera.** O jogo leva minutos para chegar ao menu, e nenhum deles é para ficar olhando. Deixe-o carregando e volte quando ouvir o som do menu: a cor do número continua nas barras até o jogo pintar por cima. Ao voltar, olhe primeiro as barras do P3 e do P4, ANTES de entrar na partida — se alguma já deixou a cor do número sem ninguém ter entrado, anote a hora.
 
-**A armadilha.** Seis. (1) Máscara «Xbox 360» não tem barra do lado do jogo: o teste morre sem defeito. (2) Com o cartão «Xbox» do quadro «Modo» aceso a luz não volta pelo canal comum. (3) No Modo Nativo não há cópia: a luz que acende é do jogo. (4) UMA CONEXÃO DE RÁDIO PODE NASCER COM A BARRA TRAVADA, sem nada avisar: por isso o passo do amarelo existe — se nem ele pegar, clique em «Reiniciar o serviço», na aba Sistema, e refaça. (5) A Steam escreve na barra por conta própria; ela começa fechada. (6) Se o jogo nunca pintar, o resultado é «não mediu», não vermelho. E não some as duas metades: luz e gatilho vêm pelo mesmo caminho, mas são medidas separadas.
+**A armadilha.** Sete. (1) A COR E O GATILHO QUE VOCÊ ESCOLHEU VENCEM OS DO JOGO — ordem sua de 16/09, «meu perfil manda»: um controle com cor escolhida na aba Iluminação, ou gravada no perfil, não troca de cor nem de gatilho pelo jogo. É por isso que o teste roda num perfil novo, que nasce sem cor nem gatilho próprios em controle nenhum, e com o «Trava o perfil ativo» aceso, para o jogo não trocar de perfil. (2) O NÚMERO É DO HEFESTO: o jogo que só numera os jogadores manda as cores de número (azul, vermelho, verde e rosa escuros), e o Hefesto as recusa desde 23/09 — a barra fica na cor do número, e isso é o produto certo. Escolha um jogo que pinta a barra de propósito, por vida, dano ou cena. (3) Máscara «Xbox 360» não tem barra do lado do jogo: o teste morre sem defeito. (4) Com o cartão «Xbox» do quadro «Modo» aceso a luz não volta pelo canal comum. (5) No Modo Nativo não há cópia, e a barra continua do Hefesto: o jogo que escreve direto no controle é corrigido em até um segundo. (6) UMA CONEXÃO DE RÁDIO PODE NASCER COM A BARRA TRAVADA, sem nada avisar: por isso o passo da cor do número existe — se nem ela pegar, clique em «Reiniciar o serviço», na aba Sistema, e refaça. (7) Se o jogo nunca pintar, o resultado é «não mediu», não vermelho. A Steam não disputa mais a barra — o controle de verdade nasce escondido dela. E não some as duas metades: luz e gatilho vêm pelo mesmo caminho, mas são medidas separadas.
 
 ---
 
@@ -5542,7 +5563,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — BT, testemunha aqui — ele tem linha própria. Não clique na coluna dele; só confira que a barra não mudou durante as duas rajadas.
 * **P4** — BT, testemunha. Mesma coisa. Se a cor da rajada do P1 aparecer nele, o pedido foi para o controle errado.
 
-**A armadilha.** Clicar duas vezes no MESMO quadradinho não testa nada: o segundo clique não tem novidade a mandar, e não mandar é o certo — o Hefesto não reenvia um pedido idêntico ao anterior, de propósito. Use quadradinhos diferentes, sempre. E use só os livres: um tom que já é de outro controle não fica no que você clicou, e a tela diz de quem ele era — com isso no meio da rajada, o «último clique» deixa de ser o que você pensa. Outra: o passo com que o Hefesto junta os pedidos cresce com o número de controles ligados; com os quatro ligados ele é mais lento do que seria com um só, e uma barra que demora um pouco mais a assentar não é defeito. Feche a Steam antes de começar: com ela aberta, quem escreve por último na luz ganha, e você pode acabar medindo a Steam. E lembre que esta linha foi respondida lendo o código e nunca com controle na mão — se a barra ficar presa numa cor do meio da sequência, isso é achado novo, e vale anotar exatamente quantos cliques você deu e em que ordem.
+**A armadilha.** Clicar duas vezes no MESMO quadradinho não testa nada: o segundo clique não tem novidade a mandar, e não mandar é o certo — o Hefesto não reenvia um pedido idêntico ao anterior, de propósito. Use quadradinhos diferentes, sempre. E use só os livres: um tom que já é de outro controle não fica no que você clicou, e a tela diz de quem ele era — com isso no meio da rajada, o «último clique» deixa de ser o que você pensa. Outra: o passo com que o Hefesto junta os pedidos cresce com o número de controles ligados; com os quatro ligados ele é mais lento do que seria com um só, e uma barra que demora um pouco mais a assentar não é defeito. A bancada roda sem jogo e com a Steam fechada, mas nenhum dos dois disputa mais a barra que você pinta: a cor que você clica vence a do jogo, e o Hefesto a devolve a quem pintar por cima em até um segundo. E lembre que esta linha foi respondida lendo o código e nunca com controle na mão — se a barra ficar presa numa cor do meio da sequência, isso é achado novo, e vale anotar exatamente quantos cliques você deu e em que ordem.
 
 ---
 
@@ -5580,7 +5601,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — BT, é o primeiro a receber a rajada. Seis quadradinhos livres diferentes, e o último tem de ser o que fica na barra.
 * **P4** — BT, o segundo. Faça a rajada nele depois que o P3 assentar; se só ele perder cliques, confira em «Rádio e Adaptadores», na aba Conexões, se ele está no mesmo adaptador do P3 — a diferença pode ser do enlace dele, não do envio.
 
-**A armadilha.** O número com que o Hefesto espaça os envios é o MESMO no cabo e no rádio — não existe um valor por transporte. Então, se a rajada se perder só no rádio, a causa não é esse passo: é o enlace sem fio, e é para separar as duas coisas que a rajada no P1 vem primeiro. Sem ela, o teste não mede nada. As outras de sempre: clicar duas vezes no mesmo quadradinho não manda nada de novo, de propósito, então use quadradinhos diferentes; use só os livres, porque um tom que já é de outro controle não fica no que você clicou; e o passo cresce com o número de controles ligados, então com quatro ligados tudo assenta um pouco mais devagar do que assentaria com um. Feche a Steam antes: com ela aberta, quem escreve por último na luz ganha.
+**A armadilha.** O número com que o Hefesto espaça os envios é o MESMO no cabo e no rádio — não existe um valor por transporte. Então, se a rajada se perder só no rádio, a causa não é esse passo: é o enlace sem fio, e é para separar as duas coisas que a rajada no P1 vem primeiro. Sem ela, o teste não mede nada. As outras de sempre: clicar duas vezes no mesmo quadradinho não manda nada de novo, de propósito, então use quadradinhos diferentes; use só os livres, porque um tom que já é de outro controle não fica no que você clicou; e o passo cresce com o número de controles ligados, então com quatro ligados tudo assenta um pouco mais devagar do que assentaria com um. A bancada roda sem jogo e com a Steam fechada, mas nenhum dos dois disputa mais a barra: a cor que você clica vence a do jogo, e o Hefesto a devolve a quem pintar por cima em até um segundo.
 
 ---
 
@@ -7064,7 +7085,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e não entra neste teste: ele tem a volta dele, na linha do rádio. Confira só que as lâmpadas dele não mexeram enquanto você arrastava o Brilho do P1.
 * **P4** — No rádio, e também não entra aqui, com a mesma conferência do P3.
 
-**A armadilha.** A barra de luz colorida e as lâmpadas de numeração são DUAS grandezas, e confundi-las é o erro que este teste existe para não repetir: elas ficam a centímetros uma da outra no mesmo plástico, e a barra obedece ao deslizante. Quem olhar a barra vai concluir que o brilho funciona — e o brilho que esta linha mede continua inerte. Olhe as luzinhas brancas da numeração, e só elas. Segunda: o brilho das lâmpadas tem TRÊS degraus no aparelho, não uma rampa contínua; se um dia elas obedecerem, a mudança vai ser em saltos, e um salto entre dois valores vizinhos pode passar despercebido — por isso os passos vão direto ao mínimo e ao máximo, nunca ao meio. Terceira: com a Steam aberta, a barra pode ficar apagada e não responder ao Brilho — é a Steam segurando o controle, e não este teste; por isso ela começa fechada. Quarta: o Brilho grava no perfil ao soltar, sem esperar o Salvar Perfil — por isso o número se anota e se devolve. E nada disso aparece na tela, nem vai aparecer: a dívida é nossa e fica no mapa, por ordem dela de 07/09/2026 — o produto não confessa dívida nossa para quem está usando.
+**A armadilha.** A barra de luz colorida e as lâmpadas de numeração são DUAS grandezas, e confundi-las é o erro que este teste existe para não repetir: elas ficam a centímetros uma da outra no mesmo plástico, e a barra obedece ao deslizante. Quem olhar a barra vai concluir que o brilho funciona — e o brilho que esta linha mede continua inerte. Olhe as luzinhas brancas da numeração, e só elas. Segunda: o brilho das lâmpadas tem TRÊS degraus no aparelho, não uma rampa contínua; se um dia elas obedecerem, a mudança vai ser em saltos, e um salto entre dois valores vizinhos pode passar despercebido — por isso os passos vão direto ao mínimo e ao máximo, nunca ao meio. Terceira: a barra é do Hefesto mesmo com a Steam aberta — se ela apagar e não responder ao Brilho por mais de um segundo, anote: é achado, e a barra deixa de servir de testemunha. Quarta: o Brilho grava no perfil ao soltar, sem esperar o Salvar Perfil — por isso o número se anota e se devolve. E nada disso aparece na tela, nem vai aparecer: a dívida é nossa e fica no mapa, por ordem dela de 07/09/2026 — o produto não confessa dívida nossa para quem está usando.
 
 ---
 
@@ -7102,7 +7123,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P1** — No cabo, e é TESTEMUNHA: você não mexe na coluna dele. As lâmpadas dele não podem reagir ao deslizante do P3.
 * **P2** — No cabo, e é a segunda testemunha. Mesma leitura do P1.
 
-**A armadilha.** A mesma da linha do cabo, e uma a mais: no rádio o report leva uma conta de verificação no fim, e um envelope com essa conta errada é DESCARTADO pelo aparelho em silêncio. Ou seja, no rádio o «nada aconteceu» tem duas causas possíveis — o bit não foi ligado (que é o que esta casa sabe) ou o envelope foi recusado inteiro (que ninguém mediu). As duas se parecem exatamente na sua mão, e é por isso que a barra é conferida: se a BARRA muda, o envelope chegou, e então o silêncio das lâmpadas é do bit. Se a barra também não mudar, você está olhando outro defeito, mais grave, e este teste não é quem responde por ele — anote e pare. Com a Steam aberta a barra pode ficar apagada e não responder, e aí ela deixa de servir de testemunha: por isso a Steam começa fechada. E o Brilho grava no perfil ao soltar — anote e devolva.
+**A armadilha.** A mesma da linha do cabo, e uma a mais: no rádio o report leva uma conta de verificação no fim, e um envelope com essa conta errada é DESCARTADO pelo aparelho em silêncio. Ou seja, no rádio o «nada aconteceu» tem duas causas possíveis — o bit não foi ligado (que é o que esta casa sabe) ou o envelope foi recusado inteiro (que ninguém mediu). As duas se parecem exatamente na sua mão, e é por isso que a barra é conferida: se a BARRA muda, o envelope chegou, e então o silêncio das lâmpadas é do bit. Se a barra também não mudar, você está olhando outro defeito, mais grave, e este teste não é quem responde por ele — anote e pare. A barra é do Hefesto mesmo com a Steam aberta; se ela apagar e não responder por mais de um segundo, ela deixa de servir de testemunha — anote. E o Brilho grava no perfil ao soltar — anote e devolva.
 
 ---
 
