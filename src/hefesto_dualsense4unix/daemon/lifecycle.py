@@ -992,6 +992,12 @@ class Daemon:
     # veredito global apagaria a distinção que a medição produziu. Criado sob
     # demanda por `connection.cartorio_do_nascimento_de`.
     _cartorio_do_nascimento: Any = None
+    # STEAM-NO-FISICO-01: a `core.escritor_cru.VigiaDoSequestro` deste daemon —
+    # quem mais segura o hidraw de cada controle, e quando a barra e o número
+    # foram reescritos pela última vez —, ou None até a primeira consulta. Uma
+    # por daemon: duas vigias reescreveriam a barra em dobro. Criada sob
+    # demanda por `connection.vigia_do_sequestro_de`.
+    _vigia_do_sequestro: Any = None
 
     # ------------------------------------------------------------------
     # Ciclo de vida público
