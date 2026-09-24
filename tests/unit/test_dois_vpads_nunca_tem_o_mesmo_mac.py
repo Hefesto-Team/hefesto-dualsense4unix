@@ -352,6 +352,12 @@ class _UinputDeMentira:
         return None
 
 
+#: Os cinco controles FÍSICOS das bancadas desta casa (faixa forjada): o kernel
+#: de mentira nasce com eles na lista do driver, como o de verdade nasce com os
+#: DualSense que estão na mesa.
+FISICOS_DAS_BANCADAS = tuple(f"aa:bb:cc:00:00:0{n}" for n in range(1, 6))
+
+
 @contextmanager
 def kernel_de_mentira(monkeypatch: pytest.MonkeyPatch) -> Iterator[KernelDoHidPlaystation]:
     """O kernel de mentira no lugar do ``/dev/uhid``, com o registro de máscaras zerado.
@@ -365,7 +371,7 @@ def kernel_de_mentira(monkeypatch: pytest.MonkeyPatch) -> Iterator[KernelDoHidPl
     )
 
     _zerar_registro_de_mascaras()
-    k = KernelDoHidPlaystation()
+    k = KernelDoHidPlaystation(fisicos=FISICOS_DAS_BANCADAS)
     k.instalar(monkeypatch)
     try:
         yield k
