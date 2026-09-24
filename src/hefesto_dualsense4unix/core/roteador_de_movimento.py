@@ -552,7 +552,7 @@ def sincronizar_o_filtro(dono: object) -> None:
         return
     mesa = getattr(dono, _ATRIBUTO_DO_ATIVO, None)
     REGISTRO.definir_roteados(
-        padrao=_ligado(mesa),
+        sem_chip=_ligado(mesa),
         por_peca={chave: _ligado(v) for chave, v in por_peca(dono).items()},
     )
 
