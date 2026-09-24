@@ -75,7 +75,6 @@ from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
 
 from . import Contexto, gesto, registrar
 from .a02_controles import (
-    MIRA_NO_MODO_NATIVO,
     MIRA_SEM_O_CONTROLE,
     _corpo,
     _uniq,
@@ -224,11 +223,17 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 # OS DOIS DESLIZANTES DA MIRA — 24/09/2026, A-MIRA-POR-MOVIMENTO-NA-TELA-01
 # ---------------------------------------------------------------------------
 def _pedir_a_mira(p: Any, uniq: str, **campo: Any) -> None:
-    """Manda UM campo da mira ao daemon e diz no cartão o que não alcançou.
+    """Manda UM campo da mira ao daemon e recusa quando ele não confirma.
 
     AS FRASES SÃO AS DO CHIP da aba Controles (`a02_controles.mira`), que é o
     mesmo pedido: duas redações para a mesma recusa seriam a tela explicando o
     mesmo fato de duas maneiras.
+
+    NO MODO NATIVO O AJUSTE GRAVA E NÃO RECUSA — A-MIRA-POR-MOVIMENTO-NA-TELA-02.
+    Até aqui o `alcance.tique = "nao_se_aplica"` virava recusa com a frase do
+    Nativo; ela escolheu *"fica cinza no Nativo, sem gravar"* para o CHIP, e o
+    ajuste daqui não acende mira nenhuma: ele grava e vale quando o modo voltar,
+    calado, como qualquer ajuste que deu certo.
     """
     corpo = _corpo(p.mira_set_detalhado(uniq=uniq, **campo))
     if corpo is None:
@@ -237,9 +242,6 @@ def _pedir_a_mira(p: Any, uniq: str, **campo: Any) -> None:
             "desligou")
     if corpo.get("status") != "ok":
         raise RuntimeError(MIRA_SEM_O_CONTROLE)
-    alcance = corpo.get("alcance")
-    if isinstance(alcance, dict) and alcance.get("tique") == "nao_se_aplica":
-        raise RuntimeError(MIRA_NO_MODO_NATIVO)
 
 
 def _numero_do_deslizante(o: dict[str, Any], nome: str, faixa: tuple[int, int, int]) -> int | None:

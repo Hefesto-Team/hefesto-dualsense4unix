@@ -3272,6 +3272,13 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # `mira` que o `daemon.state_full` publica por controle
                 # (`ipc_handlers._merge_mira`): sem ele, travessão.
                 "mira-ligada": _selo_do_sensor(_mira_ligada(c)),
+                # AS DUAS RESPOSTAS DELA DE 24/09 NO CARTÃO — A-MIRA-POR-
+                # MOVIMENTO-NA-TELA-02. A dica do Giroscópio muda com a Mira
+                # acesa DESTE controle, e o chip da Mira fica cinza no Nativo.
+                # Ver `dica_do_giro` e `mira_fora`. Os dois só saem quando a
+                # página publicada tiver o endereço (`_so_se_a_pagina_tiver`).
+                "giro-dica": dica_do_giro(c, _nativo(ctx)),
+                "mira-fora": mira_fora(_nativo(ctx)),
                 # O RETÂNGULO DA BARRA DE LUZ — o desenho que CONTRADIZ o campo
                 # ao lado dele. Fotografado em 02/09/2026 às 19h: o `luz-hex`
                 # dizia `#0000FF` (a cor viva do P1) e o retângulo logo abaixo
@@ -3729,6 +3736,66 @@ def _mira_ligada(dele: dict[str, Any]) -> bool | None:
         return None
     valor = bloco.get("ligada")
     return valor if isinstance(valor, bool) else None
+
+
+# ---------------------------------------------------------------------------
+# A DICA DO GIROSCÓPIO E O CHIP CINZA NO NATIVO — A-MIRA-POR-MOVIMENTO-NA-TELA-02
+# ---------------------------------------------------------------------------
+# As duas respostas dela de 24/09/2026 que moram no cartão, e as frases são do
+# PACOTE pela lei do cabeçalho do `aba02.py`: o produto as pinta a cada tique, e
+# o desenho as importa daqui.
+
+#: A dica do chip Giroscópio de hoje — a que vale com a Mira APAGADA.
+DICA_DO_GIRO = "Ligado: o jogo recebe o giro deste controle."
+
+#: A dica com a Mira ACESA naquele controle, com as palavras que ela aprovou
+#: (`D-2409-A-DICA-DO-GIROSCOPIO-MUDA-COM-A-MIRA`): com a mira acesa o jogo não
+#: recebe o giro como giroscópio — ele chega pelo analógico direito, e a dica de
+#: hoje afirmaria o que o produto não faz.
+DICA_DO_GIRO_COM_A_MIRA = ("Com a Mira Virtual acesa, o giro deste controle vai "
+                           "ao jogo pelo analógico direito.")
+
+
+def _nativo(ctx: Contexto) -> bool:
+    """O Modo Nativo está ligado? É GLOBAL no daemon (`state_full.native_mode`).
+
+    O `getattr` é o mesmo do `rotulo_lightbar` do `pacote`: há régua que monta
+    um `Contexto` parcial, sem `state`, e para ela a resposta é "não".
+    """
+    estado = getattr(ctx, "state", None) or {}
+    return estado.get("native_mode") is True
+
+
+def dica_do_giro(dele: dict[str, Any], nativo: bool) -> str:
+    """A dica do chip Giroscópio DESTE controle — muda só com a Mira acesa.
+
+    POR CONTROLE: o P2 com a Mira e o P3 sem mostram dicas diferentes. E NO
+    NATIVO A DE HOJE VOLTA, mesmo com a Mira acesa no perfil: no Nativo o jogo
+    lê o controle físico direto — o giro chega ao jogo como giroscópio, e a
+    mira não chega a lugar nenhum. Sem leitura da mira, a de hoje também: a
+    frase nova é uma afirmação, e afirmação sem leitura é chute.
+    """
+    if _mira_ligada(dele) is True and not nativo:
+        return DICA_DO_GIRO_COM_A_MIRA
+    return DICA_DO_GIRO
+
+
+#: O valor que acende o cinza do chip da Mira: o `data-hef-quando` do grupo dos
+#: três chips no desenho. Qualquer outro valor (o vazio, o travessão do lugar
+#: sem controle) deixa o chip na cor dele.
+MIRA_NO_NATIVO = "NATIVO"
+
+
+def mira_fora(nativo: bool) -> str:
+    """`NATIVO` quando o chip da Mira fica cinza, `""` quando não fica.
+
+    Palavra dela, 24/09/2026 (`D-2409-NO-NATIVO-A-MIRA-FICA-CINZA`): *"A
+    exceção do nativo todo o resto deve ter mira Virtual"*.  <!-- noqa-acento: citação literal dela -->
+    O cinza vale para os quatro controles de uma vez porque o Modo Nativo é
+    do daemon inteiro — e não mexe no aceso/apagado do chip, que continua
+    sendo o `mira-ligada`.
+    """
+    return MIRA_NO_NATIVO if nativo else ""
 
 
 def _uniq(o: dict[str, Any]) -> str:
@@ -4807,11 +4874,17 @@ MIRA_SEM_O_CONTROLE = (
     "este controle não respondeu à mira: conecte-o de novo e tente outra vez."
 )
 
-#: O Modo Nativo GRAVA e não alcança: o jogo lê o controle direto, sem o
-#: analógico nosso onde a mira escreve. É aviso, não erro — a escolha fica.
-MIRA_NO_MODO_NATIVO = (
-    "Em Modo Nativo o jogo lê este controle direto, e a mira não chega até ele. "
-    "A escolha fica guardada e vale quando o modo voltar a Virtual ou Xbox."
+#: NO MODO NATIVO O CHIP NÃO GRAVA — 24/09/2026, a palavra dela
+#: (`D-2409-NO-NATIVO-A-MIRA-FICA-CINZA`). O chip está cinza, e o clique volta
+#: sem pedir nada ao daemon. A frase vai ao diário e o botão pisca a recusa
+#: (`hefesto_vivo.Piloto._recusou_dizendo`); na tela não entra recado nenhum.
+#:
+#: FATO SUBSTITUÍDO: até aqui o Nativo GRAVAVA e avisava no cartão
+#: (`MIRA_NO_MODO_NATIVO`, «A escolha fica guardada e vale quando o modo voltar
+#: a Virtual ou Xbox.»). Era a opção pelo lado conservador, e ela escolheu a
+#: outra.
+MIRA_CINZA_NO_NATIVO = (
+    "Em Modo Nativo o jogo lê este controle direto, e a Mira Virtual não grava."
 )
 
 
@@ -4830,10 +4903,12 @@ def mira(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     2. **CHAMA `mira.set` com UM campo só**, o `ligada`. A sensibilidade e o
        «Ignorar tremor até» são da tela Calibrar sensores, e mandar os três
        aqui reafirmaria os números dela a cada clique;
-    3. **DIZ QUANDO NÃO ALCANÇA.** Em Modo Nativo o jogo lê o controle físico,
-       e não há analógico nosso para mover: o daemon grava a escolha e devolve
-       `alcance.tique = "nao_se_aplica"`, e :data:`MIRA_NO_MODO_NATIVO` vai ao
-       cartão daquele controle como aviso.
+    3. **NO MODO NATIVO NÃO PEDE NADA** — A-MIRA-POR-MOVIMENTO-NA-TELA-02,
+       palavra dela de 24/09/2026: *"fica cinza no Nativo, sem gravar"*. O
+       chip está cinza (`mira-fora`), e o clique recusa ANTES da ponte com
+       :data:`MIRA_CINZA_NO_NATIVO`. O daemon tem a MESMA guarda
+       (`status: "nativo"`), porque o estado que esta tela leu é de um tique
+       atrás: a recusa dele volta pela mesma frase.
 
     ELE GRAVA NO PERFIL DELA, e por isso declara `grava=`: o chip é a opinião
     DESTE controle (`ControllerOverrides.movimento`), e `mira.set` a leva ao
@@ -4842,6 +4917,8 @@ def mira(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     uniq = _uniq(o)
     if not uniq:
         raise ValueError("mira: o clique não disse em qual controle")
+    if _nativo(ctx):
+        raise RuntimeError(MIRA_CINZA_NO_NATIVO)
     agora = _mira_ligada(ctx.por_uniq(uniq))
     if agora is None:
         raise RuntimeError(SEM_LEITURA_DA_MIRA)
@@ -4850,14 +4927,13 @@ def mira(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(
             "o Hefesto não confirmou a mira: ou ele parou, ou este controle se "
             "desligou")
-    # AS FRASES SÃO DESTA TELA, e não o `motivo` do daemon repassado: o recado
-    # que chega ao cartão tem de passar pelas réguas de língua, e texto vindo
-    # do outro lado do soquete não passa por nenhuma.
+    # AS FRASES SÃO DESTA TELA, e não o `motivo` do daemon repassado: a recusa
+    # tem de passar pelas réguas de língua, e texto vindo do outro lado do
+    # soquete não passa por nenhuma.
+    if corpo.get("status") == "nativo":
+        raise RuntimeError(MIRA_CINZA_NO_NATIVO)
     if corpo.get("status") != "ok":
         raise RuntimeError(MIRA_SEM_O_CONTROLE)
-    alcance = corpo.get("alcance")
-    if isinstance(alcance, dict) and alcance.get("tique") == "nao_se_aplica":
-        raise RuntimeError(MIRA_NO_MODO_NATIVO)
 
 
 @gesto("02-controles.html", "ganho-mic", grava="save_profile")
@@ -5250,8 +5326,9 @@ def mic_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 #: justamente a metade que diz que em Modo Nativo o giro continua chegando ao
 #: jogo pelo `hidraw` do físico.
 #: **`mira_set_detalhado` ENTROU — 24/09/2026**, com o chip «Mira Virtual»
-#: (A-MIRA-POR-MOVIMENTO-NA-TELA-01), e pela mesma razão do sensor: é a variante
-#: que carrega a `ressalva` do Modo Nativo.
+#: (A-MIRA-POR-MOVIMENTO-NA-TELA-01): é a variante que carrega o `status` —
+#: e desde a A-MIRA-POR-MOVIMENTO-NA-TELA-02 é o `status: "nativo"` que diz que
+#: o daemon recusou o chip no Modo Nativo.
 PONTE = {"mic_canal_set_detalhado", "speaker_set", "machine_declare",
          "mic_volume_set_detalhado", "sensor_set_detalhado",
          "mira_set_detalhado"}

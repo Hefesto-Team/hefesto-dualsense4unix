@@ -1000,18 +1000,34 @@ def test_o_chip_da_mira_esta_em_cada_controle_com_a_dica_dela() -> None:
         if 'data-conectado="nao"' not in abertura:
             assert "off" in classe.split(), (
                 f"{abertura}: o chip da mira nasceu aceso — ela nasce desligada")
-        grupo = miolo.split('<span class="sensores-peca">', 1)[1].split("</span>\n", 1)[0]
+        # O GRUPO GANHOU O ENDEREÇO DO CINZA NO NATIVO em 24/09/2026
+        # (A-MIRA-POR-MOVIMENTO-NA-TELA-02): a abertura da tag não termina
+        # mais no nome da classe.
+        grupo = miolo.split('<span class="sensores-peca"', 1)[1].split("\n          </span>", 1)[0]
         assert grupo.index('data-sensor="acelerometro"') < grupo.index(
             'data-gesto="mira"'), "o chip não está ao lado dos dois de sensor"
 
 
 def test_o_chip_giroscopio_nao_mudou() -> None:
-    """A palavra dela: *o chip Giroscópio NÃO muda* — liga o sensor e manda o giro."""
+    """A palavra dela: *o chip Giroscópio NÃO muda* — liga o sensor e manda o giro.
+
+    NOTA DATADA — 24/09/2026 (A-MIRA-POR-MOVIMENTO-NA-TELA-02): a DICA dele
+    passou a mudar com a Mira acesa (`D-2409-A-DICA-DO-GIROSCOPIO-MUDA-COM-A-
+    MIRA`), e por isso saiu do botão para o invólucro que a pinta. O chip — o
+    rótulo, o gesto, o endereço — continua o mesmo, e a dica do desenho, com a
+    Mira apagada, continua a de sempre; o lugar vazio perde a dica, como perde
+    todo alvo `atributo`.
+    """
     for abertura, miolo in _cartoes_da_bancada():
         giro = re.findall(r'<button class="sw[^"]*" data-gesto="sensor" '
-                          r'data-sensor="giroscopio"[^>]*title="([^"]*)"', miolo)
-        assert giro == ["Ligado: o jogo recebe o giro deste controle."], (
-            abertura, giro)
+                          r'data-sensor="giroscopio" data-campo="giro-ligado"[^>]*>'
+                          r'<span class="p"></span>([^<]*)</button>', miolo)
+        assert giro == ["Giroscópio"], (abertura, giro)
+        dica = re.findall(r'<span class="dica-do-giro"[^>]*?(?: title="([^"]*)")?>'
+                          r'<button[^>]*data-sensor="giroscopio"', miolo)
+        esperada = ("" if 'data-conectado="nao"' in abertura
+                    else "Ligado: o jogo recebe o giro deste controle.")
+        assert dica == [esperada], (abertura, dica)
 
 
 def test_o_rotulo_do_tremor_nao_diz_zona_morta() -> None:
@@ -1119,16 +1135,17 @@ def test_sem_leitura_o_chip_recusa_dizendo() -> None:
     assert p.chamadas == []
 
 
-def test_no_modo_nativo_o_chip_grava_e_avisa() -> None:
-    """O Nativo grava e não alcança: a tela diz, e não diz «aplicado»."""
+def test_o_chip_recusa_o_que_o_daemon_nao_confirma() -> None:
+    """O daemon que responde sem `ok` não vira «aplicado»: a recusa sai com a
+    frase DESTA tela, e não com o `motivo` do outro lado do soquete.
+
+    FATO SUBSTITUÍDO EM 24/09/2026 (A-MIRA-POR-MOVIMENTO-NA-TELA-02): esta
+    régua se chamava `test_no_modo_nativo_o_chip_grava_e_avisa` e cobrava o
+    Nativo GRAVANDO com aviso. Ela escolheu *"fica cinza no Nativo, sem
+    gravar"*, e o Nativo é medido em `test_a_mira_02_as_respostas_dela.py`.
+    """
     import pacotes.a02_controles as a02
 
-    p = _PonteDaMira({"status": "ok", "alcance": {"tique": "nao_se_aplica"}})
-    with pytest.raises(RuntimeError) as erro:
-        _o_gesto("02-controles.html", "mira")(
-            _ctx_da_aba(mira={"ligada": False}), {"uniq": _P1}, p)
-    assert str(erro.value) == a02.MIRA_NO_MODO_NATIVO
-    assert p.chamadas, "avisou sem ter pedido"
     p = _PonteDaMira({"status": "sem_controle", "motivo": "texto do daemon"})
     with pytest.raises(RuntimeError) as erro:
         _o_gesto("02-controles.html", "mira")(
