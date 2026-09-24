@@ -515,8 +515,11 @@ def test_flatpak_e_appimage_gui_semeiam_o_mesmo_conjunto() -> None:
     assert presets, "assets/profiles_default está vazio"
     # O canário ERA o `fallback.json`, e ele mudou de casa em 06/09/2026
     # (PERFIS-SAO-PERFIS-01): os oito gêneros saíram da semeadura, e o que
-    # sobrou para semear é o slot dela.
-    assert "personalizado.json" in presets
+    # sobrou para semear é o slot dela. O NOME É LIDO NO DONO: digitado, ele
+    # reprovou a renomeação para «Freestyle» (O-MODO-FREESTYLE-02, 24/09/2026).
+    from hefesto_dualsense4unix.profiles.loader import ARQUIVO_DO_PADRAO
+
+    assert ARQUIVO_DO_PADRAO in presets
 
     # E a casa nova viaja nos dois pelo mesmo par de linhas. Sem ela dentro do
     # pacote, a migração que tira os gêneros da lista não tem com o que
