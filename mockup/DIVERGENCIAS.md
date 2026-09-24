@@ -31,6 +31,15 @@ seção daqui**: a aba deixou de estar em trabalho.
   e o nome de plástico mais longo (146 px) ainda cabe. O cartão continua em
   326,63 px (teto 328). Enquanto ela não publicar, o produto não mostra o chip;
   o gesto `mira` e a pintura `mira-ligada` já esperam no pacote da aba.
+- **24/09/2026** — A-MIRA-POR-MOVIMENTO-NA-TELA-02, as respostas dela da mesma
+  sessão, esperando a próxima. A dica do Giroscópio sai do botão para um
+  invólucro sem caixa (`display:contents`, endereço `giro-dica`) e passa a
+  dizer «Com a Mira Virtual acesa, o giro deste controle vai ao jogo pelo
+  analógico direito.» quando a Mira daquele controle está acesa. O grupo dos
+  três chips ganha o endereço `mira-fora`, e no Modo Nativo o chip da Mira fica
+  com o cinza da casa (`cursor:not-allowed`) e não grava. Medido no piloto
+  oculto: o grupo continua em 320,3 px e o cartão em 326 px — nenhum pixel no
+  estado normal. Enquanto ela não publicar, o pacote não emite os dois campos.
 
 ## calibrar-sensores.html
 - **24/09/2026** — A-MIRA-POR-MOVIMENTO-NA-TELA-01, esperando a sessão dela.
@@ -39,6 +48,12 @@ seção daqui**: a aba deixou de estar em trabalho.
   até» (1 a 60 graus/s). O bloco é próprio (`data-bloco="miras"`), fora do dos
   cartões, que o produto remonta a cada tique. Enquanto ela não publicar, o
   pacote não o remonta nem o pinta (`a11_calibrar_sensores._a_pagina_tem_a_mira`).
+- **24/09/2026** — A-MIRA-POR-MOVIMENTO-NA-TELA-02, esperando a próxima sessão
+  dela. Cada coluna ganha, embaixo dos dois deslizantes, o «Só enquanto eu
+  segurar» (uma lista com «Sempre» de nascença e os dezesseis botões que o
+  esquema aceita, sem o PS) e o «Inverter» (dois interruptores, «Esquerda e
+  direita» e «Cima e baixo», apagados de nascença). A coluna foi de 127 para
+  220 px; na caixa de 1180 × 777 o miolo continua sem rolar com dois controles.
 
 ## 10-perfis.html
 - **24/09/2026** — A-MIRA-POR-MOVIMENTO-NA-TELA-01, esperando a sessão dela. A
