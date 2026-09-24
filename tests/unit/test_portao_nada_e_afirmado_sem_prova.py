@@ -78,7 +78,7 @@ TETO_SEM_PROVA_NEM_RESSALVA = 35  # 36 -> 35 em 09/09/2026: ver abaixo
 #: O MESMO PARA O CONJUNTO MAIOR — as fortes sem `provado_por`, com ou sem
 #: ressalva. Ele desce mais devagar (cada uma pede aparelho na mesa dela), e
 #: está aqui para que a conta não se perca entre uma leva e outra.
-TETO_SEM_PROVA = 103  # 104 -> 103 em 09/09/2026: ver abaixo
+TETO_SEM_PROVA = 105  # 104 -> 103 em 09/09/2026; 103 -> 105 em 24/09/2026: ver abaixo
 
 _SIM = {"sim", "1", "true"}
 
@@ -154,7 +154,7 @@ def test_o_teto_acompanha_a_realidade_e_nunca_sobra() -> None:
 
 
 def test_a_divida_maior_das_afirmacoes_sem_prova_nao_cresce() -> None:
-    """As 103 que afirmam forte e ninguém provou — com ou sem ressalva.
+    """As 105 que afirmam forte e ninguém provou — com ou sem ressalva.
 
     **80 delas dizem `inferido-do-codigo`**, que é ler o código e não tocar o
     aparelho. Elas descem uma a uma, na bancada dela.
@@ -165,6 +165,15 @@ def test_a_divida_maior_das_afirmacoes_sem_prova_nao_cresce() -> None:
     rádio) e viu as lâmpadas acenderem. Uma linha que sai das duas contas de
     uma vez é o desenho funcionando: prova de aparelho tira a afirmação das
     duas listas ao mesmo tempo.
+
+    **E ESTE SUBIU DOIS, EM 24/09/2026**, com a linha nova
+    `plataforma.religar@dualsense` (STORM-USB-02). O religar já existia no
+    produto — o do rádio desde 25/07, o do cabo desde a STORM-USB-01 — e a
+    linha só nasceu agora: os dois lados dizem `sim` lido do código, com a
+    corrente de verdade provada contra um `/sys` de mentira e nunca no
+    aparelho. Os dois trazem a ressalva que diz isso, e por isso o teto de
+    baixo não se mexeu. Descem quando a bancada provar as duas células
+    (`mapa-plataforma.religar-cabo` e `-radio`).
 
     **A MORDIDA:** a mesma da primeira; sem `cabo_ressalva` a linha cai nas
     duas contas, com ela cai só nesta.
