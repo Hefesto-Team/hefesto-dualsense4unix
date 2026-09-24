@@ -4863,6 +4863,25 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'por_que_nao_aciona': 'nada-a-acionar',
         },
     },
+    'plataforma.religar@dualsense': {
+        'existe': 'tem',
+        'cabo': {
+            'aceita': 'sim',
+            'aciona': 'sim',
+            'ate_onde_foi': '',
+            'canal': 'sysfs',
+            'de_onde_sei': 'inferido-do-codigo',
+            'por_que_nao_aciona': '',
+        },
+        'radio': {
+            'aceita': 'sim',
+            'aciona': 'sim',
+            'ate_onde_foi': '',
+            'canal': 'sysfs',
+            'de_onde_sei': 'inferido-do-codigo',
+            'por_que_nao_aciona': '',
+        },
+    },
     'plataforma.slot_jogador@dualsense': {
         'existe': 'tem',
         'cabo': {
