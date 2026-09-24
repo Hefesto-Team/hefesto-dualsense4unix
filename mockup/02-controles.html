@@ -2174,6 +2174,30 @@
   .rota button{flex:0 0 auto;height:17px;border-radius:5px;font-size:10.5px;white-space:nowrap;font-family:inherit;
     border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-mudo);cursor:pointer}
   .rota button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
+  /* A FILEIRA DA SAÍDA DE SOM TEM QUATRO — 24/09/2026, O-TERCEIRO-NOME-DELA-01,
+     e o preço foi medido antes de escrito (Chrome headless, cartão aberto).
+
+     QUATRO EMPILHADOS CUSTAVAM 19 PX (mais um botão de 17 e um vão de 2), e o
+     cartão tinha 1,4 px de folga: 326,6 contra os 328 de `PARA_O_CARD`. Lado a
+     lado em grade de dois os dois primeiros não cabem — o mais longo pede
+     239 px e a meia coluna dá 128 — e quebrariam em TRÊS linhas.
+
+     O QUE CABE É O ESPELHO: os dois primeiros continuam inteiros, cada um numa
+     linha, e os dois últimos dividem a de baixo (`.par`). Na janela do
+     produto (1180) e na de 1120 cada um deles quebra em duas linhas de 11 px
+     (24 com a borda); de 1440 para cima eles cabem numa linha só e a fileira
+     fica com a altura de antes. A conta, a 1180: 17 + 17 + 24 com dois vãos
+     de 1 dá 60, contra os 55 de três empilhados, e os 5 px voltam do rótulo
+     do alto-falante, que virou linha como o do microfone (4,6 px). O cartão
+     fica em 327.
+
+     O `white-space:normal` VALE PARA OS QUATRO, e é a decisão dela de 12/09
+     aplicada aqui: numa janela menor que o desenho o rótulo QUEBRA em vez de
+     cortar. O preço é altura, e só onde aperta. */
+  .moldura[data-bloco="alto-falante"] .rota{gap:1px}
+  .moldura[data-bloco="alto-falante"] .rota button{height:auto;min-height:17px;
+    white-space:normal;line-height:11px;padding:0}
+  .rota .par{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1px 3px}
   /* O MODO DO MICROFONE CONTINUA DEITADO, e agora precisa dizê-lo — 20/09/2026.
      Enquanto as duas fileiras eram a mesma, o `.mic-modo` não tinha uma linha
      própria de estilo, e o bloco de comentário mais acima registra por quê. A
@@ -2999,8 +3023,9 @@
             <div class="rot rot-linha">Microfone
               <span class="selo-ativo on" style="margin-left:5px" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">ATIVO</span></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> cala o
-                microfone e apaga a luz vermelha do controle.<br><br>
+                A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> liga o
+                retorno: você se ouve como o jogo te ouve. Para calar o
+                microfone, use o botão do próprio controle.<br><br>
                 A luz <b>acesa</b> quer dizer que o microfone está ligado —
                 não que alguém esteja ouvindo. Ela <b>pisca</b> quando um
                 programa está gravando e entra som; a linha abaixo diz qual.
@@ -3119,13 +3144,20 @@
           </div>
           <div class="moldura" style="margin-top:9px" data-bloco="alto-falante"
                data-campo="alto-apagado" data-hef-alvo="atributo" data-hef-atributo="data-apagado">
-            <div class="rot">Alto-falante
+            <!-- O RÓTULO DO ALTO-FALANTE VIROU LINHA, COMO O DO MICROFONE —
+                 24/09/2026, O-TERCEIRO-NOME-DELA-01. Ele era caixa INLINE, e
+                 o ponto de interrogação, com o vertical-align de menos 3 px,
+                 esticava a linha: 21,6 px contra os 17 do irmão de cima,
+                 medido no Chrome a 1180. Em linha flexível os dois têm a
+                 mesma altura, e os 4,6 px que sobram pagam o quarto botão. -->
+            <div class="rot rot-linha">Alto-falante
               <span data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span class="selo-ativo no-rotulo on" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="alto-canal" data-hef-alvo="html">ATIVO</span></span></span>
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>Efeitos do Jogo no Controle, Áudio da TV na TV</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
-                <b>Efeitos do Jogo e Áudio da TV no Controle</b>: tudo o que a máquina toca cai aqui também, e continua saindo na TV.
-                <b>Tudo na TV e Nada no Controle</b>: o alto-falante deste controle para de tocar, e o som do PC volta todo para a TV.
+                <b>Efeitos do Jogo no Controle, Áudio do PC no PC</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
+                <b>Efeitos do Jogo e Áudio do PC no Controle</b>: tudo o que a máquina toca cai aqui também, e continua saindo no PC.
+                <b>Tudo no PC e Nada no Controle</b>: o alto-falante deste controle para de tocar, e todo o som, inclusive o dele, sai no PC.
+                <b>Tudo no Controle e Nada no PC</b>: todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio.
               </span></span>
             </div>
             <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:100%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:88%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:64%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:92%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:76%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:54%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:82%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:96%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:48%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:86%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:74%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:90%"></i></span>
@@ -3147,10 +3179,22 @@
                  terceiro não custa uma linha de folha nem uma altura a mais:
                  um par novo abaixo seria a segunda gramática que o gerador já
                  recusou uma vez. -->
+            <!-- O QUARTO BOTÃO VOLTA, E OS DOIS ÚLTIMOS FICAM LADO A LADO —
+                 24/09/2026, decisão dela de 23/09: voltar o quarto, encaixado
+                 pelo desenho, sem quebrar a altura do cartão. Os dois de baixo
+                 são o espelho um do outro, e é por isso que dividem a linha:
+                 «Tudo no PC e Nada no Controle» à esquerda, «Tudo no Controle e
+                 Nada no PC» à direita. Na janela do produto (1180) cada um
+                 quebra em duas linhas; da janela de 1440 para cima cabem numa
+                 só. A gramática não muda: mesmo gesto, mesmo endereço, cada
+                 botão com o seu valor. -->
             <div class="rota">
-              <button class="on" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Efeitos do Jogo no Controle, Áudio da TV na TV</button>
-              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo na TV. Serve para jogar acompanhado: cada um ouve no próprio controle.">Efeitos do Jogo e Áudio da TV no Controle</button>
-              <button class="" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" title="O som do computador volta todo para a televisão, e o alto-falante deste controle para de tocar. O microfone e a vibração não mudam.">Tudo na TV e Nada no Controle</button>
+              <button class="on" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Efeitos do Jogo no Controle, Áudio do PC no PC</button>
+              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo no PC. Serve para jogar acompanhado: cada um ouve no próprio controle.">Efeitos do Jogo e Áudio do PC no Controle</button>
+              <span class="par">
+                <button class="" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" title="Todo o som, inclusive o deste controle, sai no PC, e o alto-falante deste controle para de tocar. O microfone e a vibração não mudam.">Tudo no PC e Nada no Controle</button>
+                <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" title="Todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio. Vale para um controle por vez. O microfone e a vibração não mudam.">Tudo no Controle e Nada no PC</button>
+              </span>
             </div>
           </div>
         </div>
@@ -3539,8 +3583,9 @@
             <div class="rot rot-linha">Microfone
               <span class="selo-ativo" style="margin-left:5px" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo cortado" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">DESLIGADO</span></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> cala o
-                microfone e apaga a luz vermelha do controle.<br><br>
+                A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> liga o
+                retorno: você se ouve como o jogo te ouve. Para calar o
+                microfone, use o botão do próprio controle.<br><br>
                 A luz <b>acesa</b> quer dizer que o microfone está ligado —
                 não que alguém esteja ouvindo. Ela <b>pisca</b> quando um
                 programa está gravando e entra som; a linha abaixo diz qual.
@@ -3659,13 +3704,20 @@
           </div>
           <div class="moldura" style="margin-top:9px" data-bloco="alto-falante"
                data-campo="alto-apagado" data-hef-alvo="atributo" data-hef-atributo="data-apagado">
-            <div class="rot">Alto-falante
+            <!-- O RÓTULO DO ALTO-FALANTE VIROU LINHA, COMO O DO MICROFONE —
+                 24/09/2026, O-TERCEIRO-NOME-DELA-01. Ele era caixa INLINE, e
+                 o ponto de interrogação, com o vertical-align de menos 3 px,
+                 esticava a linha: 21,6 px contra os 17 do irmão de cima,
+                 medido no Chrome a 1180. Em linha flexível os dois têm a
+                 mesma altura, e os 4,6 px que sobram pagam o quarto botão. -->
+            <div class="rot rot-linha">Alto-falante
               <span data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span class="selo-ativo no-rotulo on" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="alto-canal" data-hef-alvo="html">ATIVO</span></span></span>
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>Efeitos do Jogo no Controle, Áudio da TV na TV</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
-                <b>Efeitos do Jogo e Áudio da TV no Controle</b>: tudo o que a máquina toca cai aqui também, e continua saindo na TV.
-                <b>Tudo na TV e Nada no Controle</b>: o alto-falante deste controle para de tocar, e o som do PC volta todo para a TV.
+                <b>Efeitos do Jogo no Controle, Áudio do PC no PC</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
+                <b>Efeitos do Jogo e Áudio do PC no Controle</b>: tudo o que a máquina toca cai aqui também, e continua saindo no PC.
+                <b>Tudo no PC e Nada no Controle</b>: o alto-falante deste controle para de tocar, e todo o som, inclusive o dele, sai no PC.
+                <b>Tudo no Controle e Nada no PC</b>: todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio.
               </span></span>
             </div>
             <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:52%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:66%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:44%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:72%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:58%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:48%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:64%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:54%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:46%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:50%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:68%"></i></span>
@@ -3687,10 +3739,22 @@
                  terceiro não custa uma linha de folha nem uma altura a mais:
                  um par novo abaixo seria a segunda gramática que o gerador já
                  recusou uma vez. -->
+            <!-- O QUARTO BOTÃO VOLTA, E OS DOIS ÚLTIMOS FICAM LADO A LADO —
+                 24/09/2026, decisão dela de 23/09: voltar o quarto, encaixado
+                 pelo desenho, sem quebrar a altura do cartão. Os dois de baixo
+                 são o espelho um do outro, e é por isso que dividem a linha:
+                 «Tudo no PC e Nada no Controle» à esquerda, «Tudo no Controle e
+                 Nada no PC» à direita. Na janela do produto (1180) cada um
+                 quebra em duas linhas; da janela de 1440 para cima cabem numa
+                 só. A gramática não muda: mesmo gesto, mesmo endereço, cada
+                 botão com o seu valor. -->
             <div class="rota">
-              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Efeitos do Jogo no Controle, Áudio da TV na TV</button>
-              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo na TV. Serve para jogar acompanhado: cada um ouve no próprio controle.">Efeitos do Jogo e Áudio da TV no Controle</button>
-              <button class="on" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" title="O som do computador volta todo para a televisão, e o alto-falante deste controle para de tocar. O microfone e a vibração não mudam.">Tudo na TV e Nada no Controle</button>
+              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Efeitos do Jogo no Controle, Áudio do PC no PC</button>
+              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo no PC. Serve para jogar acompanhado: cada um ouve no próprio controle.">Efeitos do Jogo e Áudio do PC no Controle</button>
+              <span class="par">
+                <button class="on" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" title="Todo o som, inclusive o deste controle, sai no PC, e o alto-falante deste controle para de tocar. O microfone e a vibração não mudam.">Tudo no PC e Nada no Controle</button>
+                <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" title="Todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio. Vale para um controle por vez. O microfone e a vibração não mudam.">Tudo no Controle e Nada no PC</button>
+              </span>
             </div>
           </div>
         </div>
@@ -4079,8 +4143,9 @@
             <div class="rot rot-linha">Microfone
               <span class="selo-ativo" style="margin-left:5px" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">—</span></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> cala o
-                microfone e apaga a luz vermelha do controle.<br><br>
+                A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> liga o
+                retorno: você se ouve como o jogo te ouve. Para calar o
+                microfone, use o botão do próprio controle.<br><br>
                 A luz <b>acesa</b> quer dizer que o microfone está ligado —
                 não que alguém esteja ouvindo. Ela <b>pisca</b> quando um
                 programa está gravando e entra som; a linha abaixo diz qual.
@@ -4199,13 +4264,20 @@
           </div>
           <div class="moldura" style="margin-top:9px" data-bloco="alto-falante"
                data-campo="alto-apagado" data-hef-alvo="atributo" data-hef-atributo="data-apagado">
-            <div class="rot">Alto-falante
+            <!-- O RÓTULO DO ALTO-FALANTE VIROU LINHA, COMO O DO MICROFONE —
+                 24/09/2026, O-TERCEIRO-NOME-DELA-01. Ele era caixa INLINE, e
+                 o ponto de interrogação, com o vertical-align de menos 3 px,
+                 esticava a linha: 21,6 px contra os 17 do irmão de cima,
+                 medido no Chrome a 1180. Em linha flexível os dois têm a
+                 mesma altura, e os 4,6 px que sobram pagam o quarto botão. -->
+            <div class="rot rot-linha">Alto-falante
               <span data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span class="selo-ativo no-rotulo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="alto-canal" data-hef-alvo="html"><i class="nada"></i></span></span></span>
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>Efeitos do Jogo no Controle, Áudio da TV na TV</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
-                <b>Efeitos do Jogo e Áudio da TV no Controle</b>: tudo o que a máquina toca cai aqui também, e continua saindo na TV.
-                <b>Tudo na TV e Nada no Controle</b>: o alto-falante deste controle para de tocar, e o som do PC volta todo para a TV.
+                <b>Efeitos do Jogo no Controle, Áudio do PC no PC</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
+                <b>Efeitos do Jogo e Áudio do PC no Controle</b>: tudo o que a máquina toca cai aqui também, e continua saindo no PC.
+                <b>Tudo no PC e Nada no Controle</b>: o alto-falante deste controle para de tocar, e todo o som, inclusive o dele, sai no PC.
+                <b>Tudo no Controle e Nada no PC</b>: todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio.
               </span></span>
             </div>
             <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:55%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:40%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:62%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:48%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:58%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:36%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:50%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:44%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:38%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:52%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:46%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:42%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:56%"></i></span>
@@ -4227,10 +4299,22 @@
                  terceiro não custa uma linha de folha nem uma altura a mais:
                  um par novo abaixo seria a segunda gramática que o gerador já
                  recusou uma vez. -->
+            <!-- O QUARTO BOTÃO VOLTA, E OS DOIS ÚLTIMOS FICAM LADO A LADO —
+                 24/09/2026, decisão dela de 23/09: voltar o quarto, encaixado
+                 pelo desenho, sem quebrar a altura do cartão. Os dois de baixo
+                 são o espelho um do outro, e é por isso que dividem a linha:
+                 «Tudo no PC e Nada no Controle» à esquerda, «Tudo no Controle e
+                 Nada no PC» à direita. Na janela do produto (1180) cada um
+                 quebra em duas linhas; da janela de 1440 para cima cabem numa
+                 só. A gramática não muda: mesmo gesto, mesmo endereço, cada
+                 botão com o seu valor. -->
             <div class="rota">
-              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Efeitos do Jogo no Controle, Áudio da TV na TV</button>
-              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo na TV. Serve para jogar acompanhado: cada um ouve no próprio controle.">Efeitos do Jogo e Áudio da TV no Controle</button>
-              <button class="" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" title="O som do computador volta todo para a televisão, e o alto-falante deste controle para de tocar. O microfone e a vibração não mudam.">Tudo na TV e Nada no Controle</button>
+              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Efeitos do Jogo no Controle, Áudio do PC no PC</button>
+              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo no PC. Serve para jogar acompanhado: cada um ouve no próprio controle.">Efeitos do Jogo e Áudio do PC no Controle</button>
+              <span class="par">
+                <button class="" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" title="Todo o som, inclusive o deste controle, sai no PC, e o alto-falante deste controle para de tocar. O microfone e a vibração não mudam.">Tudo no PC e Nada no Controle</button>
+                <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" title="Todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio. Vale para um controle por vez. O microfone e a vibração não mudam.">Tudo no Controle e Nada no PC</button>
+              </span>
             </div>
           </div>
         </div>
@@ -4619,8 +4703,9 @@
             <div class="rot rot-linha">Microfone
               <span class="selo-ativo" style="margin-left:5px" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">—</span></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> cala o
-                microfone e apaga a luz vermelha do controle.<br><br>
+                A barra mostra o som <b>entrando agora</b>. O <b>🎙</b> liga o
+                retorno: você se ouve como o jogo te ouve. Para calar o
+                microfone, use o botão do próprio controle.<br><br>
                 A luz <b>acesa</b> quer dizer que o microfone está ligado —
                 não que alguém esteja ouvindo. Ela <b>pisca</b> quando um
                 programa está gravando e entra som; a linha abaixo diz qual.
@@ -4739,13 +4824,20 @@
           </div>
           <div class="moldura" style="margin-top:9px" data-bloco="alto-falante"
                data-campo="alto-apagado" data-hef-alvo="atributo" data-hef-atributo="data-apagado">
-            <div class="rot">Alto-falante
+            <!-- O RÓTULO DO ALTO-FALANTE VIROU LINHA, COMO O DO MICROFONE —
+                 24/09/2026, O-TERCEIRO-NOME-DELA-01. Ele era caixa INLINE, e
+                 o ponto de interrogação, com o vertical-align de menos 3 px,
+                 esticava a linha: 21,6 px contra os 17 do irmão de cima,
+                 medido no Chrome a 1180. Em linha flexível os dois têm a
+                 mesma altura, e os 4,6 px que sobram pagam o quarto botão. -->
+            <div class="rot rot-linha">Alto-falante
               <span data-campo="alto-canal-porque" data-hef-alvo="atributo" data-hef-atributo="title"><span class="selo-ativo no-rotulo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="alto-canal" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="alto-canal" data-hef-alvo="html"><i class="nada"></i></span></span></span>
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html"><i class="nada"></i></span>
               <span class="ajuda" style="display:inline-block;vertical-align:-3px">?<span class="dica">
-                <b>Efeitos do Jogo no Controle, Áudio da TV na TV</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
-                <b>Efeitos do Jogo e Áudio da TV no Controle</b>: tudo o que a máquina toca cai aqui também, e continua saindo na TV.
-                <b>Tudo na TV e Nada no Controle</b>: o alto-falante deste controle para de tocar, e o som do PC volta todo para a TV.
+                <b>Efeitos do Jogo no Controle, Áudio do PC no PC</b>: só o que o jogo mandar para este controle sai no alto-falante dele.
+                <b>Efeitos do Jogo e Áudio do PC no Controle</b>: tudo o que a máquina toca cai aqui também, e continua saindo no PC.
+                <b>Tudo no PC e Nada no Controle</b>: o alto-falante deste controle para de tocar, e todo o som, inclusive o dele, sai no PC.
+                <b>Tudo no Controle e Nada no PC</b>: todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio.
               </span></span>
             </div>
             <span class="onda" data-campo="alto-onda-lida" data-hef-alvo="classe" data-hef-classe="sem-leitura" data-hef-quando="nao"><i data-campo="alto-onda-0" data-hef-alvo="altura" style="height:80%"></i><i data-campo="alto-onda-1" data-hef-alvo="altura" style="height:66%"></i><i data-campo="alto-onda-2" data-hef-alvo="altura" style="height:74%"></i><i data-campo="alto-onda-3" data-hef-alvo="altura" style="height:58%"></i><i data-campo="alto-onda-4" data-hef-alvo="altura" style="height:84%"></i><i data-campo="alto-onda-5" data-hef-alvo="altura" style="height:62%"></i><i data-campo="alto-onda-6" data-hef-alvo="altura" style="height:70%"></i><i data-campo="alto-onda-7" data-hef-alvo="altura" style="height:76%"></i><i data-campo="alto-onda-8" data-hef-alvo="altura" style="height:54%"></i><i data-campo="alto-onda-9" data-hef-alvo="altura" style="height:68%"></i><i data-campo="alto-onda-10" data-hef-alvo="altura" style="height:60%"></i><i data-campo="alto-onda-11" data-hef-alvo="altura" style="height:78%"></i><i data-campo="alto-onda-12" data-hef-alvo="altura" style="height:64%"></i><i data-campo="alto-onda-13" data-hef-alvo="altura" style="height:72%"></i></span>
@@ -4767,10 +4859,22 @@
                  terceiro não custa uma linha de folha nem uma altura a mais:
                  um par novo abaixo seria a segunda gramática que o gerador já
                  recusou uma vez. -->
+            <!-- O QUARTO BOTÃO VOLTA, E OS DOIS ÚLTIMOS FICAM LADO A LADO —
+                 24/09/2026, decisão dela de 23/09: voltar o quarto, encaixado
+                 pelo desenho, sem quebrar a altura do cartão. Os dois de baixo
+                 são o espelho um do outro, e é por isso que dividem a linha:
+                 «Tudo no PC e Nada no Controle» à esquerda, «Tudo no Controle e
+                 Nada no PC» à direita. Na janela do produto (1180) cada um
+                 quebra em duas linhas; da janela de 1440 para cima cabem numa
+                 só. A gramática não muda: mesmo gesto, mesmo endereço, cada
+                 botão com o seu valor. -->
             <div class="rota">
-              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Efeitos do Jogo no Controle, Áudio da TV na TV</button>
-              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo na TV. Serve para jogar acompanhado: cada um ouve no próprio controle.">Efeitos do Jogo e Áudio da TV no Controle</button>
-              <button class="" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" title="O som do computador volta todo para a televisão, e o alto-falante deste controle para de tocar. O microfone e a vibração não mudam.">Tudo na TV e Nada no Controle</button>
+              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo">Efeitos do Jogo no Controle, Áudio do PC no PC</button>
+              <button data-gesto="rota" data-rota="junto" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="junto" title="O som do PC sai no alto-falante deste controle e continua saindo no PC. Serve para jogar acompanhado: cada um ouve no próprio controle.">Efeitos do Jogo e Áudio do PC no Controle</button>
+              <span class="par">
+                <button class="" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" title="Todo o som, inclusive o deste controle, sai no PC, e o alto-falante deste controle para de tocar. O microfone e a vibração não mudam.">Tudo no PC e Nada no Controle</button>
+                <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" title="Todo o som do PC sai só no alto-falante deste controle, e o PC fica em silêncio. Vale para um controle por vez. O microfone e a vibração não mudam.">Tudo no Controle e Nada no PC</button>
+              </span>
             </div>
           </div>
         </div>
@@ -4917,13 +5021,16 @@
     <li><b>Cada controle ganhou o botão «Mira Virtual»</b>, ao lado de <b>Giroscópio</b> e <b>Acelerômetro</b>, como você pediu: <i>"Cria um botão virtual ao lado de giroscopio e acelerometro chamado Mira Virtual"</i>. Aceso, virar aquele controle move o <b>analógico direito</b> dele — e só dele. Ele nasce <b>apagado</b>, a dica é a sua frase (<i>Usar os movimentos do controle como mira (analógico R), para pessoas com deficiência motora.</i>), e o <b>Giroscópio</b> não mudou. Uma coisa muda com a mira acesa no modo <b>Virtual</b>: o jogo deixa de receber o giro daquele controle como giroscópio e passa a recebê-lo só pelo analógico direito, para a câmera não andar em dobro. O quanto um gesto anda e o «Ignorar tremor até» ficam na tela <b>Calibrar sensores de movimento</b>.</li>
     <li><b>A dica do Giroscópio muda quando a Mira Virtual está acesa</b> naquele controle, como você escolheu: passa a dizer <i>«Com a Mira Virtual acesa, o giro deste controle vai ao jogo pelo analógico direito.»</i> Com ela apagada, continua a de sempre, e cada controle diz a sua.</li>
     <li><b>No Modo Nativo o botão «Mira Virtual» fica cinza e não grava</b>, como você escreveu: <i>"A exceção do nativo todo o resto deve ter mira Virtual"</i>. Com o <b>Sony DualSense</b> e o <b>Xbox</b> ele funciona, no USB e no BT, nos quatro controles. O «Só enquanto eu segurar» e o «Inverter» entraram na tela <b>Calibrar sensores de movimento</b>.</li>
+    <li><b>O quarto botão do alto-falante voltou</b> — <b>Tudo no Controle e Nada no PC</b> —, como você pediu: <i>"Gostaria de voltar o botão o 4 mas acho que quebraria o layout vertical. Na real temos que encaixar ele. Mas fazer isso certo com mockup antes."</i> Ele manda todo o som do PC para o alto-falante daquele controle e deixa o PC em silêncio. Vale para um controle por vez: o último clique decide, e clicar no de outro controle passa o som para ele. Para caber sem o cartão crescer, os dois de baixo dividem a mesma linha — um é o espelho do outro — e o rótulo do <b>Alto-falante</b> ficou da altura do rótulo do <b>Microfone</b>.</li>
+    <li><b>«TV» virou «PC» nos botões do alto-falante</b>, como você decidiu: quem usa fone ou monitor não tem televisão. Os três de antes passaram a dizer <b>Efeitos do Jogo no Controle, Áudio do PC no PC</b>, <b>Efeitos do Jogo e Áudio do PC no Controle</b> e <b>Tudo no PC e Nada no Controle</b>, e o que cada um faz não mudou.</li>
+    <li><b>O «?» do Microfone diz o que o 🎙 faz hoje</b>: ele liga o retorno, e você se ouve como o jogo te ouve. A frase de antes dizia que ele calava o microfone e apagava a luz vermelha, e isso deixou de ser verdade em 21/09 — quem cala é o botão do próprio controle.</li>
   </ul>
 
   <h2>O que mudou em 20/09</h2>
   <ul>
-    <li><b>Os dois primeiros botões do alto-falante têm os nomes que você escreveu</b> — <b>Efeitos do Jogo no Controle, Áudio da TV na TV</b> e <b>Efeitos do Jogo e Áudio da TV no Controle</b>. Você derrubou o enunciado anterior e o que você derrubou era conceito, não palavra: <i>"não gosto do termo jogo pra se referir ao canal especifico pro sfx do controle, pq hdmi tecnicamente é jogo que manda pra lá também"</i>. Os dois não são duas fontes — são dois modos do <b>mesmo</b> alto-falante: um deixa entrar só o que o jogo endereçar a este controle, o outro derrama tudo o que a máquina toca, sem tirar o som da TV.</li>
-    <li><b>A fileira empilhou, e o cartão não cresceu por isso.</b> Os nomes não cabem lado a lado na coluna onde ela vive, então os três botões passaram a ficar um sobre o outro — e os pixels que isso custaria voltaram das alturas vizinhas (o par do microfone, o botão de calar, os dois dos sensores e o respiro das molduras). O cartão ficou <b>mais baixo</b> do que era, e agora existe uma régua que reprova qualquer mudança futura que o faça crescer.</li>
-    <li><b>O terceiro botão ganhou o nome que você escreveu</b> — <b>Tudo na TV e Nada no Controle</b> —, e ganhou porque o <b>ato</b> mudou primeiro. Ele esperou dois dias: o nome descrevia o oposto do que o botão fazia, e pôr o nome novo sem trocar o ato seria a mentira que esta tela existe para não contar. Agora ele faz os dois lados do próprio nome: devolve todo o som do computador à televisão <b>e</b> tira o alto-falante deste controle do caminho.</li>
+    <li class="foi"><b>Os dois primeiros botões do alto-falante ganharam os nomes que você escreveu</b> — <b>Efeitos do Jogo no Controle, Áudio da TV na TV</b> e <b>Efeitos do Jogo e Áudio da TV no Controle</b>. Em 24/09 «TV» virou «PC» nos dois, por decisão sua. Você derrubou o enunciado anterior e o que você derrubou era conceito, não palavra: <i>"não gosto do termo jogo pra se referir ao canal especifico pro sfx do controle, pq hdmi tecnicamente é jogo que manda pra lá também"</i>. Os dois não são duas fontes — são dois modos do <b>mesmo</b> alto-falante: um deixa entrar só o que o jogo endereçar a este controle, o outro derrama tudo o que a máquina toca, sem tirar o som do PC.</li>
+    <li class="foi"><b>A fileira empilhou, e o cartão não cresceu por isso.</b> Os nomes não cabem lado a lado na coluna onde ela vive, então os três botões passaram a ficar um sobre o outro — e os pixels que isso custaria voltaram das alturas vizinhas (o par do microfone, o botão de calar, os dois dos sensores e o respiro das molduras). O cartão ficou <b>mais baixo</b> do que era, e agora existe uma régua que reprova qualquer mudança futura que o faça crescer. Em 24/09, com o quarto botão, os dois de baixo passaram a dividir uma linha.</li>
+    <li class="foi"><b>O terceiro botão ganhou o nome que você escreveu</b> — <b>Tudo na TV e Nada no Controle</b> —, e ganhou porque o <b>ato</b> mudou primeiro. Ele esperou dois dias: o nome descrevia o oposto do que o botão fazia, e pôr o nome novo sem trocar o ato seria a mentira que esta tela existe para não contar. Ele faz os dois lados do próprio nome: devolve todo o som do computador ao PC <b>e</b> tira o alto-falante deste controle do caminho. Em 24/09 ele passou a se chamar <b>Tudo no PC e Nada no Controle</b>.</li>
   </ul>
 
   <h2>O que mudou em 11/09</h2>
