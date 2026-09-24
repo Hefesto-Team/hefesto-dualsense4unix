@@ -841,7 +841,7 @@ EDICOES: tuple[Edicao, ...] = (
 #: A tela para no mockup até o OK dela (ordem de 23/09), e esta página tem DUAS
 #: casas que o gerador responde: a bancada, que o `main()` grava, e a cópia do
 #: produto, que só muda pelo `--publicar`. As edições daqui entram na bancada e
-#: ficam FORA da conta da cópia do produto (`pagina(com_as_que_esperam=False)`)
+#: ficam FORA da conta da cópia do produto (o `com_as_que_esperam=False`)
 #: — é isso que deixa a régua da igualdade (`test_arranjo_invariantes`) verde
 #: enquanto o desenho espera por ela.
 #:
