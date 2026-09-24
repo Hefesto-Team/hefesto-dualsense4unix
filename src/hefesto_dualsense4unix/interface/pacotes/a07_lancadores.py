@@ -1403,8 +1403,34 @@ def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     return _com_outra_frase(
         abertura
         + ("<b>abre pelo atalho do Hefesto</b>." if tem else
-           "<b>não abre pelo atalho do Hefesto</b> — clique em Consertar com o "
-           "jogo e a Steam fechados."), ctx.state)
+           "<b>não abre pelo atalho do Hefesto</b>"
+           + _quem_repoe_o_atalho(lida, appid)), ctx.state)
+
+
+#: O QUE O HEFESTO FAZ PELO JOGO SEM O ATALHO — STEAM-INPUT-01, acréscimo de
+#: 24/09/2026. A frase terminava em *"clique em Consertar com o jogo e a Steam
+#: fechados"*, e o «Consertar» saiu da aba em 21/09 (*"os mesmos botões pra
+#: todos os lançadores. sempre."*): ela mandava a um botão que não existe.
+#: Quem repõe hoje é o vigia de fora (`hefesto-steam-input-guard`, que acorda
+#: quando a Steam escreve ao sair e roda a sentinela `--reparar`), e ele repôs o
+#: do PRAGMATA sem clique nenhum na noite de 21/09. A frase diz isso, curta, na
+#: forma da escolha dela para o chip «Steam Input» (*"Liga quando a Steam
+#: fechar"*) — e não aponta botão nenhum, porque não há o que clicar.
+REPOE_QUANDO_A_STEAM_FECHAR = " — ele volta quando a Steam fechar."
+
+
+def _quem_repoe_o_atalho(lida: desenho.Leitura | None, appid: int) -> str:
+    """O fim da frase do jogo sem o atalho — a promessa só quando há quem a cumpra.
+
+    A PROMESSA É SÓ PARA O REPARÁVEL (`Leitura.reparaveis`, da mesma passada do
+    censo que a sentinela usa): o jogo que ELA tirou (`recusados`, o
+    `jogos_sem_wrapper.txt`) ou o intocável fica sem o atalho de propósito, e
+    prometer que ele volta seria a tela afirmando o que ninguém vai fazer.
+    Sem leitura ainda (`None`), também não se promete — o ponto final basta.
+    """
+    if lida is not None and str(appid) in {a for a, _r, _p in lida.reparaveis}:
+        return REPOE_QUANDO_A_STEAM_FECHAR
+    return "."
 
 
 def _appid_do_clique(o: dict[str, Any], nome: str) -> str:

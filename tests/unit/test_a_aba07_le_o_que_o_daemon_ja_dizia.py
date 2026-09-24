@@ -334,3 +334,49 @@ def test_o_detectar_nao_diz_aberto_sobre_um_jogo_fechado(a07, monkeypatch):
     assert "está aberto agora" not in diz, (
         "o produto disse que um jogo FECHADO está aberto agora")
     assert "já fechou" in diz and "Um Jogo" in diz
+
+
+@pytest.mark.parametrize(("onde", "promete"), [
+    ("reparaveis", True),
+    ("recusados", False),
+    ("sem-leitura", False),
+])
+def test_o_detectar_nao_manda_a_um_botao_que_saiu(a07, desenho, monkeypatch,
+                                                  onde, promete):
+    """O «Consertar» saiu da aba em 21/09/2026, e a frase ainda mandava clicá-lo.
+
+    STEAM-INPUT-01, acréscimo de 24/09/2026 — achado pela preparação da
+    bancada: o jogo sem o atalho terminava em *"clique em Consertar com o jogo
+    e a Steam fechados"*, e a página publicada não tem botão «Consertar»
+    nenhum. Quem repõe é o vigia de fora quando a Steam fecha, e a frase diz
+    isso — só para o jogo que ele repõe (`Leitura.reparaveis`). O que ELA tirou
+    (`recusados`) fica sem o atalho de propósito, e sem leitura não se promete.
+
+    A MORDIDA: devolva o «clique em Consertar…» à frase e a primeira asserção
+    reprova; prometa a volta a todo jogo sem o atalho (tire o filtro por
+    `reparaveis` de `_quem_repoe_o_atalho`) e o caso `recusados` reprova.
+    """
+    from hefesto_dualsense4unix.daemon import launch_env
+    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+    monkeypatch.setattr(launch_env, "launch_session_appid", lambda **kw: None)
+    monkeypatch.setattr(launch_env, "read_last_run_marker",
+                        lambda *a, **kw: (3357650, 1))
+    monkeypatch.setattr(slo, "rotulo_do_jogo", lambda a: "Um Jogo")
+    lida = {
+        "reparaveis": desenho.Leitura(reparaveis=(("3357650", "Um Jogo", "—"),)),
+        "recusados": desenho.Leitura(recusados=(("3357650", "Um Jogo"),)),
+        "sem-leitura": None,
+    }[onde]
+    monkeypatch.setattr(a07.VIGIA, "agora", lambda: lida)
+
+    diz = _gesto("detectar")(_ctx(), {}, None)["mesa"]["steam-diz"]
+
+    assert "Consertar" not in diz, (
+        f"a frase manda clicar num botão que saiu da aba: {diz!r}")
+    assert "não abre pelo atalho do Hefesto" in diz
+    volta = "volta quando a Steam fechar" in diz
+    assert volta is promete, (
+        f"({onde}) a frase {'promete' if volta else 'não promete'} a volta do "
+        f"atalho, e quem o repõe {'repõe' if promete else 'não repõe'} este "
+        f"jogo: {diz!r}")
