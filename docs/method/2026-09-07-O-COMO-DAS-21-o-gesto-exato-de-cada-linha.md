@@ -351,7 +351,7 @@ roteiro.
 11. Veja os quatro controles juntos: vermelho, azul, verde e verde-limão, acesos ao mesmo tempo.
 12. Clique no rosa, o quarto tom, na linha Cor da coluna do P4, para devolvê-lo à cor do número dele.
 13. Confira que a barra do P4 voltou ao rosa.
-14. Clique na aba Jogar e confira que o «Trava o perfil ativo», no canto direito do quadro Modo, está apagado.
+14. Clique na aba Jogar e confira que o «Modo Freestyle», no canto direito do quadro Modo, está apagado.
 15. Traga para a frente a janela de um jogo que tenha perfil próprio no Hefesto.
 16. Volte ao Hefesto com Alt+Tab.
 17. Confira o «Perfil ativo» no alto da tela: ele tem de ter trocado para o perfil daquele jogo.
@@ -365,7 +365,7 @@ roteiro.
 * **P3** — Fica no AUTOMÁTICO: ninguém clica na coluna dele. A barra tem de continuar no verde do número 3 enquanto os outros mudam — e ele está no rádio.
 * **P4** — Põe VERDE — o verde-limão, porque o verde puro é o do P3 e está com X — e depois volta à cor automática dele, o rosa do número 4. É o segundo do rádio: a cor tem de chegar igual à de quem está por cabo.
 
-**A armadilha.** A tela não é a prova: o desenho da linha LEDs mostra a cor que o Hefesto pediu, e quem responde é a faixa acesa no plástico. Um tom com X é a cor de outro controle: o clique nele pisca e nada muda, e isso é a regra, não defeito. Não mexa no interruptor «Cores automáticas por controle», no alto da aba: ele é do perfil e vale para os quatro de uma vez, e desligá-lo grava na hora a cor de todos. Pintar uma cor à mão não segura mais a troca de perfil — quem a segura é o «Trava o perfil ativo», da aba Jogar, e é por isso que ele está nos passos. Quando o perfil do jogo entra, as barras podem mudar de cor: são as cores daquele perfil, não o teste falhando. E antes de dar vermelho na última parte, olhe a aba Sistema: se a linha «Trocar de perfil ao abrir o jogo» disser que o Hefesto não está vendo a janela, esta metade não tem como ser medida hoje.
+**A armadilha.** A tela não é a prova: o desenho da linha LEDs mostra a cor que o Hefesto pediu, e quem responde é a faixa acesa no plástico. Um tom com X é a cor de outro controle: o clique nele pisca e nada muda, e isso é a regra, não defeito. Não mexa no interruptor «Cores automáticas por controle», no alto da aba: ele é do perfil e vale para os quatro de uma vez, e desligá-lo grava na hora a cor de todos. Pintar uma cor à mão não segura mais a troca de perfil — quem a segura é o «Modo Freestyle», da aba Jogar, e é por isso que ele está nos passos. Quando o perfil do jogo entra, as barras podem mudar de cor: são as cores daquele perfil, não o teste falhando. E antes de dar vermelho na última parte, olhe a aba Sistema: se a linha «Trocar de perfil ao abrir o jogo» disser que o Hefesto não está vendo a janela, esta metade não tem como ser medida hoje.
 
 ---
 
@@ -600,12 +600,12 @@ roteiro.
 
 **O que isto prova.** Prova que, depois de o jogo ganhar o atalho do Hefesto e um perfil próprio, abrir esse jogo troca o perfil sozinho e os quatro controles continuam funcionando dentro dele.
 
-**Onde olhar.** O nome do perfil que está valendo se lê no alto de qualquer aba, em «Perfil ativo» — é ali que a troca sozinha aparece. Na aba Jogar, no canto direito do quadro «Modo», o «Trava o perfil ativo». Na aba Lançadores, o botão «Detectar o jogo aberto» e o cartão da Steam, com a lista, embaixo dos botões, dos jogos que não abrem pelo atalho do Hefesto. Na aba Perfis, a lista «Perfis salvos» à esquerda, com o botão «Novo» embaixo, e o quadro «Editar» à direita, com «Nome:», «Funciona em:», «Nome do Jogo:» com o botão «Detectar» ao lado, e o botão «Ativar». No aparelho, a barra de luz do P1. E dentro do jogo, os quatro respondendo.
+**Onde olhar.** O nome do perfil que está valendo se lê no alto de qualquer aba, em «Perfil ativo» — é ali que a troca sozinha aparece. Na aba Jogar, no canto direito do quadro «Modo», o «Modo Freestyle». Na aba Lançadores, o botão «Detectar o jogo aberto» e o cartão da Steam, com a lista, embaixo dos botões, dos jogos que não abrem pelo atalho do Hefesto. Na aba Perfis, a lista «Perfis salvos» à esquerda, com o botão «Novo» embaixo, e o quadro «Editar» à direita, com «Nome:», «Funciona em:», «Nome do Jogo:» com o botão «Detectar» ao lado, e o botão «Ativar». No aparelho, a barra de luz do P1. E dentro do jogo, os quatro respondendo.
 
 **Os passos.**
 
 * Abra a aba Jogar.
-1. Confira que o «Trava o perfil ativo», no canto direito do quadro «Modo», está apagado — se estiver aceso, clique nele para apagar.
+1. Confira que o «Modo Freestyle», no canto direito do quadro «Modo», está apagado — se estiver aceso, clique nele para apagar.
 2. Abra pela Steam o jogo que você quer testar.
 3. Volte ao Hefesto com Alt+Tab e clique na aba Lançadores.
 4. Clique em «Detectar o jogo aberto».
@@ -638,7 +638,7 @@ roteiro.
 
 **A espera.** O jogo leva minutos para chegar ao menu, nas duas vezes em que você o abre, e você não precisa ficar olhando. Deixe-o carregando e vá fazer outra coisa; volte quando ouvir o som do menu. A troca de perfil acontece sozinha e continua feita quando você voltar — nada se desfaz por você ter saído da frente. Ao voltar da segunda vez, o primeiro lugar a olhar é a barra de luz do P1; se ela já apagou o amarelo, confirme pelo nome em «Perfil ativo», com Alt+Tab para o Hefesto.
 
-**A armadilha.** O «Trava o perfil ativo», na aba Jogar, desliga a troca automática inteira: aceso, o perfil nunca troca e o teste reprova sem haver defeito. Confira que ele está apagado antes de começar. Trocar de perfil pelo «Ativar» segura a troca automática por trinta segundos — o jogo leva mais que isso para abrir, mas não reabra o jogo no mesmo instante. Perfil que «Funciona em» «Qualquer jogo» nunca conta como o perfil daquele jogo — a troca só acontece com um perfil que nomeia o jogo. O jogo sem o atalho ganha o atalho sozinho quando a Steam fecha, e o passo 13 é o jeito de não esperar — o «Aplicar aos jogos da Steam», da aba Sistema, precisa do jogo fechado. A frase que o «Detectar» escreve no cartão da Steam aparece só por um instante; a lista fica, e é ela que o passo 5 lê. O amarelo é para não esbarrar num tom com X: o verde é a cor automática do P3. E se, ao abrir o jogo, a barra de luz do P1 piscar amarela e mudar, confie no nome em «Perfil ativo», não na luz, e anote: a Steam não disputa mais a barra, e o amarelo que o perfil do jogo guarda para o P1 vence a cor que o jogo mandar. Por fim, o tamanho: este é o teste mais longo dos 21, e é longo de propósito. Ele encadeia quatro coisas que só provam juntas — ver se o jogo tem o atalho, criar o perfil que nomeia o jogo, marcar esse perfil com uma cor que se enxerga de dentro da partida, e só então fechar tudo e abrir de novo para ver a troca acontecer sem a sua mão.
+**A armadilha.** O «Modo Freestyle», na aba Jogar, segura o perfil que está valendo: aceso, janela nenhuma o troca, e só o perfil próprio de um jogo entra por cima. Confira que ele está apagado antes de começar, para medir a troca automática sem ele no meio. Trocar de perfil pelo «Ativar» segura a troca automática por trinta segundos — o jogo leva mais que isso para abrir, mas não reabra o jogo no mesmo instante. Perfil que «Funciona em» «Qualquer jogo» nunca conta como o perfil daquele jogo — a troca só acontece com um perfil que nomeia o jogo. O jogo sem o atalho ganha o atalho sozinho quando a Steam fecha, e o passo 13 é o jeito de não esperar — o «Aplicar aos jogos da Steam», da aba Sistema, precisa do jogo fechado. A frase que o «Detectar» escreve no cartão da Steam aparece só por um instante; a lista fica, e é ela que o passo 5 lê. O amarelo é para não esbarrar num tom com X: o verde é a cor automática do P3. E se, ao abrir o jogo, a barra de luz do P1 piscar amarela e mudar, confie no nome em «Perfil ativo», não na luz, e anote: a Steam não disputa mais a barra, e o amarelo que o perfil do jogo guarda para o P1 vence a cor que o jogo mandar. Por fim, o tamanho: este é o teste mais longo dos 21, e é longo de propósito. Ele encadeia quatro coisas que só provam juntas — ver se o jogo tem o atalho, criar o perfil que nomeia o jogo, marcar esse perfil com uma cor que se enxerga de dentro da partida, e só então fechar tudo e abrir de novo para ver a troca acontecer sem a sua mão.
 
 ---
 
