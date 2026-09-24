@@ -25,7 +25,10 @@ Os três dublês, e por que nenhum é mais frouxo que o de verdade:
   chega à ponte pelos ganchos, que o sudo de verdade apagaria (e que a ponte e
   o religar apagam sob ``SUDO_UID``: a régua disso é a
   ``test_os_ganchos_de_teste_morrem_sob_sudo.py``). E ele recusa rodar sem
-  os ganchos apontando para a mesa de mentira: é a guarda que sai;
+  os ganchos apontando para a mesa de mentira: é a guarda que sai. A única
+  coisa que ele tem a mais é uma PAUSA pedida pela régua depois da N-ésima
+  passada (o trabalho fica parado com a trava na mão), que é onde ela põe o
+  aviso de outro controle no meio do trabalho sem depender do relógio;
 * **o kernel** — o ``bind`` do kernel é SÍNCRONO (``bind_store`` →
   ``device_driver_attach`` → a probe): o link ``driver`` existe quando a
   escrita volta, e é isso que o religar confere na linha seguinte. Um arquivo
@@ -49,6 +52,10 @@ AS MORDIDAS (arranque a cura, veja reprovar, devolva):
   controle voltaria no tique, e o P3 vira P2 enquanto o P2 está fora;
 * :func:`test_as_esperas_cabem_no_lugar_guardado` — suba a primeira espera
   do ``storm_watch.sh`` para 4 s e ela reprova;
+* :func:`test_o_aviso_que_chega_no_meio_do_trabalho_ganha_as_passadas_dele` —
+  ponha ``RELIGAR_VOLTAS=1``, tire o byte do pedido ou esvazie o arquivo da
+  trava no fim da volta (e não antes da primeira passada), e o P1 que perde a
+  HID depois da última passada do trabalho do P2 fica sem driver até o tique;
 * :func:`test_o_lugar_do_vigia_e_o_do_dono` — faça o ``lugar_da_porta`` pegar
   o PRIMEIRO controlador do caminho, e não o último;
 * :func:`test_so_a_probe_perdida_chama_o_religar` — tire o ``0005`` da forma
@@ -224,8 +231,20 @@ if ! grep -Fxq -- "${pedido}" "${HEFESTO_TESTE_SUDO_REGRAS:?}"; then
 fi
 if (( lista )); then echo "lista: ${pedido}" >>"${registro}"; exit 0; fi
 echo "roda: ${pedido}" >>"${registro}"
-export BASH_ENV="${HEFESTO_TESTE_KERNEL:?}"
-exec "$@"
+BASH_ENV="${HEFESTO_TESTE_KERNEL:?}" "$@"
+rc=$?
+# A PAUSA DA RÉGUA: depois da N-ésima passada, o trabalho do religar fica
+# parado aqui — com a trava na mão — até a régua dizer que siga. É onde ela põe
+# o aviso de OUTRO controle no meio do trabalho, sem depender do relógio.
+if [[ -n "${HEFESTO_TESTE_PAUSA_DEPOIS_DE:-}" ]] \
+      && (( $(grep -c '^roda: ' "${registro}") == HEFESTO_TESTE_PAUSA_DEPOIS_DE )); then
+    : >"${HEFESTO_TESTE_PAUSA:?}.parou"
+    for _ in $(seq 600); do
+        [[ -e "${HEFESTO_TESTE_PAUSA}.segue" ]] && break
+        sleep 0.05
+    done
+fi
+exit "${rc}"
 """
 
 
@@ -694,6 +713,69 @@ def test_uma_rajada_e_um_trabalho_so(tmp_path: Path) -> None:
     bancada.aviso(bancada.cai_o_cabo(P2))
     chamadas = bancada.chamadas()
     assert chamadas == [f"lista: {PONTE} religar-orfaos", f"roda: {PONTE} religar-orfaos"], chamadas
+
+
+def test_o_aviso_que_chega_no_meio_do_trabalho_ganha_as_passadas_dele(tmp_path: Path) -> None:
+    """Nunca só o primeiro: o P1 perde a HID quando o trabalho do P2 já passou.
+
+    Os controles de um adaptador que caiu reconectam cada um no seu tempo, e no
+    cabo cada entrada falha na sua hora. O aviso do P1 chega com a trava na mão
+    do trabalho do P2, DEPOIS da última passada dele: absorvido sem mais nada,
+    o P1 esperaria o tique — e sairia do lugar guardado. O pedido que ele deixa
+    no arquivo da trava dá ao trabalho mais uma volta inteira.
+
+    A MORDIDA: tire a segunda volta do ``religar_em_fundo`` (o ``while``) e o
+    P1 fica sem driver.
+    """
+    bancada = Bancada(tmp_path)
+    pausa = tmp_path / "pausa"
+    env = {
+        **bancada.ambiente(),
+        "HEFESTO_TESTE_PAUSA_DEPOIS_DE": str(len(ESPERAS)),
+        "HEFESTO_TESTE_PAUSA": str(pausa),
+    }
+    do_p2 = bancada.classificar(bancada.cai_o_cabo(P2))
+    trabalho = subprocess.Popen(
+        ["bash", str(VIGIA), "--test-anotar", str(bancada.trava)],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=env,
+    )
+    try:
+        assert trabalho.stdin is not None
+        trabalho.stdin.write("\n".join(do_p2) + "\n")
+        trabalho.stdin.close()
+        parou = pausa.with_name(pausa.name + ".parou")
+        limite = time.monotonic() + 60
+        while not parou.exists():
+            assert trabalho.poll() is None, "o trabalho do P2 acabou sem chegar à última passada"
+            assert time.monotonic() < limite, " | ".join(bancada.chamadas())
+            time.sleep(0.02)
+        assert P2 in bancada.ligados(), " | ".join(bancada.frases())
+
+        # O P1 cai AGORA, com o trabalho do P2 de pé e a trava na mão dele.
+        do_p1 = bancada.classificar(bancada.cai_o_cabo(P1))
+        feito = subprocess.run(
+            ["bash", str(VIGIA), "--test-anotar", str(bancada.trava)],
+            input="\n".join(do_p1) + "\n",
+            capture_output=True,
+            text=True,
+            check=False,
+            env=bancada.ambiente(),
+            timeout=60,
+        )
+        assert feito.returncode == 0, feito.stderr
+        assert bancada.chamadas().count(f"lista: {PONTE} religar-orfaos") == 1, (
+            "o aviso do P1 abriu um trabalho seu: a trava não estava na mão do do P2"
+        )
+    finally:
+        pausa.with_name(pausa.name + ".segue").touch()
+        trabalho.wait(timeout=120)
+    assert trabalho.returncode == 0, trabalho.stderr.read() if trabalho.stderr else ""
+    assert P1 in bancada.ligados(), " | ".join(bancada.chamadas() + bancada.frases())
+    assert bancada.passada_que_religou(P1) == 0, bancada.frases()
 
 
 @pytest.mark.parametrize(
