@@ -380,11 +380,21 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
     session.json apontando um perfil carregável. Quando a ativação do nome
     resolvido falha, tentamos o session.json como fallback, com o log
     `last_profile_seed_marker_invalido` (recusa do marker ≠ boot sem perfil).
+
+    O-MODO-FREESTYLE-03 (24/09/2026): O BOOT NUNCA TERMINA SEM PERFIL QUANDO O
+    «FREESTYLE» ESTÁ NO DISCO. Três caminhos acabavam sem nada valendo até o
+    primeiro jogo — a sessão apontando um perfil de janela (que este restauro
+    pula de propósito, RESTORE-ESCOPO-01), o nome da sessão que não ativa, e o
+    fallback do session.json que também não ativa. Com o Modo Freestyle ligado,
+    ou sem leitor de janela, o autoswitch não trocava por janela comum, e o
+    trecho não acabava nunca. Nos três vale o perfil de fora do jogo enquanto o
+    jogo não abre — ver `_o_de_fora_do_jogo_enquanto_espera`, logo abaixo.
     """
     from functools import partial
 
     from hefesto_dualsense4unix.profiles.loader import o_perfil_de_fora_do_jogo
     from hefesto_dualsense4unix.profiles.manager import ProfileManager, _canal_do_ps
+    from hefesto_dualsense4unix.profiles.slug import mesmo_slug
     from hefesto_dualsense4unix.utils.session import (
         load_last_profile,
         resolve_boot_profile,
@@ -392,7 +402,8 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
 
     # O-MODO-FREESTYLE-02 (24/09/2026): sem escolha dela na sessão, vale o
     # perfil de fora do jogo — o boot não fica sem perfil até o primeiro jogo.
-    name = resolve_boot_profile() or o_perfil_de_fora_do_jogo()
+    fora_do_jogo = o_perfil_de_fora_do_jogo()
+    name = resolve_boot_profile() or fora_do_jogo
     if not name:
         return
     # FEAT-NATIVE-MODE-01: em Modo Nativo o controle fica SOLTO para o jogo — não
@@ -449,10 +460,16 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
             with contextlib.suppress(Exception):
                 registrar(nome)
 
-    if _escopado_a_janela(name):
+    # A ESPERA SE REGISTRA ANTES, e o Freestyle que entra depois a encerra —
+    # de propósito. `StateStore.set_active_profile` é quem apaga o
+    # `perfil_adiado_por_janela` (PERFIL-ADIADO-POR-JANELA-01), e o contrato
+    # dele é "só tem valor enquanto `active_profile` é None". Com o Freestyle
+    # valendo não há `None` a explicar; sem ele no disco, a espera fica, e o
+    # estado diz a mesma coisa que dizia antes desta sprint.
+    pulado = _escopado_a_janela(name)
+    if pulado:
         logger.info("last_profile_restore_pulado_perfil_de_janela", name=name)
         _registrar_espera(name)
-        return
     # FEAT-POINT-AND-CLICK-01 (fix A-06/A8): provider lazy + appliers — o
     # restore pode rodar antes/depois do keyboard subir e após reconexão
     # (device recriado); resolver na ativação cobre todos os casos.
@@ -512,23 +529,66 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
         # chegava ao `ps_solo` na primeira troca de perfil. Memória no hotkey, sem device.
         ps_action_sink=_canal_do_ps(daemon),
     )
-    try:
-        await daemon._run_blocking(
-            partial(manager.activate, name, origin="system")
-        )
-        logger.info("last_profile_restored", name=name)
-    except Exception as exc:
-        # Sem `exc_info=True`: este warning dispara normalmente quando o perfil
-        # persistido na sessão foi deletado/renomeado — err=str(exc) já dá o
-        # diagnóstico; traceback completo seria ruído e atrasaria o boot.
-        logger.warning("last_profile_restore_failed", name=name, err=str(exc))
-        # Fix do review (2026-07-16, MED): o nome resolvido pode ter vindo do
-        # marker (que vence na divergência) e o marker pode estar órfão —
-        # cair no session.json preserva o restore em vez de deixar o boot
-        # sem perfil nenhum.
-        fallback = load_last_profile()
-        if not fallback or fallback == name:
+
+    async def _ativar(nome: str) -> bool:
+        """Uma ativação de sistema; devolve se o perfil entrou."""
+        try:
+            await daemon._run_blocking(
+                partial(manager.activate, nome, origin="system")
+            )
+        except Exception as exc:
+            # Sem `exc_info=True`: este warning dispara normalmente quando o
+            # perfil persistido na sessão foi deletado/renomeado — err=str(exc)
+            # já dá o diagnóstico; traceback completo seria ruído e atrasaria
+            # o boot.
+            logger.warning("last_profile_restore_failed", name=nome, err=str(exc))
+            return False
+        logger.info("last_profile_restored", name=nome)
+        return True
+
+    async def _o_de_fora_do_jogo_enquanto_espera(
+        tentados: list[str], motivo: str
+    ) -> None:
+        """O-MODO-FREESTYLE-03: o que custa menos a quem joga é ter perfil.
+
+        O perfil de janela continua fora do boot (RESTORE-ESCOPO-01): ele pinta
+        a barra e cala a paleta com o jogo fechado. O que muda é o que vale
+        ENQUANTO o jogo não abre — o «Freestyle», o mesmo que o boot restaura
+        com a sessão vazia desde a O-MODO-FREESTYLE-02. O jogo, quando abrir,
+        entra por cima pelo autoswitch, com o Modo Freestyle ligado ou não
+        (`D-2409-COM-O-FREESTYLE-O-JOGO-ENTRA-POR-CIMA`).
+
+        Não vale quando o próprio Freestyle já foi tentado (a sessão o
+        apontava), quando ela o apagou, ou quando ELA pôs nele uma regra de
+        janela — aí ele é de janela também, e a regra de cima vale para ele.
+        `origin="system"`: a sessão continua dizendo o que ela escolheu.
+        """
+        if not fora_do_jogo or any(mesmo_slug(fora_do_jogo, t) for t in tentados):
             return
+        if _escopado_a_janela(fora_do_jogo):
+            return
+        logger.info(
+            "perfil_de_fora_do_jogo_vale_enquanto_espera",
+            name=fora_do_jogo,
+            motivo=motivo,
+            sessao=tentados[0] if tentados else None,
+        )
+        await _ativar(fora_do_jogo)
+
+    if pulado:
+        await _o_de_fora_do_jogo_enquanto_espera([name], "perfil_de_janela")
+        return
+    if await _ativar(name):
+        return
+    # Fix do review (2026-07-16, MED): o nome resolvido pode ter vindo do
+    # marker (que vence na divergência) e o marker pode estar órfão — cair no
+    # session.json preserva o restore em vez de deixar o boot sem perfil
+    # nenhum.
+    fallback = load_last_profile()
+    tentados = [name]
+    motivo = "nao_ativou"
+    if fallback and fallback != name:
+        tentados.append(fallback)
         # RESTORE-ESCOPO-01: mesma regra do nome principal — perfil de
         # janela não volta no boot pelo caminho de fallback.
         if _escopado_a_janela(fallback):
@@ -536,19 +596,14 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
                 "last_profile_restore_pulado_perfil_de_janela", name=fallback
             )
             _registrar_espera(fallback)
-            return
-        logger.info(
-            "last_profile_seed_marker_invalido", marker=name, fallback=fallback
-        )
-        try:
-            await daemon._run_blocking(
-                partial(manager.activate, fallback, origin="system")
+            motivo = "perfil_de_janela"
+        else:
+            logger.info(
+                "last_profile_seed_marker_invalido", marker=name, fallback=fallback
             )
-            logger.info("last_profile_restored", name=fallback)
-        except Exception as exc2:
-            logger.warning(
-                "last_profile_restore_failed", name=fallback, err=str(exc2)
-            )
+            if await _ativar(fallback):
+                return
+    await _o_de_fora_do_jogo_enquanto_espera(tentados, motivo)
 
 
 def _broker_restore_for_recovery(daemon: DaemonProtocol) -> list[str]:

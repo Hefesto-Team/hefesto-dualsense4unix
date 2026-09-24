@@ -501,8 +501,68 @@ def _o_slot_dela_tem_nome_antigo(directory: Path) -> bool:
                for nome in (ARQUIVO_ANTIGO_DO_PADRAO, ARQUIVO_DO_PERSONALIZADO))
 
 
+def _fabrica_antiga(
+    prioridade: int,
+    barra: list[int],
+    lampadas: list[bool],
+    brilho: float,
+    *,
+    com_teclas: bool,
+) -> dict[str, object]:
+    """Uma versão que a fábrica JÁ ENTREGOU para o lugar do padrão, com o nome de hoje."""
+    dados: dict[str, object] = {
+        "name": NOME_DO_PADRAO,
+        "version": 1,
+        "match": {"type": "any"},
+        "priority": prioridade,
+        "triggers": {"left": {"mode": "Off", "params": []},
+                     "right": {"mode": "Off", "params": []}},
+        "leds": {"lightbar": barra, "player_leds": lampadas,
+                 "lightbar_brightness": brilho},
+        "rumble": {"passthrough": True},
+    }
+    if com_teclas:
+        dados["key_bindings"] = None
+    return dados
+
+
+#: O-MODO-FREESTYLE-03 (24/09/2026) — AS FÁBRICAS DE ANTES, fechadas e datadas.
+#:
+#: São as cinco versões que o asset do padrão teve no git
+#: (`assets/profiles_default/meu_perfil.json` de 22/04 a 05/09,
+#: `personalizado.json` de 05/09 a 24/09, `freestyle.json` de 24/09 até esta
+#: sprint), com o `name` de hoje: as duas renomeações do slot
+#: (`migrate_default_profile_name` e `o_personalizado_vira_freestyle`) trocam o
+#: nome — e a regra da nossa janela, que a fábrica nunca teve — e mais nada.
+#: Um `freestyle.json` igual a uma delas é uma cópia de fábrica que ninguém
+#: mexeu, e é SÓ ele que a fábrica nova alcança
+#: (`o_freestyle_de_fabrica_nasce_ligado`). As cinco nasceram com os gatilhos em
+#: `Off`, contra a ordem dela de 17/09.
+#:
+#: LISTA FECHADA: o asset de hoje não entra nela (a régua
+#: `test_o_freestyle_vale_em_todo_caminho.py` cobra), e quem mudar o asset de
+#: novo acrescenta aqui a versão que sai.
+_FABRICAS_ANTERIORES_DO_FREESTYLE: tuple[dict[str, object], ...] = (
+    # 22/04/2026 (974c55869)
+    _fabrica_antiga(5, [97, 53, 131], [True, False, False, False, False], 1.0,
+                    com_teclas=False),
+    # 22/04/2026 (c2bd10f8e)
+    _fabrica_antiga(0, [40, 80, 180], [False, False, True, False, False], 0.4,
+                    com_teclas=False),
+    # 23/04/2026 (099e4f839)
+    _fabrica_antiga(0, [40, 80, 180], [False, False, True, False, False], 0.4,
+                    com_teclas=True),
+    # 28/06/2026 (00eb5eeb9)
+    _fabrica_antiga(1, [40, 80, 180], [False, False, True, False, False], 0.4,
+                    com_teclas=True),
+    # 20/07/2026 (4a9bb696e) — a mesma de 05/09 e de 24/09, só com outro nome
+    _fabrica_antiga(1, [40, 80, 180], [False, False, True, False, False], 1.0,
+                    com_teclas=True),
+)
+
+
 def _e_o_de_fabrica_intocado(path: Path) -> bool:
-    """`freestyle.json` é a cópia de fábrica, sem nenhum ajuste dela?
+    """`freestyle.json` é UMA cópia de fábrica, sem nenhum ajuste dela?
 
     É o caso que o `install_profiles.sh` cria: ele roda ANTES de qualquer Python
     e copia o preset para um disco onde o padrão dela ainda tem o nome antigo.
@@ -510,15 +570,25 @@ def _e_o_de_fabrica_intocado(path: Path) -> bool:
     disputando. Compara o JSON lido, não os bytes: um empacotador que reformate
     o asset não pode transformar a fábrica em "configuração dela".
 
-    Sem o asset (nenhuma fonte instalada) não há como provar — responde `False`,
-    e a migração recusa, que é o lado que não sobrescreve nada.
+    A FÁBRICA É O ASSET DE HOJE OU UMA DAS DE ANTES (O-MODO-FREESTYLE-03): o
+    shell de 24/09 copiou a versão de gatilhos em `Off`, e ela continua sendo
+    fábrica depois que o asset muda — senão, ao lado de um `personalizado.json`
+    dela, a renomeação recusaria por "já existe" e ficariam dois padrões.
+
+    Sem o asset (nenhuma fonte instalada) só as de antes se provam — o resto
+    responde `False`, e a migração recusa, que é o lado que não sobrescreve nada.
     """
+    try:
+        dados = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    if dados in _FABRICAS_ANTERIORES_DO_FREESTYLE:
+        return True
     asset = _seed_source_file(ARQUIVO_DO_PADRAO)
     if asset is None:
         return False
     try:
-        return bool(json.loads(path.read_text(encoding="utf-8"))
-                    == json.loads(asset.read_text(encoding="utf-8")))
+        return bool(dados == json.loads(asset.read_text(encoding="utf-8")))
     except (OSError, ValueError):
         return False
 
@@ -675,6 +745,97 @@ def o_perfil_de_fora_do_jogo() -> str | None:
         if (profiles_dir() / ARQUIVO_DO_PADRAO).is_file():
             return NOME_DO_PADRAO
     return None
+
+
+# --- O-MODO-FREESTYLE-03 (24/09/2026) — a fábrica do Freestyle nasce ligada -----
+# A ordem dela de 17/09: *"os jogos e perfis tem que iniciar com todas as
+# features ativadas por default."*  (noqa-acento: citação literal dela)
+#
+# O asset do Freestyle nascia com os dois gatilhos em `Off` — o único campo dele
+# que nascia mudo (os outros já nascem ligados no leitor: ver
+# `schema.NASCIMENTO_DOS_CAMPOS`). Desde esta sprint ele traz os gatilhos de
+# nascimento do produto (`schema.MODO_DE_NASCIMENTO_DO_GATILHO`, com os
+# parâmetros ESCRITOS no arquivo, para a aba Gatilhos mostrar «Rígido» — um
+# perfil sem a seção é lido lá como «Desligado»).
+#
+# O QUE O INSTALL FAZ NUM DISCO QUE JÁ TEM O `freestyle.json`: nada. O
+# `install_profiles.sh` e o `seed_default_presets` só copiam o AUSENTE, e o
+# `.seeded_presets` guarda o que já foi semeado. Por isso a fábrica nova chega
+# à cópia de fábrica antiga por AQUI, na primeira carga de perfis de qualquer
+# processo — e SÓ a ela: um Freestyle com um byte de ajuste dela não é fábrica
+# (`_FABRICAS_ANTERIORES_DO_FREESTYLE`), e o disco dela não muda.
+#
+# Mesmo desenho da O-MODO-FREESTYLE-02: os bytes antigos vão ao `.historico`
+# ANTES da escrita (`restaurar_do_historico("freestyle")` os devolve), e a marca
+# faz a segunda corrida não fazer nada.
+_FREESTYLE_DE_FABRICA_NASCE_LIGADO_MARKER = ".freestyle_de_fabrica_nasce_ligado"
+
+
+def _levar_a_fabrica_nova(
+    alvo: Path, asset: Path, directory: Path
+) -> tuple[str, Path | None]:
+    """O miolo, com os dois locks tomados. Devolve `(desfecho, cópia)`.
+
+    A ORDEM: a cópia dos bytes no `.historico`, e só então o asset de hoje por
+    cima, escrito byte a byte como o semeador o copia numa máquina nova. Sem a
+    cópia nada muda.
+    """
+    bruto = _bytes_se_existe(alvo)
+    if bruto is None:
+        return "sem_freestyle", None
+    try:
+        dados = json.loads(bruto.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError):
+        return "ilegivel", None
+    if dados not in _FABRICAS_ANTERIORES_DO_FREESTYLE:
+        return "nao_e_a_fabrica_antiga", None
+    copia = _arquivar_versao(SLUG_DO_PADRAO, bruto, raiz=directory)
+    if copia is None:
+        return "sem_copia", None
+    _atomic_write_bytes(alvo, asset.read_bytes())
+    return "fabrica_nova", copia
+
+
+def o_freestyle_de_fabrica_nasce_ligado(dest_dir: Path | None = None) -> Path | None:
+    """One-shot: a cópia de fábrica ANTIGA do Freestyle vira a de hoje.
+
+    O-MODO-FREESTYLE-03 (ver o bloco acima). Devolve o caminho da cópia dos
+    bytes antigos no `.historico` quando trocou; `None` em todo outro desfecho.
+
+    RECUSA, e cada recusa tem régua (`test_o_freestyle_vale_em_todo_caminho.py`):
+    - sem `freestyle.json` — máquina nova (o semeador entrega o de hoje) ou ela
+      o apagou (a marca nasce, e a deleção dela é respeitada);
+    - o arquivo não é uma das fábricas de antes — é dela, ou já é o de hoje;
+    - sem o asset de hoje não há para onde levar: nada muda e a marca não
+      nasce, e a próxima carga tenta de novo — como sem a cópia.
+    """
+    directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
+    marker = directory / _FREESTYLE_DE_FABRICA_NASCE_LIGADO_MARKER
+    if marker.exists():
+        return None
+    asset = _seed_source_file(ARQUIVO_DO_PADRAO)
+    if asset is None:
+        return None
+    alvo = directory / ARQUIVO_DO_PADRAO
+    copia: Path | None = None
+    desfecho = "sem_freestyle"
+    with FileLock(str(_lock_path(marker))):
+        if marker.exists():
+            return None
+        if alvo.is_file():
+            # O LOCK DO ARQUIVO, o mesmo que o `save_profile` toma: um processo
+            # que grave o Freestyle agora espera a troca terminar.
+            with FileLock(str(_lock_path(alvo))):
+                desfecho, copia = _levar_a_fabrica_nova(alvo, asset, directory)
+        if desfecho != "sem_copia":
+            with contextlib.suppress(Exception):
+                marker.write_text("done\n", encoding="utf-8")
+    logger.info(
+        "freestyle_de_fabrica_nasce_ligado",
+        desfecho=desfecho,
+        copia=str(copia) if copia is not None else None,
+    )
+    return copia
 
 
 #: R-12 (auditoria 23/07): marker da migração do `match` inalcançável do
@@ -1165,6 +1326,11 @@ def _maybe_seed_presets() -> None:
             migrate_default_profile_name()
         with contextlib.suppress(Exception):
             o_personalizado_vira_freestyle()
+        # O-MODO-FREESTYLE-03: DEPOIS das duas, porque uma fábrica de antes que
+        # uma delas acabou de renomear também é fábrica, e ANTES da semeadura,
+        # que numa máquina nova entrega o asset de hoje.
+        with contextlib.suppress(Exception):
+            o_freestyle_de_fabrica_nasce_ligado()
         seed_default_presets()
         # MASCARA-QUE-GRUDA-01 (22/08/2026): aqui rodava a
         # `migrate_game_presets_to_xbox`. Nenhuma migração escreve máscara em
@@ -2815,6 +2981,7 @@ __all__ = [
     "migrar_generos_para_estilos_de_jogo",
     "migrate_coop_local_match",
     "migrate_default_profile_name",
+    "o_freestyle_de_fabrica_nasce_ligado",
     "o_perfil_de_fora_do_jogo",
     "o_personalizado_vira_freestyle",
     "perfis_de_jogo_semeados",
