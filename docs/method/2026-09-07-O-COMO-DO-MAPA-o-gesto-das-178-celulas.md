@@ -827,23 +827,23 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **Os passos.**
 
-1. Abra a aba Conexões.
-2. Clique no título «Rádio e Adaptadores» para abrir a seção.
-3. Ache o cartão do adaptador em que o P3 e o P4 aparecem e anote num papel a entrada em que ele está.
-4. Clique em «Examinar Entradas», no pé da seção.
-5. Leia, no «Check-up», a linha que fala de aparelho colado a um adaptador Bluetooth, e anote a frase inteira.
-6. Passe as pontas dos cabos do P1 e do P2 para as entradas mais próximas desse adaptador, sem tirá-las dos controles — se houver duas entradas coladas nele, use essas.
-7. Confira na fita do topo que os quatro chips voltaram e que o P1 e o P2 dizem USB.
-8. Clique em «Examinar Entradas» de novo e compare a linha do «Check-up» com a frase que você anotou.
-9. Na aba Iluminação, clique numa cor bem viva na linha «Cor» da coluna do P1 e numa bem diferente na do P2 — sempre um quadradinho sem X.
-10. Veja as duas barras de luz acenderem na cor escolhida, na hora do clique.
-11. Na aba Vibração, segure o P1 e o P2, um em cada mão, e clique em «Testar» nas duas colunas.
-12. Confira que os dois tremeram na sua mão.
-13. De volta à aba Iluminação, clique em cores novas nas colunas do P1 e do P2, alternando, dez vezes seguidas, o mais rápido que você conseguir.
-14. Anote todo clique que não acendeu e toda cor que demorou a chegar.
-15. Passe as pontas dos dois cabos para as entradas do outro lado do gabinete, o mais longe do adaptador que der.
-16. Refaça os passos 7 a 14 com os cabos na posição nova.
-17. Compare no papel as duas rodadas, lado a lado: cabos perto do adaptador e cabos longe dele.
+* Abra a aba Conexões.
+1. Clique no título «Rádio e Adaptadores» para abrir a seção.
+2. Ache o cartão do adaptador em que o P3 e o P4 aparecem e anote num papel a entrada em que ele está.
+3. Clique em «Examinar Entradas», no pé da seção.
+4. Leia, no «Check-up», a linha que fala de aparelho colado a um adaptador Bluetooth, e anote a frase inteira.
+5. Passe as pontas dos cabos do P1 e do P2 para as entradas mais próximas desse adaptador, sem tirá-las dos controles — se houver duas entradas coladas nele, use essas.
+6. Confira na fita do topo que os quatro chips voltaram e que o P1 e o P2 dizem USB.
+7. Clique em «Examinar Entradas» de novo e compare a linha do «Check-up» com a frase que você anotou.
+8. Na aba Iluminação, clique numa cor bem viva na linha «Cor» da coluna do P1 e numa bem diferente na do P2 — sempre um quadradinho sem X.
+9. Veja as duas barras de luz acenderem na cor escolhida, na hora do clique.
+10. Na aba Vibração, segure o P1 e o P2, um em cada mão, clique em «Testar» na coluna do P1 e depois na do P2 — que encerra o do P1 —, e termine no «Parar» da coluna do P2.
+11. Confira que os dois tremeram na sua mão.
+12. De volta à aba Iluminação, clique em cores novas nas colunas do P1 e do P2, alternando, dez vezes seguidas, o mais rápido que você conseguir.
+13. Anote todo clique que não acendeu e toda cor que demorou a chegar.
+14. Passe as pontas dos dois cabos para as entradas do outro lado do gabinete, o mais longe do adaptador que der.
+15. Refaça os passos 6 a 13 com os cabos na posição nova.
+16. Compare no papel as duas rodadas, lado a lado: cabos perto do adaptador e cabos longe dele.
 
 **Passa quando.** Nas duas posições dos cabos, o P1 e o P2 obedeceram do mesmo jeito: cada cor acendeu na hora do clique, nenhum clique da rajada foi engolido, e os dois tremeram no «Testar». Se eles falharam com os cabos perto do adaptador e pararam de falhar com os cabos longe, o teste não reprovou o produto — ele achou o preço da posição, e esse achado vale mais que o verde.
 
@@ -868,22 +868,22 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **Os passos.**
 
-1. Abra a aba Conexões.
-2. Clique no título «Rádio e Adaptadores» para abrir a seção.
-3. Anote num papel, cartão por cartão, a entrada de cada adaptador e quais controles aparecem dentro dele.
-4. Confira na fita do topo que o P3 e o P4 dizem BT.
-5. Clique em «Examinar Entradas» e anote a linha do «Check-up» que fala de aparelho colado a um adaptador Bluetooth.
-6. Encaixe as pontas dos cabos do P1 e do P2 nas entradas mais próximas do adaptador do P3 e do P4.
-7. Na aba Iluminação, clique numa cor bem viva na coluna do P3 e numa bem diferente na do P4 — sempre um quadradinho sem X.
-8. Veja a barra de luz de cada um acender na cor clicada, no ato do clique.
-9. Clique em cores novas nas colunas do P1 e do P2, alternando, quinze vezes seguidas, o mais rápido que você conseguir — é isto que põe o lado do cabo para trabalhar.
-10. Sem parar o ritmo, clique numa cor nova na coluna do P3 e noutra na do P4.
-11. Anote toda cor do P3 ou do P4 que demorou a chegar, ou que não chegou.
-12. Na aba Vibração, clique em «Testar» na coluna do P3 e depois na do P4, com cada um na mão.
-13. Desencaixe o adaptador do P3 e do P4, encaixe-o numa entrada do outro lado do gabinete e traga os dois de volta com um toque curto no PS de cada um.
-14. Na aba Conexões, confira que o cartão desse adaptador passou a dizer a entrada nova e que o P3 e o P4 voltaram para dentro dele.
-15. Refaça os passos 7 a 12 com o adaptador na entrada nova.
-16. Escreva as duas rodadas lado a lado.
+* Abra a aba Conexões.
+1. Clique no título «Rádio e Adaptadores» para abrir a seção.
+2. Anote num papel, cartão por cartão, a entrada de cada adaptador e quais controles aparecem dentro dele.
+3. Confira na fita do topo que o P3 e o P4 dizem BT.
+4. Clique em «Examinar Entradas» e anote a linha do «Check-up» que fala de aparelho colado a um adaptador Bluetooth.
+5. Encaixe as pontas dos cabos do P1 e do P2 nas entradas mais próximas do adaptador do P3 e do P4.
+6. Na aba Iluminação, clique numa cor bem viva na coluna do P3 e numa bem diferente na do P4 — sempre um quadradinho sem X.
+7. Veja a barra de luz de cada um acender na cor clicada, no ato do clique.
+8. Clique em cores novas nas colunas do P1 e do P2, alternando, quinze vezes seguidas, o mais rápido que você conseguir — é isto que põe o lado do cabo para trabalhar.
+9. Sem parar o ritmo, clique numa cor nova na coluna do P3 e noutra na do P4.
+10. Anote toda cor do P3 ou do P4 que demorou a chegar, ou que não chegou.
+11. Na aba Vibração, com cada um na mão, clique em «Testar» na coluna do P3 e depois na do P4 — que encerra o do P3 —, e termine no «Parar» da coluna do P4.
+12. Desencaixe o adaptador do P3 e do P4, encaixe-o numa entrada do outro lado do gabinete e traga os dois de volta com um toque curto no PS de cada um.
+13. Na aba Conexões, confira que o cartão desse adaptador passou a dizer a entrada nova e que o P3 e o P4 voltaram para dentro dele.
+14. Refaça os passos 6 a 11 com o adaptador na entrada nova.
+15. Escreva as duas rodadas lado a lado.
 
 **Passa quando.** Nas duas posições do adaptador, o P3 e o P4 obedeceram: cada cor acendeu na hora do clique, mesmo com o P1 e o P2 sendo pintados sem parar, e os dois tremeram no «Testar». Se eles falharam com o adaptador do lado dos cabos e pararam de falhar com ele do outro lado, isso é ACHADO — é exatamente a medição que ninguém nunca fez nesta casa, e ela vale mais que um verde.
 
@@ -894,7 +894,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e é a vítima possível — é ele que este lado do teste mede. A cor tem de acender no ato e o tremor tem de vir, com os dois do cabo em rajada ao lado. Se falhar, anote em qual posição do adaptador foi.
 * **P4** — No rádio, a segunda vítima possível. Mesmos gestos do P3, com cor bem diferente. Se um dos dois do rádio falhar e o outro não, anote qual — a diferença entre os dois aparelhos do mesmo lado já apareceu em medição antes, e é dado, não ruído.
 
-**A armadilha.** A pergunta é a COMPARAÇÃO de duas posições do adaptador, então a rodada dos passos 7 a 12 é feita duas vezes, uma de cada lado do gabinete; cortar uma delas apaga a pergunta inteira. Desencaixar o adaptador DERRUBA o P3 e o P4 — isso é o esperado, não é o defeito; enquanto eles estão fora os números se reorganizam, e cada um recupera o seu quando volta. Se o P3 ou o P4 voltarem para dentro do cartão de OUTRO adaptador, você mediu a entrada errada: anote e refaça com os dois no mesmo cartão. A Steam tem de continuar fechada quando os dois voltam: um controle que se conecta pelo rádio com a Steam aberta volta com a barra apagada, fechar a Steam depois não cura, e o que cura é reconectar — o botão «A luz não acende», na linha dele na «Gestão de Controles», faz isso. Se o cartão disser que o adaptador é de dentro da máquina, ele não sai do lugar, e este teste roda só mudando os cabos de entrada. O que está escrito no mapa desta linha é que o dano NÃO foi acionado, o que é diferente de «isto não existe»: a topologia existe e foi medida, o adaptador e os dois cabos penduram no mesmo controlador da máquina. A única carga que já se experimentou foi captura de microfone, não o vaivém de comandos de um jogo, e a prova parou no fio: nada nesta linha diz o que o jogo recebeu. Por fim, a linha do «Check-up» mede entradas COLADAS, e não controlador compartilhado — verde nela não fecha esta pergunta, e é por isso que ela é anotada como contexto e não como veredito.
+**A armadilha.** A pergunta é a COMPARAÇÃO de duas posições do adaptador, então a rodada dos passos 6 a 11 é feita duas vezes, uma de cada lado do gabinete; cortar uma delas apaga a pergunta inteira. Desencaixar o adaptador DERRUBA o P3 e o P4 — isso é o esperado, não é o defeito; enquanto eles estão fora os números se reorganizam, e cada um recupera o seu quando volta. Se o P3 ou o P4 voltarem para dentro do cartão de OUTRO adaptador, você mediu a entrada errada: anote e refaça com os dois no mesmo cartão. A Steam tem de continuar fechada quando os dois voltam: um controle que se conecta pelo rádio com a Steam aberta volta com a barra apagada, fechar a Steam depois não cura, e o que cura é reconectar — o botão «A luz não acende», na linha dele na «Gestão de Controles», faz isso. Se o cartão disser que o adaptador é de dentro da máquina, ele não sai do lugar, e este teste roda só mudando os cabos de entrada. O que está escrito no mapa desta linha é que o dano NÃO foi acionado, o que é diferente de «isto não existe»: a topologia existe e foi medida, o adaptador e os dois cabos penduram no mesmo controlador da máquina. A única carga que já se experimentou foi captura de microfone, não o vaivém de comandos de um jogo, e a prova parou no fio: nada nesta linha diz o que o jogo recebeu. Por fim, a linha do «Check-up» mede entradas COLADAS, e não controlador compartilhado — verde nela não fecha esta pergunta, e é por isso que ela é anotada como contexto e não como veredito.
 
 ---
 
@@ -908,24 +908,24 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **Os passos.**
 
-1. Abra a aba Controles.
-2. Confira na fita do topo que há quatro chips e que o P1 e o P2 dizem USB.
-3. Clique na linha do P1 para abrir o cartão dele.
-4. Empurre os dois analógicos do P1 até o fim para cada lado e solte-os.
-5. Veja os dois pontinhos andarem junto com os analógicos e voltarem ao centro quando você solta.
-6. Aperte, um de cada vez, o Triângulo, o Círculo, o Quadrado, a Cruz e as quatro direções do direcional do P1.
-7. Veja cada desenho acender no aperto.
-8. Arraste o dedo devagar pelo touchpad do P1.
-9. Veja o ponto seguir o dedo, e o canto do quadro «Touchpad» dizer «1 toque».
-10. Gire e incline o P1 na mão.
-11. Veja mexerem os três números do «Giroscópio» e os três do «Acelerômetro».
-12. Clique na linha do P2 e repita nele os passos 4 a 11.
-13. Clique na linha do P1 para deixar aberto só o cartão dele.
-14. Ponha o P1 numa mão e o P3 na outra e mexa os dois analógicos esquerdos ao mesmo tempo, em círculos, sem parar, contando até vinte.
-15. Veja o cartão do P1 enquanto faz isso: o pontinho não pode travar, parar nem saltar.
-16. Solte os dois controles e confira que o pontinho do P1 volta ao centro.
-17. Clique na linha do P2 e refaça essa dupla com o P2 numa mão e o P4 na outra.
-18. Escreva a resposta do P1 e a do P2, uma embaixo da outra.
+* Abra a aba Controles.
+1. Confira na fita do topo que há quatro chips e que o P1 e o P2 dizem USB.
+2. Clique na linha do P1 para abrir o cartão dele.
+3. Empurre os dois analógicos do P1 até o fim para cada lado e solte-os.
+4. Veja os dois pontinhos andarem junto com os analógicos e voltarem ao centro quando você solta.
+5. Aperte, um de cada vez, o Triângulo, o Círculo, o Quadrado, a Cruz e as quatro direções do direcional do P1.
+6. Veja cada desenho acender no aperto.
+7. Arraste o dedo devagar pelo touchpad do P1.
+8. Veja o ponto seguir o dedo, e o canto do quadro «Touchpad» dizer «1 toque».
+9. Gire e incline o P1 na mão.
+10. Veja mexerem os três números do «Giroscópio» e os três do «Acelerômetro».
+11. Clique na linha do P2 e repita nele os passos 3 a 10.
+12. Clique na linha do P1 para deixar aberto só o cartão dele.
+13. Ponha o P1 numa mão e o P3 na outra e mexa os dois analógicos esquerdos ao mesmo tempo, em círculos, sem parar, contando até vinte.
+14. Veja o cartão do P1 enquanto faz isso: o pontinho não pode travar, parar nem saltar.
+15. Solte os dois controles e confira que o pontinho do P1 volta ao centro.
+16. Clique na linha do P2 e refaça essa dupla com o P2 numa mão e o P4 na outra.
+17. Escreva a resposta do P1 e a do P2, uma embaixo da outra.
 
 **Passa quando.** Com os quatro controles ligados, tudo o que você fez no P1 e no P2 apareceu no cartão de cada um: o pontinho de cada analógico andou e voltou ao centro, cada botão apertado acendeu, o ponto do touchpad seguiu o dedo, e os números dos dois sensores mexeram. E nada disso travou nem atrasou enquanto um controle do rádio era mexido junto, com uma mão em cada.
 
@@ -950,23 +950,23 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **Os passos.**
 
-1. Abra a aba Controles.
-2. Confira na fita do topo que há quatro chips e que o P3 e o P4 dizem BT.
-3. Clique na linha do P3 para abrir o cartão dele.
-4. Mexa os dois analógicos do P3 até o fim para cada lado e solte-os.
-5. Veja os dois pontinhos andarem junto com os analógicos e voltarem ao centro quando você solta.
-6. Aperte, um de cada vez, o Triângulo, o Círculo, o Quadrado, a Cruz e as quatro direções do direcional do P3.
-7. Veja cada desenho acender no aperto.
-8. Arraste o dedo devagar pelo touchpad do P3.
-9. Veja o ponto seguir o dedo, e o canto do quadro «Touchpad» dizer «1 toque».
-10. Gire e incline o P3 na mão.
-11. Veja mexerem os três números do «Giroscópio» e os três do «Acelerômetro».
-12. Clique na linha do P4 e repita nele os passos 4 a 11.
-13. Clique na linha do P3, ponha o P3 numa mão e o P1 na outra e gire os dois analógicos esquerdos em círculos, sem parar, contando até vinte.
-14. Veja o pontinho do P3: ele não pode travar, parar nem saltar enquanto o controle do cabo é mexido junto.
-15. Solte os dois controles e confira que os pontinhos do P3 voltam ao centro.
-16. Clique na linha do P4 e repita essa volta de vinte com o P4 numa mão e o P2 na outra.
-17. Escreva a resposta do P3 e a do P4, uma embaixo da outra.
+* Abra a aba Controles.
+1. Confira na fita do topo que há quatro chips e que o P3 e o P4 dizem BT.
+2. Clique na linha do P3 para abrir o cartão dele.
+3. Mexa os dois analógicos do P3 até o fim para cada lado e solte-os.
+4. Veja os dois pontinhos andarem junto com os analógicos e voltarem ao centro quando você solta.
+5. Aperte, um de cada vez, o Triângulo, o Círculo, o Quadrado, a Cruz e as quatro direções do direcional do P3.
+6. Veja cada desenho acender no aperto.
+7. Arraste o dedo devagar pelo touchpad do P3.
+8. Veja o ponto seguir o dedo, e o canto do quadro «Touchpad» dizer «1 toque».
+9. Gire e incline o P3 na mão.
+10. Veja mexerem os três números do «Giroscópio» e os três do «Acelerômetro».
+11. Clique na linha do P4 e repita nele os passos 3 a 10.
+12. Clique na linha do P3, ponha o P3 numa mão e o P1 na outra e gire os dois analógicos esquerdos em círculos, sem parar, contando até vinte.
+13. Veja o pontinho do P3: ele não pode travar, parar nem saltar enquanto o controle do cabo é mexido junto.
+14. Solte os dois controles e confira que os pontinhos do P3 voltam ao centro.
+15. Clique na linha do P4 e repita essa volta de vinte com o P4 numa mão e o P2 na outra.
+16. Escreva a resposta do P3 e a do P4, uma embaixo da outra.
 
 **Passa quando.** Com os quatro ligados, tudo o que você fez no P3 e no P4 apareceu no cartão de cada um: o pontinho de cada analógico andou e voltou ao centro, cada botão acendeu, o ponto do touchpad seguiu o dedo, e os números dos dois sensores mexeram. E nada travou nem atrasou enquanto um controle do cabo era mexido junto.
 
@@ -1000,12 +1000,13 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 7. Clique em cores novas nas quatro colunas, uma atrás da outra, o mais rápido que der, e repita a volta três vezes.
 8. Repare nas barras do P1 e do P2 durante essa rajada e anote todo clique que não acendeu.
 9. Abra a aba Vibração.
-10. Segure o P1 e o P2, um em cada mão, e clique em «Testar» na coluna de cada um.
-11. Clique em «Testar» na coluna do P3 e na do P4, com os dois largados na mesa, para o rádio trabalhar junto.
-12. Com o P1 e o P2 na mão, clique em «Testar» nas quatro colunas, uma atrás da outra, o mais rápido que der.
-13. Anote se algum comando do P1 ou do P2 não chegou, e o que estava acontecendo no rádio naquele instante.
+10. Segure o P1 na mão e clique em «Testar» na coluna dele.
+11. Segure o P2 na outra mão e clique em «Testar» na coluna dele: o P2 começa a tremer e o P1 para, porque o Hefesto testa um controle por vez.
+12. Com o P1 e o P2 na mão, clique em «Testar» nas quatro colunas, uma atrás da outra, o mais rápido que der, com o P3 e o P4 largados na mesa para o rádio trabalhar junto.
+13. Clique em «Parar» na coluna do último controle que tremeu.
+14. Anote se algum comando do P1 ou do P2 não chegou, e o que estava acontecendo no rádio naquele instante.
 
-**Passa quando.** O P1 e o P2 — os dois do cabo — obedeceram a todos os comandos, com o P3 e o P4 recebendo comando ao mesmo tempo: cada cor acendeu no ato, nenhum clique da rajada foi engolido, e os dois tremeram no «Testar», inclusive na volta dos quatro em sequência. Se um comando do P1 ou do P2 não chegou, o achado é esse, e anote qual comando era e o que o rádio estava fazendo na hora.
+**Passa quando.** O P1 e o P2 — os dois do cabo — obedeceram a todos os comandos, com o P3 e o P4 recebendo comando ao mesmo tempo: cada cor acendeu no ato, nenhum clique da rajada foi engolido, e os dois tremeram no «Testar», cada um na sua vez, inclusive na volta dos quatro em sequência. Se um comando do P1 ou do P2 não chegou, o achado é esse, e anote qual comando era e o que o rádio estava fazendo na hora.
 
 **Por controle.**
 
@@ -1014,7 +1015,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e aqui ele é carga: recebe cor na rajada e recebe «Testar» para o rádio estar trabalhando enquanto o cabo é medido. Deixe-o na mesa; você não precisa senti-lo.
 * **P4** — No rádio, a segunda carga. Mesmo papel do P3. Os dois no ar recebendo comando é o que faz este teste ser sobre companhia — sem eles, o P1 e o P2 estariam sozinhos e nada seria medido.
 
-**A armadilha.** O «Testar» dura meio segundo: com o controle largado na mesa dá para não sentir e anotar «não tremeu» sobre um controle que obedeceu — segure na mão os dois que você está medindo. Este teste é com os QUATRO ligados: a peça do Hefesto que divide o esforço entre os controles muda de conta conforme quantos estão ligados, então uma rodada com três não se compara com uma rodada com quatro. A Steam fica fechada durante a bancada, e o motivo não é ela escrever na luz — medido, quem escreve somos nós; o que ela faz é pegar o controle do RÁDIO que se conecta com ela aberta, e aí a barra dele fica apagada. No cabo isso não acontece. E lembre de onde este teste vem: o defeito antigo era um controle NO CABO matando a saída do controle NO RÁDIO — a vítima esperada é a do outro lado. Verde aqui é o resultado previsto e não fecha a pergunta; quem fecha é a rodada do rádio. Por último, a tela mostra a cor que o Hefesto pediu, não a que acendeu: julgue pela faixa acesa no plástico, sempre.
+**A armadilha.** O «Testar» fica ligado até o «Parar», e o Hefesto testa um controle por vez: o «Testar» de outra coluna encerra o da anterior, então cada controle treme só na vez dele. Segure na mão os dois que você está medindo, e termine no «Parar» — sem ele o último continua tremendo e a vibração não volta ao jogo. Este teste é com os QUATRO ligados: a peça do Hefesto que divide o esforço entre os controles muda de conta conforme quantos estão ligados, então uma rodada com três não se compara com uma rodada com quatro. A Steam fica fechada durante a bancada, e o motivo não é ela escrever na luz — medido, quem escreve somos nós; o que ela faz é pegar o controle do RÁDIO que se conecta com ela aberta, e aí a barra dele fica apagada. No cabo isso não acontece. E lembre de onde este teste vem: o defeito antigo era um controle NO CABO matando a saída do controle NO RÁDIO — a vítima esperada é a do outro lado. Verde aqui é o resultado previsto e não fecha a pergunta; quem fecha é a rodada do rádio. Por último, a tela mostra a cor que o Hefesto pediu, não a que acendeu: julgue pela faixa acesa no plástico, sempre.
 
 ---
 
@@ -1039,9 +1040,10 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 9. Comece uma rajada só nas colunas do P1 e do P2, sem parar, contando até quinze.
 10. Sem parar a rajada, clique numa cor nova na coluna do P3 e noutra na do P4.
 11. Anote toda cor do P3 ou do P4 que não chegou, ou que chegou atrasada.
-12. Na aba Vibração, clique em «Testar» na coluna do P3 e depois na do P4, com cada um na mão.
-13. Com o P3 e o P4 na mão, clique em «Testar» nas quatro colunas, uma atrás da outra, o mais rápido que der.
-14. Anote se o P3 e o P4 tremeram nas duas voltas.
+12. Na aba Vibração, com o P3 e o P4 na mão, clique em «Testar» na coluna do P3 e depois na do P4: o P3 para quando o P4 começa, porque o Hefesto testa um controle por vez.
+13. Com os dois ainda na mão, clique em «Testar» nas quatro colunas, uma atrás da outra, o mais rápido que der.
+14. Clique em «Parar» na coluna do último controle que tremeu.
+15. Anote se o P3 e o P4 tremeram na vez de cada um, nas duas voltas.
 
 **Passa quando.** O P3 e o P4 — os dois do rádio — obedeceram a todos os comandos, inclusive durante a rajada em que o P1 e o P2 estavam sendo pintados sem parar: cada cor acendeu no ato, e os dois tremeram no «Testar», nas duas voltas. Se uma cor do P3 ou do P4 sumiu, ou se o tremor não veio, o achado é esse — anote se aconteceu com o cabo em rajada ou com o cabo parado, porque essa é a diferença que interessa.
 
@@ -1052,7 +1054,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e é a vítima principal deste teste — foi um controle no rádio que ficou mudo, no defeito antigo. Cor no ato, tremor no «Testar», com o cabo em rajada ao lado.
 * **P4** — No rádio, a segunda vítima possível. Mesmos comandos, cor bem diferente. Se um dos dois do rádio falhar e o outro não, anote qual: dois aparelhos do mesmo lado já foram medidos respondendo bem diferente um do outro, e isso é dado, não ruído.
 
-**A armadilha.** Se a barra do P3 ou do P4 não acende em cor NENHUMA desde o primeiro clique, a causa conhecida não é este teste: é a Steam ter sido aberta antes de aquele controle se conectar pelo rádio. Fechar a Steam depois não cura — o que cura é reconectar, e o botão «A luz não acende», na linha dele na aba Conexões, faz exatamente isso; reconecte, e só então comece. O «Testar» dura meio segundo: segure na mão o controle que está sendo medido, senão você anota «não tremeu» sobre um controle que obedeceu. Faça este teste com os QUATRO ligados: a peça do Hefesto que divide o esforço entre os controles muda de conta conforme quantos estão ligados, e uma rodada com três não se compara com uma com quatro. Não julgue pela tela: ela mostra a cor que o Hefesto pediu, não a que acendeu no plástico. E saiba o peso do que você está fazendo: este é o lado do defeito de origem desta família — vermelho aqui é o achado mais valioso deste roteiro, e vale anotar a hora exata e o que estava acontecendo no cabo naquele instante.
+**A armadilha.** Se a barra do P3 ou do P4 não acende em cor NENHUMA desde o primeiro clique, a causa conhecida não é este teste: é a Steam ter sido aberta antes de aquele controle se conectar pelo rádio. Fechar a Steam depois não cura — o que cura é reconectar, e o botão «A luz não acende», na linha dele na aba Conexões, faz exatamente isso; reconecte, e só então comece. O «Testar» fica ligado até o «Parar», e o de outra coluna encerra o da anterior: cada controle treme só na vez dele. Segure na mão o controle que está sendo medido, e termine no «Parar», senão o último continua tremendo e a vibração não volta ao jogo. Faça este teste com os QUATRO ligados: a peça do Hefesto que divide o esforço entre os controles muda de conta conforme quantos estão ligados, e uma rodada com três não se compara com uma com quatro. Não julgue pela tela: ela mostra a cor que o Hefesto pediu, não a que acendeu no plástico. E saiba o peso do que você está fazendo: este é o lado do defeito de origem desta família — vermelho aqui é o achado mais valioso deste roteiro, e vale anotar a hora exata e o que estava acontecendo no cabo naquele instante.
 
 ---
 
@@ -1066,20 +1068,20 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **Os passos.**
 
-1. Abra a aba Controles.
-2. Confira na fita do topo que há quatro chips e que o P1 e o P2 dizem USB.
-3. Clique na linha do P1 para abrir o cartão dele.
-4. Leia no alto do cartão a linha que começa com «Giroscópio:»: se ela trouxer um número, anote o número; se ela não aparecer, escreva «não apareceu».
-5. Gire o P1 na mão devagar, para um lado e para o outro, contando até vinte.
-6. Veja os três números do «Giroscópio» durante esse tempo: eles têm de mudar de forma corrida, sem travar e sem pular.
-7. Pare de girar e confira que os números voltam a ficar quase parados.
-8. Empurre o analógico esquerdo do P1 em círculos, contando até vinte, e veja o pontinho fazer o mesmo círculo, sem saltar.
-9. Clique na linha do P2 e refaça nele os passos 4 a 8.
-10. Clique na linha do P1 para abrir o cartão dele de novo.
-11. Gire o P1 numa mão e o P3 na outra ao mesmo tempo, sem parar, contando até trinta.
-12. Veja os números do «Giroscópio» do P1 durante esse tempo e anote todo engasgo, toda parada e todo salto.
-13. Clique na linha do P2 e refaça os passos 11 e 12 com o P2 numa mão e o P4 na outra.
-14. Escreva a resposta dos dois do cabo, uma embaixo da outra: engasgou ou não engasgou.
+* Abra a aba Controles.
+1. Confira na fita do topo que há quatro chips e que o P1 e o P2 dizem USB.
+2. Clique na linha do P1 para abrir o cartão dele.
+3. Leia no alto do cartão a linha que começa com «Giroscópio:»: se ela trouxer um número, anote o número; se ela não aparecer, escreva «não apareceu».
+4. Gire o P1 na mão devagar, para um lado e para o outro, contando até vinte.
+5. Veja os três números do «Giroscópio» durante esse tempo: eles têm de mudar de forma corrida, sem travar e sem pular.
+6. Pare de girar e confira que os números voltam a ficar quase parados.
+7. Empurre o analógico esquerdo do P1 em círculos, contando até vinte, e veja o pontinho fazer o mesmo círculo, sem saltar.
+8. Clique na linha do P2 e refaça nele os passos 3 a 7.
+9. Clique na linha do P1 para abrir o cartão dele de novo.
+10. Gire o P1 numa mão e o P3 na outra ao mesmo tempo, sem parar, contando até trinta.
+11. Veja os números do «Giroscópio» do P1 durante esse tempo e anote todo engasgo, toda parada e todo salto.
+12. Clique na linha do P2 e refaça os passos 10 e 11 com o P2 numa mão e o P4 na outra.
+13. Escreva a resposta dos dois do cabo, uma embaixo da outra: engasgou ou não engasgou.
 
 **Passa quando.** O P1 e o P2 mostraram os números do giroscópio e o pontinho do analógico mudando de forma lisa e corrida, sem engasgo e sem salto — com os quatro controles ligados e com um controle do rádio sendo girado junto na outra mão. E, se a linha «Giroscópio:» trouxer um número, ele é parecido nos dois do cabo.
 
@@ -1104,21 +1106,21 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **Os passos.**
 
-1. Abra a aba Conexões.
-2. Clique no título «Rádio e Adaptadores» e ache o P3 e o P4 dentro do cartão do adaptador deles.
-3. Com os dois parados na mesa, olhe o número em Hz de cada um por meio minuto e anote o menor e o maior que cada um mostrou.
-4. Anote se algum dos dois números mudou de cor.
-5. Na aba Controles, confira na fita do topo que há quatro chips e que o P3 e o P4 dizem BT.
-6. Clique na linha do P3 para abrir o cartão dele.
-7. Leia no alto do cartão a linha que começa com «Giroscópio:» e anote o que ela diz, com número ou sem.
-8. Gire o P3 na mão devagar, para um lado e para o outro, contando até vinte, e veja os três números do «Giroscópio» mudarem de forma corrida, sem travar e sem pular.
-9. Empurre o analógico esquerdo do P3 em círculos, contando até vinte, e veja o pontinho fazer o mesmo círculo, sem saltar.
-10. Clique na linha do P4 e refaça nele os passos 7 a 9.
-11. Clique na linha do P3, ponha o P3 numa mão e o P1 na outra e gire os dois ao mesmo tempo, sem parar, contando até trinta.
-12. Anote todo engasgo, toda parada e todo salto dos números do «Giroscópio» do P3.
-13. Clique na linha do P4 e refaça os passos 11 e 12 com o P4 numa mão e o P2 na outra.
-14. Volte à aba Conexões e anote de novo o menor e o maior número em Hz do P3 e do P4, por meio minuto.
-15. Compare as anotações: o P3 e o P4 se comportaram igual, e o começo bateu com o fim?
+* Abra a aba Conexões.
+1. Clique no título «Rádio e Adaptadores» e ache o P3 e o P4 dentro do cartão do adaptador deles.
+2. Com os dois parados na mesa, olhe o número em Hz de cada um por meio minuto e anote o menor e o maior que cada um mostrou.
+3. Anote se algum dos dois números mudou de cor.
+4. Na aba Controles, confira na fita do topo que há quatro chips e que o P3 e o P4 dizem BT.
+5. Clique na linha do P3 para abrir o cartão dele.
+6. Leia no alto do cartão a linha que começa com «Giroscópio:» e anote o que ela diz, com número ou sem.
+7. Gire o P3 na mão devagar, para um lado e para o outro, contando até vinte, e veja os três números do «Giroscópio» mudarem de forma corrida, sem travar e sem pular.
+8. Empurre o analógico esquerdo do P3 em círculos, contando até vinte, e veja o pontinho fazer o mesmo círculo, sem saltar.
+9. Clique na linha do P4 e refaça nele os passos 6 a 8.
+10. Clique na linha do P3, ponha o P3 numa mão e o P1 na outra e gire os dois ao mesmo tempo, sem parar, contando até trinta.
+11. Anote todo engasgo, toda parada e todo salto dos números do «Giroscópio» do P3.
+12. Clique na linha do P4 e refaça os passos 10 e 11 com o P4 numa mão e o P2 na outra.
+13. Volte à aba Conexões e anote de novo o menor e o maior número em Hz do P3 e do P4, por meio minuto.
+14. Compare as anotações: o P3 e o P4 se comportaram igual, e o começo bateu com o fim?
 
 **Passa quando.** O P3 e o P4 mostraram os números do giroscópio e o pontinho do analógico mudando de forma lisa, sem engasgo e sem salto, com um controle do cabo sendo girado junto. E os números em Hz dos dois, na aba Conexões, ficaram na mesma faixa entre si e entre o começo e o fim. Se um deles fica bem abaixo do outro, muda de cor, ou engasga numa volta e não na outra, anote os dois casos: é exatamente essa diferença que este teste procura.
 
@@ -1143,21 +1145,21 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **Os passos.**
 
-1. Abra a aba Controles.
-2. Tire do PC o cabo do P1 e o do P2 e desligue os dois, segurando o PS de cada um até todas as luzes apagarem — ficam só os dois do rádio.
-3. Confira na fita do topo que sobraram dois chips, os dois dizendo BT; enquanto os do cabo estão fora eles aparecem como P1 e P2, então chame de A o controle que era o P3 e de B o que era o P4, e siga-os pela cor do plástico.
-4. Clique na linha do A para abrir o cartão dele.
-5. Segure o A e mexa o analógico esquerdo em círculos, sem parar, contando até trinta.
-6. Repare no pontinho do cartão durante todo esse tempo e escreva todo salto, toda parada e todo engasgo.
-7. Aperte o Triângulo, o Círculo, o Quadrado e a Cruz do A, dez vezes cada um.
-8. Conte quantos desses quarenta apertos não acenderam o desenho no cartão.
-9. Clique na linha do B e repita nele os passos 5 a 8.
-10. Ponha um controle em cada mão e mexa os dois analógicos ao mesmo tempo, em círculos, sem parar, contando até trinta, olhando o cartão que estiver aberto.
-11. Escreva os engasgos que viu.
-12. Na aba Conexões, abra «Rádio e Adaptadores» e anote o menor e o maior número em Hz do A e do B, por meio minuto.
-13. Encaixe os cabos do P1 e do P2 de volta — se algum deles não voltar à fita sozinho, dê um toque no PS dele — e confira que o A e o B voltaram a ser o P3 e o P4.
-14. Refaça a rodada inteira com os quatro ligados: o cartão do P3, o do P4, os dois analógicos juntos e os números em Hz.
-15. Compare as duas rodadas lado a lado: dois no rádio sozinhos, e quatro ligados.
+* Abra a aba Controles.
+1. Tire do PC o cabo do P1 e o do P2 e desligue os dois, segurando o PS de cada um até todas as luzes apagarem — ficam só os dois do rádio.
+2. Confira na fita do topo que sobraram dois chips, os dois dizendo BT; enquanto os do cabo estão fora eles aparecem como P1 e P2, então chame de A o controle que era o P3 e de B o que era o P4, e siga-os pela cor do plástico.
+3. Clique na linha do A para abrir o cartão dele.
+4. Segure o A e mexa o analógico esquerdo em círculos, sem parar, contando até trinta.
+5. Repare no pontinho do cartão durante todo esse tempo e escreva todo salto, toda parada e todo engasgo.
+6. Aperte o Triângulo, o Círculo, o Quadrado e a Cruz do A, dez vezes cada um.
+7. Conte quantos desses quarenta apertos não acenderam o desenho no cartão.
+8. Clique na linha do B e repita nele os passos 4 a 7.
+9. Ponha um controle em cada mão e mexa os dois analógicos ao mesmo tempo, em círculos, sem parar, contando até trinta, olhando o cartão que estiver aberto.
+10. Escreva os engasgos que viu.
+11. Na aba Conexões, abra «Rádio e Adaptadores» e anote o menor e o maior número em Hz do A e do B, por meio minuto.
+12. Encaixe os cabos do P1 e do P2 de volta — se algum deles não voltar à fita sozinho, dê um toque no PS dele — e confira que o A e o B voltaram a ser o P3 e o P4.
+13. Refaça a rodada inteira com os quatro ligados: o cartão do P3, o do P4, os dois analógicos juntos e os números em Hz.
+14. Compare as duas rodadas lado a lado: dois no rádio sozinhos, e quatro ligados.
 
 **Passa quando.** Nas duas rodadas, tudo o que você fez nos dois controles do rádio apareceu no cartão: nenhum aperto engolido, nenhum salto do pontinho, nenhuma parada dos números. E a rodada com quatro ligados não ficou pior que a rodada com dois. Um aperto que não acende, ou um pontinho que salta, é pedaço de leitura perdido — e é o achado que este teste procura.
 
@@ -1192,9 +1194,9 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 8. Clique em cores novas nas duas colunas, alternando, dez vezes seguidas, o mais rápido que der.
 9. Anote todo clique que não acendeu.
 10. Abra a aba Vibração.
-11. Segure na mão um dos dois de cada vez e clique em «Testar» na coluna dele.
+11. Segure na mão um dos dois de cada vez, clique em «Testar» na coluna dele e, depois de sentir, em «Parar».
 12. Ponha um controle em cada mão e clique em «Testar» nas duas colunas, uma logo depois da outra, o mais rápido que der.
-13. Confira que os dois tremeram nessa sequência rápida.
+13. Confira que os dois tremeram na vez de cada um — o segundo «Testar» encerra o primeiro — e clique em «Parar» na coluna do que ficou tremendo.
 14. Encaixe os cabos do P1 e do P2 de volta — se algum deles não voltar à fita sozinho, dê um toque no PS dele — e refaça a volta inteira com os quatro ligados, só para comparar.
 
 **Passa quando.** Com só os dois no rádio, os dois obedeceram a tudo ao mesmo tempo: as duas barras acenderam nas cores escolhidas, trocaram em toda a rajada sem pular clique, e as duas tremeram no «Testar», inclusive nos dois cliques em sequência rápida. Nenhum dos dois ficou para trás.
@@ -1206,7 +1208,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e é um dos dois medidos — o A, enquanto os do cabo estão fora. Recebe cor própria, entra na rajada e treme no «Testar», com você segurando-o na mão.
 * **P4** — No rádio, o outro medido — o B —, e é ele que fecha o sentido da linha: a pergunta é se DOIS no rádio cabem juntos. Mesmos comandos, cor bem diferente da do P3. Se um obedecer e o outro não, anote qual.
 
-**A armadilha.** Se a barra de um dos dois não acende em cor NENHUMA desde o primeiro clique, a causa conhecida é a Steam ter sido aberta antes de aquele controle se conectar; fechar a Steam depois não cura — reconectar cura, e o botão «A luz não acende», na linha dele na aba Conexões, faz isso. O «Testar» dura meio segundo: segure na mão o controle que está sendo medido. Saiba o peso deste teste: ele é a CONTRAPROVA do teste do cabo com rádio. Se a saída morrer aqui também, com ninguém no cabo, então a causa não é o controlador da máquina — é a fila do adaptador de rádio. Um vermelho aqui vale mais que um vermelho lá, porque ele separa duas explicações que ninguém separou ainda. Segunda: com dois controles ligados o Hefesto divide o esforço de um jeito e com quatro de outro, então não compare a rodada de dois com a de quatro para julgar «piorou»; a última rodada é só para você ver as duas cenas. Terceira: o P1 e o P2 são desligados, e não só desplugados, porque um controle já pareado por rádio nesta máquina pode voltar pelo rádio sem o cabo. Quarta: com os do cabo fora, os números dos que ficam mudam — é a ordem de conexão, não defeito, e eles voltam aos de antes quando os cabos voltam. E do lado do cabo não há o que medir nesta linha: a pergunta é sobre dois no rádio, e a pergunta do fio mora no teste de um no cabo com um no rádio.
+**A armadilha.** Se a barra de um dos dois não acende em cor NENHUMA desde o primeiro clique, a causa conhecida é a Steam ter sido aberta antes de aquele controle se conectar; fechar a Steam depois não cura — reconectar cura, e o botão «A luz não acende», na linha dele na aba Conexões, faz isso. O «Testar» fica ligado até o «Parar», e o de outra coluna encerra o da anterior: segure na mão o controle que está sendo medido, e não esqueça o «Parar» no fim. Saiba o peso deste teste: ele é a CONTRAPROVA do teste do cabo com rádio. Se a saída morrer aqui também, com ninguém no cabo, então a causa não é o controlador da máquina — é a fila do adaptador de rádio. Um vermelho aqui vale mais que um vermelho lá, porque ele separa duas explicações que ninguém separou ainda. Segunda: com dois controles ligados o Hefesto divide o esforço de um jeito e com quatro de outro, então não compare a rodada de dois com a de quatro para julgar «piorou»; a última rodada é só para você ver as duas cenas. Terceira: o P1 e o P2 são desligados, e não só desplugados, porque um controle já pareado por rádio nesta máquina pode voltar pelo rádio sem o cabo. Quarta: com os do cabo fora, os números dos que ficam mudam — é a ordem de conexão, não defeito, e eles voltam aos de antes quando os cabos voltam. E do lado do cabo não há o que medir nesta linha: a pergunta é sobre dois no rádio, e a pergunta do fio mora no teste de um no cabo com um no rádio.
 
 ---
 
@@ -1225,17 +1227,18 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 3. Confira que as barras «Motor esquerdo» e «Motor direito» das quatro colunas não estão em 0 % e que o botão de cada lado está aceso.
 4. Ponha o P1 na sua mão esquerda e deixe o P2 na mesa, sobre uma superfície dura, sem nada por cima.
 5. Clique em «Testar» na coluna do P1 e, sem parar, em «Testar» na coluna do P2.
-6. Sinta o P1 na mão e escute o P2 na mesa — os dois têm de responder — e anote se algum dos dois não respondeu.
+6. Sinta o P1 na mão e escute o P2 na mesa — os dois têm de responder, cada um na sua vez, porque o «Testar» do P2 encerra o do P1 — e anote se algum dos dois não respondeu.
 7. Troque as mãos, o P2 na mão e o P1 na superfície dura, e refaça a dupla de cliques na ordem invertida: «Testar» no P2 e logo depois no P1.
 8. Anote se algum dos dois não respondeu.
 9. Com o P1 na mão, clique em «Testar» nas quatro colunas, uma atrás da outra, o mais rápido que der.
 10. Anote se o P1 tremeu nessa volta com os quatro sendo chamados.
 11. Repita a volta dos quatro com o P2 na mão e anote se ele tremeu.
-12. Abra um jogo que tenha vibração, com os quatro controles dentro dele.
-13. Jogue com o P1 na mão até o jogo mandar vibração e anote como foi o tremor: veio, não veio, ou veio e morreu antes da hora.
-14. Jogue com o P2 na mão até o jogo mandar vibração e anote a mesma coisa.
+12. Clique em «Parar» na coluna do último controle que tremeu — sem isso a vibração do jogo não chega a ele.
+13. Abra um jogo que tenha vibração, com os quatro controles dentro dele.
+14. Jogue com o P1 na mão até o jogo mandar vibração e anote como foi o tremor: veio, não veio, ou veio e morreu antes da hora.
+15. Jogue com o P2 na mão até o jogo mandar vibração e anote a mesma coisa.
 
-**Passa quando.** O P1 e o P2 tremeram todas as vezes, em qualquer ordem em que você clicou, inclusive quando os quatro foram chamados em sequência. E dentro do jogo os dois tremeram quando o jogo pediu, e o tremor durou o que tinha de durar em vez de morrer no começo. Se um dos dois não tremeu, ou se o tremor foi cortado, anote qual e em qual das duas metades — o botão «Testar» ou o jogo.
+**Passa quando.** O P1 e o P2 tremeram todas as vezes em que chegou a vez deles, em qualquer ordem em que você clicou, inclusive quando os quatro foram chamados em sequência. E dentro do jogo os dois tremeram quando o jogo pediu, e o tremor durou o que tinha de durar em vez de morrer no começo. Se um dos dois não tremeu, ou se o tremor foi cortado, anote qual e em qual das duas metades — o botão «Testar» ou o jogo.
 
 **Por controle.**
 
@@ -1246,7 +1249,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **A espera.** O jogo pode levar minutos para chegar ao menu, e nenhum desses minutos é para ficar olhando a tela. Deixe-o carregando e vá fazer outra coisa; volte quando ouvir o som do menu. Nada do que você já mediu se desfaz por você ter saído da frente — os quatro controles continuam ligados e os degraus da «Força da vibração» continuam onde estavam. Ao voltar, comece pelo P1 na mão.
 
-**A armadilha.** O disparo no MESMO instante saiu de instrumento, e com um par de mãos não dá para reproduzir — o que dá é um logo depois do outro, e isso já pega o defeito que interessa: o segundo não tremer. Não anote «não foi simultâneo» como reprovação. Segunda, e é a maior: as duas metades deste teste medem coisas diferentes. Pelo botão «Testar», quem manda o tremor é o próprio Hefesto, e nesse caminho os quatro já foram medidos tremendo juntos. Dentro do JOGO quem manda é o jogo. Houve um defeito medido em 11/08: o Hefesto reescrevia os motores com zero e apagava a vibração de quem falava direto com o controle; desde 12/08 ele só repete a própria escrita por dois segundos depois de cada mudança que ELE faz. O que sobra disso é prático: mexer em cor, gatilho ou vibração na tela enquanto o jogo vibra pode cortar o tremor do jogo — durante a metade do jogo, não toque na tela. Se mesmo assim o tremor vier cortado ou fraco, anote em qual controle e em que momento: é esse resto que esta linha quer ver. Terceira: com um jogo aberto na primeira metade, um tremor no P2 pode ser do jogo e não do seu clique — por isso a bancada começa com nenhum jogo aberto, conferido na faixa do topo da página, e o jogo só entra no fim. Quarta: o «Testar» dura meio segundo; com o controle largado numa superfície mole você não vê nem ouve, e anota «nada aconteceu» sobre um produto que obedeceu. Quinta: com a barra de um motor em 0 %, ou com o botão daquele lado apagado, aquele punho não treme, por mais certo que esteja o resto.
+**A armadilha.** O disparo no MESMO instante saiu de instrumento, e com um par de mãos não dá para reproduzir — o que dá é um logo depois do outro, e isso já pega o defeito que interessa: o segundo não tremer. Não anote «não foi simultâneo» como reprovação. Segunda, e é a maior: as duas metades deste teste medem coisas diferentes. Pelo botão «Testar», quem manda o tremor é o próprio Hefesto, um controle por vez — o «Testar» de outra coluna encerra o da anterior —, então essa metade prova que o segundo obedece logo depois do primeiro; tremer JUNTO só a metade do jogo mostra. Dentro do JOGO quem manda é o jogo. Houve um defeito medido em 11/08: o Hefesto reescrevia os motores com zero e apagava a vibração de quem falava direto com o controle; desde 12/08 ele só repete a própria escrita por dois segundos depois de cada mudança que ELE faz. O que sobra disso é prático: mexer em cor, gatilho ou vibração na tela enquanto o jogo vibra pode cortar o tremor do jogo — durante a metade do jogo, não toque na tela. Se mesmo assim o tremor vier cortado ou fraco, anote em qual controle e em que momento: é esse resto que esta linha quer ver. Terceira: com um jogo aberto na primeira metade, um tremor no P2 pode ser do jogo e não do seu clique — por isso a bancada começa com nenhum jogo aberto, conferido na faixa do topo da página, e o jogo só entra no fim. Quarta: o «Testar» não para sozinho — ele fica ligado até o «Parar», e enquanto estiver de pé a vibração do jogo não chega ao controle; por isso o «Parar» vem antes de abrir o jogo. Com o controle largado numa superfície mole você não vê nem ouve, e anota «nada aconteceu» sobre um produto que obedeceu. Quinta: com a barra de um motor em 0 %, ou com o botão daquele lado apagado, aquele punho não treme, por mais certo que esteja o resto.
 
 ---
 
@@ -1265,17 +1268,18 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 3. Confira que as barras «Motor esquerdo» e «Motor direito» das quatro colunas não estão em 0 % e que o botão de cada lado está aceso.
 4. Ponha o P3 na sua mão esquerda e deixe o P4 na mesa, sobre uma superfície dura, sem nada por cima.
 5. Clique em «Testar» na coluna do P3 e, sem parar, clique em «Testar» na coluna do P4.
-6. Sinta o P3 na mão e escute o P4 na mesa — os dois têm de responder — e anote se algum dos dois não respondeu.
+6. Sinta o P3 na mão e escute o P4 na mesa — os dois têm de responder, cada um na sua vez, porque o «Testar» do P4 encerra o do P3 — e anote se algum dos dois não respondeu.
 7. Troque — o P4 na mão, o P3 na superfície dura — e clique em «Testar» na coluna do P4 e, sem parar, na do P3.
 8. Anote se algum dos dois falhou com a ordem invertida.
 9. Com o P3 na mão, clique em «Testar» nas quatro colunas, uma atrás da outra, o mais rápido que der.
 10. Anote se o P3 tremeu nessa volta com os quatro sendo chamados.
 11. Repita essa volta dos quatro com o P4 na mão e anote a resposta dele.
-12. Abra um jogo que tenha vibração, com os quatro controles dentro dele.
-13. Jogue com o P3 na mão até o jogo mandar vibração, e depois repita com o P4 na mão.
-14. Anote, em cada um, como foi o tremor: veio, não veio, ou veio e morreu antes da hora.
+12. Clique em «Parar» na coluna do último controle que tremeu — sem isso a vibração do jogo não chega a ele.
+13. Abra um jogo que tenha vibração, com os quatro controles dentro dele.
+14. Jogue com o P3 na mão até o jogo mandar vibração, e depois repita com o P4 na mão.
+15. Anote, em cada um, como foi o tremor: veio, não veio, ou veio e morreu antes da hora.
 
-**Passa quando.** O P3 e o P4 tremeram todas as vezes, em qualquer ordem em que você clicou, inclusive quando os quatro foram chamados em sequência. E dentro do jogo os dois tremeram quando o jogo pediu, e o tremor durou o que tinha de durar. Se um dos dois não tremeu, ou se o tremor foi cortado, anote qual e em qual das duas metades — o botão «Testar» ou o jogo.
+**Passa quando.** O P3 e o P4 tremeram todas as vezes em que chegou a vez deles, em qualquer ordem em que você clicou, inclusive quando os quatro foram chamados em sequência. E dentro do jogo os dois tremeram quando o jogo pediu, e o tremor durou o que tinha de durar. Se um dos dois não tremeu, ou se o tremor foi cortado, anote qual e em qual das duas metades — o botão «Testar» ou o jogo.
 
 **Por controle.**
 
@@ -1286,7 +1290,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **A espera.** O jogo pode levar minutos para chegar ao menu, e nenhum desses minutos é para ficar olhando a tela. Deixe-o carregando e vá fazer outra coisa; volte quando ouvir o som do menu. Nada do que você já mediu se desfaz por você ter saído da frente — os quatro continuam ligados e os degraus da «Força da vibração» continuam onde estavam. Ao voltar, comece pelo P3 na mão.
 
-**A armadilha.** O disparo no MESMO instante saiu de instrumento; com um par de mãos o que dá é um logo depois do outro, e isso já pega o que interessa — o segundo não tremer. Não anote «não foi simultâneo» como reprovação. Segunda, e é a maior: as duas metades medem coisas diferentes. Pelo botão «Testar», quem manda o tremor é o próprio Hefesto, e por esse caminho os quatro já foram medidos tremendo juntos, os dois do cabo e os dois do rádio. Dentro do JOGO quem manda é o jogo, e jogando com o Hefesto no meio os quatro já vibraram pelo rádio sem problema — ali o tremor vem pelo caminho do jogo e o Hefesto é a fonte, não o concorrente. Houve um defeito medido em 11/08, em que o Hefesto reescrevia os motores com zero e apagava a vibração de quem falava direto com o controle; desde 12/08 ele só repete a própria escrita por dois segundos depois de cada mudança que ELE faz. O que sobra é prático: mexer em cor, gatilho ou vibração na tela enquanto o jogo vibra pode cortar o tremor — durante a metade do jogo, não toque na tela, e se o tremor vier cortado assim mesmo, anote em qual controle e em que momento. Terceira: o «Testar» dura meio segundo; numa superfície mole você não vê nem ouve. Quarta: com a barra de um motor em 0 %, ou com o botão daquele lado apagado, aquele punho não treme. Quinta: a primeira metade só vale com NENHUM jogo aberto — é o que a faixa da bancada garante no alto da página, e é por isso que ela está lá; com um jogo aberto, um tremor pode ser dele e não do seu clique.
+**A armadilha.** O disparo no MESMO instante saiu de instrumento; com um par de mãos o que dá é um logo depois do outro, e isso já pega o que interessa — o segundo não tremer. Não anote «não foi simultâneo» como reprovação. Segunda, e é a maior: as duas metades medem coisas diferentes. Pelo botão «Testar», quem manda o tremor é o próprio Hefesto, um controle por vez — o «Testar» de outra coluna encerra o da anterior —, então essa metade prova que o segundo obedece logo depois do primeiro; tremer JUNTO, os dois do cabo e os dois do rádio, só a metade do jogo mostra. Dentro do JOGO quem manda é o jogo, e jogando com o Hefesto no meio os quatro já vibraram pelo rádio sem problema — ali o tremor vem pelo caminho do jogo e o Hefesto é a fonte, não o concorrente. Houve um defeito medido em 11/08, em que o Hefesto reescrevia os motores com zero e apagava a vibração de quem falava direto com o controle; desde 12/08 ele só repete a própria escrita por dois segundos depois de cada mudança que ELE faz. O que sobra é prático: mexer em cor, gatilho ou vibração na tela enquanto o jogo vibra pode cortar o tremor — durante a metade do jogo, não toque na tela, e se o tremor vier cortado assim mesmo, anote em qual controle e em que momento. Terceira: o «Testar» não para sozinho — ele fica ligado até o «Parar», e enquanto estiver de pé a vibração do jogo não chega ao controle; por isso o «Parar» vem antes de abrir o jogo. Numa superfície mole você não vê nem ouve. Quarta: com a barra de um motor em 0 %, ou com o botão daquele lado apagado, aquele punho não treme. Quinta: a primeira metade só vale com NENHUM jogo aberto — é o que a faixa da bancada garante no alto da página, e é por isso que ela está lá; com um jogo aberto, um tremor pode ser dele e não do seu clique.
 
 ---
 
@@ -1300,32 +1304,32 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **Os passos.**
 
-1. Abra a aba Conexões.
-2. Clique no título «Gestão de Controles» para abrir a seção.
-3. Anote num papel o número de Player dos quatro e a cor do plástico de cada um, na ordem em que eles aparecem.
-4. Anote também o que cada chip da fita do topo mostra: o número, a cor do plástico e a palavra USB ou BT.
-5. Olhe as cinco lampadinhas embaixo do touchpad dos quatro e confira que a figura de cada um bate com o número da tela.
-6. Puxe do PC a ponta do cabo do P2 — este é o que sai, e ele está no cabo.
-7. Olhe a fita na hora e anote o número que cada um dos três que ficaram mostra agora, reconhecendo cada um pela cor do plástico.
-8. Leia a lista da «Gestão de Controles» e anote os números dela também.
-9. Olhe as lampadinhas dos três que ficaram e anote a figura de cada um.
-10. Encaixe a ponta do cabo do P2 de volta, sem demorar.
-11. Espere o chip dele reaparecer na fita.
-12. Leia de novo os quatro números, primeiro na fita e depois na lista.
-13. Olhe as lampadinhas dos quatro aparelhos.
-14. Compare tudo com o que você anotou nos passos 3, 4 e 5.
-15. Refaça os passos 6 a 14 puxando o cabo do P1 em vez do do P2, e devolvendo-o em menos de trinta segundos.
+* Abra a aba Conexões.
+1. Clique no título «Gestão de Controles» para abrir a seção.
+2. Anote num papel o número de Player dos quatro e a cor do plástico de cada um, na ordem em que eles aparecem.
+3. Anote também o que cada chip da fita do topo mostra: o número, a cor do plástico e a palavra USB ou BT.
+4. Olhe as cinco lampadinhas embaixo do touchpad dos quatro e confira que a figura de cada um bate com o número da tela.
+5. Puxe do PC a ponta do cabo do P2 — este é o que sai, e ele está no cabo.
+6. Olhe a fita na hora e anote o número que cada um dos três que ficaram mostra agora, reconhecendo cada um pela cor do plástico.
+7. Leia a lista da «Gestão de Controles» e anote os números dela também.
+8. Olhe as lampadinhas dos três que ficaram e anote a figura de cada um.
+9. Encaixe a ponta do cabo do P2 de volta, sem demorar.
+10. Espere o chip dele reaparecer na fita.
+11. Leia de novo os quatro números, primeiro na fita e depois na lista.
+12. Olhe as lampadinhas dos quatro aparelhos.
+13. Compare tudo com o que você anotou nos passos 2, 3 e 4.
+14. Refaça os passos 5 a 13 puxando o cabo do P1 em vez do do P2, e devolvendo-o em menos de trinta segundos.
 
 **Passa quando.** A saída de um controle do cabo pode renumerar quem ficou — isso é o combinado, a ordem é a de conexão daquele momento e não um defeito. O que tem de acontecer é a volta: quando o que saiu é devolvido, os quatro voltam exatamente aos números que você anotou no começo. Nenhum controle fica com o número de outro, nenhum número aparece repetido, nenhum some, e a figura das cinco lampadinhas concorda com a tela nos quatro aparelhos.
 
 **Por controle.**
 
 * **P1** — No cabo. Na primeira volta ele não se toca: anote o número dele antes, durante a ausência do P2 e depois, e escreva se ele mudou no meio. Na segunda volta é ELE que sai — puxe o cabo dele e devolva em menos de trinta segundos.
-* **P2** — No cabo, e é o primeiro a sair. Puxe a ponta do cabo dele do PC, olhe os outros três durante a ausência e devolva o cabo sem demorar. Ele tem de voltar com o número que tinha no passo 3.
+* **P2** — No cabo, e é o primeiro a sair. Puxe a ponta do cabo dele do PC, olhe os outros três durante a ausência e devolva o cabo sem demorar. Ele tem de voltar com o número que tinha no passo 2.
 * **P3** — No rádio, e não se toca nele em volta nenhuma. É testemunha: anote o número dele antes, olhe durante a ausência do que saiu, e confira no fim. Enquanto um do cabo está fora, ele sobe um número — é a regra —, e tem de voltar ao dele quando o outro volta.
 * **P4** — No rádio, e também não se toca. Segunda testemunha, e é o último da fila, o que mais se mexe quando alguém de antes dele sai. Confira o número dele na tela e a figura das lampadinhas antes, durante e depois.
 
-**A armadilha.** Renumerar NÃO é defeito, e quem não souber disso reprova um produto que está fazendo o combinado: a ordem dos números é a ordem de conexão daquele momento, por decisão sua. O que reprova é não voltar — e quem sai e volta na mesma sessão recupera o lugar na fila de chegada, e com ele o número; não entra no fim. Segunda: o P1 tem uma regra a mais, a do primeiro controle, cujo posto fica guardado para ele só por trinta segundos depois que o Hefesto percebe a queda — por isso o passo 15 pede a volta dentro desse tempo; voltar depois disso é outra pergunta. Terceira: as cinco lampadinhas não se contam da esquerda para a direita — o número é o conjunto aceso, e quem lê «a terceira acesa» como jogador 3 reprova um produto certo. Quarta: a tela e a lâmpada podem discordar, e o motivo é um JOGO aberto: um jogo em co-op pode mandar o próprio número por cima, como a dica da linha «Jogador» da aba Iluminação avisa. A Steam aberta sozinha não mexe nas lâmpadas — medido —, e por isso o que a bancada exige aqui é nenhum jogo aberto. Quinta: olhe os outros três DURANTE a ausência, e não só no fim; já foi medido, no cabo, um controle mudar de número enquanto o vizinho estava fora e voltar ao certo depois — que é exatamente a regra funcionando. Sexta: o lado do RÁDIO desta linha nunca foi medido — se você fizer o mesmo gesto desligando um controle do rádio, o que sair dali é achado novo, não repetição.
+**A armadilha.** Renumerar NÃO é defeito, e quem não souber disso reprova um produto que está fazendo o combinado: a ordem dos números é a ordem de conexão daquele momento, por decisão sua. O que reprova é não voltar — e quem sai e volta na mesma sessão recupera o lugar na fila de chegada, e com ele o número; não entra no fim. Segunda: o P1 tem uma regra a mais, a do primeiro controle, cujo posto fica guardado para ele só por trinta segundos depois que o Hefesto percebe a queda — por isso o passo 14 pede a volta dentro desse tempo; voltar depois disso é outra pergunta. Terceira: as cinco lampadinhas não se contam da esquerda para a direita — o número é o conjunto aceso, e quem lê «a terceira acesa» como jogador 3 reprova um produto certo. Quarta: a tela e a lâmpada podem discordar, e o motivo é um JOGO aberto: um jogo em co-op pode mandar o próprio número por cima, como a dica da linha «Jogador» da aba Iluminação avisa. A Steam aberta sozinha não mexe nas lâmpadas — medido —, e por isso o que a bancada exige aqui é nenhum jogo aberto. Quinta: olhe os outros três DURANTE a ausência, e não só no fim; já foi medido, no cabo, um controle mudar de número enquanto o vizinho estava fora e voltar ao certo depois — que é exatamente a regra funcionando. Sexta: o lado do RÁDIO desta linha nunca foi medido — se você fizer o mesmo gesto desligando um controle do rádio, o que sair dali é achado novo, não repetição.
 
 ---
 
@@ -1339,22 +1343,22 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **Os passos.**
 
-1. Abra a aba Iluminação.
-2. Desligue o P4 segurando o botão PS dele até todas as luzes apagarem — este teste é com TRÊS ligados.
-3. Confira na fita do topo que sobraram três chips: dois dizendo USB e um dizendo BT.
-4. Leia a contagem no alto à direita: ela tem de dizer «2 USB · 1 BT».
-5. Clique numa cor bem viva na linha «Cor» da coluna do P1, numa cor bem diferente na do P2 e numa terceira na do P3.
-6. Veja as três barras de luz acesas ao mesmo tempo, cada uma na sua cor.
-7. Na aba Controles, clique na linha do P1 para abrir o cartão dele.
-8. Mexa os dois analógicos do P1 e aperte os quatro botões da face dele.
-9. Veja cada movimento e cada aperto aparecerem no cartão.
-10. Clique na linha do P2 e repita nele os passos 8 e 9.
-11. Na aba Vibração, clique em «Testar» na coluna do P1, com ele na mão, e confira que ele tremeu no meio segundo do teste.
-12. Clique em «Testar» na coluna do P2, com ele na mão, e confira que ele tremeu também.
-13. Ligue o P4 com um toque no botão PS.
-14. Veja o chip dele entrar na fita e a contagem virar «2 USB · 2 BT».
-15. Refaça as três cores e os dois «Testar» com os quatro ligados.
-16. Escreva as duas rodadas lado a lado: com três e com quatro.
+* Abra a aba Iluminação.
+1. Desligue o P4 segurando o botão PS dele até todas as luzes apagarem — este teste é com TRÊS ligados.
+2. Confira na fita do topo que sobraram três chips: dois dizendo USB e um dizendo BT.
+3. Leia a contagem no alto à direita: ela tem de dizer «2 USB · 1 BT».
+4. Clique numa cor bem viva na linha «Cor» da coluna do P1, numa cor bem diferente na do P2 e numa terceira na do P3.
+5. Veja as três barras de luz acesas ao mesmo tempo, cada uma na sua cor.
+6. Na aba Controles, clique na linha do P1 para abrir o cartão dele.
+7. Mexa os dois analógicos do P1 e aperte os quatro botões da face dele.
+8. Veja cada movimento e cada aperto aparecerem no cartão.
+9. Clique na linha do P2 e repita nele os passos 7 e 8.
+10. Na aba Vibração, clique em «Testar» na coluna do P1, com ele na mão, e confira que ele tremeu.
+11. Clique em «Testar» na coluna do P2, com ele na mão, confira que ele tremeu também e clique em «Parar» na coluna dele.
+12. Ligue o P4 com um toque no botão PS.
+13. Veja o chip dele entrar na fita e a contagem virar «2 USB · 2 BT».
+14. Refaça as três cores e os dois «Testar» com os quatro ligados, terminando no «Parar».
+15. Escreva as duas rodadas lado a lado: com três e com quatro.
 
 **Passa quando.** Com três ligados, o P1 e o P2 — os dois do cabo — acenderam a cor escolhida no ato, mostraram no cartão tudo o que você fez neles, e tremeram no «Testar». E nada disso piorou quando o quarto controle entrou: as mesmas cores acenderam igual e os mesmos tremores vieram igual com os quatro.
 
@@ -1365,7 +1369,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e fica ligado o tempo todo: é ele que faz serem TRÊS em vez de dois. Recebe cor própria também, e é isso que o põe para trabalhar enquanto o cabo é medido.
 * **P4** — Fica DESLIGADO na primeira metade — segure o PS dele até apagar — e entra só perto do fim. Ele é a comparação: se o P1 e o P2 respondiam bem com três e passam a falhar quando ele entra, o achado é o quarto lugar.
 
-**A armadilha.** A medição que existe mediu PRESENÇA, não partida: os controles estavam parados, sem jogo aberto e sem ninguém apertando nada. O custo dentro de um JOGO — com a Steam aberta, com o espelho que ela faz de cada controle, e com quatro pessoas apertando ao mesmo tempo — é justamente o que continua sem medida, e é como você joga. Segunda, e é um susto conhecido: a Steam faz uma cópia de cada controle que enxerga, inclusive do controle que o próprio Hefesto cria — então três ligados podem virar seis para o jogo. Se ao abrir um jogo aparecerem jogadores a mais, ou um jogador fantasma, isso é a Steam, não o Hefesto; por isso a bancada pede a Steam fechada por inteiro antes de começar. E ela tem de continuar fechada quando o P4 volta: um controle que se conecta pelo rádio com a Steam aberta volta com a barra apagada. Terceira: desligar o P4 não muda o número de ninguém — ele é o último da fila —, e ele volta como P4. Quarta: o «Testar» dura meio segundo — segure na mão o controle que está sendo medido. Quinta: a prova desta linha parou no fio, então nada aqui diz o que o jogo recebeu; o que você prova aqui é que os aparelhos obedecem. E este teste é longo de propósito: ele mede a mesma coisa DUAS vezes — com três ligados e com quatro —, e é a comparação entre as duas rodadas que é a entrega; sem a segunda rodada não há com o que comparar.
+**A armadilha.** A medição que existe mediu PRESENÇA, não partida: os controles estavam parados, sem jogo aberto e sem ninguém apertando nada. O custo dentro de um JOGO — com a Steam aberta, com o espelho que ela faz de cada controle, e com quatro pessoas apertando ao mesmo tempo — é justamente o que continua sem medida, e é como você joga. Segunda, e é um susto conhecido: a Steam faz uma cópia de cada controle que enxerga, inclusive do controle que o próprio Hefesto cria — então três ligados podem virar seis para o jogo. Se ao abrir um jogo aparecerem jogadores a mais, ou um jogador fantasma, isso é a Steam, não o Hefesto; por isso a bancada pede a Steam fechada por inteiro antes de começar. E ela tem de continuar fechada quando o P4 volta: um controle que se conecta pelo rádio com a Steam aberta volta com a barra apagada. Terceira: desligar o P4 não muda o número de ninguém — ele é o último da fila —, e ele volta como P4. Quarta: o «Testar» fica ligado até o «Parar», e o de outra coluna encerra o da anterior — segure na mão o controle que está sendo medido. Quinta: a prova desta linha parou no fio, então nada aqui diz o que o jogo recebeu; o que você prova aqui é que os aparelhos obedecem. E este teste é longo de propósito: ele mede a mesma coisa DUAS vezes — com três ligados e com quatro —, e é a comparação entre as duas rodadas que é a entrega; sem a segunda rodada não há com o que comparar.
 
 ---
 
@@ -1389,10 +1393,10 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 8. Na aba Controles, clique na linha do A para abrir o cartão dele.
 9. Mexa os dois analógicos do A, aperte os quatro botões da face e arraste o dedo no touchpad; depois clique na linha do B e faça o mesmo nele.
 10. Confira que tudo o que você fez nos dois apareceu no cartão de cada um.
-11. Na aba Vibração, segure o A e clique em «Testar» na coluna dele; depois segure o B e clique no «Testar» da coluna dele.
+11. Na aba Vibração, segure o A e clique em «Testar» na coluna dele; depois segure o B e clique no «Testar» da coluna dele, que encerra o do A, e termine no «Parar» da coluna do B.
 12. Confira que cada um tremeu na sua vez.
 13. Encaixe o cabo do P2 de volta — se ele não voltar à fita sozinho, dê um toque no PS dele — e confira que a contagem voltou a «2 USB · 2 BT» e que o A e o B voltaram a ser o P3 e o P4.
-14. Refaça as três rodadas com os quatro ligados: as cores na aba Iluminação, os cartões do P3 e do P4 na aba Controles, e o «Testar» dos dois na aba Vibração.
+14. Refaça as três rodadas com os quatro ligados: as cores na aba Iluminação, os cartões do P3 e do P4 na aba Controles, e o «Testar» dos dois na aba Vibração, terminando no «Parar».
 15. Escreva as duas rodadas lado a lado: com três e com quatro.
 
 **Passa quando.** Com três ligados, os dois do rádio acenderam a cor escolhida no ato, mostraram no cartão tudo o que você fez neles, e tremeram no «Testar». E nada disso piorou quando o quarto controle voltou para o cabo: as mesmas cores acenderam igual e os mesmos tremores vieram igual com os quatro.
@@ -1568,20 +1572,20 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **Os passos.**
 
-1. Abra a aba Controles.
-2. Clique na linha do P3 para abrir o cartão dele, deixando as linhas do P1 e do P2 fechadas.
-3. Confira que a linha do P1 e a do P2 dizem USB.
-4. Anote o número de bateria do P1 e o do P2, e confira que nenhum dos dois mostra travessão no lugar do número.
-5. Olhe a barrinha ao lado de cada número e confira que ela está cheia mais ou menos na proporção do número.
-6. Na aba Jogar, anote o número que aparece ao lado do desenho de pilha no cartão do P1 e no do P2.
-7. Na aba Conexões, clique no título «Gestão de Controles» e anote o número que aparece depois da palavra Bateria na linha do P1 e na do P2.
-8. Compare os três números de cada controle: os três têm de ser iguais.
-9. Volte à aba Controles.
-10. Puxe o cabo do P1 e conte até dois.
-11. Encaixe o cabo do P1 de novo.
-12. Espere a linha do P1 voltar à lista, olhando a tela.
-13. Leia o número de bateria do P1 assim que ele voltar.
-14. Confira que a bateria do P2, do P3 e do P4 não piscou, não sumiu e não virou travessão nesse meio-tempo — siga os três pela cor do plástico.
+* Abra a aba Controles.
+1. Clique na linha do P3 para abrir o cartão dele, deixando as linhas do P1 e do P2 fechadas.
+2. Confira que a linha do P1 e a do P2 dizem USB.
+3. Anote o número de bateria do P1 e o do P2, e confira que nenhum dos dois mostra travessão no lugar do número.
+4. Olhe a barrinha ao lado de cada número e confira que ela está cheia mais ou menos na proporção do número.
+5. Na aba Jogar, anote o número que aparece ao lado do desenho de pilha no cartão do P1 e no do P2.
+6. Na aba Conexões, clique no título «Gestão de Controles» e anote o número que aparece depois da palavra Bateria na linha do P1 e na do P2.
+7. Compare os três números de cada controle: os três têm de ser iguais.
+8. Volte à aba Controles.
+9. Puxe o cabo do P1 e conte até dois.
+10. Encaixe o cabo do P1 de novo.
+11. Espere a linha do P1 voltar à lista, olhando a tela.
+12. Leia o número de bateria do P1 assim que ele voltar.
+13. Confira que a bateria do P2, do P3 e do P4 não piscou, não sumiu e não virou travessão nesse meio-tempo — siga os três pela cor do plástico.
 
 **Passa quando.** O P1 e o P2 têm um número de bateria nas TRÊS abas, e os três números de cada um são o mesmo. Nenhum dos dois mostra travessão. E, depois de o cabo do P1 sair e voltar, ele reaparece na lista já com um número — não com travessão e não com a barrinha vazia —, sem você recarregar nada.
 
@@ -1592,7 +1596,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e é testemunha. Anote o número dele nas três abas antes e depois. Ele não pode mudar por causa do cabo do P1 ter saído.
 * **P4** — No rádio, e é a segunda testemunha. Mesma conferência do P3. Se os dois do rádio virarem travessão quando o P1 sai do cabo, o achado é grande e vale anotar a hora exata.
 
-**A armadilha.** A leitura em si já foi medida no aparelho, em 06/09, com estes quatro controles ligados — o que não foi medido é a escada de degraus, que é outro teste. Quatro números iguais e parados não são aprovação nem defeito: podem ser quatro controles no mesmo estado, e quem decide a escada é o teste dos degraus, com as duas leituras separadas por quarenta minutos. Os gamepads virtuais que o Hefesto cria têm registro de bateria próprio no sistema, que diz «carregando» para sempre; desde 06/09 o Hefesto deixou de lê-los, e o número destas três telas vem do próprio controle. Segunda armadilha: enquanto o P1 está fora, os outros três sobem um número na tela — é a ordem de conexão —, e cada um volta ao seu quando ele volta; é por isso que o passo 14 manda seguir pela cor do plástico. O P1 é o primeiro controle, e o posto dele fica guardado só por trinta segundos: devolva o cabo dentro desse tempo. Se o P1 já foi pareado por rádio nesta máquina, sem o cabo ele pode voltar pelo rádio — a linha dele passa a dizer BT, e aí você mediu outra coisa. E leia a bateria nas linhas fechadas: no cartão aberto o número do controle some do começo da linha, e é fácil anotar o número do controle errado.
+**A armadilha.** A leitura em si já foi medida no aparelho, em 06/09, com estes quatro controles ligados — o que não foi medido é a escada de degraus, que é outro teste. Quatro números iguais e parados não são aprovação nem defeito: podem ser quatro controles no mesmo estado, e quem decide a escada é o teste dos degraus, com as duas leituras separadas por quarenta minutos. Os gamepads virtuais que o Hefesto cria têm registro de bateria próprio no sistema, que diz «carregando» para sempre; desde 06/09 o Hefesto deixou de lê-los, e o número destas três telas vem do próprio controle. Segunda armadilha: enquanto o P1 está fora, os outros três sobem um número na tela — é a ordem de conexão —, e cada um volta ao seu quando ele volta; é por isso que o passo 13 manda seguir pela cor do plástico. O P1 é o primeiro controle, e o posto dele fica guardado só por trinta segundos: devolva o cabo dentro desse tempo. Se o P1 já foi pareado por rádio nesta máquina, sem o cabo ele pode voltar pelo rádio — a linha dele passa a dizer BT, e aí você mediu outra coisa. E leia a bateria nas linhas fechadas: no cartão aberto o número do controle some do começo da linha, e é fácil anotar o número do controle errado.
 
 ---
 
@@ -1717,18 +1721,18 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **Os passos.**
 
-1. Abra a aba Sistema.
-2. Passe o mouse no botão «Parar o serviço», leia a dica e NÃO clique.
-3. Na aba Iluminação, passe o mouse no botão «Desligar» da coluna do P1, na linha «Opções», leia a dica e NÃO clique.
-4. Na aba Conexões, clique no título «Gestão de Controles», clique na linha do P1 para abri-la e passe o mouse no botão «A luz não acende» para ler a dica.
-5. Percorra as dez abas e anote se existe, em alguma, um botão que prometa desligar um controle.
-6. Anote os quatro chips da fita do topo e o que a contagem no alto à direita diz.
-7. Segure o botão PS do P1, que está no cabo, até todas as luzes dele apagarem.
-8. Solte o botão e deixe o P1 na mesa, com o cabo ainda encaixado.
-9. Anote o que aconteceu com o aparelho: as luzes apagaram, ou não.
-10. Olhe a fita do topo e anote se o chip do P1 saiu, e o que a contagem diz agora.
-11. Se o P1 saiu, anote o número que cada um dos outros três mostra, reconhecendo cada um pela cor do plástico.
-12. Se o P1 ficou apagado e fora da fita, dê um toque no botão PS dele para trazê-lo de volta, e confira que os quatro voltaram aos números de antes.
+* Abra a aba Sistema.
+1. Passe o mouse no botão «Parar o serviço», leia a dica e NÃO clique.
+2. Na aba Iluminação, passe o mouse no botão «Desligar» da coluna do P1, na linha «Opções», leia a dica e NÃO clique.
+3. Na aba Conexões, clique no título «Gestão de Controles», clique na linha do P1 para abri-la e passe o mouse no botão «A luz não acende» para ler a dica.
+4. Percorra as dez abas e anote se existe, em alguma, um botão que prometa desligar um controle.
+5. Anote os quatro chips da fita do topo e o que a contagem no alto à direita diz.
+6. Segure o botão PS do P1, que está no cabo, até todas as luzes dele apagarem.
+7. Solte o botão e deixe o P1 na mesa, com o cabo ainda encaixado.
+8. Anote o que aconteceu com o aparelho: as luzes apagaram, ou não.
+9. Olhe a fita do topo e anote se o chip do P1 saiu, e o que a contagem diz agora.
+10. Se o P1 saiu, anote o número que cada um dos outros três mostra, reconhecendo cada um pela cor do plástico.
+11. Se o P1 ficou apagado e fora da fita, dê um toque no botão PS dele para trazê-lo de volta, e confira que os quatro voltaram aos números de antes.
 
 **Passa quando.** Nenhuma das dez abas oferece desligar um controle, e as três coisas parecidas se explicam sozinhas na dica: uma para o serviço inteiro, outra apaga a barra de luz, e a terceira só vale no rádio. O P1 responde ao PS longo com o cabo encaixado, e o que ele faz fica ANOTADO — apagou e voltou sozinho, ou apagou e ficou fora. Se ele saiu, os outros subiram um número durante a ausência e voltaram aos seus quando ele voltou.
 
@@ -1739,7 +1743,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e não se toca nele. Testemunha do outro transporte: chip na fita o tempo todo; o número dele pode subir enquanto o P1 está fora, e tem de voltar quando o P1 volta.
 * **P4** — No rádio, e não se toca nele. Segunda testemunha, e é o último da fila. Confira o chip e o número dele antes, durante e depois.
 
-**A armadilha.** NÃO CLIQUE em «Parar o serviço». Ele derruba o Hefesto inteiro e os quatro controles viram gamepads comuns do Linux; se clicar sem querer, ele pergunta antes — responda que não. Segurar o PS por mais de um segundo não dispara nada no Hefesto: o que abre a Steam é o toque CURTO no PS de um controle ligado, que é um atalho do produto. Por isso o passo 12 só toca o PS se o P1 estiver apagado; se a Steam abrir, feche-a por inteiro e refaça. Renumerar enquanto o P1 está fora é a ordem de conexão, e o posto do P1, que é o primeiro controle, fica guardado para ele só por trinta segundos. E não escreva «reprovou» porque não achou o botão: aqui a ausência é a resposta certa. Onde a prova parou: ninguém nesta casa localizou o comando de desligar por software, e ninguém mediu se ele existe — a faixa de perguntas que o aparelho responde foi varrida em 15/08 e nada de energia voltou, mas ESCREVER no aparelho para desligá-lo nunca foi tentado. O PS5 desliga este mesmo controle por software, então o caminho existe no aparelho; o que falta é o nosso conhecimento dele.
+**A armadilha.** NÃO CLIQUE em «Parar o serviço». Ele derruba o Hefesto inteiro e os quatro controles viram gamepads comuns do Linux; se clicar sem querer, ele pergunta antes — responda que não. Segurar o PS por mais de um segundo não dispara nada no Hefesto: o que abre a Steam é o toque CURTO no PS de um controle ligado, que é um atalho do produto. Por isso o passo 11 só toca o PS se o P1 estiver apagado; se a Steam abrir, feche-a por inteiro e refaça. Renumerar enquanto o P1 está fora é a ordem de conexão, e o posto do P1, que é o primeiro controle, fica guardado para ele só por trinta segundos. E não escreva «reprovou» porque não achou o botão: aqui a ausência é a resposta certa. Onde a prova parou: ninguém nesta casa localizou o comando de desligar por software, e ninguém mediu se ele existe — a faixa de perguntas que o aparelho responde foi varrida em 15/08 e nada de energia voltou, mas ESCREVER no aparelho para desligá-lo nunca foi tentado. O PS5 desliga este mesmo controle por software, então o caminho existe no aparelho; o que falta é o nosso conhecimento dele.
 
 ---
 
@@ -1753,22 +1757,22 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **Os passos.**
 
-1. Abra a aba Sistema.
-2. Passe o mouse no botão «Parar o serviço», leia a dica e NÃO clique.
-3. Na aba Iluminação, passe o mouse no botão «Desligar» da coluna do P4, na linha «Opções», leia a dica e NÃO clique.
-4. Percorra as dez abas e anote se existe, em alguma, um botão que prometa desligar um controle.
-5. Anote os quatro chips da fita do topo e o que a contagem no alto à direita diz.
-6. Na aba Conexões, clique no título «Gestão de Controles» e clique na linha do P4 para abri-la.
-7. Passe o mouse no botão «A luz não acende» da linha do P4 e leia a dica.
-8. Com o P4 na mão, clique em «A luz não acende».
-9. Anote o que o P4 fez: todas as luzes apagaram, ou alguma ficou acesa ou piscando.
-10. Confira que o chip do P4 saiu da fita e que a contagem passou a dizer «2 USB · 1 BT».
-11. Confira que o P1, o P2 e o P3 continuam com os mesmos números.
-12. Dê um toque no botão PS do P4 e confira que o chip dele voltou à fita com o número 4.
-13. Agora pelo dedo: segure o botão PS do P4 até todas as luzes dele apagarem, e solte.
-14. Na aba Iluminação, confira que a linha «Modelo» da coluna do P4 passou a dizer «Desconectado» e que a contagem voltou a «2 USB · 1 BT».
-15. Dê um toque no botão PS do P4 e confira que ele voltou com o número 4.
-16. Anote lado a lado o que o aparelho fez nos dois caminhos: o botão da tela e o dedo.
+* Abra a aba Sistema.
+1. Passe o mouse no botão «Parar o serviço», leia a dica e NÃO clique.
+2. Na aba Iluminação, passe o mouse no botão «Desligar» da coluna do P4, na linha «Opções», leia a dica e NÃO clique.
+3. Percorra as dez abas e anote se existe, em alguma, um botão que prometa desligar um controle.
+4. Anote os quatro chips da fita do topo e o que a contagem no alto à direita diz.
+5. Na aba Conexões, clique no título «Gestão de Controles» e clique na linha do P4 para abri-la.
+6. Passe o mouse no botão «A luz não acende» da linha do P4 e leia a dica.
+7. Com o P4 na mão, clique em «A luz não acende».
+8. Anote o que o P4 fez: todas as luzes apagaram, ou alguma ficou acesa ou piscando.
+9. Confira que o chip do P4 saiu da fita e que a contagem passou a dizer «2 USB · 1 BT».
+10. Confira que o P1, o P2 e o P3 continuam com os mesmos números.
+11. Dê um toque no botão PS do P4 e confira que o chip dele voltou à fita com o número 4.
+12. Agora pelo dedo: segure o botão PS do P4 até todas as luzes dele apagarem, e solte.
+13. Na aba Iluminação, confira que a linha «Modelo» da coluna do P4 passou a dizer «Desconectado» e que a contagem voltou a «2 USB · 1 BT».
+14. Dê um toque no botão PS do P4 e confira que ele voltou com o número 4.
+15. Anote lado a lado o que o aparelho fez nos dois caminhos: o botão da tela e o dedo.
 
 **Passa quando.** Nenhuma das dez abas oferece desligar um controle pelo nome, e os botões parecidos se explicam na dica: um para o serviço inteiro, outro apaga a barra de luz, e o «A luz não acende» derruba o controle do rádio. Pelos dois caminhos o P4 sai do ar: o chip sai da fita, a contagem cai para um BT e o lugar dele fica vazio, sem ninguém tomá-lo. O que o aparelho fez no clique da tela — apagou por inteiro ou ficou aceso procurando — fica ANOTADO, e é a resposta que esta linha não tinha. E ele volta com o número 4 nas duas vezes.
 
@@ -1779,7 +1783,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e não se toca nele. É o vizinho de rádio do que sai, então é nele que uma bagunça aparece primeiro: confira o chip, o número e as cinco lâmpadas dele antes e depois.
 * **P4** — No rádio, e é o único em que você toca. Primeiro pelo botão da tela, depois pelo dedo, e nas duas vezes religue com um toque no PS. Ele tem de voltar com o número 4.
 
-**A armadilha.** NÃO CLIQUE em «Parar o serviço» — ele derruba o Hefesto inteiro; se clicar sem querer, ele pergunta antes, e é só responder que não. O «A luz não acende» derruba e NÃO religa: o Hefesto não reconecta sozinho, o PS é seu; se o botão da linha virar «Cancelar» enquanto espera, clicar nele só desiste da espera e não traz o controle de volta. Quem sai é o P4, e não o P3, de propósito: ele é o último da fila, e a saída dele não renumera ninguém; se o P3 saísse, o P4 subiria para 3 enquanto o outro estivesse fora — é a ordem de conexão, não defeito. A Steam tem de estar fechada: um controle que se conecta pelo rádio com ela aberta volta com a barra apagada, e fechar a Steam depois não cura. Segurar o PS por mais de um segundo não dispara nada no Hefesto; o toque CURTO no PS de um controle ligado abre a Steam, e por isso os toques de religar só vêm com o P4 apagado. Cuidado ao ler as cinco lâmpadas: elas não se contam da esquerda para a direita — o número é o CONJUNTO aceso. Jogador 1 é só a do meio; jogador 2 são a segunda e a quarta; jogador 3 são as duas pontas e a do meio; jogador 4 são as quatro pontas com a do meio apagada. Onde a prova parou: o comando de desligar por software nunca foi localizado nem medido nesta casa; a faixa de perguntas que o aparelho responde foi varrida em 15/08 e nada de energia voltou, e ESCREVER no aparelho para desligá-lo nunca foi tentado — no rádio, os degraus altos desse caminho nunca foram enviados a aparelho nenhum. O «A luz não acende» é outro mecanismo: ele corta a conversa pelo lado do computador, e o que o aparelho faz quando isso acontece é justamente o que o passo 9 mede pela primeira vez.
+**A armadilha.** NÃO CLIQUE em «Parar o serviço» — ele derruba o Hefesto inteiro; se clicar sem querer, ele pergunta antes, e é só responder que não. O «A luz não acende» derruba e NÃO religa: o Hefesto não reconecta sozinho, o PS é seu; se o botão da linha virar «Cancelar» enquanto espera, clicar nele só desiste da espera e não traz o controle de volta. Quem sai é o P4, e não o P3, de propósito: ele é o último da fila, e a saída dele não renumera ninguém; se o P3 saísse, o P4 subiria para 3 enquanto o outro estivesse fora — é a ordem de conexão, não defeito. A Steam tem de estar fechada: um controle que se conecta pelo rádio com ela aberta volta com a barra apagada, e fechar a Steam depois não cura. Segurar o PS por mais de um segundo não dispara nada no Hefesto; o toque CURTO no PS de um controle ligado abre a Steam, e por isso os toques de religar só vêm com o P4 apagado. Cuidado ao ler as cinco lâmpadas: elas não se contam da esquerda para a direita — o número é o CONJUNTO aceso. Jogador 1 é só a do meio; jogador 2 são a segunda e a quarta; jogador 3 são as duas pontas e a do meio; jogador 4 são as quatro pontas com a do meio apagada. Onde a prova parou: o comando de desligar por software nunca foi localizado nem medido nesta casa; a faixa de perguntas que o aparelho responde foi varrida em 15/08 e nada de energia voltou, e ESCREVER no aparelho para desligá-lo nunca foi tentado — no rádio, os degraus altos desse caminho nunca foram enviados a aparelho nenhum. O «A luz não acende» é outro mecanismo: ele corta a conversa pelo lado do computador, e o que o aparelho faz quando isso acontece é justamente o que o passo 8 mede pela primeira vez.
 
 ---
 
@@ -3277,7 +3281,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 14. Abra a Steam e espere ela terminar de abrir.
 15. Volte ao Hefesto e clique em «Desligado» e, dez segundos depois, em «Ligado».
 16. Anote de novo, nos quatro aparelhos, quem ficou no desenho do próprio número.
-17. Feche a Steam por inteiro.
+17. Feche a Steam de novo, por inteiro.
 
 **Passa quando.** Os dois do rádio voltam pelo PS e assentam no desenho do próprio número, como os do cabo. E depois de cada volta do «Status», os quatro estão no desenho do próprio número. Se os do cabo mantiverem e os do rádio não — sobretudo na volta com a Steam aberta —, o teste achou exatamente o que veio procurar: anote «os do rádio perderam» e em qual volta.
 
@@ -3742,7 +3746,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 13. Clique no cartão «Sony DualSense».
 14. Conte as piscadas do P3 e do P4: três, em rosa — esta é a volta que decide.
 15. Anote se o P1 e o P2 piscaram nesta volta.
-16. Feche a Steam por inteiro.
+16. Feche a Steam de novo, por inteiro.
 17. Clique no cartão que estava aceso quando você começou.
 
 **Passa quando.** A cada troca de modo, as barras do P3 e do P4 piscam TRÊS vezes na cor daquele modo e voltam sozinhas à cor de antes — com a Steam fechada e com a Steam aberta. A volta com a Steam aberta é a que fecha o teste.
@@ -4753,19 +4757,19 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 **Os passos.**
 
 1. Confira na fita do topo que os chips do P1 e do P2 terminam em USB e os do P3 e do P4 em BT.
-2. Abra a aba Jogar.
-3. Confira que a linha «Status» está em «Ligado» e que, no quadro «Modo», o chip aceso é «Sony DualSense» ou «Xbox».
-4. Leia os quatro cartões do quadro «O controle é visto como:» e anote qual chip está aceso em cada um.
-5. Abra o jogo com os quatro jogadores dentro da partida.
-6. Anote como o jogo desenha os botões de cada um dos quatro jogadores.
-7. Volte para a janela do Hefesto e clique no chip «Xbox 360» do cartão do P1.
-8. Confira que só o cartão do P1 trocou de chip aceso, e que os outros três continuam no que você anotou.
-9. Volte ao jogo, sem clicar em mais nada, e olhe o desenho dos botões do jogador que você move com o P1: tem de ter virado o do Xbox (Y B A X).
-10. Olhe os jogadores do P2, do P3 e do P4 e confira que continuam como estavam.
-11. Volte ao Hefesto e clique no chip «Xbox 360» do cartão do P2.
-12. Volte ao jogo e confira que agora são dois jogadores desenhados como Xbox, e que são os do P1 e do P2.
-13. Abra a aba Conexões, clique no título «Gestão de Controles» e leia o «Vê como» das quatro linhas: tem de contar a mesma história dos cartões.
-14. Volte à aba Jogar e clique no chip «DualSense» nos cartões do P1 e do P2, para desfazer.
+* Abra a aba Jogar.
+2. Confira que a linha «Status» está em «Ligado» e que, no quadro «Modo», o chip aceso é «Sony DualSense» ou «Xbox».
+3. Leia os quatro cartões do quadro «O controle é visto como:» e anote qual chip está aceso em cada um.
+4. Abra o jogo com os quatro jogadores dentro da partida.
+5. Anote como o jogo desenha os botões de cada um dos quatro jogadores.
+6. Volte para a janela do Hefesto e clique no chip «Xbox 360» do cartão do P1.
+7. Confira que só o cartão do P1 trocou de chip aceso, e que os outros três continuam no que você anotou.
+8. Volte ao jogo, sem clicar em mais nada, e olhe o desenho dos botões do jogador que você move com o P1: tem de ter virado o do Xbox (Y B A X).
+9. Olhe os jogadores do P2, do P3 e do P4 e confira que continuam como estavam.
+10. Volte ao Hefesto e clique no chip «Xbox 360» do cartão do P2.
+11. Volte ao jogo e confira que agora são dois jogadores desenhados como Xbox, e que são os do P1 e do P2.
+12. Abra a aba Conexões, clique no título «Gestão de Controles» e leia o «Vê como» das quatro linhas: tem de contar a mesma história dos cartões.
+13. Volte à aba Jogar e clique no chip «DualSense» nos cartões do P1 e do P2, para desfazer.
 
 **Passa quando.** A escolha feita no cartão do P1 muda o desenho dos botões do jogador do P1 dentro do jogo, e de mais ninguém; a do P2 muda o do P2, e de mais ninguém — as duas só com o clique no chip. Os cartões do P3 e do P4 não trocam de chip sozinhos, e os jogadores deles continuam desenhados como estavam. O «Vê como» da aba Conexões diz o mesmo que os cartões da aba Jogar.
 
@@ -4776,7 +4780,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — BT, e é TESTEMUNHA. Não toque no cartão dele. Se o chip dele trocar sozinho quando você mexe no do P1, a escolha vazou para todos em vez de ficar no aparelho, e é esse o defeito que este teste caça.
 * **P4** — BT, e é a segunda testemunha. Mesma conferência. Se o P3 ficou parado e o P4 mudou, o problema não é do rádio: é a escolha indo para o controle errado.
 
-**A armadilha.** Três. (1) A troca vale no clique: o Hefesto monta de novo, na hora, o controle que o jogo enxerga — não há «Aplicar» nem «Reconectar controles» a apertar. O preço é do jogo, que recebe um controle novo no lugar do antigo: alguns seguem jogando, outros tratam como jogador novo, e há os que só acertam o desenho reabrindo. Se o desenho não mudar, feche e abra o jogo antes de anotar reprovação, e anote qual jogo fez isso. (2) Com o «Status» em «Desligado», ou o Modo em «Navegação», não existe controle montado pelo Hefesto: o chip acende e a escolha fica guardada no aparelho, mas o jogo só muda quando o Hefesto voltar a entregar o controle — é por isso que o passo 3 confere os dois. (3) O chip «Nintendo Pro» funciona desde 07/09: o jogo passa a ver um controle da Nintendo, e o desenho que aparece depende de o jogo conhecer esse controle. E a ordem dos jogadores dentro do jogo pode não ser a do Hefesto: siga pelo controle na sua mão, não pelo número que o jogo escreve. Sobre o degrau: esta linha do mapa não tem degrau escrito, de propósito — tomar o controle e montar um novo é ato do computador, não conversa com o aparelho. O que se mede é o efeito no jogo, e é o que os passos pedem.
+**A armadilha.** Três. (1) A troca vale no clique: o Hefesto monta de novo, na hora, o controle que o jogo enxerga — não há «Aplicar» nem «Reconectar controles» a apertar. O preço é do jogo, que recebe um controle novo no lugar do antigo: alguns seguem jogando, outros tratam como jogador novo, e há os que só acertam o desenho reabrindo. Se o desenho não mudar, feche e abra o jogo antes de anotar reprovação, e anote qual jogo fez isso. (2) Com o «Status» em «Desligado», ou o Modo em «Navegação», não existe controle montado pelo Hefesto: o chip acende e a escolha fica guardada no aparelho, mas o jogo só muda quando o Hefesto voltar a entregar o controle — é por isso que o passo 2 confere os dois. (3) O chip «Nintendo Pro» funciona desde 07/09: o jogo passa a ver um controle da Nintendo, e o desenho que aparece depende de o jogo conhecer esse controle. E a ordem dos jogadores dentro do jogo pode não ser a do Hefesto: siga pelo controle na sua mão, não pelo número que o jogo escreve. Sobre o degrau: esta linha do mapa não tem degrau escrito, de propósito — tomar o controle e montar um novo é ato do computador, não conversa com o aparelho. O que se mede é o efeito no jogo, e é o que os passos pedem.
 
 ---
 
@@ -4799,7 +4803,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 7. Volte ao Hefesto e clique no chip «Xbox 360» do cartão do P3.
 8. Confira que só o cartão do P3 trocou de chip aceso.
 9. Volte ao jogo e confira que só o jogador do P3 mudou de desenho.
-10. Feche o jogo.
+10. Feche o jogo agora.
 11. Segure o botão PS do P3 até todas as luzes dele apagarem, e solte.
 12. Olhe o quadro «O controle é visto como:»: o cartão «Player 3» passa a mostrar o plástico do P4, com o chip «DualSense» aceso — a escolha acompanha o aparelho, não o lugar.
 13. Dê um toque curto no botão PS do P3 para religá-lo e espere o chip dele voltar à fita do topo.
@@ -4836,8 +4840,8 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 4. Faça o mesmo nas colunas do P2, do P3 e do P4, uma cor diferente em cada.
 5. Olhe os quatro controles juntos: quatro barras acesas, quatro cores.
 6. Abra a aba Vibração.
-7. Segure o P1 na mão e clique em «Testar» na coluna dele; sinta o meio segundo de tremor.
-8. Repita o «Testar» nos outros três, um de cada vez, com o controle na mão.
+7. Segure o P1 na mão e clique em «Testar» na coluna dele; sinta o tremor.
+8. Repita o «Testar» nos outros três, um de cada vez, com o controle na mão — cada «Testar» encerra o anterior —, e termine no «Parar» da coluna do P4.
 9. Abra a aba Controles e clique no chip «Todos» da fita do topo, para abrir os quatro cartões.
 10. Mexa o analógico esquerdo do P1 em círculos, devagar, e olhe o pontinho dentro do cartão dele acompanhar.
 11. Aperte, um a um, o quadrado, o triângulo, o círculo e o xis do P1, olhando o desenho acender a cada aperto.
@@ -4855,7 +4859,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — BT, e é comparação. Mesmos gestos. Aqui cada quadro que chega é conferido por selo, e o que não confere é jogado fora antes de virar tinta na tela.
 * **P4** — BT, a segunda comparação. Mesmos gestos.
 
-**A armadilha.** «Não aconteceu nada» pelo cabo nunca é o selo — pelo cabo não existe selo. Se o P1 não obedecer, procure outra coisa: o serviço parado, a coluna vazia, o jogo escrevendo por cima. E o contrário também engana: um pulo no desenho vivo do P1 não prova que um byte chegou torto; pode ser a sua mão. O que faz o achado é o padrão — pulo nos dois do cabo e em nenhum dos dois do rádio. Na cor, escolha sempre um tom livre: um tom que já é de outro controle não fica no que você clicou, e a tela diz de quem ele era. Sobre até onde a prova chegou: esta linha do mapa não tem degrau escrito. O que está medido é o ENVELOPE — em 06 de setembro os quatro controles foram lidos com o serviço parado, ninguém disputando o aparelho, e pelo cabo nenhum corte de quadro fecha com um selo: os quatro últimos bytes mudam a cada quadro, são carga e não soma de conferência. O degrau que faltava é o seu olho, e é o que os passos acima pedem.
+**A armadilha.** «Nada aconteceu» pelo cabo nunca é o selo — pelo cabo não existe selo. Se o P1 não obedecer, procure outra coisa: o serviço parado, a coluna vazia, o jogo escrevendo por cima. E o contrário também engana: um pulo no desenho vivo do P1 não prova que um byte chegou torto; pode ser a sua mão. O que faz o achado é o padrão — pulo nos dois do cabo e em nenhum dos dois do rádio. Na cor, escolha sempre um tom livre: um tom que já é de outro controle não fica no que você clicou, e a tela diz de quem ele era. Sobre até onde a prova chegou: esta linha do mapa não tem degrau escrito. O que está medido é o ENVELOPE — em 06 de setembro os quatro controles foram lidos com o serviço parado, ninguém disputando o aparelho, e pelo cabo nenhum corte de quadro fecha com um selo: os quatro últimos bytes mudam a cada quadro, são carga e não soma de conferência. O degrau que faltava é o seu olho, e é o que os passos acima pedem.
 
 ---
 
@@ -5136,17 +5140,17 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 **Os passos.**
 
 1. Confira na fita do topo que os chips do P1 e do P2 terminam em USB e os do P3 e do P4 em BT.
-2. Abra a aba Controles.
-3. Leia o chip do P1 na fita do topo e anote o nome da cor.
-4. Pegue o P1 na mão e compare o plástico com o nome anotado.
-5. Repita a leitura e a comparação com o P2.
-6. Repita com o P3 e com o P4.
-7. Abra a aba Conexões e clique no título «Gestão de Controles».
-8. Confira, nas quatro linhas, que a barra da aresta esquerda está pintada e não neutra.
-9. Abra a aba Iluminação e confira que os quatro desenhos da linha «Controle» estão pintados na cor do plástico, e não cinza.
-10. Anote qual controle, se algum, ficou sem nome de cor, com a barra neutra ou com o desenho cinza.
-11. Puxe o cabo do P1, dê um toque no PS para trazê-lo pelo rádio e leia o chip com o plástico dele de novo: o nome da cor tem de continuar lá, agora terminando em BT.
-12. Encaixe o cabo de volta e confirme que a cor continua lá, terminando em USB.
+* Abra a aba Controles.
+2. Leia o chip do P1 na fita do topo e anote o nome da cor.
+3. Pegue o P1 na mão e compare o plástico com o nome anotado.
+4. Repita a leitura e a comparação com o P2.
+5. Repita com o P3 e com o P4.
+6. Abra a aba Conexões e clique no título «Gestão de Controles».
+7. Confira, nas quatro linhas, que a barra da aresta esquerda está pintada e não neutra.
+8. Abra a aba Iluminação e confira que os quatro desenhos da linha «Controle» estão pintados na cor do plástico, e não cinza.
+9. Anote qual controle, se algum, ficou sem nome de cor, com a barra neutra ou com o desenho cinza.
+10. Puxe o cabo do P1, dê um toque no PS para trazê-lo pelo rádio e leia o chip com o plástico dele de novo: o nome da cor tem de continuar lá, agora terminando em BT.
+11. Encaixe o cabo de volta e confirme que a cor continua lá, terminando em USB.
 
 **Passa quando.** Os dois do cabo trazem nome de cor e borda pintada, e o nome bate com o plástico na sua mão. Um controle que não devolve essa resposta é o achado — e o produto o mostra como cor não lida, com a barra neutra e o desenho cinza, em vez de inventar uma cor.
 
@@ -5157,7 +5161,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — BT, e é comparação. Pelo rádio essa resposta chega assinada, e o próprio sistema recusa uma assinatura errada — quem passou por ali já acertou duas contas antes de a cor aparecer.
 * **P4** — BT, a segunda comparação. Se um dos dois do rádio vier sem cor e o outro vier com, o achado é do aparelho, não do transporte.
 
-**A armadilha.** Isto não é anti-clone, e dizer que é seria mentira. O Hefesto aceita qualquer aparelho que se apresente com o número de fábrica certo: não há desafio, não há senha, não há como um programa desta casa conferir a assinatura da Sony. O que este teste mede é uma resposta A MAIS, que o clone medido nesta casa não dá — o firmware dele responde três perguntas e mais nada, e a da cor é a quarta. Um clone melhor copia a resposta e passa igual. Segunda: a cor sumir NÃO é prova de clone; pode ser um aparelho cuja assinatura de cor esta casa ainda não conhece, e nesse caso a tela devolve «não sei», que é o certo. Terceira: na travessia do passo 11 o P1 some por um instante e os outros três descem um número até ele voltar; siga-os pelo plástico. Quarta: nenhum degrau foi escrito nesta linha do mapa. Ela foi preenchida lendo o firmware de um clone real e o que os aparelhos declaram, sem uma única escrita nos seus controles — o que você fizer aqui é a primeira vez que um par de mãos a mede.
+**A armadilha.** Isto não é anti-clone, e dizer que é seria mentira. O Hefesto aceita qualquer aparelho que se apresente com o número de fábrica certo: não há desafio, não há senha, não há como um programa desta casa conferir a assinatura da Sony. O que este teste mede é uma resposta A MAIS, que o clone medido nesta casa não dá — o firmware dele responde três perguntas e mais nada, e a da cor é a quarta. Um clone melhor copia a resposta e passa igual. Segunda: a cor sumir NÃO é prova de clone; pode ser um aparelho cuja assinatura de cor esta casa ainda não conhece, e nesse caso a tela devolve «não sei», que é o certo. Terceira: na travessia do passo 10 o P1 some por um instante e os outros três descem um número até ele voltar; siga-os pelo plástico. Quarta: nenhum degrau foi escrito nesta linha do mapa. Ela foi preenchida lendo o firmware de um clone real e o que os aparelhos declaram, sem uma única escrita nos seus controles — o que você fizer aqui é a primeira vez que um par de mãos a mede.
 
 ---
 
@@ -5211,7 +5215,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 2. Abra a aba Iluminação e, na linha «Cor» da coluna do P1, clique num quadradinho cuja cor nenhum outro controle esteja usando.
 3. Olhe a barra de luz do P1 no aparelho e confirme a cor.
 4. Abra a aba Vibração, segure o P1 na mão e clique em «Testar» na coluna dele.
-5. Sinta o meio segundo de tremor nos dois punhos.
+5. Sinta o tremor nos dois punhos e clique em «Parar» na coluna do P1.
 6. Abra a aba Gatilhos e anote o «Modo» que está escolhido no L2 e no R2 da coluna do P1.
 7. No bloco do L2, escolha «Rígido» no campo «Modo» da coluna do P1.
 8. Aperte o L2 do P1 e sinta se ele travou duro do começo ao fim do curso.
@@ -5245,18 +5249,18 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 **Os passos.**
 
 1. Confira na fita do topo que os chips do P3 e do P4 terminam em BT e os do P1 e do P2 em USB.
-2. Abra a aba Iluminação.
-3. Leia a linha «Modelo» das quatro colunas e confirme quem termina em USB e quem termina em BT.
-4. Clique num quadradinho de cor livre — que nenhum outro controle esteja usando — na linha «Cor» da coluna do P1 e confirme a cor na barra de luz dele: este é o controle de comparação, pelo cabo.
-5. Clique numa cor livre bem diferente na linha «Cor» da coluna do P3.
-6. Olhe a barra de luz do P3 no aparelho e confirme que ela acendeu nessa cor.
-7. Clique numa terceira cor livre na mesma coluna do P3 e confirme que a barra dele trocou.
-8. Clique em «Desligar», na linha «Opções» da coluna do P3, e confirme que a barra dele apaga.
-9. Clique numa cor de novo na coluna do P3 e confirme que ela volta a acender.
-10. Repita os passos 5 a 9 na coluna do P4.
-11. Olhe os quatro controles juntos: quatro barras acesas, quatro cores diferentes.
-12. Clique, em cada coluna em que você mexeu, no quadradinho da cor do número daquele controle — o primeiro para o P1, o terceiro para o P3, o quarto para o P4 —, para desfazer.
-13. Anote o modelo de cada um dos dois do rádio ao lado do resultado.
+* Abra a aba Iluminação.
+2. Leia a linha «Modelo» das quatro colunas e confirme quem termina em USB e quem termina em BT.
+3. Clique num quadradinho de cor livre — que nenhum outro controle esteja usando — na linha «Cor» da coluna do P1 e confirme a cor na barra de luz dele: este é o controle de comparação, pelo cabo.
+4. Clique numa cor livre bem diferente na linha «Cor» da coluna do P3.
+5. Olhe a barra de luz do P3 no aparelho e confirme que ela acendeu nessa cor.
+6. Clique numa terceira cor livre na mesma coluna do P3 e confirme que a barra dele trocou.
+7. Clique em «Desligar», na linha «Opções» da coluna do P3, e confirme que a barra dele apaga.
+8. Clique numa cor de novo na coluna do P3 e confirme que ela volta a acender.
+9. Repita os passos 4 a 8 na coluna do P4.
+10. Olhe os quatro controles juntos: quatro barras acesas, quatro cores diferentes.
+11. Clique, em cada coluna em que você mexeu, no quadradinho da cor do número daquele controle — o primeiro para o P1, o terceiro para o P3, o quarto para o P4 —, para desfazer.
+12. Anote o modelo de cada um dos dois do rádio ao lado do resultado.
 
 **Passa quando.** A barra de luz do P3 e a do P4 obedecem à cor escolhida, trocam quando você troca, apagam no «Desligar» e voltam quando você pinta de novo. As duas são do rádio, e é nas DUAS que a prova precisava existir: até hoje ela existia num aparelho só.
 
@@ -5282,16 +5286,16 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 **Os passos.**
 
 1. Confira na fita do topo que os chips do P1 e do P2 terminam em USB.
-2. Abra a aba Conexões.
-3. Clique no título «Gestão de Controles» e leia o que as linhas do P1 e do P2 dizem sobre o microfone: tem de estar escrito «pelo cabo • Placa do controle».
-4. Abra a aba Controles, clique na linha do P1 para abrir o cartão dele e fale perto dele: a barrinha do bloco «Microfone» tem de mexer.
-5. Volte à aba Conexões, clique na linha do P1 para abri-la e escolha «Desligado» no campo do microfone.
-6. Volte à aba Controles e fale perto do P1 de novo: a barrinha tem de continuar mexendo, porque no cabo o microfone não passa pela ponte.
-7. Volte à aba Conexões e escolha «Ligado» no campo do microfone do P1, para desfazer.
-8. Repita os passos 4 a 7 no P2.
-9. Abra a aba Iluminação e clique num quadradinho de cor livre na coluna do P1: a barra de luz dele tem de obedecer.
-10. Faça o mesmo na coluna do P2.
-11. Clique no primeiro quadradinho da coluna do P1 e no segundo da do P2 — a cor do número de cada um —, para desfazer.
+* Abra a aba Conexões.
+2. Clique no título «Gestão de Controles» e leia o que as linhas do P1 e do P2 dizem sobre o microfone: tem de estar escrito «pelo cabo • Placa do controle».
+3. Abra a aba Controles, clique na linha do P1 para abrir o cartão dele e fale perto dele: a barrinha do bloco «Microfone» tem de mexer.
+4. Volte à aba Conexões, clique na linha do P1 para abri-la e escolha «Desligado» no campo do microfone.
+5. Volte à aba Controles e fale perto do P1 de novo: a barrinha tem de continuar mexendo, porque no cabo o microfone não passa pela ponte.
+6. Volte à aba Conexões e escolha «Ligado» no campo do microfone do P1, para desfazer.
+7. Repita os passos 3 a 6 no P2.
+8. Abra a aba Iluminação e clique num quadradinho de cor livre na coluna do P1: a barra de luz dele tem de obedecer.
+9. Faça o mesmo na coluna do P2.
+10. Clique no primeiro quadradinho da coluna do P1 e no segundo da do P2 — a cor do número de cada um —, para desfazer.
 
 **Passa quando.** As linhas do P1 e do P2 dizem «pelo cabo • Placa do controle» do começo ao fim, nunca «Pela ponte». Desligar a ponte de um controle do cabo não cala o microfone dele, e depois de tudo os dois continuam obedecendo à cor.
 
@@ -5302,7 +5306,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — BT, testemunha. Não toque nele. A linha dele tem de continuar dizendo «pelo rádio • Pela ponte» enquanto você mexe nos do cabo.
 * **P4** — BT, testemunha. Mesma coisa. Se a ponte dele cair quando você desliga a do P1, a escolha foi para o controle errado, e isso é o achado.
 
-**A armadilha.** Três. (1) Este teste prova menos do que o nome da linha, e dizer isso é metade do valor dele: o outro comando cru da casa, o que devolve a barra de luz ao jogo, varre todos os controles, inclusive os do cabo — e ele não tem botão em tela nenhuma: só o instrumento de terminal da casa o manda, e a sua mão não alcança essa metade. (2) O que já está medido é que a escrita SAI e que o sistema a aceita — nunca que o aparelho a executou; é por isso que os passos 9 e 10 conferem que os controles seguem obedecendo depois. (3) O «Desligado» do campo do microfone fica guardado no controle e vale quando ele for para o rádio: se você esquecer o passo 7, o P1 chega ao rádio sem microfone. Devolva «Ligado» sempre.
+**A armadilha.** Três. (1) Este teste prova menos do que o nome da linha, e dizer isso é metade do valor dele: o outro comando cru da casa, o que devolve a barra de luz ao jogo, varre todos os controles, inclusive os do cabo — e ele não tem botão em tela nenhuma: só o instrumento de terminal da casa o manda, e a sua mão não alcança essa metade. (2) O que já está medido é que a escrita SAI e que o sistema a aceita — nunca que o aparelho a executou; é por isso que os passos 8 e 9 conferem que os controles seguem obedecendo depois. (3) O «Desligado» do campo do microfone fica guardado no controle e vale quando ele for para o rádio: se você esquecer o passo 6, o P1 chega ao rádio sem microfone. Devolva «Ligado» sempre.
 
 ---
 
@@ -5316,17 +5320,17 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **Os passos.**
 
-1. Abra a aba Conexões.
-2. Confira na fita do topo que os chips do P3 e do P4 terminam em BT.
-3. Clique no título «Gestão de Controles» e leia o que as linhas do P3 e do P4 dizem sobre o microfone: tem de estar escrito «pelo rádio • Pela ponte».
-4. Leia a mesma coisa nas linhas do P1 e do P2: nelas tem de estar escrito «pelo cabo • Placa do controle».
-5. Abra a aba Controles, clique na linha do P3 para abrir o cartão dele e fale perto dele: a barrinha do bloco «Microfone» tem de mexer.
-6. Volte à aba Conexões, clique na linha do P3 para abri-la e escolha «Desligado» no campo do microfone.
-7. Volte à aba Controles e fale perto do P3: a barrinha dele tem de parar de mexer, e o bloco «Microfone» dele fica cinza.
-8. Fale perto do P4 e confira que a barrinha DELE continua mexendo.
-9. Volte à aba Conexões e escolha «Ligado» no campo do microfone do P3.
-10. Volte à aba Controles e fale perto do P3: a barrinha tem de voltar a mexer.
-11. Refaça os passos 5 a 10 com o P4, conferindo o P3 no lugar do P4 no passo 8.
+* Abra a aba Conexões.
+1. Confira na fita do topo que os chips do P3 e do P4 terminam em BT.
+2. Clique no título «Gestão de Controles» e leia o que as linhas do P3 e do P4 dizem sobre o microfone: tem de estar escrito «pelo rádio • Pela ponte».
+3. Leia a mesma coisa nas linhas do P1 e do P2: nelas tem de estar escrito «pelo cabo • Placa do controle».
+4. Abra a aba Controles, clique na linha do P3 para abrir o cartão dele e fale perto dele: a barrinha do bloco «Microfone» tem de mexer.
+5. Volte à aba Conexões, clique na linha do P3 para abri-la e escolha «Desligado» no campo do microfone.
+6. Volte à aba Controles e fale perto do P3: a barrinha dele tem de parar de mexer, e o bloco «Microfone» dele fica cinza.
+7. Fale perto do P4 e confira que a barrinha DELE continua mexendo.
+8. Volte à aba Conexões e escolha «Ligado» no campo do microfone do P3.
+9. Volte à aba Controles e fale perto do P3: a barrinha tem de voltar a mexer.
+10. Refaça os passos 4 a 9 com o P4, conferindo o P3 no lugar do P4 no passo 7.
 
 **Passa quando.** Os dois do rádio dizem, na aba Conexões, que o microfone deles chega pela ponte, e a barrinha do cartão de cada um mexe quando você fala perto dele. «Desligado» derruba a ponte daquele controle — a barrinha dele para — sem calar o vizinho, e «Ligado» a traz de volta. Nada disso acontece no P1 nem no P2: as linhas deles dizem, do começo ao fim, que o microfone vem pela placa do próprio controle.
 
@@ -5422,22 +5426,22 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 **Os passos.**
 
 1. Confira na fita do topo que os chips do P1 e do P2 terminam em USB.
-2. Abra a aba Sistema.
-3. Desça até a faixa «Avançado» e leia o painel «Detalhes técnicos», ao lado dos botões.
-4. Role o painel até o fim e ache o bloco «Identidade de fábrica».
-5. Conte as linhas desse bloco: tem de haver uma para cada um dos quatro controles ligados.
-6. Leia a linha do P1: ela tem de trazer P1, a cor do plástico, USB e um número de série comprido.
-7. Leia a linha do P2 do mesmo jeito.
-8. Pegue o P1 na mão e compare a cor do plástico dele com o nome escrito na linha.
-9. Faça a mesma comparação com o P2.
-10. Abra a aba Controles e clique na linha do P1 para abrir o cartão dele.
-11. Confira que a «Bateria» mostra um número em porcento, e não um traço.
-12. Encoste um dedo no touchpad do P1 e confira que o «Touchpad» passa a contar o toque.
-13. Empurre o analógico esquerdo do P1 e confira que os números X e Y dele andam no cartão.
-14. Aperte o L2 do P1 até o fim e confira que o número dele, em «Gatilhos», sobe até perto de 255.
-15. Gire o P1 na mão e confira que os números do «Giroscópio» saem do zero.
-16. Repita os passos 10 a 15 no P2.
-17. Abra a aba Conexões, clique no título «Gestão de Controles» e leia o que as linhas do P1 e do P2 dizem em «Vê como».
+* Abra a aba Sistema.
+2. Desça até a faixa «Avançado» e leia o painel «Detalhes técnicos», ao lado dos botões.
+3. Role o painel até o fim e ache o bloco «Identidade de fábrica».
+4. Conte as linhas desse bloco: tem de haver uma para cada um dos quatro controles ligados.
+5. Leia a linha do P1: ela tem de trazer P1, a cor do plástico, USB e um número de série comprido.
+6. Leia a linha do P2 do mesmo jeito.
+7. Pegue o P1 na mão e compare a cor do plástico dele com o nome escrito na linha.
+8. Faça a mesma comparação com o P2.
+9. Abra a aba Controles e clique na linha do P1 para abrir o cartão dele.
+10. Confira que a «Bateria» mostra um número em porcento, e não um traço.
+11. Encoste um dedo no touchpad do P1 e confira que o «Touchpad» passa a contar o toque.
+12. Empurre o analógico esquerdo do P1 e confira que os números X e Y dele andam no cartão.
+13. Aperte o L2 do P1 até o fim e confira que o número dele, em «Gatilhos», sobe até perto de 255.
+14. Gire o P1 na mão e confira que os números do «Giroscópio» saem do zero.
+15. Repita os passos 9 a 14 no P2.
+16. Abra a aba Conexões, clique no título «Gestão de Controles» e leia o que as linhas do P1 e do P2 dizem em «Vê como».
 
 **Passa quando.** As quatro linhas de «Identidade de fábrica» existem, e as do P1 e do P2 trazem USB e um número de série comprido — nenhuma das duas com traço no lugar do serial, e os dois seriais diferentes um do outro. A cor escrita bate com o plástico que você tem na mão. E no cartão de cada um, todo campo que devia responder responde: bateria com número, touchpad contando o toque, analógico andando, gatilho subindo até perto de 255 e giroscópio saindo do zero.
 
@@ -5463,21 +5467,21 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 **Os passos.**
 
 1. Confira na fita do topo que os chips do P3 e do P4 terminam em BT.
-2. Abra a aba Sistema.
-3. Desça até a faixa «Avançado» e leia o painel «Detalhes técnicos».
-4. Role o painel até o fim e ache o bloco «Identidade de fábrica».
-5. Leia a linha do P3: ela tem de trazer P3, a cor do plástico e BT.
-6. Leia o fim dessa mesma linha: no lugar do número de série tem de estar escrito «o serial só é lido no cabo».
-7. Leia a linha do P4 do mesmo jeito.
-8. Pegue o P3 na mão e compare a cor do plástico dele com o nome escrito na linha.
-9. Faça a mesma comparação com o P4.
-10. Abra a aba Controles e clique na linha do P3 para abrir o cartão dele.
-11. Confira que a «Bateria» mostra um número em porcento, e não um traço.
-12. Encoste um dedo no touchpad do P3 e confira que o «Touchpad» passa a contar o toque.
-13. Empurre o analógico esquerdo do P3 e confira que os números andam no cartão.
-14. Gire o P3 na mão e confira que os números do «Giroscópio» saem do zero.
-15. Repita os passos 10 a 14 no P4.
-16. Clique na linha do P1 e compare os campos do cartão dele com os do P3: têm de ser os mesmos campos, com os mesmos rótulos.
+* Abra a aba Sistema.
+2. Desça até a faixa «Avançado» e leia o painel «Detalhes técnicos».
+3. Role o painel até o fim e ache o bloco «Identidade de fábrica».
+4. Leia a linha do P3: ela tem de trazer P3, a cor do plástico e BT.
+5. Leia o fim dessa mesma linha: no lugar do número de série tem de estar escrito «o serial só é lido no cabo».
+6. Leia a linha do P4 do mesmo jeito.
+7. Pegue o P3 na mão e compare a cor do plástico dele com o nome escrito na linha.
+8. Faça a mesma comparação com o P4.
+9. Abra a aba Controles e clique na linha do P3 para abrir o cartão dele.
+10. Confira que a «Bateria» mostra um número em porcento, e não um traço.
+11. Encoste um dedo no touchpad do P3 e confira que o «Touchpad» passa a contar o toque.
+12. Empurre o analógico esquerdo do P3 e confira que os números andam no cartão.
+13. Gire o P3 na mão e confira que os números do «Giroscópio» saem do zero.
+14. Repita os passos 9 a 13 no P4.
+15. Clique na linha do P1 e compare os campos do cartão dele com os do P3: têm de ser os mesmos campos, com os mesmos rótulos.
 
 **Passa quando.** As linhas do P3 e do P4 existem no bloco, dizem BT, trazem o nome da cor do plástico que bate com o aparelho na sua mão, e no lugar do número de série trazem a frase escrita — não um espaço em branco nem um traço seco. E os cartões dos dois respondem: bateria com número, touchpad contando o toque, analógico andando e giroscópio saindo do zero.
 
@@ -5504,18 +5508,18 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 1. Confira na fita do topo que os chips do P1 e do P2 terminam em USB.
 2. Feche a Steam e qualquer jogo aberto.
-3. Abra a aba Iluminação.
-4. Olhe as quatro colunas e repare quais cores os outros três controles estão usando: a rajada só pode usar quadradinhos que nenhum deles tenha.
-5. Clique num quadradinho livre, de cor bem diferente da atual, na linha «Cor» da coluna do P1.
-6. Confirme que a barra do P1 acendeu nessa cor.
-7. Clique agora, um atrás do outro e o mais rápido que você conseguir, em seis quadradinhos livres DIFERENTES da linha «Cor» do P1, terminando num que você reconheça de longe.
-8. Tire a mão do mouse e olhe a barra do P1: ela tem de estar na cor do ÚLTIMO clique.
-9. Confira que ela não parou numa cor do meio da sequência.
-10. Leia o código da cor escrito abaixo dos quadradinhos e confira que ele é o do último clique.
-11. Olhe as barras do P2, do P3 e do P4: nenhuma pode ter mudado.
-12. Repita os passos 7 a 11 na coluna do P2.
-13. Anote, mais ou menos, quanto tempo a barra levou para assentar na última cor depois de você parar de clicar.
-14. Clique no primeiro quadradinho da coluna do P1 e no segundo da do P2 — a cor do número de cada um —, para desfazer.
+* Abra a aba Iluminação.
+3. Olhe as quatro colunas e repare quais cores os outros três controles estão usando: a rajada só pode usar quadradinhos que nenhum deles tenha.
+4. Clique num quadradinho livre, de cor bem diferente da atual, na linha «Cor» da coluna do P1.
+5. Confirme que a barra do P1 acendeu nessa cor.
+6. Clique agora, um atrás do outro e o mais rápido que você conseguir, em seis quadradinhos livres DIFERENTES da linha «Cor» do P1, terminando num que você reconheça de longe.
+7. Tire a mão do mouse e olhe a barra do P1: ela tem de estar na cor do ÚLTIMO clique.
+8. Confira que ela não parou numa cor do meio da sequência.
+9. Leia o código da cor escrito abaixo dos quadradinhos e confira que ele é o do último clique.
+10. Olhe as barras do P2, do P3 e do P4: nenhuma pode ter mudado.
+11. Repita os passos 6 a 10 na coluna do P2.
+12. Anote, mais ou menos, quanto tempo a barra levou para assentar na última cor depois de você parar de clicar.
+13. Clique no primeiro quadradinho da coluna do P1 e no segundo da do P2 — a cor do número de cada um —, para desfazer.
 
 **Passa quando.** Depois da rajada de cliques, a barra do controle em que você clicou fica na cor do ÚLTIMO quadradinho, e não numa do meio. O código escrito abaixo dos quadradinhos concorda com a barra acesa. As barras dos outros três não mudam. E a barra assenta em menos de um segundo depois do último clique.
 
@@ -5542,18 +5546,18 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 1. Confira na fita do topo que os chips do P3 e do P4 terminam em BT e que o do P1 termina em USB.
 2. Feche a Steam e qualquer jogo aberto.
-3. Abra a aba Iluminação.
-4. Olhe as quatro colunas e repare quais cores cada controle está usando: a rajada só pode usar quadradinhos que nenhum dos outros tenha.
-5. Clique, um atrás do outro e o mais rápido que conseguir, em seis quadradinhos livres DIFERENTES da linha «Cor» da coluna do P1, terminando num que você reconheça de longe.
-6. Olhe a barra do P1 e anote se ela ficou na cor do último clique e quanto tempo levou para assentar.
-7. Faça a mesma rajada de seis quadradinhos livres diferentes na coluna do P3.
-8. Tire a mão do mouse e olhe a barra do P3: ela tem de estar na cor do ÚLTIMO clique.
-9. Confira que ela não parou numa cor do meio da sequência.
-10. Leia o código da cor abaixo dos quadradinhos do P3 e confira que ele é o do último clique.
-11. Olhe as barras do P1, do P2 e do P4: nenhuma pode ter mudado por causa da rajada do P3.
-12. Repita os passos 7 a 11 na coluna do P4.
-13. Compare o que você anotou do P1 com o que aconteceu no P3 e no P4, e anote a diferença de tempo.
-14. Clique, nas colunas do P1, do P3 e do P4, no quadradinho da cor do número de cada um — o primeiro, o terceiro e o quarto —, para desfazer.
+* Abra a aba Iluminação.
+3. Olhe as quatro colunas e repare quais cores cada controle está usando: a rajada só pode usar quadradinhos que nenhum dos outros tenha.
+4. Clique, um atrás do outro e o mais rápido que conseguir, em seis quadradinhos livres DIFERENTES da linha «Cor» da coluna do P1, terminando num que você reconheça de longe.
+5. Olhe a barra do P1 e anote se ela ficou na cor do último clique e quanto tempo levou para assentar.
+6. Faça a mesma rajada de seis quadradinhos livres diferentes na coluna do P3.
+7. Tire a mão do mouse e olhe a barra do P3: ela tem de estar na cor do ÚLTIMO clique.
+8. Confira que ela não parou numa cor do meio da sequência.
+9. Leia o código da cor abaixo dos quadradinhos do P3 e confira que ele é o do último clique.
+10. Olhe as barras do P1, do P2 e do P4: nenhuma pode ter mudado por causa da rajada do P3.
+11. Repita os passos 6 a 10 na coluna do P4.
+12. Compare o que você anotou do P1 com o que aconteceu no P3 e no P4, e anote a diferença de tempo.
+13. Clique, nas colunas do P1, do P3 e do P4, no quadradinho da cor do número de cada um — o primeiro, o terceiro e o quarto —, para desfazer.
 
 **Passa quando.** Depois da rajada, a barra do controle do rádio fica na cor do último quadradinho, e não numa do meio — exatamente como aconteceu no do cabo. O código escrito abaixo dos quadradinhos concorda com a barra. As barras dos outros três não mudam.
 
@@ -5579,16 +5583,16 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 **Os passos.**
 
 1. Confira na fita do topo que os chips do P1 e do P2 terminam em USB.
-2. Abra a aba Conexões.
-3. Leia o quadro «Check-up» de cima a baixo e anote cada linha que fale dos controles do cabo.
-4. Confira que nenhuma dessas linhas oferece um ajuste de enlace — elas falam de energia, de entrada e de vizinhança de rádio.
-5. Clique no título «Gestão de Controles» e clique na linha do P1 para abri-la.
-6. Leia os ajustes que abrem e confira que nenhum oferece mexer em tempo de resposta, intervalo ou latência de rádio.
-7. Pare o ponteiro sobre o botão «A luz não acende» da linha do P1 e leia a dica: ela diz que ele só funciona com o controle no rádio.
-8. Repita os passos 5 a 7 na linha do P2.
-9. Clique no título «Rádio e Adaptadores» e clique no ▶ de cada adaptador.
-10. Confira que o P1 e o P2 não aparecem em adaptador nenhum, e que o P3 e o P4 aparecem.
-11. Anote o que você encontrou; o esperado é nenhum ajuste de enlace e nenhum controle do cabo no rádio.
+* Abra a aba Conexões.
+2. Leia o quadro «Check-up» de cima a baixo e anote cada linha que fale dos controles do cabo.
+3. Confira que nenhuma dessas linhas oferece um ajuste de enlace — elas falam de energia, de entrada e de vizinhança de rádio.
+4. Clique no título «Gestão de Controles» e clique na linha do P1 para abri-la.
+5. Leia os ajustes que abrem e confira que nenhum oferece mexer em tempo de resposta, intervalo ou latência de rádio.
+6. Pare o ponteiro sobre o botão «A luz não acende» da linha do P1 e leia a dica: ela diz que ele só funciona com o controle no rádio.
+7. Repita os passos 4 a 6 na linha do P2.
+8. Clique no título «Rádio e Adaptadores» e clique no ▶ de cada adaptador.
+9. Confira que o P1 e o P2 não aparecem em adaptador nenhum, e que o P3 e o P4 aparecem.
+10. Anote o que você encontrou; o esperado é nenhum ajuste de enlace e nenhum controle do cabo no rádio.
 
 **Passa quando.** Nenhuma aba oferece ajuste de enlace sem fio para um controle do cabo, e nenhum número na tela é apresentado como medida do enlace deles. O P1 e o P2 não aparecem em «Rádio e Adaptadores», e o «A luz não acende» deles diz que só vale no rádio.
 
@@ -5649,21 +5653,21 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 **Os passos.**
 
 1. Deixe o P3 e o P4 ligados no rádio e não encoste neles durante o teste.
-2. Abra a aba Controles.
-3. Anote o nome da cor do plástico de cada um dos quatro chips da fita.
-4. Desencaixe o cabo do P1.
-5. Conte até dez, devagar.
-6. Confira que o chip com o plástico do P1 saiu da fita e que a contagem passou a «● 1 USB · 2 BT».
-7. Encaixe o cabo de volta no P1 e no PC.
-8. Conte até cinco, devagar, olhando a fita.
-9. Leia o chip com o plástico do P1: tem de ser P1 de novo, terminando em USB.
-10. Clique na linha do P1 para abrir o cartão dele.
-11. Confira que a «Bateria» mostra um número em porcento, e não um traço.
-12. Encoste um dedo no touchpad do P1 e confira que o «Touchpad» conta o toque.
-13. Gire o P1 na mão e confira que os números do «Giroscópio» saem do zero.
-14. Empurre o analógico esquerdo do P1 e confira que os números andam no cartão.
-15. Repita os passos 4 a 14 com o P2.
-16. Confira, no fim, que a contagem voltou a «● 2 USB · 2 BT» e que os quatro têm os números do começo.
+* Abra a aba Controles.
+2. Anote o nome da cor do plástico de cada um dos quatro chips da fita.
+3. Desencaixe o cabo do P1.
+4. Conte até dez, devagar.
+5. Confira que o chip com o plástico do P1 saiu da fita e que a contagem passou a «● 1 USB · 2 BT».
+6. Encaixe o cabo de volta no P1 e no PC.
+7. Conte até cinco, devagar, olhando a fita.
+8. Leia o chip com o plástico do P1: tem de ser P1 de novo, terminando em USB.
+9. Clique na linha do P1 para abrir o cartão dele.
+10. Confira que a «Bateria» mostra um número em porcento, e não um traço.
+11. Encoste um dedo no touchpad do P1 e confira que o «Touchpad» conta o toque.
+12. Gire o P1 na mão e confira que os números do «Giroscópio» saem do zero.
+13. Empurre o analógico esquerdo do P1 e confira que os números andam no cartão.
+14. Repita os passos 3 a 13 com o P2.
+15. Confira, no fim, que a contagem voltou a «● 2 USB · 2 BT» e que os quatro têm os números do começo.
 
 **Passa quando.** Depois de encaixar o cabo, o controle volta à fita em menos de cinco segundos, com o mesmo número de antes, e o cartão dele responde em TODOS os campos vivos: bateria com número, touchpad contando o toque, giroscópio saindo do zero e analógico andando. Meio controle não passa — se ele aparece mas a bateria fica em traço, ou o giroscópio não sai do zero, o teste reprovou.
 
@@ -5689,21 +5693,21 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 **Os passos.**
 
 1. Deixe o P1 e o P2 no cabo e não encoste neles durante o teste.
-2. Abra a aba Controles.
-3. Anote o nome da cor do plástico de cada um dos quatro chips da fita.
-4. Segure o botão PS do P3 até todas as luzes dele apagarem, e solte.
-5. Conte até dez, devagar.
-6. Confira que o chip com o plástico do P3 saiu da fita e que a contagem passou a «● 2 USB · 1 BT».
-7. Dê um toque curto no botão PS do P3 para religá-lo.
-8. Conte até cinco, devagar, olhando a fita.
-9. Leia o chip com o plástico do P3: tem de ser P3 de novo, terminando em BT.
-10. Clique na linha do P3 para abrir o cartão dele.
-11. Confira que a «Bateria» mostra um número em porcento, e não um traço.
-12. Encoste um dedo no touchpad do P3 e confira que o «Touchpad» conta o toque.
-13. Gire o P3 na mão e confira que os números do «Giroscópio» saem do zero.
-14. Empurre o analógico esquerdo do P3 e confira que os números andam no cartão.
-15. Repita os passos 4 a 14 com o P4.
-16. Confira, no fim, que a contagem voltou a «● 2 USB · 2 BT» e que os quatro têm os números do começo.
+* Abra a aba Controles.
+2. Anote o nome da cor do plástico de cada um dos quatro chips da fita.
+3. Segure o botão PS do P3 até todas as luzes dele apagarem, e solte.
+4. Conte até dez, devagar.
+5. Confira que o chip com o plástico do P3 saiu da fita e que a contagem passou a «● 2 USB · 1 BT».
+6. Dê um toque curto no botão PS do P3 para religá-lo.
+7. Conte até cinco, devagar, olhando a fita.
+8. Leia o chip com o plástico do P3: tem de ser P3 de novo, terminando em BT.
+9. Clique na linha do P3 para abrir o cartão dele.
+10. Confira que a «Bateria» mostra um número em porcento, e não um traço.
+11. Encoste um dedo no touchpad do P3 e confira que o «Touchpad» conta o toque.
+12. Gire o P3 na mão e confira que os números do «Giroscópio» saem do zero.
+13. Empurre o analógico esquerdo do P3 e confira que os números andam no cartão.
+14. Repita os passos 3 a 13 com o P4.
+15. Confira, no fim, que a contagem voltou a «● 2 USB · 2 BT» e que os quatro têm os números do começo.
 
 **Passa quando.** Depois do toque no PS, o controle volta à fita em poucos segundos com o mesmo número, e o cartão dele responde em TODOS os campos vivos: bateria com número, touchpad contando o toque, giroscópio saindo do zero e analógico andando. Aparecer na lista não basta — um controle listado sem bateria, sem touchpad e sem movimento é reprovação.
 
@@ -5714,7 +5718,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — BT, é o primeiro a sair e voltar. Segure o PS até apagar, religue com um toque curto, e confira o cartão inteiro depois.
 * **P4** — BT, o segundo, e um de cada vez. Enquanto o P3 está fora ele aparece como P3 e volta a ser P4 quando o P3 volta. Se ele cair sozinho quando você desliga o P3, o achado não é da entrada do controle: confira em «Rádio e Adaptadores», na aba Conexões, se os dois dividem o mesmo adaptador, e anote.
 
-**A armadilha.** É NO RÁDIO que o meio controle acontece de verdade, e a razão é do aparelho: pelo rádio o DualSense nasce MUDO — manda só o essencial até alguém lhe pedir uma informação de fábrica, e é esse pedido que o vira para o relatório completo, com movimento, touchpad e bateria dentro. Se o pedido falhar, o controle acende, pareia, entra na lista e fica sem nada disso. Então «ele conectou» não é resposta neste teste: as três conferências dos passos 11 a 13 é que são. E o pedido tem prazo curto: quando expira, a subida inteira é abandonada de uma vez, sem segunda tentativa do lado do sistema — o conserto é desligar e ligar o controle de novo, não esperar. Segunda: enquanto um controle do rádio está fora, os que vêm depois dele descem um número e voltam quando ele volta; siga-os pelo plástico. Terceira: um aperto solto no PS abre a Steam; se ela abrir, feche-a antes de seguir.
+**A armadilha.** É NO RÁDIO que o meio controle acontece de verdade, e a razão é do aparelho: pelo rádio o DualSense nasce MUDO — manda só o essencial até alguém lhe pedir uma informação de fábrica, e é esse pedido que o vira para o relatório completo, com movimento, touchpad e bateria dentro. Se o pedido falhar, o controle acende, pareia, entra na lista e fica sem nada disso. Então «ele conectou» não é resposta neste teste: as três conferências dos passos 10 a 12 é que são. E o pedido tem prazo curto: quando expira, a subida inteira é abandonada de uma vez, sem segunda tentativa do lado do sistema — o conserto é desligar e ligar o controle de novo, não esperar. Segunda: enquanto um controle do rádio está fora, os que vêm depois dele descem um número e voltam quando ele volta; siga-os pelo plástico. Terceira: um aperto solto no PS abre a Steam; se ela abrir, feche-a antes de seguir.
 
 ---
 
@@ -5729,18 +5733,18 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 **Os passos.**
 
 1. Confira que os quatro estão ligados e que a contagem diz «● 2 USB · 2 BT».
-2. Abra a aba Controles.
-3. Anote o nome da cor do plástico de cada chip da fita, e a hora no relógio.
-4. Desencaixe o cabo do P1, conte até três, e encaixe de volta.
-5. Repita esse desencaixa-e-encaixa mais quatro vezes no P1, sempre contando até três entre uma coisa e a outra.
-6. Deixe o cabo encaixado na última vez.
-7. Conte até dez, devagar.
-8. Confira que o chip com o plástico do P1 está na fita, como P1.
-9. Clique na linha do P1 e confira que o cartão responde: bateria com número, touchpad contando o toque e giroscópio saindo do zero.
-10. Repita os passos 4 a 9 com o P2.
-11. Abra a aba Sistema e desça até a faixa «Avançado».
-12. Clique em «Ver detalhes» e leia as últimas linhas do registro.
-13. Procure, pelo horário que você anotou, as linhas das idas e voltas do P1 e do P2, e anote se alguma delas fala de tentativa que falhou.
+* Abra a aba Controles.
+2. Anote o nome da cor do plástico de cada chip da fita, e a hora no relógio.
+3. Desencaixe o cabo do P1, conte até três, e encaixe de volta.
+4. Repita esse desencaixa-e-encaixa mais quatro vezes no P1, sempre contando até três entre uma coisa e a outra.
+5. Deixe o cabo encaixado na última vez.
+6. Conte até dez, devagar.
+7. Confira que o chip com o plástico do P1 está na fita, como P1.
+8. Clique na linha do P1 e confira que o cartão responde: bateria com número, touchpad contando o toque e giroscópio saindo do zero.
+9. Repita os passos 3 a 8 com o P2.
+10. Abra a aba Sistema e desça até a faixa «Avançado».
+11. Clique em «Ver detalhes» e leia as últimas linhas do registro.
+12. Procure, pelo horário que você anotou, as linhas das idas e voltas do P1 e do P2, e anote se alguma delas fala de tentativa que falhou.
 
 **Passa quando.** Depois de cinco idas e voltas seguidas, os dois controles do cabo estão de volta na fita com os mesmos números de antes, e os cartões deles respondem em todos os campos vivos. Nenhum dos dois ficou de fora e nenhum voltou pela metade.
 
@@ -5766,19 +5770,19 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 **Os passos.**
 
 1. Confira que os quatro estão ligados e que a contagem diz «● 2 USB · 2 BT».
-2. Abra a aba Controles.
-3. Anote o nome da cor do plástico de cada chip da fita, e a hora no relógio.
-4. Segure o botão PS do P3 até as luzes apagarem e solte.
-5. Conte até cinco, devagar, com o P3 parado ao seu lado.
-6. Dê um toque curto no botão PS do P3 para religá-lo.
-7. Anote quantos segundos levou até o chip com o plástico dele voltar à fita.
-8. Anote também se a barra de luz dele acendeu sem o chip aparecer.
-9. Repita os passos 4 a 8 mais quatro vezes no P3, sempre esperando o chip voltar antes da volta seguinte.
-10. Se em alguma volta ele acendeu e não apareceu em dez segundos, abra a aba Jogar, clique em «Reconectar controles», leia a frase e faça o que ela pedir; se nada mudar, desligue e ligue o P3 mais uma vez.
-11. Clique na linha do P3, na aba Controles, e confira que o cartão responde: bateria com número, touchpad contando o toque e giroscópio saindo do zero.
-12. Repita os passos 4 a 11 com o P4.
-13. Abra a aba Sistema, desça até a faixa «Avançado» e clique em «Ver detalhes».
-14. Leia as últimas linhas do registro pelo horário que você anotou e anote qualquer linha que fale de tentativa que falhou.
+* Abra a aba Controles.
+2. Anote o nome da cor do plástico de cada chip da fita, e a hora no relógio.
+3. Segure o botão PS do P3 até as luzes apagarem e solte.
+4. Conte até cinco, devagar, com o P3 parado ao seu lado.
+5. Dê um toque curto no botão PS do P3 para religá-lo.
+6. Anote quantos segundos levou até o chip com o plástico dele voltar à fita.
+7. Anote também se a barra de luz dele acendeu sem o chip aparecer.
+8. Repita os passos 3 a 7 mais quatro vezes no P3, sempre esperando o chip voltar antes da volta seguinte.
+9. Se em alguma volta ele acendeu e não apareceu em dez segundos, abra a aba Jogar, clique em «Reconectar controles», leia a frase e faça o que ela pedir; se nada mudar, desligue e ligue o P3 mais uma vez.
+10. Clique na linha do P3, na aba Controles, e confira que o cartão responde: bateria com número, touchpad contando o toque e giroscópio saindo do zero.
+11. Repita os passos 3 a 10 com o P4.
+12. Abra a aba Sistema, desça até a faixa «Avançado» e clique em «Ver detalhes».
+13. Leia as últimas linhas do registro pelo horário que você anotou e anote qualquer linha que fale de tentativa que falhou.
 
 **Passa quando.** Nas cinco voltas, o controle do rádio termina de volta na fita, com o mesmo número, e o cartão dele responde em todos os campos vivos. Se em alguma volta ele acendeu sem aparecer na lista, o «Reconectar controles» ou um desligar e ligar resolveu — e isso ainda vale como passa, desde que você anote em quantas das cinco aconteceu e qual dos dois gestos resolveu.
 
@@ -5954,18 +5958,18 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 **Os passos.**
 
 1. Confira que o P1 e o P2 estão no cabo e que o P3 e o P4 estão no rádio, sem cabo nenhum neles.
-2. Abra a aba Controles.
-3. Anote o nome da cor do plástico de cada chip da fita e a palavra do fim de cada um.
-4. Leia a contagem do canto de cima e anote.
-5. Abra a aba Conexões, clique no título «Gestão de Controles» e leia as quatro linhas; anote se cada uma termina em USB ou em BT.
-6. Confira que os lugares dizem a mesma coisa sobre cada um dos quatro.
-7. Puxe o cabo do P1 de dentro do PC — do lado do PC, nunca do lado do controle.
-8. Encaixe-o numa entrada USB diferente do PC, sem demorar.
-9. Conte até dez, devagar.
-10. Leia o chip com o plástico do P1: tem de ser P1 de novo e terminar em USB, nunca em BT.
-11. Leia a contagem do canto: tem de continuar «● 2 USB · 2 BT».
-12. Repita os passos 7 a 11 com o cabo do P2, numa terceira entrada USB.
-13. Olhe os chips do P3 e do P4 e confira que os dois continuaram terminando em BT o tempo todo.
+* Abra a aba Controles.
+2. Anote o nome da cor do plástico de cada chip da fita e a palavra do fim de cada um.
+3. Leia a contagem do canto de cima e anote.
+4. Abra a aba Conexões, clique no título «Gestão de Controles» e leia as quatro linhas; anote se cada uma termina em USB ou em BT.
+5. Confira que os lugares dizem a mesma coisa sobre cada um dos quatro.
+6. Puxe o cabo do P1 de dentro do PC — do lado do PC, nunca do lado do controle.
+7. Encaixe-o numa entrada USB diferente do PC, sem demorar.
+8. Conte até dez, devagar.
+9. Leia o chip com o plástico do P1: tem de ser P1 de novo e terminar em USB, nunca em BT.
+10. Leia a contagem do canto: tem de continuar «● 2 USB · 2 BT».
+11. Repita os passos 6 a 10 com o cabo do P2, numa terceira entrada USB.
+12. Olhe os chips do P3 e do P4 e confira que os dois continuaram terminando em BT o tempo todo.
 
 **Passa quando.** Os dois controles do cabo dizem USB em todos os lugares, antes e depois de trocar de entrada, e a contagem volta a «● 2 USB · 2 BT». Os dois do rádio nunca trocam de palavra, nem enquanto os cabos estão fora.
 
@@ -6065,18 +6069,18 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **Os passos.**
 
-1. Abra a aba Controles.
-2. Clique na linha do P1 para abrir o cartão dele.
-3. Mexa no analógico esquerdo do P1 e confirme que o pontinho anda e os números X e Y mudam.
-4. Aperte o botão Círculo do P1 e confirme que o desenho dele acende.
-5. Puxe o cabo do P1 de dentro do PC.
-6. Encaixe-o de volta na mesma entrada, sem demorar.
-7. Repita o par tirar-e-pôr mais quatro vezes seguidas, contando até três entre uma e outra.
-8. Espere o chip com o plástico do P1 reaparecer na fita do topo, como P1.
-9. Clique na linha do P1 se o cartão tiver fechado, mexa no analógico esquerdo e conte até cinco olhando o pontinho.
-10. Aperte o Círculo do P1 e confira que o desenho acende.
-11. Faça os passos 2 a 10 no P2.
-12. Mexa no analógico do P3 e no do P4, um de cada vez, com o cartão de cada um aberto, e confirme que os dois continuam respondendo.
+* Abra a aba Controles.
+1. Clique na linha do P1 para abrir o cartão dele.
+2. Mexa no analógico esquerdo do P1 e confirme que o pontinho anda e os números X e Y mudam.
+3. Aperte o botão Círculo do P1 e confirme que o desenho dele acende.
+4. Puxe o cabo do P1 de dentro do PC.
+5. Encaixe-o de volta na mesma entrada, sem demorar.
+6. Repita o par tirar-e-pôr mais quatro vezes seguidas, contando até três entre uma e outra.
+7. Espere o chip com o plástico do P1 reaparecer na fita do topo, como P1.
+8. Clique na linha do P1 se o cartão tiver fechado, mexa no analógico esquerdo e conte até cinco olhando o pontinho.
+9. Aperte o Círculo do P1 e confira que o desenho acende.
+10. Faça os passos 1 a 9 no P2.
+11. Mexa no analógico do P3 e no do P4, um de cada vez, com o cartão de cada um aberto, e confirme que os dois continuam respondendo.
 
 **Passa quando.** Depois de cada vaivém do cabo, o controle volta à fita E volta a responder — o pontinho anda e o botão acende — em poucos segundos, sem você fechar nem reabrir nada. O que reprova é o par errado: o chip do controle na fita, dizendo que ele está lá, e o cartão mudo, sem pontinho andando e sem botão aceso, por mais de dez segundos.
 
@@ -6101,19 +6105,19 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **Os passos.**
 
-1. Abra a aba Controles.
-2. Clique na linha do P3 para abrir o cartão dele.
-3. Mexa no analógico esquerdo do P3 e aperte o botão Círculo dele.
-4. Confira que o pontinho anda e que o desenho do botão acende.
-5. Segure o botão PS do P3 até todas as luzes dele apagarem.
-6. Dê um toque curto no mesmo botão para religá-lo.
-7. Quando o chip com o plástico dele voltar à fita, abra o cartão dele, mexa no analógico e conte até cinco: o pontinho tem de voltar a andar dentro desse tempo.
-8. Repita os passos 5 a 7 mais duas vezes, uma atrás da outra.
-9. Leve o P3 ligado para o cômodo ao lado, feche a porta, conte até vinte longe da tela e volte com ele.
-10. Confira na fita do topo qual das três coisas aconteceu — o chip dele saiu, saiu e voltou, ou ficou lá o tempo todo — e anote.
-11. Mexa no analógico do P3 e conte até dez olhando o pontinho: ele tem de voltar a andar dentro desse tempo.
-12. Faça no P4 as três voltas de desligar e religar, com a mesma conferência do analógico, sem sair do lugar.
-13. Mexa nos analógicos do P1 e do P2, um de cada vez, e confira que os dois continuam respondendo.
+* Abra a aba Controles.
+1. Clique na linha do P3 para abrir o cartão dele.
+2. Mexa no analógico esquerdo do P3 e aperte o botão Círculo dele.
+3. Confira que o pontinho anda e que o desenho do botão acende.
+4. Segure o botão PS do P3 até todas as luzes dele apagarem.
+5. Dê um toque curto no mesmo botão para religá-lo.
+6. Quando o chip com o plástico dele voltar à fita, abra o cartão dele, mexa no analógico e conte até cinco: o pontinho tem de voltar a andar dentro desse tempo.
+7. Repita os passos 4 a 6 mais duas vezes, uma atrás da outra.
+8. Leve o P3 ligado para o cômodo ao lado, feche a porta, conte até vinte longe da tela e volte com ele.
+9. Confira na fita do topo qual das três coisas aconteceu — o chip dele saiu, saiu e voltou, ou ficou lá o tempo todo — e anote.
+10. Mexa no analógico do P3 e conte até dez olhando o pontinho: ele tem de voltar a andar dentro desse tempo.
+11. Faça no P4 as três voltas de desligar e religar, com a mesma conferência do analógico, sem sair do lugar.
+12. Mexa nos analógicos do P1 e do P2, um de cada vez, e confira que os dois continuam respondendo.
 
 **Passa quando.** Depois de cada volta — do desligar e religar, e do passeio até o outro cômodo — o P3 e o P4 voltam a responder no cartão em poucos segundos. O que reprova é o par errado: o chip do controle na fita, dizendo que ele está lá, e o pontinho parado com o botão apagado por mais de dez segundos. Sumir da fita e voltar não reprova.
 
@@ -6141,7 +6145,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 1. Feche o jogo, se ele estiver aberto.
 2. Abra a aba Jogar e confira que a linha «Status» está em «Ligado» — em Desligado não existe controle virtual nenhum e este teste não roda.
 3. Anote a máscara escolhida no cartão de cada um dos quatro; não troque nenhuma.
-4. Abra a aba Controles.
+4. Saia da aba Jogar e abra a aba Controles.
 5. Pare o ponteiro sobre o nome do P1, no cabeçalho do cartão dele, e espere a dica aparecer.
 6. Anote de qual jogador é o controle virtual que o P1 alimenta e a primeira palavra entre parênteses.
 7. Faça o mesmo no nome do P2 e anote.
@@ -6175,7 +6179,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 1. Feche o jogo, se ele estiver aberto.
 2. Abra a aba Jogar, confira que a linha «Status» está em «Ligado» e anote a máscara escolhida no cartão de cada um dos quatro.
-3. Abra a aba Controles.
+3. Saia da aba Jogar e abra a aba Controles.
 4. Confira, no cabeçalho do cartão do P3, que depois da cor do plástico está escrito BT.
 5. Pare o ponteiro sobre o nome do P3 e espere a dica aparecer.
 6. Anote de qual jogador é o controle virtual dele, a primeira palavra entre parênteses e, se a dica trouxer, o nome com que ele aparece no sistema.
