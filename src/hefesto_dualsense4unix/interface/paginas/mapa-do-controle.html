@@ -23,11 +23,23 @@
     --m:ui-monospace,"JetBrains Mono","Fira Mono","DejaVu Sans Mono",monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:#11121a;color:var(--fg);font-family:var(--f);padding:22px;
+  /* O RECUO DO `body` E O TAMANHO DA `.cx` VÊM DA JANELA DAS ABAS — 24/09/2026,
+     decisão dela: o mapa segue a caixa da janela, como a Calibrar. */
+  body{background:#11121a;color:var(--fg);font-family:var(--f);
         display:flex;flex-direction:column;align-items:center;gap:16px}
   .mono{font-family:var(--m)}
-  .cx{width:1800px;max-width:100%;background:var(--app-bg);border-radius:11px;
-       border:1px solid var(--border-sutil);overflow:hidden}
+  /* COLUNA COMO A `.janela`: o cabeçalho fica e o `.corpo` rola por dentro
+     quando a vista encolhe. `.cx > .corpo`, e não `.corpo` solto: o desenho
+     do controle tem peças com essa classe. */
+  .cx{background:var(--app-bg);border-radius:11px;
+       border:1px solid var(--border-sutil);overflow:hidden;
+       display:flex;flex-direction:column}
+  .cx > .topo{flex:0 0 auto}
+  .cx > .corpo{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column}
+  .cx > .corpo > .mapa{flex:1 0 auto}
+  :root{--recuo-do-corpo:16px;--piso-da-vista:777px;--teto-da-vista:855px;--alt-janela:clamp(var(--piso-da-vista), calc(100dvh - var(--recuo-do-corpo) * 2), var(--teto-da-vista))}
+  body{padding:var(--recuo-do-corpo)}
+  .cx{width:min(100%,1600px);height:var(--alt-janela);max-width:100%;max-height:calc(100dvh - var(--recuo-do-corpo) * 2)}
   .topo{padding:15px 20px;border-bottom:1px solid var(--border-sutil)}
   h1{font-size:18px;font-weight:700}
   h1 .p{color:var(--pink)}
@@ -420,6 +432,7 @@
          não precisava da frase. -->
   </div>
 
+  <div class="corpo">
   <div class="provas">
     <div class="prova">
       <div class="prova-rot">Cor do plástico</div>
@@ -1288,14 +1301,14 @@
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span><span class="txt"><b>Motor de vibração esquerdo</b><span class="ap">motor forte</span><span class="id mono">feat-rumble-esquerdo</span></span><span class="nota-peca" title="Contrapeso maior — soa grosso. No código do produto é `strong`.">i</span></div>
+</svg></span><span class="txt"><b>Motor de vibração esquerdo</b><span class="ap">motor forte</span><span class="id mono">feat-rumble-esquerdo</span></span><span class="nota-peca" title="Contrapeso maior — soa grosso.">i</span></div>
       <div class="item item-feat-rumble-direito"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <path d="M12,4 h6 q3,0 4,3 l3,10 q2,7 -2,11 q-4,4 -8,1 q-3,-2 -3,-7 z"
         fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
   <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span><span class="txt"><b>Motor de vibração direito</b><span class="ap">motor leve</span><span class="id mono">feat-rumble-direito</span></span><span class="nota-peca" title="Contrapeso menor — soa fino. No código do produto é `weak`.">i</span></div>
+</svg></span><span class="txt"><b>Motor de vibração direito</b><span class="ap">motor leve</span><span class="id mono">feat-rumble-direito</span></span><span class="nota-peca" title="Contrapeso menor — soa fino.">i</span></div>
     </div>
     <div class="grupo">
       <div class="grupo-rot">Chassi</div>
@@ -1308,6 +1321,7 @@
     <span><b>28</b> peças</span>
     <span><b>27</b> com glifo · <b>1</b> sem</span>
     <span><b>28</b> modelos de cor · <b>9</b> zonas</span>
+  </div>
   </div>
 </div>
 

@@ -215,6 +215,7 @@ ROTEIRO_DA_PROVA_DE_GESTO: tuple[tuple[int, str] | tuple[int, str, str], ...] = 
     # pegar.
     (2500, '.rota button[data-rota="nada"]'),
     (2800, '.rota button[data-rota="junto"]'),
+    (2950, '.rota button[data-rota="pc"]'),
     (3100, '.rota button[data-rota="jogo"]'),
     (3400, '[data-mudo="alto-falante"]'),
     # O 🎙 NÃO ENTRA NESTE ROTEIRO, e a ausência é decidida, não esquecimento.
