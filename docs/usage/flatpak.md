@@ -109,7 +109,8 @@ A lista completa, item por item, está em
 entre os três caminhos de instalação — se uma regra entra no `install_udev.sh`
 e não no helper do Flatpak, o gate reprova.
 
-Após a instalação, desconecte e reconecte o controle DualSense.
+Após a instalação, desconecte e reconecte o controle DualSense, e abra o Hefesto
+de novo se ele estava aberto (ver «O que o daemon alcança em `/run`», abaixo).
 
 ---
 
@@ -259,6 +260,9 @@ O manifest `flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml` declara a
 | `--talk-name=org.freedesktop.portal.*`     | Portals do freedesktop (tray, background)           |
 | `--allow=bluetooth`                        | O medidor do rádio abre o socket de Bluetooth (os Hz e os canais de cada adaptador) |
 | `--share=network`                          | Mantém o sandbox na rede do sistema: fora dela o kernel recusa o socket de Bluetooth |
+| `--filesystem=/run/hefesto-hidraw-broker:ro` | O socket do broker, a porta do DualSense físico quando o nó nasce fechado |
+| `--filesystem=/run/hefesto-dualsense4unix` | A trava comum do rádio, disputada com os serviços do sistema |
+| `--filesystem=/run/udev/data:ro`           | A base do udev: quem é o dono do cursor, e o ContainerId da vibração |
 
 > **Por que `--socket=x11` e não `--socket=fallback-x11`.** O `fallback-x11` só
 > monta o socket X11 quando **não** há Wayland — e no COSMIC há. Como esta
@@ -266,6 +270,35 @@ O manifest `flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml` declara a
 > socket nenhum e a janela não abria. O manifesto declara `--socket=x11` desde
 > então, com o motivo escrito ao lado da linha. Esta tabela dizia
 > `fallback-x11` até 29/07/2026: descrevia a versão que foi corrigida.
+
+### O que o daemon alcança em `/run`
+
+O daemon roda dentro do sandbox, e o `/run` de lá é só dele: o que o
+`finish-args` não monta não existe lá dentro. As três linhas de `/run` da
+tabela são os três lugares que o install cria e o daemon abre (medido em
+24/09/2026, flatpak 1.18.1):
+
+- **o broker.** Com a regra 70 e a 72 instaladas pelo `install-host-udev.sh`, o
+  hidraw e os nós de entrada do DualSense físico nascem fechados, e quem os
+  abre é o broker, que entrega o nó ao daemon pelo socket. Sem essa linha o
+  daemon do Flatpak ficava sem o controle;
+- **a trava comum do rádio**, com escrita: o daemon escreve nela quem está com
+  a trava. Ela nasce do `install.sh`; o `install-host-udev.sh` não a cria, e
+  sem ela o daemon usa uma trava da própria sessão, como antes;
+- **a base do udev**, só leitura.
+
+Um caminho que não existe na máquina é pulado em silêncio. **O Flatpak só monta
+esses caminhos ao abrir o Hefesto:** depois de rodar o `install-host-udev.sh`,
+feche e abra o Hefesto de novo.
+
+O que **continua sem alcançar**, e fica aqui escrito:
+
+- **o diário dos serviços do sistema** (`/var/lib/hefesto-dualsense4unix`). No
+  Flatpak, o diário do rádio mostra só o lado da sessão;
+- **o BlueZ.** Ele mora no barramento de SISTEMA do D-Bus, e este manifesto não
+  abre esse barramento: de dentro do sandbox, os gestos do Hefesto que falam
+  com o BlueZ não o alcançam. O controle pareado pelo sistema continua
+  aparecendo.
 
 ---
 
@@ -277,9 +310,10 @@ O manifest `flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml` declara a
 2. **Daemon sem systemd**: o daemon não é gerenciado pelo systemd do usuário
    dentro do Flatpak. Autostart depende do ambiente gráfico.
 
-3. **Bluetooth**: o acesso a Bluetooth dentro do sandbox exige permissão adicional
-   via D-Bus (`--talk-name=org.bluez.*`). Se o DualSense via BT não for detectado,
-   execute `flatpak override --user --talk-name=org.bluez.* io.github.hefesto_team.hefesto_dualsense4unix`.
+3. **Bluetooth**: o controle pareado pelo sistema chega ao daemon pelo hidraw,
+   como o do cabo. O que não chega é o BlueZ, que mora no barramento de SISTEMA
+   do D-Bus (ver «O que o daemon alcança em `/run`», acima). O `--talk-name`
+   fala com o barramento de SESSÃO, e um override com ele não muda isso.
 
 4. **Flathub**: o Hefesto - DualSense4Unix não está publicado no Flathub ainda. A instalação é
    via bundle local ou build a partir do código-fonte.
