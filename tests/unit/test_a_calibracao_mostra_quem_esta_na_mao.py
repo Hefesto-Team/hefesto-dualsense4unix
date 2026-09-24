@@ -253,7 +253,11 @@ def test_todo_endereco_que_o_pacote_emite_existe_na_pagina(pacotes_mod):
     """
     carga = _carga(pacotes_mod, 4)
     from pacotes import a11_calibrar_sensores as a11
-    html = str(carga["blocos"][a11.BLOCO_DOS_CONTROLES])
+    # TODO BLOCO QUE O PACOTE REMONTA conta, e não só o dos cartões — 24/09/2026:
+    # com a Mira publicada, o bloco `miras` também é remontado a cada tique, e
+    # os endereços `mira-*` moram nele.
+    assert a11.BLOCO_DOS_CONTROLES in carga["blocos"]
+    html = "".join(str(b) for b in carga["blocos"].values())
     publicado = (INTERFACE / "paginas" / PAGINA).read_text(encoding="utf-8")  # noqa-acento: nome de PASTA
     for campos in carga["colunas"].values():
         for chave in campos:
