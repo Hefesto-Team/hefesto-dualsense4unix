@@ -410,24 +410,29 @@ def test_o_aparelho_recebe_a_cor_pedida_com_o_brilho_novo(pac):
 def test_a_cor_pedida_sai_do_brilho_velho(pac):
     """D8: o `lightbar_rgb` do daemon é PÓS-escala. Inverter com o novo mente.
 
-    O CASO, e ele é o que quebra: a barra está no azul do P1 a 50%, então o
-    daemon publica `#00007F`. Ela arrasta para 100%. A cor PEDIDA continua sendo
-    `#0000FF` — e para descobri-la é preciso desfazer a escala com o brilho
-    VELHO (50%). Desfazendo com o NOVO (100%), `cor_escolhida` devolve o
-    `#00007F` cru, e o gesto REPINTA a barra num azul escuro que ela nunca
-    pediu — o brilho escurecendo duas vezes.
+    O CASO, e ele é o que quebra: a barra está no laranja a 50%, então o
+    daemon publica `#7F4000`. Ela arrasta para 100%. A cor PEDIDA continua
+    sendo `#FF8000` — e para descobri-la é preciso desfazer a escala com o
+    brilho VELHO (50%). Desfazendo com o NOVO (100%), nenhum tom casa, e o
+    gesto REPINTA a barra numa cor que ela nunca pediu.
 
-    A MORDIDA: leia o brilho depois de gravar (isto é, mova a leitura do `velho`
-    para depois do `save_profile`) e esta linha reprova com `(0, 0, 127)`.
+    O LARANJA, E NÃO O AZUL DO P1 — 24/09/2026, A-MARCA-DA-COR-NAO-SOME-01.
+    Quando a luz não diz o tom, a escada de `_a_cor_de_agora` desce até a cor
+    do número, e a do P1 é o próprio azul: com ele, a mordida abaixo passava
+    verde. Uma cor que não é a do número deixa a queda aparecer.
+
+    A MORDIDA: leia o perfil depois de gravar (mova o `antes = perfil.ativo(nome)`
+    do gesto `brilho` para depois do `save_profile`) e esta linha reprova com o
+    azul do número, `(0, 0, 255)`.
     """
     _semear("regua", overrides={CHAVE: {"lightbar_brightness": 0.5}})
     p = PonteDeMentira()
     fn = pac.gesto_da_pagina(PAGINA, "brilho")
-    fn(_ctx(pac, aceso={"lightbar_rgb": [0, 0, 127]}),
+    fn(_ctx(pac, aceso={"lightbar_rgb": [127, 64, 0]}),
        {"uniq": UNIQ, "valor": "100", "evento": "change"}, p)
 
     _nome, args, kwargs = p.chamadas[0]
-    assert args[0] == (0, 0, 255), (
+    assert args[0] == (255, 128, 0), (
         f"mandou {args[0]!r} — a cor foi desescalada com o brilho errado")
     assert kwargs["brightness"] == pytest.approx(1.0)
 

@@ -313,19 +313,25 @@ def test_a_cor_gravada_e_a_que_estava_acesa(pac, a04):
     """E ela é a PEDIDA, não a publicada — a diferença é o brilho.
 
     `lightbar_rgb` vem PÓS-escala por contrato do daemon (D8). Gravar esse valor
-    faria a cor do perfil escurecer a cada volta: a 50%, o azul `#0000FF` acende
-    `#00007F`, e guardar `#00007F` deixaria o brilho escalá-lo DE NOVO na
-    aplicação seguinte.
+    faria a cor do perfil escurecer a cada volta: a 50%, o verde `#00FF00`
+    acende `#007F00`, e guardar `#007F00` deixaria o brilho escalá-lo DE NOVO
+    na aplicação seguinte.
 
-    A MORDIDA: troque `cor_escolhida(...)` por `cor_do_swatch(...)` cru em
-    `_a_cor_de_agora` e esta linha reprova com `(0, 0, 127)`.
+    O VERDE, E NÃO O AZUL DO P1 — 24/09/2026, A-MARCA-DA-COR-NAO-SOME-01.
+    Quando a luz não diz o tom, a escada de `_a_cor_de_agora` desce até a cor
+    do número, e a do P1 é o próprio azul: com ele, uma inversão quebrada
+    gravava o azul certo por acaso, e a régua passava.
+
+    A MORDIDA: troque o `_o_tom_que_acende(...)` de `_a_cor_de_agora` pela luz
+    crua (`cor_do_swatch(c)`) e esta linha reprova com `(0, 127, 0)`; faça a
+    inversão usar o brilho de 100% e ela reprova com o azul do número.
     """
     caminho = _semear(automatico=True, brilho=0.5)
-    meio = dict(P1, lightbar_rgb=[0, 0, 127])
+    meio = dict(P1, lightbar_rgb=[0, 127, 0])
     a04.auto_cores(_ctx(pac, conectados=[meio]), _mudanca(), PonteDeMentira())
 
     gravada = _do_disco(caminho)["controllers"][CHAVE_UM]["leds"]["lightbar"]
-    assert tuple(gravada) == (0, 0, 255), (
+    assert tuple(gravada) == (0, 255, 0), (
         f"gravou {tuple(gravada)} — a cor guardada é a PEDIDA, e a 50% de "
         f"brilho o daemon publica a metade dela")
 
