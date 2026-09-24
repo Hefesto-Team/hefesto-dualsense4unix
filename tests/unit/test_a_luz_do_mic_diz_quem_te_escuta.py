@@ -232,7 +232,7 @@ async def _rodar(
     """Sobe o laço, deixa dar `voltas` consultas, e o derruba pelo cancelamento.
 
     O derrube é o do produto: `connection.shutdown` faz `task.cancel()` e
-    depois `await task` (`daemon/connection.py:1500-1504`). Testar com um
+    depois `await task` (`daemon/connection.py:1503-1507`). Testar com um
     `_parando = True` educado mediria um caminho que o daemon nunca toma.
 
     **Devolve o que foi escrito EM VOO**, tirado antes do cancelamento. A
