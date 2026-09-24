@@ -394,7 +394,7 @@ def test_nenhum_chamador_de_src_omite_a_fonte() -> None:
 
     # POR AST, E NÃO POR EXPRESSÃO REGULAR. A primeira tentativa desta régua
     # recortava o argumento até o primeiro `)` e acusou
-    # `lifecycle.py:3411`, que passa `fonte=` — o `)` era o do `int(volume)`
+    # `lifecycle.py:3417`, que passa `fonte=` — o `)` era o do `int(volume)`
     # aninhado. Uma régua que lê estrutura com busca de texto é a ferramenta
     # errada, e esta casa já pagou por isso.
     alvos = {"definir_volume_da_captura", "volume_da_captura"}

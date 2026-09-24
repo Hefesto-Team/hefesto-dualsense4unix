@@ -263,7 +263,7 @@ def _is_virtual_evdev(event_path: str) -> bool:
     classificaria um aparelho de VERDADE como virtual. Restaurá-la é trivial e
     já tem molde nesta casa: ler `HID_PHYS` do `uevent` do HID **pai**, que vem
     preenchido, como `core/backend_pydualsense.py:196` e
-    `broker/hidraw_broker.py:272` já fazem. Não foi feito aqui porque mudaria
+    `broker/hidraw_broker.py:306` já fazem. Não foi feito aqui porque mudaria
     comportamento sem que ninguém tenha pedido.
     """
     import os

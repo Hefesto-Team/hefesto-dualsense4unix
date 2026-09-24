@@ -694,7 +694,7 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
         "controles com hidraw) acusando ZERO zumbis."
     ),
     "HEFESTO_BROKER_ALLOWED_UID": (
-        "Qual UID pode falar com o broker de hidraw (broker/hidraw_broker.py:76). "
+        "Qual UID pode falar com o broker de hidraw (broker/hidraw_broker.py:77). "
         "É promessa de sistema: sem ela o broker não serve a sessão dela. "
         "MEDIDO em 12/08/2026: LIGADA, por `Environment=` em "
         "assets/systemd/hefesto-hidraw-broker.service:37, com o UID substituído "
@@ -703,7 +703,7 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
     "HEFESTO_BROKER_NO_NASCE_FECHADO": (
         "Se o nó hidraw do DualSense físico NASCE FECHADO — `0600 root`, pela "
         "regra `assets/70-ps5-controller.rules` da cura O-NO-NASCE-FECHADO-01 "
-        "(broker/hidraw_broker.py:91). É promessa dela, decidida em "
+        "(broker/hidraw_broker.py:92). É promessa dela, decidida em "
         "20/09/2026: «o Hefesto tem que ter prioridade em tudo e isso deveria "
         "estar no install por default». Ela acopla as duas metades da cura — "
         "a udev decide o NASCIMENTO do nó, e esta env conta ao broker qual é o "
@@ -756,7 +756,7 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
     ),
     "HEFESTO_DUALSENSE4UNIX_SYSTEM_WARNINGS_NOTIFY": (
         "Faz os avisos de infraestrutura do boot virarem notificação de desktop "
-        "(daemon/lifecycle.py:3141). É escolha dela: receber ou não o aviso na "
+        "(daemon/lifecycle.py:3147). É escolha dela: receber ou não o aviso na "
         "tela. MEDIDO em 12/08/2026: sem mão."
     ),
 }
@@ -788,7 +788,7 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "três, escrita em daemon/main.py:104 — default da dataclass (True) < "
         "esta env < `keyboard_emulation.flag`. Quem grava o flag é "
         "`save_keyboard_emulation`, e ele É chamado em produção "
-        "(daemon/lifecycle.py:1481-1485, dentro de `set_keyboard_emulation`, na "
+        "(daemon/lifecycle.py:1487-1491, dentro de `set_keyboard_emulation`, na "
         "borda que alterna o teclado em runtime — o endereço era :1300 e caducou; "
         "RECONFERIDO em 26/08/2026, quando a frente da poda o mediu de novo "
         "JUSTAMENTE para saber se podia apagá-lo. Não pode: tem chamador vivo). "
@@ -880,7 +880,7 @@ _SEM_MAO_HOJE: dict[str, str] = {
     "HEFESTO_DUALSENSE4UNIX_SYSTEM_WARNINGS_NOTIFY": (
         "MEDIDO em 12/08/2026: nenhuma porta a escreve. O daemon calcula os "
         "avisos de infraestrutura no boot, escreve cada um no log "
-        "(lifecycle.py:3138) e então descarta a notificação porque a chave está "
+        "(lifecycle.py:3144) e então descarta a notificação porque a chave está "
         "vazia — o trabalho é feito e jogado fora. "
         "O QUE A FECHA: a mesma decisão da chave `..._DESKTOP_NOTIFICATIONS`, e "
         "as duas deviam ser decididas juntas: um interruptor só de "

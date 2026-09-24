@@ -84,7 +84,7 @@ def test_trocar_de_perfil_manda_o_bitmask_para_o_controle() -> None:
     )
     assert int(handle.light.playerNumber) == player_bitmask(UM_TRES_CINCO) == 21, (
         "o bitmask que saiu não é o do perfil: o caminho vivo "
-        "(backend_pydualsense.py:2869) e `player_bitmask` divergiram, e duas "
+        "(backend_pydualsense.py:2877) e `player_bitmask` divergiram, e duas "
         f"conversões que divergem é pior que uma desligada — saiu "
         f"{int(handle.light.playerNumber)}, esperado {player_bitmask(UM_TRES_CINCO)}"
     )
@@ -116,7 +116,7 @@ def test_a_conversao_do_backend_e_a_de_led_control_sao_a_mesma() -> None:
     """As duas implementações do mesmo layout, conferidas uma contra a outra.
 
     `player_bitmask` (core/led_control.py:85-89) e o `sum(1 << i …)` do
-    `_write_partial_output` (core/backend_pydualsense.py:2869) escrevem a mesma
+    `_write_partial_output` (core/backend_pydualsense.py:2877) escrevem a mesma
     regra duas vezes. Enquanto as duas existirem, é este caso que garante que
     elas não se separem em silêncio — o dia em que uma mudar sozinha, o padrão
     que ela vê na barra deixa de ser o que a janela mostra.

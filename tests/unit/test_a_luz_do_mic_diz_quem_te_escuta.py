@@ -539,7 +539,7 @@ async def test_o_nivel_chega_inteiro_pelo_caminho_que_carrega_o_nivel(
     """`2` e `3` saem como `2` e `3`, e `set_mic_led` NUNCA é chamado.
 
     Medido em 03/09/2026 nesta árvore: `set_mic_led` coage a `bool` duas vezes
-    em série (`core/backend_pydualsense.py:4063` e `:372`), e o `2` e o `3`
+    em série (`core/backend_pydualsense.py:4073` e `:372`), e o `2` e o `3`
     viram `1` sem erro e sem log — luz acesa fixa onde devia piscar, que se lê
     como *"a PEÇA B não está detectando som"*. O dublê expõe as DUAS portas de
     propósito: se alguém trocar o caminho, a lista errada é que enche.

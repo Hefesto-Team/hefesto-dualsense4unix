@@ -202,7 +202,7 @@ PALAVRAS_DE_CULPA = frozenset(
 #: adaptador do vizinho.
 SEM_ADAPTADOR = ""
 
-#: MAC bem-formado, minúsculo. É a MESMA regex de ``broker/hidraw_broker.py:123``,
+#: MAC bem-formado, minúsculo. É a MESMA regex de ``broker/hidraw_broker.py:132``,
 #: recompilada aqui de propósito: lá ela é privada e mora no broker, e importar
 #: um símbolo privado de outra camada é dívida pior que quatro linhas repetidas.
 _MAC_RE = re.compile(r"^[0-9a-f]{2}(:[0-9a-f]{2}){5}$")
@@ -276,7 +276,7 @@ def adaptador_por_uniq(
     ``HID_UNIQ`` segue sendo a chave e a resposta é o ``HID_PHYS``.
 
     Por que o ``HID_PHYS`` responde à pergunta "qual adaptador": o próprio
-    broker decide por ele. ``broker/hidraw_broker.py:281`` recusa o nó cujo
+    broker decide por ele. ``broker/hidraw_broker.py:316`` recusa o nó cujo
     ``HID_PHYS`` não é MAC, com o comentário literal *"BT real tem HID_PHYS =
     MAC do adaptador"*, e o belt de ``:282-284`` só confirma quando o sysfs de
     Bluetooth está legível.
@@ -304,7 +304,7 @@ def adaptador_por_uniq(
     except OSError:
         # Sysfs ilegível é "não sei", nunca um adaptador chutado. O sysfs de
         # Bluetooth é instável ao vivo — adaptador em down, rfkill, hci sem
-        # `address` (`broker/hidraw_broker.py:166-172`).
+        # `address` (`broker/hidraw_broker.py:179-185`).
         return saida
     leitor = ler if ler is not None else _ler_texto
     for no in nos:
@@ -331,7 +331,7 @@ def ocupacao_por_adaptador(
     """``{endereço do adaptador: Ocupacao}`` a partir do estado do daemon.
 
     ``controles`` é a lista ``state["controllers"]`` como ela já chega
-    (``core/backend_pydualsense.py:7118``, o `describe_controllers`): cada item traz ``transport``,
+    (``core/backend_pydualsense.py:7110``, o `describe_controllers`): cada item traz ``transport``,
     ``connected`` e ``uniq`` — este último com 12 hex sem separador, **ou
     ``None``** quando a chave do backend era um caminho e não um MAC
     (``:4664-4679``, a guarda que impediu o pseudo-MAC ``deda4``).
@@ -623,7 +623,7 @@ def _hex(valor: str) -> str:
     """Só os dígitos hex minúsculos, "" quando não há nenhum.
 
     ``core.sysfs_leds.norm_mac`` é o normalizador público do projeto e é o MESMO
-    que produz o ``uniq`` do estado (``core/backend_pydualsense.py:6621-6635``,
+    que produz o ``uniq`` do estado (``core/backend_pydualsense.py:6615-6629``,
     o corpo de ``_key_to_uniq``; o endereço anterior, ``4674-4679``, apontava
     para o ``set_coop_outputs`` desde alguma mudança não datada),
     então os dois lados casam por construção. Aqui só a ausência muda de forma:

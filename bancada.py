@@ -155,7 +155,7 @@ _ESTADO_RUMBLE_FF = (
     "não pelos bits — provado por dose-resposta (0,5s -> pulso; 8,0s -> oito segundos) e "
     "por troca de lado (bits desligados trocaram o motor que vibra). A cura ESTA escrita e "
     "LIGADA: `OUT_REPORT_KEEPALIVE_CONFIRMACAO_SEC = 2.0` "
-    "(core/backend_pydualsense.py:273), consumida no laco vivo em :965-972, com mordida em "
+    "(core/backend_pydualsense.py:273), consumida no laco vivo em :973-980, com mordida em "
     "tests/unit/test_rumble_sem_dono_01.py. O que ela NAO tem e medicao de radio: a mordida "
     "prova o LACO, nunca o motor."
 )
@@ -197,7 +197,7 @@ _ESTADO_IMU_PERDA = (
 )
 _ESTADO_BRILHO_INERTE = (
     'o produto escreve `common[42]` com o valor do brilho da BARRA '
-    '(backend_pydualsense.py:1424) e nunca liga o bit: hoje é inerte, e o valor '
+    '(backend_pydualsense.py:1432) e nunca liga o bit: hoje é inerte, e o valor '
     'que ele manda é de outra grandeza. Ver BRILHO-DE-HARDWARE-01.'
 )
 ESTADOS = ["", "funciona", "regrediu", "nunca funcionou",

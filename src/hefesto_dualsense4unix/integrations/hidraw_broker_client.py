@@ -612,7 +612,7 @@ def make_exposicao_factory(daemon: Any) -> Callable[[str], AbstractContextManage
 #
 # Defeito medido em 15/08/2026: com a mesa 2+2 montada, NENHUM dos quatro
 # DualSense físicos abre por `open()` — o próprio Hefesto os esconde de
-# propósito (`broker/hidraw_broker.py:416` — `setfacl -b` + `chmod 0600`), para
+# propósito (`broker/hidraw_broker.py:455` — `setfacl -b` + `chmod 0600`), para
 # que o jogo veja só o vpad. Os instrumentos batiam nessa porta fechada e
 # imprimiam `[Errno 13] Permission denied` (ou, pior, silêncio), quando a casa
 # já tinha construído a porta certa: o `cmd open` do broker, que devolve um fd

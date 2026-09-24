@@ -4,7 +4,7 @@ POR QUE ESTE ARQUIVO EXISTE
 ===========================
 Em 22/08/2026 a auditoria da luz achou o mesmo byte descrito de duas maneiras
 opostas na MESMA árvore: `core/lightbar_reset.py:12-16` chama o `0x08` de
-*"A CURA da lightbar por Bluetooth"*, e `core/backend_pydualsense.py:2440-2449`
+*"A CURA da lightbar por Bluetooth"*, e `core/backend_pydualsense.py:2448-2457`
 o chama de *"o CULPADO"*, com 7 eventos de correlação perfeita. O código está
 coerente com a decisão de 04/08 — quem não está coerente é o texto.
 

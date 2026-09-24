@@ -9,13 +9,13 @@ fecha essa pergunta, com endereço.
 O CAMINHO, medido lendo o código (nenhum aparelho tocado):
 
     HotkeyManager.observe(buttons_pressed)          integrations/hotkey_daemon.py
-        chamado com  <-  self._evdev_buttons_once()  daemon/lifecycle.py:4662,4803
+        chamado com  <-  self._evdev_buttons_once()  daemon/lifecycle.py:4668,4803
         que delega a  <- evdev_buttons_once(daemon)   daemon/subsystems/poll.py:53
         que lê         <- daemon.controller._evdev.snapshot()
         onde  controller._evdev  é um  EvdevReader()  retargetado por
-        `self._evdev.retarget(self.primary_uniq)` (core/backend_pydualsense.py:2699)
+        `self._evdev.retarget(self.primary_uniq)` (core/backend_pydualsense.py:2707)
         e  `primary_uniq`  só resolve identidade de um handle DualSense
-        (core/backend_pydualsense.py:1779-1794 — o backend inteiro só abre
+        (core/backend_pydualsense.py:1787-1802 — o backend inteiro só abre
         hardware Sony via hidapi; não existe handle de SN30 aqui).
 
     Sem alvo (`_target_uniq is None`), `EvdevReader._locate()` cai em

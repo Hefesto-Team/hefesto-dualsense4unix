@@ -2277,7 +2277,7 @@ def _numeros_sem_vpad(
     - **Conexão Nativa (Sony)**: o jogo abre o controle FÍSICO e fala direto com
       ele. Não há intermediário, mas há controle na mão de alguém, e o número
       dele **já está calculado** — o ``identity_registry`` é chaveado pelo MAC e
-      não consulta modo nenhum (``daemon/lifecycle.py:4506-4508`` roda o
+      não consulta modo nenhum (``daemon/lifecycle.py:4512-4514`` roda o
       ``_sync_identity_registry`` antes do gate de conexão, a cada 2 s). Era
       dado pronto que a tela não publicava.
 
@@ -2305,7 +2305,7 @@ def _numeros_sem_vpad(
     vpad por jogador* (``_spawn_player``), e pôr-se no meio é exatamente o que a
     Conexão Nativa dispensa — abrir aquele gate **desfaria o modo que ela
     pediu**, pela mesma razão que já mantém a exceção de
-    ``lifecycle.py:1900-1901``. Ou o jogo conta os dois físicos sozinho, ou
+    ``lifecycle.py:1906-1907``. Ou o jogo conta os dois físicos sozinho, ou
     alguém tem de estar no meio (o Caminho D, que é oferta e continua sem a
     palavra dela). A régua que trava isto é
     ``tests/unit/test_o_coop_vive_na_conexao_nativa.py``.

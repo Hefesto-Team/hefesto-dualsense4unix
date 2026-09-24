@@ -509,7 +509,7 @@ def test_sem_cor_conhecida_o_brilho_aplica_e_a_ressalva_fica(pac):
     estava escrita no mesmo arquivo. `_a_cor_de_agora` trata o MESMO "o motor
     não afirma a cor" e responde o contrário, com a razão por extenso — *"A
     QUEDA É A COR DO SLOT, e ela é a resposta CERTA e não um remendo"*. E a
-    janela estável nunca teve o buraco: `lightbar_actions.py:830` escreve
+    janela estável nunca teve o buraco: `lightbar_actions.py:835` escreve
     SEMPRE, com a cor do perfil.
 
     O QUE NÃO MUDOU: a ressalva continua saindo. Ela diz que o motor não afirma

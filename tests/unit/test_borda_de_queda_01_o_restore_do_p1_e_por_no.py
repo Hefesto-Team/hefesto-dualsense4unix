@@ -5,7 +5,7 @@ O DEFEITO, provado no código antes desta régua existir
 `daemon/subsystems/gamepad.py`, `_broker_sync_grab` no ramo ``grab=False`` —
 o caminho por onde o `stop` do P1 solta o grab — pedia ``client.restore_all``.
 E ``restore_all`` não é "restaura o que este caminho escondeu": o servidor o
-executa sobre a **lease inteira** (`broker/hidraw_broker.py:689-694` percorre
+executa sobre a **lease inteira** (`broker/hidraw_broker.py:734-739` percorre
 `by_conn[conn_id]`), e o daemon inteiro fala com o broker por **uma conexão
 só** (`integrations/hidraw_broker_client.py`, cliente-lease singleton por
 daemon). Logo desligar a emulação do Jogador 1 devolvia à vista o hidraw

@@ -7,7 +7,7 @@ Em 11/08/2026 ficou medido, por dose-resposta, que o keepalive do daemon cancela
 o rumble que chega por EV_FF no no físico: com `OUT_REPORT_KEEPALIVE_SEC` em
 0,5 s o motor da um pulso; com 8,0 s ele dura oito segundos exatos.
 
-A cura chamada `keepalive neutro` (GUERRA-01, `core/backend_pydualsense.py:772`)
+A cura chamada `keepalive neutro` (GUERRA-01, `core/backend_pydualsense.py:780`)
 supoe que desligar os BITS que autorizam vibracao basta para o firmware conservar
 o motor. Mas o report continua carregando `common[2] = 0` e `common[3] = 0` — os
 bytes sao escritos SEMPRE, fora do `if not rumble_asserted`. A premissa e:

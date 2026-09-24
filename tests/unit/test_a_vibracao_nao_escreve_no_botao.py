@@ -319,7 +319,7 @@ def test_o_multiplicador_e_o_numero_e_nao_o_degrau(emitidos):
     **CORRIGIDO EM 03/09/2026, e a régua CIMENTAVA a divergência.** Ela exigia
     `70%` e `46.7`, os números de `rumble_mult_applied` — um campo que o daemon
     dela deixa **preso no default 0,7** em passthrough ocioso
-    (`daemon/lifecycle.py:3459-3468`, com todas as letras). Medido no mesmo dia,
+    (`daemon/lifecycle.py:3465-3474`, com todas as letras). Medido no mesmo dia,
     clicando os quatro degraus pela porta do produto: a política mudou as quatro
     vezes e o número **não se moveu**. Com o degrau em "Balanceado" — cujo
     multiplicador é 1,0 — a tela escrevia `70%`, ao lado de uma dica dela que

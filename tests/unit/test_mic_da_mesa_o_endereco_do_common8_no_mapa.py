@@ -49,7 +49,8 @@ CAMPOS = (
 
 #: (faixa citada, âncora que TEM de estar dentro dela).
 #:
-#: Cada par foi conferido contra o fonte em 02/09/2026 e REMEDIDO em 20/09/2026.
+#: Cada par foi conferido contra o fonte em 02/09/2026 e REMEDIDO em 20/09/2026
+#: e em 24/09/2026 (a STEAM-NO-FISICO-01, ver `APOSENTADOS`).
 #: O `:442-455` é o que NÃO derivou em nenhuma das ondas — está acima de todo
 #: ponto de inserção — e fica aqui de propósito: a cura fácil seria somar a
 #: deriva a tudo, e somar nele QUEBRARIA uma referência que estava certa.
@@ -70,22 +71,41 @@ CAMPOS = (
 #: cair; encolhê-la para o `_escrever_conferindo` apontaria para um método que
 #: não carimba `seq` nenhum.
 ANCORAS: tuple[tuple[str, str], ...] = (
-    (":1715-1716", "VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE"),
-    (":1758-1764", "common[8] = int(mic_led) & 0xFF"),
-    (":1526-1553", "def set_microphone_led"),
-    (":5015", "def set_mic_led"),
-    (":5022-5023", "report[11] no rádio"),
-    (":5024-5028", "CORRIGIDO em 15/08/2026"),
-    (":1823-1824", "build_bt_report"),
-    (":1883-1914", "self.device.write"),
-    (":3419-3432", "should_reclaim_on_wake"),
+    (":1783-1784", "VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE"),
+    (":1826-1832", "common[8] = int(mic_led) & 0xFF"),
+    (":1594-1621", "def set_microphone_led"),
+    (":5201", "def set_mic_led"),
+    (":5208-5209", "report[11] no rádio"),
+    (":5210-5214", "CORRIGIDO em 15/08/2026"),
+    (":1891-1892", "build_bt_report"),
+    (":1951-1982", "self.device.write"),
+    (":3495-3508", "should_reclaim_on_wake"),
     (":442-455", "def _escrever_led_do_mic"),
-    (":969", "_audio_status"),
+    (":1037", "_audio_status"),
 )
 
 #: Os endereços que a auditoria aposentou. Se um deles voltar à célula, ou a
 #: deriva voltou, ou alguém somou 59 no lugar errado.
 APOSENTADOS = (
+    # AS DEZ DE BAIXO SE APOSENTARAM EM 24/09/2026, pela STEAM-NO-FISICO-01:
+    # a numeração do Hefesto (`numeracao_do_jogo`), a vigia do sequestro e o
+    # Modo Nativo que escreve a luz entraram no `backend_pydualsense.py` em
+    # degraus diferentes — o `:442-455` não se moveu, as do meio desceram 68,
+    # o `should_reclaim_on_wake` 76 e as do `set_mic_led` 186. Cada par foi
+    # reapontado pela ÂNCORA, com o diff contra o `dev` de `12a2b3cae` —
+    # nunca por soma. O `:1883-1914` da célula do rádio foi à mão: ele vem
+    # logo depois de um `core/ds_output_report.py:…`, e o reapontador o lia
+    # como daquele arquivo.
+    ":1715-1716",
+    ":1758-1764",
+    ":1526-1553",
+    ":5015",
+    ":5022-5023",
+    ":5024-5028",
+    ":1823-1824",
+    ":1883-1914",
+    ":3419-3432",
+    ":969",
     # AS ONZE DE BAIXO SE APOSENTARAM EM 20/09/2026, pela
     # O-NO-NASCE-FECHADO-01 (`ace69acef`): a reconciliação da exposição do
     # Modo Nativo entrou no `_poll_loop` e o arquivo cresceu 63 linhas — em

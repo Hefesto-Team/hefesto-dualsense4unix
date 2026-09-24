@@ -10,7 +10,7 @@ O RAIO DO ESTRAGO — cinco leitores em produção, e DOIS estão na tela
 --------------------------------------------------------------------
 Censo de 25/08/2026. Nenhum destes cinco pode responder ``True``:
 
-1. ``daemon/lifecycle.py:2270`` — ``CALADA_VPAD_SUSPENSO`` é a razão de calada
+1. ``daemon/lifecycle.py:2276`` — ``CALADA_VPAD_SUSPENSO`` é a razão de calada
    do gate do desktop, e ela **nunca é devolvida**;
 2. ``daemon/subsystems/hotkey.py:261`` — ramo de modo, num ``or`` cujo outro
    lado (``steam_input_excecao_ativa``) carrega a decisão sozinho;
@@ -145,7 +145,7 @@ _PAR_ACEITO: dict[str, str] = {
         "MEDIDO em 25/08/2026 (VPAD-SUSPENSO-MORTO-01/E1). O armador "
         "`suspend_vpads_for_steam_input` (daemon/subsystems/gamepad.py:882) tem ZERO "
         "chamadores em src/; os desarmadores `resume_vpads_after_steam_input` "
-        "(gamepad.py:526) e `start_gamepad_emulation_desfecho` (lifecycle.py:1635) "
+        "(gamepad.py:526) e `start_gamepad_emulation_desfecho` (lifecycle.py:1641) "
         "estão vivos. NÃO é descuido: o commit `d8022ea` (09/08/2026) tirou a chamada "
         "da borda de entrada da exceção de Steam Input e pôs `esconder_o_fisico_para_o_"
         "jogo` no lugar, por decisão DELA — ESCONDER-EM-VEZ-DE-SAIR-01, *a allowlist do "
@@ -157,7 +157,7 @@ _PAR_ACEITO: dict[str, str] = {
         "leitores em produção, e DOIS deles estão na tela — a frase da ponte em "
         "app/actions/home_actions.py:1139 (Início) e a frase do vpad recolhido em "
         "app/actions/emulation_actions.py:529 (Emulação) são inalcançáveis. Os outros "
-        "três: lifecycle.py:2270 (CALADA_VPAD_SUSPENSO), hotkey.py:261 e "
+        "três: lifecycle.py:2276 (CALADA_VPAD_SUSPENSO), hotkey.py:261 e "
         "ipc_handlers.py:2210, e nenhuma dessas leituras pode ser verdadeira. Ou as "
         "leituras saem, ou a suspensão ganha caminho de volta — as duas mexem em "
         "arquivo de outra frente e a escolha é DELA, não deste portão."

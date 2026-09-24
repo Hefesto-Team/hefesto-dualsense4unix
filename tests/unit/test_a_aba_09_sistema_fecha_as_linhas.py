@@ -403,9 +403,9 @@ class TestODesenhoCarregaAPeca:
         # E ELA DIZ OS DOIS TRABALHOS MEDIDOS, na ordem em que acontecem —
         # 05/09/2026. A palavra cobrada mudou junto com a medição: com
         # `config_overrides` vazio o `daemon.reload` NÃO reaplica configuração
-        # nenhuma (`lifecycle.py:1353` e `:1361` comparam `old` com `new` e
+        # nenhuma (`lifecycle.py:1359` e `:1367` comparam `old` com `new` e
         # nunca disparam). O que acontece são os ATALHOS do controle religados
-        # (`lifecycle.py:1351-1352`) e os arquivos da Steam reescritos
+        # (`lifecycle.py:1357-1358`) e os arquivos da Steam reescritos
         # (`ipc_handlers.py:5472`). Cobrar "reaplicar" aqui era a régua
         # exigindo da tela a frase que a medição derrubou.
         assert "atalhos" in dica.lower() and "Steam" in dica, dica

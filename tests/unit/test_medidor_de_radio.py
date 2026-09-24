@@ -119,7 +119,7 @@ def _hex(mac: str) -> str:
 def test_o_hid_phys_de_um_controle_no_radio_e_o_endereco_do_adaptador() -> None:
     """É o casamento inteiro do medidor, e ele não custa `sudo`.
 
-    `broker/hidraw_broker.py:281` já decide por este campo, com o comentário
+    `broker/hidraw_broker.py:316` já decide por este campo, com o comentário
     literal de que BT real tem `HID_PHYS` = MAC do adaptador.
     """
     listar, ler = _bancada(
@@ -134,7 +134,7 @@ def test_o_hid_phys_de_um_controle_no_radio_e_o_endereco_do_adaptador() -> None:
 def test_uniq_com_e_sem_dois_pontos_casam() -> None:
     """Os dois lados escrevem o mesmo endereço de jeitos diferentes.
 
-    O estado do daemon dá 12 hex sem separador (`backend_pydualsense.py:4868`);
+    O estado do daemon dá 12 hex sem separador (`backend_pydualsense.py:4865`);
     o uevent dá MAC com dois-pontos. Sem normalizar os dois lados, o casamento
     falha em silêncio e a barra fica em zero com o rádio cheio.
     """
@@ -184,7 +184,7 @@ def test_o_vpad_nao_vira_adaptador() -> None:
 def test_sysfs_ilegivel_devolve_ausencia_e_nao_levanta() -> None:
     """Leitura falha vira "não sei", nunca um adaptador chutado.
 
-    `broker/hidraw_broker.py:166-172` mede que o sysfs de Bluetooth é instável
+    `broker/hidraw_broker.py:179-185` mede que o sysfs de Bluetooth é instável
     ao vivo — adaptador em down, rfkill, hci sem `address`. Uma exceção aqui
     derrubaria a troca de aba; um adaptador inventado seria pior.
     """
@@ -290,7 +290,7 @@ def test_controle_bt_sem_endereco_nao_pega_o_adaptador_do_vizinho() -> None:
 
 
 def test_uniq_nulo_cai_na_barra_de_nao_sei_sem_levantar() -> None:
-    """`controllers[].uniq` pode ser `None` (`backend_pydualsense.py:4858`)."""
+    """`controllers[].uniq` pode ser `None` (`backend_pydualsense.py:4855`)."""
     listar, ler = _bancada({})
 
     ocupacoes = ocupacao_por_adaptador([_controle(None)], listar=listar, ler=ler)
