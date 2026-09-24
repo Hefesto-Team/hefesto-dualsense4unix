@@ -50,6 +50,32 @@
 # um resumo sai a cada HEFESTO_KERNELWATCH_RESUMO_S (60) enquanto a rajada dura
 # e outro quando ela acaba (HEFESTO_KERNELWATCH_JANELA_S, 10, sem repetir).
 #
+#   [PROBE-PERDIDA]  (STORM-USB-02, 24/09/2026) o controle do RÁDIO que perdeu
+#                    a probe: `playstation 0005:054C:…: probe with driver
+#                    playstation failed`. Pareado, conectado, com a luz acesa
+#                    pelo próprio firmware — e sem existir para o sistema. É a
+#                    contenção medida em 25/07 (dois subindo no mesmo
+#                    adaptador), e é o que o -71 de um adaptador provoca: ele
+#                    derruba todos os controles dele, e eles voltam juntos. Só o
+#                    barramento 0005: no 0003 mora o vpad do próprio Hefesto
+#                    (o `-17` do vpad que repete o MAC), que não se religa.
+#
+# O LUGAR E O RELIGAR NA HORA (STORM-USB-02). Duas coisas acontecem no instante
+# do aviso, num estágio DEPOIS do `classify` (`anotar`) — o `classify` segue
+# puro:
+#   1. a linha [USB-71] ganha o LUGAR da porta (` · lugar pci-…-usb-0:4.4`), lido
+#      do /sys DESTE boot na hora. Até aqui um -71 de outro boot era traduzido
+#      pelos barramentos de hoje, e numa máquina em que a ordem dos xHCI mude o
+#      nome da entrada sairia errado. Quem lê é o `exame_da_mesa`;
+#   2. a linha da probe perdida — a HID do cabo no -71 (`usbhid …: can't add
+#      hid device`) ou o [PROBE-PERDIDA] do rádio — chama o religar pela ponte
+#      privilegiada (`sudo -n <ponte> religar-orfaos`), três vezes, com esperas
+#      que cabem no lugar guardado de quem saiu (30 s): o controle volta com o
+#      número dele. O tique do watchdog passa de 2 em 2 min (medido no journal
+#      dela: mediana 120 s), e religado só ali ele voltava fora do prazo em ~3
+#      de cada 4 quedas. Sem a regra do sudo (o install sem senha, o Flatpak),
+#      nada muda: o tique continua religando, como antes.
+#
 # Log: ~/.local/state/hefesto-dualsense4unix/kernel.log (novo nome). O antigo
 # storm.log é PRESERVADO se existir (histórico); se não existir, vira symlink
 # para kernel.log (compat para humanos e scripts antigos).
@@ -66,6 +92,16 @@
 #                                           o agora nas outras) e grava a marca
 #   --test-bt-delta P_RX P_TX C_RX C_TX DEV emite a linha [BT-ERR] se delta > 0
 #   --test-bt-sem-contador                  emite a linha [BT-SEM-CONTADOR]
+#   --test-lugar                            lê mensagens do kernel (o que vem
+#                                           depois da tag) e escreve «porta TAB
+#                                           lugar» de cada uma
+# E UM QUE NÃO É PURO, dito na cara: o estágio `anotar` inteiro.
+#   --test-anotar TRAVA                     o `anotar` sobre o stdin. O religar
+#                                           segura TRAVA (um arquivo) e chama o
+#                                           sudo de HEFESTO_KERNELWATCH_SUDO —
+#                                           sem esse gancho o hook sai com 2
+#                                           ANTES da primeira linha: uma régua
+#                                           nunca chama o sudo de verdade
 #
 # Uso manual: bash scripts/storm_watch.sh   (Ctrl+C encerra)
 set -uo pipefail
@@ -84,7 +120,9 @@ set -uo pipefail
 # entrada). As do hci também casam o padrão genérico `bluetooth: hci…`; ficam
 # escritas por extenso para que tirar o genérico não as cegue — e a régua
 # (`test_o_vigia_ve_as_quatro_familias.py`) mede cada família SEM o genérico.
-GREP_UNION="error -71|can.t add hid device|device descriptor read/64, error|not accepting address|unable to enumerate usb device|joycon_enforce_subcmd_rate|probe - fail = -|failed to get joycon info|init over bluetooth failed|output queue is full|bt socket write error|link tx timeout|killing stalled connection|command 0x[0-9a-f]{4} tx timeout|read reg16 failed|failed to generate devcoredump|crc.s check failed|bluetooth: hci[0-9].*(timeout|failed|error)|xhci_hcd.*(reset|died|timeout|halt)"
+# [PROBE-PERDIDA] (STORM-USB-02): a probe do hid-playstation que abortou num
+# controle do rádio (barramento 0005, e só ele).
+GREP_UNION="error -71|can.t add hid device|device descriptor read/64, error|not accepting address|unable to enumerate usb device|joycon_enforce_subcmd_rate|probe - fail = -|failed to get joycon info|init over bluetooth failed|output queue is full|bt socket write error|link tx timeout|killing stalled connection|command 0x[0-9a-f]{4} tx timeout|read reg16 failed|failed to generate devcoredump|crc.s check failed|bluetooth: hci[0-9].*(timeout|failed|error)|xhci_hcd.*(reset|died|timeout|halt)|playstation 0005:[0-9a-f:.]+: probe with driver playstation failed"
 
 # CADERNO-QUE-NÃO-ESCREVE-01: o `awk` desta casa lê de um cano que NUNCA fecha
 # (`journalctl -f`), e o mawk bufferiza a ENTRADA — ver o comentário do
@@ -171,6 +209,7 @@ classify() {
         borda = 0
         if (low ~ /joycon_enforce_subcmd_rate/) tag = "[JOYCON]"
         else if (low ~ /probe - fail = -|failed to get joycon info|init over bluetooth failed/) tag = "[JOYCON-PROBE]"
+        else if (low ~ /playstation 0005:[0-9a-f:.]+: probe with driver playstation failed/) tag = "[PROBE-PERDIDA]"
         else if (low ~ /error -71|can.t add hid device|device descriptor read\/64, error|not accepting address|unable to enumerate usb device/) tag = "[USB-71]"
         else if (low ~ /output queue is full/) { tag = "[FILA-CHEIA]"; borda = 1 }
         else if (low ~ /bt socket write error/) { tag = "[BT-SOCKET]"; borda = 1 }
@@ -307,10 +346,134 @@ desde_do_journal() {
     fi
 }
 
+# ---- o LUGAR e o RELIGAR NA HORA (STORM-USB-02, 24/09/2026) ------------------
+# Ver o cabeçalho. Tudo aqui roda como ela: nada escreve no /sys (o lugar é um
+# `readlink`), e o religar é da ponte privilegiada, pelo sudo sem senha que o
+# install grava para o verbo — e SÓ para ele.
+
+#: Onde o /sys lista os nós USB. Gancho da régua: o /sys de mentira.
+SYSFS_USB="${HEFESTO_KERNELWATCH_SYSFS_USB:-/sys/bus/usb/devices}"
+
+#: A ponte instalada e quem a chama. Os dois ganchos existem para a régua, cujo
+#: sudo de mentira aceita só o que a regra do sudoers aceita.
+PONTE="${HEFESTO_KERNELWATCH_PONTE:-/usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh}"
+SUDO="${HEFESTO_KERNELWATCH_SUDO:-sudo}"
+
+#: As esperas do religar, em segundos, contadas do aviso do kernel. A primeira
+#: deixa a porta — ou o rádio, com os outros controles subindo juntos —
+#: assentar; a soma (20 s), mais a probe e o hotplug do daemon (2 s), cabe no
+#: lugar guardado de quem saiu (30 s, `identity.prazo_do_lugar_guardado`). São
+#: três porque o teto do `bt_rebind_orphans.sh --evento` é três.
+RELIGAR_ESPERAS="${HEFESTO_KERNELWATCH_RELIGAR_ESPERAS:-3 7 10}"
+
+#: A porta USB de uma mensagem do kernel, no nome do /sys (`3-4.1.3`) — ou nada.
+#: DUAS CÓPIAS, UMA FORMA: a outra é `exame_da_mesa.porta_do_evento`, que relê
+#: o log depois; a régua (`test_o_cabo_que_cai_volta_com_o_numero.py`) passa as
+#: cinco formas da linha pelas duas. O alvo é o que vem antes do primeiro `: `.
+porta_da_mensagem() {
+    local alvo
+    [[ "$1" =~ ^[[:space:]]*[^[:space:]]+[[:space:]]+([^[:space:]]+):[[:space:]] ]] || return 0
+    alvo="${BASH_REMATCH[1]}"
+    if [[ "${alvo}" =~ ^usb([0-9]+)-port([0-9]+)$ ]]; then
+        printf '%s-%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+    elif [[ "${alvo}" =~ ^([0-9]+-[0-9]+(\.[0-9]+)*)-port([0-9]+)$ ]]; then
+        printf '%s.%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[3]}"
+    elif [[ "${alvo}" =~ ^([0-9]+-[0-9]+(\.[0-9]+)*):[0-9]+\.[0-9]+$ ]]; then
+        printf '%s\n' "${BASH_REMATCH[1]}"
+    elif [[ "${alvo}" =~ ^[0-9]+-[0-9]+(\.[0-9]+)*$ ]]; then
+        printf '%s\n' "${alvo}"
+    fi
+}
+
+#: O LUGAR de uma porta pelos barramentos DESTE boot: `3-4.4` vira
+#: `pci-0000:0c:00.3-usb-0:4.4` — o controlador PCI do hub-raiz `usb3` e a cadeia
+#: de portas. DUAS CÓPIAS, UMA FORMA: a grafia é a do `ID_PATH` do udev, o dono
+#: dela é `utils/lugar.lugar_do_caminho` e a leitura do controlador é
+#: `mesa_de_radio.controladores_dos_barramentos` (o ÚLTIMO `0000:xx:xx.x` do
+#: caminho real); a mesma régua confere as duas. Nada quando não se sabe.
+lugar_da_porta() {
+    local porta="$1" real parte pci=""
+    local -a partes
+    [[ "${porta}" =~ ^[0-9]+-[0-9]+(\.[0-9]+)*$ ]] || return 0
+    real="$(readlink -f -- "${SYSFS_USB}/usb${porta%%-*}" 2>/dev/null)" || return 0
+    IFS=/ read -ra partes <<<"${real}"
+    for parte in "${partes[@]}"; do
+        [[ "${parte}" =~ ^0000:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]$ ]] && pci="${parte}"
+    done
+    [[ -n "${pci}" ]] && printf 'pci-%s-usb-0:%s\n' "${pci}" "${porta#*-}"
+    return 0
+}
+
+#: A linha pede o religar? As duas formas que o `bt_rebind_orphans.sh` cura, e
+#: só elas: a HID do cabo que perdeu a probe no -71, e o controle do rádio que
+#: perdeu a probe. Um -71 que o kernel ainda está tentando não pede nada.
+_RELIGA_O_CABO='\[usb-71\] usbhid [0-9.:-]+: (can.t add hid device|probe with driver usbhid failed)'
+pede_religar() {
+    local baixa="${1,,}"
+    [[ "${baixa}" =~ ${_RELIGA_O_CABO} ]] && return 0
+    [[ "${baixa}" == *" [probe-perdida] "* ]]
+}
+
+#: O religar, EM FUNDO, para não segurar o log. Uma rajada, um trabalho: quem
+#: chega com um de pé é absorvido por ele (o `flock`), e cada passada da ponte
+#: religa o que houver de órfão naquela hora. Sem a regra do sudo, sai calado.
+religar_em_fundo() {
+    local trava="$1"
+    (
+        if command -v flock >/dev/null 2>&1; then
+            flock -n 9 || exit 0
+        fi
+        [[ -x "${PONTE}" ]] || exit 0
+        "${SUDO}" -n -l "${PONTE}" religar-orfaos >/dev/null 2>&1 || exit 0
+        for espera in ${RELIGAR_ESPERAS}; do
+            sleep "${espera}"
+            timeout 60 "${SUDO}" -n "${PONTE}" religar-orfaos >/dev/null 2>&1 || true
+        done
+    ) 9>>"${trava}" </dev/null >/dev/null 2>&1 &
+}
+
+#: O estágio depois do `classify`: o lugar na linha do -71 e o religar da probe
+#: perdida. `$1` é a trava do religar; vazio, só anota.
+anotar() {
+    local trava="${1:-}" linha porta lugar
+    while IFS= read -r linha || [[ -n "${linha}" ]]; do
+        if [[ "${linha}" == *" [USB-71] "* && "${linha}" != *" · lugar "* ]]; then
+            porta="$(porta_da_mensagem "${linha#* \[USB-71\] }")"
+            lugar=""
+            [[ -n "${porta}" ]] && lugar="$(lugar_da_porta "${porta}")"
+            [[ -n "${lugar}" ]] && linha="${linha} · lugar ${lugar}"
+        fi
+        printf '%s\n' "${linha}"
+        if [[ -n "${trava}" ]] && pede_religar "${linha}"; then
+            religar_em_fundo "${trava}"
+        fi
+    done
+}
+
 # ---- hooks de teste (puros, saem antes de tocar estado/journal) --------------
 case "${1:-}" in
     --classify)
         classify
+        exit 0
+        ;;
+    --test-lugar)
+        while IFS= read -r mensagem || [[ -n "${mensagem}" ]]; do
+            porta="$(porta_da_mensagem "${mensagem}")"
+            lugar=""
+            [[ -n "${porta}" ]] && lugar="$(lugar_da_porta "${porta}")"
+            printf '%s\t%s\n' "${porta}" "${lugar}"
+        done
+        exit 0
+        ;;
+    --test-anotar)
+        # A GUARDA QUE SAI: sem o sudo de mentira, este hook chamaria o sudo de
+        # verdade — e a ponte instalada dela.
+        if [[ -z "${HEFESTO_KERNELWATCH_SUDO:-}" || -z "${2:-}" ]]; then
+            echo "storm_watch.sh --test-anotar: precisa de HEFESTO_KERNELWATCH_SUDO e da trava" >&2
+            exit 2
+        fi
+        anotar "$2"
+        wait
         exit 0
         ;;
     --test-bt-delta)
@@ -360,7 +523,7 @@ mapfile -t DESDE < <(desde_do_journal "${STATE_DIR}/kernel-watch.boot" \
 if [[ "${DESDE[0]:-}" == "-b" ]]; then
     echo "# $(date '+%F %T') kernel-watch: primeira volta deste boot — relendo o arranque (o -71 da enumeração nasce antes da vigia)" >>"${LOG}"
 fi
-echo "# $(date '+%F %T') kernel-watch iniciado (padrões: USB-71 JOYCON JOYCON-PROBE FILA-CHEIA BT-SOCKET ENLACE-PARADO BT-TRAVADO CRC BT-HCI XHCI + contadores hci; preventivos ficam silenciosos até a 1ª ocorrência; rajada vira borda + resumo)" >>"${LOG}"
+echo "# $(date '+%F %T') kernel-watch iniciado (padrões: USB-71 JOYCON JOYCON-PROBE PROBE-PERDIDA FILA-CHEIA BT-SOCKET ENLACE-PARADO BT-TRAVADO CRC BT-HCI XHCI + contadores hci; preventivos ficam silenciosos até a 1ª ocorrência; rajada vira borda + resumo; o -71 leva o lugar; a probe perdida chama o religar)" >>"${LOG}"
 
 bt_delta_loop &
 BT_LOOP_PID=$!
@@ -371,9 +534,11 @@ trap 'kill "${BT_LOOP_PID}" 2>/dev/null' EXIT INT TERM
 # Fontes: kernel (+ = OU lógico) e o bluetoothd (unit), que é de onde vem o
 # «BT socket write error» da família 2A.
 # --case-sensitive=false: sem smartcase surpresa ("Bluetooth: hci" tem maiúscula).
+# O `anotar` vem DEPOIS do `classify` (STORM-USB-02): põe o lugar na linha do -71
+# e chama o religar na probe perdida, com a trava do religar no estado dela.
 journalctl -f "${DESDE[@]}" -o short-iso --case-sensitive=false --grep="${GREP_UNION}" \
     _TRANSPORT=kernel + _SYSTEMD_UNIT=bluetooth.service \
-    2>>"${LOG}" | classify >>"${LOG}"
+    2>>"${LOG}" | classify | anotar "${STATE_DIR}/kernel-watch.religar" >>"${LOG}"
 
 echo "# $(date '+%F %T') kernel-watch terminou inesperadamente (journalctl caiu?) — a unit re-tenta" >>"${LOG}"
 exit 1
