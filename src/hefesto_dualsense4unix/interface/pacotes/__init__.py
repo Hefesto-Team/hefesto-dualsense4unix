@@ -1437,6 +1437,7 @@ def topo(ctx: Contexto) -> dict[str, Any]:
     from hefesto_dualsense4unix.interface.pacotes import perfil as _perfil
 
     ativo = _perfil.nome_do_ativo(ctx.state)
+    do_rodape = ativo or _o_perfil_do_rodape()
     return {
         # O «N controles:» SAIU DA TELA — 22/09/2026, pedido dela:
         # *"Esse x controles cai fora pra ganharmos espaçço Lateral"*.  # (noqa-acento): dela
@@ -1457,10 +1458,11 @@ def topo(ctx: Contexto) -> dict[str, Any]:
         # SEM PERFIL ATIVO NÃO SE INVENTA NOME: o texto cai para "no perfil
         # ativo", que é o mesmo que o desenho já traz congelado — dizer "no
         # perfil —" seria pior do que não dizer.
-        # Sem perfil ativo, o Salvar grava no «Freestyle» (O-MODO-FREESTYLE-02),
-        # e a dica diz onde — o dono é `rodape.perfil_do_salvar`.
-        "rodape.salvar": _dica_do_salvar(ativo or _onde_o_salvar_grava()),
-        "rodape.exportar": _dica_do_exportar(ativo),
+        # Sem perfil ativo, o Salvar e o Exportar agem no «Freestyle»
+        # (O-MODO-FREESTYLE-02 e -03), e as duas dicas dizem onde — o dono é
+        # `rodape.perfil_do_rodape`, o mesmo que os gestos perguntam.
+        "rodape.salvar": _dica_do_salvar(do_rodape),
+        "rodape.exportar": _dica_do_exportar(do_rodape),
     }
 
 
@@ -1470,23 +1472,66 @@ def topo(ctx: Contexto) -> dict[str, Any]:
 _SEM_PERFIL = "no perfil ativo"
 
 
+#: QUANDO O QUE SE GRAVA VOLTA A VALER, por tipo de perfil — O-MODO-FREESTYLE-03,
+#: 24/09/2026. A frase do desenho prometia *"volta sozinho toda vez que este
+#: jogo abrir"* a QUALQUER perfil, e o Freestyle — o perfil de fora do jogo —
+#: não volta com jogo nenhum. A promessa segue o perfil ativo: a de jogo é a do
+#: desenho, palavra por palavra; as outras duas dizem o que o tipo faz, sem
+#: recado. Sem tipo sabido, não se promete nada (:func:`_dica_do_salvar`).
+_QUANDO_VOLTA = {
+    "jogo": "o que você salvar aqui volta sozinho toda vez que este jogo abrir.",
+    "any": "vale fora do jogo e em todo jogo sem perfil próprio.",
+    "manual": "vale quando você escolher este perfil.",
+}
+
+
+def _tipo_do_perfil(nome: str) -> str:
+    """`jogo`, `any`, `manual` ou `""` — o `match` do disco, lido cru.
+
+    O `match.type` é o mesmo que a aba Perfis traduz na coluna "Funciona em"
+    (`a10_perfis.QUANDO`). A única volta a mais é a do `criteria` sem nenhum dos
+    três campos: ele nunca entra sozinho (`MatchCriteria.matches` sem condição
+    é `False`), então promete o que o `manual` promete — é a mesma regra com que
+    o boot separa o perfil de janela (`connection.restore_last_profile`).
+
+    NUNCA LEVANTA: é pintura de tique; o que não se lê vira `""`.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import perfil as _perfil
+
+    try:
+        cru = _perfil.ativo(nome) if nome else {}
+        casamento = cru.get("match") if cru else None
+    except Exception:
+        return ""
+    if not isinstance(casamento, dict):
+        return ""
+    tipo = casamento.get("type", "criteria")
+    if tipo == "criteria":
+        regra = ("window_class", "window_title_regex", "process_name")
+        return "jogo" if any(casamento.get(k) for k in regra) else "manual"
+    return tipo if tipo in _QUANDO_VOLTA else ""
+
+
 def _dica_do_salvar(ativo: str) -> str:
     """A dica do botão que GRAVA, com o nome do perfil que vai receber.
 
-    O texto é o do desenho, palavra por palavra; o que muda é o nome. Reescrevê-lo
-    aqui faria duas versões da mesma frase, e a do desenho envelheceria calada —
-    então esta função só troca a metade que é dado.
+    A primeira metade é a do desenho, palavra por palavra (o `fim.html`
+    congela `Grava no perfil ativo. É onde a mudança vai cair.`); o que muda é
+    o nome e, desde a O-MODO-FREESTYLE-03, a promessa de quando o que se grava
+    volta (:data:`_QUANDO_VOLTA`), que depende do perfil.
     """
     onde = f"no perfil {ativo}" if ativo else _SEM_PERFIL
-    return (f"Grava {onde}. É onde a mudança vai cair: o que você salvar aqui "
-            "volta sozinho toda vez que este jogo abrir.")
+    quando = _QUANDO_VOLTA.get(_tipo_do_perfil(ativo), "")
+    if not quando:
+        return f"Grava {onde}. É onde a mudança vai cair."
+    return f"Grava {onde}. É onde a mudança vai cair: {quando}"
 
 
-def _onde_o_salvar_grava() -> str:
-    """O perfil em que o «Salvar Perfil» grava sem perfil ativo — do dono."""
-    from hefesto_dualsense4unix.interface.pacotes.rodape import perfil_do_salvar
+def _o_perfil_do_rodape() -> str:
+    """O perfil dos gestos do rodapé sem perfil ativo — do dono."""
+    from hefesto_dualsense4unix.interface.pacotes.rodape import perfil_do_rodape
 
-    return perfil_do_salvar({})
+    return perfil_do_rodape({})
 
 
 def _dica_do_exportar(ativo: str) -> str:

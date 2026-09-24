@@ -75,9 +75,15 @@ def test_a_dica_continua_dizendo_o_que_o_botao_faz() -> None:
 
     A decisão que o rodapé protege é a diferença entre APLICAR (vale agora) e
     SALVAR (grava no perfil). Trocar o nome não pode ter levado isso junto.
+
+    O-MODO-FREESTYLE-03, 24/09/2026: a promessa de QUANDO o que se grava volta
+    passou a seguir o perfil ativo — a de cada tipo se mede na
+    `test_o_freestyle_vale_em_todo_caminho.py`. O que ensina a diferença vale
+    para todo perfil, inclusive o que não está no disco, como este.
     """
     campos = pacotes.topo(_Ctx("meu_perfil"))
-    assert "volta sozinho toda vez que este jogo abrir" in campos["rodape.salvar"]
+    assert campos["rodape.salvar"].startswith(
+        "Grava no perfil meu_perfil. É onde a mudança vai cair"), campos["rodape.salvar"]
     assert ".json" in campos["rodape.exportar"]
 
 

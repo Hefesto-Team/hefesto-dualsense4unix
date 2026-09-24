@@ -752,7 +752,7 @@ def test_o_salvar_sem_perfil_ativo_grava_no_freestyle(semeadura_ligada: None) ->
     Perfis."*), e ela teria de ir à aba Perfis ativar o perfil de fora do jogo
     para voltar e salvar. A dica do botão diz o mesmo nome.
 
-    MORDE: tire o `o_perfil_de_fora_do_jogo()` de `rodape.perfil_do_salvar` e
+    MORDE: tire o `o_perfil_de_fora_do_jogo()` de `rodape.perfil_do_rodape` e
     o gesto volta a recusar.
     """
     from hefesto_dualsense4unix.interface.pacotes import rodape, topo
