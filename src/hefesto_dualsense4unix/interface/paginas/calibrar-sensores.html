@@ -15,13 +15,18 @@
     --m:ui-monospace,"JetBrains Mono","Fira Mono","DejaVu Sans Mono",monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:#11121a;color:var(--fg);font-family:var(--f);padding:22px;
+  /* O RECUO DO `body` E O TAMANHO DA `.cx` NÃO MORAM AQUI — 23/09/2026: vêm
+     da `moldura()`, lidos do `topo.html`. A razão está acima de `calibrar.moldura`. */
+  body{background:#11121a;color:var(--fg);font-family:var(--f);
        display:flex;flex-direction:column;align-items:center;gap:16px}
   .mono{font-family:var(--m)}
-  .cx{width:1180px;max-width:100%;background:var(--app-bg);border-radius:11px;
-      border:1px solid var(--border-sutil);overflow:hidden}
+  /* COLUNA COMO A `.janela`: o cabeçalho fica, o `.corpo` rola por dentro
+     quando a vista encolhe, e a caixa nunca passa da tela. */
+  .cx{background:var(--app-bg);border-radius:11px;
+      border:1px solid var(--border-sutil);overflow:hidden;
+      display:flex;flex-direction:column}
   .topo{padding:15px 20px;border-bottom:1px solid var(--border-sutil);
-        position:relative;padding-left:132px}
+        position:relative;padding-left:132px;flex:0 0 auto}
   h1{font-size:18px;font-weight:700}
   h1 .p{color:var(--pink)}
   .sub{font-size:12.5px;color:var(--texto-mudo);margin-top:3px}
@@ -31,7 +36,8 @@
           color:var(--texto-suave);font-size:12px}
   .voltar:hover{border-color:var(--comment);color:var(--fg)}
 
-  .corpo{padding:18px 20px 20px;display:flex;flex-direction:column;gap:14px}
+  .corpo{padding:18px 20px 20px;display:flex;flex-direction:column;gap:14px;
+         flex:1;min-height:0;overflow-y:auto}
 
   /* ---------- OS TRÊS ESTADOS ----------
      Os rádios vêm ANTES de tudo o que reage a eles: o `~` do CSS só enxerga
@@ -129,7 +135,9 @@
   #e-medindo:checked ~ .rodape .barra > i{width:58%}
   #e-pronto:checked  ~ .rodape .barra > i{width:100%;background:var(--green)}
 
-  .rodape{display:flex;align-items:center;gap:13px}
+  /* O RODAPÉ DESCE PARA O FIM DA CAIXA, como o das abas: a altura que sobra
+     vira vão ENTRE os cartões e os botões, nunca abaixo do aviso. */
+  .rodape{display:flex;align-items:center;gap:13px;margin-top:auto}
   .rodape .barra{flex:1}
   /* A CONTA DE QUEM ESTÁ AQUI, e ela fica ao lado do botão de propósito: é a
      última coisa que a tela diz antes de ela apertar «Começar». Ver
@@ -152,6 +160,9 @@
 
   .aviso{font-size:12px;color:var(--texto-mudo);line-height:17px}
   .aviso b{color:var(--texto-suave);font-weight:600}
+  :root{--recuo-do-corpo:16px;--piso-da-vista:777px;--teto-da-vista:855px;--alt-janela:clamp(var(--piso-da-vista), calc(100dvh - var(--recuo-do-corpo) * 2), var(--teto-da-vista))}
+  body{padding:var(--recuo-do-corpo)}
+  .cx{width:min(100%,1600px);height:var(--alt-janela);max-width:100%;max-height:calc(100dvh - var(--recuo-do-corpo) * 2)}
 </style>
 </head>
 <body>
