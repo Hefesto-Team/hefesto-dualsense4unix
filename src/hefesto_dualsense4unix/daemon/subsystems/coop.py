@@ -2360,6 +2360,21 @@ class CoopManager:
             return None
         return self._numero_da_carta(primario)
 
+    def _posto_vago(self, chave: str, autoridade: bool) -> bool:
+        """`chave` é o vpad do P1 parado à espera do primário que caiu?
+
+        A mesma pergunta que o backend faz para abrir a vaga
+        (:meth:`o_posto_do_p1_espera`, O-ASSENTO-GUARDADO-NAO-ANDA-02), sobre o
+        dono do posto de agora. Só com o jogo na autoridade: é quando o vpad do
+        P1 é fixo e a carta dele não decide nada.
+        """
+        if chave != _CHAVE_DO_P1 or not autoridade:
+            return False
+        primario = self._primary_identity()
+        if primario is None or primario.startswith("path:"):
+            return False
+        return self.o_posto_do_p1_espera(primario)
+
     def _nascer_na_ordem(self, player: _SecondaryPlayer) -> None:
         """Dá o vpad a `player` — recriando ANTES quem ficaria fora de ordem.
 
@@ -2424,9 +2439,25 @@ class CoopManager:
             self._compactar()
         chaves_novas = [nascer.identity] if nascer is not None else []
         cartas: dict[str, int] = {}
-        for chave in [*self._mesa_do_jogo.values(), *chaves_novas]:
+        vago = False
+        for lugar, chave in [
+            *self._mesa_do_jogo.items(),
+            *((None, c) for c in chaves_novas),
+        ]:
             carta = self._carta_da_chave(chave)
-            if carta is None:
+            if carta is None and lugar is not None and self._posto_vago(chave, autoridade):
+                # O POSTO VAGO NÃO PARA A MESA (conferência da O-ASSENTO-
+                # GUARDADO-NAO-ANDA-03). Com o P1 fora dentro do prazo e o jogo
+                # aberto, o vpad dele espera parado e o primário ausente não
+                # tem carta — e o `return` abaixo deixava o P4 no boneco 4 com a
+                # tela e a lâmpada dizendo 3 até o P1 voltar ou o prazo DELE
+                # vencer (medido: 24 s). O vpad do P1 é fixo com o jogo na
+                # autoridade (a R-04), então a carta dele não escolhe plano
+                # nenhum: vai a do lugar em que ele espera, e o `inteira` desta
+                # passada não fala do P1.
+                vago = True
+                carta = lugar + 1
+            elif carta is None:
                 # Sem carta não há ordem a obedecer (dublê, backend legado,
                 # primário sem MAC): o de sempre.
                 if nascer is not None:
@@ -2440,13 +2471,17 @@ class CoopManager:
             fixos=frozenset({_CHAVE_DO_P1}) if autoridade else frozenset(),
             compacta=not autoridade,
         )
-        if inteira != (not self._p1_espera_o_jogo):
+        if vago:
+            cartas_no_diario = {_rotulo(c): n for c, n in cartas.items() if c != _CHAVE_DO_P1}
+        else:
+            cartas_no_diario = {_rotulo(c): n for c, n in cartas.items()}
+        if not vago and inteira != (not self._p1_espera_o_jogo):
             self._p1_espera_o_jogo = not inteira
             logger.info(
                 "coop_ordem_do_p1_espera_o_jogo"
                 if not inteira
                 else "coop_ordem_do_p1_voltou",
-                cartas={_rotulo(c): n for c, n in cartas.items()},
+                cartas=cartas_no_diario,
             )
         if recriar:
             assinatura = (tuple(sorted(cartas.items())), tuple(recriar))
@@ -2466,7 +2501,7 @@ class CoopManager:
                 logger.info(
                     "coop_ordem_recriada",
                     recriar=[_rotulo(c) for c in recriar],
-                    cartas={_rotulo(c): n for c, n in cartas.items()},
+                    cartas=cartas_no_diario,
                     jogo=autoridade,
                 )
         elif not chaves_novas:

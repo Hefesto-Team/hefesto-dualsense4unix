@@ -36,7 +36,14 @@ AS MORDIDAS (24/09/2026, cada uma devolvida com o md5 conferido):
   a varredura;
 - a carta do co-op lida da TELA (``numeros_da_mesa``) em vez da lâmpada
   reprova ``test_o_jogo_muda_junto_com_a_lampada_e_nao_antes`` nos seis casos
-  com alguém atrás do buraco: o jogo correria na frente da lâmpada.
+  com alguém atrás do buraco: o jogo correria na frente da lâmpada;
+- (conferência) ``CoopManager._posto_vago`` devolvendo sempre False reprova
+  :class:`TestOPrazoDeOutroVenceComOPostoVago` nos 18 casos com alguém atrás
+  de quem saiu; a vaga mexendo no aviso do P1 reprova os nove de
+  ``test_a_vaga_nao_diz_que_o_p1_voltou_ao_boneco_dele``; e a carta
+  emprestada ao P1 ausente no diário reprova a primeira classe inteira. A
+  carta emprestada trocada por 99 passa tudo: com o jogo na autoridade ela
+  não escolhe plano nenhum, que é o que a cura afirma.
 
 Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5 zerados.
 """
@@ -311,6 +318,124 @@ class TestAVoltaTardiaDoP1:
         bancada.vpad_do_p1.mac = vpad_mac(P1, 1)
 
         self._p1_sai_e_volta_tarde(bancada)  # o `tique` confere o MAC repetido
+
+
+#: Quanto o OUTRO já está fora quando o P1 sai: o prazo dele vence com o do P1
+#: ainda correndo.
+OUTRO_JA_FORA = 26.0
+
+DOIS_FORA = [
+    pytest.param(
+        quantos,
+        transporte,
+        outro,
+        volta,
+        id=f"{quantos}-controles-{transporte}-sai-p{outro + 1}-p1-{'volta' if volta else 'vence'}",
+    )
+    for quantos in (3, 4)
+    for transporte in TRANSPORTES
+    for outro in range(1, quantos)
+    for volta in (True, False)
+]
+
+
+@pytest.mark.usefixtures("config_isolado")
+class TestOPrazoDeOutroVenceComOPostoVago:
+    """Dois fora: o prazo de um vence enquanto o posto do P1 espera por ele.
+
+    A conferência de 24/09/2026. Com o P1 fora dentro do prazo e o jogo
+    aberto, o vpad dele fica parado à espera (a O-ASSENTO-02), e o primário
+    ausente não tem carta. O ``_ordenar`` desistia da mesa inteira por isso
+    («sem carta não há ordem a obedecer»): o P4 ficava no boneco 4 com a tela
+    e a lâmpada dizendo 3 até o P1 voltar ou o prazo DELE vencer — 24 s
+    medidos na bancada. A cura: o vpad do P1 é fixo com o jogo na autoridade,
+    então a carta dele não escolhe plano; ele leva a do lugar em que espera.
+
+    A MORDIDA: ``_posto_vago`` devolvendo sempre False reprova os casos com
+    alguém atrás de quem saiu.
+    """
+
+    @pytest.mark.parametrize(("quantos", "transporte", "outro", "volta"), DOIS_FORA)
+    def test_quem_ficou_atras_desce_com_o_posto_vago(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        quantos: int,
+        transporte: str,
+        outro: int,
+        volta: bool,
+    ) -> None:
+        bancada = montar(monkeypatch, quantos, transporte)
+        vpad_do_posto = bancada.vpad_do_p1
+        via_do_p1 = bancada.mesa.transporte_de(P1)
+        ficaram = [u for u in UNIQS[1:quantos] if u != UNIQS[outro]]
+        atras = UNIQS[outro + 1 : quantos]
+        vpads_de_antes = {u: bancada.vpad_de(u) for u in ficaram}
+
+        bancada.mesa.levantar(UNIQS[outro])
+        for _ in range(int(OUTRO_JA_FORA / TIQUE)):
+            bancada.tique()
+        bancada.mesa.levantar(P1)
+        antes = len(bancada.vpads)
+        with structlog.testing.capture_logs() as registros:
+            for _ in range(_ticks_ate_o_fim_do_prazo(OUTRO_JA_FORA)):
+                bancada.tique()
+
+        # O posto segue vago: o prazo do P1 ainda corre.
+        assert bancada.inst.primary_uniq == P1
+        assert bancada.dono_do_vpad_do_p1() is None
+        assert bancada.daemon._gamepad_device is vpad_do_posto and vpad_do_posto.vivo
+        # A fila do outro se fechou na tela, com o lugar do P1 ainda contando.
+        assert bancada.a_tela() == {u: n + 2 for n, u in enumerate(ficaram)}
+        bancada.o_jogo_segue_a_tela()
+        for uniq in atras:
+            assert len(_nascidos(bancada, antes, uniq)) == 1, (
+                f"{uniq} ficou atrás do buraco com o posto vago e não desceu (ou desceu duas vezes)"
+            )
+        for uniq in set(ficaram) - set(atras):
+            assert bancada.vpad_de(uniq) is vpads_de_antes[uniq], f"{uniq} estava na frente"
+        recriadas = [r for r in registros if r["event"] == "coop_ordem_recriada"]
+        assert [r["recriar"] for r in recriadas] == ([list(atras)] if atras else [])
+        # O diário não inventa carta para o P1 ausente, nem diz que ele espera o jogo.
+        assert all("p1" not in r["cartas"] for r in recriadas)
+        assert not [r for r in registros if r["event"] == "coop_ordem_do_p1_espera_o_jogo"]
+
+        assentada = len(bancada.vpads)
+        if volta:
+            bancada.mesa.sentar(P1, transporte=via_do_p1)
+            bancada.tique()
+            bancada.tique()
+            assert bancada.inst.primary_uniq == P1
+            assert bancada.dono_do_vpad_do_p1() == P1
+            assert bancada.a_tela() == {P1: 1, **{u: n + 2 for n, u in enumerate(ficaram)}}
+            assert len(bancada.vpads) == assentada, "a volta do P1 recriou alguém"
+        else:
+            for _ in range(_ticks_ate_o_fim_do_prazo(0.0)):
+                bancada.tique()
+            assert bancada.dono_do_vpad_do_p1() == ficaram[0]
+            assert bancada.a_tela() == {u: n + 1 for n, u in enumerate(ficaram)}
+        bancada.o_jogo_segue_a_tela()
+
+    @MATRIZ
+    def test_a_vaga_nao_diz_que_o_p1_voltou_ao_boneco_dele(
+        self, monkeypatch: pytest.MonkeyPatch, quantos: int, transporte: str
+    ) -> None:
+        """Com o P1 no boneco 2 (a volta tardia), o posto vago do P2 não apaga o aviso.
+
+        O P2 dirige o vpad do P1 depois da volta tardia; se ELE cai dentro do
+        prazo, o posto fica vago à espera dele, e a carta que a vaga empresta
+        ao vpad do P1 não é a de ninguém: ela não pode escrever no diário que
+        o P1 voltou ao boneco dele — ele segue no 2 até o jogo fechar.
+        """
+        bancada = montar(monkeypatch, quantos, transporte)
+        TestAVoltaTardiaDoP1._p1_sai_e_volta_tarde(bancada)
+        assert bancada.coop._p1_espera_o_jogo is True
+        bancada.mesa.levantar(P2)
+        with structlog.testing.capture_logs() as registros:
+            for _ in range(int(VINTE_SEGUNDOS / TIQUE)):
+                bancada.tique()
+        assert bancada.inst.primary_uniq == P2 and bancada.dono_do_vpad_do_p1() is None
+        assert not [r for r in registros if r["event"] == "coop_ordem_do_p1_voltou"]
+        assert bancada.coop._p1_espera_o_jogo is True
 
 
 class TestOPlano:
