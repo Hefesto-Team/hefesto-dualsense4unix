@@ -397,3 +397,56 @@ def test_quem_e_saida_de_controle(sink: str, e_de_controle: bool) -> None:
 
     lista_viva = ServidorDeSom()(["pactl", "list", "sinks", "short"])
     assert e_saida_de_controle(sink, lista_viva) is e_de_controle
+
+
+# ===========================================================================
+# 5. No USB, o dono de verdade — sem o dublê do `sink_do_controle`
+# ===========================================================================
+
+
+def test_no_cabo_o_quarto_escolhe_a_placa_e_a_volta_pergunta_ao_dono() -> None:
+    """Os testes acima trocam o `sink_do_controle` por um dicionário. Este não:
+    no USB quem responde é o `escolher_sink` sobre a placa da Sony, e a placa
+    é o destino do quarto, e não o «Alto-falante do Controle N» (o nó desta
+    casa, que no cabo termina na mesma placa). A bancada manda conferir isso
+    (`audio.saida_dedicada-cabo`, linha 19): a lista do sistema mostra a placa.
+
+    E a volta vale a partir da placa, não do nó: a saída que ela escolheu pela
+    lista, no nó, é ela quem devolve pela lista.
+
+    MORDIDA: no bloco do `de` de `devolver_o_som_do_pc`, troque
+    `padrao != deste` por `False` — o nó escolhido pela lista passa a ser
+    devolvido pelo botão de cima.
+    """
+    from hefesto_dualsense4unix.app import audio_saida
+
+    servidor = ServidorDeSom()
+    servidor.sinks = [PC, PLACA, nome_do_sink(P1)]
+    memoria = {"anterior": ""}
+    rota = audio_saida.RotaDeSaida(
+        runner=servidor, ler_memoria=lambda: memoria["anterior"],
+        gravar_memoria=lambda s: memoria.__setitem__("anterior", s))
+
+    desfecho = audio_saida.mandar_o_som_do_pc(P1, (P1,), rota=rota, runner=servidor)
+    assert desfecho.ok, desfecho.motivo
+    assert servidor.padrao == PLACA, (
+        f"no USB o quarto mandou o som para {servidor.padrao!r}, e o dono "
+        f"(`escolher_sink`) diz que a saída do P1 é a placa")
+
+    class Motor:
+        voltas = 0
+
+        def voltar_ao_anterior(self) -> bool:
+            Motor.voltas += 1
+            return True
+
+    assert audio_saida.devolver_o_som_do_pc(
+        de=P1, uniqs_na_mesa=(P1,), rota=Motor(), runner=servidor).ok
+    assert Motor.voltas == 1
+
+    servidor.padrao = nome_do_sink(P1)
+    desfecho = audio_saida.devolver_o_som_do_pc(
+        de=P1, uniqs_na_mesa=(P1,), rota=Motor(), runner=servidor)
+    assert not desfecho.ok and Motor.voltas == 1, (
+        "o botão de cima devolveu uma saída que o quarto não levou — ela a "
+        "escolheu pela lista")
