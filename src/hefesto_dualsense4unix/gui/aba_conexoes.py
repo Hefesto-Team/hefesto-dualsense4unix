@@ -207,6 +207,13 @@ def _e(texto: object) -> str:
 # Quadro 1 — Gestão Controles
 # ---------------------------------------------------------------------------
 #: Como a tela chama cada transporte. O produto diz ``usb``/``bt``.
+#:
+#: É A PALAVRA DA TELA DESDE 21/09/2026, decisão dela (a I9 revogada): USB e
+#: BT, nunca cabo e rádio. O dono da casa é
+#: ``home_actions._PALAVRA_DO_TRANSPORTE``, e este módulo não o importa porque
+#: nasceu puro (o gerador da 08 roda sem o ``structlog``): quem impede as duas
+#: tabelas de divergirem é ``tests/unit/test_as_frases_que_a_bancada_achou.py``,
+#: que pergunta ao dono.
 NOME_DO_TRANSPORTE = {"usb": "USB", "bt": "BT", "bluetooth": "BT"}
 
 #: Como a tela chama cada máscara. É o ``flavor`` do produto, e ele é GLOBAL —
@@ -251,17 +258,21 @@ class Controle:
 
     @property
     def texto_do_microfone(self) -> str:
-        """*Ligado, pelo rádio • Pela ponte* — e o "por onde" NÃO é escolha.
+        """*Ligado, pelo BT • Pela ponte* — e o "por onde" NÃO é escolha.
 
         Pelo cabo o microfone chega pela placa de áudio do próprio aparelho;
         pelo rádio, pela ponte do Hefesto, porque o DualSense não tem A2DP nem
         HFP. Quem decide é o transporte, e por isso esta frase é derivada, nunca
         perguntada.
+
+        A PALAVRA DO TRANSPORTE É A DA TELA (:data:`NOME_DO_TRANSPORTE`) desde
+        24/09/2026 — era «pelo cabo»/«pelo rádio», de antes da decisão dela de
+        21/09. É a mesma frase de ``pacotes.a08_conexoes.caminho_do_microfone``.
         """
         estado = "Ligado" if self.mic_ligado else "Desligado"
         if self.pelo_radio:
-            return f"{estado}, pelo rádio • Pela ponte"
-        return f"{estado}, pelo cabo • Placa do controle"
+            return f"{estado}, pelo {NOME_DO_TRANSPORTE['bt']} • Pela ponte"
+        return f"{estado}, pelo {NOME_DO_TRANSPORTE['usb']} • Placa do controle"
 
 
 def controles_do_estado(
@@ -300,15 +311,31 @@ def controles_do_estado(
 
 
 def texto_da_contagem(controles: Sequence[Controle]) -> str:
-    """``4 controles • 2 no cabo • 2 no rádio`` — o canto do quadro 1.
+    """``4 controles • 2 USB • 2 BT`` — o canto do quadro 1.
+
+    A PALAVRA DO TRANSPORTE É USB E BT DESDE 24/09/2026
+    (AS-FRASES-QUE-A-BANCADA-ACHOU-01). Ela era «2 no cabo • 2 no rádio», e a
+    razão de a contagem não ter acompanhado a tela — *"2 cabo · 0 rádio" não é
+    português*, a D-05 — caiu com a decisão dela de 21/09 (a I9 revogada): a
+    tela diz USB e BT, e «2 USB» é português. A palavra é a de
+    :data:`NOME_DO_TRANSPORTE`, a mesma do nome da linha.
+
+    O TRANSPORTE SEM CONTROLE NÃO APARECE, pela decisão dela de 17/09 que o
+    canto de cima já segue (``mesa_viva.frase_dos_transportes``): o que não
+    está lá não se escreve. E um controle só é «1 controle».
 
     A PALAVRA "mesa" SAIU EM 05/09/2026, ordem dela: *"não é pra ter mesa em
     nada da interface"*. O número já dizia o que ela precisava; a palavra só
     acrescentava um jargão desta casa à tela de quem joga.
     """
     radio = sum(1 for c in controles if c.pelo_radio)
-    cabo = len(controles) - radio
-    return f"{len(controles)} controles • {cabo} no cabo • {radio} no rádio"
+    usb = len(controles) - radio
+    pedacos = [f"{len(controles)} {'controle' if len(controles) == 1 else 'controles'}"]
+    if usb:
+        pedacos.append(f"{usb} {NOME_DO_TRANSPORTE['usb']}")
+    if radio:
+        pedacos.append(f"{radio} {NOME_DO_TRANSPORTE['bt']}")
+    return " • ".join(pedacos)
 
 
 def mascara_da_maquina(estado: Mapping[str, Any]) -> str:
