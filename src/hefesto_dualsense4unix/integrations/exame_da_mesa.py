@@ -743,7 +743,7 @@ def censo(itens: Sequence[Item] | None = None) -> dict[str, object]:
 #    `python3` do sistema, sem pydantic 2), sobra o caminho do kernel, como antes;
 # 2. **o CONTROLE**, e a matriz dela: o -71 não é só do cabo. Os adaptadores BT
 #    também são USB, e o -71 num deles derruba todos os controles dele — medido
-#    no `kernel.log` dela: os 26 eventos em `1-4` de 13/09 são o TP-Link UB500 no
+#    no `kernel.log` dela: os 27 eventos em `1-4` de 13/09 são o TP-Link UB500 no
 #    laço de reinícios, e não um DualSense. :attr:`Aparelho.papel` diz qual dos
 #    dois está na entrada;
 # 3. **o que ficou PARADO.** Duas das formas acima são o kernel DESISTINDO, e
