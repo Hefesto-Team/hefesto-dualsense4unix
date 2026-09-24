@@ -90,8 +90,8 @@
 # O tique do watchdog passa a cada 2 min (medido no journal dela: 5.671
 # intervalos, mediana 120 s, o maior 126 s), e o lugar guardado de quem saiu
 # vale 30 s (`identity.prazo_do_lugar_guardado`). Religado no tique, o controle
-# volta depois do prazo em ~3 de cada 4 quedas, e os outros já trocaram de
-# número. Por isso o kernel-watch (`storm_watch.sh`) chama este mesmo script
+# volta depois do prazo em mais de 3 de cada 4 quedas, e os outros já trocaram
+# de número. Por isso o kernel-watch (`storm_watch.sh`) chama este mesmo script
 # NA HORA do aviso do kernel, pelo verbo `religar-orfaos` da ponte privilegiada,
 # com `--evento`:
 #   - as guardas são AS MESMAS (é o mesmo laço, não uma cópia dele);

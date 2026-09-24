@@ -1131,8 +1131,8 @@ verbo_reiniciar_travado() {
 # A palavra dela de 23/09 é «nomear e religar»: o controle que cai por -71 volta
 # sozinho, COM O MESMO NÚMERO. O religar existia (o `bt_rebind_orphans.sh`, no
 # tique de 2 min do watchdog), mas o lugar guardado de quem saiu vale 30 s — e
-# no tique o controle voltava fora do prazo em ~3 de cada 4 quedas. Este verbo
-# é o mesmo religar chamado pelo kernel-watch NA HORA do aviso do kernel.
+# no tique o controle voltava fora do prazo em mais de 3 de cada 4 quedas. Este
+# verbo é o mesmo religar chamado pelo kernel-watch NA HORA do aviso do kernel.
 #
 # SEM ARGUMENTO, como o `reiniciar-travado`: quem escolhe O QUE religar é o /sys,
 # pelas guardas do `bt_rebind_orphans.sh` (a HID de um Sony sem driver, no cabo;

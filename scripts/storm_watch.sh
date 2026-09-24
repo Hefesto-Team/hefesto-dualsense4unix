@@ -74,9 +74,9 @@
 #      número dele — e o aviso de OUTRO controle que chega no meio do trabalho
 #      ganha mais uma volta das três (`religar_em_fundo`). O tique do watchdog
 #      passa de 2 em 2 min (medido no journal dela: mediana 120 s), e religado
-#      só ali ele voltava fora do prazo em ~3 de cada 4 quedas. Sem a regra do
-#      sudo (o install sem senha, o Flatpak), nada muda: o tique continua
-#      religando, como antes.
+#      só ali ele voltava fora do prazo em mais de 3 de cada 4 quedas. Sem a
+#      regra do sudo (o install sem senha, o Flatpak), nada muda: o tique
+#      continua religando, como antes.
 #
 # Log: ~/.local/state/hefesto-dualsense4unix/kernel.log (novo nome). O antigo
 # storm.log é PRESERVADO se existir (histórico); se não existir, vira symlink
