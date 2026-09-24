@@ -136,12 +136,12 @@ a ordem de preferência, com versão de esquema nova"*. Isso **caducou em
 árvore fecham aquela porta, e os quatro estão registrados na
 ``REGRA-NAO-REGISTRO-01``:
 
-1. ``identity.load`` (``identity.py:1951``) DESCARTA a fila inteira quando a
+1. ``identity.load`` (``identity.py:2052``) DESCARTA a fila inteira quando a
    versão do arquivo difere — um bump renumeraria a mesa dela;
 2. ``identity._save_locked`` só aproveita as entradas do outro lado quando
-   ``bruto.get("version") == CONTROLLERS_SCHEMA_VERSION`` (``:2066-2070``): o
+   ``bruto.get("version") == CONTROLLERS_SCHEMA_VERSION`` (``:2167-2171``): o
    primeiro save de DualSense depois de um bump APAGARIA a fila dos externos;
-3. ``payload: dict[str, Any] = {}`` é montado do zero (``identity.py:2071``) —
+3. ``payload: dict[str, Any] = {}`` é montado do zero (``identity.py:2172``) —
    chave nova de topo escrita pelo lado externo morre no primeiro save do outro;
 4. ``merged_order_payload`` devolve exatamente ``{addr, kind, rank}``
    (``:555``) e ``order_entries`` descarta ``kind`` desconhecido (``:521``) —
@@ -314,7 +314,7 @@ class ExternalMaskRegistry:
         Delega a ``ExternalIdentityRegistry._canonical`` — a MESMA função que a
         fila usa — em vez de repetir a regra do MAC. O precedente de chamar o
         método privado do irmão já existe na árvore
-        (``ExternalImuEnabler.tick``, ``external_identity.py:1008``), e é
+        (``ExternalImuEnabler.tick``, ``external_identity.py:1047``), e é
         deliberado: uma segunda implementação da canonização é uma segunda
         chance de a máscara e o número discordarem sobre quem é o aparelho.
         """
@@ -594,7 +594,7 @@ class ExternalMaskRegistry:
         """Read-modify-write atômico do arquivo de máscaras (sob ``_lock``).
 
         Preserva o que não entende — chaves de TOPO e campos POR ENTRADA
-        escritos por uma versão futura. É a lição do ``identity.py:2071``
+        escritos por uma versão futura. É a lição do ``identity.py:2172``
         (``payload = {}`` do zero) aplicada contra nós mesmos: quem monta o
         documento do zero destrói o que o outro escritor sabia.
 
