@@ -4757,7 +4757,8 @@ def html_do_lugar(lug: dict[str, Any], cena: dict[str, Any], com_hz: bool = Fals
     topo = (
         '<div class="lugar-topo">'
         f'<button class="abre-lugar" aria-expanded="{str(aberto).lower()}" title="{ver}" '
-        f'aria-label="{ver}" data-gesto="abrir-adaptador" data-alvo="{lid}">▶</button>'
+        f'aria-label="{ver}" data-gesto="abrir-adaptador" data-alvo="{lid}">'
+        '<span aria-hidden="true">▶</span></button>'
         f'<input class="lugar-nome" value="{_x(nome)}" placeholder="{DE_UM_NOME}" '
         f'aria-label="Nome deste adaptador" style="width:{largura}ch" '
         f'data-gesto="adaptador-renomear" data-alvo="{lid}">'

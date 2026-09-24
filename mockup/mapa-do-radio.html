@@ -1646,7 +1646,8 @@ function pintar() {
     }
     const abre = document.createElement('button');
     abre.className = 'abre-lugar';
-    abre.textContent = '\u25B6';
+    /* O glifo é desenho: o nome é o aria-label (senão o leitor lê duas vezes). */
+    abre.innerHTML = '<span aria-hidden="true">\u25B6</span>';
     abre.setAttribute('aria-expanded', String(lug.aberto));
     abre.title = (lug.aberto ? 'Esconder' : 'Ver') + ' os aparelhos deste adaptador';
     abre.setAttribute('aria-label', abre.title);
