@@ -58,8 +58,10 @@ fi
 _tmp="$(mktemp)"
 trap 'rm -f "${_tmp}"' EXIT
 
-# Reabre SÓ as duas linhas do DualSense standard (0ce6). As do Edge (0df2) e a
-# do vpad nunca fecharam — ver o cabeçalho do asset.
+# Reabre as QUATRO linhas do DualSense físico: as duas do standard (0ce6) e,
+# desde a STEAM-NO-FISICO-01 (24/09/2026), as duas do Edge físico (0df2). A do
+# vpad nunca fechou — ver o cabeçalho do asset. A guarda 1 abaixo é a que
+# confere as quatro: nenhuma linha fechada pode sobrar.
 sed -e 's/MODE="0600", OWNER="root", GROUP="root", TAG-="uaccess"/MODE="0660", TAG+="uaccess"/' \
     "${ORIGEM}" > "${_tmp}"
 

@@ -35,6 +35,10 @@ from hefesto_dualsense4unix.broker.hidraw_broker import (
 HID_ID_USB = "HID_ID=0003:0000054C:00000CE6"
 HID_ID_BT = "HID_ID=0005:0000054C:00000CE6"
 HID_ID_VPAD = "HID_ID=0003:0000054C:00000DF2"
+#: O Edge FÍSICO tem o mesmo HID_ID do vpad pelo cabo — o que o separa é o pai
+#: USB real; pelo rádio é bus 0005 (STEAM-NO-FISICO-01).
+HID_ID_EDGE_USB = HID_ID_VPAD
+HID_ID_EDGE_BT = "HID_ID=0005:0000054C:00000DF2"
 HID_ID_NINTENDO = "HID_ID=0003:0000057E:00002009"
 
 #: Papel espelhado da evidência viva 2026-07-20 (uhid do BlueZ 5.85):
@@ -215,10 +219,39 @@ class TestValidateAceita:
         assert _valida(node, kwargs) == "hidraw3"
 
 
+class TestOEdgeFisicoEntra:
+    """STEAM-NO-FISICO-01 (24/09/2026) — o Edge físico (0df2) é físico.
+
+    O nó dele nasce fechado desde esta sprint (`assets/70-ps5-controller.rules`),
+    e sem o broker aceitá-lo ninguém o abriria: o daemon abre o handle de
+    controle por `expose` e o motion reader por `open`. A MORDIDA: devolva o
+    `if product == VPAD_PRODUCT: return None` e as duas reprovam.
+    """
+
+    def test_o_edge_pelo_cabo(self, tmp_path: Path) -> None:
+        node, kwargs = _make_tree(tmp_path, base="hidraw7", hid_id=HID_ID_EDGE_USB)
+        assert _valida(node, kwargs) == "hidraw7"
+
+    def test_o_edge_pelo_radio_sob_uhid(self, tmp_path: Path) -> None:
+        node, kwargs = _make_tree(
+            tmp_path,
+            base="hidraw8",
+            parent="uhid",
+            uevent=_uevent_bt_uhid(hid_id=HID_ID_EDGE_BT),
+            adapters=[MAC_ADAPTADOR],
+        )
+        assert _valida(node, kwargs) == "hidraw8"
+
+
 class TestValidateRejeitaIdentidade:
-    def test_vpad_0df2(self, tmp_path: Path) -> None:
+    def test_vpad_0df2_sob_uhid_sem_as_marcas(self, tmp_path: Path) -> None:
         # O vpad 0df2 JAMAIS é escondido/aberto — é por ele que o jogo fala.
-        node, kwargs = _make_tree(tmp_path, base="hidraw6", hid_id=HID_ID_VPAD)
+        # STEAM-NO-FISICO-01 (24/09/2026): desde que o Edge FÍSICO entrou, o
+        # PID não o recusa mais; recusa a topologia — USB sob `/misc/uhid/`
+        # (D1), mesmo sem o `phys`/`uniq` do vpad no uevent.
+        node, kwargs = _make_tree(
+            tmp_path, base="hidraw6", hid_id=HID_ID_VPAD, parent="uhid"
+        )
         assert _valida(node, kwargs) is None
 
     def test_vpad_0df2_sob_uhid(self, tmp_path: Path) -> None:

@@ -301,16 +301,27 @@ class TestOsPacotesNaoFechamSemPorta:
         ]
         assert len(abertas) == 2, abertas
         assert all('MODE="0660"' in linha for linha in abertas)
+        # STEAM-NO-FISICO-01 (24/09/2026): o Edge físico fecha junto, e a
+        # variante aberta o reabre junto — as duas linhas físicas do 0df2.
+        edge = [
+            linha
+            for linha in linhas
+            if "0df2" in linha.lower() and "DEVPATH" not in linha
+        ]
+        assert len(edge) == 2, edge
+        assert all('TAG+="uaccess"' in linha for linha in edge)
 
     def test_o_asset_versionado_continua_fechado(self) -> None:
         """A decisão dela não mudou: o default é o nó nascer fechado.
 
         O irmão da régua acima. Sem ele, alguém «consertaria» o bloqueante 3
-        reabrindo o asset — e a cura inteira sairia com a suíte verde.
+        reabrindo o asset — e a cura inteira sairia com a suíte verde. São
+        QUATRO desde a STEAM-NO-FISICO-01: o standard e o Edge, cada um pelo
+        cabo e pelo rádio.
         """
         linhas = _linhas_efetivas(REGRA.read_text(encoding="utf-8"))
         fechadas = [linha for linha in linhas if 'TAG-="uaccess"' in linha]
-        assert len(fechadas) == 2, fechadas
+        assert len(fechadas) == 4, fechadas
         assert all('MODE="0600"' in linha for linha in fechadas)
 
     def test_a_transformacao_recusa_um_asset_que_ela_nao_alcanca(

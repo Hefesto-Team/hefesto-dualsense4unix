@@ -32,8 +32,9 @@ Regras de ouro (invariante "duplicado > zero controles"):
   - Um nó NUNCA é "esquecido" com o fs em 0600: só sai do rastreio DEPOIS do
     restore de fs verificado (lição 2 da auditoria que parkou a 1ª versão).
   - O validador SÓ aceita hidraw cujo pai HID imediato tem HID_ID de DualSense
-    físico (054c:0ce6 em USB 0003 ou BT 0005). O vpad 0df2 é REJEITADO
-    explicitamente — é por ele que o jogo fala com o controle.
+    físico (054c:0ce6, ou o Edge 054c:0df2, em USB 0003 ou BT 0005). O NOSSO
+    vpad também anuncia 0df2, e é REJEITADO pela topologia e pela identidade
+    (D1/D2 abaixo) — é por ele que o jogo fala com o controle.
   - ARMADILHA BLUEZ-UHID-01: com BlueZ ≥5.73 os controles BT FÍSICOS moram em
     /devices/virtual/misc/uhid/ — topologia NÃO é veredito; a identidade vem
     do uevent do pai HID (HID_ID/HID_PHYS/HID_UNIQ), como no fix do daemon.
@@ -95,7 +96,15 @@ MAX_LINE_BYTES = 4096
 # Identidade canônica (HID_ID do pai HID imediato — transport-independent).
 PHYS_VENDOR = 0x054C  # Sony
 PHYS_PRODUCT = 0x0CE6  # DualSense físico
-VPAD_PRODUCT = 0x0DF2  # DualSense Edge = NOSSO vpad — NUNCA esconder
+VPAD_PRODUCT = 0x0DF2  # DualSense Edge: o do NOSSO vpad e o do Edge físico
+#: STEAM-NO-FISICO-01 (24/09/2026) — os PIDs de DualSense FÍSICO que o broker
+#: esconde, expõe e abre. O Edge físico (0df2) entrou: o nó dele nasce fechado
+#: como o do standard (`assets/70-ps5-controller.rules`), e sem o broker
+#: aceitá-lo ninguém o abriria. O 0df2 é TAMBÉM o PID do nosso vpad uhid, então
+#: ele deixou de ser recusado pelo PID e passou a ser recusado pelo que o
+#: distingue do físico: USB sob `/misc/uhid/` (D1) e o `phys`/`uniq` do vpad
+#: (D2). O Edge físico pelo cabo tem pai USB real; pelo rádio é bus 0005.
+PHYS_PRODUCTS = frozenset({PHYS_PRODUCT, VPAD_PRODUCT})
 BUS_USB = 0x0003
 BUS_BT = 0x0005
 ACCEPTED_BUSES = frozenset({BUS_USB, BUS_BT})
@@ -121,13 +130,17 @@ _HIDRAW_DEVINFO_FMT = "=Ihh"  # bustype u32, vendor s16, product s16
 
 
 def _hidraw_devinfo_identity_ok(vendor: int, product: int) -> bool:
-    """True sse (vendor, product) do devinfo é o DualSense físico 054c:0ce6.
+    """True sse (vendor, product) do devinfo é um DualSense 054c:0ce6/0df2.
 
-    Mesma identidade que `validate_physical_node` aceita — NUNCA o vpad 0df2
-    (VPAD_PRODUCT) nem device alheio. vendor/product vêm do kernel como __s16
-    assinado; a máscara 0xFFFF normaliza a representação.
+    A família que `validate_physical_node` aceita — nunca device alheio. O
+    devinfo não separa o Edge físico do nosso vpad (os dois são 0003:054c:0df2
+    pelo cabo); quem separa é a topologia, e ela já foi julgada no
+    `validate_physical_node` antes do open. O pior caso de uma corrida aqui é
+    servir o vpad, que já é `0660` da sessão — nenhum acesso novo.
+    vendor/product vêm do kernel como __s16 assinado; a máscara 0xFFFF
+    normaliza a representação.
     """
-    return (vendor & 0xFFFF, product & 0xFFFF) == (PHYS_VENDOR, PHYS_PRODUCT)
+    return (vendor & 0xFFFF) == PHYS_VENDOR and (product & 0xFFFF) in PHYS_PRODUCTS
 
 
 #: Formato REAL (zero-preenchido) do valor de HID_ID no uevent do kernel:
@@ -145,7 +158,7 @@ def _log(event: str, **fields: object) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Validador — SÓ nós filhos do DualSense físico 054c:0ce6 (BLUEZ-UHID-01)
+# Validador — SÓ nós filhos do DualSense físico 054c:0ce6/0df2 (BLUEZ-UHID-01)
 # ---------------------------------------------------------------------------
 
 
@@ -203,6 +216,27 @@ def _adapter_addresses(sys_class_bluetooth: str) -> set[str] | None:
     return addresses
 
 
+def _e_o_nosso_vpad(uevent: dict[str, str], hid_parent: str, bus: int) -> bool:
+    """True quando o pai HID é o vpad do daemon (D1/D2), qualquer que seja o PID.
+
+    STEAM-NO-FISICO-01 (24/09/2026): o Edge físico (0df2) passou a ser aceito,
+    e o 0df2 é também o PID do vpad — a recusa do vpad deixou de poder ser pelo
+    PID. Ela é pelo que só o vpad tem, as mesmas duas marcas do
+    `validate_physical_node`:
+
+    - D1: USB sob `/devices/virtual/misc/uhid/` — o cabo real nunca é uhid; o
+      vpad é BUS_USB criado por uhid;
+    - D2: o `phys` (`hefesto-vpad*`) ou o `uniq` (prefixo 02:fe) do vpad.
+    """
+    if "/misc/uhid/" in hid_parent and bus != BUS_BT:
+        return True
+    phys = uevent.get("HID_PHYS", "").strip().lower()
+    uniq = uevent.get("HID_UNIQ", "").strip().lower()
+    return phys.startswith(VPAD_PHYS_PREFIX) or uniq.replace(":", "").startswith(
+        VPAD_UNIQ_PREFIX
+    )
+
+
 def validate_physical_node(
     node: object,
     *,
@@ -212,7 +246,7 @@ def validate_physical_node(
     stat_fn: Callable[[str], Any] = os.stat,
     lstat_fn: Callable[[str], Any] = os.lstat,
 ) -> str | None:
-    """Basename canônico `hidrawN` se `node` é DualSense FÍSICO 054c:0ce6; senão None.
+    """Basename canônico `hidrawN` se `node` é DualSense FÍSICO 054c:0ce6/0df2; senão None.
 
     NUNCA abre o device. Barreiras, na ordem (1-3 e 5 herdadas do parkado; a 4
     é a decisão BLUEZ-UHID-01 do desenho de 2026-07-20):
@@ -221,9 +255,9 @@ def validate_physical_node(
       3. `(major, minor)` do nó casa o `/sys/class/hidraw/<base>/dev` (fecha
          "symlink/nó plantado apontando para outro device");
       4. identidade do pai HID imediato (uevent): `HID_ID` zero-preenchido
-         BUS:VVVV:PPPP com bus∈{0003,0005}, vendor 054C, product 0CE6 (0DF2 =
-         vpad, SEMPRE rejeitado ANTES do != geral; 057E Nintendo cai no
-         vendor) + regras da subárvore `/devices/virtual/misc/uhid/`:
+         BUS:VVVV:PPPP com bus∈{0003,0005}, vendor 054C, product 0CE6 ou 0DF2
+         (o Edge; o NOSSO vpad também é 0DF2 e cai no D1/D2; 057E Nintendo
+         cai no vendor) + regras da subárvore `/devices/virtual/misc/uhid/`:
            D1. USB real NUNCA é uhid — bus 0003 sob uhid = forjado;
            D2. identidade do NOSSO vpad (HID_PHYS `hefesto-vpad*` ou HID_UNIQ
                prefixo 02:fe) rejeita mesmo anunciando 0CE6;
@@ -272,12 +306,13 @@ def validate_physical_node(
     product = int(match.group(3), 16)
     if bus not in ACCEPTED_BUSES or vendor != PHYS_VENDOR:
         return None
-    if product == VPAD_PRODUCT:
-        # Explícito ANTES do != geral: o vpad 0df2 JAMAIS é escondido/aberto —
-        # é por ele que rumble/triggers/lightbar do jogo chegam.
+    if product not in PHYS_PRODUCTS:
         return None
-    if product != PHYS_PRODUCT:
-        return None
+    # STEAM-NO-FISICO-01: o 0df2 é o Edge físico E o nosso vpad. O vpad JAMAIS
+    # é escondido/aberto (é por ele que rumble/triggers/lightbar do jogo
+    # chegam), e ele é USB sob `/misc/uhid/` — o D1 logo abaixo o recusa, e o
+    # D2 é o cinto. O Edge físico pelo cabo tem pai USB real e nem entra no
+    # ramo de baixo; pelo rádio é bus 0005 com o MAC dele, como o standard.
     # ---- decisão BLUEZ-UHID-01: /devices/virtual/ NÃO é veredito ----
     if "/devices/virtual/" in hid_parent:
         if "/misc/uhid/" not in hid_parent:
@@ -381,31 +416,35 @@ class FsAclOps:
             return None
 
     def _sysfs_hid_identity_ok(self, base: str) -> bool:
-        """True sse o pai HID de `base` é DualSense 054c:0ce6, OU o uevent é
-        ILEGÍVEL. Cinto do S-4 contra minor-reuse no hide/restore (o fd O_PATH
-        do _pin não faz HIDIOCGRAWINFO): re-lê o HID_ID do uevent; identidade
-        legível e != DualSense ⇒ False (gone, nunca chmod/ACL num device
-        alheio). Ilegível ⇒ True: esconder/apagar o uevent exige root, e um
-        atacante não-root (a ameaça do minor-reuse) nunca chega a esse estado.
+        """True sse o pai HID de `base` é DualSense 054c:0ce6/0df2 FÍSICO, OU o
+        uevent é ILEGÍVEL. Cinto do S-4 contra minor-reuse no hide/restore (o fd
+        O_PATH do _pin não faz HIDIOCGRAWINFO): re-lê o HID_ID do uevent;
+        identidade legível e != DualSense ⇒ False (gone, nunca chmod/ACL num
+        device alheio). Ilegível ⇒ True: esconder/apagar o uevent exige root, e
+        um atacante não-root (a ameaça do minor-reuse) nunca chega a esse estado.
+
+        STEAM-NO-FISICO-01: desde que o Edge físico (0df2) entrou, o PID não
+        separa mais o físico do NOSSO vpad — os dois são 0003:054C:0DF2 pelo
+        cabo. O cinto então pergunta também o que só o vpad tem
+        (`_e_o_nosso_vpad`): um nome reciclado para um vpad NUNCA recebe chmod,
+        porque fechar o vpad é tirar o controle do jogo.
         """
         try:
             with open(
                 f"{self._sys_class_hidraw}/{base}/device/uevent", encoding="ascii"
             ) as fh:
-                text = fh.read()
+                uevent = _parse_uevent_text(fh.read())
         except OSError:
             return True
-        for linha in text.splitlines():
-            key, sep, val = linha.partition("=")
-            if key == "HID_ID" and sep:
-                match = _HID_ID_VALUE_RE.match(val.strip())
-                if match is None:
-                    return False
-                return (int(match.group(2), 16), int(match.group(3), 16)) == (
-                    PHYS_VENDOR,
-                    PHYS_PRODUCT,
-                )
-        return False  # sem HID_ID = não é o DualSense validado
+        match = _HID_ID_VALUE_RE.match(uevent.get("HID_ID", ""))
+        if match is None:
+            return False  # sem HID_ID (ou malformado) = não é o DualSense validado
+        if int(match.group(2), 16) != PHYS_VENDOR:
+            return False
+        if int(match.group(3), 16) not in PHYS_PRODUCTS:
+            return False
+        pai = os.path.realpath(f"{self._sys_class_hidraw}/{base}/device")
+        return not _e_o_nosso_vpad(uevent, pai, int(match.group(1), 16))
 
     def _pin(self, node: str, base: str) -> int | None:
         """O_PATH no nó + fstat cruzado com o sysfs. None = sumiu/reciclado (gone)."""
@@ -485,7 +524,7 @@ class FsAclOps:
             raise StaleNodeError(node)
         # S-4: identidade do PRÓPRIO fd, não só rdev==sysfs. Um nó reciclado
         # para outro device no mesmo minor passaria o check de rdev; o
-        # HIDIOCGRAWINFO prova que o fd É o DualSense 054c:0ce6 (à prova de
+        # HIDIOCGRAWINFO prova que o fd É um DualSense 054c:0ce6/0df2 (à prova de
         # corrida — lê do kernel, não do sysfs por nome). Falha do ioctl (ex.:
         # não é hidraw) ⇒ stale, fd fechado (nenhum caminho vaza fd).
         try:
@@ -496,6 +535,12 @@ class FsAclOps:
             os.close(fd)
             raise StaleNodeError(node) from None
         if not _hidraw_devinfo_identity_ok(vendor, product):
+            os.close(fd)
+            raise StaleNodeError(node)
+        # STEAM-NO-FISICO-01: o devinfo não separa o Edge físico do nosso vpad
+        # (os dois são 0003:054c:0df2 pelo cabo). O mesmo cinto do hide/restore
+        # pergunta ao sysfs o que só o vpad tem — nunca servir o vpad como físico.
+        if not self._sysfs_hid_identity_ok(base):
             os.close(fd)
             raise StaleNodeError(node)
         return fd
