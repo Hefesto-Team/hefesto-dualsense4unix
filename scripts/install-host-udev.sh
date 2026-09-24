@@ -475,7 +475,7 @@ _build_install_cmd() {
         # dois conjuntos de `/sys/module/hid_nintendo/parameters/*` escritos).
         #
         # O que quebra sem estas três linhas, no caminho de PACOTE: o
-        # uninstall.sh:1390-1392 devolve os três a 0 de propósito; a reinstalação
+        # uninstall.sh:1393-1395 devolve os três a 0 de propósito; a reinstalação
         # por pacote recoloca a conf do modprobe.d (que os traz), mas a conf só
         # é lida quando o MÓDULO CARREGA — e recarregar é proibido aqui
         # (derrubaria Pro/8BitDo em uso). Resultado: o 8BitDo Pro clone no cabo
@@ -768,7 +768,7 @@ if [[ -n "${RTW88_DKMS_SRC}" && -n "${DKMS_LIB_SH}" ]]; then
         # ÚNICO param desta casa sem conf de modprobe.d: `ls assets/modprobe.d/`
         # traz btusb, hid-nintendo e hid-playstation, e nenhum rtw88. Ou seja, o
         # valor só vem do default compilado (Y) ou de uma escrita a quente.
-        # O uninstall.sh:1429 o devolve a 0 de propósito; o install.sh:821 o
+        # O uninstall.sh:1432 o devolve a 0 de propósito; o install.sh:821 o
         # rearma; este script — o caminho de PACOTE, que instala o MESMO módulo
         # logo acima — nunca o rearmava. GRAU: MEDIDO (comparação dos dois
         # conjuntos de params escritos a quente).
