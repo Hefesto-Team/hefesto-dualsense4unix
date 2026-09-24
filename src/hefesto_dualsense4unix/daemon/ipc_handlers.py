@@ -3719,10 +3719,10 @@ class IpcHandlersMixin:
             última cor mandada aplicar (`resolved_led_for`).
           * ``"desconhecida"`` — nada conhecido (rgb None; NUNCA rotular de
             "apagada" — o LED pode estar brilhando o azul-kernel agora).
-          Modo Nativo: a matriz NÃO muda — o jogo escreve por hidraw (não
-          toca a classe LED), então a fonte devolve a ÚLTIMA COR CONHECIDA; o
-          campo global ``native_mode`` (já no payload) é o aviso da GUI ("o
-          jogo é dono do LED") — nenhuma flag nova por controle.
+          Modo Nativo: a matriz NÃO muda, e a tela também não — desde a
+          `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO` a barra é do
+          Hefesto no Nativo, e o «o jogo é dono do LED» saiu da tela em
+          24/09/2026 (`D-2409-NO-NATIVO-A-TELA-MOSTRA-A-COR`).
 
         - ``lightbar_disputada`` (ESCRITOR-CRU-01): ``True`` quando outro
           processo — hoje só a Steam é reconhecida — segura o ``hidraw``

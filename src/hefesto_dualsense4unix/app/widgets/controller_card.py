@@ -1180,17 +1180,16 @@ def rotulo_lightbar(
 
     Regras (STATUS-03 + refutação 1 do sprint — o dono da escrita decide):
 
-    * ``native_mode`` global → "em Nativo o jogo é dono do LED"; o accent usa
-      a última cor conhecida (ou o neutro, se nenhuma). O jogo escreve por
-      hidraw e o daemon não pisa no LED — o card avisa em vez de mentir.
+    * O Modo Nativo não tem ramo desde 24/09/2026 (`D-2409-NO-NATIVO-A-TELA-
+      MOSTRA-A-COR`): a barra é do Hefesto no Nativo também, e «Em Nativo o
+      jogo é dono do LED» virou fato errado; o Nativo cai nas regras abaixo.
     * ``lightbar_disputada`` (ESCRITOR-CRU-01) → "a Steam tem este controle
-      aberto"; o accent segue a última cor NOSSA. Vem logo depois do
-      Nativo e antes de tudo o mais porque é um aviso sobre a CONFIANÇA no
-      valor, não sobre o valor: com a Steam segurando o hidraw, o que a
-      classe LED devolve é o que o Hefesto PEDIU — a madrugada de 16/08 leu
-      ``[0 255 0]`` com a barra apagada e ``[0 255 0]`` com ela verde. Dizer
-      "apagada" ou pintar a bolinha de verde sem ressalva seria, nos dois
-      casos, afirmar o que ninguém mediu.
+      aberto"; o accent segue a última cor NOSSA. Vem antes de tudo o mais
+      porque é um aviso sobre a CONFIANÇA no valor, não sobre o valor: com a
+      Steam segurando o hidraw, o que a classe LED devolve é o que o Hefesto
+      PEDIU — a madrugada de 16/08 leu ``[0 255 0]`` com a barra apagada e
+      ``[0 255 0]`` com ela verde. Dizer "apagada" ou pintar a bolinha de
+      verde sem ressalva seria, nos dois casos, afirmar o que ninguém mediu.
 
       LUZ-CEGA-01/F2 (22/08/2026) — a frase era *"a Steam também escreve
       nesta barra"*, e isso é justamente o que o campo NÃO mede. O booleano
@@ -1210,8 +1209,6 @@ def rotulo_lightbar(
     O chamador ajusta com ``ensure_min_contrast`` antes de pintar traço.
     """
     rgb = _rgb3(entry.get("lightbar_rgb"))
-    if bool(state_global.get("native_mode")):
-        return ("Em Nativo o jogo é dono do LED", rgb)
     if bool(entry.get("lightbar_disputada")):
         return (ROTULO_LIGHTBAR_SEGURADA, rgb)
     fonte = str(entry.get("lightbar_source") or "desconhecida")
@@ -1276,16 +1273,16 @@ def texto_motion(entry: dict[str, Any], state_global: dict[str, Any]) -> str | N
 
     Nos dois casos a frase EXPLICA; nos demais o silêncio continua.
 
-    **A PEÇA QUE MIRA NÃO MANDA O GIRO COMO GIROSCÓPIO** — 24/09/2026,
-    A-MIRA-POR-MOVIMENTO-NA-TELA-02. Com a Mira Virtual acesa (o bloco `mira`
-    do `state_full`, `ipc_handlers._merge_mira`), o filtro do report tira o
-    giroscópio da janela daquele controle (`virtual_motion.REGISTRO.filtrar`):
-    o giro chega ao jogo pelo analógico direito, e o `motion_streaming` do vpad
-    continua ligado pelo acelerômetro. «Fluindo para o jogo» seria a tela
-    afirmando o que não acontece, ao lado da dica do chip Giroscópio que ela
-    aprovou (`D-2409-A-DICA-DO-GIROSCOPIO-MUDA-COM-A-MIRA`). A linha some,
-    como some em todo caso sem frase; o Nativo e a máscara Xbox vêm antes
-    porque as duas frases continuam verdadeiras com a Mira acesa.
+    **O GIRO QUE NÃO VAI COMO GIROSCÓPIO NÃO FLUI** — 24/09/2026. Com a Mira
+    Virtual acesa (A-MIRA-POR-MOVIMENTO-NA-TELA-02, o bloco `mira`) ou com o
+    chip Giroscópio desligado por ela (A-MIRA-NA-NAVEGACAO-01, o `False` de
+    `sensores.giroscopio_ligado`), o filtro do report tira o giroscópio da
+    janela daquele controle (`virtual_motion.REGISTRO.filtrar`), e o
+    `motion_streaming` segue ligado pelo acelerômetro: «fluindo para o jogo»
+    seria fato errado, e a linha some. Sem o bloco, ninguém leu, e a linha
+    segue a telemetria. O Nativo e a máscara Xbox vêm antes: as duas frases
+    continuam verdadeiras com a Mira acesa e com o Giroscópio desligado (no
+    Nativo o jogo lê o `hidraw` do físico, e o interruptor não o alcança).
     """
     if bool(state_global.get("native_mode")):
         return f"Giroscópio: {_FRASE_NATIVO}"
@@ -1293,6 +1290,9 @@ def texto_motion(entry: dict[str, Any], state_global: dict[str, Any]) -> str | N
         return f"Giroscópio: {_FRASE_MASCARA_XBOX['giroscopio']}"
     mira = entry.get("mira")
     if isinstance(mira, dict) and mira.get("ligada") is True:
+        return None
+    sensores = entry.get("sensores")
+    if isinstance(sensores, dict) and sensores.get("giroscopio_ligado") is False:
         return None
     rumble_ff = state_global.get("rumble_ff")
     per_vpad = rumble_ff.get("per_vpad") if isinstance(rumble_ff, dict) else None

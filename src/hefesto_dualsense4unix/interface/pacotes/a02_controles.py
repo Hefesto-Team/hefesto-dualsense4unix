@@ -874,12 +874,15 @@ CLICADO = "[%s]"
 #
 #   o motor DIZ                        base    o campo dizia   e devia dizer
 #   (sem rótulo) — conhecida e acesa   a cor   #0000FF         #0000FF
-#   Em Nativo o jogo é dono do LED     CRUA    #000000         não sei
 #   A Steam tem este controle aberto   CRUA    #000000         não sei
 #   Lightbar: cor desconhecida         None    —               não sei
 #   Lightbar: apagada                  None    —               apagada
 #
-# NOS DOIS DO MEIO A BASE É O `rgb` CRU (linhas 1183 e 1185 do motor), e com a
+# (Havia uma quinta linha, «Em Nativo o jogo é dono do LED», e ela saiu do
+# motor em 24/09/2026 — `D-2409-NO-NATIVO-A-TELA-MOSTRA-A-COR`: no Nativo a
+# barra também é do Hefesto, e o Nativo cai nas mesmas quatro.)
+#
+# NA DA STEAM A BASE É O `rgb` CRU (`controller_card.rotulo_lightbar`), e com a
 # fonte desconhecida esse cru é `[0,0,0]` — exatamente a mentira que o motor
 # nomeia: *"o 0,0,0 do sysfs sem escrita nossa pode ser o azul-kernel brilhando
 # neste exato momento"*. A GTK mostra a cor COM a ressalva ao lado; aqui a
@@ -955,29 +958,27 @@ def _cor_da_barra(rotulo: str | None, base: tuple[int, ...] | None) -> str:
 # ---------------------------------------------------------------------------
 # O TRAVESSÃO DA BARRA DE LUZ VIRA PALAVRA — decisão [02], 04/09/2026
 # ---------------------------------------------------------------------------
-# ATÉ HOJE OS TRÊS "NÃO SEI" DO `luz_hex` COLAPSAVAM NUM TRAVESSÃO SÓ, e os
-# três dizem coisas diferentes: em Modo Nativo o LED é do JOGO, com a Steam
-# aberta o valor é o que nós PEDIMOS (não o que a barra emite), e a cor
-# desconhecida é o sysfs sem escrita nossa. Um `—` para os três apaga a única
-# pergunta que a pessoa faz olhando ali: *"por que não vejo a cor?"*.
+# ATÉ HOJE OS "NÃO SEI" DO `luz_hex` COLAPSAVAM NUM TRAVESSÃO SÓ, e eles
+# dizem coisas diferentes: com a Steam aberta o valor é o que nós PEDIMOS (não
+# o que a barra emite), e a cor desconhecida é o sysfs sem escrita nossa. Um
+# `—` para todos apaga a única pergunta que a pessoa faz olhando ali: *"por que
+# não vejo a cor?"*.
 #
 # A DECISÃO DELA: **palavra curta no lugar do travessão, frase inteira no
-# hover** — as quatro palavras são dela, e estão no
+# hover** — as palavras são dela, e estão no
 # `2026-09-04-O-PO-DECIDE-as-54-e-os-sete-conflitos.md`, §2, `02-controles`
-# [02]: `Jogo` · `Steam` · `Não sei` · `Apagada`.
+# [02]: `Jogo` · `Steam` · `Não sei` · `Apagada` — o `Jogo`, do Modo Nativo,
+# saiu em 24/09/2026 com a `D-2409-NO-NATIVO-A-TELA-MOSTRA-A-COR`.
 #
 # A FRASE INTEIRA NÃO CABE NO CAMPO, e isso está MEDIDO (ver o comentário do
 # `luz-hex` no pintor): a linha que contém o `<span class="de-quem">` mede
 # 148px, e "Lightbar: apagada" ocupa 86,7px QUEBRANDO a linha. Palavra cabe,
 # frase não — e é por isso que a frase mora no `title`, que não paga pixel.
 #
-# OS QUATRO RÓTULOS SÃO PERGUNTADOS AO MOTOR, NENHUM DIGITADO. É a mesma
+# OS RÓTULOS SÃO PERGUNTADOS AO MOTOR, NENHUM DIGITADO. É a mesma
 # disciplina do `ROTULO_DA_LUZ_APAGADA` logo acima, e a mesma razão: no dia em
 # que `rotulo_lightbar` trocar uma frase, a tabela abaixo deixa de casar e a
 # palavra volta a ser o travessão — barulhento, e não calado.
-
-#: "Em Nativo o jogo é dono do LED" — a entrada mínima que só este ramo atende.
-ROTULO_DA_LUZ_EM_NATIVO = rotulo_lightbar({}, {"native_mode": True})[0]
 
 #: "A Steam tem este controle aberto" — `lightbar_disputada`, sem Nativo.
 ROTULO_DA_LUZ_SEGURADA = rotulo_lightbar({"lightbar_disputada": True}, {})[0]
@@ -991,7 +992,6 @@ ROTULO_DA_LUZ_DESCONHECIDA = rotulo_lightbar({}, {})[0]
 #: fita do topo já usa para um controle sem nome lido. Duas grafias de "não sei"
 #: na mesma tela seriam duas traduções do mesmo fato — o que esta casa persegue.
 PALAVRA_DA_LUZ: dict[str | None, str] = {
-    ROTULO_DA_LUZ_EM_NATIVO: "Jogo",
     ROTULO_DA_LUZ_SEGURADA: "Steam",
     ROTULO_DA_LUZ_DESCONHECIDA: NOME_SEM_LEITURA,
     ROTULO_DA_LUZ_APAGADA: "Apagada",
@@ -1012,14 +1012,14 @@ def luz_palavra(rotulo: str | None, base: tuple[int, ...] | None) -> str:
 
     A cor conhecida continua sendo o hexadecimal — ela é a informação, e
     trocá-la por palavra perderia o que a pessoa foi ali ver. O que muda são os
-    três "não sei" e a "apagada", que dividiam um travessão só.
+    "não sei" e a "apagada", que dividiam um travessão só.
 
     RÓTULO QUE O MOTOR PASSE A DEVOLVER E ESTA TABELA NÃO CONHEÇA cai no
     travessão de antes, e não numa palavra chutada: o `luz_hex` é o dono do
     desfecho, e esta função só traduz o que ele já decidiu ser "não sei".
 
     **A TABELA VEM ANTES DO `luz_hex`, e a ordem foi medida.** A "apagada" é o
-    único dos quatro estados em que o `luz_hex` devolve um CÓDIGO
+    único dos estados com palavra em que o `luz_hex` devolve um CÓDIGO
     (`HEX_DA_LUZ_APAGADA`, o preto que uma barra sem corrente emite) — decidir
     pelo `#` deixaria justamente ela sem a palavra dela, e ela é uma das quatro
     que o PO nomeou. O preto continua indo para o RETÂNGULO, que é onde ele
@@ -1034,7 +1034,7 @@ def luz_porque(rotulo: str | None, base: tuple[int, ...] | None) -> str:
     """A frase inteira, para o `title` da linha da Barra de luz.
 
     Com a cor conhecida ela é a explicação de quem escolhe a cor
-    (:data:`DICA_DA_LUZ`); nos outros quatro estados é a frase que o MOTOR
+    (:data:`DICA_DA_LUZ`); nos outros estados é a frase que o MOTOR
     devolve, palavra por palavra — é ela que diz por que o código não aparece.
 
     O `base` entra sem ser lido de propósito: a assinatura é a mesma do
@@ -2789,7 +2789,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # `# type: ignore[arg-type]` na chamada). Sem esta guarda, a primeira
         # aba a ler o estado GLOBAL derruba a régua de outra. O dublê é que
         # precisa crescer; enquanto ele não cresce, `{}` é o que
-        # `rotulo_lightbar` já trata (`state_global.get("native_mode")`).
+        # `rotulo_lightbar` já trata.
         rotulo_da_luz, base_da_luz = rotulo_lightbar(c, getattr(ctx, "state", None) or {})
         casa = next((m for m in ctx.mesa if str(m.get("uniq") or "") == uniq), {})
 

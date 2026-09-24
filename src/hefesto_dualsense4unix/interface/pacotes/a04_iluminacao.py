@@ -760,7 +760,7 @@ TIRA_APAGADA = "background:var(--panel);color:transparent;opacity:1"
 #:
 #:     acesa     a barra está acesa e a cor é conhecida     tira na cor, com halo
 #:     apagada   fonte NOSSA, e ela está desligada          tira lisa e vazia
-#:     incerta   Nativo · Steam segurando · cor desconhecida  tira TRACEJADA
+#:     incerta   Steam segurando · cor desconhecida  tira TRACEJADA
 #:
 #: O tracejado é CONTORNO, não cor — de propósito. Nesta aba tudo o que é CHEIO
 #: de cor é LUZ (as tiras, as lâmpadas, os oito tons da guia); uma cor nova para
@@ -785,17 +785,20 @@ def estado_da_tira(recado: str | None) -> str:
     O DISCRIMINADOR É O PRIMEIRO RETORNO de
     `app/widgets/controller_card.rotulo_lightbar`, e não o segundo: a docstring
     dele diz que a cor devolvida é *"a BASE do accent"*, e ela vem PREENCHIDA
-    nos dois ramos em que o próprio motor avisa que a cor pode não estar no
-    plástico (Nativo e Steam). Ler a base como "há luz?" colapsa dois estados —
-    é o mesmo defeito que a `a02_controles` mediu com sonda em 02/09/2026.
+    no ramo em que o próprio motor avisa que a cor pode não estar no plástico
+    (a Steam). Ler a base como "há luz?" colapsa dois estados — é o mesmo
+    defeito que a `a02_controles` mediu com sonda em 02/09/2026.
 
-    ONDE CAI CADA UM DOS CINCO RAMOS do motor (`controller_card.py:1181-1191`)::
+    ONDE CAI CADA UM DOS QUATRO RAMOS do motor (`controller_card.rotulo_lightbar`)::
 
         (None, rgb)                        cor conhecida e acesa      → acesa
         "Lightbar: apagada"                fonte NOSSA, desligada     → apagada
-        "Em Nativo o jogo é dono do LED"   o jogo escreve por hidraw  → incerta
         "A Steam tem este controle aberto" quem segura o `fd`         → incerta
         "Lightbar: cor desconhecida"       sem fonte, ou sem rgb      → incerta
+
+    O MODO NATIVO NÃO É RAMO desde 24/09/2026
+    (`D-2409-NO-NATIVO-A-TELA-MOSTRA-A-COR`): no Nativo a barra é do Hefesto, e
+    a tira desenha a cor como em todo modo, em vez do tracejado.
 
     A FRASE DA APAGADA NÃO SE DIGITA — ela se PERGUNTA. Das quatro que
     `rotulo_lightbar` devolve só uma é constante exportada
@@ -1679,10 +1682,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 
     # A FRASE DA DISPUTA É DO MOTOR, e não se reescreve.
     # `app/widgets/controller_card.rotulo_lightbar` é a mesma que os cards da
-    # GUI estável já usam, e ela sabe QUATRO estados onde este pacote sabia um:
-    # Nativo (o jogo é dono do LED), a Steam segurando o `fd`, cor desconhecida
-    # e apagada. O texto que estava aqui era a segunda verdade — e ainda dizia
-    # mais do que o campo mede: `lightbar_disputada` sai de quem SEGURA o
+    # GUI estável já usam, e ela sabe TRÊS estados onde este pacote sabia um:
+    # a Steam segurando o `fd`, cor desconhecida e apagada (o Nativo deixou de
+    # ser estado em 24/09/2026 — a barra é do Hefesto nele também). O texto
+    # que estava aqui era a segunda verdade — e ainda dizia mais do que o
+    # campo mede: `lightbar_disputada` sai de quem SEGURA o
     # `fd`, não de quem escreve (426 reports contra 1, medido em 22/08).
     #
     # E ELA DECIDE MAIS DO QUE A FRASE: o SEGUNDO valor de retorno é a cor BASE,
@@ -1748,21 +1752,21 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         recado, base = rotulo_lightbar(c, ctx.state)
         #: A TIRA PERGUNTA OUTRA COISA, e o segundo retorno não responde a ela.
         #: `rotulo_lightbar` devolve `(ressalva, COR BASE DO ACCENT)`, e a base
-        #: é a ÚLTIMA COR CONHECIDA — devolvida também nos dois estados em que
-        #: o próprio motor avisa que ela pode não estar no plástico:
+        #: é a ÚLTIMA COR CONHECIDA — devolvida também no estado em que o
+        #: próprio motor avisa que ela pode não estar no plástico:
         #:
-        #:     native_mode           → ("Em Nativo o jogo é dono do LED", rgb)
         #:     lightbar_disputada    → ("a Steam tem este controle aberto", rgb)
         #:
-        #: Nos DOIS a base volta preenchida **com `lightbar_on` falso**, porque
-        #: a pergunta que ela responde é *"de que cor pinto o traço do card?"* e
+        #: Ali a base volta preenchida **com `lightbar_on` falso**, porque a
+        #: pergunta que ela responde é *"de que cor pinto o traço do card?"* e
         #: não *"a barra está acesa?"*. Este pacote lia a base como se fosse a
-        #: segunda pergunta — e a tira acendia sob Steam ou sob Nativo com a
-        #: barra apagada. Medido em 02/09/2026 com o dublê de estado.
+        #: segunda pergunta — e a tira acendia sob Steam com a barra apagada.
+        #: Medido em 02/09/2026 com o dublê de estado (e sob o Nativo também,
+        #: que era ramo até 24/09/2026).
         #:
         #: QUEM RESPONDE A PERGUNTA DA TIRA É O PRIMEIRO RETORNO: `rotulo_lightbar`
         #: devolve `None` no rótulo em UM único ramo — o último, *"cor conhecida
-        #: e acesa"*. Nos outros quatro há ressalva, e ressalva é exatamente
+        #: e acesa"*. Nos outros três há ressalva, e ressalva é exatamente
         #: "não afirme". É a regra dela de hoje, aplicada ao desenho: *"se não
         #: tá mostrando agora, não tem info pra mostrar no produto"*.
         acesa = base if recado is None else None
@@ -1782,7 +1786,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         #: publica: ela já vem PÓS-ESCALA de brilho por contrato (D8), então o
         #: desenho mostra a cor JÁ escalada sem esta aba refazer a conta — que é o
         #: mesmo que a prévia da GTK pinta (`_on_lightbar_preview_draw`).
-        #: `None` nos quatro estados de ressalva, e aí a barra APAGA.
+        #: `None` nos estados de ressalva, e aí a barra APAGA.
         if casa.get("pref"):
             luz_do_desenho[str(casa["pref"])] = (_hex(acesa) if acesa else "", n)
         colunas[uniq] = {
@@ -2906,8 +2910,8 @@ def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     DUAS escritas ao rádio. `_so_abriu_o_seletor` já era exatamente esse guarda,
     do outro lado do mesmo problema.
 
-    SEM COR CONHECIDA, GUARDA E DIZ. Nos quatro estados de ressalva do motor
-    (Nativo, a Steam segurando o `fd`, cor desconhecida) não há cor a reescalar,
+    SEM COR CONHECIDA, GUARDA E DIZ. Nos estados de ressalva do motor
+    (a Steam segurando o `fd`, cor desconhecida) não há cor a reescalar,
     e mandar preto APAGARIA a barra por um arraste de brilho. O número vai para
     o disco — que é o que ela pediu — e o cartão diz que a barra não mudou
     agora. Entre a frase no cartão e o silêncio, o silêncio é a mentira.
@@ -2973,8 +2977,8 @@ def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     #      justificar a falha"  (pergunta 04-Q4)
     #
     # Até hoje esta linha era `if recado is not None or not pedida: return
-    # {"recado": …}`: com o motor sem afirmar a cor — Modo Nativo, a Steam com o
-    # `fd`, ou cor desconhecida, que é o estado de PARTIDA de toda sessão antes
+    # {"recado": …}`: com o motor sem afirmar a cor — a Steam com o `fd`, ou
+    # cor desconhecida, que é o estado de PARTIDA de toda sessão antes
     # de o produto escrever a primeira cor — o trilho gravava o percentual no
     # disco e devolvia a desculpa. O trilho virava o botão que aceita o toque e
     # não age, que é a família de defeito que este gesto nasceu para curar.
@@ -3023,8 +3027,8 @@ def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
     é quem inverte a escala, e é o mesmo caminho que a caixa `#RRGGBB` usa.
 
     A QUEDA É A COR DO SLOT, e ela é a resposta CERTA e não um remendo: nos
-    quatro estados em que o motor não afirma cor (Nativo, a Steam com o `fd`,
-    cor desconhecida) o que o automático estava dando àquele controle era
+    estados em que o motor não afirma cor (a Steam com o `fd`, cor
+    desconhecida) o que o automático estava dando àquele controle era
     exatamente `player_slot_color(numero)` — é essa a paleta que ele governa. Um
     preto aqui apagaria a barra dela por um clique num interruptor; um branco
     inventaria uma cor que ninguém escolheu.

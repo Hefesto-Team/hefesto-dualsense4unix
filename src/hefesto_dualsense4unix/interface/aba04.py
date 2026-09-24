@@ -1080,7 +1080,11 @@ CSS = """
 
        acesa     a cor conhecida, com halo        `background:{tinta}`
        apagada   fonte NOSSA, barra desligada     `TIRA_APAGADA` — lisa e vazia
-       incerta   Nativo · Steam · cor ignorada    ESTA REGRA — tracejada
+       incerta   Steam · cor ignorada             ESTA REGRA — tracejada
+
+     O NATIVO SAIU DA LINHA DE BAIXO em 24/09/2026
+     (`D-2409-NO-NATIVO-A-TELA-MOSTRA-A-COR`): no Nativo a barra é do
+     Hefesto, e a tira desenha a cor como em todo modo.
 
      CONTORNO, E NUNCA COR NOVA — ordem dela. Nesta aba tudo o que é CHEIO de
      cor é LUZ (as duas tiras, as cinco lâmpadas, os oito tons da guia): uma

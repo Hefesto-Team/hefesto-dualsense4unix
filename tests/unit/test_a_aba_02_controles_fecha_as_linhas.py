@@ -220,14 +220,17 @@ def test_o_selo_chega_ao_card(monkeypatch: pytest.MonkeyPatch) -> None:
 # ===========================================================================
 # 2. A PALAVRA DA BARRA DE LUZ — decisão [02]
 # ===========================================================================
-#: OS QUATRO ESTADOS, com a ENTRADA que só aquele ramo do motor atende. A
+#: OS TRÊS ESTADOS, com a ENTRADA que só aquele ramo do motor atende. A
 #: palavra sai da tabela do pacote (que por sua vez pergunta ao motor); o que
 #: esta lista digita é só a entrada.
+#:
+#: NOTA DATADA — 24/09/2026 (A-MIRA-NA-NAVEGACAO-01): eram QUATRO, e o do Modo
+#: Nativo («Jogo») saiu com a `D-2409-NO-NATIVO-A-TELA-MOSTRA-A-COR` — no
+#: Nativo a barra é do Hefesto, e a tela mostra a cor como em todo modo. A
+#: régua que prova a cor no Nativo é `test_a_mira_na_navegacao.py`, seção 6.
 ESTADOS_DA_LUZ = [
     ({"lightbar_rgb": [0, 0, 0], "lightbar_source": "desconhecida"}, {},
      a02.ROTULO_DA_LUZ_DESCONHECIDA),
-    ({"lightbar_rgb": [0, 0, 0], "lightbar_source": "desconhecida"},
-     {"native_mode": True}, a02.ROTULO_DA_LUZ_EM_NATIVO),
     ({"lightbar_rgb": [0, 0, 0], "lightbar_source": "desconhecida",
       "lightbar_disputada": True}, {}, a02.ROTULO_DA_LUZ_SEGURADA),
     ({"lightbar_rgb": [0, 0, 255], "lightbar_source": "sysfs",
@@ -235,13 +238,13 @@ ESTADOS_DA_LUZ = [
 ]
 
 
-def test_os_quatro_rotulos_sao_perguntados_ao_motor_e_diferentes() -> None:
-    """As quatro chaves da tabela saem de `rotulo_lightbar`, e são quatro.
+def test_os_rotulos_sao_perguntados_ao_motor_e_diferentes() -> None:
+    """As três chaves da tabela saem de `rotulo_lightbar`, e são três.
 
     ELA É O QUE IMPEDE A TABELA DE ENVELHECER CALADA: no dia em que o motor
     trocar uma frase, a chave deixa de casar e a palavra volta a ser o
-    travessão. Esta régua reprova ANTES disso, porque cobra que as quatro
-    entradas mínimas produzam quatro rótulos distintos e que os quatro estejam
+    travessão. Esta régua reprova ANTES disso, porque cobra que as três
+    entradas mínimas produzam três rótulos distintos e que os três estejam
     na tabela.
 
     MORDE: digite `"Lightbar: apagada"` na tabela do pacote em vez de perguntar,
@@ -249,7 +252,8 @@ def test_os_quatro_rotulos_sao_perguntados_ao_motor_e_diferentes() -> None:
     """
     lidos = {rotulo_lightbar(entry, estado)[0]
              for entry, estado, _ in ESTADOS_DA_LUZ}
-    assert len(lidos) == 4, f"o motor devolveu {len(lidos)} rótulo(s): {lidos}"
+    assert len(lidos) == len(ESTADOS_DA_LUZ), (
+        f"o motor devolveu {len(lidos)} rótulo(s): {lidos}")
     assert lidos == set(a02.PALAVRA_DA_LUZ), (
         "a tabela de palavras e os rótulos do motor divergiram:\n"
         f"  do motor : {sorted(lidos)}\n"
@@ -260,9 +264,9 @@ def test_os_quatro_rotulos_sao_perguntados_ao_motor_e_diferentes() -> None:
 def test_a_palavra_curta_substitui_o_travessao(
     entry: dict[str, Any], estado: dict[str, Any], rotulo: str
 ) -> None:
-    """Cada um dos quatro estados mostra a SUA palavra — não um `—` para todos.
+    """Cada um dos três estados mostra a SUA palavra — não um `—` para todos.
 
-    MORDE: devolva `luz_palavra` a `luz_hex` e os quatro casos reprovam com o
+    MORDE: devolva `luz_palavra` a `luz_hex` e os três casos reprovam com o
     travessão, que é o que a tela mostrava até 04/09.
     """
     campos = _card(entry, state=estado)
@@ -287,7 +291,7 @@ def test_a_frase_inteira_vai_para_o_hover(
     É a outra metade da decisão [02] — *"frase inteira no hover"* —, e sem ela
     a palavra curta seria uma perda de informação em vez de uma tradução.
 
-    MORDE: devolva `luz_porque` a `""` e os quatro casos reprovam.
+    MORDE: devolva `luz_porque` a `""` e os três casos reprovam.
     """
     assert _card(entry, state=estado)["luz-porque"] == rotulo
 

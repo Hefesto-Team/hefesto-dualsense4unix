@@ -21,6 +21,7 @@ Cada régua diz a MORDIDA: o que arrancar para vê-la reprovar.
 from __future__ import annotations
 
 import asyncio
+import sys
 from collections.abc import Iterator
 from pathlib import Path
 from types import SimpleNamespace
@@ -49,6 +50,14 @@ from hefesto_dualsense4unix.profiles.schema import (
     ProfileMovimentoConfig,
 )
 from hefesto_dualsense4unix.testing import FakeController
+
+#: A RAIZ DA ÁRVORE, e a pasta da interface no caminho de import: os pacotes das
+#: abas (`pacotes.a02_controles`, `pacotes.a04_iluminacao`) se importam pelo
+#: nome curto, como o piloto os importa.
+_RAIZ = Path(__file__).resolve().parents[2]
+_INTERFACE = str(_RAIZ / "src" / "hefesto_dualsense4unix" / "interface")
+if _INTERFACE not in sys.path:
+    sys.path.insert(0, _INTERFACE)
 
 #: Os quatro controles, na grafia do backend e do hub (doze hex).
 _P = {n: f"aabbcc00000{n}" for n in (1, 2, 3, 4)}
@@ -563,3 +572,94 @@ def test_sem_o_mouse_emulado_o_tique_da_navegacao_nao_drena(
     _tique(nav)
     assert all(leitor.drenagens == 0 for leitor in nav.mesa.movimento.values())
 
+
+
+# ---------------------------------------------------------------------------
+# 5. O «FLUINDO» COM O GIROSCÓPIO DESLIGADO — `controller_card.texto_motion`
+# ---------------------------------------------------------------------------
+
+
+def _com_espelho(jogador: int) -> dict[str, Any]:
+    return {"rumble_ff": {"per_vpad": [
+        {"player": jogador, "motion_streaming": True, "motion_hz": 250.0}]}}
+
+
+@pytest.mark.parametrize(("entrada", "jogador"), [
+    ({"is_primary": True}, 1),       # o primário, fora do co-op
+    ({"player": 3}, 3),              # um secundário do co-op
+])
+def test_o_giroscopio_desligado_nao_diz_que_flui(entrada: dict[str, Any], jogador: int) -> None:
+    """Com o chip Giroscópio desligado, o filtro tira o giro da janela do
+    report daquele controle, e o `motion_streaming` segue pelo acelerômetro:
+    «fluindo para o jogo» seria fato errado. Só o `False` DITO pelo daemon
+    apaga a linha — sem o bloco `sensores`, ninguém leu.
+
+    MORDIDA: tire a guarda `giroscopio_ligado is False` de `texto_motion` e os
+    dois casos reprovam.
+    """
+    from hefesto_dualsense4unix.app.widgets.controller_card import texto_motion
+
+    estado = _com_espelho(jogador)
+    ligado = {**entrada, "sensores": {"giroscopio_ligado": True}}
+    desligado = {**entrada, "sensores": {"giroscopio_ligado": False}}
+    assert texto_motion(ligado, estado) == "Giroscópio: fluindo para o jogo (~250 Hz)"
+    assert texto_motion(entrada, estado) == "Giroscópio: fluindo para o jogo (~250 Hz)"
+    assert texto_motion(desligado, estado) is None
+
+
+def test_o_giroscopio_desligado_apaga_a_linha_do_cartao() -> None:
+    """Pelo pacote da aba 02, que é quem leva a linha à tela: o vazio a esconde."""
+    import pacotes
+    import pacotes.a02_controles as a02
+
+    dele = {"uniq": "aa:bb:cc:00:00:02", "transport": "bt", "connected": True,
+            "is_primary": True, "inputs": {}, "audio": {}, "speaker": {},
+            "sensores": {"giroscopio_ligado": False}}
+    ctx = pacotes.Contexto(state=_com_espelho(1), mesa=[], conectados=[dele], estados={})
+    cards = a02.pacote(ctx)["cards"]
+    assert [c["giro-no-jogo"] for c in cards.values()] == [""], cards
+
+
+# ---------------------------------------------------------------------------
+# 6. NO MODO NATIVO A TELA MOSTRA A COR — `D-2409-NO-NATIVO-A-TELA-MOSTRA-A-COR`
+# ---------------------------------------------------------------------------
+#: A barra acesa numa cor que o Hefesto escreveu (fonte NOSSA), nos dois
+#: transportes. É o estado do Nativo depois da `D-2309-NO-NATIVO-A-LUZ-E-O-
+#: NUMERO-SAO-DO-HEFESTO`: a vigia do sequestro a reafirma em até 1 s.
+_ACESA = {"lightbar_rgb": [0, 0, 255], "lightbar_on": True, "lightbar_source": "sysfs"}
+
+
+@pytest.mark.parametrize("transporte", ["usb", "bluetooth"])
+def test_no_nativo_a_aba_02_mostra_a_cor_e_nao_jogo(transporte: str) -> None:
+    """A aba 02 mostrava «Jogo» no lugar da cor, e o hover dizia «Em Nativo o
+    jogo é dono do LED». A cor aparece como em qualquer modo, sem palavra nova.
+
+    MORDIDA: devolva o ramo `native_mode` ao `controller_card.rotulo_lightbar`
+    e os dois casos reprovam.
+    """
+    import pacotes
+    import pacotes.a02_controles as a02
+
+    dele = {"uniq": "aa:bb:cc:00:00:03", "transport": transporte, "connected": True,
+            "inputs": {}, "audio": {}, "speaker": {}, **_ACESA}
+    ctx = pacotes.Contexto(state={"native_mode": True}, mesa=[], conectados=[dele],
+                           estados={})
+    campos = next(iter(a02.pacote(ctx)["cards"].values()))
+    assert campos["luz-hex"] == "#0000FF", campos["luz-hex"]
+    assert campos["luz-porque"] == a02.DICA_DA_LUZ
+    assert "Jogo" not in a02.PALAVRA_DA_LUZ.values()
+
+
+def test_no_nativo_a_aba_04_desenha_a_tira_na_cor() -> None:
+    """A aba 04 desenhava a tira tracejada do «não sei» no Nativo. Com a barra
+    do Hefesto, a tira é a da cor, como em todo modo.
+
+    MORDIDA: a mesma — o ramo `native_mode` de volta ao motor.
+    """
+    from pacotes import a04_iluminacao as a04
+
+    from hefesto_dualsense4unix.app.widgets.controller_card import rotulo_lightbar
+
+    recado, base = rotulo_lightbar(dict(_ACESA), {"native_mode": True})
+    assert (recado, base) == (None, (0, 0, 255))
+    assert a04.estado_da_tira(recado) == a04.ACESA

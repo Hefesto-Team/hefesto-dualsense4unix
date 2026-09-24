@@ -516,8 +516,16 @@ def test_o_campo_da_disputa_sai_da_foto_e_nunca_de_um_dible() -> None:
         assert handler._lightbar_disputada(UNIQ_A, nos) is False
 
 
-def test_o_modo_nativo_continua_vencendo_o_aviso_da_disputa() -> None:
-    """Em Nativo o dono é o jogo — e essa é a frase mais importante do card."""
+def test_no_modo_nativo_o_aviso_da_disputa_continua_valendo() -> None:
+    """A Steam segurando o `fd` é aviso sobre a CONFIANÇA na cor, e ele vale no
+    Nativo como em todo modo.
+
+    NOTA DATADA — 24/09/2026: esta régua dizia *"Em Nativo o dono é o jogo — e
+    essa é a frase mais importante do card"*, e o Nativo vencia a disputa. A
+    `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO` fez a barra ser do
+    Hefesto também no Nativo, e a `D-2409-NO-NATIVO-A-TELA-MOSTRA-A-COR` tirou
+    a frase da tela (A-MIRA-NA-NAVEGACAO-01).
+    """
     entry = {
         "lightbar_rgb": [0, 255, 0],
         "lightbar_on": True,
@@ -525,4 +533,4 @@ def test_o_modo_nativo_continua_vencendo_o_aviso_da_disputa() -> None:
         "lightbar_disputada": True,
     }
     rotulo, _base = rotulo_lightbar(entry, {"native_mode": True})
-    assert rotulo == "Em Nativo o jogo é dono do LED"
+    assert rotulo == ROTULO_LIGHTBAR_SEGURADA
