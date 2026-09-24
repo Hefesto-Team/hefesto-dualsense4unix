@@ -21,11 +21,17 @@ As cenas rodam em bash contra um `/dev`, `/sys` e `/run` de mentira, com
 """
 from __future__ import annotations
 
+import contextlib
 import getpass
+import json
 import os
 import re
 import shutil
+import socket
 import subprocess
+import tempfile
+import threading
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -239,10 +245,19 @@ def _cena(
 
 
 def _check(raiz: Path) -> str:
-    corpo = _funcao("check_input_uaccess")
+    corpo = "\n".join(
+        _funcao(nome)
+        for nome in (
+            "_nos_de_entrada_do_hidraw",
+            "_entradas_expostas_no_broker",
+            "_entradas_devolvidas_pelo_nativo",
+            "check_input_uaccess",
+        )
+    )
     for real in (
         "/dev/input/",
         "/sys/class/input/",
+        "/sys/class/hidraw/",
         "/etc/udev/rules.d/",
         "/usr/lib/udev/rules.d/",
         "/run/hefesto-hidraw-broker/",
@@ -313,3 +328,78 @@ class TestOTouchpadDoFisicoFechadoEACura:
         saida = _check(tmp_path)
         assert "gamepad virtual" in saida.lower(), saida
         assert "[PASS]" not in saida
+
+    def test_o_modo_nativo_devolve_e_o_doctor_nao_acusa(self, tmp_path: Path) -> None:
+        """O Nativo DEVOLVE os nós de entrada ao jogo — é o produto. O broker
+        de verdade responde o `status` com `entradas_expostas`, e o doctor
+        pergunta a ele antes de acusar. A MORDIDA (conferência): tire o ramo
+        `devolvidos_ao_nativo` e o Nativo inteiro sai como «seguem abertos»."""
+        raiz = Path(tempfile.mkdtemp(prefix="h2n-", dir="/tmp"))
+        try:
+            _cena(raiz, _fisico(RADIO, 0o660), com_broker=False)
+            hid = raiz / RADIO.lstrip("/")
+            for base in ("event28", "event29"):
+                (hid / "input" / f"input-{base}" / base).mkdir()
+            classe = raiz / "sys" / "class" / "hidraw" / "hidraw5"
+            classe.mkdir(parents=True)
+            (classe / "device").symlink_to(hid)
+            with _broker_de_status(
+                raiz / "run" / "hefesto-hidraw-broker" / "broker.sock",
+                {"ok": True, "cmd": "status", "entradas_expostas": ["/dev/hidraw5"]},
+            ):
+                saida = _check(raiz)
+        finally:
+            shutil.rmtree(raiz, ignore_errors=True)
+        assert "[WARN]" not in saida, saida
+        assert "devolvidos ao jogo pelo Modo Nativo" in saida
+        assert "event28" in saida and "event29" in saida
+
+    def test_aberto_fora_do_nativo_continua_acusado(self, tmp_path: Path) -> None:
+        """O broker responde, e o nó aberto NÃO é do Nativo: segue o WARN."""
+        raiz = Path(tempfile.mkdtemp(prefix="h2n-", dir="/tmp"))
+        try:
+            _cena(raiz, _fisico(RADIO, 0o660), com_broker=False)
+            with _broker_de_status(
+                raiz / "run" / "hefesto-hidraw-broker" / "broker.sock",
+                {"ok": True, "cmd": "status", "entradas_expostas": []},
+            ):
+                saida = _check(raiz)
+        finally:
+            shutil.rmtree(raiz, ignore_errors=True)
+        assert "[WARN]" in saida and "seguem abertos" in saida, saida
+
+
+@contextlib.contextmanager
+def _broker_de_status(caminho: Path, resposta: dict[str, object]) -> Iterator[None]:
+    """Um broker de mentira que responde UMA linha ao `status`, num socket
+    AF_UNIX de verdade — o doctor fala com ele pelo mesmo python que fala com
+    o de produção. O caminho vem de um `mkdtemp` curto em /tmp porque o
+    AF_UNIX não aceita mais de 107 bytes."""
+    caminho.parent.mkdir(parents=True, exist_ok=True)
+    servidor = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    servidor.bind(str(caminho))
+    servidor.listen(4)
+    servidor.settimeout(5.0)
+
+    def _atende() -> None:
+        with contextlib.suppress(OSError):
+            conexao, _ = servidor.accept()
+            with conexao:
+                conexao.settimeout(5.0)
+                buf = b""
+                while not buf.endswith(b"\n"):
+                    pedaco = conexao.recv(4096)
+                    if not pedaco:
+                        return
+                    buf += pedaco
+                if json.loads(buf).get("cmd") == "status":
+                    conexao.sendall(json.dumps(resposta).encode("utf-8") + b"\n")
+
+    fio = threading.Thread(target=_atende, daemon=True)
+    fio.start()
+    try:
+        yield
+    finally:
+        servidor.close()
+        fio.join(timeout=5.0)
+

@@ -913,7 +913,15 @@ check_input_uaccess() {
     # os nós de entrada do DualSense físico (0600 root) e o daemon os lê pelo
     # broker. Fechado ali é a cura, não a falta dela; aberto é o que acusa.
     local sock_do_broker="/run/hefesto-hidraw-broker/broker.sock"
-    local fechados_pelo_hefesto=() nasceu_aberto=()
+    local fechados_pelo_hefesto=() nasceu_aberto=() devolvidos_ao_nativo=()
+    # O Modo Nativo DEVOLVE os nós de entrada ao jogo (a lease `expose` com
+    # `"entradas": true`), e aberto ali é o produto, não o defeito. Quem sabe
+    # quais são é o broker — a conferência achou o doctor acusando «seguem
+    # abertos» sobre o Nativo inteiro.
+    local do_nativo=" "
+    if [[ -e "${sock_do_broker}" ]]; then
+        do_nativo=" $(_entradas_devolvidas_pelo_nativo "${sock_do_broker}" | tr '\n' ' ') "
+    fi
     eu="$(id -un 2>/dev/null || true)"
     for node in /dev/input/event*; do
         [[ -e "${node}" ]] || continue
@@ -950,7 +958,9 @@ check_input_uaccess() {
         pid="$(cat "/sys/class/input/${base}/device/id/product" 2>/dev/null || true)"
         if [[ "${classe}" == "fis" && "${vid}" == "054c" \
               && ( "${pid}" == "0ce6" || "${pid}" == "0df2" ) && -e "${sock_do_broker}" ]]; then
-            if [[ -r "${node}" ]]; then
+            if [[ -r "${node}" && "${do_nativo}" == *" ${base} "* ]]; then
+                devolvidos_ao_nativo+=("${base}")
+            elif [[ -r "${node}" ]]; then
                 nasceu_aberto+=("${base}")
             else
                 fechados_pelo_hefesto+=("${base}")
@@ -983,11 +993,16 @@ check_input_uaccess() {
         warn "o broker está de pé e ${#nasceu_aberto[@]} nó(s) de touchpad/movimento do controle FÍSICO seguem abertos (${nasceu_aberto[*]}) — quem enumera /dev/input acha o controle dobrado. Nasceram antes do broker, ou o broker em memória é o de antes da cura: reconecte o controle; se persistir, veja o check do broker em memória"
         return
     fi
-    if [[ "${#fechados_pelo_hefesto[@]}" -eq "${vistos_fis}" ]]; then
-        pass "touchpad e giroscópio do controle físico fechados para todos menos o Hefesto em ${vistos_fis} nó(s) (${fechados_pelo_hefesto[*]}) — o daemon os lê pelo broker"
+    if [[ "${#devolvidos_ao_nativo[@]}" -gt 0 ]]; then
+        pass "touchpad e giroscópio do controle físico devolvidos ao jogo pelo Modo Nativo em ${#devolvidos_ao_nativo[@]} nó(s) (${devolvidos_ao_nativo[*]}) — só o Nativo os abre"
+    fi
+    local cobertos=$(( ${#fechados_pelo_hefesto[@]} + ${#devolvidos_ao_nativo[@]} ))
+    if [[ "${#fechados_pelo_hefesto[@]}" -gt 0 && "${cobertos}" -eq "${vistos_fis}" ]]; then
+        pass "touchpad e giroscópio do controle físico fechados para todos menos o Hefesto em ${#fechados_pelo_hefesto[@]} nó(s) (${fechados_pelo_hefesto[*]}) — o daemon os lê pelo broker"
         return
     fi
-    local vistos_com_acl=$((vistos_fis - ${#fechados_pelo_hefesto[@]}))
+    [[ "${cobertos}" -eq "${vistos_fis}" ]] && return
+    local vistos_com_acl=$((vistos_fis - cobertos))
     if [[ "${#sem_acesso[@]}" -gt 0 ]]; then
         fail "sem permissão de leitura em ${#sem_acesso[@]} de ${vistos_com_acl} nó(s) FÍSICOS de touchpad/movimento (${sem_acesso[*]}) — o daemon engole o EACCES e relata 'sem sensor'. A ACL nasce no (re)add do device: desconecte e reconecte o controle; se persistir, rode: sudo bash scripts/install_udev.sh"
         return
@@ -5280,6 +5295,44 @@ _nos_de_entrada_do_hidraw() {
         [[ -e "${alvo}" ]] || continue
         basename "${alvo}"
     done
+}
+
+#: Os nós de entrada que o broker DEVOLVEU ao jogo a pedido do Modo Nativo
+#: (HIDE-SO-O-HIDRAW-02): o `status` do broker lista em `entradas_expostas`
+#: os hidraw cujo pedido levou os nós de entrada junto, e aqui eles viram os
+#: basenames do mesmo aparelho. $1 = o socket. Broker mudo = nada, e «nada»
+#: não vira «tudo fechado»: quem chama só usa a lista para NÃO acusar.
+_entradas_devolvidas_pelo_nativo() {
+    command -v python3 >/dev/null 2>&1 || return 0
+    local no
+    for no in $(_entradas_expostas_no_broker "$1"); do
+        _nos_de_entrada_do_hidraw "${no}"
+    done
+}
+
+#: O `entradas_expostas` do `status` do broker, um hidraw por palavra.
+_entradas_expostas_no_broker() {
+    python3 - "$1" <<'PYEOF' 2>/dev/null || true
+import json
+import socket
+import sys
+
+s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+s.settimeout(2.0)
+try:
+    s.connect(sys.argv[1])
+    s.sendall(b'{"cmd": "status"}\n')
+    buf = b""
+    while not buf.endswith(b"\n"):
+        pedaco = s.recv(65536)
+        if not pedaco:
+            break
+        buf += pedaco
+    resposta = json.loads(buf.decode("utf-8"))
+    print(" ".join(str(no) for no in resposta.get("entradas_expostas") or []))
+except (OSError, ValueError, AttributeError):
+    pass
+PYEOF
 }
 
 #: rc=0 se um processo DELA consegue `open(2)` o nó — que é a pergunta que o
