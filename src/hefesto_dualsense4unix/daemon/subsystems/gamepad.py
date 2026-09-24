@@ -2825,11 +2825,15 @@ def aplicar_o_movimento(
 
         # A PEÇA DECIDE — A-MIRA-POR-MOVIMENTO-NA-TELA-01: o chip «Mira Virtual»
         # de cada controle, por cima da mira do perfil. `None` = esta não mira.
-        arranjo = roteador.da_peca(getattr(daemon, "store", None), uniq, arranjo)
-        if arranjo is None:
+        peca = roteador.da_peca(getattr(daemon, "store", None), uniq, arranjo)
+        # A DRENAGEM, ANTES DE TUDO — inclusive do portão da peça. Ver o
+        # parágrafo do docstring: a peça de chip apagado numa mesa de cursor
+        # DESCARTA o ângulo, em vez de guardá-lo para um salto.
+        quer_angulo = arranjo.quer_angulo or (peca is not None and peca.quer_angulo)
+        angulo = hub.angulo_do_movimento(uniq) if quer_angulo else None
+        if peca is None:
             return lx, ly, rx, ry
-        # A DRENAGEM, ANTES DE TUDO. Ver o parágrafo do docstring.
-        angulo = hub.angulo_do_movimento(uniq) if arranjo.quer_angulo else None
+        arranjo = peca
 
         gatilho = arranjo.gatilho
         if gatilho is not None and GATILHOS_DO_JOGO.get(gatilho, gatilho) not in botoes:
