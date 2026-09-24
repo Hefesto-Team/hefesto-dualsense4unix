@@ -251,7 +251,7 @@ roteiro.
 * **P3** — É ESTE que religa, e é o único que você toca. Está no rádio. Um toque curto no PS, espere a barra de luz acender e ponha-o de volta na mesa. Tem de voltar como jogador 3.
 * **P4** — Não pode mudar de posto. Está no rádio. Não toque nele. É aqui que se vê se alguém tomou o lugar do P3 enquanto ele estava fora — olhe as lâmpadas dele com atenção.
 
-**A armadilha.** Religar pelo cabo é outro teste, com resposta possivelmente diferente — ninguém mediu essa ainda. Religue pelo botão PS, com um toque curto: segurar o PS por uns cinco segundos, com o controle já ligado, faz o Hefesto abrir a Steam. O prazo de trinta segundos do Hefesto é o do posto de Jogador 1; o número do P3 é guardado pelo endereço dele e não vence enquanto o Hefesto estiver de pé — se ele voltar com outro número, isso é achado, não demora sua. E se a Steam estiver aberta — o PS segurado demais a abre —, a barra e as lâmpadas do P3 continuam as do Hefesto: o controle de verdade nasce escondido dela, e o Hefesto devolve a cor e o número a quem pintar por cima em até um segundo.
+**A armadilha.** Religar pelo cabo é outro teste, com resposta possivelmente diferente — ninguém mediu essa ainda. Religue pelo botão PS, com um toque curto: segurar o PS não dispara nada no Hefesto, e só o toque curto no PS de um controle já ligado abre a Steam. O prazo de trinta segundos do Hefesto é o do posto de Jogador 1; o número do P3 é guardado pelo endereço dele e não vence enquanto o Hefesto estiver de pé — se ele voltar com outro número, isso é achado, não demora sua. E se a Steam estiver aberta, a barra e as lâmpadas do P3 continuam as do Hefesto: o controle de verdade nasce escondido dela, e o Hefesto devolve a cor e o número a quem pintar por cima em até um segundo.
 
 ---
 
