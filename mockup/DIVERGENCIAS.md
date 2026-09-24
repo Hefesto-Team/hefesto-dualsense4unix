@@ -64,6 +64,8 @@ seção daqui**: a aba deixou de estar em trabalho.
   as barras ao vivo, e o de outro controle encerra este
   (`a05_vibracao.testar`, `_EM_TESTE`). Só o texto da dica muda; nada sai do
   lugar.
+  Até publicar, o «?» do produto continua prometendo meio segundo, e o
+  botão já faz o que a dica nova diz: treme até o Parar.
 
 ## 08-conexoes.html
 - **24/09/2026** — AS-FRASES-QUE-A-BANCADA-ACHOU-01, esperando quem coordena
@@ -76,3 +78,6 @@ seção daqui**: a aba deixou de estar em trabalho.
   (`gui.aba_conexoes.texto_da_contagem`, `a08_conexoes.caminho_do_microfone`
   e `dica_do_microfone`): o produto diz USB/BT desde o primeiro tique, e o que
   espera o `--publicar` é o primeiro quadro e o «?» do microfone.
+  Até publicar, o primeiro quadro diz «1 no cabo • 1 no rádio» e «pelo
+  cabo»/«pelo rádio» por um tique, e o «?» do Ligado/Desligado continua em
+  cabo e rádio.
