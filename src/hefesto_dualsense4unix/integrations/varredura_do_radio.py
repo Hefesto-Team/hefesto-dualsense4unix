@@ -93,7 +93,7 @@ _NO_DO_ADAPTADOR = re.compile(r"^/org/bluez/(hci[0-9]+)$")
 SEM_BUSCTL = "não há `busctl` nesta máquina — não consigo perguntar ao BlueZ"
 
 #: ``busctl tree org.bluez`` mudo: o ``bluetoothd`` não está de pé, o barramento
-#: de sistema não está acessível (Flatpak sem ``--socket=system-bus``), ou o
+#: de sistema não está acessível (um sandbox sem o ``org.bluez``), ou o
 #: serviço não respondeu. Nenhuma dessas é "nenhum adaptador varre".
 SEM_BLUEZ = "o `org.bluez` não respondeu no barramento — não sei quem varre"
 

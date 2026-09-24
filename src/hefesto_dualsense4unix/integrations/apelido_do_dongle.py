@@ -86,12 +86,12 @@ A política do BlueZ em ``/usr/share/dbus-1/system.d/bluetooth.conf`` tem
 ``<policy context="default"><allow send_destination="org.bluez"/>``, e o
 ``Alias`` não passa por polkit. **Não há helper privilegiado a pedir aqui.**
 
-O ponto de injeção ``executar`` existe assim mesmo, por duas razões que não são
-privilégio: a suíte precisa de um D-Bus dublado, e dentro do Flatpak o barramento
-de sistema **não está montado** (o manifesto
-``flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml``
-não tem ``--socket=system-bus`` nem ``--system-talk-name=org.bluez``) — lá a leitura e a
-escrita simplesmente não chegam ao BlueZ, e quem resolver isso pluga aqui.
+O ponto de injeção ``executar`` existe assim mesmo, e a razão não é privilégio:
+a suíte precisa de um D-Bus dublado. Dentro do Flatpak o barramento de sistema
+chega pelo ``--system-talk-name=org.bluez`` do manifesto
+(``flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml``,
+O-FLATPAK-ALCANCA-O-BLUEZ-01), e a leitura e a escrita do ``Alias`` saem pelo
+mesmo dono do BlueZ que fora dele.
 
 **A escrita é ASSÍNCRONA.** Medido: ler a propriedade imediatamente depois de
 escrever devolve o valor ANTIGO; um segundo depois, o novo. Quem quiser conferir
@@ -437,8 +437,8 @@ def ler_os_dongles(
     ninguém confia.
 
     Tupla VAZIA é resposta legítima: sem ``busctl``, com o ``bluetoothd``
-    parado, dentro do Flatpak (que não monta o barramento de sistema) ou numa
-    máquina sem adaptador nenhum. Quem chama diz isso na tela — nunca uma
+    parado, num sandbox sem o ``org.bluez`` ou numa máquina sem adaptador
+    nenhum. Quem chama diz isso na tela — nunca uma
     tabela em branco.
     """
     leitor = _leitor(executar)

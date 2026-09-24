@@ -555,7 +555,7 @@ def test_o_busctl_sem_json_ainda_entrega_o_nome_com_espaco() -> None:
 
 
 def test_sem_busctl_a_leitura_e_vazia_e_nao_explode() -> None:
-    """Flatpak não monta o barramento de sistema — e isso não é exceção."""
+    """Sem barramento de sistema (um sandbox sem o `org.bluez`) — e isso não é exceção."""
     assert ler_os_dongles(**_mesa(BusDublado(sem_busctl=True))) == ()
 
 

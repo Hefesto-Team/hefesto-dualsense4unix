@@ -25,10 +25,10 @@ Não entrega o **endereço** (MAC) do adaptador. Medido nesta bancada em
 22/08/2026, kernel 7.0.11-76070011-generic: ``/sys/class/bluetooth/hci0/`` não
 tem arquivo ``address`` — o ``_adapter_addresses`` do próprio projeto
 (``broker/hidraw_broker.py:232``) devolve ``set()`` sobre ``/sys``. O endereço
-existe pelo BlueZ no D-Bus de sistema, que hoje o produto não abre em lugar
-nenhum e que o manifesto Flatpak não permite
-(``flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml``:
-sem ``--socket=system-bus``). Por isso
+existe pelo BlueZ no D-Bus de sistema, que este módulo não abre: quem fala
+com o BlueZ é o ``bluez_dbus``, o dono único do barramento de sistema
+(BLUEZ-UM-DONO-01), e este módulo fica no que o kernel diz pelo
+``/sys``. Por isso
 o nome de um adaptador aqui é a **identidade física**, que é estável entre
 boots — ao contrário de ``hciN``, que inverte — e ainda responde "onde está" de
 quebra. É a decisão M1 de ``DECISOES-DA-EXECUCAO.md``.
@@ -47,7 +47,7 @@ Nada aqui olha nome de máquina, ordem de conexão ou quantidade de aparelhos. A
 mesma pergunta se responde igual numa mesa de zero, de um ou de quatro
 adaptadores — quem responde é o sysfs do kernel. Lista vazia e ``""`` são
 respostas legítimas, e **zero adaptadores é o caso mais comum lá fora**: a
-máquina sem Bluetooth nenhum, e o Flatpak, que não monta o barramento.
+máquina sem Bluetooth nenhum.
 
 Esta bancada NÃO é esse caso — ela tem TRÊS (``hci0``, ``hci1``, ``hci2``,
 medido em 22/08/2026). A frase anterior aqui dizia o contrário, e um fato
