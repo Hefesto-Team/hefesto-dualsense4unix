@@ -3288,7 +3288,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # acesa DESTE controle, e o chip da Mira fica cinza no Nativo.
                 # Ver `dica_do_giro` e `mira_fora`. Os dois só saem quando a
                 # página publicada tiver o endereço (`_so_se_a_pagina_tiver`).
-                "giro-dica": dica_do_giro(c, _nativo(ctx)),
+                "giro-dica": dica_do_giro(c, _nativo(ctx), _na_navegacao(ctx)),
                 "mira-fora": mira_fora(_nativo(ctx)),
                 # O RETÂNGULO DA BARRA DE LUZ — o desenho que CONTRADIZ o campo
                 # ao lado dele. Fotografado em 02/09/2026 às 19h: o `luz-hex`
@@ -3752,19 +3752,24 @@ def _mira_ligada(dele: dict[str, Any]) -> bool | None:
 # ---------------------------------------------------------------------------
 # A DICA DO GIROSCÓPIO E O CHIP CINZA NO NATIVO — A-MIRA-POR-MOVIMENTO-NA-TELA-02
 # ---------------------------------------------------------------------------
-# As duas respostas dela de 24/09/2026 que moram no cartão, e as frases são do
-# PACOTE pela lei do cabeçalho do `aba02.py`: o produto as pinta a cada tique, e
-# o desenho as importa daqui.
+# As frases são do PACOTE pela lei do cabeçalho do `aba02.py`: o produto as
+# pinta a cada tique, e o desenho as importa daqui.
 
 #: A dica do chip Giroscópio de hoje — a que vale com a Mira APAGADA.
 DICA_DO_GIRO = "Ligado: o jogo recebe o giro deste controle."
 
-#: A dica com a Mira ACESA naquele controle, com as palavras que ela aprovou
-#: (`D-2409-A-DICA-DO-GIROSCOPIO-MUDA-COM-A-MIRA`): com a mira acesa o jogo não
-#: recebe o giro como giroscópio — ele chega pelo analógico direito, e a dica de
-#: hoje afirmaria o que o produto não faz.
+#: A dica com a Mira ACESA, nas palavras que ela aprovou
+#: (`D-2409-A-DICA-DO-GIROSCOPIO-MUDA-COM-A-MIRA`): o giro chega ao jogo pelo
+#: analógico, e a de hoje afirmaria o giroscópio que o filtro tirou da janela.
 DICA_DO_GIRO_COM_A_MIRA = ("Com a Mira Virtual acesa, o giro deste controle vai "
                            "ao jogo pelo analógico direito.")
+#: A MESMA FRASE, PELO DESTINO — A-MIRA-NA-NAVEGACAO-01, 24/09/2026. O chip
+#: grava o analógico direito; o esquerdo e o cursor só vêm do perfil escrito à
+#: mão, e a dica diz o que o destino dele faz em vez de afirmar o direito. Na
+#: Navegação todo destino é o cursor (`D-2409-NA-NAVEGACAO-O-GIRO-VIRA-CURSOR`).
+DICA_DO_GIRO_NO_ESQUERDO = ("Com a Mira Virtual acesa, o giro deste controle vai "
+                            "ao jogo pelo analógico esquerdo.")
+DICA_DO_GIRO_NO_CURSOR = "Com a Mira Virtual acesa, o giro deste controle move o cursor."
 
 
 def _nativo(ctx: Contexto) -> bool:
@@ -3777,18 +3782,39 @@ def _nativo(ctx: Contexto) -> bool:
     return estado.get("native_mode") is True
 
 
-def dica_do_giro(dele: dict[str, Any], nativo: bool) -> str:
+def _na_navegacao(ctx: Contexto) -> bool:
+    """O modo vivo é a Navegação? Pelo dono da leitura (`mode_of_state`).
+
+    SEM ESTADO, NÃO: `mode_of_state({})` devolve a Navegação, e a dica
+    afirmaria o cursor sobre um tique sem resposta (a porta da `a01_jogar`).
+    """
+    from hefesto_dualsense4unix.app.actions.mode_transition import (
+        MODE_DESKTOP,
+        mode_of_state,
+    )
+
+    estado = getattr(ctx, "state", None) or {}
+    return bool(estado) and mode_of_state(estado) == MODE_DESKTOP
+
+
+def dica_do_giro(dele: dict[str, Any], nativo: bool, navegacao: bool = False) -> str:
     """A dica do chip Giroscópio DESTE controle — muda só com a Mira acesa.
 
-    POR CONTROLE: o P2 com a Mira e o P3 sem mostram dicas diferentes. E NO
-    NATIVO A DE HOJE VOLTA, mesmo com a Mira acesa no perfil: no Nativo o jogo
-    lê o controle físico direto — o giro chega ao jogo como giroscópio, e a
-    mira não chega a lugar nenhum. Sem leitura da mira, a de hoje também: a
-    frase nova é uma afirmação, e afirmação sem leitura é chute.
+    POR CONTROLE: o P2 com a Mira e o P3 sem mostram dicas diferentes. NO
+    NATIVO A DE HOJE VOLTA: o jogo lê o controle físico, o giro chega como
+    giroscópio e a mira não chega a lugar nenhum. Sem leitura da mira, a de
+    hoje também — afirmação sem leitura é chute. Com a Mira acesa, a frase
+    segue o DESTINO que o daemon publica (`mira.destino`), e na Navegação é o
+    cursor; destino que a tela não conhece fica com a aprovada.
     """
-    if _mira_ligada(dele) is True and not nativo:
-        return DICA_DO_GIRO_COM_A_MIRA
-    return DICA_DO_GIRO
+    if _mira_ligada(dele) is not True or nativo:
+        return DICA_DO_GIRO
+    destino = (dele.get("mira") or {}).get("destino")
+    if navegacao or destino == "mouse":
+        return DICA_DO_GIRO_NO_CURSOR
+    if destino == "analogico_esquerdo":
+        return DICA_DO_GIRO_NO_ESQUERDO
+    return DICA_DO_GIRO_COM_A_MIRA
 
 
 #: O valor que acende o cinza do chip da Mira: o `data-hef-quando` do grupo dos

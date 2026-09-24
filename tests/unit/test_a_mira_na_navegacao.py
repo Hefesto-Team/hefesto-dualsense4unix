@@ -663,3 +663,94 @@ def test_no_nativo_a_aba_04_desenha_a_tira_na_cor() -> None:
     recado, base = rotulo_lightbar(dict(_ACESA), {"native_mode": True})
     assert (recado, base) == (None, (0, 0, 255))
     assert a04.estado_da_tira(recado) == a04.ACESA
+
+
+# ---------------------------------------------------------------------------
+# 7. A DICA DO GIROSCÓPIO DIZ O QUE ACONTECE — na Navegação e pelo destino
+# ---------------------------------------------------------------------------
+#: AS FRASES, escritas POR EXTENSO e não lidas do pacote: a régua confere o
+#: pacote contra o que o produto faz, não contra ele mesmo.
+_DICA_DE_HOJE = "Ligado: o jogo recebe o giro deste controle."
+_DICA_NO_DIREITO = ("Com a Mira Virtual acesa, o giro deste controle vai ao jogo "
+                    "pelo analógico direito.")
+_DICA_NO_ESQUERDO = ("Com a Mira Virtual acesa, o giro deste controle vai ao jogo "
+                     "pelo analógico esquerdo.")
+_DICA_NO_CURSOR = "Com a Mira Virtual acesa, o giro deste controle move o cursor."
+
+#: Os três modos vivos, na forma do `state_full` que `mode_of_state` lê.
+_NAVEGACAO = {"native_mode": False, "gamepad_emulation": {"enabled": False}}
+_VIRTUAL = {"native_mode": False, "gamepad_emulation": {"enabled": True}}
+_NATIVO = {"native_mode": True, "gamepad_emulation": {"enabled": False}}
+
+
+def _dicas(monkeypatch: pytest.MonkeyPatch, estado: dict[str, Any],
+           miras: dict[int, dict[str, Any] | None]) -> dict[int, str]:
+    """A dica do Giroscópio de cada controle, pelo pacote da aba 02 — um
+    controle por jogador, no USB e no BT alternados."""
+    import pacotes
+    import pacotes.a02_controles as a02
+
+    monkeypatch.setattr(a02, "_so_se_a_pagina_tiver", lambda campos: campos)
+    conectados = []
+    for n, mira in miras.items():
+        dele: dict[str, Any] = {
+            "uniq": f"aa:bb:cc:00:00:0{n}", "transport": "usb" if n % 2 else "bluetooth",
+            "connected": True, "inputs": {}, "audio": {}, "speaker": {}}
+        if mira is not None:
+            dele["mira"] = mira
+        conectados.append(dele)
+    ctx = pacotes.Contexto(state=estado, mesa=[], conectados=conectados, estados={})
+    cards = a02.pacote(ctx)["cards"]
+    return {int(u[-1]): c["giro-dica"] for u, c in cards.items()}
+
+
+def test_na_navegacao_a_dica_diz_que_o_giro_move_o_cursor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Na Navegação o giro de quem está com a Mira acesa move o cursor, e a
+    dica diz isso — por controle: o P1 e o P3 acesos, o P2 apagado, o P4 sem
+    leitura.
+
+    MORDIDA: passe `navegacao=False` na chamada do `pacote` e o P1 e o P3
+    voltam a dizer «pelo analógico direito», que na Navegação é a roda.
+    """
+    acesa = {"ligada": True, "destino": "analogico_direito"}
+    dicas = _dicas(monkeypatch, _NAVEGACAO,
+                   {1: acesa, 2: {"ligada": False, "destino": "nenhum"}, 3: acesa, 4: None})
+    assert dicas == {1: _DICA_NO_CURSOR, 2: _DICA_DE_HOJE, 3: _DICA_NO_CURSOR,
+                     4: _DICA_DE_HOJE}, dicas
+
+
+@pytest.mark.parametrize(("estado", "esperada"), [
+    (_VIRTUAL, _DICA_NO_DIREITO),     # o modo com controle virtual: o analógico
+    (_NATIVO, _DICA_DE_HOJE),         # o Nativo: a de hoje, como antes
+    ({}, _DICA_NO_DIREITO),           # sem estado não se afirma a Navegação
+])
+def test_fora_da_navegacao_a_dica_nao_fala_do_cursor(
+    monkeypatch: pytest.MonkeyPatch, estado: dict[str, Any], esperada: str,
+) -> None:
+    """O controle da régua de cima: o MESMO chip aceso, fora da Navegação.
+
+    MORDIDA: faça `_na_navegacao` devolver `True` para o estado vazio (o
+    `mode_of_state({})` cru) e o terceiro caso reprova.
+    """
+    dicas = _dicas(monkeypatch, estado, {2: {"ligada": True, "destino": "analogico_direito"}})
+    assert dicas == {2: esperada}
+
+
+@pytest.mark.parametrize(("destino", "esperada"), [
+    ("analogico_direito", _DICA_NO_DIREITO),
+    ("analogico_esquerdo", _DICA_NO_ESQUERDO),
+    ("mouse", _DICA_NO_CURSOR),
+])
+def test_a_dica_segue_o_destino_que_o_daemon_publica(
+    monkeypatch: pytest.MonkeyPatch, destino: str, esperada: str,
+) -> None:
+    """O destino fora do padrão (só no perfil escrito à mão) não pode acender
+    «pelo analógico direito»: a dica diz o que o destino dele faz.
+
+    MORDIDA: devolva sempre `DICA_DO_GIRO_COM_A_MIRA` com a Mira acesa e o
+    esquerdo e o cursor reprovam.
+    """
+    dicas = _dicas(monkeypatch, _VIRTUAL, {3: {"ligada": True, "destino": destino}})
+    assert dicas == {3: esperada}
