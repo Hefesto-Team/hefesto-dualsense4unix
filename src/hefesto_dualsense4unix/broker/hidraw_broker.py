@@ -20,6 +20,11 @@ projeto) roda como root isolado/hardened e, a pedido do daemon:
     root e devolve o fd via SCM_RIGHTS na MESMA conexão — o motion reader do
     daemon NUNCA reabre por caminho, então o hide deixa de ter qualquer
     interação com o ciclo de vida do gyro (a classe de bugs broker/motion morre).
+  - os nós de ENTRADA (HIDE-SO-O-HIDRAW-02, 24/09/2026): o evdev e o joydev
+    do MESMO aparelho seguem o hidraw — fechados com ele, e abertos só pelo
+    pedido do Modo Nativo (`expose` com `"entradas": true`). O `open` serve
+    também o `/dev/input/eventN` do físico, que é por onde o daemon lê o
+    gamepad, o touchpad e os sensores de movimento.
 
 Desenho vigente: docs/process/estudos/2026-07-20-desenho-onda-s-broker-fd-injection.md
 (spec original da mecânica ACL: docs/process/estudos/2026-07-18-estudo-broker-hide-hidraw.md).
@@ -116,6 +121,40 @@ VPAD_PHYS_PREFIX = "hefesto-vpad"
 VPAD_UNIQ_PREFIX = "02fe"
 
 _HIDRAW_BASE_RE = re.compile(r"^hidraw[0-9]+$")
+
+# HIDE-SO-O-HIDRAW-02 (24/09/2026) — os QUATRO nós de entrada do físico. O
+# mesmo DualSense aparece em três superfícies: o hidraw, o evdev
+# (`/dev/input/eventN`: o gamepad, o touchpad, os sensores de movimento e a
+# tomada do fone) e o joydev (`/dev/input/jsN`). Decisão dela de 23/09,
+# «Esconder tudo»: os nós de entrada somem para todos menos para o Hefesto,
+# como o hidraw já some, e só o Modo Nativo os devolve.
+#: Diretório dos nós de entrada.
+DEV_INPUT_ROOT = "/dev/input"
+#: Os nós de entrada que o broker fecha e abre junto com o hidraw do aparelho.
+_ENTRADA_BASE_RE = re.compile(r"^(event|js)[0-9]+$")
+#: O único nó de entrada que o broker SERVE por fd: o daemon lê evdev, nunca js.
+_EVENT_BASE_RE = re.compile(r"^event[0-9]+$")
+#: O `jsN` dos sensores de movimento é da `80-motion-joydev-hide.rules`
+#: (`MODE="0000"` para todos): o broker nunca o abre nem o fecha, senão um
+#: `restore` daria à sessão o joystick fantasma que aquela regra esconde.
+_SUFIXO_DO_MOVIMENTO = "Motion Sensors"
+#: EVIOCGID = _IOR('E', 0x02, struct input_id{__u16 bustype, vendor, product,
+#: version}) — a identidade lida do PRÓPRIO fd, à prova de corrida, como o
+#: HIDIOCGRAWINFO faz para o hidraw (S-4).
+_EVIOCGID = 0x80084502
+_INPUT_ID_FMT = "=HHHH"
+
+#: O REINÍCIO QUE NÃO ABRE — HIDE-SO-O-HIDRAW-02, achado do install de 24/09.
+#: Parar o broker ABRE todo físico (`restore_everything` e o ExecStopPost),
+#: e é de propósito: broker fora do ar deixou de ser a porta. Num REINÍCIO
+#: pedido (o install trocando o binário) a porta volta em um segundo, e abrir
+#: nesse segundo é entregar o físico à Steam aberta, que vigia /dev por
+#: inotify e pega o nó na hora. Quem reinicia de propósito grava este arquivo
+#: (root, recente) antes do `systemctl restart`, e o broker que sai não abre.
+REINICIO_SEM_ABRIR_PATH = "/run/hefesto-hidraw-broker/reinicio-sem-abrir"
+#: Validade do pedido: passado isto, o arquivo é lixo de um install que caiu
+#: no meio, e o broker volta a abrir ao parar — o piso de recuperação.
+REINICIO_SEM_ABRIR_VALIDADE_S = 120.0
 
 # S-4 (auditoria 21/07): identidade RACE-FREE do fd servido. O check
 # rdev(fd)==sysfs(base) prova nó==base, NÃO a identidade do device — no
@@ -298,16 +337,35 @@ def validate_physical_node(
             uevent = _parse_uevent_text(fh.read())
     except OSError:
         return None
+    if not _pai_hid_e_dualsense_fisico(
+        hid_parent, uevent, sys_class_bluetooth=sys_class_bluetooth
+    ):
+        return None
+    return base
+
+
+def _pai_hid_e_dualsense_fisico(
+    hid_parent: str, uevent: dict[str, str], *, sys_class_bluetooth: str
+) -> bool:
+    """A barreira 4 do validador: o pai HID é um DualSense FÍSICO?
+
+    HIDE-SO-O-HIDRAW-02 (24/09/2026): extraída do `validate_physical_node`
+    sem mudar uma vírgula do critério, porque o nó de ENTRADA
+    (`validate_physical_input_node`) tem de responder a MESMA pergunta sobre o
+    mesmo pai HID. Duas cópias do D1-D4 divergiriam na primeira correção — e
+    a divergência seria o broker abrir por um caminho o vpad que recusa pelo
+    outro.
+    """
     match = _HID_ID_VALUE_RE.match(uevent.get("HID_ID", ""))
     if match is None:
-        return None
+        return False
     bus = int(match.group(1), 16)
     vendor = int(match.group(2), 16)
     product = int(match.group(3), 16)
     if bus not in ACCEPTED_BUSES or vendor != PHYS_VENDOR:
-        return None
+        return False
     if product not in PHYS_PRODUCTS:
-        return None
+        return False
     # STEAM-NO-FISICO-01: o 0df2 é o Edge físico E o nosso vpad. O vpad JAMAIS
     # é escondido/aberto (é por ele que rumble/triggers/lightbar do jogo
     # chegam), e ele é USB sob `/misc/uhid/` — o D1 logo abaixo o recusa, e o
@@ -316,22 +374,93 @@ def validate_physical_node(
     # ---- decisão BLUEZ-UHID-01: /devices/virtual/ NÃO é veredito ----
     if "/devices/virtual/" in hid_parent:
         if "/misc/uhid/" not in hid_parent:
-            return None  # uinput/virtual puro jamais é físico
+            return False  # uinput/virtual puro jamais é físico
         if bus != BUS_BT:
-            return None  # (D1) USB real NUNCA é uhid: 0003 sob uhid = forjado
+            return False  # (D1) USB real NUNCA é uhid: 0003 sob uhid = forjado
         phys = uevent.get("HID_PHYS", "").strip().lower()
         uniq = uevent.get("HID_UNIQ", "").strip().lower()
         if phys.startswith(VPAD_PHYS_PREFIX):
-            return None  # (D2) nosso vpad, mesmo que anuncie 0CE6
+            return False  # (D2) nosso vpad, mesmo que anuncie 0CE6
         if uniq.replace(":", "").startswith(VPAD_UNIQ_PREFIX):
-            return None  # (D2)
+            return False  # (D2)
         if _MAC_RE.match(uniq) is None:
-            return None  # (D3) BT real tem HID_UNIQ = MAC do controle
+            return False  # (D3) BT real tem HID_UNIQ = MAC do controle
         if _MAC_RE.match(phys) is None:
-            return None  # (D3) BT real tem HID_PHYS = MAC do adaptador
+            return False  # (D3) BT real tem HID_PHYS = MAC do adaptador
         adapters = _adapter_addresses(sys_class_bluetooth)
         if adapters is not None and adapters and phys not in adapters:
-            return None  # (D4) belt: só decide com sysfs BT legível
+            return False  # (D4) belt: só decide com sysfs BT legível
+    return True
+
+
+def canonical_input_base(node: object, *, dev_input_root: str = DEV_INPUT_ROOT) -> str | None:
+    """Basename `eventN` se `node` é EXATAMENTE `<dev_input_root>/eventN`; senão None.
+
+    O espelho de `canonical_hidraw_base` para o evdev. Só `eventN`: o `jsN`
+    nunca é servido por fd (o daemon lê evdev), então não há por que o
+    protocolo aceitá-lo.
+    """
+    if not isinstance(node, str) or not node:
+        return None
+    base = os.path.basename(node)
+    if _EVENT_BASE_RE.match(base) is None:
+        return None
+    if node != f"{dev_input_root}/{base}":
+        return None
+    return base
+
+
+def validate_physical_input_node(
+    node: object,
+    *,
+    dev_input_root: str = DEV_INPUT_ROOT,
+    sys_class_input: str = "/sys/class/input",
+    sys_class_bluetooth: str = "/sys/class/bluetooth",
+    stat_fn: Callable[[str], Any] = os.stat,
+    lstat_fn: Callable[[str], Any] = os.lstat,
+) -> str | None:
+    """Basename `eventN` se `node` é um nó de ENTRADA de DualSense FÍSICO; senão None.
+
+    HIDE-SO-O-HIDRAW-02 (24/09/2026). O daemon lê o gamepad, o touchpad e os
+    sensores de movimento pelo evdev, e com esses nós nascendo `0600 root` o
+    único jeito de ele continuar lendo é o broker servir o fd, como já serve
+    o do hidraw. Mesmas barreiras do `validate_physical_node`, na mesma ordem:
+
+      1. caminho canônico literal (`canonical_input_base`);
+      2. nem symlink, e char device;
+      3. `(major, minor)` do nó casa `/sys/class/input/<base>/dev`;
+      4. o pai HID do nó (`<base>/device` é o `inputNN`, e o `device` dele é
+         o device HID) passa pelo MESMO `_pai_hid_e_dualsense_fisico` — o
+         vpad é recusado aqui pelas mesmas marcas D1/D2 que o recusam no
+         hidraw.
+
+    NUNCA abre o device; na dúvida, recusa (fail-closed, como o do hidraw).
+    """
+    if not isinstance(node, str):
+        return None
+    base = canonical_input_base(node, dev_input_root=dev_input_root)
+    if base is None:
+        return None
+    sys_dir = f"{sys_class_input}/{base}"
+    try:
+        if stat_mod.S_ISLNK(lstat_fn(node).st_mode):
+            return None
+        st = stat_fn(node)
+        if not stat_mod.S_ISCHR(st.st_mode):
+            return None
+        with open(f"{sys_dir}/dev", encoding="ascii") as fh:
+            dev_sysfs = fh.read().strip()
+        if dev_sysfs != f"{os.major(st.st_rdev)}:{os.minor(st.st_rdev)}":
+            return None
+        hid_parent = os.path.realpath(f"{sys_dir}/device/device")
+        with open(f"{hid_parent}/uevent", encoding="ascii", errors="replace") as fh:
+            uevent = _parse_uevent_text(fh.read())
+    except OSError:
+        return None
+    if not _pai_hid_e_dualsense_fisico(
+        hid_parent, uevent, sys_class_bluetooth=sys_class_bluetooth
+    ):
+        return None
     return base
 
 
@@ -400,8 +529,18 @@ class FsAclOps:
     O cmd open revalida o rdev NO PRÓPRIO fd devolvido pelo open(2).
     """
 
-    def __init__(self, *, sys_class_hidraw: str = "/sys/class/hidraw") -> None:
+    def __init__(
+        self,
+        *,
+        sys_class_hidraw: str = "/sys/class/hidraw",
+        dev_input_root: str = DEV_INPUT_ROOT,
+        sys_class_input: str = "/sys/class/input",
+        sys_class_bluetooth: str = "/sys/class/bluetooth",
+    ) -> None:
         self._sys_class_hidraw = sys_class_hidraw
+        self._dev_input_root = dev_input_root
+        self._sys_class_input = sys_class_input
+        self._sys_class_bluetooth = sys_class_bluetooth
 
     def _sysfs_rdev(self, base: str) -> tuple[int, int] | None:
         """(major, minor) de /sys/class/hidraw/<base>/dev; None = ilegível."""
@@ -545,6 +684,254 @@ class FsAclOps:
             raise StaleNodeError(node)
         return fd
 
+    # -- os nós de ENTRADA do mesmo aparelho (HIDE-SO-O-HIDRAW-02) -------
+
+    def entradas_do_no(self, base: str) -> list[tuple[str, str]]:
+        """`(nó em /dev/input, diretório dele no sysfs)` de cada nó de entrada do aparelho.
+
+        Derivados do device HID do hidraw `base` — `<hid>/input/input*/eventN`
+        e `jsN`, o mesmo caminho que o doctor mede em
+        `_nos_de_entrada_do_hidraw`. Fica de fora o `jsN` dos sensores de
+        movimento, que a regra 80 fecha para todos.
+
+        O pai HID passa ANTES pelo `_pai_hid_e_dualsense_fisico`: se o nome
+        `hidrawN` foi reciclado para outro aparelho entre o pedido e aqui, os
+        nós de entrada seriam os DELE — o teclado dela, no pior caso — e o
+        broker não mexe em nó de aparelho que não validou. Sysfs ilegível
+        devolve lista vazia, e vazia nunca é «tudo fechado».
+        """
+        try:
+            hid = os.path.realpath(f"{self._sys_class_hidraw}/{base}/device")
+            with open(f"{hid}/uevent", encoding="ascii", errors="replace") as fh:
+                uevent = _parse_uevent_text(fh.read())
+            inputs = sorted(os.listdir(f"{hid}/input"))
+        except OSError:
+            return []
+        if not _pai_hid_e_dualsense_fisico(
+            hid, uevent, sys_class_bluetooth=self._sys_class_bluetooth
+        ):
+            return []
+        saida: list[tuple[str, str]] = []
+        for pasta in inputs:
+            if not pasta.startswith("input"):
+                continue
+            input_dir = f"{hid}/input/{pasta}"
+            try:
+                with open(f"{input_dir}/name", encoding="utf-8", errors="replace") as fh:
+                    nome = fh.read().strip()
+                filhos = sorted(os.listdir(input_dir))
+            except OSError:
+                continue
+            for filho in filhos:
+                if _ENTRADA_BASE_RE.match(filho) is None:
+                    continue
+                if filho.startswith("js") and nome.endswith(_SUFIXO_DO_MOVIMENTO):
+                    continue  # regra 80: MODE 0000 para todos, e fica assim
+                saida.append((f"{self._dev_input_root}/{filho}", f"{input_dir}/{filho}"))
+        return saida
+
+    #: «É char device?» dos nós de ENTRADA. Hook de classe só para a suíte,
+    #: que não cria char device sem root: a subclasse de teste troca isto, e
+    #: todo o resto da decisão (o rdev contra o sysfs, a identidade) segue o
+    #: de produção.
+    _e_char_device = staticmethod(stat_mod.S_ISCHR)
+
+    def _pin_entrada(self, node: str, sys_dir: str) -> int | None:
+        """O_PATH no nó de entrada + fstat cruzado com o `dev` do sysfs DELE.
+
+        O `sys_dir` vem de baixo do device HID já validado, e é isso que
+        prende a identidade: se o `eventN` foi destruído e recriado para outro
+        aparelho, o diretório velho some e a leitura falha. None = sumiu.
+        """
+        try:
+            fd = os.open(node, os.O_PATH | os.O_NOFOLLOW | os.O_CLOEXEC)
+        except OSError:
+            return None
+        try:
+            st = os.fstat(fd)
+            with open(f"{sys_dir}/dev", encoding="ascii") as fh:
+                dev_sysfs = fh.read().strip()
+        except OSError:
+            os.close(fd)
+            return None
+        if not self._e_char_device(st.st_mode) or dev_sysfs != (
+            f"{os.major(st.st_rdev)}:{os.minor(st.st_rdev)}"
+        ):
+            os.close(fd)
+            return None
+        return fd
+
+    @staticmethod
+    def _entrada_aberta_a_alguem(st: os.stat_result) -> bool:
+        """O nó abre para alguém além do root?
+
+        Os bits de grupo e de outros bastam, e a ACL não precisa ser lida: num
+        nó com ACL, os bits de grupo SÃO a máscara, e a máscara limita toda
+        entrada nomeada. Um `0600` com uma ACL velha de `user:ela:rw` tem
+        máscara `---` — a entrada está lá e não vale nada.
+        """
+        return stat_mod.S_IMODE(st.st_mode) & 0o077 != 0
+
+    def fechar_entradas(self, base: str) -> tuple[list[str], list[str]]:
+        """`setfacl -b` + `chmod 0600` em cada nó de entrada: `(mudados, falhos)`.
+
+        `mudados` são só os que ESTAVAM abertos — quem chama loga a
+        transição, não a reafirmação (o rehide roda a cada 30 s, e o journal
+        de 15/08 já teve 717 linhas da mesma frase).
+        """
+        mudados: list[str] = []
+        falhos: list[str] = []
+        for node, sys_dir in self.entradas_do_no(base):
+            fd = self._pin_entrada(node, sys_dir)
+            if fd is None:
+                continue  # sumiu no meio: nada a fechar
+            try:
+                aberto = self._entrada_aberta_a_alguem(os.fstat(fd))
+                ref = f"/proc/self/fd/{fd}"
+                with contextlib.suppress(OSError):  # ENODATA = já sem ACL
+                    os.removexattr(ref, _ACL_XATTR)
+                os.chmod(ref, 0o600)
+                if aberto:
+                    mudados.append(node)
+            except OSError:
+                falhos.append(node)
+            finally:
+                os.close(fd)
+        return mudados, falhos
+
+    def abrir_entradas(self, base: str, uid: int) -> tuple[list[str], list[str]]:
+        """`chmod 0660` + ACL `u:<uid>:rw` em cada nó de entrada: `(mudados, falhos)`."""
+        mudados: list[str] = []
+        falhos: list[str] = []
+        for node, sys_dir in self.entradas_do_no(base):
+            fd = self._pin_entrada(node, sys_dir)
+            if fd is None:
+                continue
+            try:
+                ja_aberto = self._exposta_ao_uid(fd, uid)
+                ref = f"/proc/self/fd/{fd}"
+                os.chmod(ref, 0o660)
+                os.setxattr(ref, _ACL_XATTR, encode_access_acl(uid))
+                if not ja_aberto:
+                    mudados.append(node)
+            except OSError:
+                falhos.append(node)
+            finally:
+                os.close(fd)
+        return mudados, falhos
+
+    @staticmethod
+    def _exposta_ao_uid(fd: int, uid: int) -> bool:
+        """O nó pinado está no estado canônico exposto (0660 + ACL do uid)?"""
+        try:
+            if stat_mod.S_IMODE(os.fstat(fd).st_mode) != 0o660:
+                return False
+            blob = os.getxattr(f"/proc/self/fd/{fd}", _ACL_XATTR)
+        except OSError:
+            return False
+        return uid in decode_acl_user_uids(blob)
+
+    def entradas_abertas(self, base: str) -> list[str]:
+        """Os nós de entrada do aparelho que abrem para alguém além do root."""
+        abertas: list[str] = []
+        for node, _sys_dir in self.entradas_do_no(base):
+            try:
+                if self._entrada_aberta_a_alguem(os.stat(node)):
+                    abertas.append(node)
+            except OSError:
+                continue
+        return abertas
+
+    def entradas_fechadas_para(self, base: str, uid: int) -> list[str]:
+        """Os nós de entrada do aparelho que NÃO estão expostos ao `uid`."""
+        fechadas: list[str] = []
+        for node, _sys_dir in self.entradas_do_no(base):
+            if not self.is_exposed_to(node, uid):
+                fechadas.append(node)
+        return fechadas
+
+    def open_entrada(self, node: str, base: str) -> int:
+        """open(2) de um nó de ENTRADA + revalidação pós-open NO fd.
+
+        O espelho do `open_node` para o evdev: o rdev do fd tem de casar o
+        sysfs do `base`, o EVIOCGID do PRÓPRIO fd tem de ser DualSense
+        054c:0ce6/0df2 por USB ou BT, e o pai HID não pode ter as marcas do
+        nosso vpad (o EVIOCGID não separa o Edge físico do vpad, os dois são
+        0003:054c:0df2 pelo cabo). Qualquer falha fecha o fd e levanta
+        `StaleNodeError`; nenhum caminho vaza fd.
+        """
+        fd = os.open(node, os.O_RDWR | os.O_CLOEXEC | os.O_NOFOLLOW)
+        try:
+            st = os.fstat(fd)
+            with open(f"{self._sys_class_input}/{base}/dev", encoding="ascii") as fh:
+                dev_sysfs = fh.read().strip()
+        except OSError:
+            os.close(fd)
+            raise StaleNodeError(node) from None
+        if not self._e_char_device(st.st_mode) or dev_sysfs != (
+            f"{os.major(st.st_rdev)}:{os.minor(st.st_rdev)}"
+        ):
+            os.close(fd)
+            raise StaleNodeError(node)
+        try:
+            bus, vendor, product, _versao = self._ler_input_id(fd)
+        except OSError:
+            os.close(fd)
+            raise StaleNodeError(node) from None
+        if bus not in ACCEPTED_BUSES or vendor != PHYS_VENDOR or product not in PHYS_PRODUCTS:
+            os.close(fd)
+            raise StaleNodeError(node)
+        try:
+            pai = os.path.realpath(f"{self._sys_class_input}/{base}/device/device")
+            with open(f"{pai}/uevent", encoding="ascii", errors="replace") as fh:
+                uevent = _parse_uevent_text(fh.read())
+        except OSError:
+            os.close(fd)
+            raise StaleNodeError(node) from None
+        if _e_o_nosso_vpad(uevent, pai, bus):
+            os.close(fd)
+            raise StaleNodeError(node)
+        return fd
+
+    @staticmethod
+    def _ler_input_id(fd: int) -> tuple[int, int, int, int]:
+        """EVIOCGID do PRÓPRIO fd: `(bustype, vendor, product, version)`."""
+        buf = bytearray(struct.calcsize(_INPUT_ID_FMT))
+        fcntl.ioctl(fd, _EVIOCGID, buf, True)
+        bus, vendor, product, versao = struct.unpack(_INPUT_ID_FMT, bytes(buf))
+        return int(bus), int(vendor), int(product), int(versao)
+
+
+def reinicio_sem_abrir_pedido(
+    path: str = REINICIO_SEM_ABRIR_PATH,
+    *,
+    agora: Callable[[], float] = time.time,
+    dono_esperado: int = 0,
+) -> bool:
+    """O broker está sendo REINICIADO de propósito, e não pode abrir o físico?
+
+    HIDE-SO-O-HIDRAW-02 — o achado do install de 24/09/2026. Quem reinicia o
+    serviço de propósito (o install, trocando o binário) grava
+    `REINICIO_SEM_ABRIR_PATH` antes do `systemctl restart`. Só vale o arquivo
+    que prova quem o escreveu e quando: regular, do root, sem escrita de
+    grupo nem de outros, e com no máximo `REINICIO_SEM_ABRIR_VALIDADE_S` de
+    idade. O resto é lixo, e lixo não pode impedir o piso de recuperação —
+    um nó `0600` sem broker só volta com `sudo`, e isto é um app de
+    acessibilidade.
+    """
+    try:
+        st = os.lstat(path)
+    except OSError:
+        return False
+    if not stat_mod.S_ISREG(st.st_mode):
+        return False
+    if st.st_uid != dono_esperado:
+        return False
+    if stat_mod.S_IMODE(st.st_mode) & 0o022:
+        return False
+    idade = agora() - st.st_mtime
+    return -5.0 <= idade <= REINICIO_SEM_ABRIR_VALIDADE_S
+
 
 # ---------------------------------------------------------------------------
 # Estado do broker: protocolo JSON-por-linha + lease/refcount resilientes
@@ -607,6 +994,10 @@ class BrokerState:
         log: Callable[..., None] = _log,
         sleep_fn: Callable[[float], None] = time.sleep,
         no_nasce_fechado: bool = False,
+        dev_input_root: str = DEV_INPUT_ROOT,
+        sys_class_input: str = "/sys/class/input",
+        validator_entrada: Callable[[str], str | None] | None = None,
+        reinicio_sem_abrir: Callable[[], bool] = reinicio_sem_abrir_pedido,
     ) -> None:
         self.allowed_uid = allowed_uid
         #: O-NO-NASCE-FECHADO-01: o nó do físico nasce `0600 root` pela regra
@@ -614,19 +1005,38 @@ class BrokerState:
         #: `NO_NASCE_FECHADO_ENV` na unit. False = mundo histórico (o udev dá
         #: `uaccess` e o repouso é ABERTO); True = o repouso é FECHADO.
         self.no_nasce_fechado = bool(no_nasce_fechado)
-        self._ops = ops if ops is not None else FsAclOps(sys_class_hidraw=sys_class_hidraw)
+        self._ops = (
+            ops
+            if ops is not None
+            else FsAclOps(
+                sys_class_hidraw=sys_class_hidraw,
+                dev_input_root=dev_input_root,
+                sys_class_input=sys_class_input,
+                sys_class_bluetooth=sys_class_bluetooth,
+            )
+        )
         self._validator = validator
+        self._validator_entrada = validator_entrada
         self._dev_root = dev_root
+        self._dev_input_root = dev_input_root
         self._sys_class_hidraw = sys_class_hidraw
+        self._sys_class_input = sys_class_input
         self._sys_class_bluetooth = sys_class_bluetooth
         self._log = log
         self._sleep = sleep_fn
+        self._reinicio_sem_abrir = reinicio_sem_abrir
         self.hidden: dict[str, _HiddenNode] = {}
         self.by_conn: dict[int, set[str]] = {}
         #: A lease INVERTIDA (`cmd expose`): refcount global por nó e, por
         #: conexão, o conjunto que AQUELA conexão mandou manter aberto.
         self.expostos: dict[str, _ExpostoNode] = {}
         self.expostos_by_conn: dict[int, set[str]] = {}
+        #: HIDE-SO-O-HIDRAW-02: por conexão, os nós cuja exposição pediu
+        #: TAMBÉM os nós de entrada (`expose` com `"entradas": true`). É o
+        #: pedido do Modo Nativo — o único que devolve os quatro nós ao jogo.
+        #: A exposição transitória do handle de controle (`hidapi` abrindo por
+        #: caminho) não pede, e os nós de entrada seguem fechados durante ela.
+        self.entradas_by_conn: dict[int, set[str]] = {}
 
     # -- validação -------------------------------------------------------
 
@@ -639,6 +1049,88 @@ class BrokerState:
             sys_class_hidraw=self._sys_class_hidraw,
             sys_class_bluetooth=self._sys_class_bluetooth,
         )
+
+    def _validate_entrada(self, node: str) -> str | None:
+        if self._validator_entrada is not None:
+            return self._validator_entrada(node)
+        return validate_physical_input_node(
+            node,
+            dev_input_root=self._dev_input_root,
+            sys_class_input=self._sys_class_input,
+            sys_class_bluetooth=self._sys_class_bluetooth,
+        )
+
+    # -- os nós de entrada seguem a lease (HIDE-SO-O-HIDRAW-02) ------------
+
+    def _entradas_holders(self, canon: str) -> int:
+        """Nº de conexões VIVAS que pediram os nós de ENTRADA de `canon` abertos."""
+        return sum(1 for held in self.entradas_by_conn.values() if canon in held)
+
+    def _entradas_devem_abrir(self, canon: str) -> bool:
+        """O estado dos nós de entrada, derivado SÓ da contabilidade.
+
+        Três regras, nesta ordem, e a ordem é a decisão dela de 23/09
+        («Esconder tudo; só o Modo Nativo devolve»):
+
+        1. alguma conexão viva pediu os nós de entrada (o Modo Nativo) ⇒
+           ABERTOS;
+        2. alguma lease de hide viva ⇒ FECHADOS (o grab do daemon manda);
+        3. senão, o repouso do mundo instalado: fechados com a regra da cura,
+           abertos no mundo histórico (`--no-fechar-o-no`).
+
+        A exposição transitória do hidraw NÃO aparece aqui de propósito: o
+        `hidapi` do handle de controle precisa do hidraw por caminho, e de
+        mais nada.
+        """
+        if self._entradas_holders(canon) > 0:
+            return True
+        if self._lease_holders(canon) > 0:
+            return False
+        return not self.no_nasce_fechado
+
+    def _aplicar_entradas(self, canon: str) -> None:
+        """Leva os nós de entrada de `canon` ao estado que a lease manda.
+
+        Idempotente e best-effort: ops sem a mecânica de entrada (dublê antigo
+        da suíte, que modela um aparelho sem nós de entrada) não fazem nada;
+        falha num nó vira log e nunca derruba a resposta do hidraw — o
+        controle continua usável pelo hidraw, e a próxima reconciliação
+        (o rehide de 30 s) tenta de novo.
+        """
+        base = canonical_hidraw_base(canon, dev_root=self._dev_root)
+        if base is None:
+            return
+        abrir = self._entradas_devem_abrir(canon)
+        op = getattr(self._ops, "abrir_entradas" if abrir else "fechar_entradas", None)
+        if not callable(op):
+            return
+        try:
+            mudados, falhos = op(base, self.allowed_uid) if abrir else op(base)
+        except OSError as exc:
+            self._log("entradas_falharam", node=canon, abrir=abrir, err=str(exc))
+            return
+        if falhos:
+            self._log("entradas_parcial", node=canon, abrir=abrir, falhos=",".join(falhos))
+        if mudados:
+            evento = "entradas_abertas" if abrir else "entradas_fechadas"
+            self._log(evento, node=canon, nos=",".join(mudados))
+
+    def _entradas_seguem(self, resposta: dict[str, object]) -> dict[str, object]:
+        """Depois de um comando sobre UM nó, os nós de entrada dele seguem.
+
+        Só para nó canônico que passou pelo validador: as recusas
+        (`reject_*`) não tocam nada, e o nó que sumiu (`gone`) não tem nós
+        de entrada.
+        """
+        erro = resposta.get("error")
+        if isinstance(erro, str) and erro.startswith("reject_"):
+            return resposta
+        if resposta.get("state") == "gone":
+            return resposta
+        node = resposta.get("node")
+        if isinstance(node, str):
+            self._aplicar_entradas(node)
+        return resposta
 
     # -- protocolo -------------------------------------------------------
 
@@ -669,18 +1161,35 @@ class BrokerState:
                     "cmd": "status",
                     "hidden": sorted(self.hidden),
                     "expostos": sorted(self.expostos),
+                    "entradas_expostas": sorted(
+                        {no for held in self.entradas_by_conn.values() for no in held}
+                    ),
                     "no_nasce_fechado": self.no_nasce_fechado,
                 },
                 None,
             )
         if cmd == "expose":
-            return (self._cmd_expose(conn_id, peer_uid, request.get("node")), None)
+            # HIDE-SO-O-HIDRAW-02: `"entradas": true` é o pedido do Modo
+            # Nativo, o único que devolve os nós de entrada. Quem não manda o
+            # campo (o `with` transitório do handle, um daemon antigo) expõe
+            # só o hidraw — e um broker antigo ignora o campo, expõe o hidraw
+            # e o daemon segue funcionando.
+            entradas = request.get("entradas") is True
+            return (
+                self._entradas_seguem(
+                    self._cmd_expose(conn_id, peer_uid, request.get("node"), entradas=entradas)
+                ),
+                None,
+            )
         if cmd == "unexpose":
-            return (self._cmd_unexpose(conn_id, request.get("node")), None)
+            return (self._entradas_seguem(self._cmd_unexpose(conn_id, request.get("node"))), None)
         if cmd == "hide":
-            return (self._cmd_hide(conn_id, peer_uid, request.get("node")), None)
+            return (
+                self._entradas_seguem(self._cmd_hide(conn_id, peer_uid, request.get("node"))),
+                None,
+            )
         if cmd == "restore":
-            return (self._cmd_restore(conn_id, request.get("node")), None)
+            return (self._entradas_seguem(self._cmd_restore(conn_id, request.get("node"))), None)
         if cmd == "restore_all":
             return (self._cmd_restore_all(conn_id), None)
         if cmd == "open":
@@ -694,8 +1203,15 @@ class BrokerState:
             None,
         )
 
-    def _cmd_expose(self, conn_id: int, peer_uid: int, node: object) -> dict[str, object]:
+    def _cmd_expose(
+        self, conn_id: int, peer_uid: int, node: object, *, entradas: bool = False
+    ) -> dict[str, object]:
         """«Mantenha este nó ABERTO enquanto eu viver» — o abrir sob pedido.
+
+        HIDE-SO-O-HIDRAW-02: com `entradas=True` a conexão pede também os nós
+        de entrada do aparelho (evdev e joydev). É o Modo Nativo, e o registro
+        vai para `entradas_by_conn` — os nós seguem abertos enquanto houver
+        UMA conexão viva que os pediu (`_entradas_devem_abrir`).
 
         O-NO-NASCE-FECHADO-01, item 2 da decisão dela de 20/09/2026. Com o nó
         do físico nascendo `0600 root`, quem precisa abri-lo POR CAMINHO — o
@@ -748,6 +1264,8 @@ class BrokerState:
                 entry.uid = peer_uid
                 self._log("exposto_orfao_adotado", node=canon, conn=conn_id, uid=peer_uid)
         held.add(canon)
+        if entradas:
+            self.entradas_by_conn.setdefault(conn_id, set()).add(canon)
         return resposta
 
     def _cmd_unexpose(self, conn_id: int, node: object) -> dict[str, object]:
@@ -763,6 +1281,10 @@ class BrokerState:
         canon = f"{self._dev_root}/{base}"
         held = self.expostos_by_conn.get(conn_id, set())
         entry = self.expostos.get(canon)
+        # HIDE-SO-O-HIDRAW-02: o pedido dos nós de entrada desta conexão sai
+        # junto com a exposição dela — quem os segue abertos, se houver, é
+        # outra conexão viva (`_entradas_devem_abrir`).
+        self.entradas_by_conn.get(conn_id, set()).discard(canon)
         if canon in held:
             held.discard(canon)
             if entry is not None and entry.refcount > 1:
@@ -938,7 +1460,8 @@ class BrokerState:
         restored: list[str] = []
         failed: list[str] = []
         for canon in sorted(self.by_conn.get(conn_id, set())):
-            response = self._cmd_restore(conn_id, canon)
+            # HIDE-SO-O-HIDRAW-02: os nós de entrada de cada nó seguem a lease.
+            response = self._entradas_seguem(self._cmd_restore(conn_id, canon))
             if response.get("ok") and response.get("state") in ("exposed", "fechado", "gone"):
                 restored.append(canon)
             elif not response.get("ok"):
@@ -958,6 +1481,9 @@ class BrokerState:
         assimetria que o design explora).
         """
         raw = node if isinstance(node, str) else None
+        if canonical_input_base(raw, dev_input_root=self._dev_input_root) is not None:
+            assert raw is not None  # narrow p/ mypy: canonical exige str
+            return self._cmd_open_entrada(conn_id, raw)
         base_canon = canonical_hidraw_base(raw, dev_root=self._dev_root)
         if base_canon is None:
             return ({"ok": False, "cmd": "open", "node": raw, "error": "reject_bad_path"}, None)
@@ -986,6 +1512,44 @@ class BrokerState:
         state = "hidden" if canon in self.hidden else "exposed"
         self._log("node_fd_servido", node=canon, conn=conn_id, state=state)
         return ({"ok": True, "cmd": "open", "node": canon, "state": state}, fd)
+
+    def _cmd_open_entrada(
+        self, conn_id: int, raw: str
+    ) -> tuple[dict[str, object], int | None]:
+        """O `open` de um nó de ENTRADA (`/dev/input/eventN`) — HIDE-SO-O-HIDRAW-02.
+
+        Com os nós de entrada do físico nascendo `0600 root`, o gamepad, o
+        touchpad e os sensores de movimento só chegam ao daemon por aqui, como
+        o hidraw já chega. Mesmo contrato do `open` do hidraw: valida sem
+        abrir, abre como root, revalida NO fd, e a lease não muda.
+        """
+        base = self._validate_entrada(raw)
+        if base is None:
+            return (
+                {"ok": False, "cmd": "open", "node": raw, "error": "reject_not_physical_dualsense"},
+                None,
+            )
+        canon = f"{self._dev_input_root}/{base}"
+        abrir = getattr(self._ops, "open_entrada", None)
+        if not callable(abrir):
+            return (
+                {"ok": False, "cmd": "open", "node": canon, "error": "reject_sem_entrada"},
+                None,
+            )
+        try:
+            fd = abrir(canon, base)
+        except StaleNodeError:
+            self._log("open_stale_node", node=canon)
+            return ({"ok": False, "cmd": "open", "node": canon, "error": "reject_stale_node"}, None)
+        except OSError as exc:
+            self._log("open_failed", node=canon, errno=exc.errno)
+            return (
+                {"ok": False, "cmd": "open", "node": canon, "error": "open_failed",
+                 "errno": exc.errno},
+                None,
+            )
+        self._log("entrada_fd_servida", node=canon, conn=conn_id)
+        return ({"ok": True, "cmd": "open", "node": canon, "state": "entrada"}, fd)
 
     def _lease_holders(self, canon: str) -> int:
         """Nº de conexões VIVAS cuja lease segura `canon`.
@@ -1037,6 +1601,11 @@ class BrokerState:
         """
         restored: list[str] = []
         failed: list[str] = []
+        # HIDE-SO-O-HIDRAW-02: o pedido dos nós de entrada morre junto, e
+        # ANTES de tudo — é ele que os segura abertos no Modo Nativo.
+        entradas_da_conn = self.entradas_by_conn.pop(conn_id, set())
+        tocados = set(entradas_da_conn) | set(self.by_conn.get(conn_id, set()))
+        tocados |= set(self.expostos_by_conn.get(conn_id, set()))
         # O-NO-NASCE-FECHADO-01: as exposições saem PRIMEIRO. Elas são o que
         # segura o nó aberto; soltá-las antes faz o `_repouso` do laço de
         # baixo (e o dos nós que esta conexão só expôs) enxergar a contagem
@@ -1077,6 +1646,10 @@ class BrokerState:
             else:
                 failed.append(canon)
         self.by_conn.pop(conn_id, None)
+        # HIDE-SO-O-HIDRAW-02: com a contabilidade já sem esta conexão, os nós
+        # de entrada de cada nó que ela tocava vão para o estado que sobra.
+        for canon in sorted(tocados):
+            self._aplicar_entradas(canon)
         if restored:
             self._log("lease_closed_restored", conn=conn_id, nodes=",".join(restored))
         if failed:
@@ -1091,16 +1664,47 @@ class BrokerState:
         embora, ele deixa de ser a porta: um nó `0600 root` sem broker de pé é
         um controle que só volta com `sudo`, e isto é um app de acessibilidade.
         O ExecStartPre do serviço re-fecha no próximo start.
+
+        HIDE-SO-O-HIDRAW-02 (24/09/2026), duas coisas:
+
+        - os nós de ENTRADA abrem junto (`abrir_entradas`): sem o broker, o
+          daemon não tem por onde lê-los, e o gamepad inteiro morreria;
+        - o REINÍCIO PEDIDO não abre nada (`reinicio_sem_abrir_pedido`). Com o
+          nó nascendo fechado, abrir num reinício é entregar o físico à Steam
+          aberta no segundo em que o broker novo ainda não subiu — medido no
+          install de 24/09, que trocou o binário e deixou o serviço com o
+          código velho na memória desde 22/09. O broker novo sobe em ~1 s e o
+          baseline dele fecha o que houver.
         """
         restored: list[str] = []
-        for canon, entry in sorted(self.hidden.items()):
-            response = self._fs_restore(canon, canon.rsplit("/", 1)[-1], entry.uid)
-            if response.get("ok"):
-                del self.hidden[canon]
-                restored.append(canon)
+        if self.no_nasce_fechado and self._reinicio_sem_abrir():
+            self._log(
+                "reinicio_sem_abrir",
+                escondidos=",".join(sorted(self.hidden)) or "-",
+                expostos=",".join(sorted(self.expostos)) or "-",
+            )
+        else:
+            abrir = getattr(self._ops, "abrir_entradas", None)
+            for canon, entry in sorted(self.hidden.items()):
+                base = canon.rsplit("/", 1)[-1]
+                response = self._fs_restore(canon, base, entry.uid)
+                if response.get("ok"):
+                    del self.hidden[canon]
+                    restored.append(canon)
+                if callable(abrir) and response.get("state") != "gone":
+                    with contextlib.suppress(OSError):
+                        abrir(base, entry.uid)
+            # Os nós que só foram EXPOSTOS já têm o hidraw aberto, mas os
+            # nós de entrada deles podem estar fechados (a exposição
+            # transitória não os abre): o broker que sai abre todos.
+            if callable(abrir):
+                for canon in sorted(self.expostos):
+                    with contextlib.suppress(OSError):
+                        abrir(canon.rsplit("/", 1)[-1], self.allowed_uid)
         self.by_conn.clear()
         self.expostos.clear()
         self.expostos_by_conn.clear()
+        self.entradas_by_conn.clear()
         return restored
 
 
@@ -1175,12 +1779,21 @@ def restore_all_physical(
     (`fechar_todo_fisico`), que é o baseline do mundo novo. Esta função fica
     como está, e continua sendo o piso de recuperação do ExecStopPost.
     """
-    fs_ops = ops if ops is not None else FsAclOps(sys_class_hidraw=sys_class_hidraw)
+    fs_ops = (
+        ops
+        if ops is not None
+        else FsAclOps(sys_class_hidraw=sys_class_hidraw, sys_class_bluetooth=sys_class_bluetooth)
+    )
     restored: list[str] = []
     try:
         entries = sorted(os.listdir(sys_class_hidraw))
     except OSError:
         return restored
+    # HIDE-SO-O-HIDRAW-02: o piso de recuperação abre também os nós de
+    # ENTRADA — sem broker, o daemon não tem outra porta para o gamepad, o
+    # touchpad e os sensores de movimento.
+    fechadas_fn = getattr(fs_ops, "entradas_fechadas_para", None)
+    abrir_fn = getattr(fs_ops, "abrir_entradas", None)
     for base in entries:
         node = f"{dev_root}/{base}"
         valid = (
@@ -1195,6 +1808,16 @@ def restore_all_physical(
         )
         if valid is None:
             continue
+        if callable(fechadas_fn) and callable(abrir_fn) and fechadas_fn(base, uid):
+            try:
+                mudados, falhos = abrir_fn(base, uid)
+            except OSError as exc:
+                log("baseline_entradas_restore_failed", node=node, err=str(exc))
+            else:
+                if mudados:
+                    log("baseline_entradas_restored", node=node, nos=",".join(mudados))
+                if falhos:
+                    log("baseline_entradas_restore_failed", node=node, nos=",".join(falhos))
         if fs_ops.is_exposed_to(node, uid):
             continue
         try:
@@ -1229,12 +1852,22 @@ def fechar_todo_fisico(
     mesmo critério de exposição), com o sinal trocado. Idempotente e
     best-effort: falha num nó nunca aborta o laço.
     """
-    fs_ops = ops if ops is not None else FsAclOps(sys_class_hidraw=sys_class_hidraw)
+    fs_ops = (
+        ops
+        if ops is not None
+        else FsAclOps(sys_class_hidraw=sys_class_hidraw, sys_class_bluetooth=sys_class_bluetooth)
+    )
     fechados: list[str] = []
     try:
         entries = sorted(os.listdir(sys_class_hidraw))
     except OSError:
         return fechados
+    # HIDE-SO-O-HIDRAW-02: o baseline fecha também os nós de ENTRADA. É o que
+    # alcança o controle conectado ANTES de o socket do broker existir (a
+    # regra 72 só fecha na criação do nó quando há broker para abri-lo) e o
+    # controle que já estava na mesa quando a cura chegou.
+    abertas_fn = getattr(fs_ops, "entradas_abertas", None)
+    fechar_fn = getattr(fs_ops, "fechar_entradas", None)
     for base in entries:
         node = f"{dev_root}/{base}"
         valid = (
@@ -1249,6 +1882,16 @@ def fechar_todo_fisico(
         )
         if valid is None:
             continue
+        if callable(abertas_fn) and callable(fechar_fn) and abertas_fn(base):
+            try:
+                mudados, falhos = fechar_fn(base)
+            except OSError as exc:
+                log("baseline_entradas_fechar_failed", node=node, err=str(exc))
+            else:
+                if mudados:
+                    log("baseline_entradas_fechadas", node=node, nos=",".join(mudados))
+                if falhos:
+                    log("baseline_entradas_fechar_failed", node=node, nos=",".join(falhos))
         if not fs_ops.is_exposed_to(node, uid):
             continue
         try:
@@ -1552,6 +2195,13 @@ def main(argv: list[str] | None = None) -> int:
         if args.fechar_tudo_e_sair and no_nasce_fechado:
             fechados = fechar_todo_fisico(uid=allowed_uid)
             _log("fechar_tudo_done", count=len(fechados))
+            return 0
+        if args.restore_all_and_exit and no_nasce_fechado and reinicio_sem_abrir_pedido():
+            # HIDE-SO-O-HIDRAW-02: o ExecStopPost de um REINÍCIO pedido não
+            # abre nada — o broker novo sobe em ~1 s e o baseline dele fecha
+            # o que houver. Sem o pedido (parar de verdade, cair, desinstalar),
+            # segue o piso de recuperação de sempre, logo abaixo.
+            _log("reinicio_sem_abrir", belt="restore-all-and-exit")
             return 0
         restored = restore_all_physical(uid=allowed_uid)
         _log("restore_all_done", count=len(restored))

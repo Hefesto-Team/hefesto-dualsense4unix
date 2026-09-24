@@ -104,7 +104,10 @@ class TestServiceHardening:
         # hidraw é dinâmico — um numérico quebraria em kernel novo).
         d = _directives(service_text)
         assert d["DevicePolicy"] == ["closed"]
-        assert d["DeviceAllow"] == ["char-hidraw rw"]
+        # HIDE-SO-O-HIDRAW-02 (24/09/2026): o `open` serve também o evdev do
+        # físico, que nasce `0600 root` — `char-input` é o segundo grupo, e
+        # nenhum outro entra.
+        assert d["DeviceAllow"] == ["char-hidraw rw", "char-input rw"]
 
     def test_hardening_exato_do_desenho(self, service_text: str) -> None:
         d = _directives(service_text)

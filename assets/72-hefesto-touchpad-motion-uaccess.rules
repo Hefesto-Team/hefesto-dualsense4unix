@@ -97,10 +97,12 @@
 #     fora da lista de gamepads (não devolvemos `ID_INPUT_JOYSTICK`; damos a
 #     TAG direto, que é o que separa "quem enxerga" de "quem tem acesso");
 #   - `80-motion-joydev-hide.rules` — os `jsN` legados continuam em MODE 0000.
-#     Só `event*` entra aqui, de propósito.
+#     Só `event*` GANHA acesso aqui, de propósito; o `jsN` só aparece nas
+#     duas linhas do fim, e elas FECHAM.
 #
 # Reverter: remover este arquivo e `sudo udevadm control --reload`. Nada aqui
-# escreve em atributo de device, não cria grupo e não altera modo nem dono.
+# escreve em atributo de device e não cria grupo. As duas linhas do FIM (ver
+# o bloco HIDE-SO-O-HIDRAW-02) são as únicas que alteram modo e dono.
 
 # --- Sony: DualSense, DualSense Edge, DualShock4, 8BitDo em modo PS4, e os
 #     vpads uhid do daemon (todos com id/vendor 054c) ---
@@ -113,3 +115,52 @@ ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ATTRS{id/vendor}=="0
 #     `input_id` — mesma lacuna do "Motion Sensors" da Sony. Não há touchpad
 #     nesta família. ---
 ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ATTRS{id/vendor}=="057e", ATTRS{name}=="*(IMU)", TAG+="uaccess"
+
+# ---------------------------------------------------------------------------
+# HIDE-SO-O-HIDRAW-02 (24/09/2026) — OS NÓS DE ENTRADA DO FÍSICO NASCEM FECHADOS
+# ---------------------------------------------------------------------------
+#
+# A palavra dela, 23/09/2026, escolhida entre as opções: «Esconder tudo». Os
+# quatro nós de entrada do DualSense FÍSICO — o gamepad, o touchpad, os
+# sensores de movimento e a tomada do fone (`event*`), e o joystick legado
+# (`js*`) — somem para todos, menos para o Hefesto, como o hidraw já some
+# desde a `70-ps5-controller.rules`. Só o Modo Nativo os devolve, pelo broker.
+#
+# POR QUÊ. O doctor media, com o hidraw fechado: «o FÍSICO segue alcançável em
+# 4 nó(s) de entrada (event27 event28 event29 js1), e quem enumerar /dev/input
+# em vez de hidraw acha o controle dobrado». O que separava o jogo do físico
+# era só a env do wrapper de launch — e a Steam apaga esse wrapper sozinha.
+#
+# COMO O HEFESTO CONTINUA LENDO. O daemon lê o gamepad, o touchpad e o
+# giroscópio por estes nós. Com eles `0600 root`, ele pede o fd ao broker
+# (`cmd open` com `/dev/input/eventN`), como já pede o do hidraw.
+#
+# POR QUE AQUI E NÃO NA 70. Quem dá `uaccess` ao gamepad é o
+# `/usr/lib/udev/rules.d/70-uaccess.rules` do sistema, e `70-ps5` corre ANTES
+# de `70-uaccess` (p < u): um `TAG-=` lá seria desfeito. Este arquivo corre
+# depois dele e antes do `73-seat-late.rules`, que é quem vira a TAG em ACL.
+# E as linhas vêm DEPOIS das de acesso acima, que dão `TAG+=` ao touchpad e
+# ao movimento de todo aparelho Sony — a ordem dentro do arquivo é a cura.
+#
+# COMO SEPARA O FÍSICO DO VPAD, a mesma topologia da `70-ps5-controller`:
+#   - pelo RÁDIO o físico é bus 0005 (`KERNELS=="0005:054C:…"`), e o vpad é
+#     sempre 0003;
+#   - pelo CABO o físico tem pai USB real, e o vpad mora em
+#     `/devices/virtual/misc/uhid/` — o `DEVPATH!=` o deixa de fora.
+#   O vpad continua aberto: é o controle que o Hefesto ENTREGA ao jogo.
+#
+# SÓ COM O BROKER DE PÉ — o `TEST==` do socket. Sem broker não há quem sirva o
+# fd, e fechar estes nós seria matar o gamepad inteiro (o daemon lê a entrada
+# por eles). Os pacotes de distro que não instalam o broker, e a máquina em
+# que ele foi desinstalado, ficam no mundo de antes, com a ACL da sessão. O
+# controle que conecta antes de o socket existir (o cabo no boot) nasce aberto
+# e o broker o fecha ao subir (`--fechar-tudo-e-sair`).
+#
+# O `jsN` dos sensores de movimento casa aqui também, e a `80-motion-joydev-
+# hide.rules`, que corre depois, o põe em `MODE="0000"` — ela continua dona.
+#
+# COMO REVERTER, junto com o hidraw: a variante aberta sai do mesmo
+# `scripts/regra_do_no_aberta.sh` que abre a 70 — as duas linhas têm a forma
+# fechada que ele troca.
+ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*|js*", KERNELS=="0005:054C:0CE6.*|0005:054C:0DF2.*", TEST=="/run/hefesto-hidraw-broker/broker.sock", MODE="0600", OWNER="root", GROUP="root", TAG-="uaccess"
+ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*|js*", KERNELS=="0003:054C:0CE6.*|0003:054C:0DF2.*", DEVPATH!="/devices/virtual/*", TEST=="/run/hefesto-hidraw-broker/broker.sock", MODE="0600", OWNER="root", GROUP="root", TAG-="uaccess"

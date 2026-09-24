@@ -86,9 +86,17 @@ def _linhas_de_codigo(path: Path) -> list[str]:
 
 @pytest.fixture(scope="module")
 def linhas() -> list[str]:
+    """As linhas que DÃO acesso — as invariantes deste módulo são delas.
+
+    HIDE-SO-O-HIDRAW-02 (24/09/2026): o arquivo ganhou, no fim, duas linhas
+    que FECHAM os nós de entrada do DualSense físico (`TAG-="uaccess"`,
+    `MODE="0600"`, `event*` e `js*`). Elas têm régua própria, em
+    `tests/unit/test_hide_so_o_hidraw_02_os_quatro_nos_de_entrada.py`; aqui
+    ficam as de acesso, que continuam valendo linha a linha.
+    """
     if not REGRA.is_file():
         pytest.fail(f"regra ausente: {REGRA}")
-    return _linhas_de_codigo(REGRA)
+    return [ln for ln in _linhas_de_codigo(REGRA) if 'TAG-="uaccess"' not in ln]
 
 
 def test_o_arquivo_existe() -> None:
@@ -118,6 +126,18 @@ def test_toda_linha_de_codigo_da_uaccess(linhas: list[str]) -> None:
     assert linhas, "o arquivo não tem linha de código nenhuma"
     for ln in linhas:
         assert 'TAG+="uaccess"' in ln, f"linha sem TAG uaccess: {ln}"
+
+
+def test_toda_linha_ou_da_acesso_ou_fecha_o_fisico() -> None:
+    """Cada linha de código faz UMA das duas coisas, e nunca as duas.
+
+    A mordida: uma linha nova que não dá nem tira a TAG (um `MODE=` solto, por
+    exemplo) cai aqui, em vez de passar calada pelo filtro do `linhas`.
+    """
+    for ln in _linhas_de_codigo(REGRA):
+        da = 'TAG+="uaccess"' in ln
+        tira = 'TAG-="uaccess"' in ln
+        assert da != tira, f"linha que não dá nem tira a TAG uaccess (ou faz as duas): {ln}"
 
 
 def test_motion_tem_uaccess(linhas: list[str]) -> None:
