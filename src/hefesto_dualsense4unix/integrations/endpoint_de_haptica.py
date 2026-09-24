@@ -46,10 +46,32 @@ jogo abriu o stream de quatro canais.
 
 **Nada é escrito na âncora.** Ela é só um endereço de onde o Wine tira quatro
 números.
+
+O RÓTULO DIZ O CONTROLE, E NÃO O ENDEREÇO — 24/09/2026
+------------------------------------------------------
+A-HAPTICA-TEM-NOME-DE-CONTROLE-01. O nó aparecia na lista de saídas de som da
+pessoa como «DualSense <os seis hex do endereço> (háptica)». Passou à FORMA A
+dos outros dois nós do controle: «Háptica do Controle N (DualSense Wireless
+Controller)», com o número do jogador, republicado quando o número muda
+(:meth:`EndpointDeHaptica.renovar_o_rotulo`). O NOME do nó continua pela marca
+do aparelho: é dele que o Wine tira o id do endpoint, e é ele que sobrevive à
+reconexão.
+
+**O que o jogo lê não mudou, e isso foi medido no código** — o GE-Proton11-7
+com os 182 patches ``proton-ds5-haptic`` aplicados em ordem. A descrição chega
+ao Wine como o nome amigável (``get_device_name`` → ``drv_id`` → ``Speakers
+(…)``), e os casamentos do ``mmdevapi`` sobre ele dão o MESMO resultado para o
+rótulo velho e para o novo: «DualSense» presente (``is_dualsense_endpoint_name``,
+o 0187 inclusive), «… Speaker» e «Internal Mono Speaker» ausentes
+(``is_dualsense_audioendpoint_name``, o mono), «Direct Wireless Controller»
+ausente. O id do endpoint sai do NOME, e a âncora do ``ContainerId`` — o que a
+RE Engine casa com o device KS — sai do ``sysfs.path``. Nenhum dos dois mudou.
+A régua é ``tests/unit/test_a_haptica_tem_nome_de_controle.py``.
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -61,10 +83,11 @@ from hefesto_dualsense4unix.integrations.alto_falante_bt import (
     so_hex,
 )
 from hefesto_dualsense4unix.integrations.vestido_de_dualsense import (
-    FABRICANTE_USB,
     PID_DUALSENSE,
     VID_SONY,
     campos_da_identidade,
+    campos_do_nome,
+    com_o_nome_da_sony,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -124,7 +147,20 @@ PRIORIDADE_DA_SESSAO = 0
 #: Cravar 100% neles aqui atropelaria a escolha dela do outro lado.
 VOLUME_DOS_MOTORES = "100%"
 
+#: A metade do rótulo SEM o número e sem o sufixo da Sony, que
+#: :func:`rotulo_da_haptica` acrescenta. Irmã de
+#: ``alto_falante_bt.NOME_DO_ALTO_FALANTE_DO_CONTROLE`` e de
+#: ``dualsense_bt_audio.NOME_DO_MICROFONE_DO_CONTROLE``: os três nós de um
+#: controle no BT se leem lado a lado na lista de som da pessoa.
+NOME_DA_HAPTICA_DO_CONTROLE = "Háptica do Controle"
+
 _MODULO_NULL_SINK = "module-null-sink"
+
+#: O rótulo dentro do argumento do módulo, como o ``pactl list short modules``
+#: o devolve: entre aspas SIMPLES, dentro do ``sink_properties="…"`` — as aspas
+#: que :func:`propriedades_do_endpoint` escreve. O rótulo desta casa nunca leva
+#: uma aspa simples.
+_ROTULO_NO_ARGUMENTO = re.compile(r"device\.description='([^']*)'")
 
 
 @dataclass(frozen=True)
@@ -291,22 +327,68 @@ def nome_do_endpoint(uniq: str) -> str:
     return nome if len(nome) <= MAX_NOME else ""
 
 
-def propriedades_do_endpoint(uniq: str, ancora: Ancora) -> str:
+def rotulo_da_haptica(numero: int | None) -> str:
+    """A FORMA A — «Háptica do Controle N (DualSense Wireless Controller)».
+
+    **Decidido por delegação dela em 24/09/2026**, pelo padrão que ela fixou
+    para o alto-falante e o microfone em 23/09 (A-FORJA-VALIDA-O-SOM-01, E6): o
+    nome dela na frente, o ``iProduct`` da Sony atrás, e nada de endereço. O
+    rótulo de antes, «DualSense <hex6> (háptica)», punha o rabo do endereço do
+    controle na lista de som da máquina — e fazia a bancada contar quatro placas
+    DualSense onde há duas.
+
+    ``None``, ``bool`` e número que não seja positivo valem como *"não sei o
+    assento"*: sem número não se inventa número, e o rótulo sai sem ele.
+    """
+    base = NOME_DA_HAPTICA_DO_CONTROLE
+    if isinstance(numero, int) and not isinstance(numero, bool) and numero > 0:
+        base = f"{base} {numero}"
+    return com_o_nome_da_sony(base)
+
+
+def descricao_da_haptica(uniq: str) -> str:
+    """O rótulo deste controle AGORA, com o assento perguntado ao DONO.
+
+    O número vem de ``dualsense_bt_audio.numero_do_assento`` — o mesmo
+    numerador que dá o «Alto-falante do Controle N» e o «Microfone do Controle
+    N». Um segundo numerador aqui poria o mesmo controle no 3 numa linha da
+    lista de som e no 4 na de baixo; a posição na lista de controles não é o
+    número do jogador.
+    """
+    from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
+        numero_do_assento,
+    )
+
+    return rotulo_da_haptica(numero_do_assento(str(uniq or "")))
+
+
+def propriedades_do_endpoint(
+    uniq: str, ancora: Ancora, rotulo: str | None = None
+) -> str:
     """O ``sink_properties=``, ENTRE ASPAS DUPLAS.
 
     **As aspas são a cura conhecida desta casa**, paga em 06/09/2026: o parser
     do ``pipewire-pulse`` corta o valor no primeiro ESPAÇO quando ele não vem
     entre aspas, e só a primeira propriedade chega — com a régua dando verde
     por ler o argv em vez do nó.
+
+    O rótulo pronto entra por ``rotulo`` quando quem publica precisa lembrar
+    dele (:meth:`EndpointDeHaptica.iniciar`); sem ele, é o de agora.
     """
-    marca = marca_do_controle(uniq)
+    if rotulo is None:
+        rotulo = descricao_da_haptica(uniq)
     campos = (
         # A IDENTIDADE tem um dono, e a âncora é a dele: sem `sysfs.path` o
         # Wine zera o `ContainerId` e o jogo não casa o endpoint com o device
         # KS — a razão inteira deste módulo.
         *campos_da_identidade(ancora.declarado),
-        f"device.vendor.name='{FABRICANTE_USB}'",
-        f"device.description='DualSense {marca} (háptica)'",
+        # O NOME da Sony, do mesmo dono do nó do alto-falante. O que pesa aqui
+        # é o `device.product.name`: o monitor deste nó se chama «Monitor of
+        # Háptica do Controle N (…)», 64 caracteres, e acima dos 62 do Wine é
+        # dele que o `get_device_name` monta o nome — sem ele, o comprido chega
+        # inteiro ao jogo.
+        *campos_do_nome(),
+        f"device.description='{rotulo}'",
         f"priority.session={PRIORIDADE_DA_SESSAO}",
         "device.icon_name=audio-speakers",
     )
@@ -339,6 +421,20 @@ def endpoints_de_pe(
     chamar = runner or rodar_pactl
     saida = chamar(["pactl", "list", "short", "modules"]) or ""
     de_pe: dict[str, list[tuple[str, str]]] = {}
+    for module_id, nome, caminho, _rotulo in _modulos_desta_casa(saida):
+        de_pe.setdefault(nome, []).append((module_id, caminho))
+    return de_pe
+
+
+def _modulos_desta_casa(saida: str) -> list[tuple[str, str, str, str]]:
+    """``(module_id, sink_name, sysfs.path, rótulo)`` de cada endpoint desta casa.
+
+    O leitor ÚNICO do ``pactl list short modules`` deste módulo: a posse (nome e
+    âncora, :func:`endpoints_de_pe`) e o rótulo do nó adotado
+    (:func:`rotulo_no_ar`) saem da mesma linha, e duas leituras dela divergiriam
+    no dia em que uma aprendesse um campo. Rótulo ausente é ``""``.
+    """
+    achados: list[tuple[str, str, str, str]] = []
     for linha in saida.splitlines():
         if _MODULO_NULL_SINK not in linha or MARCA_DO_NOME not in linha:
             continue
@@ -353,9 +449,31 @@ def endpoints_de_pe(
                 nome = pedaco[len("sink_name=") :]
             elif pedaco.startswith("sysfs.path="):
                 caminho = pedaco[len("sysfs.path=") :]
-        if nome:
-            de_pe.setdefault(nome, []).append((partes[0].strip(), caminho))
-    return de_pe
+        if not nome:
+            continue
+        rotulo = _ROTULO_NO_ARGUMENTO.search(argv)
+        achados.append((partes[0].strip(), nome, caminho, rotulo.group(1) if rotulo else ""))
+    return achados
+
+
+def rotulo_no_ar(
+    module_id: str, runner: Callable[[list[str]], str | None] | None = None
+) -> str:
+    """O rótulo com que o módulo ``module_id`` nasceu — ``""`` quando não se sabe.
+
+    **É A MEMÓRIA DO NÓ ADOTADO.** O daemon que reinicia adota o endpoint que
+    está de pé, sem recarregá-lo (:meth:`EndpointDeHaptica.iniciar`), e o
+    servidor de som não guarda o assento em lugar nenhum além deste texto. Sem
+    ele o nó adotado nunca saberia que o rótulo envelheceu — e o do produto de
+    antes («DualSense <hex6> (háptica)») ficaria na lista dela até o controle
+    reconectar.
+    """
+    chamar = runner or rodar_pactl
+    saida = chamar(["pactl", "list", "short", "modules"]) or ""
+    for achado_id, _nome, _caminho, rotulo in _modulos_desta_casa(saida):
+        if achado_id == str(module_id):
+            return rotulo
+    return ""
 
 
 def _volume_da_frente(saida_do_pactl: str, nome_do_sink: str) -> tuple[str, str]:
@@ -443,6 +561,10 @@ class EndpointDeHaptica:
         self.taxa_hz = taxa_hz
         self.runner = runner or rodar_pactl
         self._module_id: str | None = None
+        #: O rótulo que está NO AR: o do ``load-module`` deste processo, ou o
+        #: que o servidor diz do nó adotado. ``""`` é *"não sei"*, e rótulo que
+        #: não se sabe nunca autoriza derrubar o nó (:meth:`rotulo_envelheceu`).
+        self.rotulo = ""
 
     @property
     def module_id(self) -> str | None:
@@ -484,6 +606,10 @@ class EndpointDeHaptica:
             self._module_id = iguais[0]
             for sobrando in [m for m, _ in instancias if m != iguais[0]]:
                 self.runner(["pactl", "unload-module", sobrando])
+            # O nó adotado traz o rótulo de QUANDO nasceu — talvez de outro
+            # assento, talvez do produto de antes. Lembrá-lo é o que deixa
+            # `renovar_o_rotulo` alcançar também o nó que o restart herdou.
+            self.rotulo = rotulo_no_ar(iguais[0], self.runner)
             logger.info(
                 "haptica_endpoint_adotado",
                 uniq=self.uniq,
@@ -499,6 +625,19 @@ class EndpointDeHaptica:
                 uniq=self.uniq,
                 quantos=len(instancias),
             )
+        if not self._carregar(self.rotulo_de_agora()):
+            logger.warning("haptica_endpoint_nao_subiu", uniq=self.uniq)
+            return False
+        logger.info(
+            "haptica_endpoint_publicado",
+            uniq=self.uniq,
+            sink=self.nome,
+            ancora=self.ancora.syspath,
+        )
+        return True
+
+    def _carregar(self, rotulo: str) -> bool:
+        """Um ``load-module`` com este rótulo. True = o servidor devolveu o id."""
         saida = self.runner(
             [
                 "pactl",
@@ -509,22 +648,91 @@ class EndpointDeHaptica:
                 f"rate={self.taxa_hz}",
                 f"channels={self.canais}",
                 "channel_map=front-left,front-right,rear-left,rear-right",
-                propriedades_do_endpoint(self.uniq, self.ancora),
+                propriedades_do_endpoint(self.uniq, self.ancora, rotulo),
             ]
         )
         linhas = [ln.strip() for ln in (saida or "").splitlines() if ln.strip()]
         if not linhas or not linhas[-1].isdigit():
-            logger.warning("haptica_endpoint_nao_subiu", uniq=self.uniq)
             return False
         self._module_id = linhas[-1]
+        self.rotulo = rotulo
         self._ligar_os_motores()
-        logger.info(
-            "haptica_endpoint_publicado",
-            uniq=self.uniq,
-            sink=self.nome,
-            ancora=self.ancora.syspath,
-        )
         return True
+
+    # -- o rótulo acompanha o assento — A-HAPTICA-TEM-NOME-DE-CONTROLE-01 ------
+
+    def rotulo_de_agora(self) -> str:
+        """O rótulo que este nó teria se nascesse AGORA."""
+        return descricao_da_haptica(self.uniq)
+
+    def rotulo_envelheceu(self) -> bool:
+        """O rótulo no ar ficou para trás do assento de agora? Nunca levanta.
+
+        A regra é a do alto-falante, e mora num lugar só
+        (``dualsense_bt_audio.rotulo_envelheceu``): perder o número nunca conta
+        como envelhecer, senão o nó renasceria a cada vez que o numerador
+        piscasse. Nó que não está de pé, ou cujo rótulo não se sabe, não
+        envelhece — *"não sei"* nunca autoriza derrubar o que está no ar.
+        """
+        return bool(self._rotulo_novo())
+
+    def _rotulo_novo(self) -> str:
+        """O rótulo de agora, se o do ar envelheceu; ``""`` se não há o que trocar.
+
+        UMA leitura do numerador para as duas perguntas: conferir com uma e
+        publicar com outra abriria a janela em que o número some entre elas, e
+        o nó renasceria sem número — o que a regra do envelhecer existe para
+        impedir.
+        """
+        if self._module_id is None or not self.rotulo:
+            return ""
+        from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
+            rotulo_envelheceu,
+        )
+
+        try:
+            de_agora = self.rotulo_de_agora()
+            return de_agora if rotulo_envelheceu(self.rotulo, de_agora) else ""
+        except Exception:  # pragma: no cover - defensivo: numerador explodindo
+            logger.debug("haptica_rotulo_de_agora_ilegivel", uniq=self.uniq, exc_info=True)
+            return ""
+
+    def renovar_o_rotulo(self) -> bool:
+        """O nó renasce com o rótulo de agora. True só quando renasceu com ele.
+
+        **Renomear é republicar:** o ``device.description`` de um
+        ``module-null-sink`` se fixa no ``load-module`` e não se reescreve —
+        medido em 20/09/2026 (``dualsense_bt_audio.rotulo_envelheceu``). O NOME
+        e a ÂNCORA ficam, então o jogo que abrir depois acha o mesmo endpoint,
+        com o mesmo id e o mesmo ``ContainerId``.
+
+        **QUANDO é do subsystem**, que sabe se há jogo aberto
+        (``AltoFalanteSubsystem._renovar_o_rotulo_da_haptica``); aqui só se
+        faz, e só se o rótulo envelheceu de fato. A ordem é a do nó do
+        alto-falante (``GerenciadorDeNosDeSom._republicar``): o rótulo novo se
+        resolve ANTES de derrubar, e o nó que não sobe com ele volta com o
+        velho — um rótulo velho é melhor que endpoint nenhum. Só quando nem a
+        volta sobe o nó fica fora, com ``module_id`` vazio para quem chama ver.
+        """
+        module_id = self._module_id
+        de_agora = self._rotulo_novo()
+        if module_id is None or not de_agora:
+            return False
+        velho = self.rotulo
+        self.runner(["pactl", "unload-module", module_id])
+        self._module_id = None
+        if self._carregar(de_agora):
+            logger.info(
+                "haptica_rotulo_renovado", uniq=self.uniq, no_ar=velho, de_agora=de_agora
+            )
+            return True
+        logger.warning("haptica_rotulo_novo_nao_subiu", uniq=self.uniq, de_agora=de_agora)
+        if self._carregar(velho):
+            logger.info("haptica_endpoint_voltou_com_o_rotulo_velho", uniq=self.uniq)
+        else:
+            self.rotulo = ""
+            logger.warning("haptica_endpoint_sumiu_ao_renovar", uniq=self.uniq)
+        return False
 
     def _ligar_os_motores(self) -> None:
         """Põe os canais traseiros em :data:`VOLUME_DOS_MOTORES`, preservando a frente.
@@ -562,6 +770,7 @@ class EndpointDeHaptica:
         self.runner(["pactl", "unload-module", self._module_id])
         logger.info("haptica_endpoint_derrubado", uniq=self.uniq, sink=self.nome)
         self._module_id = None
+        self.rotulo = ""
 
     def __enter__(self) -> EndpointDeHaptica:
         self.iniciar()
@@ -574,15 +783,19 @@ class EndpointDeHaptica:
 __all__ = [
     "AGULHAS",
     "MOLDE_DO_NOME",
+    "NOME_DA_HAPTICA_DO_CONTROLE",
     "PID_DUALSENSE",
     "VID_SONY",
     "Ancora",
     "EndpointDeHaptica",
     "ancoras",
+    "descricao_da_haptica",
     "distribuir_ancoras",
     "endpoints_de_pe",
     "marca_do_controle",
     "nome_do_endpoint",
     "propriedades_do_endpoint",
+    "rotulo_da_haptica",
+    "rotulo_no_ar",
     "varrer_endpoints_orfaos",
 ]
