@@ -631,3 +631,177 @@ def test_a_ponte_leva_o_sempre_como_null(monkeypatch: pytest.MonkeyPatch) -> Non
         ("mira.set", {"gatilho": None, "uniq": "aa:bb:cc:00:00:01"}),
         ("mira.set", {"inverter_vertical": False, "uniq": "aa:bb:cc:00:00:01"}),
     ]
+
+
+# ---------------------------------------------------------------------------
+# A MATRIZ DO ITEM 2 — fora do Nativo, a Mira do CHIP anda em todo caminho
+# ---------------------------------------------------------------------------
+# *"todas as decisões e funcionalidades nunca é pensada só em um modo, rota,
+# forma de conexão se cabo ou se bt, ou só pro player 1."*  <!-- noqa-acento: citação literal dela -->
+#
+# OS MODOS QUE EXISTEM, medidos em 24/09/2026 (`mode_transition.MODES` e
+# `ProfileModeConfig`): `gamepad` (o Hefesto ligado, com o CAMINHO `dualsense`
+# — o vpad `uhid` — ou `xbox` — o vpad `uinput`), `native` (o Modo Nativo) e
+# `desktop` (a Navegação). A matriz abaixo é a do `gamepad`: os dois caminhos,
+# os dois transportes e os quatro jogadores, com a mira acesa PELO CHIP
+# (`mira.set`), e o analógico direito lido na SAÍDA de cada vpad de verdade —
+# o report `0x01` do `uhid` e o `ABS_RX` do `uinput`. O `desktop` não entra:
+# nele não há gamepad virtual (o `dispatch_gamepad` volta no `device is None`)
+# e o analógico direito vira a roda do mouse (`uinput_mouse.dispatch`); a
+# decisão de o chip ficar ou não cinza ali é dela, e está no relatório.
+
+_GIRO = (0.0, 150.0, 0.0)
+
+
+class _GravadorDeEvdev:
+    """O nó `uinput` de mentira: guarda o último valor de cada eixo escrito.
+
+    Do tamanho do `evdev.UInput` para o que o `UinputGamepad.forward_analog`
+    usa — `write(tipo, código, valor)` e `syn()` —, e nada a mais.
+    """
+
+    def __init__(self) -> None:
+        self.eixos: dict[int, int] = {}
+        self.syns = 0
+
+    def write(self, tipo: int, codigo: int, valor: int) -> None:
+        from evdev import ecodes
+
+        if tipo == ecodes.EV_ABS:
+            self.eixos[codigo] = valor
+
+    def syn(self) -> None:
+        self.syns += 1
+
+
+def _vpad_de_verdade(caminho: str, jogador: int, fds: list[int]) -> tuple[Any, Any]:
+    """O vpad DO CAMINHO, com o codificador de verdade, e o leitor do analógico
+    direito que o jogo receberia.
+
+    `dualsense` é o `UhidDualSense`: o fd vai ao `/dev/null` (o `send_report`
+    escreve de verdade) e o analógico sai do corpo do report `0x01`, byte 2.
+    `xbox` é o `UinputGamepad`: o nó é o gravador acima, e o analógico sai do
+    `ABS_RX` que o `forward_analog` escreveu.
+    """
+    import os
+
+    if caminho == "dualsense":
+        from hefesto_dualsense4unix.integrations.uhid_gamepad import UhidDualSense
+
+        pad = UhidDualSense(player=jogador, blueprint=None)
+        pad._fd = os.open(os.devnull, os.O_WRONLY)
+        fds.append(pad._fd)
+        return pad, lambda: pad._encode_body()[2]
+    from evdev import ecodes
+
+    from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad
+
+    pad = UinputGamepad.for_flavor("xbox")
+    gravador = _GravadorDeEvdev()
+    pad._device = gravador
+    pad._ecodes = ecodes
+    return pad, lambda: gravador.eixos.get(ecodes.ABS_RX)
+
+
+def _servidor_da_matriz(tmp_path: Path, transporte: str, hub: Any) -> Any:
+    """O `Daemon` e o `IpcServer` reais, com um perfil ATIVO SEM mira: quem
+    acende a mira aqui é o CHIP, e só ele."""
+    from hefesto_dualsense4unix.profiles.loader import save_profile
+    from tests.unit.test_a_mira_por_movimento_na_tela import _mesa_de_verdade
+
+    perfil = Profile(name="Bancada", match=MatchAny(type="any"))
+    save_profile(perfil)
+    daemon, servidor = _mesa_de_verdade(tmp_path, transporte, hub)
+    servidor.profile_manager.apply_movimento(perfil)
+    servidor.store.set_active_profile(perfil.name)
+    return daemon, servidor
+
+
+@pytest.mark.parametrize("transporte", ["usb", "bt"])
+@pytest.mark.parametrize("caminho", ["dualsense", "xbox"])
+def test_fora_do_nativo_a_mira_do_chip_anda_do_p1_ao_p4(
+    perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    caminho: str, transporte: str,
+) -> None:
+    """Os dois caminhos × os dois transportes × os quatro jogadores: o chip
+    acende a mira de cada um, e o analógico direito que o JOGO recebe anda.
+
+    MORDIDAS, as três conferidas em 24/09/2026: faça o `mira.set` recusar
+    `ligada` em todo modo (a guarda sem o `nativo`) e os quatro casos reprovam;
+    arranque o `aplicar_o_movimento` do `coop.CoopManager.forward_all` e os
+    quatro reprovam pelos P2 a P4; arranque-o do `gamepad.dispatch_gamepad` e
+    os quatro reprovam pelo P1.
+    """
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.daemon.subsystems import coop as co
+    from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
+    from tests.unit.test_a_mira_por_movimento_na_tela import _P1, _estado, _hub
+
+    todos = (_P1, _P2, _P3, _P4)
+    hub = _hub({u: _GIRO for u in todos})
+    daemon, servidor = _servidor_da_matriz(tmp_path, transporte, hub)
+    for uniq in todos:
+        corpo = _mira_set(servidor, uniq=uniq, ligada=True)
+        assert corpo["status"] == "ok" and corpo["ligada"] is True, (uniq, corpo)
+
+    fds: list[int] = []
+    try:
+        # O P1 — o tique do primário, `dispatch_gamepad`.
+        monkeypatch.setattr(gp, "_reconciliar_launch", lambda d: None)
+        monkeypatch.setattr(gp, "_avisar_troca_de_modo", lambda d: None)
+        vpad1, ler1 = _vpad_de_verdade(caminho, 1, fds)
+        daemon._gamepad_device = vpad1
+        gp.dispatch_gamepad(daemon, _estado(transporte), frozenset())
+        hub.reconciliar()
+        gp.dispatch_gamepad(daemon, _estado(transporte), frozenset())
+        lidos = {_P1: ler1()}
+
+        # Os P2 a P4 — o laço dos secundários, `CoopManager.forward_all`.
+        gerente = co.CoopManager(daemon)
+        leitores = {}
+        for n, uniq in enumerate(todos[1:], start=2):
+            vpad, leitores[uniq] = _vpad_de_verdade(caminho, n, fds)
+            gerente._players[uniq] = co._SecondaryPlayer(
+                identity=uniq,
+                evdev_path=f"/dev/input/event{n}",
+                reader=SimpleNamespace(
+                    snapshot=lambda: SimpleNamespace(
+                        lx=128, ly=128, rx=128, ry=128, l2_raw=0, r2_raw=0,
+                        buttons_pressed=frozenset()),
+                    grab_state="held",
+                ),
+                player_index=n,
+                vpad=vpad,
+            )
+        gerente.forward_all()
+        hub.reconciliar()
+        gerente.forward_all()
+        lidos.update({u: ler() for u, ler in leitores.items()})
+    finally:
+        import os
+
+        for fd in fds:
+            os.close(fd)
+    parados = {u: v for u, v in lidos.items() if v in (None, 128)}
+    assert not parados, (
+        f"{caminho}/{transporte}: o chip acendeu a mira e o analógico direito "
+        f"que o jogo recebe ficou parado em {parados}")
+
+
+@pytest.mark.parametrize("transporte", ["usb", "bt"])
+def test_no_nativo_o_chip_nao_acende_ninguem(
+    perfis: Path, tmp_path: Path, transporte: str
+) -> None:
+    """A exceção dela, nos quatro jogadores e nos dois transportes: no Nativo
+    o chip de ninguém acende, e o giro nativo de ninguém sai da janela."""
+    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+    from tests.unit.test_a_mira_por_movimento_na_tela import _P1, _hub
+
+    todos = (_P1, _P2, _P3, _P4)
+    _daemon, servidor = _servidor_da_matriz(tmp_path, transporte, _hub({}))
+    servidor.daemon._native_mode = True
+    for uniq in todos:
+        assert _mira_set(servidor, uniq=uniq, ligada=True)["status"] == "nativo"
+    assert not rot.por_peca(servidor.store)
+    assert not any(REGISTRO.roteado(u) for u in todos)
