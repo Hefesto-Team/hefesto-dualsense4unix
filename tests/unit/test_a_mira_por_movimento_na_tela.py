@@ -1081,13 +1081,26 @@ def test_a_calibrar_tem_os_dois_deslizantes_de_cada_controle() -> None:
 
 
 class _PonteDaMira:
-    """O dublê ESTRITO da ponte: devolve o corpo do daemon, como a real."""
+    """O dublê ESTRITO da ponte: devolve o corpo do daemon, como a real.
+
+    ESTRITO DE VERDADE desde 24/09/2026 (A-MIRA-POR-MOVIMENTO-NA-TELA-02, na
+    conferência): o pedido é amarrado à ASSINATURA da função real
+    (`ipc_bridge.mira_set_detalhado`) antes de ser anotado. Com `**kw` solto, um
+    gesto que mandasse um nome que a ponte não conhece (um `inverter_lado`)
+    passaria aqui e levantaria `TypeError` no produto — o dublê mais frouxo que
+    o real, que é o defeito que esta casa já pagou três vezes.
+    """
 
     def __init__(self, corpo: dict[str, Any] | None) -> None:
         self.corpo = corpo
         self.chamadas: list[dict[str, Any]] = []
 
     def mira_set_detalhado(self, **kw: Any) -> dict[str, Any] | None:
+        import inspect
+
+        from hefesto_dualsense4unix.app import ipc_bridge
+
+        inspect.signature(ipc_bridge.mira_set_detalhado).bind(**kw)
         self.chamadas.append(kw)
         return self.corpo
 
