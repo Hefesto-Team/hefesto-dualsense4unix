@@ -1189,8 +1189,8 @@ for dele in (lugares.values() if isinstance(lugares, dict) else ()):
     # O diretório-pai só sai junto com a unit de snapshot: ela declara
     # ReadWritePaths=/var/lib/hefesto-dualsense4unix sem o prefixo `-`, e o
     # systemd RECUSA iniciar a unit se o caminho não existir. Preservada a
-    # unit (--keep-udev, alvo da regra 83), o pai fica — sem credencial
-    # nenhuma com --purge-config; por padrão, com a cópia guardada dentro. E
+    # unit (--keep-udev, alvo da regra 83), o pai fica — sem as credenciais
+    # do Hefesto com --purge-config; por padrão, com a cópia guardada dentro. E
     # ele sai DEPOIS do diário do root (conferência da
     # INSTALL-E-UNINSTALL-DO-RADIO-01): antes, o `rmdir` rodava com o diário
     # ainda dentro, e o --purge-config deixava a pasta vazia em /var/lib.
