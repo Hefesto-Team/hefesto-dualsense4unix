@@ -2809,16 +2809,16 @@ def aplicar_o_movimento(
 
     **NA NAVEGAÇÃO TODO DESTINO É O CURSOR** — A-MIRA-NA-NAVEGACAO-01,
     24/09/2026 (`D-2409-NA-NAVEGACAO-O-GIRO-VIRA-CURSOR`). ``na_navegacao`` é
-    o `mouse.dispatch_mouse` perguntando: ali não há controle virtual, e o
-    analógico que a mira escolheria é a roda e o cursor do próprio mouse. O
-    arranjo da peça e o da mesa passam pelo `roteador.para_o_cursor`, e o resto
-    é ESTE motor, na ordem de sempre — a drenagem antes dos portões, o gatilho,
-    o sensor dela, a zona morta medida na velocidade.
+    o `mouse.mover_o_cursor_pelo_giro` chamando: ali não há controle virtual,
+    e os analógicos são o cursor e a roda do próprio mouse. O arranjo da peça
+    e o da mesa passam pelo `roteador.para_o_cursor`, e o resto é ESTE motor,
+    na ordem de sempre — a drenagem antes dos portões, o gatilho, o sensor
+    dela, a zona morta medida na velocidade.
 
     **E O ÂNGULO DE UM SILÊNCIO NÃO É MOVIMENTO** (`roteador.angulo_do_tique`):
     a primeira drenagem depois de meio segundo sem drenar é o acumulado de
-    quando ninguém drenava, e sai como nada. Vale para os dois chamadores do
-    cursor — este e o destino «mouse» do perfil.
+    quando ninguém drenava, e sai como nada. Vale para todo cursor: o da
+    Navegação e o destino «mouse» do perfil.
     """
     try:
         if not uniq:

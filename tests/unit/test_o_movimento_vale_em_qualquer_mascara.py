@@ -390,7 +390,7 @@ _ESTADO = SimpleNamespace(raw_lx=128, raw_ly=128, raw_rx=128, raw_ry=128,
 
 def _despachar(monkeypatch: pytest.MonkeyPatch, *, arranjo: Any, hub: _Hub,
                botoes: frozenset[str] = frozenset(), giro_ligado: bool = True,
-               estado: Any = _ESTADO, mouse: Any = None) -> _Device:
+               estado: Any = _ESTADO, mouse: Any = None, tiques: int = 1) -> _Device:
     from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
     from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 
@@ -404,7 +404,8 @@ def _despachar(monkeypatch: pytest.MonkeyPatch, *, arranjo: Any, hub: _Hub,
     dev = _Device()
     daemon = _daemon_do_tamanho_do_real(hub, store=store, _gamepad_device=dev,
                                         _mouse_device=mouse)
-    gp.dispatch_gamepad(daemon, estado, botoes)
+    for _ in range(tiques):
+        gp.dispatch_gamepad(daemon, estado, botoes)
     return dev
 
 
@@ -560,12 +561,21 @@ def test_o_giro_desligado_tambem_drena(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_o_destino_mouse_move_o_cursor(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A entrega do destino «mouse»: ângulo percorrido vira pixel."""
+    """A entrega do destino «mouse»: ângulo percorrido vira pixel.
+
+    NOTA DATADA — 24/09/2026 (A-MIRA-NA-NAVEGACAO-01): DOIS tiques, e o
+    primeiro não move. A primeira drenagem de uma peça é o acumulado de quando
+    ninguém drenava (`roteador.angulo_do_tique`), e sai como nada — é o salto
+    de cursor que a mira na Navegação traria na volta de um silêncio. O cursor
+    anda no SEGUNDO tique.
+    """
     mouse = _Mouse()
     _despachar(monkeypatch, arranjo=_arranjo(destino=rot.DESTINO_MOUSE),
                hub=_Hub(velocidade=(0.0, 300.0, 0.0), angulo=(0.0, 10.0, 0.0)),
-               mouse=mouse)
-    assert mouse.movimentos, "o cursor não andou"
+               mouse=mouse, tiques=2)
+    assert len(mouse.movimentos) == 1, (
+        f"o cursor andou {len(mouse.movimentos)} vez(es) em dois tiques — o "
+        "primeiro é o acumulado e sai como nada")
     assert mouse.movimentos[0][0] != 0.0
 
 
@@ -588,10 +598,12 @@ def test_a_deriva_nao_passeia_o_cursor(monkeypatch: pytest.MonkeyPatch) -> None:
     um controle parado com deriva percorre ângulo de verdade. Sem este portão o
     cursor dela passearia sozinho com o controle na mesa.
     """
+    # DOIS tiques desde 24/09/2026 (A-MIRA-NA-NAVEGACAO-01): o primeiro é
+    # descartado como acumulado, e só o segundo chega a este portão.
     mouse = _Mouse()
     _despachar(monkeypatch, arranjo=_arranjo(destino=rot.DESTINO_MOUSE),
                hub=_Hub(velocidade=(0.0, 1.0, 0.0), angulo=(0.0, 8.0, 0.0)),
-               mouse=mouse)
+               mouse=mouse, tiques=2)
     assert mouse.movimentos == [], (
         f"a deriva moveu o cursor em {mouse.movimentos}")
 
