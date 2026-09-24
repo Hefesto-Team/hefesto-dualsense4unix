@@ -6,7 +6,7 @@ movimento e a tomada do fone em `/dev/input/eventN`, e o joystick legado em
 `/dev/input/jsN`) somem para todos menos para o Hefesto, e só o Modo Nativo os
 devolve.
 
-O que o doctor media antes, com o hidraw já fechado::
+O que o doctor acusava antes, com o hidraw já fechado::
 
     [WARN] o hide cobre SÓ o hidraw: 0 de 1 controle(s) escondido(s) do jogo —
     o FÍSICO segue alcançável em 4 nó(s) de entrada (event27 event28 event29 js1)
