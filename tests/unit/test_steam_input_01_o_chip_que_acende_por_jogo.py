@@ -757,9 +757,10 @@ def _texto_visivel_das_abas() -> str:
     import html as _html
     import re
 
-    pasta = pathlib.Path(aba.__file__).parents[1] / "paginas"
+    from hefesto_dualsense4unix.interface import onde
+
     pedacos = []
-    for pagina in sorted(pasta.glob("[01][0-9]-*.html")):
+    for pagina in sorted(onde.PUBLICADO.glob("[01][0-9]-*.html")):
         texto = pagina.read_text(encoding="utf-8")
         texto = re.sub(r"<!--.*?-->", " ", texto, flags=re.S)
         texto = re.sub(r"<(script|style)\b.*?</\1>", " ", texto, flags=re.S)
