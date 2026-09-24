@@ -197,7 +197,7 @@ def _ensaiar(tmp_path: Path, *flags: str) -> tuple[subprocess.CompletedProcess[s
 @pytest.mark.parametrize(
     "flags",
     [(), ("--purge-config", "--restore-bluez"), ("--so-o-applet",)],
-    ids=["padrao", "purge-e-restore", "so-o-applet"],
+    ids=["sem-flag", "purge-e-restore", "so-o-applet"],
 )
 def test_o_ensaio_nao_chama_binario_que_escreve(tmp_path: Path, flags: tuple[str, ...]) -> None:
     r, chamados, _ = _ensaiar(tmp_path, *flags)
