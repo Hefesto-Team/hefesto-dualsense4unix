@@ -82,6 +82,7 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)
 
+from hefesto_dualsense4unix.app.actions.jogar import painel
 from hefesto_dualsense4unix.interface import onde
 from pacotes import Contexto
 from pacotes import a01_jogar as aba
@@ -93,9 +94,13 @@ LARGURAS = (1228, 1300)
 
 #: Três frases REAIS do produto coladas — um dublê de COMPRIMENTO, e não uma
 #: frase de tela: é o tamanho que levou o botão à outra ponta no piloto.
-TRES_FRASES = ("Os controles foram renumerados: P1, P2, P3 e P4. "
-               "Não consegui conferir a numeração dos controles. "
-               "Não consegui ajustar a numeração dos controles.")
+#:
+#: LIDAS DO DONO DESDE 24/09/2026, e são o recado MAIS LONGO que o «Reconectar»
+#: ainda monta: as duas do rádio e a falha mais longa do passo 2. A primeira
+#: das três de antes era a da numeração que mudou, que saiu do produto pela
+#: decisão dela (`D-2409-O-RECONECTAR-NAO-DIZ-NADA`); digitada aqui, ela seria
+#: uma frase que o produto não diz mais.
+TRES_FRASES = " ".join((painel.recado_do_radio(1, 1), painel._NAO_CONFERIU))
 
 VIVO_DUALSENSE: dict[str, Any] = {
     "connected": True, "native_mode": False, "paused": False,

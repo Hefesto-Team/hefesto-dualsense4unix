@@ -145,18 +145,25 @@ def _ocorrencias_no_fonte(
     return sorted(achados)
 
 
-def test_a_lista_tem_as_tres_e_a_busca_e_por_substring() -> None:
-    """As três continuam banidas — o terceiro trecho é que passou a alcançar.
+def test_a_lista_tem_as_quatro_e_a_busca_e_por_substring() -> None:
+    """As três de 04/09 continuam banidas, e a quarta entrou em 24/09/2026.
 
     **MUDOU EM 06/09/2026:** ``"duros como no PS5"`` virou
-    ``"gatilhos ficam duros"``. Não é uma quarta frase nem uma a menos: é o
+    ``"gatilhos ficam duros"``. Não é uma frase a mais nem uma a menos: é o
     MESMO alarme, escrito curto o bastante para casar com as duas grafias que
     esta casa já teve. A razão medida está no `frases_que_ela_baniu`.
+
+    **E A QUARTA ENTROU EM 24/09/2026** (A-FRASE-DO-RECONECTAR-SAI-01):
+    ``"foram renumerados"``, a frase que o «Reconectar controles» dizia quando
+    um número mudava. Ela não alarma, narra — e ela a tirou: *«Nada: o número
+    novo aparece no próprio cartão»*. A régua dela é
+    `test_o_reconectar_nao_diz_nada.py`.
     """
     assert set(FRASES_BANIDAS) == {
         "derrubam o controle",
         "resultado é ZERO",
         "gatilhos ficam duros",
+        "foram renumerados",
     }
     assert frase_banida_em("Alguns jogos derrubam o controle no meio") == (
         "derrubam o controle"
@@ -285,7 +292,7 @@ def test_a_guarda_do_fonte_reprova_o_dono_da_lista_sem_a_isencao() -> None:
     # A CONTAGEM NÃO SERVE DE RÉGUA AQUI, e foi assim que este teste reprovou
     # na primeira volta: o arquivo cita as frases na prosa que explica por que
     # elas caíram, então há mais ocorrências que trechos. O que prova a leitura
-    # é cada um dos TRÊS aparecer como LITERAL — que é a tupla em si.
+    # é cada trecho da lista aparecer como LITERAL — que é a tupla em si.
     achadas = {a.split(" literal ")[1] for a in dono if " literal " in a}
     assert achadas == {repr(f) for f in FRASES_BANIDAS}, (
         f"sem a isenção a régua achou {sorted(achadas)} como literal no dono "
