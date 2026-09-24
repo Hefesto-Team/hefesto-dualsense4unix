@@ -40,12 +40,25 @@
   }
 
   * { box-sizing: border-box; }
+  /* A CAIXA DA JANELA — 24/09/2026, decisão dela: «vira caixa da janela,
+     rolando por dentro». O recuo e o tamanho são os das abas (as três
+     linhas no fim deste bloco); o cabeçalho fica e o `.corpo` rola. */
   body {
-    margin: 0; background: var(--color-paper); color: var(--color-ink);
+    margin: 0; background: #11121a; color: var(--color-ink);
     font-family: var(--font-corpo); font-size: var(--text-base); line-height: 1.55;
     -webkit-font-smoothing: antialiased;
+    display: flex; flex-direction: column; align-items: center;
   }
-  .pagina { max-width: 1180px; margin: 0 auto; padding: var(--space-md) var(--space-sm) var(--space-lg); }
+  .pagina { background: var(--color-paper); border: 1px solid var(--color-paper-3);
+            border-radius: 11px; overflow: hidden; display: flex; flex-direction: column;
+            padding: var(--space-md) var(--space-sm) 0; }
+  .pagina > .topo { flex: 0 0 auto; }
+  .pagina > .corpo { flex: 1; min-height: 0; overflow-y: auto;
+                     margin: 0 calc(-1 * var(--space-sm));
+                     padding: 0 var(--space-sm) var(--space-lg); }
+  :root{--recuo-do-corpo:16px;--piso-da-vista:777px;--teto-da-vista:855px;--alt-janela:clamp(var(--piso-da-vista), calc(100dvh - var(--recuo-do-corpo) * 2), var(--teto-da-vista))}
+  body{padding:var(--recuo-do-corpo)}
+  .pagina{width:min(100%,1600px);height:var(--alt-janela);max-width:100%;max-height:calc(100dvh - var(--recuo-do-corpo) * 2)}
 
   /* ─── cabeçalho ─────────────────────────────────────────── */
   .topo { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2xs) var(--space-sm);
@@ -291,6 +304,7 @@
     <p class="quando" id="de-quando">leitura de exemplo · 24/08/2026</p>
   </header>
 
+  <div class="corpo">
   <div class="modos" id="modos"></div>
   <section class="painel" id="painel"></section>
 
@@ -332,6 +346,7 @@
       enumera como se estivesse na entrada do hub. Por isso uma entrada com extensor ganha uma
       entrada-filha declarada — para o desenho mostrar onde a antena está de verdade.</p>
   </footer>
+  </div>
 </div>
 
 <script>
