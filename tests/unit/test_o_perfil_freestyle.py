@@ -432,6 +432,76 @@ def test_o_install_profiles_depois_do_python_nao_traz_um_segundo(
     assert (pasta / loader.ARQUIVO_DO_PADRAO).read_bytes() == antes
 
 
+def _grava_meu_perfil(pasta: Path, match: dict[str, Any]) -> None:
+    """O disco de antes de 05/09: o padrão dela ainda se chama `meu_perfil`."""
+    pasta.mkdir(parents=True, exist_ok=True)
+    velho = dict(PERFIL_DELA, name=loader.NOME_ANTIGO_DO_PADRAO, match=match)
+    (pasta / loader.ARQUIVO_ANTIGO_DO_PADRAO).write_text(
+        json.dumps(velho, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def test_o_meu_perfil_com_a_nossa_janela_tambem_vale_fora_do_jogo(
+    semeadura_ligada: None,
+) -> None:
+    """A regra da própria janela sai também no disco de antes de 05/09.
+
+    A renomeação de 05/09 leva o `meu_perfil` direto ao Freestyle, e a regra que
+    só mira o Hefesto deixaria o boot pulá-lo (`_escopado_a_janela`).
+
+    MORDE: tire o `_o_freestyle_vale_fora_do_jogo` de
+    `migrate_default_profile_name` e a regra da nossa janela fica.
+    """
+    pasta = profiles_dir(ensure=True)
+    _grava_meu_perfil(pasta, PERFIL_DELA["match"])
+
+    assert [p.name for p in loader.load_all_profiles()] == ["Freestyle"]
+    assert _freestyle(pasta)["match"] == {"type": "any"}
+
+
+def test_o_install_profiles_de_hoje_no_disco_de_antes_de_05_09(
+    tmp_path: Path, semeadura_ligada: None, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O shell de hoje copia a fábrica ao lado do `meu_perfil.json` também.
+
+    A recusa do shell olha só o `personalizado.json` ao lado do `meu_perfil`,
+    e o arquivo de hoje é outro. A primeira carga do Python resolve pelo mesmo
+    caminho da cena de 23/09: a fábrica intocada cede, e o dela vence.
+
+    MORDE: tire o `_e_o_de_fabrica_intocado` de `migrate_default_profile_name`
+    e a renomeação recusa por "já existe", deixando DOIS padrões na lista.
+    """
+    home = tmp_path / "home"
+    pasta = home / ".config" / "hefesto-dualsense4unix" / "profiles"
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(home / ".config"))
+    _grava_meu_perfil(pasta, {"type": "any"})
+
+    feito = _install_profiles(home)
+
+    assert feito.returncode == 0, feito.stderr
+    assert [p.name for p in loader.load_all_profiles()] == ["Freestyle"]
+    assert _freestyle(pasta)["controllers"] == QUATRO
+    assert (pasta / loader.BACKUP_DO_PADRAO).is_file()
+
+
+def test_o_personalizado_que_ela_renomeou_nao_ganha_um_freestyle_ao_lado(
+    semeadura_ligada: None,
+) -> None:
+    """Ela deu outro nome ao padrão: esse é o perfil de fora do jogo DELA.
+
+    A migração recusa (`nome_mudado_pela_usuaria`), e o semeador também não
+    entrega a fábrica ao lado — seriam dois padrões disputando o controle.
+
+    MORDE: tire o `personalizado.json` de `_o_slot_dela_tem_nome_antigo` e o
+    semeador copia o Freestyle de fábrica ao lado do dela.
+    """
+    pasta = profiles_dir(ensure=True)
+    _grava_dela(pasta, dict(PERFIL_DELA, name="Sofá", match={"type": "any"}))
+
+    assert [p.name for p in loader.load_all_profiles()] == ["Sofá"]
+    assert not (pasta / loader.ARQUIVO_DO_PADRAO).exists()
+
+
 # =============================================================================
 # 3. O BOOT — a matriz da sprint
 # =============================================================================
