@@ -285,7 +285,9 @@ def vpad_do_p1(
     """O caminho de verdade do vpad do P1 (`gamepad`), com o nascimento anotado.
 
     Não é mais frouxo que o real nos dois pontos que a mesa lê: o `stop` deixa
-    `_gamepad_device` em ``None`` e o `start` põe um objeto NOVO lá.
+    `_gamepad_device` em ``None`` e o `start` põe um objeto NOVO lá. O CAMINHO
+    ele não conhece — quem o mede com o start de verdade é
+    `TestOP1RenasceNoMesmoCaminho` (conferência de 24/09/2026).
     """
     eventos: list[tuple[Any, ...]] = []
 
@@ -293,14 +295,16 @@ def vpad_do_p1(
         eventos.append(("stop", persist, release_grab))
         daemon._gamepad_device = None
 
-    def _start(daemon: Any, flavor: Any = None, *, origin: str) -> bool:
+    def _start(
+        daemon: Any, flavor: Any = None, *, origin: str, caminho: str | None = None
+    ) -> str:
         eventos.append(("start", origin))
         nascimentos.append("p1")
         daemon._gamepad_device = object()
-        return True
+        return gamepad_mod.EMU_APLICADO
 
     monkeypatch.setattr(gamepad_mod, "stop_gamepad_emulation", _stop)
-    monkeypatch.setattr(gamepad_mod, "start_gamepad_emulation", _start)
+    monkeypatch.setattr(gamepad_mod, "start_gamepad_emulation_desfecho", _start)
     return eventos
 
 
@@ -582,4 +586,122 @@ class TestOPlano:
         assert planejar_a_ordem(mesa, cartas, fixos=frozenset({"p1"})) == (
             ["x", "y"],
             False,
+        )
+
+
+# ---------------------------------------------------------------------------
+# A conferência de 24/09/2026: o P1 que renasce pela ordem volta no MESMO
+# caminho.
+# ---------------------------------------------------------------------------
+
+
+class _PadComCaminho:
+    """Um vpad com o que o produto lê dele: máscara, canal e caminho de origem.
+
+    O canal NÃO é digitado: sai de `virtual_pad.quer_uhid`, a mesma função do
+    produto — é o `_PadFalso` de `test_o_caminho_nao_vaza_entre_jogos`, com o
+    que o `forward_all` do co-op pede a um secundário.
+    """
+
+    def __init__(self, flavor: str, caminho: str | None, identidade: str) -> None:
+        from hefesto_dualsense4unix.integrations import virtual_pad as vp
+
+        self.identidade = identidade
+        self.flavor = flavor
+        self.caminho = vp.caminho_resolvido(caminho, flavor)
+        self.backend = "uhid" if vp.quer_uhid(caminho, flavor) else "uinput"
+
+    def stop(self) -> None:
+        return None
+
+    def forward_analog(self, **_kw: int) -> None:
+        return None
+
+    def forward_buttons(self, _pressed: frozenset[str]) -> None:
+        return None
+
+    def pump_ff(self) -> None:
+        return None
+
+
+class _EspelhoFalso:
+    """`PhysicalReportReader` de mentira: o P1 em uhid sobe um, e ele não lê nada."""
+
+    def __init__(self, **_kw: Any) -> None:
+        return None
+
+    def start(self) -> bool:
+        return True
+
+    def stop(self) -> None:
+        return None
+
+
+class TestOP1RenasceNoMesmoCaminho:
+    """O vpad do P1 que renasce pela ordem volta no caminho em que estava.
+
+    A conferência de 24/09/2026 achou a terceira porta do vazamento de caminho
+    (O-CAMINHO-NAO-VAZA-01, CAMINHO-CONTAGIO-01): o `_reerguer_o_p1` chamava o
+    start SEM caminho. Um start sem opinião não herda de lugar nenhum, por
+    ordem dela (`gamepad._caminho_a_herdar` devolve ``None``), e o
+    `_guardar_o_caminho` LIMPA o slot da sessão. Com a mesa no Modo Xbox — o
+    chip da aba Jogar, que muda o CAMINHO e não a máscara —, a carta 1 que
+    chegava depois do primário devolvia o P1 em DualSense/uhid, e a escolha
+    dela sumia da tela e dos secundários sem ela ter tocado em nada.
+
+    Aqui o start e o stop são os DE VERDADE (`gamepad`), para a régua não ser
+    mais frouxa que o produto: o dublê do `vpad_do_p1` não conhece caminho.
+    A MORDIDA: devolva o `_reerguer_o_p1` sem o `caminho=` e o P1 volta uhid.
+    """
+
+    def test_o_modo_xbox_sobrevive_a_recriacao_do_p1(
+        self, nascimentos: list[str], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        pads: list[_PadComCaminho] = []
+
+        def _fabrica(
+            flavor: str | None, *, identity: str | None = None, **kw: Any
+        ) -> _PadComCaminho:
+            pad = _PadComCaminho(flavor or "dualsense", kw.get("caminho"), str(identity))
+            nascimentos.append(str(identity))
+            pads.append(pad)
+            return pad
+
+        monkeypatch.setattr(
+            "hefesto_dualsense4unix.integrations.virtual_pad.make_virtual_pad", _fabrica
+        )
+        monkeypatch.setattr(gamepad_mod, "_set_controller_grab", lambda *_a: None)
+        monkeypatch.setattr(
+            "hefesto_dualsense4unix.core.physical_report_reader.PhysicalReportReader",
+            _EspelhoFalso,
+        )
+        daemon = _daemon(cartas={P1: 2, P2: 1, P3: 3, P4: 4})
+        daemon.config.gamepad_emulation_enabled = False
+        daemon.config.gamepad_caminho = None
+        daemon.config.gamepad_caminho_global = None
+        daemon.config.rumble_active = None
+        daemon._gamepad_device = None
+        daemon._mouse_device = None
+        daemon._motion_reader = None
+        daemon.controller.hidraw_path = lambda uniq=None: "/dev/hidraw4"
+        # O caminho DA SESSÃO em Xbox, com a máscara DualSense de sempre — o
+        # que o chip «Xbox» da aba Jogar ou um perfil que opina deixam de pé.
+        # `origin="profile"` para a régua não gravar nada em disco.
+        gamepad_mod.start_gamepad_emulation_desfecho(
+            daemon, origin="profile", caminho="xbox"
+        )
+        assert daemon._gamepad_device.backend == "uinput"
+        nascimentos.clear()
+
+        CoopManager(daemon).sync()
+
+        assert nascimentos == [P2, P1, P3, P4], "o P1 tinha de renascer atrás da carta 1"
+        assert daemon._gamepad_device.caminho == "xbox", (
+            "o P1 renasceu em outro caminho — a recriação pela ordem desfez o "
+            "Modo Xbox que ela escolheu"
+        )
+        assert daemon._gamepad_device.backend == "uinput"
+        assert daemon.config.gamepad_caminho == "xbox", (
+            "o slot da sessão foi limpo: a tela e os secundários passam a ver "
+            "DualSense sobre uma escolha dela de Xbox"
         )
