@@ -983,7 +983,11 @@ def test_sem_o_religar_ao_lado_a_ponte_recusa(tmp_path: Path) -> None:
 
 #: O root de mentira: o ``id -u`` diz 0, e o ``stat -c %u`` diz o dono que a
 #: régua pede (``HEFESTO_TESTE_DONO``); o resto vai para os de verdade.
-ID_DE_MENTIRA = '#!/usr/bin/env bash\n[[ "${1:-}" == "-u" ]] && { echo 0; exit 0; }\nexec /usr/bin/id "$@"\n'
+ID_DE_MENTIRA = (
+    "#!/usr/bin/env bash\n"
+    '[[ "${1:-}" == "-u" ]] && { echo 0; exit 0; }\n'
+    'exec /usr/bin/id "$@"\n'
+)
 STAT_DE_MENTIRA = (
     "#!/usr/bin/env bash\n"
     'if [[ "${1:-}" == "-c" && "${2:-}" == "%u" && -n "${HEFESTO_TESTE_DONO:-}" ]]; then\n'
