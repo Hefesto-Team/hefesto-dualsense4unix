@@ -444,6 +444,10 @@ class ExternalIdentityRegistry:
         #: prazo dos DualSense (``identity.prazo_do_lugar_guardado``): a mesa
         #: é uma só, e um externo fora dentro do prazo não faz ninguém andar.
         self._guardados: dict[str, float] = {}
+        #: E gente NOVA refaz a mesa inteira (conferência de 24/09/2026): quem
+        #: solta o lugar guardado dos DualSense quando um externo novo chega.
+        #: Fiado por ``ExternalLedSync``; None = só este lado.
+        self._soltar_os_dualsense: Callable[[], object] | None = None
         #: NUM-01: key canônica → LUGAR NA FILA global (não o número
         #: exibido; esse sai de ``slot_for``, que conta os presentes).
         self._ordem: dict[str, int] = {}
@@ -502,6 +506,19 @@ class ExternalIdentityRegistry:
         with self._lock:
             self._ds_presence = provider
 
+    def set_dualsense_release_provider(
+        self, provider: Callable[[], object] | None
+    ) -> None:
+        """Injeta quem solta o lugar guardado dos DualSense (O-ASSENTO-GUARDADO-NAO-ANDA-01).
+
+        Espelho de ``ControllerIdentityRegistry.set_external_release_provider``:
+        gente nova chegando por ESTE lado refaz a mesa inteira, e o DualSense
+        com o lugar guardado também cede. Chamado SEMPRE fora do ``_lock``
+        (a hierarquia é DualSense → externos).
+        """
+        with self._lock:
+            self._soltar_os_dualsense = provider
+
     def present_ranks(self) -> set[int]:
         """Lugares da fila ocupados por externos PRESENTES agora (NUM-01).
 
@@ -535,12 +552,17 @@ class ExternalIdentityRegistry:
             return {self._ordem[k] for k in chaves if k in self._ordem}
 
     def soltar_os_lugares_guardados(self) -> bool:
-        """Solta todo lugar guardado — o gesto de numerar à mão (ver o DualSense)."""
+        """Solta todo lugar guardado — a mesa se refez do lado dos DualSense.
+
+        Quem chama é a ponte do ``ExternalLedSync``, pelo DualSense: o
+        "Renumerar agora" ou gente nova chegando por lá. NUNCA chama o outro
+        lado de volta (a hierarquia é DualSense → externos).
+        """
         with self._lock:
             havia = bool(self._guardados)
             self._guardados.clear()
         if havia:
-            logger.info("external_lugares_guardados_soltos_pelo_gesto")
+            logger.info("external_lugares_guardados_soltos", motivo="dualsense")
         return havia
 
     def _ds_present_ranks(self, reserve: int = 0) -> set[int]:
@@ -670,7 +692,10 @@ class ExternalIdentityRegistry:
             # O-ASSENTO-GUARDADO-NAO-ANDA-01: quem saiu agora ganha o lugar
             # guardado (só MAC de hardware — a identidade volátil não tem
             # promessa a honrar, MODO-01), quem voltou o retoma, e o prazo
-            # vencido sai da tabela e deixa a linha no diário.
+            # vencido sai da tabela e deixa a linha no diário. E GENTE NOVA
+            # — quem chegou e não é dono de lugar guardado — refaz a mesa:
+            # nenhum lugar fica guardado, dos dois lados (ver
+            # `ControllerIdentityRegistry._quem_chega_novo_refaz_a_mesa_locked`).
             from hefesto_dualsense4unix.daemon.subsystems.identity import (
                 prazo_do_lugar_guardado,
             )
@@ -679,10 +704,19 @@ class ExternalIdentityRegistry:
             for key in [k for k, ate in self._guardados.items() if ate <= agora]:
                 del self._guardados[key]
                 logger.info("external_lugar_guardado_venceu", uniq=key)
-            for key in self._connected - vivos:
-                if key in self._ordem and key not in self._volatile:
-                    self._guardados[key] = agora + prazo_do_lugar_guardado()
-                    logger.info("external_lugar_guardado", uniq=key)
+            chegou_gente_nova = bool(
+                vivos - self._connected - self._guardados_locked()
+            )
+            if chegou_gente_nova:
+                if self._guardados:
+                    self._guardados.clear()
+                    logger.info("external_lugares_guardados_soltos",
+                                motivo="chegou_gente_nova")
+            else:
+                for key in self._connected - vivos:
+                    if key in self._ordem and key not in self._volatile:
+                        self._guardados[key] = agora + prazo_do_lugar_guardado()
+                        logger.info("external_lugar_guardado", uniq=key)
             for key in vivos:
                 self._guardados.pop(key, None)
             self._connected = vivos
@@ -690,6 +724,10 @@ class ExternalIdentityRegistry:
             if self._dirty:
                 self._save_locked()
                 self._dirty = False
+            soltar_os_dualsense = self._soltar_os_dualsense
+        if chegou_gente_nova and soltar_os_dualsense is not None:
+            with contextlib.suppress(Exception):
+                soltar_os_dualsense()
 
     def _prune_volatile_locked(self, vivos: set[str]) -> None:
         """Solta o slot de identidade VOLÁTIL ausente (já sob ``self._lock``).
@@ -771,9 +809,10 @@ class ExternalIdentityRegistry:
 
         NUM-01: os valores de ``mapping`` são LUGARES NA FILA, não números
         exibidos (o exibido pode nem mudar — ele já contava só os presentes).
-        O-ASSENTO-GUARDADO-NAO-ANDA-01: o gesto solta o lugar guardado.
+        O-ASSENTO-GUARDADO-NAO-ANDA-01: NÃO solta o lugar guardado — a troca
+        do ``identity.number.set`` passa por aqui e é sobre o que ela vê, com
+        o buraco; quem solta no "Renumerar agora" é o ``compact`` do DualSense.
         """
-        self.soltar_os_lugares_guardados()
         with self._lock:
             changed = False
             for key, novo_rank in mapping.items():
@@ -1189,8 +1228,13 @@ class ExternalLedSync:
         soltar = getattr(ds, "set_external_release_provider", None)
         if callable(soltar):
             with contextlib.suppress(Exception):
-                # E o gesto dela que solta o lugar guardado alcança os dois.
+                # E quando a mesa se refaz de um lado, o outro cede junto.
                 soltar(externo.soltar_os_lugares_guardados)
+        soltar_ds = getattr(ds, "soltar_os_lugares_guardados", None)
+        set_soltar_ds = getattr(externo, "set_dualsense_release_provider", None)
+        if callable(soltar_ds) and callable(set_soltar_ds):
+            with contextlib.suppress(Exception):
+                set_soltar_ds(lambda: soltar_ds(motivo="chegou_gente_nova"))
         set_ds = getattr(externo, "set_dualsense_presence_provider", None)
         if callable(set_ds):
             with contextlib.suppress(Exception):

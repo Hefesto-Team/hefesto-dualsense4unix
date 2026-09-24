@@ -41,7 +41,11 @@ from hefesto_dualsense4unix.core.led_control import (
     player_led_pattern,
     player_slot_color,
 )
-from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
+from hefesto_dualsense4unix.daemon.ipc_handlers import (
+    IpcHandlersMixin,
+    _NumeroAlvoAusenteError,
+    _NumeroForaDaMesaError,
+)
 from hefesto_dualsense4unix.daemon.subsystems import external_identity as ei_mod
 from hefesto_dualsense4unix.daemon.subsystems import identity as id_mod
 from hefesto_dualsense4unix.daemon.subsystems.coop import (
@@ -348,30 +352,83 @@ class TestQuemNaoGuardaLugar:
 
 
 @pytest.mark.usefixtures("config_isolado")
-class TestOGestoDelaSolta:
-    """A máquina dá o padrão, a escolha dela sobrepõe — e o número pedido é o mostrado."""
+class TestOGestoDelaTrocaSobreOQueElaVe:
+    """O clique dela é TROCA sobre o que ela vê — e ela vê o buraco.
 
-    def test_pedir_um_numero_solta_o_lugar_guardado(self) -> None:
+    A regra é de 28/08, e está na aba 04 com todas as letras: *"os dois
+    trocam, os outros não se mexem"*. A primeira escrita desta sprint soltava
+    o lugar guardado no clique, e a troca saía sobre uma mesa fechada que ela
+    não estava vendo — pedir o 3 para o P4 mandava o P3 para o 2, e o 4 que a
+    aba oferecia ao P3 voltava recusado como fora da mesa. Conferência de
+    24/09/2026.
+    """
+
+    def test_o_3_para_o_p4_troca_o_p3_e_o_p4_e_mais_ninguem(self) -> None:
         mesa = Mesa()
         mesa.sai(1)
         assert mesa.tela() == {P1: 1, P3: 3, P4: 4}
 
-        IpcHandlersMixin._set_number_locked(mesa.reg, None, P4, 2)
+        IpcHandlersMixin._set_number_locked(mesa.reg, None, P4, 3)
 
-        assert mesa.tela()[P4] == 2, "ela pediu o 2 e a tela mostra outro"
-        assert sorted(mesa.tela().values()) == [1, 2, 3]
-        assert mesa.reg.guardados() == {}
+        assert mesa.tela() == {P1: 1, P3: 4, P4: 3}, "a troca não foi a da tela"
+        assert P2 in mesa.reg.guardados(), "o clique fechou o lugar de quem saiu"
 
-    def test_renumerar_solta_o_lugar_guardado(self) -> None:
+    def test_o_4_que_um_ligado_tem_e_troca_e_nao_recusa(self) -> None:
+        """A aba desenha o 4 do P4 como troca; o daemon não pode recusá-lo."""
         mesa = Mesa()
         mesa.sai(1)
 
-        IpcHandlersMixin._renumber_locked(mesa.reg, None)
+        IpcHandlersMixin._set_number_locked(mesa.reg, None, P3, 4)
 
-        assert mesa.tela() == {P1: 1, P3: 2, P4: 3}
+        assert mesa.tela() == {P1: 1, P3: 4, P4: 3}
 
-    def test_o_gesto_solta_tambem_o_lugar_do_externo(self) -> None:
-        """A fila é uma só: o externo guardado no meio também sai do caminho."""
+    def test_o_lugar_vazio_e_troca_com_quem_saiu(self) -> None:
+        """O 2 vazio: o P4 senta nele, o P3 não anda, e o P2 volta com o 4."""
+        mesa = Mesa()
+        mesa.sai(1)
+
+        IpcHandlersMixin._set_number_locked(mesa.reg, None, P4, 2)
+
+        assert mesa.tela() == {P1: 1, P3: 3, P4: 2}, "alguém além do P4 andou"
+        mesa.volta(1)
+        assert mesa.tela() == {P1: 1, P2: 4, P3: 3, P4: 2}
+
+    def test_o_numero_que_so_o_lugar_guardado_tem_acima_da_conta_e_recusado(
+        self,
+    ) -> None:
+        """O mesmo cinza da aba: acima dos ligados e sem ligado que o tenha."""
+        mesa = Mesa()
+        mesa.sai(3)  # o P4 sai: o 4 é só do lugar guardado dele
+
+        with pytest.raises(_NumeroForaDaMesaError):
+            IpcHandlersMixin._set_number_locked(mesa.reg, None, P1, 4)
+
+        assert mesa.tela() == {P1: 1, P2: 2, P3: 3}
+        assert P4 in mesa.reg.guardados()
+
+    def test_quem_saiu_nao_e_alvo_do_clique(self) -> None:
+        """O lugar guardado é assento, não coluna: quem saiu não recebe número."""
+        mesa = Mesa()
+        mesa.sai(1)
+
+        with pytest.raises(_NumeroAlvoAusenteError):
+            IpcHandlersMixin._set_number_locked(mesa.reg, None, P2, 1)
+
+        assert mesa.tela() == {P1: 1, P3: 3, P4: 4}
+
+    def test_a_troca_sobrevive_ao_congelamento_da_mesa(self) -> None:
+        """A mesa estável congela 4 s depois; a escolha dela fica."""
+        mesa = Mesa()
+        mesa.sai(1)
+        IpcHandlersMixin._set_number_locked(mesa.reg, None, P4, 3)
+
+        mesa.relogio.avancar(id_mod.JANELA_MESA_ESTAVEL_SEC + 1.0)
+        mesa.tique()
+
+        assert mesa.tela() == {P1: 1, P3: 4, P4: 3}
+
+    def test_a_troca_com_o_externo_guardado(self) -> None:
+        """A fila é uma só: o lugar guardado de um externo também é assento."""
         relogio = Relogio()
         ds, ext = TestAMesaMista._mista(relogio)
         ds.sync_connected([P1, P2, P3])  # o P3 chega depois do externo
@@ -381,6 +438,142 @@ class TestOGestoDelaSolta:
         IpcHandlersMixin._set_number_locked(ds, ext, P3, 3)
 
         assert ds.numeros_da_mesa()[P3] == 3, "ela pediu o 3 e a tela mostra outro"
+        ext.sync_connected([EXTERNO])
+        assert ext.peek(EXTERNO) == 4, "o externo não voltou para o lugar trocado"
+
+    def test_a_troca_de_dois_nao_mexe_em_quem_esta_atras_do_externo_guardado(
+        self,
+    ) -> None:
+        """O P1 e o P2 trocam; o P3, atrás do lugar guardado do externo, fica."""
+        relogio = Relogio()
+        ds, ext = TestAMesaMista._mista(relogio)
+        ds.sync_connected([P1, P2, P3])
+        ext.sync_connected([])
+        assert ds.numeros_da_mesa() == {P1: 1, P2: 2, P3: 4}
+
+        IpcHandlersMixin._set_number_locked(ds, ext, P2, 1)
+
+        assert ds.numeros_da_mesa() == {P1: 2, P2: 1, P3: 4}, "o P3 andou"
+
+    def test_renumerar_solta_o_lugar_guardado(self) -> None:
+        """O "Renumerar agora" é fechar a fila por vontade dela."""
+        mesa = Mesa()
+        mesa.sai(1)
+
+        IpcHandlersMixin._renumber_locked(mesa.reg, None)
+
+        assert mesa.tela() == {P1: 1, P3: 2, P4: 3}
+        assert mesa.reg.guardados() == {}
+
+    def test_renumerar_solta_tambem_o_lugar_do_externo(self) -> None:
+        relogio = Relogio()
+        ds, ext = TestAMesaMista._mista(relogio)
+        ds.sync_connected([P1, P2, P3])
+        ext.sync_connected([])
+
+        IpcHandlersMixin._renumber_locked(ds, ext)
+
+        assert ds.numeros_da_mesa()[P3] == 3
+        assert ext.lugares_da_mesa() == set(), "o lugar do externo ficou guardado"
+
+
+@pytest.mark.usefixtures("config_isolado")
+class TestGenteNovaRefazAMesa:
+    """Quem chega e não é dono de lugar guardado refaz a mesa (um até N).
+
+    Conferência de 24/09/2026. Segurar o novo atrás do buraco quebrava o que a
+    NUM-01 protegia: com os quatro na mesa, o P2 sai e outro controle chega —
+    o novo nascia 5 (cinco lâmpadas, barra amarela) numa mesa de quatro, e a
+    tela, que tem quatro cartões, voltava a contar por posição. A sprint manda
+    não mudar o que o lugar vazio quebra.
+    """
+
+    NOVO_KEY = "AA:BB:CC:00:00:05"
+    NOVO = "aabbcc000005"
+
+    def _chega_o_novo(self, mesa: Mesa, *, tique: bool = True) -> None:
+        mesa.handles[self.NOVO_KEY] = _FakeHandle(transport_name="BT")
+        mesa.backend._handles[self.NOVO_KEY] = mesa.handles[self.NOVO_KEY]  # type: ignore[index]
+        if tique:
+            mesa.tique()
+
+    @pytest.mark.parametrize("quem_sai", [0, 1, 2, 3], ids=["p1", "p2", "p3", "p4"])
+    def test_a_mesa_cheia_nao_da_o_5_a_quem_chega(self, quem_sai: int) -> None:
+        mesa = Mesa()
+        mesa.sai(quem_sai)
+        mesa.relogio.avancar(5.0)
+        self._chega_o_novo(mesa)
+
+        tela = mesa.tela()
+        assert sorted(tela.values()) == [1, 2, 3, 4], f"a mesa não fechou: {tela}"
+        assert tela[self.NOVO] == 4
+        assert mesa.reg.guardados() == {}
+        # E o aparelho, depois do gatilho da cor, acende o 4 — não o 5.
+        mesa.reg.liberar_as_lampadas()
+        assert mesa.aparelho()[self.NOVO] == lampada(4)
+
+    def test_o_novo_que_o_provider_poe_antes_do_tique_que_ve_a_saida(self) -> None:
+        """A troca de controle entre dois tiques: o provider de cor põe o novo
+        na mesa antes de o tique lento ver a saída — e mesmo assim ninguém
+        guarda lugar para o que saiu."""
+        mesa = Mesa()
+        del mesa.backend._handles[KEYS[1]]  # type: ignore[attr-defined]
+        self._chega_o_novo(mesa, tique=False)
+        mesa.backend._merged_desired_for_key(self.NOVO_KEY)  # o provider de cor
+        mesa.tique()
+
+        assert mesa.tela() == {P1: 1, P3: 2, P4: 3, self.NOVO: 4}
+        assert mesa.reg.guardados() == {}
+
+    def test_o_novo_que_o_provider_poe_com_o_lugar_ja_guardado(self) -> None:
+        """O hotplug do novo pinta antes do tique: a mesa se refaz ali mesmo."""
+        mesa = Mesa()
+        mesa.sai(1)
+        assert P2 in mesa.reg.guardados()
+        self._chega_o_novo(mesa, tique=False)
+
+        mesa.backend._merged_desired_for_key(self.NOVO_KEY)  # o provider de cor
+
+        assert mesa.tela() == {P1: 1, P3: 2, P4: 3, self.NOVO: 4}
+        assert mesa.reg.guardados() == {}
+
+    def test_quem_so_volta_nao_e_gente_nova(self) -> None:
+        mesa = Mesa()
+        mesa.sai(1)
+        mesa.sai(2)
+        mesa.relogio.avancar(5.0)
+        mesa.volta(2)
+
+        assert mesa.tela() == {P1: 1, P3: 3, P4: 4}, "a volta do P3 soltou o lugar do P2"
+        assert P2 in mesa.reg.guardados()
+
+    def test_o_externo_novo_refaz_a_mesa_dos_dualsense(self) -> None:
+        relogio = Relogio()
+        ds = ControllerIdentityRegistry(clock=relogio)
+        ext = ExternalIdentityRegistry(clock=relogio)
+        ExternalLedSync(SimpleNamespace(identity_registry=ds), ext)
+        ds.set_external_reserve_provider(lambda: set(ext.snapshot().values()))
+        ds.sync_connected([P1, P2, P3])
+        relogio.avancar(id_mod.JANELA_DE_ONDA_SEC * 2)
+        ds.sync_connected([P1, P3])
+        assert ds.numeros_da_mesa() == {P1: 1, P3: 3}
+
+        ext.sync_connected([EXTERNO])
+        ext.slot_for(EXTERNO, reserve=max(ds.snapshot().values()))
+
+        assert ds.numeros_da_mesa() == {P1: 1, P3: 2}
+        assert ext.peek(EXTERNO) == 3, "o externo novo nasceu atrás do buraco"
+
+    def test_o_dualsense_novo_refaz_a_mesa_dos_externos(self) -> None:
+        relogio = Relogio()
+        ds, ext = TestAMesaMista._mista(relogio)
+        ext.sync_connected([])  # o externo sai: lugar 3 guardado
+        relogio.avancar(id_mod.JANELA_DE_ONDA_SEC * 2)
+
+        ds.sync_connected([P1, P2, P3])
+
+        assert ds.numeros_da_mesa()[P3] == 3, "o DualSense novo nasceu atrás do buraco"
+        assert ext.lugares_da_mesa() == set()
 
 
 @pytest.mark.usefixtures("config_isolado")

@@ -213,7 +213,8 @@ class TestAtribuirNumero:
         REBAIXA quem está ausente"). Este comando permuta APENAS os lugares
         dos presentes: quem está na gaveta fica exatamente onde estava.
         """
-        ds = ControllerIdentityRegistry()
+        agora = [1000.0]
+        ds = ControllerIdentityRegistry(clock=lambda: agora[0])
         ds.sync_connected([UNIQ_A, UNIQ_B, UNIQ_C])  # lugares 1, 2, 3
         ds.sync_connected([UNIQ_A, UNIQ_C])  # B foi para a gaveta
 
@@ -224,7 +225,13 @@ class TestAtribuirNumero:
         assert fila[UNIQ_B] == 2, "o ausente perdeu o lugar dele na fila"
         assert {fila[UNIQ_A], fila[UNIQ_C]} == {1, 3}
         assert fila[UNIQ_C] == 1
-        # E na mesa, quem ficou conta 1..N sem o ausente.
+        # E na mesa: dentro do prazo do lugar guardado do B, a troca é a da
+        # tela — o C com o 1, o A com o 3, e o 2 continua do B
+        # (O-ASSENTO-GUARDADO-NAO-ANDA-01, conferência de 24/09/2026)…
+        assert ds.slot_for(UNIQ_C, assign=False) == 1
+        assert ds.slot_for(UNIQ_A, assign=False) == 3
+        # …e passado o prazo, quem ficou conta 1..N sem o ausente.
+        agora[0] += id_mod.prazo_do_lugar_guardado() + 1.0
         assert ds.slot_for(UNIQ_C, assign=False) == 1
         assert ds.slot_for(UNIQ_A, assign=False) == 2
 
