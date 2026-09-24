@@ -706,7 +706,7 @@ roteiro.
 * **P3** — Não se toca nele. Testemunha: anote o número antes e confira durante a ausência do P2 — ele continua P3, com as duas pontas e a do meio acesas — e no fim.
 * **P4** — Não se toca nele. Testemunha: anote o número antes e confira durante a ausência e no fim — as quatro lampadinhas acesas com a do meio apagada, o tempo todo.
 
-**A armadilha.** Passar do prazo. O lugar do P2 fica guardado por trinta segundos, contados de quando o chip dele some da fita; passado esse tempo sem ele voltar, a fila se fecha de propósito — o P3 vira 2 e o P4 vira 3, na tela na hora e nas lampadinhas junto com a cor da barra. Por isso a contagem começa no chip e o P2 volta aos 20. Se algum dos três trocar de número antes dos trinta segundos, anote com a hora: é defeito. Na aba Conexões a linha de um controle desligado some da lista e a conta da seção cai — isso é a lista dizendo quem está ligado, não o lugar sendo perdido.
+**A armadilha.** Passar do prazo. O lugar do P2 fica guardado por trinta segundos, contados de quando o chip dele some da fita; passado esse tempo sem ele voltar, a fila se fecha de propósito — o P3 vira 2 e o P4 vira 3, na tela na hora e nas lampadinhas junto com a cor da barra. Por isso a contagem começa no chip e o P2 volta aos 20. Se algum dos três trocar de número antes dos trinta segundos, anote com a hora: é defeito. E não ligue nenhum outro controle enquanto o P2 está fora: um controle que chega de novo refaz a mesa na hora, de propósito, e o teste passa a medir outra coisa. Na aba Conexões a linha de um controle desligado some da lista e a conta da seção cai — isso é a lista dizendo quem está ligado, não o lugar sendo perdido.
 
 ---
 

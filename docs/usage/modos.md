@@ -187,7 +187,8 @@ estável por endereço MAC (replugar recupera o mesmo número).
 > **24/09/2026 — decidido** (`D-2409-O-ASSENTO-GUARDADO-NAO-ANDA`): enquanto o
 > lugar de quem saiu está guardado — trinta segundos, o mesmo prazo do posto de
 > Jogador 1 —, os outros não trocam de número, nos quatro lugares, no cabo e no
-> rádio. Passado o prazo, a fila se fecha.
+> rádio. Passado o prazo, a fila se fecha. Um controle NOVO que chega nesse
+> meio refaz a mesa na hora, como antes: ele nunca nasce atrás do lugar vazio.
 
 Controles externos (Nintendo Pro; 8BitDo em modo Switch no cabo ou em modo
 DirectInput/PS4 por Bluetooth — ver
