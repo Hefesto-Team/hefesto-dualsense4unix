@@ -43,6 +43,12 @@ AS MORDIDAS:
   diferentes deixam a soma dos endereços menor que a contagem com
   ``sem_endereco`` igual a zero, e nenhuma régua acusava.
 
+* :func:`test_o_controle_sem_hid_vira_aviso_com_o_gesto` e
+  :func:`test_a_entrada_largada_vira_aviso_com_o_gesto` (24/09, «nomear e
+  religar») — troque o `warn` do `parada_hid)` ou do `parada_vazia)` por `info`
+  e a régua dela reprova. São as duas entradas em que o kernel DESISTIU: nelas
+  o controle não volta pelo kernel, e é a linha sobre a qual há o que fazer.
+
 **DUAS MORDIDAS DESTE ARQUIVO NÃO MORDERAM NA PRIMEIRA TENTATIVA**, e as duas
 estão corrigidas acima em vez de escondidas. Elas custaram também uma
 sentinela do `doctor.sh` que foi escrita e removida: nenhuma entrada a
@@ -57,6 +63,7 @@ import pathlib
 import subprocess
 import sys
 import textwrap
+from collections.abc import Callable
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 DOCTOR = RAIZ / "scripts/doctor.sh"
@@ -116,6 +123,7 @@ def _rodar(
     janela: int = 7,
     com_sys: bool = True,
     python: str | None = None,
+    montar: Callable[[pathlib.Path], None] | None = None,
 ) -> str:
     """Escreve um `kernel.log` e um `/sys` de mentira; devolve o que o bloco imprime."""
     import tempfile
@@ -132,6 +140,8 @@ def _rodar(
             _no(raiz_usb, "3-4.1", "05e3", "0610", "USB2.1 Hub", "09")
             _no(raiz_usb, "3-4.1.3", "054c", "0ce6", "DualSense", "00")
             _no(raiz_usb, "3-4.4", "2357", "0604", "UB500", "e0")
+        if montar is not None:
+            montar(raiz_usb)
         env = dict(
             os.environ,
             TMPHOME=lar,
@@ -394,3 +404,60 @@ def test_o_endereco_nao_le_o_sys_da_maquina_que_roda() -> None:
     )
     assert "3-4.1.3" in saida, saida
     assert "054c" not in saida, f"leu o /sys de fora da bancada injetada:\n{saida}"
+
+
+def _interface_hid_sem_driver(raiz: pathlib.Path) -> None:
+    """A HID do DualSense de `3-4.1.3` sem driver — o desfecho do `can't add hid device`."""
+    interface = raiz / "3-4.1.3:1.3"
+    interface.mkdir()
+    (interface / "bInterfaceClass").write_text("03\n", encoding="utf-8")
+
+
+def test_o_controle_sem_hid_vira_aviso_com_o_gesto() -> None:
+    """O controle encaixado sem o HID sai em WARN, com a entrada e o gesto.
+
+    A MORDIDA: troque o `warn` do caso `parada_hid)` por `info` e esta régua
+    reprova — o controle mudo para o jogo ficaria no mesmo tom da contagem.
+    """
+    saida = _rodar(
+        [
+            "# 2026-07-20 kernel-watch iniciado",
+            _linha(1, "usbhid 3-4.1.3:1.3: can't add hid device: -71"),
+        ],
+        montar=_interface_hid_sem_driver,
+    )
+    linhas = [linha for linha in saida.splitlines() if "sem o HID" in linha]
+    assert linhas, f"o controle parado não foi dito:\n{saida}"
+    assert linhas[0].startswith("WARN Entrada 4.1.3 (3-4.1.3): o controle está nela"), linhas[0]
+    assert "Tire e ponha o cabo desse controle" in linhas[0], linhas[0]
+
+
+def test_o_controle_com_hid_nao_vira_aviso() -> None:
+    """Sem a interface sem driver, nenhum WARN de parada — o controle está de pé."""
+    saida = _rodar(
+        [
+            "# 2026-07-20 kernel-watch iniciado",
+            _linha(1, "usbhid 3-4.1.3:1.3: can't add hid device: -71"),
+        ]
+    )
+    assert "sem o HID" not in saida, saida
+    assert "desistiu dela" not in saida, saida
+
+
+def test_a_entrada_largada_vira_aviso_com_o_gesto() -> None:
+    """A entrada que o kernel largou vazia sai em WARN, com o gesto de tirar e pôr.
+
+    A MORDIDA: troque o `warn` do caso `parada_vazia)` por `info` e esta régua
+    reprova.
+    """
+    saida = _rodar(
+        [
+            "# 2026-07-20 kernel-watch iniciado",
+            _linha(1, "usb 3-9.9: device not accepting address 10, error -71"),
+            _linha(1, "usb 3-9-port9: unable to enumerate USB device"),
+        ]
+    )
+    linhas = [linha for linha in saida.splitlines() if "desistiu dela" in linha]
+    assert linhas, f"a entrada largada não foi dita:\n{saida}"
+    assert linhas[0].startswith("WARN Entrada 9.9 (3-9.9): o kernel desistiu dela"), linhas[0]
+    assert "tire e ponha" in linhas[0], linhas[0]
