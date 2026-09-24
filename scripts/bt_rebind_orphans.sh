@@ -62,6 +62,30 @@
 # NUNCA carrega/descarrega módulo: recarregar hid_playstation derrubaria TODOS
 # os DualSense, inclusive os por Bluetooth.
 #
+# ─── O órfão do CABO (STORM-USB-01, 24/09/2026) ──────────────────────────────
+# A mesma cura no outro transporte, e é a palavra dela de 23/09: «nomear e
+# RELIGAR» — o controle que cai por -71 volta sozinho. No cabo, a probe perdida
+# tem outra forma, e está no journal da mesa dela (16/09, a 3-4.4):
+#
+#   usbhid 3-4.4:1.3: can't add hid device: -71
+#   usbhid 3-4.4:1.3: probe with driver usbhid failed with error -71
+#
+# O aparelho enumerou (o áudio dele segue vivo), mas a INTERFACE HID ficou sem
+# driver: não nasce device HID nenhum, e por isso o laço de cima não a vê. O
+# driver não refaz a probe sozinho; ficou assim 15 s, até a queda seguinte. O
+# religar é o bind da interface no `usbhid`, que refaz a probe — sem reset de
+# porta e sem re-enumerar, e é o que o separa do "authorized-toggle" que a
+# auditoria do storm de 26/06 condenou como realimentação do próprio -71.
+#
+# Escopo, também ESTREITO — TODAS as condições:
+#   1. interface USB (`3-4.4:1.3`) de classe 03 (HID), SEM symlink `driver`;
+#   2. o aparelho dela é Sony (idVendor 054c). O vpad do hefesto nasce por uhid
+#      e não tem interface USB nenhuma: fica fora por construção;
+#   3. `authorized` da interface não é 0 — interface desligada é escolha de
+#      alguém, não o -71.
+# O contador é por interface E por `devnum`: tirar e pôr o cabo dá outro
+# `devnum`, e o orçamento recomeça, como no rádio.
+#
 # Uso:
 #   bt_rebind_orphans.sh              cura (requer root p/ escrever no sysfs)
 #   bt_rebind_orphans.sh --dry-run    só relata o que faria (não requer root)
@@ -77,6 +101,17 @@ STAMP_DIR="${HEFESTO_REBIND_STAMP_DIR:-/run/hefesto-bt-rebind}"
 LOG_TAG=hefesto-bt-rebind
 HID_DEVICES="${HEFESTO_HID_DEVICES_DIR:-/sys/bus/hid/devices}"
 HID_DRIVERS="${HEFESTO_HID_DRIVERS_DIR:-/sys/bus/hid/drivers}"
+# O CABO (STORM-USB-01). A árvore DESVIADA não lê a real: uma régua que desvia só
+# o HID (as de 25/07) não pode, por esquecer esta costura, passar a varrer o
+# `/sys/bus/usb` de quem roda a suíte — vazio aqui é "não olhe".
+if [[ -n "${HEFESTO_USB_DEVICES_DIR:-}" ]]; then
+    USB_DEVICES="${HEFESTO_USB_DEVICES_DIR}"
+elif [[ -n "${HEFESTO_HID_DEVICES_DIR:-}" ]]; then
+    USB_DEVICES=""
+else
+    USB_DEVICES=/sys/bus/usb/devices
+fi
+USB_DRIVERS="${HEFESTO_USB_DRIVERS_DIR:-/sys/bus/usb/drivers}"
 
 DRY_RUN=0
 QUIET=0
@@ -200,20 +235,102 @@ for dev in "${HID_DEVICES}"/*; do
 done
 shopt -u nullglob
 
+# ─── O órfão do CABO (STORM-USB-01) — ver o cabeçalho ───────────────────────
+_cabo_do_stamp_vive() {  # <cabo-INTERFACE-DEVNUM>: a interface existe com o mesmo devnum?
+    local resto="${1#cabo-}" intf devnum
+    intf="${resto%-*}"
+    devnum="${resto##*-}"
+    [[ -n "${USB_DEVICES}" && -e "${USB_DEVICES}/${intf}" ]] || return 1
+    [[ "$(cat "${USB_DEVICES}/${intf%%:*}/devnum" 2>/dev/null || true)" == "${devnum}" ]]
+}
+
+if [[ -n "${USB_DEVICES}" ]]; then
+    shopt -s nullglob
+    for intf in "${USB_DEVICES}"/*:*; do
+        nome="$(basename "${intf}")"
+        [[ "${nome}" =~ ^[0-9]+-[0-9]+(\.[0-9]+)*:[0-9]+\.[0-9]+$ ]] || continue
+        [[ "$(cat "${intf}/bInterfaceClass" 2>/dev/null || true)" == "03" ]] || continue
+        [[ -e "${intf}/driver" ]] && continue   # tem driver: nada a fazer
+        [[ "$(cat "${intf}/authorized" 2>/dev/null || true)" == "0" ]] && continue
+        porta="${nome%%:*}"
+        orfaos=$((orfaos + 1))
+
+        vid="$(cat "${USB_DEVICES}/${porta}/idVendor" 2>/dev/null || true)"
+        if [[ "${vid,,}" != "054c" ]]; then
+            log_info "interface HID órfã FORA do escopo, ignorada: ${nome} (só religamos a HID de um controle Sony 054c no cabo)"
+            ignorados=$((ignorados + 1))
+            continue
+        fi
+
+        bind="${USB_DRIVERS}/usbhid/bind"
+        if [[ ! -w "${bind}" && "${DRY_RUN}" -eq 0 ]]; then
+            if [[ ! -e "${bind}" ]]; then
+                log "driver usbhid ausente em ${USB_DRIVERS} — NÃO carregamos módulo aqui. ${nome} segue sem o HID"
+            else
+                log "sem permissão de escrita em ${bind} (rode como root) — ${nome} segue sem o HID"
+            fi
+            falhados=$((falhados + 1))
+            continue
+        fi
+
+        devnum="$(cat "${USB_DEVICES}/${porta}/devnum" 2>/dev/null || true)"
+        [[ "${devnum}" =~ ^[0-9]+$ ]] || devnum=0
+        stamp="${STAMP_DIR}/cabo-${nome}-${devnum}"
+        tentativas=0
+        [[ -f "${stamp}" ]] && tentativas="$(cat "${stamp}" 2>/dev/null || printf '0')"
+        [[ "${tentativas}" =~ ^[0-9]+$ ]] || tentativas=0
+
+        if [[ "${tentativas}" -ge "${MAX_TENTATIVAS}" ]]; then
+            if [[ ! -f "${stamp}.desisti" ]]; then
+                [[ "${DRY_RUN}" -eq 0 ]] && : > "${stamp}.desisti" 2>/dev/null || true
+                log "DESISTINDO do controle do cabo em ${porta} após ${MAX_TENTATIVAS} religadas da HID sem sucesso — não é a probe perdida por um -71 solto; o cabo ou a entrada seguem falhando. Tire e ponha o cabo; se voltar a cair ali, troque de entrada"
+            fi
+            esgotados=$((esgotados + 1))
+            continue
+        fi
+
+        if [[ "${DRY_RUN}" -eq 1 ]]; then
+            log "[dry-run] faria: echo '${nome}' > ${bind} (tentativa $((tentativas + 1))/${MAX_TENTATIVAS})"
+            curados=$((curados + 1))
+            continue
+        fi
+
+        mkdir -p "${STAMP_DIR}" 2>/dev/null || true
+        printf '%s' "$((tentativas + 1))" > "${stamp}" 2>/dev/null || true
+
+        # O kernel faz a probe DENTRO da escrita: quando o `printf` volta, o
+        # `driver` já existe ou a probe caiu de novo (-71 outra vez, ENODEV se o
+        # aparelho saiu). Guardado, porque o script roda com set -e.
+        if printf '%s' "${nome}" > "${bind}" 2>/dev/null && [[ -e "${intf}/driver" ]]; then
+            log "controle do cabo RELIGADO em ${porta}: a HID (${nome}) tinha perdido a probe no -71; o aparelho estava inteiro"
+            rm -f "${stamp}" "${stamp}.desisti" 2>/dev/null || true
+            curados=$((curados + 1))
+        else
+            log "religar a HID de ${nome} NÃO pegou (tentativa $((tentativas + 1))/${MAX_TENTATIVAS}) — nova tentativa na próxima passagem do watchdog"
+            falhados=$((falhados + 1))
+        fi
+    done
+    shopt -u nullglob
+fi
+
 # Limpeza dos contadores de devices que não existem mais (reconexão troca o id;
-# sem isto o /run acumularia stamp morto até o reboot).
+# sem isto o /run acumularia stamp morto até o reboot). O do cabo vive enquanto
+# a interface existir com o MESMO devnum.
 if [[ "${DRY_RUN}" -eq 0 && -d "${STAMP_DIR}" ]]; then
     shopt -s nullglob
     for stamp in "${STAMP_DIR}"/*; do
         alvo="$(basename "${stamp}")"
         alvo="${alvo%.desisti}"
-        [[ -e "${HID_DEVICES}/${alvo}" ]] || rm -f "${stamp}" 2>/dev/null || true
+        case "${alvo}" in
+            cabo-*) _cabo_do_stamp_vive "${alvo}" || rm -f "${stamp}" 2>/dev/null || true ;;
+            *) [[ -e "${HID_DEVICES}/${alvo}" ]] || rm -f "${stamp}" 2>/dev/null || true ;;
+        esac
     done
     shopt -u nullglob
 fi
 
 if [[ "${orfaos}" -eq 0 ]]; then
-    log_info "nenhum device HID órfão — todos os controles têm driver"
+    log_info "nenhum device HID órfão, nem no rádio nem no cabo — todos os controles têm driver"
 else
     log_info "órfãos=${orfaos} curados=${curados} falhados=${falhados} esgotados=${esgotados} ignorados=${ignorados}"
 fi
