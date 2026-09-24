@@ -437,9 +437,9 @@ class ExternalIdentityRegistry:
 
     def __init__(self, *, clock: Callable[[], float] | None = None) -> None:
         self._lock = threading.RLock()
-        #: O-ASSENTO-GUARDADO-NAO-ANDA-01: relógio MONOTÔNICO do lugar
-        #: guardado — injetável só para o teste mover o tempo sem dormir.
-        self._clock: Callable[[], float] = clock or time.monotonic
+        #: O-ASSENTO-GUARDADO-NAO-ANDA-01/02: o relógio do lugar guardado, o dono
+        #: único dos prazos (anda na suspensão); injetável só para o teste.
+        self._clock: Callable[[], float] = clock or relogio_do_lugar_guardado
         #: key de quem SAIU → instante em que o lugar dele se libera. O MESMO
         #: prazo dos DualSense (``identity.prazo_do_lugar_guardado``): a mesa
         #: é uma só, e um externo fora dentro do prazo não faz ninguém andar.
@@ -1504,6 +1504,14 @@ class ExternalLedSync:
             with contextlib.suppress(Exception):
                 self._imu_enabler.tick(inventory, now=agora)
 
+
+# O-ASSENTO-GUARDADO-NAO-ANDA-02: o relógio padrão do registro é o do lugar
+# guardado dos DualSense, que pergunta ao dono único dos prazos. O import mora
+# aqui, depois das classes, e não no bloco lá de cima, porque o mapa de canais
+# cita este arquivo por linha; o `__init__` só lê o nome quando roda.
+from hefesto_dualsense4unix.daemon.subsystems.identity import (  # noqa: E402
+    relogio_do_lugar_guardado,
+)
 
 __all__ = [
     "EXTERNAL_IDENTITY_FIELD",

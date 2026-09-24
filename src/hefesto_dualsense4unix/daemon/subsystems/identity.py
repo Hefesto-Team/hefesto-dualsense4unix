@@ -274,7 +274,6 @@ import os
 import re
 import tempfile
 import threading
-import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -380,7 +379,8 @@ def prazo_do_lugar_guardado() -> float:
     mesma promessa, medida na mesma janela — uma piscada de rádio cabe nela, e
     guardar mais atrapalharia quem desliga o controle e segue jogando com o
     outro. Antes desta sprint só o P1 tinha prazo; o número dos outros se
-    fechava na hora, na tela, e nas lâmpadas no batimento seguinte.
+    fechava na hora, na tela, e nas lâmpadas no batimento seguinte. E o
+    RELÓGIO também é um só, e anda na suspensão (:func:`relogio_do_lugar_guardado`).
 
     **O que o lugar guardado NÃO muda**, medido antes de mudar: o jogo. O vpad
     de quem ficou não é recriado (``coop.planejar_a_ordem`` só exige cartas em
@@ -598,11 +598,11 @@ class ControllerIdentityRegistry:
 
     def __init__(self, *, clock: Callable[[], float] | None = None) -> None:
         self._lock = threading.RLock()
-        #: D-30: relógio MONOTÔNICO da fila do momento (ondas e estabilidade
-        #: da mesa). Injetável só para o teste poder mover o tempo sem
-        #: dormir — em produção é sempre ``time.monotonic``, que não anda
-        #: para trás com ajuste de NTP nem com suspend/resume.
-        self._clock: Callable[[], float] = clock or time.monotonic
+        #: D-30: relógio da fila do momento (ondas, estabilidade da mesa) e do
+        #: lugar guardado. Injetável só para o teste mover o tempo sem dormir —
+        #: em produção é o dono ÚNICO dos prazos (``relogio_do_lugar_guardado``),
+        #: que não anda para trás com o NTP e ANDA durante a suspensão.
+        self._clock: Callable[[], float] = clock or relogio_do_lugar_guardado
         #: D-30: key → ONDA em que a casa VIU este controle chegar NESTA
         #: sessão (1, 2, 3…). É a FILA DO MOMENTO, e é ela que ordena a
         #: exibição; o ``rank`` gravado só desempata dentro de uma onda.
@@ -2373,6 +2373,24 @@ def reset_identity_registry() -> None:
     global _registry
     with _registry_lock:
         _registry = None
+
+
+def relogio_do_lugar_guardado() -> float:
+    """O relógio do lugar guardado — o MESMO do posto de primário.
+
+    O-ASSENTO-GUARDADO-NAO-ANDA-02. Não é um segundo relógio: pergunta ao dono,
+    ``core.backend_pydualsense.relogio_do_prazo`` (o ``CLOCK_BOOTTIME``, que
+    anda enquanto a máquina dorme), pelo mesmo import tardio de
+    :func:`prazo_do_lugar_guardado`. É o relógio padrão dos dois registros (o
+    dos DualSense e o dos externos), e por isso o prazo de um controle que saiu
+    antes de a máquina suspender vence junto com o posto de primário, contando o
+    tempo em que ela dormiu.
+
+    Mora no fim do módulo porque o mapa de canais cita este arquivo por linha.
+    """
+    from hefesto_dualsense4unix.core.backend_pydualsense import relogio_do_prazo
+
+    return relogio_do_prazo()
 
 
 __all__ = [

@@ -2226,10 +2226,10 @@ class PyDualSenseController(IController):
         # COOP-QUE-NAO-DESMONTA-01 / E2(a): `(key, instante)` do primário que
         # caiu — o posto fica reservado a ele por `PRIMARIO_RESERVA_SEC`.
         self._primario_deposto: tuple[str, float] | None = None
-        # Seam de relógio (só isto, e só para a bancada de queda programável do
-        # E4 poder envelhecer a reserva sem dormir de verdade). O produto usa
-        # `time.monotonic` e nada mais.
-        self._relogio: Callable[[], float] = time.monotonic
+        # Seam de relógio (só para a bancada de queda envelhecer a reserva sem
+        # dormir). O produto usa `relogio_do_prazo`, o dono ÚNICO dos dois
+        # prazos, que anda na suspensão (O-ASSENTO-GUARDADO-NAO-ANDA-02).
+        self._relogio: Callable[[], float] = relogio_do_prazo
 
     # --- identidade ------------------------------------------------------
 
@@ -7551,4 +7551,38 @@ ESTADO_DE_CARGA: dict[int, str] = {
     0xF: "erro",
 }
 
-__all__ = ["ESTADO_DE_CARGA", "PyDualSenseController"]
+
+#: O-ASSENTO-GUARDADO-NAO-ANDA-02 — o relógio dos DOIS prazos, e ele é um só.
+#:
+#: Os dois prazos da casa medem a mesma promessa: o posto de primário
+#: (`PRIMARIO_RESERVA_SEC`, a reserva deste backend) e o lugar guardado dos
+#: quatro (`identity.prazo_do_lugar_guardado`, que devolve a mesma constante).
+#: Até 24/09/2026 os dois corriam no `time.monotonic`, que é o `CLOCK_MONOTONIC`
+#: do kernel e PARA durante a suspensão: o controle visto saindo antes de a
+#: máquina dormir voltava, horas depois, dentro de um prazo que para o relógio
+#: tinha durado segundos — mostrava o número antigo sozinho por até 30 s, e só
+#: então a mesa fechava.
+#:
+#: O `CLOCK_BOOTTIME` é o mesmo relógio com a suspensão somada: não anda para
+#: trás com o NTP (o que o `monotonic` já garantia) e anda enquanto a máquina
+#: dorme. Resolve sem segundo relógio — nenhuma conta com a hora de parede,
+#: nenhum evento de resume a escutar. Onde o kernel não o tem, fica o de antes.
+#:
+#: MORA AQUI, no fim do módulo, pela razão do `ESTADO_DE_CARGA` acima: o mapa
+#: de canais cita este arquivo por linha.
+_RELOGIO_DOS_PRAZOS: int = getattr(time, "CLOCK_BOOTTIME", time.CLOCK_MONOTONIC)
+
+
+def relogio_do_prazo() -> float:
+    """Segundos no relógio dos dois prazos — o dono ÚNICO (O-ASSENTO-GUARDADO-NAO-ANDA-02).
+
+    Quem mede o posto de primário (`PyDualSenseController._relogio`) e quem mede
+    o lugar guardado (`identity.relogio_do_lugar_guardado`, que serve ao registro
+    dos DualSense e ao dos externos) perguntam AQUI. Um relógio de cada lado
+    deixaria os dois prazos vencerem em instantes diferentes depois de uma
+    suspensão, que é a contradição que a sprint veio fechar.
+    """
+    return time.clock_gettime(_RELOGIO_DOS_PRAZOS)
+
+
+__all__ = ["ESTADO_DE_CARGA", "PyDualSenseController", "relogio_do_prazo"]
