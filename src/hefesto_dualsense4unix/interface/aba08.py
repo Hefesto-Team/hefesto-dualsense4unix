@@ -541,8 +541,8 @@ POR_PREF = {c["pref"]: c for c in MESA}
 CAMPO_DA_ORDEM = "ordem"
 
 #: A CONTAGEM DA SEÇÃO GESTÃO DE CONTROLES, e ela tem UM dono: o
-#: `gui.aba_conexoes.texto_da_contagem`, que escreve *"2 controles • 1 no cabo • 1
-#: no rádio"* — a frase inteira, com os três números. Este arquivo a digitava,
+#: `gui.aba_conexoes.texto_da_contagem`, que escreve *"2 controles • 1 USB •
+#: 1 BT"* — a frase inteira, com os números. Este arquivo a digitava,
 #: e era a segunda grafia: com um controle só na mesa, o produto continuava
 #: mostrando 2/1/1 porque o `<span>` não tinha endereço nem dono.
 #:
