@@ -4012,6 +4012,13 @@ check_bt_crc_counters() {
 # contra um retrato de barramento de OUTRA máquina — a de quem pediu ajuda —, e
 # é por onde a régua injeta uma bancada em vez de medir a topologia de quem
 # roda o teste.
+#
+# «NOMEAR E RELIGAR», a palavra dela de 23/09 (24/09/2026). Cada linha diz a
+# ENTRADA pelo nome da seção do rádio (o dono é `entrada_a_entrada.nome_da_porta`,
+# e o módulo pergunta a ele) e o CONTROLE que está nela — ou o adaptador BT, que
+# leva todos os controles dele quando cai. E a entrada em que o kernel DESISTIU
+# vira WARN com o gesto: o controle encaixado sem o HID, ou a entrada largada
+# vazia. As duas não voltam sozinhas pelo kernel, e é por isso que viram aviso.
 _o_endereco_do_storm() {
     local log="${1}" dias="${2}"
     local py arquivo raiz_usb
@@ -4039,6 +4046,10 @@ for p in d.get("portas") or []:
     texto = str(p.get("porque") or "").strip()
     if texto:
         print("porta\t" + texto)
+    parada = str(p.get("parada") or "").strip()
+    if parada:
+        marca = "parada_hid" if (p.get("aparelho") or {}).get("hid_sem_driver") else "parada_vazia"
+        print(marca + "\t" + str(p.get("entrada") or p.get("porta") or "") + ": " + parada)
 for h in d.get("hubs_em_comum") or []:
     texto = str(h.get("porque") or "").strip()
     if texto:
@@ -4066,6 +4077,8 @@ if sobra > 0:
         [[ -n "${texto}" ]] || continue
         case "${marca}" in
             porta) info "  -71 em ${texto}" ;;
+            parada_hid) warn "${texto}. Tire e ponha o cabo desse controle na mesma entrada; se ele cair de novo ali, troque de entrada" ;;
+            parada_vazia) warn "${texto}. Se o controle ou o adaptador BT ainda está encaixado nela, tire e ponha: o kernel só volta a olhar essa entrada quando algo é encaixado de novo" ;;
             hub) warn "${texto}. É o suspeito a trocar primeiro: tire um dos aparelhos desse hub e ligue direto numa entrada do computador, ou troque o hub (de preferência um com fonte própria)" ;;
             naosei) info "${texto}" ;;
         esac
@@ -4169,7 +4182,7 @@ check_kernel_watch() {
     recentes_usb71="$(_quantos_desde USB-71 "${corte}")"
     _relata USB-71 "${n_usb71}" "${recentes_usb71}" \
         "$(_quando_o_ultimo USB-71)" \
-        "storm USB (-71) registrado no kernel-watch [USB-71] — a PORTA e o APARELHO de cada um saem logo abaixo; as alavancas (quirk, regra 75) estão na seção USB/dropout"
+        "storm USB (-71) registrado no kernel-watch [USB-71] — a ENTRADA e o CONTROLE de cada um saem logo abaixo; as alavancas (quirk, regra 75) estão na seção USB/dropout"
     # STORM-USB-01: o número sozinho não manda ninguém a lugar nenhum.
     #
     # ESTA GUARDA É ECONOMIA, NÃO COMPORTAMENTO, e medir isso custou uma

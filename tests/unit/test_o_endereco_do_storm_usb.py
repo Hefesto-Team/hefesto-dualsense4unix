@@ -303,7 +303,7 @@ def test_a_frase_diz_que_a_leitura_do_aparelho_e_de_agora(tmp_path: Path) -> Non
         hoje=HOJE,
         raiz_usb=_bancada(tmp_path),
     )
-    assert "nesta porta AGORA:" in laudo.portas[0].porque
+    assert "nela AGORA:" in laudo.portas[0].porque
 
 
 def test_a_janela_corta_o_que_e_velho(tmp_path: Path) -> None:
