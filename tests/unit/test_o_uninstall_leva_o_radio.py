@@ -59,6 +59,52 @@ BLOCO_DOS_NOMES = _recorte(
 )
 
 
+#: O `busctl` de mentira imprime como o de verdade. O dublê de antes devolvia o
+#: texto CRU, e o `busctl` do systemd escapa em C todo byte fora do ASCII
+#: (`cescape`): «Sofá» sai `s "Sof\303\241"` — medido num barramento privado
+#: com o systemd 255 dela (23/09/2026). Com o dublê cru, o uninstall que
+#: comparava o texto escapado com o nome do `maquina.json` passava aqui e, na
+#: máquina de verdade, deixava o lugar com acento no rádio e ainda gravava de
+#: volta o texto escapado. Este dá as duas formas do real: a escapada e a do
+#: `--json=short`. Propriedade ausente é erro, como no real.
+_BUSCTL_DE_MENTIRA = """#!/usr/bin/env python3
+import json
+import sys
+from pathlib import Path
+
+args = sys.argv[1:]
+json_curto = "--json=short" in args
+args = [a for a in args if not a.startswith("--json")]
+if args[:1] != ["get-property"]:
+    sys.exit(0)
+arquivo = Path(PROPS) / (args[2].rsplit("/", 1)[-1] + "." + args[4])
+if not arquivo.is_file():
+    sys.exit(1)
+texto = arquivo.read_text(encoding="utf-8")
+if json_curto:
+    print(json.dumps({"type": "s", "data": texto}, ensure_ascii=False, separators=(",", ":")))
+    sys.exit(0)
+ESPECIAIS = {7: "a", 8: "b", 12: "f", 10: "n", 13: "r", 9: "t", 11: "v", 92: "\\\\", 34: '"', 39: "'"}
+saida = []
+for byte in texto.encode("utf-8"):
+    if byte in ESPECIAIS:
+        saida.append("\\\\" + ESPECIAIS[byte])
+    elif byte < 32 or byte >= 127:
+        saida.append("\\\\%03o" % byte)
+    else:
+        saida.append(chr(byte))
+print('s "' + "".join(saida) + '"')
+"""
+
+
+def _busctl_como_o_de_verdade(alvo: Path, props: Path) -> None:
+    alvo.parent.mkdir(parents=True, exist_ok=True)
+    alvo.write_text(
+        _BUSCTL_DE_MENTIRA.replace("Path(PROPS)", f"Path({str(props)!r})"), encoding="utf-8"
+    )
+    alvo.chmod(alvo.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+
+
 def _mesa(tmp_path: Path, adaptadores: dict[str, tuple[str, str]], lugares: list[str]):
     fakes = tmp_path / "fakes"
     sysfs = tmp_path / "sysfs"
@@ -85,18 +131,7 @@ def _mesa(tmp_path: Path, adaptadores: dict[str, tuple[str, str]], lugares: list
         encoding="utf-8",
     )
     _fake(fakes, "sudo", 'printf "SUDO:%s\\n" "$(printf "[%s]" "$@")"\nexit 0\n')
-    _fake(
-        fakes,
-        "busctl",
-        f"""
-if [[ "$1" == "get-property" ]]; then
-    hci="${{3##*/}}"
-    f="{props}/${{hci}}.$5"
-    [[ -f "$f" ]] && printf 's "%s"\\n' "$(cat "$f")"
-fi
-exit 0
-""",
-    )
+    _busctl_como_o_de_verdade(fakes / "busctl", props)
     # Sem `hciconfig`: a metade da link policy não é o que esta régua mede.
     _fake(fakes, "hciconfig", "exit 1\n")
     script = "set -uo pipefail\n" 'log() { printf "[uninstall] %s\\n" "$*"; }\n' + BLOCO_DOS_NOMES
@@ -174,6 +209,39 @@ def test_o_nome_de_fabrica_do_bluez_com_numero_volta_ao_padrao(tmp_path: Path) -
     escritas = _escritas(r.stdout)
     assert escritas.get("hci0") == "" and escritas.get("hci1") == "", r.stdout
     assert escritas.get("hci2") == "Sala", r.stdout
+
+
+def test_o_lugar_com_acento_volta_ao_padrao_e_nada_sai_escapado(tmp_path: Path) -> None:
+    """O nome dela tem acento, e o `busctl` de verdade o devolve escapado.
+
+    Conferência da INSTALL-E-UNINSTALL-DO-RADIO-01 (23/09): lido sem
+    `--json`, «Nintendo Sofá» chegava ao uninstall como «Nintendo
+    Sof\\303\\241». O lugar não casava com o `maquina.json` (ficava no rádio),
+    e o ramo do prefixo gravava de volta «Sof\\303\\241» — o nome dela trocado
+    por barras e números. A MORDIDA: voltar a ler sem o `--json=short` reprova
+    as três linhas de baixo.
+    """
+    r = _mesa(
+        tmp_path,
+        {
+            "hci0": ("Nintendo Sofá", "Máquina da Tetê"),
+            "hci1": ("Escritório", "Máquina da Tetê #2"),
+            "hci2": ("Nintendo Canto da Tetê", "Máquina da Tetê #3"),
+            "hci3": ("Nintendo Máquina da Tetê #1", "Máquina da Tetê"),
+        },
+        ["Sofá", "Escritório"],
+    )
+    assert r.returncode == 0, r.stderr
+    escritas = _escritas(r.stdout)
+    assert escritas.get("hci0") == "", "o lugar com acento ficou no rádio:\n" + r.stdout
+    assert escritas.get("hci1") == "", "o lugar com acento, sem prefixo, ficou:\n" + r.stdout
+    assert escritas.get("hci2") == "Canto da Tetê", (
+        "o nome que não é do Hefesto tem de voltar como ela o escreveu:\n" + r.stdout
+    )
+    assert escritas.get("hci3") == "", r.stdout
+    assert not any("\\" in valor for valor in escritas.values()), (
+        "o uninstall gravou texto ESCAPADO no nome de um adaptador:\n" + r.stdout
+    )
 
 
 def test_sem_maquina_json_o_prefixo_ainda_sai(tmp_path: Path) -> None:
