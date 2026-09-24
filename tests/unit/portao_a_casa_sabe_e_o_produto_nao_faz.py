@@ -320,13 +320,13 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
     "integrations/steam_launch_options.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/steam_launch_options.py",
-        "install.sh:4018 o roda com `--migrate`; uninstall.sh:1931 o roda para "
+        "install.sh:4018 o roda com `--migrate`; uninstall.sh:1963 o roda para "
         "tirar o wrapper; doctor.sh:2228 o publica como cura",
     ),
     "integrations/proton_pin.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/proton_pin.py",
-        "install.sh:4190 (--ensure) e uninstall.sh:1909 o rodam; "
+        "install.sh:4190 (--ensure) e uninstall.sh:1941 o rodam; "
         "doctor.sh:4056 (check_proton_pin, --report) também",
     ),
     "integrations/opcoes_por_jogo.py": (
@@ -342,7 +342,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "src/hefesto_dualsense4unix/integrations/audio_ks_dualsense.py",
         "install.sh:3295 o copia para ~/.local/share/hefesto-dualsense4unix/"
         "bin/hefesto-audio-ks, e o assets/hefesto-launch.sh:511 "
-        "(curar_audio_ks) o roda a cada jogo lançado; uninstall.sh:1971 o "
+        "(curar_audio_ks) o roda a cada jogo lançado; uninstall.sh:2003 o "
         "roda com --remover-de-todos",
     ),
     "integrations/exame_da_mesa.py": (
@@ -357,7 +357,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
 #: gambiarra: é a política desta casa — *"quem DECIDE é o módulo puro
 #: integrations/kernel_cmdline.py (100% stdlib, testável); aqui só traduzimos o
 #: plano"* (install.sh:1682-1683). O instalador e o desinstalador abrem um
-#: ``python3 - "${ROOT_DIR}" <<'PYEOF'`` (install.sh:1686, uninstall.sh:1653)
+#: ``python3 - "${ROOT_DIR}" <<'PYEOF'`` (install.sh:1686, uninstall.sh:1685)
 #: que importa o módulo e chama as funções dele.
 #:
 #: Esse Python É produção: roda na máquina dela, com ``sudo``, mexendo na linha
@@ -2649,7 +2649,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # entrada afirmava "esse cuidado está escrito e nunca roda", pedindo como
     # cura que "o `uninstall.sh` chamar este caminho". SUBSTITUÍDO em
     # 13/08/2026, porque o fato era falso e não decisão a preservar: o
-    # `uninstall.sh` já chama, em uninstall.sh:1669 (`rest, changed =
+    # `uninstall.sh` já chama, em uninstall.sh:1701 (`rest, changed =
     # kc.strip_quirks_token(tok)`), dentro do heredoc que importa o módulo. Era
     # o PORTÃO que não enxergava — ver `_ROTEIROS_DE_PRODUCAO`. A entrada saiu
     # porque a varredura passou a alcançá-la, e não porque alguém a apagou à
@@ -2975,7 +2975,7 @@ def trechos_python_embutidos(roteiro: Path) -> list[str]:
     A varredura anterior era CEGA a isto, e a cegueira tinha consequência
     escrita: uma função chamada pelo desinstalar desde julho aparecia na lista
     de dívida. Ler o shell como texto solto não serve — o nome também aparece
-    nos comentários em prosa do próprio roteiro (uninstall.sh:1628 cita
+    nos comentários em prosa do próprio roteiro (uninstall.sh:1660 cita
     ``strip_quirks_token`` numa linha ``#``), e comentário não é chamada. O que
     vale é o corpo do heredoc, e ele é Python de verdade: sai daqui e entra em
     ``ast.parse``, pela MESMA régua que mede ``src/``.
@@ -4869,7 +4869,7 @@ class TestOPortaoMorde:
         assert chave in promessas_sem_caminho(copia), (
             "arrancada a chamada do heredoc, o portão NÃO voltou a acusar "
             f"{chave!r}. Ou ele está lendo o roteiro como texto solto (e o "
-            "COMENTÁRIO de uninstall.sh:1628 o satisfaz), ou ele parou de "
+            "COMENTÁRIO de uninstall.sh:1660 o satisfaz), ou ele parou de "
             "olhar o roteiro da CÓPIA e está medindo a árvore viva"
         )
         assert chave not in promessas_sem_caminho(), (
@@ -5165,10 +5165,10 @@ class TestOPortaoMorde:
         embutido = "\n".join(trechos_python_embutidos(_RAIZ / "uninstall.sh"))
         assert "kc.strip_quirks_token(tok)" in embutido, (
             "o extrator não achou a chamada dentro do heredoc de "
-            "uninstall.sh:1653 — o delimitador ou a linha de abertura mudaram"
+            "uninstall.sh:1685 — o delimitador ou a linha de abertura mudaram"
         )
         assert "IDs do hefesto (strip_quirks_token do módulo puro)" not in embutido, (
-            "o extrator engoliu o COMENTÁRIO de uninstall.sh:1628 junto com o "
+            "o extrator engoliu o COMENTÁRIO de uninstall.sh:1660 junto com o "
             "heredoc — ele está pegando texto demais, e menção viraria prova"
         )
 
