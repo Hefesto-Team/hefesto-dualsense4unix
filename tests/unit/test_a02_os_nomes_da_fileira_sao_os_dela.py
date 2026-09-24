@@ -14,6 +14,11 @@ Os dois primeiros nomes são os que ela escreveu, com estas letras:
     | 1 | Efeitos do Jogo                              |
     | 2 | Efeitos do Jogo e Áudio da TV no Controle    |
 
+**E «TV» VIROU «PC» EM 23/09/2026** (`D-2309-TV-VIRA-PC`: «TV» não é verdade
+para quem usa fone ou monitor), no mesmo dia em que o QUARTO botão voltou
+(`D-2309-O-QUARTO-BOTAO-VOLTA`). Os nomes de hoje estão em `DELA`; os de ontem,
+em `DE_ONTEM`, e a tela os recusa.
+
 **POR QUE ESTE ARQUIVO EXISTE, com o `_conferir` do gerador ao lado.** Porque
 o `_conferir` roda dentro do `__main__` de `interface/aba02.py`: ele só morde
 **quem regera**. Um nome apagado direto no HTML da bancada, ou uma bancada que
@@ -49,10 +54,23 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 #: A PALAVRA DELA, digitada. `data-rota` → o rótulo que o botão tem de dizer.
 DELA: dict[str, str] = {
-    "jogo": "Efeitos do Jogo no Controle, Áudio da TV na TV",
-    "junto": "Efeitos do Jogo e Áudio da TV no Controle",
-    "nada": "Tudo na TV e Nada no Controle",
+    "jogo": "Efeitos do Jogo no Controle, Áudio do PC no PC",
+    "junto": "Efeitos do Jogo e Áudio do PC no Controle",
+    "nada": "Tudo no PC e Nada no Controle",
+    "pc": "Tudo no Controle e Nada no PC",
 }
+
+#: OS NOMES DE 21/09, guardados para serem RECUSADOS — a mesma função do
+#: `EM_ESPERA` logo abaixo. «TV» saiu dos rótulos por decisão dela de 23/09.
+DE_ONTEM = ("Efeitos do Jogo no Controle, Áudio da TV na TV",
+            "Efeitos do Jogo e Áudio da TV no Controle",
+            "Tudo na TV e Nada no Controle")
+
+#: A PALAVRA QUE SAIU, e o que ela quer dizer no desenho: nenhum texto que a
+#: moldura do alto-falante MOSTRA — rótulo, dica de botão, o «?» — diz «TV»
+#: nem «televisão». Casada como palavra inteira, para não acender em «TVs» de
+#: nome próprio nem em pedaço de outra palavra.
+PALAVRAS_DA_TV = re.compile(r"\b(?:TV|televis[ãa]o)\b", re.I)
 
 #: **O TERCEIRO PASSOU A SER DELA — 21/09/2026.**
 #:
@@ -129,14 +147,17 @@ def test_o_botao_de_espera_nao_voltou() -> None:
     Enquanto o terceiro botão CALAVA a televisão, o nome dela mentiria — e a
     régua travava o `"Só no controle"` até o ato mudar. O ato mudou em 21/09.
 
-    MORDIDA: devolva `data-rota="pc"` e o rótulo de espera ao gerador. Esta
-    régua reprova, e com ela o nome dela some da tela outra vez.
+    **O `pc` VOLTOU EM 24/09, e com NOME PRÓPRIO** — o quarto botão, decisão
+    dela de 23/09. O que esta régua continua proibindo é o arranjo que mentia:
+    o `pc` com o rótulo de espera, ou com o nome do terceiro.
+
+    MORDIDA: devolva o rótulo de espera ao gerador, em qualquer botão.
     """
     doc = _bancada()
 
-    assert not _rotulos(doc, "pc"), (
-        "o botão `pc` voltou à fileira — ele calava a televisão, e o nome que "
-        "ela escreveu para essa posição diz o contrário")
+    assert set(_rotulos(doc, "pc")) <= {DELA["pc"]}, (
+        f"o botão `pc` diz {sorted(set(_rotulos(doc, 'pc')))} — o nome dele é "
+        f"{DELA['pc']!r}, o espelho do terceiro")
     # **OS COMENTÁRIOS SAEM ANTES, e os DOIS tipos** — a página guarda lápide
     # em comentário HTML (o estado que ela viu em 03/09, citado quatro vezes) e
     # em comentário de CSS (as duas medições de largura). Comentário não chega
@@ -149,8 +170,49 @@ def test_o_botao_de_espera_nao_voltou() -> None:
         f"nome dela é {DELA['nada']!r}")
 
 
-def test_a_fileira_tem_os_tres_botoes_no_mesmo_numero_de_cartoes() -> None:
-    """Os três são UM estado: nenhum pode faltar num cartão que tem os outros.
+def test_os_nomes_de_ontem_sairam_da_tela() -> None:
+    """«TV» virou «PC» — e a troca vale para os TRÊS nomes de ontem.
+
+    MORDIDA: devolva «Tudo na TV e Nada no Controle» a `ROTULO_NADA_NO_CONTROLE`
+    e regere. O `_conferir` do gerador reprova primeiro; com a bancada editada
+    à mão, esta régua reprova sozinha.
+    """
+    vivo = re.sub(r"<!--.*?-->|/\*.*?\*/", "", _bancada(), flags=re.S)
+    # A LEGENDA DA BANCADA É HISTÓRIA, e a lápide dela (`<li class="foi">`)
+    # nomeia o que saiu de propósito — é a licença que o gerador dá a ela.
+    vivo = vivo.split('<div class="nota">', 1)[0]
+    voltaram = [nome for nome in DE_ONTEM if nome in vivo]
+    assert not voltaram, f"o nome de ontem voltou à tela: {voltaram}"
+
+
+def test_a_moldura_do_alto_falante_nao_diz_tv() -> None:
+    """Nada que a moldura do alto-falante MOSTRA diz «TV» — rótulo, dica de
+    botão (`title`) ou o «?» do rótulo.
+
+    **POR QUE A MOLDURA INTEIRA, e não só os rótulos:** a regra dela é sobre o
+    que a pessoa lê, e quem usa fone ou monitor lê a dica tanto quanto o
+    botão. Medido em 24/09: além dos três rótulos, a dica do botão do meio
+    («continua saindo na TV»), a do terceiro («volta todo para a televisão») e
+    duas linhas do «?» diziam a palavra.
+
+    MORDIDA: devolva «na TV» a `DICA_OUVIR_JUNTO` e regere.
+    """
+    doc = re.sub(r"<!--.*?-->", "", _bancada(), flags=re.S)
+    molduras = re.findall(
+        r'<div class="moldura"[^>]*data-bloco="alto-falante".*?<div class="rota quatro">.*?</div>',
+        doc, flags=re.S)
+    assert molduras, "o desenho perdeu a moldura do alto-falante (ou a fileira)"
+    for moldura in molduras:
+        lido = " ".join(re.findall(r'title="([^"]*)"', moldura))
+        lido += " " + re.sub(r"<[^>]+>", " ", moldura)
+        achado = PALAVRAS_DA_TV.search(lido)
+        assert achado is None, (
+            f"a moldura do alto-falante diz {achado.group(0)!r}: "
+            f"…{lido[max(0, achado.start() - 60):achado.end() + 20]}…")
+
+
+def test_a_fileira_tem_os_quatro_botoes_no_mesmo_numero_de_cartoes() -> None:
+    """Os quatro são UM estado: nenhum pode faltar num cartão que tem os outros.
 
     MORDIDA: apague o botão do meio de um dos cartões. A fileira daquele
     controle ficaria sem o modo que ela acabou de nomear, e o `aceso_da_fileira`
@@ -161,11 +223,11 @@ def test_a_fileira_tem_os_tres_botoes_no_mesmo_numero_de_cartoes() -> None:
     quantos = {rota: len(_rotulos(doc, rota)) for rota in DELA}
 
     assert len(set(quantos.values())) == 1, (
-        f"a fileira do som não tem os três botões nos mesmos cartões: {quantos}")
+        f"a fileira do som não tem os quatro botões nos mesmos cartões: {quantos}")
     assert all(quantos.values()), f"a fileira do som sumiu do desenho: {quantos}"
 
 
-@pytest.mark.parametrize("rota", ["jogo", "junto", "nada"])
+@pytest.mark.parametrize("rota", ["jogo", "junto", "nada", "pc"])
 def test_o_nome_interno_nao_chega_ao_botao(rota: str) -> None:
     """A tela nunca diz «sfx» nem «mix» — é metade da correção dela.
 
@@ -200,8 +262,9 @@ def test_o_gerador_guarda_a_palavra_dela(rota: str) -> None:
 
     das_constantes = {
         "jogo": aba02.ROTULO_SO_OS_EFEITOS,
-        "junto": aba02.ROTULO_EFEITOS_MAIS_A_TV,
+        "junto": aba02.ROTULO_EFEITOS_MAIS_O_PC,
         "nada": aba02.ROTULO_NADA_NO_CONTROLE,
+        "pc": aba02.ROTULO_TUDO_NO_CONTROLE,
     }
     assert das_constantes[rota] == DELA[rota], (
         f"o gerador emite {das_constantes[rota]!r} para o botão `{rota}` e a "
@@ -224,8 +287,9 @@ def test_o_gerador_e_o_desenho_nao_divergiram() -> None:
 
     doc = _bancada()
     for rota, constante in (("jogo", aba02.ROTULO_SO_OS_EFEITOS),
-                            ("junto", aba02.ROTULO_EFEITOS_MAIS_A_TV),
-                            ("nada", aba02.ROTULO_NADA_NO_CONTROLE)):
+                            ("junto", aba02.ROTULO_EFEITOS_MAIS_O_PC),
+                            ("nada", aba02.ROTULO_NADA_NO_CONTROLE),
+                            ("pc", aba02.ROTULO_TUDO_NO_CONTROLE)):
         assert set(_rotulos(doc, rota)) == {constante}, (
             f"o gerador diz {constante!r} para o botão `{rota}` e o desenho "
             f"aprovado diz {sorted(set(_rotulos(doc, rota)))}")
