@@ -21,7 +21,8 @@ retratista (`olhar.MEDIDA_NA_VISTA`), nunca do texto do CSS:
 
 1. a caixa de cada avulsa (`calibrar-sensores`, `mapa-do-controle`,
    `mapa-das-portas`) tem a largura, a altura, o vão dos lados e a sobra
-   embaixo da `.janela` da 02, ±2 px, em cinco vistas;
+   embaixo da `.janela` da 02, ±2 px, em cinco vistas — e o LUGAR dela, lido
+   do retângulo (`LUGAR`): a borda esquerda, o topo e o vão da direita;
 2. a página não rola, nem de lado: quem rola é o `.corpo`, por dentro, e com
    ele rolado até o fim o último bloco (o rodapé) cabe na caixa;
 3. as três pedem a caixa ao MESMO dono (`caixa_da_janela.moldura`) e a bancada
@@ -30,6 +31,13 @@ retratista (`olhar.MEDIDA_NA_VISTA`), nunca do texto do CSS:
 A MORDIDA: devolva ao `mapa.py` o `.cx{width:1800px;max-width:100%}` e o
 `body{padding:22px}` no lugar da `moldura()`, regere, e o caso da vista dela
 reprova com 1800 x 778 contra 1600 x 808 — os números medidos acima.
+
+A SEGUNDA MORDIDA, e ela nasceu de um verde falso (conferência de 24/09/2026):
+tire do `body` do `mapa.py` o `align-items:center` e regere. A caixa continua
+com 1600 x 808, mas encosta na esquerda — 16,16 na TV dela, contra a `.janela`
+em 159,16. O `vao_dos_lados` da medida do retratista é CONTA, feita da largura
+(`(vista - largura) / 2`), e não a posição: com ele só, a régua dava 33 verdes
+sobre a caixa no lugar errado. Com o `LUGAR`, reprova.
 """
 from __future__ import annotations
 
@@ -85,6 +93,20 @@ FIM = """() => {
           rola_por_dentro: miolo.scrollHeight > miolo.clientHeight};
 }"""
 
+#: ONDE A CAIXA ESTÁ, lido do retângulo — e não deduzido do tamanho. O
+#: `vao_dos_lados` do `olhar.MEDIDA_NA_VISTA` é `(vista - largura) / 2`: uma
+#: caixa do tamanho certo encostada na esquerda passava nele (ver a segunda
+#: mordida, no topo). Aqui a borda esquerda, o topo e o vão da direita vêm do
+#: `getBoundingClientRect`, na aba e em cada avulsa, na mesma vista.
+LUGAR = """() => {
+  const c = document.querySelector('.janela') || document.querySelector('.cx')
+         || document.querySelector('.pagina');
+  if (!c) return {erro: 'nem .janela, nem .cx, nem .pagina — não há lugar a ler'};
+  const r = c.getBoundingClientRect();
+  return {x: Math.round(r.left), y: Math.round(r.top),
+          vao_da_direita: Math.round(window.innerWidth - r.right)};
+}"""
+
 
 @pytest.fixture(scope="module")
 def medido() -> dict[str, dict[str, Any]]:
@@ -118,6 +140,7 @@ def medido() -> dict[str, dict[str, Any]]:
                     pg.wait_for_load_state("networkidle")
                     pg.add_style_tag(content=esconde)
                     lido[nome] = pg.evaluate(olhar.MEDIDA_NA_VISTA)
+                    lido[nome]["lugar"] = pg.evaluate(LUGAR)
                     if nome != ABA:
                         lido[nome]["fim"] = pg.evaluate(FIM)
                 fora[vista] = lido
@@ -133,12 +156,20 @@ CASOS = [(v, n) for v in VISTAS for n in AVULSAS]
 @pytest.mark.parametrize(("vista", "nome"), CASOS)
 def test_a_caixa_da_avulsa_e_a_da_janela(medido: dict[str, Any], vista: str,
                                          nome: str) -> None:
-    """Largura, altura, vão dos lados e sobra embaixo: os da `.janela`, ±2 px."""
+    """Tamanho e LUGAR: os da `.janela`, ±2 px.
+
+    Largura, altura, vão dos lados e sobra embaixo vêm da medida do retratista;
+    a borda esquerda, o topo e o vão da direita vêm do retângulo (`LUGAR`),
+    porque o vão dos lados do retratista é conta feita da largura.
+    """
     aba, avulsa = medido[vista][ABA], medido[vista][nome]
     assert "erro" not in aba and "erro" not in avulsa, (aba, avulsa)
+    assert "erro" not in aba["lugar"] and "erro" not in avulsa["lugar"], (aba, avulsa)
     assert aba["caixa"] == "janela", f"a {ABA} não mediu a `.janela`: {aba}"
     difere = {k: (avulsa[k], aba[k]) for k in ("larg", "alt", "vao_dos_lados", "morto_abaixo")
               if abs(avulsa[k] - aba[k]) > FOLGA}
+    difere |= {k: (avulsa["lugar"][k], aba["lugar"][k]) for k in ("x", "y", "vao_da_direita")
+               if abs(avulsa["lugar"][k] - aba["lugar"][k]) > FOLGA}
     assert not difere, (
         f"na vista {vista}, a caixa `.{avulsa['caixa']}` de {nome} difere da "
         f"`.janela` da {ABA} em {difere} (avulsa, aba). A palavra dela, 24/09: "
