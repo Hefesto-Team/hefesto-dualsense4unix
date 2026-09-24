@@ -6447,7 +6447,7 @@ check_perms_soft() {
         elif [[ "${_culpado_tardio}" -eq 1 ]]; then
             info "  ATENÇÃO: a regra acima roda DEPOIS das do Hefesto (ou usa 'MODE:='), então ela vence — os nós dos controles também ficam abertos."
         else
-            info "  os aparelhos do Hefesto não são afetados: a regra deles roda depois e os devolve a 0660+uaccess."
+            info "  os aparelhos do Hefesto não são afetados: a regra deles roda depois e os devolve ao esperado (o controle físico 0600, aberto pelo broker; o virtual 0660+uaccess)."
         fi
     fi
     # A OFERTA — decisão dela de 07/08/2026, resposta 16 do painel: o restauro
