@@ -3115,12 +3115,15 @@ def _pulsos_de_falha() -> list[tuple[tuple[int, int, int], float]]:
     ]
 
 
-def mascara_atual(daemon: DaemonProtocol) -> str:
-    """A máscara do jogador 1 AGORA: a que o vpad veste, ou a que ele vestiria.
+def mascara_atual(daemon: DaemonProtocol, uniq: str | None = None) -> str:
+    """A máscara do cartão `uniq` AGORA: a que o vpad veste, ou a que ele vestiria.
 
     Com o vpad de pé, é o `flavor` dele — a prova é o aparelho. Sem vpad (na
     Navegação), é a do cartão herdando a da sessão (`external_mask.
     mascara_efetiva`): a que o próximo vpad veste e a que a aba Jogar acende.
+
+    `uniq` omitido é o cartão do jogador 1. O PS + L3 passa o de quem segura os
+    atalhos (OS-ATALHOS-NA-ESPERA-01, ver `build_next_mask_callback`).
     """
     from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
         mascara_efetiva,
@@ -3131,11 +3134,28 @@ def mascara_atual(daemon: DaemonProtocol) -> str:
     # TROCA-DENTRO-DO-JOGO-01 (14/09/2026): a pergunta "o que o aparelho veste"
     # tem UM leitor (`external_mask.mascara_vestida`). Aqui havia uma cópia dele,
     # quase igual à da env — e as duas divergiam no estado de falha.
-    vivo = mascara_vestida(daemon)
+    vivo = mascara_vestida(daemon, uniq)
     if isinstance(vivo, str) and vivo in CICLO_DE_MASCARAS:
         return vivo
     sessao = getattr(getattr(daemon, "config", None), "gamepad_flavor", None)
-    return mascara_efetiva(primary_identity(daemon), sessao)
+    return mascara_efetiva(uniq if uniq is not None else primary_identity(daemon), sessao)
+
+
+def _vpad_do_cartao_de_pe(daemon: DaemonProtocol, uniq: str) -> bool:
+    """O vpad do cartão `uniq` está de pé? O do jogador 1 é o `_gamepad_device`.
+
+    Os outros são do co-op, e quem responde por eles é o leitor único do que o
+    aparelho veste (`external_mask.mascara_vestida`): sem vpad, None.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
+        mascara_vestida,
+        mesma_identidade,
+    )
+    from hefesto_dualsense4unix.daemon.subsystems.gamepad import primary_identity
+
+    if mesma_identidade(uniq, primary_identity(daemon)):
+        return getattr(daemon, "_gamepad_device", None) is not None
+    return mascara_vestida(daemon, uniq) is not None
 
 
 def proxima_mascara(atual: str) -> str:
@@ -3164,9 +3184,14 @@ def build_next_mask_callback(daemon: DaemonProtocol) -> Any:
     aparelho não alcançou dá os pulsos vermelhos com o longo no fim, como no
     PS + R3.
 
-    SÓ O JOGADOR 1: o laço de botões do daemon é o do primário, então é dele o
-    cartão que o gesto anda. Sem o MAC do primário não há cartão a gravar, e o
-    gesto recusa pela luz em vez de trocar a máscara da sessão calado.
+    O CARTÃO É O DE QUEM FAZ O GESTO — quem segura os atalhos do PS
+    (`poll.quem_segura_os_atalhos`, o dono único da pergunta). É o jogador 1;
+    com o jogo aberto e o P1 fora dentro do prazo do lugar guardado, é o
+    próximo da fila que está na mesa (OS-ATALHOS-NA-ESPERA-01, 24/09/2026), e
+    o gesto anda o cartão DELE: o do P1 ausente não se mexe, e o vpad parado
+    no lugar dele não é recriado (recriá-lo com o jogo aberto o derrubaria, a
+    R-04). Sem o MAC de quem segura não há cartão a gravar, e o gesto recusa
+    pela luz em vez de trocar a máscara da sessão calado.
     """
 
     async def _ciclar_mascara() -> None:
@@ -3174,13 +3199,13 @@ def build_next_mask_callback(daemon: DaemonProtocol) -> Any:
             escolher_a_mascara,
             mascara_vestida,
         )
-        from hefesto_dualsense4unix.daemon.subsystems.gamepad import primary_identity
+        from hefesto_dualsense4unix.daemon.subsystems.poll import quem_segura_os_atalhos
 
         store = getattr(daemon, "store", None)
         if store is not None and getattr(store, "native_mode_active", False):
             logger.info("mascara_ciclo_skip_native_mode")
             return
-        identidade = primary_identity(daemon)
+        identidade = quem_segura_os_atalhos(daemon)
         if not identidade:
             logger.warning("mascara_do_gesto_sem_cartao", identidade=identidade)
             await _sinalizar_lightbar(daemon, _pulsos_de_falha())
@@ -3196,12 +3221,12 @@ def build_next_mask_callback(daemon: DaemonProtocol) -> Any:
         # têm `await` entre elas, e é isso que as mantém no mesmo pedaço de laço:
         # se o ato virar assíncrono um dia, aqui precisa de trava.
         jogo_no_controle = getattr(daemon, "display_authority", "unknown") == "game"
-        if mascara_vestida(daemon) is not None and jogo_no_controle:
+        if mascara_vestida(daemon, identidade) is not None and jogo_no_controle:
             await _sinalizar_lightbar(daemon, _PULSOS_DE_RISCO)
 
-        atual = mascara_atual(daemon)
+        atual = mascara_atual(daemon, identidade)
         alvo = proxima_mascara(atual)
-        vpad_antes = getattr(daemon, "_gamepad_device", None) is not None
+        vpad_antes = _vpad_do_cartao_de_pe(daemon, identidade)
         logger.info(
             "mascara_troca_pedida_por_gesto",
             de=atual,
@@ -3221,8 +3246,8 @@ def build_next_mask_callback(daemon: DaemonProtocol) -> Any:
 
         # A PROVA É O APARELHO, como no PS + R3: o vpad que existia tem de
         # continuar existindo, e vestindo o alvo.
-        vpad_depois = getattr(daemon, "_gamepad_device", None) is not None
-        efetiva = mascara_atual(daemon)
+        vpad_depois = _vpad_do_cartao_de_pe(daemon, identidade)
+        efetiva = mascara_atual(daemon, identidade)
         if resposta is not None and efetiva == alvo and vpad_depois >= vpad_antes:
             if store is not None:
                 with contextlib.suppress(Exception):

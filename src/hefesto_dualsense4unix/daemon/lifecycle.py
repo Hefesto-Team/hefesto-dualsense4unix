@@ -5897,8 +5897,13 @@ class Daemon:
                 if self._keyboard_device is not None and emu_active:
                     self._dispatch_keyboard_emulation(emu_buttons)
 
-            if self._hotkey_manager is not None:
-                self._hotkey_manager.observe(buttons_pressed, now=tick_started)
+            # OS-ATALHOS-NA-ESPERA-01 (24/09/2026): os atalhos do PS leem os
+            # botões de QUEM SEGURA os atalhos — o primário, ou, com o posto de
+            # P1 vago, o próximo da fila (`poll.botoes_dos_atalhos`). O vpad do
+            # P1 recebeu `buttons_pressed` lá em cima, e só ele.
+            from hefesto_dualsense4unix.daemon.subsystems.poll import observar_os_atalhos
+
+            observar_os_atalhos(self, buttons_pressed, now=tick_started)
 
             if self._plugins_subsystem is not None:
                 active_profile = self.store.active_profile
