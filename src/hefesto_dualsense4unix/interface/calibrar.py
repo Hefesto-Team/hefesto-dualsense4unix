@@ -121,6 +121,75 @@ TREMOR = (1, 60, 3)          # idem, em graus/s
 DE_ONDE_VEM_A_MIRA = ("Valem para o controle com a Mira Virtual acesa, na aba "
                       "Controles.")
 
+# ---------------------------------------------------------------------------
+# «SÓ ENQUANTO EU SEGURAR» E «INVERTER» — 24/09/2026, A-MIRA-POR-MOVIMENTO-NA-TELA-02
+# ---------------------------------------------------------------------------
+# Palavra dela na página da sessão dos desenhos
+# (`D-2409-SEGURAR-E-INVERTER-ENTRAM-NA-TELA`): «entram as duas». Os dois já
+# estavam no esquema e no motor (`ProfileMovimentoConfig.gatilho`,
+# `inverter_horizontal`, `inverter_vertical`); faltava a tela. Moram na coluna
+# de cada controle, embaixo dos dois deslizantes, e nascem DESLIGADOS: a mira
+# anda sempre, e nada inverte.
+#
+# OS BOTÕES DA LISTA SÃO OS DO ESQUEMA, e não uma lista escrita aqui: é
+# `remapeamento_de_botao.REMAPEAVEIS`, a mesma de que o esquema recusa o que
+# não está nela — o PS fica fora porque é a saída de emergência dela. (O
+# `monta`, que este gerador importa, já puxa o pacote; a nota do topo sobre
+# rodar sem ele caducou para os geradores que o importam.)
+from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
+    REMAPEAVEIS,
+)
+
+ROTULO_SEGURAR = "Só enquanto eu segurar"
+#: A opção de nascença da lista: a mira anda sem botão nenhum. O VALOR não é o
+#: vazio porque o alvo `valor` do piloto troca o vazio pelo travessão, e um
+#: `<select>` não aceita o que não oferece — a lista nunca voltaria a «Sempre».
+ROTULO_SEMPRE = "Sempre"
+SEMPRE = "sempre"
+ROTULO_INVERTER = "Inverter"
+#: Os dois lados do «Inverter», cada um por si: `(o valor do `data-inverter`,
+#: o rótulo do botão, o campo do esquema)`.
+INVERTER = (
+    ("lado", "Esquerda e direita", "inverter_horizontal"),
+    ("cima-baixo", "Cima e baixo", "inverter_vertical"),
+)
+
+#: OS TRÊS BOTÕES CUJO ID DO JOGO NÃO É O ID DA PEÇA no mapa das peças: o clique
+#: dos dois analógicos e o Create, que o mapa chama pelo nome do plástico antigo.
+_PECA_DO_BOTAO = {"l3": "stick_l", "r3": "stick_r", "create": "share"}
+
+
+def _pecas() -> dict:
+    """O mapa das peças (`docs/data/pecas-do-dualsense.csv`), por id."""
+    import csv
+
+    linhas = [x for x in (monta.DADOS_DO_REPO / "pecas-do-dualsense.csv")
+              .read_text(encoding="utf-8").splitlines() if x and not x.startswith("#")]
+    return {p["id"]: p for p in csv.DictReader(linhas)}
+
+
+def nome_do_botao(botao, pecas=None):
+    """O nome curto do botão na tela, LIDO do mapa das peças.
+
+    A MESMA REGRA da troca de botões da aba Navegação (`aba06.nome_de`): o
+    `nome` quando ele é curto, e o apelido curto quando não é — é de lá que
+    saem o L3 e o R3. Uma segunda regra aqui faria a mesma peça ter dois nomes
+    na mesma janela.
+    """
+    p = (pecas or _pecas())[_PECA_DO_BOTAO.get(botao, botao)]
+    if len(p["nome"]) <= 8:
+        return p["nome"]
+    for a in p["apelidos"].split("|"):
+        if a.isalnum() and len(a) <= 3:
+            return a
+    return p["nome"]
+
+
+def _opcoes_do_segurar():
+    """`(valor, rótulo)` de cada opção da lista, «Sempre» primeiro."""
+    pecas = _pecas()
+    return [(SEMPRE, ROTULO_SEMPRE)] + [(b, nome_do_botao(b, pecas)) for b in REMAPEAVEIS]
+
 
 def plural(quantos: int, um: str, muitos: str) -> str:
     """Uma das duas palavras, pela contagem. ``0`` usa o plural, como em português.
@@ -345,6 +414,31 @@ CSS = """
   .desl .un{color:var(--texto-mudo)}
   .desl .trilho{grid-row:2;grid-column:1 / -1;width:100%;margin:0;
                 accent-color:var(--purple)}
+  /* «SÓ ENQUANTO EU SEGURAR» E «INVERTER» — 24/09/2026, A-MIRA-POR-MOVIMENTO-
+     NA-TELA-02. A MESMA GRAMÁTICA DOS DESLIZANTES: o rótulo em cima, o
+     controle embaixo, na largura inteira da coluna — com quatro controles a
+     coluna tem menos de 300px, e lado a lado a lista não caberia. */
+  .desl .lista,.desl .inverter{grid-row:2;grid-column:1 / -1}
+  .desl .lista{width:100%;height:24px;padding:0 8px;border-radius:6px;
+               border:1px solid var(--border-forte);background:var(--app-bg);
+               color:var(--fg);font-family:inherit;font-size:12px;cursor:pointer}
+  .desl .lista:hover{border-color:var(--comment)}
+  .desl .lista option{background:var(--panel);color:var(--fg)}
+  /* OS DOIS «INVERTER» TÊM A CARA DOS CHIPS DE SENSOR da aba Controles
+     (`aba02.py`, `.sensores-peca .sw`): o mesmo verde aceso, o mesmo apagado,
+     a mesma pastilha de 17px. É cópia declarada — esta página tem folha
+     própria, como a paleta do topo —, e um interruptor com outra cara na
+     mesma janela seria um segundo vocabulário para o mesmo ato. */
+  .inverter{display:flex;gap:6px;flex-wrap:wrap}
+  .inverter .sw{height:17px;border-radius:6px;font-size:10.5px;font-family:inherit;
+    cursor:pointer;border:1px solid var(--green);background:rgba(80,250,123,.09);
+    color:var(--green);display:inline-flex;align-items:center;gap:6px;padding:0 10px;
+    white-space:nowrap}
+  .inverter .sw .p{width:6px;height:6px;border-radius:50%;background:var(--green);
+    box-shadow:0 0 6px var(--green)}
+  .inverter .sw.off{border-color:var(--border-forte);background:var(--app-bg);
+    color:var(--texto-mudo)}
+  .inverter .sw.off .p{background:var(--border-forte);box-shadow:none}
   .aviso{font-size:12px;color:var(--texto-mudo);line-height:17px}
   .aviso b{color:var(--texto-suave);font-weight:600}
 """
@@ -564,8 +658,45 @@ def _deslizante(gesto, rotulo, faixa, campo, unidade=""):
             f'</span></label>')
 
 
+def _segurar():
+    """A linha do «Só enquanto eu segurar»: o rótulo e a lista, nascendo «Sempre».
+
+    A lista é um `<select>` de verdade, e o endereço é o alvo `valor`: o
+    produto escreve nela o botão que a peça usa (`sempre` quando não há), e a
+    troca dela chega ao gesto pela porta do `change`.
+    """
+    opcoes = "".join(
+        f'<option value="{v}"{" selected" if v == SEMPRE else ""}>{r}</option>'
+        for v, r in _opcoes_do_segurar())
+    return (f'              <label class="desl"><span class="r">{ROTULO_SEGURAR}</span>'
+            f'<select class="lista" data-gesto="mira-segurar" data-campo="mira-segurar"'
+            f' data-hef-alvo="valor" aria-label="{ROTULO_SEGURAR}">{opcoes}</select>'
+            f'</label>')
+
+
+def _inverter():
+    """A linha do «Inverter»: o rótulo e os dois botões, cada lado por si.
+
+    Os botões são interruptores na cara dos chips de sensor da aba Controles
+    (o verde aceso, o `off` apagado), e NASCEM APAGADOS. O alvo é `classe`, na
+    língua do `_selo_do_sensor`: `off` quando o produto disser `DESLIGADO`.
+    O nome acessível diz o ato inteiro, porque o rótulo do botão sozinho
+    («Cima e baixo») não diz que inverte.
+    """
+    botoes = "".join(
+        f'<button class="sw off" data-gesto="mira-inverter" data-inverter="{qual}"'
+        f' data-campo="mira-inverter-{qual}" data-hef-alvo="classe"'
+        f' data-hef-classe="off" data-hef-quando="DESLIGADO"'
+        f' aria-label="{ROTULO_INVERTER} {rotulo.lower()}">'
+        f'<span class="p"></span>{rotulo}</button>'
+        for qual, rotulo, _ in INVERTER)
+    return (f'              <div class="desl"><span class="r">{ROTULO_INVERTER}</span>'
+            f'<span class="inverter">{botoes}</span></div>')
+
+
 def mira(c):
-    """A coluna da mira de UM controle — os dois deslizantes dele.
+    """A coluna da mira de UM controle — os dois deslizantes, o «Só enquanto eu
+    segurar» e o «Inverter» dele.
 
     PÚBLICA pelo mesmo motivo do `controle()`: o `pacotes/a11_calibrar_sensores`
     a remonta quando a página publicada tiver o bloco. O `data-controle` é o do
@@ -576,6 +707,8 @@ def mira(c):
             f'            <span class="quem">Player {jogador}</span>\n'
             f'{_deslizante("mira-sensibilidade", ROTULO_SENSIBILIDADE, SENSIBILIDADE, "mira-sensibilidade")}\n'
             f'{_deslizante("mira-tremor", ROTULO_TREMOR, TREMOR, "mira-tremor", UNIDADE_DO_TREMOR)}\n'
+            f'{_segurar()}\n'
+            f'{_inverter()}\n'
             f'          </div>')
 
 
