@@ -258,6 +258,11 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
     # O 🎙 DA LINHA DO CONTROLE na seção do rádio (TRANSPLANTE-DA-SECAO-01) é o
     # MESMO ato do `mudo` da 02 — o gesto dela, chamado (`a08_conexoes.custo_mic`).
     "custo-mic": ("audio.microfone.mudo",),
+    # A MIRA VIRTUAL (A-MIRA-POR-MOVIMENTO-NA-TELA-01/02, publicada em 24/09):
+    # é ARRANJO, não peça do plástico — o que ela lê do aparelho é o giro, e é
+    # a linha dele que responde cabo e rádio. A matriz das duas sprints provou
+    # os dois transportes, do P1 ao P4.
+    "mira": ("movimento.giroscopio",),
 }
 
 #: A DÍVIDA CONHECIDA — o gesto que HOJE não responde as quatro, com a sprint
@@ -329,6 +334,9 @@ NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
     # O 🎙 da seção do rádio grava pelo `mudo` da 02 (`_lembrar_do_som`), no
     # mesmo `controllers[<uniq>].mic` — é o mesmo gesto, chamado.
     "custo-mic": ("mic", "mic"),
+    # A Mira grava em `movimento`, nos dois níveis: o default do perfil e o
+    # `controllers[<uniq>].movimento` que o chip de cada cartão escreve.
+    "mira": ("movimento", "movimento"),
 }
 
 
