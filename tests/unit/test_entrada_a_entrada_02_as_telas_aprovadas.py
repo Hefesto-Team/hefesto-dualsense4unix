@@ -64,6 +64,7 @@ from hefesto_dualsense4unix.utils.maquina import (
     carregar_maquina,
 )
 from tests.unit import radio_de_mentira as rm
+from tests.unit.busctl_de_verdade import escrever_impressor
 
 RAIZ = Path(__file__).resolve().parents[2]
 SRC = RAIZ / "src" / "hefesto_dualsense4unix"
@@ -1131,6 +1132,12 @@ class Bancada:
             "exit 0\n",
         )
         _executavel(self.fakes / "id", "echo 0\n")
+        # O `busctl` de mentira imprime como o de verdade: escapado em C sem o
+        # `--json`, e em UTF-8 com ele (`tests/unit/busctl_de_verdade.py`). Com
+        # o `printf` cru de antes, «Sofá» nunca chegava escapado ao script, e a
+        # reescrita do nome a cada tique passava aqui (conferência da
+        # INSTALL-E-UNINSTALL-DO-RADIO-01).
+        impressor = escrever_impressor(self.fakes)
         dos_alias = " ".join(f'["/org/bluez/{h}"]="{a}"' for h, a in alias.items())
         endereco = " ".join(f'["/org/bluez/{h}"]="{e}"' for h, e in ADAPTADORES.items())
         _executavel(
@@ -1141,8 +1148,8 @@ case "$1" in
   tree) printf '%s\\n' /org/bluez/hci0 /org/bluez/hci1 ;;
   get-property)
     case "$5" in
-      Alias)   printf 's "%s"\\n' "${{ALIAS[$3]:-}}" ;;
-      Address) printf 's "%s"\\n' "${{ENDERECO[$3]:-}}" ;;
+      Alias)   python3 '{impressor}' "${{ALIAS[$3]:-}}" "$@" ;;
+      Address) python3 '{impressor}' "${{ENDERECO[$3]:-}}" "$@" ;;
     esac ;;
   set-property) printf '%s\\t%s\\n' "$3" "$7" >> '{self.escritas}' ;;
 esac

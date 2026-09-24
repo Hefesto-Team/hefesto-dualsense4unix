@@ -31,6 +31,8 @@ import stat
 import subprocess
 from pathlib import Path
 
+from tests.unit.busctl_de_verdade import escrever_impressor
+
 BASH = shutil.which("bash") or "/bin/bash"
 RAIZ = Path(__file__).resolve().parents[2]
 UNINSTALL = (RAIZ / "uninstall.sh").read_text(encoding="utf-8")
@@ -59,50 +61,25 @@ BLOCO_DOS_NOMES = _recorte(
 )
 
 
-#: O `busctl` de mentira imprime como o de verdade. O dublê de antes devolvia o
-#: texto CRU, e o `busctl` do systemd escapa em C todo byte fora do ASCII
-#: (`cescape`): «Sofá» sai `s "Sof\303\241"` — medido num barramento privado
-#: com o systemd 255 dela (23/09/2026). Com o dublê cru, o uninstall que
-#: comparava o texto escapado com o nome do `maquina.json` passava aqui e, na
-#: máquina de verdade, deixava o lugar com acento no rádio e ainda gravava de
-#: volta o texto escapado. Este dá as duas formas do real: a escapada e a do
-#: `--json=short`. Propriedade ausente é erro, como no real.
-_BUSCTL_DE_MENTIRA = """#!/usr/bin/env python3
-import json
-import sys
-from pathlib import Path
-
-args = sys.argv[1:]
-json_curto = "--json=short" in args
-args = [a for a in args if not a.startswith("--json")]
-if args[:1] != ["get-property"]:
-    sys.exit(0)
-arquivo = Path(PROPS) / (args[2].rsplit("/", 1)[-1] + "." + args[4])
-if not arquivo.is_file():
-    sys.exit(1)
-texto = arquivo.read_text(encoding="utf-8")
-if json_curto:
-    print(json.dumps({"type": "s", "data": texto}, ensure_ascii=False, separators=(",", ":")))
-    sys.exit(0)
-ESPECIAIS = {7: "a", 8: "b", 12: "f", 10: "n", 13: "r", 9: "t", 11: "v", 92: "\\\\", 34: '"', 39: "'"}
-saida = []
-for byte in texto.encode("utf-8"):
-    if byte in ESPECIAIS:
-        saida.append("\\\\" + ESPECIAIS[byte])
-    elif byte < 32 or byte >= 127:
-        saida.append("\\\\%03o" % byte)
-    else:
-        saida.append(chr(byte))
-print('s "' + "".join(saida) + '"')
-"""
-
-
 def _busctl_como_o_de_verdade(alvo: Path, props: Path) -> None:
-    alvo.parent.mkdir(parents=True, exist_ok=True)
-    alvo.write_text(
-        _BUSCTL_DE_MENTIRA.replace("Path(PROPS)", f"Path({str(props)!r})"), encoding="utf-8"
+    """O `busctl` de mentira imprime como o de verdade (`tests/unit/busctl_de_verdade.py`).
+
+    O dublê de antes devolvia o texto CRU, e com ele o uninstall que comparava
+    o texto ESCAPADO com o nome do `maquina.json` passava aqui e, na máquina de
+    verdade, deixava o lugar com acento no rádio e gravava de volta o escapado.
+    Propriedade ausente é erro, como no real.
+    """
+    impressor = escrever_impressor(alvo.parent)
+    _fake(
+        alvo.parent,
+        alvo.name,
+        f"""
+[[ "$1" == "get-property" ]] || exit 0
+f="{props}/${{3##*/}}.$5"
+[[ -f "$f" ]] || exit 1
+exec python3 '{impressor}' "$(cat "$f")" "$@"
+""",
     )
-    alvo.chmod(alvo.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
 
 
 def _mesa(tmp_path: Path, adaptadores: dict[str, tuple[str, str]], lugares: list[str]):

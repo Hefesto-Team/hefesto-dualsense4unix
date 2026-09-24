@@ -271,9 +271,9 @@ _e_pro_genuino() {  # $1 = MAC do controle · $2 = nome do controle
     return 1
 }
 
-_prop_adaptador() {  # $1 = hciN · $2 = propriedade de org.bluez.Adapter1
-    busctl get-property org.bluez "/org/bluez/$1" org.bluez.Adapter1 "$2" 2>/dev/null \
-        | sed -E 's/^s "?//; s/"?$//' || true
+_prop_adaptador() {  # $1 = hciN · $2 = propriedade de org.bluez.Adapter1, em UTF-8 (o porquê está no ALIAS_ATUAL, abaixo)
+    { busctl get-property org.bluez "/org/bluez/$1" org.bluez.Adapter1 "$2" --json=short 2>/dev/null | sed -nE 's/^.*"data":"(.*)"\}$/\1/p' | grep . \
+        || busctl get-property org.bluez "/org/bluez/$1" org.bluez.Adapter1 "$2" 2>/dev/null | sed -E 's/^s "?//; s/"?$//'; } | grep -v '\\' || true
 }
 
 # Os `hciN` que hospedam a linhagem, um por linha e com repetição — quem chama
@@ -501,6 +501,16 @@ for lugar, dele in sorted(lugares.items() if isinstance(lugares, dict) else ()):
             [[ -n "${LUGAR}" ]] && NOME="${NOME_DO_LUGAR[${LUGAR}]:-}"
         fi
         [[ -n "${NOME}" || "${HOSPEDA}" -eq 1 ]] || continue
+        # O ALIAS DE AGORA É LIDO EM UTF-8 (conferência da INSTALL-E-UNINSTALL-
+        # DO-RADIO-01, 23/09/2026). Sem o `--json`, o `busctl` escapa em C todo
+        # byte fora do ASCII — «Sofá» sai «Sof\303\241», medido num barramento
+        # privado com o systemd 255 dela —, e o `_prop_adaptador` devolvia o
+        # texto escapado. Com o nome do lugar, a comparação abaixo nunca batia e
+        # o nome era reescrito a cada tique do watchdog; sem ele, a BASE era o
+        # escapado, e a costura gravava «Nintendo Sof\303\241» no adaptador de
+        # quem tem acento no nome. Agora o texto vem do `--json=short`; num
+        # systemd sem ele, vale a forma de antes só quando não tem barra, e o
+        # que ainda vier com barra é «não sei» (vazio) — que não se costura.
         ALIAS_ATUAL="$(_prop_adaptador "${HCI}" Alias)"
         BASE="${NOME:-${ALIAS_ATUAL}}"
         [[ -n "${BASE}" ]] || continue

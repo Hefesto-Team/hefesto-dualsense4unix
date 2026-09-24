@@ -75,6 +75,7 @@ from hefesto_dualsense4unix.integrations.apelido_do_dongle import (
     PREFIXO_NINTENDO,
     TETO_DE_BYTES,
 )
+from tests.unit.busctl_de_verdade import escrever_impressor
 
 RAIZ = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ / "scripts" / "bt_active_mode.sh"
@@ -172,6 +173,12 @@ class Bancada:
                     nomes[caminho] = NOME_PRO if mac == MAC_PRO else NOME_DUALSENSE
 
         _executavel(self.fakes / "id", "echo 0\n")
+        # O `busctl` de mentira imprime como o de verdade: escapado em C sem o
+        # `--json`, e em UTF-8 com ele (`tests/unit/busctl_de_verdade.py`). Com
+        # o `printf` cru de antes, o acento «de propósito» desta bancada nunca
+        # chegava escapado ao script, e a costura «Nintendo Sof\303\241»
+        # passava aqui (conferência da INSTALL-E-UNINSTALL-DO-RADIO-01).
+        impressor = escrever_impressor(self.fakes)
         _executavel(
             self.fakes / "busctl",
             _mapa("ALIAS", {f"/org/bluez/{h}": a for h, a in self.alias.items()})
@@ -184,12 +191,12 @@ case "$1" in
     case "$4" in
       org.bluez.Adapter1)
         case "$5" in
-          Alias)   printf 's "%s"\\n' "${{ALIAS[$3]:-}}" ;;
-          Address) printf 's "%s"\\n' "${{ENDERECO[$3]:-}}" ;;
+          Alias)   python3 '{impressor}' "${{ALIAS[$3]:-}}" "$@" ;;
+          Address) python3 '{impressor}' "${{ENDERECO[$3]:-}}" "$@" ;;
         esac ;;
       org.bluez.Device1)
         case "$5" in
-          Alias)     printf 's "%s"\\n' "${{NOME[$3]:-}}" ;;
+          Alias)     python3 '{impressor}' "${{NOME[$3]:-}}" "$@" ;;
           Connected) echo 'b false' ;;
         esac ;;
     esac ;;
