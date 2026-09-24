@@ -221,7 +221,7 @@ class TestOResto:
         assert common[38] == 0
 
     def test_o_gatilho_fica_guardado(self) -> None:
-        ctl, radio, no = _mesa_no_nativo()
+        ctl, _radio, _no = _mesa_no_nativo()
         efeito = build_from_name("Rigid", [5, 200])
 
         palavra = ctl.apply_output_for(UNIQ_CABO, OutputSpec(trigger_left=efeito))
