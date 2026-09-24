@@ -686,3 +686,41 @@ def test_a_bancada_conta_duas_placas(mesa: _Mesa) -> None:
     # E os dois endpoints de háptica estão NA lista — descontados, não ausentes.
     haptica = [d for d in mesa.servidor.saidas() if d.startswith(_HAPTICA)]
     assert sorted(haptica) == [f"{_HAPTICA} 3{_SONY}", f"{_HAPTICA} 4{_SONY}"]
+
+
+#: O rótulo citado nos dois arquivos do gesto, com o número (ou o N genérico).
+_CITADO = re.compile(r"«(Háptica do Controle ([1-4N]))([^»]*)»")
+#: Quem cita pelo COMEÇO não depende da forma — é a leitura certa para contar.
+_PELO_COMECO = re.compile(r"(começa com|começam com|outra com|nem com|ou com) $")
+
+
+def test_o_gesto_cita_a_haptica_como_a_lista_mostra(assentos) -> None:
+    """O irmão de ``test_a_bancada_fala_a_forma_a`` para o terceiro nó do controle.
+
+    Um gesto que manda achar «Háptica do Controle 3» pelo nome inteiro tem de
+    citar o nome que a lista MOSTRA, e o nome sai do dono
+    (:func:`endpoint_de_haptica.rotulo_da_haptica`); quem cita pelo começo só
+    precisa ser o começo dele.
+    """
+    arquivos = (
+        RAIZ / "docs/method/2026-09-07-O-COMO-DO-MAPA-o-gesto-das-178-celulas.md",
+        RAIZ / "docs/method/2026-09-07-O-COMO-DAS-21-o-gesto-exato-de-cada-linha.md",
+    )
+    citacoes = []
+    for arquivo in arquivos:
+        for n, linha in enumerate(arquivo.read_text(encoding="utf-8").splitlines(), 1):
+            for m in _CITADO.finditer(linha):
+                numero = m.group(2)
+                esperado = eh.rotulo_da_haptica(int(numero) if numero.isdigit() else None)
+                pelo_comeco = bool(_PELO_COMECO.search(linha[: m.start()]))
+                citado = m.group(1) + m.group(3)
+                citacoes.append((arquivo.name[:30], n, citado, esperado, pelo_comeco))
+    assert len(citacoes) >= 3, f"só {len(citacoes)} citações — a régua ficou cega"
+    erradas = [
+        c for c in citacoes
+        if not (c[3].startswith(c[2]) if c[4] else c[2] == c[3])
+    ]
+    assert not erradas, "\n".join(
+        f"{arq}:{n}: o gesto cita «{citado}» e a lista mostra «{esperado}»"
+        for arq, n, citado, esperado, _c in erradas
+    )
