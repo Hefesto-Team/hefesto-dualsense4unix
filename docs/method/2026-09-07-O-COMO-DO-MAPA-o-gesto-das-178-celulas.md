@@ -1068,14 +1068,14 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que a leitura dos dois controles do cabo continua chegando de forma lisa, sem engasgo, com dois controles no rádio ligados e sendo mexidos ao lado.
 
-**Onde olhar.** Na aba Controles, dentro do cartão de cada controle. Duas coisas: os três números da moldura «Giroscópio», que mudam quando você gira o controle no ar, e o pontinho de cada analógico, que anda quando você mexe. No alto do cartão aberto, ao lado do nome, pode aparecer uma linha discreta que começa com «Giroscópio:» e traz um número por segundo — algo como «Giroscópio: fluindo para o jogo (~250 Hz)». Ela só aparece no cartão do controle cujo movimento está sendo entregue ao jogo como giroscópio; nos outros cartões ela simplesmente não existe, e isso não é defeito — ela some também no controle com a «Mira Virtual» acesa, porque ali o giro vai ao jogo pelo analógico direito. Quantas leituras um controle do CABO entrega no fio não aparece em campo nenhum do produto: a contagem por segundo que existe, na seção «Rádio e Adaptadores» da aba Conexões, mostra só os controles do rádio.
+**Onde olhar.** Na aba Controles, dentro do cartão de cada controle. Duas coisas: os três números da moldura «Giroscópio», que mudam quando você gira o controle no ar, e o pontinho de cada analógico, que anda quando você mexe. No alto do cartão aberto, ao lado do nome, pode aparecer uma linha discreta que começa com «Giroscópio:» e traz um número por segundo — algo como «Giroscópio: fluindo para o jogo (~250 Hz)». Ela só aparece no cartão do controle cujo movimento está sendo entregue ao jogo como giroscópio; nos outros cartões ela simplesmente não existe, e isso não é defeito — ela some também no controle com a «Mira Virtual» acesa, porque ali o giro vai ao jogo pelo analógico direito, e no controle com o «Giroscópio» desligado. Quantas leituras um controle do CABO entrega no fio não aparece em campo nenhum do produto: a contagem por segundo que existe, na seção «Rádio e Adaptadores» da aba Conexões, mostra só os controles do rádio.
 
 **Os passos.**
 
 * Abra a aba Controles.
 1. Confira na fita do topo que há quatro chips e que o P1 e o P2 dizem USB.
 2. Clique na linha do P1 para abrir o cartão dele.
-3. Leia no alto do cartão a linha que começa com «Giroscópio:»: se ela trouxer um número, anote o número; se ela não aparecer, escreva «não apareceu», e anote se a «Mira Virtual» dele está acesa.
+3. Leia no alto do cartão a linha que começa com «Giroscópio:»: se ela trouxer um número, anote o número; se ela não aparecer, escreva «não apareceu», e anote se a «Mira Virtual» dele está acesa e se o «Giroscópio» dele está desligado.
 4. Gire o P1 na mão devagar, para um lado e para o outro, contando até vinte.
 5. Veja os três números do «Giroscópio» durante esse tempo: eles têm de mudar de forma corrida, sem travar e sem pular.
 6. Pare de girar e confira que os números voltam a ficar quase parados.
@@ -1096,7 +1096,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e é carga: entra na segunda metade, girado junto com o P1, só para o rádio estar ocupado enquanto o cabo é lido. Não meça o cartão dele aqui.
 * **P4** — No rádio, a segunda carga. Entra girado junto com o P2. Se o P2 só engasgar quando o P4 se mexe, anote — é o rádio atrapalhando o cabo, e é o que esta família procura.
 
-**A armadilha.** O número da linha «Giroscópio:» é o TETO DO PRODUTO, não uma medição do cabo. O Hefesto limita em 250 leituras por segundo o que ele repassa ao jogo, então ler «~250» diz que o limitador está funcionando, e não que o cabo entrega 250. O que se mediu no fio — 250 cravados, iguais nos quatro aparelhos, sem se mover — não aparece em campo nenhum desta tela para os controles do cabo, e não adianta procurar. Segunda: a linha «Giroscópio:» só nasce no cartão do controle cujo movimento está indo para o jogo; em Modo Nativo e com a máscara de Xbox ela diz outra coisa, com a «Mira Virtual» acesa ela some, e nenhum desses casos é defeito. Terceira, e é a que mais engana: o olho é uma régua ruim para velocidade de leitura — a diferença entre 250 e 400 por segundo você não enxerga. O que o olho enxerga é ENGASGO, e é só isso que este teste pede que você anote. Não clique nos botões «Giroscópio», «Acelerômetro» e «Mira Virtual» do alto do cartão: eles mudam o que o jogo recebe daquele controle. E a prova desta linha parou no fio: nada aqui diz o que o jogo recebeu.
+**A armadilha.** O número da linha «Giroscópio:» é o TETO DO PRODUTO, não uma medição do cabo. O Hefesto limita em 250 leituras por segundo o que ele repassa ao jogo, então ler «~250» diz que o limitador está funcionando, e não que o cabo entrega 250. O que se mediu no fio — 250 cravados, iguais nos quatro aparelhos, sem se mover — não aparece em campo nenhum desta tela para os controles do cabo, e não adianta procurar. Segunda: a linha «Giroscópio:» só nasce no cartão do controle cujo movimento está indo para o jogo; em Modo Nativo e com a máscara de Xbox ela diz outra coisa, com a «Mira Virtual» acesa ou o «Giroscópio» desligado ela some, e nenhum desses casos é defeito. Terceira, e é a que mais engana: o olho é uma régua ruim para velocidade de leitura — a diferença entre 250 e 400 por segundo você não enxerga. O que o olho enxerga é ENGASGO, e é só isso que este teste pede que você anote. Não clique nos botões «Giroscópio», «Acelerômetro» e «Mira Virtual» do alto do cartão: eles mudam o que o jogo recebe daquele controle. E a prova desta linha parou no fio: nada aqui diz o que o jogo recebeu.
 
 ---
 
@@ -1106,7 +1106,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova se a leitura dos dois controles do rádio chega de forma lisa com dois controles no cabo ao lado — e se os dois do rádio se comportam igual entre si.
 
-**Onde olhar.** Em dois lugares. Na aba Conexões, seção «Rádio e Adaptadores» (abre clicando no título): cada controle do rádio aparece dentro do cartão do adaptador dele, e na linha do controle há um número em Hz ao lado de um ícone de sinal — passe o mouse e a dica diz «Movimento por segundo». Ele conta os quadros que chegam AGORA do controle, um por relatório, parado ou não; é o campo mais perto da taxa que o controle entrega pelo rádio, e quando o número cai muito ele muda de cor. Se a lista de um cartão estiver fechada, a setinha ao lado do nome a abre. E na aba Controles, dentro do cartão de cada controle: os três números da moldura «Giroscópio» e o pontinho de cada analógico, e, no alto do cartão aberto, a linha discreta que começa com «Giroscópio:» — ela só existe no cartão do controle cujo movimento está indo para o jogo, e nos outros não, o que não é defeito — ela some também no controle com a «Mira Virtual» acesa, porque ali o giro vai ao jogo pelo analógico direito.
+**Onde olhar.** Em dois lugares. Na aba Conexões, seção «Rádio e Adaptadores» (abre clicando no título): cada controle do rádio aparece dentro do cartão do adaptador dele, e na linha do controle há um número em Hz ao lado de um ícone de sinal — passe o mouse e a dica diz «Movimento por segundo». Ele conta os quadros que chegam AGORA do controle, um por relatório, parado ou não; é o campo mais perto da taxa que o controle entrega pelo rádio, e quando o número cai muito ele muda de cor. Se a lista de um cartão estiver fechada, a setinha ao lado do nome a abre. E na aba Controles, dentro do cartão de cada controle: os três números da moldura «Giroscópio» e o pontinho de cada analógico, e, no alto do cartão aberto, a linha discreta que começa com «Giroscópio:» — ela só existe no cartão do controle cujo movimento está indo para o jogo, e nos outros não, o que não é defeito — ela some também no controle com a «Mira Virtual» acesa, porque ali o giro vai ao jogo pelo analógico direito, e no controle com o «Giroscópio» desligado.
 
 **Os passos.**
 
@@ -1116,7 +1116,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 3. Anote se algum dos dois números mudou de cor.
 4. Na aba Controles, confira na fita do topo que há quatro chips e que o P3 e o P4 dizem BT.
 5. Clique na linha do P3 para abrir o cartão dele.
-6. Leia no alto do cartão a linha que começa com «Giroscópio:» e anote o que ela diz, com número ou sem, e se a «Mira Virtual» dele está acesa.
+6. Leia no alto do cartão a linha que começa com «Giroscópio:» e anote o que ela diz, com número ou sem, se a «Mira Virtual» dele está acesa e se o «Giroscópio» dele está desligado.
 7. Gire o P3 na mão devagar, para um lado e para o outro, contando até vinte, e veja os três números do «Giroscópio» mudarem de forma corrida, sem travar e sem pular.
 8. Empurre o analógico esquerdo do P3 em círculos, contando até vinte, e veja o pontinho fazer o mesmo círculo, sem saltar.
 9. Clique na linha do P4 e refaça nele os passos 6 a 8.
@@ -2069,20 +2069,21 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 14. Confira que a página longa rolou para os dois lados.
 15. Empurre os dois analógicos de cada um dos outros três controles, um por vez.
 16. Confira que o cursor não anda e a página não rola com nenhum deles.
-17. Na aba Controles, acenda a «Mira Virtual» do controle que navega o PC, volte à página longa e gire esse controle devagar, no ar, para os lados.
-18. Anote se o cursor andou com o giro, e apague a «Mira Virtual» dele de novo.
-19. Desfaça o teste: devolva a Velocidade da rolagem ao número anotado, volte à aba Jogar e clique no cartão Sony DualSense.
+17. Na aba Controles, acenda a «Mira Virtual» do controle que navega o PC e a do P3, e volte à página longa.
+18. Gire devagar, no ar, para os lados, o controle que navega o PC, e depois o P3.
+19. Confira que o cursor andou com o giro de cada um e parou quando você parou de girar, e apague as duas «Mira Virtual».
+20. Desfaça o teste: devolva a Velocidade da rolagem ao número anotado, volte à aba Jogar e clique no cartão Sony DualSense.
 
-**Passa quando.** O analógico esquerdo do controle do cabo que navega o PC leva o cursor pelos quatro sentidos, e o cursor para assim que você solta. O analógico direito rola a página nos dois sentidos. E os analógicos dos outros três controles não mexem no cursor nem rolam nada. O que o giro fez com a «Mira Virtual» acesa é anotação, não critério.
+**Passa quando.** O analógico esquerdo do controle do cabo que navega o PC leva o cursor pelos quatro sentidos, e o cursor para assim que você solta. O analógico direito rola a página nos dois sentidos. E os analógicos dos outros três controles não mexem no cursor nem rolam nada. Com a «Mira Virtual» acesa, o giro move o cursor — o do controle que navega o PC e o do P3, que não navega — e o cursor para quando o giro para.
 
 **Por controle.**
 
 * **P1** — No cabo. Se for ele quem diz Navega o PC, é o analógico esquerdo dele que leva o cursor e o direito que rola a página.
 * **P2** — No cabo. Se o Navega o PC for do P2, o teste é nele. Se não for, ele é testemunha do próprio cabo: os analógicos dele não podem mexer no cursor.
-* **P3** — No rádio, e é testemunha. Empurre os dois analógicos dele e confira que o cursor não anda — não é defeito, é o produto: o cursor do PC é um só e sai de um controle só.
+* **P3** — No rádio, e é testemunha. Empurre os dois analógicos dele e confira que o cursor não anda — não é defeito, é o produto: o cursor do PC é um só e sai de um controle só. Com a «Mira Virtual» dele acesa é diferente: o giro dele move o cursor, porque a Mira vale nos quatro.
 * **P4** — No rádio, e é a segunda testemunha. Mesmo empurrão, mesma conferência de que nada acontece.
 
-**A armadilha.** Sete. Zona morta: o analógico esquerdo só começa a mover o cursor depois de um sexto do curso, e o direito só começa a rolar depois de quase um terço — o direito precisa de um empurrão bem maior que o esquerdo, e empurrão de leve nos dois parece analógico morto. A rolagem nasce na velocidade 1, a mais lenta que existe: antes de dizer que não rola, ponha a Velocidade da rolagem no 5. O cursor é um só e sai de um controle só, o que diz Navega o PC — os outros três não mexerem nele é o produto certo. Se o Status do Modo estiver cinza e a borda dele piscar em laranja quando você clica, o Modo ainda não é Navegação: o ? ao lado dele diz que o mouse e o teclado só se ligam fora do jogo — volte à aba Jogar e clique em Navegação. Entrar em Navegação derruba o controle virtual: com um jogo aberto ele perde os controles, e é por isso que a bancada começa sem jogo nenhum e o teste se desfaz no fim clicando Sony DualSense — o clique no cartão e a barra da rolagem gravam no perfil ativo, e deixar pela metade é deixar gravado. Não mexa na Navegação Interna: ela é sobre andar dentro da janela do Hefesto e não entra neste teste. A «Mira Virtual» acesa faz o giro virar o analógico direito do controle virtual, e na Navegação não há controle virtual: hoje o chip acende e o giro não tem o que mover. Por isso o passo da Mira ANOTA — se o cursor andar com o giro, anote também, porque é o que a tela vai passar a fazer. E o mapa carrega uma observação dela de 11 de agosto dizendo que pelo rádio o analógico e o gatilho NÃO moviam o cursor, e que pelo cabo funcionavam; em 5 de setembro os dois caminhos foram medidos e responderam. Se hoje o cabo falhar, é defeito novo — anote com essa palavra.
+**A armadilha.** Sete. Zona morta: o analógico esquerdo só começa a mover o cursor depois de um sexto do curso, e o direito só começa a rolar depois de quase um terço — o direito precisa de um empurrão bem maior que o esquerdo, e empurrão de leve nos dois parece analógico morto. A rolagem nasce na velocidade 1, a mais lenta que existe: antes de dizer que não rola, ponha a Velocidade da rolagem no 5. O cursor é um só e sai de um controle só, o que diz Navega o PC — os outros três não mexerem nele é o produto certo. Se o Status do Modo estiver cinza e a borda dele piscar em laranja quando você clica, o Modo ainda não é Navegação: o ? ao lado dele diz que o mouse e o teclado só se ligam fora do jogo — volte à aba Jogar e clique em Navegação. Entrar em Navegação derruba o controle virtual: com um jogo aberto ele perde os controles, e é por isso que a bancada começa sem jogo nenhum e o teste se desfaz no fim clicando Sony DualSense — o clique no cartão e a barra da rolagem gravam no perfil ativo, e deixar pela metade é deixar gravado. Não mexa na Navegação Interna: ela é sobre andar dentro da janela do Hefesto e não entra neste teste. Na Navegação a «Mira Virtual» acesa move o cursor pelo giro, com a sensibilidade, o «Ignorar tremor até», o «Só enquanto eu segurar» e o «Inverter» da tela Calibrar sensores de movimento: se o cursor não andar com o giro, confira ali o «Só enquanto eu segurar» antes de reprovar. O giro não segue a regra do analógico — ele vale em todo controle com a Mira acesa, e dois com a Mira acesa somam no mesmo cursor. E o mapa carrega uma observação dela de 11 de agosto dizendo que pelo rádio o analógico e o gatilho NÃO moviam o cursor, e que pelo cabo funcionavam; em 5 de setembro os dois caminhos foram medidos e responderam. Se hoje o cabo falhar, é defeito novo — anote com essa palavra.
 
 ---
 
@@ -2110,22 +2111,23 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 12. Empurre o analógico direito do mesmo controle para baixo e depois para cima.
 13. Confira que a página rola nos dois sentidos.
 14. Empurre os dois analógicos do outro controle do rádio e confira que o cursor não anda e a página não rola.
-15. Na aba Controles, acenda a «Mira Virtual» do controle que navega o PC, volte à página longa e gire esse controle devagar, no ar, para os lados.
-16. Anote se o cursor andou com o giro, e apague a «Mira Virtual» dele de novo.
-17. Devolva a Velocidade da rolagem ao número anotado e, na aba Jogar, clique no cartão Sony DualSense.
-18. Encaixe os dois cabos de volta no P1 e no P2 e confira na fita do topo que os dois voltaram com USB e com o número que tinham.
-19. Abra a aba Navegação e leia quem diz Navega o PC: se ainda for um cartão com BT, segure o PS do P3 e do P4 até apagarem, espere meio minuto e ligue os dois de novo com um toque no PS — se a Steam vier para a frente, feche-a.
+15. Na aba Controles, acenda a «Mira Virtual» do controle que navega o PC e a do outro controle do rádio, e volte à página longa.
+16. Gire devagar, no ar, para os lados, o controle que navega o PC, e depois o outro do rádio.
+17. Confira que o cursor andou com o giro de cada um e parou quando você parou de girar, e apague as duas «Mira Virtual».
+18. Devolva a Velocidade da rolagem ao número anotado e, na aba Jogar, clique no cartão Sony DualSense.
+19. Encaixe os dois cabos de volta no P1 e no P2 e confira na fita do topo que os dois voltaram com USB e com o número que tinham.
+20. Abra a aba Navegação e leia quem diz Navega o PC: se ainda for um cartão com BT, segure o PS do P3 e do P4 até apagarem, espere meio minuto e ligue os dois de novo com um toque no PS — se a Steam vier para a frente, feche-a.
 
-**Passa quando.** O analógico esquerdo do controle do rádio que navega o PC leva o cursor pelos quatro sentidos e o cursor para assim que você solta; o analógico direito rola a página nos dois sentidos. É a mesma resposta que o cabo dá, e é exatamente esse empate que este teste procura. O outro controle do rádio não mexe no cursor. O que o giro fez com a «Mira Virtual» acesa é anotação, não critério.
+**Passa quando.** O analógico esquerdo do controle do rádio que navega o PC leva o cursor pelos quatro sentidos e o cursor para assim que você solta; o analógico direito rola a página nos dois sentidos. É a mesma resposta que o cabo dá, e é exatamente esse empate que este teste procura. O outro controle do rádio não mexe no cursor. Com a «Mira Virtual» acesa, o giro move o cursor — o do controle que navega o PC e o do outro do rádio — e o cursor para quando o giro para, como no cabo.
 
 **Por controle.**
 
 * **P1** — No cabo, e sai do teste: o cabo dele é puxado para que um controle do rádio assuma o Navega o PC. Enquanto ele está fora, os que ficam contam de 1 em diante na tela, e é pela cor que você reconhece cada um. No fim, encaixe o cabo de volta e confirme que ele voltou como P1, com USB.
 * **P2** — No cabo, e sai do teste pelo mesmo motivo. No fim, encaixe o cabo de volta e confirme que ele voltou como P2, com USB.
 * **P3** — No rádio. Se for ele quem passar a dizer Navega o PC, é o analógico esquerdo dele que leva o cursor e o direito que rola a página.
-* **P4** — No rádio. Se o Navega o PC ficar com o P4, o teste é nele; se ficar com o P3, o P4 é a testemunha — os analógicos dele não podem mexer no cursor, e isso não é defeito.
+* **P4** — No rádio. Se o Navega o PC ficar com o P4, o teste é nele; se ficar com o P3, o P4 é a testemunha — os analógicos dele não podem mexer no cursor, e isso não é defeito. Com a «Mira Virtual» dele acesa, o giro dele move o cursor — a Mira vale nos quatro.
 
-**A armadilha.** Oito, e a última é o motivo de este teste existir. Zona morta: o analógico esquerdo só começa a mover o cursor depois de um sexto do curso, e o direito só começa a rolar depois de quase um terço — empurrão de leve parece analógico morto. A rolagem nasce na velocidade 1, a mais lenta: ponha a Velocidade da rolagem no 5 antes de dizer que não rola. O cursor é um só e sai de um controle só — o outro do rádio não mexer nele é o produto certo. Se o Status do Modo estiver cinza e a borda dele piscar em laranja quando você clica, o Modo ainda não é Navegação — volte à aba Jogar e clique em Navegação. Um controle que perde o cabo pode voltar sozinho pelo rádio, com o chip dizendo BT; se for ele que passar a dizer Navega o PC, ele serve — o que se pede é que quem navega esteja no BT. Quem assume o Navega o PC fica com ele, porque controle que volta depois de meio minuto entra no fim da fila — é por isso que o último passo existe. A «Mira Virtual» acesa faz o giro virar o analógico direito do controle virtual, e na Navegação não há controle virtual: hoje o chip acende e o giro não tem o que mover, então o passo da Mira ANOTA — se o cursor andar com o giro, anote também, porque é o que a tela vai passar a fazer. E a oitava: o mapa carrega uma observação dela de 11 de agosto dizendo que pelo rádio o analógico e o gatilho NÃO moviam o cursor, e que pelo cabo funcionavam; em 5 de setembro os dois caminhos foram medidos e responderam. Se hoje o rádio falhar, é aquele defeito de volta — e é o achado mais valioso desta linha.
+**A armadilha.** Oito, e a última é o motivo de este teste existir. Zona morta: o analógico esquerdo só começa a mover o cursor depois de um sexto do curso, e o direito só começa a rolar depois de quase um terço — empurrão de leve parece analógico morto. A rolagem nasce na velocidade 1, a mais lenta: ponha a Velocidade da rolagem no 5 antes de dizer que não rola. O cursor é um só e sai de um controle só — o outro do rádio não mexer nele é o produto certo. Se o Status do Modo estiver cinza e a borda dele piscar em laranja quando você clica, o Modo ainda não é Navegação — volte à aba Jogar e clique em Navegação. Um controle que perde o cabo pode voltar sozinho pelo rádio, com o chip dizendo BT; se for ele que passar a dizer Navega o PC, ele serve — o que se pede é que quem navega esteja no BT. Quem assume o Navega o PC fica com ele, porque controle que volta depois de meio minuto entra no fim da fila — é por isso que o último passo existe. Na Navegação a «Mira Virtual» acesa move o cursor pelo giro, com a sensibilidade, o «Ignorar tremor até», o «Só enquanto eu segurar» e o «Inverter» da tela Calibrar sensores de movimento: se o cursor não andar com o giro, confira ali o «Só enquanto eu segurar» antes de reprovar. O giro não segue a regra do analógico — ele vale em todo controle com a Mira acesa, e dois com a Mira acesa somam no mesmo cursor. E a oitava: o mapa carrega uma observação dela de 11 de agosto dizendo que pelo rádio o analógico e o gatilho NÃO moviam o cursor, e que pelo cabo funcionavam; em 5 de setembro os dois caminhos foram medidos e responderam. Se hoje o rádio falhar, é aquele defeito de volta — e é o achado mais valioso desta linha.
 
 ---
 
@@ -3891,7 +3893,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No RÁDIO, testemunha. Não toque na coluna dele. Se a barra dele mudar quando você pinta um do cabo, o clique pegou o transporte inteiro.
 * **P4** — No RÁDIO, segunda testemunha. A cor antes e depois tem de ser a mesma.
 
-**A armadilha.** Cinco. (1) A TELA NÃO É A PROVA: o código e o desenho mostram a cor PEDIDA; já se mediu o mesmo valor com a barra verde e com ela apagada. Quem responde é o plástico. (2) USE UMA COR QUE NINGUÉM MAIS QUEIRA: amarelo e ciano são dos números 5 e 6, e ninguém aqui tem esses números. Azul no P1 seria o pior teste — é a cor que o produto já dá ao 1. Se a barra voltar sozinha à cor de antes em menos de um minuto, anote: o seu clique não ficou. (3) Um quadradinho com X é a cor de outro controle: o clique nele é recusado, com a borda piscando laranja — escolha sua de 09/09. (4) A Steam não disputa mais a barra: o controle de verdade nasce escondido dela, e o Hefesto devolve a cor a quem pintar por cima em até um segundo — é o que os passos da Steam medem, e uma barra que fica apagada ou noutra cor depois disso é o achado. A tira tracejada na linha «LEDs» quer dizer que o Hefesto não afirma a cor daquele instante: com a Steam aberta, anote; no Modo Nativo, julgue só pelo plástico. (5) Desde 23/09 a luz é do Hefesto também no Modo Nativo, no cabo e no rádio: se a barra do P2 não mudar ali, anote.
+**A armadilha.** Cinco. (1) A TELA NÃO É A PROVA: o código e o desenho mostram a cor PEDIDA; já se mediu o mesmo valor com a barra verde e com ela apagada. Quem responde é o plástico. (2) USE UMA COR QUE NINGUÉM MAIS QUEIRA: amarelo e ciano são dos números 5 e 6, e ninguém aqui tem esses números. Azul no P1 seria o pior teste — é a cor que o produto já dá ao 1. Se a barra voltar sozinha à cor de antes em menos de um minuto, anote: o seu clique não ficou. (3) Um quadradinho com X é a cor de outro controle: o clique nele é recusado, com a borda piscando laranja — escolha sua de 09/09. (4) A Steam não disputa mais a barra: o controle de verdade nasce escondido dela, e o Hefesto devolve a cor a quem pintar por cima em até um segundo — é o que os passos da Steam medem, e uma barra que fica apagada ou noutra cor depois disso é o achado. A tira tracejada na linha «LEDs» quer dizer que o Hefesto não afirma a cor daquele instante: com a Steam aberta, anote. No Modo Nativo a tira fica lisa e na cor, como em todo modo, desde 24/09 — e quem responde continua sendo o plástico. (5) Desde 23/09 a luz é do Hefesto também no Modo Nativo, no cabo e no rádio: se a barra do P2 não mudar ali, anote.
 
 ---
 
@@ -4483,7 +4485,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o interruptor «Giroscópio» de um controle do cabo mira naquele controle e só naquele sensor — sem levar junto o «Acelerômetro» nem as outras três linhas.
 
-**Onde olhar.** Aba Controles, na LINHA de cada controle — com o card aberto ou fechado. No fim da linha, três interruptores, «Giroscópio», «Acelerômetro» e «Mira Virtual», com a bolinha verde quando ligado e cinza quando desligado. A dica do «Giroscópio» diz «Ligado: o jogo recebe o giro deste controle.»; no controle com a «Mira Virtual» acesa ela passa a dizer «Com a Mira Virtual acesa, o giro deste controle vai ao jogo pelo analógico direito.». No Modo Nativo a «Mira Virtual» fica cinza e o clique nela não grava. Mais à esquerda, «DualSense», «Xbox 360» ou «Nintendo Pro» é o que o jogo vê. Quando o giro daquele controle está indo para um jogo, a linha diz também «Giroscópio: fluindo para o jogo», com o número por segundo — menos com a Mira acesa, quando ela some. Depois do clique, a borda do interruptor pisca verde quando pegou inteiro e laranja quando recusou ou pegou pela metade.
+**Onde olhar.** Aba Controles, na LINHA de cada controle — com o card aberto ou fechado. No fim da linha, três interruptores, «Giroscópio», «Acelerômetro» e «Mira Virtual», com a bolinha verde quando ligado e cinza quando desligado. A dica do «Giroscópio» diz «Ligado: o jogo recebe o giro deste controle.»; no controle com a «Mira Virtual» acesa ela passa a dizer «Com a Mira Virtual acesa, o giro deste controle vai ao jogo pelo analógico direito.», e na Navegação «Com a Mira Virtual acesa, o giro deste controle move o cursor.». No Modo Nativo a «Mira Virtual» fica cinza e o clique nela não grava. Mais à esquerda, «DualSense», «Xbox 360» ou «Nintendo Pro» é o que o jogo vê. Quando o giro daquele controle está indo para um jogo, a linha diz também «Giroscópio: fluindo para o jogo», com o número por segundo — menos com a Mira acesa ou com o «Giroscópio» desligado, quando ela some. Depois do clique, a borda do interruptor pisca verde quando pegou inteiro e laranja quando recusou ou pegou pela metade.
 
 **Os passos.**
 
@@ -4493,17 +4495,18 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 4. Anote a cor das doze bolinhas: «Giroscópio», «Acelerômetro» e «Mira Virtual» das quatro linhas.
 5. Clique no interruptor «Giroscópio» da linha do P1.
 6. Confira que a bolinha dele trocou de cor, e anote a cor em que a borda piscou.
-7. Confira que o «Acelerômetro» e a «Mira Virtual» da mesma linha e os três interruptores do P2, do P3 e do P4 não mudaram.
-8. Anote o que a moldura «Giroscópio» do card do P1 passou a mostrar: números vivos, números parados ou traço.
-9. Clique de novo no «Giroscópio» do P1, para devolvê-lo.
-10. Clique no interruptor «Giroscópio» da linha do P2.
-11. Confira que só a bolinha dele trocou de cor, e anote a cor da borda.
-12. Clique de novo no «Giroscópio» do P2, para devolvê-lo.
-13. Confira que as doze bolinhas voltaram às cores anotadas.
-14. Acenda a «Mira Virtual» do P1, passe o mouse no «Giroscópio» do P1 e depois no do P2, e anote as duas dicas.
-15. Apague a «Mira Virtual» do P1 e passe o mouse de novo no «Giroscópio» dele.
+7. Confira que a frase «Giroscópio: fluindo para o jogo», se estava na linha do P1, sumiu dela.
+8. Confira que o «Acelerômetro» e a «Mira Virtual» da mesma linha e os três interruptores do P2, do P3 e do P4 não mudaram.
+9. Anote o que a moldura «Giroscópio» do card do P1 passou a mostrar: números vivos, números parados ou traço.
+10. Clique de novo no «Giroscópio» do P1, para devolvê-lo, e confira que a frase voltou.
+11. Clique no interruptor «Giroscópio» da linha do P2.
+12. Confira que só a bolinha dele trocou de cor, e anote a cor da borda.
+13. Clique de novo no «Giroscópio» do P2, para devolvê-lo.
+14. Confira que as doze bolinhas voltaram às cores anotadas.
+15. Acenda a «Mira Virtual» do P1, passe o mouse no «Giroscópio» do P1 e depois no do P2, e anote as duas dicas.
+16. Apague a «Mira Virtual» do P1 e passe o mouse de novo no «Giroscópio» dele.
 
-**Passa quando.** O clique no «Giroscópio» do P1 troca a cor da bolinha DELE e de mais nada, com a borda piscando verde; o mesmo no P2. O «Acelerômetro», a «Mira Virtual» da mesma linha e as linhas dos outros não se mexem. No fim, os doze voltam ao que eram. E com a Mira acesa só no P1, só a dica do «Giroscópio» do P1 muda — a do P2 continua a de sempre —, e ela volta quando a Mira apaga.
+**Passa quando.** O clique no «Giroscópio» do P1 troca a cor da bolinha DELE e de mais nada, com a borda piscando verde; o mesmo no P2. O «Acelerômetro», a «Mira Virtual» da mesma linha e as linhas dos outros não se mexem. Com o «Giroscópio» do P1 desligado, a frase «Giroscópio: fluindo para o jogo» sai da linha dele e volta quando ele religa. No fim, os doze voltam ao que eram. E com a Mira acesa só no P1, só a dica do «Giroscópio» do P1 muda — a do P2 continua a de sempre —, e ela volta quando a Mira apaga.
 
 **Por controle.**
 
@@ -4522,7 +4525,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o interruptor «Giroscópio» de um controle do rádio mira naquele controle e só naquele sensor, igual aos do cabo.
 
-**Onde olhar.** Aba Controles, na LINHA de cada controle — com o card aberto ou fechado. No fim da linha, três interruptores, «Giroscópio», «Acelerômetro» e «Mira Virtual», com a bolinha verde quando ligado e cinza quando desligado. A dica do «Giroscópio» diz «Ligado: o jogo recebe o giro deste controle.»; no controle com a «Mira Virtual» acesa ela passa a dizer «Com a Mira Virtual acesa, o giro deste controle vai ao jogo pelo analógico direito.». No Modo Nativo a «Mira Virtual» fica cinza e o clique nela não grava. Mais à esquerda, «DualSense», «Xbox 360» ou «Nintendo Pro» é o que o jogo vê. Depois do clique, a borda do interruptor pisca verde quando pegou inteiro e laranja quando recusou ou pegou pela metade.
+**Onde olhar.** Aba Controles, na LINHA de cada controle — com o card aberto ou fechado. No fim da linha, três interruptores, «Giroscópio», «Acelerômetro» e «Mira Virtual», com a bolinha verde quando ligado e cinza quando desligado. A dica do «Giroscópio» diz «Ligado: o jogo recebe o giro deste controle.»; no controle com a «Mira Virtual» acesa ela passa a dizer «Com a Mira Virtual acesa, o giro deste controle vai ao jogo pelo analógico direito.», e na Navegação «Com a Mira Virtual acesa, o giro deste controle move o cursor.». No Modo Nativo a «Mira Virtual» fica cinza e o clique nela não grava. Quando o giro daquele controle está indo para um jogo, a linha diz também «Giroscópio: fluindo para o jogo», com o número por segundo — menos com a Mira acesa ou com o «Giroscópio» desligado, quando ela some. Mais à esquerda, «DualSense», «Xbox 360» ou «Nintendo Pro» é o que o jogo vê. Depois do clique, a borda do interruptor pisca verde quando pegou inteiro e laranja quando recusou ou pegou pela metade.
 
 **Os passos.**
 
@@ -4532,16 +4535,17 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 4. Anote a cor das doze bolinhas: «Giroscópio», «Acelerômetro» e «Mira Virtual» das quatro linhas.
 5. Clique no interruptor «Giroscópio» da linha do P3.
 6. Confira que a bolinha dele trocou de cor, e anote a cor em que a borda piscou.
-7. Confira que o «Acelerômetro» e a «Mira Virtual» da mesma linha e os três interruptores do P1, do P2 e do P4 não mudaram.
-8. Clique de novo no «Giroscópio» do P3, para devolvê-lo.
-9. Clique no interruptor «Giroscópio» da linha do P4.
-10. Confira que só a bolinha dele trocou de cor, e anote a cor da borda.
-11. Clique de novo no «Giroscópio» do P4, para devolvê-lo.
-12. Confira que as doze bolinhas voltaram às cores anotadas.
-13. Acenda a «Mira Virtual» do P3, passe o mouse no «Giroscópio» do P3 e depois no do P4, e anote as duas dicas.
-14. Apague a «Mira Virtual» do P3 e passe o mouse de novo no «Giroscópio» dele.
+7. Confira que a frase «Giroscópio: fluindo para o jogo», se estava na linha do P3, sumiu dela.
+8. Confira que o «Acelerômetro» e a «Mira Virtual» da mesma linha e os três interruptores do P1, do P2 e do P4 não mudaram.
+9. Clique de novo no «Giroscópio» do P3, para devolvê-lo, e confira que a frase voltou.
+10. Clique no interruptor «Giroscópio» da linha do P4.
+11. Confira que só a bolinha dele trocou de cor, e anote a cor da borda.
+12. Clique de novo no «Giroscópio» do P4, para devolvê-lo.
+13. Confira que as doze bolinhas voltaram às cores anotadas.
+14. Acenda a «Mira Virtual» do P3, passe o mouse no «Giroscópio» do P3 e depois no do P4, e anote as duas dicas.
+15. Apague a «Mira Virtual» do P3 e passe o mouse de novo no «Giroscópio» dele.
 
-**Passa quando.** O clique no «Giroscópio» do P3 troca a cor da bolinha DELE e de mais nada, com a borda piscando verde; o mesmo no P4. No fim, tudo volta ao que era. E com a Mira acesa só no P3, só a dica do «Giroscópio» do P3 muda, e ela volta quando a Mira apaga.
+**Passa quando.** O clique no «Giroscópio» do P3 troca a cor da bolinha DELE e de mais nada, com a borda piscando verde; o mesmo no P4. Com o «Giroscópio» do P3 desligado, a frase «Giroscópio: fluindo para o jogo» sai da linha dele e volta quando ele religa. No fim, tudo volta ao que era. E com a Mira acesa só no P3, só a dica do «Giroscópio» do P3 muda, e ela volta quando a Mira apaga.
 
 **Por controle.**
 
@@ -4962,7 +4966,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 14. Abra a aba Iluminação e confira, na linha «Controle», que os quatro desenhos estão pintados na cor do plástico, e não cinza.
 15. Anote qualquer campo, de qualquer um dos quatro, que tenha vindo vazio, cinza ou com um travessão.
 
-**Passa quando.** Os quatro trazem nome de cor e borda pintada, o desenho pintado, o giroscópio andando com a mão e fluindo onde a «Mira Virtual» está apagada, a bateria com número e o microfone com selo, e os quatro chegam a «Calibrado». Nenhum campo do P1 e do P2 — os dois do cabo — vem mais vazio que o do P3 e o do P4.
+**Passa quando.** Os quatro trazem nome de cor e borda pintada, o desenho pintado, o giroscópio andando com a mão e fluindo onde a «Mira Virtual» está apagada e o «Giroscópio» ligado, a bateria com número e o microfone com selo, e os quatro chegam a «Calibrado». Nenhum campo do P1 e do P2 — os dois do cabo — vem mais vazio que o do P3 e o do P4.
 
 **Por controle.**
 
@@ -5920,7 +5924,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 1. Feche o jogo, se ele estiver aberto.
 2. Abra a aba Jogar e confira que a linha «Status» está em «Ligado».
 3. Confira, no cartão de cada um dos quatro, qual máscara está escolhida, e anote; não troque nenhuma.
-4. Abra a aba Controles, clique no chip «Todos», no começo da fita do topo, e anote em quais cartões a «Mira Virtual» está acesa.
+4. Abra a aba Controles, clique no chip «Todos», no começo da fita do topo, e anote em quais cartões a «Mira Virtual» está acesa e em quais o «Giroscópio» está desligado.
 5. Leia a frase do P1 no cabeçalho do cartão dele e anote o número.
 6. Conte até dez e leia o número do P1 de novo; anote o segundo valor embaixo do primeiro.
 7. Leia o número do P2 e anote; conte até dez e leia de novo.
@@ -5929,7 +5933,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 10. Leia o número do P1 outra vez e anote o terceiro valor.
 11. Deixe o P1 parado, apoiado, por dez segundos e leia uma quarta vez.
 
-**Passa quando.** Nos dois controles do cabo com a máscara DualSense e a «Mira Virtual» apagada, a frase aparece com um número, e o número fica firme perto de 250 nas quatro leituras — não vai a zero, não some e não pula para valores muito diferentes a cada olhada, nem com o controle girando, nem parado. Cada um dos quatro cartões mostra a SUA frase.
+**Passa quando.** Nos dois controles do cabo com a máscara DualSense, a «Mira Virtual» apagada e o «Giroscópio» ligado, a frase aparece com um número, e o número fica firme perto de 250 nas quatro leituras — não vai a zero, não some e não pula para valores muito diferentes a cada olhada, nem com o controle girando, nem parado. Cada um dos quatro cartões mostra a SUA frase.
 
 **Por controle.**
 
@@ -5938,7 +5942,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — BT, e é testemunha. Anote o número dele sem tocar em nada: ele é a comparação com a linha do rádio deste mesmo par.
 * **P4** — BT, a segunda testemunha. Mesma coisa. Os quatro juntos mostram que cada cartão fala do controle virtual DELE, e não de um só para todos.
 
-**A armadilha.** O número NÃO é a taxa do controle. Ele é a velocidade com que o Hefesto entrega o movimento ao controle virtual que o jogo vê, e essa entrega tem um TETO de 250 por segundo. Por isso 250 no cabo é o esperado e é também o teto: um controle que entregasse mais apareceria exatamente igual. Segunda: a frase muda de texto, ou some, e isso é o certo, em quatro casos. No Modo Nativo ela diz «Giroscópio: o jogo fala direto com o controle». Com a máscara Xbox 360 ela diz que essa API não leva giroscópio e que no Hefesto ele segue ativo. Com a máscara Nintendo Pro ela some — esse controle virtual não leva giroscópio nenhum —, e ela some também no controle com a «Mira Virtual» acesa, porque ali o giro vai ao jogo pelo analógico direito. Confira o Status, a máscara e a Mira que você anotou antes de reprovar por ausência. Terceira: os botões «Giroscópio» e «Mira Virtual» não são o instrumento desta linha, e nenhum dos dois se clica aqui — o «Giroscópio» corta o giro no que vai ao jogo e a frase segue, porque ela mede a entrega do movimento; a «Mira Virtual» acesa faz a frase sumir. Quarta: nada aqui prova que o jogo usou aquele giro; o número mede a entrega ao controle virtual, e o mapa não registra medição do outro lado.
+**A armadilha.** O número NÃO é a taxa do controle. Ele é a velocidade com que o Hefesto entrega o movimento ao controle virtual que o jogo vê, e essa entrega tem um TETO de 250 por segundo. Por isso 250 no cabo é o esperado e é também o teto: um controle que entregasse mais apareceria exatamente igual. Segunda: a frase muda de texto, ou some, e isso é o certo, em cinco casos. No Modo Nativo ela diz «Giroscópio: o jogo fala direto com o controle». Com a máscara Xbox 360 ela diz que essa API não leva giroscópio e que no Hefesto ele segue ativo. Com a máscara Nintendo Pro ela some — esse controle virtual não leva giroscópio nenhum —, e ela some também no controle com a «Mira Virtual» acesa, porque ali o giro vai ao jogo pelo analógico direito, e no controle com o «Giroscópio» desligado, porque ali o giro não vai ao jogo. Confira o Status, a máscara, a Mira e o Giroscópio que você anotou antes de reprovar por ausência. Terceira: os botões «Giroscópio» e «Mira Virtual» não são o instrumento desta linha, e nenhum dos dois se clica aqui — o «Giroscópio» desligado corta o giro no que vai ao jogo e a frase some junto, desde 24/09; a «Mira Virtual» acesa também a faz sumir. Quarta: nada aqui prova que o jogo usou aquele giro; o número mede a entrega ao controle virtual, e o mapa não registra medição do outro lado.
 
 ---
 
@@ -5955,7 +5959,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 1. Faça a linha do cabo deste mesmo par antes desta, e tenha à mão o papel com os números do P1 e do P2.
 2. Feche o jogo, se ele estiver aberto.
 3. Abra a aba Jogar, confira que a linha «Status» está em «Ligado» e anote a máscara escolhida no cartão do P3 e no do P4.
-4. Abra a aba Controles, clique no chip «Todos», no começo da fita do topo, e anote em quais cartões a «Mira Virtual» está acesa.
+4. Abra a aba Controles, clique no chip «Todos», no começo da fita do topo, e anote em quais cartões a «Mira Virtual» está acesa e em quais o «Giroscópio» está desligado.
 5. Confira, no cabeçalho do cartão do P3, que depois da cor do plástico está escrito BT.
 6. Leia a frase do P3 e anote o número; conte até dez e leia de novo; conte até dez e leia uma terceira vez.
 7. Faça as três leituras também no P4, anotando os três valores.
@@ -5967,7 +5971,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 13. Traga o P3 de volta e leia mais uma vez.
 14. Volte à aba Controles e confira que os números do P1 e do P2 não mudaram em nenhuma dessas leituras.
 
-**Passa quando.** A frase aparece nos dois controles do rádio com a máscara DualSense e a «Mira Virtual» apagada, com um número, e não some enquanto eles estiverem ligados. O número do cartão nunca passa de 250, e o da lista do adaptador pode passar: se o cartão mostrar perto de 250 enquanto a lista mostra bem mais, isso não é você errando — é o teto achatando o que passava por cima, e é justamente o achado desta linha. Anote os números dos dois lugares lado a lado.
+**Passa quando.** A frase aparece nos dois controles do rádio com a máscara DualSense, a «Mira Virtual» apagada e o «Giroscópio» ligado, com um número, e não some enquanto eles estiverem ligados. O número do cartão nunca passa de 250, e o da lista do adaptador pode passar: se o cartão mostrar perto de 250 enquanto a lista mostra bem mais, isso não é você errando — é o teto achatando o que passava por cima, e é justamente o achado desta linha. Anote os números dos dois lugares lado a lado.
 
 **Por controle.**
 
@@ -5976,7 +5980,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — BT, e é ESTE. Três leituras paradas no cartão e na lista, uma leitura longe do PC e uma de volta. Pelo rádio o movimento chega em rajadas, então oscilar entre leituras é o normal, não o defeito.
 * **P4** — BT, o segundo. Três leituras paradas, sem sair do lugar. Ele mostra se a variação é do rádio inteiro ou só do controle que você afastou.
 
-**A armadilha.** O teto é o mesmo nos dois transportes, e é ele que engana. O número do cartão é a entrega do Hefesto ao controle virtual, capada em 250 por segundo; o que chega do rádio pode passar disso. E o que chega não é uma taxa do controle: o adaptador tem um orçamento, repartido entre os controles que estão nele — medido nesta casa, um controle SOZINHO num adaptador chegou perto de 800 por segundo, e dois dividindo um adaptador ficaram perto de 400 cada. Por isso anote se o P3 e o P4 dividem o adaptador: é isso que explica boa parte da diferença entre eles. Segunda: número que oscila muito entre uma leitura e outra pelo rádio não é defeito. Terceira: a frase muda de texto, e isso é o certo, no Modo Nativo e com a máscara Xbox 360, e some com a máscara Nintendo Pro e no controle com a «Mira Virtual» acesa. Confira a máscara e a Mira que você anotou antes de reprovar por ausência. Quarta: nada aqui prova que o jogo recebeu o giro nessa velocidade — o mapa não registra medição do lado do jogo.
+**A armadilha.** O teto é o mesmo nos dois transportes, e é ele que engana. O número do cartão é a entrega do Hefesto ao controle virtual, capada em 250 por segundo; o que chega do rádio pode passar disso. E o que chega não é uma taxa do controle: o adaptador tem um orçamento, repartido entre os controles que estão nele — medido nesta casa, um controle SOZINHO num adaptador chegou perto de 800 por segundo, e dois dividindo um adaptador ficaram perto de 400 cada. Por isso anote se o P3 e o P4 dividem o adaptador: é isso que explica boa parte da diferença entre eles. Segunda: número que oscila muito entre uma leitura e outra pelo rádio não é defeito. Terceira: a frase muda de texto, e isso é o certo, no Modo Nativo e com a máscara Xbox 360, e some com a máscara Nintendo Pro, no controle com a «Mira Virtual» acesa e no controle com o «Giroscópio» desligado. Confira a máscara, a Mira e o Giroscópio que você anotou antes de reprovar por ausência. Quarta: nada aqui prova que o jogo recebeu o giro nessa velocidade — o mapa não registra medição do lado do jogo.
 
 ---
 
