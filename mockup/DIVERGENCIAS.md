@@ -76,3 +76,8 @@ seção daqui**: a aba deixou de estar em trabalho.
   publicar apaga essa constante e ajusta as duas réguas que medem os 17 px da
   publicada (`test_a_trava_e_a_pilula_dos_sensores`,
   `test_o_cadeado_mora_no_canto_do_bloco`) no mesmo commit.
+  **O motor espera junto:** o Personalizado continua no produto enquanto
+  `loader.O_PERSONALIZADO_ESPERA_A_SESSAO_DELA` for `True`, porque sem ele não
+  há perfil valendo do boot ao primeiro jogo — o topo diz «—» e as abas 02 a 08
+  recusam o ajuste. Quem publicar decide essa linha com a resposta dela no mesmo
+  commit (`test_o_modo_freestyle.test_a_saida_espera_a_sessao_dela`).
