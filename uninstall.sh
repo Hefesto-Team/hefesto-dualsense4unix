@@ -20,7 +20,9 @@
 #                        config nem perfis. O applet saiu do instalador em
 #                        19/09/2026 por ordem dela — o tray faz o mesmo, e esta
 #                        flag existe para o resto não custar um wipe inteiro.
-#   --purge-config       APAGA a config do usuário (com backup antes). Default: preserva.
+#   --purge-config       APAGA a config do usuário (com backup antes) e as cópias de
+#                        pareamento do Bluetooth, inclusive as de uninstalls anteriores.
+#                        Default: preserva.
 #   --keep-config        preserva a config (default; mantido por retrocompatibilidade).
 #   --keep-steam-input   PRESERVA Steam Input PSSupport (default: desliga em TODOS os
 #                        localconfig.vdf de todos os Steam users em todos os formatos).
@@ -235,7 +237,8 @@ DKMS, drop-ins). Por padrão PRESERVA sua configuração e seus perfis.
 Opções:
   --keep-udev           preserva as regras udev + modules-load
   --remove-usb-quirk    remove também o quirk da cmdline (sensível; exige reboot)
-  --purge-config        APAGA config e perfis (destrutivo; o padrão é preservar)
+  --purge-config        APAGA config, perfis e as cópias de pareamento do
+                        Bluetooth (destrutivo; o padrão é preservar)
   --so-o-applet         remove SÓ o applet COSMIC aposentado (binário, .desktop
                         e ícones) e sai. Não toca em daemon, udev, Steam nem
                         config. O applet saiu do instalador em 19/09/2026 —
