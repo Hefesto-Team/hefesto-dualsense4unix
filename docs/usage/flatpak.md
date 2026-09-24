@@ -275,8 +275,8 @@ O manifest `flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml` declara a
 
 O daemon roda dentro do sandbox, e o `/run` de lá é só dele: o que o
 `finish-args` não monta não existe lá dentro. As três linhas de `/run` da
-tabela são os três lugares que o install cria e o daemon abre (medido em
-24/09/2026, flatpak 1.18.1):
+tabela são os três lugares do sistema que o daemon abre: os dois primeiros o
+install cria, e o terceiro é do udev (medido em 24/09/2026, flatpak 1.18.1):
 
 - **o broker.** Com a regra 70 e a 72 instaladas pelo `install-host-udev.sh`, o
   hidraw e os nós de entrada do DualSense físico nascem fechados, e quem os
@@ -285,11 +285,13 @@ tabela são os três lugares que o install cria e o daemon abre (medido em
 - **a trava comum do rádio**, com escrita: o daemon escreve nela quem está com
   a trava. Ela nasce do `install.sh`; o `install-host-udev.sh` não a cria, e
   sem ela o daemon usa uma trava da própria sessão, como antes;
-- **a base do udev**, só leitura.
+- **a base do udev**, só leitura: por ela o daemon sabe se o touchpad move o
+  cursor pelo sistema ou pelo Hefesto, e grava o ContainerId da vibração nos
+  jogos da RE Engine.
 
 Um caminho que não existe na máquina é pulado em silêncio. **O Flatpak só monta
 esses caminhos ao abrir o Hefesto:** depois de rodar o `install-host-udev.sh`,
-feche e abra o Hefesto de novo.
+feche o Hefesto por inteiro, inclusive na bandeja, e abra de novo.
 
 O que **continua sem alcançar**, e fica aqui escrito:
 
