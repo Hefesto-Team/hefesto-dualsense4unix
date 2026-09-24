@@ -304,29 +304,29 @@ roteiro.
 
 1. Abra a aba Gatilhos.
 2. Confira que as quatro colunas têm etiqueta de controle no alto, e que nenhuma diz «Desconectado».
-3. Aperte o L2 e o R2 de cada um dos quatro controles, um por vez, para guardar na mão como cada um está ANTES.
-4. Escolha «Rígido» na lista «Modo» da seção do L2, na coluna do P3.
-5. Aperte o L2 do P3.
-6. Confira, na mão, que ele travou duro do começo ao fim do curso.
-7. Escolha «Rígido» na lista «Modo» da seção do R2, na mesma coluna do P3.
-8. Aperte o R2 do P3.
-9. Confira, na mão, que ele travou também.
-10. Aperte o L2 e o R2 do P1, do P2 e do P4 de novo, um por vez.
-11. Compare com o que você sentiu no começo: os três têm de estar iguais, nenhum mais duro e nenhum mais solto.
-12. Escolha «Desligado» na lista «Modo» das duas seções do P3, a do L2 e a do R2, para desfazer o teste.
-13. Aperte o L2 e o R2 do P3.
-14. Confira que os dois voltaram a ficar leves.
+3. Anote no papel o Modo das duas seções da coluna do P3, e escolha «Desligado» nas duas.
+4. Aperte o L2 e o R2 de cada um dos quatro controles, um por vez, para guardar na mão como cada um está ANTES: os do P3 têm de estar leves.
+5. Escolha «Rígido» na lista «Modo» da seção do L2, na coluna do P3.
+6. Aperte o L2 do P3.
+7. Confira, na mão, que ele travou duro do começo ao fim do curso.
+8. Escolha «Rígido» na lista «Modo» da seção do R2, na mesma coluna do P3.
+9. Aperte o R2 do P3.
+10. Confira, na mão, que ele travou também.
+11. Aperte o L2 e o R2 do P1, do P2 e do P4 de novo, um por vez.
+12. Compare com o que você sentiu no começo: os três têm de estar iguais, nenhum mais duro e nenhum mais solto.
+13. Escolha «Desligado» nas duas seções do P3, aperte o L2 e o R2 dele e confira que os dois voltaram a ficar leves.
+14. Devolva o Modo das duas seções do P3 ao que você anotou no papel.
 
-**Passa quando.** Só o L2 e o R2 do P3 ficam duros. Os gatilhos do P1, do P2 e do P4 continuam exatamente como estavam antes — nenhum endureceu e nenhum ficou mais solto. E, ao escolher «Desligado» nas duas seções do P3, os dois gatilhos dele voltam a ficar leves na sua mão.
+**Passa quando.** Só o L2 e o R2 do P3 ficam duros. Os gatilhos do P1, do P2 e do P4 continuam exatamente como estavam antes — nenhum endureceu e nenhum ficou mais solto. E, com «Desligado» nas duas seções do P3, os dois gatilhos dele estavam leves na sua mão antes do «Rígido» e voltam a ficar leves depois.
 
 **Por controle.**
 
 * **P1** — Não toque na coluna dele. Aperte o L2 e o R2 antes e depois; tem de estar igual nas duas vezes.
 * **P2** — Não toque na coluna dele. Aperte o L2 e o R2 antes e depois; tem de estar igual nas duas vezes.
-* **P3** — É o único em que você mexe. Ponha «Rígido» no Modo do L2 e no do R2, e sinta os dois travarem. No fim, ponha «Desligado» nos dois para desfazer.
+* **P3** — É o único em que você mexe. Solte os dois com «Desligado», ponha «Rígido» no Modo do L2 e no do R2, e sinta os dois travarem. No fim, «Desligado» nos dois para sentir que soltam, e devolva o que você anotou.
 * **P4** — Não toque na coluna dele. Aperte o L2 e o R2 antes e depois; tem de estar igual nas duas vezes.
 
-**A armadilha.** Não use «Desligado» como o efeito do teste. Ele é a escolha que SOLTA o gatilho, e se ela escapar para os quatro você não vê nada — os outros três já estão soltos, e o teste passa por cima do defeito. O efeito do teste tem de ser um que ENDUREÇA, porque endurecer é o que a mão sente. E não julgue pela tela: o campo Modo continua mostrando «Rígido» mesmo se um jogo escrever por cima e o gatilho estiver leve na sua mão. Se você não apertar os quatro ANTES, não tem com o que comparar depois — e aí o teste não mede nada.
+**A armadilha.** Não use «Desligado» como o efeito do teste. Ele é a escolha que SOLTA o gatilho, e se ela escapar para os quatro você pode não ver nada — um gatilho que já estava solto não muda —, e o teste passa por cima do defeito. O efeito do teste tem de ser um que ENDUREÇA, porque endurecer é o que a mão sente. E é pelo mesmo motivo que o P3 começa solto: o Freestyle de fábrica nasce com os gatilhos em «Rígido», e escolher «Rígido» num gatilho que já está duro não manda nada nem muda nada na mão. A escolha GRAVA no perfil daquele controle, e é por isso que o terceiro passo anota e o último devolve. E não julgue pela tela: o campo Modo continua mostrando «Rígido» mesmo se um jogo escrever por cima e o gatilho estiver leve na sua mão. Se você não apertar os quatro ANTES, não tem com o que comparar depois — e aí o teste não mede nada.
 
 ---
 
@@ -531,31 +531,32 @@ roteiro.
 6. Confira que só o punho direito treme.
 7. Clique em «Parar» na coluna do P1.
 8. Abra a aba Gatilhos.
-9. Escolha «Rígido» na lista «Modo» da seção do L2 e na da seção do R2, na coluna do P2.
-10. Confira, apertando o L2 e o R2 do P2, que os dois ganharam resistência, e, apertando os do P1, do P3 e do P4, que continuam como estavam.
-11. Abra a aba Iluminação.
-12. Clique, na linha «Cor» da coluna do P4, num tom sem X e bem diferente do que a barra dele tem agora.
-13. Confira que a barra de luz do P4 mudou para o tom novo e que as dos outros três não mudaram.
-14. Feche a janela do Hefesto pelo X.
-15. Abra o Hefesto de novo.
-16. Confira que o nome em «Perfil ativo» é o mesmo que você anotou.
-17. Confira que a barra de luz do P4 continua no tom novo.
-18. Abra a aba Vibração e clique em «Testar» na coluna do P1, com ele na mão.
-19. Confira que a barra do «Motor esquerdo» do P1 continua em 0 e que só o punho direito treme.
-20. Clique em «Parar» na coluna do P1.
-21. Abra a aba Gatilhos e aperte o L2 e o R2 do P2.
-22. Confira que o Modo do L2 e do R2 do P2 continua «Rígido» e que o seu dedo ainda sente a resistência.
+9. Escolha «Desligado» na lista «Modo» da seção do L2 e na da seção do R2, na coluna do P2, e confira, apertando os dois, que estão leves.
+10. Escolha «Rígido» na lista «Modo» da seção do L2 e na da seção do R2, na coluna do P2.
+11. Confira, apertando o L2 e o R2 do P2, que os dois ganharam resistência, e, apertando os do P1, do P3 e do P4, que continuam como estavam.
+12. Abra a aba Iluminação.
+13. Clique, na linha «Cor» da coluna do P4, num tom sem X e bem diferente do que a barra dele tem agora.
+14. Confira que a barra de luz do P4 mudou para o tom novo e que as dos outros três não mudaram.
+15. Feche a janela do Hefesto pelo X.
+16. Abra o Hefesto de novo.
+17. Confira que o nome em «Perfil ativo» é o mesmo que você anotou.
+18. Confira que a barra de luz do P4 continua no tom novo.
+19. Abra a aba Vibração e clique em «Testar» na coluna do P1, com ele na mão.
+20. Confira que a barra do «Motor esquerdo» do P1 continua em 0 e que só o punho direito treme.
+21. Clique em «Parar» na coluna do P1.
+22. Abra a aba Gatilhos e aperte o L2 e o R2 do P2.
+23. Confira que o Modo do L2 e do R2 do P2 continua «Rígido» e que o seu dedo ainda sente a resistência.
 
 **Passa quando.** Cada aba mostra o que foi feito NAQUELE controle, e o aparelho responde no instante do clique: o punho esquerdo do P1 mudo no «Testar», o L2 e o R2 do P2 duros, a barra do P4 no tom novo. O P3 termina exatamente como começou, e nenhum dos outros mudou junto. Depois de fechar e reabrir a janela, as três mudanças continuam lá — e em nenhum momento você clicou em Aplicar ou em Salvar Perfil.
 
 **Por controle.**
 
 * **P1** — Muda a VIBRAÇÃO, na aba Vibração: motor esquerdo em 0. No «Testar» só o punho direito treme, antes e depois de fechar e reabrir.
-* **P2** — Muda o GATILHO, na aba Gatilhos: L2 e R2 em «Rígido». A resistência tem de estar lá antes e depois de fechar e reabrir.
+* **P2** — Muda o GATILHO, na aba Gatilhos: L2 e R2 soltos em «Desligado» e então em «Rígido». A resistência tem de estar lá antes e depois de fechar e reabrir.
 * **P3** — Ninguém toca, é a testemunha. Está no rádio, e serve para provar que nenhuma das três mudanças vazou para ele: a barra de luz e os gatilhos dele têm de terminar como começaram.
 * **P4** — Muda a COR, na aba Iluminação: um tom novo na barra. Está no rádio: a cor tem de acender no clique e continuar depois de fechar e reabrir.
 
-**A armadilha.** POR QUE ESTE TESTE É LONGO: ele é o mesmo teste feito DUAS vezes — três mudanças em três abas antes de fechar a janela, e as três conferidas de novo depois de reabrir. Cortar a segunda metade seria cortar exatamente o que ele prova, que é o perfil sobreviver ao fechar. NÃO TOQUE em «Aplicar» nem em «Salvar Perfil», no rodapé, do começo ao fim: são eles que o teste existe para dispensar, e um clique neles apaga a prova. Clique em «Parar» antes de fechar a janela — o «Testar» não para sozinho. Feche só a JANELA do Hefesto, pelo X — não pare o serviço pela aba Sistema: com o serviço parado a luz e o gatilho voltam ao que o aparelho faz sozinho, e o teste reprova sem haver defeito. A bancada roda com a Steam fechada; mesmo aberta, ela não apaga mais a barra: o controle de verdade nasce escondido dela, e o Hefesto devolve a cor e o número a quem pintar por cima em até um segundo. Um tom com X é a cor de outro controle e não se escolhe. E não confie só na tela dos gatilhos: ela mostra o que o Hefesto mandou, não o que o gatilho está fazendo — o controle não sabe responder isso, e a prova é o seu dedo.
+**A armadilha.** POR QUE ESTE TESTE É LONGO: ele é o mesmo teste feito DUAS vezes — três mudanças em três abas antes de fechar a janela, e as três conferidas de novo depois de reabrir. Cortar a segunda metade seria cortar exatamente o que ele prova, que é o perfil sobreviver ao fechar. NÃO TOQUE em «Aplicar» nem em «Salvar Perfil», no rodapé, do começo ao fim: são eles que o teste existe para dispensar, e um clique neles apaga a prova. Clique em «Parar» antes de fechar a janela — o «Testar» não para sozinho. Feche só a JANELA do Hefesto, pelo X — não pare o serviço pela aba Sistema: com o serviço parado a luz e o gatilho voltam ao que o aparelho faz sozinho, e o teste reprova sem haver defeito. A bancada roda com a Steam fechada; mesmo aberta, ela não apaga mais a barra: o controle de verdade nasce escondido dela, e o Hefesto devolve a cor e o número a quem pintar por cima em até um segundo. Um tom com X é a cor de outro controle e não se escolhe. E não confie só na tela dos gatilhos: ela mostra o que o Hefesto mandou, não o que o gatilho está fazendo — o controle não sabe responder isso, e a prova é o seu dedo. O P2 passa por «Desligado» antes do «Rígido» porque o Freestyle de fábrica nasce com os gatilhos em «Rígido»: escolher o mesmo nome que já está no campo não manda nada, e o dedo não teria o que sentir mudar.
 
 ---
 

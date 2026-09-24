@@ -5253,7 +5253,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 3. Olhe a barra de luz do P1 no aparelho e confirme a cor.
 4. Abra a aba Vibração, segure o P1 na mão e clique em «Testar» na coluna dele.
 5. Sinta o tremor nos dois punhos e clique em «Parar» na coluna do P1.
-6. Abra a aba Gatilhos e anote o «Modo» que está escolhido no L2 e no R2 da coluna do P1.
+6. Abra a aba Gatilhos, anote o «Modo» que está escolhido no L2 e no R2 da coluna do P1, e escolha «Desligado» nos dois.
 7. No bloco do L2, escolha «Rígido» no campo «Modo» da coluna do P1.
 8. Aperte o L2 do P1 e sinta se ele travou duro do começo ao fim do curso.
 9. Escolha «Rígido» também no «Modo» do bloco do R2 da coluna do P1 e aperte o R2.
@@ -5271,7 +5271,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — BT, comparação. Não é preciso mexer nele: ele está aqui para lembrar que pelo rádio essas mesmas três coisas viajam por um caminho que tem nove tamanhos, e pelo cabo só um.
 * **P4** — BT, segunda comparação. Não toque nele.
 
-**A armadilha.** A pergunta desta linha não é respondível daqui, e o mapa é honesto sobre isso: pelo rádio o controle oferece NOVE caminhos de saída, de tamanhos crescentes; pelo cabo ele oferece um só. Se algum dos caminhos grandes funcionaria pelo fio, NINGUÉM TENTOU — a célula do mapa diz «desconhecido» e não «não», de propósito. Nenhum botão desta tela manda um caminho grande pelo cabo, e não é para você tentar isso com as mãos. Segunda: não declarar não é recusar — o cabo não anuncia esses caminhos, e isso não prova que ele os jogaria fora. Terceira: se o gatilho não travar, não conclua nada sobre o caminho; o DualSense não devolve o modo em que está, a tela mostra o que foi PEDIDO, e um jogo aberto pode estar escrevendo por cima. E o degrau: esta linha do mapa não tem degrau escrito.
+**A armadilha.** A pergunta desta linha não é respondível daqui, e o mapa é honesto sobre isso: pelo rádio o controle oferece NOVE caminhos de saída, de tamanhos crescentes; pelo cabo ele oferece um só. Se algum dos caminhos grandes funcionaria pelo fio, NINGUÉM TENTOU — a célula do mapa diz «desconhecido» e não «não», de propósito. Nenhum botão desta tela manda um caminho grande pelo cabo, e não é para você tentar isso com as mãos. Segunda: não declarar não é recusar — o cabo não anuncia esses caminhos, e isso não prova que ele os jogaria fora. Terceira: se o gatilho não travar, não conclua nada sobre o caminho; o DualSense não devolve o modo em que está, a tela mostra o que foi PEDIDO, e um jogo aberto pode estar escrevendo por cima. E o «Desligado» antes do «Rígido» existe porque o Freestyle de fábrica nasce com os gatilhos em «Rígido»: escolher o mesmo nome que já está no campo não manda nada, e o gatilho não sairia pelo caminho que o teste mede. E o degrau: esta linha do mapa não tem degrau escrito.
 
 ---
 
