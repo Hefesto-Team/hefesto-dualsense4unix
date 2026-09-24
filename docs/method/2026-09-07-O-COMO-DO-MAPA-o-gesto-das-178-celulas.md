@@ -4746,40 +4746,37 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `plataforma.adocao @ cabo`
 
-**O que isto prova.** Prova que, pelo cabo, o Hefesto toma o controle para si e entrega ao jogo um controle montado por ele — e que a escolha de como o jogo enxerga cada aparelho fica no aparelho escolhido.
+**O que isto prova.** Prova que, pelo cabo, o Hefesto toma o controle para si e entrega ao jogo um controle montado por ele — e que a escolha de como o jogo enxerga cada aparelho vale só para o aparelho escolhido, a partir do clique.
 
-**Onde olhar.** Na aba Jogar. Primeiro a linha "Status", com as duas posições "Ligado" e "Desligado". Depois o quadro "O Controle é visto como:": um cartão por controle, com o número do jogador, o nome da cor do plástico e por onde ele está ligado; dentro de cada cartão, três chips — DualSense, Xbox 360 e Nintendo Pro. Embaixo dos cartões fica o botão "Reconectar Controles". Quando o Hefesto não está entregando o controle ao jogo, nasce ali a linha "Guardada por controle: o Hefesto não está entregando o controle ao jogo agora, e a escolha vale assim que ele voltar a entregar.". A mesma informação, só para ler, está na aba Controles: dentro do quadro "Dispositivos Conectados", a linha de cada controle traz "Vê como" com o nome do que o jogo enxerga. E quem fecha o teste é o JOGO: o desenho dos botões na tela dele.
+**Onde olhar.** Na aba Jogar. A linha «Status», com as posições «Ligado» e «Desligado». O quadro «Modo», com os chips «Sony DualSense», «Xbox», «Steam Input» e «Navegação». E o quadro «O controle é visto como:», com um cartão por controle — «Sony • Player N», o nome da cor do plástico e USB ou BT — e, dentro de cada cartão, três chips: «DualSense», «Xbox 360» e «Nintendo Pro». O chip aceso é o que o jogo vê daquele controle. A mesma escolha aparece, só para ler, em dois lugares: na aba Conexões, no quadro «Gestão de Controles», a linha de cada controle traz «Vê como» seguido do nome; e na aba Controles, no alto do cartão de cada controle, logo depois de USB ou BT. Quem fecha o teste é o JOGO: o desenho dos botões na tela dele.
 
 **Os passos.**
 
-1. Confira que P1 e P2 estão no cabo e P3 e P4 no rádio.
+1. Confira na fita do topo que os chips do P1 e do P2 terminam em USB e os do P3 e do P4 em BT.
 2. Abra a aba Jogar.
-3. Confira que a linha "Status" está na posição "Ligado".
-4. Leia os quatro cartões do quadro "O Controle é visto como:" e anote qual chip está aceso em cada um.
+3. Confira que a linha «Status» está em «Ligado» e que, no quadro «Modo», o chip aceso é «Sony DualSense» ou «Xbox».
+4. Leia os quatro cartões do quadro «O controle é visto como:» e anote qual chip está aceso em cada um.
 5. Abra o jogo com os quatro jogadores dentro da partida.
 6. Anote como o jogo desenha os botões de cada um dos quatro jogadores.
-7. Volte para a janela do Hefesto.
-8. Clique no chip "Xbox 360" do cartão do P1.
-9. Confira que só o cartão do P1 trocou de chip aceso, e que os outros três continuam no que você anotou.
-10. Clique em "Reconectar Controles", embaixo dos cartões.
-11. Volte ao jogo e olhe o desenho dos botões do jogador 1.
-12. Olhe os botões dos jogadores 2, 3 e 4 e confira que continuam como estavam.
-13. Volte ao Hefesto e clique no chip "Xbox 360" do cartão do P2.
-14. Clique em "Reconectar Controles" de novo.
-15. Volte ao jogo e confira que agora são dois jogadores desenhados como Xbox, e que são o 1 e o 2.
-16. Abra a aba Controles e leia o "Vê como" das quatro linhas: tem de contar a mesma história dos cartões.
-17. Volte à aba Jogar, clique no chip "DualSense" nos cartões do P1 e do P2 e clique em "Reconectar Controles" uma última vez, para desfazer.
+7. Volte para a janela do Hefesto e clique no chip «Xbox 360» do cartão do P1.
+8. Confira que só o cartão do P1 trocou de chip aceso, e que os outros três continuam no que você anotou.
+9. Volte ao jogo, sem clicar em mais nada, e olhe o desenho dos botões do jogador que você move com o P1: tem de ter virado o do Xbox (Y B A X).
+10. Olhe os jogadores do P2, do P3 e do P4 e confira que continuam como estavam.
+11. Volte ao Hefesto e clique no chip «Xbox 360» do cartão do P2.
+12. Volte ao jogo e confira que agora são dois jogadores desenhados como Xbox, e que são os do P1 e do P2.
+13. Abra a aba Conexões, clique no título «Gestão de Controles» e leia o «Vê como» das quatro linhas: tem de contar a mesma história dos cartões.
+14. Volte à aba Jogar e clique no chip «DualSense» nos cartões do P1 e do P2, para desfazer.
 
-**Passa quando.** A escolha feita no cartão do P1 muda o desenho dos botões do jogador 1 dentro do jogo, e de mais ninguém; a do P2 muda o jogador 2, e de mais ninguém. Os cartões do P3 e do P4 não trocam de chip sozinhos, e os jogadores 3 e 4 continuam desenhados como estavam. A leitura "Vê como" da aba Controles diz o mesmo que os cartões da aba Jogar.
+**Passa quando.** A escolha feita no cartão do P1 muda o desenho dos botões do jogador do P1 dentro do jogo, e de mais ninguém; a do P2 muda o do P2, e de mais ninguém — as duas só com o clique no chip. Os cartões do P3 e do P4 não trocam de chip sozinhos, e os jogadores deles continuam desenhados como estavam. O «Vê como» da aba Conexões diz o mesmo que os cartões da aba Jogar.
 
 **Por controle.**
 
-* **P1** — No cabo, e é ESTE que muda primeiro. Ponha "Xbox 360" no cartão dele, clique em "Reconectar Controles" e veja o jogador 1 trocar de desenho no jogo. No fim, devolva "DualSense".
-* **P2** — No cabo, e é o segundo a mudar. Só mexa nele depois de o P1 já ter trocado — assim você vê os dois estados na mesma tela. No fim, devolva "DualSense".
-* **P3** — No rádio, e é TESTEMUNHA. Não toque no cartão dele. Se o chip dele trocar sozinho quando você mexe no do P1, a escolha vazou para a máquina inteira em vez de ficar no aparelho, e isso é o defeito que este teste caça.
-* **P4** — No rádio, e é a segunda testemunha. Mesma conferência. Se o P3 ficou parado e o P4 mudou, o problema não é do rádio: é escrita no controle errado.
+* **P1** — USB, e é ESTE que muda primeiro. Um clique em «Xbox 360» no cartão dele, e o jogador dele troca de desenho no jogo sem mais nada. No fim, devolva «DualSense».
+* **P2** — USB, e é o segundo a mudar. Só mexa nele depois de o P1 já ter trocado — assim você vê os dois estados no mesmo jogo. No fim, devolva «DualSense».
+* **P3** — BT, e é TESTEMUNHA. Não toque no cartão dele. Se o chip dele trocar sozinho quando você mexe no do P1, a escolha vazou para todos em vez de ficar no aparelho, e é esse o defeito que este teste caça.
+* **P4** — BT, e é a segunda testemunha. Mesma conferência. Se o P3 ficou parado e o P4 mudou, o problema não é do rádio: é a escolha indo para o controle errado.
 
-**A armadilha.** Três, e a primeira faz o teste medir nada. (1) Clicar no chip e correr para o jogo: a escolha é gravada na hora, mas ela só chega ao jogo quando o Hefesto monta de novo o controle que o jogo enxerga — é para isso que o "Reconectar Controles" está nos passos. (2) O chip "Nintendo Pro" é desenho sem motor: clicar nele RECUSA com uma frase na tela, e isso é o produto certo, não defeito. (3) Se a linha "Guardada por controle: o Hefesto não está entregando o controle ao jogo agora…" estiver na tela, o Hefesto está fora do meio — Status em "Desligado", ou o modo Navegação — e nenhuma escolha vai mudar coisa alguma; ponha o Status em "Ligado" antes de começar. E sobre até onde a prova chegou: esta linha do mapa não tem degrau escrito, e é de propósito — tomar o controle para si e montar um controle novo é ato do computador, não conversa com o aparelho; no DualSense não existe nenhum aviso de "este dono me tomou". O que se mede é o efeito no jogo, e é o que estes passos pedem.
+**A armadilha.** Três. (1) A troca vale no clique: o Hefesto monta de novo, na hora, o controle que o jogo enxerga — não há «Aplicar» nem «Reconectar controles» a apertar. O preço é do jogo, que recebe um controle novo no lugar do antigo: alguns seguem jogando, outros tratam como jogador novo, e há os que só acertam o desenho reabrindo. Se o desenho não mudar, feche e abra o jogo antes de anotar reprovação, e anote qual jogo fez isso. (2) Com o «Status» em «Desligado», ou o Modo em «Navegação», não existe controle montado pelo Hefesto: o chip acende e a escolha fica guardada no aparelho, mas o jogo só muda quando o Hefesto voltar a entregar o controle — é por isso que o passo 3 confere os dois. (3) O chip «Nintendo Pro» funciona desde 07/09: o jogo passa a ver um controle da Nintendo, e o desenho que aparece depende de o jogo conhecer esse controle. E a ordem dos jogadores dentro do jogo pode não ser a do Hefesto: siga pelo controle na sua mão, não pelo número que o jogo escreve. Sobre o degrau: esta linha do mapa não tem degrau escrito, de propósito — tomar o controle e montar um novo é ato do computador, não conversa com o aparelho. O que se mede é o efeito no jogo, e é o que os passos pedem.
 
 ---
 
@@ -4787,40 +4784,39 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `plataforma.adocao @ rádio`
 
-**O que isto prova.** Prova que, pelo rádio, o Hefesto toma o controle para si igual ao cabo — a escolha de como o jogo enxerga o aparelho vale nele, e sobrevive a ele cair e voltar.
+**O que isto prova.** Prova que, pelo rádio, o Hefesto toma o controle para si igual ao cabo — a escolha de como o jogo enxerga o aparelho vale nele, e volta com ele quando ele cai e religa, porque ela é do aparelho e não do lugar.
 
-**Onde olhar.** Na aba Jogar. A linha "Status", com "Ligado" e "Desligado". O quadro "O Controle é visto como:", com um cartão por controle — número do jogador, nome da cor do plástico, por onde ele está ligado — e três chips dentro de cada um: DualSense, Xbox 360 e Nintendo Pro. Embaixo, o botão "Reconectar Controles". A linha "Guardada por controle: o Hefesto não está entregando o controle ao jogo agora, e a escolha vale assim que ele voltar a entregar." aparece quando o Hefesto está fora do meio. Na aba Controles, dentro do quadro "Dispositivos Conectados", a linha de cada controle repete a escolha em "Vê como", só para leitura. E quem fecha é o JOGO: o desenho dos botões de cada jogador.
+**Onde olhar.** Na aba Jogar. A linha «Status», com «Ligado» e «Desligado»; o quadro «Modo»; e o quadro «O controle é visto como:», com um cartão por controle — «Sony • Player N», o nome da cor do plástico e USB ou BT — e os três chips dentro de cada um: «DualSense», «Xbox 360» e «Nintendo Pro». Na aba Conexões, no quadro «Gestão de Controles», a linha de cada controle repete a escolha em «Vê como», só para leitura. E quem fecha é o JOGO: o desenho dos botões de cada jogador.
 
 **Os passos.**
 
-1. Confira que P3 e P4 estão no rádio e P1 e P2 no cabo.
-2. Abra a aba Jogar.
-3. Confira que a linha "Status" está na posição "Ligado".
-4. Leia os quatro cartões do quadro "O Controle é visto como:" e anote qual chip está aceso em cada um.
-5. Abra o jogo com os quatro jogadores dentro da partida.
-6. Anote como o jogo desenha os botões de cada um dos quatro jogadores.
-7. Volte ao Hefesto e clique no chip "Xbox 360" do cartão do P3.
+1. Confira na fita do topo que os chips do P3 e do P4 terminam em BT e os do P1 e do P2 em USB.
+2. Anote o nome da cor do plástico do P3 e o do P4, que estão nos chips da fita — é por eles que você vai seguir o P3 quando ele sair.
+3. Abra a aba Jogar.
+4. Confira que a linha «Status» está em «Ligado» e que, no quadro «Modo», o chip aceso é «Sony DualSense» ou «Xbox».
+5. Leia os quatro cartões do quadro «O controle é visto como:» e anote qual chip está aceso em cada um.
+6. Abra o jogo com os quatro jogadores dentro da partida e anote como ele desenha os botões de cada um.
+7. Volte ao Hefesto e clique no chip «Xbox 360» do cartão do P3.
 8. Confira que só o cartão do P3 trocou de chip aceso.
-9. Clique em "Reconectar Controles".
-10. Volte ao jogo e confira que só o jogador 3 mudou de desenho.
-11. Volte ao Hefesto e clique no chip "Xbox 360" do cartão do P4.
-12. Clique em "Reconectar Controles" e confira no jogo que agora os jogadores 3 e 4 estão desenhados como Xbox.
-13. Segure o botão PS do P3 até todas as luzes dele apagarem, e solte.
-14. Dê um toque no botão PS do P3 para trazê-lo de volta, sem demorar — do apagar até o toque tem de passar menos de trinta segundos.
-15. Leia o cartão do P3 quando ele reaparecer: o chip aceso tem de ser "Xbox 360" de novo.
-16. Clique em "Reconectar Controles" e confira no jogo que o jogador 3 voltou desenhado como Xbox.
-17. Devolva "DualSense" nos cartões do P3 e do P4 e clique em "Reconectar Controles" uma última vez.
+9. Volte ao jogo e confira que só o jogador do P3 mudou de desenho.
+10. Feche o jogo.
+11. Segure o botão PS do P3 até todas as luzes dele apagarem, e solte.
+12. Olhe o quadro «O controle é visto como:»: o cartão «Player 3» passa a mostrar o plástico do P4, com o chip «DualSense» aceso — a escolha acompanha o aparelho, não o lugar.
+13. Dê um toque curto no botão PS do P3 para religá-lo e espere o chip dele voltar à fita do topo.
+14. Leia o cartão com o plástico do P3: ele tem de voltar a ser «Player 3», com o chip «Xbox 360» aceso de novo, e o do P4 volta a ser «Player 4» com «DualSense».
+15. Abra o jogo de novo e confira que o jogador do P3 volta desenhado como Xbox e que os outros três estão como no começo.
+16. Clique no chip «DualSense» do cartão do P3, para desfazer.
 
-**Passa quando.** A escolha feita no cartão do P3 muda o desenho dos botões do jogador 3 no jogo, e de mais ninguém; a do P4 muda o jogador 4. Os cartões do P1 e do P2 não trocam de chip sozinhos e os jogadores 1 e 2 ficam como estavam. E depois de o P3 cair e voltar pelo rádio, o cartão dele volta com a mesma escolha de antes — a escolha é do aparelho, não da sessão.
+**Passa quando.** A escolha feita no cartão do P3 muda o desenho dos botões do jogador do P3 no jogo, e de mais ninguém. Enquanto o P3 está desligado, o cartão que passa a ocupar o lugar dele mostra a escolha do P4, e não a do P3. E depois de o P3 cair e voltar pelo rádio, o cartão dele volta com o mesmo número e com a mesma escolha de antes — a escolha é do aparelho, não da sessão nem do lugar.
 
 **Por controle.**
 
-* **P1** — No cabo, e é TESTEMUNHA. Não toque no cartão dele. Se ele trocar de chip quando você mexe no P3, a escolha vazou para a máquina inteira.
-* **P2** — No cabo, e é a segunda testemunha. Mesma conferência.
-* **P3** — No rádio, e é ESTE que muda primeiro. Ponha "Xbox 360", reconecte, veja o jogador 3 trocar — e depois desligue-o e religue-o pelo PS para conferir se a escolha volta com ele.
-* **P4** — No rádio, e é o segundo a mudar. Ponha "Xbox 360" só depois de o P3 já ter mudado. Confira também que ele não trocou sozinho quando você mexeu no P3.
+* **P1** — USB, e é TESTEMUNHA. Não toque no cartão dele. Se ele trocar de chip quando você mexe no P3, a escolha vazou para todos.
+* **P2** — USB, e é a segunda testemunha. Mesma conferência.
+* **P3** — BT, e é ESTE. Ponha «Xbox 360», veja o jogador dele trocar no jogo — e depois desligue-o e religue-o pelo PS para conferir se a escolha volta com ele.
+* **P4** — BT, e é o vizinho que prova a outra metade: enquanto o P3 está fora ele aparece no lugar «Player 3» com a escolha DELE, «DualSense». Se ele aparecer ali com «Xbox 360», a escolha ficou presa ao lugar em vez de ao aparelho, e esse é o achado.
 
-**A armadilha.** Quatro. (1) "Reconectar Controles" NÃO reconecta o rádio, e isso é decisão dela: o botão traz de volta o JOGADOR — o controle que o jogo enxerga —, nunca o link do rádio. Quem religa o aparelho é o botão PS na sua mão. Se o P3 sumiu da tela, esse botão não vai trazê-lo. (2) O prazo: o lugar de quem cai fica guardado por trinta segundos; se você demorar mais que isso entre apagar e religar, ele volta com outro número, e isso é a regra do produto, não defeito. (3) O chip "Nintendo Pro" é desenho sem motor e recusa com uma frase — é o produto certo. (4) Se a linha "Guardada por controle: o Hefesto não está entregando o controle ao jogo agora…" estiver na tela, nada do que você escolher vai chegar ao jogo; ponha o Status em "Ligado" primeiro. E o degrau: esta linha do mapa não tem degrau escrito de propósito — tomar o controle e montar um controle novo é ato do computador, não conversa com o aparelho, e por isso o mapa registra que pelo rádio isso funciona sem nenhuma trava de transporte: é exatamente essa igualdade que os passos acima medem.
+**A armadilha.** Quatro. (1) Enquanto um controle está fora, os que vêm depois dele descem um número na tela e nas lâmpadas — o P4 passa a aparecer como P3 — e voltam ao número deles quando o que saiu volta. Isso é o produto (medido em 12/08), não defeito; por isso os passos seguem o P3 pelo plástico. (2) Não há prazo para a volta: o número e a escolha voltam com o aparelho enquanto o serviço estiver de pé, demore o que demorar. (3) A troca de máscara vale no clique, e o jogo recebe um controle novo no lugar do antigo; é por isso que o jogo fica fechado enquanto o P3 cai e volta — um jogo aberto pode tratar a volta como jogador novo, e aí o teste passa a medir o jogo. (4) Com o «Status» em «Desligado», ou o Modo em «Navegação», não há controle montado pelo Hefesto, e nada do que você escolher chega ao jogo até ele voltar a entregar. E o degrau: esta linha do mapa não tem degrau escrito, de propósito — tomar o controle e montar um controle novo é ato do computador, e o mapa registra que pelo rádio isso funciona sem nenhuma trava de transporte: é essa igualdade que os passos medem.
 
 ---
 
@@ -4830,35 +4826,36 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, pelo cabo, o que o Hefesto manda e o que ele lê chegam inteiros mesmo sem nenhum selo de conferência no caminho.
 
-**Onde olhar.** O selo de conferência não tem campo em aba nenhuma, e a fonte não diz onde ele se leria — porque pelo cabo ele simplesmente não existe. O que se lê é o EFEITO, em três lugares. No aparelho: a barra de luz (as duas tiras que ladeiam o touchpad) e o tremor na sua mão. Na tela: a linha "Cor" da coluna de cada controle, na aba Iluminação; o botão "Testar" da linha "Testar agora", na aba Vibração; e, na aba Controles, o cartão de cada controle, onde o analógico tem um pontinho que anda com a sua mão, o desenho do botão acende quando você aperta e a bateria mostra um número.
+**Onde olhar.** O selo de conferência não tem campo em aba nenhuma — pelo cabo ele simplesmente não existe. O que se lê é o EFEITO, em três lugares. No aparelho: a barra de luz (as duas tiras acesas dos lados do touchpad) e o tremor na sua mão. Na tela: a linha «Cor» da coluna de cada controle, na aba Iluminação — onze quadradinhos de cor, com o código da cor escrito embaixo deles; o botão «Testar» da linha «Testar agora», na aba Vibração; e, na aba Controles, o cartão de cada controle, onde cada analógico tem um pontinho que anda com a sua mão, o desenho do botão acende quando você o aperta e a bateria mostra um número.
 
 **Os passos.**
 
-1. Confira que P1 e P2 estão no cabo e P3 e P4 no rádio.
+1. Confira na fita do topo que os chips do P1 e do P2 terminam em USB e os do P3 e do P4 em BT.
 2. Abra a aba Iluminação.
-3. Clique numa bolinha da linha "Cor" da coluna do P1 e olhe a barra de luz dele no aparelho.
-4. Repita nos outros três, com uma cor diferente em cada um.
+3. Na linha «Cor» da coluna do P1, clique num quadradinho cuja cor nenhum dos outros três esteja usando, e olhe a barra de luz dele no aparelho.
+4. Faça o mesmo nas colunas do P2, do P3 e do P4, uma cor diferente em cada.
 5. Olhe os quatro controles juntos: quatro barras acesas, quatro cores.
 6. Abra a aba Vibração.
-7. Segure o P1 na mão e clique em "Testar" na coluna dele; sinta o meio segundo de tremor.
-8. Repita o "Testar" nos outros três, um de cada vez, com o controle na mão.
-9. Abra a aba Controles e clique no chip "Todos" da fita do topo, para abrir os quatro cartões.
+7. Segure o P1 na mão e clique em «Testar» na coluna dele; sinta o meio segundo de tremor.
+8. Repita o «Testar» nos outros três, um de cada vez, com o controle na mão.
+9. Abra a aba Controles e clique no chip «Todos» da fita do topo, para abrir os quatro cartões.
 10. Mexa o analógico esquerdo do P1 em círculos, devagar, e olhe o pontinho dentro do cartão dele acompanhar.
 11. Aperte, um a um, o quadrado, o triângulo, o círculo e o xis do P1, olhando o desenho acender a cada aperto.
 12. Repita os dois passos acima no P2.
 13. Repita no P3 e no P4.
 14. Anote se em algum momento o pontinho pulou para um canto sem a sua mão ir lá, se um botão acendeu sozinho, ou se um número de bateria deu um salto absurdo.
+15. Volte à aba Iluminação e, em cada coluna, clique no quadradinho da cor do número daquele controle — o primeiro na coluna do P1, o segundo na do P2, o terceiro na do P3 e o quarto na do P4 —, para desfazer.
 
 **Passa quando.** Os quatro obedecem à cor e ao tremor, e o desenho vivo dos quatro segue a sua mão sem pulos e sem acender nada sozinho. Pelo cabo, o P1 e o P2 fazem tudo isso sem nenhuma conferência de integridade no caminho — é este o ponto da linha: não há selo, e mesmo assim nada chega quebrado.
 
 **Por controle.**
 
-* **P1** — No cabo, e é um dos dois que provam o lado SEM selo. Cor, tremor e o desenho vivo seguindo a mão.
-* **P2** — No cabo, o segundo. Mesmos gestos. Um pulo que apareça no P1 e no P2 e nunca no P3 e no P4 é justamente a assinatura que este teste procura.
-* **P3** — No rádio, e é comparação. Mesmos gestos. Aqui cada quadro que chega é conferido por selo, e o que não confere é jogado fora antes de virar tinta na tela.
-* **P4** — No rádio, a segunda comparação. Mesmos gestos.
+* **P1** — USB, e é um dos dois que provam o lado SEM selo. Cor, tremor e o desenho vivo seguindo a mão.
+* **P2** — USB, o segundo. Mesmos gestos. Um pulo que apareça no P1 e no P2 e nunca no P3 e no P4 é justamente a assinatura que este teste procura.
+* **P3** — BT, e é comparação. Mesmos gestos. Aqui cada quadro que chega é conferido por selo, e o que não confere é jogado fora antes de virar tinta na tela.
+* **P4** — BT, a segunda comparação. Mesmos gestos.
 
-**A armadilha.** "Não aconteceu nada" pelo cabo nunca é o selo — pelo cabo não existe selo. Se o P1 não obedecer, procure outra coisa: o serviço parado, a coluna vazia, o jogo escrevendo por cima. E o contrário também engana: um pulo no desenho vivo do P1 não prova que um byte chegou torto; pode ser a sua mão. O que faz o achado é o padrão — pulo nos dois do cabo e em nenhum dos dois do rádio. Sobre até onde a prova chegou: esta linha do mapa não tem degrau escrito. O que está medido é o ENVELOPE — em 06 de setembro os quatro controles foram lidos com o serviço parado, ninguém disputando o aparelho, e pelo cabo nenhum corte de quadro fecha com um selo: os quatro últimos bytes mudam a cada quadro, são carga e não soma de conferência. O degrau que faltava é o olho dela, e é o que os passos acima pedem.
+**A armadilha.** «Não aconteceu nada» pelo cabo nunca é o selo — pelo cabo não existe selo. Se o P1 não obedecer, procure outra coisa: o serviço parado, a coluna vazia, o jogo escrevendo por cima. E o contrário também engana: um pulo no desenho vivo do P1 não prova que um byte chegou torto; pode ser a sua mão. O que faz o achado é o padrão — pulo nos dois do cabo e em nenhum dos dois do rádio. Na cor, escolha sempre um tom livre: um tom que já é de outro controle não fica no que você clicou, e a tela diz de quem ele era. Sobre até onde a prova chegou: esta linha do mapa não tem degrau escrito. O que está medido é o ENVELOPE — em 06 de setembro os quatro controles foram lidos com o serviço parado, ninguém disputando o aparelho, e pelo cabo nenhum corte de quadro fecha com um selo: os quatro últimos bytes mudam a cada quadro, são carga e não soma de conferência. O degrau que faltava é o seu olho, e é o que os passos acima pedem.
 
 ---
 
@@ -4868,36 +4865,37 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, pelo rádio, o que o Hefesto manda vai assinado direito — porque um pedido com a assinatura errada o controle joga fora em silêncio, sem uma palavra.
 
-**Onde olhar.** No aparelho: a barra de luz do P3 e do P4 (as duas tiras que ladeiam o touchpad). Na tela: a linha "Cor" da coluna de cada controle, na aba Iluminação; o chip de cada controle na fita do topo, que traz o nome da cor do plástico e a borda pintada nessa cor — essa cor é uma resposta que veio do aparelho e, pelo rádio, veio assinada; e o cartão do controle na aba Controles, onde o pontinho do analógico anda com a sua mão. O selo em si não tem campo em tela nenhuma: a fonte não diz onde ele se leria.
+**Onde olhar.** No aparelho: a barra de luz do P3 e a do P4 (as duas tiras acesas dos lados do touchpad). Na tela: a linha «Cor» da coluna de cada controle, na aba Iluminação — onze quadradinhos de cor, com o código da cor escrito embaixo; o chip de cada controle na fita do topo, que traz o nome da cor do plástico e a borda pintada nessa cor — essa cor é uma resposta que veio do aparelho e, pelo rádio, veio assinada; e o cartão do controle na aba Controles, onde o pontinho do analógico anda com a sua mão. O selo em si não tem campo em tela nenhuma.
 
 **Os passos.**
 
-1. Confira que P3 e P4 estão no rádio e P1 e P2 no cabo.
+1. Confira na fita do topo que os chips do P3 e do P4 terminam em BT e os do P1 e do P2 em USB.
 2. Abra a aba Iluminação.
-3. Clique numa bolinha da linha "Cor" da coluna do P1 e confirme a cor na barra de luz dele — este é o controle de comparação, pelo cabo.
-4. Clique numa cor bem diferente na linha "Cor" da coluna do P3.
+3. Na linha «Cor» da coluna do P1, clique num quadradinho cuja cor nenhum outro controle esteja usando, e confirme a cor na barra de luz dele — este é o controle de comparação, pelo cabo.
+4. Clique num quadradinho livre de cor bem diferente na linha «Cor» da coluna do P3.
 5. Olhe a barra de luz do P3 no aparelho e confirme que ela acendeu nessa cor.
-6. Clique numa terceira cor na mesma coluna do P3 e confirme que a barra dele trocou.
+6. Clique numa terceira cor livre na mesma coluna do P3 e confirme que a barra dele trocou.
 7. Repita os dois passos acima na coluna do P4.
 8. Abra a aba Controles.
 9. Leia o chip do P3 na fita do topo: ele tem de trazer o nome de uma cor de plástico e a borda pintada.
 10. Pegue o P3 na mão e compare o plástico com o nome que está no chip.
 11. Repita a leitura do chip com o P4.
-12. Clique no chip "Todos" da fita para abrir os quatro cartões.
+12. Clique no chip «Todos» da fita para abrir os quatro cartões.
 13. Mexa o analógico esquerdo do P3 em círculos, devagar, e olhe o pontinho do cartão dele acompanhar sem pular.
 14. Repita no P4.
-15. Anote qualquer coisa que a tela tenha dito que aplicou e que o plástico não tenha feito.
+15. Volte à aba Iluminação e clique, em cada coluna em que você mexeu, no quadradinho da cor do número daquele controle — o primeiro para o P1, o terceiro para o P3, o quarto para o P4 —, para desfazer.
+16. Anote qualquer coisa que a tela tenha dito que aplicou e que o plástico não tenha feito.
 
 **Passa quando.** As barras de luz do P3 e do P4 acendem na cor escolhida e trocam quando você troca. Os chips deles trazem o nome da cor do plástico e a borda pintada, e o nome bate com o aparelho na sua mão. O pontinho do analógico segue a mão sem pulos. Nada disso chegaria com a assinatura errada — pelo rádio o controle descarta calado.
 
 **Por controle.**
 
-* **P1** — No cabo, e é a comparação obrigatória. Pinte uma cor NELE primeiro: se ele também não obedecer, o problema não é do rádio e o resto do teste não mede nada.
-* **P2** — No cabo. Não toque nele. Serve de segunda comparação se o P1 der resultado estranho.
-* **P3** — No rádio, e é ESTE que prova a ida (a cor que sai) e a volta (a cor do plástico que chega). Todos os gestos de cor são nele primeiro.
-* **P4** — No rádio, e é o segundo. Confira nele as mesmas duas coisas. Se o P3 responder e o P4 não, o achado é daquele aparelho, e não do rádio.
+* **P1** — USB, e é a comparação obrigatória. Pinte uma cor NELE primeiro: se ele também não obedecer, o problema não é do rádio e o resto do teste não mede nada.
+* **P2** — USB. Não toque nele. Serve de segunda comparação se o P1 der resultado estranho.
+* **P3** — BT, e é ESTE que prova a ida (a cor que sai) e a volta (a cor do plástico que chega). Todos os gestos de cor são nele primeiro.
+* **P4** — BT, e é o segundo. Confira nele as mesmas duas coisas. Se o P3 responder e o P4 não, o achado é daquele aparelho, e não do rádio.
 
-**A armadilha.** O silêncio é a resposta padrão do erro aqui, e é isso que engana. Pelo rádio um pedido mal assinado é DESCARTADO pelo controle sem erro nenhum: a tela pode dizer que aplicou e o plástico não mudar. Foi assim que "a cor nunca funcionou pelo rádio" viveu meses nesta casa. Por isso o P1, no cabo, entra nos passos: se ele obedecer e os do rádio não, o achado é do rádio; se nenhum obedecer, é outra coisa. Segunda: o nome da cor do plástico pelo rádio está provado em DUAS unidades desta bancada, não nas quatro — se um terceiro controle vier sem cor, o achado é a assinatura daquele aparelho, e a tela devolve "não sei" em vez de inventar uma cor, que é o comportamento certo. E o degrau: esta linha do mapa não tem degrau escrito de propósito. O que foi medido em 06 de setembro foi a VOLTA — duzentos quadros de cada controle do rádio, todos conferindo, com a régua mordida de propósito (virando um bit de três bytes diferentes) para ver a conferência reprovar. A IDA é o que os seus dedos medem aqui.
+**A armadilha.** O silêncio é a resposta padrão do erro aqui, e é isso que engana. Pelo rádio um pedido mal assinado é DESCARTADO pelo controle sem erro nenhum: o código embaixo dos quadradinhos pode mudar e o plástico não. Foi assim que «a cor nunca funcionou pelo rádio» viveu meses nesta casa. Por isso o P1, no cabo, entra nos passos: se ele obedecer e os do rádio não, o achado é do rádio; se nenhum obedecer, é outra coisa. Segunda: escolha sempre um tom livre — um tom que já é de outro controle não fica no que você clicou, e a tela diz de quem ele era; isso não é o rádio falhando. Terceira: o nome da cor do plástico pelo rádio está provado em DUAS unidades desta bancada, não nas quatro — se um terceiro controle vier sem cor, o achado é a assinatura daquele aparelho, e a tela devolve «não sei» em vez de inventar uma cor, que é o comportamento certo. E o degrau: esta linha do mapa não tem degrau escrito de propósito. O que foi medido em 06 de setembro foi a VOLTA — duzentos quadros de cada controle do rádio, todos conferindo, com a régua mordida de propósito (virando um bit de três bytes diferentes) para ver a conferência reprovar. A IDA é o que os seus dedos medem aqui.
 
 ---
 
@@ -4907,35 +4905,36 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o buraco do cabo — dez coisas que o controle promete e recusa quando lhe perguntam — não chega à tela: tudo o que o Hefesto lê do aparelho pelo fio aparece preenchido.
 
-**Onde olhar.** Na fita do topo, o chip de cada controle: o número, o nome da cor do plástico e a borda pintada com essa cor. Na aba Controles, dentro do quadro "Dispositivos Conectados", o cartão de cada controle: o desenho do modelo (pintado quando a leitura aconteceu, cinza quando não), a linha "Giroscópio", o número da bateria e o selo do Microfone. E, no alto desse quadro, o botão "Calibrar Sensores de Movimento". A recusa em si — o "não" que o controle devolve a dez perguntas quando está no fio — não aparece em tela nenhuma: a fonte não diz onde ela se leria, porque o produto nunca faz essas dez perguntas.
+**Onde olhar.** Na fita do topo, o chip de cada controle: o número, o nome da cor do plástico e a borda pintada com essa cor. Na aba Controles, dentro do quadro «Dispositivos conectados», o cartão de cada controle: no alto, a frase «Giroscópio: fluindo para o jogo», o selo do «Microfone» (ATIVO ou DESLIGADO) e a «Bateria» com número; dentro, o bloco «Giroscópio» com X, Y e Z. No alto do quadro, o botão «Calibrar sensores de movimento», que abre a página da calibração no lugar da aba. E na aba Iluminação, a linha «Controle», com o desenho de cada controle pintado na cor do plástico. A recusa em si — o «não» que o controle devolve a dez perguntas quando está no fio — não aparece em tela nenhuma, porque o produto nunca faz essas dez perguntas.
 
 **Os passos.**
 
-1. Confira que P1 e P2 estão no cabo e P3 e P4 no rádio.
+1. Confira na fita do topo que os chips do P1 e do P2 terminam em USB e os do P3 e do P4 em BT.
 2. Abra a aba Controles.
 3. Leia o chip do P1 na fita do topo: ele tem de trazer um nome de cor de plástico e a borda pintada.
 4. Pegue o P1 na mão e compare o plástico com o nome do chip.
 5. Repita a leitura do chip com o P2, com o P3 e com o P4.
-6. Clique no chip "Todos" da fita, para abrir os quatro cartões.
-7. Confira, no cartão do P1, que o desenho do controle está pintado e não cinza.
-8. Leia a linha "Giroscópio" do cartão do P1 e anote o que ela diz.
-9. Leia o número da bateria e o selo do Microfone do cartão do P1.
-10. Repita os três passos acima no P2, no P3 e no P4.
-11. Clique em "Calibrar Sensores de Movimento", no alto do quadro "Dispositivos Conectados".
-12. Siga o que a janela pedir, com os quatro controles parados numa superfície plana.
-13. Volte à aba Controles e confira que a linha "Giroscópio" dos quatro continua dizendo que está fluindo.
-14. Anote qualquer campo, de qualquer um dos quatro, que tenha vindo vazio, cinza ou com um travessão.
+6. Clique no chip «Todos» da fita, para abrir os quatro cartões.
+7. No cartão do P1, leia a frase «Giroscópio: fluindo para o jogo» no alto; gire o P1 na mão e confira que os números X, Y e Z do bloco «Giroscópio» andam.
+8. Leia a «Bateria» e o selo do «Microfone» do P1 e anote os dois.
+9. Repita os dois passos acima no P2, no P3 e no P4.
+10. Clique em «Calibrar sensores de movimento», no alto do quadro «Dispositivos conectados».
+11. Pouse os quatro controles parados numa superfície plana e clique em «Começar».
+12. Espere os quatro cartões da página dizerem «Calibrado» — são 5 segundos, e encostar num controle recomeça a conta dele.
+13. Clique em «← Voltar» e confira que a frase «Giroscópio: fluindo para o jogo» continua nos quatro cartões.
+14. Abra a aba Iluminação e confira, na linha «Controle», que os quatro desenhos estão pintados na cor do plástico, e não cinza.
+15. Anote qualquer campo, de qualquer um dos quatro, que tenha vindo vazio, cinza ou com um travessão.
 
-**Passa quando.** Os quatro trazem nome de cor e borda pintada, o desenho do modelo colorido, o giroscópio fluindo, a bateria com número e o microfone com selo. Nenhum campo do P1 e do P2 — os dois do cabo — vem mais vazio que o do P3 e o do P4.
+**Passa quando.** Os quatro trazem nome de cor e borda pintada, o desenho pintado, o giroscópio fluindo e andando com a mão, a bateria com número e o microfone com selo, e os quatro chegam a «Calibrado». Nenhum campo do P1 e do P2 — os dois do cabo — vem mais vazio que o do P3 e o do P4.
 
 **Por controle.**
 
-* **P1** — No cabo, e é um dos dois que provam este lado. Todos os campos preenchidos: cor com nome e borda, desenho pintado, giroscópio fluindo, bateria com número, microfone com selo.
-* **P2** — No cabo, o segundo. Mesma conferência. Se um campo faltar no P1 e no P2 e estiver cheio no P3 e no P4, o achado é do cabo — anote qual campo.
-* **P3** — No rádio, e é comparação. Pelo rádio não há buraco nenhum: tudo o que o controle promete, ele entrega. Os campos dele são a régua contra a qual você lê os do cabo.
-* **P4** — No rádio, a segunda comparação. Mesma conferência.
+* **P1** — USB, e é um dos dois que provam este lado. Todos os campos preenchidos: cor com nome e borda, desenho pintado, giroscópio fluindo, bateria com número, microfone com selo.
+* **P2** — USB, o segundo. Mesma conferência. Se um campo faltar no P1 e no P2 e estiver cheio no P3 e no P4, o achado é do cabo — anote qual campo.
+* **P3** — BT, e é comparação. Pelo rádio não há buraco nenhum: tudo o que o controle promete, ele entrega. Os campos dele são a régua contra a qual você lê os do cabo.
+* **P4** — BT, a segunda comparação. Mesma conferência.
 
-**A armadilha.** A cor de fábrica é lida por uma pergunta que o cabo ENTREGA — e a pergunta vizinha, de número quase igual, é uma das dez que ele RECUSA. Então, se a cor faltar num controle do cabo, não conclua "é o buraco do cabo": não é. As dez recusas são de LEITURA, o produto não faz nenhuma delas em lugar nenhum, e a que ele usa para a cor é uma das que respondem. E o degrau: esta linha parou em SAIU NO FIO — o byte saiu e o controle respondeu, com um "não" de um lado e com dado do outro, mas ninguém viu nada acender, girar nem soar. Os passos acima são exatamente o degrau que falta, e é o olho dela que o dá.
+**A armadilha.** A cor de fábrica é lida por uma pergunta que o cabo ENTREGA — e a pergunta vizinha, de número quase igual, é uma das dez que ele RECUSA. Então, se a cor faltar num controle do cabo, não conclua «é o buraco do cabo»: não é. As dez recusas são de LEITURA, o produto não faz nenhuma delas em lugar nenhum, e a que ele usa para a cor é uma das que respondem. Segunda: o travessão num número quer dizer que a leitura ainda não chegou — não é zero, e não conta como passa. E o degrau: esta linha parou em SAIU NO FIO — o byte saiu e o controle respondeu, com um «não» de um lado e com dado do outro, mas ninguém viu nada acender, girar nem soar. Os passos acima são exatamente o degrau que falta, e é o seu olho que o dá.
 
 ---
 
@@ -4945,34 +4944,35 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, pelo rádio, não falta nada: tudo o que o controle promete, ele entrega — e o que ele entrega vazio é resposta, não recusa.
 
-**Onde olhar.** Na fita do topo, o chip de cada controle, com o número, o nome da cor do plástico e a borda pintada. Na aba Controles, dentro do quadro "Dispositivos Conectados", o cartão de cada controle: o desenho do modelo (cinza quando a leitura não aconteceu), a linha "Giroscópio", o número da bateria e o selo do Microfone, que diz ATIVO, MUDO ou traz um travessão. O travessão quer dizer "não consegui ler" e não é nenhum dos dois. E, no alto do quadro, o botão "Calibrar Sensores de Movimento".
+**Onde olhar.** Na fita do topo, o chip de cada controle, com o número, o nome da cor do plástico e a borda pintada. Na aba Controles, dentro do quadro «Dispositivos conectados», o cartão de cada controle: no alto, a frase «Giroscópio: fluindo para o jogo», o selo do «Microfone» — ATIVO, DESLIGADO ou um travessão — e a «Bateria» com número; dentro, o bloco «Giroscópio» com X, Y e Z. O travessão quer dizer «não consegui ler» e não é nenhum dos dois. E na aba Iluminação, a linha «Controle», com o desenho de cada controle pintado na cor do plástico.
 
 **Os passos.**
 
-1. Confira que P3 e P4 estão no rádio e P1 e P2 no cabo.
+1. Confira na fita do topo que os chips do P3 e do P4 terminam em BT e os do P1 e do P2 em USB.
 2. Abra a aba Controles.
 3. Leia os quatro chips da fita do topo e anote, de cada um, se veio o nome da cor e se a borda está pintada.
 4. Pegue o P3 na mão e compare o plástico com o nome do chip dele.
 5. Faça o mesmo com o P4.
-6. Clique no chip "Todos" da fita, para abrir os quatro cartões.
-7. Leia, no cartão do P3, o desenho do modelo, a linha "Giroscópio", a bateria e o selo do Microfone — e anote os quatro.
+6. Clique no chip «Todos» da fita, para abrir os quatro cartões.
+7. Leia, no cartão do P3, a frase do giroscópio, os números do bloco «Giroscópio» enquanto você gira o P3, a «Bateria» e o selo do «Microfone» — e anote os quatro.
 8. Repita a leitura no cartão do P4.
 9. Repita a leitura nos cartões do P1 e do P2, que estão no cabo.
-10. Compare campo a campo: qualquer campo cheio nos do cabo e vazio nos do rádio é o achado.
-11. Se algum campo do P3 tiver vindo vazio, encaixe um cabo nele, sem desligá-lo.
-12. Leia o mesmo campo de novo e anote se ele encheu.
-13. Puxe o cabo do P3 e confirme que ele volta ao rádio.
+10. Abra a aba Iluminação e anote, na linha «Controle», quais dos quatro desenhos estão pintados e quais estão cinza.
+11. Compare campo a campo: qualquer campo cheio nos do cabo e vazio nos do rádio é o achado.
+12. Se algum campo do P3 tiver vindo vazio, encaixe um cabo nele, sem desligá-lo.
+13. Leia o mesmo campo de novo e anote se ele encheu.
+14. Puxe o cabo do P3 e confirme que o chip dele volta a terminar em BT; se ele não voltar sozinho, dê um toque curto no PS dele.
 
-**Passa quando.** Os dois do rádio trazem exatamente os mesmos campos preenchidos que os dois do cabo: nome de cor e borda, desenho pintado, giroscópio fluindo, bateria com número e microfone com selo — ATIVO ou MUDO, nunca travessão. Nada falta do lado do rádio, e é isso que a linha afirma.
+**Passa quando.** Os dois do rádio trazem exatamente os mesmos campos preenchidos que os dois do cabo: nome de cor e borda, desenho pintado, giroscópio fluindo, bateria com número e microfone com selo — ATIVO ou DESLIGADO, nunca travessão. Nada falta do lado do rádio, e é isso que a linha afirma.
 
 **Por controle.**
 
-* **P1** — No cabo, e é comparação. Todos os campos anotados antes de você julgar o rádio: sem eles não há com o que comparar.
-* **P2** — No cabo, segunda comparação.
-* **P3** — No rádio, e é ESTE que prova o lado. Se um campo dele vier vazio, leve o mesmo aparelho para o cabo e olhe de novo: encheu no cabo é achado do rádio; ficou vazio nos dois é achado do aparelho.
-* **P4** — No rádio, e é o segundo. A mesma leitura, e ela importa: dois aparelhos que respondem valem muito mais que um.
+* **P1** — USB, e é comparação. Todos os campos anotados antes de você julgar o rádio: sem eles não há com o que comparar.
+* **P2** — USB, segunda comparação.
+* **P3** — BT, e é ESTE que prova o lado. Se um campo dele vier vazio, leve o mesmo aparelho para o cabo e olhe de novo: encheu no cabo é achado do rádio; ficou vazio nos dois é achado do aparelho.
+* **P4** — BT, e é o segundo. A mesma leitura, e ela importa: dois aparelhos que respondem valem muito mais que um.
 
-**A armadilha.** Voltar vazio e recusar são duas respostas diferentes, e o mapa guarda as duas. Pelo rádio há perguntas que respondem com tudo zero, e isso conta como resposta — na tela vira um campo sem valor, não um erro, e não é o buraco de que esta linha fala: buraco, pelo rádio, não existe. Segunda: a leitura da cor do plástico pelo rádio está provada em DUAS unidades desta bancada, não nas quatro; se um terceiro aparelho vier sem cor, o achado é dele e a tela mostra "não sei" em vez de inventar, que é o comportamento certo. E o degrau: esta linha parou em SAIU NO FIO — o byte saiu e o controle respondeu com dado, mas ninguém viu nada acender, girar nem soar. Os passos acima são o degrau seguinte, e quem o dá é o olho dela.
+**A armadilha.** Voltar vazio e recusar são duas respostas diferentes, e o mapa guarda as duas. Pelo rádio há perguntas que respondem com tudo zero, e isso conta como resposta — na tela vira um campo sem valor, não um erro, e não é o buraco de que esta linha fala: buraco, pelo rádio, não existe. Segunda: a leitura da cor do plástico pelo rádio está provada em DUAS unidades desta bancada, não nas quatro; se um terceiro aparelho vier sem cor, o achado é dele e a tela mostra «não sei» em vez de inventar, que é o comportamento certo. Terceira: encaixar e puxar o cabo derruba o P3 por um instante, e enquanto ele está fora o P4 aparece como P3 — ele volta ao 4 quando o P3 volta; siga-os pelo plástico. E o degrau: esta linha parou em SAIU NO FIO — o byte saiu e o controle respondeu com dado, mas ninguém viu nada acender, girar nem soar. Os passos acima são o degrau seguinte, e quem o dá é o seu olho.
 
 ---
 
@@ -4982,34 +4982,35 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o que o controle oferece muda com o BRAÇO em que ele está, e não com o aparelho — e que pelo cabo ele entrega uma coisa que o rádio não tem: a placa de som do próprio controle.
 
-**Onde olhar.** Na aba Conexões, quadro "Gestão de Controles": uma linha por controle ligado, com o número do jogador, o nome da cor do plástico e a palavra cabo ou rádio. Na mesma linha vem o campo Microfone, e é ele que muda com o transporte: pelo cabo ele diz "pelo cabo • Placa do controle"; pelo rádio diz "pelo rádio • Pela ponte". O quadro também traz a contagem, no formato "4 controles • 2 no cabo • 2 no rádio". O tamanho do que cada transporte declara não aparece em tela nenhuma: a fonte não diz onde ele se leria, porque não há campo.
+**Onde olhar.** Na aba Conexões, no quadro «Gestão de Controles», que abre clicando no título: uma linha por controle — «Sony • Player N • <o nome da cor do plástico> • USB» ou «• BT». Na mesma linha vem o campo «Microfone», e é ele que muda com o transporte: pelo cabo ele diz «Ligado, pelo cabo • Placa do controle»; pelo rádio, «Ligado, pelo rádio • Pela ponte». Ao lado do título, a contagem, no formato «4 controles • 2 no cabo • 2 no rádio». O tamanho do que cada transporte declara não aparece em tela nenhuma, porque não há campo para ele.
 
 **Os passos.**
 
-1. Confira que P1 e P2 estão no cabo e P3 e P4 no rádio.
+1. Confira na fita do topo que os chips do P1 e do P2 terminam em USB e os do P3 e do P4 em BT.
 2. Confira que o controle do P1 já foi pareado por rádio nesta máquina alguma vez — sem isso ele não volta pelo PS e o teste não roda.
 3. Abra a aba Conexões.
-4. Leia as quatro linhas do quadro "Gestão de Controles" e anote, de cada uma, o nome da cor do plástico, a palavra cabo ou rádio e o que diz o campo Microfone.
-5. Leia a contagem do quadro e anote.
-6. Puxe o cabo de dentro do controle do P1.
-7. Dê um toque no botão PS desse mesmo aparelho, sem demorar — do puxão até o toque tem de passar menos de trinta segundos.
-8. Leia de novo a linha dele: o nome da cor do plástico tem de ser o mesmo, e a palavra tem de ter virado rádio.
-9. Leia o campo Microfone dessa linha: ele tem de ter virado "pelo rádio • Pela ponte".
-10. Encaixe o cabo de volta no mesmo aparelho.
-11. Leia a linha mais uma vez: a palavra volta para cabo e o Microfone volta para "pelo cabo • Placa do controle".
-12. Confira as linhas do P2, do P3 e do P4 e veja que nenhuma mudou durante a ida e a volta.
-13. Leia a contagem do quadro de novo e compare com a que você anotou.
+4. Clique no título «Gestão de Controles» para abrir o quadro.
+5. Leia as quatro linhas e anote, de cada uma, o nome da cor do plástico, se termina em USB ou em BT, e o que diz o campo «Microfone».
+6. Leia a contagem ao lado do título e anote.
+7. Puxe o cabo de dentro do controle do P1.
+8. Dê um toque no botão PS desse mesmo aparelho.
+9. Ache a linha com o plástico do P1: ela tem de terminar em BT agora, com o mesmo nome de cor.
+10. Leia o campo «Microfone» dessa linha: ele tem de ter virado «pelo rádio • Pela ponte».
+11. Encaixe o cabo de volta no mesmo aparelho.
+12. Leia a linha mais uma vez: ela volta a terminar em USB, e o «Microfone» volta para «pelo cabo • Placa do controle».
+13. Confira que as linhas do P2, do P3 e do P4 terminam como no começo — mesmo plástico, mesmo USB ou BT, mesmo «Microfone».
+14. Leia a contagem de novo e compare com a que você anotou.
 
-**Passa quando.** O mesmo aparelho, atravessando os dois braços, continua sendo o mesmo na tela: mesma cor de plástico, mesmo desenho, mesmo número de jogador. A única coisa que muda é o que depende do transporte — a palavra cabo ou rádio, e o caminho do microfone. Pelo cabo o som vem da placa do próprio controle; pelo rádio, pela ponte do Hefesto. As linhas dos outros três não se mexem.
+**Passa quando.** O mesmo aparelho, atravessando os dois braços, continua sendo o mesmo na tela: mesma cor de plástico e, no fim, o mesmo número de jogador. A única coisa que muda é o que depende do transporte — USB ou BT no fim da linha, e o caminho do microfone. Pelo cabo o som vem da placa do próprio controle; pelo rádio, pela ponte do Hefesto. No fim, as linhas dos outros três estão como começaram.
 
 **Por controle.**
 
-* **P1** — É ESTE que atravessa: sai do cabo, volta pelo rádio com um toque no PS, e depois volta ao cabo. O que tem de mudar na linha dele são duas coisas e só duas: a palavra do transporte e o caminho do microfone.
-* **P2** — No cabo, e não sai de lá. É a comparação parada: a linha dele tem de dizer "pelo cabo • Placa do controle" o tempo todo, do começo ao fim.
-* **P3** — No rádio, testemunha. Não toque nele. A linha dele não pode piscar para fora do quadro enquanto o P1 atravessa, e ninguém pode tomar o número dele.
-* **P4** — No rádio, segunda testemunha. Mesma conferência. É o último da fila e o primeiro a cair quando alguma coisa desmonta.
+* **P1** — É ESTE que atravessa: sai do cabo, volta pelo rádio com um toque no PS, e depois volta ao cabo. O que tem de mudar na linha dele são duas coisas e só duas: USB ou BT, e o caminho do microfone.
+* **P2** — USB, e não sai de lá. É a comparação parada: a linha dele tem de dizer «pelo cabo • Placa do controle» do começo ao fim.
+* **P3** — BT, testemunha. Não toque nele. A linha dele não pode sumir do quadro enquanto o P1 atravessa.
+* **P4** — BT, segunda testemunha. Mesma conferência.
 
-**A armadilha.** Três. (1) O relógio: o lugar de quem sai fica guardado por trinta segundos; se você demorar mais que isso entre puxar o cabo e tocar o PS, o P1 volta com outro número — e isso é a regra do produto funcionando, não defeito. (2) Não saia procurando na tela "o que o cabo declara": não há campo, e você vai procurar para sempre. A única diferença de transporte que esta tela mostra é o caminho do microfone. (3) Declarar não é entregar, e essa distinção é de outra linha: o cabo anuncia MAIS coisas que o rádio e entrega menos da metade delas. Ver isso aqui é impossível, e não é defeito desta tela. E o degrau: esta linha do mapa não tem degrau escrito. O que está medido é o que os dois braços DECLARAM, lido do sistema em 15 de agosto com os quatro aparelhos passando pelos dois braços — e o achado foi que a lista segue o BRAÇO, não a unidade: o mesmo aparelho anuncia uma coisa no fio e outra no ar.
+**A armadilha.** Três. (1) No instante em que o cabo sai e o rádio ainda não subiu, o P1 está fora, e os outros três descem um número — o P2 aparece como Player 1, e assim por diante — e voltam ao número deles quando o P1 volta. Isso é o produto, não defeito: siga cada um pelo nome do plástico, e confira os números só no fim. Não há prazo para a volta: o P1 recupera o número dele pelo rádio, demore o que demorar. (2) Não saia procurando na tela «o que o cabo declara»: não há campo, e você vai procurar para sempre. A única diferença de transporte que esta tela mostra é o caminho do microfone. (3) Declarar não é entregar, e essa distinção é de outra linha: o cabo anuncia MAIS coisas que o rádio e entrega menos da metade delas. Ver isso aqui é impossível, e não é defeito desta tela. E o degrau: esta linha do mapa não tem degrau escrito. O que está medido é o que os dois braços DECLARAM, lido do sistema em 15 de agosto com os quatro aparelhos passando pelos dois braços — e o achado foi que a lista segue o BRAÇO, não a unidade: o mesmo aparelho anuncia uma coisa no fio e outra no ar.
 
 ---
 
@@ -5019,34 +5020,35 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o rádio oferece um caminho próprio, que só existe enquanto o aparelho está no ar — e que ele some assim que o mesmo aparelho entra no fio.
 
-**Onde olhar.** Na aba Conexões, em dois lugares. No quadro "Gestão de Controles": uma linha por controle, com o número do jogador, o nome da cor do plástico, a palavra cabo ou rádio, e o campo Microfone, que pelo rádio diz "pelo rádio • Pela ponte" e pelo cabo diz "pelo cabo • Placa do controle". E na seção "Desempenho · O rádio de cada adaptador, em turnos": uma pista por adaptador, com um bloco para cada controle que está naquele rádio e um bloco menor ao lado quando o microfone dele também vai por ali; uma pista sem ninguém mostra a frase "Nenhum controle neste rádio". O tamanho do caminho que cada transporte anuncia não aparece em tela nenhuma: a fonte não diz onde ele se leria, porque não há campo.
+**Onde olhar.** Na aba Conexões, em dois quadros que abrem pelo título, um de cada vez. No «Gestão de Controles»: uma linha por controle, terminando em USB ou BT, e o campo «Microfone», que pelo rádio diz «pelo rádio • Pela ponte» e pelo cabo diz «pelo cabo • Placa do controle». No «Rádio e Adaptadores»: ao lado do título, a contagem no formato «2 controles · 3 adaptadores», que conta só os controles do rádio; e um bloco por adaptador Bluetooth, com o nome da entrada em que ele está (por exemplo «Entrada 4.1.4») e um ▶ que abre a lista do que está nele — cada controle do rádio aparece ali com o nome «Player N» e a cor do plástico. Um controle no cabo nunca aparece nessa seção. O tamanho do caminho que cada transporte anuncia não aparece em tela nenhuma.
 
 **Os passos.**
 
-1. Confira que P3 e P4 estão no rádio e P1 e P2 no cabo.
+1. Confira na fita do topo que os chips do P3 e do P4 terminam em BT e os do P1 e do P2 em USB.
 2. Abra a aba Conexões.
-3. Leia a seção "Desempenho" e anote quantas pistas há, e qual controle está em cada uma.
-4. Leia as quatro linhas do quadro "Gestão de Controles" e anote o campo Microfone de cada uma.
-5. Encaixe um cabo no controle do P3, sem desligá-lo.
-6. Leia de novo a linha dele: a palavra tem de virar cabo e o Microfone tem de virar "pelo cabo • Placa do controle".
-7. Volte à seção "Desempenho" e confira que o bloco do P3 saiu da pista do adaptador.
-8. Confira que o bloco do P4 continua na pista dele, do mesmo tamanho.
-9. Puxe o cabo do P3.
-10. Confira que a linha dele volta a dizer rádio, e o Microfone volta a "pelo rádio • Pela ponte".
-11. Volte à seção "Desempenho" e confira que o bloco do P3 voltou para a pista do adaptador.
-12. Repita todos os passos acima com o P4.
-13. Confira, no fim, que as linhas do P1 e do P2 não se mexeram uma vez sequer.
+3. Clique no título «Rádio e Adaptadores» e anote a contagem ao lado dele.
+4. Clique no ▶ de cada adaptador e anote em qual deles estão o P3 e o P4.
+5. Clique no título «Gestão de Controles» e anote o campo «Microfone» das quatro linhas.
+6. Encaixe um cabo no controle do P3, sem desligá-lo.
+7. Leia de novo a linha dele: ela tem de terminar em USB, e o «Microfone» tem de virar «pelo cabo • Placa do controle».
+8. Clique no título «Rádio e Adaptadores»: a contagem tem de ter caído um, e o P3 tem de ter saído da lista do adaptador dele.
+9. Confira que o P4 continua na lista do adaptador dele.
+10. Puxe o cabo do P3; se ele não voltar ao rádio sozinho, dê um toque curto no PS dele.
+11. Em «Gestão de Controles», confira que a linha dele volta a terminar em BT, com o «Microfone» em «pelo rádio • Pela ponte».
+12. Em «Rádio e Adaptadores», confira que ele voltou à lista de um adaptador e que a contagem voltou.
+13. Repita todos os passos acima com o P4.
+14. Confira, no fim, que o P1 e o P2 nunca apareceram em «Rádio e Adaptadores».
 
-**Passa quando.** O mesmo aparelho continua sendo o mesmo na tela — cor de plástico, desenho, número de jogador —, e o que aparece e some junto com o rádio é o caminho de rádio dele: o bloco na pista do adaptador e o microfone pela ponte. Quando ele entra no fio, o bloco sai da pista e o microfone passa a vir da placa do próprio controle. Os dois do cabo não se mexem.
+**Passa quando.** O mesmo aparelho continua sendo o mesmo na tela — cor de plástico e, no fim, número de jogador —, e o que aparece e some junto com o rádio é o caminho de rádio dele: a presença na lista de um adaptador e o microfone pela ponte. Quando ele entra no fio, sai do adaptador e o microfone passa a vir da placa do próprio controle. Os dois do cabo não se mexem.
 
 **Por controle.**
 
-* **P1** — No cabo, testemunha. Não toque nele. A linha dele tem de dizer "pelo cabo • Placa do controle" do começo ao fim, e ele nunca pode aparecer numa pista da seção "Desempenho".
-* **P2** — No cabo, segunda testemunha. Mesma conferência.
-* **P3** — No rádio, e é ESTE que atravessa primeiro. Entra no fio, sai do fio. O que tem de aparecer e sumir com ele é o bloco na pista do adaptador e o microfone pela ponte.
-* **P4** — No rádio, e é o segundo a atravessar. Enquanto o P3 está no fio, é ele quem prova que a pista do adaptador continua viva com um só: o bloco dele não pode mudar de tamanho por causa do vizinho.
+* **P1** — USB, testemunha. Não toque nele. A linha dele tem de dizer «pelo cabo • Placa do controle» do começo ao fim, e ele nunca pode aparecer num adaptador de «Rádio e Adaptadores».
+* **P2** — USB, segunda testemunha. Mesma conferência.
+* **P3** — BT, e é ESTE que atravessa primeiro. Entra no fio, sai do fio. O que tem de sumir e voltar com ele é a presença no adaptador e o microfone pela ponte.
+* **P4** — BT, e é o segundo a atravessar. Enquanto o P3 está no fio, é ele quem prova que o adaptador continua vivo com um só: ele não pode sumir da lista por causa do vizinho.
 
-**A armadilha.** Duas, e as duas são de leitura. (1) Encaixar o cabo num controle que está no rádio não o desliga do rádio na mesma hora, e por um instante a tela pode mostrar as duas coisas; espere a linha assentar antes de anotar. (2) Os números de turno da seção "Desempenho" são conta, não medição do momento: eles vêm de um ensaio de bancada com UM controle, e a soma de quatro é derivada. Não vale reprovar a tela porque o número não bateu com uma conta sua — o que este teste lê ali é a PRESENÇA e a AUSÊNCIA do bloco, não o valor dele. E o degrau: esta linha do mapa não tem degrau escrito. O que está medido é o que cada braço declara, lido em 15 de agosto com os quatro aparelhos passando pelos dois lados: o que só o rádio anuncia continuou sendo só do rádio, com os aparelhos trocados de braço. A lista segue o braço, não a unidade.
+**A armadilha.** Três, e as três são de leitura. (1) Encaixar o cabo num controle que está no rádio não o tira do rádio no mesmo instante, e por um momento a tela pode mostrar as duas coisas; espere a linha assentar antes de anotar. (2) Na troca de braço o P3 some por um instante, e enquanto isso o P4 aparece como Player 3 — ele volta ao 4 quando o P3 volta; siga-os pelo plástico. (3) Os números em Hz que aparecem ao lado de cada controle em «Rádio e Adaptadores» são leitura viva do que chega agora, e mudam sozinhos; o que este teste lê ali é a PRESENÇA e a AUSÊNCIA do controle, não o valor. E o degrau: esta linha do mapa não tem degrau escrito. O que está medido é o que cada braço declara, lido em 15 de agosto com os quatro aparelhos passando pelos dois lados: o que só o rádio anuncia continuou sendo só do rádio, com os aparelhos trocados de braço. A lista segue o braço, não a unidade.
 
 ---
 
@@ -5054,35 +5056,35 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `plataforma.diagnostico_morte_radio @ cabo`
 
-**O que isto prova.** Prova que o produto não inventa diagnóstico de rádio para um controle que está no cabo — e que, quando um controle do cabo cai, o que ela vê é a queda dita com todas as letras.
+**O que isto prova.** Prova que o produto não inventa diagnóstico de rádio para um controle que está no cabo — e que, quando um controle do cabo cai, o que você vê é a queda dita com todas as letras.
 
-**Onde olhar.** A contagem no alto de qualquer aba, no formato "● 4 controles: 2 USB · 2 BT". A fita do topo, com um chip por controle. Na aba Controles, o quadro "Dispositivos Conectados", onde o lugar de um controle que saiu passa a dizer "Desconectado". E na aba Sistema, a faixa "O exame de hoje", com a conta ao lado dela ("8 linhas · nenhum aviso") e uma linha por achado, cada uma com um selo e um "?" que diz o que foi visto, por que importa e o que fazer.
+**Onde olhar.** No canto de cima, à direita, a contagem, no formato «● 2 USB · 2 BT». A fita do topo, com um chip por controle — «P1 • <nome da cor do plástico> • USB». Na aba Conexões, o quadro «Gestão de Controles», que abre pelo título: um lugar sem controle passa a dizer «Player N • Desconectado». E na aba Sistema, a faixa «O exame de hoje», com a conta ao lado dela (por exemplo «8 linhas · nenhum aviso») e uma linha por achado, cada uma com um selo — o exame é da máquina: som, Steam Input, regras de permissão.
 
 **Os passos.**
 
-1. Confira que os quatro estão ligados: P1 e P2 no cabo, P3 e P4 no rádio.
-2. Abra a aba Sistema e leia a conta ao lado de "O exame de hoje": anote quantas linhas e quantos avisos.
+1. Confira que os quatro estão ligados — os chips do P1 e do P2 terminando em USB, os do P3 e do P4 em BT — e anote o nome da cor do plástico de cada um.
+2. Abra a aba Sistema e leia a conta ao lado de «O exame de hoje»: anote quantas linhas e quantos avisos.
 3. Leia as linhas do exame, uma a uma, e anote o que cada uma diz.
 4. Puxe o cabo de dentro do controle do P1.
-5. Leia a contagem no alto da aba: ela tem de cair para três controles, com um no cabo.
-6. Abra a aba Controles e confira que o lugar do P1 diz "Desconectado".
-7. Confira que nenhum dos outros três se mudou para o lugar do P1.
+5. Leia a contagem no alto: ela tem de passar a «● 1 USB · 2 BT».
+6. Confira na fita que o chip com o plástico do P1 saiu e que ficaram três chips, com os outros três plásticos.
+7. Abra a aba Conexões, clique no título «Gestão de Controles» e confira que a última linha passou a dizer «Player 4 • Desconectado».
 8. Volte à aba Sistema e leia o exame de novo.
-9. Confira que nenhuma linha nova nasceu falando de rádio, de Bluetooth ou de controle sumido.
+9. Confira que nenhuma linha NOVA nasceu falando de rádio, de Bluetooth ou de controle sumido.
 10. Encaixe o cabo de volta no P1.
-11. Confira que a contagem volta a quatro e que o P1 volta ao lugar dele.
+11. Confira que a contagem volta a «● 2 USB · 2 BT» e que o chip com o plástico do P1 volta a ser o P1, com os outros três de volta aos números do começo.
 12. Repita os passos 4 a 11 com o P2.
 
-**Passa quando.** Puxar o cabo de um controle aparece como o que é — a queda de um controle do CABO: a contagem cai, o lugar dele diz "Desconectado" e ninguém toma esse lugar. O exame da aba Sistema não ganha nem perde linha por causa disso, e não diz uma palavra sobre rádio. O P3 e o P4 ficam onde estavam.
+**Passa quando.** Puxar o cabo de um controle aparece como o que é — a queda de um controle do CABO: a contagem perde um USB, o chip dele sai da fita, e um lugar passa a dizer «Desconectado». O exame da aba Sistema não ganha linha nova por causa disso, e não diz uma palavra sobre rádio. Com o cabo de volta, os quatro terminam com os números do começo.
 
 **Por controle.**
 
-* **P1** — No cabo, e é o primeiro a cair. Puxe o cabo dele, leia as três telas, e devolva o cabo antes de passar ao P2.
-* **P2** — No cabo, e é o segundo a cair. Um de cada vez: dois fora ao mesmo tempo esconde quem tomou o lugar de quem.
-* **P3** — No rádio, testemunha. Não toque nele. O chip dele não pode sumir da fita, o número não pode mudar, e ele não pode se mudar para o lugar do que caiu.
-* **P4** — No rádio, segunda testemunha. Mesma conferência. É o último da fila e o mais propenso a se mexer quando alguma coisa desmonta.
+* **P1** — USB, e é o primeiro a cair. Puxe o cabo dele, leia as três telas, e devolva o cabo antes de passar ao P2.
+* **P2** — USB, e é o segundo a cair. Um de cada vez: dois fora ao mesmo tempo esconde quem fez o quê.
+* **P3** — BT, testemunha. Não toque nele. O chip dele não pode sumir da fita. Enquanto o P1 está fora ele desce um número e volta ao 3 quando o P1 volta — isso é o produto.
+* **P4** — BT, segunda testemunha. Mesma conferência. É ele quem aparece como P3 durante a ausência, e o lugar «Player 4» fica «Desconectado» por isso.
 
-**A armadilha.** Esta célula do mapa é uma AUSÊNCIA declarada: o diagnóstico de que ela fala é o da morte por RÁDIO, e pelo cabo não há o que diagnosticar por esse caminho. Mas a razão desse "não" está registrada como NÃO MEDIDA — ninguém foi ver se existe uma morte de cabo que mereça diagnóstico próprio. Então, se durante este teste um controle do cabo sumir sem você puxar nada, isso é achado e vale anotar com a hora. E não confunda o exame da aba Sistema com diagnóstico de rádio: aquele exame é da MÁQUINA — som, Steam Input, regras de permissão —, ele nunca falou de rádio, e não falar não é falha dele. O que reprovaria aqui é o contrário: uma linha nova aparecendo, por causa de um cabo puxado, a falar de rádio.
+**A armadilha.** Esta célula do mapa é uma AUSÊNCIA declarada: o diagnóstico de que ela fala é o da morte por RÁDIO, e pelo cabo não há o que diagnosticar por esse caminho. Mas a razão desse «não» está registrada como NÃO MEDIDA — ninguém foi ver se existe uma morte de cabo que mereça diagnóstico próprio. Então, se durante este teste um controle do cabo sumir sem você puxar nada, isso é achado e vale anotar com a hora. Segunda: o lugar que fica «Desconectado» é o ÚLTIMO, e não o do P1 — enquanto um controle está fora, os que vêm depois dele descem um número e voltam quando ele volta, e é por isso que os passos seguem cada um pelo plástico. Terceira: não confunda o exame da aba Sistema com diagnóstico de rádio — ele é da máquina e não fala de rádio, e não falar não é falha dele. Uma linha que já existia e conta controles (a do áudio, por exemplo) pode mudar o número quando o cabo sai; isso é a conta. O que reprovaria aqui é uma linha NOVA aparecendo, por causa de um cabo puxado, a falar de rádio.
 
 ---
 
@@ -5090,36 +5092,36 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `plataforma.diagnostico_morte_radio @ rádio`
 
-**O que isto prova.** Prova o que a tela dela diz quando um controle do rádio sai — e o que ela NÃO diz quando ele morre de verdade, que é o achado desta linha.
+**O que isto prova.** Prova o que a tela diz quando um controle do rádio sai — e o que ela NÃO diz quando ele morre de verdade, que é o achado desta linha.
 
-**Onde olhar.** Quatro lugares. A contagem no alto de qualquer aba ("● 4 controles: 2 USB · 2 BT"). A fita do topo, com um chip por controle. Na aba Controles, o quadro "Dispositivos Conectados", onde o lugar de quem saiu passa a dizer "Desconectado". E na aba Conexões, a seção "Desempenho · O rádio de cada adaptador, em turnos", onde cada adaptador tem uma pista com um bloco por controle, e uma pista sem ninguém mostra "Nenhum controle neste rádio". O diagnóstico da morte por rádio — o aviso de que o controle está pareado, o computador o dá por conectado e mesmo assim ele não existe para o sistema — não aparece em aba nenhuma: a fonte diz que ele mora fora do produto, numa ferramenta da casa, e não na tela.
+**Onde olhar.** No canto de cima, à direita, a contagem («● 2 USB · 2 BT»). A fita do topo, com um chip por controle. Na aba Conexões, o quadro «Gestão de Controles», onde um lugar sem controle diz «Player N • Desconectado», e a seção «Rádio e Adaptadores», com a contagem ao lado do título («2 controles · 3 adaptadores») e, em cada adaptador, um ▶ que abre a lista dos controles que estão nele. Na aba Jogar, o botão «Reconectar controles», embaixo dos cartões: desde 22/09 ele também chama de volta pelo rádio os controles que o Bluetooth do computador conhece e que o Hefesto não está vendo, e diz numa frase o que fez. O diagnóstico da morte por rádio — o aviso de que o controle está pareado, o computador o dá por conectado e mesmo assim ele não existe para o Hefesto — não nasce sozinho em aba nenhuma.
 
 **Os passos.**
 
-1. Confira que P3 e P4 estão no rádio e P1 e P2 no cabo.
-2. Abra a aba Conexões e leia a seção "Desempenho": anote quantas pistas há e qual controle está em cada uma.
-3. Abra a aba Sistema e leia a conta ao lado de "O exame de hoje": anote quantas linhas e quantos avisos.
+1. Confira na fita do topo que os chips do P3 e do P4 terminam em BT e os do P1 e do P2 em USB, e anote o nome da cor do plástico de cada um.
+2. Abra a aba Conexões, clique no título «Rádio e Adaptadores», anote a contagem e, abrindo o ▶ de cada adaptador, em qual deles está cada controle do rádio.
+3. Abra a aba Sistema e leia a conta ao lado de «O exame de hoje»: anote quantas linhas e quantos avisos.
 4. Segure o botão PS do P3 até todas as luzes dele apagarem, e solte.
-5. Leia a contagem no alto da aba: tem de cair para três controles, com um no rádio.
-6. Abra a aba Controles e confira que o lugar do P3 diz "Desconectado".
-7. Confira que nenhum dos outros três se mudou para o lugar dele.
-8. Volte à aba Conexões e confira que o bloco do P3 saiu da pista do adaptador.
-9. Confira que o bloco do P4 continua na pista, do mesmo tamanho.
-10. Volte à aba Sistema e leia o exame de novo: anote se alguma linha nova nasceu.
-11. Segure o botão PS do P3 por cerca de cinco segundos, até a barra de luz dele acender, e ponha-o na mesa.
-12. Confira que ele volta ao lugar dele, com o mesmo número, e que a contagem volta a quatro.
+5. Leia a contagem no alto: ela tem de passar a «● 2 USB · 1 BT».
+6. Confira na fita que o chip com o plástico do P3 saiu e que o plástico do P4 aparece agora como P3.
+7. Volte à aba Conexões e confira que a contagem de «Rádio e Adaptadores» caiu um, que o P3 saiu da lista do adaptador dele e que o P4 continua na do seu.
+8. Volte à aba Sistema e leia o exame de novo: anote se alguma linha nova nasceu.
+9. Abra a aba Jogar e clique em «Reconectar controles», com o P3 ainda desligado.
+10. Espere a frase que aparece depois do clique — ela pode levar alguns segundos por controle pareado que esteja desligado — e anote-a palavra por palavra.
+11. Dê um toque curto no botão PS do P3 para religá-lo.
+12. Confira que ele volta com o plástico dele como P3, que o P4 volta a ser P4, e que a contagem volta a «● 2 USB · 2 BT».
 13. Repita os passos 4 a 12 com o P4.
 
-**Passa quando.** Desligar um do rádio aparece como três coisas ao mesmo tempo, em três abas: a contagem cai, o lugar dele diz "Desconectado", e o bloco dele sai da pista do adaptador na aba Conexões. Os outros três não se mexem e ninguém toma o lugar vago. E o exame da aba Sistema continua com as mesmas linhas de antes — ele não fala de rádio, e é honesto que não fale.
+**Passa quando.** Desligar um do rádio aparece como três coisas ao mesmo tempo: a contagem perde um BT, o chip dele sai da fita, e ele sai da lista do adaptador em «Rádio e Adaptadores». Nenhum dos outros cai, e no fim os quatro voltam aos números do começo. O exame da aba Sistema continua com as mesmas linhas — ele não fala de rádio, e é honesto que não fale.
 
 **Por controle.**
 
-* **P1** — No cabo, testemunha. Não toque nele. Número, cor e lugar iguais antes e depois. Ele nunca aparece numa pista da seção "Desempenho".
-* **P2** — No cabo, segunda testemunha. Mesma conferência.
-* **P3** — No rádio, e é ESTE que sai primeiro. Segure o PS até todas as luzes apagarem — nem antes nem depois — e depois religue-o pelo PS.
-* **P4** — No rádio, e é o vizinho de rádio de quem caiu: é nele que a bagunça costuma aparecer primeiro. Confira que o bloco dele continua na pista e que ele não se mudou para o lugar do P3. Depois é a vez dele de sair.
+* **P1** — USB, testemunha. Não toque nele. Ele nunca aparece em «Rádio e Adaptadores», e não pode cair.
+* **P2** — USB, segunda testemunha. Mesma conferência.
+* **P3** — BT, e é ESTE que sai primeiro. Segure o PS até todas as luzes apagarem — nem antes nem depois — e depois religue-o com um toque curto.
+* **P4** — BT, e é o vizinho de rádio de quem caiu. Enquanto o P3 está fora, ele aparece como P3 e tem de continuar na lista do adaptador dele. Depois é a vez dele de sair.
 
-**A armadilha.** Este teste NÃO alcança a morte de que a linha fala, e é preciso dizer. A morte por rádio é outra coisa: o controle está pareado, o computador o dá por conectado, e mesmo assim ele não existe para o sistema — nasce órfão. Isso não se provoca com o botão PS. Quem o detecta hoje é uma ferramenta da casa que não está na tela: nenhuma aba avisa, nenhuma frase nasce. O que os passos acima medem é o degrau de baixo — o desligamento limpo, que a tela conta certo em três lugares. Se um dia o P3 estiver pareado, o computador disser que ele está conectado e mesmo assim ele não aparecer no Hefesto, ISSO é a morte por rádio: anote a hora e não procure a frase, porque ela não existe. Segunda armadilha: soltar o botão PS cedo demais não desliga o controle, e com cerca de cinco segundos de aperto o Hefesto lê aquilo como um toque e abre a Steam — se ela abrir, feche-a e refaça o passo. Terceira: não conte o exame da aba Sistema como diagnóstico de rádio; ele é da máquina.
+**A armadilha.** Este teste NÃO provoca a morte de que a linha fala, e é preciso dizer. A morte por rádio é outra coisa: o controle está pareado, o computador o dá por conectado, e mesmo assim ele não existe para o Hefesto — nasce órfão. Isso não se provoca com o botão PS, e nenhuma aba avisa sozinha quando acontece. O que a tela tem hoje é a CURA: «Reconectar controles» derruba esse elo morto e pede que você aperte PS. Então, se um dia um controle estiver aceso e pareado e não aparecer no Hefesto, ISSO é a morte por rádio: anote a hora e clique em «Reconectar controles». Segunda, e é o que o passo 10 caça: com o P3 desligado de propósito, a frase do «Reconectar controles» pode dizer que derrubou um elo morto — e não havia elo morto nenhum, o controle só estava desligado. Anote a frase inteira: ela conta todo DualSense pareado neste computador que esteja desligado, não só o P3. Terceira: soltar o botão PS cedo demais não desliga o controle, e um aperto solto no PS abre a Steam; se ela abrir, feche-a e refaça o passo. Quarta: não conte o exame da aba Sistema como diagnóstico de rádio; ele é da máquina.
 
 ---
 
@@ -5129,33 +5131,33 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o Hefesto arranca de cada controle do cabo uma resposta que o clone medido nesta casa não sabe dar: o nome da cor do plástico de fábrica.
 
-**Onde olhar.** Na fita do topo, o chip de cada controle: o número, o nome da cor do plástico e a borda pintada nessa cor. Na aba Conexões, quadro "Gestão de Controles", a mesma leitura aparece como uma barra fina de cor na aresta esquerda da linha de cada controle; quando o Hefesto não conseguiu ler a cor, a barra fica neutra e o desenho do controle fica cinza — e está dito no "?" do quadro e ao passar o ponteiro na linha. Não existe em tela nenhuma um campo que diga "genuíno" ou "clone": a fonte não diz onde ele se leria, porque o produto não faz verificação de autenticidade.
+**Onde olhar.** Na fita do topo, o chip de cada controle — «P1 • <nome da cor do plástico> • USB» — com a borda pintada nessa cor. Na aba Conexões, no quadro «Gestão de Controles» (abre pelo título), a mesma leitura aparece como uma barra fina de cor na aresta esquerda da linha de cada controle; o «?» do quadro diz que a borda e o desenho usam a cor lida do aparelho e que, sem leitura, ficam neutros. Na aba Iluminação, a linha «Controle» desenha cada controle na cor do plástico. Não existe em tela nenhuma um campo que diga «genuíno» ou «clone», porque o produto não faz verificação de autenticidade.
 
 **Os passos.**
 
-1. Confira que P1 e P2 estão no cabo e P3 e P4 no rádio.
+1. Confira na fita do topo que os chips do P1 e do P2 terminam em USB e os do P3 e do P4 em BT.
 2. Abra a aba Controles.
 3. Leia o chip do P1 na fita do topo e anote o nome da cor.
 4. Pegue o P1 na mão e compare o plástico com o nome anotado.
 5. Repita a leitura e a comparação com o P2.
 6. Repita com o P3 e com o P4.
-7. Abra a aba Conexões.
-8. Confira, nas quatro linhas do quadro "Gestão de Controles", que a barra da aresta esquerda está pintada e não neutra.
-9. Passe o ponteiro sobre a linha de qualquer controle cuja barra esteja neutra e leia o que o produto diz.
-10. Anote qual controle, se algum, ficou sem nome de cor e sem borda.
-11. Puxe o cabo do P1, dê um toque no PS para trazê-lo pelo rádio e leia o chip dele de novo.
-12. Encaixe o cabo de volta e confirme que a cor continua lá.
+7. Abra a aba Conexões e clique no título «Gestão de Controles».
+8. Confira, nas quatro linhas, que a barra da aresta esquerda está pintada e não neutra.
+9. Abra a aba Iluminação e confira que os quatro desenhos da linha «Controle» estão pintados na cor do plástico, e não cinza.
+10. Anote qual controle, se algum, ficou sem nome de cor, com a barra neutra ou com o desenho cinza.
+11. Puxe o cabo do P1, dê um toque no PS para trazê-lo pelo rádio e leia o chip com o plástico dele de novo: o nome da cor tem de continuar lá, agora terminando em BT.
+12. Encaixe o cabo de volta e confirme que a cor continua lá, terminando em USB.
 
-**Passa quando.** Os dois do cabo trazem nome de cor e borda pintada, e o nome bate com o plástico na sua mão. Um controle que não devolve essa resposta é o achado — e o produto o mostra como cor não lida, com borda neutra e desenho cinza, em vez de inventar uma cor.
+**Passa quando.** Os dois do cabo trazem nome de cor e borda pintada, e o nome bate com o plástico na sua mão. Um controle que não devolve essa resposta é o achado — e o produto o mostra como cor não lida, com a barra neutra e o desenho cinza, em vez de inventar uma cor.
 
 **Por controle.**
 
-* **P1** — No cabo, e é ESTE que responde primeiro. Nome da cor no chip, borda pintada, e o plástico na sua mão batendo com os dois. É também ele que atravessa para o rádio no fim, para você ver a mesma resposta chegando pelos dois braços.
-* **P2** — No cabo, o segundo. Mesma conferência. Dois aparelhos respondendo valem muito mais que um.
-* **P3** — No rádio, e é comparação. Pelo rádio essa resposta chega assinada, e o próprio sistema recusa uma assinatura errada — quem passou por ali já acertou duas contas antes de a cor aparecer.
-* **P4** — No rádio, a segunda comparação. Se um dos dois do rádio vier sem cor e o outro vier com, o achado é do aparelho, não do transporte.
+* **P1** — USB, e é ESTE que responde primeiro. Nome da cor no chip, borda pintada, e o plástico na sua mão batendo com os dois. É também ele que atravessa para o rádio no fim, para você ver a mesma resposta chegando pelos dois braços.
+* **P2** — USB, o segundo. Mesma conferência. Dois aparelhos respondendo valem muito mais que um.
+* **P3** — BT, e é comparação. Pelo rádio essa resposta chega assinada, e o próprio sistema recusa uma assinatura errada — quem passou por ali já acertou duas contas antes de a cor aparecer.
+* **P4** — BT, a segunda comparação. Se um dos dois do rádio vier sem cor e o outro vier com, o achado é do aparelho, não do transporte.
 
-**A armadilha.** Isto não é anti-clone, e dizer que é seria mentira. O Hefesto aceita qualquer aparelho que se apresente com o número de fábrica certo: não há desafio, não há senha, não há como um programa desta casa conferir a assinatura da Sony. O que este teste mede é uma resposta A MAIS, que o clone medido nesta casa não dá — o firmware dele responde três perguntas e mais nada, e a da cor é a quarta. Um clone melhor copia a resposta e passa igual. Segunda: a cor sumir NÃO é prova de clone; pode ser um aparelho cuja assinatura de cor esta casa ainda não conhece, e nesse caso a tela devolve "não sei", que é o certo. Terceira: nenhum degrau foi escrito nesta linha do mapa. Ela foi preenchida lendo o firmware de um clone real e o que os aparelhos declaram, sem uma única escrita nos controles dela — o que você fizer aqui é a primeira vez que um par de mãos a mede.
+**A armadilha.** Isto não é anti-clone, e dizer que é seria mentira. O Hefesto aceita qualquer aparelho que se apresente com o número de fábrica certo: não há desafio, não há senha, não há como um programa desta casa conferir a assinatura da Sony. O que este teste mede é uma resposta A MAIS, que o clone medido nesta casa não dá — o firmware dele responde três perguntas e mais nada, e a da cor é a quarta. Um clone melhor copia a resposta e passa igual. Segunda: a cor sumir NÃO é prova de clone; pode ser um aparelho cuja assinatura de cor esta casa ainda não conhece, e nesse caso a tela devolve «não sei», que é o certo. Terceira: na travessia do passo 11 o P1 some por um instante e os outros três descem um número até ele voltar; siga-os pelo plástico. Quarta: nenhum degrau foi escrito nesta linha do mapa. Ela foi preenchida lendo o firmware de um clone real e o que os aparelhos declaram, sem uma única escrita nos seus controles — o que você fizer aqui é a primeira vez que um par de mãos a mede.
 
 ---
 
@@ -5165,20 +5167,20 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, pelo rádio, o controle tem de acertar mais contas antes de aparecer na tela — e que a resposta que denuncia o clone medido chega assim mesmo.
 
-**Onde olhar.** Na fita do topo, o chip do P3 e o do P4: o número, o nome da cor do plástico e a borda pintada nessa cor. Na aba Conexões, quadro "Gestão de Controles", a barra fina de cor na aresta esquerda da linha de cada controle; barra neutra e desenho cinza querem dizer que a cor não foi lida, e o "?" do quadro explica isso. Não existe em tela nenhuma um campo que diga "genuíno" ou "clone": a fonte não diz onde ele se leria, porque o produto não faz verificação de autenticidade.
+**Onde olhar.** Na fita do topo, o chip do P3 e o do P4 — «P3 • <nome da cor do plástico> • BT» — com a borda pintada nessa cor. Na aba Conexões, no quadro «Gestão de Controles» (abre pelo título), a barra fina de cor na aresta esquerda da linha de cada controle; barra neutra quer dizer que a cor não foi lida, e o «?» do quadro diz isso. Na aba Iluminação, a linha «Controle», com o desenho de cada controle na cor do plástico — cinza quando a cor não foi lida. Não existe em tela nenhuma um campo que diga «genuíno» ou «clone».
 
 **Os passos.**
 
-1. Confira que P3 e P4 estão no rádio e P1 e P2 no cabo.
+1. Confira na fita do topo que os chips do P3 e do P4 terminam em BT e os do P1 e do P2 em USB.
 2. Abra a aba Controles.
 3. Leia o chip do P3 na fita do topo e anote o nome da cor.
 4. Pegue o P3 na mão e compare o plástico com o nome anotado.
 5. Repita a leitura e a comparação com o P4.
 6. Leia os chips do P1 e do P2, que estão no cabo, e anote as cores deles também.
-7. Abra a aba Conexões e confira, nas quatro linhas do quadro "Gestão de Controles", quais barras estão pintadas e quais estão neutras.
-8. Passe o ponteiro sobre a linha de qualquer controle de barra neutra e leia o que o produto diz.
-9. Se o P3 tiver vindo sem cor, encaixe um cabo nele, sem desligá-lo, e leia o chip de novo.
-10. Puxe o cabo do P3 e confira o que acontece com a cor quando ele volta ao rádio.
+7. Abra a aba Conexões, clique no título «Gestão de Controles» e confira, nas quatro linhas, quais barras estão pintadas e quais estão neutras.
+8. Abra a aba Iluminação e confira quais desenhos da linha «Controle» estão pintados e quais estão cinza.
+9. Se o P3 tiver vindo sem cor, encaixe um cabo nele, sem desligá-lo, e leia o chip dele de novo.
+10. Puxe o cabo do P3 e confira o que acontece com a cor quando ele volta ao rádio; se ele não voltar sozinho, dê um toque curto no PS dele.
 11. Repita os dois passos acima com o P4, se ele também tiver vindo sem cor.
 12. Anote, no fim, quantos dos quatro devolveram a cor e por qual braço.
 
@@ -5186,12 +5188,12 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **Por controle.**
 
-* **P1** — No cabo, comparação. Anote a cor dele antes de julgar o rádio: se nem no cabo aparecer cor, o problema não é do rádio.
-* **P2** — No cabo, segunda comparação.
-* **P3** — No rádio, e é ESTE que responde primeiro. Se ele vier sem cor, leve o mesmo aparelho ao cabo e olhe de novo — apareceu no cabo e não no rádio, o achado é do rádio; não apareceu nos dois, o achado é do aparelho.
-* **P4** — No rádio, e é ele que fecha a amostra: a leitura da cor pelo rádio está provada em DUAS unidades desta bancada, não nas quatro. Se ele responder, a conta fecha; se recusar, anote o modelo dele, porque o achado é a assinatura daquele aparelho.
+* **P1** — USB, comparação. Anote a cor dele antes de julgar o rádio: se nem no cabo aparecer cor, o problema não é do rádio.
+* **P2** — USB, segunda comparação.
+* **P3** — BT, e é ESTE que responde primeiro. Se ele vier sem cor, leve o mesmo aparelho ao cabo e olhe de novo — apareceu no cabo e não no rádio, o achado é do rádio; não apareceu nos dois, o achado é do aparelho.
+* **P4** — BT, e é ele que fecha a amostra: a leitura da cor pelo rádio está provada em DUAS unidades desta bancada, não nas quatro. Se ele responder, a conta fecha; se recusar, anote o modelo dele, porque o achado é a assinatura daquele aparelho.
 
-**A armadilha.** A barra que o rádio impõe é mais alta e continua copiável: o selo tem semente conhecida, e qualquer clone que leia a mesma tabela o acerta. Nada aqui prova autenticidade — prova só que o aparelho deu uma resposta a mais que o clone medido não dá. Segunda, e é a que faz julgar errado: a cor pelo rádio está provada em duas unidades, então um terceiro controle sem cor NÃO é veredito sobre o transporte; é achado daquele aparelho, e a tela devolve "não sei" em vez de inventar, que é o certo. Antes de concluir qualquer coisa, faça o mesmo aparelho atravessar para o cabo e olhe de novo. Terceira: nenhum degrau foi escrito nesta linha do mapa — ela nasceu de leitura de firmware de clone e do que os aparelhos declaram, sem uma escrita sequer nos controles dela.
+**A armadilha.** A barra que o rádio impõe é mais alta e continua copiável: o selo tem semente conhecida, e qualquer clone que leia a mesma tabela o acerta. Nada aqui prova autenticidade — prova só que o aparelho deu uma resposta a mais que o clone medido não dá. Segunda, e é a que faz julgar errado: a cor pelo rádio está provada em duas unidades, então um terceiro controle sem cor NÃO é veredito sobre o transporte; é achado daquele aparelho, e a tela devolve «não sei» em vez de inventar, que é o certo. Antes de concluir qualquer coisa, faça o mesmo aparelho atravessar para o cabo e olhe de novo — e, na travessia, ele some por um instante e o vizinho desce um número até ele voltar. Terceira: nenhum degrau foi escrito nesta linha do mapa — ela nasceu de leitura de firmware de clone e do que os aparelhos declaram, sem uma escrita sequer nos seus controles.
 
 ---
 
@@ -5199,35 +5201,36 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `plataforma.escada_de_output @ cabo`
 
-**O que isto prova.** Prova que, pelo cabo, tudo o que o Hefesto manda cabe num caminho de saída só, curto — e que a pergunta "e se coubesse mais?" nunca foi feita a nenhum controle no fio.
+**O que isto prova.** Prova que, pelo cabo, tudo o que o Hefesto manda cabe num caminho de saída só, curto — e que a pergunta «e se coubesse mais?» nunca foi feita a nenhum controle no fio.
 
-**Onde olhar.** No aparelho: a barra de luz (as duas tiras que ladeiam o touchpad), o tremor na sua mão e a resistência do L2 e do R2. Na tela: a linha "Cor" da coluna de cada controle, na aba Iluminação; o botão "Testar" da linha "Testar agora", na aba Vibração; e o campo "Modo" das linhas "Gatilho esquerdo" e "Gatilho direito", na aba Gatilhos. O tamanho do caminho de saída não aparece em tela nenhuma: a fonte não diz onde ele se leria, porque não há campo — e nenhum botão desta interface pede um caminho maior pelo cabo.
+**Onde olhar.** No aparelho: a barra de luz (as duas tiras acesas dos lados do touchpad), o tremor na sua mão e a resistência do L2 e do R2. Na tela: a linha «Cor» da coluna de cada controle, na aba Iluminação; o botão «Testar» da linha «Testar agora», na aba Vibração; e, na aba Gatilhos, o campo «Modo» de cada coluna — o do bloco de cima é o do L2, o do bloco de baixo é o do R2. O tamanho do caminho de saída não aparece em tela nenhuma, e nenhum botão desta interface pede um caminho maior pelo cabo.
 
 **Os passos.**
 
-1. Confira que P1 e P2 estão no cabo e P3 e P4 no rádio.
-2. Abra a aba Iluminação e clique numa bolinha da linha "Cor" da coluna do P1.
+1. Confira na fita do topo que os chips do P1 e do P2 terminam em USB e os do P3 e do P4 em BT.
+2. Abra a aba Iluminação e, na linha «Cor» da coluna do P1, clique num quadradinho cuja cor nenhum outro controle esteja usando.
 3. Olhe a barra de luz do P1 no aparelho e confirme a cor.
-4. Abra a aba Vibração, segure o P1 na mão e clique em "Testar" na coluna dele.
+4. Abra a aba Vibração, segure o P1 na mão e clique em «Testar» na coluna dele.
 5. Sinta o meio segundo de tremor nos dois punhos.
-6. Abra a aba Gatilhos e escolha "Rígido" no campo "Modo" da linha "Gatilho esquerdo", na coluna do P1.
-7. Aperte o L2 do P1 e sinta se ele travou duro do começo ao fim do curso.
-8. Escolha "Rígido" também no "Gatilho direito" do P1 e aperte o R2.
-9. Repita os passos 2 a 8 no P2.
-10. Volte à aba Iluminação e confira que a barra de luz do P1 continua na cor que você pôs.
-11. Escolha "Desligado" nos dois gatilhos do P1 e do P2, para desfazer.
-12. Aperte o L2 e o R2 dos dois e confirme que voltaram a ficar leves.
+6. Abra a aba Gatilhos e anote o «Modo» que está escolhido no L2 e no R2 da coluna do P1.
+7. No bloco do L2, escolha «Rígido» no campo «Modo» da coluna do P1.
+8. Aperte o L2 do P1 e sinta se ele travou duro do começo ao fim do curso.
+9. Escolha «Rígido» também no «Modo» do bloco do R2 da coluna do P1 e aperte o R2.
+10. Repita os passos 2 a 9 no P2.
+11. Volte à aba Iluminação e confira que a barra de luz do P1 continua na cor que você pôs.
+12. Na aba Gatilhos, devolva ao L2 e ao R2 do P1 e do P2 o «Modo» que você anotou, e aperte os quatro gatilhos para sentir que voltaram.
+13. Na aba Iluminação, clique no primeiro quadradinho da coluna do P1 e no segundo da coluna do P2 — a cor do número de cada um —, para desfazer.
 
 **Passa quando.** Cor, tremor e gatilho chegam aos dois controles do cabo, e as três coisas viajam pelo mesmo caminho único e curto que o cabo oferece. Não há nada a mais para ver aqui, e é exatamente isso que esta linha do mapa afirma.
 
 **Por controle.**
 
-* **P1** — No cabo, e é ESTE que prova o caminho: cor na barra de luz, tremor na mão, L2 e R2 travando. Devolva "Desligado" nos gatilhos no fim.
-* **P2** — No cabo, o segundo. Os mesmos três gestos. Dois aparelhos fazem a prova valer mais que um.
-* **P3** — No rádio, comparação. Não é preciso mexer nele: ele está aqui para lembrar que pelo rádio essas mesmas três coisas viajam por um caminho que tem nove tamanhos, e pelo cabo só um.
-* **P4** — No rádio, segunda comparação. Não toque nele.
+* **P1** — USB, e é ESTE que prova o caminho: cor na barra de luz, tremor na mão, L2 e R2 travando. Devolva os gatilhos ao que eram no fim.
+* **P2** — USB, o segundo. Os mesmos três gestos. Dois aparelhos fazem a prova valer mais que um.
+* **P3** — BT, comparação. Não é preciso mexer nele: ele está aqui para lembrar que pelo rádio essas mesmas três coisas viajam por um caminho que tem nove tamanhos, e pelo cabo só um.
+* **P4** — BT, segunda comparação. Não toque nele.
 
-**A armadilha.** A pergunta desta linha não é respondível daqui, e o mapa é honesto sobre isso: pelo rádio o controle oferece NOVE caminhos de saída, de tamanhos crescentes; pelo cabo ele oferece um só. Se algum dos caminhos grandes funcionaria pelo fio, NINGUÉM TENTOU — a célula do mapa diz "desconhecido" e não "não", de propósito. Nenhum botão desta tela manda um caminho grande pelo cabo, e não é para ela tentar isso com as mãos. Segunda: não declarar não é recusar — o cabo não anuncia esses caminhos, e isso não prova que ele os jogaria fora. Terceira: se o gatilho não travar, não conclua nada sobre o caminho; a tela mostra o que foi PEDIDO, e um jogo aberto pode estar escrevendo por cima. E o degrau: esta linha do mapa não tem degrau escrito.
+**A armadilha.** A pergunta desta linha não é respondível daqui, e o mapa é honesto sobre isso: pelo rádio o controle oferece NOVE caminhos de saída, de tamanhos crescentes; pelo cabo ele oferece um só. Se algum dos caminhos grandes funcionaria pelo fio, NINGUÉM TENTOU — a célula do mapa diz «desconhecido» e não «não», de propósito. Nenhum botão desta tela manda um caminho grande pelo cabo, e não é para você tentar isso com as mãos. Segunda: não declarar não é recusar — o cabo não anuncia esses caminhos, e isso não prova que ele os jogaria fora. Terceira: se o gatilho não travar, não conclua nada sobre o caminho; o DualSense não devolve o modo em que está, a tela mostra o que foi PEDIDO, e um jogo aberto pode estar escrevendo por cima. E o degrau: esta linha do mapa não tem degrau escrito.
 
 ---
 
@@ -5237,34 +5240,34 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o caminho de saída que o Hefesto sabe montar chega ao controle pelo rádio nos DOIS aparelhos do ar — que é exatamente a amostra que faltava.
 
-**Onde olhar.** No aparelho: a barra de luz do P3 e a do P4 (as duas tiras que ladeiam o touchpad). Na tela, na aba Iluminação: cada controle tem uma coluna com a etiqueta dele no alto; a linha "Cor" traz oito bolinhas e a linha "Opções" traz os botões "Automático" e "Desligar". A linha "LEDs" mostra a cor que o Hefesto PEDIU, não a que está acesa — e embaixo dela pode nascer uma ressalva quando ele não tem certeza. Os caminhos maiores de saída não têm botão em tela nenhuma: a fonte não diz onde se pediria um, porque o produto só sabe montar o menor.
+**Onde olhar.** No aparelho: a barra de luz do P3 e a do P4 (as duas tiras acesas dos lados do touchpad). Na tela, na aba Iluminação: cada controle tem uma coluna; a linha «Modelo» diz de quem ela é («P3 • <cor do plástico> • BT»); a linha «Cor» traz onze quadradinhos, com o código da cor escrito embaixo; a linha «Opções» traz o botão «Desligar»; e a linha «LEDs» desenha a barra e as lâmpadas que o Hefesto PEDIU, não as que estão acesas. Os caminhos maiores de saída não têm botão em tela nenhuma: o produto só sabe montar o menor.
 
 **Os passos.**
 
-1. Confira que P3 e P4 estão no rádio e P1 e P2 no cabo.
+1. Confira na fita do topo que os chips do P3 e do P4 terminam em BT e os do P1 e do P2 em USB.
 2. Abra a aba Iluminação.
-3. Leia a etiqueta no alto das quatro colunas e confirme quem está por cabo e quem está por rádio.
-4. Clique numa bolinha da linha "Cor" da coluna do P1 e confirme a cor na barra de luz dele — este é o controle de comparação, pelo cabo.
-5. Clique numa cor bem diferente na linha "Cor" da coluna do P3.
+3. Leia a linha «Modelo» das quatro colunas e confirme quem termina em USB e quem termina em BT.
+4. Clique num quadradinho de cor livre — que nenhum outro controle esteja usando — na linha «Cor» da coluna do P1 e confirme a cor na barra de luz dele: este é o controle de comparação, pelo cabo.
+5. Clique numa cor livre bem diferente na linha «Cor» da coluna do P3.
 6. Olhe a barra de luz do P3 no aparelho e confirme que ela acendeu nessa cor.
-7. Clique numa terceira cor na mesma coluna do P3 e confirme que a barra dele trocou.
-8. Clique em "Desligar" na linha "Opções" da coluna do P3 e confirme que a barra dele apaga.
+7. Clique numa terceira cor livre na mesma coluna do P3 e confirme que a barra dele trocou.
+8. Clique em «Desligar», na linha «Opções» da coluna do P3, e confirme que a barra dele apaga.
 9. Clique numa cor de novo na coluna do P3 e confirme que ela volta a acender.
 10. Repita os passos 5 a 9 na coluna do P4.
 11. Olhe os quatro controles juntos: quatro barras acesas, quatro cores diferentes.
-12. Clique em "Automático" na linha "Opções" das colunas do P3 e do P4, para desfazer.
+12. Clique, em cada coluna em que você mexeu, no quadradinho da cor do número daquele controle — o primeiro para o P1, o terceiro para o P3, o quarto para o P4 —, para desfazer.
 13. Anote o modelo de cada um dos dois do rádio ao lado do resultado.
 
-**Passa quando.** A barra de luz do P3 e a do P4 obedecem à cor escolhida, trocam quando você troca, apagam no "Desligar" e voltam quando você pinta de novo. As duas são do rádio, e é nas DUAS que a prova precisava existir: até hoje ela existia num aparelho só.
+**Passa quando.** A barra de luz do P3 e a do P4 obedecem à cor escolhida, trocam quando você troca, apagam no «Desligar» e voltam quando você pinta de novo. As duas são do rádio, e é nas DUAS que a prova precisava existir: até hoje ela existia num aparelho só.
 
 **Por controle.**
 
-* **P1** — No cabo, e é a comparação. Pinte uma cor NELE primeiro: se ele também não obedecer, o achado não é do rádio e o resto do teste não mede nada.
-* **P2** — No cabo. Não toque nele.
-* **P3** — No rádio, e é ESTE que repete o que já foi visto: um aparelho como ele obedeceu com o olho dela em 15 de agosto.
-* **P4** — No rádio, e é o que INTERESSA MAIS. A obediência pelo rádio está vista em UMA unidade só; este é o segundo aparelho. Se ele obedecer, a amostra fecha; se não, o achado é dele — anote o modelo.
+* **P1** — USB, e é a comparação. Pinte uma cor NELE primeiro: se ele também não obedecer, o achado não é do rádio e o resto do teste não mede nada.
+* **P2** — USB. Não toque nele.
+* **P3** — BT, e é ESTE que repete o que já foi visto: um aparelho como ele obedeceu com o seu olho em 15 de agosto.
+* **P4** — BT, e é o que INTERESSA MAIS. A obediência pelo rádio está vista em UMA unidade só; este é o segundo aparelho. Se ele obedecer, a amostra fecha; se não, o achado é dele — anote o modelo.
 
-**A armadilha.** A tela não é a prova. A linha "LEDs" mostra a cor que o Hefesto PEDIU, e pelo rádio um pedido mal montado é jogado fora pelo controle sem uma palavra: a tela pode dizer que pediu e o plástico não mudar. Quem responde é a faixa acesa no plástico. Segunda: não mexa no interruptor "Cores automáticas por controle", no alto da aba — ele é do perfil e vale para os quatro de uma vez, e este teste é sobre a coluna de cada um. Terceira, e é sobre o alcance: os caminhos GRANDES de saída não têm botão nesta tela. Dois deles já obedeceram, com o olho dela, em 15 de agosto, num aparelho branco — mas o Hefesto de hoje só sabe carimbar o menor; um grande sairia sem selo e o controle o jogaria fora enquanto o registro diria "escrito". Não procure por eles aqui. E o degrau: esta linha do mapa está com o degrau VAZIO de propósito — a obediência foi vista, mas o caderno de bancada ainda não tem o ensaio que a registra. O que você fizer aqui é o que vai preenchê-lo.
+**A armadilha.** A tela não é a prova. A linha «LEDs» e o código embaixo dos quadradinhos mostram o que o Hefesto PEDIU, e pelo rádio um pedido mal montado é jogado fora pelo controle sem uma palavra: a tela pode dizer que pediu e o plástico não mudar. Quem responde é a faixa acesa no plástico. Segunda: não mexa no interruptor «Cores automáticas por controle», no alto da aba — ele é do perfil e vale para os quatro de uma vez, e este teste é sobre a coluna de cada um. E escolha sempre um tom livre: um tom que já é de outro controle não fica no que você clicou, e a tela diz de quem ele era. Terceira, e é sobre o alcance: os caminhos GRANDES de saída não têm botão nesta tela. Dois deles já obedeceram, com o seu olho, em 15 de agosto, num aparelho branco — mas o Hefesto de hoje só sabe carimbar o menor para a luz; um grande sairia sem selo e o controle o jogaria fora enquanto o registro diria «escrito». Não procure por eles aqui. E o degrau: esta linha do mapa está com o degrau VAZIO de propósito — a obediência foi vista, mas o caderno de bancada ainda não tem o ensaio que a registra. O que você fizer aqui é o que vai preenchê-lo.
 
 ---
 
@@ -5272,36 +5275,34 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `plataforma.escrita_crua @ cabo`
 
-**O que isto prova.** Prova que o comando que o Hefesto escreve direto no aparelho também sai pelos dois controles do cabo, e que eles continuam obedecendo à cor depois disso.
+**O que isto prova.** Prova que o comando cru que a tela ainda aciona — o que põe o microfone do rádio no ar — nunca vai para os dois controles do cabo, e que eles seguem obedecendo depois.
 
-**Onde olhar.** Na aba Iluminação. Cada controle tem uma coluna, com a etiqueta dele no alto — o número, a cor do plástico e por onde ele está ligado. As linhas são nomeadas na coluna da esquerda: Controle, Modelo, Cor, Brilho, Jogador, LEDs e Opções. A linha Cor tem os oito quadradinhos de cor, com o código da cor escrito logo abaixo deles; a linha Opções tem os botões «Automático» e «Desligar». Mas a resposta não é a tela: é a barra de luz no plástico, as duas tiras acesas dos dois lados do touchpad. Se o comando não chegar ao serviço, uma frase de recusa aparece na própria coluna. Não existe na tela nenhum campo que diga «o comando cru saiu» — a fonte não diz onde se leria isso, porque não há onde.
+**Onde olhar.** Na aba Conexões, no quadro «Gestão de Controles» (abre pelo título): a linha de cada controle diz por onde o microfone dele chega — nos do cabo, «pelo cabo • Placa do controle»; nos do rádio, «pelo rádio • Pela ponte». A ponte é o caminho cru, e ela só existe no rádio. Clicando na linha de um controle, ela abre e mostra, abaixo de «Microfone e botões», o campo com «Ligado» e «Desligado». Na aba Controles, no cartão de cada controle, o bloco «Microfone» tem uma barrinha que mexe com o som que está entrando agora. E na aba Iluminação, a linha «Cor» da coluna de cada controle e, no aparelho, a barra de luz. Não existe na tela nenhum campo que diga «o comando cru saiu».
 
 **Os passos.**
 
-1. Confira na fita do topo que o P1 e o P2 dizem cabo.
-2. Feche a Steam e qualquer jogo aberto.
-3. Abra a aba Iluminação.
-4. Olhe as barras de luz dos quatro aparelhos e anote a cor de cada uma.
-5. Clique, na linha Cor da coluna do P1, num quadradinho de cor bem diferente da que ele tem agora.
-6. Confirme que a barra do P1 acendeu nessa cor.
-7. Clique em «Automático», na linha Opções da coluna do P1.
-8. Olhe a barra do P1 no aparelho: ela tem de passar para a cor do número dele, que é o azul.
-9. Confira que nenhuma frase de recusa apareceu na coluna do P1.
-10. Olhe as barras do P3 e do P4: nenhuma pode ter mudado.
-11. Clique de novo num quadradinho de cor na coluna do P1 e confirme que a barra ainda obedece.
-12. Repita os passos 5 a 11 na coluna do P2, cuja cor de número é o vermelho.
-13. Anote qualquer coisa estranha que o P1 ou o P2 fizer logo depois do «Automático» — piscada, apagão, cor errada, ou um instante de barra morta.
+1. Confira na fita do topo que os chips do P1 e do P2 terminam em USB.
+2. Abra a aba Conexões.
+3. Clique no título «Gestão de Controles» e leia o que as linhas do P1 e do P2 dizem sobre o microfone: tem de estar escrito «pelo cabo • Placa do controle».
+4. Abra a aba Controles, clique na linha do P1 para abrir o cartão dele e fale perto dele: a barrinha do bloco «Microfone» tem de mexer.
+5. Volte à aba Conexões, clique na linha do P1 para abri-la e escolha «Desligado» no campo do microfone.
+6. Volte à aba Controles e fale perto do P1 de novo: a barrinha tem de continuar mexendo, porque no cabo o microfone não passa pela ponte.
+7. Volte à aba Conexões e escolha «Ligado» no campo do microfone do P1, para desfazer.
+8. Repita os passos 4 a 7 no P2.
+9. Abra a aba Iluminação e clique num quadradinho de cor livre na coluna do P1: a barra de luz dele tem de obedecer.
+10. Faça o mesmo na coluna do P2.
+11. Clique no primeiro quadradinho da coluna do P1 e no segundo da do P2 — a cor do número de cada um —, para desfazer.
 
-**Passa quando.** Nos dois controles do cabo, o «Automático» troca a barra para a cor do número sem nenhuma frase de recusa na coluna, e logo depois o mesmo controle ainda obedece a um clique de cor novo. As barras do P3 e do P4 não mudam em nenhum dos dois momentos.
+**Passa quando.** As linhas do P1 e do P2 dizem «pelo cabo • Placa do controle» do começo ao fim, nunca «Pela ponte». Desligar a ponte de um controle do cabo não cala o microfone dele, e depois de tudo os dois continuam obedecendo à cor.
 
 **Por controle.**
 
-* **P1** — Cabo, e é um dos dois que recebem o comando. Ponha uma cor à mão, clique em «Automático» e veja a barra ir para o azul do número 1. Depois clique numa cor de novo: ele tem de continuar obedecendo.
-* **P2** — Cabo, o segundo que recebe. Mesmo gesto, e a cor do número 2 é o vermelho. Se um dos dois do cabo se comportar diferente do outro, o achado é daquele aparelho e não do transporte — anote qual.
-* **P3** — Rádio, testemunha. Não toque na coluna dele. A barra dele não pode mudar quando você mexe no P1 nem no P2.
-* **P4** — Rádio, testemunha. Mesma coisa. Se a cor que você pôs no P1 aparecer nele, o comando pegou o transporte inteiro em vez do controle escolhido, e isso é o achado.
+* **P1** — USB, e é um dos dois que provam que o caminho cru não os alcança. Microfone pela placa do próprio controle, antes e depois de mexer na ponte.
+* **P2** — USB, o segundo. Mesma conferência. Se um dos dois do cabo se comportar diferente do outro, o achado é daquele aparelho e não do transporte — anote qual.
+* **P3** — BT, testemunha. Não toque nele. A linha dele tem de continuar dizendo «pelo rádio • Pela ponte» enquanto você mexe nos do cabo.
+* **P4** — BT, testemunha. Mesma coisa. Se a ponte dele cair quando você desliga a do P1, a escolha foi para o controle errado, e isso é o achado.
 
-**A armadilha.** Este teste prova menos do que parece, e dizer isso é metade do valor dele. O que já está medido é que a escrita SAI e que o sistema a aceita — nunca que o aparelho a executou. O canal por onde ela sai é cru: não confere nada, e por isso ela sai igual pelo cabo, onde o controle nem declara esperar esse comando. Um verde aqui diz «o Hefesto mandou e ninguém reclamou», e é exatamente por isso que o passo 11 existe: o único degrau que a sua mão consegue provar é que o controle continua obedecendo depois. Mais duas: não use o interruptor «Cores automáticas por controle», no alto da aba — ele é do perfil e vale para os quatro de uma vez, e este teste é sobre a coluna de um; e o «Automático» LARGA a barra daquele controle para o jogo escolher, então com a Steam ou um jogo abertos a cor pode mudar sozinha depois, e você anotaria como defeito o que é outro programa escrevendo por cima.
+**A armadilha.** Três. (1) Este teste prova menos do que o nome da linha, e dizer isso é metade do valor dele: o outro comando cru da casa, o que devolve a barra de luz ao jogo, varre todos os controles, inclusive os do cabo — e ele não tem botão em tela nenhuma: só o instrumento de terminal da casa o manda, e a sua mão não alcança essa metade. (2) O que já está medido é que a escrita SAI e que o sistema a aceita — nunca que o aparelho a executou; é por isso que os passos 9 e 10 conferem que os controles seguem obedecendo depois. (3) O «Desligado» do campo do microfone fica guardado no controle e vale quando ele for para o rádio: se você esquecer o passo 7, o P1 chega ao rádio sem microfone. Devolva «Ligado» sempre.
 
 ---
 
@@ -5309,41 +5310,34 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `plataforma.escrita_crua @ rádio`
 
-**O que isto prova.** Prova que os dois comandos que o Hefesto escreve direto no aparelho saem pelos dois controles do rádio — o que solta a barra de luz e o que faz o microfone chegar pela ponte.
+**O que isto prova.** Prova que o comando que o Hefesto escreve direto no aparelho para pôr o microfone no ar sai pelos dois controles do rádio — e que ele sobe e desce a ponte de cada um sem mexer no vizinho.
 
-**Onde olhar.** Dois lugares. Na aba Conexões, no quadro Gestão de Controles, a linha de cada controle diz por onde o microfone dele chega: nos do rádio tem de estar escrito «pelo rádio • Pela ponte», e nos do cabo «pelo cabo • Placa do controle» — a ponte é o caminho cru que só existe no rádio. Na aba Controles, abrindo o cartão de um controle, a linha Microfone traz uma barrinha que mexe com o som que está entrando agora, e é ela que mostra a ponte de pé. E na aba Iluminação, a coluna do P3 e a do P4: a linha Cor com os oito quadradinhos e a linha Opções com «Automático» e «Desligar» — mas quem responde é a barra de luz no plástico, as duas tiras dos lados do touchpad.
+**Onde olhar.** Na aba Conexões, no quadro «Gestão de Controles» (abre pelo título): a linha de cada controle diz por onde o microfone dele chega — nos do rádio, «pelo rádio • Pela ponte»; nos do cabo, «pelo cabo • Placa do controle». A ponte é o caminho cru, que só existe no rádio. Clicando na linha de um controle, ela abre e mostra, abaixo de «Microfone e botões», o campo com «Ligado» e «Desligado» — é ele que sobe e desce a ponte. Na aba Controles, no cartão de cada controle, o bloco «Microfone» tem uma barrinha que mexe com o som que está entrando agora, e é ela que mostra a ponte de pé.
 
 **Os passos.**
 
 1. Abra a aba Conexões.
-2. Confira na fita do topo que o P3 e o P4 dizem rádio.
-3. Leia, no quadro Gestão de Controles, o que a linha do P3 e a do P4 dizem sobre o microfone: tem de estar escrito pelo rádio, e Pela ponte.
-4. Leia a mesma coisa nas linhas do P1 e do P2: nelas tem de estar escrito pelo cabo, e Placa do controle.
-5. Abra a aba Controles.
-6. Clique na linha do P3 para abrir o cartão dele e fale perto dele; depois faça o mesmo na linha do P4.
-7. Confira que a barrinha da linha Microfone mexe nos dois, cada uma enquanto você fala perto do seu controle.
-8. Abra a aba Iluminação.
-9. Repare a cor da barra de luz dos quatro aparelhos, antes de mexer em qualquer coisa.
-10. Clique num quadradinho de cor bem diferente na linha Cor da coluna do P3.
-11. Confira que a barra do P3 acendeu nessa cor.
-12. Clique em «Automático», na linha Opções da coluna do P3.
-13. Confira que a barra do P3 passou para a cor do número 3, que é o verde.
-14. Confira que nenhuma frase de recusa apareceu na coluna do P3.
-15. Confira que as barras do P1 e do P2 não mudaram.
-16. Clique de novo num quadradinho de cor na coluna do P3.
-17. Confira que ele ainda obedece ao clique.
-18. Refaça na coluna do P4 os três cliques que você fez na do P3 — cor à mão, «Automático», e cor à mão de novo —, lembrando que a cor de número dele é o rosa.
+2. Confira na fita do topo que os chips do P3 e do P4 terminam em BT.
+3. Clique no título «Gestão de Controles» e leia o que as linhas do P3 e do P4 dizem sobre o microfone: tem de estar escrito «pelo rádio • Pela ponte».
+4. Leia a mesma coisa nas linhas do P1 e do P2: nelas tem de estar escrito «pelo cabo • Placa do controle».
+5. Abra a aba Controles, clique na linha do P3 para abrir o cartão dele e fale perto dele: a barrinha do bloco «Microfone» tem de mexer.
+6. Volte à aba Conexões, clique na linha do P3 para abri-la e escolha «Desligado» no campo do microfone.
+7. Volte à aba Controles e fale perto do P3: a barrinha dele tem de parar de mexer, e o bloco «Microfone» dele fica cinza.
+8. Fale perto do P4 e confira que a barrinha DELE continua mexendo.
+9. Volte à aba Conexões e escolha «Ligado» no campo do microfone do P3.
+10. Volte à aba Controles e fale perto do P3: a barrinha tem de voltar a mexer.
+11. Refaça os passos 5 a 10 com o P4, conferindo o P3 no lugar do P4 no passo 8.
 
-**Passa quando.** Os dois do rádio dizem, na aba Conexões, que o microfone deles chega pela ponte, e a barrinha do cartão de cada um mexe quando você fala perto dele. Na aba Iluminação, o «Automático» troca a barra dos dois para a cor do número, sem frase de recusa, e o controle continua obedecendo ao clique de cor seguinte. Nada disso acontece no P1 nem no P2: as linhas deles continuam dizendo que o microfone vem pela placa do próprio controle, e as barras de luz deles não mudam.
+**Passa quando.** Os dois do rádio dizem, na aba Conexões, que o microfone deles chega pela ponte, e a barrinha do cartão de cada um mexe quando você fala perto dele. «Desligado» derruba a ponte daquele controle — a barrinha dele para — sem calar o vizinho, e «Ligado» a traz de volta. Nada disso acontece no P1 nem no P2: as linhas deles dizem, do começo ao fim, que o microfone vem pela placa do próprio controle.
 
 **Por controle.**
 
-* **P1** — Cabo, testemunha — e é ela que prova a divisão. A linha dele tem de dizer que o microfone vem pelo cabo, pela placa do próprio controle. Se disser «Pela ponte», o caminho que devia ser só do rádio vazou para o cabo, e esse é o achado.
-* **P2** — Cabo, a segunda testemunha. Mesma leitura da linha, e a barra de luz dele não pode mudar quando você mexe nos do rádio.
-* **P3** — Rádio, é um dos dois que recebem. Fale perto dele e veja a barrinha mexer; depois ponha uma cor à mão e clique em «Automático» na coluna dele.
-* **P4** — Rádio, o segundo que recebe. Mesmos gestos. Se um dos dois do rádio responder e o outro não, o achado é daquele aparelho ou da distância dele até o adaptador, não do transporte — anote qual.
+* **P1** — USB, testemunha — e é ela que prova a divisão. A linha dele tem de dizer que o microfone vem pelo cabo, pela placa do próprio controle. Se disser «Pela ponte», o caminho que devia ser só do rádio vazou para o cabo, e esse é o achado.
+* **P2** — USB, a segunda testemunha. Mesma leitura da linha.
+* **P3** — BT, é um dos dois que recebem. Fale perto dele, desça a ponte, confira o silêncio só nele, e suba de novo.
+* **P4** — BT, o segundo que recebe. Mesmos gestos. Se um dos dois do rádio responder e o outro não, o achado é daquele aparelho ou da distância dele até o adaptador, não do transporte — anote qual.
 
-**A armadilha.** NÃO CLIQUE no botão de microfone da tela, o desenho de microfone que fica dentro do cartão: ele passa o comando do mudo para o Hefesto, o botãozinho do plástico para de valer, e esta tela não devolve — a volta é reiniciar o Hefesto. Falar perto do controle e olhar a barrinha é seguro; clicar não é. E vale aqui a mesma medida do lado do cabo: o que está provado é que a escrita SAI e que o sistema a aceita, nunca que o aparelho a executou — o que a sua mão prova é o degrau seguinte, que é o controle continuar obedecendo depois. Por fim, o «Automático» larga a barra para o jogo escolher: com um jogo ou a Steam abertos a cor pode voltar atrás sozinha, e isso não é o comando falhando — por isso a cerimônia manda fechar os dois antes de começar.
+**A armadilha.** Três. (1) O 🎙 do bloco «Microfone», na aba Controles, é o RETORNO: aceso, você se ouve pelo PC até clicar de novo; ele não liga nem desliga a ponte, e com o microfone calado no botão do próprio controle ele recusa dizendo por quê. Não confunda o silêncio do retorno com a ponte caída. (2) O que está provado é que a escrita SAI e que o sistema a aceita, nunca que o aparelho a executou — o que a sua voz prova é o degrau seguinte: a ponte sobe e o som chega. (3) O outro comando cru da casa, o que devolve a barra de luz ao jogo, não tem botão em tela nenhuma: essa metade da linha a sua mão não alcança. E devolva sempre «Ligado» no fim — o «Desligado» fica guardado no controle e é o único registro de que você disse não, então ele não volta sozinho.
 
 ---
 
@@ -5353,32 +5347,32 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o Hefesto não promete nada sobre um bloco de dados escondido do controle que, no cabo, nem chega a existir.
 
-**Onde olhar.** A fonte não diz onde se lê este valor na tela — e não diz porque não há onde: o produto não lê nem escreve esse bloco em lugar nenhum, e nenhuma aba tem campo para ele. O que se olha é onde ele apareceria se alguém o tivesse ligado. Primeiro, a aba Controles: clicando na linha de um controle o cartão abre com as linhas Microfone, Bateria, Touchpad, Barra de luz, LED do jogador, os dois analógicos, os Gatilhos e os blocos Giroscópio e Acelerômetro. Segundo, a aba Sistema, na faixa Avançado: o painel Detalhes técnicos, ao lado dos botões, é a saída crua do Hefesto e se preenche sozinho; o botão «Ver detalhes», acima dele, troca o painel pelas últimas linhas do registro.
+**Onde olhar.** O produto não lê nem escreve esse bloco em lugar nenhum, e nenhuma aba tem campo para ele. O que se olha é onde ele apareceria se alguém o tivesse ligado. Primeiro, a aba Controles: clicando na linha de um controle, o cartão abre — no alto, USB ou BT, o nome do que o jogo vê, o selo do «Microfone», a frase do giroscópio, os interruptores «Giroscópio» e «Acelerômetro» e a «Bateria»; dentro, «Touchpad», «Barra de luz», «LED do jogador», os dois analógicos, os botões, os blocos «Microfone» e «Alto-falante», «Giroscópio», «Acelerômetro» e «Gatilhos». Segundo, a aba Sistema: na faixa «Avançado», à esquerda, os botões «Restaurar de fábrica», «Aplicar aos jogos da Steam» e «Ver detalhes»; ao lado, o painel «Detalhes técnicos», que é a saída crua do Hefesto e se preenche sozinho. «Ver detalhes» põe no painel as últimas 80 linhas do registro.
 
 **Os passos.**
 
-1. Confira na fita do topo que o P1 e o P2 dizem cabo.
+1. Confira na fita do topo que os chips do P1 e do P2 terminam em USB.
 2. Abra a aba Controles.
 3. Clique na linha do P1 para abrir o cartão dele.
 4. Leia todos os campos do cartão, um a um, e anote se algum traz um valor que a tela não explica de onde veio.
 5. Clique na linha do P2 e faça a mesma leitura no cartão dele.
 6. Abra a aba Sistema.
-7. Desça até a faixa Avançado.
-8. Leia o painel Detalhes técnicos, ao lado dos botões, rolando-o de cima a baixo.
-9. Clique em «Ver detalhes» e leia as linhas que aparecem.
+7. Desça até a faixa «Avançado».
+8. Leia o painel «Detalhes técnicos», rolando-o de cima a baixo.
+9. Clique em «Ver detalhes» e leia as linhas que aparecem no painel.
 10. Procure alguma linha que fale de uma leitura de 547 bytes, ou de um bloco que o controle devolva vazio.
 11. Anote o que você encontrou; o esperado é não encontrar nada.
 
-**Passa quando.** Nenhuma tela mostra valor nenhum vindo desse bloco escondido, e nenhum campo dos cartões do P1 e do P2 promete um dado que venha dele. O painel Detalhes técnicos não traz uma única linha sobre ele. Não acontecer nada é o verde deste teste.
+**Passa quando.** Nenhuma tela mostra valor nenhum vindo desse bloco escondido, e nenhum campo dos cartões do P1 e do P2 promete um dado que venha dele. O painel «Detalhes técnicos» não traz uma única linha sobre ele. Não acontecer nada é o verde deste teste.
 
 **Por controle.**
 
-* **P1** — Cabo, e é onde o teste tem mais força: pelo cabo o controle nem chega a declarar que esse bloco existe. Qualquer valor na tela que dissesse vir dele para este controle seria inventado.
-* **P2** — Cabo, a mesma leitura no cartão dele. Dois iguais valem mais que um: se um dos dois mostrar alguma coisa que o outro não mostra, anote qual é.
-* **P3** — Rádio, e aqui ele serve só de contraste — é no rádio que o bloco existe de verdade. Não mexa nele; ele tem a linha dele.
-* **P4** — Rádio, mesma coisa. Não mexa; só confira que o cartão dele não mostra nenhum campo a mais do que o do P1.
+* **P1** — USB, e é onde o teste tem mais força: pelo cabo o controle nem chega a declarar que esse bloco existe. Qualquer valor na tela que dissesse vir dele para este controle seria inventado.
+* **P2** — USB, a mesma leitura no cartão dele. Dois iguais valem mais que um: se um dos dois mostrar alguma coisa que o outro não mostra, anote qual é.
+* **P3** — BT, e aqui ele serve só de contraste — é no rádio que o bloco existe de verdade. Não mexa nele; ele tem a linha dele.
+* **P4** — BT, mesma coisa. Não mexa; só confira que o cartão dele não mostra nenhum campo a mais do que o do P1.
 
-**A armadilha.** Este é um dos raros testes em que NADA ACONTECER é o resultado certo, e é fácil registrá-lo como «não consegui testar». Ele existe para a próxima pessoa não gastar um dia procurando. Esse bloco foi lido com instrumento de bancada, nunca com a mão, e voltou vazio nos quatro controles — mas vir vazio numa leitura que não provocou o aparelho não decide nada nos dois sentidos: «só responde depois de um pedido» e «não responde nunca» devolvem o mesmo silêncio, e ninguém nunca o provocou com escrita nenhuma. Então a sua mão não pode provar o que ele faz; ela pode provar que o produto não finge saber. Se algum dia aparecer na tela um campo que diga vir daí, isso é o achado, e é grave: seria a tela afirmando uma função que medição nenhuma sustenta. E não clique em «Restaurar de fábrica», que fica na mesma faixa Avançado — não há razão de encostar nele aqui.
+**A armadilha.** Este é um dos raros testes em que NADA ACONTECER é o resultado certo, e é fácil registrá-lo como «não consegui testar». Ele existe para a próxima pessoa não gastar um dia procurando. Esse bloco foi lido com instrumento de bancada, nunca com a mão, e voltou vazio nos quatro controles — mas vir vazio numa leitura que não provocou o aparelho não decide nada nos dois sentidos: «só responde depois de um pedido» e «não responde nunca» devolvem o mesmo silêncio, e ninguém nunca o provocou com escrita nenhuma. Então a sua mão não pode provar o que ele faz; ela pode provar que o produto não finge saber. Se algum dia aparecer na tela um campo que diga vir daí, isso é o achado, e é grave: seria a tela afirmando uma função que medição nenhuma sustenta. E não clique em «Restaurar de fábrica», que fica na mesma faixa «Avançado» — não há razão de encostar nele aqui.
 
 ---
 
@@ -5388,32 +5382,32 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, nos dois controles do rádio — onde esse bloco escondido de fato existe —, o Hefesto continua sem lê-lo e sem prometer nada sobre ele.
 
-**Onde olhar.** A fonte não diz onde se lê este valor na tela: o produto não o lê em lugar nenhum, e nenhuma aba tem campo para ele. O que se olha é onde ele apareceria. Na aba Controles, o cartão que abre ao clicar na linha de um controle, com as linhas Microfone, Bateria, Touchpad, Barra de luz, LED do jogador, os dois analógicos, os Gatilhos e os blocos Giroscópio e Acelerômetro. E na aba Sistema, na faixa Avançado, o painel Detalhes técnicos, ao lado dos botões, que é a saída crua do Hefesto e se preenche sozinho — o botão «Ver detalhes» troca o painel pelas últimas linhas do registro.
+**Onde olhar.** O produto não o lê em lugar nenhum, e nenhuma aba tem campo para ele. O que se olha é onde ele apareceria. Na aba Controles, o cartão que abre ao clicar na linha de um controle — no alto, USB ou BT, o nome do que o jogo vê, o selo do «Microfone», a frase do giroscópio, os interruptores e a «Bateria»; dentro, «Touchpad», «Barra de luz», «LED do jogador», os dois analógicos, os botões, os blocos «Microfone» e «Alto-falante», «Giroscópio», «Acelerômetro» e «Gatilhos». E na aba Sistema, na faixa «Avançado», o painel «Detalhes técnicos», ao lado dos botões, que é a saída crua do Hefesto e se preenche sozinho — o botão «Ver detalhes» põe nele as últimas 80 linhas do registro.
 
 **Os passos.**
 
-1. Confira na fita do topo que o P3 e o P4 dizem rádio.
+1. Confira na fita do topo que os chips do P3 e do P4 terminam em BT.
 2. Abra a aba Controles.
 3. Clique na linha do P1 para abrir o cartão dele e anote quais campos ele mostra, na ordem.
 4. Clique na linha do P3 para abrir o cartão dele.
 5. Compare campo a campo com o que você anotou do P1: o do rádio não pode ter nenhum campo a mais.
 6. Clique na linha do P4 e faça a mesma comparação.
 7. Abra a aba Sistema.
-8. Desça até a faixa Avançado e leia o painel Detalhes técnicos, rolando-o de cima a baixo.
+8. Desça até a faixa «Avançado» e leia o painel «Detalhes técnicos», rolando-o de cima a baixo.
 9. Clique em «Ver detalhes» e leia as linhas que aparecem.
 10. Procure alguma linha que fale de um bloco de 547 bytes lido do controle, ou de uma leitura que só aconteça no rádio.
 11. Anote o que você encontrou; o esperado é não encontrar nada.
 
-**Passa quando.** Os cartões do P3 e do P4 mostram exatamente os mesmos campos que os do P1 e do P2 — nenhum campo a mais, nenhum valor que só apareça no rádio. E o painel Detalhes técnicos não traz uma linha sequer sobre esse bloco. Não acontecer nada é o verde.
+**Passa quando.** Os cartões do P3 e do P4 mostram exatamente os mesmos campos que os do P1 e do P2 — nenhum campo a mais, nenhum valor que só apareça no rádio. E o painel «Detalhes técnicos» não traz uma linha sequer sobre esse bloco. Não acontecer nada é o verde.
 
 **Por controle.**
 
-* **P1** — Cabo, é a régua de comparação. Anote os campos do cartão dele ANTES de abrir o de um controle do rádio: sem esse antes não há com o que comparar, e o teste não mede nada.
-* **P2** — Cabo, a segunda régua. Confira que ele mostra os mesmos campos do P1 — se os dois do cabo já divergirem entre si, pare e anote, porque a comparação com o rádio deixou de valer.
-* **P3** — Rádio, e é aqui que o bloco existe de verdade. Compare o cartão dele com o do P1, campo a campo, com os dois rótulos lado a lado.
-* **P4** — Rádio, o segundo. Mesma comparação. Se um dos dois do rádio mostrar um campo que o outro não mostra, isso é achado — anote qual, mesmo que não tenha nada a ver com este bloco.
+* **P1** — USB, é a régua de comparação. Anote os campos do cartão dele ANTES de abrir o de um controle do rádio: sem esse antes não há com o que comparar, e o teste não mede nada.
+* **P2** — USB, a segunda régua. Confira que ele mostra os mesmos campos do P1 — se os dois do cabo já divergirem entre si, pare e anote, porque a comparação com o rádio deixou de valer.
+* **P3** — BT, e é aqui que o bloco existe de verdade. Compare o cartão dele com o do P1, campo a campo, com os dois rótulos lado a lado.
+* **P4** — BT, o segundo. Mesma comparação. Se um dos dois do rádio mostrar um campo que o outro não mostra, isso é achado — anote qual, mesmo que não tenha nada a ver com este bloco.
 
-**A armadilha.** Pelo rádio o bloco EXISTE e tem 547 bytes, exatamente o tamanho do maior pacote de saída do aparelho — e essa coincidência de tamanho é a única coisa que alimenta a suspeita de que ele sirva para combinar som. Suspeita, não medição: o conteúdo veio zerado nas quatro unidades lidas, e ninguém provocou o aparelho para ver se ele responde diferente depois de um pedido. Se você ler alguém desta casa dizendo que ele serve para o som, isso é hipótese vestida de fato, e derrubá-la é serviço prestado. Como no lado do cabo, nada acontecer é o verde — o difícil deste teste é registrá-lo como feito em vez de como impossível. E não clique em «Restaurar de fábrica», que fica na mesma faixa Avançado.
+**A armadilha.** Pelo rádio o bloco EXISTE e tem 547 bytes, exatamente o tamanho do maior pacote de saída do aparelho — e essa coincidência de tamanho é a única coisa que alimenta a suspeita de que ele sirva para combinar som. Suspeita, não medição: o conteúdo veio zerado nas quatro unidades lidas, e ninguém provocou o aparelho para ver se ele responde diferente depois de um pedido. O som pelo rádio, quando foi medido em 10/09, saiu por outro degrau da escada, e não por este bloco. Se você ler alguém desta casa dizendo que ele serve para o som, isso é hipótese vestida de fato, e derrubá-la é serviço prestado. Como no lado do cabo, nada acontecer é o verde — o difícil deste teste é registrá-lo como feito em vez de como impossível. E não clique em «Restaurar de fábrica», que fica na mesma faixa «Avançado».
 
 ---
 
@@ -5423,38 +5417,38 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que a lista do que o Hefesto sabe de cada controle está completa e certa para os dois do cabo, inclusive o número de série, que só o cabo entrega.
 
-**Onde olhar.** Três lugares. Na aba Controles, o quadro Dispositivos Conectados: cada controle é uma linha com o número, a cor do plástico e por onde ele fala; clicando na linha o cartão abre com a leitura viva — Microfone, Bateria em porcento, Touchpad, Barra de luz com o código da cor, LED do jogador, os dois analógicos, os Gatilhos com um número de 0 a 255 cada, e os blocos Giroscópio e Acelerômetro com X, Y e Z. Na aba Sistema, na faixa Avançado, o painel Detalhes técnicos se preenche sozinho e mostra o FIM do texto: lá embaixo há um bloco chamado «Identidade de fábrica», com uma linha por controle ligado — o número, a cor do plástico, a palavra cabo ou rádio, e o número de série. E na aba Conexões, no quadro Gestão de Controles, cada linha traz «Vê como», que é o que o jogo enxerga.
+**Onde olhar.** Três lugares. Na aba Controles, o quadro «Dispositivos conectados»: cada controle é uma linha com o número, a cor do plástico e USB ou BT; clicando na linha o cartão abre com a leitura viva — «Bateria» em porcento, «Touchpad» contando os toques, «Barra de luz» com o código da cor, «LED do jogador», os dois analógicos com X e Y, «Gatilhos» com um número de 0 a 255 para o L2 e para o R2, e os blocos «Giroscópio» e «Acelerômetro» com X, Y e Z. Na aba Sistema, na faixa «Avançado», o painel «Detalhes técnicos» se preenche sozinho e mostra o FIM do texto: lá embaixo há um bloco chamado «Identidade de fábrica», com uma linha por controle ligado — no formato «P1 · Cosmic Red · USB · <número de série>». E na aba Conexões, no quadro «Gestão de Controles», cada linha traz «Vê como», que é o que o jogo enxerga.
 
 **Os passos.**
 
-1. Confira na fita do topo que o P1 e o P2 dizem cabo.
+1. Confira na fita do topo que os chips do P1 e do P2 terminam em USB.
 2. Abra a aba Sistema.
-3. Desça até a faixa Avançado e leia o painel Detalhes técnicos, ao lado dos botões.
+3. Desça até a faixa «Avançado» e leia o painel «Detalhes técnicos», ao lado dos botões.
 4. Role o painel até o fim e ache o bloco «Identidade de fábrica».
 5. Conte as linhas desse bloco: tem de haver uma para cada um dos quatro controles ligados.
-6. Leia a linha do P1: ela tem de trazer o número, a cor do plástico, a palavra cabo e um número de série comprido.
+6. Leia a linha do P1: ela tem de trazer P1, a cor do plástico, USB e um número de série comprido.
 7. Leia a linha do P2 do mesmo jeito.
 8. Pegue o P1 na mão e compare a cor do plástico dele com o nome escrito na linha.
 9. Faça a mesma comparação com o P2.
 10. Abra a aba Controles e clique na linha do P1 para abrir o cartão dele.
-11. Confira que a Bateria mostra um número em porcento, e não um traço.
-12. Encoste um dedo no touchpad do P1 e confira que a linha Touchpad passa a contar o toque.
-13. Empurre o analógico esquerdo do P1 e confira que os números do analógico esquerdo andam no cartão.
-14. Aperte o L2 do P1 até o fim e confira que o número dele, na linha Gatilhos, sobe até perto de 255.
-15. Gire o P1 na mão e confira que os números do Giroscópio saem do zero.
+11. Confira que a «Bateria» mostra um número em porcento, e não um traço.
+12. Encoste um dedo no touchpad do P1 e confira que o «Touchpad» passa a contar o toque.
+13. Empurre o analógico esquerdo do P1 e confira que os números X e Y dele andam no cartão.
+14. Aperte o L2 do P1 até o fim e confira que o número dele, em «Gatilhos», sobe até perto de 255.
+15. Gire o P1 na mão e confira que os números do «Giroscópio» saem do zero.
 16. Repita os passos 10 a 15 no P2.
-17. Abra a aba Conexões e leia, no quadro Gestão de Controles, o que a linha do P1 e a do P2 dizem em «Vê como».
+17. Abra a aba Conexões, clique no título «Gestão de Controles» e leia o que as linhas do P1 e do P2 dizem em «Vê como».
 
-**Passa quando.** As quatro linhas de «Identidade de fábrica» existem, e as do P1 e do P2 trazem a palavra cabo e um número de série comprido — nenhuma das duas com traço no lugar do serial, e os dois seriais diferentes um do outro. A cor escrita bate com o plástico que você tem na mão. E no cartão de cada um, todo campo que devia responder responde: bateria com número, touchpad contando o toque, analógico andando, gatilho subindo até perto de 255 e giroscópio saindo do zero.
+**Passa quando.** As quatro linhas de «Identidade de fábrica» existem, e as do P1 e do P2 trazem USB e um número de série comprido — nenhuma das duas com traço no lugar do serial, e os dois seriais diferentes um do outro. A cor escrita bate com o plástico que você tem na mão. E no cartão de cada um, todo campo que devia responder responde: bateria com número, touchpad contando o toque, analógico andando, gatilho subindo até perto de 255 e giroscópio saindo do zero.
 
 **Por controle.**
 
-* **P1** — Cabo, e é ele que tem de trazer o número de série inteiro. Confira também o nome da cor contra o plástico na sua mão.
-* **P2** — Cabo. O mesmo, e ele é a segunda prova: dois aparelhos, dois seriais diferentes. Dois controles com o MESMO serial escrito na tela é achado grave — anote os dois.
-* **P3** — Rádio, testemunha. Só confira que a linha dele existe no bloco e que ela diz rádio. O serial dele é assunto da outra linha deste par, e a falta dele aqui não é defeito.
-* **P4** — Rádio, testemunha. Mesma conferência. Se faltar a linha de um dos quatro no bloco, o inventário perdeu um controle, e isso é o achado.
+* **P1** — USB, e é ele que tem de trazer o número de série inteiro. Confira também o nome da cor contra o plástico na sua mão.
+* **P2** — USB. O mesmo, e ele é a segunda prova: dois aparelhos, dois seriais diferentes. Dois controles com o MESMO serial escrito na tela é achado grave — anote os dois.
+* **P3** — BT, testemunha. Só confira que a linha dele existe no bloco e que ela diz BT. O serial dele é assunto da outra linha deste par, e a falta dele aqui não é defeito.
+* **P4** — BT, testemunha. Mesma conferência. Se faltar a linha de um dos quatro no bloco, o inventário perdeu um controle, e isso é o achado.
 
-**A armadilha.** Esta linha nunca foi medida com controle na mão: ela foi respondida LENDO O CÓDIGO, e o seu teste é o primeiro contato dela com o aparelho — anote tudo o que divergir, mesmo o que parecer bobagem. Duas armadilhas de leitura. A primeira: o painel Detalhes técnicos tem seis linhas de altura e mostra sempre o FIM do texto; a identidade fica no fim de propósito, e o resto do diagnóstico está uma rolada acima — quem não rolar vai jurar que o painel só tem o estado do serviço. A segunda: campo sem informação não mostra nada, por decisão sua — um campo em branco quer dizer «não foi lido», não «zero», e um traço no lugar de um número tem o mesmo sentido; nenhum dos dois conta como passa. E não confunda o que o cartão mostra com o que o jogo recebe: o «Vê como» da aba Conexões diz a máscara que o jogo enxerga, e ela se escolhe na aba Jogar — se estiver dizendo Xbox 360, é escolha sua e não defeito de inventário. Por fim, não clique em «Restaurar de fábrica», que fica na mesma faixa Avançado.
+**A armadilha.** Esta linha nunca foi medida com controle na mão: ela foi respondida LENDO O CÓDIGO, e o seu teste é o primeiro contato dela com o aparelho — anote tudo o que divergir, mesmo o que parecer bobagem. Duas armadilhas de leitura. A primeira: o painel «Detalhes técnicos» é baixo e mostra sempre o FIM do texto; a identidade fica no fim de propósito, e o resto do diagnóstico está uma rolada acima — quem não rolar vai jurar que o painel só tem o estado do serviço. E se você clicar em «Ver detalhes», o painel passa a mostrar o registro, e a identidade sai dele. A segunda: campo sem informação não mostra nada, por decisão sua — um campo em branco quer dizer «não foi lido», não «zero», e um traço no lugar de um número tem o mesmo sentido; nenhum dos dois conta como passa. E não confunda o que o cartão mostra com o que o jogo recebe: o «Vê como» da aba Conexões diz a máscara que o jogo enxerga, e ela se escolhe na aba Jogar — se estiver dizendo Xbox 360, é escolha sua e não defeito de inventário. Por fim, não clique em «Restaurar de fábrica», que fica na mesma faixa «Avançado».
 
 ---
 
@@ -5462,39 +5456,39 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `plataforma.inventario @ rádio`
 
-**O que isto prova.** Prova que a lista do que o Hefesto sabe dos dois controles do rádio está completa até onde o rádio entrega — e que o que falta aparece dito com todas as letras, em vez de sumir calado.
+**O que isto prova.** Prova que a lista do que o Hefesto sabe dos dois controles do rádio está completa até onde ele publica — e que o que falta aparece dito com todas as letras, em vez de sumir calado.
 
-**Onde olhar.** Os mesmos dois lugares do lado do cabo, agora nas linhas do rádio. Na aba Sistema, faixa Avançado, o painel Detalhes técnicos se preenche sozinho e mostra o FIM do texto: no fim dele está o bloco «Identidade de fábrica», com uma linha por controle ligado — o número, a cor do plástico, a palavra cabo ou rádio, e o número de série. Nas linhas do rádio, no lugar do serial, tem de estar escrita a frase que diz que o serial só é lido no cabo. E na aba Controles, o cartão que abre ao clicar na linha de um controle, com Bateria em porcento, Touchpad, os dois analógicos, os Gatilhos e os blocos Giroscópio e Acelerômetro.
+**Onde olhar.** Os mesmos dois lugares do lado do cabo, agora nas linhas do rádio. Na aba Sistema, faixa «Avançado», o painel «Detalhes técnicos» se preenche sozinho e mostra o FIM do texto: no fim dele está o bloco «Identidade de fábrica», com uma linha por controle ligado. Nas linhas do rádio, no lugar do serial, tem de estar escrita a frase «o serial só é lido no cabo» — por exemplo «P3 · Nova Pink · BT · o serial só é lido no cabo». E na aba Controles, o cartão que abre ao clicar na linha de um controle, com «Bateria» em porcento, «Touchpad», os dois analógicos, «Gatilhos» e os blocos «Giroscópio» e «Acelerômetro».
 
 **Os passos.**
 
-1. Confira na fita do topo que o P3 e o P4 dizem rádio.
+1. Confira na fita do topo que os chips do P3 e do P4 terminam em BT.
 2. Abra a aba Sistema.
-3. Desça até a faixa Avançado e leia o painel Detalhes técnicos.
+3. Desça até a faixa «Avançado» e leia o painel «Detalhes técnicos».
 4. Role o painel até o fim e ache o bloco «Identidade de fábrica».
-5. Leia a linha do P3: ela tem de trazer o número, a cor do plástico e a palavra rádio.
-6. Leia o fim dessa mesma linha: no lugar do número de série tem de estar escrito que o serial só é lido no cabo.
+5. Leia a linha do P3: ela tem de trazer P3, a cor do plástico e BT.
+6. Leia o fim dessa mesma linha: no lugar do número de série tem de estar escrito «o serial só é lido no cabo».
 7. Leia a linha do P4 do mesmo jeito.
 8. Pegue o P3 na mão e compare a cor do plástico dele com o nome escrito na linha.
 9. Faça a mesma comparação com o P4.
 10. Abra a aba Controles e clique na linha do P3 para abrir o cartão dele.
-11. Confira que a Bateria mostra um número em porcento, e não um traço.
-12. Encoste um dedo no touchpad do P3 e confira que a linha Touchpad passa a contar o toque.
+11. Confira que a «Bateria» mostra um número em porcento, e não um traço.
+12. Encoste um dedo no touchpad do P3 e confira que o «Touchpad» passa a contar o toque.
 13. Empurre o analógico esquerdo do P3 e confira que os números andam no cartão.
-14. Gire o P3 na mão e confira que os números do Giroscópio saem do zero.
+14. Gire o P3 na mão e confira que os números do «Giroscópio» saem do zero.
 15. Repita os passos 10 a 14 no P4.
 16. Clique na linha do P1 e compare os campos do cartão dele com os do P3: têm de ser os mesmos campos, com os mesmos rótulos.
 
-**Passa quando.** As linhas do P3 e do P4 existem no bloco, dizem rádio, trazem o nome da cor do plástico que bate com o aparelho na sua mão, e no lugar do número de série trazem a frase escrita — não um espaço em branco nem um traço seco. E os cartões dos dois respondem: bateria com número, touchpad contando o toque, analógico andando e giroscópio saindo do zero.
+**Passa quando.** As linhas do P3 e do P4 existem no bloco, dizem BT, trazem o nome da cor do plástico que bate com o aparelho na sua mão, e no lugar do número de série trazem a frase escrita — não um espaço em branco nem um traço seco. E os cartões dos dois respondem: bateria com número, touchpad contando o toque, analógico andando e giroscópio saindo do zero.
 
 **Por controle.**
 
-* **P1** — Cabo, régua de comparação: a linha dele traz o serial, e é olhando as duas linhas lado a lado que a diferença entre os transportes fica visível.
-* **P2** — Cabo, a segunda régua. Confira que ele também traz serial — se nenhum dos dois do cabo trouxer, o problema não é do rádio e este teste está medindo outra coisa.
-* **P3** — Rádio, é um dos dois medidos. Confira o nome da cor, a palavra rádio, a frase no lugar do serial, e os campos vivos do cartão.
-* **P4** — Rádio, o segundo, e é o que mais importa aqui: a leitura da cor do plástico pelo rádio só foi provada em DUAS unidades, e nenhuma delas é necessariamente esta. Se o P4 vier sem nome de cor e com a borda neutra, o achado é DESTA unidade e não do transporte — anote qual controle é.
+* **P1** — USB, régua de comparação: a linha dele traz o serial, e é olhando as duas linhas lado a lado que a diferença entre os transportes fica visível.
+* **P2** — USB, a segunda régua. Confira que ele também traz serial — se nenhum dos dois do cabo trouxer, o problema não é do rádio e este teste está medindo outra coisa.
+* **P3** — BT, é um dos dois medidos. Confira o nome da cor, o BT, a frase no lugar do serial, e os campos vivos do cartão.
+* **P4** — BT, o segundo, e é o que mais importa aqui: a leitura da cor do plástico pelo rádio só foi provada em DUAS unidades, e nenhuma delas é necessariamente esta. Se o P4 vier sem nome de cor, o achado é DESTA unidade e não do transporte — anote qual controle é.
 
-**A armadilha.** A frase «o serial só é lido no cabo» é o produto sendo honesto, não um defeito: o aparelho responde, quem cala é quem publica o dado, e escrever a frase foi decisão desta casa para o campo vazio não ler como falha. O que É defeito: um número de série aparecendo na linha de um controle do rádio — alguém o inventou —, ou um traço seco no lugar da frase, que é a explicação tendo sumido. Duas coisas mais. A cor do plástico pelo rádio está provada em duas unidades, não nas quatro desta bancada; se um terceiro controle recusar, o achado é a assinatura daquele aparelho, e a tela responde «não sei» em vez de mentir uma cor — borda neutra é ausência de leitura, não número errado. E, como no lado do cabo: esta linha foi respondida lendo o código, nunca com controle na mão, e o seu teste é o primeiro contato dela com o aparelho.
+**A armadilha.** A frase «o serial só é lido no cabo» diz menos do que parece: o aparelho RESPONDE o serial pelo rádio também — medido em 03/09 —, quem não o publica é o serviço. Então a frase não é o aparelho recusando, e o que É defeito é outra coisa: um número de série aparecendo na linha de um controle do rádio — alguém o inventou —, ou um traço seco no lugar da frase. Duas coisas mais. A cor do plástico pelo rádio está provada em duas unidades, não nas quatro desta bancada; se um terceiro controle recusar, o achado é a assinatura daquele aparelho, e a tela responde «não sei» em vez de mentir uma cor. E, como no lado do cabo: esta linha foi respondida lendo o código, nunca com controle na mão, e o seu teste é o primeiro contato dela com o aparelho.
 
 ---
 
@@ -5504,33 +5498,35 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o Hefesto não perde o último clique quando você muda a mesma coisa muitas vezes seguidas num controle do cabo.
 
-**Onde olhar.** Na aba Iluminação, a coluna do P1 e a do P2: a linha Cor, com os oito quadradinhos de cor lado a lado, e o código da cor escrito logo abaixo deles. A resposta é a barra de luz no plástico — as duas tiras acesas dos lados do touchpad. O passo com que o Hefesto junta os pedidos e os manda ao aparelho não tem campo na tela: a fonte não diz onde se leria esse número, porque não há onde. O que a sua mão mede é só o resultado — se o último clique chegou, e em quanto tempo.
+**Onde olhar.** Na aba Iluminação, a coluna do P1 e a do P2: a linha «Cor», com onze quadradinhos de cor lado a lado, e o código da cor escrito logo abaixo deles — é a cor que vai ao aparelho. A resposta é a barra de luz no plástico — as duas tiras acesas dos lados do touchpad. O passo com que o Hefesto junta os pedidos e os manda ao aparelho não tem campo na tela. O que a sua mão mede é só o resultado — se o último clique chegou, e em quanto tempo.
 
 **Os passos.**
 
-1. Confira na fita do topo que o P1 e o P2 dizem cabo.
+1. Confira na fita do topo que os chips do P1 e do P2 terminam em USB.
 2. Feche a Steam e qualquer jogo aberto.
 3. Abra a aba Iluminação.
-4. Clique num quadradinho de cor bem diferente da atual na linha Cor da coluna do P1.
-5. Confirme que a barra do P1 acendeu nessa cor.
-6. Clique agora, um atrás do outro e o mais rápido que você conseguir, em seis quadradinhos DIFERENTES da linha Cor do P1, terminando num que você reconheça de longe.
-7. Tire a mão do mouse e olhe a barra do P1: ela tem de estar na cor do ÚLTIMO clique.
-8. Confira que ela não parou numa cor do meio da sequência.
-9. Leia o código da cor escrito abaixo dos quadradinhos e confira que ele é o do último clique.
-10. Olhe as barras do P2, do P3 e do P4: nenhuma pode ter mudado.
-11. Repita os passos 6 a 10 na coluna do P2.
-12. Anote, mais ou menos, quanto tempo a barra levou para assentar na última cor depois de você parar de clicar.
+4. Olhe as quatro colunas e repare quais cores os outros três controles estão usando: a rajada só pode usar quadradinhos que nenhum deles tenha.
+5. Clique num quadradinho livre, de cor bem diferente da atual, na linha «Cor» da coluna do P1.
+6. Confirme que a barra do P1 acendeu nessa cor.
+7. Clique agora, um atrás do outro e o mais rápido que você conseguir, em seis quadradinhos livres DIFERENTES da linha «Cor» do P1, terminando num que você reconheça de longe.
+8. Tire a mão do mouse e olhe a barra do P1: ela tem de estar na cor do ÚLTIMO clique.
+9. Confira que ela não parou numa cor do meio da sequência.
+10. Leia o código da cor escrito abaixo dos quadradinhos e confira que ele é o do último clique.
+11. Olhe as barras do P2, do P3 e do P4: nenhuma pode ter mudado.
+12. Repita os passos 7 a 11 na coluna do P2.
+13. Anote, mais ou menos, quanto tempo a barra levou para assentar na última cor depois de você parar de clicar.
+14. Clique no primeiro quadradinho da coluna do P1 e no segundo da do P2 — a cor do número de cada um —, para desfazer.
 
 **Passa quando.** Depois da rajada de cliques, a barra do controle em que você clicou fica na cor do ÚLTIMO quadradinho, e não numa do meio. O código escrito abaixo dos quadradinhos concorda com a barra acesa. As barras dos outros três não mudam. E a barra assenta em menos de um segundo depois do último clique.
 
 **Por controle.**
 
-* **P1** — Cabo, é o primeiro a receber a rajada. Seis quadradinhos diferentes, o mais rápido que você conseguir, e o último tem de ser o que fica.
-* **P2** — Cabo, o segundo. Faça nele a mesma rajada, depois que o P1 já tiver assentado: os dois do cabo têm de se comportar igual, e uma diferença entre eles é achado do aparelho.
-* **P3** — Rádio, testemunha aqui — ele tem linha própria. Não clique na coluna dele; só confira que a barra não mudou durante as duas rajadas.
-* **P4** — Rádio, testemunha. Mesma coisa. Se a cor da rajada do P1 aparecer nele, o pedido foi para o controle errado.
+* **P1** — USB, é o primeiro a receber a rajada. Seis quadradinhos livres diferentes, o mais rápido que você conseguir, e o último tem de ser o que fica.
+* **P2** — USB, o segundo. Faça nele a mesma rajada, depois que o P1 já tiver assentado: os dois do cabo têm de se comportar igual, e uma diferença entre eles é achado do aparelho.
+* **P3** — BT, testemunha aqui — ele tem linha própria. Não clique na coluna dele; só confira que a barra não mudou durante as duas rajadas.
+* **P4** — BT, testemunha. Mesma coisa. Se a cor da rajada do P1 aparecer nele, o pedido foi para o controle errado.
 
-**A armadilha.** Clicar duas vezes no MESMO quadradinho não testa nada: o segundo clique não tem novidade a mandar, e não mandar é o certo — o Hefesto não reenvia um pedido idêntico ao anterior, de propósito. Use quadradinhos diferentes, sempre. Outra: o passo com que ele junta os pedidos cresce com o número de controles ligados; com os quatro na mesa ele é mais lento do que seria com um só, e uma barra que demora um pouco mais a assentar não é defeito. Feche a Steam antes de começar: com ela aberta, quem escreve por último na luz ganha, e você pode acabar medindo a Steam. E lembre que esta linha foi respondida lendo o código e nunca com controle na mão — se a barra ficar presa numa cor do meio da sequência, isso é achado novo, e vale anotar exatamente quantos cliques você deu e em que ordem.
+**A armadilha.** Clicar duas vezes no MESMO quadradinho não testa nada: o segundo clique não tem novidade a mandar, e não mandar é o certo — o Hefesto não reenvia um pedido idêntico ao anterior, de propósito. Use quadradinhos diferentes, sempre. E use só os livres: um tom que já é de outro controle não fica no que você clicou, e a tela diz de quem ele era — com isso no meio da rajada, o «último clique» deixa de ser o que você pensa. Outra: o passo com que o Hefesto junta os pedidos cresce com o número de controles ligados; com os quatro ligados ele é mais lento do que seria com um só, e uma barra que demora um pouco mais a assentar não é defeito. Feche a Steam antes de começar: com ela aberta, quem escreve por último na luz ganha, e você pode acabar medindo a Steam. E lembre que esta linha foi respondida lendo o código e nunca com controle na mão — se a barra ficar presa numa cor do meio da sequência, isso é achado novo, e vale anotar exatamente quantos cliques você deu e em que ordem.
 
 ---
 
@@ -5540,33 +5536,35 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que a rajada de cliques também não se perde nos dois controles do rádio, e separa o que é do passo de envio do que é do sem fio.
 
-**Onde olhar.** Na aba Iluminação, as colunas do P1, do P3 e do P4: a linha Cor, com os oito quadradinhos de cor, e o código da cor escrito logo abaixo. A resposta é a barra de luz no plástico, as duas tiras dos lados do touchpad. O passo com que o Hefesto junta os pedidos e os manda não tem campo na tela — a fonte não diz onde se leria, porque não há onde; e ele é o MESMO número no cabo e no rádio, o que é justamente o que torna a comparação entre os dois útil.
+**Onde olhar.** Na aba Iluminação, as colunas do P1, do P3 e do P4: a linha «Cor», com onze quadradinhos de cor, e o código da cor escrito logo abaixo — é a cor que vai ao aparelho. A resposta é a barra de luz no plástico, as duas tiras acesas dos lados do touchpad. O passo com que o Hefesto junta os pedidos e os manda não tem campo na tela — e ele é o MESMO número no cabo e no rádio, o que é justamente o que torna a comparação entre os dois útil.
 
 **Os passos.**
 
-1. Confira na fita do topo que o P3 e o P4 dizem rádio e que o P1 diz cabo.
+1. Confira na fita do topo que os chips do P3 e do P4 terminam em BT e que o do P1 termina em USB.
 2. Feche a Steam e qualquer jogo aberto.
 3. Abra a aba Iluminação.
-4. Clique, um atrás do outro e o mais rápido que conseguir, em seis quadradinhos DIFERENTES da linha Cor da coluna do P1, terminando num que você reconheça de longe.
-5. Olhe a barra do P1 e anote se ela ficou na cor do último clique e quanto tempo levou para assentar.
-6. Faça a mesma rajada de seis quadradinhos diferentes na coluna do P3.
-7. Tire a mão do mouse e olhe a barra do P3: ela tem de estar na cor do ÚLTIMO clique.
-8. Confira que ela não parou numa cor do meio da sequência.
-9. Leia o código da cor abaixo dos quadradinhos do P3 e confira que ele é o do último clique.
-10. Olhe as barras do P1, do P2 e do P4: nenhuma pode ter mudado por causa da rajada do P3.
-11. Repita os passos 6 a 10 na coluna do P4.
-12. Compare o que você anotou do P1 com o que aconteceu no P3 e no P4, e anote a diferença de tempo.
+4. Olhe as quatro colunas e repare quais cores cada controle está usando: a rajada só pode usar quadradinhos que nenhum dos outros tenha.
+5. Clique, um atrás do outro e o mais rápido que conseguir, em seis quadradinhos livres DIFERENTES da linha «Cor» da coluna do P1, terminando num que você reconheça de longe.
+6. Olhe a barra do P1 e anote se ela ficou na cor do último clique e quanto tempo levou para assentar.
+7. Faça a mesma rajada de seis quadradinhos livres diferentes na coluna do P3.
+8. Tire a mão do mouse e olhe a barra do P3: ela tem de estar na cor do ÚLTIMO clique.
+9. Confira que ela não parou numa cor do meio da sequência.
+10. Leia o código da cor abaixo dos quadradinhos do P3 e confira que ele é o do último clique.
+11. Olhe as barras do P1, do P2 e do P4: nenhuma pode ter mudado por causa da rajada do P3.
+12. Repita os passos 7 a 11 na coluna do P4.
+13. Compare o que você anotou do P1 com o que aconteceu no P3 e no P4, e anote a diferença de tempo.
+14. Clique, nas colunas do P1, do P3 e do P4, no quadradinho da cor do número de cada um — o primeiro, o terceiro e o quarto —, para desfazer.
 
 **Passa quando.** Depois da rajada, a barra do controle do rádio fica na cor do último quadradinho, e não numa do meio — exatamente como aconteceu no do cabo. O código escrito abaixo dos quadradinhos concorda com a barra. As barras dos outros três não mudam.
 
 **Por controle.**
 
-* **P1** — Cabo, e é a régua: faça a rajada NELE primeiro e anote o tempo. Sem esse antes não há com o que comparar, e o teste não separa nada.
-* **P2** — Cabo, testemunha. Não clique na coluna dele; só confira que a barra não mudou durante as rajadas dos outros.
-* **P3** — Rádio, é o primeiro a receber a rajada. Seis quadradinhos diferentes, e o último tem de ser o que fica na barra.
-* **P4** — Rádio, o segundo, e ele divide o adaptador com o P3. Faça a rajada nele depois que o P3 assentar; se só ele perder cliques, a diferença é do enlace dele, não do envio.
+* **P1** — USB, e é a régua: faça a rajada NELE primeiro e anote o tempo. Sem esse antes não há com o que comparar, e o teste não separa nada.
+* **P2** — USB, testemunha. Não clique na coluna dele; só confira que a barra não mudou durante as rajadas dos outros.
+* **P3** — BT, é o primeiro a receber a rajada. Seis quadradinhos livres diferentes, e o último tem de ser o que fica na barra.
+* **P4** — BT, o segundo. Faça a rajada nele depois que o P3 assentar; se só ele perder cliques, confira em «Rádio e Adaptadores», na aba Conexões, se ele está no mesmo adaptador do P3 — a diferença pode ser do enlace dele, não do envio.
 
-**A armadilha.** O número com que o Hefesto espaça os envios é o MESMO no cabo e no rádio — não existe um valor por transporte. Então, se a rajada se perder só no rádio, a causa não é esse passo: é o enlace sem fio, e é para separar as duas coisas que a rajada no P1 vem primeiro. Sem ela, o teste não mede nada. As outras duas de sempre: clicar duas vezes no mesmo quadradinho não manda nada de novo, de propósito, então use quadradinhos diferentes; e o passo cresce com o número de controles ligados, então com quatro na mesa tudo assenta um pouco mais devagar do que assentaria com um. Feche a Steam antes: com ela aberta, quem escreve por último na luz ganha.
+**A armadilha.** O número com que o Hefesto espaça os envios é o MESMO no cabo e no rádio — não existe um valor por transporte. Então, se a rajada se perder só no rádio, a causa não é esse passo: é o enlace sem fio, e é para separar as duas coisas que a rajada no P1 vem primeiro. Sem ela, o teste não mede nada. As outras de sempre: clicar duas vezes no mesmo quadradinho não manda nada de novo, de propósito, então use quadradinhos diferentes; use só os livres, porque um tom que já é de outro controle não fica no que você clicou; e o passo cresce com o número de controles ligados, então com quatro ligados tudo assenta um pouco mais devagar do que assentaria com um. Feche a Steam antes: com ela aberta, quem escreve por último na luz ganha.
 
 ---
 
@@ -5576,33 +5574,32 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o Hefesto não oferece nem inventa ajuste de enlace sem fio para os dois controles do cabo — onde enlace sem fio nem existe.
 
-**Onde olhar.** Na aba Conexões. O quadro Check-up é o exame da sala; o quadro Gestão de Controles tem uma linha por controle ligado; e no fim da aba fica a seção Desempenho, com a linha «O rádio de cada adaptador, em turnos» e uma régua por adaptador, onde se lê algo como «276,7 de 1.600». Nessa régua, as vagas TRACEJADAS são os controles que estão no cabo: eles não gastam rádio e aparecem só como «se viessem». Logo abaixo da régua há um parágrafo chamado «De onde vêm os números». Não existe em tela nenhuma um campo que ofereça mexer em tempo de supervisão, em intervalo de escuta ou em latência do enlace — a fonte não diz onde se leria isso porque não há onde.
+**Onde olhar.** Na aba Conexões, três quadros que abrem pelo título, um de cada vez. O «Check-up» é o exame da sala: energia das entradas, rádio, vizinhança. O «Gestão de Controles» tem uma linha por controle ligado, e clicar na linha abre os ajustes dele — o campo do microfone, abaixo de «Microfone e botões», o «Limite da vibração» e o botão «A luz não acende». O «Rádio e Adaptadores» tem um bloco por adaptador Bluetooth, e o ▶ de cada um abre a lista dos controles que estão nele, cada um com o número de pacotes de movimento por segundo que chegam agora. Não existe em tela nenhuma um campo que ofereça mexer em tempo de supervisão, em intervalo de escuta ou em latência do enlace.
 
 **Os passos.**
 
-1. Confira na fita do topo que o P1 e o P2 dizem cabo.
+1. Confira na fita do topo que os chips do P1 e do P2 terminam em USB.
 2. Abra a aba Conexões.
-3. Leia o quadro Check-up de cima a baixo e anote cada linha que fale dos controles do cabo.
-4. Confira que nenhuma dessas linhas oferece um ajuste de enlace — elas falam de entrada, de energia e de vizinhança de rádio.
-5. Desça até a seção Desempenho.
-6. Conte as vagas tracejadas na régua do adaptador: tem de haver uma para cada controle que está no cabo.
-7. Confira que o P1 e o P2 aparecem só como tracejados, e não como consumo de agora.
-8. Leia o parágrafo «De onde vêm os números», logo abaixo da explicação da régua, e anote o que ele diz sobre a origem de cada número.
-9. Suba até o quadro Gestão de Controles e abra a linha do P1.
-10. Procure, dentro dela, qualquer campo que ofereça mexer em tempo de resposta, intervalo ou latência de rádio.
-11. Repita a procura na linha do P2.
-12. Anote o que você encontrou; o esperado é não encontrar nada.
+3. Leia o quadro «Check-up» de cima a baixo e anote cada linha que fale dos controles do cabo.
+4. Confira que nenhuma dessas linhas oferece um ajuste de enlace — elas falam de energia, de entrada e de vizinhança de rádio.
+5. Clique no título «Gestão de Controles» e clique na linha do P1 para abri-la.
+6. Leia os ajustes que abrem e confira que nenhum oferece mexer em tempo de resposta, intervalo ou latência de rádio.
+7. Pare o ponteiro sobre o botão «A luz não acende» da linha do P1 e leia a dica: ela diz que ele só funciona com o controle no rádio.
+8. Repita os passos 5 a 7 na linha do P2.
+9. Clique no título «Rádio e Adaptadores» e clique no ▶ de cada adaptador.
+10. Confira que o P1 e o P2 não aparecem em adaptador nenhum, e que o P3 e o P4 aparecem.
+11. Anote o que você encontrou; o esperado é nenhum ajuste de enlace e nenhum controle do cabo no rádio.
 
-**Passa quando.** Nenhuma aba oferece ajuste de enlace sem fio para um controle do cabo, e nenhum número na tela é apresentado como medida do enlace deles. Na régua da seção Desempenho, o P1 e o P2 aparecem como vagas tracejadas — o que eles custariam se viessem para o rádio —, nunca como consumo de agora.
+**Passa quando.** Nenhuma aba oferece ajuste de enlace sem fio para um controle do cabo, e nenhum número na tela é apresentado como medida do enlace deles. O P1 e o P2 não aparecem em «Rádio e Adaptadores», e o «A luz não acende» deles diz que só vale no rádio.
 
 **Por controle.**
 
-* **P1** — Cabo. Confira que ele aparece só como vaga tracejada na régua e que nenhum campo da linha dele oferece ajuste de rádio. Ele não tem enlace sem fio: não há o que parametrizar.
-* **P2** — Cabo. Mesma conferência. Se os dois do cabo aparecerem consumindo turnos, a conta está cobrando de quem não fala no rádio, e esse é o achado.
-* **P3** — Rádio, testemunha, e é o contraste que dá sentido ao teste: ele SIM tem de aparecer consumindo turnos na régua.
-* **P4** — Rádio, testemunha. Mesma coisa. Se ele estiver ligado no rádio e não aparecer na régua, anote — a régua está contando menos gente do que existe.
+* **P1** — USB. Confira que ele não aparece em adaptador nenhum e que nenhum campo da linha dele oferece ajuste de rádio. Ele não tem enlace sem fio: não há o que parametrizar.
+* **P2** — USB. Mesma conferência. Se um dos dois do cabo aparecer num adaptador, a tela está cobrando rádio de quem não fala no rádio, e esse é o achado.
+* **P3** — BT, testemunha, e é o contraste que dá sentido ao teste: ele SIM tem de aparecer na lista de um adaptador.
+* **P4** — BT, testemunha. Mesma coisa. Se ele estiver ligado no rádio e não aparecer em adaptador nenhum, anote — a seção está contando menos gente do que existe.
 
-**A armadilha.** O erro fácil aqui é ler os números da régua como medida do enlace. Eles não são, e a própria tela diz isso: o parágrafo «De onde vêm os números» escreve que os 1.600 turnos são especificação do Bluetooth e nunca foram medidos aqui, e que o consumo por controle veio de um ensaio com UM controle, com a soma de quatro sendo derivada — o maior ensaio de rádio desta casa foi de dois. Um número honesto sobre a própria origem não vira medida por estar na tela. E é isso que este teste protege: se algum dia aparecer ali um número apresentado como leitura do enlace de agora, sem essa ressalva, isso é o achado — porque ninguém nesta casa tem instrumento que leia esses números, e o lado do cabo nem tem enlace a ler. Não confunda com o exame do Check-up: ele fala de entrada USB fraca e de vizinhança de rádio, que são outra coisa e existem de verdade.
+**A armadilha.** O erro fácil aqui é ler como ajuste de enlace o que é outra coisa. Os números em Hz de «Rádio e Adaptadores» são LEITURA do que chega agora de cada controle do rádio, e não parâmetro que alguém escolha; os canais que a faixa «Quem está no ar» diz que os adaptadores evitam também são leitura, feita no próprio adaptador. Nenhum deles é tempo de supervisão, escuta ou latência — ninguém nesta casa tem instrumento que leia esses três, e o lado do cabo nem tem enlace a ler. Não confunda com o «Check-up»: ele fala de energia das entradas e de vizinhança de rádio, que são outra coisa e existem de verdade.
 
 ---
 
@@ -5612,34 +5609,32 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, nos dois controles do rádio, o Hefesto continua sem mexer no enlace e sem apresentar como medido nenhum número que ninguém mediu.
 
-**Onde olhar.** Na aba Conexões, a seção Desempenho, no fim da aba: a linha «O rádio de cada adaptador, em turnos», a régua de cada adaptador — onde cada controle do rádio aparece como uma fatia com o nome da cor do plástico dele —, o número no fim da régua no formato tantos «de 1.600», e o parágrafo «De onde vêm os números» logo abaixo. Acima, o quadro Gestão de Controles, com a linha de cada controle ligado, que se abre ao clicar. E na aba Sistema, no quadro O exame de hoje, a linha que fala de Bluetooth — quantos adaptadores e quantos controles no rádio.
+**Onde olhar.** Na aba Conexões, a seção «Rádio e Adaptadores», que abre pelo título: no alto, a faixa «Quem está no ar», com a frase de quantos aparelhos Bluetooth seus saltam por quantos canais livres e a conta «N/79 evitados» — os canais que os adaptadores evitam, lidos no próprio adaptador; embaixo, um bloco por adaptador, e o ▶ de cada um abre a lista dos controles que estão nele, cada um com o número de pacotes de movimento por segundo que chegam AGORA (em Hz, ao lado do ícone de sinal). Acima, o quadro «Gestão de Controles», com a linha de cada controle, que se abre ao clicar.
 
 **Os passos.**
 
-1. Confira na fita do topo que o P3 e o P4 dizem rádio.
+1. Confira na fita do topo que os chips do P3 e do P4 terminam em BT.
 2. Abra a aba Conexões.
-3. Desça até a seção Desempenho.
-4. Confira que o P3 e o P4 aparecem na régua do adaptador consumindo turnos, cada um com o nome da cor do plástico dele.
-5. Leia o número no fim da régua, no formato tantos «de 1.600», e anote-o.
-6. Leia o parágrafo «De onde vêm os números» e anote o que ele diz sobre a origem de cada número.
-7. Confira que ele diz, com todas as letras, que os turnos são especificação e nunca foram medidos aqui.
-8. Suba até o quadro Gestão de Controles e clique na linha do P3 para abri-la.
-9. Procure, dentro dela, qualquer campo que ofereça mexer em tempo de resposta, intervalo de escuta ou latência do rádio.
+3. Clique no título «Rádio e Adaptadores» e clique no ▶ de cada adaptador.
+4. Confira que o P3 e o P4 aparecem, cada um na lista de um adaptador, com um número em Hz ao lado.
+5. Anote o Hz de cada um; conte até dez e leia de novo — é leitura viva, e pode oscilar.
+6. Leia a faixa «Quem está no ar» e anote a conta de canais evitados.
+7. Procure, em toda a seção, qualquer campo que ofereça mexer em tempo de resposta, intervalo de escuta ou latência do rádio.
+8. Clique no título «Gestão de Controles» e clique na linha do P3 para abri-la.
+9. Procure, dentro dela, qualquer campo que ofereça mexer no enlace; os ajustes dela são o microfone, o «Limite da vibração» e o botão «A luz não acende».
 10. Repita a procura na linha do P4.
-11. Abra a aba Sistema e leia, no quadro O exame de hoje, a linha que fala de Bluetooth.
-12. Confira que ela conta os adaptadores e quantos controles estão no rádio, e que ela manda para a aba Conexões em vez de oferecer um ajuste.
-13. Anote qualquer número da tela que seja apresentado como medida do enlace sem dizer de onde veio.
+11. Anote qualquer número da tela que seja apresentado como tempo de supervisão, escuta ou latência do enlace.
 
-**Passa quando.** Nenhuma linha dos controles do rádio oferece ajuste de enlace, e todo número da seção Desempenho vem acompanhado do parágrafo que diz de onde ele saiu. A régua mostra os DOIS controles do rádio, cada um com o nome da cor dele. E a linha de Bluetooth do exame da aba Sistema conta o que existe e aponta para a aba Conexões, sem prometer conserto.
+**Passa quando.** Nenhuma linha dos controles do rádio oferece ajuste de enlace, e os números que a seção mostra são leituras do que chega (os Hz de movimento) e do que o adaptador evita (os canais) — nenhum é apresentado como supervisão, escuta ou latência. A lista mostra os DOIS controles do rádio, cada um no adaptador em que está.
 
 **Por controle.**
 
-* **P1** — Cabo, testemunha: ele aparece como vaga tracejada na régua, e nenhum campo da linha dele oferece ajuste de rádio.
-* **P2** — Cabo, testemunha. Mesma coisa. Os dois do cabo juntos mostram que a régua sabe separar quem fala no rádio de quem não fala.
-* **P3** — Rádio, é um dos dois medidos. Confira que ele aparece consumindo turnos, com o nome da cor dele, e que nenhum campo da linha dele oferece mexer no enlace.
-* **P4** — Rádio, o segundo. Mesma conferência — e com os dois no ar a régua tem de SOMAR os dois, não repetir um. Uma régua que mostra um só com dois no rádio é o achado.
+* **P1** — USB, testemunha: ele não aparece em «Rádio e Adaptadores», e nenhum campo da linha dele oferece ajuste de rádio.
+* **P2** — USB, testemunha. Mesma coisa. Os dois do cabo juntos mostram que a seção sabe separar quem fala no rádio de quem não fala.
+* **P3** — BT, é um dos dois medidos. Confira que ele aparece num adaptador com o Hz ao lado, e que nenhum campo da linha dele oferece mexer no enlace.
+* **P4** — BT, o segundo. Mesma conferência — e com os dois no ar cada um tem de aparecer com o SEU número; dois Hz sempre idênticos, leitura após leitura, é o achado.
 
-**A armadilha.** O que esta linha do mapa diz é «ninguém sabe», e o teste tem de conseguir enxergar isso. Não há nesta casa instrumento que leia tempo de supervisão, intervalo de escuta ou latência do enlace: quem negocia esses números é o sistema com o firmware, sozinho. E há uma prova de que a ausência é do aparelho e não de quem procurou: o driver desta máquina tem as alavancas todas para um controle mais velho da mesma marca, e nenhuma para o DualSense. Então um verde aqui não diz que o enlace está bom — diz que a tela não mente sobre ele. O achado que este teste caça é uma tela que passe a exibir um desses números como se alguém os tivesse lido. Não confunda com a régua de turnos: ela é uma conta declarada, não uma medição do seu enlace, e a própria tela diz isso no parágrafo de origem.
+**A armadilha.** O que esta linha do mapa diz é «ninguém sabe», e o teste tem de conseguir enxergar isso. Não há nesta casa instrumento que leia tempo de supervisão, intervalo de escuta ou latência do enlace: quem negocia esses números é o sistema com o firmware, sozinho. E há uma prova de que a ausência é do aparelho e não de quem procurou: o driver desta máquina tem as alavancas todas para um controle mais velho da mesma marca, e nenhuma para o DualSense. Então um verde aqui não diz que o enlace está bom — diz que a tela não mente sobre ele. Segunda: os canais evitados e os Hz são leituras reais, mas de OUTRAS grandezas — não os tome por supervisão ou latência. Terceira: a dica do campo do microfone, numa linha do rádio da «Gestão de Controles», traz uma conta de relatórios e quadros por segundo; ela é uma conta feita com um controle na bancada de agosto, não a leitura do seu enlace de agora — não julgue o seu rádio por ela.
 
 ---
 
@@ -5649,36 +5644,37 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que encaixar o cabo faz o controle nascer INTEIRO para o Hefesto — com número, bateria, movimento e touchpad — em menos de cinco segundos.
 
-**Onde olhar.** Na fita do topo do Hefesto, a linha que começa com «Selecionar:»: cada controle vira um chip com o número, a cor do plástico e a palavra cabo ou rádio. No alto, a contagem, no formato «4 controles: 2 USB · 2 BT». Na aba Controles, o quadro Dispositivos Conectados, com uma linha por controle, e o cartão que abre ao clicar na linha: Bateria em porcento, Touchpad, os dois analógicos, os Gatilhos e os blocos Giroscópio e Acelerômetro com X, Y e Z.
+**Onde olhar.** Na fita do topo, a linha que começa com «Selecionar:»: cada controle é um chip no formato «P1 • <nome da cor do plástico> • USB». No canto de cima, à direita, a contagem, no formato «● 2 USB · 2 BT». Na aba Controles, o quadro «Dispositivos conectados», com uma linha por controle, e o cartão que abre ao clicar na linha: «Bateria» em porcento, «Touchpad», os dois analógicos, «Gatilhos» e os blocos «Giroscópio» e «Acelerômetro» com X, Y e Z.
 
 **Os passos.**
 
 1. Deixe o P3 e o P4 ligados no rádio e não encoste neles durante o teste.
-2. Abra o Hefesto na aba Controles.
-3. Desencaixe o cabo do P1.
-4. Conte até dez, devagar.
-5. Confira que o chip do P1 saiu da fita e que a contagem do alto caiu para três controles.
-6. Encaixe o cabo de volta no P1 e depois no PC.
-7. Conte até cinco, devagar, olhando a fita.
-8. Leia o chip que apareceu: número, cor do plástico e a palavra cabo.
-9. Clique na linha do P1 para abrir o cartão dele.
-10. Confira que a Bateria mostra um número em porcento, e não um traço.
-11. Encoste um dedo no touchpad do P1 e confira que a linha Touchpad conta o toque.
-12. Gire o P1 na mão e confira que os números do Giroscópio saem do zero.
-13. Empurre o analógico esquerdo do P1 e confira que os números andam no cartão.
-14. Repita os passos 3 a 13 com o P2.
-15. Confira, no fim, que a contagem do alto voltou a dizer quatro controles, dois no cabo e dois no rádio.
+2. Abra a aba Controles.
+3. Anote o nome da cor do plástico de cada um dos quatro chips da fita.
+4. Desencaixe o cabo do P1.
+5. Conte até dez, devagar.
+6. Confira que o chip com o plástico do P1 saiu da fita e que a contagem passou a «● 1 USB · 2 BT».
+7. Encaixe o cabo de volta no P1 e no PC.
+8. Conte até cinco, devagar, olhando a fita.
+9. Leia o chip com o plástico do P1: tem de ser P1 de novo, terminando em USB.
+10. Clique na linha do P1 para abrir o cartão dele.
+11. Confira que a «Bateria» mostra um número em porcento, e não um traço.
+12. Encoste um dedo no touchpad do P1 e confira que o «Touchpad» conta o toque.
+13. Gire o P1 na mão e confira que os números do «Giroscópio» saem do zero.
+14. Empurre o analógico esquerdo do P1 e confira que os números andam no cartão.
+15. Repita os passos 4 a 14 com o P2.
+16. Confira, no fim, que a contagem voltou a «● 2 USB · 2 BT» e que os quatro têm os números do começo.
 
 **Passa quando.** Depois de encaixar o cabo, o controle volta à fita em menos de cinco segundos, com o mesmo número de antes, e o cartão dele responde em TODOS os campos vivos: bateria com número, touchpad contando o toque, giroscópio saindo do zero e analógico andando. Meio controle não passa — se ele aparece mas a bateria fica em traço, ou o giroscópio não sai do zero, o teste reprovou.
 
 **Por controle.**
 
-* **P1** — Cabo, é o primeiro a sair e voltar. Desencaixe o cabo, encaixe de novo, e confira o cartão inteiro depois — não só o chip na fita.
-* **P2** — Cabo, o segundo. Mesmo gesto, e um de cada vez: com os dois fora ao mesmo tempo você não sabe qual voltou primeiro nem qual ficou pela metade.
-* **P3** — Rádio, testemunha. Não encoste nele. O chip dele não pode sumir da fita nem trocar de número enquanto o do cabo sai e volta.
-* **P4** — Rádio, testemunha. Mesma coisa. Se ele cair junto quando você mexe num do cabo, o achado não é da entrada do controle e sim de alguma coisa que derruba os quatro — anote a hora exata.
+* **P1** — USB, é o primeiro a sair e voltar. Desencaixe o cabo, encaixe de novo, e confira o cartão inteiro depois — não só o chip na fita.
+* **P2** — USB, o segundo. Mesmo gesto, e um de cada vez: com os dois fora ao mesmo tempo você não sabe qual voltou primeiro nem qual ficou pela metade.
+* **P3** — BT, testemunha. Não encoste nele. O chip dele não pode sumir da fita enquanto o do cabo sai e volta.
+* **P4** — BT, testemunha. Mesma coisa. Se ele cair junto quando você mexe num do cabo, o achado não é da entrada do controle e sim de alguma coisa que derruba os quatro — anote a hora exata.
 
-**A armadilha.** Meio controle é o defeito que este teste caça, e ele engana porque o chip APARECE. Quando um controle sobe pela metade, o Hefesto o lista e o cartão fica sem bateria, sem movimento e sem touchpad — e isso se lê como «a tela está lenta». Por isso os passos mandam MEXER no aparelho: touchpad, giroscópio e analógico, um a um. Segunda: olhe a palavra do transporte dentro do chip. No chip vivo está escrito cabo ou rádio; se você vir USB ou BT dentro de um chip, a fita não está lendo os seus controles, e o teste não passou nem reprovou — não houve leitura. (Na contagem lá do alto é o contrário: ali USB e BT estão certos, foi decisão sua.) Terceira: se o controle não voltar de jeito nenhum, troque de porta USB antes de reprovar — entrada fraca derruba controle do cabo, e o exame da aba Conexões tem uma linha só sobre isso.
+**A armadilha.** Meio controle é o defeito que este teste caça, e ele engana porque o chip APARECE. Quando um controle sobe pela metade, o Hefesto o lista e o cartão fica sem bateria, sem movimento e sem touchpad — e isso se lê como «a tela está lenta». Por isso os passos mandam MEXER no aparelho: touchpad, giroscópio e analógico, um a um. Segunda: enquanto o P1 está fora, os três que ficaram descem um número — o plástico do P2 aparece como P1, e assim por diante — e voltam ao número deles quando o P1 volta. Isso é o produto, não defeito; é por isso que os passos seguem o P1 pelo plástico. Terceira: se o controle não voltar de jeito nenhum, troque de entrada USB antes de reprovar — entrada fraca derruba controle do cabo.
 
 ---
 
@@ -5688,36 +5684,37 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que ligar o controle pelo rádio o faz nascer INTEIRO — e não apenas conectado: com bateria, movimento e touchpad respondendo.
 
-**Onde olhar.** Na fita do topo, a linha que começa com «Selecionar:», onde cada controle é um chip com o número, a cor do plástico e a palavra cabo ou rádio; e a contagem no alto, no formato «4 controles: 2 USB · 2 BT». Na aba Controles, o quadro Dispositivos Conectados e o cartão que abre ao clicar na linha de um controle: Bateria em porcento, Touchpad, os dois analógicos, os Gatilhos e os blocos Giroscópio e Acelerômetro com X, Y e Z. São esses três últimos — bateria, touchpad e movimento — que dizem se ele subiu inteiro.
+**Onde olhar.** Na fita do topo, a linha que começa com «Selecionar:», onde cada controle é um chip no formato «P3 • <nome da cor do plástico> • BT»; e a contagem no canto de cima, à direita, no formato «● 2 USB · 2 BT». Na aba Controles, o quadro «Dispositivos conectados» e o cartão que abre ao clicar na linha de um controle: «Bateria» em porcento, «Touchpad», os dois analógicos, «Gatilhos» e os blocos «Giroscópio» e «Acelerômetro» com X, Y e Z. São bateria, touchpad e movimento que dizem se ele subiu inteiro.
 
 **Os passos.**
 
 1. Deixe o P1 e o P2 no cabo e não encoste neles durante o teste.
-2. Abra o Hefesto na aba Controles.
-3. Segure o botão PS do P3 até todas as luzes dele apagarem, e solte.
-4. Conte até dez, devagar.
-5. Confira que o chip do P3 saiu da fita e que a contagem do alto caiu para três controles.
-6. Dê um toque curto no botão PS do P3 para religá-lo.
-7. Conte até cinco, devagar, olhando a fita.
-8. Leia o chip que apareceu: número, cor do plástico e a palavra rádio.
-9. Clique na linha do P3 para abrir o cartão dele.
-10. Confira que a Bateria mostra um número em porcento, e não um traço.
-11. Encoste um dedo no touchpad do P3 e confira que a linha Touchpad conta o toque.
-12. Gire o P3 na mão e confira que os números do Giroscópio saem do zero.
-13. Empurre o analógico esquerdo do P3 e confira que os números andam no cartão.
-14. Repita os passos 3 a 13 com o P4.
-15. Confira, no fim, que a contagem do alto voltou a dizer quatro controles, dois no cabo e dois no rádio.
+2. Abra a aba Controles.
+3. Anote o nome da cor do plástico de cada um dos quatro chips da fita.
+4. Segure o botão PS do P3 até todas as luzes dele apagarem, e solte.
+5. Conte até dez, devagar.
+6. Confira que o chip com o plástico do P3 saiu da fita e que a contagem passou a «● 2 USB · 1 BT».
+7. Dê um toque curto no botão PS do P3 para religá-lo.
+8. Conte até cinco, devagar, olhando a fita.
+9. Leia o chip com o plástico do P3: tem de ser P3 de novo, terminando em BT.
+10. Clique na linha do P3 para abrir o cartão dele.
+11. Confira que a «Bateria» mostra um número em porcento, e não um traço.
+12. Encoste um dedo no touchpad do P3 e confira que o «Touchpad» conta o toque.
+13. Gire o P3 na mão e confira que os números do «Giroscópio» saem do zero.
+14. Empurre o analógico esquerdo do P3 e confira que os números andam no cartão.
+15. Repita os passos 4 a 14 com o P4.
+16. Confira, no fim, que a contagem voltou a «● 2 USB · 2 BT» e que os quatro têm os números do começo.
 
 **Passa quando.** Depois do toque no PS, o controle volta à fita em poucos segundos com o mesmo número, e o cartão dele responde em TODOS os campos vivos: bateria com número, touchpad contando o toque, giroscópio saindo do zero e analógico andando. Aparecer na lista não basta — um controle listado sem bateria, sem touchpad e sem movimento é reprovação.
 
 **Por controle.**
 
-* **P1** — Cabo, testemunha. Não encoste nele; o chip dele não pode sumir nem trocar de número enquanto os do rádio saem e voltam.
-* **P2** — Cabo, testemunha. Mesma coisa.
-* **P3** — Rádio, é o primeiro a sair e voltar. Segure o PS até apagar, religue com um toque curto, e confira o cartão inteiro depois.
-* **P4** — Rádio, o segundo, e um de cada vez. Se ele cair sozinho quando você desliga o P3, o achado não é da entrada do controle: é o adaptador de rádio dividindo banda entre os dois, e isso tem lugar próprio na seção Desempenho da aba Conexões.
+* **P1** — USB, testemunha. Não encoste nele; o chip dele não pode sumir enquanto os do rádio saem e voltam.
+* **P2** — USB, testemunha. Mesma coisa.
+* **P3** — BT, é o primeiro a sair e voltar. Segure o PS até apagar, religue com um toque curto, e confira o cartão inteiro depois.
+* **P4** — BT, o segundo, e um de cada vez. Enquanto o P3 está fora ele aparece como P3 e volta a ser P4 quando o P3 volta. Se ele cair sozinho quando você desliga o P3, o achado não é da entrada do controle: confira em «Rádio e Adaptadores», na aba Conexões, se os dois dividem o mesmo adaptador, e anote.
 
-**A armadilha.** É NO RÁDIO que o meio controle acontece de verdade, e a razão é do aparelho: pelo rádio o DualSense nasce MUDO — manda só o essencial até alguém lhe pedir uma informação de fábrica, e é esse pedido que o vira para o relatório completo, com movimento, touchpad e bateria dentro. Se o pedido falhar, o controle acende, pareia, entra na lista e fica sem nada disso. Então «ele conectou» não é resposta neste teste: as três conferências dos passos 10 a 12 é que são. E o pedido tem prazo curto: quando expira, a subida inteira é abandonada de uma vez, sem segunda tentativa do lado do sistema — o conserto é desligar e ligar o controle de novo, não esperar. Por fim, olhe a palavra dentro do chip: no chip vivo está escrito cabo ou rádio; USB ou BT dentro de um chip quer dizer que a fita não está lendo os seus controles, e aí não houve leitura nenhuma.
+**A armadilha.** É NO RÁDIO que o meio controle acontece de verdade, e a razão é do aparelho: pelo rádio o DualSense nasce MUDO — manda só o essencial até alguém lhe pedir uma informação de fábrica, e é esse pedido que o vira para o relatório completo, com movimento, touchpad e bateria dentro. Se o pedido falhar, o controle acende, pareia, entra na lista e fica sem nada disso. Então «ele conectou» não é resposta neste teste: as três conferências dos passos 11 a 13 é que são. E o pedido tem prazo curto: quando expira, a subida inteira é abandonada de uma vez, sem segunda tentativa do lado do sistema — o conserto é desligar e ligar o controle de novo, não esperar. Segunda: enquanto um controle do rádio está fora, os que vêm depois dele descem um número e voltam quando ele volta; siga-os pelo plástico. Terceira: um aperto solto no PS abre a Steam; se ela abrir, feche-a antes de seguir.
 
 ---
 
@@ -5727,21 +5724,21 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o Hefesto fica tentando sozinho até o controle do cabo entrar, e que ele entra inteiro mesmo depois de várias idas e voltas seguidas.
 
-**Onde olhar.** Na fita do topo, os chips com o número, a cor do plástico e a palavra cabo ou rádio; e a contagem no alto, no formato «4 controles: 2 USB · 2 BT». Na aba Controles, o quadro Dispositivos Conectados e o cartão que abre ao clicar na linha: Bateria em porcento, Touchpad, os analógicos e os blocos Giroscópio e Acelerômetro. E na aba Sistema, na faixa Avançado, o botão «Ver detalhes», que troca o painel Detalhes técnicos pelas últimas linhas do registro, cada uma com o horário na frente.
+**Onde olhar.** Na fita do topo, os chips no formato «P1 • <nome da cor do plástico> • USB»; e a contagem no canto de cima, à direita, no formato «● 2 USB · 2 BT». Na aba Controles, o quadro «Dispositivos conectados» e o cartão que abre ao clicar na linha: «Bateria» em porcento, «Touchpad», os analógicos e os blocos «Giroscópio» e «Acelerômetro». E na aba Sistema, na faixa «Avançado», o botão «Ver detalhes», que põe no painel «Detalhes técnicos», ao lado, as últimas 80 linhas do registro, cada uma com o horário na frente.
 
 **Os passos.**
 
-1. Confira que os quatro estão ligados e que a contagem do alto diz quatro controles.
-2. Abra o Hefesto na aba Controles.
-3. Anote a hora no relógio.
+1. Confira que os quatro estão ligados e que a contagem diz «● 2 USB · 2 BT».
+2. Abra a aba Controles.
+3. Anote o nome da cor do plástico de cada chip da fita, e a hora no relógio.
 4. Desencaixe o cabo do P1, conte até três, e encaixe de volta.
 5. Repita esse desencaixa-e-encaixa mais quatro vezes no P1, sempre contando até três entre uma coisa e a outra.
 6. Deixe o cabo encaixado na última vez.
 7. Conte até dez, devagar.
-8. Confira que o chip do P1 está na fita, com o mesmo número de antes.
+8. Confira que o chip com o plástico do P1 está na fita, como P1.
 9. Clique na linha do P1 e confira que o cartão responde: bateria com número, touchpad contando o toque e giroscópio saindo do zero.
 10. Repita os passos 4 a 9 com o P2.
-11. Abra a aba Sistema e desça até a faixa Avançado.
+11. Abra a aba Sistema e desça até a faixa «Avançado».
 12. Clique em «Ver detalhes» e leia as últimas linhas do registro.
 13. Procure, pelo horário que você anotou, as linhas das idas e voltas do P1 e do P2, e anote se alguma delas fala de tentativa que falhou.
 
@@ -5749,12 +5746,12 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **Por controle.**
 
-* **P1** — Cabo, é o primeiro a apanhar: cinco idas e voltas, uma de cada vez, com três segundos entre elas. No fim, o cartão inteiro tem de responder.
-* **P2** — Cabo, o segundo. Mesma sequência, e só depois de o P1 já ter assentado — os dois ao mesmo tempo não deixam saber qual demorou.
-* **P3** — Rádio, testemunha. Não encoste nele; o chip dele não pode sumir nem trocar de número enquanto o do cabo entra e sai cinco vezes.
-* **P4** — Rádio, testemunha. Mesma coisa, e ele é o mais sensível: se as idas e voltas de um controle do cabo derrubarem o último do rádio, isso é o achado.
+* **P1** — USB, é o primeiro a apanhar: cinco idas e voltas, uma de cada vez, com três segundos entre elas. No fim, o cartão inteiro tem de responder.
+* **P2** — USB, o segundo. Mesma sequência, e só depois de o P1 já ter assentado — os dois ao mesmo tempo não deixam saber qual demorou.
+* **P3** — BT, testemunha. Não encoste nele; o chip dele não pode sumir enquanto o do cabo entra e sai cinco vezes.
+* **P4** — BT, testemunha. Mesma coisa, e ele é o mais sensível: se as idas e voltas de um controle do cabo derrubarem o último do rádio, isso é o achado.
 
-**A armadilha.** O Hefesto refaz a procura a cada cinco segundos, e ela ESPAÇA quando falha muitas vezes seguidas: depois de várias tentativas a espera entre uma e outra cresce, então um controle que demora quinze ou vinte segundos a voltar no fim de uma sequência longa não é defeito — é a espera crescida. Espere mais antes de reprovar, e anote quanto tempo levou. Duas coisas mais. Existem DUAS tentativas diferentes em jogo, e elas não se somam: a do Hefesto refaz a procura inteira a cada cinco segundos, e a do sistema tenta de novo um pedido de informação de fábrica dentro de uma única subida — confundir as duas faz procurar o número errado quando um controle não entra. E não faça as idas e voltas depressa demais: encaixar e desencaixar sem esperar maltrata o conector, e o que você mede passa a ser o seu gesto, não o produto. Não clique em «Restaurar de fábrica», que fica na mesma faixa Avançado.
+**A armadilha.** O Hefesto refaz a procura a cada cinco segundos, e ela ESPAÇA quando falha muitas vezes seguidas: depois de várias tentativas a espera entre uma e outra cresce, então um controle que demora quinze ou vinte segundos a voltar no fim de uma sequência longa não é defeito — é a espera crescida. Espere mais antes de reprovar, e anote quanto tempo levou. Duas coisas mais. Existem DUAS tentativas diferentes em jogo, e elas não se somam: a do Hefesto refaz a procura inteira a cada cinco segundos, e a do sistema tenta de novo um pedido de informação de fábrica dentro de uma única subida — confundir as duas faz procurar o número errado quando um controle não entra. E a cada saída do P1 os outros três descem um número e voltam quando ele volta; isso pisca na fita cinco vezes, e é o produto. Não faça as idas e voltas depressa demais: encaixar e desencaixar sem esperar maltrata o conector, e o que você mede passa a ser o seu gesto, não o produto. Não clique em «Restaurar de fábrica», que fica na mesma faixa «Avançado».
 
 ---
 
@@ -5764,35 +5761,35 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que um controle do rádio que não entra na primeira volta acaba entrando, e mostra o que fazer quando ele acende mas não aparece na lista.
 
-**Onde olhar.** Na fita do topo, os chips com o número, a cor do plástico e a palavra cabo ou rádio; e a contagem no alto, no formato «4 controles: 2 USB · 2 BT». Na aba Controles, o cartão que abre ao clicar na linha de um controle: Bateria em porcento, Touchpad, os analógicos e os blocos Giroscópio e Acelerômetro. E na aba Sistema, na faixa Avançado, o botão «Ver detalhes», que troca o painel Detalhes técnicos pelas últimas linhas do registro, cada uma com o horário na frente.
+**Onde olhar.** Na fita do topo, os chips no formato «P3 • <nome da cor do plástico> • BT»; e a contagem no canto de cima, à direita, no formato «● 2 USB · 2 BT». Na aba Controles, o cartão que abre ao clicar na linha de um controle: «Bateria» em porcento, «Touchpad», os analógicos e os blocos «Giroscópio» e «Acelerômetro». Na aba Jogar, o botão «Reconectar controles», embaixo dos cartões: desde 22/09 ele derruba o elo morto de um controle que o Bluetooth diz estar aqui e o Hefesto não vê, e diz numa frase o que fez. E na aba Sistema, na faixa «Avançado», o botão «Ver detalhes», que põe no painel «Detalhes técnicos» as últimas 80 linhas do registro, cada uma com o horário na frente.
 
 **Os passos.**
 
-1. Confira que os quatro estão ligados e que a contagem do alto diz quatro controles.
-2. Abra o Hefesto na aba Controles.
-3. Anote a hora no relógio.
+1. Confira que os quatro estão ligados e que a contagem diz «● 2 USB · 2 BT».
+2. Abra a aba Controles.
+3. Anote o nome da cor do plástico de cada chip da fita, e a hora no relógio.
 4. Segure o botão PS do P3 até as luzes apagarem e solte.
-5. Conte até cinco, devagar, com o P3 na mesa.
+5. Conte até cinco, devagar, com o P3 parado ao seu lado.
 6. Dê um toque curto no botão PS do P3 para religá-lo.
-7. Anote quantos segundos levou até o chip dele voltar à fita.
+7. Anote quantos segundos levou até o chip com o plástico dele voltar à fita.
 8. Anote também se a barra de luz dele acendeu sem o chip aparecer.
 9. Repita os passos 4 a 8 mais quatro vezes no P3, sempre esperando o chip voltar antes da volta seguinte.
-10. Desligue e ligue o P3 mais uma vez, se em alguma das cinco voltas ele tiver acendido sem aparecer.
-11. Clique na linha do P3 e confira que o cartão responde: bateria com número, touchpad contando o toque e giroscópio saindo do zero.
+10. Se em alguma volta ele acendeu e não apareceu em dez segundos, abra a aba Jogar, clique em «Reconectar controles», leia a frase e faça o que ela pedir; se nada mudar, desligue e ligue o P3 mais uma vez.
+11. Clique na linha do P3, na aba Controles, e confira que o cartão responde: bateria com número, touchpad contando o toque e giroscópio saindo do zero.
 12. Repita os passos 4 a 11 com o P4.
-13. Abra a aba Sistema, desça até a faixa Avançado e clique em «Ver detalhes».
+13. Abra a aba Sistema, desça até a faixa «Avançado» e clique em «Ver detalhes».
 14. Leia as últimas linhas do registro pelo horário que você anotou e anote qualquer linha que fale de tentativa que falhou.
 
-**Passa quando.** Nas cinco voltas, o controle do rádio termina de volta na fita, com o mesmo número, e o cartão dele responde em todos os campos vivos. Se em alguma volta ele acendeu sem aparecer na lista, desligar e ligar de novo resolveu — e isso ainda vale como passa, desde que você anote em quantas das cinco aconteceu.
+**Passa quando.** Nas cinco voltas, o controle do rádio termina de volta na fita, com o mesmo número, e o cartão dele responde em todos os campos vivos. Se em alguma volta ele acendeu sem aparecer na lista, o «Reconectar controles» ou um desligar e ligar resolveu — e isso ainda vale como passa, desde que você anote em quantas das cinco aconteceu e qual dos dois gestos resolveu.
 
 **Por controle.**
 
-* **P1** — Cabo, testemunha: chip na fita o tempo todo, número intacto, e o cartão respondendo no fim.
-* **P2** — Cabo, testemunha. Mesma conferência.
-* **P3** — Rádio, é o primeiro a apanhar: cinco voltas, uma de cada vez, esperando o chip reaparecer entre elas. Anote os segundos de cada volta.
-* **P4** — Rádio, o segundo, e é o que mais costuma sofrer — ele é o último da fila e divide o mesmo adaptador com o P3. Se ele precisar de mais voltas que o P3, anote o número de cada um: é a diferença entre os dois que interessa.
+* **P1** — USB, testemunha: chip na fita o tempo todo e o cartão respondendo no fim.
+* **P2** — USB, testemunha. Mesma conferência.
+* **P3** — BT, é o primeiro a apanhar: cinco voltas, uma de cada vez, esperando o chip reaparecer entre elas. Anote os segundos de cada volta.
+* **P4** — BT, o segundo, e é o que mais costuma sofrer — ele é o último da fila e pode dividir o adaptador com o P3. Enquanto o P3 está fora, ele aparece como P3. Se ele precisar de mais voltas que o P3, anote o número de cada um: é a diferença entre os dois que interessa.
 
-**A armadilha.** Aqui existe uma falha que NÃO se conserta esperando, e reconhecê-la é o ponto do teste. Pelo rádio, o pedido de informação de fábrica que o controle precisa responder para subir inteiro tem prazo de três segundos, e o sistema desta máquina faz UMA tentativa só por padrão. Se ela expira, a subida morre inteira: o controle fica aceso, pareado, e simplesmente não existe para o Hefesto. E o Hefesto refazendo a procura a cada cinco segundos não salva esse caso, porque não há o que procurar. O gesto que resolve é desligar e ligar o controle de novo — ficar esperando não resolve, e é assim que se perde meia hora. Duas outras: conte os segundos a partir de quando você SOLTA o botão, não de quando aperta; e não religue depressa demais, porque o Hefesto ainda pode achar que ele está lá — deixe pelo menos cinco segundos desligado entre uma volta e a seguinte. Não clique em «Restaurar de fábrica», que fica na mesma faixa Avançado.
+**A armadilha.** Aqui existe uma falha que NÃO se conserta esperando, e reconhecê-la é o ponto do teste. Pelo rádio, o pedido de informação de fábrica que o controle precisa responder para subir inteiro tem prazo de três segundos, e o sistema desta máquina faz UMA tentativa só por padrão. Se ela expira, a subida morre inteira: o controle fica aceso, pareado, e simplesmente não existe para o Hefesto. E o Hefesto refazendo a procura a cada cinco segundos não salva esse caso, porque não há o que procurar. O gesto que resolve é o «Reconectar controles», que derruba esse elo, ou desligar e ligar o controle de novo — ficar esperando não resolve, e é assim que se perde meia hora. Duas outras: conte os segundos a partir de quando você SOLTA o botão, não de quando aperta; e não religue depressa demais — deixe pelo menos cinco segundos desligado entre uma volta e a seguinte. E um aperto solto no PS abre a Steam; se ela abrir, feche-a. Não clique em «Restaurar de fábrica», que fica na mesma faixa «Avançado».
 
 ---
 
@@ -5802,34 +5799,35 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o número de jogador dos dois controles do cabo pertence ao CONTROLE, e não à entrada USB em que ele está espetado.
 
-**Onde olhar.** Três lugares, e eles têm de concordar. Na fita do topo do Hefesto, a linha que começa com "Selecionar:": cada controle é um chip com o número (P1 a P4), a cor do plástico e a palavra cabo ou rádio. No alto, a contagem, no formato "4 controles: 2 USB · 2 BT". Na aba Conexões, o quadro Gestão de Controles, onde cada linha traz "Player 1", "Player 2" e assim por diante, e termina em USB ou em BT. E no aparelho: as cinco lampadinhas brancas embaixo do touchpad, que dizem o número pelo CONJUNTO aceso — jogador 1 é só a do meio; jogador 2 são a segunda e a quarta; jogador 3 são as duas das pontas e a do meio; jogador 4 são as quatro, com a do meio apagada.
+**Onde olhar.** Três lugares, e eles têm de concordar. Na fita do topo, a linha que começa com «Selecionar:»: cada controle é um chip no formato «P1 • <nome da cor do plástico> • USB». Na aba Conexões, o quadro «Gestão de Controles» (abre pelo título), onde cada linha começa com «Sony • Player N» e termina em USB ou BT. E no aparelho: as cinco lampadinhas brancas embaixo do touchpad, que dizem o número pelo CONJUNTO aceso — jogador 1 é só a do meio; jogador 2 são a segunda e a quarta; jogador 3 são as duas das pontas e a do meio; jogador 4 são as quatro, com a do meio apagada.
 
 **Os passos.**
 
-1. Confira que os quatro estão ligados: P1 e P2 no cabo, P3 e P4 no rádio.
-2. Abra o Hefesto e clique na aba Conexões.
-3. Anote num papel o número de Player dos quatro, na lista Gestão de Controles.
-4. Olhe as lampadinhas de cada um dos quatro aparelhos e confira que a figura bate com o número que a tela mostra.
-5. Anote em qual entrada USB do PC está o cabo do P1.
-6. Puxe o cabo do P1 de dentro do PC — do lado do PC, nunca do lado do controle.
+1. Confira que os quatro estão ligados: os chips do P1 e do P2 terminando em USB, os do P3 e do P4 em BT.
+2. Anote num papel o nome da cor do plástico e o número de cada um dos quatro, lidos na fita do topo.
+3. Olhe as lampadinhas de cada um dos quatro aparelhos e confira que a figura bate com o número que a tela mostra.
+4. Anote em qual entrada USB do PC está o cabo do P1.
+5. Puxe o cabo do P1 de dentro do PC — do lado do PC, nunca do lado do controle.
+6. Olhe a fita enquanto ele está fora e anote o número com que cada um dos três que ficaram aparece.
 7. Encaixe esse mesmo cabo numa entrada USB DIFERENTE do PC, sem demorar.
 8. Conte até dez, devagar, olhando a fita do topo.
-9. Leia o chip do P1: tem de dizer P1 e a palavra cabo.
-10. Olhe as lampadinhas do P1 e confira que continuam no desenho do jogador 1.
-11. Repita os passos 5 a 10 com o cabo do P2, levando-o para uma terceira entrada USB.
-12. Leia de novo a lista Gestão de Controles e a contagem do alto.
-13. Olhe as lampadinhas dos quatro aparelhos uma última vez e compare com o que você anotou no papel.
+9. Leia o chip com o plástico do P1: tem de dizer P1 e terminar em USB.
+10. Confira que os outros três voltaram aos números que você anotou no passo 2.
+11. Olhe as lampadinhas do P1 e confira que continuam no desenho do jogador 1.
+12. Repita os passos 4 a 11 com o cabo do P2, levando-o para uma terceira entrada USB.
+13. Abra a aba Conexões, clique no título «Gestão de Controles» e leia os quatro «Player N».
+14. Olhe as lampadinhas dos quatro aparelhos uma última vez e compare com o que você anotou no papel.
 
-**Passa quando.** Cada um dos dois controles do cabo volta com exatamente o mesmo número de jogador que tinha antes de trocar de entrada USB, na tela e nas lampadinhas do aparelho. A contagem do alto volta a dizer quatro controles, dois no cabo e dois no rádio. E os dois do rádio não trocam de número em instante nenhum, nem enquanto os cabos estão fora.
+**Passa quando.** Cada um dos dois controles do cabo volta com exatamente o mesmo número de jogador que tinha antes de trocar de entrada USB, na tela e nas lampadinhas do aparelho. No fim, os quatro têm os números do começo, e a contagem volta a «● 2 USB · 2 BT». Enquanto um cabo está fora, os que vêm depois dele descem um número e voltam quando ele volta — isso é o produto; o que reprova é o número do fim, não o do meio.
 
 **Por controle.**
 
-* **P1** — Cabo, e é o primeiro a mudar de entrada. Anote o número dele e a entrada USB antes de puxar o cabo. Tem de voltar como o mesmo jogador, com as mesmas lampadinhas acesas, numa entrada que ele nunca tinha visto.
-* **P2** — Cabo, e é o segundo a mudar de entrada. Mesmo gesto, uma entrada ainda diferente. Faça um de cada vez: com os dois cabos fora ao mesmo tempo você não sabe qual dos dois causou o que aparecer.
-* **P3** — Rádio, e é testemunha. Não encoste nele. O número dele não pode mudar enquanto os cabos vão e vêm, e o chip dele não pode sumir da fita. Se ele trocar de número junto com a mexida no cabo, a numeração está seguindo a mesa inteira em vez de cada controle.
-* **P4** — Rádio, e é a segunda testemunha. Não encoste nele. É o último da fila e o primeiro a se mexer quando alguma coisa se desmonta: confira número e lampadinhas antes e depois.
+* **P1** — USB, e é o primeiro a mudar de entrada. Anote o número dele e a entrada USB antes de puxar o cabo. Tem de voltar como o mesmo jogador, com as mesmas lampadinhas acesas, numa entrada que ele nunca tinha visto.
+* **P2** — USB, e é o segundo a mudar de entrada. Mesmo gesto, uma entrada ainda diferente. Faça um de cada vez: com os dois cabos fora ao mesmo tempo você não sabe qual dos dois causou o que aparecer.
+* **P3** — BT, e é testemunha. Não encoste nele. O chip dele não pode sumir da fita. Enquanto o P1 está fora ele aparece como P2, e tem de voltar a P3 quando o P1 volta.
+* **P4** — BT, e é a segunda testemunha. Não encoste nele. Enquanto o P1 está fora ele aparece como P3; no fim, confira número e lampadinhas.
 
-**A armadilha.** As cinco lampadinhas não se contam da esquerda para a direita — o número é o CONJUNTO aceso, e quem lê "a terceira lampadinha acesa" como jogador 3 reprova um produto que está certo. Segunda: puxar o cabo derruba o controle, e o lugar dele fica guardado por trinta segundos; se você demorar mais que isso entre tirar e devolver o cabo, ele pode voltar com outro número, e isso é a regra do produto valendo, não defeito — refaça mais rápido. Terceira: se um chip da fita disser USB ou BT em vez de cabo ou rádio, a fita não está lendo os seus controles, está mostrando o desenho parado; ali o teste não passou nem reprovou. (Na contagem do alto, USB e BT estão certos — foi decisão sua.) E há uma coisa que o mapa já declara e que muda o veredito: o DualSense NÃO SABE que número ele é. O número é invenção do Hefesto e não tem canal nenhum no aparelho; o que o aparelho mostra são as lampadinhas. Se a tela disser um número e as lampadinhas disserem outro, quem quebrou foi a metade que EXIBE, e é esse o achado a anotar.
+**A armadilha.** As cinco lampadinhas não se contam da esquerda para a direita — o número é o CONJUNTO aceso, e quem lê «a terceira lampadinha acesa» como jogador 3 reprova um produto que está certo. Segunda: a numeração nunca deixa buraco — enquanto um controle está fora, quem vem depois dele desce um número, na tela e nas lâmpadas, e volta quando ele volta. Isso foi medido em 12/08 e é o produto de hoje; se é o desejado num co-op em andamento é decisão sua, registrada como aberta. Por isso a conferência que decide é a do FIM. Terceira: não há prazo para a volta — o controle recupera o número dele enquanto o serviço estiver de pé, demore o que demorar. E há uma coisa que o mapa já declara e que muda o veredito: o DualSense NÃO SABE que número ele é. O número é invenção do Hefesto e não tem canal nenhum no aparelho; o que o aparelho mostra são as lampadinhas. Se a tela disser um número e as lampadinhas disserem outro, quem quebrou foi a metade que EXIBE, e é esse o achado a anotar.
 
 ---
 
@@ -5839,37 +5837,36 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o número de jogador dos dois controles do rádio segue o controle, e não a ordem em que ele voltou a ligar.
 
-**Onde olhar.** Na fita do topo do Hefesto, a linha que começa com "Selecionar:", onde cada controle é um chip com o número, a cor do plástico e a palavra cabo ou rádio. Na aba Conexões, o quadro Gestão de Controles, com "Player 1", "Player 2" e assim por diante em cada linha. A contagem no alto, no formato "4 controles: 2 USB · 2 BT". E, nos aparelhos, as cinco lampadinhas brancas embaixo do touchpad: jogador 1 é só a do meio; jogador 2 são a segunda e a quarta; jogador 3 são as duas das pontas e a do meio; jogador 4 são as quatro, com a do meio apagada.
+**Onde olhar.** Na fita do topo, a linha que começa com «Selecionar:», onde cada controle é um chip no formato «P3 • <nome da cor do plástico> • BT». Na aba Conexões, o quadro «Gestão de Controles» (abre pelo título), com «Sony • Player N» no começo de cada linha. A contagem no canto de cima, à direita, no formato «● 2 USB · 2 BT». E, nos aparelhos, as cinco lampadinhas brancas embaixo do touchpad: jogador 1 é só a do meio; jogador 2 são a segunda e a quarta; jogador 3 são as duas das pontas e a do meio; jogador 4 são as quatro, com a do meio apagada.
 
 **Os passos.**
 
-1. Confira que os quatro estão ligados: P1 e P2 no cabo, P3 e P4 no rádio.
-2. Abra o Hefesto e clique na aba Conexões.
-3. Anote num papel o número de Player dos quatro, na lista Gestão de Controles.
-4. Olhe as lampadinhas dos quatro aparelhos e confira que a figura bate com o número da tela.
-5. Ponha o P3 e o P4 lado a lado na mesa, com as duas mãos livres — daqui para a frente você tem trinta segundos.
-6. Segure o botão PS do P3 até todas as luzes dele apagarem.
-7. Segure o botão PS do P4 até todas as luzes dele apagarem, logo em seguida.
-8. Dê um toque curto no botão PS do P4 — o QUARTO controle, e ele volta PRIMEIRO.
-9. Conte até cinco, devagar, olhando a fita.
-10. Leia o chip que apareceu: tem de dizer P4 e a palavra rádio.
-11. Dê um toque curto no botão PS do P3.
-12. Conte até cinco, devagar.
-13. Leia o chip novo: tem de dizer P3 e a palavra rádio.
-14. Olhe as lampadinhas do P3 e do P4 e confira que cada um voltou ao desenho do próprio número.
-15. Leia a contagem do alto e as quatro linhas da lista Gestão de Controles.
-16. Confira que o P1 e o P2 continuam com os números que você anotou no papel.
+1. Confira que os quatro estão ligados: os chips do P1 e do P2 terminando em USB, os do P3 e do P4 em BT.
+2. Anote num papel o nome da cor do plástico e o número de cada um dos quatro, lidos na fita do topo.
+3. Olhe as lampadinhas dos quatro aparelhos e confira que a figura bate com o número da tela.
+4. Segure o botão PS do P3 até todas as luzes dele apagarem.
+5. Segure o botão PS do P4 até todas as luzes dele apagarem, logo em seguida.
+6. Confira que a contagem passou a «● 2 USB» e que só os chips do P1 e do P2 ficaram na fita.
+7. Dê um toque curto no botão PS do P4 — o QUARTO controle, e ele volta PRIMEIRO.
+8. Conte até cinco, devagar, olhando a fita.
+9. Leia o chip com o plástico do P4: com o P3 ainda fora, ele aparece como P3 — a numeração não deixa buraco.
+10. Dê um toque curto no botão PS do P3.
+11. Conte até cinco, devagar.
+12. Leia os dois chips: o do plástico do P3 tem de dizer P3, e o do plástico do P4 tem de ter voltado a P4.
+13. Olhe as lampadinhas do P3 e do P4 e confira que cada um voltou ao desenho do próprio número.
+14. Leia a contagem, de volta a «● 2 USB · 2 BT», e as quatro linhas de «Gestão de Controles».
+15. Confira que o P1 e o P2 continuam com os números que você anotou no papel.
 
-**Passa quando.** O P4 volta como jogador 4 mesmo tendo sido o PRIMEIRO a religar, e o P3 volta como jogador 3 mesmo tendo sido o segundo — na tela e nas lampadinhas dos dois aparelhos. Se o P4 voltasse como jogador 3, o número estaria seguindo a ordem de chegada em vez de seguir o controle, e isso reprova. E os dois do cabo não trocam de número em instante nenhum.
+**Passa quando.** No fim, o P3 é o jogador 3 e o P4 é o jogador 4 — na tela e nas lampadinhas —, mesmo o P3 tendo sido o ÚLTIMO a religar. Se o P3 voltasse como jogador 4, o número estaria seguindo a ordem de chegada em vez de seguir o controle, e isso reprova. O P4 aparecer como P3 enquanto está sozinho no rádio é a regra do produto, não defeito. E os dois do cabo terminam com os números do começo.
 
 **Por controle.**
 
-* **P1** — Cabo, e é testemunha. Não encoste nele. Anote o número antes e confira depois: tem de ser o mesmo, com as mesmas lampadinhas. Se um dos dois do cabo se mexer enquanto os do rádio saem e voltam, anote que quem se mexeu estava no CABO.
-* **P2** — Cabo, e é a segunda testemunha. Não encoste nele. Mesma conferência do P1.
-* **P3** — Rádio, e é o que sai PRIMEIRO e volta POR ÚLTIMO. Segure o PS até apagar; depois, quando chegar a vez dele, um toque curto no PS. Tem de voltar como jogador 3, com as duas lampadinhas das pontas e a do meio acesas.
-* **P4** — Rádio, e é o que sai POR ÚLTIMO e volta PRIMEIRO. É nele que este teste se decide: voltando antes do P3, ele tem de voltar mesmo assim como jogador 4, com as quatro lampadinhas acesas e a do meio apagada.
+* **P1** — USB, e é testemunha. Não encoste nele. Anote o número antes e confira depois: tem de ser o mesmo, com as mesmas lampadinhas.
+* **P2** — USB, e é a segunda testemunha. Não encoste nele. Mesma conferência do P1.
+* **P3** — BT, e é o que sai PRIMEIRO e volta POR ÚLTIMO. Segure o PS até apagar; depois, quando chegar a vez dele, um toque curto no PS. Tem de voltar como jogador 3, com as duas lampadinhas das pontas e a do meio acesas.
+* **P4** — BT, e é o que sai POR ÚLTIMO e volta PRIMEIRO. É nele que o meio do teste se lê: sozinho no rádio ele aparece como P3; quando o P3 volta, ele tem de voltar a ser jogador 4, com as quatro lampadinhas acesas e a do meio apagada.
 
-**A armadilha.** O relógio decide, e ele já reprovou produto são: o lugar de quem cai fica guardado por trinta segundos. Do momento em que você desliga o primeiro até o momento em que o segundo volta tem de passar MENOS de trinta segundos; passando disso os dois lugares são liberados e os números saem mesmo pela ordem de chegada — e isso é a regra do produto vencendo, não defeito. Se estourar o tempo, refaça mais rápido. Segunda: as cinco lampadinhas não se contam da esquerda para a direita; o número é o conjunto aceso. Terceira: chip que diz USB ou BT em vez de cabo ou rádio é o desenho parado, e ali não houve leitura. E o que o mapa já declara: o DualSense não sabe que número ele é — o número é do Hefesto e não tem canal nenhum no aparelho, e o que o aparelho mostra são as lampadinhas. Tela e lampadinhas discordando é a metade que EXIBE quebrada, e é isso que se anota.
+**A armadilha.** A numeração nunca deixa buraco, e é isso que engana no meio: com o P3 fora, o P4 aparece como P3 — na tela e nas lâmpadas — e volta a P4 quando o P3 chega. Isso foi medido em 12/08 e é o produto de hoje; se é o desejado num co-op em andamento é decisão sua, registrada como aberta. O que se julga é o FIM. Segunda: não há prazo — o controle que volta recupera o número dele enquanto o serviço estiver de pé, demore o que demorar entre desligar e religar. Terceira: as cinco lampadinhas não se contam da esquerda para a direita; o número é o conjunto aceso. Quarta: um aperto solto no PS abre a Steam; se ela abrir, feche-a. E o que o mapa já declara: o DualSense não sabe que número ele é — o número é do Hefesto e não tem canal nenhum no aparelho, e o que o aparelho mostra são as lampadinhas. Tela e lampadinhas discordando é a metade que EXIBE quebrada, e é isso que se anota.
 
 ---
 
@@ -5879,35 +5876,32 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o Hefesto mostra, para cada controle do cabo, com que frequência o giroscópio dele está sendo entregue ao controle virtual que o jogo enxerga — e que pelo cabo esse número fica firme.
 
-**Onde olhar.** Na aba Controles, na faixa do alto do card de cada controle — a linha em que estão a cor do plástico e a palavra cabo ou rádio. Ali, ao lado, fica a frase "Giroscópio: fluindo para o jogo", com um número e a palavra Hz entre parênteses. Na mesma faixa estão os dois interruptores, Giroscópio e Acelerômetro. A frase só aparece quando o giroscópio daquele controle está mesmo chegando ao controle virtual; sem isso ela some, e o sumiço, por si só, não é alarme. Na aba Jogar, a linha "Status" diz Ligado ou Desligado — no Desligado não existe controle virtual e a frase não tem do que falar.
+**Onde olhar.** Na aba Controles, no cabeçalho do cartão de cada controle — a linha com a cor do plástico e USB ou BT. Com o cartão ABERTO, ali aparece a frase «Giroscópio: fluindo para o jogo (~250 Hz)», com o número do momento, e ao lado dela os dois interruptores, «Giroscópio» e «Acelerômetro». A frase só aparece com o cartão aberto; o chip «Todos», no começo da fita do topo, abre os quatro de uma vez. Na aba Jogar, a linha «Status» diz Ligado ou Desligado, e o cartão de cada controle mostra a máscara escolhida para ele — DualSense, Xbox 360 ou Nintendo Pro.
 
 **Os passos.**
 
 1. Feche o jogo, se ele estiver aberto.
-2. Abra o Hefesto e clique na aba Jogar.
-3. Confira que a linha "Status" está em "Ligado".
-4. Clique na aba Controles.
-5. Ache a faixa do alto do card do P1 e confira que o interruptor "Giroscópio" está aceso.
-6. Leia a frase "Giroscópio: fluindo para o jogo" na faixa do P1 e anote o número dela.
-7. Conte até dez e leia o número do P1 de novo; anote o segundo valor embaixo do primeiro.
-8. Leia o número do P2 e anote; conte até dez e leia de novo.
-9. Anote também o número que aparece no P3 e no P4, sem mexer em nenhum dos dois.
-10. Pegue o P1 na mão e gire-o devagar de um lado para o outro por uns cinco segundos.
-11. Leia o número do P1 outra vez e anote o terceiro valor.
-12. Clique no interruptor "Giroscópio" da faixa do P1 para desligá-lo.
-13. Confira que a frase do P1 sumiu e que as frases dos outros três continuam lá.
-14. Clique de novo no interruptor "Giroscópio" do P1 e confira que a frase dele volta.
+2. Abra a aba Jogar e confira que a linha «Status» está em «Ligado».
+3. Confira, no cartão de cada um dos quatro, qual máscara está escolhida, e anote; não troque nenhuma.
+4. Abra a aba Controles e clique no chip «Todos», no começo da fita do topo.
+5. Leia a frase do P1 no cabeçalho do cartão dele e anote o número.
+6. Conte até dez e leia o número do P1 de novo; anote o segundo valor embaixo do primeiro.
+7. Leia o número do P2 e anote; conte até dez e leia de novo.
+8. Anote também o que aparece no P3 e no P4, sem mexer em nenhum dos dois.
+9. Pegue o P1 na mão e gire-o devagar de um lado para o outro por uns cinco segundos.
+10. Leia o número do P1 outra vez e anote o terceiro valor.
+11. Deixe o P1 parado, apoiado, por dez segundos e leia uma quarta vez.
 
-**Passa quando.** Nos dois controles do cabo a frase aparece com um número, e o número fica firme perto de 250 nas três leituras — não vai a zero, não some e não pula para valores muito diferentes a cada olhada. Girar o P1 na mão não derruba o número dele. E desligar o interruptor Giroscópio do P1 apaga a frase DELE e só dela; ligar de volta a devolve.
+**Passa quando.** Nos dois controles do cabo com a máscara DualSense, a frase aparece com um número, e o número fica firme perto de 250 nas quatro leituras — não vai a zero, não some e não pula para valores muito diferentes a cada olhada, nem com o controle girando, nem parado. Cada um dos quatro cartões mostra a SUA frase.
 
 **Por controle.**
 
-* **P1** — Cabo, e é o que você lê três vezes e gira na mão. É também o único em que você mexe no interruptor Giroscópio. Esperado: número firme, perto de 250.
-* **P2** — Cabo, e é o segundo a ser lido, duas vezes. Mesmo esperado: firme, perto de 250. Se os dois do cabo derem números bem diferentes um do outro, anote os dois lado a lado — é aí que a diferença aparece.
-* **P3** — Rádio, e é testemunha. Anote o número dele sem tocar em nada. Ele existe aqui para comparação com a linha do rádio deste mesmo par — e para provar que desligar o giroscópio do P1 não apaga a frase dele.
-* **P4** — Rádio, e é a segunda testemunha. Mesma coisa. Se desligar o interruptor do P1 apagar a frase do P3 ou do P4, o comando pegou a mesa inteira em vez do controle escolhido, e esse é o achado.
+* **P1** — USB, e é o que você lê quatro vezes, girando e parado. Esperado: número firme, perto de 250.
+* **P2** — USB, e é o segundo a ser lido, duas vezes. Mesmo esperado: firme, perto de 250. Se os dois do cabo derem números bem diferentes um do outro, anote os dois lado a lado — é aí que a diferença aparece.
+* **P3** — BT, e é testemunha. Anote o número dele sem tocar em nada: ele é a comparação com a linha do rádio deste mesmo par.
+* **P4** — BT, a segunda testemunha. Mesma coisa. Os quatro juntos mostram que cada cartão fala do controle virtual DELE, e não de um só para todos.
 
-**A armadilha.** O número NÃO é a taxa do controle. Ele é a velocidade com que o Hefesto entrega o giro ao controle virtual que o jogo vê, e essa entrega tem um TETO de 250 por segundo. Por isso 250 no cabo é o esperado e é também o teto: um controle que entregasse mais apareceria exatamente igual. Segunda: a frase some, e o sumiço é a resposta certa, em três casos — no Modo Nativo, com a máscara Xbox 360 e num controle que não esteja alimentando controle virtual nenhum. Confira o Status e a máscara antes de reprovar por ausência. Terceira, e é a que mais engana: fora do modo de vários jogadores, só o controle PRINCIPAL tem esse espelho de giro. Se a frase aparecer num só dos quatro, isso não é defeito — é que os outros três não têm o que mostrar. Quarta: nada aqui prova que o jogo usou aquele giro; o que este número mede é a entrega ao controle virtual, e o mapa não registra medição do outro lado.
+**A armadilha.** O número NÃO é a taxa do controle. Ele é a velocidade com que o Hefesto entrega o movimento ao controle virtual que o jogo vê, e essa entrega tem um TETO de 250 por segundo. Por isso 250 no cabo é o esperado e é também o teto: um controle que entregasse mais apareceria exatamente igual. Segunda: a frase muda de texto, e isso é o certo, em três casos. No Modo Nativo ela diz «Giroscópio: o jogo fala direto com o controle». Com a máscara Xbox 360 ela diz que essa API não leva giroscópio e que no Hefesto ele segue ativo. E com a máscara Nintendo Pro ela some — esse controle virtual não leva giroscópio nenhum. Confira o Status e a máscara que você anotou antes de reprovar por ausência. Terceira: o interruptor «Giroscópio» não é o instrumento desta linha — ele corta o giro no que vai ao jogo, e a frase mede a entrega do movimento, que segue; não o use para fazer a frase sumir. Quarta: nada aqui prova que o jogo usou aquele giro; o número mede a entrega ao controle virtual, e o mapa não registra medição do outro lado.
 
 ---
 
@@ -5917,36 +5911,35 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que a mesma frase de entrega do giroscópio aparece nos dois controles do rádio — e revela que o número mostrado ali é o teto do Hefesto, não o que o aparelho entrega.
 
-**Onde olhar.** Na aba Controles, na faixa do alto do card de cada controle — a linha com a cor do plástico e a palavra cabo ou rádio. Ali fica a frase "Giroscópio: fluindo para o jogo", com um número e a palavra Hz entre parênteses, e os interruptores Giroscópio e Acelerômetro. Na aba Jogar, a linha "Status" tem de estar em "Ligado": no Desligado não existe controle virtual e a frase não tem do que falar.
+**Onde olhar.** Dois lugares, e é a comparação entre eles que mede. Primeiro, na aba Controles, o cabeçalho do cartão de cada controle, com o cartão ABERTO: a frase «Giroscópio: fluindo para o jogo (~250 Hz)» — o que o Hefesto ENTREGA ao controle virtual, com teto de 250. O chip «Todos», no começo da fita do topo, abre os quatro cartões de uma vez. Segundo, na aba Conexões, a seção «Rádio e Adaptadores», que abre pelo título: o ▶ de cada adaptador abre a lista dos controles que estão nele, e cada linha traz, ao lado do ícone de sinal, o movimento que CHEGA do controle agora, em Hz — esse número não tem teto. Na aba Jogar, a linha «Status» tem de estar em «Ligado».
 
 **Os passos.**
 
 1. Faça a linha do cabo deste mesmo par antes desta, e tenha à mão o papel com os números do P1 e do P2.
 2. Feche o jogo, se ele estiver aberto.
-3. Abra o Hefesto na aba Jogar e confira que a linha "Status" está em "Ligado".
-4. Clique na aba Controles.
-5. Confira, na faixa do card do P3, que depois da cor do plástico está escrita a palavra rádio.
-6. Confira que o interruptor "Giroscópio" do P3 está aceso.
-7. Leia a frase do P3 e anote o número.
-8. Conte até dez e leia de novo; anote o segundo valor.
-9. Conte até dez e leia uma terceira vez; anote o terceiro valor.
-10. Faça as três leituras também no P4, anotando os três valores.
-11. Ponha os números do P3 e do P4 lado a lado com os do P1 e do P2 no papel.
-12. Leve o P3 para o outro lado da sala, o mais longe do PC que der.
-13. Volte à tela e leia o número do P3; anote.
-14. Traga o P3 de volta para a mesa e leia mais uma vez.
-15. Confira que os números do P1 e do P2 não mudaram em nenhuma dessas leituras.
+3. Abra a aba Jogar, confira que a linha «Status» está em «Ligado» e anote a máscara escolhida no cartão do P3 e no do P4.
+4. Abra a aba Controles e clique no chip «Todos», no começo da fita do topo.
+5. Confira, no cabeçalho do cartão do P3, que depois da cor do plástico está escrito BT.
+6. Leia a frase do P3 e anote o número; conte até dez e leia de novo; conte até dez e leia uma terceira vez.
+7. Faça as três leituras também no P4, anotando os três valores.
+8. Abra a aba Conexões, clique no título «Rádio e Adaptadores» e clique no ▶ de cada adaptador.
+9. Ache a linha do P3 e a do P4 e anote o Hz de movimento de cada uma, três vezes, contando até dez entre as leituras.
+10. Anote também se o P3 e o P4 estão no MESMO adaptador ou em adaptadores diferentes.
+11. Ponha lado a lado, no papel, os números do cartão e os da lista do adaptador, para cada um dos dois.
+12. Leve o P3 para o outro lado da sala, o mais longe do PC que der, e leia o Hz de movimento dele na lista; anote.
+13. Traga o P3 de volta e leia mais uma vez.
+14. Volte à aba Controles e confira que os números do P1 e do P2 não mudaram em nenhuma dessas leituras.
 
-**Passa quando.** A frase aparece nos dois controles do rádio, com um número, e não some enquanto eles estiverem entregando o giro. Se os números do rádio saírem iguais aos do cabo — perto de 250 nos quatro —, isso não é você errando: anote os quatro lado a lado, porque é justamente o achado desta linha.
+**Passa quando.** A frase aparece nos dois controles do rádio com a máscara DualSense, com um número, e não some enquanto eles estiverem ligados. O número do cartão nunca passa de 250, e o da lista do adaptador pode passar: se o cartão mostrar perto de 250 enquanto a lista mostra bem mais, isso não é você errando — é o teto achatando o que passava por cima, e é justamente o achado desta linha. Anote os números dos dois lugares lado a lado.
 
 **Por controle.**
 
-* **P1** — Cabo, e é testemunha. Não toque nele. O número dele tem de continuar firme enquanto você lê e passeia com os do rádio. Ele é a régua de comparação: sem o número dele no papel, o do rádio não diz nada.
-* **P2** — Cabo, e é a segunda testemunha. Mesma coisa. Se o número do P1 ou do P2 se mexer quando você afasta o P3, anote — a distância de um não devia alcançar o outro.
-* **P3** — Rádio, e é ESTE. Três leituras paradas, uma leitura longe do PC e uma leitura de volta na mesa. Pelo rádio a entrega vem em rajadas, então oscilar entre leituras é o normal, não o defeito.
-* **P4** — Rádio, e é o segundo. Três leituras paradas, sem sair da mesa. Ele mostra se a variação é do rádio inteiro ou só do controle que você afastou.
+* **P1** — USB, e é testemunha. Não toque nele. O número dele no cartão tem de continuar firme enquanto você lê e passeia com os do rádio. Ele é a régua de comparação: sem o número dele no papel, o do rádio não diz nada.
+* **P2** — USB, a segunda testemunha. Mesma coisa. Se o número do P1 ou do P2 se mexer quando você afasta o P3, anote — a distância de um não devia alcançar o outro.
+* **P3** — BT, e é ESTE. Três leituras paradas no cartão e na lista, uma leitura longe do PC e uma de volta. Pelo rádio o movimento chega em rajadas, então oscilar entre leituras é o normal, não o defeito.
+* **P4** — BT, o segundo. Três leituras paradas, sem sair do lugar. Ele mostra se a variação é do rádio inteiro ou só do controle que você afastou.
 
-**A armadilha.** O teto é o mesmo nos dois transportes, e é ele que engana. O número que a tela mostra é a entrega do Hefesto ao controle virtual, e ela é capada em 250 por segundo. Pelo cabo a entrega é firme; pelo rádio ela vem em rajadas — medido nesta casa, a média de janelas seguidas do MESMO controle foi de 38 a 392 por segundo, sem que nada mudasse. Logo, um número parado em 250 pelo rádio não é o aparelho: é o teto achatando o que passava por cima. NÃO reprove por causa disso — anote os quatro números, porque é isso que a linha existe para revelar. Segunda: número que oscila muito entre uma leitura e outra pelo rádio também não é defeito. Terceira: a frase some, e o sumiço é o certo, no Modo Nativo, com a máscara Xbox 360 e em controle que não alimenta controle virtual nenhum; e, fora do modo de vários jogadores, só o controle principal tem essa frase. Confira isso antes de reprovar por ausência. Quarta: nada aqui prova que o jogo recebeu o giro nessa velocidade — o mapa não registra medição do lado do jogo.
+**A armadilha.** O teto é o mesmo nos dois transportes, e é ele que engana. O número do cartão é a entrega do Hefesto ao controle virtual, capada em 250 por segundo; o que chega do rádio pode passar disso. E o que chega não é uma taxa do controle: o adaptador tem um orçamento, repartido entre os controles que estão nele — medido nesta casa, um controle SOZINHO num adaptador chegou perto de 800 por segundo, e dois dividindo um adaptador ficaram perto de 400 cada. Por isso anote se o P3 e o P4 dividem o adaptador: é isso que explica boa parte da diferença entre eles. Segunda: número que oscila muito entre uma leitura e outra pelo rádio não é defeito. Terceira: a frase muda de texto, e isso é o certo, no Modo Nativo e com a máscara Xbox 360, e some com a máscara Nintendo Pro. Confira a máscara que você anotou antes de reprovar por ausência. Quarta: nada aqui prova que o jogo recebeu o giro nessa velocidade — o mapa não registra medição do lado do jogo.
 
 ---
 
@@ -5956,34 +5949,34 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o Hefesto acerta, para os dois controles do cabo, por onde eles estão falando — e que a resposta não muda quando o cabo troca de entrada USB.
 
-**Onde olhar.** Três lugares, e eles têm de concordar. Na fita do topo, a linha que começa com "Selecionar:": cada chip termina com a palavra cabo ou a palavra rádio. No alto, a contagem, no formato "4 controles: 2 USB · 2 BT". Na aba Conexões, o quadro Gestão de Controles, onde cada linha termina em USB ou em BT. E, na aba Controles, na faixa do alto de cada card, logo depois da cor do plástico, aparece de novo a palavra cabo ou rádio.
+**Onde olhar.** Quatro lugares, e eles têm de concordar. Na fita do topo, a linha que começa com «Selecionar:»: cada chip termina em USB ou em BT. No canto de cima, à direita, a contagem, no formato «● 2 USB · 2 BT». Na aba Conexões, o quadro «Gestão de Controles» (abre pelo título): cada linha termina em USB ou em BT, e o canto do quadro diz «4 controles • 2 no cabo • 2 no rádio». E, na aba Controles, o cabeçalho do cartão de cada controle, onde, logo depois da cor do plástico, aparece de novo USB ou BT.
 
 **Os passos.**
 
 1. Confira que o P1 e o P2 estão no cabo e que o P3 e o P4 estão no rádio, sem cabo nenhum neles.
-2. Abra o Hefesto e clique na aba Controles.
-3. Leia os quatro chips da fita do topo e anote a palavra do fim de cada um.
-4. Leia a contagem no alto e anote.
-5. Clique na aba Conexões e leia as quatro linhas do quadro Gestão de Controles; anote se cada uma termina em USB ou em BT.
-6. Confira que os três lugares dizem a mesma coisa sobre cada um dos quatro.
+2. Abra a aba Controles.
+3. Anote o nome da cor do plástico de cada chip da fita e a palavra do fim de cada um.
+4. Leia a contagem do canto de cima e anote.
+5. Abra a aba Conexões, clique no título «Gestão de Controles» e leia as quatro linhas; anote se cada uma termina em USB ou em BT.
+6. Confira que os lugares dizem a mesma coisa sobre cada um dos quatro.
 7. Puxe o cabo do P1 de dentro do PC — do lado do PC, nunca do lado do controle.
 8. Encaixe-o numa entrada USB diferente do PC, sem demorar.
 9. Conte até dez, devagar.
-10. Leia o chip do P1: tem de dizer cabo, nunca rádio.
-11. Leia a contagem do alto: tem de continuar em 2 USB e 2 BT.
+10. Leia o chip com o plástico do P1: tem de ser P1 de novo e terminar em USB, nunca em BT.
+11. Leia a contagem do canto: tem de continuar «● 2 USB · 2 BT».
 12. Repita os passos 7 a 11 com o cabo do P2, numa terceira entrada USB.
-13. Olhe os chips do P3 e do P4 e confira que os dois continuaram dizendo rádio o tempo todo.
+13. Olhe os chips do P3 e do P4 e confira que os dois continuaram terminando em BT o tempo todo.
 
-**Passa quando.** Os dois controles do cabo dizem cabo nos três lugares, antes e depois de trocar de entrada USB, e a contagem do alto volta a dizer 2 USB e 2 BT. Os dois do rádio nunca trocam de palavra, nem enquanto os cabos estão fora.
+**Passa quando.** Os dois controles do cabo dizem USB em todos os lugares, antes e depois de trocar de entrada, e a contagem volta a «● 2 USB · 2 BT». Os dois do rádio nunca trocam de palavra, nem enquanto os cabos estão fora.
 
 **Por controle.**
 
-* **P1** — Cabo, e é o primeiro a mudar de entrada. Tem de dizer cabo nos três lugares antes e depois, e não pode passar por rádio no meio do caminho.
-* **P2** — Cabo, e é o segundo a mudar de entrada. Mesma conferência. Faça um de cada vez: com os dois fora ao mesmo tempo a contagem do alto muda por dois motivos e você não separa qual foi.
-* **P3** — Rádio, e é testemunha. Não encoste nele. A palavra do chip dele tem de continuar rádio enquanto os cabos vão e vêm. Se ela virar cabo sem ninguém encostar, a leitura pegou a mesa em vez do controle.
-* **P4** — Rádio, e é a segunda testemunha. Mesma conferência do P3. Os dois juntos provam que mexer no cabo de um não reescreve o transporte de quem está sem fio.
+* **P1** — USB, e é o primeiro a mudar de entrada. Tem de dizer USB em todos os lugares antes e depois, e não pode passar por BT no meio do caminho.
+* **P2** — USB, o segundo a mudar de entrada. Mesma conferência. Faça um de cada vez: com os dois fora ao mesmo tempo a contagem muda por dois motivos e você não separa qual foi.
+* **P3** — BT, testemunha. Não encoste nele. A palavra do chip dele tem de continuar BT enquanto os cabos vão e vêm. Se ela virar USB sem ninguém encostar, a leitura pegou o controle errado. Enquanto o P1 está fora, ele aparece como P2 por um instante — isso é o número, não a palavra.
+* **P4** — BT, a segunda testemunha. Mesma conferência do P3. Os dois juntos provam que mexer no cabo de um não reescreve o transporte de quem está sem fio.
 
-**A armadilha.** Chip que diz USB ou BT em vez de cabo ou rádio é o desenho parado, não a leitura viva: ali o teste não passou nem reprovou. (Na contagem do alto, USB e BT estão certos — foi decisão sua.) Segunda, e é a que o mapa declara: o Hefesto decide isto pelo TAMANHO do que o controle manda e pela entrada que o sistema mostra, e nenhum dos dois separa cabo de DADO de cabo de SÓ CARGA. Se você usar um cabo de carregador que não passa dado, o controle continua dizendo rádio com o cabo espetado — e isso está CERTO, porque a entrada dele continua chegando pelo rádio; o que a tela não conta é que ele está carregando. Não reprove: troque por um cabo de dado e refaça. Terceira: puxe o cabo do lado do PC. Mexer no encaixe do controle o derruba, e o lugar dele fica guardado só por trinta segundos.
+**A armadilha.** A que o mapa declara: o Hefesto decide isto pelo TAMANHO do que o controle manda e pela entrada que o sistema mostra, e nenhum dos dois separa cabo de DADO de cabo de SÓ CARGA. Se você usar um cabo de carregador que não passa dado, o controle continua dizendo BT com o cabo espetado — e isso está CERTO, porque a entrada dele continua chegando pelo rádio; o que a tela não conta é que ele está carregando. Não reprove: troque por um cabo de dado e refaça. Segunda: enquanto um cabo está fora, os controles que vêm depois dele descem um número e voltam quando ele volta — siga-os pelo plástico, e julgue a PALAVRA do fim do chip, não o número. Terceira: puxe o cabo do lado do PC; mexer no encaixe do controle o derruba à toa.
 
 ---
 
@@ -5991,38 +5984,38 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `plataforma.transporte_radio @ rádio`
 
-**O que isto prova.** Prova que os dois controles do rádio são lidos como rádio, e que espetar um cabo de dado num deles vira a resposta para cabo na hora — e ela volta para rádio quando o cabo sai.
+**O que isto prova.** Prova que os dois controles do rádio são lidos como BT, e que espetar um cabo de dado num deles vira a resposta para USB — e ela volta para BT quando o cabo sai.
 
-**Onde olhar.** Na fita do topo, a linha que começa com "Selecionar:": cada chip termina com a palavra cabo ou rádio. No alto, a contagem, no formato "4 controles: 2 USB · 2 BT". Na aba Conexões, o quadro Gestão de Controles, onde cada linha termina em USB ou em BT. E, na aba Controles, na faixa do alto de cada card, logo depois da cor do plástico, a palavra cabo ou rádio.
+**Onde olhar.** Na fita do topo, a linha que começa com «Selecionar:»: cada chip termina em USB ou em BT. No canto de cima, à direita, a contagem, no formato «● 2 USB · 2 BT». Na aba Conexões, o quadro «Gestão de Controles» (abre pelo título), onde cada linha termina em USB ou em BT. E, na aba Controles, o cabeçalho do cartão de cada controle, com USB ou BT logo depois da cor do plástico.
 
 **Os passos.**
 
 1. Confira que o P3 e o P4 estão no rádio, sem cabo nenhum espetado neles.
-2. Abra o Hefesto e clique na aba Controles.
-3. Leia os quatro chips da fita e anote a palavra do fim de cada um.
-4. Leia a contagem no alto e anote.
+2. Abra a aba Controles.
+3. Anote o nome da cor do plástico de cada chip da fita e a palavra do fim de cada um.
+4. Leia a contagem do canto de cima e anote.
 5. Separe um cabo que você sabe que passa dado — um igual ao que o P1 está usando serve.
 6. Espete esse cabo no P3 e depois no PC.
 7. Conte até dez, devagar, olhando a fita.
-8. Leia o chip do P3: tem de ter virado cabo.
-9. Leia a contagem do alto: tem de dizer 3 no cabo e 1 no rádio.
-10. Olhe o chip do P4 e confirme que ele continua dizendo rádio.
+8. Leia o chip com o plástico do P3: tem de ter virado USB, ainda como P3.
+9. Leia a contagem do canto: tem de dizer «● 3 USB · 1 BT».
+10. Olhe o chip do P4 e confirme que ele continua terminando em BT.
 11. Puxe o cabo do P3 de dentro do PC.
-12. Conte até dez, devagar.
-13. Leia o chip do P3 de novo: tem de ter voltado a dizer rádio, e com o mesmo número de antes.
-14. Leia a contagem: tem de voltar a 2 no cabo e 2 no rádio.
-15. Confira que os chips do P1 e do P2 disseram cabo do começo ao fim.
+12. Conte até dez, devagar; se o chip dele não voltar sozinho, dê um toque curto no botão PS do P3.
+13. Leia o chip com o plástico do P3 de novo: tem de ter voltado a BT, e como P3.
+14. Leia a contagem: tem de voltar a «● 2 USB · 2 BT».
+15. Confira que os chips do P1 e do P2 terminaram em USB do começo ao fim.
 
-**Passa quando.** O P3 vira cabo em menos de dez segundos com o cabo de dado espetado, e volta a dizer rádio em menos de dez segundos quando o cabo sai — com o mesmo número de jogador nas duas pontas. O P4 diz rádio o tempo inteiro, e o P1 e o P2 dizem cabo o tempo inteiro. A contagem do alto acompanha as duas viradas.
+**Passa quando.** O P3 vira USB em menos de dez segundos com o cabo de dado espetado, e volta a dizer BT quando o cabo sai — com o mesmo número de jogador nas duas pontas. O P4 diz BT o tempo inteiro, e o P1 e o P2 dizem USB o tempo inteiro. A contagem do canto acompanha as duas viradas.
 
 **Por controle.**
 
-* **P1** — Cabo, e é testemunha. Não encoste nele. Tem de dizer cabo do começo ao fim, e a contagem só pode mudar por causa do P3.
-* **P2** — Cabo, e é a segunda testemunha. Mesma conferência do P1.
-* **P3** — Rádio, e é ESTE. Recebe o cabo de dado, tem de virar cabo, e tem de voltar a rádio quando o cabo sai. Confira também o número dele nas duas pontas — a palavra pode mudar, o número não.
-* **P4** — Rádio, e é a testemunha que mais importa: ele está no mesmo tipo de conexão do P3. Se ele também virar cabo quando você espeta o cabo no P3, a leitura pegou o rádio inteiro em vez do controle escolhido, e é esse o achado.
+* **P1** — USB, testemunha. Não encoste nele. Tem de dizer USB do começo ao fim, e a contagem só pode mudar por causa do P3.
+* **P2** — USB, a segunda testemunha. Mesma conferência do P1.
+* **P3** — BT, e é ESTE. Recebe o cabo de dado, tem de virar USB, e tem de voltar a BT quando o cabo sai. Confira também o número dele nas duas pontas — a palavra pode mudar, o número não.
+* **P4** — BT, e é a testemunha que mais importa: ele está no mesmo tipo de conexão do P3. Se ele também virar USB quando você espeta o cabo no P3, a leitura pegou o rádio inteiro em vez do controle escolhido, e é esse o achado. Se o P3 sumir da fita por um instante na troca, o P4 aparece como P3 até ele voltar — isso é o número, não a palavra.
 
-**A armadilha.** O cabo errado inventa um defeito. O Hefesto decide isto pelo TAMANHO do que o controle manda e pela entrada que o sistema mostra, e nenhum dos dois separa cabo de DADO de cabo de SÓ CARGA: com um cabo de carregador o P3 continua dizendo rádio, espetado e carregando — e isso está CERTO, porque a entrada dele continua vindo pelo rádio. Se der isso, troque de cabo antes de anotar qualquer coisa. Segunda: chip que diz USB ou BT em vez de cabo ou rádio é o desenho parado, e ali não houve leitura. Terceira: espetar e tirar o cabo pode derrubar o P3 do rádio por um instante; se o chip dele sumir e voltar, isso sozinho não reprova — o que reprova é ele voltar com OUTRO número, e mesmo aí confira se você não passou dos trinta segundos, que é o prazo em que o lugar fica guardado.
+**A armadilha.** O cabo errado inventa um defeito. O Hefesto decide isto pelo TAMANHO do que o controle manda e pela entrada que o sistema mostra, e nenhum dos dois separa cabo de DADO de cabo de SÓ CARGA: com um cabo de carregador o P3 continua dizendo BT, espetado e carregando — e isso está CERTO, porque a entrada dele continua vindo pelo rádio. Se der isso, troque de cabo antes de anotar qualquer coisa. Segunda: espetar e tirar o cabo pode derrubar o P3 do rádio por um instante; se o chip dele sumir e voltar, isso sozinho não reprova — o que reprova é ele voltar com OUTRO número depois que tudo assentou. Não há prazo para essa volta: o controle recupera o número dele demore o que demorar. Terceira: um aperto solto no PS abre a Steam; se ela abrir, feche-a.
 
 ---
 
@@ -6032,36 +6025,33 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o sistema está proibido de pôr as entradas USB para dormir — que é o que faz um controle no cabo cair sozinho, sem aviso, no meio do jogo.
 
-**Onde olhar.** Na aba Conexões, no quadro Check-up. A linha "Energia das portas", com o selo ao lado dela (CERTO, AJUSTAR ou NOTA) e a frase que explica: ela conta QUANTAS entradas USB foram olhadas e quantas podem entrar em economia de energia. No mesmo quadro fica o botão "Examinar Portas", que refaz o exame. A linha vizinha, "Economia de energia desligada", é OUTRA coisa: ela fala do adaptador do rádio, não das entradas do cabo.
+**Onde olhar.** Na aba Conexões, no quadro «Check-up», que abre pelo título. Cada linha tem um selo ao lado (CERTO, AJUSTAR ou NOTA) e uma frase com o que se achou. A das entradas diz, no certo, «Nenhuma das N portas USB está em economia de energia.» — N é QUANTAS entradas foram olhadas, não quais. A linha vizinha, «O sistema está proibido de desligar o rádio dos controles.», é OUTRA coisa: ela fala do adaptador do rádio, não das entradas do cabo. As duas se refazem sozinhas a cada instante; o botão «Examinar Entradas», no pé da seção «Rádio e Adaptadores», refaz o exame inteiro.
 
 **Os passos.**
 
 1. Confira que o P1 e o P2 estão ligados pelo cabo, cada um na sua entrada USB.
-2. Abra o Hefesto e clique na aba Conexões.
-3. Ache o quadro Check-up.
-4. Clique no botão "Examinar Portas".
-5. Leia a linha "Energia das portas": anote o selo e a frase inteira, com o número de entradas que ela cita.
-6. Puxe os dois cabos de dentro do PC.
-7. Clique em "Examinar Portas" de novo.
-8. Leia a linha "Energia das portas" outra vez e anote o novo número de entradas.
-9. Compare os dois números: o segundo tem de ser menor que o primeiro.
-10. Encaixe os dois cabos de volta, cada um na entrada de onde saiu.
-11. Clique em "Examinar Portas" mais uma vez.
-12. Confira que o número de entradas voltou ao do passo 5 e que o selo continua o mesmo.
-13. Leia também a linha "Economia de energia desligada", logo ali no mesmo quadro, e anote o selo e a frase dela.
+2. Abra a aba Conexões e clique no título «Check-up».
+3. Ache a linha das portas USB e anote o selo e a frase inteira, com o número de portas que ela cita.
+4. Puxe os dois cabos de dentro do PC.
+5. Conte até cinco e leia a mesma linha de novo; anote o novo número de portas.
+6. Compare os dois números: o segundo tem de ser menor que o primeiro, em duas.
+7. Encaixe os dois cabos de volta, cada um na entrada de onde saiu.
+8. Conte até cinco e confira que o número voltou ao do passo 3 e que o selo continua o mesmo.
+9. Se algum número não mexeu, clique em «Examinar Entradas», no pé de «Rádio e Adaptadores», e leia de novo.
+10. Leia também a linha do rádio dos controles, no mesmo quadro, e anote o selo e a frase dela.
 
-**Passa quando.** Com os dois cabos espetados, a linha "Energia das portas" traz o selo CERTO e diz que NENHUMA das entradas USB está em economia de energia. E o número de entradas cai quando você tira os dois cabos e sobe de volta quando você os devolve — é essa mexida no número que prova que os dois controles estavam entre as entradas contadas.
+**Passa quando.** Com os dois cabos espetados, a linha das portas traz o selo CERTO e diz que NENHUMA das portas USB está em economia de energia. E o número de portas cai em duas quando você tira os dois cabos e sobe de volta quando você os devolve — é essa mexida no número que prova que os dois controles estavam entre as portas contadas.
 
 **Por controle.**
 
-* **P1** — Cabo, e é uma das entradas contadas. Tire e devolva o cabo dele e veja o número da frase mexer. Se o número não mexer com nenhum dos dois, esta linha não está olhando os seus controles.
-* **P2** — Cabo, e é a outra entrada contada. Mesmo gesto. Tirando os dois juntos, a queda tem de ser de duas entradas, não de uma.
-* **P3** — Rádio, e ele NÃO aparece nesta linha — de propósito. Sem cabo, o controle não está no barramento USB e não há entrada dele para pôr para dormir. Quem responde por ele é a linha vizinha, "Economia de energia desligada", que fala do adaptador do rádio: leia o selo dela e anote.
-* **P4** — Rádio, igual ao P3. Não aparece nesta linha, e é coberto pela mesma linha vizinha do adaptador. Se o selo de "Economia de energia desligada" não estiver em CERTO, anote a frase inteira — ela diz o que falta e o que fazer.
+* **P1** — USB, e é uma das portas contadas. Tire e devolva o cabo dele e veja o número da frase mexer. Se o número não mexer com nenhum dos dois, esta linha não está olhando os seus controles.
+* **P2** — USB, a outra porta contada. Mesmo gesto. Tirando os dois juntos, a queda tem de ser de duas, não de uma.
+* **P3** — BT, e ele NÃO entra nesta linha — de propósito. Sem cabo, o controle não está no barramento USB e não há entrada dele para pôr para dormir. Quem responde por ele é a linha do rádio dos controles, que fala do adaptador: leia o selo dela e anote.
+* **P4** — BT, igual ao P3. Não entra nesta linha, e é coberto pela mesma linha do adaptador. Se o selo dela não estiver em CERTO, anote a frase inteira e a do `?` ao lado — elas dizem o que falta e o que fazer.
 
-**A espera.** São vinte minutos, e nenhum deles é para ficar olhando a tela. Depois de conferir a linha e devolver os dois cabos, deixe o P1 e o P2 espetados e PARADOS na mesa, sem tocar em nenhum dos dois — é ficar parado que faz uma entrada adormecida derrubar o controle. Marque um alarme de vinte minutos e vá fazer as outras linhas desta leva; não desencaixe nada nesse tempo. Quando o alarme tocar, volte à fita do topo do Hefesto: os dois chips têm de continuar lá, dizendo cabo, com os mesmos números. Mexa então no analógico de cada um e confira que os dois respondem. Se algum tiver caído sozinho enquanto estava parado, anote a hora — é esse o defeito que esta linha existe para pegar.
+**A espera.** São vinte minutos, e nenhum deles é para ficar olhando a tela. Depois de conferir a linha e devolver os dois cabos, deixe o P1 e o P2 espetados e PARADOS, apoiados, sem tocar em nenhum dos dois — é ficar parado que faz uma entrada adormecida derrubar o controle. Marque um alarme de vinte minutos e vá fazer as outras linhas desta leva; não desencaixe nada nesse tempo. Quando o alarme tocar, volte à fita do topo: os dois chips têm de continuar lá, terminando em USB, com os mesmos números. Mexa então no analógico de cada um e confira que os dois respondem. Se algum tiver caído sozinho enquanto estava parado, anote a hora — é esse o defeito que esta linha existe para pegar.
 
-**A armadilha.** A frase conta QUANTAS entradas, nunca QUAIS. Um CERTO com os dois cabos fora não diz coisa nenhuma sobre os seus controles — é exatamente por isso que o exame se faz com eles espetados, e é por isso que este teste tira e devolve os cabos: para ver o número mexer. Segunda: o selo tem três palavras, e NOTA não é passa nem reprova — ela quer dizer que este sistema não deixou ler o estado das entradas USB. Anote e não conte como verde. Terceira: não misture as duas linhas do quadro. "Economia de energia desligada" é do adaptador do rádio, e ela pode dizer que a regra está no lugar mas só passa a valer no próximo encaixe do adaptador — isso é verdade sobre o rádio e não tem nada a ver com esta linha. Quarta: se você trocou cabos de entrada em algum teste anterior, o número de entradas já pode ter mudado por causa disso; clique em "Examinar Portas" e leia de novo antes de comparar.
+**A armadilha.** A frase conta QUANTAS portas, nunca QUAIS. Um CERTO com os dois cabos fora não diz coisa nenhuma sobre os seus controles — é exatamente por isso que o exame se faz com eles espetados, e é por isso que este teste tira e devolve os cabos: para ver o número mexer. Segunda: o selo tem três palavras, e NOTA não é passa nem reprova — na linha das portas ela quer dizer que este sistema não deixou ler o estado delas. Anote e não conte como verde. Terceira: não misture as duas linhas do quadro. A do rádio dos controles pode dizer que a regra está no lugar mas o adaptador só a recebe no próximo encaixe — isso é verdade sobre o rádio e não tem nada a ver com esta linha. Quarta: se você trocou cabos de entrada em algum teste anterior, o número de portas já pode ter mudado por causa disso; leia o número de novo antes de comparar.
 
 ---
 
@@ -6071,32 +6061,31 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que um controle do cabo nunca fica na tela sem responder: se o caminho por onde ele fala envelhecer, o Hefesto o troca sozinho em poucos segundos.
 
-**Onde olhar.** Duas coisas ao mesmo tempo, e é o par delas que decide. Primeira, o chip do controle na fita do topo — ele dizendo que o controle está conectado. Segunda, na aba Controles com o card daquele controle aberto, o pontinho do analógico, que anda quando você mexe no analógico do aparelho, e o desenho do botão, que acende quando você o aperta. Controle são é chip na fita e card respondendo; o que se caça é o par errado — chip na fita e card mudo. A fonte não diz onde se lê, dentro do Hefesto, que a troca aconteceu: o que se enxerga é o resultado, o card voltando a responder.
+**Onde olhar.** Duas coisas ao mesmo tempo, e é o par delas que decide. Primeira, o chip do controle na fita do topo — ele dizendo que o controle está conectado. Segunda, na aba Controles com o cartão daquele controle aberto, o bloco «Analógico esquerdo», com o pontinho que anda e os números X e Y quando você mexe no analógico do aparelho, e o desenho do botão, que acende quando você o aperta. Controle são é chip na fita e cartão respondendo; o que se caça é o par errado — chip na fita e cartão mudo. A troca em si não tem campo na tela: o que se enxerga é o resultado, o cartão voltando a responder.
 
 **Os passos.**
 
-1. Abra o Hefesto e clique na aba Controles.
-2. Clique na linha do P1 para abrir o card dele.
-3. Mexa no analógico esquerdo do P1 e confirme que o pontinho anda no desenho.
+1. Abra a aba Controles.
+2. Clique na linha do P1 para abrir o cartão dele.
+3. Mexa no analógico esquerdo do P1 e confirme que o pontinho anda e os números X e Y mudam.
 4. Aperte o botão Círculo do P1 e confirme que o desenho dele acende.
 5. Puxe o cabo do P1 de dentro do PC.
 6. Encaixe-o de volta na mesma entrada, sem demorar.
 7. Repita o par tirar-e-pôr mais quatro vezes seguidas, contando até três entre uma e outra.
-8. Espere o chip do P1 reaparecer na fita do topo.
-9. Mexa no analógico esquerdo do P1 e conte até cinco olhando o pontinho.
+8. Espere o chip com o plástico do P1 reaparecer na fita do topo, como P1.
+9. Clique na linha do P1 se o cartão tiver fechado, mexa no analógico esquerdo e conte até cinco olhando o pontinho.
 10. Aperte o Círculo do P1 e confira que o desenho acende.
-11. Clique na linha do P2 para abrir o card dele e faça nele os passos 3 a 10.
-12. Mexa no analógico do P3 e no do P4, um de cada vez, e confirme que os dois continuam respondendo.
-13. Confira que os chips do P3 e do P4 não sumiram da fita em nenhum instante.
+11. Faça os passos 2 a 10 no P2.
+12. Mexa no analógico do P3 e no do P4, um de cada vez, com o cartão de cada um aberto, e confirme que os dois continuam respondendo.
 
-**Passa quando.** Depois de cada vaivém do cabo, o controle volta à fita E volta a responder — o pontinho anda e o botão acende — em poucos segundos, sem você fechar nem reabrir nada. O que reprova é o par errado: o chip do controle na fita, dizendo que ele está lá, e o card mudo, sem pontinho e sem botão aceso, por mais de dez segundos.
+**Passa quando.** Depois de cada vaivém do cabo, o controle volta à fita E volta a responder — o pontinho anda e o botão acende — em poucos segundos, sem você fechar nem reabrir nada. O que reprova é o par errado: o chip do controle na fita, dizendo que ele está lá, e o cartão mudo, sem pontinho andando e sem botão aceso, por mais de dez segundos.
 
 **Por controle.**
 
-* **P1** — Cabo, e é o primeiro a levar o vaivém. Cinco vezes tirando e pondo o cabo, e no fim o pontinho e o botão têm de voltar. Se ele voltar à fita e ficar mudo, anote a hora exata.
-* **P2** — Cabo, e é o segundo. Mesmo gesto. Faça um de cada vez: os dois cabos indo e vindo juntos esconde de qual dos dois veio o problema.
-* **P3** — Rádio, e é testemunha. Não encoste nele. O chip dele não pode sumir da fita e ele tem de continuar respondendo no card enquanto você mexe nos cabos.
-* **P4** — Rádio, e é a segunda testemunha. Igual ao P3. Se os dois do rádio ficarem mudos junto com o vaivém do cabo, o estrago atravessou de um transporte para o outro, e é esse o achado.
+* **P1** — USB, e é o primeiro a levar o vaivém. Cinco vezes tirando e pondo o cabo, e no fim o pontinho e o botão têm de voltar. Se ele voltar à fita e ficar mudo, anote a hora exata.
+* **P2** — USB, o segundo. Mesmo gesto. Faça um de cada vez: os dois cabos indo e vindo juntos escondem de qual dos dois veio o problema.
+* **P3** — BT, testemunha. Não encoste nele durante os vaivéns. O chip dele não pode sumir da fita, e ele tem de continuar respondendo no cartão. Enquanto o P1 está fora ele aparece como P2 por um instante — isso é o número, não queda.
+* **P4** — BT, a segunda testemunha. Igual ao P3. Se os dois do rádio ficarem mudos junto com o vaivém do cabo, o estrago atravessou de um transporte para o outro, e é esse o achado.
 
 **A armadilha.** Este teste passar no cabo NÃO diz nada sobre o rádio, e o mapa já explica por quê: pelo rádio existe, dentro do controle, um contador de vida que fica congelado. Uma checagem construída sobre ele funcionaria perfeitamente no cabo e seria CEGA no rádio — a pior forma de defeito, porque passa em todo teste feito com o cabo espetado. Verde aqui obriga a fazer a linha do rádio deste mesmo par. Segunda: a troca acontece em passadas de dois em dois segundos, então julgar no primeiro segundo dá vermelho falso — conte até cinco antes de decidir. Terceira: sumir da fita e voltar não é reprovação; uma queda honesta é o produto dizendo a verdade. O que reprova é ficar na fita e emudecer. Quarta: nada disto foi medido no aparelho até hoje — o mapa registra a leitura como achado de fonte, não como bancada. O seu resultado aqui vale mais que o que está escrito lá.
 
@@ -6108,35 +6097,34 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que um controle do rádio nunca fica na tela sem responder — e é aqui que esse defeito se esconde, porque nenhum teste feito com o cabo o alcança.
 
-**Onde olhar.** Duas coisas ao mesmo tempo, e é o par delas que decide. Primeira, o chip do controle na fita do topo, dizendo que ele está conectado. Segunda, na aba Controles com o card daquele controle aberto, o pontinho do analógico, que anda quando você mexe no analógico do aparelho, e o desenho do botão, que acende quando você o aperta. Controle são é chip na fita e card respondendo; o que se caça é o par errado — chip na fita e card mudo. A fonte não diz onde se lê, dentro do Hefesto, que a troca aconteceu: o que se enxerga é o resultado, o card voltando a responder.
+**Onde olhar.** Duas coisas ao mesmo tempo, e é o par delas que decide. Primeira, o chip do controle na fita do topo, dizendo que ele está conectado. Segunda, na aba Controles com o cartão daquele controle aberto, o bloco «Analógico esquerdo», com o pontinho que anda e os números X e Y quando você mexe no analógico do aparelho, e o desenho do botão, que acende quando você o aperta. Controle são é chip na fita e cartão respondendo; o que se caça é o par errado — chip na fita e cartão mudo. A troca em si não tem campo na tela: o que se enxerga é o resultado, o cartão voltando a responder.
 
 **Os passos.**
 
-1. Abra o Hefesto e clique na aba Controles.
-2. Clique na linha do P3 para abrir o card dele.
+1. Abra a aba Controles.
+2. Clique na linha do P3 para abrir o cartão dele.
 3. Mexa no analógico esquerdo do P3 e aperte o botão Círculo dele.
 4. Confira que o pontinho anda e que o desenho do botão acende.
-5. Segure o botão PS do P3 até todas as luzes dele apagarem, dê um toque curto no mesmo botão para religá-lo e, quando o chip dele voltar à fita do topo, mexa no analógico contando até cinco.
-6. Confira que o pontinho voltou a andar dentro desses cinco segundos.
-7. Repita esse desligar, religar e conferir mais duas vezes, uma atrás da outra.
-8. Leve o P3 ligado para o cômodo ao lado, feche a porta, conte até vinte longe da tela e volte com ele para a mesa.
-9. Confira na fita do topo qual das três coisas aconteceu — o chip dele saiu, saiu e voltou, ou ficou lá o tempo todo — e anote.
-10. Mexa no analógico do P3 e conte até dez olhando o pontinho.
-11. Confira que ele voltou a andar dentro desses dez segundos.
-12. Clique na linha do P4 e faça nele as três voltas de desligar e religar, com a mesma conferência do analógico, sem sair da mesa.
-13. Mexa nos analógicos do P1 e do P2, um de cada vez.
-14. Confira que os dois continuam respondendo.
+5. Segure o botão PS do P3 até todas as luzes dele apagarem.
+6. Dê um toque curto no mesmo botão para religá-lo.
+7. Quando o chip com o plástico dele voltar à fita, abra o cartão dele, mexa no analógico e conte até cinco: o pontinho tem de voltar a andar dentro desse tempo.
+8. Repita os passos 5 a 7 mais duas vezes, uma atrás da outra.
+9. Leve o P3 ligado para o cômodo ao lado, feche a porta, conte até vinte longe da tela e volte com ele.
+10. Confira na fita do topo qual das três coisas aconteceu — o chip dele saiu, saiu e voltou, ou ficou lá o tempo todo — e anote.
+11. Mexa no analógico do P3 e conte até dez olhando o pontinho: ele tem de voltar a andar dentro desse tempo.
+12. Faça no P4 as três voltas de desligar e religar, com a mesma conferência do analógico, sem sair do lugar.
+13. Mexa nos analógicos do P1 e do P2, um de cada vez, e confira que os dois continuam respondendo.
 
-**Passa quando.** Depois de cada volta — do desligar e religar, e do passeio até o outro cômodo — o P3 e o P4 voltam a responder no card em poucos segundos. O que reprova é o par errado: o chip do controle na fita, dizendo que ele está lá, e o pontinho parado com o botão apagado por mais de dez segundos. Sumir da fita e voltar não reprova.
+**Passa quando.** Depois de cada volta — do desligar e religar, e do passeio até o outro cômodo — o P3 e o P4 voltam a responder no cartão em poucos segundos. O que reprova é o par errado: o chip do controle na fita, dizendo que ele está lá, e o pontinho parado com o botão apagado por mais de dez segundos. Sumir da fita e voltar não reprova.
 
 **Por controle.**
 
-* **P1** — Cabo, e é testemunha. Não encoste nele. Tem de continuar respondendo no card enquanto os do rádio saem e voltam, e o chip dele não pode piscar para fora da fita.
-* **P2** — Cabo, e é a segunda testemunha. Igual ao P1.
-* **P3** — Rádio, e é ESTE. Três voltas de desligar e religar, mais o passeio até o outro cômodo. É nele que o defeito desta linha se esconde: um P3 que fica na fita sem responder é exatamente o que ninguém enxergaria com o cabo espetado.
-* **P4** — Rádio, e é o segundo. Três voltas de desligar e religar, sem sair da mesa. Ele separa o que é do rádio inteiro do que é só do controle que você afastou.
+* **P1** — USB, testemunha. Não encoste nele. Tem de continuar respondendo no cartão enquanto os do rádio saem e voltam, e o chip dele não pode piscar para fora da fita.
+* **P2** — USB, a segunda testemunha. Igual ao P1.
+* **P3** — BT, e é ESTE. Três voltas de desligar e religar, mais o passeio até o outro cômodo. É nele que o defeito desta linha se esconde: um P3 que fica na fita sem responder é exatamente o que ninguém enxergaria com o cabo espetado.
+* **P4** — BT, o segundo. Três voltas de desligar e religar, sem sair do lugar. Ele separa o que é do rádio inteiro do que é só do controle que você afastou. Enquanto o P3 está fora, ele aparece como P3 — isso é o número, não queda.
 
-**A armadilha.** É AQUI que o defeito mora, e o mapa diz por quê: pelo rádio existe, dentro do controle, um contador de vida que fica congelado, e uma checagem construída sobre ele passa sempre no cabo e não enxerga nada no rádio. Então um P3 que fique na fita e não responda é o achado inteiro desta leva — anote a hora exata. Segunda: sair da fita ao ir para o outro cômodo é o CERTO, e não defeito; o que se caça é o contrário, o chip que fica e o controle que emudece. Terceira: a troca acontece em passadas de dois em dois segundos; conte até cinco antes de decidir, ou você dá vermelho no seu próprio relógio. Quarta: nada disto foi medido no aparelho até hoje — o mapa registra a leitura como achado de fonte, e o seu resultado aqui é a primeira medição que esta casa vai ter.
+**A armadilha.** É AQUI que o defeito mora, e o mapa diz por quê: pelo rádio existe, dentro do controle, um contador de vida que fica congelado, e uma checagem construída sobre ele passa sempre no cabo e não enxerga nada no rádio. Então um P3 que fique na fita e não responda é o achado inteiro desta leva — anote a hora exata. Segunda: sair da fita ao ir para o outro cômodo é o CERTO, e não defeito; o que se caça é o contrário, o chip que fica e o controle que emudece. Terceira: a troca acontece em passadas de dois em dois segundos; conte até cinco antes de decidir, ou você dá vermelho no seu próprio relógio. Quarta: o controle que ACENDE e não entra na fita é outro defeito, com outro vigia — o do elo de rádio que ficou de pé sem controle nenhum; esse o Hefesto derruba sozinho depois de uns vinte segundos. Se acontecer, anote e desligue e ligue o controle de novo, mas não conte como reprovação desta linha. Quinta: nada disto foi medido no aparelho até hoje — o mapa registra a leitura como achado de fonte, e o seu resultado aqui é a primeira medição que esta casa vai ter.
 
 ---
 
@@ -6146,36 +6134,32 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o Hefesto cria um controle virtual para cada um dos dois controles do cabo, e que cada aparelho está preso ao controle virtual certo.
 
-**Onde olhar.** Na aba Controles. Passe o mouse sobre o NOME do controle, no alto do card dele — a parte onde estão a cor do plástico e a palavra cabo ou rádio. Aparece uma dica dizendo "Alimenta o gamepad virtual do Jogador N", com um endereço entre parênteses; quando não há nenhum, a dica diz "Este controle ainda não alimenta gamepad virtual nenhum". Na mesma faixa, ao lado do nome, está a máscara — DualSense, Xbox 360 ou Nintendo Pro —, que é o desenho de botões que o jogo vê; um asteriscozinho ao lado dela quer dizer que a emulação saiu no modo simples, e o motivo aparece ao passar o mouse nele. Na aba Jogar, a linha "Status" diz Ligado ou Desligado. O aviso do modo simples NÃO fica na aba Jogar: ele é o asteriscozinho ao lado da máscara, na aba Controles, e o motivo aparece ao parar o mouse nele.
-
-> **A coluna Atenção saiu da aba Jogar em 07/09/2026**, por ordem dela (*"em jogar remover essa seção do atenção, nenhum aviso esse — deixar só o reconectar controles"*). O selo GAMEPAD morava lá. O fato não se perdeu — o asteriscozinho da aba Controles diz a mesma coisa, e diz por CONTROLE em vez de para a mesa inteira, que é o que esta célula precisa.
+**Onde olhar.** Na aba Controles. Pare o ponteiro sobre o NOME do controle, no cabeçalho do cartão dele — a parte com a cor do plástico e USB ou BT. Aparece uma dica dizendo «Alimenta o gamepad virtual do Jogador N», com um endereço entre parênteses que começa pelo jeito como o controle virtual foi feito, «uhid» ou «uinput»; às vezes ela acrescenta com que nome ele aparece no sistema. Quando o controle ainda não tem controle virtual, a dica diz «Este controle ainda não alimenta gamepad virtual nenhum.». Ao lado do nome fica a máscara — DualSense, Xbox 360 ou Nintendo Pro —, que é o desenho de botões que o jogo vê; ela se escolhe no cartão de cada controle, na aba Jogar. Na aba Jogar, a linha «Status» diz Ligado ou Desligado.
 
 **Os passos.**
 
 1. Feche o jogo, se ele estiver aberto.
-2. Abra o Hefesto e clique na aba Jogar.
-3. Confira que a linha "Status" está em "Ligado" — no Modo Nativo não existe controle virtual nenhum e este teste não roda.
-4. Na aba Controles, olhe se há asteriscozinho ao lado da máscara de cada controle; havendo, pare o mouse nele e anote o que a dica diz.
-5. Clique na aba Controles.
-6. Passe o mouse sobre o nome do P1, no alto do card dele, e espere a dica aparecer.
-7. Leia a dica e anote de qual jogador é o controle virtual que o P1 alimenta.
-8. Passe o mouse sobre o nome do P2 e anote a dica dele do mesmo jeito.
-9. Compare as duas: têm de nomear jogadores DIFERENTES.
-10. Olhe a máscara ao lado do nome do P1 e do P2 e anote a palavra que aparece em cada um.
-11. Confira se há um asteriscozinho ao lado de alguma das duas máscaras; se houver, passe o mouse nele e anote o motivo por escrito.
-12. Passe o mouse sobre o nome do P3 e do P4 e anote as dicas dos dois.
-13. Confira que as quatro dicas nomeiam quatro jogadores diferentes, sem nenhum repetido.
+2. Abra a aba Jogar e confira que a linha «Status» está em «Ligado» — em Desligado não existe controle virtual nenhum e este teste não roda.
+3. Anote a máscara escolhida no cartão de cada um dos quatro; não troque nenhuma.
+4. Abra a aba Controles.
+5. Pare o ponteiro sobre o nome do P1, no cabeçalho do cartão dele, e espere a dica aparecer.
+6. Anote de qual jogador é o controle virtual que o P1 alimenta e a primeira palavra entre parênteses.
+7. Faça o mesmo no nome do P2 e anote.
+8. Compare as duas: têm de nomear jogadores DIFERENTES.
+9. Faça o mesmo nos nomes do P3 e do P4 e anote as duas dicas.
+10. Confira que as quatro dicas nomeiam quatro jogadores diferentes, sem nenhum repetido.
+11. Confira que cada controle com a máscara DualSense tem «uhid» entre parênteses.
 
-**Passa quando.** Cada um dos dois controles do cabo tem uma dica dizendo que alimenta o controle virtual de um jogador, e os dois jogadores são diferentes. Nenhum dos dois diz "ainda não alimenta gamepad virtual nenhum", e nenhum dos dois traz o asteriscozinho da emulação em modo simples ao lado da máscara.
+**Passa quando.** Cada um dos dois controles do cabo tem uma dica dizendo que alimenta o controle virtual de um jogador, e os dois jogadores são diferentes. Nenhum dos dois diz «ainda não alimenta gamepad virtual nenhum», e, com a máscara DualSense, os dois trazem «uhid» entre parênteses.
 
 **Por controle.**
 
-* **P1** — Cabo. A dica dele tem de nomear um controle virtual, com jogador. Anote o número do jogador e o endereço entre parênteses — é esse par que diz a qual controle virtual o aparelho na sua mão está preso.
-* **P2** — Cabo. Mesma leitura, e o jogador tem de ser OUTRO. Dois controles nomeando o mesmo jogador é o defeito que este teste caça, e ele deixaria dois aparelhos empurrando o mesmo boneco.
-* **P3** — Rádio, e é testemunha. A dica dele também tem de nomear um controle virtual — pelo rádio o Hefesto cria um igualzinho, sem diferença nenhuma. O que reprova aqui é ele repetir o jogador de alguém.
-* **P4** — Rádio, e é a segunda testemunha. Igual ao P3. Se os quatro nomearem quatro jogadores diferentes, a amarração está certa; se dois se repetirem, anote quais dois e por qual conexão cada um estava.
+* **P1** — USB. A dica dele tem de nomear um controle virtual, com jogador. Anote o número do jogador e o endereço entre parênteses — é esse par que diz a qual controle virtual o aparelho na sua mão está preso.
+* **P2** — USB. Mesma leitura, e o jogador tem de ser OUTRO. Dois controles nomeando o mesmo jogador é o defeito que este teste caça, e ele deixaria dois aparelhos empurrando o mesmo boneco.
+* **P3** — BT, testemunha. A dica dele também tem de nomear um controle virtual — pelo rádio o Hefesto cria um igualzinho, sem diferença nenhuma. O que reprova aqui é ele repetir o jogador de alguém.
+* **P4** — BT, a segunda testemunha. Igual ao P3. Se os quatro nomearem quatro jogadores diferentes, a amarração está certa; se dois se repetirem, anote quais dois e por qual conexão cada um estava.
 
-**A armadilha.** A prova desta linha parou em MONTOU — o mapa registra que o controle virtual é CRIADO, e nada além disso. Então não julgue este teste dentro de um jogo: o que se prova aqui é que ele existe e está preso ao aparelho certo, não que o jogo reagiu. Segunda: a dica SOME quando não há nada a dizer, e sumiço não é a mesma coisa que "não alimenta nenhum". A frase escrita é uma resposta; a ausência dela é outra — anote qual das duas você viu. Terceira, e é a que quebra a mesa: trocar a máscara DESTRÓI e RECRIA o controle virtual, e com o jogo aberto isso deixa o jogo sem controle nenhum. Não troque máscara durante este teste, e nunca com jogo aberto. Quarta: no Modo Nativo não existe controle virtual, e a dica sumir ali é o certo — por isso o passo 3 confere o Status antes de tudo.
+**A armadilha.** A prova desta linha parou em MONTOU — o mapa registra que o controle virtual é CRIADO, e nada além disso. Então não julgue este teste dentro de um jogo: o que se prova aqui é que ele existe e está preso ao aparelho certo, não que o jogo reagiu. Segunda: a primeira palavra entre parênteses é a única pista, na tela, de que a emulação saiu no modo simples: com a máscara DualSense o esperado é «uhid»; «uinput» ali quer dizer que ele caiu para o modo simples, e isso se anota. Com as máscaras Xbox 360 e Nintendo Pro, «uinput» é o certo. Terceira: a dica SOME quando não há nada a dizer, e sumiço não é a mesma coisa que «ainda não alimenta gamepad virtual nenhum» — anote qual das duas você viu. Quarta, e é a que quebra o jogo: trocar a máscara DESTRÓI e RECRIA o controle virtual na hora, e com o jogo aberto isso o deixa sem controle, e ele pode precisar ser reaberto. Não troque máscara durante este teste, e nunca com jogo aberto.
 
 ---
 
@@ -6185,36 +6169,34 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que os dois controles do rádio também ganham cada um o seu controle virtual — e que esse controle virtual nasce sempre com cara de cabo, mesmo com o aparelho sem fio.
 
-**Onde olhar.** Na aba Controles. Passe o mouse sobre o NOME do controle, no alto do card dele — onde estão a cor do plástico e a palavra cabo ou rádio. A dica diz "Alimenta o gamepad virtual do Jogador N", com um endereço entre parênteses, e às vezes acrescenta com que nome ele aparece no sistema; quando não há nenhum, ela diz "Este controle ainda não alimenta gamepad virtual nenhum". Ao lado do nome fica a máscara — DualSense, Xbox 360 ou Nintendo Pro — com um asteriscozinho quando a emulação saiu em modo simples. Na aba Jogar, a linha "Status". (A coluna **Atenção** saiu da aba Jogar em 07/09/2026, por ordem dela; o aviso do modo simples é o asteriscozinho ao lado da máscara, na aba Controles.) Para saber se o JOGO enxerga o controle virtual como de cabo ou de rádio, a fonte não diz onde se lê isso dentro do Hefesto: o lugar mais próximo é a lista de controles da Steam, e se ela não disser por onde cada um está ligado, anote que não deu para ler.
+**Onde olhar.** Na aba Controles. Pare o ponteiro sobre o NOME do controle, no cabeçalho do cartão dele — a parte com a cor do plástico e USB ou BT. A dica diz «Alimenta o gamepad virtual do Jogador N», com um endereço entre parênteses que começa por «uhid» ou «uinput», e às vezes acrescenta com que nome ele aparece no sistema; quando não há nenhum, ela diz «Este controle ainda não alimenta gamepad virtual nenhum.». Ao lado do nome fica a máscara — DualSense, Xbox 360 ou Nintendo Pro —, escolhida no cartão de cada controle, na aba Jogar. Na aba Jogar, a linha «Status». Para saber se o JOGO enxerga o controle virtual como de cabo ou de rádio, não há onde ler dentro do Hefesto: o lugar mais próximo é a lista de controles da Steam, e se ela não disser por onde cada um está ligado, anote que não deu para ler.
 
 **Os passos.**
 
 1. Feche o jogo, se ele estiver aberto.
-2. Abra o Hefesto e clique na aba Jogar.
-3. Confira que a linha "Status" está em "Ligado".
-4. Na aba Controles, olhe se há asteriscozinho ao lado da máscara de cada controle e anote o que a dica dele diz.
-5. Clique na aba Controles.
-6. Confira, no alto do card do P3, que depois da cor do plástico está escrita a palavra rádio.
-7. Passe o mouse sobre o nome do P3 e espere a dica aparecer.
-8. Anote de qual jogador é o controle virtual dele e, se a dica trouxer, o nome com que ele aparece no sistema.
-9. Faça o mesmo no P4 e anote.
-10. Compare as duas dicas: têm de nomear jogadores diferentes entre si, e diferentes dos do P1 e do P2.
-11. Confira que nenhum dos dois traz o asteriscozinho ao lado da máscara.
-12. Segure o botão PS do P3 até apagar e religue-o com um toque curto.
-13. Espere o chip dele voltar à fita do topo e passe o mouse sobre o nome dele de novo.
-14. Confira que a dica voltou a nomear um controle virtual, e anote se é o mesmo jogador de antes.
-15. Abra a lista de controles da Steam, se ela estiver instalada, e anote quantos controles ela lista e o que ela diz sobre a conexão de cada um.
+2. Abra a aba Jogar, confira que a linha «Status» está em «Ligado» e anote a máscara escolhida no cartão de cada um dos quatro.
+3. Abra a aba Controles.
+4. Confira, no cabeçalho do cartão do P3, que depois da cor do plástico está escrito BT.
+5. Pare o ponteiro sobre o nome do P3 e espere a dica aparecer.
+6. Anote de qual jogador é o controle virtual dele, a primeira palavra entre parênteses e, se a dica trouxer, o nome com que ele aparece no sistema.
+7. Faça o mesmo no P4 e anote.
+8. Compare as duas dicas: têm de nomear jogadores diferentes entre si, e diferentes dos do P1 e do P2.
+9. Segure o botão PS do P3 até as luzes apagarem.
+10. Dê um toque curto no PS do P3 para religá-lo e espere o chip com o plástico dele voltar à fita, como P3.
+11. Pare o ponteiro sobre o nome do P3 de novo e confira que a dica voltou a nomear um controle virtual, do mesmo jogador de antes.
+12. Pare o ponteiro sobre o nome do P4 e confira que ele voltou a ser o jogador de antes.
+13. Abra a lista de controles da Steam, se ela estiver instalada, e anote quantos controles ela lista e o que ela diz sobre a conexão de cada um.
 
-**Passa quando.** Os dois controles do rádio alimentam cada um o seu controle virtual, com jogadores diferentes entre si e diferentes dos dois do cabo, e nenhum dos dois diz "ainda não alimenta gamepad virtual nenhum". Depois de desligar e religar o P3, a dica dele volta a nomear um controle virtual.
+**Passa quando.** Os dois controles do rádio alimentam cada um o seu controle virtual, com jogadores diferentes entre si e diferentes dos dois do cabo, e nenhum dos dois diz «ainda não alimenta gamepad virtual nenhum». Depois de desligar e religar o P3, a dica dele volta a nomear o controle virtual do mesmo jogador, e o P4 volta ao dele.
 
 **Por controle.**
 
-* **P1** — Cabo, e é testemunha. Não encoste nele. A dica dele não pode trocar de jogador enquanto você mexe nos do rádio — se trocar, a mexida num controle reescreveu a amarração de outro.
-* **P2** — Cabo, e é a segunda testemunha. Mesma conferência do P1.
-* **P3** — Rádio, e é ESTE. Leia a dica dele, desligue-o e religue-o pelo PS, e leia a dica de novo. O jogador que ele alimenta tem de ser o mesmo antes e depois.
-* **P4** — Rádio, e é o segundo. Leia a dica dele antes e depois de mexer no P3. Se o P4 perder a dica ou trocar de jogador quando você desliga o P3, o comando pegou o rádio inteiro em vez do controle escolhido, e é esse o achado.
+* **P1** — USB, testemunha. Não encoste nele. A dica dele não pode trocar de jogador enquanto você mexe nos do rádio — se trocar, a mexida num controle reescreveu a amarração de outro.
+* **P2** — USB, a segunda testemunha. Mesma conferência do P1.
+* **P3** — BT, e é ESTE. Leia a dica dele, desligue-o e religue-o pelo PS, e leia a dica de novo. O jogador que ele alimenta tem de ser o mesmo antes e depois; o endereço entre parênteses pode mudar, porque o controle virtual nasce de novo.
+* **P4** — BT, o segundo. Leia a dica dele antes e depois da volta do P3. Enquanto o P3 está fora, o P4 aparece como Jogador 3 — a numeração não deixa buraco, e isso não reprova. O que reprova é ele perder a dica, ou não voltar ao jogador dele quando o P3 volta.
 
-**A armadilha.** O controle virtual NASCE SEMPRE COMO SE FOSSE DE CABO, mesmo com o aparelho no rádio — é de propósito, e é justamente isso que faz o jogo funcionar. Então, se a lista da Steam mostrar os quatro como controles de cabo, isso está CERTO e não é defeito: quem está no rádio é o aparelho na sua mão, não o controle que o jogo enxerga. Segunda: a prova desta linha parou em MONTOU — o mapa registra que o controle virtual é criado, e nada além; não julgue este teste dentro de um jogo. Terceira: desligar e religar pelo rádio pode devolver o controle a um jogador diferente se você demorar mais de trinta segundos, porque é esse o prazo em que o lugar fica guardado — passando dele, o que você viu foi a regra do produto, não defeito. Quarta: trocar a máscara destrói e recria o controle virtual; não faça isso durante este teste, e nunca com o jogo aberto. Quinta: a dica some quando não há nada a dizer, e sumiço não é o mesmo que a frase "ainda não alimenta gamepad virtual nenhum" — anote qual das duas você viu.
+**A armadilha.** O controle virtual NASCE SEMPRE COMO SE FOSSE DE CABO, mesmo com o aparelho no rádio — é de propósito, e é justamente isso que faz o jogo funcionar. Então, se a lista da Steam mostrar os controles virtuais como de cabo, isso está CERTO e não é defeito: quem está no rádio é o aparelho na sua mão, não o controle que o jogo enxerga. Segunda: a lista da Steam pode mostrar, além dos controles virtuais, os próprios DualSense físicos — anote quantos aparecem e com que nome, porque é essa separação que esta linha precisa registrar. Terceira: a prova desta linha parou em MONTOU — o mapa registra que o controle virtual é criado, e nada além; não julgue este teste dentro de um jogo. Quarta: não há prazo para a volta — o controle recupera o número dele demore o que demorar. Quinta: trocar a máscara destrói e recria o controle virtual na hora; não faça isso durante este teste, e nunca com o jogo aberto. Sexta: a dica some quando não há nada a dizer, e sumiço não é o mesmo que a frase «ainda não alimenta gamepad virtual nenhum» — anote qual das duas você viu. E um aperto solto no PS abre a Steam; se ela abrir sem você pedir, feche-a antes do passo 13.
 
 ---
 
