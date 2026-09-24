@@ -308,7 +308,7 @@ para o mesmo resultado: sem número de jogador.** **[MEDIDO 11/08]**, grau
 
 **O risco maior, e é ausência, não rótulo errado.** `discover_external_gamepads`
 só enxerga um evdev que tenha `BTN_GAMEPAD` ou `BTN_SOUTH`
-(`core/evdev_reader.py:795`) — e **os dois são o mesmo código, `0x130`**,
+(`core/evdev_reader.py:846`) — e **os dois são o mesmo código, `0x130`**,
 conferido no `input-event-codes.h` desta máquina. Para um aparelho servido pelo
 `hid-generic`, o código base dos botões é decidido pela **collection de
 aplicação** do descritor: `Gamepad` põe os botões em `0x130`; `Joystick` põe em
