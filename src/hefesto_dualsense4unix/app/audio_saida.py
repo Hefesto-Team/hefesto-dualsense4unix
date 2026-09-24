@@ -86,6 +86,7 @@ from hefesto_dualsense4unix.integrations.alto_falante_bt import (
     FONTE_PADRAO,
     FONTE_SFX,
     NOME_DO_ALTO_FALANTE_DO_CONTROLE,
+    PREFIXO_SINK_DO_SOM,
     RotaDoNo,
     argv_das_rotas,
     argv_para_ligar_o_mix,
@@ -884,11 +885,23 @@ class RotaDeSaida:
         """
         if not sink_do_controle:
             return False
-        vivos = nomes_de_sinks(self._runner(["pactl", "list", "sinks", "short"]))
+        lista_viva = self._runner(["pactl", "list", "sinks", "short"])
+        vivos = nomes_de_sinks(lista_viva)
         if sink_do_controle not in vivos:
             return False
         atual = sink_padrao_da_saida(self._runner(["pactl", "get-default-sink"]))
-        if atual and atual != sink_do_controle:
+        # **A MEMÓRIA NÃO TROCA A TV POR OUTRO CONTROLE — 24/09/2026**,
+        # O-TERCEIRO-NOME-DELA-01. Com o quarto botão de volta, o P2 pode pedir
+        # a saída do PC enquanto ela está no P1. Gravar o `atual` aqui guardava
+        # o P1 como "para onde voltar", e a TV se perdia: o P2 devolvia ao P1,
+        # o P1 não tinha mais memória, e o som do PC ficava preso no plástico
+        # do P1 com a fileira dele acesa em «Efeitos do Jogo no Controle,
+        # Áudio do PC no PC». Quando a saída atual é de um controle e já há
+        # para onde voltar, a volta continua sendo a de antes.
+        guardar = bool(atual) and atual != sink_do_controle
+        if guardar and e_saida_de_controle(atual, lista_viva) and self._ler_memoria():
+            guardar = False
+        if guardar:
             self._gravar_memoria(atual)
         # SOM-SAIDA-MUDA-01, 04/08/2026 — MEDIDO com ela: o seletor mandava o
         # som para o controle, o `pactl` obedecia, e NÃO SAÍA NADA.
@@ -1033,6 +1046,12 @@ MOTIVO_ROTA_SEM_VOLTA: Final[str] = (
     "Hefesto que o trouxe para cá, ou aquela saída não está mais na máquina."
 )
 
+#: A saída do PC está com OUTRO controle (ou com nenhum): não é este clique que
+#: a devolve. Ver :func:`devolver_o_som_do_pc`, parâmetro ``de``.
+MOTIVO_A_SAIDA_NAO_E_DESTE: Final[str] = (
+    "a saída do PC não está neste controle, então não há o que devolver daqui."
+)
+
 
 def sink_do_controle(
     uniq: str,
@@ -1092,13 +1111,33 @@ def mandar_o_som_do_pc(
 
 def devolver_o_som_do_pc(
     *,
+    de: str = "",
+    uniqs_na_mesa: list[str] | tuple[str, ...] = (),
     rota: RotaDeSaida | None = None,
     runner: Callable[[list[str]], str] | None = None,
 ) -> DesfechoDaRota:
     """Camada 1, o desfazer: a saída padrão volta para onde estava.
 
     Recusa em vez de chutar um destino — ver :data:`MOTIVO_ROTA_SEM_VOLTA`.
+
+    **SÓ DEVOLVE QUEM ESTÁ COM ELA — 24/09/2026, O-TERCEIRO-NOME-DELA-01.**
+    Com ``de`` (o `uniq` de quem clicou), a saída só volta se ela estiver NESTE
+    controle agora. O quarto botão da fileira do som («Tudo no Controle e Nada
+    no PC») voltou por decisão dela de 23/09, e com ele uma mesa de quatro pode
+    ter um controle segurando a saída do PC enquanto outro troca de botão.
+    Sem esta pergunta, o «Efeitos do Jogo e Áudio do PC no Controle» do P3
+    devolvia à TV a saída que o P1 tinha acabado de pedir — o clique de um
+    jogador desfazendo o do outro, sem uma palavra na tela.
+
+    Sem ``de`` o comportamento é o de antes, letra por letra: é quem não sabe
+    de controle nenhum (o ensaio da rota, a porta da CLI).
     """
+    if de:
+        ler = runner if runner is not None else rodar_leitura
+        deste = sink_do_controle(de, uniqs_na_mesa, runner=ler)
+        padrao = sink_padrao_da_saida(ler(["pactl", "get-default-sink"]))
+        if not deste or padrao != deste:
+            return DesfechoDaRota(False, MOTIVO_A_SAIDA_NAO_E_DESTE)
     motor = rota if rota is not None else RotaDeSaida(runner=runner)
     if not motor.voltar_ao_anterior():
         return DesfechoDaRota(False, MOTIVO_ROTA_SEM_VOLTA)
@@ -1422,6 +1461,21 @@ def caminho_regra_nunca_dorme(home: str | None = None) -> str:
 def regra_nunca_dorme_instalada(home: str | None = None) -> bool:
     """A regra que impede o sono do alto-falante está no lugar?"""
     return os.path.isfile(caminho_regra_nunca_dorme(home))
+
+
+def e_saida_de_controle(sink: str, saida_pactl: str) -> bool:
+    """Este sink é a saída de um controle? PURA sobre `pactl list sinks short`.
+
+    Os dois donos que já respondem isso, juntos: a placa de um DualSense no
+    cabo (``mic_monitor.sinks_dualsense``) e o nó que esta casa publica por
+    controle (``hefesto_som_<hex6>``, a saída no rádio). Quem precisa dela é a
+    memória da :class:`RotaDeSaida` — ver `mandar_para_o_controle`.
+    """
+    from hefesto_dualsense4unix.app.mic_monitor import sinks_dualsense
+
+    if not sink:
+        return False
+    return sink.startswith(PREFIXO_SINK_DO_SOM) or sink in sinks_dualsense(saida_pactl)
 
 
 def sono_dos_sinks_do_controle(saida_pactl: str) -> dict[str, str]:
@@ -1860,6 +1914,7 @@ __all__ = [
     "FONTE_MIX",
     "FONTE_PADRAO",
     "FONTE_SFX",
+    "MOTIVO_A_SAIDA_NAO_E_DESTE",
     "MOTIVO_DESLIGADO",
     "MOTIVO_FALHOU",
     "MOTIVO_NO_SEM_ASSENTO",
@@ -1911,6 +1966,7 @@ __all__ = [
     "botao_da_rota_aceso",
     "caminho_regra_nunca_dorme",
     "devolver_o_som_do_pc",
+    "e_saida_de_controle",
     "estado_do_canal",
     "estado_do_sono",
     "estados_crus_dos_sinks",

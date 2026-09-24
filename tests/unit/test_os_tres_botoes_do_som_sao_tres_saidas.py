@@ -53,7 +53,9 @@ class TestOTerceiroBotaoMandaoSomParaATV:
         corpo = _ramo_do_gesto()
         i = corpo.index("if qual == ROTA_NADA_NO_CONTROLE:")
         ramo = corpo[i : corpo.index("if qual == ROTA_OUVIR_JUNTO:", i)]
-        assert ramo.index("devolver_o_som_do_pc()") < ramo.index(
+        # `devolver_o_som_do_pc(` SEM o fecho: desde 24/09 a chamada leva o
+        # `de=uniq`, e a ordem é o que esta régua mede.
+        assert ramo.index("devolver_o_som_do_pc(") < ramo.index(
             "som_do_controle_na_tv.ligar(uniq)"), (
             "o laço sobe antes de o caminho de volta cair — o som dá a volta")
 

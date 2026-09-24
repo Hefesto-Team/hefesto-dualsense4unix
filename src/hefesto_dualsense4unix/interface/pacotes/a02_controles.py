@@ -1932,30 +1932,39 @@ def aceso_da_rota(uniq: str, entry: Any) -> str:
 #: é o que ELA lê: não «mix», não «fonte», não o nome do nó.
 ROTA_OUVIR_JUNTO = "junto"
 
-#: **O TERCEIRO BOTÃO — «Tudo na TV e Nada no Controle»**, decisão dela de
-#: 20/09/2026 (*"O nome está certo, mude o ato."*). Ele substitui o `"pc"` na
-#: FILEIRA, e só nela: o `"pc"` continua existindo no gesto, no IPC e na CLI,
-#: porque a capacidade «som do PC no controle» tem dono, régua e ensaio —
-#: o que ela perdeu foi o botão, não o caminho.
+#: **O TERCEIRO BOTÃO — «Tudo no PC e Nada no Controle»**, decisão dela de
+#: 20/09/2026 (*"O nome está certo, mude o ato."*; o «TV» virou «PC» em 23/09).
+#: Ele substituiu o `"pc"` na FILEIRA de 20 a 23/09, e só nela: o `"pc"`
+#: continuou existindo no gesto, no IPC e na CLI.
 ROTA_NADA_NO_CONTROLE = "nada"
 
-#: **OS TRÊS BOTÕES DA FILEIRA, e um dono só — 21/09/2026.**
+#: **O QUARTO BOTÃO — «Tudo no Controle e Nada no PC»**, decisão dela de
+#: 23/09/2026 (`D-2309-O-QUARTO-BOTAO-VOLTA`), com o desenho antes:
+#: *"Mas fazer isso certo com mockup antes."* É o `"pc"` de sempre — a rota 3
+#: mais a saída padrão do sistema mandada para este controle —, o mesmo valor
+#: que o IPC, a CLI e o perfil falam. O que volta é o botão.
+ROTA_TUDO_NO_CONTROLE = "pc"
+
+#: **OS QUATRO BOTÕES DA FILEIRA, e um dono só — 21/09/2026, com o quarto de
+#: volta em 24/09.**
 #:
 #: `NOME_DO_BOTAO_DA_ROTA` responde outra pergunta (*"que nome tem o byte
-#: tal?"*) e continua mapeando o byte 3 para `"pc"`. **Mas `"pc"` não é mais um
-#: botão desta fileira** desde 20/09, quando ela trocou o ATO do terceiro:
-#: *"O nome está certo, mude o ato."*
+#: tal?"*) e mapeia o byte 3 para `"pc"`. De 20 a 23/09 o `"pc"` não foi botão
+#: desta fileira, e confundir as duas perguntas já custou: a régua do desenho
+#: derivava a fileira dos VALORES daquele dicionário e cobrava um botão `pc`
+#: que a página não tinha — e reprovava a decisão dela em vez de um defeito.
 #:
-#: As duas coisas são verdade ao mesmo tempo, e confundi-las já custou: a régua
-#: do desenho derivava a fileira dos VALORES daquele dicionário e cobrava um
-#: botão `pc` que a página não tem — e reprovava a decisão dela em vez de um
-#: defeito.
+#: **É A FILEIRA DO DESENHO**, na ordem dela: pouco · tudo · nada · só aqui. A
+#: página PUBLICADA ganha o quarto quando quem coordena publicar a aba; até lá
+#: o produto mostra três, e o `"pc"` aceso (o byte 3 com a saída padrão neste
+#: controle) não acende botão nenhum — que é o que ele fazia desde 20/09.
 #:
-#: O `"pc"` continua vivo no GESTO, no IPC e na CLI: a capacidade «som do PC
-#: no controle» tem dono, régua e ensaio. O que ela perdeu foi o botão. O
-#: PERFIL guarda o 3 e o aparelho o recebe como 2 desde 22/09/2026 — ver
-#: `Daemon.apply_profile_speaker`.
-BOTOES_DA_FILEIRA_DO_SOM = ("jogo", ROTA_OUVIR_JUNTO, ROTA_NADA_NO_CONTROLE)
+#: O PERFIL guarda o 3 e o aparelho o recebe como 2 desde 22/09/2026 — ver
+#: `Daemon.apply_profile_speaker`. O quarto botão não muda isso: a metade que
+#: o faz valer é a saída padrão do sistema, que é UMA para a máquina e não
+#: cabe num perfil por controle.
+BOTOES_DA_FILEIRA_DO_SOM = ("jogo", ROTA_OUVIR_JUNTO, ROTA_NADA_NO_CONTROLE,
+                            ROTA_TUDO_NO_CONTROLE)
 
 
 def fonte_do_controle(entry: Any) -> str:
@@ -2039,31 +2048,33 @@ def _a_pagina_tem_o_ouvir_junto() -> bool:
 
 
 def aceso_da_fileira(uniq: str, entry: Any) -> str:
-    """Qual dos TRÊS botões da fileira do som acende — 10/09/2026, A3.
+    """Qual dos QUATRO botões da fileira do som acende — 10/09/2026, A3.
 
-    A fileira responde UMA pergunta — *"o que este controle ouve?"* — em três
-    respostas que se excluem:
+    A fileira responde UMA pergunta — *"o que este controle ouve?"* — em quatro
+    respostas que se excluem (o quarto voltou em 24/09, e os nomes trocaram
+    «TV» por «PC» no mesmo dia):
 
-    ==================  ===========================================  =========
-    botão               o que ele quer dizer                         camada
-    ==================  ===========================================  =========
-    Sons do jogo          só o que o jogo mandar para este controle  firmware
-    No controle e na TV   o som do PC cai TAMBÉM aqui, sem sair da TV  sistema
-    Só no controle        o som do PC sai SÓ aqui                      sistema+fw
-    ==================  ===========================================  =========
+    =====  ==============================================  ==========
+    valor  o que ele quer dizer                            camada
+    =====  ==============================================  ==========
+    jogo   só o que o jogo mandar para este controle        firmware
+    junto  o som do PC cai TAMBÉM aqui, sem sair do PC      sistema
+    nada   o controle cala, e o som dele vai para o PC      fw+sistema
+    pc     o som do PC sai SÓ aqui                          sistema+fw
+    =====  ==============================================  ==========
 
-    **A ORDEM DE PRECEDÊNCIA É MEDIDA, e não é gosto:** «Só no controle»
-    vence, porque ele é o único estado em que a saída padrão do sistema mudou
-    de lugar — um fato que a pessoa OUVE, e que contradizer na tela é o defeito
-    de 03/09 (botão aceso, som na TV). Só depois dele o `mix` fala.
+    **A ORDEM DE PRECEDÊNCIA É MEDIDA, e não é gosto:** o `pc` vence, porque
+    ele é o único estado em que a saída padrão do sistema mudou de lugar — um
+    fato que a pessoa OUVE, e que contradizer na tela é o defeito de 03/09
+    (botão aceso, som saindo em outro lugar). Só depois dele o `mix` fala.
     """
     aceso = aceso_da_rota(uniq, entry)
-    # «NADA NO CONTROLE» VENCE PELA MESMA RAZÃO QUE «pc» VENCE — 21/09/2026: os
-    # dois são estados em que a camada 2 já decidiu sozinha o que sai do
+    # «NADA NO CONTROLE» VENCE PELA MESMA RAZÃO QUE O QUARTO VENCE — 21/09/2026:
+    # os dois são estados em que a camada 2 já decidiu sozinha o que sai do
     # plástico, e o `mix` da camada 1 não tem como contradizê-los. Com a rota
     # em 0 o alto-falante está fora do caminho: um `mix` esquecido no perfil
-    # acenderia «No controle e na TV» sobre um controle que não toca nada.
-    if aceso in ("pc", ROTA_NADA_NO_CONTROLE) or not A_FILEIRA_TEM_TRES:
+    # acenderia o botão do meio sobre um controle que não toca nada.
+    if aceso in (ROTA_TUDO_NO_CONTROLE, ROTA_NADA_NO_CONTROLE) or not A_FILEIRA_TEM_TRES:
         return aceso
     return ROTA_OUVIR_JUNTO if fonte_do_controle(entry) == "mix" else aceso
 
@@ -4508,7 +4519,15 @@ def _dizer_a_fonte_ao_daemon(p: Any, uniq: str, fonte: str) -> None:
 
 @gesto("02-controles.html", "rota", grava="save_profile")
 def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Onde o som do controle sai. **"Sons do jogo" tem dono; "Só no controle" não.**
+    """Onde o som do controle sai — os QUATRO botões da fileira, um gesto só.
+
+    O TÍTULO DE 04/09 DIZIA *"«Sons do jogo» tem dono; «Só no controle» não"*,
+    e os dois nomes caducaram: hoje os botões dizem «Efeitos do Jogo no
+    Controle, Áudio do PC no PC» (`jogo`), «Efeitos do Jogo e Áudio do PC no
+    Controle» (`junto`), «Tudo no PC e Nada no Controle» (`nada`) e «Tudo no
+    Controle e Nada no PC» (`pc`, de volta em 24/09). Os quatro têm dono, e é
+    este gesto. O resto desta docstring é o registro de 04/09, com os nomes
+    daquele dia.
 
     "SONS DO JOGO" É UM BYTE, e ele é o caso que ela descreveu com o Zelda —
     *"o speaker do controle faz os barulhos da espada do Link enquanto na tela
@@ -4561,12 +4580,18 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     uniq, qual = _uniq(o), str(o.get("rota") or "")
     if not uniq:
         raise ValueError("rota: o clique não disse em qual controle")
-    # A FILEIRA VEM DO DONO, e o `"pc"` entra ao lado dela: ele não é botão
-    # desta fileira desde 20/09, mas continua sendo rota válida pelo perfil,
-    # pelo IPC e pela CLI — ver `BOTOES_DA_FILEIRA_DO_SOM`.
-    if qual not in (*BOTOES_DA_FILEIRA_DO_SOM, "pc"):
+    # A FILEIRA VEM DO DONO — e o `"pc"` voltou a ser botão dela em 24/09 (o
+    # quarto, «Tudo no Controle e Nada no PC»). Ver `BOTOES_DA_FILEIRA_DO_SOM`.
+    if qual not in BOTOES_DA_FILEIRA_DO_SOM:
         raise ValueError(f"rota: não conheço a rota {qual!r} — a página manda "
                          f"'jogo', 'junto', 'nada' ou 'pc'")
+    # A MESA INTEIRA, e desde 24/09 ela serve também à VOLTA. `uniqs_na_mesa`
+    # é o que deixa o casamento por dispositivo USB vetar a placa do vizinho
+    # (com dois DualSense no cabo, sem a lista o `escolher_sink` não tem como),
+    # e a volta pergunta de quem é a saída do PC antes de devolvê-la: com o
+    # quarto botão, um controle pode estar segurando a saída enquanto outro
+    # troca de botão — ver `audio_saida.devolver_o_som_do_pc`, parâmetro `de`.
+    na_mesa = [str(c.get("uniq") or "") for c in ctx.conectados if c.get("uniq")]
 
     # "OUVIR JUNTO" É A `fonte`, E ELA NÃO É UMA TERCEIRA CAMADA — 10/09/2026
     # (SOM-NA-TELA-01, a A3). O produto já obedecia a `speaker.fonte` desde a
@@ -4618,7 +4643,7 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # com ele o monitor continua entregando a onda ao nó. Este botão diz o que
     # ENTRA no nó; o `♪` cala o plástico. Camadas diferentes, donos diferentes.
     if qual == ROTA_NADA_NO_CONTROLE:
-        audio_saida.devolver_o_som_do_pc()
+        audio_saida.devolver_o_som_do_pc(de=uniq, uniqs_na_mesa=na_mesa)
         if fonte_do_controle(ctx.por_uniq(uniq)) == "mix":
             _dizer_a_fonte_ao_daemon(p, uniq, "sfx")
         # **O «TUDO» INCLUI O SOM DO CONTROLE — 21/09/2026, ordem dela.** *"o
@@ -4649,7 +4674,7 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         return
 
     if qual == ROTA_OUVIR_JUNTO:
-        audio_saida.devolver_o_som_do_pc()
+        audio_saida.devolver_o_som_do_pc(de=uniq, uniqs_na_mesa=na_mesa)
         # SAIR DO TERCEIRO BOTÃO FECHA O LAÇO. Deixá-lo de pé aqui poria o som
         # do controle saindo na TV **e** o alto-falante tocando — o estado que
         # nenhum dos três botões descreve, e o pior deles: com o `mix` ligado
@@ -4683,25 +4708,22 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # nos dois lugares com a tela dizendo que toca num só.
     som_do_controle_na_tv.desligar(uniq)
 
-    # A CAMADA 1 VEM PRIMEIRO — ver a docstring. `uniqs_na_mesa` é a mesa
-    # inteira porque o casamento por dispositivo USB precisa saber de QUEM são
-    # as outras placas: com dois DualSense no cabo, sem a lista o `escolher_sink`
-    # não tem como vetar a placa do vizinho.
-    na_mesa = [str(c.get("uniq") or "") for c in ctx.conectados if c.get("uniq")]
+    # A CAMADA 1 VEM PRIMEIRO — ver a docstring. A mesa inteira vai junto, e
+    # a razão está onde `na_mesa` nasce, no topo deste gesto.
     desfecho = (
         audio_saida.mandar_o_som_do_pc(uniq, na_mesa)
-        if qual == "pc"
-        else audio_saida.devolver_o_som_do_pc()
+        if qual == ROTA_TUDO_NO_CONTROLE
+        else audio_saida.devolver_o_som_do_pc(de=uniq, uniqs_na_mesa=na_mesa)
     )
     # DEVOLVER PODE NÃO TER PARA ONDE, E ISSO NÃO INVALIDA O CLIQUE: se o som
     # nunca esteve no controle, "Sons do jogo" continua sendo só o byte da
     # camada 2, que é o que ele sempre foi. O caminho de IDA é diferente — sem
     # sink não há som a mover, e aí a recusa é a resposta certa.
-    if qual == "pc" and not desfecho.ok:
+    if qual == ROTA_TUDO_NO_CONTROLE and not desfecho.ok:
         raise RuntimeError(desfecho.motivo)
 
     byte_da_rota = ROTA_DO_CANAL[
-        CANAL_TODO_O_PC if qual == "pc" else CANAL_SONS_DO_JOGO]
+        CANAL_TODO_O_PC if qual == ROTA_TUDO_NO_CONTROLE else CANAL_SONS_DO_JOGO]
     if not p.speaker_set(rota=byte_da_rota, uniq=uniq,
                          **_volume_conhecido(ctx.por_uniq(uniq))):
         raise RuntimeError(
