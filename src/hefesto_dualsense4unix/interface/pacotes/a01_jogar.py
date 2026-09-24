@@ -3963,20 +3963,22 @@ def reconectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
     nomeados neste mesmo gesto (`home_actions._on_home_reconciliar_clicked`), e
     nenhum deles chegava aqui.
 
-    `resultado` E NÃO `chamar_detalhado`, e a razão é o passo 1: o recibo
-    precisa de QUANTOS jogadores voltaram, e isso está no CORPO da resposta
-    (``coop.sync {} -> {status, players, active}``). `chamar_detalhado` devolve
-    ``(ok, motivo)`` e joga o corpo fora — ele serviria para dizer que não deu,
-    e não para dizer o que foi feito. O passo 2 usa a mesma função pelo mesmo
-    motivo: ``{ok, renumbered}`` é o que separa *"compactei N controles"* de
-    *"já estava compacta"*.
+    `resultado` E NÃO `chamar_detalhado`, e a razão é o CORPO da resposta:
+    `chamar_detalhado` devolve ``(ok, motivo)`` e joga o corpo fora. O passo 2
+    precisa dele porque a recusa por jogo aberto chega DENTRO de uma resposta
+    bem-sucedida (``{ok: false, reason: "sessao_de_jogo_aberta"}``), e é o
+    corpo que a separa da falha de verdade. NOTA DATADA — 24/09/2026: até aqui
+    este parágrafo dizia que o ``renumbered`` separava *"compactei N
+    controles"* de *"já estava compacta"*; a numeração que deu certo deixou de
+    ter frase pela decisão dela (`D-2409-O-RECONECTAR-NAO-DIZ-NADA`), e o
+    ``renumbered`` não é mais lido — ver `painel.recibo_do_reconectar`.
 
     **A FALHA DO PASSO 1 LEVANTA; A DO PASSO 2, NÃO.** É o encadeamento da
     janela antiga, linha por linha: o `coop.sync` é quem responde *"meus
     jogadores voltaram?"*, e sem ele não há gesto — vira `RuntimeError`, que é
     o canal da recusa laranja. O `identity.renumber` é acabamento: se ele não
     responder, o recibo diz que a numeração não foi conferida
-    (`reconciliar_toast` com ``None``) e os jogadores continuam de pé.
+    (`painel._NAO_CONFERIU`) e os jogadores continuam de pé.
 
     O `except Exception` LARGO nos dois é de propósito e tem endereço: `ponte.
     resultado` levanta `RuntimeError` quando o daemon não atende, mas o
