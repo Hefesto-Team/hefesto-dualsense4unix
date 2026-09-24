@@ -468,7 +468,7 @@ class _PainelDaMesa:
         self._caixa_do_hub: Any = None
         #: Os adaptadores pela ótica do BlueZ — endereço, alias e quem hospeda
         #: Nintendo. Tupla vazia é o caso comum e legítimo: sem `busctl`, com o
-        #: `bluetoothd` parado, no Flatpak, ou em máquina sem adaptador.
+        #: `bluetoothd` parado, num sandbox sem o `org.bluez`, ou em máquina sem adaptador.
         self._dongles: tuple[Dongle, ...] = ()
         #: Impede empilhar leituras do BlueZ quando ela clica duas vezes.
         self._dongles_pedidos = False
@@ -1030,7 +1030,7 @@ class _PainelDaMesa:
         # adaptador desta tabela. É a mesma régua que manteve "Firmware" fora
         # daqui: coluna que só sabe dizer "não sei" em toda linha ocupa
         # largura, que é o recurso escasso desta janela, e ensina a ignorar a
-        # tabela. No Flatpak e com o `bluetoothd` parado ela não aparece.
+        # tabela. Com o `bluetoothd` parado, ou num sandbox sem o `org.bluez`, ela não aparece.
         com_nome = any(
             adaptador.interface in por_interface for adaptador in mesa.adaptadores
         )
