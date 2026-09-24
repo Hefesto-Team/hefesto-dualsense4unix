@@ -61,6 +61,11 @@ from hefesto_dualsense4unix.integrations import alto_falante_bt as som
 from hefesto_dualsense4unix.integrations import dualsense_bt_audio as mic
 from hefesto_dualsense4unix.profiles.schema import ProfileSpeakerConfig
 
+#: A FORMA A, decisão dela de 23/09/2026 (A-FORJA-VALIDA-O-SOM-01): o nome dela
+#: na frente e o ``iProduct`` da Sony atrás. Digitado aqui DE PROPÓSITO — a
+#: régua lê a decisão, não o dono (``vestido_de_dualsense.com_o_nome_da_sony``).
+_SONY = " (DualSense Wireless Controller)"
+
 #: Faixas sintéticas da casa. NENHUM destes é um controle desta bancada — uma
 #: régua que só passa com os quatro DualSense dela mede a bancada, não a cura.
 _UNIQ_P1 = "02fe0011a1b2"
@@ -151,8 +156,8 @@ def test_o_no_se_chama_alto_falante_do_controle_n() -> None:
     e as quatro comparações caem — e com elas cai o instrumento de bancada, que
     procura exatamente esta palavra na lista viva.
     """
-    assert nome_do_alto_falante("p1") == "Alto-falante do Controle 1"
-    assert nome_do_alto_falante("p4") == "Alto-falante do Controle 4"
+    assert nome_do_alto_falante("p1") == "Alto-falante do Controle 1" + _SONY
+    assert nome_do_alto_falante("p4") == "Alto-falante do Controle 4" + _SONY
     assert nome_do_alto_falante("p5") == ""
     assert som.NOME_DO_ALTO_FALANTE_DO_CONTROLE == "Alto-falante do Controle"
 
@@ -168,8 +173,8 @@ def test_o_par_com_o_microfone_e_a_mesma_gramatica() -> None:
     """
     anterior = mic.registrar_numerador_de_assento(lambda _u: 2)
     try:
-        assert som.descricao_do_alto_falante(_UNIQ_P1) == "Alto-falante do Controle 2"
-        assert mic.descricao_do_microfone(_UNIQ_P1) == "Microfone do Controle 2"
+        assert som.descricao_do_alto_falante(_UNIQ_P1) == "Alto-falante do Controle 2" + _SONY
+        assert mic.descricao_do_microfone(_UNIQ_P1) == "Microfone do Controle 2" + _SONY
     finally:
         mic.registrar_numerador_de_assento(anterior)
 
@@ -182,7 +187,7 @@ def test_sem_assento_sabido_nao_se_inventa_numero() -> None:
     """
     anterior = mic.registrar_numerador_de_assento(None)
     try:
-        assert som.descricao_do_alto_falante(_UNIQ_P1) == "Alto-falante do Controle"
+        assert som.descricao_do_alto_falante(_UNIQ_P1) == "Alto-falante do Controle" + _SONY
     finally:
         mic.registrar_numerador_de_assento(anterior)
 
@@ -377,7 +382,7 @@ def test_o_no_sobe_o_loopback_junto_com_o_sink() -> None:
     gravador = _Gravador()
     no = som.SinkVirtualPipeWire(
         uniq=_UNIQ_P1,
-        descricao="Alto-falante do Controle 1",
+        descricao="Alto-falante do Controle 1" + _SONY,
         runner=gravador,
         rota=som.RotaDoNo(True, sink=_SINK_P1, por_onde=som.POR_CABO),
     )

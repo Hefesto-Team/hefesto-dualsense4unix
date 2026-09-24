@@ -41,6 +41,11 @@ import pytest
 from hefesto_dualsense4unix.daemon.subsystems import bt_mic
 from hefesto_dualsense4unix.integrations import dualsense_bt_audio as bt
 
+#: A FORMA A, decisão dela de 23/09/2026 (A-FORJA-VALIDA-O-SOM-01): o nome dela
+#: na frente e o ``iProduct`` da Sony atrás. Digitado aqui DE PROPÓSITO — a
+#: régua lê a decisão, não o dono (``vestido_de_dualsense.com_o_nome_da_sony``).
+_SONY = " (DualSense Wireless Controller)"
+
 #: Quatro controles, quatro endereços — sintéticos, com a máscara da casa.
 P1 = "aa:bb:cc:00:00:01"
 P2 = "aa:bb:cc:00:00:02"
@@ -112,10 +117,10 @@ def test_o_rotulo_do_no_e_microfone_do_controle_n(numerador_limpo) -> None:  # t
     rotulos = [bt.descricao_do_microfone(u) for u in OS_QUATRO]
 
     assert rotulos == [
-        "Microfone do Controle 1",
-        "Microfone do Controle 2",
-        "Microfone do Controle 3",
-        "Microfone do Controle 4",
+        "Microfone do Controle 1" + _SONY,
+        "Microfone do Controle 2" + _SONY,
+        "Microfone do Controle 3" + _SONY,
+        "Microfone do Controle 4" + _SONY,
     ], f"os quatro nós não têm o nome que ela decidiu: {rotulos}"
     assert len(set(rotulos)) == 4, (
         "dois controles com o MESMO rótulo na lista de entrada dela — o nome "
@@ -157,13 +162,13 @@ def test_sem_assento_sabido_nao_se_inventa_numero(numerador_limpo) -> None:  # t
     Uma lista com dois «Microfone do Controle 1» é pior que uma com dois
     «Microfone do Controle»: o número repetido MENTE sobre qual é qual.
     """
-    assert bt.descricao_do_microfone(P1) == "Microfone do Controle"
+    assert bt.descricao_do_microfone(P1) == "Microfone do Controle" + _SONY
 
     # E um numerador que responde bobagem vale como "não sei" — `True` é `int`
     # em Python e viraria o assento 1 calado.
     for resposta in (0, -3, True, "2", None):
         bt.registrar_numerador_de_assento(lambda _u, r=resposta: r)
-        assert bt.descricao_do_microfone(P1) == "Microfone do Controle", (
+        assert bt.descricao_do_microfone(P1) == "Microfone do Controle" + _SONY, (
             f"o numerador respondeu {resposta!r} e virou assento"
         )
 
@@ -172,7 +177,7 @@ def test_sem_assento_sabido_nao_se_inventa_numero(numerador_limpo) -> None:  # t
         raise RuntimeError("o daemon caiu no meio")
 
     bt.registrar_numerador_de_assento(_explode)
-    assert bt.descricao_do_microfone(P1) == "Microfone do Controle"
+    assert bt.descricao_do_microfone(P1) == "Microfone do Controle" + _SONY
 
 
 def test_a_ponte_do_radio_batiza_o_no_com_o_nome_dela(  # type: ignore[no-untyped-def]
@@ -211,7 +216,7 @@ def test_a_ponte_do_radio_batiza_o_no_com_o_nome_dela(  # type: ignore[no-untype
 
     assert ponte.iniciar() is False  # o canal dublado recusa; é o combinado
     assert pedidos, "a ponte não pediu o canal por controle"
-    assert pedidos[0][1] == "Microfone do Controle 2", (
+    assert pedidos[0][1] == "Microfone do Controle 2" + _SONY, (
         f"a ponte batizou o nó de {pedidos[0][1]!r} — o nome dela não chegou "
         "ao produto"
     )
@@ -358,7 +363,7 @@ def test_o_toque_dela_ergue_o_canal_do_cabo_com_o_no_alsa(  # type: ignore[no-un
     sub._reconciliar_o_cabo([])
 
     assert dono_dublado["abriu"] == [
-        (_hex(P1), "Microfone do Controle 1", FONTE_DO_CABO)
+        (_hex(P1), "Microfone do Controle 1" + _SONY, FONTE_DO_CABO)
     ], f"o canal do cabo do P1 não subiu como devia: {dono_dublado['abriu']}"
     assert sub._canais_do_cabo == {_hex(P1): "hefesto_mic_000001"}
 
@@ -522,13 +527,13 @@ def test_o_gancho_do_assento_sobe_e_desce_com_o_subsystem(  # type: ignore[no-un
 
     asyncio.run(sub.start(ctx))  # type: ignore[arg-type]
     try:
-        assert bt.descricao_do_microfone(P2) == "Microfone do Controle 2", (
+        assert bt.descricao_do_microfone(P2) == "Microfone do Controle 2" + _SONY, (
             "o subsystem subiu e o nó continuou sem assento"
         )
     finally:
         asyncio.run(sub.stop())
 
-    assert bt.descricao_do_microfone(P2) == "Microfone do Controle", (
+    assert bt.descricao_do_microfone(P2) == "Microfone do Controle" + _SONY, (
         "o subsystem parou e o numerador dele continuou respondendo"
     )
 

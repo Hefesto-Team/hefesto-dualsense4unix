@@ -55,6 +55,11 @@ from hefesto_dualsense4unix.app.audio_saida import (
     rota_do_no,
 )
 
+#: A FORMA A, decisão dela de 23/09/2026 (A-FORJA-VALIDA-O-SOM-01): o nome dela
+#: na frente e o ``iProduct`` da Sony atrás. Digitado aqui DE PROPÓSITO — a
+#: régua lê a decisão, não o dono (``vestido_de_dualsense.com_o_nome_da_sony``).
+_SONY = " (DualSense Wireless Controller)"
+
 # ---------------------------------------------------------------------------
 # A bancada de mentira: dois controles no cabo, cada um no seu dispositivo USB
 # ---------------------------------------------------------------------------
@@ -174,7 +179,7 @@ def test_o_mesmo_controle_no_cabo_e_no_radio_e_o_mesmo_no() -> None:
 
     assert no_cabo is not None
     assert no_radio is not None
-    assert no_cabo.nome == no_radio.nome == "Alto-falante do Controle 1"
+    assert no_cabo.nome == no_radio.nome == "Alto-falante do Controle 1" + _SONY
     assert no_cabo.id_do_no == no_radio.id_do_no == "hefesto_som_11a1b2"
 
 
@@ -186,10 +191,10 @@ def test_o_nome_e_o_id_vem_do_assento_e_de_mais_nada() -> None:
     que é o que esta casa escrevia até 08/09, e as quatro comparações caem.
     """
     assert [nome_do_alto_falante(a) for a in ASSENTOS] == [
-        "Alto-falante do Controle 1",
-        "Alto-falante do Controle 2",
-        "Alto-falante do Controle 3",
-        "Alto-falante do Controle 4",
+        "Alto-falante do Controle 1" + _SONY,
+        "Alto-falante do Controle 2" + _SONY,
+        "Alto-falante do Controle 3" + _SONY,
+        "Alto-falante do Controle 4" + _SONY,
     ]
 
 
@@ -276,7 +281,7 @@ def test_o_plano_do_cabo_liga_o_no_ao_sink_pelos_dois_canais_da_frente(
     assert "module-null-sink" in criar
     assert "sink_name=hefesto_som_11a1b2" in criar
     assert any(
-        "device.description='Alto-falante do Controle 1'" in arg for arg in criar
+        f"device.description='Alto-falante do Controle 1{_SONY}'" in arg for arg in criar
     ), criar
     assert "module-loopback" in ligar
     assert "source=hefesto_som_11a1b2.monitor" in ligar
@@ -333,7 +338,7 @@ def test_no_radio_sem_ponte_o_no_recusa_com_a_frase() -> None:
 
     plano = plano_de_publicacao(no)
 
-    assert plano.nome == "Alto-falante do Controle 1"
+    assert plano.nome == "Alto-falante do Controle 1" + _SONY
     assert plano.id_do_no == "hefesto_som_11a1b2"
     assert plano.vai_publicar is True
     assert plano.tem_rota is False
@@ -437,7 +442,7 @@ def test_a_mascara_nao_muda_o_no(flavor: str, usb_da_bancada: None) -> None:
         runner=_runner(),
     )
 
-    assert plano.nome == "Alto-falante do Controle 1"
+    assert plano.nome == "Alto-falante do Controle 1" + _SONY
     assert plano.id_do_no == "hefesto_som_11a1b2"
     assert plano.sink == _SINK_P1
     assert plano.vai_publicar is True
@@ -481,7 +486,7 @@ def test_um_controle_que_nunca_esteve_aqui_ganha_o_mesmo_no() -> None:
     """
     no = no_do_controle(_entry(_UNIQ_NUNCA_VISTO, slot=4))
     assert no is not None
-    assert no.nome == "Alto-falante do Controle 4"
+    assert no.nome == "Alto-falante do Controle 4" + _SONY
 
     plano = plano_de_publicacao(no, [_UNIQ_NUNCA_VISTO], runner=_runner(curto=""))
     assert plano.vai_publicar is True
