@@ -33,7 +33,10 @@ AS MORDIDAS (24/09/2026, cada uma devolvida com o md5 conferido):
   :class:`TestORenumerarAgoraFechaNaHora` e as linhas do plano;
 - sem a guarda de quem já está no boneco certo, reprovam
   ``test_quem_esta_no_boneco_certo_nao_sai_para_fechar_o_buraco_de_ninguem`` e
-  a varredura.
+  a varredura;
+- a carta do co-op lida da TELA (``numeros_da_mesa``) em vez da lâmpada
+  reprova ``test_o_jogo_muda_junto_com_a_lampada_e_nao_antes`` nos seis casos
+  com alguém atrás do buraco: o jogo correria na frente da lâmpada.
 
 Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5 zerados.
 """
@@ -169,6 +172,37 @@ class TestPassadoOPrazoOJogoFechaOBuraco:
             bancada.tique()
             bancada.o_jogo_segue_a_tela()
         assert len(bancada.vpads) == assentada, "a mesa assentada renasceu de novo"
+
+    @MATRIZ
+    def test_o_jogo_muda_junto_com_a_lampada_e_nao_antes(
+        self, monkeypatch: pytest.MonkeyPatch, quantos: int, transporte: str
+    ) -> None:
+        """A carta do co-op é o número da LÂMPADA, que só anda no gatilho da cor.
+
+        A bancada deixa a tabela das lâmpadas vazia (a resposta é a mesa de
+        agora); aqui ela é congelada como no produto, e só o
+        ``liberar_as_lampadas`` — o gatilho que o ``reconnect_loop`` arma
+        quando a numeração muda — a solta. A tela muda na hora; o jogo espera
+        a lâmpada.
+        """
+        bancada = montar(monkeypatch, quantos, transporte)
+        bancada.reg.liberar_as_lampadas()
+        vpads_de_antes = {u: bancada.vpad_de(u) for u in UNIQS[1:quantos]}
+        bancada.mesa.levantar(UNIQS[1])
+        for _ in range(_ticks_ate_o_fim_do_prazo(0.0)):
+            bancada.tique()
+        assert bancada.a_tela() == {
+            u: n + 1 for n, u in enumerate(u for u in UNIQS[:quantos] if u != UNIQS[1])
+        }, "a tela não fechou a fila no fim do prazo"
+        for uniq in UNIQS[2:quantos]:
+            assert bancada.vpad_de(uniq) is vpads_de_antes[uniq], (
+                f"{uniq} renasceu antes de a lâmpada mudar"
+            )
+
+        bancada.reg.liberar_as_lampadas()  # o gatilho da cor dispara
+        bancada.tique()
+
+        bancada.o_jogo_segue_a_tela()
 
     @MATRIZ
     def test_o_diario_diz_quem_renasceu(
