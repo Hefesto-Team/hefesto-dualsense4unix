@@ -705,40 +705,44 @@ def test_a_luz_pergunta_ao_motor_se_ha_cor_a_afirmar(colunas):
         f"mediu.")
 
 
-def test_a_tira_nao_acende_sob_steam_nem_sob_nativo(colunas):
+def test_a_tira_nao_acende_sob_steam_e_no_nativo_mostra_a_cor(colunas):
     """A pergunta da TIRA não é a que o segundo retorno do motor responde.
 
     `rotulo_lightbar` devolve `(ressalva, COR BASE DO ACCENT)`, e a base é a
-    ÚLTIMA COR CONHECIDA — devolvida **também** nos dois estados em que o
-    próprio motor avisa que ela pode não estar no plástico::
+    ÚLTIMA COR CONHECIDA — devolvida **também** no estado em que o próprio
+    motor avisa que ela pode não estar no plástico::
 
-        native_mode         → ("Em Nativo o jogo é dono do LED", rgb)
         lightbar_disputada  → ("a Steam tem este controle aberto", rgb)
 
-    Nos dois a base volta preenchida COM `lightbar_on` falso — o pacote lia
-    isso como "está acesa" e a tira acendia. Medido em 02/09/2026, com o dublê
-    de estado, ANTES da cura (saída literal da mesma sonda)::
+    Ali a base volta preenchida COM `lightbar_on` falso — o pacote lia isso
+    como "está acesa" e a tira acendia. Medido em 02/09/2026, com o dublê de
+    estado, ANTES da cura (saída literal da mesma sonda)::
 
         NATIVO + lightbar_on falso   background:#7EB8D4;color:#7EB8D4;opacity:1.0
         STEAM  + lightbar_on falso   background:#7EB8D4;color:#7EB8D4;opacity:1.0
 
-    A MORDIDA: troque `base if recado is None else None` por `base` e as duas
-    primeiras linhas reprovam — a tira volta a acender azul com a barra
-    apagada, sob os dois estados.
+    NOTA DATADA — 24/09/2026 (A-MIRA-NA-NAVEGACAO-01): o Nativo deixou de ser
+    ressalva (`D-2409-NO-NATIVO-A-TELA-MOSTRA-A-COR`: a barra é do Hefesto no
+    Nativo também). A barra apagada no Nativo é APAGADA, como em todo modo, e
+    a acesa mostra a cor — a segunda metade desta régua cobra as duas.
+
+    A MORDIDA: troque `base if recado is None else None` por `base` e a linha
+    da Steam reprova — a tira volta a acender azul com a barra apagada.
     """
     apagado = dict(DO_RADIO, lightbar_on=False)
-    sob_nativo = colunas([apagado], {"active_profile": "", "native_mode": True})
-    assert "color:transparent" in sob_nativo[DO_RADIO["uniq"]]["luz"], (
-        "em Nativo a tira acendeu com a barra apagada: o jogo é dono do LED e "
-        "a última cor NOSSA não diz o que está no plástico.")
-
     sob_steam = colunas([dict(apagado, lightbar_disputada=True)])
     assert "color:transparent" in sob_steam[DO_RADIO["uniq"]]["luz"], (
         "com a Steam segurando o `fd` a tira acendeu com a barra apagada.")
 
-    #: E A RESSALVA CONTINUA SENDO DITA — apagar sem explicar seria trocar uma
-    #: afirmação falsa por um silêncio.
-    assert "Em Nativo" in sob_nativo[DO_RADIO["uniq"]]["luz"]
+    #: NO NATIVO, COMO EM TODO MODO: apagada é apagada, acesa é a cor.
+    nativo = {"active_profile": "", "native_mode": True}
+    apagada_no_nativo = colunas([apagado], nativo)[DO_RADIO["uniq"]]["luz"]
+    assert "color:transparent" in apagada_no_nativo
+    assert "Lightbar: apagada" in apagada_no_nativo
+    acesa_no_nativo = colunas([DO_RADIO], nativo)[DO_RADIO["uniq"]]["luz"]
+    assert "color:transparent" not in acesa_no_nativo, (
+        "no Nativo a barra é do Hefesto, e a tira não mostrou a cor")
+    assert "Nativo" not in acesa_no_nativo, acesa_no_nativo
 
     #: O CAMINHO QUE NÃO PODE FECHAR JUNTO: acesa, cor conhecida, sem ressalva.
     acesa = colunas([DO_RADIO])[DO_RADIO["uniq"]]["luz"]
@@ -995,7 +999,11 @@ def test_a_frase_da_disputa_e_a_do_motor(colunas):
 
 
 def test_o_recado_conhece_os_estados_que_a_mao_nao_conhecia(colunas):
-    """Quatro estados onde havia um: Nativo, disputa, desconhecida, apagada.
+    """Os estados onde havia um: disputa, desconhecida, apagada.
+
+    NOTA DATADA — 24/09/2026 (A-MIRA-NA-NAVEGACAO-01): eram quatro, e o
+    Nativo saiu (`D-2409-NO-NATIVO-A-TELA-MOSTRA-A-COR`): com a barra acesa
+    numa cor conhecida, o Nativo não tem o que ressalvar.
 
     ONDE A FRASE MORA, desde 02/09/2026: no `title` das TRÊS peças do desenho,
     dentro do `luz`. Ela era emitida num `data-campo="recado"` que NENHUMA das
@@ -1014,8 +1022,7 @@ def test_o_recado_conhece_os_estados_que_a_mao_nao_conhecia(colunas):
     assert "Lightbar: apagada" in dica([dict(DO_RADIO, lightbar_on=False)])
     assert "Lightbar: cor desconhecida" in dica(
         [dict(DO_RADIO, lightbar_source="desconhecida")])
-    assert "Em Nativo o jogo é dono do LED" in dica(
-        [DO_RADIO], {"active_profile": "", "native_mode": True})
+    assert "Nativo" not in dica([DO_RADIO], {"active_profile": "", "native_mode": True})
     limpa = dica()
     assert "Lightbar:" not in limpa and "Nativo" not in limpa, limpa
 

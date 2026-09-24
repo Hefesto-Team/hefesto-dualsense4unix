@@ -112,9 +112,14 @@ def test_estado_da_tira_separa_os_tres_pelos_cinco_ramos(a04):
     assert estado(SEGURADO) == a04.INCERTA, (
         "com a Steam segurando o `fd`, o que a classe LED devolve é o que o "
         "Hefesto PEDIU — não o que está no plástico.")
-    assert estado(ACESO, {"native_mode": True}) == a04.INCERTA, (
-        "em Nativo o jogo é dono do LED e escreve por hidraw; o daemon não "
-        "pisa nele.")
+    # NOTA DATADA — 24/09/2026 (A-MIRA-NA-NAVEGACAO-01): em Nativo a tira era
+    # INCERTA («o jogo é dono do LED»). Com a `D-2309-NO-NATIVO-A-LUZ-E-O-
+    # NUMERO-SAO-DO-HEFESTO` a barra é do Hefesto no Nativo também, e a
+    # `D-2409-NO-NATIVO-A-TELA-MOSTRA-A-COR` manda a tela mostrar a cor como em
+    # todo modo: o Nativo cai nos mesmos ramos.
+    assert estado(ACESO, {"native_mode": True}) == a04.ACESA, (
+        "no Nativo a barra é do Hefesto, e a tira voltou ao tracejado")
+    assert estado(DESLIGADO, {"native_mode": True}) == a04.APAGADA
 
 
 def test_a_frase_da_apagada_e_perguntada_ao_motor_e_nao_digitada(a04):

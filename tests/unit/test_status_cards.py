@@ -436,12 +436,15 @@ def test_rotulo_desconhecida_nunca_diz_apagada(host: _Host) -> None:
     assert card._accent == ensure_min_contrast(ACCENT_NEUTRO)
 
 
-def test_rotulo_nativo_o_jogo_e_dono_do_led(host: _Host) -> None:
+def test_no_nativo_a_cor_conhecida_e_acesa_fica_sem_rotulo(host: _Host) -> None:
+    """NOTA DATADA — 24/09/2026 (A-MIRA-NA-NAVEGACAO-01): era
+    `test_rotulo_nativo_o_jogo_e_dono_do_led`, e o card dizia «Em Nativo o jogo
+    é dono do LED». Com a `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO` a
+    barra é do Hefesto no Nativo também, e a `D-2409-NO-NATIVO-A-TELA-MOSTRA-
+    A-COR` manda mostrar a cor como em todo modo."""
     host._render_live_state(_state(_entry(), native_mode=True))
     card = host.cards()[0]
-    assert card._lightbar_label.get_visible() is True
-    assert card._lightbar_label.get_text() == "Em Nativo o jogo é dono do LED"
-    # Última cor conhecida segue nos traços (ajustada).
+    assert card._lightbar_label.get_visible() is False
     assert card._accent == ensure_min_contrast(COR_A)
 
 
@@ -490,12 +493,12 @@ def test_cor_conhecida_e_acesa_sem_rotulo(host: _Host) -> None:
             {},
             "Lightbar: cor desconhecida",
         ),
-        # Nativo vence: o jogo é dono do LED.
+        # Nativo: como em todo modo (a barra é do Hefesto — D-2409, 24/09/2026).
         (
             {"lightbar_rgb": [16, 32, 72], "lightbar_on": True,
              "lightbar_source": "sysfs"},
             {"native_mode": True},
-            "Em Nativo o jogo é dono do LED",
+            None,
         ),
         # cor conhecida acesa → sem rótulo.
         (

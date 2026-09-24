@@ -445,7 +445,8 @@ def test_o_zero_de_uma_barra_desligada_tambem_e_apagada(pac, a02):
 
 
 def test_em_nativo_a_tela_nao_afirma_a_cor_crua(pac, a02):
-    """Modo Nativo: o jogo é dono do LED, e o `rgb` que sobra é CRU.
+    """Modo Nativo com a fonte DESCONHECIDA: o `rgb` que sobra é CRU, e a tela
+    não o afirma.
 
     O RAMO NÃO TINHA UM ÚNICO CASO até 02/09/2026 — os três testes de `luz-hex`
     passavam `state=None`, então `native_mode` era sempre falso, e a cura que
@@ -453,22 +454,24 @@ def test_em_nativo_a_tela_nao_afirma_a_cor_crua(pac, a02):
     ramo**: medido com sonda, `nativo + fonte desconhecida + rgb 0,0,0` dava
     `#000000` antes e depois dela.
 
-    `rotulo_lightbar` decide `native_mode` PRIMEIRO (`controller_card.py:1182`)
-    e devolve o `rgb` CRU — o teste de fonte desconhecida nem é alcançado. A
-    GTK mostra essa cor COM a frase que a explica ao lado; aqui a frase não tem
-    endereço, e cor sem ressalva é afirmar o que ninguém mediu.
-
-    A PALAVRA É `Jogo` DESDE 04/09/2026 (decisão [02] dela), e ela diz o que o
-    travessão calava: quem está com o LED é o JOGO. O que a régua cobra
-    continua sendo o mesmo — a cor crua não aparece.
+    NOTA DATADA — 24/09/2026 (A-MIRA-NA-NAVEGACAO-01): a palavra era `Jogo`
+    («o jogo é dono do LED»), e o Nativo era o primeiro ramo do motor. Com a
+    `D-2409-NO-NATIVO-A-TELA-MOSTRA-A-COR` o Nativo cai nas mesmas regras de
+    todo modo: a fonte desconhecida diz «Não sei», e a cor conhecida aparece.
+    O que a régua cobra continua sendo o mesmo — a cor crua não aparece.
 
     MORDE: decidir pela base (`base is not None`) reprova aqui com `'#000000'`.
     """
     d = _card(pac, a02, {**BASE, "lightbar_rgb": [0, 0, 0],
                          "lightbar_source": "desconhecida", "lightbar_on": True},
               state={"native_mode": True})
-    assert d["luz-hex"] == a02.PALAVRA_DA_LUZ[a02.ROTULO_DA_LUZ_EM_NATIVO]
+    assert d["luz-hex"] == a02.PALAVRA_DA_LUZ[a02.ROTULO_DA_LUZ_DESCONHECIDA]
     assert "000000" not in d["luz-hex"]
+    conhecida = _card(pac, a02, {**BASE, "lightbar_rgb": [0, 0, 255],
+                                 "lightbar_source": "sysfs", "lightbar_on": True},
+                      state={"native_mode": True})
+    assert conhecida["luz-hex"] == "#0000FF", (
+        "no Nativo a barra é do Hefesto, e a tela escondeu a cor")
 
 
 def test_com_a_steam_segurando_o_fd_a_tela_nao_afirma_a_cor_crua(pac, a02):
