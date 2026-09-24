@@ -754,10 +754,17 @@ def censo(itens: Sequence[Item] | None = None) -> dict[str, object]:
 #    o desfecho do log com a leitura de AGORA e diz qual das duas ficou.
 #
 # O RELIGAR NÃO MORA AQUI: este módulo é só leitura. O controle que fica sem o
-# HID é religado pelo vigia root do Bluetooth (`scripts/bt_rebind_orphans.sh`, o
-# ramo do cabo); a entrada que o kernel largou vazia pede um reset de porta que
-# nenhum caminho root do produto tem hoje — está escrito na sprint, em «O que o
-# install precisa».
+# HID é religado pelo `scripts/bt_rebind_orphans.sh` (o ramo do cabo): na hora
+# do aviso do kernel, pelo kernel-watch e o verbo `religar-orfaos` da ponte
+# privilegiada (STORM-USB-02), e no tique do vigia root do Bluetooth; a entrada
+# que o kernel largou vazia pede um reset de porta que nenhum caminho root do
+# produto tem hoje — está escrito na sprint, em «O que o install precisa».
+#
+# E O LUGAR NA LINHA (STORM-USB-02). Desde 24/09 o kernel-watch grava, no fim de
+# cada linha `[USB-71]`, o lugar da porta no instante do evento. O caminho do
+# kernel carrega o número do barramento, que é a ordem de subida dos xHCI
+# daquele boot; :func:`_porta_de_hoje` traduz o lugar pelos barramentos da raiz
+# lida, e a entrada nomeada é a certa mesmo que a ordem tenha mudado.
 # ---------------------------------------------------------------------------
 
 #: A tag que o `storm_watch.sh:classify` põe na linha do storm.
@@ -825,6 +832,12 @@ _INTERFACE_USB = re.compile(r"^(?P<no>\d+-\d+(?:\.\d+)*):\d+\.\d+$")
 
 #: `3-4.1.3` — o nó do dispositivo, que é o que o `/sys/bus/usb/devices` lista.
 _NO_USB = re.compile(r"^\d+-\d+(?:\.\d+)*$")
+
+#: O LUGAR que o kernel-watch grava no fim da linha do -71 desde a STORM-USB-02
+#: (` · lugar pci-0000:0c:00.3-usb-0:4.4`): o controlador PCI e a cadeia de
+#: portas, lidos do `/sys` NO INSTANTE do evento. É o que separa a entrada de um
+#: -71 de outro boot da entrada que o mesmo caminho do kernel nomeia hoje.
+_LUGAR_NA_LINHA = re.compile(r"\s·\slugar\s(?P<lugar>pci-\S+)\s*$")
 
 
 def porta_do_evento(mensagem: str) -> str:
@@ -909,9 +922,14 @@ class Aparelho:
         """«Entrada 3 (3-4.1.3)»: o nome da seção do rádio e o caminho do kernel.
 
         O caminho fica junto, e não é segundo nome: é o que o suporte procura no
-        journal, e o que separa duas entradas que ela chamou igual.
+        journal, e o que separa duas entradas que ela chamou igual. Quando o
+        NOME já é o caminho — o rótulo de reserva que o dono desempata numa
+        máquina com dois controladores USB, «Entrada 3-4» (STORM-USB-02) —, o
+        parêntese repetiria o que está escrito ao lado, e sai.
         """
         if self.nome_da_entrada and self.nome_da_entrada != self.porta:
+            if self.porta in self.nome_da_entrada.split():
+                return self.nome_da_entrada
             return f"{self.nome_da_entrada} ({self.porta})"
         return self.porta
 
@@ -1230,6 +1248,67 @@ def _nomeador(
     return nomear
 
 
+def _barramentos_da_raiz(raiz_usb: Path) -> dict[int, str]:
+    """``{busnum: controlador PCI}`` da raiz lida — ``{}`` quando não se sabe.
+
+    A mesma leitura do :func:`_nomeador`, e pela mesma razão os barramentos são
+    os da RAIZ, nunca os de quem roda. Nunca levanta: sem o dono ao alcance (o
+    ``python3`` do sistema), o laudo segue com o caminho do log, como antes.
+    """
+    try:
+        from hefesto_dualsense4unix.integrations.mesa_de_radio import (
+            controladores_dos_barramentos,
+        )
+
+        return dict(controladores_dos_barramentos(raiz_usb=str(raiz_usb)))
+    except Exception:  # sem o dono, "não sei" — nunca derruba o laudo
+        return {}
+
+
+def _porta_de_hoje(
+    porta: str, lugar: str, barramentos: dict[int, str], raiz_usb: Path
+) -> str:
+    """O caminho de HOJE da entrada em que o -71 aconteceu — STORM-USB-02.
+
+    O caminho do kernel (``3-4.4``) carrega o número do barramento, e o número
+    é a ORDEM em que os controladores xHCI subiram naquele boot. Nos 12 boots
+    medidos na mesa dela a ordem não mudou; num computador em que mude, o
+    caminho de um -71 de ontem nomeia OUTRA entrada hoje. O ``lugar`` que o
+    kernel-watch grava na linha (o controlador PCI e a cadeia de portas) é o
+    que diz qual é a certa, e esta função o traduz pelos barramentos da raiz.
+
+    Vale o caminho do log quando a linha não tem lugar (o log de antes de
+    24/09), quando não há barramentos lidos, quando a ordem não mudou (o caso
+    comum: o mesmo resultado de antes) e quando o controlador daquele boot não
+    está mais na máquina — aí não há entrada de hoje para apontar. Dos dois
+    lados de uma entrada USB 3 (o 2.0 e o 3.x têm o mesmo lugar), fica o que
+    tem aparelho agora; sem nenhum, o 2.0, onde o DualSense e os adaptadores
+    enumeram.
+    """
+    if not lugar or not barramentos:
+        return porta
+    try:
+        from hefesto_dualsense4unix.utils.lugar import (
+            caminhos_do_lugar,
+            lugar_do_caminho,
+        )
+    except Exception:  # sem o dono da grafia, o caminho do log
+        return porta
+    if lugar_do_caminho(porta, barramentos) == lugar:
+        return porta
+    candidatos = caminhos_do_lugar(lugar, barramentos)
+    if not candidatos:
+        return porta
+    presentes = []
+    for candidato in candidatos:
+        try:
+            if (raiz_usb / candidato).is_dir():
+                presentes.append(candidato)
+        except OSError:
+            continue
+    return (presentes or list(candidatos))[0]
+
+
 def _desfecho(mensagem: str) -> str:
     """O kernel desistiu nesta linha? Um dos ``DESFECHO_*``, ou ``""``."""
     if _ENTRADA_LARGADA.search(mensagem):
@@ -1283,6 +1362,8 @@ def storm_por_porta(
     carimbo: dict[str, str] = {}
     desfecho: dict[str, str] = {}
     sem_endereco = 0
+    #: Os barramentos da raiz, lidos UMA vez e só se alguma linha tiver lugar.
+    barramentos: dict[int, str] | None = None
     for linha in linhas:
         if TAG_DO_STORM not in linha:
             continue
@@ -1290,10 +1371,21 @@ def storm_por_porta(
         if len(data) < 10 or data < corte:
             continue
         _, _, mensagem = linha.partition(TAG_DO_STORM)
+        # O lugar que o kernel-watch grava no fim da linha (STORM-USB-02) sai da
+        # mensagem antes de ela ser lida: ela é a do kernel, e só ela.
+        lugar = ""
+        casou = _LUGAR_NA_LINHA.search(mensagem)
+        if casou is not None:
+            lugar = casou.group("lugar")
+            mensagem = mensagem[: casou.start()]
         porta = porta_do_evento(mensagem.strip())
         if not porta:
             sem_endereco += 1
             continue
+        if lugar:
+            if barramentos is None:
+                barramentos = _barramentos_da_raiz(raiz_usb)
+            porta = _porta_de_hoje(porta, lugar, barramentos, raiz_usb)
         quantos[porta] = quantos.get(porta, 0) + 1
         if data > ultimo.get(porta, ""):
             ultimo[porta] = data
