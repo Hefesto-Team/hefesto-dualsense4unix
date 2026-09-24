@@ -18,7 +18,9 @@ AS MORDIDAS, uma por teste:
 5. rode um comando ao montar ou listar e a folha toca o som dela antes da
    primeira pergunta;
 6. deixe sair linha de caderno sem gesto e o degrau `.jogo` vira opinião; e o
-   nome do nó, que leva o rabo do endereço, tem de sair MASCARADO.
+   nome do nó, que leva o rabo do endereço, tem de sair MASCARADO;
+7. abra a sala Voz sem perguntar quem é o microfone PADRÃO e a coluna do P3
+   mede o P1 — o jogo ouve o padrão, não a coluna.
 """
 
 from __future__ import annotations
@@ -205,3 +207,34 @@ def test_veredito_sem_gesto_nao_vira_linha_e_o_no_sai_mascarado(
     # o nó é `hefesto_som_<hex6>`: os octetos 4 e 5 saem zerados, como a máscara da casa
     assert "123401" not in linha
     assert folha.nome_do_sink("aa:bb:cc:00:00:01") in linha
+
+
+def test_a_voz_so_abre_com_o_microfone_deste_controle_de_padrao(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sem_godot_de_fora
+) -> None:
+    """O jogo ouve o microfone PADRÃO: a Voz na coluna do P3, com o P1 de padrão, mediria o P1.
+
+    MORDIDA: tire a guarda de `executar` (ou o `ouve_o_padrao` do gesto) e a
+    Forja abre com o padrão de outro controle — e o «vi no jogo» vai para a
+    coluna errada. E o gesto recusado não entra na conta da célula.
+    """
+    este, outro = folha.Controle(_NO_RADIO, "radio"), folha.Controle(_NO_CABO, "cabo")
+    forja = _forja_de_mentira(tmp_path)
+    voz = folha.gesto_do_jogo(_pergunta("audio.microfone.jogo"), este, forja)
+    assert voz.ouve_o_padrao == este.no_do_microfone
+    # Só a Voz pergunta: a Galeria e o Impacto não dependem do microfone.
+    for chave in ("gatilho.direito.adaptativo.jogo", "vibracao.rumble.jogo"):
+        assert folha.gesto_do_jogo(_pergunta(chave), este, forja).ouve_o_padrao == ""
+
+    abertos: list[list[str]] = []
+    monkeypatch.setattr(subprocess, "Popen", lambda argv, **_k: abertos.append(list(argv)))
+    # «Não sei» não se lê como «é outro»: cada recusa diz a sua.
+    for padrao, frase in ((outro.no_do_microfone, "é outro"), ("", "não consegui perguntar")):
+        monkeypatch.setattr(folha, "microfone_padrao", lambda p=padrao: p)
+        texto, rodou = folha.executar(voz)
+        assert not rodou and not abertos, f"a Voz abriu com o padrão {padrao!r}: {texto}"
+        assert frase in texto, texto
+        assert "hefesto_mic_" not in texto, "a recusa nomeou o nó de outro controle"
+    monkeypatch.setattr(folha, "microfone_padrao", lambda: este.no_do_microfone)
+    texto, rodou = folha.executar(voz)
+    assert rodou and len(abertos) == 1 and abertos[0][-1] == "--sala=voz", texto
