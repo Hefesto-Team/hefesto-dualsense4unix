@@ -20,18 +20,20 @@ pelo lugar do vpad do P1 (fixo com o jogo na autoridade, a R-04):
   ``1@2 2@3 4F@4 5@5``);
 - o P1 fora do boneco dele, esperando o jogo (as outras cinco).
 
-Em todas, um ou dois secundários estão atrás do buraco que venceu, e um
-secundário certo está atrás do lugar guardado. **Chegar a elas exige seis
-controles de uma vez** (quatro vpads sentados, um que venceu e um guardado):
-com P1 a P4 e quaisquer dois fora, nenhuma das 60 acontece
-(:class:`TestAMatrizDeQuatro`).
+Em todas, um ou dois secundários estão atrás do buraco que venceu, um
+secundário certo está mais atrás, e entre eles há um boneco que ninguém pode
+ocupar agora: o da carta guardada, ou, com o P1 fora do boneco dele, o boneco
+do P1, que espera o jogo. Recriar o certo o jogaria nesse boneco. **Chegar a
+elas exige seis controles na mesa** (quatro vpads sentados, um que venceu e um
+que segura a carta que falta, guardado ou externo): com P1 a P4 e quaisquer
+dois fora, nenhuma das 60 acontece (:class:`TestAMatrizDeQuatro`).
 
 **A CURA mora no dono** (``coop._a_faixa``): quando o sufixo deixa alguém fora
 do boneco, numa mesa já em ordem e com o jogo aberto, tenta-se recriar só uma
-FAIXA de cartas. Ela só vale se ninguém dela está certo ou é fixo, se todo
-mundo dela renasce no boneco da própria carta e se bate o sufixo em (fora do
-boneco, recriações). Nos 60, todo secundário acaba no boneco da carta; só o P1
-fora do boneco continua fora, esperando o jogo.
+FAIXA de cartas. Ela só vale se todo mundo dela renasce no boneco da própria
+carta (o que já deixa de fora quem está certo), se o fixo não entra e se bate o
+sufixo em (fora do boneco, recriações). Nos 60, todo secundário acaba no boneco
+da carta; só o P1 fora do boneco continua fora, esperando o jogo.
 
 **E A MESMA FAMÍLIA fora dos 60:** a varredura muda 652 mesas, e 592 não são
 dos 60 — o buraco à frente do lugar guardado com três sentados, que sufixo
@@ -165,10 +167,15 @@ def _forma(mesa: Mapping[int, str], cartas: Mapping[str, int], fixos: frozenset[
     )
 
 
-def _fora(mesa: Mapping[int, str], cartas: Mapping[str, int], nascer: Sequence[str],
-          recriar: Sequence[str], compacta: bool) -> int:
-    return _fora_do_boneco(_a_mesa_depois(mesa, recriar, nascer, cartas, compacta=compacta),
-                           cartas)
+def _fora(
+    mesa: Mapping[int, str],
+    cartas: Mapping[str, int],
+    nascer: Sequence[str],
+    recriar: Sequence[str],
+    compacta: bool,
+) -> int:
+    depois = _a_mesa_depois(mesa, recriar, nascer, cartas, compacta=compacta)
+    return _fora_do_boneco(depois, cartas)
 
 
 @functools.cache
@@ -311,7 +318,7 @@ class TestAVarredura:
 
 # -- a bancada de queda, com a classe real -----------------------------------
 
-#: O sexto controle: os 60 pedem seis de uma vez (a bancada de queda tem cinco).
+#: O sexto controle: os 60 pedem seis na mesa (a bancada de queda tem cinco).
 SEXTO = "aabbcc000006"
 
 #: Seis controles no cabo, no rádio, e alternados.
