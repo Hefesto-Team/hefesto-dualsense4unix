@@ -1129,7 +1129,10 @@ async def vigiar_escritor_cru(daemon: DaemonProtocol, *, forcar: bool) -> int:
     nativo devolvemos o controle pra steam e no modo conexão também, todo o
     resto é o hefesto"*. Ali o dono do hidraw é o jogo, e um escritor cru não
     é intruso: é o dono. Sondar seria gastar `pgrep` para concluir que sim, o
-    jogo está lá.
+    jogo está lá. 24/09/2026 (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-
+    HEFESTO`): a barra e o número passaram a ser do Hefesto no Nativo também, e
+    quem os defende ali é a `VigiaDoSequestro` (em até 1 s); esta sonda segue
+    calada para não pagar o `pgrep` duas vezes pelo mesmo nó.
 
     ``forcar`` é o tique de 30 s do `reconnect_loop` (o único com orçamento
     para o `pgrep`); sem ele, só sonda quando o produto acabou de pintar, e
