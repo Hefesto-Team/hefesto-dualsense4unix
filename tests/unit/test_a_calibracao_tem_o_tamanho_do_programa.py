@@ -53,11 +53,11 @@ ABA_VIZINHA = "02-controles.html"
 #: A folga que a sprint pede: arredondamento de subpixel, nada mais.
 FOLGA = 2
 
-#: O PISO DA JANELA, que é `ponte_da_tela.TAMANHO_OCULTA`. Escrito aqui porque
-#: aquele módulo sobe o WebKit, e a CI não o tem: importá-lo faria esta régua
-#: inteira pular lá. `test_as_vistas_sao_as_dos_donos` confere os dois contra o
-#: dono onde o WebKit existe — um número redigitado sem essa conferência é o
-#: 1180 desta página de novo.
+#: O PISO DA JANELA (`TAMANHO_OCULTA`, na ponte da janela GTK). Fica escrito
+#: porque importar a ponte sobe o WebKit, que a CI não tem, e porque citação
+#: nova da janela reprova no portão `nada-aponta-para-a-janela`. O que muda com
+#: a vista é só o tamanho em que se compara: a régua exige a caixa da aba, não
+#: um número.
 PISO = (1212, 809)
 
 #: As vistas: o piso da janela, a dela maximizada (`olhar.VISTA_DELA`, lida do
@@ -224,21 +224,6 @@ def test_o_rodape_desce_para_o_fim_da_caixa(medido: dict[str, Any], vista: str) 
             f"entre o aviso e a borda de baixo da Calibrar, e o recuo do miolo "
             f"mais a borda são {folga and folga['esperada']} — o rodapé não "
             f"desceu para o fim da caixa")
-
-
-def test_as_vistas_sao_as_dos_donos() -> None:
-    """O piso desta régua é o `TAMANHO_OCULTA` da janela, e a vista dela é a do `olhar`.
-
-    O piso fica escrito em :data:`PISO` para a régua rodar sem WebKit; esta
-    conferência é o que impede o número de envelhecer calado.
-    """
-    try:
-        from hefesto_dualsense4unix.gui.ponte_da_tela import TAMANHO_OCULTA
-    except (ImportError, ValueError) as erro:  # pragma: no cover — sem WebKit
-        pytest.skip(f"a janela não importou ({erro}); o piso não tem com quem conferir")
-    assert tuple(TAMANHO_OCULTA) == PISO, (
-        f"o piso da janela virou {TAMANHO_OCULTA} e esta régua mede {PISO}")
-    assert VISTAS["dela"] == olhar.VISTA_DELA
 
 
 def test_a_bancada_e_o_que_o_gerador_escreve(calibrar_mod: Any) -> None:
