@@ -354,6 +354,13 @@ class TestOTouchpadDoFisicoFechadoEACura:
         assert "devolvidos ao jogo pelo Modo Nativo" in saida
         assert "event28" in saida and "event29" in saida
 
+    def test_o_doctor_le_o_campo_que_o_broker_escreve(self) -> None:
+        """Dois donos da mesma palavra: o `status` do broker e a pergunta do
+        doctor. Renomear um lado sem o outro calaria o ramo do Nativo."""
+        broker = (RAIZ / "src" / "hefesto_dualsense4unix" / "broker" / "hidraw_broker.py")
+        assert '"entradas_expostas":' in broker.read_text(encoding="utf-8")
+        assert 'resposta.get("entradas_expostas")' in _funcao("_entradas_expostas_no_broker")
+
     def test_aberto_fora_do_nativo_continua_acusado(self, tmp_path: Path) -> None:
         """O broker responde, e o nó aberto NÃO é do Nativo: segue o WARN."""
         raiz = Path(tempfile.mkdtemp(prefix="h2n-", dir="/tmp"))
