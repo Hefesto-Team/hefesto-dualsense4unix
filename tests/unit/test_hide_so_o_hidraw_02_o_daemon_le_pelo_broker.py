@@ -177,36 +177,94 @@ class TestAPortaDoNoFechado:
         assert broker.pedidos == []
 
 
+def _list_devices_da_biblioteca(pasta: Path) -> list[str]:
+    """O `evdev.list_devices()` com o critério da BIBLIOTECA: só o nó que abre.
+
+    O `evdev/util.py:is_device` pede `os.access(R_OK | W_OK)` — e a primeira
+    versão desta régua trocava o `list_devices` por uma lista que devolvia
+    também os nós FECHADOS, mais frouxa que a biblioteca: a descoberta real
+    nunca via o físico, e a régua dava verde. O `S_ISCHR` da biblioteca fica de
+    fora só porque a suíte não cria char device sem root; o critério que
+    decide aqui é o do acesso, e ele é o de verdade.
+    """
+    return [str(c) for c in sorted(pasta.glob("event*")) if os.access(c, os.R_OK | os.W_OK)]
+
+
+@pytest.fixture
+def dev_input(mesa: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> dict[str, str]:
+    """O `/dev/input` de mentira: o gamepad e o touchpad do físico FECHADOS
+    (modo 0000, como o `0600 root` é para ela), o teclado aberto, e o socket
+    do broker de pé."""
+    if os.geteuid() == 0:  # pragma: no cover - como root o 0000 não fecha nada
+        pytest.skip("como root todo nó abre")
+    broker, recusa = mesa
+    pasta = tmp_path / "dev-input"
+    pasta.mkdir()
+    caminhos: dict[str, str] = {}
+    for no, modo in ((NO_GAMEPAD, 0o000), (NO_TOUCHPAD, 0o000), (NO_TECLADO, 0o660)):
+        arquivo = pasta / Path(no).name
+        arquivo.write_text("", encoding="ascii")
+        arquivo.chmod(modo)
+        caminhos[no] = str(arquivo)
+    monkeypatch.setattr(er, "DEV_INPUT_DIR", str(pasta))
+    monkeypatch.setattr("evdev.list_devices", lambda: _list_devices_da_biblioteca(pasta))
+    socket_do_broker = tmp_path / "broker.sock"
+    socket_do_broker.write_text("", encoding="ascii")
+    monkeypatch.setenv("HEFESTO_BROKER_SOCKET", str(socket_do_broker))
+    fisicos = {caminhos[NO_GAMEPAD], caminhos[NO_TOUCHPAD]}
+    recusa.fechados |= fisicos
+    broker.servidos |= fisicos
+    return caminhos
+
+
 class TestADescobertaAchaOFisicoFechado:
+    def test_a_biblioteca_filtra_pelo_acesso(self) -> None:
+        """A premissa do dublê acima: a biblioteca filtra pelo acesso. Se uma
+        versão do python-evdev parar de filtrar, esta régua avisa que o
+        `_nos_de_evento` passou a ser redundante — não errado."""
+        from evdev import util
+
+        assert "os.access" in inspect.getsource(util.is_device)
+
     def test_o_touchpad_fechado_entra_no_mapa(
-        self, mesa: Any, monkeypatch: pytest.MonkeyPatch
+        self, mesa: Any, dev_input: dict[str, str]
     ) -> None:
         """Antes, o `except Exception: continue` engolia o EACCES e o
-        controle saía do mapa «sem touchpad». A MORDIDA: volte o
-        `_discover_dualsense_por_nome` para `InputDevice(path)` e o mapa sai
-        vazio."""
+        controle saía do mapa «sem touchpad». A MORDIDA (conferência): faça o
+        `_nos_de_evento` devolver só o `list_devices()` da biblioteca e o mapa
+        sai vazio — o nó fechado nem chega ao `abrir_input_device`."""
         broker, _ = mesa
-        monkeypatch.setattr("evdev.list_devices", lambda: [NO_GAMEPAD, NO_TOUCHPAD, NO_TECLADO])
         mapa = er.discover_dualsense_touchpad_evdevs()
-        assert list(mapa.values()) == [Path(NO_TOUCHPAD)]
+        assert list(mapa.values()) == [Path(dev_input[NO_TOUCHPAD])]
         # Ao broker foi SÓ o nó cujo nome é de touchpad.
-        assert broker.pedidos == [NO_TOUCHPAD]
+        assert broker.pedidos == [dev_input[NO_TOUCHPAD]]
 
     def test_o_gamepad_fechado_entra_na_descoberta(
-        self, mesa: Any, monkeypatch: pytest.MonkeyPatch
+        self, mesa: Any, dev_input: dict[str, str], monkeypatch: pytest.MonkeyPatch
     ) -> None:
         broker, _ = mesa
         from evdev import ecodes
 
-        monkeypatch.setattr("evdev.list_devices", lambda: [NO_GAMEPAD, NO_TOUCHPAD, NO_TECLADO])
         monkeypatch.setattr(
             "evdev._input.ioctl_capabilities",
             lambda fd: {ecodes.EV_KEY: [ecodes.BTN_SOUTH], ecodes.EV_ABS: []},
         )
         achados = er.discover_gamepads(com_sysfs=False)
-        assert [g.evdev_path for g in achados] == [NO_GAMEPAD]
+        assert [g.evdev_path for g in achados] == [dev_input[NO_GAMEPAD]]
         # O touchpad não tem BTN_GAMEPAD no sysfs: não foi pedido ao broker.
-        assert broker.pedidos == [NO_GAMEPAD]
+        assert broker.pedidos == [dev_input[NO_GAMEPAD]]
+
+    def test_sem_broker_o_no_fechado_fica_de_fora(
+        self, mesa: Any, dev_input: dict[str, str], monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """Sem o socket, nó fechado não tem porta: a lista é a da biblioteca,
+        e o broker nem é procurado. É também o que mantém a suíte longe do
+        `/dev/input` real dela (o conftest aponta o socket para o vazio)."""
+        broker, _ = mesa
+        monkeypatch.setenv("HEFESTO_BROKER_SOCKET", str(tmp_path / "nao-ha.sock"))
+        assert er.discover_dualsense_touchpad_evdevs() == {}
+        assert broker.pedidos == []
 
 
 class TestOCartaoDoTouchpadNaoFicaCego:

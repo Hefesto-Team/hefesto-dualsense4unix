@@ -389,6 +389,57 @@ def _no_de_dualsense_no_sysfs(caminho: str) -> bool:
     return vendor == DUALSENSE_VENDOR and product in DUALSENSE_PIDS
 
 
+#: Onde moram os `eventN` que a descoberta percorre. Só a suíte a desvia.
+DEV_INPUT_DIR = "/dev/input"
+
+
+def _ha_broker_para_pedir() -> bool:
+    """O socket do broker existe? É a mesma resolução do `HidrawBrokerClient`.
+
+    A suíte aponta `HEFESTO_BROKER_SOCKET` para um caminho inexistente em todo
+    teste (conftest, BROKER-01), e é isso que impede a descoberta de enumerar
+    o `/dev/input` real dela sob teste.
+    """
+    from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+        DEFAULT_SOCKET_PATH,
+        SOCKET_PATH_ENV,
+    )
+
+    return os.path.exists(os.environ.get(SOCKET_PATH_ENV, DEFAULT_SOCKET_PATH))
+
+
+def _nos_de_evento(list_devices: Any) -> list[str]:
+    """Os `eventN` que a descoberta percorre: os abertos E os do físico fechado.
+
+    HIDE-SO-O-HIDRAW-02, achado pela conferência. O `list_devices()` do
+    python-evdev só devolve o nó que o processo consegue abrir
+    (`evdev/util.py:is_device` pede `os.access(R_OK | W_OK)`). Com os nós do
+    DualSense físico nascendo `0600 root`, a descoberta nunca chegava ao
+    `abrir_input_device`: o gamepad, o touchpad e os sensores de movimento
+    sumiam do daemon, com o broker de pé pronto para servir o fd que ninguém
+    pedia. A régua da frente não via, porque o dublê do `list_devices`
+    devolvia também os nós fechados — mais frouxo que a biblioteca.
+
+    A lista é a da biblioteca MAIS os nós que o processo não abre e que o
+    sysfs diz serem de DualSense, e só quando há broker a quem pedir: sem o
+    socket, nó fechado não tem porta, e a lista fica a de sempre.
+    """
+    import glob
+
+    abertos = [str(c) for c in list_devices()]
+    if not _ha_broker_para_pedir():
+        return abertos
+    vistos = set(abertos)
+    fechados = [
+        caminho
+        for caminho in glob.glob(f"{DEV_INPUT_DIR}/event*")
+        if caminho not in vistos
+        and not os.access(caminho, os.R_OK | os.W_OK)
+        and _no_de_dualsense_no_sysfs(caminho)
+    ]
+    return abertos + fechados
+
+
 def _nome_no_sysfs(caminho: str) -> str:
     """O `name` do input device de um nó, pelo sysfs ("" se ilegível)."""
     base = os.path.basename(caminho)
@@ -877,7 +928,9 @@ def discover_gamepads(*, com_sysfs: bool = True) -> list[GamepadDescoberto]:
     from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 
     encontrados: dict[tuple[str, str], GamepadDescoberto] = {}
-    for path in sorted(list_devices(), key=lambda p: _event_num(Path(p))):
+    # HIDE-SO-O-HIDRAW-02: `_nos_de_evento`, e não o `list_devices()` cru — a
+    # biblioteca deixa de fora o nó que o processo não abre, que é o físico.
+    for path in sorted(_nos_de_evento(list_devices), key=lambda p: _event_num(Path(p))):
         if _is_virtual_evdev(path):
             continue
         try:
@@ -1931,7 +1984,9 @@ def _discover_dualsense_por_nome(marcador: str) -> dict[str, Path]:
     from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 
     found: dict[str, Path] = {}
-    for path in sorted(list_devices(), key=lambda p: _event_num(Path(p))):
+    # HIDE-SO-O-HIDRAW-02: `_nos_de_evento`, pelo mesmo motivo da descoberta
+    # do gamepad — o touchpad e os sensores do físico nascem fechados.
+    for path in sorted(_nos_de_evento(list_devices), key=lambda p: _event_num(Path(p))):
         if _is_virtual_evdev(path):
             continue
         try:
