@@ -584,6 +584,39 @@ def test_a_calibrar_pinta_o_segurar_e_o_inverter(monkeypatch: pytest.MonkeyPatch
         assert "mira-segurar" not in a11.pacote(_ctx_calibrar(**mira))["colunas"]["p1"]
 
 
+def test_a_calibrar_pinta_cada_controle_com_o_dele(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Do P1 ao P4, no USB e no BT: cada coluna recebe o botão e os dois
+    «Inverter» do SEU controle — nunca só o P1 (a regra dela de 23/09).
+
+    MORDIDA: faça o `pacote` ler o bloco `mira` do primeiro controle para
+    todas as colunas e este teste reprova.
+    """
+    import pacotes
+    from pacotes import a11_calibrar_sensores as a11
+
+    import pacotes.a02_controles as a02
+
+    monkeypatch.setattr(a11, "_TEM_A_MIRA", True)
+    gatilhos = {1: None, 2: "l2", 3: "square", 4: "r1"}
+    mesa = [{"pref": f"p{n}", "uniq": f"aa:bb:cc:00:00:0{n}", "jogador": n,
+             "cor": "cosmic-red", "nome": "Cosmic Red", "via": "USB" if n % 2 else "BT"}
+            for n in gatilhos]
+    conectados = [{"uniq": f"aa:bb:cc:00:00:0{n}",
+                   "transport": "usb" if n % 2 else "bluetooth", "connected": True,
+                   "inputs": {},
+                   "mira": {"gatilho": g, "inverter_horizontal": n == 3,
+                            "inverter_vertical": n == 4}}
+                  for n, g in gatilhos.items()]
+    ctx = pacotes.Contexto(state={}, mesa=mesa, conectados=conectados, estados={})
+    colunas = a11.pacote(ctx)["colunas"]
+    assert {p: c["mira-segurar"] for p, c in colunas.items()} == {
+        "p1": "sempre", "p2": "l2", "p3": "square", "p4": "r1"}
+    ligado = a02.SENSOR_LIGADO
+    assert [p for p, c in colunas.items() if c["mira-inverter-lado"] == ligado] == ["p3"]
+    assert [p for p, c in colunas.items()
+            if c["mira-inverter-cima-baixo"] == ligado] == ["p4"]
+
+
 def test_escolher_o_botao_manda_um_campo_so() -> None:
     """A escolha vai ao `mira.set` sozinha; «Sempre» manda o vazio (que a ponte
     leva como `null`); o `click` de abrir a lista não é escolha.
@@ -697,6 +730,14 @@ def test_a_ponte_leva_o_sempre_como_null(monkeypatch: pytest.MonkeyPatch) -> Non
 # nele não há gamepad virtual (o `dispatch_gamepad` volta no `device is None`)
 # e o analógico direito vira a roda do mouse (`uinput_mouse.dispatch`); a
 # decisão de o chip ficar ou não cinza ali é dela, e está no relatório.
+#
+# E O QUARTO CHIP DA FILEIRA, o «Steam Input», NÃO É UMA LINHA A MAIS — medido
+# na conferência, em `a01_jogar.o_que_o_chip_faz`: ele é `gamepad` com o
+# caminho `dualsense` e o jogo na lista da Steam. No daemon é a MESMA linha do
+# `dualsense` acima (o vpad `uhid` recebe a mira igual), e o que a Steam faz
+# depois com o analógico direito é configuração dela, que esta régua não mede.
+# Uma linha `steam` aqui repetiria a do `dualsense` com outro nome — a matriz
+# que finge cobrir o que não exercita.
 
 _GIRO = (0.0, 150.0, 0.0)
 
