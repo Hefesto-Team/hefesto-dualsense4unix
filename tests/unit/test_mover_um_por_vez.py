@@ -29,6 +29,7 @@ O QUE ESTA RÉGUA COBRA:
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import threading
 from collections.abc import Iterator
@@ -833,12 +834,25 @@ async def test_o_ipc_ocupado_e_a_recusa_e_o_parametro_torto_levanta(
     central.fechar()
 
 
+#: Os métodos que nasceram DEPOIS do `radio.mover`, na ordem — e por isso vêm
+#: depois dele na tabela. A-MIRA-POR-MOVIMENTO-NA-TELA-01 (24/09/2026) pôs o
+#: `mira.set` no fim, pela mesma regra.
+_DEPOIS_DO_RADIO_MOVER = ("mira.set",)
+
+
 def test_radio_mover_e_o_ultimo_metodo_da_tabela() -> None:
-    """Método IPC novo vai no FIM da tabela — regra da leva."""
+    """Método IPC novo vai no FIM da tabela — regra da leva.
+
+    Depois do `radio.mover` só vêm os que nasceram depois dele, declarados em
+    `_DEPOIS_DO_RADIO_MOVER`: um método inserido no MEIO continua reprovando.
+    """
     fonte = (RAIZ / "src/hefesto_dualsense4unix/daemon/ipc_server.py").read_text(encoding="utf-8")
     ultimo = fonte.index('"radio.mover": self._handle_radio_mover,')
     fecha = fonte.index("\n        }\n", ultimo)
-    assert fonte[ultimo:fecha].count('": self._handle_') == 1, "radio.mover não é o último"
+    depois = re.findall(r'"([^"]+)": self\._handle_', fonte[ultimo:fecha])
+    assert tuple(depois) == ("radio.mover", *_DEPOIS_DO_RADIO_MOVER), (
+        f"depois do radio.mover a tabela traz {depois[1:]}, e só "
+        f"{list(_DEPOIS_DO_RADIO_MOVER)} nasceram depois dele")
 
 
 @pytest.mark.asyncio

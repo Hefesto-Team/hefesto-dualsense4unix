@@ -1582,6 +1582,36 @@ def speaker_set_detalhado(
                              timeout=_TETO_DO_ATO_DE_AUDIO)
 
 
+def mira_set_detalhado(
+    *,
+    ligada: bool | None = None,
+    sensibilidade: int | None = None,
+    zona_morta_graus_s: float | None = None,
+    uniq: str | None = None,
+) -> dict[str, Any] | None:
+    """``mira.set`` com a RESPOSTA inteira — o chip «Mira Virtual» e os deslizantes.
+
+    A-MIRA-POR-MOVIMENTO-NA-TELA-01 (24/09/2026). Campo ``None`` **não é
+    enviado**, e por isso não mexe naquele campo — o mesmo contrato do
+    ``sensor_set_detalhado``: mexer no deslizante do tremor não pode acender ou
+    apagar o chip pelas costas dela. O corpo traz ``status``, o que passou a
+    valer (``ligada``, ``sensibilidade``, ``zona_morta_graus_s``), ``gravado``
+    e ``alcance``. ``None`` = daemon não respondeu, ou nada foi pedido.
+    """
+    payload: dict[str, Any] = {}
+    if ligada is not None:
+        payload["ligada"] = bool(ligada)
+    if sensibilidade is not None:
+        payload["sensibilidade"] = int(sensibilidade)
+    if zona_morta_graus_s is not None:
+        payload["zona_morta_graus_s"] = float(zona_morta_graus_s)
+    if not payload:
+        return None
+    if uniq:
+        payload["uniq"] = uniq
+    return _corpo_do_daemon("mira.set", payload)
+
+
 # PODA DE 26/08/2026 (BG-07) — cinco pontes públicas sem NENHUM chamador em
 # `src/` foram apagadas daqui, e o `__all__` abaixo é o registro do que ficou:
 # `apply_draft`, `rumble_policy_set`, `rumble_policy_set_detalhado`,
@@ -1628,6 +1658,7 @@ __all__ = [
     "mic_set",
     "mic_set_detalhado",
     "mic_volume_set_detalhado",
+    "mira_set_detalhado",
     "player_leds_set",
     "player_leds_set_detalhado",
     "profile_list",

@@ -267,6 +267,9 @@ class IpcServer(IpcHandlersMixin):
             # adaptador, ou — sem `aparelho` — o «Conectar» no destino da D8.
             # Volta em até ~6 s: «esperando», ou a recusa que faz o botão tremer.
             "radio.mover": self._handle_radio_mover,
+            # A-MIRA-POR-MOVIMENTO-NA-TELA-01 (24/09/2026): o chip «Mira
+            # Virtual» de cada controle e os dois deslizantes da Calibrar.
+            "mira.set": self._handle_mira_set,
         }
 
     async def start(self) -> None:
