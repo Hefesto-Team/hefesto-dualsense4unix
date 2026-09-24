@@ -48,40 +48,32 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 ---
 
-## mapa-audio.saida_dedicada.payload_do_degrau-cabo — Prova que, no cabo, o Hefesto não usa nem promete o caminho
+## mapa-audio.saida_dedicada.payload_do_degrau-cabo — Saída de áudio por rádio — o CONTEÚDO do payload dos degraus · cabo
 
-**O que isto prova.** Prova que, no cabo, o Hefesto não usa nem promete o caminho de som do rádio — no cabo o som do controle é uma saída comum do computador, e é isso que a tela mostra.
+*Célula:* `audio.saida_dedicada.payload_do_degrau @ cabo`
 
-**Onde olhar.** Na aba Controles, no cartão do P1 e no do P2, bloco Alto-falante: embaixo dos dois botões de rota NÃO pode haver a frase do rádio, e o rótulo do bloco traz o sufixo "· acordado" ou "· dormindo", que só existe quando há saída de som daquele controle. Do outro lado, no cartão do P3, a frase do rádio tem de estar lá e o sufixo não — é esse contraste que faz a prova. Onde se leria o CONTEÚDO do caminho de rádio não existe na tela, e nesta linha nem existe pergunta do lado do cabo: a fonte não diz.
+**O que isto prova.** Prova que, no USB, o som do controle não passa pelo caminho do BT: o controle no USB tem placa de som própria, e o do BT só tem a saída que o Hefesto cria para ele.
+
+**Onde olhar.** Fora do Hefesto, na lista de saídas das configurações de Som do sistema. Cada controle tem ali uma saída que começa com «Alto-falante do Controle», com o número do jogador — é o Hefesto que a cria, nos dois transportes. O controle que está no USB aparece uma segunda vez, com a placa de som do próprio DualSense e o nome da Sony; o que está no BT não tem essa segunda entrada. No Hefesto, a fita do topo diz USB ou BT ao lado de cada controle.
 
 **Os passos.**
 
-1. Confira na fita do topo que P1 e P2 dizem cabo e que P3 e P4 dizem rádio.
-2. Abra o Hefesto e clique na aba Controles.
-3. Clique na linha do P1 para abrir o cartão dele.
-4. Leia a linha embaixo dos dois botões de rota e confirme que ela está VAZIA.
-5. Leia o rótulo do bloco Alto-falante e confirme que ele traz "· acordado" ou "· dormindo".
-6. Arraste o volume do alto-falante do P1 até 80.
-7. Clique em "Todo o som do PC" no bloco do P1 e toque uma música.
-8. Encoste o ouvido no P1: o som tem de sair.
-9. Clique em "Sons do jogo" no bloco do P1 para devolver o som às caixas.
-10. Clique na linha do P2 e repita do passo 4 ao 9 nele.
-11. Clique na linha do P3 e leia a linha embaixo dos botões de rota: ali a frase do rádio TEM de aparecer.
-12. Confira que o rótulo do bloco do P3 não traz "· acordado" nem "· dormindo".
-13. Encoste o ouvido no P3 e confirme o silêncio.
-14. Clique na linha do P4 e repita os passos 11 a 13 nele.
-15. Anote as quatro respostas lado a lado.
+1. Confira na fita do topo que P1 e P2 dizem USB e que P3 e P4 dizem BT.
+2. Abra as configurações de Som do sistema, na parte das saídas.
+3. Confira que há uma saída «Alto-falante do Controle» com o número de cada um dos quatro: 1, 2, 3 e 4.
+4. Conte as saídas com o nome DualSense que não começam com «Alto-falante do Controle»: têm de ser duas.
+5. Feche as configurações de Som sem escolher nada.
 
-**Passa quando.** No P1 e no P2 a linha de ressalva está vazia, o rótulo traz o sufixo e o som sai. No P3 e no P4 a frase do rádio está lá, o sufixo não está e nenhum som sai. Os dois lados descrevem caminhos diferentes, e nenhum deles está emprestando as palavras do outro.
+**Passa quando.** A lista tem uma saída «Alto-falante do Controle» com o número de cada um dos quatro e exatamente duas placas DualSense, as do P1 e do P2, que estão no USB. O P3 e o P4 não acrescentam placa nenhuma.
 
 **Por controle.**
 
-* **P1** — No cabo, e é aqui que a prova acontece: nada de frase do rádio no cartão dele, sufixo presente no rótulo, e som saindo. Se aparecer uma ressalva de rádio num cartão do cabo, é esse o defeito que este teste caça.
-* **P2** — No cabo, e faz a mesma conferência. É a segunda prova do cabo: se um dos dois trouxer a frase do rádio, anote qual.
-* **P3** — No rádio, e é CONTRASTE, não alvo. Você não mexe em nada nele além de ler: a frase tem de estar lá, o sufixo não, e o silêncio confirmado com o ouvido.
-* **P4** — No rádio, e é o segundo contraste. Mesma leitura do P3. Os quatro juntos é que fazem a resposta: dois com som e sem frase, dois com frase e sem som.
+* **P1** — No USB: tem as duas entradas, a do Hefesto e a placa do próprio controle.
+* **P2** — No USB: a mesma coisa. Se só uma placa DualSense aparecer, um dos dois do USB está sem som próprio — anote.
+* **P3** — No BT: só a entrada do Hefesto. É o CONTRASTE: o som dele viaja pelo fio do BT, e é esse fio que a pergunta desta linha examina.
+* **P4** — No BT, e é o segundo contraste. Mesma leitura do P3.
 
-**A armadilha.** Do lado do cabo esta pergunta NÃO EXISTE, e isso é o ponto inteiro: no cabo o som do controle é uma saída de som comum do computador e não passa pelo canal do rádio de jeito nenhum. Então não há o que clicar aqui além de conferir que o produto não DIZ nada sobre rádio nos cartões do cabo. Segunda, e é regra desta casa com nome: ninguém pode concluir, de um canal responder, que ele FAZ o que a gente esperava dele. Pelo rádio o produto de fato manda por esse canal, e o que viaja dentro dele NUNCA foi identificado — por isso nada do que você vir no lado do cabo prova ou desmente coisa alguma sobre o conteúdo do rádio. Terceira: a prova desta linha está como "não medido" do lado do cabo e vai continuar assim; o que você entrega aqui é o contraste entre os quatro cartões, e esse contraste é a entrega inteira.
+**A armadilha.** Do lado do USB esta pergunta não tem objeto: o conteúdo que viaja pelo fio do BT não passa por aqui, e não há o que clicar além de conferir o contraste. As duas placas DualSense têm o mesmo nome e não dizem qual é qual — não é defeito, é a razão de o Hefesto criar a saída com o número do jogador. Se as saídas do Hefesto vierem com «(DualSense Wireless Controller)» no fim do nome, é a forma nova do nome: elas continuam começando com «Alto-falante do Controle», e é só por esse começo que você conta. Uma saída «Alto-falante do Controle» SEM número é de um controle que já passou por aqui e saiu: o Hefesto a mantém para não tirar o dispositivo debaixo de um jogo que o tinha escolhido, e ela não entra na conta.
 
 ---
 
@@ -93,42 +85,38 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.alto_falante @ cabo`
 
-**O que isto prova.** Prova que o som do jogo sai mesmo pelo alto-falante dos dois controles que estão no cabo, e que os dois do rádio ficam mudos.
+**O que isto prova.** Prova que o som sai mesmo pelo alto-falante dos dois controles do USB, um de cada vez, e que os dois do BT não tocam junto.
 
-**Onde olhar.** Na aba Controles do Hefesto. Clique na linha de um controle e o cartão dele abre (o que estava aberto fecha sozinho). Dentro do cartão, o bloco chamado Alto-falante: na linha do rótulo pode vir um sufixo, "· acordado" ou "· dormindo"; abaixo vem a barrinha de ondas, o deslizante de volume com o número ao lado e o botão ♪; depois os dois botões de rota, "Sons do jogo" e "Todo o som do PC"; e, por último, uma linha de ressalva que fica vazia quando não há nada a dizer. Mas quem responde este teste é o seu OUVIDO, encostado no alto-falante do próprio controle: são nove furinhos em duas fileiras, na frente do DualSense, logo abaixo e entre os dois analógicos.
+**Onde olhar.** Na aba Controles, no cartão de cada controle — clique na linha dele e o cartão abre; os outros fecham. Dentro do cartão, o bloco Alto-falante: a pílula ATIVO no rótulo, a barrinha de ondas (ela mexe com o som que o computador está mandando para aquele controle), o deslizante de volume com o número e o ♪, e, um sobre o outro, os botões «Efeitos do Jogo no Controle, Áudio da TV na TV», «Efeitos do Jogo e Áudio da TV no Controle» e «Tudo na TV e Nada no Controle». Mas quem responde é o seu OUVIDO, encostado no alto-falante do controle: os nove furinhos em duas fileiras, na frente do DualSense, entre os dois analógicos.
 
 **Os passos.**
 
 1. Clique na aba Controles.
-2. Confira na fita do topo que P1 e P2 dizem cabo e que P3 e P4 dizem rádio.
-3. Abra um jogo e deixe-o produzindo som.
+2. Ponha uma música que se repita para tocar no computador.
+3. Abaixe o volume da TV pelo controle remoto da própria TV até não ouvir mais a música, sem mexer no volume do computador.
 4. Clique na linha do P1 para abrir o cartão dele.
-5. Leia o rótulo do bloco Alto-falante e anote se ele traz "· acordado", "· dormindo" ou nada.
-6. Arraste o deslizante de volume do bloco Alto-falante do P1 até o fim da direita.
-7. Confira que o número ao lado do deslizante diz 100.
-8. Encoste o ouvido no alto-falante do P1 e escute o som curto de confirmação.
-9. Clique em "Sons do jogo" no bloco do P1.
-10. Faça o jogo produzir um som bem marcado, como um tiro ou uma música de menu.
-11. Encoste o ouvido no P1 e escute se o som do jogo sai por ali.
-12. Encoste o ouvido no P3 e depois no P4 e confirme que os dois estão mudos.
-13. Clique em "Todo o som do PC" no bloco do P1.
-14. Toque um vídeo qualquer fora do jogo.
-15. Encoste o ouvido no P1 e escute o som do vídeo saindo por ali.
-16. Leia a linha de ressalva embaixo dos dois botões e anote se apareceu alguma frase.
-17. Clique em "Sons do jogo" no bloco do P1 para devolver o som às caixas — não pule este passo.
-18. Clique na linha do P2 e repita nele tudo o que você fez no P1, DA LEITURA DO RÓTULO do bloco Alto-falante até o clique que devolve o som às caixas.
-19. Encoste o ouvido no P3 e no P4 uma última vez e confirme o silêncio.
+5. Encoste o ouvido nos nove furinhos do P1 e deixe-o ali pela rodada inteira dele.
+6. Arraste o deslizante de volume do bloco Alto-falante do P1 até 80 e solte.
+7. Confira que saiu pelo P1 um som curto de confirmação.
+8. Clique em «Efeitos do Jogo e Áudio da TV no Controle», no bloco Alto-falante do P1.
+9. Confira que a música passou a sair pelo P1 e que a barrinha de ondas do bloco Alto-falante dele se mexe.
+10. Clique em «Tudo na TV e Nada no Controle», no bloco do P1.
+11. Confira que o P1 emudeceu e que a pílula do bloco continua dizendo ATIVO.
+12. Clique em «Efeitos do Jogo no Controle, Áudio da TV na TV», no bloco do P1, para deixá-lo como estava.
+13. Clique na linha do P2 e refaça nele a mesma rodada, do ouvido encostado até a volta ao botão de cima.
+14. Encoste o ouvido no P3 e depois no P4 e confirme que os dois ficaram mudos o tempo todo.
+15. Devolva o volume da TV pelo controle remoto dela.
 
-**Passa quando.** Sai som pelo alto-falante do P1 e pelo do P2, os dois que estão no cabo: primeiro o som curto de confirmação depois do arrasto do volume, depois o som do jogo com "Sons do jogo" aceso, e depois o som do computador inteiro com "Todo o som do PC" aceso. O rótulo do bloco foi lido e anotado nos DOIS cartões do cabo, o do P1 e o do P2. O P3 e o P4 ficam mudos do começo ao fim. E a linha de ressalva dos dois cartões do cabo continua vazia — nenhuma frase aparece ali.
+**Passa quando.** No P1 e no P2 sai o som curto depois do arrasto, a música sai com o botão do meio aceso, e o controle emudece com «Tudo na TV e Nada no Controle». A pílula continua ATIVO nos três botões. O P3 e o P4 ficam mudos do começo ao fim.
 
 **Por controle.**
 
-* **P1** — No cabo, e é o primeiro a tocar. Leia o rótulo do bloco e anote o sufixo, arraste o volume até 100, ouça o som de confirmação, ponha "Sons do jogo" e ouça o jogo, ponha "Todo o som do PC" e ouça o vídeo. No fim, devolva o som às caixas clicando em "Sons do jogo".
-* **P2** — No cabo, e faz exatamente o mesmo que o P1, um de cada vez, começando pela leitura do rótulo do bloco dele — o sufixo "· acordado" ou "· dormindo" do P2 é dado próprio e tem de ser anotado, porque é ele que explica um começo de som comido. Ele é a segunda prova do cabo: se só um dos dois tocar, o problema é daquele controle e não do caminho de som — e vale anotar qual dos dois falhou.
-* **P3** — No rádio, e é TESTEMUNHA: você não toca nele. Encoste o ouvido nele durante o teste do P1 e de novo no fim. Se ele tocar junto, o comando pegou o transporte inteiro em vez do controle escolhido, e isso é achado.
-* **P4** — No rádio, e é a segunda testemunha. Mesmo gesto do P3: ouvido encostado, nenhum toque. Se o P3 ficou mudo e o P4 tocou, não é o rádio — é alguma coisa escrevendo no controle errado.
+* **P1** — No USB, e é o primeiro a tocar: o som curto no arrasto, a música com o botão do meio, o silêncio com o de baixo. No fim, volte ao botão de cima.
+* **P2** — No USB, e faz a mesma rodada depois do P1. É a segunda prova do USB: se só um dos dois tocar, o defeito é daquele controle — anote qual.
+* **P3** — No BT, e é TESTEMUNHA: você não toca nele. Se ele tocar junto com o P1, o comando pegou mais de um controle, e isso é achado.
+* **P4** — No BT, e é a segunda testemunha. Mesmo gesto do P3: ouvido encostado, nenhum clique.
 
-**A armadilha.** A prova desta linha já chegou até "o aparelho obedeceu": o alto-falante soou com a orelha dela em 02/08/2026, mas por "Todo o som do PC". A rota "Sons do jogo" NUNCA foi exercida — este teste é a primeira vez, e por isso o clique em "Sons do jogo" e a escuta logo depois dele são o coração dele. E há um achado dela ainda em aberto: pela janela do Hefesto o som curto de confirmação NÃO sai hoje nem no cabo, tendo saído antes. Se ele não vier depois do arrasto do volume, isso é a regressão conhecida da janela, não erro seu: anote e siga para o som do jogo, que é o degrau que este teste sobe. Duas outras coisas: "Todo o som do PC" tira o som das caixas e o joga no controle — esquecer de clicar em "Sons do jogo" depois deixa a máquina muda e parece defeito sem ser. E se o rótulo do bloco disser "· dormindo", ou se aparecer um selo "Canal dormindo", o começo do som é comido pelo canal e não pelo alto-falante — anote isso ao lado do resultado, e é por isso que a leitura do rótulo é o PRIMEIRO gesto da volta em cada um dos dois controles do cabo, e não só no P1. Este teste passa dos oito atos — são quinze —, e a razão é o ouvido: cada escuta é um gesto próprio, num controle próprio e numa rota de som própria, e juntar duas escutas num passo só faria você julgar duas rotas com uma lembrança só.
+**A armadilha.** O botão do meio manda ao controle o MESMO som que vai para a TV — por isso a TV fica baixa, e baixa pelo controle remoto dela: o volume do computador fica parado para a régua não mudar no meio do teste. O som curto de confirmação não sai se outro ainda estiver tocando: solte o deslizante e espere antes do próximo arrasto. A pílula ATIVO não quer dizer que sai som — ela diz que o canal daquele controle existe e que ninguém calou o ♪, e é por isso que não muda com «Tudo na TV e Nada no Controle». Se aparecer «Saída muda» ao lado dela, o canal daquele controle está mudo no sistema, e o silêncio não é do Hefesto. Com um fone plugado no controle o som vai para o fone e o alto-falante cala — tire o fone antes. E o degrau: esta célula já chegou a «o aparelho obedeceu», com o seu ouvido; o que esta rodada confere é que ele continua obedecendo nos três botões de hoje.
 
 ---
 
@@ -136,36 +124,39 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.alto_falante.preamp @ cabo`
 
-**O que isto prova.** Prova que o volume do alto-falante dos dois controles do cabo muda de verdade ao longo de TODO o curso do deslizante, sem trecho morto.
+**O que isto prova.** Prova que o volume do alto-falante dos dois controles do USB muda de verdade ao longo de TODO o curso do deslizante, sem trecho morto — quem abre esse curso é o reforço de ganho, que viaja junto com o volume.
 
-**Onde olhar.** Na aba Controles, com o cartão do controle aberto: o bloco Alto-falante, o deslizante de volume e o número que fica ao lado dele. O reforço de ganho que este teste persegue NÃO tem campo na tela — a fonte não diz onde ele se lê, porque ele viaja escondido junto com o número do volume. O que se lê é o efeito, e o instrumento é o seu ouvido encostado no alto-falante do controle, os nove furinhos na frente do DualSense, entre os dois analógicos.
+**Onde olhar.** Na aba Controles, no bloco Alto-falante do cartão aberto: o deslizante de volume e o número ao lado dele. O reforço de ganho NÃO tem campo na tela — ele sai na mesma mensagem que o volume —, e o que se lê é o efeito, com o ouvido encostado nos nove furinhos da frente do controle, entre os dois analógicos.
 
 **Os passos.**
 
-1. Abra o Hefesto e clique na aba Controles.
-2. Clique na linha do P1 para abrir o cartão dele.
-3. Clique em "Todo o som do PC" no bloco Alto-falante do P1.
-4. Toque uma música que se repita, e não mexa mais no volume do sistema até o fim deste teste.
-5. Arraste o deslizante do bloco Alto-falante do P1 até o número 20.
-6. Confira, com o ouvido encostado no P1, o quanto se ouve, e anote.
-7. Arraste o mesmo deslizante até 40, depois 60, depois 80 e depois 100, parando em cada número.
-8. Confira, com o ouvido no mesmo lugar, o quanto se ouve em cada uma das quatro paradas, e anote as quatro impressões.
-9. Arraste o deslizante até 0.
-10. Confira que o P1 ficou em silêncio completo.
-11. Clique em "Sons do jogo" no bloco do P1 para devolver o som às caixas.
-12. Clique na linha do P2 e refaça nele a sequência inteira, do "Todo o som do PC" até o "Sons do jogo", com as mesmas cinco posições.
-13. Confira, com o ouvido encostado no P3 e depois no P4, que os dois ficaram mudos o tempo todo.
+1. Clique na aba Controles.
+2. Ponha uma música que se repita para tocar no computador, e não mexa mais no volume do computador até o fim.
+3. Abaixe o volume da TV pelo controle remoto da própria TV até não ouvir mais a música.
+4. Clique na linha do P1 para abrir o cartão dele.
+5. Clique em «Efeitos do Jogo e Áudio da TV no Controle», no bloco Alto-falante do P1.
+6. Encoste o ouvido nos nove furinhos do P1 e deixe-o ali pela rodada inteira dele.
+7. Arraste o volume do Alto-falante do P1 até 20, solte e escute.
+8. Arraste até 40, solte e confira que ficou mais alto que em 20.
+9. Arraste até 60, solte e confira que ficou mais alto que em 40.
+10. Arraste até 80, solte e confira que ficou mais alto que em 60.
+11. Arraste até 100, solte e confira que ficou mais alto que em 80.
+12. Arraste até 0, solte e confira que o P1 ficou em silêncio.
+13. Clique em «Efeitos do Jogo no Controle, Áudio da TV na TV», no bloco do P1, e devolva o volume dele a 100.
+14. Clique na linha do P2 e refaça nele a mesma rodada, do botão do meio até a volta, com as mesmas seis paradas.
+15. Encoste o ouvido no P3 e depois no P4 e confirme que os dois ficaram mudos o tempo todo.
+16. Devolva o volume da TV pelo controle remoto dela.
 
-**Passa quando.** Em cada uma das cinco posições — 20, 40, 60, 80 e 100 — o P1 e o P2 soam AUDIVELMENTE diferente da posição anterior. Não existe um trecho do deslizante em que arrastar não muda nada, nem um trecho em que já está no máximo e continuar arrastando não adianta. Em 0 é silêncio completo. E o P3 e o P4 ficam mudos do começo ao fim.
+**Passa quando.** Em cada parada — 20, 40, 60, 80 e 100 — o P1 e o P2 soam audivelmente mais alto que na anterior: não há trecho em que arrastar não muda nada, nem trecho em que já saturou. Em 0 é silêncio. O P3 e o P4 ficam mudos do começo ao fim.
 
 **Por controle.**
 
-* **P1** — No cabo, e é o primeiro. Faça as cinco posições nele, com o ouvido encostado e a mesma música tocando. Anote as cinco impressões antes de passar ao P2.
-* **P2** — No cabo, e faz as mesmas cinco posições. Ele é a segunda prova: se o curso for útil num e morto no outro, o defeito é daquele aparelho e não da conta que o Hefesto faz.
-* **P3** — No rádio, e é TESTEMUNHA. Não toque no deslizante dele. Encoste o ouvido e confirme silêncio: se ele começar a soar quando você mexe no P1, o comando pegou mais de um controle.
-* **P4** — No rádio, e é a segunda testemunha. Mesmo gesto: ouvido encostado, deslizante intocado, silêncio esperado.
+* **P1** — No USB, e é o primeiro. As seis paradas são nele, com a mesma música e o ouvido no mesmo lugar.
+* **P2** — No USB, e faz as mesmas seis paradas. É a segunda prova: se o curso for útil num e morto no outro, o defeito é daquele aparelho, e não da conta que o Hefesto faz.
+* **P3** — No BT, e é TESTEMUNHA. Não mexa nele. Se ele soar quando você arrasta o volume do P1, o comando pegou mais de um controle.
+* **P4** — No BT, e é a segunda testemunha. Mesmo gesto do P3: ouvido encostado, nada arrastado.
 
-**A armadilha.** O reforço de ganho não se desliga pela tela: ele sai na MESMA mensagem que o número do volume, então não existe um "com e sem" para comparar. O que este teste mede é só uma coisa — se o curso é útil de ponta a ponta. E a prova desta célula parou no primeiro degrau: o produto monta e manda o reforço junto, e ninguém mediu no aparelho que ele chegou. Cuidado com um número velho que anda escrito por aí: o "mudo até 38, satura em 102" foi levantado SEM o reforço e em outra escala, a do registrador cru — ele não é o 0 a 100 do deslizante da tela, e comparar os dois é comparar duas réguas diferentes. Por fim, a música e o volume do sistema têm de ficar iguais do começo ao fim: subir o volume da máquina entre duas posições falsifica o degrau e você marca verde sobre nada.
+**A armadilha.** A cada parada sai também o som curto de confirmação — compare a música, não o som curto. O reforço de ganho não se desliga pela tela, então não existe «com e sem» para comparar: o que se mede é só se o curso é útil de ponta a ponta. Um número velho anda por aí — «mudo até 38, satura em 102» —, levantado sem o reforço e na escala crua do aparelho, que não é o 0 a 100 do deslizante; não o use para julgar esta tela. E a prova desta célula parou em «montou»: o produto manda o reforço junto com o volume, e ninguém ouviu o efeito dele no aparelho — esta rodada é essa escuta.
 
 ---
 
@@ -173,37 +164,39 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.alto_falante.preamp @ rádio`
 
-**O que isto prova.** Prova que o Hefesto aceita o volume nos dois controles do rádio e AVISA na tela que por rádio o som ainda não sai, em vez de fingir que saiu.
+**O que isto prova.** Prova que o volume do alto-falante dos dois controles do BT muda de verdade ao longo de todo o curso do deslizante, com o som chegando pelo próprio fio do BT.
 
-**Onde olhar.** Na aba Controles, no cartão do P3 e no do P4, bloco Alto-falante. Três coisas: o deslizante de volume com o número ao lado; o rótulo do bloco, que nos controles do rádio NÃO ganha o sufixo "· acordado" nem "· dormindo"; e, embaixo dos dois botões de rota, a linha de ressalva, que nos do rádio tem de trazer a frase "Pelo rádio o Hefesto ainda não faz o som sair neste alto-falante."
+**Onde olhar.** Na aba Controles, no cartão do P3 e no do P4, bloco Alto-falante: o deslizante de volume e o número ao lado. O reforço de ganho não tem campo na tela; o que se lê é o efeito, com o ouvido encostado nos nove furinhos da frente do controle. No BT, quem leva o som até o controle é o Hefesto, pelo mesmo fio por onde passam os botões.
 
 **Os passos.**
 
-1. Confira na fita do topo que P3 e P4 dizem rádio e que não há cabo plugado neles.
-2. Abra o Hefesto e clique na aba Controles.
-3. Clique na linha do P3 para abrir o cartão dele.
-4. Leia a linha embaixo dos botões "Sons do jogo" e "Todo o som do PC" e anote a frase inteira.
-5. Leia o rótulo do bloco Alto-falante e confira que ele não traz "· acordado" nem "· dormindo".
-6. Anote o número que está ao lado do deslizante de volume do P3.
-7. Arraste o deslizante do P3 até 20 e confira que o número acompanhou.
-8. Encoste o ouvido no P3 e escute.
-9. Arraste até 50, escute de novo.
-10. Arraste até 100, escute de novo.
-11. Clique na linha do P1 e leia o número do volume do alto-falante dele.
-12. Clique na linha do P2 e leia o número do volume do alto-falante dele.
-13. Clique na linha do P4 e repita do passo 4 ao 10 nele.
-14. Anote as quatro respostas antes de fechar.
+1. Clique na aba Controles.
+2. Ponha uma música que se repita para tocar no computador, e não mexa mais no volume do computador até o fim.
+3. Abaixe o volume da TV pelo controle remoto da própria TV até não ouvir mais a música.
+4. Clique na linha do P3 para abrir o cartão dele.
+5. Clique em «Efeitos do Jogo e Áudio da TV no Controle», no bloco Alto-falante do P3.
+6. Encoste o ouvido nos nove furinhos do P3 e confirme que a música sai por ali.
+7. Arraste o volume do Alto-falante do P3 até 20, solte e escute.
+8. Arraste até 40, solte e confira que ficou mais alto que em 20.
+9. Arraste até 60, solte e confira que ficou mais alto que em 40.
+10. Arraste até 80, solte e confira que ficou mais alto que em 60.
+11. Arraste até 100, solte e confira que ficou mais alto que em 80.
+12. Arraste até 0, solte e confira que o P3 ficou em silêncio.
+13. Clique em «Efeitos do Jogo no Controle, Áudio da TV na TV», no bloco do P3, e devolva o volume dele a 100.
+14. Clique na linha do P4 e refaça nele a mesma rodada, do botão do meio até a volta, com as mesmas seis paradas.
+15. Encoste o ouvido no P1 e depois no P2 e confirme que os dois ficaram mudos o tempo todo.
+16. Devolva o volume da TV pelo controle remoto dela.
 
-**Passa quando.** A frase "Pelo rádio o Hefesto ainda não faz o som sair neste alto-falante" aparece no cartão do P3 e no do P4. O número ao lado do deslizante acompanha o arrasto nos dois. Nenhum som sai do P3 nem do P4 em nenhuma das três posições — e isso é o esperado, não uma falha. E os números do P1 e do P2 continuam onde estavam, sem se mexer.
+**Passa quando.** Em cada parada o P3 e o P4 soam audivelmente mais alto que na anterior, sem trecho morto nem trecho saturado, e em 0 é silêncio. O P1 e o P2 ficam mudos do começo ao fim.
 
 **Por controle.**
 
-* **P1** — No cabo, e é TESTEMUNHA. Não arraste nada nele. Leia o número do volume dele antes e depois: se ele andar quando você mexe no P3, o comando pegou o transporte inteiro em vez do controle escolhido.
-* **P2** — No cabo, e é a segunda testemunha. Mesma leitura do P1: número anotado antes, conferido depois. Se o P1 ficou parado e o P2 andou, o defeito não é do transporte — é de alguma coisa escrevendo no controle errado.
-* **P3** — No rádio, e é ELE que você mexe primeiro. Leia a frase de ressalva, confira que o rótulo não traz sufixo, e arraste o volume até 20, 50 e 100, escutando em cada posição. Silêncio é a resposta certa aqui.
-* **P4** — No rádio, e faz exatamente o mesmo que o P3. Ele é a segunda prova do rádio: a frase de ressalva tem de aparecer nele também, não só num dos dois.
+* **P1** — No USB, e é TESTEMUNHA. Não mexa nele. Se ele soar quando você arrasta o volume do P3, o comando pegou mais de um controle.
+* **P2** — No USB, e é a segunda testemunha. Mesmo gesto do P1.
+* **P3** — No BT, e é o primeiro. As seis paradas são nele, com a mesma música e o ouvido no mesmo lugar.
+* **P4** — No BT, e faz as mesmas seis paradas. É a segunda prova do BT: se o curso for útil num e morto no outro, anote qual.
 
-**A armadilha.** Silêncio no rádio é a resposta CERTA desta linha, e o próprio cartão diz por quê — a dívida é NOSSA, não do aparelho: o alto-falante existe e ela já o ouviu pelo cabo. O que reprova aqui é outra coisa: a frase de ressalva NÃO aparecer num controle do rádio (aí o produto está calado sobre um som que não entrega), o número não acompanhar o arrasto, ou o número de um controle do cabo andar junto. A prova desta célula parou no primeiro degrau nos dois transportes: o produto monta e manda o reforço de ganho, e ninguém mediu no aparelho que ele chegou — então não escreva "funcionou" nem "não funcionou", escreva o que a tela fez. E o rótulo sem o "· acordado" nos do rádio não é leitura faltando: é o produto dizendo honestamente que não sabe, porque no rádio o controle não publica saída de som nenhuma.
+**A armadilha.** No BT o som leva um instante a mais para chegar: depois de soltar, espere a música assentar antes de comparar uma parada com a outra. No BT a queda e a volta são rotina: se o P3 cair e voltar no meio, a música some e volta e o volume pode voltar ao de antes — anote a hora e refaça aquela parada. O som curto de confirmação também pode sair a cada parada; compare a música, não ele. E a prova desta célula parou em «montou»: o produto manda o reforço de ganho pelo BT, e ninguém ouviu o efeito — esta rodada é essa escuta.
 
 ---
 
@@ -211,43 +204,40 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.alto_falante.rota @ cabo`
 
-**O que isto prova.** Prova que trocar para onde o som vai, nos dois controles do cabo, leva o som para o lugar certo e não mata o microfone do mesmo controle.
+**O que isto prova.** Prova que cada um dos três botões do alto-falante, nos dois controles do USB, faz o que o nome dele diz, e que trocar de botão não mata o microfone do mesmo controle.
 
-**Onde olhar.** Na aba Controles, com o cartão aberto, dois blocos do mesmo cartão. No bloco Alto-falante: os dois botões de rota, "Sons do jogo" e "Todo o som do PC" — um deles fica aceso —, e a linha de ressalva logo abaixo deles. No bloco Microfone, do mesmo cartão: a barrinha de ondas, que mexe com o som que entra AGORA, e o selo ao lado da palavra Microfone, que diz ATIVO, MUDO ou um travessão. O ouvido encostado no alto-falante do controle é quem confirma para onde o som foi.
+**Onde olhar.** Na aba Controles, dois blocos do mesmo cartão. No bloco Alto-falante, os três botões, um sobre o outro, com um aceso: «Efeitos do Jogo no Controle, Áudio da TV na TV» (o controle toca só o que for mandado para ele; o som do computador fica na TV), «Efeitos do Jogo e Áudio da TV no Controle» (o som do computador sai também no controle, e continua na TV) e «Tudo na TV e Nada no Controle» (o controle para de tocar). No bloco Microfone, a pílula ao lado da palavra Microfone (ATIVO, DESLIGADO ou um travessão) e a barrinha de ondas, que mexe com o som que entra agora. O ouvido encostado nos nove furinhos do controle é quem confirma para onde o som foi.
 
 **Os passos.**
 
-1. Abra o Hefesto e clique na aba Controles.
-2. Clique na linha do P1 para abrir o cartão dele.
-3. Confira qual dos dois botões de rota está aceso no bloco Alto-falante, e anote qual é.
-4. Confira o microfone do P1: fale perto dele e veja a barrinha de ondas do bloco Microfone mexer.
-5. Confira o que diz o selo ao lado da palavra Microfone, e anote.
-6. Abra um jogo e faça-o produzir som.
-7. Clique em "Sons do jogo" no bloco Alto-falante do P1.
-8. Confira, com o ouvido encostado no P1, que o som do jogo sai dele.
-9. Confira o microfone de novo: fale perto do P1 e veja a barrinha continuar mexendo.
-10. Confira que o selo do Microfone continua dizendo o que você anotou.
-11. Clique em "Todo o som do PC" no bloco do P1.
-12. Confira que o botão aceso trocou.
-13. Toque um vídeo fora do jogo.
-14. Confira, com o ouvido encostado no P1, que o som do vídeo sai dele.
-15. Confira o microfone mais uma vez: fale perto do P1 e veja a barrinha ainda mexer.
-16. Leia a linha embaixo dos dois botões e anote se apareceu alguma frase.
-17. Clique em "Sons do jogo" no bloco do P1 para devolver o som às caixas.
-18. Clique na linha do P2 e refaça nele a sequência inteira, do primeiro clique de rota até devolver o som às caixas — inclusive as três conferências do microfone.
-19. Abra o cartão do P3 e depois o do P4.
-20. Confira que o botão de rota aceso de cada um dos dois não trocou.
+1. Clique na aba Controles.
+2. Ponha um vídeo com som para tocar no computador.
+3. Abaixe o volume da TV pelo controle remoto da própria TV até não ouvir mais o vídeo.
+4. Clique na linha do P1 para abrir o cartão dele.
+5. Encoste o ouvido nos nove furinhos do P1 e deixe-o ali pela rodada inteira dele.
+6. Clique em «Efeitos do Jogo no Controle, Áudio da TV na TV», no bloco Alto-falante do P1.
+7. Confira que o P1 deu só o som curto de confirmação, sem o som do vídeo.
+8. Fale perto do P1 e confira que a barrinha de ondas do bloco Microfone dele mexe e que a pílula do Microfone diz ATIVO.
+9. Clique em «Efeitos do Jogo e Áudio da TV no Controle», no bloco do P1.
+10. Confira que o som do vídeo passou a sair pelo P1.
+11. Clique em «Tudo na TV e Nada no Controle», no bloco do P1.
+12. Confira que o P1 emudeceu.
+13. Fale perto do P1 e confira de novo que a barrinha do Microfone mexe e que a pílula continua ATIVO.
+14. Clique em «Efeitos do Jogo no Controle, Áudio da TV na TV», no bloco do P1, para deixá-lo como estava.
+15. Clique na linha do P2 e refaça nele a mesma rodada, do ouvido encostado até a volta ao botão de cima.
+16. Clique em «Todos», na fita do topo, e confira que o botão aceso do P3 e o do P4 não mudaram.
+17. Devolva o volume da TV pelo controle remoto dela.
 
-**Passa quando.** No P1 e no P2 o botão aceso segue o seu clique, e o som vai para onde o botão diz: só o som do jogo com "Sons do jogo" aceso, o som do computador inteiro com "Todo o som do PC" aceso. E — esta é a metade que importa — o MICROFONE do mesmo controle continua vivo depois de cada troca: a barrinha de ondas mexe quando você fala e o selo não muda. O botão aceso do P3 e do P4 não trocou sozinho.
+**Passa quando.** No P1 e no P2 o botão aceso segue o clique, e o som vai para onde o nome dele diz: com o de cima, só o som curto — o vídeo fica fora do controle; com o do meio, o vídeo sai também no controle; com o de baixo, o controle cala. O microfone do mesmo controle continua vivo depois das trocas: a barrinha mexe quando você fala e a pílula não sai de ATIVO. O botão aceso do P3 e do P4 não trocou.
 
 **Por controle.**
 
-* **P1** — No cabo, e é ELE que troca de rota primeiro. Antes de cada troca, fale perto dele e olhe a barrinha do Microfone; depois de cada troca, fale de novo. As duas leituras do microfone são o teste, tanto quanto o som que sai.
-* **P2** — No cabo, e faz a mesma sequência inteira, inclusive as duas conferências do microfone. Se o microfone morrer num dos dois e não no outro, anote em qual — é o dado que separa um defeito do aparelho de um defeito do comando.
-* **P3** — No rádio, e é TESTEMUNHA. Não clique em botão de rota nenhum dele. Só abra o cartão no fim e confira que o botão aceso continua o mesmo. Se ele trocou junto, o comando pegou o transporte inteiro.
-* **P4** — No rádio, e é a segunda testemunha. Mesma conferência do P3, e nenhum clique. Se o P3 ficou parado e o P4 trocou, alguma coisa escreveu no controle errado.
+* **P1** — No USB, e é ELE que troca de botão primeiro. As duas conferências do microfone, depois do botão de cima e depois do de baixo, são o teste tanto quanto o som que sai.
+* **P2** — No USB, e faz a mesma rodada, inclusive as duas conferências do microfone. Se o microfone morrer num e não no outro, anote em qual — é o que separa um defeito do aparelho de um defeito do comando.
+* **P3** — No BT, e é TESTEMUNHA. Não clique em botão nenhum dele. Se o botão aceso dele trocou junto, o comando pegou mais de um controle.
+* **P4** — No BT, e é a segunda testemunha. Mesma conferência do P3, e nenhum clique.
 
-**A armadilha.** As três conferências do microfone — a de antes da primeira troca e as duas de depois — são o ponto do teste, não enfeite. Foi medido em 02/08/2026: pedir a rota escrevia por cima da metade do comando que carrega o caminho do microfone, e o microfone daquele controle foi a ZERO. Isso foi curado, e esta conferência é o que mantém curado — um teste de rota que só escuta o alto-falante passa por cima exatamente deste defeito. Segunda: se os DOIS botões apagarem e uma frase aparecer embaixo, isso não é falha — é o produto dizendo que o controle está roteado para receber todo o som mas a saída padrão do sistema é outra, e o som continua saindo onde estava; foi o que ela viu em 03/09, com o botão aceso e o som na TV. Leia a frase e faça o que ela manda. Terceira: com um fone plugado na entrada do controle, os dois botões também apagam, e isso é legítimo — há rotas de som que esses dois botões não representam, e acender um deles seria arredondar. E a prova desta célula chegou até "o aparelho obedeceu"; o degrau que este teste sobe é o jogo receber, e ele está sendo subido aqui pela primeira vez.
+**A armadilha.** As duas conferências do microfone são metade do teste: pedir a rota escreve no mesmo byte do aparelho que carrega o caminho do microfone, e em 02/08/2026 isso levou o microfone daquele controle a zero. Foi curado, e esta conferência é o que o mantém curado. Ela é feita com o alto-falante daquele controle calado de propósito: com o vídeo tocando ao lado do microfone, a barrinha mexeria com o vídeo, e não com a sua voz. O «efeito do jogo» é o som que um jogo manda para aquele controle; sem jogo aberto, o único som endereçado ao controle é o som curto de confirmação, e por isso o vídeo NÃO pode sair nele com o botão de cima. A pílula do Alto-falante fica ATIVO nos três botões: ela fala do canal, não do botão. E o degrau: o botão de cima já obedeceu ao seu ouvido; o do meio e o de baixo são mais novos, e esta rodada é a medição deles.
 
 ---
 
@@ -255,38 +245,40 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.alto_falante.rota @ rádio`
 
-**O que isto prova.** Prova que trocar para onde o som vai, nos dois controles do rádio, é aceito, não apaga o microfone do mesmo controle e não vaza para os dois do cabo.
+**O que isto prova.** Prova que cada um dos três botões do alto-falante, nos dois controles do BT, faz o que o nome dele diz, que trocar de botão não apaga o microfone do mesmo controle, e que nada disso vaza para os dois do USB.
 
-**Onde olhar.** Na aba Controles, no cartão do P3 e no do P4. No bloco Alto-falante: os dois botões "Sons do jogo" e "Todo o som do PC", com um deles aceso, e a linha de ressalva logo abaixo, que nos do rádio traz a frase "Pelo rádio o Hefesto ainda não faz o som sair neste alto-falante." No bloco Microfone do mesmo cartão: a barrinha de ondas e o selo ao lado da palavra Microfone.
+**Onde olhar.** Na aba Controles, no cartão do P3 e no do P4. No bloco Alto-falante, os três botões, um sobre o outro, com um aceso: «Efeitos do Jogo no Controle, Áudio da TV na TV», «Efeitos do Jogo e Áudio da TV no Controle» e «Tudo na TV e Nada no Controle» — cada um diz no nome para onde o som vai. No bloco Microfone do mesmo cartão, a pílula ao lado da palavra Microfone e a barrinha de ondas. No BT, quem leva o som até o controle é o Hefesto, pelo próprio fio do BT; o ouvido encostado nos nove furinhos confirma para onde ele foi.
 
 **Os passos.**
 
-1. Confira na fita do topo que P3 e P4 dizem rádio.
-2. Abra o Hefesto e clique na aba Controles.
-3. Clique na linha do P3 para abrir o cartão dele.
-4. Leia a linha embaixo dos dois botões de rota e anote a frase inteira.
-5. Anote qual dos dois botões está aceso.
-6. Fale perto do P3 e confira que a barrinha do bloco Microfone mexe.
-7. Anote o que diz o selo ao lado da palavra Microfone.
-8. Clique em "Todo o som do PC" no bloco do P3.
-9. Confira que o botão aceso trocou.
-10. Fale perto do P3 de novo e confira que a barrinha do Microfone continua mexendo.
-11. Confira que o selo do Microfone continua no que você anotou.
-12. Encoste o ouvido no P3 e anote se saiu algum som.
-13. Clique em "Sons do jogo" no bloco do P3.
-14. Clique na linha do P4 e repita do passo 4 ao 13 nele.
-15. Abra o cartão do P1 e depois o do P2 e confira que o botão aceso de cada um não trocou.
+1. Clique na aba Controles.
+2. Ponha um vídeo com som para tocar no computador.
+3. Abaixe o volume da TV pelo controle remoto da própria TV até não ouvir mais o vídeo.
+4. Clique na linha do P3 para abrir o cartão dele.
+5. Encoste o ouvido nos nove furinhos do P3 e deixe-o ali pela rodada inteira dele.
+6. Clique em «Efeitos do Jogo no Controle, Áudio da TV na TV», no bloco Alto-falante do P3.
+7. Confira que o som do vídeo não sai pelo P3, e anote se saiu um som curto de confirmação.
+8. Fale perto do P3 e confira que a barrinha de ondas do bloco Microfone dele mexe e que a pílula do Microfone diz ATIVO.
+9. Clique em «Efeitos do Jogo e Áudio da TV no Controle», no bloco do P3.
+10. Confira que o som do vídeo passou a sair pelo P3.
+11. Clique em «Tudo na TV e Nada no Controle», no bloco do P3.
+12. Confira que o P3 emudeceu.
+13. Fale perto do P3 e confira de novo que a barrinha do Microfone mexe e que a pílula continua ATIVO.
+14. Clique em «Efeitos do Jogo no Controle, Áudio da TV na TV», no bloco do P3, para deixá-lo como estava.
+15. Clique na linha do P4 e refaça nele a mesma rodada, do ouvido encostado até a volta ao botão de cima.
+16. Clique em «Todos», na fita do topo, e confira que o botão aceso do P1 e o do P2 não mudaram.
+17. Devolva o volume da TV pelo controle remoto dela.
 
-**Passa quando.** No P3 e no P4 o botão aceso segue o seu clique, e a frase de ressalva continua ali dizendo que por rádio o som ainda não sai. O microfone do mesmo controle continua vivo depois de cada troca — barrinha mexendo e selo igual. Nenhum som sai dos dois do rádio, e isso é o esperado. E o botão aceso do P1 e do P2 não trocou.
+**Passa quando.** No P3 e no P4 o botão aceso segue o clique, e o som vai para onde o nome dele diz: com o de cima, o vídeo fica fora do controle; com o do meio, o vídeo sai também no controle; com o de baixo, o controle cala. O microfone do mesmo controle continua vivo depois das trocas, com a pílula em ATIVO. O botão aceso do P1 e do P2 não trocou.
 
 **Por controle.**
 
-* **P1** — No cabo, e é TESTEMUNHA. Não clique em nada nele. Confira no fim que o botão de rota aceso dele é o mesmo do começo. Se trocou, o comando pegou o transporte inteiro em vez do controle escolhido.
-* **P2** — No cabo, e é a segunda testemunha. Mesma conferência do P1. Um dos dois trocando e o outro não já diz que a mira do comando está errada, e vale anotar qual.
-* **P3** — No rádio, e é ELE que troca primeiro. Leia a ressalva, troque de botão, e fale perto dele ANTES e DEPOIS da troca olhando a barrinha do microfone. Silêncio no alto-falante é a resposta certa.
-* **P4** — No rádio, e faz a sequência inteira igual. É a segunda prova do rádio: a ressalva tem de aparecer nele também, e o microfone dele tem de sobreviver à troca do mesmo jeito.
+* **P1** — No USB, e é TESTEMUNHA. Não clique em nada nele. Se o botão aceso dele trocou, o comando pegou mais de um controle.
+* **P2** — No USB, e é a segunda testemunha. Mesma conferência do P1. Um dos dois trocando e o outro não já diz que a mira do comando está errada — anote qual.
+* **P3** — No BT, e é ELE que troca de botão primeiro, com o ouvido encostado e as duas conferências do microfone.
+* **P4** — No BT, e faz a mesma rodada. É a segunda prova do BT: se um obedecer e o outro não, anote qual.
 
-**A armadilha.** No rádio não há som para escutar, e não é isso que este teste mede — ele mede três outras coisas: que o gesto é aceito, que ele não apaga o microfone do mesmo controle, e que ele não vaza para os dois do cabo. A prova desta célula parou no primeiro degrau pelo rádio: o produto monta e manda a rota, e ninguém mediu que o aparelho recebeu — então não escreva "a rota funcionou no rádio"; escreva o que você viu, que é o botão trocando e o microfone sobrevivendo. Segunda: no rádio a queda e a volta são rotina. Se o P3 cair e voltar no meio do teste, o botão aceso pode retornar sozinho ao que era, e isso é a reconexão, não o seu clique — anote a hora e refaça. Terceira: a conferência do microfone existe porque essa exata perda já aconteceu no cabo, medida em 02/08/2026; pular os passos 6, 10 e 11 é abrir mão da metade que caça o defeito conhecido.
+**A armadilha.** No BT o começo de um som curto pode ser comido enquanto o fio acorda — por isso o som de confirmação aqui é anotado, e não cobrado; o que decide é o vídeo, que é contínuo. No BT a queda e a volta são rotina: se o P3 cair e voltar no meio, o botão aceso pode voltar sozinho ao que era, e isso é a reconexão, não o seu clique — anote a hora e refaça. As conferências do microfone existem porque pedir a rota já apagou o microfone do mesmo controle, no USB, em 02/08/2026; elas são feitas com o alto-falante calado para a barrinha mexer com a sua voz e não com o vídeo. E a prova desta célula parou em «montou» pelo BT: o produto manda a rota, e ninguém ouviu o controle obedecer — esta rodada é essa escuta.
 
 ---
 
@@ -294,41 +286,39 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.alto_falante.volume @ cabo`
 
-**O que isto prova.** Prova que o deslizante de volume do alto-falante manda no som dos dois controles do cabo, e que o botão de calar só destrava depois do primeiro arrasto.
+**O que isto prova.** Prova que o deslizante de volume manda no som dos dois controles do USB, e que o ♪ cala e devolve o alto-falante sem perder o número.
 
-**Onde olhar.** Na aba Controles, com o cartão aberto, bloco Alto-falante: o deslizante de volume, o número ao lado dele, o botão ♪ (que é o calar) e o "?" ao lado do ♪, cuja frase explica por que ele está cinza. O som em si é do seu ouvido, encostado nos nove furinhos da frente do controle, entre os dois analógicos.
+**Onde olhar.** Na aba Controles, no bloco Alto-falante do cartão aberto: a pílula ATIVO no rótulo (ela só vira DESLIGADO enquanto o ♪ está calado), o deslizante de volume, o número ao lado e o ♪. O som em si é do seu ouvido, encostado nos nove furinhos da frente do controle, entre os dois analógicos.
 
 **Os passos.**
 
-1. Abra o Hefesto e clique na aba Controles.
-2. Clique na linha do P1 para abrir o cartão dele.
-3. Confira que o botão ♪ do bloco Alto-falante está apagado, em cinza.
-4. Leia a frase inteira que aparece quando o mouse para no "?" ao lado do ♪, e que explica o cinza.
-5. Arraste o deslizante de volume do P1 até 60.
-6. Confira que o número ao lado diz 60 e que o ♪ acendeu.
-7. Clique em "Todo o som do PC" no bloco do P1 e toque uma música.
-8. Encoste o ouvido nos nove furinhos do P1 e deixe-o ali até o fim da rodada dele.
-9. Confira que a música sai pelo alto-falante do P1.
-10. Arraste o volume do P1 até 100, escute, e só então arraste até 10.
-11. Compare os três volumes, com o ouvido encostado: em 100 tem de ficar mais alto que em 60, e em 10, mais baixo.
-12. Clique no ♪ do P1 uma vez só.
-13. Confira que o som do P1 morreu no ato.
-14. Clique no ♪ do P1 de novo.
-15. Confira que o som voltou, e no mesmo volume em que estava.
-16. Leia os números de volume do P2, do P3 e do P4 e confira que nenhum deles se mexeu.
-17. Clique em "Sons do jogo" no bloco do P1, para devolver o som às caixas.
-18. Clique na linha do P2 e refaça nele toda a sequência do P1, do ♪ cinza ao "Sons do jogo".
+1. Clique na aba Controles.
+2. Ponha uma música que se repita para tocar no computador.
+3. Abaixe o volume da TV pelo controle remoto da própria TV até não ouvir mais a música.
+4. Clique na linha do P1 para abrir o cartão dele.
+5. Confira que o ♪ do bloco Alto-falante está aceso, e anote o número ao lado do deslizante.
+6. Clique em «Efeitos do Jogo e Áudio da TV no Controle», no bloco Alto-falante do P1.
+7. Encoste o ouvido nos nove furinhos do P1 e deixe-o ali pela rodada inteira dele.
+8. Arraste o volume do P1 até 60, solte e escute.
+9. Arraste até 100, solte e confira que ficou mais alto que em 60.
+10. Arraste até 10, solte e confira que ficou mais baixo que em 60.
+11. Clique no ♪ do P1 e confira que o som morreu no ato e que a pílula ao lado da palavra Alto-falante passou a dizer DESLIGADO.
+12. Clique no ♪ de novo e confira que o som voltou baixo, como estava, com a pílula em ATIVO e o número ainda em 10.
+13. Clique em «Todos», na fita do topo, e confira que os números de volume do P2, do P3 e do P4 não se mexeram.
+14. Clique em «Efeitos do Jogo no Controle, Áudio da TV na TV», no bloco do P1, e devolva o volume dele ao número que você anotou.
+15. Clique na linha do P2 e refaça nele a mesma rodada, do ♪ aceso até a volta.
+16. Devolva o volume da TV pelo controle remoto dela.
 
-**Passa quando.** No P1 e no P2 o ♪ estava cinza antes do primeiro arrasto e acendeu depois dele. O número acompanha o arrasto. O quanto se ouve acompanha o número, com o ouvido encostado. O ♪ cala e descala sem perder o número. E os números dos outros três controles não se mexem enquanto você arrasta o de um.
+**Passa quando.** No P1 e no P2 o ♪ já estava aceso, o número acompanha o arrasto e o quanto se ouve acompanha o número. O ♪ cala e traz de volta sem perder o número, e a pílula diz DESLIGADO só enquanto ele está calado. Os números dos outros três não se mexem enquanto você arrasta o de um.
 
 **Por controle.**
 
-* **P1** — No cabo, e é o primeiro. Faça a sequência inteira nele, começando pelo ♪ cinza — este é o único momento em que dá para ver o ♪ cinza, e ele se perde se você arrastar antes.
-* **P2** — No cabo, e faz a mesma sequência. Ele é a segunda prova: se o ♪ do P1 destravar e o do P2 não, o defeito é daquele controle e vale anotar qual.
-* **P3** — No rádio, e é TESTEMUNHA. Não arraste o deslizante dele. Anote o número dele antes e confira depois: se ele andar quando você mexe no P1, o comando pegou mais de um controle.
-* **P4** — No rádio, e é a segunda testemunha. Mesma leitura do P3: número anotado antes, conferido depois, deslizante intocado.
+* **P1** — No USB, e é o primeiro. Faça a rodada inteira nele, do ♪ aceso até a volta ao botão de cima.
+* **P2** — No USB, e faz a mesma rodada. É a segunda prova: se o ♪ ou o volume funcionarem num e não no outro, anote qual.
+* **P3** — No BT, e é TESTEMUNHA. Não arraste nada nele. Se o número dele andar quando você mexe no P1, o comando pegou mais de um controle.
+* **P4** — No BT, e é a segunda testemunha. Mesma leitura do P3, com o deslizante intocado.
 
-**A armadilha.** O ♪ cinza antes do primeiro arrasto NÃO é defeito: é o produto se recusando a calar um alto-falante cujo volume ele não conhece, porque o DualSense não devolve esse número. Se ele já estiver aceso quando você abrir a aba, é porque alguém arrastou antes — outro teste, ou você mesma numa volta anterior — e o passo do ♪ cinza não mede nada; feche a janela do Hefesto no X e abra-a de novo, para que nenhum volume tenha sido escrito nesta sessão, e recomece do primeiro passo. Segunda: a prova desta célula parou no primeiro degrau, e há um número velho que engana — o "mudo até 38, satura em 102" foi levantado numa escala que não é a do deslizante da tela e num estado do produto que não existe mais, sem o reforço de ganho que ele escreve hoje. Não use aqueles números para julgar o curso desta tela. Terceira: o número na tela é o que o produto PEDIU; só o ouvido diz o que saiu. Marcar verde olhando só o número é medir a tela contra ela mesma. E o tamanho, declarado: são NOVE atos, um a mais que o alvo de oito, por duas razões que não se pode cortar. Calar e descalar são dois atos separados porque o que se mede é o silêncio ENTRE eles — num clique duplo não existe quando escutar o mudo, e quem seguisse o passo marcaria verde sobre metade que não ouviu. E o ouvido encostado no controle é ato próprio, não conferência: sem ele este teste vira leitura de número, que é justamente o que a terceira armadilha proíbe.
+**A armadilha.** O ♪ nasce aceso porque o Hefesto põe o volume de todo controle em 100 assim que ele chega — decisão sua, de 16/08. Se ele estiver cinza, pare o mouse no «?» ao lado: a frase manda arrastar o volume uma vez, e o arrasto o destrava; anote que ele nasceu cinza, porque não devia. O número na tela é o que o produto PEDIU; só o ouvido diz o que saiu — marcar verde olhando o número é medir a tela contra ela mesma. Calar e trazer de volta são dois cliques separados porque o que se escuta é o silêncio ENTRE eles. O ♪ não mexe no microfone. E a prova desta célula parou em «montou»; o número velho «mudo até 38, satura em 102» é de outra escala e de antes do reforço de ganho, e não serve para julgar este deslizante.
 
 ---
 
@@ -336,36 +326,39 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.alto_falante.volume @ rádio`
 
-**O que isto prova.** Prova que o volume do alto-falante é aceito nos dois controles do rádio, que o produto avisa que por ali o som ainda não sai, e que nada disso vaza para os dois do cabo.
+**O que isto prova.** Prova que o deslizante de volume manda no som dos dois controles do BT — com o som saindo pelo próprio fio do BT —, que o ♪ cala e devolve sem perder o número, e que nada disso vaza para os dois do USB.
 
-**Onde olhar.** Na aba Controles, no cartão do P3 e no do P4, bloco Alto-falante: o deslizante de volume, o número ao lado, o botão ♪ com o "?" que explica o cinza dele, e a linha de ressalva embaixo dos dois botões de rota, que nos do rádio traz a frase "Pelo rádio o Hefesto ainda não faz o som sair neste alto-falante."
+**Onde olhar.** Na aba Controles, no cartão do P3 e no do P4, bloco Alto-falante: a pílula ATIVO no rótulo, o deslizante de volume, o número ao lado e o ♪. O som é do seu ouvido, encostado nos nove furinhos da frente do controle. No BT, quem leva o som até o controle é o Hefesto, pelo mesmo fio por onde passam os botões.
 
 **Os passos.**
 
-1. Feche a janela do Hefesto no X e abra-a de novo.
-2. Clique na aba Controles.
-3. Clique na linha do P3 para abrir o cartão dele.
-4. Leia a linha embaixo dos botões de rota e anote a frase inteira.
-5. Olhe o botão ♪ do bloco Alto-falante e confirme que ele está cinza.
-6. Arraste o deslizante de volume do P3 até 50.
-7. Confira que o número ao lado diz 50 e que o ♪ acendeu.
-8. Encoste o ouvido no P3 e anote se saiu som.
-9. Arraste até 100 e escute de novo.
-10. Arraste até 0 e escute de novo.
-11. Leia os números de volume do P1 e do P2 e confirme que nenhum se mexeu.
-12. Clique na linha do P4 e repita do passo 4 ao 11 nele.
-13. Volte ao cartão do P3 e confira se o ♪ continua aceso e o número continua onde você deixou.
+1. Clique na aba Controles.
+2. Ponha uma música que se repita para tocar no computador.
+3. Abaixe o volume da TV pelo controle remoto da própria TV até não ouvir mais a música.
+4. Clique na linha do P3 para abrir o cartão dele.
+5. Confira que o ♪ do bloco Alto-falante está aceso, e anote o número ao lado do deslizante.
+6. Clique em «Efeitos do Jogo e Áudio da TV no Controle», no bloco Alto-falante do P3.
+7. Encoste o ouvido nos nove furinhos do P3 e confirme que a música sai por ali.
+8. Arraste o volume do P3 até 60, solte e escute.
+9. Arraste até 100, solte e confira que ficou mais alto que em 60.
+10. Arraste até 10, solte e confira que ficou mais baixo que em 60.
+11. Clique no ♪ do P3 e confira que o som morreu e que a pílula ao lado da palavra Alto-falante passou a dizer DESLIGADO.
+12. Clique no ♪ de novo e confira que o som voltou baixo, como estava, com a pílula em ATIVO e o número ainda em 10.
+13. Clique em «Todos», na fita do topo, e confira que os números de volume do P1, do P2 e do P4 não se mexeram.
+14. Clique em «Efeitos do Jogo no Controle, Áudio da TV na TV», no bloco do P3, e devolva o volume dele ao número que você anotou.
+15. Clique na linha do P4 e refaça nele a mesma rodada, do ♪ aceso até a volta.
+16. Devolva o volume da TV pelo controle remoto dela.
 
-**Passa quando.** No P3 e no P4 o ♪ estava cinza e acendeu depois do primeiro arrasto, e o número acompanha o deslizante. A frase de ressalva aparece nos dois cartões. Nenhum som sai de nenhum dos dois, em nenhuma das três posições — e isso é o esperado. E os números do P1 e do P2 continuam parados.
+**Passa quando.** No P3 e no P4 o ♪ já estava aceso, o número acompanha o arrasto e o quanto se ouve acompanha o número. O ♪ cala e traz de volta sem perder o número, com a pílula em DESLIGADO só enquanto ele está calado. Os números do P1 e do P2 ficam parados.
 
 **Por controle.**
 
-* **P1** — No cabo, e é TESTEMUNHA. Não arraste nada nele. Anote o número do volume dele antes e confira depois: se ele andar, o comando pegou o transporte inteiro em vez do controle escolhido.
-* **P2** — No cabo, e é a segunda testemunha. Mesma leitura do P1. Um andando e o outro não já mostra que a mira do comando está errada.
-* **P3** — No rádio, e é o primeiro a mexer. Confira o ♪ cinza, arraste até 50, 100 e 0, escutando em cada posição. Silêncio é a resposta certa aqui.
-* **P4** — No rádio, e faz a mesma sequência. É a segunda prova do rádio: o ♪ dele também tem de destravar e a frase de ressalva também tem de aparecer.
+* **P1** — No USB, e é TESTEMUNHA. Não arraste nada nele. Se o número dele andar, o comando pegou mais de um controle.
+* **P2** — No USB, e é a segunda testemunha. Mesma leitura do P1. Um andando e o outro não já mostra que a mira do comando está errada.
+* **P3** — No BT, e é o primeiro a mexer: o ♪ aceso, as três paradas com o ouvido encostado, o calar e o trazer de volta.
+* **P4** — No BT, e faz a mesma rodada. É a segunda prova do BT: o volume e o ♪ dele têm de responder igual aos do P3.
 
-**A armadilha.** Mexer neste volume pelo rádio é mexer no volume de uma coisa que ninguém está tocando: hoje não existe caminho de dados de som saindo pelo rádio. Então "não saiu som" é a resposta esperada e não reprova nada. O que reprova: o ♪ não destravar depois do arrasto (aí o comando nem saiu), a frase de ressalva não aparecer, ou o número de um controle do cabo andar junto. Segunda: a prova desta célula parou no primeiro degrau — o produto monta e manda o número, e ninguém mediu que o aparelho o recebeu por rádio; escreva o que a tela fez, não uma conclusão sobre o aparelho. Terceira: no rádio a queda e a volta são rotina. Se o ♪ voltar sozinho ao cinza, ou o número voltar ao que era, sem você fechar nada, anote a HORA — é exatamente o tipo de perda silenciosa que este teste consegue enxergar, e ela vale mais que o resto do resultado.
+**A armadilha.** No BT a queda e a volta são rotina: se o ♪ mudar sozinho, ou o número voltar ao que era sem você fazer nada, anote a HORA — é exatamente a perda silenciosa que este teste consegue enxergar, e vale mais que o resto do resultado. No BT o som leva um instante a mais para chegar: depois de soltar, espere a música assentar antes de comparar. O número na tela é o que o produto PEDIU; só o ouvido diz o que saiu. E a prova desta célula parou em «montou»: o produto manda o volume pelo BT, e ninguém ouviu o controle obedecer — esta rodada é essa escuta.
 
 ---
 
@@ -373,41 +366,40 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.jack.deteccao @ cabo`
 
-**O que isto prova.** Prova que, plugando um fone na entrada do próprio controle no cabo, o som muda de lugar: sai do alto-falante do controle e passa para o fone.
+**O que isto prova.** Prova que, plugando um fone na entrada do próprio controle no USB, o som muda de lugar: sai do alto-falante do controle e passa para o fone.
 
-**Onde olhar.** No aparelho: a entrada de fone fica na borda de baixo do DualSense, no meio, ao lado do conector do cabo; e o alto-falante são os nove furinhos na frente, entre os dois analógicos. NA TELA NÃO HÁ ONDE LER "há fone plugado" — a fonte não diz, e nenhuma das dez abas mostra essa leitura. O mais perto disso são duas coisas: no cartão da aba Controles, bloco Alto-falante, os dois botões de rota APAGAM juntos quando o som está indo para o fone; e na aba Sistema, na seção "O exame de hoje", a linha do áudio, que conta as saídas de som dos controles no cabo — mas ela fala da saída do controle, não do fone plugado.
+**Onde olhar.** No aparelho: a entrada de fone fica na borda de baixo do DualSense, no meio, ao lado de onde o cabo entra; o alto-falante são os nove furinhos na frente, entre os dois analógicos. NA TELA NÃO HÁ ONDE LER «fone plugado» — nenhuma das dez abas mostra essa leitura. O que se mede é a consequência, com o ouvido; e, no bloco Alto-falante do cartão, repara-se se o botão aceso muda quando o fone entra.
 
 **Os passos.**
 
-1. Abra a aba Controles.
-2. Confira que não há fone plugado em controle nenhum, e deixe um fone de plugue 3,5 mm ao alcance da mão.
-3. Clique na linha do P1 para abrir o cartão dele.
-4. Arraste o volume do bloco Alto-falante do P1 até 80.
-5. Clique em "Todo o som do PC" no bloco do P1 e toque uma música que se repita.
-6. Confira, com o ouvido encostado no alto-falante do P1, que o som está saindo por ali.
-7. Repare qual dos dois botões de rota do P1 está aceso.
-8. Plugue o fone na entrada da borda de baixo do P1.
-9. Confira, com o fone no ouvido, que o som passou para ele.
-10. Confira, com o ouvido no alto-falante do P1, que ele emudeceu.
-11. Repare se algum dos dois botões de rota do P1 apagou.
-12. Tire o fone do P1.
-13. Confira, com o ouvido no alto-falante do P1, que o som voltou para ele.
-14. Clique em "Sons do jogo" no bloco do P1 para devolver o som às caixas.
-15. Repita a volta inteira no P2, do cartão aberto até "Sons do jogo", com o MESMO fone.
-16. Vá à aba Sistema e passe o mouse na linha do áudio da seção "O exame de hoje".
-17. Leia a frase inteira que aparece e veja se ela conta os dois controles do cabo.
-18. Confira, com o ouvido no P3 e no P4, que os dois ficaram mudos do começo ao fim.
+1. Clique na aba Controles.
+2. Separe um fone de plugue fino e prove-o antes num celular ou no computador.
+3. Ponha uma música que se repita para tocar no computador.
+4. Abaixe o volume da TV pelo controle remoto da própria TV até não ouvir mais a música.
+5. Clique na linha do P1 para abrir o cartão dele.
+6. Clique em «Efeitos do Jogo e Áudio da TV no Controle», no bloco Alto-falante do P1.
+7. Encoste o ouvido nos nove furinhos do P1 e confirme que a música sai por ali.
+8. Anote qual dos três botões do bloco Alto-falante do P1 está aceso.
+9. Plugue o fone na entrada da borda de baixo do P1 e ponha-o num ouvido.
+10. Confira que a música passou para o fone.
+11. Encoste o outro ouvido nos furinhos do P1 e confira que o alto-falante emudeceu.
+12. Olhe o bloco Alto-falante do P1 e anote se o botão aceso mudou.
+13. Tire o fone e confira, com o ouvido nos furinhos, que a música voltou para o alto-falante do P1.
+14. Clique em «Efeitos do Jogo no Controle, Áudio da TV na TV», no bloco do P1.
+15. Clique na linha do P2 e refaça nele a mesma rodada, do botão do meio até a volta, com o mesmo fone.
+16. Encoste o ouvido no P3 e depois no P4 e confirme que os dois ficaram mudos do começo ao fim.
+17. Devolva o volume da TV pelo controle remoto dela.
 
-**Passa quando.** No P1 e no P2, que estão no cabo, plugar o fone MUDA o som de lugar: o fone toca e o alto-falante do controle emudece; tirar o fone traz o som de volta para o alto-falante. O P3 e o P4 ficaram mudos do começo ao fim. E a linha do áudio da seção "O exame de hoje" conta os dois controles do cabo.
+**Passa quando.** No P1 e no P2 plugar o fone MUDA o som de lugar: o fone toca e o alto-falante do controle emudece; tirar o fone traz a música de volta ao alto-falante. O P3 e o P4 ficam mudos do começo ao fim.
 
 **Por controle.**
 
-* **P1** — No cabo, e é o primeiro. Faça a sequência inteira nele: ouvir no alto-falante, plugar o fone, ouvir no fone, conferir o alto-falante mudo, tirar o fone, ouvir o alto-falante de novo.
-* **P2** — No cabo, e faz a mesma sequência com o MESMO fone. Ele é a segunda prova: se o som mudar de lugar num e não no outro, o problema é daquele controle, e vale anotar qual.
-* **P3** — No rádio, e é TESTEMUNHA. Não plugue fone nele neste teste. Encoste o ouvido e confirme silêncio: se ele começar a soar quando o fone entra no P1, alguma coisa pegou o transporte inteiro.
-* **P4** — No rádio, e é a segunda testemunha. Mesmo gesto do P3: nada plugado, ouvido encostado, silêncio esperado.
+* **P1** — No USB, e é o primeiro: ouvir no alto-falante, plugar, ouvir no fone, conferir o alto-falante mudo, tirar, ouvir o alto-falante de novo.
+* **P2** — No USB, e faz a mesma rodada com o MESMO fone. É a segunda prova: se o som mudar de lugar num e não no outro, o problema é daquele controle — anote qual.
+* **P3** — No BT, e é TESTEMUNHA. Não plugue nada nele. Se ele começar a soar quando o fone entra no P1, alguma coisa pegou mais de um controle.
+* **P4** — No BT, e é a segunda testemunha. Mesmo gesto do P3.
 
-**A armadilha.** Este teste não tem campo na tela para ler: em lugar nenhum das dez abas o produto diz "tem fone plugado", e a fonte não diz onde isso se leria. O que você mede é a CONSEQUÊNCIA, com o ouvido. Por isso, se o som não mudar de lugar, não conclua que a detecção falhou: pode ser a rota, pode ser o volume, pode ser um fone com o plugue ruim — teste o mesmo fone numa saída do PC antes de acusar o controle. Segunda: os dois botões de rota apagarem quando o fone entra é ESPERADO e não é defeito — há rotas legítimas que mandam tudo para o fone e que esses dois botões não representam; acender um deles ali seria arredondar para o botão mais parecido. Terceira: a linha do "O exame de hoje" fala da saída de som do controle, não do fone que você plugou; lê-la como "ele viu meu fone" é ler outra coisa. E a prova desta célula parou no primeiro degrau: o produto lê o dado da detecção, e ninguém nunca pôs e tirou um fone para conferir — esta volta é a primeira.
+**A armadilha.** Não há campo na tela para ler, e por isso, se o som não mudar de lugar, não conclua logo que a detecção falhou: pode ser o fone — é por isso que ele é provado antes. Se o fone tocar igual nos dois lados, ou só de um, anote: três das quatro rotas do aparelho saem mono no fone, medido por você em 09/09. O botão aceso mudar quando o fone entra não é defeito nem acerto — é anotação; o que decide é o ouvido. E a prova desta célula parou em «montou»: o produto lê o aviso de fone plugado, e ninguém ainda pôs e tirou um fone olhando — esta rodada é a primeira.
 
 ---
 
@@ -415,39 +407,38 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.jack.deteccao @ rádio`
 
-**O que isto prova.** Prova que plugar um fone num controle do rádio não faz o Hefesto prometer um som que ele ainda não entrega, e não mexe nos dois do cabo.
+**O que isto prova.** Mede o que acontece quando se pluga um fone num controle do BT que está tocando: se o som passa para o fone, se o alto-falante cala, ou se nada muda.
 
-**Onde olhar.** No aparelho: a entrada de fone na borda de baixo do P3 e do P4, ao lado de onde o cabo entraria. Na tela, o cartão do P3 e do P4 na aba Controles, bloco Alto-falante: a linha de ressalva embaixo dos dois botões de rota, que nos do rádio traz "Pelo rádio o Hefesto ainda não faz o som sair neste alto-falante.", e o rótulo do bloco, que nos do rádio NÃO ganha "· acordado" nem "· dormindo". Onde se leria "há fone plugado" não existe: a fonte não diz.
+**Onde olhar.** No aparelho: a entrada de fone na borda de baixo do P3 e do P4, e o alto-falante nos nove furinhos da frente. Na tela não há onde ler «fone plugado»; o que se olha, no cartão do P3 e no do P4 na aba Controles, é se alguma coisa no bloco Alto-falante muda quando o fone entra. No BT, quem leva o som até o controle é o Hefesto, pelo próprio fio do BT.
 
 **Os passos.**
 
-1. Confira na fita do topo que P3 e P4 dizem rádio e não têm cabo plugado.
-2. Plugue o fone na entrada da borda de baixo do P1, que está no cabo, e toque uma música.
-3. Ponha o fone no ouvido e confirme que ele toca — isto prova o fone antes de tudo.
-4. Tire o fone do P1.
-5. Abra o Hefesto e clique na aba Controles.
-6. Clique na linha do P3 para abrir o cartão dele.
-7. Leia a linha embaixo dos botões de rota e anote a frase inteira.
-8. Leia o rótulo do bloco Alto-falante e confira que ele não traz "· acordado" nem "· dormindo".
-9. Arraste o volume do alto-falante do P3 até 100.
-10. Clique em "Todo o som do PC" no bloco do P3.
-11. Plugue o fone na entrada do P3.
-12. Ponha o fone no ouvido e anote se saiu som.
-13. Olhe a tela e anote se QUALQUER coisa do cartão do P3 mudou quando o fone entrou.
-14. Tire o fone do P3 e clique em "Sons do jogo" no bloco dele.
-15. Clique na linha do P4 e repita do passo 7 ao 14 nele.
-16. Abra o cartão do P1 e depois o do P2 e confira que nada mudou neles.
+1. Clique na aba Controles.
+2. Separe um fone de plugue fino e prove-o antes num celular ou no computador.
+3. Ponha uma música que se repita para tocar no computador.
+4. Abaixe o volume da TV pelo controle remoto da própria TV até não ouvir mais a música.
+5. Clique na linha do P3 para abrir o cartão dele.
+6. Clique em «Efeitos do Jogo e Áudio da TV no Controle», no bloco Alto-falante do P3.
+7. Encoste o ouvido nos nove furinhos do P3 e confirme que a música sai por ali.
+8. Plugue o fone na entrada da borda de baixo do P3 e ponha-o num ouvido.
+9. Anote se a música passou para o fone, se continuou no alto-falante, ou se sumiu dos dois.
+10. Olhe o cartão do P3 e anote se alguma coisa no bloco Alto-falante mudou quando o fone entrou.
+11. Tire o fone e confira, com o ouvido nos furinhos, que a música voltou para o alto-falante do P3.
+12. Clique em «Efeitos do Jogo no Controle, Áudio da TV na TV», no bloco do P3.
+13. Clique na linha do P4 e refaça nele a mesma rodada, do botão do meio até a volta, com o mesmo fone.
+14. Encoste o ouvido no P1 e depois no P2 e confirme que os dois ficaram mudos do começo ao fim.
+15. Devolva o volume da TV pelo controle remoto dela.
 
-**Passa quando.** O mesmo fone toca quando plugado no P1, que está no cabo, e não toca quando plugado no P3 nem no P4 — e esse silêncio é o esperado. A frase de ressalva continua nos cartões do P3 e do P4 dizendo que por rádio o som não sai. Nada muda nos cartões do P1 e do P2 durante o teste.
+**Passa quando.** A música sai pelo alto-falante do P3 e do P4 antes do fone e volta para ele depois que o fone sai. O que aconteceu com o fone plugado está anotado nos dois — essa anotação é a entrega, porque ninguém mediu ainda o que o BT faz com um fone. Se o fone tocou num e não no outro, anote qual. O P1 e o P2 ficam mudos.
 
 **Por controle.**
 
-* **P1** — No cabo, e é a PROVA DO FONE: é nele que você confirma, antes de tudo, que o fone funciona. Sem esse passo, o silêncio no P3 não quer dizer nada. Depois disso ele vira testemunha e você não mexe mais nele.
-* **P2** — No cabo, e é testemunha. Não plugue nada nele. Confira no fim que o cartão dele está como estava.
-* **P3** — No rádio, e é ELE que recebe o fone. Leia a ressalva, confira o rótulo sem sufixo, arraste o volume até 100, plugue o fone e escute. Silêncio é a resposta certa.
-* **P4** — No rádio, e faz o mesmo que o P3, com o mesmo fone. É a segunda prova do rádio: a ressalva tem de estar nele também.
+* **P1** — No USB, e é TESTEMUNHA. Não plugue nada nele. Se ele soar durante o teste do P3, alguma coisa pegou mais de um controle.
+* **P2** — No USB, e é a segunda testemunha. Mesmo gesto do P1.
+* **P3** — No BT, e é ELE que recebe o fone primeiro: a música no alto-falante, o fone plugado, a anotação, o fone fora.
+* **P4** — No BT, e recebe o mesmo fone depois. É a segunda prova do BT: a resposta dele tem de ser anotada tanto quanto a do P3.
 
-**A armadilha.** O silêncio no fone plugado num controle do rádio é a resposta certa, e é fácil de confundir com fone quebrado — por isso o passo 2 prova o fone no P1 ANTES de qualquer outra coisa. Se ele toca no P1 e não toca no P3, o fone está bom e o que você mediu foi o rádio. Segunda: o rótulo do bloco sem "· acordado" nos do rádio não é leitura faltando; é o produto dizendo honestamente que não sabe, porque no rádio o controle não publica saída de som nenhuma, e escrever "acordado" a partir de ausência seria prometer som. Terceira: a prova desta célula parou no primeiro degrau — o produto lê o dado da detecção também pelo rádio, e ninguém plugou um fone para ver. Por isso o passo 13 existe: se ALGUMA coisa mudar na tela quando o plugue entra, anote, porque isso é mais do que qualquer pessoa desta casa já mediu.
+**A armadilha.** No USB o fone manda por cima do alto-falante — está medido, e é o que o teste irmão do USB confere. No BT ninguém sabe: o caminho do fone que o sistema conhece só existe no USB, e o som que o Hefesto leva pelo BT vai endereçado ao alto-falante. Por isso aqui não há resposta errada — «o fone ficou mudo e o alto-falante continuou» é resultado tão válido quanto «o som passou para o fone»; escreva o que ouviu. Prove o fone antes: sem isso, um fone ruim e o BT dão o mesmo silêncio. E a prova desta célula parou em «montou»: o produto lê o aviso de fone plugado também pelo BT, e ninguém plugou um fone para ver.
 
 ---
 
@@ -455,37 +446,39 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.jack.volume @ cabo`
 
-**O que isto prova.** Prova que, com o fone plugado no controle, o mesmo deslizante do bloco Alto-falante manda também no volume do fone, nos dois controles do cabo.
+**O que isto prova.** Prova que, com o fone plugado no controle, o mesmo deslizante do bloco Alto-falante manda também no volume do fone, nos dois controles do USB.
 
-**Onde olhar.** Na aba Controles, com o cartão aberto, bloco Alto-falante: o deslizante de volume, o número ao lado e o botão ♪. NÃO existe na tela um volume próprio do fone — é este mesmo deslizante que vai para os dois. A resposta é o fone no seu ouvido, plugado na borda de baixo do controle, ao lado de onde o cabo entra.
+**Onde olhar.** Na aba Controles, no bloco Alto-falante do cartão aberto: o deslizante de volume, o número ao lado e o ♪. NÃO existe na tela um volume próprio do fone — é este mesmo deslizante que vai para os dois. A resposta é o fone no seu ouvido, plugado na borda de baixo do controle, ao lado de onde o cabo entra.
 
 **Os passos.**
 
-1. Abra o Hefesto e clique na aba Controles.
-2. Plugue o fone na entrada da borda de baixo do P1 e ponha-o no ouvido.
-3. Clique na linha do P1 para abrir o cartão dele.
-4. Clique em "Todo o som do PC" no bloco Alto-falante do P1.
-5. Toque uma música que se repita e não mexa mais no volume do sistema até o fim.
-6. Arraste o deslizante do bloco Alto-falante do P1 pelas paradas 20, 50, 100 e 0, escutando o fone em cada uma, e devolva-o a 50.
-7. Confira que de 20 para 50, e de 50 para 100, o fone fica mais alto a cada parada.
-8. Confira que em 0 o fone fica em silêncio.
-9. Repare em que número o som parou de ficar mais alto, se isso acontecer, e anote esse número.
-10. Clique no ♪ do bloco do P1 duas vezes, com uma pausa entre as duas para escutar o fone.
-11. Confira que o primeiro clique cala o fone e o segundo traz o som de volta.
-12. Tire o fone do P1 e devolva o bloco Alto-falante dele para "Sons do jogo".
-13. Refaça os atos 1 a 7 no P2, com o mesmo fone — a música pode continuar tocando.
-14. Confira que os números de volume do P3 e do P4 não se mexeram enquanto você arrastava o de um controle do cabo.
+1. Clique na aba Controles.
+2. Ponha uma música que se repita para tocar no computador, e não mexa mais no volume do computador até o fim.
+3. Abaixe o volume da TV pelo controle remoto da própria TV até não ouvir mais a música.
+4. Clique na linha do P1 para abrir o cartão dele.
+5. Clique em «Efeitos do Jogo e Áudio da TV no Controle», no bloco Alto-falante do P1.
+6. Plugue o fone na entrada da borda de baixo do P1 e ponha-o no ouvido.
+7. Arraste o volume do P1 até 20, solte e escute no fone.
+8. Arraste até 50, solte e confira que o fone ficou mais alto.
+9. Arraste até 100, solte e confira que o fone ficou mais alto de novo — e anote o número em que ele parou de subir, se isso acontecer.
+10. Arraste até 0, solte e confira que o fone ficou em silêncio.
+11. Arraste de volta até 50 e clique no ♪: o fone tem de calar.
+12. Clique no ♪ de novo: a música tem de voltar ao fone.
+13. Tire o fone e clique em «Efeitos do Jogo no Controle, Áudio da TV na TV», no bloco do P1.
+14. Clique na linha do P2 e refaça nele a mesma rodada, do botão do meio até a volta, com o mesmo fone.
+15. Clique em «Todos», na fita do topo, e confira que os números de volume do P3 e do P4 não se mexeram.
+16. Devolva o volume da TV pelo controle remoto dela.
 
-**Passa quando.** No fone plugado no P1 e no plugado no P2, o quanto se ouve acompanha o deslizante nas três posições, 0 é silêncio e o ♪ cala e traz de volta. E os números do P3 e do P4 não se mexem enquanto você arrasta o de um controle do cabo.
+**Passa quando.** No fone plugado no P1 e no plugado no P2, o quanto se ouve acompanha o deslizante, 0 é silêncio e o ♪ cala e traz de volta. Os números do P3 e do P4 não se mexem enquanto você arrasta o de um controle do USB.
 
 **Por controle.**
 
-* **P1** — No cabo, e é o primeiro a receber o fone. Faça as três posições e as duas do ♪ com o fone no ouvido, sem mexer no volume do sistema.
-* **P2** — No cabo, e recebe o MESMO fone depois. Ele é a segunda prova: se o volume do fone seguir o deslizante num e não no outro, anote qual — é o dado que separa aparelho de comando.
-* **P3** — No rádio, e é TESTEMUNHA. Não plugue fone nem arraste nada nele. Anote o número do volume antes e confira depois: se andar, o comando pegou mais de um controle.
-* **P4** — No rádio, e é a segunda testemunha. Mesma leitura do P3, sem tocar em nada.
+* **P1** — No USB, e é o primeiro a receber o fone. As quatro paradas e os dois cliques do ♪ são nele, com o fone no ouvido.
+* **P2** — No USB, e recebe o MESMO fone depois. É a segunda prova: se o volume do fone seguir o deslizante num e não no outro, anote qual.
+* **P3** — No BT, e é TESTEMUNHA. Não plugue nem arraste nada nele. Se o número dele andar, o comando pegou mais de um controle.
+* **P4** — No BT, e é a segunda testemunha. Mesma leitura do P3.
 
-**A armadilha.** O fone NÃO tem volume próprio na tela, e é aí que este teste engana: o mesmo deslizante vai para os dois, então o som mudar no fone não prova que o campo do fone funciona — prova que o único campo alcança os dois. Segunda, e é dívida declarada desta casa: a autorização para mexer no volume do fone NÃO está no núcleo do sistema, veio de fonte de comunidade, e a curva do deslizante foi levantada no ALTO-FALANTE, nunca no fone. Então, se acima de mais ou menos metade do curso o fone parar de ficar mais alto, isso é ACHADO deste teste e não erro seu — a conferência do ato 5 existe para você anotar em que número ele empacou. Terceira: a prova desta célula parou no primeiro degrau; ninguém desta casa jamais plugou um fone e arrastou este deslizante. E mantenha o volume do sistema fixo do começo ao fim, senão o degrau é falso.
+**A armadilha.** O fone não tem deslizante próprio na tela: o do Alto-falante vai para os dois, e o som mudar no fone prova que esse único campo alcança o fone — não que exista um campo do fone. A licença para mexer no volume do fone não está no sistema: veio de fonte de comunidade, e a curva do deslizante foi levantada no alto-falante, nunca no fone. Se acima da metade o fone parar de subir, é ACHADO, e o passo do 100 existe para você anotar onde. Se o fone tocar só de um lado, anote qual. E a prova desta célula parou em «montou»: ninguém desta casa plugou um fone e arrastou este deslizante.
 
 ---
 
@@ -493,38 +486,38 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.jack.volume @ rádio`
 
-**O que isto prova.** Prova que o volume do fone é aceito nos dois controles do rádio, que nada sai por ali, e que o mesmo fone toca quando vai para um controle do cabo.
+**O que isto prova.** Prova que o volume é aceito nos dois controles do BT com um fone plugado, e mede se o fone toca pelo BT — e, se tocar, se o volume dele acompanha o deslizante.
 
-**Onde olhar.** Na aba Controles, no cartão do P3 e no do P4, bloco Alto-falante: o deslizante de volume, o número ao lado, o botão ♪, e a linha de ressalva embaixo dos botões de rota, que nos do rádio traz "Pelo rádio o Hefesto ainda não faz o som sair neste alto-falante." O fone vai na borda de baixo do controle. Não existe na tela um volume próprio do fone — é o mesmo deslizante do alto-falante.
+**Onde olhar.** Na aba Controles, no cartão do P3 e no do P4, bloco Alto-falante: o deslizante de volume, o número ao lado e o ♪. Não existe na tela um volume próprio do fone: é o mesmo deslizante do alto-falante. O fone vai na borda de baixo do controle.
 
 **Os passos.**
 
-1. Confira na fita do topo que P3 e P4 dizem rádio.
-2. Plugue o fone no P1, que está no cabo, toque uma música e confirme no ouvido que ele toca.
-3. Tire o fone do P1.
-4. Abra o Hefesto e clique na aba Controles.
+1. Clique na aba Controles.
+2. Separe um fone de plugue fino e prove-o antes num celular ou no computador.
+3. Ponha uma música que se repita para tocar no computador, e não mexa mais no volume do computador até o fim.
+4. Abaixe o volume da TV pelo controle remoto da própria TV até não ouvir mais a música.
 5. Clique na linha do P3 para abrir o cartão dele.
-6. Leia a linha embaixo dos botões de rota e anote a frase inteira.
-7. Plugue o fone na entrada do P3 e ponha-o no ouvido.
-8. Clique em "Todo o som do PC" no bloco do P3.
-9. Arraste o deslizante de volume do P3 até 20 e escute.
-10. Arraste até 50 e escute.
-11. Arraste até 100 e escute.
-12. Confira que o ♪ acendeu depois do primeiro arrasto.
-13. Leia os números de volume do P1 e do P2 e confirme que não se mexeram.
-14. Tire o fone do P3 e clique em "Sons do jogo" no bloco dele.
-15. Plugue o fone no P4 e repita do passo 6 ao 14 nele.
+6. Clique em «Efeitos do Jogo e Áudio da TV no Controle», no bloco Alto-falante do P3.
+7. Plugue o fone na entrada da borda de baixo do P3 e ponha-o no ouvido.
+8. Anote se a música sai no fone.
+9. Arraste o volume do P3 até 20, solte e escute no fone.
+10. Arraste até 50, solte e escute de novo.
+11. Arraste até 100, solte e escute de novo.
+12. Tire o fone e clique em «Efeitos do Jogo no Controle, Áudio da TV na TV», no bloco do P3.
+13. Clique na linha do P4 e refaça nele a mesma rodada, do botão do meio até a volta, com o mesmo fone.
+14. Clique em «Todos», na fita do topo, e confira que os números de volume do P1 e do P2 não se mexeram.
+15. Devolva o volume da TV pelo controle remoto dela.
 
-**Passa quando.** O mesmo fone toca quando plugado no P1, no cabo, e não toca em nenhuma das três posições quando plugado no P3 ou no P4 — e esse silêncio é o esperado. O número acompanha o deslizante nos dois do rádio e o ♪ destrava depois do primeiro arrasto. A frase de ressalva está nos dois cartões do rádio. E os números do P1 e do P2 continuam parados.
+**Passa quando.** O número acompanha o deslizante no P3 e no P4, e os números do P1 e do P2 ficam parados. Se o fone tocou, o quanto se ouve nele acompanha o número; se não tocou, o silêncio está anotado — o que o BT faz com um fone plugado ainda não foi medido, e essa anotação é a entrega.
 
 **Por controle.**
 
-* **P1** — No cabo, e é a PROVA DO FONE: nele o fone tem de tocar, antes de qualquer outra coisa. Sem isso, o silêncio no rádio não mede nada. Depois ele é testemunha e você não mexe mais nele.
-* **P2** — No cabo, e é testemunha. Não plugue nem arraste. Anote o número do volume dele antes e confira depois.
-* **P3** — No rádio, e é o primeiro a receber o fone. Leia a ressalva, arraste até 20, 50 e 100 com o fone no ouvido, e confira o ♪ destravando. Silêncio é a resposta certa.
-* **P4** — No rádio, e recebe o mesmo fone depois. É a segunda prova do rádio: a ressalva e o comportamento do deslizante têm de ser iguais aos do P3.
+* **P1** — No USB, e é TESTEMUNHA. Não plugue nem arraste nada nele. Anote o número do volume dele antes e confira depois.
+* **P2** — No USB, e é a segunda testemunha. Mesma leitura do P1.
+* **P3** — No BT, e é o primeiro a receber o fone: a anotação de onde a música sai, e as três paradas com o fone no ouvido.
+* **P4** — No BT, e recebe o mesmo fone depois. É a segunda prova do BT: a resposta dele tem de ser anotada tanto quanto a do P3.
 
-**A armadilha.** O silêncio é a resposta esperada aqui, e é por isso que o passo 2 existe: sem provar o fone no P1, um fone ruim e o rádio dão exatamente o mesmo resultado. Segunda: o número na tela é o que o produto PEDIU, não o que o aparelho fez — a prova desta célula parou no primeiro degrau, e pelo rádio ninguém mediu se o comando chegou. Escreva o que a tela fez e o que o ouvido não ouviu, sem concluir sobre o aparelho. Terceira: no rádio a queda e a volta são rotina; se o ♪ voltar sozinho ao cinza ou o número resetar enquanto você testa, anote a HORA — é o tipo de perda silenciosa que este teste enxerga. E lembre-se de que o fone não tem deslizante próprio: o que você está arrastando é o do alto-falante, que carrega os dois.
+**A armadilha.** Prove o fone antes: sem isso, um fone ruim e o BT dão exatamente o mesmo silêncio. O som que o Hefesto leva pelo BT vai endereçado ao alto-falante, e ninguém sabe se o controle o desvia para o fone — se o fone ficar mudo e a música continuar nos furinhos, isso é resultado, não erro seu. No BT a queda e a volta são rotina: se o número voltar sozinho ao que era enquanto você testa, anote a HORA. E lembre-se de que o que você arrasta é o deslizante do alto-falante, que carrega os dois.
 
 ---
 
@@ -532,39 +525,35 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.leitura_de_volta @ cabo`
 
-**O que isto prova.** Mede o que o Hefesto consegue LER DE VOLTA do som dos dois controles do cabo: o mudo do microfone volta do aparelho, e o volume do alto-falante não volta de lugar nenhum.
+**O que isto prova.** Mede o que o Hefesto consegue LER DE VOLTA do som dos dois controles do USB: o mudo do microfone volta do aparelho a cada aperto, e o volume do alto-falante não volta — o número na tela é o último que o Hefesto mandou.
 
-**Onde olhar.** Na aba Controles, com o cartão aberto, dois lugares que dão respostas opostas. No bloco Microfone: o selo ao lado da palavra Microfone, que diz ATIVO, MUDO ou um travessão — o travessão quer dizer "não consegui ler", e não é nenhum dos dois. No bloco Alto-falante: o botão ♪ e o "?" ao lado dele, cuja frase diz com todas as letras que o DualSense não publica o volume. No aparelho, o botão de microfone é o botãozinho de mudo no plástico, logo abaixo do touchpad.
+**Onde olhar.** Na aba Controles, no cartão aberto, dois lugares que dão respostas opostas. No bloco Microfone, a pílula ao lado da palavra Microfone: ATIVO, DESLIGADO ou um travessão — o travessão quer dizer «não consegui ler», e não é nenhum dos dois. No bloco Alto-falante, o número do volume e a pílula ATIVO. No aparelho, o botão de microfone é o botãozinho logo abaixo do botão PS, e a luz dele fica acesa com o microfone ligado e apaga no mudo.
 
 **Os passos.**
 
-1. Feche a janela do Hefesto no X e abra-a de novo.
-2. Clique na aba Controles.
+1. Clique na aba Controles.
+2. Clique em «Todos», na fita do topo, e anote a pílula do Microfone e o número do volume do Alto-falante dos quatro.
 3. Clique na linha do P1 para abrir o cartão dele.
-4. Leia o selo ao lado da palavra Microfone e anote o que ele diz.
-5. Aperte uma vez o botão de microfone no plástico do P1.
-6. Leia o selo de novo e anote se ele mudou.
-7. Espere um segundo e aperte o botão do plástico outra vez.
-8. Confira que o selo voltou ao que dizia no passo 4.
-9. Olhe o botão ♪ do bloco Alto-falante do P1 e anote se ele está aceso ou cinza.
-10. Passe o mouse no "?" ao lado do ♪ e leia a frase inteira.
-11. Arraste o volume do alto-falante do P1 até 70.
-12. Confira que o ♪ acendeu e que o número diz 70.
-13. Feche a janela do Hefesto no X e abra-a de novo.
-14. Clique na linha do P1 e anote o número do volume e o estado do ♪ agora.
-15. Clique na linha do P2 e repita do passo 4 ao 14 nele.
-16. Confira que os selos e os números do P3 e do P4 não se mexeram em nenhum momento.
+4. Aperte uma vez o botão de microfone no plástico do P1.
+5. Confira que a pílula do Microfone do P1 passou a DESLIGADO e que a luz desse botão apagou.
+6. Espere um segundo e aperte o botão do P1 de novo.
+7. Confira que a pílula voltou a ATIVO e que a luz acendeu.
+8. Arraste o volume do Alto-falante do P1 até 70 e solte.
+9. Feche a janela do Hefesto no X e abra-a de novo.
+10. Clique na linha do P1 e anote o número do volume do Alto-falante e a pílula dele agora.
+11. Clique na linha do P2 e refaça nele a mesma rodada, do primeiro aperto até a anotação depois de reabrir a janela.
+12. Clique em «Todos» e confira que a pílula e o número do P3 e do P4 continuam os do começo.
 
-**Passa quando.** No P1 e no P2, o selo do Microfone SEGUE o botão do plástico a cada aperto — isso é uma leitura que voltou do aparelho. E o volume do alto-falante NÃO volta: o ♪ estava cinza antes do primeiro arrasto, e a frase do "?" diz por quê. O que este teste entrega é o que você anotou no passo 14 — o número e o ♪ depois de fechar e reabrir. Nada mudou no P3 e no P4.
+**Passa quando.** No P1 e no P2 a pílula do Microfone SEGUE o botão do plástico a cada aperto — essa é uma leitura que volta do aparelho. O volume do alto-falante não volta de lá: o número depois de reabrir a janela é o último que o Hefesto mandou, e a entrega deste teste é esse número anotado. Nada mudou no P3 e no P4.
 
 **Por controle.**
 
-* **P1** — No cabo, e é o primeiro. Aperte o botão de microfone do plástico dele duas vezes, com um segundo entre os apertos, olhando o selo. Depois faça a parte do alto-falante inteira, inclusive fechar e reabrir a janela.
-* **P2** — No cabo, e faz a mesma sequência. Ele é a segunda prova: se o selo seguir o botão num e não no outro, anote qual — é a diferença entre um aparelho e o produto.
-* **P3** — No rádio, e é TESTEMUNHA. Não aperte o botão de microfone dele nem arraste nada. Confira que o selo e o número dele ficaram parados o tempo todo.
-* **P4** — No rádio, e é a segunda testemunha. Mesma conferência do P3: selo parado, número parado, nada tocado.
+* **P1** — No USB, e é o primeiro: os dois apertos com um segundo entre eles, olhando a pílula e a luz, e depois o volume e a janela reaberta.
+* **P2** — No USB, e faz a mesma rodada. É a segunda prova: se a pílula seguir o botão num e não no outro, anote qual.
+* **P3** — No BT, e é TESTEMUNHA. Não aperte nem arraste nada nele. A pílula e o número dele ficam parados o tempo todo.
+* **P4** — No BT, e é a segunda testemunha. Mesma conferência do P3.
 
-**A armadilha.** Esta é a única linha do lote que ainda NÃO TEM resposta, e o que está em disputa é o que "ler de volta" quer dizer — a decisão é DELA e ainda não foi tomada. Se quiser dizer "qualquer estado relido do aparelho", o selo do microfone já responde que sim. Se quiser dizer estritamente "o comando que NÓS mandamos, relido de volta", a resposta continua sendo não, porque o que volta é um dado que o controle manda sozinho, e não o eco do que enviamos. Enquanto ela não decidir, NADA aqui reprova o produto: não escreva "passou" nem "reprovou" — escreva o que aconteceu, aperto por aperto. E um cuidado que muda o resultado inteiro: não clique no 🎙 da TELA antes deste teste. A partir desse clique o mudo daquele controle passa a ser do Hefesto e o botão do plástico deixa de valer — e aí o selo pararia de seguir o botão por um motivo que não tem nada a ver com ler de volta. Dê um segundo entre um aperto e o seguinte no mesmo controle: apertos mais rápidos que isso são engolidos de propósito.
+**A armadilha.** Esta linha ainda não tem resposta, e o que está em disputa é o que «ler de volta» quer dizer — a decisão é sua, e ainda não foi tomada. Se for «qualquer estado relido do aparelho», a pílula do microfone já responde que sim; se for «o volume que nós mandamos, relido», a resposta continua sendo não. Enquanto isso, nada aqui reprova o produto: escreva o que aconteceu, aperto por aperto. Dê um segundo entre um aperto e o seguinte no mesmo controle: apertos mais rápidos são engolidos de propósito. O 🎙 da tela não cala o microfone — ele liga o retorno, para você se ouvir — e não interfere nesta leitura.
 
 ---
 
@@ -572,38 +561,36 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.leitura_de_volta @ rádio`
 
-**O que isto prova.** Mede o que o Hefesto consegue ler de volta dos dois controles do rádio, e se essa leitura sobrevive a uma queda e uma volta — que no rádio é rotina.
+**O que isto prova.** Mede o que o Hefesto consegue ler de volta dos dois controles do BT, e o que sobra dessa leitura depois de uma queda e uma volta — que no BT é rotina.
 
-**Onde olhar.** Na aba Controles, com o cartão aberto: no bloco Microfone, o selo ao lado da palavra Microfone, que diz ATIVO, MUDO ou um travessão; no bloco Alto-falante, o botão ♪ e o número do volume ao lado do deslizante. No aparelho, o botão de microfone é o botãozinho de mudo no plástico, logo abaixo do touchpad; e o botão PS é o redondo do meio de baixo, entre os dois analógicos.
+**Onde olhar.** Na aba Controles, no cartão aberto: no bloco Microfone, a pílula ao lado da palavra Microfone (ATIVO, DESLIGADO ou um travessão); no bloco Alto-falante, o número do volume e a pílula ATIVO. No aparelho, o botão de microfone é o botãozinho logo abaixo do botão PS, com a luz acesa no microfone ligado e apagada no mudo; e o botão PS é o redondo do meio, entre os dois analógicos.
 
 **Os passos.**
 
-1. Feche a janela do Hefesto no X e abra-a de novo.
-2. Clique na aba Controles.
+1. Clique na aba Controles.
+2. Clique em «Todos», na fita do topo, e anote a pílula do Microfone e o número do volume do Alto-falante dos quatro.
 3. Clique na linha do P3 para abrir o cartão dele.
-4. Leia o selo ao lado da palavra Microfone e anote o que ele diz.
-5. Aperte uma vez o botão de microfone no plástico do P3.
-6. Leia o selo de novo e anote se ele mudou.
-7. Espere um segundo e aperte o botão do plástico outra vez.
-8. Confira que o selo voltou ao que dizia no passo 4.
-9. Olhe o botão ♪ do bloco Alto-falante do P3 e anote se está aceso ou cinza.
-10. Arraste o volume do alto-falante do P3 até 70 e confira que o ♪ acendeu.
-11. Segure o botão PS do P3 até TODAS as luzes dele apagarem, e solte.
-12. Segure o botão PS do P3 por cerca de cinco segundos, até a barra de luz acender, e solte.
-13. Clique na linha do P3 e anote o selo do Microfone, o número do volume e o estado do ♪ agora.
-14. Clique na linha do P4 e repita do passo 4 ao 13 nele.
-15. Confira que os selos e os números do P1 e do P2 não se mexeram em nenhum momento.
+4. Aperte uma vez o botão de microfone no plástico do P3.
+5. Confira que a pílula do Microfone do P3 passou a DESLIGADO e que a luz desse botão apagou.
+6. Espere um segundo e aperte o botão do P3 de novo.
+7. Confira que a pílula voltou a ATIVO e que a luz acendeu.
+8. Arraste o volume do Alto-falante do P3 até 70 e solte.
+9. Desligue o P3 segurando o botão PS até TODAS as luzes dele apagarem.
+10. Religue o P3 apertando o botão PS e espere a linha dele voltar à aba.
+11. Clique na linha do P3 e anote a pílula do Microfone, a luz do botão de microfone, o número do volume e a pílula do Alto-falante agora.
+12. Clique na linha do P4 e refaça nele a mesma rodada, do primeiro aperto até a anotação depois da volta.
+13. Clique em «Todos» e confira que a pílula e o número do P1 e do P2 continuam os do começo.
 
-**Passa quando.** No P3 e no P4, o selo do Microfone segue o botão do plástico a cada aperto, e o ♪ do alto-falante estava cinza até o primeiro arrasto. O que este teste entrega é o que você anotou no passo 13 — o selo, o número e o ♪ DEPOIS de o controle cair e voltar. Nada mudou no P1 e no P2.
+**Passa quando.** No P3 e no P4 a pílula do Microfone segue o botão do plástico a cada aperto. O que este teste entrega é o que você anotou depois de o controle cair e voltar — a pílula, a luz, o número e a pílula do alto-falante. Nada mudou no P1 e no P2.
 
 **Por controle.**
 
-* **P1** — No cabo, e é TESTEMUNHA. Não toque nele. Confira no fim que o selo do microfone e o número do volume dele são os mesmos do começo.
-* **P2** — No cabo, e é a segunda testemunha. Mesma conferência do P1. Se um dos dois do cabo se mexer quando o P3 cai e volta, isso é achado e vale anotar.
-* **P3** — No rádio, e é o primeiro a mexer. Faça os dois apertos do botão do plástico, arraste o volume, e então desligue e religue ELE pelo botão PS. É a queda e a volta que este teste veio medir.
-* **P4** — No rádio, e faz a sequência inteira igual, inclusive desligar e religar. É a segunda prova do rádio: se um perder o estado e o outro não, anote qual.
+* **P1** — No USB, e é TESTEMUNHA. Não toque nele. A pílula e o número dele são os mesmos do começo ao fim.
+* **P2** — No USB, e é a segunda testemunha. Se um dos dois do USB mudar quando o P3 cai e volta, isso é achado.
+* **P3** — No BT, e é o primeiro: os dois apertos, o volume, e então desligar e religar ELE pelo botão PS. É a queda e a volta que este teste veio medir.
+* **P4** — No BT, e faz a mesma rodada, inclusive desligar e religar. Se um perder o estado e o outro não, anote qual.
 
-**A armadilha.** Esta linha ainda não tem resposta e o sentido dela é DECISÃO DELA, ainda não tomada — então não escreva "passou" nem "reprovou", escreva o que aconteceu. Sobre a queda e a volta, há um defeito conhecido e MEDIDO: em 03/08/2026 um mudo pedido pelo Hefesto EVAPOROU quando o controle caiu e voltou, porque o vínculo com o aparelho se refaz e o pedido não vai junto. A cura foi proposta e NÃO foi feita. Então, se depois do passo 12 o selo ou o ♪ voltarem diferentes, isso é o achado esperado desta linha e não erro seu: anote a hora e siga. E duas armadilhas de gesto: não clique no 🎙 da TELA antes deste teste, porque a partir dali o botão do plástico para de valer e o selo pararia de segui-lo por outro motivo; e segure o PS até as luzes apagarem de verdade para desligar — cerca de cinco segundos é lido como toque curto e ABRE A STEAM. Se a Steam abrir, feche-a e refaça o passo.
+**A armadilha.** Esta linha ainda não tem resposta, e o sentido dela é decisão sua, ainda não tomada — escreva o que aconteceu, não «passou» nem «reprovou». Quando o controle volta, o Hefesto torna a escrever o volume: o número que aparece vem dele, e não do aparelho. O mudo do microfone mora no vínculo com o aparelho, que se refaz a cada reconexão — se ele voltar diferente do que era, é o achado desta linha, não erro seu; anote a hora. Para desligar, segure o PS até as luzes apagarem de verdade: soltar antes é lido como toque, e o toque abre a Steam — se ela abrir, feche-a e refaça. Dê um segundo entre um aperto e o seguinte no mesmo controle.
 
 ---
 
@@ -611,37 +598,36 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.microfone @ cabo`
 
-**O que isto prova.** Prova que o microfone dos dois controles do cabo capta a voz dela e chega até um programa do computador, um controle de cada vez.
+**O que isto prova.** Prova que o microfone dos dois controles do USB capta a sua voz e que ela chega ao computador — você se ouve pelo Hefesto, e um programa de fora te ouve —, um controle de cada vez.
 
-**Onde olhar.** Na aba Controles, com o cartão aberto, bloco Microfone: a barrinha de ondas, que mexe com o som que entra AGORA, e o selo ao lado da palavra Microfone, que diz ATIVO, MUDO ou um travessão. E na aba Conexões: na linha fechada de cada controle está escrito por onde o microfone chega — nos do cabo tem de dizer "Microfone Ligado, pelo cabo • Placa do controle".
+**Onde olhar.** Na aba Controles, no bloco Microfone do cartão aberto: a pílula ao lado da palavra Microfone (ATIVO, DESLIGADO ou um travessão), a barrinha de ondas, que mexe com o som que entra agora, e o 🎙 ao lado do número do Volume — ele liga o RETORNO: aceso em verde, você se ouve na TV, com o volume e o ganho do cartão já aplicados. Quando um programa de fora está gravando esse microfone, uma linha embaixo dos botões Virtual e Nativo diz qual. No aparelho, a luz do botão de microfone fica acesa com o microfone ligado, pisca quando um programa de fora grava e entra som, e apaga no mudo. Na aba Conexões, em «Gestão de Controles», a linha de cada controle diz por onde o microfone chega.
 
 **Os passos.**
 
-1. Abra o Hefesto e clique na aba Conexões.
-2. Leia a linha do P1 e confira que ela diz Microfone Ligado, pelo cabo • Placa do controle.
-3. Leia a linha do P2 e confira o mesmo.
-4. Clique na aba Controles.
-5. Clique na linha do P1 para abrir o cartão dele.
-6. Confira que o selo ao lado da palavra Microfone diz ATIVO.
-7. Fale perto do P1, em tom normal, e olhe a barrinha de ondas do bloco Microfone.
-8. Fique em silêncio três segundos e confira que a barrinha desce.
-9. Abra um programa que ouça microfone — um gravador ou uma chamada de voz.
-10. Escolha, nesse programa, a entrada que corresponde ao P1.
-11. Fale e confirme que o programa está ouvindo você.
-12. Fale perto do P2 e confira que a barrinha do cartão do P1 NÃO mexe.
-13. Clique na linha do P2 e repita do passo 6 ao 11 nele.
-14. Fale perto do P3 e depois perto do P4 e confira que a barrinha do cartão aberto não mexe.
+1. Clique na aba Controles.
+2. Clique na linha do P1 para abrir o cartão dele.
+3. Confira que a pílula do Microfone diz ATIVO e que a luz do botão de microfone do P1 está acesa.
+4. Fale perto do P1 e confira que a barrinha de ondas do bloco Microfone mexe, e que ela desce quando você se cala.
+5. Clique no 🎙 ao lado do número do Volume do Microfone do P1 e confira que ele ficou verde.
+6. Fale perto do P1 e confira que a sua voz sai na TV.
+7. Aperte o botão de microfone no plástico do P1 e confira que a sua voz parou de sair na TV.
+8. Aperte o botão do P1 de novo, espere a pílula voltar a ATIVO, e apague o 🎙 se ele ainda estiver verde.
+9. Abra um programa que ouça microfone — um gravador ou uma chamada de voz — e escolha como entrada a do P1: «Microfone do Controle 1», ou, se ela não estiver na lista, a do DualSense.
+10. Fale e confira que o programa te ouve, que a luz do botão do P1 pisca enquanto você fala, e que o cartão do P1 diz que esse programa está te ouvindo.
+11. Feche o programa.
+12. Clique na linha do P2 e refaça nele a mesma rodada, da pílula ATIVO até fechar o programa, com «Microfone do Controle 2».
+13. Clique na aba Conexões, abra «Gestão de Controles» e confira que as linhas do P1 e do P2 dizem «Microfone Ligado, pelo cabo • Placa do controle».
 
-**Passa quando.** No P1 e no P2 a barrinha de ondas mexe quando você fala e desce no silêncio, o selo diz ATIVO, e um programa do computador ouve a sua voz pela entrada daquele controle. Falar perto de um controle não mexe a barrinha do outro. E a aba Conexões diz, nos dois, que o microfone chega pelo cabo, pela placa do controle.
+**Passa quando.** No P1 e no P2 a pílula diz ATIVO, a luz está acesa e a barrinha segue a sua voz. Com o 🎙 verde a voz sai na TV, e para quando o botão do plástico cala aquele controle. Um programa de fora te ouve pela entrada daquele controle, com a luz piscando e o cartão dizendo o nome dele. E a aba Conexões diz, nos dois, que o microfone chega pelo cabo, pela placa do controle.
 
 **Por controle.**
 
-* **P1** — No cabo, e é o primeiro. Fale perto dele, veja a barrinha, escolha a entrada dele no programa e confirme que ele te ouve. Depois fale perto do P2 sem tocar no P1 — a barrinha do P1 não pode mexer.
-* **P2** — No cabo, e faz a mesma sequência inteira. É a segunda prova do cabo: se um capta e o outro não, anote qual — o defeito é daquele aparelho, não do caminho.
-* **P3** — No rádio, e é TESTEMUNHA. Não fale perto dele durante o teste do P1, a não ser no passo 14, que existe justamente para provar que a voz de perto dele não aparece na barrinha do controle do cabo.
-* **P4** — No rádio, e é a segunda testemunha. Mesmo gesto do P3: fale perto dele só no passo 14 e confira que a barrinha do cartão aberto fica parada.
+* **P1** — No USB, e é o primeiro: pílula e luz, a barrinha, o retorno, o mudo pelo plástico e o programa de fora.
+* **P2** — No USB, e faz a mesma rodada inteira. É a segunda prova: se um capta e o outro não, anote qual — o defeito é daquele aparelho, não do caminho.
+* **P3** — No BT, e é TESTEMUNHA. Não mexa nele: a pílula do Microfone dele continua como estava do começo ao fim.
+* **P4** — No BT, e é a segunda testemunha. Mesma conferência do P3.
 
-**A armadilha.** Há uma regra do sistema que mata esta linha inteira e que só existe se alguém a instalou de propósito: se a regra que desliga o áudio USB do controle estiver ligada, o microfone E o fone de TODOS os controles do cabo ficam mortos e nada aqui funciona. Quem diz se ela está ligada é a seção "O exame de hoje", na aba Sistema — vá lá antes de acusar o produto. Segunda, e ela já enganou esta casa: o sistema pode marcar o microfone do controle como indisponível e ele captar assim mesmo — medido em 16 e 17/08/2026, com a voz dela, no cabo: com a porta marcada como indisponível o microfone captou 12% da escala em seis segundos de fala contra 0,4% em cinco de silêncio. Então não reprove pela palavra de uma lista de aparelhos; reprove pela barrinha e pelo programa. Terceira: a prova desta célula chegou até "saiu no fio" — o som sai do controle. Que um programa o ouça é o degrau que este teste sobe, e o selo ATIVO já carrega as duas metades, porque ele só acende quando o aparelho não está calando E o som chega ao canal dele.
+**A armadilha.** O 🎙 não cala o microfone: desde 21/09 ele é o retorno, e quem cala é o botão do plástico. Se a dica do «?» do bloco Microfone ainda disser que o 🎙 cala, ela está velha — vale o que o próprio 🎙 diz quando você para o mouse nele. Se o 🎙 recusar com um recado laranja no cartão, o microfone daquele controle está no mudo: aperte o botão do plástico e tente de novo. E ele pode apagar sozinho quando você cala o controle pelo plástico — o retorno fica sem o que ouvir —, e isso não é defeito. Com a TV alta e o retorno ligado o microfone pode ouvir a própria TV e apitar: fale longe dela. Se nada funcionar nos dois do USB, veja na aba Sistema, em «O exame de hoje», a linha que começa com «regra áudio-off»: com essa regra ativa, o microfone e o fone de todo controle no USB ficam desligados de propósito. Não reprove pela palavra «indisponível» de uma lista de aparelhos — o microfone do DualSense já captou marcado assim; reprove pela barrinha e pelo ouvido. O degrau: esta célula está em «saiu no fio»; o retorno e o programa de fora são os dois degraus acima.
 
 ---
 
@@ -649,39 +635,38 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.microfone @ rádio`
 
-**O que isto prova.** Prova que o microfone dos dois controles do rádio chega ao computador pela ponte do Hefesto, e que o botão Nativo, no rádio, não tem por onde entregar som.
+**O que isto prova.** Prova que o microfone dos dois controles do BT chega ao computador pela ponte do Hefesto, os dois no ar ao mesmo tempo, e que o «Nativo» fica cinza no BT, com a razão escrita.
 
-**Onde olhar.** Na aba Controles, com o cartão aberto, bloco Microfone: a barrinha de ondas, o selo ao lado da palavra Microfone e, na fileira embaixo do deslizante, os dois botões de modo, "Virtual" e "Nativo", com um deles aceso. E na aba Conexões: na linha fechada de cada controle está escrito por onde o microfone chega — nos do rádio tem de dizer "Microfone Ligado, pelo rádio • Pela ponte".
+**Onde olhar.** Na aba Controles, no bloco Microfone do cartão aberto: a pílula ao lado da palavra Microfone, a barrinha de ondas, o 🎙 ao lado do número do Volume (o retorno: aceso em verde, você se ouve na TV), e, embaixo, os botões «Virtual» e «Nativo» — no BT o «Nativo» e o trilho do Ganho ficam cinza, com a razão no «?» ao lado. Quando um programa de fora grava esse microfone, uma linha embaixo dos dois botões diz qual. Na aba Conexões, em «Gestão de Controles», a linha de cada controle diz por onde o microfone chega.
 
 **Os passos.**
 
-1. Abra o Hefesto e clique na aba Conexões.
-2. Leia a linha do P3 e confira que ela diz Microfone Ligado, pelo rádio • Pela ponte.
-3. Leia a linha do P4 e confira o mesmo.
-4. Clique na aba Controles.
-5. Clique na linha do P3 para abrir o cartão dele.
-6. Anote qual dos dois botões de modo está aceso, Virtual ou Nativo.
-7. Clique em "Virtual", se ele já não estiver aceso.
-8. Confira que o selo ao lado da palavra Microfone diz ATIVO.
-9. Fale perto do P3, em tom normal, e olhe a barrinha de ondas.
-10. Fique em silêncio três segundos e confira que a barrinha desce.
-11. Abra um programa que ouça microfone e escolha a entrada que corresponde ao P3.
-12. Fale e confirme que o programa está ouvindo você.
-13. Clique em "Nativo" no cartão do P3, fale de novo e anote o que a barrinha faz.
-14. Clique em "Virtual" de volta no cartão do P3.
-15. Clique na linha do P4 e repita do passo 6 ao 14 nele.
-16. Fale perto do P1 e do P2 e confira que a barrinha do cartão aberto não mexe.
+1. Clique na aba Controles.
+2. Clique na linha do P3 para abrir o cartão dele.
+3. Confira que «Virtual» está aceso e «Nativo» está cinza, e leia a frase do «?» ao lado do «Nativo».
+4. Confira que a pílula do Microfone diz ATIVO e que a luz do botão de microfone do P3 está acesa.
+5. Fale perto do P3 e confira que a barrinha de ondas mexe, e que ela desce quando você se cala.
+6. Clique no 🎙 do Microfone do P3 e confira que ele ficou verde.
+7. Clique na linha do P4 e clique no 🎙 do Microfone dele também.
+8. Fale perto do P3 e depois perto do P4, e confira que a sua voz sai na TV nas duas vezes.
+9. Aperte o botão de microfone no plástico do P3 e confira que a pílula do P3 passou a DESLIGADO, a do P4 continuou ATIVO, e você continua se ouvindo na TV pelo P4.
+10. Aperte o botão do P3 de novo, espere a pílula voltar a ATIVO, e apague o 🎙 do P3 e o do P4 que ainda estiverem verdes.
+11. Abra um programa que ouça microfone e escolha como entrada «Microfone do Controle 3».
+12. Fale e confira que o programa te ouve, que a luz do botão do P3 pisca enquanto você fala, e que o cartão do P3 diz que esse programa está te ouvindo.
+13. Troque a entrada do programa para «Microfone do Controle 4» e confira o mesmo no P4.
+14. Feche o programa.
+15. Clique na aba Conexões, abra «Gestão de Controles» e confira que as linhas do P3 e do P4 dizem «Microfone Ligado, pelo rádio • Pela ponte».
 
-**Passa quando.** No P3 e no P4, com "Virtual" aceso, a barrinha de ondas mexe com a sua voz e um programa do computador ouve a voz pela entrada daquele controle — o som do microfone de um controle do rádio chegando ao PC é o degrau que este teste sobe. A aba Conexões diz, nos dois, que ele chega pelo rádio, pela ponte. E falar perto de um controle não mexe a barrinha de outro.
+**Passa quando.** No P3 e no P4 a pílula diz ATIVO e a barrinha segue a voz; com os dois 🎙 verdes ao mesmo tempo a voz sai na TV pelos dois, e calar um pelo plástico deixa o outro no ar. Um programa de fora te ouve pela entrada de cada um, com a luz piscando e o cartão dizendo o nome dele. O «Nativo» está cinza, com a razão no «?». E a aba Conexões diz que o microfone dos dois chega pelo rádio, pela ponte.
 
 **Por controle.**
 
-* **P1** — No cabo, e é TESTEMUNHA. Não mexa nos botões de modo dele. Fale perto dele no passo 16 e confira que a barrinha do cartão do rádio que está aberto não reage.
-* **P2** — No cabo, e é a segunda testemunha. Mesmo gesto do P1. Se falar perto de um controle do cabo mexer a barrinha de um do rádio, alguma coisa está entregando o som do controle errado.
-* **P3** — No rádio, e é o primeiro. Ponha "Virtual", fale, confira a barrinha e o programa. Depois clique em "Nativo" só para anotar o que acontece, e volte para "Virtual" antes de sair.
-* **P4** — No rádio, e faz a sequência inteira igual. É a segunda prova do rádio, e a que revela o preço: com os dois microfones do rádio ligados ao mesmo tempo, repare se os botões dos dois começam a responder atrasados.
+* **P1** — No USB, e é TESTEMUNHA. Não mexa nele. A pílula dele fica como estava; a barrinha dele pode mexer quando você fala — o microfone dele também ouve a sala, e isso não reprova.
+* **P2** — No USB, e é a segunda testemunha. Mesma conferência do P1.
+* **P3** — No BT, e é o primeiro: o «Nativo» cinza, a pílula, a barrinha, o retorno, o mudo pelo plástico e o programa de fora.
+* **P4** — No BT, e é a segunda prova — e a que mostra os dois microfones do BT no ar juntos. Se só um dos dois chegar, anote qual.
 
-**A armadilha.** O botão "Nativo" num controle do rádio é a armadilha deste teste. Pelo rádio o controle não publica saída de som nenhuma — o DualSense não anuncia perfil de áudio por Bluetooth —, então no modo Nativo não há de onde o som sair, e silêncio ali é a resposta esperada, não defeito. Volte para "Virtual" antes de concluir qualquer coisa. Segunda: o microfone no rádio CUSTA. Com ele ligado, um controle do rádio troca parte dos turnos de resposta por turnos de som, e os turnos são do ADAPTADOR, divididos entre os controles ligados nele — com dois no rádio, cada um fica com cerca de metade. Então, se os botões do P3 e do P4 começarem a responder atrasados com os dois microfones ligados, isso é o preço, ele está medido, e vale anotar. Terceira: a prova desta célula parou no primeiro degrau pelo rádio — a ponte é montada e ninguém mediu o som saindo. Qualquer coisa que você ouvir aqui é mais do que já foi medido, e "não saiu som" é resultado legítimo para anotar.
+**A armadilha.** O «Nativo» cinza é o certo: pelo BT o controle não publica microfone próprio, e o som só chega pelo Hefesto. O microfone no BT custa: com ele no ar, o controle troca parte dos turnos de resposta por turnos de som, e os turnos são do adaptador, divididos entre os controles ligados nele — se os botões do P3 e do P4 responderem atrasados com os dois microfones no ar, é o preço, e vale anotar. O 🎙 não cala o microfone: ele é o retorno, e quem cala é o botão do plástico; se ele recusar com um recado laranja, o microfone está no mudo. O degrau: esta célula está em «saiu no fio» pelo BT; o retorno e o programa de fora são os dois degraus acima.
 
 ---
 
@@ -689,37 +674,37 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.microfone.mudo @ cabo`
 
-**O que isto prova.** Prova que calar o microfone pela tela cala o controle escolhido e só ele, nos dois do cabo, e que a luz vermelha do plástico conta a mesma história.
+**O que isto prova.** Prova que o botão de microfone de cada controle do USB cala aquele controle, e só ele, no próprio aparelho — e que a luz do botão, a pílula da tela e o som que chega ao computador contam a mesma história.
 
-**Onde olhar.** No aparelho: o botão de microfone é o botãozinho de mudo no plástico, logo abaixo do touchpad, e ele tem uma luz vermelha. Na tela, aba Controles, com o cartão aberto, bloco Microfone: o selo ao lado da palavra Microfone (ATIVO, MUDO ou um travessão), a barrinha de ondas e o botão 🎙, que é o de calar.
+**Onde olhar.** No aparelho, o botão de microfone é o botãozinho logo abaixo do botão PS, e a luz dele segue a regra desta casa: acesa é microfone ligado, apagada é mudo. Na aba Controles, no bloco Microfone do cartão: a pílula ao lado da palavra Microfone (ATIVO, DESLIGADO ou um travessão), a barrinha de ondas, e o 🎙 ao lado do número do Volume, que liga o retorno — aceso em verde, você se ouve na TV. Com o cartão fechado, a linha de cada controle também mostra a pílula do Microfone.
 
 **Os passos.**
 
-1. Abra o Hefesto e clique na aba Controles.
-2. Clique na linha de cada um dos quatro controles, um por vez, e anote o que diz o selo do Microfone de cada um.
-3. Clique na linha do P1 para deixar o cartão dele aberto.
-4. Fale perto do P1 e confira que a barrinha de ondas mexe.
-5. Clique no 🎙 do bloco Microfone do P1.
-6. Olhe a luz vermelha do botão de microfone no plástico do P1 e ANOTE o que ela fez.
-7. Leia o selo do P1 e confira que ele passou a dizer MUDO.
-8. Fale perto do P1 e confira que a barrinha parou de mexer.
-9. Abra os cartões do P2, do P3 e do P4, um por vez, e confira que os selos deles não mudaram.
-10. Volte ao cartão do P1 e clique no 🎙 de novo.
-11. Confira que o selo do P1 voltou a dizer ATIVO e que a barrinha volta a mexer quando você fala.
-12. Clique na linha do P2 e repita do passo 4 ao 11 nele.
-13. Confira que os quatro selos voltaram ao que diziam no passo 2.
-14. Feche a janela do Hefesto no X e abra-a de novo, para devolver o mudo ao botão do plástico.
+1. Clique na aba Controles.
+2. Clique em «Todos», na fita do topo, e anote o que a pílula do Microfone de cada um dos quatro diz — é o ponto de partida.
+3. Clique na linha do P1 para abrir o cartão dele.
+4. Clique no 🎙 do Microfone do P1 e fale perto dele: a sua voz tem de sair na TV.
+5. Aperte uma vez o botão de microfone no plástico do P1.
+6. Confira que a luz desse botão apagou e que a pílula do Microfone do P1 passou a DESLIGADO.
+7. Fale perto do P1 e confira que a voz parou de sair na TV e que a barrinha de ondas do Microfone ficou parada.
+8. Clique em «Todos» e confira que as pílulas do P2, do P3 e do P4 não mudaram.
+9. Espere um segundo e aperte o botão do plástico do P1 de novo.
+10. Confira que a luz acendeu e que a pílula voltou a ATIVO.
+11. Se o 🎙 apagou sozinho durante o mudo, clique nele de novo; fale e confira que a voz voltou a sair na TV.
+12. Clique no 🎙 do P1 para apagar o retorno.
+13. Clique na linha do P2 e refaça nele a mesma rodada, do 🎙 aceso até apagá-lo.
+14. Confira que as quatro pílulas voltaram ao que diziam no começo.
 
-**Passa quando.** No P1 e no P2 o clique no 🎙 cala AQUELE controle: o selo passa a MUDO, a barrinha para de mexer e a luz vermelha do plástico muda. Os outros três não se mexem. Clicar de novo traz de volta. E a luz vermelha faz a mesma coisa nos dois controles do cabo — se ela acende quando o selo diz MUDO num, tem de acender no outro também.
+**Passa quando.** No P1 e no P2 cada aperto cala ou devolve AQUELE controle: com o mudo, a luz apaga, a pílula diz DESLIGADO, a barrinha para e a voz some da TV; com o segundo aperto, tudo volta. As pílulas dos outros três não se mexem, e no fim as quatro dizem o que diziam no começo.
 
 **Por controle.**
 
-* **P1** — No cabo, e é ELE que você cala primeiro. Antes de clicar, fale perto dele e veja a barrinha; depois de clicar, anote o que a luz vermelha fez e confira o selo. Clique de novo para desfazer.
-* **P2** — No cabo, e faz a mesma sequência. Antes de clicar nele, olhe onde estão os quatro selos: o erro que este teste caça é calar UM e outro emudecer junto, e isso só se enxerga sabendo o de antes.
-* **P3** — No rádio, e é TESTEMUNHA. Não clique no 🎙 dele nem aperte o botão do plástico dele. O selo dele tem de ficar parado enquanto você cala os do cabo.
-* **P4** — No rádio, e é a segunda testemunha. Mesma conferência do P3. Se o P3 ficou parado e o P4 mudou, não é o transporte — é alguma coisa escrevendo no controle errado.
+* **P1** — No USB, e é ELE que você cala primeiro, com o retorno ligado para ouvir o silêncio acontecer.
+* **P2** — No USB, e faz a mesma rodada. Antes de apertar, olhe as quatro pílulas: o erro que este teste caça é calar UM e outro emudecer junto, e isso só se enxerga sabendo o de antes.
+* **P3** — No BT, e é TESTEMUNHA. Não aperte o botão dele. A pílula dele tem de ficar parada enquanto você cala os do USB.
+* **P4** — No BT, e é a segunda testemunha. Se o P3 ficou parado e o P4 mudou, alguma coisa está escrevendo no controle errado.
 
-**A armadilha.** O 🎙 da TELA tira o mudo do botão do plástico e NÃO devolve: a partir do clique quem manda no mudo daquele controle é o Hefesto, e o botão do plástico para de valer. É por isso que o último passo fecha e reabre a janela. Se você fizer este teste antes do teste do botão físico e não reabrir, o segundo dá vermelho sobre um controle são. Segunda: são DOIS mudos em série e só um é nosso — o próprio sistema, ao ver o botão do plástico ser apertado, vira o mudo do aparelho por conta própria, sem pedir licença a ninguém. Então um selo que muda sem você ter clicado em nada pode ser ele, e não o Hefesto. Terceira: a prova desta célula parou no primeiro degrau; que o comando é montado e enviado ninguém duvida, e o que você mede aqui — a luz vermelha e a barrinha — é o degrau acima. Por isso o passo 6 manda ANOTAR o que a luz fez, em vez de esperar um sentido: a dica do 🎙 descreve o caminho da tela, não o do botão do plástico, e se os dois discordarem isso é o achado.
+**A armadilha.** Na tela não há botão de calar o microfone: o 🎙 é o retorno, e o deslizante de Volume também não cala — a luz fica acesa. O mudo é do botão do plástico: é o sistema que, ao ver o aperto, cala o microfone dentro do próprio controle, e o Hefesto lê esse mudo para pintar a pílula e acender ou apagar a luz. Dê um segundo entre um aperto e o seguinte no mesmo controle: apertos mais rápidos são engolidos de propósito. Uma pílula em travessão não é ATIVO nem DESLIGADO — anote e não conte como passa. O 🎙 pode apagar sozinho quando o microfone vai ao mudo — o retorno fica sem o que ouvir —, e é por isso que o passo depois do segundo aperto manda ligá-lo de novo. Se ele recusar com um recado laranja, o microfone ainda está no mudo: aperte o botão do plástico antes. E a prova desta célula parou em «montou»; esta rodada é a do aparelho.
 
 ---
 
@@ -727,40 +712,36 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.microfone.mudo @ rádio`
 
-**O que isto prova.** Prova que calar o microfone pela tela cala o controle escolhido nos dois do rádio, e mede se esse mudo sobrevive a uma queda e uma volta.
+**O que isto prova.** Prova que o botão de microfone de cada controle do BT cala aquele controle, e só ele, e mede se esse mudo sobrevive a uma queda e uma volta.
 
-**Onde olhar.** No aparelho: o botãozinho de mudo no plástico, logo abaixo do touchpad, com a luz vermelha; e o botão PS, o redondo do meio de baixo, entre os analógicos. Na tela, aba Controles, com o cartão aberto, bloco Microfone: o selo ao lado da palavra Microfone (ATIVO, MUDO ou travessão), a barrinha de ondas e o botão 🎙.
+**Onde olhar.** No aparelho: o botão de microfone logo abaixo do botão PS, com a luz acesa no microfone ligado e apagada no mudo; e o botão PS, o redondo do meio, entre os dois analógicos. Na aba Controles, no bloco Microfone do cartão: a pílula ao lado da palavra Microfone (ATIVO, DESLIGADO ou um travessão), a barrinha de ondas e o 🎙 ao lado do número do Volume, que liga o retorno — aceso em verde, você se ouve na TV.
 
 **Os passos.**
 
-1. Abra a aba Controles.
-2. Leia o selo do Microfone dos quatro controles, um cartão por vez e terminando no P3, e anote o que cada um diz — é o ponto de partida.
-3. Fale perto do P3.
-4. Confira que a barrinha de ondas do cartão dele mexe.
-5. Clique no 🎙 do bloco Microfone do P3.
-6. Veja a luz vermelha do botão de microfone no plástico do P3 e ANOTE o que ela fez.
-7. Leia o selo do P3: ele tem de passar a dizer MUDO.
-8. Confira, falando perto do P3 outra vez, que a barrinha parou de mexer.
-9. Confira, abrindo o cartão de cada um, que os selos do P1, do P2 e do P4 não mudaram.
-10. Desligue o P3 segurando o botão PS até TODAS as luzes dele apagarem.
-11. Religue o P3 segurando o botão PS por cerca de cinco segundos, até a barra de luz acender.
-12. Clique na linha do P3 para reabrir o cartão dele.
-13. Leia o selo do Microfone do P3 e ANOTE o que ele diz agora — esta é a entrega do teste.
-14. Veja a luz vermelha do plástico do P3 e anote o que ela está fazendo.
-15. Clique no 🎙 do P3 até o selo voltar a dizer ATIVO.
-16. Repita no P4 tudo o que você fez no P3, do "fale perto" até o selo de volta em ATIVO.
-17. Feche a janela do Hefesto no X e abra-a de novo, para devolver o mudo ao botão do plástico.
+1. Clique na aba Controles.
+2. Clique em «Todos», na fita do topo, e anote o que a pílula do Microfone de cada um dos quatro diz — é o ponto de partida.
+3. Clique na linha do P3 para abrir o cartão dele.
+4. Clique no 🎙 do Microfone do P3 e fale perto dele: a sua voz tem de sair na TV.
+5. Aperte uma vez o botão de microfone no plástico do P3.
+6. Confira que a luz desse botão apagou e que a pílula do Microfone do P3 passou a DESLIGADO.
+7. Fale perto do P3 e confira que a voz parou de sair na TV e que a barrinha de ondas ficou parada.
+8. Clique em «Todos» e confira que as pílulas do P1, do P2 e do P4 não mudaram.
+9. Desligue o P3 segurando o botão PS até TODAS as luzes dele apagarem.
+10. Religue o P3 apertando o botão PS e espere a linha dele voltar à aba.
+11. Anote o que a pílula do Microfone do P3 diz agora e se a luz do botão de microfone dele está acesa ou apagada — esta é a entrega do teste.
+12. Aperte o botão do plástico do P3 até a pílula dizer ATIVO, e apague o 🎙 do P3 se ele ainda estiver verde.
+13. Clique na linha do P4 e refaça nele a mesma rodada, do 🎙 aceso até a anotação depois da volta.
 
-**Passa quando.** No P3 e no P4 o clique no 🎙 cala aquele controle — selo em MUDO, barrinha parada, luz vermelha mudando — e os outros três não se mexem. E a entrega deste teste é o que você anotou depois da queda e da volta: o que o selo e a luz vermelha do P3 fizeram quando ele voltou.
+**Passa quando.** No P3 e no P4 o aperto cala aquele controle — luz apagada, pílula DESLIGADO, voz fora da TV — e os outros três não se mexem. E a entrega deste teste é o que você anotou depois da queda e da volta: a pílula e a luz de cada um quando ele voltou.
 
 **Por controle.**
 
-* **P1** — No cabo, e é TESTEMUNHA. Não clique no 🎙 dele. O selo dele tem de ficar parado, inclusive durante a queda e a volta do P3.
-* **P2** — No cabo, e é a segunda testemunha. Mesma conferência do P1. Se um controle do cabo emudecer junto com um do rádio, o comando pegou mais de um.
-* **P3** — No rádio, e é ELE que você cala e depois desliga e religa. É aqui que o defeito conhecido do rádio aparece, e é por isso que o selo e a luz lidos DEPOIS da volta são a entrega.
-* **P4** — No rádio, e faz a sequência inteira igual, inclusive a queda e a volta. Se um perder o mudo e o outro não, anote qual — é o dado que diz se a perda é do rádio ou daquele aparelho.
+* **P1** — No USB, e é TESTEMUNHA. Não aperte o botão dele. A pílula dele fica parada, inclusive durante a queda e a volta do P3.
+* **P2** — No USB, e é a segunda testemunha. Se um controle do USB emudecer junto com um do BT, o comando pegou mais de um.
+* **P3** — No BT, e é ELE que você cala e depois desliga e religa. A pílula e a luz lidas DEPOIS da volta são a entrega.
+* **P4** — No BT, e faz a mesma rodada, inclusive a queda e a volta. Se um voltar calado e o outro não, anote qual.
 
-**A armadilha.** Este é o defeito conhecido do rádio, e ele está MEDIDO: o que segura o mudo vive no vínculo entre o Hefesto e o aparelho, e pelo rádio esse vínculo se refaz a cada reconexão — em 03/08/2026 o mudo pedido evaporou na volta e o pedido não foi junto. A cura foi PROPOSTA e não feita. Então um mudo que se desfaz sozinho depois da queda é o resultado esperado desta linha, não erro seu: anote a hora e siga. O que reprovaria de verdade é o clique não calar nada, ou calar o controle errado. Segunda: o 🎙 da tela tira o mudo do botão do plástico e não devolve — feche e reabra o Hefesto no fim, senão o próximo teste que usar o botão físico dá vermelho sobre um controle são. Terceira: para desligar, segure o PS até as luzes APAGAREM; cerca de cinco segundos é lido como toque curto e abre a Steam. Se abrir, feche-a e refaça o ato.
+**A armadilha.** O mudo mora no vínculo com o aparelho, e pelo BT esse vínculo se refaz a cada reconexão: um mudo que se desfaz sozinho na volta é o resultado esperado de hoje, não erro seu — anote a hora e siga. O que reprova de verdade é o aperto não calar nada, ou calar o controle errado. O retorno cai junto com o controle e não volta sozinho; é por isso que o passo depois da volta manda conferir o 🎙. Para desligar, segure o PS até as luzes apagarem de verdade: soltar antes é lido como toque, e o toque abre a Steam — se ela abrir, feche-a e refaça. Dê um segundo entre um aperto e o seguinte no mesmo controle.
 
 ---
 
@@ -768,38 +749,34 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.saida_dedicada @ cabo`
 
-**O que isto prova.** Prova que cada controle no cabo entra no computador com uma saída de som PRÓPRIA — uma por controle, não uma para os dois.
+**O que isto prova.** Prova que cada controle do USB tem uma saída de som PRÓPRIA — uma por controle, com o número certo —, e que o exame do Hefesto conta as placas de som dos dois.
 
-**Onde olhar.** Na aba Sistema, na seção "O exame de hoje": a linha do áudio, que conta as saídas de som dos controles no cabo; ela é cortada na tela, então passe o mouse em cima para ler a frase inteira. Na mesma seção, a linha da regra de áudio desligado, que quando ativa mata o microfone e o fone de todos os controles do cabo. E na aba Controles, no cartão de cada controle, o rótulo do bloco Alto-falante, que ganha o sufixo "· acordado" ou "· dormindo" — esse sufixo só existe quando há saída de som daquele controle, e nos do rádio ele não aparece.
+**Onde olhar.** Na aba Sistema, na seção «O exame de hoje»: a linha que começa com «áudio presente», que conta as placas de som dos controles no USB; a que começa com «regra áudio-off», que diz se o microfone e o fone deles estão liberados — as duas são cortadas na tela, então pare o mouse em cima para ler a frase inteira —; e a que começa com «Som do sistema», que diz por onde o som do computador está saindo. Fora do Hefesto, a lista de saídas das configurações de Som do sistema, onde cada controle tem a sua saída «Alto-falante do Controle N», com o número do jogador.
 
 **Os passos.**
 
-1. Confira na fita do topo que P1 e P2 dizem cabo e que P3 e P4 dizem rádio.
-2. Abra o Hefesto e clique na aba Sistema.
-3. Ache a seção "O exame de hoje".
-4. Passe o mouse na linha do áudio e leia a frase inteira.
-5. Confira que ela conta DOIS controles no cabo, e não um.
-6. Passe o mouse na linha da regra de áudio desligado e leia a frase inteira, até o fim.
-7. Clique na aba Controles e clique na linha do P1.
-8. Leia o rótulo do bloco Alto-falante e confira que ele traz "· acordado" ou "· dormindo".
-9. Clique na linha do P2 e confira o mesmo.
-10. Clique na linha do P3 e confira que o rótulo NÃO traz nenhum dos dois.
-11. Clique na linha do P4 e confira o mesmo.
-12. Puxe o cabo de dentro do P2.
-13. Volte à aba Sistema e leia a linha do áudio de novo: ela tem de passar a contar UM controle no cabo.
-14. Encaixe o cabo do P2 de volta.
-15. Volte à aba Sistema e confira que a linha voltou a contar dois.
+1. Clique na aba Sistema.
+2. Na seção «O exame de hoje», pare o mouse na linha que começa com «áudio presente» e leia a frase inteira.
+3. Confira que ela conta os 2 controles do USB.
+4. Pare o mouse na linha que começa com «regra áudio-off» e leia a frase inteira.
+5. Clique na aba Controles e confira que o P1 e o P2 estão com «Efeitos do Jogo no Controle, Áudio da TV na TV» aceso.
+6. Abra as configurações de Som do sistema e escolha como saída a que começa com «Alto-falante do Controle 1».
+7. Toque uma música no computador e confira, com o ouvido, que ela sai pelo P1 e não sai na TV nem no P2.
+8. Escolha como saída a que começa com «Alto-falante do Controle 2» e confira que a música passou para o P2, e só para ele.
+9. Encoste o ouvido no P3 e depois no P4 e confirme que os dois estão mudos.
+10. Clique na aba Sistema e confira que a linha que começa com «Som do sistema» diz, em poucos segundos, que o som sai em «Alto-falante do Controle 2».
+11. Devolva a saída do sistema para a TV e confira que a música voltou para ela e que o P1 e o P2 emudeceram.
 
-**Passa quando.** A linha do áudio do exame conta exatamente quantos controles estão no cabo: dois com os dois plugados, um depois de você puxar o cabo do P2, e dois de novo quando ele volta. O rótulo do bloco Alto-falante traz o sufixo "· acordado" ou "· dormindo" no P1 e no P2, e NÃO traz nem um nem outro no P3 e no P4.
+**Passa quando.** A linha «áudio presente» conta os 2 controles do USB e a da regra de áudio diz que eles estão liberados. Escolhida a saída «Alto-falante do Controle 1», a música sai só no P1; escolhida a do 2, só no P2; a aba Sistema diz para onde o som foi; e, devolvida a saída para a TV, os dois emudecem. O P3 e o P4 ficam mudos.
 
 **Por controle.**
 
-* **P1** — No cabo, e fica plugado o tempo todo. Ele é o que sobra na conta quando você puxa o cabo do P2 — se a conta continuar dizendo dois com só ele plugado, ela não está contando de verdade.
-* **P2** — No cabo, e é ELE que você desplugua e replugua. Esse gesto é o coração do teste: sem puxar um cabo, uma conta certa e uma conta errada ficam idênticas na tela.
-* **P3** — No rádio, e é TESTEMUNHA. Confira que o rótulo do bloco Alto-falante dele não traz sufixo nenhum, e que ele nunca entra na conta do exame.
-* **P4** — No rádio, e é a segunda testemunha. Mesma conferência do P3. Se um controle do rádio aparecer na conta dos do cabo, isso é achado.
+* **P1** — No USB, e é o primeiro a receber a saída do sistema. A música tem de sair nele e em nenhum outro.
+* **P2** — No USB, e recebe a saída depois. É ele que prova que o número não está trocado: o «2» tem de tocar no P2, e não no P1.
+* **P3** — No BT, e é TESTEMUNHA. Não entra na conta do exame e fica mudo o tempo todo.
+* **P4** — No BT, e é a segunda testemunha. Mesma conferência do P3.
 
-**A armadilha.** Esta linha já deu VERDE sobre um controle valendo por quatro: ela procurava a palavra do modelo no texto inteiro e um único controle respondia por todos. Hoje ela CONTA — e é exatamente por isso que o passo 12 puxa um cabo: sem puxar, uma conta errada é indistinguível de uma certa. Segunda: as frases dessa seção são CORTADAS na tela, e no caso da regra de áudio o corte INVERTE o sentido — o que sobra ao lado do selo se lê como problema, e as duas metades escondidas são justamente "estão liberados" e "o que fazer: nada". Passe sempre o mouse. Terceira: o sufixo "· acordado" faltando nos do rádio não é leitura faltando, é o produto dizendo honestamente que não sabe — no rádio o controle não publica saída de som nenhuma. E a prova desta célula parou no primeiro degrau e está marcada como parcial: o que se mediu foi o controle ANUNCIAR a saída própria, não tudo o que ela consegue fazer.
+**A armadilha.** As frases do exame são cortadas, e no caso da regra de áudio o corte inverte o sentido: o que sobra ao lado do selo se lê como problema, e o «estão liberados» fica escondido — pare sempre o mouse em cima. As duas placas DualSense do USB têm o mesmo nome e não dizem qual é qual: é por isso que existe «Alto-falante do Controle N», e o que este teste mede é o número cair no controle certo. O número do nome só se renova com aquele controle em silêncio: se o «2» tocar no P1 logo depois de os jogadores trocarem de lugar, pare a música, espere uns segundos e escolha a saída de novo antes de reprovar. Deixe o P1 e o P2 no botão de cima: com o do meio, o outro controle também receberia a música mandada ao primeiro, e o teste não diria mais de onde ela veio. Devolva a saída para a TV no fim — se esquecer, o computador continua tocando só no controle. E a prova desta célula parou em «montou», e está marcada como parcial.
 
 ---
 
@@ -807,37 +784,32 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.saida_dedicada @ rádio`
 
-**O que isto prova.** Prova que, pelo rádio, o Hefesto não inventa uma saída de som do controle — e diz isso com uma frase no cartão, em vez de deixar a tela muda.
+**O que isto prova.** Prova que cada controle do BT também tem uma saída de som PRÓPRIA, criada pelo Hefesto, e que o som mandado a ela sai só naquele controle, pelo fio do BT.
 
-**Onde olhar.** Na aba Controles, no cartão do P3 e no do P4, bloco Alto-falante: a linha de ressalva embaixo dos dois botões de rota, que tem de dizer "Pelo rádio o Hefesto ainda não faz o som sair neste alto-falante."; e o rótulo do bloco, que nos do rádio não traz "· acordado" nem "· dormindo". Na aba Sistema, seção "O exame de hoje", a linha do áudio, que só conta os controles do cabo. E o ouvido encostado nos nove furinhos da frente do controle.
+**Onde olhar.** Fora do Hefesto, a lista de saídas das configurações de Som do sistema: cada controle do BT tem ali a sua saída «Alto-falante do Controle N», com o número do jogador, e nenhuma placa DualSense — pelo BT o controle não publica placa de som, e quem leva o som até ele é o Hefesto. Na aba Sistema, em «O exame de hoje», a linha que começa com «Som do sistema» diz por onde o som do computador está saindo. E o ouvido encostado nos nove furinhos da frente do controle.
 
 **Os passos.**
 
-1. Confira na fita do topo que P3 e P4 dizem rádio e que não há cabo plugado neles.
-2. Abra o Hefesto e clique na aba Controles.
-3. Clique na linha do P3 para abrir o cartão dele.
-4. Leia a linha embaixo dos botões "Sons do jogo" e "Todo o som do PC" e anote a frase inteira.
-5. Leia o rótulo do bloco Alto-falante e confira que ele não traz "· acordado" nem "· dormindo".
-6. Arraste o volume do alto-falante do P3 até 100.
-7. Clique em "Todo o som do PC" no bloco do P3.
-8. Toque uma música e encoste o ouvido no P3.
-9. Anote se saiu som.
-10. Clique em "Sons do jogo" no bloco do P3.
-11. Clique na linha do P4 e repita do passo 4 ao 10 nele.
-12. Clique na linha do P1 e confira que o cartão dele NÃO tem essa linha de ressalva.
-13. Encoste o ouvido no P1 e confirme que nele o som sai.
-14. Clique na aba Sistema e leia a linha do áudio da seção "O exame de hoje": ela só pode contar os do CABO.
+1. Clique na aba Controles.
+2. Confira na fita do topo que P3 e P4 dizem BT, e que os dois estão com «Efeitos do Jogo no Controle, Áudio da TV na TV» aceso.
+3. Abra as configurações de Som do sistema e confira que há uma saída que começa com «Alto-falante do Controle 3» e outra com «Alto-falante do Controle 4».
+4. Escolha como saída a que começa com «Alto-falante do Controle 3».
+5. Toque uma música no computador e confira, com o ouvido, que ela sai pelo P3 e não sai na TV nem no P4.
+6. Escolha como saída a que começa com «Alto-falante do Controle 4» e confira que a música passou para o P4, e só para ele.
+7. Encoste o ouvido no P1 e depois no P2 e confirme que os dois estão mudos.
+8. Clique na aba Sistema e confira que a linha que começa com «Som do sistema» diz, em poucos segundos, que o som sai em «Alto-falante do Controle 4».
+9. Devolva a saída do sistema para a TV e confira que a música voltou para ela e que o P3 e o P4 emudeceram.
 
-**Passa quando.** A frase de ressalva aparece nos cartões do P3 e do P4, e NÃO aparece nos do P1 e do P2. Os dois do rádio ficam mudos mesmo com o volume em 100 e com "Todo o som do PC" aceso. O P1, no cabo, toca. E a linha do áudio do exame conta só os controles do cabo.
+**Passa quando.** A lista de saídas do sistema tem uma saída própria para o P3 e outra para o P4. Escolhida uma delas, a música sai só naquele controle, pelo BT; a aba Sistema diz para onde o som foi; e, devolvida a saída para a TV, os dois emudecem. O P1 e o P2 ficam mudos.
 
 **Por controle.**
 
-* **P1** — No cabo, e é o CONTROLE DE COMPARAÇÃO. Nele o som tem de sair e a linha de ressalva não pode aparecer. Sem essa metade, o silêncio no P3 não prova nada — pode ser volume do sistema ou saída errada.
-* **P2** — No cabo, e é testemunha. Não mexa nele. Só confira que o cartão dele também não tem a linha de ressalva do rádio.
-* **P3** — No rádio, e é o primeiro que você examina. Leia a frase inteira, confira o rótulo sem sufixo, ponha o volume em 100, escute, e devolva o som às caixas no fim.
-* **P4** — No rádio, e faz o mesmo. É a segunda prova do rádio: a frase tem de aparecer nele também, não só num dos dois.
+* **P1** — No USB, e é TESTEMUNHA. Não mexa nele. Se ele tocar a música mandada ao P3, o som pegou o controle errado.
+* **P2** — No USB, e é a segunda testemunha. Mesma conferência do P1.
+* **P3** — No BT, e é o primeiro a receber a saída do sistema. A música tem de sair nele e em nenhum outro.
+* **P4** — No BT, e recebe a saída depois. É ele que prova que o número não está trocado: o «4» tem de tocar no P4, e não no P3.
 
-**A armadilha.** O silêncio no rádio é a resposta CERTA, e a frase no cartão é a entrega deste teste — um produto calado sobre isso, com os botões acesos e nada saindo, é exatamente o que esta linha existe para impedir. E a redação da frase importa: ela diz que o HEFESTO ainda não faz, não que o controle não consegue. A dívida é nossa; o alto-falante existe e ela já o ouviu pelo cabo. Ninguém desta casa pode escrever que "descobrimos o som por Bluetooth" ou que "a ponte funciona": não há ponte, há um canal que responde — e concluir que um canal FAZ o que a gente esperava só porque ele responde é o erro que esta linha nomeia. Segunda: não confira isto com um cabo plugado no P3 "só para ver" — com o cabo ele muda de lado e a frase some, corretamente. Terceira: se um dia a ressalva sumir sozinha, isso não é defeito: a frase é lida do mapa, e no dia em que a medição virar ela desaparece sem ninguém tocar em nada.
+**A armadilha.** A página pode chegar com «nada» já marcado nesta célula: é a pré-marca herdada do mapa, que ainda guarda a medição de antes de 10/09, quando pelo BT o som não saía. Troque-a pelo que você ouviu. O número do nome só se renova com aquele controle em silêncio: se o «4» tocar no P3 logo depois de os jogadores trocarem de lugar, pare a música, espere uns segundos e escolha a saída de novo antes de reprovar. Deixe o P3 e o P4 no botão de cima: com o do meio, o outro controle também receberia a música mandada ao primeiro. No BT o começo da música pode demorar um instante enquanto o fio acorda — espere antes de concluir que não saiu. Devolva a saída para a TV no fim; se esquecer, o computador continua tocando só no controle. E ninguém desta casa pode escrever que «descobriu o som pelo BT» a partir de um canal que responde: o que decide é o ouvido, com o som saindo do controle certo e de nenhum outro.
 
 ---
 
