@@ -27,10 +27,16 @@ AS QUATRO LINHAS, uma por chave `.jogo` do mapa
 chave                              o nosso                     o jogo (a Forja)
 =================================  ==========================  =============================
 ``audio.alto_falante.jogo``        o tom no nó do controle     o MESMO tom, achado pelo nome
-``audio.microfone.jogo``           o nível do nó do controle   a Forja na sala Voz (F5)
+``audio.microfone.jogo``           o nível do nó do controle   a Voz (F5), ESTE de padrão
 ``gatilho.direito.adaptativo.jogo`` o degrau do mapa            a Forja na Galeria (R2)
 ``vibracao.rumble.jogo``           o degrau do mapa            a Forja no Impacto (motores)
 =================================  ==========================  =============================
+
+O JOGO OUVE O MICROFONE PADRÃO, e não o da coluna: é assim que um jogo pede, e
+é o que a Forja faz. Então a sala Voz só abre na coluna do controle cujo
+microfone é o padrão AGORA — aberta na coluna do P3 com o P1 de padrão, a barra
+subiria com a voz dela no P1 e o «vi no jogo» iria para o P3 (conferente,
+24/09/2026). A pergunta é uma só, feita no clique, e só lê.
 
 Nas duas de baixo o positivo JÁ está medido (`O APARELHO OBEDECEU`, no mapa);
 a folha o lê do dono em vez de mandar um gatilho pelo daemon, que gravaria no
@@ -282,6 +288,8 @@ class Gesto:
     pcm: bytes = b""
     recusa: str = ""
     fica_aberto: bool = False  #: a janela do jogo, que ela fecha quando acabar
+    #: o nó que TEM de ser o microfone padrão para o jogo ouvir ESTE controle
+    ouve_o_padrao: str = ""
 
     @property
     def texto(self) -> str:
@@ -336,11 +344,53 @@ def gesto_do_jogo(p: Pergunta, c: Controle, forja: Forja) -> Gesto:
         )
     if falta:
         return Gesto(f"Abrir a Forja ({p.sala})", recusa=falta)
+    if p.nosso == "nivel" and not c.no_do_microfone:
+        return Gesto(f"Abrir a Forja ({p.sala})", recusa="controle sem identidade legível")
     return Gesto(
         f"Abrir a Forja ({p.sala})",
         argv=[str(forja.godot), "--path", str(forja.raiz / "godot"), "--", f"--sala={p.sala}"],
         fica_aberto=True,
+        # O jogo ouve o PADRÃO: sem isto, a sala Voz aberta na coluna do P3
+        # mede o microfone de quem for o padrão — o P1, quase sempre.
+        ouve_o_padrao=c.no_do_microfone if p.nosso == "nivel" else "",
     )
+
+
+def microfone_padrao() -> str:
+    """O microfone PADRÃO do sistema agora — o que o jogo vai ouvir. Só lê.
+
+    ``""`` quando o servidor não responde: aí a folha não sabe quem o jogo
+    ouviria, e recusa em vez de adivinhar. ``LC_ALL=C`` pela regra da casa (o
+    ``pactl`` dela traduz), mesmo sendo um nome de nó.
+    """
+    if shutil.which("pactl") is None:
+        return ""
+    try:
+        feito = subprocess.run(
+            ["pactl", "get-default-source"], capture_output=True, text=True, timeout=5,
+            check=False, env={**os.environ, "LC_ALL": "C"},
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return feito.stdout.strip() if feito.returncode == 0 else ""
+
+
+def recusa_do_padrao(g: Gesto, padrao: str) -> str:
+    """Por que o jogo NÃO ouviria este controle — ``""`` quando ouviria.
+
+    Não diz o nome do padrão de agora: ele leva o rabo do endereço de outro
+    controle, e a célula só mostra o que sai mascarado.
+    """
+    if not g.ouve_o_padrao:
+        return ""
+    if not padrao:
+        return "não consegui perguntar qual é o microfone padrão: o jogo ouviria um que eu não sei"
+    if padrao != g.ouve_o_padrao:
+        return (
+            "o jogo ouve o microfone PADRÃO, e o padrão agora é outro: escolha o deste "
+            "controle como entrada nas configurações de Som e abra de novo"
+        )
+    return ""
 
 
 def degrau_do_mapa(chave: str, transporte: str) -> str:
@@ -418,26 +468,33 @@ def _pico_em_db(bruto: bytes) -> float:
     return -80.0 if pico == 0 else max(20.0 * math.log10(pico / 32768.0), -80.0)
 
 
-def executar(g: Gesto) -> str:
-    """Roda o gesto e devolve o que ela precisa ler na célula."""
+def executar(g: Gesto) -> tuple[str, bool]:
+    """Roda o gesto: o que ela precisa ler na célula, e se ele RODOU.
+
+    O gesto recusado não conta para a linha do caderno — um «vi no jogo» não
+    pode sair apoiado num comando que nem rodou.
+    """
     if not g.argv:
-        return g.recusa
+        return g.recusa, False
     if shutil.which(g.argv[0]) is None and not os.access(g.argv[0], os.X_OK):
-        return f"{g.argv[0]} não está nesta máquina"
+        return f"{g.argv[0]} não está nesta máquina", False
+    recusa = recusa_do_padrao(g, microfone_padrao()) if g.ouve_o_padrao else ""
+    if recusa:
+        return recusa, False
     if g.fica_aberto:
         subprocess.Popen(g.argv, start_new_session=True)
-        return "a Forja abriu — faça o gesto nela, e feche quando acabar"
+        return "a Forja abriu — faça o gesto nela, e feche quando acabar", True
     if g.argv[0] == "parec":
         proc = subprocess.Popen(g.argv, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         time.sleep(SEGUNDOS_DO_MICROFONE)
         proc.terminate()  # o processo que ESTE gesto abriu, pelo objeto — nunca por nome
         bruto, _ = proc.communicate(timeout=5)
-        return f"pico {_pico_em_db(bruto):.0f} dB em {SEGUNDOS_DO_MICROFONE:g} s"
+        return f"pico {_pico_em_db(bruto):.0f} dB em {SEGUNDOS_DO_MICROFONE:g} s", True
     feito = subprocess.run(
         g.argv, input=g.pcm or None, capture_output=True, timeout=15, check=False
     )
     saida = (feito.stdout + feito.stderr).decode("utf-8", "replace").strip().splitlines()
-    return f"rc={feito.returncode} · " + (" / ".join(saida[-2:]) if saida else "sem saída")
+    return f"rc={feito.returncode} · " + (" / ".join(saida[-2:]) if saida else "sem saída"), True
 
 
 class Folha:
@@ -520,16 +577,24 @@ class Folha:
     def _apertar(self, _b: Gtk.Button, p: Pergunta, c: Controle, g: Gesto) -> None:
         recado = self.recados[(p.chave, c.mac)]
         recado.set_text(f"{g.rotulo}…")
-        self.feitos.setdefault((p.chave, c.mac), []).append(g)
 
         def _no_fio() -> None:
             try:
-                texto = executar(g)
+                texto, rodou = executar(g)
             except (OSError, subprocess.SubprocessError) as erro:
-                texto = f"não rodou: {erro}"
-            GLib.idle_add(recado.set_text, f"{g.rotulo}: {texto}")
+                texto, rodou = f"não rodou: {erro}", False
+            GLib.idle_add(self._contar, p, c, g, rodou, recado, f"{g.rotulo}: {texto}")
 
         threading.Thread(target=_no_fio, daemon=True).start()
+
+    def _contar(
+        self, p: Pergunta, c: Controle, g: Gesto, rodou: bool, recado: Gtk.Label, texto: str
+    ) -> bool:
+        """No laço do GTK: o gesto que RODOU entra na conta da célula; o recado sempre."""
+        if rodou:
+            self.feitos.setdefault((p.chave, c.mac), []).append(g)
+        recado.set_text(texto)
+        return False
 
     def _gravar(self, _b: Gtk.Button, p: Pergunta, c: Controle, resultado: str) -> None:
         linha = linha_para_o_caderno(p, c, resultado, self.feitos.get((p.chave, c.mac), []))
