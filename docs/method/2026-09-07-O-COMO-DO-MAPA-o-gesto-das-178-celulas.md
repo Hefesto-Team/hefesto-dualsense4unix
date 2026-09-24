@@ -52,28 +52,29 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.saida_dedicada.payload_do_degrau @ cabo`
 
-**O que isto prova.** Prova que, no USB, o som do controle não passa pelo caminho do BT: o controle no USB tem placa de som própria, e o do BT só tem a saída que o Hefesto cria para ele.
+**O que isto prova.** Prova que, no USB, o som do controle não passa pelo caminho do BT: o controle no USB tem placa de som própria, e o do BT só tem as saídas que o Hefesto cria para ele.
 
-**Onde olhar.** Fora do Hefesto, na lista de saídas das configurações de Som do sistema. Cada controle tem ali uma saída que começa com «Alto-falante do Controle», com o número do jogador — é o Hefesto que a cria, nos dois transportes. O controle que está no USB aparece uma segunda vez, com a placa de som do próprio DualSense e o nome da Sony; o que está no BT não tem essa segunda entrada. No Hefesto, a fita do topo diz USB ou BT ao lado de cada controle.
+**Onde olhar.** Fora do Hefesto, na lista de saídas das configurações de Som do sistema. Cada controle tem ali uma saída que começa com «Alto-falante do Controle», com o número do jogador — é o Hefesto que a cria, nos dois transportes. Cada controle no BT tem também uma saída que começa com «Háptica do Controle», com o número dele: é por ela que o jogo acha a vibração, e ela também é do Hefesto. O controle que está no USB aparece uma segunda vez, com a placa de som do próprio DualSense e o nome da Sony; o que está no BT não tem essa segunda entrada. No Hefesto, a fita do topo diz USB ou BT ao lado de cada controle.
 
 **Os passos.**
 
 1. Confira na fita do topo que P1 e P2 dizem USB e que P3 e P4 dizem BT.
 2. Abra as configurações de Som do sistema, na parte das saídas.
 3. Confira que há uma saída «Alto-falante do Controle» com o número de cada um dos quatro: 1, 2, 3 e 4.
-4. Conte as saídas com o nome DualSense que não começam com «Alto-falante do Controle»: têm de ser duas.
-5. Feche as configurações de Som sem escolher nada.
+4. Confira que há uma saída que começa com «Háptica do Controle 3» e outra com «Háptica do Controle 4», e nenhuma «Háptica do Controle» com o número do P1 ou do P2.
+5. Conte as saídas com o nome DualSense que não começam com «Alto-falante do Controle» nem com «Háptica do Controle»: têm de ser duas.
+6. Feche as configurações de Som sem escolher nada.
 
-**Passa quando.** A lista tem uma saída «Alto-falante do Controle» com o número de cada um dos quatro e exatamente duas placas DualSense, as do P1 e do P2, que estão no USB. O P3 e o P4 não acrescentam placa nenhuma.
+**Passa quando.** A lista tem uma saída «Alto-falante do Controle» com o número de cada um dos quatro, uma «Háptica do Controle» com o número do P3 e outra com o do P4, e exatamente duas placas DualSense, as do P1 e do P2, que estão no USB. O P3 e o P4 não acrescentam placa nenhuma.
 
 **Por controle.**
 
-* **P1** — No USB: tem as duas entradas, a do Hefesto e a placa do próprio controle.
+* **P1** — No USB: tem as duas entradas, a do Hefesto e a placa do próprio controle. A vibração dele viaja pela placa, e por isso não há «Háptica do Controle 1».
 * **P2** — No USB: a mesma coisa. Se só uma placa DualSense aparecer, um dos dois do USB está sem som próprio — anote.
-* **P3** — No BT: só a entrada do Hefesto. É o CONTRASTE: o som dele viaja pelo fio do BT, e é esse fio que a pergunta desta linha examina.
-* **P4** — No BT, e é o segundo contraste. Mesma leitura do P3.
+* **P3** — No BT: só as entradas do Hefesto, a «Alto-falante do Controle 3» e a «Háptica do Controle 3». É o CONTRASTE: o som dele viaja pelo fio do BT, e é esse fio que a pergunta desta linha examina.
+* **P4** — No BT, e é o segundo contraste. Mesma leitura do P3, com o número 4.
 
-**A armadilha.** Do lado do USB esta pergunta não tem objeto: o conteúdo que viaja pelo fio do BT não passa por aqui, e não há o que clicar além de conferir o contraste. As duas placas DualSense têm o mesmo nome e não dizem qual é qual — não é defeito, é a razão de o Hefesto criar a saída com o número do jogador. Se as saídas do Hefesto vierem com «(DualSense Wireless Controller)» no fim do nome, é a forma nova do nome: elas continuam começando com «Alto-falante do Controle», e é só por esse começo que você conta. Uma saída «Alto-falante do Controle» SEM número é de um controle que já passou por aqui e saiu: o Hefesto a mantém para não tirar o dispositivo debaixo de um jogo que o tinha escolhido, e ela não entra na conta.
+**A armadilha.** Do lado do USB esta pergunta não tem objeto: o conteúdo que viaja pelo fio do BT não passa por aqui, e não há o que clicar além de conferir o contraste. As duas placas DualSense têm o mesmo nome e não dizem qual é qual — não é defeito, é a razão de o Hefesto criar as saídas com o número do jogador. As saídas do Hefesto também terminam com «(DualSense Wireless Controller)», e por isso a conta separa pelo começo do nome: o que começa com «Alto-falante do Controle» ou com «Háptica do Controle» é do Hefesto, e não entra. Uma saída «Alto-falante do Controle» SEM número é de um controle que já passou por aqui e saiu: o Hefesto a mantém para não tirar o dispositivo debaixo de um jogo que o tinha escolhido, e ela não entra na conta. O número da «Háptica do Controle» só se renova com nenhum jogo aberto: se ele não bater logo depois de os jogadores trocarem de lugar, espere uns segundos antes de reprovar. E se ainda aparecer uma saída «DualSense … (háptica)», é o nome de antes desta versão — espere uns segundos com os jogos fechados, e o Hefesto a renomeia para «Háptica do Controle»; ela não é placa, e não entra na conta.
 
 ---
 
