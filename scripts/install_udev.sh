@@ -149,7 +149,23 @@ sudo install -Dm644 "$ASSETS/72-ps5-controller-autosuspend.rules" /etc/udev/rule
 # só a quem estivesse no grupo `input` POR FORA do produto. Numa máquina nova,
 # touchpad e giroscópio simplesmente não funcionavam. OQ-6.
 # O número TEM de ser < 73 (a 73-seat-late.rules é quem vira a TAG em ACL).
-sudo install -Dm644 "$ASSETS/72-hefesto-touchpad-motion-uaccess.rules" /etc/udev/rules.d/72-hefesto-touchpad-motion-uaccess.rules
+# A 72 FECHA AS ENTRADAS DO FÍSICO desde a HIDE-SO-O-HIDRAW-02 (24/09/2026), e
+# o opt-out tem de abrir as duas regras juntas: com a 70 aberta e a 72 fechada
+# o estado fica incoerente (o `--fechar-tudo-e-sair` reabre o que a 72 fecha).
+# O dono da transformação é o mesmo da 70.
+if [[ "$ABRIR_O_NO" -eq 1 ]]; then
+    _regra_72_aberta="$(mktemp)"
+    if ! bash "$HERE/scripts/regra_do_no_aberta.sh" \
+            "$ASSETS/72-hefesto-touchpad-motion-uaccess.rules" "$_regra_72_aberta"; then
+        rm -f "$_regra_72_aberta"
+        echo "ERRO: --no-fechar-o-no não conseguiu reabrir as entradas da 72." >&2
+        exit 1
+    fi
+    sudo install -Dm644 "$_regra_72_aberta" /etc/udev/rules.d/72-hefesto-touchpad-motion-uaccess.rules
+    rm -f "$_regra_72_aberta"
+else
+    sudo install -Dm644 "$ASSETS/72-hefesto-touchpad-motion-uaccess.rules" /etc/udev/rules.d/72-hefesto-touchpad-motion-uaccess.rules
+fi
 # 76: só o touchpad do VPAD é ignorado como ponteiro libinput — o touchpad
 # FÍSICO volta a ser o touchpad do sistema em TODOS os modos, que é o pedido
 # dela de 09/08 (TOUCHPAD-DO-SISTEMA-01; o curinga antigo apagava o físico em
