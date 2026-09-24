@@ -156,6 +156,40 @@ class TestOGestoDelaSaiNoNativo:
             assert [_cor_do_report(r) for r in radio.escritos] == [(7, 7, 7)]
 
 
+class TestOCaboSemNoNaoDizEscreveu:
+    """No Nativo, «escreveu» só quando a luz saiu por FORA do fluxo mudo.
+
+    A conferência de 24/09/2026. A luz e o número saem no Nativo por duas rotas
+    que o mute não alcança: a classe LED do kernel (o nó da regra 77) e o
+    `0x31` mínimo do rádio. Um controle no CABO sem nó gravável (sem a regra 77
+    — a máquina em que o install não pôs as regras) cai no `handle.light`, que
+    só sai pelo `report_thread` — e ele está MUDO no Nativo. A resposta era
+    «escreveu» com zero byte no fio, a mentira que a MESA-CHEIA-09 matou.
+
+    A MORDIDA: conte a luz como escrita sem olhar a rota, e o cabo sem nó volta
+    a dizer «escreveu».
+    """
+
+    def test_o_cabo_sem_no_guarda_e_diz_registrado(self) -> None:
+        ctl, _radio, no = _mesa_no_nativo()
+        ctl._sysfs = {}
+
+        palavra = ctl.apply_output_for(UNIQ_CABO, OutputSpec(led=(7, 7, 7)))
+
+        assert palavra == "registrado"
+        assert no.cores == []
+        assert ctl._desired_by_uniq[UNIQ_CABO].led == (7, 7, 7)
+
+    def test_o_radio_sem_no_escreve_pelo_0x31(self) -> None:
+        ctl, radio, _no = _mesa_no_nativo()
+        ctl._sysfs = {}
+
+        palavra = ctl.apply_output_for(UNIQ_RADIO, OutputSpec(led=(7, 7, 7)))
+
+        assert palavra == "escreveu"
+        assert [_cor_do_report(r) for r in radio.escritos] == [(7, 7, 7)]
+
+
 class TestOHefestoRepintaNoNativo:
     def test_o_reassert_da_ativacao_de_perfil(self) -> None:
         ctl, _radio, no = _mesa_no_nativo()
