@@ -6210,23 +6210,23 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, num controle ligado por cabo, o Hefesto enxerga o dedo no touchpad: a palavra muda e o pontinho acende no lugar onde o dedo está — e só no cartão daquele controle.
 
-**Onde olhar.** Na aba Controles. Clique no chip «Todos» da fita do topo para abrir os quatro cartões. Dentro de cada cartão, na coluna da esquerda, tem a moldura Touchpad: na mesma linha do rótulo vem a palavra do estado — «Sem toque», «1 toque» ou um travessão — e, embaixo dela, um retângulo cinza com um pontinho ciano. O pontinho só aparece enquanto há dedo na superfície, e ele fica na POSIÇÃO do dedo: canto de cima à esquerda do retângulo é canto de cima à esquerda do touchpad. Com os quatro cartões abertos a caixa rola — role para ver os quatro. O travessão quer dizer «não consegui ler», e não é nem «Sem toque» nem «1 toque». Na fita do topo, cada controle é um chip com o número, a cor do plástico e a palavra do transporte: cabo ou rádio.
+**Onde olhar.** Na aba Controles. Clique no chip «Todos» da fita do topo para abrir os quatro cartões. Dentro de cada cartão, no canto de cima à esquerda, tem a moldura Touchpad: na mesma linha do rótulo vem a palavra do estado — «Sem toque», «1 toque», «2 toques» ou um travessão — e, embaixo dela, um retângulo escuro onde cada dedo é um pontinho ciano. O pontinho só aparece enquanto há dedo na superfície, e fica na POSIÇÃO do dedo: canto de cima à esquerda do retângulo é canto de cima à esquerda do touchpad. Com os quatro cartões abertos a caixa rola — role para ver os quatro. O travessão quer dizer «não consegui ler», e não é nem «Sem toque» nem «1 toque». Na fita do topo, cada controle é um chip com o número, a cor do plástico e a palavra do transporte: USB para o cabo, BT para o rádio.
 
 **Os passos.**
 
 1. Abra o Hefesto e clique na aba Controles.
 2. Clique no chip «Todos» da fita do topo, para abrir os quatro cartões.
-3. Confira na fita que o P1 e o P2 dizem cabo, e que o P3 e o P4 dizem rádio.
+3. Confira na fita que o P1 e o P2 dizem USB, e que o P3 e o P4 dizem BT.
 4. Tire as mãos dos quatro controles e deixe-os parados na mesa.
-5. Leia a palavra do Touchpad nos quatro cartões e anote: os quatro têm de dizer «Sem toque».
-6. Confira que nenhum dos quatro retângulos tem pontinho aceso.
-7. Encoste UM dedo, de leve, no canto de cima à esquerda do touchpad do P1, e mantenha-o lá.
-8. Leia o cartão do P1: a palavra tem de virar «1 toque» e o pontinho tem de acender perto do canto de cima à esquerda do retângulo.
-9. Olhe os cartões do P2, do P3 e do P4 com o seu dedo ainda apoiado no P1: os três têm de continuar em «Sem toque», sem pontinho.
-10. Arraste o dedo devagar pelo touchpad do P1 até o canto de baixo à direita, sem tirá-lo da superfície.
-11. Veja o pontinho do P1 andar junto, na mesma direção do dedo.
-12. Tire o dedo do P1 e confira que a palavra volta a «Sem toque» e que o pontinho apaga.
-13. Repita os passos 7 a 12 no P2, com os outros três largados na mesa.
+5. Confira que os quatro cartões dizem «Sem toque» no Touchpad, sem pontinho aceso.
+6. Encoste UM dedo, de leve, no canto de cima à esquerda do touchpad do P1, e mantenha-o lá.
+7. Confira no cartão do P1 que a palavra virou «1 toque» e que o pontinho acendeu perto do canto de cima à esquerda do retângulo.
+8. Confira que os cartões do P2, do P3 e do P4 continuam em «Sem toque», sem pontinho, com o seu dedo ainda no P1.
+9. Arraste o dedo devagar pelo touchpad do P1 até o canto de baixo à direita, sem tirá-lo da superfície.
+10. Confira que o pontinho do P1 andou junto, na mesma direção do dedo.
+11. Tire o dedo do P1.
+12. Confira que a palavra voltou a «Sem toque» e que o pontinho apagou.
+13. Faça no P2 a mesma volta — dedo no canto de cima à esquerda, arrasto até o canto de baixo à direita, dedo fora —, com os outros três largados na mesa.
 14. Anote, para o P1 e para o P2, três coisas: se a palavra mudou, se o pontinho acendeu e se ele andou junto com o dedo.
 
 **Passa quando.** Nos dois controles do cabo, a palavra vira «1 toque» no instante em que o dedo encosta e volta a «Sem toque» quando ele sai; o pontinho acende no lugar onde o dedo está e anda junto com ele. E, enquanto o seu dedo está num deles, os cartões dos outros três continuam em «Sem toque», sem pontinho nenhum.
@@ -6238,7 +6238,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — Rádio, testemunha. Não encoste nele. Enquanto o seu dedo está num controle do cabo, o cartão do P3 tem de continuar em «Sem toque». Se ele acender junto, a tela está mostrando o toque de um controle no cartão de outro.
 * **P4** — Rádio, segunda testemunha. Não encoste nele e confira o cartão dele do mesmo jeito. É o último da fila, e é nele que a leitura trocada costuma aparecer primeiro.
 
-**A armadilha.** Um gesto por vez, e esta regra custou caro a esta casa: num ensaio pediu-se para girar o controle E passar o dedo ao mesmo tempo, o toque saiu ZERO, e por pouco não se escreveu que o produto não lia o touchpad. Gesto composto produz ausência falsa. O toque é LEVE: se você apertar até estalar, isso é o clique, e o clique é outro teste. O pontinho já mentiu de um jeito específico, e vale conhecer: ele acendia e apagava certo e ficava PARADO no ponto em que o desenho o cravou — se ele acender e não andar com o dedo, o defeito é esse, e não a sua mão. O travessão não é «Sem toque»: é «não consegui ler»; anote e não conte como passa. O cartão enxerga UM dedo só: pousar dois não faz aparecer «2 toques» — a palavra existe na tela, o dado ainda não; não reprove por isso. E se um chip da fita disser USB ou BT em vez de cabo ou rádio, a fita não está lendo os seus controles: são os dois chips do desenho, e nesse estado o teste não passou nem reprovou. Onde a prova parou: a casa provou que o toque entra no controle virtual que o jogo lê, e parou aí — o que o jogo faz com ele não está medido por esta linha.
+**A armadilha.** Um gesto por vez, e esta regra custou caro a esta casa: num ensaio pediu-se para girar o controle E passar o dedo ao mesmo tempo, o toque saiu ZERO, e por pouco não se escreveu que o produto não lia o touchpad. Gesto composto produz ausência falsa. O toque é LEVE: se você apertar até estalar, isso é o clique, e o clique é outro teste. Um dedo só: dois dedos fazem duas bolinhas e a palavra «2 toques», e isso é o teste dos dedos, não este. O pontinho já mentiu de um jeito específico, e vale conhecer: ele acendia e apagava certo e ficava PARADO no ponto em que o desenho o cravou — se ele acender e não andar com o dedo, o defeito é esse, e não a sua mão. O travessão não é «Sem toque»: é «não consegui ler»; anote e não conte como passa. E se a fita mostrar menos chips do que os quatro controles ligados, a tela não está lendo todos eles: nesse estado o teste não passou nem reprovou. Onde a prova parou: a casa provou que o toque entra no controle virtual que o jogo lê, e parou aí — o que o jogo faz com ele não está medido por esta linha.
 
 ---
 
@@ -6248,24 +6248,27 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o Hefesto enxerga o dedo no touchpad de um controle ligado por rádio do mesmo jeito que enxerga no cabo — e só no cartão daquele controle.
 
-**Onde olhar.** Na aba Controles. Clique no chip «Todos» da fita do topo para abrir os quatro cartões. Dentro de cada cartão, na coluna da esquerda, tem a moldura Touchpad: na mesma linha do rótulo vem a palavra do estado — «Sem toque», «1 toque» ou um travessão — e, embaixo dela, um retângulo cinza com um pontinho ciano. O pontinho só aparece enquanto há dedo na superfície, e fica na POSIÇÃO do dedo. Com os quatro cartões abertos a caixa rola — role para ver os quatro. O travessão quer dizer «não consegui ler». Na fita do topo, cada controle é um chip com o número, a cor do plástico e a palavra do transporte: cabo ou rádio.
+**Onde olhar.** Na aba Controles. Clique no chip «Todos» da fita do topo para abrir os quatro cartões. Dentro de cada cartão, no canto de cima à esquerda, tem a moldura Touchpad: na mesma linha do rótulo vem a palavra do estado — «Sem toque», «1 toque», «2 toques» ou um travessão — e, embaixo dela, um retângulo escuro onde cada dedo é um pontinho ciano. O pontinho só aparece enquanto há dedo na superfície, e fica na POSIÇÃO do dedo. Com os quatro cartões abertos a caixa rola — role para ver os quatro. O travessão quer dizer «não consegui ler». Na fita do topo, cada controle é um chip com o número, a cor do plástico e a palavra do transporte: USB para o cabo, BT para o rádio. No alto do bloco Microfone de cada cartão, o selo diz ATIVO ou DESLIGADO — ele entra neste teste por causa da armadilha.
 
 **Os passos.**
 
 1. Abra o Hefesto e clique na aba Controles.
 2. Clique no chip «Todos» da fita do topo, para abrir os quatro cartões.
-3. Confira na fita que o P3 e o P4 dizem rádio, e que o P1 e o P2 dizem cabo.
-4. Tire as mãos dos quatro controles e confira que os quatro cartões dizem «Sem toque», sem pontinho.
-5. Encoste um dedo de leve no touchpad do P1, que está no cabo, e confira que o cartão dele responde — este é o controle de comparação, e sem ele o resto não mede nada.
-6. Tire o dedo do P1 e não encoste mais nele.
-7. Encoste UM dedo, de leve, no canto de cima à esquerda do touchpad do P3, e mantenha-o lá.
-8. Leia o cartão do P3: a palavra tem de virar «1 toque» e o pontinho tem de acender perto do canto de cima à esquerda do retângulo.
-9. Olhe os cartões do P1, do P2 e do P4 com o seu dedo ainda apoiado no P3: os três têm de continuar em «Sem toque», sem pontinho.
-10. Arraste o dedo devagar pelo touchpad do P3 até o canto de baixo à direita, sem tirá-lo da superfície.
-11. Veja o pontinho do P3 andar junto, na mesma direção do dedo.
-12. Tire o dedo do P3 e confira que a palavra volta a «Sem toque» e que o pontinho apaga.
-13. Repita os passos 7 a 12 no P4, com os outros três largados na mesa.
-14. Anote, para o P3 e para o P4, se a palavra mudou, se o pontinho acendeu, se ele andou junto e se ele andou liso ou aos saltos.
+3. Confira na fita que o P3 e o P4 dizem BT, e que o P1 e o P2 dizem USB.
+4. Tire as mãos dos quatro controles.
+5. Confira que os quatro cartões dizem «Sem toque», sem pontinho.
+6. Encoste um dedo de leve no touchpad do P1, que está no cabo.
+7. Confira que o cartão do P1 respondeu — ele é o controle de comparação, e sem ele o resto não mede nada.
+8. Tire o dedo do P1 e não encoste mais nele.
+9. Encoste UM dedo, de leve, no canto de cima à esquerda do touchpad do P3, e mantenha-o lá.
+10. Confira no cartão do P3 que a palavra virou «1 toque» e que o pontinho acendeu perto do canto de cima à esquerda do retângulo.
+11. Confira que os cartões do P1, do P2 e do P4 continuam em «Sem toque», sem pontinho, com o seu dedo ainda no P3.
+12. Arraste o dedo devagar pelo touchpad do P3 até o canto de baixo à direita, sem tirá-lo da superfície.
+13. Confira que o pontinho do P3 andou junto, e repare se ele andou liso ou aos saltos.
+14. Tire o dedo do P3.
+15. Confira que a palavra voltou a «Sem toque» e que o pontinho apagou.
+16. Faça no P4 a mesma volta do P3, com os outros três largados na mesa.
+17. Anote, para o P3 e para o P4, se a palavra mudou, se o pontinho acendeu, se ele andou junto e se ele andou liso ou aos saltos.
 
 **Passa quando.** Nos dois controles do rádio, a palavra vira «1 toque» com o dedo e volta a «Sem toque» sem ele, e o pontinho acende no lugar do dedo e anda junto. Para o resultado valer, o P1, que está no cabo, tem de ter respondido antes. E, enquanto o seu dedo está num do rádio, os cartões dos dois do cabo continuam em «Sem toque».
 
@@ -6276,7 +6279,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — Rádio, e é um dos dois que têm de responder. Dedo leve, andando de um canto ao outro, e o pontinho acompanhando. Repare também no ANDAR do pontinho: pelo rádio chegam menos leituras que pelo cabo.
 * **P4** — Rádio, e é o outro que tem de responder. Mesmos gestos. Se o P3 responder e o P4 não, o defeito não é do rádio — é do segundo controle sem fio, e isso é outra coisa.
 
-**A armadilha.** Um gesto por vez: num ensaio pediu-se para girar o controle E passar o dedo ao mesmo tempo, o toque saiu ZERO, e por pouco não se acusou o produto de não ler o touchpad. Gesto composto produz ausência falsa. Pelo rádio chegam menos leituras que do aparelho — medido em dez segundos de dedo: 2.807 contra 3.660 —, então o pontinho pode andar mais aos saltos que no cabo, e isso sozinho não reprova. O caso já conhecido, e ele é dela: pelo rádio o toque funciona FORA do jogo e não dentro. Se o pontinho andar aqui e o mesmo dedo não fizer nada dentro do jogo, isso já foi visto, o repasse até o controle virtual está inteiro e a perda é depois dele — continua sem causa. Anote e siga; não é erro seu. A casa também declarou uma ressalva que só existe no rádio: o som do microfone viaja no MESMO pacote em que viaja o toque. Se o pontinho de um controle do rádio acender ou pular sem dedo nenhum, olhe antes se o microfone daquele controle está ligado — o selo do cartão dele diz ATIVO ou MUDO — e anote as duas coisas juntas. O travessão não é «Sem toque»: é «não consegui ler». E o cartão enxerga UM dedo só: dois dedos não fazem aparecer «2 toques». Onde a prova parou: a casa provou que o toque entra no controle virtual que o jogo lê, e parou aí.
+**A armadilha.** Um gesto por vez: num ensaio pediu-se para girar o controle E passar o dedo ao mesmo tempo, o toque saiu ZERO, e por pouco não se acusou o produto de não ler o touchpad. Gesto composto produz ausência falsa. Pelo rádio chegam menos leituras que do aparelho — medido em dez segundos de dedo: 2.807 contra 3.660 —, então o pontinho pode andar mais aos saltos que no cabo, e isso sozinho não reprova. O caso já conhecido, e ele é dela: pelo rádio o toque funciona FORA do jogo e não dentro. Se o pontinho andar aqui e o mesmo dedo não fizer nada dentro do jogo, isso já foi visto, o repasse até o controle virtual está inteiro e a perda é depois dele — continua sem causa. Anote e siga; não é erro seu. A casa também declarou uma ressalva que só existe no rádio: o som do microfone viaja no MESMO pacote em que viaja o toque. Se o pontinho de um controle do rádio acender ou pular sem dedo nenhum, olhe antes o selo do Microfone daquele cartão — ATIVO ou DESLIGADO — e anote as duas coisas juntas. O travessão não é «Sem toque»: é «não consegui ler». E um dedo só: dois dedos fazem duas bolinhas e a palavra «2 toques», e isso é o teste dos dedos. Onde a prova parou: a casa provou que o toque entra no controle virtual que o jogo lê, e parou aí.
 
 ---
 
@@ -6284,42 +6287,44 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `toque.touchpad.clique @ cabo`
 
-**O que isto prova.** Prova que o clique firme do touchpad de um controle no cabo é um clique de verdade, e que a recusa do Hefesto em transformá-lo em tecla está escrita na tela e é cumprida.
+**O que isto prova.** Prova que o clique firme do touchpad de um controle no cabo é um clique de mouse de verdade, e que a recusa do Hefesto em transformá-lo em tecla está marcada na tela e é cumprida.
 
-**Onde olhar.** Na aba Navegação, na tabela grande da direita, a que diz o que cada botão faz. O touchpad tem TRÊS linhas nela, uma por terço da superfície: Touchpad · Clique esquerdo, Touchpad · Clique direito e Touchpad · Clique central. Ao lado do nome de cada uma há uma marca cinza escrita «não dispara»; parando o mouse em cima dela sai a frase inteira, que diz que o touchpad do controle continua sendo o mouse do computador e que, enquanto for assim, o Hefesto não transforma o clique dele em tecla. Na ajuda do título dessa tabela — o «?» ao lado do nome — o fim do texto diz para qual controle ela vale: o que navega o PC, nomeado ali. À esquerda, no quadro «As opções de ativação», ficam o «Status do Modo» (Ligado ou Desligado) e a «Função do teclado». NÃO existe campo na tela que acenda com o clique do touchpad: o desenho do Touchpad na fileira de botões do cartão, na aba Controles, é alimentado pela lista de botões do controle, e o clique do touchpad não viaja nessa lista — ele fica apagado mesmo com o clique funcionando. A fonte não diz onde se lê o clique ao vivo; o que se lê é o efeito dele.
+**Onde olhar.** Na aba Navegação. No quadro «Quem navega, e com qual controle», cada controle tem um cartão, e embaixo do desenho ele diz a palavra do transporte (USB é o cabo, BT é o rádio) e «Navega o PC» ou «Só a janela» — as linhas de botão valem só para o que diz «Navega o PC». No quadro «As opções de ativação» ficam o «Status do Modo» (Ligado ou Desligado) e a «Função do teclado». Embaixo dele, o botão «Definições Controle e Mouse» abre a tela das linhas de botão: o touchpad tem TRÊS linhas nela, uma por terço da superfície — «Touchpad» com «Clique esquerdo», «Clique direito» e «Clique central» ao lado —, e cada uma traz a marca cinza «não dispara»; parando o mouse em cima dela sai a frase inteira, que diz que o touchpad é o ponteiro do computador e que, enquanto for assim, o clique dele não vira tecla. Essa tela grava pelo «Guardar», no pé dela. NÃO existe campo que acenda com o clique do touchpad: o desenho do Touchpad na fileira de botões do cartão, na aba Controles, não acende com ele. O que se lê é o efeito do clique.
 
 **Os passos.**
 
 1. Abra a aba Navegação.
-2. Abra a ajuda do título da tabela — o «?» ao lado do nome — e leia, no fim do texto, qual controle navega o PC; anote o número dele.
-3. Confira na fita do topo que o P1 e o P2 dizem cabo.
-4. Confira que o «Status do Modo», no quadro «As opções de ativação», está em Ligado — desligado, nada desta aba chega ao PC e o teste não mede nada.
-5. Confira que a «Função do teclado», no mesmo quadro, está em «Só fora do jogo».
-6. Confira que as três linhas do Touchpad, na tabela, têm a marca «não dispara» ao lado do nome.
-7. Pare o mouse em cima de uma dessas marcas e leia a frase inteira.
-8. Confira que ela fala do touchpad ser o mouse do computador, e anote.
-9. Anote o que está escrito hoje na lista da linha Touchpad · Clique esquerdo e escolha «Espaço» nela.
-10. Abra um editor de texto qualquer, num documento em branco, e leve a seta do mouse para dentro da área branca — o clique do touchpad é um clique de verdade e vai cair onde a seta estiver.
-11. Aperte o touchpad do P1 com força, até sentir o estalo, no terço da ESQUERDA, depois no meio e depois no terço da direita.
-12. Confira, em cada um dos três, que o editor recebeu um clique de mouse — o cursor de texto pulou para onde a seta estava.
-13. Confira, em cada um dos três, que NÃO nasceu nenhum espaço no texto: a recusa que a tela anunciou tem de valer.
-14. Aperte o touchpad do P2 nos três terços, do mesmo jeito.
-15. Confira nele as mesmas duas coisas.
-16. Aperte o touchpad do P3 e o do P4 até estalar.
-17. Confira que neles também não nasce espaço nenhum.
-18. Devolva a lista da linha Touchpad · Clique esquerdo ao que você anotou.
-19. Abra, se quiser o dado do jogo, um jogo que use o clique do touchpad, aperte-o no P1 e anote o que acontecer — sem reprovar por isso.
+2. Anote qual cartão do quadro «Quem navega, e com qual controle» diz «Navega o PC».
+3. Confira nos cartões desse quadro que o P1 e o P2 dizem USB.
+4. Confira que o «Status do Modo» está em Ligado — desligado, nada desta aba chega ao PC e o teste não mede nada.
+5. Confira que a «Função do teclado» está em «Só fora do jogo».
+6. Clique em «Definições Controle e Mouse».
+7. Confira que as três linhas do Touchpad trazem a marca «não dispara», e pare o mouse em cima de uma delas para ler a frase inteira.
+8. Anote o que está escolhido hoje na lista da linha «Touchpad», «Clique esquerdo».
+9. Escolha «Espaço» nessa lista e clique em «Guardar».
+10. Abra um editor de texto num documento em branco e leve a seta do mouse para dentro da área branca — o clique do touchpad é um clique de verdade e vai cair onde a seta estiver.
+11. Aperte o touchpad do P1 até sentir o estalo, no terço da ESQUERDA.
+12. Confira que o editor recebeu um clique de mouse — o cursor de texto pulou para onde a seta estava — e que nenhum espaço nasceu no texto.
+13. Aperte o touchpad do P1 até estalar no meio e depois no terço da direita, com a mesma conferência a cada aperto.
+14. Aperte o touchpad do P2 nos três terços, do mesmo jeito, com a mesma conferência a cada aperto.
+15. Aperte o touchpad do P3 e o do P4 até estalar.
+16. Confira que neles também não nasce espaço nenhum.
+17. Volte ao Hefesto e clique de novo em «Definições Controle e Mouse».
+18. Devolva a lista da linha «Touchpad», «Clique esquerdo», ao que você anotou, e clique em «Guardar».
+19. Se quiser o dado do jogo, abra um jogo que use o clique do touchpad, aperte-o no P1 e anote o que acontecer — sem reprovar por isso.
 
-**Passa quando.** As três linhas do Touchpad mostram a marca «não dispara», e a frase do hover explica por quê. O touchpad do P1 e o do P2 estalam quando apertados e o clique chega ao computador como clique de mouse. E nenhum dos quatro digita a tecla que você escolheu: a recusa é a mesma nos quatro, e o produto não finge ter aplicado.
+**Passa quando.** As três linhas do Touchpad mostram a marca «não dispara», e a frase dela explica por quê. O touchpad do P1 e o do P2 estalam e o clique chega ao computador como clique de mouse. E nenhum dos quatro digita o «Espaço» que você escolheu: a recusa é a mesma nos quatro, e o produto não finge ter aplicado.
 
 **Por controle.**
 
-* **P1** — Cabo, e é um dos dois que têm de responder. Aperte até estalar uma vez em cada terço: esquerda, meio e direita. Se ele for o controle que navega o PC, é nele que a recusa da tabela está sendo medida de verdade.
+* **P1** — Cabo, e é um dos dois que têm de responder. Aperte até estalar uma vez em cada terço: esquerda, meio e direita. Se o cartão dele disser «Navega o PC», é nele que a recusa da tabela está sendo medida de verdade.
 * **P2** — Cabo, e é o outro que tem de responder. Mesmos três apertos. Ele também prova que a escolha da tabela não vaza para um controle que não navega o PC.
 * **P3** — Rádio, testemunha. Aperte o touchpad dele até estalar e confira que nenhuma tecla nasce. Se o espaço aparecer aqui, a escolha pegou o rádio inteiro em vez do controle escolhido.
 * **P4** — Rádio, segunda testemunha. Mesmo aperto, mesma conferência. Se três recusarem e ele não, anote — é o último da fila, e é onde a escolha costuma escapar.
 
-**A armadilha.** O clique é MECÂNICO: encostar o dedo não é clicar, tem de afundar até estalar. Toque de leve é o outro teste. A tabela vale para UM controle só, o que navega o PC, nomeado na ajuda do título — esperar que os quatro digitem é reprovar um produto que está certo. A marca «não dispara» não é defeito: é o produto avisando que, enquanto o touchpad do controle for o mouse do computador, ele não vira tecla, e que a escolha fica guardada para o dia em que isso mudar. Se a marca sumir e a tecla continuar não nascendo, aí sim há o que perguntar. O falso vermelho mais fácil é olhar a fileira de botões do cartão da aba Controles: o desenho do Touchpad ali não acende com o clique, porque ele é alimentado pela lista de botões do controle e o clique não viaja nessa lista — apagado ali não quer dizer que o clique não chegou. E não aperte com a seta do mouse em cima de qualquer janela: é um clique de verdade, e um clique cego já desfez configuração nesta casa. Onde a prova parou: a casa provou que o clique entra no pacote do controle virtual que o jogo lê, e parou aí. Este defeito já existiu de verdade — faltava uma linha de ligação e o clique NÃO chegava ao jogo; foi curada. Por isso o passo do jogo é anotação, e não reprovação. Sobre o tamanho: nove atos, um a mais que o alvo, porque este teste troca uma escolha da tabela e tem de devolvê-la no fim — deixar «Espaço» gravado ali muda o produto dela depois que você sair. O ato do jogo, o último, é opcional e só existe para colher o dado que falta.
+**A armadilha.** O clique é MECÂNICO: encostar o dedo não é clicar, tem de afundar até estalar. Toque de leve é o outro teste. As linhas de botão valem para UM controle só, o que diz «Navega o PC» — esperar que os quatro digitem é reprovar um produto que está certo. A marca «não dispara» não é defeito: é o produto avisando que, enquanto o touchpad do controle for o ponteiro do computador, o clique dele não vira tecla, e que a escolha fica guardada. Se a marca sumir e a tecla continuar não nascendo, aí sim há o que perguntar. A escolha só vale depois do «Guardar»: mudar a lista e fechar a tela pelo «Cancelar» ou pelo × a desfaz. O falso vermelho mais fácil é olhar a fileira de botões do cartão da aba Controles: o desenho do Touchpad ali não acende com o clique — apagado ali não quer dizer que o clique não chegou. E não aperte com a seta do mouse em cima de qualquer janela: é um clique de verdade, e um clique cego já desfez configuração nesta casa. Onde a prova parou: a casa provou que o clique entra no pacote do controle virtual que o jogo lê, e parou aí. Esse defeito já existiu de verdade — faltava uma linha de ligação e o clique NÃO chegava ao jogo; foi curado. Por isso o passo do jogo é anotação, e não reprovação.
+
+---
 
 ## mapa-toque.touchpad.clique-radio — Touchpad — o clique (botão) · rádio
 
@@ -6327,42 +6332,44 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o clique do touchpad de um controle no rádio é reconhecido e que a recusa em virar tecla é a mesma do cabo — e esta é a primeira vez que alguém mede isso com o dedo.
 
-**Onde olhar.** Na aba Navegação, na tabela grande da direita, as TRÊS linhas do touchpad: Touchpad · Clique esquerdo, Touchpad · Clique direito e Touchpad · Clique central, cada uma com a marca cinza «não dispara» ao lado do nome e a frase inteira ao parar o mouse em cima dela. Na ajuda do título da tabela, no fim do texto, está o controle para o qual ela vale: o que navega o PC. À esquerda, no quadro «As opções de ativação», o «Status do Modo» (Ligado ou Desligado) e a «Função do teclado». E, na aba Controles, o cartão do P3 e o do P4: o selo do Microfone, que diz ATIVO, MUDO ou um travessão — ele entra neste teste por causa da armadilha, não por causa do clique. NÃO existe campo na tela que acenda com o clique do touchpad: o desenho do Touchpad na fileira de botões do cartão é alimentado pela lista de botões do controle, e o clique não viaja nessa lista. A fonte não diz onde se lê o clique ao vivo; o que se lê é o efeito dele.
+**Onde olhar.** Na aba Navegação: no quadro «Quem navega, e com qual controle», o cartão de cada controle diz USB ou BT e «Navega o PC» ou «Só a janela»; no quadro «As opções de ativação», o «Status do Modo» e a «Função do teclado»; e o botão «Definições Controle e Mouse», que abre a tela com as TRÊS linhas do touchpad — «Touchpad» com «Clique esquerdo», «Clique direito» e «Clique central» —, cada uma com a marca cinza «não dispara» e a frase inteira ao parar o mouse em cima dela. Essa tela grava pelo «Guardar». E, na aba Controles, o cartão do P3 e o do P4: o selo do Microfone, que diz ATIVO, DESLIGADO ou um travessão, e a fileira de botões, onde o PS acende enquanto está apertado — os dois entram neste teste por causa da armadilha, não por causa do clique. NÃO existe campo que acenda com o clique do touchpad; o que se lê é o efeito dele.
 
 **Os passos.**
 
 1. Abra a aba Navegação.
-2. Confira na fita do topo que o P3 e o P4 dizem rádio.
-3. Confira que o «Status do Modo» está em Ligado e que a «Função do teclado» está em «Só fora do jogo».
-4. Abra a ajuda do título da tabela e anote qual controle navega o PC.
-5. Confira que as três linhas do Touchpad têm a marca «não dispara», e leia a frase de uma delas parando o mouse em cima.
-6. Anote o que está escrito hoje na lista da linha Touchpad · Clique esquerdo, e escolha «Espaço» nessa lista.
-7. Abra um editor de texto num documento em branco e leve a seta do mouse para dentro da área branca.
-8. Aperte o touchpad do P1, que está no cabo, até estalar.
-9. Confira que o editor recebeu o clique de mouse — é ele que prova que a sua mão e o editor estão medindo alguma coisa hoje.
-10. Abra a aba Controles e leia o selo do Microfone do cartão do P3, e anote se ele diz ATIVO ou MUDO.
-11. Volte ao editor de texto, com a seta dentro da área branca.
-12. Aperte o touchpad do P3 até estalar, com força, uma vez em cada terço: primeiro na ESQUERDA, depois no meio, depois na direita.
-13. Confira, a cada aperto, que o editor recebeu um clique de mouse e que NÃO nasceu espaço nenhum no texto.
-14. Aperte o touchpad do P3 mais umas dez vezes seguidas, em qualquer terço.
-15. Aperte o botão PS do P3 uma vez.
-16. Confira que o PS ainda responde, e leia de novo o selo do Microfone do P3 para ver se ele continua no que você anotou.
-17. Aperte o botãozinho de microfone do P3 no plástico, para trocar o estado dele, e refaça a volta que vai dos três terços até a leitura do selo.
-18. Refaça a volta inteira no P4, também com o microfone nos dois estados.
-19. Aperte o touchpad do P1 e o do P2 até estalar.
-20. Confira que também neles não nasce tecla nenhuma.
-21. Devolva a lista da linha Touchpad · Clique esquerdo ao que você anotou.
+2. Anote qual cartão do quadro «Quem navega, e com qual controle» diz «Navega o PC».
+3. Confira nos cartões desse quadro que o P3 e o P4 dizem BT.
+4. Confira que o «Status do Modo» está em Ligado e que a «Função do teclado» está em «Só fora do jogo».
+5. Clique em «Definições Controle e Mouse».
+6. Confira que as três linhas do Touchpad trazem a marca «não dispara», e pare o mouse em cima de uma delas para ler a frase.
+7. Anote o que está escolhido hoje na lista da linha «Touchpad», «Clique esquerdo».
+8. Escolha «Espaço» nessa lista e clique em «Guardar».
+9. Abra um editor de texto num documento em branco e leve a seta do mouse para dentro da área branca.
+10. Aperte o touchpad do P1, que está no cabo, até estalar.
+11. Confira que o editor recebeu o clique de mouse — é ele que prova que a sua mão e o editor estão medindo alguma coisa hoje.
+12. Clique na aba Controles, abra o cartão do P3 clicando na linha dele, e anote se o selo do Microfone diz ATIVO ou DESLIGADO.
+13. Volte ao editor e aperte o touchpad do P3 até estalar, uma vez em cada terço: esquerda, meio, direita.
+14. Confira, a cada aperto, que o editor recebeu um clique de mouse e que nenhum espaço nasceu no texto.
+15. Aperte o touchpad do P3 mais umas dez vezes seguidas, em qualquer terço.
+16. Volte à aba Controles e aperte o botão PS do P3 uma vez.
+17. Confira que o PS acendeu e apagou na fileira de botões do cartão do P3, e que o selo do Microfone dele continua no que você anotou.
+18. Aperte o botãozinho de microfone do P3, no plástico, para trocar o estado dele, e refaça no P3 a volta dos três terços, dos dez apertos e do PS.
+19. Faça no P4 a mesma volta, com o microfone dele nos dois estados.
+20. Aperte o touchpad do P1 e o do P2 até estalar.
+21. Confira que neles também não nasce tecla nenhuma.
+22. Volte à aba Navegação e clique em «Definições Controle e Mouse».
+23. Devolva a lista da linha «Touchpad», «Clique esquerdo», ao que você anotou, e clique em «Guardar».
 
-**Passa quando.** O touchpad do P3 e o do P4 estalam e o clique chega ao computador como clique de mouse, igual ao do cabo. Nenhum dos quatro digita a tecla escolhida. E a sequência de apertos no rádio não prende nem embaralha nada: o botão PS dos dois continua respondendo e o selo do microfone deles não vira sozinho.
+**Passa quando.** O touchpad do P3 e o do P4 estalam e o clique chega ao computador como clique de mouse, igual ao do cabo. Nenhum dos quatro digita a tecla escolhida. E a sequência de apertos no rádio não prende nem embaralha nada: o PS dos dois acende e apaga no cartão e o selo do microfone deles não vira sozinho.
 
 **Por controle.**
 
 * **P1** — Cabo, e é o controle de comparação. Aperte primeiro nele e confirme o estalo e o clique no editor. Depois vira testemunha: aperte-o de novo só no fim, para conferir que ele também não digita.
 * **P2** — Cabo, testemunha. Só no fim: um aperto até estalar, e nenhuma tecla pode nascer.
-* **P3** — Rádio, e é um dos dois que têm de responder. Três apertos, um por terço, e depois uma sequência de dez. Faça tudo isso DUAS vezes: uma com o microfone dele ATIVO e outra com ele MUDO, trocando pelo botãozinho do plástico.
+* **P3** — Rádio, e é um dos dois que têm de responder. Três apertos, um por terço, e depois uma sequência de dez. Faça tudo isso DUAS vezes: uma com o microfone dele ATIVO e outra com ele DESLIGADO, trocando pelo botãozinho do plástico.
 * **P4** — Rádio, e é o outro. Mesmos apertos. Se o P3 aguentar a sequência e o P4 não, anote: são dois controles no mesmo tipo de conexão, e é aí que a diferença aparece.
 
-**A armadilha.** Ninguém nunca pôs o dedo neste touchpad com o controle no rádio para ver o clique chegar: o que a casa sabe deste caminho veio de leitura de código, não de bancada. O que sair daqui é medição nova — anote tudo, inclusive o que parecer óbvio. A armadilha que só existe no rádio mora exatamente no clique: com o microfone ligado, o controle manda o SOM dentro do mesmo pacote em que manda o clique, o botão PS e o mudo do microfone, e os bytes do som caem em cima justamente desse byte. Foi assim que o PS e o microfone ficaram presos nesta máquina. Existe uma guarda que separa uma coisa da outra, e é ela que este teste está espremendo: se, depois da sequência de apertos com o microfone ativo, o PS parar de responder, o selo do microfone virar sozinho, ou aparecer um clique que ninguém deu — isso é o achado, e é o mais valioso deste lote. Troque o estado do microfone pelo botãozinho do PLÁSTICO, nunca pelo botão de microfone da tela: aquele passa o comando do mudo para o Hefesto, o botão do plástico daquele controle para de valer, e a volta é reiniciar o Hefesto. O resto vale igual ao cabo: o clique é mecânico e tem de estalar; a tabela vale só para o controle que navega o PC; a marca «não dispara» é o produto avisando, não defeito; e o desenho do Touchpad na fileira de botões do cartão não acende com o clique. Não aperte com a seta do mouse em cima de qualquer janela — é um clique de verdade. Onde a prova parou: a casa provou que o clique entra no pacote do controle virtual, e parou aí, nos dois transportes. E este teste é LONGO de propósito, com doze atos: a arrumação da tecla «Espaço» e a devolução dela no fim custam dois, a linha de base no P1 custa outro, e a volta de apertos tem de acontecer QUATRO vezes — P3 e P4, cada um com o microfone ativo e mudo — porque é justamente o cruzamento do som com o clique que ele existe para espremer.
+**A armadilha.** Ninguém nunca pôs o dedo neste touchpad com o controle no rádio para ver o clique chegar: o que a casa sabe deste caminho veio de leitura de código, não de bancada. O que sair daqui é medição nova — anote tudo, inclusive o que parecer óbvio. A armadilha que só existe no rádio mora exatamente no clique: com o microfone ligado, o controle manda o SOM dentro do mesmo pacote em que manda o clique, o botão PS e o mudo do microfone, e os bytes do som caem em cima justamente desse byte. Foi assim que o PS e o microfone ficaram presos nesta máquina. Existe uma guarda que separa uma coisa da outra, e é ela que este teste está espremendo: se, depois da sequência de apertos com o microfone ativo, o PS ficar aceso no cartão sem ninguém apertar, o selo do microfone virar sozinho, ou aparecer um clique que ninguém deu — isso é o achado, e é o mais valioso deste lote. Troque o estado do microfone pelo botãozinho do PLÁSTICO: na tela, o 🎙 do cartão não cala nada — ele liga o retorno, para você se ouvir. Se o cartão do P3 ou do P4 disser «Navega o PC», o PS dele sozinho abre a Steam: confira o PS pelo desenho do cartão e feche a Steam depois. O resto vale igual ao cabo: o clique é mecânico e tem de estalar; as linhas de botão valem só para o controle que diz «Navega o PC»; a marca «não dispara» é o produto avisando, não defeito; a escolha só vale depois do «Guardar»; e o desenho do Touchpad na fileira de botões do cartão não acende com o clique. Não aperte com a seta do mouse em cima de qualquer janela — é um clique de verdade. Onde a prova parou: a casa provou que o clique entra no pacote do controle virtual, e parou aí, nos dois transportes.
 
 ---
 
@@ -6372,38 +6379,36 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que passar o dedo no touchpad de um controle do cabo move a seta do mouse na tela — e mostra de quem é essa seta hoje.
 
-**Onde olhar.** O resultado é a SETA DO MOUSE na sua própria tela, e não um campo do Hefesto — feche ou minimize o que estiver aberto e deixe à mostra uma área vazia, para a seta ter para onde andar. No Hefesto, na aba Navegação, quadro «As opções de ativação»: a linha «Status do Modo», que diz Ligado ou Desligado, e a linha «Velocidade de cursor», um deslizante de 1 a 12 com o número ao lado. A ajuda da «Velocidade de cursor» diz que o mesmo número vale para o analógico esquerdo e para o dedo no touchpad. A ajuda da linha «Navegação Interna», ali do lado, diz a outra metade, e ela é o ponto deste teste: o cursor do PC é UM só e sai do controle do Player 1.
+**Onde olhar.** O resultado é a SETA DO MOUSE na sua própria tela, e não um campo do Hefesto — deixe à mostra uma área vazia, para a seta ter para onde andar. No Hefesto, aba Navegação: no quadro «Quem navega, e com qual controle», o cartão de cada controle diz USB ou BT e «Navega o PC» ou «Só a janela»; no quadro «As opções de ativação», a linha «Status do Modo», que diz Ligado ou Desligado, e a linha «Velocidade de cursor», um deslizante de 1 a 12 com o número ao lado. A ajuda da «Velocidade de cursor» diz que o mesmo número vale para o analógico esquerdo e para o touchpad; a ajuda de «Quem navega, e com qual controle» diz a outra metade, e ela é o ponto deste teste: o cursor do PC é UM só e sai do controle marcado «Navega o PC».
 
 **Os passos.**
 
 1. Abra a aba Navegação.
 2. Confira que o «Status do Modo» está em Ligado.
-3. Leia o número que está na linha «Velocidade de cursor» e anote-o.
-4. Confira na fita do topo que o P1 e o P2 dizem cabo.
+3. Anote o número da «Velocidade de cursor» e qual cartão diz «Navega o PC».
+4. Confira nos cartões do quadro «Quem navega, e com qual controle» que o P1 e o P2 dizem USB.
 5. Largue os quatro controles na mesa e passe o dedo devagar no touchpad do P1, da esquerda para a direita e depois de cima para baixo.
-6. Confira que a seta anda para a direita quando o dedo vai para a direita, e desce quando o dedo desce.
+6. Confira que a seta andou para a direita quando o dedo foi para a direita, e desceu quando o dedo desceu.
 7. Levante o dedo, reapoie-o em outro canto do touchpad do P1 e ande de novo.
 8. Confira que a seta NÃO pulou ao reapoiar — ela só anda quando o dedo anda.
-9. Repita os atos 1 e 2 no P2, com os outros três largados na mesa.
-10. Repita os atos 1 e 2 no P3 e depois no P4, um de cada vez.
-11. Confira se a seta anda com eles também, e anote a resposta — aqui é anotação, e não reprovação.
-12. Arraste a «Velocidade de cursor» de 6 para 12.
-13. Passe o dedo no touchpad do P1 do mesmo jeito de antes.
-14. Repare se a seta ficou mais rápida, e anote.
-15. Empurre o analógico esquerdo do P1.
-16. Repare se ELE ficou mais rápido, e anote.
-17. Devolva a «Velocidade de cursor» ao número que você anotou no começo.
+9. Faça no P2 as mesmas duas passadas e o mesmo reapoio, com os outros três largados na mesa.
+10. Passe o dedo no touchpad do P3 e depois no do P4, um de cada vez.
+11. Anote se a seta andou com eles — aqui é anotação, e não reprovação.
+12. Arraste a «Velocidade de cursor» até 12.
+13. Passe o dedo no touchpad do P1 do mesmo jeito de antes, e anote se a seta ficou mais rápida.
+14. Empurre o analógico esquerdo do controle que diz «Navega o PC», e anote se ELE ficou mais rápido.
+15. Devolva a «Velocidade de cursor» ao número que você anotou.
 
 **Passa quando.** A seta do mouse anda com o dedo nos DOIS controles do cabo: para a direita quando o dedo vai para a direita, para baixo quando o dedo desce, e sem pular quando você levanta e reapoia o dedo. O que os dois do rádio fazem é anotação, e não reprovação: hoje o esperado é que eles também movam a seta, porque quem a move é o sistema e o sistema ouve os quatro touchpads.
 
 **Por controle.**
 
-* **P1** — Cabo, e é o primeiro que tem de mover a seta. Ele é também o único controle de quem o próprio Hefesto sabe mover o cursor: se um dia a seta andar SÓ com ele, o dono do cursor mudou, e isso é notícia.
+* **P1** — Cabo, e é o primeiro que tem de mover a seta. Se o cartão dele disser «Navega o PC», é também o analógico dele que o ato da velocidade mede.
 * **P2** — Cabo, e tem de mover a seta igual ao P1. Se o P1 mover e o P2 não, o defeito é do segundo lugar da fila, não do cabo.
-* **P3** — Rádio, testemunha — e esta testemunha responde uma pergunta em vez de ficar quieta. Passe o dedo nela e anote se a seta anda: andando, quem move a seta é o sistema, que ouve os quatro; não andando, quem move é o Hefesto, e aí só um controle move.
+* **P3** — Rádio, testemunha — e esta testemunha responde uma pergunta em vez de ficar quieta. Passe o dedo nela e anote se a seta anda: andando, quem move a seta é o sistema, que ouve os quatro; não andando, quem move é o Hefesto, e aí só o controle «Navega o PC» move.
 * **P4** — Rádio, segunda testemunha, mesma pergunta. Se o P3 mover e o P4 não, anote — são dois controles no mesmo tipo de conexão, e a diferença entre eles é o achado.
 
-**A armadilha.** O dedo tem de andar APOIADO: a seta só junta movimento enquanto o dedo está na superfície, e levantar zera a referência de propósito — é isso que impede o salto ao reapoiar. Se a seta pular ao reapoiar, isso é o defeito. Quem move a seta com o touchpad físico hoje é o SISTEMA, e não o Hefesto: foi decisão dela em 09/08, o Hefesto devolveu o touchpad ao computador nos dois transportes, e em 03/09 os dois nós foram medidos assim. Daí saem duas coisas que enganam. A primeira: a seta andar não prova que o Hefesto está funcionando — prova que o touchpad e o nó dele estão de pé. A segunda: a «Velocidade de cursor» pode não mudar NADA no dedo e mudar tudo no analógico esquerdo, porque o número é do Hefesto e o dedo não passa por ele; se for isso que você vir, anote — é o estado medido, não um defeito novo. Rolar com dois dedos EXISTE, e quem faz é o SISTEMA, não o Hefesto: medido em 18/09/2026 com os dedos dela, o libinput emitiu 922 eventos de rolagem de dois dedos e 8 pinças no mesmo nó — o DualSense entrega dois pontos de toque. Não é o que este teste mede. E não confunda os dois gestos: apertar até estalar é o clique, e ele é outro teste. Onde a prova parou: a casa provou o caminho até o controle virtual, e parou aí.
+**A armadilha.** O dedo tem de andar APOIADO: a seta só junta movimento enquanto o dedo está na superfície, e levantar zera a referência de propósito — é isso que impede o salto ao reapoiar. Se a seta pular ao reapoiar, isso é o defeito. Quem move a seta com o touchpad físico hoje é o SISTEMA, e não o Hefesto: foi decisão dela em 09/08, o Hefesto devolveu o touchpad ao computador nos dois transportes, e em 03/09 os dois nós foram medidos assim. A ajuda de «Quem navega, e com qual controle» diz que os outros controles «não mexem no cursor» — isso vale para o analógico e os seis gestos, que são do Hefesto; o dedo no touchpad é do sistema. Daí saem duas coisas que enganam. A primeira: a seta andar não prova que o Hefesto está funcionando — prova que o touchpad e o nó dele estão de pé. A segunda: a «Velocidade de cursor» pode não mudar NADA no dedo e mudar tudo no analógico esquerdo, porque o número é do Hefesto e o dedo não passa por ele; se for isso que você vir, anote — é o estado medido, não um defeito novo. Rolar com dois dedos EXISTE, e quem faz é o SISTEMA: medido em 18/09/2026 com os dedos dela, o sistema emitiu 922 eventos de rolagem de dois dedos e 8 pinças no mesmo nó. Não é o que este teste mede. E não confunda os dois gestos: apertar até estalar é o clique, e ele é outro teste. Onde a prova parou: a casa provou o caminho até o controle virtual, e parou aí.
 
 ---
 
@@ -6413,27 +6418,26 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que passar o dedo no touchpad de um controle ligado por rádio move a seta do mouse na tela — o que nunca foi medido com um dedo até hoje.
 
-**Onde olhar.** O resultado é a SETA DO MOUSE na sua própria tela, e não um campo do Hefesto — então deixe à mostra uma área vazia ao lado da janela do Hefesto, para a seta ter para onde andar. No Hefesto, na aba Navegação, quadro «As opções de ativação»: a linha «Status do Modo», que diz Ligado ou Desligado, e a linha «Velocidade de cursor», um deslizante de 1 a 12 com o número ao lado. A ajuda da «Navegação Interna», ao lado, diz que o cursor do PC é UM só e sai do controle do Player 1. Na ajuda do título da tabela de botões, do outro lado da mesma aba, o fim do texto diz qual controle navega o PC — é esse nome que decide se o ato do analógico pode ser feito hoje.
+**Onde olhar.** O resultado é a SETA DO MOUSE na sua própria tela, e não um campo do Hefesto — deixe à mostra uma área vazia ao lado da janela do Hefesto, para a seta ter para onde andar. No Hefesto, aba Navegação: no quadro «Quem navega, e com qual controle», o cartão de cada controle diz USB ou BT e «Navega o PC» ou «Só a janela» — é esse cartão que decide se o ato do analógico pode ser feito hoje; no quadro «As opções de ativação», a linha «Status do Modo», que diz Ligado ou Desligado, e a linha «Velocidade de cursor», um deslizante de 1 a 12 com o número ao lado.
 
 **Os passos.**
 
 1. Abra o Hefesto e clique na aba Navegação.
 2. Confira que o «Status do Modo» está em Ligado.
-3. Confira na fita do topo que o P3 e o P4 dizem rádio.
-4. Abra a ajuda do título da tabela de botões e anote qual controle navega o PC.
+3. Confira nos cartões do quadro «Quem navega, e com qual controle» que o P3 e o P4 dizem BT.
+4. Anote qual cartão diz «Navega o PC».
 5. Com os quatro controles largados na mesa, passe o dedo no touchpad do P1, que está no cabo.
-6. Veja a seta andar — é ele que prova que a tela e a sua mão estão medindo alguma coisa hoje. Depois disso não encoste mais nele.
+6. Confira que a seta andou — é o P1 que prova que a tela e a sua mão estão medindo alguma coisa hoje. Depois disso não encoste mais nele.
 7. Passe o dedo devagar no touchpad do P3, da esquerda para a direita e depois de cima para baixo.
-8. Veja a seta ir para a direita e, na segunda passada, descer.
+8. Confira que a seta foi para a direita e, na segunda passada, desceu.
 9. Levante o dedo do P3, reapoie-o em outro canto do touchpad e ande de novo.
 10. Confira que a seta NÃO pulou ao reapoiar.
 11. Passe o dedo no touchpad do P3 por uns dez segundos, indo e voltando.
-12. Repare se a seta anda liso ou aos saltos, e anote.
-13. Empurre o analógico esquerdo do P3 — mas só se o controle que navega o PC (ato 1) for um dos do rádio.
-14. Veja se a seta anda, e anote. Se quem navega o PC for um do cabo, anote que este pedaço não deu para medir hoje.
-15. Repita os atos 3 a 5 no P4, com os outros três largados na mesa.
+12. Anote se a seta andou liso ou aos saltos.
+13. Se o cartão que diz «Navega o PC» for o do P3, empurre o analógico esquerdo dele e anote se a seta anda; se for de outro controle, anote que este pedaço não deu para medir hoje.
+14. Faça no P4 a mesma volta do P3 — as duas passadas, o reapoio, os dez segundos e, se for ele quem navega o PC, o analógico —, com os outros três largados na mesa.
 
-**Passa quando.** A seta do mouse anda com o dedo nos DOIS controles do rádio: para a direita quando o dedo vai para a direita, para baixo quando o dedo desce, e sem pular quando você levanta e reapoia o dedo. Para o resultado valer, o P1, que está no cabo, tem de ter movido a seta antes. No fim, você tem anotado, para o P3 e para o P4: se a seta andou, se ela pulou ao reapoiar, e se ela andou lisa ou aos saltos.
+**Passa quando.** A seta do mouse anda com o dedo nos DOIS controles do rádio: para a direita quando o dedo vai para a direita, para baixo quando o dedo desce, e sem pular quando você levanta e reapoia o dedo. Para o resultado valer, o P1, que está no cabo, tem de ter movido a seta antes. No fim, você tem anotado, para o P3 e para o P4: se a seta andou, se ela pulou ao reapoiar, e se ela andou liso ou aos saltos.
 
 **Por controle.**
 
@@ -6442,43 +6446,47 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — Rádio, e é um dos dois que têm de mover a seta. Dedo apoiado, andando devagar nos dois sentidos, e depois dez segundos indo e voltando para ver se ela anda liso.
 * **P4** — Rádio, e é o outro. Mesmos gestos. Se o P3 mover a seta e o P4 não, anote: são dois controles sem fio, e a diferença entre eles é o achado deste teste.
 
-**A armadilha.** Este é o lado que nunca foi medido com um dedo. Em 03/09 mediu-se que o touchpad existe pelo rádio, com os mesmos eixos e a mesma geometria do cabo, mas ninguém encostou nele — a POSIÇÃO por rádio não tem medição de bancada nenhuma. O que sair daqui é o primeiro número. Existe uma observação dela, de 11/08, e ela também nunca foi medida: pelo rádio o touchpad move a seta, mas os gatilhos e o analógico não — o touchpad seria o único dos três que funciona sem fio. Por isso o ato do analógico, e por isso ele só vale no controle que navega o PC: em qualquer outro o analógico não move a seta de propósito, e cobrar isso dele seria reprovar um produto que está certo. O dedo tem de andar APOIADO: levantar zera a referência, e é isso que impede o salto ao reapoiar; se a seta pular, isso é o defeito. E quem move a seta com o touchpad físico hoje é o SISTEMA, não o Hefesto — decisão dela de 09/08, medida igual nos dois transportes em 03/09: a seta andar prova que o touchpad e o nó dele estão de pé, não que o Hefesto está movendo. Rolar com dois dedos EXISTE, e quem faz é o SISTEMA, não o Hefesto: medido em 18/09/2026 com os dedos dela, o libinput emitiu 922 eventos de rolagem de dois dedos e 8 pinças no mesmo nó — o DualSense entrega dois pontos de toque. Não é o que este teste mede. Apertar até estalar é o clique, e é outro teste. Onde a prova parou: a casa provou o caminho até o controle virtual, e parou aí.
+**A armadilha.** Este é o lado que nunca foi medido com um dedo. Em 03/09 mediu-se que o touchpad existe pelo rádio, com os mesmos eixos e a mesma geometria do cabo, mas ninguém encostou nele — a POSIÇÃO por rádio não tem medição de bancada nenhuma. O que sair daqui é o primeiro número. Existe uma observação dela, de 11/08, que também nunca foi medida: pelo rádio o touchpad move a seta, mas os gatilhos e o analógico não. Por isso o ato do analógico, e por isso ele só vale no controle que diz «Navega o PC»: em qualquer outro o analógico não move a seta de propósito, e cobrar isso dele seria reprovar um produto que está certo. O dedo tem de andar APOIADO: levantar zera a referência, e é isso que impede o salto ao reapoiar; se a seta pular, isso é o defeito. E quem move a seta com o touchpad físico hoje é o SISTEMA, não o Hefesto — decisão dela de 09/08, medida igual nos dois transportes em 03/09: a seta andar prova que o touchpad e o nó dele estão de pé, não que o Hefesto está movendo. A frase «os outros não mexem no cursor», na ajuda de «Quem navega», fala do analógico e dos gestos, que são do Hefesto — não do dedo. Rolar com dois dedos EXISTE, e quem faz é o SISTEMA: medido em 18/09/2026 com os dedos dela, 922 eventos de rolagem de dois dedos e 8 pinças no mesmo nó. Não é o que este teste mede. Apertar até estalar é o clique, e é outro teste. Onde a prova parou: a casa provou o caminho até o controle virtual, e parou aí.
+
+---
 
 ## mapa-toque.touchpad.dedos-cabo — Touchpad — os dedos na TELA (leitura por slot) · cabo
 
 *Célula:* `toque.touchpad.dedos @ cabo`
 
-**O que isto prova.** Prova que a aba Controles mostra os DOIS dedos que você apoia no touchpad — uma bolinha por dedo, cada uma onde o dedo está — e que a palavra do canto conta certo: «Sem toque», «1 toque», «2 toques».
+**O que isto prova.** Prova que o cartão da aba Controles mostra os DOIS dedos que você apoia no touchpad de um controle no cabo — uma bolinha por dedo, cada uma onde o dedo está — e que a palavra do canto conta certo: «Sem toque», «1 toque», «2 toques».
 
-**Onde olhar.** No Hefesto, aba Controles, o card do controle que você está tocando: o quadro «Touchpad», no canto de cima à esquerda do card. O retângulo escuro é o touchpad; as bolinhas ciano são os dedos; a palavra no canto de cima à direita do quadro é a contagem.
+**Onde olhar.** Na aba Controles. Clique no chip «Todos» da fita do topo para abrir os quatro cartões — com eles abertos a caixa rola. Em cada cartão, no canto de cima à esquerda, a moldura Touchpad: o retângulo escuro é o touchpad, as bolinhas ciano são os dedos, e a palavra na linha do rótulo, à direita, é a contagem. Na fita, cada controle diz USB (cabo) ou BT (rádio).
 
 **Os passos.**
 
-1. Abra a aba Controles e escolha o P1 na fita do topo, para o card dele ficar aberto.
-2. Confira que o quadro «Touchpad» diz «Sem toque» e não mostra bolinha nenhuma.
-3. Apoie UM dedo no canto de cima à direita do touchpad do P1 e deixe-o parado.
-4. Confira que aparece UMA bolinha no canto de cima à direita do quadro e que a palavra diz «1 toque».
-5. Sem tirar o primeiro dedo, apoie um SEGUNDO dedo no canto de baixo à esquerda.
-6. Confira que aparecem DUAS bolinhas, uma em cada canto, e que a palavra diz «2 toques».
-7. Deixe os dois dedos parados por uns dez segundos.
-8. Confira que as duas bolinhas continuam lá, paradas — dedo parado não some.
-9. Levante SÓ o primeiro dedo (o de cima à direita).
-10. Confira que a bolinha que sobrou é a do canto de baixo à esquerda, que ela NÃO pulou para o outro canto, e que a palavra voltou para «1 toque».
-11. Levante o segundo dedo e confira «Sem toque».
-12. Apoie TRÊS dedos juntos e anote quantas bolinhas aparecem.
-13. Repita os passos 3 a 11 no P2, com os outros três largados na mesa.
+1. Abra a aba Controles.
+2. Clique no chip «Todos» da fita do topo, para abrir os quatro cartões.
+3. Confira na fita que o P1 e o P2 dizem USB.
+4. Confira que o Touchpad do cartão do P1 diz «Sem toque» e não mostra bolinha nenhuma.
+5. Apoie UM dedo no canto de cima à direita do touchpad do P1 e deixe-o parado.
+6. Confira que aparece UMA bolinha no canto de cima à direita do retângulo e que a palavra diz «1 toque».
+7. Sem tirar o primeiro dedo, apoie um SEGUNDO dedo no canto de baixo à esquerda.
+8. Confira que aparecem DUAS bolinhas, uma em cada canto, e que a palavra diz «2 toques».
+9. Deixe os dois dedos parados por uns dez segundos.
+10. Confira que as duas bolinhas continuam lá — dedo parado não some — e que os cartões do P2, do P3 e do P4 continuam em «Sem toque».
+11. Levante SÓ o primeiro dedo, o de cima à direita.
+12. Confira que a bolinha que sobrou é a do canto de baixo à esquerda, que ela NÃO pulou para o outro canto, e que a palavra voltou a «1 toque».
+13. Levante o segundo dedo.
+14. Confira que a palavra voltou a «Sem toque».
+15. Apoie TRÊS dedos juntos no touchpad do P1 e anote quantas bolinhas aparecem.
+16. Faça no P2 a mesma volta, do primeiro dedo até levantar o segundo, com os outros três largados na mesa.
+
+**Passa quando.** Dois dedos viram duas bolinhas, cada uma onde o seu dedo está, com a palavra «2 toques»; dedo parado continua na tela; levantar um dedo não faz o outro trocar de lugar; e os cartões dos controles que ninguém tocou ficam em «Sem toque». Com três dedos o esperado são DUAS bolinhas, e isso não é defeito — veja a armadilha.
 
 **Por controle.**
 
 * **P1** — Cabo, e é o primeiro que tem de mostrar os dois dedos.
 * **P2** — Cabo, e tem de mostrar igual ao P1. Se o P1 mostrar e o P2 não, o defeito é do segundo lugar da fila, não do cabo.
-* **P3** — Rádio, testemunha: largado na mesa. Se o card DELE mostrar bolinha enquanto você toca o P1, os dedos estão indo para o controle errado, e isso é o achado.
+* **P3** — Rádio, testemunha: largado na mesa. Se o cartão DELE mostrar bolinha enquanto você toca o P1, os dedos estão indo para o controle errado, e isso é o achado.
 * **P4** — Rádio, segunda testemunha, mesma pergunta.
 
-
-**Passa quando.** Dois dedos viram duas bolinhas, cada uma onde o seu dedo está, com a palavra «2 toques»; dedo parado continua na tela; e levantar um dedo não faz o outro trocar de lugar. No passo 12 o esperado são DUAS bolinhas, e isso não é defeito — veja a armadilha.
-
-**A armadilha.** O touchpad do DualSense tem DOIS pontos de toque no aparelho, e não mais: o nó do kernel declara `ABS_MT_SLOT` de 0 a 1, e o terceiro dedo não chega nem ao sistema. O zoom de três dedos parece funcionar porque a pinça do sistema só precisa de dois — por isso três dedos viram duas bolinhas. A segunda armadilha é o sistema: rolar com dois dedos e dar zoom com a pinça são gestos do SISTEMA, que usa o mesmo touchpad ao mesmo tempo; eles podem mover a página que estiver sob a seta enquanto você testa, e isso não é o Hefesto. A terceira é o tempo da tela: ela lê o controle dez vezes por segundo, então um toque rápido demais pode não aparecer — os passos pedem dedo parado de propósito.
+**A armadilha.** O touchpad do DualSense tem DOIS pontos de toque no aparelho, e não mais: o nó do kernel declara `ABS_MT_SLOT` de 0 a 1, e o terceiro dedo não chega nem ao sistema. O zoom de três dedos parece funcionar porque a pinça do sistema só precisa de dois — por isso três dedos viram duas bolinhas. A segunda armadilha é o sistema: rolar com dois dedos e dar zoom com a pinça são gestos do SISTEMA, que usa o mesmo touchpad ao mesmo tempo; eles podem mover a página que estiver sob a seta enquanto você testa, e isso não é o Hefesto. A terceira é o tempo da tela: ela lê o controle dez vezes por segundo, então um toque rápido demais pode não aparecer — os passos pedem dedo parado de propósito. Apertar até estalar é o clique, e é outro teste.
 
 ---
 
@@ -6486,37 +6494,42 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `toque.touchpad.dedos @ rádio`
 
-**O que isto prova.** Prova que a aba Controles mostra os DOIS dedos que você apoia no touchpad — uma bolinha por dedo, cada uma onde o dedo está — e que a palavra do canto conta certo: «Sem toque», «1 toque», «2 toques».
+**O que isto prova.** Prova que o cartão da aba Controles mostra os DOIS dedos que você apoia no touchpad de um controle no rádio — uma bolinha por dedo, cada uma onde o dedo está — e que a palavra do canto conta certo: «Sem toque», «1 toque», «2 toques».
 
-**Onde olhar.** No Hefesto, aba Controles, o card do controle que você está tocando: o quadro «Touchpad», no canto de cima à esquerda do card. O retângulo escuro é o touchpad; as bolinhas ciano são os dedos; a palavra no canto de cima à direita do quadro é a contagem.
+**Onde olhar.** Na aba Controles. Clique no chip «Todos» da fita do topo para abrir os quatro cartões — com eles abertos a caixa rola. Em cada cartão, no canto de cima à esquerda, a moldura Touchpad: o retângulo escuro é o touchpad, as bolinhas ciano são os dedos, e a palavra na linha do rótulo, à direita, é a contagem. Na fita, cada controle diz USB (cabo) ou BT (rádio).
 
 **Os passos.**
 
-1. Abra a aba Controles e escolha o P1 na fita do topo, para o card dele ficar aberto.
-2. Confira que o quadro «Touchpad» diz «Sem toque» e não mostra bolinha nenhuma.
-3. Apoie UM dedo no canto de cima à direita do touchpad do P1 e deixe-o parado.
-4. Confira que aparece UMA bolinha no canto de cima à direita do quadro e que a palavra diz «1 toque».
-5. Sem tirar o primeiro dedo, apoie um SEGUNDO dedo no canto de baixo à esquerda.
-6. Confira que aparecem DUAS bolinhas, uma em cada canto, e que a palavra diz «2 toques».
-7. Deixe os dois dedos parados por uns dez segundos.
-8. Confira que as duas bolinhas continuam lá, paradas — dedo parado não some.
-9. Levante SÓ o primeiro dedo (o de cima à direita).
-10. Confira que a bolinha que sobrou é a do canto de baixo à esquerda, que ela NÃO pulou para o outro canto, e que a palavra voltou para «1 toque».
-11. Levante o segundo dedo e confira «Sem toque».
-12. Apoie TRÊS dedos juntos e anote quantas bolinhas aparecem.
-13. Repita os passos 3 a 11 no P3 e depois no P4, um de cada vez, com os outros largados na mesa.
+1. Abra a aba Controles.
+2. Clique no chip «Todos» da fita do topo, para abrir os quatro cartões.
+3. Confira na fita que o P3 e o P4 dizem BT.
+4. Apoie dois dedos no touchpad do P1, que está no cabo, e deixe-os parados.
+5. Confira que o cartão do P1 mostra as duas bolinhas — é a comparação, e sem ela o resto não mede nada.
+6. Tire os dedos do P1 e não encoste mais nele.
+7. Confira que o Touchpad do cartão do P3 diz «Sem toque» e não mostra bolinha nenhuma.
+8. Apoie UM dedo no canto de cima à direita do touchpad do P3 e deixe-o parado.
+9. Confira que aparece UMA bolinha no canto de cima à direita do retângulo e que a palavra diz «1 toque».
+10. Sem tirar o primeiro dedo, apoie um SEGUNDO dedo no canto de baixo à esquerda.
+11. Confira que aparecem DUAS bolinhas, uma em cada canto, e que a palavra diz «2 toques».
+12. Deixe os dois dedos parados por uns dez segundos.
+13. Confira que as duas bolinhas continuam lá — dedo parado não some — e que os cartões do P1, do P2 e do P4 continuam em «Sem toque».
+14. Levante SÓ o primeiro dedo, o de cima à direita.
+15. Confira que a bolinha que sobrou é a do canto de baixo à esquerda, que ela NÃO pulou para o outro canto, e que a palavra voltou a «1 toque».
+16. Levante o segundo dedo.
+17. Confira que a palavra voltou a «Sem toque».
+18. Apoie TRÊS dedos juntos no touchpad do P3 e anote quantas bolinhas aparecem.
+19. Faça no P4 a mesma volta do P3, do primeiro dedo até levantar o segundo, com os outros três largados na mesa.
+
+**Passa quando.** Nos dois do rádio, dois dedos viram duas bolinhas, cada uma onde o seu dedo está, com a palavra «2 toques»; dedo parado continua na tela; levantar um dedo não faz o outro trocar de lugar; e os cartões dos controles que ninguém tocou ficam em «Sem toque». Com três dedos o esperado são DUAS bolinhas, e isso não é defeito — veja a armadilha.
 
 **Por controle.**
 
+* **P1** — Cabo, e é o controle de comparação: dois dedos nele primeiro, e depois vira testemunha. Se o cartão DELE mostrar bolinha enquanto você toca o P3, os dedos estão indo para o controle errado.
+* **P2** — Cabo, testemunha: largado na mesa, mesma pergunta.
 * **P3** — Rádio, e é o primeiro que tem de mostrar os dois dedos. O nó de touchpad é o mesmo nos dois transportes, então pelo rádio o esperado é igual ao cabo.
 * **P4** — Rádio, e tem de mostrar igual ao P3.
-* **P1** — Cabo, testemunha: largado na mesa. Se o card DELE mostrar bolinha enquanto você toca o P3, os dedos estão indo para o controle errado.
-* **P2** — Cabo, segunda testemunha, mesma pergunta.
 
-
-**Passa quando.** Dois dedos viram duas bolinhas, cada uma onde o seu dedo está, com a palavra «2 toques»; dedo parado continua na tela; e levantar um dedo não faz o outro trocar de lugar. No passo 12 o esperado são DUAS bolinhas, e isso não é defeito — veja a armadilha.
-
-**A armadilha.** O touchpad do DualSense tem DOIS pontos de toque no aparelho, e não mais: o nó do kernel declara `ABS_MT_SLOT` de 0 a 1, e o terceiro dedo não chega nem ao sistema. O zoom de três dedos parece funcionar porque a pinça do sistema só precisa de dois — por isso três dedos viram duas bolinhas. A segunda armadilha é o sistema: rolar com dois dedos e dar zoom com a pinça são gestos do SISTEMA, que usa o mesmo touchpad ao mesmo tempo; eles podem mover a página que estiver sob a seta enquanto você testa, e isso não é o Hefesto. A terceira é o tempo da tela: ela lê o controle dez vezes por segundo, então um toque rápido demais pode não aparecer — os passos pedem dedo parado de propósito.
+**A armadilha.** O touchpad do DualSense tem DOIS pontos de toque no aparelho, e não mais: o nó do kernel declara `ABS_MT_SLOT` de 0 a 1, e o terceiro dedo não chega nem ao sistema. O zoom de três dedos parece funcionar porque a pinça do sistema só precisa de dois — por isso três dedos viram duas bolinhas. A segunda armadilha é o sistema: rolar com dois dedos e dar zoom com a pinça são gestos do SISTEMA, que usa o mesmo touchpad ao mesmo tempo; eles podem mover a página que estiver sob a seta enquanto você testa, e isso não é o Hefesto. A terceira é o tempo da tela: ela lê o controle dez vezes por segundo, e pelo rádio chegam menos leituras que pelo cabo, então um toque rápido demais pode não aparecer — os passos pedem dedo parado de propósito.
 
 ---
 
@@ -6524,42 +6537,38 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `vibracao.rumble.direito @ cabo`
 
-**O que isto prova.** Prova que, nos dois controles do cabo, o motor que o Hefesto chama de direito é o punho direito — e que a barra dele cala aquele punho e mais nenhum.
+**O que isto prova.** Prova que, nos dois controles do cabo, o motor que o Hefesto chama de direito é o punho direito — e que, com a barra do Motor esquerdo em 0, só o punho direito treme, e só naquele controle.
 
-**Onde olhar.** Na aba Vibração, que tem uma coluna por controle. O cabeçalho da coluna diz o número do jogador, a cor do plástico e por onde ele fala (a palavra cabo ou a palavra rádio). Logo abaixo vem o desenho do controle, e nele o lado que está tremendo acende em laranja. Mais abaixo há duas linhas de motor, cada uma com um ícone, uma barra para arrastar e um número seguido de %: a de cima é Motor de vibração esquerdo, a de baixo é Motor de vibração direito. No pé da coluna ficam os botões Testar e Parar. Embaixo das quatro colunas há uma linha que começa com um pontinho — é ela que conta os pedidos de vibração do jogo, jogador por jogador. O juiz final, porém, são as suas mãos.
+**Onde olhar.** Na aba Vibração, que tem uma coluna por controle — a fita do topo não escolhe nada aqui. Na linha Controle, o desenho do controle: o lado que treme acende em laranja. Na linha Modelo, o número, a cor do plástico e a palavra do transporte — USB é o cabo, BT é o rádio. Mais abaixo, a linha Motor esquerdo e a linha Motor direito, cada uma com um ícone que fica aceso enquanto o motor está ligado, uma barra de 0 a 100 e o número com %. No pé da coluna, «Testar» e «Parar»: o Testar faz aquele controle tremer com os valores das barras da coluna e o deixa tremendo até você clicar em Parar. Ao ser clicado, o botão pisca a borda — verde quando aplicou, laranja quando foi recusado. O juiz final são as suas mãos.
 
 **Os passos.**
 
-1. Abra a aba Jogar.
-2. Confira que o Status está em Ligado.
-3. Confira que o Modo escolhido não é o Modo Nativo.
-4. Clique na aba Vibração.
-5. Leia os dois números de motor de cada uma das quatro colunas e escreva os oito, antes de arrastar qualquer barra.
-6. Clique em Parar em cada uma das quatro colunas, para limpar qualquer vibração fixada de um teste anterior.
-7. Ponha, na coluna do P1 e na do P2, a barra do Motor de vibração esquerdo em 0 e a do Motor de vibração direito em 100.
-8. Confira que as quatro barras do P3 e do P4 continuam em 100.
-9. Abra o jogo com os quatro jogadores dentro da partida.
-10. Segure o P1 com uma mão em cada punho, sem apertar, e provoque no jogo a vibração do jogador dele — o dano, o tiro ou a batida que você sabe provocar.
-11. Diga em voz alta qual punho tremeu, antes de olhar a tela.
-12. Veja, no desenho da coluna do P1 durante a vibração, qual lado acendeu em laranja.
-13. Repita a volta inteira com o P2: segure com uma mão em cada punho, provoque a vibração dele, diga o punho em voz alta e só então olhe o desenho.
-14. Segure o P3 e provoque uma vibração para o jogador dele.
-15. Confira que no P3 os DOIS punhos tremem.
-16. Pare o mouse na linha Motor de vibração esquerdo da coluna daquele jogador e leia a dica com o número que o jogo pediu.
-17. Devolva as oito barras aos números que você escreveu no começo.
+1. Feche o jogo, se houver algum aberto.
+2. Clique na aba Vibração.
+3. Confira na linha Modelo que as colunas do P1 e do P2 dizem USB.
+4. Anote os dois números de motor de cada uma das quatro colunas, antes de mexer em qualquer barra.
+5. Arraste, na coluna do P1, a barra do Motor esquerdo até 0 e a do Motor direito até 100.
+6. Clique em Testar na coluna do P1.
+7. Pegue o P1 com uma mão em cada punho, sem apertar, feche os olhos e diga em voz alta qual punho treme.
+8. Confira, de olhos abertos, qual lado do desenho da coluna do P1 está aceso em laranja, e que o P2, o P3 e o P4 estão parados na mesa.
+9. Clique em Parar na coluna do P1.
+10. Faça na coluna do P2 a mesma volta: barra esquerda em 0 e direita em 100, Testar, as duas mãos de olhos fechados, a olhada no desenho, Parar.
+11. Arraste as duas barras de motor da coluna do P3 até 100 e clique em Testar na coluna dele.
+12. Pegue o P3 com uma mão em cada punho.
+13. Confira que no P3 os DOIS punhos tremem.
+14. Clique em Parar na coluna do P3.
+15. Devolva as barras das quatro colunas aos números que você anotou.
 
-**Passa quando.** No P1 e no P2 — os dois do cabo —, com a barra esquerda em 0, só o punho DIREITO tremeu com a vibração do jogo, e no desenho só o lado direito acendeu em laranja; o punho esquerdo desses dois ficou parado. No P3 e no P4, com as duas barras em 100, os dois punhos tremeram: é isso que prova que o motor esquerdo está vivo e que quem o calou foi a barra, não um defeito. E nenhum controle tremeu quando a vibração era de outro jogador.
+**Passa quando.** No P1 e no P2 — os dois do cabo —, com a barra esquerda em 0, só o punho DIREITO tremeu, e no desenho só o lado direito acendeu em laranja; o punho esquerdo desses dois ficou parado. No P3, com as duas barras em 100, os dois punhos tremeram: é isso que prova que o motor esquerdo está vivo e que quem o calou foi a barra, não um defeito. E nenhum controle tremeu enquanto o Testar era de outro.
 
 **Por controle.**
 
 * **P1** — Está no CABO e é um dos dois que têm de reagir. Barra esquerda em 0, direita em 100: só o punho direito pode tremer, e só o lado direito acende no desenho.
 * **P2** — Também no cabo, mesma configuração e mesma resposta esperada. Se os dois do cabo se comportarem diferente um do outro, o defeito é daquele controle e não do transporte — anote qual dos dois.
-* **P3** — Está no RÁDIO e é testemunha: não mexa nas barras dele. Duas conferências nele — não pode tremer quando a vibração é do jogador do P1, e quando é a dele os dois punhos têm de tremer.
-* **P4** — Também no rádio e também testemunha, com a mesma dupla conferência. Se o P3 e o P4 tremerem junto com o P1, a vibração perdeu o endereço e foi para os quatro em vez de ir para o escolhido.
+* **P3** — Está no RÁDIO e é testemunha e contraste: parado enquanto o Testar é do P1 ou do P2, e, com as duas barras em 100, os dois punhos dele têm de tremer quando o Testar é dele.
+* **P4** — Também no rádio, testemunha: não mexa nas barras dele, e ele não pode tremer em momento nenhum deste teste. Se tremer junto com o P1, a vibração perdeu o endereço e foi para os quatro.
 
-**A espera.** O jogo pode levar minutos para chegar ao menu, e nenhum desses minutos é para ficar olhando a tela. Deixe-o carregando e vá fazer outra coisa; volte quando ouvir o som do menu. Nada se desfaz por você ter saído da frente: as oito barras continuam onde você as pôs, e o Parar que você clicou continua valendo. Ao voltar, comece pelo P1 na mão.
-
-**A armadilha.** A barra NÃO muda o botão Testar, e é aqui que este teste dá falso vermelho. O Testar manda um par fixo para os DOIS motores e ignora as duas barras da coluna: quem puser a barra esquerda em 0, clicar em Testar, sentir os dois punhos tremerem e concluir que a barra não funciona reprovou um produto certo. A barra só morde a vibração que vem DO JOGO. Segunda: a barra grava no perfil ativo no instante em que você solta o dedo, e fica gravada — por isso os números se escrevem antes e se devolvem no fim. Terceira: o laranja do desenho vem da vibração do jogo e apaga sozinho cerca de três segundos depois da última — desenho apagado com a vibração já terminada não é defeito. Quarta: o tremor viaja pelo casco; com o controle apoiado na mesa, ou apertado com força, o punho mudo parece tremer também. Segure leve. No mapa esta célula chegou até o aparelho obedeceu, e a prova foi um teste às cegas: ela disse o lado sem saber o que tinha sido enviado. E a razão de este teste ter NOVE atos, um a mais que o alvo de oito: o dizer às cegas é passo próprio e numerado de propósito. Ele é a defesa contra o próprio viés — falar o punho ANTES de olhar o desenho —, e dobrado dentro do passo que provoca a vibração ele vira recomendação, que é justamente o que faz alguém olhar a tela primeiro e depois "sentir" o lado que a tela mostrou.
+**A armadilha.** O Testar mudou duas vezes, e as duas mudanças importam aqui. Desde 07/09, por pedido dela, ele NÃO é mais um pulso de meio segundo: fica ligado até você clicar em Parar — é isso que deixa você clicar e só depois pegar o controle com as duas mãos. A ajuda do «Testar agora» ainda fala em meio segundo; vale o que a mão sente. E desde 09/09 o Testar obedece às barras da coluna: com a barra do Motor esquerdo em 0, o punho esquerdo tem de ficar parado também no Testar — se ele tremer, isso é o defeito. Começar o Testar noutra coluna encerra o da anterior, e trocar de aba também o desliga. Se o botão piscar laranja em vez de verde, o Testar foi recusado: confira na aba Jogar se o Status está em Ligado — em Desligado quem manda nos motores é o jogo. O tremor viaja pelo casco: com o controle apoiado na mesa, ou apertado com força, o punho mudo parece tremer também — segure leve. A barra grava no perfil ativo no instante em que você a solta, e fica gravada: por isso os números se anotam antes e se devolvem no fim. O ícone ao lado da barra acende sozinho quando ela passa de 0; clicar nele liga o motor em 100 ou o desliga em 0, e não lembra o número de antes. O «diga em voz alta de olhos fechados» é passo próprio de propósito: falar o punho antes de olhar o desenho é a defesa contra sentir o lado que a tela mostrou. No mapa esta célula chegou até o aparelho obedecer, num teste às cegas com o jogo; aqui é a confirmação pelo Testar, sem jogo — que a barra também vale para a vibração do jogo é o que o teste do rumble por amplitude mede.
 
 ---
 
@@ -6567,43 +6576,38 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `vibracao.rumble.direito @ rádio`
 
-**O que isto prova.** Prova que, nos dois controles do rádio, o motor direito é o punho direito — e que a barra dele cala aquele punho sem tocar nos controles do cabo.
+**O que isto prova.** Prova que, nos dois controles do rádio, o motor direito é o punho direito — e que, com a barra do Motor esquerdo em 0, só o punho direito treme, sem tocar nos controles do cabo.
 
-**Onde olhar.** Na aba Vibração, nas colunas do P3 e do P4 — o cabeçalho de cada uma tem de dizer a palavra rádio. Dentro da coluna: o desenho do controle, onde o lado que treme acende em laranja; a linha Motor de vibração esquerdo e a linha Motor de vibração direito, cada uma com uma barra e um número seguido de %; e os botões Testar e Parar no pé. Embaixo das quatro colunas, a linha que começa com um pontinho conta os pedidos do jogo por jogador. Quem decide o resultado são as suas mãos.
+**Onde olhar.** Na aba Vibração, uma coluna por controle — a fita do topo não escolhe nada aqui. Nas colunas do P3 e do P4, a linha Modelo tem de dizer BT, que é o rádio. Dentro de cada coluna: o desenho do controle, onde o lado que treme acende em laranja; a linha Motor esquerdo e a linha Motor direito, cada uma com um ícone aceso enquanto o motor está ligado, uma barra de 0 a 100 e o número com %; e, no pé, «Testar» e «Parar». O Testar faz aquele controle tremer com os valores das barras da coluna e o deixa tremendo até o Parar; ao ser clicado, o botão pisca a borda verde quando aplicou e laranja quando foi recusado. Quem decide o resultado são as suas mãos.
 
 **Os passos.**
 
-1. Abra a aba Jogar.
-2. Confira que o Status está em Ligado.
-3. Confira que o Modo escolhido não é o Modo Nativo.
-4. Clique na aba Vibração.
-5. Confira que o cabeçalho das colunas do P3 e do P4 diz rádio.
-6. Leia os dois números de motor de cada uma das quatro colunas e escreva os oito, antes de arrastar qualquer barra.
-7. Clique em Parar em cada uma das quatro colunas.
-8. Ponha, na coluna do P3 e na do P4, a barra do Motor de vibração esquerdo em 0 e a do Motor de vibração direito em 100.
-9. Confira que as quatro barras do P1 e do P2 continuam em 100.
-10. Abra o jogo com os quatro jogadores dentro da partida.
-11. Segure o P3 com uma mão em cada punho, sem apertar, e provoque no jogo a vibração do jogador dele.
-12. Diga em voz alta qual punho tremeu, antes de olhar a tela.
-13. Veja, no desenho da coluna do P3 durante a vibração, qual lado acendeu em laranja.
-14. Repita a volta inteira com o P4: segure com uma mão em cada punho, provoque a vibração dele, diga o punho em voz alta e só então olhe o desenho.
-15. Segure o P1 e provoque uma vibração para o jogador dele.
-16. Confira que no P1 os DOIS punhos tremem.
-17. Pare o mouse na linha Motor de vibração esquerdo da coluna daquele jogador e leia a dica com o número que o jogo pediu.
-18. Devolva as oito barras aos números que você escreveu no começo.
+1. Feche o jogo, se houver algum aberto.
+2. Clique na aba Vibração.
+3. Confira na linha Modelo que as colunas do P3 e do P4 dizem BT.
+4. Anote os dois números de motor de cada uma das quatro colunas, antes de mexer em qualquer barra.
+5. Arraste, na coluna do P3, a barra do Motor esquerdo até 0 e a do Motor direito até 100.
+6. Clique em Testar na coluna do P3.
+7. Pegue o P3 com uma mão em cada punho, sem apertar, feche os olhos e diga em voz alta qual punho treme.
+8. Confira, de olhos abertos, qual lado do desenho da coluna do P3 está aceso em laranja, e que o P1, o P2 e o P4 estão parados na mesa.
+9. Clique em Parar na coluna do P3.
+10. Faça na coluna do P4 a mesma volta: barra esquerda em 0 e direita em 100, Testar, as duas mãos de olhos fechados, a olhada no desenho, Parar.
+11. Arraste as duas barras de motor da coluna do P1 até 100 e clique em Testar na coluna dele.
+12. Pegue o P1 com uma mão em cada punho.
+13. Confira que no P1 os DOIS punhos tremem.
+14. Clique em Parar na coluna do P1.
+15. Devolva as barras das quatro colunas aos números que você anotou.
 
-**Passa quando.** No P3 e no P4 — os dois do rádio —, com a barra esquerda em 0, só o punho DIREITO tremeu, e no desenho só o lado direito acendeu em laranja. O P1 e o P2, que ficaram com as duas barras em 100, tremeram dos dois lados quando a vibração era deles: é a prova de que o motor esquerdo está vivo e de que quem o calou no rádio foi a barra. E nenhum dos quatro tremeu quando a vibração era de outro jogador.
+**Passa quando.** No P3 e no P4 — os dois do rádio —, com a barra esquerda em 0, só o punho DIREITO tremeu, e no desenho só o lado direito acendeu em laranja. O P1, com as duas barras em 100, tremeu dos dois lados quando o Testar era dele: é a prova de que o motor esquerdo está vivo e de que quem o calou no rádio foi a barra. E nenhum dos quatro tremeu enquanto o Testar era de outro.
 
 **Por controle.**
 
-* **P1** — Está no CABO e é testemunha. Não mexa nas barras dele. Ele não pode tremer quando a vibração é do jogador do P3 — se tremer, o comando pegou a mesa inteira em vez do controle escolhido.
-* **P2** — Também no cabo e também testemunha, com a mesma conferência. Ele é ainda o controle de comparação: com as duas barras em 100, os dois punhos dele têm de tremer quando a vibração é dele.
+* **P1** — Está no CABO e é testemunha e contraste. Ele não pode tremer enquanto o Testar é do P3 ou do P4 — se tremer, o comando pegou os quatro em vez do controle escolhido. Com as duas barras em 100, os dois punhos dele têm de tremer quando o Testar é dele.
+* **P2** — Também no cabo, testemunha: não mexa nas barras dele, e ele não pode tremer em momento nenhum deste teste.
 * **P3** — Está no RÁDIO e é um dos dois que têm de reagir. Barra esquerda em 0, direita em 100: só o punho direito treme, e só o lado direito acende no desenho.
 * **P4** — Também no rádio, mesma configuração. Se ele responder diferente do P3, anote qual dos dois — dois controles no mesmo transporte discordando aponta para o aparelho, não para o caminho.
 
-**A espera.** O jogo pode levar minutos para chegar ao menu, e nenhum desses minutos é para ficar olhando a tela. Deixe-o carregando e vá fazer outra coisa; volte quando ouvir o som do menu. Nada se desfaz por você ter saído da frente: as oito barras continuam onde você as pôs. Ao voltar, comece pelo P3 na mão — e, se ele tiver caído do rádio enquanto você estava fora, isso é achado e vale anotar a hora.
-
-**A armadilha.** A barra NÃO muda o botão Testar: o Testar manda um par fixo aos dois motores e ignora as barras da coluna. Quem testar a barra pelo Testar sente os dois punhos tremerem e reprova um produto certo — a barra só morde a vibração do JOGO. Segunda, e é do rádio: o comando vai numerado e conferido, e um comando que chegue fora de ordem o próprio controle joga fora, sem avisar ninguém. O sintoma é uma vibração que falha de vez em quando, e ele não aparece em campo nenhum da tela — se acontecer, refaça a rodada antes de concluir qualquer coisa. Terceira: a medição de quatro controles na mesa não achou diferença nenhuma entre cabo e rádio nesta família; o que fazia diferença era o Hefesto estar de pé ou parado. Então, se aqui os dois do rádio se comportarem diferente dos dois do cabo, isso é informação nova e vale anotar com todas as letras. Quarta: a barra grava no perfil ativo assim que você solta o dedo — escreva os oito números antes, devolva depois. E a razão de este teste ter NOVE atos, um a mais que o alvo de oito: o dizer às cegas é passo próprio e numerado de propósito. Ele é a defesa contra o próprio viés — falar o punho ANTES de olhar o desenho —, e dobrado dentro do passo que provoca a vibração ele vira recomendação, que é justamente o que faz alguém olhar a tela primeiro e depois "sentir" o lado que a tela mostrou.
+**A armadilha.** O Testar NÃO é mais um pulso de meio segundo: desde 07/09, por pedido dela, ele fica ligado até você clicar em Parar — a ajuda do «Testar agora» ainda fala em meio segundo, e vale o que a mão sente. E desde 09/09 ele obedece às barras da coluna: com a barra esquerda em 0, o punho esquerdo tem de ficar parado também no Testar — se ele tremer, isso é o defeito. Começar o Testar noutra coluna encerra o da anterior, e trocar de aba também o desliga. Se o botão piscar laranja em vez de verde, o Testar foi recusado: confira na aba Jogar se o Status está em Ligado. Segunda, e é do rádio: o comando vai numerado e conferido, e um comando que chegue fora de ordem o próprio controle joga fora, sem avisar ninguém. O sintoma é uma vibração que falha de vez em quando, e ele não aparece em campo nenhum da tela — se acontecer, refaça a rodada antes de concluir qualquer coisa. Não deixe o alto-falante do P3 ou do P4 tocando durante o teste: pelo rádio o som e a vibração disputam o mesmo fio. Terceira: a medição de quatro controles na mesa não achou diferença nenhuma entre cabo e rádio nesta família; se aqui os dois do rádio se comportarem diferente dos dois do cabo, isso é informação nova e vale anotar com todas as letras. Quarta: a barra grava no perfil ativo assim que você a solta — escreva os oito números antes, devolva depois. E o «diga em voz alta de olhos fechados» é passo próprio de propósito: falar o punho antes de olhar o desenho é a defesa contra sentir o lado que a tela mostrou.
 
 ---
 
@@ -6611,41 +6615,39 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `vibracao.rumble.esquerdo @ cabo`
 
-**O que isto prova.** Prova que, nos dois controles do cabo, o motor que o Hefesto chama de esquerdo é o punho esquerdo — o pesado, o que soa grosso — e que a barra dele cala só aquele punho.
+**O que isto prova.** Prova que, nos dois controles do cabo, o motor que o Hefesto chama de esquerdo é o punho esquerdo — o pesado, o que soa grosso — e que, com a barra do Motor direito em 0, o tremor fica só nele.
 
-**Onde olhar.** Na aba Vibração, nas colunas do P1 e do P2 — o cabeçalho de cada uma tem de dizer a palavra cabo. Dentro da coluna: o desenho do controle, onde o lado que treme acende em laranja; a linha Motor de vibração esquerdo e a linha Motor de vibração direito, cada uma com uma barra e um número seguido de %; e os botões Testar e Parar no pé. Parando o mouse em cima do ícone de cada linha aparece a dica que diz qual motor é aquele e como ele soa. Embaixo das quatro colunas, a linha que começa com um pontinho conta os pedidos do jogo. As mãos decidem. Antes de tudo isso, a aba Jogar: é lá que se confere o Status e o Modo escolhido, e é de lá que este teste parte.
+**Onde olhar.** Na aba Vibração, uma coluna por controle — a fita do topo não escolhe nada aqui. Nas colunas do P1 e do P2, a linha Modelo tem de dizer USB, que é o cabo. Dentro de cada coluna: o desenho do controle, onde o lado que treme acende em laranja; a linha Motor esquerdo e a linha Motor direito, cada uma com um ícone aceso enquanto o motor está ligado, uma barra de 0 a 100 e o número com % — parando o mouse no ? de cada linha sai qual punho é aquele e como ele soa; e, no pé, «Testar» e «Parar». O Testar faz aquele controle tremer com os valores das barras da coluna e o deixa tremendo até o Parar; ao ser clicado, o botão pisca a borda verde quando aplicou e laranja quando foi recusado. As mãos decidem.
 
 **Os passos.**
 
-1. Abra a aba Jogar.
-2. Confira que o Status está em Ligado.
-3. Confira que o Modo escolhido não é o Modo Nativo.
-4. Clique na aba Vibração.
-5. Anote os dois números de motor das quatro colunas, antes de arrastar qualquer barra.
-6. Clique em Parar em cada uma das quatro colunas.
-7. Ponha as barras assim: nas colunas do P1 e do P2, o Motor de vibração direito em 0 e o Motor de vibração esquerdo em 100; nas colunas do P3 e do P4, as quatro em 100.
-8. Abra o jogo com os quatro jogadores dentro da partida.
-9. Segure o P1 com uma mão em cada punho, sem apertar, e provoque no jogo uma vibração para o jogador dele.
-10. Diga em voz alta qual punho tem o PESO do tremor, antes de olhar a tela.
-11. Segure o P1 só pelo punho esquerdo e provoque a vibração de novo.
-12. Segure o P1 só pelo punho direito e provoque a vibração mais uma vez.
-13. Veja o desenho da coluna do P1 durante a vibração e repare qual lado acendeu em laranja.
-14. Refaça no P2 os quatro gestos de mão que você fez no P1.
-15. Segure o P3 e provoque uma vibração para o jogador dele.
-16. Confira que ali os DOIS punhos tremem.
-17. Pare o mouse na linha Motor de vibração esquerdo da coluna daquele jogador e leia a dica com o número que o jogo pediu.
-18. Devolva as oito barras aos números que você anotou.
+1. Feche o jogo, se houver algum aberto.
+2. Clique na aba Vibração.
+3. Confira na linha Modelo que as colunas do P1 e do P2 dizem USB.
+4. Anote os dois números de motor das quatro colunas, antes de mexer em qualquer barra.
+5. Arraste, na coluna do P1, a barra do Motor direito até 0 e a do Motor esquerdo até 100.
+6. Clique em Testar na coluna do P1.
+7. Pegue o P1 com uma mão em cada punho, sem apertar, feche os olhos e diga em voz alta em qual punho está o PESO do tremor.
+8. Segure o P1 só pelo punho esquerdo.
+9. Troque: segure o P1 só pelo punho direito.
+10. Confira que no punho direito não vem tremor próprio, só o eco que atravessa o plástico, e que no desenho da coluna do P1 só o lado esquerdo está aceso.
+11. Clique em Parar na coluna do P1.
+12. Faça na coluna do P2 a mesma volta: barra direita em 0 e esquerda em 100, Testar, as duas mãos de olhos fechados, um punho de cada vez, Parar.
+13. Arraste as duas barras de motor da coluna do P3 até 100, clique em Testar na coluna dele e pegue o P3 com as duas mãos.
+14. Confira que no P3 os DOIS punhos tremem.
+15. Clique em Parar na coluna do P3.
+16. Devolva as barras das quatro colunas aos números que você anotou.
 
-**Passa quando.** No P1 e no P2, com a barra direita em 0, o peso do tremor ficou no punho ESQUERDO — e segurando só pelo punho direito não há tremor próprio, só o eco que atravessa o plástico. No desenho, só o lado esquerdo acendeu em laranja. No P3 e no P4, com as duas barras em 100, os dois punhos tremeram, provando que o motor direito está vivo e que quem o calou foi a barra. E nenhum controle tremeu quando a vibração era de outro jogador.
+**Passa quando.** No P1 e no P2, com a barra direita em 0, o peso do tremor ficou no punho ESQUERDO — e segurando só pelo punho direito não há tremor próprio, só o eco que atravessa o plástico. No desenho, só o lado esquerdo acendeu em laranja. No P3, com as duas barras em 100, os dois punhos tremeram, provando que o motor direito está vivo e que quem o calou foi a barra. E nenhum controle tremeu enquanto o Testar era de outro.
 
 **Por controle.**
 
 * **P1** — Está no CABO e é um dos dois que têm de reagir. Barra direita em 0, esquerda em 100: o peso do tremor fica no punho esquerdo e só o lado esquerdo acende no desenho.
 * **P2** — Também no cabo, mesma configuração. Se os dois do cabo discordarem entre si, o defeito é do aparelho e não do caminho — anote qual dos dois.
-* **P3** — Está no RÁDIO e é testemunha: não mexa nas barras dele. Não pode tremer quando a vibração é do jogador do P1, e quando é a dele os dois punhos têm de tremer.
-* **P4** — Também no rádio e também testemunha, com a mesma dupla conferência. Os dois tremendo junto com o P1 quer dizer que a vibração foi para a mesa inteira.
+* **P3** — Está no RÁDIO e é testemunha e contraste: parado enquanto o Testar é do P1 ou do P2, e, com as duas barras em 100, os dois punhos dele têm de tremer quando o Testar é dele.
+* **P4** — Também no rádio, testemunha: não mexa nas barras dele, e ele não pode tremer em momento nenhum. Tremendo junto com o P1, a vibração foi para os quatro.
 
-**A armadilha.** O motor esquerdo é o PESADO, e é ele que faz este teste dar falso vermelho. Quando só o esquerdo treme, o casco inteiro balança e a mão direita sente alguma coisa — quem julgar por senti alguma coisa conclui que os dois lados tremeram e reprova um produto certo. O que se julga é onde está o PESO, não onde há sensação; e a conferência de verdade é a dos passos que mandam segurar um punho de cada vez. Segunda: a barra não muda o botão Testar — o Testar manda um par fixo aos dois motores e ignora as barras, e nesse par o esquerdo já sai mais forte que o direito de propósito. Quem testar a barra pelo Testar sente os dois tremerem e reprova o certo. Terceira: a barra grava no perfil ativo assim que você solta o dedo, e fica — anote antes, devolva depois. Quarta: o laranja apaga sozinho cerca de três segundos depois da última vibração; desenho apagado com a vibração já acabada não é defeito. E este teste é LONGO de propósito, com doze atos: ele nasce na aba Jogar, porque conferir o Status e o Modo com a barra já arrastada seria medir o produto errado, e só depois passa para a aba Vibração; arruma oito barras antes de medir e as devolve no fim; e a prova é a mão trocando de punho três vezes no mesmo controle. Cortar qualquer dessas trocas devolve exatamente o falso vermelho da primeira armadilha.
+**A armadilha.** O motor esquerdo é o PESADO, e é ele que faz este teste dar falso vermelho. Quando só o esquerdo treme, o casco inteiro balança e a mão direita sente alguma coisa — quem julgar por «senti alguma coisa» conclui que os dois lados tremeram e reprova um produto certo. O que se julga é onde está o PESO, não onde há sensação; e a conferência de verdade é a dos passos que mandam segurar um punho de cada vez — cortar uma dessas trocas devolve o falso vermelho. Segunda: o Testar NÃO é mais um pulso de meio segundo — desde 07/09 ele fica ligado até o Parar, e é isso que dá tempo de trocar de punho sem reclicar; a ajuda do «Testar agora» ainda fala em meio segundo, e vale o que a mão sente. Desde 09/09 ele obedece às barras: com a barra direita em 0, o punho direito tem de ficar sem tremor próprio também no Testar. No par que o Testar manda o esquerdo já sai mais forte que o direito de propósito. Começar o Testar noutra coluna encerra o da anterior, e trocar de aba também o desliga; se o botão piscar laranja, confira na aba Jogar se o Status está em Ligado. Terceira: a barra grava no perfil ativo assim que você a solta, e fica — anote antes, devolva depois. O ícone ao lado da barra liga em 100 ou desliga em 0, e não lembra o número de antes. Quarta: o laranja do desenho apaga sozinho uns três segundos depois de o motor parar; desenho apagado com a vibração já acabada não é defeito.
 
 ---
 
@@ -6653,42 +6655,39 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `vibracao.rumble.esquerdo @ rádio`
 
-**O que isto prova.** Prova que, nos dois controles do rádio, o motor esquerdo é o punho esquerdo — o pesado — e que a barra dele cala aquele punho sem tocar nos controles do cabo.
+**O que isto prova.** Prova que, nos dois controles do rádio, o motor esquerdo é o punho esquerdo — o pesado — e que, com a barra do Motor direito em 0, o tremor fica só nele, sem tocar nos controles do cabo.
 
-**Onde olhar.** Na aba Vibração, nas colunas do P3 e do P4 — o cabeçalho de cada uma tem de dizer a palavra rádio. Dentro da coluna: o desenho, onde o lado que treme acende em laranja; a linha Motor de vibração esquerdo e a linha Motor de vibração direito, cada uma com barra e número seguido de %; e os botões Testar e Parar no pé. Embaixo das quatro colunas, a linha que começa com um pontinho conta os pedidos do jogo por jogador. Antes de tudo isso há uma condição, e ela mora na aba Jogar: o Status tem de estar em Ligado e o Modo escolhido não pode ser o Modo Nativo — no Modo Nativo o jogo fala direto com o controle e a barra desta aba não tem o que fazer. As mãos decidem.
+**Onde olhar.** Na aba Vibração, uma coluna por controle — a fita do topo não escolhe nada aqui. Nas colunas do P3 e do P4, a linha Modelo tem de dizer BT, que é o rádio. Dentro de cada coluna: o desenho, onde o lado que treme acende em laranja; a linha Motor esquerdo e a linha Motor direito, cada uma com um ícone aceso enquanto o motor está ligado, uma barra de 0 a 100 e o número com %; e, no pé, «Testar» e «Parar». O Testar faz aquele controle tremer com os valores das barras da coluna e o deixa tremendo até o Parar; ao ser clicado, o botão pisca a borda verde quando aplicou e laranja quando foi recusado. As mãos decidem.
 
 **Os passos.**
 
-1. Abra a aba Jogar.
-2. Confira que o Status está em Ligado.
-3. Confira que o Modo escolhido não é o Modo Nativo.
-4. Clique na aba Vibração.
-5. Confira que o cabeçalho das colunas do P3 e do P4 diz rádio.
-6. Leia os dois números de motor das quatro colunas e copie-os num papel, antes de arrastar qualquer barra.
-7. Clique em Parar em cada uma das quatro colunas, para soltar qualquer vibração presa de um teste anterior.
-8. Arraste, na coluna do P3 e na do P4, a barra do Motor de vibração direito até 0 e a do Motor de vibração esquerdo até 100 — e deixe em 100 as quatro barras do P1 e do P2.
-9. Abra o jogo com os quatro jogadores dentro da partida.
-10. Segure o P3 com uma mão em cada punho, sem apertar, e provoque no jogo uma vibração para o jogador dele.
-11. Diga em voz alta em qual punho está o PESO do tremor, antes de olhar a tela.
-12. Veja qual lado do desenho da coluna do P3 acendeu em laranja.
-13. Segure o P3 só pelo punho direito e provoque a vibração de novo.
-14. Confira que não vem tremor próprio naquele punho.
-15. Repita os atos 5 a 7 com o P4.
-16. Segure o P1 e provoque uma vibração para o jogador dele.
-17. Confira que ali os DOIS punhos tremem, e que nenhum dos quatro treme quando a vibração é de outro jogador.
-18. Pare o mouse na linha Motor de vibração esquerdo da coluna daquele jogador e leia a dica com o número que o jogo pediu.
-19. Devolva as oito barras aos números que você anotou no papel.
+1. Feche o jogo, se houver algum aberto.
+2. Clique na aba Vibração.
+3. Confira na linha Modelo que as colunas do P3 e do P4 dizem BT.
+4. Anote os dois números de motor das quatro colunas, antes de mexer em qualquer barra.
+5. Arraste, na coluna do P3, a barra do Motor direito até 0 e a do Motor esquerdo até 100.
+6. Clique em Testar na coluna do P3.
+7. Pegue o P3 com uma mão em cada punho, sem apertar, feche os olhos e diga em voz alta em qual punho está o PESO do tremor.
+8. Segure o P3 só pelo punho esquerdo.
+9. Troque: segure o P3 só pelo punho direito.
+10. Confira que no punho direito não vem tremor próprio, e que no desenho da coluna do P3 só o lado esquerdo está aceso.
+11. Clique em Parar na coluna do P3.
+12. Faça na coluna do P4 a mesma volta: barra direita em 0 e esquerda em 100, Testar, as duas mãos de olhos fechados, um punho de cada vez, Parar.
+13. Arraste as duas barras de motor da coluna do P1 até 100, clique em Testar na coluna dele e pegue o P1 com as duas mãos.
+14. Confira que no P1 os DOIS punhos tremem.
+15. Clique em Parar na coluna do P1.
+16. Devolva as barras das quatro colunas aos números que você anotou.
 
-**Passa quando.** No P3 e no P4, com a barra direita em 0, o peso do tremor ficou no punho ESQUERDO, e segurando só pelo punho direito não há tremor próprio. No desenho, só o lado esquerdo acendeu em laranja. O P1 e o P2, com as duas barras em 100, tremeram dos dois lados quando a vibração era deles. E nenhum dos quatro tremeu quando a vibração era de outro jogador.
+**Passa quando.** No P3 e no P4, com a barra direita em 0, o peso do tremor ficou no punho ESQUERDO, e segurando só pelo punho direito não há tremor próprio. No desenho, só o lado esquerdo acendeu em laranja. O P1, com as duas barras em 100, tremeu dos dois lados quando o Testar era dele. E nenhum dos quatro tremeu enquanto o Testar era de outro.
 
 **Por controle.**
 
-* **P1** — Está no CABO e é testemunha. Não mexa nas barras dele. Não pode tremer quando a vibração é do jogador do P3, e serve de comparação: com as duas barras em 100, os dois punhos dele tremem quando a vibração é dele.
-* **P2** — Também no cabo e também testemunha, com a mesma conferência. Os dois do cabo tremendo junto com o P3 quer dizer que a vibração foi para a mesa inteira.
+* **P1** — Está no CABO e é testemunha e comparação: não pode tremer enquanto o Testar é do P3 ou do P4, e, com as duas barras em 100, os dois punhos dele tremem quando o Testar é dele.
+* **P2** — Também no cabo, testemunha: não mexa nas barras dele, e ele não pode tremer em momento nenhum. Os dois do cabo tremendo junto com o P3 quer dizer que a vibração foi para os quatro.
 * **P3** — Está no RÁDIO e é um dos dois que têm de reagir. Barra direita em 0, esquerda em 100: o peso fica no punho esquerdo e só o lado esquerdo acende no desenho.
 * **P4** — Também no rádio, mesma configuração e mesma resposta esperada. Se ele discordar do P3, o defeito é do aparelho — anote qual dos dois.
 
-**A armadilha.** Este teste tem DEZ atos, acima dos oito do alvo, e o motivo é a forma da prova: o punho certo só se separa do errado segurando um punho de cada vez, o que dá dois atos por controle, vezes os dois do rádio, mais a comparação no P1 e a devolução das barras ao perfil. Cortar um dos dois modos de segurar apaga a prova. O motor esquerdo é o PESADO: quando só ele treme, o casco inteiro balança e a mão direita sente o eco. Julgue pelo PESO do tremor, não por sentir alguma coisa. Segunda, e é do rádio: o comando vai numerado e conferido, e o controle descarta sozinho o que chegar fora de ordem, calado; o sintoma é uma vibração que some de vez em quando e não aparece em campo nenhum da tela. Terceira: a barra não vale para o botão Testar, que manda um par fixo aos dois motores e ignora as barras. Quarta: houve um tempo em que a vibração pelo rádio era gasto de energia e nada mais, porque o comando saía malformado e o controle o descartava inteiro; hoje ele sai certo, mas se os dois do rádio ficarem MUDOS enquanto os dois do cabo tremem no mesmo teste, é exatamente isso que você está vendo voltar — anote antes de mexer em qualquer outra coisa. Quinta: a barra grava no perfil ativo assim que você solta o dedo, e é por isso que os números vão para o papel no começo e voltam para as barras no fim.
+**A armadilha.** O motor esquerdo é o PESADO: quando só ele treme, o casco inteiro balança e a mão direita sente o eco. Julgue pelo PESO do tremor, não por sentir alguma coisa — e o punho certo só se separa do errado segurando um punho de cada vez, que é por que o teste troca de mão. O Testar NÃO é mais um pulso de meio segundo: desde 07/09 ele fica ligado até o Parar, e a ajuda do «Testar agora» ainda fala em meio segundo — vale o que a mão sente. Desde 09/09 ele obedece às barras da coluna. Começar o Testar noutra coluna encerra o da anterior, e trocar de aba também o desliga; se o botão piscar laranja, confira na aba Jogar se o Status está em Ligado. Segunda, e é do rádio: o comando vai numerado e conferido, e o controle descarta sozinho o que chegar fora de ordem, calado; o sintoma é uma vibração que some de vez em quando e não aparece em campo nenhum da tela. Não deixe o alto-falante do P3 ou do P4 tocando durante o teste: pelo rádio o som e a vibração disputam o mesmo fio. Terceira: houve um tempo em que a vibração pelo rádio era gasto de energia e nada mais, porque o comando saía malformado e o controle o descartava inteiro; hoje ele sai certo, mas se os dois do rádio ficarem MUDOS enquanto o P1 treme no mesmo teste, é exatamente isso que você está vendo voltar — anote antes de mexer em qualquer outra coisa. Quarta: a barra grava no perfil ativo assim que você a solta, e é por isso que os números se anotam no começo e voltam para as barras no fim.
 
 ---
 
@@ -6698,29 +6697,31 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, nos dois controles do cabo, a vibração que o jogo pede chega com a força pedida e DURA o tempo que o jogo segurou — sem ser cortada num piscar.
 
-**Onde olhar.** Na aba Vibração, na COLUNA de cada jogador — a testemunha aqui é por controle, e não mais uma linha só embaixo de todas. No alto da coluna, o desenho acende em laranja o punho que está tremendo: é ele que responde *chegou força agora, neste controle?*. Parando o mouse em cima da linha Motor de vibração esquerdo ou direito daquela coluna, com o jogo vibrando, aparece a dica dizendo quanto o jogo pediu naquele motor agora, de 0 a 255 — e quando o jogo não está pedindo nada ali, **não aparece dica nenhuma**, porque o Hefesto apaga o aviso em vez de deixar um número velho. É esse par (punho aceso + dica com número) que diz quem recebeu. E a duração quem mede são as suas mãos e a sua contagem em voz alta.
-
-> **A contagem do pé da grade saiu da tela em 07/09/2026**, por ordem dela (*"Vibração remove essa última frase também"*). Ela era cumulativa — dizia quantas vezes o jogo já pediu — e o que a substitui é mais forte para este teste: o punho e a dica são AO VIVO e são por jogador, então dizem quem está recebendo AGORA, que é o que estas células perguntam.
+**Onde olhar.** Na aba Vibração, na COLUNA de cada jogador — a testemunha é por controle. No alto da coluna, o desenho acende em laranja o punho que está recebendo força agora, e apaga uns três segundos depois da última. Parando o mouse em cima do número ao lado da barra de um motor sai a dica: com o jogo vibrando, «O jogo pediu … de 255 neste motor agora.»; sem pedido, ela diz a conta da coluna, «Este motor a …%, força …% — sai …% do que o jogo pedir.». É esse par — punho aceso e a dica do pedido — que diz quem recebeu. Na aba Controles, parando o mouse no nome de um controle, no alto do cartão, a dica diz qual gamepad virtual ele alimenta. A duração quem mede são as suas mãos e a sua contagem em voz alta.
 
 **Os passos.**
 
-1. Abra o Hefesto e clique na aba Jogar.
-2. Confira que o Status está em Ligado.
-3. Clique na aba Vibração.
-4. Vá à aba Controles, pare o mouse no NOME de cada controle e confira que a dica diz que ele alimenta o gamepad virtual de um jogador — e não que ainda não alimenta nenhum. Volte à aba Vibração.
-5. Clique em Parar em cada uma das quatro colunas, para soltar qualquer vibração fixada de um teste anterior.
-6. Escolha Balanceado nas quatro colunas.
-7. Confira que as oito barras de motor estão em 100.
-8. Abra o jogo com os quatro jogadores dentro da partida.
-9. Segure o P1 nas duas mãos.
-10. Provoque uma vibração LONGA no jogo — daquelas que ele segura por vários segundos, como um motor acelerando ou uma arma automática segurada.
-11. Conte os segundos em voz alta enquanto ela dura, e segure o gatilho o tempo todo.
-12. Solte o gatilho e confira que a vibração parou junto.
-13. Provoque agora uma vibração CURTA e forte, de um tiro ou de uma batida, e confira que ela chega com força.
-14. Confira que o punho do desenho na coluna do P1 acendeu em laranja enquanto a vibração chegava.
-15. Pare o mouse em cima da linha Motor de vibração esquerdo da coluna do P1 enquanto o jogo vibra, e leia a dica.
-16. Repita os sete passos acima com o P2.
-17. Provoque uma vibração longa no P1 e, sem soltar, provoque outra no P3 — e confira que a do P1 não encolhe.
+1. Clique na aba Vibração.
+2. Clique na aba Jogar e confira que o Status está em Ligado.
+3. Clique na aba Controles e pare o mouse no nome de cada um dos quatro controles, no alto do cartão.
+4. Confira que a dica de cada um diz «Alimenta o gamepad virtual do Jogador …», e não que ainda não alimenta nenhum.
+5. Volte à aba Vibração.
+6. Clique em Parar em cada uma das quatro colunas, para devolver ao jogo qualquer vibração presa num teste anterior.
+7. Anote o degrau aceso na Força da vibração e os dois números de motor de cada coluna.
+8. Clique em Balanceado nas quatro colunas e arraste as oito barras de motor até 100.
+9. Abra o jogo com os quatro jogadores dentro da partida.
+10. Segure o P1 nas duas mãos e provoque uma vibração LONGA para o jogador dele — daquelas que o jogo segura por vários segundos, como um motor acelerando ou uma arma automática.
+11. Conte os segundos em voz alta enquanto ela dura.
+12. Pare de provocar a vibração.
+13. Confira que ela parou junto.
+14. Provoque uma vibração CURTA e forte, de um tiro ou de uma batida.
+15. Confira que ela chegou com força.
+16. Provoque de novo a longa e, com ela correndo, pare o mouse no número ao lado da barra do Motor esquerdo da coluna do P1.
+17. Confira que o punho do desenho da coluna do P1 está aceso e que a dica diz «O jogo pediu … de 255 neste motor agora.».
+18. Faça no P2 a mesma volta: a longa contada, a curta, e a olhada na coluna dele.
+19. Provoque uma vibração longa no P1 e, sem parar, outra no P3.
+20. Confira que a do P1 não encolheu.
+21. Devolva o degrau e as barras de cada coluna ao que você anotou.
 
 **Passa quando.** Nos dois do cabo, a vibração que o jogo segurou por vários segundos durou esses segundos inteiros na mão, e parou quando o jogo parou de pedir — não virou um estalo de meio segundo. A vibração curta e forte chegou forte. O punho do desenho acendeu em laranja na coluna daquele controle, e a dica da linha do motor daquela coluna trouxe o número que o jogo pediu. E a vibração de um não encurtou a do outro.
 
@@ -6728,10 +6729,10 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 * **P1** — Está no CABO e é um dos dois que têm de reagir. É nele que a contagem de segundos importa: a vibração longa tem de durar o que o jogo segurou.
 * **P2** — Também no cabo, mesma medição. Dois controles no mesmo transporte com durações diferentes é achado — anote os dois números de segundos.
-* **P3** — Está no RÁDIO e é testemunha. Ele entra no último passo: uma vibração provocada nele não pode encurtar a que já está correndo no P1. Se encurtar, um está cortando a vibração do outro.
-* **P4** — Também no rádio e também testemunha, com a mesma conferência — e é o último da fila, o primeiro a perder a vez quando alguma coisa disputa a saída. Repita nele o último passo se o P3 não mostrar nada.
+* **P3** — Está no RÁDIO e é testemunha. Ele entra no penúltimo passo: uma vibração provocada nele não pode encurtar a que já está correndo no P1. Se encurtar, um está cortando a vibração do outro.
+* **P4** — Também no rádio e também testemunha, com a mesma conferência — e é o último da fila, o primeiro a perder a vez quando alguma coisa disputa a saída. Repita nele o passo do P3 se o P3 não mostrar nada.
 
-**A armadilha.** O corte em meio segundo é um defeito CONHECIDO desta casa e já foi medido por dose: o Hefesto re-afirma o estado dos motores de meio em meio segundo, e essa re-afirmação já zerava a vibração de quem não fosse ele — esticando esse meio segundo para oito, a vibração passou a durar oito segundos exatos, nos dois transportes. O conserto está escrito e ligado; este teste existe para dizer se ele continua de pé. Por isso a contagem em voz alta é o instrumento, e não um detalhe. Segunda: se você clicou em Testar pouco antes, aquele controle pode ficar com a vibração FIXADA, e nesse estado a vibração do jogo é ignorada — é a queixa testei os motores e o jogo não vibra mais. O Parar em cada coluna, no começo, é o que evita isso. Terceira: um jogo pode simplesmente não pedir vibração, e quem separa os dois casos é a dica da linha do motor daquela coluna — se ela traz um número e a mão não sente nada, a perda é dentro do Hefesto; se não há dica nenhuma, o jogo não pediu. Quarta: se a aba Controles disser que aquele controle não alimenta gamepad virtual nenhum, o Hefesto saiu do meio e este teste não está medindo o caminho dele.
+**A armadilha.** O corte em meio segundo é um defeito CONHECIDO desta casa e já foi medido por dose: o Hefesto re-afirma o estado dos motores de meio em meio segundo, e essa re-afirmação já zerava a vibração de quem não fosse ele — esticando esse meio segundo para oito, a vibração passou a durar oito segundos exatos, nos dois transportes. O conserto está escrito e ligado; este teste existe para dizer se ele continua de pé. Por isso a contagem em voz alta é o instrumento, e não um detalhe. Segunda: o Testar agora fica LIGADO até alguém clicar em Parar, e enquanto ele está ligado a vibração do jogo naquele controle é ignorada — é o que o Parar em cada coluna, no começo, evita. Terceira: um jogo pode simplesmente não pedir vibração, e quem separa os dois casos é a dica da linha do motor — se ela diz «O jogo pediu …» e a mão não sente nada, a perda é dentro do Hefesto; se ela diz a conta da coluna, «Este motor a …», o jogo não pediu. Quarta: se a aba Controles disser que aquele controle ainda não alimenta gamepad virtual nenhum, o Hefesto saiu do meio e este teste não está medindo o caminho dele. Quinta: se o jogo listar mais controles do que os quatro, ele está vendo os aparelhos além dos virtuais, e a vibração pode ir direto ao controle por fora do Hefesto — feche o jogo e abra pelo atalho de sempre antes de concluir qualquer coisa.
 
 ---
 
@@ -6741,30 +6742,30 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, nos dois controles do rádio, a vibração que o jogo pede chega com a força pedida e dura o tempo que o jogo segurou — igual à dos dois do cabo.
 
-**Onde olhar.** Na aba Vibração, nas colunas do P3 e do P4 — cabeçalho com a palavra rádio. O desenho acende em laranja o punho que treme, e parando o mouse na linha de um motor, com o jogo vibrando, a dica diz quanto o jogo pediu naquele motor agora, de 0 a 255; onde o jogo não está pedindo, não há dica. A duração quem mede são as suas mãos e a contagem em voz alta.
-
-> **A contagem do pé da grade saiu da tela em 07/09/2026**, por ordem dela. O que responde *chegou a este controle?* passa a ser a própria coluna dele — punho aceso e dica com número —, que é por jogador e ao vivo.
+**Onde olhar.** Na aba Vibração, nas colunas do P3 e do P4 — a linha Modelo delas diz BT, que é o rádio. O desenho acende em laranja o punho que recebe força agora, e apaga uns três segundos depois da última; parando o mouse em cima do número ao lado da barra de um motor, com o jogo vibrando, a dica diz «O jogo pediu … de 255 neste motor agora.», e sem pedido ela diz a conta da coluna, «Este motor a …». Na aba Controles, parando o mouse no nome de um controle, a dica diz qual gamepad virtual ele alimenta. A duração quem mede são as suas mãos e a contagem em voz alta.
 
 **Os passos.**
 
-1. Abra o Hefesto e clique na aba Jogar.
-2. Confira que o Status está em Ligado.
-3. Clique na aba Vibração.
-4. Confira que o cabeçalho das colunas do P3 e do P4 diz rádio.
-5. Vá à aba Controles, pare o mouse no NOME de cada controle e confira que a dica diz que ele alimenta o gamepad virtual de um jogador — e não que ainda não alimenta nenhum. Volte à aba Vibração.
-6. Clique em Parar em cada uma das quatro colunas.
-7. Escolha Balanceado nas quatro colunas.
-8. Confira que as oito barras de motor estão em 100.
-9. Abra o jogo com os quatro jogadores dentro da partida.
-10. Segure o P3 nas duas mãos.
-11. Provoque uma vibração LONGA no jogo para o jogador dele e segure o gatilho.
+1. Clique na aba Vibração.
+2. Clique na aba Jogar e confira que o Status está em Ligado.
+3. Clique na aba Controles e pare o mouse no nome de cada um dos quatro controles, no alto do cartão.
+4. Confira que a dica de cada um diz «Alimenta o gamepad virtual do Jogador …», e não que ainda não alimenta nenhum.
+5. Volte à aba Vibração.
+6. Confira na linha Modelo que as colunas do P3 e do P4 dizem BT.
+7. Clique em Parar em cada uma das quatro colunas.
+8. Anote o degrau aceso na Força da vibração e os dois números de motor de cada coluna.
+9. Clique em Balanceado nas quatro colunas e arraste as oito barras de motor até 100.
+10. Abra o jogo com os quatro jogadores dentro da partida.
+11. Segure o P3 nas duas mãos e provoque uma vibração LONGA para o jogador dele.
 12. Conte os segundos em voz alta enquanto ela dura.
-13. Solte o gatilho e confira que a vibração parou junto.
-14. Provoque uma vibração CURTA e forte e confira que ela chega forte.
-15. Confira que o punho do desenho na coluna do P3 acendeu em laranja enquanto a vibração chegava.
-16. Repita os cinco passos acima com o P4.
-17. Faça a mesma vibração longa no P1 e conte os segundos dela.
-18. Compare os segundos do rádio com os segundos do cabo.
+13. Pare de provocar a vibração.
+14. Confira que ela parou junto.
+15. Provoque uma vibração CURTA e forte.
+16. Confira que ela chegou forte e que o punho do desenho da coluna do P3 acendeu em laranja enquanto ela chegava.
+17. Faça no P4 a mesma volta: a longa contada, a curta, e a olhada na coluna dele.
+18. Faça a mesma vibração longa no P1 e conte os segundos dela.
+19. Compare os segundos do rádio com os segundos do cabo.
+20. Devolva o degrau e as barras de cada coluna ao que você anotou.
 
 **Passa quando.** Nos dois do rádio, a vibração longa durou o tempo em que o jogo a segurou e parou quando ele parou de pedir; a curta chegou forte; e o punho do desenho acendeu em laranja na coluna daquele controle, com a dica da linha do motor trazendo o número pedido. Comparados com o P1, os segundos batem: se o rádio durar menos que o cabo na mesma vibração, isso é o achado do teste.
 
@@ -6775,7 +6776,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — Está no RÁDIO e é um dos dois que têm de reagir. Conte os segundos da vibração longa dele e escreva o número.
 * **P4** — Também no rádio, mesma medição. Ele é o último a entrar e o primeiro a perder a vez: se só ele encurtar, anote isso separado — é diferente de o rádio inteiro encurtar.
 
-**A armadilha.** O corte em meio segundo já foi medido nesta casa nos DOIS transportes, e a prova foi por dose: esticando o meio segundo da re-afirmação dos motores para oito, a vibração passou a durar oito segundos exatos. O conserto está escrito e ligado; a contagem em voz alta é o que diz se ele continua de pé. Segunda, e é do rádio: o comando vai numerado e conferido, e o controle descarta sozinho o que chegar fora de ordem — uma vibração que falha de vez em quando pelo rádio pode ser isso, e não aparece em campo nenhum da tela. Terceira: a medição com quatro controles na mesa não achou diferença entre cabo e rádio nesta família; quem fazia diferença era o Hefesto estar de pé ou parado. Uma diferença aqui é notícia nova. Quarta: se você clicou em Testar pouco antes, aquele controle pode ter ficado com a vibração fixada, e nesse estado a do jogo é ignorada — o Parar no começo é o que evita. Quinta: bateria baixa no rádio muda a força com que o motor responde; se um dos dois estiver quase descarregado, carregue antes de acusar o transporte.
+**A armadilha.** O corte em meio segundo já foi medido nesta casa nos DOIS transportes, e a prova foi por dose: esticando o meio segundo da re-afirmação dos motores para oito, a vibração passou a durar oito segundos exatos. O conserto está escrito e ligado; a contagem em voz alta é o que diz se ele continua de pé. Segunda, e é do rádio: o comando vai numerado e conferido, e o controle descarta sozinho o que chegar fora de ordem — uma vibração que falha de vez em quando pelo rádio pode ser isso, e não aparece em campo nenhum da tela. Não deixe o alto-falante do P3 ou do P4 tocando durante o teste: pelo rádio o som e a vibração disputam o mesmo fio. Terceira: a medição com quatro controles na mesa não achou diferença entre cabo e rádio nesta família; quem fazia diferença era o Hefesto estar de pé ou parado. Uma diferença aqui é notícia nova. Quarta: o Testar agora fica LIGADO até alguém clicar em Parar, e enquanto ele está ligado a vibração do jogo naquele controle é ignorada — o Parar no começo é o que evita. Quinta: bateria baixa no rádio muda a força com que o motor responde; se um dos dois estiver quase descarregado, carregue antes de acusar o transporte. E se o jogo listar mais controles do que os quatro, ele está vendo os aparelhos além dos virtuais — feche e abra pelo atalho de sempre antes de concluir.
 
 ---
 
@@ -6785,37 +6786,34 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, nos dois controles do cabo, o Hefesto liga a autorização de vibração no controle — sem ela nenhum motor obedeceria a coisa nenhuma.
 
-**Onde olhar.** Não há campo na tela que mostre essa autorização: a fonte não diz onde se lê esse valor. O que se lê é a CONSEQUÜÊNCIA dela — o punho tremendo depois de um clique em Testar. Então olhe a aba Vibração, coluna por coluna: os três botões Economia, Balanceado e Máximo; as duas linhas de motor com suas barras e seus números seguidos de %; e os botões Testar e Parar no pé da coluna. Quando o produto recusa um clique, aparece uma tarja de recado dentro da própria coluna daquele controle, e ela fica cerca de meio minuto na tela. As mãos dizem o resto.
+**Onde olhar.** Não há campo na tela que mostre essa autorização. O que se lê é a CONSEQUÊNCIA dela — o punho tremendo depois de um clique em Testar — e a resposta do próprio botão: ao ser clicado, ele pisca a borda por um segundo e meio, VERDE quando o Hefesto aplicou e LARANJA quando recusou. Na aba Vibração, coluna por coluna: a linha Modelo, que diz USB para o cabo e BT para o rádio; os três degraus da Força da vibração — Economia, Balanceado e Máximo —; as barras do Motor esquerdo e do Motor direito, com o número em %; e, no pé da coluna, «Testar» e «Parar». O Testar deixa aquele controle tremendo até o Parar. As mãos dizem o resto.
 
 **Os passos.**
 
 1. Feche o jogo, se houver algum aberto.
-2. Abra o Hefesto e clique na aba Jogar.
-3. Confira que o Status está em Ligado.
-4. Confira que o Modo escolhido não é o Modo Nativo.
-5. Clique na aba Vibração.
-6. Confira que nenhum punho do desenho está aceso em coluna nenhuma, e que parar o mouse nas linhas de motor não abre dica de pedido em nenhuma delas.
-7. Escolha Balanceado nas quatro colunas.
-8. Ponha as oito barras de motor em 100.
-9. Segure o P1 nas duas mãos.
-10. Clique em Testar na coluna do P1.
-11. Confira que ele treme por cerca de meio segundo e para sozinho.
-12. Olhe os outros três em cima da mesa nesse instante e confira que nenhum deles se mexeu.
-13. Clique em Testar de novo na coluna do P1 e, antes de o tremor acabar, clique em Parar na mesma coluna.
-14. Confira que ele parou na hora.
-15. Repita os cinco passos acima com o P2.
-16. Confira se apareceu alguma tarja de recado dentro de alguma coluna e leia o que ela diz.
+2. Clique na aba Vibração.
+3. Confira na linha Modelo que as colunas do P1 e do P2 dizem USB.
+4. Anote o degrau aceso e os dois números de motor de cada coluna.
+5. Clique em Balanceado nas quatro colunas e arraste as oito barras de motor até 100.
+6. Clique em Testar na coluna do P1.
+7. Confira que o botão piscou a borda verde, e não laranja.
+8. Pegue o P1 nas duas mãos.
+9. Confira que ele treme e CONTINUA tremendo, e que os outros três estão parados na mesa.
+10. Clique em Parar na coluna do P1.
+11. Confira que o tremor parou na hora.
+12. Faça na coluna do P2 a mesma volta: Testar, a borda verde, o tremor que continua, Parar.
+13. Devolva o degrau e as barras de cada coluna ao que você anotou.
 
-**Passa quando.** Nos dois do cabo, um clique em Testar fez aquele controle — e só ele — tremer por cerca de meio segundo e parar sozinho; os outros três ficaram parados na mesa; e o Parar cortou o tremor na hora. Nenhuma tarja de recado apareceu. Um controle que não treme nem no cabo nem no rádio, com Balanceado escolhido e as barras em 100, é a autorização faltando.
+**Passa quando.** Nos dois do cabo, o Testar piscou verde e fez aquele controle — e só ele — tremer sem parar até o Parar; os outros três ficaram parados na mesa; e o Parar cortou o tremor na hora. Um controle que não treme, com Balanceado, as barras em 100 e o botão piscando verde, é a autorização faltando.
 
 **Por controle.**
 
 * **P1** — Está no CABO e é um dos dois que têm de reagir. Ele treme quando o Testar da coluna dele é clicado, e só então.
 * **P2** — Também no cabo, mesma resposta esperada. Um dos dois tremendo e o outro não, com a mesma configuração, aponta para aquele aparelho — anote qual.
-* **P3** — Está no RÁDIO e é testemunha: não toque nele. Ele não pode tremer quando o Testar clicado é o da coluna do P1 ou do P2. Se tremer, o comando foi para a mesa inteira em vez de ir para o controle escolhido.
+* **P3** — Está no RÁDIO e é testemunha: não toque nele. Ele não pode tremer quando o Testar clicado é o da coluna do P1 ou do P2. Se tremer, o comando foi para os quatro em vez de ir para o controle escolhido.
 * **P4** — Também no rádio e também testemunha, com a mesma conferência — e é o mais propenso a receber comando de outro, por ser o último da fila.
 
-**A armadilha.** Esta célula NÃO TEM MEDIÇÃO NENHUMA no mapa: a coluna que diz até onde a prova chegou está vazia, no cabo e no rádio. Ninguém mediu este aspecto até hoje, então o que você está fazendo aqui é o primeiro degrau — e um verde aqui não quer dizer mais do que os motores obedecem. Segunda, e ela é do produto: das quatro chavinhas de autorização que o Hefesto deveria ligar, ele liga TRÊS. A quarta, a da vibração nova dos firmwares mais recentes, nunca sobe, e não aparece em campo nenhum da tela. Se um controle ficar completamente mudo nos dois transportes com tudo em 100, esse é o primeiro suspeito, e ele não é o seu gesto. Terceira: se a aba Jogar estiver em Modo Nativo, o Testar é RECUSADO de propósito, com a frase Vibração não aplicada: em Modo Nativo quem manda nos motores é o jogo, numa tarja dentro da coluna. Isso é o produto recusando direito, e não defeito — mas o teste não corre nesse modo. Quarta: se o controle da coluna tiver saído da mesa entre o clique e agora, a recusa diz O controle escolhido não está na mesa — nada foi enviado, e também não é defeito.
+**A armadilha.** Esta célula NÃO TEM MEDIÇÃO NENHUMA no mapa: a coluna que diz até onde a prova chegou está vazia, no cabo e no rádio. Ninguém mediu este aspecto até hoje, então o que você está fazendo aqui é o primeiro degrau — e um verde aqui não quer dizer mais do que «os motores obedecem». Segunda, e ela é do produto: das quatro chavinhas de autorização que o Hefesto deveria ligar, ele liga TRÊS. A quarta, a da vibração nova dos firmwares mais recentes, nunca sobe, e não aparece em campo nenhum da tela. Se um controle ficar completamente mudo nos dois transportes com tudo em 100, esse é o primeiro suspeito, e ele não é o seu gesto. Terceira: o Testar NÃO para sozinho — desde 07/09 ele fica ligado até o Parar; a ajuda do «Testar agora» ainda fala em meio segundo, e vale o que a mão sente. Quarta: se o botão piscar laranja, o Testar foi recusado e a frase da recusa não aparece na tela. As duas causas conhecidas são o Status em Desligado na aba Jogar — o Modo Nativo, em que quem manda nos motores é o jogo — e o controle da coluna ter saído entre o clique e agora. Nos dois casos o produto está recusando direito, e o teste não corre assim.
 
 ---
 
@@ -6825,38 +6823,36 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, nos dois controles do rádio, o Hefesto liga a autorização de vibração no controle — sem ela nenhum motor obedeceria a coisa nenhuma.
 
-**Onde olhar.** Não há campo na tela que mostre essa autorização: a fonte não diz onde se lê esse valor. O que se lê é a consequência — o punho tremendo depois de um clique em Testar. Olhe a aba Vibração, nas colunas do P3 e do P4, cujo cabeçalho tem de dizer rádio: os três botões Economia, Balanceado e Máximo; as duas linhas de motor com barra e número seguido de %; e os botões Testar e Parar no pé da coluna. Uma recusa aparece como tarja de recado dentro da própria coluna e fica cerca de meio minuto. As mãos dizem o resto.
+**Onde olhar.** Não há campo na tela que mostre essa autorização. O que se lê é a consequência — o punho tremendo depois de um clique em Testar — e a resposta do próprio botão: ele pisca a borda por um segundo e meio, VERDE quando o Hefesto aplicou e LARANJA quando recusou. Na aba Vibração, nas colunas do P3 e do P4, cuja linha Modelo tem de dizer BT: os três degraus da Força da vibração — Economia, Balanceado e Máximo —; as barras do Motor esquerdo e do Motor direito, com o número em %; e, no pé da coluna, «Testar» e «Parar». O Testar deixa aquele controle tremendo até o Parar. As mãos dizem o resto.
 
 **Os passos.**
 
 1. Feche o jogo, se houver algum aberto.
-2. Abra o Hefesto e clique na aba Jogar.
-3. Confira que o Status está em Ligado.
-4. Confira que o Modo escolhido não é o Modo Nativo.
-5. Clique na aba Vibração.
-6. Confira que o cabeçalho das colunas do P3 e do P4 diz rádio.
-7. Escolha Balanceado nas quatro colunas.
-8. Ponha as oito barras de motor em 100.
-9. Segure o P3 nas duas mãos.
-10. Clique em Testar na coluna do P3.
-11. Confira que ele treme por cerca de meio segundo e para sozinho.
-12. Olhe os outros três na mesa nesse instante e confira que nenhum se mexeu.
-13. Clique em Testar de novo na coluna do P3 e, antes de o tremor acabar, clique em Parar na mesma coluna.
-14. Confira que ele parou na hora.
-15. Repita os cinco passos acima com o P4.
-16. Clique em Testar na coluna do P1 e confira que ali também treme — é a comparação com o cabo.
-17. Confira se apareceu alguma tarja de recado dentro de alguma coluna e leia o que ela diz.
+2. Clique na aba Vibração.
+3. Confira na linha Modelo que as colunas do P3 e do P4 dizem BT.
+4. Anote o degrau aceso e os dois números de motor de cada coluna.
+5. Clique em Balanceado nas quatro colunas e arraste as oito barras de motor até 100.
+6. Clique em Testar na coluna do P3.
+7. Confira que o botão piscou a borda verde, e não laranja.
+8. Pegue o P3 nas duas mãos.
+9. Confira que ele treme e CONTINUA tremendo, e que os outros três estão parados na mesa.
+10. Clique em Parar na coluna do P3.
+11. Confira que o tremor parou na hora.
+12. Faça na coluna do P4 a mesma volta: Testar, a borda verde, o tremor que continua, Parar.
+13. Clique em Testar na coluna do P1, pegue-o e clique em Parar — é a comparação com o cabo.
+14. Confira que o P1 tremeu do mesmo jeito.
+15. Devolva o degrau e as barras de cada coluna ao que você anotou.
 
-**Passa quando.** Nos dois do rádio, um clique em Testar fez aquele controle — e só ele — tremer por cerca de meio segundo e parar sozinho; os outros três ficaram parados; e o Parar cortou na hora. O P1, no cabo, tremeu do mesmo jeito quando foi a vez dele. Nenhuma tarja de recado apareceu. Um controle do rádio mudo enquanto o do cabo treme, com a mesma configuração, é o achado deste teste.
+**Passa quando.** Nos dois do rádio, o Testar piscou verde e fez aquele controle — e só ele — tremer sem parar até o Parar; os outros três ficaram parados; e o Parar cortou na hora. O P1, no cabo, tremeu do mesmo jeito quando foi a vez dele. Um controle do rádio mudo enquanto o do cabo treme, com a mesma configuração e o botão piscando verde, é o achado deste teste.
 
 **Por controle.**
 
 * **P1** — Está no CABO e é testemunha, e também a comparação: ele não pode tremer quando o Testar clicado é o da coluna do P3 ou do P4, mas tem de tremer quando é o dele.
 * **P2** — Também no cabo e também testemunha, com a mesma conferência. Use-o para repetir a comparação se o P1 der resposta estranha.
-* **P3** — Está no RÁDIO e é um dos dois que têm de reagir. Treme meio segundo quando o Testar da coluna dele é clicado, e para na hora com o Parar.
+* **P3** — Está no RÁDIO e é um dos dois que têm de reagir. Treme quando o Testar da coluna dele é clicado, continua tremendo, e para na hora com o Parar.
 * **P4** — Também no rádio, mesma resposta esperada. Se ele responder e o P3 não, ou o contrário, anote qual dos dois — é o aparelho, não o transporte.
 
-**A armadilha.** Esta célula NÃO TEM MEDIÇÃO NENHUMA no mapa: a coluna que diz até onde a prova chegou está vazia, nos dois transportes. Você está fazendo o primeiro degrau, e um verde aqui só diz que os motores obedecem. Segunda: das quatro chavinhas de autorização, o produto liga três — a quarta, a da vibração nova dos firmwares mais recentes, nunca sobe, e é igual nos dois transportes de propósito. Ela não aparece em campo nenhum da tela, e é a primeira suspeita para um controle mudo em toda parte. Terceira: no rádio o comando vai numerado e conferido, e o controle descarta calado o que chegar fora de ordem — um Testar que não produz tremor nenhum, uma vez só, pede uma segunda tentativa antes de virar defeito. Quarta: em Modo Nativo o Testar é recusado de propósito, com a frase Vibração não aplicada: em Modo Nativo quem manda nos motores é o jogo, numa tarja dentro da coluna; e se o controle tiver saído da mesa a recusa diz O controle escolhido não está na mesa — nada foi enviado. Nos dois casos o produto está recusando direito.
+**A armadilha.** Esta célula NÃO TEM MEDIÇÃO NENHUMA no mapa: a coluna que diz até onde a prova chegou está vazia, nos dois transportes. Você está fazendo o primeiro degrau, e um verde aqui só diz que os motores obedecem. Segunda: das quatro chavinhas de autorização, o produto liga três — a quarta, a da vibração nova dos firmwares mais recentes, nunca sobe, e é igual nos dois transportes de propósito. Ela não aparece em campo nenhum da tela, e é a primeira suspeita para um controle mudo em toda parte. Terceira: no rádio o comando vai numerado e conferido, e o controle descarta calado o que chegar fora de ordem — um Testar que não produz tremor nenhum, uma vez só, pede uma segunda tentativa antes de virar defeito. Não deixe o alto-falante do P3 ou do P4 tocando durante o teste: pelo rádio o som e a vibração disputam o mesmo fio. Quarta: o Testar NÃO para sozinho — desde 07/09 ele fica ligado até o Parar, e a ajuda do «Testar agora» ainda fala em meio segundo. Quinta: se o botão piscar laranja, o Testar foi recusado e a frase da recusa não aparece na tela: ou o Status está em Desligado na aba Jogar — o Modo Nativo, em que quem manda nos motores é o jogo —, ou o controle da coluna saiu entre o clique e agora. Nos dois casos o produto está recusando direito.
 
 ---
 
@@ -6866,29 +6862,28 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que a vibração que o jogo manda para UM jogador chega ao controle daquele jogador quando ele está no cabo — e não chega a mais nenhum.
 
-**Onde olhar.** Na aba Vibração, coluna por coluna. No alto de cada uma, o desenho do controle acende em laranja o punho que está tremendo — é ele que diz, na tela, qual controle recebeu. Parando o mouse na linha Motor de vibração esquerdo ou direito de uma coluna, a dica diz quanto o jogo pediu naquele motor agora, de 0 a 255; **onde o jogo não está pedindo, não há dica** — o Hefesto apaga o aviso em vez de deixar número velho, e é isso que torna o silêncio dos outros três mensurável. E os quatro controles na mesa dizem o resto: um controle solto no tampo chacoalha de forma audível.
-
-> **A contagem do pé da grade saiu da tela em 07/09/2026**, por ordem dela. Para esta célula a troca é ganho: aquela linha era cumulativa e ficava embaixo de TODAS as colunas, enquanto o punho e a dica são por jogador e ao vivo — que é exatamente o que "chegou a um e a mais nenhum" precisa medir.
+**Onde olhar.** Na aba Vibração, coluna por coluna — a linha Modelo diz USB para o cabo e BT para o rádio. No alto de cada coluna, o desenho do controle acende em laranja o punho que está recebendo força agora — é ele que diz, na tela, qual controle recebeu. Parando o mouse em cima do número ao lado da barra de um motor, a dica diz, com o jogo vibrando, «O jogo pediu … de 255 neste motor agora.»; onde o jogo não está pedindo nada, ela diz a conta da coluna, «Este motor a …%, força …% — sai …% do que o jogo pedir.», e é essa troca de frase que torna o silêncio dos outros três mensurável. E os quatro controles na mesa dizem o resto: um controle solto no tampo chacoalha de forma audível.
 
 **Os passos.**
 
-1. Abra o Hefesto e clique na aba Jogar.
-2. Confira que o Status está em Ligado.
-3. Clique na aba Vibração.
-4. Clique em Parar em cada uma das quatro colunas, para soltar qualquer vibração fixada de um teste anterior.
-5. Escolha Balanceado nas quatro colunas.
-6. Ponha as oito barras de motor em 100.
+1. Clique na aba Vibração.
+2. Clique na aba Jogar e confira que o Status está em Ligado.
+3. Volte à aba Vibração.
+4. Clique em Parar em cada uma das quatro colunas, para devolver ao jogo qualquer vibração presa num teste anterior.
+5. Anote o degrau aceso na Força da vibração e os dois números de motor de cada coluna.
+6. Clique em Balanceado nas quatro colunas e arraste as oito barras de motor até 100.
 7. Abra o jogo com os quatro jogadores dentro da partida.
 8. Apoie os quatro controles na mesa, separados uns dos outros, sem ninguém segurando.
 9. Provoque no jogo uma vibração só para o jogador do P1 — um dano levado só por ele.
-10. Olhe e escute os quatro na mesa: só o do jogador 1 pode chacoalhar.
-11. Olhe os desenhos das quatro colunas: só o da coluna do P1 pode acender em laranja.
-12. Confira na tela que só a coluna do Jogador 1 respondeu: o punho dela acendeu em laranja e a dica da linha do motor traz o número pedido, enquanto nas outras três o punho ficou apagado e a linha do motor não abre dica nenhuma.
-13. Repita os quatro passos acima com o P2.
-14. Provoque uma vibração para o jogador do P3 e confira que o P1 e o P2 ficam parados.
-15. Repita com o P4.
+10. Confira, olhando e escutando, que só o P1 chacoalhou na mesa, e que só o desenho da coluna do P1 acendeu em laranja.
+11. Provoque o dano de novo e, com ele correndo, pare o mouse no número ao lado da barra do Motor esquerdo da coluna do P1 e depois no da coluna do P2.
+12. Confira que a dica do P1 diz «O jogo pediu … de 255 neste motor agora.», e que a do P2 diz a conta da coluna, «Este motor a …», porque nada foi pedido a ele.
+13. Faça a mesma volta com o jogador do P2, conferindo agora a coluna do P1 como a que ficou calada.
+14. Provoque uma vibração para o jogador do P3 e depois uma para o do P4.
+15. Confira que o P1 e o P2 ficam parados nas duas.
+16. Devolva o degrau e as barras de cada coluna ao que você anotou.
 
-**Passa quando.** A vibração de cada jogador chegou ao controle daquele jogador e a mais nenhum: os outros três ficaram parados na mesa e apagados no desenho. E a tela bateu com quem levou o dano nos DOIS sentidos — na coluna de quem levou, o punho acendeu em laranja e a dica da linha do motor trouxe o número que o jogo pediu; nas outras três, o punho ficou apagado e parar o mouse na linha do motor **não abriu dica nenhuma**.
+**Passa quando.** A vibração de cada jogador chegou ao controle daquele jogador e a mais nenhum: os outros três ficaram parados na mesa e apagados no desenho. E a tela bateu com quem levou o dano nos DOIS sentidos — na coluna de quem levou, o punho acendeu em laranja e a dica do motor trouxe o número que o jogo pediu; nas outras três, o punho ficou apagado e a dica disse só a conta da coluna.
 
 **Por controle.**
 
@@ -6897,7 +6892,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — Está no RÁDIO e é testemunha: tem de ficar parado quando a vibração é do jogador do P1 ou do P2. Se chacoalhar junto, a vibração perdeu o endereço.
 * **P4** — Também no rádio e também testemunha, com a mesma conferência. Ele é o último a entrar, e é nele que a falta de endereço costuma aparecer primeiro.
 
-**A armadilha.** São DOIS retratos do MESMO defeito, e os dois enganam de jeitos opostos. Se os quatro chacoalharem juntos quando só um levou dano, a vibração perdeu o endereço e foi para a mesa inteira — é o defeito clássico desta célula. Mas se o controle CERTO ficar mudo enquanto a dica da linha do motor daquela coluna mostra o número que o jogo pediu, é o mesmo endereço perdido: hoje o Hefesto prefere descartar a espalhar, e o descarte não aparece em campo nenhum da tela. Nos dois casos o que fura é a comparação entre o que a COLUNA daquele jogador diz e o que a mão dele sentiu. Segunda, e é o tamanho da prova: no mapa esta célula parou em MONTOU — está provado que o Hefesto MONTA o comando, e não que o aparelho obedeceu. O que você está fazendo aqui é o degrau seguinte, e é a primeira vez que ele é medido; um vermelho aqui não é regressão, é a resposta que faltava. Terceira: controle apoiado no mesmo tampo transmite o tremor do vizinho — deixe-os separados, ou levante um de cada vez para decidir. Quarta: se você clicou em Testar pouco antes, aquele controle pode ter ficado com a vibração fixada, e nesse estado a do jogo é ignorada — o Parar em cada coluna, no começo, é o que evita.
+**A armadilha.** São DOIS retratos do MESMO defeito, e os dois enganam de jeitos opostos. Se os quatro chacoalharem juntos quando só um levou dano, a vibração perdeu o endereço e foi para os quatro — é o defeito clássico desta célula. Mas se o controle CERTO ficar mudo enquanto a dica do motor daquela coluna diz «O jogo pediu …», é o mesmo endereço perdido: hoje o Hefesto prefere descartar a espalhar, e o descarte não aparece em campo nenhum da tela. Nos dois casos o que fura é a comparação entre o que a COLUNA daquele jogador diz e o que o controle dele fez. Segunda, e é o tamanho da prova: no mapa esta célula parou em MONTOU — está provado que o Hefesto MONTA o comando, e não que o aparelho obedeceu. O que você está fazendo aqui é o degrau seguinte; um vermelho aqui não é regressão, é a resposta que faltava. Terceira: controle apoiado no mesmo tampo transmite o tremor do vizinho — deixe-os separados, ou levante um de cada vez para decidir. Quarta: o Testar agora fica LIGADO até alguém clicar em Parar, e com ele ligado a vibração do jogo naquele controle é ignorada — o Parar em cada coluna, no começo, é o que evita. Quinta: se o jogo listar mais controles do que os quatro, ele está vendo os aparelhos além dos virtuais, e a vibração pode ir direto ao controle, por fora do Hefesto — aí nem a coluna nem a barra dizem nada sobre ela. Feche o jogo e abra pelo atalho de sempre antes de concluir.
 
 ---
 
@@ -6907,37 +6902,39 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que a vibração que o jogo manda para um jogador chega ao controle dele quando ele está no rádio — a metade desta célula que nunca foi medida.
 
-**Onde olhar.** Na aba Vibração. Embaixo das quatro colunas, a linha que começa com um pontinho conta os pedidos do jogo por jogador. No alto das colunas do P3 e do P4 — cabeçalho com a palavra rádio — o desenho acende em laranja o lado que treme. E os quatro controles na mesa dizem o resto: um controle solto no tampo chacoalha de forma audível.
+**Onde olhar.** Na aba Vibração, nas colunas do P3 e do P4 — a linha Modelo delas diz BT, que é o rádio. No alto de cada coluna, o desenho acende em laranja o punho que está recebendo força agora. Parando o mouse em cima do número ao lado da barra de um motor, a dica diz, com o jogo vibrando, «O jogo pediu … de 255 neste motor agora.»; onde o jogo não está pedindo nada, ela diz a conta da coluna, «Este motor a …%, força …% — sai …% do que o jogo pedir.». E os quatro controles na mesa dizem o resto: um controle solto no tampo chacoalha de forma audível.
 
 **Os passos.**
 
-1. Abra o Hefesto e clique na aba Jogar.
-2. Confira que o Status está em Ligado.
-3. Clique na aba Vibração.
-4. Confira que o cabeçalho das colunas do P3 e do P4 diz rádio.
+1. Clique na aba Vibração.
+2. Clique na aba Jogar e confira que o Status está em Ligado.
+3. Volte à aba Vibração.
+4. Confira na linha Modelo que as colunas do P3 e do P4 dizem BT.
 5. Clique em Parar em cada uma das quatro colunas.
-6. Escolha Balanceado nas quatro colunas.
-7. Ponha as oito barras de motor em 100.
+6. Anote o degrau aceso na Força da vibração e os dois números de motor de cada coluna.
+7. Clique em Balanceado nas quatro colunas e arraste as oito barras de motor até 100.
 8. Abra o jogo com os quatro jogadores dentro da partida.
 9. Apoie os quatro controles na mesa, separados uns dos outros, sem ninguém segurando.
 10. Provoque no jogo uma vibração só para o jogador do P3.
-11. Olhe e escute os quatro na mesa: só o do jogador 3 pode chacoalhar.
-12. Olhe os desenhos das quatro colunas: só o da coluna do P3 pode acender em laranja.
-13. Confira na tela que só a coluna do Jogador 3 respondeu: o punho dela acendeu em laranja e a dica da linha do motor traz o número pedido, enquanto nas outras três o punho ficou apagado e a linha do motor não abre dica nenhuma.
-14. Repita os quatro passos acima com o P4.
-15. Provoque uma vibração para o jogador do P1 e confira que o P3 e o P4 ficam parados.
-16. Anote, com estas palavras, se os dois do rádio chacoalharam ou ficaram mudos.
+11. Confira, olhando e escutando, que só o P3 chacoalhou na mesa, e que só o desenho da coluna do P3 acendeu em laranja.
+12. Provoque o dano de novo e, com ele correndo, pare o mouse no número ao lado da barra do Motor esquerdo da coluna do P3 e depois no da coluna do P4.
+13. Confira que a dica do P3 diz «O jogo pediu … de 255 neste motor agora.», e que a do P4 diz a conta da coluna, «Este motor a …».
+14. Faça a mesma volta com o jogador do P4, conferindo agora a coluna do P3 como a que ficou calada.
+15. Provoque uma vibração para o jogador do P1.
+16. Confira que o P1 chacoalhou e que o P3 e o P4 ficaram parados.
+17. Anote, com estas palavras, se os dois do rádio chacoalharam ou ficaram mudos.
+18. Devolva o degrau e as barras de cada coluna ao que você anotou.
 
-**Passa quando.** A vibração do jogador do P3 chegou ao P3 e a mais nenhum, e a do P4 chegou ao P4; os outros três ficaram parados na mesa e apagados no desenho em cada rodada. Na coluna de quem levou o dano o punho acendeu e a dica do motor trouxe o número pedido; nas outras três o punho ficou apagado e a linha do motor não abriu dica. E os dois do rádio responderam como os dois do cabo respondem.
+**Passa quando.** A vibração do jogador do P3 chegou ao P3 e a mais nenhum, e a do P4 chegou ao P4; os outros três ficaram parados na mesa e apagados no desenho em cada rodada. Na coluna de quem levou o dano o punho acendeu e a dica do motor trouxe o número pedido; nas outras três o punho ficou apagado e a dica disse só a conta da coluna. E os dois do rádio responderam como o P1, no cabo, respondeu.
 
 **Por controle.**
 
-* **P1** — Está no CABO e é testemunha, e é também a comparação: ele não pode chacoalhar quando a vibração é do jogador do P3, mas tem de chacoalhar quando é a dele — é isso que separa o jogo não pediu de o rádio não recebeu.
+* **P1** — Está no CABO e é testemunha, e é também a comparação: ele não pode chacoalhar quando a vibração é do jogador do P3, mas tem de chacoalhar quando é a dele — é isso que separa «o jogo não pediu» de «o rádio não recebeu».
 * **P2** — Também no cabo e também testemunha, com a mesma dupla função. Use-o para repetir a comparação se o P1 der resposta estranha.
 * **P3** — Está no RÁDIO e é um dos dois que têm de reagir. É a metade desta célula que ninguém nunca mediu: escreva o que aconteceu com ele, mesmo que tenha sido nada.
 * **P4** — Também no rádio, mesma medição. Se um dos dois receber e o outro não, anote qual — é diferente de o rádio inteiro ficar mudo.
 
-**A armadilha.** A metade do rádio desta célula está EM BRANCO no mapa: ninguém nunca mediu isto por rádio, e o branco não quer dizer não funciona, quer dizer que não houve resposta. Então aqui um mudo é resultado, não falha sua — anote com todas as letras. E há história: houve um tempo em que o comando montado para o rádio saía malformado e o controle o descartava inteiro, calado; o rádio vibrava zero e nada na tela dizia isso. O comando de hoje sai certo, mas o aparelho nunca confirmou. Se o P3 e o P4 ficarem mudos enquanto a dica da linha do motor das colunas deles traz o número que o jogo pediu, e o P1 chacoalhar no mesmo teste, é exatamente essa pergunta que você acabou de responder. Segunda: o defeito irmão anda ao contrário — se os QUATRO chacoalharem quando só um levou dano, a vibração perdeu o endereço e foi para a mesa inteira. Terceira: controle apoiado no mesmo tampo transmite o tremor do vizinho; separe-os, ou levante um de cada vez. Quarta: bateria baixa no rádio abaixa a força do motor — um chacoalho fraco demais para ouvir não é o mesmo que mudo; levante o controle e sinta antes de decidir.
+**A armadilha.** A metade do rádio desta célula está EM BRANCO no mapa: ninguém nunca mediu isto por rádio, e o branco não quer dizer «não funciona», quer dizer que não houve resposta. Então aqui um mudo é resultado, não falha sua — anote com todas as letras. E há história: houve um tempo em que o comando montado para o rádio saía malformado e o controle o descartava inteiro, calado; o rádio vibrava zero e nada na tela dizia isso. O comando de hoje sai certo, mas o aparelho nunca confirmou por este caminho. Se o P3 e o P4 ficarem mudos enquanto a dica do motor das colunas deles diz «O jogo pediu …», e o P1 chacoalhar no mesmo teste, é exatamente essa pergunta que você acabou de responder. Segunda: o defeito irmão anda ao contrário — se os QUATRO chacoalharem quando só um levou dano, a vibração perdeu o endereço e foi para os quatro. Terceira: controle apoiado no mesmo tampo transmite o tremor do vizinho; separe-os, ou levante um de cada vez. Quarta: bateria baixa no rádio abaixa a força do motor — um chacoalho fraco demais para ouvir não é o mesmo que mudo; levante o controle e sinta antes de decidir. Não deixe o alto-falante do P3 ou do P4 tocando: pelo rádio o som e a vibração disputam o mesmo fio. Quinta: o Testar ligado numa coluna faz o jogo ser ignorado naquele controle até o Parar — é o que o Parar no começo evita. E se o jogo listar mais controles do que os quatro, ele está vendo os aparelhos além dos virtuais: feche e abra pelo atalho de sempre antes de concluir.
 
 ---
 
@@ -6945,40 +6942,39 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.alto_falante @ rádio`
 
-**O que isto prova.** Prova que o som do jogo sai mesmo pelo alto-falante dos dois controles que estão no rádio — o caminho que só existe nesta casa desde 10/09/2026 — e entrega as duas metades que faltam para o mapa parar de dizer "não": o negativo de rota e a escuta cega. A primeira metade já foi feita e não se repete: o som saiu do plástico por rádio, setenta segundos contínuos, com o seu ouvido. O que falta é provar que ele saiu de LÁ e não de outro lugar.
+**O que isto prova.** Prova que o som do computador sai mesmo pelo alto-falante dos dois controles que estão no rádio — o caminho que existe nesta casa desde 10/09/2026 — e entrega as duas metades que faltam para o mapa fechar esta célula: o negativo de rota e a escuta cega. A primeira metade já foi feita e não se repete: o som saiu do plástico por rádio, setenta segundos contínuos, com o seu ouvido. O que falta é provar que ele saiu de LÁ e não de outro lugar.
 
-**Onde olhar.** Na aba Controles do Hefesto. Clique na linha de um controle e o cartão dele abre (o que estava aberto fecha sozinho). Dentro do cartão, o bloco chamado Alto-falante: o deslizante de volume com o número ao lado, o botão ♪, e os dois botões de rota, "Sons do jogo" e "Todo o som do PC". Mas quem responde este teste é o seu OUVIDO, encostado no alto-falante do próprio controle: são nove furinhos em duas fileiras, na frente do DualSense, logo abaixo e entre os dois analógicos. E quem responde a segunda metade é outra pessoa: alguém precisa clicar por você, sem dizer o que clicou.
+**Onde olhar.** Na aba Controles do Hefesto. Clique na linha de um controle e o cartão dele abre (o que estava aberto fecha sozinho). Dentro do cartão, o bloco Alto-falante: o selo ATIVO ao lado do nome, as barrinhas que se mexem quando entra som naquele controle, o deslizante de volume com o número ao lado, o botão ♪ — que CALA o alto-falante —, e os três botões de rota: «Efeitos do Jogo no Controle, Áudio da TV na TV» (o de sempre: só o que o jogo mandar para aquele controle), «Efeitos do Jogo e Áudio da TV no Controle» (tudo o que a máquina toca cai também no controle, e continua saindo na TV) e «Tudo na TV e Nada no Controle» (o alto-falante do controle para de tocar). Mas quem responde este teste é o seu OUVIDO, encostado no alto-falante do próprio controle: são nove furinhos em duas fileiras, na frente do DualSense, logo abaixo e entre os dois analógicos. E quem responde a segunda metade é outra pessoa: alguém precisa clicar por você, sem dizer o que clicou.
 
 **Os passos.**
 
 1. Clique na aba Controles.
-2. Confira na fita do topo que P3 e P4 dizem rádio e que P1 e P2 dizem cabo.
+2. Confira na fita do topo que o P3 e o P4 dizem BT e que o P1 e o P2 dizem USB.
 3. Clique na linha do P3 para abrir o cartão dele.
 4. Arraste o deslizante de volume do bloco Alto-falante do P3 até o fim da direita.
-5. Confira que o número ao lado do deslizante diz 100.
-6. Clique em "Todo o som do PC" no bloco do P3.
-7. Toque um som bem marcado e curto, que se reconheça de ouvido — um toque de aviso, não uma música.
-8. Encoste o ouvido no P3 e escute se ele sai por ali.
-9. Encoste o ouvido no P4 e confirme que ele está mudo.
-10. Encoste o ouvido no P1 e no P2 e confirme que os dois estão mudos.
-11. Agora o NEGATIVO DE ROTA, e ele é o coração deste teste: escolha na aba Sistema do seu computador a saída da TV, e toque o MESMO som.
-12. Encoste o ouvido no P3 enquanto ele toca na TV: o P3 tem de ficar MUDO.
-13. Devolva a saída para o controle e toque o mesmo som mais uma vez para confirmar que ele voltou a sair do P3.
-14. Chame outra pessoa e peça que ela faça, sem você ver a tela e sem falar nada, seis passadas em ordem embaralhada: três tocando no P3 e três tocando na TV.
-15. A cada passada, com o ouvido no P3, diga em voz alta "controle" ou "TV", e peça que ela anote a sua resposta ao lado do que ela realmente fez.
-16. Clique em "Sons do jogo" no bloco do P3 para devolver o som às caixas — não pule este passo.
-17. Clique na linha do P4 e repita do passo 4 ao 13 nele, com o P3 agora de testemunha muda.
+5. Confira que o número ao lado dele diz 100.
+6. Clique em «Efeitos do Jogo e Áudio da TV no Controle» no bloco do P3.
+7. Toque no computador um som bem marcado e curto, que se reconheça de ouvido — um toque de aviso, não uma música.
+8. Encoste o ouvido no P3 e escute se o som sai por ali.
+9. Encoste o ouvido no P4, depois no P1 e no P2, e confirme que os três estão mudos.
+10. Agora o NEGATIVO DE ROTA, e ele é o coração deste teste: clique em «Tudo na TV e Nada no Controle» no bloco do P3.
+11. Toque o MESMO som e encoste o ouvido no P3: ele sai na TV, e o P3 tem de ficar MUDO.
+12. Clique de novo em «Efeitos do Jogo e Áudio da TV no Controle» e toque o mesmo som, para confirmar que ele voltou a sair do P3.
+13. Chame outra pessoa e peça que ela faça, sem você ver a tela e sem falar nada, seis passadas em ordem embaralhada: três com «Efeitos do Jogo e Áudio da TV no Controle» aceso no P3 e três com «Tudo na TV e Nada no Controle», tocando o mesmo som em cada uma.
+14. A cada passada, com o ouvido no P3, diga em voz alta «controle» ou «só TV», e peça que ela anote a sua resposta ao lado do botão que estava aceso.
+15. Clique em «Efeitos do Jogo no Controle, Áudio da TV na TV» no bloco do P3, para devolvê-lo ao de sempre — não pule este passo.
+16. Clique na linha do P4 e faça nele a mesma volta — volume em 100, o som no controle, o negativo de rota e a devolução ao botão de sempre —, com o P3 agora de testemunha muda.
 
-**Passa quando.** Sai som pelo alto-falante do P3 e pelo do P4, os dois que estão no rádio. O mesmo som, mirado na TV, NÃO sai de nenhum dos dois — esse é o negativo de rota, e sem ele o teste não passa mesmo que você tenha ouvido o som cem vezes. E as seis passadas cegas batem SEIS de seis: você acertou onde o som estava tocando sem saber o que a outra pessoa clicou. Cinco de seis já não passa: uma errada é ruído ou é vazamento, e nos dois casos a resposta é repetir.
+**Passa quando.** Sai som pelo alto-falante do P3 e pelo do P4, os dois que estão no rádio. O mesmo som, com «Tudo na TV e Nada no Controle», sai na TV e NÃO sai de nenhum dos dois — esse é o negativo de rota, e sem ele o teste não passa mesmo que você tenha ouvido o som cem vezes. E as seis passadas cegas batem SEIS de seis: você acertou onde o som estava tocando sem saber o que a outra pessoa clicou. Cinco de seis já não passa: uma errada é ruído ou é vazamento, e nos dois casos a resposta é repetir.
 
 **Por controle.**
 
 * **P3** — No rádio, e é o alvo. Ele é quem toca, quem cala no negativo de rota e quem você escuta nas seis passadas cegas.
 * **P4** — No rádio, e é a segunda prova do caminho: se só um dos dois tocar, o problema é daquele controle e não do rádio — anote qual falhou. Ele também é testemunha enquanto o P3 toca: se os dois tocarem juntos, o comando pegou o transporte inteiro em vez do controle escolhido, e isso é achado.
-* **P1** — No cabo, e é TESTEMUNHA: você não toca nele. O som do P3 não pode sair dele.
+* **P1** — No cabo, e é TESTEMUNHA: você não mexe no bloco dele. O som do P3 não pode sair dele.
 * **P2** — No cabo, e é a segunda testemunha. Mesmo gesto do P1.
 
-**A armadilha.** O botão ♪ NÃO faz barulho no rádio, e isso é por desenho, não defeito: a confirmação toca pelo sink daquele controle, e no rádio não há sink próprio para tocar. Se você clicar no ♪ esperando o som curto de confirmação e ele não vier, isso não desmente nada deste teste — o caminho do rádio não passa por ali. Segunda, e é regra desta casa com nome: ninguém pode concluir, de um canal responder, que ele FAZ o que a gente esperava dele. O canal do rádio aceitava bytes muito antes de tocar um som, e foi por isso que a casa mirou no report errado durante semanas. Terceira: "Todo o som do PC" tira o som das caixas e o joga no controle — esquecer de clicar em "Sons do jogo" no fim deixa a máquina muda e parece defeito sem ser. E quarta, que é a razão das seis passadas cegas: você SABE o que quer ouvir, e ouvido que sabe o que quer ouvir ouve. A escuta cega existe porque a sua própria expectativa é a fonte de erro mais provável deste teste — e ela já derrubou uma medição desta casa antes.
+**A armadilha.** O selo ATIVO do alto-falante NÃO apaga com «Tudo na TV e Nada no Controle», e isso é decisão dela: o selo fala do canal, não da rota. Quem responde o negativo de rota é o seu ouvido. O ♪ não é confirmação: ele CALA o alto-falante, e as barrinhas ficam no chão com ele calado — se você clicou nele sem querer, clique de novo antes de concluir que o rádio não toca. Segunda, e é regra desta casa com nome: ninguém pode concluir, de um canal responder, que ele FAZ o que a gente esperava dele. O canal do rádio aceitava bytes muito antes de tocar um som, e foi por isso que a casa mirou no report errado durante semanas. Terceira: «Efeitos do Jogo e Áudio da TV no Controle» deixa o som da máquina saindo também pelo controle até alguém voltar ao botão de sempre — esquecer disso faz o próximo teste ouvir o PC no controle e parece defeito sem ser. Não dispare vibração no P3 ou no P4 enquanto testa: pelo rádio o som e a vibração disputam o mesmo fio. E quarta, que é a razão das seis passadas cegas: você SABE o que quer ouvir, e ouvido que sabe o que quer ouvir ouve. A escuta cega existe porque a sua própria expectativa é a fonte de erro mais provável deste teste — e ela já derrubou uma medição desta casa antes.
 
 ---
 
@@ -6988,25 +6984,27 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o que viaja DENTRO do canal do rádio é som de verdade — não que o canal aceitou bytes. São duas perguntas diferentes, e confundi-las custou semanas a esta casa: o aparelho respondia de bom grado a um report que não carregava áudio nenhum. Este teste separa as duas ouvindo o CONTEÚDO: um som que você reconhece sem hesitar, saindo com a forma que você mandou.
 
-**Onde olhar.** Na aba Controles, no cartão do P3 e no do P4, bloco Alto-falante. O que se lê na tela é pouco de propósito: o volume, a rota e o ♪. O conteúdo do que viaja não tem tela e não vai ter — ele se prova com o ouvido, comparando o que saiu com o que foi mandado.
+**Onde olhar.** Na aba Controles, no cartão do P3 e no do P4, bloco Alto-falante: o volume com o número ao lado, o ♪ — que cala o alto-falante — e os três botões de rota, dos quais este teste usa dois: «Efeitos do Jogo e Áudio da TV no Controle», que põe o som da máquina no controle sem tirá-lo da TV, e «Efeitos do Jogo no Controle, Áudio da TV na TV», o de sempre. O conteúdo do que viaja não tem tela e não vai ter — ele se prova com o ouvido, comparando o que saiu com o que foi mandado. Como o som continua saindo na TV, a TV tem de estar calada pelo controle remoto dela, senão o seu ouvido entende a frase pela TV e não pelo controle.
 
 **Os passos.**
 
 1. Clique na aba Controles.
-2. Confira na fita do topo que P3 e P4 dizem rádio.
+2. Confira na fita do topo que o P3 e o P4 dizem BT.
 3. Escolha TRÊS sons bem diferentes um do outro: um grave longo, um agudo curto e uma voz falando uma frase que você reconheça.
-4. Clique na linha do P3 e arraste o volume do bloco Alto-falante até 100.
-5. Clique em "Todo o som do PC" no bloco do P3.
-6. Toque o grave longo e escute com o ouvido no P3.
-7. Toque o agudo curto e escute com o ouvido no P3.
-8. Toque a voz e escute com o ouvido no P3: você tem de entender a frase, não só ouvir que tem som.
-9. Anote, para cada um dos três, se o que saiu era o MESMO som — e não um estalo, um chiado ou um pedaço dele.
-10. Arraste o volume do P3 até 30 e toque a voz de novo: ela tem de sair mais baixa e continuar compreensível.
-11. Clique em "Sons do jogo" no bloco do P3 para devolver o som às caixas.
-12. Clique na linha do P4 e repita do passo 4 ao 11 nele.
-13. Deixe a voz tocando por dois minutos seguidos no P3 e escute o fim: ela não pode ter engasgado, cortado nem virado chiado no meio do caminho.
+4. Abaixe o volume da própria TV até zero, pelo controle remoto dela.
+5. Clique na linha do P3 e arraste o volume do bloco Alto-falante até 100.
+6. Clique em «Efeitos do Jogo e Áudio da TV no Controle» no bloco do P3.
+7. Toque o grave longo e escute com o ouvido no P3.
+8. Toque o agudo curto e escute com o ouvido no P3.
+9. Toque a voz e escute com o ouvido no P3: você tem de entender a frase, não só ouvir que tem som.
+10. Anote, para cada um dos três, se o que saiu era o MESMO som — e não um estalo, um chiado ou um pedaço dele.
+11. Arraste o volume do P3 até 30 e toque a voz de novo: ela tem de sair mais baixa e continuar compreensível.
+12. Arraste o volume do P3 de volta a 100 e deixe a voz tocando por dois minutos seguidos, escutando o fim: ela não pode ter engasgado, cortado nem virado chiado no meio do caminho.
+13. Clique em «Efeitos do Jogo no Controle, Áudio da TV na TV» no bloco do P3.
+14. Clique na linha do P4 e faça nele a mesma volta: volume em 100, o som no controle, os três sons, o volume em 30, os dois minutos e a devolução ao botão de sempre.
+15. Devolva o volume da TV ao de antes.
 
-**Passa quando.** Os três sons saem reconhecíveis pelos dois controles do rádio, e a voz é COMPREENSÍVEL — não basta sair barulho. O volume em 30 abaixa o som sem quebrá-lo. E os dois minutos seguidos terminam sem engasgo: um caminho que entrega dez segundos e morre no terceiro minuto não entregou o payload, entregou uma amostra.
+**Passa quando.** Os três sons saem reconhecíveis pelos dois controles do rádio, e a voz é COMPREENSÍVEL — não basta sair barulho. O volume em 30 abaixa o som sem quebrá-lo. E os dois minutos seguidos terminam sem engasgo: um caminho que entrega dez segundos e morre no terceiro minuto não entregou o conteúdo, entregou uma amostra.
 
 **Por controle.**
 
@@ -7015,7 +7013,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P1** — No cabo, e é testemunha muda. No cabo o som é uma saída comum do computador e não passa por este canal: se ele tocar junto, o que está tocando não é o que este teste mede.
 * **P2** — No cabo, e é a segunda testemunha. Mesma leitura do P1.
 
-**A armadilha.** A pergunta desta linha NÃO é "o canal responde" — é "o que viaja dentro dele é som". Duas fontes de fora descrevem o formato deste payload byte a byte, e as duas DIVERGEM entre si; e as duas erraram o report. Por isso a leitura de fonte não vale como resposta aqui, por mais detalhada que seja: só o ouvido responde. Segunda: a voz é o som que decide, e não por gosto — um estalo, um chiado e um engasgo todos soam como "tem som saindo", e só a fala mostra se o que chegou foi o som ou um pedaço dele. Terceira: dois minutos parecem exagero e não são. O caminho já entregou setenta segundos; o que ele nunca entregou é um trecho longo o bastante para uma falha de cadência aparecer.
+**A armadilha.** A pergunta desta linha NÃO é «o canal responde» — é «o que viaja dentro dele é som». Duas fontes de fora descrevem o formato deste conteúdo byte a byte, e as duas DIVERGEM entre si; e as duas erraram o report. Por isso a leitura de fonte não vale como resposta aqui, por mais detalhada que seja: só o ouvido responde. Segunda: a voz é o som que decide, e não por gosto — um estalo, um chiado e um engasgo todos soam como «tem som saindo», e só a fala mostra se o que chegou foi o som ou um pedaço dele. Terceira: com a TV só com o volume baixo, e não zerado, a frase que você entende pode ter vindo dela — zere pelo controle remoto da TV, e não pelo volume do computador: o som que chega ao controle sai da mesma saída, e mexer nela mede outra coisa. Quarta: dois minutos parecem exagero e não são; um trecho longo é o que deixa uma falha de cadência aparecer. Não dispare vibração no P3 ou no P4 durante o teste: pelo rádio o som e a vibração disputam o mesmo fio.
 
 ---
 
@@ -7023,23 +7021,25 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `luz.led_jogador.brilho @ cabo`
 
-**O que isto prova.** Prova que as lâmpadas de numeração do controle — as cinco luzinhas embaixo do touchpad que dizem quem é P1, P2, P3 e P4 — mudam de brilho pelos três degraus que o aparelho tem, no cabo. E prova, no mesmo gesto, uma coisa que hoje não é verdade: o produto ainda não liga o bit que autoriza esse byte, e por isso o degrau que ele manda é inerte. Esta é a metade que o teste mede e a bancada registra.
+**O que isto prova.** Prova, no cabo, o que o produto faz hoje com o brilho das lâmpadas de numeração do controle — as cinco luzinhas brancas embaixo do touchpad que dizem quem é P1, P2, P3 e P4. O aparelho sabe mudar esse brilho em três degraus, e isso foi medido; o produto ainda não liga o bit que autoriza esse byte, e por isso o deslizante de Brilho do Hefesto não chega a elas. Esta é a metade que o teste mede e a bancada registra.
 
-**Onde olhar.** Na aba Iluminação do Hefesto, no bloco de brilho do controle escolhido. E no PLÁSTICO: as lâmpadas de numeração ficam na frente do DualSense, embaixo do touchpad, em fileira. Elas NÃO são a barra de luz colorida que contorna o touchpad — a barra é outra grandeza, obedece por outro caminho e não entra neste teste. Olhe só as luzinhas brancas da numeração.
+**Onde olhar.** Na aba Iluminação do Hefesto, uma coluna por controle — a fita do topo não escolhe nada aqui. Em cada coluna, a linha Modelo diz o número, a cor e a palavra do transporte (USB é o cabo, BT é o rádio), e a linha Brilho tem o deslizante da barra daquele controle, com o número em % ao lado. E no PLÁSTICO: as lâmpadas de numeração ficam na frente do DualSense, embaixo do touchpad, em fileira. Elas NÃO são a barra de luz colorida das duas tiras ao lado do touchpad — a barra é outra grandeza, obedece a este deslizante por outro caminho, e aqui ela entra só como testemunha de que o deslizante chegou ao aparelho.
 
 **Os passos.**
 
-1. Clique na aba Iluminação.
-2. Confira na fita do topo que P1 e P2 dizem cabo.
-3. Escolha o P1 na fita do topo.
-4. Olhe as lâmpadas de numeração do P1 no plástico e guarde na memória o brilho delas.
-5. Arraste o deslizante de brilho até o mínimo.
-6. Olhe as lâmpadas de numeração do P1 outra vez e anote se elas mudaram.
-7. Arraste o deslizante de brilho até o máximo.
-8. Olhe as lâmpadas de numeração do P1 outra vez e anote se elas mudaram.
-9. Olhe a barra de luz colorida do P1 nas duas pontas do deslizante e anote se ELA mudou.
-10. Escolha o P2 na fita do topo e repita do passo 4 ao 9 nele.
-11. Anote as quatro respostas lado a lado: lâmpadas do P1, barra do P1, lâmpadas do P2, barra do P2.
+1. Feche a Steam por inteiro.
+2. Clique na aba Iluminação.
+3. Confira na linha Modelo que as colunas do P1 e do P2 dizem USB.
+4. Anote o número do Brilho da coluna do P1.
+5. Olhe as lâmpadas de numeração do P1 no plástico e guarde na memória o brilho delas.
+6. Arraste o Brilho da coluna do P1 até o mínimo.
+7. Confira se as lâmpadas de numeração do P1 mudaram, e anote.
+8. Arraste o Brilho da coluna do P1 até o máximo.
+9. Confira de novo as lâmpadas de numeração do P1, e anote.
+10. Confira se a barra de luz colorida do P1 mudou entre as duas pontas do deslizante, e anote.
+11. Devolva o Brilho do P1 ao número anotado.
+12. Faça na coluna do P2 a mesma volta: as duas pontas do Brilho, as lâmpadas e a barra olhadas separadamente, e o número devolvido.
+13. Anote as quatro respostas lado a lado: lâmpadas do P1, barra do P1, lâmpadas do P2, barra do P2.
 
 **Passa quando.** As lâmpadas de numeração NÃO mudam de brilho em nenhuma das duas pontas do deslizante, nos dois controles do cabo — e a barra de luz colorida muda. É esse contraste que é a entrega: ele mostra que o deslizante chega ao aparelho (a barra prova) e que o degrau das lâmpadas não chega (elas provam). Se as lâmpadas MUDAREM, o produto passou a ligar o bit desde a última medição, e isso é achado: anote e avise, porque o mapa desta célula muda com essa resposta.
 
@@ -7047,10 +7047,10 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 * **P1** — No cabo, e é o alvo. As duas pontas do deslizante, lâmpadas e barra olhadas separadamente.
 * **P2** — No cabo, e é a segunda prova. Se o P1 e o P2 responderem diferente, o problema é de um controle e não do caminho — anote qual.
-* **P3** — No rádio, e não entra neste teste: ele tem a volta dele, na linha do rádio.
-* **P4** — No rádio, e também não entra aqui.
+* **P3** — No rádio, e não entra neste teste: ele tem a volta dele, na linha do rádio. Confira só que as lâmpadas dele não mexeram enquanto você arrastava o Brilho do P1.
+* **P4** — No rádio, e também não entra aqui, com a mesma conferência do P3.
 
-**A armadilha.** A barra de luz colorida e as lâmpadas de numeração são DUAS grandezas, e confundi-las é o erro que este teste existe para não repetir: elas ficam a centímetros uma da outra no mesmo plástico, e a barra obedece ao deslizante. Quem olhar a barra vai concluir que o brilho funciona — e o brilho que esta linha mede continua inerte. Olhe as luzinhas brancas da numeração, e só elas. Segunda: o brilho das lâmpadas tem TRÊS degraus no aparelho, não uma rampa contínua; se um dia elas obedecerem, a mudança vai ser em saltos, e um salto entre dois valores vizinhos pode passar despercebido — por isso os passos vão direto ao mínimo e ao máximo, nunca ao meio. Terceira: nada disso aparece na tela, e não vai aparecer. A dívida é nossa e fica no mapa, por ordem dela de 07/09/2026 — o produto não confessa dívida nossa para quem está usando.
+**A armadilha.** A barra de luz colorida e as lâmpadas de numeração são DUAS grandezas, e confundi-las é o erro que este teste existe para não repetir: elas ficam a centímetros uma da outra no mesmo plástico, e a barra obedece ao deslizante. Quem olhar a barra vai concluir que o brilho funciona — e o brilho que esta linha mede continua inerte. Olhe as luzinhas brancas da numeração, e só elas. Segunda: o brilho das lâmpadas tem TRÊS degraus no aparelho, não uma rampa contínua; se um dia elas obedecerem, a mudança vai ser em saltos, e um salto entre dois valores vizinhos pode passar despercebido — por isso os passos vão direto ao mínimo e ao máximo, nunca ao meio. Terceira: com a Steam aberta, a barra pode ficar apagada e não responder ao Brilho — é a Steam segurando o controle, e não este teste; por isso ela começa fechada. Quarta: o Brilho grava no perfil ao soltar, sem esperar o Salvar Perfil — por isso o número se anota e se devolve. E nada disso aparece na tela, nem vai aparecer: a dívida é nossa e fica no mapa, por ordem dela de 07/09/2026 — o produto não confessa dívida nossa para quem está usando.
 
 ---
 
@@ -7058,24 +7058,26 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `luz.led_jogador.brilho @ rádio`
 
-**O que isto prova.** O mesmo que a linha do cabo, e no rádio: as lâmpadas de numeração mudam de brilho pelos três degraus do aparelho, e o produto ainda não liga o bit que autoriza o byte. A razão de ser um teste próprio é que o envelope é outro — no rádio o degrau viaja noutro report, com uma conta de verificação no fim —, e um caminho que funciona no cabo não prova nada sobre o outro.
+**O que isto prova.** O mesmo que a linha do cabo, e no rádio: o aparelho sabe mudar o brilho das lâmpadas de numeração em três degraus, e o produto ainda não liga o bit que autoriza o byte, então o deslizante de Brilho do Hefesto não chega a elas. A razão de ser um teste próprio é que o envelope é outro — no rádio o degrau viaja noutro report, com uma conta de verificação no fim —, e um caminho que funciona no cabo não prova nada sobre o outro.
 
-**Onde olhar.** Na aba Iluminação do Hefesto, no bloco de brilho do controle escolhido. E no PLÁSTICO: as lâmpadas de numeração, na frente do DualSense, embaixo do touchpad, em fileira. Não é a barra de luz colorida que contorna o touchpad.
+**Onde olhar.** Na aba Iluminação do Hefesto, uma coluna por controle — a fita do topo não escolhe nada aqui. Nas colunas do P3 e do P4, a linha Modelo tem de dizer BT, que é o rádio; a linha Brilho tem o deslizante da barra daquele controle, com o número em % ao lado. E no PLÁSTICO: as lâmpadas de numeração, na frente do DualSense, embaixo do touchpad, em fileira. Não é a barra de luz colorida das duas tiras ao lado do touchpad — a barra entra aqui só como testemunha de que o deslizante chegou ao aparelho.
 
 **Os passos.**
 
-1. Clique na aba Iluminação.
-2. Confira na fita do topo que P3 e P4 dizem rádio.
-3. Escolha o P3 na fita do topo.
-4. Olhe as lâmpadas de numeração do P3 no plástico e guarde na memória o brilho delas.
-5. Arraste o deslizante de brilho até o mínimo.
-6. Olhe as lâmpadas de numeração do P3 outra vez e anote se elas mudaram.
-7. Arraste o deslizante de brilho até o máximo.
-8. Olhe as lâmpadas de numeração do P3 outra vez e anote se elas mudaram.
-9. Olhe a barra de luz colorida do P3 nas duas pontas do deslizante e anote se ELA mudou.
-10. Olhe as lâmpadas de numeração do P1, que está no cabo, e confirme que elas não mexeram enquanto você arrastava o deslizante do P3.
-11. Escolha o P4 na fita do topo e repita do passo 4 ao 10 nele.
-12. Anote as respostas lado a lado: lâmpadas do P3, barra do P3, lâmpadas do P4, barra do P4, e as testemunhas do cabo.
+1. Feche a Steam por inteiro.
+2. Clique na aba Iluminação.
+3. Confira na linha Modelo que as colunas do P3 e do P4 dizem BT.
+4. Anote o número do Brilho da coluna do P3.
+5. Olhe as lâmpadas de numeração do P3 no plástico e guarde na memória o brilho delas.
+6. Arraste o Brilho da coluna do P3 até o mínimo.
+7. Confira se as lâmpadas de numeração do P3 mudaram, e anote.
+8. Arraste o Brilho da coluna do P3 até o máximo.
+9. Confira de novo as lâmpadas de numeração do P3, e anote.
+10. Confira se a barra de luz colorida do P3 mudou entre as duas pontas do deslizante, e anote.
+11. Confira que as lâmpadas do P1 e do P2, que estão no cabo, não mexeram enquanto você arrastava o Brilho do P3.
+12. Devolva o Brilho do P3 ao número anotado.
+13. Faça na coluna do P4 a mesma volta: as duas pontas do Brilho, as lâmpadas e a barra olhadas separadamente, as testemunhas do cabo e o número devolvido.
+14. Anote as respostas lado a lado: lâmpadas do P3, barra do P3, lâmpadas do P4, barra do P4, e as testemunhas do cabo.
 
 **Passa quando.** As lâmpadas de numeração NÃO mudam de brilho em nenhuma das duas pontas do deslizante, nos dois controles do rádio — e a barra de luz colorida muda. As lâmpadas do P1 e do P2 ficam paradas o tempo todo: o deslizante de um controle não pode mexer no outro. Se as lâmpadas do P3 ou do P4 MUDAREM, o produto passou a ligar o bit desde a última medição — anote e avise, porque o mapa desta célula muda com essa resposta.
 
@@ -7083,10 +7085,10 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 * **P3** — No rádio, e é o alvo. As duas pontas do deslizante, lâmpadas e barra olhadas separadamente.
 * **P4** — No rádio, e é a segunda prova do envelope do rádio. Se o P3 e o P4 responderem diferente, o problema é de um controle.
-* **P1** — No cabo, e é TESTEMUNHA: você não toca nele. As lâmpadas dele não podem reagir ao deslizante do P3.
+* **P1** — No cabo, e é TESTEMUNHA: você não mexe na coluna dele. As lâmpadas dele não podem reagir ao deslizante do P3.
 * **P2** — No cabo, e é a segunda testemunha. Mesma leitura do P1.
 
-**A armadilha.** A mesma da linha do cabo, e uma a mais: no rádio o report leva uma conta de verificação no fim, e um envelope com essa conta errada é DESCARTADO pelo aparelho em silêncio. Ou seja, no rádio o "nada aconteceu" tem duas causas possíveis — o bit não foi ligado (que é o que esta casa sabe) ou o envelope foi recusado inteiro (que ninguém mediu). As duas se parecem exatamente na sua mão, e é por isso que o passo 9 existe: se a BARRA muda, o envelope chegou, e então o silêncio das lâmpadas é do bit. Se a barra também não mudar, você está olhando outro defeito, mais grave, e este teste não é quem responde por ele — anote e pare.
+**A armadilha.** A mesma da linha do cabo, e uma a mais: no rádio o report leva uma conta de verificação no fim, e um envelope com essa conta errada é DESCARTADO pelo aparelho em silêncio. Ou seja, no rádio o «nada aconteceu» tem duas causas possíveis — o bit não foi ligado (que é o que esta casa sabe) ou o envelope foi recusado inteiro (que ninguém mediu). As duas se parecem exatamente na sua mão, e é por isso que a barra é conferida: se a BARRA muda, o envelope chegou, e então o silêncio das lâmpadas é do bit. Se a barra também não mudar, você está olhando outro defeito, mais grave, e este teste não é quem responde por ele — anote e pare. Com a Steam aberta a barra pode ficar apagada e não responder, e aí ela deixa de servir de testemunha: por isso a Steam começa fechada. E o Brilho grava no perfil ao soltar — anote e devolva.
 
 ---
 
@@ -7094,23 +7096,40 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.microfone.ganho @ cabo`
 
-**O que isto prova.** Prova que o segundo deslizante do bloco do Microfone — o **Ganho** — muda de verdade o quanto a placa amplifica a sua voz, e que o número que a tela mostra é o que a placa devolveu, não o que foi pedido. O ganho é da PLACA DE SOM do controle, e não do firmware do DualSense: ele não passa pelo daemon.
+**O que isto prova.** Prova que o trilho Ganho do bloco Microfone muda de verdade o quanto a placa de som do controle amplifica a sua voz, e que o número que a tela mostra é o que a placa devolveu, não o que foi pedido. O ganho é da PLACA DE SOM do controle, e não do firmware do DualSense — por isso ele só existe no cabo.
 
-**Onde olhar.** Na aba Controles. Clique na linha de um controle **ligado pelo cabo** e o cartão dele abre. Dentro do cartão, o bloco do Microfone tem DOIS trilhos: o de cima é **Volume**, o de baixo é **Ganho**.
+**Onde olhar.** Na aba Controles, no cartão de um controle ligado pelo cabo — na fita do topo, o chip dele diz USB. Dentro do cartão, o bloco Microfone: o selo ATIVO ou DESLIGADO ao lado do nome; as barrinhas que se mexem com a sua voz; o trilho Volume, com o número e o 🎙 ao lado; e, embaixo, o trilho Ganho, com o número em dB, de 0 a +48. O 🎙 é o retorno: aceso em verde, você se ouve pela saída de som do computador, com o volume e o ganho do cartão já aplicados, até clicar nele de novo. O ? ao lado do Microfone explica a diferença entre os dois trilhos.
 
 **Os passos.**
 
 1. Clique na aba Controles.
-2. Confira na fita do topo que o controle que você vai usar diz **cabo**.
-3. Clique na linha dele para abrir o cartão.
-4. Anote o número que o trilho **Ganho** mostra.
-5. Arraste o trilho do Ganho para um valor bem diferente — 40, por exemplo — e solte.
-6. Espere dois segundos sem clicar em mais nada.
-7. Fale no microfone do controle e veja a barra de nível logo acima.
+2. Confira na fita do topo que o P1 e o P2 dizem USB.
+3. Clique na linha do P1 para abrir o cartão dele.
+4. Confira que o selo do Microfone do P1 diz ATIVO — se disser DESLIGADO, aperte o botão de microfone no próprio P1.
+5. Anote o número do Ganho do P1.
+6. Clique no 🎙 do P1.
+7. Confira que ele ficou verde.
+8. Fale uma frase no P1 e guarde a altura da sua voz no retorno e das barrinhas.
+9. Arraste o Ganho do P1 até perto de +20 dB e solte.
+10. Espere dois segundos sem clicar em nada.
+11. Confira que o número ficou perto de +20 e não voltou sozinho.
+12. Fale a mesma frase.
+13. Confira que a voz voltou mais baixa no retorno e que as barrinhas ficaram mais curtas.
+14. Clique no 🎙 de novo para desligar o retorno.
+15. Clique na linha do P2 e confira que o Ganho dele continua no número de antes — mexer no P1 não pode mexer nele.
+16. Volte ao cartão do P1 e arraste o Ganho de volta ao número anotado.
+17. Faça no P2 a mesma volta — o retorno, a frase, o Ganho em +20, a frase de novo e o número devolvido —, com o P1 de testemunha.
 
-**O que tem de acontecer.** O número do Ganho fica no valor novo e **não volta sozinho**. A barra de nível responde à sua voz com altura diferente da de antes. Se o número saltar de volta ao antigo, o que a tela mostra é o pedido e não a resposta da placa.
+**Passa quando.** O número do Ganho fica no valor novo e não volta sozinho; com a mesma frase, a voz no retorno e as barrinhas baixam junto com o ganho; e o Ganho do outro controle não se mexe. Se o número saltar de volta ao antigo, o que a tela mostra é o pedido e não a resposta da placa.
 
-**O que anotar.** O número antes, o que você arrastou, o que ficou na tela depois dos dois segundos, e se a barra de nível mudou de altura com a mesma voz.
+**Por controle.**
+
+* **P1** — Está no cabo, e é o alvo. O arrasto, a frase antes e depois, e o número que tem de ficar.
+* **P2** — Também no cabo, e é a segunda prova — e, enquanto você mexe no P1, a testemunha de que o ganho é de um controle só.
+* **P3** — Está no rádio, testemunha: o trilho Ganho dele fica cinza, porque pelo rádio não há placa de som onde o ganho exista. Você não mexe nele.
+* **P4** — Também no rádio, com o trilho cinza, mesma leitura do P3.
+
+**A armadilha.** No mapa esta célula parou em MONTOU: o caminho está escrito e a leitura da placa foi medida, mas o arrasto com o seu ouvido nunca foi feito — é o degrau que falta, e é este teste. Ganho e Volume são dois trilhos diferentes: o Ganho é o quanto a placa amplifica o que entra; o Volume é o quanto desse som o produto entrega ao PC. Mexer num esperando o efeito do outro confunde a leitura. O 🎙 não cala o microfone: ele liga o retorno, e só o clique seguinte o apaga; calar é o botão de microfone do próprio controle. Se você não ouvir o retorno, confira se a saída de som do computador está alta antes de concluir qualquer coisa. E o número que salta de volta ao antigo é o defeito que esta célula caça: a tela mostrando o pedido em vez da resposta da placa.
 
 ---
 
@@ -7118,22 +7137,34 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.microfone.ganho @ rádio`
 
-**O que isto prova.** Prova que pelo rádio o produto **diz que não dá, e diz por quê** — em vez de oferecer um trilho que não faz nada. Pelo rádio o microfone chega como som já digitalizado, por um nó da ponte desta casa: não existe placa ALSA onde o elemento de ganho more. A recusa com a razão é a entrega desta célula.
+**O que isto prova.** Prova que pelo rádio o produto diz que o ganho não se alcança, e diz por quê — em vez de oferecer um trilho que não faz nada. Pelo rádio o microfone chega como som já digitalizado, pela ponte do Hefesto: não existe placa de som onde o elemento de ganho more. O cinza com a razão é a entrega desta célula.
 
-**Onde olhar.** O mesmo lugar: aba Controles, cartão de um controle **ligado pelo rádio**, bloco do Microfone, trilho de baixo (**Ganho**).
+**Onde olhar.** Na aba Controles, no cartão de um controle ligado pelo rádio — na fita do topo, o chip dele diz BT. Dentro do cartão, o bloco Microfone: o trilho de cima é o Volume, e o de baixo é o Ganho. Pelo rádio o trilho Ganho fica cinza, e o ? ao lado dele, com o mouse parado em cima, traz a razão. No cartão de um controle do cabo o mesmo trilho fica normal — é o contraste.
 
 **Os passos.**
 
 1. Clique na aba Controles.
-2. Confira na fita do topo que o controle que você vai usar diz **rádio**.
-3. Clique na linha dele para abrir o cartão.
-4. Olhe o trilho do **Ganho**: ele tem de estar **cinza**.
-5. Clique no `?` ao lado dele e leia a frase que aparece.
-6. Tente arrastar o trilho cinza.
+2. Confira na fita do topo que o P3 e o P4 dizem BT e que o P1 e o P2 dizem USB.
+3. Clique na linha do P3 para abrir o cartão dele.
+4. Confira que o trilho Ganho do P3 está cinza.
+5. Pare o mouse em cima do ? ao lado do Ganho do P3.
+6. Leia a frase: ela tem de dizer que o ganho é do aparelho, que só o cabo o alcança, e que pelo rádio o microfone chega sem placa de som.
+7. Tente arrastar o trilho cinza do Ganho do P3.
+8. Confira que o número dele não mudou.
+9. Clique na linha do P4 e faça nele a mesma volta: o cinza, a frase do ? e o arrasto que não muda nada.
+10. Clique na linha do P1.
+11. Confira que o Ganho do P1 NÃO está cinza e mostra um número em dB.
 
-**O que tem de acontecer.** O trilho fica cinza, o `?` explica que pelo rádio não há placa de som onde o ganho exista, e o arrasto não muda número nenhum. O que NÃO pode acontecer é o trilho parecer normal e não fazer nada — é o «efeito pronto e sem escolha» ao contrário.
+**Passa quando.** Nos dois do rádio, o trilho Ganho está cinza, o ? explica que pelo rádio não há placa de som onde o ganho exista, e o arrasto não muda número nenhum. No P1, no cabo, o mesmo trilho está normal. O que NÃO pode acontecer é o trilho do rádio parecer normal e não fazer nada.
 
-**O que anotar.** Se o trilho estava cinza, a frase inteira do `?`, e se o arrasto mexeu em alguma coisa.
+**Por controle.**
+
+* **P3** — Está no rádio, e é o alvo: o cinza, a frase e o arrasto que não muda nada.
+* **P4** — Também no rádio, mesma leitura. Se um dos dois do rádio mostrar o trilho normal, anote qual.
+* **P1** — Está no cabo, e é o contraste: o trilho dele tem de estar normal, com número. Sem ele, o cinza do rádio não prova nada.
+* **P2** — Também no cabo, testemunha. Não precisa mexer nele.
+
+**A armadilha.** Nos primeiros segundos da aba o trilho pode ainda não estar cinza: enquanto o Hefesto não perguntou à placa, ele não apaga nada, porque «não sei» não é «não dá». Espere uns segundos antes de anotar. Isto não é dívida: é o aparelho — no cabo o DualSense publica placa de som e o ganho mora nela; no rádio não há placa. A própria frase diz «Ligue o cabo e ele acende», e é verdade. E o Volume, logo acima, continua funcionando pelo rádio: é outro trilho, e outro teste.
 
 ---
 
@@ -7141,22 +7172,35 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.microfone.volume @ cabo`
 
-**O que isto prova.** Prova que o número ao lado da barra do microfone é o volume REAL do canal daquele controle, lido do sistema, e não um número do desenho. A célula nasceu em 12/09/2026, com a `MIC-VOLUME-02`: até esse dia a tela mostrava a barra de nível (que se move com a voz) mas o volume do canal não tinha endereço — quem mudasse o volume por fora via a tela continuar dizendo outra coisa.
+**O que isto prova.** Prova que o número ao lado do trilho Volume do microfone é o volume REAL do canal daquele controle, lido do sistema, e não um número do desenho — e que ele é de um controle só. Até 12/09/2026 a tela mostrava o 80 do desenho para sempre, fizesse o sistema o que fizesse.
 
-**Onde olhar.** Na aba Controles. Clique na linha de um controle **ligado pelo cabo** e o cartão dele abre. Dentro do cartão, o bloco do Microfone: a barra de nível, o botão 🎙 e, ao lado, o número do volume.
+**Onde olhar.** Na aba Controles, no cartão de um controle ligado pelo cabo — na fita do topo, o chip dele diz USB. Dentro do cartão, o bloco Microfone: as barrinhas que se mexem com a voz, e o trilho Volume com o número ao lado. Fora do Hefesto, o painel de som do sistema, na lista de ENTRADAS: cada controle tem a sua, «Microfone do Controle 1» para o P1, «Microfone do Controle 2» para o P2.
 
 **Os passos.**
 
 1. Clique na aba Controles.
-2. Confira na fita do topo que o controle que você vai usar diz **cabo**.
-3. Clique na linha dele para abrir o cartão.
-4. Anote o número do volume que a tela mostra.
-5. Abra o painel de som do sistema, ache a entrada daquele controle e **mude o volume** — para 30, por exemplo.
-6. Volte ao Hefesto sem fechar nada e espere dois segundos.
+2. Confira na fita do topo que o P1 e o P2 dizem USB.
+3. Clique na linha do P1 para abrir o cartão dele.
+4. Anote o número do Volume do microfone do P1.
+5. Abra o painel de som do sistema e ache, nas entradas, o «Microfone do Controle 1».
+6. Mude o volume dessa entrada para 30.
+7. Volte ao Hefesto sem clicar em nada e espere dois segundos.
+8. Confira que o número do Volume do P1 foi para 30 e que o trilho acompanhou.
+9. Clique na linha do P2 e confira que o Volume dele não mudou.
+10. Volte ao cartão do P1 e arraste o Volume de volta ao número anotado.
+11. Confira no painel de som que o «Microfone do Controle 1» acompanhou.
+12. Faça no P2 a mesma volta, com o «Microfone do Controle 2».
 
-**O que tem de acontecer.** O número na tela acompanha o que você mudou por fora, sem você clicar em nada. Se ele ficar parado no valor antigo, a leitura não está chegando; se ele mostrar um número que o sistema não tem, a tela está inventando.
+**Passa quando.** O número do Volume acompanha, em poucos segundos, o que você mudou no painel do sistema, sem você clicar em nada no Hefesto; o outro controle não se mexe; e o arrasto de volta no Hefesto aparece no painel. Se o número ficar parado no valor antigo, a leitura não está chegando; se ele mostrar um número que o sistema não tem, a tela está inventando.
 
-**O que anotar.** O número antes, o número que você pôs no painel do sistema, e o número que a tela mostrou depois — os três.
+**Por controle.**
+
+* **P1** — Está no cabo, e é o alvo: o número tem de seguir o painel, e o painel tem de seguir o arrasto.
+* **P2** — Também no cabo, e é a segunda prova — e, enquanto você mexe no P1, a testemunha de que o volume é de um controle só.
+* **P3** — Está no rádio, testemunha: o número dele não pode mudar enquanto você mexe no P1 ou no P2. A volta dele é a linha do rádio.
+* **P4** — Também no rádio, mesma leitura do P3.
+
+**A armadilha.** A leitura acontece de dois em dois segundos: olhar o número no mesmo instante em que você soltou o painel pode mostrar o valor velho sem defeito nenhum. O número vai de 0 a 100, como o trilho — um volume acima de 100 no sistema aparece como 100. O Volume não é o mudo: a luz vermelha do controle fica acesa e o botão de microfone do plástico continua valendo. Se o painel mostrar mais de uma entrada com cara de DualSense, mude primeiro a «Microfone do Controle» com o número do controle; se o Hefesto não seguir, mude a outra e anote qual fez o número andar — isso diz qual entrada o Hefesto está lendo. E se o número do nome não bater com o do cartão, anote também: o nome da entrada segue o lugar do controle, e um nome velho é achado.
 
 ---
 
@@ -7164,19 +7208,36 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `audio.microfone.volume @ rádio`
 
-**O que isto prova.** O mesmo que a de cima, pelo outro transporte — e aqui a pergunta tem uma metade a mais, porque pelo rádio o canal do microfone não é uma placa que o sistema publica sozinho: ele sobe pela ponte desta casa. Provar o volume no rádio é provar que a leitura atravessa essa ponte.
+**O que isto prova.** O mesmo que a linha do cabo, pelo outro transporte — e aqui a pergunta tem uma metade a mais, porque pelo rádio o canal do microfone não é uma placa que o sistema publica sozinho: ele sobe pela ponte do Hefesto. Provar o volume no rádio é provar que a leitura atravessa essa ponte, e que o trilho muda a voz que chega ao PC — o que ninguém mediu pelo rádio até hoje.
 
-**Onde olhar.** O mesmo lugar: aba Controles, cartão do controle aberto, bloco do Microfone.
+**Onde olhar.** Na aba Controles, no cartão de um controle ligado pelo rádio — na fita do topo, o chip dele diz BT. Dentro do cartão, o bloco Microfone: o selo ATIVO ou DESLIGADO ao lado do nome, as barrinhas que se mexem com a voz, o trilho Volume com o número e o 🎙 ao lado. O 🎙 é o retorno: aceso em verde, você se ouve pela saída de som do computador, com o volume do cartão já aplicado, e ele assim FICA até o clique seguinte. Fora do Hefesto, o painel de som do sistema, nas ENTRADAS: «Microfone do Controle 3» para o P3, «Microfone do Controle 4» para o P4.
 
 **Os passos.**
 
 1. Clique na aba Controles.
-2. Confira na fita do topo que o controle que você vai usar diz **rádio**.
-3. Clique na linha dele para abrir o cartão.
-4. Aperte o botão 🎙 para **ouvir a si mesma**: ele fica verde e assim continua até você clicar de novo.
-5. Anote o número do volume.
-6. Mude o volume daquele canal pelo painel de som do sistema e volte.
+2. Confira na fita do topo que o P3 e o P4 dizem BT.
+3. Clique na linha do P3 para abrir o cartão dele.
+4. Confira que o selo do Microfone do P3 diz ATIVO — se disser DESLIGADO, aperte o botão de microfone no próprio P3.
+5. Anote o número do Volume do microfone do P3.
+6. No painel de som do sistema, mude o volume da entrada «Microfone do Controle 3» para 30.
+7. Volte ao Hefesto sem clicar em nada e espere dois segundos.
+8. Confira que o número do Volume do P3 foi para 30.
+9. Clique no 🎙 do P3.
+10. Confira que ele ficou verde e assim continua sem você segurar nada.
+11. Fale uma frase no P3 e, falando, arraste o Volume do P3 de 30 até 100.
+12. Confira que a sua voz subiu no retorno junto com o trilho.
+13. Clique no 🎙 de novo.
+14. Confira que ele apagou e que o retorno calou.
+15. Arraste o Volume do P3 de volta ao número anotado.
+16. Faça no P4 a mesma volta, com o «Microfone do Controle 4».
 
-**O que tem de acontecer.** O número acompanha, igual ao do cabo. E há uma segunda coisa a ver: **o botão 🎙 fica verde e assim FICA** — ele é uma trava, como o do Discord, e só o clique seguinte o apaga. Você ouve a própria voz enquanto ele estiver verde; quem se move é a barra de nível.
+**Passa quando.** O número acompanha o painel do sistema, igual ao do cabo — a leitura atravessa a ponte. A voz no retorno sobe quando o trilho sobe. E o 🎙 fica verde e assim FICA — ele é uma trava, como a do Discord, e só o clique seguinte o apaga.
 
-**O que anotar.** Os três números, se o botão continuou verde sem você segurar nada, e se você se ouviu.
+**Por controle.**
+
+* **P3** — Está no rádio, e é o alvo: a leitura que segue o painel, a voz que segue o trilho, e o 🎙 que fica aceso.
+* **P4** — Também no rádio, mesma volta. Se o P3 responder e o P4 não, anote — são dois controles na mesma ponte.
+* **P1** — Está no cabo, testemunha: o número do Volume dele não pode mudar enquanto você mexe no P3.
+* **P2** — Também no cabo, mesma leitura do P1.
+
+**A armadilha.** O trilho do Volume mexe em DUAS coisas ao mesmo tempo: no canal daquele controle no sistema e num byte do próprio controle. Pelo rádio ninguém mediu o byte sozinho — a voz subir prova o par, não o byte; é isso que você anota. Se o número do P3 for um travessão, a ponte do microfone daquele controle ainda não subiu: espere alguns segundos antes de concluir. O 🎙 não cala o microfone: ele liga o retorno; calar é o botão de microfone do próprio controle, e com o microfone calado o 🎙 nem liga. Se você não ouvir o retorno, confira se a saída de som do computador está alta. A leitura acontece de dois em dois segundos, então dê esse tempo antes de olhar o número. E se o painel mostrar mais de uma entrada para o mesmo controle, mude primeiro a «Microfone do Controle» com o número dele e anote qual fez o número andar.
