@@ -1055,7 +1055,10 @@ class ControllerIdentityRegistry:
                 self._marcar_chegada_locked(key)
                 self._entrou_na_mesa_locked(key)
                 self._retomar_o_lugar_locked(key)
-                if not dono_de_lugar:
+                # Só com ENDEREÇO: o controle sem serial chega aqui pelo
+                # caminho cru, e o crachá dele só se resolve no tique lento —
+                # é lá que se sabe se ele é gente nova ou o dono que voltou.
+                if not dono_de_lugar and persistable:
                     chegou_gente_nova = True
                     self._quem_chega_novo_refaz_a_mesa_locked()
             numero = self._posicao_locked(key)

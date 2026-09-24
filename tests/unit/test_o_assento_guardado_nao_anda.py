@@ -537,6 +537,29 @@ class TestGenteNovaRefazAMesa:
         assert mesa.tela() == {P1: 1, P3: 2, P4: 3, self.NOVO: 4}
         assert mesa.reg.guardados() == {}
 
+    def test_o_controle_sem_serial_que_volta_nao_e_gente_nova(self) -> None:
+        """O crachá (O-CONTROLE-SEM-MAC-01) só se resolve no tique lento: o
+        provider de cor vê primeiro o caminho cru do P2 que voltou, e isso não
+        pode soltar o lugar de ninguém — nem o dele."""
+        relogio = Relogio()
+        reg = ControllerIdentityRegistry(clock=relogio)
+        cru = "/dev/hidraw9"
+        reg.set_cracha_provider(lambda u: KEYS[1] if u == cru else None)
+        mesa: list[str] = []
+        for uniq in (P1, cru, P3, P4):
+            mesa.append(uniq)
+            reg.sync_connected(mesa)
+            relogio.avancar(id_mod.JANELA_DE_ONDA_SEC * 2)
+        assert reg.numeros_da_mesa() == {P1: 1, P2: 2, P3: 3, P4: 4}
+
+        reg.sync_connected([P1, P3, P4])  # o P2 sai
+        reg.slot_for(cru, autoridade_de_presenca=False)  # e volta pelo provider
+
+        numeros = reg.numeros_da_mesa()
+        assert (numeros[P3], numeros[P4]) == (3, 4), "o caminho cru soltou o lugar"
+        reg.sync_connected([P1, cru, P3, P4])  # o tique resolve o crachá
+        assert reg.numeros_da_mesa() == {P1: 1, P2: 2, P3: 3, P4: 4}
+
     def test_quem_so_volta_nao_e_gente_nova(self) -> None:
         mesa = Mesa()
         mesa.sai(1)
