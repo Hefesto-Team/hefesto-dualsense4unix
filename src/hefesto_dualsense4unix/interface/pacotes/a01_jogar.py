@@ -430,7 +430,21 @@ ESPERA_DICA = (
 #: reprovou com DUAS âncoras de linha — em `app/actions/footer_actions.py` e
 #: neste arquivo — caindo em linha em branco. O texto muda; o tamanho do
 #: arquivo, não.
-CADEADO_ROTULO = "Trava o perfil ativo"
+#:
+#: **A PALAVRA MUDOU EM 23/09/2026, e é dela** (D-2309-O-MODO-FREESTYLE):
+#: *"o botão Trava o perfil Ativo na aba jogar. Vira Modo Freestyle o botão."*
+#: O que o botão FAZ não mudou — é o mesmo `autoswitch.lock`, e a dica abaixo
+#: continua a razão dele. O que mudou foi o nome, a letra e a altura, e os três
+#: estão no DESENHO (`aba01.py`), esperando a sessão dela.
+CADEADO_ROTULO = "Modo Freestyle"
+#: A PALAVRA QUE A PÁGINA PUBLICADA AINDA DIZ, enquanto o desenho espera a
+#: sessão dela — os desenhos novos se aprovam todos juntos (ordem dela, 23/09).
+#: O piloto não pinta o rótulo (o alvo da pílula é só a `classe`), então o
+#: produto segue dizendo esta até o `--publicar 01`. **TEM PRAZO:** no dia em
+#: que a publicada disser `CADEADO_ROTULO`, a régua
+#: `test_o_modo_freestyle.test_a_palavra_de_ontem_tem_prazo` reprova até esta
+#: linha sair, no mesmo commit do `--publicar`.
+CADEADO_ROTULO_ESPERANDO_A_SESSAO_DELA = "Trava o perfil ativo"
 CADEADO_DICA = (
     "O perfil ativo continua valendo mesmo quando você abre outro jogo. "
     "Desmarque para o Hefesto voltar a escolher sozinho."
@@ -3493,7 +3507,7 @@ def modo_navegacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
 
 @gesto("01-jogar.html", "cadeado", grava="autoswitch_lock_set")
 def cadeado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """A caixa "Trava o perfil ativo".
+    """O botão «Modo Freestyle» — até 23/09/2026, a caixa «Trava o perfil ativo».
 
     PEDIDO NOMEADO DELA, de 23/07/2026, e ele saiu do desenho por escolha minha
     — declarada na legenda desta própria página: *"A caixa saiu — o perfil ativo

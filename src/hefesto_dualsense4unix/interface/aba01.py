@@ -711,13 +711,31 @@ CSS = """
      O PADDING ENCOLHE COM A ALTURA: o `.sw` usa `0 10px` numa caixa de 26px;
      aqui são `0 8px` em 17px, que é o que mantém a pílula com a mesma
      proporção sem estourar a linha do título. */
-  .cadeado{display:inline-flex;align-items:center;justify-content:center;gap:6px;
-           margin-left:auto;height:17px;flex:0 0 auto;white-space:nowrap;
-           border-radius:6px;padding:0 8px;font-size:10.5px;font-family:inherit;
+  /* O «MODO FREESTYLE» — 24/09/2026, O-MODO-FREESTYLE-01, pedido dela:
+     *"Vira Modo Freestyle o botão. E a fonte dele aumenta e a altura do botão
+     aumenta também"*. A pílula e a polaridade ficam; mudam a letra e a altura,
+     e nenhuma das duas é medida nova:
+
+       `12.5px`  a letra de todo botão desta casa (`.btn`, o rodapé, os chips
+                 dos modos logo abaixo). Era 10,5.
+       `26px`    a altura do `.sw` da aba Controles no dia em que ela o apontou
+                 como modelo (19/09, *"queria esse tipo de botão"*). Era 17. Os
+                 36 dos chips de modo ficam de fora de propósito: com a mesma
+                 altura deles o botão voltaria a ler como um quinto modo, que
+                 foi o motivo de ele subir para este canto em 08/09.
+
+     A CONTA DE ALTURA É PAGA, e é esta: o `.quadro-topo` tem a altura do filho
+     mais alto, então a linha do título cresce 9 px e tudo abaixo do bloco Modo
+     desce 9 px. A Jogar é a aba com mais vão vertical (109 px), e a página
+     continua sem rolar — `tests/unit/test_o_modo_freestyle.py` mede as duas
+     coisas no desenho. */
+  .cadeado{display:inline-flex;align-items:center;justify-content:center;gap:7px;
+           margin-left:auto;height:26px;flex:0 0 auto;white-space:nowrap;
+           border-radius:7px;padding:0 12px;font-size:12.5px;font-family:inherit;
            cursor:pointer;
            border:1px solid var(--border-forte);background:var(--app-bg);
            color:var(--texto-mudo)}
-  .cadeado .p{width:6px;height:6px;border-radius:50%;flex:0 0 auto;
+  .cadeado .p{width:7px;height:7px;border-radius:50%;flex:0 0 auto;
               background:var(--border-forte);box-shadow:none}
   .cadeado.ligada{border-color:var(--green);background:rgba(80,250,123,.09);
                   color:var(--green)}
@@ -1674,6 +1692,8 @@ MIOLO = f'''
              este preço medido — a primeira volta dela tinha 19px e 663 caixas
              da aba desceram 2px. Por isso o cadeado entra aqui com a mesma
              trava de 17px, e não com a altura de linha que ele tinha embaixo.
+             OS 17px CADUCARAM EM 24/09/2026, pedido dela: o botão virou «Modo
+             Freestyle» com letra e altura maiores — a conta nova está na folha.
 
              A RESSALVA NÃO SOBE JUNTO, e está logo abaixo do bloco de modos: ela
              é uma FRASE inteira (`texto_do_cadeado_cego`), e frase não cabe numa
@@ -1890,6 +1910,17 @@ MIOLO = f'''
 LEGENDA = f'''<div class="nota">
   <h2>O que mudou, e por quê</h2>
   <ul>
+    <li><b>"Trava o perfil ativo" virou <span class="marca">Modo Freestyle</span>, com letra e altura maiores</b> — sua palavra, 23/09:
+      <span class="marca">"Vira Modo Freestyle o botão. E a fonte dele aumenta e a altura do botão
+      aumenta também"</span>. A letra foi de 10,5 para <b>12,5 px</b>, a de todo botão desta janela;
+      a altura, de 17 para <b>26 px</b>, a do botão de giroscópio no dia em que você o apontou como
+      modelo. O que ele faz não mudou: ligado, o perfil que está valendo continua valendo; só o
+      perfil próprio de um jogo entra por cima, como já era.</li>
+    <li><b>O "Personalizado" saiu</b> — <span class="marca">"O trava perfil ativo já faz isso"</span>,
+      e está medido: com a trava ligada ele nunca entrava. O seu arquivo foi guardado no histórico
+      do perfil, de onde volta inteiro. <b>O topo, quando nenhum jogo casa, diz o nome do perfil
+      que está valendo</b> — nada troca ao sair de um jogo; antes do primeiro jogo depois de ligar
+      o computador não há perfil nenhum, e ele diz <b>—</b>, como já dizia.</li>
     <li><b>A fileira plana virou DOIS NÍVEIS</b> — sua palavra, 31/08:
       <span class="marca">"vamos desconfundir isso que tal? Hefesto Ligado/Desligado (…) Modo
       Hefesto se Ligado Abre as seções de Modo"</span>. A pergunta que abriu isto também é sua
@@ -1990,7 +2021,7 @@ LEGENDA = f'''<div class="nota">
       precisaria de ~460px — os quatro somariam 1840px numa fileira que tem 1163px. Quem diz
       o número aqui é o rótulo <b>Player N</b>; o padrão das luzes, desenhado grande, está na
       <b>Iluminação</b>.</li>
-    <li><b>A caixa "Trava o perfil ativo" está no canto do bloco Modo</b> — na linha do título, como o "Banco de provas" da Navegação. Embaixo dos modos ela lia como um quinto modo, e não é modo: é uma trava sobre o perfil. O rótulo é palavra dela de 11/09; o mecanismo, que era o rótulo antigo, passou para a dica no ponteiro do mouse.</li>
+    <li><b>O botão do canto do bloco Modo (era "Trava o perfil ativo") mora na linha do título</b> — como o "Banco de provas" da Navegação. Embaixo dos modos ela lia como um quinto modo, e não é modo: é uma trava sobre o perfil. O rótulo é palavra dela de 11/09; o mecanismo, que era o rótulo antigo, passou para a dica no ponteiro do mouse.</li>
     <li><b>"Reconciliar jogadores" virou "Reconectar Controles"</b>.</li>
     <li><b>A área de avisos tem espaço reservado</b> e <b>conta quantos são</b>. Antes, três banners disputavam a linha e o primeiro escondia os outros. A barra vertical que a separa dos cartões agora vai até embaixo — era um toco de um terço, porque a coluna media a altura do único aviso.</li>  <!-- noqa-acento: `media` é o verbo medir -->
     <li><b>32 frases viraram 12</b> — o resto está nos três ícones <b>?</b>. Passe o mouse neles.</li>
