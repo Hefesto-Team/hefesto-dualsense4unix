@@ -373,18 +373,18 @@ roteiro.
 
 **Os passos.**
 
-1. Abra a aba Controles.
-2. Clique no chip «Todos», na fita do topo, para abrir os quatro cartões.
-3. Leia o selo do Microfone dos quatro e anote o que cada um diz — este é o ponto de partida.
-4. Olhe a luz do botão de microfone de cada um dos quatro e anote.
-5. Fale perto do P1 e confira que a barrinha de ondas do cartão dele mexe.
-6. Aperte uma vez o botão do microfone do P1, no plástico.
-7. Confira que a luz do botão do P1 mudou e que, dos quatro selos, só o do P1 trocou.
-8. Espere um segundo.
-9. Aperte o botão do P1 de novo e confira que a luz e o selo voltaram ao que eram.
-10. Abra as configurações de Som do sistema, na parte de Entrada, e procure o microfone do P1 — «Microfone do Controle 1» quando o cartão dele está em «Virtual» — e anote como ele aparece.
-11. Repita os passos 5 a 10 no P2, no P3 e no P4, trocando o número, e só passe ao seguinte quando o selo do anterior tiver assentado.
-12. Confira, no fim, que os quatro selos voltaram a dizer o que diziam no passo 3.
+* Abra a aba Controles.
+1. Clique no chip «Todos», na fita do topo, para abrir os quatro cartões.
+2. Leia o selo do Microfone dos quatro e anote o que cada um diz — este é o ponto de partida.
+3. Olhe a luz do botão de microfone de cada um dos quatro e anote.
+4. Fale perto do P1 e confira que a barrinha de ondas do cartão dele mexe.
+5. Aperte uma vez o botão do microfone do P1, no plástico.
+6. Confira que a luz do botão do P1 mudou e que, dos quatro selos, só o do P1 trocou.
+7. Espere um segundo.
+8. Aperte o botão do P1 de novo e confira que a luz e o selo voltaram ao que eram.
+9. Abra as configurações de Som do sistema, na parte de Entrada, e procure o microfone do P1 — «Microfone do Controle 1» quando o cartão dele está em «Virtual» — e anote como ele aparece.
+10. Repita os passos 4 a 9 no P2, no P3 e no P4, trocando o número, e só passe ao seguinte quando o selo do anterior tiver assentado.
+11. Confira, no fim, que os quatro selos voltaram a dizer o que diziam no passo 2.
 
 **Passa quando.** Cada aperto mexe no microfone do controle que foi apertado, e só nele: o selo daquele cartão troca e os outros três ficam parados. A luz do botão apertado inverte a cada aperto e acompanha o selo — acesa com ATIVO, apagada com DESLIGADO —, do mesmo jeito nos quatro, no cabo e no rádio. Com o selo em ATIVO, a Entrada do sistema mostra o microfone daquele controle — o «Microfone do Controle N», quando o cartão está em «Virtual». E no fim os quatro voltam ao que estavam no começo.
 
@@ -600,28 +600,28 @@ roteiro.
 
 **Os passos.**
 
-1. Abra a aba Jogar.
-2. Confira que o «Trava o perfil ativo», no canto direito do quadro «Modo», está apagado — se estiver aceso, clique nele para apagar.
-3. Abra pela Steam o jogo que você quer testar.
-4. Volte ao Hefesto com Alt+Tab e clique na aba Lançadores.
-5. Clique em «Detectar o jogo aberto».
-6. Leia a frase que aparece no cartão da Steam: ela diz o nome do jogo e se ele abre ou não pelo atalho do Hefesto.
-7. Clique na aba Perfis e clique em «Novo», com o jogo ainda aberto.
-8. Preencha o campo «Nome:» com o nome do jogo.
-9. Confira que o «Nome do Jogo:» traz o seu jogo e que o «Funciona em:» diz «Steam» — se não, clique em «Detectar», ao lado do «Nome do Jogo:», e confira de novo.
-10. Clique em «Ativar».
-11. Clique na aba Iluminação e clique no amarelo, o quinto tom da linha «Cor», na coluna do P1.
-12. Confira que a barra de luz do P1 ficou amarela.
-13. Feche o jogo.
-14. Se a frase do passo 6 disse que o jogo NÃO abre pelo atalho do Hefesto, vá à aba Sistema e clique em «Aplicar aos jogos da Steam», em Avançado, e clique de novo no mesmo botão para confirmar — ele fecha a Steam por uns 20 segundos.
-15. Clique na aba Perfis, escolha outro perfil qualquer da lista e clique em «Ativar».
-16. Confira que o alto da tela passou a mostrar esse outro nome em «Perfil ativo» e que a barra de luz do P1 deixou de ser amarela.
-17. Abra pela Steam o mesmo jogo outra vez.
-18. Veja a barra de luz do P1 assim que o jogo abrir.
-19. Volte ao Hefesto com Alt+Tab.
-20. Leia o nome que está em «Perfil ativo».
-21. Volte ao jogo com Alt+Tab e aperte um botão de cada controle, um por vez, do P1 ao P4.
-22. Confira que o jogo responde aos quatro.
+* Abra a aba Jogar.
+1. Confira que o «Trava o perfil ativo», no canto direito do quadro «Modo», está apagado — se estiver aceso, clique nele para apagar.
+2. Abra pela Steam o jogo que você quer testar.
+3. Volte ao Hefesto com Alt+Tab e clique na aba Lançadores.
+4. Clique em «Detectar o jogo aberto».
+5. Leia a frase que aparece no cartão da Steam: ela diz o nome do jogo e se ele abre ou não pelo atalho do Hefesto.
+6. Clique na aba Perfis e clique em «Novo», com o jogo ainda aberto.
+7. Preencha o campo «Nome:» com o nome do jogo.
+8. Confira que o «Nome do Jogo:» traz o seu jogo e que o «Funciona em:» diz «Steam» — se não, clique em «Detectar», ao lado do «Nome do Jogo:», e confira de novo.
+9. Clique em «Ativar».
+10. Clique na aba Iluminação e clique no amarelo, o quinto tom da linha «Cor», na coluna do P1.
+11. Confira que a barra de luz do P1 ficou amarela.
+12. Feche o jogo agora.
+13. Se a frase do passo 5 disse que o jogo NÃO abre pelo atalho do Hefesto, vá à aba Sistema e clique em «Aplicar aos jogos da Steam», em Avançado, e clique de novo no mesmo botão para confirmar — ele fecha a Steam por uns 20 segundos.
+14. Clique na aba Perfis, escolha outro perfil qualquer da lista e clique em «Ativar».
+15. Confira que o alto da tela passou a mostrar esse outro nome em «Perfil ativo» e que a barra de luz do P1 deixou de ser amarela.
+16. Abra pela Steam o mesmo jogo outra vez.
+17. Veja a barra de luz do P1 assim que o jogo abrir.
+18. Volte ao Hefesto com Alt+Tab.
+19. Leia o nome que está em «Perfil ativo».
+20. Volte ao jogo com Alt+Tab e aperte um botão de cada controle, um por vez, do P1 ao P4.
+21. Confira que o jogo responde aos quatro.
 
 **Passa quando.** Ao abrir o jogo, sem você tocar em nada, o nome em «Perfil ativo» vira o do perfil que você criou para ele, e a barra de luz do P1 fica amarela — os dois sinais da troca automática. E dentro do jogo os quatro controles respondem: os dois do cabo e os dois do rádio.
 
