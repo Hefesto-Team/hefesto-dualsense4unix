@@ -138,16 +138,17 @@ def _corpo_por_uniq(uniq: str | None) -> dict[str, Any]:
     * controle na mesa, output livre -> ``"escreveu"`` -> ``aplicado_em``;
     * controle FORA da mesa (``handle is None``) -> ``"registrado"`` ->
       ``guardado_em``;
-    * Modo Nativo (``_output_mute``) -> ``"registrado"`` -> ``guardado_em``,
-      que é o conserto 1.3.
+    * Modo Nativo (``_output_mute``) com o controle NA mesa -> ``"escreveu"``
+      -> ``aplicado_em``: desde 23/09/2026 a luz e o número saem no Nativo
+      (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`,
+      STEAM-NO-FISICO-01). Era ``"registrado"`` (o conserto 1.3), e um dublê
+      que continuasse dizendo guardado seria mais frouxo que o daemon.
 
     **Sem isto o dublê seria uma régua que só sabe passar**: dizendo sempre
     ``aplicado_em: [uniq]`` ele afirmaria escrita onde o produto mede
     registro, e a aba — que agora decide pelo CORPO — repetiria a afirmação.
     O dublê tem de saber recusar; é a régua da casa.
     """
-    if uniq and _MESA_DO_DAEMON["nativo"]:
-        return {"status": "ok", "aplicado_em": [], "guardado_em": [uniq]}
     if uniq and uniq in _MESA_DO_DAEMON["conectados"]:
         return {"status": "ok", "aplicado_em": [uniq], "guardado_em": []}
     if uniq:
@@ -309,13 +310,16 @@ class TestOQuintoGestoDaAba:
         assert "vai valer quando o Controle 2 voltar" in toast
         assert "Lightbar apagada" not in toast
 
-    def test_em_modo_nativo_nao_diz_apagada(self) -> None:
+    def test_em_modo_nativo_diz_apagada(self) -> None:
+        """Era «em Modo Nativo não diz apagada». Desde 23/09/2026 a barra é do
+        Hefesto no Nativo (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`)
+        e apagá-la sai no fio — dizer «guardado» seria a mentira ao contrário."""
         host = _Host(alvo=NA_MESA, conectados={0: NA_MESA}, nativo=True)
         host.on_lightbar_off(None)
         toast = host._toasts[-1]
-        assert GUARDADO in toast
-        assert "Modo Nativo" in toast
-        assert "Lightbar apagada" not in toast
+        assert GUARDADO not in toast
+        assert "Modo Nativo" not in toast
+        assert "Lightbar apagada" in toast
 
     # A PALAVRA DA TELA MUDOU — 08/09/2026: "mesa" é banida na tela por decisão
     # dela (06/09) e `textos_de_aplicacao` passou a dizer "não está ligado".
@@ -333,10 +337,10 @@ class TestOQuintoGestoDaAba:
         """
         host = _Host(alvo=FORA_DA_MESA, conectados={0: NA_MESA}, nativo=True)
         host.on_lightbar_off(None)
+        # O Modo Nativo não é pendência da LUZ desde 23/09/2026
+        # (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`): sobra a ausência.
         assert host._toasts[-1] == (
-            "Apagar a lightbar — guardado: em Modo Nativo quem manda no "
-            "controle é o jogo; o Controle 2 não está ligado. Vale quando o "
-            "Modo Nativo sair e o Controle 2 voltar."
+            "Apagar a lightbar — guardado, vai valer quando o Controle 2 voltar."
         )
 
     def test_com_o_alvo_na_mesa_a_frase_e_a_de_sempre(self) -> None:
@@ -404,12 +408,15 @@ class TestAsPendenciasSomam:
             "frase prometia que bastava"
         )
 
-    def test_modo_nativo_e_alvo_fora_promete_as_duas_liberacoes(self) -> None:
+    def test_modo_nativo_e_alvo_fora_a_cor_so_espera_o_controle(self) -> None:
+        """A cor no Modo Nativo sai no fio desde 23/09/2026
+        (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`): da soma antiga
+        («Modo Nativo sair e Controle 2 voltar») sobra só a ausência."""
         host = _Host(alvo=FORA_DA_MESA, conectados={0: NA_MESA}, nativo=True)
         host._aplicar_cor_no_controle()
         toast = host._toasts[-1]
         assert GUARDADO in toast
-        assert "Modo Nativo sair" in toast
+        assert "Modo Nativo" not in toast
         assert "Controle 2 voltar" in toast
 
     def test_os_dois_donos_de_agora_juntos_somam(self) -> None:
@@ -419,12 +426,27 @@ class TestAsPendenciasSomam:
         nenhum teste as punha juntas. Sem esta mordida, quem escrevesse
         ``if coop and not nativo`` engolia a do co-op sem um vermelho.
         """
-        host = _Host(alvo=NA_MESA, conectados={0: NA_MESA}, coop=True, nativo=True)
-        host.on_player_leds_preset_p3(None)
-        assert host._toasts[-1] == (
+        # A SOMA mora no dono do vocabulário, e é lá que ela se prova: desde
+        # 23/09/2026 o Modo Nativo não é pendência das luzes
+        # (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`), e nenhum gesto
+        # desta aba alcança mais o par co-op + Nativo.
+        from hefesto_dualsense4unix.app.textos_de_aplicacao import frase_de_guardado
+
+        assert frase_de_guardado(
+            "Desenho das luzes (LEDs acesos: 1, 3 e 5)",
+            alvo_ausente=None,
+            coop=True,
+            nativo=True,
+        ) == (
             "Desenho das luzes (LEDs acesos: 1, 3 e 5) — guardado: com o co-op "
             "ligado, quem manda nas 5 luzes é ele; em Modo Nativo quem manda no "
             "controle é o jogo. Vale quando o co-op sair e o Modo Nativo sair."
+        )
+        host = _Host(alvo=NA_MESA, conectados={0: NA_MESA}, coop=True, nativo=True)
+        host.on_player_leds_preset_p3(None)
+        assert host._toasts[-1] == (
+            "Desenho das luzes (LEDs acesos: 1, 3 e 5) — guardado; com o co-op "
+            "ligado, quem manda nas 5 luzes é ele. Vale quando o co-op sair."
         )
         assert "não está ligado" not in host._toasts[-1], (
             "o alvo está na mesa — a frase não pode inventar a terceira pendência"
@@ -439,11 +461,19 @@ class TestAsPendenciasSomam:
         das três liberações é a mesma mentira que a soma veio matar, uma casa
         adiante.
         """
-        host = _Host(
-            alvo=FORA_DA_MESA, conectados={0: NA_MESA}, coop=True, nativo=True
+        # A trinca se prova no DONO do vocabulário: desde 23/09/2026 o Modo
+        # Nativo não é pendência das luzes
+        # (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`), e o gesto desta
+        # aba sai com as duas que sobram (conferido no fim).
+        from hefesto_dualsense4unix.app.textos_de_aplicacao import frase_de_guardado
+
+        toast = frase_de_guardado(
+            "Desenho das luzes (LEDs acesos: 1, 3 e 5)",
+            alvo_ausente=ROTULO_DO_AUSENTE.split(" (")[0],
+            coop=True,
+            nativo=True,
         )
-        host.on_player_leds_preset_p3(None)
-        toast = host._toasts[-1]
+        assert toast is not None
         for liberacao in ("o co-op sair", "o Modo Nativo sair", "o Controle 2 voltar"):
             assert liberacao in toast, (
                 f"a liberação «{liberacao}» sumiu da soma de três: {toast}"
@@ -460,6 +490,13 @@ class TestAsPendenciasSomam:
             < toast.index("em Modo Nativo")
             < toast.index("não está ligado")
         )
+        host = _Host(
+            alvo=FORA_DA_MESA, conectados={0: NA_MESA}, coop=True, nativo=True
+        )
+        host.on_player_leds_preset_p3(None)
+        assert "Modo Nativo" not in host._toasts[-1]
+        assert "o co-op sair" in host._toasts[-1]
+        assert "o Controle 2 voltar" in host._toasts[-1]
 
     def test_uma_pendencia_so_continua_com_a_frase_de_sempre(self) -> None:
         """Hipótese tem de explicar o que JÁ funcionava: com UMA condição, as
@@ -476,12 +513,11 @@ class TestAsPendenciasSomam:
             "Cor (80% de brilho) — guardado, vai valer quando o Controle 2 "
             "voltar."
         )
+        # O Modo Nativo sozinho não segura mais a COR (23/09/2026,
+        # `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`): ela sai no fio.
         so_nativo = _Host(alvo=NA_MESA, conectados={0: NA_MESA}, nativo=True)
         so_nativo._aplicar_cor_no_controle()
-        assert so_nativo._toasts[-1] == (
-            "Cor (80% de brilho) — guardado; em Modo Nativo quem manda no "
-            "controle é o jogo. Vale quando o Modo Nativo sair."
-        )
+        assert so_nativo._toasts[-1] == "Cor enviada ao controle (80% de brilho)"
 
 
 class _BarraDeStatus:
@@ -558,21 +594,24 @@ class TestOModoNativoNaTela:
             "escrita com o report_thread inteiro mutado"
         )
 
-    def test_cor_em_modo_nativo_nao_diz_enviada(self) -> None:
+    def test_cor_em_modo_nativo_diz_enviada(self) -> None:
+        """Era «não diz enviada»; desde 23/09/2026 a cor SAI no Modo Nativo
+        (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`, STEAM-NO-FISICO-01),
+        e o toast diz o que aconteceu."""
         host = _Host(alvo=NA_MESA, conectados={0: NA_MESA}, nativo=True)
         host._aplicar_cor_no_controle()
         (toast,) = host._toasts
-        assert GUARDADO in toast
-        assert "Modo Nativo" in toast
-        assert "enviada" not in toast
+        assert toast == "Cor enviada ao controle (80% de brilho)"
 
-    def test_desenho_em_modo_nativo_nao_diz_atualizado(self) -> None:
+    def test_desenho_em_modo_nativo_diz_atualizado(self) -> None:
+        """O número também é do Hefesto no Modo Nativo desde 23/09/2026
+        (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`)."""
         host = _Host(alvo=NA_MESA, conectados={0: NA_MESA}, nativo=True)
         host.on_player_leds_preset_p3(None)
         toast = host._toasts[-1]
-        assert GUARDADO in toast
-        assert "Modo Nativo" in toast
-        assert "atualizado —" not in toast
+        assert GUARDADO not in toast
+        assert "Modo Nativo" not in toast
+        assert toast.startswith("Desenho das luzes atualizado —")
 
     def test_sem_modo_nativo_as_tres_frases_sao_as_de_sempre(self) -> None:
         """Hipótese tem de explicar o que JÁ funcionava."""

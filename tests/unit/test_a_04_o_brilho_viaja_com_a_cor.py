@@ -327,29 +327,39 @@ def test_aplicou_e_o_gesto_cala(a04, ctx, monkeypatch):
 def test_guardado_vira_frase_no_cartao_dela(a04, ctx, monkeypatch):
     """O clique que NÃO acendeu nada tem de dizer isso — e a frase é do produto.
 
-    ESTE É O DEFEITO MAIS CARO DESTA CASA, e ele estava vivo aqui: com o Modo
-    Nativo ligado o backend muta toda escrita de output, o daemon responde
-    `guardado_em: [uniq]` e o `bool` do `led_set` volta `True`. O gesto calava,
-    o piloto anotava "aplicou", e o segundo clique parecia o primeiro.
+    ESTE É O DEFEITO MAIS CARO DESTA CASA, e ele estava vivo aqui: o daemon
+    responde `guardado_em: [uniq]` e o `bool` do `led_set` volta `True`. O gesto
+    calava, o piloto anotava "aplicou", e o segundo clique parecia o primeiro.
+    (Até 23/09/2026 o caso medido era o Modo Nativo; a luz passou a sair nele —
+    `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO` —, e o guardado que
+    sobra é o do controle fora da mesa.)
 
     A MORDIDA: volte a `p.led_set(...)` (ou compare `frase` com `""` em vez de
     com `enviado`) e este teste reprova — o gesto passa a não levantar. A frase
-    NÃO é digitada aqui: sai de `textos_de_aplicacao.guardado_ate_o_nativo_sair`,
-    que é quem a GTK usa no mesmo evento.
+    NÃO é digitada aqui: sai de `textos_de_aplicacao`, que é quem a GTK usa no
+    mesmo evento.
     """
     import pacotes
 
-    from hefesto_dualsense4unix.app.textos_de_aplicacao import _MOTIVO_NATIVO
+    from hefesto_dualsense4unix.app.textos_de_aplicacao import (
+        _MOTIVO_NATIVO,
+        GUARDADO,
+    )
 
     _com_o_perfil(monkeypatch, a04, {"leds": {"lightbar_brightness": 1.0}})
+    # O Modo Nativo ligado não é mais o PORQUÊ de uma cor guardada: desde
+    # 23/09/2026 a luz sai no fio nele (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-
+    # DO-HEFESTO`). O guardado que o daemon ainda declara (o controle fora da
+    # mesa, por exemplo) continua levantando — e a frase não põe o Nativo.
     ctx.state["native_mode"] = True
     p = PonteDeMentira({"status": "ok", "aplicado_em": [], "guardado_em": [UNIQ]})
     fn = pacotes.gesto_da_pagina("04-iluminacao.html", "cor")
     with pytest.raises(RuntimeError) as erro:
         fn(ctx, {"controle": "p1", "uniq": UNIQ, "hex": "#0000FF"}, p)
-    assert _MOTIVO_NATIVO in str(erro.value), (
+    assert GUARDADO in str(erro.value), (
         f"a frase foi {str(erro.value)!r}, e ela tem de ser a do produto — a "
         f"mesma que a janela GTK diz neste mesmo evento.")
+    assert _MOTIVO_NATIVO not in str(erro.value)
 
 
 def test_nada_aconteceu_tambem_fala(a04, ctx, monkeypatch):

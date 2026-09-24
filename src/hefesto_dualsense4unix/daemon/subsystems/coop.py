@@ -2004,26 +2004,15 @@ class CoopManager:
             return None
         return (bool(bits[0]), bool(bits[1]), bool(bits[2]), bool(bits[3]), bool(bits[4]))
 
-    def _backend_output_muted(self) -> bool:
-        """True quando o backend está em Modo Nativo (output_mute) — gate D12.
-
-        Mutado, o JOGO é dono do LED: os reverts por-uniq (escrita sysfs
-        direta, fora do report_thread que o mute cobre) NÃO escrevem — o
-        estado desejado segue guardado no backend e o unmute re-aplica o
-        resolvido por-uniq de cada controle (`set_output_mute(False)`).
-        Espelha o gate dos caminhos públicos (`_for_each_led`).
-        """
-        ctrl = getattr(self._daemon, "controller", None)
-        return bool(getattr(ctrl, "_output_mute", False))
-
     def _revert_single_player_led(self, mac: str) -> None:
         """Devolve UM controle (por MAC) ao padrão do perfil. Best-effort.
 
         PERFIL-06: o padrão restaurado é o RESOLVIDO POR-UNIQ deste mac
         (override de `player_leds` do perfil onde existe, default broadcast
-        onde não) — nunca o global cego por cima do override. Em Modo
-        Nativo (output_mute) não escreve: o jogo é dono do LED e o unmute do
-        backend re-aplica o resolvido (D12).
+        onde não) — nunca o global cego por cima do override. Escreve no
+        Modo Nativo também: o número é do Hefesto ali
+        (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`, 23/09/2026, que
+        revogou o gate D12 deste revert).
 
         R-13: com a API de camadas, este revert por-controle é DESNECESSÁRIO
         — o jogador sai da camada no próximo `_apply_coop_player_leds` (fim
@@ -2034,9 +2023,6 @@ class CoopManager:
                             "set_coop_outputs", None)):
             return
         if not self._leds_overridden or mac.startswith("path:"):
-            return
-        if self._backend_output_muted():
-            logger.debug("coop_player_led_revert_mutado", identity=mac)
             return
         bits = self._resolved_player_leds(mac)
         if bits is None:
@@ -2072,9 +2058,9 @@ class CoopManager:
         pelo caminho público que o perfil usa (`set_player_leds`, que
         prefere sysfs e cai em pydualsense) — o comportamento histórico.
         Sem padrão conhecido (None), não escreve nada: o próximo apply de
-        perfil / reassert do backend na reconexão cobre. Os caminhos
-        públicos do backend respeitam o output_mute por construção; a
-        correção sysfs tem o gate explícito (D12).
+        perfil / reassert do backend na reconexão cobre. Nada aqui espera o
+        Modo Nativo acabar: o número é do Hefesto ali também
+        (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`).
         """
         if not self._leds_overridden:
             return
@@ -2119,8 +2105,8 @@ class CoopManager:
         o `apply_output_defaults` pinta TODOS os conectados com o default;
         aqui os controles cujo padrão RESOLVIDO difere (têm override de
         `player_leds` no perfil ativo) voltam ao padrão DELES. Best-effort:
-        só toca o sysfs quando há o que corrigir, e nunca em Modo Nativo
-        (output_mute — o unmute do backend re-aplica o resolvido, D12).
+        só toca o sysfs quando há o que corrigir — no Modo Nativo também
+        (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`).
         Controle sem MAC (uniq None no describe) fica de fora — segue só o
         global, como em todo o resto do mapa por-uniq.
         """
@@ -2145,12 +2131,6 @@ class CoopManager:
                 continue
             pending.append((uniq, bits))
         if not pending:
-            return
-        if self._backend_output_muted():
-            logger.debug(
-                "coop_player_led_revert_mutado",
-                identities=[mac for mac, _ in pending],
-            )
             return
         from hefesto_dualsense4unix.core import sysfs_leds
 

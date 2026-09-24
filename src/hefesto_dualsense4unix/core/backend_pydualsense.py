@@ -619,6 +619,14 @@ _COOP_LAYER_FIELDS = ("player_leds",)
 #: mesa. O «mesmo em co-op» dela é sobre a numeração do JOGO, que é outra.
 _CAMPOS_QUE_O_HEFESTO_NUMERA: frozenset[str] = frozenset({"player_leds"})
 
+#: STEAM-NO-FISICO-01 — os campos que o Hefesto ESCREVE no Modo Nativo, e só
+#: eles: a luz e o número. Decisão dela de 23/09/2026
+#: (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`): *"no Modo Nativo, o
+#: Hefesto escreve a barra e o número SEMPRE"* — revoga o «zero write» do
+#: FEAT-PARITY-REVIEW-01 só para os dois; vibração, gatilhos e áudio (e o LED
+#: do mic, que vai no mesmo report do jogo) continuam dele.
+_CAMPOS_QUE_O_NATIVO_ESCREVE: frozenset[str] = frozenset({"led", "player_leds"})
+
 #: A cor que é NÚMERO, e não pintura: a paleta de jogador do SDL.
 #:
 #: Lida no fonte, `libsdl-org/SDL@0c8feecc`
@@ -3742,10 +3750,11 @@ class PyDualSenseController(IController):
             ``_sysfs_written`` (prova de posse do nó — é o que autoriza o
             handler IPC a ler ``multi_intensity`` como verdade e o único estado
             em que ``0 0 0`` significa "apagada");
-          - exceção documentada: em Modo Nativo (muted) NADA disso roda — o
-            jogo é dono do LED (o gate histórico cobre reassert E priming); o
-            nó novo fica SEM rastreio e o estado por controle sai como
-            "desired"/"desconhecida" até o unmute re-afirmar.
+          - em Modo Nativo roda IGUAL: a luz e o número são do Hefesto também
+            ali (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`, 23/09). Até
+            então esta era a exceção documentada — o jogo era o dono do LED, e
+            o nó que nascia no Nativo ficava apagado e sem rastreio até o
+            unmute.
         """
         from hefesto_dualsense4unix.core import sysfs_leds
 
@@ -3833,9 +3842,10 @@ class PyDualSenseController(IController):
                 )
 
         # Re-afirma o perfil de LED ativo nos nós que SURGIRAM agora (cor que o
-        # kernel ainda não tinha ou perdeu no connect/resume).
-        # FEAT-PARITY-REVIEW-01: em Modo Nativo (muted) NÃO re-afirma — o jogo é
-        # dono do LED; o desejado segue guardado e o unmute o re-aplica.
+        # kernel ainda não tinha ou perdeu no connect/resume). Em Modo Nativo
+        # TAMBÉM, desde 23/09/2026 (STEAM-NO-FISICO-01): a luz e o número são do
+        # Hefesto ali (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`); o
+        # controle que conectava no meio do jogo nascia apagado até o desmute.
         # PERFIL-01: o valor re-afirmado é o MERGE por controle (default +
         # override do uniq DESTE nó) — nunca o desejado de outro controle.
         # STATUS-01: nó RECRIADO (mesmo MAC, `indicator_dir` diferente) também é
@@ -3850,7 +3860,7 @@ class PyDualSenseController(IController):
             for k in mapping
             if k not in prev or _node_dir(prev[k]) != _node_dir(mapping[k])
         ]
-        if not self._output_mute and new_keys:
+        if new_keys:
             with self._io_lock:
                 reasserts = [
                     (key, mapping[key], self._merged_desired_for_key(key))
@@ -4315,13 +4325,11 @@ class PyDualSenseController(IController):
         acerta a pergunta errada. O journal dela mostrou exatamente isso:
         `lightbar_reassert_skip_cache rgb=(0, 0, 255)`.
 
-        Devolve ``{key: repintado?}``. Vazio = nenhum DualSense no cabo, ou
-        Modo Nativo — resposta, não erro.
+        Devolve ``{key: repintado?}``. Vazio = nenhum DualSense no cabo —
+        resposta, não erro. Vale no Modo Nativo também
+        (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`).
         """
         with self._io_lock:
-            if self._output_mute:
-                logger.info("repintar_o_cabo_no_op_modo_nativo")
-                return {}
             do_cabo = [
                 key for key, handle in self._handles.items()
                 if self._detect_transport(handle) != "bt"
@@ -4419,12 +4427,14 @@ class PyDualSenseController(IController):
         que enxerga. A versão que escrevia só no controle recém-chegado deixou
         dois dos três no padrão da Steam (ensaio `gatilho-1500ms-por-controle`).
 
-        **3. Por que o Modo Nativo é no-op.** Regra dela, literal: *"no modo
-        nativo devolvemos o controle pra steam e no modo conexão também, todo o
-        resto é o hefesto"*. O portão é o `_output_mute` que já existe — o
-        mesmo que o `reassert_resolved_outputs` e o `defend_display` usam; em
-        Modo Nativo / Conexão Nativa (Sony) o dono do hidraw é o jogo, e um
-        report nosso por baixo dele violaria o contrato de zero write.
+        **3. O Modo Nativo ESCREVE, desde 23/09/2026.** Até ali era no-op, pela
+        regra dela *"no modo nativo devolvemos o controle pra steam e no modo
+        conexão também, todo o resto é o hefesto"*. A decisão
+        `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO` (STEAM-NO-FISICO-01)
+        revoga o «zero write» SÓ para a luz e o número: *"no Modo Nativo, o
+        Hefesto escreve a barra e o número SEMPRE"* — e este report é
+        exatamente isso, sem vibração, sem gatilho e sem áudio, que continuam
+        do jogo.
 
         **4. Por que a escrita é INCONDICIONAL — sem cache, sem dedup.**
         MEDIDO em 12/08/2026: com as três barras apagadas pela Steam, um
@@ -4452,13 +4462,10 @@ class PyDualSenseController(IController):
         virgem nascer aceso em vez de nascer apagado.
 
         Devolve ``{key: escreveu?}``. Vazio significa "nenhum DualSense no
-        rádio" ou "Modo Nativo" — resposta, não erro; best-effort por handle,
-        e a falha de um nunca aborta os outros.
+        rádio" — resposta, não erro; best-effort por handle, e a falha de um
+        nunca aborta os outros.
         """
         with self._io_lock:
-            if self._output_mute:
-                logger.info("gatilho_da_cor_no_op_modo_nativo")
-                return {}
             pode_player = self._pode_escrever_player_leds()
             alvos = [
                 (key, handle, self._merged_desired_for_key(key))
@@ -4550,17 +4557,17 @@ class PyDualSenseController(IController):
         vigia do sequestro (`daemon/connection.py`), a cada segundo, enquanto
         outro processo segura o hidraw do físico — «quantas vezes for preciso».
 
-        TRÊS DIFERENÇAS do `reescrever_lightbar_por_hidraw`, todas deliberadas:
+        DUAS DIFERENÇAS do `reescrever_lightbar_por_hidraw`, as duas
+        deliberadas (a terceira, «vale no Modo Nativo», deixou de ser diferença
+        quando a `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO` levou a
+        mesma regra a todos os caminhos da luz e do número; o `_output_mute`
+        continua calando o `report_thread`, a vibração, os gatilhos e o áudio,
+        e o que sai daqui é o report mínimo, com `valid_flag0` e `valid_flag2`
+        zerados):
 
         1. **É MIRADO.** Só os controles que alguém sequestrou; o gatilho
            repinta a mesa inteira porque a rajada da Steam é da mesa inteira.
-        2. **Vale no Modo Nativo.** A regra dela de 23/09 (A MATRIZ): *"no
-           Nativo o jogo recebe o físico, e mesmo assim o número e a barra são
-           do Hefesto"*. O `_output_mute` continua calando TUDO o mais — o
-           `report_thread`, a vibração, os gatilhos, o áudio: o que sai daqui é
-           o report mínimo, com `valid_flag0` e `valid_flag2` zerados, e ele não
-           toca em nada do que o jogo é dono.
-        3. **Nos dois transportes.** Pelo rádio, o `0x31` mínimo (o mesmo do
+        2. **Nos dois transportes.** Pelo rádio, o `0x31` mínimo (o mesmo do
            gatilho, `_escrever_barra_e_numero_bt`); pelo cabo, a classe LED do
            kernel, com o cache invalidado antes — o cache mede a cor PEDIDA, e
            a escrita crua do sequestrador não o atualiza.
@@ -4665,11 +4672,11 @@ class PyDualSenseController(IController):
            `_for_each_led` já manda os dois quando recebe o valor em forma de
            dado.
 
-        Em Modo Nativo (`_output_mute`) é no-op: ali o dono do LED é o jogo, e
-        essa é a mesma regra do `reassert_resolved_outputs` e do
-        `reescrever_lightbar_por_hidraw`. O aviso de ENTRADA no Modo Nativo
-        ainda sai, porque quem o dispara roda antes do mute (ver
-        `daemon/subsystems/gamepad.stop_gamepad_emulation`).
+        Vale no Modo Nativo desde 23/09/2026: a barra é do Hefesto ali também
+        (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`). Até então era
+        no-op, e o par `restaurar_lightbar_do_perfil` também — o aviso de
+        ENTRADA no Nativo saía antes do mute e a devolução caía depois dele,
+        deixando a barra na cor do aviso.
 
         Devolve **quantos controles receberam a escrita** — nunca "quantos
         acenderam". Não há como saber o segundo: o `multi_intensity` é a
@@ -4677,9 +4684,6 @@ class PyDualSenseController(IController):
         hardware, e escrita por hidraw nem o atualiza.
         """
         with self._io_lock:
-            if self._output_mute:
-                logger.debug("aviso_de_modo_no_op_modo_nativo")
-                return 0
             quantos = len(self._handles)
         if not quantos:
             return 0
@@ -4712,8 +4716,6 @@ class PyDualSenseController(IController):
         devolver o que não se tirou é mudança que ela não pediu.
         """
         with self._io_lock:
-            if self._output_mute:
-                return 0
             itens = [
                 (key, handle, self._sysfs.get(key), self._merged_desired_for_key(key).led)
                 for key, handle in self._handles.items()
@@ -4725,7 +4727,6 @@ class PyDualSenseController(IController):
                 ok = self._write_partial_output(
                     handle,
                     node,
-                    False,
                     _DesiredOutput(led=alvo),
                     what="aviso_de_modo_devolve",
                 )
@@ -4817,7 +4818,6 @@ class PyDualSenseController(IController):
             if record:
                 self._record_desired_locked(target, record)
             sysfs_map = dict(self._sysfs)
-            muted = self._output_mute
         if ausente is not None:
             # P4: ver `_resolver_escopo`. O valor fica guardado no
             # override do alvo; a barra dos OUTROS não muda de cor.
@@ -4830,16 +4830,14 @@ class PyDualSenseController(IController):
             return
         for key, handle in items:
             node = sysfs_map.get(key)
-            # FEAT-PARITY-REVIEW-01: em Modo Nativo (muted) o JOGO é dono do LED
-            # do controle. A rota sysfs escreve DIRETO no /sys (fora do
-            # report_thread, que o mute cobre), então sem este gate um perfil/
-            # reassert de player-LED/lightbar pisaria no número que o jogo setou.
-            # `_desired` já guarda o valor (setado pelo caller) e o unmute o
-            # re-aplica ao sysfs — aqui só evitamos tocar o hardware. O pydual_op
-            # abaixo apenas atualiza o estado interno (o report_thread mutado não
-            # escreve), mantendo o handle coerente para o próximo unmute.
+            # MODO NATIVO: a rota sysfs escreve DIRETO no /sys (fora do
+            # report_thread, que o mute cobre), e escreve também sob o mute —
+            # a luz e o número são do Hefesto ali (`D-2309-NO-NATIVO-A-LUZ-E-O-
+            # NUMERO-SAO-DO-HEFESTO`, 23/09/2026, que revogou o gate do
+            # FEAT-PARITY-REVIEW-01 só para eles). Este método só carrega luz e
+            # número; o LED do mic vai pelo `_for_each`.
             escreveu_sysfs = False
-            if node is not None and not muted:
+            if node is not None:
                 try:
                     escreveu_sysfs = bool(sysfs_op(node))
                 except Exception as exc:
@@ -4848,11 +4846,10 @@ class PyDualSenseController(IController):
                     )
             # ROTA-BT-EM-REGIME-01: por rádio a rota sysfs NÃO basta, e isso é
             # medido — ver `_pintar_por_hidraw_bt`. O report vai junto, tenha
-            # o sysfs escrito ou não; em Modo Nativo (`muted`) é no-op.
-            if not muted:
-                self._pintar_por_hidraw_bt(
-                    key, handle, rgb=rgb, players=players, what=what
-                )
+            # o sysfs escrito ou não, no Modo Nativo também.
+            self._pintar_por_hidraw_bt(
+                key, handle, rgb=rgb, players=players, what=what
+            )
             if escreveu_sysfs:
                 continue
             try:
@@ -4887,7 +4884,6 @@ class PyDualSenseController(IController):
         """
         with self._io_lock:
             node = self._sysfs.get(key)
-            muted = self._output_mute
             desired = self._merged_desired_for_key(key)
             uniq = self._key_to_uniq(key)
             game_triggers = (
@@ -4917,7 +4913,7 @@ class PyDualSenseController(IController):
             else:
                 logger.debug("mic_posse_handle_sem_api", key=key)
         self._write_partial_output(
-            handle, node, muted, desired, what="reapply_perfil_no_hotplug"
+            handle, node, desired, what="reapply_perfil_no_hotplug"
         )
 
     def _pintar_por_hidraw_bt(
@@ -5008,7 +5004,6 @@ class PyDualSenseController(IController):
         self,
         handle: pydualsense,
         node: Any,
-        muted: bool,
         out: _DesiredOutput,
         *,
         what: str,
@@ -5019,11 +5014,15 @@ class PyDualSenseController(IController):
         Lightbar e player-LED vão pelo nó sysfs do kernel quando o controle está
         coberto (cor em USB E BT); senão, por pydualsense (fallback histórico).
 
-        FEAT-PARITY-REVIEW-01: em Modo Nativo (muted) a rota sysfs de LED é
-        desabilitada (o jogo é dono do LED). `node and not muted` mantém o
-        fallback: sem sysfs disponível, o LED cai em handle.light — mas o
-        report_thread também está mutado, então nada chega ao hardware; o
-        estado interno fica coerente para o unmute re-aplicar.
+        MODO NATIVO — decisão dela de 23/09/2026 (`D-2309-NO-NATIVO-A-LUZ-E-O-
+        NUMERO-SAO-DO-HEFESTO`, STEAM-NO-FISICO-01): *"no Modo Nativo, o
+        Hefesto escreve a barra e o número SEMPRE"*. Até ali a rota sysfs e o
+        `0x31` avulso eram desligados sob `_output_mute` (FEAT-PARITY-REVIEW-01,
+        «o jogo é dono do LED»); a decisão revoga isso SÓ para a luz e o número.
+        Gatilhos e LED do mic continuam indo pelo handle, e o `report_thread`
+        mudo não os escreve: vibração, gatilhos e áudio seguem do jogo. Sem nó
+        sysfs (sem a regra 77) a luz cai no handle e espera o desmute, como
+        antes — o caminho degradado de sempre.
 
         ROTA-BT-EM-REGIME-01: por rádio, cor e número saem TAMBÉM pelo report
         `0x31` avulso (`_pintar_por_hidraw_bt`) — é este o caminho do perfil e
@@ -5045,34 +5044,27 @@ class PyDualSenseController(IController):
             if out.trigger_right is not None:
                 self._apply_trigger(handle, "right", out.trigger_right)
             if out.led is not None and not (
-                node is not None and not muted and node.set_rgb(*out.led)
+                node is not None and node.set_rgb(*out.led)
             ):
                 handle.light.setColorI(*out.led)
             if (
                 out.player_leds is not None
                 and self._pode_escrever_player_leds()
-                and not (
-                    node is not None
-                    and not muted
-                    and node.set_players(out.player_leds)
-                )
+                and not (node is not None and node.set_players(out.player_leds))
             ):
                 mask = sum(1 << i for i, b in enumerate(out.player_leds) if b)
                 handle.light.playerNumber = PlayerID(mask)
             if out.mic_led is not None:
                 _escrever_led_do_mic(handle, out.mic_led)
-            if not muted:
-                self._pintar_por_hidraw_bt(
-                    None,
-                    handle,
-                    rgb=out.led,
-                    players=(
-                        out.player_leds
-                        if self._pode_escrever_player_leds()
-                        else None
-                    ),
-                    what=what,
-                )
+            self._pintar_por_hidraw_bt(
+                None,
+                handle,
+                rgb=out.led,
+                players=(
+                    out.player_leds if self._pode_escrever_player_leds() else None
+                ),
+                what=what,
+            )
         except Exception as exc:
             logger.warning("reapply_perfil_no_hotplug_falhou", op=what, err=str(exc))
             return False
@@ -6293,15 +6285,15 @@ class PyDualSenseController(IController):
         sprint (*"Modo Nativo com output mutado"*), que a entrega original
         deixou passar com afirmação POSITIVA:
 
-        * **Modo Nativo** (``_output_mute``): a rota sysfs de LED está
-          desabilitada por `not muted`, o `_pintar_por_hidraw_bt` é pulado, e o
-          `report_thread` não escreve NADA (`set_output_mute`). O que a escrita
-          faz aqui é só deixar o estado interno pronto — e, ao desmutar, o
-          `set_output_mute` limpa o dirty-flag e re-aplica o desejado pelo
-          sysfs. Isso é, palavra por palavra, o que ``"registrado"`` já
-          significa: **fica guardado e vale quando o evento que o segura
-          passar** — hotplug num caso, desmute no outro. Por isso é a mesma
-          palavra, e não uma sexta.
+        * **Modo Nativo** (``_output_mute``): o `report_thread` não escreve
+          NADA (`set_output_mute`), então o que vai por ele — gatilhos, LED do
+          mic — fica só no estado interno, e ao desmutar o `set_output_mute`
+          re-aplica o desejado. Isso é, palavra por palavra, o que
+          ``"registrado"`` já significa: **fica guardado e vale quando o evento
+          que o segura passar** — hotplug num caso, desmute no outro. A LUZ e
+          o NÚMERO saem na hora desde 23/09/2026
+          (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`): pedido só
+          deles no Nativo responde ``"escreveu"``.
         * **escrita que LEVANTOU**: `_write_partial_output` engole a exceção
           (log `reapply_perfil_no_hotplug_falhou`), e o caminho seguia para
           "escreveu". Agora ela devolve ``False`` e isto vira ``"falhou"`` —
@@ -6338,15 +6330,19 @@ class PyDualSenseController(IController):
             )
             return "registrado"
         escreveu = self._write_partial_output(
-            handle, node, muted, _DesiredOutput(**fields), what="apply_output_for"
+            handle, node, _DesiredOutput(**fields), what="apply_output_for"
         )
         if not escreveu:
             return "falhou"
-        if muted:
+        # A luz e o número saem no Modo Nativo (`D-2309-NO-NATIVO-A-LUZ-E-O-
+        # NUMERO-SAO-DO-HEFESTO`); o resto (gatilhos, LED do mic) fica
+        # guardado para o desmute. «escreveu» só quando TUDO saiu.
+        guardados = sorted(set(fields) - _CAMPOS_QUE_O_NATIVO_ESCREVE)
+        if muted and guardados:
             logger.debug(
                 "apply_output_for_modo_nativo_registrado",
                 uniq=alvo,
-                campos=sorted(fields),
+                campos=guardados,
             )
             return "registrado"
         return "escreveu"
@@ -6455,7 +6451,6 @@ class PyDualSenseController(IController):
         adiados: dict[str, list[str]] = {}
         with self._io_lock:
             self._clear_layer_locked(_LAYER_PROFILE)
-            muted = self._output_mute
             for alvo, campos in novo.items():
                 override = self._desired_by_uniq.setdefault(alvo, _DesiredOutput())
                 for nome, valor in campos.items():
@@ -6490,7 +6485,7 @@ class PyDualSenseController(IController):
                 )
         for handle, node, out in escritas:
             self._write_partial_output(
-                handle, node, muted, out, what="reset_profile_overrides"
+                handle, node, out, what="reset_profile_overrides"
             )
         if adiados:
             # Observabilidade da precedência (o doctor/journal precisam poder
@@ -6579,7 +6574,6 @@ class PyDualSenseController(IController):
             if antigo == novo:
                 return
             self._desired_coop_by_uniq = novo
-            muted = self._output_mute
             for alvo in set(antigo) | set(novo):
                 key = self._key_for_uniq(alvo)
                 handle = self._handles.get(key) if key is not None else None
@@ -6593,7 +6587,7 @@ class PyDualSenseController(IController):
                 )
         for handle, node, out in escritas:
             self._write_partial_output(
-                handle, node, muted, out, what="set_coop_outputs"
+                handle, node, out, what="set_coop_outputs"
             )
 
     def set_rumble_for(self, uniq: str, weak: int, strong: int) -> bool:
@@ -6836,11 +6830,10 @@ class PyDualSenseController(IController):
             key = self._key_for_uniq(alvo)
             handle = self._handles.get(key) if key is not None else None
             node = self._sysfs.get(key) if key is not None else None
-            muted = self._output_mute
         if handle is None:
             return True
         self._write_partial_output(
-            handle, node, muted, _DesiredOutput(**fields), what="game_output_replica"
+            handle, node, _DesiredOutput(**fields), what="game_output_replica"
         )
         return True
 
@@ -6961,7 +6954,6 @@ class PyDualSenseController(IController):
             key = self._key_for_uniq(alvo)
             handle = self._handles.get(key) if key is not None else None
             node = self._sysfs.get(key) if key is not None else None
-            muted = self._output_mute
             desired = (
                 self._merged_desired_for_key(key) if key is not None else None
             )
@@ -7014,7 +7006,7 @@ class PyDualSenseController(IController):
         if game is not None and game.player_leds is not None:
             restore.player_leds = desired.player_leds
         self._write_partial_output(
-            handle, node, muted, restore, what="game_session_close"
+            handle, node, restore, what="game_session_close"
         )
         return True
 
@@ -7205,8 +7197,9 @@ class PyDualSenseController(IController):
         Escreve pela rota sysfs (os nós do mapa `_sysfs`, com registro no
         rastreio "escrito por nós"). Controle sem nó gravável (sem a regra
         77) segue no caminho pydualsense com o global até o próximo
-        `_reapply_desired` — limitação documentada do caminho degradado. Em
-        Modo Nativo é no-op (o jogo é dono do LED; o unmute já re-aplica).
+        `_reapply_desired` — limitação documentada do caminho degradado. Vale
+        no Modo Nativo também desde 23/09/2026: a luz e o número são do
+        Hefesto ali (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`).
 
         NUMA-03 (``verify=True``): repassa a verificação de escritor
         estrangeiro a `SysfsLedNode.set_rgb`/`set_players_verified` — mas SÓ
@@ -7217,8 +7210,9 @@ class PyDualSenseController(IController):
         histórico (`verify=False` é byte-idêntico ao HEAD).
         """
         with self._io_lock:
-            if self._output_mute:
-                return
+            # Modo Nativo NÃO pula mais (23/09/2026): este reassert só carrega
+            # luz e número, e os dois são do Hefesto também ali
+            # (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`).
             # `verify` só vale sob autoridade 'daemon' explícita — em
             # game/unknown/sem-provider a defesa não roda (fail-safe).
             check = verify and not self._game_wins()
@@ -7259,14 +7253,13 @@ class PyDualSenseController(IController):
         hidraw-direto que a re-leitura de classe não vê; no incidente 14:42,
         repinte ≤2s da escrita estrangeira). NÃO é o reassert incondicional
         do flash azul (GUERRA-01): só em transição ou sob evidência de
-        escritor, sempre com teto de frequência. No-op TOTAL sob
-        `_output_mute` (Modo Nativo: o jogo é o dono — nada escrito, nem
-        repaint). Falha de um nó não aborta os demais (suppress por item do
-        reassert).
+        escritor, sempre com teto de frequência. Vale no Modo Nativo desde
+        23/09/2026: o que ela defende é a luz e o número, e os dois são do
+        Hefesto ali também (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`;
+        até então era no-op total sob `_output_mute`). Falha de um nó não
+        aborta os demais (suppress por item do reassert).
         """
         with self._io_lock:
-            if self._output_mute:
-                return
             self._defend_last_at = time.monotonic()
             nodes = list(self._sysfs.values())
         for node in nodes:
@@ -7278,10 +7271,16 @@ class PyDualSenseController(IController):
         """Muta/desmuta TODA escrita de output HID (FEAT-NATIVE-OUTPUT-MUTE-01).
 
         Modo Nativo = o JOGO é o dono do hidraw: rumble, gatilhos adaptativos e
-        LEDs vêm dele. Mutado, o report_thread NÃO escreve nada (nem o
+        áudio vêm dele. Mutado, o report_thread NÃO escreve nada (nem o
         keepalive — que zerava o rumble do jogo a cada 0.5s, sentido ao vivo no
         Sackboy). Ao desmutar, o dirty-flag é limpo para o estado desejado do
         hefesto ser re-escrito no próximo ciclo (~ms).
+
+        A LUZ E O NÚMERO NÃO ENTRAM NO MUTE — decisão dela de 23/09/2026
+        (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`,
+        STEAM-NO-FISICO-01): *"no Modo Nativo, o Hefesto escreve a barra e o
+        número SEMPRE"*. Eles saem fora do fluxo — a classe LED pelo cabo, o
+        `0x31` mínimo pelo rádio — e o mute não os alcança.
         """
         with self._io_lock:
             self._output_mute = bool(muted)

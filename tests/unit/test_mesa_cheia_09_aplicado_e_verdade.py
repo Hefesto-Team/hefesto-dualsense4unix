@@ -203,18 +203,29 @@ class TestConserto13OQueDizEscreveuSemByteNenhum:
     esta: `apply_output_for` lia `muted` e não o usava no retorno.
     """
 
-    def test_modo_nativo_nao_pode_dizer_que_escreveu(self) -> None:
-        """Mutado: sysfs desabilitado, `0x31` pulado, report_thread calado.
+    def test_modo_nativo_so_diz_escreveu_da_luz_e_do_numero(self) -> None:
+        """Mutado, o `report_thread` cala — e a luz e o número saem por fora.
 
-        A palavra é "registrado" porque o caso é semanticamente IDÊNTICO ao do
-        controle fora da mesa — o desejado fica guardado e o `set_output_mute`
-        o re-escreve ao desmutar; o que muda é só o evento que o libera.
+        A palavra do gatilho é "registrado" porque o caso é semanticamente
+        IDÊNTICO ao do controle fora da mesa — o desejado fica guardado e o
+        `set_output_mute` o re-escreve ao desmutar. A da LUZ passou a ser
+        "escreveu" em 23/09/2026: `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-
+        HEFESTO` (STEAM-NO-FISICO-01) — no Modo Nativo o Hefesto escreve a
+        barra e o número sempre. Pedido misto diz "registrado": dizer
+        "escreveu" prometeria o gatilho que só vale no desmute.
         """
         backend = _backend_com_um_conectado()
         backend.set_output_mute(True)
+        efeito = build_from_name("Rigid", [5, 200])
         assert backend.apply_output_for(NA_MESA, OutputSpec(led=(9, 8, 7))) == (
-            "registrado"
-        ), "em Modo Nativo o dono do hidraw é o jogo: nenhum byte nosso sai"
+            "escreveu"
+        ), "no Modo Nativo a barra é do Hefesto: a cor sai na hora"
+        assert backend.apply_output_for(
+            NA_MESA, OutputSpec(trigger_left=efeito)
+        ) == "registrado", "no Modo Nativo o gatilho é do jogo"
+        assert backend.apply_output_for(
+            NA_MESA, OutputSpec(led=(1, 2, 3), trigger_left=efeito)
+        ) == "registrado"
 
     def test_modo_nativo_guarda_de_verdade_o_que_promete(self) -> None:
         """"Registrado" é promessa: o desejado tem de estar no mapa."""
@@ -244,19 +255,21 @@ class TestConserto13OQueDizEscreveuSemByteNenhum:
         backend._sysfs = {_key_de(NA_MESA): node}  # type: ignore[dict-item]
 
         backend.set_output_mute(True)
-        assert backend.apply_output_for(NA_MESA, OutputSpec(led=(9, 8, 7))) == (
-            "registrado"
-        )
-        assert node.cores == [], (
-            "mutado, a rota sysfs está desabilitada por `not muted` — se algo "
-            "escrevesse aqui, o dono do hidraw não seria o jogo"
-        )
+        efeito = build_from_name("Rigid", [5, 200])
+        assert backend.apply_output_for(
+            NA_MESA, OutputSpec(led=(9, 8, 7), trigger_left=efeito)
+        ) == "registrado"
+        # A LUZ sai na hora desde 23/09/2026
+        # (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`); o gatilho é o
+        # que fica guardado para o desmute.
+        assert node.cores == [(9, 8, 7)]
 
         backend.set_output_mute(False)
-        assert node.cores == [(9, 8, 7)], (
+        assert node.cores[-1] == (9, 8, 7), (
             "o desmute tem de RE-ESCREVER o que ficou guardado; sem isso a "
             "palavra certa não seria 'registrado'"
         )
+        assert backend._desired_by_uniq[NA_MESA].trigger_left == efeito
 
     def test_o_desmute_rearma_o_report_para_gatilho_e_mic(self) -> None:
         """A outra metade da promessa: o que não passa pelo `sysfs`.

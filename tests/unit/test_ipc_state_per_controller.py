@@ -537,18 +537,22 @@ class TestPrimingERastreio:
         assert node.writes == [(40, 80, 180)]
         assert backend._sysfs_written == {KEY1: (40, 80, 180)}
 
-    def test_priming_nao_roda_em_modo_nativo(
+    def test_priming_roda_em_modo_nativo_tambem(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Exceção documentada: mutado, o jogo é dono do LED — nada é escrito."""
+        """Era a exceção documentada («mutado, nada é escrito»); caducou em
+        23/09/2026 com a decisão dela
+        `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO` (STEAM-NO-FISICO-01):
+        a luz e o número são do Hefesto no Nativo também. O nó que nasce ali é
+        escrito e entra no rastreio de posse."""
         node = _FakeLedNode(rgb=(0, 0, 0))
         backend = _backend_com_nos(monkeypatch, {MAC1: node})
         backend._output_mute = True
 
         backend._refresh_sysfs_leds()
 
-        assert node.writes == []
-        assert backend._sysfs_written == {}
+        assert node.writes == [(0, 0, 128)]
+        assert backend._sysfs_written == {KEY1: (0, 0, 128)}
 
     def test_no_recriado_no_reconnect_bt_e_primado_de_novo(
         self, monkeypatch: pytest.MonkeyPatch

@@ -22,7 +22,6 @@ from hefesto_dualsense4unix.app.textos_de_aplicacao import (
     coop_manda_nas_luzes,
     frase_de_guardado,
     frase_do_desfecho,
-    modo_nativo_manda_no_output,
 )
 from hefesto_dualsense4unix.utils.i18n import _
 
@@ -257,8 +256,14 @@ def frase_do_envio(
     ``coop_aplica`` viaja intacto: só quem escreve os 5 LEDs de jogador o passa
     ``True`` (``_COOP_LAYER_FIELDS = ("player_leds",)`` no backend), e a cor da
     lightbar nunca foi governada pelo co-op.
+
+    ``nativo_aplica=False`` SEMPRE, e é a decisão dela de 23/09/2026
+    (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`): no Modo Nativo o
+    Hefesto escreve a barra e o número, e esta aba só fala dos dois.
     """
-    frase = frase_do_desfecho(assunto, corpo, host, coop_aplica=coop_aplica)
+    frase = frase_do_desfecho(
+        assunto, corpo, host, coop_aplica=coop_aplica, nativo_aplica=False
+    )
     return enviado if frase.startswith(f"{assunto} aplicado") else frase
 
 
@@ -979,13 +984,12 @@ class LightbarActionsMixin(WidgetAccessMixin):
             #
             # MESA-CHEIA-09/E3 + D-9: com o alvo FORA da mesa, o daemon
             # registra o override e o hotplug o aplica quando ele voltar —
-            # nenhum byte saiu agora. Conserto 1.3: em Modo Nativo a cor também
-            # não sai — a rota sysfs está desabilitada sob mute e o `0x31`
-            # avulso é pulado.
+            # nenhum byte saiu agora. O Modo Nativo NÃO entra mais aqui: desde
+            # 23/09/2026 a cor sai no fio nele também
+            # (`D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO`).
             msg = frase_de_guardado(
                 _ASSUNTO_COR.format(pct=pct),
                 alvo_ausente=alvo_fora_da_mesa(self),
-                nativo=modo_nativo_manda_no_output(self),
             ) or _TOAST_COR_ENVIADA.format(pct=pct)
         if d4_disparou:
             msg = f"{_AVISO_D4} — {msg}"
@@ -1096,7 +1100,6 @@ class LightbarActionsMixin(WidgetAccessMixin):
             msg = frase_de_guardado(
                 _ASSUNTO_APAGAR,
                 alvo_ausente=alvo_fora_da_mesa(self),
-                nativo=modo_nativo_manda_no_output(self),
             ) or _TOAST_LIGHTBAR_APAGADA
         if d4_disparou:
             msg = f"{_AVISO_D4} — {msg}"
@@ -1538,7 +1541,6 @@ class LightbarActionsMixin(WidgetAccessMixin):
                 assunto,
                 alvo_ausente=alvo_fora_da_mesa(self),
                 coop=True,
-                nativo=modo_nativo_manda_no_output(self),
             ) or enviado
         else:
             frase = frase_do_envio(assunto, enviado, corpo, self, coop_aplica=True)
