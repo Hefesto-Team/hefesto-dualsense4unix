@@ -649,10 +649,10 @@ class ExternalIdentityRegistry:
         """Reconcilia com os uniqs presentes AGORA (tick ~2s) e persiste.
 
         Quem saiu vira RESERVA (slot preso ao uniq — replug recupera o
-        número) e, pelo prazo do lugar guardado, segura o assento. Diferente do registro DualSense, não há expiração por
-        sessão-esvaziou: um externo BT que dorme não pode perder o número
-        (era exatamente o sintoma). ÚNICO ponto de escrita em disco fora do
-        ``load()``.
+        número) e, pelo prazo do lugar guardado, segura o assento. Sem
+        expiração por sessão-esvaziou, ao contrário do DualSense: um
+        externo BT que dorme não pode perder o número (era exatamente o
+        sintoma). ÚNICO ponto de escrita em disco fora do ``load()``.
 
         MODO-01 (25/07): a reserva eterna vale para MAC de HARDWARE. Uma
         identidade VOLÁTIL ausente solta o slot (ver
