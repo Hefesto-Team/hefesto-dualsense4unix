@@ -65,6 +65,7 @@ def _veredito(
     marcas: list[str] | None,
     do_dpkg: bool = True,
     versoes: dict[str, str] | None = None,
+    baseline: Path = BASELINE,
 ) -> tuple[str, str]:
     fakes = tmp_path / "fakes"
     binario = tmp_path / "bluetoothd"
@@ -84,7 +85,7 @@ def _veredito(
     script = (
         "set -euo pipefail\n"
         + _funcao("_bz_veredito")
-        + f'_bz_veredito "{binario if marcas is not None else ""}" "{BASELINE}" "{ALVO}"\n'
+        + f'_bz_veredito "{binario if marcas is not None else ""}" "{baseline}" "{ALVO}"\n'
     )
     r = subprocess.run(
         [BASH, "-c", script],
@@ -162,6 +163,32 @@ def test_sem_binario(tmp_path: Path) -> None:
     assert _veredito(tmp_path, marcas=None)[0] == "sem-binario"
 
 
+def test_baseline_sem_marca_e_nao_sei_e_nunca_curado(tmp_path: Path) -> None:
+    """Sem marca nenhuma no dono do fato, não houve pergunta ao binário.
+
+    Conferência da INSTALL-E-UNINSTALL-DO-RADIO-01: o laço vazio deixava
+    `faltam` vazio, e um 5.86 OFICIAL — que passa de qualquer ~hefesto no
+    dpkg — saía «curado» sem ter sido perguntado. A MORDIDA: tirar o
+    `perguntadas -eq 0` faz este caso voltar a dizer «curado».
+    """
+    vazio = tmp_path / "BASELINE-sem-marcas"
+    vazio.write_text(
+        "# um BASELINE que perdeu as linhas MARCA_\nREVISAO_ULTIMA=4\n", encoding="utf-8"
+    )
+    veredito, _ = _veredito(
+        tmp_path,
+        marcas=[],
+        versoes={
+            "bluez": "5.86-0ubuntu0.1",
+            "bluez-cups": "5.86-0ubuntu0.1",
+            "libbluetooth3": "5.86-0ubuntu0.1",
+        },
+        baseline=vazio,
+    )
+    assert veredito == "sem-marcas", veredito
+    assert "sem-marcas)" in _bloco_3f(), "o 3f não trata o «não sei» do veredito"
+
+
 def test_o_registro_leva_a_versao_que_o_archive_serve(tmp_path: Path) -> None:
     fakes = tmp_path / "fakes"
     _fake(
@@ -221,7 +248,7 @@ def test_a_receita_apontada_e_o_script_que_constroi() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _doctor(tmp_path: Path, marcas: list[str]) -> str:
+def _doctor(tmp_path: Path, marcas: list[str], **extra: str) -> str:
     todas = _marcas()
     binario = tmp_path / "bluetoothd-doctor"
     binario.write_bytes(b"\x00".join(todas[m].encode() for m in marcas) + b"\x00")
@@ -231,6 +258,7 @@ def _doctor(tmp_path: Path, marcas: list[str]) -> str:
             "PATH": "/usr/bin:/bin",
             "HOME": str(tmp_path),
             "HEFESTO_DOCTOR_BLUETOOTHD": str(binario),
+            **extra,
         },
         capture_output=True,
         text=True,
@@ -248,3 +276,21 @@ def test_o_doctor_acusa_o_bluetoothd_sem_o_0002(tmp_path: Path) -> None:
 def test_o_doctor_passa_o_bluetoothd_com_as_curas(tmp_path: Path) -> None:
     saida = _doctor(tmp_path, ["hefesto-0001", "hefesto-0002"])
     assert "[ OK ] o bluetoothd em execução traz as curas" in saida, saida
+
+
+def test_o_doctor_sem_marca_no_baseline_diz_que_nao_sabe(tmp_path: Path) -> None:
+    """MORDIDA: tirar o ramo `else` do doctor faz a linha sumir — silêncio."""
+    vazio = tmp_path / "BASELINE-sem-marcas"
+    vazio.write_text("REVISAO_ULTIMA=4\n", encoding="utf-8")
+    saida = _doctor(tmp_path, [], HEFESTO_DOCTOR_BLUEZ_BASELINE=str(vazio))
+    assert "não sei conferir as curas do backport" in saida, saida
+    assert "[WARN]" not in saida, saida
+    assert "[ OK ]" not in saida, saida
+
+
+def test_o_doctor_sem_dpkg_nao_manda_rodar_o_install(tmp_path: Path) -> None:
+    """Numa distro sem dpkg o 3f não existe: mandar rodar o install é mandar
+    repetir o que não entrega. MORDIDA: tirar a guarda do dpkg volta o WARN."""
+    saida = _doctor(tmp_path, ["hefesto-0001"], HEFESTO_DOCTOR_DPKG="dpkg-que-nao-existe")
+    assert "[WARN]" not in saida, saida
+    assert "sem dpkg nesta distro" in saida, saida
