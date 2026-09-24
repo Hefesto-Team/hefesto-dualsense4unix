@@ -672,7 +672,7 @@ check_hid_playstation() {
 # diferença; o segundo perde o canal de controle L2CAP, o BlueZ estoura o teto
 # de 3 s (hidp_report_req_timeout) e o uhid achata o erro em -EIO (o -5 é
 # máscara). A cadeia está medida elo a elo em
-# assets/dkms/hid-playstation/README.md:62-114.
+# assets/dkms/hid-playstation/README.md:65-117.
 #
 # Função PURA (stdin -> stdout), uma linha por instância hid que abortou:
 # "INSTANCIA n_probe n_feature". O gate é o ABORTO (probe >= 1); a falha de
@@ -769,7 +769,7 @@ check_hid_playstation_probe_abortado() {
         else
             warn "a vigia que chamaria o rebind sozinha (hefesto-bt-health-watchdog.timer) está ${tw:-ausente} — sem ela o controle órfão só volta à mão; ligue: sudo systemctl enable --now hefesto-bt-health-watchdog.timer"
         fi
-        info "não é hardware (tese vetada por ela, por escrito, depois de dias perdidos nela): é contenção — dois DualSense subindo no mesmo adaptador com ~1 s de diferença; o segundo perde o canal de controle L2CAP e o BlueZ desiste no teto de 3 s (hidp_report_req_timeout). Cadeia medida: assets/dkms/hid-playstation/README.md:62-114"
+        info "não é hardware (tese vetada por ela, por escrito, depois de dias perdidos nela): é contenção — dois DualSense subindo no mesmo adaptador com ~1 s de diferença; o segundo perde o canal de controle L2CAP e o BlueZ desiste no teto de 3 s (hidp_report_req_timeout). Cadeia medida: assets/dkms/hid-playstation/README.md:65-117"
         return
     fi
 
@@ -779,7 +779,7 @@ check_hid_playstation_probe_abortado() {
         total_feature="$(printf '%s\n' "${abortos}" | awk '{s += $3} END {printf "%d", s + 0}')"
         instancias="$(printf '%s\n' "${abortos}" | awk '{printf "%s%s", (NR > 1 ? ", " : ""), $1}')"
         info "aborto de probe do hid-playstation na janela (${janela}), JÁ RECUPERADO: ${total_probe}x 'probe with driver playstation failed' em ${instancias} (${total_feature}x 'Failed to retrieve feature' antes) — nenhum DualSense está órfão AGORA, então não há o que fazer: é histórico, não defeito ativo (os 6 abortos de 08/08 voltaram sozinhos em 2 a 20 min, por reconexão)"
-        info "se acontecer de novo COM o controle sumindo, a cura é o rebind (sudo /usr/local/lib/hefesto-dualsense4unix/bt_rebind_orphans.sh) e a vigia hefesto-bt-health-watchdog.timer a chama de 2 em 2 minutos; a causa medida é contenção de dois controles no mesmo adaptador, não hardware (assets/dkms/hid-playstation/README.md:62-114)"
+        info "se acontecer de novo COM o controle sumindo, a cura é o rebind (sudo /usr/local/lib/hefesto-dualsense4unix/bt_rebind_orphans.sh) e a vigia hefesto-bt-health-watchdog.timer a chama de 2 em 2 minutos; a causa medida é contenção de dois controles no mesmo adaptador, não hardware (assets/dkms/hid-playstation/README.md:65-117)"
         return
     fi
 
