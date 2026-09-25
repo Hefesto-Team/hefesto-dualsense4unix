@@ -1170,6 +1170,96 @@ def fileira_de_players(nome: str, meu: int, donos: dict[int, dict[str, Any]],
                      for n in NUMEROS)
 
 
+#: AS TRÊS PÍLULAS DO BRILHO DAS LUZES DE NÚMERO — 24/09/2026, decisão dela
+#: (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`): *"Fraco, Médio e Forte na
+#: linha LEDs, nascendo no Fraco"*. O endereço é o da fileira inteira (alvo
+#: `html`), pela mesma razão da fileira de números: o que muda com o dado é
+#: QUAL pílula fica `on`, e o pintor não escreve classe.
+ENDERECO_DO_BRILHO_DAS_LUZES = "brilho-luzes"
+#: O gesto das três pílulas. Ele carrega a PALAVRA do disco em `data-luzes`.
+GESTO_DO_BRILHO_DAS_LUZES = "brilho-luzes"
+#: O que a tela escreve. As palavras são as dela; a chave é a do disco
+#: (`core/led_control.BRILHOS_DAS_LUZES`, que também dá a ordem).
+ROTULO_DO_BRILHO_DAS_LUZES = {"fraco": "Fraco", "medio": "Médio", "forte": "Forte"}
+
+
+def fileira_de_brilhos_das_luzes(escolhido: str, recuo: str = "") -> str:
+    """As três pílulas de UM controle, em HTML — o miolo da `.brilhos`.
+
+    UM DONO, DOIS CHAMADORES, como `fileira_de_players`: o gerador a chama para
+    desenhar a bancada e o pacote a cada tique. A ordem e as palavras do disco
+    vêm de `core/led_control.BRILHOS_DAS_LUZES`, a mesma tabela que diz ao
+    aparelho qual degrau cada palavra acende.
+
+    `escolhido` fora das três (o `""` de quem não sabe) não acende pílula
+    nenhuma — o travessão da coluna é outro elemento, e uma pílula acesa sem
+    leitura seria a tela afirmando um brilho que ninguém conferiu.
+    """
+    from hefesto_dualsense4unix.core.led_control import BRILHOS_DAS_LUZES
+
+    botoes = []
+    for valor in BRILHOS_DAS_LUZES:
+        rotulo = ROTULO_DO_BRILHO_DAS_LUZES[valor]
+        marca = ' class="on"' if valor == escolhido else ""
+        botoes.append(
+            f'{recuo}<button{marca} data-gesto="{GESTO_DO_BRILHO_DAS_LUZES}" '
+            f'data-luzes="{valor}" title="Luzes de número: {rotulo}">{rotulo}</button>')
+    return "\n".join(botoes)
+
+
+_TEM_AS_PILULAS: bool | None = None
+
+
+def a_pagina_tem_as_pilulas() -> bool:
+    """A página PUBLICADA tem onde pôr as três pílulas do brilho das luzes?
+
+    A MESMA PERGUNTA DE `a_pintura_alcanca_o_desenho`, pela mesma razão: o
+    desenho e o pacote chegam ao produto em tempos diferentes. Enquanto ela não
+    aprovar a 04 na sessão dos desenhos, o produto renderiza a página de ontem,
+    sem a caixa `brilhos` — e um campo emitido para lá seria ÓRFÃO calado no
+    piloto, tique após tique. No dia em que a 04 for publicada, a pergunta
+    passa a responder sim sozinha.
+    """
+    global _TEM_AS_PILULAS
+    if _TEM_AS_PILULAS is None:
+        from hefesto_dualsense4unix.interface import onde
+
+        try:
+            pagina = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
+        except OSError:
+            pagina = ""
+        _TEM_AS_PILULAS = f'data-campo="{ENDERECO_DO_BRILHO_DAS_LUZES}"' in pagina
+    return _TEM_AS_PILULAS
+
+
+def brilho_das_luzes_do_controle(p: dict[str, Any] | None, uniq: str) -> str:
+    """A palavra do brilho das luzes de número DAQUELE controle, lida do perfil.
+
+    A MESMA ORDEM DO `brilho_do_controle` logo acima, e pela mesma razão: o
+    override por controle vence a seção global, e a seção global vence o
+    padrão do esquema (`LedsConfig.player_led_brightness`, o Fraco). Aqui só se
+    lê o disco; quem resolve as camadas no aparelho é o daemon.
+
+    SEM PERFIL LIDO devolve o padrão, e não `""`: o esquema é o dono do
+    padrão, e todo controle nasce no Fraco (a decisão dela).
+    """
+    from hefesto_dualsense4unix.core.led_control import (
+        BRILHO_DAS_LUZES_PADRAO,
+        BRILHOS_DAS_LUZES,
+    )
+
+    if not isinstance(p, dict):
+        return BRILHO_DAS_LUZES_PADRAO
+    leds = p.get("leds")
+    global_ = leds.get("player_led_brightness") if isinstance(leds, dict) else None
+    alvo = chave_do_override(uniq)
+    meu = next((v for k, v in (p.get("controllers") or {}).items()
+                if chave_do_override(str(k)) == alvo), None)
+    seus = (meu.get("leds") or {}) if isinstance(meu, dict) else {}
+    valor = seus.get("player_led_brightness", global_) if isinstance(seus, dict) else global_
+    return valor if valor in BRILHOS_DAS_LUZES else BRILHO_DAS_LUZES_PADRAO
+
+
 def desenho_da_luz(tinta: str, brilho: float, jogador: int, dica: str = "",
                    recuo: str = "", estado: str = "") -> str:
     """O miolo do `.aceso`: as duas tiras e as cinco lâmpadas, VIVAS.
@@ -1713,10 +1803,15 @@ def o_lugar_vazio() -> dict[str, str]:
     regra nova na folha seria pixel da página publicada; esta é a mesma, no
     elemento.
     """
+    #: AS PÍLULAS DO BRILHO DAS LUZES SAEM COM O CONTROLE — 24/09/2026: um lugar
+    #: sem aparelho não oferece gesto nenhum, e a caixa vazia mantém a tira no
+    #: mesmo y das colunas vivas. Só quando a página publicada tem a caixa.
+    pilulas = ({ENDERECO_DO_BRILHO_DAS_LUZES: ""} if a_pagina_tem_as_pilulas() else {})
     return {
         "luz": desenho_da_luz("", 1.0, 0, estado=APAGADA),
         "players": (f'<span class="nada" style="{ESTILO_DO_TRACO_VAZIO}">'
                     f'{TRAVESSAO}</span>'),
+        **pilulas,
     }
 
 
@@ -1994,6 +2089,14 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             #: tem item de mesa fica fora dos donos e continua ligado.
             "players": fileira_de_players(nome, n, donos,
                                           quantos=len(ctx.conectados)),
+            #: AS TRÊS PÍLULAS DO BRILHO DAS LUZES DE NÚMERO — 24/09/2026,
+            #: decisão dela (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`). A
+            #: acesa é a que o PERFIL guarda para este controle, a mesma leitura
+            #: do trilho de brilho (`brilho_das_luzes_do_controle`). Só quando a
+            #: página publicada tem a caixa — ver `a_pagina_tem_as_pilulas`.
+            **({ENDERECO_DO_BRILHO_DAS_LUZES: fileira_de_brilhos_das_luzes(
+                brilho_das_luzes_do_controle(p, uniq), "              ")}
+               if a_pagina_tem_as_pilulas() else {}),
             #: O ANEL DE CADA NÚMERO, e ele vem DEPOIS do `players` de propósito
             #: — a mesma lição que `ENDERECO_DA_INCERTA` pagou uma linha acima.
             #: O `players` troca o miolo da fileira inteira (alvo `html`) e
