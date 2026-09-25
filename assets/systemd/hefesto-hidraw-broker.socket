@@ -7,10 +7,11 @@
 # instalado por hefesto-dualsense4unix (install.sh) — remoção: uninstall.sh
 #
 # A SOCKET UNIT é a DONA do diretório e do arquivo de socket (lição 4/#10 da
-# auditoria): ela cria /run/hefesto-hidraw-broker (DirectoryMode) e só o
-# remove quando ELA parar (disable intencional). O .service NÃO tem
-# RuntimeDirectory nenhum — restart/crash do serviço não pode apagar o socket
-# debaixo da lease do daemon; conexões pendentes ficam enfileiradas.
+# auditoria): ela cria /run/hefesto-hidraw-broker (DirectoryMode) e, parada,
+# NÃO o apaga (RemoveOnStop é off, `man systemd.socket`): quem o tira é o
+# uninstall. O .service NÃO tem RuntimeDirectory nenhum — restart/crash do
+# serviço não pode apagar o socket debaixo da lease do daemon; conexões
+# pendentes ficam enfileiradas.
 # Desenho: docs/process/estudos/2026-07-20-desenho-onda-s-broker-fd-injection.md §5.
 [Unit]
 Description=Hefesto — socket de comando do broker root hide-hidraw
