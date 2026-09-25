@@ -2656,6 +2656,50 @@ class CoopManager:
         pergunta = getattr(registry, "o_lugar_espera", None)
         return callable(pergunta) and bool(pergunta(uniq))
 
+    # -- quem alimenta cada vpad (A-HAPTICA-SEGUE-QUEM-ALIMENTA-O-VPAD-01) --
+    # No fim da classe pela razão da vaga logo acima: o mapa de canais cita os
+    # métodos desta classe por número de linha.
+
+    def quem_alimenta_cada_vpad(self) -> dict[str, str]:
+        """``{MAC que o vpad veste: identidade do físico que o alimenta}``. Só leitura.
+
+        A háptica pelo rádio perguntava à FORJA de quem é um vpad (o aparelho
+        de que o MAC dele deriva), e a forja responde quem o vpad era ao NASCER:
+        o posto nasce sem identidade no boot, ou com a do primário de quando
+        renasceu, e o primário muda embaixo dele sem ele renascer. Quem sabe
+        quem alimenta cada vpad AGORA é este manager, que liga cada físico ao
+        vpad dele — a mesma resposta que o rumble do jogo já segue:
+
+        - o vpad do posto (``daemon._gamepad_device``) é do primário: quem o
+          dirige, ou quem a vaga espera (O-ASSENTO-GUARDADO-NAO-ANDA-02) — o
+          alvo de ``gamepad.make_primary_rumble_sink``;
+        - o de cada secundário promovido é do físico dele — o alvo de
+          :meth:`_make_player_rumble_sink`.
+
+        Ficam de fora quem espera o grab (sem vpad), quem cedeu o controle ao
+        primário (o físico agora alimenta o posto, e o vpad velho cai no tique
+        seguinte), a identidade por ``path:`` (sem MAC não casa nada) e o vpad
+        sem MAC (o ``uinput`` não carrega ``uniq``).
+
+        A chave é o MAC que o vpad VESTE (``vpad.mac``), em minúsculas: é o que
+        o kernel republica no ``uniq`` do nó. Quem pergunta roda fora do laço
+        (a volta do alto-falante), então a lista dos jogadores é copiada antes
+        de ser percorrida, e nada é escrito.
+        """
+        alimenta: dict[str, str] = {}
+        primario = self._primary_identity()
+        posto = getattr(self._daemon, "_gamepad_device", None)
+        mac = _texto_ou_none(getattr(posto, "mac", None))
+        if mac and primario is not None and not primario.startswith("path:"):
+            alimenta[mac.lower()] = primario
+        for identidade, jogador in list(self._players.items()):
+            if jogador.vpad is None or jogador.cedido_ao_primario:
+                continue
+            mac = _texto_ou_none(getattr(jogador.vpad, "mac", None))
+            if mac and not identidade.startswith("path:"):
+                alimenta[mac.lower()] = identidade
+        return alimenta
+
 
 # F1-REMAPEAR (13/09/2026): o import da troca de botões mora AQUI, depois da
 # classe, e não no topo, de propósito. No topo ele empurrava os métodos que o
