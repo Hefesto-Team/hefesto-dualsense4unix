@@ -78,12 +78,12 @@
 #
 # Onda R (2026-07-19, bluetoothd 5.72 crasha crônico — ver estudo
 # docs/usage/receita-backport-bluez.md):
-#   --keep-bluez         PRESERVA o backport do bluez (default: RESTAURA as versões
-#                        originais do noble via VERSOES-ANTERIORES.txt do cache).
-#                        Remoção BRUTAL de propósito (reinicia o bluetoothd — a
-#                        ÚNICA exceção documentada à regra de nunca reiniciar —
-#                        e descarta os bonds outra vez): pede confirmação
-#                        interativa (--yes pula) ANTES de aplicar via apt.
+#   --restore-bluez      DEVOLVE as versões originais do noble (VERSOES-ANTERIORES.txt
+#                        do cache). Nasceu como o padrão, com --keep-bluez para
+#                        preservar; desde 02/08 o padrão PRESERVA e o --keep-bluez é
+#                        no-op (BLUEZ-PADRAO-INVERTIDO-01). BRUTAL: reinicia o
+#                        bluetoothd (a ÚNICA exceção à regra) e descarta os bonds
+#                        outra vez; pede confirmação interativa (--yes pula).
 #   - bloco JustWorksRepairing do main.conf: removido por default, mesmo
 #     mecanismo (sentinelas/drop-in) do FastConnectable — sem restart do bluetoothd.
 #   - hefesto-bt-agent.service (agente de pareamento persistente): desabilitado
@@ -1568,7 +1568,7 @@ fi
 BLUEZ_BACKPORT_CACHE="${HOME}/.cache/hefesto-dualsense4unix/bluez-backport"
 BLUEZ_VERSOES_FILE="${BLUEZ_BACKPORT_CACHE}/VERSOES-ANTERIORES.txt"
 if [[ "${KEEP_BLUEZ}" -eq 1 ]]; then
-    log "bluez backport preservado (--keep-bluez) — a versão atual continua ativa"
+    log "bluez backport preservado (o padrão; --restore-bluez devolve o da distribuição) — a versão atual continua ativa"
 elif [[ ! -f "${BLUEZ_VERSOES_FILE}" ]]; then
     log "sem registro de backport do bluez (${BLUEZ_VERSOES_FILE} ausente) — nada a restaurar"
 elif ! sudo -n true 2>/dev/null; then
