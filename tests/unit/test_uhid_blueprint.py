@@ -9,8 +9,8 @@ O que estes testes travam (critérios de aceite dos dois sprint docs):
    `.bin` de `captures/` (procedência fossilizada, conferível para sempre).
 3. **0x09 NUNCA fossilizado com identidade**: template de exatamente 20 B com a
    assinatura `08 25 00` nos bytes 7-9 e as DUAS áreas de MAC zeradas (bytes
-   1..6 = device, 10..15 = host pareado). O MAC de verdade é o forjado por
-   jogador (`02:fe:00:00:00:0N`, LE), carimbado em runtime pelo `start()`.
+   1..6 = device, 10..15 = host pareado). O MAC de verdade é o forjado que o
+   vpad veste (`UhidDualSense.mac`, `02:fe:…`, LE), carimbado pelo `start()`.
 4. O firmware do 0x20 induz o caminho `use_vibration_v2` do kernel (update
    version `0x0630` ≥ limiar `0x0215`) — é o caminho de vibração validado ao
    vivo; um template regenerado com fw antigo mudaria o caminho em silêncio.

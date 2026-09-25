@@ -544,11 +544,11 @@ class TestAPiscadaDoPrimario:
     def test_quem_nao_saiu_da_mesa_nao_muda_de_indice(
         self, bancada: Bancada, sync_antes_do_connect: bool
     ) -> None:
-        """Asserção 3 — o índice vira o MAC do vpad no kernel.
+        """Asserção 3 — o índice de quem não saiu não passeia.
 
-        B nunca saiu da mesa. Se o índice dele passeia, o MAC do vpad do
-        Jogador 2 passa a pertencer a outra pessoa — e em jogo que salve por
-        slot de dispositivo, os perfis trocam de dono.
+        B nunca saiu da mesa. O índice é o lugar dele no jogo (P1..PN contíguos)
+        e o recuo do MAC e do nome do vpad sem identidade de aparelho (E3,
+        A-MESMA-LINGUA-01): se ele passeia, o Jogador 2 muda de lugar sem sair.
 
         A janela em que B é o PRIMÁRIO (entre a queda de A e a volta dele)
         fica de fora de propósito: ali B não é secundário nenhum, é o P1, e

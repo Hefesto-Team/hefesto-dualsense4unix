@@ -595,8 +595,8 @@ def test_indice_de_alocacao_do_vpad_e_estavel_e_reusado_apos_saida(
 ) -> None:
     """`player_index` é o índice de ALOCAÇÃO do vpad — 1..N contíguo, reusado.
 
-    Ele vira o MAC do uhid (`02:fe:00:00:00:0N`, VPAD-03) e é o número que o
-    JOGO vê, então contiguidade e reuso são o comportamento CERTO aqui. R-24
+    Ele é o recuo do MAC e do nome do vpad sem identidade de aparelho (E3), e o
+    jogo quer P1..PN contíguos, então contiguidade e reuso são o CERTO aqui. R-24
     tirou dele a única responsabilidade que não era sua: acender a lâmpada
     (ver `test_lampada_usa_o_espaco_de_numeracao_unico` abaixo).
     """
