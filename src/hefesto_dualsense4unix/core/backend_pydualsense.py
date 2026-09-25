@@ -1958,7 +1958,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         - a `report_thread` daquele handle, em regime (`sendReport`);
         - a thread do chamador (IPC / executor do poll loop) em
           `reescrever_lightbar_por_hidraw`, `_pintar_por_hidraw_bt` e
-          `core/lightbar_reset.py` — todas escritas AVULSAS, todas só no rádio.
+          `core/lightbar_reset.py` no rádio, e `_levar_o_brilho_das_luzes` — AVULSAS.
 
         E o corpo era um *read-modify-write* sem exclusão: ler `_bt_seq`,
         carimbar, incrementar, escrever. Duas threads podiam ler o MESMO valor e
@@ -4534,7 +4534,7 @@ class PyDualSenseController(IController):
         pode_player: bool,
         nome: str,
     ) -> tuple[bool, tuple[int, int, int], tuple[bool, ...] | None]:
-        """Escreve o `0x31` MÍNIMO (cor + número) num handle do rádio.
+        """Escreve o `0x31` MÍNIMO (cor, número e brilho dele) num handle do rádio.
 
         É o corpo que o `reescrever_lightbar_por_hidraw` sempre teve, posto
         num lugar só porque desde a STEAM-NO-FISICO-01 ele tem DOIS chamadores
@@ -4607,8 +4607,8 @@ class PyDualSenseController(IController):
         quando a `D-2309-NO-NATIVO-A-LUZ-E-O-NUMERO-SAO-DO-HEFESTO` levou a
         mesma regra a todos os caminhos da luz e do número; o `_output_mute`
         continua calando o `report_thread`, a vibração, os gatilhos e o áudio,
-        e o que sai daqui é o report mínimo, com `valid_flag0` e `valid_flag2`
-        zerados):
+        e o que sai daqui é o report mínimo, com `valid_flag0` zerado e só o
+        bit0 do `valid_flag2`, o brilho das luzes de número):
 
         1. **É MIRADO.** Só os controles que alguém sequestrou; o gatilho
            repinta a mesa inteira porque a rajada da Steam é da mesa inteira.
