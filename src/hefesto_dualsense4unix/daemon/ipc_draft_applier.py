@@ -35,6 +35,16 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
+def _brilho_de(cru: Any) -> float | None:
+    """O brilho 0,0-1,0 de um campo do rascunho, ou `None` quando não é número."""
+    if cru is None or isinstance(cru, bool):
+        return None
+    try:
+        return max(0.0, min(1.0, float(cru)))
+    except (TypeError, ValueError):
+        return None
+
+
 class DraftApplier:
     """Aplica as seções de `profile.apply_draft` em ordem canônica."""
 
@@ -52,6 +62,9 @@ class DraftApplier:
         # outras), mas a falha para de morrer no warning do log: sobe junto
         # com `applied` para quem chamou poder dizer a verdade na tela.
         self.failed: dict[str, str] = {}
+        #: O brilho global do rascunho em aplicação — o denominador dos fatores
+        #: por controle (`_publicar_escalas_de_brilho`). `None` = sem seção `leds`.
+        self._brilho_do_rascunho: float | None = None
 
     def apply(self, params: dict[str, Any]) -> list[str]:
         # ONDA-U (Causa A): trava manual INCONDICIONAL, no topo — antes vivia
@@ -75,6 +88,14 @@ class DraftApplier:
         # Cada `apply` conta a história dele: zera o registro de falhas antes
         # de começar (o mesmo applier pode ser reusado).
         self.failed = {}
+        # O denominador dos fatores de brilho por controle: o brilho GLOBAL do
+        # rascunho, lido da seção `leds` (ver `_publicar_escalas_de_brilho`).
+        leds_raw = params.get("leds")
+        self._brilho_do_rascunho = (
+            _brilho_de(leds_raw.get("lightbar_brightness"))
+            if isinstance(leds_raw, dict)
+            else None
+        )
         self._apply_section(applied, params.get("leds"), "leds", self._apply_leds)
         self._apply_section(applied, params.get("triggers"), "triggers", self._apply_triggers)
         # PERFIL-04: overrides por-controle DEPOIS das seções globais — o
@@ -309,6 +330,7 @@ class DraftApplier:
             reset(specs or None)
         for uniq, spec in specs.items():
             self.controller.apply_output_for(uniq, spec)
+        self._publicar_escalas_de_brilho(raw)
         # POR-UNIDADE-01 (10/08/2026): vibração e som da PEÇA. Ficam FORA do
         # `OutputSpec` de propósito — não são output persistente do controle
         # (o rumble é transitório; o áudio tem posse própria), e empurrá-los
@@ -316,6 +338,42 @@ class DraftApplier:
         # passou. Cada um segue a sua rota por-uniq, que já existia.
         self._publicar_escalas_de_vibracao(raw)
         self._escrever_alto_falantes_por_unidade(raw)
+
+    def _publicar_escalas_de_brilho(self, raw: dict[str, Any]) -> None:
+        """Publica o brilho por controle como FATOR, como a ativação (R-20 item 2).
+
+        A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01, 25/09/2026. O override que só
+        escreveu o brilho chega aqui SEM cor (`DraftConfig._controllers_to_ipc`
+        parou de lhe emprestar o global), e o brilho dele vale sobre a base do
+        merge — a cor do número ou o global —, pelo mesmo fator que
+        `manager._controllers_to_led_scales` publica na ativação: o brilho do
+        controle sobre o do perfil. SUBSTITUI o mapa inteiro, como a
+        vibração logo abaixo, e pela mesma razão: o brilho que ela tirou de um
+        controle tem de sumir no mesmo "Aplicar".
+
+        Sem o brilho global no rascunho (seção `leds` ausente) não há
+        denominador, e o mapa da última ativação fica; com ele em 0% também não
+        — é o caso degenerado em que a cor viaja materializada.
+        """
+        escalar = getattr(self.controller, "set_led_scales", None)
+        base = self._brilho_do_rascunho
+        if not callable(escalar) or base is None or base <= 0.0:
+            return
+        escalas: dict[str, float] = {}
+        for uniq, entry in raw.items():
+            leds_raw = entry.get("leds") if isinstance(entry, dict) else None
+            if not isinstance(leds_raw, dict):
+                continue
+            brilho = _brilho_de(leds_raw.get("lightbar_brightness"))
+            if brilho is None:
+                continue
+            fator = brilho / base
+            if fator != 1.0:
+                escalas[str(uniq)] = fator
+        try:
+            escalar(escalas or None, brilho_do_perfil=base)
+        except TypeError:
+            escalar(escalas or None)
 
     def _publicar_escalas_de_vibracao(self, raw: dict[str, Any]) -> None:
         """Publica a escala de vibração por peça no backend (POR-UNIDADE-01).
