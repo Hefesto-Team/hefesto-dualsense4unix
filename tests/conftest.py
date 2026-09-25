@@ -21,6 +21,7 @@ import shlex
 import shutil
 import sys
 import tempfile
+import threading
 import types
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
@@ -2271,6 +2272,43 @@ def _nenhum_registro_de_identidade_atravessa() -> Iterator[None]:
     _descartar_registro_de_identidade()
     yield
     _descartar_registro_de_identidade()
+
+
+def _leitores_fisicos_vivos() -> dict[int, Any]:
+    """``{ident da thread: leitor}`` de todo ``PhysicalReportReader`` rodando.
+
+    Pela classe do alvo da thread, sem importar o produto: fixture que importa
+    o produto no ``conftest`` já vermelhou 28 testes (ver
+    ``_nenhum_sysfs_vivo_na_varredura_de_vpad``).
+    """
+    vivos: dict[int, Any] = {}
+    for fio in threading.enumerate():
+        dono = getattr(getattr(fio, "_target", None), "__self__", None)
+        if type(dono).__name__ == "PhysicalReportReader" and fio.ident is not None:
+            vivos[fio.ident] = dono
+    return vivos
+
+
+@pytest.fixture(autouse=True)
+def _nenhum_leitor_fisico_atravessa() -> Iterator[None]:
+    """O leitor de movimento que um caso ligou, o próprio caso desliga.
+
+    Medido na costura da 6e-3, 25/09/2026: a ``MesaHonesta`` monta o co-op de
+    verdade, que liga um ``PhysicalReportReader`` por jogador, e nenhum caso
+    da família o parava. Um arquivo só deixava 189 fios vivos, e o caso da
+    interface que junta todo fio do processo (``join(timeout=5)`` em cada um)
+    ficou cinco minutos parado no meio da parte 03 da suíte.
+
+    Curado aqui, e não caso a caso: vale para todo teste que ligar um leitor,
+    inclusive o que ainda não foi escrito. O ``stop()`` é o do produto (sinal
+    e espera curta), e o leitor que nasceu antes do caso não é tocado.
+    """
+    antes = set(_leitores_fisicos_vivos())
+    yield
+    for ident, leitor in _leitores_fisicos_vivos().items():
+        if ident not in antes:
+            with contextlib.suppress(Exception):
+                leitor.stop()
 
 
 # ---------------------------------------------------------------------------
