@@ -264,7 +264,7 @@ def _cena(
         no.chmod(modo)
 
 
-def _check(raiz: Path) -> str:
+def _check(raiz: Path, antes: str = "", env: dict[str, str] | None = None) -> str:
     corpo = "\n".join(
         _funcao(nome)
         for nome in (
@@ -286,10 +286,15 @@ def _check(raiz: Path) -> str:
     # A ACL da sessão é a de quem roda o check: o getfacl de mentira a dá a
     # QUEM PERGUNTA, que é o que o `uaccess` faz no login.
     bin_dir = _getfacl_de_mentira(raiz, f"user:{getpass.getuser()}:rw-")
+    # O `udevadm settle` do check é o da máquina se ninguém o trocar; a cena
+    # não tem udev, e um de mentira volta na hora.
+    udevadm = bin_dir / "udevadm"
+    udevadm.write_text("#!/bin/sh\nexit 0\n", encoding="ascii")
+    udevadm.chmod(0o755)
     return _bash(
         raiz,
-        corpo + "\ncheck_input_uaccess\n",
-        {"PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}"},
+        corpo + "\n" + antes + "\ncheck_input_uaccess\n",
+        {"PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}", **(env or {})},
     )
 
 
@@ -348,6 +353,35 @@ class TestOTouchpadDoFisicoFechadoEACura:
         saida = _check(tmp_path)
         assert "gamepad virtual" in saida.lower(), saida
         assert "[PASS]" not in saida
+
+    def test_o_vpad_que_acabou_de_nascer_nao_reprova(self, tmp_path: Path) -> None:
+        """25/09/2026: o install reinicia o daemon e roda o doctor; o vpad
+        renasce e a ACL chega depois do nó. O install acusou FALHA sobre dois
+        nós que, segundos depois, eram legíveis. A MORDIDA: tire a espera antes
+        do `fail` e o nó que abre um segundo depois reprova."""
+        if os.geteuid() == 0:  # pragma: no cover
+            pytest.skip("como root o 0000 não fecha nada")
+        nos: list[No] = [
+            ("event267", "054c", "0df2", "02:fe:00:00:00:01",
+             "DualSense Wireless Controller (Hefesto P1) Motion Sensors", VPAD, 0o000),
+        ]
+        _cena(tmp_path, nos, com_broker=True)
+        no = tmp_path / "dev" / "input" / "event267"
+        saida = _check(tmp_path, f"( sleep 1; chmod 660 '{no}' ) &",
+                       {"HEFESTO_DOCTOR_ESPERA_DO_VPAD": "4"})
+        assert "[FAIL]" not in saida, saida
+
+    def test_o_vpad_que_segue_fechado_reprova(self, tmp_path: Path) -> None:
+        """A espera não vira licença: o nó que não abre continua FALHA."""
+        if os.geteuid() == 0:  # pragma: no cover
+            pytest.skip("como root o 0000 não fecha nada")
+        nos: list[No] = [
+            ("event267", "054c", "0df2", "02:fe:00:00:00:01",
+             "DualSense Wireless Controller (Hefesto P1) Motion Sensors", VPAD, 0o000),
+        ]
+        _cena(tmp_path, nos, com_broker=True)
+        saida = _check(tmp_path, "", {"HEFESTO_DOCTOR_ESPERA_DO_VPAD": "1"})
+        assert "[FAIL]" in saida and "gamepad VIRTUAL" in saida, saida
 
     def test_o_modo_nativo_devolve_e_o_doctor_nao_acusa(self, tmp_path: Path) -> None:
         """O Nativo DEVOLVE os nós de entrada ao jogo — é o produto. O broker
