@@ -2510,20 +2510,20 @@ FATOS: Final[dict[str, dict[str, object]]] = {
     'luz.led_jogador.brilho@dualsense': {
         'existe': 'tem',
         'cabo': {
-            'aceita': '',
-            'aciona': 'não',
-            'ate_onde_foi': '',
+            'aceita': 'sim',
+            'aciona': 'sim',
+            'ate_onde_foi': 'MONTOU',
             'canal': 'hidraw',
             'de_onde_sei': 'medido',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': '',
         },
         'radio': {
-            'aceita': '',
-            'aciona': 'não',
-            'ate_onde_foi': '',
+            'aceita': 'sim',
+            'aciona': 'sim',
+            'ate_onde_foi': 'MONTOU',
             'canal': 'hidraw',
             'de_onde_sei': 'medido',
-            'por_que_nao_aciona': 'so-ela-decide',
+            'por_que_nao_aciona': '',
         },
     },
     'luz.led_jogador.brilho@pro': {
