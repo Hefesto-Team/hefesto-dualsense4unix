@@ -9,9 +9,11 @@ fila. As barras do P3 e do P4 estavam apagadas.
 E ELA VIU A OUTRA METADE, às 09h50: *«o p2 tá ligado. com um verde claro ou
 azul ciano»* — a cor que o Hefesto dá ao P2. O P2 também foi carimbado
 condenado, com a Steam segurando o físico dele. Então o carimbo diz a
-CONDIÇÃO do nascimento, e não a lâmpada; e a reescrita de cada segundo é o que
-segura o P2 com a cor do Hefesto contra a Steam. Tirar o condenado da vigia
-(como uma das medições recomendou) apagaria justamente o P2.
+CONDIÇÃO do nascimento, e não a lâmpada. O P2 obedecia com a vigia
+reescrevendo-o a cada segundo; se é a reescrita que o segura ali contra a
+Steam NÃO foi medido (conferência de 25/09/2026), mas tirar o condenado da
+vigia (como uma das medições recomendou) arriscaria justamente o controle cuja
+barra obedece.
 
 O que esta régua cobra:
 
@@ -169,8 +171,8 @@ def test_sem_condenado_o_campo_nao_aparece() -> None:
 def test_o_condenado_continua_sendo_reescrito() -> None:
     """O P2 de 25/09: condenado, e com a barra na cor do Hefesto.
 
-    É a reescrita de cada segundo que o segura ali contra a Steam; um
-    condenado fora da vigia seria entregue a ela.
+    Ele obedecia com a vigia reescrevendo-o a cada segundo; tirá-lo da vigia
+    arriscaria a barra que obedece, e o carimbo não separa ele do P3 e do P4.
     """
     controle = _Controle()
     _rodar(_daemon(controle, _cartorio(UNIQ_2, UNIQ_3)), 3)
