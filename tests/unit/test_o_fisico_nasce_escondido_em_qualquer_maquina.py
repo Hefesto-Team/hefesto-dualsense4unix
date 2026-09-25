@@ -435,17 +435,17 @@ class TestOUdevDeBolsoReproduzAMesaDela:
 
 
 class TestOFisicoNasceFechadoEmQualquerMaquina:
-    @pytest.mark.parametrize("acao", ["add", "change"])
+    @pytest.mark.parametrize("evento", ["add", "change"])
     @pytest.mark.parametrize("maquina", sorted(TERCEIROS_POR_MAQUINA))
     @pytest.mark.parametrize("aparelho", sorted(FISICOS))
     def test_o_fisico_termina_0600_de_root_sem_acl(
-        self, tmp_path: Path, aparelho: str, maquina: str, acao: str
+        self, tmp_path: Path, aparelho: str, maquina: str, evento: str
     ) -> None:
         """A MORDIDA: o asset de volta ao nome 70 reprova as linhas com a 71-sony."""
         raiz = montar(tmp_path, terceiros=TERCEIROS_POR_MAQUINA[maquina])
         ap = FISICOS[aparelho]()
-        ap.acao = acao
-        if acao == "change":
+        ap.acao = evento
+        if evento == "change":
             # O pior caso do `change` (o trigger do install): o nó chega com
             # as tags do nascimento anterior, o `uaccess` e o `seat`.
             ap.tags = {"uaccess", "seat"}
