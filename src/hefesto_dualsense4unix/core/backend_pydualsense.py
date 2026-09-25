@@ -6376,20 +6376,22 @@ class PyDualSenseController(IController):
             )
         if spec.player_led_brightness is not None and self._pode_escrever_player_leds():
             # O BRILHO DAS LUZES DE NÚMERO, o «Todos» do perfil (24/09/2026).
-            # Vai o RESOLVIDO de cada controle, e não o global cru: quem tem
-            # override guardado não pisca para o global e volta — o global
-            # acabou de entrar no `_desired_default`, e o merge o entrega a quem
-            # não tem opinião própria.
+            # Vai o GLOBAL cru a todos, como a cor e o número logo acima — e
+            # não o resolvido de cada um. Na ativação o manager chama isto
+            # ANTES de publicar a camada do perfil novo, e o merge ainda
+            # carrega o override do perfil ANTERIOR: medido na conferência de
+            # 25/09/2026, o P2 com Forte no perfil A ficava no Forte depois da
+            # troca para o B (sem override) no rádio e no cabo sem nó, porque
+            # nem o passo 3 do `reset_profile_overrides` (só quem ainda tem
+            # override) nem o `reassert_resolved_outputs` (só a classe LED) o
+            # repintam. Quem tem override é repintado pelo passo 3 com o
+            # resolvido, que é o contrato da cor e do número.
+            degrau_global = spec.player_led_brightness
             with self._io_lock:
-                brilhos = [
-                    (key, handle, self._merged_desired_for_key(key).player_led_brightness)
-                    for key, handle in self._handles.items()
-                ]
-            for key, handle, degrau in brilhos:
+                todos = list(self._handles.items())
+            for key, handle in todos:
                 self._levar_o_brilho_das_luzes(
-                    key, handle,
-                    degrau if degrau is not None else spec.player_led_brightness,
-                    what="apply_output_defaults",
+                    key, handle, degrau_global, what="apply_output_defaults"
                 )
         if spec.mic_led is not None:
             # MIC-DA-MESA-ELEICAO-01 — A POSSE DO PERFIL NÃO CHEGAVA AO BYTE.
