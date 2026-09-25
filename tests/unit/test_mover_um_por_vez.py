@@ -702,8 +702,21 @@ def test_o_equilibrar_propoe_um_e_so_depois_do_chegou_o_proximo(
 
 
 def test_duas_mais_duas_nao_propoe_nada(
-    diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
+    diario: Path, relogio: rm.Relogio
 ) -> None:
+    """Duas pontes em cada um de DOIS adaptadores: no limite, e nada a mover.
+
+    DESDE 25/09/2026 (A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01) o «Equilibrar»
+    também olha QUANTOS controles cada adaptador tem, e com um terceiro
+    adaptador vazio na mesa, 2 + 2 + 0 pede um para lá. Por isso esta régua,
+    que é sobre as pontes no limite, roda numa mesa de dois adaptadores: 2 + 2
+    é o equilíbrio dela.
+    """
+    mundo = rm.RadioDeMentira(adaptadores=(SALA, QUARTO))
+    mundo.pareado(SALA, VERMELHO)
+    mundo.pareado(SALA, AZUL)
+    dono = bd.DonoVivo(mundo)
+    assert dono.ligar()
     central = _central(dono, mundo, relogio)
     mesa = [
         _controle(VERMELHO, SALA, "som"),
@@ -714,6 +727,7 @@ def test_duas_mais_duas_nao_propoe_nada(
     assert central.propor(mesa) is None
     publicado = central.publicar(mesa)
     assert publicado == {"movimentos": [], "em_curso": False, "proposta": None}
+    dono.fechar()
 
 
 # ---------------------------------------------------------------------------
