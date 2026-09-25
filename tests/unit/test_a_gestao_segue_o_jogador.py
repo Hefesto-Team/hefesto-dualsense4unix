@@ -117,7 +117,8 @@ def _cenas() -> list[dict[str, Any]]:
     cenas: list[dict[str, Any]] = []
     for tamanho in range(1, len(LUGARES) + 1):
         for jogadores in itertools.combinations(range(1, len(LUGARES) + 1), tamanho):
-            for alvo in ("todos", *jogadores):
+            alvos: tuple[int | str, ...] = ("todos", *jogadores)
+            for alvo in alvos:
                 estado = _estado(jogadores, alvo)
                 mesa = mesa_viva.mesa_do_estado(estado, {})
                 ctx = Contexto(state=estado, mesa=mesa, conectados=estado["controllers"])
