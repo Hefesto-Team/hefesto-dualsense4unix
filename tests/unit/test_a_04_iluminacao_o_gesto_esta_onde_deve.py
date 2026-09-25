@@ -114,6 +114,12 @@ GESTOS_QUE_FICAM_A_VISTA = frozenset({"reenviar"})
 #: linha `Jogador`, uma célula acima. Ver `test_a_celula_de_leds_nao_tem_gesto`.
 CELULA_DE_LEDS = "cel-leds"
 
+#: O ÚNICO GESTO QUE MORA NA CÉLULA DOS LEDs — 24/09/2026, decisão dela
+#: (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`): *"Fraco, Médio e Forte na
+#: linha LEDs, nascendo no Fraco"*. As pílulas mudam o BRILHO das lâmpadas, e
+#: não QUAIS acendem — a segunda maneira de escolher o desenho continua fora.
+GESTO_DO_BRILHO_DAS_LUZES = "brilho-luzes"
+
 
 def _gerar(destino: pathlib.Path) -> pathlib.Path:
     """A página da aba 04 montada pelo gerador de verdade, num lar de mentira.
@@ -408,12 +414,14 @@ def test_a_celula_de_leds_nao_tem_gesto(medido: dict) -> None:
     for estado in ("como_nasce", "depois_do_1c"):
         for quem, dado in medido[estado].items():
             na_celula = [g for g in dado["gestos"]
-                         if CELULA_DE_LEDS in g["celula"]]
+                         if CELULA_DE_LEDS in g["celula"]
+                         and g["gesto"] != GESTO_DO_BRILHO_DAS_LUZES]
             assert not na_celula, (
                 f"[{estado}] {quem} tem gesto na célula dos LEDs "
-                f"({[g['gesto'] for g in na_celula]}) — ela é desenho de "
+                f"({[g['gesto'] for g in na_celula]}) — o desenho dela é de "
                 f"leitura desde 07/09/2026, e as cinco lâmpadas espelham o "
-                f"número sem escolha própria")
+                f"número sem escolha própria; o único gesto da faixa é o do "
+                f"brilho (24/09/2026)")
 
 
 # ---------------------------------------------------------------------------

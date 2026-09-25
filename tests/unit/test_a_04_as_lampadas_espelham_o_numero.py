@@ -307,11 +307,17 @@ def _grade() -> str:
 
 
 def _celulas_de_leds(grade: str) -> list[tuple[int, str]]:
-    """`(número do jogador, HTML da célula LEDs)` de cada coluna CONECTADA.
+    """`(número do jogador, HTML do DESENHO da célula LEDs)` de cada coluna CONECTADA.
 
     O RECORTE PASSA PELA COLUNA, e não pelo miolo inteiro: os quatro lugares
     emitem a `.cel-leds` desde 07/09/2026, e casar `<div class="cel-leds">` no
     documento todo devolveria as duas vazias junto com as duas cheias.
+
+    E ELE PARA NAS PÍLULAS DO BRILHO — 24/09/2026, decisão dela
+    (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`): a célula ganhou, debaixo do
+    desenho, as três pílulas Fraco · Médio · Forte, com o gesto delas. O que
+    este arquivo mede é o DESENHO (as tiras e as cinco lâmpadas), e quem mede as
+    pílulas é `tests/unit/test_o_brilho_das_luzes_de_numero.py`.
     """
     import re
 
@@ -320,7 +326,7 @@ def _celulas_de_leds(grade: str) -> list[tuple[int, str]]:
             r'<div class="ctrl(?! vazia)"(.*?)(?=<div class="ctrl[" ]|\Z)',
             grade, re.S):
         n = re.search(r'data-campo="identidade">P(\d)', coluna)
-        leds = re.search(r'<div class="cel-leds">(.*?)</div>\s*</div>',
+        leds = re.search(r'<div class="cel-leds">(.*?)<div class="brilhos"',
                          coluna, re.S)
         if n and leds:
             fora.append((int(n.group(1)), leds.group(1)))
@@ -354,6 +360,12 @@ def test_as_cinco_lampadas_desenham_o_padrao_do_numero_da_coluna():
 
 def test_a_celula_de_leds_nao_oferece_gesto_nenhum():
     """As lâmpadas MOSTRAM o número; quem o escolhe é a linha `Jogador`.
+
+    O RECORTE É O DESENHO DA CÉLULA (ver `_celulas_de_leds`): desde 24/09/2026
+    as três pílulas do brilho moram debaixo dele, por decisão dela, e elas não
+    mexem no DESENHO das lâmpadas — mudam o brilho. A ausência que esta régua
+    mede continua a mesma: nenhuma segunda maneira de escolher QUAIS lâmpadas
+    acendem.
 
     ESTA RÉGUA MEDE UMA AUSÊNCIA, e por isso nomeia os três gestos que não podem
     voltar. Um `data-gesto` nesta faixa é a botoeira de volta — a segunda maneira
@@ -426,8 +438,12 @@ def test_os_tres_gestos_da_botoeira_sairam_do_pacote(pac, a04):
             f"o gesto `{morto}` voltou ao pacote sem o widget que o oferecia — "
             f"um gesto que a tela não alcança é código morto, e ela mandou "
             f"remover a botoeira inteira em 07/09/2026")
+    # `brilho-luzes` ENTROU EM 24/09/2026, por decisão dela
+    # (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`): as três pílulas do brilho
+    # das luzes de número, na linha LEDs. Não é nenhum dos três da botoeira —
+    # aqueles escolhiam o DESENHO; este escolhe o brilho.
     assert vivos == {"cor", "apagar", "brilho", "player",
-                     "reenviar", "auto-cores"}, (
+                     "reenviar", "auto-cores", "brilho-luzes"}, (
         f"a poda da botoeira levou junto um gesto que FICA: {sorted(vivos)}")
 
 
@@ -439,12 +455,12 @@ def test_o_piso_da_aba_desceu_com_a_ordem_dela(a04):
     calada — há uma ordem dela, e os três que saem são exatamente os três que a
     LUZES-01 trouxe. Ver a nota datada em `a04_iluminacao.PISO_DA_ABA`.
     """
-    assert a04.PISO_DA_ABA == 6, (
+    assert a04.PISO_DA_ABA == 7, (
         f"o piso da aba é {a04.PISO_DA_ABA}. Ele desceu DUAS vezes em "
         f"07/09/2026, nas duas ordens dela — 11 para 8 com a botoeira das "
-        f"lâmpadas, 8 para 6 com os dois botões do automático. Cada degrau de "
-        f"volta é repor um botão que ela mandou tirar, e isso pede a palavra "
-        f"dela")
+        f"lâmpadas, 8 para 6 com os dois botões do automático — e subiu UMA em "
+        f"24/09/2026, 6 para 7, com as pílulas do brilho das luzes que ela "
+        f"decidiu. Cada degrau pede a palavra dela")
 
 
 def test_a_linha_de_ressalva_saiu_da_celula_de_leds():
