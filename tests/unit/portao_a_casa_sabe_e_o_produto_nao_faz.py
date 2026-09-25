@@ -675,6 +675,38 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "gancho, e a ponte o APAGA sob sudo junto com os outros ganchos: nenhum "
         "fluxo dela passa por aqui, e o produto instalado não o escreve."
     ),
+    "HEFESTO_MEMORIA_ENSAIO": (
+        "25/09/2026, ESQUECER-OS-CONTROLES-01 — a GUARDA do lar de mentira "
+        "(`utils/memoria_dos_controles.conferir_o_ensaio`): ligada, qualquer "
+        "raiz que resolva para o lar ou o `/var/lib` de verdade faz o comando "
+        "RECUSAR antes de tocar em qualquer coisa, e o `Sistema` fica inerte "
+        "(não para o daemon dela, não pergunta à Steam dela). É a régua quem a "
+        "liga; o comando dela nunca, e ligá-la não abre feature nenhuma."
+    ),
+    "HEFESTO_MEMORIA_BLUEZ": (
+        "25/09/2026, ESQUECER-OS-CONTROLES-01 — desvia o armazenamento do BlueZ "
+        "para o lar de mentira da régua (`Raizes.do_ambiente`). Sob root o "
+        "desvio MORRE (`raizes_do_root` volta às raízes reais), e com as três "
+        "raízes do root desviadas a parte do root roda no próprio processo, sem "
+        "sudo. Nenhum fluxo dela passa por aqui."
+    ),
+    "HEFESTO_MEMORIA_VARLIB": (
+        "25/09/2026, ESQUECER-OS-CONTROLES-01 — desvia o `/var/lib/<slug>` (as "
+        "cópias de pareamento e o diário do root) para o lar de mentira, com a "
+        "mesma regra do `HEFESTO_MEMORIA_BLUEZ`: morre sob root, e desviar só "
+        "parte das raízes do root faz o comando recusar."
+    ),
+    "HEFESTO_MEMORIA_GUARDADO_ROOT": (
+        "25/09/2026, ESQUECER-OS-CONTROLES-01 — desvia a pasta onde a parte do "
+        "root guarda (`/var/lib/hefesto-memoria-guardada`), com a mesma regra "
+        "dos outros dois desvios do root. Nenhum fluxo dela passa por aqui."
+    ),
+    "HEFESTO_MEMORIA_SISTEMA": (
+        "25/09/2026, ESQUECER-OS-CONTROLES-01 — desvia a raiz onde o «limpa?» "
+        "procura o que o install escreve no sistema (`/etc`, `/usr/local`, "
+        "`/run`), para a régua montar um sistema de mentira. Sob root volta a "
+        "`/`, e o «limpa?» só LÊ. Nenhum fluxo dela passa por aqui."
+    ),
 }
 
 #: Interruptores que SÃO promessa à usuária: abrem uma feature que ela pode
@@ -1311,6 +1343,16 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`aba04.py:5`, `aba06.py:42` e `interface/calibrar.py::_svg` —, que se "
         "rodam à mão para PUBLICAR as páginas e não são carregados pelo piloto. "
         "É o mesmo estatuto de `scripts/`: constrói o produto, não é o produto."
+    ),
+    "utils/memoria_dos_controles.py::conferir_a_casa": (
+        "25/09/2026, ESQUECER-OS-CONTROLES-01 — é o «a máquina está limpa?» da "
+        "rotina de controle de qualidade, e quem o chama é "
+        "`scripts/guardar-e-devolver-a-casa.py limpa`. Não tem chamador no "
+        "produto POR CONSTRUÇÃO, e o docstring do script diz por quê: ele roda "
+        "DEPOIS do `uninstall.sh`, quando o comando do Hefesto e a `.venv` já "
+        "não existem, com o `python3` do sistema carregando este módulo pelo "
+        "caminho. Um ponto de entrada do produto que o chamasse não existiria "
+        "na hora em que a pergunta é feita."
     ),
 }
 
