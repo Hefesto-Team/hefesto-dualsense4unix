@@ -1879,7 +1879,7 @@ def primary_identity(daemon: DaemonProtocol) -> str | None:
     propriedade (`FakeController` do `run.sh --fake`), daemon offline no boot
     (o vpad sobe ANTES do `controller.connect()` — invariante VPAD-03/BT-01), e
     a key de fallback por path, que o `primary_uniq` já devolve como None desde
-    a auditoria M3 (`backend_pydualsense.py:2325-2339`), justamente porque um
+    a auditoria M3 (`backend_pydualsense.py:3699-3724`), justamente porque um
     pseudo-MAC furava o guard anti-input-dobrado do co-op.
     """
     uniq = getattr(getattr(daemon, "controller", None), "primary_uniq", None)
