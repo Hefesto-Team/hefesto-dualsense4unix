@@ -2109,6 +2109,34 @@ def repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
+def _o_produto_nao_roda_neste_ambiente(erro: ModuleNotFoundError) -> bool:
+    """O job LEVE do CI: o produto não importa aqui, e não há o que blindar.
+
+    As fixtures de sessão que apontam o sysfs, o `/proc` e o `pactl` para o
+    vazio importam o produto para trocar uma constante. Nos jobs que instalam
+    só o pytest (`A casa sabe`, os documentos, o mapa) esse import falha — e
+    elas foram escritas para, nesse caso, só ceder a vez: sem o produto não há
+    varredura a desviar.
+
+    A PERGUNTA ANTIGA NUNCA CASAVA, e é por isso que esta função existe
+    (O-CI-DA-DEV-VOLTA-A-VERDE-01, 25/09/2026). Ela era «o módulo que faltou é
+    o `hefesto_dualsense4unix`?», mas este mesmo arquivo põe o `src/` na frente
+    do `sys.path` (ver o topo): o pacote SEMPRE se acha. O que falta no job
+    leve é a dependência DELE, e a corrida `36119169814` reprovou os 42 testes
+    do portão com `No module named 'structlog'`, vindo de uma fixture que
+    importa o `dualsense_bt_audio`.
+
+    A pergunta nova é «o módulo que faltou não está instalado neste
+    interpretador?». Continua estreita onde tem de ser: um submódulo do
+    produto que sumiu (renome, arquivo apagado) tem o pacote instalado, e
+    propaga — a ausência aí é defeito, não desenho.
+    """
+    import importlib.util
+
+    nome = (erro.name or "").split(".")[0]
+    return bool(nome) and importlib.util.find_spec(nome) is None
+
+
 @pytest.fixture(autouse=True)
 def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Ativa HEFESTO_DUALSENSE4UNIX_FAKE=1 e ISOLA os diretórios XDG em todo teste.
@@ -2233,7 +2261,7 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         # O job "A casa sabe e o produto não faz" instala só o pytest; sem o
         # pacote não há leitura de sysfs a desviar (ver
         # `_nenhum_sysfs_vivo_na_varredura_de_vpad`).
-        if (erro.name or "").split(".")[0] != "hefesto_dualsense4unix":
+        if not _o_produto_nao_roda_neste_ambiente(erro):
             raise
     else:
         sysfs_vazio = xdg_root / "sys-class-input"
@@ -2769,12 +2797,13 @@ def _nenhum_sysfs_vivo_na_varredura_de_vpad(
         # portão, nenhum dos quais toca em vpad. O CI de main ficou vermelho
         # nos dois repositórios desde então.
         #
-        # Sem o pacote instalado NÃO HÁ o que blindar: a varredura de sysfs
-        # que esta fixture aponta para o vazio mora dentro do produto, e quem
-        # a chamasse já teria estourado no próprio import. O `except` é
-        # estreito de propósito — se faltar qualquer OUTRO módulo, propaga,
-        # porque aí a ausência é defeito e não desenho.
-        if (erro.name or "").split(".")[0] != "hefesto_dualsense4unix":
+        # Sem o produto de pé NÃO HÁ o que blindar: a varredura de sysfs que
+        # esta fixture aponta para o vazio mora dentro do produto, e quem a
+        # chamasse já teria estourado no próprio import. O `except` é estreito
+        # de propósito, e quem decide o que é «produto que não roda aqui» é
+        # `_o_produto_nao_roda_neste_ambiente` — um submódulo do produto que
+        # sumiu propaga, porque aí a ausência é defeito e não desenho.
+        if not _o_produto_nao_roda_neste_ambiente(erro):
             raise
         yield
         return
@@ -2836,7 +2865,7 @@ def _nenhum_hidraw_vivo_na_varredura_de_som(
         # A mesma razão, palavra por palavra, da irmã logo acima: o job "A casa
         # sabe e o produto não faz" instala só o pytest e nunca importa o
         # produto. Sem o pacote não há o que blindar.
-        if (erro.name or "").split(".")[0] != "hefesto_dualsense4unix":
+        if not _o_produto_nao_roda_neste_ambiente(erro):
             raise
         yield
         return
@@ -2868,7 +2897,7 @@ def _nenhuma_placa_de_som_viva_no_aviso_do_ucm(
     try:
         from hefesto_dualsense4unix.core import system_check
     except ModuleNotFoundError as erro:  # pragma: no cover - só no job leve do CI
-        if (erro.name or "").split(".")[0] != "hefesto_dualsense4unix":
+        if not _o_produto_nao_roda_neste_ambiente(erro):
             raise
         yield
         return
@@ -3286,7 +3315,7 @@ def _nenhum_modulo_de_som_de_verdade() -> Iterator[None]:
         # Mesma razão da `_nenhum_sysfs_vivo_na_varredura_de_vpad`: o portão
         # "A casa sabe" roda com só o pytest instalado e nunca importa o
         # produto. Sem o pacote não há o que blindar.
-        if (erro.name or "").split(".")[0] != "hefesto_dualsense4unix":
+        if not _o_produto_nao_roda_neste_ambiente(erro):
             raise
         yield
         return
@@ -3340,7 +3369,7 @@ def _recuo_do_pactl_zerado() -> Iterator[None]:
     try:
         from hefesto_dualsense4unix.integrations import dualsense_bt_audio
     except ModuleNotFoundError as erro:  # pragma: no cover — job leve do CI
-        if (erro.name or "").split(".")[0] != "hefesto_dualsense4unix":
+        if not _o_produto_nao_roda_neste_ambiente(erro):
             raise
         yield
         return
