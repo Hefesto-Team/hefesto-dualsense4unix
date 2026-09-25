@@ -156,7 +156,7 @@ fi
 # ---------------------------------------------------------------------------
 # Copiar regras udev
 # ---------------------------------------------------------------------------
-# PACKAGING-UDEV-DEB-PARITY-01: empacota o conjunto canônico 70/71/72/76/77 —
+# PACKAGING-UDEV-DEB-PARITY-01: empacota o conjunto canônico 71/72/73-hefesto/76/77 —
 # PARIDADE com scripts/install_udev.sh (native) e scripts/install-host-udev.sh.
 # 76 (touchpad-libinput-ignore) e 77 (leds) NÃO são opt-in: sem a 76 o touchpad
 # do DualSense briga com a emulação de mouse (feature-título point-and-click);
