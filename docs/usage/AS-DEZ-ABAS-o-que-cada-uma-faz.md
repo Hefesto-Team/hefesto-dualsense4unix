@@ -448,8 +448,8 @@ rádio.
 - **Funciona em:** — **Todos · Steam · Estilo de Jogo · Jogo · Jogo da Steam**.
 - **Nome do Jogo:** com o botão **Detectar**, que lê o jogo aberto atrás da
   janela e monta a regra.
-- **Estilo de Jogo:** — catorze de fábrica (FPS, Corrida, Ação, Aventura,
-  Esportes, Point-and-click, Terror, Luta, Co-op local, Maratona, Plataforma,
+- **Estilo de Jogo:** — treze de fábrica (FPS, Corrida, Ação, Aventura,
+  Esportes, Point-and-click, Terror, Luta, Maratona, Plataforma,
   Retrô/Emulador, Ritmo/Música, Simulação/Voo) mais **Personalizado**. Escolher
   um estilo já traz gatilho, luz, vibração e som resolvidos, em vez de configurar
   aba por aba.
