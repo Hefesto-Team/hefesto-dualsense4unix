@@ -60,7 +60,7 @@ olhando a mesa e chamando `sudo` com o daemon já morto.
 
 POR QUE `HotkeySubsystem` NÃO ESTÁ NA LISTA — e não é esquecimento:
 
-* `HotkeySubsystem` (`hotkey.py:3249`) é uma **lápide, não um órfão**: os dois
+* `HotkeySubsystem` (`hotkey.py:3274`) é uma **lápide, não um órfão**: os dois
   métodos são `noop` declarados, e a hotkey já está viva no `run()` desde
   sempre, por FUNÇÃO — `lifecycle.py:972` (`start_hotkey_manager`) e `:974`
   (`start_mic_hotkey`). Registrá-lo não acende nada; só acrescenta duas linhas
