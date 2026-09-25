@@ -106,10 +106,17 @@ def ler_btsnoop(caminho: str) -> tuple[list[Quadro], list[str]]:
     Este parser NÃO usa o opcode para decidir sentido — ele o ignora de
     propósito e lê o `0xA1`/`0xA2` do próprio HID. O opcode entraria como uma
     lembrança minha sobre um formato; o byte do HID é o protocolo.
+
+    Uma captura que não existe ou não se lê (o ``sudo -n`` não pôs o ``btmon``
+    de pé, a entrega a quem mede falhou) volta como QUEIXA, não como exceção:
+    quem chama responde «não medi» em vez de morrer com o relatório pela metade.
     """
     queixas: list[str] = []
-    with open(caminho, "rb") as arq:
-        dados = arq.read()
+    try:
+        with open(caminho, "rb") as arq:
+            dados = arq.read()
+    except OSError as erro:
+        return [], [f"captura ilegível ({erro.strerror or erro}): {caminho}"]
 
     if len(dados) < 16 or not dados.startswith(b"btsnoop\x00"):
         return [], ["arquivo não começa com a assinatura `btsnoop\\0`"]
@@ -232,8 +239,45 @@ def assinaturas_de_saida(quadros: list[Quadro]) -> list[tuple[int, int, bytes]]:
     return [(h, contas[(h, a)], exemplar[(h, a)]) for h, a in ordem]
 
 
+#: Quantos 0x31 distintos a leitura guarda byte a byte. A captura crua sai
+#: depois de lida, e o que não estiver na leitura não volta: o teto só existe
+#: para uma rajada que varia a cada quadro não virar um arquivo de megabytes.
+TETO_DE_REPORTS_BYTE_A_BYTE = 40
+
+
+def reports_distintos(quadros: list[Quadro]) -> list[tuple[int, int, bytes]]:
+    """``(handle, quantos, report)`` de cada 0x31 de saída distinto BYTE A BYTE.
+
+    Distinto pelo report inteiro menos o que muda a cada quadro por desenho —
+    o ``seq_tag`` e o CRC. É a outra metade da pergunta da lightbar: *que
+    report* a Steam manda, e não só o que ele diz da barra.
+    """
+    ordem: list[tuple[int, bytes]] = []
+    contas: dict[tuple[int, bytes], int] = {}
+    exemplar: dict[tuple[int, bytes], bytes] = {}
+    for q in reports_de_saida(quadros):
+        report = q.corpo[1:]
+        sem_contador = bytearray(report)
+        if len(sem_contador) > OFF_SEQ_TAG:
+            sem_contador[OFF_SEQ_TAG] = 0
+        sem_contador[OFF_CRC:OFF_CRC + 4] = bytes(len(sem_contador[OFF_CRC:OFF_CRC + 4]))
+        chave = (q.handle, bytes(sem_contador))
+        if chave not in contas:
+            ordem.append(chave)
+            contas[chave] = 0
+            exemplar[chave] = report
+        contas[chave] += 1
+    return [(h, contas[(h, c)], exemplar[(h, c)]) for h, c in ordem]
+
+
 def texto_dos_reports_de_saida(caminho: str) -> str:
-    """O que a lightbar grava como leitura de um braço: só os 0x31 de saída."""
+    """O que a lightbar grava como leitura de um braço: só os 0x31 de saída.
+
+    Duas vistas do mesmo conteúdo: a tabela dos campos da barra (o que decide
+    a cor) e os reports distintos byte a byte (o que mais eles dizem). O 0x31
+    de saída não leva chave nem endereço, e a leitura guarda tudo o que a
+    captura tinha dele — a captura crua, que pode levar a chave, não fica.
+    """
     quadros, queixas = ler_btsnoop(caminho)
     assinaturas = assinaturas_de_saida(quadros)
     total = sum(n for _, n, _ in assinaturas)
@@ -256,6 +300,18 @@ def texto_dos_reports_de_saida(caminho: str) -> str:
             str(handle), str(n), f"0x{b(OFF_VALID_FLAG1)}", f"0x{b(OFF_VALID_FLAG2)}",
             f"0x{b(OFF_LIGHTBAR_SETUP)}", f"{b(OFF_R)} {b(OFF_G)} {b(OFF_B)}",
         )))
+
+    distintos = reports_distintos(quadros)
+    linhas.append("")
+    linhas.append(
+        f"    os {len(distintos)} distinto(s) byte a byte (sem o seq_tag e o CRC)"
+        + (f", os primeiros {TETO_DE_REPORTS_BYTE_A_BYTE}"
+           if len(distintos) > TETO_DE_REPORTS_BYTE_A_BYTE else "")
+    )
+    for handle, n, report in distintos[:TETO_DE_REPORTS_BYTE_A_BYTE]:
+        linhas.append(f"    handle {handle} · {n} quadro(s) · {len(report)} bytes:")
+        for i in range(0, len(report), 16):
+            linhas.append(f"      {i:3d}: " + " ".join(f"{c:02x}" for c in report[i:i + 16]))
     return "\n".join(linhas)
 
 
@@ -264,11 +320,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--reports-de-saida", metavar="CAPTURA", required=True,
                     help="imprime os 0x31 de saída distintos de uma captura do btmon -w")
     argumentos = ap.parse_args(argv)
-    try:
-        print(texto_dos_reports_de_saida(argumentos.reports_de_saida))
-    except OSError as erro:
-        print(f"    (captura ilegível: {erro})")
-        return 1
+    print(texto_dos_reports_de_saida(argumentos.reports_de_saida))
     return 0
 
 
