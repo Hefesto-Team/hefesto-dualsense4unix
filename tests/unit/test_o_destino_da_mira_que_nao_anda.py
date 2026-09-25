@@ -639,6 +639,7 @@ _LER = r"""
     const card = document.querySelector('.nav-mesa [data-controle="' + pref + '"]');
     const linha = card ? card.querySelector('[data-campo="navega"]') : null;
     fora[pref] = linha ? (linha.innerText || '').replace(/\s+/g, ' ').trim() : null;
+    fora['vazia_' + pref] = card ? card.classList.contains('vazia') : null;
   }
   return fora;
 })()
@@ -659,6 +660,10 @@ def _cenarios_da_pagina() -> list[tuple[str, dict[str, Any]]]:
                  _a_carga_da_06(_estado_da_06(_NAVEGACAO, mesa, quem_navega, {n})))
                 for mesa, quem_navega, n in _CASOS]
     cenarios.append(("nativo", _a_carga_da_06(_estado_da_06(_NATIVO, "A", 1, {1, 2, 3, 4}))))
+    # O P1 E O P3 NA MESA, o P2 e o P4 fora: a casca de vazio vai para quem saiu.
+    dois = _estado_da_06(_NAVEGACAO, "A", 1, {3})
+    dois["controllers"] = [c for c in dois["controllers"] if c["uniq"] in (_P[1], _P[3])]
+    cenarios.append(("dois", _a_carga_da_06(dois)))
     return cenarios
 
 
@@ -742,3 +747,21 @@ def test_no_nativo_a_pagina_renderizada_nao_fala_do_cursor(
     """Com a Mira acesa nos quatro, no Nativo: ninguém diz «Move o cursor»."""
     lido = renderizada[onde]["nativo"]
     assert _PAPEL_DO_CURSOR not in " ".join(str(v) for v in lido.values()), lido
+
+
+@pytest.mark.parametrize("onde", sorted(_PAGINAS))
+def test_o_lugar_com_dono_perde_a_cara_de_vazio(
+    renderizada: dict[str, dict[str, dict[str, str | None]]], onde: str,
+) -> None:
+    """O P3 e o P4 nascem `nav-ctl vazia` no desenho. Com os quatro na mesa,
+    nenhum cartão fica esmaecido; com o P1 e o P3, o P2 e o P4 ficam — e o P3
+    diz «Move o cursor» com a casca de quem está na mesa.
+
+    MORDIDA: tire a chave `vazia` das marcas do lugar no pacote da 06 e o P3 e
+    o P4 conectados reprovam, esmaecidos como se tivessem saído.
+    """
+    quatro = renderizada[onde]["A-1-3"]
+    assert [quatro[f"vazia_p{n}"] for n in (1, 2, 3, 4)] == [False] * 4, quatro
+    dois = renderizada[onde]["dois"]
+    assert [dois[f"vazia_p{n}"] for n in (1, 2, 3, 4)] == [False, True, False, True], dois
+    assert dois["p3"] == f"BT • {_PAPEL_DO_CURSOR}", dois
