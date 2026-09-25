@@ -177,7 +177,7 @@ def _gtk() -> Any:
 def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
             anda: str = "", teto_s: float = 60.0,
             ajuste: Any = None) -> SimpleNamespace:
-    """Roda o piloto oculto na `pagina`, com `n` controles, e segue o `roteiro`.
+    """Roda o piloto oculto na página pedida, com `n` controles, e segue o `roteiro`.
 
     O roteiro recebe `(fora, piloto, agora)` a cada 50 ms depois de a página
     estar de pé, e devolve `False` quando acabou. `fora` é o registro: cada
@@ -706,8 +706,8 @@ ROTEIRO_DE_PASSOS = r"""
   alvo.innerHTML = MONTAGEM;
   for(const passo of PASSOS){
     const el = document.querySelector(passo.onde || 'body');
-    if(passo.acao === 'foco'){ el.focus(); el.value = passo.valor; }
-    if(passo.acao === 'solta'){ el.blur(); }
+    if(passo.faz === 'foco'){ el.focus(); el.value = passo.valor; }
+    if(passo.faz === 'solta'){ el.blur(); }
     if(passo.carga && Object.keys(passo.carga).length){ window.__hef.pintar(passo.carga); }
     const lido = document.querySelector(passo.ler);
     fora.push(lido ? (('value' in lido && lido.tagName !== 'DIV' && lido.tagName !== 'B')
@@ -808,9 +808,9 @@ def test_r3_o_select_recusado_volta_ao_valor_do_daemon() -> None:
     carga = {"mesa": {"regua-escolha": "a"}, "fita": "", "alvo": ""}
     sel = '#regua-janela select'
     passos: list[dict[str, Any]] = [{"carga": mandar(copy.deepcopy(carga)), "ler": sel}]
-    passos.append({"acao": "foco", "onde": sel, "valor": "b",
+    passos.append({"faz": "foco", "onde": sel, "valor": "b",
                    "carga": mandar(copy.deepcopy(carga)), "ler": sel})
-    passos.append({"acao": "solta", "onde": sel,
+    passos.append({"faz": "solta", "onde": sel,
                    "carga": mandar(copy.deepcopy(carga)), "ler": sel})
     for _ in range(10):
         passos.append({"carga": mandar(copy.deepcopy(carga)), "ler": sel})
