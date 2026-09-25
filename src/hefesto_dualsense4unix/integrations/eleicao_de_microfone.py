@@ -68,11 +68,13 @@ microfone", e nenhuma foi escrita.
 
 from __future__ import annotations
 
+import contextlib
 import os
 import shutil
 import subprocess
+import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -295,6 +297,42 @@ def _rodar(argv: list[str]) -> tuple[int, str]:
     except (OSError, subprocess.SubprocessError):
         return (127, "")
     return (proc.returncode, proc.stdout.strip())
+
+
+#: A MEMÓRIA DE UMA VOLTA — A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01,
+#: 25/09/2026. Ela é LOCAL AO FIO e só existe dentro de
+#: :func:`uma_leitura_por_volta`: quem a liga é a renovação da camada 1 da aba
+#: 02, que pergunta a mesma `list sources` uma vez por controle (4 controles, 8
+#: `pactl` da eleição a cada 2 s; com fonte nativa no cabo, 16). O daemon e os
+#: gestos não a ligam, e para eles nada muda.
+_MEMORIA_DO_FIO = threading.local()
+
+
+@contextlib.contextmanager
+def uma_leitura_por_volta() -> Iterator[None]:
+    """Neste fio, e só enquanto durar, cada `argv` roda uma vez.
+
+    A MEMÓRIA EMBRULHA O DONO, lido na hora de cada chamada: é o `_rodar` deste
+    módulo que roda, e as réguas que o dublam continuam alcançando o produto.
+    """
+    antes = getattr(_MEMORIA_DO_FIO, "lidos", None)
+    _MEMORIA_DO_FIO.lidos = {}
+    try:
+        yield
+    finally:
+        _MEMORIA_DO_FIO.lidos = antes
+
+
+def _ler(argv: list[str]) -> tuple[int, str]:
+    """O `_rodar`, com a memória da volta quando ela está ligada neste fio."""
+    lidos: dict[tuple[str, ...], tuple[int, str]] | None = getattr(
+        _MEMORIA_DO_FIO, "lidos", None)
+    if lidos is None:
+        return _rodar(argv)
+    chave = tuple(argv)
+    if chave not in lidos:
+        lidos[chave] = _rodar(argv)
+    return lidos[chave]
 
 
 def _script_do_wireplumber() -> Path | None:
@@ -1058,7 +1096,7 @@ def _a_nativa_deste(uniq: str, conectados: list[str]) -> tuple[bool | None, str]
     não há nome, e devolver um nome com ``None`` ao lado deixaria quem lê só o
     segundo achar que a resposta é *"não há"* quando ela é *"não sei"*.
     """
-    rc, saida = _rodar(["pactl", "list", "sources", "short"])
+    rc, saida = _ler(["pactl", "list", "sources", "short"])
     if rc != 0:
         return (None, "")
     nativas = fontes_nativas(saida)
@@ -1089,7 +1127,7 @@ def casamento_usb_agora(uniqs: list[str]) -> CasamentoUSB | None:
 
     if not uniqs:
         return None
-    rc, longa = _rodar(["pactl", "list", "sources"])
+    rc, longa = _ler(["pactl", "list", "sources"])
     if rc != 0 or not longa.strip():
         return None
     try:
@@ -1122,4 +1160,5 @@ __all__ = [
     "recusa_de_quem_nao_elegeu",
     "registrar_dizedor_do_no_ar",
     "registrar_pedidor_de_canal",
+    "uma_leitura_por_volta",
 ]
