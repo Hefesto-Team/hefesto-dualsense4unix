@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import ctypes
 import ctypes.util
+import errno
 import json
 import os
 import stat
@@ -588,30 +589,32 @@ def _acl_com_dois(uid: int, outro: int) -> bytes:
 
 
 class TestR3OLadoDeAbrir:
+    @pytest.mark.parametrize("jogador", JOGADORES)
     def test_o_expose_repetido_nao_escreve_e_o_que_mudou_e_reescrito(
-        self, raiz: Path, abrir_inotify: Callable[[Mesa], _Inotify]
+        self, raiz: Path, abrir_inotify: Callable[[Mesa], _Inotify], jogador: str
     ) -> None:
         """O Modo Nativo pede `expose` com `"entradas": true`. O primeiro pedido
         escreve; os trinta iguais seguintes, nada. O nó que renasce `0600` é
         escrito no pedido seguinte, e o nó com a ACL dela E a de um segundo
         uid volta ao blob canônico — o alvo é o blob, não «ela consegue
-        abrir?».
+        abrir?». Para cada um dos quatro: os dois pelo rádio, o do cabo (com a
+        tomada do fone) e o Edge pelo cabo.
 
         AS MORDIDAS:
           - sem a pergunta no `restore` e no `abrir_entradas`, cada pedido
-            gera `IN_ATTRIB` nos cinco nós do P1;
+            gera `IN_ATTRIB` em cada nó do controle;
           - perguntar `is_exposed_to(uid)` deixa o segundo uid na ACL.
         """
         mesa = _montar(raiz, aberta=False)
         st = _estado(mesa, [])
         vigia = abrir_inotify(mesa)
         vigia.drenar()
-        p1 = {_chave(mesa, c) for c in mesa.do_controle("P1")}
-        pedido = {"cmd": "expose", "node": str(mesa.no("P1")), "entradas": True}
+        do_controle = {_chave(mesa, c) for c in mesa.do_controle(jogador)}
+        pedido = {"cmd": "expose", "node": str(mesa.no(jogador)), "entradas": True}
 
         assert _pede(st, pedido)["state"] == "exposed"
-        assert set(vigia.drenar()) == p1
-        assert all(_aberto_para_ela(c) for c in mesa.do_controle("P1"))
+        assert set(vigia.drenar()) == do_controle
+        assert all(_aberto_para_ela(c) for c in mesa.do_controle(jogador))
 
         repetidos = []
         for _ in range(30):
@@ -619,13 +622,13 @@ class TestR3OLadoDeAbrir:
             repetidos.append(vigia.drenar())
         assert all(not conta for conta in repetidos), _resumo(repetidos)
 
-        _nascer(mesa, "P1", aberto=False)  # o replug: o nó renasce fechado
+        _nascer(mesa, jogador, aberto=False)  # o replug: o nó renasce fechado
         vigia.drenar()
         assert _pede(st, pedido)["state"] == "exposed"
-        assert set(vigia.drenar()) == p1
-        assert all(_aberto_para_ela(c) for c in mesa.do_controle("P1"))
+        assert set(vigia.drenar()) == do_controle
+        assert all(_aberto_para_ela(c) for c in mesa.do_controle(jogador))
 
-        com_dois = [mesa.no("P1"), mesa.entradas("P1")[0]]
+        com_dois = [mesa.no(jogador), mesa.entradas(jogador)[0]]
         try:
             for caminho in com_dois:
                 os.setxattr(caminho, ACL, _acl_com_dois(UID, UID + 1))
@@ -635,11 +638,111 @@ class TestR3OLadoDeAbrir:
         vigia.drenar()
         assert _pede(st, pedido)["state"] == "exposed"
         assert set(vigia.drenar()) == {_chave(mesa, c) for c in com_dois}
-        assert all(_aberto_para_ela(c) for c in mesa.do_controle("P1"))
+        assert all(_aberto_para_ela(c) for c in mesa.do_controle(jogador))
 
         assert _pede(st, pedido)["state"] == "exposed"
         assert vigia.drenar() == Counter()
-        assert all(_fechado(c) for j in ("P2", "P3", "P4") for c in mesa.do_controle(j))
+        outros = [j for j in JOGADORES if j != jogador]
+        assert all(_fechado(c) for j in outros for c in mesa.do_controle(j))
+
+
+# ---------------------------------------------------------------------------
+# R6 — na dúvida, escreve
+# ---------------------------------------------------------------------------
+
+
+def _getxattr_que_falha(erro: int) -> Callable[..., bytes]:
+    """O `getxattr` da ACL falhando com `erro`; qualquer outro atributo é o real."""
+    real = os.getxattr
+
+    def falso(caminho: Any, nome: str, *args: Any, **kwargs: Any) -> bytes:
+        if nome == ACL:
+            raise OSError(erro, os.strerror(erro))
+        return real(caminho, nome, *args, **kwargs)
+
+    return falso
+
+
+#: (errno da leitura da ACL, o nó `0600` é reescrito?). Só as duas respostas
+#: que PROVAM «sem ACL» pulam a escrita; qualquer outra é dúvida, e escreve.
+LEITURAS_DO_FECHAR = (
+    (errno.ENODATA, False),  # sem ACL: o devtmpfs, o tmpfs e o ext4
+    (errno.EOPNOTSUPP, False),  # o fs que não guarda ACL POSIX
+    (errno.EIO, True),
+    (errno.EACCES, True),
+    (errno.ENOMEM, True),
+)
+
+
+class TestR6NaDuvidaEscreve:
+    @pytest.mark.parametrize(("erro", "escreve"), LEITURAS_DO_FECHAR)
+    def test_fechar_so_pula_quando_a_leitura_prova_que_nao_ha_acl(
+        self,
+        raiz: Path,
+        abrir_inotify: Callable[[Mesa], _Inotify],
+        monkeypatch: pytest.MonkeyPatch,
+        erro: int,
+        escreve: bool,
+    ) -> None:
+        """A mesa fechada e uma volta do rehide cuja leitura da ACL falha.
+        `ENODATA` e `EOPNOTSUPP` dizem «não há ACL», e o nó `0600` fica como
+        está; qualquer outro erro é dúvida, e os 22 nós são reescritos — como
+        antes da cura.
+
+        AS MORDIDAS:
+          - «todo erro é sem ACL» deixa de escrever no `EIO`;
+          - «só o `ENODATA` é sem ACL» reescreve a cada volta num fs sem ACL
+            POSIX, que é o achado de volta em outra máquina.
+        """
+        mesa = _montar(raiz, aberta=True)
+        st = _estado(mesa, [])
+        vigia = abrir_inotify(mesa)
+        _volta(st, mesa)
+        vigia.drenar()
+
+        with monkeypatch.context() as m:
+            m.setattr(os, "getxattr", _getxattr_que_falha(erro))
+            assert _volta(st, mesa) == ["hidden"] * 4
+        eventos = vigia.drenar()
+
+        esperados = {_chave(mesa, c) for c in mesa.todos()} if escreve else set()
+        assert set(eventos) == esperados, (os.strerror(erro), dict(eventos))
+        assert all(_fechado(c) for c in mesa.todos())
+
+    @pytest.mark.parametrize("erro", [e for e, _ in LEITURAS_DO_FECHAR])
+    def test_abrir_so_pula_quando_le_o_blob_canonico(
+        self,
+        raiz: Path,
+        abrir_inotify: Callable[[Mesa], _Inotify],
+        monkeypatch: pytest.MonkeyPatch,
+        erro: int,
+    ) -> None:
+        """Os quatro já abertos no alvo (`0660` e o blob dela). Sem ler o
+        blob, não há prova de alvo: todo erro de leitura reescreve, no
+        `restore` e no `abrir_entradas`.
+
+        A MORDIDA: «erro de leitura é alvo» deixa de escrever.
+        """
+        mesa = _montar(raiz, aberta=True)
+        ops = _OpsDeArquivo(
+            sys_class_hidraw=str(mesa.sys_hidraw),
+            dev_input_root=str(mesa.dev_input),
+            sys_class_input=str(mesa.sys_input),
+            sys_class_bluetooth=str(mesa.bluetooth),
+        )
+        vigia = abrir_inotify(mesa)
+        vigia.drenar()
+
+        with monkeypatch.context() as m:
+            m.setattr(os, "getxattr", _getxattr_que_falha(erro))
+            for jogador in JOGADORES:
+                ops.restore(str(mesa.no(jogador)), mesa.no(jogador).name, UID)
+                _mudados, falhos = ops.abrir_entradas(mesa.no(jogador).name, UID)
+                assert falhos == [], falhos
+        eventos = vigia.drenar()
+
+        assert set(eventos) == {_chave(mesa, c) for c in mesa.todos()}, dict(eventos)
+        assert all(_aberto_para_ela(c) for c in mesa.todos())
 
 
 # ---------------------------------------------------------------------------
