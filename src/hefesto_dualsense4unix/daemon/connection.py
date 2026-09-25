@@ -10,6 +10,7 @@ import contextlib
 import os
 import time
 from collections.abc import Mapping, Sequence
+from typing import Any
 
 from hefesto_dualsense4unix.core.escritor_cru import (
     PASSO_DA_VIGIA_S,
@@ -80,6 +81,13 @@ RECONNECT_HOTPLUG_POLL_INTERVAL_SEC: float = 2.0
 #: laço apertado: fora da janela armada nada muda, e dentro dela são ~6 fatias
 #: de `asyncio.sleep` antes de UMA escrita.
 PASSO_ENQUANTO_O_GATILHO_ESTA_ARMADO_SEC: float = 0.25
+
+#: O-CABO-ASSUME-DO-RADIO-01: a espera do laço com a mesa vazia enquanto o
+#: único controle troca de transporte. A regra udev religa o cabo no instante
+#: em que o rádio sai e a probe no cabo leva menos de um segundo; meio segundo
+#: por volta é o que separa "voltou" de "o jogador ficou parado cinco segundos".
+#: Só vale enquanto a marca de troca vale (o prazo do posto, 30 s).
+PASSO_ENQUANTO_UM_CONTROLE_TROCA_DE_TRANSPORTE_SEC: float = 0.5
 
 
 async def connect_with_retry(daemon: DaemonProtocol) -> None:
@@ -347,9 +355,20 @@ async def anunciar_bordas_por_alvo(
 
     A volta reaplica o som DAQUELE controle, pelo `uniq` dele — é a metade da
     entrega que o `reaplicar_som_em_todos_os_alvos` cobre no outro caminho.
+
+    O-CABO-ASSUME-DO-RADIO-01: quem saiu TROCANDO de transporte não caiu — o
+    rádio saiu para o cabo entrar (ou o contrário), e o lugar dele espera. A
+    borda de queda dele não é publicada; a volta, sim, porque o handle novo
+    nasce sem a posse dos bytes de áudio.
     """
+    trocando = trocas_de_transporte_pendentes(daemon)
     for key in [k for k in antes if k not in agora]:
         uniq = antes[key]
+        if uniq in trocando:
+            logger.info(
+                "controle_trocando_de_transporte", uniq=_endereco_mascarado(uniq)
+            )
+            continue
         daemon.bus.publish(
             EventTopic.CONTROLLER_DISCONNECTED,
             {"reason": "alvo_sumiu", "uniq": uniq},
@@ -362,6 +381,240 @@ async def anunciar_bordas_por_alvo(
             await reapply_mic_after_connect(daemon, uniq=agora[key])
         with contextlib.suppress(Exception):
             nascer_o_microfone_ao_conectar(daemon, uniq=agora[key])
+
+
+def trocas_de_transporte_pendentes(daemon: DaemonProtocol) -> frozenset[str]:
+    """Os MACs fora da mesa por estarem trocando de transporte (O-CABO-ASSUME-DO-RADIO-01).
+
+    Pergunta ao backend, que é quem marca a troca. Backend enxuto (dublê,
+    legado) não troca nada: vazio.
+    """
+    pergunta = getattr(getattr(daemon, "controller", None), "trocas_de_transporte_pendentes", None)
+    if not callable(pergunta):
+        return frozenset()
+    try:
+        return frozenset(pergunta() or ())
+    except Exception as exc:
+        logger.debug("trocas_de_transporte_falhou", err=str(exc))
+        return frozenset()
+
+
+def transportes_dos_alvos_de(daemon: DaemonProtocol) -> dict[str, str] | None:
+    """`{key: transporte}` dos controles na mesa, ou None se o backend não sabe."""
+    metodo = getattr(getattr(daemon, "controller", None), "transportes_dos_alvos", None)
+    if not callable(metodo):
+        return None
+    try:
+        transportes = metodo()
+    except Exception as exc:
+        logger.debug("transportes_dos_alvos_falhou", err=str(exc))
+        return None
+    return dict(transportes) if isinstance(transportes, dict) else None
+
+
+async def reaplicar_som_de_quem_trocou_de_transporte(
+    daemon: DaemonProtocol,
+    alvos_antes: dict[str, str | None],
+    alvos_agora: dict[str, str | None],
+    transportes_antes: dict[str, str],
+    transportes_agora: dict[str, str],
+) -> int:
+    """O controle que trocou de transporte ENTRE dois tiques ganha o som de volta.
+
+    O-CABO-ASSUME-DO-RADIO-01. Quando o rádio sai e o cabo entra dentro de um
+    tique só, o backend troca o handle no mesmo lugar e o controle nunca some
+    de `alvos_conectados()` — nenhuma borda de `anunciar_bordas_por_alvo`. Mas
+    o handle é novo, e a posse dos bytes de áudio morre com o velho: sem isto o
+    volume e o mudo do perfil voltavam aos do firmware em silêncio, que é a
+    armadilha 4 da SOM-02/E4. Devolve quantos controles foram reaplicados.
+
+    Para o som, quem trocou de transporte É quem chegou — e por isso a volta
+    passa pela MESMA borda de chegada de `anunciar_bordas_por_alvo`, sem uma
+    terceira cópia das três reaplicações.
+    """
+    trocaram = {
+        key: uniq
+        for key, uniq in alvos_agora.items()
+        if key in alvos_antes
+        and key in transportes_antes
+        and key in transportes_agora
+        and transportes_antes[key] != transportes_agora[key]
+    }
+    for key, uniq in trocaram.items():
+        logger.info(
+            "controle_trocou_de_transporte",
+            uniq=_endereco_mascarado(uniq),
+            antes=transportes_antes[key],
+            agora=transportes_agora[key],
+        )
+    if trocaram:
+        await anunciar_bordas_por_alvo(daemon, {}, trocaram)
+    return len(trocaram)
+
+
+def vigia_do_cabo_de(daemon: DaemonProtocol) -> Any:
+    """A `VigiaDoCabo` DESTE daemon, criada na primeira consulta (O-CABO-ASSUME-DO-RADIO-01).
+
+    Única por daemon pela razão das irmãs de cima: a borda da carga e o
+    instante em que cada cabo foi visto são memória, e duas memórias dariam
+    duas verdades sobre o mesmo cabo.
+    """
+    from hefesto_dualsense4unix.integrations.o_cabo_em_espera import VigiaDoCabo
+
+    vigia = getattr(daemon, "_vigia_do_cabo_em_espera", None)
+    if isinstance(vigia, VigiaDoCabo):
+        return vigia
+    vigia = VigiaDoCabo()
+    with contextlib.suppress(Exception):
+        setattr(daemon, "_vigia_do_cabo_em_espera", vigia)  # noqa: B010 — fora do protocolo
+    return vigia
+
+
+def _o_barramento_hid_mudou(daemon: DaemonProtocol) -> bool:
+    """O barramento HID mudou, ou um cabo que espera ficou maduro? (O-CABO-ASSUME-DO-RADIO-01)
+
+    O cabo que o kernel recusa NÃO muda `/dev/input` — a probe falha antes de
+    nascer nó de entrada —, e o `InputDirWatch` do laço não o vê. Sem este
+    olhar, o cabo só seria notado no fallback de 30 s. Custo: um `listdir` de
+    `/sys/bus/hid/devices` por fatia. Só olha num backend que troca de
+    transporte; os dublês da suíte seguem o laço de antes.
+    """
+    ctrl = getattr(daemon, "controller", None)
+    if not callable(getattr(ctrl, "iniciar_troca_de_transporte", None)):
+        return False
+    from hefesto_dualsense4unix.integrations import o_cabo_em_espera
+
+    watch = getattr(daemon, "_watch_do_barramento_hid", None)
+    if not isinstance(watch, InputDirWatch):
+        watch = InputDirWatch(root=o_cabo_em_espera.RAIZ_DO_BARRAMENTO_HID)
+        watch.poll()  # a linha de base: só mudança de verdade conta
+        with contextlib.suppress(Exception):
+            setattr(daemon, "_watch_do_barramento_hid", watch)  # noqa: B010
+        return False
+    if watch.poll():
+        logger.debug("barramento_hid_mudou")
+        return True
+    return bool(vigia_do_cabo_de(daemon).quer_olhar_de_novo(time.monotonic()))
+
+
+async def vigiar_o_cabo_em_espera(
+    daemon: DaemonProtocol,
+    *,
+    agora: float | None = None,
+    leitor_do_bluez: Any = None,
+    ler_o_diario: Any = None,
+) -> int:
+    """O controle do rádio que ganhou cabo passa para o cabo. Devolve quantos passaram.
+
+    O-CABO-ASSUME-DO-RADIO-01, a decisão dela de 25/09/2026: *passa para o
+    cabo* — no cabo há a vibração por áudio, o som e menos atraso —, com o
+    mesmo número e sem o jogo perder o controle.
+
+    O MEDIDO (19:42 de 25/09, na mesa dela): o kernel recusa o HID do cabo com
+    ``-EEXIST`` enquanto o rádio segura o endereço, e o cabo fica esperando sem
+    driver — o rádio precisa sair para o cabo existir. Então, para cada cabo
+    que espera (`integrations/o_cabo_em_espera.py`):
+
+    1. acha o par no rádio (a linha do kernel; sem ela, a borda da carga);
+    2. marca a troca no backend (`iniciar_troca_de_transporte`) — o posto, o
+       vpad do co-op e as bordas de queda passam a esperar pelo controle;
+    3. derruba o RÁDIO dele (`Disconnect`; o pareamento fica, e é ele que traz
+       o controle de volta quando o cabo sair);
+    4. a regra udev religa o cabo no instante em que o rádio sai, e o
+       `connect()` o abre no mesmo lugar da mesa.
+
+    **NO MODO NATIVO O CABO ESPERA.** Ali o jogo segura o físico, e trocar o nó
+    debaixo dele seria o jogo perdendo o controle — o contrário da decisão. A
+    troca acontece quando o Nativo acaba, no tique seguinte.
+
+    Best-effort de ponta a ponta: nada aqui derruba o laço de reconexão, e a
+    dúvida sempre vale "fica no rádio", que é o comportamento de antes.
+    """
+    ctrl = getattr(daemon, "controller", None)
+    iniciar = getattr(ctrl, "iniciar_troca_de_transporte", None)
+    descrever = getattr(ctrl, "describe_controllers", None)
+    if not callable(iniciar) or not callable(descrever):
+        return 0
+    from hefesto_dualsense4unix.integrations import o_cabo_em_espera as oce
+
+    vigia = vigia_do_cabo_de(daemon)
+    agora = time.monotonic() if agora is None else float(agora)
+    try:
+        no_radio = {
+            str(item["uniq"]): item.get("battery_state")
+            for item in descrever() or ()
+            if item.get("connected") and item.get("transport") == "bt" and item.get("uniq")
+        }
+        cabos = oce.cabos_em_espera()
+    except Exception as exc:
+        logger.debug("o_cabo_em_espera_leitura_falhou", err=str(exc))
+        return 0
+    vigia.observar_a_carga(no_radio, agora)
+    pendentes = vigia.observar_os_cabos(cabos, agora)
+    if not pendentes:
+        return 0
+    if _modo_nativo(daemon):
+        for cabo in pendentes:
+            if vigia.primeira_vez(f"nativo:{cabo.instancia}"):
+                logger.info("o_cabo_espera_o_modo_nativo", instancia=cabo.instancia)
+        return 0
+    impedimentos = oce.impedimentos_da_troca()
+    if impedimentos:
+        if vigia.primeira_vez("impedida"):
+            logger.warning("o_cabo_em_espera_impedido", motivos=impedimentos)
+        return 0
+    ler = ler_o_diario if callable(ler_o_diario) else oce.ler_o_diario_do_kernel
+    try:
+        texto = await asyncio.to_thread(ler)
+    except Exception as exc:
+        logger.debug("o_cabo_em_espera_diario_falhou", err=str(exc))
+        texto = None
+    diario = oce.enderecos_recusados(texto) if texto else None
+    passaram = 0
+    for cabo in pendentes:
+        decisao = vigia.decidir(cabo, diario=diario, no_radio=no_radio, agora=agora)
+        if decisao.par is None:
+            if decisao.desistir:
+                vigia.resolver(cabo.instancia)
+                logger.info(
+                    "o_cabo_em_espera_fica_no_radio",
+                    instancia=cabo.instancia,
+                    motivo=decisao.motivo,
+                )
+            continue
+        vigia.resolver(cabo.instancia)
+        par = decisao.par
+        if not iniciar(par, motivo="o_cabo_chegou"):
+            continue
+
+        def _derrubar(uniq: str = par) -> tuple[bool, str]:
+            return oce.derrubar_o_radio(uniq, leitor=leitor_do_bluez)
+
+        try:
+            feito, motivo = await asyncio.to_thread(_derrubar)
+        except Exception as exc:
+            feito, motivo = False, str(exc)
+        if not feito:
+            cancelar = getattr(ctrl, "cancelar_troca_de_transporte", None)
+            if callable(cancelar):
+                with contextlib.suppress(Exception):
+                    cancelar(par, motivo="o_radio_nao_caiu")
+            logger.warning(
+                "o_cabo_nao_assumiu",
+                uniq=oce.mascarar(par),
+                instancia=cabo.instancia,
+                motivo=motivo,
+            )
+            continue
+        vigia.derrubou(par, agora)
+        passaram += 1
+        logger.info(
+            "o_cabo_assume",
+            uniq=oce.mascarar(par),
+            instancia=cabo.instancia,
+            fonte=decisao.fonte,
+        )
+    return passaram
 
 
 async def restore_last_profile(daemon: DaemonProtocol) -> None:
@@ -749,6 +1002,9 @@ async def reconnect_loop(
     # memória vazia leria a primeira volta do laço como "chegou alguém" e
     # reaplicaria o som sem que nada tivesse acontecido.
     alvos_antes = alvos_conectados_de(daemon) or {}
+    # O-CABO-ASSUME-DO-RADIO-01: e POR ONDE cada um está — a troca que cabe
+    # num tique só não é borda de ninguém, e só a foto do transporte a vê.
+    transportes_antes = transportes_dos_alvos_de(daemon) or {}
     while not daemon._is_stopping():
         try:
             await daemon._run_blocking(daemon.controller.connect)
@@ -788,12 +1044,18 @@ async def reconnect_loop(
         # que agrava um carimbo) acabou de ser tirada. Custo zero em mesa
         # parada: sem instância nova, nem `journalctl` roda.
         await carimbar_o_nascimento(daemon)
+        # O-CABO-ASSUME-DO-RADIO-01: e o controle do rádio que ganhou cabo
+        # passa para o cabo. Depois do `connect()` de propósito: a mesa que ele
+        # consulta (quem está no rádio, com que carga) é a deste tique.
+        await vigiar_o_cabo_em_espera(daemon)
 
         is_connected = bool(daemon.controller.is_connected())
         # BORDA-DE-QUEDA-01: a foto por alvo do MESMO tique do agregado — as
         # duas têm de vir do mesmo instante, senão a comparação atribui a um
         # tique uma borda que aconteceu no outro.
         alvos_agora = alvos_conectados_de(daemon)
+        transportes_agora = transportes_dos_alvos_de(daemon)
+        trocando = trocas_de_transporte_pendentes(daemon)
         if is_connected and not was_connected:
             # BUG-DAEMON-CONNECT-GHOST-INPUT-01: transição offline→online
             # detectada pelo probe. Rearma o settling antes de qualquer outra
@@ -853,6 +1115,13 @@ async def reconnect_loop(
             # primário e em mais ninguém.
             await reaplicar_som_em_todos_os_alvos(daemon)
             was_connected = True
+        elif not is_connected and was_connected and trocando:
+            # O-CABO-ASSUME-DO-RADIO-01: a mesa ficou vazia porque o controle
+            # está TROCANDO de transporte — o rádio saiu e o cabo ainda não
+            # entrou. Não é queda: sem `probe_offline`, sem aviso no desktop, e
+            # a memória agregada fica "online" para a volta não virar conexão
+            # nova. As bordas por alvo dizem o que houver a dizer.
+            await anunciar_bordas_por_alvo(daemon, alvos_antes, alvos_agora or {})
         elif not is_connected and was_connected:
             # Transição online→offline detectada pelo probe (poll_loop também
             # pode detectar via exceção em read_state e disparar reconnect()
@@ -883,12 +1152,18 @@ async def reconnect_loop(
             # um cair: nenhum dos dois ramos acima dispara, e o Controle 2 some
             # sem evento, sem linha e sem o som de volta quando retorna.
             await anunciar_bordas_por_alvo(daemon, alvos_antes, alvos_agora)
+            if transportes_agora is not None:
+                await reaplicar_som_de_quem_trocou_de_transporte(
+                    daemon, alvos_antes, alvos_agora, transportes_antes, transportes_agora
+                )
 
         # A memória por alvo avança em TODOS os caminhos (inclusive nos dois
         # ramos agregados, que são donos das bordas deles): deixá-la para trás
         # faria o tique seguinte reanunciar a mesma borda.
         if alvos_agora is not None:
             alvos_antes = alvos_agora
+        if transportes_agora is not None:
+            transportes_antes = transportes_agora
 
         if is_connected:
             # BROKER-01 §2.2: re-hide do físico a cada reconciliação online —
@@ -939,7 +1214,15 @@ async def reconnect_loop(
             )
             if gatilho_lightbar is not None:
                 gatilho_lightbar.desarmar()
-            await _wait_or_stop(daemon, RECONNECT_PROBE_INTERVAL_SEC)
+            # O-CABO-ASSUME-DO-RADIO-01: com o controle trocando de transporte
+            # o cabo entra em menos de um segundo, e esperar os 5 s do probe
+            # seria deixar o jogador parado à toa.
+            await _wait_or_stop(
+                daemon,
+                PASSO_ENQUANTO_UM_CONTROLE_TROCA_DE_TRANSPORTE_SEC
+                if trocando
+                else RECONNECT_PROBE_INTERVAL_SEC,
+            )
 
 
 def registro_de_gatilhos_de(daemon: DaemonProtocol) -> RegistroDeGatilhos:
@@ -1742,6 +2025,10 @@ async def _wait_online_or_hotplug(
         await disparar_gatilhos_devidos(daemon)
         if watch.poll():
             return True
+        # O-CABO-ASSUME-DO-RADIO-01: o cabo que o kernel recusa não muda
+        # `/dev/input`; ele aparece no barramento HID.
+        if _o_barramento_hid_mudou(daemon):
+            return True
     return False
 
 
@@ -1926,6 +2213,7 @@ async def shutdown(daemon: DaemonProtocol) -> None:
 __all__ = [
     "BACKOFF_MAX_SEC",
     "PASSO_ENQUANTO_O_GATILHO_ESTA_ARMADO_SEC",
+    "PASSO_ENQUANTO_UM_CONTROLE_TROCA_DE_TRANSPORTE_SEC",
     "RECONNECT_HOTPLUG_POLL_INTERVAL_SEC",
     "RECONNECT_ONLINE_CHECK_INTERVAL_SEC",
     "RECONNECT_PROBE_INTERVAL_SEC",
@@ -1936,6 +2224,7 @@ __all__ = [
     "armar_gatilho_da_cor_por_numeracao",
     "connect_with_retry",
     "disparar_gatilhos_devidos",
+    "reaplicar_som_de_quem_trocou_de_transporte",
     "reapply_mic_after_connect",
     "reapply_speaker_after_connect",
     "reconnect",
@@ -1946,7 +2235,11 @@ __all__ = [
     "restore_last_profile",
     "sentinela_de_escritor_cru_de",
     "shutdown",
+    "transportes_dos_alvos_de",
+    "trocas_de_transporte_pendentes",
+    "vigia_do_cabo_de",
     "vigia_do_sequestro_de",
     "vigiar_escritor_cru",
+    "vigiar_o_cabo_em_espera",
     "vigiar_o_sequestro",
 ]

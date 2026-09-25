@@ -2931,6 +2931,38 @@ def _nenhuma_placa_de_som_viva_no_aviso_do_ucm(
         system_check._PROC_CARDS = antes
 
 
+@pytest.fixture(autouse=True, scope="session")
+def _nenhum_cabo_em_espera_vivo_na_suite(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Iterator[None]:
+    """O barramento HID que o laço do daemon olha aponta para o VAZIO.
+
+    O-CABO-ASSUME-DO-RADIO-01 (25/09/2026). O `reconnect_loop` passou a olhar
+    `/sys/bus/hid/devices` atrás do cabo que o kernel deixou esperando, e a
+    derrubar o RÁDIO do gêmeo dele. No dia em que a sprint nasceu havia um
+    desses na mesa dela (`0003:054C:0CE6.001B`, o controle plugado às 19:42):
+    todo teste que roda o laço com o backend de verdade o leria, e só a regra
+    udev ausente impediria a suíte de pedir o `Disconnect` do controle dela.
+    Vazio, pela razão das irmãs acima; quem precisa de um barramento forjado
+    aponta a constante com `monkeypatch` de escopo de função.
+    """
+    vazio = tmp_path_factory.mktemp("sysfs-sem-barramento-hid")
+    try:
+        from hefesto_dualsense4unix.integrations import o_cabo_em_espera
+    except ModuleNotFoundError as erro:  # pragma: no cover - só no job leve do CI
+        if not _o_produto_nao_roda_neste_ambiente(erro):
+            raise
+        yield
+        return
+
+    antes = o_cabo_em_espera.RAIZ_DO_BARRAMENTO_HID
+    o_cabo_em_espera.RAIZ_DO_BARRAMENTO_HID = str(vazio)
+    try:
+        yield
+    finally:
+        o_cabo_em_espera.RAIZ_DO_BARRAMENTO_HID = antes
+
+
 # ---------------------------------------------------------------------------
 # BINARIO-QUE-SO-EXISTE-NA-ARVORE-DELA-01 (25/08/2026)
 # ---------------------------------------------------------------------------
