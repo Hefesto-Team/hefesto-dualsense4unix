@@ -36,7 +36,9 @@ dele; se não aparece, o comando morreu ANTES do ar.
 
 O `btmon` é passivo: ele não fala com o adaptador, não abre conexão, não toca
 em nenhum controle. Precisa de `CAP_NET_RAW`, e por isso este instrumento — e
-só este trecho dele — roda `sudo -n btmon -w`.
+só este trecho dele — roda `sudo -n btmon -w`. A captura nasce 0600 e sai
+depois de lida (`CapturaDoFio`): se um controle reconecta no meio, ela leva a
+chave de pareamento em claro.
 
 A RÉGUA, DECLARADA
 -------------------
@@ -99,6 +101,8 @@ USO
 from __future__ import annotations
 
 import argparse
+import atexit
+import contextlib
 import os
 import re
 import struct
@@ -297,6 +301,94 @@ def crc_confere(report: bytes) -> bool | None:
     calc = zlib.crc32(bytes([CRC32_SEED_SAIDA]))
     calc = zlib.crc32(report[: DS_OUTPUT_BT_TAM - 4], calc)
     return struct.unpack_from("<I", report, OFF_CRC)[0] == calc
+
+
+# ---------------------------------------------------------------------------
+# A captura: nasce fechada, é lida e sai
+# ---------------------------------------------------------------------------
+
+#: O comando que o root roda. A umask vai DENTRO dele porque o `sudo` junta a
+#: nossa com a do sudoers, e um sudoers com `umask_override` impõe a dele (022):
+#: fora daqui, a captura nasceria 0644 em algumas máquinas.
+_BTMON_FECHADO = 'umask 077 && exec btmon -w "$1"'
+
+#: O que o root roda no fim: a captura passa a ser de quem mede, e continua 0600.
+_ENTREGAR_FECHADO = 'chown "$1" "$2" && chmod 0600 "$2"'
+
+
+class CapturaDoFio:
+    """Uma captura do ``btmon -w``, do nascimento à remoção. **Nasce fechada.**
+
+    Se um controle reconecta durante a captura, o ``btmon`` grava a chave de
+    pareamento em claro (o ``Link Key Request Reply``). Até 24/09/2026 a captura
+    nascia 0644, do root, no ``/tmp``, e ficava lá
+    (AS-CAPTURAS-DE-RADIO-NASCEM-FECHADAS-01). Agora ela:
+
+    * nasce 0600 num diretório 0700 de quem mede — duas trancas, e nenhuma
+      depende do sudoers da máquina;
+    * no fim passa a ser de quem mede (``chown``), ainda 0600, e é lida sem root;
+    * sai logo depois de lida, e :meth:`apagar` devolve a linha com o caminho,
+      para a saída dizer onde ela esteve. Se o instrumento cair antes, o
+      ``atexit`` apaga.
+
+    Os dois instrumentos que capturam o fio (este e a captura armada) passam
+    por aqui: duas cópias deste ciclo é como uma delas volta a nascer aberta.
+    """
+
+    def __init__(self, prefixo: str) -> None:
+        self.diretorio = tempfile.mkdtemp(prefix=f"{prefixo}-")
+        self.caminho = os.path.join(self.diretorio, f"{prefixo}.btsnoop")
+        self._processo: subprocess.Popen[bytes] | None = None
+        self._linha = ""
+        atexit.register(self.apagar)
+
+    def comecar(self) -> None:
+        """Põe o ``btmon -w`` de pé, como root, com a umask fechada."""
+        self._processo = subprocess.Popen(
+            ["sudo", "-n", "sh", "-c", _BTMON_FECHADO, "btmon", self.caminho],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+    def encerrar(self) -> None:
+        """Para o ``btmon`` e entrega o arquivo a quem mede, ainda 0600."""
+        processo, self._processo = self._processo, None
+        if processo is None:
+            return
+        processo.terminate()
+        try:
+            processo.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            processo.kill()
+            processo.wait()
+        subprocess.run(
+            ["sudo", "-n", "sh", "-c", _ENTREGAR_FECHADO, "sh",
+             f"{os.getuid()}:{os.getgid()}", self.caminho],
+            capture_output=True,
+            check=False,
+            timeout=20,
+        )
+
+    def apagar(self) -> str:
+        """Apaga a captura e o diretório dela; devolve a linha para a saída."""
+        atexit.unregister(self.apagar)
+        if self._linha:
+            return self._linha
+        self.encerrar()
+        try:
+            os.unlink(self.caminho)
+        except FileNotFoundError:
+            pass
+        except OSError:
+            subprocess.run(["sudo", "-n", "rm", "-f", self.caminho],
+                           capture_output=True, check=False, timeout=20)
+        with contextlib.suppress(OSError):
+            os.rmdir(self.diretorio)
+        if os.path.exists(self.caminho):
+            self._linha = f"captura: {self.caminho}  NÃO SAIU — apague à mão (tem MAC real)"
+        else:
+            self._linha = f"captura: {self.caminho}  (lida e apagada)"
+        return self._linha
 
 
 # ---------------------------------------------------------------------------
@@ -567,22 +659,16 @@ def main() -> int:
         print("\n  !! Sem handle não dá para atribuir quadro a controle. Veredito parcial.")
 
     # ---- captura ----------------------------------------------------------
-    fd_tmp, caminho_captura = tempfile.mkstemp(prefix="byte-no-fio-", suffix=".btsnoop")
-    os.close(fd_tmp)
-    # O `btmon` roda como root e recria o arquivo; ele não sobrescreve um que
-    # já exista com dono diferente. A captura NÃO é versionada: tem MAC real.
-    _sudo_sh(f"rm -f {caminho_captura}")
+    # Tem MAC real e pode ter a chave de pareamento: nasce 0600 e sai depois de
+    # lida (`CapturaDoFio`). NÃO se versiona.
+    captura = CapturaDoFio("byte-no-fio")
     kprobe_erro = "não pedido"
     if args.kprobe:
         kprobe_erro = kprobe_armar()
         if not kprobe_erro:
             kprobe_zerar()
 
-    captura = subprocess.Popen(
-        ["sudo", "-n", "btmon", "-w", caminho_captura],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    captura.comecar()
     time.sleep(1.0)  # o btmon precisa abrir o socket antes de a gente escrever
 
     janelas: list[tuple[str, Alvo, tuple[int, int, int], float, float, int]] = []
@@ -620,12 +706,7 @@ def main() -> int:
                   f"   ({'ok' if not erro else 'ERRO: ' + erro})")
 
     time.sleep(0.4)
-    captura.terminate()
-    try:
-        captura.wait(timeout=5)
-    except subprocess.TimeoutExpired:
-        captura.kill()
-    _sudo_sh(f"chmod 0644 {caminho_captura}")
+    captura.encerrar()
 
     # ---- devolver a cor de antes -----------------------------------------
     print("\nDEVOLVENDO a cor que cada um tinha antes")
@@ -639,7 +720,8 @@ def main() -> int:
         kprobe_desarmar()
 
     # ---- leitura ----------------------------------------------------------
-    quadros, queixas = ler_btsnoop(caminho_captura)
+    quadros, queixas = ler_btsnoop(captura.caminho)
+    linha_da_captura = captura.apagar()
     saidas = reports_de_saida(quadros)
     entradas = [q for q in quadros if q.sentido == HID_BT_ENTRADA]
 
@@ -763,7 +845,7 @@ def main() -> int:
         with open(destino, "w", encoding="utf-8") as arq:
             arq.write(mascarar(texto) + "\n\nRESUMO: " + mascarar(veredito) + "\n")
         print(f"bruto: {destino}")
-    print(f"captura: {caminho_captura}  (NÃO versionar: contém MAC real)")
+    print(linha_da_captura)
     return 0
 
 
