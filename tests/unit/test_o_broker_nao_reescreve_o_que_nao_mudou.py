@@ -434,8 +434,8 @@ class TestR0AMesaAlcancaOKernel:
         `IN_ATTRIB` e termina `0600` sem ACL.
 
         Sem este irmão, uma mesa cujo instrumento não visse nada deixaria a R1
-        verde sobre nada. A MORDIDA: desligue o `inotify` (o `add_watch` com
-        máscara 0) e esta régua reprova.
+        verde sobre nada. A MORDIDA: troque o `IN_ATTRIB` do `add_watch` por
+        outro evento e esta régua reprova.
         """
         mesa = _montar(raiz, aberta=True)
         diario: list[tuple[str, dict[str, Any]]] = []
