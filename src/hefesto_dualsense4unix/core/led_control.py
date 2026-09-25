@@ -340,6 +340,29 @@ def _na_escala(tom: RGB, brilho: float | None) -> RGB:
     return LedSettings(lightbar=tom).apply_brightness(brilho).lightbar
 
 
+def reescalar(acesa: RGB, de: float, para: float) -> RGB:
+    """A luz `acesa`, que está no brilho `de`, levada ao brilho `para`.
+
+    O BRILHO ENTRA UMA VEZ SÓ — A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01,
+    25/09/2026. O brilho por controle é um fator sobre a cor que já chegou no
+    brilho do perfil (`backend._scaled_led`), e a conta em dois passos trunca
+    duas vezes: o P1 a 60% saía `(0,0,152)` do perfil e `(0,0,153)` do trilho,
+    e com o perfil a 1% e o controle a 100% o azul voltava `(0,0,200)`. Quando
+    a luz é um tom da paleta NAQUELE brilho — é a automática, e é o caso de
+    todo controle que nasce sem cor escolhida —, o tom é levado ao brilho novo
+    pela conta do dono, uma vez só, e a resposta é a do trilho. Fora da paleta
+    (o global dela, `#2850B4`) não há tom a provar, e vale a razão, como antes.
+    O tom tem de ser ÚNICO: abaixo de 1% o vermelho, o rosa e o laranja acendem
+    o mesmo `(1,0,0)`, e escolher um deles seria trocar a cor pelo brilho.
+    """
+    if de > 0.0:
+        tons = [t for t in _PLAYER_SLOT_COLORS.values() if _na_escala(t, de) == acesa]
+        if len(tons) == 1:
+            return _na_escala(tons[0], para)
+    fator = para / de if de > 0.0 else 0.0
+    return LedSettings(lightbar=acesa).apply_brightness(fator).lightbar
+
+
 def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
     """Resolve a mesa inteira de modo que duas peças nunca fiquem da mesma cor.
 
@@ -591,4 +614,5 @@ __all__ = [
     "player_bitmask",
     "player_led_pattern",
     "player_slot_color",
+    "reescalar",
 ]
