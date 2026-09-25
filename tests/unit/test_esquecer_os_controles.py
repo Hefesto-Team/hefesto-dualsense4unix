@@ -1028,13 +1028,27 @@ def test_o_verbo_olhar_do_root_so_le(raizes: m.Raizes, tmp_path: Path) -> None:
         m.executar_parte_do_root(raizes, "esquecer", None, seco=True)
 
 
-def test_o_limpa_diz_as_copias_do_vdf_como_de_proposito(raizes: m.Raizes) -> None:
+def test_o_limpa_diz_as_copias_ao_lado_como_de_proposito(raizes: m.Raizes) -> None:
+    """As cópias que o produto tira ao lado do vdf, do ``config.vdf`` e do
+    registro de cada prefixo ficam depois do uninstall — de propósito, e ditas.
+    Medido no ciclo de ponta a ponta: o ``config.vdf.bak.hefesto-proton-<ts>``
+    que o destravar deixa não aparecia em resposta nenhuma."""
     instalar_de_mentira(raizes)
-    vdf = raizes.lar / ".steam/steam/userdata/12345/config/localconfig.vdf"
-    copia = vdf.with_name(vdf.name + ".bak.hefesto-launch-1790000000")
-    copia.write_text("x", encoding="utf-8")
+    steam = (raizes.lar / ".steam/steam").resolve()
+    vdf = steam / "userdata/12345/config/localconfig.vdf"
+    cfg = steam / "config/config.vdf"
+    reg = steam / "steamapps/compatdata/100/pfx/system.reg"
+    reg.parent.mkdir(parents=True)
+    reg.write_text("WINE REGISTRY Version 2\n", encoding="utf-8")
+    for arquivo, sufixo in ((vdf, "hefesto-launch-1"), (vdf, "steam-input-2"),
+                            (cfg, "hefesto-proton-3"), (reg, "hefesto-audio-ks")):
+        arquivo.with_name(f"{arquivo.name}.bak.{sufixo}").write_text("x", encoding="utf-8")
+    vdf.with_name(vdf.name + ".bak.de-outro-programa").write_text("x", encoding="utf-8")
     rastros = {r.onde: r for r in m.conferir_a_casa(raizes)}
-    assert rastros[str(copia.resolve())].de_proposito
+    assert rastros[f"{vdf}.bak.*"].de_proposito
+    assert rastros[f"{vdf}.bak.*"].o_que.startswith("2 cópia(s)"), "a de outro programa contou"
+    assert rastros[f"{cfg}.bak.*"].de_proposito
+    assert rastros[f"{reg}.bak.*"].de_proposito
 
 
 def _carregar_o_script_da_casa() -> Any:
