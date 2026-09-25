@@ -71,3 +71,33 @@ def test_toda_flag_que_a_secao_cita_existe_e_faz_o_que_ela_diz() -> None:
         "o `--keep-bluez` é no-op desde 02/08 (preservar o BlueZ é o padrão); "
         "quem muda algo é o `--restore-bluez`"
     )
+
+
+# ---------------------------------------------------------------------------
+# O mesmo fato errado do `--keep-bluez` morava em mais dois lugares
+# ---------------------------------------------------------------------------
+# Achado da conferência: a retomada tirou a frase da seção «Desinstalar», e ela
+# seguia na seção do backport do BlueZ, na mesma página («`uninstall.sh
+# --keep-bluez` preserva a versão instalada»), e na FALA do próprio uninstall,
+# que creditava o padrão ao no-op em todo uninstall sem flag nenhuma. Fato
+# errado sai de todos os lugares. A MORDIDA, medida: devolver qualquer uma das
+# duas frases reprova a régua dela.
+
+
+def test_a_pagina_inteira_nao_da_ao_keep_bluez_um_trabalho_que_ele_nao_tem() -> None:
+    assert "--keep-bluez" not in INSTALACAO, (
+        "o `--keep-bluez` é no-op desde 02/08: preservar o BlueZ é o padrão, e "
+        "quem muda algo é o `--restore-bluez`"
+    )
+
+
+def test_a_fala_do_uninstall_nao_credita_o_padrao_ao_no_op() -> None:
+    """O ramo que PRESERVA o BlueZ roda em todo uninstall sem `--restore-bluez`."""
+    ramo = UNINSTALL[UNINSTALL.index('if [[ "${KEEP_BLUEZ}" -eq 1 ]]; then') :]
+    fala = ramo.splitlines()[1]
+    assert fala.lstrip().startswith("log "), fala
+    assert "--keep-bluez" not in fala, fala
+    assert "--restore-bluez" in fala, (
+        "a fala do ramo que preserva tem de dizer qual flag devolve o BlueZ da "
+        f"distribuição: {fala}"
+    )

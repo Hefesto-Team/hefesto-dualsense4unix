@@ -175,7 +175,7 @@ serviço de sistema:
   Sem esse cache, ele avisa como gerar e segue — nada falha. Se a troca de versão
   acontecer, é o `postinst` do próprio `bluez` que reinicia o `bluetoothd`, e a
   migração descarta os pareamentos antigos: parear de novo uma vez resolve.
-  `uninstall.sh --keep-bluez` preserva a versão instalada.
+  O `uninstall.sh` a preserva; `--restore-bluez` devolve a da distribuição.
 - **Agente de pareamento persistente** — um serviço de sistema com `bt-agent`
   (`--capability=NoInputNoOutput`) fica registrado no D-Bus para responder aos
   pedidos de confirmação do BlueZ. Sem ele nasce o pareamento pela metade
