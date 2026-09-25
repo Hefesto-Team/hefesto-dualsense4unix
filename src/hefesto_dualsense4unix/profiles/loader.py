@@ -11,7 +11,7 @@ atômico (tmpfile + rename) para evitar arquivos truncados em crash.
 
 PROFILE-SLUG-SEPARATION-01: filename é derivado de `slugify(profile.name)`.
 `load_profile` aceita tanto slug direto (literal ASCII) quanto display name
-acentuado via busca adaptativa em três camadas.
+acentuado; o arquivo é o que `arquivo_do_perfil` acha, em quatro pernas.
 """
 from __future__ import annotations
 
@@ -2245,41 +2245,58 @@ def _read_profile(path: Path) -> Profile:
     return Profile.model_validate(raw)
 
 
-def load_profile(identifier: str) -> Profile:
-    """Carrega perfil por slug direto ou por display name.
+def arquivo_do_perfil(identifier: str, directory: Path | None = None) -> Path | None:
+    """O ARQUIVO que `load_profile(identifier)` lê, ou ``None`` quando não há.
 
-    Ordem de busca:
-    1. `<identifier>.json` direto (assume que `identifier` já é slug/filename).
-    2. `<slugify(identifier)>.json` (se `identifier` era display name acentuado).
-    3. Varredura fallback: itera o diretório buscando `profile.name` cujo
-       slug bata com `slugify(identifier)`. Cobre arquivos cujo filename
-       não acompanhou o slug atual (ex.: `meu-perfil.json` com name "Meu Perfil").
+    O-PERFIL-ATIVO-ACHA-O-ARQUIVO-COMO-O-DAEMON-01 (25/09/2026). «Nome vira
+    arquivo» tem UM dono, e é esta função: `load_profile` a chama, e a tela
+    (`interface/pacotes/perfil.arquivo`) também. A tela tinha uma cópia com
+    duas das quatro pernas (o nome e o slug); o perfil que só as outras duas
+    achavam virava `{}` na tela, e a aba 03 dizia «Desligado» com o Rígido
+    indo ao controle.
+
+    As pernas, na ordem do daemon:
+
+    1. `<identifier>.json` direto (o `identifier` já é slug ou nome de arquivo);
+    2. `<slugify(identifier)>.json` (o `identifier` era o nome acentuado);
+    3. a varredura: o arquivo cujo `name` tem o slug do `identifier`, para o
+       arquivo que não acompanhou o slug (`meu-perfil.json` com name
+       "Meu Perfil", ou o `x-2.json` que a importação cria no conflito);
+    4. a subpasta dos Estilos de Jogo.
+
+    SEM EFEITO COLATERAL, e é o que a deixa servir a uma tela que pergunta a
+    cada tique: não semeia, não varre a biblioteca da Steam e não cria a pasta.
+    Quem carrega (`load_profile`) semeia antes de perguntar.
+
+    `directory` é a pasta de perfis quando quem pergunta já tem a sua (a tela
+    pergunta a `perfil.pasta()`, que é a dona dela lá); sem ele, é a
+    `profiles_dir()` desta chamada.
+
+    Levanta ``ValueError`` no identificador que tenta sair da pasta, como
+    `load_profile`; a ausência é ``None``, nunca exceção.
     """
     _reject_traversal(identifier)
-    _maybe_seed_presets()
-    _talvez_semear_jogos()
-    directory = profiles_dir(ensure=True)
-    direct = directory / f"{identifier}.json"
+    pasta = profiles_dir() if directory is None else directory
+    direct = pasta / f"{identifier}.json"
     # Defesa em profundidade: mesmo após rejeição de tokens, confirmar que o
     # path resolvido não escapa do diretório de perfis (ex.: symlink hostil).
-    directory_resolved = directory.resolve()
-    if not direct.resolve().is_relative_to(directory_resolved):
+    if not direct.resolve().is_relative_to(pasta.resolve()):
         raise ValueError("identifier de perfil escapa do diretório de perfis")
     if direct.exists():
-        return _read_profile(direct)
+        return direct
 
     try:
         slug = slugify(identifier)
     except ValueError:
-        raise FileNotFoundError(f"perfil não encontrado: {identifier}") from None
+        return None
 
-    slugged = directory / f"{slug}.json"
+    slugged = pasta / f"{slug}.json"
     if slugged.exists():
-        return _read_profile(slugged)
+        return slugged
 
     # `sorted` torna a varredura determinística (importante para testes e logs
     # reproduzíveis quando múltiplos perfis existem).
-    for path in sorted(directory.glob("*.json")):
+    for path in sorted(pasta.glob("*.json")):
         try:
             profile = _read_profile(path)
         except _PROFILE_DECODE_ERRORS as exc:
@@ -2292,7 +2309,7 @@ def load_profile(identifier: str) -> Profile:
             continue
         try:
             if slugify(profile.name) == slug:
-                return profile
+                return path
         except ValueError:
             continue
 
@@ -2304,11 +2321,27 @@ def load_profile(identifier: str) -> Profile:
     # bootaria SEM perfil, com um `last_profile_restore_failed` no journal —
     # o mesmo estrago que `_repontar_a_sessao_para_o_padrao_novo` evitou na
     # renomeação do padrão, por outra porta.
-    estilo = directory / ESTILOS_DE_JOGO_DIR_NAME / f"{slug}.json"
+    estilo = pasta / ESTILOS_DE_JOGO_DIR_NAME / f"{slug}.json"
     if estilo.is_file():
-        return _read_profile(estilo)
+        return estilo
+    return None
 
-    raise FileNotFoundError(f"perfil não encontrado: {identifier}")
+
+def load_profile(identifier: str) -> Profile:
+    """Carrega perfil por slug direto ou por display name.
+
+    O arquivo é o que :func:`arquivo_do_perfil` acha, com as quatro pernas dela
+    na ordem dela: o nome direto, o slug, a varredura por `name` e a subpasta
+    dos Estilos de Jogo. Antes de perguntar, semeia os perfis de fábrica e os
+    dos jogos — é o carregador do boot.
+    """
+    _reject_traversal(identifier)
+    _maybe_seed_presets()
+    _talvez_semear_jogos()
+    alvo = arquivo_do_perfil(identifier, profiles_dir(ensure=True))
+    if alvo is None:
+        raise FileNotFoundError(f"perfil não encontrado: {identifier}")
+    return _read_profile(alvo)
 
 
 def perfil_em_disco(identifier: str) -> Profile | None:
