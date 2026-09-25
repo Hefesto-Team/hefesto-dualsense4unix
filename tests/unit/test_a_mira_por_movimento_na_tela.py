@@ -724,6 +724,16 @@ def test_a_peca_que_apagou_o_chip_ainda_drena_o_angulo(
 
     Conta as drenagens, não o efeito.
 
+    O CURSOR ENTRA POR BAIXO DO ESQUEMA — A-MIRA-NA-NAVEGACAO-02 (25/09/2026).
+    O esquema passou a ler o «mouse» como o analógico direito
+    (`ProfileMovimentoConfig._o_cursor_fora_da_navegacao_e_o_analogico_direito`),
+    e no laço do co-op o destino que consome ângulo não chega mais por perfil.
+    O motor continua sabendo o destino (a Navegação o usa, e a volta da
+    decisão é uma linha do esquema), e é o MOTOR que esta régua mede: a seção
+    nasce por `model_construct`, sem o validador. A mesma drenagem, pelo
+    caminho que o produto alcança hoje, é a
+    `test_o_destino_da_mira_que_nao_anda.test_na_navegacao_a_peca_de_chip_apagado_drena`.
+
     MORDIDA: ponha o `return` da peça que não mira ANTES da drenagem em
     `gamepad.aplicar_o_movimento` e este teste reprova pelo P4.
     """
@@ -749,7 +759,7 @@ def test_a_peca_que_apagou_o_chip_ainda_drena_o_angulo(
     perfil = Profile(
         name="mesa no cursor",
         match=MatchAny(type="any"),
-        movimento=ProfileMovimentoConfig(destino="mouse"),
+        movimento=ProfileMovimentoConfig.model_construct(destino="mouse"),
         controllers={"aabbcc000004": ControllerOverrides(
             movimento=ProfileMovimentoConfig(destino="nenhum"))},
     )
