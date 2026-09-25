@@ -664,17 +664,25 @@ DECISOES_DELA = RAIZ / "docs" / "data" / "decisoes-dela.csv"
 #: jogador, com controle virtual, perfil e Mira?» —, e a resposta chegou só às
 #: linhas do SN30: as do Pro cuja causa era a mesma não-adoção seguiram dizendo
 #: `nada-a-acionar` («não há o que fazer»), com a divergência declarada em vez
-#: de resolvida. As cinco primeiras saíram de `nada-a-acionar`; as duas da
+#: de resolvida. As sete primeiras saíram de `nada-a-acionar`; as duas da
 #: taxa já eram `decisao-tomada` pelo veto de 19/07 e não citavam o id.
 #:
 #: DIGITADA AQUI pelo mesmo motivo da lista de cima: derivada do CSV, a linha que
 #: voltasse a `nada-a-acionar` sairia da lista junto com o defeito.
+#:
+#: A BATERIA ESPELHADA AO JOGO entrou na conferência do mesmo dia: é o mesmo
+#: espelho ao vpad do giroscópio e do acelerômetro, e o `cabo_detalhe` do Pro
+#: já dizia «por decisão de arquitetura (8BIT-02), não por limite de
+#: protocolo». A do SN30 vai junto: a passada de 24/09 procurou «veto de
+#: 19/07» com `so-ela-decide`, e ela dizia `nada-a-acionar`.
 O_VETO_ALCANCA_O_PRO: dict[str, str] = {
     "plataforma.adocao@pro": VETO_DOS_EXTERNOS,
     "entrada.combo.ponte@pro": VETO_DOS_EXTERNOS,
     "vibracao.rumble.passthrough@pro": VETO_DOS_EXTERNOS,
     "movimento.giroscopio.jogo@pro": VETO_DOS_EXTERNOS,
     "movimento.acelerometro.jogo@pro": VETO_DOS_EXTERNOS,
+    "energia.bateria.jogo@pro": VETO_DOS_EXTERNOS,
+    "energia.bateria.jogo@sn30": VETO_DOS_EXTERNOS,
     "combinacao.cabo_e_radio.taxa@pro": VETO_DOS_EXTERNOS,
     "combinacao.cabo_e_radio.taxa@sn30": VETO_DOS_EXTERNOS,
 }
