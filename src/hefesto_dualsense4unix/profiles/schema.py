@@ -471,6 +471,8 @@ class ProfileMovimentoConfig(BaseModel):
 
     #: Para onde o giroscópio vai. `nenhum` guarda o arranjo e desliga a mira —
     #: é o que permite ela experimentar sem perder a calibração que ajustou.
+    #: O `mouse` ENTRA e vira o analógico direito — ver
+    #: `_o_cursor_fora_da_navegacao_e_o_analogico_direito`.
     destino: Literal["nenhum", "analogico_direito", "analogico_esquerdo", "mouse"] = (
         "nenhum"
     )
@@ -486,10 +488,35 @@ class ProfileMovimentoConfig(BaseModel):
     zona_morta_graus_s: float = Field(default=3.0, ge=0.0, le=60.0)
     #: Graus/s que já valem deflexão cheia.
     teto_graus_s: float = Field(default=220.0, gt=0.0, le=2000.0)
-    #: Só para o destino `mouse`: pixels por grau girado.
+    #: Só para o cursor (a Navegação): pixels por grau girado.
     pixels_por_grau: float = Field(default=12.0, gt=0.0, le=200.0)
     #: O botão que LIGA a mira enquanto está apertado. `None` = sempre ligada.
     gatilho: str | None = None
+
+    @field_validator("destino", mode="after")
+    @classmethod
+    def _o_cursor_fora_da_navegacao_e_o_analogico_direito(cls, value: str) -> str:
+        """O destino «mouse» é o analógico direito — A-MIRA-NA-NAVEGACAO-02.
+
+        Decisão por delegação dela, 24/09/2026: *a tela nunca afirma o que não
+        acontece*. O «mouse» só chega por JSON escrito à mão, e fora da
+        Navegação ele não movia nada: o mouse emulado e o controle virtual se
+        excluem (`gamepad.start_gamepad_emulation_desfecho` desliga o mouse ao
+        erguer o controle virtual), e o giro caía num `_mouse_device` que não
+        existe — com a dica do Giroscópio afirmando «move o cursor».
+
+        A LEITURA É EXATA NOS QUATRO MODOS, e é por isso que ela mora aqui e não
+        no motor. No Virtual e no Xbox o giro vai ao analógico direito, que é o
+        destino padrão do chip e o que a Mira faz em todo modo. Na Navegação
+        TODO destino ligado já é o cursor (`roteador.para_o_cursor`): o direito
+        e o «mouse» dão o mesmo arranjo. No Nativo a Mira não anda.
+
+        O `Literal` continua aceitando «mouse»: recusá-lo derrubaria o perfil
+        inteiro de quem o escreveu. Voltar atrás é apagar este validador — o
+        motor (`roteador.DESTINO_MOUSE`) e a dica (`dica_do_giro`) ainda sabem
+        o destino.
+        """
+        return "analogico_direito" if value == "mouse" else value
 
     @model_validator(mode="after")
     def _o_teto_fica_acima_da_zona_morta(self) -> ProfileMovimentoConfig:
@@ -2755,7 +2782,7 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "acima da zona morta impedem um teto que nunca mova nada.",
     ),
     "ProfileMovimentoConfig.pixels_por_grau": Nascimento(
-        E_CONTRATO, "Parâmetro do destino `mouse` só; o `gt=0` impede o mudo."
+        E_CONTRATO, "Parâmetro do cursor (a Navegação) só; o `gt=0` impede o mudo."
     ),
     "ProfileMovimentoConfig.gatilho": Nascimento(
         NASCE_NO_LEITOR,
