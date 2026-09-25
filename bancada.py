@@ -195,23 +195,31 @@ _ESTADO_IMU_PERDA = (
     'o contador que ele nunca teve e ao rádio um que mede perda de verdade, em vez do '
     '`bt_drops`, que conta o que o PRODUTO descartou.'
 )
-#: AS-FRASES-QUE-A-BANCADA-ACHOU-01 (24/09/2026): a prosa dizia «nunca liga o
-#: bit», e o `_build_common` o liga no cabo sem nó gravável. Transcrita de novo.
-_ESTADO_BRILHO_INERTE = (
-    'o produto não dá a ninguém o brilho das lâmpadas: nada escreve o '
-    '`light.brightness`, e o `common[42]` leva o padrão da pydualsense (2, o '
-    'degrau baixo). Com o nó de LED do kernel gravável — o produto instalado — o '
-    'fluxo é LED-neutro e o `flag2` bit0 sai desligado nos dois transportes; no '
-    'rádio, sempre. Só no cabo sem nó gravável o `flag2` herda o `ledOption` da '
-    'pydualsense (0x03) e o bit sai LIGADO com o 2: as lâmpadas ficam no degrau '
-    'baixo sem escolha de ninguém (medido no `_build_common` em 24/09/2026). Ver '
-    'BRILHO-DE-HARDWARE-01.'
+#: O-BRILHO-DAS-LUZES-DE-NUMERO-01 (25/09/2026): o brilho das lâmpadas deixou de
+#: ser inerte, e a frase de 24/09 saiu do mapa. Transcrita de novo.
+_ESTADO_BRILHO_DO_PERFIL = (
+    'o perfil escolhe o brilho das luzes de número por controle — Fraco, '
+    'Médio ou Forte (`leds.player_led_brightness`, no global e no override de '
+    'cada controle), e todo controle nasce no Fraco (o degrau 2). O produto '
+    'manda o `flag2` bit0 com o degrau nos dois transportes: no cabo sem nó '
+    'gravável, pelo fluxo; no cabo com o nó do kernel, num 0x02 avulso logo '
+    'depois do número; no rádio, no 0x31 que acende o número. Vale para o '
+    '«Todos» do perfil, para um controle só, para o clique da linha LEDs '
+    '(`led.player_brightness_set`) e para o controle que chega depois, e a '
+    'escolha sobrevive à troca de perfil, ao «Salvar Perfil» do rodapé e ao '
+    'Estilo de Jogo. A pílula da aba Iluminação acende o degrau que o daemon '
+    'diz aceso naquele controle (`daemon.state_full` → '
+    '`controllers[].brilho_das_luzes`, o merge com a camada da usuária), e '
+    'por isso o clique sobrevive à troca automática também na tela; sem o '
+    'daemon, ou com um daemon que não publica a chave, ela cai no perfil do '
+    'disco. Ver O-BRILHO-DAS-LUZES-DE-NUMERO-01 e '
+    'A-04-PERGUNTA-AO-DAEMON-VIVO-01.'
 )
 ESTADOS = ["", "funciona", "regrediu", "nunca funcionou",
            "não implementado", "impossível",
            _ESTADO_RUMBLE_SIMULTANEO, _ESTADO_RUMBLE_FF,
            _ESTADO_GIROSCOPIO_BIAS, _ESTADO_IMU_LIGAR, _ESTADO_IMU_PERDA,
-           _ESTADO_BRILHO_INERTE]
+           _ESTADO_BRILHO_DO_PERFIL]
 LADOS = {"cabo": "cabo_", "rádio": "radio_"}
 
 st.set_page_config(page_title="Hefesto · bancada de medição", layout="wide")
