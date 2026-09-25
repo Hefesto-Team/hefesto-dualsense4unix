@@ -5,10 +5,10 @@ vê-la reprovar. Régua que passa com a cura arrancada não mede nada.
 
 O QUE ESTAS RÉGUAS **NÃO** MEDEM, dito antes de qualquer asserção
 ------------------------------------------------------------------
-Elas não medem que som saiu de aparelho nenhum, e não podem. O mapa proíbe a
-conclusão com todas as letras (``audio.saida_dedicada.payload_do_degrau``):
-*"NÃO ESCREVER, EM LUGAR NENHUM, que 'descobrimos o áudio por Bluetooth' ou que
-a ponte funciona (…) FALÁCIA DO CANAL QUE RESPONDE"*. O que elas cobrem é o
+Elas não medem que som saiu de aparelho nenhum, e não podem: o som que saiu
+pelo rádio em 10/09/2026 (o `0x35`, com a orelha dela) se conta pelo degrau, e
+a lição fica no mapa com nome — a FALÁCIA DO CANAL QUE RESPONDE
+(``audio.saida_dedicada@dualsense``). O que elas cobrem é o
 nosso lado do fio — a rotação do contador, a leitura curta, a recusa por
 transporte, e **o nome do número**, que é o que separa "o kernel aceitou" de
 "o firmware obedeceu".

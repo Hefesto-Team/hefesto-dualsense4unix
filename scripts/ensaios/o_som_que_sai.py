@@ -4,16 +4,15 @@
 O QUE ELE É, E O QUE ELE NÃO É
 -------------------------------
 Ele é o instrumento da SOM-QUE-SAI-01: monta, mede e mostra. **Ele não conclui
-nada sobre som ter saído de aparelho nenhum**, e o mapa proíbe que qualquer
-coisa nesta árvore conclua isso antes do ensaio de bancada
-(``audio.saida_dedicada.payload_do_degrau@dualsense``.radio_ressalva):
+nada sobre som ter saído de aparelho nenhum** — quem concluiu foi a orelha
+dela, em 10/09/2026: o som saiu pelo rádio no ``0x35`` de 334 B, com um quadro
+só (``integrations/alto_falante_bt.ARRANJO_035``), e não por nenhum dos dois
+arranjos do ``0x39`` que este ensaio nasceu montando lado a lado.
 
-    *"NÃO ESCREVER, EM LUGAR NENHUM, que 'descobrimos o áudio por Bluetooth'
-    ou que a ponte funciona. Não funciona, e não há ponte: há um canal que
-    responde. FALÁCIA DO CANAL QUE RESPONDE."*
-
-O honesto, até a orelha dela decidir: **o canal responde, e o conteúdo vai
-pelos DOIS arranjos candidatos.**
+A lição fica no mapa com nome (``audio.saida_dedicada@dualsense``): a
+FALÁCIA DO CANAL QUE RESPONDE — concluir que, porque um canal responde, ele
+FAZ o que se esperava dele. É por ela que o retorno do ``os.write()`` nunca é a
+medição (a armadilha logo abaixo).
 
 AS TRÊS PERGUNTAS QUE ELE RESPONDE
 -----------------------------------
