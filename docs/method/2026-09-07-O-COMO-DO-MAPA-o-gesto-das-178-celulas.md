@@ -3780,7 +3780,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `luz.lightbar.brilho @ cabo`
 
-**O que isto prova.** Prova que o trilho «Brilho» escurece a barra dos controles do cabo diminuindo a própria cor — a ilusão que você escolheu em 09/09, porque a barra não tem brilho de hardware —, que ele apaga a barra de vez no 0, que a marca da cor de cada controle não sai do lugar enquanto isso, e que o perfil aplicado de novo — «Salvar Perfil», «Aplicar», trocar de perfil e voltar — não escurece barra nenhuma.
+**O que isto prova.** Prova que o trilho «Brilho» escurece a barra dos controles do cabo diminuindo a própria cor — a ilusão que você escolheu em 09/09, porque a barra não tem brilho de hardware —, que ele apaga a barra de vez no 0, que a marca da cor de cada controle não sai do lugar enquanto isso, que o perfil aplicado de novo — «Salvar Perfil», «Aplicar», trocar de perfil e voltar — não escurece barra nenhuma, e que o «Desligar», que é o mesmo trilho em 0%, continua apagado depois da troca de perfil.
 
 **Onde olhar.** Na aba Iluminação, linha «Brilho» de cada coluna: um trilho roxo com puxador e o número em porcento ao lado; a dica diz que ele grava no perfil ao soltar, sem esperar o «Salvar Perfil». Linha «Cor»: onze quadradinhos; os oito primeiros são as cores dos jogadores 1 a 8 — 1 azul, 2 vermelho, 3 verde, 4 rosa, 5 amarelo, 6 ciano, 7 laranja, 8 roxo — e os três últimos são tons a mais. A cor de cada controle é o quadradinho com borda na coluna dele e com um X nas colunas dos outros três. A prova é a barra no aparelho: as duas tiras dos lados do touchpad, e as marcas da linha «Cor».
 
@@ -3808,10 +3808,14 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 20. Na aba Perfis, anote o nome em «Perfil ativo», escolha outro perfil em «Perfis salvos» e clique em «Ativar»; depois escolha o que você anotou e clique em «Ativar» de novo.
 21. Volte à aba Iluminação e confira que as quatro barras estão como no passo 18: a do P1 amarela e a do P2 ciano, as duas pela metade, e as do P3 e do P4 no brilho de antes.
 22. Repita os passos 19 a 21 mais duas vezes.
-23. Devolva os quatro números de brilho aos valores anotados.
-24. Clique no quadradinho da cor do número de cada um para devolver a cor: o primeiro no P1, o segundo no P2.
+23. Clique em «Desligar», na linha «Opções» da coluna do P1, e confira que a barra dele apaga e que o número da linha «Brilho» vai a 0%.
+24. Na aba Perfis, ative outro perfil e depois o anotado, como no passo 20.
+25. Volte à aba Iluminação e confira que a barra do P1 continua apagada, a linha «Brilho» dele continua em 0%, e a borda continua no amarelo.
+26. Clique no quadradinho amarelo da coluna do P1 e confira que a barra volta acesa, amarela.
+27. Devolva os quatro números de brilho aos valores anotados.
+28. Clique no quadradinho da cor do número de cada um para devolver a cor: o primeiro no P1, o segundo no P2.
 
-**Passa quando.** Nos dois controles do cabo a barra escurece junto com o número, some POR COMPLETO no 0 e volta cheia no 100, sem mudar de cor. Mexer no brilho de um nunca mexe no de outro. A marca da cor não sai do lugar em parada nenhuma, nem no 0: a borda fica na cor do próprio controle, e o X dela fica nas colunas dos outros três. E as três voltas de «Salvar Perfil», «Aplicar» e troca de perfil deixam as quatro barras exatamente como estavam — nenhuma fica mais fraca a cada volta.
+**Passa quando.** Nos dois controles do cabo a barra escurece junto com o número, some POR COMPLETO no 0 e volta cheia no 100, sem mudar de cor. Mexer no brilho de um nunca mexe no de outro. A marca da cor não sai do lugar em parada nenhuma, nem no 0: a borda fica na cor do próprio controle, e o X dela fica nas colunas dos outros três. As três voltas de «Salvar Perfil», «Aplicar» e troca de perfil deixam as quatro barras exatamente como estavam — nenhuma fica mais fraca a cada volta. E o P1 «Desligado» atravessa a troca de perfil apagado, com o trilho em 0% e a cor dele guardada, e um clique na cor o acende de novo.
 
 **Por controle.**
 
@@ -3820,7 +3824,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, testemunha. Não toque na coluna dele. O porcento, a barra e o X no amarelo da coluna dele ficam como estavam.
 * **P4** — No rádio, segunda testemunha. A mesma conferência do P3.
 
-**A armadilha.** Seis. (1) O trilho multiplica a cor, e por isso no 0 a barra apaga inteira: se ela ficar acesa fraquinha no 0, isso é o achado. (2) O brilho de três degraus que o aparelho tem por dentro é das CINCO LÂMPADAS, não da barra — você mediu em 09/09 —, e o Hefesto não o comanda. Os três degraus da aba Vibração («Economia», «Balanceado», «Máximo») são força de tremor. (3) Arrastar grava no perfil ativo NA HORA, e a cor escolhida também fica: devolva as duas no fim. (4) Se as tiras da linha «LEDs» da coluna estiverem tracejadas, o Hefesto não afirma a cor de agora (a Steam segurando o controle, o Modo Nativo, ou cor desconhecida): o número vai para o disco e a barra pode não mudar — não é defeito do trilho. (5) Olhe as marcas LOGO AO SOLTAR, e não só depois: até 24/09 o X sumia das outras colunas por meio segundo ao soltar, e no 0 sumia de vez. (6) Até 25/09 o brilho entrava DUAS vezes quando o perfil era aplicado de novo: a barra ficava mais fraca a cada «Salvar Perfil» seguido de troca de perfil, e a cada troca de jogo em quem nunca escolheu cor. O número do trilho não muda nesse defeito — só a barra —, e é por isso que os passos 19 a 22 olham a barra e não o número.
+**A armadilha.** Sete. (1) O trilho multiplica a cor, e por isso no 0 a barra apaga inteira: se ela ficar acesa fraquinha no 0, isso é o achado. (2) O brilho de três degraus que o aparelho tem por dentro é das CINCO LÂMPADAS, não da barra — você mediu em 09/09 —, e o Hefesto não o comanda. Os três degraus da aba Vibração («Economia», «Balanceado», «Máximo») são força de tremor. (3) Arrastar grava no perfil ativo NA HORA, e a cor escolhida também fica: devolva as duas no fim. (4) Se as tiras da linha «LEDs» da coluna estiverem tracejadas, o Hefesto não afirma a cor de agora (a Steam segurando o controle, o Modo Nativo, ou cor desconhecida): o número vai para o disco e a barra pode não mudar — não é defeito do trilho. (5) Olhe as marcas LOGO AO SOLTAR, e não só depois: até 24/09 o X sumia das outras colunas por meio segundo ao soltar, e no 0 sumia de vez. (6) Até 25/09 o brilho entrava DUAS vezes quando o perfil era aplicado de novo: a barra ficava mais fraca a cada «Salvar Perfil» seguido de troca de perfil, e a cada troca de jogo em quem nunca escolheu cor. O número do trilho não muda nesse defeito — só a barra —, e é por isso que os passos 19 a 22 olham a barra e não o número. (7) Até 25/09 o «Desligar» gravava o preto como a COR do controle, e o preto não é cor desde 22/09: a troca de perfil acendia a barra de novo e a cor escolhida estava perdida. Se a barra do P1 acender no passo 25, é o achado.
 
 ---
 
@@ -3828,7 +3832,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `luz.lightbar.brilho @ rádio`
 
-**O que isto prova.** Prova que o trilho «Brilho» escurece a barra dos controles do rádio diminuindo a própria cor, como no cabo, que ele apaga a barra de vez no 0, que a marca da cor de cada controle não sai do lugar enquanto isso, e que o perfil aplicado de novo — «Salvar Perfil», «Aplicar», trocar de perfil e voltar — não escurece barra nenhuma.
+**O que isto prova.** Prova que o trilho «Brilho» escurece a barra dos controles do rádio diminuindo a própria cor, como no cabo, que ele apaga a barra de vez no 0, que a marca da cor de cada controle não sai do lugar enquanto isso, que o perfil aplicado de novo — «Salvar Perfil», «Aplicar», trocar de perfil e voltar — não escurece barra nenhuma, e que o «Desligar», que é o mesmo trilho em 0%, continua apagado depois da troca de perfil.
 
 **Onde olhar.** Na aba Iluminação, linha «Brilho» de cada coluna: o trilho roxo com o número em porcento; a dica diz que ele grava no perfil ao soltar. Linha «Cor»: os onze quadradinhos (5 é amarelo, 6 é ciano); a cor de cada controle tem borda na coluna dele e um X nas colunas dos outros três. O nome da coluna, na linha «Modelo», termina em BT para quem está no rádio. A prova é a barra no aparelho, e as marcas da linha «Cor».
 
@@ -3857,10 +3861,14 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 21. Na aba Perfis, anote o nome em «Perfil ativo», escolha outro perfil em «Perfis salvos» e clique em «Ativar»; depois escolha o que você anotou e clique em «Ativar» de novo.
 22. Volte à aba Iluminação e confira que as quatro barras estão como no passo 19: a do P3 amarela e a do P4 ciano, as duas pela metade, e as do P1 e do P2 no brilho de antes.
 23. Repita os passos 20 a 22 mais duas vezes.
-24. Devolva os quatro números de brilho aos valores anotados.
-25. Clique no quadradinho da cor do número de cada um para devolver a cor: o terceiro no P3, o quarto no P4.
+24. Clique em «Desligar», na linha «Opções» da coluna do P3, e confira que a barra dele apaga e que o número da linha «Brilho» vai a 0%.
+25. Na aba Perfis, ative outro perfil e depois o anotado, como no passo 21.
+26. Volte à aba Iluminação e confira que a barra do P3 continua apagada, a linha «Brilho» dele continua em 0%, e a borda continua no amarelo.
+27. Clique no quadradinho amarelo da coluna do P3 e confira que a barra volta acesa, amarela.
+28. Devolva os quatro números de brilho aos valores anotados.
+29. Clique no quadradinho da cor do número de cada um para devolver a cor: o terceiro no P3, o quarto no P4.
 
-**Passa quando.** Nos dois controles do rádio a barra escurece junto com o número, some POR COMPLETO no 0 e volta cheia no 100. Mexer no brilho de um nunca mexe no de outro nem nos dois do cabo. A marca da cor não sai do lugar em parada nenhuma, nem no 0: a borda fica na cor do próprio controle, e o X dela fica nas colunas dos outros três. E as três voltas de «Salvar Perfil», «Aplicar» e troca de perfil deixam as quatro barras exatamente como estavam — nenhuma fica mais fraca a cada volta.
+**Passa quando.** Nos dois controles do rádio a barra escurece junto com o número, some POR COMPLETO no 0 e volta cheia no 100. Mexer no brilho de um nunca mexe no de outro nem nos dois do cabo. A marca da cor não sai do lugar em parada nenhuma, nem no 0: a borda fica na cor do próprio controle, e o X dela fica nas colunas dos outros três. As três voltas de «Salvar Perfil», «Aplicar» e troca de perfil deixam as quatro barras exatamente como estavam — nenhuma fica mais fraca a cada volta. E o P3 «Desligado» atravessa a troca de perfil apagado, com o trilho em 0% e a cor dele guardada, e um clique na cor o acende de novo.
 
 **Por controle.**
 
@@ -3869,7 +3877,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P3** — No rádio, e é um dos dois desta célula. Amarelo, e o trilho em 100, na metade, em 0 e de volta.
 * **P4** — No rádio, e é o outro. Ciano, o mesmo caminho.
 
-**A armadilha.** Seis. (1) O trilho multiplica a cor: acesa fraquinha no 0 é o achado. (2) UMA CONEXÃO DE RÁDIO PODE NASCER COM A BARRA TRAVADA, ignorando toda escrita, e nada avisa: se o P3 e o P4 não responderem a nada e o P1 responder, o suspeito é esse, e o que já foi medido devolvendo a barra é «Reiniciar o serviço», na aba Sistema. Não conclua que a culpa é de ter reconectado — «reconectar cura» já caiu nesta casa mais de uma vez. (3) O brilho de três degraus do aparelho é das cinco lâmpadas, não da barra (medido por você em 09/09). (4) Arrastar grava no perfil ativo na hora, e a cor escolhida também: devolva as duas. (5) Olhe as marcas LOGO AO SOLTAR, e não só depois: até 24/09 o X sumia das outras colunas por meio segundo ao soltar, e no 0 sumia de vez. (6) Até 25/09 o brilho entrava DUAS vezes quando o perfil era aplicado de novo: a barra ficava mais fraca a cada «Salvar Perfil» seguido de troca de perfil, e a cada troca de jogo em quem nunca escolheu cor. O número do trilho não muda nesse defeito — só a barra —, e é por isso que os passos 20 a 23 olham a barra e não o número.
+**A armadilha.** Sete. (1) O trilho multiplica a cor: acesa fraquinha no 0 é o achado. (2) UMA CONEXÃO DE RÁDIO PODE NASCER COM A BARRA TRAVADA, ignorando toda escrita, e nada avisa: se o P3 e o P4 não responderem a nada e o P1 responder, o suspeito é esse, e o que já foi medido devolvendo a barra é «Reiniciar o serviço», na aba Sistema. Não conclua que a culpa é de ter reconectado — «reconectar cura» já caiu nesta casa mais de uma vez. (3) O brilho de três degraus do aparelho é das cinco lâmpadas, não da barra (medido por você em 09/09). (4) Arrastar grava no perfil ativo na hora, e a cor escolhida também: devolva as duas. (5) Olhe as marcas LOGO AO SOLTAR, e não só depois: até 24/09 o X sumia das outras colunas por meio segundo ao soltar, e no 0 sumia de vez. (6) Até 25/09 o brilho entrava DUAS vezes quando o perfil era aplicado de novo: a barra ficava mais fraca a cada «Salvar Perfil» seguido de troca de perfil, e a cada troca de jogo em quem nunca escolheu cor. O número do trilho não muda nesse defeito — só a barra —, e é por isso que os passos 20 a 23 olham a barra e não o número. (7) Até 25/09 o «Desligar» gravava o preto como a COR do controle, e o preto não é cor desde 22/09: a troca de perfil acendia a barra de novo e a cor escolhida estava perdida. Se a barra do P3 acender no passo 26, é o achado.
 
 ---
 
@@ -7162,11 +7170,12 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 11. Confira que a barra de luz colorida do P1 não mudou em nenhum dos três cliques, e anote.
 12. Clique em Forte na coluna do P1, tire o cabo do P1 e ponha de volta.
 13. Confira que as lâmpadas do P1 voltaram no Forte, e anote.
-14. Faça na coluna do P2 a mesma volta: Forte, Fraco e Médio, a barra olhada à parte, e o cabo que sai e volta.
-15. Devolva as colunas do P1 e do P2 às pílulas anotadas.
-16. Anote as respostas lado a lado: os três degraus do P1, a barra do P1, a volta pelo cabo do P1, e o mesmo do P2.
+14. Com o P1 no Forte, abra um jogo que tenha perfil próprio no Hefesto, volte à aba Iluminação com o jogo aberto e confira que a pílula acesa do P1 continua Forte e as lâmpadas dele também; feche o jogo.
+15. Faça na coluna do P2 a mesma volta: Forte, Fraco e Médio, a barra olhada à parte, o cabo que sai e volta, e o jogo que abre.
+16. Devolva as colunas do P1 e do P2 às pílulas anotadas.
+17. Anote as respostas lado a lado: os três degraus do P1, a barra do P1, a volta pelo cabo do P1, a pílula com o jogo aberto, e o mesmo do P2.
 
-**Passa quando.** Os três cliques mudam as lâmpadas de numeração em três degraus que se distinguem a olho — Forte o mais claro, Fraco o mais apagado —, nos dois controles do cabo, e a barra de luz colorida não muda com nenhum deles. O clique numa coluna muda só aquele controle. E o controle que volta pelo cabo volta no degrau que tinha. Se as lâmpadas NÃO mudarem, anote em qual degrau e em qual controle: o report sai com o bit, e o que falhou é o caminho até o plástico.
+**Passa quando.** Os três cliques mudam as lâmpadas de numeração em três degraus que se distinguem a olho — Forte o mais claro, Fraco o mais apagado —, nos dois controles do cabo, e a barra de luz colorida não muda com nenhum deles. O clique numa coluna muda só aquele controle. O controle que volta pelo cabo volta no degrau que tinha. E com o jogo aberto a pílula acesa é a das lâmpadas: até 25/09 ela mostrava o degrau do perfil do jogo enquanto as lâmpadas seguiam no Forte. Se as lâmpadas NÃO mudarem, anote em qual degrau e em qual controle: o report sai com o bit, e o que falhou é o caminho até o plástico.
 
 **Por controle.**
 
@@ -7203,11 +7212,12 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 12. Confira que as lâmpadas do P1 e do P2, que estão no cabo, não mudaram enquanto você clicava na coluna do P3.
 13. Clique em Forte na coluna do P3, segure o PS do P3 por dez segundos até ele desligar e aperte o PS de novo.
 14. Confira que, de volta pelo rádio, as lâmpadas do P3 acendem no Forte, e anote.
-15. Faça na coluna do P4 a mesma volta: Forte, Fraco e Médio, a barra olhada à parte, as testemunhas do cabo e o desligar e religar pelo PS.
-16. Devolva as colunas do P3 e do P4 às pílulas anotadas.
-17. Anote as respostas lado a lado: os três degraus do P3, a barra do P3, a volta pelo rádio do P3, o mesmo do P4, e as testemunhas do cabo.
+15. Com o P3 no Forte, abra um jogo que tenha perfil próprio no Hefesto, volte à aba Iluminação com o jogo aberto e confira que a pílula acesa do P3 continua Forte e as lâmpadas dele também; feche o jogo.
+16. Faça na coluna do P4 a mesma volta: Forte, Fraco e Médio, a barra olhada à parte, as testemunhas do cabo, o desligar e religar pelo PS, e o jogo que abre.
+17. Devolva as colunas do P3 e do P4 às pílulas anotadas.
+18. Anote as respostas lado a lado: os três degraus do P3, a barra do P3, a volta pelo rádio do P3, a pílula com o jogo aberto, o mesmo do P4, e as testemunhas do cabo.
 
-**Passa quando.** Os três cliques mudam as lâmpadas de numeração em três degraus que se distinguem a olho — Forte o mais claro, Fraco o mais apagado —, nos dois controles do rádio, e a barra de luz colorida não muda com nenhum deles. As lâmpadas do P1 e do P2 ficam paradas o tempo todo: o clique numa coluna não pode mexer no outro controle. E o controle que volta pelo rádio acende no degrau que tinha. Se as lâmpadas do P3 ou do P4 NÃO mudarem, anote em qual degrau e em qual controle.
+**Passa quando.** Os três cliques mudam as lâmpadas de numeração em três degraus que se distinguem a olho — Forte o mais claro, Fraco o mais apagado —, nos dois controles do rádio, e a barra de luz colorida não muda com nenhum deles. As lâmpadas do P1 e do P2 ficam paradas o tempo todo: o clique numa coluna não pode mexer no outro controle. O controle que volta pelo rádio acende no degrau que tinha. E com o jogo aberto a pílula acesa é a das lâmpadas: até 25/09 ela mostrava o degrau do perfil do jogo enquanto as lâmpadas seguiam no Forte. Se as lâmpadas do P3 ou do P4 NÃO mudarem, anote em qual degrau e em qual controle.
 
 **Por controle.**
 
