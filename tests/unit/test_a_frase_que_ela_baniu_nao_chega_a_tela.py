@@ -47,6 +47,7 @@ from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
     FRASES_BANIDAS,
     frase_banida_em,
 )
+from tests.conftest import skip_sem_gi_real
 
 RAIZ = Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
@@ -171,6 +172,7 @@ def test_a_lista_tem_as_quatro_e_a_busca_e_por_substring() -> None:
     assert frase_banida_em("Modo Nativo ligado · Ponte com o jogo desligada") is None
 
 
+@skip_sem_gi_real
 def test_o_funil_de_execucao_denuncia_a_frase_e_nao_mata_a_janela(capsys) -> None:
     """O caminho de RUNTIME DENUNCIA e pinta — 13/09/2026.
 
@@ -385,6 +387,7 @@ def test_o_buraco_do_terceiro_trecho_estava_aberto_e_fechou() -> None:
     assert busca(FRASES_BANIDAS, metade_que_sobra) == "gatilhos ficam duros"
 
 
+@skip_sem_gi_real
 def test_o_trecho_curto_que_a_sprint_propunha_pegaria_frase_inocente() -> None:
     """POR QUE NÃO ``"como no PS5"``, que era o proposto — e é medição, não gosto.
 
