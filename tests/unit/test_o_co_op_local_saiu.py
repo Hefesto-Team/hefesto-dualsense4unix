@@ -1,4 +1,4 @@
-"""O-CO-OP-LOCAL-SAI-01 — o Estilo «Co-op local» saiu, e a tela parou de tratar o co-op como um modo.
+"""O-CO-OP-LOCAL-SAI-01 — o Estilo «Co-op local» saiu, e a tela não trata o co-op como modo.
 
 O pedido é dela (`D-2409-O-CO-OP-LOCAL-SAI`), e ela confirmou a leitura: o
 Hefesto dá um controle virtual a cada jogador SEMPRE, do P1 ao P4, e o co-op não
@@ -89,7 +89,7 @@ def test_o_coop_nao_volta_ao_dono_dos_estilos() -> None:
 def test_os_de_fabrica_sao_os_que_tem_receita() -> None:
     """`DE_FABRICA` é `ESTILOS` sem o «Personalizado», na mesma ordem."""
     esperado = tuple(e for e in estilos_de_jogo.ESTILOS if e.chave != "personalizado")
-    assert estilos_de_jogo.DE_FABRICA == esperado
+    assert esperado == estilos_de_jogo.DE_FABRICA
     assert len(estilos_de_jogo.DE_FABRICA) == len(estilos_de_jogo.ESTILOS) - 1
 
 
@@ -119,7 +119,7 @@ def test_a_dica_da_aba_perfis_conta_pelo_dono() -> None:
         f"{len(estilos_de_jogo.DE_FABRICA)}")
     fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/aba10.py").read_text(
         encoding="utf-8")
-    digitada = re.search(r"Os (%s) de fábrica" % "|".join(_LIDO), fonte)
+    digitada = re.search(rf"Os ({'|'.join(_LIDO)}) de fábrica", fonte)
     assert digitada is None, (
         f"a conta da dica voltou a ser digitada no gerador: «{digitada.group(0)}»")
 
