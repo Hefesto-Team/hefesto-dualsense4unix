@@ -742,6 +742,37 @@ class TestOsEnsaiosGravamFechadoLeemEApagam:
         assert "(lida e apagada)" not in saida, "a saída diz que leu uma captura que não existiu"
         assert not list(dubles.tmp.glob("byte-no-fio-*")), "a pasta da captura ficou"
 
+    @pytest.mark.parametrize("nome", ["byte_no_fio", "a_captura_armada_do_som_no_radio"])
+    def test_a_entrega_que_falha_vira_queixa_nos_dois_ensaios(
+        self, tmp_path: Path, dubles: Dubles, monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str], nome: str,
+    ) -> None:
+        """O ``sudo`` venceu no meio (a captura armada espera minutos): o relatório diz.
+
+        O ``btmon`` de mentira grava como quem mede, então a leitura ainda passa;
+        o que se confere é que os DOIS chamadores levam a queixa do ciclo à saída.
+        """
+        _executavel(dubles.bin / "sudo", _SUDO.replace(
+            'printf \'%s\\n\' "$*" >> "$SUDO_DE_MENTIRA_LOG"\n',
+            'printf \'%s\\n\' "$*" >> "$SUDO_DE_MENTIRA_LOG"\n'
+            'case "$*" in *chown*) echo "sudo: a password is required" >&2; exit 1 ;; esac\n',
+        ))
+        assert "*chown*" in (dubles.bin / "sudo").read_text(encoding="utf-8")
+        modulo = _carregar(nome)
+        _preparar_ensaio(modulo, tmp_path, dubles, monkeypatch)
+        if nome == "byte_no_fio":
+            monkeypatch.setattr(sys, "argv", ["byte_no_fio.py", "--segundos", "0.05"])
+            assert modulo.main() == 0
+        else:
+            monkeypatch.setattr(
+                modulo, "escutar_o_hidraw", lambda *a, **k: modulo.LeituraDoHidraw()
+            )
+            assert modulo.main(["--exigir-mac", MAC_DE_MENTIRA, "--segundos", "0.1"]) == 0
+        saida = capsys.readouterr().out
+        assert "a captura não foi entregue a quem mede (rc=1)" in saida, saida
+        (caminho, _, _), = dubles.escritas()
+        assert not Path(caminho).parent.exists(), "a pasta da captura ficou"
+
 
 _CAI_NO_MEIO = """\
 import os, sys, time
