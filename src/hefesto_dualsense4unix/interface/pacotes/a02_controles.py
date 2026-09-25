@@ -4419,7 +4419,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         #
         # O QUE O DAEMON DESTA ÁRVORE RESPONDE, medido em 06/09/2026: o corpo
         # de `mic.canal.set` NÃO traz `por_uniq` — quem o traz é o
-        # `mic.volume.set` (`daemon/ipc_handlers.py:6500`). O ato do microfone
+        # `mic.volume.set` (`daemon/ipc_handlers.py:6859`). O ato do microfone
         # monta a resposta em `AtoDoMicrofone.como_corpo`
         # (`daemon/subsystems/hotkey.py:1582`), e lá o campo não existe. Então
         # `alvo_honrado` devolve `None` aqui, esta linha fica CALADA contra o
@@ -4472,7 +4472,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         #
         # ISTO ERA DELEGADO AO DAEMON, e delegar não é travar: a linha abaixo
         # mandava `muted=True` sem volume e contava com a recusa do
-        # `ipc_handlers.py:5647` para não estragar nada. Recusa de longe é
+        # `ipc_handlers.py:6299-6303` para não estragar nada. Recusa de longe é
         # recusa que depende do outro lado continuar recusando.
         #
         # A FRASE NÃO É A DO MOTOR, e a diferença está medida: `DICA_SPEAKER_
@@ -4496,7 +4496,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         lido = speaker_do_entry(dele)
         # O VOLUME VAI JUNTO QUANDO SE SABE, e a razão é uma recusa do daemon,
         # não zelo: `speaker.set {muted}` sem volume conhecido é ERRO
-        # (`ipc_handlers.py:5647`), porque mudo como primeira escrita tranca o
+        # (`ipc_handlers.py:6299-6303`), porque mudo como primeira escrita tranca o
         # alto-falante em zero e o próprio mudo não o solta. O desenho já apaga
         # o botão nesse estado (`alto_pode` do `aba02.py`); esta linha é a
         # segunda trava, para o clique que chegar mesmo assim.

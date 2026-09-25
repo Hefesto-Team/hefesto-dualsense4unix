@@ -1327,8 +1327,8 @@ class ProfileManager:
         **FATO ERRADO, SUBSTITUÍDO — 03/09/2026.** Esta linha dizia que o
         global *"escreveu em todo mundo (``uniq=None`` = broadcast)"*. Medido:
         ``set_speaker_volume(uniq=None)`` chama ``_handle_for(None)``
-        (``core/backend_pydualsense.py:5842``), que devolve **o handle
-        PRIMÁRIO** (``:4611-4623``) — um só, nunca todos. A família de áudio
+        (``core/backend_pydualsense.py:6315``), que devolve **o handle
+        PRIMÁRIO** (``:6347-6352``) — um só, nunca todos. A família de áudio
         inteira compartilha esse ``_handle_for``, e por isso ela não se
         comporta como a barra de luz ou a vibração, que têm broadcast de
         verdade. **Consequência, e ela não é desta frente:** numa mesa de dois,
