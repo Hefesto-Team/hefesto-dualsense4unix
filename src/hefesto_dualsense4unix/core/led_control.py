@@ -427,16 +427,29 @@ def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
     do_global: list[PecaDaMesa] = []
 
     paleta = tuple(_PLAYER_SLOT_COLORS.values())
+    # O QUE AS OUTRAS PEÇAS ACENDEM E NÃO VÃO LARGAR — conferência da
+    # A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01, 25/09/2026. `tomadas` só conhece
+    # quem já passou na ordem, e o global só entra na segunda volta: sem a
+    # paleta, o fóssil do P3 a 50% ia para o azul a 50% com o P1 no azul
+    # GLOBAL a 82% ao lado, e o fóssil do P1 ia para o azul a 82% com o P4
+    # escolhido azul a 50% logo atrás na ordem — o byte livre, o tom não. O
+    # deslocado evita também o tom de toda peça que fica onde está (quem não
+    # é fóssil); o fóssil larga a cor dele, e por isso não reserva nada.
+    ficam: list[tuple[str, RGB]] = [
+        (peca.uniq, peca.pedida) for peca in mesa
+        if peca.pedida is not None and peca.pedida != _APAGADA
+        and not _e_fossil(peca, numeros)
+    ]
 
-    def _tomado(acesa: RGB, tons: tuple[RGB, ...]) -> bool:
+    def _tomado(acesa: RGB, tons: tuple[RGB, ...], uniq: str) -> bool:
         # O TOM, E NÃO O BYTE — 25/09/2026. O azul do P1 a 82% e o azul cheio
         # são bytes diferentes e a mesma cor; ver `_acende_o_tom`.
-        if acesa in tomadas:
+        acesas = [*tomadas, *(luz for dono, luz in ficam if dono != uniq)]
+        if acesa in acesas:
             return True
         return any(
             _acende_o_tom(luz, tom)
-            for luz in tomadas
-            if luz != _APAGADA
+            for luz in acesas
             for tom in tons
         )
 
@@ -453,7 +466,7 @@ def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
         for acesa, tons in candidatas:
             if acesa == _APAGADA:
                 continue
-            if not _tomado(acesa, tons):
+            if not _tomado(acesa, tons, peca.uniq):
                 return acesa
         return None  # as oito tomadas: recusa, não gira
 
