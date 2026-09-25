@@ -1632,7 +1632,92 @@ async def ligar_o_microfone(
         firmware=firmware.feita,
         motivo=ato.motivo,
     )
+    await _o_disco_guarda_o_ato(daemon, ato)
     return ato
+
+
+async def _o_disco_guarda_o_ato(daemon: DaemonProtocol, ato: AtoDoMicrofone) -> None:
+    """O último ato vale, e o disco o guarda. O-BOTAO-DO-MIC-GRAVA-NO-PERFIL-01.
+
+    **O ACHADO, 25/09/2026**, no journal dela: o perfil Freestyle guardava
+    ``mic.muted: true`` para o P4. Ela ligou o microfone pelo botão do
+    controle às 17:19:55 (``mic_ato … feito=True ligado=True``), o perfil
+    continuou dizendo mudo, e no restart do install, às 18:08:02, o P4 calou
+    de novo: ``profile_mic_mute_applied muted=True origin=replug`` e
+    ``mic_nasce_calado_por_perfil``. O mesmo ciclo às 23h59, 09h32 e 09h56.
+    O P4 não tinha defeito — tinha o registro de um ato velho vencendo o novo.
+
+    **AQUI, E NÃO NO LAÇO DO BOTÃO**, pela razão de sempre deste arquivo: o
+    ato é UMA função com dois chamadores (a borda do plástico e o 🎙 da tela),
+    e gravar só no laço do botão deixaria a tela fora. Os dois gravam no MESMO
+    lugar — o ajuste daquele controle no perfil ativo
+    (`manager.gravar_o_mic_no_perfil_ativo`, com as regras do clique da tela)
+    — e a reconexão lê dali (`reapply_mic_on_connect` e o nascimento, por
+    `o_perfil_pede_silencio`). O nascimento NÃO passa por aqui: ele chama
+    `_metade_do_canal` direto, e nascer não é ato dela — a regra de 18/09
+    (todo controle nasce com o microfone; só um «calado» gravado desliga)
+    continua de pé.
+
+    **O QUE SE GRAVA É A PALAVRA DELA, quando alguma metade ficou de pé.**
+    Calar grava sempre que o firmware ou o canal obedeceram — o silêncio que
+    ela pediu não pode depender da eleição, e é a mesma assimetria da SEXTA
+    PORTA de `_metade_do_canal`. Ligar também: o canal recusado por rádio
+    (a ponte que demora a publicar) é o desfecho COMUM, e sem a gravação a
+    reconexão seguinte a calaria outra vez — que é a queixa inteira. Só o ato
+    em que NADA aconteceu (as duas metades recusadas) não vai ao disco: o
+    arquivo não pode dizer o que o aparelho nunca teve.
+
+    **E A SESSÃO LEMBRA O ATO**, além do disco (`StateStore.lembrar_o_ato_do_mic`):
+    a troca automática pode pôr outro perfil no lugar, com um registro mais
+    velho deste controle, e a reconexão seguinte leria esse registro. A troca
+    EXPLÍCITA de perfil esquece a lembrança — ela é, ela mesma, ato dela.
+
+    Nunca levanta: o ato já aconteceu no aparelho, e um `.json` ilegível não
+    pode transformá-lo em traceback no laço do botão.
+    """
+    if not (ato.canal_no_sistema.feita or ato.firmware.feita):
+        logger.info("mic_ato_nao_gravado", uniq=ato.uniq, motivo="nada_ficou_de_pe")
+        return
+    from hefesto_dualsense4unix.profiles.manager import chave_de_peca_que_grava
+
+    chave = chave_de_peca_que_grava(str(ato.uniq or ""))
+    if chave is None:
+        logger.info("mic_ato_nao_gravado", uniq=ato.uniq, motivo="sem_endereco_de_peca")
+        return
+    mudo = not ato.ligado
+    store = getattr(daemon, "store", None)
+    lembrar = getattr(store, "lembrar_o_ato_do_mic", None)
+    if callable(lembrar):
+        try:
+            lembrar(chave, mudo)
+        except Exception:  # best-effort: o ato já aconteceu no aparelho
+            logger.debug("mic_ato_nao_lembrado", uniq=chave, exc_info=True)
+    ativo = getattr(store, "active_profile", None)
+    try:
+        nome, gravou, motivo = await daemon._run_blocking(
+            _gravar_o_ato_no_perfil, ativo if isinstance(ativo, str) else None, chave, mudo
+        )
+    except Exception as exc:
+        logger.warning("mic_ato_nao_gravado", uniq=chave, motivo="erro", err=str(exc))
+        return
+    if not gravou:
+        logger.info("mic_ato_nao_gravado", uniq=chave, perfil=nome, motivo=motivo)
+
+
+def _gravar_o_ato_no_perfil(
+    ativo: str | None, chave: str, mudo: bool
+) -> tuple[str | None, bool, str | None]:
+    """Resolve o perfil que grava e grava. POSICIONAIS: `_run_blocking(fn, *args)`.
+
+    Disco (ler o perfil, gravar o `.json`): corre no worker, nunca no laço.
+    """
+    from hefesto_dualsense4unix.profiles.manager import (
+        gravar_o_mic_no_perfil_ativo,
+        nome_do_perfil_que_grava,
+    )
+
+    nome = nome_do_perfil_que_grava(ativo)
+    return gravar_o_mic_no_perfil_ativo(nome, chave=chave, muted=mudo)
 
 
 async def _metade_do_canal(
