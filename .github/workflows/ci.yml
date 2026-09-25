@@ -41,6 +41,35 @@ jobs:
         with:
           fetch-depth: 0
       - run: bash scripts/check_anonymity.sh
+      # O QUE OS PORTÕES DESTE JOB IMPORTAM — 25/09/2026
+      # (O-CI-DA-DEV-VOLTA-A-VERDE-01). Este job rodava no `python3` pelado do
+      # runner, e a corrida 36119169814 reprovou no segundo passo com
+      # `No module named 'playwright'`. Medido num clone limpo, passo a passo,
+      # o que falta a cada um: o `playwright` (as três réguas do Chrome), as
+      # dependências do produto (`check_cores_…` importa o produto, que pede o
+      # `structlog`), o `pytest` (quatro passos) e o GTK do sistema — o
+      # `check_a_altura_do_cartao` importa o gerador `aba02`, e ele importa
+      # `app.actions`, que carrega o Gtk no topo.
+      #
+      # O `.[dev]` é a casa declarada do playwright e do pytest (ver o
+      # `pyproject.toml`), e o GTK vem pelo mesmo caminho do job `gtk-real`: o
+      # Python DO SISTEMA com um venv que enxerga o `dist-packages`. O venv mora
+      # FORA do checkout de propósito: vários portões daqui varrem o disco da
+      # árvore, e milhares de arquivos de biblioteca dentro dela seriam lidos
+      # como se fossem da casa. As fontes são as que o desenho pede, pela mesma
+      # razão escrita no `gtk-real` — a altura do cartão é medida em texto.
+      - name: Instalar o que os portões importam
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            python3-venv python3-gi \
+            gir1.2-glib-2.0 gir1.2-gtk-3.0 gir1.2-gdkpixbuf-2.0 \
+            gir1.2-pango-1.0 gir1.2-atk-1.0 gir1.2-harfbuzz-0.0 gir1.2-freedesktop \
+            fonts-space-grotesk-ttf fonts-jetbrains-mono
+          /usr/bin/python3 -m venv --system-site-packages "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --upgrade pip
+          "$RUNNER_TEMP/venv/bin/pip" install -e ".[dev]"
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
       - run: python3 scripts/check_pecas_do_dualsense.py
       # O irmão do de cima, para a COR: os 28 modelos do
       # docs/data/cores-do-dualsense.csv contra o que o navegador pinta, zona a
