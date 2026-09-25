@@ -348,6 +348,18 @@ def esconde_e_volta(request: pytest.FixtureRequest,
     return fora
 
 
+def _fim_do_escondido(fora: Any) -> float:
+    """O INSTANTE em que a página disse `vista` de novo, pelo aviso anotado.
+
+    O roteiro vê a volta até 50 ms depois, e o fio lê já na volta: o tique que
+    pinta o estado novo cairia dentro da fase escondida se ela terminasse na
+    marca do roteiro.
+    """
+    return next((t for t, escondida, _ in fora.avisos
+                 if not escondida and t >= fora.marcos["esconde"]),
+                fora.marcos["mostra"])
+
+
 def _entre(fora: Any, de: float, ate: float) -> list[Any]:
     return [x for x in fora.ticks if de <= x.t <= ate]
 
@@ -356,7 +368,7 @@ def _entre(fora: Any, de: float, ate: float) -> list[Any]:
 # R1 — JANELA ESCONDIDA NÃO TRABALHA, NO TEMPO
 # ===========================================================================
 def test_r1_a_janela_escondida_nao_pinta_nem_pergunta(esconde_e_volta: Any) -> None:
-    """Escondida, zero pintura, zero leitura do estado e zero `pactl`.
+    """Escondida, zero pintura, zero `pactl` e uma leitura do estado por segundo.
 
     A janela minimizada é o caso em que ela joga. O WebKit já parava de
     desenhar, mas o tique seguia montando a carga e mandando-a, dez vezes por
@@ -371,17 +383,24 @@ def test_r1_a_janela_escondida_nao_pinta_nem_pergunta(esconde_e_volta: Any) -> N
         "a página nunca disse que estava escondida — o `hide()` da janela oculta "
         "não chegou ao `document.hidden`, ou o aviso não chegou ao piloto")
     de = fora.marcos["escondeu"] + ASSENTAR_S
-    ate = fora.marcos.get("voltou", fora.marcos["mostra"])
+    ate = _fim_do_escondido(fora)
     dentro = _entre(fora, de, ate)
     assert len(dentro) >= 25, f"poucos tiques escondidos para medir: {len(dentro)}"
     pinturas = [p for p in fora.pinturas if de <= p[0] <= ate]
     assert not pinturas, (
         f"{len(pinturas)} pintura(s) com a janela escondida em "
         f"{fora.pagina} com {fora.n} controle(s)")
+    # ESCONDIDA, O FIO LÊ DE SEGUNDO EM SEGUNDO, e não dez vezes por segundo:
+    # é o que mantém o contexto do coração com a mesa de agora (ver
+    # `test_r1_o_coracao_nao_bate_por_quem_saiu_escondido`).
+    import hefesto_vivo as hv
+
     leituras = dentro[-1].leituras - dentro[0].leituras
-    assert leituras == 0, (
-        f"{leituras} leitura(s) do estado com a janela escondida — o fio do "
-        "estado tinha de estar pausado")
+    passo = hv.LeitorDoEstado.SEGUNDOS_ENTRE_LEITURAS_ESCONDIDA
+    teto = int((dentro[-1].t - dentro[0].t) / passo) + 1
+    assert leituras <= teto, (
+        f"{leituras} leitura(s) do estado em {dentro[-1].t - dentro[0].t:.1f} s "
+        f"com a janela escondida — o teto é uma a cada {passo} s ({teto})")
     pactl = [c for t, c in fora.pactl if de <= t <= ate]
     assert not pactl, f"`pactl` com a janela escondida: {pactl[:4]}"
     assert all(x.ondas == 0 for x in dentro), (
@@ -400,12 +419,67 @@ def test_r1_o_coracao_segue_batendo_escondido(esconde_e_volta: Any) -> None:
     """
     fora = esconde_e_volta
     de = fora.marcos["escondeu"] + ASSENTAR_S
-    ate = fora.marcos.get("voltou", fora.marcos["mostra"])
+    ate = _fim_do_escondido(fora)
     dentro = _entre(fora, de, ate)
     batidas = dentro[-1].batidas - dentro[0].batidas
     assert batidas >= 2, (
         f"{batidas} batida(s) do coração em {ate - de:.1f} s com a janela "
         "escondida e um teste de motor em curso")
+
+
+def _roteiro_o_controle_sai_escondido(fora: Any, piloto: Any, t: float) -> bool:
+    """1 s à vista; a janela se esconde; escondida, o controle do teste sai."""
+    marcos = fora.marcos
+    if t < 1.0:
+        return True
+    if "esconde" not in marcos:
+        marcos["esconde"] = time.monotonic()
+        piloto.tela.janela.hide()
+        return True
+    if piloto._escondida and "saiu" not in marcos:
+        # O CONTROLE EM TESTE É O PRIMEIRO DA MESA (ver `_correr`), e o outro
+        # fica: é nele que o par sem endereço cairia.
+        st = copy.deepcopy(fora.estado.base)
+        st["controllers"] = st["controllers"][1:]
+        fora.estado.fixo = st
+        marcos["saiu"] = time.monotonic()
+    return "saiu" not in marcos or time.monotonic() - marcos["saiu"] < 4.5
+
+
+@pytest.fixture(scope="module")
+def o_controle_sai_escondido(publicado_de_hoje: pathlib.Path) -> SimpleNamespace:
+    return _correr(publicado_de_hoje, "02-controles.html", 2,
+                   _roteiro_o_controle_sai_escondido)
+
+
+def test_r1_o_coracao_nao_bate_por_quem_saiu_escondido(
+        o_controle_sai_escondido: Any) -> None:
+    """Escondida, o controle do teste de motor sai da mesa: o coração para.
+
+    O coração bate com o CONTEXTO do tique, e a guarda dele é o controle estar
+    na mesa (`a05_vibracao._bater_o_coracao_do_teste`): quem saiu tem o teste
+    parado. Com o fio do estado parado e o contexto de antes de esconder, o
+    teste de quem saiu seguia batendo — e o `rumble.set` não leva endereço: o
+    par cai no controle que ficou, que vibra até a janela voltar à vista.
+    Escondida, o fio lê de segundo em segundo, e o contexto anda com ele.
+
+    MORDIDA: faça o fio parar de ler com a janela escondida (o `_laco` esperar
+    o `retomar()` sem ler), ou tire `_o_contexto_anda_escondido` do ramo da
+    janela escondida no `_tique`, e as batidas seguem depois da saída.
+    """
+    fora = o_controle_sai_escondido
+    assert "saiu" in fora.marcos, "a janela nunca se escondeu para o controle sair"
+    import hefesto_vivo as hv
+
+    # Uma leitura escondida e um batimento de folga.
+    de = fora.marcos["saiu"] + 2 * hv.LeitorDoEstado.SEGUNDOS_ENTRE_LEITURAS_ESCONDIDA
+    depois = [x for x in fora.ticks if x.t >= de]
+    assert len(depois) >= 10, f"poucos tiques depois da saída: {len(depois)}"
+    assert all(x.escondida for x in depois), "a janela voltou à vista no meio"
+    batidas = depois[-1].batidas - depois[0].batidas
+    assert batidas == 0, (
+        f"{batidas} batida(s) do coração por um controle que saiu da mesa com a "
+        "janela escondida — o par cairia no controle que ficou")
 
 
 def test_r1_na_volta_a_carga_vai_inteira_e_com_estado_novo(esconde_e_volta: Any) -> None:

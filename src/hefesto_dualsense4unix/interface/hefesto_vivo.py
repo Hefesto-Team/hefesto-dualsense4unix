@@ -2924,6 +2924,12 @@ class LeitorDoEstado:
     que recebia — a mudança é quem espera pela resposta, não quantas são.
     """
 
+    #: COM A JANELA ESCONDIDA, UMA LEITURA POR SEGUNDO — A-JANELA-ABERTA-NAO-
+    #: GASTA-O-PROCESSADOR-01. É o espaçamento do coração, que bate com o
+    #: contexto lido daqui: mais espaçado, o coração bateria mais de uma vez por
+    #: um controle que já saiu.
+    SEGUNDOS_ENTRE_LEITURAS_ESCONDIDA = 1.0
+
     def __init__(
         self,
         ler: Callable[[], dict[str, Any]] | None = None,
@@ -2941,10 +2947,12 @@ class LeitorDoEstado:
         self._geracao = 0
         self._parar = threading.Event()
         #: A JANELA À VISTA — A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01. Com
-        #: ela escondida o fio espera AQUI, sem perguntar nada ao daemon: não
-        #: há quem leia a resposta.
+        #: ela escondida o fio lê de `SEGUNDOS_ENTRE_LEITURAS_ESCONDIDA` em
+        #: `SEGUNDOS_ENTRE_LEITURAS_ESCONDIDA`, e `_acordar` o tira da espera
+        #: quando ela volta (ou quando ele tem de parar).
         self._a_vista = threading.Event()
         self._a_vista.set()
+        self._acordar = threading.Event()
         self._fio: threading.Thread | None = None
 
     # -- o que o tique chama, e ele nunca bloqueia -------------------------
@@ -2973,16 +2981,18 @@ class LeitorDoEstado:
     def parar(self) -> None:
         """Pede o fim do fio. Ele é `daemon`, então o processo não o espera."""
         self._parar.set()
-        # ACORDA O FIO PAUSADO, senão ele ficaria esperando a janela voltar.
-        self._a_vista.set()
+        # ACORDA O FIO ESCONDIDO, senão ele terminaria a espera longa antes.
+        self._acordar.set()
 
     def pausar(self) -> None:
-        """A janela foi escondida: o fio para de ler até `retomar()`."""
+        """A janela foi escondida: o fio passa a ler de segundo em segundo."""
         self._a_vista.clear()
+        self._acordar.clear()
 
     def retomar(self) -> None:
-        """A janela voltou: a próxima leitura sai um intervalo depois."""
+        """A janela voltou: o fio acorda, lê já e volta à cadência do tique."""
         self._a_vista.set()
+        self._acordar.set()
 
     def _uma_leitura(self) -> None:
         try:
@@ -3001,14 +3011,19 @@ class LeitorDoEstado:
         # leitura; ler de novo na primeira volta daria DUAS perguntas ao daemon
         # no mesmo instante — a cadência tem de ser a do tique desde a primeira.
         while not self._parar.is_set():
-            self._parar.wait(self._intervalo)
+            if self._a_vista.is_set():
+                self._parar.wait(self._intervalo)
+            else:
+                # ESCONDIDA: uma leitura por segundo, e não nenhuma. O coração
+                # bate com o contexto que sai daqui, e a guarda dele é o
+                # controle estar na mesa: com o fio parado, o teste de um
+                # controle que saiu seguia batendo, e o par sem endereço caía
+                # no controle que ficou (conferência de 25/09/2026).
+                self._acordar.wait(max(self._intervalo,
+                                       self.SEGUNDOS_ENTRE_LEITURAS_ESCONDIDA))
+                self._acordar.clear()
             if self._parar.is_set():
                 return
-            if not self._a_vista.is_set():
-                # PAUSADO: espera a janela voltar e recomeça a volta, para que
-                # a primeira leitura saia um intervalo depois da volta.
-                self._a_vista.wait()
-                continue
             self._uma_leitura()
 
 
@@ -3566,8 +3581,9 @@ class Piloto:
         seguia montando e mandando a carga inteira dez vezes por segundo: 45%
         na banca, com a tela parada.
 
-        Escondida, o fio do estado pausa, as ondas soltam os nós e o tique só
-        bate o coração (esconder não é largar). Na volta, a carga vai inteira e
+        Escondida, o fio do estado lê de segundo em segundo, as ondas soltam os
+        nós e o tique só anda o contexto e bate o coração (esconder não é
+        largar). Na volta, a carga vai inteira e
         só depois de o leitor trazer um estado NOVO: a tela fica com o último
         quadro por um tique, e não pinta o estado de antes de esconder.
 
@@ -3983,8 +3999,14 @@ class Piloto:
             self._agendar()
 
     # -- a pintura ---------------------------------------------------------
-    def _contexto(self, st: dict[str, Any]) -> tuple[pacotes.Contexto, dict[str, str]]:
-        """O contexto do tique, e o dicionário `uniq → pref` para traduzir."""
+    def _contexto(self, st: dict[str, Any], *,
+                  perguntar: bool = True) -> tuple[pacotes.Contexto, dict[str, str]]:
+        """O contexto do tique, e o dicionário `uniq → pref` para traduzir.
+
+        `perguntar=False` é o da janela escondida: o contexto anda, e a cor do
+        plástico e os externos não são perguntados (ver
+        `_o_contexto_anda_escondido`).
+        """
         ctx_conectados = [c for c in (st.get("controllers") or [])
                           if c.get("connected", True)]
         # A COR DO PLÁSTICO vem do leitor, que responde `{}` até a primeira
@@ -3996,13 +4018,15 @@ class Piloto:
         # instante virava «Não sei» até ela fechar a janela.
         self.leitor.esquecer_ausentes(
             {str(c.get("uniq") or "") for c in ctx_conectados})
-        self.leitor.disparar(ctx_conectados)
+        if perguntar:
+            self.leitor.disparar(ctx_conectados)
         conectados = ctx_conectados
         # OS QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026. A pergunta sai em
         # thread e a resposta é lida do cache, pela mesma razão da cor do
         # plástico três linhas acima: ela fala com `/dev/input` e com um
         # subprocess, e no tique travaria o laço do GTK inteiro.
-        self._talvez_ler_os_externos()
+        if perguntar:
+            self._talvez_ler_os_externos()
         mesa = mesa_viva.mesa_do_estado(st, self.leitor.conhecidos())
         para_pref = {str(c.get("uniq") or ""): c["pref"] for c in mesa}
         ctx = pacotes.Contexto(state=st, mesa=mesa, conectados=conectados, estados={},
@@ -4126,6 +4150,28 @@ class Piloto:
             self._st_de_agora = self._da_resposta(st_lido, erro_lido)
         return self._st_de_agora
 
+    def _o_contexto_anda_escondido(self) -> None:
+        """Com a janela escondida, o CONTEXTO anda com o leitor; a pintura não.
+
+        O coração bate com ele, e a guarda do coração é o controle estar na
+        mesa (`a05_vibracao._bater_o_coracao_do_teste`). Com o contexto de
+        antes de esconder, o teste de um controle que saiu seguia batendo, e o
+        `rumble.set`, que não leva endereço, caía no controle que ficou. A poda
+        dos caches de quem saiu (`podar_o_que_saiu`) lê o mesmo contexto.
+
+        Só quando o leitor traz resposta nova, e sem as perguntas que o tique
+        faz (a cor do plástico e os externos): ninguém vê a tela.
+        """
+        if self._estado_vivo.ultimo()[2] == self._geracao_vista:
+            return
+        st = self._estado_do_tique()
+        try:
+            ctx, _ = self._contexto(st, perguntar=False)
+        except Exception as e:
+            print(f"[mesa] não montou: {e}", file=sys.stderr)
+            return
+        self._mesa_de_agora, self._ctx_de_agora = ctx.mesa, ctx
+
     def _esperando_o_estado_novo(self) -> bool:
         """A janela voltou e o leitor ainda não trouxe resposta depois disso?"""
         if self._geracao_na_volta is None:
@@ -4167,6 +4213,7 @@ class Piloto:
         # volta, o tique espera o leitor trazer um estado NOVO (ver
         # `_a_janela_mudou`) e então manda a carga inteira.
         if self._escondida or self._esperando_o_estado_novo():
+            self._o_contexto_anda_escondido()
             pacotes.bater_os_coracoes(self._ctx_de_agora, ponte)
             return True
         # O TIQUE NÃO ENFILEIRA — A-TELA-SAMBA-01, e é a cura de *"trava por
