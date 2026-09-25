@@ -202,7 +202,7 @@ install -Dm644 assets/modprobe.d/hefesto-btusb-no-autosuspend.conf \
 install -Dm644 assets/modprobe.d/hefesto-hid-nintendo.conf \
     %{buildroot}/usr/lib/modprobe.d/hefesto-hid-nintendo.conf
 # Contencao BT (2026-07-25): opcoes do hid-playstation patchado
-# (feature_retries=2). Mesmo fail-safe: sem o modulo DKMS o in-tree ignora.
+# (o feature_retries, no valor que a conf declara). Mesmo fail-safe: sem o modulo DKMS o in-tree ignora.
 install -Dm644 assets/modprobe.d/hefesto-hid-playstation.conf \
     %{buildroot}/usr/lib/modprobe.d/hefesto-hid-playstation.conf
 # Onda T (corretor, achado #9): a conf acima e INERTE sem o MODULO DKMS.

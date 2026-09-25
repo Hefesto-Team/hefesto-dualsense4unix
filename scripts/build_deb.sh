@@ -307,7 +307,7 @@ install -Dm644 assets/modprobe.d/hefesto-hid-nintendo.conf \
     "${STAGING}/usr/lib/modprobe.d/hefesto-hid-nintendo.conf"
 install -Dm644 assets/modprobe.d/hefesto-hid-nintendo.conf \
     "${STAGING}/usr/share/hefesto-dualsense4unix/modprobe.d/hefesto-hid-nintendo.conf"
-# Contenção BT (2026-07-25): opções do hid-playstation patchado (feature_retries=2). Mesmos DOIS destinos e mesmo
+# Contenção BT (2026-07-25): opções do hid-playstation patchado (o feature_retries, no valor que a conf declara). Mesmos DOIS destinos e mesmo
 # fail-safe da Onda T: sem o módulo DKMS o in-tree só loga "unknown parameter
 # ignored" e sobe normal, então a conf viaja em todo formato (paridade).
 install -Dm644 assets/modprobe.d/hefesto-hid-playstation.conf \
