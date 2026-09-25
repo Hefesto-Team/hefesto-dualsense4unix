@@ -159,11 +159,11 @@ def identidade_do_vpad(vpad: Any) -> dict[str, Any]:
     `getattr` tipado: nada aqui exige um backend específico, e um vpad dublado
     por mock devolve `None` em vez de derrubar o `json.dumps` do `state_full`.
 
-    - ``vpad_uniq`` é o MAC FORJADO que o produto carimba no uhid
-      (`player_mac`, faixa localmente administrada `02:fe:00:00:00:0N`) e que
-      sai no `HID_UNIQ` do sysfs. É o único "nó" que um vpad uhid tem: ele
-      nasce por `/dev/uhid` e não guarda ponteiro para /dev nem para /sys.
-      ``None`` no uinput, que é evdev puro e não tem `uniq`.
+    - ``vpad_uniq`` é o MAC FORJADO que o vpad uhid VESTE (`UhidDualSense.mac`:
+      o do aparelho, ou o do número quando não há identidade, e o seguinte deles
+      quando outro vpad vivo já veste aquele — O-VPAD-DO-P1-NAO-REPETE-O-MAC-01)
+      e que sai no `HID_UNIQ` do sysfs. É o único "nó" de um vpad uhid: nasce por
+      `/dev/uhid`, sem ponteiro para /dev nem /sys. ``None`` no uinput, sem `uniq`.
     - ``vpad_indice`` é o inteiro que está DENTRO do nome do vpad, congelado
       quando aquele vpad nasceu.
 
@@ -1237,14 +1237,14 @@ class CoopManager:
             )
             return
 
-        # SPRINT-UHID-VPAD-01 + VPAD-03: `player_index` não é detalhe — no
-        # backend uhid o índice vira o MAC do vpad (02:fe:00:00:00:0N), e MAC
-        # repetido faz o probe do 2º jogador em diante morrer com -EEXIST (co-op
-        # de 4 reduzido a 1). O blueprint é o canônico embutido (nenhuma leitura
-        # do físico): jogador com controle não-DualSense (8BitDo, Pro Controller)
-        # também ganha vpad uhid Edge — decisão de produto do VPAD-09
-        # (uniformidade, dedup segura e rumble via hidraw para todos). O backend
-        # fake veta o uhid (VPAD-08).
+        # SPRINT-UHID-VPAD-01 + VPAD-03: o MAC que o kernel vê é o que o dono dos
+        # vpads vivos VESTE (`uhid_gamepad._MacsDosVpadsVivos`): o do aparelho (sem
+        # identidade, o do número), e o seguinte quando outro vpad vivo já o veste;
+        # dois vivos nunca repetem MAC (O-VPAD-DO-P1-NAO-REPETE-O-MAC-01). O
+        # blueprint é o canônico embutido (nenhuma leitura do físico): jogador com
+        # controle não-DualSense (8BitDo, Pro Controller) também ganha vpad uhid
+        # Edge — decisão de produto do VPAD-09 (uniformidade, dedup segura e rumble
+        # via hidraw para todos). O backend fake veta o uhid (VPAD-08).
         vpad = make_virtual_pad(
             self._flavor(),
             # MÁSCARA-POR-JOGADOR-01 (29/08/2026): o MAC deste jogador. Com ele
@@ -1885,9 +1885,9 @@ class CoopManager:
         - o registro de identidade (`identity_registry`) dá o "Controle N" que
           a GUI, a CLI e a cor automática exibem — keyed por MAC, reservado no
           disconnect, agora estável entre boots (R-23);
-        - o co-op tem o `player_index`, que é o número do JOGADOR para o jogo
-          (índice de alocação do vpad: vira o MAC `02:fe:00:00:00:0N` do uhid,
-          por isso 1..N contíguo e REUSADO quando alguém sai — VPAD-03).
+        - o co-op tem o `player_index`, o índice de ALOCAÇÃO do vpad (1..N
+          contíguo e REUSADO quando alguém sai — VPAD-03); o MAC e o nome do vpad
+          saíram dele (E3 e A-MESMA-LINGUA-01), e ele ficou só como o `fallback`.
 
         São coisas diferentes e as duas estão certas no seu domínio; o erro
         era acender o SEGUNDO na lâmpada. Com o primário cravado em 1 e o Pro
