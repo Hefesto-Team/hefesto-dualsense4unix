@@ -6347,20 +6347,81 @@ _steam_input_do_appid() {
     return 0
 }
 
+# O-DOCTOR-VE-O-CONTROLE-NO-RADIO-01 (25/09/2026). As duas perguntas «há
+# controle agora?» (esta e o `suggest_port`) rodavam `timeout 4 bluetoothctl
+# devices`, e o `timeout` é um BINÁRIO: ele executa o bluetoothctl de verdade e
+# pula o embrulho BLUEZ-586-CTL-01 do começo deste arquivo — e o 5.86, no modo
+# de um comando só, não imprime nada. Com um DualSense conectado pelo rádio, o
+# doctor dizia «controle não detectado agora». Medido na mesa dela depois do
+# install de 25/09.
+#
+# A resposta agora vem do KERNEL (o `uevent` de cada hidraw: LÊ ARQUIVO, não
+# abre nó nem roda nada) para «conectado», e do BlueZ pelo D-Bus para
+# «pareado». Olha todo adaptador, os dois transportes e todo fabricante de
+# controle — o conjunto é o de `integrations/exame_da_mesa.VIDS_DE_CONTROLE`, e a
+# régua (`test_o_doctor_ve_o_controle_no_radio.py`) confere os dois. O vpad fica
+# de fora pela identidade dele (`HID_PHYS=hefesto-vpad`, `uniq` 02:fe).
+_VIDS_DE_CONTROLE="054c 057e 045e 2dc8 0f0d 20d6 28de"
+
+# Imprime `<USB|BT> <vid>:<pid> <uniq>` por controle FÍSICO no kernel agora.
+_controles_no_kernel() {
+    local raiz="${1:-${HEFESTO_HIDRAW_ROOT:-/sys/class/hidraw}}" ue id bus vid pid phys uniq
+    for ue in "${raiz}"/*/device/uevent; do
+        [[ -r "${ue}" ]] || continue
+        id="$(grep -m1 '^HID_ID=' "${ue}" 2>/dev/null | cut -d= -f2)"
+        phys="$(grep -m1 '^HID_PHYS=' "${ue}" 2>/dev/null | cut -d= -f2)"
+        uniq="$(grep -m1 '^HID_UNIQ=' "${ue}" 2>/dev/null | cut -d= -f2)"
+        uniq="${uniq,,}"
+        if [[ "${phys}" == hefesto-vpad* || "${uniq}" == 02:fe:* ]]; then
+            continue
+        fi
+        IFS=: read -r bus vid pid <<<"${id}"
+        vid="${vid: -4}"; vid="${vid,,}"
+        pid="${pid: -4}"; pid="${pid,,}"
+        if [[ " ${_VIDS_DE_CONTROLE} " != *" ${vid} "* ]]; then
+            continue
+        fi
+        case "${bus}" in
+            0003) printf 'USB %s:%s %s\n' "${vid}" "${pid}" "${uniq:-${ue%/device/uevent}}" ;;
+            0005) printf 'BT %s:%s %s\n' "${vid}" "${pid}" "${uniq:-${ue%/device/uevent}}" ;;
+        esac
+    done | sort -u
+}
+
+# Imprime o endereço de cada controle com CHAVE no BlueZ (Paired=true e a classe
+# de joystick ou gamepad), em qualquer adaptador.
+_controles_pareados_no_bluez() {
+    local p cls
+    while IFS= read -r p; do
+        [[ -z "${p}" ]] && continue
+        [[ "$(_dbus_bt_prop "${p}" org.bluez.Device1 Paired)" == "true" ]] || continue
+        cls="$(_dbus_bt_prop "${p}" org.bluez.Device1 Class)"
+        [[ "${cls}" =~ ^[0-9]+$ ]] || continue
+        # A regra de `gesto_de_pareamento.e_controle`: periférico (0x05) e
+        # menor 0x01 (joystick) ou 0x02 (gamepad).
+        if (( ((cls >> 8) & 0x1F) == 5 && ( ((cls >> 2) & 0x0F) == 1 || ((cls >> 2) & 0x0F) == 2 ) )); then
+            printf '%s\n' "${p##*/dev_}"
+        fi
+    done < <(_dbus_bt_device_paths) | sort -u
+}
+
 check_controller() {
     # As duas linhas abaixo LISTAM nós, e nunca abrem nenhum: `[[ -e ]]` e `ls`
     # não fazem `open(2)`. É a exceção declarada no portão da porta
     # (tests/unit/test_a_porta_que_a_casa_construiu_01.py) — quem precisa de um
     # fd de hidraw neste arquivo pede ao broker, em `check_hidraw_broker`.
-    local h hidraw=0
+    local h hidraw=0 vivos pelo_usb pelo_bt
     for h in /dev/hidraw*; do [[ -e "$h" ]] && hidraw=1; done
     [[ "${hidraw}" -eq 1 ]] && info "nós hidraw: $(ls /dev/hidraw* 2>/dev/null | tr '\n' ' ')"
-    if command -v lsusb >/dev/null 2>&1 && lsusb 2>/dev/null | grep -qiE '054c'; then
-        pass "DualSense conectado via USB (vendor 054c)"
-    elif command -v bluetoothctl >/dev/null 2>&1 && timeout 4 bluetoothctl devices 2>/dev/null | grep -qi 'DualSense'; then
-        pass "DualSense pareado via Bluetooth (conecte para usar)"
+    vivos="$(_controles_no_kernel)"
+    pelo_usb="$(grep -c '^USB ' <<<"${vivos}")"
+    pelo_bt="$(grep -c '^BT ' <<<"${vivos}")"
+    if (( pelo_usb + pelo_bt > 0 )); then
+        pass "controle conectado agora: ${pelo_usb} pelo USB e ${pelo_bt} pelo BT"
+    elif [[ -n "$(_controles_pareados_no_bluez)" ]]; then
+        pass "controle pareado pelo BT (conecte para usar)"
     else
-        warn "controle não detectado agora — conecte o DualSense para testar"
+        warn "controle não detectado agora — conecte o controle para testar"
     fi
 }
 
@@ -7468,7 +7529,9 @@ suggest_port() {
         [[ "$(cat "$d/idVendor" 2>/dev/null)" == "054c" ]] && ds_dev="$d"
     done
     if [[ -z "$ds_dev" ]]; then
-        if command -v bluetoothctl >/dev/null 2>&1 && timeout 4 bluetoothctl devices 2>/dev/null | grep -qi 'DualSense'; then
+        # O-DOCTOR-VE-O-CONTROLE-NO-RADIO-01: o kernel, não o `bluetoothctl`
+        # (a razão está em `_controles_no_kernel`).
+        if _controles_no_kernel | grep -q '^BT 054c:'; then
             info "DualSense via Bluetooth (sem caminho USB) -- sem snd-usb-audio, logo sem storm pelo controle"
         else
             info "DualSense não conectado via USB nem Bluetooth -- conecte para avaliar"

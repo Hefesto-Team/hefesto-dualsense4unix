@@ -345,7 +345,7 @@ def _sys_da_mesa(
     for controle, casa, pelo_radio in planos:
         fisico = _no_do_sys(controle, casa if pelo_radio else "usb-0000:0c:00.3-1/input3")
         vpad = _no_do_sys(controle, "hefesto-vpad") if mascara == "dualsense" else None
-        for texto in ([vpad, fisico] if vpad_primeiro else [fisico, vpad]):
+        for texto in [vpad, fisico] if vpad_primeiro else [fisico, vpad]:
             if texto is not None:
                 nos[f"hidraw{n}"] = texto
                 n += 1
