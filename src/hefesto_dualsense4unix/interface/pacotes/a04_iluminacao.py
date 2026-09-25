@@ -1180,7 +1180,11 @@ ENDERECO_DO_BRILHO_DAS_LUZES = "brilho-luzes"
 GESTO_DO_BRILHO_DAS_LUZES = "brilho-luzes"
 #: O que a tela escreve. As palavras são as dela; a chave é a do disco
 #: (`core/led_control.BRILHOS_DAS_LUZES`, que também dá a ordem).
-ROTULO_DO_BRILHO_DAS_LUZES = {"fraco": "Fraco", "medio": "Médio", "forte": "Forte"}
+ROTULO_DO_BRILHO_DAS_LUZES = {
+    "fraco": "Fraco",
+    "medio": "Médio",  # noqa-acento: chave ASCII, o rótulo ao lado
+    "forte": "Forte",
+}
 
 
 def fileira_de_brilhos_das_luzes(escolhido: str, recuo: str = "") -> str:
@@ -3295,7 +3299,9 @@ def _com_o_brilho_das_luzes_gravado(prof: Any, uniq: str, palavra: str) -> Any:
     dele = atuais.get(chave) or ControllerOverrides()
     antes = dele.leds
     if antes is None:
-        novos = LedsConfig(player_led_brightness=palavra)
+        # `model_validate` e não o construtor: a palavra chega como `str` do
+        # clique, e é o esquema quem a confere contra as três.
+        novos = LedsConfig.model_validate({"player_led_brightness": palavra})
     else:
         if ("player_led_brightness" in antes.model_fields_set
                 and antes.player_led_brightness == palavra):

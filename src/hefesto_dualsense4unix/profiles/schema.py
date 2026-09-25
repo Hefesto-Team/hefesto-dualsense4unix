@@ -392,11 +392,11 @@ class LedsConfig(BaseModel):
     #
     # A PALAVRA, e não o degrau do firmware: o `common[42]` é invertido (0 é o
     # forte), e o disco dela diz o que a tela diz. A tradução é de
-    # `core/led_control.degrau_do_brilho_das_luzes`. `medio` sem acento porque
-    # é valor de máquina. Perfil antigo sem o campo valida com o Fraco, o
+    # `core/led_control.degrau_do_brilho_das_luzes`. A palavra do meio vai sem
+    # acento porque é valor de máquina. Perfil antigo sem o campo valida com o Fraco, o
     # brilho de antes da decisão — aditivo, sem migração; ATENÇÃO downgrade,
     # mesma nota do `auto_player_colors` (`extra="forbid"`).
-    player_led_brightness: Literal["fraco", "medio", "forte"] = "fraco"
+    player_led_brightness: Literal["fraco", "medio", "forte"] = "fraco"  # noqa-acento: chave ASCII
 
     @field_validator("lightbar")
     @classmethod
