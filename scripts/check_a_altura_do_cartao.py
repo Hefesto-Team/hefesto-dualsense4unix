@@ -60,8 +60,8 @@ from playwright.sync_api import sync_playwright
 R = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(R / "src"))
 
-from hefesto_dualsense4unix.interface import aba02 as _aba02  # noqa: E402
-from hefesto_dualsense4unix.interface import onde as _onde  # noqa: E402
+from hefesto_dualsense4unix.interface import aba02 as _aba02
+from hefesto_dualsense4unix.interface import onde as _onde
 
 #: A janela do produto abre com 1180px por dentro (`interface/olhar.py`), e é
 #: nessa largura que a conta de `PARA_O_CARD` foi feita. As outras duas são as

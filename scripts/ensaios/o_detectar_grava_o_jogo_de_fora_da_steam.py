@@ -60,27 +60,27 @@ sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 # A janela deste instrumento NÃO nasce na tela dela (TELA-DELA-02).
-from hefesto_dualsense4unix.utils.tela_de_mentira import (  # noqa: E402
+from hefesto_dualsense4unix.utils.tela_de_mentira import (
     garantir_tela_de_mentira,
 )
 
 garantir_tela_de_mentira()
 
-import gi  # noqa: E402
+import gi
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("WebKit2", "4.1")
-from gi.repository import GLib, Gtk  # noqa: E402
+from gi.repository import GLib, Gtk
 
-from hefesto_dualsense4unix.interface import hefesto_vivo, onde  # noqa: E402
-from hefesto_dualsense4unix.interface.pacotes import ponte  # noqa: E402
-from hefesto_dualsense4unix.profiles.loader import (  # noqa: E402
+from hefesto_dualsense4unix.interface import hefesto_vivo, onde
+from hefesto_dualsense4unix.interface.pacotes import ponte
+from hefesto_dualsense4unix.profiles.loader import (
     load_profile,
     profiles_dir,
     save_profile,
 )
-from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile  # noqa: E402
-from hefesto_dualsense4unix.profiles.simple_match import (  # noqa: E402
+from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
+from hefesto_dualsense4unix.profiles.simple_match import (
     detect_simple_preset,
 )
 

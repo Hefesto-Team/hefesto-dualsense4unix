@@ -76,7 +76,7 @@ def iluminacao_sem_automatico() -> tuple[bool, str]:
     sobra_gesto = "auto" in gestos
     n = corpo.count("Automático")
     if sobra_gesto:
-        return False, f"o gesto `auto` ainda existe na página publicada"
+        return False, "o gesto `auto` ainda existe na página publicada"
     if n:
         trechos = [" ".join(m.group(0).split())
                    for m in re.finditer(r".{60}Automático.{60}", corpo, flags=re.S)]

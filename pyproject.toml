@@ -148,6 +148,12 @@ include = [
 line-length = 100
 target-version = "py310"
 exclude = ["tests/fixtures/**"]
+# O `exclude` acima só vale quando o ruff DESCOBRE os arquivos; o `pre-commit`
+# passa cada caminho explícito, e aí o ruff o ignorava. Na corrida 36119169814
+# o job `pre-commit` reprovou sete apontamentos dentro de `tests/fixtures/`, que
+# o `ruff check src/ tests/` do `lint-test` nunca vê. Com o `force-exclude` os
+# dois caminhos dão a mesma resposta (25/09/2026).
+force-exclude = true
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
@@ -187,6 +193,11 @@ select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
 "src/hefesto_dualsense4unix/interface/regerar.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
 
 "tests/**" = ["E402", "I001"]
+# Os testes que SAÍRAM para `arquivados/` em 19/09/2026 são os mesmos testes, com
+# a mesma guarda do GTK antes dos imports (`exigir_gi_real`), e perderam a regra
+# de teste ao mudar de pasta: o `pre-commit` da corrida 36119169814 acusou cinco
+# E402 neles. A regra acompanha o arquivo.
+"arquivados/tests/**" = ["E402", "I001"]
 # CSS-EM-STRING-01 (13/08/2026): o `gerar-mapa.py` embute a folha de estilo do
 # `specs.html` como string literal, e regras CSS de uma linha passam de 100
 # colunas. Quebrar a regra piora a leitura de quem edita o estilo, e `# noqa`

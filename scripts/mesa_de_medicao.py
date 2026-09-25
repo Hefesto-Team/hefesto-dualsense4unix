@@ -654,12 +654,11 @@ def enxuga_os_passos(
             if any(re.match(r, passo) for r, _ in PREPARO_DA_BANCADA):
                 continue
             achou = re.match(_A_ABA_DO_PASSO, passo)
-            if achou:
-                # a PRIMEIRA aba citada é onde o teste mora; se ele volta a
-                # outra no meio, esse passo continua sendo um ato e fica
-                if not aba:
-                    aba = achou.group(1)
-                    continue
+            # a PRIMEIRA aba citada é onde o teste mora; se ele volta a
+            # outra no meio, esse passo continua sendo um ato e fica
+            if achou and not aba:
+                aba = achou.group(1)
+                continue
             sobra.append(passo)
         fora.append((rotulo, "\n".join(sobra)))
     if aba:
