@@ -234,8 +234,11 @@ def test_o_trilho_manda_a_cor_do_disco_e_nao_a_luz_acesa(pac, a04):
     a tomava como pedido e mandava `(14,28,63)`: **subir o brilho escurecia**.
     Com o disco, o alvo é `(40,80,180)` e o que sai é `(28,56,126)`.
 
-    **A MORDIDA:** tire `_a_cor_guardada` do começo da escada do `alvo` e o
-    valor volta a ser a luz acesa reescalada.
+    **A MORDIDA:** troque o `alvo` do gesto `brilho` pela luz acesa
+    (`cor_do_swatch(dele)`) e o valor volta a ser a luz reescalada. Tirar só o
+    `_a_cor_guardada` do começo do `alvo` não morde desde 24/09/2026: o degrau
+    2 de `_a_cor_de_agora` também lê a cor do disco
+    (A-MARCA-DA-COR-NAO-SOME-01), e ela tem de sair dos dois lugares.
     """
     _semear("regua", campos={"lightbar": list(FORA_DA_GUIA),
                              "lightbar_brightness": 0.5})
