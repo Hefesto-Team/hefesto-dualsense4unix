@@ -196,7 +196,10 @@ estável por endereço MAC (replugar recupera o mesmo número).
 > E o JOGO espera junto (`D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO`): com um jogo
 > aberto, o controle virtual do Jogador 1 fica parado enquanto o P1 está fora,
 > e o P2 segue no dele; sem jogo, o P2 assume na hora, porque o P1 também move
-> o mouse do PC. O prazo conta o tempo em que o computador dormiu.
+> o mouse do PC. O prazo conta o tempo em que o computador dormiu. Nessa
+> espera, os atalhos do PS ficam com o próximo da fila que continua ligado — o
+> P2; se ele também saiu, o P3 —, sem ele trocar de número, e voltam ao P1
+> quando ele volta (`D-2409-OS-ATALHOS-NA-ESPERA-FICAM-COM-O-P2`).
 
 Controles externos (Nintendo Pro; 8BitDo em modo Switch no cabo ou em modo
 DirectInput/PS4 por Bluetooth — ver

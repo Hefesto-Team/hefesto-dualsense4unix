@@ -30,7 +30,7 @@ Política (V2-4 + V3-2 + FEAT-HOTKEY-STEAM-01):
 Vocabulário completo dos gestos:
     PS sozinho          abre/foca a Steam (toque de até 700 ms)
     PS + cima / baixo   perfil seguinte / anterior
-    PS + L3             próxima máscara (a do cartão do jogador 1)
+    PS + L3             próxima máscara (a do cartão de quem segura os atalhos)
     PS + R3             próximo modo
     PS + Options        modo jogo
     PS segurado         desligado por padrão (disparava modo-jogo acidental)
