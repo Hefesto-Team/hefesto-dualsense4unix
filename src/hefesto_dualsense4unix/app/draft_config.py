@@ -1736,18 +1736,33 @@ class DraftConfig(BaseModel):
                 campos = override.leds.model_fields_set
                 leds_entry: dict[str, Any] = {}
                 if "lightbar" in campos or "lightbar_brightness" in campos:
-                    rgb = (
-                        tuple(override.leds.lightbar)
-                        if "lightbar" in campos
-                        else self.leds.lightbar_rgb
-                    )
                     brilho = (
                         float(override.leds.lightbar_brightness)
                         if "lightbar_brightness" in campos
                         else self.leds.lightbar_brightness / 100.0
                     )
+                    # O BRILHO SOZINHO NÃO VIRA COR — 25/09/2026,
+                    # A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01. Aqui ele levava a
+                    # cor GLOBAL junto, que é o achado R-20
+                    # `brilho-por-controle-materializa-cor-global` vivo no
+                    # "Aplicar": medido na mesa de quatro real, o P1 a 60% na
+                    # cor do número saía do Aplicar no global do perfil a 60%.
+                    # O brilho viaja só, e o `DraftApplier` o publica como
+                    # fator, como a ativação. A exceção é a do manager
+                    # (`_brilho_materializa_cor`): com o global a 0% não há
+                    # cor a escalar de volta, e a cor vai junto.
+                    materializa = (
+                        "lightbar" not in campos and self.leds.lightbar_brightness <= 0
+                    )
+                    rgb = (
+                        tuple(override.leds.lightbar)
+                        if "lightbar" in campos
+                        else self.leds.lightbar_rgb if materializa else None
+                    )
                     if rgb is not None:
                         leds_entry["lightbar_rgb"] = list(rgb)
+                        leds_entry["lightbar_brightness"] = brilho
+                    elif "lightbar_brightness" in campos:
                         leds_entry["lightbar_brightness"] = brilho
                 if "player_leds" in campos:
                     leds_entry["player_leds"] = [
