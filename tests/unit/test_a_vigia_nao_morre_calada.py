@@ -200,13 +200,13 @@ class TestNenhumScriptTemAForma:
 # lexicográfico (hidraw10 vem antes de hidraw2), então o «último» muda com o
 # tamanho da mesa, e a matriz cobre isso sem escolher o caso.
 MODOS = ("nativo", "dualsense", "xbox")
-CONEXOES = ("usb", "bt", "misto")
+TRANSPORTES = ("usb", "bt", "misto")
 
 
-def _mesa(modo: str, conexao: str, jogadores: int) -> list[str]:
+def _mesa(modo: str, transporte: str, jogadores: int) -> list[str]:
     uniqs = ["", "", "", ""]  # mouse e teclado USB: UNIQ vazio
     for n in range(1, jogadores + 1):
-        pelo_bt = conexao == "bt" or (conexao == "misto" and n % 2 == 0)
+        pelo_bt = transporte == "bt" or (transporte == "misto" and n % 2 == 0)
         uniqs.append(f"aa:bb:cc:00:00:1{n}" if pelo_bt else "")
     if modo == "dualsense":  # o boneco é uhid e tem hidraw; o do xbox é uinput
         uniqs.extend(f"02:fe:00:00:00:0{n}" for n in range(1, jogadores + 1))
@@ -214,17 +214,17 @@ def _mesa(modo: str, conexao: str, jogadores: int) -> list[str]:
 
 
 CASOS = [("nativo", "usb", 0), ("dualsense", "usb", 0), ("xbox", "usb", 0)] + [
-    (modo, conexao, jogadores)
-    for modo, conexao, jogadores in itertools.product(MODOS, CONEXOES, range(1, 5))
+    (modo, transporte, jogadores)
+    for modo, transporte, jogadores in itertools.product(MODOS, TRANSPORTES, range(1, 5))
 ]
 
 
-@pytest.mark.parametrize(("modo", "conexao", "jogadores"), CASOS)
+@pytest.mark.parametrize(("modo", "transporte", "jogadores"), CASOS)
 def test_o_watchdog_roda_inteiro_em_toda_mesa(
-    tmp_path: Path, modo: str, conexao: str, jogadores: int
+    tmp_path: Path, modo: str, transporte: str, jogadores: int
 ) -> None:
     hidraw = tmp_path / "hidraw"
-    for numero, uniq in enumerate(_mesa(modo, conexao, jogadores)):
+    for numero, uniq in enumerate(_mesa(modo, transporte, jogadores)):
         dispositivo = hidraw / f"hidraw{numero}" / "device"
         dispositivo.mkdir(parents=True)
         (dispositivo / "uevent").write_text(f"HID_UNIQ={uniq}\n", encoding="utf-8")
@@ -244,6 +244,6 @@ def test_o_watchdog_roda_inteiro_em_toda_mesa(
         timeout=60,
     )
     assert proc.returncode == 0, (
-        f"a vigia morreu calada com {jogadores} controle(s) em {conexao}, modo {modo} "
+        f"a vigia morreu calada com {jogadores} controle(s) em {transporte}, modo {modo} "
         f"(rc={proc.returncode}, stderr={proc.stderr!r})"
     )
