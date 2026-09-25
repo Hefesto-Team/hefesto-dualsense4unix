@@ -216,7 +216,10 @@ class TestFuncaoContrato:
     def test_instala_a_conf_da_cura_em_etc_modprobe_d(self) -> None:
         assert "install -Dm644" in FN
         assert CONF_ETC in FN
-        assert "bt_probe_retries=3" in FN
+        # O valor é da conf, e a função PERGUNTA a ela (OS-TEXTOS-QUE-A-6E-1-
+        # DEIXOU-VELHOS-01); o `=3` é cobrado na própria conf, em
+        # test_dkms_hid_nintendo_assets.py.
+        assert 'opcao_do_modprobe "${_hidn_conf}" bt_probe_retries' in FN
 
     def test_ativacao_nunca_recarrega_modulo(self) -> None:
         # modprobe.d (o DIRETÓRIO de conf) é legítimo — o PROIBIDO é invocar
