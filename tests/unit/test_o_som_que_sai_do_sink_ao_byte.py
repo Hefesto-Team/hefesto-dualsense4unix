@@ -684,7 +684,7 @@ class TestNadaAquiAfirmaQueSomSaiu:
             texto = self._fonte(relativo)
             for frase in self.PROIBIDAS:
                 assert self.afirmacoes(texto, frase) == [], (
-                    f"{relativo} afirma o que ninguém mediu: {frase!r}"
+                    f"{relativo} afirma solto o que se conta pelo degrau: {frase!r}"
                 )
 
     def test_a_regua_sabe_distinguir_citar_de_afirmar(self) -> None:
