@@ -659,9 +659,36 @@ RESPONDIDAS_POR_ELA: dict[str, str] = {
 }
 DECISOES_DELA = RAIZ / "docs" / "data" / "decisoes-dela.csv"
 
+#: O VETO ALCANÇA O PRO (25/09/2026, O-MAPA-QUE-A-6E-DEIXOU-01). A pergunta que
+#: ela respondeu nomeava os DOIS externos — «O 8BitDo e o Pro da Nintendo viram
+#: jogador, com controle virtual, perfil e Mira?» —, e a resposta chegou só às
+#: linhas do SN30: as do Pro cuja causa era a mesma não-adoção seguiram dizendo
+#: `nada-a-acionar` («não há o que fazer»), com a divergência declarada em vez
+#: de resolvida. As cinco primeiras saíram de `nada-a-acionar`; as duas da
+#: taxa já eram `decisao-tomada` pelo veto de 19/07 e não citavam o id.
+#:
+#: DIGITADA AQUI pelo mesmo motivo da lista de cima: derivada do CSV, a linha que
+#: voltasse a `nada-a-acionar` sairia da lista junto com o defeito.
+O_VETO_ALCANCA_O_PRO: dict[str, str] = {
+    "plataforma.adocao@pro": VETO_DOS_EXTERNOS,
+    "entrada.combo.ponte@pro": VETO_DOS_EXTERNOS,
+    "vibracao.rumble.passthrough@pro": VETO_DOS_EXTERNOS,
+    "movimento.giroscopio.jogo@pro": VETO_DOS_EXTERNOS,
+    "movimento.acelerometro.jogo@pro": VETO_DOS_EXTERNOS,
+    "combinacao.cabo_e_radio.taxa@pro": VETO_DOS_EXTERNOS,
+    "combinacao.cabo_e_radio.taxa@sn30": VETO_DOS_EXTERNOS,
+}
 
-def respostas_que_voltaram(mapa: Path | str, decisoes: Path | str) -> list[str]:
+
+def respostas_que_voltaram(
+    mapa: Path | str,
+    decisoes: Path | str,
+    respondidas: dict[str, str] | None = None,
+) -> list[str]:
     """O que desfaz uma resposta dela, por linha. Lista vazia: nada voltou.
+
+    `respondidas` é `{id da linha: id da decisão}`; sem ela, as doze de
+    `RESPONDIDAS_POR_ELA`.
 
     Quatro perguntas por linha: a decisão continua `decidida` no arquivo dela;
     os DOIS lados dizem `aciona = não`, que é a resposta; a causa dos dois é
@@ -681,7 +708,9 @@ def respostas_que_voltaram(mapa: Path | str, decisoes: Path | str) -> list[str]:
         if _celula(linha, "estado") == "decidida"
     }
     achados: list[str] = []
-    for ident, decisao in RESPONDIDAS_POR_ELA.items():
+    if respondidas is None:
+        respondidas = RESPONDIDAS_POR_ELA
+    for ident, decisao in respondidas.items():
         if decisao not in decididas:
             achados.append(f"{ident}: `{decisao}` não está `decidida` em {Path(decisoes).name}")
         linha = linhas.get(ident)
@@ -767,3 +796,40 @@ def test_a_regua_das_respostas_ve_o_aciona_que_muda(ident: str, lado: str, acion
         falso = _mapa_com_a_linha_mexida(Path(pasta) / "mapa.csv", ident, colunas)
         voltaram = respostas_que_voltaram(falso, DECISOES_DELA)
     assert any(achado.startswith(f"{ident} ({lado}): `aciona`") for achado in voltaram), voltaram
+
+
+# ── o veto alcança o Pro (25/09/2026) ───────────────────────────────────────
+
+
+def test_o_veto_alcanca_o_pro() -> None:
+    """MORDE: devolva `nada-a-acionar` a uma linha do Pro, ou apague o id da taxa."""
+    voltaram = respostas_que_voltaram(MAPA, DECISOES_DELA, O_VETO_ALCANCA_O_PRO)
+    assert not voltaram, (
+        f"{len(voltaram)} achado(s) nas linhas do Pro e da taxa que o veto alcança: "
+        + "; ".join(voltaram)
+        + ". A pergunta dela nomeava o 8BitDo E o Pro: a não-adoção do Pro é "
+        "`decisao-tomada` com o id, não `nada-a-acionar`. Se o veto caiu, a decisão "
+        "sai de `decidida` e a linha sai de `O_VETO_ALCANCA_O_PRO` no mesmo gesto"
+    )
+
+
+@pytest.mark.parametrize(
+    ("ident", "colunas", "achado"),
+    [
+        # o Pro volta a dizer «não há o que fazer»
+        ("plataforma.adocao@pro", {"cabo_por_que_nao_aciona": NADA_A_ACIONAR},
+         "plataforma.adocao@pro (cabo): `por_que_nao_aciona`"),
+        # a taxa perde o id da decisão que a sustenta
+        ("combinacao.cabo_e_radio.taxa@sn30", {"radio_ressalva": ""},
+         "combinacao.cabo_e_radio.taxa@sn30: nenhuma célula cita"),
+    ],
+)
+def test_a_regua_do_veto_ve_o_pro_que_volta(ident: str, colunas: dict[str, str],
+                                           achado: str) -> None:
+    """A régua de cima tem de VER a linha do Pro que desfaz a resposta dela."""
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as pasta:
+        falso = _mapa_com_a_linha_mexida(Path(pasta) / "mapa.csv", ident, colunas)
+        voltaram = respostas_que_voltaram(falso, DECISOES_DELA, O_VETO_ALCANCA_O_PRO)
+    assert any(item.startswith(achado) for item in voltaram), voltaram
