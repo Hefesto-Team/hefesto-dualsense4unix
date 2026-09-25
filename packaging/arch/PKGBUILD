@@ -190,7 +190,7 @@ package() {
     # Sem o módulo DKMS o in-tree só loga "unknown parameter ignored" (fail-safe).
     install -Dm644 assets/modprobe.d/hefesto-hid-nintendo.conf \
         "$pkgdir/usr/lib/modprobe.d/hefesto-hid-nintendo.conf"
-    # Contenção BT (2026-07-25): opções do hid-playstation patchado (feature_retries=2).
+    # Contenção BT (2026-07-25): opções do hid-playstation patchado (o feature_retries, no valor que a conf declara).
     # Mesmo fail-safe: sem o módulo DKMS o in-tree ignora o parâmetro.
     install -Dm644 assets/modprobe.d/hefesto-hid-playstation.conf \
         "$pkgdir/usr/lib/modprobe.d/hefesto-hid-playstation.conf"
