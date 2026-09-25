@@ -3780,7 +3780,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `luz.lightbar.brilho @ cabo`
 
-**O que isto prova.** Prova que o trilho «Brilho» escurece a barra dos controles do cabo diminuindo a própria cor — a ilusão que você escolheu em 09/09, porque a barra não tem brilho de hardware — e que ele apaga a barra de vez no 0.
+**O que isto prova.** Prova que o trilho «Brilho» escurece a barra dos controles do cabo diminuindo a própria cor — a ilusão que você escolheu em 09/09, porque a barra não tem brilho de hardware —, que ele apaga a barra de vez no 0, e que a marca da cor de cada controle não sai do lugar enquanto isso.
 
 **Onde olhar.** Na aba Iluminação, linha «Brilho» de cada coluna: um trilho roxo com puxador e o número em porcento ao lado; a dica diz que ele grava no perfil ao soltar, sem esperar o «Salvar Perfil». Linha «Cor»: onze quadradinhos; os oito primeiros são as cores dos jogadores 1 a 8 — 1 azul, 2 vermelho, 3 verde, 4 rosa, 5 amarelo, 6 ciano, 7 laranja, 8 roxo — e os três últimos são tons a mais. A cor de cada controle é o quadradinho com borda na coluna dele e com um X nas colunas dos outros três. A prova é a barra no aparelho: as duas tiras dos lados do touchpad, e as marcas da linha «Cor».
 
@@ -3793,15 +3793,15 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 5. Arraste o puxador da linha «Brilho» do P1 até o fim da direita, em 100%.
 6. Arraste o mesmo puxador até mais ou menos a metade.
 7. Confira que a barra do P1 ficou visivelmente mais fraca e continua amarela.
-8. Confira, logo ao soltar e de novo depois de dois segundos, que a borda continua no amarelo do P1 e o X amarelo continua nas outras três colunas.
+8. Confira, logo ao soltar e de novo depois de dois segundos, que a borda continua no amarelo do P1 e o X no amarelo continua nas outras três colunas.
 9. Arraste o puxador até o fim da esquerda, em 0%.
 10. Anote se a barra do P1 apagou por completo ou ficou acesa fraquinha.
-11. Confira que, com a barra apagada, a coluna do P1 continua com a borda no amarelo e a caixa diz #FFFF00, e o X amarelo continua nas outras três.
+11. Confira que, com a barra apagada, a coluna do P1 continua com a borda no amarelo e o código embaixo da linha «Cor» diz #FFFF00, e o X no amarelo continua nas outras três.
 12. Arraste o puxador do P1 de volta a 100%.
 13. Confira que a barra do P1 voltou ao amarelo cheio, e que as barras do P2, do P3 e do P4 não mudaram de brilho em nenhum momento.
 14. Clique no quadradinho ciano (o sexto) da linha «Cor», na coluna do P2.
-15. Arraste o puxador do P2 até a metade, depois até 0% e de volta a 100%, olhando em cada parada a barra dele e o X ciano nas outras três colunas.
-16. Confira que o brilho do P1 não mudou enquanto você arrastava o do P2, e que o X amarelo do P1 não saiu do lugar.
+15. Arraste o puxador do P2 até a metade, depois até 0% e de volta a 100%, olhando em cada parada a barra dele e o X no ciano nas outras três colunas.
+16. Confira que o brilho do P1 não mudou enquanto você arrastava o do P2, e que o X no amarelo do P1 não saiu do lugar.
 17. Devolva os quatro números de brilho aos valores anotados.
 18. Clique no quadradinho da cor do número de cada um para devolver a cor: o primeiro no P1, o segundo no P2.
 
@@ -3811,10 +3811,10 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 * **P1** — No cabo, e é um dos dois desta célula. Amarelo, e o trilho em 100, na metade, em 0 e de volta.
 * **P2** — No cabo, e é o outro. Ciano, o mesmo caminho. Enquanto arrasta o do P2, olhe o P1.
-* **P3** — No rádio, testemunha. Não toque na coluna dele. O porcento, a barra e o X amarelo da coluna dele ficam como estavam.
+* **P3** — No rádio, testemunha. Não toque na coluna dele. O porcento, a barra e o X no amarelo da coluna dele ficam como estavam.
 * **P4** — No rádio, segunda testemunha. A mesma conferência do P3.
 
-**A armadilha.** Cinco. (1) O trilho multiplica a cor, e por isso no 0 a barra apaga inteira: se ela ficar acesa fraquinha no 0, isso é o achado. (2) O brilho de três degraus que o aparelho tem por dentro é das CINCO LÂMPADAS, não da barra — você mediu em 09/09 —, e o Hefesto não o comanda. Os três degraus da aba Vibração («Economia», «Balanceado», «Máximo») são força de tremor. (3) Arrastar grava no perfil ativo NA HORA, e a cor escolhida também fica: devolva as duas no fim. (4) Se as tiras da linha «LEDs» da coluna estiverem tracejadas, o Hefesto não afirma a cor de agora (a Steam segurando o controle, o Modo Nativo, ou cor desconhecida): o número vai para o disco e a barra pode não mudar — não é defeito do trilho. (5) Olhe as marcas LOGO AO SOLTAR, e não só depois: até 24/09 o X sumia das outras colunas por meio segundo e voltava sozinho.
+**A armadilha.** Cinco. (1) O trilho multiplica a cor, e por isso no 0 a barra apaga inteira: se ela ficar acesa fraquinha no 0, isso é o achado. (2) O brilho de três degraus que o aparelho tem por dentro é das CINCO LÂMPADAS, não da barra — você mediu em 09/09 —, e o Hefesto não o comanda. Os três degraus da aba Vibração («Economia», «Balanceado», «Máximo») são força de tremor. (3) Arrastar grava no perfil ativo NA HORA, e a cor escolhida também fica: devolva as duas no fim. (4) Se as tiras da linha «LEDs» da coluna estiverem tracejadas, o Hefesto não afirma a cor de agora (a Steam segurando o controle, o Modo Nativo, ou cor desconhecida): o número vai para o disco e a barra pode não mudar — não é defeito do trilho. (5) Olhe as marcas LOGO AO SOLTAR, e não só depois: até 24/09 o X sumia das outras colunas por meio segundo ao soltar, e no 0 sumia de vez.
 
 ---
 
@@ -3822,7 +3822,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `luz.lightbar.brilho @ rádio`
 
-**O que isto prova.** Prova que o trilho «Brilho» escurece a barra dos controles do rádio diminuindo a própria cor, como no cabo, e que ele apaga a barra de vez no 0.
+**O que isto prova.** Prova que o trilho «Brilho» escurece a barra dos controles do rádio diminuindo a própria cor, como no cabo, que ele apaga a barra de vez no 0, e que a marca da cor de cada controle não sai do lugar enquanto isso.
 
 **Onde olhar.** Na aba Iluminação, linha «Brilho» de cada coluna: o trilho roxo com o número em porcento; a dica diz que ele grava no perfil ao soltar. Linha «Cor»: os onze quadradinhos (5 é amarelo, 6 é ciano); a cor de cada controle tem borda na coluna dele e um X nas colunas dos outros três. O nome da coluna, na linha «Modelo», termina em BT para quem está no rádio. A prova é a barra no aparelho, e as marcas da linha «Cor».
 
@@ -3837,14 +3837,14 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 7. Arraste o puxador da linha «Brilho» do P3 até 100%.
 8. Arraste o mesmo puxador até mais ou menos a metade.
 9. Confira que a barra do P3 ficou visivelmente mais fraca e continua amarela.
-10. Confira, logo ao soltar e de novo depois de dois segundos, que a borda continua no amarelo do P3 e o X amarelo continua nas outras três colunas.
+10. Confira, logo ao soltar e de novo depois de dois segundos, que a borda continua no amarelo do P3 e o X no amarelo continua nas outras três colunas.
 11. Arraste o puxador até 0%.
 12. Anote se a barra do P3 apagou por completo ou ficou acesa fraquinha.
-13. Confira que, com a barra apagada, a coluna do P3 continua com a borda no amarelo e a caixa diz #FFFF00, e o X amarelo continua nas outras três.
+13. Confira que, com a barra apagada, a coluna do P3 continua com a borda no amarelo e o código embaixo da linha «Cor» diz #FFFF00, e o X no amarelo continua nas outras três.
 14. Arraste o puxador do P3 de volta a 100%.
 15. Confira que a barra do P3 voltou ao amarelo cheio, e que as do P1, do P2 e do P4 não mudaram.
 16. Clique no quadradinho ciano (o sexto) da linha «Cor», na coluna do P4.
-17. Arraste o puxador do P4 até a metade, depois até 0% e de volta a 100%, olhando em cada parada a barra dele e o X ciano nas outras três colunas.
+17. Arraste o puxador do P4 até a metade, depois até 0% e de volta a 100%, olhando em cada parada a barra dele e o X no ciano nas outras três colunas.
 18. Devolva os quatro números de brilho aos valores anotados.
 19. Clique no quadradinho da cor do número de cada um para devolver a cor: o terceiro no P3, o quarto no P4.
 
@@ -3853,11 +3853,11 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 **Por controle.**
 
 * **P1** — No cabo, testemunha e comparação. Não toque. Se o trilho não mexer nada no P3 nem no P4, arraste o do P1: se a barra DELE responder, o defeito é do rádio; se nem ela, o defeito não é do transporte.
-* **P2** — No cabo, testemunha. Não toque. O porcento dele fica o mesmo, e o X amarelo da coluna dele também.
+* **P2** — No cabo, testemunha. Não toque. O porcento dele fica o mesmo, e o X no amarelo da coluna dele também.
 * **P3** — No rádio, e é um dos dois desta célula. Amarelo, e o trilho em 100, na metade, em 0 e de volta.
 * **P4** — No rádio, e é o outro. Ciano, o mesmo caminho.
 
-**A armadilha.** Cinco. (1) O trilho multiplica a cor: acesa fraquinha no 0 é o achado. (2) UMA CONEXÃO DE RÁDIO PODE NASCER COM A BARRA TRAVADA, ignorando toda escrita, e nada avisa: se o P3 e o P4 não responderem a nada e o P1 responder, o suspeito é esse, e o que já foi medido devolvendo a barra é «Reiniciar o serviço», na aba Sistema. Não conclua que a culpa é de ter reconectado — «reconectar cura» já caiu nesta casa mais de uma vez. (3) O brilho de três degraus do aparelho é das cinco lâmpadas, não da barra (medido por você em 09/09). (4) Arrastar grava no perfil ativo na hora, e a cor escolhida também: devolva as duas. (5) Olhe as marcas LOGO AO SOLTAR, e não só depois: até 24/09 o X sumia das outras colunas por meio segundo e voltava sozinho.
+**A armadilha.** Cinco. (1) O trilho multiplica a cor: acesa fraquinha no 0 é o achado. (2) UMA CONEXÃO DE RÁDIO PODE NASCER COM A BARRA TRAVADA, ignorando toda escrita, e nada avisa: se o P3 e o P4 não responderem a nada e o P1 responder, o suspeito é esse, e o que já foi medido devolvendo a barra é «Reiniciar o serviço», na aba Sistema. Não conclua que a culpa é de ter reconectado — «reconectar cura» já caiu nesta casa mais de uma vez. (3) O brilho de três degraus do aparelho é das cinco lâmpadas, não da barra (medido por você em 09/09). (4) Arrastar grava no perfil ativo na hora, e a cor escolhida também: devolva as duas. (5) Olhe as marcas LOGO AO SOLTAR, e não só depois: até 24/09 o X sumia das outras colunas por meio segundo ao soltar, e no 0 sumia de vez.
 
 ---
 
