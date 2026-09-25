@@ -591,3 +591,32 @@ def test_a_cor_do_perfil_publica_o_brilho_do_controle(mesa_de):
     assert brilhos["brilho_da_barra"] == pytest.approx(0.40), brilhos
     assert mesa.server._brilhos_acesos(UNIQS[2])["brilho_da_barra"] == pytest.approx(
         BRILHO_GLOBAL)
+
+
+def test_o_tom_religa_no_brilho_que_o_perfil_do_jogo_guarda(mesa_de):
+    """O «Desligar» atravessou a troca automática para um perfil que guarda o P2 a 40%.
+
+    A barra segue apagada (a camada viva), e o tom da guia a religa no brilho
+    que o perfil ATIVO dá ao P2 — os 40% dele, e não o do perfil (82%). E o
+    disco do perfil do jogo continua com os 40%: só o 0% sai.
+
+    **A MORDIDA:** faça `_o_brilho_de_religar` ler só o brilho do perfil, ou o
+    `_com_a_cor_gravada` tirar do override qualquer brilho próprio, e o roxo
+    acende a 82% e os 40% somem do disco do jogo.
+    """
+    from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
+    from hefesto_dualsense4unix.profiles.schema import ControllerOverrides, LedsConfig
+
+    mesa = mesa_de()
+    b = load_profile(NOME_B)
+    chave = mesa.a04.chave_do_override(UNIQS[1])
+    save_profile(b.model_copy(update={"controllers": {chave: ControllerOverrides(
+        leds=LedsConfig.model_validate({"lightbar_brightness": 0.40}))}}), origem="regua")
+    mesa.a04.apagar(mesa.ctx(), {"uniq": UNIQS[1]}, mesa.ponte)
+    mesa.trocar(NOME_B, "autoswitch")
+    assert mesa.luz(2) == (0, 0, 0), "a régua precisa do P2 apagado no perfil do jogo"
+    assert mesa.coluna(2)["brilho"] == "0%"
+    mesa.clicar_no_tom(2, ROXO)
+    assert mesa.luz(2) == _na(ROXO, 0.40), f"o tom religou o P2 em {mesa.luz(2)}"
+    assert mesa.disco(NOME_B, 2).lightbar_brightness == pytest.approx(0.40)
+    assert mesa.coluna(2)["brilho"] == "40%"
