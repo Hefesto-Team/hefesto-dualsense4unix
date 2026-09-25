@@ -4449,6 +4449,24 @@
 
 <!-- ================= LEGENDA DO MOCKUP ================= -->
 <div class="nota">
+  <h2>O que mudou em 25/09</h2>
+  <ul>
+    <li><b>O cartão de quem não navega diz <i>Move o cursor</i> quando a
+    Mira Virtual dele está acesa na Navegação.</b> O giro daquele controle já
+    movia o cursor do computador, e o cartão continuava dizendo <i>Só a janela</i>.
+    Fica <i>Só a janela</i> sempre que o giro não chega ao cursor: com a
+    Mira apagada, com o Giroscópio daquele controle desligado, com o mouse
+    parado (o Status do Modo desligado, ou em pausa no modo jogo) e fora da
+    Navegação: no Sony DualSense e no Xbox a Mira vai ao analógico direito do
+    jogo, e no Nativo ela não anda. O desenho mostra a Mira apagada
+    nos quatro, como a aba Controles; é o produto que troca a palavra, a cada
+    tique, em todo controle que não navega, no USB e no BT.</li>
+    <li><b>Com três ou quatro controles conectados, o P3 e o P4 deixaram de
+    aparecer apagados</b>, com a cara de lugar vazio. Eles nascem vazios no
+    desenho, e a tela só tirava essa cara do P2. Agora quem está conectado
+    aparece como o P2, e quem saiu fica apagado, nos quatro lugares.</li>
+  </ul>
+
   <h2>Um botão virou dois, e uma pop-up virou duas</h2>
   <ul>
     <li><b>O que ela pediu, e por quê.</b> <i>"aba navegação no botão Definições e
@@ -4572,8 +4590,10 @@
     <code>hotkey_manager.observe</code> (<code>:4757</code>); os secundários do
     co-op têm um caminho só, o do gamepad virtual
     (<code>daemon/subsystems/coop.py:2057</code>). Por isso o cartão do
-    <b>Player 1</b> diz <i>Navega o PC</i> e os outros dizem <i>Só a
-    janela</i>, e por isso o desenho que acende no combo é o dele. A
+    <b>Player 1</b> diz <i>Navega o PC</i> e os outros dizem <i>Só a janela</i>,
+    e por isso o desenho que acende no combo é o dele. A exceção é o giro: na
+    Navegação, quem acende a Mira Virtual move o cursor com ele, e o cartão
+    diz <i>Move o cursor</i>. A
     <b>Navegação Interna</b> é a outra metade: com ela ligada, cada jogador anda
     na janela do Hefesto no seu próprio card.</li>
     <li><b>O realce do combo estava morto em três das cinco linhas.</b> A regra
@@ -4618,9 +4638,11 @@
     único porque é lá que ela responde a pergunta da aba sem custar altura. Se você
     quiser os quatro <b>maiores</b>, eles cabem numa fileira própria — mas aí a aba
     passa da dobra, e as tabelas de baixo já estão em telas à parte por isso.</li>
-    <li><b>O cartão diz "Só a janela"</b> para os outros três. É o que o produto
-    faz hoje com a Navegação Interna ligada. Se você preferir que os quatro
-    disputem o cursor do PC, isso é código novo no daemon, não desenho.</li>
+    <li><b>O cartão diz "Só a janela"</b> para os outros três: os analógicos
+    deles andam só na janela do Hefesto, com a Navegação Interna ligada. O giro
+    de quem acende a Mira Virtual soma no mesmo cursor, e aí o cartão diz
+    "Move o cursor". Se você preferir que os quatro disputem o cursor pelos
+    analógicos também, isso é código novo no daemon, não desenho.</li>
   </ul>
 </div>
 
