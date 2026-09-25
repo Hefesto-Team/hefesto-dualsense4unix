@@ -351,6 +351,60 @@ def test_o_trecho_que_abraca_o_def_de_fora_anda_com_a_funcao(repo: Path) -> None
     assert _validar(repo).returncode == 0
 
 
+MD_CURTA = (
+    "# Doc\n\nO `segunda` em `src/hefesto_dualsense4unix/alvo.py:10-12`, "
+    "e o `terceira` em `:15-16`.\n"
+)
+
+
+def test_a_forma_curta_da_mesma_linha_anda_junto(repo: Path) -> None:
+    """A forma curta ``:N`` herda o arquivo da citação inteira da mesma linha.
+
+    O validador a lê assim e devolve o endereço com o arquivo; o texto não o
+    tem. Antes, a troca pelo endereço inteiro dava zero e saía nos feitos como
+    «(0x)» — medido na costura da 6e-4, na `dualsense-referencia-canonica.md`.
+
+    MORDIDA: tire a queda para ``_trocar_curta`` em ``reapontar`` — o `:15-16`
+    fica onde estava e esta régua reprova.
+    """
+    doc = repo / "docs" / "protocol" / "curta.md"
+    doc.write_text(MD_CURTA, encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-q", "-m", "a forma curta")
+    _inserir_no_topo(repo, 3, commitar=True)
+
+    feitos, a_mao = _rodar(repo)
+
+    assert a_mao == [], a_mao
+    texto = doc.read_text(encoding="utf-8")
+    assert "alvo.py:13-15`" in texto and "`:18-19`" in texto, texto
+    assert not any("(0x)" in f for f in feitos), feitos
+    assert _validar(repo).returncode == 0, _validar(repo).stdout
+
+
+def test_o_endereco_que_nao_esta_escrito_vai_para_a_mao(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Troca que não escreveu nada não entra nos feitos.
+
+    MORDIDA: devolva o ``feitos.append`` para antes do teste de ``n == 0`` —
+    o endereço sai como reapontado sem ter sido escrito, e esta régua reprova.
+    """
+    doc = repo / "docs" / "protocol" / "curta.md"
+    doc.write_text(MD_CURTA, encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-q", "-m", "a forma curta")
+    _inserir_no_topo(repo, 3, commitar=True)
+    modulo = _script()
+    monkeypatch.setattr(modulo, "_trocar_curta", lambda texto, _cit, _end: (texto, 0))
+
+    feitos, a_mao = modulo.reapontar(repo, escrever=True)
+
+    assert any("`:15-16`" not in f and "curta.md" in f and "forma curta" in f for f in a_mao), a_mao
+    assert not any("curta.md" in f and "15-16" in f for f in feitos), feitos
+    assert "`:15-16`" in doc.read_text(encoding="utf-8")
+
+
 def test_sem_escrever_nada_muda(repo: Path) -> None:
     _inserir_no_topo(repo, 3, commitar=True)
     antes = {p: p.read_bytes() for p in repo.rglob("*") if p.is_file() and ".git" not in p.parts}
