@@ -16,6 +16,10 @@ from __future__ import annotations
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `gui.ponte_da_tela`, que carrega o GTK")
+
 from hefesto_dualsense4unix.gui import ponte_da_tela
 
 

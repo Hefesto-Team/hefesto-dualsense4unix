@@ -34,6 +34,10 @@ from typing import Any, ClassVar
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
+
 from hefesto_dualsense4unix.app import audio_saida
 from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
 from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov

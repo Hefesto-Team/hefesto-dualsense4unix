@@ -40,6 +40,11 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 # O `sys.path` acima é o mesmo que o `pacotes/__init__` monta.
+
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
+
 import monta
 
 from hefesto_dualsense4unix.interface.pacotes import (

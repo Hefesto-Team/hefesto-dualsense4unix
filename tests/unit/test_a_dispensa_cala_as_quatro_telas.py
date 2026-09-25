@@ -21,6 +21,10 @@ sem wrapper agora?"; o novo responde "há algo a DIZER a ela sobre isso?".
 from __future__ import annotations
 
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `app.actions.home_actions`, que carrega o GTK")
+
 from hefesto_dualsense4unix.app.actions import home_actions as ha
 
 COM_JOGO_SEM_WRAPPER = {

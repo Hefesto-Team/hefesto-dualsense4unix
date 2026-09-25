@@ -23,6 +23,11 @@ from typing import Any
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
+
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `app.actions.home_actions`, que carrega o GTK")
+
 for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)

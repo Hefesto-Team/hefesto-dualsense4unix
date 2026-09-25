@@ -43,6 +43,11 @@ import pytest
 # A ORDEM IMPORTA: `pacotes/__init__` põe `interface/` no `sys.path`, e é dele
 # que `monta` precisa para achar o `onde`. Importar `monta` primeiro dá
 # `ModuleNotFoundError: No module named 'onde'`.
+
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
+
 from hefesto_dualsense4unix.interface import pacotes  # noqa: F401  isort:skip
 from hefesto_dualsense4unix.interface import monta
 from hefesto_dualsense4unix.interface.pacotes import a06_navegacao, a09_sistema

@@ -82,6 +82,11 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `app.actions.mouse_actions`, que carrega o GTK")
+
 from rich.console import Console
 
 from hefesto_dualsense4unix.app.actions import emulation_actions, mouse_actions

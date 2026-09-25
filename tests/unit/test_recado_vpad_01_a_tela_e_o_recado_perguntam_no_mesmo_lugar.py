@@ -70,6 +70,10 @@ from typing import Any
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `app.actions.rumble_actions`, que carrega o GTK")
+
 from hefesto_dualsense4unix.app.actions import rumble_actions
 from hefesto_dualsense4unix.app.actions.jogar import painel
 from hefesto_dualsense4unix.app.actions.mode_transition import (

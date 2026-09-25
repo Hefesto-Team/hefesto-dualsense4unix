@@ -34,6 +34,10 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "scripts"))
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `scripts.regua_de_tela`, que carrega o GTK")
+
 import regua_de_tela as regua
 
 

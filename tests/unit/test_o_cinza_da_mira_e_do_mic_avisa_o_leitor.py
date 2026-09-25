@@ -44,6 +44,10 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 PILOTO = RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
 BANCADA = RAIZ / "mockup/02-controles.html"
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
+
 from pacotes.a02_controles import MIRA_NO_NATIVO
 
 #: A razão do «Nativo» fora de alcance: qualquer texto não vazio acende o

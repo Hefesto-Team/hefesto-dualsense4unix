@@ -23,6 +23,10 @@ import types
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `interface.hefesto_vivo`, que carrega o GTK")
+
 from hefesto_dualsense4unix.interface import hefesto_vivo, regua_do_mockup
 
 #: AS DEZ PÁGINAS, e a lista é literal de propósito: escrever

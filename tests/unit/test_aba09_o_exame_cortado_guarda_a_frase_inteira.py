@@ -45,6 +45,11 @@ import pytest
 # OS GLIFOS VÊM DO PRODUTO, e não digitados: `aba_sistema.py:133` é o dono, e um
 # símbolo teclado aqui seria a segunda cópia — a que diverge no dia em que ela
 # trocar o glifo. O `ruff` também reprova o da NOTA cru, por ambiguidade.
+
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `gui.aba_sistema`, que carrega o GTK")
+
 from hefesto_dualsense4unix.gui.aba_sistema import GLIFO_INFO, GLIFO_OK
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]

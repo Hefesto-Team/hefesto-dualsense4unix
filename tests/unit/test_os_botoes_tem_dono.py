@@ -62,6 +62,10 @@ MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
 #: dicionário de gestos ter virado o decorador `@gesto`.
 
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
+
 def _pacotes():
     """Os módulos de pacote, com o que cada um declara sobre os seus botões."""
     import importlib

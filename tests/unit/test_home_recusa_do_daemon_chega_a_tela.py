@@ -36,10 +36,13 @@ import pytest
 
 
 # NOTA — este arquivo NÃO planta `gi` falso em `sys.modules` no import, e é
-# de propósito: `home_actions` e `footer_actions` importam `gi` DENTRO das
-# funções, então o módulo carrega sem toolkit nenhum. O único ponto que
-# precisa de widget é o `_render_home`, e ali o stub entra por
-# `monkeypatch.setitem` (fixture `gtk_de_render`), que se desfaz sozinho.
+# de propósito. `home_actions` e `footer_actions` carregam o GTK no topo, pelo
+# `app/actions/base`, e por isso a guarda abaixo vem antes deles: sem
+# PyGObject o módulo pula, e no job `gtk-real` ele roda contra o GTK de
+# verdade (medido na corrida 36119169814, 25/09/2026, quando ele errava na
+# coleta sem PyGObject). O único ponto que precisa de widget FALSO é o
+# `_render_home`, e ali o stub entra por `monkeypatch.setitem` (fixture
+# `gtk_de_render`), que se desfaz sozinho.
 #
 # GUARDA-GI-REAL-01: plantar o stub no import faria este arquivo rodar VERDE
 # contra widgets de mentira no job de lint e NUNCA entrar no job `gtk-real`,
@@ -47,6 +50,9 @@ import pytest
 # (`test_guarda_gi_falso_precisa_de_exigir_gi_real.py`), e ele pegou esta
 # versão do arquivo em 25/08/2026.
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `app.actions.home_actions`, que carrega o GTK")
 
 from hefesto_dualsense4unix.app.actions import (
     footer_actions,

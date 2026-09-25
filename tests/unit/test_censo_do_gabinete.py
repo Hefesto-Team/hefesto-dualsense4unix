@@ -40,6 +40,10 @@ import re
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `app.actions.config`, que carrega o GTK")
+
 from hefesto_dualsense4unix.app.actions.config import secao_mesa
 from hefesto_dualsense4unix.integrations import censo_do_gabinete as cg
 from hefesto_dualsense4unix.integrations.censo_do_barramento import Aparelho, Censo
