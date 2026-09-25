@@ -225,13 +225,12 @@ class Mesa:
     dev_input: Path
     sys_class: Path
     nos: dict[str, _No] = field(default_factory=dict)  # eventN -> nó
-    #: caminho `/dev` de mentira -> papel e dono, para as asserções.
-    caminho: dict[str, str] = field(default_factory=dict)  # eventN -> caminho
-    tentativas: list[str] = field(default_factory=list)  # InputDevice(caminho)
-    pedidos: list[dict[str, Any]] = field(default_factory=list)  # linhas no socket
+    caminho: dict[str, str] = field(default_factory=dict)  # eventN -> o /dev de mentira
+    tentativas: list[str] = field(default_factory=list)  # cada InputDevice(caminho)
+    pedidos: list[dict[str, Any]] = field(default_factory=list)  # cada linha no socket
     diario: list[tuple[str, str, dict[str, Any]]] = field(default_factory=list)
-    no_dev_de_verdade: list[str] = field(default_factory=list)
-    escritas_de_led: list[Any] = field(default_factory=list)
+    no_dev_de_verdade: list[str] = field(default_factory=list)  # tem de ficar vazia
+    escritas_de_led: list[Any] = field(default_factory=list)  # luz e IMU, anotadas
 
     # -- leitura para as réguas --
     def de(self, k: int, papel: str = "gamepad") -> str:
