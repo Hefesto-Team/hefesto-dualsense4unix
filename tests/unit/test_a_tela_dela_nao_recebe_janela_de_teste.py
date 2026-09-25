@@ -25,6 +25,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 RAIZ = Path(__file__).resolve().parents[2]
 
 
@@ -34,6 +36,11 @@ def test_a_suite_nao_enxerga_o_wayland_dela() -> None:
         "a suíte está enxergando o compositor VIVO — toda `Gtk.Window` daqui "
         "nasce na tela dela. É o defeito de 04/09/2026."
     )
+    if os.environ.get("DISPLAY") is None:
+        # Sem sessão NENHUMA (o `lint-test` do CI): a guarda não tem o que
+        # desviar, e janela nenhuma tem onde nascer. As duas asserções de baixo
+        # só têm sentido onde havia uma tela — e lá elas continuam cobrando.
+        pytest.skip("sem sessão gráfica: não há tela para desviar")
     assert os.environ.get("GDK_BACKEND") == "x11", os.environ.get("GDK_BACKEND")
     display = os.environ.get("DISPLAY")
     assert display and display != ":1", (

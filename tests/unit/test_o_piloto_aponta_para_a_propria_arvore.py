@@ -34,6 +34,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.conftest import skip_sem_gi_real
+
 RAIZ = Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 
@@ -75,6 +77,10 @@ def test_a_pagina_que_o_instrumento_abre_existe_no_disco(nome: str) -> None:
     )
 
 
+# O piloto é GTK + WebKit2 de verdade: sem PyGObject ele morre no `import gi`
+# antes de medir, e a régua lia isso como «não acusou». Pula onde não há GTK
+# e roda no job `gtk-real`, que seleciona por este marcador (25/09/2026).
+@skip_sem_gi_real
 def test_a_regua_do_mockup_nao_sai_verde_sobre_o_vazio() -> None:
     """Página morta REPROVA — medido rodando o piloto, não lendo o fonte dele.
 
