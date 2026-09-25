@@ -612,7 +612,11 @@ class FsAclOps:
         return fd
 
     def hide(self, node: str, base: str) -> None:
-        """`setfacl -b` + `chmod 0600` → só root abre. Fd já aberto sobrevive."""
+        """`setfacl -b` + `chmod 0600` → só root abre. Fd já aberto sobrevive.
+
+        Só escreve o que difere do alvo (`_ja_esta_no_alvo`): o nó que já está
+        `0600` sem ACL não é tocado, e quem vigia `/dev` não recebe nada.
+        """
         fd = self._pin(node, base)
         if fd is None:
             raise FileNotFoundError(node)  # nó sumiu/reciclado: tratar como gone
@@ -620,14 +624,18 @@ class FsAclOps:
             ref = f"/proc/self/fd/{fd}"  # operações no INODE pinado, não no nome
             if self._ja_esta_no_alvo(fd, None):
                 return
-            with contextlib.suppress(OSError):  # ENODATA = já sem ACL
+            with contextlib.suppress(OSError):  # sem ACL: 0 (medido) ou ENODATA/EOPNOTSUPP
                 os.removexattr(ref, _ACL_XATTR)
             os.chmod(ref, 0o600)
         finally:
             os.close(fd)
 
     def restore(self, node: str, base: str, uid: int) -> None:
-        """`chmod 0660` + ACL `u:<uid>:rw` — reverte exatamente o hide."""
+        """`chmod 0660` + ACL `u:<uid>:rw` — reverte exatamente o hide.
+
+        Como o `hide`, só escreve o que difere do alvo: modo `0660` e a ACL
+        canônica do uid, byte a byte.
+        """
         fd = self._pin(node, base)
         if fd is None:
             raise FileNotFoundError(node)  # nome stale ⇒ gone (replug nasce exposto)
@@ -830,7 +838,8 @@ class FsAclOps:
 
         `mudados` são só os que ESTAVAM abertos — quem chama loga a
         transição, não a reafirmação (o rehide roda a cada 30 s, e o journal
-        de 15/08 já teve 717 linhas da mesma frase).
+        de 15/08 já teve 717 linhas da mesma frase). E o nó que já está `0600`
+        sem ACL não é tocado (`_ja_esta_no_alvo`): a reafirmação não escreve.
         """
         mudados: list[str] = []
         falhos: list[str] = []
@@ -843,7 +852,7 @@ class FsAclOps:
                 if self._ja_esta_no_alvo(fd, None):
                     continue  # nada a escrever; e um `0600` sem ACL não estava aberto
                 ref = f"/proc/self/fd/{fd}"
-                with contextlib.suppress(OSError):  # ENODATA = já sem ACL
+                with contextlib.suppress(OSError):  # sem ACL: 0 (medido) ou ENODATA/EOPNOTSUPP
                     os.removexattr(ref, _ACL_XATTR)
                 os.chmod(ref, 0o600)
                 if aberto:
@@ -855,7 +864,11 @@ class FsAclOps:
         return mudados, falhos
 
     def abrir_entradas(self, base: str, uid: int) -> tuple[list[str], list[str]]:
-        """`chmod 0660` + ACL `u:<uid>:rw` em cada nó de entrada: `(mudados, falhos)`."""
+        """`chmod 0660` + ACL `u:<uid>:rw` em cada nó de entrada: `(mudados, falhos)`.
+
+        Só escreve o nó que difere do alvo (`_ja_esta_no_alvo`). `mudados`
+        segue sendo o que não estava exposto a ela.
+        """
         mudados: list[str] = []
         falhos: list[str] = []
         for node, sys_dir in self.entradas_do_no(base):
@@ -1032,8 +1045,9 @@ class BrokerState:
     refcount impede expor um nó que o novo re-escondeu.
 
     Lições 2-3 da auditoria, obrigatórias aqui:
-      - `hide` re-aplica o fs MESMO para nó já rastreado (nó recriado com o
-        mesmo hidrawN nasceu exposto; idempotência só em memória mentiria);
+      - `hide` confere o fs e escreve o que difere MESMO para nó já
+        rastreado (nó recriado com o mesmo hidrawN nasceu exposto;
+        idempotência só em memória mentiria);
       - um nó só é destrackeado DEPOIS do restore de fs verificado (retry com
         backoff); falha mantém o nó na lease e no `hidden` — belts cobrem;
       - falha num nó NUNCA aborta o restore dos demais (EOF/restore_all).
@@ -1295,9 +1309,9 @@ class BrokerState:
                 "error": "reject_not_physical_dualsense",
             }
         canon = f"{self._dev_root}/{base}"
-        # Lição 2, espelhada: SEMPRE toca o fs. Um nó recriado com o mesmo
-        # `hidrawN` nasceu FECHADO pela regra udev, e o estado em memória não
-        # é prova de nada.
+        # Lição 2, espelhada: SEMPRE confere o fs e escreve o que difere. Um
+        # nó recriado com o mesmo `hidrawN` nasceu FECHADO pela regra udev, e
+        # o estado em memória não é prova de nada.
         resposta = self._fs_restore(canon, base, peer_uid)
         resposta["cmd"] = "expose"
         if not resposta.get("ok"):
@@ -1429,9 +1443,9 @@ class BrokerState:
             self._log("hide_adiado_por_exposicao", node=canon, conn=conn_id)
             return {"ok": True, "cmd": "hide", "node": canon, "state": "exposed"}
         try:
-            # Lição 2: SEMPRE toca o fs (idempotente e barato) — nó recriado
-            # com o mesmo hidrawN renasceu exposto e o estado em memória não
-            # é prova de nada.
+            # Lição 2: SEMPRE confere o fs e escreve o que difere — nó
+            # recriado com o mesmo hidrawN renasceu exposto e o estado em
+            # memória não é prova de nada.
             self._ops.hide(canon, base)
         except FileNotFoundError:
             self._log("hide_node_gone", node=canon)

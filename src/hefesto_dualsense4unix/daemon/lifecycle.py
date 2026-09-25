@@ -5212,9 +5212,10 @@ class Daemon:
         A CURA NÃO PRECISOU DE PEÇA NOVA, e é por isso que ela cabe aqui: quem
         já sabe do aparelho a cada 2 s é o `_poll_loop`, e quem já reaplica a
         ACL sem acreditar em memória é o próprio broker — o `_cmd_expose`
-        SEMPRE toca o fs antes de contabilizar («um nó recriado com o mesmo
-        `hidrawN` nasceu FECHADO pela regra udev, e o estado em memória não é
-        prova de nada»). Faltava alguém PERGUNTAR de novo. É este laço.
+        SEMPRE confere o fs e escreve o que difere antes de contabilizar («um
+        nó recriado com o mesmo `hidrawN` nasceu FECHADO pela regra udev, e o
+        estado em memória não é prova de nada»). Faltava alguém PERGUNTAR de
+        novo. É este laço.
 
         TRÊS ATOS, nesta ordem, e nenhum é o mesmo:
           1. SOLTAR o que saiu da mesa — ou tudo, quando o modo desliga;

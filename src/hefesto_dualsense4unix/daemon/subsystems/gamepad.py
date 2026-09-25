@@ -1052,9 +1052,10 @@ def rehide_physical_hidraw(daemon: DaemonProtocol) -> None:
     """Re-hide de TODOS os hidraw físicos com vpad vivo (P1 + jogadores co-op).
 
     BROKER-01 §2.2: nó recriado pelo replug/wake BT NASCE VISÍVEL (rule 70 +
-    uaccess re-aplicados pelo udev) — o broker re-aplica o fs mesmo para nó
-    já rastreado (lição 2: idempotência só em memória mentiria), então chamar
-    isto a cada reconciliação online do `reconnect_loop` converge sozinho.
+    uaccess re-aplicados pelo udev) — o broker confere o fs e escreve o que
+    difere mesmo para nó já rastreado (lição 2: idempotência só em memória
+    mentiria), então chamar isto a cada reconciliação online do
+    `reconnect_loop` converge sozinho, e com os nós parados não escreve nada.
     SEMPRE via executor DEDICADO do broker (`broker_executor_for`, corretor
     final achado #6): o cliente faz I/O de socket com timeout de 2 s por nó —
     nunca no event loop E nunca no pool compartilhado 'hefesto-hid' de
