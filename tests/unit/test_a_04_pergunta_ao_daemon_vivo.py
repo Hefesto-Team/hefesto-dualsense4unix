@@ -493,3 +493,101 @@ def test_o_brilho_da_cor_so_explica_a_mesma_cor(mesa_de):
     assert ctl._brilho_da_cor == {}
     assert ctl.brilho_da_barra_para("sem-mac") is None
     assert ctl.brilho_das_luzes_para("sem-mac") is None
+
+
+# ---------------------------------------------------------------------------
+# 8. As portas que a conferência achou sem régua (25/09/2026)
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize("paleta", [True, False], ids=["com-paleta", "sem-paleta"])
+@pytest.mark.parametrize("n", [1, 2], ids=["P1-sem-cor", "P2-laranja"])
+def test_o_desligar_sem_a_paleta_tambem_sobrevive(mesa_de, n, paleta):
+    """Sem a paleta, o controle «Desligado» fica apagado na troca manual e no Aplicar.
+
+    A base do merge sem a paleta é o global do perfil, e não a cor do número:
+    é ela que o 0% do override tem de apagar. Com e sem a paleta, porque a
+    régua dos cinco caminhos acima só mede com ela.
+
+    **A MORDIDA:** devolva o preto como a cor gravada do «Desligar» e a troca
+    manual acende o global (ou o laranja) de novo.
+    """
+    mesa = mesa_de("um", "bt")
+    if not paleta:
+        mesa.desligar_a_paleta(GLOBAL)
+    mesa.a04.apagar(mesa.ctx(), {"uniq": UNIQS[n - 1], "tipo": "button",
+                                 "evento": "click"}, mesa.ponte)
+    for caminho in ("manual", "aplicar", "autoswitch"):
+        _reaplicar(mesa, caminho)
+        assert mesa.luz(n) == (0, 0, 0), f"P{n} acendeu {mesa.luz(n)} depois de {caminho}"
+        assert mesa.coluna(n)["brilho"] == "0%"
+    for outro in {1, 2, 3, 4} - {n}:
+        assert mesa.luz(outro) != (0, 0, 0), f"o «Desligar» do P{n} apagou o P{outro}"
+
+
+@pytest.mark.parametrize("paleta", [True, False], ids=["com-paleta", "sem-paleta"])
+@pytest.mark.parametrize("via", ["usb", "bt"])
+def test_o_preto_de_um_desligar_antigo_nao_e_a_cor_dele(mesa_de, via, paleta):
+    """O perfil gravado por um «Desligar» de antes de 25/09 guarda o PRETO como a cor.
+
+    Desde 22/09 o daemon lê esse preto como «não opinou» e acende a cor que o
+    controle teria sem ele (`led_control.cor_escolhida`). A aba responde o
+    mesmo: a caixa não diz preto, e o trilho sobe a luz que está acesa — e
+    não o preto, que apagaria pelo gesto de brilho a barra que o daemon acende.
+
+    **A MORDIDA:** faça `_a_cor_guardada` devolver o preto como cor, e o
+    trilho manda `(0,0,0)`.
+    """
+    mesa = mesa_de("todos", via)
+    if not paleta:
+        mesa.desligar_a_paleta(GLOBAL)
+    mesa.gravar_sem_procedencia(2, (0, 0, 0))
+    acesa = mesa.luz(2)
+    assert acesa != (0, 0, 0), "a régua precisa do daemon acendendo quem guarda o preto"
+    assert mesa.coluna(2)["hex"] != "#000000"
+    mesa.soltar(2, 50)
+    enviado = tuple(mesa.ponte.enviados[-1]["rgb"])
+    assert enviado != (0, 0, 0), "o trilho mandou o preto de um «Desligar» antigo"
+    assert mesa.luz(2) != (0, 0, 0), "o gesto de brilho apagou a barra que estava acesa"
+    if paleta:
+        assert enviado == player_slot_color(2)
+        assert mesa.luz(2) == _na(player_slot_color(2), 0.50)
+
+
+@pytest.mark.parametrize("via", ["usb", "bt"])
+def test_o_todos_do_led_set_publica_o_brilho_de_cada_um(mesa_de, via):
+    """O `led.set` sem `uniq` («Todos», a CLI) carimba o brilho nos quatro.
+
+    O broadcast escreve a cor na camada da usuária de CADA conectado
+    (`_registrar_em_todos`), e ela atravessa a troca automática como a do
+    clique numa coluna: o brilho viaja junto, ou o daemon diria «não sei» sobre
+    a cor que acabou de acender.
+
+    **A MORDIDA:** tire o `brilho_da_cor` do `_registrar_em_todos` no
+    `_handle_led_set`, e os quatro publicam `None`.
+    """
+    mesa = mesa_de("todos", via)
+    mesa.rodar(mesa.server._handle_led_set({"rgb": [255, 0, 255], "brightness": 0.5}))
+    mesa.trocar(NOME_B, "autoswitch")
+    for n, u in enumerate(UNIQS, start=1):
+        assert mesa.server._brilhos_acesos(u)["brilho_da_barra"] == pytest.approx(0.5), (
+            f"P{n}: o «Todos» a 50% publicou {mesa.server._brilhos_acesos(u)}")
+        assert mesa.coluna(n)["brilho"] == "50%"
+
+
+def test_a_cor_do_perfil_publica_o_brilho_do_controle(mesa_de):
+    """A cor gravada no perfil (a camada do PERFIL) acende no brilho do controle.
+
+    A troca manual solta a camada da usuária, e o laranja do P2 volta pelo
+    disco, escalado pelo brilho próprio dele (40%): é o brilho que o daemon
+    publica, e não o do perfil (82%) nem «não sei».
+
+    **A MORDIDA:** faça `brilho_da_barra_para` devolver `None` para toda cor
+    de override sem carimbo, e o P2 publica `None`.
+    """
+    mesa = mesa_de()
+    mesa.gravar_o_brilho(2, 0.40)
+    mesa.trocar(NOME, "manual")
+    assert mesa.luz(2) == _na(LARANJA, 0.40), "a régua precisa do laranja do disco a 40%"
+    brilhos = mesa.server._brilhos_acesos(UNIQS[1])
+    assert brilhos["brilho_da_barra"] == pytest.approx(0.40), brilhos
+    assert mesa.server._brilhos_acesos(UNIQS[2])["brilho_da_barra"] == pytest.approx(
+        BRILHO_GLOBAL)
