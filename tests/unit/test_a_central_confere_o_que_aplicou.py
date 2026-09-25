@@ -2,7 +2,14 @@
 
 O coração da sprint: *"o BlueZ disse que pareou"* não é *"o controle chegou"*.
 Só o ``HID_PHYS`` no adaptador pretendido E o movimento chegando dizem
-«chegou»; sem os dois o estado fica «esperando», e a origem NÃO se apaga.
+«chegou»; sem os dois o estado fica «esperando».
+
+FATO SUBSTITUÍDO (25/09/2026, A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01): aqui se
+lia *«e a origem NÃO se apaga»*. Desde a lista dela de 25/09 a origem sai ANTES
+do gesto (a R1 dela ao pé da letra — ligado, o controle não entra em modo de
+parear, e com a chave lá ele volta sozinho). O que o CONFERIR segura continua
+sendo o «chegou»: sem os dois sinais, nunca «chegou», e o diário não diz
+«moveu».
 
 O mundo é o ``radio_de_mentira`` com o botão ``pair_mente``: o ``Pair``
 responde que deu e o controle não muda de host — o «aplicar que falha» da
@@ -106,13 +113,14 @@ def _da_central(diario: Path) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
-def test_o_aplicar_que_falha_fica_esperando_e_nao_apaga_a_origem(
+def test_o_aplicar_que_falha_fica_esperando_e_nao_diz_chegou(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
     """A régua da sprint: *"injete um aplicar que falha, e a régua acusa"*.
 
     MORDIDA: faça o ``_conferir`` devolver ``True`` sem perguntar — o mover diz
-    «chegou», apaga a sala com o controle ainda lá, e esta régua reprova.
+    «chegou» e escreve «moveu» no diário com o controle fora do quarto, e esta
+    régua reprova.
     """
     central = _central(dono, mundo, relogio)
 
@@ -122,8 +130,8 @@ def test_o_aplicar_que_falha_fica_esperando_e_nao_apaga_a_origem(
     assert (feito.estado, feito.motivo) == (cr.ESPERANDO, cr.MOTIVO_SEM_CONFIRMACAO)
     assert feito.passo == cr.PASSO_CONFERINDO
     assert feito.estado != cr.CHEGOU
-    assert mundo.objeto(SALA, VERMELHO) is not None, "a origem não se apaga sem conferir"
-    assert mundo.lapides == []
+    assert feito.origens_esquecidas is True
+    assert mundo.lapides == [(SALA, VERMELHO)], "UMA lápide: a da origem, antes do gesto"
     assert _da_central(diario) == []
 
 
@@ -155,7 +163,7 @@ def test_o_hid_phys_que_confirma_depois_vira_chegou_e_so_entao_a_origem_sai(
     _aplicar_que_falha(mundo, relogio, central)
     central.vigiar()
     assert central.movimento_de(VERMELHO).estado == cr.ESPERANDO
-    assert mundo.lapides == []
+    assert mundo.lapides == [(SALA, VERMELHO)]
 
     # O controle pega o host novo e conecta no quarto.
     mundo.fisicos[VERMELHO].host = QUARTO
@@ -170,20 +178,30 @@ def test_o_hid_phys_que_confirma_depois_vira_chegou_e_so_entao_a_origem_sai(
     assert _da_central(diario) == [cr.MOVEU_O_APARELHO]
 
 
-def test_o_controle_que_volta_para_a_origem_nao_chegou(
+def test_o_controle_nao_tem_como_voltar_para_a_origem(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
+    """O host que ele guarda ainda é a sala — e a sala não tem mais a chave.
+
+    FATO SUBSTITUÍDO (25/09/2026): era «o controle que volta para a origem não
+    chegou». Com a origem esquecida antes do gesto, ele não volta — nem com o
+    PS, nem sozinho (o passo c2 da lista dela) —, e o «esperando» segue até o
+    prazo.
+
+    MORDIDA: devolva o esquecer para depois do conferir — o PS o leva de volta
+    à sala e esta régua reprova.
+    """
     central = _central(dono, mundo, relogio)
     _aplicar_que_falha(mundo, relogio, central)
 
-    mundo.apertar_ps(VERMELHO)  # o host que ele guarda ainda é a sala
+    mundo.apertar_ps(VERMELHO)
+    assert mundo.voltar_sozinho(VERMELHO) == ""
     central.vigiar()
 
     feito = central.movimento_de(VERMELHO)
-    assert (feito.estado, feito.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_VOLTOU)
-    assert mundo.lapides == []
-    assert mundo.onde_esta(rm.uniq(VERMELHO)) == SALA
-    assert _da_central(diario) == [cr.O_APARELHO_NAO_CHEGOU]
+    assert feito.estado == cr.ESPERANDO
+    assert mundo.onde_esta(rm.uniq(VERMELHO)) != SALA
+    assert _da_central(diario) == []
 
 
 def test_o_esperando_que_passa_do_prazo_nao_chegou(
@@ -201,7 +219,7 @@ def test_o_esperando_que_passa_do_prazo_nao_chegou(
     central.vigiar()
     feito = central.movimento_de(VERMELHO)
     assert (feito.estado, feito.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_PRAZO)
-    assert mundo.lapides == []
+    assert mundo.lapides == [(SALA, VERMELHO)], "nenhuma lápide a mais no prazo"
 
 
 # ---------------------------------------------------------------------------
@@ -225,7 +243,7 @@ def test_hid_phys_sem_movimento_nao_e_chegada(
 
     assert mundo.onde_esta(rm.uniq(VERMELHO)) == QUARTO
     assert feito.estado == cr.ESPERANDO
-    assert mundo.lapides == []
+    assert mundo.lapides == [(SALA, VERMELHO)]
 
 
 # ---------------------------------------------------------------------------
@@ -253,10 +271,11 @@ def test_o_fone_pareado_que_nao_conecta_no_destino_fica_esperando(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
     """O ``Pair`` do fone diz que deu, e o ``Connect`` no quarto falha: sem o
-    ``Connected`` do destino, não é «chegou», e a sala não se apaga.
+    ``Connected`` do destino, não é «chegou». (A sala já saiu antes do gesto —
+    a R1 dela, desde 25/09.)
 
     MORDIDA: faça o ``_chegou`` do fone responder pelo objeto, sem o
-    ``Connected`` — ele diz «chegou», a sala sai, e esta régua reprova.
+    ``Connected`` — ele diz «chegou», e esta régua reprova.
     """
     mundo.pareado(SALA, FONE, classe=rm.CLASSE_DE_FONE)
     dono._fotografar()
@@ -269,8 +288,7 @@ def test_o_fone_pareado_que_nao_conecta_no_destino_fica_esperando(
     assert mundo.objeto(QUARTO, FONE)["Paired"] is True, "o BlueZ disse que deu"
     assert mundo.objeto(QUARTO, FONE)["Connected"] is False
     assert (feito.estado, feito.motivo) == (cr.ESPERANDO, cr.MOTIVO_SEM_CONFIRMACAO)
-    assert mundo.objeto(SALA, FONE) is not None
-    assert mundo.lapides == []
+    assert mundo.lapides == [(SALA, FONE)]
 
 
 # ---------------------------------------------------------------------------
@@ -421,7 +439,7 @@ def test_um_erro_na_vigia_nao_segura_o_esperando_alem_do_prazo(
 
     feito = central.movimento_de(VERMELHO)
     assert (feito.estado, feito.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_PRAZO)
-    assert mundo.lapides == []
+    assert mundo.lapides == [(SALA, VERMELHO)]
 
 
 # ---------------------------------------------------------------------------
@@ -471,8 +489,12 @@ def test_o_publicado_so_tem_os_tres_estados_e_nenhum_texto_de_tela(
     assert estados <= set(cr.ESTADOS)
     assert estados == {cr.ESPERANDO, cr.NAO_CHEGOU}
     for movimento in publicado["movimentos"]:
+        # «classe», «modalias» e «nome» (25/09/2026): o que a tela precisa para
+        # dizer O QUE está esperando depois de a origem sair. O «nome» é o que
+        # ELA deu ao aparelho — dado dela, e não texto de tela do produto.
         assert set(movimento) == {
-            "aparelho", "destino", "estado", "passo", "motivo", "origens", "e_controle", "quando"
+            "aparelho", "destino", "estado", "passo", "motivo", "origens", "e_controle",
+            "classe", "modalias", "nome", "quando",
         }
 
 
