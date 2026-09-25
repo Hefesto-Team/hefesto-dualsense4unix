@@ -385,10 +385,13 @@ flatpak uninstall --user io.github.hefesto_team.hefesto_dualsense4unix
 rm -rf ~/.var/app/io.github.hefesto_team.hefesto_dualsense4unix/
 ```
 
-As regras udev instaladas no host permanecem. Para removê-las:
+As regras udev instaladas no host permanecem. Para removê-las (a regra do nó
+do DualSense se chamava `70-ps5-controller.rules` até 25/09/2026, e um host
+instalado antes pode ter as duas):
 
 ```bash
-sudo rm /etc/udev/rules.d/73-hefesto-ps5-controller.rules \
+sudo rm -f /etc/udev/rules.d/73-hefesto-ps5-controller.rules \
+        /etc/udev/rules.d/70-ps5-controller.rules \
         /etc/udev/rules.d/71-uinput.rules \
         /etc/udev/rules.d/72-ps5-controller-autosuspend.rules
 sudo udevadm control --reload-rules
