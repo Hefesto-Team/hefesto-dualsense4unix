@@ -700,6 +700,26 @@ def test_o_sistema_de_verdade_e_inerte_no_ensaio(raizes: m.Raizes) -> None:
     assert s._systemctl_do_usuario("stop", m.UNIT_DO_DAEMON) == 3
 
 
+def test_no_ensaio_a_parte_do_root_nunca_chama_o_sudo(
+    raizes: m.Raizes, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O «limpa?» chega à parte do root sem passar pelo guardar: a guarda tem
+    de estar na porta do root, e não só na entrada dos dois verbos."""
+    chamadas: list[list[str]] = []
+
+    def run_que_anota(argv: list[str], **_: Any) -> subprocess.CompletedProcess[str]:
+        chamadas.append(list(argv))
+        return subprocess.CompletedProcess(argv, 0, stdout="{}", stderr="")
+
+    monkeypatch.setattr(m.subprocess, "run", run_que_anota)
+    reais = m.Raizes(**{**raizes.__dict__, "bluez": m.BLUEZ_REAL, "varlib": m.VARLIB_DO_PRODUTO,
+                        "guardado_do_root": m.GUARDADO_DO_ROOT_REAL})
+    with pytest.raises(m.RecusaError, match="ensaio"):
+        m.Sistema().rodar_parte_do_root(reais, "olhar", None, seco=True)
+    assert m.Sistema().olhar_o_bluez(reais) is None
+    assert chamadas == [], f"o ensaio chamou {chamadas}"
+
+
 # ─── 6. a casa inteira: guardar → uninstall → limpa? → install → devolver ──
 
 
