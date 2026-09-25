@@ -806,6 +806,36 @@ BOOTSTRAP = r"""
       else { el.style.setProperty('--plastico', t); }
       return el.style.getPropertyValue('--plastico') === antes ? 0 : 1;
     }
+    // O ALVO `posicao` — ONDE O PONTINHO ESTÁ, e ele não reescreve folha
+    // nenhuma. A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01, 25/09/2026.
+    //
+    // O valor é `x,y` em por cento, e o alvo escreve só `--hef-x` e `--hef-y`
+    // no próprio elemento. Quem os usa é a regra da página,
+    // `left:var(--hef-x,50.2%);top:var(--hef-y,50.2%)`. Antes, a posição era
+    // uma folha endereçada trocada inteira a cada tique: o WebKit refazia o
+    // estilo das 1.955 peças da 02 e repintava a janela toda, dez vezes por
+    // segundo (37,7% de um núcleo contra 1,13% por aqui, na banca).
+    //
+    // O VAZIO E O TRAVESSÃO TIRAM AS DUAS VARIÁVEIS, e o pontinho volta ao
+    // REPOUSO do `var()`. É o que o lugar vazio mostrava pelo piso da folha, e
+    // `--hef-x:—` invalidaria a regra. Apagar o que já não está lá conta 0.
+    if(alvo === 'posicao'){
+      const ax = el.style.getPropertyValue('--hef-x').trim();
+      const ay = el.style.getPropertyValue('--hef-y').trim();
+      const xy = (vazio || t === '—') ? [] : t.split(',');
+      if(xy.length !== 2){
+        if(!ax && !ay) return 0;
+        el.style.removeProperty('--hef-x');
+        el.style.removeProperty('--hef-y');
+        return 1;
+      }
+      const x = xy[0].trim() + '%';
+      const y = xy[1].trim() + '%';
+      let mudou = 0;
+      if(ax !== x){ el.style.setProperty('--hef-x', x); mudou = 1; }
+      if(ay !== y){ el.style.setProperty('--hef-y', y); mudou = 1; }
+      return mudou;
+    }
     // O ALVO `atributo` — UM ATRIBUTO DA TAG, e é o que faltava para o desenho
     // do controle seguir o aparelho. A lei dela, 03/09/2026: *"os svgs do
     // dualsense (…) mudam de acordo com o controle identificado no canto
@@ -1450,6 +1480,22 @@ BOOTSTRAP = r"""
     // é a única das quatro que NÃO despacha o gesto de `data-hef-gesto`, e a
     // razão é que ali o gesto grava no disco dela.
     document.addEventListener('input', function(ev){ manda_do_vivo(ev); }, true);
+    // A JANELA ESCONDIDA — A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01. Quem
+    // sabe se a janela está à vista é o WebKit, e ele diz isso por
+    // `document.hidden`, o mesmo sinal com que para de pintar. O aviso vai
+    // pelo canal de sempre, sem `gesto`, e o `_gesto` do Python o separa antes
+    // de contar clique.
+    document.addEventListener('visibilitychange', function(){ dizer_a_vista(); });
+  }
+  function dizer_a_vista(){
+    // SEM O CANAL NÃO HÁ A QUEM DIZER: as réguas rodam este BOOTSTRAP num
+    // WebView sem o `hefesto`, e um erro aqui derrubaria a instalação inteira.
+    const canal = window.webkit && window.webkit.messageHandlers
+                  && window.webkit.messageHandlers.hefesto;
+    if(!canal) return;
+    canal.postMessage(JSON.stringify({
+      visibilidade: document.hidden ? 'escondida' : 'vista',
+      pagina: location.pathname.split('/').pop()}));
   }
   // A SÉRIE DO GESTO VIVO. Ela é própria e não o contador do voo: o voo carimba
   // o elemento e volta pelo `voltouDoVoo`; a série do vivo nunca toca o DOM —
@@ -1655,6 +1701,9 @@ BOOTSTRAP = r"""
     o.pagina = location.pathname.split('/').pop();
     window.webkit.messageHandlers.hefesto.postMessage(JSON.stringify(o));
   }
+  // UMA VEZ NA CARGA, e a cada troca pelo ouvinte lá em cima: a página que
+  // nasce com a janela minimizada já diz que ninguém a vê.
+  dizer_a_vista();
   return 'ok';
 })();
 """
@@ -2500,6 +2549,14 @@ LER_CAMPOS = r"""
     // do lado do pacote pelo mesmo ramo que já serve o `largura`.
     else if(alvo === 'altura'){ v = el.style.height; }
     else if(alvo === 'valor'){ v = ('value' in el) ? String(el.value ?? '') : ''; }
+    // O ALVO `posicao`, na língua do pacote: `x,y` sem o `%`, ou vazio quando o
+    // pontinho está no repouso. `regua_do_mockup._campo` lê o `style=` do
+    // arquivo pelo mesmo par de variáveis.
+    else if(alvo === 'posicao'){
+      const px = el.style.getPropertyValue('--hef-x').trim().replace(/%$/, '');
+      const py = el.style.getPropertyValue('--hef-y').trim().replace(/%$/, '');
+      v = (px || py) ? (px + ',' + py) : '';
+    }
     else if(alvo === 'cor'){ v = el.style.color; }
     else if(alvo === 'atributo'){
       // O ATRIBUTO, NA MESMA LÍNGUA DOS DOIS LADOS: o texto que ele guarda, ou
@@ -2870,6 +2927,11 @@ class LeitorDoEstado:
         #: Sobe a cada RESPOSTA — boa ou muda. É o que o tique compara.
         self._geracao = 0
         self._parar = threading.Event()
+        #: A JANELA À VISTA — A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01. Com
+        #: ela escondida o fio espera AQUI, sem perguntar nada ao daemon: não
+        #: há quem leia a resposta.
+        self._a_vista = threading.Event()
+        self._a_vista.set()
         self._fio: threading.Thread | None = None
 
     # -- o que o tique chama, e ele nunca bloqueia -------------------------
@@ -2898,6 +2960,16 @@ class LeitorDoEstado:
     def parar(self) -> None:
         """Pede o fim do fio. Ele é `daemon`, então o processo não o espera."""
         self._parar.set()
+        # ACORDA O FIO PAUSADO, senão ele ficaria esperando a janela voltar.
+        self._a_vista.set()
+
+    def pausar(self) -> None:
+        """A janela foi escondida: o fio para de ler até `retomar()`."""
+        self._a_vista.clear()
+
+    def retomar(self) -> None:
+        """A janela voltou: a próxima leitura sai um intervalo depois."""
+        self._a_vista.set()
 
     def _uma_leitura(self) -> None:
         try:
@@ -2919,6 +2991,11 @@ class LeitorDoEstado:
             self._parar.wait(self._intervalo)
             if self._parar.is_set():
                 return
+            if not self._a_vista.is_set():
+                # PAUSADO: espera a janela voltar e recomeça a volta, para que
+                # a primeira leitura saia um intervalo depois da volta.
+                self._a_vista.wait()
+                continue
             self._uma_leitura()
 
 
@@ -2954,7 +3031,20 @@ class Piloto:
     SEGUNDOS_ENTRE_LEITURAS_DOS_EXTERNOS = 4.0
     SEGUNDOS_DE_ESPERA_DOS_EXTERNOS = 3.0
 
+    #: A CARGA INTEIRA SAI A CADA 10 TIQUES (1 s) — A-JANELA-ABERTA-NAO-GASTA-
+    #: O-PROCESSADOR-01, 25/09/2026. Entre uma e outra o tique manda só o que
+    #: mudou. A inteira de 1 em 1 s repõe o que a página não aplicou: o campo
+    #: `sob_o_dedo`, o bloco adiado por um voo e o `<select>` que recusou.
+    TIQUES_ENTRE_CARGAS_INTEIRAS = 10
+    #: QUANTOS CUSTOS DE TIQUE A JANELA GUARDA: 6.000 são 10 min de tique. Numa
+    #: janela aberta por 10 h a lista crescia 20 números por segundo e nunca
+    #: encolhia (720 mil); 10 min ainda cobrem toda régua e todo passeio.
+    CUSTOS_GUARDADOS = 6000
+
     def __init__(self, args: argparse.Namespace) -> None:
+        from collections import deque
+
+
         self.args = args
         self.pronto = False
         self.agendado = False
@@ -2977,7 +3067,7 @@ class Piloto:
         #: engoliu o zero.
         self.trocas: dict[str, int] = {}
         self.visitadas: list[str] = []
-        self.custos: list[float] = []
+        self.custos: deque[float] = deque(maxlen=self.CUSTOS_GUARDADOS)
         #: O que ESTE processo mandou ao daemon, e o que recusou por falta de
         #: dono. Os dois contados: sem o segundo, "nada aconteceu" e "não havia
         #: quem atendesse" ficariam indistinguíveis.
@@ -3077,7 +3167,21 @@ class Piloto:
         self._st_de_agora: dict[str, Any] = {}
         #: O custo das DUAS VIAGENS de IPC, separado do custo total do tique. É
         #: o que responde "quem come o orçamento" sem adivinhação.
-        self.custo_do_ipc: list[float] = []
+        self.custo_do_ipc: deque[float] = deque(maxlen=self.CUSTOS_GUARDADOS)
+        #: A JANELA ESCONDIDA, pelo que a página disse (`document.hidden`). Com
+        #: ela escondida o tique só bate o coração — ver `_a_janela_mudou`.
+        self._escondida = False
+        #: Na volta da janela, a geração do leitor naquele instante: o tique só
+        #: pinta quando ela ANDA, para não pintar o estado de antes de esconder.
+        self._geracao_na_volta: int | None = None
+        #: A ÚLTIMA CARGA que o tique mandou à página, inteira. É contra ela que
+        #: o tique seguinte mede a diferença; `None` pede a carga inteira.
+        self._pintada: dict[str, Any] | None = None
+        #: Quantos tiques faltam para a próxima carga inteira.
+        self._ate_a_inteira = 0
+        #: As listas que um `data-hef-molde` conta, por página — ver
+        #: `_moldes_da_pagina`.
+        self._moldes: dict[str, frozenset[str]] = {}
         #: Quem pode perguntar de novo, e quando, é do leitor
         #: (`cor_do_plastico.AgendaDaPergunta`) — nunca duas em voo por controle.
         self.leitor = mesa_viva.LeitorDeCor(ligado=not args.sem_cor)
@@ -3295,6 +3399,7 @@ class Piloto:
         self.vivos_atendidos.append(f"{pagina}:{nome}")
         # A GUARDA `window.__hef &&` é a mesma da pintura, e pela mesma razão:
         # entre a tecla e a volta da thread a página pode ter trocado.
+        self._esquecer_a_pintura()
         self._js(f"window.__hef && window.__hef.pintar({_json(resposta)})")
         return False
 
@@ -3309,6 +3414,14 @@ class Piloto:
         `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` em miniatura — quem clica conclui que
         funcionou.
         """
+        # O AVISO DA JANELA NÃO É GESTO — A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01.
+        # Ele vem pelo mesmo canal, sem `gesto`, e sai antes de ser contado.
+        if "gesto" not in o and o.get("visibilidade") in ("escondida", "vista"):
+            self._a_janela_mudou(o.get("visibilidade") == "escondida")
+            return
+        # TODA MENSAGEM DA PÁGINA PEDE A CARGA INTEIRA no tique seguinte: o
+        # clique pode ter mudado o que está na tela sem passar pela pintura.
+        self._esquecer_a_pintura()
         self.gestos.append(o)
         nome = str(o.get("gesto") or "")
         pagina = str(o.get("pagina") or self.pagina)  # (noqa-acento: verbo)  (nome de variável)
@@ -3429,6 +3542,64 @@ class Piloto:
 
         threading.Thread(target=trabalhar, daemon=True).start()
 
+    # -- a janela escondida e a carga mínima (A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01)
+    def _a_janela_mudou(self, escondida: bool) -> None:
+        """A página disse se alguém pode vê-la. Escondida, a janela não trabalha.
+
+        A QUEIXA, medida no diário dela: uma janela aberta por 10 h gastou 35%
+        de um núcleo em 25/09/2026, sem ninguém olhando. Com a janela escondida
+        (minimizada, desmapeada) o WebKit já para de desenhar, mas o tique
+        seguia montando e mandando a carga inteira dez vezes por segundo: 45%
+        na banca, com a tela parada.
+
+        Escondida, o fio do estado pausa, as ondas soltam os nós e o tique só
+        bate o coração (esconder não é largar). Na volta, a carga vai inteira e
+        só depois de o leitor trazer um estado NOVO: a tela fica com o último
+        quadro por um tique, e não pinta o estado de antes de esconder.
+
+        O diário ganha uma linha por troca; a tela, nenhuma.
+        """
+        if escondida == self._escondida:
+            return
+        self._escondida = escondida
+        self._esquecer_a_pintura()
+        if escondida:
+            self._geracao_na_volta = None
+            self._estado_vivo.pausar()
+            _soltar_as_ondas()
+            print("[janela] escondida: o tique parou", file=sys.stderr)
+            return
+        self._geracao_na_volta = self._estado_vivo.ultimo()[2]
+        self._estado_vivo.retomar()
+        print("[janela] à vista: o tique voltou", file=sys.stderr)
+
+    def _esquecer_a_pintura(self) -> None:
+        """O próximo tique manda a carga INTEIRA, e não só o que mudou.
+
+        Quem chama é quem mexeu na página por fora do tique (um gesto, a
+        resposta dele, o pouso do voo, a janela que volta) ou quem não sabe se
+        a pintura pousou (a pintura que falhou, a página trocada no meio).
+        """
+        self._pintada = None
+
+    def _moldes_da_pagina(self) -> frozenset[str]:
+        """As chaves de lista que um `data-hef-molde` conta nesta página.
+
+        Lidas do arquivo publicado, que é o que o WebView carregou, uma vez por
+        página. Uma lista dessas que muda clona ou remove nós, e o nó novo
+        precisa dos campos da carga inteira no mesmo passe.
+        """
+        import re
+
+        if self.pagina not in self._moldes:
+            try:
+                texto = onde.pagina(self.pagina, publicado=True).read_text(encoding="utf-8")
+            except OSError:
+                texto = ""
+            self._moldes[self.pagina] = frozenset(
+                re.findall(r'data-hef-molde-conta="([^"]+)"', texto))
+        return self._moldes[self.pagina]
+
     def _pousou(self, voo: str, certo: bool | None = None) -> bool:
         """O botão volta do voo — a classe sai e o rótulo original é devolvido.
 
@@ -3449,6 +3620,9 @@ class Piloto:
         """
         if not voo:
             return False
+        # O POUSO DEVOLVE O RÓTULO GUARDADO por cima do que o tique pintou no
+        # botão: a carga seguinte vai inteira.
+        self._esquecer_a_pintura()
         self._js(
             f"window.__hef && window.__hef.voltouDoVoo({_json(voo)}, {_json(certo)})"
         )
@@ -3475,6 +3649,7 @@ class Piloto:
             # A GUARDA `window.__hef &&` é a mesma da pintura, e pela mesma
             # razão: entre o clique e a volta da thread a página pode ter
             # trocado, e o `__hef` morre com o documento.
+            self._esquecer_a_pintura()
             self._js(f"window.__hef && window.__hef.pintar({_json(resposta)})")
             print(f"[gesto] {pagina} · {nome} → aplicado, e a resposta foi para a tela")
             return False
@@ -3790,6 +3965,12 @@ class Piloto:
         # abertura pintaria `{}`, que a tela lê como *"não há ninguém na mesa"*.
         # Chamar duas vezes não sobe dois fios.
         self._estado_vivo.comecar()
+        # A PÁGINA NOVA NASCE SEM NADA DO QUE O TIQUE PINTOU, então a primeira
+        # carga dela vai inteira. E as ondas soltam os nós da aba anterior: só
+        # a 02 os pede, e ela os pede de novo no tique logo abaixo — antes
+        # disto, o `parec` seguia vivo em qualquer aba depois que a 02 abria.
+        self._esquecer_a_pintura()
+        _soltar_as_ondas()
         self._tique()
         if not self.agendado:
             self.agendado = True
@@ -3940,8 +4121,48 @@ class Piloto:
             self._st_de_agora = self._da_resposta(st_lido, erro_lido)
         return self._st_de_agora
 
+    def _esperando_o_estado_novo(self) -> bool:
+        """A janela voltou e o leitor ainda não trouxe resposta depois disso?"""
+        if self._geracao_na_volta is None:
+            return False
+        if self._estado_vivo.ultimo()[2] == self._geracao_na_volta:
+            return True
+        self._geracao_na_volta = None
+        return False
+
+    def _o_que_mandar(self, carga: dict[str, Any]) -> dict[str, Any]:
+        """A carga que ESTE tique manda à página: inteira, só a diferença, ou nada.
+
+        A diferença é contra a última carga MANDADA, lida valor a valor
+        (`_achatar_a_carga`). Uma diferença que muda a FORMA da página — a fita,
+        um bloco, a lista que um molde conta — vai inteira: esses três trocam
+        ou clonam nós, e o `pintar` escreve os campos, os lugares vazios e as
+        marcas DEPOIS, no mesmo passe. Por diferença, o nó novo ficaria até
+        1 s com o valor do desenho, e o lugar vazio marcado como conectado.
+        """
+        agora = _achatar_a_carga(carga)
+        antes, self._pintada = self._pintada, agora
+        self._ate_a_inteira -= 1
+        if antes is None or self._ate_a_inteira <= 0:
+            self._ate_a_inteira = self.TIQUES_ENTRE_CARGAS_INTEIRAS
+            return carga
+        dif = _o_que_mudou(antes, agora)
+        if _a_diferenca_muda_a_forma(dif, self._moldes_da_pagina()):
+            self._ate_a_inteira = self.TIQUES_ENTRE_CARGAS_INTEIRAS
+            return carga
+        return dif
+
     def _tique(self) -> bool:
         if not self.pronto:
+            return True
+        # A JANELA ESCONDIDA NÃO TRABALHA — A-JANELA-ABERTA-NAO-GASTA-O-
+        # PROCESSADOR-01, 25/09/2026. Ninguém vê a página, então não há o que
+        # montar nem o que pintar; só o coração de quem segura um aparelho
+        # continua, com o último contexto, porque esconder não é largar. Na
+        # volta, o tique espera o leitor trazer um estado NOVO (ver
+        # `_a_janela_mudou`) e então manda a carga inteira.
+        if self._escondida or self._esperando_o_estado_novo():
+            pacotes.bater_os_coracoes(self._ctx_de_agora, ponte)
             return True
         # O TIQUE NÃO ENFILEIRA — A-TELA-SAMBA-01, e é a cura de *"trava por
         # instantes"*.
@@ -4126,6 +4347,9 @@ class Piloto:
             # deixaria a janela muda para sempre depois do primeiro erro de JS.
             self._pintura_no_ar = False
             if erro is not None:
+                # A PÁGINA NÃO APLICOU o que foi, e o tique seguinte não pode
+                # medir a diferença contra uma pintura que não pousou.
+                self._esquecer_a_pintura()
                 print(f"[{self.pagina}] a pintura falhou: {erro}", file=sys.stderr)
                 return
             try:
@@ -4135,6 +4359,7 @@ class Piloto:
             # O `-1` (página trocada no meio) NÃO entra na conta de tiques:
             # contá-lo como zero faria uma aba viva parecer muda na travessia.
             if n < 0:
+                self._esquecer_a_pintura()
                 self.trocas[self.pagina] = self.trocas.get(self.pagina, 0) + 1
                 return
             self.tiques[self.pagina] = self.tiques.get(self.pagina, 0) + 1
@@ -4150,9 +4375,22 @@ class Piloto:
         # nunca vinha, e todo tique seguinte voltava no `if self._pintura_no_ar`.
         # A janela ficava com o HTML publicado — a lista de exemplo do desenho,
         # o "2 controles" — até ser fechada. Treze vezes no diário dela.
-        pedido = PEDIR_A_PINTURA.replace("CARGA", _json(carga))
-        self._pintura_no_ar = True
-        self.ponte.perguntar(pedido, contou)
+        #
+        # SÓ VAI O QUE MUDOU — A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01. A
+        # carga inteira sai na primeira pintura de cada página, depois de toda
+        # mensagem dela, na volta da janela, quando a FORMA muda e a cada
+        # `TIQUES_ENTRE_CARGAS_INTEIRAS`; entre uma e outra, só a diferença. O
+        # `pintar` já trata a chave ausente como «não mexe» em toda seção.
+        enviar = self._o_que_mandar(carga)
+        if enviar:
+            pedido = PEDIR_A_PINTURA.replace("CARGA", _json(enviar))
+            self._pintura_no_ar = True
+            self.ponte.perguntar(pedido, contou)
+        else:
+            # NADA MUDOU: nenhum `run_javascript`. O tique CONTA, com zero
+            # pinturas — sem isto o detector de aba muda acusaria toda aba
+            # quieta, e a aba parada não deixaria rastro de que rodou.
+            self.tiques[self.pagina] = self.tiques.get(self.pagina, 0) + 1
         # A CARGA DESTE TIQUE fica guardada: é ela — e não o código-fonte do
         # pacote — que diz o que o produto DECLAROU pintar nesta aba agora. Ler
         # daqui é o que separa esta régua das anteriores, que perguntavam se o
@@ -4769,6 +5007,7 @@ class Piloto:
         # O piloto não sabe QUE assunto é — quem sabe é a aba, em
         # `pacotes.LARGADAS`. Aqui é só o gatilho, e ele é o da travessia.
         pacotes.largar_o_que_as_abas_seguram(ponte)
+        _soltar_as_ondas()
         self.view.load_uri(alvo.as_uri())
         return False
 
@@ -4966,6 +5205,82 @@ def _o_desenho_cheio_no_lugar_vazio(
     return fora
 
 
+# ---------------------------------------------------------------------------
+# A CARGA MÍNIMA — A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01, 25/09/2026
+# ---------------------------------------------------------------------------
+# O tique mandava a carga INTEIRA dez vezes por segundo (15 KB na 02), com a
+# tela parada ou não. Cada uma custava o funil do Python, a travessia até o
+# WebKit e o laço do `pintar` inteiro. Agora ele manda só o que mudou, e a
+# inteira sai nos momentos de `Piloto._o_que_mandar`.
+
+#: As seções que descem CHAVE A CHAVE, e quantos níveis. As outras (as listas
+#: de lugares, a fita, o alvo) vão inteiras quando mudam.
+_SECOES_POR_CHAVE: dict[str, int] = {"mesa": 1, "colunas": 2, "blocos": 1, "marcas": 1}
+
+
+def _achatar_a_carga(carga: dict[str, Any]) -> dict[tuple[str, ...], tuple[Any, Any]]:
+    """`{caminho: (retrato, valor)}` de cada valor que o `pintar` lê sozinho.
+
+    O RETRATO é o que se compara, e ele é imutável: um texto fica como está e o
+    resto vira JSON. Comparar os valores crus deixaria passar uma lista que o
+    pacote reusa e muda no lugar, e trataria `1`, `True` e `"1"` como iguais.
+    """
+    import json
+
+    fora: dict[tuple[str, ...], tuple[Any, Any]] = {}
+
+    def descer(caminho: tuple[str, ...], valor: Any, niveis: int) -> None:
+        if niveis and isinstance(valor, dict):
+            for k, v in valor.items():
+                descer((*caminho, str(k)), v, niveis - 1)
+            return
+        retrato = (("t", valor) if isinstance(valor, str)
+                   else ("j", json.dumps(valor, sort_keys=True, ensure_ascii=False,
+                                         default=str)))
+        fora[caminho] = (retrato, valor)
+
+    for secao, valor in carga.items():
+        descer((str(secao),), valor, _SECOES_POR_CHAVE.get(str(secao), 0))
+    return fora
+
+
+def _o_que_mudou(antes: dict[tuple[str, ...], tuple[Any, Any]],
+                 agora: dict[tuple[str, ...], tuple[Any, Any]]) -> dict[str, Any]:
+    """A carga com só o que mudou entre as duas, na forma que o `pintar` lê.
+
+    O que SUMIU da carga não entra: para o `pintar`, a chave ausente é «não
+    mexe», e é o que a carga inteira já fazia com ela.
+    """
+    dif: dict[str, Any] = {}
+    for caminho, (retrato, valor) in agora.items():
+        velho = antes.get(caminho)
+        if velho is not None and velho[0] == retrato:
+            continue
+        no = dif
+        for k in caminho[:-1]:
+            no = no.setdefault(k, {})
+        no[caminho[-1]] = valor
+    return dif
+
+
+def _a_diferenca_muda_a_forma(dif: dict[str, Any], moldes: frozenset[str]) -> bool:
+    """A diferença troca ou clona nós? A fita, um bloco ou a lista de um molde."""
+    return ("fita" in dif or "blocos" in dif
+            or any(k in moldes for k in (dif.get("mesa") or {})))
+
+
+def _soltar_as_ondas() -> None:
+    """As ondas sonoras soltam todo nó. Nunca levanta.
+
+    Só a 02 pede nós às ondas, a cada tique dela; fora dela, e com a janela
+    escondida, nenhum `parec` precisa ficar vivo.
+    """
+    from hefesto_dualsense4unix.integrations import ondas_de_som
+
+    with contextlib.suppress(Exception):
+        ondas_de_som.o_de_sempre().seguir({})
+
+
 def _json(obj: Any) -> str:
     """Serializa para o WebView — e DENUNCIA o que ela mandou tirar da tela.
 
@@ -5007,18 +5322,63 @@ def _json(obj: Any) -> str:
     )
 
     saida = json.dumps(obj, ensure_ascii=False, default=str)
-    banida = primeiro_trecho_banido(saida)
-    if banida is not None and banida not in _BANIDAS_JA_DENUNCIADAS:
-        _BANIDAS_JA_DENUNCIADAS.add(banida)
-        print(f"[texto banido] {banida!r} foi para a tela. A frase é defeito do "
-              "dono dela — ver `interface/frases_que_ela_baniu.py`.",
-              file=sys.stderr)
+    # O FUNIL LÊ CADA TEXTO UMA VEZ — A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01,
+    # 25/09/2026. Ele passava a carga serializada INTEIRA a cada tique: 13
+    # buscas com lookbehind sobre 15 KB, a maior parcela do tique em toda aba
+    # (9,9% de um núcleo na 03). Agora passa cada VALOR, e só o que ainda não
+    # leu; as chaves nunca vão à tela.
+    #
+    # O VALOR É LIDO SERIALIZADO, COM AS ASPAS — o mesmo texto de antes, só
+    # fatiado. Cru, um valor que É a palavra sozinha cairia na exceção
+    # `texto.strip() == palavra` de `palavra_banida_em` e passaria calado:
+    # `"Mesa"` cru dá `None`, e serializado dá a palavra.
+    for folha in _textos_da_carga(obj):
+        if isinstance(folha, str) and folha in _TEXTOS_LIDOS_PELO_FUNIL:
+            banida = _TEXTOS_LIDOS_PELO_FUNIL[folha]
+        else:
+            banida = primeiro_trecho_banido(
+                json.dumps(folha, ensure_ascii=False, default=str))
+            if isinstance(folha, str):
+                if len(_TEXTOS_LIDOS_PELO_FUNIL) >= TEXTOS_QUE_O_FUNIL_LEMBRA:
+                    _TEXTOS_LIDOS_PELO_FUNIL.pop(next(iter(_TEXTOS_LIDOS_PELO_FUNIL)))
+                _TEXTOS_LIDOS_PELO_FUNIL[folha] = banida
+        if banida is not None and banida not in _BANIDAS_JA_DENUNCIADAS:
+            _BANIDAS_JA_DENUNCIADAS.add(banida)
+            print(f"[texto banido] {banida!r} foi para a tela. A frase é defeito do "
+                  "dono dela — ver `interface/frases_que_ela_baniu.py`.",
+                  file=sys.stderr)
     return saida
+
+
+def _textos_da_carga(obj: Any) -> Iterable[Any]:
+    """Os VALORES de uma carga que podem ter letra — as chaves ficam de fora.
+
+    Número, booleano e `None` não têm como carregar palavra nenhuma. O que não
+    é texto nem contêiner (o `default=str` do `json.dumps`) sai como está, para
+    o funil serializá-lo do mesmo jeito que a carga.
+    """
+    if isinstance(obj, dict):
+        for valor in obj.values():
+            yield from _textos_da_carga(valor)
+    elif isinstance(obj, (list, tuple)):
+        for valor in obj:
+            yield from _textos_da_carga(valor)
+    elif obj is None or isinstance(obj, (bool, int, float)):
+        return
+    else:
+        yield obj
 
 
 #: As palavras que o funil já denunciou nesta janela. Uma linha por palavra, e
 #: não uma por tique: o diário da janela não pode virar dez linhas por segundo.
 _BANIDAS_JA_DENUNCIADAS: set[str] = set()
+
+#: QUANTOS TEXTOS O FUNIL LEMBRA, com a resposta de cada um. Sem a memória,
+#: ler valor por valor não ganha nada (3,76 ms por tique contra 3,46 ms da carga
+#: inteira, medido numa carga de 10,6 KB); com ela, 0,30 ms. O mais velho sai
+#: primeiro quando a memória enche.
+TEXTOS_QUE_O_FUNIL_LEMBRA = 4096
+_TEXTOS_LIDOS_PELO_FUNIL: dict[str, str | None] = {}
 
 
 def main() -> None:

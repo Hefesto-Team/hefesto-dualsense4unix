@@ -64,14 +64,13 @@ from pacotes.a02_controles import (DICA_DO_GIRO, DICA_DO_GIRO_COM_A_MIRA,
 # divergiria em silêncio no dia em que o dono (`audio_saida.estado_do_canal`)
 # trocasse de palavra, porque um texto que não casa não dá erro nenhum.
 # A GEOMETRIA DO PONTINHO TAMBÉM É DO PACOTE, e pela mesma razão do
-# `ROTULO_DO_CLIQUE`: a folha que o produto escreve a cada tique
-# (`a02_controles.folha_das_posicoes`) e a folha que este gerador escreve uma
-# vez têm de falar a MESMA gramática de seletor — duas cópias divergem calada, e
-# esta casa já pagou isso com o `--plastico`. O `pos` era daqui e mudou de lado.
-from pacotes.a02_controles import (ALVOS_DA_POSICAO, MAX_DEDOS,
-                                   PISO_DAS_POSICOES,
-                                   pos_do_analogico as pos, regra_da_posicao,
-                                   seletor_da_posicao)
+# `ROTULO_DO_CLIQUE`: o endereço de cada pontinho e a regra que o posiciona são
+# os mesmos que o produto pinta a cada tique (alvo `posicao`), e duas cópias
+# divergem calada — esta casa já pagou isso com o `--plastico`. O `pos` era
+# daqui e mudou de lado.
+from pacotes.a02_controles import (CAMPOS_DA_POSICAO, MAX_DEDOS,
+                                   REGRA_DAS_POSICOES,
+                                   pos_do_analogico as pos)
 
 # ---------------------------------------------------------------------------
 # D-A-LEITURA-DO-ACELERÔMETRO-SAI-DA-TELA (29/08/2026) — MUDANÇA DE ESPECIFICAÇÃO.
@@ -2814,11 +2813,10 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
     exigir dos quatro lugares.
 
     O QUE O LUGAR VAZIO NÃO LEVA são as duas coisas que ele não TEM: a cor do
-    plástico lida do aparelho e a posição do dedo. Sem elas o `--plastico` e o
-    `left`/`top` caem nos dois PISOS que a folha já traz
-    (`PISO_DO_PLASTICO`, `PISO_DAS_POSICOES`), e as âncoras de
-    `cor_do_plastico_por_regra` e `posicao_por_regra` continuam contando
-    exatamente os conectados — nenhuma delas mudou.
+    plástico lida do aparelho e a posição do dedo. Sem elas o `--plastico` cai
+    no PISO da folha (`PISO_DO_PLASTICO`) e o pontinho no REPOUSO da regra da
+    posição (`REGRA_DAS_POSICOES`), e a âncora de `cor_do_plastico_por_regra`
+    continua contando exatamente os conectados.
     """
     plastico = cor_da_zona(c["cor"])            # a cor da casca, lida do SVG gerado
     luz = luz_do_jogador(c)
@@ -2835,16 +2833,21 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
     marca = "" if conectado else ' data-conectado="nao"'
     classe = "ctl card" if conectado else "ctl card off"
     # A COR DO PLÁSTICO E A POSIÇÃO DO DEDO SÓ EXISTEM ONDE HÁ APARELHO. Sem
-    # elas, `--plastico` e `left`/`top` caem nos dois PISOS da folha
-    # (`PISO_DO_PLASTICO` e `PISO_DAS_POSICOES`) — que é a resposta certa para
-    # um assento vazio, e a mesma que o produto dá quando a mesa viva não nomeia
-    # o lugar. Cravá-las aqui seria o desenho afirmando a cor de um plástico que
+    # elas, `--plastico` cai no PISO da folha (`PISO_DO_PLASTICO`) e o pontinho
+    # no REPOUSO da regra (`REGRA_DAS_POSICOES`) — que é a resposta certa para
+    # um assento vazio, e a mesma que o produto dá quando não há leitura. Cravá-las aqui seria o desenho afirmando a cor de um plástico que
     # ninguém leu, que é exatamente a lei dela de 03/09.
     casca = f' style="--plastico:{plastico}"' if conectado else ""
 
     def onde_esta(x, y, quebra=""):
-        """O `left`/`top` de um pontinho — nada, no lugar sem controle."""
-        return f'{quebra} style="left:{x}%;top:{y}%"' if conectado else ""
+        """O exemplo do DESENHO para um pontinho — nada, no lugar sem controle.
+
+        São as duas variáveis do alvo `posicao`, cravadas no próprio elemento: o
+        produto as sobrescreve com a leitura, e o vazio as tira (A-JANELA-
+        ABERTA-NAO-GASTA-O-PROCESSADOR-01, 25/09/2026). Sem o exemplo aqui, só
+        o repouso do `var()` sobraria, e o P1 do desenho iria ao centro.
+        """
+        return f'{quebra} style="--hef-x:{x}%;--hef-y:{y}%"' if conectado else ""
     # O SELO INTEIRO, montado pelo dono único (`selo_do_microfone`): são três
     # elementos com o mesmo endereço e três alvos de pintura, e escrevê-los à
     # mão nos dois lugares era como a cor congelou. O `mic_selo`/`mic_off` que
@@ -2951,8 +2954,8 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
             <div class="rot rot-linha">Touchpad
               <span class="de-quem" data-campo="touch-estado" title="{DICA_TOQUE}">{toque_txt}</span></div>
             <div class="touch">
-              <span class="ponto ponto-1{ponto_on}" data-campo="touch-ponto" data-hef-alvo="classe"{onde_esta(touch[0], touch[1], chr(10) + " " * 16)}></span>
-              <span class="ponto ponto-2{ponto2_on}" data-campo="touch-ponto-2" data-hef-alvo="classe"{onde_esta(touch2[0], touch2[1], chr(10) + " " * 16)}></span></div>
+              <span data-campo="{CAMPOS_DA_POSICAO["touch"]}" data-hef-alvo="posicao"{onde_esta(touch[0], touch[1])}><span class="ponto ponto-1{ponto_on}" data-campo="touch-ponto" data-hef-alvo="classe"></span></span>
+              <span data-campo="{CAMPOS_DA_POSICAO["touch2"]}" data-hef-alvo="posicao"{onde_esta(touch2[0], touch2[1])}><span class="ponto ponto-2{ponto2_on}" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></span></div>
           </div>
           <!-- O TRAVESSÃO VIROU PALAVRA — decisão dela, 04/09/2026 [02]:
                *"palavra curta no lugar do travessão, frase inteira no hover"*,
@@ -3014,14 +3017,14 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                 <div class="stick-rot">Analógico<br>esquerdo</div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">{ROTULO_DO_CLIQUE["l"]}</span>
-                  <span class="p"{onde_esta(pos(sticks[0]), pos(sticks[1]))}></span></div>
+                  <span class="p" data-campo="{CAMPOS_DA_POSICAO["ana-e"]}" data-hef-alvo="posicao"{onde_esta(pos(sticks[0]), pos(sticks[1]))}></span></div>
                 <div class="xy" data-xy="l" data-campo="xy-l" data-hef-alvo="html">{_texto_do_xy(sticks[0], sticks[1])}</div>
               </div>
               <div>
                 <div class="stick-rot">Analógico<br>direito</div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">{ROTULO_DO_CLIQUE["r"]}</span>
-                  <span class="p"{onde_esta(pos(sticks[2]), pos(sticks[3]))}></span></div>
+                  <span class="p" data-campo="{CAMPOS_DA_POSICAO["ana-d"]}" data-hef-alvo="posicao"{onde_esta(pos(sticks[2]), pos(sticks[3]))}></span></div>
                 <div class="xy" data-xy="r" data-campo="xy-r" data-hef-alvo="html">{_texto_do_xy(sticks[2], sticks[3])}</div>
               </div>
             </div>
@@ -3696,6 +3699,11 @@ CSS_DA_CARGA = "".join(
 
 CSS += f"""
 {CSS_DA_CARGA}  .faixa{{--larg-bateria:{LARG_BATERIA}px}}
+  /* A POSIÇÃO DOS PONTINHOS — uma regra só, e ela lê as duas variáveis que o
+     produto escreve no próprio pontinho (alvo `posicao`), com o repouso como
+     reserva. Era uma folha endereçada trocada inteira a cada tique, e cada
+     troca repintava a janela toda (A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01). */
+  {REGRA_DAS_POSICOES}
   /* O CARD ABERTO NÃO ESTICA — 14/09/2026, queixa dela com a foto na mão:
      *"o tamanho do card completo verticalmente"* está *"o triplo"*.
 
@@ -4343,91 +4351,21 @@ def cor_do_plastico_por_regra(doc):
 
 
 # ---------------------------------------------------------------------------
-# A POSIÇÃO DOS PONTINHOS SAI DO `style=` E VIRA REGRA — 04/09/2026
+# A POSIÇÃO DOS PONTINHOS — o alvo `posicao`, 25/09/2026
 # ---------------------------------------------------------------------------
-# A QUEIXA É DELA, com dois DualSense na mesa: *"não funciona o touch,
-# analogicos"*. O dado chegava inteiro do daemon e morria aqui: o `left`/`top`
-# do pontinho do touchpad e dos dois polegares era `style=` de LINHA, escrito
-# pelo desenho — e estilo de linha vence folha de estilo, então o produto não
-# tinha como movê-los. Pior: ele nem tem o alvo. Os nove do `escrever()` são
-# texto · largura · fundo · valor · html · classe · cor · plástico · atributo, e
-# o `atributo` RECUSA `style` por nome (`hefesto_vivo.atributo_escrevivel`).
+# A QUEIXA DELA, 04/09/2026, com dois DualSense na mesa: *"não funciona o touch,
+# analogicos"*. O `left`/`top` era `style=` de LINHA, que folha nenhuma vence e
+# o produto não alcançava; a primeira cura tirou a posição dali e a pôs numa
+# folha endereçada (`posicao-css`) que o produto trocava inteira a cada tique.
 #
-# É EXATAMENTE A MESMA CURA DA COR DO PLÁSTICO, na função logo acima, com a
-# mesma âncora asserida e o mesmo lugar de execução — o `__main__`, e não o
-# `bloco()`: `controles_vivos.py` chama `bloco()` direto para montar a mesa
-# VIVA, e ali o `style=` de linha é o valor LIDO. Tirá-lo de lá apagaria a
-# posição de um piloto que não é meu.
-#
-# OS SELETORES NÃO SÃO DIGITADOS AQUI: `regra_da_posicao` e `PISO_DAS_POSICOES`
-# vêm do pacote, que é quem escreve a folha VIVA. Uma segunda gramática faria as
-# duas folhas divergirem sem ninguém ver.
-CARD_DA_MESA = re.compile(r'<div class="ctl card" data-controle="([^"]+)">')
-#: O pontinho do touchpad. A âncora é o `data-campo` — a classe muda (`ponto` ou
-#: `ponto on`) e o `style` está na linha SEGUINTE, dentro da mesma tag.
-PONTO_DO_TOUCH = re.compile(
-    r'(?P<antes><span class="ponto[^"]*" data-campo="touch-ponto(?P<segundo>-2)?"'
-    r'[^>]*?)\s*style="left:(?P<x>[0-9.]+)%;top:(?P<y>[0-9.]+)%"')
-#: A bolinha de um analógico. Quem diz QUAL é o `data-stick` da moldura, e não a
-#: ordem em que ela aparece: contar na ordem é a família de régua que esta casa
-#: já pagou.
-PONTO_DO_STICK = re.compile(
-    r'(?P<antes><div class="stick" data-stick="(?P<lado>[lr])">.*?<span class="p")'
-    r' style="left:(?P<x>[0-9.]+)%;top:(?P<y>[0-9.]+)%"', re.S)
-#: `data-stick` -> o nome do alvo em `a02_controles.ALVOS_DA_POSICAO`.
-LADO_DO_STICK = {"l": "ana-e", "r": "ana-d"}
-
-
-def posicao_por_regra(doc):
-    """Tira o `left`/`top` cravado do `style=` e o devolve como folha VIVA.
-
-    CARD A CARD, e não com um `sub` sobre o documento inteiro: o `data-controle`
-    que nomeia o assento está na tag ANCESTRAL do pontinho, e uma substituição
-    global teria de adivinhar de quem é cada um pela ordem.
-    """
-    aberturas = [(m.start(), m.group(1)) for m in CARD_DA_MESA.finditer(doc)]
-    if len(aberturas) != len(CONECTADOS):
-        raise SystemExit(
-            f"ERRO na posição: {len(aberturas)} card(s) com `data-controle` e a "
-            f"mesa tem {len(CONECTADOS)} conectado(s) — a forma mudou.")
-    limites = [i for i, _ in aberturas] + [len(doc)]
-    regras: list[str] = []
-    pedacos = [doc[:limites[0]]]
-    for n, (inicio, pref) in enumerate(aberturas):
-        trecho = doc[inicio:limites[n + 1]]
-
-        # `pref` ENTRA COMO PADRÃO, e não por fechamento: uma função definida
-        # dentro do laço que LÊ a variável do laço é o `B023` do ruff, que é
-        # portão — e o defeito que ele persegue é real em quem guarda a função
-        # para depois.
-        def _guardar(m, alvo=None, pref=pref):
-            alvo = alvo or LADO_DO_STICK[m.group("lado")]
-            regras.append(regra_da_posicao(pref, alvo, m.group("x"), m.group("y")))
-            return m.group("antes")
-
-        trecho, toques = PONTO_DO_TOUCH.subn(
-            lambda m: _guardar(m, "touch2" if m.group("segundo") else "touch"),
-            trecho)
-        trecho, polegares = PONTO_DO_STICK.subn(_guardar, trecho)
-        # A ÂNCORA, e ela é por CARD: um card que mude de forma casaria zero e a
-        # página sairia com a posição congelada de volta, verde em todo portão.
-        # DOIS de touchpad desde 18/09/2026 (MULTITOQUE-01) — era 1, e o
-        # aparelho tem dois pontos de toque (`ABS_MT_SLOT 0..1`).
-        if (toques, polegares) != (MAX_DEDOS, 2):
-            raise SystemExit(
-                f"ERRO na posição: o card `{pref}` tem {toques} pontinho(s) de "
-                f"touchpad e {polegares} de analógico — "
-                f"esperados {MAX_DEDOS} e 2.")
-        pedacos.append(trecho)
-    doc = "".join(pedacos)
-    if re.search(r'style="left:[0-9.]+%;top:[0-9.]+%"', doc):
-        raise SystemExit("ERRO na posição: sobrou posição cravada na página")
-    folha = ('<style data-campo="posicao-css" data-hef-alvo="html">\n'
-             + "\n".join(f"  {r}" for r in [PISO_DAS_POSICOES, *regras])
-             + "\n</style>\n")
-    if "</head>" not in doc:
-        raise SystemExit("ERRO na posição: a página não tem `</head>`")
-    return doc.replace("</head>", folha + "</head>", 1)
+# A FOLHA SAIU EM 25/09/2026 (A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01): cada
+# troca refazia o estilo da página inteira e repintava a janela toda, dez vezes
+# por segundo, com o controle parado na mesa. Hoje cada pontinho tem o seu
+# endereço (`a02_controles.CAMPOS_DA_POSICAO`, alvo `posicao`), o exemplo do
+# desenho vai cravado nele como `--hef-x`/`--hef-y` (ver `onde_esta` no
+# `bloco()`), e a página tem UMA regra, `REGRA_DAS_POSICOES`, no `CSS` acima. O
+# `bloco()` já sai assim, e por isso o `controles_vivos.py`, que o chama direto,
+# recebe a mesma forma.
 
 
 # ESCREVER O ARQUIVO É O `__main__`, E NÃO O IMPORT (29/08/2026).
@@ -5056,23 +4994,32 @@ def _conferir(doc):
     exigir(not re.search(r'style="left:[0-9.]+%;top:[0-9.]+%"', doc),
            "a posição do pontinho voltou para o `style=` — estilo de linha vence "
            "folha de estilo, e o produto não tem alvo que escreva `style`")
-    exigir('<style data-campo="posicao-css" data-hef-alvo="html">' in doc,
-           "a folha endereçada da posição sumiu, ou perdeu o `data-hef-alvo=html` "
-           "— sem ele o pontinho volta a ficar onde o mockup o cravou")
-    exigir(doc.count('data-campo="posicao-css"') == 1,
-           "a folha da posição deixou de ser UMA — duas folhas deixam o assento "
-           "que a segunda não nomeia com a posição do desenho")
-    exigir(PISO_DAS_POSICOES in doc,
-           "o piso da posição sumiu da folha — o assento que a mesa viva não "
-           "nomeia ficaria sem `left`/`top` em vez de cair no repouso")
-    # TRÊS PONTINHOS POR CONTROLE CONECTADO: o dedo e os dois polegares. Uma
-    # regra a menos é um pontinho que o produto não move — e o seletor é pedido
-    # ao DONO, nunca redigitado aqui.
-    faltam = [f'{c["pref"]}/{alvo}' for c in CONECTADOS for alvo in ALVOS_DA_POSICAO
-              if f"{seletor_da_posicao(c['pref'], alvo)}{{left:" not in doc]
-    exigir(not faltam,
-           f"a folha da posição não nomeia {faltam} — esse pontinho fica onde o "
-           "desenho o cravou")
+    # A FOLHA TROCADA A CADA TIQUE NÃO VOLTA — 25/09/2026, A-JANELA-ABERTA-NAO-
+    # GASTA-O-PROCESSADOR-01. Cada troca dela repintava a janela inteira.
+    exigir('data-campo="posicao-css"' not in doc,
+           "a folha `posicao-css` voltou — o produto a trocaria inteira a cada "
+           "tique, e cada troca repinta a janela toda")
+    exigir(doc.count(REGRA_DAS_POSICOES) == 1,
+           "a regra única da posição sumiu (ou se repetiu) — sem ela o pontinho "
+           "não lê `--hef-x`/`--hef-y` e fica parado no canto")
+    # QUATRO PONTINHOS POR LUGAR, com o endereço do alvo `posicao`: o dedo, o
+    # segundo dedo e os dois polegares. Um endereço a menos é um pontinho que o
+    # produto não move. E o EXEMPLO DO DESENHO vai cravado só onde há controle:
+    # o lugar vazio fica no repouso da regra.
+    lugares = len(CONECTADOS) + VAZIOS
+    # UM ENDEREÇO POR DEDO QUE O APARELHO ENTREGA (`MAX_DEDOS`, MULTITOQUE-01):
+    # uma bolinha a mais ou a menos é um dedo que a tela inventa ou perde.
+    exigir(sum(1 for alvo in CAMPOS_DA_POSICAO if alvo.startswith("touch")) == MAX_DEDOS,
+           f"o touchpad tem {MAX_DEDOS} dedos no aparelho e outro número de "
+           "pontinhos com endereço de posição")
+    for campo in CAMPOS_DA_POSICAO.values():
+        exigir(doc.count(f'data-campo="{campo}" data-hef-alvo="posicao"') == lugares,
+               f"o pontinho `{campo}` não tem o endereço do alvo `posicao` nos "
+               f"{lugares} lugares — ele fica onde o desenho o cravou")
+        exigir(doc.count(f'data-campo="{campo}" data-hef-alvo="posicao" '
+                         f'style="--hef-x:') == len(CONECTADOS),
+               f"o exemplo do desenho do pontinho `{campo}` não está cravado nos "
+               f"{len(CONECTADOS)} conectado(s) — o mockup o mostraria no centro")
     for nome in {str(c["nome"]) for c in CONECTADOS}:
         exigir(corpo.count(nome) == corpo.count(f'<span data-campo="peca">{nome}</span>'),
                f"o nome de plástico `{nome}` aparece no miolo sem endereço")
@@ -5121,8 +5068,7 @@ if __name__ == "__main__":
     # reprovou com `0 chips para 5 rádios` — ela lia o arquivo VELHO, já com os
     # `<label>` da execução anterior. Régua que acha zero é ERRO, não silêncio.
     SAIDA = onde.pagina("02-controles.html")
-    SAIDA.write_text(
-        posicao_por_regra(cor_do_plastico_por_regra(fita_clicavel(SAIDA.read_text()))))
+    SAIDA.write_text(cor_do_plastico_por_regra(fita_clicavel(SAIDA.read_text())))
     _conferir(SAIDA.read_text())
     shutil.copyfile(SAIDA, _real / "02-controles.html")
     shutil.rmtree(_prova)
