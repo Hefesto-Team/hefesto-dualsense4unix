@@ -453,10 +453,10 @@ grep -qsF '# >>> hefesto JustWorksRepairing >>>' /etc/bluetooth/main.conf 2>/dev
 [[ -e /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh ]] && _NEEDS_SUDO=1
 [[ "${KEEP_BLUEZ}" -eq 0 && -f "${HOME}/.cache/hefesto-dualsense4unix/bluez-backport/VERSOES-ANTERIORES.txt" ]] && _NEEDS_SUDO=1
 # O-DIARIO-DO-RADIO-01 (instalado pela INSTALL-E-UNINSTALL-DO-RADIO-01): a
-# trava comum do rádio (tmpfiles.d + /run), os carimbos do reinício da ponte e
-# o diário do root — os três de root.
+# trava comum do rádio (tmpfiles.d + /run), os carimbos da ponte, do religar
+# (STORM-USB-02) e do watchdog, e o diário do root — todos de root.
 [[ -e /etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf ]] && _NEEDS_SUDO=1
-[[ -e /run/hefesto-dualsense4unix || -e /run/hefesto-bt-ponte ]] && _NEEDS_SUDO=1
+[[ -e /run/hefesto-dualsense4unix || -e /run/hefesto-bt-ponte || -e /run/hefesto-bt-rebind || -e /run/hefesto-bt-watchdog ]] && _NEEDS_SUDO=1
 compgen -G '/var/lib/hefesto-dualsense4unix/radio-diario.jsonl*' >/dev/null 2>&1 && _NEEDS_SUDO=1
 # AS CÓPIAS DE PAREAMENTO DE UNINSTALLS ANTERIORES (O-PURGE-LEVA-AS-COPIAS-DE-
 # PAREAMENTO-01): com --purge-config elas saem, e a pasta é de root. Sem esta
@@ -947,11 +947,11 @@ if sudo -n true 2>/dev/null; then
         sudo rm -f /etc/sudoers.d/49-hefesto-bt-ponte 2>/dev/null || true
     fi
     sudo rm -f /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh 2>/dev/null || true
-    # OS CARIMBOS DO REINÍCIO DA PONTE (O-DIARIO-DO-RADIO-01): `reset-<porta>`,
-    # `.dito`, `.seguidos` e `.desistiu`, na pasta 0700 que o próprio
-    # `reiniciar-travado` cria. É tmpfs e some no boot; sair aqui é o que faz o
-    # produto não deixar rastro até lá.
-    sudo rm -rf /run/hefesto-bt-ponte 2>/dev/null || true
+    # OS CARIMBOS DE ROOT EM /run das peças que este bloco tira: os `reset-<porta>`
+    # da ponte (O-DIARIO-DO-RADIO-01), os do religar e os `evento-*` (STORM-USB-02),
+    # os `promoted-*` e o do reinício do watchdog. tmpfs: sair aqui é não deixar rastro.
+    sudo rm -rf /run/hefesto-bt-ponte /run/hefesto-bt-rebind /run/hefesto-bt-watchdog \
+        /run/hefesto-bt-watchdog.restart-stamp 2>/dev/null || true
     # A TRAVA COMUM DO RÁDIO — simétrica ao `install_trava_do_radio_host`. Sai
     # DEPOIS dos timers (desabilitados acima): o watchdog é quem a disputa com
     # o daemon, e o daemon já foi parado no começo deste script. O `rmdir` é
@@ -1241,10 +1241,9 @@ fi
 # Broker root hide-hidraw (BROKER-01/Onda S — fd-injection). Simétrico ao
 # install.sh (passo 3h): disable+stop dispara o ExecStopPost
 # --restore-all-and-exit da própria unit (nenhum hidraw físico fica 0600
-# órfão); um belt explícito roda o MESMO restore ANTES de remover o binário
-# (precisa existir ainda para rodar). Remove SÓ os caminhos que o install
-# REGISTROU em broker-owner.conf e que ainda carregam o header do hefesto —
-# nunca toca unit de terceiros. Desenho:
+# órfão); um belt explícito roda o MESMO restore ANTES de remover o binário.
+# Remove SÓ os caminhos que o install REGISTROU em broker-owner.conf e que
+# carregam o header do hefesto — nunca unit de terceiros. Desenho:
 # docs/process/estudos/2026-07-20-desenho-onda-s-broker-fd-injection.md §7.2.
 BROKER_BIN="/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker"
 BROKER_SERVICE="/etc/systemd/system/hefesto-hidraw-broker.service"
@@ -1279,6 +1278,7 @@ if [[ -e "${BROKER_SERVICE}" || -e "${BROKER_SOCKET}" || -e "${BROKER_BIN}" ]]; 
             [[ -e "${BROKER_BIN}" ]] && sudo rm -f "${BROKER_BIN}"
         fi
         sudo rm -f "${BROKER_OWNER_FILE}"
+        sudo rm -rf /run/hefesto-hidraw-broker 2>/dev/null || true  # a pasta do socket e o marcador
         sudo systemctl daemon-reload >/dev/null 2>&1 || true
     else
         log "sudo indisponível — broker hide-hidraw NÃO removido"
