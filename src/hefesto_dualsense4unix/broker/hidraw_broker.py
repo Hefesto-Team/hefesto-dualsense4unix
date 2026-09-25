@@ -67,6 +67,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import errno
 import fcntl
 import json
 import os
@@ -469,6 +470,10 @@ def validate_physical_input_node(
 # ---------------------------------------------------------------------------
 
 _ACL_XATTR = "system.posix_acl_access"
+#: O-BROKER-NAO-REESCREVE-O-QUE-NAO-MUDOU-01: o `getxattr` da ACL num nó sem
+#: ACL. `ENODATA` é o do devtmpfs, do tmpfs e do ext4; `EOPNOTSUPP` é o do fs
+#: que não guarda ACL POSIX. Os dois contam como «sem ACL».
+_SEM_ACL = frozenset({errno.ENODATA, errno.EOPNOTSUPP})
 _ACL_VERSION = 2
 _ACL_TAG_USER_OBJ = 0x01
 _ACL_TAG_USER = 0x02
@@ -613,6 +618,8 @@ class FsAclOps:
             raise FileNotFoundError(node)  # nó sumiu/reciclado: tratar como gone
         try:
             ref = f"/proc/self/fd/{fd}"  # operações no INODE pinado, não no nome
+            if self._ja_esta_no_alvo(fd, None):
+                return
             with contextlib.suppress(OSError):  # ENODATA = já sem ACL
                 os.removexattr(ref, _ACL_XATTR)
             os.chmod(ref, 0o600)
@@ -626,10 +633,56 @@ class FsAclOps:
             raise FileNotFoundError(node)  # nome stale ⇒ gone (replug nasce exposto)
         try:
             ref = f"/proc/self/fd/{fd}"
+            if self._ja_esta_no_alvo(fd, uid):
+                return
             os.chmod(ref, 0o660)
             os.setxattr(ref, _ACL_XATTR, encode_access_acl(uid))
         finally:
             os.close(fd)
+
+    @staticmethod
+    def _ja_esta_no_alvo(fd: int, uid: int | None) -> bool:
+        """O nó pinado já está como a escrita o deixaria? Na dúvida, «não».
+
+        O-BROKER-NAO-REESCREVE-O-QUE-NAO-MUDOU-01 (25/09/2026). Escrever o que
+        já está lá não é de graça: todo `removexattr` e todo `chmod` anda o
+        `ctime` e dispara um `IN_ATTRIB` para quem vigia `/dev` e `/dev/input`,
+        MESMO quando nada muda (medido em tmpfs e em ext4; o `removexattr` num
+        nó sem ACL devolve 0). O rehide de 30 s fazia isso em cada nó escondido,
+        a cada volta.
+
+        A pergunta lê o INODE PINADO, pelo mesmo caminho da escrita (`fstat` no
+        fd `O_PATH` e `getxattr` por `/proc/self/fd/N`), e ler não gera evento.
+        Ela é feita a cada pedido, como a escrita era: quem decide é o fs lido
+        agora, nunca a memória (lição 2). E ela compara com o ALVO exato da
+        escrita, não com «ela consegue abrir?»:
+
+          - `uid=None`, o alvo de FECHAR: modo `0600` e nenhuma ACL;
+          - um uid, o alvo de ABRIR: modo `0660` e a ACL byte a byte igual a
+            `encode_access_acl(uid)`. Uma ACL com um segundo uid não é igual.
+
+        Qualquer outro erro de leitura responde «não está», e a escrita
+        acontece.
+        """
+        try:
+            modo = stat_mod.S_IMODE(os.fstat(fd).st_mode)
+        except OSError:
+            return False
+        ref = f"/proc/self/fd/{fd}"
+        if uid is None:
+            if modo != 0o600:
+                return False
+            try:
+                os.getxattr(ref, _ACL_XATTR)
+            except OSError as exc:
+                return exc.errno in _SEM_ACL
+            return False
+        if modo != 0o660:
+            return False
+        try:
+            return os.getxattr(ref, _ACL_XATTR) == encode_access_acl(uid)
+        except OSError:
+            return False
 
     def is_exposed_to(self, node: str, uid: int) -> bool:
         """True se o nó está no estado canônico exposto (0660 + ACL do uid)."""
@@ -787,6 +840,8 @@ class FsAclOps:
                 continue  # sumiu no meio: nada a fechar
             try:
                 aberto = self._entrada_aberta_a_alguem(os.fstat(fd))
+                if self._ja_esta_no_alvo(fd, None):
+                    continue  # nada a escrever; e um `0600` sem ACL não estava aberto
                 ref = f"/proc/self/fd/{fd}"
                 with contextlib.suppress(OSError):  # ENODATA = já sem ACL
                     os.removexattr(ref, _ACL_XATTR)
@@ -809,6 +864,8 @@ class FsAclOps:
                 continue
             try:
                 ja_aberto = self._exposta_ao_uid(fd, uid)
+                if self._ja_esta_no_alvo(fd, uid):
+                    continue  # nada a escrever; e o alvo já estava exposto a ela
                 ref = f"/proc/self/fd/{fd}"
                 os.chmod(ref, 0o660)
                 os.setxattr(ref, _ACL_XATTR, encode_access_acl(uid))
