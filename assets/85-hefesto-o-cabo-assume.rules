@@ -1,0 +1,44 @@
+# O-CABO-ASSUME-DO-RADIO-01 (25/09/2026) — o controle que espera o gêmeo sair.
+#
+# A decisão dela: o controle do rádio que ganha cabo passa para o cabo (no cabo
+# há a vibração por áudio, o som e menos atraso), com o mesmo número; tirou o
+# cabo, volta pelo rádio.
+#
+# O MEDIDO (mesa dela, 25/09/2026, 19:42): o `hid-playstation` não deixa o mesmo
+# endereço existir nos dois barramentos. O HID que chega depois é recusado:
+#
+#   playstation 0003:054C:0CE6.001B: Duplicate device found for MAC address …
+#   playstation 0003:054C:0CE6.001B: probe with driver playstation failed with error -17
+#
+# O `-17` (`-EEXIST`) vem de `ps_devices_list_add`, e o aparelho fica em
+# `/sys/bus/hid/devices` SEM driver — sem hidraw, sem input, sem LED. Quando o
+# gêmeo sai, NINGUÉM refaz a probe: o kernel não reprova de novo sozinho, e o
+# controle fica em lugar nenhum até alguém tirar e pôr o cabo.
+#
+# O QUE ESTA REGRA FAZ: quando um DualSense físico SAI do barramento HID (o
+# rádio que o daemon derrubou para o cabo assumir, ou o cabo que ela tirou),
+# ela pede a probe de todo DualSense que ficou esperando sem driver. É o
+# `drivers_probe` do barramento HID: num aparelho que já tem driver ele não faz
+# nada, e no que esperava ele refaz a probe agora que o endereço está livre.
+#
+# POR QUE NA SAÍDA, E NÃO NA CHEGADA: na chegada o gêmeo ainda segura o
+# endereço, e a probe recusaria de novo. O `remove` do udev sai DEPOIS de o
+# driver soltar o aparelho (`device_del`: `bus_remove_device` antes do
+# `KOBJ_REMOVE`) — o endereço já está livre quando isto roda.
+#
+# ESCOPO: só a saída de um DualSense FÍSICO (comum e Edge). O rádio é o
+# barramento 0005; o cabo é o 0003 fora de `/devices/virtual/` — o vpad do
+# produto também é 0003, mas nasce por `uhid` em `/devices/virtual/` e fica de
+# fora: ele morre e renasce toda hora, e não tem gêmeo nenhum.
+#
+# NÃO É LAÇO: a probe que falha não tira ninguém do barramento, e só uma SAÍDA
+# dispara esta regra. Quem desiste de religar um órfão por contenção de rádio
+# continua sendo o `bt_rebind_orphans.sh`, com o orçamento dele.
+#
+# O daemon só derruba o rádio de um controle quando esta regra está instalada
+# (`integrations/o_cabo_em_espera.impedimentos_da_troca`): sem ela o controle
+# ficaria sem rádio e sem cabo.
+#
+# Reverter: remover este arquivo e `udevadm control --reload`.
+ACTION=="remove", SUBSYSTEM=="hid", KERNEL=="0005:054C:0CE6.*|0005:054C:0DF2.*", RUN+="/bin/sh -c 'for d in /sys/bus/hid/devices/*:054C:0CE6.* /sys/bus/hid/devices/*:054C:0DF2.*; do [ -e $$d/driver ] || echo $${d##*/} > /sys/bus/hid/drivers_probe; done 2>/dev/null; exit 0'"
+ACTION=="remove", SUBSYSTEM=="hid", KERNEL=="0003:054C:0CE6.*|0003:054C:0DF2.*", DEVPATH!="/devices/virtual/*", RUN+="/bin/sh -c 'for d in /sys/bus/hid/devices/*:054C:0CE6.* /sys/bus/hid/devices/*:054C:0DF2.*; do [ -e $$d/driver ] || echo $${d##*/} > /sys/bus/hid/drivers_probe; done 2>/dev/null; exit 0'"

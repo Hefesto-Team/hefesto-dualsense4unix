@@ -314,6 +314,9 @@ RULES=(
     # 84: separa o Pro genuíno do 8BitDo clone, que colidem em VID:PID E no
     # serial — o discriminador é o bcdDevice (0210 x 0200). NINTENDO-VARIANT-01.
     "84-nintendo-pro-variant.rules"
+    # 85: quando um DualSense físico sai, refaz a probe do gêmeo que esperava
+    # sem driver (o cabo que ganhou o lugar do rádio). O-CABO-ASSUME-DO-RADIO-01.
+    "85-hefesto-o-cabo-assume.rules"
 )
 
 # Verificar se TODAS as rules existem na origem.

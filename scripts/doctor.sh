@@ -437,7 +437,8 @@ check_udev() {
                  81-hefesto-usb-host-power.rules
                  82-nintendo-pro-nosniff.rules
                  83-hefesto-bond-snapshot.rules
-                 84-nintendo-pro-variant.rules)
+                 84-nintendo-pro-variant.rules
+                 85-hefesto-o-cabo-assume.rules)
     local total=${#rules[@]}
     for r in "${rules[@]}"; do
         if [[ -e "/etc/udev/rules.d/${r}" || -e "/usr/lib/udev/rules.d/${r}" ]]; then
@@ -447,7 +448,7 @@ check_udev() {
         fi
     done
     if [[ "${found}" -eq "${total}" ]]; then
-        pass "${total} regras udev canônicas presentes (73-hefesto/71-uhid/71-uinput/72-autosuspend/72-uaccess/76/77/78/79/80/81-power/81-host/82/83/84)"
+        pass "${total} regras udev canônicas presentes (73-hefesto/71-uhid/71-uinput/72-autosuspend/72-uaccess/76/77/78/79/80/81-power/81-host/82/83/84/85)"
     elif [[ "${found}" -eq 0 ]]; then
         fail "nenhuma regra udev instalada — rode: sudo bash scripts/install_udev.sh"
     else

@@ -817,6 +817,7 @@ if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
                    /etc/udev/rules.d/82-nintendo-pro-nosniff.rules \
                    /etc/udev/rules.d/83-hefesto-bond-snapshot.rules \
                    /etc/udev/rules.d/84-nintendo-pro-variant.rules \
+                   /etc/udev/rules.d/85-hefesto-o-cabo-assume.rules \
                    /etc/modules-load.d/hefesto-dualsense4unix.conf \
                    /etc/modprobe.d/hefesto-btusb-no-autosuspend.conf
         # hefesto-dualsense-storm.conf NÃO entra nesta lista de propósito — ver
@@ -854,7 +855,7 @@ else
         log "  sudo rm -f /etc/udev/rules.d/73-hefesto-ps5-controller.rules /etc/udev/rules.d/70-ps5-controller.rules"
     fi
     log "udev rules preservadas (--keep-udev). Para remover depois:"
-    log "  sudo rm /etc/udev/rules.d/73-hefesto-ps5-controller.rules /etc/udev/rules.d/70-ps5-controller.rules /etc/udev/rules.d/71-uinput.rules /etc/udev/rules.d/71-uhid.rules /etc/udev/rules.d/72-ps5-controller-autosuspend.rules /etc/udev/rules.d/72-hefesto-touchpad-motion-uaccess.rules /etc/udev/rules.d/75-ps5-controller-disable-usb-audio.rules /etc/udev/rules.d/76-dualsense-touchpad-libinput-ignore.rules /etc/udev/rules.d/77-dualsense-leds.rules /etc/udev/rules.d/78-dualsense-motion-not-joystick.rules /etc/udev/rules.d/79-external-controller-leds.rules /etc/udev/rules.d/80-motion-joydev-hide.rules /etc/udev/rules.d/81-hefesto-usb-power.rules /etc/udev/rules.d/81-hefesto-usb-host-power.rules /etc/udev/rules.d/82-nintendo-pro-nosniff.rules /etc/udev/rules.d/83-hefesto-bond-snapshot.rules /etc/udev/rules.d/84-nintendo-pro-variant.rules /etc/modules-load.d/hefesto-dualsense4unix.conf /etc/modprobe.d/hefesto-btusb-no-autosuspend.conf"
+    log "  sudo rm /etc/udev/rules.d/73-hefesto-ps5-controller.rules /etc/udev/rules.d/70-ps5-controller.rules /etc/udev/rules.d/71-uinput.rules /etc/udev/rules.d/71-uhid.rules /etc/udev/rules.d/72-ps5-controller-autosuspend.rules /etc/udev/rules.d/72-hefesto-touchpad-motion-uaccess.rules /etc/udev/rules.d/75-ps5-controller-disable-usb-audio.rules /etc/udev/rules.d/76-dualsense-touchpad-libinput-ignore.rules /etc/udev/rules.d/77-dualsense-leds.rules /etc/udev/rules.d/78-dualsense-motion-not-joystick.rules /etc/udev/rules.d/79-external-controller-leds.rules /etc/udev/rules.d/80-motion-joydev-hide.rules /etc/udev/rules.d/81-hefesto-usb-power.rules /etc/udev/rules.d/81-hefesto-usb-host-power.rules /etc/udev/rules.d/82-nintendo-pro-nosniff.rules /etc/udev/rules.d/83-hefesto-bond-snapshot.rules /etc/udev/rules.d/84-nintendo-pro-variant.rules /etc/udev/rules.d/85-hefesto-o-cabo-assume.rules /etc/modules-load.d/hefesto-dualsense4unix.conf /etc/modprobe.d/hefesto-btusb-no-autosuspend.conf"
     log "  as 82 e 83 chamam alvos por RUN+= — os alvos ficaram junto com elas."
     log "  Ao remover as regras, remova também:"
     log "  sudo rm /usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh /usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh /etc/systemd/system/hefesto-bt-bonds-snapshot.service"

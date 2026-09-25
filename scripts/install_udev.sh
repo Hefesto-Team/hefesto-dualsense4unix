@@ -86,6 +86,7 @@ for f in \
     "$ASSETS/82-nintendo-pro-nosniff.rules" \
     "$ASSETS/83-hefesto-bond-snapshot.rules" \
     "$ASSETS/84-nintendo-pro-variant.rules" \
+    "$ASSETS/85-hefesto-o-cabo-assume.rules" \
     "$ASSETS/hefesto-dualsense4unix.conf" \
     "$HERE/scripts/bt_nosniff_now.sh" \
     "$HERE/scripts/bt_bonds_snapshot.sh" \
@@ -214,6 +215,11 @@ sudo install -Dm644 "$ASSETS/83-hefesto-bond-snapshot.rules" /etc/udev/rules.d/8
 # genuíno). Marca cada um com HEFESTO_CONTROLLER_VARIANT + symlink estável em
 # /dev/hefesto/. NINTENDO-VARIANT-01 (2026-07-25).
 sudo install -Dm644 "$ASSETS/84-nintendo-pro-variant.rules" /etc/udev/rules.d/84-nintendo-pro-variant.rules
+# 85: o DualSense que ganhou cabo espera, sem driver, o gêmeo do rádio sair
+# (o kernel recusa o mesmo endereço nos dois barramentos, -EEXIST); quando um
+# DualSense físico sai, a regra refaz a probe de quem esperava.
+# O-CABO-ASSUME-DO-RADIO-01 (2026-09-25).
+sudo install -Dm644 "$ASSETS/85-hefesto-o-cabo-assume.rules" /etc/udev/rules.d/85-hefesto-o-cabo-assume.rules
 # 73/74 (GUI auto-spawn no hotplug) DESCONTINUADAS 2026-06-23 (abriam o controle
 # via hidraw a cada ACTION=="add", amplificando a re-enumeração do storm -71) e
 # REMOVIDAS do repo em 2026-07-18. O rm compensatório fica por 1 release para
