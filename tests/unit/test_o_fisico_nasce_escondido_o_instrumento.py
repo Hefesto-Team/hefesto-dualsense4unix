@@ -20,11 +20,14 @@ O que esta régua cobra:
 2. o controle condenado CONTINUA sendo reescrito, como os outros;
 3. os endereços saem mascarados (as duas grafias: com e sem dois-pontos);
 4. o sequestro longo deixa prova no diário (`sequestro_segue`, em 10, 100,
-   1000… reescritas) — em 25/09 não havia uma linha entre 09:35 e 09:44.
+   1000… reescritas) — em 25/09 não havia uma linha entre 09:35 e 09:44;
+5. a razão do carimbo condenado diz que a barra PODE não obedecer, pelas
+   duas portas que a escrevem.
 
 AS MORDIDAS, medidas: devolver o nome `sequestro_corrigido` reprova a 1; tirar
 o condenado do `reafirmar` reprova a 2; tirar o `_endereco_mascarado` das
-chaves reprova a 3; tirar o laço dos marcos reprova a 4.
+chaves reprova a 3; tirar o laço dos marcos reprova a 4; devolver a frase de
+antes a qualquer das duas portas reprova a 5.
 """
 
 from __future__ import annotations
@@ -37,6 +40,7 @@ import structlog
 
 from hefesto_dualsense4unix.core import escritor_cru as ec
 from hefesto_dualsense4unix.daemon import connection as conn
+from hefesto_dualsense4unix.integrations import sinal_da_barra as sdb
 from hefesto_dualsense4unix.integrations.sinal_da_barra import (
     CONFIANCA_LIMPA,
     CONFIANCA_SUSPEITA,
@@ -191,3 +195,42 @@ def test_o_sequestro_longo_deixa_prova_nos_marcos() -> None:
     assert sorted(r["no"] for r in segue) == [NO_2, NO_3], segue
     assert all(r["reescritas"] == 10 and r["pids"] == [STEAM] for r in segue), segue
     assert conn.MARCOS_DA_REESCRITA[:3] == (10, 100, 1_000)
+
+
+def _alvo_do_radio() -> Instancia:
+    return Instancia(
+        instancia="000E", uniq=MAC_3, adaptador="aa:bb:cc:00:00:ce", hw_version="0x0811",
+        input_n=None, hidraw=NO_3, transporte="bt",
+    )
+
+
+def test_o_carimbo_nao_afirma_a_lampada_pelas_duas_portas() -> None:
+    """A razão do condenado dizia «a barra não obedece, e só a reconexão devolve».
+
+    O P2 de 25/09 desmentiu as duas metades: condenado, e com a barra na cor
+    do Hefesto, sem reconectar. As duas portas que escrevem a razão — o diário
+    lido (`veredito_do_nascimento`) e a sonda do próprio daemon (`carimbar`
+    com `nos_segurados`) — passam a dizer que PODE não obedecer.
+    """
+    alvo = _alvo_do_radio()
+    pelo_diario = sdb.veredito_do_nascimento(
+        instancias=[alvo],
+        nascimentos={
+            "000e": sdb.Nascimento(
+                instancia="000E", quando=0.0, no=NO_3, transporte="bt",
+                escritor=(STEAM,), sujo=True,
+            )
+        },
+    )[0]
+    cartorio = CartorioDoNascimento()
+    cartorio.observar([], 0.0)
+    cartorio.observar([alvo], 1.0)
+    pela_sonda = cartorio.carimbar(
+        [Leitura(alvo=alvo, confianca=CONFIANCA_LIMPA, porque="limpa")], 1.2,
+        nos_segurados={NO_3},
+    )[0].leitura
+    for leitura in (pelo_diario, pela_sonda):
+        assert leitura.pede_reconexao, leitura
+        assert "pode não obedecer" in leitura.porque, leitura.porque
+        assert "a barra não obedece" not in leitura.porque, leitura.porque
+        assert "só a reconexão" not in leitura.porque, leitura.porque

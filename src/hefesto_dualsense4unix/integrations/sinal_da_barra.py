@@ -651,7 +651,7 @@ def _veredito(
             confianca=CONFIANCA_SUSPEITA,
             porque=(
                 f"nasceu com {quem} segurando o nó do controle — nesta "
-                "condição a barra não obedece, e só a reconexão devolve"
+                "condição a barra pode não obedecer, e reconectar devolve"
             ),
             pids_do_escritor=nasc.escritor,
             nasceu_em=nasc.quando,
@@ -788,8 +788,8 @@ class CartorioDoNascimento:
                     porque=(
                         "nasceu com outro processo segurando o nó do controle "
                         "(visto pela sonda do próprio daemon, no tique em que a "
-                        "conexão apareceu) — nesta condição a barra não obedece, "
-                        "e só a reconexão devolve"
+                        "conexão apareceu) — nesta condição a barra pode não "
+                        "obedecer, e reconectar devolve"
                     ),
                 )
             antigo = self._carimbos.get(chave)
