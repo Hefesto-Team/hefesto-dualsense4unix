@@ -663,9 +663,16 @@ DECISOES_DELA = RAIZ / "docs" / "data" / "decisoes-dela.csv"
 def respostas_que_voltaram(mapa: Path | str, decisoes: Path | str) -> list[str]:
     """O que desfaz uma resposta dela, por linha. Lista vazia: nada voltou.
 
-    Três perguntas por linha: a decisão continua `decidida` no arquivo dela; a
-    causa de todo lado que não aciona é `decisao-tomada`; e a linha cita a
-    decisão pelo id e não diz mais `so-ela-decide` em célula nenhuma.
+    Quatro perguntas por linha: a decisão continua `decidida` no arquivo dela;
+    os DOIS lados dizem `aciona = não`, que é a resposta; a causa dos dois é
+    `decisao-tomada`; e a linha cita a decisão pelo id e não diz mais
+    `so-ela-decide` em célula nenhuma.
+
+    OS DOIS LADOS, SEMPRE (conferência de 24/09/2026): a primeira versão só
+    olhava a causa do lado que dizia `aciona = não` — a população saía de uma
+    coluna da própria linha. Apagar o `aciona` (a resposta some) ou virá-lo
+    para `sim` (o SN30 adotado com o veto de pé) tirava o lado da conta, e a
+    régua ficava verde.
     """
     linhas = {_celula(linha, "id"): linha for linha in _linhas(mapa)}
     decididas = {
@@ -682,7 +689,9 @@ def respostas_que_voltaram(mapa: Path | str, decisoes: Path | str) -> list[str]:
             achados.append(f"{ident}: a linha sumiu do mapa")
             continue
         for lado in LADOS:
-            if _celula(linha, f"{lado}_aciona") != ACIONA_NAO:
+            aciona = _celula(linha, f"{lado}_aciona")
+            if aciona != ACIONA_NAO:
+                achados.append(f"{ident} ({lado}): `aciona` = {aciona!r}, e a resposta é não")
                 continue
             causa = _celula(linha, f"{lado}_{SUFIXO}")
             if causa != DECISAO:
@@ -696,14 +705,15 @@ def respostas_que_voltaram(mapa: Path | str, decisoes: Path | str) -> list[str]:
 
 
 def test_a_resposta_dela_nao_volta_a_ser_pergunta() -> None:
-    """MORDE: devolva `so-ela-decide` a uma das doze, ou apague o id dela."""
+    """MORDE: devolva `so-ela-decide` a uma das doze, apague o id dela, ou mexa no `aciona`."""
     voltaram = respostas_que_voltaram(MAPA, DECISOES_DELA)
     assert not voltaram, (
         f"{len(voltaram)} achado(s) nas linhas que ela respondeu em 24/09/2026: "
         + "; ".join(voltaram)
-        + ". A pergunta tem resposta: a causa é `decisao-tomada` e a linha cita a "
-        "decisão pelo id. Se a pergunta voltou, a decisão sai de `decidida` no "
-        "arquivo dela e a linha sai de `RESPONDIDAS_POR_ELA` no mesmo gesto"
+        + ". A pergunta tem resposta: os dois lados dizem `aciona = não`, a causa é "
+        "`decisao-tomada` e a linha cita a decisão pelo id. Se a pergunta voltou, a "
+        "decisão sai de `decidida` no arquivo dela e a linha sai de "
+        "`RESPONDIDAS_POR_ELA` no mesmo gesto"
     )
 
 
@@ -717,3 +727,43 @@ def test_a_regua_das_respostas_ve_uma_que_volta() -> None:
         voltaram = respostas_que_voltaram(falso, DECISOES_DELA)
     assert any(achado.startswith(f"{alvo[0]} ({alvo[1]})") for achado in voltaram), voltaram
     assert any(SO_ELA_DECIDE in achado for achado in voltaram), voltaram
+
+
+def _mapa_com_a_linha_mexida(destino: Path, ident: str, colunas: dict[str, str]) -> Path:
+    """Uma cópia do mapa com QUALQUER coluna de uma linha trocada.
+
+    O `_csv_de_mentira` só troca a causa; aqui o que se mexe é o `aciona`.
+    """
+    linhas = list(csv.reader(io.StringIO(MAPA.read_text(encoding="utf-8"))))
+    cabecalho = linhas[0]
+    i_id = cabecalho.index("id")
+    for linha in linhas[1:]:
+        if linha[i_id].strip() == ident:
+            for coluna, valor in colunas.items():
+                linha[cabecalho.index(coluna)] = valor
+    buffer = io.StringIO()
+    csv.writer(buffer, lineterminator="\n").writerows(linhas)
+    destino.write_text(buffer.getvalue(), encoding="utf-8")
+    return destino
+
+
+@pytest.mark.parametrize(
+    ("ident", "lado", "aciona"),
+    [
+        # a resposta some: o `aciona` e a causa do cabo apagados
+        ("entrada.bruta@sn30", "cabo", ""),
+        # o SN30 adotado com o veto de pé, e a causa apagada junto
+        ("plataforma.adocao@sn30", "radio", "sim"),
+        # a leitura do finetune entrando sem ninguém mover a linha
+        ("entrada.stick.calibracao@dualsense", "cabo", "parcial"),
+    ],
+)
+def test_a_regua_das_respostas_ve_o_aciona_que_muda(ident: str, lado: str, aciona: str) -> None:
+    """O lado que deixa de dizer `não` tem de ser VISTO, e não sair da conta."""
+    import tempfile
+
+    colunas = {f"{lado}_aciona": aciona, f"{lado}_{SUFIXO}": ""}
+    with tempfile.TemporaryDirectory() as pasta:
+        falso = _mapa_com_a_linha_mexida(Path(pasta) / "mapa.csv", ident, colunas)
+        voltaram = respostas_que_voltaram(falso, DECISOES_DELA)
+    assert any(achado.startswith(f"{ident} ({lado}): `aciona`") for achado in voltaram), voltaram
