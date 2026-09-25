@@ -27,9 +27,11 @@ DualSense **não devolve** o modo em que está (é comando de ida, e o
 `docs/data/mapa-controles.csv` diz o mesmo pela outra ponta). Logo o perfil é a
 melhor fonte que existe, e mostrar `Rigid` é mais verdadeiro que mostrar `—`.
 
-QUEM LÊ NÃO ESCREVE. As funções de leitura não escrevem no disco (a memória
-de `arquivo()` e a do último arquivo lido são do processo); **duas** funções no fim do
-arquivo escrevem, e as duas moram aqui pela MESMA razão — mais de uma aba
+QUEM LÊ NÃO ESCREVE PERFIL. As funções de leitura não gravam perfil nenhum: a
+memória de `arquivo()` e a do último arquivo lido são do processo, e a única
+marca no disco é o `.lock` que a varredura do loader deixa ao lado do arquivo
+que lê (o `FileLock` não o apaga, e o daemon deixa os mesmos). **Duas** funções
+no fim do arquivo escrevem, e as duas moram aqui pela MESMA razão — mais de uma aba
 precisou delas, e a segunda cópia é a que esquece um dos tempos:
 
 * `gravar_e_reaplicar()` (01/09/2026) — disco, reaplicar, `launch_env.refresh`;
@@ -390,7 +392,8 @@ def gravar_e_reaplicar(prof: Any, ctx: Any, p: Any, *, era: str = "") -> None:
 
     O CABEÇALHO DESTE MÓDULO DIZIA *"nada aqui escreve"*. Deixou de valer hoje,
     e a linha foi corrigida em vez de contornada: o que continua verdadeiro é
-    que **quem lê** não escreve — as funções de leitura acima seguem puras.
+    que **quem lê** não escreve perfil — o cabeçalho diz o que as de leitura
+    deixam no disco.
 
     QUEM ESTÁ VALENDO SE PERGUNTA AO DONO — corrigido em 05/09/2026
     ---------------------------------------------------------------
