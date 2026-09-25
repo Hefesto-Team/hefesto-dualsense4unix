@@ -488,15 +488,15 @@ def _sysfs_tem_tecla(caminho: str, tecla: int) -> bool:
 def _input_device_do_fd(fd: int, caminho: str) -> Any:
     """Um `evdev.InputDevice` em volta de um fd que o broker serviu.
 
-    O `InputDevice(caminho)` abre o nó por conta própria, e reabrir por
-    `/proc/self/fd/N` refaz a checagem de permissão no inode — com o nó
-    `0600 root`, é o mesmo `EACCES`. Então o objeto nasce aqui com
-    exatamente os campos que o `__init__` da biblioteca preenche, na mesma
-    ordem e pelas mesmas chamadas; a régua
-    `test_o_input_device_do_fd_espelha_o_da_biblioteca` compara a lista com o
-    `__init__` instalado e reprova na primeira versão que mudar.
+    O `InputDevice(caminho)` reabre o nó, e por `/proc/self/fd/N` refaz a
+    checagem de permissão no inode — com o nó `0600 root`, o mesmo `EACCES`.
+    O objeto nasce aqui com os campos que o `__init__` da biblioteca preenche,
+    na mesma ordem e pelas mesmas chamadas; a régua
+    `test_o_input_device_do_fd_espelha_o_da_biblioteca` reprova na versão que mudar. O
+    `_input` é C sem stub: vem como submódulo, que o mypy lê como `Any` na 1.7 e na 2.0.
     """
-    from evdev import InputDevice, _input
+    import evdev._input as _input
+    from evdev import InputDevice
     from evdev.device import DeviceInfo
 
     os.set_blocking(fd, False)
