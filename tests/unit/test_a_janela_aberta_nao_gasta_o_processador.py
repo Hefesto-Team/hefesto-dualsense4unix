@@ -63,6 +63,12 @@ FASE_S = 4.0
 #: laço do GTK, e uma leitura pode estar no meio quando o fio pausa).
 ASSENTAR_S = 0.6
 
+#: NA VOLTA, O DAEMON DEMORA um tique e pouco para responder. Com a leitura
+#: instantânea do dublê, o fio que acorda na volta responde antes do primeiro
+#: tique, e a régua não veria o tique que pintasse o estado de antes de
+#: esconder (a mordida do `_esperando_o_estado_novo` passava verde).
+ATRASO_NA_VOLTA_S = 0.12
+
 
 # ===========================================================================
 # A bancada: o piloto de verdade, oculto, com dublês nas quatro bordas
@@ -87,9 +93,14 @@ class _Estado:
         self.leituras = 0
         self.passo = 0
         self.fixo: dict[str, Any] | None = None
+        #: Quanto cada leitura DEMORA, como o daemon de verdade. A leitura só
+        #: conta quando volta: é a resposta que o tique pode pintar.
+        self.atraso_s = 0.0
         self._trava = threading.Lock()
 
     def __call__(self, *_a: Any, **_k: Any) -> dict[str, Any]:
+        if self.atraso_s:
+            time.sleep(self.atraso_s)
         with self._trava:
             self.leituras += 1
             self.passo += 1
@@ -327,6 +338,7 @@ def _roteiro_esconde_e_volta(fora: Any, piloto: Any, t: float) -> bool:
         return True
     if "mostra" not in marcos:
         marcos["mostra"] = time.monotonic()
+        fora.estado.atraso_s = ATRASO_NA_VOLTA_S
         piloto.tela.janela.show_all()
         return True
     if not piloto._escondida and "voltou" not in marcos and "escondeu" in marcos:
