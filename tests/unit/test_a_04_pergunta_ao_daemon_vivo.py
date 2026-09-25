@@ -269,16 +269,22 @@ def test_o_clique_depois_do_autoswitch_age_so_naquele_controle(mesa_de, n, via, 
 # ---------------------------------------------------------------------------
 # 3. Sem a paleta, o gesto de brilho manda a cor acesa
 # ---------------------------------------------------------------------------
+@pytest.mark.parametrize("alvo", ["todos", "um"])
 @pytest.mark.parametrize("via", ["usb", "bt"])
-@pytest.mark.parametrize(("n", "para"), [(2, 3), (3, 1)], ids=["P2", "P3"])
-def test_sem_a_paleta_o_trilho_manda_a_cor_que_o_daemon_acende(mesa_de, via, n, para):
+@pytest.mark.parametrize(("n", "para"), [(2, 3), (3, 1), (4, 1)], ids=["P2", "P3", "P4"])
+def test_sem_a_paleta_o_trilho_manda_a_cor_que_o_daemon_acende(mesa_de, via, n, para, alvo):
     """O fóssil sem a paleta: o daemon o desloca, e o trilho não o ressuscita.
+
+    O P4 entra com a cor do número dele escolhida à mão (a conferência, 25/09:
+    o fóssil só era medido no P2 e no P3, e só com «Todos» no seletor).
 
     **A MORDIDA:** devolva o `return guardada` sem a pergunta do fóssil no
     ramo sem a paleta de `_a_cor_guardada_que_vale`, e o trilho manda o
-    laranja (ou o ciano) fóssil.
+    laranja, o ciano ou o rosa fóssil.
     """
-    mesa = mesa_de("todos", via)
+    mesa = mesa_de(alvo, via)
+    if n == 4:
+        mesa.clicar_no_tom(4, COR_DELE[4])
     mesa.desligar_a_paleta(GLOBAL)
     mesa.fossilizar(n, escolhida_para=para)
     fossil = COR_DELE[n]
