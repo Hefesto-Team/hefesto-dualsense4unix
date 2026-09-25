@@ -523,8 +523,7 @@ def _tiques_do_piloto(pagina: str, mesas: list[list[dict[str, Any]]],
     # que mudou. O dublê leva o estado inicial e os MÉTODOS DO PRODUTO, ligados a
     # ele: mais pobre que o piloto, ele reprovaria por atributo, e não pelo que
     # mede. Cada mesa daqui muda a fita, então cada tique leva a carga inteira.
-    for metodo in ("_o_que_mandar", "_esquecer_a_pintura", "_esperando_o_estado_novo",
-                   "_moldes_da_pagina"):
+    for metodo in ("_o_que_mandar", "_esperando_o_estado_novo", "_moldes_da_pagina"):
         setattr(piloto, metodo, types.MethodType(getattr(hefesto_vivo.Piloto, metodo), piloto))
     vars(piloto).update(
         _escondida=False, _geracao_na_volta=None, _pintada=None, _ate_a_inteira=0,
