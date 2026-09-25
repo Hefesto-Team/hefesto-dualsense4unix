@@ -3438,7 +3438,7 @@ def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
 
     **ELE GANHOU MOTOR EM 03/09/2026, e a decisão de construí-lo é dela.**
     Perguntada se o motor devia existir, respondeu *"Construir o motor"*, e
-    escolheu o alcance: **gatilho + vibração + luz**. As quinze receitas estão
+    escolheu o alcance: **gatilho + vibração + luz**. As receitas estão
     em `profiles/estilos_de_jogo.py` — *"o resto ta aprovado"* —, e é de lá que
     saem tanto os rótulos do `<select>` (`aba10.ESTILOS`) quanto o que cada um
     faz. **Não há tabela de estilo neste arquivo**, e não pode haver: uma
@@ -4246,7 +4246,7 @@ def _editor_de(prof: Any) -> dict[str, Any]:
 #: ele APLICA. Aqui estava escrito que *"motor ele continua não tendo … quem
 #: lhes dá motor é a ONDA-PERFIS-04"*, e a premissa estava certa e a conclusão
 #: não seguia: o estilo nunca precisou de campo no `Profile` — ele resolve
-#: gatilho, vibração e luz e sai de cena. As quinze receitas são de
+#: gatilho, vibração e luz e sai de cena. As receitas são de
 #: `profiles/estilos_de_jogo.py`, por decisão dela.
 #:
 #: **`editor.prioridade` NASCEU COM DONO no mesmo dia**, e era o único campo do

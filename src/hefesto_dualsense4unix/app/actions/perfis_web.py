@@ -52,7 +52,7 @@ dela.** Ficam escritas porque a forma delas é a que se repete:
 2. **"Estilo de Jogo"** não existia em campo, widget ou preset nenhum, e por
    isso nascia TRAVADO — *um ``<select>`` que aceita escolha e não guarda nada é
    a pior das saídas*. Ela mandou **construir o motor**, e escolheu o alcance:
-   gatilho + vibração + luz. As quinze receitas estão em
+   gatilho + vibração + luz. As receitas estão em
    ``profiles/estilos_de_jogo.py``, e quem as aplica é
    ``interface/pacotes/a10_perfis.editor_estilo``. **O campo continua sem valor
    a MOSTRAR** — o estilo é um verbo, não um campo do ``Profile``: escolher
@@ -159,7 +159,7 @@ DONOS_DOS_GESTOS: dict[str, str] = {
     # ONDA-PERFIS-04"*. O motor nasceu, por decisão dela (*"Construir o
     # motor"*), e o que continua verdadeiro é só a metade do CAMPO: `Profile`
     # não ganhou campo de estilo, e não vai ganhar — ele é um verbo.
-    "editor.estilo": "SÓ NO HTML: `profiles/estilos_de_jogo.py` traz as quinze "
+    "editor.estilo": "SÓ NO HTML: `profiles/estilos_de_jogo.py` traz as "
     "receitas que ela aprovou (gatilho + vibração + luz por unidade), e "
     "`a10_perfis.editor_estilo` as aplica no perfil. A GTK não tem widget "
     "equivalente. NÃO há campo em profiles/schema.Profile nem preset em "

@@ -340,7 +340,7 @@ def test_o_gatilho_sai_do_dono_dos_parametros(disco: dict[str, Any]) -> None:
     sabe os números é ``app/actions/trigger_specs.PRESETS``.
 
     MORDIDA: troque o ``preset_to_positional_params(spec, {})`` de
-    ``_com_o_estilo`` por ``[]`` e isto reprova em todos os catorze.
+    ``_com_o_estilo`` por ``[]`` e isto reprova em todos os de fábrica.
     """
     sem_params = []
     for estilo in estilos_de_jogo.ESTILOS:

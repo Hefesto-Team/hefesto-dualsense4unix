@@ -31,3 +31,11 @@ seção daqui**: a aba deixou de estar em trabalho.
   tela dela não mostra as pílulas e o pacote não emite o endereço delas
   (`a_pagina_tem_as_pilulas`); o brilho que o perfil guarda — o Fraco, se
   ninguém escolheu — já vai ao aparelho nos dois transportes.
+
+## 10-perfis.html
+- **25/09/2026** — o Estilo de Jogo «Co-op local» saiu do `<select>` (pedido
+  dela, `D-2409-O-CO-OP-LOCAL-SAI`), e a dica do rótulo diz «Os treze de
+  fábrica», com a conta saindo do motor (`estilos_de_jogo.DE_FABRICA`). Espera
+  quem coordena publicar (O-CO-OP-LOCAL-SAI-01). Até publicar, a tela oferece
+  «Co-op local» e o gesto recusa dizendo que ele não é um dos Estilos de Jogo
+  do produto; nada é gravado.
