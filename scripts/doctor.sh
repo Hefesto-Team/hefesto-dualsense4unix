@@ -397,7 +397,8 @@ check_socket() {
 
 check_udev() {
     # DOCTOR-UDEV-CANONICAL-FIX-01 + COR-06/STATUS-07: o conjunto CANÔNICO é o
-    # que o install_udev.sh põe SEM FLAG: 70, 71-uhid, 71-uinput, 72, 76
+    # que o install_udev.sh põe SEM FLAG: a regra do nó (73-hefesto; era a 70
+    # até 25/09/2026), 71-uhid, 71-uinput, 72, 76
     # (touchpad-ignore), 77 (LEDs graváveis) e 78 (motion fora do joystick).
     # A ÚNICA opt-in é a 75 (audio-off, --disable-usb-audio) — fora da contagem.
     # As regras 73/74 (hotplug-GUI) foram REMOVIDAS por alimentarem a
@@ -6210,7 +6211,7 @@ _veredito_de_quem_segura_o_fisico() {
     local no
     if [[ "${nativo}" == "True" ]]; then
         for no in $(printf '%s\n' "${!por_no[@]}" | LC_ALL=C sort); do
-            info "Modo Nativo: ${no##*/} aberto por ${por_no[${no}]%, } — é o jogo recebendo o físico, de propósito"
+            info "Modo Nativo: ${no##*/} aberto por ${por_no[${no}]%, } — no Nativo o físico fica exposto à sessão de propósito"
         done
         return 0
     fi
