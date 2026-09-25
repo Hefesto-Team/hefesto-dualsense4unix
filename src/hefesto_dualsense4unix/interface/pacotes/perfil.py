@@ -27,7 +27,8 @@ DualSense **não devolve** o modo em que está (é comando de ida, e o
 `docs/data/mapa-controles.csv` diz o mesmo pela outra ponta). Logo o perfil é a
 melhor fonte que existe, e mostrar `Rigid` é mais verdadeiro que mostrar `—`.
 
-QUEM LÊ NÃO ESCREVE. As funções de leitura são puras; **duas** funções no fim do
+QUEM LÊ NÃO ESCREVE. As funções de leitura não escrevem no disco (a memória
+de `arquivo()` e a do último arquivo lido são do processo); **duas** funções no fim do
 arquivo escrevem, e as duas moram aqui pela MESMA razão — mais de uma aba
 precisou delas, e a segunda cópia é a que esquece um dos tempos:
 
@@ -45,6 +46,7 @@ from __future__ import annotations
 import json
 import pathlib
 import sys
+import time
 from typing import Any
 
 #: A árvore, para achar o `src/`. Este módulo mora em
@@ -158,8 +160,21 @@ def ativo(nome: str | None) -> dict[str, Any]:
     sim é `{}`.
 
     A CURA É AQUI E NÃO EM CADA ABA de propósito: são cinco chamadores em cinco
-    pacotes (03, 04, 06, 08 e 10), e cobrir um deixaria os outros quatro
-    remedindo o mesmo defeito — a regra que 05/09 deixou escrita.
+    pacotes (03, 04, 05, 06 e 08), mais a dica do Salvar do rodapé das dez, e
+    cobrir um deixaria os outros remedindo o mesmo defeito — a regra que 05/09
+    deixou escrita.
+
+    O ARQUIVO É O QUE O DAEMON LÊ — O-PERFIL-ATIVO-ACHA-O-ARQUIVO-COMO-O-DAEMON-01,
+    25/09/2026. Quem acha é :func:`arquivo`, que pergunta ao loader. Esta função
+    procurava só pelo nome e pelo slug; o perfil achado só pela varredura por
+    `name` ou na subpasta dos Estilos de Jogo virava `{}`, e a aba 03 dizia
+    «Desligado» com o daemon mandando o Rígido.
+
+    O ARQUIVO QUE SUMIU COM O PERFIL VALENDO devolve o que esta tela leu dele
+    por último (:func:`_lembrar`): o controle segue com o que o daemon aplicou
+    até outro perfil entrar, e o que ele aplicou é o que estava no arquivo.
+    Sem lembrança (a janela abriu depois de o arquivo sumir), é `{}`: a tela
+    não inventa um perfil.
     """
     if not nome:
         nome = nome_do_ativo(None)
@@ -168,31 +183,137 @@ def ativo(nome: str | None) -> dict[str, Any]:
     onde = pasta()
     if onde is None:
         return {}
-    #: A PASTA TEM UM DONO SÓ, e é a `pasta()` acima. A primeira versão daqui
-    #: chamava `loader._profile_path(nome)`, que resolve o caminho INTEIRO —
-    #: pasta e nome — e assim `ativo()` e `lista()` podiam apontar para lugares
-    #: diferentes. A régua `test_o_perfil_chega_na_tela.py` pegou isso na
-    #: primeira execução: `lista()` achava os dois perfis e `ativo()` devolvia
-    #: `{}` para os mesmos.
-    #:
-    #: Do loader vem só o SLUG — a regra de como um nome vira arquivo, que é
-    #: dele e não se digita duas vezes.
-    alvo = onde / f"{nome}.json"
-    if not alvo.exists():
+    alvo = arquivo(str(nome), onde)
+    if alvo is not None:
         try:
-            _com_o_src()
-            from hefesto_dualsense4unix.profiles.slug import slugify
-
-            alvo = onde / f"{slugify(str(nome))}.json"
+            texto = alvo.read_text(encoding="utf-8")
+            lido = json.loads(texto)
         except Exception:
-            pass
-    if not alvo.exists():
+            lido = None
+        if isinstance(lido, dict):
+            _lembrar(onde, str(nome), texto)
+            return lido
+    return _o_que_a_tela_leu(onde, str(nome))
+
+
+#: POR QUANTO TEMPO a resposta de :func:`arquivo` vale sem perguntar de novo, em
+#: segundos. A varredura por `name` custa ~7 ms com 34 perfis (medido em
+#: 25/09/2026 num lar de mentira), e a aba 06 pergunta nove vezes por tique, no
+#: laço do GTK: sem memória, o perfil de arquivo de outro nome custaria ~60 ms
+#: por tique. A assinatura da pasta derruba a memória antes do prazo quando um
+#: arquivo nasce, some ou muda de nome; o prazo cobre o que a assinatura não vê
+#: (o `name` editado no lugar, sem renomear o arquivo).
+VALIDADE_DO_ARQUIVO_S = 1.0
+
+#: `(pasta, nome) -> (assinatura, quando, arquivo)`. Ver :func:`arquivo`.
+_ONDE_ACHOU: dict[tuple[str, str], tuple[tuple[Any, ...], float, pathlib.Path | None]] = {}
+
+#: `(pasta, slug) -> texto` do último arquivo lido de cada perfil. Ver
+#: :func:`_lembrar`.
+_LIDO: dict[tuple[str, str], str] = {}
+
+
+def _assinatura(onde: pathlib.Path, achado: pathlib.Path | None) -> tuple[Any, ...]:
+    """O que muda quando a resposta de :func:`arquivo` pode ter mudado.
+
+    O `mtime` da pasta e o da subpasta dos Estilos (nasce, some, renomeia), e o
+    do arquivo achado (o `name` dele editado no lugar). Três `stat`, nenhuma
+    leitura.
+    """
+    def carimbo(p: pathlib.Path | None) -> int | None:
+        if p is None:
+            return None
+        try:
+            return p.stat().st_mtime_ns
+        except OSError:
+            return None
+
+    _com_o_src()
+    from hefesto_dualsense4unix.profiles.loader import ESTILOS_DE_JOGO_DIR_NAME
+
+    return (carimbo(onde), carimbo(onde / ESTILOS_DE_JOGO_DIR_NAME), carimbo(achado))
+
+
+def arquivo(nome: str, onde: pathlib.Path | None = None) -> pathlib.Path | None:
+    """O arquivo do perfil `nome`, achado como o DAEMON o acha. ``None`` quando não há.
+
+    O-PERFIL-ATIVO-ACHA-O-ARQUIVO-COMO-O-DAEMON-01, 25/09/2026. «Nome vira
+    arquivo» tem UM dono, `profiles.loader.arquivo_do_perfil`, que é o mesmo que
+    o `load_profile` do daemon pergunta: o nome direto, o slug, a varredura por
+    `name` e a subpasta dos Estilos de Jogo, nessa ordem. Aqui não se digita
+    perna nenhuma.
+
+    A PASTA É A DE :func:`pasta` — ela continua a dona da pasta desta tela, e é
+    o que mantém `ativo()` e `lista()` olhando o mesmo lugar (a régua
+    `test_o_perfil_chega_na_tela.py` pegou os dois divergindo em 01/09). Do
+    loader vem a regra de como um nome vira arquivo DENTRO dela.
+
+    A RESPOSTA FICA NA MEMÓRIA por :data:`VALIDADE_DO_ARQUIVO_S`, e a
+    assinatura da pasta (:func:`_assinatura`) a derruba antes disso.
+
+    Quem chama além de `ativo()`: o «Exportar» do rodapé, que copiava o arquivo
+    com a mesma cópia das duas pernas e dizia «não achei o arquivo» sobre o
+    perfil que o daemon aplicava.
+
+    NUNCA LEVANTA: um nome que o loader recusa (`ValueError`) é ``None``.
+    """
+    if onde is None:
+        onde = pasta()
+    if onde is None or not nome:
+        return None
+    chave = (str(onde), nome)
+    agora = time.monotonic()
+    guardado = _ONDE_ACHOU.get(chave)
+    if guardado is not None:
+        assinatura, quando, achado = guardado
+        if (agora - quando) < VALIDADE_DO_ARQUIVO_S and _assinatura(onde, achado) == assinatura:
+            return achado
+    try:
+        loader = _com_o_src()
+        achado = loader.arquivo_do_perfil(nome, onde)
+    except Exception:
+        achado = None
+    _ONDE_ACHOU[chave] = (_assinatura(onde, achado), agora, achado)
+    return achado
+
+
+def _chave_da_lembranca(onde: pathlib.Path, nome: str) -> tuple[str, str]:
+    """`(pasta, slug)`: «Navegação» e «Navegacao» são o mesmo perfil (R-10)."""
+    try:
+        _com_o_src()
+        from hefesto_dualsense4unix.profiles.slug import slugify
+
+        return (str(onde), slugify(nome))
+    except Exception:
+        return (str(onde), nome)
+
+
+def _lembrar(onde: pathlib.Path, nome: str, texto: str) -> None:
+    """Guarda o TEXTO do último arquivo lido deste perfil.
+
+    É o que o daemon aplicou: ele lê o mesmo arquivo ao ativar, e todo gesto
+    que grava reaplica. Quando o arquivo some com o perfil ainda valendo, o
+    controle segue com isso (`profiles_actions._AVISO_DA_REMOCAO_DO_ATIVO`: *"a
+    cor, os gatilhos e a vibração dele seguem aplicados até você ativar outro
+    perfil"*), e a tela segue dizendo o mesmo em vez de pintar um perfil vazio.
+
+    O TEXTO, e não o dicionário: cada chamada de `ativo()` devolve um
+    dicionário novo, como sempre devolveu — um chamador que mexa no que
+    recebeu não mexe no que o próximo vai ler.
+    """
+    _LIDO[_chave_da_lembranca(onde, nome)] = texto
+
+
+def _o_que_a_tela_leu(onde: pathlib.Path, nome: str) -> dict[str, Any]:
+    """O último arquivo lido deste perfil, ou `{}` quando esta tela nunca o leu."""
+    texto = _LIDO.get(_chave_da_lembranca(onde, nome))
+    if texto is None:
         return {}
     try:
-        lido: dict[str, Any] = json.loads(alvo.read_text(encoding="utf-8"))
+        lido = json.loads(texto)
     except Exception:
         return {}
-    return lido
+    return lido if isinstance(lido, dict) else {}
 
 
 def lista() -> list[dict[str, Any]]:

@@ -468,13 +468,11 @@ def exportar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     pasta = perfil.pasta()
     if pasta is None:
         raise RuntimeError("exportar: não achei a pasta de perfis.")
-    origem = pasta / f"{nome}.json"
-    if not origem.exists():
-        perfil._com_o_src()
-        from hefesto_dualsense4unix.profiles.slug import slugify
-
-        origem = pasta / f"{slugify(nome)}.json"
-    if not origem.exists():
+    # O ARQUIVO É O QUE O DAEMON LÊ — O-PERFIL-ATIVO-ACHA-O-ARQUIVO-COMO-O-DAEMON-01.
+    # Aqui morava uma cópia das duas primeiras pernas (o nome e o slug), e o
+    # perfil de arquivo de outro nome ou de Estilo de Jogo não se exportava.
+    origem = perfil.arquivo(nome, pasta)
+    if origem is None:
         raise FileNotFoundError(f"exportar: não achei o arquivo de {nome!r}.")
     sugestao = str(pathlib.Path.home() / f"hefesto-{origem.name}")
     escolhido = p.salvar_arquivo("Onde guardar o perfil", sugestao=sugestao)
