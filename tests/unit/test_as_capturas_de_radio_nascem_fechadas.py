@@ -720,7 +720,11 @@ class TestOsEnsaiosGravamFechadoLeemEApagam:
         assert not Path(captura.diretorio).exists()
         assert "(lida e apagada)" in linha
         (pid,) = dubles.pids()
-        assert _morreu(pid), "o apagar tirou a captura e deixou o btmon gravando"
+        morreu = _morreu(pid)
+        if not morreu:  # o dublê não fica órfão quando a mordida está no ar
+            with contextlib.suppress(ProcessLookupError):
+                os.kill(pid, signal.SIGKILL)
+        assert morreu, "o apagar tirou a captura e deixou o btmon gravando"
 
     def test_sem_sudo_o_byte_no_fio_diz_que_nao_capturou(
         self, tmp_path: Path, dubles: Dubles, monkeypatch: pytest.MonkeyPatch,
