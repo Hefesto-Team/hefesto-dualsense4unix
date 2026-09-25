@@ -29,7 +29,8 @@ e o `Off` ESCRITO, que tem de continuar `Off`.
 A MORDIDA, arrancada antes deste arquivo entrar: com
 `_o_lado_que_o_perfil_cala` devolvendo `{}`, os casos sem seção reprovam com
 «Desligado»; com `_chave_no_perfil` devolvendo o `uniq` cru, o override de
-chave editada à mão reprova.
+chave editada à mão reprova; com o perfil nenhum devolvendo o nascimento, a
+régua do perfil nenhum reprova.
 """
 from __future__ import annotations
 
@@ -141,7 +142,7 @@ def disco():
     return gravar
 
 
-def _ctx(nome: str, grafia: str = "doze-hexa", alvo: int | None = None):
+def _ctx(nome: str | None, grafia: str = "doze-hexa", alvo: int | None = None):
     """O `Contexto` do tique, montado como o piloto o monta (`_contexto`)."""
     import mesa_viva
     from pacotes import Contexto
@@ -337,3 +338,104 @@ def test_o_guardar_nao_troca_o_gatilho_do_controle_por_off(disco) -> None:
             f"o «Guardar» do P2 trocou o {disco_} que o controle recebia "
             f"({antes.efetivo(uniq, disco_)}) por {depois.efetivo(uniq, disco_)} — "
             f"a coluna gravou o que dizia, e o que ela dizia era {forma}")
+
+
+class _PonteDoBroadcast(_Ponte):
+    """A ponte do «Em todos»: aceita o envio e anota o efeito de cada lado."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.saiu: dict[str, Any] = {}
+
+    def trigger_set_detalhado(self, lado: str, modo: str, params: list[int],
+                              uniq: str | None = None) -> bool:
+        from hefesto_dualsense4unix.core.trigger_effects import build_from_name
+
+        self.saiu[lado] = build_from_name(modo, params)
+        return True
+
+    def trigger_reset_detalhado(self, lado: str, uniq: str | None = None) -> bool:
+        from hefesto_dualsense4unix.core.trigger_effects import build_from_name
+
+        self.saiu[lado] = build_from_name("Off", [])
+        return True
+
+
+def test_o_em_todos_nao_espalha_o_lado_que_ela_nao_tocou(disco) -> None:
+    """O «Em todos» também lê a COLUNA, e o alcance dele é a mesa inteira.
+
+    Ele recolhe os dois lados da coluna, manda os dois em broadcast e grava os
+    dois na seção global. Com a coluna dizendo «Desligado» no lado que o perfil
+    cala, trocar só o L2 do P1 tirava o «Rígido» de nascimento do R2 dos QUATRO
+    controles, no aparelho e no perfil. Aqui ela troca só o L2, a coluna é
+    recolhida como o piloto a recolhe, e o R2 que sai no fio e o que o daemon
+    relê do disco têm de ser o que eram.
+    """
+    from pacotes import gesto_da_pagina, pacote_da_pagina
+    from pacotes.a03_gatilhos import GESTO_DE_TODOS
+
+    from hefesto_dualsense4unix.profiles.schema import TriggersConfig
+
+    nome = disco("jogo-sem-secao")
+    ctx = _ctx(nome)
+    r = pacote_da_pagina(PAGINA, ctx)
+    assert r is not None
+    uniq = str(next(c for c in ctx.conectados if c["player"] == 1)["uniq"])
+    # O MODO NOVO NÃO É O NASCIMENTO: com ele o gesto não teria o que gravar, e
+    # a régua mediria um clique que o produto, com razão, ignora.
+    novo = "Pulse"
+    assert TriggersConfig().left.mode != novo
+    forma: dict[str, str] = {"nome-do-efeito": ""}
+    for sig in LADOS:
+        _rotulo, modo, ajustes = _o_que_a_coluna_diz(r, uniq, "p1", sig)
+        forma[f"modo-chave-{sig}"] = modo
+        forma.update({f"aj-val-{sig}-{i}": str(v) for i, v in enumerate(ajustes)})
+    # ELA TROCA SÓ O L2: a caixa dele passa a ser a do modo novo, nos padrões.
+    forma = {k: v for k, v in forma.items() if not k.startswith("aj-val-e-")}
+    forma["modo-chave-e"] = novo
+    antes = _o_que_o_daemon_manda(nome)
+
+    em_todos = gesto_da_pagina(PAGINA, GESTO_DE_TODOS)
+    assert em_todos is not None
+    ponte = _PonteDoBroadcast()
+    em_todos(ctx, {"uniq": uniq, "controle": "p1", "forma": forma}, ponte)
+
+    depois = _o_que_o_daemon_manda(nome)
+    for c in ctx.conectados:
+        u = str(c["uniq"])
+        era = antes.efetivo(u, "right")
+        assert ponte.saiu.get("right", era) == era, (
+            f"o «Em todos» do P1 mandou ao R2 do P{c['player']} "
+            f"{ponte.saiu.get('right')} no lugar de {era} — a coluna dizia {forma}")
+        assert depois.efetivo(u, "right") == era, (
+            f"o «Em todos» do P1 gravou no perfil um R2 que tira do "
+            f"P{c['player']} o {era} que ele recebia: {depois.efetivo(u, 'right')}")
+        assert depois.efetivo(u, "left") != antes.efetivo(u, "left"), (
+            "o L2 não mudou: o gesto não gravou nada e esta régua não mediu o "
+            "lado que ela não tocou")
+
+
+def test_sem_perfil_nenhum_a_coluna_nao_inventa_o_nascimento() -> None:
+    """Sem perfil valendo, nenhum perfil mandou gatilho, e a coluna não inventa um.
+
+    O nascimento é o que o esquema põe no perfil que CALA a seção; sem perfil
+    não há seção calada, e o daemon não escreveu gatilho nenhum. Com o daemon
+    respondendo `active_profile: null` e o disco sem marcador, os oito lados
+    dizem o estado sem efeito, e não o «Rígido» que só um perfil manda.
+    """
+    from pacotes import pacote_da_pagina
+
+    from hefesto_dualsense4unix.core.trigger_effects import build_from_name
+
+    ctx = _ctx(None)
+    r = pacote_da_pagina(PAGINA, ctx)
+    assert r is not None
+    pref_de = {str(m["uniq"]): str(m["pref"]) for m in ctx.mesa}
+    sem_efeito = build_from_name("Off", [])
+    for c in ctx.conectados:
+        uniq = str(c["uniq"])
+        for sig in LADOS:
+            rotulo, modo, ajustes = _o_que_a_coluna_diz(r, uniq, pref_de[uniq], sig)
+            assert build_from_name(modo, ajustes) == sem_efeito, (
+                f"sem perfil nenhum, a coluna do P{c['player']} diz «{rotulo}» "
+                f"{ajustes} num gatilho que perfil nenhum escreveu")
