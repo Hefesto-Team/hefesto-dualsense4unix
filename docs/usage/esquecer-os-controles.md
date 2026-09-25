@@ -44,16 +44,23 @@ hefesto-dualsense4unix esquecer-controles --restaurar [<pasta>]
 python3 scripts/guardar-e-devolver-a-casa.py devolver [<pasta>]
 ```
 
-A mais nova, se não disser qual. O que estiver no lugar vai antes para
-`<pasta>/depois-do-teste/<carimbo>/`, e o comando diz o que sobrescreveu. A
-pasta guardada fica: dá para devolver de novo. Com `--seco`, os dois só dizem o
-que fariam.
+Sem pasta pedida, vale a mais nova **ainda não devolvida**, e só do alcance do
+comando: quem esqueceu duas vezes desfaz na ordem certa repetindo o comando. O
+que estiver no lugar vai antes para `<pasta>/depois-do-teste/<carimbo>/`, e o
+comando diz o que sobrescreveu. O que já está igual ao guardado não se mexe.
+O que o teste **criou** onde antes não havia nada (a fila de números, um perfil
+novo, um ajuste por controle num perfil que não tinha nenhum) também vai para
+`depois-do-teste`: devolver é deixar como estava, inclusive o que não estava.
+A pasta guardada fica: dá para devolver de novo. Com `--seco`, os dois só dizem
+o que fariam (`devolver por cima`, `tirar (não existia)`).
 
 **O pareamento é a exceção, e a razão é do controle.** Um DualSense guarda uma
 chave de pareamento só. Se ele foi pareado de novo durante o teste (ou resetado
 pelo botão de trás), a chave antiga morreu nele: o devolver **não** põe a
 antiga por cima de um pareamento vivo do mesmo controle, em adaptador nenhum.
-A antiga fica na pasta do root.
+A antiga fica na pasta do root, e o devolver grava a lápide dela no acervo
+de cópias (`bt-bonds/.lapides`): sem isso, o `bt_bonds_autorestore.sh` a
+plantaria de volta no adaptador antigo na próxima morte do `bluetoothd`.
 
 Na casa inteira, três registros ficam só na pasta, porque o install novo grava
 os dele e devolver o antigo por cima desencontraria o próximo uninstall: o
@@ -62,7 +69,8 @@ MANTER são ditas pelo nome no fim do devolver) e o `kernel.log`.
 
 ## O roteiro da primeira vez de verdade
 
-Na árvore do produto, com a Steam e os jogos fechados, e o askpass exportado:
+Na árvore do produto, com a Steam, os jogos e a janela do Hefesto fechados, e
+o askpass exportado:
 
 ```bash
 python3 scripts/guardar-e-devolver-a-casa.py guardar --seco   # conferir a lista
@@ -76,10 +84,45 @@ python3 scripts/guardar-e-devolver-a-casa.py devolver --seco
 python3 scripts/guardar-e-devolver-a-casa.py devolver
 ```
 
-O `limpa` responde lugar por lugar e sai com `1` se sobrou algo que não é de
-propósito. De propósito são: o backup que o próprio uninstall faz
-(`~/.config/hefesto-dualsense4unix.backup-*`), o Proton que o Hefesto extraiu
-(é seu) e o quirk do boot (só sai com `--remove-usb-quirk`).
+O `limpa` responde lugar por lugar, com três respostas: `0` limpa, `1`
+sobrou algo que não é de propósito (defeito do uninstall), `3` **não sei** —
+o BlueZ (`/var/lib/bluetooth`, 700) só o root lê, e sem privilégio fica sem
+resposta a pergunta «sobrou controle pareado, ou adaptador com o nome
+começando por `Nintendo`?». Com o askpass exportado ela vai à parte do root,
+que só lê.
+De propósito são: o backup que o próprio uninstall faz
+(`~/.config/hefesto-dualsense4unix.backup-*`), as cópias `.bak.*` ao lado de
+cada `localconfig.vdf`, o Proton que o Hefesto extraiu (é seu) e o quirk do
+boot (só sai com `--remove-usb-quirk`).
+
+Enquanto as sprints propostas não fecham, ele acha até três defeitos do
+uninstall: o ambiente da ponte no `config.json` do Heroic, o mesmo ambiente no
+`override` do Flatpak de cada lançador, e a pasta de estado que o
+`conexao-zumbi.json` segura.
+
+Depois do devolver, a pasta do root (`/var/lib/hefesto-memoria-guardada/…`)
+continua com as chaves de pareamento antigas: apague-a quando não servir mais.
+
+**O devolver da casa inteira põe de volta os arquivos da Steam INTEIROS**
+(`localconfig.vdf`, `config.vdf`): é o que traz as suas exceções (os jogos
+sem atalho, os fora do pino) de acordo com a configuração devolvida. O preço:
+o que a Steam gravou neles durante o teste vai para `depois-do-teste`, e se a
+Steam trocou o token de login no meio (`ConnectCache`, dentro do
+`config.vdf`), ela vai pedir login de novo.
+
+## O que fica de fora, e por quê
+
+- **O que o daemon guarda só em memória** (os números vistos, a cor lida, a
+  reserva do rádio): o comando para o daemon, e o restart apaga.
+- **A memória dos outros programas**: o WirePlumber lembra volume e saída
+  padrão por nó (e os nós levam o endereço do controle pelo rádio); a Steam
+  lembra os controles dela. Não são arquivos do Hefesto — o teste da primeira
+  vez do SOM começa com o que o WirePlumber lembrava.
+- **No alcance só dos controles, o nome dos adaptadores** (o `Alias` no
+  BlueZ, com o lugar e o prefixo «Nintendo »): é da mesa, não do controle.
+  O uninstall o devolve ao padrão, e a casa inteira passa por ele.
+- **O device de áudio da háptica nos prefixos dos jogos**: o produto o regrava
+  a cada lançamento, e o uninstall o tira.
 
 ## O que a leitura dos apps tem de achar sozinha numa instalação nova
 

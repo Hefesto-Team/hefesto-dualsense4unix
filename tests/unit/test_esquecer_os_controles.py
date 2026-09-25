@@ -484,7 +484,7 @@ def test_o_que_o_teste_criou_onde_nao_havia_nada_sai_no_devolver(
     # o teste
     (cfg / "controller_masks.json").write_text('{"aa:bb:cc:00:00:01": "xbox"}',
                                               encoding="utf-8")
-    (cfg / "maquina.json").write_text('{"versao": 1}', encoding="utf-8")
+    (cfg / "maquina.json").write_text('{"mesa": {}}', encoding="utf-8")
     (cfg / "profiles/.historico/neutro").mkdir(parents=True)
     (cfg / "profiles/.historico/neutro/1.json").write_text("{}", encoding="utf-8")
     (cfg / "profiles/novo.json").write_text(json.dumps(_perfil("novo", [])), encoding="utf-8")
