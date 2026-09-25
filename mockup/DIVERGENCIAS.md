@@ -25,11 +25,13 @@ seção daqui**: a aba deixou de estar em trabalho.
 - **25/09/2026** — A-MIRA-NA-NAVEGACAO-02, esperando quem coordena publicar.
   Só a nota muda: ela ganha «O que mudou em 25/09» (o cartão de quem não
   navega diz «Move o cursor» com a Mira Virtual acesa na Navegação e o Status
-  do Modo ligado) e duas frases velhas que diziam que só o P1 mexe no cursor
-  passam a contar o giro. Os cartões do desenho não mudam: a Mira nasce
+  do Modo ligado; e o P3 e o P4 na mesa deixam de aparecer apagados, com a
+  cara de lugar vazio) e duas frases velhas que diziam que só o P1 mexe no
+  cursor passam a contar o giro. Os cartões do desenho não mudam: a Mira nasce
   apagada nos quatro, como na aba Controles. Até publicar, o cartão da
   publicada já diz a palavra nova, porque quem pinta a linha dele é o pacote
   (medido no piloto, no lar de mentira: o P2 e o P4 com a Mira acesa dizem
   «BT • Move o cursor» e «USB • Move o cursor»; com o mouse desligado, no
-  Virtual e no Nativo, voltam a «Só a janela»); o que fica velho é só a nota
-  da publicada, que ninguém vê no produto.
+  Virtual e no Nativo, voltam a «Só a janela»; e o P3 e o P4 conectados
+  perdem a classe `vazia`); o que fica velho é só a nota da publicada, que
+  ninguém vê no produto.
