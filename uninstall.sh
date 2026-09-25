@@ -9,6 +9,8 @@
 #
 # Flags:
 #   --keep-udev          PRESERVA udev rules + modules-load (default: remove, sudo).
+#                        A regra do nó do DualSense fica, na variante ABERTA: o
+#                        broker sai, e fechada ela deixaria o controle sem dono.
 #   --udev               [DEPRECATED] no-op — remoção é default desde v3.8.3.
 #   --remove-usb-quirk   EXPLÍCITO (default NÃO remove): tira o quirk de boot
 #                        usbcore.quirks=054c:0ce6:gn,054c:0df2:gn do cmdline
@@ -235,7 +237,8 @@ Remove o Hefesto - DualSense4Unix (serviços, binários, regras udev, módulos
 DKMS, drop-ins). Por padrão PRESERVA sua configuração e seus perfis.
 
 Opções:
-  --keep-udev           preserva as regras udev + modules-load
+  --keep-udev           preserva as regras udev + modules-load (a do nó do
+                        DualSense fica aberta, porque o broker sai)
   --remove-usb-quirk    remove também o quirk da cmdline (sensível; exige reboot)
   --purge-config        APAGA config, perfis e as cópias de pareamento do
                         Bluetooth (destrutivo; o padrão é preservar)
