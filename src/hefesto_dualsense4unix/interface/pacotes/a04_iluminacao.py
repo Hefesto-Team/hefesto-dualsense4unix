@@ -2540,34 +2540,54 @@ def _a_cor_guardada_que_vale(ctx: Contexto, cru: dict[str, Any] | None,
     número para o qual foi escolhida (`lightbar_para_o_numero`), e o daemon a
     troca pela do número de hoje (`led_control.cores_sem_colisao`). Quem diz
     se é fóssil é o dono da regra (`led_control._e_fossil`); aqui só se monta
-    a peça com o número deste controle (`_numero`).
+    a peça com o número deste controle (`_numero`) e as cores de número da
+    mesa, que é o que o resolvedor lhe entrega.
 
     POR QUE ELA EXISTE — 24/09/2026, conferência da A-MARCA-DA-COR-NAO-SOME-01.
-    A cor gravada crua é o degrau 2 da escada da marca e o primeiro do trilho,
-    e com um fóssil os dois desfaziam o que o daemon faz: medido na mesa de
-    quatro real, o P2 acendia o vermelho do número e soltar o trilho dele em
-    50% mandava o laranja fóssil — o gesto de brilho trocava a cor, e a borda
-    e o X pulavam junto; a 0% a marca ia para o laranja, que não acende.
+    A cor gravada crua era o degrau 2 da escada da marca e o primeiro do
+    trilho, e com um fóssil os dois desfaziam o que o daemon faz. Medido pelo
+    clique, no piloto: ela troca o P2 e o P3 de número na linha Jogador, o
+    daemon acende a cor do número nos dois, e soltar o «Brilho» de um deles
+    mandava ao aparelho a cor gravada de antes da troca — o gesto de brilho
+    trocava a cor, e o X dele andava nas outras três fileiras até o fim.
 
     O PRETO NÃO É FÓSSIL, pela mesma isenção do resolvedor: barra apagada é
     ausência de cor, e ele nunca a desloca — quem apagou pelo «Desligar»
-    continua apagado com outro número. E O OVERRIDE SEM PROCEDÊNCIA (`LEGADO`,
-    perfil anterior a 08/09) FICA: o resolvedor o prova pela forma, contra as
-    cores de número da mesa inteira, e sem elas (`numeros` vazio) a regra do
-    dono responde que não é fóssil.
+    continua apagado com outro número. O OVERRIDE SEM PROCEDÊNCIA (`LEGADO`,
+    perfil anterior a 08/09) é provado pela FORMA, como o resolvedor prova:
+    fóssil quando é a cor do número de OUTRO controle da mesa. A comparação é
+    antes do brilho; a do daemon é depois dele, e só diverge com brilhos
+    diferentes por controle — e aí o erro daqui cai para o lado que não troca
+    a cor de ninguém (a marca pisca a do número, o trilho manda a luz acesa).
+
+    SEM A PALETA, A COR GRAVADA FICA, fóssil ou não. O daemon desloca o fóssil
+    para o primeiro tom livre da paleta, e qual é esse tom depende da mesa
+    inteira; a escada desta aba só sabe a cor do número (degrau 4) e o global
+    (degrau 3), e mandar o global pelo trilho tiraria a cor de outro controle
+    que está nele. A cor escolhida é o que esta aba respondia antes, e é a que
+    não inventa. Medido na mesa de quatro real: sem a paleta, o fóssil sai
+    deslocado SEM o brilho — relatado, é do daemon.
     """
-    from hefesto_dualsense4unix.core.led_control import LEGADO, PecaDaMesa, _e_fossil
+    from hefesto_dualsense4unix.core.led_control import (
+        LEGADO,
+        PecaDaMesa,
+        _e_fossil,
+        player_slot_color,
+    )
 
     uniq = str(c.get("uniq") or "")
     guardada = _a_cor_guardada(cru, uniq)
-    if guardada is None or guardada == (0, 0, 0):
+    if guardada is None or guardada == (0, 0, 0) or not automatico_do_perfil(cru):
         return guardada
     dono = ((cru or {}).get("controllers") or {}).get(chave_do_override(uniq))
     para = ((dono or {}).get("leds") or {}).get("lightbar_para_o_numero")
-    peca = PecaDaMesa(uniq=uniq, pedida=guardada, do_numero=None,
+    numero = _numero(ctx, c)
+    peca = PecaDaMesa(uniq=uniq, pedida=guardada,
+                      do_numero=player_slot_color(numero),
                       procedencia=LEGADO if para is None else para,
-                      numero=_numero(ctx, c))
-    return None if _e_fossil(peca, set()) else guardada
+                      numero=numero)
+    numeros = {player_slot_color(_numero(ctx, outro)) for outro in ctx.conectados}
+    return None if _e_fossil(peca, numeros) else guardada
 
 
 def _a_cor_do_global(cru: dict[str, Any] | None) -> tuple[int, int, int] | None:
@@ -3140,7 +3160,13 @@ def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     # acesa, e a 0% ela devolvia o PRIMEIRO tom da tabela: subir o trilho de um
     # controle na cor do número depois do zero o acendia AZUL. Quem sabe a cor
     # quando a luz não diz é `_a_cor_de_agora` — a do número, pela paleta.
-    alvo = _a_cor_guardada(antes, uniq) or _a_cor_de_agora(ctx, antes, dele)
+    #
+    # E A COR GUARDADA FÓSSIL NÃO SOBE PELO TRILHO — conferência desta frente.
+    # Depois de ela trocar dois controles de número, a cor gravada de cada um é
+    # a do número de antes, e o daemon já acende a do número de hoje; mandá-la
+    # aqui a ressuscitava como escolha viva, e o brilho trocava a cor. Ver
+    # `_a_cor_guardada_que_vale`.
+    alvo = _a_cor_guardada_que_vale(ctx, antes, dele) or _a_cor_de_agora(ctx, antes, dele)
     _escrever_a_cor(ctx, p, uniq, alvo, brilho=_fracao_do_disco(pct))
     if recado is not None:
         # A ressalva NÃO some: ela diz que o motor não afirma a cor, e isso
@@ -3173,7 +3199,9 @@ def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
     tom tomado e a cor que o trilho reenvia saem TODOS daqui, e a escada é:
 
         1. a luz acesa, quando ela diz o tom (`_o_tom_que_acende`);
-        2. a cor que ela escolheu para ESTE controle, gravada no perfil;
+        2. a cor que ela escolheu para ESTE controle, gravada no perfil — menos
+           a FÓSSIL, que o daemon já trocou pela do número
+           (`_a_cor_guardada_que_vale`);
         3. com a paleta automática desligada, a cor GLOBAL do perfil, antes do
            brilho (`_a_cor_do_global`) — e, sem global, a luz acesa como está;
         4. a cor do número, que é a da paleta automática.
@@ -3212,7 +3240,7 @@ def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
     tom = _o_tom_que_acende(efetiva, brilho_do_controle(cru, uniq))
     if tom is not None:
         return tom
-    guardada = _a_cor_guardada(cru, uniq)
+    guardada = _a_cor_guardada_que_vale(ctx, cru, c)
     if guardada is not None:
         return guardada
     #: SEM A PALETA, quem não tem cor gravada acende o GLOBAL do perfil — e a

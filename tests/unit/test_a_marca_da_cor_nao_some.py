@@ -281,13 +281,16 @@ class Mesa:
         self.a04.cor(self.ctx(), {"uniq": UNIQS[n - 1], "hex": _hexa(rgb)[1:],
                                   "tipo": "button", "evento": "click"}, self.ponte)
 
-    def fossilizar(self, n: int, escolhida_para: int) -> None:
+    def fossilizar(self, n: int, escolhida_para: int, *, reaplicar: bool = True) -> None:
         """A cor gravada do P<n> passa a dizer que foi escolhida para OUTRO número.
 
         É o fóssil de `led_control.cores_sem_colisao`: o número é de sessão, e a
         cor escolhida quando este aparelho era o `escolhida_para` sai sozinha
         hoje. O perfil é reaplicado como a troca MANUAL o reaplica, que solta a
         camada viva do clique — sobra o disco, e o daemon desloca a cor.
+
+        `reaplicar=False` é a troca de número SEM reaplicar o perfil: a camada
+        viva do clique fica, e só o disco diz que a cor é de outro número.
         """
         from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
 
@@ -297,6 +300,25 @@ class Mesa:
         leds = dele.leds.model_copy(update={"lightbar_para_o_numero": escolhida_para})
         save_profile(prof.model_copy(update={"controllers": {
             **prof.controllers, chave: dele.model_copy(update={"leds": leds})}}),
+            origem="regua")
+        if reaplicar:
+            self.pm.apply(self._perfil(), origin="manual")
+
+    def gravar_sem_procedencia(self, n: int, rgb: tuple[int, int, int]) -> None:
+        """O P<n> com `rgb` no disco e SEM `lightbar_para_o_numero` — um perfil de antes de 08/09.
+
+        É o `LEGADO` de `led_control`: a única peça que o resolvedor ainda prova
+        pela forma. A troca MANUAL solta a camada viva do clique; sobra o disco.
+        """
+        from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
+        from hefesto_dualsense4unix.profiles.schema import ControllerOverrides, LedsConfig
+
+        prof = load_profile(NOME)
+        chave = self.a04.chave_do_override(UNIQS[n - 1])
+        dele = prof.controllers.get(chave) or ControllerOverrides()
+        save_profile(prof.model_copy(update={"controllers": {
+            **prof.controllers,
+            chave: dele.model_copy(update={"leds": LedsConfig(lightbar=rgb)})}}),
             origem="regua")
         self.pm.apply(self._perfil(), origin="manual")
 
@@ -547,8 +569,9 @@ def test_a_luz_vem_antes_da_cor_gravada(mesa_de):
     (`led_control.cores_sem_colisao`). A borda, o X e a caixa dizem o que o
     plástico mostra — o vermelho —, e não o laranja que não acende.
 
-    **A MORDIDA:** ponha o degrau 2 (`_a_cor_guardada`) antes do degrau 1 em
-    `_a_cor_de_agora` e esta reprova com a marca do P2 no laranja.
+    **A MORDIDA:** ponha a cor gravada crua (`_a_cor_guardada(cru, uniq)`)
+    antes do degrau 1 em `_a_cor_de_agora` e esta reprova com a marca do P2 no
+    laranja.
     """
     mesa = mesa_de()
     mesa.fossilizar(2, escolhida_para=3)
@@ -556,6 +579,102 @@ def test_a_luz_vem_antes_da_cor_gravada(mesa_de):
     assert luz[UNIQS[1]] == list(mesa.a04._com_o_brilho(player_slot_color(2), BRILHO_GLOBAL)), (
         f"a régua precisa do daemon deslocando o fóssil, e o P2 acende {luz[UNIQS[1]]}")
     assert mesa.fora_do_lugar(cores={**COR_DELE, 2: player_slot_color(2)}) == []
+
+
+@pytest.mark.parametrize(("n", "para"), [(2, 3), (3, 2)], ids=["P2-USB", "P3-BT"])
+def test_o_brilho_nao_ressuscita_a_cor_fossil(mesa_de, n, para):
+    """Depois de uma troca de número, o trilho não devolve a cor de antes da troca.
+
+    O CASO É O DA LINHA JOGADOR, medido pelo clique no piloto: ela troca o P2 e
+    o P3 de número, a cor gravada de cada um passa a ser a do número de ANTES
+    — fóssil —, e o daemon acende a do número de hoje. Soltar o «Brilho» de um
+    deles mandava ao aparelho a cor gravada: o gesto de brilho trocava a cor, e
+    o X dele andava nas outras três fileiras até o fim. Aqui a troca é a do
+    disco (`fossilizar`), que é o que a leitura da aba vê depois dela.
+
+    **A MORDIDA:** devolva ao `alvo` do gesto `brilho` e ao degrau 2 de
+    `_a_cor_de_agora` a cor gravada crua (`_a_cor_guardada`) e esta reprova: o
+    trilho manda o laranja (ou o ciano) e a marca vai junto.
+    """
+    mesa = mesa_de()
+    mesa.fossilizar(n, escolhida_para=para)
+    do_numero = player_slot_color(n)
+    cores = {**COR_DELE, n: do_numero}
+    assert mesa.fora_do_lugar(cores=cores) == [], "o daemon não deslocou o fóssil"
+    for pct in (50, 0, 70):
+        atrasado = mesa.soltar(n, pct)
+        enviado = mesa.ponte.enviados[-1]
+        assert tuple(enviado["rgb"]) == do_numero, (
+            f"P{n} solto em {pct}% mandou {_hexa(enviado['rgb'])}, e ele acende a cor "
+            f"do número, {_hexa(do_numero)}")
+        assert mesa.fora_do_lugar(atrasado, cores=cores) == [], f"P{n} a {pct}%, tique atrasado"
+        assert mesa.fora_do_lugar(cores=cores) == [], f"P{n} a {pct}%, luz assentada"
+    mesa.reaplicar_o_perfil()
+    assert mesa.fora_do_lugar(cores=cores) == [], "o perfil reaplicado trouxe o fóssil de volta"
+
+
+def test_a_barra_apagada_nao_vira_fossil(mesa_de):
+    """Quem ela apagou pelo «Desligar» continua apagado depois da troca de número.
+
+    O resolvedor nunca desloca o preto — barra apagada é ausência de cor, não
+    identidade —, e a aba diz o mesmo: o trilho do P2 apagado manda o preto, e
+    a cor do número dele não ganha X nas outras fileiras. A troca é sem
+    reaplicar o perfil, como a da linha Jogador: o preto do clique continua
+    aceso na camada viva (reaplicado, o perfil acende a cor do número por cima
+    do preto do disco, que desde 22/09 não é cor).
+
+    **A MORDIDA:** tire o `guardada == (0, 0, 0)` da guarda de
+    `_a_cor_guardada_que_vale` e esta reprova: o trilho acende a barra que ela
+    apagou, na cor do número, e o vermelho ganha X nas outras três.
+    """
+    mesa = mesa_de()
+    mesa.a04.apagar(mesa.ctx(), {"uniq": UNIQS[1], "tipo": "button", "evento": "click"},
+                    mesa.ponte)
+    mesa.fossilizar(2, escolhida_para=3, reaplicar=False)
+    assert mesa.publicado()[1]["lightbar_rgb"] == [0, 0, 0], "a régua precisa do P2 apagado"
+    guia = [_hexa(t) for t in mesa.a04.tons_da_guia()]
+    dos_outros = {n: sorted(_hexa(COR_DELE[k]) for k in (1, 3, 4) if k != n) for n in (1, 3, 4)}
+    for pct in (50, 0, 70):
+        atrasado = mesa.soltar(2, pct)
+        assert tuple(mesa.ponte.enviados[-1]["rgb"]) == (0, 0, 0), (
+            f"o trilho do P2 apagado, a {pct}%, acendeu {_hexa(mesa.ponte.enviados[-1]['rgb'])}")
+        for tique in (atrasado, None):
+            pacote = mesa.a04.pacote(mesa.ctx(tique))
+            for n in (1, 3, 4):
+                tons = pacote["colunas"][UNIQS[n - 1]]["tons"]
+                casas = re.findall(r'<button class="([^"]*)"', tons)
+                xis = sorted(guia[i] for i, c in enumerate(casas) if "tomado" in c.split())
+                assert xis == dos_outros[n], (
+                    f"a {pct}%, a fileira do P{n} tem X em {xis}; o P2 apagado não toma cor")
+
+
+@pytest.mark.parametrize(("rgb", "fossil"), [
+    (player_slot_color(1), True),
+    (player_slot_color(8), False),
+], ids=["a-cor-do-P1-e-fossil", "o-roxo-fica"])
+def test_a_cor_sem_procedencia_e_fossil_pela_forma(mesa_de, rgb, fossil):
+    """O perfil de antes de 08/09 não diz para qual número a cor foi escolhida.
+
+    O resolvedor prova pela FORMA (`LEGADO`): é fóssil a cor que é a do número
+    de OUTRO controle da mesa — o P2 com o azul do P1 acende o vermelho dele —,
+    e uma escolha de verdade, o roxo que não é número de ninguém, fica. A aba
+    diz o mesmo nas duas, no tique atrasado, no 0 e no trilho.
+
+    **AS MORDIDAS:** passe `set()` no lugar das cores de número a `_e_fossil`
+    em `_a_cor_guardada_que_vale` e o azul reprova (o trilho manda o azul do
+    P1); trate toda cor sem procedência como fóssil e o roxo reprova.
+    """
+    mesa = mesa_de()
+    mesa.gravar_sem_procedencia(2, rgb)
+    esperada = player_slot_color(2) if fossil else rgb
+    cores = {**COR_DELE, 2: esperada}
+    assert mesa.fora_do_lugar(cores=cores) == [], "a mesa de partida não é a do resolvedor"
+    for pct in (50, 0, 70):
+        atrasado = mesa.soltar(2, pct)
+        assert tuple(mesa.ponte.enviados[-1]["rgb"]) == esperada, (
+            f"P2 solto em {pct}% mandou {_hexa(mesa.ponte.enviados[-1]['rgb'])}")
+        assert mesa.fora_do_lugar(atrasado, cores=cores) == [], f"P2 a {pct}%, tique atrasado"
+        assert mesa.fora_do_lugar(cores=cores) == [], f"P2 a {pct}%, luz assentada"
 
 
 #: O GLOBAL NUM TOM DA GUIA — o verde-água, que não é cor de número nenhum da
@@ -635,3 +754,32 @@ def test_sem_a_paleta_o_global_preto_nao_e_cor(mesa_de):
     enviado = tuple(mesa.ponte.enviados[-1]["rgb"])
     assert enviado != (0, 0, 0), "subir o trilho do P4 mandou o preto: a barra ficou apagada"
     assert mesa.ponte.enviados[-1]["brightness"] == pytest.approx(0.70)
+
+
+def test_sem_a_paleta_o_fossil_nao_tira_o_global_de_ninguem(mesa_de):
+    """Sem a paleta, o trilho de quem tem cor fóssil não manda o global.
+
+    O daemon desloca o fóssil para o primeiro tom livre da paleta, que esta aba
+    não sabe calcular; a escada sabe a cor do número e o global. Mandar o
+    global pelo trilho do P3 o faria reivindicar a cor do P4, que acende o
+    global por não ter cor gravada — e o P4 perderia a cor por um gesto de
+    brilho de OUTRO controle. A cor escolhida é a resposta que não inventa.
+
+    **A MORDIDA:** tire o `not automatico_do_perfil(cru)` da guarda de
+    `_a_cor_guardada_que_vale` e esta reprova com o verde-água mandado pelo P3
+    e o P4 deslocado.
+    """
+    mesa = mesa_de()
+    mesa.clicar_no_tom(1, COR_DELE[1])
+    mesa.desligar_a_paleta(VERDE_AGUA)
+    mesa.fossilizar(3, escolhida_para=2)
+    luz_do_p4 = mesa.publicado()[3]["lightbar_rgb"]
+    assert luz_do_p4 == list(mesa.a04._com_o_brilho(VERDE_AGUA, BRILHO_GLOBAL)), (
+        f"a régua precisa do P4 no global, e ele acende {luz_do_p4}")
+    for pct in (50, 0, 70):
+        mesa.soltar(3, pct)
+        assert tuple(mesa.ponte.enviados[-1]["rgb"]) != VERDE_AGUA, (
+            f"o P3 a {pct}% mandou o global, que é a cor do P4")
+        assert mesa.publicado()[3]["lightbar_rgb"] == luz_do_p4, (
+            f"o brilho do P3 a {pct}% tirou o P4 do global")
+
