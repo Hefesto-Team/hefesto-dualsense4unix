@@ -131,9 +131,10 @@ _PLAYER_LED_OVERFLOW = (True, False, True, True, False)
 #: as cinco lâmpadas de numeração, e a barra de cor não.
 #:
 #: A ORDEM DO DICIONÁRIO É A DA TELA (do mais fraco ao mais forte), e quem
-#: desenha as três pílulas a lê daqui. A palavra `medio` vai sem acento porque
-#: é valor legível por máquina (o disco, o gesto); a tela escreve «Médio».
-BRILHOS_DAS_LUZES: dict[str, int] = {"fraco": 2, "medio": 1, "forte": 0}
+#: desenha as três pílulas a lê daqui. A palavra do meio vai sem acento
+#: porque é valor legível por máquina (o disco, o gesto); a tela escreve
+#: «Médio». A régua de acento a pula pela marca na linha do dicionário.
+BRILHOS_DAS_LUZES: dict[str, int] = {"fraco": 2, "medio": 1, "forte": 0}  # noqa-acento: chave ASCII
 
 #: O Fraco é o de antes da decisão — o degrau baixo que a pydualsense manda
 #: por padrão — e é onde todo perfil e todo controle nascem.

@@ -1569,7 +1569,7 @@ class IpcHandlersMixin:
         a linha LEDs da aba Iluminação, uma pílula por controle.
 
         Params:
-            brilho: ``"fraco"``, ``"medio"`` ou ``"forte"`` — a PALAVRA do
+            brilho: ``"fraco"``, ``"medio"`` ou ``"forte"`` — a PALAVRA do (noqa-acento)
                 perfil. A tradução para o degrau do firmware é de
                 ``core/led_control.degrau_do_brilho_das_luzes``, e a palavra
                 desconhecida é recusada ali, com a lista das três.
@@ -1580,12 +1580,16 @@ class IpcHandlersMixin:
         Nos dois casos o brilho sai pelos caminhos do número, nos dois
         transportes — ver ``PyDualSenseController._levar_o_brilho_das_luzes``.
         """
-        from hefesto_dualsense4unix.core.led_control import degrau_do_brilho_das_luzes
+        from hefesto_dualsense4unix.core.led_control import (
+            BRILHOS_DAS_LUZES,
+            degrau_do_brilho_das_luzes,
+        )
 
         brilho = params.get("brilho")
         if not isinstance(brilho, str):
+            palavras = ", ".join(BRILHOS_DAS_LUZES)
             raise ValueError(
-                "led.player_brightness_set: 'brilho' precisa ser fraco, medio ou forte"
+                f"led.player_brightness_set: 'brilho' precisa ser um de: {palavras}"
             )
         degrau = degrau_do_brilho_das_luzes(brilho)
         resultado = self._apply_por_uniq(params, player_led_brightness=degrau)
@@ -1607,14 +1611,15 @@ class IpcHandlersMixin:
                 padrao(spec)
             aplicado_em = []
             apply_for = getattr(self.controller, "apply_output_for", None)
-            for alvo in self._uniqs_conectados() if callable(apply_for) else []:
-                try:
-                    if apply_for(alvo, spec) == "escreveu":
-                        aplicado_em.append(alvo)
-                except Exception as exc:
-                    logger.warning(
-                        "brilho_das_luzes_em_todos_falhou", uniq=alvo, err=str(exc)
-                    )
+            if callable(apply_for):
+                for alvo in self._uniqs_conectados():
+                    try:
+                        if apply_for(alvo, spec) == "escreveu":
+                            aplicado_em.append(alvo)
+                    except Exception as exc:
+                        logger.warning(
+                            "brilho_das_luzes_em_todos_falhou", uniq=alvo, err=str(exc)
+                        )
         return {
             "status": "ok",
             "brilho": brilho,

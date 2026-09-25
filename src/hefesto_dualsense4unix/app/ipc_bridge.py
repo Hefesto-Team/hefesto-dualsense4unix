@@ -1077,7 +1077,7 @@ def player_led_brightness_set_detalhado(
 ) -> dict[str, Any] | None:
     """``led.player_brightness_set`` com a RESPOSTA do daemon (24/09/2026).
 
-    O brilho das cinco luzes de número — ``"fraco"``, ``"medio"`` ou
+    O brilho das cinco luzes de número — ``"fraco"``, ``"medio"`` ou (noqa-acento: chave ASCII)
     ``"forte"``, decisão dela (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`).
     Nasce já na forma ``_detalhado``, pela lição do irmão
     :func:`player_leds_set_detalhado`: um ``True`` só diria *"o daemon

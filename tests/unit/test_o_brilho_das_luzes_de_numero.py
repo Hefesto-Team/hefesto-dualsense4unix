@@ -210,7 +210,8 @@ def test_as_tres_palavras_tem_um_dono_so() -> None:
     assert typing.get_args(campo.annotation) == tuple(BRILHOS_DAS_LUZES)
     assert campo.default == BRILHO_DAS_LUZES_PADRAO == "fraco", (
         "todo perfil e todo controle nascem no Fraco — é a decisão dela")
-    assert BRILHOS_DAS_LUZES == {"fraco": FRACO, "medio": MEDIO, "forte": FORTE}, (
+    esperado = {"fraco": FRACO, "medio": MEDIO, "forte": FORTE}  # noqa-acento: chave ASCII
+    assert esperado == BRILHOS_DAS_LUZES, (
         "o degrau do firmware é invertido: 0 é o forte e 2 o fraco (medido em "
         "09/09/2026)")
     assert degrau_do_brilho_das_luzes(None) == FRACO
@@ -251,7 +252,7 @@ def test_o_todos_do_perfil_chega_ao_bit_de_p1_a_p4(transporte: str, com_no: bool
 def test_o_override_de_um_controle_so_muda_so_ele(transporte: str, com_no: bool) -> None:
     """Um controle só: o override do P3 no perfil vence o global SÓ no P3."""
     ctl, controles = _mesa(transporte, com_no=com_no)
-    _aplicar(ctl, _perfil("medio", P3="forte"))
+    _aplicar(ctl, _perfil("medio", P3="forte"))  # noqa-acento: chave ASCII
     fica = [_o_aparelho_fica_em(h) for h in controles]
     assert fica == [MEDIO, MEDIO, FORTE, MEDIO], (
         f"[{transporte}, {'com' if com_no else 'sem'} nó] os quatro ficaram em "
@@ -300,7 +301,7 @@ def test_o_controle_que_chega_depois_recebe_o_brilho_dele(
     — sem caminho próprio, porque o campo anda pelas camadas do número.
     """
     ctl, controles = _mesa(transporte, com_no=com_no, quantos=3)
-    _aplicar(ctl, _perfil("medio", P4="forte"))
+    _aplicar(ctl, _perfil("medio", P4="forte"))  # noqa-acento: chave ASCII
     chegou = _controle(transporte)
     chegou._suppress_leds = com_no or transporte == "bt"
     ctl._handles[MACS[3]] = chegou
@@ -354,7 +355,7 @@ async def test_o_ipc_sem_uniq_e_o_todos_e_vence_o_override(
     ctl, controles = _mesa(transporte, com_no=com_no)
     _aplicar(ctl, _perfil("fraco", P2="forte"))
     resposta = await _servidor(ctl, tmp_path)._handle_led_player_brightness_set(
-        {"brilho": "medio"})
+        {"brilho": "medio"})  # noqa-acento: chave ASCII
     assert sorted(resposta["aplicado_em"]) == sorted(UNIQS)
     assert [_o_aparelho_fica_em(h) for h in controles] == [MEDIO] * 4
     assert ctl._desired_default.player_led_brightness == MEDIO
@@ -364,9 +365,9 @@ async def test_o_ipc_sem_uniq_e_o_todos_e_vence_o_override(
 async def test_o_ipc_recusa_a_palavra_que_nao_existe(tmp_path: pathlib.Path) -> None:
     """Uma palavra fora das três é recusada DIZENDO quais são — nada sai."""
     ctl, controles = _mesa("usb", com_no=True, quantos=1)
-    with pytest.raises(ValueError, match="fraco, medio, forte"):
+    with pytest.raises(ValueError, match="fraco, medio, forte"):  # noqa-acento: chave ASCII
         await _servidor(ctl, tmp_path)._handle_led_player_brightness_set(
-            {"brilho": "maximo", "uniq": MACS[0]})
+            {"brilho": "máximo", "uniq": MACS[0]})
     assert controles[0].quadros == []
 
 
@@ -463,10 +464,10 @@ def test_a_pilula_acesa_e_a_do_perfil_de_cada_controle() -> None:
     """A fileira de cada coluna acende a palavra do override dela, ou a do global."""
     from pacotes import a04_iluminacao as a04
 
-    p = {"leds": {"player_led_brightness": "medio"},
+    p = {"leds": {"player_led_brightness": "medio"},  # noqa-acento: chave ASCII
          "controllers": {UNIQS[2]: {"leds": {"player_led_brightness": "forte"}}}}
     assert a04.brilho_das_luzes_do_controle(p, MACS[2]) == "forte"
-    assert a04.brilho_das_luzes_do_controle(p, MACS[0]) == "medio"
+    assert a04.brilho_das_luzes_do_controle(p, MACS[0]) == "medio"  # noqa-acento: chave ASCII
     assert a04.brilho_das_luzes_do_controle({}, MACS[0]) == "fraco"
     fileira = a04.fileira_de_brilhos_das_luzes("forte")
     assert fileira.count('class="on"') == 1
