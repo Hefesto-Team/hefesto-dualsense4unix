@@ -679,7 +679,7 @@ roteiro.
 * **P3** — Não se toca nele. Mesma testemunha: anote o número de Player e o fim da linha antes, e confira no fim.
 * **P4** — É este. Ele precisa estar no rádio (linha terminando em BT). Abra a linha dele, clique em «A luz não acende», veja o controle apagar, aperte PS nele e espere voltar; depois, a segunda volta com o «Cancelar». De quebra, olhe a barra de luz dele depois da volta: fazer a barra voltar a obedecer é o motivo de este botão existir.
 
-**A armadilha.** Falso vermelho: se o P4 estiver no cabo, o botão nasce cinza e a dica dele explica que só vale no rádio — ali o teste não roda, e isso não é defeito. Falso verde: se o P4 não apagar e o botão não virar «Cancelar», nada foi derrubado e o teste não provou coisa nenhuma — refaça. O «Cancelar» não religa nada: é ele que deixa o controle fora do rádio até você apertar PS por conta própria. E o «Conectar», da seção «Rádio e Adaptadores», é para controle NOVO; este teste é sobre um controle que já está pareado.
+**A armadilha.** Falso vermelho: se o P4 estiver no cabo, o botão nasce cinza e a dica dele explica que só vale no BT — ali o teste não roda, e isso não é defeito. Falso verde: se o P4 não apagar e o botão não virar «Cancelar», nada foi derrubado e o teste não provou coisa nenhuma — refaça. O «Cancelar» não religa nada: é ele que deixa o controle fora do rádio até você apertar PS por conta própria. E o «Conectar», da seção «Rádio e Adaptadores», é para controle NOVO; este teste é sobre um controle que já está pareado.
 
 ---
 
