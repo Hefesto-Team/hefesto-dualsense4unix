@@ -2887,8 +2887,8 @@ def aplicar_o_movimento(
 
     **E O ÂNGULO DE UM SILÊNCIO NÃO É MOVIMENTO** (`roteador.angulo_do_tique`):
     a primeira drenagem depois de meio segundo sem drenar é o acumulado de
-    quando ninguém drenava, e sai como nada. Vale para todo cursor: o da
-    Navegação e o destino «mouse» do perfil.
+    quando ninguém drenava, e sai como nada. Vale para o cursor, que só a
+    Navegação alcança: o esquema lê o «mouse» do perfil como o analógico direito.
     """
     try:
         if not uniq:
