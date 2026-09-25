@@ -10,6 +10,11 @@ O QUE O DAEMON DEVOLVE, medido em 01/09/2026 com o DualSense dela no cabo:
     player             1             o número, das cinco lâmpadas  ← tem dono
     leds.lightbar_brightness   o brilho, DO PERFIL          ← tem dono
 
+E desde 25/09/2026 (A-04-PERGUNTA-AO-DAEMON-VIVO-01) o daemon publica também:
+
+    brilho_da_barra    0.0-1.0       o brilho em que a cor acendeu ← tem dono
+    brilho_das_luzes   "fraco"…      o degrau das luzes de número  ← tem dono
+
 O BRILHO ESTAVA MARCADO "SEM DONO" AQUI, E ERA MEU ERRO — corrigido em
 01/09/2026, depois de ela perguntar: *"vc tá corrigindo na origem esses
 problemas que tá relatando né?"*. O que estava escrito:
@@ -24,9 +29,11 @@ faixa declarada (`ge=0.0, le=1.0`), e **os 33 perfis dela têm o campo
 preenchido**. Havia dono, em disco, o tempo todo — eu perguntei só ao
 `state_full` do daemon, que não publica isto, e li a ausência como inexistência.
 
-A distinção que FICA, porque ela muda o que a tela diz: o brilho é o que está
-**salvo no perfil**, e a cor é o que está **aceso agora** (o daemon publica
-`lightbar_rgb`). Quando os dois discordam, quem manda na tela é o vivo.
+A distinção que FICA, porque ela muda o que a tela diz: quando o vivo e o disco
+discordam, quem manda na tela é o vivo. Desde 25/09/2026 isso vale para o
+brilho também: o `state_full` publica o brilho que o merge acendeu
+(`brilho_aceso`, `brilho_das_luzes_acesas`), e o perfil em disco é só a queda
+quando o daemon não diz.
 
 E O `lightbar_rgb` É **PÓS-ESCALA DE BRILHO** — 03/09/2026, e é fato do
 contrato do daemon, não interpretação. Estava escrito lá o tempo todo
@@ -740,7 +747,7 @@ def cor_escolhida(efetiva: Any, brilho: float | None) -> Any:
     (ver `_o_tom_que_acende`), e aí a efetiva volta inteira.
 
     :param efetiva: o `lightbar_rgb` do daemon, ou `None`/vazio quando não há.
-    :param brilho: `brilho_do_controle`. `None` ou `1.0` devolvem a efetiva sem
+    :param brilho: `brilho_aceso`. `None` ou `1.0` devolvem a efetiva sem
         varrer nada — a 100% as duas escalas são a mesma, e varrer só gastaria.
     """
     if not efetiva:
@@ -2508,7 +2515,7 @@ def _escrever_a_cor(ctx: Contexto, p: Any, uniq: str,
     O `brilho` CHEGA PRONTO OU SE PERGUNTA AO PERFIL, e o parâmetro nasceu em
     03/09/2026 com o trilho que grava. Os três gestos de COR não têm brilho na
     mão — eles pintam com o que já está guardado —, e para eles nada muda: o
-    default `_DO_PERFIL` lê `brilho_do_controle`, que é o MESMO número que a
+    default `_DO_PERFIL` lê `brilho_aceso`, que é o MESMO número que a
     coluna imprime. Quem passa o valor é o gesto `brilho`, e a razão é de ORDEM:
     ele precisa aplicar no aparelho o número que ela ACABOU de escolher, e não
     depender de a gravação em disco ter acontecido primeiro. Sem o parâmetro,
@@ -2526,7 +2533,7 @@ def _escrever_a_cor(ctx: Contexto, p: Any, uniq: str,
     que mostra `50%` no trilho mandava a cor a 100%, e um clique num tom
     DESFAZIA o brilho que ela tinha escolhido na janela GTK — sem uma palavra.
     A GTK manda `brightness=self._current_brightness` em toda escrita
-    (`lightbar_actions.py:944`); aqui o número sai de `brilho_do_controle`, que
+    (`lightbar_actions.py:944`); aqui o número sai de `brilho_aceso`, que
     é o MESMO que a coluna imprime.
 
     **2. O DESFECHO SE LÊ DO CORPO DO DAEMON.** A porta era `led_set` (`bool`), e
@@ -3276,10 +3283,12 @@ def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 
     POR QUE GRAVAR É A ÚNICA SAÍDA COERENTE, e a razão é medida: esta interface
     NÃO TEM RASCUNHO (decisão dela de 01/09 — *"clicar na cor já deveria aplicar
-    a cor no controle"*), e o número que a coluna imprime é lido do PERFIL EM
-    DISCO por `brilho_do_controle`. Sem gravar, o valor voltaria sozinho ao
-    velho no tique seguinte, e o gesto seria mais um botão que aceita o toque e
-    não age — a família de defeito que o mapa desta casa nomeia dezesseis vezes.
+    a cor no controle"*), e o disco é o que a troca de perfil reaplica. Sem
+    gravar, o valor voltaria sozinho ao velho no primeiro perfil aplicado de
+    novo, e o gesto seria mais um botão que aceita o toque e não age — a
+    família de defeito que o mapa desta casa nomeia dezesseis vezes. (O número
+    que a coluna imprime é o que o daemon acende, `brilho_aceso`, desde
+    25/09/2026; o do disco é a queda quando ele não diz.)
 
     OS TRÊS TEMPOS, E A ORDEM IMPORTA:
 
