@@ -6504,9 +6504,13 @@ class PyDualSenseController(IController):
         # NUMERO-SAO-DO-HEFESTO`); o resto (gatilhos, LED do mic) fica
         # guardado para o desmute. «escreveu» só quando TUDO saiu — e a luz do
         # cabo sem nó não saiu (`por_fora`, logo acima).
-        guardados = sorted(
-            set(fields) - (_CAMPOS_QUE_O_NATIVO_ESCREVE if por_fora else frozenset())
+        # O BRILHO DAS LUZES DE NÚMERO sai SEMPRE por fora do fluxo — o `0x02`
+        # mínimo no cabo, com ou sem nó (`_levar_o_brilho_das_luzes`) —, e no
+        # cabo sem nó ele também saiu (conferência de 25/09/2026).
+        sairam = _CAMPOS_QUE_O_NATIVO_ESCREVE if por_fora else frozenset(
+            {"player_led_brightness"}
         )
+        guardados = sorted(set(fields) - sairam)
         if muted and guardados:
             logger.debug(
                 "apply_output_for_modo_nativo_registrado",

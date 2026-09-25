@@ -211,6 +211,27 @@ class TestOCaboSemNoNaoDizEscreveu:
         assert palavra == "escreveu"
         assert [_cor_do_report(r) for r in radio.escritos] == [(7, 7, 7)]
 
+    def test_o_brilho_das_luzes_no_cabo_sem_no_sai_e_diz_escreveu(self) -> None:
+        """O brilho das luzes de número não espera o fluxo — conferência de 25/09/2026.
+
+        Ele sai SEMPRE por fora do `report_thread`: o `0x02` mínimo no cabo, com
+        ou sem nó (`_levar_o_brilho_das_luzes`). No cabo sem nó o byte sai no
+        Nativo, e a resposta era «registrado» — a promessa de um byte que já
+        tinha saído.
+
+        MORDIDA: tire o `player_led_brightness` do que sai por fora no cabo sem
+        nó (`apply_output_for`) e a resposta volta a «registrado».
+        """
+        ctl, _radio, _no = _mesa_no_nativo()
+        ctl._sysfs = {}
+        cabo = ctl._handles[MAC_CABO]
+
+        palavra = ctl.apply_output_for(UNIQ_CABO, OutputSpec(player_led_brightness=0))
+
+        assert palavra == "escreveu"
+        [quadro] = cabo.escritos
+        assert quadro[0] == 0x02 and quadro[1 + 38] & 0x01 and quadro[1 + 42] == 0
+
 
 class TestOHefestoRepintaNoNativo:
     def test_o_reassert_da_ativacao_de_perfil(self) -> None:
