@@ -58,7 +58,8 @@ def principal(argv: list[str] | None = None) -> int:
     sub = p.add_subparsers(dest="verbo", required=True)
     g = sub.add_parser("guardar", help="copia a casa e esquece os controles (Steam fechada)")
     g.add_argument("--seco", action="store_true", help="só diz o que faria")
-    sub.add_parser("limpa", help="depois do uninstall: sobrou algo do Hefesto?")
+    sub.add_parser("limpa", help="depois do uninstall: sobrou algo do Hefesto? "
+                   "(sai 0 limpa, 1 sobrou, 3 não sei: falta privilégio)")
     d = sub.add_parser("devolver", help="devolve a pasta (a mais nova, se não disser qual)")
     d.add_argument("pasta", nargs="?", default=None)
     d.add_argument("--seco", action="store_true", help="só diz o que faria")
@@ -79,16 +80,27 @@ def principal(argv: list[str] | None = None) -> int:
                 print(pasta)
             return 0
         else:
-            rastros = m.conferir_a_casa(raizes)
-            defeitos = [r for r in rastros if not r.de_proposito]
+            # Três respostas, e «não sei» é uma delas: o BlueZ só o root lê, e
+            # sem privilégio a pergunta não tem resposta — contá-lo como
+            # «sobrou» faria toda máquina de verdade reprovar; como «limpa»,
+            # esconderia um controle ainda pareado.
+            rastros = m.conferir_a_casa(raizes, sistema)
+            defeitos = [r for r in rastros if not r.de_proposito and not r.nao_sei]
+            incertos = [r for r in rastros if r.nao_sei]
             for r in rastros:
-                marca = "de propósito" if r.de_proposito else "SOBROU"
+                marca = ("NÃO SEI" if r.nao_sei
+                         else "de propósito" if r.de_proposito else "SOBROU")
                 print(f"{marca:<13} {r.onde} — {r.o_que}")
+            if defeitos:
+                return 1
+            if incertos:
+                print("não sei se está limpa: há lugar que só o root lê (acima)")
+                return 3
             if not rastros:
                 print("limpa: nenhum rastro do Hefesto nos lugares do inventário")
-            elif not defeitos:
+            else:
                 print("limpa: só o que o uninstall deixa de propósito")
-            return 1 if defeitos else 0
+            return 0
     except m.RecusaError as erro:
         print(f"recusado: {erro}", file=sys.stderr)
         return 2
