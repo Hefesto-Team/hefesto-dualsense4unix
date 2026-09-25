@@ -21,15 +21,13 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
-
 ## 04-iluminacao.html
 - **24/09/2026** — as três pílulas **Fraco · Médio · Forte** na linha «LEDs» de
   cada controle, no molde da linha «Jogador», com o Fraco aceso (decisão dela,
   `D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`: *"Fraco, Médio e Forte na linha
   LEDs, nascendo no Fraco"*). A faixa dos LEDs foi de 56 para 64 px e a de
-  Opções de 72 para 64: a coluna continua em 472 e a aba não rola. Espera a
-  sessão dos desenhos novos (O-BRILHO-DAS-LUZES-DE-NUMERO-01). Até publicar, a
+  Opções de 72 para 64: a coluna continua em 472 e a aba não rola. Espera
+  quem coordena publicar (O-BRILHO-DAS-LUZES-DE-NUMERO-01). Até publicar, a
   tela dela não mostra as pílulas e o pacote não emite o endereço delas
   (`a_pagina_tem_as_pilulas`); o brilho que o perfil guarda — o Fraco, se
   ninguém escolheu — já vai ao aparelho nos dois transportes.
