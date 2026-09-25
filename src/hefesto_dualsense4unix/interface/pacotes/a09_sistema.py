@@ -2239,7 +2239,7 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `_safe_call` devolve `False` para serviço desligado, socket ausente, timeout
     e erro JSON-RPC (`app/ipc_bridge.py:105-112`); o gesto não levantava, o
     piloto executava o ramo do sucesso (`_deu_certo`,
-    `interface/hefesto_vivo.py:3458`) e
+    `interface/hefesto_vivo.py:3635`) e
     a tela dizia **"Pronto."** em verde. **A cena inteira, com o serviço
     parado:** o botão trocava de palavra, esperava o teto, voltava ao rótulo e
     afirmava ter feito. Nenhum byte havia saído. E ele não fica cinza para
