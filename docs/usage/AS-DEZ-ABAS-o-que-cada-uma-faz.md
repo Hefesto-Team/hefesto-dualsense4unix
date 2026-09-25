@@ -261,7 +261,9 @@ controle.*
 - **Quem navega, e com qual controle** — os controles ligados, cada um na cor do
   plástico. O cursor do PC é um só: mouse, teclado e os cinco gestos saem do
   controle do **Player 1**; os outros chegam ao jogo pelo gamepad virtual e não
-  mexem no cursor.
+  mexem no cursor. Com um jogo aberto e o Player 1 desligado, nos até trinta
+  segundos em que o lugar dele fica guardado, os gestos ficam com o próximo da
+  fila que continua ligado, sem ninguém trocar de número.
 - **Os gestos do controle** — as combinações que valem a qualquer momento, mesmo
   com o jogo aberto, desenhadas no controle do Player 1. Apertar os dois botões
   em até **0,15 s** conta como combo; mais devagar, o Hefesto entende como dois

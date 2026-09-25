@@ -4,6 +4,13 @@ O Hefesto - DualSense4Unix reconhece atalhos nativos do DualSense detectados pel
 `HotkeyManager`. Todos os atalhos respeitam o buffer de 150 ms (V3-2) para
 distinguir combos de toques isolados.
 
+**Os atalhos saem de um controle só: o do jogador 1.** Com um jogo aberto e o
+jogador 1 desligado, nos até trinta segundos em que o lugar dele fica guardado,
+eles ficam com o próximo da fila que continua ligado — o jogador 2; se ele
+também saiu, o 3 —, e ninguém troca de número. Quando o jogador 1 volta, os
+atalhos voltam para ele (OS-ATALHOS-NA-ESPERA-01, 24/09/2026; o lugar guardado
+está em [`modos.md`](modos.md)).
+
 ## Combos sagrados (troca de perfil)
 
 | Combo            | Ação                                  |
@@ -226,9 +233,9 @@ conferida com o olho dela. O roteiro está em
 **Máscara** é como o jogo reconhece o controle, por cima do modo: DualSense,
 Xbox 360 ou Nintendo Pro. O gesto **PS + L3** anda por elas sem fechar o jogo, em
 ciclo — **DualSense → Xbox 360 → Nintendo Pro → DualSense** — e é o mesmo chip
-do cartão do jogador 1 na aba Jogar: a máscara vale na hora e fica gravada no
-perfil ativo (PS-L3-MASCARA-01, 14/09/2026). O modo não muda; quem troca o modo
-é o **PS + R3**.
+do cartão de quem faz o gesto na aba Jogar: a máscara vale na hora e fica
+gravada no perfil ativo (PS-L3-MASCARA-01, 14/09/2026). O modo não muda; quem
+troca o modo é o **PS + R3**.
 
 **O L3 sozinho continua abrindo o teclado na tela** — o mesmo latch de combo do
 R3 segura o L3 até todos os botões serem soltos. O latch só pega o L3 quando o
@@ -248,9 +255,12 @@ máscara em rajada.
 | **dois pulsos vermelhos**, antes de aplicar | há jogo com o controle na mão: recriar o controle virtual pode derrubá-lo |
 | dois pulsos vermelhos **+ um vermelho longo** | a máscara não chegou ao aparelho, ou não há controle primário |
 
-**Só o jogador 1.** O gesto anda o cartão do controle primário; os outros trocam
-de máscara pelo próprio cartão, na aba Jogar. **Na Navegação** o gesto guarda a
-máscara e não liga o controle virtual: ela vale quando um modo de jogo subir.
+**O cartão é o de quem segura os atalhos.** O gesto anda o cartão do jogador 1;
+na espera do lugar guardado, o de quem segura os atalhos — o do jogador 1
+ausente não se mexe, e o controle virtual dele, parado à espera, não é recriado.
+Os outros trocam de máscara pelo próprio cartão, na aba Jogar. **Na Navegação**
+o gesto guarda a máscara e não liga o controle virtual: ela vale quando um modo
+de jogo subir.
 
 **O que o modo muda com cada máscara, medido em 14/09/2026** no daemon vivo, com
 a libSDL2 do sistema: com a máscara **DualSense**, o modo Sony DualSense dá o
