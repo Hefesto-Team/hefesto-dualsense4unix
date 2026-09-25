@@ -4,9 +4,9 @@ O módulo uhid estava provado no hardware mas não tinha call site: nada em `src
 o importava. Aqui trava-se o que o daemon precisa ENTREGAR à factory para o vpad
 uhid ser um DualSense de verdade em vez de um device mudo:
 
-1. **o índice do jogador** — no uhid, sem identidade de aparelho, é dele que
-   sai o MAC do vpad (E3). Todos nascendo `player=1` = MAC repetido = probe do
-   P2 em diante morrendo com -EEXIST, ou seja, co-op de 4 reduzido a 1.
+1. **o índice do jogador** — no uhid é o número do nome do vpad e, sem
+   identidade de aparelho, o recuo do MAC (E3). Todos nascendo `player=1` =
+   quatro vpads chamados «P1», e o jogo sem como separar os lugares.
 2. **o veto do backend fake** (`allow_uhid`, VPAD-08) — o daemon FAKE
    (`run.sh --fake`, smoke na máquina da usuária) não pode registrar um
    DualSense Edge REAL no kernel, visível pela Steam.

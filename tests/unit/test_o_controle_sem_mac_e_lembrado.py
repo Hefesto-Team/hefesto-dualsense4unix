@@ -350,10 +350,9 @@ class TestOVpadContinuaSemSlot:
     ) -> None:
         """Um crachá que devolve o MAC forjado ``02:fe:...`` é RECUSADO.
 
-        Slot repetido no endereço do vpad uhid mata o probe com ``-EEXIST`` e
-        degrada o co-op em silêncio (D9, e a separação D3: este slot é
-        EXIBIÇÃO/LED). O caminho novo teria sido uma segunda entrada por onde
-        ele passaria.
+        O vpad é o espelho de um controle, nunca «Controle N» (D9, e a
+        separação D3: este slot é EXIBIÇÃO/LED de um controle de verdade). O
+        caminho novo teria sido uma segunda entrada por onde ele passaria.
         """
         reg = ControllerIdentityRegistry()
         reg.set_cracha_provider(_cracha_fixo({PATH_1: "02:fe:00:00:00:07"}))

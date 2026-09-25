@@ -30,7 +30,7 @@ outro braço do ensaio.
 ANONIMATO: o 0x09 carrega o MAC do controle e o MAC do host pareado. O script
 imprime SEMPRE a versão sanitizada (bytes 1..6 e 10..15 zerados) — é a única
 que pode aparecer em commit. O runtime nem usa esses bytes: o `start()` do
-vpad carimba o MAC forjado do jogador (`02:fe:00:00:00:0N`, LE).
+vpad carimba o MAC forjado que ele veste (`UhidDualSense.mac`, `02:fe:…`, LE).
 """
 from __future__ import annotations
 
