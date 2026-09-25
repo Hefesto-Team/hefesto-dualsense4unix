@@ -119,6 +119,46 @@ _PLAYER_LED_PATTERNS: dict[int, tuple[bool, bool, bool, bool, bool]] = {
 _PLAYER_LED_OVERFLOW = (True, False, True, True, False)
 
 
+#: O BRILHO DAS LUZES DE NÚMERO — `D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`,
+#: decisão dela de 24/09/2026: *"Fraco, Médio e Forte na linha LEDs, nascendo
+#: no Fraco"*. A razão que ela escolheu: quem enxerga pouco não tinha como
+#: aumentar, e quem se incomoda com luz não tinha como escolher.
+#:
+#: A CHAVE É A PALAVRA, O VALOR É O DEGRAU DO FIRMWARE — e o degrau é INVERTIDO:
+#: o `common[42]` do report de saída diz 0 alto · 1 médio · 2 baixo, e só vale
+#: com o `flag2` bit0 (`SET_PLAYER_LED_BRIGHTNESS`) ligado. Medido pelo olho
+#: dela nos dois transportes (BRILHO-DE-HARDWARE-01, 09/09/2026): o degrau muda
+#: as cinco lâmpadas de numeração, e a barra de cor não.
+#:
+#: A ORDEM DO DICIONÁRIO É A DA TELA (do mais fraco ao mais forte), e quem
+#: desenha as três pílulas a lê daqui. A palavra `medio` vai sem acento porque
+#: é valor legível por máquina (o disco, o gesto); a tela escreve «Médio».
+BRILHOS_DAS_LUZES: dict[str, int] = {"fraco": 2, "medio": 1, "forte": 0}
+
+#: O Fraco é o de antes da decisão — o degrau baixo que a pydualsense manda
+#: por padrão — e é onde todo perfil e todo controle nascem.
+BRILHO_DAS_LUZES_PADRAO = "fraco"
+
+
+def degrau_do_brilho_das_luzes(nome: str | None) -> int:
+    """O degrau do firmware (`common[42]`) para a palavra do perfil.
+
+    `None` é quem não opinou, e vale o padrão (Fraco): o Hefesto sempre manda
+    no brilho das lâmpadas, e sem escolha nenhuma ele manda o de antes.
+    Palavra desconhecida levanta — o esquema já recusa na entrada, e um
+    degrau inventado aqui acenderia um brilho que ninguém pediu.
+    """
+    if nome is None:
+        nome = BRILHO_DAS_LUZES_PADRAO
+    try:
+        return BRILHOS_DAS_LUZES[nome]
+    except KeyError as erro:
+        raise ValueError(
+            f"brilho das luzes de número desconhecido: {nome!r} "
+            f"(as palavras são {', '.join(BRILHOS_DAS_LUZES)})"
+        ) from erro
+
+
 def player_led_pattern(index: int) -> tuple[bool, bool, bool, bool, bool]:
     """Padrão canônico de player-LED do jogador/controle `index`.
 
@@ -459,6 +499,8 @@ def hex_to_rgb(hex_str: str) -> RGB:
 
 
 __all__ = [
+    "BRILHOS_DAS_LUZES",
+    "BRILHO_DAS_LUZES_PADRAO",
     "DA_MAO",
     "DA_PALETA",
     "DO_BROADCAST",
@@ -471,6 +513,7 @@ __all__ = [
     "apply_led_settings",
     "cor_escolhida",
     "cores_sem_colisao",
+    "degrau_do_brilho_das_luzes",
     "hex_to_rgb",
     "off",
     "player_bitmask",

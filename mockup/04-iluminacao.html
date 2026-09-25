@@ -1030,7 +1030,7 @@
      apontava. Com a fita esmaecida (decisão dela, 28/08) esse alvo deixou de
      existir, e as seções desceram para dentro das colunas.
 
-     AS ALTURAS SÃO TOKENS porque a soma é o orçamento: 146+16+44+26+52+56+72
+     AS ALTURAS SÃO TOKENS porque a soma é o orçamento: 146+16+44+26+52+64+64
      = 412, mais seis passos de 10 = 472, contra o teto de 476 que a caixa do
      miolo oferece. Mexer numa linha sem tirar de outra faz a aba rolar por
      dentro — e quadro que rola por dentro é conteúdo que ninguém sabe que
@@ -1080,7 +1080,14 @@
        D-13 não entra nesta conta porque não gasta linha nenhuma: ele mora na
        faixa do TÍTULO do quadro, que tem 17px de altura e 1000px vazios à
        direita — ver `.chave-auto`. */
-    --r-player:52px;--r-leds:56px;--r-acoes:72px;
+    /* AS TRÊS PÍLULAS DO BRILHO DAS LUZES MORAM NA LINHA DOS LEDs — 24/09/2026,
+       decisão dela (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`): *"Fraco,
+       Médio e Forte na linha LEDs, nascendo no Fraco"*. Elas pedem 30px
+       (24 de pílula e 6 de vão) debaixo da tira de 34: `--r-leds` vai de 56
+       para 64 e `--r-acoes` de 72 para 64. OS OITO SAEM DA LINHA OPÇÕES porque
+       ela sobrava: tem UM botão desde 07/09/2026, e ele mede 34px dentro dos
+       72 — a coluna continua em 472 e o teto de 476 não é tocado. */
+    --r-player:52px;--r-leds:64px;--r-acoes:64px;
     /* O RESPIRO É O DONO, E O PASSO É O DOBRO DELE — 31/08/2026, pedido dela:
        *"aba iluminação tem a mesma questão do respiro vertical."* É a mesma
        construção da Vibração (30/08) e da Gatilhos (hoje), e o mesmo valor da
@@ -1755,13 +1762,14 @@
   .players{display:flex;gap:5px;align-items:center;height:100%}
   /* O BOTÃO CONTINUA COM OS 36px DA ESCALA — quem os fixa é o esqueleto
      (`.players button{height:var(--h-escolha)}`). */
-  .players button{
+  .players button,.brilhos button{
     flex:1;border-radius:7px;gap:6px;min-width:0;
     border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
     cursor:pointer;font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;
   }
-  .players button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg)}
-  .players button:hover:not(.on):not(.fora){border-color:var(--comment);color:var(--texto-suave)}
+  .players button.on,.brilhos button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg)}
+  .players button:hover:not(.on):not(.fora),
+  .brilhos button:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
   /* O NÚMERO QUE O PRODUTO RECUSARIA — 03/09/2026, medido com UM controle no
      cabo. Os botões 2, 3 e 4 eram pixel a pixel iguais ao 1 e a dica dizia
      "livre"; clicar devolvia *"Esse número é maior do que a quantidade de
@@ -1821,7 +1829,20 @@
      encolhe abaixo do conteúdo, e as cinco colunas dividem 1112px em partes
      iguais. */
   .cel-leds{display:flex;flex-direction:column;align-items:stretch;
-            justify-content:center;min-width:0}
+            justify-content:center;min-width:0;gap:6px}
+  /* AS TRÊS PÍLULAS DO BRILHO DAS LUZES — 24/09/2026, decisão dela
+     (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`). No molde da linha
+     `Jogador`: a regra de botão é a MESMA (`.players button`, logo acima, e
+     ela ganhou o seletor destas), e só a altura muda — 24 em vez dos 36 da
+     escala, porque elas dividem a faixa com a tira. `flex:0 0 24px` pela
+     razão da tira: sem a trava, o `flex-shrink` padrão as apertaria.
+
+     O LUGAR SEM DONO FICA SEM PÍLULA, e a caixa fica: o pacote escreve a
+     fileira vazia quando o controle sai, e a caixa de 24px mantém a tira no
+     MESMO y das colunas vivas. */
+  .brilhos{display:flex;gap:5px;align-items:stretch;flex:0 0 24px;min-width:0}
+  .brilhos button{height:24px;font-size:12px}
+  .luz-grade .ctrl[data-conectado="nao"] .brilhos button{display:none}
   /* E A TIRA DO LUGAR VAZIO MORA NA MESMA CÉLULA — 07/09/2026. Até aqui o
      `.aceso` do lugar sem dono era ele próprio o item da grade, e esta linha
      dizia `align-self:center;height:34px` para ele não esticar pelos 56px da
@@ -2992,6 +3013,11 @@
                  dele.* Quem precisar do nome: ele está no
                  `test_a_04_as_lampadas_espelham_o_numero`, que cobra a
                  ausência. -->
+            <div class="brilhos" data-campo="brilho-luzes" data-hef-alvo="html">
+              <button class="on" data-gesto="brilho-luzes" data-luzes="fraco" title="Luzes de número: Fraco">Fraco</button>
+              <button data-gesto="brilho-luzes" data-luzes="medio" title="Luzes de número: Médio">Médio</button>
+              <button data-gesto="brilho-luzes" data-luzes="forte" title="Luzes de número: Forte">Forte</button>
+            </div>
           </div>
           <div class="cel-acoes">
             <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz deste controle.">Desligar</button>
@@ -3385,6 +3411,11 @@
                  dele.* Quem precisar do nome: ele está no
                  `test_a_04_as_lampadas_espelham_o_numero`, que cobra a
                  ausência. -->
+            <div class="brilhos" data-campo="brilho-luzes" data-hef-alvo="html">
+              <button class="on" data-gesto="brilho-luzes" data-luzes="fraco" title="Luzes de número: Fraco">Fraco</button>
+              <button data-gesto="brilho-luzes" data-luzes="medio" title="Luzes de número: Médio">Médio</button>
+              <button data-gesto="brilho-luzes" data-luzes="forte" title="Luzes de número: Forte">Forte</button>
+            </div>
           </div>
           <div class="cel-acoes">
             <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz deste controle.">Desligar</button>
@@ -3757,6 +3788,9 @@
                  dele.* Quem precisar do nome: ele está no
                  `test_a_04_as_lampadas_espelham_o_numero`, que cobra a
                  ausência. -->
+            <div class="brilhos" data-campo="brilho-luzes" data-hef-alvo="html">
+
+            </div>
           </div>
           <div class="cel-acoes">
             <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz deste controle.">Desligar</button>
@@ -4129,6 +4163,9 @@
                  dele.* Quem precisar do nome: ele está no
                  `test_a_04_as_lampadas_espelham_o_numero`, que cobra a
                  ausência. -->
+            <div class="brilhos" data-campo="brilho-luzes" data-hef-alvo="html">
+
+            </div>
           </div>
           <div class="cel-acoes">
             <button class="btn vermelho" data-gesto="apagar" title="Apaga a barra de luz deste controle.">Desligar</button>

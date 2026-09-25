@@ -249,7 +249,7 @@ CSS = """
      apontava. Com a fita esmaecida (decisão dela, 28/08) esse alvo deixou de
      existir, e as seções desceram para dentro das colunas.
 
-     AS ALTURAS SÃO TOKENS porque a soma é o orçamento: 146+16+44+26+52+56+72
+     AS ALTURAS SÃO TOKENS porque a soma é o orçamento: 146+16+44+26+52+64+64
      = 412, mais seis passos de 10 = 472, contra o teto de 476 que a caixa do
      miolo oferece. Mexer numa linha sem tirar de outra faz a aba rolar por
      dentro — e quadro que rola por dentro é conteúdo que ninguém sabe que
@@ -299,7 +299,14 @@ CSS = """
        D-13 não entra nesta conta porque não gasta linha nenhuma: ele mora na
        faixa do TÍTULO do quadro, que tem 17px de altura e 1000px vazios à
        direita — ver `.chave-auto`. */
-    --r-player:52px;--r-leds:56px;--r-acoes:72px;
+    /* AS TRÊS PÍLULAS DO BRILHO DAS LUZES MORAM NA LINHA DOS LEDs — 24/09/2026,
+       decisão dela (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`): *"Fraco,
+       Médio e Forte na linha LEDs, nascendo no Fraco"*. Elas pedem 30px
+       (24 de pílula e 6 de vão) debaixo da tira de 34: `--r-leds` vai de 56
+       para 64 e `--r-acoes` de 72 para 64. OS OITO SAEM DA LINHA OPÇÕES porque
+       ela sobrava: tem UM botão desde 07/09/2026, e ele mede 34px dentro dos
+       72 — a coluna continua em 472 e o teto de 476 não é tocado. */
+    --r-player:52px;--r-leds:64px;--r-acoes:64px;
     /* O RESPIRO É O DONO, E O PASSO É O DOBRO DELE — 31/08/2026, pedido dela:
        *"aba iluminação tem a mesma questão do respiro vertical."* É a mesma
        construção da Vibração (30/08) e da Gatilhos (hoje), e o mesmo valor da
@@ -974,13 +981,14 @@ CSS = """
   .players{display:flex;gap:5px;align-items:center;height:100%}
   /* O BOTÃO CONTINUA COM OS 36px DA ESCALA — quem os fixa é o esqueleto
      (`.players button{height:var(--h-escolha)}`). */
-  .players button{
+  .players button,.brilhos button{
     flex:1;border-radius:7px;gap:6px;min-width:0;
     border:1px solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
     cursor:pointer;font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace;
   }
-  .players button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg)}
-  .players button:hover:not(.on):not(.fora){border-color:var(--comment);color:var(--texto-suave)}
+  .players button.on,.brilhos button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg)}
+  .players button:hover:not(.on):not(.fora),
+  .brilhos button:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
   /* O NÚMERO QUE O PRODUTO RECUSARIA — 03/09/2026, medido com UM controle no
      cabo. Os botões 2, 3 e 4 eram pixel a pixel iguais ao 1 e a dica dizia
      "livre"; clicar devolvia *"Esse número é maior do que a quantidade de
@@ -1040,7 +1048,20 @@ CSS = """
      encolhe abaixo do conteúdo, e as cinco colunas dividem 1112px em partes
      iguais. */
   .cel-leds{display:flex;flex-direction:column;align-items:stretch;
-            justify-content:center;min-width:0}
+            justify-content:center;min-width:0;gap:6px}
+  /* AS TRÊS PÍLULAS DO BRILHO DAS LUZES — 24/09/2026, decisão dela
+     (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`). No molde da linha
+     `Jogador`: a regra de botão é a MESMA (`.players button`, logo acima, e
+     ela ganhou o seletor destas), e só a altura muda — 24 em vez dos 36 da
+     escala, porque elas dividem a faixa com a tira. `flex:0 0 24px` pela
+     razão da tira: sem a trava, o `flex-shrink` padrão as apertaria.
+
+     O LUGAR SEM DONO FICA SEM PÍLULA, e a caixa fica: o pacote escreve a
+     fileira vazia quando o controle sai, e a caixa de 24px mantém a tira no
+     MESMO y das colunas vivas. */
+  .brilhos{display:flex;gap:5px;align-items:stretch;flex:0 0 24px;min-width:0}
+  .brilhos button{height:24px;font-size:12px}
+  .luz-grade .ctrl[data-conectado="nao"] .brilhos button{display:none}
   /* E A TIRA DO LUGAR VAZIO MORA NA MESMA CÉLULA — 07/09/2026. Até aqui o
      `.aceso` do lugar sem dono era ele próprio o item da grade, e esta linha
      dizia `align-self:center;height:34px` para ele não esticar pelos 56px da
@@ -1465,6 +1486,15 @@ def coluna(c):
     resto_do_desenho = ({"jogador": j, "luz": tinta} if ligado
                         else {"lampadas": False})
     brilho_escrito = f"{b}%" if ligado else VAZIO
+    # AS TRÊS PÍLULAS DO BRILHO DAS LUZES — 24/09/2026, decisão dela
+    # (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`): *"Fraco, Médio e Forte na
+    # linha LEDs, nascendo no Fraco"*. O desenho as mostra no padrão do
+    # esquema, que é onde todo controle nasce; no produto quem acende a pílula
+    # é o pacote, com o que está no perfil. O lugar sem dono não oferece gesto
+    # nenhum (31/08/2026), e por isso nasce com a caixa e sem pílula.
+    from hefesto_dualsense4unix.core.led_control import BRILHO_DAS_LUZES_PADRAO
+    brilhos = (_pacote04.fileira_de_brilhos_das_luzes(
+        BRILHO_DAS_LUZES_PADRAO, "              ") if ligado else "")
     # A CÉLULA OPÇÕES FICOU COM UM BOTÃO — 07/09/2026, ordem dela sobre os três
     # cantos que falavam de automático: *"Olha na real sai todos. Deixa só lá o
     # de cima mesmo o tongle."* Saiu o botão POR CONTROLE que devolvia a barra
@@ -1539,6 +1569,9 @@ def coluna(c):
                  dele.* Quem precisar do nome: ele está no
                  `test_a_04_as_lampadas_espelham_o_numero`, que cobra a
                  ausência. -->
+            <div class="brilhos" data-campo="{_pacote04.ENDERECO_DO_BRILHO_DAS_LUZES}" data-hef-alvo="html">
+{brilhos}
+            </div>
           </div>
           <div class="cel-acoes">
             {opcoes}<!-- O TRAVESSÃO DESTA CÉLULA NASCE AQUI, escondido na coluna viva, e
@@ -1796,10 +1829,12 @@ _UMA_COLUNA = re.compile(r'<div class="ctrl([" ][^>]*?)>(.*?)(?=<div class="ctrl
                          re.S)
 
 #: O MIOLO DE UM BLOCO DE ALVO `html`, para descontá-lo do contrato do cartão —
-#: ver a §14. Os dois desta aba (`players` e `aceso`) não têm `<div>` por
-#: dentro; a §14 confere isso antes de confiar neste recorte.
+#: ver a §14. Os três desta aba (`players`, `aceso` e, desde 24/09/2026, as
+#: pílulas do brilho das luzes em `brilhos`) não têm `<div>` por dentro; a §14
+#: confere isso antes de confiar neste recorte.
 _MIOLO_DO_ALVO_HTML = re.compile(
-    r'(<div class="(?:players|aceso)"[^>]*data-hef-alvo="html"[^>]*>).*?</div>', re.S)
+    r'(<div class="(?:players|aceso|brilhos)"[^>]*data-hef-alvo="html"[^>]*>).*?</div>',
+    re.S)
 
 
 #: O QUE ESCONDE CADA WIDGET DE GESTO ENQUANTO O LUGAR NÃO TEM DONO — a
@@ -2134,19 +2169,51 @@ def _conferir(doc):
            "dela em 07/09/2026 (*'o que eu não quero é frase da steam ou "
            "outras'*), e a razão da barra apagada continua no `title` das duas "
            "tiras, escrita pela `dica_da_luz` a cada tique")
-    #     E NENHUM GESTO MORA AQUI. As cinco lâmpadas são ESPELHO do número —
-    #     quem escolhe o número é a linha `Jogador`, uma célula acima. Um
-    #     `data-gesto` nesta faixa é o desenho voltando a oferecer uma segunda
-    #     maneira de mexer nas mesmas luzes, que é exatamente o que ela mandou
-    #     tirar: *"pq tá surgindo os leds no lado da iluminação se acima já tem
-    #     o canto dos players?"*
+    #     E UM GESTO SÓ MORA AQUI: O BRILHO. As cinco lâmpadas são ESPELHO do
+    #     número — quem escolhe o número é a linha `Jogador`, uma célula acima —,
+    #     e um gesto que mexesse no DESENHO delas seria a segunda maneira de
+    #     mexer nas mesmas luzes que ela mandou tirar: *"pq tá surgindo os leds
+    #     no lado da iluminação se acima já tem o canto dos players?"*
+    #
+    #     O BRILHO É OUTRA PERGUNTA, e a resposta é dela (24/09/2026,
+    #     `D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`): *"Fraco, Médio e Forte
+    #     na linha LEDs, nascendo no Fraco"*. Por isso a régua deixou de medir a
+    #     ausência de TODO gesto e passou a medir que o único é o do brilho, com
+    #     as três palavras na ordem e o Fraco aceso — cobrar a ausência de todos
+    #     reprovaria a decisão dela em vez do defeito.
+    from hefesto_dualsense4unix.core.led_control import (
+        BRILHO_DAS_LUZES_PADRAO,
+        BRILHOS_DAS_LUZES,
+    )
     for bloco in re.findall(
-            r'<div class="cel-leds">(.*?)</div>\s*</div>',
+            r'<div class="cel-leds">(.*?)<div class="brilhos"',
             "\n".join(_cada_coluna(grade)[1]), re.S):
         exigir("data-gesto=" not in bloco,
-               "um gesto voltou à célula dos LEDs — ela é desenho de leitura "
+               "um gesto voltou ao DESENHO da célula dos LEDs — ele é de leitura "
                "desde 07/09/2026, e as cinco lâmpadas espelham o número sem "
-               "escolha própria")
+               "escolha própria; o único gesto da faixa é o do brilho")
+    for coluna_html in _cada_coluna(grade)[1]:
+        pilulas = re.search(r'<div class="brilhos"[^>]*>(.*?)</div>', coluna_html, re.S)
+        exigir(bool(pilulas), "uma coluna conectada perdeu as pílulas do brilho "
+               "das luzes — a decisão dela de 24/09/2026 as põe na linha LEDs")
+        if not pilulas:
+            continue
+        gestos = re.findall(r'data-gesto="([^"]+)"', pilulas.group(1))
+        exigir(set(gestos) == {_pacote04.GESTO_DO_BRILHO_DAS_LUZES},
+               f"as pílulas do brilho oferecem {sorted(set(gestos))} — o único "
+               f"gesto delas é {_pacote04.GESTO_DO_BRILHO_DAS_LUZES!r}")
+        palavras = re.findall(r'data-luzes="([^"]+)"', pilulas.group(1))
+        exigir(palavras == list(BRILHOS_DAS_LUZES),
+               f"as pílulas do brilho dizem {palavras} — são as três da decisão "
+               f"dela, na ordem da tela: {list(BRILHOS_DAS_LUZES)}")
+        acesa = re.findall(r'<button class="on"[^>]*data-luzes="([^"]+)"',
+                           pilulas.group(1))
+        exigir(acesa == [BRILHO_DAS_LUZES_PADRAO],
+               f"a pílula acesa do desenho é {acesa} — todo controle nasce no "
+               f"{BRILHO_DAS_LUZES_PADRAO!r}, e é isso que a bancada mostra")
+    for bloco in re.findall(
+            r'<div class="cel-leds">(.*?)<div class="brilhos"',
+            "\n".join(_cada_coluna(grade)[1]), re.S):
         exigir('class="luzinhas"' in bloco,
                "as cinco lâmpadas do indicador sumiram da célula dos LEDs — "
                "sem elas a coluna deixa de replicar a linha `Jogador`")
