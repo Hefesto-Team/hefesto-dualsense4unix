@@ -3436,11 +3436,11 @@ def alvo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     ELE NÃO TEM FUNÇÃO NO `ipc_bridge` — é o degrau 3 da ponte, e passa pelo
     mesmo `_safe_call`, com o mesmo timeout.
 
-    O QUE ESTE GESTO **NÃO** FAZ, e é honesto dizer: a fita do topo não se move.
-    O piloto único chama `mesa_viva.mesa_do_estado(st, …)` sem o argumento `alvo`
-    (`hefesto_vivo.py:476`), então a fita aponta sempre para a posição 1. Quem
-    mudar isso é o piloto, não este pacote — o efeito que ESTE gesto entrega é o
-    do daemon, e ele é real.
+    O efeito que ESTE gesto entrega é o do daemon, e ele é real. A FITA DO TOPO
+    ACOMPANHA NO TIQUE SEGUINTE, e não é este gesto que a move: o destaque do
+    chip vem do `:checked` do acordeão, que :func:`_alvo_de_saida` marca pelo
+    alvo que o daemon guardou, e as regras do gerador acham o chip pelo número
+    do jogador (`data-pref`, A-GESTAO-SEGUE-O-JOGADOR-01).
     """
     uniq = _uniq(o)
     if not uniq:
@@ -4242,9 +4242,9 @@ def luz_nao_acende(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     e devolve a frase de tela pronta em português. Foi escrito para esta cura e
     nunca tinha sido chamado por tela nenhuma.
 
-    A RECUSA DO CABO É DO DESENHO, não minha: o `title` do botão apagado diz
-    *"Este controle está no cabo, onde a barra de luz não depende de reconexão
-    nenhuma"*. Derrubar um controle que está no cabo não o derruba — e um botão
+    A RECUSA DO CABO É DO DESENHO, não minha: o `title` do botão apagado
+    (`aba08.LUZ_NO_CABO`, repintado por `secao_controles.DICA_NO_CABO`) diz que
+    ele só vale no BT. Derrubar um controle que está no cabo não o derruba — e um botão
     que aceita o clique e não faz nada é o que responde calado.
 
     OS QUATRO DESFECHOS VIRAM DOIS, e a linha que os separa é do módulo:
