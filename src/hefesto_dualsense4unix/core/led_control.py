@@ -353,7 +353,7 @@ def reescalar(
     a luz é um tom da paleta NAQUELE brilho — é a automática, e é o caso de
     todo controle que nasce sem cor escolhida —, o tom é levado ao brilho novo
     pela conta do dono, uma vez só, e a resposta é a do trilho. Fora da paleta
-    (o global dela, `#2850B4`) não há tom a provar, e vale a razão, como antes.
+    e dos `extras` não há tom a provar, e vale a razão, como antes.
     O tom tem de ser ÚNICO: abaixo de 1% o vermelho, o rosa e o laranja acendem
     o mesmo `(1,0,0)`, e escolher um deles seria trocar a cor pelo brilho.
 
