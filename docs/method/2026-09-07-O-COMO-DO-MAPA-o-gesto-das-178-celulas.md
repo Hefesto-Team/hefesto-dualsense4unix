@@ -1722,7 +1722,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que o Hefesto não oferece nenhum jeito de desligar um controle do cabo pela tela, e que os três botões que parecem isso são outra coisa.
 
-**Onde olhar.** Em três lugares, e nenhum dos três desliga controle do cabo. Na aba Sistema, o botão «Parar o serviço» — passe o mouse e a dica diz que o Hefesto deixa de rodar, que os controles viram gamepads comuns do Linux e que ele pergunta antes. Na aba Iluminação, o botão «Desligar» na linha «Opções» de cada coluna — a dica diz que ele apaga a barra de luz daquele controle. Na aba Conexões, seção «Gestão de Controles», dentro da linha aberta de um controle, o botão «A luz não acende» — no cabo ele fica apagado, e a dica diz que ele só vale no rádio. O único desligamento que existe hoje para o cabo é com o dedo, no botão PS do aparelho. Para acompanhar o que acontece, use a fita do topo que começa com «Selecionar:» e a contagem no alto à direita, que diz só os transportes que têm controle — «2 USB · 2 BT» com os quatro.
+**Onde olhar.** Em três lugares, e nenhum dos três desliga controle do cabo. Na aba Sistema, o botão «Parar o serviço» — passe o mouse e a dica diz que o Hefesto deixa de rodar, que os controles viram gamepads comuns do Linux e que ele pergunta antes. Na aba Iluminação, o botão «Desligar» na linha «Opções» de cada coluna — a dica diz que ele apaga a barra de luz daquele controle. Na aba Conexões, seção «Gestão de Controles», dentro da linha aberta de um controle, o botão «A luz não acende» — no cabo ele fica apagado, e a dica diz que ele só vale no BT. O único desligamento que existe hoje para o cabo é com o dedo, no botão PS do aparelho. Para acompanhar o que acontece, use a fita do topo que começa com «Selecionar:» e a contagem no alto à direita, que diz só os transportes que têm controle — «2 USB · 2 BT» com os quatro.
 
 **Os passos.**
 
@@ -1739,7 +1739,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 10. Se o P1 saiu, anote o número que cada um dos outros três mostra, reconhecendo cada um pela cor do plástico.
 11. Se o P1 ficou apagado e fora da fita, dê um toque no botão PS dele para trazê-lo de volta, e confira que os quatro voltaram aos números de antes.
 
-**Passa quando.** Nenhuma das dez abas oferece desligar um controle, e as três coisas parecidas se explicam sozinhas na dica: uma para o serviço inteiro, outra apaga a barra de luz, e a terceira só vale no rádio. O P1 responde ao PS longo com o cabo encaixado, e o que ele faz fica ANOTADO — apagou e voltou sozinho, ou apagou e ficou fora. Se ele saiu, os outros três ficaram com o número deles nos primeiros trinta segundos da ausência, desceram um número passado esse prazo, e voltaram aos seus quando ele voltou.
+**Passa quando.** Nenhuma das dez abas oferece desligar um controle, e as três coisas parecidas se explicam sozinhas na dica: uma para o serviço inteiro, outra apaga a barra de luz, e a terceira só vale no BT. O P1 responde ao PS longo com o cabo encaixado, e o que ele faz fica ANOTADO — apagou e voltou sozinho, ou apagou e ficou fora. Se ele saiu, os outros três ficaram com o número deles nos primeiros trinta segundos da ausência, desceram um número passado esse prazo, e voltaram aos seus quando ele voltou.
 
 **Por controle.**
 
@@ -2962,7 +2962,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, com o controle no cabo, o Hefesto recusa o gesto de refazer a conexão sem fio — e diz por quê, em vez de fingir que fez.
 
-**Onde olhar.** Aba Conexões, quadro Gestão de Controles, que nasce recolhido e se abre clicando no título. Cada controle ligado é uma linha, e clicar na linha abre só ela: dentro vêm Microfone e botões, Limite da vibração e um botão escrito A luz não acende. Na linha de um controle que está no cabo esse botão nasce APAGADO, num cinza diferente dos botões que funcionam, e a explicação aparece ao parar o mouse em cima: ela diz que ele só vale no rádio. Parear um aparelho NOVO mora em outra seção da mesma aba, Rádio e Adaptadores, com Conectar e Parear ao lado de cada aparelho que o Hefesto achou por perto; esquecer um controle já pareado não existe em aba nenhuma.
+**Onde olhar.** Aba Conexões, quadro Gestão de Controles, que nasce recolhido e se abre clicando no título. Cada controle ligado é uma linha, e clicar na linha abre só ela: dentro vêm Microfone e botões, Limite da vibração e um botão escrito A luz não acende. Na linha de um controle que está no cabo esse botão nasce APAGADO, num cinza diferente dos botões que funcionam, e a explicação aparece ao parar o mouse em cima: ela diz que ele só vale no BT. Parear um aparelho NOVO mora em outra seção da mesma aba, Rádio e Adaptadores, com Conectar e Parear ao lado de cada aparelho que o Hefesto achou por perto; esquecer um controle já pareado não existe em aba nenhuma.
 
 **Os passos.**
 
@@ -2979,7 +2979,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 11. Clique na linha do P3 e confira que ali o mesmo botão está no tom normal, e não apagado — não clique nele.
 12. Leia a seção Rádio e Adaptadores e anote se existe, para um controle já ligado, algum botão de esquecer ou de desparear.
 
-**Passa quando.** Nas duas linhas dos controles do cabo o botão está apagado, a explicação diz que ele só vale no rádio, e clicar não derruba o controle — a borda do botão só pisca em laranja. Na linha de um controle do rádio o mesmo botão está no tom normal. E em nenhuma aba existe um botão de esquecer um controle já pareado.
+**Passa quando.** Nas duas linhas dos controles do cabo o botão está apagado, a explicação diz que ele só vale no BT, e clicar não derruba o controle — a borda do botão só pisca em laranja. Na linha de um controle do rádio o mesmo botão está no tom normal. E em nenhuma aba existe um botão de esquecer um controle já pareado.
 
 **Por controle.**
 
@@ -5634,13 +5634,13 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 3. Confira que nenhuma dessas linhas oferece um ajuste de enlace — elas falam de energia, de entrada e de vizinhança de rádio.
 4. Clique no título «Gestão de Controles» e clique na linha do P1 para abri-la.
 5. Leia os ajustes que abrem e confira que nenhum oferece mexer em tempo de resposta, intervalo ou latência de rádio.
-6. Pare o ponteiro sobre o botão «A luz não acende» da linha do P1 e leia a dica: ela diz que ele só funciona com o controle no rádio.
+6. Pare o ponteiro sobre o botão «A luz não acende» da linha do P1 e leia a dica: ela diz que ele só vale no BT.
 7. Repita os passos 4 a 6 na linha do P2.
 8. Clique no título «Rádio e Adaptadores» e clique no ▶ de cada adaptador.
 9. Confira que o P1 e o P2 não aparecem em adaptador nenhum, e que o P3 e o P4 aparecem.
 10. Anote o que você encontrou; o esperado é nenhum ajuste de enlace e nenhum controle do cabo no rádio.
 
-**Passa quando.** Nenhuma aba oferece ajuste de enlace sem fio para um controle do cabo, e nenhum número na tela é apresentado como medida do enlace deles. O P1 e o P2 não aparecem em «Rádio e Adaptadores», e o «A luz não acende» deles diz que só vale no rádio.
+**Passa quando.** Nenhuma aba oferece ajuste de enlace sem fio para um controle do cabo, e nenhum número na tela é apresentado como medida do enlace deles. O P1 e o P2 não aparecem em «Rádio e Adaptadores», e o «A luz não acende» deles diz que só vale no BT.
 
 **Por controle.**
 
