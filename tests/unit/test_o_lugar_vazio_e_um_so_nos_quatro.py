@@ -228,8 +228,12 @@ def test_os_quatro_cartoes_vazios_da_06_sao_iguais() -> None:
         coluna = carga["colunas"][pref]
         assert coluna.get("identidade") == pacotes.SEM_NINGUEM_AQUI, (pref, coluna)
         assert coluna.get("navega") == pacotes.TRAVESSAO, (pref, coluna)
-    assert carga[pacotes.MARCAS_DO_LUGAR] == {"navega": []}, (
+    assert carga[pacotes.MARCAS_DO_LUGAR]["navega"] == [], (
         "com a mesa vazia algum cartão ficou com o verde de quem navega")
+    # A CASCA DE VAZIO nos quatro — A-MIRA-NA-NAVEGACAO-02: a marca `vazia`
+    # acende onde não há dono, pela mesma chave do verde.
+    assert carga[pacotes.MARCAS_DO_LUGAR]["vazia"] == sorted(LUGARES), (
+        "com a mesa vazia algum cartão ficou sem a casca de lugar vazio")
 
 
 def test_o_verde_vai_para_o_primario() -> None:
@@ -237,7 +241,9 @@ def test_o_verde_vai_para_o_primario() -> None:
     ctx = pacotes.Contexto(state={"connected": True}, mesa=MESA_DE_UM,
                            conectados=[dict(PRIMARIO)], estados={})
     carga = _o_que_chega_a_tela("06-navegacao.html", ctx, {UNIQ: "p1"})
-    assert carga[pacotes.MARCAS_DO_LUGAR] == {"navega": ["p1"]}
+    assert carga[pacotes.MARCAS_DO_LUGAR]["navega"] == ["p1"]
+    assert carga[pacotes.MARCAS_DO_LUGAR]["vazia"] == ["p2", "p3", "p4"], (
+        "o lugar do primário ficou com a casca de vazio, ou um lugar sem dono a perdeu")
     assert carga["colunas"]["p1"]["navega"] == a06_navegacao.linha_do_cartao("USB", True)
     assert a06_navegacao.BOLINHA in carga["colunas"]["p1"]["navega"], (
         "o primário voltou sem a bolinha — era o que a linha em texto fazia "
