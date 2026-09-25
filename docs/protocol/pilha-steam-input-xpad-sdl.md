@@ -1417,8 +1417,11 @@ escrita, e o resultado inverso.**
 
 **O limite desta medição, dito porque não foi medido:** contaram-se os pacotes,
 **não** se decodificou o conteúdo. Não se sabe **que** report a Steam manda, nem
-se algum deles pede a barra apagada. As capturas ficaram em
-`/tmp/hefesto-probe-lightbar/` para quem continuar.
+se algum deles pede a barra apagada. As capturas daquela noite não existem
+mais (o `/tmp` não passa de um boot); quem continuar grava os dois braços de
+novo com `scripts/capturar_a_probe_da_lightbar.sh`, que desde 25/09/2026 lê os
+`0x31` na hora e não guarda a captura crua — ela pode levar a chave de
+pareamento (AS-CAPTURAS-DE-RADIO-NASCEM-FECHADAS-01).
 
 ### 6-bis.3 A escrita é em RAJADA, e a rajada tem hora
 
@@ -1538,7 +1541,7 @@ Uma variável por linha, que é como se ataca isto.
 | 3 | a taxa real do giroscópio do vpad Edge — 250 ou 1000 para o jogo? | os quatro passos de 5.3, **contra a SDL3 da Steam** | 5 |
 | 4 | de quantos bits de autorização o firmware precisa para vibrar? | bancada, um bit por vez, com o controle na mão dela | 6.5 |
 | 5 | o pedido de rumble do jogo chega ao vpad numa sessão com Steam Input? | o anel de pedidos crus, sessão de jogo real | 6.5 |
-| 7 | **que report** a Steam manda nos 98 pacotes da rajada, e algum deles pede a barra apagada? | decodificar o payload das capturas em `/tmp/hefesto-probe-lightbar/` — o parser escrito em 12/08 não venceu o formato do `btmon` | 6-bis.2 |
+| 7 | **que report** a Steam manda nos 98 pacotes da rajada, e algum deles pede a barra apagada? | regravar os dois braços com `scripts/capturar_a_probe_da_lightbar.sh` e comparar os `0x31` distintos que ele imprime — o parser de 12/08 (um `awk` sobre o `btmon -r`) não venceu o formato, e desde 25/09 a leitura é a do `btsnoop` binário | 6-bis.2 |
 | 8 | **o que decide qual controle** a Steam repinta depois de perder a cor? | repetir a escrita por `hidraw` nos três e observar qual volta ao padrão dela | 6-bis.5 |
 | 9 | a **volta** do ensaio da lightbar: subir os controles com a Steam viva na probe, **de propósito**, e ver o defeito voltar | o mesmo desenho de 6-bis.2, com o braço sujo provocado | 6-bis |
 | 11 | o que a **classe própria do Edge** muda no motor do jogo — o consumidor do `ebx` da cadeia de `cmp` | desmontar o ramo, ou abrir o jogo com `PROTON_LOG=+hid` | 5-ter.4 |
