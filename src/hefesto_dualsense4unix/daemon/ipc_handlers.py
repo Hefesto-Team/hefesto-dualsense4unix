@@ -1041,7 +1041,13 @@ class IpcHandlersMixin:
 
     # --- triggers --------------------------------------------------------
 
-    def _apply_por_uniq(self, params: dict[str, Any], **campos: Any) -> str | None:
+    def _apply_por_uniq(
+        self,
+        params: dict[str, Any],
+        *,
+        brilho_da_cor: float | None = None,
+        **campos: Any,
+    ) -> str | None:
         """Aplica ``campos`` SÓ no controle do MAC ``params["uniq"]``, se houver.
 
         PERFIL-05 (22/07): alinha o eixo da escrita VIVA com o da persistência
@@ -1059,6 +1065,11 @@ class IpcHandlersMixin:
         vira ``"escreveu"``: é a resposta histórica, e trocá-la por "guardado"
         faria a tela dizer que ficou pendente um ajuste que o dublê aplicou.
         Quem quiser a verdade implementa o retorno.
+
+        `brilho_da_cor` viaja com a cor do `led.set` (A-04-PERGUNTA-AO-DAEMON-VIVO-01):
+        o backend o guarda ao lado dela, e é o que o `state_full` publica como
+        `brilho_da_barra`. O backend de outra árvore, sem o parâmetro, recebe a
+        cor igual — sem o carimbo, a tela cai no disco, como antes.
         """
         alvo = params.get("uniq")
         if not isinstance(alvo, str) or not alvo:
@@ -1068,7 +1079,14 @@ class IpcHandlersMixin:
             return None
         from hefesto_dualsense4unix.core.controller import OutputSpec
 
-        resultado = apply_for(alvo, OutputSpec(**campos))
+        spec = OutputSpec(**campos)
+        if brilho_da_cor is None:
+            resultado = apply_for(alvo, spec)
+        else:
+            try:
+                resultado = apply_for(alvo, spec, brilho_da_cor=brilho_da_cor)
+            except TypeError:
+                resultado = apply_for(alvo, spec)
         return resultado if isinstance(resultado, str) and resultado else "escreveu"
 
     @staticmethod
@@ -1139,7 +1157,9 @@ class IpcHandlersMixin:
                 alvos.append(uniq)
         return alvos
 
-    def _registrar_em_todos(self, **campos: Any) -> list[str]:
+    def _registrar_em_todos(
+        self, *, brilho_da_cor: float | None = None, **campos: Any
+    ) -> list[str]:
         """Registra ``campos`` na camada da USUÁRIA de CADA controle conectado.
 
         BROADCAST-QUE-NAO-MENTE-01 (02/08), medido na máquina dela: ``led.set``
@@ -1239,7 +1259,15 @@ class IpcHandlersMixin:
                 # ou duas escolhas colididas — e o palpite desfazia o
                 # broadcast no tique seguinte, com o P1 acendendo a cor do
                 # número do 3. Ver `core/led_control.py::cores_sem_colisao`.
-                apply_for(alvo, spec, procedencia_da_cor=DO_BROADCAST)
+                if brilho_da_cor is None:
+                    apply_for(alvo, spec, procedencia_da_cor=DO_BROADCAST)
+                else:
+                    # O BRILHO DA COR vai junto (A-04-PERGUNTA-AO-DAEMON-VIVO-01):
+                    # é o que o `state_full` publica como `brilho_da_barra`.
+                    apply_for(
+                        alvo, spec, procedencia_da_cor=DO_BROADCAST,
+                        brilho_da_cor=brilho_da_cor,
+                    )
             except TypeError:
                 # Backend sem o carimbo (outra árvore, dublê de teste): a cor
                 # chega igual. O `apply_output_for` do produto ainda deduz o
@@ -1462,7 +1490,7 @@ class IpcHandlersMixin:
         # a hotplug) e escreve SÓ naquele controle. Antes, o caminho vivo por
         # índice (`_output_target_key`) caía em BROADCAST quando o alvo
         # desalinhava — "configurei o controle 2 e mudou todos".
-        resultado = self._apply_por_uniq(params, led=(r, g, b))
+        resultado = self._apply_por_uniq(params, brilho_da_cor=brightness, led=(r, g, b))
         guardado_em: list[str] = []
         if resultado is not None:
             # MESA-CHEIA-09 (E1): era `[uniq]` SEMPRE — com o controle fora da
@@ -1477,7 +1505,7 @@ class IpcHandlersMixin:
             # automática no merge — sem a linha seguinte, o reassert logo
             # abaixo repinta a cor do slot por cima e o handler responderia
             # "ok" para uma cor que nunca ficou. Ver `_registrar_em_todos`.
-            aplicado_em = self._registrar_em_todos(led=(r, g, b))
+            aplicado_em = self._registrar_em_todos(brilho_da_cor=brightness, led=(r, g, b))
         # Fix cross-cutting U x N (2026-07-20, HIGH): `set_led` escreve CRU via
         # `_for_each_led` (gate só `_output_mute`, nunca `_game_wins`) — sem
         # isto a cor do JOGO ficava sobrescrita na hora, e a trava manual
@@ -3807,6 +3835,10 @@ class IpcHandlersMixin:
           exigiria refactor do estado desejado fora do escopo; a legibilidade
           de cor escura (objetivo do D8) é da GUI via
           `utils/color_contrast.ensure_min_contrast`.
+        - ``brilho_da_barra``/``brilho_das_luzes`` (A-04-PERGUNTA-AO-DAEMON-VIVO-01):
+          o brilho em que ``lightbar_rgb`` foi acesa e o degrau das luzes de
+          número que o merge manda, com a camada da usuária. ``None`` = não
+          sei. Ver :meth:`_brilhos_acesos`.
         - ``nascimento`` (SINAL-NO-NASCIMENTO-01/E2): como a CONEXÃO deste
           controle nasceu, ou ``None`` = **não carimbei** (nunca "limpa"). É a
           RAZÃO que faltava ao botão "A luz não acende" do card: enquanto o
@@ -3904,6 +3936,7 @@ class IpcHandlersMixin:
             entry["lightbar_source"] = source
             entry["lightbar_disputada"] = self._lightbar_disputada(uniq, nos_por_uniq)
             entry["nascimento"] = self._nascimento_para(uniq)
+            entry.update(self._brilhos_acesos(uniq))
 
             if entry.get("is_primary") and state is not None:
                 entry["inputs"] = self._inputs_from_state(state)
@@ -4405,6 +4438,49 @@ class IpcHandlersMixin:
                 if rgb is not None:
                     return rgb, rgb != (0, 0, 0), "desired"
         return None, False, "desconhecida"
+
+    def _brilhos_acesos(self, uniq: str | None) -> dict[str, Any]:
+        """Os dois brilhos que ESTE controle acende agora — sempre as duas chaves.
+
+        A-04-PERGUNTA-AO-DAEMON-VIVO-01, 25/09/2026. A regra da casa é
+        *pergunte ao daemon vivo, não ao perfil*, e a aba Iluminação lia os dois
+        do disco. A camada da usuária (R-20) atravessa a troca AUTOMÁTICA de
+        perfil, e medido na mesa de quatro real: o P3 clicado em Forte seguia
+        Forte no aparelho depois do autoswitch para um perfil que diz Fraco, e
+        a pílula acendia Fraco; o P1 a 60% pelo trilho seguia a 60%, e o
+        trilho dizia 82%.
+
+        - ``brilho_da_barra``: ``0.0``-``1.0``, o brilho em que a cor publicada
+          em ``lightbar_rgb`` foi acesa (`brilho_da_barra_para` do backend);
+        - ``brilho_das_luzes``: ``"fraco"``, ``"medio"`` ou ``"forte"``, o (noqa-acento)
+          degrau das luzes de número que o merge manda ao aparelho
+          (`brilho_das_luzes_para`), na palavra do perfil.
+
+        QUEM DECIDE É O DONO DO MERGE; aqui só se lê. ``None`` é «não sei» —
+        backend sem as leituras, controle sem MAC, perfil que não publicou o
+        brilho, ou a cor que chegou sem ele —, e quem lê cai no disco, como
+        fazia antes. Nada aqui toca hardware.
+        """
+        from hefesto_dualsense4unix.core.led_control import BRILHOS_DAS_LUZES
+
+        saida: dict[str, Any] = {"brilho_da_barra": None, "brilho_das_luzes": None}
+        if uniq is None:
+            return saida
+        barra = getattr(self.controller, "brilho_da_barra_para", None)
+        if callable(barra):
+            with contextlib.suppress(Exception):
+                brilho = barra(uniq)
+                if isinstance(brilho, (int, float)) and not isinstance(brilho, bool):
+                    saida["brilho_da_barra"] = max(0.0, min(1.0, float(brilho)))
+        luzes = getattr(self.controller, "brilho_das_luzes_para", None)
+        if callable(luzes):
+            with contextlib.suppress(Exception):
+                degrau = luzes(uniq)
+                if isinstance(degrau, int) and not isinstance(degrau, bool):
+                    saida["brilho_das_luzes"] = next(
+                        (p for p, d in BRILHOS_DAS_LUZES.items() if d == degrau), None
+                    )
+        return saida
 
     def _lightbar_disputada(
         self, uniq: str | None, nos_por_uniq: dict[str, str]
