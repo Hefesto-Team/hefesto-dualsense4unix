@@ -1,14 +1,14 @@
 """O-BOTAO-DO-MIC-GRAVA-NO-PERFIL-01 — o botão do microfone vale depois de reconectar.
 
-**O ACHADO, 25/09/2026**, de um agente de leitura, a pedido dela (*«to com a
-sensação real que ele é o unico com o mic com algum problema»*). O P4 não tinha
-defeito: o perfil Freestyle guardava ``mic.muted: true`` só para ele. Ela ligou o
-microfone pelo botão do controle às 17:19:55 (``mic_ato … feito=True
-ligado=True``), e o perfil continuou dizendo mudo; no restart do install, às
-18:08:02, ele calou de novo — ``profile_mic_mute_applied muted=True
+**O ACHADO, 25/09/2026**, de um agente de leitura, a pedido dela:
+*«to com a sensação real que ele é o unico com o mic com algum problema»*  # (noqa-acento) dela
+O P4 não tinha defeito: o perfil Freestyle guardava ``mic.muted: true`` só para
+ele. Ela ligou o microfone pelo botão do controle às 17:19:55 (``mic_ato …
+feito=True ligado=True``), e o perfil continuou dizendo mudo; no restart do
+install, às 18:08:02, ele calou de novo — ``profile_mic_mute_applied muted=True
 origin=replug`` e ``mic_nasce_calado_por_perfil``. O mesmo ciclo às 23h59, 09h32
-e 09h56. A palavra dela: *«isso aqui deveriamos ter uma correção a nivel de
-produto.»* <!-- noqa-acento: citação literal dela -->
+e 09h56. A palavra dela:
+*«isso aqui deveriamos ter uma correção a nivel de produto.»*  # (noqa-acento) dela
 
 A CENA É A DO PRODUTO, E NO TEMPO
 ------------------------------------------------------------------------------
