@@ -2612,8 +2612,8 @@ def vpad_macs_do_aparelho(identity: str | None, player: int) -> Iterator[str]:
     """Os MACs que o vpad deste aparelho pode vestir, na ordem em que o dono os tenta.
 
     O primeiro é sempre o de :func:`vpad_mac` — o do aparelho (E3), o de
-    sempre, e o que o resto da casa deriva
-    (`quem_o_jogo_le.dono_do_vpad_pela_forja`). Os seguintes só são vestidos
+    sempre, o que o jogo e o Steam Input reconhecem de uma reconexão para a
+    outra. Os seguintes só são vestidos
     quando um vpad VIVO já veste o anterior, e saem do mesmo lugar que o
     primeiro:
 
@@ -2670,8 +2670,8 @@ class _MacsDosVpadsVivos:
 
     **Por que não tirar a identidade do MAC do posto.** O posto passaria a
     vestir o MAC do número, o mesmo para quem quer que sente nele: a E3
-    perderia o que tem de melhor (um controle, um MAC, no posto e fora dele),
-    e a háptica pelo rádio deixaria de achar o dono do posto pela forja.
+    perderia o que tem de melhor (um controle, um MAC, no posto e fora dele).
+    Quem vibra NÃO sai do MAC: o co-op diz quem alimenta cada vpad (25/09).
 
     **Referência FRACA ao vpad:** um vpad que some sem `stop` (fd vazado) não
     segura o MAC para sempre deste lado. O kernel, esse sim, segura — e o
