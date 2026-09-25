@@ -350,14 +350,14 @@ _FUNCOES_DA_LIB = {
 }
 
 
-@pytest.mark.parametrize("funcao", sorted(_FUNCOES_DA_LIB))
-def test_a_lib_escreve_a_quente_o_valor_da_conf(funcao: str, tmp_path: Path) -> None:
-    modulo = _FUNCOES_DA_LIB[funcao]
-    corpo = _funcao(LIB, funcao)
+@pytest.mark.parametrize("rotina", sorted(_FUNCOES_DA_LIB))
+def test_a_lib_escreve_a_quente_o_valor_da_conf(rotina: str, tmp_path: Path) -> None:
+    modulo = _FUNCOES_DA_LIB[rotina]
+    corpo = _funcao(LIB, rotina)
     params = sorted(
         {o for m, o in re.findall(r"/sys/module/(\w+)/parameters/(\w+)", corpo) if m == modulo}
     )
-    assert params, f"{funcao} deixou de escrever parâmetro de {modulo}"
+    assert params, f"{rotina} deixou de escrever parâmetro de {modulo}"
     parametros = tmp_path / "sys" / "module" / modulo / "parameters"
     parametros.mkdir(parents=True)
     for p in params:
@@ -388,7 +388,7 @@ def test_a_lib_escreve_a_quente_o_valor_da_conf(funcao: str, tmp_path: Path) -> 
             "dkms_module_from_updates() { return 0; }",
             LEITORES["lib (install.sh)"],
             corpo,
-            funcao,
+            rotina,
         )
     )
     r = subprocess.run(
