@@ -3738,9 +3738,10 @@ def _acender_o_numero(ctx: Contexto, p: Any, uniq: str, n: int) -> str:
             # 25/09/2026. Ela terminava em *"com o co-op ligado, quem as acende
             # é o jogo"*, e as duas metades eram fato errado: o co-op não é um
             # modo que se liga (`D-2409-O-CO-OP-LOCAL-SAI`), e quem acende as
-            # cinco lâmpadas é o Hefesto, sempre (`D-2309-O-HEFESTO-MANDA-NO-
-            # NUMERO`) — a camada que está acima do override é a do PRÓPRIO
-            # Hefesto (`coop._publicar_camada_coop`), com o número da mesa.
+            # cinco lâmpadas é o Hefesto, sempre
+            # (`D-2309-O-HEFESTO-MANDA-NO-NUMERO`) — a camada que está acima do
+            # override é a do PRÓPRIO Hefesto (`coop._publicar_camada_coop`),
+            # com o número da mesa.
             raise RuntimeError(
                 f"o número deste controle mudou para {n}, mas as cinco "
                 f"lâmpadas não.")
