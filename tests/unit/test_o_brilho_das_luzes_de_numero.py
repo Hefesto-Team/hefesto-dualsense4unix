@@ -1,0 +1,415 @@
+"""O-BRILHO-DAS-LUZES-DE-NUMERO-01 — Fraco, Médio e Forte, do disco dela ao BIT.
+
+A DECISÃO É DELA, 24/09/2026 (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`):
+*"Fraco, Médio e Forte na linha LEDs, nascendo no Fraco"*. A razão que ela
+escolheu: quem enxerga pouco não tinha como aumentar, e quem se incomoda com
+luz não tinha como escolher.
+
+O QUE O APARELHO FAZ JÁ ESTAVA MEDIDO (BRILHO-DE-HARDWARE-01, 09/09/2026, o
+olho dela, os dois transportes): o `common[42]` muda as cinco lâmpadas de
+numeração em três degraus (0 alto · 1 médio · 2 baixo), e SÓ com o `flag2` bit0
+(`SET_PLAYER_LED_BRIGHTNESS`) ligado. O que esta régua prova é o PRODUTO: que o
+report que ele monta para cada controle leva o bit e o degrau certos.
+
+A RÉGUA PERGUNTA AO APARELHO DE MENTIRA, E NÃO AO TEXTO DO CÓDIGO. O controle é
+um `_PinnedPyDualSense` nascido pelo `__init__` de produção, sem device, com o
+`_escrever_conferindo` trocado por um fio que só GUARDA o quadro que sairia. O
+que se lê é o quadro inteiro — o envelope (`0x02` do cabo, `0x31` do rádio),
+o `flag2` e o `common[42]` — e, no cabo sem nó de LED, o fluxo que o
+`report_thread` mandaria (`_build_common`). O nó de LED do kernel é um dublê
+que guarda o número: ele é 0/1 por lâmpada e não carrega brilho nenhum.
+
+A MATRIZ (a regra dela: nunca só um modo, uma rota, um transporte ou o P1):
+
+* P1 a P4 na mesma mesa;
+* USB e BT;
+* com o nó de LED do kernel (o produto instalado) e sem ele;
+* «Todos» (a seção global do perfil) e um controle só (o override dele, e o
+  clique na coluna dele);
+* o controle que chega DEPOIS do perfil aplicado (o hotplug).
+
+AS MORDIDAS, arrancadas e devolvidas com md5 (a lista está no relatório da
+sprint): tire o `brilho_das_luzes=` do `_pintar_por_hidraw_bt` no
+`_write_partial_output` e o rádio reprova; tire o `_levar_o_brilho_das_luzes`
+do `_write_partial_output` e o cabo reprova; tire o campo do `_OUTPUT_FIELDS`
+e o merge o perde — o hotplug e o override reprovam; tire o
+`player_led_brightness=` do `apply_output_defaults` do manager e o «Todos»
+reprova.
+
+O LAR É DE MENTIRA: o `conftest` desvia o `HOME` e os `XDG_*`, e o gesto grava
+o perfil de verdade dentro dele.
+"""
+from __future__ import annotations
+
+import pathlib
+import sys
+import typing
+from typing import Any
+
+import pytest
+
+#: O PACOTE DA ABA MORA EM `interface/`, e é por lá que as réguas da 04 o
+#: importam (`from pacotes import …`). Um segundo caminho de import faria o
+#: `@gesto` registrar o mesmo botão duas vezes.
+RAIZ = pathlib.Path(__file__).resolve().parents[2]
+for _p in (str(RAIZ / "src"), str(RAIZ / "src" / "hefesto_dualsense4unix" / "interface")):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
+from hefesto_dualsense4unix.core import backend_pydualsense as bp
+from hefesto_dualsense4unix.core import ds_output_report as rep
+from hefesto_dualsense4unix.core.controller import OutputSpec
+from hefesto_dualsense4unix.core.led_control import (
+    BRILHO_DAS_LUZES_PADRAO,
+    BRILHOS_DAS_LUZES,
+    degrau_do_brilho_das_luzes,
+    player_led_pattern,
+)
+
+#: O degrau do firmware, invertido — 0 é o forte.
+FORTE, MEDIO, FRACO = 0, 1, 2
+BIT = rep.VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE
+
+#: Quatro controles na mesa, P1 a P4 (endereços da faixa forjada da casa).
+MACS = [f"AA:BB:CC:00:00:0{n}" for n in (1, 2, 3, 4)]
+UNIQS = [m.replace(":", "").lower() for m in MACS]
+
+
+class _NoDeLed:
+    """A classe LED do kernel (a regra 77 instalada): guarda o número, e só."""
+
+    def __init__(self) -> None:
+        self.numeros: list[tuple[bool, ...]] = []
+        self.indicator_dir = "/sys/class/leds/de-mentira"
+
+    def writable(self) -> bool:
+        return True
+
+    def set_rgb(self, *_rgb: int, **_kw: Any) -> bool:
+        return True
+
+    def set_players(self, bits: tuple[bool, ...], **_kw: Any) -> bool:
+        self.numeros.append(tuple(bits))
+        return True
+
+    def set_players_verified(self, bits: tuple[bool, ...]) -> bool:
+        return self.set_players(bits)
+
+    def invalidate_cache(self) -> None:
+        return None
+
+
+def _controle(transporte: str) -> Any:
+    """O aparelho de mentira: o handle de produção com o fio trocado."""
+    from pydualsense.enums import ConnectionType
+    from pydualsense.pydualsense import DSAudio, DSLight, DSTrigger
+
+    h = bp._PinnedPyDualSense(b"/dev/hidraw-de-mentira", is_edge=False)
+    h.audio, h.light = DSAudio(), DSLight()
+    h.triggerL, h.triggerR = DSTrigger(), DSTrigger()
+    h.conType = ConnectionType.BT if transporte == "bt" else ConnectionType.USB
+    h.quadros = []
+    h._escrever_conferindo = lambda quadro: h.quadros.append(bytes(quadro)) or len(quadro)
+    return h
+
+
+def _common(quadro: bytes) -> bytes:
+    """O `common` de 47 bytes dentro do envelope de cada transporte."""
+    inicio = 3 if quadro[0] == rep.BT_REPORT_ID else 1
+    return quadro[inicio:inicio + rep.COMMON_LEN]
+
+
+def _brilhos_no_fio(h: Any) -> list[int]:
+    """Os degraus que SAÍRAM autorizados pelo bit, na ordem, deste controle."""
+    return [c[42] for c in map(_common, h.quadros) if c[rep.COMMON_VALID_FLAG2] & BIT]
+
+
+def _o_aparelho_fica_em(h: Any) -> int | None:
+    """O degrau em que o firmware fica: o último autorizado que chegou a ele.
+
+    Pelo fio avulso (o `0x02`/`0x31` que o Hefesto escreve) ou, no cabo sem nó
+    de LED, pelo fluxo do `report_thread`. O firmware guarda o último degrau
+    autorizado — um quadro sem o bit não o desfaz (medido em 09/09/2026).
+    """
+    fio = _brilhos_no_fio(h)
+    fluxo = h._build_common(rumble_asserted=False)
+    if not getattr(h, "_suppress_leds", True) and fluxo[rep.COMMON_VALID_FLAG2] & BIT:
+        return fluxo[42]
+    return fio[-1] if fio else None
+
+
+def _numero(uniq: str) -> bp._DesiredOutput:
+    """A camada automática: o número de cada um é a posição dele na mesa."""
+    return bp._DesiredOutput(player_leds=player_led_pattern(UNIQS.index(uniq) + 1))
+
+
+def _mesa(transporte: str, *, com_no: bool, quantos: int = 4) -> tuple[Any, list[Any]]:
+    ctl = bp.PyDualSenseController()
+    controles = [_controle(transporte) for _ in range(quantos)]
+    ctl._handles = dict(zip(MACS, controles, strict=False))
+    if com_no:
+        ctl._sysfs = {mac: _NoDeLed() for mac in MACS[:quantos]}
+    # A política de `_refresh_sysfs_leds`: o fluxo fica LED-neutro quando o
+    # kernel é dono do nó, e no rádio sempre.
+    for h in controles:
+        h._suppress_leds = com_no or transporte == "bt"
+    ctl.set_auto_output_provider(_numero)
+    return ctl, controles
+
+
+def _perfil(global_: str | None, **por_controle: str) -> Any:
+    from hefesto_dualsense4unix.profiles.schema import (
+        ControllerOverrides,
+        LedsConfig,
+        MatchAny,
+        Profile,
+    )
+
+    leds = LedsConfig() if global_ is None else LedsConfig(player_led_brightness=global_)
+    return Profile(
+        name="Régua do brilho das luzes", match=MatchAny(), priority=1, leds=leds,
+        controllers={
+            UNIQS[int(p[1]) - 1]: ControllerOverrides(
+                leds=LedsConfig(player_led_brightness=palavra))
+            for p, palavra in por_controle.items()
+        },
+    )
+
+
+def _aplicar(ctl: Any, perfil: Any) -> None:
+    from hefesto_dualsense4unix.profiles.manager import ProfileManager
+
+    ProfileManager(controller=ctl).apply(perfil, origin="manual")
+
+
+MATRIZ = [
+    pytest.param("usb", True, id="usb-com-no"),
+    pytest.param("usb", False, id="usb-sem-no"),
+    pytest.param("bt", True, id="bt-com-no"),
+    pytest.param("bt", False, id="bt-sem-no"),
+]
+
+
+# ---------------------------------------------------------------------------
+# 1. As três palavras têm UM dono
+# ---------------------------------------------------------------------------
+def test_as_tres_palavras_tem_um_dono_so() -> None:
+    """O esquema, o degrau do firmware e a tela falam as MESMAS três palavras.
+
+    O `Literal` do esquema e a tabela `BRILHOS_DAS_LUZES` são duas declarações
+    — a do disco e a do aparelho —, e esta régua as trava juntas: uma palavra
+    nova num lado só seria uma pílula que grava e não acende, ou que acende e
+    o disco recusa.
+    """
+    from pacotes import a04_iluminacao as a04
+
+    from hefesto_dualsense4unix.profiles.schema import LedsConfig
+
+    campo = LedsConfig.model_fields["player_led_brightness"]
+    assert typing.get_args(campo.annotation) == tuple(BRILHOS_DAS_LUZES)
+    assert campo.default == BRILHO_DAS_LUZES_PADRAO == "fraco", (
+        "todo perfil e todo controle nascem no Fraco — é a decisão dela")
+    assert BRILHOS_DAS_LUZES == {"fraco": FRACO, "medio": MEDIO, "forte": FORTE}, (
+        "o degrau do firmware é invertido: 0 é o forte e 2 o fraco (medido em "
+        "09/09/2026)")
+    assert degrau_do_brilho_das_luzes(None) == FRACO
+    with pytest.raises(ValueError):
+        degrau_do_brilho_das_luzes("máximo")
+    assert set(a04.ROTULO_DO_BRILHO_DAS_LUZES) == set(BRILHOS_DAS_LUZES)
+    assert list(a04.ROTULO_DO_BRILHO_DAS_LUZES.values()) == ["Fraco", "Médio", "Forte"]
+
+
+def test_o_controle_nasce_no_fraco_com_o_bit() -> None:
+    """Antes de qualquer perfil, o fluxo do cabo sem nó já leva o Fraco AUTORIZADO.
+
+    É o de antes da decisão (o degrau baixo que a pydualsense mandava), agora
+    com dono: o `_brilho_das_luzes` do handle, e não o `ledOption` herdado.
+    """
+    h = _controle("usb")
+    h._suppress_leds = False
+    c = h._build_common(rumble_asserted=False)
+    assert c[rep.COMMON_VALID_FLAG2] & BIT and c[42] == FRACO
+
+
+# ---------------------------------------------------------------------------
+# 2. O report montado leva o bit e o degrau, nos quatro caminhos
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize(("transporte", "com_no"), MATRIZ)
+def test_o_todos_do_perfil_chega_ao_bit_de_p1_a_p4(transporte: str, com_no: bool) -> None:
+    """«Todos»: a seção global do perfil acende o mesmo degrau nos quatro."""
+    ctl, controles = _mesa(transporte, com_no=com_no)
+    _aplicar(ctl, _perfil("forte"))
+    for n, h in enumerate(controles, start=1):
+        assert _o_aparelho_fica_em(h) == FORTE, (
+            f"[{transporte}, {'com' if com_no else 'sem'} nó] o P{n} ficou em "
+            f"{_o_aparelho_fica_em(h)} depois do «Todos» no Forte — o report "
+            f"montado não levou o bit e o degrau")
+
+
+@pytest.mark.parametrize(("transporte", "com_no"), MATRIZ)
+def test_o_override_de_um_controle_so_muda_so_ele(transporte: str, com_no: bool) -> None:
+    """Um controle só: o override do P3 no perfil vence o global SÓ no P3."""
+    ctl, controles = _mesa(transporte, com_no=com_no)
+    _aplicar(ctl, _perfil("medio", P3="forte"))
+    fica = [_o_aparelho_fica_em(h) for h in controles]
+    assert fica == [MEDIO, MEDIO, FORTE, MEDIO], (
+        f"[{transporte}, {'com' if com_no else 'sem'} nó] os quatro ficaram em "
+        f"{fica}; o P3 tem override Forte e os outros seguem o Médio global")
+
+
+@pytest.mark.parametrize(("transporte", "com_no"), MATRIZ)
+def test_o_perfil_sem_o_campo_nasce_no_fraco(transporte: str, com_no: bool) -> None:
+    """O perfil antigo (sem o campo) acende o Fraco — e autorizado, nos quatro."""
+    ctl, controles = _mesa(transporte, com_no=com_no)
+    _aplicar(ctl, _perfil(None))
+    assert [_o_aparelho_fica_em(h) for h in controles] == [FRACO] * 4
+
+
+@pytest.mark.parametrize(("transporte", "com_no"), MATRIZ)
+def test_o_clique_no_p3_so_manda_no_p3(transporte: str, com_no: bool) -> None:
+    """A pílula «Forte» da coluna do P3: a porta da usuária, SÓ naquele MAC.
+
+    É a mesma porta do IPC `led.player_brightness_set` com `uniq`
+    (`_apply_por_uniq` → `apply_output_for`). Os outros três não recebem um
+    quadro sequer — um clique numa coluna não pode acender a de outro.
+    """
+    ctl, controles = _mesa(transporte, com_no=com_no)
+    _aplicar(ctl, _perfil(None))
+    antes = [len(h.quadros) for h in controles]
+    fluxo_antes = [bytes(h._build_common(rumble_asserted=False)) for h in controles]
+    assert ctl.apply_output_for(UNIQS[2], OutputSpec(player_led_brightness=FORTE)) \
+        == "escreveu"
+    assert _o_aparelho_fica_em(controles[2]) == FORTE
+    for n in (0, 1, 3):
+        h = controles[n]
+        assert len(h.quadros) == antes[n], (
+            f"o clique no P3 escreveu no P{n + 1}")
+        assert bytes(h._build_common(rumble_asserted=False)) == fluxo_antes[n], (
+            f"o clique no P3 mudou o fluxo do P{n + 1}")
+        assert _o_aparelho_fica_em(h) == FRACO
+
+
+@pytest.mark.parametrize(("transporte", "com_no"), MATRIZ)
+def test_o_controle_que_chega_depois_recebe_o_brilho_dele(
+        transporte: str, com_no: bool) -> None:
+    """O perfil foi aplicado com três na mesa; o P4 chega depois, pelo hotplug.
+
+    O override do P4 estava REGISTRADO no mapa em memória (o perfil publica os
+    desconectados também), e o `_reapply_desired` do hotplug o leva ao aparelho
+    — sem caminho próprio, porque o campo anda pelas camadas do número.
+    """
+    ctl, controles = _mesa(transporte, com_no=com_no, quantos=3)
+    _aplicar(ctl, _perfil("medio", P4="forte"))
+    chegou = _controle(transporte)
+    chegou._suppress_leds = com_no or transporte == "bt"
+    ctl._handles[MACS[3]] = chegou
+    if com_no:
+        ctl._sysfs[MACS[3]] = _NoDeLed()
+    ctl._reapply_desired(MACS[3], chegou)
+    assert _o_aparelho_fica_em(chegou) == FORTE, (
+        f"[{transporte}, {'com' if com_no else 'sem'} nó] o P4 que chegou depois "
+        f"ficou em {_o_aparelho_fica_em(chegou)}, e o override dele é o Forte")
+    assert [_o_aparelho_fica_em(h) for h in controles] == [MEDIO] * 3
+
+
+# ---------------------------------------------------------------------------
+# 3. O que o quadro NÃO pode levar
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize("transporte", ["usb", "bt"])
+def test_o_quadro_do_brilho_nao_reengata_a_barra(transporte: str) -> None:
+    """O bit0 sai; o 0x02 do `flag2` e o 0x08 do `flag1` não saem nunca.
+
+    `LIGHTBAR-BT-KEEPALIVE-01` (22/07) mediu que o SETUP da lightbar em regime
+    trava a exibição; `LIGHTBAR-BT-CULPADO-01` (03/08) pegou o `RELEASE_LEDS`.
+    O quadro do brilho não pede vibração, gatilho nem áudio.
+    """
+    ctl, controles = _mesa(transporte, com_no=True, quantos=1)
+    _aplicar(ctl, _perfil("forte"))
+    com_brilho = [c for c in map(_common, controles[0].quadros)
+                  if c[rep.COMMON_VALID_FLAG2] & BIT]
+    assert com_brilho, "nenhum quadro levou o brilho"
+    for c in com_brilho:
+        assert c[rep.COMMON_VALID_FLAG2] == BIT, (
+            f"o `flag2` do quadro do brilho saiu {c[rep.COMMON_VALID_FLAG2]:#04x} — "
+            f"só o bit0 pode sair")
+        assert c[1] & rep.VALID_FLAG1_RELEASE_LEDS == 0
+        assert c[0] == 0, "o quadro do brilho pediu vibração, gatilho ou áudio"
+
+
+def test_pelo_radio_o_brilho_vai_no_mesmo_quadro_do_numero() -> None:
+    """Cada report pelo rádio custa duas fatias: o brilho não ganha quadro próprio.
+
+    No hotplug o número e o brilho saem JUNTOS, num `0x31` só.
+    """
+    ctl, controles = _mesa("bt", com_no=True, quantos=1)
+    _aplicar(ctl, _perfil("forte"))
+    h = controles[0]
+    antes = len(h.quadros)
+    ctl._reapply_desired(MACS[0], h)
+    novos = [_common(q) for q in h.quadros[antes:]]
+    assert len(novos) == 1, f"o hotplug pelo rádio escreveu {len(novos)} quadros"
+    c = novos[0]
+    assert c[1] & rep.VALID_FLAG1_PLAYER_INDICATOR_CONTROL_ENABLE
+    assert c[rep.COMMON_VALID_FLAG2] & BIT and c[42] == FORTE
+
+
+# ---------------------------------------------------------------------------
+# 4. A tela: o clique grava no perfil e manda só naquele controle
+# ---------------------------------------------------------------------------
+class _PonteDeMentira:
+    """A ponte com os mesmos nomes da de verdade, que só anota."""
+
+    def __init__(self) -> None:
+        self.chamadas: list[tuple[str, tuple[Any, ...], dict[str, Any]]] = []
+
+    def player_led_brightness_set_detalhado(self, brilho: str, uniq: str | None = None
+                                            ) -> dict[str, Any]:
+        self.chamadas.append(("player_led_brightness_set_detalhado", (brilho,),
+                              {"uniq": uniq}))
+        return {"status": "ok", "brilho": brilho, "aplicado_em": [uniq],
+                "guardado_em": []}
+
+
+def test_o_clique_em_forte_no_p3_grava_so_o_p3_e_chama_so_o_p3() -> None:
+    """A pílula «Forte» do P3: o disco dela recebe o Forte SÓ no override do P3.
+
+    E a ponte é chamada uma vez, com a palavra e o MAC do P3 — é o que o
+    daemon de mentira da prova de tela anota como `led.player_brightness_set`.
+    """
+    import json
+
+    import pacotes
+    from pacotes import a04_iluminacao as a04
+
+    from hefesto_dualsense4unix.profiles.loader import save_profile
+
+    arquivo = save_profile(_perfil(None), origem="regua")
+    nome = "Régua do brilho das luzes"
+    ctx = pacotes.Contexto(state={"active_profile": nome}, mesa=[])
+    ponte = _PonteDeMentira()
+    a04.brilho_luzes(ctx, {"uniq": MACS[2], "controle": "p3", "luzes": "forte"}, ponte)
+
+    assert ponte.chamadas == [("player_led_brightness_set_detalhado", ("forte",),
+                               {"uniq": MACS[2]})]
+    disco = json.loads(pathlib.Path(arquivo).read_text(encoding="utf-8"))
+    controles = disco.get("controllers") or {}
+    assert controles.get(UNIQS[2], {}).get("leds") == {"player_led_brightness": "forte"}, (
+        f"o override do P3 no disco é {controles.get(UNIQS[2])} — só o campo "
+        f"clicado entra, para não densificar o resto")
+    assert set(controles) == {UNIQS[2]}, f"o clique no P3 gravou em {sorted(controles)}"
+    assert disco["leds"]["player_led_brightness"] == "fraco", (
+        "o clique numa coluna mexeu no «Todos» do perfil")
+
+
+def test_a_pilula_acesa_e_a_do_perfil_de_cada_controle() -> None:
+    """A fileira de cada coluna acende a palavra do override dela, ou a do global."""
+    from pacotes import a04_iluminacao as a04
+
+    p = {"leds": {"player_led_brightness": "medio"},
+         "controllers": {UNIQS[2]: {"leds": {"player_led_brightness": "forte"}}}}
+    assert a04.brilho_das_luzes_do_controle(p, MACS[2]) == "forte"
+    assert a04.brilho_das_luzes_do_controle(p, MACS[0]) == "medio"
+    assert a04.brilho_das_luzes_do_controle({}, MACS[0]) == "fraco"
+    fileira = a04.fileira_de_brilhos_das_luzes("forte")
+    assert fileira.count('class="on"') == 1
+    assert 'class="on" data-gesto="brilho-luzes" data-luzes="forte"' in fileira
