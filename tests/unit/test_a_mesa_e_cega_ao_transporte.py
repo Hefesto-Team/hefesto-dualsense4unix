@@ -53,7 +53,6 @@ import csv
 import re
 from pathlib import Path
 
-import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
 COOP = RAIZ / "src" / "hefesto_dualsense4unix" / "daemon" / "subsystems" / "coop.py"
@@ -242,41 +241,53 @@ def test_toda_citacao_de_coop_py_no_mapa_nomeia_o_simbolo() -> None:
     )
 
 
-@pytest.mark.parametrize(
-    ("faixa", "simbolo"),
-    [
-        ("1819-1877", "numeros_de_jogador"),
-        ("1879-1909", "_numero_exibido"),
-        ("941-951", "_next_player_index"),
-        ("1463-1537", "_start_player_motion_reader"),
-        ("1173-1219", "_make_player_replica_sinks"),
-        ("1143-1171", "_make_player_rumble_sink"),
-        ("1058-1115", "_spawn_player"),
-        ("1221-1324", "_promote_player"),
-        ("392-398", "should_be_active"),
-        ("681-843", "sync"),
-    ],
-)
-def test_a_faixa_reapontada_ainda_e_a_funcao_prometida(
-    faixa: str, simbolo: str
-) -> None:
-    """Cada endereço que a área reapontou em 03/09/2026 abre na função certa.
+def _faixas_de_coop_no_mapa() -> list[tuple[str, int, int, str]]:
+    """``(id, início, fim, símbolo)`` de toda faixa de ``coop.py`` que nomeia o símbolo."""
+    faixas: list[tuple[str, int, int, str]] = []
+    for ident, linha in _linhas_do_mapa().items():
+        for coluna in ("cabo_codigo_ref", "radio_codigo_ref"):
+            texto = linha.get(coluna) or ""
+            for achado in ENDERECO_DE_COOP.finditer(texto):
+                nome = NOME_DEPOIS.match(texto[achado.end() : achado.end() + 80])
+                if nome and achado.group("b"):
+                    faixas.append(
+                        (ident, int(achado.group("a")), int(achado.group("b")), nome.group("nome"))
+                    )
+    return faixas
+
+
+def test_toda_faixa_de_coop_no_mapa_abre_dentro_da_funcao_prometida() -> None:
+    """Cada faixa de ``coop.py`` que o mapa cita fica DENTRO da função que ela nomeia.
 
     O portão de citações confere isto lendo o CSV; aqui a mesma pergunta é feita
-    do lado do CÓDIGO, para que mover uma função em `coop.py` acuse na hora em
-    vez de esperar a próxima varredura do mapa.
+    do lado do CÓDIGO, para que mover uma função em ``coop.py`` acuse na hora.
+
+    FATO SUBSTITUÍDO em 25/09/2026: esta régua digitava dez faixas
+    (``("1819-1877", "numeros_de_jogador")``…). Cada leva que tocava o
+    ``coop.py`` apodrecia as dez aqui E no mapa, e a parte 04 da suíte caía no
+    merge da 6e por isso. As faixas agora saem do mapa, que é o dono delas, e
+    ``scripts/reapontar-citacoes.py --escrever`` as leva junto com o código.
+
+    MORDIDA: devolva ``coop.py:1032-1065`` ao ``_spawn_player`` do mapa (a faixa
+    que ficou 26 linhas acima da função) — esta régua reprova.
     """
-    inicio, fim = (int(n) for n in faixa.split("-"))
-    arvore = ast.parse(COOP.read_text(encoding="utf-8"))
-    casou = [
-        no
-        for no in ast.walk(arvore)
-        if isinstance(no, ast.FunctionDef | ast.AsyncFunctionDef)
-        and no.name == simbolo
-        and no.lineno == inicio
-        and no.end_lineno == fim
-    ]
-    assert casou, (
-        f"`{simbolo}` não é mais coop.py:{faixa} — reaponte o "
-        "`docs/data/mapa-controles.csv` antes que o endereço apodreça calado"
+    faixas = _faixas_de_coop_no_mapa()
+    assert len(faixas) >= 10, (
+        f"o mapa tem só {len(faixas)} faixa(s) de coop.py com símbolo — a régua ficaria vazia"
+    )
+    definicoes: dict[str, list[tuple[int, int]]] = {}
+    for no in ast.walk(ast.parse(COOP.read_text(encoding="utf-8"))):
+        if isinstance(no, ast.FunctionDef | ast.AsyncFunctionDef):
+            definicoes.setdefault(no.name, []).append((no.lineno, no.end_lineno or no.lineno))
+    fora = []
+    for ident, inicio, fim, simbolo in faixas:
+        casas = definicoes.get(simbolo, [])
+        if len(casas) != 1:
+            continue  # `want` é variável local; sem definição única não há o que medir
+        de, ate = casas[0]
+        if inicio < de or fim > ate + 1:
+            fora.append(f"{ident}: coop.py:{inicio}-{fim} (`{simbolo}`), e ele mora em {de}-{ate}")
+    assert not fora, (
+        "faixa de coop.py fora da função que ela promete — rode "
+        "`python3 scripts/reapontar-citacoes.py --escrever`:\n  " + "\n  ".join(fora)
     )
