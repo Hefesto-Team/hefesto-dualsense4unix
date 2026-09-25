@@ -927,6 +927,12 @@ class Sistema:
         """Roda a parte do root; devolve o que ela relatou."""
         if raizes.raizes_do_root_desviadas:
             return executar_parte_do_root(raizes, verbo, pasta_root, seco=seco)
+        if self.ensaio:
+            # A guarda do ensaio vale AQUI também, e não só na entrada do
+            # guardar e do devolver: o «limpa?» chega à parte do root por
+            # outro caminho, e um ensaio nunca fala com o sudo nem com o
+            # BlueZ de verdade.
+            raise RecusaError("ensaio: a parte do root só roda com as raízes desviadas")
         if not raizes.raizes_do_root_sao_as_reais:
             raise RecusaError("as raízes do root estão meio desviadas — recuso misturar")
         argv = [
