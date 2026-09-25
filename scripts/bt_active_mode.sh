@@ -301,7 +301,12 @@ _hci_com_nintendo() {
         _e_linhagem_nintendo "${mac}" "${nome}" || continue
         end="${dir%/*}"
         end="${end##*/}"
-        [[ -n "${HCI_DE[${end^^}]:-}" ]] && printf '%s\n' "${HCI_DE[${end^^}]}"
+        # `if`, e não `&&`: o `&&` no fim da função devolve 1 sem Nintendo no
+        # último bond, e sob `set -e` isso mata quem chamar por `$(...)` (a
+        # régua é `test_a_vigia_nao_morre_calada.py`).
+        if [[ -n "${HCI_DE[${end^^}]:-}" ]]; then
+            printf '%s\n' "${HCI_DE[${end^^}]}"
+        fi
     done <<<"$(find "${LIB}" -mindepth 3 -maxdepth 3 -type f -name info 2>/dev/null || true)"
 }
 
@@ -449,7 +454,9 @@ if command -v busctl >/dev/null 2>&1; then
         dono="${alvo%%:*}"
         arquivo="${alvo#*:}"
         while IFS=$'\t' read -r lugar nome; do
-            [[ -n "${lugar}" && -n "${nome}" ]] && NOME_DO_LUGAR["${lugar}"]="${nome}"
+            if [[ -n "${lugar}" && -n "${nome}" ]]; then
+                NOME_DO_LUGAR["${lugar}"]="${nome}"
+            fi
         done < <(python3 -I -c '
 import json, os, stat, sys
 arquivo, dono = sys.argv[1], sys.argv[2]
