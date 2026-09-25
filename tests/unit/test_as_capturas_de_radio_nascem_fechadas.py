@@ -694,25 +694,33 @@ class TestOsEnsaiosGravamFechadoLeemEApagam:
             monkeypatch.setenv(var, valor)
         monkeypatch.setattr(tempfile, "tempdir", str(dubles.tmp))
         modulo = _carregar("byte_no_fio")
-        sinal_antes = signal.getsignal(signal.SIGTERM)
-        captura = modulo.CapturaDoFio("cai-no-meio")
-        captura.comecar()
+        # O SIGTERM parte do padrão, qualquer que seja a ordem dos testes: um
+        # ensaio anterior que não devolvesse o sinal esconderia a mordida.
+        sinal_do_pytest = signal.signal(signal.SIGTERM, signal.SIG_DFL)
         try:
-            for _ in range(100):
-                if dubles.escritas():
-                    break
-                time.sleep(0.05)
-            assert Path(captura.caminho).exists()
+            captura = modulo.CapturaDoFio("cai-no-meio")
+            captura.comecar()
+            try:
+                assert signal.getsignal(signal.SIGTERM) is not signal.SIG_DFL, (
+                    "enquanto a captura vive, o SIGTERM tem de sair pelo atexit"
+                )
+                for _ in range(100):
+                    if dubles.escritas():
+                        break
+                    time.sleep(0.05)
+                assert Path(captura.caminho).exists()
+            finally:
+                linha = captura.apagar()
+            assert signal.getsignal(signal.SIGTERM) is signal.SIG_DFL, (
+                "o apagar tem de devolver o SIGTERM que havia antes da captura"
+            )
         finally:
-            linha = captura.apagar()
+            signal.signal(signal.SIGTERM, sinal_do_pytest)
         assert not Path(captura.caminho).exists()
         assert not Path(captura.diretorio).exists()
         assert "(lida e apagada)" in linha
         (pid,) = dubles.pids()
         assert _morreu(pid), "o apagar tirou a captura e deixou o btmon gravando"
-        assert signal.getsignal(signal.SIGTERM) == sinal_antes, (
-            "o apagar tem de devolver o SIGTERM que havia antes da captura"
-        )
 
     def test_sem_sudo_o_byte_no_fio_diz_que_nao_capturou(
         self, tmp_path: Path, dubles: Dubles, monkeypatch: pytest.MonkeyPatch,
