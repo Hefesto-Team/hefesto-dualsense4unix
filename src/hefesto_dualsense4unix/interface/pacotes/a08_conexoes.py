@@ -4375,6 +4375,26 @@ ICONE_DO_RADIO = {
     "wifi": "wifi", "fone": "fone", "teclado": "teclado",
     "mouse": "mouse", "webcam": "webcam", "caixa_de_som": "caixa", "caixa": "caixa",
 }
+#: O TIPO PELO ``Icon`` QUE O PRÓPRIO BLUEZ DERIVA — da classe no rádio
+#: clássico, da ``Appearance`` no de baixo consumo. É a única pista de um
+#: aparelho LE, que não publica ``Class``: o «BT5.0 Keyboard» da lista dela de
+#: 25/09 (passo b7) chegava sem classe e virava o desenho genérico. O que não
+#: está aqui (celular, relógio, computador, outro controle) é o genérico — o
+#: produto não tem desenho para ele, e não inventa um.
+TIPO_PELO_ICONE = {
+    "input-keyboard": "teclado", "input-mouse": "mouse", "input-tablet": "mouse",
+    "audio-headset": "fone", "audio-headphones": "fone", "audio-card": "caixa",
+    "camera-video": "webcam", "camera-photo": "webcam",
+}
+#: A palavra de cada tipo na frase do parear (o «outro» é «aparelho»).
+PALAVRA_DO_TIPO = {"teclado": "teclado", "mouse": "mouse", "fone": "fone",
+                   "caixa": "caixa de som", "webcam": "webcam", "outro": "aparelho"}
+#: OS BOTÕES DE PAREAR DE CADA MODELO, pelo produto do ``Modalias`` (Sony,
+#: ``054C``): o DualSense e o Edge seguram PS + Create; o DualShock 4, PS +
+#: Share. Um controle que não está aqui não ganha gesto: o produto não pede o
+#: que não sabe (a lista dela de 25/09, passo c3).
+BOTOES_DE_PAREAR = {"0ce6": "PS + Create", "0df2": "PS + Create",
+                    "05c4": "PS + Share", "09cc": "PS + Share"}
 ICONE_DO_CUSTO = {"mic": "mic", "som": "som", "haptica": "vibra"}
 NOME_DO_CUSTO = {"mic": "microfone", "som": "som", "haptica": "vibração"}
 #: As cores de quem não tem plástico: cinzas do mesmo mundo, para que a cor
@@ -4446,15 +4466,77 @@ def _hz(valor: Any) -> str:
     return f"{round(valor)} Hz"
 
 
+#: O SEPARADOR DO NOME NA ABA CONEXÕES — o da decisão dela de 25/09, com a
+#: grafia dela: «Vitória ● Cosmic Red ● P1».
+SEPARADOR_DO_NOME = " \u25cf "
+
+
+def nome_na_conexoes(ap: dict[str, Any]) -> str:
+    """«Vitória ● Cosmic Red ● P1» — o formato do nome, SÓ na aba Conexões.
+
+    Decisão dela, 25/09/2026, 22h50: ``Nome ● Modelo do plástico ● Pn``. O NOME
+    é do CONTROLE (o ``Alias`` que ela deu, pelo endereço), o modelo é o
+    plástico lido, e o NÚMERO é do daemon vivo — *«sincronizado com o daemon»*
+    (a lista dela, passo a2). Sem nome, o padrão «Player N» (a decisão [02] da
+    aba 01: apagar o nome volta a ele); sem plástico lido ou sem número, a
+    parte sai — campo sem informação não mostra nada. Quem não é controle é só
+    o nome. <!-- noqa-acento: citação literal dela -->
+    """
+    nome = str(ap.get("nome") or "") or str(ap.get("rotulo") or "")
+    if ap.get("tipo") != "controle":
+        return nome
+    partes = [nome, str(ap.get("cor_nome") or "")]
+    jogador = ap.get("jogador")
+    if isinstance(jogador, int) and not isinstance(jogador, bool):
+        partes.append(f"P{jogador}")
+    return SEPARADOR_DO_NOME.join(p for p in partes if p)
+
+
 def como_se_chama(ap: dict[str, Any]) -> str:
-    """«o <b>Cosmic Red</b> de <b>Vitória</b>» — a cor é a identidade do controle."""
-    nome = str(ap.get("nome") or "")
+    """«<b>Vitória ● Cosmic Red ● P1</b>» — o controle pelo nome da aba Conexões.
+
+    FATO SUBSTITUÍDO (25/09/2026): era «o <b>Cosmic Red</b> de <b>Vitória</b>»,
+    a cor na frente. A decisão dela do formato do nome vale para a aba inteira,
+    e a pergunta de mover é da aba. Quem não é controle continua com o artigo.
+    """
     if ap.get("tipo") == "controle":
-        cor = str(ap.get("cor_nome") or "") or str(ap.get("rotulo") or "")
-        if cor:
-            return f"o <b>{_x(cor)}</b>" + (f" de <b>{_x(nome)}</b>" if nome else "")
+        return f"<b>{_x(nome_na_conexoes(ap))}</b>"
+    nome = str(ap.get("nome") or "")
     artigo = ARTIGO_DO_TIPO.get(str(ap.get("tipo")), "o")
     return f"{artigo} <b>{_x(nome or ap.get('rotulo') or '')}</b>"
+
+
+def _produto_do_modalias(modalias: object) -> str:
+    """``bluetooth:v054Cp0CE6d0100`` → ``0ce6``; ``""`` quando não é Sony."""
+    m = re.search(r"v054Cp([0-9A-F]{4})", str(modalias or ""), re.I)
+    return m.group(1).lower() if m else ""
+
+
+def gesto_de_parear(ap: dict[str, Any]) -> str:
+    """«Segure PS + Create» — o gesto que ESTE aparelho pede, ou ``""``.
+
+    CADA TIPO DIZ O PRÓPRIO GESTO, OU NÃO PEDE O QUE NÃO SABE (a lista dela de
+    25/09, passo c3: mover um TECLADO pedia «segure PS + Create» e mostrava o
+    DualSense). O controle que o daemon publica é DualSense — sem ``Modalias``,
+    é ele; com, vale o modelo (:data:`BOTOES_DE_PAREAR`). Um teclado, um fone
+    ou um controle de outra marca não têm gesto que o produto conheça, e a
+    linha não inventa um: a pergunta antes de mover já disse o que fazer.
+    """
+    if ap.get("tipo") != "controle":
+        return ""
+    modelo = _produto_do_modalias(ap.get("modalias"))
+    if not modelo and not ap.get("modalias"):
+        return SEGURE
+    botoes = BOTOES_DE_PAREAR.get(modelo, "")
+    return f"Segure {botoes}" if botoes else ""
+
+
+def _desenho_de(ap: dict[str, Any], classe: str = "ds") -> str:
+    """O DualSense na cor dele, ou o ícone do tipo — nunca o DualSense de um teclado."""
+    if ap.get("tipo") == "controle":
+        return _silhueta(ap, classe)
+    return (f'<svg class="i ico" aria-hidden="true" style="color:{_x(_cor_de(ap))}">'
+            f'<use href="#rd-{ICONE_DO_APARELHO.get(str(ap.get("tipo")), "radio")}"/></svg>')
 
 
 #: O adaptador sem porta — o da placa-mãe, que não pendura em entrada nenhuma.
@@ -4590,26 +4672,31 @@ def html_da_linha(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool = False
     arrasta = not ap.get("fixo") and not esperando and not _ocupado(cena)
     nome = str(ap.get("nome") or "")
     rotulo = str(ap.get("rotulo") or "")
-    quem = ((f'controle {ap.get("cor_nome")}' if ap.get("cor_nome") else "controle")
-            if ap.get("tipo") == "controle" else str(ap.get("tipo")))
-    le = _x(f"{nome or rotulo}, {quem}")
+    quem = "controle" if ap.get("tipo") == "controle" else str(ap.get("tipo"))
+    le = _x(f"{nome_na_conexoes(ap) or rotulo}, {quem}")
     if arrasta:
         abre = (f'<div class="linha" data-id="{aid}" data-alvo="{aid}" draggable="true" '
                 f'tabindex="0" role="button" aria-label="{le} — Enter para mudar de adaptador">')
     else:
         abre = (f'<div class="linha{" esperando" if esperando else ""}" data-id="{aid}" '
                 f'data-alvo="{aid}" aria-label="{le}">')
-    if ap.get("tipo") == "controle":
-        desenho = _silhueta(ap)
-    else:
-        desenho = (f'<svg class="i ico" aria-hidden="true" style="color:{_x(_cor_de(ap))}">'
-                   f'<use href="#rd-{ICONE_DO_APARELHO.get(str(ap.get("tipo")), "radio")}"/></svg>')
+    desenho = _desenho_de(ap)
     campo = (f'<input class="nome" value="{_x(nome)}" placeholder="{_x(rotulo)}" '
              'aria-label="Nome deste aparelho" title="Clique para renomear; arraste para mover" '
              f'draggable="true" data-gesto="aparelho-renomear" data-alvo="{aid}">')
+    if ap.get("tipo") == "controle":
+        # O FORMATO DA ABA CONEXÕES (decisão dela de 25/09): o campo guarda o
+        # NOME, e o plástico e o número vêm depois dele, do daemon vivo.
+        resto = nome_na_conexoes({**ap, "nome": "", "rotulo": ""})
+        campo = (f'<span class="quem">{campo}'
+                 + (f'<span class="quem-resto">{_x(SEPARADOR_DO_NOME + resto)}</span>'
+                    if resto else "") + "</span>")
     if esperando:
-        return (abre + desenho + campo + f'<div class="features"><span class="segure">{SEGURE}'
-                '</span></div><span class="conta-da-vaga">' + TRACO_CURTO + '</span></div>')
+        gesto = gesto_de_parear(ap)
+        dica = _x(re.sub(r"</?b>", "", _como_se_pareia(ap)))
+        fala = f'<span class="segure">{_x(gesto)}</span>' if gesto else ""
+        return (abre + desenho + campo + f'<div class="features" title="{dica}">{fala}'
+                '</div><span class="conta-da-vaga">' + TRACO_CURTO + '</span></div>')
     if ap.get("tipo") == "controle":
         faixa = _linha_do_controle(ap, cena, com_hz)
     elif ap.get("tipo") == "webcam":
@@ -4661,10 +4748,13 @@ def _marcas_de_onde(lug: dict[str, Any], cena: dict[str, Any]) -> str:
                       f'aria-label="{USB3_AO_LADO}">{_ic("aviso")}</span>')
     for ap in _moradores(cena, str(lug["id"])):
         if ap.get("esperando"):
-            quem = _x(ap.get("cor_nome") or ap.get("nome") or ap.get("rotulo") or "controle")
+            gesto = gesto_de_parear(ap)
+            quem = nome_na_conexoes(ap) or PALAVRA_DO_TIPO.get(str(ap.get("tipo")), "controle")
+            dica = (f"{gesto} no {quem} até a luz piscar." if gesto
+                    else re.sub(r"</?b>", "", _como_se_pareia(ap)))
             partes.append(f'<span class="espera" '
-                          f'data-alvo="{_x(ap["id"])}" title="Segure PS + Create no {quem} '
-                          f'até a luz piscar.">{_silhueta(ap)}{SEGURE}</span>')
+                          f'data-alvo="{_x(ap["id"])}" title="{_x(dica)}">'
+                          f'{_desenho_de(ap)}{_x(gesto)}</span>')
     if lug.get("conectando"):
         partes.append(f'<span class="espera" data-alvo="" '
                       f'title="Segure PS + Create no controle até a luz piscar.">'
@@ -4723,7 +4813,7 @@ def _barra_do_lugar(lug: dict[str, Any], cena: dict[str, Any]) -> str:
         if ap:
             cor = _cor_de(ap)
             borda = f";border-color:{_x(cor)}" if i < maximo else ""
-            dica = (f'{ap.get("cor_nome") or ap.get("nome") or ap.get("rotulo") or ""} · '
+            dica = (f'{nome_na_conexoes(ap)} · '
                     f'{NOME_DO_CUSTO[str(ap["ponte"])]}'
                     + (" · esperando" if ap.get("esperando") else "")
                     + (" · passou do limite" if i >= maximo else ""))
@@ -4796,10 +4886,18 @@ def html_do_lugar(lug: dict[str, Any], cena: dict[str, Any], com_hz: bool = Fals
 
 
 def _como_se_pareia(ap: dict[str, Any]) -> str:
-    if ap.get("tipo") == "controle":
-        return "Depois, segure <b>PS + Create</b> até a luz piscar."
-    artigo = ARTIGO_DO_TIPO.get(str(ap.get("tipo")), "o")
-    return f"Depois, ponha {artigo} {_x(ap.get('tipo'))} para parear."
+    """O que ela faz com a mão, pelo tipo — o gesto do modelo, ou o genérico.
+
+    O «outro» é «o aparelho» (era «ponha o outro para parear»); o controle de
+    modelo que o produto não conhece é «o controle», sem botões inventados.
+    """
+    gesto = gesto_de_parear(ap)
+    if gesto:
+        return f"Depois, segure <b>{_x(gesto.removeprefix('Segure '))}</b> até a luz piscar."
+    tipo = str(ap.get("tipo"))
+    palavra = "controle" if tipo == "controle" else PALAVRA_DO_TIPO.get(tipo, "aparelho")
+    artigo = ARTIGO_DO_TIPO.get(tipo, "o")
+    return f"Depois, ponha {artigo} {_x(palavra)} para parear."
 
 
 def pergunta_de_mover(ap: dict[str, Any], destino: dict[str, Any], cena: dict[str, Any]) -> str:
@@ -4885,8 +4983,7 @@ def _moldes_de_painel(cena: dict[str, Any]) -> str:
         # QUEM VEM PARA CÁ: o arrastar de quem não arrasta.
         vem = [(("ds" if a.get("tipo") == "controle"
                  else ICONE_DO_APARELHO.get(str(a.get("tipo")), "radio")),
-                (a.get("nome") or a.get("rotulo") or "")
-                + (f' · {a["cor_nome"]}' if a.get("cor_nome") else ""),
+                nome_na_conexoes(a),
                 f'data-aparelho="{_x(a["id"])}" data-destino="{_x(lid)}"')
                for a in movidos if a.get("lugar") != lid]
         titulo = ("Quem vem para " + (lug.get("nome") or ("a " + str(lug.get("entrada") or "")))
@@ -4901,7 +4998,7 @@ def _moldes_de_painel(cena: dict[str, Any]) -> str:
                   f'{PONTES_POR_ADAPTADOR}',
                   f'data-aparelho="{_x(ap["id"])}" data-destino="{_x(d["id"])}"')
                  for d in lugares if d["id"] != ap.get("lugar")]
-        titulo = f'Para onde vai {ap.get("cor_nome") or ap.get("nome") or ap.get("rotulo") or ""}?'
+        titulo = f'Para onde vai {nome_na_conexoes(ap)}?'
         moldes.append(f'<template class="painel-molde" data-painel="para-onde" '
                       f'data-alvo="{_x(ap["id"])}" data-titulo="{_x(titulo)}">'
                       f'{_botoes(itens)}</template>')
@@ -4926,7 +5023,8 @@ def _moldes_de_painel(cena: dict[str, Any]) -> str:
         f'{_x(_titulo_do_lugar(lug))}</button>' for lug in lugares)
     achados = "".join(
         '<div class="achado">'
-        + (_ic("ds", "ds cheio") if a.get("tipo") == "controle" else _ic("radio", "ico"))
+        + (_ic("ds", "ds cheio") if a.get("tipo") == "controle"
+           else _ic(ICONE_DO_APARELHO.get(str(a.get("tipo")), "radio"), "ico"))
         + f'<span class="nome">{_x(a.get("nome"))}</span>'
         + (f'<span class="forca" title="Sinal: mais perto de zero, mais perto">'
            f'{_x(a["forca"])} dBm</span>' if a.get("forca") is not None else "")
@@ -5091,7 +5189,13 @@ def html_fora_da_faixa(cena: dict[str, Any]) -> str:
         dica = (_x(f"{rotulo}: canal que o sistema não diz. Toque para trocar.") if tipo
                 else _x(f"{sugestao}? Toque para dizer o que é.") if sugestao
                 else "Rádio sem nome. Toque para dizer o que é.")
-        icone = ICONE_DO_RADIO.get(tipo, "radio") if tipo else "ajuda"
+        # O TIPO QUE O KERNEL SUGERE JÁ TEM DESENHO (a lista dela, passo b7): o
+        # teclado que o sistema reconhece mostra o teclado, ainda com a borda de
+        # quem não foi confirmado (`sem-nome`); o que ninguém sabe fica com o
+        # genérico do desenho aprovado.
+        sugerido = str(viz.get("sugestao_tipo") or "")
+        icone = (ICONE_DO_RADIO.get(tipo, "radio") if tipo
+                 else ICONE_DO_RADIO.get(sugerido, "ajuda") if sugerido else "ajuda")
         partes.append(f'<button class="selo-fora vizinho{"" if tipo else " sem-nome"}" '
                       f'title="{dica}" aria-label="{dica}" data-gesto="vizinho-o-que-e" '
                       f'data-alvo="{_x(viz["id"])}">{_ic(icone)}</button>')
@@ -5441,8 +5545,49 @@ def _tipo_pela_classe(classe: int | None) -> str:
     if maior == 0x04:
         return "fone" if menor in (0x01, 0x06) else "caixa"
     if maior == 0x05:
-        return {0x10: "teclado", 0x20: "mouse"}.get(menor & 0x30, "outro")
+        # O combo (teclado com touchpad) é teclado: é o desenho que ela reconhece.
+        return {0x10: "teclado", 0x20: "mouse", 0x30: "teclado"}.get(menor & 0x30, "outro")
+    if maior == 0x06 and menor & 0x08:
+        return "webcam"
     return "outro"
+
+
+def _tipo_do_aparelho(icone: str, classe: int | None) -> str:
+    """O tipo pelo ``Icon`` do BlueZ primeiro, e pela classe quando ele cala.
+
+    O ``Icon`` é o que alcança o aparelho LE, que não tem ``Class`` (o passo b7
+    da lista dela). Os dois são do BlueZ — a tela não casa tipo por nome.
+    """
+    return TIPO_PELO_ICONE.get(str(icone or "")) or _tipo_pela_classe(classe)
+
+
+#: Os nomes de FÁBRICA dos controles: um ``Alias`` igual a um deles é o BlueZ
+#: repetindo o ``Name``, e não um nome que ela deu.
+_NOMES_DE_FABRICA = ("DualSense", "Wireless Controller")
+
+
+def _e_nome_de_fabrica(nome: str) -> bool:
+    return any(nome.startswith(f) for f in _NOMES_DE_FABRICA)
+
+
+def _nomes_por_endereco(aparelhos_bz: tuple[Any, ...]) -> dict[str, str]:
+    """O nome que ela deu a cada controle, pelo ENDEREÇO — um só por aparelho.
+
+    O BlueZ guarda o ``Alias`` por OBJETO, um por adaptador que conhece o
+    aparelho, e o dicionário de antes pegava o ÚLTIMO da árvore: com o controle
+    pareado em dois adaptadores, a tela podia ler o objeto velho, com outro
+    nome ou nenhum (a lista dela de 25/09, passo a2 — *«O vermelho era P4,
+    reconectou como P3, e a tela mostrava o nome errado»*). Vale o do objeto
+    CONECTADO; sem nome ali, o de qualquer outro; nome de fábrica não é nome.
+    <!-- noqa-acento: citação literal dela -->
+    """
+    nomes: dict[str, str] = {}
+    for a in sorted(aparelhos_bz, key=lambda a: getattr(a, "conectado", None) is not True):
+        nome = str(getattr(a, "nome", "") or "").strip()
+        endereco = _mac(getattr(a, "endereco", ""))
+        if nome and endereco and not _e_nome_de_fabrica(nome) and endereco not in nomes:
+            nomes[endereco] = nome
+    return nomes
 
 
 def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
@@ -5556,9 +5701,9 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
         tipo = declarados.get(chave, "")
         # A SUGESTÃO DO KERNEL só entra enquanto ela não respondeu, e só na dica
         # — vestida de pergunta; o `maquina.json` só recebe a palavra DELA.
+        sugestao = "" if tipo else _sugestao_do_vizinho(str(getattr(r, "no", "") or ""), para_id)
         vizinhos.append({"id": chave, "tipo": tipo, "nome": rotulo_do_tipo.get(tipo, ""),
-                         "sugestao": "" if tipo else _sugestao_do_vizinho(
-                             str(getattr(r, "no", "") or ""), para_id)})
+                         "sugestao": sugestao, "sugestao_tipo": para_id.get(sugestao, "")})
         if getattr(r, "caminho", ""):
             portas.append({"id": f"porta-{chave}", "caminho": str(r.caminho),
                            "usb": "3.0" if getattr(r, "usb3", False) else "2.0",
@@ -5582,6 +5727,7 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
                      if _so_hex(a["id"]) == _so_hex(str(proposta.get("controle") or ""))), None)
         proposta = ({"controle": dono["id"], "destino": _mac(proposta.get("destino"))}
                     if dono else None)
+    lugares = _na_ordem_dela(lugares)
     cena = {
         # ALGUÉM RESPONDEU sobre os adaptadores: o BlueZ, ou o daemon pelo
         # `radio_ar`/`radio_governador`. Sem isso a sala não diz «nenhum».
@@ -5589,12 +5735,55 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
         "lugares": lugares, "aparelhos": aparelhos, "evitados": evitados,
         "canais_medidos": canais_medidos, "espectro": [], "vizinhos": vizinhos,
         "portas": portas, "pedido": pedido, "proposta": proposta, "ocupado": ocupado,
-        "aberto": (_ABERTO["lugar"] if "lugar" in _ABERTO
-                   else _o_mais_cheio(lugares, aparelhos)),
+        "aberto": _o_aberto(lugares, aparelhos),
         "perto": _perto(aparelhos_bz, adaptadores_bz, aparelhos),
     }
     cena["destino_do_conectar"] = _destino_do_conectar(cena, st)
     return cena
+
+
+def _o_aberto(lugares: list[dict[str, Any]], aparelhos: list[dict[str, Any]]) -> str | None:
+    """O adaptador aberto no acordeão.
+
+    COM UM ADAPTADOR SÓ NA MÁQUINA, A CAIXA DELE NASCE E FICA ABERTA — decisão
+    dela, 25/09/2026: *«Essa área se só tiver um conector ela tá sempre
+    aberta.»* Não há outra para abrir no lugar, e fechar a única esconderia os
+    controles atrás de um clique a mais. Com mais de um, o que ela abriu; sem
+    escolha dela, o que mais passou do limite. <!-- noqa-acento: citação literal dela -->
+    """
+    if len(lugares) == 1:
+        return str(lugares[0]["id"])
+    return _ABERTO["lugar"] if "lugar" in _ABERTO else _o_mais_cheio(lugares, aparelhos)
+
+
+def _chave_da_ordem(lug: dict[str, Any]) -> str:
+    """A chave do adaptador na ordem gravada: o LUGAR (a porta, D3), que é o que
+    o nome dela segue; o adaptador sem porta (o da placa-mãe), pelo endereço."""
+    return str(lug.get("lugar") or lug.get("id") or "")
+
+
+def _na_ordem_dela(lugares: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Os adaptadores na ORDEM QUE ELA ARRASTOU — decisão dela, 25/09/2026:
+    *«segurar a área do conector e arrastar ela pra mudar de ordem entre
+    eles»*, e a ordem fica gravada (``gui_prefs``, o dono do que ela arrasta
+    na janela). Quem ela nunca arrastou vem depois, na ordem de sempre.
+    <!-- noqa-acento: citação literal dela -->
+    """
+    ordem = _ordem_gravada()
+    if not ordem:
+        return lugares
+    posicao = {chave: i for i, chave in enumerate(ordem)}
+    return sorted(lugares, key=lambda lug: posicao.get(_chave_da_ordem(lug), len(posicao)))
+
+
+def _ordem_gravada() -> list[str]:
+    try:
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.app.gui_prefs import ordem_dos_adaptadores
+
+        return list(ordem_dos_adaptadores())
+    except Exception:
+        return []
 
 
 def _o_mais_cheio(lugares: list[dict[str, Any]], aparelhos: list[dict[str, Any]]) -> str | None:
@@ -5648,7 +5837,7 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
     ordem_da_vaga = {_so_hex(str(p.get("uniq") or "")): i
                      for publicado in governador.values()
                      for i, p in enumerate(_dicionario(publicado).get("pontes") or ())}
-    alias = {_mac(a.endereco): str(a.nome or "") for a in aparelhos_bz}
+    alias = _nomes_por_endereco(aparelhos_bz)
     fora: list[dict[str, Any]] = []
     vistos: set[str] = set()
     for c in st.get("controllers") or ():
@@ -5673,7 +5862,9 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
         fora.append({
             **vaga,
             "id": uniq, "tipo": "controle", "lugar": adaptador,
-            "nome": "" if nome_bz.startswith("DualSense") else nome_bz,
+            "nome": nome_bz,
+            # O NÚMERO É DO DAEMON VIVO (a mesa do tique), e o nome é do endereço.
+            "jogador": eu.get("jogador"),
             "rotulo": f"Player {eu['jogador']}" if eu.get("jogador") else "DualSense",
             "cor": cor if cor.startswith("#") else "",
             "cor_nome": "" if str(eu.get("nome") or "") in ("", _cor_desconhecida())
@@ -5698,8 +5889,17 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
         eu = next((m2 for u, m2 in da_mesa.items() if _so_hex(u) == quem), {})
         slug = str(eu.get("cor") or "")
         cor = _hex_do_plastico(slug)
-        fora.append({"id": str(m.get("aparelho")), "tipo": "controle" if m.get("e_controle")
-                     else "outro", "lugar": _mac(m.get("destino")), "nome": "",
+        # O QUE ESTÁ ESPERANDO, PELO QUE A CENTRAL LEU ANTES DE ESQUECER A
+        # ORIGEM: depois dela o BlueZ não tem mais objeto do aparelho, e o
+        # daemon já não o publica (desligado). Sem a classe, um teclado virava
+        # «outro» — e o controle, um DualSense sem nome.
+        classe = m.get("classe")
+        tipo = ("controle" if m.get("e_controle")
+                else _tipo_pela_classe(classe if isinstance(classe, int) else None))
+        fora.append({"id": str(m.get("aparelho")), "tipo": tipo,
+                     "lugar": _mac(m.get("destino")), "nome": str(m.get("nome") or ""),
+                     "modalias": str(m.get("modalias") or ""),
+                     "jogador": eu.get("jogador"),
                      "rotulo": f"Player {eu['jogador']}" if eu.get("jogador") else "",
                      "cor": cor if cor.startswith("#") else "",
                      "cor_nome": "" if str(eu.get("nome") or "") in ("", _cor_desconhecida())
@@ -5713,7 +5913,9 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
         if (not a.conectado or not adaptador or _so_hex(endereco) in vistos
                 or "V054C" in str(getattr(a, "modalias", "")).upper()):
             continue
-        fora.append({"id": endereco, "tipo": _tipo_pela_classe(a.classe), "lugar": adaptador,
+        fora.append({"id": endereco,
+                     "tipo": _tipo_do_aparelho(getattr(a, "icone", ""), a.classe),
+                     "lugar": adaptador,
                      "nome": str(a.nome or ""), "rotulo": str(a.nome or ""),
                      "esperando": False, "fixo": False})
         vistos.add(_so_hex(endereco))
@@ -5730,7 +5932,8 @@ def _perto(aparelhos_bz: tuple[Any, ...], adaptadores_bz: tuple[Any, ...],
             continue
         vistos[_mac(a.endereco)] = {
             "id": _mac(a.endereco), "nome": a.nome or _mac(a.endereco),
-            "tipo": "controle" if "054C" in str(a.modalias).upper() else "outro",
+            "tipo": ("controle" if "054C" in str(a.modalias).upper()
+                     else _tipo_do_aparelho(getattr(a, "icone", ""), a.classe)),
             "forca": a.rssi, "conhecido": bool(a.pareado),
         }
     return sorted(vistos.values(), key=lambda a: -(a["forca"] or -999))
@@ -5837,10 +6040,40 @@ def _aparelho_na_tela(alvo: str) -> dict[str, Any]:
 
 @gesto("08-conexoes.html", "abrir-adaptador")
 def abrir_adaptador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """Abre um adaptador e fecha os outros (acordeão exclusivo, ordem dela)."""
+    """Abre um adaptador e fecha os outros (acordeão exclusivo, ordem dela).
+
+    Com um adaptador só, ele não fecha: a caixa da máquina de um adaptador
+    nasce e FICA aberta (decisão dela, 25/09/2026 — ver :func:`_o_aberto`).
+    """
     lug = _lugar_na_tela(o)
+    if len(_CENA_NA_TELA.get("lugares") or ()) == 1:
+        return {"armou": True}
     _ABERTO["lugar"] = None if _CENA_NA_TELA.get("aberto") == lug["id"] else lug["id"]
     return {"armou": True}
+
+
+@gesto("08-conexoes.html", "adaptador-reordenar", grava="guardar_ordem_dos_adaptadores")
+def adaptador_reordenar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """A ordem das caixas que ela arrastou — gravada, e a sala nasce nela.
+
+    Decisão dela, 25/09/2026: *«segurar a área do conector e arrastar ela pra
+    mudar de ordem entre eles»*. O roteiro da página solta a caixa no lugar e
+    manda a ordem NOVA, de cima para baixo, pelos ``data-id`` das caixas (o
+    endereço de cada adaptador); aqui ela vira a chave de cada um — o lugar,
+    que é o que o nome dela segue — e vai para o ``gui_prefs``, o dono do que
+    ela arrasta na janela. Um id que não está na tela recusa: a ordem nunca
+    inventa um adaptador. <!-- noqa-acento: citação literal dela -->
+    """
+    ids = str(o.get("valor") or "").split()
+    na_tela = {str(lug["id"]): lug for lug in _CENA_NA_TELA.get("lugares") or ()}
+    if not ids or any(i not in na_tela for i in ids):
+        raise ValueError(f"a ordem não disse os adaptadores da tela ({ids!r})")
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.app.gui_prefs import guardar_ordem_dos_adaptadores
+
+    guardar_ordem_dos_adaptadores([_chave_da_ordem(na_tela[i]) for i in ids])
+    _CENA_NA_TELA["lugares"] = [na_tela[i] for i in ids] + [
+        lug for i, lug in na_tela.items() if i not in ids]
 
 
 def _gravar_o_nome(lugar: str, nome: str) -> Any:
@@ -5880,18 +6113,29 @@ def adaptador_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
 
 
 def _alias_do_aparelho(endereco: str, nome: str) -> Any:
-    """O `Alias` de um APARELHO no BlueZ, pelo dono (`bluez_dbus`)."""
+    """O `Alias` de um APARELHO no BlueZ, pelo dono (`bluez_dbus`) — em TODOS
+    os objetos dele.
+
+    O NOME É DO APARELHO, E O BLUEZ O GUARDA POR ADAPTADOR. Esta função
+    escrevia no PRIMEIRO objeto da árvore; com o controle pareado em dois
+    adaptadores, o nome ia para o de onde ele não estava, e a tela lia o outro
+    (a lista dela de 25/09, passo a2: *«O nome renomeado não aparece»*). Agora
+    vai para todos, e vale onde ele reconectar. Nome vazio devolve o de fábrica
+    — o BlueZ faz isso com o ``Alias`` em branco, e a tela volta ao «Player N».
+    Devolve a primeira escrita que deu, ou a primeira recusa quando nenhuma deu.
+    <!-- noqa-acento: citação literal dela -->
+    """
     perfil._com_o_src()
     from hefesto_dualsense4unix.integrations import bluez_dbus
 
     dono = bluez_dbus.dono()
-    caminho = dono.caminho_do_aparelho(endereco)
-    if not caminho:
+    caminhos = dono.caminhos_do_aparelho(endereco)
+    if not caminhos:
         raise RuntimeError("o Bluetooth do sistema não achou este aparelho agora")
-    escrita = dono.escrever_propriedade(
-        caminho, bluez_dbus.APARELHO, "Alias", "s", nome, quem="tela")
+    escritas = [dono.escrever_propriedade(
+        caminho, bluez_dbus.APARELHO, "Alias", "s", nome, quem="tela") for caminho in caminhos]
     _esquecer("bluez")
-    return escrita
+    return next((e for e in escritas if getattr(e, "feita", False)), escritas[0])
 
 
 @gesto("08-conexoes.html", "aparelho-renomear", grava="escrever_propriedade")
@@ -6234,6 +6478,9 @@ PROVAS = [
 #: aplicam" de 02/09: eles recusaram, com frase, porque o clique automático não
 #: levava o argumento do próprio botão (`caminho`, `entrada`, `face`, `uniq`).
 #:
+#: `adaptador-reordenar` (25/09/2026) grava a ordem das caixas no
+#: `gui_preferences.json`, o arquivo da JANELA: o daemon nem sabe dela.
+#:
 #: OS QUATRO DA SEÇÃO DO RÁDIO — 23/09/2026: `adaptador-renomear`,
 #: `entrada-face` e `entrada-nao-alcanco` gravam no `maquina.json` (o nome e o
 #: mapa das entradas), e `aparelho-renomear` grava o `Alias` no BlueZ. O
@@ -6243,4 +6490,4 @@ SEM_ECO = ("sala-altura", "sala-visada", "mic-existe", "vizinho-o-que-e",
            "escolher-aparelho", "escolher-entrada", "tirar-daqui",
            "nova-entrada", "nova-extensao", "nova-face",
            "adaptador-renomear", "aparelho-renomear", "entrada-face",
-           "entrada-nao-alcanco")
+           "entrada-nao-alcanco", "adaptador-reordenar")

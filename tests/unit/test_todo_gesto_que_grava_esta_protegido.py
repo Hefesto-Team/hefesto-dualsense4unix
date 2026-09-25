@@ -109,6 +109,9 @@ ESCREVEM = {
     # (`entrada_a_entrada.dar_nome`, no `maquina.json`); a porta antiga ficou
     # sem chamador na tela, e um nome sem chamador não acusa coisa alguma.
     "dar_nome",                # grava o nome do lugar no `maquina.json` dela
+    # A ORDEM DAS CAIXAS DOS ADAPTADORES — A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01,
+    # 25/09/2026: vai para o `gui_preferences.json` dela.
+    "guardar_ordem_dos_adaptadores",
     "escrever_propriedade",    # grava o `Alias` de um aparelho no BlueZ dela
     # AS DUAS RESPOSTAS DO «MAPEAR ENTRADA A ENTRADA» (a cerimônia da 08): a
     # face e o «Não alcanço» vão ao `maquina.json` dela na hora.
