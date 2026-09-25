@@ -1375,7 +1375,7 @@ class IpcHandlersMixin:
         effect = build_from_name(mode, trigger_params)
         # PERFIL-05: `uniq` presente = gatilho por-MAC via apply_output_for
         # (override registrado + escrita só no controle selecionado).
-        campos = (
+        campos: dict[str, Any] = (
             {"trigger_left": effect} if side == "left" else {"trigger_right": effect}
         )
         resultado = self._apply_por_uniq(params, **campos)
