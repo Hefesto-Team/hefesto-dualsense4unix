@@ -1280,7 +1280,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nada-a-acionar',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
         'radio': {
             'aceita': '',
@@ -1288,7 +1288,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nada-a-acionar',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
     },
     'energia.bateria.jogo@sn30': {
@@ -1299,7 +1299,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nada-a-acionar',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
         'radio': {
             'aceita': '',
@@ -1307,7 +1307,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nada-a-acionar',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
     },
     'energia.bateria.leitura_hefesto@dualsense': {
