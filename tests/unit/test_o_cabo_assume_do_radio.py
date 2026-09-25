@@ -682,6 +682,11 @@ class TestOCaboAssume:
         mesa = montar(monkeypatch, tmp_path, _transportes(quantos, posicao, outros), jogo=False)
         alvo = UNIQS[posicao]
         plugar_o_cabo_e_esperar(mesa, alvo)
+        # Ela joga um tempo no cabo: a folga da ida acaba antes de o cabo sair,
+        # e quem segura a volta é a volta, não a sobra da ida.
+        for _ in range(int(FOLGA_DEPOIS_DA_TROCA_S / TIQUE) + 1):
+            mesa.tique()
+        assert not mesa.inst.em_troca_de_transporte(alvo)
         numeros_antes = mesa.numeros()
         bonecos_antes = {u: mesa.boneco_de(u) for u in numeros_antes}
         jogo_antes = mesa.o_jogo_ve()
