@@ -261,6 +261,7 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
                 t=time.monotonic(), escondida=piloto._escondida, pintou=no_tique[0],
                 leituras=estado.leituras, pactl=len(fora.pactl),
                 batidas=fora.ponte.chamadas.count("rumble_set_checked"),
+                externos=fora.ponte.chamadas.count("resultado"),
                 ondas=len(ondas_de_som.o_de_sempre()._desejado)))
             return volta
 
@@ -492,6 +493,13 @@ def test_r1_o_coracao_nao_bate_por_quem_saiu_escondido(
     assert batidas == 0, (
         f"{batidas} batida(s) do coração por um controle que saiu da mesa com a "
         "janela escondida — o par cairia no controle que ficou")
+    # O CONTEXTO ANDA SEM AS PERGUNTAS DO TIQUE: com a janela escondida não se
+    # pede o inventário dos externos (`controller.list`, 10-40 ms e um
+    # subprocess no daemon). MORDIDA: `perguntar=True` no contexto escondido.
+    escondida = [x for x in fora.ticks if x.t >= fora.marcos["saiu"]]
+    externos = escondida[-1].externos - escondida[0].externos
+    assert externos == 0, (
+        f"{externos} pergunta(s) do inventário dos externos com a janela escondida")
 
 
 def test_r1_na_volta_a_carga_vai_inteira_e_com_estado_novo(esconde_e_volta: Any) -> None:
