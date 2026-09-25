@@ -352,8 +352,10 @@ def libinput_ignora_device(event_path: Path | str | None) -> bool:
 _ABRIDOR_DO_BROKER: Any = None
 _ABRIDOR_LOCK = threading.Lock()
 _CLIENTE_DO_BROKER: Any = None
-#: Raiz do sysfs dos nós de entrada que os três filtros abaixo leem. Só a
-#: suíte a desvia, para uma árvore de mentira.
+#: Raiz do sysfs dos nós de entrada que os três filtros abaixo leem, sempre
+#: pelo nome do módulo, na chamada (nunca num default de parâmetro, que
+#: congelaria no import). Só a suíte a desvia: o `tests/conftest.py` a aponta
+#: para uma pasta vazia em todo teste, e quem precisa de árvore monta a sua.
 SYS_CLASS_INPUT = "/sys/class/input"
 
 
@@ -375,8 +377,12 @@ def _abridor_do_broker() -> Any:
 def _no_de_dualsense_no_sysfs(caminho: str) -> bool:
     """O sysfs diz que o nó de entrada é de um DualSense (054c:0ce6/0df2)?
 
-    Só leitura de dois arquivos do sysfs, sem abrir o nó. Nó ilegível é False:
-    na dúvida, o broker não é incomodado e o `PermissionError` sobe como antes.
+    Só leitura de dois arquivos do sysfs, sem abrir o nó. Nó ilegível é False,
+    e a dúvida sai barata para os dois chamadores: no `abrir_input_device` o
+    broker não é incomodado e o `PermissionError` sobe como antes; na vista
+    dos externos (`discover_gamepads(especie=ESPECIE_EXTERNAL)`) o nó é aberto
+    e a classificação o descarta, como antes — um externo nunca some por um
+    sysfs que não se leu.
     """
     base = os.path.basename(caminho)
     try:
@@ -879,7 +885,9 @@ def _int_ou(valor: Any, reserva: int) -> int:
         return reserva
 
 
-def discover_gamepads(*, com_sysfs: bool = True) -> list[GamepadDescoberto]:
+def discover_gamepads(
+    *, com_sysfs: bool = True, especie: str | None = None
+) -> list[GamepadDescoberto]:
     """Descoberta ÚNICA: abre cada node de /dev/input UMA vez e classifica.
 
     LUGAR-À-MESA-01/E2. Até aqui havia DOIS laços — `discover_dualsense_evdevs`
@@ -907,20 +915,34 @@ def discover_gamepads(*, com_sysfs: bool = True) -> list[GamepadDescoberto]:
     `com_sysfs=False` pula a subida no sysfs (driver/hidraw): é o que o caminho
     do co-op nunca leu e não vai começar a pagar.
 
+    `especie` devolve só aquela espécie (None = as duas, como sempre). Com
+    `ESPECIE_EXTERNAL`, o nó que o sysfs diz ser de DualSense
+    (`_no_de_dualsense_no_sysfs`) sai da volta ANTES de abrir, esteja ele
+    aberto ou fechado (O-INVENTARIO-DOS-EXTERNOS-NAO-ABRE-O-DUALSENSE-01,
+    25/09/2026). Medido na máquina dela com os quatro controles: o inventário
+    dos externos abria pelo broker o nó de gamepad de cada DualSense a cada
+    1,3 s (o tique de 2 s e a janela, a cada 4 s), só para ler a identidade e
+    descartar — duas linhas por nó, uma em cada diário. Na dúvida (sysfs
+    ilegível) o nó é aberto e descartado pela classificação, como antes. Quem
+    quer o DualSense não passa espécie e continua abrindo o nó.
+
     **O que ela NÃO faz: adotar ninguém.** Devolver um externo aqui é dizer que
     ele existe e qual a forma dos eixos dele — não é dar-lhe vpad nem lugar na
     partida. O veto de 19/07 (*"externo não ganha controle virtual"*) segue de
     pé; quem o derruba é a `E3`, e ela é dela.
 
-    CUSTO (lição PERF-MULTI-CONTROLLER-01): abre TODOS os nodes de /dev/input
-    (open + ioctls + close, ~10-40 ms) — PROIBIDO no event loop do daemon e em
-    qualquer caminho quente (`state_full`/tick). **GRAU: SUSPEITA COM
-    MECANISMO** sobre o delta: o caminho DualSense passa a chamar
+    CUSTO (lição PERF-MULTI-CONTROLLER-01): sem espécie, abre TODOS os nodes
+    de /dev/input que não são virtuais (open + ioctls + close, ~10-40 ms), e o
+    do DualSense físico, que nasce fechado, abre pelo broker — cada abertura
+    dessas é uma linha em cada diário. Fora do event loop, sempre. **GRAU:
+    SUSPEITA COM MECANISMO** sobre o delta: o caminho DualSense passa a chamar
     `capabilities()` também nos nodes de outro vendor (antes o filtro de vendor
     curto-circuitava antes) — alguns ioctls a mais por node, num caminho que já
     é gated pelo `InputDirWatch` e só roda em hotplug. Não foi medido com
     aparelho na mesa.
     """
+    if especie not in (None, ESPECIE_DUALSENSE, ESPECIE_EXTERNAL):
+        raise ValueError(f"discover_gamepads: espécie desconhecida {especie!r}")
     try:
         from evdev import ecodes, list_devices
     except ImportError:
@@ -932,6 +954,11 @@ def discover_gamepads(*, com_sysfs: bool = True) -> list[GamepadDescoberto]:
     # biblioteca deixa de fora o nó que o processo não abre, que é o físico.
     for path in sorted(_nos_de_evento(list_devices), key=lambda p: _event_num(Path(p))):
         if _is_virtual_evdev(path):
+            continue
+        # O-INVENTARIO-DOS-EXTERNOS-NAO-ABRE-O-DUALSENSE-01: quem pede os
+        # externos não abre o nó do DualSense. O sysfs responde sem abrir; o
+        # ilegível segue para a abertura e a classificação abaixo o descarta.
+        if especie == ESPECIE_EXTERNAL and _no_de_dualsense_no_sysfs(path):
             continue
         try:
             # HIDE-SO-O-HIDRAW-02: o nó do físico está FECHADO; ao broker vai
@@ -952,11 +979,13 @@ def discover_gamepads(*, com_sysfs: bool = True) -> list[GamepadDescoberto]:
                     continue
                 uniq_raw = str(getattr(dev, "uniq", "") or "").strip()
                 if vendor == DUALSENSE_VENDOR and product in DUALSENSE_PIDS:
-                    especie = ESPECIE_DUALSENSE
+                    especie_do_no = ESPECIE_DUALSENSE
                     identidade = norm_mac(uniq_raw) or f"path:{path}"
                 else:
-                    especie = ESPECIE_EXTERNAL
+                    especie_do_no = ESPECIE_EXTERNAL
                     identidade = _external_dedup_key(path, uniq_raw, vendor, product)
+                if especie is not None and especie_do_no != especie:
+                    continue
                 driver, hidraw = (
                     _external_device_sysfs(path) if com_sysfs else (None, None)
                 )
@@ -969,9 +998,9 @@ def discover_gamepads(*, com_sysfs: bool = True) -> list[GamepadDescoberto]:
                 # por uma entrada com o campo em branco. Kernel real sempre
                 # publica os dois.
                 encontrados.setdefault(
-                    (especie, identidade),
+                    (especie_do_no, identidade),
                     GamepadDescoberto(
-                        especie=especie,
+                        especie=especie_do_no,
                         identidade=identidade,
                         evdev_path=str(path),
                         name=str(getattr(dev, "name", "") or ""),
@@ -1037,10 +1066,18 @@ def discover_external_gamepads() -> list[dict[str, Any]]:
     clones idênticos. Colapsar os vários nodes de um controle (gamepad, IMU,
     touchpad) numa entrada só continua sendo requisito: os dois lados têm teste.
 
-    CUSTO (lição PERF-MULTI-CONTROLLER-01): abre TODOS os nodes de /dev/input
-    (open + ioctls + close, ~10-40 ms) — PROIBIDO no event loop do daemon e
-    em qualquer caminho quente (`state_full`/tick). Consumidor canônico: o
-    handler `controller.list` sob opt-in, via thread.
+    CUSTO (lição PERF-MULTI-CONTROLLER-01, e o custo de hoje): o nó que o
+    sysfs diz ser de DualSense NÃO é aberto — nem pelo caminho, nem pelo
+    broker (O-INVENTARIO-DOS-EXTERNOS-NAO-ABRE-O-DUALSENSE-01, 25/09/2026). O
+    resto ainda abre pelo caminho, um por um (open + ioctls + close): todo nó
+    não virtual que não é de DualSense, com ou sem botão de gamepad. Na
+    máquina dela são 20 por volta (botões de energia, entradas de áudio, HDMI,
+    mouse e teclado), calados e sem broker. Fora do event loop, sempre. Quem
+    chama: o tique dos externos do daemon, a cada 2 s
+    (`ExternalLedSync.tick`, no executor), e o `controller.list` com
+    `{"external": true}`, via thread — a janela aberta pede a cada 4 s, e a
+    CLI `controller list` e os seletores da `app/actions` pedem pelo mesmo
+    handler.
 
     LUGAR-À-MESA-01/E2: virou uma VISTA da descoberta única
     (`discover_gamepads`). As oito chaves do dict e a regra de dedup são as
@@ -1049,7 +1086,7 @@ def discover_external_gamepads() -> list[dict[str, Any]]:
     """
     return [
         gp.como_entrada_de_inventario()
-        for gp in discover_gamepads()
+        for gp in discover_gamepads(especie=ESPECIE_EXTERNAL)
         if gp.especie == ESPECIE_EXTERNAL
     ]
 
