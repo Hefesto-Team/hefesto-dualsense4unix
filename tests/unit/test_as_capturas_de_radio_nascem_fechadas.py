@@ -28,9 +28,11 @@ lá); nos ensaios, pela chamada que o ``sudo`` de mentira registrou.
 from __future__ import annotations
 
 import ast
+import contextlib
 import importlib.util
 import os
 import shutil
+import signal
 import stat
 import struct
 import subprocess
@@ -120,6 +122,9 @@ if len(sys.argv) == 3 and sys.argv[1] == "-w":
         "w " + caminho + " " + format(stat.S_IMODE(os.fstat(fd).st_mode), "04o")
         + " " + format(stat.S_IMODE(os.stat(pasta).st_mode), "04o")
     )
+    registrar("pid " + str(os.getpid()) + " " + caminho)
+    outros = [n for n in os.listdir(pasta) if n != os.path.basename(caminho)]
+    registrar("vizinhos " + str(len(outros)) + " " + caminho)
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
     signal.signal(signal.SIGINT, lambda *_: sys.exit(0))
     while True:
@@ -228,6 +233,20 @@ class Dubles:
                 saida.append((caminho, modo, modo_da_pasta))
         return saida
 
+    def pids(self) -> list[int]:
+        """O pid de cada ``btmon -w`` de mentira, na ordem em que nasceram."""
+        return [
+            int(linha.split(" ", 2)[1])
+            for linha in self._linhas(self.log_btmon) if linha.startswith("pid ")
+        ]
+
+    def vizinhos(self) -> list[int]:
+        """Quantas outras entradas a pasta da captura tinha quando cada uma nasceu."""
+        return [
+            int(linha.split(" ", 2)[1])
+            for linha in self._linhas(self.log_btmon) if linha.startswith("vizinhos ")
+        ]
+
     def leituras(self) -> list[tuple[str, str]]:
         """``(caminho, modo)`` de cada ``btmon -r``, no instante da leitura."""
         saida = []
@@ -304,6 +323,22 @@ def _grupo_secundario() -> int | None:
 
 def _modo(caminho: Path) -> int:
     return stat.S_IMODE(caminho.stat().st_mode)
+
+
+def _morreu(pid: int, segundos: float = 3.0) -> bool:
+    """O processo ``pid`` deixou de existir (espera um pouco pelo sinal chegar)."""
+    fim = time.monotonic() + segundos
+    while True:
+        try:
+            with open(f"/proc/{pid}/stat", encoding="utf-8") as arq:
+                estado = arq.read().rsplit(")", 1)[1].split()[0]
+        except OSError:
+            return True
+        if estado == "Z":  # já saiu; só falta quem o espere
+            return True
+        if time.monotonic() > fim:
+            return False
+        time.sleep(0.05)
 
 
 # ---------------------------------------------------------------------------
@@ -414,6 +449,18 @@ class TestALightbarGravaFechadoLeEApaga:
         assert "recuso" in r.stderr
         assert dubles.escritas() == [], "o btmon não pode rodar com o destino recusado"
 
+    def test_destino_em_que_qualquer_um_escreve_e_recusado(
+        self, tmp_path: Path, dubles: Dubles
+    ) -> None:
+        """Ali outro usuário troca a leitura por um link entre o ``rm`` e a escrita do root."""
+        destino = tmp_path / "destino-aberto"
+        destino.mkdir()
+        destino.chmod(0o777)
+        r = _rodar_lightbar(dubles, destino, "limpo", "1")
+        assert r.returncode != 0
+        assert "qualquer um escreve" in r.stderr, r.stderr
+        assert dubles.escritas() == [], "o btmon não pode rodar com o destino recusado"
+
 
 # ---------------------------------------------------------------------------
 # scripts/medir_w3_coex.sh — tudo como root, três braços
@@ -466,6 +513,10 @@ class TestOW3GravaFechadoLeEApaga:
         assert len(diretorios) == 1
         assert not diretorios.pop().exists(), "a pasta das capturas ficou"
         assert "Hardware Error: 1" in texto, "o relatório leu a captura antes de apagá-la"
+        assert corrida_do_w3.dubles.vizinhos() == [0, 0, 0], (
+            "a captura de um braço ainda estava na pasta quando o seguinte começou: "
+            "ela sai depois de lida, não só no fim"
+        )
 
     def test_o_relatorio_e_de_quem_chamou_o_sudo(self, corrida_do_w3: CorridaDoW3) -> None:
         relatorio = corrida_do_w3.relatorio
@@ -480,6 +531,44 @@ class TestOW3GravaFechadoLeEApaga:
         chamadas = corrida_do_w3.dubles.log_chamadas.read_text(encoding="utf-8").splitlines()
         rfkill = [c for c in chamadas if c.startswith("rfkill ")]
         assert rfkill == ["rfkill block wifi", "rfkill unblock wifi"], rfkill
+
+
+def test_o_w3_interrompido_no_meio_nao_deixa_btmon_nem_download(tmp_path: Path) -> None:
+    """Um ``kill`` no meio do braço B: o ``restaurar`` para o ``btmon`` e a carga.
+
+    Sem isto o ``btmon`` do root seguia gravando num arquivo já apagado — invisível
+    e crescendo, com a chave se um controle reconectasse — e o laço de download
+    do braço B seguia baixando para sempre.
+    """
+    dubles = _fazer_dubles(tmp_path)
+    amb = dubles.ambiente(SUDO_UID=str(os.getuid()), SUDO_GID=str(os.getgid()))
+    processo = subprocess.Popen(
+        [BASH, str(W3), "--run", "--dur", "30", "--out", str(tmp_path / "relatorio.txt")],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=amb,
+        start_new_session=True,
+    )
+    try:
+        fim = time.monotonic() + 30
+        while len(dubles.pids()) < 2 and processo.poll() is None:
+            assert time.monotonic() < fim, "o braço B não começou"
+            time.sleep(0.02)
+        assert processo.poll() is None, "o W3 terminou antes do braço B"
+        processo.send_signal(signal.SIGTERM)
+        processo.wait(timeout=20)
+        btmon_do_b = dubles.pids()[1]
+        assert _morreu(btmon_do_b), "o btmon do braço B ficou gravando depois do kill"
+        caminho_b = dubles.escritas()[1][0]
+        assert not Path(caminho_b).parent.exists(), "a pasta das capturas ficou"
+        time.sleep(0.3)
+        antes = dubles.log_chamadas.read_text(encoding="utf-8").count("curl ")
+        time.sleep(0.6)
+        depois = dubles.log_chamadas.read_text(encoding="utf-8").count("curl ")
+        assert antes > 0, "o braço B não chegou a baixar nada"
+        assert depois == antes, "o laço de download do braço B seguiu depois do kill"
+    finally:
+        with contextlib.suppress(ProcessLookupError):
+            os.killpg(processo.pid, signal.SIGKILL)
+        processo.wait(timeout=20)
 
 
 # ---------------------------------------------------------------------------
@@ -528,7 +617,11 @@ class _Leitor:
         self.lidas: list[tuple[str, int]] = []
 
     def __call__(self, caminho: str) -> Any:
-        self.lidas.append((caminho, stat.S_IMODE(os.stat(caminho).st_mode)))
+        try:
+            modo = stat.S_IMODE(os.stat(caminho).st_mode)
+        except FileNotFoundError:
+            modo = -1  # não havia captura: quem lê tem de dizer isso, não morrer
+        self.lidas.append((caminho, modo))
         return self.original(caminho)
 
 
@@ -601,6 +694,7 @@ class TestOsEnsaiosGravamFechadoLeemEApagam:
             monkeypatch.setenv(var, valor)
         monkeypatch.setattr(tempfile, "tempdir", str(dubles.tmp))
         modulo = _carregar("byte_no_fio")
+        sinal_antes = signal.getsignal(signal.SIGTERM)
         captura = modulo.CapturaDoFio("cai-no-meio")
         captura.comecar()
         try:
@@ -614,6 +708,90 @@ class TestOsEnsaiosGravamFechadoLeemEApagam:
         assert not Path(captura.caminho).exists()
         assert not Path(captura.diretorio).exists()
         assert "(lida e apagada)" in linha
+        (pid,) = dubles.pids()
+        assert _morreu(pid), "o apagar tirou a captura e deixou o btmon gravando"
+        assert signal.getsignal(signal.SIGTERM) == sinal_antes, (
+            "o apagar tem de devolver o SIGTERM que havia antes da captura"
+        )
+
+    def test_sem_sudo_o_byte_no_fio_diz_que_nao_capturou(
+        self, tmp_path: Path, dubles: Dubles, monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """O ``sudo -n`` que pede senha: «não medi», e não um traceback nem «lida».
+
+        Até 24/09 o arquivo vazio do ``mkstemp`` ficava e virava queixa do parser;
+        com a captura nascendo pelas mãos do root, ele não existe mais.
+        """
+        _executavel(dubles.bin / "sudo", (
+            "#!/bin/bash\n"
+            "printf 'recusado %s\\n' \"$*\" >> \"$SUDO_DE_MENTIRA_LOG\"\n"
+            "echo 'sudo: a password is required' >&2\n"
+            "exit 1\n"
+        ))
+        modulo = _carregar("byte_no_fio")
+        _preparar_ensaio(modulo, tmp_path, dubles, monkeypatch)
+        monkeypatch.setattr(sys, "argv", ["byte_no_fio.py", "--segundos", "0.05"])
+        assert modulo.main() == 0
+        saida = capsys.readouterr().out
+        assert dubles.escritas() == []
+        assert "saiu sozinho (rc=1)" in saida, saida
+        assert "captura ilegível" in saida, saida
+        assert "INSTRUMENTO QUEBRADO" in saida, saida
+        assert "(o btmon não gravou nada ali)" in saida, saida
+        assert "(lida e apagada)" not in saida, "a saída diz que leu uma captura que não existiu"
+        assert not list(dubles.tmp.glob("byte-no-fio-*")), "a pasta da captura ficou"
+
+
+_CAI_NO_MEIO = """\
+import os, sys, time
+sys.path.insert(0, {ensaios!r})
+import byte_no_fio
+captura = byte_no_fio.CapturaDoFio("cai-no-meio")
+captura.comecar()
+for _ in range(200):
+    if os.path.exists(captura.caminho):
+        break
+    time.sleep(0.02)
+print(captura.caminho, captura._processo.pid, flush=True)
+if sys.argv[1] == "excecao":
+    raise RuntimeError("o instrumento caiu no meio")
+time.sleep(60)
+"""
+
+
+@pytest.mark.parametrize("como", ["excecao", "sigterm", "sighup"])
+def test_o_instrumento_que_cai_no_meio_apaga_e_para_o_btmon(
+    tmp_path: Path, dubles: Dubles, como: str
+) -> None:
+    """Uma exceção, um ``kill`` ou o terminal que fecha: a captura sai e o ``btmon`` para.
+
+    A exceção sai pelo ``atexit``; os dois sinais, que matariam o Python sem
+    ``atexit``, viram ``SystemExit`` enquanto a captura vive.
+    """
+    script = tmp_path / "cai_no_meio.py"
+    script.write_text(_CAI_NO_MEIO.format(ensaios=str(ENSAIOS)), encoding="utf-8")
+    processo = subprocess.Popen(
+        [sys.executable, str(script), como],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        env=dubles.ambiente(PYTHONPATH=str(REPO_ROOT / "src")),
+        start_new_session=True,
+    )
+    try:
+        assert processo.stdout is not None
+        caminho, pid_do_btmon = processo.stdout.readline().split()
+        assert Path(caminho).exists(), "o btmon de mentira não gravou"
+        if como != "excecao":
+            processo.send_signal(signal.SIGTERM if como == "sigterm" else signal.SIGHUP)
+        _, erro = processo.communicate(timeout=30)
+        assert processo.returncode != 0, erro
+        assert not Path(caminho).exists(), f"a captura ficou depois de {como}"
+        assert not Path(caminho).parent.exists(), f"a pasta da captura ficou depois de {como}"
+        assert _morreu(int(pid_do_btmon)), f"o btmon seguiu gravando depois de {como}"
+    finally:
+        with contextlib.suppress(ProcessLookupError):
+            os.killpg(processo.pid, signal.SIGKILL)
+        processo.wait(timeout=20)
 
 
 # ---------------------------------------------------------------------------
@@ -629,9 +807,29 @@ class TestOFormatoLeOBinarioESoUsaABibliotecaPadrao:
         texto = formato.texto_dos_reports_de_saida(str(captura))
         linhas = texto.splitlines()
         assert linhas[0].strip() == "1 report(s) 0x31 de saída, 1 distinto(s)", texto
-        assert linhas[-1].split() == [str(HANDLE), "1", "0x04", "0x02", "0x02",
-                                      "11", "22", "33"], texto
+        assert [str(HANDLE), "1", "0x04", "0x02", "0x02", "11", "22", "33"] in [
+            linha.split() for linha in linhas
+        ], texto
         assert "CHAVE" not in texto
+
+    def test_a_leitura_guarda_o_report_inteiro(self, tmp_path: Path) -> None:
+        """A captura crua sai depois de lida: o que não está na leitura não volta.
+
+        O 0x31 de saída não leva chave nem endereço, então ela o guarda byte a byte.
+        """
+        captura = tmp_path / "captura.btsnoop"
+        captura.write_bytes(_captura_de_mentira())
+        formato = _carregar("o_formato_btsnoop")
+        texto = formato.texto_dos_reports_de_saida(str(captura))
+        assert f"handle {HANDLE} · 1 quadro(s) · 78 bytes:" in texto, texto
+        assert "  0: 31 00 00 00 04 00" in texto, texto
+        assert " 48: 22 33 00" in texto, texto
+
+    def test_captura_que_nao_existe_vira_queixa(self, tmp_path: Path) -> None:
+        formato = _carregar("o_formato_btsnoop")
+        quadros, queixas = formato.ler_btsnoop(str(tmp_path / "nao-existe.btsnoop"))
+        assert quadros == []
+        assert len(queixas) == 1 and queixas[0].startswith("captura ilegível"), queixas
 
     def test_so_importa_a_biblioteca_padrao(self) -> None:
         """A lightbar o roda como root: nada da casa pode vir junto."""

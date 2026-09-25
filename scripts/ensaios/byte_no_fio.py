@@ -105,11 +105,14 @@ import atexit
 import contextlib
 import os
 import re
+import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from datetime import datetime
+from typing import Any
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -187,7 +190,13 @@ class CapturaDoFio:
     * no fim passa a ser de quem mede (``chown``), ainda 0600, e é lida sem root;
     * sai logo depois de lida, e :meth:`apagar` devolve a linha com o caminho,
       para a saída dizer onde ela esteve. Se o instrumento cair antes, o
-      ``atexit`` apaga.
+      ``atexit`` apaga — e um ``SIGTERM`` ou um ``SIGHUP`` (o terminal que
+      fecha) saem pelo mesmo caminho, em vez de matar o Python com o ``btmon``
+      do root ainda gravando.
+
+    O que deu errado no caminho (o ``sudo -n`` que não pôs o ``btmon`` de pé, a
+    entrega que falhou) fica em :attr:`queixas`, para o relatório dizer «não
+    medi» em vez de «não houve».
 
     Os dois instrumentos que capturam o fio (este e a captura armada) passam
     por aqui: duas cópias deste ciclo é como uma delas volta a nascer aberta.
@@ -196,36 +205,63 @@ class CapturaDoFio:
     def __init__(self, prefixo: str) -> None:
         self.diretorio = tempfile.mkdtemp(prefix=f"{prefixo}-")
         self.caminho = os.path.join(self.diretorio, f"{prefixo}.btsnoop")
+        self.queixas: list[str] = []
         self._processo: subprocess.Popen[bytes] | None = None
+        self._sinais: dict[int, Any] = {}
         self._linha = ""
         atexit.register(self.apagar)
 
     def comecar(self) -> None:
         """Põe o ``btmon -w`` de pé, como root, com a umask fechada."""
+        self._sair_pelo_atexit_nos_sinais()
         self._processo = subprocess.Popen(
             ["sudo", "-n", "sh", "-c", _BTMON_FECHADO, "btmon", self.caminho],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
 
+    def _sair_pelo_atexit_nos_sinais(self) -> None:
+        """``SIGTERM``/``SIGHUP`` viram ``SystemExit`` enquanto a captura vive.
+
+        Só troca o sinal que está no padrão, e só no fio principal (o único
+        onde o Python deixa trocar); o :meth:`apagar` devolve o que havia.
+        """
+        if threading.current_thread() is not threading.main_thread():
+            return
+        for sinal in (signal.SIGTERM, signal.SIGHUP):
+            if signal.getsignal(sinal) is signal.SIG_DFL:
+                self._sinais[sinal] = signal.signal(sinal, _sair_pelo_caminho_normal)
+
     def encerrar(self) -> None:
         """Para o ``btmon`` e entrega o arquivo a quem mede, ainda 0600."""
         processo, self._processo = self._processo, None
         if processo is None:
             return
+        saiu_sozinho = processo.poll()
+        if saiu_sozinho is not None:
+            self.queixas.append(
+                f"o `sudo -n btmon -w` saiu sozinho (rc={saiu_sozinho}) antes do fim "
+                "da janela: o fio NÃO foi capturado. Sem credencial do sudo em cache? "
+                "Rode `sudo -v` antes."
+            )
         processo.terminate()
         try:
             processo.wait(timeout=5)
         except subprocess.TimeoutExpired:
             processo.kill()
             processo.wait()
-        subprocess.run(
+        entrega = subprocess.run(
             ["sudo", "-n", "sh", "-c", _ENTREGAR_FECHADO, "sh",
              f"{os.getuid()}:{os.getgid()}", self.caminho],
             capture_output=True,
             check=False,
             timeout=20,
         )
+        if entrega.returncode != 0 and os.path.lexists(self.caminho):
+            self.queixas.append(
+                f"a captura não foi entregue a quem mede (rc={entrega.returncode}): "
+                "ela continua do root, 0600, e não se lê sem root."
+            )
 
     def apagar(self) -> str:
         """Apaga a captura e o diretório dela; devolve a linha para a saída."""
@@ -233,6 +269,7 @@ class CapturaDoFio:
         if self._linha:
             return self._linha
         self.encerrar()
+        existia = os.path.lexists(self.caminho)
         try:
             os.unlink(self.caminho)
         except FileNotFoundError:
@@ -242,11 +279,28 @@ class CapturaDoFio:
                            capture_output=True, check=False, timeout=20)
         with contextlib.suppress(OSError):
             os.rmdir(self.diretorio)
-        if os.path.exists(self.caminho):
+        if threading.current_thread() is threading.main_thread():
+            for sinal, antes in self._sinais.items():
+                signal.signal(sinal, antes)
+            self._sinais.clear()
+        if os.path.lexists(self.caminho):
             self._linha = f"captura: {self.caminho}  NÃO SAIU — apague à mão (tem MAC real)"
-        else:
+        elif existia:
             self._linha = f"captura: {self.caminho}  (lida e apagada)"
+        else:
+            self._linha = f"captura: {self.caminho}  (o btmon não gravou nada ali)"
         return self._linha
+
+
+def _sair_pelo_caminho_normal(numero: int, _quadro: Any) -> None:
+    """O sinal vira ``SystemExit``: os ``finally`` e o ``atexit`` rodam.
+
+    O segundo sinal não interrompe a limpeza que o primeiro disparou: os dois
+    passam a ser ignorados até o :meth:`CapturaDoFio.apagar` devolver os de antes.
+    """
+    for sinal in (signal.SIGTERM, signal.SIGHUP):
+        signal.signal(sinal, signal.SIG_IGN)
+    raise SystemExit(128 + numero)
 
 
 # ---------------------------------------------------------------------------
@@ -560,6 +614,7 @@ def main() -> int:
     # ---- leitura ----------------------------------------------------------
     quadros, queixas = ler_btsnoop(captura.caminho)
     linha_da_captura = captura.apagar()
+    queixas = [*captura.queixas, *queixas]
     saidas = reports_de_saida(quadros)
     entradas = [q for q in quadros if q.sentido == HID_BT_ENTRADA]
 

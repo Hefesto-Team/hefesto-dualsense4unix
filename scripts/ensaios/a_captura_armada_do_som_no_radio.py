@@ -508,6 +508,8 @@ def main(argv: list[str] | None = None) -> int:
     quadros, queixas = ler_btsnoop(captura.caminho)
     print(f"\nO QUE A CAPTURA VIU — {len(quadros)} quadro(s) ACL")
     print(f"  {captura.apagar()}")
+    for q in captura.queixas:
+        print(f"  QUEIXA DA CAPTURA: {q}")
     for q in queixas:
         print(f"  QUEIXA DO ARQUIVO: {q}")
     if handle < 0:
