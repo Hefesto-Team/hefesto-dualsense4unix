@@ -317,6 +317,40 @@ def test_o_trecho_de_dentro_da_funcao_nao_e_desta_pergunta(repo: Path) -> None:
     assert "alvo.py:10-11 (`segunda`" in csv.read_text(encoding="utf-8")
 
 
+def test_o_trecho_que_abraca_o_def_de_fora_anda_com_a_funcao(repo: Path) -> None:
+    """As duas primeiras linhas de ``segunda`` (10-11), e uma linha nasce em cima dela.
+
+    Hoje ``segunda`` mora em 11-13, e 10-11 ainda tem o ``def`` dentro: a
+    pergunta 2 passa verde, e a faixa abre numa linha de código que não é
+    dela. É a forma de ``coop.py:1032-1065`` (`_spawn_player`) e de
+    ``uinput_mouse.py:458-487`` (`_emit_move`), medidas em 25/09/2026.
+
+    MORDIDA: tire a pergunta 3 do ``_contem`` — a citação fica em 10-11, e esta
+    régua reprova.
+    """
+    csv = repo / "docs" / "data" / "mapa.csv"
+    csv.write_text(
+        csv.read_text(encoding="utf-8").replace(
+            "alvo.py:10-12 (`segunda`", "alvo.py:10-11 (`segunda`"
+        ),
+        encoding="utf-8",
+    )
+    _git(repo, "commit", "-q", "-am", "o trecho do começo")
+    alvo = repo / "src" / "hefesto_dualsense4unix" / "alvo.py"
+    alvo.write_text(
+        alvo.read_text(encoding="utf-8").replace("\ndef segunda", "\nOUTRO = 2\ndef segunda"),
+        encoding="utf-8",
+    )
+    _git(repo, "commit", "-q", "-am", "uma linha nasce em cima de segunda")
+    assert _validar(repo).returncode == 1, "a premissa: a pergunta 3 do validador vê a deriva"
+
+    _feitos, a_mao = _rodar(repo)
+
+    assert a_mao == [], a_mao
+    assert "alvo.py:11-12 (`segunda`" in csv.read_text(encoding="utf-8")
+    assert _validar(repo).returncode == 0
+
+
 def test_sem_escrever_nada_muda(repo: Path) -> None:
     _inserir_no_topo(repo, 3, commitar=True)
     antes = {p: p.read_bytes() for p in repo.rglob("*") if p.is_file() and ".git" not in p.parts}

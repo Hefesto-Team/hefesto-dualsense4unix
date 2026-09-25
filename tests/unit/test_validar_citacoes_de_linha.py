@@ -117,6 +117,42 @@ def test_o_nome_entre_parenteses_depois_do_endereco_tambem_e_promessa(
         f"a forma com parênteses não é conferida. Disse: {saida.stdout!r}")
 
 
+def _modulo_com_def(arvore: Path, antes: str) -> None:
+    """``core/q3.py``: ``antes`` na linha 1, e o ``def alvo`` na 2."""
+    (arvore / "src" / "hefesto_dualsense4unix" / "core" / "q3.py").write_text(
+        f"{antes}\ndef alvo():\n    return 1\n", encoding="utf-8")
+
+
+def test_a_faixa_que_abraca_o_def_comecando_em_codigo_de_fora_reprova(
+    arvore: Path,
+) -> None:
+    """A pergunta 3: a função desceu uma linha e a faixa não foi junto.
+
+    O ``def alvo`` continua dentro de ``:1-3``, e é por isso que a pergunta 2
+    passa verde — foi assim que ``coop.py:1032-1065`` ficou 26 linhas acima do
+    ``_spawn_player`` de 24 a 25/09/2026.
+
+    MORDIDA: tire o laço da pergunta 3 do ``confere_endereco`` — esta reprova.
+    """
+    _modulo_com_def(arvore, "VALOR = 1")
+    documento(arvore, "o corpo em `core/q3.py:1-3` (`alvo`)\n")
+    saida = rodar(arvore)
+    assert saida.returncode == 1, saida.stdout
+    assert "começa antes do `def alvo` (linha 2)" in saida.stdout, saida.stdout
+
+
+def test_o_comentario_de_cabecalho_do_def_nao_e_codigo_de_fora(arvore: Path) -> None:
+    """O outro lado: a faixa que abre no comentário que apresenta a função.
+
+    MORDIDA: tire a folga do comentário e da linha em branco do
+    ``abraca_de_fora`` — esta reprova.
+    """
+    _modulo_com_def(arvore, "# o cabeçalho de alvo")
+    documento(arvore, "o corpo em `core/q3.py:1-3` (`alvo`)\n")
+    saida = rodar(arvore)
+    assert saida.returncode == 0, saida.stdout
+
+
 def test_a_fonte_de_fora_da_arvore_e_ignorada(arvore: Path) -> None:
     """136 dos 204 endereços de `docs/protocol/` citam kernel, SDL e wine.
 
