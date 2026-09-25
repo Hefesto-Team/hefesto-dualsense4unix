@@ -125,16 +125,17 @@ def test_o_botao_do_mic_nao_muta_o_aparelho_de_terceiro() -> None:
     `common[9]` "faz o kernel parar de alternar na borda". É falso, e o fonte C
     desta árvore diz o contrário: o kernel alterna `ds->mic_muted` a partir do
     BIT DO BOTÃO no report de ENTRADA
-    (`assets/dkms/hid-playstation/hid-playstation.c:1630-1640`,
+    (`dualsense_parse_report` em `assets/dkms/hid-playstation/hid-playstation.c`,
     `ds_report->buttons[2] & DS_BUTTONS2_MIC_MUTE`) e não consulta nada que o
     userspace escreva. Ele continua alternando.
 
     O que se perde ao afirmar o byte é a LEGIBILIDADE da borda, e isso é
     consequência de uma ESCOLHA desta casa: o detector lê o mudo do FIRMWARE
-    (`status[1]` BIT(2), `core/physical_report_reader.py:186`), não o botão.
+    (`status[1]` BIT(2), `JACK_STATUS_OFFSET` em `core/physical_report_reader.py`),
+    não o botão.
     Fixar o `common[9]` cegaria o NOSSO leitor — e nem por completo, porque o
     keepalive é limitado à janela de confirmação de 2 s
-    (`core/backend_pydualsense.py:942-947`).
+    (`OUT_REPORT_KEEPALIVE_CONFIRMACAO_SEC`, em `core/backend_pydualsense.py`).
 
     Mordida: repor `toggle_default_source_mute` no laço — esta régua reprova.
     """
@@ -416,7 +417,7 @@ def test_o_probe_do_kernel_nao_conta_como_jogo() -> None:
 
     **No hardware, `_game_open = False` depois do probe NÃO ACONTECE.** O
     `hid-playstation` chama `hid_hw_open()` ao adotar o device, e isso dispara
-    o `UHID_OPEN` que liga `_game_open` (`uhid_gamepad.py:1542-1545`). O estado
+    o `UHID_OPEN` que liga `_game_open` (em `UhidDualSense._handle_event`). O estado
     que este teste monta à mão é justamente o que a máquina nunca apresenta.
 
     Some-se a graça de `_GAME_REPLICA_GRACE_S` = **0,5 s**, dimensionada para o
