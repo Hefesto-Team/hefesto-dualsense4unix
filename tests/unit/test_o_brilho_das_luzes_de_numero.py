@@ -501,3 +501,42 @@ def test_a_pilula_acesa_e_a_do_perfil_de_cada_controle() -> None:
     fileira = a04.fileira_de_brilhos_das_luzes("forte")
     assert fileira.count('class="on"') == 1
     assert 'class="on" data-gesto="brilho-luzes" data-luzes="forte"' in fileira
+
+
+def test_o_salvar_do_rodape_nao_apaga_o_brilho_das_luzes() -> None:
+    """O «Salvar» do rodapé grava o que está valendo — e não apaga o brilho.
+
+    Achado da conferência de 25/09/2026, a família do item 13 de 05/09 (*"o
+    Salvar os DESTRUÍA"*): a pílula grava o brilho no override DAQUELE
+    controle, e o Salvar remontava a seção `leds` do override com a cor viva
+    (`with_controller_leds`), trocando-a inteira — o Médio do P3 voltava ao
+    Fraco em silêncio. O global ia pelo mesmo caminho: o rascunho não tinha o
+    campo, e o `to_profile` o regravava no padrão.
+
+    MORDIDA: tire o `player_led_brightness` do que o `with_controller_leds`
+    preserva e o override reprova; tire-o do `_leds_draft_to_config` e o
+    global reprova.
+    """
+    from pacotes import rodape
+
+    from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
+
+    save_profile(_perfil("forte", P3="medio"), origem="regua")  # noqa-acento: chave ASCII
+    nome = "Régua do brilho das luzes"
+
+    from types import SimpleNamespace
+
+    ctx = SimpleNamespace(state={}, conectados=[
+        {"uniq": UNIQS[2], "lightbar_rgb": [0, 0, 255], "lightbar_on": True,
+         "lightbar_source": "sysfs"}])
+    draft = rodape._draft_do_ativo(nome, ctx)
+    gravado = draft.to_profile(nome, priority=load_profile(nome).priority)
+    dele = gravado.controllers[UNIQS[2]].leds
+    assert dele.lightbar == (0, 0, 255), "o Salvar deixou de gravar a cor viva"
+    assert dele.player_led_brightness == "medio" and (  # noqa-acento: chave ASCII
+        "player_led_brightness" in dele.model_fields_set), (
+        f"o Salvar deixou o P3 em {dele.player_led_brightness!r} "
+        f"(escrito: {sorted(dele.model_fields_set)}) — a pílula tinha gravado o Médio")
+    assert gravado.leds.player_led_brightness == "forte", (
+        f"o Salvar regravou o global em {gravado.leds.player_led_brightness!r}, e o "
+        f"perfil dizia Forte")

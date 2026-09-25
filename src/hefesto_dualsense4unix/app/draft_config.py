@@ -28,7 +28,7 @@ from pydantic import BaseModel, ConfigDict, Field
 # TYPE_CHECKING como o `Profile` abaixo) porque o pydantic precisa do valor na
 # hora de construir a classe.
 from hefesto_dualsense4unix.app.alvo_de_edicao import alvo_de_edicao
-from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX
+from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX, LedsConfig
 
 if TYPE_CHECKING:
     from hefesto_dualsense4unix.profiles.schema import Profile
@@ -100,6 +100,15 @@ class LedsDraft(BaseModel):
     player_leds: tuple[bool, bool, bool, bool, bool] = (False, False, False, False, False)
     mic_led: bool = False  # reservado V2
     auto_player_colors: bool = True  # COR-04 (default do schema: ligado)
+    #: O brilho das luzes de número (O-BRILHO-DAS-LUZES-DE-NUMERO-01, 25/09/2026)
+    #: — a PALAVRA do disco, com o padrão lido do esquema, que é o dono dele.
+    #: Só a seção GLOBAL o leva ao disco (`_leds_draft_to_config` com
+    #: `include_auto=True`); o de cada controle a janela não edita, e o
+    #: `with_controller_leds` o PRESERVA do override. Sem ele, o «Salvar»
+    #: regravava o padrão por cima do que a pílula tinha gravado.
+    player_led_brightness: str = str(
+        LedsConfig.model_fields["player_led_brightness"].default
+    )
 
 
 class RumbleDraft(BaseModel):
@@ -317,6 +326,9 @@ def _leds_config_to_draft(leds_cfg: Any) -> LedsDraft:
         lightbar_brightness=brightness_pct,
         player_leds=player_5,
         auto_player_colors=bool(getattr(leds_cfg, "auto_player_colors", True)),
+        player_led_brightness=str(getattr(
+            leds_cfg, "player_led_brightness",
+            LedsConfig.model_fields["player_led_brightness"].default)),
     )
 
 
@@ -360,6 +372,7 @@ def _leds_draft_to_config(
         kwargs["lightbar"] = rgb
     if include_auto:
         kwargs["auto_player_colors"] = leds.auto_player_colors
+        kwargs["player_led_brightness"] = leds.player_led_brightness
     if only_fields is not None:
         kwargs = {nome: val for nome, val in kwargs.items() if nome in only_fields}
     return LedsConfig(**kwargs)
@@ -1255,9 +1268,18 @@ class DraftConfig(BaseModel):
             return self.with_controller_fields_cleared(
                 uniq, "leds", {"lightbar", "lightbar_brightness", "player_leds"}
             )
-        return self._with_override_section(
-            uniq, "leds", _leds_draft_to_config(leds, only_fields=campos)
-        )
+        secao = _leds_draft_to_config(leds, only_fields=campos)
+        # O BRILHO DAS LUZES DE NÚMERO NÃO É DESTE ESCRITOR (25/09/2026): quem o
+        # grava é a pílula da linha LEDs, direto no override. A seção é trocada
+        # INTEIRA logo abaixo, e sem esta linha o «Salvar» do rodapé apagava o
+        # brilho que ela escolheu para o controle — medido na conferência da
+        # O-BRILHO-DAS-LUZES-DE-NUMERO-01.
+        antes = getattr(self.controller_override(uniq), "leds", None)
+        if antes is not None and "player_led_brightness" in antes.model_fields_set:
+            secao = secao.model_copy(
+                update={"player_led_brightness": antes.player_led_brightness}
+            )
+        return self._with_override_section(uniq, "leds", secao)
 
     def with_controller_triggers(
         self, uniq: str, triggers: TriggersDraft
