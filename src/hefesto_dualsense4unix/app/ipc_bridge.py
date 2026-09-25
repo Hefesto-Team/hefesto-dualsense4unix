@@ -1072,6 +1072,25 @@ def player_leds_set_detalhado(
     return _corpo_do_daemon("led.player_set", _payload_player_leds(bits, uniq))
 
 
+def player_led_brightness_set_detalhado(
+    brilho: str, uniq: str | None = None
+) -> dict[str, Any] | None:
+    """``led.player_brightness_set`` com a RESPOSTA do daemon (24/09/2026).
+
+    O brilho das cinco luzes de número — ``"fraco"``, ``"medio"`` ou
+    ``"forte"``, decisão dela (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`).
+    Nasce já na forma ``_detalhado``, pela lição do irmão
+    :func:`player_leds_set_detalhado`: um ``True`` só diria *"o daemon
+    respondeu"*, e a tela precisa saber ONDE pegou (``aplicado_em``) e onde
+    ficou guardado (``guardado_em``). ``uniq`` presente = só naquele
+    controle. ``None`` = daemon não respondeu.
+    """
+    payload: dict[str, Any] = {"brilho": brilho}
+    if uniq:
+        payload["uniq"] = uniq
+    return _corpo_do_daemon("led.player_brightness_set", payload)
+
+
 def apply_draft_detalhado(draft_dict: dict) -> dict | None:  # type: ignore[type-arg]
     """Envia ``profile.apply_draft`` e devolve a RESPOSTA INTEIRA do daemon.
 

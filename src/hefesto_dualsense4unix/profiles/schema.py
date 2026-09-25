@@ -379,6 +379,24 @@ class LedsConfig(BaseModel):
     # pode fazer sem o dado. Aditivo, sem migração; ATENÇÃO downgrade, mesma
     # nota do `auto_player_colors` (`extra="forbid"`).
     lightbar_para_o_numero: int | None = None
+    # O BRILHO DAS CINCO LUZES DE NÚMERO — decisão dela de 24/09/2026
+    # (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`): *"Fraco, Médio e Forte na
+    # linha LEDs, nascendo no Fraco"*. Quem enxerga pouco não tinha como
+    # aumentar, e quem se incomoda com luz não tinha como escolher.
+    #
+    # VALE NOS DOIS LUGARES, ao contrário dos dois campos acima: na seção
+    # GLOBAL é o brilho de todos os controles («Todos»), e dentro de um
+    # override por controle (`ControllerOverrides.leds`) é o daquele controle,
+    # que é o que a linha LEDs da aba Iluminação grava. O override só vale
+    # quando foi ESCRITO (`model_fields_set`), como os outros campos dele.
+    #
+    # A PALAVRA, e não o degrau do firmware: o `common[42]` é invertido (0 é o
+    # forte), e o disco dela diz o que a tela diz. A tradução é de
+    # `core/led_control.degrau_do_brilho_das_luzes`. `medio` sem acento porque
+    # é valor de máquina. Perfil antigo sem o campo valida com o Fraco, o
+    # brilho de antes da decisão — aditivo, sem migração; ATENÇÃO downgrade,
+    # mesma nota do `auto_player_colors` (`extra="forbid"`).
+    player_led_brightness: Literal["fraco", "medio", "forte"] = "fraco"
 
     @field_validator("lightbar")
     @classmethod

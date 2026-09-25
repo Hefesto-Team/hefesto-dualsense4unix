@@ -63,9 +63,12 @@ from __future__ import annotations
 
 from hefesto_dualsense4unix.core.ds_output_report import (
     COMMON_LEN,
+    COMMON_VALID_FLAG2,
     VALID_FLAG1_LIGHTBAR_CONTROL_ENABLE,
     VALID_FLAG1_PLAYER_INDICATOR_CONTROL_ENABLE,
+    VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE,
     build_bt_report,
+    build_usb_report,
 )
 
 #: Offsets dentro do payload ``common`` de 47 bytes (espelho do
@@ -75,6 +78,10 @@ COMMON_PLAYER_LEDS = 43
 COMMON_LIGHTBAR_R = 44
 COMMON_LIGHTBAR_G = 45
 COMMON_LIGHTBAR_B = 46
+#: O brilho das luzes de número (`led_brightness`, 0 alto · 1 médio · 2 baixo),
+#: que só vale com o `flag2` bit0 (`SET_PLAYER_LED_BRIGHTNESS`) ligado. Medido
+#: pelo olho dela nos dois transportes (BRILHO-DE-HARDWARE-01, 09/09/2026).
+COMMON_PLAYER_LED_BRIGHTNESS = 42
 
 #: Quanto se espera DEPOIS DA ÚLTIMA conexão nova antes de repintar.
 #:
@@ -107,10 +114,68 @@ def mascara_de_player_leds(padrao: tuple[bool, bool, bool, bool, bool]) -> int:
     return sum(1 << i for i, aceso in enumerate(padrao) if aceso)
 
 
+def common_das_luzes(
+    rgb: tuple[int, int, int] | None,
+    player_leds: tuple[bool, bool, bool, bool, bool] | None = None,
+    *,
+    brilho_das_luzes: int | None = None,
+) -> bytearray:
+    """O `common` MÍNIMO das luzes: a barra, o número e o brilho do número.
+
+    UM DONO PARA OS DOIS ENVELOPES — o `0x31` do rádio
+    (`build_bt_lightbar_report`) e o `0x02` do cabo
+    (`build_usb_lightbar_report`). Cada eixo entra SÓ quando há valor, pela
+    disciplina que a docstring do `build_bt_lightbar_report` explica.
+
+    O BRILHO DAS LUZES DE NÚMERO É O TERCEIRO EIXO — 24/09/2026, decisão dela
+    (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`). Ele liga o bit0 do `flag2`
+    e SÓ ele: o bit 0x02 (`LIGHTBAR_SETUP_CONTROL`) continua zerado, porque é
+    ele o que o `LIGHTBAR-BT-KEEPALIVE-01` (22/07) mediu travando a exibição. O
+    bit0 não trava — a bancada de 09/09/2026 o martelou a 10 Hz no rádio com a
+    barra acesa e ela julgou a barra a olho nos três degraus (ensaio
+    `painel-do-brilho-a-barra-nao-atenua-radio-0909`).
+    """
+    common = bytearray(COMMON_LEN)
+    flag1 = 0
+    if rgb is not None:
+        flag1 |= VALID_FLAG1_LIGHTBAR_CONTROL_ENABLE
+        common[COMMON_LIGHTBAR_R] = int(rgb[0]) & 0xFF
+        common[COMMON_LIGHTBAR_G] = int(rgb[1]) & 0xFF
+        common[COMMON_LIGHTBAR_B] = int(rgb[2]) & 0xFF
+    if player_leds is not None:
+        flag1 |= VALID_FLAG1_PLAYER_INDICATOR_CONTROL_ENABLE
+        common[COMMON_PLAYER_LEDS] = mascara_de_player_leds(player_leds) & 0xFF
+    if brilho_das_luzes is not None:
+        common[COMMON_VALID_FLAG2] |= VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE
+        common[COMMON_PLAYER_LED_BRIGHTNESS] = int(brilho_das_luzes) & 0xFF
+    common[1] = flag1  # common[1] é o valid_flag1 ([0] é o flag0)
+    return common
+
+
+def build_usb_lightbar_report(
+    rgb: tuple[int, int, int] | None,
+    player_leds: tuple[bool, bool, bool, bool, bool] | None = None,
+    *,
+    brilho_das_luzes: int | None = None,
+) -> bytes:
+    """O mesmo `common` mínimo no envelope `0x02` do CABO.
+
+    Nasceu para o brilho das luzes de número (24/09/2026): pelo cabo o número
+    vai pela classe LED do kernel, e o `hid_playstation` NUNCA liga o `flag2`
+    bit0 nem escreve o `led_brightness` (`assets/dkms/hid-playstation/
+    hid-playstation.c`, o `valid_flag2` só recebe `COMPATIBLE_VIBRATION2` e o
+    `LIGHTBAR_SETUP` do reset). O nó de LED é 0/1 por lâmpada: brilho de três
+    degraus não passa por ele. Quem o escolhe é este report, escrito ao lado.
+    """
+    return bytes(build_usb_report(
+        common_das_luzes(rgb, player_leds, brilho_das_luzes=brilho_das_luzes)))
+
+
 def build_bt_lightbar_report(
     rgb: tuple[int, int, int] | None,
     player_leds: tuple[bool, bool, bool, bool, bool] | None = None,
     *,
+    brilho_das_luzes: int | None = None,
     seq: int = 0,
 ) -> bytes:
     """Report ``0x31`` MÍNIMO que pinta a lightbar e o número do jogador.
@@ -128,11 +193,12 @@ def build_bt_lightbar_report(
     O que fica ZERADO importa tanto quanto o que é escrito:
 
     - ``valid_flag0`` zerado — não pede vibração, gatilho nem áudio;
-    - ``valid_flag2`` zerado — em particular o
-      ``LIGHTBAR_SETUP_CONTROL_ENABLE`` (0x02), que o
+    - ``valid_flag2`` sem o ``LIGHTBAR_SETUP_CONTROL_ENABLE`` (0x02), que o
       ``LIGHTBAR-BT-KEEPALIVE-01`` (22/07) mediu: reengatá-lo fora da UMA vez
       por conexão que o kernel faz **trava a exibição no firmware** (o
-      registrador aceita a cor, o sysfs mostra, e a barra fica apagada);
+      registrador aceita a cor, o sysfs mostra, e a barra fica apagada). O
+      bit0 (o brilho das luzes de número) só sai quando ``brilho_das_luzes``
+      vem — ver `common_das_luzes`;
     - ``valid_flag1`` sem o ``RELEASE_LEDS`` (0x08), que o
       ``LIGHTBAR-BT-CULPADO-01`` (03/08) provou travar a barra 7 de 7 dentro da
       janela pós-conexão.
@@ -143,17 +209,7 @@ def build_bt_lightbar_report(
     descartado pelo firmware, e o sintoma é o pior de todos: o log diz
     "escrito" e a barra não muda.
     """
-    common = bytearray(COMMON_LEN)
-    flag1 = 0
-    if rgb is not None:
-        flag1 |= VALID_FLAG1_LIGHTBAR_CONTROL_ENABLE
-        common[COMMON_LIGHTBAR_R] = int(rgb[0]) & 0xFF
-        common[COMMON_LIGHTBAR_G] = int(rgb[1]) & 0xFF
-        common[COMMON_LIGHTBAR_B] = int(rgb[2]) & 0xFF
-    if player_leds is not None:
-        flag1 |= VALID_FLAG1_PLAYER_INDICATOR_CONTROL_ENABLE
-        common[COMMON_PLAYER_LEDS] = mascara_de_player_leds(player_leds) & 0xFF
-    common[1] = flag1  # common[1] é o valid_flag1 ([0] é o flag0)
+    common = common_das_luzes(rgb, player_leds, brilho_das_luzes=brilho_das_luzes)
     return bytes(build_bt_report(common, seq=seq))
 
 
@@ -163,7 +219,10 @@ __all__ = [
     "COMMON_LIGHTBAR_G",
     "COMMON_LIGHTBAR_R",
     "COMMON_PLAYER_LEDS",
+    "COMMON_PLAYER_LED_BRIGHTNESS",
     "NOME_DO_GATILHO",
     "build_bt_lightbar_report",
+    "build_usb_lightbar_report",
+    "common_das_luzes",
     "mascara_de_player_leds",
 ]

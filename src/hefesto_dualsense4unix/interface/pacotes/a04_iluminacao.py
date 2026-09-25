@@ -3278,6 +3278,75 @@ def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     return None
 
 
+def _com_o_brilho_das_luzes_gravado(prof: Any, uniq: str, palavra: str) -> Any:
+    """O perfil com o brilho das luzes DESTE controle trocado, ou `None`.
+
+    O MOLDE É O DO `_com_o_brilho_gravado`, e pelas mesmas razões: o alvo é o
+    override do controle (cada coluna é um controle, e a fita desta aba é
+    inerte); a fusão é por campo, para não apagar a cor que ela escolheu; e
+    `None` quando nada mudou, para não criar backup por um clique na pílula que
+    já estava acesa. Só o campo clicado entra no `model_fields_set` — é o que
+    faz `_controllers_to_specs` levá-lo ao aparelho sem densificar o resto.
+    """
+    from hefesto_dualsense4unix.profiles.schema import ControllerOverrides, LedsConfig
+
+    chave = chave_do_override(uniq)
+    atuais = dict(prof.controllers or {})
+    dele = atuais.get(chave) or ControllerOverrides()
+    antes = dele.leds
+    if antes is None:
+        novos = LedsConfig(player_led_brightness=palavra)
+    else:
+        if ("player_led_brightness" in antes.model_fields_set
+                and antes.player_led_brightness == palavra):
+            return None
+        novos = antes.model_copy(update={"player_led_brightness": palavra})
+    atuais[chave] = dele.model_copy(update={"leds": novos})
+    return prof.model_copy(update={"controllers": atuais})
+
+
+@gesto("04-iluminacao.html", GESTO_DO_BRILHO_DAS_LUZES, grava="save_profile")
+def brilho_luzes(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """Ela clicou numa pílula da linha LEDs: Fraco, Médio ou Forte.
+
+    DECISÃO DELA, 24/09/2026 (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`):
+    *"Fraco, Médio e Forte na linha LEDs, nascendo no Fraco"*.
+
+    OS DOIS TEMPOS DO TRILHO DE BRILHO, na mesma ordem e pela mesma razão
+    (`brilho`, logo acima): esta interface não tem rascunho, e a pílula acesa é
+    lida do PERFIL a cada tique — sem gravar, ela voltaria sozinha no tique
+    seguinte. Então: (1) o DISCO recebe a palavra no override DESTE controle;
+    (2) o APARELHO recebe o degrau, só neste controle (`uniq`), pelo
+    `led.player_brightness_set`, que o leva ao cabo e ao rádio pelos caminhos
+    do número.
+
+    ESCREVE NO DISCO DELA, e por isso declara `grava=` — a prova botão a botão
+    não o clica sozinha.
+    """
+    from hefesto_dualsense4unix.core.led_control import BRILHOS_DAS_LUZES
+
+    uniq = _uniq(o)
+    if not uniq:
+        raise ValueError("brilho-luzes: o clique não disse em qual controle")
+    palavra = str(o.get("luzes") or "").strip()
+    if palavra not in BRILHOS_DAS_LUZES:
+        raise ValueError(
+            f"brilho-luzes: a pílula mandou {palavra!r}, e as palavras são "
+            f"{', '.join(BRILHOS_DAS_LUZES)}")
+    nome = perfil.nome_do_ativo(ctx.state).strip()
+    if not nome:
+        raise RuntimeError(
+            "não há perfil ativo agora, e o brilho das luzes é do perfil — não "
+            "da máquina. Escolha um perfil na aba Perfis.")
+    loader = perfil._com_o_src()
+    novo = _com_o_brilho_das_luzes_gravado(loader.load_profile(nome), uniq, palavra)
+    if novo is not None:
+        loader.save_profile(novo, origem="interface-nova")
+    if p.player_led_brightness_set_detalhado(palavra, uniq=uniq) is None:
+        raise RuntimeError(sem_resposta_do_daemon())
+    return None
+
+
 def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
                     c: dict[str, Any]) -> tuple[int, int, int]:
     """A cor que ESTE controle está acendendo agora — a que o desligamento grava.
@@ -3909,8 +3978,11 @@ def player(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 #: assim: o `player_leds_set` devolve `bool`, e um `True` dele significa só *"o
 #: daemon respondeu"* — foi com um `aplicado_em` desses que a medição da mesa
 #: dela mostrou duas lâmpadas paradas. Ver `_acender_o_numero`.
+#: A PORTA DO BRILHO DAS LUZES DE NÚMERO nasceu `_detalhado` em 24/09/2026,
+#: pela mesma lição das duas de cima. Ver `brilho_luzes`.
 PONTE = {"led_set_detalhado", "identity_number_set",
-         "player_leds_set_detalhado", "chamar", "profile_switch"}
+         "player_leds_set_detalhado", "player_led_brightness_set_detalhado",
+         "chamar", "profile_switch"}
 #: `coop.sync` É O ÚNICO JEITO DE MOVER AS LÂMPADAS COM O CO-OP LIGADO —
 #: medido, e o porquê está em `_acender_o_numero`.
 #:
@@ -3974,7 +4046,13 @@ PAGINA = "04-iluminacao.html"
 #: E O PISO NÃO PODE SUBIR SEM ELA: cada degrau de volta é repor um botão que
 #: ela mandou tirar, em duas ordens diferentes do mesmo dia. Quem for mexer
 #: aqui lê primeiro esta nota.
-PISO_DA_ABA = 6
+#:
+#: 6 → 7 EM 24/09/2026, E É ELA QUEM O SOBE: as três pílulas do brilho das
+#: luzes de número (`brilho-luzes`), decisão dela
+#: (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`): *"Fraco, Médio e Forte na
+#: linha LEDs, nascendo no Fraco"*. Não é nenhum dos botões que ela mandou
+#: tirar — aqueles mexiam no DESENHO das lâmpadas; este muda o BRILHO delas.
+PISO_DA_ABA = 7
 PROVAS = [
     {"pagina": PAGINA, "gesto": "cor", "clique": {"hex": "#FF8000"},  # (noqa-acento) id
      "chama": [("led_set_detalhado", [(255, 128, 0)],
@@ -4014,10 +4092,12 @@ PROVAS = [
     # ninguém — quem escreve as cinco luzes agora é só o `player`, uma linha
     # acima, e a prova dele continua logo aqui em cima.
     #
-    # `brilho` E `auto-cores` NÃO ESTÃO AQUI, e a ausência é declarada: os dois
-    # ESCREVEM NO DISCO (`loader.save_profile`), e esta régua roda com o perfil
-    # ATIVO da máquina em que ela roda. Uma prova deles aqui gravaria no perfil
-    # de quem rodou o teste — que é o oposto do que uma régua faz.
-    # Quem os morde é `tests/unit/test_a_aba_04_iluminacao_fecha_as_linhas.py`,
-    # com a pasta de perfis desviada para um lar de mentira.
+    # `brilho`, `auto-cores` E `brilho-luzes` NÃO ESTÃO AQUI, e a ausência é
+    # declarada: os três ESCREVEM NO DISCO (`loader.save_profile`), e esta régua
+    # roda com o perfil ATIVO da máquina em que ela roda. Uma prova deles aqui
+    # gravaria no perfil de quem rodou o teste — que é o oposto do que uma
+    # régua faz. Quem morde os dois primeiros é
+    # `tests/unit/test_a_aba_04_iluminacao_fecha_as_linhas.py`, e o terceiro,
+    # `tests/unit/test_o_brilho_das_luzes_de_numero.py`, os dois com a pasta de
+    # perfis desviada para um lar de mentira.
 ]

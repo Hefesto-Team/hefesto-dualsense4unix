@@ -61,6 +61,9 @@ led_set = _b.led_set
 led_set_detalhado = _b.led_set_detalhado
 player_leds_set = _b.player_leds_set
 player_leds_set_detalhado = _b.player_leds_set_detalhado
+#: O brilho das cinco luzes de número — a linha LEDs da aba Iluminação
+#: (O-BRILHO-DAS-LUZES-DE-NUMERO-01, 24/09/2026).
+player_led_brightness_set_detalhado = _b.player_led_brightness_set_detalhado
 identity_number_set = _b.identity_number_set
 
 trigger_set = _b.trigger_set
