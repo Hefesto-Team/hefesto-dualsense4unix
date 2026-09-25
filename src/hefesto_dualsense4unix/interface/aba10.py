@@ -82,10 +82,11 @@ from hefesto_dualsense4unix.profiles.simple_match import (  # noqa: E402
 # O QUE O PERFIL GUARDA DE CADA CONTROLE — e isto NÃO é escolha de desenho.
 #
 # `Profile.controllers` é um mapa `{ID da peça: ControllerOverrides}`
-# (`profiles/schema.py:1867`), e a classe tem QUATRO campos HOJE
-# (`profiles/schema.py:1675-1678`):
+# (`profiles/schema.py:1867`), e a classe tem OITO campos hoje
+# (`profiles/schema.py:1675-1719`), que a coluna desenha todos
+# (`a10_perfis.SECOES_DA_COLUNA`):
 #
-#     leds  ·  triggers  ·  rumble  ·  speaker
+#     leds · triggers · rumble · speaker · mic · sensores · mascara · movimento
 #
 # E A TELA MOSTRA CINCO — decisão dela, 03/09/2026, decisão nº20:
 # **o microfone vira o quinto ajuste por controle.** A razão é dela e é o canal:
@@ -105,10 +106,9 @@ from hefesto_dualsense4unix.profiles.simple_match import (  # noqa: E402
 # `set_microphone_mute(uniq=…)`), faltando três costuras. *"O item mais caro da
 # lista virou o mais barato."*
 #
-# O QUINTO NASCE APAGADO EM TODO PERFIL REAL, e isso não é defeito: enquanto
-# `ControllerOverrides.mic` não existir, `perfis_web._secoes_do_controle` não
-# devolve a chave, o pacote lê `None` e a coluna fica no estado "herda" — que é
-# a verdade. A tela está pronta para o campo; ela não o inventa.
+# O `mic` entrou em `ControllerOverrides` em 03/09 (`3f757b77d`); a `mascara`
+# em 09/09 (`7541d468e`). Quem só herda fica no estado "herda" — que é a
+# verdade.
 #
 # Campo `None` = **sem opinião**: aquele controle herda a seção global do perfil
 # (merge POR CAMPO, PERFIL-01). É por isso que a coluna tem dois estados e não
@@ -119,8 +119,8 @@ from hefesto_dualsense4unix.profiles.simple_match import (  # noqa: E402
 # A lista abaixo é uma TRADUÇÃO da classe mais a decisão nº20, não uma segunda
 # verdade: quem a compara com o esquema é
 # `tests/unit/test_a_coluna_de_ajuste_proprio_da_aba10_e_dado.py`, que exige que
-# toda seção desenhada exista em `perfis_web.SECOES_POR_CONTROLE` — com o `mic`
-# isento ENQUANTO o esquema não o tiver, e cobrado no dia em que tiver.
+# toda seção desenhada exista em `perfis_web.SECOES_POR_CONTROLE`, que nasce
+# da própria classe.
 #
 # NÃO HÁ MAIS DICA POR CÉLULA — decisão dela, 03/09/2026, decisão nº4:
 # *"Meu Deus melhor nenhuma assim. Auto falante é auto falante, gatilho é
