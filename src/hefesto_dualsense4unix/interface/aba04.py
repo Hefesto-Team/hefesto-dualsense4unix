@@ -1313,10 +1313,29 @@ def coluna(c):
     # eram duas escritas, o desenho e o produto podiam divergir sem ninguém ver
     # — e o X do vizinho, que só o pacote sabe calcular, nunca chegaria aqui.
     #
-    # NO DESENHO NÃO HÁ VIZINHO A PROTEGER: a bancada é uma mesa fixa, e um X
-    # cravado no HTML ficaria na tela dela para sempre. O dicionário vazio é a
-    # forma honesta de dizer "nenhuma cor tomada, ainda".
-    tons = _pacote04.fileira_de_tons(cor if ligado else "", {}, "            ",
+    # O DESENHO MOSTRA O X DO VIZINHO — 24/09/2026, A-MARCA-DA-COR-NAO-SOME-01.
+    # Achado por ela na foto da documentação (`aba-04-iluminacao.png`, que é
+    # esta página): o P1 e o P2 da mesa do desenho estão ligados, e nenhuma das
+    # duas fileiras mostrava o X da cor do outro — o desenho dizia menos que o
+    # produto sobre a regra dela (COR-X-01). O dicionário ia vazio com a razão
+    # *"um X cravado no HTML ficaria na tela dela para sempre"*, e o FATO CAIU
+    # em 23/09 (O-LUGAR-VAZIO-DIZ-O-QUE-O-DESENHO-DIZ-01): a coluna ligada tem
+    # a fileira reescrita pelo pacote a cada tique (alvo `html`), e o lugar que
+    # esvazia recebe a fileira do lugar vazio do desenho — a do P3 e do P4, sem
+    # X nenhum (`ligado=False`). O X daqui só vive até a primeira pintura, como
+    # a borda e o hexadecimal do lado.
+    #
+    # O DONO É A MESA DO DESENHO (`DONOS_NA_MESA`, só quem está ligado), e a
+    # dica diz só o número — a forma curta do `_quem_e` do pacote. O nome do
+    # plástico ficaria congelado no `title` até a primeira pintura, e dica que
+    # nomeia controle do desenho é o que
+    # `test_nenhuma_dica_congelada_do_miolo_nomeia_um_controle` reprova. O
+    # plástico vai vazio pela mesma razão: o X é preto desde 09/09, e cor de
+    # aparelho cravada na bancada é o que `check_a_cor_vem_do_aparelho` reprova.
+    tomadas = {} if not ligado else {
+        luz(d["jogador"]): {"nome": f'P{d["jogador"]}', "plastico": ""}
+        for d in DONOS_NA_MESA.values() if d["pref"] != p}
+    tons = _pacote04.fileira_de_tons(cor if ligado else "", tomadas, "            ",
                                      ligado=ligado)
 
     # ---- O QUE O `conectado` DECIDE, peça por peça ----
