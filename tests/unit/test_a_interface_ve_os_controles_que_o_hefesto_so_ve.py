@@ -171,12 +171,26 @@ def test_a_jogar_apaga_a_secao_quando_nao_ha_externo() -> None:
         "a regra que esconde o marcador saiu do CSS da aba 01")
 
 
+def _a_saida_estavel() -> str:
+    """O fim do aviso do `hid-nintendo`, com a palavra PERGUNTADA ao dono.
+
+    Em 24/09/2026 (A-GESTAO-SEGUE-O-JOGADOR-01, conferência) o aviso passou de
+    «por cabo é estável» para a palavra de tela do transporte, a decisão dela
+    de 21/09; digitar «cabo» aqui prenderia a palavra que ela revogou.
+    """
+    from hefesto_dualsense4unix.app.actions.home_actions import (
+        palavra_do_transporte,
+    )
+
+    return f"pelo {palavra_do_transporte('usb')} é estável"
+
+
 def test_a_jogar_avisa_a_armadilha_do_driver_so_no_nintendo() -> None:
     """O aviso do `hid-nintendo` nasce no Pro por rádio, e em mais ninguém."""
     do_pro = jogar.pacote(_ctx([UM_PRO]))["externos"]
-    assert "por cabo é estável" in do_pro
+    assert _a_saida_estavel() in do_pro
     do_8bitdo = jogar.pacote(_ctx([UM_8BITDO]))["externos"]
-    assert "por cabo é estável" not in do_8bitdo
+    assert _a_saida_estavel() not in do_8bitdo
 
 
 def test_a_jogar_nao_inventa_cor_de_plastico_para_o_externo() -> None:
@@ -218,7 +232,7 @@ def test_a_conexoes_lista_o_externo() -> None:
     # A MESMA FRASE DA ABA 01, PELO MESMO DONO: é isso que impede as duas abas
     # de discordarem sobre o mesmo aparelho.
     assert "só vê" in html
-    assert "por cabo é estável" in html
+    assert _a_saida_estavel() in html
 
 
 def test_a_conexoes_apaga_a_lista_quando_nao_ha_externo() -> None:

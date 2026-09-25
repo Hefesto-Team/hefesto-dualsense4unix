@@ -237,14 +237,20 @@ def nintendo_bt_warning(entry: dict[str, Any]) -> str | None:
     """Aviso honesto quando é um controle Nintendo-mode POR Bluetooth.
 
     ``None`` quando não se aplica. O texto NÃO promete cura pelo Hefesto — a
-    morte é do driver ``hid-nintendo`` do kernel; a saída estável é cabo.
+    morte é do driver ``hid-nintendo`` do kernel; a saída estável é o USB.
+
+    A PALAVRA DO TRANSPORTE NA TELA É USB E BT — decisão dela de 21/09/2026 (a
+    I9 revogada). Esta frase sai na linha do externo da aba 08 e da aba 01, ao
+    lado de ``palavra_do_transporte`` («BT · o Hefesto só vê»), e dizia «Por
+    Bluetooth… por cabo» — duas palavras de outra língua para o mesmo transporte
+    na mesma linha (A-GESTAO-SEGUE-O-JOGADOR-01, conferência, 24/09/2026).
     """
     vid = str(entry.get("vid") or "").lower()
     bus = str(entry.get("bus") or "").lower()
     if vid in _NINTENDO_MODE_VIDS and bus in ("bluetooth", "bt"):
         return (
-            "Por Bluetooth o modo Switch pode travar (driver do kernel); "
-            "por cabo é estável."
+            "Pelo BT o modo Switch pode travar (driver do kernel); "
+            "pelo USB é estável."
         )
     return None
 

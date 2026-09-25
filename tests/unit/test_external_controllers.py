@@ -140,9 +140,16 @@ class TestMarcaPorOUI:
 
 class TestAvisoBluetooth:
     def test_nintendo_bt_avisa(self) -> None:
+        # A PALAVRA DO TRANSPORTE SE PERGUNTA AO DONO (decisão dela de 21/09:
+        # USB e BT na tela). Digitar `"cabo"` aqui prendia a palavra revogada.
+        from hefesto_dualsense4unix.app.actions.home_actions import (
+            palavra_do_transporte as palavra,
+        )
+
         aviso = nintendo_bt_warning(_8BITDO_BT)
         assert aviso is not None
-        assert "cabo" in aviso  # aponta a saída estável
+        assert f"pelo {palavra('usb')}" in aviso  # aponta a saída estável
+        assert palavra("bt") in aviso  # e diz o transporte que trava
         assert "driver" in aviso  # deixa claro que a morte é do kernel
         # HARM-GUI-01: aviso de UMA frase — a parede de texto foi vetada.
         assert len(aviso) < 120
