@@ -169,7 +169,10 @@ class TestOBancoDoUdevDizComoONoNasceu:
     def test_uma_regra_depois_da_73_seat_late_reabre_na_troca_de_sessao(
         self, tmp_path: Path
     ) -> None:
-        tardia = 'KERNEL=="hidraw*", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0ce6", TAG+="uaccess"\n'
+        tardia = (
+            'KERNEL=="hidraw*", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0ce6", '
+            'TAG+="uaccess"\n'
+        )
         etc, usr = _regras(tmp_path, nossa=NOVA, extra={"99-tardia.rules": tardia})
         _no(tmp_path, "hidraw4", "237:4", "0003:0000054C:00000CE6", BANCO_ABERTO)
         saida = _chamar(
