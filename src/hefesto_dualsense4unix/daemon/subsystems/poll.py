@@ -173,15 +173,15 @@ def _o_proximo_da_fila(daemon: object) -> tuple[str, frozenset[str]] | None:
         return None
     try:
         vivos = coop.live_snapshots()
+        if not isinstance(vivos, dict) or not vivos:
+            return None
         numeros = coop.numeros_de_jogador()
+        sem_numero = float("inf")
+        mac = min(vivos, key=lambda m: numeros.get(m, sem_numero))
+        return mac, frozenset(vivos[mac].buttons_pressed)
     except Exception as exc:
         logger.debug("atalhos_na_vaga_sem_fila", err=str(exc))
         return None
-    if not isinstance(vivos, dict) or not vivos:
-        return None
-    sem_numero = float("inf")
-    mac = min(vivos, key=lambda m: numeros.get(m, sem_numero))
-    return mac, frozenset(vivos[mac].buttons_pressed)
 
 
 def _anotar_a_mao(daemon: object, na_vaga: str | None) -> None:
