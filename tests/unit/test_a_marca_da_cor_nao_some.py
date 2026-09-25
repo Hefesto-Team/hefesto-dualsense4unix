@@ -305,7 +305,7 @@ class Mesa:
 
         Pelo disco, e não pelo gesto `auto-cores`: o gesto grava a cor de cada
         conectado, e a régua precisa do controle que NÃO tem cor gravada — o
-        que chega depois do interruptor, ou o de um perfil feito por outra
+        que chega depois do interruptor, ou o de um perfil gravado por outra
         porta. A troca MANUAL solta a camada viva dos cliques; sobra o disco.
         """
         from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
