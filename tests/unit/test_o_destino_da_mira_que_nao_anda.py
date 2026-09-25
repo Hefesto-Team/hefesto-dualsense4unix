@@ -111,7 +111,7 @@ def _perfil_escrito_a_mao(
     *, mesa: dict[str, Any] | None = None, por_controle: dict[int, dict[str, Any]] | None = None
 ) -> dict[str, Any]:
     """O perfil como ela o escreveria num editor de texto: um dicionário cru."""
-    bruto: dict[str, Any] = {"name": "Escrito a mao", "match": {"type": "any"}}
+    bruto: dict[str, Any] = {"name": "Feito no editor", "match": {"type": "any"}}
     if mesa is not None:
         bruto["movimento"] = mesa
     if por_controle:
@@ -140,8 +140,8 @@ def test_o_mouse_escrito_a_mao_vira_o_analogico_direito(perfis: Path) -> None:
     # O ARQUIVO À MÃO: o caminho que o JSON dela faz de verdade.
     bruto = _perfil_escrito_a_mao(mesa={"destino": "mouse", "gatilho": "l2"},
                                   por_controle={3: {"destino": "mouse"}})
-    (perfis / "escrito_a_mao.json").write_text(json.dumps(bruto), encoding="utf-8")
-    lido = load_profile("escrito_a_mao")
+    (perfis / "feito_no_editor.json").write_text(json.dumps(bruto), encoding="utf-8")
+    lido = load_profile("feito_no_editor")
     assert lido.movimento is not None
     assert (lido.movimento.destino, lido.movimento.gatilho) == ("analogico_direito", "l2")
     dele = (lido.controllers or {})[_CHAVE[3]].movimento
@@ -504,7 +504,7 @@ _MESAS = {"A": {1: "usb", 2: "bt", 3: "bt", 4: "usb"},
           "B": {1: "bt", 2: "usb", 3: "usb", 4: "bt"}}
 
 
-def _estado_da_06(modo: dict[str, Any], mesa: str, primario: int,
+def _estado_da_06(modo: dict[str, Any], mesa: str, quem_navega: int,
                   com_a_mira: set[int]) -> dict[str, Any]:
     """O `state_full` da 06: quatro controles, o primário marcado, a Mira acesa
     em quem a régua escolher (o bloco `mira` que o `_merge_mira` publica)."""
@@ -513,7 +513,7 @@ def _estado_da_06(modo: dict[str, Any], mesa: str, primario: int,
         acesa = n in com_a_mira
         controles.append({
             "uniq": _P[n], "player": n, "player_slot": n, "index": n - 1,
-            "connected": True, "is_primary": n == primario, "transport": transporte,
+            "connected": True, "is_primary": n == quem_navega, "transport": transporte,
             "battery_pct": 80,
             "mira": {"ligada": acesa, "destino": "analogico_direito" if acesa else "nenhum"},
         })
@@ -550,13 +550,13 @@ def _via(mesa: str, n: int) -> str:
 
 #: Os casos da matriz: cada jogador fora do posto de quem navega, nos dois
 #: transportes. O P1 só sai do posto com o P2 navegando.
-_CASOS = [(mesa, primario, n) for mesa in _MESAS
-          for primario, jogadores in ((1, (2, 3, 4)), (2, (1,))) for n in jogadores]
+_CASOS = [(mesa, quem_navega, n) for mesa in _MESAS
+          for quem_navega, jogadores in ((1, (2, 3, 4)), (2, (1,))) for n in jogadores]
 
 
-@pytest.mark.parametrize(("mesa", "primario", "jogador"), _CASOS)
+@pytest.mark.parametrize(("mesa", "quem_navega", "jogador"), _CASOS)
 def test_o_cartao_de_quem_nao_navega_diz_o_cursor_com_a_mira(
-    mesa: str, primario: int, jogador: int,
+    mesa: str, quem_navega: int, jogador: int,
 ) -> None:
     """Na Navegação, com o mouse ligado, a Mira acesa no jogador N: o cartão dele
     diz «Move o cursor», o de quem navega diz «Navega o PC» e os outros dois,
@@ -565,12 +565,12 @@ def test_o_cartao_de_quem_nao_navega_diz_o_cursor_com_a_mira(
     MORDIDA: devolva sempre «Só a janela» em `linha_do_cartao` para quem não
     navega e os oito casos reprovam.
     """
-    estado = _estado_da_06(_NAVEGACAO, mesa, primario, {jogador})
+    estado = _estado_da_06(_NAVEGACAO, mesa, quem_navega, {jogador})
     linhas = _linhas_do_pacote(estado)
     for n, linha in linhas.items():
-        papel = (_PAPEL_QUE_NAVEGA if n == primario
+        papel = (_PAPEL_QUE_NAVEGA if n == quem_navega
                  else _PAPEL_DO_CURSOR if n == jogador else _PAPEL_SO_A_JANELA)
-        assert linha == f"{_via(mesa, n)} • {papel}", (mesa, primario, jogador, linhas)
+        assert linha == f"{_via(mesa, n)} • {papel}", (mesa, quem_navega, jogador, linhas)
     carga = _a_carga_da_06(estado)
     assert "bolinha" not in carga["colunas"][f"p{jogador}"]["navega"]
 
@@ -655,9 +655,9 @@ def _roteiro(cenarios: list[tuple[str, dict[str, Any]]]) -> str:
 
 
 def _cenarios_da_pagina() -> list[tuple[str, dict[str, Any]]]:
-    cenarios = [(f"{mesa}-{primario}-{n}",
-                 _a_carga_da_06(_estado_da_06(_NAVEGACAO, mesa, primario, {n})))
-                for mesa, primario, n in _CASOS]
+    cenarios = [(f"{mesa}-{quem_navega}-{n}",
+                 _a_carga_da_06(_estado_da_06(_NAVEGACAO, mesa, quem_navega, {n})))
+                for mesa, quem_navega, n in _CASOS]
     cenarios.append(("nativo", _a_carga_da_06(_estado_da_06(_NATIVO, "A", 1, {1, 2, 3, 4}))))
     return cenarios
 
@@ -674,7 +674,7 @@ def renderizada() -> dict[str, dict[str, dict[str, str | None]]]:
         pytest.skip("sem sessão gráfica — o WebKit não abre")
     roteiro = _roteiro(_cenarios_da_pagina())
     medidas: dict[str, dict[str, dict[str, str | None]]] = {}
-    for nome, pagina in _PAGINAS.items():
+    for nome, onde in _PAGINAS.items():
         saiu: list[str] = []
         janela = Gtk.OffscreenWindow()
         view = WebKit2.WebView()
@@ -703,7 +703,7 @@ def renderizada() -> dict[str, dict[str, dict[str, str | None]]]:
                 v.evaluate_javascript(_bootstrap(), -1, None, None, None, instalou)
 
         view.connect("load-changed", carregou)
-        view.load_uri(pagina.as_uri())
+        view.load_uri(onde.as_uri())
         guarda = GLib.timeout_add(20000, Gtk.main_quit)
         try:
             Gtk.main()
@@ -716,11 +716,11 @@ def renderizada() -> dict[str, dict[str, dict[str, str | None]]]:
     return medidas
 
 
-@pytest.mark.parametrize("pagina", sorted(_PAGINAS))
-@pytest.mark.parametrize(("mesa", "primario", "jogador"), _CASOS)
+@pytest.mark.parametrize("onde", sorted(_PAGINAS))
+@pytest.mark.parametrize(("mesa", "quem_navega", "jogador"), _CASOS)
 def test_a_pagina_renderizada_diz_o_cursor(
     renderizada: dict[str, dict[str, dict[str, str | None]]],
-    pagina: str, mesa: str, primario: int, jogador: int,
+    onde: str, mesa: str, quem_navega: int, jogador: int,
 ) -> None:
     """A carga do pacote pintada pelo BOOTSTRAP do piloto, na bancada e na
     publicada: o cartão do jogador N diz «Move o cursor», do P1 ao P4, USB e BT.
@@ -728,17 +728,17 @@ def test_a_pagina_renderizada_diz_o_cursor(
     MORDIDA: a mesma do pacote; e tire o `data-hef-alvo="html"` da linha do
     cartão no gerador, e a bancada reprova (a linha vira texto cru).
     """
-    lido = renderizada[pagina][f"{mesa}-{primario}-{jogador}"]
+    lido = renderizada[onde][f"{mesa}-{quem_navega}-{jogador}"]
     for n in (1, 2, 3, 4):
-        papel = (_PAPEL_QUE_NAVEGA if n == primario
+        papel = (_PAPEL_QUE_NAVEGA if n == quem_navega
                  else _PAPEL_DO_CURSOR if n == jogador else _PAPEL_SO_A_JANELA)
-        assert lido[f"p{n}"] == f"{_via(mesa, n)} • {papel}", (pagina, mesa, lido)
+        assert lido[f"p{n}"] == f"{_via(mesa, n)} • {papel}", (onde, mesa, lido)
 
 
-@pytest.mark.parametrize("pagina", sorted(_PAGINAS))
+@pytest.mark.parametrize("onde", sorted(_PAGINAS))
 def test_no_nativo_a_pagina_renderizada_nao_fala_do_cursor(
-    renderizada: dict[str, dict[str, dict[str, str | None]]], pagina: str,
+    renderizada: dict[str, dict[str, dict[str, str | None]]], onde: str,
 ) -> None:
     """Com a Mira acesa nos quatro, no Nativo: ninguém diz «Move o cursor»."""
-    lido = renderizada[pagina]["nativo"]
+    lido = renderizada[onde]["nativo"]
     assert _PAPEL_DO_CURSOR not in " ".join(str(v) for v in lido.values()), lido
