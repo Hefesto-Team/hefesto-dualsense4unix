@@ -648,3 +648,28 @@ def test_o_estilo_de_jogo_nao_apaga_o_brilho_das_luzes() -> None:
     p1 = novo.controllers[UNIQS[0]].leds
     assert "player_led_brightness" not in p1.model_fields_set, (
         "o estilo inventou um brilho para o P1, que não tinha opinião própria")
+
+
+@pytest.mark.parametrize(("transporte", "com_no"), MATRIZ)
+def test_o_clique_atravessa_a_troca_automatica_e_sai_na_manual(
+        transporte: str, com_no: bool) -> None:
+    """O clique entra na camada da usuária, como o `led.player_set` (R-20).
+
+    Medido na conferência de 25/09/2026 e escrito no contrato do IPC: a troca
+    AUTOMÁTICA de perfil (a janela do jogo) não solta o degrau que ela clicou,
+    e a troca MANUAL solta — aí vale o que o perfil novo diz. Esta régua prende
+    o comportamento para que ele mude por decisão, e não calado.
+    """
+    from hefesto_dualsense4unix.profiles.manager import ProfileManager
+
+    ctl, controles = _mesa(transporte, com_no=com_no)
+    gerente = ProfileManager(controller=ctl)
+    gerente.apply(_perfil("fraco"), origin="manual")
+    assert ctl.apply_output_for(UNIQS[2], OutputSpec(player_led_brightness=FORTE)) \
+        == "escreveu"
+    gerente.apply(_perfil("fraco"), origin="auto")
+    assert _o_aparelho_fica_em(controles[2]) == FORTE, (
+        "a troca automática soltou o degrau que ela clicou")
+    gerente.apply(_perfil("fraco"), origin="manual")
+    assert _o_aparelho_fica_em(controles[2]) == FRACO, (
+        "a troca manual não soltou o degrau da camada da usuária")
