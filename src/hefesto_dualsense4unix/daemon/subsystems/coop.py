@@ -783,6 +783,8 @@ class CoopManager:
 
         for mac in list(self._players):
             player = self._players[mac]
+            if self._segura_na_troca_de_transporte(player, want.get(mac)):
+                continue
             if mac not in want:
                 self._teardown_player(mac)
             elif player.evdev_path != want[mac]:
@@ -841,6 +843,62 @@ class CoopManager:
         # como o replug também dispara o watch, este reassert devolve o padrão
         # do jogador logo em seguida).
         self._apply_coop_player_leds()
+
+    def _segura_na_troca_de_transporte(
+        self, player: _SecondaryPlayer, no_de_agora: str | None
+    ) -> bool:
+        """O jogador que está TROCANDO de transporte fica com o vpad. Devolve se segurou.
+
+        O-CABO-ASSUME-DO-RADIO-01, a decisão dela de 25/09/2026: o controle do
+        rádio que ganha cabo passa para o cabo *sem o jogo perder o controle*.
+        O kernel não deixa o mesmo endereço existir nos dois barramentos: entre
+        o rádio sair e o cabo entrar, o controle some da mesa por um instante e
+        volta por OUTRO nó. As duas regras de baixo do `sync` leriam isso como
+        "saiu" e "o nó mudou", e as duas derrubam o vpad — o jogo veria o
+        jogador desconectar e um controle novo chegar.
+
+        Quem responde se é troca é o backend (`em_troca_de_transporte`), que
+        marca a ida antes de derrubar o rádio e a volta quando o cabo sai. Com o
+        sim:
+
+        - fora da mesa: o jogador fica, com o vpad de pé e parado (o leitor
+          dele solta os botões ao perder o nó, `_reset_on_disconnect`);
+        - de volta por outro nó: o leitor é reapontado — ele já procura o
+          controle pelo MAC (`target_uniq`) e refaz o grab ao abrir —, e o
+          espelho de movimento segue sozinho, pelo `hidraw_path` do backend.
+
+        Sem o método (backend enxuto, dublê) ou fora da troca, nada muda.
+        """
+        if no_de_agora is not None and no_de_agora == player.evdev_path:
+            return False
+        pergunta = getattr(
+            getattr(self._daemon, "controller", None), "em_troca_de_transporte", None
+        )
+        if not callable(pergunta):
+            return False
+        try:
+            em_troca = bool(pergunta(player.identity))
+        except Exception as exc:  # a pergunta nunca derruba o sync
+            logger.debug("coop_troca_de_transporte_pergunta_falhou", err=str(exc))
+            return False
+        if not em_troca:
+            return False
+        if no_de_agora is None:
+            logger.debug("coop_player_segura_na_troca", identity=player.identity)
+            return True
+        logger.info(
+            "coop_player_reapontado_na_troca",
+            identity=player.identity,
+            old=player.evdev_path,
+            new=no_de_agora,
+        )
+        player.evdev_path = no_de_agora
+        with contextlib.suppress(Exception):
+            player.reader.request_reopen("troca_de_transporte")
+        # O físico novo nasce fechado pela regra udev; o `rehide` do laço de
+        # reconexão também o pega, e pedir aqui só adianta.
+        self._broker_hide_player(player)
+        return True
 
     def _reavaliar_a_mesa_suspensa(self) -> None:
         """Reabre a conta do aviso enquanto os vpads estão suspensos.
