@@ -71,22 +71,42 @@ CAMPOS = (
 #: cair; encolhê-la para o `_escrever_conferindo` apontaria para um método que
 #: não carimba `seq` nenhum.
 ANCORAS: tuple[tuple[str, str], ...] = (
-    (":1783-1784", "VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE"),
-    (":1826-1832", "common[8] = int(mic_led) & 0xFF"),
-    (":1594-1621", "def set_microphone_led"),
-    (":5201", "def set_mic_led"),
-    (":5208-5209", "report[11] no rádio"),
-    (":5210-5214", "CORRIGIDO em 15/08/2026"),
-    (":1891-1892", "build_bt_report"),
-    (":1951-1982", "self.device.write"),
-    (":3495-3508", "should_reclaim_on_wake"),
-    (":442-455", "def _escrever_led_do_mic"),
-    (":1037", "_audio_status"),
+    (":1820-1821", "VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE"),
+    (":1864-1870", "common[8] = int(mic_led) & 0xFF"),
+    (":1622-1649", "def set_microphone_led"),
+    (":5339", "def set_mic_led"),
+    (":5346-5347", "report[11] no rádio"),
+    (":5348-5352", "CORRIGIDO em 15/08/2026"),
+    (":1929-1930", "build_bt_report"),
+    (":1989-2020", "self.device.write"),
+    (":3533-3546", "should_reclaim_on_wake"),
+    (":443-456", "def _escrever_led_do_mic"),
+    (":1065", "_audio_status"),
 )
 
 #: Os endereços que a auditoria aposentou. Se um deles voltar à célula, ou a
 #: deriva voltou, ou alguém somou 59 no lugar errado.
 APOSENTADOS = (
+    # AS ONZE DE BAIXO SE APOSENTARAM EM 25/09/2026, pela
+    # O-BRILHO-DAS-LUZES-DE-NUMERO-01: o brilho das luzes de número ganhou
+    # campo no handle (o default de CLASSE), no `_build_common` e no
+    # `_levar_o_brilho_das_luzes`, e o `backend_pydualsense.py` cresceu em
+    # degraus — o `_escrever_led_do_mic` desceu 1, o `_audio_status` 28, o
+    # `set_microphone_led` 28, as do fluxo 37 e 38, o `should_reclaim_on_wake`
+    # 38 e as do `set_mic_led` 138. Cada par foi levado pelos hunks do
+    # `git diff -U0` contra `dca12170b`, e a âncora conferida na faixa nova —
+    # nunca por soma.
+    ":1783-1784",
+    ":1826-1832",
+    ":1594-1621",
+    ":5201",
+    ":5208-5209",
+    ":5210-5214",
+    ":1891-1892",
+    ":1951-1982",
+    ":3495-3508",
+    ":442-455",
+    ":1037",
     # AS DEZ DE BAIXO SE APOSENTARAM EM 24/09/2026, pela STEAM-NO-FISICO-01:
     # a numeração do Hefesto (`numeracao_do_jogo`), a vigia do sequestro e o
     # Modo Nativo que escreve a luz entraram no `backend_pydualsense.py` em
