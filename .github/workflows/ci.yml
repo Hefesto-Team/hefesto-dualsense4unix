@@ -474,12 +474,14 @@ jobs:
           python-version: "3.10"
       - run: python -m pip install --upgrade pip && pip install pytest
       - run: python -m pytest tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py -q
-      - run: python -m pytest tests/unit/test_o_portao_declara_o_interpretador.py -q
-      - run: python -m pytest tests/unit/test_a_tela_dela_nao_recebe_janela_de_teste.py -q
-      - run: python -m pytest tests/unit/test_o_instrumento_nao_abre_na_tela_dela.py -q
-      - run: python -m pytest tests/unit/test_a_frase_que_ela_baniu_nao_chega_a_tela.py -q
-      - run: python -m pytest tests/unit/test_o_piloto_aponta_para_a_propria_arvore.py -q
-      - run: python -m pytest tests/unit/test_a_suite_mede_esta_arvore.py -q
+      # OS SEIS PORTÕES DA TELA E DO INTERPRETADOR MORAVAM AQUI, e saíram para
+      # o job `gtk-real` em 25/09/2026 (O-CI-DA-DEV-VOLTA-A-VERDE-01). Eles
+      # entraram neste job em 04/09 porque o portão do portão só pede que o
+      # pytest rode no CI, e este era o job de pytest mais leve; mas nenhum deles
+      # é leitura da árvore. Medido num clone limpo com só o pytest: seis de 38
+      # testes reprovam pelo AMBIENTE — dois pedem o interpretador completo
+      # (structlog, playwright, ruff, mypy), três importam o GTK e um exige a
+      # tela desviada para um Xvfb. O `gtk-real` tem os três, e lá os 38 passam.
 
   version-check:
     runs-on: ubuntu-latest
@@ -753,7 +755,15 @@ jobs:
             libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev \
             xvfb dbus-x11 \
             librsvg2-2 librsvg2-common gir1.2-rsvg-2.0 \
+            gir1.2-webkit2-4.1 libopus0 \
             fonts-space-grotesk-ttf fonts-jetbrains-mono
+            # A PONTE DAS DEZ ABAS E O SOM PELO RÁDIO — 25/09/2026. A interface
+            # nova é HTML num `WebKit2.WebView` (`gi.require_version("WebKit2",
+            # "4.1")` no piloto e na ponte), e o alto-falante pelo rádio codifica
+            # Opus pela `libopus` do sistema. Sem os dois, a corrida 36119169814
+            # reprovou 16 testes deste job por AMBIENTE: `Namespace WebKit2 not
+            # available` e `libopus não encontrada`. O `install.sh` instala os
+            # dois na máquina de quem usa; este job monta a sua à mão.
             # AS FONTES NÃO SÃO ENFEITE — são a régua. Mesma classe de armadilha
             # do librsvg logo acima, e ela custou uma leva inteira em 19/08: os
             # testes de PIXEL (test_layout_orcamento_altura,
@@ -820,6 +830,25 @@ jobs:
           assert Gtk.Box is not object, 'o venv ignora o PyGObject do sistema'
           print('o venv enxerga o gi real:', gi.__file__)
           "
+      # OS SEIS PORTÕES DA TELA E DO INTERPRETADOR, vindos do job «A casa sabe
+      # e o produto não faz» em 25/09/2026 (O-CI-DA-DEV-VOLTA-A-VERDE-01; a
+      # razão está escrita lá). Aqui eles têm o que pedem: o interpretador
+      # completo na `.venv` desta árvore, o GTK real e a tela de mentira. Vêm
+      # ANTES do passo grande de propósito: um vermelho lá não os cala.
+      - name: Portões da tela e do interpretador (TELA-DELA)
+        env:
+          HEFESTO_EXIGE_GTK_REAL: "1"
+          GDK_BACKEND: x11
+          NO_AT_BRIDGE: "1"
+        run: |
+          xvfb-run -a --server-args="-screen 0 1280x1024x24" \
+            .venv/bin/python -m pytest -q \
+              tests/unit/test_o_portao_declara_o_interpretador.py \
+              tests/unit/test_a_tela_dela_nao_recebe_janela_de_teste.py \
+              tests/unit/test_o_instrumento_nao_abre_na_tela_dela.py \
+              tests/unit/test_a_frase_que_ela_baniu_nao_chega_a_tela.py \
+              tests/unit/test_o_piloto_aponta_para_a_propria_arvore.py \
+              tests/unit/test_a_suite_mede_esta_arvore.py
       # HEFESTO_EXIGE_GTK_REAL=1 vira a chave da guarda: aqui, "pulei porque
       # não tenho GTK" não é sucesso, é REPROVAÇÃO. Se o ambiente degradar, o
       # job fala; não fica verde por omissão.
