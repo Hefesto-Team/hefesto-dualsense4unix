@@ -331,6 +331,17 @@ class DraftApplier:
         for uniq, spec in specs.items():
             self.controller.apply_output_for(uniq, spec)
         self._publicar_escalas_de_brilho(raw)
+        # A LUZ CONVERGE DEPOIS DO MAPA NOVO — conferência da
+        # A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01, 25/09/2026. O brilho sozinho de
+        # um controle viaja como FATOR, sem cor, e o `apply_output_for` acima
+        # não escreve luz nenhuma por ele; o único reassert desta aplicação era
+        # o de `_apply_leds`, que roda ANTES do mapa novo. Medido na mesa de
+        # quatro real: com o brilho do P1 mudado no disco (30%) e o «Aplicar»,
+        # o produto decidia `(0,0,76)` e a barra ficava em `(0,0,153)` até o
+        # próximo reassert. É o mesmo fecho da ativação (`manager.apply`).
+        reassert = getattr(self.controller, "reassert_resolved_outputs", None)
+        if callable(reassert):
+            reassert()
         # POR-UNIDADE-01 (10/08/2026): vibração e som da PEÇA. Ficam FORA do
         # `OutputSpec` de propósito — não são output persistente do controle
         # (o rumble é transitório; o áudio tem posse própria), e empurrá-los

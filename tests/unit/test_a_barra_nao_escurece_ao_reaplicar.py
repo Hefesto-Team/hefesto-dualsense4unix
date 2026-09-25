@@ -290,6 +290,43 @@ def test_sem_a_paleta_o_salvar_grava_o_global_e_nao_a_luz(mesa_de):
     assert no_disco == global_dela, f"o Salvar deu ao P4 a cor {no_disco} no disco"
 
 
+@pytest.mark.parametrize("via", ["usb", "bt"])
+@pytest.mark.parametrize("alvo", ["todos", "um"])
+@pytest.mark.parametrize("o_que_mudou", ["brilho-do-controle", "brilho-do-perfil"])
+def test_o_aplicar_acende_o_brilho_que_o_disco_diz(mesa_de, o_que_mudou, alvo, via):
+    """O «Aplicar» leva à barra o brilho do disco, e não só ao resolvido.
+
+    O brilho sozinho de um controle viaja como FATOR, sem cor, e o único
+    reassert do «Aplicar» rodava ANTES do mapa novo. Medido na conferência:
+    com a camada viva solta (troca manual) e o brilho mudado no disco por
+    outra porta, o produto decidia a luz nova e a barra ficava na velha — o
+    P1 a 30% decidido `(0,0,76)` e aceso `(0,0,153)`; o perfil a 50%, o P1
+    decidido `(0,0,153)` e aceso `(0,0,92)`.
+
+    **A MORDIDA:** tire o reassert do fim de `DraftApplier._apply_controllers`
+    e esta reprova no `_luz` (o nó não é o que o produto decidiu).
+    """
+    from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
+    from pacotes import rodape
+
+    mesa = mesa_de(alvo, via)
+    mesa.soltar(1, 60)
+    mesa.pm.apply(mesa._perfil(), origin="manual")
+    if o_que_mudou == "brilho-do-controle":
+        mesa.gravar_o_brilho(1, 0.3)
+        brilho = {1: 0.3, 2: BRILHO_GLOBAL, 3: BRILHO_GLOBAL, 4: BRILHO_GLOBAL}
+    else:
+        prof = load_profile(NOME)
+        save_profile(prof.model_copy(update={"leds": prof.leds.model_copy(
+            update={"lightbar_brightness": 0.5})}), origem="regua")
+        brilho = {1: 0.60, 2: 0.5, 3: 0.5, 4: 0.5}
+    esperada = [_na(COR_DELE[n], brilho[n]) for n in (1, 2, 3, 4)]
+    for vez in (1, 2, 3):
+        rodape.aplicar(mesa.ctx(), {"tipo": "button", "evento": "click"},
+                       _PonteDoRodape(mesa))
+        assert _luz(mesa) == esperada, f"{vez}º «Aplicar» depois do disco mudar"
+
+
 # ---------------------------------------------------------------------------
 # 2. o brilho do controle vale para a cor do número de quem tem cor gravada
 # ---------------------------------------------------------------------------
