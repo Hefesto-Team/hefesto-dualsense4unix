@@ -229,6 +229,15 @@ brilho); no rádio, no `0x31` que acende o número. O `flag2` leva só o bit0
 Iluminação, e ela grava a palavra no override do controle ANTES de chamar —
 uma troca de perfil reaplica o que o perfil diz, que é o que ela escolheu.
 
+**A leitura de volta é o `state_full`** (A-04-PERGUNTA-AO-DAEMON-VIVO-01): cada
+controle traz `brilho_das_luzes` (`"fraco"`, `"medio"` ou `"forte"`, o degrau
+que o merge manda ao aparelho) e `brilho_da_barra` (`0.0`-`1.0`, o brilho em
+que a cor de `lightbar_rgb` foi acesa). Os dois saem do dono do merge, com a
+camada da usuária — a que atravessa a troca automática de perfil —, e `null`
+quer dizer «não sei»: a aba Iluminação cai no perfil do disco. O `led.set`
+leva o `brightness` até o backend para isso, e a cor que chega sem ele (a CLI
+antiga) publica `null`.
+
 ### `rumble.motores.set` — a BARRA de cada motor (VIBRACAO-POR-MOTOR-01)
 
 | Método               | Parâmetros                                         | Retorno                                                        |
