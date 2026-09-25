@@ -155,6 +155,13 @@ def _draft_do_ativo(nome: str, ctx: Contexto | None = None) -> Any:
     # controle no rádio.
     from hefesto_dualsense4unix.app.widgets.controller_card import rotulo_lightbar
 
+    from .a04_iluminacao import brilho_do_controle
+    from .a04_iluminacao import cor_escolhida as a_cor_pedida
+
+    #: O PERFIL CRU, para o brilho de cada controle — lido UMA vez e pelo dono
+    #: da conta (`a04_iluminacao.brilho_do_controle`), o mesmo que a coluna da
+    #: aba 04 imprime e com que o trilho escala.
+    cru = perfil.ativo(nome)
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
         # A BARRA APAGADA NÃO É UMA COR PRETA, e a diferença custa o trabalho
@@ -171,6 +178,17 @@ def _draft_do_ativo(nome: str, ctx: Contexto | None = None) -> Any:
         rgb = list(base) if base is not None else []
         if not uniq or len(rgb) < 3:
             continue
+        # A COR ACESA É PÓS-BRILHO, E O DISCO GUARDA A PEDIDA — 25/09/2026,
+        # A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01. O `lightbar_rgb` do daemon já
+        # vem escalado (D8), e gravá-lo como a cor do controle, ao lado do
+        # brilho dele, fazia o brilho entrar DUAS vezes na aplicação seguinte.
+        # Medido na mesa de quatro real: o P1 a 60% acendia `#000099`, o Salvar
+        # gravava `#000099` como a cor escolhida, e o trilho seguinte a 40%
+        # acendia `#00003D`; cada Salvar e troca de perfil escurecia mais. Quem
+        # desfaz a escala é o dono da inversão (`a04_iluminacao.cor_escolhida`,
+        # o mesmo da caixa `#RRGGBB`), e a luz que não inverte em tom nenhum
+        # volta inteira, como antes: a cor viva continua vencendo o disco.
+        rgb = list(a_cor_pedida(tuple(rgb[:3]), brilho_do_controle(cru, uniq)))
         # A COR VIVA VIRA OVERRIDE DAQUELE CONTROLE, e não a cor global: cada
         # controle tem a sua, e é assim que o perfil já guarda (o
         # `ControllerOverrides.leds` do schema existe desde antes desta aba).
