@@ -1836,13 +1836,21 @@ class ProfileManager:
         if lido is None:
             # Perfil sem opinião sobre o microfone: só o ato de CALAR tem o que
             # escrever (o `False` não atravessa o replug, e é o default do
-            # firmware). Sem perfil ativo que carregue não há vista para o
-            # `apply_mic`, e a regra dele não se copia aqui.
+            # firmware).
             if ato is not True:
                 return None
+            # E O CALAR DA SESSÃO NÃO DEPENDE DE O PERFIL CARREGAR (conferência
+            # de 25/09/2026). `o_perfil_pede_silencio` responde pelo ato ANTES
+            # de abrir o disco, e o nascimento recua; com o ativo ilegível ou
+            # ausente este ramo devolvia `None` e o firmware voltava ABERTO —
+            # dois leitores, dois vereditos, a forma que a guarda do global cura
+            # logo abaixo. A vista vazia só leva a peça: quem decide o que
+            # atravessa o replug continua sendo o `apply_mic`, em cópia única.
             profile = self._perfil_ativo_carregado()
             if profile is None:
-                return None
+                from hefesto_dualsense4unix.profiles.schema import MatchManual
+
+                profile = Profile(name="ato da sessão", match=MatchManual())
             global_, override = None, None
         else:
             profile, global_, override = lido

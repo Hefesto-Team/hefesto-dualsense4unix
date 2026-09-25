@@ -635,7 +635,30 @@ class TestUmaMetadeDePeBasta:
         assert novo.controller.mudos_escritos(P4) == [True]
 
 
-class TestOAtoDaSessaoPeloEndereco:
+class TestOAtoDaSessaoSemPerfil:
+    @pytest.mark.asyncio
+    async def test_o_calar_da_sessao_chega_ao_firmware_sem_perfil_legivel(
+        self, casa: Any
+    ) -> None:
+        """O ativo não carrega (apagado, ilegível): o ato de calar ainda vale.
+
+        O nascimento pergunta o ato ANTES do disco e recua; o replug tem de
+        escrever o mesmo veredito no firmware, senão o plástico volta ABERTO
+        com o canal recuado — dois leitores, dois vereditos.
+
+        MORDIDA: o ramo sem perfil legível devolvendo `None`.
+        """
+        daemon = casa.daemon(ativo="Sumiu")
+        ato = await hotkey.ligar_o_microfone(daemon, P4, ligado=False)
+        await _derrubar(daemon)
+        assert ato.firmware.feita and daemon.store.ato_do_mic(P4) is True
+        daemon.controller.escritas_do_mudo.clear()
+
+        assert await _reconectar(daemon, P4) is False
+        assert daemon.controller.mudos_escritos(P4) == [True], (
+            "o replug deixou o firmware aberto sobre o silêncio da sessão"
+        )
+
     def test_o_ato_da_sessao_casa_o_mac_com_dois_pontos(self) -> None:
         """A tela manda `aa:bb:…`; a sessão guarda 12 hex. MORDIDA: ler cru."""
         store = StateStore()
