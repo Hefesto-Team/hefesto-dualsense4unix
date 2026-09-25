@@ -188,6 +188,45 @@ def test_planilha_nova_em_docs_data_nasce_coberta(arvore: Path) -> None:
         f"{saida.stdout!r}")
 
 
+#: Arquivos DESTA árvore com extensões que a lista digitada de antes de
+#: 25/09/2026 não tinha. O `.conf` é o do achado; os outros são os tipos que a
+#: medição daquele dia achou citados no mapa e resolvendo na árvore.
+EXTENSOES_QUE_A_LISTA_ESQUECIA = (
+    "assets/modprobe.d/hefesto-exemplo.conf",
+    "assets/hefesto-exemplo.service",
+    "docs/data/ensaios-brutos/exemplo.txt",
+    "src/hefesto_dualsense4unix/interface/paginas/exemplo.html",
+)
+
+
+@pytest.mark.parametrize("relativo", EXTENSOES_QUE_A_LISTA_ESQUECIA)
+def test_extensao_que_ninguem_listou_nasce_coberta(arvore: Path, relativo: str) -> None:
+    """A MORDIDA da O-MAPA-QUE-A-6E-DEIXOU-01 (25/09/2026).
+
+    A conferência da O-MAPA-OUVE-AS-RESPOSTAS-DE-24-09-01 achou as 35 citações
+    de `assets/modprobe.d/*.conf` do mapa FORA do portão — `conf` não estava na
+    lista de extensões — e uma delas além do fim do arquivo. A cura não
+    acrescentou `conf` à lista: a lista saiu, e quem decide o que se cobra é a
+    RESOLUÇÃO, como já decidia para o caminho. MORDA ASSIM: devolva a lista
+    digitada a `EXTENSOES` e os quatro casos passam calados.
+    """
+    alvo = arvore / relativo
+    alvo.parent.mkdir(parents=True, exist_ok=True)
+    alvo.write_text("um\ndois\ntrês\n", encoding="utf-8")
+
+    planilha(arvore, f"o valor mora em {relativo}:2-3, e é só isso")
+    saida = rodar(arvore, "--all")
+    assert saida.returncode == 0, (
+        f"a citação de {relativo} que ABRE foi acusada. Disse: {saida.stdout!r}")
+
+    planilha(arvore, f"o valor mora em {relativo}:81, e é só isso")
+    saida = rodar(arvore, "--all")
+    assert saida.returncode == 1, (
+        f"a citação de {relativo} além do fim do arquivo passou calada — a "
+        f"extensão ficou fora do portão. Disse: {saida.stdout!r}")
+    assert "tem 3 linha(s)" in saida.stdout, saida.stdout
+
+
 def test_a_celula_com_virgula_e_quebra_de_linha_nao_despedaca_o_endereco(
     arvore: Path,
 ) -> None:
