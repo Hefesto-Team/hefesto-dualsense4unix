@@ -62,6 +62,9 @@ AS MORDIDAS (24/09/2026, cada uma devolvida com o md5 conferido):
   (a R-04);
 - a faixa pesando só a conta de fora, sem as recriações, reprova oito: é quem
   espera o lugar guardado renascendo à toa;
+- a faixa dizendo sempre que a ordem fecha inteira reprova as três famílias em
+  que o P1 fixo fica fora de ordem, esperando o jogo: o diário diria
+  ``coop_ordem_do_p1_voltou`` sobre um P1 que não voltou;
 - sem a guarda da O-ASSENTO-03 (o ``break``), a faixa acha o mesmo plano nas
   34.790 mesas de até quatro; quem ainda a mede é
   :meth:`TestOs60.test_a_guarda_da_03_continua_valendo_numa_mesa_de_cinco`.
@@ -233,7 +236,7 @@ class TestOs60:
         """Atrás do buraco, renasce no boneco da carta; quem espera o guardado fica."""
         casos = [linha for linha in _os_60() if _forma(linha[0], linha[1], FIXO) == forma]
         assert len(casos) == 6
-        for mesa, cartas, _nascer, _fixos, _compacta, _da_03, _sem, (recriar, _i) in casos:
+        for mesa, cartas, _nascer, _fixos, _compacta, _da_03, _sem, (recriar, inteira) in casos:
             lugar_de = {c: lugar for lugar, c in mesa.items()}
             fora_do_boneco = {c for c in mesa.values() if lugar_de[c] != cartas[c] - 1}
             assert set(recriar) == fora_do_boneco - FIXO, (mesa, cartas, recriar)
@@ -242,6 +245,12 @@ class TestOs60:
                 lugar == cartas[c] - 1 for lugar, c in depois.items() if c not in FIXO
             ), f"um secundário ficou fora do boneco: {depois}"
             assert not set(recriar) & FIXO
+            # O segundo valor diz se a ordem fecha inteira COM o P1 fixo: é ele
+            # que escolhe a frase do diário (`coop_ordem_do_p1_espera_o_jogo`).
+            # Em três formas a do P1 fica fora de ordem até o jogo devolver a
+            # autoridade, e a faixa não pode dizer que ele voltou.
+            numeros = [cartas[c] for _lugar, c in sorted(depois.items())]
+            assert inteira == (numeros == sorted(numeros)), (mesa, cartas, inteira)
 
     def test_quem_espera_o_lugar_guardado_nao_se_mexe(self) -> None:
         """O ``d`` certo atrás do 4 guardado fica; o ``b`` e o ``c`` fecham o buraco."""
