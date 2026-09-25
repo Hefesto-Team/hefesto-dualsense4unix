@@ -517,9 +517,14 @@ class ProfileManager:
         escalar = getattr(self.controller, "set_led_scales", None)
         if callable(escalar):
             try:
+                # A COR DO GLOBAL vai com o brilho (conferência): sem ela, o
+                # controle no global sem a paleta saía pela razão, com duas
+                # truncagens — o P4 a 30% do trilho `(12,24,54)` voltava
+                # `(11,23,53)` a cada perfil reaplicado.
                 escalar(
                     escalas or None,
                     brilho_do_perfil=float(profile.leds.lightbar_brightness),
+                    cor_do_perfil=cor_do_global,
                 )
             except TypeError:
                 escalar(escalas or None)

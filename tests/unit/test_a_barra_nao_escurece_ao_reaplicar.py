@@ -50,6 +50,7 @@ from tests.unit import test_a_marca_da_cor_nao_some as marca
 from tests.unit.test_a_marca_da_cor_nao_some import (
     BRILHO_GLOBAL,
     COR_DELE,
+    GLOBAL,
     MACS,
     NOME,
     UNIQS,
@@ -204,6 +205,77 @@ def test_reaplicar_tres_vezes_da_a_luz_da_primeira(mesa_de, caminho, alvo, via):
     assert _luz(mesa) == esperada, "o trilho a 40% depois das três aplicações"
     _reaplicar(mesa, caminho)
     assert _luz(mesa) == esperada, f"{caminho} depois do trilho a 40%"
+
+
+@pytest.mark.parametrize("via", ["usb", "bt"])
+@pytest.mark.parametrize("alvo", ["todos", "um"])
+@pytest.mark.parametrize("caminho", CAMINHOS)
+def test_sem_a_paleta_o_global_acende_a_conta_do_trilho(mesa_de, caminho, alvo, via):
+    """Sem a paleta, o controle no GLOBAL com o brilho dele acende o byte do trilho.
+
+    O global dela (`#2850B4`) não é tom da paleta, e o fator entrava pela
+    razão, com duas truncagens: o P4 a 30% do trilho acendia `(12,24,54)` e
+    o perfil reaplicado `(11,23,53)` pelo boot, pela troca manual e pelo
+    «Aplicar» (conferência). O P1 azul escolhido, o P2 laranja e o P3 ciano
+    ficam na cor deles; três aplicações dão a luz do trilho.
+
+    **AS MORDIDAS:** tire a cor do perfil do `reescalar` do `_scaled_led`
+    (ou do `set_led_scales` do manager, ou do `DraftApplier`) e o P4 sai
+    `(11, 23, 53)`.
+    """
+    mesa = mesa_de(alvo, via)
+    mesa.clicar_no_tom(1, COR_DELE[1])
+    mesa.desligar_a_paleta(GLOBAL)
+    mesa.soltar(1, 60)
+    mesa.soltar(2, 50)
+    mesa.soltar(4, 30)
+    esperada = [_na(COR_DELE[1], 0.60), _na(COR_DELE[2], 0.50),
+                _na(COR_DELE[3], BRILHO_GLOBAL), _na(GLOBAL, 0.30)]
+    assert _luz(mesa) == esperada, "o trilho não acendeu a conta de uma vez"
+    for vez in (1, 2, 3):
+        _reaplicar(mesa, caminho)
+        assert _luz(mesa) == esperada, f"{caminho}, {vez}ª aplicação sem a paleta"
+
+
+def test_sem_a_paleta_o_global_nao_perde_o_tom_com_o_perfil_quase_apagado(mesa_de):
+    """O perfil a 2% e o P4 no global a 100%: o `#2850B4` inteiro, sem perder o vermelho.
+
+    Pela razão, `(0,1,3)` vezes cinquenta dava `(0,50,150)`: o controle de
+    quem sobe o brilho perdia o tom que o de pouca luz tem.
+
+    **A MORDIDA:** as do teste acima.
+    """
+    from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
+
+    mesa = mesa_de()
+    mesa.desligar_a_paleta(GLOBAL)
+    mesa.soltar(4, 100)
+    prof = load_profile(NOME)
+    save_profile(prof.model_copy(update={"leds": prof.leds.model_copy(
+        update={"lightbar_brightness": 0.02})}), origem="regua")
+    for _ in range(3):
+        mesa.pm.apply(mesa._perfil(), origin="manual")
+        assert _luz(mesa)[3] == GLOBAL
+
+
+def test_a_cor_do_perfil_e_o_par_do_brilho(mesa_de):
+    """Publicar o brilho sem a cor diz «não se sabe o global», e o preto não é cor.
+
+    Guardar a cor do perfil anterior levaria o global de ONTEM à conta de
+    hoje: um perfil com o preto no global (que não é cor) herdaria o tom do
+    outro.
+
+    **A MORDIDA:** faça o `set_led_scales` guardar a cor velha quando a nova
+    não vem, e esta reprova.
+    """
+    ctl = mesa_de().ctl
+    ctl.set_led_scales(None, brilho_do_perfil=0.5, cor_do_perfil=(40, 80, 180))
+    assert ctl._cor_do_perfil == (40, 80, 180)
+    ctl.set_led_scales(None, brilho_do_perfil=0.5, cor_do_perfil=(0, 0, 0))
+    assert ctl._cor_do_perfil is None, "o preto não é cor"
+    ctl.set_led_scales(None, brilho_do_perfil=0.5, cor_do_perfil=[40, 80, 180])
+    ctl.set_led_scales(None, brilho_do_perfil=0.5)
+    assert ctl._cor_do_perfil is None, "o brilho sem a cor ficou com o global de antes"
 
 
 def test_sem_no_o_produto_decide_a_mesma_luz(mesa_de):
@@ -535,6 +607,8 @@ def test_reescalar_faz_a_conta_de_uma_vez_na_paleta_e_a_razao_fora_dela():
     # o global dela, fora da paleta: vale a razão
     fora = _na((40, 80, 180), 0.82)
     assert reescalar(fora, 0.82, 0.41) == _na(fora, 0.41 / 0.82)
+    # o global dela entra como tom a mais, e a conta é a do trilho
+    assert reescalar(fora, 0.82, 0.41, ((40, 80, 180),)) == _na((40, 80, 180), 0.41)
     # abaixo de 1% o vermelho, o rosa e o laranja acendem o mesmo (1, 0, 0):
     # não há tom único, e o brilho não troca a cor por palpite
     assert reescalar((1, 0, 0), 0.005, 1.0) == _na((1, 0, 0), 1.0 / 0.005)
