@@ -2672,8 +2672,8 @@ def _a_cor_guardada_que_vale(ctx: Contexto, cru: dict[str, Any] | None,
     inteira; a escada desta aba só sabe a cor do número (degrau 4) e o global
     (degrau 3), e mandar o global pelo trilho tiraria a cor de outro controle
     que está nele. A cor escolhida é o que esta aba respondia antes, e é a que
-    não inventa. Medido na mesa de quatro real: sem a paleta, o fóssil sai
-    deslocado SEM o brilho — relatado, é do daemon.
+    não inventa. O daemon desloca o fóssil já no brilho da peça e pelo tom,
+    desde a A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01 (25/09).
     """
     from hefesto_dualsense4unix.core.led_control import (
         LEGADO,
