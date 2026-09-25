@@ -35,6 +35,11 @@ from typing import Any
 import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
+
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
+
 if str(RAIZ / "src") not in sys.path:  # pragma: no cover - trava de caminho
     sys.path.insert(0, str(RAIZ / "src"))
 

@@ -51,6 +51,11 @@ from typing import Any
 import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
+
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `app.actions.perfis_web`, que carrega o GTK")
+
 if str(RAIZ / "src") not in sys.path:
     sys.path.insert(0, str(RAIZ / "src"))
 

@@ -64,6 +64,10 @@ from __future__ import annotations
 
 import re
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `interface.hefesto_vivo`, que carrega o GTK")
+
 from hefesto_dualsense4unix.interface import hefesto_vivo, mesa_viva, monta, onde
 
 PAGINA = "10-perfis.html"  # (noqa-acento) nome de arquivo

@@ -41,6 +41,10 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `app.actions.home_actions`, que carrega o GTK")
+
 from hefesto_dualsense4unix.app.actions.home_actions import (
     palavra_do_transporte as palavra,
 )

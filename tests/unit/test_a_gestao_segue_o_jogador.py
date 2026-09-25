@@ -67,6 +67,11 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 # O `monta.py` importa os irmãos pelo nome curto (`import onde`), como o gerador
 # roda: a pasta da interface entra no caminho junto com o `src/`.
+
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `app.actions.home_actions`, que carrega o GTK")
+
 for _pasta in (RAIZ / "src", RAIZ / "src/hefesto_dualsense4unix/interface"):
     if str(_pasta) not in sys.path:
         sys.path.insert(0, str(_pasta))

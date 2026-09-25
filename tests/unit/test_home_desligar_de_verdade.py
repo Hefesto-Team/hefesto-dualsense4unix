@@ -35,6 +35,10 @@ from typing import Any
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `app.gui_dialogs`, que carrega o GTK")
+
 from hefesto_dualsense4unix.app import gui_dialogs
 from hefesto_dualsense4unix.app.actions.home_actions import HomeActionsMixin
 

@@ -41,6 +41,10 @@ from pathlib import Path
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `app.actions.emulation_actions`, que carrega o GTK")
+
 from hefesto_dualsense4unix.app.actions import emulation_actions
 from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin
 from hefesto_dualsense4unix.cli import cmd_mic

@@ -49,6 +49,11 @@ import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 _INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
+
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
+
 if str(_INTERFACE) not in sys.path:
     sys.path.insert(0, str(_INTERFACE))
 

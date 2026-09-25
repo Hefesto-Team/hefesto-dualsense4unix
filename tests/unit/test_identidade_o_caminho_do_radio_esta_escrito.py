@@ -67,6 +67,10 @@ from typing import Any
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `app.actions.config`, que carrega o GTK")
+
 from hefesto_dualsense4unix.app.actions.config import secao_controles
 from hefesto_dualsense4unix.app.fatos_do_mapa import FATOS
 from hefesto_dualsense4unix.daemon.subsystems import external_identity

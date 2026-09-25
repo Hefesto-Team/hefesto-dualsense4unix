@@ -26,6 +26,10 @@ from __future__ import annotations
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `app.actions.input_actions`, que carrega o GTK")
+
 from hefesto_dualsense4unix.app.actions import input_actions
 from hefesto_dualsense4unix.core.keyboard_mappings import parse_binding
 

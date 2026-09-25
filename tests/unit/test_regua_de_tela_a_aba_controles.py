@@ -54,10 +54,14 @@ from typing import Any
 
 import pytest
 
-from hefesto_dualsense4unix.gui import ponte_da_tela
 from tests.conftest import exigir_gi_real
 
+# A guarda vem ANTES da ponte: `gui.ponte_da_tela` carrega o GTK e o WebKit2
+# no import, e depois dela a guarda chegava tarde — sem PyGObject o módulo
+# errava na coleta em vez de pular (corrida 36119169814, 25/09/2026).
 exigir_gi_real("RÉGUA-DE-TELA-01 — a aba Controles dirigida por dentro")
+
+from hefesto_dualsense4unix.gui import ponte_da_tela
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "scripts"))

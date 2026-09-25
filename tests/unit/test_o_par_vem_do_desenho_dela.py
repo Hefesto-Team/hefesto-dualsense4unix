@@ -42,6 +42,10 @@ from __future__ import annotations
 
 import inspect
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `app.actions.config`, que carrega o GTK")
+
 from hefesto_dualsense4unix.app.actions.config import secao_mesa
 from hefesto_dualsense4unix.integrations import mapa_das_portas
 from hefesto_dualsense4unix.integrations.mapa_das_portas import irmas_de

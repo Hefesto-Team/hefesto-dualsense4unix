@@ -50,6 +50,10 @@ from typing import Any
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `app.actions.config`, que carrega o GTK")
+
 from hefesto_dualsense4unix.app.actions.config.secao_controles import (
     ESPERA_PROCURANDO,
     EsperaPeloPS,

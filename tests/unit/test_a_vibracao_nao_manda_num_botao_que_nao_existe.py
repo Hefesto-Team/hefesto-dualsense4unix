@@ -81,6 +81,10 @@ from typing import Any
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `app.actions.rumble_actions`, que carrega o GTK")
+
 from hefesto_dualsense4unix.app.actions.rumble_actions import (
     BTN_GIVE_BACK_TO_GAME,
     COMO_DEVOLVER_AO_JOGO,

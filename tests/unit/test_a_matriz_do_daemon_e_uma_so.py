@@ -21,6 +21,10 @@ Esta régua não digita a lista: compara as duas pontas.
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `app.actions.daemon_actions`, que carrega o GTK")
+
 from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin
 from hefesto_dualsense4unix.gui import aba_sistema
 
