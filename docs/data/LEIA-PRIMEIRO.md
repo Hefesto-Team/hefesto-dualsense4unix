@@ -11,7 +11,7 @@ nele. **O que ele não é:** um resumo do mapa. Nada aqui substitui a prosa das
 células — ele te dá o endereço dela.
 
 **A conta que justifica este arquivo.** Até hoje havia duas portas: ler o CSV
-inteiro (<!--@caracteres-do-mapa-->1.444.107<!--/--> caracteres em células,
+inteiro (<!--@caracteres-do-mapa-->1.444.769<!--/--> caracteres em células,
 ~<!--@tokens-do-mapa-->361<!--/--> mil tokens) ou não ler nada. O
 veredito por lado das <!--@linhas-do-mapa-->314<!--/--> linhas, sem uma linha de prosa, custa 27.828
 caracteres — **4,2%**. A porta barata sempre existiu; faltava alguém dizer onde
@@ -37,9 +37,9 @@ onde saiu em 25/08. Corrigir à mão seria pagar o mesmo preço de novo amanhã.
 
 | Arquivo | Bytes | O que é | Quando abrir |
 |---|---:|---|---|
-| `docs/data/mapa-controles.csv` | <!--@bytes:docs/data/mapa-controles.csv-->1.504.453<!--/--> | **A FONTE.** <!--@linhas-do-mapa-->314<!--/--> linhas x <!--@colunas-do-mapa-->50<!--/--> colunas. Uma linha = uma feature em um controle. É portão, não documentação. | Sempre, mas **filtrado** — nunca com `Read` inteiro. Veja a seção 5. |
+| `docs/data/mapa-controles.csv` | <!--@bytes:docs/data/mapa-controles.csv-->1.505.129<!--/--> | **A FONTE.** <!--@linhas-do-mapa-->314<!--/--> linhas x <!--@colunas-do-mapa-->50<!--/--> colunas. Uma linha = uma feature em um controle. É portão, não documentação. | Sempre, mas **filtrado** — nunca com `Read` inteiro. Veja a seção 5. |
 | `docs/data/ensaios.csv` | <!--@bytes:docs/data/ensaios.csv-->218.078<!--/--> | **O LASTRO.** <!--@linhas-do-caderno-->248<!--/--> ensaios x <!--@colunas-do-caderno-->14<!--/--> colunas. Cada linha é uma medição com hardware na mesa. Casa com o mapa por `linha_id == id`. **`degrau` e `ponte` existem no cabeçalho desde 20/08/2026 e quase ninguém as respondeu:** `ponte` está vazia em <!--@caderno-sem-ponte-->248<!--/--> ensaios e `degrau` em <!--@caderno-sem-degrau-->206<!--/-->. Não procure dado que ninguém escreveu ainda. | Quando a célula do mapa diz `medido` e você quer ver a medição. |
-| `html/specs.html` | <!--@bytes:html/specs.html-->2.307.732<!--/--> | **DERIVADO** do CSV + do caderno, por `scripts/gerar-mapa.py`. Filtra no navegador. Mudou da raiz para `html/` em 25/08/2026. | **IA: não abra.** Ele embute o CSV inteiro como JSON: custa ~2x a fonte pela mesma informação. É excelente para olho humano com navegador, e péssimo para leitura por texto. |
+| `html/specs.html` | <!--@bytes:html/specs.html-->2.308.404<!--/--> | **DERIVADO** do CSV + do caderno, por `scripts/gerar-mapa.py`. Filtra no navegador. Mudou da raiz para `html/` em 25/08/2026. | **IA: não abra.** Ele embute o CSV inteiro como JSON: custa ~2x a fonte pela mesma informação. É excelente para olho humano com navegador, e péssimo para leitura por texto. |
 | `docs/protocol/dualsense-referencia-canonica.md` | <!--@bytes:docs/protocol/dualsense-referencia-canonica.md-->122.130<!--/--> | **O PROTOCOLO.** O que o DualSense entende, byte a byte. | Quando a pergunta é "que report/offset/valor eu mando". Use a régua de conversão da seção 6. |
 | `docs/protocol/paridade-bluetooth-versus-cabo.md` | <!--@bytes:docs/protocol/paridade-bluetooth-versus-cabo.md-->18.732<!--/--> | Tabela cabo x rádio em prosa. Declara-se desempatador nas linhas `MEDIDO AO VIVO`. | Para visão geral. **Onde divergir do mapa fora das linhas `MEDIDO AO VIVO`, o mapa vence** — ele tem domínio fechado e portão; a tabela é prosa. |
 | `docs/method/METODO-DE-ISOLAMENTO.md` | <!--@bytes:docs/method/METODO-DE-ISOLAMENTO.md-->63.703<!--/--> | O ciclo de ensaio: perguntas de sanidade, oito passos, as armadilhas A-1..A-25. | Quando você vai **produzir** medição nova, não consumir. Cuidado: ele ainda ensina o nome de coluna `grau`, que o portão de hoje reprova (seção 6). |
@@ -121,12 +121,12 @@ degrau contém o anterior.
 
 | Valor | Direção | Significa | Células |
 |---|---|---|---:|
-| `MONTOU` | saída | o produto montou o report | <!--@celulas-escada-montou-->98<!--/--> |
+| `MONTOU` | saída | o produto montou o report | <!--@celulas-escada-montou-->100<!--/--> |
 | `SAIU NO FIO` | saída | o byte saiu e algo voltou | <!--@celulas-escada-saiu-->20<!--/--> |
 | `O APARELHO OBEDECEU` | saída | acendeu, girou, saiu som | <!--@celulas-escada-obedeceu-->26<!--/--> |
 | `O JOGO RECEBEU` | **entrada** | o processo do jogo ABRIU o nó do nosso vpad | 0 |
 | `O JOGO REAGIU` | **entrada** | o jogo agiu sobre o que recebeu | 0 |
-| vazio | — | a escada não foi registrada | <!--@celulas-escada-vazio-->484<!--/--> |
+| vazio | — | a escada não foi registrada | <!--@celulas-escada-vazio-->482<!--/--> |
 
 **OS DOIS ÚLTIMOS SÃO DE 19/08/2026, e nasceram de um buraco que este arquivo já
 confessava em duas linhas** — `toque.touchpad` diz *"quem ler `radio_aciona =
@@ -148,7 +148,7 @@ cruzamento das <!--@celulas-do-mapa-->628<!--/--> células (<!--@linhas-do-mapa-
 
 | | vazio | MONTOU | SAIU NO FIO | OBEDECEU |
 |---|---:|---:|---:|---:|
-| `medido` | **<!--@cruzamento-medido-vazio-->74<!--/-->** | <!--@cruzamento-medido-montou-->34<!--/--> | <!--@cruzamento-medido-saiu-->20<!--/--> | <!--@cruzamento-medido-obedeceu-->26<!--/--> |
+| `medido` | **<!--@cruzamento-medido-vazio-->72<!--/-->** | <!--@cruzamento-medido-montou-->36<!--/--> | <!--@cruzamento-medido-saiu-->20<!--/--> | <!--@cruzamento-medido-obedeceu-->26<!--/--> |
 | `inferido-do-codigo` | <!--@cruzamento-inferido-vazio-->378<!--/--> | **<!--@cruzamento-inferido-montou-->62<!--/-->** | <!--@cruzamento-inferido-saiu-->0<!--/--> | <!--@cruzamento-inferido-obedeceu-->0<!--/--> |
 | `afirmado-no-doc` | <!--@cruzamento-afirmado-vazio-->25<!--/--> | <!--@cruzamento-afirmado-montou-->2<!--/--> | <!--@cruzamento-afirmado-saiu-->0<!--/--> | <!--@cruzamento-afirmado-obedeceu-->0<!--/--> |
 | `incerto` | <!--@cruzamento-incerto-vazio-->7<!--/--> | <!--@cruzamento-incerto-montou-->0<!--/--> | <!--@cruzamento-incerto-saiu-->0<!--/--> | <!--@cruzamento-incerto-obedeceu-->0<!--/--> |
@@ -156,7 +156,7 @@ cruzamento das <!--@celulas-do-mapa-->628<!--/--> células (<!--@linhas-do-mapa-
 
 Leia as duas casas em negrito e você entendeu o mapa:
 
-- **<!--@cruzamento-medido-vazio-->74<!--/--> células são `medido` com a escada vazia.** Alguém mediu e não registrou
+- **<!--@cruzamento-medido-vazio-->72<!--/--> células são `medido` com a escada vazia.** Alguém mediu e não registrou
   até onde a prova chegou. `medido` **não** quer dizer que o aparelho obedeceu.
 - **<!--@cruzamento-inferido-montou-->62<!--/--> células são `inferido-do-codigo` com `MONTOU`.** Ninguém tocou no
   aparelho: leram a fonte e viram que o produto monta o report. Subir o primeiro
