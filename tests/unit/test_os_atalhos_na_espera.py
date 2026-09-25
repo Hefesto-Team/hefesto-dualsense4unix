@@ -901,6 +901,68 @@ class TestOPsR3DoP2TrocaOModo:
         assert bancada.apertar(P1, "ps", "r3") == ["ponte"]
         assert bancada.apertar(P2, "ps", "r3") == []
 
+    @pytest.mark.parametrize("quantos", [2, 3, 4])
+    @pytest.mark.parametrize(
+        "gesto", [build_next_bridge_callback, build_next_mask_callback], ids=["ps-r3", "ps-l3"]
+    )
+    def test_a_mao_nao_pisca_enquanto_o_vpad_de_quem_segura_renasce(
+        self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
+        quantos: int, gesto: Any,
+    ) -> None:
+        """No tique em que o co-op ainda não promoveu quem renasceu, a mão fica com o P2.
+
+        Conferência de 24/09/2026. O ato do PS + R3 recria todos os jogadores
+        do co-op, e o do PS + L3 do P2 recria o dele; cada um volta a sentar
+        com o grab pendente e só ganha vpad no ``forward_all`` de um tique
+        seguinte. Com os atalhos presos a quem tem vpad de pé, nesse tique a
+        mão ia para o P3 — ou, sem ninguém de pé, para o posto: o diário dizia
+        ``atalhos_voltam_ao_posto`` com o P1 ainda fora (a linha que o install
+        manda procurar para saber que ele voltou), e a pergunta «de quem é o
+        gesto» respondia o P1 ausente.
+        """
+        bancada = montar_atalhos(monkeypatch, kernel, quantos)
+        armar_o_ato_do_daemon(bancada, monkeypatch)
+        _fora_dentro_do_prazo(bancada, P1)
+        # O tique do daemon que roda antes de a thread do leitor abrir o device.
+        monkeypatch.setattr(hotkey, "_ESPERA_DO_VPAD_DO_COOP_S", 0.0)
+        with structlog.testing.capture_logs() as registros:
+            asyncio.run(gesto(bancada.daemon)())
+            assert em.mascara_vestida(bancada.daemon, P2) is None, "premissa: o P2 renasce"
+            observar_os_atalhos(bancada.daemon, evdev_buttons_once(bancada.daemon), now=0.0)
+            segura = quem_segura_os_atalhos(bancada.daemon)
+            bancada.tique(0.0)
+        assert segura == P2, f"no tique do renascer, quem segurava era {segura}"
+        trocas = [
+            r for r in registros
+            if r["event"] in ("atalhos_com_o_proximo_da_fila", "atalhos_voltam_ao_posto")
+        ]
+        assert trocas == [], f"o diário disse troca de mão sem troca nenhuma: {trocas}"
+        assert bancada.vaga() and quem_segura_os_atalhos(bancada.daemon) == P2
+
+    def test_na_vaga_sem_ninguem_sentado_ninguem_segura(
+        self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
+    ) -> None:
+        """O P2 está na mesa, mas o co-op não consegue sentá-lo: ninguém segura.
+
+        Outro leitor exclusivo segura o controle do P2 (o grab é recusado), e o
+        posto segue vago. Os atalhos leem o posto vazio, a pergunta «de quem é
+        o gesto» não responde o P1 ausente, e o diário não diz que os atalhos
+        voltaram ao posto.
+        """
+        bancada = montar_atalhos(monkeypatch, kernel, 2)
+        _fora_dentro_do_prazo(bancada, P1)
+        with structlog.testing.capture_logs() as registros:
+            bancada.mesa.grab_recusado.add(P2)  # type: ignore[attr-defined]
+            bancada.coop._teardown_player(P2)
+            bancada.tique(0.0)
+            bancada.tique(0.0)
+        assert bancada.vaga() and bancada.coop.live_snapshots() == {}
+        assert quem_segura_os_atalhos(bancada.daemon) is None
+        assert bancada.apertar(P2, "ps", "r3") == []
+        assert not [r for r in registros if r["event"] == "atalhos_voltam_ao_posto"], (
+            "o diário disse que os atalhos voltaram ao posto com o P1 ainda fora"
+        )
+
     @pytest.mark.xfail(
         strict=True,
         raises=_OPostoSoltouNoMeioDoAtoError,
