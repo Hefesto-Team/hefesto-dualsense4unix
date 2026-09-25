@@ -918,6 +918,18 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
     _reports_recusados: int = 0
     _recusa_avisada: bool = False
 
+    #: O BRILHO DAS LUZES DE NÚMERO, no degrau do firmware — 24/09/2026,
+    #: `D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`. Todo controle NASCE no
+    #: Fraco (o degrau baixo que a pydualsense já mandava), e quem o troca é o
+    #: `_levar_o_brilho_das_luzes`. É ele, e não o `light.brightness` da
+    #: pydualsense, que o `_build_common` põe no `common[42]`: o byte tem dono,
+    #: e o dono é o perfil dela. Default de CLASSE, e não do `__init__`, pela
+    #: razão dos três de cima: o dublê por `__new__` nascia sem ele, com o bit0
+    #: desligado, e ficava mais POBRE que o produto — medido em 25/09 no
+    #: `test_backend_keepalive_neutro`, que viu o `flag2` 0x02 onde o produto
+    #: manda 0x03.
+    _brilho_das_luzes: int = degrau_do_brilho_das_luzes(None)
+
     def __init__(self, path: bytes, *, is_edge: bool) -> None:
         super().__init__()
         self._pinned_path = path
@@ -997,13 +1009,6 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         # posse do perfil (caminho DSTrigger histórico).
         self._raw_trigger_right: bytes | None = None
         self._raw_trigger_left: bytes | None = None
-        # O BRILHO DAS LUZES DE NÚMERO, no degrau do firmware — 24/09/2026,
-        # `D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`. Todo controle NASCE no
-        # Fraco (o degrau baixo que a pydualsense já mandava), e quem o troca é
-        # o `_levar_o_brilho_das_luzes`. É ele, e não o `light.brightness` da
-        # pydualsense, que o `_build_common` põe no `common[42]`: o byte tem
-        # dono, e o dono é o perfil dela.
-        self._brilho_das_luzes: int = degrau_do_brilho_das_luzes(None)
         # AUDIO-OWNER-01 — os DOIS campos de áudio que o upstream autorizava em
         # TODO report sem nunca escrever valor nenhum. Enquanto estes ficarem
         # None, os bits de validação correspondentes saem ZERADOS e o firmware
@@ -1797,8 +1802,8 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         # pydualsense: ele cai aqui e só volta, logo abaixo, com o degrau que
         # o Hefesto escolheu para este handle (`_brilho_das_luzes`).
         flag2 &= ~rep.VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE
-        brilho_das_luzes = getattr(self, "_brilho_das_luzes", None)
-        if brilho_das_luzes is not None and not suppress_leds:
+        brilho_das_luzes = int(self._brilho_das_luzes)
+        if not suppress_leds:
             flag2 |= rep.VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE
         # AUDIO-OWNER-01: os bits de áudio do flag0 caem TODOS e só voltam,
         # um a um, para os bytes de que alguém assumiu a posse.
@@ -1887,8 +1892,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             # 24/09/2026 ele tem dono: o degrau que o perfil escolheu para este
             # controle (`_brilho_das_luzes`, o Fraco se ninguém escolheu), com o
             # `flag2` bit0 ligado lá em cima — ver `luz.led_jogador.brilho`.
-            if brilho_das_luzes is not None:
-                common[42] = int(brilho_das_luzes) & 0xFF
+            common[42] = brilho_das_luzes & 0xFF
             common[43] = int(self.light.playerNumber.value) & 0xFF
             common[44] = int(self.light.TouchpadColor[0]) & 0xFF
             common[45] = int(self.light.TouchpadColor[1]) & 0xFF
