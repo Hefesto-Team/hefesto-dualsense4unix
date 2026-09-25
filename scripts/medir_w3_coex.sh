@@ -70,16 +70,26 @@ if [[ "${RUN}" -ne 1 ]]; then
 fi
 
 [[ "$(id -u)" -eq 0 ]] || { echo "precisa de root (btmon/debugfs)" >&2; exit 1; }
+# A CAPTURA NASCE FECHADA E NÃO FICA (AS-CAPTURAS-DE-RADIO-NASCEM-FECHADAS-01):
+# se um controle reconecta durante um braço, o `btmon` grava a chave de
+# pareamento em claro. Tudo o que o root escreve daqui em diante nasce 0600; as
+# capturas moram num diretório 0700 e saem depois de lidas.
+umask 077
 OUT="${OUT:-/tmp/w3-coex-$(date +%Y%m%d-%H%M%S).txt}"
 
 WIFI_BLOQUEADO=0
+CAPTURAS=""
 restaurar() {
     if [[ "${WIFI_BLOQUEADO}" -eq 1 ]]; then
         log "restaurando rfkill unblock wifi"
         rfkill unblock wifi || true
     fi
+    if [[ -n "${CAPTURAS}" ]]; then
+        rm -rf "${CAPTURAS}"
+    fi
 }
 trap restaurar EXIT
+CAPTURAS="$(mktemp -d -t w3-coex-capturas.XXXXXX)"
 
 # Taxa de reports/lacunas por evdev: lê eventos crus por DUR segundos e
 # reporta total, taxa média e as 3 maiores lacunas entre eventos (ms).
@@ -155,13 +165,14 @@ medir_braco() { # $1=nome $2=preparo(fn) $3=finaliza(fn)
     t0="$(date '+%Y-%m-%d %H:%M:%S')"
     antes="$(snapshot_hci)"
 
-    btmon -w "/tmp/w3-${nome}.snoop" >/dev/null 2>&1 &
+    local snoop="${CAPTURAS}/w3-${nome}.snoop"
+    btmon -w "${snoop}" >/dev/null 2>&1 &
     local btmon_pid=$!
 
     local pids=() i=0
     for ev in "${EVDEVS[@]:-}"; do
         [[ -n "${ev}" ]] || continue
-        medir_evdev "${ev}" "/tmp/w3-${nome}-ev${i}.txt"
+        medir_evdev "${ev}" "${CAPTURAS}/w3-${nome}-ev${i}.txt"
         pids+=("$!")
         i=$((i + 1))
     done
@@ -169,6 +180,8 @@ medir_braco() { # $1=nome $2=preparo(fn) $3=finaliza(fn)
     sleep "${DUR}"
 
     kill "${btmon_pid}" 2>/dev/null || true
+    # Lê só depois de o `btmon` fechar o arquivo.
+    wait "${btmon_pid}" 2>/dev/null || true
     for p in "${pids[@]:-}"; do [[ -n "${p}" ]] && wait "${p}" 2>/dev/null || true; done
     depois="$(snapshot_hci)"
     t1="$(date '+%Y-%m-%d %H:%M:%S')"
@@ -181,20 +194,21 @@ medir_braco() { # $1=nome $2=preparo(fn) $3=finaliza(fn)
         echo "-- hciconfig antes:";  echo "${antes}"
         echo "-- hciconfig depois:"; echo "${depois}"
         echo "-- btmon (eventos de interesse):"
-        btmon -r "/tmp/w3-${nome}.snoop" 2>/dev/null |
+        btmon -r "${snoop}" 2>/dev/null |
             grep -cE 'Hardware Error' | sed 's/^/   Hardware Error: /' || true
-        btmon -r "/tmp/w3-${nome}.snoop" 2>/dev/null |
+        btmon -r "${snoop}" 2>/dev/null |
             grep -A1 'Disconnect Complete' | grep -E 'Reason' | sort | uniq -c |
             sed 's/^/   /' || echo "   (sem Disconnection Complete)"
         echo "-- evdev:"
-        cat /tmp/w3-"${nome}"-ev*.txt 2>/dev/null || echo "   (sem --evdev)"
+        cat "${CAPTURAS}/w3-${nome}"-ev*.txt 2>/dev/null || echo "   (sem --evdev)"
         echo "-- debugfs (${HCI}):"
         for f in conn_info_min_age conn_info_max_age supervision_timeout; do
             printf '   %s=' "${f}"
             cat "/sys/kernel/debug/bluetooth/${HCI}/${f}" 2>/dev/null || echo '?'
         done
-        echo
     } >> "${OUT}"
+    rm -f "${snoop}" "${CAPTURAS}/w3-${nome}"-ev*.txt
+    printf -- '-- captura do btmon: %s (lida e apagada)\n\n' "${snoop}" >> "${OUT}"
 }
 
 carga_pid=""
@@ -209,7 +223,11 @@ prep_rfkill() { WIFI_BLOQUEADO=1; rfkill block wifi; }
 fin_rfkill() { rfkill unblock wifi; WIFI_BLOQUEADO=0; sleep 5; }
 
 : > "${OUT}"
-echo "# W3 — coexistência WiFi×BT (dur=${DUR}s/braço; snoops em /tmp/w3-*.snoop)" >> "${OUT}"
+# O relatório não leva captura nenhuma: é de quem chamou o `sudo`, que o lê sem root.
+if [[ -n "${SUDO_UID:-}" ]]; then
+    chown "${SUDO_UID}:${SUDO_GID:-${SUDO_UID}}" "${OUT}" || log "aviso: ${OUT} ficou do root"
+fi
+echo "# W3 — coexistência WiFi×BT (dur=${DUR}s/braço; capturas do btmon em ${CAPTURAS}, apagadas depois de lidas)" >> "${OUT}"
 medir_braco A-ocioso prep_ocioso fin_ocioso
 medir_braco B-carga  prep_carga  fin_carga
 medir_braco C-rfkill prep_rfkill fin_rfkill
@@ -227,4 +245,5 @@ medir_braco C-rfkill prep_rfkill fin_rfkill
     echo "  comparar os braços A/B (mesmos números = não era o barramento)."
 } >> "${OUT}"
 
+log "capturas do btmon: ${CAPTURAS} (apagadas depois de lidas)"
 log "relatório em ${OUT}"
