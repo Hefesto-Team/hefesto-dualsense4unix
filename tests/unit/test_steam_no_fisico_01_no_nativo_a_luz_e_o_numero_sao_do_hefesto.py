@@ -156,6 +156,28 @@ class TestOGestoDelaSaiNoNativo:
             assert [_cor_do_report(r) for r in radio.escritos] == [(7, 7, 7)]
 
 
+    @pytest.mark.parametrize("uniq", [UNIQ_RADIO, UNIQ_CABO])
+    def test_o_brilho_das_luzes_de_um_controle_sai_no_nativo(self, uniq: str) -> None:
+        """O brilho das luzes de número é do NÚMERO — 25/09/2026.
+
+        O-BRILHO-DAS-LUZES-DE-NUMERO-01: no Modo Nativo ele sai por fora do
+        fluxo mudo, como o desenho — no rádio num `0x31` mínimo, no cabo num
+        `0x02` mínimo ao lado do nó —, com o `flag2` bit0 e o degrau no
+        `common[42]`. Perguntado ao report que saiu, não à constante.
+        """
+        ctl, radio, _no = _mesa_no_nativo()
+
+        palavra = ctl.apply_output_for(uniq, OutputSpec(player_led_brightness=0))
+
+        assert palavra == "escreveu"
+        handle = radio if uniq == UNIQ_RADIO else ctl._handles[MAC_CABO]
+        inicio = 3 if uniq == UNIQ_RADIO else 1
+        [quadro] = handle.escritos
+        common = quadro[inicio : inicio + 47]
+        assert common[38] & 0x01, "o brilho saiu sem o bit que o autoriza"
+        assert common[42] == 0, f"o degrau saiu {common[42]}, e o pedido foi o Forte (0)"
+
+
 class TestOCaboSemNoNaoDizEscreveu:
     """No Nativo, «escreveu» só quando a luz saiu por FORA do fluxo mudo.
 
@@ -274,4 +296,10 @@ class TestOResto:
 
 def test_a_decisao_esta_no_dono_das_constantes() -> None:
     """Uma constante, com a decisão escrita: é a que o `apply_output_for` lê."""
-    assert frozenset({"led", "player_leds"}) == bp._CAMPOS_QUE_O_NATIVO_ESCREVE
+    # O terceiro é o brilho das luzes de número (24/09/2026): ele é do NÚMERO,
+    # e sai por fora do fluxo mudo pelos mesmos caminhos — o comportamento é
+    # medido em `test_o_brilho_das_luzes_de_um_controle_sai_no_nativo`.
+    assert (
+        frozenset({"led", "player_leds", "player_led_brightness"})
+        == bp._CAMPOS_QUE_O_NATIVO_ESCREVE
+    )
