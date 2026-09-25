@@ -2620,6 +2620,17 @@ class PyDualSenseController(IController):
                 auto = None
             if auto is not None:
                 base = _merge_desired(base, auto)
+        # O FATOR DE BRILHO POR CONTROLE ESCALA SÓ A BASE — o global e a
+        # automática, as duas camadas que chegam aqui no brilho do PERFIL
+        # (A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01, 25/09/2026). O override por
+        # controle já traz o brilho DELE: a cor do perfil é escalada na borda
+        # (`_controllers_to_specs`) e a da mão vem escalada pelo `led.set`.
+        # Escalado depois do merge, o fator caía também sobre o override, e o
+        # brilho entrava duas vezes — medido na mesa de quatro real: o P1 a 60%
+        # acendia (0,0,153) pelo trilho e (0,0,111) a cada perfil reaplicado.
+        # Ver `_scaled_led`.
+        if uniq is not None:
+            base = self._scaled_led(uniq, base)
         resolved = _merge_desired(base, override)
         coop: _DesiredOutput | None = None
         cor_do_numero: tuple[int, int, int] | None = None
@@ -2627,7 +2638,6 @@ class PyDualSenseController(IController):
             if incluir_coop:
                 coop = self._desired_coop_by_uniq.get(uniq)
                 resolved = _merge_desired(resolved, coop)
-            resolved = self._scaled_led(uniq, resolved)
             if auto is not None and auto.led is not None:
                 cor_do_numero = self._scaled_led(
                     uniq, _DesiredOutput(led=auto.led)
@@ -2917,6 +2927,17 @@ class PyDualSenseController(IController):
         ter devolvido o próprio `_desired_default` (quando não há override
         nem camada automática), e mutá-lo corromperia o padrão broadcast de
         todo mundo.
+
+        **SÓ SOBRE A BASE** (o global e a automática), nunca sobre a cor
+        resolvida — A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01, 25/09/2026. O fator é
+        RELATIVO ao brilho do perfil (`brilho_do_controle / brilho_global`,
+        `manager._controllers_to_led_scales`) e só tem sentido sobre uma cor
+        que chegou no brilho do perfil. O override por controle chega no
+        brilho dele, e escalá-lo de novo era o defeito: o trilho acendia o P1
+        a 60% em (0,0,153), o perfil reaplicado o levava a (0,0,111), e o
+        trilho seguinte a 40% publicava (0,0,74) em vez de (0,0,102). Quem
+        tinha cor gravada não escurecia porque o manager não lhe publicava
+        fator — a guarda estava na ponta errada.
         """
         fator = self._led_scale_by_uniq.get(uniq)
         if fator is None or desired.led is None:
@@ -6686,11 +6707,13 @@ class PyDualSenseController(IController):
     def set_led_scales(self, scales: Mapping[str, float] | None = None) -> None:
         """SUBSTITUI o mapa de escala de brilho por-uniq (R-20 item 2).
 
-        Camada do PERFIL (é do JSON dele que vem), aplicada DEPOIS do merge
-        sobre a cor RESOLVIDA — inclusive a automática do slot. Antes, um
-        override que só escrevia `lightbar_brightness` era convertido em cor
-        materializada (o RGB global escalado) e, como override vence a camada
-        automática, o controle perdia a cor do slot para sempre.
+        Camada do PERFIL (é do JSON dele que vem), aplicada sobre a BASE do
+        merge — o global e a automática do slot, que chegam no brilho do
+        perfil — e nunca sobre o override por controle, que já traz o brilho
+        dele (`_scaled_led`). Antes, um override que só escrevia
+        `lightbar_brightness` era convertido em cor materializada (o RGB global
+        escalado) e, como override vence a camada automática, o controle perdia
+        a cor do slot para sempre.
 
         Fator ≤ 0 é aceito (apaga a lightbar daquele controle, que é o que
         brilho 0 significa); ausência de entrada = sem opinião. Sem escrita de
