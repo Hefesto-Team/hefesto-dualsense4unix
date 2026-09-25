@@ -449,6 +449,66 @@ def test_sem_a_paleta_o_fossil_nao_cai_no_tom_de_outra_peca(mesa_de, n, para, al
                         f"{passo}: o P{n} acende o tom {tom}, que o P{k} já acende em {outra}")
 
 
+@pytest.mark.parametrize("alvo", ["todos", "um"])
+def test_sem_a_paleta_o_fossil_nao_cai_no_tom_do_global(mesa_de, alvo):
+    """O global é um tom da paleta, e o fóssil deslocado não cai nele.
+
+    O global entra na regra só na SEGUNDA volta, depois dos fósseis: o P3
+    fóssil a 50% ia para o azul a 50%, `(0,0,127)`, com o P1 e o P4 no azul
+    global a 82%, `(0,0,209)` — o byte livre, o tom não (conferência).
+
+    **A MORDIDA:** tire as peças que ficam (`ficam`) do `_tomado` de
+    `led_control.cores_sem_colisao` e o P3 acende o azul do P1.
+    """
+    mesa = mesa_de(alvo)
+    mesa.desligar_a_paleta(player_slot_color(1))
+    mesa.fossilizar(3, escolhida_para=2)
+    mesa.soltar(3, 50)
+    for _ in range(3):
+        mesa.pm.apply(mesa._perfil(), origin="manual")
+        luz = _luz(mesa)
+        assert luz[0] == _na(player_slot_color(1), BRILHO_GLOBAL), "o P1 fica no global"
+        tom = next((t for t in PALETA if _na(t, 0.5) == luz[2]), None)
+        assert tom is not None, f"o P3 acende {luz[2]}, que não é tom da paleta a 50%"
+        for k, outra in enumerate(luz, start=1):
+            if k != 3:
+                assert tom not in _tons_de(outra), (
+                    f"o P3 acende o tom {tom}, que o P{k} já acende em {outra}")
+
+
+def test_o_deslocado_nao_cai_no_tom_de_quem_fica():
+    """A mesa pura: o deslocado evita o tom de quem fica, venha antes ou depois.
+
+    Os dois buracos da primeira volta, os dois com o byte livre e o tom não:
+    o global que só entra na segunda volta, e a escolha viva que vem DEPOIS
+    do fóssil na ordem.
+
+    **A MORDIDA:** a do teste acima.
+    """
+    from hefesto_dualsense4unix.core.led_control import DO_GLOBAL
+
+    azul = player_slot_color(1)
+    ciano = (0, 255, 255)
+    # o global azul a 82% e o fóssil a 50%
+    saida = cores_sem_colisao([
+        PecaDaMesa(uniq="p1", pedida=_na(azul, 0.82), do_numero=None,
+                   procedencia=DO_GLOBAL, numero=1, brilho=0.82),
+        PecaDaMesa(uniq="p3", pedida=_na(ciano, 0.5), do_numero=None,
+                   procedencia=2, numero=3, brilho=0.5),
+    ])
+    assert saida["p1"] == _na(azul, 0.82)
+    assert azul not in _tons_de(saida["p3"]), saida
+    # o fóssil é o primeiro da ordem, e quem escolheu azul a 50% vem depois
+    saida = cores_sem_colisao([
+        PecaDaMesa(uniq="p1", pedida=_na(ciano, 0.82), do_numero=None,
+                   procedencia=2, numero=1, brilho=0.82),
+        PecaDaMesa(uniq="p4", pedida=_na(azul, 0.5), do_numero=None,
+                   procedencia=4, numero=4, brilho=0.5),
+    ])
+    assert saida["p4"] == _na(azul, 0.5)
+    assert azul not in _tons_de(saida["p1"]), saida
+
+
 # ---------------------------------------------------------------------------
 # 4. os donos das duas contas
 # ---------------------------------------------------------------------------
