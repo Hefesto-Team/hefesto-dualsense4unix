@@ -3287,12 +3287,20 @@ class PyDualSenseController(IController):
         serial em USB. Faz dedupe por device (uma mesma controladora pode
         enumerar múltiplas interfaces HID).
 
+        O-CABO-ASSUME-DO-RADIO-01 (25/09/2026): o MESMO controle nos dois
+        transportes é a mesma key em dois nós, e o dedupe ficava com o que o
+        hidapi listasse primeiro — sorteio de enumeração. Agora vence o cabo
+        (decisão dela: no cabo há a vibração por áudio, o som e menos atraso).
+        O kernel de hoje recusa o segundo nó (`ps_devices_list_add`, -EEXIST),
+        então os dois só aparecem juntos num kernel que não recuse; a regra
+        existe para a escolha nunca ser do sorteio.
+
         SEAM de teste: stubável para `[]` (offline) ou uma lista fixa.
         """
         import hidapi
 
         out: list[tuple[str, bytes, bool]] = []
-        seen: set[str] = set()
+        posicao: dict[str, int] = {}
         for info in hidapi.enumerate(vendor_id=DUALSENSE_VENDOR):
             if info.product_id not in DUALSENSE_PIDS:
                 continue
@@ -3302,10 +3310,13 @@ class PyDualSenseController(IController):
             # char* → bytes. NÃO chamar .decode() no serial (já é str).
             serial = info.serial_number
             key = serial if serial else info.path.decode("utf-8", "replace")
-            if key in seen:  # dedupe de múltiplas interfaces do mesmo device
+            entrada = (key, info.path, info.product_id == DUALSENSE_EDGE_PID)
+            if key in posicao:  # dedupe de múltiplas interfaces do mesmo device
+                if _o_cabo_vence(info.path, out[posicao[key]][1]):
+                    out[posicao[key]] = entrada
                 continue
-            seen.add(key)
-            out.append((key, info.path, info.product_id == DUALSENSE_EDGE_PID))
+            posicao[key] = len(out)
+            out.append(entrada)
         return out
 
     def _open_one(self, path: bytes, *, is_edge: bool) -> pydualsense | None:
@@ -3456,7 +3467,9 @@ class PyDualSenseController(IController):
           - controle novo → abre o handle e re-aplica o PERFIL ATIVO nele;
           - controle removido → fecha o handle (sem vazar) e promove o próximo
             mais antigo a primário se for o caso;
-          - já presente → mantém intacto (não reabre).
+          - já presente → mantém intacto (não reabre);
+          - já presente por OUTRO nó → troca o handle no MESMO lugar
+            (O-CABO-ASSUME-DO-RADIO-01, ver `_o_no_mudou_locked`).
         """
         want = self._enumerate_device_keys()
         if not want:
@@ -3467,22 +3480,28 @@ class PyDualSenseController(IController):
             return
 
         want_keys = {key for key, _, _ in want}
+        caminho_pedido = {key: path for key, path, _ in want}
         with self._io_lock:
             # hotplug-OUT: fecha tudo que sumiu (sem vazar handle/thread).
             self._close_handles(keep=want_keys)
             existing = set(self._handles)
+            trocar = {
+                key for key in existing if self._o_no_mudou_locked(key, caminho_pedido[key])
+            }
 
         # hotplug-IN: abre os que faltam (fora do lock — `_open_one` pode levar
         # até INIT_TIMEOUT_SEC e não deve bloquear read_state/fan-out).
         new_handles: list[tuple[str, pydualsense]] = []
+        #: key -> o transporte do handle que saiu (O-CABO-ASSUME-DO-RADIO-01).
+        trocados: dict[str, str] = {}
         for key, path, is_edge in want:
-            if key in existing:
+            if key in existing and key not in trocar:
                 continue
             # L2: pula se já há handle OU se outro probe concorrente já está
             # abrindo esta key (guard sob `_io_lock`). Marca a key como "em
             # abertura" antes do `_open_one` (caro) e a libera no `finally`.
             with self._io_lock:
-                if key in self._handles or key in self._opening:
+                if key in self._opening or (key in self._handles and key not in trocar):
                     continue
                 self._opening.add(key)
             try:
@@ -3490,8 +3509,14 @@ class PyDualSenseController(IController):
                 if handle is None:
                     continue  # timeout / sumiu na corrida — retenta no próximo probe
                 dup: pydualsense | None = None
+                antigo: pydualsense | None = None
                 with self._io_lock:
-                    if key in self._handles:
+                    if key in trocar and self._o_no_mudou_locked(key, path):
+                        # O MESMO lugar do dict: a ordem, o posto de primário e
+                        # o número não andam. Só o nó mudou.
+                        antigo = self._handles[key]
+                        self._handles[key] = handle
+                    elif key in self._handles:
                         # outro probe concorrente abriu primeiro — descarta o dup.
                         dup = handle
                     else:
@@ -3500,6 +3525,16 @@ class PyDualSenseController(IController):
                     with contextlib.suppress(Exception):
                         dup.close()
                     continue
+                if antigo is not None:
+                    trocados[key] = self._detect_transport(antigo)
+                    with contextlib.suppress(Exception):
+                        antigo.close()
+                    logger.info(
+                        "handle_trocado_de_no",
+                        uniq=_endereco_mascarado(self._key_to_uniq(key)),
+                        antes=trocados[key],
+                        agora=self._detect_transport(handle),
+                    )
                 new_handles.append((key, handle))
             except Exception as exc:
                 # LIGHTBAR-BT-ADOPT-01 (complemento): falha de UM device não pode
@@ -3516,6 +3551,9 @@ class PyDualSenseController(IController):
 
         with self._io_lock:
             self._recompute_primary()
+            if self._primary_key in trocados:
+                self._religar_o_primario_trocado_locked()
+            self._anotar_os_transportes_locked(new_handles, trocados)
             self._offline = not self._handles
             # PERF-MULTI-CONTROLLER-01: throttle do report_thread escala com o
             # nº de controles (base x N, capado) — divide a pressão de USB e de
@@ -3731,6 +3769,7 @@ class PyDualSenseController(IController):
         """
         for key in [k for k in self._handles if k not in keep]:
             handle = self._handles.pop(key)
+            self._segurar_a_volta_pelo_radio_locked(key, handle)
             with contextlib.suppress(Exception):
                 handle.close()
         if self._primary_key is not None and self._primary_key not in self._handles:
@@ -7968,6 +8007,20 @@ class PyDualSenseController(IController):
         """
         reserva = self._primario_deposto
         pergunta = self._espera_do_posto
+        if reserva is not None and self._handles and self._a_troca_espera_locked(reserva[0]):
+            # O-CABO-ASSUME-DO-RADIO-01: quem saiu está TROCANDO de transporte,
+            # e volta em segundos pelo outro. Com jogo ou sem, o posto espera:
+            # entregá-lo ao P2 para devolvê-lo logo depois seria o P2 dirigindo
+            # o jogador 1 por um instante, e o vpad dele caindo e renascendo.
+            if self._posto_vago_de != reserva[0]:
+                self._posto_vago_de = reserva[0]
+                logger.info(
+                    "posto_do_p1_espera",
+                    key=reserva[0],
+                    transporte=self._transport,
+                    motivo="troca_de_transporte",
+                )
+            return None
         if reserva is not None and pergunta is not None and self._handles:
             chave = reserva[0]
             uniq = self._key_to_uniq(chave)
@@ -8041,6 +8094,233 @@ class PyDualSenseController(IController):
             return {"battery_pct": 0, "battery_state": None}
         battery, carga = self._carga_do_posto
         return {"battery_pct": battery, "battery_state": carga}
+
+    # --- a troca de transporte (O-CABO-ASSUME-DO-RADIO-01) ----------------
+    #
+    # A decisão dela (25/09/2026): o controle do rádio que ganha cabo passa
+    # para o cabo, com o mesmo número e sem o jogo perder o controle; tirou o
+    # cabo, volta pelo rádio. O kernel não deixa o mesmo endereço existir nos
+    # dois barramentos ao mesmo tempo (`ps_devices_list_add`, -EEXIST): entre o
+    # rádio sair e o cabo entrar há um instante em que o controle não está na
+    # mesa. Estas marcas seguram o lugar dele nesse instante — o posto de P1
+    # (`_quem_senta_no_posto`), o vpad do co-op (`em_troca_de_transporte`) e o
+    # silêncio das bordas de queda (`daemon/connection.py`).
+    #
+    # Defaults de CLASSE e dicionários criados na primeira escrita: a suíte
+    # monta backend por `__new__`.
+
+    #: MAC 12-hex -> até quando (no relógio dos prazos) a troca segura o lugar.
+    _trocas_de_transporte: dict[str, float] | None = None
+    #: key -> os transportes em que ela já esteve nesta vida do daemon.
+    _transportes_da_sessao: dict[str, set[str]] | None = None
+
+    def iniciar_troca_de_transporte(self, uniq: str, *, motivo: str) -> bool:
+        """Segura o lugar do controle `uniq` enquanto ele troca de transporte.
+
+        Quem chama é quem vai TIRAR o controle de um transporte: o laço do
+        daemon, logo antes de derrubar o rádio do controle que ganhou cabo. O
+        prazo é o do posto de primário (`PRAZO_DA_TROCA_DE_TRANSPORTE_S`) —
+        a mesma promessa, no mesmo relógio.
+        """
+        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+        alvo = norm_mac(uniq)
+        if not alvo or len(alvo) != 12:
+            return False
+        with self._io_lock:
+            trocas = self._trocas_de_transporte
+            if trocas is None:
+                trocas = self._trocas_de_transporte = {}
+            trocas[alvo] = self._relogio() + PRAZO_DA_TROCA_DE_TRANSPORTE_S
+        logger.info(
+            "troca_de_transporte_iniciada",
+            uniq=_endereco_mascarado(alvo),
+            motivo=motivo,
+            prazo_s=PRAZO_DA_TROCA_DE_TRANSPORTE_S,
+        )
+        return True
+
+    def cancelar_troca_de_transporte(self, uniq: str, *, motivo: str) -> None:
+        """Solta a marca — a troca não vai acontecer (o rádio não caiu)."""
+        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+        alvo = norm_mac(uniq)
+        with self._io_lock:
+            trocas = self._trocas_de_transporte
+            if not trocas or not alvo or trocas.pop(alvo, None) is None:
+                return
+        logger.info(
+            "troca_de_transporte_cancelada", uniq=_endereco_mascarado(alvo), motivo=motivo
+        )
+
+    def em_troca_de_transporte(self, uniq: str | None) -> bool:
+        """O controle `uniq` está trocando de transporte (ou acabou de trocar)?
+
+        É a pergunta do co-op: com o sim, o jogador que saiu da mesa por um
+        instante fica com o vpad, e o que voltou por outro nó é reapontado em
+        vez de recriado. Vale até o prazo, e ainda
+        `FOLGA_DEPOIS_DA_TROCA_S` depois de o controle voltar — o co-op olha a
+        mesa no ritmo dele (~2 s), e a volta pode ter passado entre dois olhares.
+        """
+        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+        alvo = norm_mac(uniq) if uniq else None
+        with self._io_lock:
+            return self._troca_valida_locked(alvo)
+
+    def trocas_de_transporte_pendentes(self) -> frozenset[str]:
+        """Os MACs que estão FORA da mesa por estarem trocando de transporte.
+
+        É a pergunta do laço do daemon: com alguém aqui, a mesa que ficou vazia
+        por um instante não é queda, e o controle que sumiu não é "alvo que
+        sumiu".
+        """
+        with self._io_lock:
+            presentes = {self._key_to_uniq(key) for key in self._handles}
+            trocas = dict(self._trocas_de_transporte or {})
+            return frozenset(
+                uniq
+                for uniq in trocas
+                if uniq not in presentes and self._troca_valida_locked(uniq)
+            )
+
+    def transportes_dos_alvos(self) -> dict[str, str]:
+        """`{key: 'usb' | 'bt'}` dos controles conectados AGORA.
+
+        A irmã de `alvos_conectados()`: aquela diz QUEM está na mesa, esta diz
+        POR ONDE. A troca que acontece entre dois tiques (o handle trocado no
+        mesmo lugar, `_o_no_mudou_locked`) não aparece como borda de ninguém, e
+        o laço do daemon a enxerga comparando duas fotos desta.
+        """
+        with self._io_lock:
+            items = list(self._handles.items())
+        return {
+            key: self._detect_transport(handle)
+            for key, handle in items
+            if bool(getattr(handle, "connected", False))
+        }
+
+    def _troca_valida_locked(self, uniq: str | None) -> bool:
+        """A marca de `uniq` ainda vale? Vencida, sai (com uma linha). Sob `_io_lock`."""
+        trocas = self._trocas_de_transporte
+        if not uniq or not trocas or uniq not in trocas:
+            return False
+        if self._relogio() < trocas[uniq]:
+            return True
+        del trocas[uniq]
+        logger.info("troca_de_transporte_venceu", uniq=_endereco_mascarado(uniq))
+        return False
+
+    def _a_troca_espera_locked(self, key: str) -> bool:
+        """O posto de `key` espera por ela porque ela está trocando de transporte?"""
+        return key not in self._handles and self._troca_valida_locked(self._key_to_uniq(key))
+
+    def _o_no_mudou_locked(self, key: str, pedido: bytes) -> bool:
+        """A key segue na mesa, mas por OUTRO nó — o handle aberto é de um nó morto.
+
+        É a troca de transporte que o tique não viu: o rádio saiu e o cabo
+        entrou entre dois `connect()` (a regra udev religa o cabo no mesmo
+        instante em que o rádio sai), e a key nunca some da enumeração. Antes
+        desta linha o `connect()` via a key "já presente" e ficava com o handle
+        do nó do rádio, que não existe mais — medido em 25/09/2026 na medição
+        desta sprint. Também é o rádio que volta num tique só.
+
+        Só compara quando os dois lados têm caminho (`_pinned_path`): um handle
+        sem ele (dublê antigo) segue a regra de antes.
+        """
+        atual = getattr(self._handles.get(key), "_pinned_path", None)
+        return isinstance(atual, bytes) and isinstance(pedido, bytes) and atual != pedido
+
+    def _religar_o_primario_trocado_locked(self) -> None:
+        """O primário trocou de nó sem trocar de key: o transporte e os leitores seguem.
+
+        O `_recompute_primary` só religa quando a KEY do primário muda, e aqui
+        ela não mudou — mudou o nó. Sem isto o `_transport` dizia "bt" com o
+        primário no cabo, e os leitores do P1 esperavam o nó velho.
+        """
+        chave = self._primary_key
+        if chave is None or chave not in self._handles:
+            return
+        self._transport = self._detect_transport(self._handles[chave])
+        with contextlib.suppress(Exception):
+            self._evdev.request_reopen(reason="troca_de_transporte")
+        if self._motion_reader is not None:
+            with contextlib.suppress(Exception):
+                self._motion_reader.request_reopen("troca_de_transporte")
+        logger.info("controller_primary_bound", transport=self._transport, motivo="troca_de_no")
+
+    def _anotar_os_transportes_locked(
+        self, novos: list[tuple[str, pydualsense]], trocados: Mapping[str, str]
+    ) -> None:
+        """Guarda por onde cada controle esteve, e fecha a troca de quem voltou.
+
+        Quem estava trocando e voltou (por qualquer transporte) conclui a troca;
+        a marca fica mais `FOLGA_DEPOIS_DA_TROCA_S` para o co-op, que pode não
+        ter olhado a mesa no meio. O handle trocado no mesmo lugar por outro
+        transporte, sem marca nenhuma (a troca que ninguém pediu), ganha a
+        mesma folga pelo mesmo motivo. Sob `_io_lock`.
+        """
+        if not novos:
+            return
+        sessao = self._transportes_da_sessao
+        if sessao is None:
+            sessao = self._transportes_da_sessao = {}
+        agora = self._relogio()
+        for key, handle in novos:
+            try:
+                transporte = self._detect_transport(handle)
+            except Exception:  # dublê sem conType: sem transporte, sem marca
+                continue
+            sessao.setdefault(key, set()).add(transporte)
+            uniq = self._key_to_uniq(key)
+            if uniq is None:
+                continue
+            trocas = self._trocas_de_transporte
+            if trocas is None:
+                trocas = self._trocas_de_transporte = {}
+            if self._troca_valida_locked(uniq):
+                trocas[uniq] = min(trocas[uniq], agora + FOLGA_DEPOIS_DA_TROCA_S)
+                logger.info(
+                    "troca_de_transporte_concluida",
+                    uniq=_endereco_mascarado(uniq),
+                    transporte=transporte,
+                )
+            elif key in trocados and trocados[key] != transporte:
+                trocas[uniq] = agora + FOLGA_DEPOIS_DA_TROCA_S
+                logger.info(
+                    "troca_de_transporte_concluida",
+                    uniq=_endereco_mascarado(uniq),
+                    transporte=transporte,
+                    motivo="no_trocado_no_mesmo_tique",
+                )
+
+    def _segurar_a_volta_pelo_radio_locked(self, key: str, handle: Any) -> None:
+        """O cabo saiu de um controle que veio do rádio: o lugar espera ele voltar.
+
+        A volta da decisão dela: *tirou o cabo, volta pelo BT, com o mesmo
+        número*. O controle que já esteve no rádio nesta vida do daemon tem o
+        pareamento aqui, e reconecta sozinho — o prazo é o mesmo da ida. O que
+        nunca esteve no rádio sai como sempre saiu. Sob `_io_lock`.
+        """
+        uniq = self._key_to_uniq(key)
+        if uniq is None:
+            return
+        try:
+            transporte = self._detect_transport(handle)
+        except Exception:
+            return
+        if transporte != "usb" or "bt" not in (self._transportes_da_sessao or {}).get(key, ()):
+            return
+        trocas = self._trocas_de_transporte
+        if trocas is None:
+            trocas = self._trocas_de_transporte = {}
+        trocas[uniq] = self._relogio() + PRAZO_DA_TROCA_DE_TRANSPORTE_S
+        logger.info(
+            "troca_de_transporte_iniciada",
+            uniq=_endereco_mascarado(uniq),
+            motivo="o_cabo_saiu",
+            prazo_s=PRAZO_DA_TROCA_DE_TRANSPORTE_S,
+        )
 
 
 #: O nibble ALTO do byte de bateria (`status[0]`), traduzido — BATERIA-PARADA-01.
@@ -8116,4 +8396,49 @@ def relogio_do_prazo() -> float:
     return time.clock_gettime(_RELOGIO_DOS_PRAZOS)
 
 
-__all__ = ["ESTADO_DE_CARGA", "PyDualSenseController", "relogio_do_prazo"]
+#: O-CABO-ASSUME-DO-RADIO-01 — quanto a troca de transporte segura o lugar do
+#: controle. É o prazo do posto de primário, e não um número novo: o posto do
+#: P1 e o lugar dos quatro já são UMA promessa (`identity.prazo_do_lugar_guardado`),
+#: e o controle que troca de transporte é o caso mais curto dela — o rádio sai e
+#: o cabo entra em segundos. Guardar mais atrapalharia quem desliga o controle.
+PRAZO_DA_TROCA_DE_TRANSPORTE_S: float = PRIMARIO_RESERVA_SEC
+
+#: Depois de o controle voltar, por quanto a marca ainda responde "em troca". O
+#: co-op olha a mesa a cada ~2 s (`coop.sync`), e a volta pode cair entre dois
+#: olhares: sem a folga ele veria o nó novo com a marca já solta e recriaria o
+#: vpad — o jogo perderia o controle na troca que devia ser invisível. Cinco
+#: olhares cabem nela.
+FOLGA_DEPOIS_DA_TROCA_S: float = 10.0
+
+
+def _endereco_mascarado(uniq: object) -> str | None:
+    """O MAC 12-hex com os octetos 4 e 5 zerados — a máscara da casa, para o diário."""
+    if not isinstance(uniq, str) or len(uniq) != 12:
+        return None
+    return uniq[:6] + "0000" + uniq[10:]
+
+
+def _barramento_do_hidraw(path: bytes) -> str | None:
+    """`usb` ou `bt` pelo `HID_ID` do nó (``0003:`` é o cabo, ``0005:`` o rádio)."""
+    no = os.path.basename(path.decode("utf-8", "replace"))
+    barramento = _hidraw_uevent(no).get("HID_ID", "")[:4]
+    return {"0003": "usb", "0005": "bt"}.get(barramento)
+
+
+def _o_cabo_vence(novo: bytes, guardado: bytes) -> bool:
+    """O nó `novo` do mesmo controle toma o lugar do `guardado`? Só se for o cabo.
+
+    O-CABO-ASSUME-DO-RADIO-01: no cabo há a vibração por áudio, o som e menos
+    atraso. Entre dois nós do mesmo barramento (interfaces do mesmo aparelho),
+    fica o primeiro, como sempre.
+    """
+    return _barramento_do_hidraw(novo) == "usb" and _barramento_do_hidraw(guardado) != "usb"
+
+
+__all__ = [
+    "ESTADO_DE_CARGA",
+    "FOLGA_DEPOIS_DA_TROCA_S",
+    "PRAZO_DA_TROCA_DE_TRANSPORTE_S",
+    "PyDualSenseController",
+    "relogio_do_prazo",
+]
