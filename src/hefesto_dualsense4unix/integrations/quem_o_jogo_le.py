@@ -63,7 +63,7 @@ dirigia o posto. Quem sabe quem alimenta cada vpad AGORA é o co-op
 rumble do jogo já segue.
 
 **Nada muda sem vpad nem com o vpad ``uinput``.** No Modo Nativo o jogo abre
-o físico, que casa pelo próprio ``uniq``, e o tradutor nem é perguntado. Com
+o físico, que casa pelo próprio ``uniq``, e o tradutor não decide nada. Com
 a máscara Xbox o vpad é ``uinput`` e não carrega ``uniq``: o jogo que o lê
 não entra no conjunto, antes e depois desta cura.
 
