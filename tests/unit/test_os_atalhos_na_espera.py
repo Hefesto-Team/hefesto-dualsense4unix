@@ -930,9 +930,9 @@ class TestOPsR3DoP2TrocaOModo:
         com o grab pendente e só ganha vpad no ``forward_all`` de um tique
         seguinte. Com os atalhos presos a quem tem vpad de pé, nesse tique a
         mão ia para o P3 — ou, sem ninguém de pé, para o posto: o diário dizia
-        ``atalhos_voltam_ao_posto`` com o P1 ainda fora (a linha que o install
-        manda procurar para saber que ele voltou), e a pergunta «de quem é o
-        gesto» respondia o P1 ausente.
+        ``atalhos_voltam_ao_posto`` com o P1 ainda fora (a linha que se procura
+        no diário, depois do install, para saber que ele voltou), e a pergunta
+        «de quem é o gesto» respondia o P1 ausente.
         """
         bancada = montar_atalhos(monkeypatch, kernel, quantos)
         armar_o_ato_do_daemon(bancada, monkeypatch)
