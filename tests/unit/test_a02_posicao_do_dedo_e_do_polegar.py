@@ -6,42 +6,29 @@ rádio, os dois validados): *"não funciona o touch, analogicos"*.
 
 E ela estava certa nos dois. O DADO CHEGAVA INTEIRO — `daemon/sensor_hub.py`
 publica o bloco `touchpad` com as cinco chaves juntas (`touching`, `x`, `y`,
-`width`, `height`) e o `inputs` com `lx`/`ly`/`rx`/`ry`;
-`docs/data/mapa-controles.csv` diz `toque.touchpad = sim` nos DOIS transportes.
-O que o produto fazia com ele:
+`width`, `height`) e o `inputs` com `lx`/`ly`/`rx`/`ry` — e morria no
+`style=` de linha do desenho, que o produto não alcançava.
 
-    onde o dado morria                       o que a tela mostrava
-    `toque_do_controle` lia só `lido[0]`     o pontinho ACENDIA e APAGAVA certo,
-                                             parado em `left:62%;top:44%`
-    os dois `<span class="p">` dos           as bolinhas dos polegares paradas
-    analógicos não tinham endereço           onde o mockup as cravou
+A PRIMEIRA CURA (04/09) foi uma folha endereçada, `posicao-css`, trocada
+inteira a cada tique. Ela moveu os pontinhos e repintava a janela toda dez vezes
+por segundo: 37,7% de um núcleo no WebKit, medido na banca em 25/09/2026.
 
-**ACENDER NO LUGAR ERRADO É A FAMÍLIA DE DEFEITO QUE ESTA ABA JÁ PAGOU DUAS
-VEZES**: ter dono não é dizer a verdade. O `touch-ponto` tinha dono desde 02/09
-— e o dono só sabia dizer *se* havia um dedo, nunca *onde*.
+A CURA DE HOJE (A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01) é o alvo `posicao`:
+cada pontinho tem um endereço, o produto escreve `--hef-x`/`--hef-y` nele, e a
+página tem UMA regra com o repouso como reserva do `var()`. O exemplo do
+desenho vai cravado no próprio pontinho.
 
-POR QUE NÃO ERA ALCANÇÁVEL, e é a razão de a cura ser uma FOLHA e não um campo:
-`left`/`top` moravam num `style=` de LINHA, que vence qualquer folha de estilo,
-e o `escrever()` do piloto não tem alvo que escreva `style` — o alvo `atributo`
-o RECUSA por nome (`hefesto_vivo.atributo_escrevivel` exige `data-`/`aria-` ou
-`title`). A cura é a mesma da cor do plástico, de 03/09: a posição sai do
-`style=` e vira REGRA numa folha endereçada que o produto TROCA INTEIRA
-(`data-campo="posicao-css"`, alvo `html`).
+O QUE ESTA RÉGUA MEDE, e o que cada teste MORDE está escrito no teste:
 
-O QUE ESTA RÉGUA MEDE, e o que cada teste MORDE está escrito no teste. As duas
-metades:
+1. **o dado chega ao endereço** — com touchpad e analógicos sintéticos, o
+   pacote emite `x,y` lidos, e `""` onde não leu;
+2. **a página não tem posição fora do alvo** — nenhum `style="left:…%;top:…%"`,
+   nenhuma folha `posicao-css`, a regra única e os quatro endereços por lugar;
+3. **o desenho continua no desenho** — o P1 do mockup mostra, lido pela régua
+   do mockup, o exemplo que o desenho cravou.
 
-1. **o dado chega à folha** — com touchpad e analógicos sintéticos, a regra do
-   assento sai com a posição lida, e não com a do desenho;
-2. **a página não tem mais posição cravada** — nenhum `style="left:…%;top:…%"`
-   sobrou, e a folha endereçada existe, é UMA e nomeia os três pontinhos de cada
-   controle conectado.
-
-O QUE ELA NÃO MEDE, declarado para não virar verde por vacuidade: ela não abre
-o `WebView` nem confere o que o WebKit calcula. A prova de que a regra VENCE o
-desenho é de especificidade, e está contada em `PISO_DAS_POSICOES`; a prova de
-que ela chega à tela é a foto, que é obrigatória nesta casa e não cabe num teste
-de unidade.
+O QUE ELA NÃO MEDE: o WebKit calculando o `left`. Isso é da régua no tempo
+(`test_a_janela_aberta_nao_gasta_o_processador.py`, R5), que abre o piloto.
 """
 from __future__ import annotations
 
@@ -59,16 +46,12 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 UNIQ = "aa:bb:cc:00:00:01"
 
 #: O TOUCHPAD COMO O DAEMON O PUBLICA, com o dedo em três quartos da largura e
-#: um quarto da altura. Os limites são os que o payload declara — 1920x1080 é o
-#: que os dois DualSense dela publicam, e `posicao_normalizada` os LÊ em vez de
-#: cravá-los.
+#: um quarto da altura. Os limites são os que o payload declara.
 DEDO = {"touching": True, "x": 1440, "y": 270, "width": 1920, "height": 1080}
-#: A posição do `DEDO` em por cento: 1440/1920 e 270/1080.
-DEDO_EM_POR_CENTO = (75.0, 25.0)
 
 #: OS DOIS POLEGARES, e o esquerdo está no TALO — `lx=0` é o extremo à
-#: esquerda, não o centro. É o defeito que `mesa_viva._eixo_do_analogico` mediu
-#: e curou em 29/08/2026 (`int(inputs.get(nome) or 128)` fazia `0` virar `128`).
+#: esquerda, não o centro (o defeito que `mesa_viva._eixo_do_analogico` curou em
+#: 29/08/2026).
 POLEGARES = {"lx": 0, "ly": 255, "rx": 128, "ry": 128}
 
 
@@ -88,13 +71,7 @@ def a02():
 
 @pytest.fixture(scope="module")
 def pagina() -> str:
-    """A página da BANCADA — o desenho de hoje, que é o que ela olha.
-
-    A bancada, e não o publicado, de propósito: apontar uma régua para o
-    publicado a faria dar **verde sobre a página congelada**, que é a armadilha
-    mais cara do `docs/method/COMO-OLHAR-A-TELA.md` e a razão de
-    `onde.pagina()` ter a bancada por padrão.
-    """
+    """A página da BANCADA — o desenho de hoje, que é o que ela olha."""
     from hefesto_dualsense4unix.interface import onde
 
     return onde.pagina("02-controles.html").read_text(encoding="utf-8")
@@ -104,209 +81,158 @@ BASE: dict[str, Any] = {
     "uniq": UNIQ, "player": 1, "connected": True, "transport": "usb",
     "battery_pct": 95, "is_primary": True, "inputs": {}, "audio": {},
 }
-#: O assento na mesa. O `pref` é o endereço do desenho (`data-controle="p1"`), e
-#: é ele — não o `uniq` do daemon — que nomeia o seletor.
 MESA = [{"uniq": UNIQ, "pref": "p1", "nome": "White", "via": "USB", "cor": "white"}]
 
 
-def _folha(pac, a02, entrada: dict, monkeypatch) -> str:
-    """A folha `posicao-css` que o pacote emite para UM controle na mesa.
+def _posicoes(pac, a02, entrada: dict, monkeypatch) -> dict[str, str]:
+    """Os quatro endereços de posição que o pacote emite para UM controle.
 
     O `_ENDERECOS` É FORÇADO, e a razão é de calendário: `_so_se_a_pagina_tiver`
-    pergunta à página **publicada**, e o `posicao-css` nasce hoje na BANCADA —
-    o publicado só o recebe no dia em que ela mandar publicar a aba. Sem este
+    pergunta à página **publicada**, e os endereços nascem na BANCADA. Sem este
     desvio esta régua mediria a data da publicação, e não a cura.
     """
     monkeypatch.setattr(
-        a02, "_ENDERECOS", frozenset({"posicao-css", "plastico-css"}), raising=False)
+        a02, "_ENDERECOS", frozenset(a02.CAMPOS_DA_POSICAO.values()), raising=False)
     ctx = pac.Contexto(state={}, mesa=MESA, conectados=[entrada], estados={})
-    return str(a02.pacote(ctx)["mesa"]["posicao-css"])
+    card = a02.pacote(ctx)["cards"][UNIQ]
+    return {alvo: card[campo] for alvo, campo in a02.CAMPOS_DA_POSICAO.items()}
 
 
 # --------------------------------------------------------------------------
-# 1. O DADO CHEGA À FOLHA
+# 1. O DADO CHEGA AO ENDEREÇO
 # --------------------------------------------------------------------------
-def test_a_posicao_do_dedo_chega_a_folha(pac, a02, monkeypatch):
-    """Com o dedo em 75%/25% do pad, a regra do P1 diz 75%/25%.
+def test_a_posicao_do_dedo_chega_ao_endereco(pac, a02, monkeypatch):
+    """Com o dedo em 75%/25% do pad, o endereço do dedo diz `75.0,25.0`.
 
-    Ela é a metade `touch` da queixa dela. O `fx`/`fy` já vinham prontos de
-    `controller_card.touchpad_do_inputs` — *"já normalizados 0..1 pelos limites
-    que o PRÓPRIO payload declara"* — e `toque_do_controle` os jogava fora.
-
-    MORDE: voltar `dedos_do_controle` a devolver o par (só `palavra` e `ponto`,
-    sem a posição) rebenta a desempacotação em `pacote()`; devolver `None` no
-    lugar da posição — a forma silenciosa do mesmo estrago — apaga a regra e
-    reprova aqui, porque a folha volta a ter só o piso.
-
-    **O SELETOR GANHOU SUFIXO EM 18/09/2026** (MULTITOQUE-01): `.ponto` virou
-    `.ponto-1`, porque agora são DUAS bolinhas por card e um seletor sem
-    sufixo escreveria a posição do dedo 1 em cima da do dedo 2. O que este
-    teste mede não mudou — é o dado do aparelho chegando à folha.
+    MORDE: devolver `None` no lugar da posição em `dedos_do_controle` apaga o
+    valor, e o pontinho iria ao repouso com o dedo no pad.
     """
-    folha = _folha(pac, a02, {**BASE, "inputs": {"touchpad": DEDO}}, monkeypatch)
-    x, y = DEDO_EM_POR_CENTO
-    assert f'.ctl[data-controle="p1"] .touch .ponto-1{{left:{x}%;top:{y}%}}' in folha, (
-        f"a posição do dedo não chegou à folha:\n{folha}")
-    assert "62%" not in folha, (
-        "a folha carrega o `left:62%` que o mockup cravou — o pontinho continua "
-        "aceso no lugar do desenho")
+    pos = _posicoes(pac, a02, {**BASE, "inputs": {"touchpad": DEDO}}, monkeypatch)
+    assert pos["touch"] == "75.0,25.0", f"a posição do dedo não chegou: {pos}"
+    assert pos["touch2"] == "", (
+        f"o pacote escreveu posição para um segundo dedo que não está lá: {pos}")
 
 
-def test_o_segundo_dedo_tem_regra_propria_na_folha(pac, a02, monkeypatch):
-    """MULTITOQUE-01: dois dedos no pad, duas regras na folha — distintas.
+def test_o_segundo_dedo_tem_endereco_proprio(pac, a02, monkeypatch):
+    """MULTITOQUE-01: dois dedos no pad, dois endereços — distintos.
 
-    O DualSense entrega dois pontos de toque (`ABS_MT_SLOT 0..1`, medido no
-    aparelho dela em 18/09/2026) e a tela mostrava um. Esta régua trava o
-    elo de baixo: se as duas bolinhas voltarem a dividir o mesmo seletor, a
-    segunda regra sobrescreve a primeira e os dois dedos aparecem colados.
-
-    MORDE: tirar `"touch2"` de `ALVOS_DA_POSICAO` derruba com `KeyError`;
-    apontar os dois alvos para `.touch .ponto` faz a segunda asserção casar
-    a primeira string e reprovar na comparação de regras distintas.
+    MORDE: apontar os dois alvos para o mesmo `data-campo` em
+    `CAMPOS_DA_POSICAO` faz o segundo sobrescrever o primeiro.
     """
     dois = {**DEDO, "pontos": [{"slot": 0, "x": 1440, "y": 270, "id": 7},
                                {"slot": 1, "x": 480, "y": 810, "id": 8}]}
-    folha = _folha(pac, a02, {**BASE, "inputs": {"touchpad": dois}}, monkeypatch)
-    assert '.ctl[data-controle="p1"] .touch .ponto-1{left:75.0%;top:25.0%}' in folha
-    assert '.ctl[data-controle="p1"] .touch .ponto-2{left:25.0%;top:75.0%}' in folha, (
-        f"o segundo dedo não chegou à folha:\n{folha}")
+    pos = _posicoes(pac, a02, {**BASE, "inputs": {"touchpad": dois}}, monkeypatch)
+    assert (pos["touch"], pos["touch2"]) == ("75.0,25.0", "25.0,75.0"), pos
+    assert len(set(a02.CAMPOS_DA_POSICAO.values())) == len(a02.CAMPOS_DA_POSICAO)
 
 
-def test_sem_segundo_dedo_a_bolinha_dois_nao_ganha_regra(pac, a02, monkeypatch):
-    """Um dedo só: a bolinha 2 cai no PISO, e não numa posição inventada.
-
-    É a diferença entre "não sei onde ele está" e "ele está no centro" — a
-    mesma disciplina do `gyro` ausente, que a casa já paga desde 04/09.
-    """
-    folha = _folha(pac, a02, {**BASE, "inputs": {"touchpad": DEDO}}, monkeypatch)
-    assert '.touch .ponto-2{' not in folha, (
-        f"a folha escreveu posição para um dedo que não está lá:\n{folha}")
-
-
-def test_a_posicao_dos_polegares_chega_a_folha(pac, a02, monkeypatch):
+def test_a_posicao_dos_polegares_chega_ao_endereco(pac, a02, monkeypatch):
     """Os dois analógicos, e o esquerdo no TALO: `lx=0` é 0%, não o centro.
 
-    A metade `analogicos` da queixa dela. Os dois `<span class="p">` não tinham
-    endereço NENHUM — o `left`/`top` deles era o que o mockup cravou, e nenhuma
-    linha de código os movia.
-
-    MORDE DUAS VEZES:
-    * apagar as duas entradas de `posicoes_do_controle` reprova na primeira
-      asserção (a folha fica só com o piso);
-    * ler o eixo com `inputs.get("lx") or 128` — o defeito de 29/08, em que o
-      zero vira o centro — reprova na segunda, que é o talo.
+    MORDE: ler o eixo com `inputs.get("lx") or 128` — o defeito de 29/08 —
+    põe `50.2` no lugar do `0.0`.
     """
-    folha = _folha(pac, a02, {**BASE, "inputs": dict(POLEGARES)}, monkeypatch)
-    assert '.ctl[data-controle="p1"] .stick[data-stick="l"] .p{left:0.0%;top:100.0%}' \
-        in folha, f"o polegar esquerdo não chegou à folha:\n{folha}"
-    assert '.ctl[data-controle="p1"] .stick[data-stick="r"] .p{left:50.2%;top:50.2%}' \
-        in folha, f"o polegar direito não chegou à folha:\n{folha}"
-    # O TALO NÃO PODE TER VIRADO O CENTRO. Esta é a linha que pega o `or 128`.
-    esquerdo = next(ln for ln in folha.split("\n") if 'data-stick="l"' in ln)
-    assert "left:0.0%" in esquerdo, (
-        f"`lx=0` — o extremo à esquerda — virou outra coisa: {esquerdo}")
+    pos = _posicoes(pac, a02, {**BASE, "inputs": dict(POLEGARES)}, monkeypatch)
+    assert pos["ana-e"] == "0.0,100.0", f"o polegar esquerdo: {pos}"
+    assert pos["ana-d"] == "50.2,50.2", f"o polegar direito: {pos}"
 
 
-def test_sem_leitura_a_folha_e_so_o_piso(pac, a02, monkeypatch):
-    """O controle sem `inputs` não ganha regra nenhuma — e o piso o recolhe.
+def test_sem_leitura_nenhum_pontinho_tem_posicao(pac, a02, monkeypatch):
+    """O controle sem `inputs` não afirma posição: os quatro saem vazios.
 
-    É o card do P2 da mesa dela: o daemon só publica `inputs` para o
-    `is_primary`, e o outro vem `None` (`daemon/ipc_handlers.py:3513-3516`).
-    Escrever o repouso como se fosse leitura seria a mesma mentira que o card do
-    P2 já contou com os números do P1.
+    É o card do P2 da mesa dela quando o daemon só publica `inputs` para o
+    primário. O vazio tira `--hef-x`/`--hef-y` e o pontinho cai no repouso.
 
-    MORDE: emitir a posição mesmo sem leitor (trocar o `if tem_leitor` por
-    `True` em `posicoes_do_controle`) põe duas regras a mais aqui e reprova.
+    MORDE: emitir a posição sem leitor (trocar o `if tem_leitor` por `True` em
+    `posicoes_do_controle`) põe `50.2,50.2` nos analógicos.
     """
-    folha = _folha(pac, a02, {**BASE, "inputs": None}, monkeypatch)
-    assert folha == a02.PISO_DAS_POSICOES, (
-        f"um controle sem leitura ganhou regra de posição:\n{folha}")
+    pos = _posicoes(pac, a02, {**BASE, "inputs": None}, monkeypatch)
+    assert pos == dict.fromkeys(a02.CAMPOS_DA_POSICAO, ""), pos
 
 
-def test_o_piso_vem_primeiro_e_recolhe_o_assento_sem_dono(a02):
-    """A folha é trocada INTEIRA, então ela precisa de um piso.
+def test_o_repouso_e_a_reserva_da_regra(a02):
+    """A regra única lê as duas variáveis, e o repouso do analógico é a reserva."""
+    assert a02.REPOUSO_DA_POSICAO == 50.2
+    assert a02.REGRA_DAS_POSICOES == (
+        ".ctl .touch .ponto,.ctl .stick .p"
+        "{left:var(--hef-x,50.2%);top:var(--hef-y,50.2%)}")
+    assert a02.texto_da_posicao(None) == ""
+    assert a02.texto_da_posicao((0.0, 100.0)) == "0.0,100.0"
 
-    Sem ele, o assento que a mesa viva não nomeia ficaria sem `left`/`top` — e o
-    pontinho cairia na posição estática do elemento, que não é lugar nenhum. O
-    neutro é o REPOUSO (128 nos dois eixos), o mesmo que o `xy-l`/`xy-r` ao lado
-    já dizem quando não há leitura.
 
-    MORDE: apagar `PISO_DAS_POSICOES` da lista de `folha_das_posicoes` reprova
-    na primeira linha.
+def test_a_folha_trocada_a_cada_tique_nao_volta(a02):
+    """O pacote não emite mais a folha `posicao-css` nem a monta.
+
+    MORDE: devolver `"posicao-css": folha_das_posicoes(...)` ao `pacote()`.
     """
-    folha = a02.folha_das_posicoes({"p1": {"touch": (10.0, 20.0)}})
-    assert folha.split("\n")[0] == a02.PISO_DAS_POSICOES
-    assert a02.PISO_DAS_POSICOES.endswith("{left:50.2%;top:50.2%}"), (
-        "o piso deixou de ser o repouso do analógico")
-
-
-def test_o_assento_sem_pref_nao_vira_seletor(a02):
-    """Sem `pref` não há endereço — e um seletor vazio pegaria TODOS os cards.
-
-    `.ctl[data-controle=""] …` não casa nada, mas a regra entraria na folha e o
-    dia em que alguém a afrouxasse ela vestiria a mesa inteira com a posição de
-    um controle só.
-
-    MORDE: tirar o `if pref` de `folha_das_posicoes` põe a regra aqui.
-    """
-    folha = a02.folha_das_posicoes({"": {"touch": (10.0, 20.0)}})
-    assert folha == a02.PISO_DAS_POSICOES
+    assert not hasattr(a02, "folha_das_posicoes")
+    fonte = pathlib.Path(a02.__file__).read_text(encoding="utf-8")
+    assert '"posicao-css":' not in fonte
 
 
 # --------------------------------------------------------------------------
-# 2. A PÁGINA NÃO TEM MAIS POSIÇÃO CRAVADA
+# 2. A PÁGINA NÃO TEM POSIÇÃO FORA DO ALVO
 # --------------------------------------------------------------------------
-def test_a_pagina_nao_tem_mais_posicao_no_style_de_linha(pagina):
-    """Nenhum `style="left:…%;top:…%"` sobrou — era o que travava tudo.
-
-    Estilo de LINHA vence folha de estilo. Enquanto um só desses sobrar, o
-    pontinho daquele card fica onde o desenho o pôs, faça o produto o que fizer.
-
-    MORDE: devolver o `style=` ao `bloco()` (ou tirar a chamada de
-    `posicao_por_regra` do `__main__` do gerador) reprova aqui — e reprova antes
-    disso, no próprio gerador, que já para com a âncora.
-    """
+def test_a_pagina_nao_tem_posicao_no_style_de_linha(pagina):
+    """Nenhum `style="left:…%;top:…%"` sobrou — estilo de linha vence tudo."""
     achados = re.findall(r'style="left:[0-9.]+%;top:[0-9.]+%"', pagina)
-    assert not achados, (
-        f"{len(achados)} posição(ões) ainda cravada(s) no `style=`: {achados[:3]}")
+    assert not achados, achados[:3]
 
 
-def test_a_pagina_tem_a_folha_enderecada_e_ela_e_uma_so(pagina):
-    """A folha existe, é UMA e o alvo é `html`.
+def test_a_pagina_nao_tem_a_folha_e_tem_a_regra_unica(pagina, a02):
+    """Sem `posicao-css`, e com a regra que lê as duas variáveis, uma vez.
 
-    Sem o `data-hef-alvo="html"` o piloto escreveria a folha como TEXTO por cima
-    da página. Duas folhas deixariam o assento que a segunda não nomeia com a
-    posição do desenho — o buraco medido em 03/09 com o `--plastico`.
-
-    MORDE: trocar o alvo, ou emitir a folha duas vezes, reprova.
+    MORDE: devolver o `posicao_por_regra` ao `__main__` do gerador põe a folha
+    de volta; tirar a regra do `CSS` do gerador a apaga.
     """
-    assert '<style data-campo="posicao-css" data-hef-alvo="html">' in pagina
-    assert pagina.count('data-campo="posicao-css"') == 1
+    assert 'data-campo="posicao-css"' not in pagina
+    assert pagina.count(a02.REGRA_DAS_POSICOES) == 1
 
 
-def test_a_folha_da_pagina_nomeia_os_tres_pontinhos_de_cada_controle(pagina, a02):
-    """Três regras por controle conectado: o dedo e os dois polegares.
+def test_cada_lugar_tem_os_quatro_enderecos(pagina, a02):
+    """Quatro pontinhos por lugar, os quatro com o alvo `posicao`.
 
-    E o SELETOR É PEDIDO AO DONO (`seletor_da_posicao`), nunca redigitado: o
-    gerador e o produto escrevem a mesma folha, e duas gramáticas divergiriam
-    sem ninguém ver — foi a lição do `seletor_do_plastico`.
-
-    MORDE: mudar a gramática do seletor num dos dois lados reprova aqui.
+    O lugar vazio também tem, sem exemplo: é o que faz o cartão vazio virar um
+    cartão de verdade no instante em que o controle chega.
     """
-    prefs = sorted(set(re.findall(r'<div class="ctl card" data-controle="([^"]+)">',
-                                  pagina)))
-    assert prefs, "a régua não achou um card sequer — régua que acha zero é ERRO"
-    faltam = [f"{p}/{alvo}" for p in prefs for alvo in a02.ALVOS_DA_POSICAO
-              if f"{a02.seletor_da_posicao(p, alvo)}{{left:" not in pagina]
-    assert not faltam, f"a folha da página não nomeia {faltam}"
+    lugares = len(re.findall(r'<div class="ctl card[^"]*" data-controle="p\d"', pagina))
+    assert lugares == 4, f"a régua achou {lugares} lugares — régua que acha zero é ERRO"
+    for campo in a02.CAMPOS_DA_POSICAO.values():
+        assert pagina.count(f'data-campo="{campo}" data-hef-alvo="posicao"') == lugares, campo
 
 
-def test_o_piso_da_pagina_e_o_do_produto(pagina, a02):
-    """O piso da página é o MESMO objeto de texto que o produto emite.
+# --------------------------------------------------------------------------
+# 3. O DESENHO CONTINUA NO DESENHO
+# --------------------------------------------------------------------------
+def test_o_p1_do_mockup_mostra_o_exemplo_do_desenho(pagina):
+    """Lido pela RÉGUA DO MOCKUP, o P1 está onde o desenho o pôs.
 
-    Se os dois divergirem, o primeiro tique troca a folha e move todo pontinho
-    que a mesa viva não nomear — um salto visível na tela dela, sem causa.
+    O exemplo é o mesmo da folha de antes: os polegares em 23,5/78,4 e
+    70,6/35,3, os dedos em 62/44 e 38/56. E o lugar vazio não tem nenhum.
 
-    MORDE: redigitar o piso no gerador reprova.
+    MORDE DUAS VEZES: tirar o `onde_esta` do `bloco()` manda o P1 ao centro
+    (os quatro saem vazios); tirar o ramo `posicao` de `regua_do_mockup._campo`
+    faz a régua ler o texto do `<span>`, vazio, nos quatro.
     """
-    assert a02.PISO_DAS_POSICOES in pagina
+    from hefesto_dualsense4unix.interface import regua_do_mockup
+
+    do_p = {(c.dono, c.chave): c for c in regua_do_mockup._campos_cravados(pagina)
+            if c.alvo == "posicao"}
+    esperado = {"pos-ana-e": "23.5,78.4", "pos-ana-d": "70.6,35.3",
+                "pos-touch": "62,44", "pos-touch-2": "38,56"}
+    lido = {chave: do_p[("p1", chave)].valor for chave in esperado}
+    assert lido == esperado, f"o P1 do mockup saiu do desenho: {lido}"
+    assert all(do_p[("p3", chave)].valor == "" for chave in esperado), (
+        "o lugar vazio ganhou exemplo de posição")
+
+
+def test_a_regua_fala_a_lingua_do_alvo(pagina):
+    """O travessão do lugar vazio é o repouso, que a tela lê vazio."""
+    from hefesto_dualsense4unix.interface import regua_do_mockup
+
+    campo = next(c for c in regua_do_mockup._campos_cravados(pagina)
+                 if c.alvo == "posicao")
+    assert regua_do_mockup._declarado_neste_elemento(
+        campo, regua_do_mockup.TRAVESSAO) == ""
+    assert regua_do_mockup._declarado_neste_elemento(campo, "0.0,100.0") == "0.0,100.0"
+    assert regua_do_mockup._posicao_do_estilo("--hef-x:62.0%;--hef-y:44%") == "62.0,44"

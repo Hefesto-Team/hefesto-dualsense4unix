@@ -369,6 +369,14 @@ class _Leitor(html.parser.HTMLParser):
             # lados e devolveria INDECIDÍVEL para as 56 barrinhas, que é o
             # veredito mais caro que ela sabe dar.
             valor = _do_estilo(d.get("style", ""), "height")
+        elif alvo == "posicao":
+            # O ALVO `posicao` — onde o pontinho está, pelas duas variáveis que
+            # o `escrever` põe no próprio elemento (A-JANELA-ABERTA-NAO-GASTA-O-
+            # PROCESSADOR-01, 25/09/2026). Sem este ramo a régua leria o TEXTO
+            # de um `<span>` vazio nos dois lados e devolveria INDECIDÍVEL, como
+            # o ramo `altura` já registra. A língua é a do `LER_CAMPOS`: `x,y`
+            # sem o `%`, ou vazio no repouso.
+            valor = _posicao_do_estilo(d.get("style", ""))
         elif alvo == "cor":
             # LIDA DE VERDADE, e não pelo texto: a normalização do WebKit para
             # ``color`` é fechada e ``_cor_css`` a reproduz. Ver a nota do
@@ -677,6 +685,21 @@ def _do_estilo(estilo: str, propriedade: str) -> str:
     return ""
 
 
+def _posicao_do_estilo(estilo: str) -> str:
+    """``"--hef-x:62%;--hef-y:44%"`` → ``"62,44"``; sem as duas, ``""``.
+
+    A VARIÁVEL NÃO SE NORMALIZA: o navegador devolve ``--hef-x`` como foi
+    escrita (``62.0%`` continua ``62.0%``), e por isso este ramo não passa pelo
+    ``_numero_css`` do ``_do_estilo``, que tiraria o ``.0`` só deste lado.
+    """
+    lido: dict[str, str] = {}
+    for parte in estilo.split(";"):
+        nome, _, valor = parte.partition(":")
+        lido[nome.strip().lower()] = valor.strip().removesuffix("%")
+    x, y = lido.get("--hef-x", ""), lido.get("--hef-y", "")
+    return f"{x},{y}" if (x or y) else ""
+
+
 def _ler_html(texto: str) -> _Leitor:
     """O arquivo publicado, lido uma vez. Devolve o leitor com tudo dentro."""
     leitor = _Leitor()
@@ -894,6 +917,10 @@ def _declarado_neste_elemento(campo: _Campo, declarado: str,
         # que emite o número `80` via `el.value = 80` deixa `"80"` na tela, e
         # comparar `80` com `"80"` acusa o produto que acertou.
         return "" if declarado is None else str(declarado)
+    if campo.alvo == "posicao":
+        # O VAZIO E O TRAVESSÃO TIRAM AS DUAS VARIÁVEIS, e o `LER_CAMPOS` lê
+        # vazio no pontinho que ficou no repouso. `x,y` vale como veio.
+        return "" if declarado in (None, "", TRAVESSAO) else str(declarado)
     if campo.alvo == "html":
         # O TERCEIRO ALVO DA DECISÃO 15 DELA — 03/09/2026, e ele faltava: *"a
         # régua aprende os alvos que faltam (`largura`, `valor`, `html`), como

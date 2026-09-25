@@ -408,22 +408,22 @@ def texto_do_xy(x: Any, y: Any) -> str:
 # ou `title`). Fotografado em 02/09 e ainda de pé em 04/09: o pontinho ciano do
 # P1 parado em `left:62%;top:44%`, que é onde o mockup o cravou.
 #
-# A CURA É A DA COR DO PLÁSTICO, e não precisa de alvo novo: a posição sai do
-# `style=` e vira REGRA numa folha endereçada que o produto TROCA INTEIRA
-# (`data-campo="posicao-css"`, alvo `html`). É a mesma forma que
-# `folha_do_plastico` já usa, e o gerador faz a mesma mudança do lado do desenho
-# (`aba02.posicao_por_regra`).
+# A PRIMEIRA CURA (04/09/2026) foi a da cor do plástico: a posição saiu do
+# `style=` e virou REGRA numa folha endereçada (`posicao-css`, alvo `html`) que o
+# produto trocava INTEIRA a cada tique. Ela moveu os pontinhos e custou caro:
+# trocar o texto de uma folha refaz o estilo do documento inteiro (1.955 nós na
+# 02) e repinta a janela toda, dez vezes por segundo, com o controle parado na
+# mesa. Medido na banca em 25/09/2026, com o tique parado e o mesmo pontinho
+# andando 0,4% a 10 Hz: 37,7% de um núcleo no WebKit pela folha, 1,13% pelo
+# `var()`.
 #
-# POR QUE UMA FOLHA IRMÃ, E NÃO A MESMA DO PLÁSTICO — a escolha é de DONO e de
-# CADÊNCIA, e a razão é estrutural: uma folha endereçada é substituída INTEIRA.
-# O plástico sai da MESA (identidade: muda quando um controle entra ou sai) e a
-# posição sai da LEITURA (muda a cada tique). Numa folha só, um tique que
-# soubesse a identidade e não a leitura teria de reemitir a posição para não
-# apagá-la — e vice-versa: os dois "não sei" ficariam amarrados um no outro, que
-# é justamente o que a regra dela (*campo sem informação não mostra nada*) exige
-# separar. Duas folhas não têm o buraco das DUAS FOLHAS de 03/09, que era outro:
-# lá as duas escreviam a MESMA propriedade (`--plastico`) e só se sobrepunham no
-# assento que a segunda nomeava. Aqui as propriedades são disjuntas.
+# A CURA DE HOJE É O ALVO `posicao` (A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01,
+# 25/09/2026). Cada pontinho tem o seu endereço, e o `escrever` do piloto põe
+# só `--hef-x` e `--hef-y` no próprio elemento. A página tem UMA regra,
+# `REGRA_DAS_POSICOES`, com o repouso como reserva do `var()`. O exemplo do
+# desenho vai cravado no próprio pontinho (`style="--hef-x:…;--hef-y:…"`), e o
+# pacote o sobrescreve; o vazio e o travessão o tiram, e o pontinho volta ao
+# centro.
 
 #: O CURSO DE UM EIXO DE ANALÓGICO, cru. É o `max` do `absinfo` dos dois
 #: DualSense dela (`ABS_X/ABS_Y/ABS_RX/ABS_RY min=0 max=255`), o mesmo 255 que
@@ -456,11 +456,6 @@ def pos_do_analogico(v: Any) -> float:
     return round(int(v) / CURSO_DO_ANALOGICO * 100, 1)
 
 
-#: ONDE MORA CADA PONTINHO, dentro do card de um controle. Os três seletores em
-#: um lugar só: o gerador os importa daqui para escrever a folha do DESENHO, e
-#: `folha_das_posicoes` os usa para a folha VIVA. Duas gramáticas para a mesma
-#: regra é o que faz as duas folhas divergirem sem ninguém ver — foi a lição do
-#: `seletor_do_plastico`.
 #: Quantos dedos o desenho tem bolinha para mostrar (MULTITOQUE-01).
 #:
 #: DOIS, e o número é do APARELHO, não de gosto: o nó de touchpad do
@@ -474,45 +469,46 @@ def pos_do_analogico(v: Any) -> float:
 #: literais em dois arquivos é como uma bolinha fica órfã de endereço.
 MAX_DEDOS: int = 2
 
-ALVOS_DA_POSICAO: dict[str, str] = {
-    # MULTITOQUE-01 (18/09/2026): DOIS dedos, um seletor cada. `.ponto` sem
-    # sufixo pegaria os dois e a folha viva escreveria a posição do dedo 1
-    # em cima do dedo 2 — as classes `ponto-1`/`ponto-2` existem para isso,
-    # e a classe `ponto` fica nas duas porque é ela que o piso e o CSS de
-    # aparência usam.
-    "touch": ".touch .ponto-1",
-    "touch2": ".touch .ponto-2",
-    "ana-e": '.stick[data-stick="l"] .p',
-    "ana-d": '.stick[data-stick="r"] .p',
+#: O ENDEREÇO DE CADA PONTINHO, por alvo: o `data-campo` com
+#: `data-hef-alvo="posicao"`. O gerador os importa daqui para escrever o
+#: desenho, e o pacote os usa para pintar; dois nomes digitados em dois
+#: arquivos é como um pontinho fica órfão de endereço.
+#:
+#: MULTITOQUE-01 (18/09/2026): DOIS dedos, um endereço cada. No touchpad o
+#: endereço mora num `<span>` em volta da bolinha, e não nela: a bolinha já tem
+#: o dela (`touch-ponto`, alvo `classe`, que a acende), e um elemento tem um
+#: endereço só. A variável se herda, e a regra lê a da bolinha.
+CAMPOS_DA_POSICAO: dict[str, str] = {
+    "touch": "pos-touch",
+    "touch2": "pos-touch-2",
+    "ana-e": "pos-ana-e",
+    "ana-d": "pos-ana-d",
 }
 
+#: O REPOUSO, em por cento: 128 nos dois eixos. É o que o `xy-l`/`xy-r` ao lado
+#: dizem quando não há leitura, e onde o pontinho do touchpad fica invisível de
+#: qualquer modo. Ele é a RESERVA do `var()`: pontinho sem `--hef-x` fica aqui.
+REPOUSO_DA_POSICAO = pos_do_analogico(REPOUSO_DO_ANALOGICO)
 
-def seletor_da_posicao(pref: str, alvo: str) -> str:
-    """O seletor de UM pontinho de UM assento. `pref` é `p1`… (o `data-controle`)."""
-    return f'.ctl[data-controle="{pref}"] {ALVOS_DA_POSICAO[alvo]}'
-
-
-def regra_da_posicao(pref: str, alvo: str, x: Any, y: Any) -> str:
-    """A regra CSS de um pontinho: seletor + `left`/`top` em por cento."""
-    return f"{seletor_da_posicao(pref, alvo)}{{left:{x}%;top:{y}%}}"
-
-
-#: O PISO DA FOLHA, e ele existe pela mesma razão que o `PISO_DA_FOLHA` do
-#: plástico: a folha é trocada INTEIRA, então o assento que a mesa viva não
-#: nomeia tem de cair num neutro — e não sobrar com a posição que o desenho
-#: deixou ali. O neutro é o REPOUSO (128 nos dois eixos), que é o que o `xy-l`
-#: /`xy-r` ao lado já dizem quando não há leitura, e onde o pontinho do touchpad
-#: fica invisível de qualquer modo.
-#:
-#: A ESPECIFICIDADE É O QUE FAZ ISTO FUNCIONAR, e ela foi contada: o piso é
-#: `.ctl .touch .ponto` (0,3,0) e a regra de um assento é
-#: `.ctl[data-controle="p1"] .touch .ponto` (0,4,0) — a específica vence
-#: independentemente da ordem em que as duas apareçam na folha.
-PISO_DAS_POSICOES = (
+#: A REGRA ÚNICA DA POSIÇÃO, e a página a publica uma vez. `left`/`top` leem as
+#: variáveis que o alvo `posicao` escreve no próprio pontinho; sem elas, o
+#: repouso.
+REGRA_DAS_POSICOES = (
     f".ctl .touch .ponto,.ctl .stick .p"
-    f"{{left:{pos_do_analogico(REPOUSO_DO_ANALOGICO)}%;"
-    f"top:{pos_do_analogico(REPOUSO_DO_ANALOGICO)}%}}"
+    f"{{left:var(--hef-x,{REPOUSO_DA_POSICAO}%);"
+    f"top:var(--hef-y,{REPOUSO_DA_POSICAO}%)}}"
 )
+
+
+def texto_da_posicao(xy: tuple[float, float] | None) -> str:
+    """`(x, y)` → `"x,y"`, a língua do alvo `posicao`; `""` quando não se leu.
+
+    Quem não tem o que dizer não escreve: o vazio tira as duas variáveis e o
+    pontinho volta ao repouso da regra.
+    """
+    if xy is None:
+        return ""
+    return f"{xy[0]},{xy[1]}"
 
 
 def posicoes_do_controle(
@@ -537,7 +533,8 @@ def posicoes_do_controle(
     dict)` que o `pacote()` usa para os outros 46 campos: sem ele o repouso (128)
     seria indistinguível de "o daemon não publica `inputs` para este controle" —
     e é justamente o card do P2 da mesa dela, que mostrava os números do P1 como
-    se estivesse medindo. Sem regra, o pontinho cai no piso, que é o centro.
+    se estivesse medindo. Sem leitura, o pontinho cai no repouso da regra, que
+    é o centro.
     """
     import mesa_viva
 
@@ -554,25 +551,6 @@ def posicoes_do_controle(
             for alvo, (cx, cy) in (("ana-e", ("lx", "ly")), ("ana-d", ("rx", "ry")))
         },
     }
-
-
-def folha_das_posicoes(
-    posicoes: dict[str, dict[str, tuple[float, float] | None]],
-) -> str:
-    """A folha de posição INTEIRA, montada da leitura VIVA.
-
-    `posicoes` é `{pref: {alvo: (x, y) | None}}`. Assento sem `pref` e alvo sem
-    leitura não viram regra — quem não tem o que dizer não escreve, e o piso
-    responde por ele.
-    """
-    return "\n".join([PISO_DAS_POSICOES] + [
-        regra_da_posicao(pref, alvo, x, y)
-        for pref, alvos in posicoes.items()
-        if pref
-        for alvo, xy in alvos.items()
-        if xy is not None
-        for x, y in (xy,)
-    ])
 
 
 def _eixos_do_sensor(
@@ -2721,10 +2699,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         tuple((str(c.get("uniq") or ""), _byte_da_rota(c)) for c in ctx.conectados),
         na_mesa,
     )
-    # ONDE CADA PONTINHO ESTÁ, por assento — ver `folha_das_posicoes`. Ele se
-    # junta AQUI, e não dentro de `cards`, porque o destino é a folha da PÁGINA:
-    # `left`/`top` não são campo de um elemento, são regra de um seletor.
-    posicoes: dict[str, dict[str, tuple[float, float] | None]] = {}
     # OS NÓS DAS ONDAS, uma vez por tique e para a mesa inteira — ver o bloco
     # `AS ONDAS SONORAS`. Passa-se a lista COMPLETA: o medidor fecha o que saiu
     # dela no mesmo instante, e é isso que faz o controle desligado parar de
@@ -2833,11 +2807,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         toque_txt, dedos = dedos_do_controle(e)
         toque_ponto, onde_o_dedo = dedos[0]
         toque_ponto2, onde_o_dedo2 = dedos[1]
-        # A POSIÇÃO DOS TRÊS PONTINHOS, pelo `pref` do assento — que é o que o
-        # `data-controle` das páginas traz, e o mesmo endereço que a
-        # `folha_do_plastico` usa. Sem `pref` na mesa não há seletor a escrever.
-        posicoes[str(casa.get("pref") or "")] = posicoes_do_controle(
-            e, tem_leitor, onde_o_dedo, onde_o_dedo2)
+        # A POSIÇÃO DOS QUATRO PONTINHOS, um endereço por pontinho, no card
+        # deste controle (alvo `posicao`, ver `CAMPOS_DA_POSICAO`). Quem vai
+        # para a coluna é o `pref` do assento, pelo despachante, como todo
+        # campo por controle.
+        posicoes = posicoes_do_controle(e, tem_leitor, onde_o_dedo, onde_o_dedo2)
         # A IDENTIDADE DO CABEÇALHO, pelos donos: a ordem das quatro fontes é de
         # `identidade_de`, e a tradução do transporte é a MESMA que a mesa usa.
         #
@@ -3183,9 +3157,16 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 "bateria-carga": carga_na_tela(c.get("battery_state")),
                 "touch-ponto": toque_ponto,
                 # A SEGUNDA BOLINHA — MULTITOQUE-01. Ela acende pela mesma
-                # via da primeira (classe), e não por `style`: o `style` de
-                # posição é da FOLHA VIVA, que `folha_das_posicoes` escreve.
+                # via da primeira (classe); onde ela está é do alvo `posicao`,
+                # no `<span>` em volta dela.
                 "touch-ponto-2": toque_ponto2,
+                # ONDE CADA PONTINHO ESTÁ — o alvo `posicao`. Os endereços nascem
+                # na bancada e só entram quando a página publicada os tiver,
+                # como os outros da bancada.
+                **_so_se_a_pagina_tiver({
+                    CAMPOS_DA_POSICAO[alvo]: texto_da_posicao(xy)
+                    for alvo, xy in posicoes.items()
+                }),
                 # O `alto-estado` DESCEU PARA CÁ — 04/09/2026, decisão [09]
                 # resolvida. Ele era emitido SEMPRE, para um `<span
                 # class="mudo" data-campo="alto-estado" hidden>` que o piloto
@@ -3538,12 +3519,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # o ramo `Array.isArray`). Chip a mais recebe vazio e vira travessão.
     da_pagina = _so_se_a_pagina_tiver({
         "plastico-css": folha_do_plastico(ctx.mesa),
-        # ONDE O DEDO E OS DOIS POLEGARES ESTÃO — a queixa dela de 04/09. Ver o
-        # bloco `A POSIÇÃO DOS PONTINHOS` no topo: `left`/`top` viravam `style=`
-        # de linha, que folha de estilo nenhuma vence e o piloto não sabe
-        # escrever. Ela entra pelo `_so_se_a_pagina_tiver` como os outros da
-        # bancada: acende no minuto em que ela mandar publicar.
-        "posicao-css": folha_das_posicoes(posicoes),
+        # A FOLHA `posicao-css` SAIU — A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01,
+        # 25/09/2026. Ela era trocada inteira a cada tique e repintava a janela
+        # toda; a posição agora é o alvo `posicao`, por pontinho, no card.
         "fita-peca": [
             "" if str(m.get("nome") or "") == NOME_SEM_LEITURA else str(m.get("nome") or "")
             for m in ctx.mesa
