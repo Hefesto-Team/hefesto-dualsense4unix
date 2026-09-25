@@ -87,7 +87,8 @@ A PROCEDÊNCIA, DECLARADA
 Como todo instrumento desta pasta, ele imprime de qual ARQUIVO veio cada
 biblioteca antes da primeira linha de medição. O parser de ``btsnoop`` **não é
 novo**: é o do ``byte_no_fio.py``, importado, porque duas leituras do mesmo
-formato é como esta casa fabrica divergência silenciosa.
+formato é como esta casa fabrica divergência silenciosa. O ciclo da captura
+também vem de lá (``CapturaDoFio``): ela nasce 0600 e sai depois de lida.
 """
 
 from __future__ import annotations
@@ -97,7 +98,6 @@ import os
 import select
 import subprocess
 import sys
-import tempfile
 import threading
 import time
 from dataclasses import dataclass, field
@@ -114,6 +114,7 @@ for _p in (_AQUI, _SRC):
 from byte_no_fio import (
     HID_BT_ENTRADA,
     HID_BT_SAIDA,
+    CapturaDoFio,
     Quadro,
     handles_por_mac,
     ler_btsnoop,
@@ -438,8 +439,7 @@ def main(argv: list[str] | None = None) -> int:
         f"  duração ..... {argumentos.segundos:.0f} s"
     )
 
-    captura = None
-    caminho_captura = ""
+    captura: CapturaDoFio | None = None
     t_fio_zero = time.monotonic()
     if argumentos.sem_fio:
         print("\n  metade do FIO: DESLIGADA por --sem-fio.")
@@ -451,22 +451,14 @@ def main(argv: list[str] | None = None) -> int:
             "  antes e chame de novo para ter as duas."
         )
     else:
-        # O DESTINO SAI DO AMBIENTE, e não de um caminho digitado. O `btmon`
-        # roda como root e recria o arquivo; escrever um diretório fixo aqui
-        # prenderia a captura à máquina de quem escreveu — e o portão de
-        # anonimato pega isso por FORMA, sem consultar nada.
-        caminho_captura = os.path.join(
-            tempfile.gettempdir(), f"captura-armada-{int(time.time())}.btsnoop"
-        )
-        subprocess.run(["sudo", "-n", "rm", "-f", caminho_captura], check=False)
-        captura = subprocess.Popen(
-            ["sudo", "-n", "btmon", "-w", caminho_captura],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
+        # O DESTINO SAI DO AMBIENTE (`tempfile`), e não de um caminho digitado:
+        # um diretório fixo prenderia a captura à máquina de quem escreveu — e
+        # o portão de anonimato pega isso por FORMA, sem consultar nada.
+        captura = CapturaDoFio("captura-armada")
+        captura.comecar()
         time.sleep(1.0)  # o btmon precisa abrir o socket antes de a gente contar
         t_fio_zero = time.monotonic()
-        print(f"\n  metade do FIO: `btmon -w {caminho_captura}` de pé.")
+        print(f"\n  metade do FIO: `btmon -w {captura.caminho}` de pé (0600).")
 
     print(
         "\nO GESTO DELA, e é UM só:\n"
@@ -486,12 +478,7 @@ def main(argv: list[str] | None = None) -> int:
         leitura = LeituraDoHidraw(erro="interrompido por Ctrl-C")
     finally:
         if captura is not None:
-            captura.terminate()
-            try:
-                captura.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                captura.kill()
-            subprocess.run(["sudo", "-n", "chmod", "0644", caminho_captura], check=False)
+            captura.encerrar()
 
     print("\nO QUE A METADE DO HIDRAW VIU")
     for linha in leitura.linhas():
@@ -515,8 +502,9 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0 if not leitura.erro else 1
 
-    quadros, queixas = ler_btsnoop(caminho_captura)
-    print(f"\nO QUE A CAPTURA VIU — {len(quadros)} quadro(s) ACL em {caminho_captura}")
+    quadros, queixas = ler_btsnoop(captura.caminho)
+    print(f"\nO QUE A CAPTURA VIU — {len(quadros)} quadro(s) ACL")
+    print(f"  {captura.apagar()}")
     for q in queixas:
         print(f"  QUEIXA DO ARQUIVO: {q}")
     if handle < 0:
