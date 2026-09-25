@@ -101,6 +101,9 @@ class Citacao:
     b: int
     faixa: bool
     nomes: set[str] = field(default_factory=set)
+    #: As linhas do documento em que o validador a achou. É o que deixa
+    #: escrever a forma curta ``:N``, que só vale ancorada na MESMA linha.
+    linhas: set[int] = field(default_factory=set)
 
     @property
     def texto(self) -> str:
@@ -344,6 +347,7 @@ def podres_do_validador(raiz: Path) -> tuple[list[Citacao], list[str]]:
                 endereco["b"] is not None,
             )
         por_chave[chave].nomes.add(nome["nome"])
+        por_chave[chave].linhas.add(achado.linha)
     return list(por_chave.values()), a_mao
 
 
@@ -455,6 +459,26 @@ def _trocar(texto: str, velho: str, novo: str) -> tuple[str, int]:
     return padrao.subn(novo, texto)
 
 
+def _trocar_curta(texto: str, cit: Citacao, endereco: str) -> tuple[str, int]:
+    """Troca a forma curta ``:N`` só nas linhas em que o validador a ancorou.
+
+    No `.md` a forma curta herda o arquivo da citação inteira da MESMA linha, e
+    é assim que o validador a lê. O endereço que ele devolve vem com o arquivo,
+    e o texto não o tem: trocar pelo endereço inteiro dava zero, e a troca
+    saía na lista dos feitos sem ter escrito nada (medido na costura da 6e-4,
+    com a `dualsense-referencia-canonica.md:766`).
+    """
+    curto_velho = cit.texto[len(cit.arquivo):]
+    curto_novo = endereco[len(cit.arquivo):]
+    linhas = texto.split("\n")
+    total = 0
+    for numero in sorted(cit.linhas):
+        if 1 <= numero <= len(linhas):
+            linhas[numero - 1], n = _trocar(linhas[numero - 1], curto_velho, curto_novo)
+            total += n
+    return "\n".join(linhas), total
+
+
 def reapontar(raiz: Path, *, escrever: bool) -> tuple[list[str], list[str]]:
     """Devolve (feitos, à mão). Com ``escrever``, grava e confere cada documento."""
     feitos: list[str] = []
@@ -496,6 +520,14 @@ def reapontar(raiz: Path, *, escrever: bool) -> tuple[list[str], list[str]]:
         texto = original
         for cit, endereco in trocas:
             texto, n = _trocar(texto, cit.texto, endereco)
+            if n == 0:
+                texto, n = _trocar_curta(texto, cit, endereco)
+            if n == 0:
+                a_mao.append(
+                    f"{documento.relative_to(raiz)}: `{cit.texto}` -> `{endereco}`: o endereço "
+                    "não está escrito no documento, nem inteiro nem na forma curta da linha"
+                )
+                continue
             feitos.append(f"{documento.relative_to(raiz)}: `{cit.texto}` -> `{endereco}` ({n}x)")
         if not escrever or texto == original:
             continue
