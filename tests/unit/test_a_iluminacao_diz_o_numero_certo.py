@@ -864,96 +864,38 @@ def test_a_dica_nao_afirma_o_desenho_das_cinco_luzes_que_o_pacote_nao_ve(
 
 
 def test_o_coop_so_manda_quando_ha_mais_de_um_jogador():
-    """`coop.enabled` NÃO responde "o co-op está ligado", e isso está medido.
+    """`coop.enabled` NÃO responde "há mais de um jogador", e isso está medido.
 
     `app/actions/status_actions.texto_do_coop_derrubado` diz: *"``CoopManager.
     disable()`` não zera ``coop_enabled``, então o ``state_full`` segue
-    publicando ``coop.enabled=True`` com ``coop.players=1`` — de fora,
-    indistinguível de 'ela desligou o co-op'"*. É o estado da mesa dela HOJE.
+    publicando ``coop.enabled=True`` com ``coop.players=1``"*. É o estado de
+    toda mesa de um controle só.
 
     A MORDIDA: troque a leitura por `bool(coop.get("enabled"))` e a primeira
-    linha reprova — a dica passaria a dizer, na mesa parada, que quem manda nas
-    cinco luzes é o co-op.
+    linha reprova — o gesto `player` pediria um `coop.sync` inútil numa mesa
+    de um jogador só.
     """
     import pacotes.a04_iluminacao as a04
 
     parado = {"coop": {"enabled": True, "players": 1, "mesa": [{"player": 1}]}}
     assert a04.o_coop_manda(parado) is False, (
-        "`enabled=True` com um jogador é a mesa parada — ler o booleano faria "
-        "a dica afirmar um co-op que ninguém ligou.")
+        "`enabled=True` com um jogador é a mesa de um controle só — ler o "
+        "booleano faria o gesto reconciliar uma camada que não existe.")
     assert a04.o_coop_manda({"coop": {"enabled": True, "players": 3}}) is True
     assert a04.o_coop_manda({}) is False
     assert a04.o_coop_manda({"coop": None}) is False
 
-    dica = a04.dica_da_luz("Cosmic Red", "BT", "", coop_manda=True)
-    assert "co-op" in dica, dica
 
-
-def test_a_frase_do_coop_e_a_do_motor_chamada_e_nao_uma_copia(monkeypatch):
-    """A régua do reuso mede o ATO, e não a palavra.
-
-    O DEFEITO QUE ELA FECHA, achado pela auditoria de 02/09/2026: a régua
-    anterior era `assert _PREFIXO_DESENHO in luz` mais comparações contra
-    strings digitadas no próprio teste. Arrancar a chamada ao motor e escrever
-    a frase À MÃO no pacote deixava **os 31 testes verdes** — e a LEI 0 da casa
-    (*"não temos que recriar nada"*) é justamente o que essa régua deveria
-    proteger.
-
-    Duas medições, e nenhuma é uma string digitada aqui:
-
-    1. a frase que o pacote emite é, literalmente, o retorno de
-       `texto_do_desenho_aceso`;
-    2. o pacote CHAMOU a função — um espião no módulo do motor. Como
-       `dica_da_luz` importa dentro do corpo, trocar o atributo do módulo pega
-       a chamada de verdade.
-    """
-    from hefesto_dualsense4unix.app.actions import lightbar_actions
-    import pacotes.a04_iluminacao as a04
-
-    do_motor = lightbar_actions.texto_do_desenho_aceso((False,) * 5, None,
-                                                       coop_ligado=True)
-    assert do_motor in a04.dica_da_luz("Cosmic Red", "BT", "",
-                                       coop_manda=True), (
-        "a frase do co-op não é a do motor — escrever outra criaria a segunda "
-        "verdade que a GTK já matou.")
-
-    chamadas: list[tuple] = []
-
-    def espiao(*args, **kw):
-        chamadas.append((args, kw))
-        return "ESPIÃO"
-
-    monkeypatch.setattr(lightbar_actions, "texto_do_desenho_aceso", espiao)
-    dica = a04.dica_da_luz("Cosmic Red", "BT", "", coop_manda=True)
-    assert chamadas, (
-        "o pacote não chamou `texto_do_desenho_aceso` — a frase foi copiada à "
-        "mão, e é o defeito que esta régua existe para pegar.")
-    assert "ESPIÃO" in dica, dica
-
-
-def test_o_ramo_do_coop_do_motor_ignora_o_rascunho_e_o_numero():
-    """Por que `dica_da_luz` pode passar sentinelas nos dois primeiros args.
-
-    O pacote não sabe o rascunho (não vê o override por-uniq) nem precisa do
-    número neste ramo, e passa `(False,) * 5` e `None`. Isso só é honesto
-    enquanto o ramo 1 de `texto_do_desenho_aceso` devolver ANTES de olhar
-    qualquer um dos dois.
-
-    SE O MOTOR MUDAR, ESTE TESTE ACUSA — e o chamador em
-    `a04_iluminacao.dica_da_luz` passa a estar mentindo sobre um rascunho
-    vazio que ele nunca mediu.
-    """
-    from hefesto_dualsense4unix.app.actions.lightbar_actions import (
-        texto_do_desenho_aceso,
-    )
-
-    sentinela = texto_do_desenho_aceso((False,) * 5, None, coop_ligado=True)
-    for rascunho in ((False,) * 5, (True, False, True, False, True)):
-        for slot in (None, 1, 4):
-            assert texto_do_desenho_aceso(
-                rascunho, slot, coop_ligado=True) == sentinela, (
-                "o ramo do co-op passou a ler o rascunho ou o número — a aba "
-                "04 não sabe nenhum dos dois e precisa parar de passá-los.")
+# A FRASE DO CO-OP SAIU DA DICA DA CÉLULA LEDs — O-CO-OP-LOCAL-SAI-01,
+# 25/09/2026, pedido dela (`D-2409-O-CO-OP-LOCAL-SAI`). Aqui moravam duas
+# réguas do REUSO daquela frase: `test_a_frase_do_coop_e_a_do_motor_chamada_
+# e_nao_uma_copia` (a dica tinha de ser o retorno de `lightbar_actions.
+# texto_do_desenho_aceso(..., coop_ligado=True)`, e não uma cópia) e
+# `test_o_ramo_do_coop_do_motor_ignora_o_rascunho_e_o_numero` (os sentinelas
+# que a dica passava ao motor). As duas mediam um chamador que deixou de
+# existir: a dica não traz mais frase de co-op nenhuma, e é a mesma com um
+# jogador ou com quatro. Quem mede isso agora é
+# `tests/unit/test_o_co_op_local_saiu.py`.
 
 
 def test_o_hex_e_o_do_dono_e_nao_um_guarda_copiado(colunas):

@@ -32,6 +32,16 @@ seção daqui**: a aba deixou de estar em trabalho.
   (`a_pagina_tem_as_pilulas`); o brilho que o perfil guarda — o Fraco, se
   ninguém escolheu — já vai ao aparelho nos dois transportes.
 
+## 09-sistema.html
+- **25/09/2026** — a linha do exame deixa de tratar o co-op como um modo que se
+  liga (pedido dela, `D-2409-O-CO-OP-LOCAL-SAI`): *«Um gamepad virtual por
+  jogador (co-op)»* com *«o co-op está ligado e o Hefesto criou N gamepads
+  virtuais»* virou *«Um gamepad virtual por jogador»* com *«o Hefesto criou N
+  gamepads virtuais, um para cada controle»*. Espera quem coordena publicar
+  (O-CO-OP-LOCAL-SAI-01). Até publicar, a frase velha só aparece no desenho
+  publicado antes do primeiro tique: o exame do produto é pintado pelo
+  `storm_report`, que não diz co-op.
+
 ## 10-perfis.html
 - **25/09/2026** — o Estilo de Jogo «Co-op local» saiu do `<select>` (pedido
   dela, `D-2409-O-CO-OP-LOCAL-SAI`), e a dica do rótulo diz «Os treze de

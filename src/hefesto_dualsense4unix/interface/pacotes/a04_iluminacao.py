@@ -882,9 +882,16 @@ def o_coop_manda(state: dict[str, Any]) -> bool:
 
     Quem manda nas cinco lâmpadas é a CAMADA de co-op do merge
     (`core/backend_pydualsense._merged_desired_for_key`, a segunda de cinco), e
-    ela só tem opinião quando há mais de um jogador. Ler o booleano faria a dica
-    desta aba dizer *"quem manda é o co-op"* numa mesa em que ninguém está
-    jogando em co-op.
+    ela só tem opinião quando há mais de um jogador. Ler o booleano mandaria o
+    `player` pedir um `coop.sync` inútil numa mesa de um jogador só, e deixaria
+    sem escrever o override que é quem acende ali (`_acender_o_numero`).
+
+    MEDIDO EM 25/09/2026 (O-CO-OP-LOCAL-SAI-01), e o ramo continua de pé: a
+    camada existe (`backend_pydualsense._desired_coop_by_uniq`) e quem a publica
+    é o PRÓPRIO Hefesto (`CoopManager._apply_coop_player_leds`, só com um
+    secundário ou mais, que é `players > 1`), com o número da mesa. O co-op não
+    é um modo que se liga (`D-2409-O-CO-OP-LOCAL-SAI`); esta função responde
+    «há mais de um jogador», e é só isso que o nome dela quer dizer.
     """
     coop = state.get("coop")
     if not isinstance(coop, dict):
@@ -895,8 +902,7 @@ def o_coop_manda(state: dict[str, Any]) -> bool:
         return False
 
 
-def dica_da_luz(nome: str, via: str, recado: str,
-                coop_manda: bool = False) -> str:
+def dica_da_luz(nome: str, via: str, recado: str) -> str:
     """A dica da célula LEDs: o controle VIVO, e só o que este pacote MEDE.
 
     DUAS DECISÕES DELA, de 02/09/2026, e esta função é as duas::
@@ -946,34 +952,29 @@ def dica_da_luz(nome: str, via: str, recado: str,
     regra dela: *"se não tá mostrando agora, não tem info pra mostrar no
     produto"* — campo sem informação **não mostra nada**.
 
-    O QUE SOBRA É O QUE SE MEDE, e as duas frases continuam tendo dono no motor:
+    O QUE SOBRA É O QUE SE MEDE, e a frase continua tendo dono no motor: a
+    da BARRA é o primeiro retorno de `controller_card.rotulo_lightbar` — a
+    mesma que os cards da GTK usam, e que sabe os quatro estados em que a cor
+    publicada **não** é a que está no plástico. `""` quando não há ressalva.
 
-    * a da BARRA é o primeiro retorno de `controller_card.rotulo_lightbar` — a
-      mesma que os cards da GTK usam, e que sabe os quatro estados em que a cor
-      publicada **não** é a que está no plástico. `""` quando não há ressalva;
-    * a do CO-OP é `lightbar_actions.texto_do_desenho_aceso` no ramo 1, e essa
-      camada o pacote VÊ: `o_coop_manda` a lê de `coop.players`, e ela está
-      acima do override no merge — ligado o co-op, é ele que numera, tenha ela
-      escolhido desenho ou não. Os dois primeiros argumentos vão nos sentinelas
-      de "não sei" (`(False,) * 5` e `None`) porque o ramo devolve ANTES de
-      olhar qualquer um dos dois; há teste que morde se o motor mudar isso.
+    A FRASE DO CO-OP SAIU — O-CO-OP-LOCAL-SAI-01, 25/09/2026, pedido dela
+    (`D-2409-O-CO-OP-LOCAL-SAI`). Com mais de um jogador a dica somava
+    *"Desenho que mandamos: o do co-op — com o co-op ligado, é ele que manda
+    nas 5 luzes"* (o ramo 1 de `lightbar_actions.texto_do_desenho_aceso`), e a
+    frase tratava o co-op como um modo que se liga: o Hefesto dá um controle
+    virtual a cada jogador sempre, e quem numera as cinco lâmpadas é ele
+    (`D-2309-O-HEFESTO-MANDA-NO-NUMERO`). O que a frase explicava — que
+    escolher um desenho à mão não adianta — perdeu o assunto em 07/09, quando
+    a botoeira saiu e as lâmpadas passaram a espelhar a linha `Jogador` logo
+    acima. **A dica agora é a mesma com um jogador ou com quatro**, e a régua
+    é `tests/unit/test_o_co_op_local_saiu.py`.
 
     :param nome: o modelo VIVO, o que a mesa sabe — nunca o do desenho.
     :param via: `USB`/`BT` de agora. `—` ou vazio some da frase em vez de
         virar `(—)`: um travessão entre parênteses não diz nada a ninguém.
     :param recado: o primeiro retorno de `rotulo_lightbar`, ou `""`.
-    :param coop_manda: `o_coop_manda(state)` — ver lá por que não é
-        `coop.enabled`.
     """
-    from hefesto_dualsense4unix.app.actions.lightbar_actions import (
-        texto_do_desenho_aceso,
-    )
-
     frases = [recado] if recado else []
-    if coop_manda:
-        #: O ÚNICO RAMO QUE ESTE PACOTE PODE AFIRMAR — ver o docstring.
-        frases.append(texto_do_desenho_aceso(
-            (False,) * 5, None, coop_ligado=True))
     quem = f"{nome} ({via})" if via and via != "—" else nome
     #: SEM FRASE, SÓ O NOME — e nunca `"Nome · "` com o separador órfão.
     return (f"{quem} · " + " · ".join(frases)) if frases else quem
@@ -2049,8 +2050,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             #: têm como divergir.
             "luz": desenho_da_luz(_tinta(cor_escolhida(acesa, b)),
                                   1.0 if b is None else float(b), n,
-                                  dica_da_luz(nome, via, recado or "",
-                                              o_coop_manda(ctx.state)),
+                                  dica_da_luz(nome, via, recado or ""),
                                   estado=estado),
             #: O TRACEJADO, COM ENDEREÇO PRÓPRIO — e ele vem DEPOIS do `luz` de
             #: propósito. O `luz` troca o miolo do `.aceso` inteiro (alvo
@@ -3734,9 +3734,16 @@ def _acender_o_numero(ctx: Contexto, p: Any, uniq: str, n: int) -> str:
 
     if o_coop_manda(ctx.state):
         if not p.chamar(_RECONCILIAR_O_COOP):
+            # A FRASE DIZ O QUE ACONTECEU, e só — O-CO-OP-LOCAL-SAI-01,
+            # 25/09/2026. Ela terminava em *"com o co-op ligado, quem as acende
+            # é o jogo"*, e as duas metades eram fato errado: o co-op não é um
+            # modo que se liga (`D-2409-O-CO-OP-LOCAL-SAI`), e quem acende as
+            # cinco lâmpadas é o Hefesto, sempre (`D-2309-O-HEFESTO-MANDA-NO-
+            # NUMERO`) — a camada que está acima do override é a do PRÓPRIO
+            # Hefesto (`coop._publicar_camada_coop`), com o número da mesa.
             raise RuntimeError(
                 f"o número deste controle mudou para {n}, mas as cinco "
-                f"lâmpadas não: com o co-op ligado, quem as acende é o jogo.")
+                f"lâmpadas não.")
         return ""
 
     recado = ""
