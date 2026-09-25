@@ -1600,26 +1600,23 @@ CSS += (f"\n  .gc-cabeca,\n"
         f"  .gc .ext-linha{{--larg-nome:{LARG_NOME}px}}\n")
 
 # ---------------------------------------------------------------------------
-# AS REGRAS QUE O ACORDEÃO GERA — uma por estado, e o estado é a MESA.
+# AS REGRAS QUE O ACORDEÃO GERA — uma por estado, e o estado é o LUGAR.
 #
 # Duas coisas saem daqui, e as duas são a decisão dela de 28/08:
 #   1. a linha ABERTA é a da fita, e clicar numa linha MUDA A FITA;
 #   2. o chip "Todos" abre os quatro.
 #
-# A FITA É DO `monta.fita()`, e esta aba não a escreve — ela repinta os chips
-# pela posição, que é derivada da MESA e não digitada. O primeiro filho do
-# `.fita` é o rótulo "Ajustes vão para:", o segundo é o chip "Todos", e daí em
-# diante vem um por controle, na ordem da mesa.
+# O CHIP SE ACHA PELO JOGADOR, NUNCA PELA POSIÇÃO — A-GESTAO-SEGUE-O-JOGADOR-01,
+# 24/09/2026. A regra contava filhos (`.chip:nth-child(n)`) e a fita só desenha
+# quem está na mesa: com o P1 fora, abrir o P2 acendia o P3, e o P3 e o P4 não
+# tinham regra. O `data-pref` do chip (`monta._endereco_do_chip`) é o número.
 #
-# O QUE O MOCKUP NÃO CONSEGUE, e é honesto dizer: o chip da fita é um `<span>`
-# do esqueleto, e um `<span>` não vira alvo de clique sem tocar o `monta.py`.
-# O gesto "voltar para Todos" existe e está no lugar mais próximo — a própria
-# própria linha aberta —, com o `title` dizendo o que ele faz.
+# ATÉ 05/09/2026 O CHIP NÃO CLICAVA: o chip da fita era um `<span>` do
+# esqueleto, e um `<span>` não vira alvo de clique sem tocar o `monta.py`. O
+# "voltar para Todos" continua também na linha aberta, com o `title` que o diz.
 # ---------------------------------------------------------------------------
-#: Um rádio por controle QUE ABRE, mais o "todos". Gerar um para quem não
-#: está na mesa deixaria no CSS uma regra que nenhum label pode disparar —
-#: e regra que ninguém alcança é a mesma coisa que régua que casa zero.
-ESTADOS = ["todos"] + [c["pref"] for c in CONECTADOS]
+#: Os QUATRO lugares, como os `<input>` do acordeão — a mesa da tela é a viva.
+ESTADOS = ["todos"] + [c["pref"] for c in MESA]
 
 _regras = [
     "  /* o destaque estático da fita perde para o do acordeão: `.fita .chip.on`",
@@ -1643,14 +1640,17 @@ _regras = [
     "  .quadro-corpo:has(#gc-todos:checked) .gc-seta.abre{display:none}",
     "  .quadro-corpo:has(#gc-todos:checked) .gc-item:not(.off) .gc-seta.so{display:flex}",
 ]
-for i, estado in enumerate(ESTADOS):
-    n = 2 + i  # o chip deste estado, na fita
-    _regras.append(
-        f"  body:has(#gc-{estado}:checked) .fita .chip:nth-child({n})"
-        "{background:var(--sel-bg);color:var(--fg);font-weight:600;border-color:var(--purple)}")
-    _regras.append(
-        f"  body:has(#gc-{estado}:checked) .fita .chip.plastico:nth-child({n})"
-        "{border-color:var(--plastico,var(--border-forte))}")
+for estado in ESTADOS:
+    marcado = f"body:has(#gc-{estado}:checked)"
+    # O CHIP É ACHADO PELO JOGADOR (`data-pref`). Com UM controle na mesa não há
+    # chip «Todos», e o dele É o todos (`monta.escolha_da_fita`).
+    chips = [f'{marcado} .fita .chip[data-pref="{estado}"]']
+    if estado == "todos":
+        chips.append(f'{marcado} .fita:not(:has(.chip[data-pref="todos"])) .chip[data-pref]')
+    _regras.append("  " + ",".join(chips) + "{background:var(--sel-bg);"
+                   "color:var(--fg);font-weight:600;border-color:var(--purple)}")
+    _regras.append("  " + ",".join(f"{c}.plastico" for c in chips)
+                   + "{border-color:var(--plastico,var(--border-forte))}")
     if estado == "todos":
         continue
     _regras.append(f"  .quadro-corpo:has(#gc-{estado}:checked) .gc-{estado} .gc-corpo"
@@ -1964,9 +1964,15 @@ BORDA_NEUTRA = ("A borda é <b>neutra</b> porque a cor deste controle <b>não fo
                 "Uma borda colorida aqui seria uma cor que ninguém leu — e o desenho "
                 "continua na cor que o resto do Hefesto já conhece.")
 
-LUZ_NO_CABO = ("Só funciona com o controle no rádio. Este está no cabo, onde a barra de luz "
+#: A PALAVRA DO TRANSPORTE NA TELA É USB E BT — decisão dela de 21/09/2026 (a I9
+#: revogada), aplicada à 08 inteira em 24/09 (A-GESTAO-SEGUE-O-JOGADOR-01): estas
+#: duas dicas, o exame da cena e o `CENSO`. «Turno de rádio», «pesa no rádio» e
+#: «falando no rádio» ficam: ali o rádio é o recurso, não o transporte. Quem
+#: prende a palavra ao dono (`home_actions.palavra_do_transporte`) é
+#: `tests/unit/test_a_gestao_segue_o_jogador.py`.
+LUZ_NO_CABO = ("Só funciona com o controle no BT. Este está no USB, onde a barra de luz "
                "não depende de reconexão.")
-LUZ_NO_RADIO = ("Desliga este controle do rádio. Aperte PS para ele voltar, e a barra de luz "
+LUZ_NO_RADIO = ("Desliga este controle do BT. Aperte PS para ele voltar, e a barra de luz "
                 "volta a obedecer.")
 
 # A PALAVRA DA UNIDADE É **TURNO**, e não "fatia" nem "faixa"
@@ -2396,7 +2402,7 @@ def linha_do_controle(c):
               <label class="gc-seta so" for="gc-{c["pref"]}" data-gesto="alvo"
                      title="{SO_ESTE_DICA}">só este</label>
               <label class="gc-seta fecha" for="gc-todos" data-gesto="todos"
-                     title="Fecha. A fita volta para «Todos» e os {len(CONECTADOS)} abrem juntos.">▴</label>
+                     title="Fecha. A fita volta para «Todos» e todos abrem juntos.">▴</label>
             </div>
             <div class="gc-corpo">
               {desenho_do_controle(c, luz)}
@@ -2660,7 +2666,7 @@ def ajuda(txt, largura=""):
 # ---------------------------------------------------------------------------
 #: `(espécie, nome do kernel, entrada em que ela o pôs, o que é na mesa dela)`
 CENSO = [
-    ("Aparelho de entrada", "1-2", "1",   f'o P{CONECTADOS[0]["jogador"]} {CONECTADOS[0]["nome"]}, no {"rádio" if e_radio(CONECTADOS[0]) else "cabo"}'),
+    ("Aparelho de entrada", "1-2", "1",   f'o P{CONECTADOS[0]["jogador"]} {CONECTADOS[0]["nome"]}, no {"BT" if e_radio(CONECTADOS[0]) else "USB"}'),
     ("Mouse",               "1-3", "7",   "o receptor do mouse"),
     # O SEGUNDO APARELHO DE ENTRADA É O SEGUNDO CONECTADO, não o `MESA[3]` —
     # 01/09/2026. Ele citava *"o P4 White, no cabo"*, e o P4 está DESCONECTADO
@@ -2672,7 +2678,7 @@ CENSO = [
     # e na Navegação (quem navega o PC saía da `MESA`). Toda frase que nomeia um
     # controle tem de sair de `CONECTADOS` — a `MESA` sabe dos quatro lugares, e
     # a TELA só pode falar dos que estão ocupados.
-    ("Aparelho de entrada", "1-5", "2",   f'o P{CONECTADOS[1]["jogador"]} {CONECTADOS[1]["nome"]}, no {"rádio" if e_radio(CONECTADOS[1]) else "cabo"}'),
+    ("Aparelho de entrada", "1-5", "2",   f'o P{CONECTADOS[1]["jogador"]} {CONECTADOS[1]["nome"]}, no {"BT" if e_radio(CONECTADOS[1]) else "USB"}'),
     ("Bluetooth",           "3-3", "3",   f'o adaptador “{ADAPTADORES[0]["nome"]}”'
                                           f' — {ADAPTADORES[0]["modelo"]}'),
     ("Teclado",             "3-4", "4",   "o receptor do teclado que o exame desta aba cita"),
@@ -3886,17 +3892,17 @@ MIOLO = f'''
             <div class="col-exame" data-hef-molde=".exame" data-hef-molde-conta="achado">
 {exame("certo",
        f'As entradas dão energia para {"os" if len(NO_CABO) > 1 else "o"} {len(NO_CABO)} '
-       f'{_plural(len(NO_CABO), "controle", "controles")} no cabo',
+       f'{_plural(len(NO_CABO), "controle", "controles")} no USB',
        "<b>O que eu vi:</b> as entradas em uso entregam 500 mA ou mais.<br><br><b>Por que "
-       "importa:</b> entrada fraca faz o controle cair do cabo no meio da partida, e o sintoma "
+       "importa:</b> entrada fraca faz o controle cair do USB no meio da partida, e o sintoma "
        "parece defeito do controle.", linha=0)}
 {exame(_ATENCAO, "Dois rádios da bancada estão em entradas vizinhas",
        "<b>O que eu vi:</b> o adaptador Bluetooth na <b>Entrada 3</b> e o receptor do teclado na "
        "<b>Entrada 4</b> saem do mesmo controlador USB 3.0.<br><br><b>O que fazer:</b> a ordem de "
        "serviço ao lado, e o <b>?</b> dela diz por que isso importa.", linha=1)}
 {exame("certo",
-       (f'Os {len(NO_CABO)} controles no cabo têm uma entrada cada um' if len(NO_CABO) > 1
-        else 'O controle no cabo tem uma entrada só para ele'),
+       (f'Os {len(NO_CABO)} controles no USB têm uma entrada cada um' if len(NO_CABO) > 1
+        else 'O controle no USB tem uma entrada só para ele'),
        f'<b>O que eu vi:</b> nenhum outro aparelho de dados divide o controlador USB das '
        f'entradas onde estão o {JOGADORES_NO_CABO}.', linha=2)}
 {exame("nao_sei",
@@ -3991,9 +3997,9 @@ MIOLO = f'''
 
              UM ENDEREÇO, AS DUAS METADES DA QUEIXA. O destaque da FITA do topo
              não vem do `.on` que o piloto escreve — vem das regras
-             `body:has(#gc-…:checked) .fita .chip:nth-child(n)` geradas logo
-             acima —, então marcar o rádio certo move o acordeão e a fita
-             juntos.
+             `body:has(#gc-pN:checked) .fita .chip[data-pref="pN"]` geradas
+             logo acima, pelo número do jogador —, então marcar o rádio certo
+             move o acordeão e a fita juntos.
 
              O ALVO É `marcado`, o décimo do pintor (decisão dela em 04/09,
              `PINTOR-MARCADO-01`): dos nove anteriores, `valor` escreve
