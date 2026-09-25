@@ -518,6 +518,17 @@ def _tiques_do_piloto(pagina: str, mesas: list[list[dict[str, Any]]],
         _estado_do_tique=lambda: agora["st"], _contexto=contexto,
         trocas={}, tiques={}, pinturas={}, voltas=0, custos=[], custo_do_ipc=[],
         _contar_mutacoes=lambda: None)
+    # A JANELA À VISTA E A CARGA MÍNIMA — A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01,
+    # 25/09/2026. O tique passou a ler se a janela está escondida e a mandar só o
+    # que mudou. O dublê leva o estado inicial e os MÉTODOS DO PRODUTO, ligados a
+    # ele: mais pobre que o piloto, ele reprovaria por atributo, e não pelo que
+    # mede. Cada mesa daqui muda a fita, então cada tique leva a carga inteira.
+    for metodo in ("_o_que_mandar", "_esquecer_a_pintura", "_esperando_o_estado_novo",
+                   "_moldes_da_pagina"):
+        setattr(piloto, metodo, types.MethodType(getattr(hefesto_vivo.Piloto, metodo), piloto))
+    vars(piloto).update(
+        _escondida=False, _geracao_na_volta=None, _pintada=None, _ate_a_inteira=0,
+        _moldes={}, TIQUES_ENTRE_CARGAS_INTEIRAS=hefesto_vivo.Piloto.TIQUES_ENTRE_CARGAS_INTEIRAS)
     cargas = []
     for controles in mesas:
         agora["st"] = {"connected": True, "controllers": [dict(c) for c in controles]}
