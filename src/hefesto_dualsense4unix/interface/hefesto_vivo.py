@@ -1485,7 +1485,20 @@ BOOTSTRAP = r"""
     // `document.hidden`, o mesmo sinal com que para de pintar. O aviso vai
     // pelo canal de sempre, sem `gesto`, e o `_gesto` do Python o separa antes
     // de contar clique.
-    document.addEventListener('visibilitychange', function(){ dizer_a_vista(); });
+    //
+    // TROCAR DE ABA NÃO É ESCONDER. O documento que sai passa a `hidden`
+    // antes de morrer, e o `pagehide` vem antes disso: sem esta marca, cada
+    // troca de aba escreveria no diário que a janela foi escondida, e a linha
+    // que prova o minimizar na máquina dela não provaria nada. A página nova
+    // diz `vista` assim que nasce; a que volta do cache diz no `pageshow`.
+    window.addEventListener('pagehide', function(){ window.__hefSaindo = true; });
+    window.addEventListener('pageshow', function(){
+      window.__hefSaindo = false;
+      dizer_a_vista();
+    });
+    document.addEventListener('visibilitychange', function(){
+      if(!window.__hefSaindo) dizer_a_vista();
+    });
   }
   function dizer_a_vista(){
     // SEM O CANAL NÃO HÁ A QUEM DIZER: as réguas rodam este BOOTSTRAP num

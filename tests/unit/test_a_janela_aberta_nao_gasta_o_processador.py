@@ -197,7 +197,7 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
     estado = _Estado(n, anda)
     fora = SimpleNamespace(ticks=[], pinturas=[], marcos={}, estado=estado,
                            pactl=[], ponte=_PonteDeMentira(), mudas=False,
-                           avaliados={}, piloto=None)
+                           avaliados={}, piloto=None, avisos=[], acabou=False)
 
     def pactl(argv: list[str]) -> str:
         fora.pactl.append((time.monotonic(), " ".join(argv)))
@@ -238,6 +238,12 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
         tique_original = piloto._tique
 
         def tique() -> bool:
+            # O PILOTO DE UM CENÁRIO QUE ACABOU NÃO TIQUETAQUEIA NO SEGUINTE: o
+            # relógio dele é do laço do GTK, que é um só para o módulo inteiro.
+            # Vivo, ele rodaria o pacote da aba dele (e o `pactl` da 02) no
+            # meio da medição do cenário seguinte.
+            if fora.acabou:
+                return False
             no_tique[0] = False
             volta = tique_original()
             fora.ticks.append(SimpleNamespace(
@@ -251,11 +257,12 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
         mudou_original = piloto._a_janela_mudou
 
         def a_janela_mudou(escondida: bool) -> None:
-            # AS LEITURAS NO INSTANTE DO AVISO, e não no primeiro tique depois:
-            # o fio pode trazer a resposta nova antes de o tique rodar.
-            fora.marcos.setdefault(
-                "leituras-ao-esconder" if escondida else "leituras-na-volta",
-                estado.leituras)
+            # CADA TROCA, com as leituras no INSTANTE do aviso, e não no
+            # primeiro tique depois: o fio pode trazer a resposta nova antes
+            # de o tique rodar. O aviso que não muda nada (a página que nasce
+            # dizendo `vista`) não é troca.
+            if escondida != piloto._escondida:
+                fora.avisos.append((time.monotonic(), escondida, estado.leituras))
             mudou_original(escondida)
 
         piloto._a_janela_mudou = a_janela_mudou  # type: ignore[method-assign]
@@ -289,6 +296,8 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
         try:
             gtk.main()
         finally:
+            fora.acabou = True
+            piloto.pronto = False
             GLib.source_remove(guarda)
             a05.parar_o_teste()
             piloto._estado_vivo.parar()
@@ -413,7 +422,10 @@ def test_r1_na_volta_a_carga_vai_inteira_e_com_estado_novo(esconde_e_volta: Any)
     """
     fora = esconde_e_volta
     assert "voltou" in fora.marcos, "a página nunca disse que voltou à vista"
-    voltou = fora.marcos["voltou"]
+    # O INSTANTE DO AVISO, e não o do roteiro, que o vê até 50 ms depois: o
+    # tique que pintasse o estado velho cairia antes da marca e sairia da conta.
+    voltou, _, leituras_na_volta = next(
+        a for a in fora.avisos if not a[1] and a[0] >= fora.marcos["esconde"])
     depois = [x for x in fora.ticks if x.t >= voltou and not x.escondida]
     primeiro = next((i for i, x in enumerate(depois) if x.pintou), None)
     assert primeiro is not None and primeiro < 3, (
@@ -421,8 +433,28 @@ def test_r1_na_volta_a_carga_vai_inteira_e_com_estado_novo(esconde_e_volta: Any)
     pintura = next(p for p in fora.pinturas if p[0] >= voltou)
     assert _inteira(pintura[1]), (
         f"a primeira pintura da volta não é a carga inteira: {sorted(pintura[1])}")
-    assert depois[primeiro].leituras > fora.marcos["leituras-na-volta"], (
+    assert depois[primeiro].leituras > leituras_na_volta, (
         "a volta pintou antes de o leitor trazer um estado novo")
+
+
+def test_r1_trocar_de_aba_nao_e_esconder(esconde_e_volta: Any) -> None:
+    """A janela só se esconde quando a janela se esconde: a troca de aba não conta.
+
+    O documento que sai passa a `hidden` antes de morrer. Sem a marca do
+    `pagehide`, a ida da 01 para a 02 e para a 08 (o piloto abre na 01)
+    pausava o fio e escrevia no diário `[janela] escondida` — e a linha que
+    ela vai ler depois de minimizar, na máquina dela, não provaria nada.
+
+    MORDIDA: tire o `if(!window.__hefSaindo)` do ouvinte do BOOTSTRAP e a
+    troca de aba vira um par escondida/vista antes do `hide()`.
+    """
+    fora = esconde_e_volta
+    antes = [a for a in fora.avisos if a[0] < fora.marcos["esconde"]]
+    assert not antes, (
+        f"{len(antes)} troca(s) de visibilidade antes de a janela se esconder, "
+        f"indo para {fora.pagina}: {[(round(t - antes[0][0], 3), e) for t, e, _ in antes]}")
+    trocas = [e for _, e, _ in fora.avisos]
+    assert trocas == [True, False], f"as trocas da janela foram {trocas}"
 
 
 # ===========================================================================
@@ -497,14 +529,23 @@ def test_r2_so_o_giro_mexe_e_so_o_giro_vai(so_o_giro: Any) -> None:
 
 @pytest.fixture(scope="module")
 def um_controle_chega(publicado_de_hoje: pathlib.Path) -> SimpleNamespace:
-    """A 01 com um controle; aos 2 s, chega o segundo."""
+    """A 01 com um controle; aos 2 s, chega o segundo.
+
+    SEM A CARGA INTEIRA DE 1 s: ela cairia na mesma fase da chegada (a página
+    abre, e a cada 10 tiques vem uma) e a régua ficaria verde sem a cura da
+    forma. Aqui a única inteira depois da primeira é a que a forma pede.
+    """
     def roteiro(fora: Any, _piloto: Any, t: float) -> bool:
         if t >= 2.0 and "chegou" not in fora.marcos:
             fora.marcos["chegou"] = time.monotonic()
             fora.estado.fixo = _estado_da_fixture(2)
         return t < 4.0
 
-    return _correr(publicado_de_hoje, "01-jogar.html", 1, roteiro)
+    def sem_a_inteira_de_1_s(mp: pytest.MonkeyPatch, hv: Any) -> None:
+        mp.setattr(hv.Piloto, "TIQUES_ENTRE_CARGAS_INTEIRAS", 10**6)
+
+    return _correr(publicado_de_hoje, "01-jogar.html", 1, roteiro,
+                   ajuste=sem_a_inteira_de_1_s)
 
 
 def test_r2_o_controle_que_chega_leva_a_carga_inteira(um_controle_chega: Any) -> None:
