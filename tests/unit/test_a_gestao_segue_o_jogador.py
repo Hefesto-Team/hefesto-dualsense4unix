@@ -40,7 +40,11 @@ MORDIDAS (todas rodadas em 24/09/2026):
   (:func:`test_a_regua_morde_a_regra_por_posicao`): as regras da página saem e
   entram as de antes, e o mesmo roteiro tem de acusar;
 * devolva «no rádio»/«no cabo» a uma frase da 08, ou a um dos donos que ela
-  pinta, e o caso daquela frase reprova nomeando-a;
+  pinta, e o caso daquela frase reprova nomeando-a — inclusive o aviso do
+  externo Nintendo no BT (`external_controllers.nintendo_bt_warning`), que a
+  conferência achou fora da lista medida;
+* devolva `os {len(CONECTADOS)}` à dica da ▴ e regere a 08: a régua da seta
+  reprova, porque a dica é estática e contava os dois do desenho;
 * devolva «não escreve no aparelho» ao cabeçalho do `alto_falante_bt.py` e o
   caso do cabeçalho reprova;
 * a régua da proibição que caiu nasceu ANTES da cura e reprovou os quatro
@@ -511,6 +515,54 @@ def test_o_exame_diz_o_pareamento_na_palavra_do_dono() -> None:
     item = pareamentos(executar=busctl)
     assert f"pareado por {palavra('bt')}" in item.porque, item.porque
     assert not _transporte_na_lingua_do_mapa(item.porque), item.porque
+
+
+#: UM PRO CONTROLLER NO BT, na forma que o daemon publica em `external`
+#: (`ipc_handlers._handle_controller_list`). O endereço é da faixa SINTÉTICA
+#: da casa (`aa:bb:cc`), nunca de aparelho real.
+_PRO_NO_BT: dict[str, Any] = {
+    "name": "Pro Controller", "vid": "057e", "pid": "2009", "bus": "bluetooth",
+    "uniq": "aa:bb:cc:00:00:5b", "driver": "hid-nintendo", "player_slot": 4,
+}
+
+
+def test_o_aviso_do_externo_na_08_diz_a_palavra_do_dono(a08: Any) -> None:
+    """«Pelo BT o modo Switch pode travar (driver do kernel); pelo USB é
+    estável.» — a linha de um externo Nintendo na Gestão da 08
+    (`_html_dos_externos`), pelo dono `external_controllers.nintendo_bt_warning`.
+
+    A LISTA MEDIDA POR GREP NÃO O TINHA: a conferência achou-o entre os donos
+    que a 08 pinta, dizendo «por cabo» ao lado do «BT» da mesma linha.
+
+    MORDIDA: devolva «por cabo é estável» ao `nintendo_bt_warning` — reprova.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import Contexto
+
+    linha = a08._html_dos_externos(Contexto(state={}, externos=[_PRO_NO_BT]))
+    texto = html.unescape(re.sub(r"<[^>]+>", " ", linha))
+    assert "modo Switch" in texto, (
+        f"a linha do externo perdeu o aviso do `hid-nintendo` — a régua ficou cega: {texto!r}")
+    assert f"pelo {palavra('usb')} é estável" in texto, texto
+    assert not _transporte_na_lingua_do_mapa(texto), texto
+
+
+def test_a_seta_que_fecha_nao_conta_os_controles_do_desenho() -> None:
+    """A dica da ▴ vale em qualquer mesa: «todos abrem juntos», sem número.
+
+    Ela dizia «os {len(CONECTADOS)} abrem juntos» — os DOIS conectados do
+    desenho —, e o `title` é estático: o piloto não o repinta, então com os
+    quatro na mesa a tela dizia «os 2».
+
+    MORDIDA: devolva `os {len(CONECTADOS)}` ao `aba08.linha_do_controle` e
+    regere a 08 — reprova.
+    """
+    x = BANCADA.read_text(encoding="utf-8")
+    dicas = re.findall(r'<label class="gc-seta fecha"[^>]*?title="([^"]*)"', x)
+    assert len(dicas) == len(LUGARES), (
+        f"a 08 tem {len(dicas)} setas que fecham, e a mesa tem {len(LUGARES)} "
+        f"lugares — a régua ficou cega")
+    com_numero = sorted({d for d in dicas if re.search(r"\d", d)})
+    assert not com_numero, f"a dica da ▴ conta os controles do desenho: {com_numero}"
 
 
 # ---------------------------------------------------------------------------
