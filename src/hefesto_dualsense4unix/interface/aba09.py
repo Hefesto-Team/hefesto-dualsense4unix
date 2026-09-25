@@ -1026,7 +1026,7 @@ def sel(opcoes, escolhida, dica="", ident="", gesto=""):
 # 2 jogos, desliguei". A palavra dela está no índice da onda.
 ACHADOS = [
     saude("OK", "✓", "Regra de permissão dos controles instalada",
-          "<b>O que eu vi:</b> a regra <b>70-hefesto.rules</b> está em /etc/udev/rules.d e foi lida pelo sistema."
+          "<b>O que eu vi:</b> a regra <b>73-hefesto-ps5-controller.rules</b> está em /etc/udev/rules.d e foi lida pelo sistema."
           "<br><br><b>Por que importa:</b> sem ela o Hefesto não consegue escrever nos controles, e gatilho, luz e "
           "vibração ficam mudos."
           "<br><br><b>O que fazer:</b> nada — está no lugar."),
