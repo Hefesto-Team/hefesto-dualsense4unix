@@ -569,6 +569,12 @@ def _medida(pg) -> dict:
     A LINHA SAIU, e a lição não: medir o VÃO em vez da ALTURA é o que faz esta
     régua continuar respondendo sobre a faixa, e não sobre a peça que já não
     está lá.
+
+    O CONJUNTO GANHOU UM ANDAR EM 24/09/2026, por decisão dela
+    (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`): as três pílulas do brilho
+    das luzes moram debaixo da tira, na caixa `.brilhos`. O vão passa a ser o
+    do PAR — acima da tira e abaixo da caixa das pílulas —, e continua
+    reprovando qualquer terceira coisa posta no fluxo da célula.
     """
     return pg.evaluate("""() => {
       const m = document.querySelector('.miolo');
@@ -576,7 +582,9 @@ def _medida(pg) -> dict:
       const vaos = Array.from(document.querySelectorAll('.cel-leds')).map(cel => {
         const c = cel.getBoundingClientRect();
         const t = cel.querySelector('.aceso').getBoundingClientRect();
-        return [+(t.top - c.top).toFixed(2), +(c.bottom - t.bottom).toFixed(2)];
+        const b = (cel.querySelector('.brilhos') || cel.querySelector('.aceso'))
+          .getBoundingClientRect();
+        return [+(t.top - c.top).toFixed(2), +(c.bottom - b.bottom).toFixed(2)];
       });
       return {rola: m.scrollHeight > m.clientHeight,
               quadro: Math.round(q.getBoundingClientRect().height),
@@ -615,6 +623,13 @@ def test_no_repouso_a_linha_nao_cobra_pixel_e_a_aba_nao_rola(pagina_no_chrome):
             f"a tira ficou descentrada na faixa dos LEDs ({acima} acima, "
             f"{abaixo} abaixo) — alguma coisa entrou no fluxo da célula "
             f"debaixo da tira e cobra pixel em toda tela")
+        # E O PAR CABE NA FAIXA (24/09/2026): a tira e as pílulas enchem os
+        # 64px, e uma terceira coisa no MEIO do par transbordaria por igual
+        # dos dois lados — o vão negativo simétrico passaria pela asserção de
+        # cima. Esta é a que o pega.
+        assert acima >= -0.6 and abaixo >= -0.6, (
+            f"a faixa dos LEDs transbordou ({acima} acima, {abaixo} abaixo) — "
+            f"alguma coisa entrou no fluxo da célula além da tira e das pílulas")
     assert not m["rola"], (
         f"a aba passou a rolar por dentro — o quadro mede {m['quadro']}px")
 

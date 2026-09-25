@@ -12,18 +12,19 @@ de `ds_output_report.py`, na chave `luz.lightbar.brilho` do mapa e na sprint
 BRILHO-DE-HARDWARE-01. A fonte externa já dizia o certo e ninguém tinha olhado:
 `flag_2: SET_PLAYER_LED_BRIGHTNESS 0x01` (RPCS3 `.h:26-44`).
 
-O QUE ESTE TESTE GUARDA, e por que ele é DE DÍVIDA e não de feature
--------------------------------------------------------------------
-`backend_pydualsense` escreve `common[42] = self.light.brightness.value`, e o
-bit0 do `flag2` só sai ligado sem a supressão de LED (o cabo sem nó gravável),
-herdado do `ledOption`; o produto instalado o desliga. Esta régua não vê esse
-caminho: quem o prende é `test_as_frases_que_a_bancada_achou.py` (24/09/2026).
-
-Então a régua tem DUAS metades, e a segunda é a que morde:
+O QUE ESTE TESTE GUARDA
+----------------------
+A DÍVIDA FECHOU EM 24/09/2026 (O-BRILHO-DAS-LUZES-DE-NUMERO-01, decisão dela
+`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`): o `common[42]` ganhou campo
+próprio — o degrau que o perfil escolheu para aquele controle
+(`_brilho_das_luzes`), e não o `light.brightness` da pydualsense. A régua tem
+DUAS metades, e a segunda é a que morde:
 
 1. a constante do bit diz de qual LED ela é (o fato substituído fica escrito);
-2. enquanto a FONTE do valor for `light.brightness`, o bit tem de continuar
-   desligado. Ligar um sem trocar o outro reprova aqui, nomeando a dívida.
+2. com o bit ligado, o byte é o do campo próprio — perguntado ao
+   `_build_common`, e não ao texto do backend. Devolver o `light.brightness`
+   como fonte reprova aqui, nomeando a dívida. O caminho inteiro, nos dois
+   transportes, é de `test_o_brilho_das_luzes_de_numero.py`.
 
 A prova do aparelho não mora num teste: mora em `docs/data/ensaios.csv`
 (`painel-do-brilho-*-0909`), porque quem a produziu foi o olho dela.
@@ -32,23 +33,28 @@ A prova do aparelho não mora num teste: mora em `docs/data/ensaios.csv`
 from __future__ import annotations
 
 import ast
-import re
 from pathlib import Path
+from typing import Any
 
 RAIZ = Path(__file__).resolve().parents[2]
 REPORT = RAIZ / "src/hefesto_dualsense4unix/core/ds_output_report.py"
-BACKEND = RAIZ / "src/hefesto_dualsense4unix/core/backend_pydualsense.py"
 
-#: A linha que escreve o byte, e a fonte do valor que ela usa hoje.
-_ESCRITA_DO_42 = re.compile(r"common\[42\]\s*=\s*int\(self\.light\.(\w+)\.value\)")
 
-#: Quem LIGA o bit (um `|=` sobre o flag2 com a constante). Desligar (`&= ~`)
-#: não conta — é o que o `suppress_leds` faz, e é o oposto do risco.
-_LIGA_O_BIT = re.compile(
-    r"flag2\s*\|=[^\n]*VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE"
-    r"|flag2\s*\|=\s*\(\s*[^)]*VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE",
-    re.S,
-)
+def _handle_sem_aparelho(*, led_gravavel: bool) -> Any:
+    """Um handle da pydualsense sem device, nascido pelo `__init__` de produção.
+
+    `led_gravavel` é o `_suppress_leds`: com o nó de LED do kernel gravável o
+    fluxo é LED-neutro (no rádio, sempre).
+    """
+    from pydualsense.pydualsense import DSAudio, DSLight, DSTrigger
+
+    from hefesto_dualsense4unix.core.backend_pydualsense import _PinnedPyDualSense
+
+    h = _PinnedPyDualSense(b"/dev/hidraw-de-bancada", is_edge=False)
+    h.audio, h.light = DSAudio(), DSLight()
+    h.triggerL, h.triggerR = DSTrigger(), DSTrigger()
+    h._suppress_leds = led_gravavel
+    return h
 
 
 def test_a_constante_diz_de_qual_led_ela_e() -> None:
@@ -81,26 +87,38 @@ def test_a_constante_existe_e_e_o_bit_zero() -> None:
 
 
 def test_o_bit_fica_desligado_enquanto_a_fonte_do_valor_for_a_barra() -> None:
-    """A METADE QUE MORDE.
+    """A METADE QUE MORDE — e desde 24/09/2026 ela pergunta ao PRODUTO.
 
-    Ligar o bit mandando `light.brightness` faz o produto atenuar as lâmpadas
-    de numeração achando que escurece a barra. Enquanto os dois andarem juntos,
-    isto reprova — e a mensagem diz o que fazer.
+    Ligar o bit mandando o `light.brightness` da pydualsense faz o produto
+    atenuar as lâmpadas com um degrau que ninguém escolheu. O nome do caso
+    ficou (o mapa o cita em `luz.lightbar.brilho`); o que ele cobra agora é que,
+    com o bit ligado, o byte seja o do campo próprio — o `_brilho_das_luzes`,
+    que o perfil escreve — e nunca o da pydualsense.
+
+    MORDIDA (24/09/2026): devolva `common[42] = int(self.light.brightness.value)`
+    ao `_build_common` e o degrau Forte (0) do campo sai como o Fraco (2) da
+    pydualsense — reprova na segunda asserção.
     """
-    fonte = BACKEND.read_text(encoding="utf-8")
-    escrita = _ESCRITA_DO_42.search(fonte)
-    assert escrita is not None, (
-        "ninguém escreve mais `common[42] = int(self.light.<x>.value)` no backend. "
-        "Se a fonte do valor mudou, esta régua tem de mudar junto — leia a docstring."
-    )
-    fonte_do_valor = escrita.group(1)
-    liga = _LIGA_O_BIT.search(fonte)
-    if fonte_do_valor == "brightness":
-        assert liga is None, (
-            "o produto passou a LIGAR o `flag2` bit0 e continua mandando "
-            "`light.brightness` no `common[42]`. Esse byte é o brilho dos LEDS DE "
-            "JOGADOR (medido por ela em 09/09/2026): o efeito é atenuar as lâmpadas "
-            "de numeração, não a barra.\n"
-            "Para fechar isto de verdade, o valor tem de vir de um campo próprio do "
-            "brilho das lâmpadas — e aí esta régua muda com ele."
-        )
+    from pydualsense.enums import Brightness
+
+    from hefesto_dualsense4unix.core import ds_output_report as rep
+
+    bit = rep.VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE
+    h = _handle_sem_aparelho(led_gravavel=False)
+    h.light.brightness = Brightness.low
+    h._brilho_das_luzes = 0
+    common = h._build_common(rumble_asserted=False)
+    assert common[rep.COMMON_VALID_FLAG2] & bit, (
+        "o fluxo do cabo sem nó não autorizou o brilho das lâmpadas — o campo "
+        "próprio (`_brilho_das_luzes`) deixou de ligar o `flag2` bit0")
+    assert common[42] == 0, (
+        f"o `common[42]` saiu {common[42]} com o campo próprio no Forte (0): o "
+        f"byte voltou a vir do `light.brightness` da pydualsense. Ele é o brilho "
+        f"dos LEDS DE JOGADOR (medido por ela em 09/09/2026), e quem o escolhe é "
+        f"o perfil dela.")
+    suprimido = _handle_sem_aparelho(led_gravavel=True)
+    suprimido._brilho_das_luzes = 0
+    neutro = suprimido._build_common(rumble_asserted=False)
+    assert neutro[rep.COMMON_VALID_FLAG2] & bit == 0, (
+        "sob supressão o fluxo tem de ficar LED-neutro — o brilho vai ao lado "
+        "do número, fora do fluxo (`_levar_o_brilho_das_luzes`)")

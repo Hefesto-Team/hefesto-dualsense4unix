@@ -129,6 +129,9 @@ class _BackendMinimo:
 _METODOS = (
     "_for_each_led",
     "_pintar_por_hidraw_bt",
+    # O brilho das luzes de número (24/09/2026) sai pelo mesmo
+    # `_write_partial_output`, e o método emprestado o chama.
+    "_levar_o_brilho_das_luzes",
     "_write_partial_output",
     "_apply_trigger",
     "_pode_escrever_player_leds",

@@ -358,27 +358,27 @@ def pre_marcas() -> dict[str, str]:
 
 
 def _handle_sem_aparelho(*, led_gravavel: bool) -> Any:
-    """Um handle da pydualsense sem device — só o estado que o `_build_common` lê.
+    """Um handle da pydualsense sem device, nascido pelo `__init__` de produção.
 
     `led_gravavel` é o `_suppress_leds`: o produto instalado tem o nó de LED do
     kernel gravável, e aí o fluxo é LED-neutro (no rádio, sempre).
+
+    ELE NASCIA POR `__new__` ATÉ 24/09/2026, com o estado privado escrito à mão
+    — e o dublê por `__new__` fica mais pobre que o produto a cada campo novo:
+    o `_brilho_das_luzes` (O-BRILHO-DAS-LUZES-DE-NUMERO-01) não existia nele, e
+    o fluxo do dublê saía sem o brilho que o do produto leva. O `__init__` de
+    produção não toca em hardware; é a mesma fábrica do `conftest`.
     """
     from pydualsense.pydualsense import DSAudio, DSLight, DSTrigger
 
     from hefesto_dualsense4unix.core.backend_pydualsense import _PinnedPyDualSense
 
-    h = _PinnedPyDualSense.__new__(_PinnedPyDualSense)
+    h = _PinnedPyDualSense(b"/dev/hidraw-de-bancada", is_edge=False)
     h.audio = DSAudio()
     h.light = DSLight()
     h.triggerL = DSTrigger()
     h.triggerR = DSTrigger()
-    h.leftMotor = 0
-    h.rightMotor = 0
     h._suppress_leds = led_gravavel
-    h._volumes_audio = [None, None, None, None]
-    h._mic_mute_desejado = None
-    h._raw_trigger_left = None
-    h._raw_trigger_right = None
     return h
 
 
@@ -402,20 +402,23 @@ def test_o_brilho_das_lampadas_e_o_que_o_build_common_manda(
     """A célula do brilho pergunta ao PRODUTO, não ao ensaio de 09/09.
 
     O ensaio mediu o APARELHO (com o bit, os três degraus mudam as lâmpadas).
-    O mapa mede o produto, e o `_build_common` responde duas coisas:
+    O mapa mede o produto, e desde 24/09/2026 (O-BRILHO-DAS-LUZES-DE-NUMERO-01)
+    o `_build_common` responde duas coisas:
 
     * com o nó de LED gravável — o produto instalado, e o rádio sempre — o
-      `flag2` bit0 sai DESLIGADO: nada chega às lâmpadas, e a mesa não pode
-      pré-marcar «obedeceu»;
-    * no cabo sem nó gravável o bit sai LIGADO, herdado do `ledOption` da
-      pydualsense, com o `common[42]` no padrão dela (o degrau baixo) — é o
-      `estado_hoje` da linha, e esta régua o prende: quando isso mudar, a
-      célula muda junto.
+      `flag2` bit0 do FLUXO continua DESLIGADO: o brilho vai ao lado do número,
+      fora do fluxo (`_levar_o_brilho_das_luzes`), e quem o prende é
+      `test_o_brilho_das_luzes_de_numero.py`. A mesa não pode pré-marcar
+      «obedeceu»: o caminho do produto é novo e ninguém o olhou no aparelho;
+    * no cabo sem nó gravável o bit sai LIGADO com o degrau que o HANDLE
+      guarda (`_brilho_das_luzes`, o Fraco se ninguém escolheu), e não mais o
+      herdado do `ledOption` com o padrão da pydualsense.
 
     MORDIDAS: (1) tire a `VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE` do
     `&= ~(…)` da supressão no `_build_common` — reprova na primeira metade;
-    (2) devolva `O APARELHO OBEDECEU` e `aciona = sim` à linha do CSV —
-    reprova com a pré-marca «obedeceu».
+    (2) devolva `O APARELHO OBEDECEU` à linha do CSV — reprova com a
+    pré-marca «obedeceu»; (3) devolva o `light.brightness` como fonte do
+    `common[42]` — reprova na última.
     """
     from pydualsense.enums import Brightness
 
@@ -434,9 +437,15 @@ def test_o_brilho_das_lampadas_e_o_que_o_build_common_manda(
 
     h = _handle_sem_aparelho(led_gravavel=False)
     sem_no = h._build_common(rumble_asserted=False)
-    assert sem_no[rep.COMMON_VALID_FLAG2] & bit == int(h.light.ledOption.value) & bit, (
-        "no cabo sem nó gravável o bit0 deixou de vir do `ledOption` — o "
-        "`estado_hoje` de `luz.led_jogador.brilho` descreve outro produto")
+    assert sem_no[rep.COMMON_VALID_FLAG2] & bit, (
+        "no cabo sem nó gravável o fluxo deixou de autorizar o brilho das "
+        "lâmpadas — o `estado_hoje` de `luz.led_jogador.brilho` descreve outro "
+        "produto")
     assert sem_no[42] == int(Brightness.low), (
-        f"o `common[42]` saiu {sem_no[42]}, e o `estado_hoje` diz que ninguém "
-        f"escolhe o brilho das lâmpadas (o padrão da pydualsense, o degrau baixo)")
+        f"o `common[42]` saiu {sem_no[42]}: todo controle nasce no Fraco (o "
+        f"degrau baixo), e é o que o handle leva antes de o perfil escolher")
+    h._brilho_das_luzes = 0
+    h.light.brightness = Brightness.low
+    assert h._build_common(rumble_asserted=False)[42] == 0, (
+        "o `common[42]` voltou a sair do `light.brightness` da pydualsense — o "
+        "byte tem dono, e é o degrau que o perfil escolheu para o controle")
