@@ -235,6 +235,16 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "(`mic-radio-a-voz-sai-0907`) —, e é justamente o «um de cada vez» que "
         "falta: quatro fontes com nome estável, uma por controle",
     ),
+    "brilho-luzes": (
+        "médio",
+        "2026-09-24-O-BRILHO-DAS-LUZES-DE-NUMERO-01.md",
+        "`luz.led_jogador.brilho@dualsense` está em MONTOU nos dois: a régua pergunta "
+        "ao report montado pelo bit do degrau (o `flag2` bit0 e o `common[42]`), no "
+        "USB com e sem o nó do kernel e no BT, do P1 ao P4. O que falta é o olho dela "
+        "nas lâmpadas nos três degraus, nas células `mapa-luz.led_jogador.brilho-cabo` "
+        "e `-radio` da bancada (25/09); ninguém viu ainda qual degrau o firmware "
+        "acende ao ligar",
+    ),
     "mudo": (
         "horas",
         "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio-com-ela.md",
