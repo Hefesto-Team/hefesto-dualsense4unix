@@ -2958,7 +2958,8 @@ class PyDualSenseController(IController):
         base = self._brilho_do_perfil
         para = self._brilho_da_peca_locked(uniq)
         if base is not None and para is not None:
-            return replace(desired, led=reescalar(tuple(desired.led), base, para))
+            r, g, b = desired.led
+            return replace(desired, led=reescalar((int(r), int(g), int(b)), base, para))
         return replace(
             desired,
             led=tuple(  # type: ignore[arg-type]
