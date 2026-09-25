@@ -3167,7 +3167,7 @@ def proxima_mascara(atual: str) -> str:
 
 
 def build_next_mask_callback(daemon: DaemonProtocol) -> Any:
-    """Cria o callback do gesto PS + L3: PRÓXIMA MÁSCARA do jogador 1.
+    """Cria o callback do gesto PS + L3: PRÓXIMA MÁSCARA do cartão de quem o faz.
 
     O GESTO É O CHIP DO CARTÃO, pelo controle. Ele chama o MESMO handler que o
     clique chama (`IpcHandlersMixin._handle_gamepad_mask_set`), no mesmo laço:
