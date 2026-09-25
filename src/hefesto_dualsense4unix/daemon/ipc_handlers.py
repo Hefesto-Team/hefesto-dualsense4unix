@@ -1152,7 +1152,7 @@ class IpcHandlersMixin:
         (``_record_desired_locked`` com alvo ``None``,
         ``core/backend_pydualsense.py:3121``); o ``reassert_resolved_outputs``
         logo abaixo re-resolve por controle, e o ``_merged_desired_for_key``
-        (``core/backend_pydualsense.py:7351``) põe a camada AUTOMÁTICA do slot
+        (``core/backend_pydualsense.py:7357``) põe a camada AUTOMÁTICA do slot
         (COR-03) EM CIMA do default — a paleta repinta por cima da cor que
         acabou de sair. O caminho por-``uniq`` SEMPRE funcionou pelo mesmo
         motivo, ao contrário: ``apply_output_for`` grava em ``_desired_by_uniq``,

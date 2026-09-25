@@ -4563,7 +4563,7 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     (`controller_card.py:4316`).
 
     "TODO O SOM DO PC" SÃO DUAS CAMADAS, E A SEGUNDA NÃO É IPC. O
-    `profiles/schema.py:589` já escreve o limite com todas as letras:
+    `profiles/schema.py:803` já escreve o limite com todas as letras:
 
         LIMITE DECLARADO: a rota é a CAMADA 2 (o firmware). O estado "Todo o
         som do PC" da janela também mexe na CAMADA 1 (o *default sink* do
