@@ -16,8 +16,8 @@ from monta import monta, glifo, cor_da_zona, rotulo, CSS_GLIFO, MESA, SEPARADOR,
 # números que o produto aceita — e ninguém veria.
 #
 # OS RÓTULOS DOS ESTILOS saem de `profiles/estilos_de_jogo.py`, o motor que
-# nasceu em 03/09/2026 com as quinze receitas que ela aprovou. Eram QUINZE
-# palavras digitadas aqui, e a lista só concordava com o motor por coincidência:
+# nasceu em 03/09/2026 com as receitas que ela aprovou. Eram quinze palavras
+# digitadas aqui, e a lista só concordava com o motor por coincidência:
 # um estilo novo lá, ou um rótulo corrigido, e o `<select>` passaria a oferecer
 # uma opção que o gesto não sabe aplicar — a tarja diria "não é um estilo" sobre
 # uma palavra que a própria página escreveu.
@@ -26,6 +26,9 @@ from monta import monta, glifo, cor_da_zona, rotulo, CSS_GLIFO, MESA, SEPARADOR,
 # trava para quem rodar o gerador sem `PYTHONPATH`; com ele posto, o import é o
 # mesmo que o `aba03.py` já faz com o `trigger_specs`.
 sys.path.insert(0, str(R.parents[1]))
+from hefesto_dualsense4unix.profiles.estilos_de_jogo import (  # noqa: E402
+    DE_FABRICA as ESTILOS_DE_FABRICA,
+)
 from hefesto_dualsense4unix.profiles.estilos_de_jogo import (  # noqa: E402
     ESTILOS as ESTILOS_DO_MOTOR,
 )
@@ -201,8 +204,17 @@ def _lista_das_secoes() -> str:
 #: contagem de `NAO_PINTAVEIS` divergiu no primeiro dia. Sai daqui, de
 #: `len(SECOES)`, e muda sozinha quando a lista mudar.
 _EXTENSO = {1: "um", 2: "dois", 3: "três", 4: "quatro", 5: "cinco", 6: "seis",
-            7: "sete", 8: "oito"}
+            7: "sete", 8: "oito", 9: "nove", 10: "dez", 11: "onze", 12: "doze",
+            13: "treze", 14: "catorze", 15: "quinze", 16: "dezesseis",
+            17: "dezessete", 18: "dezoito", 19: "dezenove", 20: "vinte"}
 QUANTAS_SECOES = _EXTENSO[len(SECOES)]
+#: QUANTOS ESTILOS DE FÁBRICA a dica do campo diz — O-CO-OP-LOCAL-SAI-01,
+#: 25/09/2026. Era a palavra «catorze» digitada no `title`, e ela ficou velha no
+#: minuto em que o «Co-op local» saiu do motor. Sai do dono
+#: (`estilos_de_jogo.DE_FABRICA`); passando de vinte, o número vai cru, que é
+#: melhor que a tela inventar uma palavra.
+QUANTOS_ESTILOS_DE_FABRICA = _EXTENSO.get(len(ESTILOS_DE_FABRICA),
+                                          str(len(ESTILOS_DE_FABRICA)))
 
 # O ESTADO DESTE PERFIL, controle a controle. Um mockup que acende TODAS as
 # seções nos quatro controles ensina que o normal é cada peça ter tudo próprio —
@@ -2077,7 +2089,7 @@ MIOLO = f'''
                 </span>
               </div>
               <div class="campo">
-                <span title="Pré-aplica de uma vez o gatilho, a vibração e a cor da luz. Os catorze de fábrica não se editam; o Personalizado usa o que você ajustou nas abas.">Estilo de Jogo:</span>
+                <span title="Pré-aplica de uma vez o gatilho, a vibração e a cor da luz. Os {QUANTOS_ESTILOS_DE_FABRICA} de fábrica não se editam; o Personalizado usa o que você ajustou nas abas.">Estilo de Jogo:</span>
                 <span class="val"><select class="destaque" data-hef="editor.estilo" data-hef-gesto="editor.estilo" data-hef-alvo="valor">
 {opts(ESTILOS, "", vazio=True)}
                 </select></span>
@@ -2744,6 +2756,11 @@ def _conferir(html: str) -> None:
     exigir('<option value="" selected>—</option>' in html,
            "a opção vazia do Estilo de Jogo saiu — o campo voltaria a abrir "
            "afirmando um estilo que perfil nenhum guarda")
+    # A CONTA DA DICA É A DO MOTOR — O-CO-OP-LOCAL-SAI-01, 25/09/2026. A dica
+    # dizia «catorze» digitado, e ficou velha quando o «Co-op local» saiu.
+    exigir(f"Os {QUANTOS_ESTILOS_DE_FABRICA} de fábrica não se editam" in html,
+           f"a dica do Estilo de Jogo não diz os {QUANTOS_ESTILOS_DE_FABRICA} "
+           f"de fábrica que o motor tem — a conta voltou a ser digitada")
 
     # O TRAVESSÃO DO "FUNCIONA EM" — 04/09/2026, medido no DOM vivo. Sem esta
     # opção o `escrever()` não tem onde pousar o `—` de um perfil cuja regra a

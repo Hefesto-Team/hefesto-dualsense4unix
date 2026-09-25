@@ -25,6 +25,8 @@ régua acusa que branco não rende quatro.
 
 from __future__ import annotations
 
+import pathlib
+
 import pytest
 
 from hefesto_dualsense4unix.profiles import estilos_de_jogo as estilos
@@ -175,26 +177,60 @@ def test_todo_degrau_de_vibracao_da_receita_e_real() -> None:
         + f"\nos reais: {sorted(RUMBLE_POLICY_MULT)}")
 
 
+def _opcoes_do_estilo(pagina: pathlib.Path) -> set[str] | None:
+    """As opções do `<select>` do Estilo de Jogo numa página, sem o travessão."""
+    import re
+
+    t = pagina.read_text(encoding="utf-8")
+    m = re.search(r'<select[^>]*(?:data-hef|data-campo)="editor\.estilo"[^>]*>(.*?)</select>',
+                  t, re.S)
+    if not m:
+        return None
+    da_tela = {x.strip() for x in re.findall(r'<option[^>]*>([^<]*)</option>', m.group(1))}
+    da_tela.discard("—")
+    return da_tela
+
+
+def _a_10_esta_em_trabalho() -> bool:
+    """A aba Perfis está declarada em trabalho na bancada (`mockup/DIVERGENCIAS.md`)?
+
+    Enquanto estiver, o publicado pode estar atrás do desenho de propósito — é o
+    contrato do `scripts/check_o_desenho_aprovado.py`, e a direção é `mockup/` →
+    produto. Mesmo desenho do `_em_trabalho` da régua da aba 01.
+    """
+    from hefesto_dualsense4unix.interface import onde
+
+    arquivo = onde.BANCADA / "DIVERGENCIAS.md"
+    if not arquivo.exists():
+        return False
+    corpo = arquivo.read_text(encoding="utf-8").split("\n---\n", 1)[-1]
+    return "\n## 10-perfis.html" in f"\n{corpo}"
+
+
 def test_a_lista_da_tela_e_a_das_receitas_batem() -> None:
     """Os rótulos das receitas são os que o `<select>` da aba Perfis oferece.
 
     Sem esta linha, ela escolheria "Ritmo/Música" na tela e o motor procuraria
     uma receita que não existe — o campo voltaria a aceitar e não fazer, que é
     o defeito que o motor veio curar.
-    """
-    import pathlib
-    import re
 
-    pagina = (pathlib.Path(__file__).resolve().parents[2]
-              / "src/hefesto_dualsense4unix/interface/paginas/10-perfis.html")
-    t = pagina.read_text(encoding="utf-8")
-    m = re.search(r'<select[^>]*(?:data-hef|data-campo)="editor\.estilo"[^>]*>(.*?)</select>',
-                  t, re.S)
-    if not m:
-        pytest.skip("o `<select>` do estilo não está na página publicada")
-    da_tela = {x.strip() for x in re.findall(r'<option[^>]*>([^<]*)</option>', m.group(1))}
-    da_tela.discard("—")
+    A RÉGUA MEDE A BANCADA SEMPRE E O PUBLICADO QUANDO A ABA NÃO ESTÁ EM
+    TRABALHO — 25/09/2026, O-CO-OP-LOCAL-SAI-01. O «Co-op local» saiu do motor
+    e do desenho no mesmo commit, e publicar é ato de quem coordena: cobrar o
+    publicado antes disso reprovaria por uma espera declarada, não por defeito.
+    Ela se rearma sozinha no dia da publicação, quando a seção sai do
+    `DIVERGENCIAS.md`.
+    """
+    from hefesto_dualsense4unix.interface import onde
+
     das_receitas = {e.rotulo for e in estilos.ESTILOS}
-    assert da_tela == das_receitas, (
-        f"só na tela: {sorted(da_tela - das_receitas)}\n"
-        f"só nas receitas: {sorted(das_receitas - da_tela)}")
+    alvos = [onde.pagina("10-perfis.html")]
+    if not _a_10_esta_em_trabalho():
+        alvos.append(onde.pagina("10-perfis.html", publicado=True))
+    for pagina in alvos:
+        da_tela = _opcoes_do_estilo(pagina)
+        assert da_tela is not None, f"o `<select>` do estilo sumiu de {pagina}"
+        assert da_tela == das_receitas, (
+            f"{pagina.parent.name}/{pagina.name}\n"
+            f"só na tela: {sorted(da_tela - das_receitas)}\n"
+            f"só nas receitas: {sorted(das_receitas - da_tela)}")

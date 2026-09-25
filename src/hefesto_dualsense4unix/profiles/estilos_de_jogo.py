@@ -30,7 +30,7 @@ paleta de fps tem que ter variações pra cada unidade"*.
 
 COMO AS QUATRO VARIAÇÕES NASCEM, e por que não são digitadas
 --------------------------------------------------------------
-Sessenta cores escritas à mão (15 estilos x 4 unidades) seriam sessenta lugares
+Quatro cores por estilo, escritas à mão, seriam dezenas de lugares
 para envelhecer, e ninguém conferiria se duas colidem. Elas são DERIVADAS de uma
 cor-família por rotação de matiz e passo de luminância — e :func:`as_quatro`
 garante, medindo, que as quatro saem distinguíveis.
@@ -47,6 +47,19 @@ Ela pede economia de bateria, e a proposta original era a luz APAGADA. Apagada,
 os quatro ficam iguais — o que a regra dela proíbe. A leitura que fica: brilho
 MÍNIMO com as quatro cores distintas. Gasta quase nada e a mesa continua
 legível. **Se ela preferir apagada mesmo, é uma palavra e uma linha.**
+
+O «CO-OP LOCAL» SAIU — 25/09/2026, O-CO-OP-LOCAL-SAI-01
+--------------------------------------------------------
+O pedido é dela (`D-2409-O-CO-OP-LOCAL-SAI`): *"Temos que remover o perfil
+coop ou modo de jogo coop que não faz sentido inclusive."* O Hefesto dá um
+controle virtual a cada jogador SEMPRE, do P1 ao P4, e o co-op não é um modo
+que se escolhe — um Estilo com esse nome prometia ligar o que nunca desliga.
+O que ele fazia (gatilho `SimpleRigid`,
+vibração `balanceado`, a família azul da paleta de jogador) não some de perfil
+nenhum: o estilo nunca foi guardado (ele é um verbo, ver
+`app/actions/perfis_web.ESTILO_APLICA_E_SAI`), e o perfil que o recebeu guarda
+os três ajustes como valores. A régua que impede a volta é
+`tests/unit/test_o_co_op_local_saiu.py`.
 """
 
 from __future__ import annotations
@@ -92,8 +105,10 @@ class Estilo:
     porque: str
 
 
-#: AS QUINZE RECEITAS, propostas por mim e APROVADAS por ela em 03/09/2026 —
-#: *"o resto ta aprovado"* —, com a emenda da cor que esta docstring abre.
+#: AS RECEITAS, propostas por mim e APROVADAS por ela em 03/09/2026 —
+#: *"o resto ta aprovado"* —, com a emenda da cor que esta docstring abre. Eram
+#: quinze; o «Co-op local» saiu em 25/09/2026 (ver a docstring do módulo). A
+#: conta que a tela diz sai de :data:`DE_FABRICA`, nunca digitada.
 #:
 #: A REGRA QUE GEROU A COLUNA DO GATILHO: o efeito descreve a RESISTÊNCIA que o
 #: gênero pede no dedo, não o clima do jogo. `None` = não mexe no gatilho.
@@ -121,9 +136,6 @@ ESTILOS: tuple[Estilo, ...] = (
            "o pulso irregular é o susto no dedo; a luz baixa não denuncia"),
     Estilo("luta", "Luta", "SemiAutoGun", "max", (255, 40, 180), 1.0,
            "um estalo por golpe, com volta rápida"),
-    Estilo("coop", "Co-op local", "SimpleRigid", "balanceado", (0, 0, 255), 1.0,
-           "quatro na mesa: a família é a paleta canônica de jogador, que é a "
-           "que ela já conhece de olhar"),
     Estilo("maratona", "Maratona", "Off", "economia", (120, 120, 140), 0.25,
            "a sessão é longa: tudo que gasta bateria cai ao mínimo — mas a luz "
            "NÃO apaga, porque apagada os quatro ficariam iguais"),
@@ -150,6 +162,13 @@ ESTILOS: tuple[Estilo, ...] = (
 
 POR_CHAVE = {e.chave: e for e in ESTILOS}
 POR_ROTULO = {e.rotulo: e for e in ESTILOS}
+
+#: OS DE FÁBRICA — os que trazem receita. O «Personalizado» fica de fora porque
+#: ele é o estilo que diz *"eu ajusto na mão"* e não escolhe nada. É daqui que
+#: a dica da aba Perfis tira a conta que diz; digitá-la lá faria a tela
+#: prometer um número que o motor já não tem no dia em que um estilo sair —
+#: foi o que aconteceu com os «catorze» quando o «Co-op local» saiu.
+DE_FABRICA: tuple[Estilo, ...] = tuple(e for e in ESTILOS if e.chave != "personalizado")
 
 
 def _distancia(a: RGB, b: RGB) -> int:
