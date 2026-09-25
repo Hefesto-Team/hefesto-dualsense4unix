@@ -124,8 +124,8 @@ class TestProtocolo:
         assert ops.calls == [("hide", "/dev/hidraw3", "hidraw3")]
 
     def test_hide_repetido_reaplica_o_fs(self) -> None:
-        # LIÇÃO 2: o re-hide do hotplug SEMPRE toca o fs — nó recriado com o
-        # mesmo hidrawN nasceu exposto e o estado em memória não é prova.
+        # LIÇÃO 2: o re-hide do hotplug SEMPRE chama o ops, que confere o fs — nó
+        # recriado com o mesmo hidrawN nasceu exposto e a memória não é prova.
         # (Inverte o teste do parkado, que exigia UMA operação só.)
         state, ops = make_state()
         req(state, 1, {"cmd": "hide", "node": "/dev/hidraw3"})
@@ -310,11 +310,11 @@ class TestLeaseRefcount:
     def test_refcount_duas_conexoes_takeover(self) -> None:
         # Takeover: daemon novo (conn 2) re-esconde o nó da lease velha (conn
         # 1). A morte da velha NÃO expõe; só a última lease restaura.
-        # LIÇÃO 2: o hide da conn 2 TAMBÉM toca o fs (re-aplica).
+        # LIÇÃO 2: o hide da conn 2 TAMBÉM chama o ops (que confere o fs).
         state, ops = make_state()
         req(state, 1, {"cmd": "hide", "node": "/dev/hidraw3"})
         req(state, 2, {"cmd": "hide", "node": "/dev/hidraw3"})
-        assert len([c for c in ops.calls if c[0] == "hide"]) == 2  # fs 2x (lição 2)
+        assert len([c for c in ops.calls if c[0] == "hide"]) == 2  # ops 2x (lição 2)
         assert state.hidden["/dev/hidraw3"].refcount == 2
         assert state.on_conn_closed(1) == []  # conn 2 ainda segura
         assert "/dev/hidraw3" in state.hidden
