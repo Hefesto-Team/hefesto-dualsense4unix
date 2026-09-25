@@ -531,7 +531,9 @@ class TestNoDaemon:
         assert controle.reescritos == [[UNIQ_1], [UNIQ_1], [UNIQ_1]]
         eventos = [r["event"] for r in registros]
         assert eventos.count("sequestro_detectado") == 1
-        assert eventos.count("sequestro_corrigido") == 1
+        # O nome diz o que se mede desde 25/09/2026: a escrita, não a lâmpada.
+        assert eventos.count("sequestro_reescrito") == 1
+        assert eventos.count("sequestro_corrigido") == 0
         encerrado = [r for r in registros if r["event"] == "sequestro_encerrado"]
         assert encerrado and encerrado[0]["reescritas"] == 2
         detectado = next(r for r in registros if r["event"] == "sequestro_detectado")
