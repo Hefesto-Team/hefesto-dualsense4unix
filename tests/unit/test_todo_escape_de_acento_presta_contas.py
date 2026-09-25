@@ -105,7 +105,6 @@ SEM_RAZAO_PINADOS: dict[str, int] = {
     "tests/unit/test_o_preset_nao_escolhe_a_mascara.py": 2,
     "tests/unit/test_profile_manager.py": 2,
     "tests/unit/test_state_full_game_signal.py": 1,
-    "tests/unit/test_validar_acentuacao_fstring.py": 9,
     "tests/unit/test_validar_acentuacao_multiplos_arquivos.py": 2,
 }
 
