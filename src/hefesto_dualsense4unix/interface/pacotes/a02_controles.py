@@ -80,7 +80,8 @@ from __future__ import annotations
 
 import contextlib
 import re
-from collections.abc import Callable, Sequence
+import threading
+from collections.abc import Callable, Iterator, Sequence
 from typing import Any
 
 from hefesto_dualsense4unix.app.actions.home_actions import (
@@ -1183,6 +1184,49 @@ _CAMADA_1_EM_VOO = [False]
 _CAMADA_1_SELO = [0]
 
 
+#: A MEMÓRIA DE UMA VOLTA DA RENOVAÇÃO — A-JANELA-ABERTA-NAO-GASTA-O-
+#: PROCESSADOR-01, 25/09/2026. Os QUATRO leitores da renovação (a camada 1, o
+#: sono, o nativo e o ganho) perguntavam as mesmas coisas ao servidor de som:
+#: 21 `pactl` por volta com quatro controles, e 29 com fonte nativa no cabo, a
+#: cada 2 s. Com ela ligada, cada `argv` roda uma vez por volta e por DONO:
+#: esta, para `audio_saida.rodar_leitura`; a da eleição
+#: (`eleicao_de_microfone.uma_leitura_por_volta`), para o `_rodar` dela.
+#:
+#: LOCAL AO FIO, e só dentro de `_uma_leitura_por_volta`: fora da renovação
+#: (os gestos, as réguas) nada muda.
+_MEMORIA_DA_VOLTA = threading.local()
+
+
+@contextlib.contextmanager
+def _uma_leitura_por_volta() -> Iterator[None]:
+    """Neste fio, e só enquanto durar, cada `argv` roda uma vez por dono."""
+    from hefesto_dualsense4unix.integrations import eleicao_de_microfone
+
+    antes = getattr(_MEMORIA_DA_VOLTA, "lidos", None)
+    _MEMORIA_DA_VOLTA.lidos = {}
+    try:
+        with eleicao_de_microfone.uma_leitura_por_volta():
+            yield
+    finally:
+        _MEMORIA_DA_VOLTA.lidos = antes
+
+
+def _ler_pelo_dono(argv: list[str]) -> str:
+    """`audio_saida.rodar_leitura`, com a memória da volta quando ligada.
+
+    O DONO É LIDO NA HORA DA CHAMADA, e nunca trocado: as réguas que dublam
+    `audio_saida.rodar_leitura` continuam alcançando o produto, e a eleição
+    tem a memória dela, que embrulha o `_rodar` dela.
+    """
+    lidos: dict[tuple[str, ...], str] | None = getattr(_MEMORIA_DA_VOLTA, "lidos", None)
+    if lidos is None:
+        return audio_saida.rodar_leitura(argv)
+    chave = tuple(argv)
+    if chave not in lidos:
+        lidos[chave] = audio_saida.rodar_leitura(argv)
+    return lidos[chave]
+
+
 def _ler_a_camada_1(entradas: tuple[tuple[str, int | None], ...],
                     na_mesa: tuple[str, ...]) -> dict[str, Any]:
     """A camada 1 de cada controle da mesa. BLOQUEANTE — roda `pactl`.
@@ -1196,7 +1240,8 @@ def _ler_a_camada_1(entradas: tuple[tuple[str, int | None], ...],
         if not uniq:
             continue
         try:
-            lido[uniq] = audio_saida.ler_as_duas_camadas(uniq, byte, list(na_mesa))
+            lido[uniq] = audio_saida.ler_as_duas_camadas(
+                uniq, byte, list(na_mesa), runner=_ler_pelo_dono)
         except Exception:
             # UMA LEITURA QUE FALHA NÃO APAGA AS OUTRAS, e não vira `False`:
             # a chave simplesmente não entra, e quem pergunta recebe "não sei".
@@ -1369,7 +1414,7 @@ def _ler_o_ganho(na_mesa: tuple[str, ...]) -> dict[str, tuple[int, float] | None
     if not alvos:
         return fora
     try:
-        lista = audio_saida.rodar_leitura(["pactl", "list", "sources"])
+        lista = _ler_pelo_dono(["pactl", "list", "sources"])
     except Exception:
         # Uma leitura que falha não inventa estado — a mesma regra do
         # `_ler_o_sono` logo abaixo. Sem a lista não há como casar fonte e
@@ -1384,8 +1429,7 @@ def _ler_o_ganho(na_mesa: tuple[str, ...]) -> dict[str, tuple[int, float] | None
         if placa not in por_placa:
             try:
                 por_placa[placa] = _ganho_do_scontents(
-                    audio_saida.rodar_leitura(
-                        ["amixer", "-c", placa, "scontents"]))
+                    _ler_pelo_dono(["amixer", "-c", placa, "scontents"]))
             except Exception:
                 por_placa[placa] = None
         fora[uniq] = por_placa[placa]
@@ -1486,7 +1530,7 @@ def _ler_o_sono(lido: dict[str, Any]) -> dict[str, str]:
     if not lido:
         return {}
     try:
-        saida = audio_saida.rodar_leitura(["pactl", "list", "sinks", "short"])
+        saida = _ler_pelo_dono(["pactl", "list", "sinks", "short"])
     except Exception:
         # UMA LEITURA QUE FALHA NÃO INVENTA ESTADO: o cache fica vazio e a tela
         # cala, que é a mesma regra do `_ler_a_camada_1` logo acima.
@@ -1549,30 +1593,9 @@ def _camada_1(entradas: tuple[tuple[str, int | None], ...],
 
     def renovar() -> None:
         try:
-            novo = _ler_a_camada_1(entradas, na_mesa)
-            # O SONO VEM NA MESMA VOLTA, e depois da camada 1 porque é dela que
-            # sai o sink de cada controle. A regra do WirePlumber é um `isfile`
-            # e mora aqui pela mesma razão que o resto: o pintor roda a 10 Hz, e
-            # quatro `stat` por tique é trabalho de disco por nada.
-            sono = _ler_o_sono(novo)
-            try:
-                regra = audio_saida.regra_nunca_dorme_instalada()
-            except Exception:
-                regra = None
-            # O NATIVO VEM NA MESMA VOLTA, e depois do sono: os três são
-            # leitura do mesmo servidor de som, e três threads para a mesma
-            # família de pergunta é o defeito que a `_camada_1` existe para não
-            # cometer.
-            nativo = _ler_o_nativo(na_mesa)
-            # O GANHO VEM NA MESMA VOLTA — O-GANHO-DO-MIC-TEM-DONO-01. Ele é a
-            # QUINTA leitura desta thread, e está aqui pela mesma razão das
-            # outras três: é pergunta ao sistema, não ao quadro. A diferença é
-            # que o comando não é o `pactl` — o ganho é do MIXER, e quem
-            # responde por ele é o `amixer`. E quem responde por qual nó o
-            # KERNEL publica para cada controle é a eleição: perguntar ao
-            # `canal_fonte` do daemon daria o nó que o produto ELEGEU — o
-            # nosso, sem placa ALSA, inclusive no cabo.
-            ganho = _ler_o_ganho(na_mesa)
+            # UMA PERGUNTA POR `argv` NESTA VOLTA — ver `_MEMORIA_DA_VOLTA`.
+            with _uma_leitura_por_volta():
+                novo, sono, regra, nativo, ganho = _ler_a_volta()
             # A MESA MUDOU ENQUANTO EU LIA? Então esta leitura inteira é de um
             # mundo que não existe mais, e publicá-la DESFARIA a poda — ver
             # `_CAMADA_1_SELO`. O `finally` continua destravando o voo, e o
@@ -1591,6 +1614,35 @@ def _camada_1(entradas: tuple[tuple[str, int | None], ...],
             _REGRA_DO_SONO[0] = regra
         finally:
             _CAMADA_1_EM_VOO[0] = False
+
+    def _ler_a_volta() -> tuple[dict[str, Any], dict[str, str], bool | None,
+                                dict[str, bool | None],
+                                dict[str, tuple[int, float] | None]]:
+        novo = _ler_a_camada_1(entradas, na_mesa)
+        # O SONO VEM NA MESMA VOLTA, e depois da camada 1 porque é dela que
+        # sai o sink de cada controle. A regra do WirePlumber é um `isfile`
+        # e mora aqui pela mesma razão que o resto: o pintor roda a 10 Hz, e
+        # quatro `stat` por tique é trabalho de disco por nada.
+        sono = _ler_o_sono(novo)
+        try:
+            regra = audio_saida.regra_nunca_dorme_instalada()
+        except Exception:
+            regra = None
+        # O NATIVO VEM NA MESMA VOLTA, e depois do sono: os três são
+        # leitura do mesmo servidor de som, e três threads para a mesma
+        # família de pergunta é o defeito que a `_camada_1` existe para não
+        # cometer.
+        nativo = _ler_o_nativo(na_mesa)
+        # O GANHO VEM NA MESMA VOLTA — O-GANHO-DO-MIC-TEM-DONO-01. Ele é a
+        # QUINTA leitura desta thread, e está aqui pela mesma razão das
+        # outras três: é pergunta ao sistema, não ao quadro. A diferença é
+        # que o comando não é o `pactl` — o ganho é do MIXER, e quem
+        # responde por ele é o `amixer`. E quem responde por qual nó o
+        # KERNEL publica para cada controle é a eleição: perguntar ao
+        # `canal_fonte` do daemon daria o nó que o produto ELEGEU — o
+        # nosso, sem placa ALSA, inclusive no cabo.
+        ganho = _ler_o_ganho(na_mesa)
+        return novo, sono, regra, nativo, ganho
 
     threading.Thread(target=renovar, name="hefesto-rota-camada-1",
                      daemon=True).start()
