@@ -3187,9 +3187,10 @@ class Piloto:
         #: Na volta da janela, a geração do leitor naquele instante: o tique só
         #: pinta quando ela ANDA, para não pintar o estado de antes de esconder.
         self._geracao_na_volta: int | None = None
-        #: A ÚLTIMA CARGA que o tique mandou à página, inteira. É contra ela que
-        #: o tique seguinte mede a diferença; `None` pede a carga inteira.
-        self._pintada: dict[str, Any] | None = None
+        #: A ÚLTIMA CARGA que o tique mandou à página, achatada valor a valor
+        #: (`_achatar_a_carga`). É contra ela que o tique seguinte mede a
+        #: diferença; `None` pede a carga inteira.
+        self._pintada: dict[tuple[str, ...], tuple[Any, Any]] | None = None
         #: Quantos tiques faltam para a próxima carga inteira.
         self._ate_a_inteira = 0
         #: As listas que um `data-hef-molde` conta, por página — ver
