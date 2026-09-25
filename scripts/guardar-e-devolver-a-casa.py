@@ -60,7 +60,8 @@ def principal(argv: list[str] | None = None) -> int:
     g.add_argument("--seco", action="store_true", help="só diz o que faria")
     sub.add_parser("limpa", help="depois do uninstall: sobrou algo do Hefesto? "
                    "(sai 0 limpa, 1 sobrou, 3 não sei: falta privilégio)")
-    d = sub.add_parser("devolver", help="devolve a pasta (a mais nova, se não disser qual)")
+    d = sub.add_parser("devolver", help="devolve a pasta (a mais nova ainda não "
+                       "devolvida da casa inteira, se não disser qual)")
     d.add_argument("pasta", nargs="?", default=None)
     d.add_argument("--seco", action="store_true", help="só diz o que faria")
     sub.add_parser("pastas", help="lista as pastas guardadas")
@@ -74,7 +75,7 @@ def principal(argv: list[str] | None = None) -> int:
         if a.verbo == "guardar":
             relato = m.guardar(raizes, m.CASA, sistema, seco=a.seco)
         elif a.verbo == "devolver":
-            relato = m.devolver(raizes, sistema, a.pasta, seco=a.seco)
+            relato = m.devolver(raizes, sistema, a.pasta, seco=a.seco, alcance=m.CASA)
         elif a.verbo == "pastas":
             for pasta in m.pastas_guardadas(raizes):
                 print(pasta)

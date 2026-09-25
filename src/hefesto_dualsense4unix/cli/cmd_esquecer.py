@@ -73,7 +73,8 @@ def esquecer_cmd(*, restaurar: bool, pasta: str | None, seco: bool) -> None:
     sistema = SistemaDoProduto()
     try:
         if restaurar:
-            relato = memoria.devolver(raizes, sistema, pasta, seco=seco)
+            relato = memoria.devolver(raizes, sistema, pasta, seco=seco,
+                                      alcance=memoria.CONTROLES)
         else:
             if pasta:
                 raise memoria.RecusaError(

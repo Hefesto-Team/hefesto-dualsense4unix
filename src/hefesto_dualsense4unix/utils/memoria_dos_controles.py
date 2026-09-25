@@ -842,8 +842,22 @@ def pastas_guardadas(raizes: Raizes) -> list[Path]:
     )
 
 
-def escolher_pasta(raizes: Raizes, pedida: str | None) -> Path:
-    """A pasta pedida (nome ou caminho), ou a mais nova."""
+def _ja_devolvida(pasta: Path) -> bool:
+    try:
+        return bool(Manifesto.ler(pasta).devolvido_em)
+    except RecusaError:
+        return False
+
+
+def escolher_pasta(raizes: Raizes, pedida: str | None, alcance: str | None = None) -> Path:
+    """A pasta pedida (nome ou caminho), ou a mais nova AINDA NÃO devolvida.
+
+    Sem pasta pedida, cada comando olha só as do seu alcance (o
+    ``esquecer-controles --restaurar`` não devolve a casa inteira por engano, e
+    vice-versa), e a escolha é a mais nova que ainda não voltou: quem esqueceu
+    duas vezes seguidas desfaz na ordem certa só repetindo o comando — a
+    segunda pasta primeiro, a primeira depois. Tudo devolvido, a mais nova.
+    """
     if pedida:
         candidata = Path(pedida)
         if not candidata.is_absolute():
@@ -851,10 +865,13 @@ def escolher_pasta(raizes: Raizes, pedida: str | None) -> Path:
         if not (candidata / "manifesto.json").is_file():
             raise RecusaError(f"não há pasta guardada em {candidata}")
         return candidata
-    todas = pastas_guardadas(raizes)
+    todas = [p for p in pastas_guardadas(raizes)
+             if alcance is None or p.name.endswith(f"-{alcance}")]
     if not todas:
-        raise RecusaError(f"nenhuma pasta guardada em {raizes.guardado}")
-    return todas[-1]
+        qual = f" do alcance {alcance}" if alcance else ""
+        raise RecusaError(f"nenhuma pasta guardada{qual} em {raizes.guardado}")
+    pendentes = [p for p in todas if not _ja_devolvida(p)]
+    return (pendentes or todas)[-1]
 
 
 # ══ 6. O sistema: daemon, Steam, root ══════════════════════════════════════
@@ -1312,6 +1329,7 @@ def devolver(
     *,
     seco: bool = False,
     agora: float | None = None,
+    alcance: str | None = None,
 ) -> Relato:
     """Devolve o que uma pasta guardou, byte a byte, por cima do que houver.
 
@@ -1320,7 +1338,7 @@ def devolver(
     pasta guardada FICA (o devolver copia): dá para devolver de novo.
     """
     conferir_o_ensaio(raizes)
-    pasta = escolher_pasta(raizes, pedida)
+    pasta = escolher_pasta(raizes, pedida, alcance)
     manifesto = Manifesto.ler(pasta)
     relato = Relato(pasta=pasta)
     tem_steam = any(i.chave.startswith("steam-") for i in manifesto.itens if i.devolve)

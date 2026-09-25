@@ -293,7 +293,7 @@ def speaker(
 def esquecer_controles(
     restaurar: bool = typer.Option(
         False, "--restaurar",
-        help="Devolve o que foi guardado (a pasta mais nova, se não disser qual).",
+        help="Devolve o que foi guardado (a mais nova ainda não devolvida, se não disser qual).",
     ),
     pasta: str | None = typer.Argument(
         None, help="Com --restaurar: o nome (ou o caminho) da pasta guardada."
