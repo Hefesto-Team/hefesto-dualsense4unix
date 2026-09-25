@@ -79,7 +79,20 @@ OUT="${OUT:-/tmp/w3-coex-$(date +%Y%m%d-%H%M%S).txt}"
 
 WIFI_BLOQUEADO=0
 CAPTURAS=""
+# Quem o `restaurar` para quando a medição é interrompida no meio de um braço
+# (um `kill`, o `sudo` repassando um SIGTERM): sem isto, o `btmon` do root
+# seguia gravando num arquivo já apagado — invisível e crescendo — e o laço
+# de download do braço B seguia baixando para sempre.
+BTMON_PID=""
+carga_pid=""
 restaurar() {
+    if [[ -n "${BTMON_PID}" ]]; then
+        kill "${BTMON_PID}" 2>/dev/null || true
+        wait "${BTMON_PID}" 2>/dev/null || true
+    fi
+    if [[ -n "${carga_pid}" ]]; then
+        kill "${carga_pid}" 2>/dev/null || true
+    fi
     if [[ "${WIFI_BLOQUEADO}" -eq 1 ]]; then
         log "restaurando rfkill unblock wifi"
         rfkill unblock wifi || true
@@ -167,7 +180,7 @@ medir_braco() { # $1=nome $2=preparo(fn) $3=finaliza(fn)
 
     local snoop="${CAPTURAS}/w3-${nome}.snoop"
     btmon -w "${snoop}" >/dev/null 2>&1 &
-    local btmon_pid=$!
+    BTMON_PID=$!
 
     local pids=() i=0
     for ev in "${EVDEVS[@]:-}"; do
@@ -179,9 +192,10 @@ medir_braco() { # $1=nome $2=preparo(fn) $3=finaliza(fn)
 
     sleep "${DUR}"
 
-    kill "${btmon_pid}" 2>/dev/null || true
+    kill "${BTMON_PID}" 2>/dev/null || true
     # Lê só depois de o `btmon` fechar o arquivo.
-    wait "${btmon_pid}" 2>/dev/null || true
+    wait "${BTMON_PID}" 2>/dev/null || true
+    BTMON_PID=""
     for p in "${pids[@]:-}"; do [[ -n "${p}" ]] && wait "${p}" 2>/dev/null || true; done
     depois="$(snapshot_hci)"
     t1="$(date '+%Y-%m-%d %H:%M:%S')"
@@ -211,7 +225,6 @@ medir_braco() { # $1=nome $2=preparo(fn) $3=finaliza(fn)
     printf -- '-- captura do btmon: %s (lida e apagada)\n\n' "${snoop}" >> "${OUT}"
 }
 
-carga_pid=""
 prep_ocioso() { :; }
 fin_ocioso() { :; }
 prep_carga() {
