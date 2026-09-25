@@ -122,6 +122,10 @@ PERGUNTE_AO_APARELHO = object()
 O_QUE_E_MUDO: dict[str, Any] = {
     "LedsConfig.auto_player_colors": False,
     "LedsConfig.lightbar_brightness": 0.0,
+    # O brilho das luzes de número não tem degrau apagado: os três acendem. O
+    # silêncio deste campo é NÃO escolher — o produto sem o bit, que era o de
+    # antes de 24/09/2026 (O-BRILHO-DAS-LUZES-DE-NUMERO-01).
+    "LedsConfig.player_led_brightness": None,
     "Profile.suppress_desktop_emulation": True,
     "ProfileSpeakerConfig.muted": True,
     "RumbleConfig.passthrough": False,

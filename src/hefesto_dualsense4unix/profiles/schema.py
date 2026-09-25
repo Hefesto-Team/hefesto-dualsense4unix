@@ -2468,6 +2468,13 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     "LedsConfig.lightbar_brightness": Nascimento(
         NASCE_NO_ESQUEMA, "1.0 é o topo da escala: a barra nasce no brilho máximo."
     ),
+    "LedsConfig.player_led_brightness": Nascimento(
+        NASCE_NO_ESQUEMA,
+        "`\"fraco\"` é a decisão dela de 24/09 "
+        "(`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`): as luzes de número "
+        "nascem no Fraco, e o produto MANDA esse degrau. O silêncio seria não "
+        "mandar — o firmware no último degrau que alguém autorizou.",
+    ),
     "LedsConfig.auto_player_colors": Nascimento(
         NASCE_NO_ESQUEMA,
         "`True` desde a COR-03. É ele que faz a barra e o LED do número "
