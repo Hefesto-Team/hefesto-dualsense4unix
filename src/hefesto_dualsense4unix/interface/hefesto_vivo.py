@@ -3412,7 +3412,7 @@ class Piloto:
         self.vivos_atendidos.append(f"{pagina}:{nome}")
         # A GUARDA `window.__hef &&` é a mesma da pintura, e pela mesma razão:
         # entre a tecla e a volta da thread a página pode ter trocado.
-        self._esquecer_a_pintura()
+        _esquecer_a_pintura(self)
         self._js(f"window.__hef && window.__hef.pintar({_json(resposta)})")
         return False
 
@@ -3434,7 +3434,7 @@ class Piloto:
             return
         # TODA MENSAGEM DA PÁGINA PEDE A CARGA INTEIRA no tique seguinte: o
         # clique pode ter mudado o que está na tela sem passar pela pintura.
-        self._esquecer_a_pintura()
+        _esquecer_a_pintura(self)
         self.gestos.append(o)
         nome = str(o.get("gesto") or "")
         pagina = str(o.get("pagina") or self.pagina)  # (noqa-acento: verbo)  (nome de variável)
@@ -3575,7 +3575,7 @@ class Piloto:
         if escondida == self._escondida:
             return
         self._escondida = escondida
-        self._esquecer_a_pintura()
+        _esquecer_a_pintura(self)
         if escondida:
             self._geracao_na_volta = None
             self._estado_vivo.pausar()
@@ -3585,15 +3585,6 @@ class Piloto:
         self._geracao_na_volta = self._estado_vivo.ultimo()[2]
         self._estado_vivo.retomar()
         print("[janela] à vista: o tique voltou", file=sys.stderr)
-
-    def _esquecer_a_pintura(self) -> None:
-        """O próximo tique manda a carga INTEIRA, e não só o que mudou.
-
-        Quem chama é quem mexeu na página por fora do tique (um gesto, a
-        resposta dele, o pouso do voo, a janela que volta) ou quem não sabe se
-        a pintura pousou (a pintura que falhou, a página trocada no meio).
-        """
-        self._pintada = None
 
     def _moldes_da_pagina(self) -> frozenset[str]:
         """As chaves de lista que um `data-hef-molde` conta nesta página.
@@ -3635,7 +3626,7 @@ class Piloto:
             return False
         # O POUSO DEVOLVE O RÓTULO GUARDADO por cima do que o tique pintou no
         # botão: a carga seguinte vai inteira.
-        self._esquecer_a_pintura()
+        _esquecer_a_pintura(self)
         self._js(
             f"window.__hef && window.__hef.voltouDoVoo({_json(voo)}, {_json(certo)})"
         )
@@ -3662,7 +3653,7 @@ class Piloto:
             # A GUARDA `window.__hef &&` é a mesma da pintura, e pela mesma
             # razão: entre o clique e a volta da thread a página pode ter
             # trocado, e o `__hef` morre com o documento.
-            self._esquecer_a_pintura()
+            _esquecer_a_pintura(self)
             self._js(f"window.__hef && window.__hef.pintar({_json(resposta)})")
             print(f"[gesto] {pagina} · {nome} → aplicado, e a resposta foi para a tela")
             return False
@@ -3982,7 +3973,7 @@ class Piloto:
         # carga dela vai inteira. E as ondas soltam os nós da aba anterior: só
         # a 02 os pede, e ela os pede de novo no tique logo abaixo — antes
         # disto, o `parec` seguia vivo em qualquer aba depois que a 02 abria.
-        self._esquecer_a_pintura()
+        _esquecer_a_pintura(self)
         _soltar_as_ondas()
         self._tique()
         if not self.agendado:
@@ -4362,7 +4353,7 @@ class Piloto:
             if erro is not None:
                 # A PÁGINA NÃO APLICOU o que foi, e o tique seguinte não pode
                 # medir a diferença contra uma pintura que não pousou.
-                self._esquecer_a_pintura()
+                _esquecer_a_pintura(self)
                 print(f"[{self.pagina}] a pintura falhou: {erro}", file=sys.stderr)
                 return
             try:
@@ -4372,7 +4363,7 @@ class Piloto:
             # O `-1` (página trocada no meio) NÃO entra na conta de tiques:
             # contá-lo como zero faria uma aba viva parecer muda na travessia.
             if n < 0:
-                self._esquecer_a_pintura()
+                _esquecer_a_pintura(self)
                 self.trocas[self.pagina] = self.trocas.get(self.pagina, 0) + 1
                 return
             self.tiques[self.pagina] = self.tiques.get(self.pagina, 0) + 1
@@ -5280,6 +5271,22 @@ def _a_diferenca_muda_a_forma(dif: dict[str, Any], moldes: frozenset[str]) -> bo
     """A diferença troca ou clona nós? A fita, um bloco ou a lista de um molde."""
     return ("fita" in dif or "blocos" in dif
             or any(k in moldes for k in (dif.get("mesa") or {})))
+
+
+def _esquecer_a_pintura(piloto: Any) -> None:
+    """O próximo tique do `piloto` manda a carga INTEIRA, e não só o que mudou.
+
+    Quem chama é quem mexeu na página por fora do tique (um gesto, a resposta
+    dele, o pouso do voo, a janela que volta) ou quem não sabe se a pintura
+    pousou (a pintura que falhou, a página trocada no meio).
+
+    É FUNÇÃO DO MÓDULO, E NÃO MÉTODO, de propósito. Quem a chama são os
+    caminhos da página, e as réguas rodam esses caminhos em dublês que só têm
+    o que cada um lê (`_gesto`, `_deu_certo`, `_pousou`). Um método novo
+    obrigaria cada dublê a redigitá-lo, e o `AttributeError` não apontaria
+    para esta cura; escrever o atributo serve a qualquer objeto.
+    """
+    piloto._pintada = None
 
 
 def _soltar_as_ondas() -> None:

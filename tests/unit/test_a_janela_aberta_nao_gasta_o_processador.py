@@ -415,7 +415,7 @@ def test_r1_na_volta_a_carga_vai_inteira_e_com_estado_novo(esconde_e_volta: Any)
     A conta das leituras é a do INSTANTE do aviso (o dublê do `_a_janela_mudou`
     a anota), porque o fio pode trazer a resposta antes do primeiro tique.
 
-    MORDIDA: tire o `_esquecer_a_pintura()` de `_a_janela_mudou` e a primeira
+    MORDIDA: tire o `_esquecer_a_pintura(self)` de `_a_janela_mudou` e a primeira
     pintura da volta passa a ser uma diferença (ou nenhuma, com a mesa parada).
     Tire o `_esperando_o_estado_novo()` do `_tique` e ela sai com o estado de
     antes de esconder.
