@@ -1218,6 +1218,25 @@ check_input_uaccess() {
     done
     # O vpad primeiro e sempre em separado: ele é nosso, e um problema nele é
     # problema do jogo, não da interface.
+    #
+    # O NÓ RECÉM-NASCIDO (25/09/2026): o install reinicia o daemon e roda este
+    # check em seguida; o vpad renasce, e a ACL da sessão chega um instante
+    # depois do nó. O install acusou FALHA sobre os dois nós, e dez segundos
+    # depois eles tinham `user:<ela>:rw`. Antes de reprovar, o check espera o
+    # udev assentar e pergunta de novo, só pelo que faltou.
+    if [[ "${#sem_acesso_virt[@]}" -gt 0 ]]; then
+        local espera="${HEFESTO_DOCTOR_ESPERA_DO_VPAD:-5}" ainda=() b s
+        command -v udevadm >/dev/null 2>&1 && udevadm settle --timeout="${espera}" >/dev/null 2>&1
+        for b in "${sem_acesso_virt[@]}"; do
+            s=0
+            while [[ ! -r "/dev/input/${b}" && "${s}" -lt "${espera}" ]]; do
+                sleep 1
+                s=$((s + 1))
+            done
+            [[ -r "/dev/input/${b}" ]] || ainda+=("${b}")
+        done
+        sem_acesso_virt=("${ainda[@]}")
+    fi
     if [[ "${#sem_acesso_virt[@]}" -gt 0 ]]; then
         fail "o gamepad VIRTUAL tem ${#sem_acesso_virt[@]} nó(s) de touchpad/movimento sem leitura (${sem_acesso_virt[*]}) — na máscara DualSense o jogo não lê giroscópio nem touchpad do vpad. Rode: sudo bash scripts/install_udev.sh"
     elif [[ "${#so_grupo_virt[@]}" -gt 0 ]]; then
