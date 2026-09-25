@@ -499,8 +499,8 @@ _build_install_cmd() {
         # `install_dkms_hid_nintendo_host`. Aqui nunca chegaram. GRAU: MEDIDO (comparação dos
         # dois conjuntos de `/sys/module/hid_nintendo/parameters/*` escritos).
         #
-        # O que quebra sem estas três linhas, no caminho de PACOTE: o
-        # uninstall.sh:1393-1395 devolve os três a 0 de propósito; a reinstalação
+        # O que quebra sem estas três linhas, no caminho de PACOTE: o uninstall.sh
+        # os devolve a 0 de propósito («params vivos do hid_nintendo»); a reinstalação
         # por pacote recoloca a conf do modprobe.d (que os traz), mas a conf só
         # é lida quando o MÓDULO CARREGA — e recarregar é proibido aqui
         # (derrubaria Pro/8BitDo em uso). Resultado: o 8BitDo Pro clone no cabo
@@ -797,13 +797,13 @@ if [[ -n "${RTW88_DKMS_SRC}" && -n "${DKMS_LIB_SH}" ]]; then
         dkms_install_patched_module hefesto-rtw88-usb "${RTW88_DKMS_VER}" \
             "${RTW88_DKMS_SRC}" rtw88_usb
         # PARIDADE-QUENTE-01 (07/08/2026), segunda metade. O `hang_reset` é o
-        # ÚNICO param desta casa sem conf de modprobe.d: `ls assets/modprobe.d/`
-        # traz btusb, hid-nintendo e hid-playstation, e nenhum rtw88. Ou seja, o
-        # valor só vem do default compilado (Y) ou de uma escrita a quente.
-        # O uninstall.sh:1432 o devolve a 0 de propósito; o install.sh:821 o
-        # rearma; este script — o caminho de PACOTE, que instala o MESMO módulo
-        # logo acima — nunca o rearmava. GRAU: MEDIDO (comparação dos dois
-        # conjuntos de params escritos a quente).
+        # ÚNICO param desta casa sem conf de modprobe.d: `assets/modprobe.d/` traz
+        # btusb, hid-nintendo, hid-playstation e uhid, e nenhum rtw88: o valor só vem
+        # do default compilado (Y) ou de uma escrita a quente. O uninstall.sh o
+        # devolve a 0 de propósito («hang_reset do rtw88_usb devolvido a 0»); o
+        # install.sh o rearma (`install_dkms_rtw88_usb_host`, na lib); este script —
+        # o caminho de PACOTE, que instala o MESMO módulo logo acima — nunca o
+        # rearmava. GRAU: MEDIDO (comparação dos dois conjuntos escritos a quente).
         # Consequência: depois de uninstall + reinstalação por pacote, o reset
         # de porta do fantasma do dongle fica DESLIGADO até o próximo boot, com
         # o módulo patchado instalado e a detecção rodando sem a cura.
