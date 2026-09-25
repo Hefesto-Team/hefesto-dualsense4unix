@@ -21,8 +21,8 @@ que morde: **ancorando cada endereço no CONTEÚDO** que ele promete. Não é
 presença de string na prosa — é ir ao arquivo, ler a faixa citada e exigir a
 âncora lá dentro.
 
-Mordida: repor qualquer endereço antigo (`:1193-1194`, `:1227-1228`,
-`:1036-1056`, `:3884`, `:2403-2416`) na célula — esta régua reprova.
+Mordida: repor na célula um endereço que derivou (o
+`core/backend_pydualsense.py:1820-1821` de antes da 6e-4) — esta régua reprova.
 """
 
 from __future__ import annotations
@@ -47,194 +47,36 @@ CAMPOS = (
     "radio_codigo_ref",
 )
 
-#: (faixa citada, âncora que TEM de estar dentro dela).
+#: As âncoras que a linha promete no `backend_pydualsense.py`.
 #:
-#: Cada par foi conferido contra o fonte em 02/09/2026 e REMEDIDO em 20/09/2026
-#: e em 24/09/2026 (a STEAM-NO-FISICO-01, ver `APOSENTADOS`).
-#: O `:442-455` é o que NÃO derivou em nenhuma das ondas — está acima de todo
-#: ponto de inserção — e fica aqui de propósito: a cura fácil seria somar a
-#: deriva a tudo, e somar nele QUEBRARIA uma referência que estava certa.
-#:
-#: A REMEDIÇÃO DE 20/09/2026, e a deriva tem QUATRO tamanhos. A
-#: ESCRITA-QUE-NÃO-MEDE-01 (`982e3fbca`, 19/09) somou 82 linhas ao
-#: `backend_pydualsense.py`, mas não de uma vez: `_escrever_led_do_mic` ficou
-#: onde estava, cinco faixas desceram 35, o `should_reclaim_on_wake` desceu 70
-#: e as três do fim desceram 82. Cada par foi reapontado pela ÂNCORA, com
-#: `difflib` contra o fonte de antes — nunca por aritmética.
-#:
-#: E UM PAR MUDOU DE FORMA, não só de lugar: aquela onda partiu a escrita em
-#: duas. O `self.device.write` saiu do bloco que carimba o `seq` do rádio e foi
-#: morar em `_escrever_conferindo`, que existe para DEVOLVER quantos bytes o
-#: fio aceitou. A faixa nova (`:1883-1914`) cobre os dois de propósito, porque
-#: é isso que a prosa do mapa promete — "o `seq` do handle carimbado e o CRC
-#: refeito no próprio write". Encolhê-la para o bloco do `seq` faria a âncora
-#: cair; encolhê-la para o `_escrever_conferindo` apontaria para um método que
-#: não carimba `seq` nenhum.
-ANCORAS: tuple[tuple[str, str], ...] = (
-    (":1820-1821", "VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE"),
-    (":1864-1870", "common[8] = int(mic_led) & 0xFF"),
-    (":1622-1649", "def set_microphone_led"),
-    (":5339", "def set_mic_led"),
-    (":5346-5347", "report[11] no rádio"),
-    (":5348-5352", "CORRIGIDO em 15/08/2026"),
-    (":1929-1930", "build_bt_report"),
-    (":1989-2020", "self.device.write"),
-    (":3533-3546", "should_reclaim_on_wake"),
-    (":443-456", "def _escrever_led_do_mic"),
-    (":1065", "_audio_status"),
+#: DESDE 25/09/2026 A RÉGUA NÃO DIGITA ENDEREÇO. Até ali ela guardava onze
+#: pares (faixa, âncora) e uma lista de aposentados, e cada leva que fazia o
+#: backend crescer pagava a remedição à mão: sete vezes entre 12/09 e 25/09,
+#: a última com a O-BRILHO-DAS-LUZES-DE-NUMERO-01 e a
+#: A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01 (a costura da 6e-4). A causa era a
+#: prosa: a linha citava o backend na forma curta (`:5339`), que o
+#: `scripts/reapontar-citacoes.py` e o validador não alcançam no CSV (a forma
+#: curta colide com hora de relógio). A prosa passou a citar
+#: `core/backend_pydualsense.py:N`, que o reapontador leva sozinho a cada leva,
+#: e a régua passou a LER as citações dela: toda faixa citada contém uma
+#: âncora, e toda âncora é citada. O `:1563-1564` que a linha tinha na forma
+#: inteira caía numa docstring desde antes da 6e-4: foi para a queda do flag1.
+ANCORAS: tuple[str, ...] = (
+    "VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE",
+    "common[8] = int(mic_led) & 0xFF",
+    "def set_microphone_led",
+    "def set_mic_led",
+    "report[11] no rádio",
+    "CORRIGIDO em 15/08/2026",
+    "build_bt_report",
+    "self.device.write",
+    "should_reclaim_on_wake",
+    "def _escrever_led_do_mic",
+    "_audio_status",
 )
 
-#: Os endereços que a auditoria aposentou. Se um deles voltar à célula, ou a
-#: deriva voltou, ou alguém somou 59 no lugar errado.
-APOSENTADOS = (
-    # AS ONZE DE BAIXO SE APOSENTARAM EM 25/09/2026, pela
-    # O-BRILHO-DAS-LUZES-DE-NUMERO-01: o brilho das luzes de número ganhou
-    # campo no handle (o default de CLASSE), no `_build_common` e no
-    # `_levar_o_brilho_das_luzes`, e o `backend_pydualsense.py` cresceu em
-    # degraus — o `_escrever_led_do_mic` desceu 1, o `_audio_status` 28, o
-    # `set_microphone_led` 28, as do fluxo 37 e 38, o `should_reclaim_on_wake`
-    # 38 e as do `set_mic_led` 138. Cada par foi levado pelos hunks do
-    # `git diff -U0` contra `dca12170b`, e a âncora conferida na faixa nova —
-    # nunca por soma.
-    ":1783-1784",
-    ":1826-1832",
-    ":1594-1621",
-    ":5201",
-    ":5208-5209",
-    ":5210-5214",
-    ":1891-1892",
-    ":1951-1982",
-    ":3495-3508",
-    ":442-455",
-    ":1037",
-    # AS DEZ DE BAIXO SE APOSENTARAM EM 24/09/2026, pela STEAM-NO-FISICO-01:
-    # a numeração do Hefesto (`numeracao_do_jogo`), a vigia do sequestro e o
-    # Modo Nativo que escreve a luz entraram no `backend_pydualsense.py` em
-    # degraus diferentes — o `:442-455` não se moveu, as do meio desceram 68,
-    # o `should_reclaim_on_wake` 76 e as do `set_mic_led` 186. Cada par foi
-    # reapontado pela ÂNCORA, com o diff contra o `dev` de `12a2b3cae` —
-    # nunca por soma. O `:1883-1914` da célula do rádio foi à mão: ele vem
-    # logo depois de um `core/ds_output_report.py:…`, e o reapontador o lia
-    # como daquele arquivo.
-    ":1715-1716",
-    ":1758-1764",
-    ":1526-1553",
-    ":5015",
-    ":5022-5023",
-    ":5024-5028",
-    ":1823-1824",
-    ":1883-1914",
-    ":3419-3432",
-    ":969",
-    # AS ONZE DE BAIXO SE APOSENTARAM EM 20/09/2026, pela
-    # O-NO-NASCE-FECHADO-01 (`ace69acef`): a reconciliação da exposição do
-    # Modo Nativo entrou no `_poll_loop` e o arquivo cresceu 63 linhas — em
-    # TRÊS degraus. As duas primeiras faixas desceram 1, a do
-    # `should_reclaim_on_wake` desceu 63 e as três do `set_mic_led` desceram
-    # 63 também, mas por outra inserção. Cada par foi reapontado pela ÂNCORA,
-    # com `difflib` contra o fonte de `ace69acef~1` — nunca por aritmética.
-    ":1714-1715",
-    ":1757-1763",
-    ":1525-1552",
-    ":4952",
-    ":4959-4960",
-    ":4961-4965",
-    ":1822-1823",
-    ":1882-1913",
-    ":3356-3369",
-    ":441-454",
-    ":968",
-    # AS ONZE DE BAIXO SE APOSENTARAM EM 20/09/2026, pela
-    # ESCRITA-QUE-NÃO-MEDE-01: o `self.device.write` ganhou um dono que mede
-    # (`_escrever_conferindo`), e o arquivo cresceu 82 linhas em três degraus
-    # diferentes. O `:1460-1461` nunca esteve em `ANCORAS` — ele vive só na
-    # prosa do mapa, e derivou junto (+35). Entra aqui porque a régua que
-    # impede a volta é esta, e meia correção deixa as duas versões vivas.
-    ":1849-1856",
-    ":4879-4883",
-    ":4877-4878",
-    ":3286-3299",
-    ":1787-1788",
-    ":1722-1728",
-    ":1679-1680",
-    ":1490-1517",
-    ":1460-1461",
-    ":4870",
-    ":933",
-    # AS DEZ DE BAIXO SE APOSENTARAM EM 17/09/2026, pela
-    # BATERIA-QUE-PULA-01: a guarda `eh_report_de_estado` e o par
-    # `_consumir_report`/`_recusar_report` entraram no meio do arquivo.
-    # A deriva NÃO é uniforme — nove desceram 83 linhas e `:923` desceu
-    # 10, porque os defaults de classe entraram acima dela e os métodos
-    # novos abaixo. Somar 83 em todas apontaria `_audio_status` para
-    # outra coisa; cada uma foi remedida pela ÂNCORA.
-    ":1595-1596",
-    ":1639-1645",
-    ":1407-1434",
-    ":4787",
-    ":4794-4795",
-    ":4796-4800",
-    ":1704-1705",
-    ":1766-1773",
-    ":3203-3216",
-    ":923",
-    # AS DUAS DE BAIXO SE APOSENTARAM EM 16/09/2026: a SOM-ROTA-02 deu dono à
-    # rota de saída (`common[7]`) na adoção do controle e acrescentou a
-    # constante `ROTA_PADRAO_DO_SOM` com a medição que a justifica. As duas
-    # foram remedidas pela ÂNCORA, uma a uma — a deriva é +49 na primeira e
-    # +166 na segunda, e somar uma delas na outra apontaria para outra coisa.
-    ":1546-1547",
-    ":4630-4634",
-    ":1589-1595",
-    ":1357-1384",
-    ":4621",
-    ":4628-4629",
-    ":1654-1655",
-    ":1716-1723",
-    ":3037-3050",
-    ":414-427",
-    ":873",
-    # AS ONZE DE BAIXO SE APOSENTARAM EM 12/09/2026, e a causa tem nome:
-    # a MIC-VOLUME-02 deu dono ao `common[6]` e empurrou o
-    # `backend_pydualsense.py` — 68 linhas abaixo do ponto de inserção,
-    # 44 acima dele. **A deriva NÃO é uma só**, e é por isso que cada par
-    # foi remedido pela ÂNCORA, uma a uma, e não por uma soma única: somar
-    # 68 em tudo teria quebrado as três que estavam acima do corte.
-    ":1478-1479",
-    ":1521-1527",
-    ":1313-1340",
-    ":4553",
-    ":4560-4561",
-    ":4562-4566",
-    ":1586-1587",
-    ":1648-1655",
-    ":2969-2982",
-    ":361-374",
-    ":829",
-    ":1252-1253",
-    ":1286-1287",
-    ":1095-1115",
-    ":1346-1347",
-    ":1402-1409",
-    ":2462-2475",
-    ":3949-3950",
-    ":3952-3956",
-    ":3943",
-    ":1193-1194",
-    ":1227-1228",
-    ":1036-1056",
-    ":3884",
-    ":3890-3891",
-    ":3893-3897",
-    ":1287-1288",
-    ":1343-1350",
-    ":2403-2416",
-    #: MIC-BT-DONO-01 (06/09/2026): +21 até `_reapply_desired`, +44 depois dele.
-    ":2475-2488",
-    ":3956",
-    ":3962-3963",
-    ":3965-3969",
-)
+#: A citação do backend na prosa, na forma que o reapontador leva.
+CITACAO = re.compile(r"backend_pydualsense\.py:(\d+)(?:-(\d+))?(?![\d-])")
 
 
 def _linha_do_led() -> dict[str, str]:
@@ -250,48 +92,54 @@ def _prosa(linha: dict[str, str]) -> str:
     return "\n".join(linha.get(campo) or "" for campo in CAMPOS)
 
 
-def test_cada_endereco_citado_contem_a_ancora_que_promete() -> None:
-    """Ir ao arquivo, ler a faixa, e exigir a âncora lá dentro."""
-    corpo = BACKEND.read_text(encoding="utf-8").splitlines()
-    prosa = _prosa(_linha_do_led())
+def test_cada_endereco_citado_contem_uma_ancora() -> None:
+    """Ir ao arquivo, ler a faixa, e exigir uma âncora lá dentro.
 
-    quebrados: list[str] = []
-    ausentes: list[str] = []
-    for faixa, ancora in ANCORAS:
-        if faixa not in prosa:
-            ausentes.append(f"{faixa} (âncora: {ancora})")
-            continue
-        numeros = [int(n) for n in re.findall(r"\d+", faixa)]
-        primeira, ultima = numeros[0], numeros[-1]
-        if ultima > len(corpo):
-            quebrados.append(f"{faixa}: além do fim ({len(corpo)} linhas)")
+    Mordida: repor na célula um endereço de antes da 6e-4
+    (`core/backend_pydualsense.py:1820-1821`) — a faixa cai fora da âncora e
+    esta régua reprova.
+    """
+    corpo = BACKEND.read_text(encoding="utf-8").splitlines()
+    citadas = [
+        (m.group(0), int(m.group(1)), int(m.group(2) or m.group(1)))
+        for m in CITACAO.finditer(_prosa(_linha_do_led()))
+    ]
+    assert len(citadas) >= len(ANCORAS), (
+        "a linha `luz.led_microfone` do mapa quase não cita o backend na forma "
+        f"inteira ({len(citadas)} citações): a régua ficaria verde sobre nada"
+    )
+    quebrados = []
+    for texto, primeira, ultima in citadas:
+        if primeira > ultima or ultima > len(corpo):
+            quebrados.append(f"{texto}: faixa impossível ({len(corpo)} linhas)")
             continue
         trecho = "\n".join(corpo[primeira - 1 : ultima])
-        if ancora not in trecho:
+        if not any(ancora in trecho for ancora in ANCORAS):
             quebrados.append(
-                f"{faixa}: a faixa NÃO contém {ancora!r} — "
-                f"começa em {corpo[primeira - 1].strip()[:60]!r}"
+                f"{texto}: nenhuma âncora dentro — começa em "
+                f"{corpo[primeira - 1].strip()[:60]!r}"
             )
-
-    assert not ausentes, (
-        "endereço que a auditoria de 02/09/2026 fixou sumiu da linha "
-        "`luz.led_microfone` do mapa:\n" + "\n".join(ausentes)
-    )
     assert not quebrados, (
         "a linha `luz.led_microfone` do mapa cita o `backend_pydualsense.py` "
-        "em endereço que derivou — a citação resolve, mas aponta para outra "
-        "coisa:\n" + "\n".join(quebrados)
+        "em endereço que derivou; rode `scripts/reapontar-citacoes.py "
+        "--escrever`:\n" + "\n".join(quebrados)
     )
 
 
-def test_os_enderecos_aposentados_nao_voltaram() -> None:
-    """A deriva não pode voltar por cima, nem por soma cega de 59."""
-    prosa = _prosa(_linha_do_led())
-    voltaram = [alvo for alvo in APOSENTADOS if alvo in prosa]
-    assert not voltaram, (
-        "voltou à linha `luz.led_microfone` um endereço que a auditoria de "
-        "02/09/2026 aposentou (ele aponta para texto sem relação com o "
-        f"`common[8]`): {', '.join(voltaram)}"
+def test_toda_ancora_e_citada() -> None:
+    """A linha cita cada âncora na forma inteira.
+
+    Mordida: apagar da célula a citação do `set_mic_led` — esta régua reprova.
+    """
+    corpo = BACKEND.read_text(encoding="utf-8").splitlines()
+    cobertas: set[str] = set()
+    for m in CITACAO.finditer(_prosa(_linha_do_led())):
+        primeira, ultima = int(m.group(1)), int(m.group(2) or m.group(1))
+        trecho = "\n".join(corpo[primeira - 1 : ultima])
+        cobertas.update(a for a in ANCORAS if a in trecho)
+    faltam = [a for a in ANCORAS if a not in cobertas]
+    assert not faltam, (
+        "a linha `luz.led_microfone` do mapa deixou de citar: " + ", ".join(faltam)
     )
 
 
