@@ -263,9 +263,17 @@ Reverte o que o `install.sh` fez: units, regras udev, drop-ins de modprobe e do
 BlueZ, timers de resiliência, broker, applet, módulos DKMS, parâmetros de cmdline
 registrados como do Hefesto, e as Opções de Inicialização da Steam.
 
-Não remove por padrão: a **sua configuração** (`--purge-config` remove, com cópia
-de segurança), o quirk de boot do USB (`--remove-usb-quirk`) e regras udev de
-terceiros. `--keep-bluez` preserva a versão de BlueZ instalada.
+Não remove por padrão: a **sua configuração**, as **cópias de pareamento** do
+Bluetooth, o quirk de boot do USB (`--remove-usb-quirk` o tira), o BlueZ que o
+Hefesto instalou (`--restore-bluez` devolve o da distribuição) e regras udev de
+terceiros.
+
+As cópias de pareamento são as chaves dos controles que o Hefesto guarda, com o
+diário do rádio. Cada uninstall as deixa numa pasta de root com a data
+(`/var/lib/hefesto-dualsense4unix/bt-bonds.pre-uninstall-<data>`) e diz como
+restaurá-las. `--purge-config` apaga a configuração (com cópia de segurança) e
+todas essas cópias, inclusive as de uninstalls anteriores. `--dry-run` mostra o
+que sairia, sem tirar nada.
 
 Para descontaminação total, cobrindo instalações antigas em outros formatos:
 
