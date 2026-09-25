@@ -1887,7 +1887,7 @@ class CoopManager:
           disconnect, agora estável entre boots (R-23);
         - o co-op tem o `player_index`, o índice de ALOCAÇÃO do vpad (1..N
           contíguo e REUSADO quando alguém sai — VPAD-03); o MAC e o nome do vpad
-          saíram dele (E3 e A-MESMA-LINGUA-01), e ele ficou só como o `fallback`.
+          saíram dele (E3 e A-MESMA-LINGUA-01), e ele ficou como o `fallback` dos dois.
 
         São coisas diferentes e as duas estão certas no seu domínio; o erro
         era acender o SEGUNDO na lâmpada. Com o primário cravado em 1 e o Pro
@@ -2878,11 +2878,11 @@ def numero_do_nome_do_primario(daemon: Any, fallback: int = 1) -> int:
     perguntar — daemon sem `_coop_manager` ainda, ou primário sem MAC.
 
     **O MAC DO VPAD NÃO SE MOVE COM ISTO, e o encaixe é o que torna a cura
-    segura.** `uhid_gamepad.vpad_mac` só deriva do número quando NÃO há
-    identidade de aparelho — e é exatamente nesse caso que
-    `numeros_de_jogador()` não tem resposta (`_alvos_de_numeracao` descarta
-    `path:`) e este fallback devolve 1, o valor de hoje. Com identidade, o MAC
-    sai do aparelho e o número só pinta o nome.
+    segura.** O MAC PEDIDO (`uhid_gamepad.vpad_mac`) só sai do número sem
+    identidade de aparelho, e aí `numeros_de_jogador()` não responde
+    (`_alvos_de_numeracao` descarta `path:`) e este fallback devolve 1. Com
+    identidade, sai do aparelho; o VESTIDO pode ser o seguinte do MESMO aparelho
+    (`vpad_macs_do_aparelho`, O-VPAD-DO-P1-NAO-REPETE-O-MAC-01). O número só pinta o nome.
 
     **NÃO cria o manager.** `getattr`, nunca `get_coop_manager`: subir um
     `CoopManager` do lado de dentro da partida do vpad inverteria a ordem de
