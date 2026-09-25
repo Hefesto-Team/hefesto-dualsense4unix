@@ -105,12 +105,10 @@ import atexit
 import contextlib
 import os
 import re
-import struct
 import subprocess
 import sys
 import tempfile
 import time
-import zlib
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -125,55 +123,22 @@ from comum import (
     tabela,
 )
 
-# ---------------------------------------------------------------------------
-# Constantes do protocolo — cada uma com a procedência que a autoriza
-# ---------------------------------------------------------------------------
+from o_formato_btsnoop import (
+    HID_BT_ENTRADA,
+    HID_BT_SAIDA,
+    NOME_DO_OFFSET,
+    OFF_B,
+    OFF_CRC,
+    OFF_G,
+    OFF_R,
+    Quadro,
+    descreve,
+    ler_btsnoop,
+    reports_de_saida,
+)
 
-#: HID-over-BT, cabeçalho de transação: `(HANDSHAKE<<4)`... o que interessa é
-#: que `0xA2` é `DATA` no sentido host->device e `0xA1` é `DATA` no sentido
-#: device->host. É por este byte, e não pelo opcode do btsnoop, que este
-#: instrumento decide o SENTIDO de cada quadro.
-HID_BT_SAIDA = 0xA2
-HID_BT_ENTRADA = 0xA1
-
-#: `DS_OUTPUT_REPORT_BT` / `_SIZE` = `0x31` / 78, de
-#: `docs/protocol/driver-hid-playstation.md`, lido no fonte C em 11/08/2026.
-DS_OUTPUT_BT_ID = 0x31
-DS_OUTPUT_BT_TAM = 78
-
-#: Offsets ABSOLUTOS dentro do report `0x31` de saída. A mesma página da casa:
-#: "BT, report `0x31`: o corpo começa em `data[2]`. Somar 2."
-OFF_SEQ_TAG = 1
-OFF_TAG = 2
-OFF_VALID_FLAG0 = 3
-OFF_VALID_FLAG1 = 4
-OFF_VALID_FLAG2 = 41
-OFF_LIGHTBAR_SETUP = 44
-OFF_LED_BRIGHTNESS = 45
-OFF_PLAYER_LEDS = 46
-OFF_R, OFF_G, OFF_B = 47, 48, 49
-OFF_CRC = 74
-
-#: `PS_OUTPUT_CRC32_SEED` do `hid-playstation`. O CRC-32 é semeado com este
-#: byte e calculado sobre os `len - 4` primeiros bytes do report.
-CRC32_SEED_SAIDA = 0xA2
-
-#: Só os offsets que TÊM nome no driver. O resto é reservado, e o diff diz
-#: isso em vez de inventar um rótulo — um campo com nome errado num relatório
-#: de protocolo custa mais caro que um campo sem nome.
-NOME_DO_OFFSET = {
-    OFF_SEQ_TAG: "seq_tag (contador rotativo do driver)",
-    OFF_TAG: "tag",
-    OFF_VALID_FLAG0: "valid_flag0",
-    OFF_VALID_FLAG1: "valid_flag1",
-    OFF_VALID_FLAG2: "valid_flag2",
-    OFF_LIGHTBAR_SETUP: "lightbar_setup",
-    OFF_LED_BRIGHTNESS: "led_brightness",
-    OFF_PLAYER_LEDS: "player_leds",
-    OFF_R: "lightbar_red",
-    OFF_G: "lightbar_green",
-    OFF_B: "lightbar_blue",
-}
+# O FORMATO DO ARQUIVO MORA NO ``o_formato_btsnoop.py`` desde 25/09/2026: a
+# lightbar o lê como root, e ele não pode puxar o ``comum``.
 
 #: As cores mágicas. Escolhidas para não colidir com nada que o produto use
 #: (o Hefesto trabalha com cores de jogador, e nenhuma delas é um degradê de
@@ -194,113 +159,6 @@ def mascarar(texto: str) -> str:
         return ":".join([p[0], p[1], p[2], "00", "00", p[5]])
 
     return _RE_MAC.sub(_troca, texto)
-
-
-# ---------------------------------------------------------------------------
-# O parser de btsnoop/monitor — pequeno, e conferido pela mordida
-# ---------------------------------------------------------------------------
-
-
-class Quadro:
-    """Um pacote ACL do monitor HCI, já com o payload L2CAP separado."""
-
-    __slots__ = ("corpo", "handle", "sentido", "ts")
-
-    def __init__(self, ts: float, handle: int, sentido: int, corpo: bytes) -> None:
-        self.ts = ts
-        self.handle = handle
-        self.sentido = sentido
-        self.corpo = corpo
-
-
-def ler_btsnoop(caminho: str) -> tuple[list[Quadro], list[str]]:
-    """Os quadros ACL de um arquivo do `btmon -w`, e as queixas do caminho.
-
-    Formato: cabeçalho de 16 bytes (`btsnoop\\0` + versão + datalink), depois
-    registros big-endian de 24 bytes de cabeçalho + payload. Para o datalink
-    2001 (o "monitor" do BlueZ) o campo `flags` é `(índice << 16) | opcode`.
-
-    Este parser NÃO usa o opcode para decidir sentido — ele o ignora de
-    propósito e lê o `0xA1`/`0xA2` do próprio HID. O opcode entraria como uma
-    lembrança minha sobre um formato; o byte do HID é o protocolo.
-    """
-    queixas: list[str] = []
-    with open(caminho, "rb") as arq:
-        dados = arq.read()
-
-    if len(dados) < 16 or not dados.startswith(b"btsnoop\x00"):
-        return [], ["arquivo não começa com a assinatura `btsnoop\\0`"]
-
-    datalink = struct.unpack_from(">I", dados, 12)[0]
-    if datalink != 2001:
-        queixas.append(f"datalink {datalink} não é 2001 (monitor do BlueZ)")
-
-    quadros: list[Quadro] = []
-    pos, incompletos, fragmentos = 16, 0, 0
-    while pos + 24 <= len(dados):
-        _orig, incl, _flags, _drops, ts = struct.unpack_from(">IIIIq", dados, pos)
-        pos += 24
-        if pos + incl > len(dados):
-            incompletos += 1
-            break
-        pacote = dados[pos : pos + incl]
-        pos += incl
-
-        # Um pacote ACL tem, no mínimo, 4 bytes de cabeçalho + 4 de L2CAP.
-        if len(pacote) < 9:
-            continue
-        hf, dlen = struct.unpack_from("<HH", pacote, 0)
-        handle, pb = hf & 0x0FFF, (hf >> 12) & 0x03
-        if dlen != len(pacote) - 4:
-            # Não é ACL (é comando, evento, nota de sistema...). Silencioso: o
-            # monitor multiplexa tudo no mesmo arquivo, e a maioria não é ACL.
-            continue
-        if pb == 0x01:
-            # Continuação de um L2CAP fragmentado. O `0x31` tem 79 bytes com o
-            # cabeçalho HID e nunca fragmenta num ACL de MTU normal; se
-            # aparecer, é para sair na queixa e não em silêncio.
-            fragmentos += 1
-            continue
-        l2_len, _cid = struct.unpack_from("<HH", pacote, 4)
-        corpo = pacote[8 : 8 + l2_len]
-        if not corpo:
-            continue
-        # O `ts` do btsnoop é microssegundo desde uma época que NÃO é a do
-        # Unix, e o deslocamento é uma constante mágica do BlueZ. Este parser
-        # se recusa a depender de uma constante que eu teria de lembrar: ele
-        # guarda o carimbo CRU e, mais adiante, normaliza pelo primeiro
-        # quadro. O veredito não usa tempo nenhum — usa a cor mágica.
-        quadros.append(Quadro(ts / 1e6, handle, corpo[0], corpo))
-
-    if incompletos:
-        queixas.append(f"{incompletos} registro(s) truncado(s) no fim do arquivo")
-    if fragmentos:
-        queixas.append(f"{fragmentos} continuação(ões) L2CAP ignorada(s)")
-    return quadros, queixas
-
-
-def reports_de_saida(quadros: list[Quadro]) -> list[Quadro]:
-    """Só o que é output report `0x31` do DualSense, no sentido host->device."""
-    return [
-        q
-        for q in quadros
-        if q.sentido == HID_BT_SAIDA
-        and len(q.corpo) >= 2
-        and q.corpo[1] == DS_OUTPUT_BT_ID
-    ]
-
-
-def crc_confere(report: bytes) -> bool | None:
-    """O CRC-32 dos quatro últimos bytes bate? `None` se o tamanho não permite.
-
-    `crc32_le(0xFFFFFFFF, &seed, 1)` seguido de `~crc32_le(crc, data, len-4)`,
-    que é exatamente o `zlib.crc32` do Python com a semente encadeada.
-    """
-    if len(report) != DS_OUTPUT_BT_TAM:
-        return None
-    calc = zlib.crc32(bytes([CRC32_SEED_SAIDA]))
-    calc = zlib.crc32(report[: DS_OUTPUT_BT_TAM - 4], calc)
-    return struct.unpack_from("<I", report, OFF_CRC)[0] == calc
 
 
 # ---------------------------------------------------------------------------
@@ -583,26 +441,6 @@ class Alvo:
 
 def fatia(quadros: list[Quadro], t0: float, t1: float) -> list[Quadro]:
     return [q for q in quadros if t0 <= q.ts <= t1]
-
-
-def descreve(report: bytes) -> list[str]:
-    """Os campos que decidem a cor, de um report `0x31`, em texto de tabela."""
-    def b(i: int) -> str:
-        return f"0x{report[i]:02x}" if i < len(report) else "--"
-
-    crc = crc_confere(report)
-    return [
-        b(OFF_SEQ_TAG),
-        b(OFF_TAG),
-        b(OFF_VALID_FLAG0),
-        b(OFF_VALID_FLAG1),
-        b(OFF_VALID_FLAG2),
-        b(OFF_LIGHTBAR_SETUP),
-        b(OFF_LED_BRIGHTNESS),
-        f"{b(OFF_R)} {b(OFF_G)} {b(OFF_B)}",
-        str(len(report)),
-        {True: "ok", False: "RUIM", None: "?"}[crc],
-    ]
 
 
 def main() -> int:
