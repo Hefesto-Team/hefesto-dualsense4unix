@@ -154,6 +154,7 @@ def _draft_do_ativo(nome: str, ctx: Contexto | None = None) -> Any:
     # AFIRMAVA aceso na ausência do campo, que é o estado de partida de um
     # controle no rádio.
     from hefesto_dualsense4unix.app.widgets.controller_card import rotulo_lightbar
+    from hefesto_dualsense4unix.core.led_control import LedSettings
 
     from .a04_iluminacao import brilho_do_controle
     from .a04_iluminacao import cor_escolhida as a_cor_pedida
@@ -188,7 +189,21 @@ def _draft_do_ativo(nome: str, ctx: Contexto | None = None) -> Any:
         # desfaz a escala é o dono da inversão (`a04_iluminacao.cor_escolhida`,
         # o mesmo da caixa `#RRGGBB`), e a luz que não inverte em tom nenhum
         # volta inteira, como antes: a cor viva continua vencendo o disco.
-        rgb = list(a_cor_pedida(tuple(rgb[:3]), brilho_do_controle(cru, uniq)))
+        #
+        # ANTES DA INVERSÃO, A COR DO DISCO: ela só conhece os catorze tons da
+        # casa, e o global dela (`#2850B4`), sem a paleta, acende fora deles. A
+        # cor que o disco já dá a este controle (a dele, ou o global que ele
+        # herda) é a pedida quando ela, no brilho dele, é EXATAMENTE a luz —
+        # a conta prova, e nada se adivinha.
+        acesa = (int(rgb[0]), int(rgb[1]), int(rgb[2]))
+        brilho = brilho_do_controle(cru, uniq)
+        do_disco = draft.effective_leds_for(uniq).lightbar_rgb
+        if (brilho is not None and do_disco is not None
+                and LedSettings(lightbar=do_disco).apply_brightness(brilho).lightbar
+                == acesa):
+            rgb = list(do_disco)
+        else:
+            rgb = list(a_cor_pedida(acesa, brilho))
         # A COR VIVA VIRA OVERRIDE DAQUELE CONTROLE, e não a cor global: cada
         # controle tem a sua, e é assim que o perfil já guarda (o
         # `ControllerOverrides.leds` do schema existe desde antes desta aba).
