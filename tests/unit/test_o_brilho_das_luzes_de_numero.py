@@ -314,6 +314,35 @@ def test_o_controle_que_chega_depois_recebe_o_brilho_dele(
     assert [_o_aparelho_fica_em(h) for h in controles] == [MEDIO] * 3
 
 
+@pytest.mark.parametrize("origem", ["manual", "auto"])
+@pytest.mark.parametrize(("transporte", "com_no"), MATRIZ)
+def test_a_troca_de_perfil_solta_o_brilho_do_perfil_anterior(
+        transporte: str, com_no: bool, origem: str) -> None:
+    """O perfil A dá Forte ao P2; o B não fala dele. Depois da troca, o P2 é Fraco.
+
+    Achado da conferência de 25/09/2026: o «Todos» do `apply_output_defaults`
+    mandava o RESOLVIDO de cada controle, e na ativação o manager o chama ANTES
+    de publicar a camada do perfil novo — o merge ainda levava o override do A.
+    No rádio e no cabo sem nó nada o repintava depois, e o P2 ficava no Forte
+    sob um perfil que diz Fraco. Vale para a troca manual e para a automática.
+
+    MORDIDA: volte o `apply_output_defaults` a mandar o
+    `_merged_desired_for_key(key).player_led_brightness` — reprova no rádio (com
+    e sem nó) e no cabo sem nó, nas duas origens.
+    """
+    from hefesto_dualsense4unix.profiles.manager import ProfileManager
+
+    ctl, controles = _mesa(transporte, com_no=com_no)
+    gerente = ProfileManager(controller=ctl)
+    gerente.apply(_perfil("fraco", P2="forte"), origin=origem)
+    assert [_o_aparelho_fica_em(h) for h in controles] == [FRACO, FORTE, FRACO, FRACO]
+    gerente.apply(_perfil("fraco"), origin=origem)
+    fica = [_o_aparelho_fica_em(h) for h in controles]
+    assert fica == [FRACO] * 4, (
+        f"[{transporte}, {'com' if com_no else 'sem'} nó, troca {origem}] os "
+        f"quatro ficaram em {fica}: o P2 guardou o Forte do perfil anterior")
+
+
 # ---------------------------------------------------------------------------
 # 3. O IPC: com `uniq` só ele; sem, «Todos»
 # ---------------------------------------------------------------------------

@@ -107,12 +107,9 @@ class _MesaDeControles:
         return True
 
     # O BRILHO DAS LUZES DE NÚMERO (O-BRILHO-DAS-LUZES-DE-NUMERO-01, 25/09/2026):
-    # o original leva a cada handle o degrau RESOLVIDO dele. A mesma decisão
+    # o original leva a cada handle o degrau GLOBAL do perfil. A mesma decisão
     # que importa aqui — sem handle não sai byte — vale para ele: uma escrita
     # por handle, e nenhuma com a mesa vazia (o laço é sobre `_handles`).
-    def _merged_desired_for_key(self, key: str) -> Any:
-        return self._desired_default
-
     def _levar_o_brilho_das_luzes(
         self, key: str | None, handle: Any, degrau: int | None, *, what: str,
         o_radio_ja_leva: bool = False,
