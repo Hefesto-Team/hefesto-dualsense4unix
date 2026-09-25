@@ -2591,7 +2591,7 @@ def _teto_do_controle(
 # `controller.target.set`, o daemon obedece, e no tique seguinte a tela
 # continuava apontando o P1 — o `checked` do desenho, cravado no HTML. Ela
 # clicava "só este" no P2, o rádio do acordeão não se mexia, e a fita do topo
-# junto com ele: as regras `body:has(#gc-pN:checked) .fita .chip:nth-child(n)`
+# junto com ele: as regras `body:has(#gc-pN:checked) .fita .chip[data-pref="pN"]`
 # do gerador fazem o destaque da fita seguir o acordeão, então **os dois
 # lados da queixa eram o mesmo elemento**.
 #
@@ -2618,9 +2618,9 @@ def _pref_do_alvo(ctx: Contexto) -> str:
     **A CONVERSÃO É O PONTO INTEIRO, e ela tem duas ordens diferentes.** O
     daemon guarda `output_target_index`, que é a POSIÇÃO em `controllers`
     ("0 = primário", `ipc_handlers.py:4399`); o desenho endereça por `pref`, que
-    é a posição na mesa ORDENADA POR NÚMERO DE IDENTIDADE
-    (`mesa_viva.mesa_do_estado:373`). As duas coincidem na mesa de um controle e
-    divergem na primeira em que o primário não for o de menor número — é a mesma
+    é o NÚMERO do jogador desde 20/09/2026 (`mesa_viva._lugares_da_mesa`): com o
+    P1 fora, o índice 0 é o P2, e o `pref` dele é `p2`. As duas divergem sempre
+    que um lugar fica vazio ou o primário não é o de menor número — é a mesma
     armadilha que `_indice` documenta do lado do gesto, e a ponte entre as duas
     é o `uniq`.
 
@@ -3142,7 +3142,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "graves": sum(1 for i in itens if i["grave"]),
         # QUAL CONTROLE A SAÍDA ESTÁ MIRANDO — ver :func:`_alvo_de_saida`. Ela
         # marca o rádio do acordeão, e com ele o chip da fita: as regras
-        # `body:has(#gc-pN:checked) .fita .chip:nth-child(n)` do gerador fazem
+        # `body:has(#gc-pN:checked) .fita .chip[data-pref="pN"]` do gerador fazem
         # o destaque do topo seguir o acordeão. Um endereço, as duas metades.
         "alvo-aberto": _alvo_de_saida(ctx),
         # OS QUATRO AVISOS, TODOS EM LINHA DE RESSALVA (D-02). Eles vão em TODO
@@ -3457,8 +3457,8 @@ def alvo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 def todos(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"▴": volta ao broadcast — as ações voltam a valer para a mesa inteira.
 
-    O `title` do botão é o contrato: *"Fecha — a fita volta para 'Todos', e os N
-    controles abrem juntos."* No daemon, "Todos" é `index: null`
+    O `title` do botão é o contrato: *"Fecha. A fita volta para «Todos» e todos
+    abrem juntos."* No daemon, "Todos" é `index: null`
     (`ipc_handlers.py:4134`: *"`index` null volta ao broadcast (padrão)"*), e é o
     mesmo `None` que a linha 0 do seletor da GUI estável carrega
     (`status_actions._controller_target_rows:1586`).
@@ -4546,7 +4546,7 @@ def _linha_do_controle(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool) -
         botoes_da_ponte.append(
             f'<button class="vaga {k}{" alem" if ligado and alem else ""}" '
             f'aria-pressed="{str(ligado).lower()}" aria-label="{rotulo} de {nome}" '
-            f'title="{rotulo}: {round(HZ_DA_PONTE)} por segundo. Pelo rádio, som ou '
+            f'title="{rotulo}: {round(HZ_DA_PONTE)} por segundo. Pelo BT, som ou '
             f'vibração, um por vez.{passou}" style="flex:{flex}" '
             f'data-gesto="{gesto}" data-alvo="{aid}">{_ic(ICONE_DO_CUSTO[k])}{hz}</button>')
     return (
