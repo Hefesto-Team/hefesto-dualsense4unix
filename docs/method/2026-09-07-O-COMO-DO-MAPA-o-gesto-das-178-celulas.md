@@ -2604,19 +2604,20 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 1. Abra a aba Gatilhos.
 2. Confira que o chip no alto da coluna do P1 e o da coluna do P2 dizem USB.
-3. Anote no papel o Modo das duas seções do P1 e do P2 — é o que você devolve no fim.
-4. Aperte o L2 e o R2 do P3 e do P4 e anote como eles estão — são as testemunhas, e não podem mudar em momento nenhum.
-5. Clique no desenho L2 da coluna da esquerda, para a linha Ajustes ficar à vista.
-6. Abra o campo Modo da seção de cima, na coluna do P1, e copie para o papel os dezenove nomes da lista, na ordem em que aparecem.
-7. Escolha «Desligado» nesse campo e aperte o L2 do P1: esta é a sua referência de gatilho solto.
-8. Escolha o nome seguinte da lista, veja o campo piscar em verde e aperte o L2 do P1 do começo ao fundo do curso, primeiro devagar e depois rápido.
-9. Escreva ao lado daquele nome o que a sua mão sentiu de diferente do «Desligado»: nada, duro do começo ao fim, duro a partir de um ponto, um estalo, tremendo, ou outra coisa.
-10. Anote também quantas barras a linha Ajustes passou a mostrar, ou se ela passou a dizer Sem ajustes.
-11. Repita a escolha, o aperto e as duas anotações para cada nome que sobra na lista, até o último.
-12. Volte a «Disparo» e depois a «Vibração», apertando o L2 do P1 com atenção em cada um dos dois, e anote de novo o que sentiu.
-13. Faça a volta inteira pelos dezenove nomes também na coluna do P2, o outro controle do cabo, e compare a tabela dele com a do P1, nome por nome.
-14. Compare, no fim de tudo, o L2 e o R2 do P3 e do P4 com o que você anotou no começo: têm de estar iguais.
-15. Devolva o Modo das duas seções do P1 e do P2 ao que você anotou no começo.
+3. Anote no papel o Modo das duas seções de cada uma das quatro colunas — é o que você devolve no fim.
+4. Escolha «Desligado» no Modo das oito seções, as duas de cada coluna.
+5. Aperte o L2 e o R2 do P3 e do P4 e confira que estão leves — são as testemunhas, e não podem mudar em momento nenhum.
+6. Clique no desenho L2 da coluna da esquerda, para a linha Ajustes ficar à vista.
+7. Abra o campo Modo da seção de cima, na coluna do P1, e copie para o papel os dezenove nomes da lista, na ordem em que aparecem.
+8. Com «Desligado» nesse campo, aperte o L2 do P1: esta é a sua referência de gatilho solto.
+9. Escolha o nome seguinte da lista, veja o campo piscar em verde e aperte o L2 do P1 do começo ao fundo do curso, primeiro devagar e depois rápido.
+10. Escreva ao lado daquele nome o que a sua mão sentiu de diferente do «Desligado»: nada, duro do começo ao fim, duro a partir de um ponto, um estalo, tremendo, ou outra coisa.
+11. Anote também quantas barras a linha Ajustes passou a mostrar, ou se ela passou a dizer Sem ajustes.
+12. Repita a escolha, o aperto e as duas anotações para cada nome que sobra na lista, até o último.
+13. Volte a «Disparo» e depois a «Vibração», apertando o L2 do P1 com atenção em cada um dos dois, e anote de novo o que sentiu.
+14. Faça a volta inteira pelos dezenove nomes também na coluna do P2, o outro controle do cabo, e compare a tabela dele com a do P1, nome por nome.
+15. Aperte, no fim de tudo, o L2 e o R2 do P3 e do P4: têm de continuar leves, como no começo.
+16. Devolva o Modo das oito seções ao que você anotou no começo.
 
 **Passa quando.** Cada nome da lista produz na sua mão uma sensação diferente da do «Desligado», e a MESMA sensação nos dois controles do cabo: o que o P1 fez, o P2 fez igual. Um nome que não muda nada em relação ao «Desligado» é achado do teste e não erro seu — anote e siga. E o P3 e o P4 não podem ter mudado de sensação em momento nenhum do teste.
 
@@ -2624,10 +2625,10 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 * **P1** — No CABO, e é onde você faz a volta inteira pelos dezenove nomes, no L2. Ele produz a sua tabela no papel: um nome, uma sensação.
 * **P2** — No CABO, e é a conferência. Faça a mesma volta na coluna dele e compare nome por nome com a tabela do P1. Onde os dois discordarem, o problema é do aparelho e não da lista — e é justamente por isso que são dois no cabo.
-* **P3** — No RÁDIO, testemunha. Não toque na coluna dele. Aperte o L2 e o R2 no começo e no fim; têm de estar iguais. Se ele mudar de sensação no meio da volta, algum dos dezenove escapou para o transporte inteiro.
+* **P3** — No RÁDIO, testemunha. Não toque na coluna dele. Aperte o L2 e o R2 no começo e no fim; têm de estar leves nas duas vezes. Se ele mudar de sensação no meio da volta, algum dos dezenove escapou para o transporte inteiro.
 * **P4** — No RÁDIO, segunda testemunha. Não toque na coluna dele. Mesma conferência. Se o P3 ficou intacto e o P4 mudou, o efeito foi parar no controle errado.
 
-**A armadilha.** O trabalho real é maior do que a lista deixa ver: a escolha, o aperto e as anotações são UM ato repetido dezenove vezes, e a volta inteira se repete no segundo controle. A lista foi encurtada; o teste não. Este é também o teste em que "nada aconteceu" é resposta legítima e prevista: o mapa registra esta linha como PARCIAL, e a medição que existe é dela mesma, pelo TATO, em 01/08 — na época SETE das escolhas não faziam nada (três mandavam ao aparelho o número do desligado; quatro mandavam o número certo sem dizer quais zonas do gatilho usar). Aquelas foram consertadas, e este teste é o que confere se ficaram. Dois nomes, porém, continuam com divergência VIVA declarada no mapa: «Disparo» e «Vibração» mandam ao aparelho, cada um, o número de OUTRO efeito, e ninguém mediu se eles fazem alguma coisa — por isso eles têm passo próprio. Se derem sensação estranha, ou nenhuma, é o achado, e está previsto. O falso verde daqui é julgar pela tela: o campo Modo e a linha Ajustes mudam SEMPRE, porque quem os desenha é o produto e nunca o aparelho — o DualSense não devolve em que efeito está. Só o dedo responde. Dois cuidados. Cada escolha GRAVA no perfil daquele controle, e é por isso que o último passo devolve o que estava lá — parar no meio deixa o último efeito da lista gravado, e o gatilho nasce com ele no próximo jogo. E dezenove escolhas levam um bom tempo: em agosto mediu-se o efeito amanhecendo solto sozinho alguns MINUTOS depois, então sinta LOGO depois de escolher e não volte a conferir o efeito de dez nomes atrás. Onde a prova parou: o mapa NÃO registra grau para esta célula. O degrau que este teste alcança é o seu dedo; o jogo está fora, e ninguém o mediu.
+**A armadilha.** O trabalho real é maior do que a lista deixa ver: a escolha, o aperto e as anotações são UM ato repetido dezenove vezes, e a volta inteira se repete no segundo controle. A lista foi encurtada; o teste não. Este é também o teste em que "nada aconteceu" é resposta legítima e prevista: o mapa registra esta linha como PARCIAL, e a medição que existe é dela mesma, pelo TATO, em 01/08 — na época SETE das escolhas não faziam nada (três mandavam ao aparelho o número do desligado; quatro mandavam o número certo sem dizer quais zonas do gatilho usar). Aquelas foram consertadas, e este teste é o que confere se ficaram. Dois nomes, porém, continuam com divergência VIVA declarada no mapa: «Disparo» e «Vibração» mandam ao aparelho, cada um, o número de OUTRO efeito, e ninguém mediu se eles fazem alguma coisa — por isso eles têm passo próprio. Se derem sensação estranha, ou nenhuma, é o achado, e está previsto. O falso verde daqui é julgar pela tela: o campo Modo e a linha Ajustes mudam SEMPRE, porque quem os desenha é o produto e nunca o aparelho — o DualSense não devolve em que efeito está. Só o dedo responde — e é por isso que os oito gatilhos começam soltos, e não só os do P1 e do P2: o Freestyle de fábrica nasce com os gatilhos em «Rígido», e num gatilho que já está duro um «Rígido» que vazasse para as testemunhas passaria calado. Dois cuidados. Cada escolha GRAVA no perfil daquele controle, e é por isso que o último passo devolve o que estava lá — parar no meio deixa o último efeito da lista gravado, e o gatilho nasce com ele no próximo jogo. E dezenove escolhas levam um bom tempo: em agosto mediu-se o efeito amanhecendo solto sozinho alguns MINUTOS depois, então sinta LOGO depois de escolher e não volte a conferir o efeito de dez nomes atrás. Onde a prova parou: o mapa NÃO registra grau para esta célula. O degrau que este teste alcança é o seu dedo; o jogo está fora, e ninguém o mediu.
 
 ---
 
@@ -2643,31 +2644,32 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 1. Abra a aba Gatilhos.
 2. Confira que o chip no alto da coluna do P3 e o da coluna do P4 dizem BT.
-3. Anote no papel o Modo das duas seções do P3 e do P4 — é o que você devolve no fim.
-4. Aperte o L2 e o R2 do P1 e do P2 até o fundo e anote como estão — eles são as testemunhas e não podem mudar em momento nenhum.
-5. Abra o campo Modo da seção de cima (a do desenho L2), na coluna do P3, e copie para o papel os dezenove nomes da lista, na ordem.
-6. Escolha «Desligado» nesse campo e aperte o L2 do P3 do começo ao fundo do curso: esta é a sua referência de gatilho solto.
-7. Escolha o próximo nome da lista no mesmo campo e veja o campo piscar em verde.
-8. Aperte o L2 do P3 do começo ao fundo do curso, primeiro devagar e depois rápido.
-9. Escreva no papel, ao lado daquele nome, o que a sua mão sentiu: nada, duro do começo ao fim, duro a partir de um ponto, um estalo, tremendo, ou outra coisa.
-10. Repare se a sensação demorou visivelmente mais a chegar do que chegaria por cabo, e anote isso ao lado.
-11. Repita a escolha, o aperto do L2 e a anotação para cada nome que sobra na lista, até o último.
-12. Volte a «Disparo» e depois a «Vibração», um de cada vez, apertando o L2 do P3 com atenção em cada um, e anote de novo o que a sua mão sentiu.
-13. Refaça a volta inteira na coluna do P4, o outro controle do rádio.
-14. Compare nome por nome a tabela do P4 com a do P3 — e com a do cabo, se você a tiver.
-15. Aperte de novo o L2 e o R2 do P1 e do P2, e confira que estão iguais ao que você anotou no começo.
-16. Devolva o Modo das duas seções do P3 e do P4 ao que você anotou no começo.
+3. Anote no papel o Modo das duas seções de cada uma das quatro colunas — é o que você devolve no fim.
+4. Escolha «Desligado» no Modo das oito seções, as duas de cada coluna.
+5. Aperte o L2 e o R2 do P1 e do P2 até o fundo e confira que estão leves — eles são as testemunhas e não podem mudar em momento nenhum.
+6. Abra o campo Modo da seção de cima (a do desenho L2), na coluna do P3, e copie para o papel os dezenove nomes da lista, na ordem.
+7. Com «Desligado» nesse campo, aperte o L2 do P3 do começo ao fundo do curso: esta é a sua referência de gatilho solto.
+8. Escolha o próximo nome da lista no mesmo campo e veja o campo piscar em verde.
+9. Aperte o L2 do P3 do começo ao fundo do curso, primeiro devagar e depois rápido.
+10. Escreva no papel, ao lado daquele nome, o que a sua mão sentiu: nada, duro do começo ao fim, duro a partir de um ponto, um estalo, tremendo, ou outra coisa.
+11. Repare se a sensação demorou visivelmente mais a chegar do que chegaria por cabo, e anote isso ao lado.
+12. Repita a escolha, o aperto do L2 e a anotação para cada nome que sobra na lista, até o último.
+13. Volte a «Disparo» e depois a «Vibração», um de cada vez, apertando o L2 do P3 com atenção em cada um, e anote de novo o que a sua mão sentiu.
+14. Refaça a volta inteira na coluna do P4, o outro controle do rádio.
+15. Compare nome por nome a tabela do P4 com a do P3 — e com a do cabo, se você a tiver.
+16. Aperte de novo o L2 e o R2 do P1 e do P2, e confira que continuam leves, como no começo.
+17. Devolva o Modo das oito seções ao que você anotou no começo.
 
 **Passa quando.** Cada nome da lista produz na sua mão uma sensação diferente da do «Desligado», e a MESMA sensação nos dois controles do rádio — e a mesma que o cabo dá, se você tiver a tabela do cabo ao lado. Nenhuma escolha pode chegar visivelmente mais tarde pelo sem fio. Um nome que não muda nada em relação ao «Desligado» é achado do teste, não erro seu: anote e siga. E o P1 e o P2 não podem ter mudado de sensação em momento nenhum.
 
 **Por controle.**
 
-* **P1** — No CABO, testemunha. Não toque na coluna dele. Aperte o L2 e o R2 no começo e no fim; têm de estar iguais. Se ele mudar de sensação no meio da volta, algum dos dezenove escapou para todo mundo.
+* **P1** — No CABO, testemunha. Não toque na coluna dele. Aperte o L2 e o R2 no começo e no fim; têm de estar leves nas duas vezes. Se ele mudar de sensação no meio da volta, algum dos dezenove escapou para todo mundo.
 * **P2** — No CABO, segunda testemunha. Não toque na coluna dele. Mesma conferência. Se o P1 ficou intacto e o P2 mudou, o efeito foi parar no controle errado.
 * **P3** — No RÁDIO, e é onde você faz a volta inteira pelos dezenove nomes, no L2. Ele produz a sua tabela do sem fio: um nome, uma sensação.
 * **P4** — No RÁDIO, e é a conferência. Faça a mesma volta na coluna dele e compare nome por nome com a tabela do P3. Onde os dois discordarem, o problema é do aparelho e não do sem fio — é para isso que são dois no rádio.
 
-**A armadilha.** Este é o teste em que "nada aconteceu" é resposta legítima e prevista: o mapa registra esta linha como PARCIAL, e a medição que existe é dela mesma, pelo TATO, em 01/08 — na época SETE das escolhas não faziam nada (três mandavam ao aparelho o número do desligado; quatro mandavam o número certo sem dizer quais zonas do gatilho usar). Aquelas foram consertadas, e este teste confere se ficaram. Dois nomes continuam com divergência VIVA declarada no mapa: «Disparo» e «Vibração» mandam ao aparelho, cada um, o número de OUTRO efeito, e ninguém mediu se fazem alguma coisa — por isso têm passo próprio. Se derem sensação estranha, ou nenhuma, é o achado. O falso verde é julgar pela tela: o campo Modo e a linha Ajustes mudam SEMPRE, porque quem os desenha é o produto e nunca o aparelho. Só o dedo responde. Três cuidados que são do rádio. Se um controle cair e voltar no meio da volta, o efeito gravado para ele deve voltar junto — mas se uma sequência de nomes seguidos aparecer como "não fez nada", confira na fita se o chip daquele controle sumiu e voltou, porque uma queda só explicaria todos eles; para mandar de novo, escolha outro nome e volte ao que estava, já que escolher o mesmo nome não manda nada. A volta pelos dezenove leva um bom tempo, e em agosto mediu-se o efeito amanhecendo solto sozinho alguns MINUTOS depois, então aperte o L2 LOGO depois de escolher. E cada escolha GRAVA no perfil daquele controle: por isso o último passo devolve o que estava lá. O aperto do L2 é o teste inteiro e se repete dezenove vezes em cada controle, com uma escolha e uma anotação em volta de cada aperto; cortar a volta pela metade não responderia a pergunta. Onde a prova parou: o mapa NÃO registra grau para esta célula. O degrau que este teste alcança é o seu dedo; o jogo está fora, e ninguém o mediu.
+**A armadilha.** Este é o teste em que "nada aconteceu" é resposta legítima e prevista: o mapa registra esta linha como PARCIAL, e a medição que existe é dela mesma, pelo TATO, em 01/08 — na época SETE das escolhas não faziam nada (três mandavam ao aparelho o número do desligado; quatro mandavam o número certo sem dizer quais zonas do gatilho usar). Aquelas foram consertadas, e este teste confere se ficaram. Dois nomes continuam com divergência VIVA declarada no mapa: «Disparo» e «Vibração» mandam ao aparelho, cada um, o número de OUTRO efeito, e ninguém mediu se fazem alguma coisa — por isso têm passo próprio. Se derem sensação estranha, ou nenhuma, é o achado. O falso verde é julgar pela tela: o campo Modo e a linha Ajustes mudam SEMPRE, porque quem os desenha é o produto e nunca o aparelho. Só o dedo responde — e é por isso que os oito gatilhos começam soltos, e não só os do P3 e do P4: o Freestyle de fábrica nasce com os gatilhos em «Rígido», e num gatilho que já está duro um «Rígido» que vazasse para as testemunhas passaria calado. Três cuidados que são do rádio. Se um controle cair e voltar no meio da volta, o efeito gravado para ele deve voltar junto — mas se uma sequência de nomes seguidos aparecer como "não fez nada", confira na fita se o chip daquele controle sumiu e voltou, porque uma queda só explicaria todos eles; para mandar de novo, escolha outro nome e volte ao que estava, já que escolher o mesmo nome não manda nada. A volta pelos dezenove leva um bom tempo, e em agosto mediu-se o efeito amanhecendo solto sozinho alguns MINUTOS depois, então aperte o L2 LOGO depois de escolher. E cada escolha GRAVA no perfil daquele controle: por isso o último passo devolve o que estava lá. O aperto do L2 é o teste inteiro e se repete dezenove vezes em cada controle, com uma escolha e uma anotação em volta de cada aperto; cortar a volta pela metade não responderia a pergunta. Onde a prova parou: o mapa NÃO registra grau para esta célula. O degrau que este teste alcança é o seu dedo; o jogo está fora, e ninguém o mediu.
 
 ---
 
