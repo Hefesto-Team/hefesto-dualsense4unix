@@ -826,3 +826,76 @@ class TestR4AVigiaVoltaAoDesenhoDela:
         assert bancada.rehides == 60
         assert bancada.proc.varreduras == 1 + len(MUDANCAS_NO_HIDRAW), bancada.proc.varreduras
         assert all(_fechado(c) for c in bancada.mesa.todos())
+
+
+# ---------------------------------------------------------------------------
+# R5 — o herdeiro do dono que morreu
+# ---------------------------------------------------------------------------
+
+
+class TestR5OHerdeiroDoDonoQueMorreu:
+    def test_o_fd_herdado_e_visto_na_fatia_seguinte_a_morte(self, raiz: Path) -> None:
+        """A Steam segura o hidraw do P2 que acabou de fechar (a varredura a
+        vê); um filho herda o fd, e a Steam morre antes da varredura
+        seguinte. Com o nó fechado e a firma parada, só a vigia que não confia
+        na morte o vê: em até uma fatia, uma varredura acha o filho, o nó
+        segue na foto e a reescrita continua. Morto o filho também, o nó sai
+        da foto com a reescrita final. E com a mesa em repouso, a morte de
+        quem não segura nada não custa varredura.
+
+        A MORDIDA: sem o `pop` da firma no `_soltar_os_mortos`, nenhuma
+        varredura depois da morte, e o filho nunca é visto em 30 min de mesa.
+        """
+        bancada = _bancada(raiz)
+        no = str(bancada.mesa.no("P2"))
+
+        # A janela: uma regra reabre o nó, a Steam o abre, e o rehide o fecha.
+        def a_janela(mesa: Mesa) -> None:
+            _abrir_para_ela(mesa.no("P2"))
+            bancada.proc.segurar(no, STEAM)
+
+        bancada.antes_do_rehide = {1: a_janela}
+        viu_a_steam = bancada.andar_ate(1800.0, parar=lambda p: no in p.novos)
+        assert viu_a_steam == 30.0
+        assert bancada.vigia.sequestrados == {no: (STEAM,)}
+        assert _fechado(bancada.mesa.no("P2"))
+
+        # O filho herda o fd, e a Steam morre antes da varredura seguinte.
+        bancada.proc.segurar(no, FILHO)
+        bancada.proc.morrer(STEAM)
+        morte = bancada.t
+        varreduras = bancada.proc.varreduras
+
+        visto_em = bancada.andar_ate(
+            1800.0, parar=lambda _p: FILHO in bancada.vigia.sequestrados.get(no, ())
+        )
+
+        assert visto_em == morte + ec.PASSO_DA_VIGIA_S, f"o filho visto em {visto_em} (None: nunca)"
+        assert bancada.proc.varreduras == varreduras + 1
+        _t, passo = bancada.passos[-1]
+        assert passo.soltos == ()
+        assert passo.sondou
+
+        # A reescrita continua: dez minutos de sequestro, nenhum buraco de mais de 1 s.
+        inicio = len(bancada.passos)
+        bancada.andar_ate(visto_em + 600.0)
+        reescritas = [t for t, p in bancada.passos[inicio:] if no in p.a_reafirmar]
+        buracos = [b - a for a, b in zip([visto_em, *reescritas], reescritas, strict=False)]
+        assert reescritas and max(buracos) <= 1.0 + 1e-9, max(buracos, default=None)
+
+        # Morto o filho também: o nó sai da foto, com a reescrita final.
+        bancada.proc.morrer(FILHO)
+        passo = bancada.fatia()
+        assert passo.soltos == (no,)
+        assert no in passo.a_reafirmar
+        assert bancada.vigia.sequestrados == {}
+
+        # Em repouso, a morte de quem não segura nada não custa varredura.
+        varreduras = bancada.proc.varreduras
+        bancada.proc.vivos.add(OUTRO)
+        bancada.andar_ate(bancada.t + 60.0)
+        bancada.proc.morrer(OUTRO)
+        bancada.andar_ate(1800.0)
+        assert bancada.proc.varreduras == varreduras
+        assert bancada.vigia.vigilante is False
+        assert all(_fechado(c) for c in bancada.mesa.todos())
