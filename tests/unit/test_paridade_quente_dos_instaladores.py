@@ -13,8 +13,8 @@ que põem as curas de módulo numa máquina:
 
 - `install.sh` — o checkout git;
 - `scripts/install-host-udev.sh` — quem instalou por `.deb`, `.rpm`, Arch ou
-  Flatpak (é o caminho que o próprio `scripts/doctor.sh` manda rodar, em
-  `:3211` e `:3271`).
+  Flatpak (é o caminho que o próprio `scripts/doctor.sh` manda rodar, pelo
+  `conselho_de_instalacao`).
 
 Em 07/08/2026 os dois conjuntos foram comparados e **divergiam em quatro
 parâmetros**: os três do patch 0003 do `hid-nintendo` (o handshake USB do clone
@@ -24,10 +24,11 @@ AUTO-01.7 e entraram só no `install.sh`.
 Por que isso morde de verdade, e não é higiene: os params são lidos NA PROBE do
 módulo, e recarregar módulo é **proibido** nos dois instaladores (derrubaria os
 controles em uso). Então a conf do `modprobe.d` — que traz os três do 0003 — só
-vale no próximo BOOT. Entre o `uninstall.sh`, que os zera de propósito
-(`:874-876` e `:913`), e o boot seguinte, quem instalou por pacote ficava com o
-8BitDo Pro clone morrendo na probe no cabo e com o reset de porta do fantasma do
-dongle desligado — com o módulo patchado instalado e a cura dentro dele.
+vale no próximo BOOT. Entre o `uninstall.sh`, que os zera de propósito (as
+falas «params vivos do hid_nintendo» e «hang_reset do rtw88_usb»), e o boot
+seguinte, quem instalou por pacote ficava com o 8BitDo Pro clone morrendo na
+probe no cabo e com o reset de porta do fantasma do dongle desligado — com o
+módulo patchado instalado e a cura dentro dele.
 
 ## A mordida, medida
 
