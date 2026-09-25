@@ -59,7 +59,13 @@ jobs:
           set -u
           echo "Intervalo auditado: $RANGE"
 
-          TOOL_RE='laude|nthropic|opilot|emini|hatGPT|gpt-[0-9]|aider|ursor|indsurf|odeium|abnine|eepseek'
+          # `cursor` SOZINHO NÃO É FERRAMENTA — a regra dela de 15/09/2026, no
+          # `_lib.sh` dos ganchos: é o cursor do mouse e a propriedade de CSS,
+          # e este produto fala dos dois. Em 25/09 esta auditoria reprovou seis
+          # commits da A-MIRA-NA-NAVEGACAO-02 que diziam «Move o cursor». Fica
+          # o editor só COM contexto: a pasta dele e o nome seguido de ide ou
+          # editor, como no gancho local.
+          TOOL_RE='laude|nthropic|opilot|emini|hatGPT|gpt-[0-9]|aider|\.[c]ursor/|[c]ursor (ide|editor)|indsurf|odeium|abnine|eepseek'
           NOREPLY_RE='noreply@(anthropic|openai|github)\.com'
 
           FAIL=0
