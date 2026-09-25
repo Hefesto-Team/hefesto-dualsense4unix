@@ -58,11 +58,17 @@ jobs:
       # árvore, e milhares de arquivos de biblioteca dentro dela seriam lidos
       # como se fossem da casa. As fontes são as que o desenho pede, pela mesma
       # razão escrita no `gtk-real` — a altura do cartão é medida em texto.
+      #
+      # E a `libhidapi-hidraw0`, que o runner NÃO traz (os outros jobs a
+      # baixam pelo apt, corrida 36119169814): o mesmo `app.actions` puxa o
+      # `pydualsense`, e o `hidapi.py` dele abre a biblioteca no import —
+      # sem ela, o `check_a_altura_do_cartao` morre com «Could not find any
+      # hidapi library». Medido escondendo a biblioteca com `bwrap`.
       - name: Instalar o que os portões importam
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            python3-venv python3-gi \
+            python3-venv python3-gi libhidapi-hidraw0 \
             gir1.2-glib-2.0 gir1.2-gtk-3.0 gir1.2-gdkpixbuf-2.0 \
             gir1.2-pango-1.0 gir1.2-atk-1.0 gir1.2-harfbuzz-0.0 gir1.2-freedesktop \
             fonts-space-grotesk-ttf fonts-jetbrains-mono
