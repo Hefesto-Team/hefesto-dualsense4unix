@@ -792,7 +792,7 @@ class Manifesto:
     #: o teste criar ali sai no devolver — «exatamente como estava» inclui o
     #: que não estava.
     ausentes: list[str] = field(default_factory=list)
-    #: Os curingas do inventário (``{"base", "padrao", "existiam"}``): no
+    #: Os curingas do inventário (``{"base", "glob", "existiam"}``): no
     #: devolver, o que casa com eles e NÃO existia no guardar nasceu no teste, e
     #: sai também. A lista do que existia é a do guardar, e não a dos itens: uma
     #: guarda que caiu no meio não pode fazer o devolver tirar o que nunca saiu.
@@ -1189,7 +1189,7 @@ def o_que_nao_existia(
         if alcance == CASA and lugar.chave != "configuracao-inteira" and cfg in alvo.parents:
             continue
         if any(c in lugar.caminho for c in "*?["):
-            curingas.append({"base": str(base), "padrao": lugar.caminho,
+            curingas.append({"base": str(base), "glob": lugar.caminho,
                              "existiam": [str(p) for p in sorted(base.glob(lugar.caminho))]})
         elif not (alvo.exists() or alvo.is_symlink()):
             ausentes.append(str(alvo))
@@ -1418,7 +1418,7 @@ def _o_que_apareceu(manifesto: Manifesto) -> list[Path]:
             achados.append(caminho)
     for curinga in manifesto.curingas:
         existiam = {str(e) for e in curinga.get("existiam", [])}
-        for caminho in sorted(Path(str(curinga["base"])).glob(str(curinga["padrao"]))):
+        for caminho in sorted(Path(str(curinga["base"])).glob(str(curinga["glob"]))):
             if str(caminho) in existiam or caminho in achados:
                 continue
             if any(p in achados for p in caminho.parents):
