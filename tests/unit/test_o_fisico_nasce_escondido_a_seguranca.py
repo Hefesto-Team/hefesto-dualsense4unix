@@ -265,6 +265,42 @@ def test_a_regra_fechada_que_fica_vira_a_aberta(tmp_path: Path, nome: str) -> No
     assert len(abertas) == 5, abertas  # as quatro físicas e a do vpad
 
 
+#: Linhas de enchimento DEPOIS das fechadas: a saída do `grep -v` passa do
+#: buffer do cano (64 KiB), e um `| grep -q` que ache cedo leva o produtor ao
+#: SIGPIPE de forma determinística (a régua da casa é
+#: `test_o_pipefail_nao_transforma_acerto_em_falha.py`; esta mede o EFEITO).
+ENCHIMENTO = "".join(f'ENV{{HEFESTO_ENCHIMENTO}}="{i:06d}"\n' for i in range(8000))
+
+
+def test_a_regra_grande_nao_engana_a_troca_sob_pipefail(tmp_path: Path) -> None:
+    """Uma fechada grande: sob `pipefail` o cano com `grep -q` a leria como aberta."""
+    etc = _etc(tmp_path)
+    (etc / NOVA).write_text(ASSET.read_text(encoding="utf-8") + ENCHIMENTO, encoding="utf-8")
+    _manter_udev(tmp_path)
+    texto = (etc / NOVA).read_text(encoding="utf-8")
+    assert not _fechada(texto), "a fechada grande ficou fechada, e o broker saiu"
+
+
+def test_a_regra_grande_nao_engana_o_doctor_sob_pipefail(tmp_path: Path) -> None:
+    """O mesmo cano no `_regra_do_no_e_a_aberta` do doctor, que roda com `pipefail`."""
+    grande = tmp_path / NOVA
+    grande.write_text(ASSET.read_text(encoding="utf-8") + ENCHIMENTO, encoding="utf-8")
+    r = subprocess.run(
+        [
+            BASH,
+            "-c",
+            'set --; source "$DOCTOR_SH"; '
+            'if _regra_do_no_e_a_aberta "$REGRA"; then echo ABERTA; else echo FECHADA; fi',
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+        env={"DOCTOR_SH": str(DOCTOR), "REGRA": str(grande), "PATH": "/usr/bin:/bin"},
+    )
+    assert r.stdout.strip() == "FECHADA", (r.stdout, r.stderr)
+
+
 def test_com_a_regra_que_fica_o_fisico_volta_ao_mundo_de_antes(tmp_path: Path) -> None:
     """Pela cadeia inteira (o udev de bolso): o físico e o vpad com a ACL da sessão.
 
