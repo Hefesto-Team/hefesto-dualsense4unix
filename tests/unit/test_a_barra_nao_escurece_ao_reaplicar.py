@@ -116,6 +116,23 @@ def _luz(mesa: Mesa) -> list[tuple[int, int, int]]:
     return acesas
 
 
+class _PonteDoRodape:
+    """A ponte do rodapé com o `profile.apply_draft` entregue ao handler REAL.
+
+    Qualquer outra chamada é recusada: um dublê que aceita tudo mede menos
+    que o produto.
+    """
+
+    def __init__(self, mesa: Mesa) -> None:
+        self.mesa = mesa
+
+    def apply_draft_detalhado(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self.mesa.rodar(self.mesa.server._handle_profile_apply_draft(payload))
+
+    def __getattr__(self, nome: str) -> Any:
+        raise AttributeError(f"a régua não previu o rodapé chamar a ponte em {nome!r}")
+
+
 def _reaplicar(mesa: Mesa, caminho: str) -> None:
     """O perfil do disco aplicado de novo, pela porta de cada caminho do produto."""
     if caminho == "boot":
@@ -136,6 +153,11 @@ def _reaplicar(mesa: Mesa, caminho: str) -> None:
         mesa.pm.apply(mesa._perfil(), origin="autoswitch")
     elif caminho == "autoswitch":
         mesa.pm.apply(mesa._perfil(), origin="autoswitch")
+    elif caminho == "aplicar":
+        from pacotes import rodape
+
+        rodape.aplicar(mesa.ctx(), {"tipo": "button", "evento": "click"},
+                       _PonteDoRodape(mesa))
     elif caminho == "salvar":
         from pacotes import rodape
 
@@ -145,7 +167,7 @@ def _reaplicar(mesa: Mesa, caminho: str) -> None:
         raise AssertionError(caminho)
 
 
-CAMINHOS = ["boot", "troca-manual", "troca-de-jogo", "autoswitch", "salvar"]
+CAMINHOS = ["boot", "troca-manual", "troca-de-jogo", "autoswitch", "aplicar", "salvar"]
 
 
 # ---------------------------------------------------------------------------
