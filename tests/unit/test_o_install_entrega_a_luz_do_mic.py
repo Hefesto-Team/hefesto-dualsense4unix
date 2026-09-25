@@ -50,8 +50,12 @@ import re
 import shutil
 import subprocess
 import sys
-import tomllib
 from pathlib import Path
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:  # o 3.10 da matriz do CI: o pytest traz o `tomli`, o mesmo leitor de antes
+    import tomli as tomllib  # de ele entrar na biblioteca padrão (25/09/2026)
 
 import pytest
 
