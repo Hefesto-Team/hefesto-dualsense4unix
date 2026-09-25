@@ -3141,21 +3141,66 @@ def mascara_atual(daemon: DaemonProtocol, uniq: str | None = None) -> str:
     return mascara_efetiva(uniq if uniq is not None else primary_identity(daemon), sessao)
 
 
+def _e_o_cartao_do_posto(daemon: DaemonProtocol, uniq: str) -> bool:
+    """O cartão `uniq` é o do dono do posto de P1 (o vpad `_gamepad_device`)?"""
+    from hefesto_dualsense4unix.daemon.subsystems.external_mask import mesma_identidade
+    from hefesto_dualsense4unix.daemon.subsystems.gamepad import primary_identity
+
+    return mesma_identidade(uniq, primary_identity(daemon))
+
+
 def _vpad_do_cartao_de_pe(daemon: DaemonProtocol, uniq: str) -> bool:
     """O vpad do cartão `uniq` está de pé? O do jogador 1 é o `_gamepad_device`.
 
     Os outros são do co-op, e quem responde por eles é o leitor único do que o
     aparelho veste (`external_mask.mascara_vestida`): sem vpad, None.
     """
-    from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
-        mascara_vestida,
-        mesma_identidade,
-    )
-    from hefesto_dualsense4unix.daemon.subsystems.gamepad import primary_identity
+    from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascara_vestida
 
-    if mesma_identidade(uniq, primary_identity(daemon)):
+    if _e_o_cartao_do_posto(daemon, uniq):
         return getattr(daemon, "_gamepad_device", None) is not None
     return mascara_vestida(daemon, uniq) is not None
+
+
+#: Quanto a prova do PS + L3 espera o vpad de um jogador do co-op voltar de pé.
+#: Passa do prazo em que o co-op desiste da calibração e promove o vpad assim
+#: mesmo (`coop._CALIB_PRAZO_S`, 2 s) — o pior caso em que ele volta — com um
+#: segundo de folga; a régua confere a relação. Na volta comum, um tique basta.
+_ESPERA_DO_VPAD_DO_COOP_S = 3.0
+#: O passo da espera: cede o laço, que é quem promove o vpad (`forward_all`).
+_PASSO_DA_ESPERA_DO_VPAD_S = 0.02
+
+
+async def _o_vpad_do_cartao_volta(daemon: DaemonProtocol, uniq: str) -> bool:
+    """Espera, com prazo, o vpad do cartão `uniq` voltar de pé. True = voltou.
+
+    **O DEFEITO (conferência da OS-ATALHOS-NA-ESPERA-01, 24/09/2026).** A prova
+    do aparelho olhava o vpad do cartão logo depois do ato. O do posto renasce
+    dentro do próprio ato (`start_gamepad_emulation_desfecho` cria o novo na
+    mesma chamada); o de um jogador do co-op, não: o `sync(force=True)` do
+    `vestir_a_mascara_do_aparelho` derruba o jogador e o senta de novo com o
+    EVIOCGRAB PENDENTE — a thread do leitor ainda não abriu o device —, e o
+    vpad nasce no `forward_all` de um tique seguinte
+    (`CoopManager._promote_pending`). Na espera do lugar guardado, o PS + L3 do
+    P2 trocava a máscara dele e piscava os pulsos de falha: a luz dizia «não
+    chegou ao aparelho» sobre uma troca que pegou, e o segundo aperto que isso
+    convida anda o ciclo mais um passo, recriando o vpad dele de novo no meio
+    do jogo. A bancada de queda não via: o leitor dela confirmava o grab na hora.
+
+    O do posto não espera: se não voltou dentro do ato, não volta.
+    """
+    import time
+
+    if _vpad_do_cartao_de_pe(daemon, uniq):
+        return True
+    if _e_o_cartao_do_posto(daemon, uniq):
+        return False
+    fim = time.monotonic() + _ESPERA_DO_VPAD_DO_COOP_S
+    while time.monotonic() < fim:
+        await asyncio.sleep(_PASSO_DA_ESPERA_DO_VPAD_S)
+        if _vpad_do_cartao_de_pe(daemon, uniq):
+            return True
+    return False
 
 
 def proxima_mascara(atual: str) -> str:
@@ -3245,8 +3290,13 @@ def build_next_mask_callback(daemon: DaemonProtocol) -> Any:
             logger.warning("mascara_do_gesto_falhou", para=alvo, err=str(exc))
 
         # A PROVA É O APARELHO, como no PS + R3: o vpad que existia tem de
-        # continuar existindo, e vestindo o alvo.
-        vpad_depois = _vpad_do_cartao_de_pe(daemon, identidade)
+        # continuar existindo, e vestindo o alvo. O de um jogador do co-op volta
+        # num tique seguinte, e a prova espera por ele (`_o_vpad_do_cartao_volta`).
+        vpad_depois = (
+            await _o_vpad_do_cartao_volta(daemon, identidade)
+            if vpad_antes
+            else _vpad_do_cartao_de_pe(daemon, identidade)
+        )
         efetiva = mascara_atual(daemon, identidade)
         if resposta is not None and efetiva == alvo and vpad_depois >= vpad_antes:
             if store is not None:
