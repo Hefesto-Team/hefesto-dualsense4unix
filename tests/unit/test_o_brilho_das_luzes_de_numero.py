@@ -108,6 +108,7 @@ def _controle(transporte: str) -> Any:
     h.audio, h.light = DSAudio(), DSLight()
     h.triggerL, h.triggerR = DSTrigger(), DSTrigger()
     h.conType = ConnectionType.BT if transporte == "bt" else ConnectionType.USB
+    h.connected = True  # o que o `describe_controllers` lê para o «Todos» do IPC
     h.quadros = []
     h._escrever_conferindo = lambda quadro: h.quadros.append(bytes(quadro)) or len(quadro)
     return h
@@ -313,7 +314,64 @@ def test_o_controle_que_chega_depois_recebe_o_brilho_dele(
 
 
 # ---------------------------------------------------------------------------
-# 3. O que o quadro NÃO pode levar
+# 3. O IPC: com `uniq` só ele; sem, «Todos»
+# ---------------------------------------------------------------------------
+def _servidor(ctl: Any, tmp_path: pathlib.Path) -> Any:
+    from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
+    from hefesto_dualsense4unix.daemon.state_store import StateStore
+    from hefesto_dualsense4unix.profiles.manager import ProfileManager
+
+    store = StateStore()
+    return IpcServer(controller=ctl, store=store,
+                     profile_manager=ProfileManager(controller=ctl, store=store),
+                     socket_path=tmp_path / "brilho.sock")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("transporte", "com_no"), MATRIZ)
+async def test_o_ipc_com_uniq_manda_so_no_controle_dele(
+        transporte: str, com_no: bool, tmp_path: pathlib.Path) -> None:
+    """`led.player_brightness_set` com `uniq`: o P3, e ninguém mais."""
+    ctl, controles = _mesa(transporte, com_no=com_no)
+    _aplicar(ctl, _perfil(None))
+    antes = [len(h.quadros) for h in controles]
+    resposta = await _servidor(ctl, tmp_path)._handle_led_player_brightness_set(
+        {"brilho": "forte", "uniq": MACS[2]})
+    assert resposta["aplicado_em"] == [MACS[2]] and resposta["guardado_em"] == []
+    assert _o_aparelho_fica_em(controles[2]) == FORTE
+    for n in (0, 1, 3):
+        assert len(controles[n].quadros) == antes[n], f"o IPC do P3 escreveu no P{n + 1}"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("transporte", "com_no"), MATRIZ)
+async def test_o_ipc_sem_uniq_e_o_todos_e_vence_o_override(
+        transporte: str, com_no: bool, tmp_path: pathlib.Path) -> None:
+    """«Todos» pelo IPC: os quatro, inclusive o que tinha override no perfil.
+
+    E o padrão fica para quem chegar depois (o `_desired_default`).
+    """
+    ctl, controles = _mesa(transporte, com_no=com_no)
+    _aplicar(ctl, _perfil("fraco", P2="forte"))
+    resposta = await _servidor(ctl, tmp_path)._handle_led_player_brightness_set(
+        {"brilho": "medio"})
+    assert sorted(resposta["aplicado_em"]) == sorted(UNIQS)
+    assert [_o_aparelho_fica_em(h) for h in controles] == [MEDIO] * 4
+    assert ctl._desired_default.player_led_brightness == MEDIO
+
+
+@pytest.mark.asyncio
+async def test_o_ipc_recusa_a_palavra_que_nao_existe(tmp_path: pathlib.Path) -> None:
+    """Uma palavra fora das três é recusada DIZENDO quais são — nada sai."""
+    ctl, controles = _mesa("usb", com_no=True, quantos=1)
+    with pytest.raises(ValueError, match="fraco, medio, forte"):
+        await _servidor(ctl, tmp_path)._handle_led_player_brightness_set(
+            {"brilho": "maximo", "uniq": MACS[0]})
+    assert controles[0].quadros == []
+
+
+# ---------------------------------------------------------------------------
+# 4. O que o quadro NÃO pode levar
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize("transporte", ["usb", "bt"])
 def test_o_quadro_do_brilho_nao_reengata_a_barra(transporte: str) -> None:
@@ -354,7 +412,7 @@ def test_pelo_radio_o_brilho_vai_no_mesmo_quadro_do_numero() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 4. A tela: o clique grava no perfil e manda só naquele controle
+# 5. A tela: o clique grava no perfil e manda só naquele controle
 # ---------------------------------------------------------------------------
 class _PonteDeMentira:
     """A ponte com os mesmos nomes da de verdade, que só anota."""
