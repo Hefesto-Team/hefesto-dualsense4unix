@@ -2666,8 +2666,10 @@ def _controllers_to_specs(
     escalar — e, como o override por-uniq vence a camada AUTOMÁTICA, ajustar
     o brilho de um controle MATAVA a cor do slot dele (o achado
     `brilho-por-controle-materializa-cor-global`). Esse caso sai daqui e vai
-    para `_controllers_to_led_scales`, que registra um FATOR aplicado depois
-    do merge, sobre a cor resolvida — automática inclusive.
+    para `_controllers_to_led_scales`, que registra um FATOR aplicado sobre a
+    BASE do merge (o global e a automática), nunca sobre este override — a cor
+    daqui já sai escalada, e o fator por cima dela era o brilho entrando duas
+    vezes (A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01).
     """
     out: dict[str, OutputSpec] = {}
     for uniq, cfg in (controllers or {}).items():
@@ -2822,16 +2824,22 @@ def _controllers_to_led_scales(
 ) -> dict[str, float]:
     """Escala de brilho POR CONTROLE do perfil (R-20 item 2).
 
-    Devolve `{uniq: fator}` para os overrides que escreveram SÓ
-    `lightbar_brightness` (sem `lightbar`). O fator é RELATIVO ao brilho
-    global — `brilho_do_controle / brilho_global` — porque a cor que chega ao
-    merge (broadcast do perfil ou paleta automática do slot) já vem escalada
-    pelo global; multiplicar de novo pelo absoluto escureceria duas vezes.
+    Devolve `{uniq: fator}` para todo override que escreveu
+    `lightbar_brightness`. O fator é RELATIVO ao brilho global —
+    `brilho_do_controle / brilho_global` — porque a cor que ele escala (o
+    global do perfil ou a paleta automática do slot) já vem escalada pelo
+    global; multiplicar de novo pelo absoluto escureceria duas vezes.
 
-    Override que escreve a COR (com ou sem brilho) não entra: ali o brilho já
-    foi aplicado na borda, em paridade com o broadcast. Fator 1.0 também não
-    entra — é "sem opinião", e uma entrada inócua no mapa só custaria uma
-    cópia de `_DesiredOutput` a cada resolução.
+    O BACKEND O APLICA SÓ NA BASE, nunca no override (`_scaled_led`), e por
+    isso o override que também escreveu a COR entra aqui desde 25/09/2026
+    (A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01): a cor dele já saiu escalada da
+    borda e o fator não a toca, mas a base dele é a cor do número, e é para
+    ela que o controle volta quando a cor gravada é fóssil ou é o preto, que
+    não é cor. Sem o fator, o fóssil do P2 a 50% voltava à cor do número no
+    brilho do perfil, e o preto gravado com 30% acendia a paleta a 82%.
+
+    Fator 1.0 não entra — é "sem opinião", e uma entrada inócua no mapa só
+    custaria uma cópia de `_DesiredOutput` a cada resolução.
     """
     out: dict[str, float] = {}
     if global_leds is None:
@@ -2843,8 +2851,7 @@ def _controllers_to_led_scales(
     for uniq, cfg in (controllers or {}).items():
         if cfg.leds is None:
             continue
-        campos = cfg.leds.model_fields_set
-        if "lightbar" in campos or "lightbar_brightness" not in campos:
+        if "lightbar_brightness" not in cfg.leds.model_fields_set:
             continue
         fator = float(cfg.leds.lightbar_brightness) / base
         if fator == 1.0:
