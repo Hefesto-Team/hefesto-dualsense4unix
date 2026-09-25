@@ -1051,8 +1051,13 @@ ACHADOS = [
           "<br><br><b>Por que importa:</b> sobreposição mal comportada engasga o jogo e a culpa costuma cair no controle."
           "<br><br><b>O que fazer:</b> nada agora. Para olhar de novo, é <b>Tirar a sobreposição Vulkan</b>, ao lado — "
           "ele mostra o que achou antes de tirar."),
-    saude("NOTA", "i", "Um gamepad virtual por jogador (co-op)",
-          f"<b>O que eu vi:</b> o co-op está ligado e o Hefesto criou <b>{N}</b> gamepads virtuais, um para cada controle."
+    # O CO-OP NÃO É UM MODO QUE SE LIGA — O-CO-OP-LOCAL-SAI-01, 25/09/2026,
+    # pedido dela (`D-2409-O-CO-OP-LOCAL-SAI`). A linha dizia *"Um gamepad
+    # virtual por jogador (co-op)"* e *"o co-op está ligado e o Hefesto
+    # criou…"*: o Hefesto dá um controle virtual a cada jogador SEMPRE, do P1 ao
+    # P4, e não há o que ligar. A linha diz o que acontece, e só.
+    saude("NOTA", "i", "Um gamepad virtual por jogador",
+          f"<b>O que eu vi:</b> o Hefesto criou <b>{N}</b> gamepads virtuais, um para cada controle."
           "<br><br><b>Por que importa:</b> é o que dá um jogador a cada pessoa em vez de todo mundo mexer no mesmo "
           "boneco."
           "<br><br><b>O que fazer:</b> nada — é assim que o jogo local funciona.",
@@ -1451,7 +1456,7 @@ LEGENDA = f'''<div class="nota">
     <li><b>Sete botões de "Preparar os jogos" viraram três</b>, e os três <b>rodam sozinhos no
       exame</b> — por isso os achados falam no pretérito. O rótulo virou <b>Refazer</b>.</li>
         <li><b>Os glifos são os do mapa</b> (<code>assets/glyphs/</code>): alto-falante e microfone na
-      linha do áudio, o indicador de jogador na linha do co-op.</li>
+      linha do áudio, o indicador de jogador na linha dos gamepads virtuais.</li>
   </ul>
 
   <h2>O que eu assumi — e que precisa do olho dela</h2>
