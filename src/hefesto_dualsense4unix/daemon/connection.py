@@ -1752,7 +1752,12 @@ async def vigiar_o_sequestro(
 
 
 def _modo_nativo(daemon: DaemonProtocol) -> bool:
-    """O daemon está em Modo Nativo? Só para o diário — não decide nada aqui."""
+    """O daemon está em Modo Nativo? Para o diário, e para o cabo que espera o jogo soltar.
+
+    O-CABO-ASSUME-DO-RADIO-01: `vigiar_o_cabo_em_espera` não derruba o rádio
+    no Nativo, em que o jogo segura o físico. Na dúvida (daemon sem a
+    pergunta), não é Nativo.
+    """
     with contextlib.suppress(Exception):
         return bool(daemon.is_native_mode())
     return False

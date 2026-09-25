@@ -229,9 +229,15 @@ def ler_o_diario_do_kernel(
     return feito.stdout or None
 
 
-def impedimentos_da_troca(regras: Iterable[str] = REGRAS_QUE_RELIGAM) -> list[str]:
-    """Por que o produto não pode derrubar o rádio agora. Vazio = pode."""
-    if any(Path(regra).exists() for regra in regras):
+def impedimentos_da_troca(regras: Iterable[str] | None = None) -> list[str]:
+    """Por que o produto não pode derrubar o rádio agora. Vazio = pode.
+
+    ``None`` lê ``REGRAS_QUE_RELIGAM`` NA CHAMADA, e não na definição: um
+    default amarrado à tupla de quando o módulo carregou não deixaria a régua
+    apontar para a regra de mentira, e ela mediria o ``/etc`` da máquina.
+    """
+    alvos = REGRAS_QUE_RELIGAM if regras is None else regras
+    if any(Path(regra).exists() for regra in alvos):
         return []
     from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalacao
 

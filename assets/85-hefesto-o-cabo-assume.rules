@@ -32,7 +32,8 @@
 # fora: ele morre e renasce toda hora, e não tem gêmeo nenhum.
 #
 # NÃO É LAÇO: a probe que falha não tira ninguém do barramento, e só uma SAÍDA
-# dispara esta regra. Quem desiste de religar um órfão por contenção de rádio
+# dispara esta regra. Sem DualSense nenhum no barramento, o padrão do `for` não
+# casa e volta literal — o `[ -e $$d ] || continue` não deixa ele virar escrita. Quem desiste de religar um órfão por contenção de rádio
 # continua sendo o `bt_rebind_orphans.sh`, com o orçamento dele.
 #
 # O daemon só derruba o rádio de um controle quando esta regra está instalada
@@ -40,5 +41,5 @@
 # ficaria sem rádio e sem cabo.
 #
 # Reverter: remover este arquivo e `udevadm control --reload`.
-ACTION=="remove", SUBSYSTEM=="hid", KERNEL=="0005:054C:0CE6.*|0005:054C:0DF2.*", RUN+="/bin/sh -c 'for d in /sys/bus/hid/devices/*:054C:0CE6.* /sys/bus/hid/devices/*:054C:0DF2.*; do [ -e $$d/driver ] || echo $${d##*/} > /sys/bus/hid/drivers_probe; done 2>/dev/null; exit 0'"
-ACTION=="remove", SUBSYSTEM=="hid", KERNEL=="0003:054C:0CE6.*|0003:054C:0DF2.*", DEVPATH!="/devices/virtual/*", RUN+="/bin/sh -c 'for d in /sys/bus/hid/devices/*:054C:0CE6.* /sys/bus/hid/devices/*:054C:0DF2.*; do [ -e $$d/driver ] || echo $${d##*/} > /sys/bus/hid/drivers_probe; done 2>/dev/null; exit 0'"
+ACTION=="remove", SUBSYSTEM=="hid", KERNEL=="0005:054C:0CE6.*|0005:054C:0DF2.*", RUN+="/bin/sh -c 'for d in /sys/bus/hid/devices/*:054C:0CE6.* /sys/bus/hid/devices/*:054C:0DF2.*; do [ -e $$d ] || continue; [ -e $$d/driver ] || echo $${d##*/} > /sys/bus/hid/drivers_probe; done 2>/dev/null; exit 0'"
+ACTION=="remove", SUBSYSTEM=="hid", KERNEL=="0003:054C:0CE6.*|0003:054C:0DF2.*", DEVPATH!="/devices/virtual/*", RUN+="/bin/sh -c 'for d in /sys/bus/hid/devices/*:054C:0CE6.* /sys/bus/hid/devices/*:054C:0DF2.*; do [ -e $$d ] || continue; [ -e $$d/driver ] || echo $${d##*/} > /sys/bus/hid/drivers_probe; done 2>/dev/null; exit 0'"
