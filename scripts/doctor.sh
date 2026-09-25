@@ -491,6 +491,212 @@ check_udev() {
     fi
 }
 
+# ---------------------------------------------------------------------------
+# O-FISICO-NASCE-ESCONDIDO-EM-QUALQUER-MAQUINA-01 (25/09/2026) — o EFEITO da
+# regra do nó, e não o arquivo.
+#
+# O `check_udev` acima confere que a regra do nó EXISTE. Em 25/09 ela existia,
+# era idêntica ao asset, e não valia: a `71-sony-controllers.rules` do pacote
+# `game-devices-udev` corria DEPOIS dela e devolvia o `uaccess` ao DualSense.
+# O doctor dava `[OK] 15 regras udev canônicas presentes` com três físicos
+# nascendo com a ACL da sessão e a Steam segurando os três.
+#
+# O que decide é o que o udev ESCREVEU no banco dele sobre o nó vivo: a tag
+# CORRENTE (`Q:` em /run/udev/data/c<major>:<minor>, desde o systemd 247; o
+# `G:` é a tag «pegajosa», que fica mesmo depois de um `TAG-=`). `Q:uaccess`
+# no físico quer dizer que o `73-seat-late.rules` deu a ACL da sessão no
+# nascimento — qualquer programa da sessão pode abri-lo antes de o broker
+# esconder. E `Q:uaccess` sem `Q:seat` é a assinatura de uma regra que devolve
+# o `uaccess` DEPOIS da `71-seat.rules`.
+#
+# O CRITÉRIO DE «FÍSICO» NÃO NASCE AQUI: quem diz quais nós são DualSense
+# físicos é o `_censo_de_fisicos`, que pergunta ao MESMO validador do broker.
+# ---------------------------------------------------------------------------
+
+#: Os diretórios de regras do udev, na PRIORIDADE para o mesmo nome (man 7
+#: udev): /etc sombreia /run, que sombreia /usr/local/lib e /usr/lib. O /lib é
+#: o /usr/lib das máquinas sem /usr unificado. A ORDEM DE EXECUÇÃO é outra: os
+#: arquivos de todos rodam juntos, pelo nome.
+_DIRS_DE_REGRAS_UDEV=(/etc/udev/rules.d /run/udev/rules.d /usr/local/lib/udev/rules.d
+                      /usr/lib/udev/rules.d /lib/udev/rules.d)
+
+#: Os dois nomes da regra do nó: o de hoje e o de até 25/09/2026.
+readonly REGRA_DO_NO="73-hefesto-ps5-controller.rules"
+readonly REGRA_DO_NO_VELHA="70-ps5-controller.rules"
+
+# As regras que o udev leria, uma por linha como `nome<TAB>caminho`, na ORDEM
+# em que ele as roda (o nome, comparado byte a byte) e já sem as sombreadas.
+# $@ = os diretórios (default: os cinco acima).
+_regras_udev_em_ordem() {
+    local dirs=("$@") d f base
+    [[ ${#dirs[@]} -gt 0 ]] || dirs=("${_DIRS_DE_REGRAS_UDEV[@]}")
+    local -A visto=()
+    for d in "${dirs[@]}"; do
+        [[ -d "${d}" ]] || continue
+        for f in "${d}"/*.rules; do
+            [[ -f "${f}" ]] || continue
+            base="${f##*/}"
+            [[ -n "${visto[${base}]:-}" ]] && continue
+            visto[${base}]=1
+            printf '%s\t%s\n' "${base}" "${f}"
+        done
+    done | LC_ALL=C sort -t $'\t' -k1,1
+}
+
+# A regra do nó que vale nesta máquina: a de hoje se existir, senão a de antes.
+# Vazio quando nenhuma está instalada. $@ = os diretórios.
+_regra_do_no_instalada() {
+    local nome caminho achou=""
+    while IFS=$'\t' read -r nome caminho; do
+        [[ "${nome}" == "${REGRA_DO_NO}" ]] && { printf '%s\n' "${nome}"; return 0; }
+        [[ "${nome}" == "${REGRA_DO_NO_VELHA}" ]] && achou="${nome}"
+    done < <(_regras_udev_em_ordem "$@")
+    [[ -n "${achou}" ]] && printf '%s\n' "${achou}"
+    return 0
+}
+
+# As linhas que dão `uaccess` ao hidraw de um DualSense (054C:0CE6/0DF2) — ou
+# a TODO hidraw, sem estreitar por aparelho — num arquivo que o udev roda
+# DEPOIS da regra do nó. Uma por linha: `arquivo:linha:quando:conteúdo`, com
+# `quando` = `nascimento` (antes da 73-seat-late: a ACL sai no nascimento) ou
+# `sessao` (depois dela: reabre a cada troca de sessão, no login).
+# $1 = o nome da regra do nó; $2.. = os diretórios.
+_regras_que_reabrem_o_fisico() {
+    local nossa="$1"; shift
+    local nome caminho quando depois=0
+    while IFS=$'\t' read -r nome caminho; do
+        if [[ "${depois}" -eq 0 ]]; then
+            [[ "${nome}" == "${nossa}" ]] && depois=1
+            continue
+        fi
+        # Regra que o usuário não lê (a do netplan em /run é 0600 root) não
+        # vira ruído: o que não se lê não se acusa.
+        [[ -r "${caminho}" ]] || continue
+        quando="nascimento"
+        [[ "$(printf '%s\n%s\n' "${nome}" "73-seat-late.rules" | LC_ALL=C sort | head -1)" \
+            == "73-seat-late.rules" ]] && quando="sessao"
+        awk -v arq="${caminho}" -v quando="${quando}" '
+            {
+                linha = $0
+                sub(/^[[:space:]]+/, "", linha)
+                sub(/[[:space:]]+$/, "", linha)
+            }
+            linha == "" || linha ~ /^#/ { next }
+            {
+                # Concede: `TAG+="uaccess"` (ou `TAG=`), ou o builtin chamado
+                # por RUN. O `TAG-=` e o `TAG==` (casamento) não concedem.
+                concede = (linha ~ /TAG[[:space:]]*\+?=[[:space:]]*"uaccess"/ || linha ~ /RUN[^,]*uaccess/)
+                if (!concede) next
+                # Alcança o hidraw: cita hidraw, ou não restringe KERNEL nem
+                # SUBSYSTEM (casa todo filho do aparelho, o hidraw junto).
+                hid = (linha ~ /hidraw/)
+                sem_alvo = (linha !~ /(^|[ ,])KERNEL[[:space:]]*[!=]=/ \
+                            && linha !~ /(^|[ ,])SUBSYSTEM[[:space:]]*[!=]=/)
+                if (!hid && !sem_alvo) next
+                u = toupper(linha)
+                dualsense = (u ~ /054C/ && (u ~ /0CE6/ || u ~ /0DF2/))
+                # Estreita: qualquer condição sobre o aparelho (atributo, pai,
+                # propriedade). Só a linha SEM nenhuma é a que abre todo hidraw.
+                estreita = (linha ~ /ATTRS?\{/ || linha ~ /(KERNELS|SUBSYSTEMS|DRIVERS)[[:space:]]*[!=]=/ \
+                            || linha ~ /ENV\{[^}]*\}[[:space:]]*[!=]=/)
+                if (dualsense || (hid && !estreita)) print arq ":" FNR ":" quando ":" linha
+            }
+        ' "${caminho}" 2>/dev/null
+    done < <(_regras_udev_em_ordem "$@")
+}
+
+# As tags CORRENTES de um nó, pelo banco do udev, uma por linha. No formato do
+# systemd >= 247 são as linhas `Q:`; quando a MÁQUINA não escreve `Q:` em
+# ninguém (udev antigo), as `G:` é que são as correntes.
+# $1 = o arquivo do nó no banco; $2 = a pasta do banco.
+_tags_correntes_do_no() {
+    local arq="$1" banco="$2"
+    [[ -r "${arq}" ]] || return 0
+    if grep -q '^Q:' "${arq}" 2>/dev/null; then
+        sed -n 's/^Q://p' "${arq}"
+    elif ! grep -rlqm1 '^Q:' "${banco}" 2>/dev/null; then
+        sed -n 's/^G://p' "${arq}"
+    fi
+}
+
+# O veredito, puro: sem /run, /sys nem /etc de verdade — tudo entra por
+# argumento, para a régua poder rodá-lo numa raiz de mentira.
+# $1 = a pasta do banco do udev (/run/udev/data); $2 = /sys/class/hidraw;
+# $3 = o CENSO de físicos (`/dev/hidrawN` separados por espaço; vazio = não
+# sei); $4.. = os diretórios de regras.
+_veredito_do_no_fisico_no_udev() {
+    local banco="$1" sysroot="$2" censo="$3"
+    shift 3
+    local nossa no base dev arq bus prod transp tags abertos=() sem_seat=0 total=0
+    nossa="$(_regra_do_no_instalada "$@")"
+    if [[ -z "${censo}" ]]; then
+        info "nenhum DualSense físico no censo agora — o efeito da regra do nó se confere com um controle conectado"
+        return 0
+    fi
+    for no in ${censo}; do
+        base="${no##*/}"
+        dev="$(cat "${sysroot}/${base}/dev" 2>/dev/null)" || continue
+        [[ -n "${dev}" ]] || continue
+        total=$((total + 1))
+        arq="${banco}/c${dev}"
+        tags="$(_tags_correntes_do_no "${arq}" "${banco}")"
+        grep -qx 'uaccess' <<<"${tags}" || continue
+        bus="$(sed -n 's/^HID_ID=\([0-9A-Fa-f]*\):.*/\1/p' "${sysroot}/${base}/device/uevent" 2>/dev/null)"
+        prod="$(sed -n 's/^HID_ID=.*:0*\([0-9A-Fa-f]*\)$/\1/p' "${sysroot}/${base}/device/uevent" 2>/dev/null)"
+        case "${bus}" in
+            *5) transp="rádio" ;;
+            *3) transp="cabo" ;;
+            *)  transp="?" ;;
+        esac
+        [[ "${prod^^}" == "DF2" || "${prod^^}" == "0DF2" ]] && transp="${transp}, Edge"
+        abertos+=("${base} (${transp})")
+        grep -qx 'seat' <<<"${tags}" || sem_seat=1
+    done
+    if [[ "${total}" -eq 0 ]]; then
+        info "sem o banco do udev dos DualSense físicos — não dá para conferir como eles nasceram"
+        return 0
+    fi
+    if [[ ${#abertos[@]} -eq 0 ]]; then
+        pass "o hidraw dos ${total} DualSense físico(s) nasceu sem a ACL da sessão — a regra do nó (${nossa:-?}) falou por último"
+        return 0
+    fi
+    fail "${#abertos[@]} de ${total} DualSense físico(s) nasceram com a ACL da sessão: ${abertos[*]} — qualquer programa da sessão (a Steam, por exemplo) abre o nó antes de o Hefesto escondê-lo, e esconder depois não fecha o que ele abriu"
+    if [[ -z "${nossa}" ]]; then
+        info "  a regra do nó do Hefesto não está instalada; $(conselho_de_instalacao)"
+        return 0
+    fi
+    if [[ "${nossa}" == "${REGRA_DO_NO_VELHA}" ]]; then
+        info "  a regra do nó instalada é a de antes (${REGRA_DO_NO_VELHA}), que as regras 71-* de terceiro desfazem; a de hoje é a ${REGRA_DO_NO} — $(conselho_de_instalacao)"
+    fi
+    local culpados linha
+    culpados="$(_regras_que_reabrem_o_fisico "${nossa}" "$@")"
+    if [[ -n "${culpados}" ]]; then
+        info "  quem devolve o uaccess DEPOIS da regra do Hefesto (nenhum destes arquivos é do Hefesto):"
+        while IFS= read -r linha; do
+            [[ -n "${linha}" ]] || continue
+            case "${linha}" in
+                *:sessao:*) info "    ${linha%%:sessao:*} — depois da 73-seat-late: reabre na troca de sessão (login)" ;;
+                *)          info "    ${linha%%:nascimento:*}" ;;
+            esac
+        done <<<"${culpados}"
+    elif [[ "${sem_seat}" -eq 1 ]]; then
+        info "  o banco tem uaccess sem seat — a assinatura de uma regra entre a 71-seat e a 73-seat-late que esta leitura não reconheceu (ENV, GOTO ou programa)"
+    else
+        info "  nenhuma regra lida explica — o nó pode ter nascido antes da regra atual: reconecte o controle"
+    fi
+    info "  o controle que já nasceu assim só se solta reconectando (o descritor que outro programa abriu não fecha com chmod)"
+}
+
+check_o_no_fisico_nasce_sem_acl() {
+    # Duas regras do nó em /etc é sobra de um install de antes da troca de
+    # nome (25/09/2026). Não reabre nada — a 73-hefesto fala por último —,
+    # mas é rastro, e o install de hoje a tira.
+    if [[ -e "/etc/udev/rules.d/${REGRA_DO_NO}" && -e "/etc/udev/rules.d/${REGRA_DO_NO_VELHA}" ]]; then
+        warn "sobrou a regra do nó com o nome de antes (/etc/udev/rules.d/${REGRA_DO_NO_VELHA}) ao lado da de hoje — $(conselho_de_instalacao)"
+    fi
+    _veredito_do_no_fisico_no_udev /run/udev/data /sys/class/hidraw "$(_censo_de_fisicos)"
+}
+
 # True (0) se o snd-usb-audio AINDA está bindado em alguma interface de áudio
 # (bInterfaceClass==01) de um DualSense (VID 054c). Lê os nós de interface USB em
 # /sys e segue o symlink `driver`. Usado para validar se a regra 75 pegou.
@@ -2950,7 +3156,9 @@ PYEOF
     esac
     while IFS='|' read -r tag slot fonte rgb; do
         [[ "${tag}" == "posse" ]] || continue
-        info "controle player_slot=${slot:-—} lightbar_source=${fonte:-desconhecida} lightbar_rgb=${rgb:-None}"
+        # A cor é a PEDIDA (o que se escreveu), não a acesa: a lâmpada não se
+        # lê. Em 25/09 esta linha dizia verde e rosa sobre duas barras apagadas.
+        info "controle player_slot=${slot:-—} lightbar_source=${fonte:-desconhecida} cor_pedida=${rgb:-None}"
     done <<<"${out}"
 }
 
@@ -5921,6 +6129,137 @@ PYEOF
 }
 
 # ---------------------------------------------------------------------------
+# O-FISICO-NASCE-ESCONDIDO-EM-QUALQUER-MAQUINA-01 (25/09/2026) — QUEM SEGURA o
+# hidraw do físico, e o nascimento condenado vivo.
+#
+# O `_veredito_do_hide` responde «o nó está fechado?». Em 25/09 ele dizia
+# `[OK] broker escondendo 4 nó(s) físico(s) … o jogo só vê o vpad` com a Steam
+# segurando TRÊS deles: fechar (tirar a ACL) não fecha um descritor que já
+# estava aberto. A pergunta que faltava é outra — quem, além do Hefesto, tem o
+# nó aberto AGORA — e ela se responde em /proc/<pid>/fd, só lendo.
+#
+# E o carimbo do nascimento (`nascimento` no `daemon.state_full`) só era lido
+# pela janela GTK, que saiu em 06/09: a condenação de uma conexão não aparecia
+# em lugar nenhum além do diário.
+# ---------------------------------------------------------------------------
+
+# Quem segura cada nó físico, fora o próprio Hefesto. Puro: /proc entra por
+# argumento. $1 = a raiz do /proc; $2 = o CENSO de físicos (`/dev/hidrawN`
+# separados por espaço); $3 = o Modo Nativo como o IPC o devolve ("True" /
+# "False" / vazio).
+_veredito_de_quem_segura_o_fisico() {
+    local proc="$1" censo="$2" nativo="$3"
+    if [[ -z "${censo}" ]]; then
+        info "nenhum DualSense físico no censo agora — sem nó para conferir quem segura"
+        return 0
+    fi
+    local dir alvo pid cmd nome chave
+    local -A visto=() por_no=()
+    # UMA varredura de /proc: `find` imprime `/proc/<pid>/fd <alvo>` de cada
+    # descritor que este usuário consegue ler (os dos outros dão EACCES, e o
+    # 2>/dev/null os cala — o que não se lê não se acusa).
+    while read -r dir alvo; do
+        case " ${censo} " in *" ${alvo} "*) ;; *) continue ;; esac
+        pid="${dir#"${proc}"/}"
+        pid="${pid%%/*}"
+        chave="${pid}|${alvo}"
+        [[ -n "${visto[${chave}]:-}" ]] && continue
+        visto[${chave}]=1
+        # O daemon e o broker do Hefesto seguram o físico de propósito.
+        cmd="$(tr '\0' ' ' < "${proc}/${pid}/cmdline" 2>/dev/null)"
+        [[ "${cmd}" == *hefesto* ]] && continue
+        nome="$(cat "${proc}/${pid}/comm" 2>/dev/null)"
+        por_no[${alvo}]+="${nome:-?} (PID ${pid}), "
+    done < <(find "${proc}"/[0-9]*/fd -mindepth 1 -maxdepth 1 -type l -printf '%h %l\n' 2>/dev/null)
+    if [[ ${#por_no[@]} -eq 0 ]]; then
+        pass "só o Hefesto segura o hidraw dos DualSense físicos"
+        return 0
+    fi
+    local no
+    if [[ "${nativo}" == "True" ]]; then
+        for no in $(printf '%s\n' "${!por_no[@]}" | LC_ALL=C sort); do
+            info "Modo Nativo: ${no##*/} aberto por ${por_no[${no}]%, } — é o jogo recebendo o físico, de propósito"
+        done
+        return 0
+    fi
+    warn "${#por_no[@]} DualSense físico(s) com o hidraw aberto por outro programa — ele abriu antes de o Hefesto esconder o nó, e esconder não fecha o que já estava aberto; enquanto ele segurar, a barra desse controle pode não obedecer ao Hefesto"
+    for no in $(printf '%s\n' "${!por_no[@]}" | LC_ALL=C sort); do
+        info "  ${no##*/}: ${por_no[${no}]%, }"
+    done
+    info "  reconectar o controle solta o nó; com a regra do nó falando por último (${REGRA_DO_NO}), a próxima conexão já nasce fechada"
+}
+
+# O `nascimento` de cada controle, pelo `daemon.state_full`. Uma linha
+# `nativo=<valor>` e uma `nasc|<P>|<pede_reconexao>|<instância>` por controle
+# carimbado. $1 = o socket do daemon.
+_nascimentos_do_daemon() {
+    python3 - "$1" <<'PYEOF' 2>/dev/null
+import json
+import socket
+import sys
+
+s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+s.settimeout(2.0)
+s.connect(sys.argv[1])
+s.sendall(
+    json.dumps({"jsonrpc": "2.0", "id": 1, "method": "daemon.state_full", "params": {}}).encode("utf-8")
+    + b"\n"
+)
+buf = b""
+while not buf.endswith(b"\n"):
+    chunk = s.recv(65536)
+    if not chunk:
+        raise SystemExit(1)
+    buf += chunk
+res = json.loads(buf.decode("utf-8")).get("result") or {}
+print(f"nativo={res.get('native_mode')}")
+for c in res.get("controllers") or []:
+    if not isinstance(c, dict):
+        continue
+    n = c.get("nascimento")
+    if not isinstance(n, dict):
+        continue
+    print(f"nasc|{c.get('player_slot')}|{n.get('pede_reconexao')}|{n.get('instancia')}")
+PYEOF
+}
+
+# O veredito dos nascimentos, puro. $1 = a saída de `_nascimentos_do_daemon`.
+#
+# WARN e não FAIL, e com «pode»: o carimbo diz a CONDIÇÃO do nascimento (outro
+# programa segurava o nó), não a lâmpada. Medido com o olho dela em 25/09: dos
+# três carimbados assim, a barra do P2 obedeceu ao Hefesto e a do P3 e a do P4,
+# não. A lâmpada não se lê.
+_veredito_dos_nascimentos() {
+    local texto="$1" tag slot pede inst condenados=() carimbados=0
+    while IFS='|' read -r tag slot pede inst; do
+        [[ "${tag}" == "nasc" ]] || continue
+        carimbados=$((carimbados + 1))
+        [[ "${pede}" == "True" ]] && condenados+=("P${slot:-?} (instância ${inst:-?})")
+    done <<<"${texto}"
+    if [[ "${carimbados}" -eq 0 ]]; then
+        info "o daemon não carimbou nascimento nenhum (parado, sem controle, ou versão sem o carimbo)"
+        return 0
+    fi
+    if [[ ${#condenados[@]} -eq 0 ]]; then
+        pass "nenhum nascimento condenado vivo (${carimbados} carimbado(s))"
+        return 0
+    fi
+    warn "nascimento condenado vivo em ${condenados[*]}: a conexão nasceu com outro programa segurando o nó, e nessa condição a barra pode não obedecer ao Hefesto — reconectar o controle com o nó limpo devolve"
+}
+
+check_quem_segura_o_fisico() {
+    local censo nasc="" nativo="" sock
+    censo="$(_censo_de_fisicos)"
+    sock="$(runtime_socket)"
+    if [[ -S "${sock}" ]] && command -v python3 >/dev/null 2>&1; then
+        nasc="$(_nascimentos_do_daemon "${sock}")"
+        nativo="$(sed -n 's/^nativo=//p' <<<"${nasc}")"
+    fi
+    _veredito_de_quem_segura_o_fisico /proc "${censo}" "${nativo}"
+    _veredito_dos_nascimentos "${nasc}"
+}
+
+# ---------------------------------------------------------------------------
 # TECLADO-QUE-NAO-DIGITA-01 — o teclado na tela que o L3 do controle abre.
 # ---------------------------------------------------------------------------
 # ESTE CHECK CONFERE E NÃO CURA. É regra desta casa, e aqui ela tem dente
@@ -6475,12 +6814,15 @@ check_controller() {
 _udev_hidraw_scan() {
     local vista="$1"; shift
     local dirs=("$@")
-    [[ ${#dirs[@]} -gt 0 ]] || dirs=(/etc/udev/rules.d /usr/lib/udev/rules.d)
+    # Os cinco diretórios do udev, e não só /etc e /usr/lib: uma regra em /run
+    # ou em /usr/local/lib vale igual e ficava invisível (O-FISICO-NASCE-
+    # ESCONDIDO-EM-QUALQUER-MAQUINA-01, 25/09/2026).
+    [[ ${#dirs[@]} -gt 0 ]] || dirs=("${_DIRS_DE_REGRAS_UDEV[@]}")
     local d f base v sombreado vistos=()
     for d in "${dirs[@]}"; do
         [[ -d "${d}" ]] || continue
         for f in "${d}"/*.rules; do
-            [[ -f "${f}" ]] || continue
+            [[ -f "${f}" && -r "${f}" ]] || continue
             base="${f##*/}"
             sombreado=0
             for v in ${vistos[@]+"${vistos[@]}"}; do
@@ -6740,20 +7082,37 @@ check_perms_soft() {
         # roda o doctor.
         #
         # Então a frase passa a ser MEDIDA em vez de afirmada: só sai quando o
-        # menor número de regra nossa é maior que o do culpado, e nenhum culpado
-        # usa `:=`.
+        # culpado não vence a regra do nó.
         # `causas` vem como "arquivo:linha:conteúdo", uma por linha.
-        _rules_nossas="$(ls /etc/udev/rules.d/7*-ps5-controller.rules 2>/dev/null | head -1)"
+        #
+        # NOTA DATADA 25/09/2026 (O-FISICO-NASCE-ESCONDIDO-EM-QUALQUER-MAQUINA-01):
+        # a comparação era pelo NÚMERO (`>= 70`), e o udev ordena pelo NOME,
+        # byte a byte — e a regra do nó virou a `73-hefesto`, com o `MODE`
+        # final (`:=`). Um culpado vence o nó físico em dois casos só: ele corre
+        # DEPOIS da nossa e a nossa não trava o `MODE` (a de antes, a 70); ou
+        # ele trava o `MODE` com `:=` e corre ANTES (a primeira trava vale).
+        _rules_nossas=""
+        if [[ -e "/etc/udev/rules.d/${REGRA_DO_NO}" ]]; then
+            _rules_nossas="/etc/udev/rules.d/${REGRA_DO_NO}"
+        elif [[ -e "/etc/udev/rules.d/${REGRA_DO_NO_VELHA}" ]]; then
+            _rules_nossas="/etc/udev/rules.d/${REGRA_DO_NO_VELHA}"
+        fi
+        _nossa_trava=0
+        if [[ -n "${_rules_nossas}" ]] && grep -q 'MODE:="0600"' "${_rules_nossas}" 2>/dev/null; then
+            _nossa_trava=1
+        fi
         _culpado_tardio=0
         while IFS= read -r _entrada; do
             [[ -z "${_entrada}" ]] && continue
             _arq="${_entrada%%:*}"
-            _num="$(basename "${_arq}" | sed -n 's/^\([0-9]\{1,3\}\).*/\1/p')"
-            if [[ -n "${_num}" ]] && [[ "${_num}" -ge 70 ]]; then
-                _culpado_tardio=1
+            _depois=0
+            if [[ -n "${_rules_nossas}" ]] && [[ "$(printf '%s\n%s\n' "${_arq##*/}" "${_rules_nossas##*/}" \
+                    | LC_ALL=C sort | head -1)" == "${_rules_nossas##*/}" ]]; then
+                _depois=1
             fi
+            [[ "${_depois}" -eq 1 && "${_nossa_trava}" -eq 0 ]] && _culpado_tardio=1
             case "${_entrada}" in
-                *MODE\ :=*|*MODE:=*) _culpado_tardio=1 ;;
+                *MODE\ :=*|*MODE:=*) [[ "${_depois}" -eq 0 ]] && _culpado_tardio=1 ;;
             esac
         done <<< "${causas}"
         if [[ -z "${_rules_nossas}" ]]; then
@@ -7845,6 +8204,7 @@ main() {
     check_loader_svg
     hdr "kernel / udev"
     check_udev
+    check_o_no_fisico_nasce_sem_acl
     check_usb_audio_off
     check_usb_quirk
     check_usb_storm_config_conflict
@@ -7915,6 +8275,7 @@ main() {
     check_proton_pin
     hdr "broker hide-hidraw (BROKER-01 — cura de raiz do duplicado)"
     check_hidraw_broker
+    check_quem_segura_o_fisico
     hdr "giroscópio no jogo (vpad Motion)"
     check_vpad_motion
     hdr "teclado na tela (o que o L3 do controle abre)"
