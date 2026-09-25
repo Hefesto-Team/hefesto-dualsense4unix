@@ -1013,10 +1013,15 @@ def _resolver_alvo(alvo: str, raiz: Path) -> Path | None:
     for candidato in (raiz / alvo, _RAIZ / alvo, _RAIZ / "src" / alvo):
         if candidato.is_file():
             return candidato
-    if Path(alvo).name != alvo:
-        return None
-    achados = [p for p in raiz.rglob(alvo)] or [
-        p for base in ("src", "tests", "scripts") for p in (_RAIZ / base).rglob(alvo)
+    # O caminho parcial (`pacotes/perfil.py`) casa pelo SUFIXO, e só se um
+    # arquivo casar: até 25/09/2026 ele saía daqui como «não é nosso», e nove
+    # citações de `src/` ficavam fora da régua, uma delas podre havia semanas.
+    nome, sufixo = Path(alvo).name, "/" + alvo.removeprefix("./")
+    achados = [p for p in raiz.rglob(nome) if p.as_posix().endswith(sufixo)] or [
+        p
+        for base in ("src", "tests", "scripts")
+        for p in (_RAIZ / base).rglob(nome)
+        if p.as_posix().endswith(sufixo)
     ]
     return achados[0] if len(achados) == 1 else None
 
@@ -1303,3 +1308,41 @@ class TestTodaCitacaoDeLinhaConfere:
         assert not [
             k for k in enderecos_envelhecidos(copia) if "_da_mordida" in k
         ]
+
+    def test_o_caminho_parcial_entra_na_regua(self, tmp_path: Path) -> None:
+        """`pacotes/perfil.py:153` é nosso, e até 25/09/2026 a régua não o via.
+
+        O `_resolver_alvo` só aceitava o caminho inteiro ou o nome solto; o
+        parcial saía como «não é nosso». Nove citações de `src/` ficavam fora,
+        e três estavam podres — uma, na a10, apontava 219 linhas antes do
+        `gravar_e_reaplicar` que ela prometia.
+
+        MORDIDA: devolva o `return None` do caminho parcial ao `_resolver_alvo`
+        — o endereço plantado some da régua, e este teste reprova.
+        """
+        copia = _copia_de_src(tmp_path)
+        fundo = copia / "utils" / "fundo"
+        fundo.mkdir()
+        (fundo / "_alvo_parcial_da_mordida.py").write_text(_ALVO_PLANTADO, encoding="utf-8")
+        (copia / "utils" / "_citante_da_mordida.py").write_text(
+            "# `ancora_plantada` mora em `fundo/_alvo_parcial_da_mordida.py:2`.\nVALOR = 1\n",
+            encoding="utf-8",
+        )
+        chave = "utils/_citante_da_mordida.py::fundo/_alvo_parcial_da_mordida.py:2"
+        assert chave in enderecos_envelhecidos(copia), (
+            "a régua não viu o endereço plantado por caminho parcial"
+        )
+
+    def test_o_caminho_parcial_ambiguo_nao_se_chuta(self, tmp_path: Path) -> None:
+        """Dois arquivos com o mesmo sufixo: a régua não escolhe um por sorte."""
+        copia = _copia_de_src(tmp_path)
+        for base in ("utils", "core"):
+            (copia / base / "fundo").mkdir()
+            (copia / base / "fundo" / "_alvo_parcial_da_mordida.py").write_text(
+                _ALVO_PLANTADO, encoding="utf-8"
+            )
+        (copia / "utils" / "_citante_da_mordida.py").write_text(
+            "# `ancora_plantada` mora em `fundo/_alvo_parcial_da_mordida.py:2`.\nVALOR = 1\n",
+            encoding="utf-8",
+        )
+        assert not [k for k in enderecos_envelhecidos(copia) if "_da_mordida" in k]

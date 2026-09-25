@@ -2217,7 +2217,7 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     thread: síncrono, este botão congelaria a janela inteira por nove segundos e
     meio, e quem clicou concluiria que o app travou. É também a razão de
     `daemon.reload` ter teto de 15 s em `ponte.TETOS` — e `chamar_detalhado`
-    consulta o MESMO `ponte.teto()` que o `chamar` (`pacotes/ponte.py:195`),
+    consulta o MESMO `ponte.teto()` que o `chamar` (`pacotes/ponte.py:236`),
     conferido: trocar de função não encolheu a espera para os 250 ms do padrão.
     Se encolher, este botão passa a recusar todo clique que funciona.
 
