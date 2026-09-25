@@ -289,6 +289,31 @@ def speaker(
     speaker_cmd(action, value=value, uniq=uniq or None)
 
 
+@app.command("esquecer-controles")
+def esquecer_controles(
+    restaurar: bool = typer.Option(
+        False, "--restaurar",
+        help="Devolve o que foi guardado (a pasta mais nova, se não disser qual).",
+    ),
+    pasta: str | None = typer.Argument(
+        None, help="Com --restaurar: o nome (ou o caminho) da pasta guardada."
+    ),
+    seco: bool = typer.Option(False, "--seco", help="Mostra o que faria, sem mexer em nada."),
+) -> None:
+    """Faz o produto esquecer os controles, como numa máquina nova — e os devolve.
+
+    Move (nunca apaga) para uma pasta datada: a fila de números, as máscaras, o
+    que foi declarado da mesa, os ajustes por controle dos perfis (o resto do
+    perfil fica), os lugares dos adaptadores, os diários do rádio e — com
+    privilégio, pelo SUDO_ASKPASS ou por um `sudo -v` antes — os pareamentos
+    Bluetooth dos controles e as cópias de pareamento do Hefesto. Os controles
+    conectados pelo rádio caem, e isso é o esperado.
+    """
+    from hefesto_dualsense4unix.cli.cmd_esquecer import esquecer_cmd
+
+    esquecer_cmd(restaurar=restaurar, pasta=pasta, seco=seco)
+
+
 @app.command()
 def version() -> None:
     """Mostra a versão instalada."""
