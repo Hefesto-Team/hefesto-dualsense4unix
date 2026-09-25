@@ -256,6 +256,40 @@ def test_o_salvar_grava_a_cor_pedida_e_nao_a_acesa(mesa_de):
             f"o Salvar gravou {tuple(leds.lightbar)} como a cor do P{n}, e ela é {cor}")
 
 
+def test_sem_a_paleta_o_salvar_grava_o_global_e_nao_a_luz(mesa_de):
+    """Sem a paleta, o global dela (`#2850B4`) acende fora dos catorze tons.
+
+    A inversão pelos tons da casa não o acha, e a luz ia ao disco como a cor
+    do P4: a 82%, `(32,65,147)` no lugar de `(40,80,180)`, e cada Salvar
+    seguido de troca de perfil escurecia mais. A cor que o disco já dá a ele,
+    no brilho dele, é exatamente a luz — e é ela que vai.
+
+    **A MORDIDA:** tire o degrau da cor do disco de `rodape._draft_do_ativo`
+    e esta reprova com o `(32, 65, 147)`.
+    """
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+    from pacotes import a04_iluminacao, rodape
+
+    global_dela = marca.GLOBAL
+    mesa = mesa_de()
+    mesa.clicar_no_tom(1, COR_DELE[1])
+    mesa.desligar_a_paleta(global_dela)
+    acesa = _luz(mesa)[3]
+    assert acesa == _na(global_dela, BRILHO_GLOBAL), "a régua precisa do P4 no global"
+    for _ in range(3):
+        rodape.salvar(mesa.ctx(), {"tipo": "button", "evento": "click"}, None)
+        mesa.pm.apply(mesa._perfil(), origin="manual")
+        assert _luz(mesa)[3] == acesa, "o Salvar e a troca escureceram o P4"
+    # A cor do P4 no disco: a dele, ou o global que ele herda — o rascunho só
+    # guarda no override o que DIVERGE do global (COR-04).
+    prof = load_profile(NOME)
+    dele = (prof.controllers or {}).get(a04_iluminacao.chave_do_override(UNIQS[3]))
+    leds = getattr(dele, "leds", None)
+    no_disco = (tuple(leds.lightbar) if leds is not None
+                and "lightbar" in leds.model_fields_set else tuple(prof.leds.lightbar))
+    assert no_disco == global_dela, f"o Salvar deu ao P4 a cor {no_disco} no disco"
+
+
 # ---------------------------------------------------------------------------
 # 2. o brilho do controle vale para a cor do número de quem tem cor gravada
 # ---------------------------------------------------------------------------
