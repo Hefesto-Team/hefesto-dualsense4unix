@@ -893,8 +893,9 @@ async def reconnect_loop(
         if is_connected:
             # BROKER-01 §2.2: re-hide do físico a cada reconciliação online —
             # nó recriado pelo replug/wake BT nasce VISÍVEL (rule 70/uaccess do
-            # udev) e é re-escondido aqui (o broker re-aplica o fs mesmo para
-            # nó já rastreado, lição 2). Corretor final (interação S x HANG-01,
+            # udev) e é re-escondido aqui (o broker confere o fs e escreve o que
+            # difere mesmo para nó já rastreado, lição 2; com os nós parados,
+            # nada). Corretor final (interação S x HANG-01,
             # achado #6): no executor DEDICADO do broker ('hefesto-broker',
             # 1 worker FIFO), NUNCA no pool compartilhado 'hefesto-hid' de
             # `_run_blocking` — o cliente do broker faz I/O de socket com
@@ -1368,9 +1369,10 @@ async def vigiar_o_sequestro(
     os gatilhos e o áudio continuam do jogo.
 
     **CUSTO EM REPOUSO: um `stat` e um `access(2)` por nó**, e UMA varredura
-    de `/proc` (~11 ms) a cada mudança de permissão do nó — o fd aberto numa
-    janela de exposição é visto depois de ela fechar (`firma_do_no`). Na
-    máquina dela, é uma por reconciliação de 30 s, a do `rehide`.
+    de `/proc` (de 16 a 21 ms na máquina dela, medido em 25/09) a cada mudança
+    real de permissão do nó — o fd aberto numa janela de exposição é visto
+    depois de ela fechar (`firma_do_no`) — e uma por morte de dono conhecido.
+    Com os nós parados, zero: o `rehide` só escreve o nó que mudou.
 
     Devolve quantos controles tiveram a barra reescrita. Best-effort: nada
     aqui pode derrubar o laço de reconexão.
@@ -1387,7 +1389,7 @@ async def vigiar_o_sequestro(
     try:
         sondar = vigia.quer_sondar(nos, agora)
         if sondar:
-            # SÓ a varredura vai ao executor (ela lê `/proc`, ~11 ms); o resto
+            # SÓ a varredura vai ao executor (ela lê `/proc`, de 16 a 21 ms); o resto
             # do passo é memória, e um `access(2)` por nó.
             def _passo() -> PassoDaVigia:
                 return vigia.passo(nos, agora, sondar=True)
@@ -1710,9 +1712,10 @@ async def _wait_online_or_hotplug(
     reafirmar uma cor não é motivo para reconciliar hotplug, e devolver True
     aqui faria o chamador logar uma mudança de `/dev/input` que não houve.
     """
-    # STEAM-NO-FISICO-01: a vigia olha UMA vez antes de dormir. O rehide acabou
-    # de mexer na permissão do nó (a firma mudou), e o fd que entrou pela janela
-    # de exposição é visto agora — não depois da primeira fatia de 2 s.
+    # STEAM-NO-FISICO-01: a vigia olha UMA vez antes de dormir. Se o rehide
+    # acabou de fechar um nó que estava aberto (a firma mudou), o fd que entrou
+    # pela janela de exposição é visto agora — não depois da primeira fatia de
+    # 2 s. Com os nós parados, o rehide não escreve e o passo não varre.
     await vigiar_o_sequestro(daemon)
     elapsed = 0.0
     while elapsed < RECONNECT_ONLINE_CHECK_INTERVAL_SEC:
