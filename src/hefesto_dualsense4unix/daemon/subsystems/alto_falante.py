@@ -1261,25 +1261,25 @@ class AltoFalanteSubsystem:
         reportou em 20/09.
 
         A lista de físicos vem de TODOS os controles da mesa, e não só dos do
-        rádio: com máscara, o jogo abre o vpad, e traduzir o vpad exige poder
-        derivá-lo de qualquer aparelho — inclusive o do cabo, que é quem
-        costuma estar jogando.
+        rádio: com máscara, o jogo abre o vpad, e quem o alimenta pode ser o
+        do cabo. Quem diz QUEM ALIMENTA cada vpad é o co-op, e não a forja do
+        MAC (A-HAPTICA-SEGUE-QUEM-ALIMENTA-O-VPAD-01): o MAC diz de quem o vpad
+        nasceu, e o posto troca de mão sem renascer.
         """
         from hefesto_dualsense4unix.integrations.quem_o_jogo_le import (
-            dono_do_vpad_pela_forja,
+            dono_do_vpad_pelo_coop,
             quem_o_jogo_le,
         )
 
-        fisicos = [
-            str(getattr(c, "uniq", "") or "") for c in controles
-        ]
+        fisicos = [str(getattr(c, "uniq", "") or "") for c in controles]
         fisicos = [u for u in fisicos if u]
         if not fisicos:
             return set()
+        coop = getattr(getattr(self, "_daemon", None), "_coop_manager", None)
         try:
             return quem_o_jogo_le(
                 fisicos=fisicos,
-                dono_do_vpad=lambda v: dono_do_vpad_pela_forja(v, fisicos),
+                dono_do_vpad=dono_do_vpad_pelo_coop(coop, fisicos),
             )
         except Exception as erro:
             # AUSÊNCIA É RESPOSTA, e ela é registrada: um erro aqui cala a

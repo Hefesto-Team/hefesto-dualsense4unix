@@ -42,10 +42,30 @@ dela em 20/09, com os quatro ligados e o PRAGMATA aberto::
     event21, event264, event265   uniq=02:fe:f0:…   «DualSense (Hefesto P1)»
     event22, event27,  event28    uniq=d4:2f:4b:…   o P3 FÍSICO
 
-O ``02:fe:f0:…`` é o vpad que o Hefesto publica. Um jogo com máscara Xbox abre
-**esse**, e casar por ``uniq`` físico devolveria "ninguém está jogando" — o
-tipo de resposta plausível e falsa que esta casa persegue. Por isso a tradução
-virtual→físico entra aqui, e o dono dela é quem cria o vpad.
+O ``02:fe:f0:…`` é o vpad que o Hefesto publica. Um jogo com máscara DualSense
+abre **esse**, e casar por ``uniq`` físico devolveria "ninguém está jogando" —
+o tipo de resposta plausível e falsa que esta casa persegue. Por isso a
+tradução virtual→físico entra aqui, e quem responde é o dono da ligação.
+
+QUEM ALIMENTA O VPAD, E NÃO DE QUEM ELE NASCEU
+==============================================
+
+A-HAPTICA-SEGUE-QUEM-ALIMENTA-O-VPAD-01, 25/09/2026. A tradução derivava o
+MAC do vpad de cada físico (``vpad_mac``) e comparava — e isso responde de
+quem o vpad NASCEU. O posto nasce sem identidade no boot (o piso
+``02:fe:00:00:00:01``, que não deriva de ninguém) ou com a do primário de
+quando renasceu, e o primário muda embaixo dele sem ele renascer. Medido na
+bancada de queda com os vpads reais, 174 casos (2, 3 e 4 controles; USB, BT
+e mista; o posto com o P1, o P2 e o P3; um jogador e todos): a forja errava
+138, e em 15 fazia vibrar a mão do P1 que voltou tarde enquanto o P2 ou o P3
+dirigia o posto. Quem sabe quem alimenta cada vpad AGORA é o co-op
+(``CoopManager.quem_alimenta_cada_vpad``), e a mesma resposta é a que o
+rumble do jogo já segue.
+
+**Nada muda sem vpad nem com o vpad ``uinput``.** No Modo Nativo o jogo abre
+o físico, que casa pelo próprio ``uniq``, e o tradutor nem é perguntado. Com
+a máscara Xbox o vpad é ``uinput`` e não carrega ``uniq``: o jogo que o lê
+não entra no conjunto, antes e depois desta cura.
 
 AUSÊNCIA É RESPOSTA, E AQUI ELA TEM LADO
 ========================================
@@ -62,10 +82,11 @@ import os
 import pathlib
 import re
 from collections.abc import Callable, Iterable
+from typing import Any
 
 __all__ = [
     "ENV_DO_JOGO",
-    "dono_do_vpad_pela_forja",
+    "dono_do_vpad_pelo_coop",
     "evdevs_abertos_por",
     "pids_de_jogo",
     "quem_o_jogo_le",
@@ -176,8 +197,9 @@ def quem_o_jogo_le(
         aparelho do que é vpad. Sem esta lista não há como distinguir os dois,
         e inventar a distinção por forma do endereço seria adivinhar.
     :param dono_do_vpad: dado o ``uniq`` de um vpad, devolve o do controle
-        físico que ele representa. É injetável porque o dono desse mapa é quem
-        CRIA o vpad — perguntar a ele é a regra da casa.
+        físico que o ALIMENTA agora (:func:`dono_do_vpad_pelo_coop`). É
+        injetável porque o dono dessa ligação é o co-op — perguntar a ele é a
+        regra da casa.
 
     Devolve conjunto VAZIO quando não há jogo, quando ``/proc`` não se lê, ou
     quando o que o jogo abriu não se traduz em controle nenhum. O vazio aqui
@@ -212,37 +234,57 @@ def quem_o_jogo_le(
     return jogando
 
 
-def dono_do_vpad_pela_forja(
-    vpad_uniq: str, fisicos: Iterable[str]
-) -> str | None:
-    """O controle físico de um vpad, PERGUNTANDO À FORJA que o criou.
+#: Um endereço de aparelho tem doze dígitos hexadecimais.
+_DIGITOS_DE_MAC = 12
 
-    O MAC do vpad é `blake2b` da identidade do aparelho
-    (:func:`~hefesto_dualsense4unix.integrations.uhid_gamepad.vpad_mac`), logo
-    não se inverte. Mas **se deriva**: gerar o candidato de cada físico e
-    comparar responde a mesma pergunta sem adivinhar nada, e é a regra da casa
-    — *quando um valor tem dono, pergunte ao dono*.
 
-    E a derivação NÃO depende do número do jogador. Medido em 20/09/2026: o
-    mesmo `uniq` com `player` 1, 2, 3 e 4 devolve o mesmo MAC, porque o número
-    é reusado e a `COOP-QUE-NÃO-DESMONTA-01/E3` desacoplou os dois de
-    propósito. Isso é o que torna esta tradução pura.
+def _digitos(endereco: object) -> str:
+    """Os doze dígitos de um endereço, em minúsculas — ou ``""``.
 
-    Devolve ``None`` quando nenhum físico gera aquele MAC — inclusive quando o
-    vpad caiu no `player_mac` (o piso, sem identidade de aparelho). Nunca
-    chuta: um palpite aqui faria um controle vibrar na mão de alguém que não
-    está jogando.
+    O co-op guarda a identidade colada (``aabbcc000001``, a do ``norm_mac``) e
+    o sysfs a imprime com ``:``; os dois lados são o mesmo aparelho. Descartar
+    e não peneirar: um caractere fora de ``[0-9a-f:]`` invalida o valor (um
+    ``path:`` tem ``d``, ``e`` e ``a`` no meio, e uma peneira faria dele um
+    endereço).
     """
-    from hefesto_dualsense4unix.integrations.uhid_gamepad import vpad_mac
+    baixo = str(endereco or "").strip().lower()
+    if any(ch not in "0123456789abcdef:" for ch in baixo):
+        return ""
+    digitos = baixo.replace(":", "")
+    return digitos if len(digitos) == _DIGITOS_DE_MAC else ""
 
-    alvo = str(vpad_uniq).lower()
-    for fisico in fisicos:
-        if not fisico:
-            continue
-        try:
-            candidato = vpad_mac(str(fisico), 1)
-        except Exception:
-            continue
-        if candidato.lower() == alvo:
-            return str(fisico)
-    return None
+
+def dono_do_vpad_pelo_coop(
+    coop: Any, fisicos: Iterable[str]
+) -> Callable[[str], str | None]:
+    """O tradutor vpad→físico de :func:`quem_o_jogo_le`, PERGUNTANDO AO CO-OP.
+
+    A-HAPTICA-SEGUE-QUEM-ALIMENTA-O-VPAD-01. O dono da ligação entre cada
+    físico e o vpad dele é quem a faz: o ``CoopManager``
+    (``quem_alimenta_cada_vpad``) — o posto é do primário de AGORA, e cada
+    secundário é do físico dele. A pergunta é feita UMA vez, na montagem; o
+    tradutor devolvido só consulta a resposta.
+
+    O físico devolvido é o da lista ``fisicos``, na grafia em que ela veio:
+    é com ela que :func:`quem_o_jogo_le` compara.
+
+    **Nunca chuta.** Sem co-op (o daemon ainda não o criou), sem a pergunta
+    (um dublê), com um vpad que ninguém alimenta ou com um dono que não está
+    na mesa, a resposta é ``None``: ninguém vibra por aquele vpad. Uma
+    exceção da pergunta SOBE — quem chama registra e responde o vazio.
+    """
+    perguntar = getattr(coop, "quem_alimenta_cada_vpad", None)
+    if not callable(perguntar):
+        return lambda _vpad: None
+    resposta = perguntar()
+    alimenta = {
+        _digitos(vpad): _digitos(fisico)
+        for vpad, fisico in dict(resposta).items()
+        if _digitos(vpad) and _digitos(fisico)
+    }
+    na_mesa = {_digitos(f): str(f) for f in fisicos if _digitos(f)}
+
+    def _dono(vpad_uniq: str) -> str | None:
+        return na_mesa.get(alimenta.get(_digitos(vpad_uniq), ""))
+
+    return _dono
