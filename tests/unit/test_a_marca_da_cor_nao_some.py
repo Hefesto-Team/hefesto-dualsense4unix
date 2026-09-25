@@ -783,3 +783,37 @@ def test_sem_a_paleta_o_fossil_nao_tira_o_global_de_ninguem(mesa_de):
         assert mesa.publicado()[3]["lightbar_rgb"] == luz_do_p4, (
             f"o brilho do P3 a {pct}% tirou o P4 do global")
 
+
+
+# ---------------------------------------------------------------------------
+# O DESENHO — a página que a foto da documentação retrata
+# ---------------------------------------------------------------------------
+_CASA_DA_GUIA = re.compile(r'<button class="(tom(?: [^"]*)?)"[^>]*?title="([^"]*)"')
+
+
+def test_o_desenho_mostra_o_x_do_vizinho_nas_fileiras_ligadas() -> None:
+    """A foto da documentação é a página publicada, e ela tem de dizer a regra.
+
+    Ela achou em 24/09, olhando `aba-04-iluminacao.png`: o P1 e o P2 da mesa
+    do desenho estão ligados e nenhuma fileira mostrava o X da cor do outro.
+    Cada fileira ligada tem o X na cor de cada OUTRO ligado, com o número dele
+    na dica, e o lugar vazio não tem X nenhum. Mede o GERADOR, casa por casa na
+    ordem da guia: a página publicada só muda quando a 04 é regerada e
+    publicada.
+
+    **A MORDIDA:** devolva `{}` às `tomadas` de `coluna()` em `aba04.py` e
+    esta reprova nas duas fileiras ligadas.
+    """
+    from hefesto_dualsense4unix.interface import aba04
+
+    ligados = {c["jogador"] for c in aba04.MESA if c.get("conectado", True)}
+    assert len(ligados) >= 2, "o desenho precisa de dois ligados para ter vizinho"
+    for c in aba04.MESA:
+        casas = _CASA_DA_GUIA.findall(aba04.coluna(c))
+        assert len(casas) == len(aba04.CRUS_DA_GUIA), (c["pref"], len(casas))
+        com_x = {cru: dica
+                 for cru, (classes, dica) in zip(aba04.CRUS_DA_GUIA, casas, strict=True)
+                 if "tomado" in classes.split()}
+        esperado = ({} if not c.get("conectado", True) else
+                    {aba04.luz(n): f"P{n}" for n in ligados if n != c["jogador"]})
+        assert com_x == esperado, (c["pref"], com_x)
