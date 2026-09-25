@@ -2817,10 +2817,11 @@ class PyDualSenseController(IController):
         Chamar sob `_io_lock` (lê o mapa por-uniq; o provider é chamado aqui
         dentro — barato e sem I/O por contrato de `set_auto_output_provider`).
 
-        R-20 item 2: a escala de brilho por-uniq entra DEPOIS do merge das
-        camadas do daemon e ANTES da camada GAME — o brilho é da usuária, a
-        cor do jogo é do jogo (escalar o que o jogo pinta seria mentir sobre
-        o que ele pediu).
+        R-20 item 2: a escala de brilho por-uniq entra na BASE (o global e a
+        automática), antes do override por-uniq e da camada GAME — o override
+        já chega no brilho dele (A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01, ver
+        `_scaled_led`), o brilho é da usuária, e a cor do jogo é do jogo
+        (escalar o que o jogo pinta seria mentir sobre o que ele pediu).
 
         Key sem MAC (fallback por path) não tem override NEM camada
         automática possível — devolve o default puro (o controle segue só o

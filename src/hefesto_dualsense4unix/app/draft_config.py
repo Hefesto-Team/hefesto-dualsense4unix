@@ -1707,9 +1707,11 @@ class DraftConfig(BaseModel):
         DraftApplier trata chave ausente como "sem opinião" e o merge por
         campo do backend herda o global), em paridade com a ativação de
         perfil. Exceção deliberada: cor e brilho formam UM campo no backend
-        (o RGB pré-escalado); quando só um dos dois é escrito, o outro é
-        resolvido do GLOBAL do draft aqui na borda, para o alvo receber a
-        mesma cor efetiva que a ativação produziria.
+        (o RGB pré-escalado); quando só a COR é escrita, o brilho é resolvido
+        do GLOBAL do draft aqui na borda, para o alvo receber a mesma cor
+        efetiva que a ativação produziria. O BRILHO SOZINHO viaja só, e o
+        ``DraftApplier`` o publica como fator (A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01),
+        salvo com o global a 0%, em que a cor do global vai junto.
 
         Z4/T8 (24/08/2026): mapa vazio tem DUAS origens que o
         ``DraftApplier`` do daemon já trata de formas diferentes (verificado
