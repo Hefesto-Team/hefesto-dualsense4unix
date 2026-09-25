@@ -30,9 +30,9 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import os
 import pathlib
-import sys
 
 #: O que NUNCA pode chegar a um jogo. Se uma destas está no ambiente, quem
 #: lançou foi o agente — e a medição que sair dali não vale.
@@ -137,10 +137,8 @@ def main() -> None:
     for k in [k for k in env if k.startswith("COSMIC_PANEL")]:
         del env[k]
 
-    try:
-        os.setsid()
-    except PermissionError:
-        pass  # já somos líder de sessão (rodado sob `setsid`)
+    with contextlib.suppress(PermissionError):
+        os.setsid()  # já somos líder de sessão (rodado sob `setsid`)
     fd = os.open(os.devnull, os.O_RDWR)
     os.dup2(fd, 0), os.dup2(fd, 1), os.dup2(fd, 2)
     os.execve(STEAM, ["steam"], env)

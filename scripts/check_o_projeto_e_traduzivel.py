@@ -85,7 +85,7 @@ except ImportError:  # pragma: no cover — 3.10, que o pyproject ainda declara
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from catraca import (  # noqa: E402
+from catraca import (
     Catraca,
     Censo,
     Medida,
@@ -144,7 +144,7 @@ def _glob_para_regex(caminho: str) -> re.Pattern[str]:
 
 
 class Regra:
-    __slots__ = ("caminho", "zona", "razao", "_re")
+    __slots__ = ("_re", "caminho", "razao", "zona")
 
     def __init__(self, caminho: str, zona: str, razao: str) -> None:
         self.caminho = caminho

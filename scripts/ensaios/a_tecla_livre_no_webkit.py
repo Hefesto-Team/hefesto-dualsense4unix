@@ -47,21 +47,20 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-from hefesto_dualsense4unix.utils.tela_de_mentira import (  # noqa: E402
+from hefesto_dualsense4unix.utils.tela_de_mentira import (
     garantir_tela_de_mentira,
 )
 
 garantir_tela_de_mentira()
 
-import gi  # noqa: E402
+import gi
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("WebKit2", "4.1")
-from gi.repository import GLib, Gtk  # noqa: E402
+from gi.repository import GLib, Gtk
 
-from hefesto_dualsense4unix.core import acoes_de_botao as acoes  # noqa: E402
-from hefesto_dualsense4unix.interface import hefesto_vivo, onde  # noqa: E402
-from hefesto_dualsense4unix.interface.pacotes import a06_navegacao as a06  # noqa: E402
+from hefesto_dualsense4unix.core import acoes_de_botao as acoes
+from hefesto_dualsense4unix.interface import hefesto_vivo, onde
 
 ABA = "06-navegacao.html"
 

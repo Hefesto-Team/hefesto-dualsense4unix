@@ -59,7 +59,7 @@ _SRC = os.path.join(os.path.dirname(os.path.dirname(_AQUI)), "src")
 if os.path.isdir(_SRC) and _SRC not in sys.path:
     sys.path.insert(0, _SRC)
 
-from comum import (  # noqa: E402
+from comum import (
     RADIO,
     abrir_no_hidraw,
     cabecalho_do_instrumento,
@@ -69,7 +69,7 @@ from comum import (  # noqa: E402
 )
 
 #: O byte de status e o bit, do dono único da metade de ENTRADA.
-from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (  # noqa: E402
+from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
     STATUS_MIC_MUDO,
 )
 

@@ -48,7 +48,7 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
-from hefesto_dualsense4unix.interface import onde  # noqa: E402
+from hefesto_dualsense4unix.interface import onde
 
 #: O bloco de um lugar, e o seletor é O MESMO que o piloto usa —
 #: `document.querySelectorAll('[data-controle="' + pref + '"]')`. Uma régua que

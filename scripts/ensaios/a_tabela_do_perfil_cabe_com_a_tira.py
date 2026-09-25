@@ -56,20 +56,20 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 
 # A janela deste instrumento NÃO nasce na tela dela (TELA-DELA-02).
-from hefesto_dualsense4unix.utils.tela_de_mentira import (  # noqa: E402
+from hefesto_dualsense4unix.utils.tela_de_mentira import (
     garantir_tela_de_mentira,
 )
 
 garantir_tela_de_mentira()
 
-import gi  # noqa: E402
+import gi
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("WebKit2", "4.1")
-from gi.repository import GLib, Gtk  # noqa: E402
+from gi.repository import GLib, Gtk
 
-from hefesto_dualsense4unix.gui.ponte_da_tela import JanelaDaAba  # noqa: E402
-from hefesto_dualsense4unix.interface import onde  # noqa: E402
+from hefesto_dualsense4unix.gui.ponte_da_tela import JanelaDaAba
+from hefesto_dualsense4unix.interface import onde
 
 ABA = "10-perfis.html"  # (noqa-acento) nome de arquivo
 TITULO = "Hefesto — aba PERFIS"
@@ -215,7 +215,7 @@ def medir(pagina: pathlib.Path) -> dict:
             else:
                 try:
                     saida.update(json.loads(valor))
-                except Exception as e:  # noqa: BLE001 — a exceção É a resposta
+                except Exception as e:  # a exceção É a resposta
                     saida["erro"] = f"{e}: {valor!r}"
             Gtk.main_quit()
 
