@@ -725,9 +725,9 @@ def firma_do_no(no: str) -> tuple[int, int] | None:
     dois mexem no ``ctime``; nó recriado (replug, mesmo ``hidrawN``) ganha
     inode e ``ctime`` novos. Logo, **todo fd aberto numa janela foi aberto
     antes da mudança de firma que fechou a janela**, e uma varredura depois
-    dela o vê. Medido em 23/09/2026 na máquina dela, só com ``stat``: o
-    ``ctime`` do ``/dev/hidraw5`` anda a cada 30 s (o ``rehide`` de cada
-    reconciliação) e fica parado entre dois — escrever e ler no nó não o move.
+    dela o vê. O broker só escreve o nó que mudou
+    (O-BROKER-NAO-REESCREVE-O-QUE-NAO-MUDOU-01, 25/09/2026): com os nós
+    parados, o ``ctime`` fica parado, e escrever e ler no nó não o move.
 
     Custa um ``stat`` (sem abrir o nó, sem permissão sobre ele). Nó que não
     existe devolve ``None``: ninguém segura um nó que não está lá, e a vigia
@@ -783,14 +783,17 @@ class VigiaDoSequestro:
     `0600 root`. Nó alcançável: a cada `INTERVALO_DA_SONDA_S`. Sequestro
     conhecido: a cada `INTERVALO_DA_SONDA_COM_SEQUESTRO_S`, só para saber
     quando acabou; entre duas varreduras, o PID que morreu solta o nó na hora
-    (um `stat`). Nó fechado, firma parada e ninguém segurando: nunca.
+    (um `stat`) — e, como a morte não prova que ninguém mais segura o nó (o
+    fd herdado por um filho, ou passado por `SCM_RIGHTS`), o nó que perdeu um
+    dono conhecido por morte varre UMA vez. Nó fechado, firma parada e
+    ninguém segurando: nunca.
 
     **CORREÇÃO DE FATO (conferência de 23/09/2026).** A primeira versão dizia
     "nó fechado e nenhum sequestrador conhecido: nunca" e só varria com o nó
     alcançável — e ficava cega exatamente ao mecanismo da sprint, a Steam que
-    abriu o nó ANTES de o broker fechar. Com a firma, o preço em regime é o da
-    cadência do broker: na máquina dela, uma varredura (~11 ms) por
-    reconciliação de 30 s.
+    abriu o nó ANTES de o broker fechar. Com a firma, o preço é uma varredura
+    (de 16 a 21 ms na máquina dela, medido em 25/09) por mudança real de
+    permissão e uma por morte de dono conhecido; com os nós parados, zero.
 
     Não lê relógio nem `/proc` por conta própria: tudo entra por injeção
     (`sonda`, `alcancavel`, `vivo`, `firma`), como no sentinela. É o que deixa
