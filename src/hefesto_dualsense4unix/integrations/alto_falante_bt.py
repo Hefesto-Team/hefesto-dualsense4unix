@@ -1,28 +1,28 @@
-"""O motor do alto-falante virtual — o encoder, o sink e os DOIS arranjos.
+"""O motor do alto-falante virtual — o encoder, o sink, os arranjos e a ponte.
 
 SOM-QUE-SAI-01, rota corrigida em 06/09/2026. Espelho de saída do
 :mod:`integrations.dualsense_bt_audio`, que é a metade de ENTRADA e **não é
 tocada por este módulo** — ele importa dela, nunca a edita.
 
-A FRASE QUE ESTE ARQUIVO NÃO PODE ESCREVER
--------------------------------------------
-O mapa de canais proíbe, com todas as letras
-(``audio.saida_dedicada.payload_do_degrau@dualsense``.radio_ressalva):
+O SOM SAI PELO RÁDIO DESDE 10/09/2026, E A LIÇÃO FICA
+------------------------------------------------------
+Pelo ``0x35`` de 334 B, com UM quadro Opus por report (:data:`ARRANJO_035`,
+que é o :data:`ARRANJO_PADRAO`): 70 s contínuos pelo alto-falante, com a
+orelha dela, e o som CALA com o CRC invertido. Quem escreve no controle é a
+:class:`PonteDeSomPorRadio`, uma por controle no rádio, e quem a sobe é o
+subsystem (``daemon/subsystems/alto_falante._casar_as_pontes``).
 
-    *"NÃO ESCREVER, EM LUGAR NENHUM, que 'descobrimos o áudio por Bluetooth'
-    ou que a ponte funciona. Não funciona, e não há ponte: há um canal que
-    responde. FALÁCIA DO CANAL QUE RESPONDE — concluir que, porque um canal
-    responde, ele FAZ o que a gente esperava dele."*
-
-O honesto, hoje e até o ensaio de bancada rodar, é o par:
-**o canal responde, e o conteúdo vai pelos DOIS arranjos candidatos.**
-Nada neste módulo afirma que som saiu de aparelho nenhum, porque ninguém
-desta casa mandou um byte de áudio por rádio.
+A lição que o mapa guarda tem nome (``audio.saida_dedicada@dualsense``):
+a FALÁCIA DO CANAL QUE RESPONDE — concluir que, porque um canal responde, ele
+FAZ o que se esperava dele. Ela segurou o som em ``não`` até a orelha dela
+ouvir o CONTEÚDO, em 10/09, e segura o degrau do produto em ``MONTOU`` até a
+bancada ouvir o caminho inteiro: o nó, a ponte e o controle. Quem conta o som
+pelo rádio conta pelo degrau e pela data, que estão no :data:`ARRANJO_035`.
 
 O QUE FALTAVA, E ERA NOMEADO PELO PRÓPRIO MAPA
 -----------------------------------------------
 ``audio.alto_falante@dualsense``.radio_codigo_ref listava três dívidas com
-endereço, e são exatamente as três peças deste arquivo:
+endereço, e as três estão pagas neste arquivo:
 
 1. **o ENCODER** — ``dualsense_bt_audio.py`` prototipa só o decodificador;
    ``opus_encoder_create`` e ``opus_encode`` não apareciam em linha nenhuma
@@ -30,12 +30,12 @@ endereço, e são exatamente as três peças deste arquivo:
 2. **o SINK** — a ponte de entrada publica uma SOURCE de captura
    (``module-pipe-source``) e não existia caminho de SAÍDA nenhum. Ver
    :class:`SinkVirtualPipeWire`;
-3. **o ARRANJO** do corpo do ``0x39``, sobre o qual as duas fontes publicadas
-   DIVERGEM. Ver :data:`ARRANJOS`, e leia o parágrafo abaixo antes de
-   escolher um.
+3. **o ARRANJO** — as duas fontes publicadas descrevem o ``0x39`` e DIVERGEM
+   (:data:`ARRANJOS`); o que tocou foi um terceiro, :data:`ARRANJO_035`. O
+   parágrafo abaixo diz os três.
 
-OS DOIS ARRANJOS, E POR QUE ESTE MÓDULO NÃO ESCOLHE
-----------------------------------------------------
+OS DOIS ARRANJOS DE FORA, E O QUE TOCOU
+---------------------------------------
 As duas fontes descrevem o MESMO report — id ``0x39``, 547 bytes, CRC nos
 quatro últimos — e discordam sobre onde, dentro dele, mora o áudio:
 
@@ -50,10 +50,10 @@ CRC-32               [543..546]                  [543..546]
 
 **O Senshi não é testemunha independente:** ele cita o DS5Dongle
 (``DualSenseBtReportBuilder.kt:76``) — leu a mesma fonte e chegou a outro
-arranjo. Escolher um aqui seria inventar o caminho. O módulo monta os dois a
-partir do MESMO PCM, e quem escolhe é o ensaio de bancada com a orelha dela
-(ensaio 1 da MESA-DE-QUATRO-01; `scripts/ensaios/o_som_que_sai.py` monta os
-dois lado a lado).
+arranjo. **E NENHUM DOS DOIS TOCOU:** o ensaio de 10/09, com a orelha dela,
+achou o ``0x35`` de 334 B com um quadro só. Os dois ficam montáveis pelo mesmo
+PCM, para ensaio (`scripts/ensaios/o_som_que_sai.py` os monta lado a lado); o
+produto não os usa.
 
 AS TRÊS RESSALVAS QUE VIAJAM COM O ACHADO
 ------------------------------------------
@@ -65,28 +65,28 @@ Do mapa, ``audio.alto_falante@dualsense``.radio_ressalva, e nenhuma é enfeite:
     DS5Dongle é ESTÉREO (``opus_encoder_create(48000, 2, …)``), e o estéreo
     casa com a rota de FONE (tag ``0x16``), não com o alto-falante interno
     (tag ``0x13``). Por isso :data:`CANAIS_DO_ENCODER` é 2 **e a tag é
-    argumento**: os 200 bytes por quadro são o que o formato exige; qual
-    saída os recebe é outra pergunta, e ela é do ensaio;
+    argumento**: os 200 bytes por quadro são o que o formato exige, e a ponte
+    manda a tag do alto-falante (``BLOCO_SPEAKER``, a do report que tocou);
 (b) **o byte [2] tem três leituras** — o DS5Dongle o lê como tag TLV
     ``0x11|0x80`` (= 0x91), e ``plataforma.escada_de_output@dualsense`` mediu
     o ``common`` de 47 B obedecendo em [3..49] com ``report[2] = 0x10``, SEM
-    o bit 7. A disputa continua aberta, e este módulo não a resolve: ele
-    monta a gramática TLV dos dois arranjos e deixa o ``common`` fora dela;
+    o bit 7. No ``0x35`` a disputa ficou respondida em 10/09: o ``[2]`` é a
+    tag ``0x91``. Fora dele ela continua aberta, e o ``common`` fica fora;
 (c) **o DS5Dongle é um DONGLE** — fala L2CAP direto e nunca toca
     ``/dev/hidraw``. Ele prova "report HID de saída", não "hidraw".
 
 O QUE ESTE MÓDULO **NÃO** FAZ, E TEM DONO
 ------------------------------------------
-* **não escreve no aparelho.** Ele MONTA bytes; quem escreve é o ensaio, com
-  a bancada reservada e o MAC conferido;
+* **não decide quando escrever.** O caminho dele até o aparelho é UM, a
+  :class:`PonteDeSomPorRadio`, e quem a sobe é o subsystem; o resto monta;
 * **não mexe em rota, volume nem pré-amplificador** — isso é de
   ``core/backend_pydualsense.py`` e de ``app/audio_saida.py``, e o segundo
   está em ``nao_toca:`` desta sprint. O nó virtual é **por onde o áudio
   entra**; o que o firmware faz com ele depois tem dono, e não é este;
-* **não escolhe o degrau para regime.** ``0x32`` a ~100 Hz contra ``0x39`` a
-  ~15 Hz é latência contra fôlego, e a decisão dela
-  (``D-0609-O-NO-DE-SOM-VIVE-COM-O-CONTROLE``) é explícita: *só depois do
-  D5*, com o número de banda na mesa. :func:`degrau_para_payload` existe para
+* **não escolhe o degrau para regime.** A decisão dela
+  (``D-0609-O-NO-DE-SOM-VIVE-COM-O-CONTROLE``) deixava ``0x32`` contra
+  ``0x39`` para *depois do D5*, e a orelha dela achou o terceiro em 10/09: o
+  ``0x35`` é o :data:`ARRANJO_PADRAO`. :func:`degrau_para_payload` existe para
   o tamanho, não para o regime.
 """
 

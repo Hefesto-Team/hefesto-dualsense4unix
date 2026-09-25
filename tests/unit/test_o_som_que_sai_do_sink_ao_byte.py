@@ -623,10 +623,10 @@ class TestODiagnosticoDizPorQueNaoSobe:
 class TestNadaAquiAfirmaQueSomSaiu:
     """O portão da FALÁCIA DO CANAL QUE RESPONDE, dentro da própria régua.
 
-    O mapa proíbe, em lugar nenhum desta árvore, afirmar que o áudio por rádio
-    foi descoberto ou que a ponte de saída trabalha. Ninguém desta casa mandou
-    um byte de áudio por rádio, e o honesto é o par: o canal responde, e o
-    conteúdo vai pelos dois arranjos candidatos.
+    O SOM SAI PELO RÁDIO DESDE 10/09/2026 — o `0x35` (`ARRANJO_035`), 70 s com
+    a orelha dela —, e a `PonteDeSomPorRadio` o escreve por controle. O que a
+    régua guarda é a FORMA: as três frases abaixo, soltas, são as conclusões
+    tiradas do canal que respondia ANTES da orelha; o fato se conta pelo degrau.
 
     **ESTA RÉGUA JÁ MORDEU A SI MESMA, e a cicatriz fica.** A primeira versão
     dela era um `frase not in texto`, e reprovou os três arquivos novos — não
@@ -646,7 +646,7 @@ class TestNadaAquiAfirmaQueSomSaiu:
         "scripts/ensaios/o_som_que_sai.py",
     )
 
-    #: As formas que ninguém mediu, em minúsculas.
+    #: As três conclusões de antes da orelha, soltas, em minúsculas.
     PROIBIDAS = (
         "descobrimos o áudio por bluetooth",
         "a ponte funciona",
