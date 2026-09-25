@@ -156,12 +156,13 @@ def _draft_do_ativo(nome: str, ctx: Contexto | None = None) -> Any:
     from hefesto_dualsense4unix.app.widgets.controller_card import rotulo_lightbar
     from hefesto_dualsense4unix.core.led_control import LedSettings
 
-    from .a04_iluminacao import brilho_do_controle
+    from .a04_iluminacao import brilho_aceso
     from .a04_iluminacao import cor_escolhida as a_cor_pedida
 
     #: O PERFIL CRU, para o brilho de cada controle — lido UMA vez e pelo dono
-    #: da conta (`a04_iluminacao.brilho_do_controle`), o mesmo que a coluna da
-    #: aba 04 imprime e com que o trilho escala.
+    #: da conta (`a04_iluminacao.brilho_aceso`), o mesmo que a coluna da aba 04
+    #: imprime e com que o trilho escala: o do daemon vivo, e o do disco só
+    #: quando ele não diz (A-04-PERGUNTA-AO-DAEMON-VIVO-01).
     cru = perfil.ativo(nome)
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
@@ -196,7 +197,12 @@ def _draft_do_ativo(nome: str, ctx: Contexto | None = None) -> Any:
         # herda) é a pedida quando ela, no brilho dele, é EXATAMENTE a luz —
         # a conta prova, e nada se adivinha.
         acesa = (int(rgb[0]), int(rgb[1]), int(rgb[2]))
-        brilho = brilho_do_controle(cru, uniq)
+        #: O BRILHO DA LUZ É O QUE O DAEMON A ACENDEU — 25/09/2026,
+        #: A-04-PERGUNTA-AO-DAEMON-VIVO-01. O do disco é o do perfil ATIVO, e a
+        #: camada da usuária atravessa a troca automática: o P1 a 60% que
+        #: atravessou o autoswitch para um perfil a 82% não se invertia em tom
+        #: nenhum, e o Salvar gravava a luz escura como a cor dela.
+        brilho = brilho_aceso(c, cru, uniq)
         do_disco = draft.effective_leds_for(uniq).lightbar_rgb
         if (brilho is not None and do_disco is not None
                 and LedSettings(lightbar=do_disco).apply_brightness(brilho).lightbar
@@ -226,7 +232,11 @@ def _draft_do_ativo(nome: str, ctx: Contexto | None = None) -> Any:
             # genérico ou uma `list` perdem esse tamanho, e o produto passa a
             # aceitar quatro cores sem ninguém ver.
             lightbar_rgb=(int(rgb[0]), int(rgb[1]), int(rgb[2])),
-            lightbar_brightness=efetivo.lightbar_brightness,
+            # O BRILHO VAI JUNTO COM A COR QUE ELE INVERTEU: o Salvar grava o
+            # que está aceso, e a cor pedida sem o brilho dela acenderia, no
+            # perfil reaplicado, outra luz que a que ela via ao salvar.
+            lightbar_brightness=(efetivo.lightbar_brightness if brilho is None
+                                 else round(brilho * 100)),
             player_leds=(efetivo.player_leds[0], efetivo.player_leds[1],
                          efetivo.player_leds[2], efetivo.player_leds[3],
                          efetivo.player_leds[4]),

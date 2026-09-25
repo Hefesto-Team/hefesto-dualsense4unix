@@ -335,7 +335,7 @@ class DraftApplier:
         if callable(reset):
             reset(specs or None)
         for uniq, spec in specs.items():
-            self.controller.apply_output_for(uniq, spec)
+            self._aplicar_com_o_brilho_da_cor(uniq, spec, raw.get(uniq))
         self._publicar_escalas_de_brilho(raw)
         # A LUZ CONVERGE DEPOIS DO MAPA NOVO — conferência da
         # A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01, 25/09/2026. O brilho sozinho de
@@ -355,6 +355,29 @@ class DraftApplier:
         # passou. Cada um segue a sua rota por-uniq, que já existia.
         self._publicar_escalas_de_vibracao(raw)
         self._escrever_alto_falantes_por_unidade(raw)
+
+    def _aplicar_com_o_brilho_da_cor(
+        self, uniq: str, spec: OutputSpec, entrada: Any
+    ) -> None:
+        """`apply_output_for` com o brilho em que a cor do override foi escalada.
+
+        A-04-PERGUNTA-AO-DAEMON-VIVO-01, 25/09/2026: o backend guarda o brilho
+        ao lado da cor da camada da usuária, e é o que o `state_full` publica
+        como `brilho_da_barra` — a aba Iluminação pergunta ao daemon vivo, e a
+        cor do «Aplicar» atravessa a troca automática de perfil como a do
+        `led.set`. O brilho é o MESMO que `_scaled_rgb_from` usou. Backend sem o
+        parâmetro recebe a cor igual, sem o carimbo.
+        """
+        aplicar: Any = self.controller.apply_output_for
+        leds_raw = entrada.get("leds") if isinstance(entrada, dict) else None
+        if spec.led is None or not isinstance(leds_raw, dict):
+            aplicar(uniq, spec)
+            return
+        brilho = _brilho_de(leds_raw.get("lightbar_brightness", 1.0))
+        try:
+            aplicar(uniq, spec, brilho_da_cor=1.0 if brilho is None else brilho)
+        except TypeError:
+            aplicar(uniq, spec)
 
     def _publicar_escalas_de_brilho(self, raw: dict[str, Any]) -> None:
         """Publica o brilho por controle como FATOR, como a ativação (R-20 item 2).

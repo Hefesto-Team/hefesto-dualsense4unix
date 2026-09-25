@@ -382,6 +382,31 @@ def brilho_do_controle(p: dict[str, Any] | None, uniq: str) -> float | None:
         return None
 
 
+def brilho_aceso(c: dict[str, Any] | None, p: dict[str, Any] | None,
+                 uniq: str) -> float | None:
+    """O brilho em que a barra DESTE controle acende agora — pergunte ao daemon vivo.
+
+    A-04-PERGUNTA-AO-DAEMON-VIVO-01, 25/09/2026. O trilho, a caixa `#RRGGBB`,
+    a marca da fileira e os gestos de cor liam `brilho_do_controle`, que é o
+    DISCO do perfil ativo. A camada da usuária (R-20) atravessa a troca
+    AUTOMÁTICA de perfil: medido na mesa de quatro real, o P1 solto a 60% seguia
+    aceso a 60% depois do autoswitch para um perfil que diz 82%, e o trilho
+    dizia 82% — a tela afirmando um brilho que não está no plástico.
+
+    O DAEMON PUBLICA O QUE O MERGE ACENDEU (`c["brilho_da_barra"]`, do
+    `ipc_handlers._brilhos_acesos`), e é o dono. Sem ele — daemon de outra
+    versão, a cor que chegou sem brilho, o perfil que não o publicou —, o
+    disco, que é o que esta aba respondia antes; não se inventa.
+
+    :param c: a entrada do daemon deste controle (`ctx.por_uniq`), ou `None`.
+    :param p: o perfil ativo, CRU (`perfil.ativo`).
+    """
+    vivo = (c or {}).get("brilho_da_barra")
+    if isinstance(vivo, (int, float)) and not isinstance(vivo, bool):
+        return max(0.0, min(1.0, float(vivo)))
+    return brilho_do_controle(p, uniq)
+
+
 #: O ENDEREÇO DO INTERRUPTOR DO AUTOMÁTICO — D-13, 04/09/2026.
 ENDERECO_DO_AUTOMATICO = "auto-cores"
 
@@ -747,8 +772,9 @@ def _o_tom_que_acende(efetiva: Any,
       0%, o disco já diz 70% e o daemon ainda publica o preto dos 0%, e a
       coluna inteira virava preta por meio segundo. Luz apagada não diz cor —
       é a ordem dela de 22/09 que `led_control.cor_escolhida` guarda, *o
-      preto é banido como cor* —, e quem apagou pelo «Desligar» tem o preto
-      GRAVADO: é o degrau seguinte da escada que o devolve;
+      preto é banido como cor* —, e quem apagou pelo «Desligar» tem a cor
+      dela GRAVADA com o brilho em 0%: é o degrau seguinte da escada que a
+      devolve;
     * **mais de um tom casa** — de 0,4% a 0,7% de brilho o vermelho, o rosa
       e o laranja acendem todos `(1, 0, 0)`, e há trios iguais no azul e no
       verde. O trilho anda de 1 em 1% e não chega lá; um perfil gravado por
@@ -1263,6 +1289,28 @@ def brilho_das_luzes_do_controle(p: dict[str, Any] | None, uniq: str) -> str:
     seus = (meu.get("leds") or {}) if isinstance(meu, dict) else {}
     valor = seus.get("player_led_brightness", global_) if isinstance(seus, dict) else global_
     return valor if valor in BRILHOS_DAS_LUZES else BRILHO_DAS_LUZES_PADRAO
+
+
+def brilho_das_luzes_acesas(c: dict[str, Any] | None, p: dict[str, Any] | None,
+                            uniq: str) -> str:
+    """A palavra do brilho que as luzes de número DESTE controle acendem agora.
+
+    A-04-PERGUNTA-AO-DAEMON-VIVO-01, 25/09/2026. O clique na pílula vai por
+    `apply_output_for`, a camada da usuária (R-20), que atravessa a troca
+    AUTOMÁTICA de perfil. Medido: o P3 clicado em Forte seguia Forte no
+    aparelho depois do autoswitch para um perfil que diz Fraco, e a pílula lida
+    do disco acendia Fraco.
+
+    O DAEMON PUBLICA O DEGRAU QUE O MERGE MANDA (`c["brilho_das_luzes"]`), na
+    palavra do perfil. Sem ele, o disco (`brilho_das_luzes_do_controle`), que é
+    o que a pílula lia antes.
+    """
+    from hefesto_dualsense4unix.core.led_control import BRILHOS_DAS_LUZES
+
+    vivo = (c or {}).get("brilho_das_luzes")
+    if isinstance(vivo, str) and vivo in BRILHOS_DAS_LUZES:
+        return vivo
+    return brilho_das_luzes_do_controle(p, uniq)
 
 
 def desenho_da_luz(tinta: str, brilho: float, jogador: int, dica: str = "",
@@ -1829,9 +1877,10 @@ ESTILO_DO_TRACO_VAZIO = ("display:flex;align-items:center;justify-content:center
 @registrar("04-iluminacao.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
     p = perfil.ativo(ctx.state.get("active_profile"))
-    #: O BRILHO É DO PERFIL, e é um só para a mesa quando não há override — como
-    #: o gatilho. A leitura tem UM dono desde 03/09/2026 (`brilho_do_controle`),
-    #: porque os gestos que escrevem a cor passaram a precisar do mesmo número.
+    #: O BRILHO É O QUE O DAEMON ACENDE, e o do perfil só quando ele não diz —
+    #: `brilho_aceso`, A-04-PERGUNTA-AO-DAEMON-VIVO-01. A leitura tem UM dono
+    #: desde 03/09/2026, porque os gestos que escrevem a cor precisam do mesmo
+    #: número que a coluna imprime.
 
     # A FRASE DA DISPUTA É DO MOTOR, e não se reescreve.
     # `app/widgets/controller_card.rotulo_lightbar` é a mesma que os cards da
@@ -1901,7 +1950,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     for c, cor_dele in zip(ctx.conectados, cor_de, strict=True):
         uniq = str(c.get("uniq") or "")
         crua = cor_do_swatch(c)
-        b = brilho_do_controle(p, uniq)
+        b = brilho_aceso(c, p, uniq)
         pct = None if b is None else round(float(b) * 100)
         casa = _da_mesa(ctx, uniq)
         n = _numero(ctx, c)
@@ -2095,11 +2144,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                                           quantos=len(ctx.conectados)),
             #: AS TRÊS PÍLULAS DO BRILHO DAS LUZES DE NÚMERO — 24/09/2026,
             #: decisão dela (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`). A
-            #: acesa é a que o PERFIL guarda para este controle, a mesma leitura
-            #: do trilho de brilho (`brilho_das_luzes_do_controle`). Só quando a
+            #: acesa é a que o DAEMON manda ao aparelho, e o disco só quando ele
+            #: não diz (`brilho_das_luzes_acesas`, A-04-PERGUNTA-AO-DAEMON-VIVO-01):
+            #: o clique atravessa a troca automática de perfil. Só quando a
             #: página publicada tem a caixa — ver `a_pagina_tem_as_pilulas`.
             **({ENDERECO_DO_BRILHO_DAS_LUZES: fileira_de_brilhos_das_luzes(
-                brilho_das_luzes_do_controle(p, uniq), "              ")}
+                brilho_das_luzes_acesas(c, p, uniq), "              ")}
                if a_pagina_tem_as_pilulas() else {}),
             #: O ANEL DE CADA NÚMERO, e ele vem DEPOIS do `players` de propósito
             #: — a mesma lição que `ENDERECO_DA_INCERTA` pagou uma linha acima.
@@ -2531,8 +2581,21 @@ def _escrever_a_cor(ctx: Contexto, p: Any, uniq: str,
     recado: str | None = None
     if escolha:
         rgb, recado = _sem_repetir_a_cor_do_vizinho(ctx, uniq, rgb)
+    cru: dict[str, Any] | None = None
     if brilho is _DO_PERFIL:
-        brilho = brilho_do_controle(perfil.ativo(ctx.state.get("active_profile")), uniq)
+        cru = perfil.ativo(ctx.state.get("active_profile"))
+        brilho = brilho_aceso(ctx.por_uniq(uniq), cru, uniq)
+    #: A COR ESCOLHIDA NUMA BARRA APAGADA A ACENDE — 25/09/2026,
+    #: A-04-PERGUNTA-AO-DAEMON-VIVO-01. Desde que o «Desligar» é o brilho em 0%
+    #: (ver `apagar`), mandar a cor no brilho dela seria mandar preto: o clique
+    #: no tom aceitaria o toque e não agiria. A ordem dela de 01/09 é *"clicar
+    #: na cor já deveria aplicar a cor no controle"*, e a barra acende no
+    #: brilho do perfil (`_o_brilho_de_religar`); o 0% do controle sai do disco
+    #: junto (`_guardar_a_cor_no_perfil`).
+    religar = bool(escolha and brilho is not None and float(brilho) <= 0.0)
+    if religar:
+        brilho = _o_brilho_de_religar(
+            cru if cru is not None else perfil.ativo(ctx.state.get("active_profile")))
     corpo = p.led_set_detalhado(rgb, brightness=brilho, uniq=uniq)
     if corpo is None:
         raise RuntimeError(sem_resposta_do_daemon())
@@ -2541,13 +2604,61 @@ def _escrever_a_cor(ctx: Contexto, p: Any, uniq: str,
                            _janela_do_desfecho(ctx, uniq, _nome_da_coluna(ctx, uniq)))
     if frase != enviado:
         raise RuntimeError(frase)
-    if escolha or apagando:
-        _guardar_a_cor_no_perfil(ctx, uniq, rgb)
+    if escolha:
+        _guardar_a_cor_no_perfil(ctx, uniq, rgb, religar=religar)
+    elif apagando:
+        _guardar_o_apagado_no_perfil(ctx, uniq)
     return recado
 
 
+def _o_brilho_de_religar(cru: dict[str, Any] | None) -> float:
+    """O brilho em que a cor escolhida acende uma barra apagada: o do perfil.
+
+    A-04-PERGUNTA-AO-DAEMON-VIVO-01. O controle apagado não tem brilho próprio
+    a devolver — o 0% é justamente o que ele guardava —, e o do perfil é o que
+    ele herda quando não opina. Perfil a 0% (a mesa inteira apagada) ou sem o
+    campo legível acende cheio: a cor escolhida tem de aparecer.
+    """
+    leds = (cru or {}).get("leds") if isinstance(cru, dict) else None
+    try:
+        do_perfil = float(leds.get("lightbar_brightness", 1.0)) if isinstance(
+            leds, dict) else 1.0
+    except (TypeError, ValueError):
+        do_perfil = 1.0
+    return do_perfil if 0.0 < do_perfil <= 1.0 else 1.0
+
+
+def _guardar_o_apagado_no_perfil(ctx: Contexto, uniq: str) -> None:
+    """O «Desligar» vai ao disco como o BRILHO em 0% deste controle, e a cor fica.
+
+    A-04-PERGUNTA-AO-DAEMON-VIVO-01, 25/09/2026. Ele gravava o preto como a
+    COR do controle, e desde 22/09 o preto não é cor (`led_control.cor_escolhida`,
+    a ordem dela: *"vamos banir esse preto de aparecer"*): o perfil
+    reaplicado lia «não opinou» e acendia a barra de novo. Medido na mesa de
+    quatro real: o P2 apagado voltava vermelho na troca manual, no boot e no
+    «Salvar Perfil» — e o preto tinha apagado do disco o laranja que ela
+    escolhera. O caminho de apagar que a própria decisão de 22/09 deixou é o
+    brilho, *"um campo que só a mão dela move"*.
+
+    Os mesmos dois estados sem onde gravar de `_guardar_a_cor_no_perfil`, e a
+    mesma razão para sair calado: a barra já apagou.
+    """
+    nome = perfil.nome_do_ativo(ctx.state).strip()
+    if not nome:
+        return
+    loader = perfil._com_o_src()
+    try:
+        antigo = loader.load_profile(nome)
+    except OSError:
+        return
+    novo = _com_o_brilho_gravado(antigo, uniq, 0)
+    if novo is not None:
+        loader.save_profile(novo, origem="interface-nova")
+
+
 def _guardar_a_cor_no_perfil(ctx: Contexto, uniq: str,
-                             rgb: tuple[int, int, int]) -> None:
+                             rgb: tuple[int, int, int], *,
+                             religar: bool = False) -> None:
     """A cor que ela ESCOLHEU vai ao disco, no override daquele controle.
 
     **O DEFEITO QUE ISTO MATA, medido na bancada dela em 09/09/2026**, e ele
@@ -2577,11 +2688,16 @@ def _guardar_a_cor_no_perfil(ctx: Contexto, uniq: str,
     chamador — desligar o automático. A escolha de um tom nunca passou por
     ele.
 
-    OS DOIS ATOS QUE GRAVAM SÃO OS DOIS QUE ELA DECIDE SOBRE A COR: escolher
-    um tom (`cor`, `reenviar` — `escolha=True`) e desligar a barra (`apagar`
-    — `apagando=True`). O `brilho` passa por fora de propósito: ele não
-    escolhe cor, e gravar ali faria um arraste de trilho congelar no perfil
-    uma cor que ela não pediu.
+    QUEM GRAVA A COR É QUEM A ESCOLHE: um tom (`cor`, `reenviar` —
+    `escolha=True`). O «Desligar» gravava o preto aqui até 25/09/2026, e o
+    preto não é cor desde 22/09: ele grava o brilho em 0%, em
+    `_guardar_o_apagado_no_perfil`, e a cor dela fica. O `brilho` passa por
+    fora de propósito: ele não escolhe cor, e gravar ali faria um arraste de
+    trilho congelar no perfil uma cor que ela não pediu.
+
+    `religar` é a cor escolhida numa barra em 0%: o 0% do controle sai do
+    override junto, e ele volta ao brilho do perfil — o mesmo em que o
+    `_escrever_a_cor` acabou de acendê-la.
 
     SEM PERFIL NO DISCO NÃO HÁ ONDE GUARDAR, e o gesto sai calado: a cor JÁ
     está no aparelho, que é o que ela pediu, e um cartão de recusa depois do
@@ -2613,7 +2729,8 @@ def _guardar_a_cor_no_perfil(ctx: Contexto, uniq: str,
     except OSError:
         return
     novo = _com_a_cor_gravada(antigo, uniq, rgb,
-                              _numero(ctx, dele) if dele is not None else None)
+                              _numero(ctx, dele) if dele is not None else None,
+                              religar=religar)
     loader.save_profile(novo, origem="interface-nova")
 
 
@@ -2635,7 +2752,13 @@ def _a_cor_guardada(cru: dict[str, Any] | None,
     if not rgb or len(tuple(rgb)) < 3:
         return None
     r, g, b = tuple(rgb)[:3]
-    return (int(r), int(g), int(b))
+    #: O PRETO GRAVADO NÃO É COR — a ordem dela de 22/09, pelo dono da regra
+    #: (`led_control.cor_escolhida`). É o de um «Desligar» anterior a
+    #: 25/09/2026 ou de um «Salvar» que leu «não sei», e o daemon já o lê como
+    #: «não opinou» e acende a cor do número; a aba responde o mesmo.
+    from hefesto_dualsense4unix.core.led_control import cor_escolhida as a_cor_nao_e_o_preto
+
+    return a_cor_nao_e_o_preto((int(r), int(g), int(b)))
 
 
 def _a_cor_guardada_que_vale(ctx: Contexto, cru: dict[str, Any] | None,
@@ -2658,23 +2781,29 @@ def _a_cor_guardada_que_vale(ctx: Contexto, cru: dict[str, Any] | None,
     mandava ao aparelho a cor gravada de antes da troca — o gesto de brilho
     trocava a cor, e o X dele andava nas outras três fileiras até o fim.
 
-    O PRETO NÃO É FÓSSIL, pela mesma isenção do resolvedor: barra apagada é
-    ausência de cor, e ele nunca a desloca — quem apagou pelo «Desligar»
-    continua apagado com outro número. O OVERRIDE SEM PROCEDÊNCIA (`LEGADO`,
-    perfil anterior a 08/09) é provado pela FORMA, como o resolvedor prova:
+    O PRETO NÃO CHEGA AQUI: `_a_cor_guardada` o devolve como «sem cor», pela
+    ordem dela de 22/09. Quem apagou pelo «Desligar» tem o brilho em 0% e a
+    cor escolhida intacta, e ela segue a mesma regra de toda cor gravada. O
+    OVERRIDE SEM PROCEDÊNCIA (`LEGADO`, perfil anterior a 08/09) é provado
+    pela FORMA, como o resolvedor prova:
     fóssil quando é a cor do número de OUTRO controle da mesa. A comparação é
     antes do brilho; a do daemon é depois dele, e só diverge com brilhos
     diferentes por controle — e aí o erro daqui cai para o lado que não troca
     a cor de ninguém (a marca pisca a do número, o trilho manda a luz acesa).
 
-    SEM A PALETA, A COR GRAVADA FICA, fóssil ou não. O daemon desloca o fóssil
-    para o primeiro tom livre da paleta, e qual é esse tom depende da mesa
-    inteira; a escada desta aba só sabe a cor do número (degrau 4) e o global
-    (degrau 3), e mandar o global pelo trilho tiraria a cor de outro controle
-    que está nele. A cor escolhida é o que esta aba respondia antes, e é a que
-    não inventa. O daemon desloca o fóssil já no brilho da peça e pelo tom,
-    desde a A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01 (25/09).
+    SEM A PALETA, O FÓSSIL SAI QUANDO A LUZ DIZ O TOM — 25/09/2026,
+    A-04-PERGUNTA-AO-DAEMON-VIVO-01. O daemon desloca o fóssil também sem a
+    paleta (a procedência inteira de outro número; sem a cor do número de
+    ninguém, que é como ele monta a mesa sem a paleta) para o primeiro tom
+    livre, e qual é esse tom depende da mesa inteira. Esta função devolvia a
+    gravada fóssil, e o trilho a mandava: medido na mesa de quatro real, o P3
+    deslocado para o azul voltava ao ciano fóssil a cada «Brilho». Quando a
+    luz acesa diz o tom, no brilho que o daemon publica (`brilho_aceso`), é
+    ele que vale (o degrau 1 de `_a_cor_de_agora`). Com a luz calada — o 0%, a
+    leitura do nó ainda velha — a gravada fica: qual tom o daemon daria não se
+    sabe, e o global tiraria a cor de outro controle que está nele.
     """
+    from hefesto_dualsense4unix.app.widgets.controller_card import cor_do_swatch
     from hefesto_dualsense4unix.core.led_control import (
         LEGADO,
         PecaDaMesa,
@@ -2684,11 +2813,17 @@ def _a_cor_guardada_que_vale(ctx: Contexto, cru: dict[str, Any] | None,
 
     uniq = str(c.get("uniq") or "")
     guardada = _a_cor_guardada(cru, uniq)
-    if guardada is None or guardada == (0, 0, 0) or not automatico_do_perfil(cru):
-        return guardada
+    if guardada is None:
+        return None
     dono = ((cru or {}).get("controllers") or {}).get(chave_do_override(uniq))
     para = ((dono or {}).get("leds") or {}).get("lightbar_para_o_numero")
     numero = _numero(ctx, c)
+    if not automatico_do_perfil(cru):
+        sem_paleta = PecaDaMesa(uniq=uniq, pedida=guardada, do_numero=None,
+                                procedencia=LEGADO if para is None else para,
+                                numero=numero)
+        luz = _o_tom_que_acende(cor_do_swatch(c), brilho_aceso(c, cru, uniq))
+        return None if luz is not None and _e_fossil(sem_paleta, set()) else guardada
     peca = PecaDaMesa(uniq=uniq, pedida=guardada,
                       do_numero=player_slot_color(numero),
                       procedencia=LEGADO if para is None else para,
@@ -2912,7 +3047,7 @@ def _quem_e(ctx: Contexto, c: dict[str, Any]) -> str:
 
 @gesto("04-iluminacao.html", "apagar", grava="save_profile")
 def apagar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """"Desligar": a barra vai a preto.
+    """"Desligar": o brilho da barra vai a 0%, e a cor dela fica.
 
     NÃO é `lightbar.reset` — esse devolve a cor AUTOMÁTICA, que é o outro botão.
     Apagar e voltar ao automático são coisas diferentes, e o desenho dela as
@@ -2923,15 +3058,23 @@ def apagar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     resposta deixa a barra ACESA, que é exatamente a cara de "não cliquei
     direito".
 
-    O BRILHO VIAJA JUNTO E NÃO MUDA NADA AQUI — `int(0 * b)` é `0` para qualquer
-    `b`. Ele vai assim mesmo porque o caminho de escrita é UM só
-    (`_escrever_a_cor`); uma rota paralela "sem brilho" para o preto seria a
-    segunda escrita da mesma cor, que é como as duas divergiriam depois.
+    O APAGADO É O BRILHO, E NÃO A COR — 25/09/2026, decisão por delegação
+    (`D-2509-O-DESLIGAR-E-O-BRILHO-EM-ZERO`, A-04-PERGUNTA-AO-DAEMON-VIVO-01).
+    O preto ia ao disco como a cor do controle, e desde 22/09 o preto é
+    «não opinou»: a troca manual, o boot e o «Salvar Perfil» acendiam a barra
+    de novo, e o laranja que ela tinha escolhido estava perdido. O brilho em
+    0% é o apagar que a decisão de 22/09 deixou, e sobrevive a reaplicar o
+    perfil (`_guardar_o_apagado_no_perfil`). Para acender: o trilho, ou um tom
+    da guia (`_escrever_a_cor`, `religar`).
+
+    PELO MESMO CAMINHO DE ESCRITA, com o brilho 0 no parâmetro: o preto que
+    sai é `int(c * 0)`, e o daemon guarda o 0% ao lado dele — é o que o
+    trilho desta coluna passa a mostrar.
     """
     uniq = _uniq(o)
     if not uniq:
         raise ValueError("apagar: o clique não disse em qual controle")
-    _escrever_a_cor(ctx, p, uniq, (0, 0, 0), apagando=True)
+    _escrever_a_cor(ctx, p, uniq, (0, 0, 0), apagando=True, brilho=0.0)
 
 
 @gesto("04-iluminacao.html", "reenviar", grava="save_profile")
@@ -3415,7 +3558,10 @@ def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
 
     uniq = str(c.get("uniq") or "")
     efetiva = cor_do_swatch(c)
-    tom = _o_tom_que_acende(efetiva, brilho_do_controle(cru, uniq))
+    #: O BRILHO É O QUE O DAEMON ACENDEU (`brilho_aceso`), e não o do disco:
+    #: invertido com o do disco, o tom do P1 a 60% que atravessou a troca
+    #: automática para um perfil a 82% não casava com nada.
+    tom = _o_tom_que_acende(efetiva, brilho_aceso(c, cru, uniq))
     if tom is not None:
         return tom
     guardada = _a_cor_guardada_que_vale(ctx, cru, c)
@@ -3436,7 +3582,7 @@ def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
 
 
 def _com_a_cor_gravada(prof: Any, uniq: str, rgb: tuple[int, int, int],
-                       numero: int | None = None) -> Any:
+                       numero: int | None = None, *, religar: bool = False) -> Any:
     """O perfil com a cor DESTE controle escrita no override dele.
 
     **A COR VAI COM PROCEDÊNCIA** — decisão de produto de 08/09/2026, e é o
@@ -3462,6 +3608,11 @@ def _com_a_cor_gravada(prof: Any, uniq: str, rgb: tuple[int, int, int],
     é a do override precisa continuar lá depois de o automático sair; devolver
     `None` faria o chamador achar que não havia o que gravar naquele controle e
     seguir sem ele.
+
+    `religar=True` é a cor escolhida numa barra em 0% (A-04-PERGUNTA-AO-DAEMON-VIVO-01):
+    o brilho próprio de 0% SAI do override, e o controle volta ao do perfil —
+    a mesma conta de `_o_brilho_de_religar`. Com o perfil em 0%, ele fica
+    cheio, explícito, pela mesma razão.
     """
     from hefesto_dualsense4unix.profiles.schema import ControllerOverrides, LedsConfig
 
@@ -3472,6 +3623,13 @@ def _com_a_cor_gravada(prof: Any, uniq: str, rgb: tuple[int, int, int],
     campos: dict[str, Any] = {"lightbar": rgb}
     if numero is not None:
         campos["lightbar_para_o_numero"] = int(numero)
+    if religar:
+        if antes is not None and "lightbar_brightness" in antes.model_fields_set:
+            antes = LedsConfig.model_validate({
+                k: getattr(antes, k) for k in antes.model_fields_set
+                if k != "lightbar_brightness"})
+        if float(getattr(prof.leds, "lightbar_brightness", 1.0)) <= 0.0:
+            campos["lightbar_brightness"] = 1.0
     novos = (LedsConfig(**campos) if antes is None
              else antes.model_copy(update=campos))
     atuais[chave] = dele.model_copy(update={"leds": novos})
