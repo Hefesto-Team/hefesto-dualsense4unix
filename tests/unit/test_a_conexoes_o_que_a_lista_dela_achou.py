@@ -397,8 +397,430 @@ def test_as_pontes_alem_do_limite_continuam_na_frente() -> None:
 def test_a_central_publica_a_proposta_de_equilibrar(mesa: Any, relogio: rm.Relogio) -> None:
     """A proposta chega ao ``state_full["radio_central"]`` — é ela que acende a
     lâmpada e dá o que perguntar ao «Equilibrar» (o resto é da tela, abaixo)."""
-    _mundo_, _dono_, central = mesa(4)
+    *_, central = mesa(4)
     publicado = central.publicar([_no_ar(u, SALA) for u in QUATRO])
     assert publicado["proposta"] is not None
     assert publicado["proposta"]["controle"] == rm.uniq(ROXO)
     assert publicado["proposta"]["destino"] == QUARTO
+
+
+# ---------------------------------------------------------------------------
+# A TELA — o pacote da aba 08 sobre uma mesa declarada (sem a máquina dela)
+# ---------------------------------------------------------------------------
+# Três adaptadores (a Esquerda, a Direita e o Centro dela), os quatro controles
+# e o que o BlueZ conhece. O pacote lê o BlueZ, o `maquina.json` e o histórico
+# por costuras que a régua troca; nada aqui toca a máquina de quem roda.
+
+PCI = "0000:00:14.0"
+ADAPTADORES_DA_TELA = ("aa:bb:cc:00:00:09", "aa:bb:cc:00:00:15", "aa:bb:cc:00:00:21")
+LUGARES_DA_TELA = (f"pci-{PCI}-usb-0:1.2", f"pci-{PCI}-usb-0:4.1.4", f"pci-{PCI}-usb-0:4.1.3")
+NOMES_DA_TELA = ("Esquerda", "Direita", "Centro")
+
+
+def _id(endereco: str) -> str:
+    """O id da tela: 12 hex em maiúsculas, a forma do `_mac` do pacote."""
+    return endereco.replace(":", "").upper()
+
+
+def _objeto(adaptador: int, aparelho: str, **kw: Any) -> Any:
+    from hefesto_dualsense4unix.integrations.bluez_dbus import AparelhoDoBluez
+
+    no = f"/org/bluez/hci{adaptador}/dev_{aparelho.upper().replace(':', '_')}"
+    return AparelhoDoBluez(no, f"/org/bluez/hci{adaptador}", aparelho.upper(), **kw)
+
+
+@pytest.fixture()
+def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
+    from hefesto_dualsense4unix.integrations.mesa_de_radio import Mesa
+    from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
+
+    monkeypatch.setattr(a08_conexoes, "LER_NA_HORA", True)
+    monkeypatch.setattr(a08_conexoes, "_FUNDO", {})
+    monkeypatch.setattr(a08_conexoes, "_ABERTO", {})
+    monkeypatch.setattr(a08_conexoes, "_CENA_NA_TELA", {})
+    monkeypatch.setattr(a08_conexoes, "_mesa_do_radio", lambda recarregar=False: Mesa())
+    monkeypatch.setattr(a08_conexoes, "_ler_o_historico", lambda: {})
+    return a08_conexoes
+
+
+def _montar(a08: Any, monkeypatch: pytest.MonkeyPatch, *, adaptadores: int = 3,
+            aparelhos: tuple[Any, ...] = ()) -> None:
+    """O BlueZ e o `maquina.json` da mesa declarada, com ``adaptadores`` deles."""
+    from hefesto_dualsense4unix.integrations.bluez_dbus import AdaptadorDoBluez
+    from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
+
+    lidos = tuple(
+        AdaptadorDoBluez(f"/org/bluez/hci{i}", f"hci{i}", ADAPTADORES_DA_TELA[i].upper(),
+                         lugar=LUGARES_DA_TELA[i], varrendo=False)
+        for i in range(adaptadores))
+    monkeypatch.setattr(a08, "_FUNDO", {})  # a leitura de antes não vale para a mesa nova
+    monkeypatch.setattr(a08, "_ler_o_bluez", lambda: (lidos, aparelhos))
+    maquina = MaquinaConfig(lugares={LUGARES_DA_TELA[i]: {"nome": NOMES_DA_TELA[i]}
+                                     for i in range(adaptadores)})
+    monkeypatch.setattr(a08, "_ler_a_maquina", lambda: (maquina, {3: PCI}))
+
+
+def _estado(onde: dict[str, int], *, pontes: dict[str, str] | None = None,
+            central: dict[str, Any] | None = None) -> dict[str, Any]:
+    """``onde`` = {controle: índice do adaptador}; o daemon publica cada um."""
+    pontes = pontes or {}
+    return {
+        "controllers": [
+            {"uniq": rm.uniq(c), "transport": "bt", "connected": True,
+             "adaptador": ADAPTADORES_DA_TELA[i], "hz_movimento": 150.0, "hz_voz": 0.0,
+             "ponte_do_radio": pontes.get(c), "audio": {"mic_mudo": True}}
+            for c, i in onde.items()],
+        "radio_central": central or {"movimentos": [], "proposta": None},
+    }
+
+
+def _ctx(estado: dict[str, Any], jogadores: dict[str, int] | None = None) -> Any:
+    from hefesto_dualsense4unix.interface.pacotes import Contexto
+
+    cores = {VERMELHO: ("cosmic-red", "Cosmic Red"), AZUL: ("white", "White"),
+             VERDE: ("", ""), ROXO: ("galactic-purple", "Galactic Purple")}
+    jogadores = jogadores or {c: n for n, c in enumerate(QUATRO, start=1)}
+    mesa = [{"uniq": rm.uniq(c), "cor": cores[c][0], "nome": cores[c][1],
+             "jogador": jogadores[c]}
+            for c in QUATRO if any(e["uniq"] == rm.uniq(c) for e in estado["controllers"])]
+    return Contexto(state=estado, conectados=list(estado["controllers"]), mesa=mesa)
+
+
+def _cena(a08: Any, estado: dict[str, Any], **kw: Any) -> dict[str, Any]:
+    ctx = _ctx(estado, **kw)
+    a08.campos_do_radio(ctx)
+    return dict(a08._CENA_NA_TELA)
+
+
+def _linha(a08: Any, cena: dict[str, Any], quem: str) -> str:
+    ap = next(a for a in cena["aparelhos"] if a["id"].replace(":", "").lower()
+              == quem.replace(":", "").lower())
+    return str(a08.html_da_linha(ap, cena))
+
+
+# -- item 4: a lotação conta pontes -------------------------------------------
+
+
+@pytest.mark.parametrize("quantos", [1, 2, 3, 4])
+def test_a_lotacao_conta_as_pontes_e_nao_os_controles(
+    a08: Any, monkeypatch: pytest.MonkeyPatch, quantos: int
+) -> None:
+    """O item 4, MEDIDO: não é defeito de conta. A foto 3 dela mostra três
+    controles na Direita e «0/2» — e o número é a R10 dela (*«pontes de som e
+    vibração: N de 2»*), com o ícone do som e a dica que diz isso. Três
+    controles SEM som são 0 pontes de 2. O limite que existe é o das pontes, e
+    passar dele a tela diz («estourou», «Passou do limite»). Os controles
+    amontoados sem som são o item 3, e quem avisa é a lâmpada.
+    <!-- noqa-acento: citação literal dela -->
+    """
+    _montar(a08, monkeypatch)
+    onde = {c: 1 for c in QUATRO[:quantos]}
+    cena = _cena(a08, _estado(onde))
+    direita = next(lug for lug in cena["lugares"] if lug["id"] == _id(ADAPTADORES_DA_TELA[1]))
+    cartao = a08.html_do_lugar(direita, cena)
+    assert '0/2</span>' in cartao
+    assert 'title="Controles com som ou vibração: 0 de 2"' in cartao
+
+    com_som = _cena(a08, _estado(onde, pontes={c: "som" for c in onde}))
+    direita = next(lug for lug in com_som["lugares"]
+                   if lug["id"] == _id(ADAPTADORES_DA_TELA[1]))
+    cartao = a08.html_do_lugar(direita, com_som)
+    assert f"{quantos}/2</span>" in cartao
+    if quantos > 2:
+        assert "estourou" in cartao and "Passou do limite" in cartao
+
+
+# -- item 3: a lâmpada e o «Equilibrar» ---------------------------------------
+
+
+@pytest.mark.parametrize("quantos", [2, 3, 4])
+def test_os_controles_amontoados_acendem_a_lampada_e_o_equilibrar_tem_o_que_perguntar(
+    a08: Any, monkeypatch: pytest.MonkeyPatch, quantos: int
+) -> None:
+    """Os passos b4 e b5: com 2, 3 ou 4 controles na Direita e o Centro vazio,
+    a proposta da central chega à tela — a lâmpada no cartão do destino, o
+    balão, e a pergunta que o «Equilibrar» abre (``moldeDe(controle, destino)``
+    no roteiro da página).
+
+    MORDIDA: a mesma do plano — devolva o ``return None`` no lugar do
+    ``_ordem_que_equilibra``; a proposta não nasce e a lâmpada some.
+    """
+    from hefesto_dualsense4unix.integrations import plano_de_radio
+
+    _montar(a08, monkeypatch)
+    onde = {c: 1 for c in QUATRO[:quantos]}
+    controles = _estado(onde)["controllers"]
+    planos = plano_de_radio.plano_por_adaptador(
+        controles, adaptadores=ADAPTADORES_DA_TELA, listar=lambda _p: [], raiz="/nao/existe")
+    ordem = plano_de_radio.ordem_de_redistribuicao(planos)
+    assert ordem is not None
+    cena = _cena(a08, _estado(onde, central={"movimentos": [], "proposta": ordem.publicar()}))
+
+    destino = _id(ordem.destino)
+    assert cena["proposta"] == {"controle": ordem.controle, "destino": destino}
+    cartao = a08.html_do_lugar(next(lug for lug in cena["lugares"] if lug["id"] == destino),
+                               cena)
+    assert 'class="lampada"' in cartao
+    moldes = a08.html_dos_moldes(cena)
+    assert f'class="balao-molde" data-controle="{ordem.controle}"' in moldes
+    assert (f'data-alvo="{ordem.controle}" data-destino="{destino}" data-sim="Mover"'
+            in moldes), "o «Equilibrar» não teria pergunta para abrir"
+    assert a08.equilibrar_radio(None, {}, None) == {"armou": True}
+
+
+def test_sem_proposta_o_equilibrar_treme(a08: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """2/1/1 é o equilíbrio: sem proposta, o botão treme (R8) e nada acende."""
+    _montar(a08, monkeypatch)
+    cena = _cena(a08, _estado({VERMELHO: 0, AZUL: 0, VERDE: 1, ROXO: 2}))
+    assert cena["proposta"] is None
+    assert "lampada" not in a08.html_da_sala(cena)
+    with pytest.raises(RuntimeError):
+        a08.equilibrar_radio(None, {}, None)
+
+
+# -- item 2: cada tipo diz o próprio gesto ------------------------------------
+
+
+def _esperando(aparelho: str, destino: int, **kw: Any) -> dict[str, Any]:
+    import time
+
+    return {"aparelho": aparelho, "destino": ADAPTADORES_DA_TELA[destino],
+            "estado": "esperando", "passo": "gesto", "motivo": "", "origens": [],
+            "quando": time.time(), **kw}
+
+
+def test_o_teclado_esperando_nao_pede_ps_create_nem_veste_dualsense(
+    a08: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O passo c3: mover um TECLADO pedia «segure PS + Create» e mostrava o
+    desenho do DualSense. A linha dele agora tem o desenho do teclado e nenhum
+    gesto inventado — a pergunta antes de mover já disse o que fazer.
+
+    MORDIDA: faça ``gesto_de_parear`` devolver sempre o ``SEGURE`` — o teclado
+    volta a pedir PS + Create e esta régua reprova.
+    """
+    _montar(a08, monkeypatch)
+    central = {"movimentos": [_esperando(TECLADO, 2, e_controle=False,
+                                         classe=rm.CLASSE_DE_TECLADO, modalias="",
+                                         nome="BT5.0 Keyboard")],
+               "proposta": None}
+    cena = _cena(a08, _estado({VERMELHO: 0}, central=central))
+    linha = _linha(a08, cena, TECLADO)
+    assert "#rd-teclado" in linha and "#rd-ds" not in linha
+    assert "PS + Create" not in linha
+    assert "ponha o teclado para parear" in linha
+    centro = next(lug for lug in cena["lugares"] if lug["id"] == _id(ADAPTADORES_DA_TELA[2]))
+    topo = a08._marcas_de_onde(centro, cena)
+    assert "PS + Create" not in topo and "#rd-teclado" in topo
+
+
+@pytest.mark.parametrize(("modalias", "gesto"), [
+    ("bluetooth:v054Cp0CE6d0100", "Segure PS + Create"),   # DualSense
+    ("bluetooth:v054Cp0DF2d0100", "Segure PS + Create"),   # DualSense Edge
+    ("bluetooth:v054Cp09CCd0100", "Segure PS + Share"),    # DualShock 4
+    ("bluetooth:v2DC8p6002d0100", ""),                     # um controle de outra marca
+    ("", "Segure PS + Create"),                            # o que o daemon publica
+])
+def test_cada_controle_diz_o_gesto_do_modelo_dele(a08: Any, modalias: str, gesto: str) -> None:
+    ap = {"tipo": "controle", "modalias": modalias}
+    assert a08.gesto_de_parear(ap) == gesto
+    fala = a08._como_se_pareia(ap)
+    if gesto:
+        assert gesto.removeprefix("Segure ") in fala
+    else:
+        assert "PS" not in fala and "ponha o controle para parear" in fala
+
+
+def test_o_outro_aparelho_nao_vira_o_outro(a08: Any) -> None:
+    """«Depois, ponha o outro para parear» era a frase do tipo «outro»."""
+    assert a08._como_se_pareia({"tipo": "outro"}) == "Depois, ponha o aparelho para parear."
+    assert a08._como_se_pareia({"tipo": "caixa"}) == "Depois, ponha a caixa de som para parear."
+
+
+# -- item 5: todo tipo conhecido tem desenho ----------------------------------
+
+
+def test_o_teclado_de_baixo_consumo_tem_o_desenho_do_teclado(
+    a08: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O passo b7: o «BT5.0 Keyboard» não mostrava o teclado. Ele é de baixo
+    consumo: o BlueZ não publica ``Class``, e sim o ``Icon`` que ele mesmo
+    deriva da ``Appearance``. Ligado, na lista do «Conectar» ou num celular
+    que o produto não conhece (o genérico), cada um com o desenho que é dele.
+
+    MORDIDA: faça ``_tipo_do_aparelho`` ignorar o ``Icon`` — o teclado volta
+    ao desenho genérico e esta régua reprova.
+    """
+    aparelhos = (
+        _objeto(0, TECLADO, nome="BT5.0 Keyboard", conectado=True, icone="input-keyboard"),
+        _objeto(1, "aa:bb:cc:00:00:6d", nome="Mouse", conectado=False, rssi=-50,
+                icone="input-mouse"),
+        _objeto(1, "aa:bb:cc:00:00:6e", nome="Celular", conectado=False, rssi=-60,
+                icone="phone"),
+        _objeto(2, "aa:bb:cc:00:00:6f", nome="Fone", conectado=True, classe=0x240404),
+    )
+    _montar(a08, monkeypatch, aparelhos=aparelhos)
+    cena = _cena(a08, _estado({VERMELHO: 0}))
+    tipos = {a["id"]: a["tipo"] for a in cena["aparelhos"]}
+    assert tipos[_id(TECLADO)] == "teclado"
+    assert tipos[_id("aa:bb:cc:00:00:6f")] == "fone"
+    assert "#rd-teclado" in _linha(a08, cena, TECLADO)
+    perto = {a["id"]: a["tipo"] for a in cena["perto"]}
+    assert perto[_id("aa:bb:cc:00:00:6d")] == "mouse"
+    assert perto[_id("aa:bb:cc:00:00:6e")] == "outro"
+    moldes = a08.html_dos_moldes(cena)
+    painel = moldes[moldes.index('data-painel="conectar"'):]
+    assert "#rd-mouse" in painel and "#rd-radio" in painel
+
+
+def test_o_vizinho_que_o_sistema_reconhece_mostra_o_desenho_dele(a08: Any) -> None:
+    """O selo do rádio vizinho: declarado, o tipo dele; sugerido pelo kernel, o
+    desenho do sugerido com a borda de «não confirmado»; nada, o genérico."""
+    cena = {"espectro": [], "vizinhos": [
+        {"id": "046d:c52b", "tipo": "", "nome": "", "sugestao": "Teclado",
+         "sugestao_tipo": "teclado"},
+        {"id": "0bda:8179", "tipo": "wifi", "nome": "Wi-Fi", "sugestao": "",
+         "sugestao_tipo": ""},
+        {"id": "1234:5678", "tipo": "", "nome": "", "sugestao": "", "sugestao_tipo": ""},
+    ]}
+    selos = a08.html_fora_da_faixa(cena).split("</button>")
+    assert "#rd-teclado" in selos[0] and "sem-nome" in selos[0]
+    assert "#rd-wifi" in selos[1]
+    assert "#rd-ajuda" in selos[2]
+
+
+# -- item 8: o nome é do controle e o número é do daemon ----------------------
+
+
+def test_o_nome_segue_o_controle_e_o_numero_segue_o_daemon(
+    a08: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O passo a2: *«O vermelho era P4, reconectou como P3, e a tela mostrava o
+    nome errado.»* O vermelho tem DOIS objetos no BlueZ — o da Esquerda, onde
+    está conectado, com o nome «Vitória», e um velho no Centro, com «André».
+    A linha diz ``Vitória ● Cosmic Red ● P4``, e quando o daemon o renumera
+    para P3, o número muda e o nome fica. <!-- noqa-acento: citação literal dela -->
+
+    MORDIDA: devolva o dicionário de nomes de antes (o último objeto da árvore
+    vence) — o velho «André» ganha e esta régua reprova.
+    """
+    aparelhos = (
+        _objeto(0, VERMELHO, nome="Vitória", conectado=True),
+        _objeto(2, VERMELHO, nome="André", conectado=False),
+    )
+    _montar(a08, monkeypatch, aparelhos=aparelhos)
+    estado = _estado({VERMELHO: 0, AZUL: 0})
+    cena = _cena(a08, estado, jogadores={VERMELHO: 4, AZUL: 1, VERDE: 2, ROXO: 3})
+    vermelho = next(a for a in cena["aparelhos"] if a["id"] == rm.uniq(VERMELHO))
+    assert a08.nome_na_conexoes(vermelho) == "Vitória ● Cosmic Red ● P4"
+    linha = _linha(a08, cena, VERMELHO)
+    assert 'value="Vitória"' in linha and "● Cosmic Red ● P4" in linha
+
+    cena = _cena(a08, estado, jogadores={VERMELHO: 3, AZUL: 1, VERDE: 2, ROXO: 4})
+    vermelho = next(a for a in cena["aparelhos"] if a["id"] == rm.uniq(VERMELHO))
+    assert a08.nome_na_conexoes(vermelho) == "Vitória ● Cosmic Red ● P3"
+    # Sem nome, o padrão «Player N» — a decisão [02] da aba 01.
+    azul = next(a for a in cena["aparelhos"] if a["id"] == rm.uniq(AZUL))
+    assert a08.nome_na_conexoes(azul) == "Player 1 ● White ● P1"
+    # A pergunta de mover fala o mesmo nome.
+    assert "Vitória ● Cosmic Red ● P3" in a08.html_dos_moldes(cena)
+
+
+def test_renomear_escreve_o_nome_em_todo_adaptador_que_conhece_o_controle(
+    diario: Path, monkeypatch: pytest.MonkeyPatch, a08: Any
+) -> None:
+    """O nome vai para TODOS os objetos do controle — senão o adaptador em que
+    ele reconectar mostra o nome velho.
+
+    MORDIDA: devolva o ``caminho_do_aparelho`` (o primeiro da árvore) no
+    ``_alias_do_aparelho`` — só um objeto ganha o nome e esta régua reprova.
+    """
+    mundo = rm.RadioDeMentira()
+    mundo.pareado(SALA, VERMELHO, nome="André")
+    mundo.pareado(QUARTO, VERMELHO, host=False)
+    dono = _dono(mundo)
+    monkeypatch.setattr(bd, "dono", lambda: dono)
+
+    escrita = a08._alias_do_aparelho(VERMELHO.upper(), "Vitória")
+
+    assert escrita.feita
+    assert mundo.objeto(SALA, VERMELHO)["Alias"] == "Vitória"
+    assert mundo.objeto(QUARTO, VERMELHO)["Alias"] == "Vitória"
+    dono.fechar()
+
+
+# -- item 7: o «Conectar» mostra quem chegou pelo pareamento antigo -----------
+
+
+def test_quem_voltou_pelo_pareamento_antigo_pisca_no_adaptador_em_que_chegou(
+    a08: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O movimento «chegou» pelo pareamento antigo tem o destino ONDE ele
+    chegou, e é esse cartão que ganha o ``data-chegou`` que o roteiro da página
+    faz piscar."""
+    import time
+
+    _montar(a08, monkeypatch)
+    chegou = {"aparelho": ROXO, "destino": ADAPTADORES_DA_TELA[0], "estado": "chegou",
+              "passo": "fim", "motivo": cr.MOTIVO_PELO_PAREAMENTO_ANTIGO, "origens": [],
+              "e_controle": True, "quando": time.time()}
+    cena = _cena(a08, _estado({VERMELHO: 0, ROXO: 0},
+                              central={"movimentos": [chegou], "proposta": None}))
+    esquerda = next(lug for lug in cena["lugares"]
+                    if lug["id"] == _id(ADAPTADORES_DA_TELA[0]))
+    assert esquerda["chegou"] == [ROXO]
+    assert f'data-chegou="{ROXO}"' in a08.html_do_lugar(esquerda, cena)
+
+
+# -- as decisões dela: a caixa única aberta e a ordem que ela arrasta ---------
+
+
+def test_com_um_adaptador_so_a_caixa_nasce_e_fica_aberta(
+    a08: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """*«Essa área se só tiver um conector ela tá sempre aberta.»*
+    <!-- noqa-acento: citação literal dela -->
+
+    MORDIDA: tire o ``len(lugares) == 1`` do ``_o_aberto`` — a caixa nasce
+    fechada e esta régua reprova.
+    """
+    _montar(a08, monkeypatch, adaptadores=1)
+    cena = _cena(a08, _estado({VERMELHO: 0, AZUL: 0}))
+    unico = cena["lugares"][0]
+    assert cena["aberto"] == unico["id"]
+    assert 'class="lugar aberto"' in a08.html_do_lugar(unico, cena)
+    # O clique no ▶ não a fecha.
+    a08.abrir_adaptador(None, {"alvo": unico["id"]}, None)
+    assert _cena(a08, _estado({VERMELHO: 0, AZUL: 0}))["aberto"] == unico["id"]
+
+    # Com dois, ela abre e fecha como sempre.
+    _montar(a08, monkeypatch, adaptadores=2)
+    cena = _cena(a08, _estado({VERMELHO: 0, AZUL: 1}))
+    assert cena["aberto"] is None
+
+
+def test_a_ordem_que_ela_arrasta_fica_gravada(a08: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """*«segurar a área do conector e arrastar ela pra mudar de ordem entre
+    eles»*: o gesto grava a ordem pela chave do LUGAR, e a sala nasce nela.
+    <!-- noqa-acento: citação literal dela -->
+
+    MORDIDA: tire o ``_na_ordem_dela`` do ``cena_do_radio`` — a sala volta à
+    ordem do BlueZ e esta régua reprova.
+    """
+    from hefesto_dualsense4unix.app import gui_prefs
+
+    _montar(a08, monkeypatch)
+    cena = _cena(a08, _estado({VERMELHO: 0}))
+    ids = [lug["id"] for lug in cena["lugares"]]
+    assert ids == [_id(a) for a in ADAPTADORES_DA_TELA]
+
+    nova = [ids[2], ids[0], ids[1]]
+    a08.adaptador_reordenar(None, {"valor": " ".join(nova)}, None)
+
+    assert gui_prefs.ordem_dos_adaptadores() == [LUGARES_DA_TELA[2], LUGARES_DA_TELA[0],
+                                                 LUGARES_DA_TELA[1]]
+    depois = _cena(a08, _estado({VERMELHO: 0}))
+    assert [lug["id"] for lug in depois["lugares"]] == nova
+    # A ordem que não diz os adaptadores da tela recusa.
+    with pytest.raises(ValueError):
+        a08.adaptador_reordenar(None, {"valor": "AABBCC0000FF"}, None)

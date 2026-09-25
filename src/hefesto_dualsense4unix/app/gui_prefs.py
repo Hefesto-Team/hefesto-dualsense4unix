@@ -53,6 +53,8 @@ _DEFAULTS: dict[str, Any] = {
     # AS TABELAS QUE ELA ARRASTA — ver o bloco `_TABELAS` no fim deste arquivo.
     # Vazio é o estado de quem nunca arrastou nem escolheu ordem nenhuma.
     "tabelas": {},
+    # OS ADAPTADORES QUE ELA ARRASTA na aba Conexões — ver `_ADAPTADORES`, no fim.
+    "adaptadores": [],
 }
 
 
@@ -66,7 +68,7 @@ def _defaults() -> dict[str, Any]:
     e é exatamente por isso que a hora de fechar é agora, antes de o primeiro
     aparecer.
     """
-    return {k: (dict(v) if isinstance(v, dict) else v)
+    return {k: (dict(v) if isinstance(v, dict) else list(v) if isinstance(v, list) else v)
             for k, v in _DEFAULTS.items()}
 
 
@@ -219,3 +221,51 @@ def guardar_ordem_da_tabela(tabela: str, coluna: str, sentido: str) -> None:
     tabelas[str(tabela)] = desta
     prefs[_TABELAS] = tabelas
     save_gui_prefs(prefs)
+
+
+# ---------------------------------------------------------------------------
+# A ORDEM DOS ADAPTADORES QUE ELA ARRASTA — A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01,
+# 25/09/2026.
+#
+# Decisão dela: *«segurar a área do conector e arrastar ela pra mudar de ordem
+# entre eles»*, e a ordem fica gravada. <!-- noqa-acento: citação literal dela -->
+#
+# MORA AQUI PELA MESMA RAZÃO DAS TABELAS: a ordem das caixas não afirma nada
+# sobre o rádio nem sobre a porta — é a janela dela. O NOME do adaptador é do
+# lugar e mora no `maquina.json`; a ordem em que ela quer vê-los, aqui.
+#
+# A CHAVE DE CADA ADAPTADOR é o lugar dele (a porta, a D3), e o endereço só
+# para o da placa-mãe, que não pendura em porta nenhuma — quem monta a chave é
+# a tela (`a08_conexoes._chave_da_ordem`). Esta função guarda a lista como veio,
+# sem repetir e sem vazio.
+_ADAPTADORES = "adaptadores"
+
+
+def ordem_dos_adaptadores() -> list[str]:
+    """A ordem que ela deixou, da caixa de cima para a de baixo. Vazio = nunca arrastou."""
+    bruto = load_gui_prefs().get(_ADAPTADORES)
+    if not isinstance(bruto, list):
+        return []
+    vistas: list[str] = []
+    for chave in bruto:
+        if isinstance(chave, str) and chave and chave not in vistas:
+            vistas.append(chave)
+    return vistas
+
+
+def guardar_ordem_dos_adaptadores(chaves: list[str]) -> list[str]:
+    """Grava a ordem e devolve a que ficou (sem repetidas e sem vazias).
+
+    Quem não veio na lista nova mas estava na velha (um adaptador fora da
+    máquina agora) fica no fim, na ordem de antes: tirar o dongle não apaga o
+    lugar dele na fila.
+    """
+    novas: list[str] = []
+    for chave in chaves:
+        if isinstance(chave, str) and chave and chave not in novas:
+            novas.append(chave)
+    for chave in ordem_dos_adaptadores():
+        if chave not in novas:
+            novas.append(chave)
+    set_pref(_ADAPTADORES, novas)
+    return novas

@@ -651,6 +651,12 @@ class AparelhoDoBluez:
     rssi: int | None = None
     classe: int | None = None
     modalias: str = ""
+    #: O ``Icon`` que o PRÓPRIO BlueZ deriva da classe (rádio clássico) ou da
+    #: ``Appearance`` (Bluetooth de baixo consumo): ``input-keyboard``,
+    #: ``input-mouse``, ``audio-headset``… É a única pista de tipo de um aparelho
+    #: LE, que não publica ``Class`` — o «BT5.0 Keyboard» da lista dela de 25/09
+    #: (passo b7) chegava à tela sem classe, e virava o desenho genérico.
+    icone: str = ""
 
 
 def _inteiro(valor: object) -> int | None:
@@ -856,6 +862,7 @@ class LeitorDoBluez:
                     rssi=_inteiro(self.propriedade(caminho, APARELHO, "RSSI")),
                     classe=_inteiro(self.propriedade(caminho, APARELHO, "Class")),
                     modalias=str(self.propriedade(caminho, APARELHO, "Modalias") or ""),
+                    icone=str(self.propriedade(caminho, APARELHO, "Icon") or ""),
                 )
             )
         return tuple(achados)
@@ -870,6 +877,23 @@ class LeitorDoBluez:
             if _hci_de(caminho) and self.endereco_do_adaptador(caminho, kernel=kernel) == alvo:
                 return caminho
         return None
+
+    def caminhos_do_aparelho(self, endereco: str) -> tuple[str, ...] | None:
+        """Todos os objetos deste aparelho — um por adaptador que o conhece.
+
+        O BlueZ guarda o ``Alias`` POR OBJETO, e o nome que ela dá é do
+        APARELHO: quem renomeia escreve em todos, senão o adaptador em que ele
+        reconectar mostra o nome velho (a lista dela de 25/09, passo a2).
+        ``None`` = não sei; ``()`` = o BlueZ não conhece este endereço.
+        """
+        alvo = _mac(endereco)
+        caminhos = self.caminhos()
+        if alvo is None or caminhos is None:
+            return None
+        return tuple(
+            caminho for caminho in caminhos
+            if _CAMINHO_DE_APARELHO.match(caminho) and endereco_do_aparelho(caminho) == alvo
+        )
 
     def caminho_do_aparelho(self, endereco: str, *, adaptador: str | None = None) -> str | None:
         """O caminho deste aparelho — em QUALQUER adaptador, ou no de endereço ``adaptador``.
@@ -1026,6 +1050,7 @@ LEITURAS = (
     "aparelhos",
     "caminho_do_adaptador",
     "caminho_do_aparelho",
+    "caminhos_do_aparelho",
     "conferir_os_lugares",
     "dono_do_bluez",
 )
