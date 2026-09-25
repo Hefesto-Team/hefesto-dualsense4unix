@@ -5138,7 +5138,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova o que a tela diz quando um controle do rádio sai — e o que ela NÃO diz quando ele morre de verdade, que é o achado desta linha.
 
-**Onde olhar.** No canto de cima, à direita, a contagem («● 2 USB · 2 BT»). A fita do topo, com um chip por controle. Na aba Conexões, o quadro «Gestão de Controles», onde um lugar sem controle diz «Player N • Desconectado», e a seção «Rádio e Adaptadores», com a contagem ao lado do título («2 controles · 3 adaptadores») e, em cada adaptador, um ▶ que abre a lista dos controles que estão nele. Na aba Jogar, o botão «Reconectar controles», embaixo dos cartões: desde 22/09 ele também chama de volta pelo rádio os controles que o Bluetooth do computador conhece e que o Hefesto não está vendo, e diz numa frase o que fez. O diagnóstico da morte por rádio — o aviso de que o controle está pareado, o computador o dá por conectado e mesmo assim ele não existe para o Hefesto — não nasce sozinho em aba nenhuma.
+**Onde olhar.** No canto de cima, à direita, a contagem («● 2 USB · 2 BT»). A fita do topo, com um chip por controle. Na aba Conexões, o quadro «Gestão de Controles», onde um lugar sem controle diz «Player N • Desconectado», e a seção «Rádio e Adaptadores», com a contagem ao lado do título («2 controles · 3 adaptadores») e, em cada adaptador, um ▶ que abre a lista dos controles que estão nele. Na aba Jogar, o botão «Reconectar controles», embaixo dos cartões: desde 22/09 ele também chama de volta pelo rádio os controles que o Bluetooth do computador conhece e que o Hefesto não está vendo, e não diz nada na tela (`D-2409-O-RECONECTAR-NAO-DIZ-NADA`): o que ele fez aparece na fita e na contagem. O diagnóstico da morte por rádio — o aviso de que o controle está pareado, o computador o dá por conectado e mesmo assim ele não existe para o Hefesto — não nasce sozinho em aba nenhuma.
 
 **Os passos.**
 
@@ -5151,7 +5151,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 7. Volte à aba Conexões e confira que a contagem de «Rádio e Adaptadores» caiu um, que o P3 saiu da lista do adaptador dele e que o P4 continua na do seu.
 8. Volte à aba Sistema e leia o exame de novo: anote se alguma linha nova nasceu.
 9. Abra a aba Jogar e clique em «Reconectar controles», com o P3 ainda desligado.
-10. Espere a frase que aparece depois do clique — ela pode levar alguns segundos por controle pareado que esteja desligado — e anote-a palavra por palavra.
+10. Espere alguns segundos por controle pareado que esteja desligado e anote o que a fita e a contagem mostram: o botão não diz nada na tela.
 11. Dê um toque curto no botão PS do P3 para religá-lo.
 12. Confira que ele volta com o plástico dele como P3, que o P4 volta a ser P4, e que a contagem volta a «● 2 USB · 2 BT».
 13. Repita os passos 4 a 12 com o P4.
@@ -5805,7 +5805,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que um controle do rádio que não entra na primeira volta acaba entrando, e mostra o que fazer quando ele acende mas não aparece na lista.
 
-**Onde olhar.** Na fita do topo, os chips no formato «P3 • <nome da cor do plástico> • BT»; e a contagem no canto de cima, à direita, no formato «● 2 USB · 2 BT». Na aba Controles, o cartão que abre ao clicar na linha de um controle: «Bateria» em porcento, «Touchpad», os analógicos e os blocos «Giroscópio» e «Acelerômetro». Na aba Jogar, o botão «Reconectar controles», embaixo dos cartões: desde 22/09 ele derruba o elo morto de um controle que o Bluetooth diz estar aqui e o Hefesto não vê, e diz numa frase o que fez. E na aba Sistema, na faixa «Avançado», o botão «Ver detalhes», que põe no painel «Detalhes técnicos» as últimas 80 linhas do registro, cada uma com o horário na frente.
+**Onde olhar.** Na fita do topo, os chips no formato «P3 • <nome da cor do plástico> • BT»; e a contagem no canto de cima, à direita, no formato «● 2 USB · 2 BT». Na aba Controles, o cartão que abre ao clicar na linha de um controle: «Bateria» em porcento, «Touchpad», os analógicos e os blocos «Giroscópio» e «Acelerômetro». Na aba Jogar, o botão «Reconectar controles», embaixo dos cartões: desde 22/09 ele derruba o elo morto de um controle que o Bluetooth diz estar aqui e o Hefesto não vê, e não diz nada na tela (`D-2409-O-RECONECTAR-NAO-DIZ-NADA`): o que ele fez aparece na fita e na contagem. E na aba Sistema, na faixa «Avançado», o botão «Ver detalhes», que põe no painel «Detalhes técnicos» as últimas 80 linhas do registro, cada uma com o horário na frente.
 
 **Os passos.**
 
@@ -5818,7 +5818,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 6. Anote quantos segundos levou até o chip com o plástico dele voltar à fita.
 7. Anote também se a barra de luz dele acendeu sem o chip aparecer.
 8. Repita os passos 3 a 7 mais quatro vezes no P3, sempre esperando o chip voltar antes da volta seguinte.
-9. Se em alguma volta ele acendeu e não apareceu, espere um minuto sem tocar em nada e anote em quantos segundos ele entrou sozinho; se o minuto passar e ele não tiver entrado, abra a aba Jogar, clique em «Reconectar controles», leia a frase e faça o que ela pedir; se nada mudar, desligue e ligue o P3 mais uma vez.
+9. Se em alguma volta ele acendeu e não apareceu, espere um minuto sem tocar em nada e anote em quantos segundos ele entrou sozinho; se o minuto passar e ele não tiver entrado, abra a aba Jogar, clique em «Reconectar controles» e espere alguns segundos (ele não diz nada na tela); se o P3 não voltar à fita, desligue e ligue o P3 mais uma vez.
 10. Clique na linha do P3, na aba Controles, e confira que o cartão responde: bateria com número, touchpad contando o toque e giroscópio saindo do zero.
 11. Repita os passos 3 a 10 com o P4.
 12. Abra a aba Sistema, desça até a faixa «Avançado» e clique em «Ver detalhes».
