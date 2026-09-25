@@ -419,9 +419,9 @@ def _montar(
         _vigiar(caminho)
         return os_open_de_verdade(caminho, flags, *args, **kw)
 
-    def _open(arquivo: Any, *args: Any, **kw: Any) -> Any:
-        _vigiar(arquivo)
-        return open_de_verdade(arquivo, *args, **kw)
+    def _open(*args: Any, **kw: Any) -> Any:
+        _vigiar(args[0] if args else kw.get("file"))
+        return open_de_verdade(*args, **kw)
 
     monkeypatch.setattr(os, "open", _os_open)
     monkeypatch.setattr(builtins, "open", _open)
