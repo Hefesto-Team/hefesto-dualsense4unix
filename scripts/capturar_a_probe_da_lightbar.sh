@@ -60,8 +60,9 @@ SEGUNDOS="${2:-40}"
 DONO_UID="${SUDO_UID:-0}"
 DONO_GID="${SUDO_GID:-0}"
 
-# $DESTINO recebe só a leitura, escrita pelo root. Um link, ou um diretório de
-# outro usuário no lugar dele, é recusado: o root não escreve por ali.
+# $DESTINO recebe só a leitura, escrita pelo root. Um link, um diretório de
+# outro usuário, ou um em que qualquer um escreve, é recusado: o root não
+# escreve por ali.
 preparar_destino() {
     if [ -L "$DESTINO" ] || { [ -e "$DESTINO" ] && [ ! -d "$DESTINO" ]; }; then
         echo "erro: $DESTINO não é um diretório comum; recuso escrever nele como root." >&2
@@ -74,6 +75,14 @@ preparar_destino() {
     dono=$(stat -c %u "$DESTINO") || return 1
     if [ "$dono" != "0" ] && [ "$dono" != "$DONO_UID" ]; then
         echo "erro: $DESTINO é de outro usuário (uid $dono); recuso escrever nele como root." >&2
+        return 1
+    fi
+    # Num diretório em que qualquer um escreve (o próprio /tmp, uma pasta 0777),
+    # outro usuário troca a leitura por um link entre o `rm` e a escrita do root.
+    local modo
+    modo=$(stat -c %a "$DESTINO") || return 1
+    if (( 8#$modo & 8#002 )); then
+        echo "erro: em $DESTINO qualquer um escreve (modo $modo); recuso escrever nele como root." >&2
         return 1
     fi
     # A versão anterior deixava a captura crua aqui, 0644 e do root.
