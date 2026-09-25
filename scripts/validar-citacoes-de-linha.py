@@ -179,7 +179,17 @@ CSV_FORA_DO_PORTAO: dict[str, str] = {}
 #: `src/hefesto_dualsense4unix/core/backend_pydualsense.py` o tempo todo.
 PREFIXOS = ("", "src/hefesto_dualsense4unix")
 
-EXTENSOES = "py|sh|c|h|md|yml|yaml|toml|rules|glade|css|js"
+#: A EXTENSÃO DEIXOU DE SER LISTA em 25/09/2026 (O-MAPA-QUE-A-6E-DEIXOU-01), e
+#: a razão é a mesma do glob das planilhas: arquivo novo nasce coberto. A lista
+#: digitada (`py|sh|c|h|md|yml|yaml|toml|rules|glade|css|js`) deixava calada toda
+#: citação de um tipo que ninguém lembrou de acrescentar. A conferência da
+#: O-MAPA-OUVE-AS-RESPOSTAS-DE-24-09-01 achou as 35 de `.conf` do mapa fora do
+#: portão, uma delas além do fim do arquivo; e a medição de 25/09 achou mais 232
+#: de `.html`, `.csv`, `.service` e `.txt` que resolvem nesta árvore.
+#: Quem separa o que se cobra do que se cala continua sendo a RESOLUÇÃO
+#: (`resolve`): um caminho que não existe nesta árvore é contado e calado, com
+#: qualquer extensão. Aberta, a régua nasceu com zero podre: 3.546 conferidas.
+EXTENSOES = "[A-Za-z0-9]+"
 
 #: `arquivo.ext:N`, `arquivo.ext:N-M`, e a forma curta `:N` / `:N-M`.
 ENDERECO = re.compile(
