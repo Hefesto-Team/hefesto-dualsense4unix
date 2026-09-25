@@ -2531,6 +2531,45 @@ def _a_cor_guardada(cru: dict[str, Any] | None,
     return (int(r), int(g), int(b))
 
 
+def _a_cor_guardada_que_vale(ctx: Contexto, cru: dict[str, Any] | None,
+                             c: dict[str, Any]) -> tuple[int, int, int] | None:
+    """A cor gravada DESTE controle — ou `None` quando ela é FÓSSIL.
+
+    Decisão dela (delegada), 08/09/2026: *"quando o número daquele aparelho
+    muda, a cor gravada é FÓSSIL e sai sozinha"*. A cor vai ao disco com o
+    número para o qual foi escolhida (`lightbar_para_o_numero`), e o daemon a
+    troca pela do número de hoje (`led_control.cores_sem_colisao`). Quem diz
+    se é fóssil é o dono da regra (`led_control._e_fossil`); aqui só se monta
+    a peça com o número deste controle (`_numero`).
+
+    POR QUE ELA EXISTE — 24/09/2026, conferência da A-MARCA-DA-COR-NAO-SOME-01.
+    A cor gravada crua é o degrau 2 da escada da marca e o primeiro do trilho,
+    e com um fóssil os dois desfaziam o que o daemon faz: medido na mesa de
+    quatro real, o P2 acendia o vermelho do número e soltar o trilho dele em
+    50% mandava o laranja fóssil — o gesto de brilho trocava a cor, e a borda
+    e o X pulavam junto; a 0% a marca ia para o laranja, que não acende.
+
+    O PRETO NÃO É FÓSSIL, pela mesma isenção do resolvedor: barra apagada é
+    ausência de cor, e ele nunca a desloca — quem apagou pelo «Desligar»
+    continua apagado com outro número. E O OVERRIDE SEM PROCEDÊNCIA (`LEGADO`,
+    perfil anterior a 08/09) FICA: o resolvedor o prova pela forma, contra as
+    cores de número da mesa inteira, e sem elas (`numeros` vazio) a regra do
+    dono responde que não é fóssil.
+    """
+    from hefesto_dualsense4unix.core.led_control import LEGADO, PecaDaMesa, _e_fossil
+
+    uniq = str(c.get("uniq") or "")
+    guardada = _a_cor_guardada(cru, uniq)
+    if guardada is None or guardada == (0, 0, 0):
+        return guardada
+    dono = ((cru or {}).get("controllers") or {}).get(chave_do_override(uniq))
+    para = ((dono or {}).get("leds") or {}).get("lightbar_para_o_numero")
+    peca = PecaDaMesa(uniq=uniq, pedida=guardada, do_numero=None,
+                      procedencia=LEGADO if para is None else para,
+                      numero=_numero(ctx, c))
+    return None if _e_fossil(peca, set()) else guardada
+
+
 def _a_cor_do_global(cru: dict[str, Any] | None) -> tuple[int, int, int] | None:
     """A cor GLOBAL do perfil (`leds.lightbar`), antes do brilho — ou `None`.
 
