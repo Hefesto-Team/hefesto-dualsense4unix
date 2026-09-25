@@ -178,7 +178,7 @@ TEXTO_CANCELAR = "Cancelar"
 
 #: A dica do botão quando ele PODE ser clicado.
 DICA_NO_RADIO = (
-    "Derruba este controle do rádio. Depois aperte PS nele para ele voltar — é "
+    "Derruba este controle do BT. Depois aperte PS nele para ele voltar — é "
     "a única cura conhecida para a barra que nasce travada. O Hefesto não "
     "reconecta sozinho: o botão PS é seu."
 )
@@ -186,8 +186,8 @@ DICA_NO_RADIO = (
 #: A dica do botão apagado. Ela diz POR QUE está apagado, que é a metade que
 #: falta em todo botão insensível desta casa.
 DICA_NO_CABO = (
-    "Só vale no rádio. Pelo cabo a barra obedece — o defeito que este gesto "
-    "cura não existe no cabo, e por isso o botão fica apagado aqui."
+    "Só vale no BT. Pelo USB a barra obedece — o defeito que este gesto "
+    "cura não existe no USB, e por isso o botão fica apagado aqui."
 )
 
 # O AVISO DA MESA SUJA SAIU DA DICA — FRASES-E-DICAS-02, 13/09/2026. Aqui
@@ -539,7 +539,7 @@ def frase_da_capacidade_do_mic() -> str:
 
     total = HZ_INPUT_COM_MIC + HZ_AUDIO_COM_MIC
     return (
-        f"Com o microfone ligado, um controle no rádio troca {_numero(HZ_INPUT_SEM_MIC)} "
+        f"Com o microfone ligado, um controle no BT troca {_numero(HZ_INPUT_SEM_MIC)} "
         f"relatórios de entrada por segundo por {_numero(HZ_INPUT_COM_MIC)} mais "
         f"{_numero(HZ_AUDIO_COM_MIC)} quadros de áudio: {_numero(total)} das "
         f"{SLOTS_POR_SEGUNDO} fatias daquele adaptador. Quanto já está em uso "

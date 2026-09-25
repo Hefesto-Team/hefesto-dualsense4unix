@@ -165,10 +165,19 @@ class TestSoAcionavelNoRadio:
         assert pode_derrubar(sem_uniq) is False
 
     def test_a_dica_do_cabo_diz_por_que_esta_apagado(self) -> None:
-        """Botão insensível sem explicação é o defeito que esta casa já pagou."""
+        """Botão insensível sem explicação é o defeito que esta casa já pagou.
+
+        A PALAVRA DOS DOIS TRANSPORTES SE PERGUNTA AO DONO desde 24/09/2026
+        (A-GESTAO-SEGUE-O-JOGADOR-01): a dica diz USB e BT, a decisão dela de
+        21/09. Digitar `"cabo"` aqui prendia a palavra que ela revogou.
+        """
+        from hefesto_dualsense4unix.app.actions.home_actions import (
+            palavra_do_transporte as palavra,
+        )
+
         dica = dica_do_botao(NO_CABO)
         assert dica == DICA_NO_CABO
-        assert "cabo" in dica and "rádio" in dica
+        assert palavra("usb") in dica and palavra("bt") in dica
 
     def test_a_dica_do_radio_diz_que_o_ps_e_dela(self) -> None:
         dica = dica_do_botao(NO_RADIO)
