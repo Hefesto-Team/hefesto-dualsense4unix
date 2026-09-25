@@ -1938,6 +1938,28 @@ def _rastros_do_lar(raizes: Raizes) -> list[Rastro]:
     return rastros
 
 
+#: Os sufixos das cópias que o produto tira AO LADO de um arquivo de terceiro
+#: antes de mexer nele: ``steam_launch_options`` (``hefesto-launch``),
+#: ``opcoes_por_jogo`` (``hefesto-opcoes``), ``proton_pin``
+#: (``hefesto-proton``), ``audio_ks_dualsense`` (``hefesto-audio-ks``),
+#: ``camadas_vulkan`` (``hefesto-camadas``) e o ``disable_steam_input.sh``
+#: (``steam-input``). O uninstall as deixa de propósito — são o desfazer.
+_SUFIXOS_DAS_COPIAS = (".bak.hefesto-", ".bak.steam-input")
+
+
+def _copias_ao_lado(arquivo: Path) -> list[Rastro]:
+    """As cópias de antes de o Hefesto mexer neste arquivo — uma linha só."""
+    try:
+        copias = [c for c in arquivo.parent.glob(f"{arquivo.name}.bak.*")
+                  if any(c.name.startswith(arquivo.name + s) for s in _SUFIXOS_DAS_COPIAS)]
+    except OSError:
+        return []
+    if not copias:
+        return []
+    return [Rastro(f"{arquivo}.bak.*", f"{len(copias)} cópia(s) de antes de o Hefesto "
+                   "mexer neste arquivo (ficam: são o seu desfazer)", de_proposito=True)]
+
+
 def _rastros_nos_lancadores(raizes: Raizes) -> list[Rastro]:
     rastros: list[Rastro] = []
     lugar_vdf = next(lg for lg in INVENTARIO if lg.chave == "steam-opcoes-e-entrada")
@@ -1950,19 +1972,12 @@ def _rastros_nos_lancadores(raizes: Raizes) -> list[Rastro]:
             if n:
                 rastros.append(Rastro(str(vdf), f"{n} jogo(s) com o atalho do Hefesto "
                                       "nas Opções de Inicialização"))
-        # As cópias que o install e o uninstall tiram ao lado de cada vdf antes de
-        # mexer nele (``steam_launch_options``: ``.bak.hefesto-launch-<ts>``;
-        # ``disable_steam_input.sh``: ``.bak.steam-input-<ts>``). Ficam de
-        # propósito — são o desfazer dela —, e o «limpa?» diz que estão lá.
-        for sufixo in ("hefesto-launch", "steam-input"):
-            for copia in sorted(vdf.parent.glob(f"{vdf.name}.bak.{sufixo}-*")):
-                rastros.append(Rastro(str(copia), "a cópia do vdf de antes de o Hefesto "
-                                      "mexer nele (fica: é o seu desfazer)",
-                                      de_proposito=True))
+        rastros.extend(_copias_ao_lado(vdf))
     pp = _modulo_de_integracao("proton_pin")
     if pp is not None:
         with contextlib.suppress(OSError, ValueError, AttributeError):
             cfg = Path(pp.default_config_vdf(raizes.lar))
+            rastros.extend(_copias_ao_lado(cfg))
             conf_path = pp.default_pin_conf_path()
             if cfg.is_file() and conf_path is not None:
                 nome = pp.parse_pin_conf(Path(conf_path).read_text(encoding="utf-8"))["name"]
@@ -1996,6 +2011,7 @@ def _rastros_nos_lancadores(raizes: Raizes) -> list[Rastro]:
         with contextlib.suppress(OSError, AttributeError):
             for prefixo in cv.raizes_de_prefixo(raizes.lar):
                 reg = Path(prefixo) / "pfx" / "system.reg"
+                rastros.extend(_copias_ao_lado(reg))
                 with contextlib.suppress(OSError):
                     if MARCA_DO_DEVICE_KS in reg.read_text(encoding="utf-8", errors="replace"):
                         rastros.append(Rastro(str(reg), "o device de áudio KS do Hefesto "
