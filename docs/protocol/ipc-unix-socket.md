@@ -41,7 +41,7 @@ aparece contada.
 
 <!-- BLOCO GERADO por scripts/gerar-contrato-ipc.py — não edite à mão -->
 
-**49 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **20** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
+**50 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **20** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
 
 Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e é por isso que ele está aqui: escrito à mão, ele já saiu 15, 17, 18 e 14 em levantamentos do mesmo dia.
 
@@ -88,6 +88,7 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `coop.sync` | `daemon/ipc_handlers.py:7191` (`_handle_coop_sync`) | Roda UM ciclo cheio de reconciliação do co-op (`sync(force=True)`). | sim |
 | `daemon.emulation.suppress` | `daemon/ipc_handlers.py:7228` (`_handle_emulation_suppress`) | Liga/desliga o modo jogo (suprime emulação mouse/teclado). | sim |
 | `led.player_set` | `daemon/ipc_handlers.py:1510` (`_handle_led_player_set`) | Aplica bitmask de 5 LEDs de player no controle. | sim |
+| `led.player_brightness_set` | `daemon/ipc_handlers.py:1562` (`_handle_led_player_brightness_set`) | O brilho das cinco luzes de número: Fraco, Médio ou Forte. | sim |
 | `identity.renumber` | `daemon/ipc_handlers.py:1667` (`_handle_identity_renumber`) | Reordena a FILA de preferência (DualSense + externos) — ONDA-U/NUM-01. | sim |
 | `identity.number.set` | `daemon/ipc_handlers.py:1981` (`_handle_identity_number_set`) | Atribui o NÚMERO EXIBIDO de UM controle (PLAYER-01, 25/07). | sim |
 | `machine.declare` | `daemon/ipc_handlers.py:7245` (`_handle_machine_declare`) | Grava no `maquina.json` o que ela DECLAROU sobre a mesa (CONFIG-03). | sim |
@@ -195,6 +196,33 @@ evento que o libera. Na mesma leva, a escrita que LEVANTA (o `hidraw` que some
 debaixo dela) deixou de contar como aplicada: o backend devolve `falhou` e as
 duas listas saem vazias, porque prometer "guardado" ali seria mandá-la esperar
 um evento que pode nunca vir.
+
+### `led.player_brightness_set` — o brilho das luzes de número (O-BRILHO-DAS-LUZES-DE-NUMERO-01)
+
+`{brilho: "fraco" | "medio" | "forte", uniq?}` → `{status, brilho,
+aplicado_em, guardado_em}`. Decisão dela de 24/09/2026
+(`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`): Fraco, Médio e Forte na linha
+LEDs, nascendo no Fraco. A palavra é a do perfil
+(`leds.player_led_brightness`); a tradução para o degrau do firmware
+(`common[42]`: 0 forte, 1 médio, 2 fraco) é de
+`core/led_control.degrau_do_brilho_das_luzes`, que recusa palavra fora das três
+dizendo quais são.
+
+Com `uniq`, vale só naquele controle, pela mesma porta e com as mesmas duas
+listas do `led.player_set`. Sem `uniq`, é o «Todos»: vira o padrão de quem
+chegar depois (hotplug) e é escrito em cada conectado — senão um override
+guardado no perfil venceria o «Todos» que acabou de ser pedido. Nesse ramo o
+`guardado_em` sai vazio.
+
+O degrau sai pelos caminhos do número, nos dois transportes: no cabo sem nó de
+LED gravável, no fluxo; no cabo com o nó do kernel, num `0x02` avulso logo
+depois do número (o nó do `hid_playstation` é 0/1 por lâmpada e não escolhe
+brilho); no rádio, no `0x31` que acende o número. O `flag2` leva só o bit0
+(`SET_PLAYER_LED_BRIGHTNESS`), nunca o 0x02 do LIGHTBAR_SETUP.
+
+**Não arma a trava manual `led`**, de propósito: quem chama é a pílula da aba
+Iluminação, e ela grava a palavra no override do controle ANTES de chamar —
+uma troca de perfil reaplica o que o perfil diz, que é o que ela escolheu.
 
 ### `rumble.motores.set` — a BARRA de cada motor (VIBRACAO-POR-MOTOR-01)
 
