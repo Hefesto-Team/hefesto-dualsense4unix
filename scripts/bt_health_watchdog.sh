@@ -217,7 +217,15 @@ _uniqs_hidraw() {
     for f in "${HIDRAW_ROOT}"/*/device/uevent; do
         [[ -r "${f}" ]] || continue
         u="$(grep -m1 '^HID_UNIQ=' "${f}" 2>/dev/null | cut -d= -f2)"
-        [[ -n "${u}" ]] && printf '%s\n' "${u,,}"
+        # `if`, e não `[[ -n ]] && printf`: o `&&` era o último comando do laço
+        # e devolvia 1 quando o ÚLTIMO hidraw vinha sem UNIQ (teclado ou mouse
+        # USB). O `set -e` matava o script calado em `UNIQS="$(...)"`, e as
+        # vigias 4 e 5 não rodavam justamente sem controle ligado. Medido em
+        # 24/09, 23h57: duas rodadas `failed` logo depois do boot (a régua é
+        # `test_a_vigia_nao_morre_calada.py`).
+        if [[ -n "${u}" ]]; then
+            printf '%s\n' "${u,,}"
+        fi
     done
 }
 
