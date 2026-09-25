@@ -577,14 +577,12 @@ class TestOMacDeCadaLugarEEstavel:
     def test_sem_colisao_cada_um_veste_o_mac_do_aparelho(
         self, kernel: KernelDoHidPlaystation
     ) -> None:
-        """O caso de sempre não muda um byte: o MAC do aparelho, e a forja o acha.
+        """O caso de sempre não muda um byte: o MAC do aparelho.
 
-        É o que a E3 prometeu e o que a háptica pelo rádio lê
-        (``dono_do_vpad_pela_forja``).
+        É o que a E3 prometeu: o jogo e o Steam Input reconhecem cada controle
+        pelo MAC dele. (Quem VIBRA não sai daqui: o co-op diz quem alimenta
+        cada vpad — A-HAPTICA-SEGUE-QUEM-ALIMENTA-O-VPAD-01.)
         """
-        from hefesto_dualsense4unix.integrations.quem_o_jogo_le import (
-            dono_do_vpad_pela_forja,
-        )
         from hefesto_dualsense4unix.integrations.uhid_gamepad import vpad_mac
 
         mesa = {P1: 1, P2: 2, P3: 3, P4: 4}
@@ -592,7 +590,7 @@ class TestOMacDeCadaLugarEEstavel:
         de_pe_no_driver(kernel, *vpads.values())
         for uniq, vpad in vpads.items():
             assert vpad.mac == vpad_mac(uniq, mesa[uniq])
-            assert dono_do_vpad_pela_forja(vpad.mac, list(mesa)) == uniq
+            assert vpad.mac == vpad_mac(uniq, 1), "o MAC do aparelho não depende do número"
 
     @pytest.mark.parametrize(
         "quem", ["posto-com-o-p1", "o-p2", "o-p3", "o-p4", "o-p1-que-volta"]

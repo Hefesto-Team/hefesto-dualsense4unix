@@ -18,12 +18,13 @@ from __future__ import annotations
 
 import os
 import pathlib
+from types import SimpleNamespace
 
 import pytest
 
 from hefesto_dualsense4unix.integrations.quem_o_jogo_le import (
     ENV_DO_JOGO,
-    dono_do_vpad_pela_forja,
+    dono_do_vpad_pelo_coop,
     evdevs_abertos_por,
     pids_de_jogo,
     quem_o_jogo_le,
@@ -154,52 +155,62 @@ class TestAAusenciaEResposta:
 
 
 class TestADobraDoVpad:
-    """Com máscara, o jogo abre o VIRTUAL — e ignorá-lo cala quem joga."""
+    """Com máscara DualSense, o jogo abre o VIRTUAL — e ignorá-lo cala quem joga.
 
-    def test_o_vpad_se_traduz_no_fisico_que_o_forjou(self):
-        """A forja é `blake2b` e não se inverte — mas se DERIVA.
+    Quem diz de quem é cada vpad é o co-op, que liga cada físico ao vpad dele
+    (A-HAPTICA-SEGUE-QUEM-ALIMENTA-O-VPAD-01, 25/09/2026). A tradução
+    derivava o MAC do vpad de cada físico, e isso responde de quem ele
+    NASCEU: o posto troca de mão sem renascer. A matriz inteira, na bancada
+    honesta, está em ``test_a_haptica_segue_quem_alimenta_o_vpad.py``.
+    """
 
-        MORDIDA: devolver `None` sempre.
-        """
-        virtual = vpad_mac(P3, 1)
-        assert dono_do_vpad_pela_forja(virtual, MESA) == P3
+    def test_o_vpad_se_traduz_no_fisico_que_o_alimenta(self):
+        """MORDIDA: devolver `None` sempre."""
+        coop = SimpleNamespace(quem_alimenta_cada_vpad=lambda: {vpad_mac(P3, 1): "aabbcc000003"})
+        assert dono_do_vpad_pelo_coop(coop, MESA)(vpad_mac(P3, 1)) == P3
 
-    def test_a_forja_nao_depende_do_numero_do_jogador(self):
-        """É o que torna a tradução pura.
+    def test_o_mac_nao_depende_do_numero_nem_de_quem_dirige(self):
+        """O MAC segue o APARELHO de que o vpad nasceu (a E3), e não o número.
 
         O número é REUSADO (`_next_player_index` devolve o menor livre e o
         teardown o devolve ao poço), e a `COOP-QUE-NÃO-DESMONTA-01/E3`
-        desacoplou o MAC dele de propósito.
+        desacoplou o MAC dele de propósito. É por isso mesmo que o MAC não diz
+        quem dirige: o posto nascido do P1 segue com o MAC do P1 quando o P2
+        passa a dirigi-lo — e é o P2 que o jogo está usando.
         """
         assert len({vpad_mac(P2, n) for n in (1, 2, 3, 4)}) == 1
+        coop = SimpleNamespace(quem_alimenta_cada_vpad=lambda: {vpad_mac(P1, 1): "aabbcc000002"})
+        assert dono_do_vpad_pelo_coop(coop, MESA)(vpad_mac(P1, 1)) == P2
 
     def test_o_jogo_lendo_so_o_vpad_ainda_acha_o_dono(self, tmp_path):
-        """O caso da mesa dela: máscara Xbox, e o jogo nunca abre o físico.
+        """O caso da mesa dela: máscara DualSense, e o jogo nunca abre o físico.
 
         MORDIDA: não passar `dono_do_vpad` — o resultado vira vazio e o
         controle de quem está jogando fica mudo.
         """
         virtual = vpad_mac(P1, 1)
+        coop = SimpleNamespace(quem_alimenta_cada_vpad=lambda: {virtual: "aabbcc000001"})
         inp = _input_de_mentira(tmp_path, {"event1": virtual, "event2": P3})
         proc = _proc_de_mentira(tmp_path, {77: (True, ["event1"])})
         assert quem_o_jogo_le(
             fisicos=MESA,
-            dono_do_vpad=lambda v: dono_do_vpad_pela_forja(v, MESA),
+            dono_do_vpad=dono_do_vpad_pelo_coop(coop, MESA),
             raiz_proc=proc,
             raiz_input=inp,
         ) == {P1}
 
     def test_vpad_sem_dono_nao_vira_chute(self, tmp_path):
-        """Um vpad que caiu no piso (`player_mac`) não pertence a ninguém.
+        """Um vpad que ninguém alimenta não pertence a ninguém.
 
         Chutar aqui faria um controle vibrar na mão de quem não está jogando —
         o defeito que ela reportou.
         """
+        coop = SimpleNamespace(quem_alimenta_cada_vpad=lambda: {})
         inp = _input_de_mentira(tmp_path, {"event1": "02:fe:00:00:00:01"})
         proc = _proc_de_mentira(tmp_path, {77: (True, ["event1"])})
         assert quem_o_jogo_le(
             fisicos=MESA,
-            dono_do_vpad=lambda v: dono_do_vpad_pela_forja(v, MESA),
+            dono_do_vpad=dono_do_vpad_pelo_coop(coop, MESA),
             raiz_proc=proc,
             raiz_input=inp,
         ) == set()
