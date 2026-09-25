@@ -241,6 +241,7 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
     "apagar": ("luz.lightbar.cor",),
     "reenviar": ("luz.lightbar.cor",),
     "player": ("luz.led_jogador.escrita_hefesto",),
+    "brilho-luzes": ("luz.led_jogador.brilho",),
     "auto-cores": ("luz.lightbar.cor", "luz.led_jogador.escrita_hefesto"),
     # O INTERRUPTOR DE PUNHO da aba Vibração — 14/09/2026, quando ele deixou de
     # ser desenho (ordem dela: *"ele deveria ligar se > 0 no slicer dele"*).
@@ -326,6 +327,7 @@ NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
     "apagar": ("leds", "leds"),
     "reenviar": ("leds", "leds"),
     "player": ("leds", "leds"),
+    "brilho-luzes": ("leds", "leds"),
     "auto-cores": ("leds", "leds"),
     # O punho grava em `rumble` e é POR CONTROLE: `rumble.motores.set` leva o
     # `uniq`, e o valor mora em `controllers[<uniq>].rumble` — o mesmo lugar do
