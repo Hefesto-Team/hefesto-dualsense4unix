@@ -228,7 +228,7 @@ roteiro.
 
 **Os passos.**
 
-1. Se o P3 ainda estiver ligado — na mesa, a seção desta linha vem antes da linha 4 —, segure o PS dele até todas as luzes apagarem, confira na aba Iluminação que a coluna dele passou a dizer «P3 • Desconectado», e siga sem demora.
+1. Se o P3 ainda estiver ligado — nesta página, a seção desta linha vem antes da linha 4 —, segure o PS dele até todas as luzes apagarem, confira na aba Iluminação que a coluna dele passou a dizer «P3 • Desconectado», e siga sem demora.
 2. Deixe P1, P2 e P4 exatamente como estão, sem tocar em nenhum.
 3. Pegue o P3, que está desligado.
 4. Dê um toque curto no botão PS do P3 e solte.
