@@ -51,6 +51,14 @@ citação é da função inteira se tem o tamanho dela hoje, ou se numa versão 
 histórico ela batia exatamente com a função; então ela vai para onde a função
 está. Citação de trecho de dentro da função não é tocada por esta pergunta.
 
+A TERCEIRA: O TRECHO QUE ABRAÇA O `def` COMEÇANDO EM CÓDIGO DE FORA
+--------------------------------------------------------------------
+O trecho do começo da função (as primeiras 34 linhas do `_spawn_player`) que
+andou menos que o próprio tamanho também passava verde na pergunta 2. A
+pergunta 3 do validador (`abraca_de_fora`) o reprova, e o `_contem` daqui faz
+a MESMA pergunta, a ele, para decidir qual versão do histórico era verdadeira
+— então o trecho anda pelos hunks como qualquer outra citação podre.
+
 Uso:
 
     python3 scripts/reapontar-citacoes.py              # só mostra
