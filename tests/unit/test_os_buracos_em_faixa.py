@@ -52,6 +52,9 @@ AS MORDIDAS (24/09/2026, cada uma devolvida com o md5 conferido):
   mesas em que o renascido cairia no boneco do P1 fixo) e a mesa de cinco;
 - a faixa sem a exigência da mesa em ordem reprova a varredura (mesa fora de
   ordem é do sufixo, STEAM-NO-FISICO-01);
+- a faixa sem a ordem DEPOIS de recriar reprova a varredura pela ordem que ela
+  confere (86 mesas em que quem renasce acertaria o próprio boneco passando à
+  frente de quem tem carta menor — a STEAM-NO-FISICO-01 ao contrário);
 - o fixo entrando na faixa reprova três famílias, a varredura, a mesa de cinco
   e três casos da matriz de quatro: o vpad do P1 renasceria com o jogo aberto
   (a R-04);
@@ -301,6 +304,12 @@ class TestAVarredura:
             depois = _a_mesa_depois(mesa, hoje[0], nascer, cartas, compacta=False)
             assert all(lugar == cartas[c] - 1 for lugar, c in depois.items() if c in hoje[0]), (
                 "quem renasce pela faixa cai no boneco da própria carta",
+                caso,
+            )
+            # A ordem continua valendo (STEAM-NO-FISICO-01): acertar o boneco
+            # de alguém passando à frente de quem tem carta menor não é cura.
+            assert _em_ordem([cartas[c] for c in depois.values() if c not in fixos]), (
+                "a faixa quebrou a ordem do jogo",
                 caso,
             )
             if id(linha) in os_60:
