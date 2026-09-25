@@ -265,6 +265,11 @@ class PecaDaMesa:
     que ela tem AGORA — e a comparação entre os dois é a regra inteira: um
     override escolhido para o número 1 num aparelho que hoje é o 2 é fóssil,
     e sai sozinho.
+
+    `brilho` é o brilho em que ESTA peça acende (o do perfil, ou o do
+    controle quando ele tem o seu): é nele que sai o tom da paleta para onde
+    ela for deslocada (A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01, 25/09/2026).
+    `None` é *"não se sabe"*, e o tom sai cheio, como antes do campo.
     """
 
     uniq: str
@@ -272,6 +277,7 @@ class PecaDaMesa:
     do_numero: RGB | None
     procedencia: object = LEGADO
     numero: int | None = None
+    brilho: float | None = None
 
 
 def _e_fossil(peca: PecaDaMesa, numeros: set[RGB]) -> bool:
@@ -298,6 +304,40 @@ def _e_fossil(peca: PecaDaMesa, numeros: set[RGB]) -> bool:
     if peca.procedencia is not LEGADO or peca.pedida is None:
         return False
     return peca.pedida in numeros and peca.pedida != peca.do_numero
+
+
+def _acende_o_tom(acesa: RGB, tom: RGB) -> bool:
+    """A luz `acesa` é o `tom` em algum brilho? — a pergunta do TOM, e não do byte.
+
+    A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01, 25/09/2026: o azul do P1 a 82% é
+    `(0,0,209)` e o azul cheio é `(0,0,255)` — bytes diferentes, a MESMA cor
+    na mão de quem joga. A régua de cor única comparava bytes, e o fóssil do
+    P3 era deslocado para o azul cheio ao lado do P1 azul.
+
+    A CONTA É A DO DONO DA ESCALA (`LedSettings.apply_brightness`: cada canal
+    vezes o brilho, truncado), e a resposta é exata, sem tolerância: existe um
+    brilho `b` em [0, 1] que leva o `tom` à `acesa` quando os intervalos de
+    `b` de cada canal se cruzam. O brilho do meio do cruzamento é conferido
+    pela própria conta, para a borda de ponto flutuante não mentir.
+    """
+    baixo, alto = 0.0, 1.0
+    for luz, canal in zip(acesa, tom, strict=True):
+        if canal == 0:
+            if luz != 0:
+                return False
+            continue
+        baixo = max(baixo, luz / canal)
+        alto = min(alto, (luz + 1) / canal)
+    if baixo > alto:
+        return False
+    return LedSettings(lightbar=tom).apply_brightness((baixo + alto) / 2).lightbar == acesa
+
+
+def _na_escala(tom: RGB, brilho: float | None) -> RGB:
+    """O `tom` aceso no `brilho` da peça — cheio quando o brilho não é sabido."""
+    if brilho is None:
+        return tom
+    return LedSettings(lightbar=tom).apply_brightness(brilho).lightbar
 
 
 def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
@@ -335,6 +375,14 @@ def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
        à irmã que também está no global**: quatro controles na mesma cor
        global é o gesto "Todos" do perfil (D4), não uma colisão.
 
+    O TOM LIVRE SAI NO BRILHO DA PEÇA E É LIVRE PELO TOM — 25/09/2026,
+    A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01. Medido na mesa de quatro real, com a
+    paleta desligada: o fóssil do P3 ia para o azul CHEIO, `(0,0,255)`, ao
+    lado do P1 azul a 82%, `(0,0,209)` — o byte estava livre, a cor não, e o
+    brilho do P3 sumia. O tom da paleta agora é levado ao `brilho` da peça, e
+    ele só está livre se nenhuma outra peça o acende em brilho nenhum
+    (`_acende_o_tom`).
+
     Com as oito tomadas, **recusa**: devolve o que foi pedido em vez de
     girar. Rodízio com a mesa cheia troca a cor de todo mundo a cada tique,
     que é o defeito que esta função existe para não ter.
@@ -355,12 +403,35 @@ def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
     saida: dict[str, RGB] = {}
     do_global: list[PecaDaMesa] = []
 
+    paleta = tuple(_PLAYER_SLOT_COLORS.values())
+
+    def _tomado(acesa: RGB, tons: tuple[RGB, ...]) -> bool:
+        # O TOM, E NÃO O BYTE — 25/09/2026. O azul do P1 a 82% e o azul cheio
+        # são bytes diferentes e a mesma cor; ver `_acende_o_tom`.
+        if acesa in tomadas:
+            return True
+        return any(
+            _acende_o_tom(luz, tom)
+            for luz in tomadas
+            if luz != _APAGADA
+            for tom in tons
+        )
+
     def _primeiro_tom_livre(peca: PecaDaMesa) -> RGB | None:
-        for candidata in (peca.do_numero, *_PLAYER_SLOT_COLORS.values()):
-            if candidata is None or candidata == _APAGADA:
+        # A COR DO NÚMERO já chega no brilho da peça (é a automática, pela
+        # mesma escala da saída); os tons da paleta chegam cheios e são
+        # levados ao brilho dela — sem isso o fóssil do P3 saía em
+        # (0,0,255) ao lado do P1 a (0,0,209). A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01.
+        candidatas: list[tuple[RGB, tuple[RGB, ...]]] = []
+        if peca.do_numero is not None:
+            tons = tuple(t for t in paleta if _acende_o_tom(peca.do_numero, t))
+            candidatas.append((peca.do_numero, tons))
+        candidatas.extend((_na_escala(t, peca.brilho), (t,)) for t in paleta)
+        for acesa, tons in candidatas:
+            if acesa == _APAGADA:
                 continue
-            if candidata not in tomadas:
-                return candidata
+            if not _tomado(acesa, tons):
+                return acesa
         return None  # as oito tomadas: recusa, não gira
 
     def _acomodar(peca: PecaDaMesa, pedida: RGB) -> None:

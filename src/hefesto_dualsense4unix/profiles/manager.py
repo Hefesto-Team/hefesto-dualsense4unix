@@ -505,13 +505,24 @@ class ProfileManager:
         # `#0000FF` do disco é a escolha dela para o número de hoje ou o
         # número de ontem congelado no arquivo.
         procedencias = _controllers_to_procedencias(profile.controllers)
-        # R-20 item 2: o brilho por-controle vira ESCALA (aplicada depois do
+        # R-20 item 2: o brilho por-controle vira ESCALA (aplicada à base do
         # merge), nunca cor materializada — publicado ANTES da camada para o
-        # reassert do fim já convergir com ele.
+        # reassert do fim já convergir com ele. O brilho do perfil vai junto:
+        # os fatores são relativos a ele, e é com os dois que a regra de cor
+        # única desloca o tom no brilho de cada peça
+        # (A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01). A queda por `TypeError` é a
+        # do `_publicar_camada`: backend de outra árvore ou dublê com a
+        # assinatura antiga recebe só os fatores.
         escalas = _controllers_to_led_scales(profile.controllers, profile.leds)
         escalar = getattr(self.controller, "set_led_scales", None)
         if callable(escalar):
-            escalar(escalas or None)
+            try:
+                escalar(
+                    escalas or None,
+                    brilho_do_perfil=float(profile.leds.lightbar_brightness),
+                )
+            except TypeError:
+                escalar(escalas or None)
         # POR-UNIDADE-01: a intensidade de vibração por peça segue o MESMO
         # ciclo de vida da escala de brilho — publicada aqui, SUBSTITUINDO o
         # mapa inteiro (perfil sem overrides limpa o que o anterior deixou).
