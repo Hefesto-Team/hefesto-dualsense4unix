@@ -503,7 +503,7 @@ def test_o_daemon_pergunta_ao_mesmo_dono(pasta: pathlib.Path,
     """
     from hefesto_dualsense4unix.profiles import loader
 
-    nome = "Dono Unico"
+    nome = "Dono Único"
     _gravar(_canonico(pasta, nome), _cru(nome))
     real = loader.arquivo_do_perfil
     perguntas: list[str] = []
