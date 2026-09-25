@@ -2336,6 +2336,11 @@
   .bat .carga-i[data-carga="Fora de faixa"] .g-atencao{display:block;color:var(--orange)}
   .bat .carga-i[data-carga="Erro de carga"] .g-atencao{display:block;color:var(--orange)}
   .faixa{--larg-bateria:240px}
+  /* A POSIÇÃO DOS PONTINHOS — uma regra só, e ela lê as duas variáveis que o
+     produto escreve no próprio pontinho (alvo `posicao`), com o repouso como
+     reserva. Era uma folha endereçada trocada inteira a cada tique, e cada
+     troca repintava a janela toda (A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01). */
+  .ctl .touch .ponto,.ctl .stick .p{left:var(--hef-x,50.2%);top:var(--hef-y,50.2%)}
   /* O CARD ABERTO NÃO ESTICA — 14/09/2026, queixa dela com a foto na mão:
      *"o tamanho do card completo verticalmente"* está *"o triplo"*.
 
@@ -2511,17 +2516,6 @@
   .ctl[data-controle],.fita .chip[for]{--plastico:var(--border-forte)}
   .ctl[data-controle="p1"],.fita .chip[for="c-p1"]{--plastico:#ae335a}
   .ctl[data-controle="p2"],.fita .chip[for="c-p2"]{--plastico:#7eb8d4}
-</style>
-<style data-campo="posicao-css" data-hef-alvo="html">
-  .ctl .touch .ponto,.ctl .stick .p{left:50.2%;top:50.2%}
-  .ctl[data-controle="p1"] .touch .ponto-1{left:62%;top:44%}
-  .ctl[data-controle="p1"] .touch .ponto-2{left:38%;top:56%}
-  .ctl[data-controle="p1"] .stick[data-stick="l"] .p{left:23.5%;top:78.4%}
-  .ctl[data-controle="p1"] .stick[data-stick="r"] .p{left:70.6%;top:35.3%}
-  .ctl[data-controle="p2"] .touch .ponto-1{left:50%;top:50%}
-  .ctl[data-controle="p2"] .touch .ponto-2{left:50%;top:50%}
-  .ctl[data-controle="p2"] .stick[data-stick="l"] .p{left:50.2%;top:50.2%}
-  .ctl[data-controle="p2"] .stick[data-stick="r"] .p{left:50.2%;top:50.2%}
 </style>
 </head>
 <body>
@@ -2854,8 +2848,8 @@
             <div class="rot rot-linha">Touchpad
               <span class="de-quem" data-campo="touch-estado" title="O ponto marca onde o dedo está. Sem toque, não há ponto.">1 toque</span></div>
             <div class="touch">
-              <span class="ponto ponto-1 on" data-campo="touch-ponto" data-hef-alvo="classe"></span>
-              <span class="ponto ponto-2" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></div>
+              <span data-campo="pos-touch" data-hef-alvo="posicao" style="--hef-x:62%;--hef-y:44%"><span class="ponto ponto-1 on" data-campo="touch-ponto" data-hef-alvo="classe"></span></span>
+              <span data-campo="pos-touch-2" data-hef-alvo="posicao" style="--hef-x:38%;--hef-y:56%"><span class="ponto ponto-2" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></span></div>
           </div>
           <!-- O TRAVESSÃO VIROU PALAVRA — decisão dela, 04/09/2026 [02]:
                *"palavra curta no lugar do travessão, frase inteira no hover"*,
@@ -2917,14 +2911,14 @@
                 <div class="stick-rot">Analógico<br>esquerdo</div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">L3</span>
-                  <span class="p"></span></div>
+                  <span class="p" data-campo="pos-ana-e" data-hef-alvo="posicao" style="--hef-x:23.5%;--hef-y:78.4%"></span></div>
                 <div class="xy" data-xy="l" data-campo="xy-l" data-hef-alvo="html">X: 60<br>Y:200</div>
               </div>
               <div>
                 <div class="stick-rot">Analógico<br>direito</div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">R3</span>
-                  <span class="p"></span></div>
+                  <span class="p" data-campo="pos-ana-d" data-hef-alvo="posicao" style="--hef-x:70.6%;--hef-y:35.3%"></span></div>
                 <div class="xy" data-xy="r" data-campo="xy-r" data-hef-alvo="html">X:180<br>Y: 90</div>
               </div>
             </div>
@@ -3416,8 +3410,8 @@
             <div class="rot rot-linha">Touchpad
               <span class="de-quem" data-campo="touch-estado" title="O ponto marca onde o dedo está. Sem toque, não há ponto.">Sem toque</span></div>
             <div class="touch">
-              <span class="ponto ponto-1" data-campo="touch-ponto" data-hef-alvo="classe"></span>
-              <span class="ponto ponto-2" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></div>
+              <span data-campo="pos-touch" data-hef-alvo="posicao" style="--hef-x:50%;--hef-y:50%"><span class="ponto ponto-1" data-campo="touch-ponto" data-hef-alvo="classe"></span></span>
+              <span data-campo="pos-touch-2" data-hef-alvo="posicao" style="--hef-x:50%;--hef-y:50%"><span class="ponto ponto-2" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></span></div>
           </div>
           <!-- O TRAVESSÃO VIROU PALAVRA — decisão dela, 04/09/2026 [02]:
                *"palavra curta no lugar do travessão, frase inteira no hover"*,
@@ -3479,14 +3473,14 @@
                 <div class="stick-rot">Analógico<br>esquerdo</div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">L3</span>
-                  <span class="p"></span></div>
+                  <span class="p" data-campo="pos-ana-e" data-hef-alvo="posicao" style="--hef-x:50.2%;--hef-y:50.2%"></span></div>
                 <div class="xy" data-xy="l" data-campo="xy-l" data-hef-alvo="html">X:128<br>Y:128</div>
               </div>
               <div>
                 <div class="stick-rot">Analógico<br>direito</div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">R3</span>
-                  <span class="p"></span></div>
+                  <span class="p" data-campo="pos-ana-d" data-hef-alvo="posicao" style="--hef-x:50.2%;--hef-y:50.2%"></span></div>
                 <div class="xy" data-xy="r" data-campo="xy-r" data-hef-alvo="html">X:128<br>Y:128</div>
               </div>
             </div>
@@ -3978,8 +3972,8 @@
             <div class="rot rot-linha">Touchpad
               <span class="de-quem" data-campo="touch-estado" title="O ponto marca onde o dedo está. Sem toque, não há ponto.">—</span></div>
             <div class="touch">
-              <span class="ponto ponto-1" data-campo="touch-ponto" data-hef-alvo="classe"></span>
-              <span class="ponto ponto-2" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></div>
+              <span data-campo="pos-touch" data-hef-alvo="posicao"><span class="ponto ponto-1" data-campo="touch-ponto" data-hef-alvo="classe"></span></span>
+              <span data-campo="pos-touch-2" data-hef-alvo="posicao"><span class="ponto ponto-2" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></span></div>
           </div>
           <!-- O TRAVESSÃO VIROU PALAVRA — decisão dela, 04/09/2026 [02]:
                *"palavra curta no lugar do travessão, frase inteira no hover"*,
@@ -4041,14 +4035,14 @@
                 <div class="stick-rot">Analógico<br>esquerdo</div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">—</span>
-                  <span class="p"></span></div>
+                  <span class="p" data-campo="pos-ana-e" data-hef-alvo="posicao"></span></div>
                 <div class="xy" data-xy="l" data-campo="xy-l" data-hef-alvo="html">X:128<br>Y:128</div>
               </div>
               <div>
                 <div class="stick-rot">Analógico<br>direito</div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">—</span>
-                  <span class="p"></span></div>
+                  <span class="p" data-campo="pos-ana-d" data-hef-alvo="posicao"></span></div>
                 <div class="xy" data-xy="r" data-campo="xy-r" data-hef-alvo="html">X:141<br>Y:122</div>
               </div>
             </div>
@@ -4540,8 +4534,8 @@
             <div class="rot rot-linha">Touchpad
               <span class="de-quem" data-campo="touch-estado" title="O ponto marca onde o dedo está. Sem toque, não há ponto.">—</span></div>
             <div class="touch">
-              <span class="ponto ponto-1" data-campo="touch-ponto" data-hef-alvo="classe"></span>
-              <span class="ponto ponto-2" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></div>
+              <span data-campo="pos-touch" data-hef-alvo="posicao"><span class="ponto ponto-1" data-campo="touch-ponto" data-hef-alvo="classe"></span></span>
+              <span data-campo="pos-touch-2" data-hef-alvo="posicao"><span class="ponto ponto-2" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></span></div>
           </div>
           <!-- O TRAVESSÃO VIROU PALAVRA — decisão dela, 04/09/2026 [02]:
                *"palavra curta no lugar do travessão, frase inteira no hover"*,
@@ -4603,14 +4597,14 @@
                 <div class="stick-rot">Analógico<br>esquerdo</div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">—</span>
-                  <span class="p"></span></div>
+                  <span class="p" data-campo="pos-ana-e" data-hef-alvo="posicao"></span></div>
                 <div class="xy" data-xy="l" data-campo="xy-l" data-hef-alvo="html">X:128<br>Y:128</div>
               </div>
               <div>
                 <div class="stick-rot">Analógico<br>direito</div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">—</span>
-                  <span class="p"></span></div>
+                  <span class="p" data-campo="pos-ana-d" data-hef-alvo="posicao"></span></div>
                 <div class="xy" data-xy="r" data-campo="xy-r" data-hef-alvo="html">X: 96<br>Y:128</div>
               </div>
             </div>
