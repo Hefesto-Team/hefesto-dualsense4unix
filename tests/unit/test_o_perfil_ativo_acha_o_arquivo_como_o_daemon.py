@@ -27,7 +27,10 @@ A MORDIDA, arrancada antes deste arquivo entrar: com `perfil.ativo` de volta às
 duas pernas, as formas «outro nome» e «estilo» reprovam com «Desligado» na 03;
 com a lembrança do último arquivo lido arrancada, o «apagado» reprova igual; com
 a assinatura da pasta cega, a memória reprova; com o «Exportar» de volta à
-cópia das duas pernas, ele reprova com «não achei o arquivo».
+cópia das duas pernas, ele reprova com «não achei o arquivo». E da conferência
+(25/09/2026): o prazo da memória arrancado, o `load_profile` com uma cópia do
+nome e do slug antes de perguntar ao dono, e a lembrança guardada pela grafia
+em vez do slug — cada uma reprova a sua régua.
 """
 from __future__ import annotations
 
@@ -112,6 +115,37 @@ def _memoria_limpa() -> Iterator[None]:
     perfil._ONDE_ACHOU.clear()
     perfil._LIDO.clear()
     a03_gatilhos.esquecer_o_rascunho()
+
+
+@pytest.fixture(autouse=True)
+def _a_08_sem_os_fios_da_maquina(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A 08 lê a MÁQUINA em fios próprios, e o fio que chega no meio finge diferença.
+
+    O exame de entrada (`_pedir_o_exame_de_entrada`, que forka `busctl` e varre
+    o `/sys`) e as leituras de fundo (`_em_fundo`: o BlueZ, a `maquina.json`, o
+    diário) respondem sobre o computador em que a régua roda, não sobre o
+    perfil. Medido na conferência, em 25/09/2026: com o exame chegando entre a
+    pintura do gêmeo e a da forma, a 08 do «apagado» deu 157 campos de
+    diferença, todos do Check-up da máquina e nenhum do perfil, e a régua
+    reprovou uma cura que estava certa. O resultado dependia do relógio.
+
+    Por isso o exame não corre, as leituras de fundo dizem «não sei» nas duas
+    pinturas, e o fio que um teste anterior deixou em voo termina antes da
+    medida. A parte da 08 que o perfil decide (o teto de cada controle) não
+    passa por nenhum dos dois.
+    """
+    import threading
+
+    from pacotes import a08_conexoes
+
+    for fio in threading.enumerate():
+        if fio.name == "hefesto-exame-de-entrada" or fio.name.startswith("radio-"):
+            fio.join(timeout=15)
+    monkeypatch.setattr(a08_conexoes, "_EXAME_PEDIDO", True)
+    monkeypatch.setattr(a08_conexoes, "_EXTRAS", ())
+    monkeypatch.setattr(a08_conexoes, "_QUANDO_O_EXAME", None)
+    monkeypatch.setattr(a08_conexoes, "_em_fundo",
+                        lambda chave, ler, validade_s: None)
 
 
 @pytest.fixture
@@ -457,3 +491,85 @@ def test_a_varredura_nao_roda_a_cada_tique(pasta: pathlib.Path,
     assert perguntas == [nome], (
         f"cinco tiques da 03 perguntaram ao loader {len(perguntas)} vezes — a "
         f"varredura inteira roda a cada tique no laço do GTK")
+
+
+def test_o_daemon_pergunta_ao_mesmo_dono(pasta: pathlib.Path,
+                                         monkeypatch: pytest.MonkeyPatch) -> None:
+    """`load_profile` acha o arquivo por `arquivo_do_perfil`, e não por uma cópia das pernas.
+
+    É a metade do «um dono só» que a ordem das pernas não prova: uma cópia do
+    nome e do slug de volta no `load_profile` responde igual hoje, e diverge no
+    dia em que alguém mexer numa das duas. O espião DELEGA ao loader de verdade.
+    """
+    from hefesto_dualsense4unix.profiles import loader
+
+    nome = "Dono Unico"
+    _gravar(_canonico(pasta, nome), _cru(nome))
+    real = loader.arquivo_do_perfil
+    perguntas: list[str] = []
+
+    def espiao(identifier: str, directory: pathlib.Path | None = None) -> Any:
+        perguntas.append(identifier)
+        return real(identifier, directory)
+
+    monkeypatch.setattr(loader, "arquivo_do_perfil", espiao)
+    assert loader.load_profile(nome).name == nome
+    assert perguntas[-1:] == [nome], (
+        "o `load_profile` achou o arquivo sem perguntar a `arquivo_do_perfil`: "
+        "«nome vira arquivo» voltou a ter dois donos")
+
+
+def test_a_memoria_vence_no_prazo(pasta: pathlib.Path,
+                                  monkeypatch: pytest.MonkeyPatch) -> None:
+    """O que a assinatura da pasta não vê cai com o prazo, que é de segundos.
+
+    O caso: o `name` de um arquivo editado no lugar. O inode é o mesmo e a pasta
+    não muda; a memória guardou «não há» e só o prazo a derruba. O relógio do
+    módulo anda cinco segundos, e não `VALIDADE_DO_ARQUIVO_S` vezes alguma
+    coisa: a régua mede a promessa (segundos), não a constante.
+    """
+    import time as relogio
+    from types import SimpleNamespace
+
+    from pacotes import perfil
+
+    monkeypatch.setattr(perfil, "CUSTO_QUE_SE_GUARDA_S", 0.0)
+    andou = [0.0]
+    monkeypatch.setattr(perfil, "time", SimpleNamespace(
+        monotonic=lambda: relogio.monotonic() + andou[0],
+        perf_counter=relogio.perf_counter))
+    nome = "Nome Editado No Lugar"
+    alvo = _gravar(pasta / "arquivo-editado.json", _cru("Outro Nome Qualquer"))
+    assert perfil.arquivo(nome) is None
+    # A primeira varredura deixa o `.lock` ao lado do arquivo e muda a pasta;
+    # a segunda assenta a memória.
+    assert perfil.arquivo(nome) is None
+    carimbo = pasta.stat().st_mtime_ns
+    alvo.write_text(json.dumps(_cru(nome)), encoding="utf-8")
+    assert pasta.stat().st_mtime_ns == carimbo, "pré-condição: editar no lugar não muda a pasta"
+    assert perfil.arquivo(nome) is None, (
+        "pré-condição: a assinatura não vê o `name` editado no lugar, e é o caso "
+        "que só o prazo cobre")
+    andou[0] = 5.0
+    assert perfil.arquivo(nome) == alvo, (
+        "cinco segundos depois a tela ainda responde «não há» sobre um arquivo "
+        "que o daemon acha: a memória não vence")
+
+
+def test_a_lembranca_e_do_perfil_e_nao_da_grafia(pasta: pathlib.Path) -> None:
+    """«Grafia Com Acentuação» e o slug dela são o mesmo perfil (R-10), e a lembrança também.
+
+    O nome chega do daemon, e quando ele se cala chega do marcador em disco
+    (`nome_do_ativo`), que pode trazer a outra grafia do MESMO arquivo.
+    """
+    from pacotes import perfil
+
+    from hefesto_dualsense4unix.profiles.slug import slugify
+
+    nome = "Grafia Com Acentuação"
+    alvo = _gravar(_canonico(pasta, nome), _cru(nome))
+    assert perfil.ativo(nome)["name"] == nome
+    alvo.unlink()
+    assert perfil.ativo(slugify(nome)).get("name") == nome, (
+        "o arquivo sumiu e a outra grafia do mesmo perfil perdeu o que a tela "
+        "tinha lido dele")
