@@ -194,6 +194,12 @@ class StateStore:
         # fato conhecido vale até a próxima resposta, nunca até o próximo susto.
         self._steam_jogo_appid: int | None = None
         self._steam_jogo_lido: bool = False
+        # O-BOTAO-DO-MIC-GRAVA-NO-PERFIL-01 (25/09/2026): o ÚLTIMO ATO dela
+        # sobre o microfone de cada controle, `{mac normalizado: mudo}`. O
+        # disco guarda o ato no perfil ativo; isto é onde ele VALE AGORA, para
+        # a troca automática de perfil não o desfazer na reconexão seguinte.
+        # Some com o daemon de propósito — ver `lembrar_o_ato_do_mic`.
+        self._atos_do_mic: dict[str, bool] = {}
 
     # --- escritas ------------------------------------------------------
 
@@ -484,6 +490,41 @@ class StateStore:
                 wm_class if isinstance(wm_class, str) else None
             ) is not None:
                 self._game_window_seen_at = moment
+
+    # --- o último ato dela no microfone (O-BOTAO-DO-MIC-GRAVA-NO-PERFIL-01) --
+
+    def lembrar_o_ato_do_mic(self, chave: str, mudo: bool) -> None:
+        """Anota o último ato dela sobre o microfone DESTE controle.
+
+        Quem escreve é o ato (`hotkey.ligar_o_microfone`: o botão do plástico e
+        o 🎙 da tela), junto com a gravação no perfil ativo. Quem lê é a
+        reconexão (`ProfileManager.reapply_mic_on_connect` e o nascimento, por
+        `o_perfil_pede_silencio`): o ato vence o registro do perfil ativo.
+
+        **O PERFIL CONTINUA SENDO ONDE O ATO DURA**, e isto não é uma segunda
+        gravação: é a memória da SESSÃO, no molde da `_fonte_viva` do
+        alto-falante. Ela existe para UMA situação — o ato foi gravado no
+        perfil A, a troca automática pôs o B, e o B guarda um registro mais
+        velho do mesmo controle. A troca automática não escreve o mudo
+        (MIC-GRAVACAO-01), mas a reconexão seguinte leria o B e desfaria o ato
+        dela. A troca EXPLÍCITA de perfil esquece a memória
+        (`esquecer_atos_do_mic`), porque ela é, ela mesma, um ato dela.
+        """
+        with self._lock:
+            self._atos_do_mic[chave] = bool(mudo)
+
+    def ato_do_mic(self, chave: str) -> bool | None:
+        """`True` = o último ato dela calou; `False` = ligou; `None` = nenhum."""
+        with self._lock:
+            return self._atos_do_mic.get(chave)
+
+    def esquecer_atos_do_mic(self, chave: str | None = None) -> None:
+        """Esquece o ato de UM controle, ou de todos com `chave=None`."""
+        with self._lock:
+            if chave is None:
+                self._atos_do_mic.clear()
+            else:
+                self._atos_do_mic.pop(chave, None)
 
     # --- lock manual de profile.switch (Bug C) ------------------------
 
