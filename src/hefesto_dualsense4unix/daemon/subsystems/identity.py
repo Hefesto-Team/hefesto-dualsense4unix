@@ -185,12 +185,12 @@ lugar ESTÁVEL na fila, keyed pelo MAC normalizado (12 hex — o mesmo
 
 Separação D3 (Refutado 2 do sprint): este slot é EXIBIÇÃO/LED. O índice de
 alocação do vpad do co-op (``_next_player_index`` + ``player=1`` do
-primário) fica intacto — slot repetido no MAC do vpad uhid mataria o probe
-com ``-EEXIST`` e degradaria o co-op em silêncio. R-24 precisou o limite: o
-índice do vpad é do JOGO (contíguo, reusado quando alguém sai) e o slot
-daqui é da EXIBIÇÃO; o que era defeito é que a LÂMPADA acendia o primeiro.
-Hoje ``CoopManager._numero_exibido`` lê ESTE registro para a barra de player
-e o índice do vpad nunca mais chega a um LED.
+primário) fica intacto. O MAC do vpad só sai dele sem identidade de aparelho
+(E3), e dois vivos nunca o repetem (``uhid_gamepad._MacsDosVpadsVivos``,
+O-VPAD-DO-P1-NAO-REPETE-O-MAC-01). R-24 precisou o limite: o índice do vpad é
+do JOGO (contíguo, reusado quando alguém sai) e o slot daqui é da EXIBIÇÃO; o
+defeito era a LÂMPADA acender o primeiro. Hoje ``CoopManager._numero_exibido``
+lê ESTE registro para a barra de player e o índice do vpad nunca chega a um LED.
 
 Persistência (``controllers.json`` no config do app, escrita atômica
 mkstemp+os.replace — padrão ``utils/session.py``): cobre o restart do daemon
