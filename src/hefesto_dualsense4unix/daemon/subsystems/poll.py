@@ -120,10 +120,19 @@ def botoes_dos_atalhos(daemon: object, botoes_do_posto: frozenset[str]) -> froze
     (:func:`quem_segura_os_atalhos`) — os botões que ele já manda ao vpad
     DELE, lidos pelo mesmo leitor do co-op. O vpad do P1 continua parado: o
     laço manda a ele `botoes_do_posto`, nunca estes.
+
+    Na vaga sem ninguém sentado no co-op, ninguém segura: os atalhos leem o
+    posto vazio, e o diário não diz troca de mão — o posto segue vago, e
+    `atalhos_voltam_ao_posto` ali seria o diário mentindo sobre a volta do P1.
     """
+    if not _o_posto_esta_vago(daemon):
+        _anotar_a_mao(daemon, None)
+        return botoes_do_posto
     proximo = _o_proximo_da_fila(daemon)
-    _anotar_a_mao(daemon, proximo[0] if proximo is not None else None)
-    return botoes_do_posto if proximo is None else proximo[1]
+    if proximo is None:
+        return botoes_do_posto
+    _anotar_a_mao(daemon, proximo[0])
+    return proximo[1]
 
 
 def quem_segura_os_atalhos(daemon: object) -> str | None:
@@ -131,7 +140,7 @@ def quem_segura_os_atalhos(daemon: object) -> str | None:
 
     O dono do posto de P1 (`primary_uniq`); na vaga do posto, o próximo da
     fila que está na mesa. None quando não há de quem perguntar (sem
-    controle, backend sem MAC).
+    controle, backend sem MAC, ou a vaga sem ninguém sentado no co-op).
 
     Quem precisa saber de QUEM é o gesto pergunta aqui, e não ao
     `primary_uniq`: o PS + L3 anda o cartão de quem o faz
@@ -139,11 +148,17 @@ def quem_segura_os_atalhos(daemon: object) -> str | None:
     botões de um controle andando o cartão de outro — na vaga, o do P1
     ausente, cujo vpad parado o jogo perderia ao ser recriado (a R-04).
     """
-    proximo = _o_proximo_da_fila(daemon)
-    if proximo is not None:
-        return proximo[0]
+    if _o_posto_esta_vago(daemon):
+        proximo = _o_proximo_da_fila(daemon)
+        return proximo[0] if proximo is not None else None
     uniq = getattr(getattr(daemon, "controller", None), "primary_uniq", None)
     return uniq if isinstance(uniq, str) and uniq else None
+
+
+def _o_posto_esta_vago(daemon: object) -> bool:
+    """O posto de P1 está VAGO agora? A pergunta é a do backend (`_posto_vago_de`)."""
+    controller = getattr(daemon, "controller", None)
+    return isinstance(getattr(controller, "_posto_vago_de", None), str)
 
 
 def _o_proximo_da_fila(daemon: object) -> tuple[str, frozenset[str]] | None:
@@ -154,31 +169,42 @@ def _o_proximo_da_fila(daemon: object) -> tuple[str, frozenset[str]] | None:
     mudam de mão exatamente quando ele para. Refazer a conta aqui (o prazo, o
     jogo com a autoridade, o co-op de pé) seria um segundo dono da vaga.
 
-    **O PRÓXIMO DA FILA** é o jogador do co-op com o MENOR número da lâmpada
-    (`CoopManager.numeros_de_jogador`, a fonte única do número que ele vê no
-    próprio controle) entre os que estão na mesa com o vpad de pé
-    (`CoopManager.live_snapshots`, que já deixa de fora quem saiu, quem
-    espera o grab e quem não tem MAC). Na vaga ninguém troca de número: é o
-    P2; se o P2 também saiu, o P3; se o P3 também, o P4. O dono do posto
-    nunca entra na conta — ele é quem está fora.
+    **O PRÓXIMO DA FILA** é o jogador sentado no co-op com o MENOR número da
+    lâmpada — `CoopManager.numeros_de_jogador`, a fonte única do número que ele
+    vê no próprio controle, e que numera quem está na mesa, com o vpad de pé
+    ou renascendo; quem saiu e quem não tem MAC não entram. Na vaga ninguém
+    troca de número: é o P2; se o P2 também saiu, o P3; se o P3 também, o P4.
+    O dono do posto nunca entra na conta — ele é quem está fora.
+
+    **OS BOTÕES** são os que o leitor dele entrega (`CoopManager.live_snapshots`).
+    Quem renasce — o PS + R3 recria todos os jogadores, o PS + L3 recria o de
+    quem o faz — senta de novo com o grab pendente e fica um tique ou dois sem
+    vpad e fora dos `live_snapshots`: ele segue segurando, com a mão vazia até
+    o leitor abrir o device. Contar só quem tinha vpad de pé passava a mão ao
+    P3 nesse tique — ou, sem ninguém de pé, ao posto, e a pergunta «de quem é
+    o gesto» respondia o P1 ausente (conferência de 24/09/2026).
 
     Nunca levanta: um co-op que falha aqui deixa os atalhos com o posto neste
     tique, e o laço segue.
     """
-    controller = getattr(daemon, "controller", None)
-    if not isinstance(getattr(controller, "_posto_vago_de", None), str):
+    if not _o_posto_esta_vago(daemon):
         return None
     coop = getattr(daemon, "_coop_manager", None)
     if coop is None:
         return None
     try:
-        vivos = coop.live_snapshots()
-        if not isinstance(vivos, dict) or not vivos:
+        dono = getattr(getattr(daemon, "controller", None), "primary_uniq", None)
+        sentados = {
+            mac: numero
+            for mac, numero in coop.numeros_de_jogador().items()
+            if mac != dono
+        }
+        if not sentados:
             return None
-        numeros = coop.numeros_de_jogador()
-        sem_numero = float("inf")
-        mac = min(vivos, key=lambda m: numeros.get(m, sem_numero))
-        return mac, frozenset(vivos[mac].buttons_pressed)
+        mac = min(sentados, key=sentados.__getitem__)
+        vivo = coop.live_snapshots().get(mac)
+        botoes = frozenset(vivo.buttons_pressed) if vivo is not None else frozenset()
+        return mac, botoes
     except Exception as exc:
         logger.debug("atalhos_na_vaga_sem_fila", err=str(exc))
         return None
