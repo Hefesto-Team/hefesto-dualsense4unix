@@ -62,6 +62,7 @@ from __future__ import annotations
 import argparse
 import ast
 import csv
+import functools
 import importlib.util
 import re
 import subprocess
@@ -76,7 +77,7 @@ from types import ModuleType
 #: inteira de costura sem deixar a busca sem teto.
 HISTORICO = 400
 
-_NOME_NA_QUEIXA = re.compile(r"a faixa não contém `(?P<nome>[^`]+)`")
+_NOME_NA_QUEIXA = re.compile(r"a faixa (?:não contém `|começa antes do `def )(?P<nome>[^`]+)`")
 _ENDERECO = re.compile(r"`?(?P<arq>[^`:\s]+):(?P<a>\d+)(?:-(?P<b>\d+))?`?")
 _HUNK = re.compile(r"^@@ -(?P<os>\d+)(?:,(?P<oc>\d+))? \+(?P<ns>\d+)(?:,(?P<nc>\d+))? @@")
 
@@ -107,6 +108,11 @@ def _git(raiz: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+@functools.cache
+def _validador_carregado() -> ModuleType:
+    return _validador(Path(__file__).resolve().parents[1])
+
+
 def _validador(raiz: Path) -> ModuleType:
     caminho = Path(__file__).resolve().parent / "validar-citacoes-de-linha.py"
     spec = importlib.util.spec_from_file_location("validar_citacoes_de_linha", caminho)
@@ -117,11 +123,21 @@ def _validador(raiz: Path) -> ModuleType:
     return modulo
 
 
-def _contem(linhas: Sequence[str], a: int, b: int, nomes: set[str]) -> bool:
+def _contem(
+    linhas: Sequence[str], a: int, b: int, nomes: set[str], relativo: str = ""
+) -> bool:
+    """A faixa é verdadeira: contém todo nome prometido e, em `.py`, não
+    abraça o `def` de nenhum deles começando em código de fora (a pergunta 3
+    do validador, perguntada a ele)."""
     if a < 1 or b < a or b > len(linhas):
         return False
     trecho = "\n".join(linhas[a - 1 : b])
-    return all(nome in trecho for nome in nomes)
+    if not all(nome in trecho for nome in nomes):
+        return False
+    if not relativo.endswith(".py") or a == b:
+        return True
+    abraca = _validador_carregado().abraca_de_fora
+    return all(abraca(list(linhas), a, b, nome) is None for nome in nomes)
 
 
 def _hunks(raiz: Path, sha: str, relativo: str) -> list[tuple[int, int, int, int]] | None:
@@ -169,7 +185,7 @@ def levar(
     quando o trecho não pode ser achado hoje sem chute.
     """
     atual = (raiz / relativo).read_text(encoding="utf-8", errors="replace").splitlines()
-    if _contem(atual, a, b, nomes):
+    if _contem(atual, a, b, nomes, relativo):
         return a, b
     commits = _git(raiz, "log", f"-n{historico}", "--format=%H", "--", relativo)
     for sha in commits.stdout.split():
@@ -177,7 +193,7 @@ def levar(
         if mostrado.returncode != 0:
             continue
         velho = mostrado.stdout.splitlines()
-        if not _contem(velho, a, b, nomes):
+        if not _contem(velho, a, b, nomes, relativo):
             continue
         return _mapear(raiz, sha, relativo, velho, atual, a, b, nomes)
     return None
@@ -196,14 +212,14 @@ def _mapear(
     hunks = _hunks(raiz, sha, relativo)
     if hunks is not None:
         a2, b2 = _levar_linha(a, hunks), _levar_linha(b, hunks)
-        if a2 is not None and b2 is not None and _contem(atual, a2, b2, nomes):
+        if a2 is not None and b2 is not None and _contem(atual, a2, b2, nomes, relativo):
             return a2, b2
     # Uma ponta caiu num hunk: o bloco inteiro, idêntico e ÚNICO, no arquivo de hoje.
     bloco = velho[a - 1 : b]
     lugares = [
         i + 1 for i in range(len(atual) - len(bloco) + 1) if atual[i : i + len(bloco)] == bloco
     ]
-    if len(lugares) == 1 and _contem(atual, lugares[0], lugares[0] + len(bloco) - 1, nomes):
+    if len(lugares) == 1 and _contem(atual, lugares[0], lugares[0] + len(bloco) - 1, nomes, relativo):
         return lugares[0], lugares[0] + len(bloco) - 1
     if len(lugares) > 1 or hunks is None:
         return None
@@ -214,7 +230,7 @@ def _mapear(
             if hoje is None:
                 return None
             a2, b2 = a + (hoje - n), b + (hoje - n)
-            return (a2, b2) if _contem(atual, a2, b2, nomes) else None
+            return (a2, b2) if _contem(atual, a2, b2, nomes, relativo) else None
     return None
 
 

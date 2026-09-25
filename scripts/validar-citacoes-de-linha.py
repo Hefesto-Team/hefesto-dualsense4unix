@@ -23,7 +23,7 @@ Não é caso isolado: a mesma varredura achou
 definido em `:838`. Dois endereços podres numa árvore que tem portão para
 arquivo inexistente desde a PORTÃO-VIVO-01.
 
-AS DUAS PERGUNTAS QUE ELE FAZ
+AS TRÊS PERGUNTAS QUE ELE FAZ
 ------------------------------
 1. **A faixa existe?** `arquivo:N` ou `arquivo:N-M` — o arquivo precisa ter ao
    menos M linhas, e N não pode ser maior que M. Pega o endereço que aponta
@@ -37,6 +37,15 @@ AS DUAS PERGUNTAS QUE ELE FAZ
 
    O nome tem de aparecer no trecho citado. É a pergunta que pega o caso do
    pré-amp, em que a faixa existia e não continha nada do que prometia.
+
+3. **A faixa que abraça o `def` do símbolo começa nele?** Só em `.py`, só
+   com faixa `N-M` e só quando o símbolo tem UMA definição. Se o `def` (ou o
+   decorador dele) está DENTRO da faixa, mas não na primeira linha, o que vem
+   antes dele tem de ser comentário ou linha em branco — o cabeçalho dele.
+   Código ali é de outra função: a função andou e a faixa não foi junto, e a
+   pergunta 2 passa verde porque a linha do `def` continua lá dentro. Medido em
+   25/09/2026: das 81 faixas `.py` com promessa, duas tinham essa forma, e as
+   duas eram deriva (`coop.py:1032-1065`, 26 linhas acima do `_spawn_player`).
 
 Citação sem nome colado passa pela pergunta 1 e não pela 2: o portão não
 adivinha promessa não escrita.
@@ -151,7 +160,9 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import ast
 import csv
+import functools
 import re
 import sys
 from dataclasses import dataclass
@@ -287,6 +298,36 @@ def nomes_prometidos(
     return nomes
 
 
+@functools.lru_cache(maxsize=64)
+def _inicios_das_definicoes(texto: str) -> dict[str, tuple[int, ...]]:
+    """``{nome: (primeira linha, decorador incluído, de cada definição)}``."""
+    try:
+        arvore = ast.parse(texto)
+    except (SyntaxError, ValueError):
+        return {}
+    inicios: dict[str, list[int]] = {}
+    for no in ast.walk(arvore):
+        if isinstance(no, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
+            primeira = min([d.lineno for d in no.decorator_list] + [no.lineno])
+            inicios.setdefault(no.name, []).append(primeira)
+    return {nome: tuple(linhas) for nome, linhas in inicios.items()}
+
+
+def abraca_de_fora(corpo: list[str], primeira: int, ultima: int, nome: str) -> int | None:
+    """A pergunta 3: a linha do `def` de ``nome`` quando a faixa o abraça
+    começando em código de fora dele; ``None`` quando ela está certa.
+
+    ``corpo`` tem de ser Python — quem chama sabe a extensão.
+    """
+    inicios = _inicios_das_definicoes("\n".join(corpo)).get(nome, ())
+    if len(inicios) != 1 or not primeira < inicios[0] <= ultima:
+        return None
+    antes = corpo[primeira - 1 : inicios[0] - 1]
+    if all(not linha.strip() or linha.lstrip().startswith("#") for linha in antes):
+        return None
+    return inicios[0]
+
+
 def confere_endereco(
     origem: str,
     linha: int,
@@ -298,7 +339,7 @@ def confere_endereco(
     raiz: Path,
     separadores: tuple[str, ...] = (),
 ) -> tuple[list[Achado], bool, bool]:
-    """As duas perguntas, para UM endereço.
+    """As três perguntas, para UM endereço.
 
     Devolve (achados, conferido, de_fora) — e `conferido` e `de_fora` são
     exclusivos: ou o arquivo resolve nesta árvore e o endereço é cobrado, ou
@@ -327,13 +368,22 @@ def confere_endereco(
                 True, False)
 
     trecho = "\n".join(corpo[primeira - 1:ultima])
+    nomes = sorted(nomes_prometidos(texto, achado.start(), achado.end(), separadores))
     achados = [
         Achado(origem, linha, endereco,
                f"a faixa não contém `{nome}`, que a citação promete", contexto)
-        for nome in sorted(
-            nomes_prometidos(texto, achado.start(), achado.end(), separadores))
+        for nome in nomes
         if nome not in trecho
     ]
+    if alvo.suffix == ".py" and achado.group("b"):
+        for nome in nomes:
+            no_def = abraca_de_fora(corpo, primeira, ultima, nome) if nome in trecho else None
+            if no_def is not None:
+                achados.append(Achado(
+                    origem, linha, endereco,
+                    f"a faixa começa antes do `def {nome}` (linha {no_def}) e abraça "
+                    "código de fora dele: a função andou e a faixa não foi junto",
+                    contexto))
     return achados, True, False
 
 
@@ -505,6 +555,10 @@ def main(argv: list[str] | None = None) -> int:
         print("endereço. Reaponte-o para onde a coisa está hoje; não apague a")
         print("afirmação, e não troque o endereço por prosa vaga: um grau de")
         print("confiança sem `arquivo:linha` desce de nível nesta casa.")
+        print("")
+        print("O reapontamento tem dono: `python3 scripts/reapontar-citacoes.py")
+        print("--escrever` leva cada endereço pelo histórico do git até onde o")
+        print("símbolo prometido está hoje, e só escreve o que confere.")
         return 1
 
     print(f"OK: {conferidos} citação(ões) de linha conferida(s) em {onde}; "
