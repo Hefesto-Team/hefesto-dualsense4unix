@@ -559,7 +559,7 @@ _regra_do_no_instalada() {
 # a TODO hidraw, sem estreitar por aparelho — num arquivo que o udev roda
 # DEPOIS da regra do nó. Uma por linha: `arquivo:linha:quando:conteúdo`, com
 # `quando` = `nascimento` (antes da 73-seat-late: a ACL sai no nascimento) ou
-# `sessao` (depois dela: reabre a cada troca de sessão, no login).
+# `login` (depois dela: reabre a cada troca de sessão).
 # $1 = o nome da regra do nó; $2.. = os diretórios.
 _regras_que_reabrem_o_fisico() {
     local nossa="$1"; shift
@@ -574,7 +574,7 @@ _regras_que_reabrem_o_fisico() {
         [[ -r "${caminho}" ]] || continue
         quando="nascimento"
         [[ "$(printf '%s\n%s\n' "${nome}" "73-seat-late.rules" | LC_ALL=C sort | head -1)" \
-            == "73-seat-late.rules" ]] && quando="sessao"
+            == "73-seat-late.rules" ]] && quando="login"
         awk -v arq="${caminho}" -v quando="${quando}" '
             {
                 linha = $0
@@ -675,7 +675,7 @@ _veredito_do_no_fisico_no_udev() {
         while IFS= read -r linha; do
             [[ -n "${linha}" ]] || continue
             case "${linha}" in
-                *:sessao:*) info "    ${linha%%:sessao:*} — depois da 73-seat-late: reabre na troca de sessão (login)" ;;
+                *:login:*)  info "    ${linha%%:login:*} — depois da 73-seat-late: reabre na troca de sessão (login)" ;;
                 *)          info "    ${linha%%:nascimento:*}" ;;
             esac
         done <<<"${culpados}"
