@@ -775,7 +775,7 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
 
     O QUE O GESTO NÃO PROMETE (medido, não suposto):
       - NÃO garante que o jogo sobreviva à troca. A troca de máscara destrói e
-        recria o vpad (`gamepad.py:1867` para, `:1892` cria — slot único, sem
+        recria o vpad (`gamepad.py:2720` para, `:2494` cria — slot único, sem
         double-buffer na árvore), e foi medido em 23/07 que recriar o vpad com
         o jogo rodando invalida os handles que ele abriu: a Steam não reabre o
         hidraw do vpad do P1. Jogo que já estava com o controle na mão pode
