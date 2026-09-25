@@ -6894,7 +6894,7 @@ class PyDualSenseController(IController):
             if cor is not None:
                 carimbo = getattr(self, "_brilho_da_cor", {}).get(alvo)
                 if carimbo is not None and carimbo[0] == tuple(cor):
-                    return carimbo[1]
+                    return float(carimbo[1])
                 dono = self._desired_owner_by_uniq.get(alvo, {}).get("led")
                 if dono != _LAYER_PROFILE or not self._brilho_do_perfil:
                     return None
