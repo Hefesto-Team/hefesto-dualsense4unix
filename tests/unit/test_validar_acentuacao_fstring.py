@@ -177,3 +177,36 @@ def test_all_enxerga_arquivo_novo_ainda_nao_adicionado(sandbox: Path) -> None:
         + res.stderr
     )
     assert "recem_nascido.py" in res.stdout, res.stdout + res.stderr
+
+
+def test_o_codigo_longe_da_chave_tem_a_mesma_resposta_nas_tres_versoes(
+    sandbox: Path,
+) -> None:
+    """25/09/2026: o 3.10, o 3.11 e o 3.12 dizem a mesma coisa.
+
+    O teste de cima só põe o nome COLADO na chave (`{producao}`), e esse a
+    heurística de separador já pulava nas três versões. O que reprovava no
+    3.10 e no 3.11 e passava no 3.12 era o nome LONGE dela, `{len(nomes)}`:
+    43 apontamentos na corrida `36119169814` do CI, todos nome de variável.
+    E o texto de verdade continua cobrado nas três: o miolo literal da
+    f-string e a string de DENTRO da expressão.
+    """
+    fonte = (
+        'a = f"o total de {len(unicos)} textos"\n'  # (noqa-acento)
+        "b = f\"{', '.join(paginas)}\"\n"  # (noqa-acento)
+        'c = f"{len(x)} nao tem"\n'  # (noqa-acento)
+        "d = f\"{'acao' if x else y}\"\n"  # (noqa-acento)
+    )
+    alvo = _escreve(sandbox, "src/chaves.py", fonte)
+
+    res = _roda(["--check-file", str(alvo)], sandbox)
+
+    achados = sorted(
+        ":".join(li.split(" -> ")[0].rsplit(":", 2)[1:])
+        for li in res.stdout.splitlines()
+        if " -> " in li
+    )
+    assert achados == ["3:nao", "4:acao"], (  # (noqa-acento)
+        f"Python {sys.version.split()[0]}: o gate leu código das chaves ou "
+        f"perdeu texto da f-string.\n{res.stdout}{res.stderr}"
+    )

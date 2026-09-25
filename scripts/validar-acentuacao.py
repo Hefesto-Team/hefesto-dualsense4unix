@@ -671,6 +671,136 @@ def _mascara_inline_code_md(linha: str) -> str:
     return _INLINE_CODE_MD.sub(_sub, linha)
 
 
+def _mascara_chaves_da_fstring(literal: str) -> str:
+    """No 3.10 e no 3.11, apaga o CÓDIGO das chaves de uma f-string.
+
+    Recebe o `STRING` inteiro (prefixo e aspas incluídos) e devolve outro do
+    mesmo tamanho, com as quebras de linha no lugar, onde sobra só o que o
+    `tokenize` do 3.12 entrega como texto: o miolo literal, a especificação de
+    formato depois do `:` e as strings de DENTRO da expressão. O prefixo, as
+    aspas de fora, o nome de variável, as chaves e os operadores viram espaço.
+    Se o literal não é
+    f-string, devolve o PRÓPRIO objeto, e quem chama usa isso para saber.
+    """
+    i = 0
+    while i < len(literal) and literal[i] not in "'\"":
+        i += 1
+    prefixo = literal[:i].lower()
+    if "f" not in prefixo or i >= len(literal):
+        return literal
+    aspas = literal[i : i + 3] if literal[i : i + 3] in ('"""', "'''") else literal[i]
+    ini = i + len(aspas)
+    fim = len(literal) - len(aspas)
+    if fim < ini:
+        return literal
+    cru = "r" in prefixo
+    saida = list(literal)
+
+    def apagar(a: int, b: int) -> None:
+        for k in range(a, b):
+            if saida[k] != "\n":
+                saida[k] = " "
+
+    def string_de_dentro(j: int) -> int:
+        """`j` é a aspa de uma string da expressão; ela é TEXTO e fica."""
+        comeco = j
+        while comeco > 0 and j - comeco < 2 and literal[comeco - 1] in "rRbBuUfF":
+            comeco -= 1
+        if comeco > 0 and (literal[comeco - 1].isalnum() or literal[comeco - 1] == "_"):
+            comeco = j  # `if"a"`: as letras eram palavra-chave, não prefixo
+        q = literal[j : j + 3] if literal[j : j + 3] in ('"""', "'''") else literal[j]
+        k = j + len(q)
+        while k < fim and not literal.startswith(q, k):
+            k += 2 if literal[k] == "\\" else 1
+        k = min(k + len(q), fim)
+        if "f" in literal[comeco:j].lower():
+            saida[comeco:k] = _mascara_chaves_da_fstring(literal[comeco:k])
+        else:
+            saida[comeco:j] = literal[comeco:j]  # o prefixo é do `STRING`: fica
+        return k
+
+    def especificacao(j: int) -> int:
+        """Depois do `:`: texto, com campos aninhados. Volta após a `}`."""
+        k = j
+        while k < fim:
+            if literal[k] == "{":
+                apagar(k, k + 1)
+                k = campo(k + 1)
+                continue
+            if literal[k] == "}":
+                apagar(k, k + 1)
+                return k + 1
+            k += 1
+        return fim
+
+    def campo(j: int) -> int:
+        """Depois da `{`: código até o `:` ou a `}` de mesma profundidade."""
+        profundidade = 0
+        codigo = j
+        k = j
+        while k < fim:
+            c = literal[k]
+            if c in "'\"":
+                apagar(codigo, k)
+                k = codigo = string_de_dentro(k)
+                continue
+            if c in "([{":
+                profundidade += 1
+            elif c in ")]" or (c == "}" and profundidade > 0):
+                profundidade -= 1
+            elif c == "}":
+                apagar(codigo, k + 1)
+                return k + 1
+            elif c == ":" and profundidade == 0:
+                apagar(codigo, k + 1)
+                return especificacao(k + 1)
+            k += 1
+        apagar(codigo, fim)
+        return fim
+
+    # O prefixo e as aspas de fora não são texto no 3.12 (`FSTRING_START` e
+    # `FSTRING_END`), e aqui também não.
+    apagar(0, ini)
+    apagar(fim, len(literal))
+    k = ini
+    while k < fim:
+        c = literal[k]
+        if c == "\\" and not cru:
+            # `\N{NOME}` é escape de caractere, não campo.
+            if literal[k + 1 : k + 3] == "N{":
+                fecha = literal.find("}", k + 3, fim)
+                k = fim if fecha < 0 else fecha + 1
+            else:
+                k += 2
+            continue
+        if c == "{" and literal[k + 1 : k + 2] != "{":
+            apagar(k, k + 1)
+            k = campo(k + 1)
+            continue
+        if c in "{}" and literal[k + 1 : k + 2] == c:
+            apagar(k + 1, k + 2)  # `{{` é uma chave de texto só, como no 3.12
+            k += 2
+            continue
+        k += 1
+    return "".join(saida)
+
+
+def _sobrepor(
+    mascarado: list[str], linhas: list[str], inicio: tuple[int, int], texto: str
+) -> None:
+    """Escreve `texto` (já mascarado) sobre as linhas, a partir de `inicio`."""
+    lin_ini, col_ini = inicio
+    for k, pedaco in enumerate(texto.split("\n")):
+        i = lin_ini - 1 + k
+        if not 0 <= i < len(linhas):
+            continue
+        comeco = col_ini if k == 0 else 0
+        fim = min(comeco + len(pedaco), len(linhas[i]))
+        mascarado[i] = (
+            mascarado[i][:comeco] + pedaco[: fim - comeco] + mascarado[i][fim:]
+        )
+
+
 def _mascara_codigo_python(conteudo: str, linhas: list[str]) -> list[str]:
     """Em ``.py``, apaga tudo que NÃO é comentário/string antes da varredura.
 
@@ -709,6 +839,15 @@ def _mascara_codigo_python(conteudo: str, linhas: list[str]) -> list[str]:
     pode virar apontamento). Os nomes são buscados com `getattr` porque no
     3.11 esses atributos não existem — assumi-los quebraria o gate na versão
     que o CI ainda usa.
+
+    A MESMA RESPOSTA NAS TRÊS VERSÕES — 25/09/2026. A metade de cima curou o
+    3.12 e deixou a assimetria no sentido contrário: no 3.10 e no 3.11 a
+    f-string inteira é UM `STRING`, com as chaves dentro, e o gate lia o nome
+    de variável que o 3.12 já mascarava. Medido na corrida `36119169814` do
+    CI: 43 apontamentos no 3.10 e no 3.11, zero no 3.12, e os 43 eram nome de
+    variável entre chaves (`f"{len(unicos)}"`). Sem `FSTRING_MIDDLE`, a
+    f-string passa por `_mascara_chaves_da_fstring`, que apaga o código das
+    chaves e guarda o que o 3.12 chama de texto.
     """
     import io
     import tokenize
@@ -729,6 +868,11 @@ def _mascara_codigo_python(conteudo: str, linhas: list[str]) -> list[str]:
     for tok in tokens:
         if tok.type not in tipos_texto:
             continue
+        if fstring_middle is None and tok.type == tokenize.STRING:
+            so_texto = _mascara_chaves_da_fstring(tok.string)
+            if so_texto is not tok.string:
+                _sobrepor(mascarado, linhas, tok.start, so_texto)
+                continue
         (lin_ini, col_ini), (lin_fim, col_fim) = tok.start, tok.end
         for n in range(lin_ini, lin_fim + 1):
             i = n - 1
