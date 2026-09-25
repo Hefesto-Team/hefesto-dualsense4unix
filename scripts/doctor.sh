@@ -574,9 +574,12 @@ _regra_do_no_instalada() {
 # (`scripts/regra_do_no_aberta.sh`). Nela o físico nasce com a ACL da sessão
 # DE PROPÓSITO: sem broker, ninguém abriria um nó fechado. $1 = o caminho.
 _regra_do_no_e_a_aberta() {
-    local caminho="$1"
+    local caminho="$1" efetivas
     [[ -r "${caminho}" ]] || return 1
-    ! grep -v '^[[:space:]]*#' "${caminho}" 2>/dev/null | grep -q 'TAG-="uaccess"'
+    # Para uma variável, e não `| grep -q`: sob o `pipefail` deste script o
+    # cano devolve 141 quando ACHA, e o `!` o leria como «não achou».
+    efetivas="$(grep -v '^[[:space:]]*#' "${caminho}" 2>/dev/null || true)"
+    [[ "${efetivas}" != *'TAG-="uaccess"'* ]]
 }
 
 # As linhas que dão `uaccess` ao hidraw de um DualSense (054C:0CE6/0DF2) — ou

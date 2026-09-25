@@ -738,13 +738,14 @@ fi
 # transformação — o mesmo fail-safe do install-host-udev.sh sem broker. Se a
 # transformação recusar, a regra do nó sai (aberto é o lado seguro).
 _abrir_a_regra_do_no_que_fica() {
-    local regra aberta
+    local regra aberta efetivas
     for regra in /etc/udev/rules.d/73-hefesto-ps5-controller.rules \
                  /etc/udev/rules.d/70-ps5-controller.rules; do
         [[ -f "${regra}" ]] || continue
-        if ! grep -v '^[[:space:]]*#' "${regra}" 2>/dev/null | grep -q 'TAG-="uaccess"'; then
-            continue
-        fi
+        # Para uma variável, e não `| grep -q`: sob `pipefail` o cano devolve
+        # 141 quando ACHA (test_o_pipefail_nao_transforma_acerto_em_falha).
+        efetivas="$(grep -v '^[[:space:]]*#' "${regra}" 2>/dev/null || true)"
+        [[ "${efetivas}" == *'TAG-="uaccess"'* ]] || continue
         if [[ "${DRY_RUN}" -eq 1 ]]; then
             _faria "(root) trocar ${regra} pela variante aberta (scripts/regra_do_no_aberta.sh): o broker sai"
             continue
