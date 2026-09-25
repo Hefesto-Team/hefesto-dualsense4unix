@@ -113,7 +113,8 @@ python3Packages.buildPythonApplication rec {
   postInstall = ''
     # Udev rules.
     #
-    # O-NO-NASCE-FECHADO-01 (auditoria de 20/09/2026, bloqueante 3): a 70 vai
+    # O-NO-NASCE-FECHADO-01 (auditoria de 20/09/2026, bloqueante 3): a regra do
+    # no (a 73-hefesto, que era a 70 ate 25/09/2026) vai
     # para o diretorio VIVO na variante ABERTA, e nao e opiniao — e a unica
     # metade da cura que este pacote consegue entregar. O asset versionado
     # fecha o no do DualSense (TAG-="uaccess", 0600 root) contando que o broker
@@ -121,8 +122,8 @@ python3Packages.buildPythonApplication rec {
     # desta derivacao. Gravar o asset fechado aqui deixaria o DualSense
     # inutilizavel — e o produto e para qualquer usuario (ordem dela,
     # 11/09/2026).
-    bash scripts/regra_do_no_aberta.sh assets/70-ps5-controller.rules \
-        $out/lib/udev/rules.d/70-ps5-controller.rules
+    bash scripts/regra_do_no_aberta.sh assets/73-hefesto-ps5-controller.rules \
+        $out/lib/udev/rules.d/73-hefesto-ps5-controller.rules
     install -Dm644 assets/71-uinput.rules \
         $out/lib/udev/rules.d/71-uinput.rules
     # 71-uhid: /dev/uhid — o gamepad virtual vira um DualSense de verdade (hidraw +

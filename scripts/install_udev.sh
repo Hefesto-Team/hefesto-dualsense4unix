@@ -17,11 +17,17 @@ ASSETS="$HERE/assets"
 # FEAT-DSX-DEFINITIVE-FIX-01 §7.5.
 DISABLE_USB_AUDIO=0
 
-# O-NO-NASCE-FECHADO-01 (decisão dela, 20/09/2026): o `70-ps5-controller.rules`
+# O-NO-NASCE-FECHADO-01 (decisão dela, 20/09/2026): o `73-hefesto-ps5-controller.rules`
 # versionado FECHA o nó do DualSense físico (`TAG-="uaccess"`, 0600 root) e o
 # broker o abre sob pedido. É o DEFAULT, por ordem dela. `--no-fechar-o-no`
-# instala uma cópia com as duas linhas 0ce6 reabertas — para quem precise do nó
+# instala uma cópia com as linhas físicas reabertas — para quem precise do nó
 # aberto para ferramenta de terceiro, ou para reverter sem editar asset.
+#
+# O NOME MUDOU em 25/09/2026 (O-FISICO-NASCE-ESCONDIDO-EM-QUALQUER-MAQUINA-01):
+# era `70-ps5-controller.rules`, e a `71-sony-controllers.rules` do pacote
+# `game-devices-udev` corria depois dela e reabria o nó. O cabeçalho do asset
+# diz por que o lugar é o 73-h, antes da `73-seat-late.rules`. A velha sai de
+# /etc aqui mesmo, logo depois de a nova entrar.
 ABRIR_O_NO=0
 
 # Mesmo padrão do uninstall.sh e do purge.sh: `--help` sai 0 e argumento
@@ -65,7 +71,7 @@ done
 
 # Falha cedo se algum arquivo esperado estiver ausente.
 for f in \
-    "$ASSETS/70-ps5-controller.rules" \
+    "$ASSETS/73-hefesto-ps5-controller.rules" \
     "$ASSETS/71-uhid.rules" \
     "$ASSETS/71-uinput.rules" \
     "$ASSETS/72-ps5-controller-autosuspend.rules" \
@@ -121,18 +127,21 @@ if [[ "$ABRIR_O_NO" -eq 1 ]]; then
     # destino quando qualquer uma reprova.
     _regra_aberta="$(mktemp)"
     if ! bash "$HERE/scripts/regra_do_no_aberta.sh" \
-            "$ASSETS/70-ps5-controller.rules" "$_regra_aberta"; then
+            "$ASSETS/73-hefesto-ps5-controller.rules" "$_regra_aberta"; then
         rm -f "$_regra_aberta"
         echo "ERRO: --no-fechar-o-no não conseguiu reabrir todas as linhas do asset." >&2
-        echo "nada foi instalado. Confira assets/70-ps5-controller.rules." >&2
+        echo "nada foi instalado. Confira assets/73-hefesto-ps5-controller.rules." >&2
         exit 1
     fi
-    sudo install -Dm644 "$_regra_aberta"                          /etc/udev/rules.d/70-ps5-controller.rules
+    sudo install -Dm644 "$_regra_aberta"                          /etc/udev/rules.d/73-hefesto-ps5-controller.rules
     rm -f "$_regra_aberta"
     echo "  AVISO: --no-fechar-o-no — o hidraw do DualSense nasce ABERTO; a Steam pode pegá-lo antes do broker"
 else
-    sudo install -Dm644 "$ASSETS/70-ps5-controller.rules"         /etc/udev/rules.d/70-ps5-controller.rules
+    sudo install -Dm644 "$ASSETS/73-hefesto-ps5-controller.rules" /etc/udev/rules.d/73-hefesto-ps5-controller.rules
 fi
+# A regra do nó com o nome de antes (até 25/09/2026). Ficar com as duas não
+# reabre nada — a 73-h fala por último —, mas é sobra, e o doctor a acusa.
+sudo rm -f /etc/udev/rules.d/70-ps5-controller.rules
 sudo install -Dm644 "$ASSETS/71-uinput.rules"                     /etc/udev/rules.d/71-uinput.rules
 # 71-uhid: /dev/uhid acessível ao usuário — o gamepad virtual vira um DualSense de
 # verdade (hidraw + lightbar + LEDs + sensores), o que faz a vibração funcionar
@@ -150,9 +159,9 @@ sudo install -Dm644 "$ASSETS/72-ps5-controller-autosuspend.rules" /etc/udev/rule
 # touchpad e giroscópio simplesmente não funcionavam. OQ-6.
 # O número TEM de ser < 73 (a 73-seat-late.rules é quem vira a TAG em ACL).
 # A 72 FECHA AS ENTRADAS DO FÍSICO desde a HIDE-SO-O-HIDRAW-02 (24/09/2026), e
-# o opt-out tem de abrir as duas regras juntas: com a 70 aberta e a 72 fechada
-# o estado fica incoerente (o `--fechar-tudo-e-sair` reabre o que a 72 fecha).
-# O dono da transformação é o mesmo da 70.
+# o opt-out tem de abrir as duas regras juntas: com a regra do nó aberta e a 72
+# fechada o estado fica incoerente (o `--fechar-tudo-e-sair` reabre o que a 72
+# fecha). O dono da transformação é o mesmo da regra do nó.
 if [[ "$ABRIR_O_NO" -eq 1 ]]; then
     _regra_72_aberta="$(mktemp)"
     if ! bash "$HERE/scripts/regra_do_no_aberta.sh" \
@@ -259,8 +268,11 @@ sudo modprobe uinput 2>/dev/null || echo "  aviso: modprobe uinput falhou (kerne
 # o daemon cai no uinput (sem vibração na máscara DualSense), então é aviso, não erro.
 sudo modprobe uhid 2>/dev/null || echo "  aviso: modprobe uhid falhou (kernel sem CONFIG_UHID?)"
 sudo udevadm control --reload-rules
-# hidraw: reaplica a 70 (MODE 0660 + TAG uaccess) nos nós que JÁ EXISTEM —
-# inclusive no DualSense que está no rádio neste instante.
+# hidraw: reaplica a regra do nó (a 73-hefesto: 0600 root, sem uaccess) nos nós
+# que JÁ EXISTEM — inclusive no DualSense que está no rádio neste instante. Com a
+# regra falando por último, este `change` FECHA o físico que outra regra tinha
+# aberto; o descritor que alguém já segura continua aberto (só reconectar o
+# solta). O vpad continua com a ACL da sessão.
 #
 # GATILHO-DA-COR-INSTALA-01 (12/08/2026). A linha que morava aqui era
 # `--subsystem-match=hidraw --attr-match=idVendor=054c`, e ela casava ZERO

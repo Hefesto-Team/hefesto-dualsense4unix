@@ -98,7 +98,7 @@ além disso:
 
 - **Cobre (faz):** autosuspend per-VID/PID via udev (`72-ps5-controller-autosuspend.rules`,
   ADR-013). Cirúrgico, idempotente, sob a mesma barreira de sudo de
-  `70-ps5-controller.rules`.
+  `73-hefesto-ps5-controller.rules` (a `70-ps5-controller.rules` até 25/09/2026).
 - **Não cobre (não faz):** kernel cmdline (`usbcore.autosuspend`, `pcie_aspm`,
   `usbcore.autosuspend_delay_ms` global), tunável global em
   `/sys/module/usbcore/parameters/*`, regras `99-usb-*` de power global, e

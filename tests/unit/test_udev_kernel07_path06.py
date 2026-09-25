@@ -4,8 +4,9 @@ Padrão do repo para lógica que vive em shell/regras udev: testes de TEXTO
 travam o contrato dos arquivos (assets/*.rules, install/uninstall, doctor) —
 a validação viva acontece no ciclo final do install (gate do orquestrador).
 
-- Regra 70 cobre o hidraw do VPAD uhid (bus 0003, sem pai USB real) — sem
-  depender do steam-devices de terceiro; uaccess vale porque 70 < 73-seat-late.
+- A regra do nó (a 70 até 25/09/2026, hoje a 73-hefesto) cobre o hidraw do
+  VPAD uhid (bus 0003, sem pai USB real) — sem depender do steam-devices de
+  terceiro; uaccess vale porque o arquivo ordena antes de 73-seat-late.
 - Regra 80 esconde os js legados de Motion Sensors (MODE 0000).
 - Regra 78 ampliada: nomes BT (sem prefixo Sony) e vpads Hefesto Virtual.
 - Assets 73/74 (hotplug-GUI) fora do repo; rm compensatório preservado.
@@ -36,7 +37,7 @@ def _rule_lines(path: Path) -> list[str]:
 
 
 def test_regra_70_cobre_o_hidraw_do_vpad_uhid() -> None:
-    linhas = _rule_lines(ASSETS / "70-ps5-controller.rules")
+    linhas = _rule_lines(ASSETS / "73-hefesto-ps5-controller.rules")
     vpad = [ln for ln in linhas if 'KERNELS=="0003:054C:0DF2.*"' in ln]
     assert vpad, "regra 70 sem o match do vpad uhid (KERNELS 0003:054C:0DF2.*)"
     for ln in vpad:
@@ -46,7 +47,7 @@ def test_regra_70_cobre_o_hidraw_do_vpad_uhid() -> None:
 
 
 def test_regra_70_mantem_fisico_usb_e_bt() -> None:
-    blob = "\n".join(_rule_lines(ASSETS / "70-ps5-controller.rules"))
+    blob = "\n".join(_rule_lines(ASSETS / "73-hefesto-ps5-controller.rules"))
     assert 'ATTRS{idVendor}=="054c"' in blob  # USB físico
     assert 'KERNELS=="0005:054C:0CE6.*"' in blob  # BT standard
     assert 'KERNELS=="0005:054C:0DF2.*"' in blob  # BT Edge

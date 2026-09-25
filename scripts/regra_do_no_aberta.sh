@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# regra_do_no_aberta.sh — escreve a variante ABERTA do 70-ps5-controller.rules.
+# regra_do_no_aberta.sh — escreve a variante ABERTA do 73-hefesto-ps5-controller.rules.
 #
 # Uso: bash scripts/regra_do_no_aberta.sh ORIGEM DESTINO
 #
@@ -62,7 +62,12 @@ trap 'rm -f "${_tmp}"' EXIT
 # desde a STEAM-NO-FISICO-01 (24/09/2026), as duas do Edge físico (0df2). A do
 # vpad nunca fechou — ver o cabeçalho do asset. A guarda 1 abaixo é a que
 # confere as quatro: nenhuma linha fechada pode sobrar.
-sed -e 's/MODE="0600", OWNER="root", GROUP="root", TAG-="uaccess"/MODE="0660", TAG+="uaccess"/' \
+#
+# O `:?` casa as duas formas da linha fechada: a do hidraw, com atribuição
+# FINAL (`MODE:=`, desde a O-FISICO-NASCE-ESCONDIDO-EM-QUALQUER-MAQUINA-01, em
+# 25/09/2026), e a das entradas na 72, com `MODE=`. A variante aberta sai sem
+# o `:=`, como era antes: aberta, ela não disputa com ninguém.
+sed -E -e 's/MODE:?="0600", OWNER:?="root", GROUP:?="root", TAG-="uaccess"/MODE="0660", TAG+="uaccess"/' \
     "${ORIGEM}" > "${_tmp}"
 
 # AS DUAS GUARDAS, e nenhuma é decorativa.

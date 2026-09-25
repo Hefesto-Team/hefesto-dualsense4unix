@@ -702,7 +702,7 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
     ),
     "HEFESTO_BROKER_NO_NASCE_FECHADO": (
         "Se o nó hidraw do DualSense físico NASCE FECHADO — `0600 root`, pela "
-        "regra `assets/70-ps5-controller.rules` da cura O-NO-NASCE-FECHADO-01 "
+        "regra `assets/73-hefesto-ps5-controller.rules` da cura O-NO-NASCE-FECHADO-01 "
         "(broker/hidraw_broker.py:92). É promessa dela, decidida em "
         "20/09/2026: «o Hefesto tem que ter prioridade em tudo e isso deveria "
         "estar no install por default». Ela acopla as duas metades da cura — "

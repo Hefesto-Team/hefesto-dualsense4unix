@@ -181,7 +181,7 @@ lsusb | grep -i 0ce6
 ls /dev/hidraw*
 
 # Confirma regras udev instaladas no host:
-ls /etc/udev/rules.d/70-ps5-controller.rules 2>&1
+ls /etc/udev/rules.d/73-hefesto-ps5-controller.rules 2>&1
 ```
 
 **Fix**:

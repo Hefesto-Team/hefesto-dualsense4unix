@@ -424,7 +424,7 @@ check_udev() {
     # e tem função própria — `check_input_uaccess`. As duas são necessárias:
     # a regra pode estar no disco e não ter pegado (ver o comentário de lá).
     local r found=0 missing=""
-    local rules=(70-ps5-controller.rules 71-uhid.rules 71-uinput.rules
+    local rules=(73-hefesto-ps5-controller.rules 71-uhid.rules 71-uinput.rules
                  72-ps5-controller-autosuspend.rules
                  72-hefesto-touchpad-motion-uaccess.rules
                  76-dualsense-touchpad-libinput-ignore.rules
@@ -446,7 +446,7 @@ check_udev() {
         fi
     done
     if [[ "${found}" -eq "${total}" ]]; then
-        pass "${total} regras udev canônicas presentes (70/71-uhid/71-uinput/72-autosuspend/72-uaccess/76/77/78/79/80/81-power/81-host/82/83/84)"
+        pass "${total} regras udev canônicas presentes (73-hefesto/71-uhid/71-uinput/72-autosuspend/72-uaccess/76/77/78/79/80/81-power/81-host/82/83/84)"
     elif [[ "${found}" -eq 0 ]]; then
         fail "nenhuma regra udev instalada — rode: sudo bash scripts/install_udev.sh"
     else

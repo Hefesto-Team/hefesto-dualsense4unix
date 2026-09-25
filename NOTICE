@@ -45,13 +45,15 @@ linha; quem revisar pode conferir uma a uma.
 
 ---
 
-assets/70-ps5-controller.rules
-------------------------------
+assets/73-hefesto-ps5-controller.rules
+--------------------------------------
 
 Regras udev derivadas do projeto pydualsense (https://github.com/flok/pydualsense),
 licenciado sob MIT License. Adaptações: adição do DualSense Edge (VID/PID
 054c:0df2) e substituição de MODE=0666 por MODE=0660 + TAG+="uaccess" para
-integração com systemd-logind.
+integração com systemd-logind. Desde 20/09/2026 o nó do DualSense FÍSICO nasce
+fechado (MODE:="0600", TAG-="uaccess") e só o controle virtual do Hefesto fica
+com a ACL da sessão; até 25/09/2026 o arquivo se chamava 70-ps5-controller.rules.
 
 O arquivo aponta para cá na própria linha 2 ("Baseado em pydualsense (MIT) —
 ver NOTICE"). Nenhuma outra regra de assets/ é derivada: a varredura de

@@ -96,7 +96,7 @@ principais:
 
 | Arquivo                               | Finalidade                                          |
 |---------------------------------------|-----------------------------------------------------|
-| `70-ps5-controller.rules`             | Acesso a `/dev/hidraw*` sem root (grupo `hefesto` + ACL por `uaccess`) |
+| `73-hefesto-ps5-controller.rules`     | O `/dev/hidraw*` do DualSense físico nasce fechado (quem o abre é o broker); o controle virtual fica com a ACL da sessão |
 | `71-uinput.rules`                     | Acesso a `/dev/uinput` para emulação de mouse       |
 | `71-uhid.rules`                       | Acesso a `/dev/uhid` — o controle virtual como DualSense de verdade |
 | `72-ps5-controller-autosuspend.rules` | Previne autosuspend USB que derruba a conexão       |
@@ -286,7 +286,7 @@ O daemon roda dentro do sandbox, e o `/run` de lá é só dele: o que o
 tabela são os três lugares do sistema que o daemon abre: os dois primeiros o
 install cria, e o terceiro é do udev (medido em 24/09/2026, flatpak 1.18.1):
 
-- **o broker.** Com a regra 70 e a 72 instaladas pelo `install-host-udev.sh`, o
+- **o broker.** Com a regra 73-hefesto e a 72 instaladas pelo `install-host-udev.sh`, o
   hidraw e os nós de entrada do DualSense físico nascem fechados, e quem os
   abre é o broker, que entrega o nó ao daemon pelo socket. Sem essa linha o
   daemon do Flatpak ficava sem o controle;
@@ -388,7 +388,7 @@ rm -rf ~/.var/app/io.github.hefesto_team.hefesto_dualsense4unix/
 As regras udev instaladas no host permanecem. Para removê-las:
 
 ```bash
-sudo rm /etc/udev/rules.d/70-ps5-controller.rules \
+sudo rm /etc/udev/rules.d/73-hefesto-ps5-controller.rules \
         /etc/udev/rules.d/71-uinput.rules \
         /etc/udev/rules.d/72-ps5-controller-autosuspend.rules
 sudo udevadm control --reload-rules

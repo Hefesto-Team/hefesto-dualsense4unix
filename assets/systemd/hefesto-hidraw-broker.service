@@ -36,7 +36,7 @@ ExecStart=/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker
 # O broker RECUSA uid 0 (lição 6: render errado nunca vira broker de root).
 Environment=HEFESTO_BROKER_ALLOWED_UID=__SESSION_UID__
 # O-NO-NASCE-FECHADO-01 (decisão dela, 20/09/2026): "1" quando o
-# 70-ps5-controller.rules instalado FECHA o nó do DualSense físico
+# 73-hefesto-ps5-controller.rules instalado FECHA o nó do DualSense físico
 # (TAG-="uaccess", 0600 root) e o broker é quem o abre sob pedido. Renderizado
 # pelo install; `--no-fechar-o-no` instala a regra aberta e renderiza 0.
 # É este env que acopla as duas metades: a udev decide o NASCIMENTO do nó, e o

@@ -10,7 +10,9 @@ O QUE ESTAVA FURADO
 O gatilho da cor (`core/lightbar_gatilho.py`) repinta a lightbar **por hidraw**
 depois que a rajada da Steam passa. Para isso o daemon precisa ESCREVER no
 `/dev/hidrawN` do DualSense que está no rádio, e quem entrega essa permissão é
-a `assets/70-ps5-controller.rules` (`MODE="0660"` + `TAG+="uaccess"`).
+a regra do nó (em 12/08, a `assets/70-ps5-controller.rules`, com `MODE="0660"` +
+`TAG+="uaccess"`; hoje a `assets/73-hefesto-ps5-controller.rules`, que fecha o
+físico e deixa o broker abrir sob pedido).
 
 Os dois instaladores de udev traziam esta linha:
 

@@ -28,6 +28,6 @@ Cobre DualSense standard (`054c:0ce6`) e DualSense Edge (`054c:0df2`). Instalaç
 (+) Eliminação de desconexão transiente em polling contínuo — causa-raiz resolvida, não sintoma mascarado.
 (+) Regra cirúrgica (per-VID/PID), não global (`/sys/module/usbcore/parameters/autosuspend`). Zero impacto em outros devices USB.
 (+) Funciona desde hotplug (`ACTION=="add"`) — novo controle já conecta com `power/control=on`.
-(−) Requer sudo para instalar a udev rule (mesma barreira já existente para `70-ps5-controller.rules`).
+(−) Requer sudo para instalar a udev rule (mesma barreira já existente para `73-hefesto-ps5-controller.rules`, que se chamava `70-ps5-controller.rules` até 25/09/2026).
 (−) Bluetooth não é coberto — BT sofre timeout L2CAP separado, issue distinta fora deste ADR.
 (−) Ao reaplicar apenas via `udevadm trigger` sem `--action=change`, a regra `ACTION=="add"` não roda. Instalador precisa chamar `--action=change --subsystem-match=usb` para aplicar imediatamente.

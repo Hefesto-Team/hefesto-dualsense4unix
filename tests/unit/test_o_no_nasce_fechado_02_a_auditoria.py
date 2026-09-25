@@ -37,7 +37,7 @@ import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
 LIFECYCLE = RAIZ / "src" / "hefesto_dualsense4unix" / "daemon" / "lifecycle.py"
-REGRA = RAIZ / "assets" / "70-ps5-controller.rules"
+REGRA = RAIZ / "assets" / "73-hefesto-ps5-controller.rules"
 REGRA_ABERTA_SH = RAIZ / "scripts" / "regra_do_no_aberta.sh"
 BUILD_DEB = RAIZ / "scripts" / "build_deb.sh"
 INSTALL_HOST = RAIZ / "scripts" / "install-host-udev.sh"
@@ -285,7 +285,7 @@ class TestOsPacotesNaoFechamSemPorta:
         self, tmp_path: Path
     ) -> None:
         """O `regra_do_no_aberta.sh` roda de verdade, sobre o asset de verdade."""
-        destino = tmp_path / "70-ps5-controller.rules"
+        destino = tmp_path / "73-hefesto-ps5-controller.rules"
         proc = subprocess.run(
             ["bash", str(REGRA_ABERTA_SH), str(REGRA), str(destino)],
             capture_output=True,
@@ -322,7 +322,7 @@ class TestOsPacotesNaoFechamSemPorta:
         linhas = _linhas_efetivas(REGRA.read_text(encoding="utf-8"))
         fechadas = [linha for linha in linhas if 'TAG-="uaccess"' in linha]
         assert len(fechadas) == 4, fechadas
-        assert all('MODE="0600"' in linha for linha in fechadas)
+        assert all('MODE:="0600"' in linha for linha in fechadas)
 
     def test_a_transformacao_recusa_um_asset_que_ela_nao_alcanca(
         self, tmp_path: Path
@@ -369,7 +369,7 @@ class TestOsPacotesNaoFechamSemPorta:
         texto = receita.read_text(encoding="utf-8")
         assert diretorio_vivo in texto, "a receita mudou de destino"
         assert "regra_do_no_aberta.sh" in texto, (
-            f"{receita.name} grava a 70 no diretório vivo sem passar pela "
+            f"{receita.name} grava a regra do nó no diretório vivo sem passar pela "
             "variante aberta — e o pacote não instala o broker"
         )
 
@@ -378,15 +378,15 @@ class TestOsPacotesNaoFechamSemPorta:
 
         O `install-host-udev.sh` é o único caminho de pacote que INSTALA o
         broker — e só quando consegue resolver o uid da sessão. Quando não
-        consegue (`BROKER_INSTALL_OK` 0), a 70 tem de ir aberta.
+        consegue (`BROKER_INSTALL_OK` 0), a regra do nó tem de ir aberta.
         """
         texto = INSTALL_HOST.read_text(encoding="utf-8")
-        assert "REGRA_70_SRC" in texto
+        assert "REGRA_DO_NO_SRC" in texto
         assert 'if [[ "${BROKER_INSTALL_OK}" -ne 1 ]]; then' in texto
         assert "regra_do_no_aberta.sh" in texto
 
     def test_o_deb_bundla_o_gerador_da_variante_aberta(self) -> None:
-        """Sem ele no pacote, o helper cai no fail-safe e não instala a 70."""
+        """Sem ele no pacote, o helper cai no fail-safe e não instala a regra do nó."""
         texto = BUILD_DEB.read_text(encoding="utf-8")
         assert (
             "/usr/share/hefesto-dualsense4unix/scripts/regra_do_no_aberta.sh" in texto

@@ -119,7 +119,7 @@ class TestAVarreduraNomeiaOCulpado:
     def test_regra_do_hefesto_nao_e_acusada(self, tmp_path: Path) -> None:
         d = tmp_path / "rules.d"
         d.mkdir()
-        (d / "70-ps5-controller.rules").write_text(HEFESTO + "\n", encoding="utf-8")
+        (d / "73-hefesto-ps5-controller.rules").write_text(HEFESTO + "\n", encoding="utf-8")
         assert _varre(d) == ""
 
     def test_linha_comentada_nao_conta(self, tmp_path: Path) -> None:

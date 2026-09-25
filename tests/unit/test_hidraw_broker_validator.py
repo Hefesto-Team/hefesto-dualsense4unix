@@ -222,7 +222,7 @@ class TestValidateAceita:
 class TestOEdgeFisicoEntra:
     """STEAM-NO-FISICO-01 (24/09/2026) — o Edge físico (0df2) é físico.
 
-    O nó dele nasce fechado desde esta sprint (`assets/70-ps5-controller.rules`),
+    O nó dele nasce fechado desde esta sprint (`assets/73-hefesto-ps5-controller.rules`),
     e sem o broker aceitá-lo ninguém o abriria: o daemon abre o handle de
     controle por `expose` e o motion reader por `open`. A MORDIDA: devolva o
     `if product == VPAD_PRODUCT: return None` e as duas reprovam.
