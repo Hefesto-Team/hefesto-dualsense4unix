@@ -92,6 +92,13 @@ PARAGRAFOS_QUE_FICAM: dict[str, str] = {
         "casos\"*. O verbo acompanhou o botão ao lado, que é o \"o que fazer\" "
         "desta frase e passou a chamar-se `Mapear Entradas`."
     ),
+    "A sessão não diz qual é o ambiente.": (
+        "estado da SESSÃO: `app/ambiente.frase_do_detectado` só a escreve quando "
+        "a sessão não declara ambiente nenhum; com um declarado, a linha é o "
+        "curto «Detectado: …». Numa sessão gráfica ela nunca aparece, e por isso "
+        "a régua só a viu no job `gtk-real` do CI, que roda sem sessão "
+        "(corrida 36119169814, 25/09/2026)."
+    ),
 }
 
 #: O que AINDA está na página e devia ter saído — a dívida desta leva, com nome
