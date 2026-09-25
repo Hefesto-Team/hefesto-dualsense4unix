@@ -323,6 +323,46 @@ def test_a_dica_da_celula_leds_e_a_mesma_de_um_a_quatro_jogadores() -> None:
                 f"a célula LEDs de {uniq} muda com {jogadores} jogadores na mesa")
 
 
+@pytest.mark.parametrize("jogadores", [1, 2, 3, 4])
+def test_nenhum_dos_dez_pacotes_pinta_co_op(jogadores: int) -> None:
+    """O que os DEZ pacotes pintam no tique, com a mesa de quatro, não diz «co-op».
+
+    A régua do HTML (`test_nenhuma_aba_diz_co_op_no_que_o_produto_renderiza`)
+    lê o que a página traz de casa; o que o produto PINTA por cima, a cada
+    tique, sai dos pacotes — foi por aí que a frase da célula LEDs chegava à
+    tela com dois jogadores ou mais, e o arquivo da 04 não a tinha. Esta régua
+    pinta as dez abas pelo `pacote_da_pagina` de verdade, com P1 a P4 (dois no
+    USB, dois no BT) e de um a quatro jogadores no bloco `coop` do estado.
+
+    MORDIDA: devolva a `dica_da_luz` o ramo do co-op — com dois jogadores ou
+    mais a 04 volta a pintar «Desenho que mandamos: o do co-op…» nas colunas.
+    """
+    import pacotes
+
+    conectados = [
+        {"uniq": c["uniq"], "transport": c["transporte"], "connected": True,
+         "player": c["jogador"], "player_slot": c["jogador"],
+         "index": c["jogador"] - 1, "is_primary": c["jogador"] == 1,
+         "lightbar_rgb": [0, 0, 255], "lightbar_on": True,
+         "lightbar_source": "sysfs", "battery_pct": 80, "vpad_backend": "uhid"}
+        for c in MESA
+    ]
+    estado = {"active_profile": "", "controllers": conectados,
+              "coop": {"enabled": True, "players": jogadores,
+                       "mesa": [{"player": n} for n in range(1, jogadores + 1)]}}
+    achados: list[str] = []
+    for pagina in _as_dez(publicado=False):
+        ctx = pacotes.Contexto(state=estado, mesa=list(MESA),
+                               conectados=list(conectados), estados={})
+        pintado = json.dumps(pacotes.pacote_da_pagina(pagina.name, ctx),
+                             ensure_ascii=False, default=str)
+        achados += [f"{pagina.name}: …{pintado[max(0, m.start() - 80):m.end() + 60]}…"
+                    for m in CO_OP.finditer(pintado)]
+    assert not achados, (
+        f"com {jogadores} jogador(es), o tique pinta «co-op»:\n  "
+        + "\n  ".join(achados[:6]))
+
+
 class _Ponte:
     """A ponte do gesto `player`: o número troca, a reconciliação não responde.
 
