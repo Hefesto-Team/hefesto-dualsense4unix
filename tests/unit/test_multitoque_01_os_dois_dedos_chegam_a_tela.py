@@ -314,9 +314,16 @@ def test_a_pagina_tem_uma_bolinha_por_dedo_em_todo_card() -> None:
         "um card perdeu a segunda e o dedo some naquele assento"
     )
     assert segundas >= 1, "nenhuma bolinha para o segundo dedo na página"
-    # Os endereços são DISTINTOS por dedo: o mesmo seletor nos dois faria a
-    # folha viva escrever a posição de um em cima do outro.
-    regras = re.findall(r'\.touch \.ponto-([12])\{left:', html)
-    assert set(regras) == {"1", "2"}, (
-        "a folha de posição não separa as duas bolinhas"
+    # Os endereços são DISTINTOS por dedo: o mesmo endereço nos dois faria o
+    # tique escrever a posição de um em cima do outro. Desde a
+    # A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01 (25/09/2026) a posição é o
+    # alvo `posicao` de um endereço por dedo, e não mais uma regra por bolinha
+    # numa folha trocada inteira a cada tique.
+    por_dedo = {
+        dedo: len(re.findall(
+            rf'data-campo="pos-touch{sufixo}" data-hef-alvo="posicao"', html))
+        for dedo, sufixo in (("1", ""), ("2", "-2"))
+    }
+    assert por_dedo == {"1": segundas, "2": segundas}, (
+        f"a posição não separa as duas bolinhas em todo card: {por_dedo}"
     )
