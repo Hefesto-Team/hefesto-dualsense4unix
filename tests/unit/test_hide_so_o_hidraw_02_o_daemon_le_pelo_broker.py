@@ -340,10 +340,16 @@ class TestOObjetoEspelhaABiblioteca:
         A MORDIDA é de versão: um `python-evdev` que ganhe um campo novo no
         `__init__` reprova aqui antes de o objeto montado pelo fd quebrar
         num método que o use.
+
+        A LEITURA também é de versão (25/09/2026): o `python-evdev` 2.0, que o
+        CI instala, anota os campos (`self.fd: int = fd`), e a régua que só lia
+        `self.fd = fd` achava dois dos nove campos da biblioteca e reprovava o
+        objeto certo. Ela passa a ler a atribuição com e sem anotação.
         """
         from evdev import InputDevice
 
-        da_biblioteca = set(re.findall(r"self\.(\w+)\s*=", inspect.getsource(InputDevice.__init__)))
+        atribuicao = r"self\.(\w+)\s*(?::[^=\n]+)?=(?!=)"
+        da_biblioteca = set(re.findall(atribuicao, inspect.getsource(InputDevice.__init__)))
         nossos = set(re.findall(r"dev\.(\w+)\s*=", inspect.getsource(er._input_device_do_fd)))
         assert nossos == da_biblioteca
 
