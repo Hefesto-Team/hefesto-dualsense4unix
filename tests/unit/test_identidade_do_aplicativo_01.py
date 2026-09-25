@@ -49,6 +49,13 @@ PONTOS_DE_TRANSICAO: dict[str, str] = {
     "src/hefesto_dualsense4unix/utils/identidade.py": (
         "os dois app-ids do Flatpak entram nos padrões de matança do ESTÁVEL"
     ),
+    # 25/09/2026 (ESQUECER-OS-CONTROLES-01): o «limpa?» depois do uninstall
+    # procura a casa do Flatpak pelos DOIS ids — é a prova de que o uninstall
+    # desinstalou os dois, e ele roda com o python3 do sistema, sem o
+    # `migrate_legacy_paths` (que importa o platformdirs) para ler dali.
+    "src/hefesto_dualsense4unix/utils/memoria_dos_controles.py": (
+        "o «limpa?» confere que a casa do Flatpak dos DOIS ids saiu"
+    ),
     # OS DOIS QUE SAÍRAM DA LISTA — 11/09/2026, e não foi conserto: foi a
     # ÁRVORE. `app/main.py` e `app/app.py` estavam aqui desde 21/08 ("mata a
     # instância anterior sob qualquer dos dois ids" e "idem, no pkill de
