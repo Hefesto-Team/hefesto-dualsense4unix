@@ -91,14 +91,26 @@ def fonte_do_driver() -> str:
     return DRIVER.read_text(encoding="utf-8", errors="replace")
 
 
+def _a_prosa_numa_linha(fonte: str) -> str:
+    """O comentário de várias linhas vira uma linha só.
+
+    A régua lê o SENTIDO do comentário, e refazer a quebra de linha não o
+    muda: em 25/09/2026 a OS-TEXTOS-QUE-A-6E-1-DEIXOU-VELHOS-01 reescreveu o
+    comentário do ``_spawn_player``, «também ganha vpad uhid Edge» passou a
+    quebrar antes de «Edge», e esta régua reprovou uma frase que continuava
+    lá.
+    """
+    return re.sub(r"\s*\n\s*#\s*", " ", fonte)
+
+
 @pytest.fixture(scope="module")
 def fonte_do_coop() -> str:
-    return COOP.read_text(encoding="utf-8")
+    return _a_prosa_numa_linha(COOP.read_text(encoding="utf-8"))
 
 
 @pytest.fixture(scope="module")
 def fonte_do_external_identity() -> str:
-    return EXTERNAL_IDENTITY.read_text(encoding="utf-8")
+    return _a_prosa_numa_linha(EXTERNAL_IDENTITY.read_text(encoding="utf-8"))
 
 
 class TestAsDezCelulasContinuamEscritas:
