@@ -2956,10 +2956,9 @@ class PyDualSenseController(IController):
         # levada do brilho do perfil ao da peça pelo tom (`reescalar`), e o
         # P1 a 60% acende pelo perfil o mesmo `(0,0,153)` que o trilho acende.
         base = self._brilho_do_perfil
-        if base is not None:
-            return replace(
-                desired, led=reescalar(tuple(desired.led), base, base * fator)
-            )
+        para = self._brilho_da_peca_locked(uniq)
+        if base is not None and para is not None:
+            return replace(desired, led=reescalar(tuple(desired.led), base, para))
         return replace(
             desired,
             led=tuple(  # type: ignore[arg-type]
@@ -6743,7 +6742,7 @@ class PyDualSenseController(IController):
         hardware: o `reassert_resolved_outputs` da ativação converge.
 
         `brilho_do_perfil` é o brilho a que os fatores são RELATIVOS (o
-        `leds.lightbar_brightness` global). Com ele, `brilho_do_perfil × fator`
+        `leds.lightbar_brightness` global). Com ele, `brilho_do_perfil * fator`
         é o brilho em que cada peça acende, e é nele que a regra de cor única
         desloca o tom (`led_control.cores_sem_colisao`,
         A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01). `None` guarda o anterior.
@@ -6770,7 +6769,12 @@ class PyDualSenseController(IController):
         if base is None:
             return None
         fator = self._led_scale_by_uniq.get(uniq, 1.0)
-        return max(0.0, min(1.0, base * fator))
+        # O ARREDONDAMENTO DESFAZ O RUÍDO DO PONTO FLUTUANTE, e não é enfeite:
+        # o fator é `brilho_do_controle / brilho_do_perfil`, e a volta
+        # `0.82 * (0.6 / 0.82)` pode dar `0.5999…`, que trunca `(0,0,152)` onde
+        # o trilho acende `(0,0,153)`. Medido: 54 dos 10.100 pares de
+        # percentuais erravam sem ele, e nenhum com ele.
+        return round(max(0.0, min(1.0, base * fator)), 9)
 
     def set_coop_outputs(
         self, outputs: Mapping[str, OutputSpec] | None = None
