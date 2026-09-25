@@ -36,11 +36,12 @@ sufixo em (fora do boneco, recriações). Nos 60, todo secundário acaba no bone
 da carta; só o P1 fora do boneco continua fora, esperando o jogo.
 
 **E A MESMA FAMÍLIA fora dos 60:** a varredura muda 652 mesas, e 592 não são
-dos 60 — o buraco à frente do lugar guardado com três sentados, que sufixo
-nenhum fechava (322, com menos gente fora do boneco), e os empates em que o
-sufixo recriava quem espera o lugar guardado para jogá-lo DENTRO dele (270,
-a mesma conta com menos recriações). O caso que já fechava não muda: a faixa
-só roda com alguém fora do boneco.
+dos 60 — o buraco que venceu à frente de um boneco que ninguém pode ocupar,
+que sufixo nenhum fechava (322, com menos gente fora do boneco: 118 com três
+sentados e 204 com quatro), e os empates em que o sufixo recriava quem espera
+para jogá-lo DENTRO desse boneco (270, a mesma conta com menos recriações: em
+168 o boneco é o da carta guardada, e em 102 o do P1 fixo, que espera o
+jogo). O caso que já fechava não muda.
 
 AS MORDIDAS (24/09/2026, cada uma devolvida com o md5 conferido):
 
@@ -49,7 +50,8 @@ AS MORDIDAS (24/09/2026, cada uma devolvida com o md5 conferido):
   bancada de queda (seis e cinco controles). A matriz de quatro passa, e é o
   que ela afirma;
 - a faixa aceitando quem não cai no boneco da carta reprova a varredura (24
-  mesas em que o renascido cairia no boneco do P1 fixo) e a mesa de cinco;
+  mesas: em 12 o renascido cairia no boneco do P1 fixo, e em 12 no da carta
+  guardada) e a mesa de cinco;
 - a faixa sem a exigência da mesa em ordem reprova a varredura (mesa fora de
   ordem é do sufixo, STEAM-NO-FISICO-01);
 - a faixa sem a ordem DEPOIS de recriar reprova a varredura pela ordem que ela
@@ -70,7 +72,13 @@ muda de plano (medido). A exigência do boneco já deixa de fora quem está
 certo, e a faixa vazia é o plano de nenhuma recriação, que o sufixo já pesou.
 O desempate a favor do sufixo também não se mede: nessas mesas, nenhuma faixa
 diferente empata com ele. E o ``not compacta`` não morde (sem jogo, faixa
-nenhuma bate o sufixo): fica porque a faixa só sabe olhar o jogo aberto.
+nenhuma bate o sufixo): fica porque a faixa só sabe olhar o jogo aberto. Nem
+o ``melhor[0]`` do ``planejar_a_ordem`` (a faixa só roda com alguém fora do
+boneco): arrancado, nenhuma das 34.790 mesas de até quatro chaves nem das
+1.218.732 de até cinco muda (conferência de 24/09/2026), porque faixa nenhuma
+bate um sufixo que já fecha. Fica pelo custo, já que o caso comum não varre
+faixa nenhuma, e porque é ele que garante, por construção, que o caso que já
+fechava não muda.
 
 Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5 zerados.
 """
