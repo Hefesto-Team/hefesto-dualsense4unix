@@ -48,6 +48,7 @@ from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
     EMU_BLOQUEADO_POR_JOGO,
     OrigemEmulacao,
+    reconciliar_as_mascaras,
 )
 
 # ---------------------------------------------------------------------------
@@ -163,6 +164,44 @@ def _caminho_vivo(daemon: Any) -> str | None:
         getattr(getattr(daemon, "config", None), "gamepad_caminho", None),
         getattr(device, "flavor", None),
     )
+
+
+def _mascara_da_maquina() -> str:
+    """A máscara que ELA escolheu para a máquina, ou a de fábrica da sessão.
+
+    A-MASCARA-SEGUE-O-ESTADO-01 (25/09/2026). É o que o jogo sem opinião de
+    máscara veste. O flag só é escrito por gesto dela que diz a máscara (ponto
+    2 da MASCARA-CONTAGIO-01), então é a escolha dela e nunca a de um jogo.
+    Sem flag, vale o `DaemonConfig.gamepad_flavor` (`dualsense`), e não o
+    `normalize_flavor(None)`: o `DEFAULT_FLAVOR` daquele módulo é o `xbox`
+    legado, e foi medindo que isso apareceu. Lido do disco a cada ativação,
+    para um gesto novo dela valer no perfil seguinte sem reiniciar nada.
+    """
+    from hefesto_dualsense4unix.integrations.uinput_gamepad import resolver_flavor
+    from hefesto_dualsense4unix.utils.session import load_gamepad_emulation
+
+    try:
+        _ligado, do_disco = load_gamepad_emulation()
+    except Exception:
+        do_disco = None
+    escolhida = resolver_flavor(do_disco) if do_disco else None
+    return escolhida or DaemonConfig.gamepad_flavor
+
+
+def _mascara_da_sessao(daemon: Any) -> str:
+    """A máscara do jogo que a sessão vale agora (a que os sem cartão herdam)."""
+    from hefesto_dualsense4unix.integrations.uinput_gamepad import resolver_flavor
+
+    vale = getattr(getattr(daemon, "config", None), "gamepad_flavor", None)
+    return (resolver_flavor(vale) if vale else None) or DaemonConfig.gamepad_flavor
+
+
+def _o_p1_vestiria(daemon: Any, flavor_do_jogo: str) -> str:
+    """A máscara que o boneco do P1 vestiria com `flavor_do_jogo`, cartão incluído."""
+    from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascara_efetiva
+    from hefesto_dualsense4unix.daemon.subsystems.gamepad import primary_identity
+
+    return mascara_efetiva(primary_identity(daemon), flavor_do_jogo)
 
 
 def _canal_mudaria(daemon: Any, caminho: str | None) -> bool:
@@ -3098,6 +3137,15 @@ class Daemon:
                     mode_from_profile=self._mode_from_profile,
                 )
                 return IGNORADO_CATCH_ALL
+            # A-MASCARA-SEGUE-O-ESTADO-01 (25/09/2026): 23 dos 29 perfis dela
+            # não têm seção `mode`. O jogo deles não opina sobre a máscara, e a
+            # dele é a da MÁQUINA, não a que o jogo anterior deixou. Aqui só se
+            # escreve a da sessão; quem veste os bonecos é o juiz
+            # `gamepad.reconciliar_as_mascaras`, com a R-04 inteira no caminho.
+            # O catch-all fica de fora (acima): ele não é o perfil de jogo
+            # nenhum, e as duas janelas que se revezavam em 19/08 fariam a
+            # máscara ir e voltar.
+            self.config.gamepad_flavor = _mascara_da_maquina()
             if self._janela_de_jogo_em_foco():
                 logger.info(
                     "profile_mode_revert_skipped",
@@ -3136,20 +3184,27 @@ class Daemon:
                 # re-aplicar o last_profile/stash desfaria a ativação corrente.
                 self.set_native_mode(False, reapply=False, origin="profile")
             flavor = getattr(mode, "gamepad_flavor", None)
+            # A-MASCARA-SEGUE-O-ESTADO-01 (25/09/2026): `None` é "sem opinião de
+            # máscara", e sem opinião a máscara do jogo é a da MÁQUINA (a escolha
+            # dela, `_mascara_da_maquina`), nunca a que o jogo anterior deixou na
+            # sessão. Até aqui o `None` não pedia nada e o `xbox` do Future
+            # Knight seguia vestido no PRAGMATA, sem giroscópio.
+            flavor_do_jogo = flavor if flavor is not None else _mascara_da_maquina()
             flavor_atual = getattr(self._gamepad_device, "flavor", None)
             # MODO-DE-CONEXAO-01 (13/09/2026): a seção `mode` também diz o
             # CAMINHO, e ele é pedido pela mesma porta da máscara. `None` é "sem
-            # opinião de caminho", como `flavor` `None` é "sem opinião de
-            # máscara": não troca e não apaga o que ela escolheu.
+            # opinião de caminho": não troca e não apaga o que ela escolheu (a
+            # máscara sem opinião, essa, vale a da máquina, logo acima).
             caminho = _caminho_da_secao(mode)
             adiada_por_jogo = False
             if (
                 not gamepad_on
-                or (flavor is not None and flavor != flavor_atual)
+                or flavor_do_jogo != _mascara_da_sessao(self)
+                or _o_p1_vestiria(self, flavor_do_jogo) != flavor_atual
                 or (caminho is not None and caminho != _caminho_vivo(self))
             ):
                 adiada_por_jogo = self._pedir_mascara_do_perfil(
-                    flavor,
+                    flavor_do_jogo,
                     profile=profile,
                     origin=origin,
                     **({"caminho": caminho} if caminho is not None else {}),
@@ -3681,13 +3736,17 @@ class Daemon:
         )
         if kind == "gamepad":
             flavor = getattr(mode, "gamepad_flavor", None)
+            # A-MASCARA-SEGUE-O-ESTADO-01: a mesma regra do `apply_profile_mode`
+            # (sem opinião = a máscara da máquina), e a comparação é com o que o
+            # P1 VESTIRIA, cartão incluído.
+            flavor_do_jogo = flavor if flavor is not None else _mascara_da_maquina()
             flavor_atual = getattr(self._gamepad_device, "flavor", None)
             # MODO-DE-CONEXAO-01: trocar de CANAL também recria o vpad do P1.
             # Trocar só o nome do caminho, com o mesmo canal, não recria nada.
             return bool(
                 gamepad_on
                 and (
-                    (flavor is not None and flavor != flavor_atual)
+                    _o_p1_vestiria(self, flavor_do_jogo) != flavor_atual
                     or _canal_mudaria(self, _caminho_da_secao(mode))
                 )
             )
@@ -5648,6 +5707,13 @@ class Daemon:
                 coop = get_coop_manager(self)
                 if tick_started >= coop_sync_next_at:
                     coop.sync()
+                    # A-MASCARA-SEGUE-O-ESTADO-01: no mesmo compasso, o juiz dos
+                    # quatro bonecos pergunta ao estado se algum veste a máscara
+                    # errada (o P1 não tinha quem perguntasse).
+                    try:
+                        reconciliar_as_mascaras(self)
+                    except Exception as exc:  # nunca derruba o poll loop
+                        logger.warning("mascara_reconciliacao_falhou", err=str(exc))
                     coop_sync_next_at = tick_started + 2.0
                 coop.forward_all()
             # BUG-DAEMON-NO-DEVICE-FATAL-01: se o controller ainda não está

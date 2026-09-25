@@ -2436,6 +2436,11 @@ def start_gamepad_emulation_desfecho(
             _guardar_o_caminho(
                 daemon, caminho, origin=origin, da_sessao=caminho_pedido
             )
+            # A-MASCARA-SEGUE-O-ESTADO-01 (25/09/2026): o boneco do P1 já veste
+            # a máscara certa (o cartão dele venceu), mas a da SESSÃO é a que os
+            # secundários sem cartão herdam. Sem esta linha ela ficava com a
+            # sobra do jogo anterior, e o P2 seguia em Xbox atrás de um P1 certo.
+            daemon.config.gamepad_flavor = key
             return EMU_JA_ESTAVA
         # R-04: daqui para baixo o vpad VIVO seria destruído e recriado. Com o
         # jogo segurando a autoridade de exibição isso arranca o controle da
@@ -2621,6 +2626,71 @@ def start_gamepad_emulation_desfecho(
         identity=identity,
     )
     return EMU_APLICADO
+
+
+def reconciliar_as_mascaras(daemon: Any) -> str | None:
+    """Todo boneco veste a máscara efetiva de AGORA: o P1 e os secundários.
+
+    A-MASCARA-SEGUE-O-ESTADO-01 (25/09/2026). Medido na máquina dela depois do
+    boot: o Future Knight (único perfil com máscara global, `xbox`) entrou às
+    00h00m44 e o boneco do P1 nasceu Xbox. O PRAGMATA abriu às 00h05m31 com os
+    quatro cartões em `dualsense`, e o boneco seguiu Xbox até ela desistir, sem
+    giroscópio e sem acelerômetro. Quem decidia o boneco do P1 era só o evento
+    que PEDIA máscara, comparando a global do perfil; os cartões chegam depois
+    do modo, e ninguém voltava a olhar. Os secundários já tinham o juiz
+    (`vpad_ficou_para_tras`, no `coop.sync`); o P1 não.
+
+    Aqui é o juiz dos quatro, chamado pelo laço do daemon no compasso do
+    co-op: vale para todo perfil, todo gesto, todo modo e transporte, e para
+    de um a quatro jogadores, porque pergunta ao estado e não ao evento. A
+    única espera é a R-04: com o jogo na autoridade ninguém é recriado na mão
+    dela, e o tique seguinte a ele sair converge sozinho.
+
+    Devolve o desfecho quando refez o boneco do P1, ou ``None``.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
+        mascara_efetiva,
+        vpad_ficou_para_tras,
+    )
+    from hefesto_dualsense4unix.integrations.virtual_pad import normalizar_caminho
+
+    cfg = getattr(daemon, "config", None)
+    if not getattr(cfg, "gamepad_emulation_enabled", False):
+        return None
+    if getattr(daemon, "_native_mode", False) or steam_input_vpad_suspenso(daemon):
+        return None
+    if _autoridade_do_jogo(daemon):
+        return None
+    flavor_do_jogo = getattr(cfg, "gamepad_flavor", None)
+    caminho = normalizar_caminho(getattr(cfg, "gamepad_caminho", None))
+    desfecho: str | None = None
+    vpad = getattr(daemon, "_gamepad_device", None)
+    identity = primary_identity(daemon)
+    if (
+        vpad is not None
+        and vpad_vivo(vpad)
+        and vpad_ficou_para_tras(
+            getattr(vpad, "flavor", None),
+            identity,
+            flavor_do_jogo,
+            vpad=vpad,
+            caminho=caminho,
+        )
+    ):
+        logger.info(
+            "mascara_do_p1_reconciliada",
+            vestia=getattr(vpad, "flavor", None),
+            veste=mascara_efetiva(identity, flavor_do_jogo),
+        )
+        with getattr(daemon, "_emu_lock", contextlib.nullcontext()):
+            desfecho = start_gamepad_emulation_desfecho(
+                daemon, origin="profile", caminho=caminho
+            )
+    coop = getattr(daemon, "_coop_manager", None)
+    atrasado = getattr(coop, "algum_boneco_ficou_para_tras", None)
+    if coop is not None and callable(atrasado) and atrasado():
+        coop.sync(force=True)
+    return desfecho
 
 
 def stop_gamepad_emulation(
