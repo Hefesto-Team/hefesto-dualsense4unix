@@ -116,7 +116,7 @@ PARAGRAFOS_QUE_FICAM: dict[str, str] = {
 #:   da conta, e CONTINUA em `BlocoDaConta.falas`, que é a lista sobre a qual o
 #:   portão das `PALAVRAS_DE_CULPA` varre tudo.
 AINDA_NA_PAGINA: dict[str, str] = {
-    "Com o microfone ligado, um controle no rádio troca": (
+    "Com o microfone ligado, um controle no BT troca": (
         "LEX-2, item 2 — `secao_controles.montar`. BLOQUEADO EM 26/08/2026, e a "
         "medição é esta: `test_o_interruptor_do_microfone_na_aba_configuracoes"
         ".py::test_a_frase_aparece_uma_unica_vez_na_secao` (`:445-452`) exige "

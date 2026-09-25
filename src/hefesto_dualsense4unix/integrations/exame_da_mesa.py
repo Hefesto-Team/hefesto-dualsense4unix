@@ -361,7 +361,7 @@ def pareamentos(
             rotulo=ROTULO_PAREAMENTOS,
             estado=ESTADO_CERTO,
             porque=(
-                "Nenhum controle pareado por rádio — não há pareamento pela "
+                "Nenhum controle pareado por BT — não há pareamento pela "
                 "metade possível."
             ),
         )
