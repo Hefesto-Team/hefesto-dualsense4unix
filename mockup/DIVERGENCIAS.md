@@ -25,7 +25,7 @@ seção daqui**: a aba deixou de estar em trabalho.
 - **25/09/2026** — A-MIRA-NA-NAVEGACAO-02, esperando quem coordena publicar.
   Só a nota muda: ela ganha «O que mudou em 25/09» (o cartão de quem não
   navega diz «Move o cursor» com a Mira Virtual acesa na Navegação e o Status
-  do Modo ligado; e o P3 e o P4 na mesa deixam de aparecer apagados, com a
+  do Modo ligado; e o P3 e o P4 conectados deixam de aparecer apagados, com a
   cara de lugar vazio) e duas frases velhas que diziam que só o P1 mexe no
   cursor passam a contar o giro. Os cartões do desenho não mudam: a Mira nasce
   apagada nos quatro, como na aba Controles. Até publicar, o cartão da
