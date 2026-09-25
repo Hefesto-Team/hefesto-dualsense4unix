@@ -6093,6 +6093,9 @@ class Daemon:
         central = CentralDoRadio(movimento=self._movimento_para_a_central)
         self._central_do_radio = central
         await asyncio.to_thread(central.ligar)
+        # A-SOBRA-DO-BOND-SAI-SOZINHA-01: a chave que um mover feito pela
+        # metade deixou num adaptador em que o controle não mora sai sozinha.
+        central.comecar_a_faxina()
 
     def _movimento_para_a_central(self, uniq: str) -> float | None:
         """Os Hz do nó de movimento deste controle AGORA, pelo ``SensorHub`` do IPC

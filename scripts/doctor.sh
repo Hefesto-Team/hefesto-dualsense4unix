@@ -4888,16 +4888,26 @@ check_bt_paired_sem_bonded() {
 # (`bt_bonds_autorestore.sh:95-98`) — ele não distingue "perdi por crash" de
 # "removi de propósito".
 #
-# ELE SÓ ACUSA. Apagar bond é destruir pareamento, e QUAL dos dois fica depende
-# de onde ela quer o controle sentado — é escolha dela, não deste script.
+# ELE SÓ ACUSA. Quem apaga é o daemon (A-SOBRA-DO-BOND-SAI-SOZINHA-01, 25/09):
+# a central do rádio esquece a chave velha sozinha quando o controle conecta
+# pelo rádio num dos dois adaptadores — a que ele usou é a que vale. Desligado
+# ou no cabo, ele ainda não disse qual vale, e a sobra espera.
 _bond_dobrado_por_controle() {
-    # Imprime `<MAC> <hciA> <hciB> …` para cada controle sob mais de um
-    # adaptador. A chave é o endereço do CONTROLE, e o valor, os adaptadores.
+    # Imprime `<MAC> <hciA> <hciB> …` para cada controle com CHAVE em mais de
+    # um adaptador. A chave é o endereço do CONTROLE, e o valor, os adaptadores.
+    #
+    # Só conta objeto com `Paired=true`: o BlueZ guarda um objeto para todo
+    # aparelho que uma busca achou, e o vizinho que dois adaptadores viram
+    # passar não tem chave em nenhum. Medido na mesa dela em 25/09: 23
+    # objetos, 10 vizinhos de busca em hci1 e hci2, e o check dava 12 avisos
+    # para UM controle com chave dobrada (a régua é
+    # `test_o_doctor_ve_o_bond_dobrado.py`).
     local paths p mac hci
     paths="$(_dbus_bt_device_paths)"
     [[ -z "${paths}" ]] && return 0
     while IFS= read -r p; do
         [[ -z "${p}" ]] && continue
+        [[ "$(_dbus_bt_prop "${p}" org.bluez.Device1 Paired)" == "true" ]] || continue
         # /org/bluez/hci1/dev_AA_BB_CC_DD_EE_FF → "hci1 AA:BB:CC:DD:EE:FF"
         hci="${p#/org/bluez/}"; hci="${hci%%/*}"
         mac="${p##*/dev_}"; mac="${mac//_/:}"
@@ -4920,7 +4930,7 @@ check_bond_dobrado() {
         # O RECADO DIZ O GESTO — regra desta casa: quem acusa diz o comando.
         # `esquecer` da ponte apaga o bond E o cache SDP na mesma execução; o
         # cache sozinho envenena o pareamento seguinte (SDP-CACHE-01).
-        warn "o controle ${mac} tem chave de pareamento em MAIS DE UM adaptador (${adps# }) — migração feita pela metade: o bond do adaptador de ORIGEM ficou. Na reconexão o adaptador errado pode ganhar a corrida, e a conta de ocupação do rádio soma o mesmo controle duas vezes. Escolha em QUAL ele deve ficar e apague o outro: sudo /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh esquecer <adaptador-que-sai> ${mac}"
+        warn "o controle ${mac} tem chave de pareamento em MAIS DE UM adaptador (${adps# }) — migração feita pela metade: o bond do adaptador de ORIGEM ficou. Na reconexão o adaptador errado pode ganhar a corrida, e a conta de ocupação do rádio soma o mesmo controle duas vezes. O Hefesto esquece a sobra sozinho assim que o controle conectar pelo rádio (a chave que ele usar é a que fica). Para não esperar, apague a do adaptador que sai: sudo /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh esquecer <adaptador-que-sai> ${mac}"
     done < <(_bond_dobrado_por_controle)
     [[ "${achou}" -eq 0 ]] && pass "nenhum controle com bond em mais de um adaptador"
 }

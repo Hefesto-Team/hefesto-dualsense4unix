@@ -67,6 +67,21 @@ O «EQUILIBRAR» (R12) é :func:`plano_de_radio.ordem_de_redistribuicao` — don
 desde 20/09. Esta central só a chama, e só quando nenhum movimento está
 «esperando»: um de cada vez.
 
+A FAXINA (A-SOBRA-DO-BOND-SAI-SOZINHA-01, 25/09/2026)
+======================================================
+O mover desta central esquece a origem no fim. Um mover feito à mão, ou antes
+de ela existir, deixa a chave velha para trás: o controle fica com bond em dois
+adaptadores, e na mesa dela o P2 ficou assim de 19/09 a 25/09, com o ``doctor``
+acusando e ninguém arrumando. A pergunta dela, 25/09: *«A interface do app não
+deveria corrigir isso automaticamente?»* Deveria, e a decisão é de quem
+coordena: o controle guarda UM host, e quando o kernel o diz conectado num
+adaptador (``HID_PHYS``) ele mesmo respondeu qual chave vale. A do outro
+adaptador é sobra, e sai como sai a origem de um mover: ``RemoveDevice`` mais o
+verbo ``esquecer`` da ponte, com lápide. :meth:`CentralDoRadio.esquecer_as_sobras`
+faz UMA por volta, dentro da trava, e nunca com um movimento «esperando» (o mover
+cuida da própria origem). Controle desligado, ou no cabo, não diz qual chave
+vale, e aí nada sai: a sobra espera ele conectar pelo rádio.
+
 O QUE ESTE MÓDULO NÃO FAZ
 =========================
 Não fala com a tela (nada de recado, R8), não move a webcam (não é do rádio)
@@ -160,6 +175,9 @@ MOTIVO_FALHOU = "falhou"
 MOVEU_O_APARELHO = "moveu um aparelho"
 #: O ``o_que`` da linha quando ele acaba sem chegar. Nada foi apagado.
 O_APARELHO_NAO_CHEGOU = "o aparelho não chegou"
+#: O ``o_que`` da linha da FAXINA: a chave que ficou num adaptador em que o
+#: controle não mora saiu.
+ESQUECEU_A_SOBRA = "esqueceu a sobra de um bond"
 
 # --- os prazos ----------------------------------------------------------------
 
@@ -191,6 +209,15 @@ VALIDADE_DOS_ADAPTADORES_S = 2.0
 
 #: O teto de fora do verbo ``esquecer`` da ponte: quem fica pendurado é ``sudo``.
 ESPERA_DA_PONTE_S = 20.0
+
+#: De quanto em quanto tempo a faxina olha. A sobra não tem pressa (ela só
+#: atrapalha a próxima reconexão), e cada olhada custa uma foto do BlueZ e uma
+#: varredura do ``/sys/class/hidraw``.
+INTERVALO_DA_FAXINA_S = 30.0
+
+#: A chave do fio da faxina em ``_fios`` — não tem forma de endereço, então não
+#: esbarra na de um movimento.
+_FIO_DA_FAXINA = "faxina"
 
 
 # ---------------------------------------------------------------------------
@@ -1271,13 +1298,139 @@ class CentralDoRadio:
             self._dormir(1.0)
             self.vigiar()
 
+    # -- a faxina: a sobra do bond sai sozinha ---------------------------------
+
+    def sobras(self, dono: bluez_dbus.LeitorDoBluez) -> tuple[tuple[str, str, str], ...] | None:
+        """``(adaptador que sai, controle, adaptador em que ele está)``, em ordem.
+
+        Só LÊ. Uma sobra é a CHAVE (``Paired``) de um controle num adaptador
+        em que o kernel não o diz conectado, quando ele está conectado, pelo
+        rádio, em OUTRO adaptador que também tem a chave dele. Fica de fora:
+
+        * o objeto sem chave — o BlueZ guarda um para todo aparelho que uma
+          busca achou, e o vizinho visto por dois adaptadores não é bond;
+        * o controle desligado ou no cabo (``HID_PHYS`` sem endereço de
+          adaptador): ele ainda não disse qual chave vale;
+        * o aparelho que a classe não diz controle — um teclado de vários
+          hosts pode querer as duas chaves;
+        * o controle conectado num adaptador em que o BlueZ não mostra chave
+          dele: é estado que esta central não entende, e ela não mexe.
+
+        ``None`` = não deu para perguntar, nunca «não há».
+        """
+        adaptadores = dono.adaptadores()
+        aparelhos = dono.aparelhos()
+        if adaptadores is None or aparelhos is None:
+            return None
+        por_caminho = {a.caminho: a.endereco for a in adaptadores}
+        chaves: dict[str, dict[str, bluez_dbus.AparelhoDoBluez]] = {}
+        for objeto in aparelhos:
+            if objeto.pareado is not True or objeto.adaptador not in por_caminho:
+                continue
+            chaves.setdefault(objeto.endereco, {})[por_caminho[objeto.adaptador]] = objeto
+        achadas: list[tuple[str, str, str]] = []
+        for aparelho, onde_tem in sorted(chaves.items()):
+            if len(onde_tem) < 2:
+                continue
+            if not any(e_controle(o.classe) for o in onde_tem.values()):
+                continue
+            agora = self._onde_esta(_hex12(aparelho))
+            if not agora or agora not in onde_tem:
+                continue
+            achadas.extend((sai, aparelho, agora) for sai in sorted(onde_tem) if sai != agora)
+        return tuple(achadas)
+
+    def esquecer_as_sobras(self) -> tuple[str, str] | None:
+        """UMA volta da faxina: esquece UMA sobra e devolve ``(adaptador, controle)``.
+
+        ``None`` quando não havia sobra, quando um movimento está «esperando»
+        (o mover esquece a própria origem, e dois motores na mesma chave é o
+        defeito que a trava existe para impedir), quando a trava não veio no
+        prazo — a próxima volta tenta de novo — ou quando algo levantou. Nunca
+        levanta: roda num fio, e o rádio estranho é justamente quando ela é útil.
+        """
+        from hefesto_dualsense4unix.integrations.diario_do_radio import TravaOcupadaError
+
+        if self._ocupada():
+            return None
+        try:
+            dono = self._dono()
+            if not self.sobras(dono):
+                return None
+            with bluez_dbus.na_trava(QUEM, prazo_s=self._prazo_da_trava_s):
+                # De novo, já com a trava: o mover pode ter nascido enquanto
+                # esta esperava, e a foto de antes pode ter envelhecido.
+                if self._ocupada():
+                    return None
+                achadas = self.sobras(dono)
+                if not achadas:
+                    return None
+                sai, aparelho, fica = achadas[0]
+                fez = self._esquecer(dono, sai, aparelho)
+                self._esperar_sumir(dono, aparelho, sai)
+        except TravaOcupadaError:
+            logger.info("central_faxina_trava_ocupada")
+            return None
+        except Exception:
+            logger.warning("central_faxina_levantou", exc_info=True)
+            return None
+        logger.info(
+            "central_esqueceu_a_sobra",
+            aparelho=mascarar(aparelho),
+            adaptador=mascarar(sai),
+            fica=mascarar(fica),
+            lapide=fez,
+        )
+        try:
+            from hefesto_dualsense4unix.integrations import diario_do_radio
+
+            diario_do_radio.registrar(
+                QUEM,
+                ESQUECEU_A_SOBRA,
+                "o controle está conectado em outro adaptador, e guarda um host só: "
+                "a chave deste era sobra de um mover feito pela metade",
+                antes={"adaptadores": sorted({sai, fica})},
+                depois={"adaptador": fica, "sem_lapide": None if fez else [sai]},
+                controle=aparelho,
+                adaptador=sai,
+            )
+        except Exception:
+            logger.warning("central_diario_nao_gravou", exc_info=True)
+        return sai, aparelho
+
+    def comecar_a_faxina(self, intervalo_s: float = INTERVALO_DA_FAXINA_S) -> None:
+        """Sobe o fio da faxina — uma volta a cada ``intervalo_s``. Idempotente.
+
+        A primeira volta espera um intervalo inteiro: no arranque os controles
+        ainda estão conectando, e o ``HID_PHYS`` de quem não chegou é «não
+        sei». O :meth:`fechar` o para como para os fios do mover.
+        """
+        with self._tranca:
+            vivo = self._fios.get(_FIO_DA_FAXINA)
+            if vivo is not None and vivo.is_alive():
+                return
+            fio = threading.Thread(
+                target=self._faxinar_sempre,
+                args=(float(intervalo_s),),
+                name="hefesto-central-faxina",
+                daemon=True,
+            )
+            self._fios[_FIO_DA_FAXINA] = fio
+        fio.start()
+
+    def _faxinar_sempre(self, intervalo_s: float) -> None:
+        while not self._parar.wait(intervalo_s):
+            self.esquecer_as_sobras()
+
 
 __all__ = [
     "CHEGOU",
     "CONECTANDO",
     "CONFERIR_S",
     "ESPERANDO",
+    "ESQUECEU_A_SOBRA",
     "ESTADOS",
+    "INTERVALO_DA_FAXINA_S",
     "MOTIVO_FALHOU",
     "MOTIVO_FORA_DO_RADIO",
     "MOTIVO_JA_ESTAVA",
