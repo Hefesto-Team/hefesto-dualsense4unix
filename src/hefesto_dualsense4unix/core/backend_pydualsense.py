@@ -2977,9 +2977,10 @@ class PyDualSenseController(IController):
         fator = self._led_scale_by_uniq.get(uniq)
         if fator is None or desired.led is None:
             return desired
-        # UMA CONTA SÓ, QUANDO O BRILHO DO PERFIL É SABIDO: a cor da paleta é
-        # levada do brilho do perfil ao da peça pelo tom (`reescalar`), e o
-        # P1 a 60% acende pelo perfil o mesmo `(0,0,153)` que o trilho acende.
+        # UMA CONTA SÓ, QUANDO O BRILHO DO PERFIL É SABIDO: a cor da paleta,
+        # ou o global do perfil (`_cor_do_perfil`), é levada do brilho do
+        # perfil ao da peça pelo tom (`reescalar`), e o P1 a 60% acende pelo
+        # perfil o mesmo `(0,0,153)` que o trilho acende.
         base = self._brilho_do_perfil
         para = self._brilho_da_peca_locked(uniq)
         if base is not None and para is not None:
