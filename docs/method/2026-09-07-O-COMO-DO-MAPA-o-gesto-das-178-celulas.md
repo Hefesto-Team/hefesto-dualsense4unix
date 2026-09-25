@@ -7131,36 +7131,39 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `luz.led_jogador.brilho @ cabo`
 
-**O que isto prova.** Prova, no cabo, o que o produto faz hoje com o brilho das lâmpadas de numeração do controle — as cinco luzinhas brancas embaixo do touchpad que dizem quem é P1, P2, P3 e P4. O aparelho sabe mudar esse brilho em três degraus, e isso foi medido; o produto ainda não liga o bit que autoriza esse byte, e por isso o deslizante de Brilho do Hefesto não chega a elas. Esta é a metade que o teste mede e a bancada registra.
+**O que isto prova.** Prova, no cabo, que o brilho que ela escolhe para as lâmpadas de numeração chega ao aparelho — as cinco luzinhas brancas embaixo do touchpad que dizem quem é P1, P2, P3 e P4. O aparelho muda esse brilho em três degraus, e isso foi medido em 09/09. Desde a O-BRILHO-DAS-LUZES-DE-NUMERO-01 (25/09) o produto oferece os três na linha LEDs da aba Iluminação — Fraco, Médio e Forte, um trio por controle, nascendo no Fraco — e monta o report com o bit que autoriza o degrau. A suíte já prova o report montado; o que falta é o olho no plástico, e é isso que este teste registra.
 
-**Onde olhar.** Na aba Iluminação do Hefesto, uma coluna por controle — a fita do topo não escolhe nada aqui. Em cada coluna, a linha Modelo diz o número, a cor e a palavra do transporte (USB é o cabo, BT é o rádio), e a linha Brilho tem o deslizante da barra daquele controle, com o número em % ao lado. E no PLÁSTICO: as lâmpadas de numeração ficam na frente do DualSense, embaixo do touchpad, em fileira. Elas NÃO são a barra de luz colorida das duas tiras ao lado do touchpad — a barra é outra grandeza, obedece a este deslizante por outro caminho, e aqui ela entra só como testemunha de que o deslizante chegou ao aparelho.
+**Onde olhar.** Na aba Iluminação do Hefesto, uma coluna por controle — a fita do topo não escolhe nada aqui. Em cada coluna, a linha Modelo diz o número e a palavra do transporte (USB é o cabo, BT é o rádio), e a linha LEDs tem o desenho das lâmpadas e, logo embaixo, as três pílulas Fraco, Médio e Forte, com a escolhida acesa. E no PLÁSTICO: as lâmpadas de numeração ficam na frente do DualSense, embaixo do touchpad, em fileira. Elas NÃO são a barra de luz colorida das duas tiras ao lado do touchpad — a barra é outra grandeza, e aqui ela entra só como testemunha de que NÃO mudou.
 
 **Os passos.**
 
 1. Feche a Steam por inteiro.
 2. Clique na aba Iluminação.
 3. Confira na linha Modelo que as colunas do P1 e do P2 dizem USB.
-4. Anote o número do Brilho da coluna do P1.
-5. Olhe as lâmpadas de numeração do P1 no plástico e guarde na memória o brilho delas.
-6. Arraste o Brilho da coluna do P1 até o mínimo.
-7. Confira se as lâmpadas de numeração do P1 mudaram, e anote.
-8. Arraste o Brilho da coluna do P1 até o máximo.
-9. Confira de novo as lâmpadas de numeração do P1, e anote.
-10. Confira se a barra de luz colorida do P1 mudou entre as duas pontas do deslizante, e anote.
-11. Devolva o Brilho do P1 ao número anotado.
-12. Faça na coluna do P2 a mesma volta: as duas pontas do Brilho, as lâmpadas e a barra olhadas separadamente, e o número devolvido.
-13. Anote as quatro respostas lado a lado: lâmpadas do P1, barra do P1, lâmpadas do P2, barra do P2.
+4. Anote qual pílula está acesa na linha LEDs das colunas do P1 e do P2.
+5. Clique em Forte na linha LEDs da coluna do P1.
+6. Confira no plástico que as lâmpadas de numeração do P1 ficaram mais claras, e anote.
+7. Clique em Fraco na linha LEDs da coluna do P1.
+8. Confira que as lâmpadas do P1 ficaram no mais apagado dos três, e anote.
+9. Clique em Médio na linha LEDs da coluna do P1.
+10. Confira que as lâmpadas do P1 ficaram entre o Forte e o Fraco, e anote.
+11. Confira que a barra de luz colorida do P1 não mudou em nenhum dos três cliques, e anote.
+12. Clique em Forte na coluna do P1, tire o cabo do P1 e ponha de volta.
+13. Confira que as lâmpadas do P1 voltaram no Forte, e anote.
+14. Faça na coluna do P2 a mesma volta: Forte, Fraco e Médio, a barra olhada à parte, e o cabo que sai e volta.
+15. Devolva as colunas do P1 e do P2 às pílulas anotadas.
+16. Anote as respostas lado a lado: os três degraus do P1, a barra do P1, a volta pelo cabo do P1, e o mesmo do P2.
 
-**Passa quando.** As lâmpadas de numeração NÃO mudam de brilho em nenhuma das duas pontas do deslizante, nos dois controles do cabo — e a barra de luz colorida muda. É esse contraste que é a entrega: ele mostra que o deslizante chega ao aparelho (a barra prova) e que o degrau das lâmpadas não chega (elas provam). Se as lâmpadas MUDAREM, o produto passou a ligar o bit desde a última medição, e isso é achado: anote e avise, porque o mapa desta célula muda com essa resposta.
+**Passa quando.** Os três cliques mudam as lâmpadas de numeração em três degraus que se distinguem a olho — Forte o mais claro, Fraco o mais apagado —, nos dois controles do cabo, e a barra de luz colorida não muda com nenhum deles. O clique numa coluna muda só aquele controle. E o controle que volta pelo cabo volta no degrau que tinha. Se as lâmpadas NÃO mudarem, anote em qual degrau e em qual controle: o report sai com o bit, e o que falhou é o caminho até o plástico.
 
 **Por controle.**
 
-* **P1** — No cabo, e é o alvo. As duas pontas do deslizante, lâmpadas e barra olhadas separadamente.
+* **P1** — No cabo, e é o alvo. Os três degraus, a barra e a volta pelo cabo são nele.
 * **P2** — No cabo, e é a segunda prova. Se o P1 e o P2 responderem diferente, o problema é de um controle e não do caminho — anote qual.
-* **P3** — No rádio, e não entra neste teste: ele tem a volta dele, na linha do rádio. Confira só que as lâmpadas dele não mexeram enquanto você arrastava o Brilho do P1.
+* **P3** — No rádio, e não entra neste teste: ele tem a volta dele, na linha do rádio. Confira só que as lâmpadas dele não mudaram enquanto você clicava nas colunas do cabo.
 * **P4** — No rádio, e também não entra aqui, com a mesma conferência do P3.
 
-**A armadilha.** A barra de luz colorida e as lâmpadas de numeração são DUAS grandezas, e confundi-las é o erro que este teste existe para não repetir: elas ficam a centímetros uma da outra no mesmo plástico, e a barra obedece ao deslizante. Quem olhar a barra vai concluir que o brilho funciona — e o brilho que esta linha mede continua inerte. Olhe as luzinhas brancas da numeração, e só elas. Segunda: o brilho das lâmpadas tem TRÊS degraus no aparelho, não uma rampa contínua; se um dia elas obedecerem, a mudança vai ser em saltos, e um salto entre dois valores vizinhos pode passar despercebido — por isso os passos vão direto ao mínimo e ao máximo, nunca ao meio. Terceira: a barra é do Hefesto mesmo com a Steam aberta — se ela apagar e não responder ao Brilho por mais de um segundo, anote: é achado, e a barra deixa de servir de testemunha. Quarta: o Brilho grava no perfil ao soltar, sem esperar o Salvar Perfil — por isso o número se anota e se devolve. E nada disso aparece na tela: se as lâmpadas ganham um brilho de escolher é pergunta dela, e ela fica no mapa — a tela não fala do que o produto não oferece.
+**A armadilha.** A barra de luz colorida e as lâmpadas de numeração são DUAS grandezas, e confundi-las é o erro que este teste existe para não repetir: elas ficam a centímetros uma da outra no mesmo plástico. Olhe as luzinhas brancas da numeração, e só elas; a barra entra para confirmar que NÃO mudou. Segunda: são TRÊS degraus, e o do meio fica perto dos vizinhos — por isso os passos vão do Forte ao Fraco primeiro, que é o salto maior, e só depois ao Médio. Terceira: o deslizante de Brilho, na linha acima, é da BARRA; ele não mexe nas lâmpadas, e não é ele que este teste usa. Quarta: a pílula grava no perfil no clique, sem esperar o Salvar Perfil — por isso a pílula de antes se anota e se devolve. E se a linha LEDs não tiver as três pílulas, a tela instalada é anterior a esta mudança: pare e avise.
 
 ---
 
@@ -7168,37 +7171,40 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `luz.led_jogador.brilho @ rádio`
 
-**O que isto prova.** O mesmo que a linha do cabo, e no rádio: o aparelho sabe mudar o brilho das lâmpadas de numeração em três degraus, e o produto ainda não liga o bit que autoriza o byte, então o deslizante de Brilho do Hefesto não chega a elas. A razão de ser um teste próprio é que o envelope é outro — no rádio o degrau viaja noutro report, com uma conta de verificação no fim —, e um caminho que funciona no cabo não prova nada sobre o outro.
+**O que isto prova.** O mesmo que a linha do cabo, e no rádio: o brilho que ela escolhe para as lâmpadas de numeração — Fraco, Médio ou Forte, na linha LEDs da aba Iluminação — chega ao aparelho. A razão de ser um teste próprio é que o envelope é outro — no rádio o degrau viaja noutro report, com uma conta de verificação no fim —, e um caminho que funciona no cabo não prova nada sobre o outro.
 
-**Onde olhar.** Na aba Iluminação do Hefesto, uma coluna por controle — a fita do topo não escolhe nada aqui. Nas colunas do P3 e do P4, a linha Modelo tem de dizer BT, que é o rádio; a linha Brilho tem o deslizante da barra daquele controle, com o número em % ao lado. E no PLÁSTICO: as lâmpadas de numeração, na frente do DualSense, embaixo do touchpad, em fileira. Não é a barra de luz colorida das duas tiras ao lado do touchpad — a barra entra aqui só como testemunha de que o deslizante chegou ao aparelho.
+**Onde olhar.** Na aba Iluminação do Hefesto, uma coluna por controle — a fita do topo não escolhe nada aqui. Nas colunas do P3 e do P4, a linha Modelo tem de dizer BT, que é o rádio; a linha LEDs tem o desenho das lâmpadas e, logo embaixo, as três pílulas Fraco, Médio e Forte, com a escolhida acesa. E no PLÁSTICO: as lâmpadas de numeração, na frente do DualSense, embaixo do touchpad, em fileira. Não é a barra de luz colorida das duas tiras ao lado do touchpad — a barra entra aqui só como testemunha de que NÃO mudou.
 
 **Os passos.**
 
 1. Feche a Steam por inteiro.
 2. Clique na aba Iluminação.
 3. Confira na linha Modelo que as colunas do P3 e do P4 dizem BT.
-4. Anote o número do Brilho da coluna do P3.
-5. Olhe as lâmpadas de numeração do P3 no plástico e guarde na memória o brilho delas.
-6. Arraste o Brilho da coluna do P3 até o mínimo.
-7. Confira se as lâmpadas de numeração do P3 mudaram, e anote.
-8. Arraste o Brilho da coluna do P3 até o máximo.
-9. Confira de novo as lâmpadas de numeração do P3, e anote.
-10. Confira se a barra de luz colorida do P3 mudou entre as duas pontas do deslizante, e anote.
-11. Confira que as lâmpadas do P1 e do P2, que estão no cabo, não mexeram enquanto você arrastava o Brilho do P3.
-12. Devolva o Brilho do P3 ao número anotado.
-13. Faça na coluna do P4 a mesma volta: as duas pontas do Brilho, as lâmpadas e a barra olhadas separadamente, as testemunhas do cabo e o número devolvido.
-14. Anote as respostas lado a lado: lâmpadas do P3, barra do P3, lâmpadas do P4, barra do P4, e as testemunhas do cabo.
+4. Anote qual pílula está acesa na linha LEDs das colunas do P3 e do P4.
+5. Clique em Forte na linha LEDs da coluna do P3.
+6. Confira no plástico que as lâmpadas de numeração do P3 ficaram mais claras, e anote.
+7. Clique em Fraco na linha LEDs da coluna do P3.
+8. Confira que as lâmpadas do P3 ficaram no mais apagado dos três, e anote.
+9. Clique em Médio na linha LEDs da coluna do P3.
+10. Confira que as lâmpadas do P3 ficaram entre o Forte e o Fraco, e anote.
+11. Confira que a barra de luz colorida do P3 não mudou em nenhum dos três cliques, e anote.
+12. Confira que as lâmpadas do P1 e do P2, que estão no cabo, não mudaram enquanto você clicava na coluna do P3.
+13. Clique em Forte na coluna do P3, segure o PS do P3 por dez segundos até ele desligar e aperte o PS de novo.
+14. Confira que, de volta pelo rádio, as lâmpadas do P3 acendem no Forte, e anote.
+15. Faça na coluna do P4 a mesma volta: Forte, Fraco e Médio, a barra olhada à parte, as testemunhas do cabo e o desligar e religar pelo PS.
+16. Devolva as colunas do P3 e do P4 às pílulas anotadas.
+17. Anote as respostas lado a lado: os três degraus do P3, a barra do P3, a volta pelo rádio do P3, o mesmo do P4, e as testemunhas do cabo.
 
-**Passa quando.** As lâmpadas de numeração NÃO mudam de brilho em nenhuma das duas pontas do deslizante, nos dois controles do rádio — e a barra de luz colorida muda. As lâmpadas do P1 e do P2 ficam paradas o tempo todo: o deslizante de um controle não pode mexer no outro. Se as lâmpadas do P3 ou do P4 MUDAREM, o produto passou a ligar o bit desde a última medição — anote e avise, porque o mapa desta célula muda com essa resposta.
+**Passa quando.** Os três cliques mudam as lâmpadas de numeração em três degraus que se distinguem a olho — Forte o mais claro, Fraco o mais apagado —, nos dois controles do rádio, e a barra de luz colorida não muda com nenhum deles. As lâmpadas do P1 e do P2 ficam paradas o tempo todo: o clique numa coluna não pode mexer no outro controle. E o controle que volta pelo rádio acende no degrau que tinha. Se as lâmpadas do P3 ou do P4 NÃO mudarem, anote em qual degrau e em qual controle.
 
 **Por controle.**
 
-* **P3** — No rádio, e é o alvo. As duas pontas do deslizante, lâmpadas e barra olhadas separadamente.
+* **P3** — No rádio, e é o alvo. Os três degraus, a barra e a volta pelo rádio são nele.
 * **P4** — No rádio, e é a segunda prova do envelope do rádio. Se o P3 e o P4 responderem diferente, o problema é de um controle.
-* **P1** — No cabo, e é TESTEMUNHA: você não mexe na coluna dele. As lâmpadas dele não podem reagir ao deslizante do P3.
+* **P1** — No cabo, e é TESTEMUNHA: você não mexe na coluna dele. As lâmpadas dele não podem reagir aos cliques na coluna do P3.
 * **P2** — No cabo, e é a segunda testemunha. Mesma leitura do P1.
 
-**A armadilha.** A mesma da linha do cabo, e uma a mais: no rádio o report leva uma conta de verificação no fim, e um envelope com essa conta errada é DESCARTADO pelo aparelho em silêncio. Ou seja, no rádio o «nada aconteceu» tem duas causas possíveis — o bit não foi ligado (que é o que esta casa sabe) ou o envelope foi recusado inteiro (que ninguém mediu). As duas se parecem exatamente na sua mão, e é por isso que a barra é conferida: se a BARRA muda, o envelope chegou, e então o silêncio das lâmpadas é do bit. Se a barra também não mudar, você está olhando outro defeito, mais grave, e este teste não é quem responde por ele — anote e pare. A barra é do Hefesto mesmo com a Steam aberta; se ela apagar e não responder por mais de um segundo, ela deixa de servir de testemunha — anote. E o Brilho grava no perfil ao soltar — anote e devolva.
+**A armadilha.** A mesma da linha do cabo, e uma a mais: no rádio o report leva uma conta de verificação no fim, e um envelope com essa conta errada é DESCARTADO pelo aparelho em silêncio. Ou seja, no rádio o «nada aconteceu» tem duas causas possíveis — o degrau não saiu, ou o envelope foi recusado inteiro —, e as duas se parecem exatamente na sua mão. Este teste não as separa: anote qual controle e qual degrau calaram, e se o P4 calou junto — um só é daquele controle, os dois são do caminho do rádio. E a pílula grava no perfil no clique — anote e devolva.
 
 ---
 
