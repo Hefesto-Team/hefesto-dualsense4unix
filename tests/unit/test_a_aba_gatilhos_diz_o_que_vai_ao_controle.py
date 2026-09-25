@@ -38,6 +38,7 @@ import json
 import pathlib
 import re
 import sys
+from collections.abc import Callable, Iterator
 from typing import Any
 
 import pytest
@@ -60,6 +61,10 @@ TRANSPORTE = {1: "usb", 2: "usb", 3: "bt", 4: "bt"}
 JOGO = {"type": "criteria", "window_class": ["steam_app_1599660"]}
 TODOS = {"type": "any"}
 MANUAL = {"type": "manual"}
+
+
+#: O fixture `disco`: grava o perfil da matriz e devolve o nome dele.
+Disco = Callable[[str], str]
 
 
 def _perfil(nome: str, match: dict[str, Any], **resto: Any) -> dict[str, Any]:
@@ -112,7 +117,7 @@ def _controle(n: int, grafia: str) -> dict[str, Any]:
 
 
 @pytest.fixture(autouse=True)
-def _rascunho_limpo():
+def _rascunho_limpo() -> Iterator[None]:
     """O rascunho da aba é estado de MÓDULO: nenhum teste herda o de outro."""
     from pacotes import a03_gatilhos
 
@@ -122,7 +127,7 @@ def _rascunho_limpo():
 
 
 @pytest.fixture
-def disco():
+def disco() -> Disco:
     """A pasta de perfis do lar de mentira que o `conftest` já isola.
 
     É a MESMA para os dois leitores: `pacotes.perfil.pasta()` e o `loader`
@@ -142,14 +147,16 @@ def disco():
     return gravar
 
 
-def _ctx(nome: str | None, grafia: str = "doze-hexa", alvo: int | None = None):
+def _ctx(nome: str | None, grafia: str = "doze-hexa",
+         alvo: int | None = None) -> Any:
     """O `Contexto` do tique, montado como o piloto o monta (`_contexto`)."""
     import mesa_viva
     from pacotes import Contexto
 
-    state = {"controllers": [_controle(n, grafia) for n in (1, 2, 3, 4)],
-             "output_target_index": alvo, "active_profile": nome}
-    conectados = [c for c in state["controllers"] if c.get("connected", True)]
+    controles = [_controle(n, grafia) for n in (1, 2, 3, 4)]
+    state: dict[str, Any] = {"controllers": controles,
+                             "output_target_index": alvo, "active_profile": nome}
+    conectados = [c for c in controles if c.get("connected", True)]
     return Contexto(state=state, mesa=mesa_viva.mesa_do_estado(state, {}),
                     conectados=conectados, estados={})
 
@@ -171,16 +178,17 @@ class _Camadas:
                 self.padrao = OutputSpec()
                 self.do_perfil: dict[str, Any] = {}
 
-            def apply_output_defaults(self, spec):  # type: ignore[override]
+            def apply_output_defaults(self, spec: Any) -> Any:
                 self.padrao = spec
                 return "escreveu"
 
-            def reset_profile_overrides(self, overrides, procedencias=None):
+            def reset_profile_overrides(self, overrides: Any,
+                                        procedencias: Any = None) -> None:
                 self.do_perfil = dict(overrides or {})
 
         self.controlador = Gravador()
 
-    def efetivo(self, mac: str, disco: str):
+    def efetivo(self, mac: str, disco: str) -> Any:
         campo = f"trigger_{disco}"
         dele = self.controlador.do_perfil.get(mac.replace(":", "").lower())
         if dele is not None and getattr(dele, campo) is not None:
@@ -214,7 +222,7 @@ def _o_que_a_coluna_diz(r: dict[str, Any], uniq: str, pref: str,
     return str(col[f"modo-{sig}"]), str(col[f"modo-chave-{sig}"]), ajustes
 
 
-def _conferir(nome: str, ctx) -> list[str]:
+def _conferir(nome: str, ctx: Any) -> list[str]:
     """As linhas em que a coluna MENTE — lista vazia quando as oito casam."""
     from hefesto_dualsense4unix.core.trigger_effects import build_from_name
     from pacotes import pacote_da_pagina
@@ -241,7 +249,8 @@ def _conferir(nome: str, ctx) -> list[str]:
 @pytest.mark.parametrize("alvo", [None, 1], ids=["fita-em-todos", "fita-no-p2"])
 @pytest.mark.parametrize("grafia", ["doze-hexa", "dois-pontos"])
 @pytest.mark.parametrize("caso", list(PERFIS))
-def test_a_coluna_diz_o_que_o_controle_recebe(disco, caso, grafia, alvo) -> None:
+def test_a_coluna_diz_o_que_o_controle_recebe(disco: Disco, caso: str, grafia: str,
+                                              alvo: int | None) -> None:
     """Os oito lados da mesa, em cada perfil da matriz, casam com o daemon."""
     nome = disco(caso)
     mentiras = _conferir(nome, _ctx(nome, grafia, alvo))
@@ -250,7 +259,8 @@ def test_a_coluna_diz_o_que_o_controle_recebe(disco, caso, grafia, alvo) -> None
         f"{len(mentiras)} de 8 lados:\n  " + "\n  ".join(mentiras))
 
 
-def test_o_nascimento_e_perguntado_ao_esquema(disco, monkeypatch) -> None:
+def test_o_nascimento_e_perguntado_ao_esquema(disco: Disco,
+                                              monkeypatch: pytest.MonkeyPatch) -> None:
     """Se o nascimento mudar no esquema, a aba muda junto — ela não o digita.
 
     O nascimento é trocado para `Feedback [5, 4]` no dono
@@ -270,7 +280,7 @@ def test_o_nascimento_e_perguntado_ao_esquema(disco, monkeypatch) -> None:
         + "\n  ".join(mentiras))
 
 
-def test_o_efeito_pronto_le_o_mesmo_modo_da_coluna(disco) -> None:
+def test_o_efeito_pronto_le_o_mesmo_modo_da_coluna(disco: Disco) -> None:
     """`_modo_de_agora` é quem escolhe a lista do «Efeito pronto» nos gestos.
 
     Ele tinha a ordem escrita por conta própria, e com ela os dois defeitos da
@@ -303,7 +313,7 @@ class _Ponte:
         return True
 
 
-def test_o_guardar_nao_troca_o_gatilho_do_controle_por_off(disco) -> None:
+def test_o_guardar_nao_troca_o_gatilho_do_controle_por_off(disco: Disco) -> None:
     """O «Guardar» lê a COLUNA — e a coluna que mentia gravava a mentira.
 
     Medido no piloto antes da cura: com o Sackboy ativo, o «Guardar» do P2
@@ -361,7 +371,7 @@ class _PonteDoBroadcast(_Ponte):
         return True
 
 
-def test_o_em_todos_nao_espalha_o_lado_que_ela_nao_tocou(disco) -> None:
+def test_o_em_todos_nao_espalha_o_lado_que_ela_nao_tocou(disco: Disco) -> None:
     """O «Em todos» também lê a COLUNA, e o alcance dele é a mesa inteira.
 
     Ele recolhe os dois lados da coluna, manda os dois em broadcast e grava os
