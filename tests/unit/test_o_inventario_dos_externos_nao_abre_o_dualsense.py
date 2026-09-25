@@ -18,8 +18,8 @@ tentativa; os ioctls respondem a identidade do nó que o fd aponta. O `sysfs`
 `/sys/class/input/*/device` fixo aponta para ela. O broker é um servidor Unix
 de verdade num caminho curto, e o `HidrawBrokerClient` que fala com ele é o
 real: é ele quem escreve a linha `hidraw_broker_fd_recebido state=entrada`.
-Um `os.open` em `/dev/input`, `/dev/hidraw`, `/dev/uinput` ou `/dev/uhid`
-reprova a régua.
+Um `os.open` ou um `open` em `/dev/input`, `/dev/hidraw`, `/dev/uinput`,
+`/dev/uhid` ou `/sys/class/input` reprova a régua.
 
 A matriz é a regra dela: de um a quatro DualSense, pelo cabo, pelo rádio e
 misto, com o Edge (0df2), escondidos e abertos, com e sem o Pro (057e:2009) e
@@ -27,6 +27,7 @@ o 8BitDo em modo PS4 (054c:05c4, que é Sony e não é DualSense).
 """
 from __future__ import annotations
 
+import builtins
 import contextlib
 import json
 import os
@@ -45,6 +46,7 @@ evdev = pytest.importorskip("evdev")
 from evdev import ecodes
 
 from hefesto_dualsense4unix.core import evdev_reader as er
+from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from hefesto_dualsense4unix.integrations import hidraw_broker_client as hbc
 from tests.unit.test_hidraw_broker_client import (
     _cleanup_socket_dir,
@@ -216,7 +218,10 @@ def _nos_do_teclado() -> list[tuple[str, dict[str, Any]]]:
 
 # --- a mesa -----------------------------------------------------------------
 
-_PORTAS_PROIBIDAS = ("/dev/input", "/dev/hidraw", "/dev/uinput", "/dev/uhid")
+#: O que é dela: os nós de verdade e o sysfs de verdade dos nós de entrada.
+_PORTAS_PROIBIDAS = (
+    "/dev/input", "/dev/hidraw", "/dev/uinput", "/dev/uhid", "/sys/class/input",
+)
 
 
 @dataclass
@@ -396,18 +401,30 @@ def _montar(
 
     monkeypatch.setattr("os.path.realpath", _realpath)
 
-    # -- o /dev de verdade é proibido --
+    # -- o /dev e o sysfs de verdade são proibidos, pelas duas portas --
+    # O `os.open` (o do `InputDevice`) e o `open` embutido (o das leituras de
+    # sysfs do `evdev_reader`). A descoberta engole toda exceção de um nó, então
+    # a guarda ANOTA antes de levantar, e a mesa reprova no fim pela anotação.
     os_open_de_verdade = os.open
+    open_de_verdade = builtins.open
 
-    def _os_open(caminho: Any, flags: int, *args: Any, **kw: Any) -> int:
+    def _vigiar(caminho: Any) -> None:
         with contextlib.suppress(TypeError, ValueError):
             texto = os.fsdecode(caminho)
             if texto.startswith(_PORTAS_PROIBIDAS):
                 mesa.no_dev_de_verdade.append(texto)
                 raise AssertionError(f"a régua tentou abrir {texto} de verdade")
+
+    def _os_open(caminho: Any, flags: int, *args: Any, **kw: Any) -> int:
+        _vigiar(caminho)
         return os_open_de_verdade(caminho, flags, *args, **kw)
 
+    def _open(arquivo: Any, *args: Any, **kw: Any) -> Any:
+        _vigiar(arquivo)
+        return open_de_verdade(arquivo, *args, **kw)
+
     monkeypatch.setattr(os, "open", _os_open)
+    monkeypatch.setattr(builtins, "open", _open)
 
     # -- a biblioteca --
     def _list_devices(input_device_dir: str | None = None) -> list[str]:
@@ -420,7 +437,9 @@ def _montar(
 
     def _init(self: Any, dev: Any) -> None:
         texto = os.fspath(dev)
-        assert os.path.dirname(texto) == str(mesa.dev_input), texto
+        if os.path.dirname(texto) != str(mesa.dev_input):
+            mesa.no_dev_de_verdade.append(texto)
+            raise AssertionError(f"InputDevice fora da mesa: {texto}")
         mesa.tentativas.append(texto)
         init_de_verdade(self, dev)
 
@@ -576,7 +595,7 @@ def test_r0_a_mesa_alcanca_o_broker_e_acha_todos_os_dualsense(
         assert set(gamepads) <= set(mesa.tentativas_em_dualsense())
 
     mapa = er.discover_dualsense_evdevs()
-    assert mapa == {mac_ds(k).replace(":", ""): Path(mesa.de(k)) for k in range(1, n + 1)}
+    assert mapa == {norm_mac(mac_ds(k)): Path(mesa.de(k)) for k in range(1, n + 1)}
 
 
 # --- R1, no tempo e pelos dois chamadores reais -----------------------------
@@ -596,9 +615,11 @@ def _chamadores(dualsenses: list[_DS], tmp_path: Path) -> tuple[Any, Any]:
     from hefesto_dualsense4unix.testing import FakeController
 
     registro = ExternalIdentityRegistry()
-    slots_ds = {mac_ds(k).replace(":", ""): k for k in range(1, len(dualsenses) + 1)}
+    slots_ds = {norm_mac(mac_ds(k)): k for k in range(1, len(dualsenses) + 1)}
     daemon = SimpleNamespace(
-        identity_registry=SimpleNamespace(snapshot=lambda: dict(slots_ds), auto_enabled=True),
+        identity_registry=SimpleNamespace(
+            snapshot=lambda: dict(slots_ds), auto_numbers_enabled=True
+        ),
         external_registry=registro,
     )
     tique = ExternalLedSync(daemon, registro)
@@ -626,10 +647,17 @@ async def test_r1_o_tique_e_a_janela_nao_abrem_o_dualsense_no_tempo(
     60 `ExternalLedSync.tick` a cada 2 s e 30 `controller.list
     {external: true}` a cada 4 s, intercalados. Depois de CADA passo: zero
     pedidos no socket, zero `hidraw_broker_fd_recebido state=entrada`, zero
-    `InputDevice` em nó de DualSense, e o Pro com o mesmo número. A MORDIDA:
-    tire o pulo da vista e a régua reprova no primeiro tique.
+    `InputDevice` em nó de DualSense, e o Pro com o mesmo número. E o irmão
+    que mede antes, também a cada passo: o passo CHEGOU à vista, e ela
+    RESPONDEU. O tique engole a exceção da enumeração (nunca derruba o laço),
+    então um tique que não enumera daria zero pedidos sobre nada — um «não
+    sei» lido como zero. A MORDIDA: tire o pulo da vista e a régua reprova no
+    primeiro tique.
     """
     from hefesto_dualsense4unix.daemon import ipc_handlers as ih
+    from hefesto_dualsense4unix.daemon.subsystems.external_identity import (
+        EXTERNAL_IDENTITY_FIELD,
+    )
     from hefesto_dualsense4unix.profiles import loader as loader_module
 
     dualsenses = MESAS[nome]
@@ -640,30 +668,58 @@ async def test_r1_o_tique_e_a_janela_nao_abrem_o_dualsense_no_tempo(
     monkeypatch.setattr(ih, "_steam_hidraw_holders", lambda: {})
     tique, janela = _chamadores(dualsenses, tmp_path)
 
+    respostas: list[str] = []
+    vista_de_verdade = er.discover_external_gamepads
+
+    def _vista_que_conta() -> list[dict[str, Any]]:
+        try:
+            inventario: list[dict[str, Any]] = vista_de_verdade()
+        except BaseException as erro:
+            respostas.append(f"levantou {type(erro).__name__}: {erro}")
+            raise
+        respostas.append("respondeu")
+        return inventario
+
+    monkeypatch.setattr(er, "discover_external_gamepads", _vista_que_conta)
+
     def _foto(rotulo: str) -> tuple[str, int, int, int]:
         return (rotulo, len(mesa.pedidos), len(mesa.fd_recebidos()),
                 len(mesa.tentativas_em_dualsense()))
 
     passos: list[tuple[str, int, int, int]] = []
+    mudos: list[tuple[str, list[str]]] = []
     pedidos_por_chamador = {"tique": 0, "janela": 0}
     numeros_do_pro: list[Any] = []
+    identidades_do_pro: set[str] = set()
     inventarios: list[list[str]] = []
+
+    def _chegou(rotulo: str, antes: int) -> None:
+        novas = respostas[antes:]
+        if not novas or any(r != "respondeu" for r in novas):
+            mudos.append((rotulo, novas))
+
     for passo in range(60):
         t = passo * 2.0
-        antes = len(mesa.pedidos)
+        antes, antes_r = len(mesa.pedidos), len(respostas)
         tique.tick(now=t)
         pedidos_por_chamador["tique"] += len(mesa.pedidos) - antes
+        _chegou(f"tique t={t:.0f}s", antes_r)
         passos.append(_foto(f"tique t={t:.0f}s"))
         if passo % 2 == 0:
-            antes = len(mesa.pedidos)
+            antes, antes_r = len(mesa.pedidos), len(respostas)
             resposta = await janela._handle_controller_list({"external": True})
             pedidos_por_chamador["janela"] += len(mesa.pedidos) - antes
+            _chegou(f"janela t={t:.0f}s", antes_r)
             vistos = resposta["external"]
             inventarios.append(_vidpids(vistos))
-            numeros_do_pro.extend(e.get("player_slot") for e in vistos if e["vid"] == "057e")
+            for e in vistos:
+                if e["vid"] == "057e":
+                    numeros_do_pro.append(e.get("player_slot"))
+                    identidades_do_pro.add(e[EXTERNAL_IDENTITY_FIELD])
             passos.append(_foto(f"janela t={t:.0f}s"))
 
     assert len(passos) == 90
+    assert not mudos, f"passo que não chegou à vista, ou em que ela não respondeu: {mudos[:3]}"
     sujos = [p for p in passos if any(p[1:])]
     assert not sujos, (
         f"o primeiro passo sujo: {sujos[0][0]} (pedidos, linhas state=entrada, "
@@ -679,7 +735,8 @@ async def test_r1_o_tique_e_a_janela_nao_abrem_o_dualsense_no_tempo(
         assert len(numeros_do_pro) == 30
         assert isinstance(numeros_do_pro[0], int), numeros_do_pro[:3]
         assert set(numeros_do_pro) == {numeros_do_pro[0]}, "o número do Pro andou"
-        assert tique._registry.peek(MAC_PRO.replace(":", "")) == numeros_do_pro[0]
+        assert len(identidades_do_pro) == 1, identidades_do_pro
+        assert tique._registry.peek(identidades_do_pro.pop()) == numeros_do_pro[0]
 
 
 # --- R2, o oráculo ----------------------------------------------------------
@@ -690,13 +747,23 @@ def test_r2_o_inventario_sai_identico_ao_de_hoje(
     montar: Any, nome: str, escondidos: bool, externos: bool
 ) -> None:
     """Os mesmos dicts, na mesma ordem. O 8BitDo em modo PS4 é Sony e
-    continua externo. A MORDIDA: pule pelo vendor 054c só e ele some."""
+    continua externo. A MORDIDA: pule pelo vendor 054c só e ele some.
+
+    E a espécie pedida é a única que volta, nas duas espécies: a lista de
+    cada uma é a descoberta sem espécie filtrada por ela, registro a registro.
+    A MORDIDA: tire o filtro depois da abertura e o Pro e o 8BitDo voltam
+    em `especie=dualsense`."""
     mesa = montar(MESAS[nome], escondidos=escondidos, externos=externos)
 
     hoje = _vista_de_hoje()
     agora = er.discover_external_gamepads()
 
     assert agora == hoje
+    todos = er.discover_gamepads()
+    for especie in (er.ESPECIE_DUALSENSE, er.ESPECIE_EXTERNAL):
+        assert er.discover_gamepads(especie=especie) == [
+            gp for gp in todos if gp.especie == especie
+        ], especie
     esperado = ["057e:2009", "054c:05c4"] if externos else []
     assert _vidpids(agora) == esperado
     if externos:
@@ -755,6 +822,9 @@ def test_r3_o_dualsense_de_sysfs_ilegivel_e_tratado_como_hoje(
 
     assert agora == hoje
     assert p1 not in [e["evdev_path"] for e in agora]
+    assert {gp.especie for gp in er.discover_gamepads(especie=er.ESPECIE_EXTERNAL)} == {
+        er.ESPECIE_EXTERNAL
+    }, "o DualSense aberto na dúvida não volta na espécie dos externos"
     assert tentativas_agora == tentativas_de_hoje == (0 if escondidos else 1)
     assert pedidos_de_hoje == 0
     assert mesa.pedidos_de_open().count(p1) == 0
@@ -772,7 +842,7 @@ def test_r4_localizar_o_p3_pela_identidade_continua_pedindo_ao_broker(
     MORDIDA: aplique o pulo sem olhar a espécie e o P3 some daqui."""
     mesa = montar(MESAS[nome], escondidos=escondidos, externos=True)
 
-    no = er.localizar_node_por_identidade(mac_ds(3).replace(":", ""))
+    no = er.localizar_node_por_identidade(norm_mac(mac_ds(3)) or "")
 
     assert no == Path(mesa.de(3))
     if escondidos:
