@@ -3002,6 +3002,7 @@ __all__ = [
     "PerfilSemeado",
     "ResultadoDaSemeadura",
     "ResultadoDosEstilos",
+    "arquivo_do_perfil",
     "classes_de_jogo_da_marca",
     "classes_do_perfil_do_jogo",
     "classes_do_perfil_do_jogo_de_lancador",
