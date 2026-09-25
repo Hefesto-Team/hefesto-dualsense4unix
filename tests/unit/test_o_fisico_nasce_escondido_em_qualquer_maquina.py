@@ -309,13 +309,22 @@ FISICOS = {
 }
 
 #: As combinações de terceiros: a máquina dela (as duas), a do Fedora/Debian só
-#: com o `steam-devices`, uma só com o `game-devices-udev`, e uma sem nenhuma.
+#: com o `steam-devices`, uma só com o `game-devices-udev`, uma sem nenhuma, e
+#: as duas do Arch — onde o pacote `steam` grava a MESMA regra da Valve com o
+#: nome `70-steam-input.rules` (conferência de 25/09/2026; o nome vem da
+#: memória do PKGBUILD, não de uma máquina Arch medida). Nelas a regra de antes
+#: perdia até SEM o `game-devices-udev`: `70-p` < `70-s`.
 TERCEIROS_POR_MAQUINA = {
     "as-duas": ("60-steam-input.rules", "71-sony-controllers.rules"),
     "so-steam-devices": ("60-steam-input.rules",),
     "so-game-devices-udev": ("71-sony-controllers.rules",),
     "nenhuma": (),
+    "arch-so-steam": ("70-steam-input.rules",),
+    "arch-com-game-devices-udev": ("70-steam-input.rules", "71-sony-controllers.rules"),
 }
+
+#: O nome que a regra tem na máquina -> a cópia de verdade que lhe dá o conteúdo.
+CONTEUDO_DE = {"70-steam-input.rules": "60-steam-input.rules"}
 
 
 def montar(
@@ -337,7 +346,7 @@ def montar(
     etc.mkdir(parents=True)
     usr.mkdir(parents=True)
     for nome in ("70-uaccess.rules", "71-seat.rules", "73-seat-late.rules", *terceiros):
-        shutil.copy(TERCEIROS / nome, usr / nome)
+        shutil.copy(TERCEIROS / CONTEUDO_DE.get(nome, nome), usr / nome)
     regra = a_regra_do_no()
     for asset in sorted(ASSETS.glob("[0-9][0-9]-*.rules")):
         if asset == regra:
@@ -416,6 +425,23 @@ class TestOUdevDeBolsoReproduzAMesaDela:
         assert ap.acl_da_sessao
         assert ap.modo == "0600"
 
+    @pytest.mark.parametrize("aparelho", ["standard-cabo", "standard-radio"])
+    def test_no_arch_a_regra_de_antes_perde_sem_o_game_devices_udev(
+        self, tmp_path: Path, aparelho: str
+    ) -> None:
+        """A `70-steam-input.rules` do Arch corre DEPOIS da `70-ps5` e reabre o 0ce6.
+
+        É o «qualquer máquina» da sprint: o defeito não era da 71-sony do Pop.
+        Sem ela, só com a regra da Valve no nome do Arch, o nó nascia aberto.
+        """
+        raiz = montar(
+            tmp_path,
+            terceiros=TERCEIROS_POR_MAQUINA["arch-so-steam"],
+            nome_da_regra=NOME_DE_ANTES,
+            conteudo_da_regra=_a_regra_de_antes(),
+        )
+        assert rodar(FISICOS[aparelho](), raiz).acl_da_sessao
+
     def test_a_assinatura_do_banco_dela_e_uaccess_sem_seat(self, tmp_path: Path) -> None:
         """A impressão digital medida: `Q:uaccess` sem `Q:seat` no físico do rádio.
 
@@ -435,28 +461,43 @@ class TestOUdevDeBolsoReproduzAMesaDela:
 
 
 class TestOFisicoNasceFechadoEmQualquerMaquina:
-    @pytest.mark.parametrize("evento", ["add", "change"])
+    @pytest.mark.parametrize("evento", ["add", "change", "change-pessimista"])
     @pytest.mark.parametrize("maquina", sorted(TERCEIROS_POR_MAQUINA))
     @pytest.mark.parametrize("aparelho", sorted(FISICOS))
     def test_o_fisico_termina_0600_de_root_sem_acl(
         self, tmp_path: Path, aparelho: str, maquina: str, evento: str
     ) -> None:
-        """A MORDIDA: o asset de volta ao nome 70 reprova as linhas com a 71-sony."""
+        """A MORDIDA: o asset de volta ao nome 70 reprova as linhas com a 71-sony.
+
+        O `change` (o trigger do install) roda de dois jeitos. O do udev de
+        verdade (systemd ≥ 247): as tags CORRENTES começam vazias a cada
+        evento, e as do evento anterior só voltam como pegajosas (`G:`), que o
+        `TAG==` não lê. E o pessimista, em que o nó chega com o `uaccess` e o
+        `seat` do nascimento anterior como correntes.
+        """
         raiz = montar(tmp_path, terceiros=TERCEIROS_POR_MAQUINA[maquina])
         ap = FISICOS[aparelho]()
-        ap.acao = evento
-        if evento == "change":
-            # O pior caso do `change` (o trigger do install): o nó chega com
-            # as tags do nascimento anterior, o `uaccess` e o `seat`.
+        ap.acao = evento.removesuffix("-pessimista")
+        if evento == "change-pessimista":
             ap.tags = {"uaccess", "seat"}
         ok, motivo = _fechado(rodar(ap, raiz))
         assert ok, motivo
 
+    @pytest.mark.parametrize("evento", ["add", "change"])
     @pytest.mark.parametrize("maquina", sorted(TERCEIROS_POR_MAQUINA))
-    def test_o_vpad_continua_com_a_acl_da_sessao(self, tmp_path: Path, maquina: str) -> None:
-        """O vpad é o controle que o Hefesto ENTREGA ao jogo: tem de ficar aberto."""
+    def test_o_vpad_continua_com_a_acl_da_sessao(
+        self, tmp_path: Path, maquina: str, evento: str
+    ) -> None:
+        """O vpad é o controle que o Hefesto ENTREGA ao jogo: tem de ficar aberto.
+
+        Também no `change` (o trigger do install), que começa sem tag corrente
+        nenhuma: é a regra do nó que tem de devolvê-la, e não a lembrança do
+        nascimento.
+        """
         raiz = montar(tmp_path, terceiros=TERCEIROS_POR_MAQUINA[maquina])
-        ap = rodar(o_vpad(), raiz)
+        ap = o_vpad()
+        ap.acao = evento
+        ap = rodar(ap, raiz)
         assert ap.acl_da_sessao, ap.run
         assert ap.modo == "0660"
 
