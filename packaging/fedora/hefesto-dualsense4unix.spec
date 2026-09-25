@@ -192,7 +192,8 @@ install -Dm644 -t %{buildroot}%{_udevrulesdir} \
     assets/81-hefesto-usb-host-power.rules \
     assets/82-nintendo-pro-nosniff.rules \
     assets/83-hefesto-bond-snapshot.rules \
-    assets/84-nintendo-pro-variant.rules
+    assets/84-nintendo-pro-variant.rules \
+    assets/85-hefesto-o-cabo-assume.rules
 # Onda PLATAFORMA 2026-07-18: modprobe.d (cura do storm + btusb sem autosuspend).
 install -Dm644 assets/modprobe/hefesto-dualsense-storm.conf \
     %{buildroot}/usr/lib/modprobe.d/hefesto-dualsense-storm.conf
@@ -468,6 +469,7 @@ fi
 %{_udevrulesdir}/82-nintendo-pro-nosniff.rules
 %{_udevrulesdir}/83-hefesto-bond-snapshot.rules
 %{_udevrulesdir}/84-nintendo-pro-variant.rules
+%{_udevrulesdir}/85-hefesto-o-cabo-assume.rules
 /usr/lib/modprobe.d/hefesto-dualsense-storm.conf
 /usr/lib/modprobe.d/hefesto-btusb-no-autosuspend.conf
 /usr/lib/modprobe.d/hefesto-hid-nintendo.conf

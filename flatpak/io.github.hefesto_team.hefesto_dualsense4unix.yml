@@ -380,6 +380,8 @@ modules:
           /app/share/hefesto-dualsense4unix/udev-rules/83-hefesto-bond-snapshot.rules
       - install -Dm644 assets/84-nintendo-pro-variant.rules
           /app/share/hefesto-dualsense4unix/udev-rules/84-nintendo-pro-variant.rules
+      - install -Dm644 assets/85-hefesto-o-cabo-assume.rules
+          /app/share/hefesto-dualsense4unix/udev-rules/85-hefesto-o-cabo-assume.rules
       - install -Dm644 assets/hefesto-dualsense4unix.conf
           /app/share/hefesto-dualsense4unix/modules-load/hefesto-dualsense4unix.conf
 

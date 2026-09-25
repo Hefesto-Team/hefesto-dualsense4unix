@@ -165,6 +165,8 @@ python3Packages.buildPythonApplication rec {
         $out/lib/udev/rules.d/83-hefesto-bond-snapshot.rules
     install -Dm644 assets/84-nintendo-pro-variant.rules \
         $out/lib/udev/rules.d/84-nintendo-pro-variant.rules
+    install -Dm644 assets/85-hefesto-o-cabo-assume.rules \
+        $out/lib/udev/rules.d/85-hefesto-o-cabo-assume.rules
     install -Dm644 assets/hefesto-dualsense4unix.conf \
         $out/lib/modules-load.d/hefesto-dualsense4unix.conf
 

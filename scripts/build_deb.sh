@@ -177,7 +177,7 @@ UDEV_RULES_GLOBS=(
     assets/71-*.rules assets/72-*.rules assets/73-hefesto-ps5-controller.rules
     assets/76-*.rules assets/77-*.rules assets/78-*.rules
     assets/79-*.rules assets/80-*.rules assets/81-*.rules
-    assets/82-*.rules assets/83-*.rules assets/84-*.rules
+    assets/82-*.rules assets/83-*.rules assets/84-*.rules assets/85-*.rules
 )
 for rules_file in "${UDEV_RULES_GLOBS[@]}"; do
     [ -f "$rules_file" ] && cp "$rules_file" "${STAGING}/usr/lib/udev/rules.d/"

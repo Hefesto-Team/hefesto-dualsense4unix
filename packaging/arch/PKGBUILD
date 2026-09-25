@@ -176,7 +176,8 @@ package() {
         assets/81-hefesto-usb-host-power.rules \
         assets/82-nintendo-pro-nosniff.rules \
         assets/83-hefesto-bond-snapshot.rules \
-        assets/84-nintendo-pro-variant.rules
+        assets/84-nintendo-pro-variant.rules \
+        assets/85-hefesto-o-cabo-assume.rules
     install -Dm644 assets/hefesto-dualsense4unix.conf \
         "$pkgdir/usr/lib/modules-load.d/hefesto-dualsense4unix.conf"
 
