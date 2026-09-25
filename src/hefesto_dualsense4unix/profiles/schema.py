@@ -1308,7 +1308,7 @@ class ControllerMicOverride(BaseModel):
     ``lifecycle.apply_profile_mic(uniq=…)`` →
     ``set_microphone_mute(muted, uniq=…)`` → ``_handle_for(uniq)``, que casa o
     MAC normalizado com o handle daquela peça
-    (``core/backend_pydualsense.py:6276``). O alvo está no parâmetro em todo
+    (``core/backend_pydualsense.py:6277``). O alvo está no parâmetro em todo
     degrau, e é o que separa *"guardei"* de *"chegou ao aparelho"*.
 
     Vale para ele a MESMA exceção MIC-GRAVACAO-01 do campo global: o ``muted``
