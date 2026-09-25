@@ -17,7 +17,16 @@ não mudou. As duas células entraram com `nada-a-acionar`, que é DECISÃO: nã
 o que acionar porque não existe comando de ligar a IMU e o sensor emite sempre.
 O contador de dívida deste arquivo não se moveu.)
 
-**RECONTADO EM 21/09/2026: são 47** — 23 no cabo, 24 no rádio. A que ENTROU é
+**RECONTADO EM 25/09/2026: são 45** — 23 no cabo, 22 no rádio (na base
+desta recontagem eram 47: 24 no cabo, 23 no rádio). As DUAS que SAÍRAM saíram
+PELO MOTIVO CERTO: os dois lados de `luz.led_jogador.brilho@dualsense` passaram
+a ser ACIONADOS pelo produto. A decisão dela
+`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS` (Fraco, Médio e Forte na linha
+LEDs, nascendo no Fraco) virou campo do perfil e report nos dois transportes
+(O-BRILHO-DAS-LUZES-DE-NUMERO-01). As duas eram `so-ela-decide`, que é
+DECISÃO: o contador de dívida deste arquivo não se moveu.
+
+**RECONTADO EM 21/09/2026: eram 47** — 23 no cabo, 24 no rádio. A que ENTROU é
 `audio.microfone.ganho@dualsense` no rádio, e a subida é de HONESTIDADE pela
 quinta vez neste arquivo: a célula NASCEU medida em 20/09 (o `amixer` do
 controle no cabo respondeu, e os três do rádio não têm placa ALSA nenhuma), com
@@ -527,8 +536,8 @@ def test_a_populacao_nao_depende_da_coluna_que_ela_confere() -> None:
         "que ela é derivada da própria coluna, e o portão ficaria verde "
         "justamente quando alguém esquecesse de responder"
     )
-    assert len(antes) == 47, (
-        f"o recorte de 21/09/2026 tinha 47 células medidas e não "
+    assert len(antes) == 45, (
+        f"o recorte de 25/09/2026 tinha 45 células medidas e não "
         f"acionadas, e agora tem {len(antes)}. Não é reprovação de defeito: é "
         "aviso de que o retrato deste arquivo envelheceu e o texto precisa ser "
         "recontado — leia o cabeçalho deste arquivo, que diz como"
