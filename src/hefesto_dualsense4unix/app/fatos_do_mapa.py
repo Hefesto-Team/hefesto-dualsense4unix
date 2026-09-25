@@ -1622,7 +1622,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nada-a-acionar',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
         'radio': {
             'aceita': 'sim',
@@ -1630,7 +1630,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nada-a-acionar',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
     },
     'entrada.combo.ponte@sn30': {
@@ -3446,7 +3446,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nada-a-acionar',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
         'radio': {
             'aceita': 'não',
@@ -3454,7 +3454,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': '',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nada-a-acionar',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
     },
     'movimento.acelerometro.jogo@sn30': {
@@ -3560,7 +3560,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'uhid',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nada-a-acionar',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
         'radio': {
             'aceita': 'não',
@@ -3568,7 +3568,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'uhid',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nada-a-acionar',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
     },
     'movimento.giroscopio.jogo@sn30': {
@@ -3902,7 +3902,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nada-a-acionar',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
         'radio': {
             'aceita': 'não',
@@ -3910,7 +3910,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'hidraw',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nada-a-acionar',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
     },
     'plataforma.adocao@sn30': {
@@ -5954,7 +5954,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'uhid',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nada-a-acionar',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
         'radio': {
             'aceita': 'não',
@@ -5962,7 +5962,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'ate_onde_foi': '',
             'canal': 'uhid',
             'de_onde_sei': 'inferido-do-codigo',
-            'por_que_nao_aciona': 'nada-a-acionar',
+            'por_que_nao_aciona': 'decisao-tomada',
         },
     },
     'vibracao.rumble.passthrough@sn30': {
