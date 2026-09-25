@@ -2113,6 +2113,16 @@ class PyDualSenseController(IController):
         # que colidiram. O palpite desfazia o "pinta os quatro de verde" dela
         # no tique seguinte. `DO_BROADCAST` é lido, não deduzido.
         self._procedencia_da_cor: dict[str, object] = {}
+        # O BRILHO QUE VEIO COM A COR DA MÃO DELA (`{uniq: (a cor que ele
+        # explica, o brilho)}`) — A-04-PERGUNTA-AO-DAEMON-VIVO-01, 25/09/2026.
+        # O `led.set` chega com a cor JÁ escalada, e a camada da usuária
+        # guardava só os bytes: a troca AUTOMÁTICA de perfil a atravessa
+        # (R-20), e ninguém sabia mais em que brilho aquela barra acendia — a
+        # aba Iluminação lia o do perfil novo no disco e mostrava outro número.
+        # Vale só enquanto o override guardar a MESMA cor
+        # (`brilho_da_barra_para`), e é lido com `getattr`, como o carimbo
+        # acima, pelo dublê que nasce por `__new__`.
+        self._brilho_da_cor: dict[str, tuple[tuple[int, int, int], float]] = {}
         # R-13 item 1: camada do CO-OP (padrão de player-LED por jogador).
         # Antes o co-op escrevia sysfs CRU, fora do estado desejado — e o
         # `reassert_resolved_outputs`, que roda em TODO `connect()` (≤30 s),
@@ -3186,6 +3196,34 @@ class PyDualSenseController(IController):
             for uniq, proc in getattr(self, "_procedencia_da_cor", {}).items()
             if getattr(self._desired_by_uniq.get(uniq), "led", None) is not None
         }
+        # O BRILHO DA COR morre com a cor que ele explica, pelo mesmo motivo.
+        self._brilho_da_cor = {
+            uniq: (cor, brilho)
+            for uniq, (cor, brilho) in getattr(self, "_brilho_da_cor", {}).items()
+            if getattr(self._desired_by_uniq.get(uniq), "led", None) == cor
+        }
+
+    def _carimbar_o_brilho_locked(
+        self, uniq: str, cor: Any, brilho: float | None
+    ) -> None:
+        """Guarda o brilho em que a cor da mão dela foi mandada. Sob `_io_lock`.
+
+        A-04-PERGUNTA-AO-DAEMON-VIVO-01, 25/09/2026. O par do
+        `_carimbar_procedencia_locked`: aquele guarda PARA QUAL NÚMERO a cor
+        foi escolhida, este guarda EM QUE BRILHO ela saiu — o `led.set` escala
+        antes de chegar aqui, e os bytes sozinhos não dizem. `None` é quem
+        não disse o brilho (a CLI antiga, um dublê): o carimbo velho sai, e
+        `brilho_da_barra_para` responde «não sei» em vez de herdar o de outra
+        cor.
+        """
+        carimbos = getattr(self, "_brilho_da_cor", None)
+        if carimbos is None:
+            carimbos = self._brilho_da_cor = {}
+        if brilho is None or cor is None:
+            carimbos.pop(uniq, None)
+            return
+        r, g, b = (int(c) for c in tuple(cor)[:3])
+        carimbos[uniq] = ((r, g, b), max(0.0, min(1.0, float(brilho))))
 
     def _record_desired_locked(self, target_key: str | None, fields: dict[str, Any]) -> None:
         """Grava campos do estado desejado no escopo CERTO. Chamar sob `_io_lock`.
@@ -6486,8 +6524,14 @@ class PyDualSenseController(IController):
         spec: OutputSpec,
         *,
         procedencia_da_cor: object = None,
+        brilho_da_cor: float | None = None,
     ) -> ResultadoDeSaida:
         """Aplica `spec` SÓ no controle de MAC `uniq` e registra o override dele.
+
+        `brilho_da_cor` é o brilho em que a `spec.led` foi escalada por quem
+        chama (o `led.set` e o «Aplicar» sabem; os bytes não dizem). É o que
+        `brilho_da_barra_para` publica enquanto esta cor estiver no override —
+        A-04-PERGUNTA-AO-DAEMON-VIVO-01.
 
         PERFIL-01: NÃO passa pelo `_output_target_key` — o alvo é o parâmetro,
         resolvido na borda pelo chamador (por construção imune à corrida do
@@ -6546,6 +6590,7 @@ class PyDualSenseController(IController):
                 self._carimbar_procedencia_locked(
                     alvo, fields["led"], procedencia_da_cor, deduzir_todos=True
                 )
+                self._carimbar_o_brilho_locked(alvo, fields["led"], brilho_da_cor)
             key = self._key_for_uniq(alvo)
             handle = self._handles.get(key) if key is not None else None
             node = self._sysfs.get(key) if key is not None else None
@@ -6637,6 +6682,9 @@ class PyDualSenseController(IController):
             self._desired_by_uniq = novo
             self._desired_owner_by_uniq = donos
             self._procedencia_da_cor = carimbos
+            # O mapa inteiro é trocado, e o brilho de cada cor nova chega pelo
+            # `apply_output_for` que o chamador faz em seguida.
+            self._brilho_da_cor = {}
 
     def reset_profile_overrides(
         self,
@@ -6814,6 +6862,59 @@ class PyDualSenseController(IController):
         # o trilho acende `(0,0,153)`. Medido: 54 dos 10.100 pares de
         # percentuais erravam sem ele, e nenhum com ele.
         return round(max(0.0, min(1.0, base * fator)), 9)
+
+    def brilho_da_barra_para(self, uniq: str) -> float | None:
+        """O brilho em que a barra de `uniq` acende AGORA (leitura pura).
+
+        A-04-PERGUNTA-AO-DAEMON-VIVO-01, 25/09/2026. A aba Iluminação lia o
+        brilho do PERFIL ATIVO no disco, e a camada da usuária (R-20) atravessa
+        a troca AUTOMÁTICA de perfil: medido na mesa de quatro real, o P1 a 60%
+        pelo trilho seguia aceso a 60% depois do autoswitch para um perfil que
+        diz 82%, e a tela dizia 82%. A regra da casa é perguntar ao daemon vivo,
+        e quem sabe é o dono do merge, pela camada que deu a cor:
+
+        * a cor da MÃO dela (camada da usuária) acende no brilho que veio com
+          ela (`_carimbar_o_brilho_locked`). Sem carimbo que explique a MESMA
+          cor, `None`: não se inventa o brilho de bytes que chegaram sem ele;
+        * a cor do PERFIL e a base (o global e a automática) acendem no brilho
+          da peça (`_brilho_da_peca_locked`), que é o do perfil vezes o fator
+          dela — a mesma conta com que o manager escalou a cor do override.
+          Com o perfil a 0% (o canto degenerado de `_brilho_materializa_cor`)
+          a cor do override saiu no brilho dele e o fator não existe: `None`.
+
+        `None` também quando o perfil nunca publicou o brilho. Quem lê cai no
+        disco, que é o que fazia antes.
+        """
+        alvo = self._key_to_uniq(uniq)
+        if alvo is None:
+            return None
+        with self._io_lock:
+            override = self._desired_by_uniq.get(alvo)
+            cor = getattr(override, "led", None)
+            if cor is not None:
+                carimbo = getattr(self, "_brilho_da_cor", {}).get(alvo)
+                if carimbo is not None and carimbo[0] == tuple(cor):
+                    return carimbo[1]
+                dono = self._desired_owner_by_uniq.get(alvo, {}).get("led")
+                if dono != _LAYER_PROFILE or not self._brilho_do_perfil:
+                    return None
+            return self._brilho_da_peca_locked(alvo)
+
+    def brilho_das_luzes_para(self, uniq: str) -> int | None:
+        """O degrau das luzes de número de `uniq`, RESOLVIDO (leitura pura).
+
+        A-04-PERGUNTA-AO-DAEMON-VIVO-01, 25/09/2026. O espelho de
+        `resolved_player_leds_for` para o `player_led_brightness`, pelo MESMO
+        merge que o hotplug, a reafirmação e a troca de perfil mandam ao
+        aparelho — a camada da usuária inclusive, que atravessa a troca
+        automática: medido, o P3 clicado em Forte seguia Forte no aparelho
+        depois do autoswitch para um perfil que diz Fraco, e a pílula acendia
+        Fraco. `None` = ninguém opinou ainda (nenhum perfil aplicado).
+        """
+        if self._key_to_uniq(uniq) is None:
+            return None
+        with self._io_lock:
+            return self._merged_desired_for_key(uniq).player_led_brightness
 
     def set_coop_outputs(
         self, outputs: Mapping[str, OutputSpec] | None = None

@@ -279,6 +279,11 @@ class TestPlayerPorControle:
         # `gatilho` e os dois `inverter_*`: o «Só enquanto eu segurar» e os
         # «Inverter» que ela mandou pôr na tela. Nascem desligados — sem botão
         # (a mira anda sempre) e sem inversão.
+        #
+        # NOTA DATADA — 25/09/2026 (A-04-PERGUNTA-AO-DAEMON-VIVO-01). Entraram
+        # `brilho_da_barra` e `brilho_das_luzes`: o que o merge acende, para a
+        # aba Iluminação perguntar ao daemon vivo e não ao disco. `None` nos
+        # dois é o «não sei» do FakeController, que não tem as leituras.
         assert result["controllers"] == [
             {"index": 0, "connected": True, "transport": "usb",
              "is_primary": True, "uniq": "aabbcc001100", "player": None,
@@ -287,6 +292,7 @@ class TestPlayerPorControle:
              "lightbar_rgb": None, "lightbar_on": False,
              "lightbar_source": "desconhecida", "lightbar_disputada": False,
              "nascimento": None,
+             "brilho_da_barra": None, "brilho_das_luzes": None,
              "inputs": None, "vpad_backend": None, "vpad_motivo": None,
              "adaptador": None, "hz_movimento": None, "hz_voz": None,
              "ponte_do_radio": None,
