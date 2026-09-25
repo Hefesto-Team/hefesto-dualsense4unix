@@ -10,12 +10,19 @@ que faltava entre o mapa de canais e a interface (§1 da Z6).
 
 O VOCABULÁRIO DE `afirma`, E O PORQUÊ DE `AFIRMA_NAO_ACIONA` EXIGIR CAUSA
 ---------------------------------------------------------------------------
-`aciona = não` sozinho não diz de quem é a culpa: as quatro colunas de causa
-do mapa (`cabo_por_que_nao_aciona`/`radio_por_que_nao_aciona`) hoje valem
-`nada-a-acionar`, `decisao-tomada`, `so-ela-decide` ou `divida`, e SÓ as duas
-primeiras nomeiam causa fora do nosso código — o portão (Z6-04) checa isso
-antes de aceitar `AFIRMA_NAO_ACIONA`, para nunca licenciar uma frase que
-culpa o aparelho pelo que é nosso.
+`aciona = não` sozinho não diz de quem é a culpa: as duas colunas de causa
+do mapa (`cabo_por_que_nao_aciona`/`radio_por_que_nao_aciona`) falam o domínio
+que tem UM dono, `DOMINIO_POR_SUFIXO["por_que_nao_aciona"]` em
+`scripts/check_paridade_transporte.py`, e SÓ as causas de `CAUSA_DE_FORA`,
+abaixo, nomeiam algo fora do nosso código — o portão (Z6-04) checa isso antes
+de aceitar `AFIRMA_NAO_ACIONA`, para nunca licenciar uma frase que culpa o
+aparelho pelo que é nosso.
+
+FATO ERRADO, SUBSTITUÍDO em 25/09/2026 (O-MAPA-QUE-A-6E-DEIXOU-01): este
+parágrafo listava os valores à mão — «quatro», e «as duas primeiras»
+(`nada-a-acionar` e `decisao-tomada`) como as de fora — enquanto o código dizia
+`nada-a-acionar` e `o-aparelho-recusa`, num domínio de seis. A lista saiu da
+prosa: quem quer os valores lê o dono, e a prosa não tem mais o que envelhecer.
 
 A REGRA QUE MORA NO TIPO, NÃO NUM DOCUMENTO
 ----------------------------------------------
@@ -75,10 +82,10 @@ AFIRMA_VALIDOS: Final[frozenset[str]] = frozenset(
     }
 )
 
-#: As duas únicas causas, entre as quatro do domínio de `*_por_que_nao_aciona`,
-#: que nomeiam algo FORA do nosso código (Z6-05/P-07). `divida`,
-#: `decisao-tomada` e `so-ela-decide` são nossas — com elas o único `afirma`
-#: legal é `AFIRMA_NADA` com `porque=` explícito.
+#: As causas, entre as do domínio de `*_por_que_nao_aciona`, que nomeiam algo
+#: FORA do nosso código (Z6-05/P-07). Todas as outras são nossas ou ninguém
+#: mediu — com elas o único `afirma` legal é `AFIRMA_NADA` com `porque=`
+#: explícito.
 CAUSA_DE_FORA: Final[frozenset[str]] = frozenset({"nada-a-acionar", "o-aparelho-recusa"})
 
 LADOS_VALIDOS: Final[frozenset[str]] = frozenset({"cabo", "radio"})
