@@ -1508,7 +1508,7 @@ BOOTSTRAP = r"""
     if(!canal) return;
     canal.postMessage(JSON.stringify({
       visibilidade: document.hidden ? 'escondida' : 'vista',
-      pagina: location.pathname.split('/').pop()}));
+      pagina: location.pathname.split('/').pop()}));  // (noqa-acento) a chave das outras mensagens
   }
   // A SÉRIE DO GESTO VIVO. Ela é própria e não o contador do voo: o voo carimba
   // o elemento e volta pelo `voltouDoVoo`; a série do vivo nunca toca o DOM —
