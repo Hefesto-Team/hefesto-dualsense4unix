@@ -62,6 +62,34 @@ declare -F step >/dev/null 2>&1 || step() { printf '\n[%s] %s\n' "$1" "$2"; }
 : "${NO_WIFI_USB:=0}"
 : "${AUTO_YES:=0}"
 
+# O QUE A CONF DO MODPROBE.D MANDA (OS-TEXTOS-QUE-A-6E-1-DEIXOU-VELHOS-01,
+# 25/09/2026). As confs de `assets/modprobe.d/` são as DONAS das opções dos
+# módulos: a fala de cada passo, o rótulo do ensaio e o parâmetro escrito a
+# quente PERGUNTAM a elas, e não digitam o número. Quem digitava errou calado
+# por mais de um mês: desde 09/08 a conf do hid-playstation manda
+# `feature_retries=1` (a NOTA DATADA dela diz por quê), e o install seguia
+# anunciando 2 e ESCREVENDO 2 no módulo carregado — até o boot seguinte, o
+# controle que perde a probe pagava a contenção do rádio uma vez a mais. O
+# `install-host-udev.sh` (o caminho por pacote, que não leva esta lib) tem a
+# mesma forma, e `tests/unit/test_as_opcoes_dos_modulos_tem_um_dono.py` passa
+# as duas pelas mesmas confs.
+#   $1 = a conf · $2 = o parâmetro · imprime o valor da ÚLTIMA linha `options`
+#   que o declara (a do modprobe também vale por último). Sem ela, ou com uma
+#   forma que não é de valor de parâmetro, não imprime nada e devolve 1 — e
+#   quem escreve a quente NÃO escreve, em vez de mandar o vazio ao /sys e
+#   anunciar que aplicou.
+opcao_do_modprobe() {
+    awk -v p="$2" '
+        $1 == "options" {
+            for (i = 3; i <= NF; i++) {
+                n = index($i, "=")
+                if (n > 1 && substr($i, 1, n - 1) == p) v = substr($i, n + 1)
+            }
+        }
+        END { if (v !~ /^[A-Za-z0-9_.,:-]+$/) exit 1; print v }
+    ' "$1" 2>/dev/null
+}
+
 # Render das units do broker root hide-hidraw (BROKER-01/Onda S): substitui
 # __SESSION_UID__/__SESSION_GROUP__ pelos valores reais da sessão e GARANTE
 # que nenhum placeholder sobra (guarda pós-render — lição 6 da auditoria:
@@ -762,9 +790,12 @@ install_dkms_hid_nintendo_host() {
     local _hidn_src="${ROOT_DIR}/assets/dkms/hid-nintendo"
     dkms_install_patched_module hefesto-hid-nintendo \
         "$(dkms_pkg_version "${_hidn_src}")" "${_hidn_src}" hid-nintendo
+    local _hidn_conf="${ROOT_DIR}/assets/modprobe.d/hefesto-hid-nintendo.conf" _v _v2
     if sudo install -Dm644 "${ROOT_DIR}/assets/modprobe.d/hefesto-hid-nintendo.conf" \
             /etc/modprobe.d/hefesto-hid-nintendo.conf 2>/dev/null; then
-        printf '      opções instaladas em /etc/modprobe.d/hefesto-hid-nintendo.conf (bt_probe_retries=3 + skip_tx_on_rate_exceeded=1)\n'
+        printf '      opções instaladas em /etc/modprobe.d/hefesto-hid-nintendo.conf (bt_probe_retries=%s + skip_tx_on_rate_exceeded=%s)\n' \
+            "$(opcao_do_modprobe "${_hidn_conf}" bt_probe_retries)" \
+            "$(opcao_do_modprobe "${_hidn_conf}" skip_tx_on_rate_exceeded)"
     else
         warn "não consegui gravar /etc/modprobe.d/hefesto-hid-nintendo.conf"
     fi
@@ -802,8 +833,10 @@ install_dkms_hid_nintendo_host() {
             # acima é de EXISTÊNCIA (`-e`), por decisão declarada, logo ele NÃO
             # pode saber se a escrita passou: com o ticket do sudo expirado ou
             # param read-only, o `|| true` engolia e a frase mentia.
-            if printf '3' | sudo tee /sys/module/hid_nintendo/parameters/bt_probe_retries >/dev/null 2>&1 \
-               && printf '1' | sudo tee /sys/module/hid_nintendo/parameters/skip_tx_on_rate_exceeded >/dev/null 2>&1; then
+            if _v="$(opcao_do_modprobe "${_hidn_conf}" bt_probe_retries)" \
+               && _v2="$(opcao_do_modprobe "${_hidn_conf}" skip_tx_on_rate_exceeded)" \
+               && printf '%s' "${_v}" | sudo tee /sys/module/hid_nintendo/parameters/bt_probe_retries >/dev/null 2>&1 \
+               && printf '%s' "${_v2}" | sudo tee /sys/module/hid_nintendo/parameters/skip_tx_on_rate_exceeded >/dev/null 2>&1; then
                 printf '      params aplicados a quente (valem no próximo plug, sem reboot)\n'
             else
                 warn "não consegui escrever os params do hid-nintendo a quente — valem no próximo boot"
@@ -816,9 +849,12 @@ install_dkms_hid_nintendo_host() {
         # porque o módulo patchado ANTIGO não tem estes params. A simetria com o
         # uninstall é cobrada por teste.
         if [[ -e /sys/module/hid_nintendo/parameters/usb_cmd_pad_to_report ]]; then
-            printf '1' | sudo tee /sys/module/hid_nintendo/parameters/usb_cmd_pad_to_report >/dev/null 2>&1 || true
-            printf '1' | sudo tee /sys/module/hid_nintendo/parameters/usb_send_conn_status >/dev/null 2>&1 || true
-            printf '1' | sudo tee /sys/module/hid_nintendo/parameters/usb_probe_degrade >/dev/null 2>&1 || true
+            _v="$(opcao_do_modprobe "${_hidn_conf}" usb_cmd_pad_to_report)" \
+                && printf '%s' "${_v}" | sudo tee /sys/module/hid_nintendo/parameters/usb_cmd_pad_to_report >/dev/null 2>&1 || true
+            _v="$(opcao_do_modprobe "${_hidn_conf}" usb_send_conn_status)" \
+                && printf '%s' "${_v}" | sudo tee /sys/module/hid_nintendo/parameters/usb_send_conn_status >/dev/null 2>&1 || true
+            _v="$(opcao_do_modprobe "${_hidn_conf}" usb_probe_degrade)" \
+                && printf '%s' "${_v}" | sudo tee /sys/module/hid_nintendo/parameters/usb_probe_degrade >/dev/null 2>&1 || true
             printf '      handshake USB do clone rearmado a quente (vale no próximo plug)\n'
         fi
     elif [[ -d /sys/module/hid_nintendo ]]; then
@@ -890,7 +926,9 @@ install_dkms_uhid_host() {
     # chega aqui PEDIU a contrapressão (`--uhid-contrapressao`), e o parâmetro
     # é 0644 exatamente para ligar sem recarregar.
     if [[ -e /sys/module/uhid/parameters/backpressure ]]; then
-        if printf '1' | sudo tee /sys/module/uhid/parameters/backpressure >/dev/null 2>&1; then
+        local _v
+        if _v="$(opcao_do_modprobe "${ROOT_DIR}/assets/modprobe.d/hefesto-uhid.conf" backpressure)" \
+           && printf '%s' "${_v}" | sudo tee /sys/module/uhid/parameters/backpressure >/dev/null 2>&1; then
             printf '      módulo patchado JÁ carregado — contrapressão ligada a quente (vale já, sem recarregar o uhid)\n'
         else
             warn "não consegui ligar a contrapressão a quente — ela vale no próximo boot, pela conf do modprobe.d"
@@ -928,9 +966,11 @@ install_dkms_hid_playstation_host() {
     local _hidp_src="${ROOT_DIR}/assets/dkms/hid-playstation"
     dkms_install_patched_module hefesto-hid-playstation \
         "$(dkms_pkg_version "${_hidp_src}")" "${_hidp_src}" hid-playstation
+    local _hidp_conf="${ROOT_DIR}/assets/modprobe.d/hefesto-hid-playstation.conf" _v
     if sudo install -Dm644 "${ROOT_DIR}/assets/modprobe.d/hefesto-hid-playstation.conf" \
             /etc/modprobe.d/hefesto-hid-playstation.conf 2>/dev/null; then
-        printf '      opções instaladas em /etc/modprobe.d/hefesto-hid-playstation.conf (feature_retries=2 + ds4_* do clone no cabo)\n'
+        printf '      opções instaladas em /etc/modprobe.d/hefesto-hid-playstation.conf (feature_retries=%s + ds4_* do clone no cabo)\n' \
+            "$(opcao_do_modprobe "${_hidp_conf}" feature_retries)"
     else
         warn "não consegui gravar /etc/modprobe.d/hefesto-hid-playstation.conf"
     fi
@@ -958,8 +998,9 @@ install_dkms_hid_playstation_host() {
         # `sudo tee` logo abaixo nunca aconteceria (mesma restrição do
         # hid-nintendo acima).
         if [[ -e /sys/module/hid_playstation/parameters/feature_retries ]]; then
-            if printf '2' | sudo tee /sys/module/hid_playstation/parameters/feature_retries >/dev/null 2>&1; then
-                printf '      feature_retries aplicado a quente (vale na próxima conexão, sem reboot)\n'
+            if _v="$(opcao_do_modprobe "${_hidp_conf}" feature_retries)" \
+               && printf '%s' "${_v}" | sudo tee /sys/module/hid_playstation/parameters/feature_retries >/dev/null 2>&1; then
+                printf '      feature_retries=%s aplicado a quente (vale na próxima conexão, sem reboot)\n' "${_v}"
             else
                 warn "não consegui escrever feature_retries a quente — vale no próximo boot"
             fi
@@ -971,14 +1012,16 @@ install_dkms_hid_playstation_host() {
         # LITERAIS de propósito: a paridade com o install-host-udev.sh é
         # verificada por grep (AUTO-01.7).
         if [[ -e /sys/module/hid_playstation/parameters/ds4_short_pairing_info ]]; then
-            if printf 'Y' | sudo tee /sys/module/hid_playstation/parameters/ds4_short_pairing_info >/dev/null 2>&1; then
+            if _v="$(opcao_do_modprobe "${_hidp_conf}" ds4_short_pairing_info)" \
+               && printf '%s' "${_v}" | sudo tee /sys/module/hid_playstation/parameters/ds4_short_pairing_info >/dev/null 2>&1; then
                 printf '      ds4_short_pairing_info aplicado a quente (clone no cabo; vale no próximo plug)\n'
             else
                 warn "não consegui escrever ds4_short_pairing_info a quente — vale no próximo boot"
             fi
         fi
         if [[ -e /sys/module/hid_playstation/parameters/ds4_synthetic_mac ]]; then
-            if printf 'Y' | sudo tee /sys/module/hid_playstation/parameters/ds4_synthetic_mac >/dev/null 2>&1; then
+            if _v="$(opcao_do_modprobe "${_hidp_conf}" ds4_synthetic_mac)" \
+               && printf '%s' "${_v}" | sudo tee /sys/module/hid_playstation/parameters/ds4_synthetic_mac >/dev/null 2>&1; then
                 printf '      ds4_synthetic_mac aplicado a quente (clone no cabo; vale no próximo plug)\n'
             else
                 warn "não consegui escrever ds4_synthetic_mac a quente — vale no próximo boot"

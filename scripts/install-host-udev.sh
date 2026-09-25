@@ -86,7 +86,7 @@ for candidate in \
     fi
 done
 
-# Onda T (2026-07-20): opções do hid-nintendo patchado (bt_probe_retries=3 —
+# Onda T (2026-07-20): opções do hid-nintendo patchado (o bt_probe_retries —
 # cura da morte por probe BT). O parâmetro só existe no módulo DKMS do hefesto;
 # com o in-tree o kernel loga "unknown parameter ignored" e sobe normal
 # (fail-safe do desenho da Onda T) — instalar a conf é sempre seguro.
@@ -103,7 +103,7 @@ for candidate in \
 done
 
 # Contenção BT (2026-07-25): idem para a conf do hid-playstation patchado
-# (feature_retries=2 — cura do 2º DualSense que perde o canal de controle
+# (o feature_retries — cura do 2º DualSense que perde o canal de controle
 # quando vários pareiam juntos). Mesmo fail-safe: sem o módulo DKMS o in-tree
 # só ignora o parâmetro, então instalar a conf é sempre seguro.
 HIDPLAYSTATION_SRC=""
@@ -406,10 +406,32 @@ if [[ "${BTRES_INSTALL_OK}" -eq 0 ]]; then
     echo ""
 fi
 
+# O QUE A CONF DO MODPROBE.D MANDA (OS-TEXTOS-QUE-A-6E-1-DEIXOU-VELHOS-01,
+# 25/09/2026). A conf é a DONA do valor que se escreve a quente: aqui ele
+# estava digitado, e o `feature_retries` ia 2 para o módulo carregado desde
+# 09/08, quando a conf já mandava 1. É a mesma forma do `opcao_do_modprobe` de
+# `scripts/lib/camada_de_maquina.sh` (esta lib não viaja nos pacotes), e
+# `tests/unit/test_as_opcoes_dos_modulos_tem_um_dono.py` passa as duas pelas
+# mesmas confs. O valor entra num comando de root entre aspas simples, então
+# só passa o que tem forma de valor de parâmetro — o resto é recusado.
+#   $1 = a conf · $2 = o parâmetro · imprime o valor da última `options` que o
+#   declara; sem ele (ou com forma estranha), nada, e devolve 1.
+_opcao_do_modprobe() {
+    awk -v p="$2" '
+        $1 == "options" {
+            for (i = 3; i <= NF; i++) {
+                n = index($i, "=")
+                if (n > 1 && substr($i, 1, n - 1) == p) v = substr($i, n + 1)
+            }
+        }
+        END { if (v !~ /^[A-Za-z0-9_.,:-]+$/) exit 1; print v }
+    ' "$1" 2>/dev/null
+}
+
 # Comando núcleo executado com privilégios elevados (pkexec ou sudo).
 # Define como string para reuso em ambos os caminhos sem duplicar lógica.
 _build_install_cmd() {
-    local cmd=""
+    local cmd="" _v
     # VPAD-09: grupo dedicado dono dos nós 71-* (racional na 71-uhid.rules) —
     # criado ANTES de copiar as regras, senão o GROUP= cai no fallback
     # uaccess-only (udev ignora grupo inexistente). A usuária entra no grupo
@@ -455,7 +477,8 @@ _build_install_cmd() {
     if [[ -n "${BTUSB_SRC}" ]]; then
         cmd+="install -Dm644 '${BTUSB_SRC}/hefesto-btusb-no-autosuspend.conf' "
         cmd+="'${SNDQUIRK_DEST}/hefesto-btusb-no-autosuspend.conf'; "
-        cmd+="printf '0' > /sys/module/btusb/parameters/enable_autosuspend 2>/dev/null || true; "
+        _v="$(_opcao_do_modprobe "${BTUSB_SRC}/hefesto-btusb-no-autosuspend.conf" enable_autosuspend)" \
+            && cmd+="printf '${_v}' > /sys/module/btusb/parameters/enable_autosuspend 2>/dev/null || true; "
     fi
     # Onda T: conf persistente do hid-nintendo patchado + parâmetro a quente
     # (só existe se o módulo DKMS estiver carregado — best-effort; vale já no
@@ -463,15 +486,17 @@ _build_install_cmd() {
     if [[ -n "${HIDNINTENDO_SRC}" ]]; then
         cmd+="install -Dm644 '${HIDNINTENDO_SRC}/hefesto-hid-nintendo.conf' "
         cmd+="'${SNDQUIRK_DEST}/hefesto-hid-nintendo.conf'; "
-        cmd+="printf '3' > /sys/module/hid_nintendo/parameters/bt_probe_retries 2>/dev/null || true; "
-        cmd+="printf '1' > /sys/module/hid_nintendo/parameters/skip_tx_on_rate_exceeded 2>/dev/null || true; "
+        _v="$(_opcao_do_modprobe "${HIDNINTENDO_SRC}/hefesto-hid-nintendo.conf" bt_probe_retries)" \
+            && cmd+="printf '${_v}' > /sys/module/hid_nintendo/parameters/bt_probe_retries 2>/dev/null || true; "
+        _v="$(_opcao_do_modprobe "${HIDNINTENDO_SRC}/hefesto-hid-nintendo.conf" skip_tx_on_rate_exceeded)" \
+            && cmd+="printf '${_v}' > /sys/module/hid_nintendo/parameters/skip_tx_on_rate_exceeded 2>/dev/null || true; "
         # PARIDADE-QUENTE-01 (07/08/2026) — a simetria da AUTO-01.7 tinha sido
         # paga em UM sentido só. O achado de 25/07
         # (docs/process/sprints/arquivados/2026-07-25-AUTO-01-um-clique-em-vez-de-dez.md:114)
         # dizia que ERA ESTE script que escrevia os params a quente e o
         # install.sh não; a cura veio, o install.sh alcançou — e os TRÊS params
         # do patch 0003 (clone USB 057E:2009) nasceram depois, só no
-        # install.sh:642-645. Aqui nunca chegaram. GRAU: MEDIDO (comparação dos
+        # `install_dkms_hid_nintendo_host`. Aqui nunca chegaram. GRAU: MEDIDO (comparação dos
         # dois conjuntos de `/sys/module/hid_nintendo/parameters/*` escritos).
         #
         # O que quebra sem estas três linhas, no caminho de PACOTE: o
@@ -485,10 +510,13 @@ _build_install_cmd() {
         #
         # Portão implícito: o módulo patchado ANTIGO não tem estes params, e o
         # redirect falha calado — que é o desejado (mesma decisão do bloco
-        # hid-playstation abaixo, e do install.sh:642).
-        cmd+="printf '1' > /sys/module/hid_nintendo/parameters/usb_cmd_pad_to_report 2>/dev/null || true; "
-        cmd+="printf '1' > /sys/module/hid_nintendo/parameters/usb_send_conn_status 2>/dev/null || true; "
-        cmd+="printf '1' > /sys/module/hid_nintendo/parameters/usb_probe_degrade 2>/dev/null || true; "
+        # hid-playstation abaixo, e do `install_dkms_hid_nintendo_host`).
+        _v="$(_opcao_do_modprobe "${HIDNINTENDO_SRC}/hefesto-hid-nintendo.conf" usb_cmd_pad_to_report)" \
+            && cmd+="printf '${_v}' > /sys/module/hid_nintendo/parameters/usb_cmd_pad_to_report 2>/dev/null || true; "
+        _v="$(_opcao_do_modprobe "${HIDNINTENDO_SRC}/hefesto-hid-nintendo.conf" usb_send_conn_status)" \
+            && cmd+="printf '${_v}' > /sys/module/hid_nintendo/parameters/usb_send_conn_status 2>/dev/null || true; "
+        _v="$(_opcao_do_modprobe "${HIDNINTENDO_SRC}/hefesto-hid-nintendo.conf" usb_probe_degrade)" \
+            && cmd+="printf '${_v}' > /sys/module/hid_nintendo/parameters/usb_probe_degrade 2>/dev/null || true; "
     fi
     # Contenção BT: conf persistente do hid-playstation patchado + parâmetros a
     # quente. Todos são lidos A CADA probe, então escrever aqui já vale na
@@ -499,9 +527,12 @@ _build_install_cmd() {
     if [[ -n "${HIDPLAYSTATION_SRC}" ]]; then
         cmd+="install -Dm644 '${HIDPLAYSTATION_SRC}/hefesto-hid-playstation.conf' "
         cmd+="'${SNDQUIRK_DEST}/hefesto-hid-playstation.conf'; "
-        cmd+="printf '2' > /sys/module/hid_playstation/parameters/feature_retries 2>/dev/null || true; "
-        cmd+="printf 'Y' > /sys/module/hid_playstation/parameters/ds4_short_pairing_info 2>/dev/null || true; "
-        cmd+="printf 'Y' > /sys/module/hid_playstation/parameters/ds4_synthetic_mac 2>/dev/null || true; "
+        _v="$(_opcao_do_modprobe "${HIDPLAYSTATION_SRC}/hefesto-hid-playstation.conf" feature_retries)" \
+            && cmd+="printf '${_v}' > /sys/module/hid_playstation/parameters/feature_retries 2>/dev/null || true; "
+        _v="$(_opcao_do_modprobe "${HIDPLAYSTATION_SRC}/hefesto-hid-playstation.conf" ds4_short_pairing_info)" \
+            && cmd+="printf '${_v}' > /sys/module/hid_playstation/parameters/ds4_short_pairing_info 2>/dev/null || true; "
+        _v="$(_opcao_do_modprobe "${HIDPLAYSTATION_SRC}/hefesto-hid-playstation.conf" ds4_synthetic_mac)" \
+            && cmd+="printf '${_v}' > /sys/module/hid_playstation/parameters/ds4_synthetic_mac 2>/dev/null || true; "
     fi
     # RADIO-AFOGADO-02 — o uhid com contrapressão (INSTALL-E-UNINSTALL-DO-
     # RADIO-01, 23/09/2026). O `uninstall.sh` devolve o `backpressure` a 0 a
@@ -518,7 +549,8 @@ _build_install_cmd() {
     # recarregar o uhid (que derrubaria todo HID por Bluetooth). Sem a conf, o
     # de fábrica segue, e o redirect falha calado num uhid sem o parâmetro.
     if [[ -f /etc/modprobe.d/hefesto-uhid.conf ]]; then
-        cmd+="printf '1' > /sys/module/uhid/parameters/backpressure 2>/dev/null || true; "
+        _v="$(_opcao_do_modprobe /etc/modprobe.d/hefesto-uhid.conf backpressure)" \
+            && cmd+="printf '${_v}' > /sys/module/uhid/parameters/backpressure 2>/dev/null || true; "
     fi
     # BROKER-01 (Onda S — fd-injection): binário + units-template renderizadas
     # (__SESSION_UID__/__SESSION_GROUP__) + enable --now do .socket (só ele —

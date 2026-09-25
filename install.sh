@@ -1332,7 +1332,7 @@ _ensaio_camada() {
                 return 0
             fi
             _faria_root "compilar e instalar o módulo DKMS hefesto-hid-nintendo (substitui o hid-nintendo in-tree por precedência; o in-tree NUNCA é removido)"
-            _faria_root "instalar /etc/modprobe.d/hefesto-hid-nintendo.conf (bt_probe_retries=3 + skip_tx_on_rate_exceeded=1)"
+            _faria_root "instalar /etc/modprobe.d/hefesto-hid-nintendo.conf (bt_probe_retries=$(opcao_do_modprobe "${ROOT_DIR}/assets/modprobe.d/hefesto-hid-nintendo.conf" bt_probe_retries) + skip_tx_on_rate_exceeded=$(opcao_do_modprobe "${ROOT_DIR}/assets/modprobe.d/hefesto-hid-nintendo.conf" skip_tx_on_rate_exceeded))"
             ;;
         dkms-rtw88)
             if [[ "${NO_DKMS}" -eq 1 ]]; then
@@ -1359,7 +1359,7 @@ _ensaio_camada() {
                 return 0
             fi
             _faria_root "compilar e instalar o módulo DKMS hefesto-hid-playstation (retry de feature report na contenção BT)"
-            _faria_root "instalar /etc/modprobe.d/hefesto-hid-playstation.conf (feature_retries=2 + ds4_* do clone no cabo)"
+            _faria_root "instalar /etc/modprobe.d/hefesto-hid-playstation.conf (feature_retries=$(opcao_do_modprobe "${ROOT_DIR}/assets/modprobe.d/hefesto-hid-playstation.conf" feature_retries) + ds4_* do clone no cabo)"
             ;;
         dkms-uhid)
             if [[ "${COM_UHID_CONTRAPRESSAO:-0}" -ne 1 ]]; then
@@ -1371,7 +1371,7 @@ _ensaio_camada() {
                 return 0
             fi
             _faria_root "compilar e instalar o módulo DKMS hefesto-uhid (só nos kernels conferidos do dkms.conf; fora deles o de fábrica assume)"
-            _faria_root "instalar /etc/modprobe.d/hefesto-uhid.conf (backpressure=1) e, com o patchado já carregado, ligar a contrapressão a quente em /sys/module/uhid/parameters/backpressure (o uhid NUNCA é recarregado)"
+            _faria_root "instalar /etc/modprobe.d/hefesto-uhid.conf (backpressure=$(opcao_do_modprobe "${ROOT_DIR}/assets/modprobe.d/hefesto-uhid.conf" backpressure)) e, com o patchado já carregado, ligar a contrapressão a quente em /sys/module/uhid/parameters/backpressure (o uhid NUNCA é recarregado)"
             ;;
         ucm)
             if [[ "${NO_UCM}" -eq 1 ]]; then
@@ -2351,7 +2351,7 @@ elif command -v sudo >/dev/null 2>&1; then
             warn "não consegui gravar /etc/modprobe.d/hefesto-btusb-no-autosuspend.conf"
         fi
         if [[ -e /sys/module/btusb/parameters/enable_autosuspend ]]; then
-            printf '0' | sudo tee /sys/module/btusb/parameters/enable_autosuspend >/dev/null 2>&1 || true
+            _v="$(opcao_do_modprobe "${ROOT_DIR}/assets/modprobe.d/hefesto-btusb-no-autosuspend.conf" enable_autosuspend)" && printf '%s' "${_v}" | sudo tee /sys/module/btusb/parameters/enable_autosuspend >/dev/null 2>&1 || true
         fi
         # Config do BlueZ (FastConnectable + JustWorksRepairing): o dono é o
         # scripts/bluez_config.sh, e a lógica saiu DAQUI de propósito.
@@ -3607,7 +3607,7 @@ fi
 # 7a-bis. A UNIT DO DAEMON PRINCIPAL.
 #     BUG-INSTALL-NAO-INSTALA-A-UNIT-DO-DAEMON-01 (25/07): assimetria de
 #     primeira grandeza. O `uninstall.sh` para, desabilita e REMOVE
-#     ~/.config/systemd/user/hefesto-dualsense4unix.service (uninstall.sh:545-547),
+#     ~/.config/systemd/user/hefesto-dualsense4unix.service (o bloco «parando daemon» do uninstall.sh),
 #     e o install NUNCA a instalava — `grep -c assets/hefesto-dualsense4unix.service
 #     install.sh` dava ZERO. A unit só existia nas máquinas onde tinha
 #     sobrevivido de uma instalação antiga; quem fizesse o ciclo completo
