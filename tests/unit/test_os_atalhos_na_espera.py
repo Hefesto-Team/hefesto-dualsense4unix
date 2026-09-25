@@ -14,9 +14,9 @@ e a mesa mista. Com o P1 na mesa, só o PS + R3 dele disparava; de volta, també
 
 **A cura mora no dono** (``poll.botoes_dos_atalhos``): na vaga, os atalhos
 leem o próximo da fila que está na mesa — o menor número da lâmpada entre os
-jogadores do co-op com o vpad de pé —, e o vpad do P1 continua recebendo só os
-botões do posto. O laço de produção entrega os botões por
-``poll.observar_os_atalhos``, e o PS + L3 anda o cartão de quem segura os
+jogadores sentados no co-op, com o vpad de pé ou renascendo —, e o vpad do P1
+continua recebendo só os botões do posto. O laço de produção entrega os botões
+por ``poll.observar_os_atalhos``, e o PS + L3 anda o cartão de quem segura os
 atalhos (``poll.quem_segura_os_atalhos``), nunca o do P1 ausente.
 
 **A bancada é a honesta** (:class:`MesaHonesta`, da O-VPAD-DO-P1-NAO-REPETE-O-
@@ -27,6 +27,14 @@ leitor do primário ou o do co-op — e o ``HotkeyManager`` real, montado pelo
 ``start_hotkey_manager`` real (os combos de fábrica), com os atos trocados por
 quem anota o que disparou. O laço de produção é medido à parte, com o
 ``Daemon.run`` de verdade (:class:`TestOLacoDeProducao`).
+
+**A conferência (24/09/2026) a deixou mais honesta em dois pontos.** O grab do
+co-op confirma no tique seguinte, como no ``EvdevReader`` de verdade — o leitor
+de mentira confirmava na hora e escondia os pulsos de falha do PS + L3 do P2.
+E os atos rodam de verdade (:func:`armar_o_ato_do_daemon`), como tarefa com o
+laço seguindo (:func:`_gesto_com_o_laco`): o PS + R3 do P2 troca o modo na
+espera, do disparo até o vpad do posto renascido no caminho novo
+(:class:`TestOPsR3DoP2TrocaOModo`).
 
 AS MORDIDAS (24/09/2026, cada uma devolvida com o md5 conferido):
 
@@ -41,7 +49,13 @@ AS MORDIDAS (24/09/2026, cada uma devolvida com o md5 conferido):
 - o PS + L3 andando o cartão do ``primary_identity`` reprova
   :class:`TestOPsL3AndaOCartaoDeQuemSegura`: o do P1 ausente seria gravado;
 - o laço voltando a chamar ``observe`` com os botões do posto reprova
-  :class:`TestOLacoDeProducao`, e só ela — as outras chamam o dono direto.
+  :class:`TestOLacoDeProducao`, e só ela — as outras chamam o dono direto;
+- (conferência) a prova do PS + L3 julgando sem esperar o vpad do co-op
+  voltar reprova a troca do P2 e o ciclo dele; a prova olhando o vpad do posto
+  reprova o P2 que não volta; o ciclo partindo da máscara do P1 reprova o ciclo
+  do P2; a mão presa a quem tem vpad de pé reprova o tique do renascer; o
+  diário e a pergunta «de quem é o gesto» caindo no posto na vaga vazia
+  reprovam a vaga sem ninguém sentado.
 
 Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5 zerados.
 """
