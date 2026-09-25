@@ -2214,6 +2214,31 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     # resolvesse o default esconderia/abriria hidraw DE VERDADE no meio da
     # suíte. Testes do próprio cliente passam o caminho explicitamente.
     monkeypatch.setenv("HEFESTO_BROKER_SOCKET", str(xdg_root / "no-broker.sock"))
+    # O-INVENTARIO-DOS-EXTERNOS-NAO-ABRE-O-DUALSENSE-01 (25/09/2026) — a irmã
+    # do BROKER-01 acima, pela mesma razão: o sysfs dos nós de entrada que o
+    # `core/evdev_reader` lê (`SYS_CLASS_INPUT`) aponta para uma pasta VAZIA em
+    # todo teste. A vista dos externos pula pelo sysfs o nó de DualSense antes
+    # de abrir, e os testes usam nomes de nó (`/dev/input/event30`,
+    # `event261`) que na máquina dela são o movimento do P1 e o touchpad do
+    # vpad do P2. Medido com a cura e sem esta linha: o Pro de dois testes do
+    # inventário sumiu (o do `event261` e o do `event30`) — só na máquina
+    # dela, e só com os controles ligados. Vazio é «não achei DualSense nenhum», a resposta de
+    # uma máquina sem controle; quem precisa de árvore monta a sua e aponta
+    # por cima (monkeypatch de função, que desfaz depois desta). Pasta nova
+    # a cada teste, sob o `.xdg/` de sempre: o módulo lê a constante na
+    # chamada, e o desvio vale do primeiro ao último teste.
+    try:
+        from hefesto_dualsense4unix.core import evdev_reader
+    except ModuleNotFoundError as erro:  # pragma: no cover - só no job leve do CI
+        # O job "A casa sabe e o produto não faz" instala só o pytest; sem o
+        # pacote não há leitura de sysfs a desviar (ver
+        # `_nenhum_sysfs_vivo_na_varredura_de_vpad`).
+        if (erro.name or "").split(".")[0] != "hefesto_dualsense4unix":
+            raise
+    else:
+        sysfs_vazio = xdg_root / "sys-class-input"
+        sysfs_vazio.mkdir(parents=True, exist_ok=True)
+        monkeypatch.setattr(evdev_reader, "SYS_CLASS_INPUT", str(sysfs_vazio))
     # DIÁRIO-QUE-NAO-MENTE-01 (15/08/2026) — mesma classe do BROKER-01 acima, e
     # medida ao vivo: vários testes rodam os scripts `bt_*.sh` DE VERDADE, e
     # eles registram no journal. Os DADOS já eram isolados (raízes em tmp); o
