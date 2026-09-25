@@ -343,6 +343,84 @@ def test_a_troca_de_perfil_solta_o_brilho_do_perfil_anterior(
         f"quatro ficaram em {fica}: o P2 guardou o Forte do perfil anterior")
 
 
+
+# ---------------------------------------------------------------------------
+# 2b. Os caminhos que REPINTAM o número também levam o brilho
+# ---------------------------------------------------------------------------
+def _brilhos_novos(h: Any, desde: int) -> list[int]:
+    """Os degraus autorizados pelo bit nos quadros que saíram depois de `desde`."""
+    return [c[42] for c in map(_common, h.quadros[desde:])
+            if c[rep.COMMON_VALID_FLAG2] & BIT]
+
+
+@pytest.mark.parametrize(("transporte", "com_no"), MATRIZ)
+def test_a_vigia_do_sequestro_devolve_o_brilho_so_de_quem_foi_sequestrado(
+        transporte: str, com_no: bool) -> None:
+    """A vigia do sequestro repinta o número do P3 — e o brilho dele volta junto.
+
+    Achado da conferência de 25/09/2026: o relatório dizia que o brilho anda
+    pela vigia (`reafirmar_barra_e_numero`), e nenhuma régua a cobria —
+    arrancar o `_levar_o_brilho_das_luzes` dela passava verde. Quem sequestra o
+    hidraw pode escrever o próprio degrau; a vigia devolve o dela, e só ao
+    controle sequestrado.
+
+    MORDIDA: tire o `_levar_o_brilho_das_luzes` da vigia (o cabo) ou o
+    `brilho_das_luzes=brilho` do `_escrever_barra_e_numero_bt` (o rádio).
+    """
+    ctl, controles = _mesa(transporte, com_no=com_no)
+    _aplicar(ctl, _perfil("medio", P3="forte"))  # noqa-acento: chave ASCII
+    antes = [len(h.quadros) for h in controles]
+    ctl.reafirmar_barra_e_numero([UNIQS[2]])
+    assert _brilhos_novos(controles[2], antes[2]) == [FORTE], (
+        f"[{transporte}, {'com' if com_no else 'sem'} nó] a vigia repintou o P3 "
+        f"com os degraus {_brilhos_novos(controles[2], antes[2])}")
+    for n in (0, 1, 3):
+        assert len(controles[n].quadros) == antes[n], (
+            f"a vigia do P3 escreveu no P{n + 1}")
+
+
+@pytest.mark.parametrize("com_no", [True, False])
+def test_o_gatilho_da_cor_pelo_radio_leva_o_brilho_de_cada_um(com_no: bool) -> None:
+    """O gatilho do fim da rajada repinta os quatro do rádio num quadro só cada.
+
+    MORDIDA: tire o `brilho_das_luzes=brilho` do `_escrever_barra_e_numero_bt`
+    e os quatro saem sem o bit.
+    """
+    ctl, controles = _mesa("bt", com_no=com_no)
+    _aplicar(ctl, _perfil("medio", P3="forte"))  # noqa-acento: chave ASCII
+    antes = [len(h.quadros) for h in controles]
+    ctl.reescrever_lightbar_por_hidraw()
+    for n, h in enumerate(controles):
+        assert len(h.quadros) - antes[n] == 1, (
+            f"o gatilho escreveu {len(h.quadros) - antes[n]} quadros no P{n + 1}")
+        assert _brilhos_novos(h, antes[n]) == [FORTE if n == 2 else MEDIO], (
+            f"o gatilho levou ao P{n + 1} os degraus {_brilhos_novos(h, antes[n])}")
+
+
+def test_o_reassert_leva_o_brilho_pelo_cabo_e_nao_gasta_quadro_no_radio() -> None:
+    """O reassert da ativação: pelo cabo, o `0x02` do brilho; pelo rádio, nada.
+
+    Pelo cabo a classe LED do kernel não carrega o degrau, e o reassert o manda
+    num `0x02` ao lado. Pelo rádio o degrau já foi no `0x31` de cada escrita do
+    número, e o reassert — que é só a classe LED — não gasta fatia.
+
+    MORDIDA: tire o laço `do_cabo` do `reassert_resolved_outputs` e o cabo
+    reprova.
+    """
+    ctl, cabo = _mesa("usb", com_no=True)
+    _aplicar(ctl, _perfil("medio", P3="forte"))  # noqa-acento: chave ASCII
+    antes = [len(h.quadros) for h in cabo]
+    ctl.reassert_resolved_outputs()
+    assert [_brilhos_novos(h, antes[n]) for n, h in enumerate(cabo)] == [
+        [MEDIO], [MEDIO], [FORTE], [MEDIO]]
+
+    ctl, radio = _mesa("bt", com_no=True)
+    _aplicar(ctl, _perfil("medio", P3="forte"))  # noqa-acento: chave ASCII
+    antes = [len(h.quadros) for h in radio]
+    ctl.reassert_resolved_outputs()
+    assert [len(h.quadros) for h in radio] == antes, (
+        "o reassert gastou quadro no rádio — o brilho já foi com o número")
+
 # ---------------------------------------------------------------------------
 # 3. O IPC: com `uniq` só ele; sem, «Todos»
 # ---------------------------------------------------------------------------
