@@ -2597,12 +2597,13 @@ def _escrever_a_cor(ctx: Contexto, p: Any, uniq: str,
     #: (ver `apagar`), mandar a cor no brilho dela seria mandar preto: o clique
     #: no tom aceitaria o toque e não agiria. A ordem dela de 01/09 é *"clicar
     #: na cor já deveria aplicar a cor no controle"*, e a barra acende no
-    #: brilho do perfil (`_o_brilho_de_religar`); o 0% do controle sai do disco
-    #: junto (`_guardar_a_cor_no_perfil`).
+    #: brilho que o perfil ATIVO dá a este controle (`_o_brilho_de_religar`); o
+    #: 0% do controle sai do disco junto (`_guardar_a_cor_no_perfil`).
     religar = bool(escolha and brilho is not None and float(brilho) <= 0.0)
     if religar:
         brilho = _o_brilho_de_religar(
-            cru if cru is not None else perfil.ativo(ctx.state.get("active_profile")))
+            cru if cru is not None else perfil.ativo(ctx.state.get("active_profile")),
+            uniq)
     corpo = p.led_set_detalhado(rgb, brightness=brilho, uniq=uniq)
     if corpo is None:
         raise RuntimeError(sem_resposta_do_daemon())
@@ -2618,13 +2619,20 @@ def _escrever_a_cor(ctx: Contexto, p: Any, uniq: str,
     return recado
 
 
-def _o_brilho_de_religar(cru: dict[str, Any] | None) -> float:
-    """O brilho em que a cor escolhida acende uma barra apagada: o do perfil.
+def _o_brilho_de_religar(cru: dict[str, Any] | None, uniq: str) -> float:
+    """O brilho em que a cor escolhida acende uma barra apagada.
 
-    A-04-PERGUNTA-AO-DAEMON-VIVO-01. O controle apagado não tem brilho próprio
-    a devolver — o 0% é justamente o que ele guardava —, e o do perfil é o que
-    ele herda quando não opina. Perfil a 0% (a mesa inteira apagada) ou sem o
-    campo legível acende cheio: a cor escolhida tem de aparecer.
+    A-04-PERGUNTA-AO-DAEMON-VIVO-01. É o que o perfil ATIVO dá a este controle
+    (`brilho_do_controle`: o brilho próprio dele, ou o do perfil) — e é
+    também o que o disco guarda depois do gesto (`_com_a_cor_gravada`), para
+    o perfil reaplicado acender o mesmo. Quem apagou pelo «Desligar» neste
+    perfil tem o 0% gravado, e aí vale o do perfil, que ele herda quando o 0%
+    sai. Conferência, 25/09/2026: o «Desligar» feito num perfil atravessa a
+    troca automática pela camada viva, e o perfil do jogo pode guardar um
+    brilho próprio para este controle — ler só o do perfil acendia a barra no
+    brilho errado e APAGAVA do disco o brilho que ela tinha gravado ali.
+    Perfil a 0% (a mesa inteira apagada) ou sem o campo legível acende cheio:
+    a cor escolhida tem de aparecer.
     """
     leds = (cru or {}).get("leds") if isinstance(cru, dict) else None
     try:
@@ -2632,7 +2640,10 @@ def _o_brilho_de_religar(cru: dict[str, Any] | None) -> float:
             leds, dict) else 1.0
     except (TypeError, ValueError):
         do_perfil = 1.0
-    return do_perfil if 0.0 < do_perfil <= 1.0 else 1.0
+    for candidato in (brilho_do_controle(cru, uniq), do_perfil):
+        if candidato is not None and 0.0 < candidato <= 1.0:
+            return candidato
+    return 1.0
 
 
 def _guardar_o_apagado_no_perfil(ctx: Contexto, uniq: str) -> None:
@@ -3620,8 +3631,10 @@ def _com_a_cor_gravada(prof: Any, uniq: str, rgb: tuple[int, int, int],
 
     `religar=True` é a cor escolhida numa barra em 0% (A-04-PERGUNTA-AO-DAEMON-VIVO-01):
     o brilho próprio de 0% SAI do override, e o controle volta ao do perfil —
-    a mesma conta de `_o_brilho_de_religar`. Com o perfil em 0%, ele fica
-    cheio, explícito, pela mesma razão.
+    a mesma conta de `_o_brilho_de_religar`. Um brilho próprio ACIMA de 0 fica
+    (é o de outro perfil que a camada viva atravessou apagada, e é escolha
+    dela). Com o perfil em 0% e sem brilho próprio, ele fica cheio, explícito,
+    pela mesma razão.
     """
     from hefesto_dualsense4unix.profiles.schema import ControllerOverrides, LedsConfig
 
@@ -3633,11 +3646,13 @@ def _com_a_cor_gravada(prof: Any, uniq: str, rgb: tuple[int, int, int],
     if numero is not None:
         campos["lightbar_para_o_numero"] = int(numero)
     if religar:
-        if antes is not None and "lightbar_brightness" in antes.model_fields_set:
+        proprio = antes is not None and "lightbar_brightness" in antes.model_fields_set
+        if antes is not None and proprio and float(antes.lightbar_brightness) <= 0.0:
             antes = LedsConfig.model_validate({
                 k: getattr(antes, k) for k in antes.model_fields_set
                 if k != "lightbar_brightness"})
-        if float(getattr(prof.leds, "lightbar_brightness", 1.0)) <= 0.0:
+            proprio = False
+        if not proprio and float(getattr(prof.leds, "lightbar_brightness", 1.0)) <= 0.0:
             campos["lightbar_brightness"] = 1.0
     novos = (LedsConfig(**campos) if antes is None
              else antes.model_copy(update=campos))
