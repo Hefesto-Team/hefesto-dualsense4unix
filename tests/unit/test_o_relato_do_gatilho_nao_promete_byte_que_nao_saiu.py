@@ -106,6 +106,22 @@ class _MesaDeControles:
     def _pode_escrever_player_leds(self) -> bool:
         return True
 
+    # O BRILHO DAS LUZES DE NÚMERO (O-BRILHO-DAS-LUZES-DE-NUMERO-01, 25/09/2026):
+    # o original leva a cada handle o degrau RESOLVIDO dele. A mesma decisão
+    # que importa aqui — sem handle não sai byte — vale para ele: uma escrita
+    # por handle, e nenhuma com a mesa vazia (o laço é sobre `_handles`).
+    def _merged_desired_for_key(self, key: str) -> Any:
+        return self._desired_default
+
+    def _levar_o_brilho_das_luzes(
+        self, key: str | None, handle: Any, degrau: int | None, *, what: str,
+        o_radio_ja_leva: bool = False,
+    ) -> bool:
+        if degrau is None:
+            return False
+        self.escritas.append(what)
+        return True
+
     # --- o que o ProfileManager.apply chama além do broadcast ---
     def apply_output_defaults(self, spec: OutputSpec) -> Any:
         return APLICAR_PADROES(self, spec)  # type: ignore[arg-type]
