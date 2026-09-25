@@ -45,7 +45,7 @@ onde saiu em 25/08. Corrigir à mão seria pagar o mesmo preço de novo amanhã.
 | `docs/method/METODO-DE-ISOLAMENTO.md` | <!--@bytes:docs/method/METODO-DE-ISOLAMENTO.md-->63.703<!--/--> | O ciclo de ensaio: perguntas de sanidade, oito passos, as armadilhas A-1..A-25. | Quando você vai **produzir** medição nova, não consumir. Cuidado: ele ainda ensina o nome de coluna `grau`, que o portão de hoje reprova (seção 6). |
 | `scripts/check_paridade_transporte.py` | <!--@bytes:scripts/check_paridade_transporte.py-->153.052<!--/--> | **O PORTÃO** do mapa, e a melhor explicação de método da casa — a docstring nomeia cada regra e o defeito real que a fez nascer. | Antes de escrever no CSV. Leia a docstring inteira — ela vai da linha 2 à <!--@ultima-linha-da-docstring-do-portao-->343<!--/-->. |
 | `scripts/eliminacao.py` | <!--@bytes:scripts/eliminacao.py-->11.675<!--/--> | **O JUIZ.** Lê o caderno e devolve um veredito por suspeito. | Seção 4. |
-| `bancada.py` | <!--@bytes:bancada.py-->26.708<!--/--> | O formulário que grava no mapa. **A escada de degraus não nasce aqui:** ele a importa do portão (`from check_paridade_transporte import VALORES_DA_ESCADA`) desde 19/08/2026 — há um dono só. | Quando for editar célula. |
+| `bancada.py` | <!--@bytes:bancada.py-->27.271<!--/--> | O formulário que grava no mapa. **A escada de degraus não nasce aqui:** ele a importa do portão (`from check_paridade_transporte import VALORES_DA_ESCADA`) desde 19/08/2026 — há um dono só. | Quando for editar célula. |
 
 **O que ainda é digitado à mão**, e por que não entrou nesta leva: o `existe`,
 as duas réguas por valor e as 20 casas do cruzamento (seções 2 e 3). Esses o
