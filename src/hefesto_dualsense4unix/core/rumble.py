@@ -110,7 +110,7 @@ def _sob_o_teto(mult: float, teto: float | None) -> float:
     número escrito na tela.
 
     E ``min`` preserva o denominador de ``_controllers_to_rumble_scales``
-    (`profiles/manager.py:2875-2925`): o valor que chega ao backend já vem
+    (`profiles/manager.py:3056-3106`): o valor que chega ao backend já vem
     escalado pela política global, então o fator por unidade é RELATIVO — um
     produto mexeria na base daquela conta sem ninguém saber.
 
