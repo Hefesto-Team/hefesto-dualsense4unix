@@ -18,13 +18,13 @@ dois arranjos escrevem `0x91` exatamente ali**, sobrescrevendo o único byte
 cujo valor esta bancada já viu o firmware aceitar. As seis passadas do ensaio
 variaram a TAG e o ARRANJO, e não variaram este byte.
 
-**O QUE ESTE ARQUIVO NÃO AFIRMA, e a proibição é literal do mapa** (`audio.
-saida_dedicada.payload_do_degrau@dualsense`.radio_ressalva, transcrita em
-`integrations/alto_falante_bt.py`): *"NÃO ESCREVER, EM LUGAR NENHUM, que
-'descobrimos o áudio por Bluetooth' ou que a ponte funciona."* Não funciona, e
-não há ponte: há um canal que responde. `os.write()` devolve sucesso quando o
-KERNEL aceita, nunca quando o firmware obedece — **FALÁCIA DO CANAL QUE
-RESPONDE**.
+**O QUE ESTE ARQUIVO NÃO AFIRMA** — que o som sai: isso se conta pelo degrau.
+Ele saiu pelo rádio em 10/09/2026, dois dias depois deste arquivo, no `0x35`
+(`integrations/alto_falante_bt.ARRANJO_035`), e a disputa do `[2]` que este
+arquivo isolou ficou respondida para aquele degrau: `0x91`. `os.write()`
+devolve sucesso quando o KERNEL aceita, nunca quando o firmware obedece — é a
+lição que o mapa guarda com nome, a **FALÁCIA DO CANAL QUE RESPONDE**
+(`audio.saida_dedicada@dualsense`).
 
 NENHUM TESTE DESTE ARQUIVO ESCREVE NUM CONTROLE. Tudo aqui é montagem de bytes
 em memória.
