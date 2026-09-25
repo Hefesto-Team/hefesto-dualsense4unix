@@ -946,9 +946,20 @@ class TestONoQueMudaNumTiqueSo:
         mesa.kernel.regra_instalada = False
         mesa.kernel.desconectar(inst)
         mesa.kernel.conectar(UNIQS[0], "usb")  # o cabo entra antes do próximo connect()
+        reaplicados: list[tuple[str, Any]] = []
+        reaplicar = mesa.inst._reapply_desired
+
+        def _espiar(key: str, handle: Any) -> None:
+            reaplicados.append((key, handle))
+            reaplicar(key, handle)
+
+        monkeypatch.setattr(mesa.inst, "_reapply_desired", _espiar)
         mesa.connect()
         novo = mesa.inst._handles[MACS[0]]
         assert novo is not antigo and antigo.closed, "o connect() ficou com o handle do nó morto"
+        assert reaplicados == [(MACS[0], novo)], (
+            "o handle do cabo não recebeu a cor e o perfil do controle"
+        )
         assert list(mesa.inst._handles) == [MACS[0], MACS[1]], "a ordem da mesa andou"
         assert mesa.inst.primary_uniq == UNIQS[0]
         assert mesa.inst.get_transport() == "usb"
