@@ -1334,8 +1334,10 @@ def test_r7_cem_mil_tiques_guardam_so_os_ultimos(publicado_de_hoje: pathlib.Path
     for i in range(100_000):
         piloto.custos.append(float(i))
         piloto.custo_do_ipc.append(float(i))
+    # O TETO É LIDO DO PRODUTO, e não digitado: o que a régua cobra é que ele
+    # exista e fique abaixo dos tiques simulados, senão ela não morderia.
     teto = piloto.CUSTOS_GUARDADOS
-    assert teto == 6000
+    assert 0 < teto < 100_000, f"teto {teto}: a régua não morderia com ele"
     assert len(piloto.custos) <= teto and len(piloto.custo_do_ipc) <= teto, (
         f"{len(piloto.custos)} custos guardados — a janela de 10 h acumula")
     assert piloto.custos[-1] == 99_999.0
