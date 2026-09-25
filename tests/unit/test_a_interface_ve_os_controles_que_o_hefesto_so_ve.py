@@ -462,10 +462,12 @@ def test_o_tique_pergunta_sozinho_pelos_externos() -> None:
     antes = ponte.resultado
     ponte.resultado = falso  # type: ignore[assignment]
     try:
+        # Só os fios que ESTE tique abriu: juntar todo fio do processo prendia
+        # o caso nos que outro caso deixou vivos (25/09/2026, parte 03).
+        fios_antes = set(__import__("threading").enumerate())
         hefesto_vivo.Piloto._contexto(p, dict(VIVO))  # type: ignore[arg-type]
-        for t in list(__import__("threading").enumerate()):
-            if t is not __import__("threading").current_thread():
-                t.join(timeout=5)
+        for t in set(__import__("threading").enumerate()) - fios_antes:
+            t.join(timeout=5)
     finally:
         ponte.resultado = antes  # type: ignore[assignment]
     assert chamadas == ["controller.list"]
