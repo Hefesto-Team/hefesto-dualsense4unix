@@ -214,6 +214,11 @@ chegar depois (hotplug) e é escrito em cada conectado — senão um override
 guardado no perfil venceria o «Todos» que acabou de ser pedido. Nesse ramo o
 `guardado_em` sai vazio.
 
+O pedido NÃO grava no perfil — quem grava é o gesto da aba Iluminação, antes
+de chamar o método. E ele entra na camada da usuária, como o `led.player_set`:
+atravessa a troca AUTOMÁTICA de perfil (a janela do jogo) e sai na troca manual
+(medido na conferência de 25/09/2026).
+
 O degrau sai pelos caminhos do número, nos dois transportes: no cabo sem nó de
 LED gravável, no fluxo; no cabo com o nó do kernel, num `0x02` avulso logo
 depois do número (o nó do `hid_playstation` é 0/1 por lâmpada e não escolhe
