@@ -763,7 +763,7 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 > | campo | onde é escrito | grau |
 > |---|---|---|
 > | volume, `common[5]` | o laço dos quatro bytes de áudio — `_AUDIO_COMMON_OFFSETS` em `core/backend_pydualsense.py:323-325` | **ALTA** — lido no código |
-> | pré-amp, `common[37]` | `core/backend_pydualsense.py:1809-1816`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1812-1814`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:197` | **ALTA** — lido no código |
+> | pré-amp, `common[37]` | `core/backend_pydualsense.py:1842-1849`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1845-1847`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:197` | **ALTA** — lido no código |
 <!-- ENDEREÇOS REAPONTADOS em 20/09/2026: a O-NO-NASCE-FECHADO-01 acrescentou a
      exposição do nó sob pedido ao `backend_pydualsense.py` e ao `lifecycle.py`
      (o `hidapi` não aceita fd, e com o nó nascendo `0600 root` o handle de

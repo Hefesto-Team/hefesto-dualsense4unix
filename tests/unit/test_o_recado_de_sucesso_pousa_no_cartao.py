@@ -113,7 +113,7 @@ def _ctl(uniq: str, transporte: str, jogador: int) -> dict:
     # O BLOCO `speaker` É O QUE DESTRAVA O ♪, e a ausência dele não era um
     # dublê mais simples: era um dublê MAIS POBRE QUE O PRODUTO, que é a
     # família de defeito que esta casa persegue por escrito. O daemon publica
-    # `speaker` assim que alguém escreve um volume (`ipc_handlers.py:4212`), e
+    # `speaker` assim que alguém escreve um volume (`ipc_handlers.py:4332`), e
     # o ♪ recusa enquanto ele não existe — *"calar antes de saber o volume
     # tranca-o em zero"*. Sem o bloco, toda régua de SUCESSO deste arquivo
     # mediria uma RECUSA e a leria como defeito da piscada.

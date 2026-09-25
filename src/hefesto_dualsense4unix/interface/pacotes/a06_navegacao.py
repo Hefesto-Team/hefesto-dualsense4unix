@@ -1220,7 +1220,7 @@ def _linhas_dos_botoes(p: dict[str, Any]) -> dict[str, str]:
 # `_persist_key_bindings_to_draft` protege o que a lista não mostra. **Aqui é o
 # contrário**: o "Voltar ao padrão" desta tela zera `key_bindings` inteiro, e o
 # "Guardar" faz `apply_button_actions` reescrever o conjunto todo a partir do de
-# fábrica (`profiles/manager.py:656`, `core/acoes_de_botao.resolver`, que nunca
+# fábrica (`profiles/manager.py:665`, `core/acoes_de_botao.resolver`, que nunca
 # consulta `profile.key_bindings`). Copiar a frase de lá seria a tela afirmando
 # o oposto do que este produto faz — e é a família de defeito que esta casa
 # persegue acima de todas.
@@ -1357,7 +1357,7 @@ def atalhos_que_param_de_valer(p: dict[str, Any]) -> list[tuple[str, str]]:
     """Os `key_bindings` do perfil que o "Guardar" desta tela faz parar de valer.
 
     **É A METADE VISÍVEL DO DEFEITO §3-1**, e o defeito é do produto, não desta
-    aba: `apply_button_actions` (`profiles/manager.py:656`) roda DEPOIS do
+    aba: `apply_button_actions` (`profiles/manager.py:665`) roda DEPOIS do
     `apply_keyboard` e chama `teclado.set_bindings(...)` com o conjunto INTEIRO
     que `acoes_de_botao.resolver()` deriva — e `resolver()` parte de
     `acoes.padrao()` e **nunca consulta `profile.key_bindings`**. Logo, um perfil com
@@ -1371,7 +1371,7 @@ def atalhos_que_param_de_valer(p: dict[str, Any]) -> list[tuple[str, str]]:
     que não se perde é ruído.
 
     A RESSALVA QUE A FRASE CARREGA, e ela é medida: sem device de mouse vivo o
-    `apply_button_actions` sai antes (`manager.py:708-711`) e nada é reescrito. Por
+    `apply_button_actions` sai antes (`manager.py:740-745`) e nada é reescrito. Por
     isso a tira diz *"quando o mouse virtual estiver de pé"* em vez de prometer
     o desastre em todo caso.
 
@@ -2323,7 +2323,7 @@ def _recusa_do_mouse(resposta: Any) -> str:
     `_call_checked_detalhado`, que é o único que entrega o corpo"*, e por isso
     um `{"status": "failed", "bloqueio": "sem_device"}` voltava como sucesso e a
     tela dela ficava sem uma palavra. A ponte entrega o corpo desde 01/09:
-    `ponte.resultado` (`interface/pacotes/ponte.py:241`) devolve o `result` do
+    `ponte.resultado` (`interface/pacotes/ponte.py:244`) devolve o `result` do
     daemon e levanta quando ninguém responde. Era um caminho que já existia e
     esta aba não chamava.
 
@@ -4100,7 +4100,7 @@ SEM_GESTO = {
 #:
 #: O `state_full` do daemon publica `active_profile` — o NOME — e mais nada do
 #: conteúdo do perfil. Nem `button_actions` nem `key_bindings` aparecem entre as
-#: chaves do payload (`daemon/ipc_handlers.py:2509`). Logo a régua que compara o
+#: chaves do payload (`daemon/ipc_handlers.py:2799`). Logo a régua que compara o
 #: estado do daemon antes e depois do clique não tem como ver o efeito destes
 #: dois, por mais que eles funcionem — e eles funcionam:
 #:

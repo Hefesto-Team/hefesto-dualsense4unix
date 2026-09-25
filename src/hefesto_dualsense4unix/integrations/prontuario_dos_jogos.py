@@ -46,7 +46,7 @@ QUEM O CHAMA, E O QUE ELE ESCREVE
 100% stdlib, para rodar no `python3` do sistema sem venv. Mas ele é módulo de
 BANCADA: medido em 21/08/2026, NENHUM chamador em produção o invoca — nem o
 `doctor.sh`, nem a janela. `grep -rn prontuario_dos_jogos src scripts
-install.sh uninstall.sh assets` devolve só menções em prosa (`schema.py:670`,
+install.sh uninstall.sh assets` devolve só menções em prosa (`schema.py:980`,
 `ponte_escada.py:123`, `steam_input_ponte.py:5`, `hotkey.py:449`). Quem o roda
 é gente, por `python -m
 hefesto_dualsense4unix.integrations.prontuario_dos_jogos`, e a suíte — e a

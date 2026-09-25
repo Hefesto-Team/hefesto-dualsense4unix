@@ -2295,7 +2295,7 @@ DICA_MIC_TESTAR = ("Liga o retorno: você se ouve enquanto ele estiver aceso, "
 #
 # QUAL É O PREÇO, medido no protocolo e não suposto: o DualSense **não devolve**
 # o registrador de volume, então a primeira escrita faz o Hefesto assumir a
-# posse (`ipc_handlers.py:4212` — o daemon só publica `speaker` depois dela) e
+# posse (`ipc_handlers.py:4332` — o daemon só publica `speaker` depois dela) e
 # não há caminho de volta por esta tela. É menor que o do microfone porque nada
 # aqui tira o comando das mãos de quem está com o controle: não há botão de
 # alto-falante no plástico.

@@ -1129,7 +1129,7 @@ def rota_na_tela(entry: Any) -> str:
     valor vazio, e no alvo `classe` com `data-hef-quando` nenhum dos dois casa
     com `—`: os dois botões ficam apagados, que é o que a tela pode afirmar
     quando o daemon nunca publicou `speaker` para este controle — o estado real
-    de quem nunca recebeu um `speaker.set` (`ipc_handlers.py:4212`).
+    de quem nunca recebeu um `speaker.set` (`ipc_handlers.py:4332`).
 
     ELE TAMBÉM APAGA OS TRÊS NA ROTA 1 (mono no fone), e isso é de propósito:
     é rota legítima do protocolo que estes botões não representam, e acender o
@@ -2774,7 +2774,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         #
         # `None` = o daemon nunca publicou `speaker` para este controle, que é o
         # estado real de quem nunca recebeu um `speaker.set` — o registrador não
-        # se lê, só se escreve (`ipc_handlers.py:4212`).
+        # se lê, só se escreve (`ipc_handlers.py:4332`).
         sp_lido = speaker_do_entry(c)
         # A COR DA BARRA DE LUZ, pelo dono das CINCO situações. **Os DOIS
         # valores são usados**: o rótulo é o discriminador e a base é a cor.
@@ -3095,7 +3095,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             #      comando): `texto_volume(102, False)` = **"100 %"**;
             #   2. `sp.get('volume', 0)` transformava AUSÊNCIA em **zero**. O
             #      daemon só publica `speaker` depois do primeiro `speaker.set`
-            #      (`ipc_handlers.py:4212`) — antes dele a tela afirmava "0%"
+            #      (`ipc_handlers.py:4332`) — antes dele a tela afirmava "0%"
             #      sobre um alto-falante que ninguém mediu, que é o gêmeo exato
             #      do "Sem toque" logo abaixo. `speaker_do_entry` devolve `None`
             #      nesse caso, e `None` é o travessão.
@@ -3851,7 +3851,7 @@ def _volume_conhecido(dele: dict[str, Any]) -> dict[str, Any]:
 
     ELE NÃO SE INVENTA, e a razão é do aparelho: o DualSense **não devolve** o
     registrador de volume, então `daemon.state_full` só publica a chave
-    `speaker` depois do primeiro `speaker.set` (`ipc_handlers.py:4212`). Mandar
+    `speaker` depois do primeiro `speaker.set` (`ipc_handlers.py:4332`). Mandar
     um número de palpite tomaria a posse com o valor errado.
 
     E MANDÁ-LO QUANDO SE SABE É O QUE A GUI ESTÁVEL FAZ, pela cura de
@@ -4146,7 +4146,7 @@ def _lembrar_do_som(
     daemon confirmou. O perfil é o REGISTRO do que já está de pé.
 
     E o disco não fica para trás: `ProfileManager.activate` faz
-    `load_profile(name)` a CADA ativação (`profiles/manager.py:288`) — não há
+    `load_profile(name)` a CADA ativação (`profiles/manager.py:289`) — não há
     cópia do `Profile` em memória atravessando ativações, então a próxima
     (hotplug, troca de jogo, boot) lê o que esta função escreveu.
 
@@ -4412,7 +4412,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         #
         # A FRASE É DO PRODUTO, e nenhuma nasce aqui: `frase_do_alvo_do_mic`
         # (`app/widgets/controller_card.py:2346`) é a dona dos três estados, e
-        # `alvo_honrado` (`app/ipc_bridge.py:1168`) é quem os lê do corpo. Os
+        # `alvo_honrado` (`app/ipc_bridge.py:1187`) é quem os lê do corpo. Os
         # dois devolvem "nada a dizer" para `True` e para `None` de propósito —
         # *"não sei" não é "não honrei"*, e inventar a confissão por ausência de
         # notícia acusaria o produto de um erro que ninguém mediu.
@@ -5056,7 +5056,7 @@ def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     **E A FALTA DELES TRANCAVA O ♪.** O DualSense não devolve o volume do
     alto-falante, então o daemon só publica a chave `speaker` **depois** de
-    alguém ESCREVER um (`ipc_handlers.py:4212`); sem escritor nesta tela, o ♪
+    alguém ESCREVER um (`ipc_handlers.py:4332`); sem escritor nesta tela, o ♪
     recusava para sempre num controle cujo volume nunca foi ajustado por outro
     caminho — e a frase de recusa original mandava *"use o controle deslizante
     primeiro"*, sobre um deslizante que não existia. Este gesto é o escritor que
