@@ -65,6 +65,9 @@ class DraftApplier:
         #: O brilho global do rascunho em aplicação — o denominador dos fatores
         #: por controle (`_publicar_escalas_de_brilho`). `None` = sem seção `leds`.
         self._brilho_do_rascunho: float | None = None
+        #: A cor global do rascunho, antes do brilho — o par do brilho acima,
+        #: publicado com ele (`set_led_scales(cor_do_perfil=)`).
+        self._cor_do_rascunho: Any = None
 
     def apply(self, params: dict[str, Any]) -> list[str]:
         # ONDA-U (Causa A): trava manual INCONDICIONAL, no topo — antes vivia
@@ -95,6 +98,9 @@ class DraftApplier:
             _brilho_de(leds_raw.get("lightbar_brightness"))
             if isinstance(leds_raw, dict)
             else None
+        )
+        self._cor_do_rascunho = (
+            leds_raw.get("lightbar_rgb") if isinstance(leds_raw, dict) else None
         )
         self._apply_section(applied, params.get("leds"), "leds", self._apply_leds)
         self._apply_section(applied, params.get("triggers"), "triggers", self._apply_triggers)
@@ -382,7 +388,11 @@ class DraftApplier:
             if fator != 1.0:
                 escalas[str(uniq)] = fator
         try:
-            escalar(escalas or None, brilho_do_perfil=base)
+            escalar(
+                escalas or None,
+                brilho_do_perfil=base,
+                cor_do_perfil=self._cor_do_rascunho,
+            )
         except TypeError:
             escalar(escalas or None)
 

@@ -340,7 +340,9 @@ def _na_escala(tom: RGB, brilho: float | None) -> RGB:
     return LedSettings(lightbar=tom).apply_brightness(brilho).lightbar
 
 
-def reescalar(acesa: RGB, de: float, para: float) -> RGB:
+def reescalar(
+    acesa: RGB, de: float, para: float, extras: tuple[RGB, ...] = ()
+) -> RGB:
     """A luz `acesa`, que está no brilho `de`, levada ao brilho `para`.
 
     O BRILHO ENTRA UMA VEZ SÓ — A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01,
@@ -354,9 +356,17 @@ def reescalar(acesa: RGB, de: float, para: float) -> RGB:
     (o global dela, `#2850B4`) não há tom a provar, e vale a razão, como antes.
     O tom tem de ser ÚNICO: abaixo de 1% o vermelho, o rosa e o laranja acendem
     o mesmo `(1,0,0)`, e escolher um deles seria trocar a cor pelo brilho.
+
+    `extras` são tons a mais que o chamador SABE que estão na base — o global
+    do perfil (conferência, 25/09/2026). Sem a paleta, o controle no global
+    com o brilho dele saía pela razão, com duas truncagens: o P4 a 30% do
+    trilho acendia `(12,24,54)` e o perfil reaplicado `(11,23,53)`; com o
+    perfil a 2% e o controle a 100%, o `#2850B4` virava `(0,50,150)`, sem o
+    vermelho. Com o global entre os tons, a conta é a do trilho.
     """
     if de > 0.0:
-        tons = [t for t in _PLAYER_SLOT_COLORS.values() if _na_escala(t, de) == acesa]
+        candidatos = dict.fromkeys((*_PLAYER_SLOT_COLORS.values(), *extras))
+        tons = [t for t in candidatos if _na_escala(t, de) == acesa]
         if len(tons) == 1:
             return _na_escala(tons[0], para)
     fator = para / de if de > 0.0 else 0.0

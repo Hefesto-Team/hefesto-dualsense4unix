@@ -70,7 +70,7 @@ from hefesto_dualsense4unix.core.led_control import (
 from hefesto_dualsense4unix.core.speaker_scale import volume_do_percentual
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Mapping
+    from collections.abc import Callable, Iterable, Mapping, Sequence
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -701,6 +701,24 @@ def _spec_fields(spec: OutputSpec) -> dict[str, Any]:
         for name in _OUTPUT_FIELDS
         if getattr(spec, name) is not None
     }
+
+
+def _rgb_do_perfil(cru: Sequence[int] | None) -> tuple[int, int, int] | None:
+    """A cor global do perfil como tom (três bytes), ou `None` quando não é cor.
+
+    O preto não é cor (`led_control.cor_escolhida`, ordem dela de 22/09) e o
+    que não tem três bytes não é tom: nos dois casos o global não entra na
+    conta de uma vez só, e o controle nele sai pela razão, como antes.
+    """
+    if cru is None:
+        return None
+    try:
+        r, g, b = (int(c) for c in cru)
+    except (TypeError, ValueError):
+        return None
+    if not all(0 <= c <= 255 for c in (r, g, b)) or (r, g, b) == (0, 0, 0):
+        return None
+    return (r, g, b)
 
 
 def _merge_desired(default: _DesiredOutput, override: _DesiredOutput | None) -> _DesiredOutput:
@@ -2051,6 +2069,12 @@ class PyDualSenseController(IController):
     #: `_exposicao_do_no` acima. `None` = ninguém publicou, e o tom deslocado
     #: sai cheio, como antes.
     _brilho_do_perfil: float | None = None
+    #: A COR GLOBAL DO PERFIL, antes do brilho, publicada junto com o brilho
+    #: dele (`set_led_scales`). É o tom que a base carrega quando não é a
+    #: paleta, e com ele o fator entra numa conta só também no global
+    #: (conferência da A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01). `None` = não se
+    #: sabe, e o global sai pela razão, como antes.
+    _cor_do_perfil: tuple[int, int, int] | None = None
 
     def __init__(self, evdev_reader: EvdevReader | None = None) -> None:
         # chave (serial/MAC ou path) -> handle aberto. O `dict` preserva ordem
@@ -2960,7 +2984,11 @@ class PyDualSenseController(IController):
         para = self._brilho_da_peca_locked(uniq)
         if base is not None and para is not None:
             r, g, b = desired.led
-            return replace(desired, led=reescalar((int(r), int(g), int(b)), base, para))
+            extras = () if self._cor_do_perfil is None else (self._cor_do_perfil,)
+            return replace(
+                desired,
+                led=reescalar((int(r), int(g), int(b)), base, para, extras),
+            )
         return replace(
             desired,
             led=tuple(  # type: ignore[arg-type]
@@ -6728,6 +6756,7 @@ class PyDualSenseController(IController):
         scales: Mapping[str, float] | None = None,
         *,
         brilho_do_perfil: float | None = None,
+        cor_do_perfil: Sequence[int] | None = None,
     ) -> None:
         """SUBSTITUI o mapa de escala de brilho por-uniq (R-20 item 2).
 
@@ -6748,6 +6777,12 @@ class PyDualSenseController(IController):
         é o brilho em que cada peça acende, e é nele que a regra de cor única
         desloca o tom (`led_control.cores_sem_colisao`,
         A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01). `None` guarda o anterior.
+
+        `cor_do_perfil` é a cor GLOBAL do perfil antes do brilho (`None` quando
+        não há, como o preto que não é cor). Vai sempre com o brilho, e é o
+        par dele: publicar o brilho sem a cor diz *"não se sabe o global"*, e
+        o controle no global volta à razão. Com ela, o fator entra numa conta
+        só também no global (`led_control.reescalar`, conferência).
         """
         novo: dict[str, float] = {}
         for uniq, fator in (scales or {}).items():
@@ -6760,6 +6795,7 @@ class PyDualSenseController(IController):
             self._led_scale_by_uniq = novo
             if brilho_do_perfil is not None:
                 self._brilho_do_perfil = max(0.0, min(1.0, float(brilho_do_perfil)))
+                self._cor_do_perfil = _rgb_do_perfil(cor_do_perfil)
 
     def _brilho_da_peca_locked(self, uniq: str) -> float | None:
         """O brilho em que `uniq` acende: o do perfil vezes o fator dele. Sob `_io_lock`.
