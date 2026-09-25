@@ -6,6 +6,21 @@
 ## re-rodar nao quebra; udevadm trigger refaz device nodes.
 
 post_install() {
+    # A REGRA DO NO TROCOU DE NOME em 25/09/2026 (70-ps5-controller ->
+    # 73-hefesto-ps5-controller). A copia em /etc e do install-host-udev.sh,
+    # fora do manifesto do pacman, e so sombreia a do pacote com o MESMO nome:
+    # a 70 fechada que ficou em /etc deixava a 73 ABERTA deste pacote falar
+    # por ultimo, e o no do DualSense voltava a nascer aberto. O mv leva a
+    # escolha de quem instalou (fechada ou aberta) para o nome de hoje.
+    if [ -e /etc/udev/rules.d/70-ps5-controller.rules ]; then
+        if [ -e /etc/udev/rules.d/73-hefesto-ps5-controller.rules ]; then
+            rm -f /etc/udev/rules.d/70-ps5-controller.rules
+        else
+            mv -f /etc/udev/rules.d/70-ps5-controller.rules \
+                /etc/udev/rules.d/73-hefesto-ps5-controller.rules
+        fi
+    fi
+
     echo ">>> Recarregando udev rules para o DualSense..."
     udevadm control --reload-rules
     udevadm trigger
@@ -76,6 +91,11 @@ pre_remove() {
               /etc/systemd/system/hefesto-hidraw-broker.socket
         systemctl daemon-reload 2>/dev/null || true
     fi
+    # A regra do no FECHADA que o helper gravou em /etc sai junto com o
+    # broker (25/09/2026): sem quem o abra, o DualSense fisico nasceria
+    # 0600 root para sempre. Os dois nomes: o de hoje e o de ate 25/09/2026.
+    rm -f /etc/udev/rules.d/73-hefesto-ps5-controller.rules \
+          /etc/udev/rules.d/70-ps5-controller.rules
 
     # Onda T (corretor, achado #9): o modulo DKMS hefesto-hid-nintendo e
     # construido FORA do manifesto do pacman (install-host-udev.sh) — sem

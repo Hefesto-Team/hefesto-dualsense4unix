@@ -61,6 +61,13 @@ case "$1" in
                   /etc/systemd/system/hefesto-hidraw-broker.socket
             systemctl daemon-reload 2>/dev/null || true
         fi
+        # A regra do nó FECHADA que o helper gravou em /etc sai junto com o
+        # broker (O-FISICO-NASCE-ESCONDIDO-EM-QUALQUER-MAQUINA-01, 25/09/2026):
+        # sem quem o abra, o DualSense físico nasceria 0600 root para sempre.
+        # As duas metades da cura viajam juntas, ou nenhuma. Os dois nomes: o
+        # de hoje e o de até 25/09/2026.
+        rm -f /etc/udev/rules.d/73-hefesto-ps5-controller.rules \
+              /etc/udev/rules.d/70-ps5-controller.rules
         # Onda T (corretor, achado #9): o modulo DKMS hefesto-hid-nintendo e
         # construido FORA do manifesto do dpkg (install-host-udev.sh) — sem
         # este bloco, apt remove deixava o modulo patchado registrado no
