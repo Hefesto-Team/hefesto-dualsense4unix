@@ -159,6 +159,7 @@ from . import (
     MARCAS_DO_LUGAR,
     NOME_SEM_LEITURA,
     SEM_NINGUEM_AQUI,
+    TODOS_OS_LUGARES,
     TRAVESSAO,
     Contexto,
     identidade_de,
@@ -2036,7 +2037,16 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # O VERDE DE QUEM NAVEGA vai para o cartão do PRIMÁRIO, e só para ele.
         # O gerador o crava no P1 do desenho; sem esta chave ele ficava lá com
         # a mesa vazia, ou com outro controle no comando.
-        MARCAS_DO_LUGAR: {"navega": [str(chefe.get("uniq") or "")] if chefe else []},
+        MARCAS_DO_LUGAR: {
+            "navega": [str(chefe.get("uniq") or "")] if chefe else [],
+            # O LUGAR QUE TEM DONO PERDE A CARA DE VAZIO — A-MIRA-NA-NAVEGACAO-02,
+            # 25/09/2026, medido no piloto: o P3 e o P4 nascem `nav-ctl vazia`
+            # no desenho, e o passo `1c` do piloto só tira o `off` (a palavra
+            # das outras abas). Com os quatro na mesa, o P3 e o P4 ficavam
+            # esmaecidos ao lado de «BT • Move o cursor». A classe acende nos
+            # lugares sem dono e apaga nos outros, pela mesma chave do verde.
+            "vazia": sorted(TODOS_OS_LUGARES - {str(m.get("pref") or "") for m in ctx.mesa}),
+        },
         # A FOLHA VIVA DO PLÁSTICO. Ela vai por `blocos` e não por campo porque
         # o casco do desenho é `var(--z-…)` dentro do SVG, e o piloto não tem
         # alvo que escreva variável CSS — ver `folha_do_plastico`.
