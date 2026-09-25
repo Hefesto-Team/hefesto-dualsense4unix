@@ -478,6 +478,12 @@ def test_o_brilho_da_cor_so_explica_a_mesma_cor(mesa_de):
     assert ctl.brilho_da_barra_para(u) == 0.5
     ctl.apply_output_for(u, OutputSpec(led=(10, 20, 30)))
     assert ctl.brilho_da_barra_para(u) is None, "a cor sem brilho herdou o da cor de antes"
+    # O OUTRO ESCRITOR DA CAMADA DA USUÁRIA, o `set_led` com o seletor no
+    # controle, não passa pelo carimbo: a cor que ele deixa não herda o brilho.
+    ctl.apply_output_for(u, OutputSpec(led=_na(ROXO, 0.5)), brilho_da_cor=0.5)
+    with ctl._io_lock:
+        ctl._record_desired_locked(MACS[0], {"led": (10, 20, 30)})
+    assert ctl.brilho_da_barra_para(u) is None, "a cor do seletor herdou o brilho do roxo"
     ctl.apply_output_for(u, OutputSpec(led=_na(ROXO, 0.5)), brilho_da_cor=0.5)
     ctl.clear_user_output_overrides()
     assert ctl.brilho_da_barra_para(u) == pytest.approx(BRILHO_GLOBAL)
