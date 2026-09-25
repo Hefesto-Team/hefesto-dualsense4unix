@@ -538,7 +538,9 @@ def _conferir_o_ciclo(dubles: Dubles, leitor: _Leitor, saida: str) -> None:
     assert modo == "0600", f"a captura nasceu {modo}; tem de nascer 0600"
     assert modo_da_pasta == "0700", f"a pasta da captura é {modo_da_pasta}"
     assert leitor.lidas == [(caminho, 0o600)], (
-        f"a captura foi lida {leitor.lidas}; tem de continuar 0600 até a leitura"
+        "a captura foi lida com "
+        + ", ".join(f"{modo_lido:04o}" for _, modo_lido in leitor.lidas)
+        + "; tem de continuar 0600 até a leitura"
     )
     entregas = [
         linha for linha in dubles.log_sudo.read_text(encoding="utf-8").splitlines()
