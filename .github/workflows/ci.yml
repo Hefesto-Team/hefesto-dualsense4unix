@@ -229,6 +229,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      # O-CI-DA-DEV-VOLTA-A-VERDE-01 (25/09/2026): o passo da citação em
+      # comentário de código é um `pytest`, e este job só tinha o Python —
+      # reprovou com `No module named pytest` na corrida 36119169814. Entra o
+      # pytest, e só ele: o job LÊ a árvore e não importa o produto (o
+      # `tests/conftest.py` cede a vez quando as dependências dele não estão).
+      - name: Instalar o pytest
+        run: python -m pip install pytest
       - name: Varredura de referências
         run: python3 scripts/validar-referencias-docs.py --all
       # CITACOES-DERIVADAS-01 (13/08). O passo acima confere o ARQUIVO; este
@@ -280,6 +287,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      # O-CI-DA-DEV-VOLTA-A-VERDE-01 (25/09/2026): três passos deste job são
+      # `pytest`, e ele só tinha o Python — o primeiro reprovou com
+      # `No module named pytest` na corrida 36119169814. Entra o pytest, e só
+      # ele, pela mesma razão do job dos documentos.
+      - name: Instalar o pytest
+        run: python -m pip install pytest
       # A referência vem do EVENTO, nunca de `HEAD~1` fixo — o mesmo desenho
       # de `anonymity-check.yml:41-49`: num PR de vários commits, `HEAD~1`
       # compararia contra o commit anterior em vez da base, e um renome feito
