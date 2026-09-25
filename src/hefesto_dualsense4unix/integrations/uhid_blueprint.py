@@ -34,9 +34,9 @@ O feature 0x09 (pairing) NUNCA é fossilizado de um controle real — ele carreg
 MAC do device e o MAC do host pareado (identidade). O template abaixo tem as
 duas áreas de MAC zeradas e só preserva a assinatura `08 25 00` (bytes 7-9) que
 o report real exibe; o `start()` do vpad carimba os bytes 1..6 com o MAC forjado
-do jogador (`player_mac()` → `02:fe:00:00:00:0N`, em little-endian) — é o que o
-probe do `hid_playstation` lê (`dualsense_get_mac_address`), e MAC duplicado
-derruba o probe com -EEXIST.
+que ele VESTE (`UhidDualSense.mac`, `02:fe:…`, em little-endian) — é o que o
+probe do `hid_playstation` lê (`dualsense_get_mac_address`); MAC duplicado
+derrubaria o probe com -EEXIST, e o dono dos vivos nunca o repete.
 
 Limitações aceitas (decisão dos sprints VPAD-03/BT-01)
 ------------------------------------------------------
@@ -112,8 +112,8 @@ CANONICAL_FEATURE_0X20: bytes = bytes.fromhex(
 #: do hid-playstation.c). SANITIZADO por construção: bytes 1..6 (MAC do device)
 #: e 10..15 (MAC do host pareado) zerados; bytes 7-9 preservam a assinatura
 #: `08 25 00` do report real. O MAC de verdade entra em runtime — o `start()`
-#: do vpad sobrescreve os bytes 1..6 com o MAC forjado do jogador
-#: (`02:fe:00:00:00:0N`, LE), que é o único campo que o probe USB lê.
+#: do vpad sobrescreve os bytes 1..6 com o MAC forjado que ele veste
+#: (`UhidDualSense.mac`, `02:fe:…`, LE), que é o único campo que o probe USB lê.
 TEMPLATE_FEATURE_0X09: bytes = bytes.fromhex(
     "0900000000000008250000000000000000000000"
 )

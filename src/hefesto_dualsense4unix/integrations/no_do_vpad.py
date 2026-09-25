@@ -41,7 +41,7 @@ DualSense Edge de verdade de distância de medir o aparelho errado.
 `/dev/uhid`, no mesmíssimo lugar. Topologia de sysfs não separa nada aqui.
 
 A régua é a do `scripts/identidade_do_vpad.py`, e é a mesma: o `uniq`
-(`02:fe:00:00:00:0N`, faixa localmente administrada, que por definição não
+(`02:fe:…`, faixa localmente administrada, que por definição não
 colide com endereço de fábrica) e o `phys` (`hefesto-vpad`, uma palavra que só
 este produto escreve). Aqui o `uniq` vem do PRÓPRIO objeto vpad, não de uma
 heurística: o produto pergunta a si mesmo.
@@ -252,7 +252,7 @@ def resolver_no_do_vpad(
 ) -> dict[str, Any]:
     """`{evdev, hidraw, ino, hidraw_ino}` do vpad com este `uniq`/`nome`.
 
-    `uniq` é o MAC forjado (`vpad.mac`, `02:fe:00:00:00:0N`) e é a régua forte;
+    `uniq` é o MAC forjado que o vpad VESTE (`vpad.mac`, `02:fe:…`) e é a régua forte;
     `nome` é o `vpad.name`, que serve para (a) escolher o gamepad entre os
     irmãos do mesmo aparelho e (b) achar o vpad de uinput, que não tem `uniq`.
 
