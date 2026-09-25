@@ -51,6 +51,9 @@ from monta import TITULOS_DA_FITA  # noqa: E402
 # escritas do mesmo rótulo é como o desenho e o produto divergem calados.
 from pacotes.a06_navegacao import (  # noqa: E402
     ENDERECO_DA_RESSALVA,
+    PAPEL_DO_CURSOR,
+    PAPEL_QUE_NAVEGA,
+    PAPEL_SO_A_JANELA,
     PREFIXO_DA_TROCA,
     ROTULOS_DA_TROCA,
     chips_da_fita,
@@ -2962,6 +2965,18 @@ MIOLO = f'''
 {BLOCO_DA_TINTA}'''
 
 LEGENDA = f'''<div class="nota">
+  <h2>O que mudou em 25/09</h2>
+  <ul>
+    <li><b>O cartão de quem não navega diz <i>{PAPEL_DO_CURSOR}</i> quando a
+    Mira Virtual dele está acesa na Navegação.</b> O giro daquele controle já
+    movia o cursor do computador, e o cartão continuava dizendo <i>{PAPEL_SO_A_JANELA}</i>.
+    Fica <i>{PAPEL_SO_A_JANELA}</i> com a Mira apagada, com o Status do Modo desligado
+    e fora da Navegação: no Sony DualSense e no Xbox a Mira vai ao analógico
+    direito do jogo, e no Nativo ela não anda. O desenho mostra a Mira apagada
+    nos quatro, como a aba Controles; é o produto que troca a palavra, a cada
+    tique, em todo controle que não navega, no USB e no BT.</li>
+  </ul>
+
   <h2>Um botão virou dois, e uma pop-up virou duas</h2>
   <ul>
     <li><b>O que ela pediu, e por quê.</b> <i>"aba navegação no botão Definições e
@@ -3085,8 +3100,10 @@ LEGENDA = f'''<div class="nota">
     <code>hotkey_manager.observe</code> (<code>:4757</code>); os secundários do
     co-op têm um caminho só, o do gamepad virtual
     (<code>daemon/subsystems/coop.py:2057</code>). Por isso o cartão do
-    <b>Player {NAVEGA}</b> diz <i>Navega o PC</i> e os outros dizem <i>Só a
-    janela</i>, e por isso o desenho que acende no combo é o dele. A
+    <b>Player {NAVEGA}</b> diz <i>{PAPEL_QUE_NAVEGA}</i> e os outros dizem <i>{PAPEL_SO_A_JANELA}</i>,
+    e por isso o desenho que acende no combo é o dele. A exceção é o giro: na
+    Navegação, quem acende a Mira Virtual move o cursor com ele, e o cartão
+    diz <i>{PAPEL_DO_CURSOR}</i>. A
     <b>Navegação Interna</b> é a outra metade: com ela ligada, cada jogador anda
     na janela do Hefesto no seu próprio card.</li>
     <li><b>O realce do combo estava morto em três das cinco linhas.</b> A regra
@@ -3131,9 +3148,11 @@ LEGENDA = f'''<div class="nota">
     único porque é lá que ela responde a pergunta da aba sem custar altura. Se você
     quiser os quatro <b>maiores</b>, eles cabem numa fileira própria — mas aí a aba
     passa da dobra, e as tabelas de baixo já estão em telas à parte por isso.</li>
-    <li><b>O cartão diz "Só a janela"</b> para os outros três. É o que o produto
-    faz hoje com a Navegação Interna ligada. Se você preferir que os quatro
-    disputem o cursor do PC, isso é código novo no daemon, não desenho.</li>
+    <li><b>O cartão diz "{PAPEL_SO_A_JANELA}"</b> para os outros três: os analógicos
+    deles andam só na janela do Hefesto, com a Navegação Interna ligada. O giro
+    de quem acende a Mira Virtual soma no mesmo cursor, e aí o cartão diz
+    "{PAPEL_DO_CURSOR}". Se você preferir que os quatro disputem o cursor pelos
+    analógicos também, isso é código novo no daemon, não desenho.</li>
   </ul>
 </div>
 
@@ -3210,7 +3229,10 @@ def _conferir(doc):
     _fileira = _fileira[1].split('<div class="combos">', 1)[0]
     for pedaco in _fileira.split('class="nav-ctl vazia"')[1:]:
         bloco = pedaco.split('class="nav-ctl', 1)[0]
-        exigir("Só a janela" not in bloco and "Navega o PC" not in bloco,
+        # OS TRÊS PAPÉIS, do dono — o terceiro, «Move o cursor», é da
+        # A-MIRA-NA-NAVEGACAO-02: um lugar vazio não move cursor nenhum.
+        exigir(all(papel not in bloco for papel in
+                   (PAPEL_SO_A_JANELA, PAPEL_QUE_NAVEGA, PAPEL_DO_CURSOR)),
                "um lugar vazio diz o que ele navega — e ele não navega nada")
 
     # 1-bis. OS QUATRO LUGARES TÊM O MESMO CONJUNTO DE `data-campo` — a régua
