@@ -25,12 +25,16 @@ O QUE ESTA RÉGUA MEDE, e nada aqui digita um valor: cada um sai da conf.
 - nenhuma fala ou rótulo que executa digita `opção=valor` de uma opção que
   tem conf dona;
 - o ensaio de verdade (a função `_ensaio_camada`, recortada do `install.sh`)
-  diz o valor da conf.
+  diz o valor da conf;
+- o comando de root que o `install-host-udev.sh` MONTA (sem executá-lo)
+  escreve a quente, em cada opção com conf dona, o valor dela.
 
 A MORDIDA, medida: devolver o `printf '2' | sudo tee …/feature_retries` à lib
 reprova a da escrita a quente; devolver o `(feature_retries=2 …)` ao rótulo
 reprova a da fala e a do ensaio; tirar a recusa de forma estranha do leitor do
-caminho por pacote reprova a do valor estranho. md5 conferido em cada volta.
+caminho por pacote reprova a do valor estranho; e perguntar à conf ERRADA no
+caminho por pacote (sem digitar nada) só a do comando de root reprova. md5
+conferido em cada volta.
 """
 
 from __future__ import annotations
@@ -240,3 +244,55 @@ def test_o_ensaio_do_hid_playstation_diz_o_feature_retries_da_conf(tmp_path: Pat
     linha = [x for x in r.stdout.splitlines() if "hefesto-hid-playstation.conf" in x]
     assert linha, r.stdout
     assert f"(feature_retries={valor} +" in linha[0], linha[0]
+
+
+# ---------------------------------------------------------------------------
+# 4. O comando elevado do caminho por pacote escreve o valor da conf
+# ---------------------------------------------------------------------------
+
+#: O que `_build_install_cmd` lê do escopo do script. Só strings: a função
+#: MONTA o comando de root e o devolve, e nada dele é executado aqui.
+_ESCOPO_DO_PACOTE = (
+    'BROKER_BIN_SRC="" BROKER_INSTALL_OK=0 BROKER_SESSION_GROUP="" BROKER_SESSION_UID=0',
+    'BROKER_UNITS_SRC="" BTRES_INSTALL_OK=0 BTRES_SCRIPTS_SRC="" BTRES_UNIT_SRC=""',
+    'BTUSB_SRC="$1" HIDNINTENDO_SRC="$1" HIDPLAYSTATION_SRC="$1"',
+    'MODLOAD_DEST=/x MODLOAD_SRC="" REGRA_70=x REGRA_70_SRC=x RULES=() RULES_DEST=/x',
+    'RULES_SRC=/x SNDQUIRK_DEST=/x SNDQUIRK_SRC=""',
+)
+
+
+def test_o_comando_de_root_dos_pacotes_escreve_a_quente_o_valor_da_conf() -> None:
+    """A escrita que ia `2` ao `feature_retries` do módulo carregado, medida no
+    comando que o `install-host-udev.sh` monta — sem executá-lo."""
+    script = "\n".join(
+        (
+            "set -euo pipefail",
+            *_ESCOPO_DO_PACOTE,
+            LEITORES["install-host-udev.sh"],
+            _funcao(HOST_UDEV, "_build_install_cmd"),
+            "_build_install_cmd",
+        )
+    )
+    r = subprocess.run(
+        [BASH, "-c", script, "pacote", str(CONFS)],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+        env={"PATH": "/usr/bin:/bin"},
+    )
+    assert r.returncode == 0, r.stderr
+    escritas = {
+        (modulo, opcao): valor
+        for valor, modulo, opcao in re.findall(
+            r"printf '([^']*)' > /sys/module/(\w+)/parameters/(\w+)", r.stdout
+        )
+    }
+    com_dono = {chave: v for chave, v in escritas.items() if chave in OPCOES}
+    assert ("hid_playstation", "feature_retries") in com_dono, sorted(escritas)
+    errados = sorted(
+        f"{m}.{o}: escreve {v!r}, a conf diz {OPCOES[(m, o)][0]!r}"
+        for (m, o), v in com_dono.items()
+        if v != OPCOES[(m, o)][0]
+    )
+    assert errados == [], errados
