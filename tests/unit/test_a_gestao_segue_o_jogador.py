@@ -16,7 +16,9 @@ tela, e este arquivo guarda as três.
    a palavra ao dono (`home_actions.palavra_do_transporte`) e nunca a digita: a
    régua de 06/09 que negava `"USB"` teria reprovado a decisão dela.
 3. **OS TEXTOS QUE NEGAVAM O SOM PELO RÁDIO.** O som sai pelo `0x35` desde
-   10/09, e a `PonteDeSomPorRadio` o escreve por controle.
+   10/09, e a `PonteDeSomPorRadio` o escreve por controle. Os três que a
+   sprint nomeia, e os quatro que o grep da frase achou citando a proibição
+   que o mapa trocou pelo `0x35`.
 
 POR QUE NUM WEBKIT DE VERDADE: quem decide qual chip acende é a cascata, com
 `:has()` e `:checked`, e reimplementá-la em Python seria medir a reimplementação.
@@ -40,7 +42,9 @@ MORDIDAS (todas rodadas em 24/09/2026):
 * devolva «no rádio»/«no cabo» a uma frase da 08, ou a um dos donos que ela
   pinta, e o caso daquela frase reprova nomeando-a;
 * devolva «não escreve no aparelho» ao cabeçalho do `alto_falante_bt.py` e o
-  caso do cabeçalho reprova.
+  caso do cabeçalho reprova;
+* a régua da proibição que caiu nasceu ANTES da cura e reprovou os quatro
+  cabeçalhos que ainda a citavam, cada um pela frase dele.
 """
 from __future__ import annotations
 
@@ -534,8 +538,61 @@ def test_o_cabecalho_nao_nega_o_som_pelo_radio(relativo: str) -> None:
     escreve é o ensaio"* ao cabeçalho do `alto_falante_bt.py` — reprova.
     """
     doc = ast.get_docstring(ast.parse((RAIZ / relativo).read_text(encoding="utf-8"))) or ""
-    baixa = doc.lower()
+    baixa = " ".join(doc.lower().split())
     negou = [f for f in _O_QUE_NEGAVA if f in baixa]
     assert not negou, f"o cabeçalho de {relativo} ainda nega o som pelo rádio: {negou}"
     assert "PonteDeSomPorRadio" in doc and "0x35" in doc, (
         f"o cabeçalho de {relativo} não diz quem escreve o som no rádio, nem o degrau")
+
+
+#: OS OUTROS QUE NEGAVAM, MEDIDOS POR GREP DA FRASE — a sprint nomeava três
+#: textos, e o grep achou mais quatro com a mesma negação: o cabeçalho da régua
+#: do som, o da bomba (07/09), o do byte `[2]` (08/09) e o do ensaio (06/09).
+#: Os quatro nasceram antes da orelha dela e citavam a proibição que o mapa
+#: trocou pelo `0x35` em 10/09; o do byte `[2]` dizia ainda que ela estava
+#: transcrita no cabeçalho do `alto_falante_bt.py`, que esta sprint curou.
+_OS_QUE_CITAVAM_A_PROIBICAO = (
+    "tests/unit/test_o_som_que_sai_do_sink_ao_byte.py",
+    "tests/unit/test_a_bomba_do_som_no_radio.py",
+    "tests/unit/test_o_byte_dois_e_a_variavel_que_ninguem_variou.py",
+    "scripts/ensaios/o_som_que_sai.py",
+)
+
+#: A proibição de antes de 10/09, e o que ela concluía. Minúsculas.
+_A_PROIBICAO_QUE_CAIU = (
+    "mandou um byte de áudio por rádio",
+    "não escrever, em lugar nenhum",
+    "não funciona, e não há ponte",
+    "até a orelha dela decidir",
+)
+
+
+def _docstrings_de(relativo: str) -> dict[str, str]:
+    """O cabeçalho e, na régua do som, a docstring de `TestNadaAquiAfirmaQueSomSaiu`."""
+    arvore = ast.parse((RAIZ / relativo).read_text(encoding="utf-8"))
+    docs = {"o cabeçalho": ast.get_docstring(arvore) or ""}
+    for no in arvore.body:
+        if isinstance(no, ast.ClassDef) and no.name == "TestNadaAquiAfirmaQueSomSaiu":
+            docs[no.name] = ast.get_docstring(no) or ""
+    return docs
+
+
+@pytest.mark.parametrize("relativo", _OS_QUE_CITAVAM_A_PROIBICAO)
+def test_o_texto_nao_cita_a_proibicao_que_caiu(relativo: str) -> None:
+    """O som saiu pelo rádio em 10/09, e o texto o conta pelo degrau: o `0x35`.
+
+    MORDIDA: devolva *"ninguém desta casa mandou um byte de áudio por rádio"* ao
+    cabeçalho de `test_o_som_que_sai_do_sink_ao_byte.py` — reprova.
+    """
+    docs = _docstrings_de(relativo)
+    if relativo.endswith("test_o_som_que_sai_do_sink_ao_byte.py"):
+        assert "TestNadaAquiAfirmaQueSomSaiu" in docs, (
+            "a classe TestNadaAquiAfirmaQueSomSaiu sumiu — a régua ficou cega")
+    for quem, doc in docs.items():
+        # A QUEBRA DE LINHA NÃO ESCONDE A FRASE: «Não funciona, e» numa linha e
+        # «não há ponte» na seguinte é a mesma frase.
+        corrido = " ".join(doc.lower().split())
+        ainda = [f for f in _A_PROIBICAO_QUE_CAIU if f in corrido]
+        assert not ainda, f"{quem} de {relativo} ainda cita a proibição que caiu: {ainda}"
+    assert "0x35" in docs["o cabeçalho"], (
+        f"o cabeçalho de {relativo} não diz o degrau que tocou")

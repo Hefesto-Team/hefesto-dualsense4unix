@@ -5,11 +5,11 @@ vê-la reprovar. Régua que passa com a cura arrancada não mede nada.
 
 O QUE ESTAS RÉGUAS **NÃO** MEDEM, dito antes de qualquer asserção
 ------------------------------------------------------------------
-Elas não medem que som saiu de aparelho nenhum, e não podem: ninguém desta
-casa mandou um byte de áudio por rádio. O mapa proíbe a conclusão com todas as
-letras (FALÁCIA DO CANAL QUE RESPONDE), e o que estas réguas cobrem é o que
-está do nosso lado do fio — o tamanho do report, o lugar do CRC, o tamanho do
-quadro Opus, a identidade do nó e o ciclo de vida dele.
+Elas não medem que som saiu de aparelho nenhum, e não podem: o som que saiu
+pelo rádio em 10/09/2026 (o `0x35`, com a orelha dela) se conta pelo degrau, e
+a lição fica no mapa com nome (FALÁCIA DO CANAL QUE RESPONDE). O que estas
+réguas cobrem é o nosso lado do fio — o tamanho do report, o lugar do CRC, o
+tamanho do quadro Opus, a identidade do nó e o ciclo de vida dele.
 
 **Nenhuma delas toca o aparelho, o servidor de som nem a bancada.** Dublês,
 MACs sintéticos e uma lista de um controle: *"a régua não é a mesa desta
