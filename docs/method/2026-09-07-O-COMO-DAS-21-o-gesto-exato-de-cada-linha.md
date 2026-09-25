@@ -228,21 +228,22 @@ roteiro.
 
 **Os passos.**
 
-1. Deixe P1, P2 e P4 exatamente como estão, sem tocar em nenhum.
-2. Pegue o P3, que está desligado.
-3. Dê um toque curto no botão PS do P3 e solte.
-4. Espere a barra de luz dele acender.
-5. Ponha o P3 na mesa.
-6. Deixe o cronômetro desta página correr os dez segundos.
-7. Conte quais das cinco lâmpadas do P3 acenderam.
-8. Confira que acenderam as duas das pontas e a do meio — é o padrão do jogador 3.
-9. Confira que o P3 voltou parado, sem tremer.
-10. Olhe as lâmpadas dos outros três e confira que nenhum mudou de padrão.
-11. Olhe a cor da barra de luz dos quatro e confira que nenhuma trocou de dono.
-12. Abra a aba Iluminação do Hefesto.
-13. Leia a conta no canto de cima à direita: tem de voltar a dizer «2 USB · 2 BT».
-14. Leia a linha «Modelo»: a coluna do P3 voltou com o nome dele e BT, e os outros três continuam nas colunas deles.
-15. Registre nesta página a resposta de cada um dos quatro.
+1. Se o P3 ainda estiver ligado — na mesa, a seção desta linha vem antes da linha 4 —, segure o PS dele até todas as luzes apagarem, confira na aba Iluminação que a coluna dele passou a dizer «P3 • Desconectado», e siga sem demora.
+2. Deixe P1, P2 e P4 exatamente como estão, sem tocar em nenhum.
+3. Pegue o P3, que está desligado.
+4. Dê um toque curto no botão PS do P3 e solte.
+5. Espere a barra de luz dele acender.
+6. Ponha o P3 na mesa.
+7. Deixe o cronômetro desta página correr os dez segundos.
+8. Conte quais das cinco lâmpadas do P3 acenderam.
+9. Confira que acenderam as duas das pontas e a do meio — é o padrão do jogador 3.
+10. Confira que o P3 voltou parado, sem tremer.
+11. Olhe as lâmpadas dos outros três e confira que nenhum mudou de padrão.
+12. Olhe a cor da barra de luz dos quatro e confira que nenhuma trocou de dono.
+13. Abra a aba Iluminação do Hefesto.
+14. Leia a conta no canto de cima à direita: tem de voltar a dizer «2 USB · 2 BT».
+15. Leia a linha «Modelo»: a coluna do P3 voltou com o nome dele e BT, e os outros três continuam nas colunas deles.
+16. Registre nesta página a resposta de cada um dos quatro.
 
 **Passa quando.** O P3 volta como jogador 3 — as mesmas três lâmpadas de antes, na mesma coluna — e os outros três terminam com os números que já tinham. Ninguém foi empurrado para outro lugar para abrir espaço para ele, e ninguém perdeu o seu.
 
@@ -253,7 +254,7 @@ roteiro.
 * **P3** — É ESTE que religa, e é o único que você toca. Está no rádio. Um toque curto no PS, espere a barra de luz acender e ponha-o de volta na mesa. Tem de voltar como jogador 3.
 * **P4** — Não pode mudar de posto. Está no rádio. Não toque nele. É aqui que se vê se alguém tomou o lugar do P3 enquanto ele estava fora — olhe as lâmpadas dele com atenção.
 
-**A armadilha.** Religar pelo cabo é outro teste, com resposta possivelmente diferente — ninguém mediu essa ainda. Religue pelo botão PS, com um toque curto: segurar o PS não dispara nada no Hefesto, e só o toque curto no PS de um controle já ligado abre a Steam. O lugar do P3 fica guardado por trinta segundos — o prazo vale para os quatro lugares, não só para o Jogador 1 —, e dentro dele ninguém troca de número. Se você vem direto da linha 4, o prazo já está correndo desde que a coluna dele passou a dizer «P3 • Desconectado»: os vinte segundos de lá gastaram dois terços dele, e sobram uns dez para o toque no PS. Se você passar dos trinta, o P4 terá descido para 3 — e, com o jogo aberto, terá ido ao boneco 3 —; quando o P3 voltar, os dois voltam ao seu, porque quem volta recupera o dele enquanto o Hefesto estiver de pé, e o jogo perde o P4 por cerca de um segundo em cada troca. Se o P3 voltar com outro número, isso é achado, não demora sua. E se a Steam estiver aberta, a barra e as lâmpadas do P3 continuam as do Hefesto: o controle de verdade nasce escondido dela, e o Hefesto devolve a cor e o número a quem pintar por cima em até um segundo.
+**A armadilha.** Religar pelo cabo é outro teste, com resposta possivelmente diferente — ninguém mediu essa ainda. Religue pelo botão PS, com um toque curto: segurar o PS não dispara nada no Hefesto, e só o toque curto no PS de um controle já ligado abre a Steam. O lugar do P3 fica guardado por trinta segundos — o prazo vale para os quatro lugares, não só para o Jogador 1 —, e dentro dele ninguém troca de número. O prazo corre desde que a coluna dele passou a dizer «P3 • Desconectado»: se você vem direto da linha 4, os vinte segundos de lá gastaram dois terços dele, e sobram uns dez para o toque no PS; se o passo 1 apagou o P3 agora, ele tem os trinta inteiros. Se você passar dos trinta, o P4 terá descido para 3 — e, com o jogo aberto, terá ido ao boneco 3 —; quando o P3 voltar, os dois voltam ao seu, porque quem volta recupera o dele enquanto o Hefesto estiver de pé, e o jogo perde o P4 por cerca de um segundo em cada troca. Se o P3 voltar com outro número, isso é achado, não demora sua. E se a Steam estiver aberta, a barra e as lâmpadas do P3 continuam as do Hefesto: o controle de verdade nasce escondido dela, e o Hefesto devolve a cor e o número a quem pintar por cima em até um segundo.
 
 ---
 
