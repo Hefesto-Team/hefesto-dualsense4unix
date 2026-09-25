@@ -1135,10 +1135,8 @@ def linha_do_cartao(via: str, primario: bool, cursor: bool = False) -> str:
     `move_o_cursor`). Ele não acende a bolinha: o verde é de quem navega, e
     quem navega continua sendo um só.
     """
-    if primario:
-        papel = PAPEL_QUE_NAVEGA
-    else:
-        papel = PAPEL_DO_CURSOR if cursor else PAPEL_SO_A_JANELA
+    papel = (PAPEL_QUE_NAVEGA if primario
+             else PAPEL_DO_CURSOR if cursor else PAPEL_SO_A_JANELA)
     corpo = f"{via}{PONTO}{papel}" if via else papel
     return (BOLINHA if primario else "") + corpo
 
