@@ -9,7 +9,7 @@ import asyncio
 import contextlib
 import os
 import time
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 
 from hefesto_dualsense4unix.core.escritor_cru import (
     PASSO_DA_VIGIA_S,
@@ -1301,6 +1301,51 @@ def vigia_do_sequestro_de(daemon: DaemonProtocol) -> VigiaDoSequestro:
     return vigia
 
 
+#: O-FISICO-NASCE-ESCONDIDO-EM-QUALQUER-MAQUINA-01 (25/09/2026): os marcos em
+#: que a vigia diz no diário que CONTINUA reescrevendo um sequestro. A
+#: reescrita de cada segundo é `debug`, e a conta só saía no
+#: `sequestro_encerrado` — que não chega enquanto a Steam segura o nó. Em 25/09,
+#: com a Steam segurando três físicos desde 09:32, o diário não tinha uma linha
+#: que provasse a vigia viva, e ela perguntou se a cura valia para todos os
+#: jogadores. Em escala de dez: um sequestro de um dia inteiro custa cinco
+#: linhas, e não oitenta mil.
+MARCOS_DA_REESCRITA: tuple[int, ...] = (10, 100, 1_000, 10_000, 100_000)
+
+
+def _endereco_mascarado(valor: object) -> str:
+    """O endereço de rádio, em qualquer grafia (com `:` ou sem), com a máscara.
+
+    O `mascarar` só reconhece a grafia com dois-pontos; o backend chaveia sem
+    eles (`14:3a:…` e `143a…` são o mesmo controle). Os dois viravam o endereço
+    INTEIRO no diário — o `sequestro_corrigido` gravava as duas grafias sem
+    máscara, com o `nascimento_condenado` mascarado na linha de cima.
+    """
+    hexa = endereco_normalizado(valor)
+    if len(hexa) != 12:
+        return str(valor)
+    return mascarar(":".join(hexa[i : i + 2] for i in range(0, 12, 2)))
+
+
+def _nascimentos_condenados_entre(
+    daemon: DaemonProtocol, uniqs: Sequence[str]
+) -> list[str]:
+    """Os controles, entre estes, cujo nascimento o cartório carimbou condenado.
+
+    Só LÊ o cartório: um daemon que ainda não o tem não ganha um por causa
+    desta pergunta (o carimbo é de `carimbar_o_nascimento`).
+    """
+    cartorio = getattr(daemon, "_cartorio_do_nascimento", None)
+    if not isinstance(cartorio, CartorioDoNascimento):
+        return []
+    condenados: list[str] = []
+    for uniq in uniqs:
+        with contextlib.suppress(Exception):
+            carimbo = cartorio.do_uniq(uniq)
+            if carimbo is not None and carimbo.pede_reconexao:
+                condenados.append(uniq)
+    return condenados
+
+
 async def vigiar_o_sequestro(
     daemon: DaemonProtocol, *, agora: float | None = None
 ) -> int:
@@ -1386,9 +1431,38 @@ async def vigiar_o_sequestro(
     vigia.reafirmado(passo.a_reafirmar, agora)
     if passo.novos:
         # A PRIMEIRA reescrita de cada sequestro vai ao diário, com o que
-        # saiu; as seguintes (uma por segundo) só contam, e a conta sai no
-        # `sequestro_encerrado`.
-        logger.info("sequestro_corrigido", uniqs=uniqs, resultado=resultado)
+        # saiu; as seguintes (uma por segundo) só contam, e a conta sai nos
+        # marcos (`sequestro_segue`) e no `sequestro_encerrado`.
+        #
+        # CORREÇÃO DE FATO (O-FISICO-NASCE-ESCONDIDO-EM-QUALQUER-MAQUINA-01,
+        # 25/09/2026): o evento se chamava `sequestro_corrigido`, com
+        # `resultado={…: True}`, e o `True` diz só que o write(2) do report
+        # voltou inteiro — pelo rádio, que o BlueZ o pôs na fila. A lâmpada não
+        # se lê. Em 25/09 ele disse «corrigido» para P2, P3 e P4 com as barras
+        # do P3 e do P4 apagadas. O nome passa a dizer o que se mede, e o
+        # nascimento condenado vai junto: nessa condição a barra pode não
+        # obedecer (a do P2, condenado também, obedeceu).
+        campos: dict[str, object] = {
+            "uniqs": [_endereco_mascarado(u) for u in uniqs],
+            "escrita_aceita": (
+                {_endereco_mascarado(k): bool(v) for k, v in resultado.items()}
+                if isinstance(resultado, Mapping)
+                else resultado
+            ),
+        }
+        condenados = _nascimentos_condenados_entre(daemon, uniqs)
+        if condenados:
+            campos["nascimento_condenado"] = [_endereco_mascarado(u) for u in condenados]
+        logger.info("sequestro_reescrito", **campos)
+    for no in passo.a_reafirmar:
+        reescritas = vigia.reescritas(no)
+        if reescritas in MARCOS_DA_REESCRITA:
+            logger.info(
+                "sequestro_segue",
+                no=no,
+                reescritas=reescritas,
+                pids=list(vigia.sequestrados.get(no, ())),
+            )
     return len(uniqs)
 
 
