@@ -735,9 +735,9 @@ _hid_playstation_orfaos_agora() {
 # aborto recuperado é só `info`, uma janela larga custa pouco ruído e devolve
 # o contexto inteiro do episódio. HEFESTO_DOCTOR_PROBE_JANELA ajusta.
 #
-# READ-ONLY, como todo check: aponta a cura (scripts/bt_rebind_orphans.sh) e
-# a vigia que a chama de 2 em 2 min, e NÃO executa nenhuma das duas — o
-# doctor confere e não cura.
+# READ-ONLY, como todo check: aponta a cura (scripts/bt_rebind_orphans.sh), que
+# roda sozinha no aviso do kernel e no tique da vigia (STORM-USB-02), e NÃO a
+# executa — o doctor confere e não cura.
 check_hid_playstation_probe_abortado() {
     local janela="${HEFESTO_DOCTOR_PROBE_JANELA:-3 days ago}"
     local orfaos abortos tem_journal=0
@@ -779,7 +779,7 @@ check_hid_playstation_probe_abortado() {
         total_feature="$(printf '%s\n' "${abortos}" | awk '{s += $3} END {printf "%d", s + 0}')"
         instancias="$(printf '%s\n' "${abortos}" | awk '{printf "%s%s", (NR > 1 ? ", " : ""), $1}')"
         info "aborto de probe do hid-playstation na janela (${janela}), JÁ RECUPERADO: ${total_probe}x 'probe with driver playstation failed' em ${instancias} (${total_feature}x 'Failed to retrieve feature' antes) — nenhum DualSense está órfão AGORA, então não há o que fazer: é histórico, não defeito ativo (os 6 abortos de 08/08 voltaram sozinhos em 2 a 20 min, por reconexão)"
-        info "se acontecer de novo COM o controle sumindo, a cura é o rebind (sudo /usr/local/lib/hefesto-dualsense4unix/bt_rebind_orphans.sh) e a vigia hefesto-bt-health-watchdog.timer a chama de 2 em 2 minutos; a causa medida é contenção de dois controles no mesmo adaptador, não hardware (assets/dkms/hid-playstation/README.md:65-117)"
+        info "se acontecer de novo COM o controle sumindo, o Hefesto o religa sozinho na hora do aviso do kernel (o kernel-watch chama o rebind pela ponte privilegiada), e a vigia hefesto-bt-health-watchdog.timer é a rede, de 2 em 2 minutos; à mão: sudo /usr/local/lib/hefesto-dualsense4unix/bt_rebind_orphans.sh; a causa medida é contenção de dois controles no mesmo adaptador, não hardware (assets/dkms/hid-playstation/README.md:65-117)"
         return
     fi
 
@@ -4019,9 +4019,9 @@ check_bt_crc_counters() {
 # leva todos os controles dele quando cai. E a entrada em que o kernel DESISTIU
 # vira WARN com o gesto: o controle encaixado sem o HID, ou a entrada largada
 # vazia. As duas não voltam sozinhas pelo kernel, e é por isso que viram aviso.
-# A primeira o Hefesto religa (o `bt_rebind_orphans.sh` no tique do watchdog
-# root; a linha só promete com o timer dele de pé, gancho da régua em
-# `HEFESTO_DOCTOR_VIGIA_DO_REBIND`); a segunda pede um reset de porta que falta.
+# A primeira o Hefesto religa na hora do aviso e, se ainda está parada, no tique
+# do watchdog root — é o que a linha promete, só com o timer de pé (gancho da
+# régua: `HEFESTO_DOCTOR_VIGIA_DO_REBIND`); a segunda pede um reset de porta.
 _o_endereco_do_storm() {
     local log="${1}" dias="${2}"
     local py arquivo raiz_usb

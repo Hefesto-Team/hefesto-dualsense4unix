@@ -445,6 +445,28 @@ class TestVeredito:
             "houve aborto na janela — dar OK apagaria o histórico"
         )
 
+    def test_a_proxima_queda_religa_na_hora_e_o_tique_e_a_rede(
+        self, tmp_path: Path
+    ) -> None:
+        """A frase das quedas futuras diz os DOIS tempos do religar.
+
+        OS-TEXTOS-QUE-A-6E-1-DEIXOU-VELHOS-01: desde a STORM-USB-02 o
+        kernel-watch chama o rebind pela ponte na hora do aviso do kernel, e o
+        tique de 2 em 2 minutos da vigia virou a rede. A frase dizia só o tique.
+        A MORDIDA: devolver a frase de antes («a vigia ... a chama de 2 em 2
+        minutos», sem o aviso do kernel) reprova.
+        """
+        resultado = self._roda(tmp_path, JORNAL_ABORTO, {INSTANCIA: True})
+        futuras = [
+            linha
+            for linha in resultado.stdout.splitlines()
+            if linha.startswith("INFO: se acontecer de novo")
+        ]
+        assert len(futuras) == 1, resultado.stdout
+        assert "na hora do aviso do kernel" in futuras[0], futuras[0]
+        assert "hefesto-bt-health-watchdog.timer é a rede" in futuras[0], futuras[0]
+        assert "bt_rebind_orphans.sh" in futuras[0], futuras[0]
+
     def test_aborto_de_um_controle_com_outro_orfao_ainda_e_fail(
         self, tmp_path: Path
     ) -> None:
