@@ -2727,8 +2727,8 @@ def gravar_o_mic_no_perfil_ativo(
     O-BOTAO-DO-MIC-GRAVA-NO-PERFIL-01 (25/09/2026). Achado dela: o perfil
     Freestyle guardava ``mic.muted: true`` para o P4; ela ligou o microfone
     pelo botão do controle, e a reconexão seguinte (o restart do install) o
-    calou de novo, porque o botão não gravava nada. *«isso aqui deveriamos ter
-    uma correção a nivel de produto.»* (noqa-acento: citação literal dela)
+    calou de novo, porque o botão não gravava nada. A palavra dela:
+    *«isso aqui deveriamos ter uma correção a nivel de produto.»*  # (noqa-acento) dela
 
     Devolve ``(nome do perfil, gravou?, motivo de não ter gravado)``, no molde
     de `gravar_a_mascara_no_perfil_ativo`.
