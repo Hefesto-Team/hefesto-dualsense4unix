@@ -613,39 +613,35 @@ def test_o_brilho_nao_ressuscita_a_cor_fossil(mesa_de, n, para):
     assert mesa.fora_do_lugar(cores=cores) == [], "o perfil reaplicado trouxe o fóssil de volta"
 
 
-def test_a_barra_apagada_nao_vira_fossil(mesa_de):
-    """Quem ela apagou pelo «Desligar» continua apagado depois da troca de número.
+def test_a_barra_apagada_segue_a_regra_do_fossil(mesa_de):
+    """Quem ela apagou pelo «Desligar» e trocou de número sobe na cor do número de hoje.
 
-    O resolvedor nunca desloca o preto — barra apagada é ausência de cor, não
-    identidade —, e a aba diz o mesmo: o trilho do P2 apagado manda o preto, e
-    a cor do número dele não ganha X nas outras fileiras. A troca é sem
-    reaplicar o perfil, como a da linha Jogador: o preto do clique continua
-    aceso na camada viva (reaplicado, o perfil acende a cor do número por cima
-    do preto do disco, que desde 22/09 não é cor).
+    NOTA DATADA — 25/09/2026 (A-04-PERGUNTA-AO-DAEMON-VIVO-01,
+    `D-2509-O-DESLIGAR-E-O-BRILHO-EM-ZERO`). Esta régua cobrava o contrário: o
+    «Desligar» gravava o PRETO como a cor, e o trilho da barra apagada mandava
+    preto a qualquer brilho. Desde 22/09 o preto não é cor, e o «Desligar»
+    passou a ser o brilho em 0% com a cor dela intacta — o mesmo 0% do trilho
+    (`test_a_zero_a_marca_fica_onde_estava`). A cor gravada segue, então, a
+    regra de toda cor gravada: o laranja escolhido para o 3, num aparelho que
+    hoje é o 2, é fóssil, e subir o trilho acende o vermelho do número, como o
+    daemon faria. A troca é sem reaplicar o perfil, como a da linha Jogador.
 
-    **A MORDIDA:** tire o `guardada == (0, 0, 0)` da guarda de
-    `_a_cor_guardada_que_vale` e esta reprova: o trilho acende a barra que ela
-    apagou, na cor do número, e o vermelho ganha X nas outras três.
+    **A MORDIDA:** faça `_a_cor_guardada_que_vale` devolver a gravada sem
+    perguntar se é fóssil, e o trilho sobe o P2 no laranja.
     """
     mesa = mesa_de()
     mesa.a04.apagar(mesa.ctx(), {"uniq": UNIQS[1], "tipo": "button", "evento": "click"},
                     mesa.ponte)
     mesa.fossilizar(2, escolhida_para=3, reaplicar=False)
     assert mesa.publicado()[1]["lightbar_rgb"] == [0, 0, 0], "a régua precisa do P2 apagado"
-    guia = [_hexa(t) for t in mesa.a04.tons_da_guia()]
-    dos_outros = {n: sorted(_hexa(COR_DELE[k]) for k in (1, 3, 4) if k != n) for n in (1, 3, 4)}
+    do_numero = player_slot_color(2)
+    cores = {**COR_DELE, 2: do_numero}
     for pct in (50, 0, 70):
         atrasado = mesa.soltar(2, pct)
-        assert tuple(mesa.ponte.enviados[-1]["rgb"]) == (0, 0, 0), (
-            f"o trilho do P2 apagado, a {pct}%, acendeu {_hexa(mesa.ponte.enviados[-1]['rgb'])}")
-        for tique in (atrasado, None):
-            pacote = mesa.a04.pacote(mesa.ctx(tique))
-            for n in (1, 3, 4):
-                tons = pacote["colunas"][UNIQS[n - 1]]["tons"]
-                casas = re.findall(r'<button class="([^"]*)"', tons)
-                xis = sorted(guia[i] for i, c in enumerate(casas) if "tomado" in c.split())
-                assert xis == dos_outros[n], (
-                    f"a {pct}%, a fileira do P{n} tem X em {xis}; o P2 apagado não toma cor")
+        assert tuple(mesa.ponte.enviados[-1]["rgb"]) == do_numero, (
+            f"o trilho do P2 apagado, a {pct}%, mandou {_hexa(mesa.ponte.enviados[-1]['rgb'])}")
+        assert mesa.fora_do_lugar(atrasado, cores=cores) == [], f"P2 a {pct}%, tique atrasado"
+        assert mesa.fora_do_lugar(cores=cores) == [], f"P2 a {pct}%, luz assentada"
 
 
 @pytest.mark.parametrize(("rgb", "fossil"), [

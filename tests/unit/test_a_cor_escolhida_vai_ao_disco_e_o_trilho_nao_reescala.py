@@ -191,18 +191,22 @@ def test_gravar_a_cor_preserva_o_brilho_que_ja_estava(pac, a04):
 
 
 def test_desligar_a_barra_tambem_grava(pac, a04):
-    """"Desligar" é escolha dela sobre a cor, e sem gravar o trilho a reacenderia.
+    """"Desligar" é escolha dela, e sem gravar o perfil reaplicado a reacenderia.
 
-    Este é o par do teste acima e não um extra: agora que o `brilho` lê a cor
-    do disco, um `apagar` que não gravasse faria o arraste seguinte reacender
-    a cor velha — o produto desfazendo o gesto anterior dela.
+    NOTA DATADA — 25/09/2026 (A-04-PERGUNTA-AO-DAEMON-VIVO-01,
+    `D-2509-O-DESLIGAR-E-O-BRILHO-EM-ZERO`): o «Desligar» gravava o PRETO como
+    a cor, e desde 22/09 o preto é «não opinou» — o perfil reaplicado acendia a
+    barra, e o laranja dela se perdia. Ele grava o brilho em 0% e a cor fica.
 
-    **A MORDIDA:** tire o `or apagando` da guarda de `_escrever_a_cor`.
+    **A MORDIDA:** tire o `elif apagando:` de `_escrever_a_cor`, ou devolva o
+    preto como cor gravada.
     """
     caminho = _semear("regua", campos={"lightbar": [255, 128, 0]})
     a04.apagar(_ctx(pac), {"uniq": UNIQ}, PonteDeMentira())
 
-    assert _cor_no_disco(caminho) == [0, 0, 0]
+    leds = _do_disco(caminho)["controllers"][CHAVE]["leds"]
+    assert leds["lightbar_brightness"] == 0.0
+    assert _cor_no_disco(caminho) == [255, 128, 0]
 
 
 def test_o_trilho_de_brilho_nao_grava_cor(pac, a04):
