@@ -20,9 +20,16 @@
 #
 # O QUE ELE FAZ
 # -------------
-# Grava dois `.snoop` com `btmon`, um por braço, e decodifica de cada um só o
-# que decide a questão: os reports de SAÍDA (0x31) e, dentro deles, os bytes de
-# lightbar e os bits que os autorizam. Depois imprime os dois lado a lado.
+# Grava um `.snoop` com `btmon` por braço e decodifica dele, na hora, só o que
+# decide a questão: os reports de SAÍDA (0x31) e, dentro deles, os bytes de
+# lightbar e os bits que os autorizam. O `comparar` imprime os dois lado a lado.
+#
+# A CAPTURA NASCE FECHADA E NÃO FICA (AS-CAPTURAS-DE-RADIO-NASCEM-FECHADAS-01):
+# se um controle reconecta durante a gravação, o `btmon` grava a chave de
+# pareamento em claro. Ela nasce 0600 num diretório 0700 do root, é lida logo
+# depois de gravada e sai; o que fica em $DESTINO é só a leitura dos reports
+# 0x31, entregue a quem chamou o `sudo` — e é por isso que o `comparar` roda
+# sem root.
 #
 #   braço LIMPO  — nenhum processo com o hidraw aberto durante a probe
 #   braço SUJO   — a Steam viva durante a probe
@@ -44,9 +51,39 @@
 set -uo pipefail
 
 DESTINO="${HEFESTO_CAPTURA_DIR:-/tmp/hefesto-probe-lightbar}"
-mkdir -p "$DESTINO"
 BRACO="${1:-}"
 SEGUNDOS="${2:-40}"
+# Quem chamou o `sudo` é quem lê a leitura depois, sem root.
+DONO_UID="${SUDO_UID:-0}"
+DONO_GID="${SUDO_GID:-0}"
+
+# $DESTINO recebe só a leitura, escrita pelo root. Um link, ou um diretório de
+# outro usuário no lugar dele, é recusado: o root não escreve por ali.
+preparar_destino() {
+    if [ -L "$DESTINO" ] || { [ -e "$DESTINO" ] && [ ! -d "$DESTINO" ]; }; then
+        echo "erro: $DESTINO não é um diretório comum; recuso escrever nele como root." >&2
+        return 1
+    fi
+    if [ ! -d "$DESTINO" ]; then
+        install -d -m 0700 -o "$DONO_UID" -g "$DONO_GID" "$DESTINO" || return 1
+    fi
+    local dono
+    dono=$(stat -c %u "$DESTINO") || return 1
+    if [ "$dono" != "0" ] && [ "$dono" != "$DONO_UID" ]; then
+        echo "erro: $DESTINO é de outro usuário (uid $dono); recuso escrever nele como root." >&2
+        return 1
+    fi
+    # A versão anterior deixava a captura crua aqui, 0644 e do root.
+    rm -f "$DESTINO/probe-limpo.snoop" "$DESTINO/probe-sujo.snoop"
+}
+
+mostrar() {
+    if [ -f "$1" ]; then
+        cat "$1"
+    else
+        echo "  (sem leitura: $1 — rode o braço com sudo)"
+    fi
+}
 
 decodificar() {
     local arquivo="$1"
@@ -74,10 +111,16 @@ limpo|sujo)
         echo "  sudo $0 $BRACO" >&2
         exit 1
     fi
-    ARQ="$DESTINO/probe-$BRACO.snoop"
+    umask 077
+    preparar_destino || exit 1
+    PRIVADO=$(mktemp -d -t hefesto-probe-lightbar.XXXXXX) || exit 1
+    trap 'rm -rf "$PRIVADO"' EXIT
+    ARQ="$PRIVADO/probe-$BRACO.snoop"
+    LEITURA="$DESTINO/probe-$BRACO.txt"
     echo "instrumento: btmon (socket de monitor do BlueZ)"
     echo "braço      : $BRACO"
-    echo "saída      : $ARQ"
+    echo "captura    : $ARQ (0600, apagada depois de lida)"
+    echo "leitura    : $LEITURA"
     echo
     echo "  quem tem hidraw aberto AGORA:"
     achou=0
@@ -94,13 +137,18 @@ limpo|sujo)
     echo "  gravando por ${SEGUNDOS}s — RECONECTE OS CONTROLES AGORA"
     timeout "$SEGUNDOS" btmon -w "$ARQ" >/dev/null 2>&1
     echo "  gravado: $(stat -c %s "$ARQ" 2>/dev/null || echo 0) bytes"
+    rm -f "$LEITURA"
+    decodificar "$ARQ" > "$LEITURA"
+    chown "$DONO_UID:$DONO_GID" "$LEITURA"
+    rm -f "$ARQ"
+    echo "  captura apagada: $ARQ"
     ;;
 comparar)
     echo "=== reports de SAÍDA (0x31) no braço LIMPO ==="
-    decodificar "$DESTINO/probe-limpo.snoop"
+    mostrar "$DESTINO/probe-limpo.txt"
     echo
     echo "=== reports de SAÍDA (0x31) no braço SUJO ==="
-    decodificar "$DESTINO/probe-sujo.snoop"
+    mostrar "$DESTINO/probe-sujo.txt"
     echo
     echo "Leitura: no envelope BT, valid_flag1 = byte 4 (bit 0x04 autoriza a cor),"
     echo "valid_flag2 = byte 41 (bit 0x02 é o LIGHTBAR_SETUP), lightbar_setup = byte 44,"
