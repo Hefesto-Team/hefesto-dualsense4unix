@@ -145,7 +145,7 @@ def test_ligado_o_gesto_dela_nao_faz_nada_e_por_isso_o_produto_desliga_antes(
 
     É a física do rádio de mentira — e é por ela que o mover desliga primeiro.
     """
-    mundo, _dono, _central_ = mesa(1)
+    mundo, _dono, _ = mesa(1)
     mundo.segurar_ps_create(VERMELHO)
     assert mundo.gestos_perdidos == [VERMELHO]
     assert mundo.onde_esta(rm.uniq(VERMELHO)) == SALA
@@ -167,7 +167,7 @@ def test_o_controle_nao_volta_sozinho_para_a_origem(mesa: Any, relogio: rm.Relog
     esquecer — o controle volta para a sala no meio da conferência, o movimento
     não chega, e esta régua reprova.
     """
-    mundo, dono, _central_ = mesa(2)
+    mundo, dono, _ = mesa(2)
     voltou: list[str] = []
 
     def onde_esta(u: str) -> str:
@@ -305,3 +305,100 @@ def test_o_nome_que_ela_deu_vai_junto_no_mover(diario: Path, relogio: rm.Relogio
     assert not [e for e in mundo.escritas if e[2] == "Alias"
                 and e[0] == rm.no_de(VARANDA, AZUL)]
     dono.fechar()
+
+
+# ---------------------------------------------------------------------------
+# 3. o «Equilibrar» nasce com os controles amontoados
+# ---------------------------------------------------------------------------
+
+
+def _no_ar(u: str, adaptador: str, ponte: str | None = None) -> dict[str, Any]:
+    """Um controle do ``state["controllers"]`` como o daemon o publica."""
+    return {"uniq": rm.uniq(u), "transport": "bt", "connected": True,
+            "adaptador": adaptador, "ponte_do_radio": ponte}
+
+
+def _plano(controles: list[dict[str, Any]], adaptadores: tuple[str, ...]) -> Any:
+    from hefesto_dualsense4unix.integrations import plano_de_radio
+
+    planos = plano_de_radio.plano_por_adaptador(
+        controles, adaptadores=adaptadores, listar=lambda _p: [], raiz="/nao/existe")
+    return plano_de_radio.ordem_de_redistribuicao(planos)
+
+
+def test_quatro_num_adaptador_so_pedem_equilibrar_ate_dois_um_um() -> None:
+    """Os passos b4 e b5 dela: os quatro num adaptador, dois vazios ao lado, e
+    o «Equilibrar» mudo. Agora ele propõe UM por vez: 4/0/0 → 3/1/0 → 2/1/1, e
+    para aí. Quem sai é o último a chegar.
+
+    MORDIDA: devolva o ``return None`` no lugar do ``_ordem_que_equilibra`` em
+    ``ordem_de_redistribuicao`` — a primeira ordem não nasce e esta régua
+    reprova.
+    """
+    tres = (SALA, QUARTO, VARANDA)
+    mesa = [_no_ar(u, SALA) for u in QUATRO]
+    primeira = _plano(mesa, tres)
+    assert primeira is not None
+    assert (primeira.origem, primeira.destino, primeira.controle) == (
+        SALA, QUARTO, rm.uniq(ROXO))
+    assert primeira.modo == ""
+    assert (primeira.pontes_na_origem_depois, primeira.pontes_no_destino_depois) == (0, 0)
+
+    mesa = [_no_ar(u, SALA) for u in QUATRO[:3]] + [_no_ar(ROXO, QUARTO)]
+    segunda = _plano(mesa, tres)
+    assert segunda is not None
+    assert (segunda.origem, segunda.destino, segunda.controle) == (
+        SALA, VARANDA, rm.uniq(VERDE))
+
+    mesa = [_no_ar(VERMELHO, SALA), _no_ar(AZUL, SALA), _no_ar(ROXO, QUARTO),
+            _no_ar(VERDE, VARANDA)]
+    assert _plano(mesa, tres) is None, "2/1/1 é o equilíbrio de quatro em três"
+
+
+@pytest.mark.parametrize(("na_sala", "no_quarto", "propoe"), [
+    (1, 0, False), (2, 0, True), (2, 1, False), (3, 0, True), (3, 1, True),
+    (4, 0, True), (2, 2, False),
+])
+def test_dois_adaptadores_equilibram_pela_diferenca(
+    na_sala: int, no_quarto: int, propoe: bool
+) -> None:
+    """De 1 a 4 controles em dois adaptadores: propõe quando a diferença é de
+    dois ou mais, e nunca para trocar quem está apertado."""
+    mesa = ([_no_ar(u, SALA) for u in QUATRO[:na_sala]]
+            + [_no_ar(u, QUARTO) for u in QUATRO[na_sala:na_sala + no_quarto]])
+    ordem = _plano(mesa, (SALA, QUARTO))
+    assert (ordem is not None) is propoe, (na_sala, no_quarto)
+
+
+def test_um_adaptador_so_nao_propoe_nada() -> None:
+    assert _plano([_no_ar(u, SALA) for u in QUATRO], (SALA,)) is None
+
+
+def test_quem_sai_para_equilibrar_e_o_ultimo_sem_som() -> None:
+    """O som de quem já tem fica onde está: sai o último que chegou SEM ponte,
+    mesmo que um com ponte tenha chegado depois dele."""
+    mesa = [_no_ar(VERMELHO, SALA), _no_ar(AZUL, SALA), _no_ar(VERDE, SALA),
+            _no_ar(ROXO, SALA, "som")]
+    ordem = _plano(mesa, (SALA, QUARTO))
+    assert ordem is not None and ordem.controle == rm.uniq(VERDE)
+
+
+def test_as_pontes_alem_do_limite_continuam_na_frente() -> None:
+    """Três pontes num adaptador que comporta duas: a ordem é a das pontes, e
+    ela move quem leva o som — equilibrar número vem depois."""
+    mesa = [_no_ar(VERMELHO, SALA, "som"), _no_ar(AZUL, SALA, "som"),
+            _no_ar(VERDE, SALA, "haptica"), _no_ar(ROXO, SALA)]
+    ordem = _plano(mesa, (SALA, QUARTO, VARANDA))
+    assert ordem is not None
+    assert (ordem.controle, ordem.modo) == (rm.uniq(VERDE), "haptica")
+    assert ordem.pontes_na_origem_depois == 2
+
+
+def test_a_central_publica_a_proposta_de_equilibrar(mesa: Any, relogio: rm.Relogio) -> None:
+    """A proposta chega ao ``state_full["radio_central"]`` — é ela que acende a
+    lâmpada e dá o que perguntar ao «Equilibrar» (o resto é da tela, abaixo)."""
+    _mundo_, _dono_, central = mesa(4)
+    publicado = central.publicar([_no_ar(u, SALA) for u in QUATRO])
+    assert publicado["proposta"] is not None
+    assert publicado["proposta"]["controle"] == rm.uniq(ROXO)
+    assert publicado["proposta"]["destino"] == QUARTO

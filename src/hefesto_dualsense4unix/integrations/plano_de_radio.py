@@ -91,6 +91,19 @@ PONTES de som e de vibração, de ritmo fixo — e o limite é
 ``palavra_das_pontes``: nasce ordem quando um adaptador passa de ``n_max``
 pontes, e o destino é o da D8 (:func:`ordem_dos_destinos`).
 
+E O «EQUILIBRAR» PESA TAMBÉM QUANTOS CONTROLES, DESDE 25/09/2026
+(A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01). Ela pôs os quatro controles num
+adaptador só, com dois vazios ao lado, e *«Equilibrar não fez nada»* — nem a
+lâmpada apareceu (a lista dela, passos b4 e b5). A régua só nascia com PONTE
+além do limite, e quatro controles sem som não passam limite nenhum. Mas a
+entrada elástica é DIVIDIDA: o que um adaptador manda por segundo se reparte
+entre quem mora nele, e a foto 3 dela mostra o preço — três na Direita, um
+deles em 121 Hz, abaixo do corte em que o movimento fica laranja. Então, sem
+ponte a mover, a régua olha o NÚMERO de controles: se um adaptador tem pelo
+menos dois a mais que outro, UM sai para o primeiro destino da D8 que fica com
+menos gente que a origem tinha. As pontes continuam na frente: transbordar o
+som derruba, e dividir a entrada só a encolhe. <!-- noqa-acento: citação literal dela -->
+
 A vista aditiva (``agora``, ``planejada``, :func:`cabe_mais_um`, as linhas e o
 selo) FICA, e não é descuido: ela tem dois leitores de tela — a seção
 Desempenho (``secao_orcamento``) e a seção de rádio de hoje da aba 08 — e sai
@@ -275,6 +288,19 @@ class Redistribuicao:
             "n_max": self.n_max,
         }
 
+
+#: A parte do "por que importa" da ordem que EQUILIBRA (25/09/2026). É a R10
+#: dela dita pelo avesso: a entrada é elástica, e o que um adaptador manda se
+#: divide entre os controles que moram nele.
+POR_QUE_IMPORTA_O_NUMERO = (
+    "os controles de um adaptador dividem o que ele manda por segundo: com menos "
+    "controles no mesmo adaptador, cada um manda mais movimento."
+)
+
+#: De quanto a diferença de controles entre dois adaptadores tem de ser para o
+#: «Equilibrar» propor. Dois, e é a conta de um só: mover um controle de um
+#: adaptador com N para um com N-1 só troca quem está apertado.
+DIFERENCA_QUE_EQUILIBRA = 2
 
 #: O que a tela diz quando o adaptador está apertado e NÃO há para onde mover.
 #: Mandar mover para lugar nenhum seria pior que calar.
@@ -615,7 +641,7 @@ def ordem_de_redistribuicao(
         key=lambda p: (-(p.pontes - p.n_max), p.endereco),
     )
     if not alem:
-        return None
+        return _ordem_que_equilibra(reais, varrendo=varrendo)
     origem = alem[0]
     quem = _quem_move(origem)
     if quem is None:
@@ -645,6 +671,75 @@ def ordem_de_redistribuicao(
             modo=modo,
             pontes_na_origem_depois=na_origem,
             pontes_no_destino_depois=no_destino,
+            n_max=origem.n_max,
+        )
+    return None
+
+
+def _quem_move_para_equilibrar(origem: PlanoDoAdaptador) -> tuple[str, str] | None:
+    """``(uniq, modo)`` do controle que sai para equilibrar: o ÚLTIMO a chegar.
+
+    Entre os que chegaram, o último SEM ponte primeiro — mover um sem som não
+    mexe na conta de pontes de ninguém, e o som de quem já tem fica onde está.
+    Sem nenhum assim, o último com ponte (``modo`` é a ponte dele); quem cuida
+    de o destino ter vaga para ela é :func:`_ordem_que_equilibra`.
+    """
+    if origem.orcamento is None:
+        return None
+    com_uniq = [c for c in origem.orcamento.controles if c.uniq]
+    sem_ponte = [c for c in com_uniq if not c.ponte]
+    candidatos = sem_ponte or com_uniq
+    if not candidatos:
+        return None
+    escolhido = candidatos[-1]
+    return escolhido.uniq, str(escolhido.ponte or "")
+
+
+def _ordem_que_equilibra(
+    reais: Mapping[str, PlanoDoAdaptador],
+    *,
+    varrendo: Iterable[str] | None = None,
+) -> Redistribuicao | None:
+    """A ordem de serviço que EQUILIBRA quantos controles cada adaptador tem.
+
+    Só quando nenhuma ponte passou do limite (quem chama já olhou). A origem é
+    o adaptador com mais controles; o destino, o primeiro da D8
+    (:func:`ordem_dos_destinos`) que fica com MENOS controles do que a origem
+    tinha — :data:`DIFERENCA_QUE_EQUILIBRA` de diferença, no mínimo — e que tem
+    vaga de ponte quando quem sai leva uma. Com um adaptador só não há destino,
+    e a resposta é ``None``: a frase do adaptador único mora em outro lugar.
+    """
+    if len(reais) < 2:
+        return None
+    origem = min(reais.values(), key=lambda p: (-p.no_ar, p.endereco))
+    quem = _quem_move_para_equilibrar(origem)
+    if quem is None:
+        return None
+    controle, modo = quem
+    for destino in ordem_dos_destinos(reais, varrendo=varrendo, exceto=origem.endereco):
+        if origem.no_ar - destino.no_ar < DIFERENCA_QUE_EQUILIBRA:
+            continue
+        if modo and destino.pontes + 1 > destino.n_max:
+            continue
+        leva = 1 if modo else 0
+        return Redistribuicao(
+            origem=origem.endereco,
+            destino=destino.endereco,
+            origem_na_tela=origem.nome_na_tela,
+            destino_na_tela=destino.nome_na_tela,
+            o_que_eu_vi=(
+                f"{origem.no_ar} controles num adaptador, e {destino.no_ar} "
+                f'no "{destino.nome_na_tela}".'
+            ),
+            por_que_importa=POR_QUE_IMPORTA_O_NUMERO,
+            ganho_esperado=(
+                f'o "{origem.nome_na_tela}" ficaria com {origem.no_ar - 1} controles, '
+                f'e o "{destino.nome_na_tela}" com {destino.no_ar + 1}.'
+            ),
+            controle=controle,
+            modo=modo,
+            pontes_na_origem_depois=origem.pontes - leva,
+            pontes_no_destino_depois=destino.pontes + leva,
             n_max=origem.n_max,
         )
     return None
@@ -878,10 +973,12 @@ def _inteiro(valor: Any) -> int | None:
 __all__ = [
     "ADAPTADOR_DESCONHECIDO",
     "ADAPTADOR_SEM_NOME",
+    "DIFERENCA_QUE_EQUILIBRA",
     "ENSAIO_MAXIMO_DESTA_CASA",
     "FRASE_DO_ADAPTADOR_UNICO",
     "MESA_CHEIA_DESTA_CASA",
     "POR_QUE_IMPORTA",
+    "POR_QUE_IMPORTA_O_NUMERO",
     "SEM_NUMERO",
     "PlanoDoAdaptador",
     "Redistribuicao",
