@@ -288,6 +288,16 @@ PONTO = ' <span class="pt">•</span> '
 #: linha ser `html`. Ver `linha_do_cartao`.
 BOLINHA = '<span class="bolinha"></span>'
 
+#: OS TRÊS PAPÉIS DO CARTÃO, o que cada controle faz no PC. Os dois primeiros
+#: são do desenho que ela aprovou; o terceiro é da A-MIRA-NA-NAVEGACAO-02
+#: (25/09/2026, por delegação dela): na Navegação, a Mira Virtual acesa num
+#: controle que não navega move o cursor com o giro dele
+#: (`D-2409-NA-NAVEGACAO-O-GIRO-VIRA-CURSOR`), e «Só a janela» afirmava o
+#: contrário. As três palavras estão no glossário da casa.
+PAPEL_QUE_NAVEGA = "Navega o PC"
+PAPEL_SO_A_JANELA = "Só a janela"
+PAPEL_DO_CURSOR = "Move o cursor"
+
 #: O PREFIXO DAS VINTE E UMA LINHAS de *o que cada botão faz*. Um por botão de
 #: `core/acoes_de_botao.BOTOES` — a lista é do produto, e não se digita aqui.
 PREFIXO_DA_ACAO = "acao-"  # (noqa-acento) prefixo de endereço, não é prosa
@@ -1048,7 +1058,7 @@ def chips_da_fita(mesa: list[dict[str, Any]]) -> str:
     return "".join(chips)
 
 
-def _linha_do_cartao(c: dict[str, Any], primario: bool) -> str:
+def _linha_do_cartao(c: dict[str, Any], primario: bool, cursor: bool = False) -> str:
     """A linha inteira do cartão: `"BT • Navega o PC"`.
 
     ELA ERA METADE, e a metade que faltava era o TRANSPORTE — medido em
@@ -1065,10 +1075,48 @@ def _linha_do_cartao(c: dict[str, Any], primario: bool) -> str:
     O `ctx.conectados` é a resposta CRUA do daemon e traz `transport`; a mesa
     traz `via`. Quem entra na tela é o da mesa.
     """
-    return linha_do_cartao(str(c.get("via") or ""), primario)
+    return linha_do_cartao(str(c.get("via") or ""), primario, cursor)
 
 
-def linha_do_cartao(via: str, primario: bool) -> str:
+def move_o_cursor(dele: dict[str, Any], ctx: Contexto, primario: bool) -> bool:
+    """Este controle, que NÃO navega o PC, move o cursor agora pelo giro?
+
+    A-MIRA-NA-NAVEGACAO-02, 25/09/2026, por delegação dela. É o que o daemon
+    faz, e não uma frase nova: na Navegação o `mouse.mover_o_cursor_pelo_giro`
+    leva ao cursor o giro de TODA peça com a Mira acesa, e o cartão dizia «Só
+    a janela» sobre um controle que movia o cursor da máquina.
+
+    AS QUATRO PERGUNTAS, e cada uma é a do dono da resposta:
+
+    1. **não é quem navega** — o primário já diz «Navega o PC», que cobre o
+       giro dele;
+    2. **a Mira dele está acesa** — o bloco `mira` do daemon, lido pelo mesmo
+       leitor do chip da aba Controles (`a02_controles._mira_ligada`). Sem
+       leitura é não: afirmação sem leitura é chute;
+    3. **o modo vivo é a Navegação** — pelo mesmo leitor da dica do Giroscópio
+       (`a02_controles._na_navegacao`, que é o `mode_of_state`). No Virtual e
+       no Xbox a Mira vai ao analógico direito do controle virtual, e no
+       Nativo ela não anda: o cursor da máquina fica onde está;
+    4. **o mouse está ligado** — o «Status do Modo» desta aba
+       (`mouse_emulation.enabled`). Desligado, o tique da Navegação não roda
+       (`lifecycle._poll_loop` só despacha o mouse com o device de pé), e o
+       giro não chega a cursor nenhum.
+
+    OS DOIS LEITORES SÃO DA ABA CONTROLES DE PROPÓSITO: o chip e a dica do
+    Giroscópio de lá e este cartão falam do MESMO fato, e duas leituras dele
+    divergiriam na primeira correção.
+    """
+    if primario:
+        return False
+    from .a02_controles import _mira_ligada, _na_navegacao
+
+    if _mira_ligada(dele) is not True or not _na_navegacao(ctx):
+        return False
+    rato = (getattr(ctx, "state", None) or {}).get("mouse_emulation") or {}
+    return rato.get("enabled") is True
+
+
+def linha_do_cartao(via: str, primario: bool, cursor: bool = False) -> str:
     """A linha de estado do cartão, em HTML — UM DONO, DOIS CHAMADORES.
 
     O gerador (`aba06.controle`) desenha a bancada com ela e o pacote pinta o
@@ -1081,8 +1129,16 @@ def linha_do_cartao(via: str, primario: bool) -> str:
     com a mesa vazia — foi o que ela fotografou. Com o alvo `html` o lugar
     vazio recebe o travessão (`LUGAR_VAZIO`) e a bolinha VOLTA quando o
     controle volta, porque quem a desenha passa a ser esta função.
+
+    O TERCEIRO PAPEL — A-MIRA-NA-NAVEGACAO-02, 25/09/2026. `cursor` diz que
+    este controle, sem navegar o PC, move o cursor pelo giro (ver
+    `move_o_cursor`). Ele não acende a bolinha: o verde é de quem navega, e
+    quem navega continua sendo um só.
     """
-    papel = "Navega o PC" if primario else "Só a janela"
+    if primario:
+        papel = PAPEL_QUE_NAVEGA
+    else:
+        papel = PAPEL_DO_CURSOR if cursor else PAPEL_SO_A_JANELA
     corpo = f"{via}{PONTO}{papel}" if via else papel
     return (BOLINHA if primario else "") + corpo
 
@@ -1836,8 +1892,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # entre a montagem da mesa e este tique), a linha sai só com o papel —
         # meia verdade, nunca um transporte inventado.
         na_mesa = next((m for m in ctx.mesa if str(m.get("uniq") or "") == uniq), {})
+        primario = bool(c.get("is_primary"))
         cards[uniq] = {
-            "navega": _linha_do_cartao(na_mesa, bool(c.get("is_primary"))),
+            # O PAPEL NO PC, e o terceiro é o da Mira na Navegação — ver
+            # `move_o_cursor` (A-MIRA-NA-NAVEGACAO-02).
+            "navega": _linha_do_cartao(na_mesa, primario,
+                                       move_o_cursor(c, ctx, primario)),
             # O NOME DO APARELHO, do dono que a ROTA-A deixou pronto. Ele lê,
             # nesta ordem, o que ELA nomeou > o modelo decodificado > o nome da
             # mesa > o transporte sozinho — e NUNCA a posição, que foi o que
