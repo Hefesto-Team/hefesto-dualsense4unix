@@ -959,10 +959,24 @@ class VigiaDoSequestro:
         return self._reescritas.pop(str(no), 0)
 
     def _soltar_os_mortos(self) -> None:
-        """O PID que morreu solta o nó sem esperar a próxima varredura."""
+        """O PID que morreu solta o nó sem esperar a próxima varredura.
+
+        E a vigia NÃO CONFIA NA MORTE (O-BROKER-NAO-REESCREVE-O-QUE-NAO-MUDOU-01,
+        25/09/2026): o nó que perdeu um PID conhecido esquece a firma sondada, e
+        o passo varre UMA vez. Um fd herdado por um filho (sem `O_CLOEXEC`) ou
+        passado por `SCM_RIGHTS` antes de o dono morrer segue no nó — e, com o
+        nó fechado e a firma parada, nada mais o faria aparecer. Até 25/09 quem
+        o achava, por acaso, era o rehide que reescrevia o nó a cada 30 s.
+
+        O nó que o dono SOLTOU (fechou o fd e segue vivo) não passa por aqui:
+        quem o viu soltar foi uma varredura.
+        """
         vivos = {
             no: tuple(p for p in pids if self._vivo(p)) for no, pids in self._por_no.items()
         }
+        for no, pids in vivos.items():
+            if pids != self._por_no[no]:
+                self._firma_sondada.pop(no, None)
         self._por_no = {no: pids for no, pids in vivos.items() if pids}
 
     def _firmas_mudaram(self, alvos: set[str]) -> bool:
