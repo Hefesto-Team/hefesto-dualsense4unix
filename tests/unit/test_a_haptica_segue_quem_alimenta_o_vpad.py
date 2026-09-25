@@ -28,21 +28,31 @@ alvo que o rumble do jogo já segue) e ``quem_o_jogo_le.dono_do_vpad_pelo_coop``
 tocando no endpoint de TODO controle no rádio (o pior caso de 20/09) — só a
 ponte de quem dirige um boneco que o jogo lê entra em modo háptica.
 
+**A matriz vai de UM a quatro** (conferência, 25/09/2026): um controle só é
+a mesa de quase todo mundo, e o posto do boot dele era o que a forja nunca
+achava; o co-op DESLIGADO (um vpad só, alimentado pelo primário de agora)
+também entra, e o posto é levado pelo P1, pelo P2, pelo P3 e pelo P4.
+
 **Nada muda** no Modo Nativo (o jogo abre o físico, que casa pelo ``uniq``
-dele) nem com a máscara Xbox (o vpad é ``uinput`` e não carrega ``uniq``).
+dele — medido com a bancada no estado do modo, sem vpad nenhum de pé) nem
+com a máscara Xbox (o vpad é ``uinput`` e não carrega ``uniq``).
 
 AS MORDIDAS (25/09/2026, cada uma devolvida com o md5 conferido):
 
 - **a forja de hoje** de volta no ``_quem_o_jogo_le`` (a mordida da sprint):
-  79 reprovam — 69 da matriz, as 9 da prova (o gate diz o P1) e a do diário;
-- o posto dado a quem ele NASCEU (``posto.identity``) e não ao primário: 83;
+  138 reprovam — 83 da matriz, 45 do co-op desligado, as 9 da prova (o gate
+  diz o P1) e a do diário;
+- o posto dado a quem ele NASCEU (``posto.identity``) e não ao primário: 142;
+- o primário por ``path:`` dando dono ao posto: 1;
 - sem o ``cedido_ao_primario``: 1; andando na lista viva dos jogadores: 1;
-- o tradutor sem a grafia da mesa (``aabbcc…`` contra ``aa:bb:cc:…``): 97;
+- o tradutor sem a grafia da mesa (``aabbcc…`` contra ``aa:bb:cc:…``): 167;
 - o tradutor que CHUTA o primeiro da mesa quando ninguém alimenta: 10 (as 9
   da vaga, e a do vpad sem dono);
 - a pergunta que falha engolida em vez de subir: 1; o ``self._daemon`` sem
   ``getattr`` (o dublê por ``__new__``): 1;
-- o tradutor consultado ANTES do casamento pelo físico: as 3 do Nativo.
+- o tradutor consultado ANTES do casamento pelo físico: as 3 do co-op hostil;
+- o gate que se cala quando o co-op não tem vpad a responder (a cura errada
+  «sem vpad, sem háptica»): 15, entre elas as 11 do Modo Nativo de verdade.
 
 A do Xbox fixa a invariância e não tem mordida própria: o nó do ``uinput``
 não tem ``uniq``, e nada chega ao tradutor.
@@ -261,6 +271,11 @@ def levar_o_posto(bancada: MesaHonesta, quem: int, *, nasceu: str, volta: bool) 
     assert bancada.dono_do_vpad_do_p1() == UNIQS[quem], "a bancada não levou o posto"
 
 
+#: Os transportes de cada tamanho de mesa: com UM controle, a mista é o cabo.
+def _transportes(n: int) -> tuple[str, ...]:
+    return ("usb", "bt") if n == 1 else tuple(TRANSPORTES)
+
+
 CENARIOS = [
     pytest.param(
         n,
@@ -271,9 +286,11 @@ CENARIOS = [
         id=f"{n}-controles-{t}-posto-com-p{quem + 1}-nasceu-{nasceu}"
         + ("-volta-tardia" if volta else ""),
     )
-    for n in (2, 3, 4)
-    for t in TRANSPORTES
-    for quem in range(min(n, 3))
+    # UM controle é o caso de quase todo mundo, e o posto do boot (o piso,
+    # sem identidade) era o que a forja nunca achava (conferência, 25/09).
+    for n in (1, 2, 3, 4)
+    for t in _transportes(n)
+    for quem in range(n)
     for nasceu in ("boot", "p1")
     for volta in ((False, True) if quem else (False,))
 ]
@@ -307,6 +324,58 @@ class TestOJogoLeQuemDirigeOPosto:
                 f"{jogo}: o gate diz {sorted(resposta)} e quem dirige é {sorted(verdade)} "
                 f"(o posto veste {bancada.daemon._gamepad_device.mac})"
             )
+
+    @pytest.mark.parametrize(
+        ("quantos", "transporte", "quem", "nasceu"),
+        [
+            (n, t, q, nasceu)
+            for n in (2, 3, 4)
+            for t in TRANSPORTES
+            for q in range(n)
+            for nasceu in ("boot", "p1")
+        ],
+        ids=[
+            f"{n}-controles-{t}-posto-com-p{q + 1}-nasceu-{nasceu}"
+            for n in (2, 3, 4)
+            for t in TRANSPORTES
+            for q in range(n)
+            for nasceu in ("boot", "p1")
+        ],
+    )
+    def test_com_o_coop_desligado_o_posto_segue_o_primario(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        kernel: KernelDoHidPlaystation,
+        tmp_path: pathlib.Path,
+        quantos: int,
+        transporte: str,
+        quem: int,
+        nasceu: str,
+    ) -> None:
+        """Sem co-op há um vpad só, e quem o alimenta é o primário de agora.
+
+        O co-op desligado é a mesa de quem joga sozinho com os controles da
+        casa ligados: o manager existe (o laço o cria de qualquer jeito), não
+        há secundário nenhum, e o posto troca de mão quando o primário sai e o
+        prazo vence. A forja errava todos os postos do boot e todos os que
+        trocaram de mão (conferência, 25/09).
+        """
+        relogio = Relogio()
+        bancada = MesaHonesta(
+            monkeypatch, kernel=kernel, relogio=relogio, tempo=relogio, coop=False
+        )
+        for uniq, via in zip(UNIQS[:quantos], TRANSPORTES[transporte][:quantos], strict=True):
+            bancada.mesa.sentar(uniq, transporte=via)
+        for _ in range(3):
+            bancada.tique()
+        assert not bancada.coop.should_be_active() and not bancada.coop._players
+        levar_o_posto(bancada, quem, nasceu=nasceu, volta=bool(quem))
+        abertos = o_que_o_jogo_le(bancada, "todos")
+        assert abertos == [bancada.daemon._gamepad_device], "sem co-op o jogo vê um vpad só"
+        proc, entrada = montar_o_mundo(bancada, tmp_path, abertos)
+        verdade = a_verdade(bancada, abertos)
+        assert verdade == {com_dois_pontos(UNIQS[quem])}
+        assert o_subsystem_responde(bancada, monkeypatch, proc, entrada) == verdade
 
     @pytest.mark.parametrize(
         ("quantos", "transporte"),
@@ -486,6 +555,43 @@ class TestAsOutrasMascaras:
         )
         assert o_subsystem_responde(bancada, monkeypatch, proc, entrada, daemon=hostil) == esperado
 
+    @pytest.mark.parametrize(
+        ("quantos", "transporte"),
+        [(n, t) for n in (1, 2, 3, 4) for t in _transportes(n)],
+        ids=[f"{n}-controles-{t}" for n in (1, 2, 3, 4) for t in _transportes(n)],
+    )
+    def test_no_modo_nativo_nao_ha_vpad_e_a_haptica_segue_o_fisico_aberto(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        kernel: KernelDoHidPlaystation,
+        tmp_path: pathlib.Path,
+        quantos: int,
+        transporte: str,
+    ) -> None:
+        """O Modo Nativo DE VERDADE: o posto desce, o co-op suspende, e vpad nenhum fica.
+
+        A régua de cima mede o casamento pelo físico com os vpads ainda de pé;
+        esta põe a bancada no estado do Modo Nativo (``set_native_mode`` desliga
+        a emulação: ``_gamepad_device`` None, e o co-op, que exige o posto,
+        desmonta os secundários) e confere que o co-op não tem vpad a responder
+        e que vibra exatamente o físico que o jogo abriu — cada um, de um a
+        quatro.
+        """
+        bancada = montar_honesto(monkeypatch, kernel, quantos, transporte)
+        bancada.daemon._gamepad_device.stop()
+        bancada.vpad_do_p1 = bancada.daemon._gamepad_device = None
+        bancada.tique()
+        assert not bancada.coop.should_be_active()
+        assert vpads_vivos(bancada) == [], "o Modo Nativo não deixa vpad de pé"
+        assert bancada.coop.quem_alimenta_cada_vpad() == {}
+        for aberto in UNIQS[:quantos]:
+            proc, entrada = montar_o_mundo(
+                bancada, tmp_path / aberto, [], fisicos_abertos=(aberto,)
+            )
+            assert o_subsystem_responde(bancada, monkeypatch, proc, entrada) == {
+                com_dois_pontos(aberto)
+            }
+
     @pytest.mark.parametrize("transporte", list(TRANSPORTES))
     def test_com_a_mascara_xbox_o_vpad_nao_tem_uniq_e_ninguem_entra_na_haptica(
         self,
@@ -581,6 +687,13 @@ class TestQuemAlimentaCadaVpad:
             P2: _jogador(P2, _Vpad(None)),  # o uinput da máscara Xbox
         }
         coop = _coop(None, _Vpad(player_mac(1)), jogadores)
+        assert coop.quem_alimenta_cada_vpad() == {}
+
+    def test_o_primario_sem_endereco_nao_da_dono_ao_posto(self) -> None:
+        """O primário por ``path:`` (o MAC ainda não resolveu): o posto fica sem dono."""
+        coop = _coop(None, _Vpad(player_mac(1)), {})
+        coop._daemon.controller._evdev = SimpleNamespace(_device_path="/dev/input/event3")
+        assert coop._primary_identity() == "path:/dev/input/event3"
         assert coop.quem_alimenta_cada_vpad() == {}
 
     def test_o_mac_sai_em_minusculas(self) -> None:
