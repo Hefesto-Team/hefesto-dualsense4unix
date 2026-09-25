@@ -75,6 +75,11 @@ def test_uninstall_nao_cita_regra_que_nao_existe_mais() -> None:
     historicas = {
         "73-ps5-controller-hotplug.rules",
         "74-ps5-controller-hotplug-bt.rules",
+        # A regra do nó do DualSense se chamava assim até 25/09/2026, quando
+        # passou a `73-hefesto-ps5-controller.rules` (a `71-sony-controllers`
+        # do `game-devices-udev` corria depois dela e reabria o nó). O
+        # install tira a velha; o uninstall também, para quem nunca reinstalou.
+        "70-ps5-controller.rules",
     }
 
     fantasmas = _regras_removidas() - _regras_do_repo() - historicas

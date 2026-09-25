@@ -106,7 +106,7 @@ EXCECOES: dict[str, str] = {
         "check_hidraw_broker, e declara a porta na tela."
     ),
     "regra_do_no_aberta.sh": (
-        "escreve por `sed` a variante ABERTA do 70-ps5-controller.rules, para "
+        "escreve por `sed` a variante ABERTA do 73-hefesto-ps5-controller.rules, para "
         "quem instala a regra sem o broker. A menção a /dev/hidraw está no "
         "comentário que explica as duas metades da cura. Não abre nó."
     ),

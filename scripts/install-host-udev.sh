@@ -35,7 +35,10 @@ for candidate in \
     "/usr/share/hefesto-dualsense4unix/udev-rules" \
     "${SCRIPT_DIR}/../assets" \
 ; do
-    if [[ -f "${candidate}/70-ps5-controller.rules" ]]; then
+    # A regra do nó do DualSense é a que prova que a pasta é do Hefesto. Ela
+    # se chama `73-hefesto-ps5-controller.rules` desde 25/09/2026; era a 70.
+    # O bundle e este script viajam juntos, então o nome é o de agora.
+    if [[ -f "${candidate}/73-hefesto-ps5-controller.rules" ]]; then
         RULES_SRC="${candidate}"
         break
     fi
@@ -225,7 +228,7 @@ fi
 # O-NO-NASCE-FECHADO-01 (auditoria de 20/09/2026, bloqueante 3): AS DUAS
 # METADES DA CURA VIAJAM JUNTAS, OU NENHUMA VIAJA.
 #
-# A `70-ps5-controller.rules` versionada faz o hidraw do DualSense físico
+# A `73-hefesto-ps5-controller.rules` versionada faz o hidraw do DualSense físico
 # nascer `0600 root` (`TAG-="uaccess"`) contando que o broker o abra sob
 # pedido. Se este helper NÃO conseguir instalar o broker — `BROKER_INSTALL_OK`
 # é 0 quando o uid resolve root, quando o grupo da sessão não resolve, ou
@@ -238,10 +241,12 @@ fi
 # variante que `scripts/regra_do_no_aberta.sh` gera (dono único da
 # transformação, com as duas guardas dentro).
 #
-# Quando nem o helper da transformação existe no formato, a 70 é PULADA em vez
-# de instalada fechada — o fail-safe aponta para o lado de a pessoa conseguir
-# usar o controle. Os pacotes já gravam uma 70 ABERTA em
-# `/usr/lib/udev/rules.d/`, e não escrever nada em `/etc` deixa aquela valendo.
+# Quando nem o helper da transformação existe no formato, a regra do nó é
+# PULADA em vez de instalada fechada — o fail-safe aponta para o lado de a
+# pessoa conseguir usar o controle. Os pacotes já gravam a mesma regra ABERTA,
+# com o MESMO nome, em `/usr/lib/udev/rules.d/`, e não escrever nada em `/etc`
+# deixa aquela valendo. O nome igual é o que faz a de `/etc` sombrear a de
+# `/usr/lib` quando o broker entra.
 REGRA_ABERTA_SH=""
 for candidate in \
     "/app/share/hefesto-dualsense4unix/scripts" \
@@ -269,7 +274,10 @@ MODLOAD_DEST="/etc/modules-load.d"
 # cada ACTION=="add" e amplificavam a re-enumeração do storm -71. Causa-raiz
 # real: porta USB ruim (full-speed/-71 na 3-1). Ver docs/process/discoveries.
 RULES=(
-    "70-ps5-controller.rules"
+    # 73-hefesto: o nó do DualSense físico nasce fechado. O nome ordena depois
+    # de todo 70-*, 71-* e 72-* de terceiro e antes da 73-seat-late.rules (ver
+    # o cabeçalho do asset). Era a 70 até 25/09/2026.
+    "73-hefesto-ps5-controller.rules"
     # 71-uhid: /dev/uhid — o gamepad virtual vira um DualSense de verdade, o que faz
     # a vibração funcionar também com a máscara DualSense. SPRINT-UHID-VPAD-01.
     # O número TEM de ser < 73 (a 73-seat-late.rules é quem vira a TAG uaccess em ACL).
@@ -326,40 +334,43 @@ for regra in "${RULES[@]}"; do
     fi
 done
 
-# O-NO-NASCE-FECHADO-01: de onde sai a 70 que vai para /etc (ver o bloco do
-# `REGRA_ABERTA_SH`, lá em cima). Por default é o asset FECHADO — a decisão
-# dela. Sem broker, é a variante ABERTA; sem o helper da transformação, a 70
-# não vai para /etc nenhuma (a do pacote, aberta, continua valendo).
-REGRA_70="70-ps5-controller.rules"
-REGRA_70_SRC="${RULES_SRC}/${REGRA_70}"
-REGRA_70_TMPDIR=""
+# O-NO-NASCE-FECHADO-01: de onde sai a regra do nó que vai para /etc (ver o
+# bloco do `REGRA_ABERTA_SH`, lá em cima). Por default é o asset FECHADO — a
+# decisão dela. Sem broker, é a variante ABERTA; sem o helper da
+# transformação, ela não vai para /etc nenhuma (a do pacote, aberta, continua
+# valendo).
+REGRA_DO_NO="73-hefesto-ps5-controller.rules"
+#: O nome de antes (até 25/09/2026). Sai de /etc em toda instalação.
+REGRA_DO_NO_VELHA="70-ps5-controller.rules"
+REGRA_DO_NO_SRC="${RULES_SRC}/${REGRA_DO_NO}"
+REGRA_DO_NO_TMPDIR=""
 if [[ "${BROKER_INSTALL_OK}" -ne 1 ]]; then
     if [[ -n "${REGRA_ABERTA_SH}" ]]; then
-        REGRA_70_TMPDIR="$(mktemp -d)"
+        REGRA_DO_NO_TMPDIR="$(mktemp -d)"
         # O `rm -rf` fica no EXIT: o arquivo tem de sobreviver até o comando
         # ELEVADO copiá-lo, e esse comando roda no fim do script.
-        trap 'rm -rf "${REGRA_70_TMPDIR}"' EXIT
-        if bash "${REGRA_ABERTA_SH}" "${RULES_SRC}/${REGRA_70}" \
-                "${REGRA_70_TMPDIR}/${REGRA_70}"; then
-            REGRA_70_SRC="${REGRA_70_TMPDIR}/${REGRA_70}"
-            echo "AVISO: o broker NÃO será instalado — a ${REGRA_70} vai ABERTA."
+        trap 'rm -rf "${REGRA_DO_NO_TMPDIR}"' EXIT
+        if bash "${REGRA_ABERTA_SH}" "${RULES_SRC}/${REGRA_DO_NO}" \
+                "${REGRA_DO_NO_TMPDIR}/${REGRA_DO_NO}"; then
+            REGRA_DO_NO_SRC="${REGRA_DO_NO_TMPDIR}/${REGRA_DO_NO}"
+            echo "AVISO: o broker NÃO será instalado — a ${REGRA_DO_NO} vai ABERTA."
             echo "       O nó do DualSense só nasce fechado quando existe quem o abra."
         else
-            REGRA_70_SRC=""
-            echo "AVISO: não foi possível gerar a variante aberta da ${REGRA_70};" >&2
+            REGRA_DO_NO_SRC=""
+            echo "AVISO: não foi possível gerar a variante aberta da ${REGRA_DO_NO};" >&2
             echo "       ela NÃO será instalada (fechá-la sem broker travaria o controle)." >&2
         fi
     else
-        REGRA_70_SRC=""
-        echo "AVISO: sem broker e sem regra_do_no_aberta.sh — a ${REGRA_70} NÃO será instalada." >&2
+        REGRA_DO_NO_SRC=""
+        echo "AVISO: sem broker e sem regra_do_no_aberta.sh — a ${REGRA_DO_NO} NÃO será instalada." >&2
         echo "       Fechá-la sem quem a abra deixaria o DualSense inutilizável." >&2
     fi
 fi
-# A lista que o resto do script percorre perde a 70 quando ela não vai.
-if [[ -z "${REGRA_70_SRC}" ]]; then
+# A lista que o resto do script percorre perde a regra do nó quando ela não vai.
+if [[ -z "${REGRA_DO_NO_SRC}" ]]; then
     _restantes=()
     for regra in "${RULES[@]}"; do
-        [[ "${regra}" == "${REGRA_70}" ]] || _restantes+=("${regra}")
+        [[ "${regra}" == "${REGRA_DO_NO}" ]] || _restantes+=("${regra}")
     done
     RULES=("${_restantes[@]}")
 fi
@@ -445,14 +456,18 @@ _build_install_cmd() {
         fi
     fi
     for regra in "${RULES[@]}"; do
-        # A 70 tem origem PRÓPRIA (`REGRA_70_SRC`): fechada com broker, aberta
-        # sem ele. As outras treze vêm sempre do `RULES_SRC`.
+        # A regra do nó tem origem PRÓPRIA (`REGRA_DO_NO_SRC`): fechada com
+        # broker, aberta sem ele. As outras treze vêm sempre do `RULES_SRC`.
         local _origem="${RULES_SRC}/${regra}"
-        if [[ "${regra}" == "${REGRA_70}" ]]; then
-            _origem="${REGRA_70_SRC}"
+        if [[ "${regra}" == "${REGRA_DO_NO}" ]]; then
+            _origem="${REGRA_DO_NO_SRC}"
         fi
         cmd+="install -Dm644 '${_origem}' '${RULES_DEST}/${regra}'; "
     done
+    # A regra do nó com o nome de antes sai SEMPRE — inclusive quando a nova
+    # não vai (sem broker e sem o helper): a velha em /etc podia ser a FECHADA,
+    # e o fail-safe deste script é deixar valendo a aberta do pacote.
+    cmd+="rm -f '${RULES_DEST}/${REGRA_DO_NO_VELHA}'; "
     if [[ -n "${MODLOAD_SRC}" ]]; then
         cmd+="install -Dm644 '${MODLOAD_SRC}/hefesto-dualsense4unix.conf' "
         cmd+="'${MODLOAD_DEST}/hefesto-dualsense4unix.conf'; "
@@ -626,7 +641,7 @@ _build_install_cmd() {
     # `hidraw` não tem `idVendor` (ele mora no pai USB, e no Bluetooth não há
     # pai USB nenhum). Aqui o `udevadm trigger` global da última linha
     # compensava por acaso; no `scripts/install_udev.sh` não havia global, e o
-    # controle já conectado no rádio ficava sem a regra 70 até reconectar.
+    # controle já conectado no rádio ficava sem a regra do nó até reconectar.
     # A justificativa completa, com a medição, está no install_udev.sh.
     cmd+="udevadm trigger --action=change --subsystem-match=hidraw 2>/dev/null || true; "
     cmd+="udevadm trigger --subsystem-match=usb --attr-match=idVendor=054c 2>/dev/null || true; "
@@ -674,12 +689,13 @@ else
     echo "" >&2
     echo "Execute manualmente como root:" >&2
     for regra in "${RULES[@]}"; do
-        if [[ "${regra}" == "${REGRA_70}" ]]; then
-            echo "  sudo install -Dm644 ${REGRA_70_SRC} ${RULES_DEST}/${regra}" >&2
+        if [[ "${regra}" == "${REGRA_DO_NO}" ]]; then
+            echo "  sudo install -Dm644 ${REGRA_DO_NO_SRC} ${RULES_DEST}/${regra}" >&2
         else
             echo "  sudo install -Dm644 ${RULES_SRC}/${regra} ${RULES_DEST}/${regra}" >&2
         fi
     done
+    echo "  sudo rm -f ${RULES_DEST}/${REGRA_DO_NO_VELHA}" >&2
     # A receita à mão também tem de trazer os alvos, senão ela reproduz o
     # defeito que este script acabou de curar: regra no disco, cura nenhuma.
     if [[ "${BTRES_INSTALL_OK}" -eq 1 ]]; then

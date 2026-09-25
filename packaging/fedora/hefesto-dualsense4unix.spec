@@ -165,7 +165,8 @@ install -Dm644 assets/simbolico/hefesto-dualsense4unix-symbolic.svg \
 # As 82/83/84 (no-sniff do Pro, snapshot de bond, variante do clone 8BitDo)
 # faltavam aqui: o install-host-udev.sh exige TODAS as 14 no pre-flight.
 #
-# O-NO-NASCE-FECHADO-01 (auditoria de 20/09/2026, bloqueante 3): a 70 vai para
+# O-NO-NASCE-FECHADO-01 (auditoria de 20/09/2026, bloqueante 3): a regra do nó
+# (a 73-hefesto, que era a 70 até 25/09/2026) vai para
 # o diretório VIVO na variante ABERTA, e não é opinião — é a única metade da
 # cura que este pacote consegue entregar. O asset versionado fecha o nó do
 # DualSense (TAG-="uaccess", 0600 root) contando que o broker o abra sob
@@ -175,8 +176,8 @@ install -Dm644 assets/simbolico/hefesto-dualsense4unix-symbolic.svg \
 # `dnf install` ate alguem rodar o helper a mao — e o produto e para qualquer
 # usuario (ordem dela, 11/09/2026). Quando o helper roda e o broker entra, ele
 # grava a variante FECHADA em /etc/udev/rules.d/, que VENCE o %{_udevrulesdir}.
-bash scripts/regra_do_no_aberta.sh assets/70-ps5-controller.rules \
-    %{buildroot}%{_udevrulesdir}/70-ps5-controller.rules
+bash scripts/regra_do_no_aberta.sh assets/73-hefesto-ps5-controller.rules \
+    %{buildroot}%{_udevrulesdir}/73-hefesto-ps5-controller.rules
 install -Dm644 -t %{buildroot}%{_udevrulesdir} \
     assets/71-uhid.rules \
     assets/71-uinput.rules \
@@ -433,7 +434,7 @@ fi
 %{_datadir}/icons/hicolor/256x256/apps/hefesto.png
 %{_datadir}/icons/hicolor/256x256/apps/hefesto-dualsense4unix.png
 %{_datadir}/icons/hicolor/symbolic/apps/hefesto-dualsense4unix-symbolic.svg
-%{_udevrulesdir}/70-ps5-controller.rules
+%{_udevrulesdir}/73-hefesto-ps5-controller.rules
 %{_udevrulesdir}/71-uhid.rules
 %{_udevrulesdir}/71-uinput.rules
 %{_udevrulesdir}/72-ps5-controller-autosuspend.rules

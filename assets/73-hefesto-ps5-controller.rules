@@ -1,0 +1,92 @@
+# Hefesto — udev rules para DualSense + DualSense Edge
+# Baseado em pydualsense (MIT) — ver NOTICE.
+#
+# O NÓ DO DUALSENSE FÍSICO NASCE FECHADO — decisão dela, 20/09/2026:
+#
+#   «Nossa udev não deveria garantir isso? Por mim caminho um e lembrando que o
+#    Hefesto tem que ter prioridade em tudo e isso deveria estar no install por
+#    default»
+#
+# POR QUÊ. A Steam aberta ANTES de o controle conectar abre o /dev/hidraw do
+# FÍSICO na janela em que o udev deu `uaccess` e o broker ainda não tirou.
+# **Tirar a ACL não fecha descritor já aberto** — por isso o broker, que esconde
+# depois, não alcança. Medido em quatro noites: 5 de 9 conexões pelo rádio em
+# 10/09, 3 de 3 em 13/09, 8 de 8 em 17/09; em 19/09, com o olho dela, só a
+# barra apaga (os player LEDs ficam certos); em 25/09, a Steam segurou três de
+# quatro controles e duas barras apagaram (a terceira obedeceu ao Hefesto).
+# Fechar a Steam não devolve a barra; reconectar com o nó limpo devolve
+# (BARRA-MUDA-01).
+#
+# A ORDEM ESTAVA INVERTIDA, e é isso que estas linhas consertam: o udev dava a
+# ACL e o produto tirava depois. Agora o nó nasce `0600 root` e QUEM PRECISA DO
+# FÍSICO PEDE ao broker (`cmd expose`), que põe a ACL enquanto o pedido viver e
+# a tira quando ele acabar. O daemon não perde nada: ele já recebe fd por
+# SCM_RIGHTS (`hidraw_broker_fd_recebido`) e abre o handle de controle dentro
+# de uma exposição pedida ao broker.
+#
+# POR QUE O NOME É `73-hefesto-…` (25/09/2026, a sprint
+# O-FISICO-NASCE-ESCONDIDO-EM-QUALQUER-MAQUINA-01). O udev ordena as regras de
+# /etc, /run, /usr/local/lib e /usr/lib JUNTAS, pelo nome do arquivo (o de /etc
+# sombreia o de mesmo nome nos outros), e sobre o mesmo nó quem fala por último
+# vence. Duas coisas têm de valer ao mesmo tempo:
+#   1. este arquivo corre DEPOIS de toda regra de terceiro que dê `uaccess` ao
+#      DualSense. Elas existem e vêm de pacote: a `60-steam-input.rules`
+#      (`steam-devices`, só o 0ce6) e a `71-sony-controllers.rules`
+#      (`game-devices-udev`, dependência do `pop-desktop` — 0ce6 e 0df2, cabo e
+#      rádio). Com o nome 70, esta regra fechava e a 71 reabria: o nó nascia
+#      `0660` com a ACL da sessão, e a cura de 20/09 nunca valeu na máquina
+#      dela;
+#   2. ele corre ANTES da `73-seat-late.rules`, que transforma a TAG em ACL
+#      ('73-h' < '73-s'). Depois dela, um `TAG-=` não desfaz a ACL do
+#      nascimento.
+# É o lugar mais tardio que cabe: depois de todo 70-*, 71-* e 72-*. O `TAG` não
+# tem atribuição final (`:=`), então uma regra de terceiro que ordene entre este
+# arquivo e a 73-seat-late ainda reabriria o nó — quem vigia isso é o doctor,
+# que lê a tag corrente (`Q:uaccess`) do nó vivo no banco do udev e nomeia a
+# regra. O `MODE`, o `OWNER` e o `GROUP` são finais (`:=`): uma regra posterior
+# (a `99-hidraw-permissions.rules` com `MODE="0666"` é a receita mais copiada da
+# internet) não os desfaz.
+#
+# O `TAG-=` é obrigatório (não basta omitir o `TAG+=`): as regras de terceiro
+# acima marcam o DualSense com `uaccess` antes deste arquivo.
+#
+# COMO REVERTER (o nó volta a nascer aberto para a sessão):
+#   sudo bash scripts/install_udev.sh --no-fechar-o-no
+#   sudo systemctl restart hefesto-hidraw-broker.socket hefesto-hidraw-broker.service
+# ou, manualmente, nas QUATRO linhas físicas de baixo (0ce6 e 0df2), troque o
+# `TAG-=` por `TAG+=` e o `MODE:=` por `MODE="0660"`, tire o `OWNER:=` e o
+# `GROUP:=`, e recarregue o udev. O `install.sh` tem a mesma flag:
+# `./install.sh --no-fechar-o-no`.
+#
+# O DUALSENSE **EDGE** FÍSICO (0df2) NASCE FECHADO TAMBÉM — STEAM-NO-FISICO-01,
+# 24/09/2026. O 0df2 é também o PID do NOSSO vpad uhid, e fechar os dois pela
+# mesma linha calaria o controle que o Hefesto ENTREGA ao jogo. O que separa os
+# dois não é o PID, é de onde o nó nasce:
+#   - o Edge pelo CABO tem pai USB real (casa o `ATTRS{idVendor}`); o vpad não;
+#   - o Edge pelo RÁDIO é bus 0005; o vpad é bus 0003. O físico do rádio TAMBÉM
+#     mora em `/devices/virtual/misc/uhid/` (é o BlueZ que o cria por uhid):
+#     quem separa é o bus, não o caminho;
+#   - a linha do vpad, a última deste arquivo, casa o `DEVPATH` além do
+#     `KERNELS`. Sem isso ela casaria o Edge do cabo também (`0003:054C:0DF2`)
+#     e o reabriria depois de fechado.
+# O broker aceita o Edge físico e recusa o vpad pela mesma topologia (D1/D2 em
+# `hefesto-hidraw-broker`).
+
+# USB — DualSense standard: NASCE FECHADO (0600 root); o broker abre sob pedido.
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0ce6", MODE:="0600", OWNER:="root", GROUP:="root", TAG-="uaccess"
+# USB — DualSense Edge FÍSICO: NASCE FECHADO também (ver cabeçalho).
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0df2", MODE:="0600", OWNER:="root", GROUP:="root", TAG-="uaccess"
+# Bluetooth — DualSense standard: NASCE FECHADO (0600 root).
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", KERNELS=="0005:054C:0CE6.*", MODE:="0600", OWNER:="root", GROUP:="root", TAG-="uaccess"
+# Bluetooth — DualSense Edge FÍSICO: NASCE FECHADO também (0600 root).
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", KERNELS=="0005:054C:0DF2.*", MODE:="0600", OWNER:="root", GROUP:="root", TAG-="uaccess"
+# Vpad UHID — o DualSense Edge VIRTUAL do daemon (bus 0003 sem pai USB real, por
+# isso o match por ATTRS{idVendor} acima não o cobre). Sem esta linha o acesso do
+# jogo ao hidraw do vpad dependia de pacote de terceiro. KERNEL-07.
+# uaccess funciona: este arquivo ordena antes de 73-seat-late.rules (quem vira
+# TAG em ACL).
+# ESTE CONTINUA ABERTO, e tem de continuar: é o controle que o Hefesto ENTREGA
+# ao jogo. Fechar o vpad seria fechar a porta que a cura existe para proteger.
+# O `DEVPATH` é o que o separa do Edge FÍSICO pelo cabo, que também é
+# `0003:054C:0DF2` e nasce fechado na linha USB acima (STEAM-NO-FISICO-01).
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", DEVPATH=="/devices/virtual/misc/uhid/*", KERNELS=="0003:054C:0DF2.*", MODE="0660", TAG+="uaccess"

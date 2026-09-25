@@ -20,7 +20,7 @@
 #
 # ESTA CAMADA É DA MÁQUINA, NÃO DO APP. É a razão de o `install-dev.sh` não a
 # ter: dois instaladores escrevendo por cima de
-# `/etc/udev/rules.d/70-ps5-controller.rules` fariam o app de uma pessoa rodar
+# `/etc/udev/rules.d/73-hefesto-ps5-controller.rules` fariam o app de uma pessoa rodar
 # sob a regra da outra sem uma linha dizendo isso. O que mudou não é essa
 # razão — é que agora existe UM app só, e ele precisa da camada.
 #

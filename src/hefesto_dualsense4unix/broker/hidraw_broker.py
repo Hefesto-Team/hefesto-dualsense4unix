@@ -11,7 +11,7 @@ projeto) roda como root isolado/hardened e, a pedido do daemon:
     `open(2)`, em QUALQUER backend (SDL, winebus-hidraw, libScePad, HIDAPI).
     O fd JÁ ABERTO do daemon sobrevive: permissão só é checada no open(2).
   - `expose`/`unexpose` (O-NO-NASCE-FECHADO-01, 2026-09-20): a lease
-    INVERTIDA. Com o `assets/70-ps5-controller.rules` da cura, o nó do físico
+    INVERTIDA. Com o `assets/73-hefesto-ps5-controller.rules` da cura, o nó do físico
     NASCE `0600 root` (`TAG-="uaccess"`) e o broker é quem o abre — enquanto
     alguém pedir. É para quem só sabe `open(path)` e não pode receber fd: o
     `hidapi.Device(path=...)` do handle de controle do daemon, e o JOGO no
@@ -86,8 +86,8 @@ from typing import Any
 DEFAULT_SOCKET_PATH = "/run/hefesto-hidraw-broker/broker.sock"
 #: Env com o uid autorizado (renderizado pelo install a partir de SUDO_UID).
 ALLOWED_UID_ENV = "HEFESTO_BROKER_ALLOWED_UID"
-#: O-NO-NASCE-FECHADO-01 (20/09/2026) — "1" quando o `assets/70-ps5-controller.
-#: rules` instalado FECHA o nó do DualSense físico (`TAG-="uaccess"`, 0600
+#: O-NO-NASCE-FECHADO-01 (20/09/2026) — "1" quando o `assets/73-hefesto-ps5-
+#: controller.rules` instalado FECHA o nó do DualSense físico (`TAG-="uaccess"`, 0600
 #: root). Renderizada pelo install na unit, e é ela que acopla as duas metades
 #: da cura: a udev decide o estado de NASCIMENTO, e este env conta ao broker
 #: qual é o estado de REPOUSO para onde `restore`/EOF devolvem o nó. Sem o
@@ -104,7 +104,7 @@ PHYS_PRODUCT = 0x0CE6  # DualSense físico
 VPAD_PRODUCT = 0x0DF2  # DualSense Edge: o do NOSSO vpad e o do Edge físico
 #: STEAM-NO-FISICO-01 (24/09/2026) — os PIDs de DualSense FÍSICO que o broker
 #: esconde, expõe e abre. O Edge físico (0df2) entrou: o nó dele nasce fechado
-#: como o do standard (`assets/70-ps5-controller.rules`), e sem o broker
+#: como o do standard (`assets/73-hefesto-ps5-controller.rules`), e sem o broker
 #: aceitá-lo ninguém o abriria. O 0df2 é TAMBÉM o PID do nosso vpad uhid, então
 #: ele deixou de ser recusado pelo PID e passou a ser recusado pelo que o
 #: distingue do físico: USB sob `/misc/uhid/` (D1) e o `phys`/`uniq` do vpad

@@ -19,7 +19,9 @@ fs são dublê, o validador é injetado, e a regra udev é lida do asset como
 TEXTO.
 
 Cobre as quatro pontas da cura, e cada uma tem a sua mordida escrita no teste:
-  1. a regra udev do asset fecha o 0ce6 e ordena ANTES do `73-seat-late`;
+  1. a regra udev do asset fecha o 0ce6 e ordena ANTES do `73-seat-late` (e,
+     desde 25/09/2026, DEPOIS de todo 70/71/72 de terceiro — a régua da cadeia
+     inteira é `test_o_fisico_nasce_escondido_em_qualquer_maquina.py`);
   2. o broker abre sob pedido, com lease, refcount e EOF;
   3. o repouso: `restore` deixa de ABRIR o que a regra fechou;
   4. o caminho que só sabe `open(path)` — o `hidapi.Device(path=…)` do handle
@@ -41,7 +43,7 @@ from hefesto_dualsense4unix.broker.hidraw_broker import (
 )
 
 RAIZ = Path(__file__).resolve().parents[2]
-REGRA = RAIZ / "assets" / "70-ps5-controller.rules"
+REGRA = RAIZ / "assets" / "73-hefesto-ps5-controller.rules"
 UNIT = RAIZ / "assets" / "systemd" / "hefesto-hidraw-broker.service"
 INSTALL = RAIZ / "install.sh"
 CAMADA = RAIZ / "scripts" / "lib" / "camada_de_maquina.sh"
@@ -106,9 +108,10 @@ class TestARegraFechaONo:
         passaria verde sobre um nó aberto.
         """
         linha = linha_do_casamento(casamento)
-        assert 'MODE="0600"' in linha, linha
-        assert 'OWNER="root"' in linha, linha
-        assert 'GROUP="root"' in linha, linha
+        # FINAIS desde 25/09/2026 (`:=`): uma regra posterior não os desfaz.
+        assert 'MODE:="0600"' in linha, linha
+        assert 'OWNER:="root"' in linha, linha
+        assert 'GROUP:="root"' in linha, linha
 
     def test_o_vpad_continua_aberto(self) -> None:
         """Fechar o vpad seria fechar a porta que a cura existe para proteger.
@@ -127,12 +130,17 @@ class TestARegraFechaONo:
     def test_o_arquivo_corre_antes_do_73_seat_late(self) -> None:
         """Quem transforma a TAG em ACL é o `73-seat-late.rules`.
 
-        Renumerar este asset para cima de 73 faria o `TAG-=` rodar DEPOIS de
-        a ACL já ter sido escrita — e aí ele não tira nada. O número é parte
-        da cura, não organização de pasta.
+        Pôr este asset depois dele faria o `TAG-=` rodar DEPOIS de a ACL já
+        ter sido escrita — e aí ele não tira nada. O nome é parte da cura, não
+        organização de pasta.
+
+        CORREÇÃO DE FATO (25/09/2026): a régua era `int(numero) < 73`, e ela
+        mentia nos dois sentidos. O udev ordena pelo NOME, byte a byte: o
+        `73-hefesto-…` corre antes do `73-seat-late` (h < s) e a régua o
+        reprovaria; e o `70-ps5-controller.rules` passava nela enquanto a
+        `71-sony-controllers.rules` o desfazia na máquina dela.
         """
-        numero = int(REGRA.name.split("-", 1)[0])
-        assert numero < 73, REGRA.name
+        assert REGRA.name.encode() < b"73-seat-late.rules", REGRA.name
 
     def test_o_comentario_carrega_a_decisao_e_a_volta(self) -> None:
         """Regra udev sem o porquê é regra que a próxima pessoa apaga.
@@ -173,7 +181,7 @@ def _casa(padrao: str, valor: str) -> bool:
 
 def _aplicar_a_regra(aparelho: _Aparelho) -> _Aparelho:
     """Roda as linhas do asset, em ordem, sobre um aparelho — o udev de bolso."""
-    termo = re.compile(r'(\w+(?:\{[^}]*\})?)\s*(==|!=|\+=|-=|=)\s*"([^"]*)"')
+    termo = re.compile(r'(\w+(?:\{[^}]*\})?)\s*(==|!=|\+=|-=|:=|=)\s*"([^"]*)"')
     for linha in linhas_de_regra():
         termos = termo.findall(linha)
         casou = True
@@ -207,9 +215,9 @@ def _aplicar_a_regra(aparelho: _Aparelho) -> _Aparelho:
         if not casou:
             continue
         for chave, op, valor in termos:
-            if chave == "MODE" and op == "=":
+            if chave == "MODE" and op in ("=", ":="):
                 aparelho.mode = valor
-            elif chave == "OWNER" and op == "=":
+            elif chave == "OWNER" and op in ("=", ":="):
                 aparelho.owner = valor
             elif chave == "TAG" and op == "+=":
                 aparelho.tags.add(valor)

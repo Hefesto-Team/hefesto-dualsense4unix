@@ -1264,7 +1264,7 @@ _ensaio_camada() {
                 return 0
             fi
             if [[ "${ABRIR_O_NO:-0}" -eq 1 ]]; then
-                _faria_root "copiar as regras udev canônicas de assets/*.rules para /etc/udev/rules.d/ e recarregar o udev (scripts/install_udev.sh) — a 70 vai ABERTA (--no-fechar-o-no)"
+                _faria_root "copiar as regras udev canônicas de assets/*.rules para /etc/udev/rules.d/ e recarregar o udev (scripts/install_udev.sh) — a regra do nó do DualSense vai ABERTA (--no-fechar-o-no)"
             else
                 _faria_root "copiar as regras udev canônicas de assets/*.rules para /etc/udev/rules.d/ e recarregar o udev (scripts/install_udev.sh)"
             fi
@@ -2132,7 +2132,7 @@ else
         "${#canonical_rules[@]}"
     for rules_base in "${canonical_rules[@]}"; do
         case "${rules_base}" in
-            70-*) rules_desc='permissão hidraw (USB, BT e vpad virtual)' ;;
+            73-hefesto-ps5-controller.rules) rules_desc='hidraw do DualSense físico fechado; o vpad aberto (USB e BT)' ;;
             71-uinput.rules) rules_desc='emulação Xbox360 via uinput' ;;
             71-uhid.rules) rules_desc='DualSense virtual via uhid (vibração na máscara PS)' ;;
             72-hefesto-touchpad-motion-uaccess.rules) rules_desc='touchpad e giroscópio acessíveis à sessão (uaccess)' ;;

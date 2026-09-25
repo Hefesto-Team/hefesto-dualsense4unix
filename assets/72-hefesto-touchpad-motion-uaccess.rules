@@ -124,7 +124,7 @@ ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ATTRS{id/vendor}=="0
 # quatro nós de entrada do DualSense FÍSICO — o gamepad, o touchpad, os
 # sensores de movimento e a tomada do fone (`event*`), e o joystick legado
 # (`js*`) — somem para todos, menos para o Hefesto, como o hidraw já some
-# desde a `70-ps5-controller.rules`. Só o Modo Nativo os devolve, pelo broker.
+# desde a `73-hefesto-ps5-controller.rules`. Só o Modo Nativo os devolve, pelo broker.
 #
 # POR QUÊ. O doctor media, com o hidraw fechado: «o FÍSICO segue alcançável em
 # 4 nó(s) de entrada (event27 event28 event29 js1), e quem enumerar /dev/input
@@ -135,14 +135,15 @@ ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ATTRS{id/vendor}=="0
 # giroscópio por estes nós. Com eles `0600 root`, ele pede o fd ao broker
 # (`cmd open` com `/dev/input/eventN`), como já pede o do hidraw.
 #
-# POR QUE AQUI E NÃO NA 70. Quem dá `uaccess` ao gamepad é o
-# `/usr/lib/udev/rules.d/70-uaccess.rules` do sistema, e `70-ps5` corre ANTES
-# de `70-uaccess` (p < u): um `TAG-=` lá seria desfeito. Este arquivo corre
-# depois dele e antes do `73-seat-late.rules`, que é quem vira a TAG em ACL.
+# POR QUE AQUI. Quem dá `uaccess` ao gamepad é o
+# `/usr/lib/udev/rules.d/70-uaccess.rules` do sistema, e a regra do hidraw
+# (que até 25/09/2026 era a `70-ps5`) corria ANTES de `70-uaccess` (p < u): um
+# `TAG-=` lá seria desfeito. Este arquivo corre depois dele e antes do
+# `73-seat-late.rules`, que é quem vira a TAG em ACL.
 # E as linhas vêm DEPOIS das de acesso acima, que dão `TAG+=` ao touchpad e
 # ao movimento de todo aparelho Sony — a ordem dentro do arquivo é a cura.
 #
-# COMO SEPARA O FÍSICO DO VPAD, a mesma topologia da `70-ps5-controller`:
+# COMO SEPARA O FÍSICO DO VPAD, a mesma topologia da `73-hefesto-ps5-controller`:
 #   - pelo RÁDIO o físico é bus 0005 (`KERNELS=="0005:054C:…"`), e o vpad é
 #     sempre 0003;
 #   - pelo CABO o físico tem pai USB real, e o vpad mora em
@@ -165,7 +166,7 @@ ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ATTRS{id/vendor}=="0
 # hide.rules`, que corre depois, o põe em `MODE="0000"` — ela continua dona.
 #
 # COMO REVERTER, junto com o hidraw: a variante aberta sai do mesmo
-# `scripts/regra_do_no_aberta.sh` que abre a 70 — as duas linhas têm a forma
-# fechada que ele troca.
+# `scripts/regra_do_no_aberta.sh` que abre a regra do hidraw — as duas linhas
+# têm a forma fechada que ele troca.
 ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*|js*", KERNELS=="0005:054C:0CE6.*|0005:054C:0DF2.*", TEST=="/run/hefesto-hidraw-broker/broker.sock", MODE="0600", OWNER="root", GROUP="root", TAG-="uaccess"
 ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*|js*", KERNELS=="0003:054C:0CE6.*|0003:054C:0DF2.*", DEVPATH!="/devices/virtual/*", TEST=="/run/hefesto-hidraw-broker/broker.sock", MODE="0600", OWNER="root", GROUP="root", TAG-="uaccess"
