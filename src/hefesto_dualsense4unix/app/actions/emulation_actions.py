@@ -555,7 +555,7 @@ BLOQUEIO_DO_TECLADO_EM_PORTUGUES: dict[str, str] = {
 BLOQUEIO_SEM_CAMINHO_DE_PRODUCAO: dict[str, str] = {
     "vpad_suspenso_pelo_steam_input": (
         "MEDIDO em 25/08/2026 (VPAD-SUSPENSO-MORTO-01/E1, reconferido aqui). O "
-        "predicado de daemon/lifecycle.py:2439 só devolve esta constante sob a "
+        "predicado de daemon/lifecycle.py:2478 só devolve esta constante sob a "
         "flag do vpad suspenso, e nada em produção a põe em True: o armador de "
         "daemon/subsystems/gamepad.py:797 tem zero chamadores em src/. A causa "
         "é decisão dela (ESCONDER-EM-VEZ-DE-SAIR-01, `d8022ea`, 09/08/2026), e "

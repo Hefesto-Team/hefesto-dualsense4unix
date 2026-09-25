@@ -882,6 +882,32 @@ class CoopManager:
             return
         reavaliar_coop_fora_da_mesa(self._daemon, presentes)
 
+    def algum_boneco_ficou_para_tras(self) -> bool:
+        """Algum secundário veste máscara ou canal diferente do efetivo de agora?
+
+        A mesma pergunta que o `sync` faz no laço dos jogadores, feita de fora
+        e sem mexer em nada: o `sync` só chega nela quando algo muda em
+        `/dev/input` ou quando é forçado, e trocar a máscara não muda nó
+        nenhum (A-MASCARA-SEGUE-O-ESTADO-01, `gamepad.reconciliar_as_mascaras`).
+        """
+        from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
+            vpad_ficou_para_tras,
+        )
+
+        flavor = self._flavor()
+        caminho = self._caminho()
+        return any(
+            player.vpad is not None
+            and vpad_ficou_para_tras(
+                getattr(player.vpad, "flavor", None),
+                mac,
+                flavor,
+                vpad=player.vpad,
+                caminho=caminho,
+            )
+            for mac, player in list(self._players.items())
+        )
+
     def _flavor(self) -> str:
         from hefesto_dualsense4unix.integrations.uinput_gamepad import normalize_flavor
 
@@ -2691,7 +2717,7 @@ def _numeros_sem_vpad(
     vpad por jogador* (``_spawn_player``), e pôr-se no meio é exatamente o que a
     Conexão Nativa dispensa — abrir aquele gate **desfaria o modo que ela
     pediu**, pela mesma razão que já mantém a exceção de
-    ``lifecycle.py:1906-1907``. Ou o jogo conta os dois físicos sozinho, ou
+    ``lifecycle.py:1945-1907``. Ou o jogo conta os dois físicos sozinho, ou
     alguém tem de estar no meio (o Caminho D, que é oferta e continua sem a
     palavra dela). A régua que trava isto é
     ``tests/unit/test_o_coop_vive_na_conexao_nativa.py``.
