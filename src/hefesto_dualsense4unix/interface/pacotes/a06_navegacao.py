@@ -1087,7 +1087,7 @@ def move_o_cursor(dele: dict[str, Any], ctx: Contexto, primario: bool) -> bool:
     leva ao cursor o giro de TODA peça com a Mira acesa, e o cartão dizia «Só
     a janela» sobre um controle que movia o cursor da máquina.
 
-    AS QUATRO PERGUNTAS, e cada uma é a do dono da resposta:
+    AS CINCO PERGUNTAS, e cada uma é a do dono da resposta:
 
     1. **não é quem navega** — o primário já diz «Navega o PC», que cobre o
        giro dele;
@@ -1098,23 +1098,41 @@ def move_o_cursor(dele: dict[str, Any], ctx: Contexto, primario: bool) -> bool:
        (`a02_controles._na_navegacao`, que é o `mode_of_state`). No Virtual e
        no Xbox a Mira vai ao analógico direito do controle virtual, e no
        Nativo ela não anda: o cursor da máquina fica onde está;
-    4. **o mouse está ligado** — o «Status do Modo» desta aba
-       (`mouse_emulation.enabled`). Desligado, o tique da Navegação não roda
-       (`lifecycle._poll_loop` só despacha o mouse com o device de pé), e o
-       giro não chega a cursor nenhum.
+    4. **o giroscópio dele chega** — o interruptor que ela liga e desliga no
+       chip Giroscópio (`sensores.giroscopio_ligado`, pelo leitor do chip,
+       `a02_controles._sensor_ligado`) e o leitor de movimento aberto
+       (`inputs.gyro`, pelo `controller_card.gyro_do_inputs`). O motor pergunta
+       as duas coisas antes de mover (`gamepad.aplicar_o_movimento`: o
+       `REGISTRO.estado(uniq).giroscopio` e a `velocidade_do_movimento`), e
+       sem qualquer uma o cursor não anda. Sem leitura é não, como na 2;
+    5. **o mouse está movendo o cursor AGORA** — `mouse_emulation.despachando`,
+       o dono único da resposta no daemon
+       (`ipc_handlers._bloqueio_da_emulacao_de_desktop`): o «Status do Modo»
+       ligado, o mouse virtual de pé, e nem o modo jogo nem o jogo com a
+       entrada calando o desktop. É a mesma conjunção com que o
+       `lifecycle._poll_loop` decide rodar o tique da Navegação, e sem ele o
+       giro não chega a cursor nenhum. O `enabled` sozinho é o sinal mais
+       fraco: com o PS segurado (modo jogo) ele segue `true`, a linha do mouse
+       diz «em pausa», e o cartão afirmaria o cursor — foi o que a conferência
+       fotografou.
 
-    OS DOIS LEITORES SÃO DA ABA CONTROLES DE PROPÓSITO: o chip e a dica do
+    OS LEITORES SÃO DA ABA CONTROLES DE PROPÓSITO: o chip e a dica do
     Giroscópio de lá e este cartão falam do MESMO fato, e duas leituras dele
     divergiriam na primeira correção.
     """
     if primario:
         return False
-    from .a02_controles import _mira_ligada, _na_navegacao
+    from hefesto_dualsense4unix.app.widgets.controller_card import gyro_do_inputs
+
+    from .a02_controles import _mira_ligada, _na_navegacao, _sensor_ligado
 
     if _mira_ligada(dele) is not True or not _na_navegacao(ctx):
         return False
+    if (_sensor_ligado(dele, "giroscopio") is not True
+            or gyro_do_inputs(dele.get("inputs")) is None):
+        return False
     rato = (getattr(ctx, "state", None) or {}).get("mouse_emulation") or {}
-    return rato.get("enabled") is True
+    return rato.get("despachando") is True
 
 
 def linha_do_cartao(via: str, primario: bool, cursor: bool = False) -> str:

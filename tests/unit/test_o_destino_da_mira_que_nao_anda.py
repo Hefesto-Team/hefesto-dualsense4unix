@@ -436,16 +436,25 @@ _DICA_NO_DIREITO = ("Com a Mira Virtual acesa, o giro deste controle vai ao jogo
                     "pelo analógico direito.")
 _DICA_NO_CURSOR = "Com a Mira Virtual acesa, o giro deste controle move o cursor."
 
+#: O bloco `mouse_emulation` como o daemon o publica
+#: (`ipc_handlers._mouse_emulation_payload`): o interruptor, o device e o
+#: `despachando`/`bloqueio` do dono único (`_bloqueio_da_emulacao_de_desktop`).
+#: A CONFERÊNCIA achou o dublê anterior mais frouxo que o daemon: ele só tinha o
+#: `enabled`, e o cartão lia o sinal mais fraco.
+_RATO_ANDANDO = {"enabled": True, "device_ativo": True, "despachando": True, "bloqueio": None}
+_RATO_DESLIGADO = {"enabled": False, "device_ativo": False, "despachando": False,
+                   "bloqueio": "desligada"}
+
 #: Os modos vivos, na forma do `state_full` que `mode_of_state` lê. O Sony
 #: DualSense e o Xbox são o mesmo modo para a dica (a máscara não muda o destino).
 _NAVEGACAO = {"native_mode": False, "gamepad_emulation": {"enabled": False},
-              "mouse_emulation": {"enabled": True}}
+              "mouse_emulation": _RATO_ANDANDO}
 _DUALSENSE = {"native_mode": False, "gamepad_emulation": {"enabled": True, "flavor": "dualsense"},
-              "mouse_emulation": {"enabled": False}}
+              "mouse_emulation": _RATO_DESLIGADO}
 _XBOX = {"native_mode": False, "gamepad_emulation": {"enabled": True, "flavor": "xbox"},
-         "mouse_emulation": {"enabled": False}}
+         "mouse_emulation": _RATO_DESLIGADO}
 _NATIVO = {"native_mode": True, "gamepad_emulation": {"enabled": False},
-           "mouse_emulation": {"enabled": False}}
+           "mouse_emulation": _RATO_DESLIGADO}
 
 
 def _o_que_o_servico_publica(tmp_path: Path, bruto: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -505,9 +514,13 @@ _MESAS = {"A": {1: "usb", 2: "bt", 3: "bt", 4: "usb"},
 
 
 def _estado_da_06(modo: dict[str, Any], mesa: str, quem_navega: int,
-                  com_a_mira: set[int]) -> dict[str, Any]:
+                  com_a_mira: set[int], sem_giroscopio: set[int] | None = None,
+                  ) -> dict[str, Any]:
     """O `state_full` da 06: quatro controles, o primário marcado, a Mira acesa
-    em quem a régua escolher (o bloco `mira` que o `_merge_mira` publica)."""
+    em quem a régua escolher (o bloco `mira` que o `_merge_mira` publica), e o
+    giroscópio de cada um como o `_merge_sensores` o publica — o leitor aberto
+    (`inputs.gyro`) e o interruptor (`sensores.giroscopio_ligado`), desligado
+    em quem estiver em `sem_giroscopio`."""
     controles = []
     for n, transporte in _MESAS[mesa].items():
         acesa = n in com_a_mira
@@ -515,6 +528,10 @@ def _estado_da_06(modo: dict[str, Any], mesa: str, quem_navega: int,
             "uniq": _P[n], "player": n, "player_slot": n, "index": n - 1,
             "connected": True, "is_primary": n == quem_navega, "transport": transporte,
             "battery_pct": 80,
+            "inputs": {"lx": _CENTRO, "ly": _CENTRO, "rx": _CENTRO, "ry": _CENTRO,
+                       "gyro": {"x": 0.1, "y": -0.2, "z": 0.05}},
+            "sensores": {"giroscopio_ligado": n not in (sem_giroscopio or set()),
+                         "acelerometro_ligado": True},
             "mira": {"ligada": acesa, "destino": "analogico_direito" if acesa else "nenhum"},
         })
     return {**modo, "controllers": controles,
@@ -576,7 +593,19 @@ def test_o_cartao_de_quem_nao_navega_diz_o_cursor_com_a_mira(
 
 
 @pytest.mark.parametrize(("nome", "modo"), [
-    ("mouse desligado", {**_NAVEGACAO, "mouse_emulation": {"enabled": False}}),
+    ("mouse desligado", {**_NAVEGACAO, "mouse_emulation": _RATO_DESLIGADO}),
+    # O INTERRUPTOR LIGADO NÃO BASTA — a conferência, 25/09/2026. Nos três o
+    # `enabled` segue `true` e o tique da Navegação não roda
+    # (`lifecycle._poll_loop`): o PS segurado (modo jogo), o `/dev/uinput` sem
+    # permissão e o jogo com a entrada calando o desktop.
+    ("modo jogo", {**_NAVEGACAO, "mouse_emulation": {
+        **_RATO_ANDANDO, "despachando": False, "bloqueio": "modo_jogo"}}),
+    ("sem o mouse virtual", {**_NAVEGACAO, "mouse_emulation": {
+        **_RATO_ANDANDO, "device_ativo": False, "despachando": False,
+        "bloqueio": "sem_device"}}),
+    ("o jogo com a entrada", {**_NAVEGACAO, "mouse_emulation": {
+        **_RATO_ANDANDO, "despachando": False,
+        "bloqueio": "vpad_suspenso_pelo_steam_input"}}),
     ("Sony DualSense", _DUALSENSE),
     ("Xbox", _XBOX),
     ("Nativo", _NATIVO),
@@ -586,8 +615,8 @@ def test_o_cartao_de_quem_nao_navega_diz_o_cursor_com_a_mira(
     # e o cartão não depende dessa ordem: quem diz para onde vai o giro é o
     # modo (`mode_of_state`), o mesmo leitor da dica do Giroscópio.
     ("Sony DualSense com o mouse ainda ligado",
-     {**_DUALSENSE, "mouse_emulation": {"enabled": True}}),
-    ("Nativo com o mouse ainda ligado", {**_NATIVO, "mouse_emulation": {"enabled": True}}),
+     {**_DUALSENSE, "mouse_emulation": _RATO_ANDANDO}),
+    ("Nativo com o mouse ainda ligado", {**_NATIVO, "mouse_emulation": _RATO_ANDANDO}),
 ])
 def test_fora_do_cursor_o_cartao_continua_so_a_janela(nome: str, modo: dict[str, Any]) -> None:
     """A MESMA Mira acesa nos quatro, onde o giro NÃO vai ao cursor: o cartão de
@@ -595,7 +624,8 @@ def test_fora_do_cursor_o_cartao_continua_so_a_janela(nome: str, modo: dict[str,
 
     MORDIDA: tire a pergunta `_na_navegacao` de `move_o_cursor` e os dois casos
     do mouse ainda ligado reprovam; tire a do `mouse_emulation` e reprovam o
-    mouse desligado e o mouse sem resposta.
+    mouse desligado, os três bloqueios e o mouse sem resposta; troque o
+    `despachando` pelo `enabled` e reprovam os três bloqueios.
     """
     linhas = _linhas_do_pacote(_estado_da_06(modo, "A", 1, {1, 2, 3, 4}))
     assert linhas == {1: f"USB • {_PAPEL_QUE_NAVEGA}", 2: f"BT • {_PAPEL_SO_A_JANELA}",
@@ -613,6 +643,50 @@ def test_sem_leitura_da_mira_o_cartao_nao_afirma_o_cursor() -> None:
     for c in estado["controllers"]:
         c.pop("mira")
     assert _linhas_do_pacote(estado)[3] == f"BT • {_PAPEL_SO_A_JANELA}"
+
+
+@pytest.mark.parametrize(("mesa", "quem_navega", "jogador"), _CASOS)
+def test_com_o_giroscopio_desligado_o_cartao_nao_afirma_o_cursor(
+    mesa: str, quem_navega: int, jogador: int,
+) -> None:
+    """A Mira acesa nos quatro, e o chip Giroscópio do jogador N DESLIGADO por
+    ela: o giro dele não chega ao cursor (`gamepad.aplicar_o_movimento` para no
+    `REGISTRO.estado(uniq).giroscopio`, medido em
+    `test_a_mira_na_navegacao.test_o_giroscopio_desligado_nao_move_o_cursor`), e
+    o cartão dele diz «Só a janela»; os outros dois que não navegam seguem
+    «Move o cursor». Do P1 ao P4, USB e BT.
+
+    Achado da conferência (25/09/2026): no piloto, com o Giroscópio do P2
+    desligado pela aba Controles, a 06 dizia «BT • Move o cursor».
+
+    MORDIDA: tire a pergunta do giroscópio de `move_o_cursor` e os oito casos
+    reprovam.
+    """
+    estado = _estado_da_06(_NAVEGACAO, mesa, quem_navega, {1, 2, 3, 4},
+                           sem_giroscopio={jogador})
+    linhas = _linhas_do_pacote(estado)
+    for n, linha in linhas.items():
+        papel = (_PAPEL_QUE_NAVEGA if n == quem_navega
+                 else _PAPEL_SO_A_JANELA if n == jogador else _PAPEL_DO_CURSOR)
+        assert linha == f"{_via(mesa, n)} • {papel}", (mesa, quem_navega, jogador, linhas)
+
+
+@pytest.mark.parametrize("sem", ["o interruptor", "o leitor de movimento"])
+def test_sem_leitura_do_giroscopio_o_cartao_nao_afirma_o_cursor(sem: str) -> None:
+    """Sem o bloco `sensores` (ninguém leu o interruptor) ou sem `inputs.gyro`
+    (o controle sem leitor de movimento — o motor não tem velocidade para
+    mover): «Só a janela». Afirmação sem leitura é chute.
+
+    MORDIDA: troque o `is not True` do interruptor por `is False`, ou tire a
+    pergunta do `gyro_do_inputs`, e o caso correspondente reprova.
+    """
+    estado = _estado_da_06(_NAVEGACAO, "A", 1, {3})
+    dele = next(c for c in estado["controllers"] if c["uniq"] == _P[3])
+    if sem == "o interruptor":
+        dele.pop("sensores")
+    else:
+        dele["inputs"].pop("gyro")
+    assert _linhas_do_pacote(estado)[3] == f"BT • {_PAPEL_SO_A_JANELA}", sem
 
 
 # --- a página renderizada: o WebKit, o BOOTSTRAP do piloto, as duas páginas ---
