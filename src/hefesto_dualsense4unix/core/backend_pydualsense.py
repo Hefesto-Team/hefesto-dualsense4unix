@@ -2043,6 +2043,14 @@ class PyDualSenseController(IController):
     #: `None` = ninguém injetou (CLI, dublê) ⇒ abre por caminho como sempre.
     _exposicao_do_no: Callable[[str], AbstractContextManager[bool]] | None = None
 
+    #: O BRILHO DO PERFIL, publicado com o mapa de fatores (`set_led_scales`):
+    #: o fator é relativo a ele, e os dois juntos dão o brilho em que cada peça
+    #: acende — é nele que a regra de cor única desloca o tom
+    #: (A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01). Default de CLASSE pela razão do
+    #: `_exposicao_do_no` acima. `None` = ninguém publicou, e o tom deslocado
+    #: sai cheio, como antes.
+    _brilho_do_perfil: float | None = None
+
     def __init__(self, evdev_reader: EvdevReader | None = None) -> None:
         # chave (serial/MAC ou path) -> handle aberto. O `dict` preserva ordem
         # de inserção (py3.7+): o 1º inserido que ainda estiver presente é o
@@ -2108,13 +2116,13 @@ class PyDualSenseController(IController):
         # guarda de 12 dígitos que impede um pseudo-MAC de key por path
         # (`/dev/hidrawN` → "deda4") levar a posse ao controle errado.
         self._mic_mute_by_uniq: dict[str, bool] = {}
-        # R-20 item 2: escala de brilho POR CONTROLE, aplicada DEPOIS do merge.
+        # R-20 item 2: escala de brilho POR CONTROLE, aplicada à BASE do merge.
         # Um override que só mexia no brilho materializava a cor GLOBAL no
         # slot por-uniq (`_controllers_to_specs` resolvia `lightbar` do global
         # para poder escalar) — e, como o override vence a camada automática,
         # isso MATAVA a cor do slot daquele controle. Guardado como fator, o
-        # brilho escala a cor RESOLVIDA (automática inclusive) sem opinar
-        # sobre qual cor é.
+        # brilho escala o global e a automática sem opinar sobre qual cor é —
+        # e nunca o override, que já traz o brilho dele (`_scaled_led`).
         self._led_scale_by_uniq: dict[str, float] = {}
         # POR-UNIDADE-01 (10/08/2026): a escala de VIBRAÇÃO por-uniq — irmã
         # exata do `_led_scale_by_uniq` acima, e pelo mesmo motivo de desenho.
@@ -2759,6 +2767,7 @@ class PyDualSenseController(IController):
                     do_numero=r.cor_do_numero,
                     procedencia=r.procedencia,
                     numero=r.numero,
+                    brilho=self._brilho_da_peca_locked(uniq),
                 ),
             ))
         pecas.sort(key=lambda peca: (peca[0], peca[1]))
@@ -6704,7 +6713,12 @@ class PyDualSenseController(IController):
         with self._io_lock:
             self._clear_layer_locked(_LAYER_USER)
 
-    def set_led_scales(self, scales: Mapping[str, float] | None = None) -> None:
+    def set_led_scales(
+        self,
+        scales: Mapping[str, float] | None = None,
+        *,
+        brilho_do_perfil: float | None = None,
+    ) -> None:
         """SUBSTITUI o mapa de escala de brilho por-uniq (R-20 item 2).
 
         Camada do PERFIL (é do JSON dele que vem), aplicada sobre a BASE do
@@ -6718,6 +6732,12 @@ class PyDualSenseController(IController):
         Fator ≤ 0 é aceito (apaga a lightbar daquele controle, que é o que
         brilho 0 significa); ausência de entrada = sem opinião. Sem escrita de
         hardware: o `reassert_resolved_outputs` da ativação converge.
+
+        `brilho_do_perfil` é o brilho a que os fatores são RELATIVOS (o
+        `leds.lightbar_brightness` global). Com ele, `brilho_do_perfil × fator`
+        é o brilho em que cada peça acende, e é nele que a regra de cor única
+        desloca o tom (`led_control.cores_sem_colisao`,
+        A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01). `None` guarda o anterior.
         """
         novo: dict[str, float] = {}
         for uniq, fator in (scales or {}).items():
@@ -6728,6 +6748,20 @@ class PyDualSenseController(IController):
             novo[alvo] = float(fator)
         with self._io_lock:
             self._led_scale_by_uniq = novo
+            if brilho_do_perfil is not None:
+                self._brilho_do_perfil = max(0.0, min(1.0, float(brilho_do_perfil)))
+
+    def _brilho_da_peca_locked(self, uniq: str) -> float | None:
+        """O brilho em que `uniq` acende: o do perfil vezes o fator dele. Sob `_io_lock`.
+
+        `None` quando o perfil não publicou o brilho (`set_led_scales`): a
+        regra de cor única então desloca no tom cheio, como antes.
+        """
+        base = self._brilho_do_perfil
+        if base is None:
+            return None
+        fator = self._led_scale_by_uniq.get(uniq, 1.0)
+        return max(0.0, min(1.0, base * fator))
 
     def set_coop_outputs(
         self, outputs: Mapping[str, OutputSpec] | None = None
