@@ -2301,9 +2301,9 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 1. Abra a aba Gatilhos.
 2. Confira que o chip no alto da coluna do P1 e o da coluna do P2 dizem USB.
-3. Anote no papel o que está escrito no Modo das duas seções da coluna do P1 e das duas da coluna do P2 — é o que você devolve no fim.
-4. Escolha «Desligado» no Modo das duas seções da coluna do P1 e das duas da coluna do P2.
-5. Aperte o L2 e o R2 dos quatro controles até o fundo, um controle por vez, e guarde na mão como cada um está agora: os do P1 e do P2 têm de estar leves.
+3. Anote no papel o que está escrito no Modo das duas seções de cada uma das quatro colunas — é o que você devolve no fim.
+4. Escolha «Desligado» no Modo das oito seções, as duas de cada coluna.
+5. Aperte o L2 e o R2 dos quatro controles até o fundo, um controle por vez, e guarde na mão como cada um está agora: os oito têm de estar leves.
 6. Escolha «Rígido» no Modo da seção de CIMA (a do desenho L2), na coluna do P1, e veja o campo piscar em verde.
 7. Aperte o L2 do P1 e depois o R2 do mesmo controle, um de cada vez.
 8. Confira que o L2 trava duro do começo ao fim do curso e que o R2 continua leve — o efeito pegou um lado só.
@@ -2311,19 +2311,19 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 10. Aperte o L2 e o R2 do P1 ao mesmo tempo, com dois dedos; depois solte e aperte de novo um de cada vez.
 11. Confira que os dois estão duros e que nenhum amoleceu quando o outro foi ligado.
 12. Repita na coluna do P2 tudo o que você fez na do P1, do «Rígido» no L2 até os dois gatilhos apertados juntos.
-13. Aperte o L2 e o R2 do P3 e depois os do P4, e compare com o que guardou na mão: os quatro têm de estar iguais ao que estavam.
-14. Devolva o Modo das duas seções da coluna do P1 e das duas da coluna do P2 ao que você anotou no papel.
+13. Aperte o L2 e o R2 do P3 e depois os do P4, e compare com o que guardou na mão: os quatro têm de continuar leves, como estavam.
+14. Devolva o Modo das oito seções ao que você anotou no papel.
 
-**Passa quando.** No P1 e no P2 — os dois do cabo — o L2 e o R2 ficam duros ao mesmo tempo, e continuam duros quando você aperta um de cada vez: ligar o segundo lado não soltou o primeiro. Os gatilhos do P3 e do P4 continuam exatamente como estavam antes, nenhum endureceu. E, com «Desligado» nas duas seções, os quatro gatilhos do P1 e do P2 estavam leves na sua mão antes do «Rígido».
+**Passa quando.** No P1 e no P2 — os dois do cabo — o L2 e o R2 ficam duros ao mesmo tempo, e continuam duros quando você aperta um de cada vez: ligar o segundo lado não soltou o primeiro. Os gatilhos do P3 e do P4 continuam exatamente como estavam antes, nenhum endureceu. E, com «Desligado» nas oito seções, os oito gatilhos estavam leves na sua mão antes do «Rígido».
 
 **Por controle.**
 
 * **P1** — No CABO, e é o primeiro em que você mexe. Ponha «Rígido» no Modo da seção de cima (L2), sinta só o L2 travar, depois ponha «Rígido» na seção de baixo (R2) e sinta os dois travados ao mesmo tempo, com dois dedos.
 * **P2** — No CABO, e é o segundo. Os mesmos gestos, na coluna dele. Ele é quem separa "o cabo funciona" de "aquele controle funciona": se der certo no P1 e não no P2, o defeito é do aparelho, não do transporte.
-* **P3** — No RÁDIO, testemunha. Não toque na coluna dele. Aperte o L2 e o R2 antes e depois; têm de estar iguais nas duas vezes. Se ele endurecer junto, o comando pegou todo mundo em vez do controle escolhido.
-* **P4** — No RÁDIO, segunda testemunha. Não toque na coluna dele. Aperte o L2 e o R2 antes e depois. Se o P3 ficou intacto e o P4 endureceu, o comando não vazou pelo transporte — foi parar no controle errado, que é outro defeito.
+* **P3** — No RÁDIO, testemunha. Solte com «Desligado» no começo, como os outros, e depois não toque mais na coluna dele. Aperte o L2 e o R2 antes e depois; têm de estar leves nas duas vezes. Se ele endurecer junto, o comando pegou todo mundo em vez do controle escolhido.
+* **P4** — No RÁDIO, segunda testemunha. Solte com «Desligado» no começo, como os outros, e depois não toque mais na coluna dele. Aperte o L2 e o R2 antes e depois. Se o P3 ficou intacto e o P4 endureceu, o comando não vazou pelo transporte — foi parar no controle errado, que é outro defeito.
 
-**A armadilha.** Não use «Desligado» como o efeito do teste. Ele é a escolha que SOLTA o gatilho: se ela vazar para os quatro controles você não vê nada, porque os outros já estavam soltos. O efeito tem de ser um que ENDUREÇA, porque endurecer é o que a mão sente. E não julgue pela tela: o campo Modo continua mostrando «Rígido» mesmo se um jogo escrever por cima e o gatilho estiver leve no seu dedo — o campo mostra o pedido, nunca o aparelho. Duas coisas mais. A escolha GRAVA: o Modo fica guardado no perfil daquele controle, e é por isso que o terceiro passo anota o que estava lá e o último devolve — deixar o teste pela metade deixa «Rígido» gravado, e o gatilho nasce duro no próximo jogo. E, em agosto, mediu-se o efeito amanhecendo solto alguns MINUTOS depois de aplicado, sem ninguém tocar, e ninguém achou quem o apaga; então sinta LOGO depois de escolher, e se você voltar mais tarde e estiver leve, anote a hora e o nome que aparece ao lado de Perfil ativo, no alto. Por fim, onde a prova desta linha parou: em O APARELHO OBEDECEU, medido com os quatro controles em 11/08 — o dedo é o degrau certo aqui, e o jogo é o degrau seguinte, que ninguém mediu. Não conclua nada sobre gatilho olhando um jogo.
+**A armadilha.** Não use «Desligado» como o efeito do teste. Ele é a escolha que SOLTA o gatilho: se ela vazar para os quatro controles você não vê nada, porque um gatilho solto não muda. O efeito tem de ser um que ENDUREÇA, porque endurecer é o que a mão sente. E é pelo mesmo motivo que os oito gatilhos começam soltos, e não só os do P1 e do P2: o Freestyle de fábrica nasce com os gatilhos em «Rígido», e num gatilho que já está duro um «Rígido» que vazasse para as testemunhas passaria calado. E não julgue pela tela: o campo Modo continua mostrando «Rígido» mesmo se um jogo escrever por cima e o gatilho estiver leve no seu dedo — o campo mostra o pedido, nunca o aparelho. Duas coisas mais. A escolha GRAVA: o Modo fica guardado no perfil daquele controle, e é por isso que o terceiro passo anota o que estava lá e o último devolve — deixar o teste pela metade deixa «Rígido» gravado, e o gatilho nasce duro no próximo jogo. E, em agosto, mediu-se o efeito amanhecendo solto alguns MINUTOS depois de aplicado, sem ninguém tocar, e ninguém achou quem o apaga; então sinta LOGO depois de escolher, e se você voltar mais tarde e estiver leve, anote a hora e o nome que aparece ao lado de Perfil ativo, no alto. Por fim, onde a prova desta linha parou: em O APARELHO OBEDECEU, medido com os quatro controles em 11/08 — o dedo é o degrau certo aqui, e o jogo é o degrau seguinte, que ninguém mediu. Não conclua nada sobre gatilho olhando um jogo.
 
 ---
 
@@ -2339,32 +2339,32 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 1. Abra a aba Gatilhos.
 2. Confira que o chip no alto da coluna do P3 e o da coluna do P4 dizem BT.
-3. Anote no papel o que está escrito no Modo das duas seções da coluna do P3 e das duas da coluna do P4.
-4. Escolha «Desligado» no Modo das duas seções da coluna do P3 e das duas da coluna do P4.
-5. Aperte o L2 e o R2 dos quatro controles até o fundo, um controle por vez, e guarde na mão como cada um está agora: os do P3 e do P4 têm de estar leves.
+3. Anote no papel o que está escrito no Modo das duas seções de cada uma das quatro colunas.
+4. Escolha «Desligado» no Modo das oito seções, as duas de cada coluna.
+5. Aperte o L2 e o R2 dos quatro controles até o fundo, um controle por vez, e guarde na mão como cada um está agora: os oito têm de estar leves.
 6. Escolha «Rígido» no Modo da seção de CIMA (a do desenho L2), na coluna do P3, e veja o campo piscar em verde.
 7. Aperte o L2 do P3 e depois o R2 do mesmo controle, um de cada vez, e confira que só o L2 travou.
 8. Escolha «Rígido» no Modo da seção de BAIXO (a do desenho R2), na mesma coluna do P3.
 9. Aperte o L2 e o R2 do P3 ao mesmo tempo, com dois dedos; depois solte e aperte de novo um de cada vez.
 10. Confira que os dois estão duros e que ligar o segundo lado não soltou o primeiro.
 11. Repita na coluna do P4 tudo o que você fez na do P3, do «Rígido» no L2 até os dois gatilhos apertados juntos.
-12. Aperte o L2 e o R2 do P1 e depois os do P2, e compare com o que guardou na mão: têm de estar iguais.
+12. Aperte o L2 e o R2 do P1 e depois os do P2, e compare com o que guardou na mão: têm de continuar leves, como estavam.
 13. Segure o PS do P3 até as luzes dele apagarem, e confira que a coluna dele passou a dizer «P3 • Desconectado» e que a do P4 continua dizendo P4.
 14. Dê um toque no PS do P3, sem demorar, e espere o chip dele voltar ao alto da coluna dele.
 15. Aperte o L2 e o R2 do P3 sem escolher nada: os dois têm de estar duros de novo.
 16. Se voltaram leves, anote, e escolha «Desligado» e depois «Rígido» nas duas seções do P3 para mandar o efeito de novo.
-17. Devolva o Modo das duas seções da coluna do P3 e das duas da coluna do P4 ao que você anotou no papel.
+17. Devolva o Modo das oito seções ao que você anotou no papel.
 
 **Passa quando.** No P3 e no P4 — os dois do rádio — o L2 e o R2 ficam duros ao mesmo tempo, e continuam duros quando você aperta um de cada vez. A sensação é a mesma que os controles do cabo dão: sem fio não pode ser mais fraco nem chegar depois. Os gatilhos do P1 e do P2 continuam exatamente como estavam. E, depois de cair e voltar, o P3 volta com os dois gatilhos duros sem você escolher nada de novo.
 
 **Por controle.**
 
-* **P1** — No CABO, testemunha. Não toque na coluna dele. Aperte o L2 e o R2 antes e depois; têm de estar iguais. Se ele endurecer junto, o comando pegou todo mundo em vez do controle escolhido.
-* **P2** — No CABO, segunda testemunha. Não toque na coluna dele. Aperte o L2 e o R2 antes e depois. Se o P1 ficou intacto e o P2 endureceu, o comando foi parar no controle errado.
+* **P1** — No CABO, testemunha. Solte com «Desligado» no começo, como os outros, e depois não toque mais na coluna dele. Aperte o L2 e o R2 antes e depois; têm de estar leves nas duas vezes. Se ele endurecer junto, o comando pegou todo mundo em vez do controle escolhido.
+* **P2** — No CABO, segunda testemunha. Solte com «Desligado» no começo, como os outros, e depois não toque mais na coluna dele. Aperte o L2 e o R2 antes e depois. Se o P1 ficou intacto e o P2 endureceu, o comando foi parar no controle errado.
 * **P3** — No RÁDIO, e é o primeiro em que você mexe. Ponha «Rígido» na seção de cima (L2), sinta só ele travar, depois ponha «Rígido» na de baixo (R2) e sinta os dois duros com dois dedos. É ele que cai e volta, para ver se o efeito volta junto.
 * **P4** — No RÁDIO, e é o segundo. Os mesmos gestos, na coluna dele. Ele separa "o rádio funciona" de "aquele controle funciona": se o P3 obedecer e o P4 não, o defeito é do aparelho, não do sem fio. Enquanto o P3 está fora, a coluna dele continua dizendo P4 — o lugar do P3 fica guardado por trinta segundos.
 
-**A armadilha.** Não use «Desligado» como o efeito do teste: ele é a escolha que SOLTA, e vazar solto num gatilho já solto não se enxerga. E não julgue pela tela — o campo Modo mostra o pedido, não o aparelho; a piscada verde diz que o comando saiu, não que o gatilho está duro. Três avisos que valem especialmente aqui. Primeiro: a escolha GRAVA no perfil daquele controle, e é por isso que o terceiro passo anota e o último devolve. Segundo: a queda e a volta do P3 são o motivo de este teste ter mais passos que o do cabo — o efeito gravado para aquele controle deve voltar sozinho quando ele reconecta, e isso é o defeito próprio do rádio; se não voltar, o achado é esse. Para mandar de novo, escolher o mesmo nome que já está no campo não faz nada: é por isso que o passo passa por «Desligado» antes do «Rígido». Terceiro: em agosto, mediu-se o efeito amanhecendo solto alguns MINUTOS depois, sem ninguém tocar, e ninguém achou quem o apaga; sinta LOGO depois de escolher, e se estiver leve quando você voltar, anote a hora e o nome ao lado de Perfil ativo, no alto. Onde a prova parou: em O APARELHO OBEDECEU, medido em 11/08 com dois controles no rádio — o dedo é o degrau certo. O jogo é o degrau seguinte e ninguém o mediu, então não tente concluir nada sobre gatilho por dentro de um jogo.
+**A armadilha.** Não use «Desligado» como o efeito do teste: ele é a escolha que SOLTA, e vazar solto num gatilho já solto não se enxerga. E é pelo mesmo motivo que os oito gatilhos começam soltos, e não só os do P3 e do P4: o Freestyle de fábrica nasce com os gatilhos em «Rígido», e num gatilho que já está duro um «Rígido» que vazasse para as testemunhas passaria calado. E não julgue pela tela — o campo Modo mostra o pedido, não o aparelho; a piscada verde diz que o comando saiu, não que o gatilho está duro. Três avisos que valem especialmente aqui. Primeiro: a escolha GRAVA no perfil daquele controle, e é por isso que o terceiro passo anota e o último devolve. Segundo: a queda e a volta do P3 são o motivo de este teste ter mais passos que o do cabo — o efeito gravado para aquele controle deve voltar sozinho quando ele reconecta, e isso é o defeito próprio do rádio; se não voltar, o achado é esse. Para mandar de novo, escolher o mesmo nome que já está no campo não faz nada: é por isso que o passo passa por «Desligado» antes do «Rígido». Terceiro: em agosto, mediu-se o efeito amanhecendo solto alguns MINUTOS depois, sem ninguém tocar, e ninguém achou quem o apaga; sinta LOGO depois de escolher, e se estiver leve quando você voltar, anote a hora e o nome ao lado de Perfil ativo, no alto. Onde a prova parou: em O APARELHO OBEDECEU, medido em 11/08 com dois controles no rádio — o dedo é o degrau certo. O jogo é o degrau seguinte e ninguém o mediu, então não tente concluir nada sobre gatilho por dentro de um jogo.
 
 ---
 
@@ -2456,8 +2456,8 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 1. Abra a aba Gatilhos.
 2. Confira que o chip no alto da coluna do P1 e o da coluna do P2 dizem USB.
-3. Anote no papel o Modo das duas seções da coluna do P1 e das duas da coluna do P2, e escolha «Desligado» nas quatro.
-4. Aperte o L2 e o R2 dos quatro controles até o fundo, um controle por vez, e guarde na mão como cada um está.
+3. Anote no papel o Modo das duas seções de cada uma das quatro colunas, e escolha «Desligado» nas oito.
+4. Aperte o L2 e o R2 dos quatro controles até o fundo, um controle por vez, e guarde na mão como cada um está: os oito têm de estar leves.
 5. Escolha «Rígido» no Modo da seção de BAIXO (a do desenho R2), na coluna do P1, e veja o campo piscar em verde.
 6. Aperte o R2 do P1 e depois o L2 do mesmo controle, na mesma mão, um de cada vez.
 7. Confira que o R2 trava duro do começo ao fim do curso e que o L2 continua leve.
@@ -2465,8 +2465,8 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 9. Arraste a barra Força do P1 até o fim da direita, em cima da linha da barra, e aperte o R2 do P1 de novo.
 10. Confira que a trava ficou mais firme do que estava.
 11. Repita na coluna do P2 o que você fez na do P1 antes da Força: «Rígido» na seção de baixo, e o R2 e o L2 apertados um de cada vez.
-12. Aperte o R2 e o L2 do P3 e depois os do P4, e compare com o que guardou na mão: têm de estar iguais ao que estavam.
-13. Devolva os quatro Modos do P1 e do P2 ao que você anotou.
+12. Aperte o R2 e o L2 do P3 e depois os do P4, e compare com o que guardou na mão: têm de continuar leves, como estavam.
+13. Devolva o Modo das oito seções ao que você anotou.
 
 **Passa quando.** O R2 do P1 e o do P2 ficam duros, e o L2 dos MESMOS controles continua leve — o comando agiu num lado só e não vazou para o outro lado da mesma mão. Os gatilhos do P3 e do P4 continuam exatamente como estavam. E puxar a Força até o fim deixa a trava mais firme do que estava.
 
@@ -2474,10 +2474,10 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 * **P1** — No CABO, e é o primeiro. Mexe-se só na seção de BAIXO (R2) da coluna dele. O R2 tem de endurecer e o L2 do mesmo controle é a testemunha na mesma mão — é ele que prova que o comando não pegou os dois lados.
 * **P2** — No CABO, e é o segundo. Os mesmos gestos, na coluna dele. Ele separa "o cabo funciona" de "aquele controle funciona": se o R2 do P1 endurecer e o do P2 não, o defeito é do aparelho.
-* **P3** — No RÁDIO, testemunha. Não toque na coluna dele. Aperte o R2 e o L2 antes e depois; têm de estar iguais. Se o R2 dele endurecer, o comando pegou todo mundo em vez do controle escolhido.
-* **P4** — No RÁDIO, segunda testemunha. Não toque na coluna dele. Mesma conferência. Se o P3 ficou intacto e o R2 do P4 endureceu, o comando foi para o controle errado.
+* **P3** — No RÁDIO, testemunha. Solte com «Desligado» no começo, como os outros, e depois não toque mais na coluna dele. Aperte o R2 e o L2 antes e depois; têm de estar leves nas duas vezes. Se o R2 dele endurecer, o comando pegou todo mundo em vez do controle escolhido.
+* **P4** — No RÁDIO, segunda testemunha. Solte com «Desligado» no começo, como os outros, e depois não toque mais na coluna dele. Mesma conferência. Se o P3 ficou intacto e o R2 do P4 endureceu, o comando foi para o controle errado.
 
-**A armadilha.** A armadilha maior deste teste é apertar o gatilho errado. O R2 é o de baixo do lado DIREITO do controle, e a seção da tela é a de BAIXO, titulada pelo desenho R2. Quem mexe na seção de cima e aperta o R2 conclui que o produto errou de lado quando quem errou foi o gesto — confira o desenho que titula a seção antes de abrir o campo. Não use «Desligado» como o efeito do teste: ele SOLTA, e um vazamento de solto não se enxerga. Não julgue pela tela: o campo Modo mostra o pedido, e a piscada verde diz que o comando saiu, não que o gatilho está duro. A escolha e a barra GRAVAM no perfil daquele controle, e é por isso que o teste anota o que estava lá e devolve no fim. E a medição que sustenta esta linha exercitou UM modo só, «Rígido», com um único jogo de números — nenhum dos outros dezoito foi tocado por lá, e é por isso que o teste pede «Rígido». Em agosto mediu-se o efeito amanhecendo solto alguns MINUTOS depois, sem ninguém tocar: sinta logo depois de escolher, e se estiver leve quando voltar, anote a hora e o nome ao lado de Perfil ativo, no alto. Onde a prova parou: em O APARELHO OBEDECEU, medido em 11/08 com os quatro controles e o lado ocioso servindo de controle negativo — o dedo é o degrau certo. O jogo é o degrau seguinte e ninguém o mediu.
+**A armadilha.** A armadilha maior deste teste é apertar o gatilho errado. O R2 é o de baixo do lado DIREITO do controle, e a seção da tela é a de BAIXO, titulada pelo desenho R2. Quem mexe na seção de cima e aperta o R2 conclui que o produto errou de lado quando quem errou foi o gesto — confira o desenho que titula a seção antes de abrir o campo. Não use «Desligado» como o efeito do teste: ele SOLTA, e um vazamento de solto não se enxerga, porque um gatilho solto não muda. E é pelo mesmo motivo que os oito gatilhos começam soltos, e não só os do P1 e do P2: o Freestyle de fábrica nasce com os gatilhos em «Rígido», e num gatilho que já está duro um «Rígido» que vazasse para as testemunhas passaria calado. Não julgue pela tela: o campo Modo mostra o pedido, e a piscada verde diz que o comando saiu, não que o gatilho está duro. A escolha e a barra GRAVAM no perfil daquele controle, e é por isso que o teste anota o que estava lá e devolve no fim. E a medição que sustenta esta linha exercitou UM modo só, «Rígido», com um único jogo de números — nenhum dos outros dezoito foi tocado por lá, e é por isso que o teste pede «Rígido». Em agosto mediu-se o efeito amanhecendo solto alguns MINUTOS depois, sem ninguém tocar: sinta logo depois de escolher, e se estiver leve quando voltar, anote a hora e o nome ao lado de Perfil ativo, no alto. Onde a prova parou: em O APARELHO OBEDECEU, medido em 11/08 com os quatro controles e o lado ocioso servindo de controle negativo — o dedo é o degrau certo. O jogo é o degrau seguinte e ninguém o mediu.
 
 ---
 
@@ -2493,8 +2493,8 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 1. Abra a aba Gatilhos.
 2. Confira que o chip no alto da coluna do P3 e o da coluna do P4 dizem BT.
-3. Anote no papel o Modo das duas seções da coluna do P3 e das duas da coluna do P4, e escolha «Desligado» nas quatro.
-4. Aperte o L2 e o R2 dos quatro controles até o fundo e guarde na mão como cada um está.
+3. Anote no papel o Modo das duas seções de cada uma das quatro colunas, e escolha «Desligado» nas oito.
+4. Aperte o L2 e o R2 dos quatro controles até o fundo e guarde na mão como cada um está: os oito têm de estar leves.
 5. Escolha «Rígido» no Modo da seção de BAIXO (a do desenho R2), na coluna do P3, e veja o campo piscar em verde.
 6. Aperte o R2 do P3 e, no mesmo controle e na mesma mão, o L2 dele.
 7. Confira que o R2 trava duro do começo ao fim do curso e que o L2 continua leve.
@@ -2502,19 +2502,19 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 9. Repita na coluna do P4 o «Rígido» na seção de baixo e os dois apertos.
 10. Segure o PS do P3 até as luzes dele apagarem; depois dê um toque no PS, sem demorar, e espere o chip dele voltar ao alto da coluna dele.
 11. Aperte o R2 e o L2 do P3 sem escolher nada, e confira que o R2 voltou duro e o L2 continua leve; se o R2 voltou leve, anote, e escolha «Desligado» e depois «Rígido» na seção de baixo para mandar de novo.
-12. Aperte o R2 e o L2 do P1 e os do P2, e compare com o que guardou na mão: os gatilhos das duas testemunhas têm de estar exatamente como estavam.
-13. Devolva os quatro Modos do P3 e do P4 ao que você anotou.
+12. Aperte o R2 e o L2 do P1 e os do P2, e compare com o que guardou na mão: os gatilhos das duas testemunhas têm de continuar leves, exatamente como estavam.
+13. Devolva o Modo das oito seções ao que você anotou.
 
 **Passa quando.** O R2 do P3 e o do P4 ficam duros, e o L2 dos MESMOS controles continua leve — o comando agiu num lado só, pelo sem fio, e não vazou para o outro lado da mesma mão. A firmeza é a mesma que um controle do cabo dá. Os gatilhos do P1 e do P2 continuam exatamente como estavam. E, depois de cair e voltar, o P3 volta com o R2 duro e o L2 leve, sem você escolher nada de novo.
 
 **Por controle.**
 
-* **P1** — No CABO, testemunha. Não toque na coluna dele. Aperte o R2 e o L2 antes e depois; têm de estar iguais. Se o R2 dele endurecer, o comando pegou todo mundo.
-* **P2** — No CABO, segunda testemunha. Não toque na coluna dele. Mesma conferência. Se o P1 ficou intacto e o R2 do P2 endureceu, o comando foi para o controle errado.
+* **P1** — No CABO, testemunha. Solte com «Desligado» no começo, como os outros, e depois não toque mais na coluna dele. Aperte o R2 e o L2 antes e depois; têm de estar leves nas duas vezes. Se o R2 dele endurecer, o comando pegou todo mundo.
+* **P2** — No CABO, segunda testemunha. Solte com «Desligado» no começo, como os outros, e depois não toque mais na coluna dele. Mesma conferência. Se o P1 ficou intacto e o R2 do P2 endureceu, o comando foi para o controle errado.
 * **P3** — No RÁDIO, e é o primeiro. Mexe-se só na seção de BAIXO (R2) da coluna dele. O R2 endurece; o L2 do mesmo controle é a testemunha na mesma mão. É ele que cai e volta, para ver se o efeito volta junto e continua respeitando o lado.
 * **P4** — No RÁDIO, e é o segundo. Os mesmos gestos, na coluna dele. Ele separa "o rádio funciona" de "aquele controle funciona": se o R2 do P3 endurecer e o do P4 não, o defeito é do aparelho, não do sem fio. Enquanto o P3 está fora, a coluna dele continua dizendo P4 — o lugar do P3 fica guardado por trinta segundos.
 
-**A armadilha.** Este teste mede o mesmo dedo em três momentos — antes do efeito, com o efeito posto e depois de o controle cair e voltar — nos quatro controles; tirar qualquer um dos três deixa o teste sem o antes ou sem o depois, e ele passa a dar verde sem prova. A armadilha maior é apertar o gatilho errado: o R2 é o de baixo do lado DIREITO, e a seção da tela é a de BAIXO, titulada pelo desenho R2 — quem mexe na seção de cima e aperta o R2 conclui que o produto errou de lado quando quem errou foi o gesto. Não use «Desligado» como o efeito do teste, e não julgue pela tela: o campo Modo mostra o pedido e a piscada verde diz que o comando saiu, nada mais. A escolha GRAVA no perfil daquele controle: por isso o teste anota e devolve. A medição que sustenta esta linha exercitou UM modo só, «Rígido», com um único jogo de números; os outros dezoito não foram tocados por lá. O efeito gravado para aquele controle deve voltar sozinho quando ele reconecta pelo rádio — se não voltar, é o achado; e para mandar de novo, escolher o mesmo nome que já está no campo não faz nada, por isso o passo passa por «Desligado». Em agosto mediu-se o efeito amanhecendo solto alguns MINUTOS depois, sem ninguém tocar: sinta logo depois de escolher, e se estiver leve quando voltar, anote a hora e o nome ao lado de Perfil ativo, no alto. Onde a prova parou: em O APARELHO OBEDECEU, medido em 11/08 com dois controles no rádio — o dedo é o degrau certo, e o jogo é o degrau seguinte, que ninguém mediu.
+**A armadilha.** Este teste mede o mesmo dedo em três momentos — antes do efeito, com o efeito posto e depois de o controle cair e voltar — nos quatro controles; tirar qualquer um dos três deixa o teste sem o antes ou sem o depois, e ele passa a dar verde sem prova. A armadilha maior é apertar o gatilho errado: o R2 é o de baixo do lado DIREITO, e a seção da tela é a de BAIXO, titulada pelo desenho R2 — quem mexe na seção de cima e aperta o R2 conclui que o produto errou de lado quando quem errou foi o gesto. Não use «Desligado» como o efeito do teste: ele SOLTA, e um vazamento de solto não se enxerga, porque um gatilho solto não muda. E é pelo mesmo motivo que os oito gatilhos começam soltos, e não só os do P3 e do P4: o Freestyle de fábrica nasce com os gatilhos em «Rígido», e num gatilho que já está duro um «Rígido» que vazasse para as testemunhas passaria calado. E não julgue pela tela: o campo Modo mostra o pedido e a piscada verde diz que o comando saiu, nada mais. A escolha GRAVA no perfil daquele controle: por isso o teste anota e devolve. A medição que sustenta esta linha exercitou UM modo só, «Rígido», com um único jogo de números; os outros dezoito não foram tocados por lá. O efeito gravado para aquele controle deve voltar sozinho quando ele reconecta pelo rádio — se não voltar, é o achado; e para mandar de novo, escolher o mesmo nome que já está no campo não faz nada, por isso o passo passa por «Desligado». Em agosto mediu-se o efeito amanhecendo solto alguns MINUTOS depois, sem ninguém tocar: sinta logo depois de escolher, e se estiver leve quando voltar, anote a hora e o nome ao lado de Perfil ativo, no alto. Onde a prova parou: em O APARELHO OBEDECEU, medido em 11/08 com dois controles no rádio — o dedo é o degrau certo, e o jogo é o degrau seguinte, que ninguém mediu.
 
 ---
 
@@ -2530,8 +2530,8 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 1. Abra a aba Gatilhos.
 2. Confira que o chip no alto da coluna do P1 e o da coluna do P2 dizem USB.
-3. Anote no papel o Modo das duas seções da coluna do P1 e das duas da coluna do P2, e escolha «Desligado» nas quatro.
-4. Aperte o L2 e o R2 dos quatro controles até o fundo, um controle de cada vez, e guarde na mão como cada um está.
+3. Anote no papel o Modo das duas seções de cada uma das quatro colunas, e escolha «Desligado» nas oito.
+4. Aperte o L2 e o R2 dos quatro controles até o fundo, um controle de cada vez, e guarde na mão como cada um está: os oito têm de estar leves.
 5. Escolha «Rígido» no Modo da seção de CIMA (a do desenho L2), na coluna do P1, e veja o campo piscar em verde: é o comando saindo.
 6. Aperte o L2 do P1 e confira que ele trava duro do começo ao fim do curso.
 7. Aperte o R2 do P1, no mesmo controle e na mesma mão, e confira que ele continua leve — é a testemunha do outro lado da mesma mão.
@@ -2539,8 +2539,8 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 9. Arraste a barra Força do P1 até o fim da direita, em cima da linha da barra, e aperte o L2 do P1 de novo.
 10. Confira se a trava ficou mais firme.
 11. Repita na coluna do P2 o que você fez na do P1 antes da Força: «Rígido» na seção de cima, e o L2 e o R2 apertados um de cada vez.
-12. Aperte o L2 e o R2 do P3 e depois os do P4, e confira que os quatro gatilhos estão como você guardou na mão.
-13. Devolva os quatro Modos do P1 e do P2 ao que você anotou.
+12. Aperte o L2 e o R2 do P3 e depois os do P4, e confira que os quatro gatilhos continuam leves, como você guardou na mão.
+13. Devolva o Modo das oito seções ao que você anotou.
 
 **Passa quando.** O L2 do P1 e o do P2 ficam duros, e o R2 dos MESMOS controles continua leve — o comando agiu num lado só e não vazou para o outro lado da mesma mão. Os gatilhos do P3 e do P4 continuam exatamente como estavam. E puxar a Força até o fim deixa a trava mais firme.
 
@@ -2548,10 +2548,10 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 * **P1** — No CABO, e é o primeiro. Mexe-se só na seção de CIMA (L2) da coluna dele. O L2 tem de endurecer e o R2 do mesmo controle é a testemunha na mesma mão — é ele que prova que o comando não pegou os dois lados.
 * **P2** — No CABO, e é o segundo. Os mesmos gestos, na coluna dele. Ele separa "o cabo funciona" de "aquele controle funciona": se o L2 do P1 endurecer e o do P2 não, o defeito é do aparelho.
-* **P3** — No RÁDIO, testemunha. Não toque na coluna dele. Aperte o L2 e o R2 antes e depois; têm de estar iguais. Se o L2 dele endurecer, o comando pegou todo mundo em vez do controle escolhido.
-* **P4** — No RÁDIO, segunda testemunha. Não toque na coluna dele. Mesma conferência. Se o P3 ficou intacto e o L2 do P4 endureceu, o comando foi para o controle errado.
+* **P3** — No RÁDIO, testemunha. Solte com «Desligado» no começo, como os outros, e depois não toque mais na coluna dele. Aperte o L2 e o R2 antes e depois; têm de estar leves nas duas vezes. Se o L2 dele endurecer, o comando pegou todo mundo em vez do controle escolhido.
+* **P4** — No RÁDIO, segunda testemunha. Solte com «Desligado» no começo, como os outros, e depois não toque mais na coluna dele. Mesma conferência. Se o P3 ficou intacto e o L2 do P4 endureceu, o comando foi para o controle errado.
 
-**A armadilha.** A armadilha maior deste teste é apertar o gatilho errado. O L2 é o de baixo do lado ESQUERDO do controle, e a seção da tela é a de CIMA, titulada pelo desenho L2. Quem mexe na seção de baixo e aperta o L2 conclui que o produto errou de lado quando quem errou foi o gesto — confira o desenho que titula a seção antes de abrir o campo. Não use «Desligado» como o efeito do teste: ele SOLTA, e um vazamento de solto não se enxerga. Não julgue pela tela: o campo Modo mostra o pedido, e a piscada verde diz que o comando saiu, não que o gatilho está duro. A escolha e a barra GRAVAM no perfil daquele controle, e é por isso que o teste anota o que estava lá e devolve no fim. E a medição que sustenta esta linha exercitou UM modo só, «Rígido», com um único jogo de números — nenhum dos outros dezoito foi tocado por lá, e é por isso que o teste pede «Rígido». Em agosto mediu-se o efeito amanhecendo solto alguns MINUTOS depois, sem ninguém tocar: sinta logo depois de escolher, e se estiver leve quando voltar, anote a hora e o nome ao lado de Perfil ativo, no alto. Onde a prova parou: em O APARELHO OBEDECEU, medido em 11/08 com os quatro controles e o lado ocioso servindo de controle negativo na mesma mão — o dedo é o degrau certo, e o jogo é o degrau seguinte, que ninguém mediu.
+**A armadilha.** A armadilha maior deste teste é apertar o gatilho errado. O L2 é o de baixo do lado ESQUERDO do controle, e a seção da tela é a de CIMA, titulada pelo desenho L2. Quem mexe na seção de baixo e aperta o L2 conclui que o produto errou de lado quando quem errou foi o gesto — confira o desenho que titula a seção antes de abrir o campo. Não use «Desligado» como o efeito do teste: ele SOLTA, e um vazamento de solto não se enxerga, porque um gatilho solto não muda. E é pelo mesmo motivo que os oito gatilhos começam soltos, e não só os do P1 e do P2: o Freestyle de fábrica nasce com os gatilhos em «Rígido», e num gatilho que já está duro um «Rígido» que vazasse para as testemunhas passaria calado. Não julgue pela tela: o campo Modo mostra o pedido, e a piscada verde diz que o comando saiu, não que o gatilho está duro. A escolha e a barra GRAVAM no perfil daquele controle, e é por isso que o teste anota o que estava lá e devolve no fim. E a medição que sustenta esta linha exercitou UM modo só, «Rígido», com um único jogo de números — nenhum dos outros dezoito foi tocado por lá, e é por isso que o teste pede «Rígido». Em agosto mediu-se o efeito amanhecendo solto alguns MINUTOS depois, sem ninguém tocar: sinta logo depois de escolher, e se estiver leve quando voltar, anote a hora e o nome ao lado de Perfil ativo, no alto. Onde a prova parou: em O APARELHO OBEDECEU, medido em 11/08 com os quatro controles e o lado ocioso servindo de controle negativo na mesma mão — o dedo é o degrau certo, e o jogo é o degrau seguinte, que ninguém mediu.
 
 ---
 
@@ -2567,8 +2567,8 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 1. Abra a aba Gatilhos.
 2. Confira que o chip no alto da coluna do P3 e o da coluna do P4 dizem BT.
-3. Anote no papel o Modo das duas seções da coluna do P3 e das duas da coluna do P4, e escolha «Desligado» nas quatro.
-4. Aperte o L2 e o R2 dos quatro controles até o fundo, um controle de cada vez, e guarde na mão como cada um está — o P1 e o P2 são as testemunhas.
+3. Anote no papel o Modo das duas seções de cada uma das quatro colunas, e escolha «Desligado» nas oito.
+4. Aperte o L2 e o R2 dos quatro controles até o fundo, um controle de cada vez, e guarde na mão como cada um está: os oito têm de estar leves, e o P1 e o P2 são as testemunhas.
 5. Escolha «Rígido» no Modo da seção de CIMA (a do desenho L2), na coluna do P3, e veja o campo piscar em verde.
 6. Aperte o L2 do P3 até o fundo do curso e confira que a trava é dura do começo ao fim.
 7. Compare essa firmeza com a de um controle do cabo que você já tenha sentido em «Rígido»: pelo rádio não pode ser mais fraca nem demorar mais a chegar.
@@ -2576,19 +2576,19 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 9. Repita na coluna do P4 o «Rígido» na seção de cima e os dois apertos, e confira que o L2 do P4 ficou duro e o R2 dele continua leve.
 10. Segure o PS do P3 até as luzes dele apagarem; depois dê um toque no PS, sem demorar, e espere o chip dele voltar ao alto da coluna dele.
 11. Aperte o L2 e o R2 do P3 sem escolher nada, e confira que o L2 voltou duro e o R2 continua leve; se o L2 voltou leve, anote, e escolha «Desligado» e depois «Rígido» na seção de cima para mandar de novo.
-12. Aperte o L2 e o R2 do P1 e depois os do P2, e confira que estão como você guardou na mão.
-13. Devolva os quatro Modos do P3 e do P4 ao que você anotou.
+12. Aperte o L2 e o R2 do P1 e depois os do P2, e confira que continuam leves, como você guardou na mão.
+13. Devolva o Modo das oito seções ao que você anotou.
 
 **Passa quando.** O L2 do P3 e o do P4 ficam duros, e o R2 dos MESMOS controles continua leve — o comando agiu num lado só, pelo sem fio, e não vazou para o outro lado da mesma mão. A firmeza é a mesma que um controle do cabo dá. Os gatilhos do P1 e do P2 continuam exatamente como estavam. E, depois de cair e voltar, o P3 volta com o L2 duro e o R2 leve, sem você escolher nada de novo.
 
 **Por controle.**
 
-* **P1** — No CABO, testemunha. Não toque na coluna dele. Aperte o L2 e o R2 antes e depois; têm de estar iguais. Se o L2 dele endurecer, o comando pegou todo mundo.
-* **P2** — No CABO, segunda testemunha. Não toque na coluna dele. Mesma conferência. Se o P1 ficou intacto e o L2 do P2 endureceu, o comando foi para o controle errado.
+* **P1** — No CABO, testemunha. Solte com «Desligado» no começo, como os outros, e depois não toque mais na coluna dele. Aperte o L2 e o R2 antes e depois; têm de estar leves nas duas vezes. Se o L2 dele endurecer, o comando pegou todo mundo.
+* **P2** — No CABO, segunda testemunha. Solte com «Desligado» no começo, como os outros, e depois não toque mais na coluna dele. Mesma conferência. Se o P1 ficou intacto e o L2 do P2 endureceu, o comando foi para o controle errado.
 * **P3** — No RÁDIO, e é o primeiro. Mexe-se só na seção de CIMA (L2) da coluna dele. O L2 endurece; o R2 do mesmo controle é a testemunha na mesma mão. É ele que cai e volta, para ver se o efeito volta junto e continua respeitando o lado.
 * **P4** — No RÁDIO, e é o segundo. Os mesmos gestos, na coluna dele. Ele separa "o rádio funciona" de "aquele controle funciona": se o L2 do P3 endurecer e o do P4 não, o defeito é do aparelho, não do sem fio. Enquanto o P3 está fora, a coluna dele continua dizendo P4 — o lugar do P3 fica guardado por trinta segundos.
 
-**A armadilha.** A armadilha maior é apertar o gatilho errado: o L2 é o de baixo do lado ESQUERDO, e a seção da tela é a de CIMA, titulada pelo desenho L2 — quem mexe na seção de baixo e aperta o L2 conclui que o produto errou de lado quando quem errou foi o gesto. Não use «Desligado» como o efeito do teste, e não julgue pela tela: o campo Modo mostra o pedido e a piscada verde diz que o comando saiu, nada mais. Sem o aperto dos quatro controles no começo este teste não mede nada: é essa mão guardada que vira a régua de tudo o que vem depois. A escolha GRAVA no perfil daquele controle: por isso o teste anota e devolve. A medição que sustenta esta linha exercitou UM modo só, «Rígido», com um único jogo de números; os outros dezoito não foram tocados por lá. O efeito gravado para aquele controle deve voltar sozinho quando ele reconecta pelo rádio — se não voltar, é o achado; e escolher o mesmo nome que já está no campo não manda nada, por isso o passo passa por «Desligado». Em agosto mediu-se o efeito amanhecendo solto alguns MINUTOS depois, sem ninguém tocar: sinta logo depois de escolher, e se estiver leve quando voltar, anote a hora e o nome ao lado de Perfil ativo, no alto. Onde a prova parou: em O APARELHO OBEDECEU, medido em 11/08 com dois controles no rádio e o lado ocioso servindo de controle negativo — o dedo é o degrau certo, e o jogo é o degrau seguinte, que ninguém mediu. Cada aperto é de um gatilho só, num controle só, porque o dedo é o único instrumento que existe aqui; juntar dois apertos numa lembrança só é exatamente o erro que a armadilha maior descreve.
+**A armadilha.** A armadilha maior é apertar o gatilho errado: o L2 é o de baixo do lado ESQUERDO, e a seção da tela é a de CIMA, titulada pelo desenho L2 — quem mexe na seção de baixo e aperta o L2 conclui que o produto errou de lado quando quem errou foi o gesto. Não use «Desligado» como o efeito do teste: ele SOLTA, e um vazamento de solto não se enxerga, porque um gatilho solto não muda. E é pelo mesmo motivo que os oito gatilhos começam soltos, e não só os do P3 e do P4: o Freestyle de fábrica nasce com os gatilhos em «Rígido», e num gatilho que já está duro um «Rígido» que vazasse para as testemunhas passaria calado. E não julgue pela tela: o campo Modo mostra o pedido e a piscada verde diz que o comando saiu, nada mais. Sem o aperto dos quatro controles no começo este teste não mede nada: é essa mão guardada que vira a régua de tudo o que vem depois. A escolha GRAVA no perfil daquele controle: por isso o teste anota e devolve. A medição que sustenta esta linha exercitou UM modo só, «Rígido», com um único jogo de números; os outros dezoito não foram tocados por lá. O efeito gravado para aquele controle deve voltar sozinho quando ele reconecta pelo rádio — se não voltar, é o achado; e escolher o mesmo nome que já está no campo não manda nada, por isso o passo passa por «Desligado». Em agosto mediu-se o efeito amanhecendo solto alguns MINUTOS depois, sem ninguém tocar: sinta logo depois de escolher, e se estiver leve quando voltar, anote a hora e o nome ao lado de Perfil ativo, no alto. Onde a prova parou: em O APARELHO OBEDECEU, medido em 11/08 com dois controles no rádio e o lado ocioso servindo de controle negativo — o dedo é o degrau certo, e o jogo é o degrau seguinte, que ninguém mediu. Cada aperto é de um gatilho só, num controle só, porque o dedo é o único instrumento que existe aqui; juntar dois apertos numa lembrança só é exatamente o erro que a armadilha maior descreve.
 
 ---
 
