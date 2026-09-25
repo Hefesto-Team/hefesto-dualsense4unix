@@ -531,6 +531,119 @@ class TestATrocaDePerfilDepois:
         )
         assert daemon.controller.mudos_escritos(P4)[-1] is True
 
+    @pytest.mark.asyncio
+    async def test_secao_do_mic_sem_o_mudo_escolhida_na_mao_nao_apaga_o_ato(
+        self, casa: Any
+    ) -> None:
+        """A seção `mic` que existe e não diz o mudo também não é ato sobre ele.
+
+        O caso de cima não alcança a guarda: perfil SEM a seção sai do
+        `apply_mic` antes de chegar a ela. Aqui a seção existe só pelo
+        `button_toggles_system` — é a forma de um perfil de fábrica.
+
+        MORDIDA: a troca explícita esquecendo o ato mesmo sem opinião
+        (`if origin == "manual":` sem o `muted is not None`).
+        """
+        casa.perfil(FREESTYLE)
+        casa.perfil(JOGO, mic={})
+        daemon = casa.daemon()
+        assert await hotkey.nascer_no_ar(daemon, P4) is True
+        await _apertar(daemon, P4)  # calou
+
+        _ativar(daemon, JOGO, origin="manual")
+
+        assert await _reconectar(daemon, P4) is False, (
+            "a seção do mic sem opinião sobre o mudo apagou o silêncio dela"
+        )
+        assert daemon.controller.mudos_escritos(P4)[-1] is True
+
+    @pytest.mark.asyncio
+    async def test_a_troca_explicita_pelo_global_vale_para_a_mesa(self, casa: Any) -> None:
+        """Ela escolhe na mão um perfil cujo GLOBAL diz calado: vale para todos.
+
+        O global não tem endereço — na reconexão ele fala por toda peça sem
+        opinião —, então a troca explícita esquece o ato de TODOS.
+
+        MORDIDA: `_esquecer_o_ato_da_sessao(None)` sem esquecer ninguém.
+        """
+        casa.perfil(FREESTYLE, por_peca={P4: {"mic": {"muted": True}}})
+        casa.perfil(JOGO, mic={"muted": True})
+        daemon = casa.daemon()
+        assert await _reconectar(daemon, P4) is False
+        await _apertar(daemon, P4)
+        assert daemon.controller.mudo_no_firmware(P4) is False, "a cena não ligou"
+
+        _ativar(daemon, JOGO, origin="manual")
+        daemon.controller.escritas_do_mudo.clear()
+
+        assert await _reconectar(daemon, P4) is False, (
+            "a reconexão abriu o microfone que o global escolhido na mão cala"
+        )
+        assert daemon.controller.mudos_escritos(P4) == [True]
+
+
+class TestUmaMetadeDePeBasta:
+    """O ato vai ao disco quando UMA das metades ficou de pé.
+
+    MORDIDA das duas: exigir as DUAS metades (`and` no lugar do `or` da guarda
+    de `_o_disco_guarda_o_ato`).
+    """
+
+    @pytest.mark.asyncio
+    async def test_o_radio_que_recusa_o_canal_nao_impede_o_disco(self, casa: Any) -> None:
+        """O desfecho COMUM por rádio: a ponte ainda não publicou o canal.
+
+        O firmware obedeceu (o kernel já virou o bit) e a eleição recusou. Sem
+        a gravação, a reconexão seguinte calaria de novo o microfone que ela
+        ligou pelo botão — a queixa inteira.
+        """
+        casa.perfil(FREESTYLE, por_peca={P4: {"mic": {"muted": True}}})
+        daemon = casa.daemon(elege_ok=False, transportes=("bt",))
+        assert await _reconectar(daemon, P4) is False
+
+        await _apertar(daemon, P4)
+
+        assert daemon.controller.mudo_no_firmware(P4) is False, "a cena não ligou"
+        assert casa.mic_no_disco(FREESTYLE, P4) == {"muted": False}, (
+            "o canal recusado pelo rádio impediu o disco de guardar o ligado"
+        )
+        novo = casa.daemon(transportes=("bt",))  # a ponte já publicou
+        assert await _reconectar(novo, P4) is True, "o restart calou o P4"
+        assert novo.controller.mudos_escritos(P4) == []
+
+    @pytest.mark.asyncio
+    async def test_calar_com_o_canal_recusado_grava_o_silencio(self, casa: Any) -> None:
+        """O 🎙 cala quem não está no ar: o canal recusa, o firmware obedece.
+
+        O silêncio que ela pediu não pode depender da eleição — é a assimetria
+        da SEXTA PORTA de `_metade_do_canal`.
+        """
+        casa.perfil(FREESTYLE)
+        daemon = casa.daemon()
+
+        ato = await hotkey.ligar_o_microfone(daemon, P4, ligado=False)
+        await _derrubar(daemon)
+
+        assert not ato.canal_no_sistema.feita and ato.firmware.feita, (
+            "a cena não é a de uma metade só"
+        )
+        assert casa.mic_no_disco(FREESTYLE, P4) == {"muted": True}, (
+            "o calar com o canal recusado não foi ao disco"
+        )
+        novo = _reiniciar(casa)
+        assert await _reconectar(novo, P4) is False, "o restart pôs no ar quem ela calou"
+        assert novo.controller.mudos_escritos(P4) == [True]
+
+
+class TestOAtoDaSessaoPeloEndereco:
+    def test_o_ato_da_sessao_casa_o_mac_com_dois_pontos(self) -> None:
+        """A tela manda `aa:bb:…`; a sessão guarda 12 hex. MORDIDA: ler cru."""
+        store = StateStore()
+        store.lembrar_o_ato_do_mic(P4, True)
+        m = ProfileManager(controller=object(), store=store)
+
+        assert m.o_perfil_pede_silencio("aa:bb:cc:00:00:44") is True
+
 
 # ===========================================================================
 # 3. O MUDO DA PEÇA VENCE O DO GLOBAL, TAMBÉM NO REPLUG
