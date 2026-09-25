@@ -143,7 +143,7 @@ def test_dualsense_usa_uhid_sem_precisar_do_fisico(backends: dict[str, Any]) -> 
 
 
 def test_uhid_recebe_o_player_do_slot(backends: dict[str, Any]) -> None:
-    """MAC próprio por jogador: sem o `player` certo, o probe do P2 morre -EEXIST."""
+    """O `player` chega ao uhid: é o número do nome e o recuo do MAC sem identidade (E3)."""
     make_virtual_pad("dualsense", player=4)
 
     assert backends["uhid_kwargs"]["player"] == 4
