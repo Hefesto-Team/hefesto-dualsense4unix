@@ -15,7 +15,9 @@ O QUE ESTA RÉGUA COBRA:
 
 1. mover um controle esquece SÓ ele, escreve UMA lápide, e abre a janela SÓ no
    destino — **mordida:** um mover que esquece dois reprova;
-2. a ordem é parear → conferir → esquecer, e um parear que falha não apaga nada;
+2. a ordem é desligar → esquecer a origem → parear → conferir (a R1 dela ao pé
+   da letra, desde 25/09 — A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01), e um parear
+   que falha deixa o controle sem casa, que o «Conectar» devolve;
 3. a conexão velha no destino sai ANTES da janela (R6 revista);
 4. o adaptador desligado é ligado, e o ``Pairable`` só vale durante a janela;
 5. idempotência: o segundo mover não escreve nada;
@@ -146,13 +148,20 @@ def test_mover_um_controle_esquece_so_ele_e_abre_a_janela_so_no_destino(
     assert movidos[0]["adaptador"] == QUARTO
 
 
-def test_a_ordem_e_parear_conferir_esquecer(
+def test_a_ordem_e_desligar_esquecer_a_origem_e_so_entao_parear(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
-    """Pair no destino ANTES de qualquer esquecer na origem.
+    """O controle DESLIGA e a sala o ESQUECE antes de a janela abrir no quarto.
 
-    MORDIDA: mova o ``_esquecer_as_origens`` para antes da janela — o
-    ``RemoveDevice`` da sala aparece antes do ``Pair``, e esta régua reprova.
+    FATO SUBSTITUÍDO (25/09/2026, A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01): esta
+    régua cobrava parear → conferir → esquecer, a ordem que quem coordenava
+    escolheu em 23/09. A lista dela de 25/09 mediu o preço: com o controle
+    ligado, o PS + Create não o põe em modo de parear (passo c1), e o que ainda
+    tem a chave na sala volta para lá (passo c2). A ordem é a da R1 dela.
+
+    MORDIDA: devolva o esquecer para depois do conferir — o ``RemoveDevice`` da
+    sala aparece depois do ``Pair`` e esta régua reprova; tire o ``Disconnect``
+    — o gesto dela cai com o controle ligado e ela reprova também.
     """
     central = _central(dono, mundo, relogio)
     _ela_segura_ps_create(mundo, relogio, VERMELHO)
@@ -160,15 +169,24 @@ def test_a_ordem_e_parear_conferir_esquecer(
     assert central.mover(VERMELHO, QUARTO).estado == cr.CHEGOU
 
     linha = mundo.linha_do_tempo
-    parear = linha.index(("Pair", QUARTO, VERMELHO))
+    desligar = linha.index(("Disconnect", SALA, VERMELHO))
     esquecer = linha.index(("RemoveDevice", SALA, VERMELHO))
-    assert parear < esquecer
-    assert linha.index(("StopDiscovery", QUARTO, "")) < esquecer
+    janela = linha.index(("StartDiscovery", QUARTO, ""))
+    parear = linha.index(("Pair", QUARTO, VERMELHO))
+    assert desligar < esquecer < janela < parear
+    assert mundo.gestos_perdidos == [], "o gesto dela caiu com o controle ligado"
 
 
-def test_o_parear_que_falha_nao_apaga_nada(
+def test_o_parear_que_falha_deixa_o_controle_sem_casa_e_o_conectar_o_traz(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
+    """O preço da R1 ao pé da letra, e a saída dele.
+
+    FATO SUBSTITUÍDO (25/09/2026): até aqui um parear que falhava deixava a
+    conexão velha na sala, e o PS a devolvia. Com a origem esquecida antes do
+    gesto, ele fica sem casa — e o «Conectar», com o mesmo PS + Create, o traz
+    de volta em qualquer adaptador. O diário diz que a origem já tinha saído.
+    """
     mundo.pair_falha = True
     central = _central(dono, mundo, relogio)
     _ela_segura_ps_create(mundo, relogio, VERMELHO)
@@ -176,31 +194,41 @@ def test_o_parear_que_falha_nao_apaga_nada(
     feito = central.mover(VERMELHO, QUARTO)
 
     assert (feito.estado, feito.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_NAO_PAREOU)
-    assert mundo.objeto(SALA, VERMELHO) is not None, "a conexão velha continua lá"
-    assert mundo.lapides == []
-    assert mundo.metodos("RemoveDevice") == []
-    # Com o PS, ele volta para a sala: nada se perdeu.
+    assert mundo.objeto(SALA, VERMELHO) is None
+    assert mundo.lapides == [(SALA, VERMELHO)]
+    # Com o PS, ele não tem para onde voltar: a sala não tem mais a chave.
     mundo.apertar_ps(VERMELHO)
-    assert mundo.onde_esta(rm.uniq(VERMELHO)) == SALA
+    assert mundo.onde_esta(rm.uniq(VERMELHO)) == ""
     linhas = diario_do_radio.ler(caminhos=[diario])
-    da_central = {cr.MOVEU_O_APARELHO, cr.O_APARELHO_NAO_CHEGOU}
-    assert [e["o_que"] for e in linhas if e["o_que"] in da_central] == [
-        cr.O_APARELHO_NAO_CHEGOU
-    ]
+    da_central = [e for e in linhas if e["o_que"] in {cr.MOVEU_O_APARELHO,
+                                                        cr.O_APARELHO_NAO_CHEGOU}]
+    assert [e["o_que"] for e in da_central] == [cr.O_APARELHO_NAO_CHEGOU]
+    assert da_central[0]["depois"]["origens_esquecidas"] is True
+
+    # O «Conectar» o traz: PS + Create, e ele chega.
+    mundo.pair_falha = False
+    mundo.desligar(VERMELHO)
+    _ela_segura_ps_create(mundo, relogio, VERMELHO)
+    volta = central.conectar(VARANDA)
+    assert (volta.estado, volta.aparelho, volta.destino) == (cr.CHEGOU, VERMELHO, VARANDA)
 
 
-def test_sem_o_gesto_a_janela_fecha_e_nada_se_apaga(
+def test_sem_o_gesto_a_janela_fecha_e_a_origem_ja_saiu(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
+    """FATO SUBSTITUÍDO (25/09/2026): era «nada se apaga». A origem sai ANTES do
+    gesto (R1), e sem o gesto a janela fecha com ela já fora — só a sala, com
+    UMA lápide, e o controle desligado."""
     central = _central(dono, mundo, relogio)
 
     feito = central.mover(VERMELHO, QUARTO)
 
     assert (feito.estado, feito.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_SEM_GESTO)
-    assert mundo.lapides == []
+    assert mundo.lapides == [(SALA, VERMELHO)]
     assert mundo.propriedade_do_adaptador(QUARTO, "Discovering") is False
     assert mundo.propriedade_do_adaptador(QUARTO, "Pairable") is False
-    assert mundo.onde_esta(rm.uniq(VERMELHO)) == SALA
+    assert mundo.onde_esta(rm.uniq(VERMELHO)) == ""
+    assert mundo.objeto(SALA, AZUL)["Connected"] is True, "o azul não foi desligado"
 
 
 # ---------------------------------------------------------------------------
@@ -352,12 +380,14 @@ def test_o_segundo_toque_com_o_primeiro_esperando_nao_desfaz_o_pareamento(
     primeiro = central.mover(VERMELHO, QUARTO)
     assert (primeiro.estado, primeiro.passo) == (cr.ESPERANDO, cr.PASSO_CONFERINDO)
     chamadas, escritas = len(mundo.chamadas), len(mundo.escritas)
+    # A lápide da SALA é a do primeiro mover (a origem sai antes do gesto).
+    assert mundo.lapides == [(SALA, VERMELHO)]
 
     de_novo = central.mover(VERMELHO, QUARTO)
 
     assert de_novo == primeiro
     assert mundo.chamadas[chamadas:] == [] and mundo.escritas[escritas:] == []
-    assert mundo.lapides == []
+    assert mundo.lapides == [(SALA, VERMELHO)], "o segundo toque não esqueceu nada"
     assert mundo.objeto(QUARTO, VERMELHO)["Paired"] is True
 
 
@@ -579,7 +609,10 @@ def test_o_conectar_pareia_o_controle_novo_no_destino_da_d8(
 def test_o_conectar_de_quem_morava_em_outro_adaptador_e_um_mover(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
+    """Ela desliga o vermelho (ligado, o PS + Create não faz nada — passo c1 da
+    lista dela) e o pareia pelo «Conectar»: a sala sai depois do «chegou»."""
     central = _central(dono, mundo, relogio)
+    mundo.desligar(VERMELHO)
     _ela_segura_ps_create(mundo, relogio, VERMELHO)
 
     feito = central.conectar(QUARTO)

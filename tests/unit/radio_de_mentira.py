@@ -25,6 +25,25 @@ cima disto — a borda, a trava, o diário e o agente próprio são os do produt
 O ``HID_PHYS`` é :meth:`RadioDeMentira.onde_esta`: o adaptador em que o
 controle está CONECTADO agora; o movimento é :meth:`RadioDeMentira.hz`.
 
+A FÍSICA QUE A LISTA DELA DE 25/09 MEDIU (A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01),
+e até ela este dublê era MAIS FROUXO que o controle de verdade:
+
+* **ligado, o PS + Create não faz nada** (passo c1: *«o controle nunca entra em
+  modo de parear»*). O controle só entra em modo de pareamento DESLIGADO — e
+  este dublê o deixava pareando conectado, o que escondia o mover que nunca
+  desligava o controle;
+* **o host que solta o enlace desliga o controle** (``Disconnect``), e ela
+  desliga na mão segurando o PS (:meth:`RadioDeMentira.desligar`);
+* **o controle volta sozinho ao pareamento antigo quando ele existe** (passo
+  c2: *«muda de adaptador, fica um tempo, e volta para o anterior»*): ele
+  lembra os hosts de antes (``Fisico.antigos``), e
+  :meth:`RadioDeMentira.voltar_sozinho` o leva de volta ao primeiro que ainda
+  tem a chave dele. Sem a chave lá, não há para onde voltar.
+  <!-- noqa-acento: citação literal dela -->
+
+O ``Alias`` nasce igual ao ``Name`` de fábrica, como no BlueZ; o nome que ela
+dá é o ``Alias`` diferente dele.
+
 Os dois botões de defeito que a régua aperta:
 
 * ``pair_falha`` — o ``Pair`` responde erro;
@@ -39,7 +58,7 @@ from __future__ import annotations
 import copy
 import threading
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from hefesto_dualsense4unix.integrations import bluez_dbus as bd
@@ -56,9 +75,17 @@ VERDE = "aa:bb:cc:00:00:03"
 ROXO = "aa:bb:cc:00:00:04"
 FONE = "aa:bb:cc:00:00:f0"
 
-#: *Class of device* de um gamepad (periférico, menor 0x02) e de um fone.
+#: *Class of device* de um gamepad (periférico, menor 0x02), de um fone e de
+#: um teclado (periférico, menor 0x10).
 CLASSE_DE_CONTROLE = 0x002508
 CLASSE_DE_FONE = 0x240404
+CLASSE_DE_TECLADO = 0x002540
+
+#: O ``Name`` de fábrica — o ``Alias`` nasce igual a ele.
+NOME_DE_FABRICA = {CLASSE_DE_CONTROLE: "DualSense Wireless Controller",
+                   CLASSE_DE_FONE: "Fone de mentira", CLASSE_DE_TECLADO: "BT5.0 Keyboard"}
+#: O ``Modalias`` do DualSense (Sony 054C, produto 0CE6), como o BlueZ publica.
+MODALIAS_DO_DUALSENSE = "bluetooth:v054Cp0CE6d0100"
 
 
 def no_de(adaptador: str, aparelho: str) -> str:
@@ -79,6 +106,9 @@ class Fisico:
     conectado_em: str = ""
     pareando: bool = False
     hz: float = 250.0
+    #: Os hosts de ANTES do de agora, o mais recente primeiro — o pareamento
+    #: antigo a que ele volta sozinho quando a chave ainda existe lá.
+    antigos: list[str] = field(default_factory=list)
 
 
 class RadioDeMentira:
@@ -121,6 +151,8 @@ class RadioDeMentira:
         self.lapides: list[tuple[str, str]] = []
         #: Tudo em ordem, para a régua da ORDEM: ``("Pair", adaptador, aparelho)``…
         self.linha_do_tempo: list[tuple[str, str, str]] = []
+        #: Os PS + Create que ela segurou com o controle LIGADO — e não deram em nada.
+        self.gestos_perdidos: list[str] = []
         self._ao_sinal: Callable[[bd.Sinal], None] | None = None
 
     # -- montar a mesa --------------------------------------------------------
@@ -133,17 +165,23 @@ class RadioDeMentira:
         classe: int = CLASSE_DE_CONTROLE,
         conectado: bool = True,
         host: bool = True,
+        nome: str = "",
     ) -> None:
-        """Um bond que já existe. ``host`` diz se o CONTROLE guarda este adaptador."""
+        """Um bond que já existe. ``host`` diz se o CONTROLE guarda este adaptador.
+
+        ``nome`` é o ``Alias`` que ela deu; sem ele, o de fábrica."""
         fisico = self.fisicos.setdefault(aparelho, Fisico(aparelho, classe))
         if host:
             fisico.host = adaptador
             if conectado:
                 fisico.conectado_em = adaptador
+        fabrica = NOME_DE_FABRICA.get(classe, "aparelho de mentira")
         self.mesa[no_de(adaptador, aparelho)] = {
             bd.APARELHO: {
                 "Address": aparelho.upper(),
-                "Alias": "controle de mentira",
+                "Name": fabrica,
+                "Alias": nome or fabrica,
+                "Modalias": MODALIAS_DO_DUALSENSE if classe == CLASSE_DE_CONTROLE else "",
                 "Paired": True,
                 "Bonded": True,
                 "Trusted": True,
@@ -155,18 +193,55 @@ class RadioDeMentira:
     # -- a física, pela mão dela ----------------------------------------------
 
     def segurar_ps_create(self, aparelho: str) -> None:
-        """Ela segura PS + Create: o controle solta o host e anuncia que pareia."""
+        """Ela segura PS + Create: DESLIGADO, o controle anuncia que pareia.
+
+        LIGADO, NADA ACONTECE — a lista dela de 25/09, passo c1: o DualSense
+        conectado não entra em modo de parear. O gesto fica anotado em
+        ``gestos_perdidos`` para a régua ver que ela apertou e nada veio.
+        """
         with self.tranca:
             fisico = self.fisicos[aparelho]
-            antes = fisico.conectado_em
-            fisico.conectado_em = ""
+            if fisico.conectado_em:
+                self.gestos_perdidos.append(aparelho)
+                return
             fisico.pareando = True
-            if antes:
-                self._mudar(no_de(antes, aparelho), bd.APARELHO, "Connected", False)
             for endereco, caminho in HCIS.items():
                 adaptador = self.mesa.get(caminho, {}).get(bd.ADAPTADOR)
                 if adaptador and adaptador.get("Discovering"):
                     self._achar(endereco, fisico)
+
+    def desligar(self, aparelho: str) -> None:
+        """Ela segura o PS até a luz apagar: o controle desliga, e o host fica."""
+        with self.tranca:
+            fisico = self.fisicos[aparelho]
+            antes, fisico.conectado_em, fisico.pareando = fisico.conectado_em, "", False
+            if antes and no_de(antes, aparelho) in self.mesa:
+                self._mudar(no_de(antes, aparelho), bd.APARELHO, "Connected", False)
+
+    def voltar_sozinho(self, aparelho: str) -> str:
+        """O controle volta sozinho ao pareamento ANTIGO quando ele existe.
+
+        É o passo c2 da lista dela: ele muda, fica um tempo, e volta para o
+        anterior. Devolve o adaptador a que voltou, ou ``""`` quando nenhum dos
+        hosts antigos ainda tem a chave dele — aí ele fica onde está.
+        """
+        with self.tranca:
+            fisico = self.fisicos[aparelho]
+            for antigo in fisico.antigos:
+                objeto = self.mesa.get(no_de(antigo, aparelho), {}).get(bd.APARELHO)
+                if not objeto or not objeto.get("Paired"):
+                    continue
+                if fisico.conectado_em and no_de(fisico.conectado_em, aparelho) in self.mesa:
+                    self._mudar(no_de(fisico.conectado_em, aparelho), bd.APARELHO,
+                                "Connected", False)
+                fisico.antigos.remove(antigo)
+                if fisico.host:
+                    fisico.antigos.insert(0, fisico.host)
+                fisico.host = fisico.conectado_em = antigo
+                fisico.pareando = False
+                self._mudar(no_de(antigo, aparelho), bd.APARELHO, "Connected", True)
+                return antigo
+        return ""
 
     def apertar_ps(self, aparelho: str) -> None:
         """Ela aperta PS: o controle volta para o host que ELE guarda."""
@@ -301,10 +376,13 @@ class RadioDeMentira:
         caminho = no_de(adaptador, fisico.endereco)
         if caminho in self.mesa:
             return
+        fabrica = NOME_DE_FABRICA.get(fisico.classe, "aparelho de mentira")
         propriedades = {
             bd.APARELHO: {
                 "Address": fisico.endereco.upper(),
-                "Alias": "achado na busca",
+                "Name": fabrica,
+                "Alias": fabrica,
+                "Modalias": MODALIAS_DO_DUALSENSE if fisico.classe == CLASSE_DE_CONTROLE else "",
                 "Paired": False,
                 "Bonded": False,
                 "Trusted": False,
@@ -380,6 +458,10 @@ class RadioDeMentira:
             if self.pair_mente:
                 return bd.Escrita(True, resposta=())
             fisico.pareando = False
+            if fisico.host and fisico.host != adaptador:
+                if fisico.host in fisico.antigos:
+                    fisico.antigos.remove(fisico.host)
+                fisico.antigos.insert(0, fisico.host)
             fisico.host = adaptador
             fisico.conectado_em = adaptador
             self._mudar(caminho, bd.APARELHO, "Connected", True)
@@ -392,6 +474,10 @@ class RadioDeMentira:
             self._mudar(caminho, bd.APARELHO, "Connected", True)
             return bd.Escrita(True, resposta=())
         if metodo == "Disconnect":
+            # O HOST QUE SOLTA O ENLACE DESLIGA O CONTROLE (o kernel tira o nó).
+            self.linha_do_tempo.append(("Disconnect", adaptador, aparelho))
+            if fisico is not None and fisico.conectado_em == adaptador:
+                fisico.conectado_em = ""
             self._mudar(caminho, bd.APARELHO, "Connected", False)
             return bd.Escrita(True, resposta=())
         return bd.Escrita(False, "org.freedesktop.DBus.Error.UnknownMethod")
