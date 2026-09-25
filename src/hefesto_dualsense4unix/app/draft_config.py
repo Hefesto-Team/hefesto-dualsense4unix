@@ -1268,17 +1268,16 @@ class DraftConfig(BaseModel):
             return self.with_controller_fields_cleared(
                 uniq, "leds", {"lightbar", "lightbar_brightness", "player_leds"}
             )
-        secao = _leds_draft_to_config(leds, only_fields=campos)
         # O BRILHO DAS LUZES DE NÚMERO NÃO É DESTE ESCRITOR (25/09/2026): quem o
         # grava é a pílula da linha LEDs, direto no override. A seção é trocada
-        # INTEIRA logo abaixo, e sem esta linha o «Salvar» do rodapé apagava o
-        # brilho que ela escolheu para o controle — medido na conferência da
-        # O-BRILHO-DAS-LUZES-DE-NUMERO-01.
-        antes = getattr(self.controller_override(uniq), "leds", None)
-        if antes is not None and "player_led_brightness" in antes.model_fields_set:
-            secao = secao.model_copy(
-                update={"player_led_brightness": antes.player_led_brightness}
-            )
+        # INTEIRA logo abaixo, e sem o dono da regra o «Salvar» do rodapé
+        # apagava o brilho que ela escolheu para o controle.
+        from hefesto_dualsense4unix.profiles.schema import com_o_brilho_das_luzes_de
+
+        secao = com_o_brilho_das_luzes_de(
+            getattr(self.controller_override(uniq), "leds", None),
+            _leds_draft_to_config(leds, only_fields=campos),
+        )
         return self._with_override_section(uniq, "leds", secao)
 
     def with_controller_triggers(

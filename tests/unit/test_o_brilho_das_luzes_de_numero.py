@@ -540,3 +540,33 @@ def test_o_salvar_do_rodape_nao_apaga_o_brilho_das_luzes() -> None:
     assert gravado.leds.player_led_brightness == "forte", (
         f"o Salvar regravou o global em {gravado.leds.player_led_brightness!r}, e o "
         f"perfil dizia Forte")
+
+
+def test_o_estilo_de_jogo_nao_apaga_o_brilho_das_luzes() -> None:
+    """Aplicar um Estilo de Jogo na aba Perfis troca a cor, e não o brilho.
+
+    O mesmo achado do «Salvar», no outro escritor que troca a seção `leds`
+    inteira de um override: o estilo pinta cada unidade (`_com_o_estilo`), e o
+    Forte que a pílula tinha gravado no P3 sumia. Quem guarda a regra é
+    `schema.com_o_brilho_das_luzes_de`, e o P1 — sem opinião própria — continua
+    sem opinião, herdando o global.
+
+    MORDIDA: troque a chamada do dono em `_com_o_estilo` pelo `LedsConfig` cru e
+    o P3 reprova.
+    """
+    from pacotes import a10_perfis as a10
+
+    from hefesto_dualsense4unix.profiles.estilos_de_jogo import ESTILOS
+
+    perfil = _perfil("medio", P3="forte")  # noqa-acento: chave ASCII
+    mesa = [{"uniq": MACS[0], "jogador": 1}, {"uniq": MACS[2], "jogador": 3}]
+    novo, pintados = a10._com_o_estilo(perfil, ESTILOS[0], mesa)
+    assert pintados == 2
+    p3 = novo.controllers[UNIQS[2]].leds
+    assert p3.player_led_brightness == "forte" and (
+        "player_led_brightness" in p3.model_fields_set), (
+        f"o estilo deixou o P3 em {p3.player_led_brightness!r} — a pílula tinha "
+        f"gravado o Forte")
+    p1 = novo.controllers[UNIQS[0]].leds
+    assert "player_led_brightness" not in p1.model_fields_set, (
+        "o estilo inventou um brilho para o P1, que não tinha opinião própria")

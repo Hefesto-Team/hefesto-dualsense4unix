@@ -416,6 +416,28 @@ class LedsConfig(BaseModel):
         return value
 
 
+def com_o_brilho_das_luzes_de(antes: LedsConfig | None, novos: LedsConfig) -> LedsConfig:
+    """`novos` com o brilho das luzes de número que o override `antes` guardava.
+
+    O-BRILHO-DAS-LUZES-DE-NUMERO-01, conferência de 25/09/2026. Quem escreve o
+    `player_led_brightness` de um controle é a pílula da linha LEDs; os outros
+    escritores da seção `leds` de um override — o «Salvar» do rodapé
+    (`DraftConfig.with_controller_leds`) e o Estilo de Jogo da aba Perfis —
+    trocam a seção INTEIRA, e o brilho que ela escolheu sumia em silêncio. Um
+    dono só para a regra, e cada escritor que troca a seção passa por aqui.
+
+    Só o que `antes` ESCREVEU volta (`model_fields_set`): um override que nunca
+    falou do brilho continua sem opinião, herdando o global. E o que `novos` já
+    escreveu vence — quem escreve o brilho de propósito não é desfeito.
+    """
+    campo = "player_led_brightness"
+    if antes is None or campo not in antes.model_fields_set:
+        return novos
+    if campo in novos.model_fields_set:
+        return novos
+    return novos.model_copy(update={campo: antes.player_led_brightness})
+
+
 class RumbleConfig(BaseModel):
     """Seção de rumble do perfil.
 
@@ -2854,6 +2876,7 @@ __all__ = [
     "TriggerConfig",
     "TriggersConfig",
     "classes_de_jogo_conhecidas",
+    "com_o_brilho_das_luzes_de",
     "e_endereco_de_jogo",
     "normalizar_gamepad_flavor",
     "perfil_declara_modo_de_jogo",

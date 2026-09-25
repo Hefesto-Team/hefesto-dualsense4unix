@@ -3361,6 +3361,7 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
         RumbleConfig,
         TriggerConfig,
         TriggersConfig,
+        com_o_brilho_das_luzes_de,
     )
 
     mudanca: dict[str, Any] = {}
@@ -3410,7 +3411,7 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
                 f"repete a cor de outro. Nada foi salvo.")
         lugares[jogador] = uniq
         dele = atuais.get(uniq) or ControllerOverrides()
-        atuais[uniq] = dele.model_copy(update={"leds": LedsConfig(
+        novos = LedsConfig(
             lightbar=cor_da_unidade(estilo, jogador),
             lightbar_brightness=estilo.brilho,
             # A PROCEDÊNCIA VIAJA COM A COR — 08/09/2026. A cor daqui é
@@ -3420,7 +3421,11 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
             # girar, o resolvedor de cor única lê o carimbo, vê que o número
             # mudou e devolve a peça à paleta — em vez de dois controles
             # acenderem a mesma cor.
-            lightbar_para_o_numero=jogador)})
+            lightbar_para_o_numero=jogador)
+        # O BRILHO DAS LUZES DE NÚMERO NÃO É DO ESTILO (25/09/2026): a seção é
+        # trocada inteira, e o dono da regra devolve o que a pílula gravou.
+        atuais[uniq] = dele.model_copy(
+            update={"leds": com_o_brilho_das_luzes_de(dele.leds, novos)})
         pintados += 1
     if pintados:
         mudanca["controllers"] = atuais
