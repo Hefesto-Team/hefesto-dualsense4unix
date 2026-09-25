@@ -197,13 +197,22 @@ def ativo(nome: str | None) -> dict[str, Any]:
 
 
 #: POR QUANTO TEMPO a resposta de :func:`arquivo` vale sem perguntar de novo, em
-#: segundos. A varredura por `name` custa ~7 ms com 34 perfis (medido em
-#: 25/09/2026 num lar de mentira), e a aba 06 pergunta nove vezes por tique, no
-#: laço do GTK: sem memória, o perfil de arquivo de outro nome custaria ~60 ms
-#: por tique. A assinatura da pasta derruba a memória antes do prazo quando um
-#: arquivo nasce, some ou muda de nome; o prazo cobre o que a assinatura não vê
-#: (o `name` editado no lugar, sem renomear o arquivo).
+#: segundos. A varredura por `name` custa ~7 ms com 34 perfis, e a aba aberta e
+#: a dica do rodapé perguntam a cada tique, no laço do GTK. Medido em 25/09/2026
+#: num lar de mentira, com um Estilo de Jogo ativo (a subpasta é a última perna,
+#: e a varredura vem antes dela): o tique da aba 06 custava 6,0 ms sem memória e
+#: custa 0,2 ms com ela. A
+#: assinatura da pasta derruba a memória antes do prazo quando um arquivo nasce,
+#: some ou muda de nome; o prazo cobre o que a assinatura não vê (o `name`
+#: editado no lugar, ou dois movimentos na pasta dentro do mesmo tique do
+#: relógio do sistema de arquivos).
 VALIDADE_DO_ARQUIVO_S = 1.0
+
+#: SÓ SE GUARDA O QUE CUSTOU, em segundos. O nome e o slug respondem em ~0,1 ms
+#: (dois `exists`), e guardá-los só trocaria uma pergunta exata por uma
+#: lembrança; a varredura e a subpasta passam de 1 ms com qualquer pasta de
+#: verdade. A régua que prova a memória põe este limiar em zero.
+CUSTO_QUE_SE_GUARDA_S = 0.001
 
 #: `(pasta, nome) -> (assinatura, quando, arquivo)`. Ver :func:`arquivo`.
 _ONDE_ACHOU: dict[tuple[str, str], tuple[tuple[Any, ...], float, pathlib.Path | None]] = {}
@@ -213,25 +222,37 @@ _ONDE_ACHOU: dict[tuple[str, str], tuple[tuple[Any, ...], float, pathlib.Path | 
 _LIDO: dict[tuple[str, str], str] = {}
 
 
-def _assinatura(onde: pathlib.Path, achado: pathlib.Path | None) -> tuple[Any, ...]:
-    """O que muda quando a resposta de :func:`arquivo` pode ter mudado.
+def _carimbo(p: pathlib.Path | None) -> tuple[int, int] | None:
+    """`(mtime_ns, tamanho)` de um caminho, ou ``None`` quando ele não está lá."""
+    if p is None:
+        return None
+    try:
+        st = p.stat()
+    except OSError:
+        return None
+    return (st.st_mtime_ns, st.st_size)
 
-    O `mtime` da pasta e o da subpasta dos Estilos (nasce, some, renomeia), e o
-    do arquivo achado (o `name` dele editado no lugar). Três `stat`, nenhuma
-    leitura.
+
+def _assinatura_da_pasta(onde: pathlib.Path) -> tuple[Any, ...]:
+    """O carimbo da pasta e o da subpasta dos Estilos: nasce, some, renomeia.
+
+    Tomado ANTES da pergunta ao loader: um arquivo que nasça durante a
+    varredura muda a pasta depois do carimbo, e a próxima chamada pergunta de
+    novo em vez de guardar uma resposta que já nasceu velha.
     """
-    def carimbo(p: pathlib.Path | None) -> int | None:
-        if p is None:
-            return None
-        try:
-            return p.stat().st_mtime_ns
-        except OSError:
-            return None
-
     _com_o_src()
     from hefesto_dualsense4unix.profiles.loader import ESTILOS_DE_JOGO_DIR_NAME
 
-    return (carimbo(onde), carimbo(onde / ESTILOS_DE_JOGO_DIR_NAME), carimbo(achado))
+    return (_carimbo(onde), _carimbo(onde / ESTILOS_DE_JOGO_DIR_NAME))
+
+
+def _assinatura(onde: pathlib.Path, achado: pathlib.Path | None) -> tuple[Any, ...]:
+    """O que muda quando a resposta de :func:`arquivo` pode ter mudado.
+
+    A pasta e a subpasta dos Estilos (:func:`_assinatura_da_pasta`), e o arquivo
+    achado (o `name` dele editado no lugar). Três `stat`, nenhuma leitura.
+    """
+    return (*_assinatura_da_pasta(onde), _carimbo(achado))
 
 
 def arquivo(nome: str, onde: pathlib.Path | None = None) -> pathlib.Path | None:
@@ -248,8 +269,9 @@ def arquivo(nome: str, onde: pathlib.Path | None = None) -> pathlib.Path | None:
     `test_o_perfil_chega_na_tela.py` pegou os dois divergindo em 01/09). Do
     loader vem a regra de como um nome vira arquivo DENTRO dela.
 
-    A RESPOSTA FICA NA MEMÓRIA por :data:`VALIDADE_DO_ARQUIVO_S`, e a
-    assinatura da pasta (:func:`_assinatura`) a derruba antes disso.
+    A RESPOSTA QUE CUSTOU FICA NA MEMÓRIA (:data:`CUSTO_QUE_SE_GUARDA_S`) por
+    :data:`VALIDADE_DO_ARQUIVO_S`, e a assinatura da pasta (:func:`_assinatura`)
+    a derruba antes disso.
 
     Quem chama além de `ativo()`: o «Exportar» do rodapé, que copiava o arquivo
     com a mesma cópia das duas pernas e dizia «não achei o arquivo» sobre o
@@ -262,18 +284,22 @@ def arquivo(nome: str, onde: pathlib.Path | None = None) -> pathlib.Path | None:
     if onde is None or not nome:
         return None
     chave = (str(onde), nome)
-    agora = time.monotonic()
-    guardado = _ONDE_ACHOU.get(chave)
+    guardado = _ONDE_ACHOU.pop(chave, None)
     if guardado is not None:
         assinatura, quando, achado = guardado
-        if (agora - quando) < VALIDADE_DO_ARQUIVO_S and _assinatura(onde, achado) == assinatura:
+        if ((time.monotonic() - quando) < VALIDADE_DO_ARQUIVO_S
+                and _assinatura(onde, achado) == assinatura):
+            _ONDE_ACHOU[chave] = guardado
             return achado
+    da_pasta = _assinatura_da_pasta(onde)
+    inicio = time.perf_counter()
     try:
         loader = _com_o_src()
         achado = loader.arquivo_do_perfil(nome, onde)
     except Exception:
         achado = None
-    _ONDE_ACHOU[chave] = (_assinatura(onde, achado), agora, achado)
+    if time.perf_counter() - inicio >= CUSTO_QUE_SE_GUARDA_S:
+        _ONDE_ACHOU[chave] = ((*da_pasta, _carimbo(achado)), time.monotonic(), achado)
     return achado
 
 
