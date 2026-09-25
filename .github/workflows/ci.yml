@@ -514,9 +514,11 @@ jobs:
       # entraram neste job em 04/09 porque o portão do portão só pede que o
       # pytest rode no CI, e este era o job de pytest mais leve; mas nenhum deles
       # é leitura da árvore. Medido num clone limpo com só o pytest: seis de 38
-      # testes reprovam pelo AMBIENTE — dois pedem o interpretador completo
-      # (structlog, playwright, ruff, mypy), três importam o GTK e um exige a
-      # tela desviada para um Xvfb. O `gtk-real` tem os três, e lá os 38 passam.
+      # testes não medem nada aqui, pelo AMBIENTE — dois pedem o interpretador
+      # completo (structlog, playwright, ruff, mypy), três importam o GTK e um
+      # exige a tela desviada para um Xvfb (desses quatro, dois passaram a PULAR
+      # onde não há tela nem GTK, e pulo aqui não é medida). O `gtk-real` tem os
+      # três, e lá os 38 passam.
 
   version-check:
     runs-on: ubuntu-latest
