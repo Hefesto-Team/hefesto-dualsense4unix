@@ -2970,9 +2970,11 @@ LEGENDA = f'''<div class="nota">
     <li><b>O cartão de quem não navega diz <i>{PAPEL_DO_CURSOR}</i> quando a
     Mira Virtual dele está acesa na Navegação.</b> O giro daquele controle já
     movia o cursor do computador, e o cartão continuava dizendo <i>{PAPEL_SO_A_JANELA}</i>.
-    Fica <i>{PAPEL_SO_A_JANELA}</i> com a Mira apagada, com o Status do Modo desligado
-    e fora da Navegação: no Sony DualSense e no Xbox a Mira vai ao analógico
-    direito do jogo, e no Nativo ela não anda. O desenho mostra a Mira apagada
+    Fica <i>{PAPEL_SO_A_JANELA}</i> sempre que o giro não chega ao cursor: com a
+    Mira apagada, com o Giroscópio daquele controle desligado, com o mouse
+    parado (o Status do Modo desligado, ou em pausa no modo jogo) e fora da
+    Navegação: no Sony DualSense e no Xbox a Mira vai ao analógico direito do
+    jogo, e no Nativo ela não anda. O desenho mostra a Mira apagada
     nos quatro, como a aba Controles; é o produto que troca a palavra, a cada
     tique, em todo controle que não navega, no USB e no BT.</li>
     <li><b>Com três ou quatro controles conectados, o P3 e o P4 deixaram de
