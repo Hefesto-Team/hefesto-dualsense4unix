@@ -1147,7 +1147,7 @@ def mascara_viva(state: dict[str, Any] | None) -> str | None:
     a afirmar". Enquanto o campo explícito não existir, a divergência é medida
     contra `gamepad_emulation.flavor` — que serve, porque o daemon só grava
     `config.gamepad_flavor` DEPOIS de o vpad novo nascer
-    (`subsystems/gamepad.py:1503`); uma troca recusada pelo gate volta com a
+    (`subsystems/gamepad.py:2556`); uma troca recusada pelo gate volta com a
     máscara antiga no payload.
     """
     if not isinstance(state, dict):

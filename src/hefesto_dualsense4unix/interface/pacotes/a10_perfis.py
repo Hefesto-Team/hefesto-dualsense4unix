@@ -3079,7 +3079,7 @@ def editor_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     escreve, "Perfil renomeado: era → novo".
 
     SEM `reaplicou=`, e é o honesto: quem reaplica é `gravar_e_reaplicar`, que
-    devolve `None` (`pacotes/perfil.py:153`). Deduzir aqui se o daemon recebeu
+    devolve `None` (`pacotes/perfil.py:372`). Deduzir aqui se o daemon recebeu
     seria a segunda verdade sobre uma coisa que este gesto não mediu — e a
     frase de três estados de `mensagem_do_salvar` existe exatamente para não
     prometer o controle quando ninguém olhou para ele.
