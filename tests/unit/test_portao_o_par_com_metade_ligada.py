@@ -1228,9 +1228,11 @@ class TestTodaCitacaoDeLinhaConfere:
             f"{len(vivas)} endereço(s) de linha em `src/` apontam para outro "
             "lugar hoje:\n"
             + "\n".join(f"  - {v}" for v in sorted(vivas.values()))
-            + "\nMeça com `grep -n` e reescreva o número. Se o arquivo citante "
-            "for de outra posse, ponha a chave em `_CITACOES_PENDENTES` com o "
-            "motivo — nunca afrouxe a régua."
+            + "\nRode `python3 scripts/reapontar-citacoes.py --escrever`: ele leva "
+            "cada endereço pelo histórico do git até onde o símbolo está hoje, e "
+            "só escreve o que confere. O que ele deixar «à mão», meça com "
+            "`grep -n`. Se o arquivo citante for de outra posse, ponha a chave em "
+            "`_CITACOES_PENDENTES` com o motivo — nunca afrouxe a régua."
         )
 
     def test_a_lista_de_pendentes_nao_vira_paisagem(self) -> None:
