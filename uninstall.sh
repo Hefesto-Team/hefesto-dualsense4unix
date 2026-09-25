@@ -468,6 +468,9 @@ compgen -G '/var/lib/hefesto-dualsense4unix/radio-diario.jsonl*' >/dev/null 2>&1
 # Onda S: broker root hide-hidraw (BROKER-01) — unit de sistema, precisa root.
 [[ -e /etc/systemd/system/hefesto-hidraw-broker.service ]] && _NEEDS_SUDO=1
 [[ -e /etc/systemd/system/hefesto-hidraw-broker.socket ]] && _NEEDS_SUDO=1
+# Com --keep-udev a regra do nó que fica vira a aberta (o broker sai): é root.
+[[ "${REMOVE_UDEV}" -eq 0 && -f /etc/udev/rules.d/73-hefesto-ps5-controller.rules ]] && _NEEDS_SUDO=1
+[[ "${REMOVE_UDEV}" -eq 0 && -f /etc/udev/rules.d/70-ps5-controller.rules ]] && _NEEDS_SUDO=1
 # Onda T: DKMS hid-nintendo patchado (probe BT resiliente) — dkms remove +
 # /etc/modprobe.d, ambos root. `dkms status` sem sudo já lista o registro
 # (leitura de /var/lib/dkms), então a checagem de presença aqui não precisa
@@ -723,6 +726,46 @@ if [[ -f "${ENVIRONMENTD_GAMEMODE}" ]]; then
     rm -f "${ENVIRONMENTD_GAMEMODE}"
 fi
 
+# A REGRA DO NÓ QUE FICA COM O `--keep-udev` VIRA A ABERTA (O-FISICO-NASCE-
+# ESCONDIDO-EM-QUALQUER-MAQUINA-01, conferência de segurança de 25/09/2026).
+# O broker sai mais abaixo, com ou sem `--keep-udev`; a regra do nó FECHADA
+# que ficasse em /etc deixaria o hidraw do DualSense físico `0600 root` para
+# sempre, sem ninguém que o abra: a Steam e o jogo perderiam o controle depois
+# de o Hefesto sair. Até 25/09 a `71-sony-controllers.rules` do Pop!_OS
+# escondia isso (corria depois da 70 e reabria o nó); com a 73-hefesto
+# falando por último, vale em toda máquina. As duas metades da cura saem
+# juntas: a regra preservada vira a variante ABERTA, pelo dono único da
+# transformação — o mesmo fail-safe do install-host-udev.sh sem broker. Se a
+# transformação recusar, a regra do nó sai (aberto é o lado seguro).
+_abrir_a_regra_do_no_que_fica() {
+    local regra aberta
+    for regra in /etc/udev/rules.d/73-hefesto-ps5-controller.rules \
+                 /etc/udev/rules.d/70-ps5-controller.rules; do
+        [[ -f "${regra}" ]] || continue
+        if ! grep -v '^[[:space:]]*#' "${regra}" 2>/dev/null | grep -q 'TAG-="uaccess"'; then
+            continue
+        fi
+        if [[ "${DRY_RUN}" -eq 1 ]]; then
+            _faria "(root) trocar ${regra} pela variante aberta (scripts/regra_do_no_aberta.sh): o broker sai"
+            continue
+        fi
+        aberta=""
+        if aberta="$(mktemp)" \
+                && bash "${ROOT_DIR}/scripts/regra_do_no_aberta.sh" "${regra}" "${aberta}" >/dev/null 2>&1 \
+                && [[ -s "${aberta}" ]]; then
+            log "a regra do nó preservada vira a variante aberta (o broker sai): ${regra}"
+            sudo install -Dm644 "${aberta}" "${regra}"
+        else
+            log "a regra do nó preservada não reabre — sai junto com o broker: ${regra}"
+            sudo rm -f "${regra}"
+        fi
+        if [[ -n "${aberta}" ]]; then
+            rm -f "${aberta}"
+        fi
+    done
+    return 0
+}
+
 if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
     # Conjunto canônico sincronizado com scripts/install_udev.sh + install-host-udev.sh.
     # As rules + modules-load uinput são SEMPRE instaladas em conjunto e devem
@@ -799,6 +842,13 @@ else
     # A lista abaixo é escrita por extenso, sem chaves de expansão do shell, para
     # que cada regra apareça com o nome exato — a versão com {70,72,...} escondia
     # as 82/83/84, que nunca foram citadas aqui.
+    if sudo -n true 2>/dev/null; then
+        _abrir_a_regra_do_no_que_fica
+    elif [[ -f /etc/udev/rules.d/73-hefesto-ps5-controller.rules \
+            || -f /etc/udev/rules.d/70-ps5-controller.rules ]]; then
+        log "sudo indisponível — a regra do nó ficou como estava, e sem o broker ela não pode ficar fechada:"
+        log "  sudo rm -f /etc/udev/rules.d/73-hefesto-ps5-controller.rules /etc/udev/rules.d/70-ps5-controller.rules"
+    fi
     log "udev rules preservadas (--keep-udev). Para remover depois:"
     log "  sudo rm /etc/udev/rules.d/73-hefesto-ps5-controller.rules /etc/udev/rules.d/70-ps5-controller.rules /etc/udev/rules.d/71-uinput.rules /etc/udev/rules.d/71-uhid.rules /etc/udev/rules.d/72-ps5-controller-autosuspend.rules /etc/udev/rules.d/72-hefesto-touchpad-motion-uaccess.rules /etc/udev/rules.d/75-ps5-controller-disable-usb-audio.rules /etc/udev/rules.d/76-dualsense-touchpad-libinput-ignore.rules /etc/udev/rules.d/77-dualsense-leds.rules /etc/udev/rules.d/78-dualsense-motion-not-joystick.rules /etc/udev/rules.d/79-external-controller-leds.rules /etc/udev/rules.d/80-motion-joydev-hide.rules /etc/udev/rules.d/81-hefesto-usb-power.rules /etc/udev/rules.d/81-hefesto-usb-host-power.rules /etc/udev/rules.d/82-nintendo-pro-nosniff.rules /etc/udev/rules.d/83-hefesto-bond-snapshot.rules /etc/udev/rules.d/84-nintendo-pro-variant.rules /etc/modules-load.d/hefesto-dualsense4unix.conf /etc/modprobe.d/hefesto-btusb-no-autosuspend.conf"
     log "  as 82 e 83 chamam alvos por RUN+= — os alvos ficaram junto com elas."
