@@ -8174,9 +8174,17 @@ class PyDualSenseController(IController):
         É a pergunta do laço do daemon: com alguém aqui, a mesa que ficou vazia
         por um instante não é queda, e o controle que sumiu não é "alvo que
         sumiu".
+
+        "Fora da mesa" é o que `alvos_conectados()` diz: o handle do rádio que
+        acabou de cair fica em `_handles` com `connected=False` até o próximo
+        `connect()`, e o laço pergunta NESSE instante, logo depois de derrubar.
         """
         with self._io_lock:
-            presentes = {self._key_to_uniq(key) for key in self._handles}
+            presentes = {
+                self._key_to_uniq(key)
+                for key, handle in self._handles.items()
+                if bool(getattr(handle, "connected", False))
+            }
             trocas = dict(self._trocas_de_transporte or {})
             return frozenset(
                 uniq
