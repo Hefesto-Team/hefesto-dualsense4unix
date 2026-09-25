@@ -263,13 +263,23 @@ _ESCOPO_DO_PACOTE = (
 
 def test_o_comando_de_root_dos_pacotes_escreve_a_quente_o_valor_da_conf() -> None:
     """A escrita que ia `2` ao `feature_retries` do módulo carregado, medida no
-    comando que o `install-host-udev.sh` monta — sem executá-lo."""
+    comando que o `install-host-udev.sh` monta — sem executá-lo.
+
+    O `backpressure` do uhid é lido da conf INSTALADA (`/etc/modprobe.d/`, só
+    existe com `--uhid-contrapressao`). Aqui ela aponta para a do `assets/`: sem
+    isso a régua mediria a máquina de quem roda — o ramo do uhid aparecia numa
+    e sumia noutra (achado da conferência)."""
+    montador = _funcao(HOST_UDEV, "_build_install_cmd")
+    assert montador.count("/etc/modprobe.d/hefesto-uhid.conf") == 2, montador
+    montador = montador.replace(
+        "/etc/modprobe.d/hefesto-uhid.conf", str(CONFS / "hefesto-uhid.conf")
+    )
     script = "\n".join(
         (
             "set -euo pipefail",
             *_ESCOPO_DO_PACOTE,
             LEITORES["install-host-udev.sh"],
-            _funcao(HOST_UDEV, "_build_install_cmd"),
+            montador,
             "_build_install_cmd",
         )
     )
@@ -290,9 +300,112 @@ def test_o_comando_de_root_dos_pacotes_escreve_a_quente_o_valor_da_conf() -> Non
     }
     com_dono = {chave: v for chave, v in escritas.items() if chave in OPCOES}
     assert ("hid_playstation", "feature_retries") in com_dono, sorted(escritas)
+    assert ("uhid", "backpressure") in com_dono, sorted(escritas)
+    # Todo parâmetro com conf dona que o montador cita tem de sair ESCRITO: um
+    # leitor que pergunta a opção errada devolve nada, e a escrita some calada.
+    citados = {
+        chave
+        for chave in re.findall(
+            r"/sys/module/(\w+)/parameters/(\w+)", "\n".join(_executa(montador))
+        )
+        if chave in OPCOES
+    }
+    assert set(com_dono) == citados, sorted(citados - set(com_dono))
     errados = sorted(
         f"{m}.{o}: escreve {v!r}, a conf diz {OPCOES[(m, o)][0]!r}"
         for (m, o), v in com_dono.items()
         if v != OPCOES[(m, o)][0]
+    )
+    assert errados == [], errados
+
+
+# ---------------------------------------------------------------------------
+# 5. A lib do install.sh escreve a quente o valor da conf — rodada, não lida
+# ---------------------------------------------------------------------------
+# Achado da conferência: o caminho por PACOTE era medido pelo que o comando de
+# root escreve, e o do `install.sh` (a lib, o caminho da máquina dela) só pela
+# AUSÊNCIA de um número digitado. A mordida que isso deixava passar, medida: a
+# lib perguntar a opção ERRADA (`bt_probe_retries` da conf do hid-nintendo no
+# lugar do `feature_retries`) punha `3` no módulo carregado com as 88 réguas
+# que citam `feature_retries` verdes. Aqui as três funções de DKMS rodam de
+# verdade, no molde da O-PURGE-LEVA-AS-COPIAS-DE-PAREAMENTO-01: o `/sys` e o
+# `/etc` trocados por pastas de mentira, o dkms dublado (o que se mede é o
+# rearme a quente, depois dele) e um `sudo` de mentira que executa e RECUSA
+# qualquer argumento que ainda aponte para o `/sys` ou o `/etc` de verdade.
+
+_SUDO_QUE_RECUSA_O_REAL = (
+    "#!/usr/bin/env bash\n"
+    'for a in "$@"; do\n'
+    '  [[ "$a" == /sys/* || "$a" == /etc/* ]] && { echo "RECUSEI $a" >&2; exit 97; }\n'
+    "done\n"
+    'while [[ "${1:-}" == -[nAEHkS] ]]; do shift; done\n'
+    'exec "$@"\n'
+)
+
+#: As três funções que escrevem parâmetro a quente, e os módulos de cada uma.
+_FUNCOES_DA_LIB = {
+    "install_dkms_hid_nintendo_host": "hid_nintendo",
+    "install_dkms_hid_playstation_host": "hid_playstation",
+    "install_dkms_uhid_host": "uhid",
+}
+
+
+@pytest.mark.parametrize("funcao", sorted(_FUNCOES_DA_LIB))
+def test_a_lib_escreve_a_quente_o_valor_da_conf(funcao: str, tmp_path: Path) -> None:
+    modulo = _FUNCOES_DA_LIB[funcao]
+    corpo = _funcao(LIB, funcao)
+    params = sorted(
+        {o for m, o in re.findall(r"/sys/module/(\w+)/parameters/(\w+)", corpo) if m == modulo}
+    )
+    assert params, f"{funcao} deixou de escrever parâmetro de {modulo}"
+    parametros = tmp_path / "sys" / "module" / modulo / "parameters"
+    parametros.mkdir(parents=True)
+    for p in params:
+        (parametros / p).write_text("ANTES", encoding="utf-8")
+    (tmp_path / "etc" / "modprobe.d").mkdir(parents=True)
+    corpo = (
+        corpo.replace('source "${ROOT_DIR}/scripts/dkms_lib.sh"', ":")
+        .replace("/sys/module/", f"{tmp_path}/sys/module/")
+        .replace("/etc/modprobe.d/", f"{tmp_path}/etc/modprobe.d/")
+    )
+    sobrou = [x for x in _executa(corpo) if re.search(r"(^|[\s'\"=])/(sys|etc)/", x)]
+    assert sobrou == [], f"a troca do /sys e do /etc não pegou a função inteira: {sobrou}"
+    fakes = tmp_path / "fakes"
+    fakes.mkdir()
+    sudo = fakes / "sudo"
+    sudo.write_text(_SUDO_QUE_RECUSA_O_REAL, encoding="utf-8")
+    sudo.chmod(0o755)
+    script = "\n".join(
+        (
+            "set -euo pipefail",
+            f"ROOT_DIR={RAIZ}",
+            "NO_DKMS=0",
+            "COM_UHID_CONTRAPRESSAO=1",
+            'warn() { printf "WARN: %s\\n" "$*"; }',
+            "dkms_warn_secureboot_once() { :; }",
+            "dkms_pkg_version() { echo 0; }",
+            "dkms_install_patched_module() { :; }",
+            "dkms_module_from_updates() { return 0; }",
+            LEITORES["lib (install.sh)"],
+            corpo,
+            funcao,
+        )
+    )
+    r = subprocess.run(
+        [BASH, "-c", script],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+        env={"PATH": f"{fakes}:/usr/bin:/bin", "HOME": str(tmp_path), "LC_ALL": "C.UTF-8"},
+    )
+    assert "RECUSEI" not in r.stderr, r.stderr
+    assert r.returncode == 0, r.stderr
+    assert "WARN" not in r.stdout, r.stdout
+    errados = sorted(
+        f"{modulo}.{p}: ficou {(parametros / p).read_text(encoding='utf-8')!r}, "
+        f"a conf diz {OPCOES[(modulo, p)][0]!r}"
+        for p in params
+        if (parametros / p).read_text(encoding="utf-8") != OPCOES[(modulo, p)][0]
     )
     assert errados == [], errados
