@@ -1758,7 +1758,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que nenhuma aba do Hefesto oferece «desligar» um controle do rádio pelo nome, e mede o que acontece no aparelho pelos dois caminhos que tiram um controle do ar: o botão «A luz não acende», que derruba o controle do rádio, e o dedo no PS.
 
-**Onde olhar.** Em três lugares da tela. Na aba Sistema, o botão «Parar o serviço» — a dica diz que o Hefesto deixa de rodar e que ele pergunta antes. Na aba Iluminação, o botão «Desligar» na linha «Opções» de cada coluna — a dica diz que ele apaga a barra de luz daquele controle. Na aba Conexões, seção «Gestão de Controles», dentro da linha aberta de um controle do rádio, o botão «A luz não acende» — a dica diz que ele derruba aquele controle do rádio e que o PS o traz de volta: é o único botão da tela que tira um controle do ar. Para acompanhar a saída e a volta, use a fita do topo que começa com «Selecionar:», a contagem no alto à direita («2 USB · 2 BT» com os quatro), e a linha «Modelo» da aba Iluminação, onde o lugar vazio diz o número e «Desconectado». No aparelho, olhe as cinco lâmpadas brancas em fileira embaixo do touchpad e a barra de luz.
+**Onde olhar.** Em três lugares da tela. Na aba Sistema, o botão «Parar o serviço» — a dica diz que o Hefesto deixa de rodar e que ele pergunta antes. Na aba Iluminação, o botão «Desligar» na linha «Opções» de cada coluna — a dica diz que ele apaga a barra de luz daquele controle. Na aba Conexões, seção «Gestão de Controles», dentro da linha aberta de um controle do rádio, o botão «A luz não acende» — a dica diz que ele derruba aquele controle do BT e que o PS o traz de volta: é o único botão da tela que tira um controle do ar. Para acompanhar a saída e a volta, use a fita do topo que começa com «Selecionar:», a contagem no alto à direita («2 USB · 2 BT» com os quatro), e a linha «Modelo» da aba Iluminação, onde o lugar vazio diz o número e «Desconectado». No aparelho, olhe as cinco lâmpadas brancas em fileira embaixo do touchpad e a barra de luz.
 
 **Os passos.**
 
@@ -2998,7 +2998,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 **O que isto prova.** Prova que, com o controle no rádio, o Hefesto derruba a conexão sem fio, pede o PS e devolve o controle ao mesmo lugar — sem abrir um segundo assento para ele.
 
-**Onde olhar.** Aba Conexões, quadro Gestão de Controles, que se abre clicando no título: a contagem no alto (4 controles • 2 USB • 2 BT), a linha de cada controle (Sony • Player 3 • cor • BT) e, dentro da linha aberta, o botão A luz não acende, cuja explicação diz que ele derruba o controle do rádio e que o PS é seu. Depois do clique, a espera se escreve na linha do controle: ▲ Aperte PS no controle · procurando…, com os segundos correndo a partir de 60, e o mesmo botão passa a dizer Cancelar. No aparelho: a fileira de cinco lampadinhas brancas embaixo do touchpad, que é o que diz o número do jogador.
+**Onde olhar.** Aba Conexões, quadro Gestão de Controles, que se abre clicando no título: a contagem no alto (4 controles • 2 USB • 2 BT), a linha de cada controle (Sony • Player 3 • cor • BT) e, dentro da linha aberta, o botão A luz não acende, cuja explicação diz que ele derruba o controle do BT e que o PS é seu. Depois do clique, a espera se escreve na linha do controle: ▲ Aperte PS no controle · procurando…, com os segundos correndo a partir de 60, e o mesmo botão passa a dizer Cancelar. No aparelho: a fileira de cinco lampadinhas brancas embaixo do touchpad, que é o que diz o número do jogador.
 
 **Os passos.**
 
