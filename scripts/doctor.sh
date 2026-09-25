@@ -534,25 +534,48 @@ _regras_udev_em_ordem() {
     for d in "${dirs[@]}"; do
         [[ -d "${d}" ]] || continue
         for f in "${d}"/*.rules; do
-            [[ -f "${f}" ]] || continue
+            [[ -e "${f}" || -L "${f}" ]] || continue
             base="${f##*/}"
             [[ -n "${visto[${base}]:-}" ]] && continue
             visto[${base}]=1
+            # A SOMBRA vale pelo NOME, seja o que for o arquivo: um link para
+            # /dev/null em /etc é o jeito documentado de DESLIGAR a regra de
+            # mesmo nome em /usr/lib (man 7 udev). Ele sombreia e não roda.
+            [[ -f "${f}" ]] || continue
             printf '%s\t%s\n' "${base}" "${f}"
         done
     done | LC_ALL=C sort -t $'\t' -k1,1
 }
 
-# A regra do nó que vale nesta máquina: a de hoje se existir, senão a de antes.
-# Vazio quando nenhuma está instalada. $@ = os diretórios.
-_regra_do_no_instalada() {
+# O CAMINHO da regra do nó que vale nesta máquina, já com a sombra: a de hoje
+# se existir, senão a de antes. Vazio quando nenhuma está instalada.
+# $@ = os diretórios.
+_caminho_da_regra_do_no() {
     local nome caminho achou=""
     while IFS=$'\t' read -r nome caminho; do
-        [[ "${nome}" == "${REGRA_DO_NO}" ]] && { printf '%s\n' "${nome}"; return 0; }
-        [[ "${nome}" == "${REGRA_DO_NO_VELHA}" ]] && achou="${nome}"
+        [[ "${nome}" == "${REGRA_DO_NO}" ]] && { printf '%s\n' "${caminho}"; return 0; }
+        [[ "${nome}" == "${REGRA_DO_NO_VELHA}" ]] && achou="${caminho}"
     done < <(_regras_udev_em_ordem "$@")
     [[ -n "${achou}" ]] && printf '%s\n' "${achou}"
     return 0
+}
+
+# O NOME da regra do nó que vale nesta máquina. $@ = os diretórios.
+_regra_do_no_instalada() {
+    local caminho
+    caminho="$(_caminho_da_regra_do_no "$@")"
+    [[ -n "${caminho}" ]] && printf '%s\n' "${caminho##*/}"
+    return 0
+}
+
+# 0 quando a regra do nó instalada é a variante ABERTA — a do
+# `--no-fechar-o-no`, ou a que os pacotes gravam quando o broker não entra
+# (`scripts/regra_do_no_aberta.sh`). Nela o físico nasce com a ACL da sessão
+# DE PROPÓSITO: sem broker, ninguém abriria um nó fechado. $1 = o caminho.
+_regra_do_no_e_a_aberta() {
+    local caminho="$1"
+    [[ -r "${caminho}" ]] || return 1
+    ! grep -v '^[[:space:]]*#' "${caminho}" 2>/dev/null | grep -q 'TAG-="uaccess"'
 }
 
 # As linhas que dão `uaccess` ao hidraw de um DualSense (054C:0CE6/0DF2) — ou
@@ -658,6 +681,15 @@ _veredito_do_no_fisico_no_udev() {
     fi
     if [[ ${#abertos[@]} -eq 0 ]]; then
         pass "o hidraw dos ${total} DualSense físico(s) nasceu sem a ACL da sessão — a regra do nó (${nossa:-?}) falou por último"
+        return 0
+    fi
+    # A variante ABERTA abre o nó de propósito (o `--no-fechar-o-no`, ou o
+    # pacote sem o broker): o `uaccess` ali é o combinado, e acusá-lo seria um
+    # FAIL sobre a escolha de quem instalou.
+    local caminho_nossa
+    caminho_nossa="$(_caminho_da_regra_do_no "$@")"
+    if [[ -n "${caminho_nossa}" ]] && _regra_do_no_e_a_aberta "${caminho_nossa}"; then
+        info "${#abertos[@]} de ${total} DualSense físico(s) nasceram com a ACL da sessão, e é o combinado: a regra do nó instalada (${caminho_nossa}) é a variante aberta (--no-fechar-o-no, ou o pacote sem o broker)"
         return 0
     fi
     fail "${#abertos[@]} de ${total} DualSense físico(s) nasceram com a ACL da sessão: ${abertos[*]} — qualquer programa da sessão (a Steam, por exemplo) abre o nó antes de o Hefesto escondê-lo, e esconder depois não fecha o que ele abriu"
@@ -6822,7 +6854,7 @@ _udev_hidraw_scan() {
     for d in "${dirs[@]}"; do
         [[ -d "${d}" ]] || continue
         for f in "${d}"/*.rules; do
-            [[ -f "${f}" && -r "${f}" ]] || continue
+            [[ -e "${f}" || -L "${f}" ]] || continue
             base="${f##*/}"
             sombreado=0
             for v in ${vistos[@]+"${vistos[@]}"}; do
@@ -6830,6 +6862,10 @@ _udev_hidraw_scan() {
             done
             vistos+=("${base}")
             [[ "${sombreado}" -eq 1 ]] && continue
+            # Sombreia pelo nome e só DEPOIS se lê: o link para /dev/null em
+            # /etc desliga a de /usr/lib (man 7 udev), e o arquivo que não se
+            # lê continua sombreando o de mesmo nome.
+            [[ -f "${f}" && -r "${f}" ]] || continue
             awk -v arq="${f}" -v vista="${vista}" '
                 {
                     linha = $0

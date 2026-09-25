@@ -211,6 +211,56 @@ class TestOBancoDoUdevDizComoONoNasceu:
         shutil.copy(etc / NOVA, etc / VELHA)
         assert _chamar("_regra_do_no_instalada", str(etc), str(usr)).strip() == NOVA
 
+    def test_a_variante_aberta_nao_e_acusada(self, tmp_path: Path) -> None:
+        """O `--no-fechar-o-no` (e o pacote sem o broker) abre o nó DE PROPÓSITO.
+
+        Conferência de 25/09/2026: a primeira versão deste check dava FAIL
+        sobre a escolha de quem instalou — a variante aberta é o caminho de
+        volta que o próprio asset ensina, e o fail-safe dos pacotes.
+
+        A MORDIDA: tire o ramo `_regra_do_no_e_a_aberta` do veredito e isto
+        volta a FAIL, nomeando a 71-sony como culpada.
+        """
+        etc, usr = _regras(tmp_path, nossa=NOVA)
+        aberta = subprocess.run(
+            ["bash", str(RAIZ / "scripts" / "regra_do_no_aberta.sh"), str(etc / NOVA),
+             str(tmp_path / "aberta.rules")],
+            capture_output=True, text=True, timeout=30, check=True,
+        )
+        assert aberta.returncode == 0
+        shutil.copy(tmp_path / "aberta.rules", etc / NOVA)
+        _no(tmp_path, "hidraw6", "237:6", "0005:0000054C:00000CE6", BANCO_ABERTO)
+        saida = _chamar(
+            "_veredito_do_no_fisico_no_udev", _banco(tmp_path), _sys(tmp_path), "/dev/hidraw6",
+            str(etc), str(usr),
+        )
+        assert "[FAIL]" not in saida, saida
+        assert "variante aberta" in saida, saida
+
+    def test_o_link_para_dev_null_desliga_a_regra_de_terceiro(self, tmp_path: Path) -> None:
+        """man 7 udev: um link para /dev/null em /etc DESLIGA a de mesmo nome em /usr/lib.
+
+        É o conserto que quem administra a máquina aplica na `71-sony`; o
+        doctor não pode continuar acusando a regra desligada. A MORDIDA: volte
+        o `[[ -f ]]` para ANTES do `visto` em `_regras_udev_em_ordem` e a
+        71-sony reaparece como culpada.
+        """
+        etc, usr = _regras(tmp_path, nossa=VELHA)
+        os.symlink("/dev/null", etc / "71-sony-controllers.rules")
+        culpados = _chamar("_regras_que_reabrem_o_fisico", VELHA, str(etc), str(usr))
+        assert "71-sony-controllers" not in culpados, culpados
+        assert "71-sony-controllers.rules" not in _chamar(
+            "_regras_udev_em_ordem", str(etc), str(usr)
+        )
+
+    def test_a_varredura_de_manta_respeita_o_link_para_dev_null(self, tmp_path: Path) -> None:
+        """A mesma sombra na varredura antiga (`_udev_hidraw_scan`): desligada não acusa."""
+        manta = 'KERNEL=="hidraw*", MODE="0666"\n'
+        etc, usr = _regras(tmp_path, nossa=NOVA, extra={"99-hidraw.rules": manta})
+        assert "99-hidraw.rules:1" in _chamar("_udev_hidraw_rw_global", str(etc), str(usr))
+        os.symlink("/dev/null", etc / "99-hidraw.rules")
+        assert _chamar("_udev_hidraw_rw_global", str(etc), str(usr)) == ""
+
 
 # ---------------------------------------------------------------------------
 # 2. Quem segura o nó físico agora
