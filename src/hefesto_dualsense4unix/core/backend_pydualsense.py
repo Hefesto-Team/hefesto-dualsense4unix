@@ -65,6 +65,7 @@ from hefesto_dualsense4unix.core.led_control import (
     PecaDaMesa,
     cores_sem_colisao,
     degrau_do_brilho_das_luzes,
+    reescalar,
 )
 from hefesto_dualsense4unix.core.speaker_scale import volume_do_percentual
 
@@ -2951,6 +2952,14 @@ class PyDualSenseController(IController):
         fator = self._led_scale_by_uniq.get(uniq)
         if fator is None or desired.led is None:
             return desired
+        # UMA CONTA SÓ, QUANDO O BRILHO DO PERFIL É SABIDO: a cor da paleta é
+        # levada do brilho do perfil ao da peça pelo tom (`reescalar`), e o
+        # P1 a 60% acende pelo perfil o mesmo `(0,0,153)` que o trilho acende.
+        base = self._brilho_do_perfil
+        if base is not None:
+            return replace(
+                desired, led=reescalar(tuple(desired.led), base, base * fator)
+            )
         return replace(
             desired,
             led=tuple(  # type: ignore[arg-type]
