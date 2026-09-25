@@ -182,6 +182,12 @@ PASTAS_DO_HEROIC: tuple[str, ...] = (
     ".config/heroic",
 )
 
+#: Onde o Hefesto escreve o ambiente do Flatpak de cada lançador — espelho de
+#: ``integrations/cura_por_estrada.estradas_do_cartao`` e de
+#: ``integrations/sandbox_dos_lancadores._raizes`` (a régua confere): o lar, e
+#: não o ``XDG_DATA_HOME``, porque é assim que os dois donos escrevem e leem.
+PASTA_DOS_OVERRIDES = ".local/share/flatpak/overrides"
+
 #: Os ids de Flatpak do próprio Hefesto — os mesmos que o ``uninstall.sh``
 #: desinstala (``HEFESTO_FLATPAK_APP_IDS``): o de hoje e o de antes de 25/08.
 IDS_DE_FLATPAK_DO_HEFESTO: tuple[str, ...] = (
@@ -484,7 +490,7 @@ INVENTARIO: tuple[Lugar, ...] = (
         "(defaultSettings.enviromentOptions)",
     ),
     Lugar(
-        "flatpak-ambiente", "dados", "flatpak/overrides/*",
+        "flatpak-ambiente", "lar", f"{PASTA_DOS_OVERRIDES}/*",
         "integrations/cura_por_estrada.py:_escrever_no_override",
         USUARIO, CASA, COPIAR,
         "o [Environment] que o Hefesto põe no Flatpak de cada lançador "
@@ -782,6 +788,15 @@ class Manifesto:
     root: str = ""
     devolvido_em: list[str] = field(default_factory=list)
     forma: int = FORMA_DO_MANIFESTO
+    #: Os lugares do inventário que NÃO existiam no guardar (``origem``). O que
+    #: o teste criar ali sai no devolver — «exatamente como estava» inclui o
+    #: que não estava.
+    ausentes: list[str] = field(default_factory=list)
+    #: Os curingas do inventário (``{"base", "padrao", "existiam"}``): no
+    #: devolver, o que casa com eles e NÃO existia no guardar nasceu no teste, e
+    #: sai também. A lista do que existia é a do guardar, e não a dos itens: uma
+    #: guarda que caiu no meio não pode fazer o devolver tirar o que nunca saiu.
+    curingas: list[dict[str, Any]] = field(default_factory=list)
 
     def gravar(self, pasta: Path) -> None:
         alvo = pasta / "manifesto.json"
@@ -807,6 +822,8 @@ class Manifesto:
             itens=itens,
             root=str(dado.get("root", "")),
             devolvido_em=list(dado.get("devolvido_em", [])),
+            ausentes=[str(a) for a in dado.get("ausentes", [])],
+            curingas=[dict(c) for c in dado.get("curingas", []) if isinstance(c, dict)],
         )
 
 
@@ -888,7 +905,7 @@ class Sistema:
         return bool(mod.steam_running())
 
     def rodar_parte_do_root(
-        self, raizes: Raizes, verbo: str, pasta_root: Path, seco: bool
+        self, raizes: Raizes, verbo: str, pasta_root: Path | None, seco: bool
     ) -> dict[str, Any]:
         """Roda a parte do root; devolve o que ela relatou."""
         if raizes.raizes_do_root_desviadas:
@@ -898,8 +915,9 @@ class Sistema:
         argv = [
             sys.executable if os.path.isabs(sys.executable) else "/usr/bin/python3",
             "-I", str(Path(__file__).resolve()), "raiz", verbo,
-            "--pasta", str(pasta_root),
         ]
+        if pasta_root is not None:
+            argv += ["--pasta", str(pasta_root)]
         if seco:
             argv.append("--seco")
         if os.geteuid() == 0:
@@ -920,6 +938,13 @@ class Sistema:
         except ValueError as erro:
             raise RecusaError(f"a parte do root respondeu fora da forma: {r.stdout!r}") from erro
         return dado if isinstance(dado, dict) else {}
+
+    def olhar_o_bluez(self, raizes: Raizes) -> dict[str, Any] | None:
+        """O que só o root lê no BlueZ, para o «limpa?». ``None`` = sem privilégio."""
+        try:
+            return self.rodar_parte_do_root(raizes, "olhar", None, seco=True)
+        except (RecusaError, OSError):
+            return None
 
     def root_precisa(self, raizes: Raizes) -> bool:
         """Há algo do lado do root para olhar? (sem privilégio: só o ``isdir``)."""
@@ -1008,7 +1033,7 @@ def variaveis_do_produto_no_heroic(texto: str) -> list[str]:
 
 
 def _achar_overrides(raizes: Raizes) -> list[Path]:
-    pasta = raizes.dados / "flatpak" / "overrides"
+    pasta = raizes.lar / PASTA_DOS_OVERRIDES
     if not pasta.is_dir():
         return []
     achados: list[Path] = []
@@ -1101,9 +1126,11 @@ def montar_plano(raizes: Raizes, alcance: str) -> list[Passo]:
             if caminho in vistos:
                 continue
             if lugar.ato == TIRAR_A_CHAVE:
-                if _perfil_com_ajustes(caminho) is None:
-                    continue
-                como = COPIAR if alcance == CASA else TIRAR_A_CHAVE
+                # O perfil SEM ajuste por controle também leva cópia: o teste
+                # pode gravar um ajuste nele (o botão do mic grava no perfil),
+                # e sem os bytes de antes o devolver não o poria como estava.
+                com_ajustes = _perfil_com_ajustes(caminho) is not None
+                como = TIRAR_A_CHAVE if com_ajustes and alcance == CONTROLES else COPIAR
             elif alcance == CASA:
                 como = COPIAR
             else:
@@ -1121,6 +1148,37 @@ def montar_plano(raizes: Raizes, alcance: str) -> list[Passo]:
     return plano
 
 
+def o_que_nao_existia(
+    raizes: Raizes, alcance: str
+) -> tuple[list[str], list[dict[str, Any]]]:
+    """Os lugares do lado dela que o devolver tem de deixar como NÃO estavam.
+
+    ``(ausentes, curingas)``: os caminhos do inventário que não existem agora, e
+    cada curinga com o que casa com ele AGORA (``existiam``). Ficam de fora os
+    lugares dos lançadores (o arquivo é do lançador, não do produto), os que o
+    install recria (``devolve=False``) e, na casa inteira, o que mora dentro da
+    configuração — ela volta inteira.
+    """
+    cfg = raizes.config / SLUG
+    ausentes: list[str] = []
+    curingas: list[dict[str, Any]] = []
+    for lugar in lugares(alcance, USUARIO):
+        if not lugar.devolve or lugar.caminho.startswith("<"):
+            continue
+        if lugar.chave == "flatpak-ambiente":
+            continue
+        base = _raiz_de(raizes, lugar.raiz)
+        alvo = base / lugar.caminho
+        if alcance == CASA and lugar.chave != "configuracao-inteira" and cfg in alvo.parents:
+            continue
+        if any(c in lugar.caminho for c in "*?["):
+            curingas.append({"base": str(base), "padrao": lugar.caminho,
+                             "existiam": [str(p) for p in sorted(base.glob(lugar.caminho))]})
+        elif not (alvo.exists() or alvo.is_symlink()):
+            ausentes.append(str(alvo))
+    return ausentes, curingas
+
+
 # ══ 9. Guardar ═════════════════════════════════════════════════════════════
 
 
@@ -1132,6 +1190,10 @@ class Relato:
     linhas: list[str] = field(default_factory=list)
     sobrescritos: list[str] = field(default_factory=list)
     pulados: list[str] = field(default_factory=list)
+    #: O que o teste criou onde antes não havia nada (foi para depois-do-teste).
+    tirados: list[str] = field(default_factory=list)
+    #: O que já estava byte a byte como fora guardado (nada a fazer).
+    iguais: list[str] = field(default_factory=list)
 
     def diz(self, texto: str) -> None:
         self.linhas.append(texto)
@@ -1162,6 +1224,7 @@ def guardar(
     conferir_o_ensaio(raizes)
     relato = Relato()
     plano = montar_plano(raizes, alcance)
+    ausentes, curingas = o_que_nao_existia(raizes, alcance)
     if alcance == CASA and sistema.steam_aberta():
         raise RecusaError("a Steam está aberta: feche-a antes de guardar (ela regrava "
                      "o localconfig.vdf ao sair, e a cópia sairia velha)")
@@ -1192,7 +1255,8 @@ def guardar(
         _preparar_pasta(raizes.guardado)
         _preparar_pasta(pasta)
         manifesto = Manifesto(alcance, carimbo, raizes.em_texto(),
-                              root=str(pasta_root) if precisa_root else "")
+                              root=str(pasta_root) if precisa_root else "",
+                              ausentes=ausentes, curingas=curingas)
         manifesto.gravar(pasta)
         relato.pasta = pasta
         if precisa_root:
@@ -1269,10 +1333,20 @@ def devolver(
     if seco:
         relato.diz(f"(a seco) devolveria {pasta}")
         for item in manifesto.itens:
-            if item.devolve:
-                relato.diz(f"  devolver                 {item.origem}")
-            else:
+            origem = Path(item.origem)
+            existe = origem.exists() or origem.is_symlink()
+            if not item.devolve:
                 relato.diz(f"  fica só na pasta         {item.origem}")
+            elif existe and retrato(origem) == item.retrato:
+                relato.iguais.append(item.origem)
+            elif existe:
+                relato.diz(f"  devolver por cima        {item.origem}")
+            else:
+                relato.diz(f"  devolver                 {item.origem}")
+        for novo in _o_que_apareceu(manifesto):
+            relato.diz(f"  tirar (não existia)      {novo}")
+        if relato.iguais:
+            relato.diz(f"  ({len(relato.iguais)} já estão como estavam: nada a fazer)")
         if pasta_root is not None:
             dado = sistema.rodar_parte_do_root(raizes, "restaurar", pasta_root, seco=True)
             for linha in dado.get("linhas", []):
@@ -1291,18 +1365,48 @@ def devolver(
                 relato.pulados.append(item.origem)
                 continue
             _devolver_um(pasta, item, depois_do_teste, relato)
+        for novo in _o_que_apareceu(manifesto):
+            mover(novo, depois_do_teste / _relativo_na_pasta(raizes, novo))
+            relato.tirados.append(str(novo))
+            relato.diz(f"tirado (não existia antes): {novo}")
         manifesto.devolvido_em.append(carimbo_agora(agora))
         manifesto.gravar(pasta)
     finally:
         if estava_de_pe:
             sistema.subir_daemon()
-    if relato.sobrescritos:
+    if relato.iguais:
+        relato.diz(f"{len(relato.iguais)} já estavam como estavam")
+    if relato.sobrescritos or relato.tirados:
         relato.diz(f"o que estava no lugar foi para {depois_do_teste}")
     for caminho in relato.pulados:
         relato.diz(f"ficou só na pasta (o produto o recria): {caminho}")
     _dizer_as_escolhas_de_camada(pasta, manifesto, relato)
     relato.diz(f"devolvido de {pasta}")
     return relato
+
+
+def _o_que_apareceu(manifesto: Manifesto) -> list[Path]:
+    """O que existe agora num lugar do inventário que o guardar achou vazio.
+
+    Um ausente que passou a existir, ou um casamento de curinga que não existia
+    no guardar: nasceu no teste (a fila de números nova, um perfil criado, o
+    ajuste que o botão do mic gravou num perfil que não tinha nenhum) — e
+    «exatamente como estava» é sem ele.
+    """
+    achados: list[Path] = []
+    for ausente in manifesto.ausentes:
+        caminho = Path(ausente)
+        if caminho.exists() or caminho.is_symlink():
+            achados.append(caminho)
+    for curinga in manifesto.curingas:
+        existiam = {str(e) for e in curinga.get("existiam", [])}
+        for caminho in sorted(Path(str(curinga["base"])).glob(str(curinga["padrao"]))):
+            if str(caminho) in existiam or caminho in achados:
+                continue
+            if any(p in achados for p in caminho.parents):
+                continue
+            achados.append(caminho)
+    return achados
 
 
 def _devolver_um(pasta: Path, item: Item, depois_do_teste: Path, relato: Relato) -> None:
@@ -1312,6 +1416,9 @@ def _devolver_um(pasta: Path, item: Item, depois_do_teste: Path, relato: Relato)
         raise RecusaError(f"a pasta perdeu {guardado} — não devolvo pela metade")
     if retrato(guardado) != item.retrato:
         raise RecusaError(f"{guardado} mudou dentro da pasta — não devolvo o que não confere")
+    if (origem.exists() or origem.is_symlink()) and retrato(origem) == item.retrato:
+        relato.iguais.append(str(origem))
+        return
     if origem.exists() or origem.is_symlink():
         rel = item.guardado
         mover(origem, depois_do_teste / rel)
@@ -1419,11 +1526,51 @@ def _bluetooth_parado(bt: Bluetooth, precisa: bool) -> Iterator[None]:
         bt.subir()
 
 
+def _apelidos_dos_adaptadores(bluez: Path) -> dict[str, str]:
+    """O ``Alias`` que cada adaptador tem gravado (``<adaptador>/settings``)."""
+    apelidos: dict[str, str] = {}
+    if not bluez.is_dir():
+        return apelidos
+    for adaptador in sorted(bluez.iterdir()):
+        if not _FORMA_DO_MAC.match(adaptador.name) or adaptador.is_symlink():
+            continue
+        settings = adaptador / "settings"
+        if not settings.is_file() or settings.is_symlink():
+            continue
+        try:
+            texto = settings.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        alias = _ler_ini(texto).get("General", "Alias", fallback="").strip()
+        if alias:
+            apelidos[adaptador.name] = alias
+    return apelidos
+
+
+def _olhar_no_root(raizes: Raizes) -> dict[str, Any]:
+    """O verbo ``olhar``: só LÊ o BlueZ — os pareamentos de controle e os nomes
+    dos adaptadores. É o que o «limpa?» pergunta e a pessoa não enxerga."""
+    pares = pareamentos_de_controle(raizes.bluez)
+    return {
+        "linhas": [f"pareamento do controle {p.controle} no adaptador {p.adaptador}"
+                   for p in pares],
+        "pareamentos": [[p.adaptador, p.controle] for p in pares],
+        "apelidos": _apelidos_dos_adaptadores(raizes.bluez),
+    }
+
+
 def executar_parte_do_root(
-    raizes: Raizes, verbo: str, pasta: Path, *, seco: bool,
+    raizes: Raizes, verbo: str, pasta: Path | None, *, seco: bool,
     bluetooth: Bluetooth | None = None,
 ) -> dict[str, Any]:
-    """O verbo do root: ``esquecer`` ou ``restaurar``. Devolve ``{"linhas": [...]}``."""
+    """O verbo do root: ``esquecer``, ``restaurar`` ou ``olhar`` (só lê).
+
+    Devolve ``{"linhas": [...]}``; o ``olhar`` não tem pasta e não escreve nada.
+    """
+    if verbo == "olhar":
+        return {**_olhar_no_root(raizes), "bluetooth": []}
+    if pasta is None:
+        raise RecusaError(f"o verbo do root {verbo} precisa da pasta")
     _conferir_pasta_do_root(raizes, pasta)
     bt = bluetooth if bluetooth is not None else Bluetooth(raizes)
     if verbo == "esquecer":
@@ -1474,30 +1621,33 @@ def _esquecer_no_root(raizes: Raizes, pasta: Path, *, seco: bool, bt: Bluetooth)
     if pasta.exists():
         raise RecusaError(f"a pasta do root {pasta} já existe")
     _preparar_pasta(pasta)
-    itens: list[Item] = []
+    # O manifesto nasce ANTES do primeiro mover e é regravado a cada item, como
+    # o do lado dela: uma queda no meio (o bluetoothd que não para, um disco
+    # cheio) deixa a pasta dizendo exatamente o que já saiu — e o devolver da
+    # outra metade não tropeça numa pasta do root sem manifesto.
+    manifesto = Manifesto(CONTROLES, pasta.name, raizes.em_texto())
+    manifesto.gravar(pasta)
+
+    def _mover_e_anotar(chave: str, origem: Path, rel: str, nota: str = "") -> None:
+        antes = retrato(origem)
+        mover(origem, pasta / rel)
+        manifesto.itens.append(Item(chave, str(origem), rel, MOVER, ROOT,
+                                    retrato=antes, nota=nota))
+        manifesto.gravar(pasta)
+
     # 1. Os pareamentos, com o bluetoothd parado.
     with _bluetooth_parado(bt, bool(pares or caches)):
         for p in pares:
-            origem = raizes.bluez / p.adaptador / p.controle
-            rel = f"bluez/{p.adaptador}/{p.controle}"
-            antes = retrato(origem)
-            mover(origem, pasta / rel)
-            itens.append(Item("pareamentos-dos-controles", str(origem), rel, MOVER, ROOT,
-                              retrato=antes, nota=p.controle))
+            _mover_e_anotar("pareamentos-dos-controles", raizes.bluez / p.adaptador / p.controle,
+                            f"bluez/{p.adaptador}/{p.controle}", p.controle)
         for c in caches:
-            rel = f"bluez/{c.relative_to(raizes.bluez)}"
-            antes = retrato(c)
-            mover(c, pasta / rel)
-            itens.append(Item("pareamentos-dos-controles", str(c), rel, MOVER, ROOT,
-                              retrato=antes, nota=c.name))
+            _mover_e_anotar("pareamentos-dos-controles", c,
+                            f"bluez/{c.relative_to(raizes.bluez)}", c.name)
         # 2. As cópias de pareamento e o diário do root, DEPOIS dos pareamentos:
         #    nenhum instantâneo de antes sobra para o autorestore ressuscitar.
         for lugar, caminho in outros:
-            rel = f"varlib/{caminho.relative_to(raizes.varlib)}"
-            antes = retrato(caminho)
-            mover(caminho, pasta / rel)
-            itens.append(Item(lugar.chave, str(caminho), rel, MOVER, ROOT, retrato=antes))
-    Manifesto(CONTROLES, pasta.name, raizes.em_texto(), itens).gravar(pasta)
+            _mover_e_anotar(lugar.chave, caminho,
+                            f"varlib/{caminho.relative_to(raizes.varlib)}")
     return linhas
 
 
@@ -1516,6 +1666,8 @@ def _restaurar_no_root(raizes: Raizes, pasta: Path, *, seco: bool, bt: Bluetooth
     depois = pasta / "depois-do-teste" / carimbo_agora()
     linhas: list[str] = []
     pular: set[str] = set()
+    #: (adaptador antigo, controle) de cada pareamento que NÃO volta.
+    enterrar: list[tuple[str, str]] = []
     plano: list[Item] = []
     for item in manifesto.itens:
         if item.chave == "pareamentos-dos-controles" and "/cache/" not in item.guardado:
@@ -1523,6 +1675,7 @@ def _restaurar_no_root(raizes: Raizes, pasta: Path, *, seco: bool, bt: Bluetooth
             vivo = _pareamento_vivo(raizes.bluez, controle)
             if vivo is not None:
                 pular.add(controle)
+                enterrar.append((Path(item.guardado).parent.name, controle))
                 linhas.append(f"o controle {controle} já está pareado de novo (adaptador "
                               f"{vivo}): o pareamento vivo fica, o antigo fica na pasta")
                 continue
@@ -1533,6 +1686,10 @@ def _restaurar_no_root(raizes: Raizes, pasta: Path, *, seco: bool, bt: Bluetooth
     tocar_o_bluez = any(i.chave == "pareamentos-dos-controles" for i in plano)
     for item in plano:
         linhas.append(f"devolveria {item.origem}" if seco else f"devolvido {item.origem}")
+    lapides = raizes.varlib / "bt-bonds" / ".lapides"
+    for adaptador, controle in enterrar:
+        linhas.append(f"{'gravaria' if seco else 'gravada'} a lápide de {controle} em "
+                      f"{adaptador}: o autorestore não o ressuscita")
     if seco:
         return linhas
     with _bluetooth_parado(bt, tocar_o_bluez):
@@ -1544,9 +1701,36 @@ def _restaurar_no_root(raizes: Raizes, pasta: Path, *, seco: bool, bt: Bluetooth
             if origem.exists() or origem.is_symlink():
                 mover(origem, depois / item.guardado)
             copiar(guardado, origem)
+        _gravar_lapides(lapides, enterrar)
     manifesto.devolvido_em.append(carimbo_agora())
     manifesto.gravar(pasta)
     return linhas
+
+
+def _gravar_lapides(lapides: Path, enterrar: list[tuple[str, str]]) -> None:
+    """A lápide do pareamento que o devolver deixou de fora — a MESMA do verbo
+    ``esquecer`` da ponte privilegiada: ``<epoch> <adaptador> <controle>`` em
+    ``bt-bonds/.lapides``.
+
+    Sem ela, o acervo de cópias que acabou de voltar traz a chave VELHA desse
+    controle, e o ``bt_bonds_autorestore.sh`` a plantaria no adaptador antigo
+    na próxima morte do ``bluetoothd`` (ele só confere o mesmo adaptador) — o
+    controle, que só conhece a chave nova, ficaria com casa em dois
+    adaptadores. É a regra do devolver («chave velha nunca por cima de um
+    pareamento vivo, em adaptador nenhum») valendo também para quem restaura
+    depois dele. A lápide só enterra cópia de ANTES dela: o pareamento vivo,
+    copiado dali em diante, volta como qualquer outro.
+    """
+    if not enterrar or not lapides.parent.is_dir() or lapides.parent.is_symlink():
+        return
+    if lapides.is_symlink():
+        raise RecusaError(f"recusando a lápide: {lapides} é link simbólico")
+    agora = int(time.time())
+    with lapides.open("a", encoding="utf-8") as fh:
+        for adaptador, controle in enterrar:
+            fh.write(f"{agora} {adaptador} {controle}\n")
+    with contextlib.suppress(OSError):
+        os.chmod(lapides, 0o600)
 
 
 # ══ 12. «A máquina está limpa?» ════════════════════════════════════════════
@@ -1561,6 +1745,10 @@ class Rastro:
     #: ``True`` quando o próprio uninstall deixa de propósito (um backup, o
     #: Proton extraído que é dado dela) — dito, mas não é defeito.
     de_proposito: bool = False
+    #: ``True`` quando o lugar não pôde ser olhado (só o root o lê, e não havia
+    #: privilégio). «Não sei» não é «sobrou» nem «limpo»: é dito à parte, com o
+    #: que fazer, e não conta como defeito do uninstall.
+    nao_sei: bool = False
 
 
 _REGRAS_HISTORICAS = (
@@ -1601,19 +1789,52 @@ def _globs_do_sistema(raizes: Raizes) -> list[tuple[str, str]]:
     return globs
 
 
-def _rastros_do_sistema(raizes: Raizes) -> list[Rastro]:
+#: O prefixo que o Hefesto põe no nome de um adaptador (``bt_active_mode.sh`` e
+#: ``integrations/apelido_do_dongle.py``). O ``uninstall.sh`` o tira de TODO
+#: adaptador — um nome que ainda começa assim depois dele é rastro.
+PREFIXO_DO_ADAPTADOR = "Nintendo "
+
+_O_QUE_FAZER_SEM_ROOT = (
+    "exporte SUDO_ASKPASS (ou rode `sudo -v` neste terminal) e pergunte de novo"
+)
+
+
+def _rastros_do_bluez(raizes: Raizes, sistema: Sistema | None) -> list[Rastro]:
+    """Os pareamentos de controle e os nomes dos adaptadores — que só o root lê.
+
+    O armazenamento do BlueZ é ``700`` do root: como pessoa, a pergunta não tem
+    resposta. Ela vai à parte do root (o mesmo ``sudo -A``/``sudo -n`` do
+    guardar); sem privilégio, a resposta é «não sei», dita com o que fazer —
+    nunca «sobrou», que faria toda máquina de verdade reprovar, e nunca
+    «limpa», que esconderia um controle ainda pareado.
+    """
+    try:
+        olhado: dict[str, Any] | None = _olhar_no_root(raizes)
+    except PermissionError:
+        olhado = sistema.olhar_o_bluez(raizes) if sistema is not None else None
+    if olhado is None:
+        return [Rastro(str(raizes.bluez), "não sei se sobrou controle pareado ou nome de "
+                       f"adaptador do Hefesto: só o root lê — {_O_QUE_FAZER_SEM_ROOT}",
+                       nao_sei=True)]
+    rastros: list[Rastro] = []
+    for adaptador, controle in olhado.get("pareamentos", []):
+        rastros.append(Rastro(str(raizes.bluez / str(adaptador) / str(controle)),
+                              "um controle ainda pareado: a primeira vez não será a primeira"))
+    for adaptador, alias in sorted(dict(olhado.get("apelidos", {})).items()):
+        if str(alias).startswith(PREFIXO_DO_ADAPTADOR):
+            rastros.append(Rastro(str(raizes.bluez / str(adaptador) / "settings"),
+                                  f"o nome do adaptador ainda leva o prefixo do Hefesto "
+                                  f"({alias})"))
+    return rastros
+
+
+def _rastros_do_sistema(raizes: Raizes, sistema: Sistema | None = None) -> list[Rastro]:
     rastros: list[Rastro] = []
     base = raizes.sistema
     if raizes.varlib.exists():
         rastros.append(Rastro(str(raizes.varlib), "pasta do root do produto (cópias de "
                               "pareamento, diário do root)"))
-    try:
-        for par in pareamentos_de_controle(raizes.bluez):
-            rastros.append(Rastro(
-                str(raizes.bluez / par.adaptador / par.controle),
-                "um controle ainda pareado: a primeira vez não será a primeira"))
-    except PermissionError:
-        rastros.append(Rastro(str(raizes.bluez), "os pareamentos só se olham com root"))
+    rastros.extend(_rastros_do_bluez(raizes, sistema))
     for padrao, o_que in _globs_do_sistema(raizes):
         for achado in sorted(base.glob(padrao)):
             rastros.append(Rastro(str(achado), o_que))
@@ -1622,7 +1843,8 @@ def _rastros_do_sistema(raizes: Raizes) -> list[Rastro]:
         if sudoers.exists():
             rastros.append(Rastro(str(sudoers), "a ponte privilegiada (sudoers)"))
     except PermissionError:
-        rastros.append(Rastro(str(sudoers), "não consegui olhar sem root"))
+        rastros.append(Rastro(str(sudoers), f"não sei: só o root lê — {_O_QUE_FAZER_SEM_ROOT}",
+                              nao_sei=True))
     main_conf = base / "etc/bluetooth/main.conf"
     with contextlib.suppress(OSError):
         if "hefesto" in main_conf.read_text(encoding="utf-8", errors="replace").lower():
@@ -1704,6 +1926,15 @@ def _rastros_nos_lancadores(raizes: Raizes) -> list[Rastro]:
             if n:
                 rastros.append(Rastro(str(vdf), f"{n} jogo(s) com o atalho do Hefesto "
                                       "nas Opções de Inicialização"))
+        # As cópias que o install e o uninstall tiram ao lado de cada vdf antes de
+        # mexer nele (``steam_launch_options``: ``.bak.hefesto-launch-<ts>``;
+        # ``disable_steam_input.sh``: ``.bak.steam-input-<ts>``). Ficam de
+        # propósito — são o desfazer dela —, e o «limpa?» diz que estão lá.
+        for sufixo in ("hefesto-launch", "steam-input"):
+            for copia in sorted(vdf.parent.glob(f"{vdf.name}.bak.{sufixo}-*")):
+                rastros.append(Rastro(str(copia), "a cópia do vdf de antes de o Hefesto "
+                                      "mexer nele (fica: é o seu desfazer)",
+                                      de_proposito=True))
     pp = _modulo_de_integracao("proton_pin")
     if pp is not None:
         with contextlib.suppress(OSError, ValueError, AttributeError):
@@ -1748,14 +1979,15 @@ def _rastros_nos_lancadores(raizes: Raizes) -> list[Rastro]:
     return rastros
 
 
-def conferir_a_casa(raizes: Raizes) -> list[Rastro]:
+def conferir_a_casa(raizes: Raizes, sistema: Sistema | None = None) -> list[Rastro]:
     """Depois do uninstall: o que sobrou do Hefesto, lugar por lugar.
 
     É também a prova de que o uninstall é honesto — o que sobra e não é de
-    propósito é defeito dele.
+    propósito é defeito dele. O ``sistema`` é por onde a pergunta chega ao que
+    só o root lê (o BlueZ); sem ele, esse pedaço volta «não sei».
     """
     return (_rastros_do_lar(raizes) + _rastros_nos_lancadores(raizes)
-            + _rastros_do_sistema(raizes))
+            + _rastros_do_sistema(raizes, sistema))
 
 
 # ══ 13. Linha de comando da parte do root ═════════════════════════════════
@@ -1765,13 +1997,14 @@ def _principal_do_root(argv: Sequence[str]) -> int:
     import argparse
 
     p = argparse.ArgumentParser(prog="memoria_dos_controles raiz")
-    p.add_argument("verbo", choices=("esquecer", "restaurar"))
-    p.add_argument("--pasta", required=True)
+    p.add_argument("verbo", choices=("esquecer", "restaurar", "olhar"))
+    p.add_argument("--pasta", default=None)
     p.add_argument("--seco", action="store_true")
     a = p.parse_args(list(argv))
     raizes = raizes_do_root()
     try:
-        dado = executar_parte_do_root(raizes, a.verbo, Path(a.pasta), seco=a.seco)
+        pasta = Path(a.pasta) if a.pasta else None
+        dado = executar_parte_do_root(raizes, a.verbo, pasta, seco=a.seco)
     except RecusaError as erro:
         print(str(erro), file=sys.stderr)
         return 2
@@ -1783,8 +2016,8 @@ def principal(argv: Iterable[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     if args[:1] == ["raiz"]:
         return _principal_do_root(args[1:])
-    print("uso: memoria_dos_controles.py raiz {esquecer,restaurar} --pasta P [--seco]",
-          file=sys.stderr)
+    print("uso: memoria_dos_controles.py raiz {esquecer,restaurar} --pasta P [--seco]"
+          " | raiz olhar", file=sys.stderr)
     return 2
 
 
