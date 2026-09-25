@@ -503,6 +503,32 @@ def test_o_que_o_teste_criou_onde_nao_havia_nada_sai_no_devolver(
     assert str(cfg / "profiles/novo.json") in relato2.tirados
 
 
+def test_esquecer_duas_vezes_desfaz_na_ordem_certa(raizes: m.Raizes, tmp_path: Path) -> None:
+    """Quem esqueceu duas vezes seguidas volta ao começo só repetindo o comando.
+
+    A escolha sem pasta pedida é a mais nova AINDA NÃO devolvida, e só do
+    alcance do comando: antes era a mais nova de todas, e o segundo
+    ``--restaurar`` devolvia a mesma pasta outra vez — a memória de verdade,
+    na primeira pasta, não voltava.
+    """
+    plantar_a_mesa(raizes, 2, "misto", True)
+    antes = _arvore(tmp_path)
+    sistema = SistemaDeMentira()
+    primeira = m.guardar(raizes, m.CONTROLES, sistema, agora=1_790_000_000).pasta
+    (raizes.config / m.SLUG / "controllers.json").write_text('{"order": ["teste"]}',
+                                                              encoding="utf-8")
+    segunda = m.guardar(raizes, m.CONTROLES, sistema, agora=1_790_000_100).pasta
+    casa = m.guardar(raizes, m.CASA, sistema, agora=1_790_000_200).pasta
+    assert primeira and segunda and casa
+
+    assert m.devolver(raizes, sistema, alcance=m.CONTROLES).pasta == segunda
+    assert m.devolver(raizes, sistema, alcance=m.CONTROLES).pasta == primeira
+    assert _arvore(tmp_path) == antes
+    # Tudo devolvido: a mais nova do alcance, e nunca a da casa inteira.
+    assert m.escolher_pasta(raizes, None, m.CONTROLES) == segunda
+    assert m.escolher_pasta(raizes, None, m.CASA) == casa
+
+
 def test_o_devolver_a_seco_nao_toca_em_nada(raizes: m.Raizes, tmp_path: Path) -> None:
     """O passo em que ela LÊ o que vai ser sobrescrito não pode sobrescrever."""
     plantar_a_mesa(raizes, 3, "misto", True)
