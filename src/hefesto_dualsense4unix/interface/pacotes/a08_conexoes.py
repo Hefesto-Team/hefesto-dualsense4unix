@@ -2863,7 +2863,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # — corrigido em 01/09/2026, e foi o defeito que segurou esta leva:
     #
     #   perfil.rumble.policy   o DENOMINADOR do fator por peça
-    #                          (`profiles/manager.py:2905`)
+    #                          (`profiles/manager.py:2943`)
     #   state['rumble_policy'] o que MULTIPLICA no funil do motor
     #                          (`daemon/ipc_handlers.py:2923` → `_effective_mult`)
     #   maquina.json           o teto por CIMA da viva, com `min`
@@ -3686,7 +3686,7 @@ def _com_o_teto(prof: Any, chave: str, policy: str | None) -> Any:
 
     "SEGUE O GLOBAL" APAGA A SEÇÃO INTEIRA (``rumble=None``), e não grava
     ``policy=None``. `_controllers_to_rumble_scales` tem DOIS desvios seguidos:
-    `cfg.rumble is None` (`profiles/manager.py:2912`) e `"policy" not in
+    `cfg.rumble is None` (`profiles/manager.py:2930`) e `"policy" not in
     model_fields_set` (`:2481`). O primeiro é o que o esquema chama de "campo
     não escrito = sem opinião", e é o que o merge POR CAMPO promete
     (`ControllerRumbleOverride`, docstring). O segundo existe para um override
