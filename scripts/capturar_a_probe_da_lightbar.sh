@@ -23,6 +23,9 @@
 # Grava um `.snoop` com `btmon` por braço e decodifica dele, na hora, só o que
 # decide a questão: os reports de SAÍDA (0x31) e, dentro deles, os bytes de
 # lightbar e os bits que os autorizam. O `comparar` imprime os dois lado a lado.
+# A leitura é a do `scripts/ensaios/o_formato_btsnoop.py`, que lê o arquivo
+# binário: o `awk` sobre o `btmon -r` que estava aqui esperava um deslocamento
+# de oito dígitos que o `btmon` não imprime, e não lia nada.
 #
 # A CAPTURA NASCE FECHADA E NÃO FICA (AS-CAPTURAS-DE-RADIO-NASCEM-FECHADAS-01):
 # se um controle reconecta durante a gravação, o `btmon` grava a chave de
@@ -85,23 +88,13 @@ mostrar() {
     fi
 }
 
+# Só biblioteca padrão, e isolado (`-I`): roda como root, e não importa nada
+# da casa nem escreve bytecode na árvore.
+FORMATO="$(dirname "$(readlink -f "$0")")/ensaios/o_formato_btsnoop.py"
 decodificar() {
     local arquivo="$1"
     [ -f "$arquivo" ] || { echo "  (sem captura: $arquivo)"; return; }
-    btmon -r "$arquivo" 2>/dev/null | awk '
-        /ACL Data TX/ { emissao = 1 }
-        /ACL Data RX/ { emissao = 0 }
-        emissao && /^ *[0-9a-f]{8} / {
-            linha = $0
-            sub(/^ *[0-9a-f]{8} +/, "", linha)
-            sub(/ +\.\..*$/, "", linha)
-            bytes = bytes linha " "
-        }
-        /^> |^< / {
-            if (bytes ~ /^a2 31|^31 /) { print "    " bytes }
-            bytes = ""
-        }
-    ' | head -40
+    python3 -I -B "$FORMATO" --reports-de-saida "$arquivo"
 }
 
 case "$BRACO" in
@@ -123,20 +116,24 @@ limpo|sujo)
     echo "leitura    : $LEITURA"
     echo
     echo "  quem tem hidraw aberto AGORA:"
-    achou=0
-    for p in /proc/[0-9]*/fd/*; do
+    # A lista sai numa variável: o `achou=1` de dentro do laço morria na
+    # subshell do `| sort`, e o «(nenhum)» saía mesmo com a Steam listada.
+    donos=$(for p in /proc/[0-9]*/fd/*; do
         alvo=$(readlink "$p" 2>/dev/null) || continue
         case "$alvo" in *hidraw*)
             pid=$(echo "$p" | cut -d/ -f3)
             echo "    $(cat "/proc/$pid/comm" 2>/dev/null) -> $alvo"
-            achou=1
         ;; esac
-    done | sort -u
-    [ "$achou" = "0" ] && echo "    (nenhum)"
+    done | sort -u)
+    if [ -n "$donos" ]; then
+        echo "$donos"
+    else
+        echo "    (nenhum)"
+    fi
     echo
     echo "  gravando por ${SEGUNDOS}s — RECONECTE OS CONTROLES AGORA"
     timeout "$SEGUNDOS" btmon -w "$ARQ" >/dev/null 2>&1
-    echo "  gravado: $(stat -c %s "$ARQ" 2>/dev/null || echo 0) bytes"
+    echo "  gravado: $(stat -c '%s bytes, modo %a' "$ARQ" 2>/dev/null || echo 'nada')"
     rm -f "$LEITURA"
     decodificar "$ARQ" > "$LEITURA"
     chown "$DONO_UID:$DONO_GID" "$LEITURA"

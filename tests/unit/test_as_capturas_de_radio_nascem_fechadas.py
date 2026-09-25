@@ -27,6 +27,7 @@ lá); nos ensaios, pela chamada que o ``sudo`` de mentira registrou.
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 import os
 import shutil
@@ -69,8 +70,9 @@ def _captura_de_mentira() -> bytes:
 
     O primeiro é o COMANDO que faz a captura ser perigosa — um ``Link Key
     Request Reply`` (``0x040B``) com endereço zerado e a chave de mentira. O
-    segundo é um ACL de saída com um report ``0x31`` no handle 11, para a
-    leitura do instrumento ter o que achar.
+    segundo é um ACL de saída com um report ``0x31`` no handle 11, com os bits
+    e a cor que a leitura da lightbar tem de achar (``0x04``/``0x02``/``0x02`` e
+    ``11 22 33``).
     """
     assert len(CHAVE) == 16
     cabecalho = b"btsnoop\x00" + struct.pack(">II", 1, 2001)
@@ -79,18 +81,20 @@ def _captura_de_mentira() -> bytes:
         return struct.pack(">IIIIq", len(dados), len(dados), opcode_do_monitor, 0, 0) + dados
 
     comando = struct.pack("<HB", 0x040B, 22) + bytes(6) + CHAVE
-    report = bytes([0xA2, 0x31]) + bytes(77)
-    l2cap = struct.pack("<HH", len(report), 0x0041) + report
+    report = bytearray(78)
+    report[0] = 0x31
+    report[4], report[41], report[44] = 0x04, 0x02, 0x02  # valid_flag1/2, setup
+    report[47:50] = bytes([0x11, 0x22, 0x33])  # R G B
+    corpo = bytes([0xA2]) + bytes(report)
+    l2cap = struct.pack("<HH", len(corpo), 0x0041) + corpo
     acl = struct.pack("<HH", 0x2000 | HANDLE, len(l2cap)) + l2cap
     return cabecalho + registro(2, comando) + registro(4, acl)
 
 
-#: O que o ``btmon -r`` de mentira imprime: um ACL de saída com ``a2 31`` (o
-#: que a decodificação da lightbar procura), uma desconexão e um erro de
-#: hardware (o que o W3 conta).
+#: O que o ``btmon -r`` de mentira imprime, na forma dos eventos do ``btmon``:
+#: uma desconexão e um erro de hardware — o que o W3 conta. A lightbar não
+#: passa mais pelo ``btmon -r``: ela lê o arquivo binário.
 LEITURA_DE_MENTIRA = """\
-< ACL Data TX: Handle 11 flags 0x02 dlen 83
-        00000000 a2 31 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 > HCI Event: Disconnect Complete (0x05) plen 4
         Reason: Remote User Terminated Connection (0x13)
 > HCI Event: Hardware Error (0x10) plen 1
@@ -343,7 +347,10 @@ def braco_limpo(tmp_path_factory: pytest.TempPathFactory) -> BracoDaLightbar:
     velha = destino / "probe-sujo.snoop"
     velha.write_bytes(_captura_de_mentira())
     velha.chmod(0o644)
-    resultado = _rodar_lightbar(dubles, destino, "limpo", "1")
+    # Um dono de hidraw que a varredura do `/proc` TEM de ver, sem depender do
+    # que está aberto na máquina: o próprio processo da régua segura o arquivo.
+    with open(raiz / "hidraw-de-mentira", "wb"):
+        resultado = _rodar_lightbar(dubles, destino, "limpo", "1")
     return BracoDaLightbar(dubles, destino, velha, resultado)
 
 
@@ -353,11 +360,11 @@ class TestALightbarGravaFechadoLeEApaga:
         assert r.returncode == 0, r.stderr
         escritas = braco_limpo.dubles.escritas()
         assert len(escritas) == 1, escritas
-        caminho, modo, modo_da_pasta = escritas[0]
+        _, modo, modo_da_pasta = escritas[0]
         assert modo == "0600", f"a captura nasceu {modo}; tem de nascer 0600"
         assert modo_da_pasta == "0700", f"a pasta da captura é {modo_da_pasta}"
-        assert braco_limpo.dubles.leituras() == [(caminho, "0600")], (
-            "a captura tem de continuar 0600 até ser lida"
+        assert "modo 600" in r.stdout, (
+            "a captura tem de continuar 0600 até ser lida:\n" + r.stdout
         )
 
     def test_a_captura_sai_depois_de_lida_e_o_caminho_vai_para_a_saida(
@@ -371,6 +378,12 @@ class TestALightbarGravaFechadoLeEApaga:
     def test_a_captura_crua_da_versao_anterior_sai(self, braco_limpo: BracoDaLightbar) -> None:
         assert not braco_limpo.velha.exists()
 
+    def test_quem_tem_hidraw_aberto_nao_vira_nenhum(self, braco_limpo: BracoDaLightbar) -> None:
+        """O braço limpo depende desta lista, e ela dizia «(nenhum)» com a Steam listada."""
+        saida = braco_limpo.resultado.stdout
+        assert "hidraw-de-mentira" in saida, saida
+        assert "(nenhum)" not in saida, saida
+
     def test_o_comparar_sem_root_le_so_a_leitura(self, braco_limpo: BracoDaLightbar) -> None:
         leitura = braco_limpo.destino / "probe-limpo.txt"
         assert _modo(leitura) == 0o600
@@ -381,11 +394,12 @@ class TestALightbarGravaFechadoLeEApaga:
                 "a leitura é de quem chamou o sudo: sem o chown, o comparar sem root não a lê"
             )
         texto = leitura.read_text(encoding="utf-8")
-        assert "a2 31" in texto
+        assert "1 report(s) 0x31 de saída" in texto, texto
+        assert "11 22 33" in texto, texto
         assert "CHAVE-DE-MENTIRA" not in texto
         r = _rodar_lightbar(braco_limpo.dubles, braco_limpo.destino, "comparar")
         assert r.returncode == 0, r.stderr
-        assert "a2 31" in r.stdout
+        assert "11 22 33" in r.stdout
         assert "sem leitura" in r.stdout, "o braço sujo não rodou, e o comparar diz isso"
 
     def test_destino_que_e_link_e_recusado_antes_do_btmon(
@@ -600,3 +614,33 @@ class TestOsEnsaiosGravamFechadoLeemEApagam:
         assert not Path(captura.caminho).exists()
         assert not Path(captura.diretorio).exists()
         assert "(lida e apagada)" in linha
+
+
+# ---------------------------------------------------------------------------
+# O formato: um dono só, e ele roda como root
+# ---------------------------------------------------------------------------
+
+
+class TestOFormatoLeOBinarioESoUsaABibliotecaPadrao:
+    def test_a_leitura_acha_o_report_e_nao_a_chave(self, tmp_path: Path) -> None:
+        captura = tmp_path / "captura.btsnoop"
+        captura.write_bytes(_captura_de_mentira())
+        formato = _carregar("o_formato_btsnoop")
+        texto = formato.texto_dos_reports_de_saida(str(captura))
+        linhas = texto.splitlines()
+        assert linhas[0].strip() == "1 report(s) 0x31 de saída, 1 distinto(s)", texto
+        assert linhas[-1].split() == [str(HANDLE), "1", "0x04", "0x02", "0x02",
+                                      "11", "22", "33"], texto
+        assert "CHAVE" not in texto
+
+    def test_so_importa_a_biblioteca_padrao(self) -> None:
+        """A lightbar o roda como root: nada da casa pode vir junto."""
+        arvore = ast.parse((ENSAIOS / "o_formato_btsnoop.py").read_text(encoding="utf-8"))
+        nomes: set[str] = set()
+        for no in ast.walk(arvore):
+            if isinstance(no, ast.Import):
+                nomes.update(a.name.split(".")[0] for a in no.names)
+            elif isinstance(no, ast.ImportFrom) and no.module:
+                nomes.add(no.module.split(".")[0])
+        de_fora = sorted(nomes - set(sys.stdlib_module_names))
+        assert de_fora == [], f"o formato importa {de_fora}; como root, só a biblioteca padrão"

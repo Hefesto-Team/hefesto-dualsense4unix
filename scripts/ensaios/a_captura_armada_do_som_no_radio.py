@@ -86,9 +86,10 @@ A PROCEDÊNCIA, DECLARADA
 -------------------------
 Como todo instrumento desta pasta, ele imprime de qual ARQUIVO veio cada
 biblioteca antes da primeira linha de medição. O parser de ``btsnoop`` **não é
-novo**: é o do ``byte_no_fio.py``, importado, porque duas leituras do mesmo
-formato é como esta casa fabrica divergência silenciosa. O ciclo da captura
-também vem de lá (``CapturaDoFio``): ela nasce 0600 e sai depois de lida.
+novo**: é o do ``o_formato_btsnoop.py`` (o mesmo que o ``byte_no_fio.py`` usa),
+importado, porque duas leituras do mesmo formato é como esta casa fabrica
+divergência silenciosa. O ciclo da captura vem do ``byte_no_fio.py``
+(``CapturaDoFio``): ela nasce 0600 e sai depois de lida.
 """
 
 from __future__ import annotations
@@ -112,12 +113,8 @@ for _p in (_AQUI, _SRC):
         sys.path.insert(0, _p)
 
 from byte_no_fio import (
-    HID_BT_ENTRADA,
-    HID_BT_SAIDA,
     CapturaDoFio,
-    Quadro,
     handles_por_mac,
-    ler_btsnoop,
     mascarar,
 )
 from comum import (
@@ -130,6 +127,12 @@ from comum import (
     fisicos,
     resumo,
     tabela,
+)
+from o_formato_btsnoop import (
+    HID_BT_ENTRADA,
+    HID_BT_SAIDA,
+    Quadro,
+    ler_btsnoop,
 )
 
 from hefesto_dualsense4unix.core import ds_output_report as rep
