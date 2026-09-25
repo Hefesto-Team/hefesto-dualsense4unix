@@ -97,6 +97,11 @@ class OutputSpec:
     led: tuple[int, int, int] | None = None
     player_leds: tuple[bool, bool, bool, bool, bool] | None = None
     mic_led: bool | None = None
+    #: O brilho das cinco luzes de número, no degrau do FIRMWARE (`common[42]`:
+    #: 0 alto · 1 médio · 2 baixo), e não na palavra do perfil — a tradução é
+    #: de `core/led_control.degrau_do_brilho_das_luzes`. Decisão dela de
+    #: 24/09/2026 (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`).
+    player_led_brightness: int | None = None
 
 
 @dataclass(frozen=True)

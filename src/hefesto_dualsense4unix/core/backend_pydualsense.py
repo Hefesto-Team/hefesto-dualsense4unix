@@ -64,6 +64,7 @@ from hefesto_dualsense4unix.core.led_control import (
     LEGADO,
     PecaDaMesa,
     cores_sem_colisao,
+    degrau_do_brilho_das_luzes,
 )
 from hefesto_dualsense4unix.core.speaker_scale import volume_do_percentual
 
@@ -550,6 +551,12 @@ class _DesiredOutput:
     led: tuple[int, int, int] | None = None
     player_leds: tuple[bool, bool, bool, bool, bool] | None = None
     mic_led: bool | None = None
+    #: O brilho das luzes de número, no degrau do firmware (`common[42]`) —
+    #: `D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`. Anda pelas MESMAS camadas
+    #: do número (padrão do perfil, override por controle, usuária), e é por
+    #: isso que o controle que chega depois do perfil aplicado o recebe no
+    #: hotplug sem caminho próprio.
+    player_led_brightness: int | None = None
 
 
 @dataclass(frozen=True)
@@ -582,7 +589,10 @@ class _ResolvidoDoDaemon:
 _SEM_NUMERO = 1 << 30
 
 #: Campos de `_DesiredOutput`/`OutputSpec` — a ordem é a de aplicação no HID.
-_OUTPUT_FIELDS = ("trigger_left", "trigger_right", "led", "player_leds", "mic_led")
+_OUTPUT_FIELDS = (
+    "trigger_left", "trigger_right", "led", "player_leds", "mic_led",
+    "player_led_brightness",
+)
 
 #: R-20 (auditoria 23/07): CAMADAS do override por-uniq, com DONO declarado.
 #:
@@ -625,7 +635,13 @@ _CAMPOS_QUE_O_HEFESTO_NUMERA: frozenset[str] = frozenset({"player_leds"})
 #: Hefesto escreve a barra e o número SEMPRE"* — revoga o «zero write» do
 #: FEAT-PARITY-REVIEW-01 só para os dois; vibração, gatilhos e áudio (e o LED
 #: do mic, que vai no mesmo report do jogo) continuam dele.
-_CAMPOS_QUE_O_NATIVO_ESCREVE: frozenset[str] = frozenset({"led", "player_leds"})
+#:
+#: O BRILHO DAS LUZES DE NÚMERO É DO NÚMERO (24/09/2026): ele sai por fora do
+#: fluxo mudo pelos mesmos dois caminhos — o `0x31` mínimo do rádio e o `0x02`
+#: mínimo do cabo (`_levar_o_brilho_das_luzes`).
+_CAMPOS_QUE_O_NATIVO_ESCREVE: frozenset[str] = frozenset(
+    {"led", "player_leds", "player_led_brightness"}
+)
 
 #: A cor que é NÚMERO, e não pintura: a paleta de jogador do SDL.
 #:
@@ -981,6 +997,13 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         # posse do perfil (caminho DSTrigger histórico).
         self._raw_trigger_right: bytes | None = None
         self._raw_trigger_left: bytes | None = None
+        # O BRILHO DAS LUZES DE NÚMERO, no degrau do firmware — 24/09/2026,
+        # `D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`. Todo controle NASCE no
+        # Fraco (o degrau baixo que a pydualsense já mandava), e quem o troca é
+        # o `_levar_o_brilho_das_luzes`. É ele, e não o `light.brightness` da
+        # pydualsense, que o `_build_common` põe no `common[42]`: o byte tem
+        # dono, e o dono é o perfil dela.
+        self._brilho_das_luzes: int = degrau_do_brilho_das_luzes(None)
         # AUDIO-OWNER-01 — os DOIS campos de áudio que o upstream autorizava em
         # TODO report sem nunca escrever valor nenhum. Enquanto estes ficarem
         # None, os bits de validação correspondentes saem ZERADOS e o firmware
@@ -1768,6 +1791,15 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         flag0 = 0xFF  # upstream: vibração+gatilhos+áudio sempre autorizados
         flag1 = 0x01 | 0x02 | 0x04 | 0x10 | 0x40  # upstream: mic+LED+atenuação
         flag2 = int(self.light.ledOption.value)
+        # O BRILHO DAS LUZES DE NÚMERO TEM DONO — 24/09/2026
+        # (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`). O bit0 do `flag2`
+        # (`SET_PLAYER_LED_BRIGHTNESS`) não é mais herdado do `ledOption` da
+        # pydualsense: ele cai aqui e só volta, logo abaixo, com o degrau que
+        # o Hefesto escolheu para este handle (`_brilho_das_luzes`).
+        flag2 &= ~rep.VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE
+        brilho_das_luzes = getattr(self, "_brilho_das_luzes", None)
+        if brilho_das_luzes is not None and not suppress_leds:
+            flag2 |= rep.VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE
         # AUDIO-OWNER-01: os bits de áudio do flag0 caem TODOS e só voltam,
         # um a um, para os bytes de que alguém assumiu a posse.
         flag0 &= ~rep.VALID_FLAG0_AUDIO_MASK
@@ -1793,10 +1825,11 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                 | rep.VALID_FLAG1_PLAYER_INDICATOR_CONTROL_ENABLE
             )
             # LIGHTBAR-BT-KEEPALIVE-01: não tocar o setup da lightbar nem o
-            # brilho dos LEDs de jogador (o kernel é o dono) — o keepalive vira
-            # LED-neutro de fato. O bit0 do flag2 é `SET_PLAYER_LED_BRIGHTNESS`,
-            # medido por ela em 09/09/2026: ele atenua as lâmpadas de numeração,
-            # não a barra.
+            # brilho dos LEDs de jogador — o keepalive vira LED-neutro de fato.
+            # O bit0 do flag2 é `SET_PLAYER_LED_BRIGHTNESS`, medido por ela em
+            # 09/09/2026: ele atenua as lâmpadas de numeração, não a barra. Sob
+            # supressão o brilho vai por FORA do fluxo, ao lado do número
+            # (`_levar_o_brilho_das_luzes`), e o fluxo continua neutro.
             flag2 &= ~(
                 rep.VALID_FLAG2_LIGHTBAR_SETUP_CONTROL_ENABLE
                 | rep.VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE
@@ -1850,11 +1883,12 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         if not suppress_leds:
             common[41] = int(self.light.pulseOptions.value) & 0xFF
             # ESTE BYTE É O BRILHO DOS LEDS DE JOGADOR, não o da barra — medido por
-            # ela nos dois transportes (BRILHO-DE-HARDWARE-01, 09/09/2026). Ninguém o
-            # escolhe: nada escreve `light.brightness`, e vai o padrão da pydualsense
-            # (2, o degrau baixo). O `flag2` bit0 que o autoriza só sai ligado aqui,
-            # sem supressão, herdado do `ledOption` — ver `luz.led_jogador.brilho`.
-            common[42] = int(self.light.brightness.value) & 0xFF
+            # ela nos dois transportes (BRILHO-DE-HARDWARE-01, 09/09/2026). Desde
+            # 24/09/2026 ele tem dono: o degrau que o perfil escolheu para este
+            # controle (`_brilho_das_luzes`, o Fraco se ninguém escolheu), com o
+            # `flag2` bit0 ligado lá em cima — ver `luz.led_jogador.brilho`.
+            if brilho_das_luzes is not None:
+                common[42] = int(brilho_das_luzes) & 0xFF
             common[43] = int(self.light.playerNumber.value) & 0xFF
             common[44] = int(self.light.TouchpadColor[0]) & 0xFF
             common[45] = int(self.light.TouchpadColor[1]) & 0xFF
@@ -4517,9 +4551,16 @@ class PyDualSenseController(IController):
         # vale AQUI também — se ele está ligado, o número não sai, e o
         # report vai só com a cor (o bit do jogador nem é autorizado).
         players = desired.player_leds if pode_player else None
+        # O BRILHO DAS LUZES DE NÚMERO vai junto do número (24/09/2026): a
+        # rajada da Steam e o sequestro repintam as luzes, e o degrau que ela
+        # escolheu volta no mesmo quadro — sem quadro a mais pelo rádio.
+        brilho = desired.player_led_brightness if pode_player else None
+        if brilho is not None:
+            with contextlib.suppress(Exception):
+                handle._brilho_das_luzes = int(brilho)
         ok = False
         try:
-            report = build_bt_lightbar_report(cor, players)
+            report = build_bt_lightbar_report(cor, players, brilho_das_luzes=brilho)
             # LIGHTBAR-BT-RESET-03: pelo `writeReport` do handle, que
             # carimba o `seq` do FLUXO daquele handle e recalcula o CRC.
             # Escrever cru no `device` com seq 0 já matou uma cura desta
@@ -4605,6 +4646,12 @@ class PyDualSenseController(IController):
             else:
                 ok, cor, players = self._repintar_um_no_do_cabo(
                     key, no, desired, pode_player=pode_player
+                )
+                # O brilho das luzes volta junto do número, pelo `0x02` mínimo:
+                # a classe LED do kernel não o carrega (24/09/2026).
+                self._levar_o_brilho_das_luzes(
+                    key, handle, desired.player_led_brightness,
+                    what="vigia_do_sequestro",
                 )
             resultado[key] = ok
             logger.debug(
@@ -4924,6 +4971,7 @@ class PyDualSenseController(IController):
         rgb: tuple[int, int, int] | None,
         players: tuple[bool, bool, bool, bool, bool] | None,
         what: str,
+        brilho_das_luzes: int | None = None,
     ) -> bool:
         """A SEGUNDA rota da lightbar por rádio, em regime. ROTA-BT-EM-REGIME-01.
 
@@ -4963,10 +5011,17 @@ class PyDualSenseController(IController):
         vazia, os três obedeceram ao verde por sysfs). A segunda rota é o que
         faltava para o caso em que existe outro escritor.
 
+        **O BRILHO DAS LUZES DE NÚMERO VAI NO MESMO QUADRO** (24/09/2026,
+        `D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`): `brilho_das_luzes` liga o
+        `flag2` bit0 e escreve o `common[42]` — ver
+        `lightbar_gatilho.common_das_luzes`, onde está por que o bit0 não é o
+        0x02 que trava a exibição. Um quadro só por ação, e não dois: cada
+        report por rádio custa duas fatias.
+
         Devolve True quando escreveu. No-op (False) fora do rádio, sem valor
         para escrever, ou quando o handle não sabe carimbar o `seq`.
         """
-        if rgb is None and players is None:
+        if rgb is None and players is None and brilho_das_luzes is None:
             return False
         if self._detect_transport(handle) != "bt":
             return False
@@ -4982,7 +5037,8 @@ class PyDualSenseController(IController):
         )
 
         try:
-            escritor(list(build_bt_lightbar_report(rgb, players)))
+            escritor(list(build_bt_lightbar_report(
+                rgb, players, brilho_das_luzes=brilho_das_luzes)))
         except Exception as exc:
             logger.debug("lightbar_hidraw_bt_falhou", op=what, key=key, err=str(exc))
             return False
@@ -4997,8 +5053,79 @@ class PyDualSenseController(IController):
             key=key,
             cor=rgb,
             player=players,
+            brilho_das_luzes=brilho_das_luzes,
         )
         return True
+
+    def _levar_o_brilho_das_luzes(
+        self,
+        key: str | None,
+        handle: Any,
+        degrau: int | None,
+        *,
+        what: str,
+        o_radio_ja_leva: bool = False,
+    ) -> bool:
+        """Leva o brilho das luzes de número a UM controle, no cabo e no rádio.
+
+        DECISÃO DELA, 24/09/2026 (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`):
+        *"Fraco, Médio e Forte na linha LEDs, nascendo no Fraco"*. O aparelho
+        obedece ao `common[42]` com o `flag2` bit0 nos dois transportes
+        (BRILHO-DE-HARDWARE-01, o olho dela); o que faltava era o CAMINHO.
+
+        O QUE FOI MEDIDO ANTES DE ESCREVER ISTO, caminho a caminho, com os
+        métodos do produto e um handle que só guarda o que receberia:
+
+        * **cabo com o nó de LED gravável** (o produto instalado): o número vai
+          pela classe LED do kernel e o fluxo é LED-neutro. O `hid_playstation`
+          nunca liga o `flag2` bit0 nem escreve o `led_brightness` — o nó é
+          0/1 por lâmpada. **Por este caminho o brilho NÃO PODE ser escolhido**,
+          e é por isso que o cabo ganha um `0x02` mínimo ao lado;
+        * **cabo sem nó**: o número vai pelo fluxo do `report_thread`, que
+          levava o bit0 HERDADO do `ledOption` e o degrau baixo da pydualsense
+          — ninguém escolhia. Agora o fluxo leva `handle._brilho_das_luzes`;
+        * **rádio, com ou sem nó**: o número vai também pelo `0x31` avulso, que
+          saía com o `flag2` zerado. O brilho vai no MESMO quadro
+          (`_pintar_por_hidraw_bt`), e `o_radio_ja_leva=True` é quem chama
+          dizendo isso — aqui então só se guarda o degrau no handle.
+
+        O FIRMWARE GUARDA O ÚLTIMO DEGRAU AUTORIZADO: uma escrita do número sem
+        o bit (a do kernel) não o desfaz. Por isso basta levá-lo quando o
+        Hefesto escreve o número e quando ele muda — sem martelar.
+
+        Devolve se algum byte saiu. `degrau=None` é quem não opinou: não sai
+        nada, e o handle fica com o que tinha.
+        """
+        if degrau is None or not self._pode_escrever_player_leds():
+            return False
+        with contextlib.suppress(Exception):
+            handle._brilho_das_luzes = int(degrau)
+        radio = self._detect_transport(handle) == "bt"
+        if radio and o_radio_ja_leva:
+            return False
+        if radio:
+            return self._pintar_por_hidraw_bt(
+                key, handle, rgb=None, players=None, what=what,
+                brilho_das_luzes=degrau,
+            )
+        escritor = getattr(handle, "writeReport", None)
+        if not callable(escritor):
+            return False
+        from hefesto_dualsense4unix.core.lightbar_gatilho import (
+            build_usb_lightbar_report,
+        )
+
+        report = build_usb_lightbar_report(None, None, brilho_das_luzes=degrau)
+        try:
+            escrito = escritor(list(report))
+        except Exception as exc:
+            logger.debug("brilho_das_luzes_cabo_falhou", op=what, key=key, err=str(exc))
+            return False
+        ok = _escrita_completa(escrito, len(report))
+        logger.debug(
+            "brilho_das_luzes_cabo_escrito", op=what, key=key, degrau=degrau, ok=ok
+        )
+        return ok
 
     def _write_partial_output(
         self,
@@ -5056,14 +5183,21 @@ class PyDualSenseController(IController):
                 handle.light.playerNumber = PlayerID(mask)
             if out.mic_led is not None:
                 _escrever_led_do_mic(handle, out.mic_led)
+            # O BRILHO DAS LUZES DE NÚMERO (24/09/2026): no rádio ele vai no
+            # MESMO `0x31` da cor e do número, logo abaixo; no cabo, num `0x02`
+            # mínimo ao lado — ver `_levar_o_brilho_das_luzes`.
+            pode_player = self._pode_escrever_player_leds()
+            brilho = out.player_led_brightness if pode_player else None
+            self._levar_o_brilho_das_luzes(
+                None, handle, brilho, what=what, o_radio_ja_leva=True
+            )
             self._pintar_por_hidraw_bt(
                 None,
                 handle,
                 rgb=out.led,
-                players=(
-                    out.player_leds if self._pode_escrever_player_leds() else None
-                ),
+                players=out.player_leds if pode_player else None,
                 what=what,
+                brilho_das_luzes=brilho,
             )
         except Exception as exc:
             logger.warning("reapply_perfil_no_hotplug_falhou", op=what, err=str(exc))
@@ -6236,6 +6370,23 @@ class PyDualSenseController(IController):
                 what="apply_output_defaults",
                 broadcast=True,
             )
+        if spec.player_led_brightness is not None and self._pode_escrever_player_leds():
+            # O BRILHO DAS LUZES DE NÚMERO, o «Todos» do perfil (24/09/2026).
+            # Vai o RESOLVIDO de cada controle, e não o global cru: quem tem
+            # override guardado não pisca para o global e volta — o global
+            # acabou de entrar no `_desired_default`, e o merge o entrega a quem
+            # não tem opinião própria.
+            with self._io_lock:
+                brilhos = [
+                    (key, handle, self._merged_desired_for_key(key).player_led_brightness)
+                    for key, handle in self._handles.items()
+                ]
+            for key, handle, degrau in brilhos:
+                self._levar_o_brilho_das_luzes(
+                    key, handle,
+                    degrau if degrau is not None else spec.player_led_brightness,
+                    what="apply_output_defaults",
+                )
         if spec.mic_led is not None:
             # MIC-DA-MESA-ELEICAO-01 — A POSSE DO PERFIL NÃO CHEGAVA AO BYTE.
             # Aqui se chamava `h.audio.setMicrophoneLED(flag)` CRU, que só mexe
@@ -7233,6 +7384,22 @@ class PyDualSenseController(IController):
                 (key, node, self._merged_desired_for_key(key))
                 for key, node in self._sysfs.items()
             ]
+            # O BRILHO DAS LUZES DE NÚMERO PELO CABO (24/09/2026): este
+            # reassert escreve o número pela classe LED, que não carrega brilho
+            # (`_levar_o_brilho_das_luzes`); pelo cabo ele vai num `0x02`
+            # mínimo ao lado. Pelo rádio o brilho viaja no `0x31` de cada
+            # escrita do número, e este reassert — que é só classe LED — não
+            # ganha quadro a mais.
+            do_cabo = [
+                (key, self._handles.get(key), desired.player_led_brightness)
+                for key, _no, desired in reasserts
+                if self._handles.get(key) is not None
+                and self._detect_transport(self._handles.get(key)) != "bt"
+            ]
+        for key, handle, degrau in do_cabo:
+            self._levar_o_brilho_das_luzes(
+                key, handle, degrau, what="reassert_resolved_outputs"
+            )
         for key, node, desired in reasserts:
             with contextlib.suppress(Exception):
                 verificar = check and key in posse

@@ -1559,6 +1559,69 @@ class IpcHandlersMixin:
             "guardado_em": guardado_em,
         }
 
+    async def _handle_led_player_brightness_set(
+        self, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """O brilho das cinco luzes de número: Fraco, Médio ou Forte.
+
+        DECISÃO DELA, 24/09/2026 (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`):
+        *"Fraco, Médio e Forte na linha LEDs, nascendo no Fraco"*. Quem clica é
+        a linha LEDs da aba Iluminação, uma pílula por controle.
+
+        Params:
+            brilho: ``"fraco"``, ``"medio"`` ou ``"forte"`` — a PALAVRA do
+                perfil. A tradução para o degrau do firmware é de
+                ``core/led_control.degrau_do_brilho_das_luzes``, e a palavra
+                desconhecida é recusada ali, com a lista das três.
+            uniq: o MAC do controle. Presente = SÓ nele (a camada da usuária,
+                pela mesma porta do ``led.player_set``); ausente = «Todos»: o
+                padrão de quem chegar depois E cada conectado.
+
+        Nos dois casos o brilho sai pelos caminhos do número, nos dois
+        transportes — ver ``PyDualSenseController._levar_o_brilho_das_luzes``.
+        """
+        from hefesto_dualsense4unix.core.led_control import degrau_do_brilho_das_luzes
+
+        brilho = params.get("brilho")
+        if not isinstance(brilho, str):
+            raise ValueError(
+                "led.player_brightness_set: 'brilho' precisa ser fraco, medio ou forte"
+            )
+        degrau = degrau_do_brilho_das_luzes(brilho)
+        resultado = self._apply_por_uniq(params, player_led_brightness=degrau)
+        guardado_em: list[str] = []
+        if resultado is not None:
+            aplicado_em, guardado_em = self._destinos_por_uniq(
+                resultado, str(params["uniq"])
+            )
+        else:
+            from hefesto_dualsense4unix.core.controller import OutputSpec
+
+            # «TODOS»: o padrão vale para quem chegar DEPOIS (hotplug), e cada
+            # conectado recebe o MESMO degrau na camada dela — senão um
+            # override por controle guardado no perfil venceria o «Todos» que
+            # ela acabou de pedir.
+            spec = OutputSpec(player_led_brightness=degrau)
+            padrao = getattr(self.controller, "apply_output_defaults", None)
+            if callable(padrao):
+                padrao(spec)
+            aplicado_em = []
+            apply_for = getattr(self.controller, "apply_output_for", None)
+            for alvo in self._uniqs_conectados() if callable(apply_for) else []:
+                try:
+                    if apply_for(alvo, spec) == "escreveu":
+                        aplicado_em.append(alvo)
+                except Exception as exc:
+                    logger.warning(
+                        "brilho_das_luzes_em_todos_falhou", uniq=alvo, err=str(exc)
+                    )
+        return {
+            "status": "ok",
+            "brilho": brilho,
+            "aplicado_em": aplicado_em,
+            "guardado_em": guardado_em,
+        }
+
     async def _handle_led_auto_release(
         self, params: dict[str, Any]
     ) -> dict[str, Any]:

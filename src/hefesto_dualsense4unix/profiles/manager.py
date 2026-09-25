@@ -21,6 +21,7 @@ from hefesto_dualsense4unix.core.led_control import (
     LEGADO,
     LedSettings,
     cor_escolhida,
+    degrau_do_brilho_das_luzes,
 )
 from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 from hefesto_dualsense4unix.daemon.state_store import StateStore
@@ -488,6 +489,14 @@ class ProfileManager:
                 trigger_right=right,
                 led=None if cor_do_global is None else effective.lightbar,
                 player_leds=settings.player_leds,
+                # O BRILHO DAS LUZES DE NÚMERO de todos — o «Todos» do perfil
+                # (24/09/2026, `D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`).
+                # Sempre com valor: perfil sem o campo valida com o Fraco, e o
+                # Hefesto manda no brilho das lâmpadas também quando ninguém
+                # escolheu.
+                player_led_brightness=degrau_do_brilho_das_luzes(
+                    profile.leds.player_led_brightness
+                ),
             )
         )
         overrides = _controllers_to_specs(profile.controllers, profile.leds)
@@ -2676,6 +2685,7 @@ def _controllers_to_specs(
                 )
         led: tuple[int, int, int] | None = None
         player_leds: tuple[bool, bool, bool, bool, bool] | None = None
+        brilho_das_luzes: int | None = None
         if cfg.leds is not None:
             campos = cfg.leds.model_fields_set
             if "lightbar" in campos or _brilho_materializa_cor(cfg, global_leds):
@@ -2703,11 +2713,20 @@ def _controllers_to_specs(
                 )
             if "player_leds" in campos:
                 player_leds = _to_led_settings(cfg.leds).player_leds
+            # O BRILHO DAS LUZES DE NÚMERO DESTE CONTROLE — a linha LEDs da aba
+            # Iluminação grava aqui (24/09/2026). Só quando foi escrito: um
+            # override que fala de cor não densifica o brilho, que continua o
+            # do global.
+            if "player_led_brightness" in campos:
+                brilho_das_luzes = degrau_do_brilho_das_luzes(
+                    cfg.leds.player_led_brightness
+                )
         if (
             trigger_left is None
             and trigger_right is None
             and led is None
             and player_leds is None
+            and brilho_das_luzes is None
         ):
             continue
         out[uniq] = OutputSpec(
@@ -2715,6 +2734,7 @@ def _controllers_to_specs(
             trigger_right=trigger_right,
             led=led,
             player_leds=player_leds,
+            player_led_brightness=brilho_das_luzes,
         )
     return out
 

@@ -247,6 +247,9 @@ class IpcServer(IpcHandlersMixin):
             "coop.sync": self._handle_coop_sync,
             "daemon.emulation.suppress": self._handle_emulation_suppress,
             "led.player_set": self._handle_led_player_set,
+            # O-BRILHO-DAS-LUZES-DE-NUMERO-01 (24/09/2026): Fraco, Médio ou
+            # Forte nas cinco luzes de número, decisão dela.
+            "led.player_brightness_set": self._handle_led_player_brightness_set,
             # ONDA-U (U2/U10): renumeração explícita gated por sessão vazia.
             "identity.renumber": self._handle_identity_renumber,
             # PLAYER-01 (25/07): atribuir o NÚMERO EXIBIDO de UM controle. Era
