@@ -281,6 +281,41 @@ class Mesa:
         self.a04.cor(self.ctx(), {"uniq": UNIQS[n - 1], "hex": _hexa(rgb)[1:],
                                   "tipo": "button", "evento": "click"}, self.ponte)
 
+    def fossilizar(self, n: int, escolhida_para: int) -> None:
+        """A cor gravada do P<n> passa a dizer que foi escolhida para OUTRO número.
+
+        É o fóssil de `led_control.cores_sem_colisao`: o número é de sessão, e a
+        cor escolhida quando este aparelho era o `escolhida_para` sai sozinha
+        hoje. O perfil é reaplicado como a troca MANUAL o reaplica, que solta a
+        camada viva do clique — sobra o disco, e o daemon desloca a cor.
+        """
+        from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
+
+        prof = load_profile(NOME)
+        chave = self.a04.chave_do_override(UNIQS[n - 1])
+        dele = prof.controllers[chave]
+        leds = dele.leds.model_copy(update={"lightbar_para_o_numero": escolhida_para})
+        save_profile(prof.model_copy(update={"controllers": {
+            **prof.controllers, chave: dele.model_copy(update={"leds": leds})}}),
+            origem="regua")
+        self.pm.apply(self._perfil(), origin="manual")
+
+    def desligar_a_paleta(self, global_rgb: tuple[int, int, int]) -> None:
+        """«Cores automáticas por controle» desligadas, com este global no perfil.
+
+        Pelo disco, e não pelo gesto `auto-cores`: o gesto grava a cor de cada
+        conectado, e a régua precisa do controle que NÃO tem cor gravada — o
+        que chega depois do interruptor, ou o de um perfil feito por outra
+        porta. A troca MANUAL solta a camada viva dos cliques; sobra o disco.
+        """
+        from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
+
+        prof = load_profile(NOME)
+        leds = prof.leds.model_copy(update={"auto_player_colors": False,
+                                            "lightbar": global_rgb})
+        save_profile(prof.model_copy(update={"leds": leds}), origem="regua")
+        self.pm.apply(self._perfil(), origin="manual")
+
     def soltar(self, n: int, pct: int,
                tique: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
         """Ela solta o trilho do P<n> em `pct` — o `change`, que é o gesto.
@@ -294,8 +329,13 @@ class Mesa:
                         self.ponte)
         return antes
 
-    def fora_do_lugar(self, conectados: list[dict[str, Any]] | None = None) -> list[str]:
-        """Cada marca que saiu do lugar neste tique — vazio é a regra dela cumprida."""
+    def fora_do_lugar(self, conectados: list[dict[str, Any]] | None = None,
+                      cores: dict[int, tuple[int, int, int]] | None = None) -> list[str]:
+        """Cada marca que saiu do lugar neste tique — vazio é a regra dela cumprida.
+
+        `cores` troca a cor esperada de cada um (o padrão é `COR_DELE`).
+        """
+        cor_de = COR_DELE if cores is None else cores
         pacote = self.a04.pacote(self.ctx(conectados))
         guia = [_hexa(t) for t in self.a04.tons_da_guia()]
         erros = []
@@ -305,8 +345,8 @@ class Mesa:
             assert len(casas) == len(guia), "a fileira não tem as casas da guia"
             borda = [guia[i] for i, c in enumerate(casas) if "on" in c.split()]
             xis = sorted(guia[i] for i, c in enumerate(casas) if "tomado" in c.split())
-            dele = _hexa(COR_DELE[n])
-            dos_outros = sorted(_hexa(COR_DELE[k]) for k in COR_DELE if k != n)
+            dele = _hexa(cor_de[n])
+            dos_outros = sorted(_hexa(cor_de[k]) for k in cor_de if k != n)
             if borda != [dele]:
                 erros.append(f"P{n}: a borda está em {borda}, e a cor dele é {dele}")
             if xis != dos_outros:
@@ -494,3 +534,104 @@ def test_o_perfil_reaplicado_nao_tira_a_marca(mesa_de, n):
     mesa.soltar(n, 0)
     mesa.reaplicar_o_perfil()
     assert mesa.fora_do_lugar() == []
+
+
+# ---------------------------------------------------------------------------
+# 5. A luz vem primeiro — e, sem ela, o que o perfil acende
+# ---------------------------------------------------------------------------
+def test_a_luz_vem_antes_da_cor_gravada(mesa_de):
+    """A luz que diz o tom manda na marca, mesmo com OUTRA cor no disco.
+
+    O caso é o fóssil: o laranja do P2 foi escolhido quando ele era o 3, e o
+    daemon o troca sozinho pela cor do número de hoje, o vermelho
+    (`led_control.cores_sem_colisao`). A borda, o X e a caixa dizem o que o
+    plástico mostra — o vermelho —, e não o laranja que não acende.
+
+    **A MORDIDA:** ponha o degrau 2 (`_a_cor_guardada`) antes do degrau 1 em
+    `_a_cor_de_agora` e esta reprova com a marca do P2 no laranja.
+    """
+    mesa = mesa_de()
+    mesa.fossilizar(2, escolhida_para=3)
+    luz = {c["uniq"]: c["lightbar_rgb"] for c in mesa.publicado()}
+    assert luz[UNIQS[1]] == list(mesa.a04._com_o_brilho(player_slot_color(2), BRILHO_GLOBAL)), (
+        f"a régua precisa do daemon deslocando o fóssil, e o P2 acende {luz[UNIQS[1]]}")
+    assert mesa.fora_do_lugar(cores={**COR_DELE, 2: player_slot_color(2)}) == []
+
+
+#: O GLOBAL NUM TOM DA GUIA — o verde-água, que não é cor de número nenhum da
+#: mesa nem das duas escolhidas: é a cor que o P4 acende sem a paleta.
+VERDE_AGUA = (0, 255, 128)
+
+
+@pytest.mark.parametrize("pct", [50, 0], ids=["a-50", "a-0"])
+def test_sem_a_paleta_a_marca_de_quem_nao_escolheu_e_o_global(mesa_de, pct):
+    """Com as «Cores automáticas por controle» desligadas, o modo que sobrava.
+
+    O P1, o P2 e o P3 têm cor gravada; o P4 não tem, e acende o GLOBAL do
+    perfil. Soltar o trilho dele — no meio, no 0 e de volta — não pode tirar a
+    marca do verde-água, nem mandar ao aparelho a cor do número: o gesto de
+    brilho não troca a cor.
+
+    **A MORDIDA:** devolva ao degrau 3 de `_a_cor_de_agora` a luz acesa como
+    está (sem `_a_cor_do_global`) e esta reprova: no tique atrasado a marca do
+    P4 some, no 0 ela pula para o rosa do número, e a volta do 0 acende o rosa.
+    """
+    mesa = mesa_de()
+    mesa.clicar_no_tom(1, COR_DELE[1])
+    mesa.desligar_a_paleta(VERDE_AGUA)
+    cores = {**COR_DELE, 4: VERDE_AGUA}
+    assert mesa.fora_do_lugar(cores=cores) == [], "a mesa sem a paleta nasceu fora"
+    atrasado = mesa.soltar(4, pct)
+    assert mesa.fora_do_lugar(atrasado, cores=cores) == []
+    assert mesa.fora_do_lugar(cores=cores) == []
+    atrasado = mesa.soltar(4, 70)
+    assert tuple(mesa.ponte.enviados[-1]["rgb"]) == VERDE_AGUA, (
+        f"o P4 saiu de {pct}% com {_hexa(mesa.ponte.enviados[-1]['rgb'])}, e a cor "
+        f"dele é o global {_hexa(VERDE_AGUA)}")
+    assert mesa.fora_do_lugar(atrasado, cores=cores) == []
+    assert mesa.fora_do_lugar(cores=cores) == []
+
+
+def test_sem_a_paleta_o_trilho_nao_escurece_o_global_fora_da_guia(mesa_de):
+    """O `#2850B4` dela, sem a paleta: arrastar três vezes não escurece a barra.
+
+    Fora da guia a luz nunca diz o tom, e o degrau que sobra é o que decide.
+    Com a luz acesa ali, cada arraste reenviava a cor JÁ escalada, e o brilho a
+    escalava de novo — a barra morria no preto, que é o defeito que a
+    `_a_cor_guardada` curou em 09/09 para quem escolheu cor. A caixa diz o
+    global, antes do brilho (D8).
+
+    **A MORDIDA:** a do teste acima; aqui ela reprova com a cor reescalada.
+    """
+    mesa = mesa_de()
+    mesa.clicar_no_tom(1, COR_DELE[1])
+    mesa.desligar_a_paleta(GLOBAL)
+    for pct in (50, 70, 90):
+        mesa.soltar(4, pct)
+        assert tuple(mesa.ponte.enviados[-1]["rgb"]) == GLOBAL, (
+            f"o P4 foi a {pct}% com {mesa.ponte.enviados[-1]['rgb']}, e o global é {GLOBAL}")
+    luz = {c["uniq"]: c["lightbar_rgb"] for c in mesa.publicado()}
+    assert luz[UNIQS[3]] == list(mesa.a04._com_o_brilho(GLOBAL, 0.90))
+    coluna = mesa.a04.pacote(mesa.ctx())["colunas"][UNIQS[3]]
+    assert coluna["hex"] == _hexa(GLOBAL), f"a caixa do P4 diz {coluna['hex']}"
+
+
+def test_sem_a_paleta_o_global_preto_nao_e_cor(mesa_de):
+    """Global preto e paleta desligada: subir o trilho do 0% não manda o preto.
+
+    O preto é banido como cor (ordem dela de 22/09, `led_control.cor_escolhida`):
+    o `apply` não manda cor nenhuma ao default, e o degrau 3 não tem global a
+    afirmar. Lido como cor, ele faria o trilho reenviar o preto — e a barra que
+    ela acabou de subir ficaria apagada.
+
+    **A MORDIDA:** tire o `cor_escolhida` do fim de `_a_cor_do_global` e esta
+    reprova com o `(0, 0, 0)` enviado.
+    """
+    mesa = mesa_de()
+    mesa.clicar_no_tom(1, COR_DELE[1])
+    mesa.desligar_a_paleta((0, 0, 0))
+    mesa.soltar(4, 0)
+    mesa.soltar(4, 70)
+    enviado = tuple(mesa.ponte.enviados[-1]["rgb"])
+    assert enviado != (0, 0, 0), "subir o trilho do P4 mandou o preto: a barra ficou apagada"
+    assert mesa.ponte.enviados[-1]["brightness"] == pytest.approx(0.70)

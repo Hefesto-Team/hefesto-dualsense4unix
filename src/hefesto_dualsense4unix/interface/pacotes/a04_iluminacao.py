@@ -2531,6 +2531,35 @@ def _a_cor_guardada(cru: dict[str, Any] | None,
     return (int(r), int(g), int(b))
 
 
+def _a_cor_do_global(cru: dict[str, Any] | None) -> tuple[int, int, int] | None:
+    """A cor GLOBAL do perfil (`leds.lightbar`), antes do brilho — ou `None`.
+
+    Com a paleta automática desligada, é ela que acende o controle sem cor
+    gravada: o `ProfileManager.apply` a manda ao default do backend, e o merge
+    por camada a entrega a quem não tem override. Ela é a cor PEDIDA; a luz
+    acesa é ela vezes o brilho (D8).
+
+    O PRETO VOLTA `None`, pelo dono da regra (`led_control.cor_escolhida`, a
+    ordem dela de 22/09: o preto é banido como cor) — com ele o `apply` não
+    manda cor nenhuma ao default, e não há global a afirmar.
+
+    LÊ O CRU, pela mesma razão de `_a_cor_guardada`.
+    """
+    from hefesto_dualsense4unix.core.led_control import (
+        cor_escolhida as a_cor_nao_e_o_preto,
+    )
+
+    leds = (cru or {}).get("leds") if isinstance(cru, dict) else None
+    rgb = leds.get("lightbar") if isinstance(leds, dict) else None
+    if not rgb or len(tuple(rgb)) < 3:
+        return None
+    try:
+        r, g, b = (int(c) for c in tuple(rgb)[:3])
+    except (TypeError, ValueError):
+        return None
+    return a_cor_nao_e_o_preto((r, g, b))
+
+
 # OS TRÊS DECLARAM `grava=` DESDE 09/09/2026, e a declaração ficou para trás de
 # uma cura por UM DIA. Em 08/09 o `_escrever_a_cor` passou a gravar a escolha no
 # perfil (`COR-NO-DISCO-01`, commit `4f616f3e`) — era a cura do defeito que ela
@@ -3106,7 +3135,8 @@ def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
 
         1. a luz acesa, quando ela diz o tom (`_o_tom_que_acende`);
         2. a cor que ela escolheu para ESTE controle, gravada no perfil;
-        3. a luz acesa como está, com a paleta automática desligada;
+        3. com a paleta automática desligada, a cor GLOBAL do perfil, antes do
+           brilho (`_a_cor_do_global`) — e, sem global, a luz acesa como está;
         4. a cor do número, que é a da paleta automática.
 
     O DEGRAU 1 SOZINHO NÃO SEGURAVA A MARCA, e o piloto mediu os três buracos
@@ -3115,9 +3145,20 @@ def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
     preto; e subindo de 0% a luz velha ainda é o preto. Nos três a luz não
     diz o tom — e a cor do controle não mudou,
     porque brilho não é cor. Quem sabe a cor nessa hora é o disco (a escolha
-    dela) ou a paleta (quem nunca escolheu acende a cor do número). A luz
-    continua vindo PRIMEIRO: ela é o que o plástico mostra, inclusive quando
-    a cor gravada é um fóssil que o daemon trocou pela do número.
+    dela, ou o global do perfil) ou a paleta (quem nunca escolheu acende a cor
+    do número). A luz continua vindo PRIMEIRO: ela é o que o plástico mostra,
+    inclusive quando a cor gravada é um fóssil que o daemon trocou pela do
+    número.
+
+    O DEGRAU 3 LÊ O GLOBAL, E NÃO A LUZ — 24/09/2026, conferência desta
+    frente. Ele devolvia a luz acesa como estava, e com as «Cores automáticas
+    por controle» desligadas os três buracos voltavam, medidos na mesa de
+    quatro real: o controle sem cor gravada perdia a borda e o X por meio
+    segundo ao soltar, a 0% a marca pulava para a cor do NÚMERO, e subir do 0%
+    acendia a barra na cor do número — o gesto de brilho trocando a cor. Com
+    um global fora da guia (o `#2850B4` dela) o trilho ainda reenviava a luz
+    já escalada, e a barra escurecia a cada arraste. A regra dela é *"nunca é
+    pensada só em um modo"*.
 
     :param cru: o perfil como DICIONÁRIO (`perfil.ativo`), e não o `Profile` do
         pydantic: `brilho_do_controle` lê o JSON cru, e um modelo passado aqui
@@ -3135,13 +3176,17 @@ def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
     guardada = _a_cor_guardada(cru, uniq)
     if guardada is not None:
         return guardada
-    #: SEM A PALETA, a luz que não casou é o global do perfil (ou uma cor que
-    #: não é da guia): ela volta como está, que é o que a coluna sempre mostrou.
-    #: O preto não entra: luz apagada é brilho, e brilho não diz cor.
-    if (efetiva and tuple(efetiva)[:3] != (0, 0, 0)
-            and not automatico_do_perfil(cru)):
-        r, g, b = tuple(efetiva)[:3]
-        return (int(r), int(g), int(b))
+    #: SEM A PALETA, quem não tem cor gravada acende o GLOBAL do perfil — e a
+    #: cor dele é a pedida, antes do brilho. Só sem global (o preto, que não é
+    #: cor) a luz que não casou volta como está; o preto dela também não entra:
+    #: luz apagada é brilho, e brilho não diz cor.
+    if not automatico_do_perfil(cru):
+        do_global = _a_cor_do_global(cru)
+        if do_global is not None:
+            return do_global
+        if efetiva and tuple(efetiva)[:3] != (0, 0, 0):
+            r, g, b = tuple(efetiva)[:3]
+            return (int(r), int(g), int(b))
     return player_slot_color(_numero(ctx, c))
 
 
