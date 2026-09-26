@@ -152,3 +152,43 @@ def test_o_nome_que_ainda_mora_no_lugar_nao_anda_com_o_buraco(tmp_path: Path) ->
     assert ee.rotulo_do_numero("1", maquina=depois) == "Meio"
     assert ee.rotulo_do_numero("2", maquina=depois) == "Entrada 2"
     assert depois.mapa.portas["1"].caminho == "1-3"
+
+
+def test_a_troca_sobrevive_ao_examinar_e_a_um_mapear_de_novo(disco: Path) -> None:
+    """A conferência da O-MAPA-QUE-ELA-CORRIGE-01: a troca 7↔8 continua de pé
+    depois do «Examinar» (o arranjo relido do disco) e de um «Mapear Entradas»
+    que passa de novo pelo buraco que foi para a 8.
+
+    O Mapear pergunta o número ao LUGAR (``_numero_conhecido``: a amarra, e
+    depois o caminho). MEDIDO com a amarra arrancada da troca: ele ainda acha
+    a 8 pelo caminho, mas o lugar da outra ponta perde a amarra
+    (``entrada_do_lugar`` = ``None``) — e esta régua reprova. O nome de cada
+    posição fica.
+    """
+    from hefesto_dualsense4unix.integrations.censo_do_barramento import Censo
+    from hefesto_dualsense4unix.interface import arranjo_desta_maquina
+    from tests.unit.test_o_nome_da_entrada_e_da_posicao import PCI_B
+
+    assert ee.trocar_as_entradas("7", "8").gravou
+    trocado = carregar_maquina()
+    assert trocado.mapa.portas["8"].caminho == "1-5"
+
+    relido = arranjo_desta_maquina.reexaminar(ler_o_barramento=lambda: Censo())
+    assert relido is not None
+    assert relido["rotulos"]["7"]["rotulo"] == "Sete"
+    assert relido["rotulos"]["8"]["rotulo"] == "Oito"
+    assert (relido["declarado"]["7"].get("usb"), relido["declarado"]["8"].get("usb")) == (3, 2)
+
+    controladores = {1: PCI_A, 3: PCI_B}
+    feita = ee._gravar_as_portas(
+        [(ee.PortaVista(lugar=_L7, caminho="1-5"), ("usb1-port5",))],
+        ee.FACE_ATRAS,
+        maquina=trocado,
+        controladores=controladores,
+    )
+    assert feita.gravou and feita.entrada == "8", "o Mapear devolveu o cabo à 7"
+    depois = carregar_maquina()
+    assert (depois.mapa.portas["7"].caminho, depois.mapa.portas["8"].caminho) == ("1-6", "1-5")
+    assert (depois.mapa.portas["7"].nome, depois.mapa.portas["8"].nome) == ("Sete", "Oito")
+    assert entrada_do_lugar(depois, _L7, controladores) == "8"
+    assert entrada_do_lugar(depois, _L8, controladores) == "7"
