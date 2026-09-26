@@ -56,18 +56,32 @@ para DUAS unidades** (``hidraw8``, código ``02``, em 27/08/2026; ``hidraw5``,
 código ``04``, hoje). Duas unidades não são universalidade, e este arquivo não
 escreve que são.
 
-DUAS TABELAS, DUAS PROCEDÊNCIAS DIFERENTES
-------------------------------------------
+UMA TABELA SÓ, E ELA É O MAPA DELA
+----------------------------------
 
-* ``NOMES_DE_FABRICA`` — código → nome oficial. Três fontes independentes
-  (``dualshock-tools`` confirmado pelo mantenedor na issue #210, ``nsfm/dualsense-ts``
-  e ``TechAntohere/Senshi``). O ensaio guarda uma cópia própria para rodar num
-  checkout sem o pacote instalado; ``tests/unit/test_config_06_declaracao_nasce_em_nao_sei.py``
-  confronta as duas, para que a cópia não vire uma segunda verdade;
-* ``TONS`` — código → hexa. Sai de ``docs/data/cores-do-plastico.md``, e **vinte
-  das vinte e uma linhas são aproximadas**: só a ``05`` (Starlight Blue,
-  ``#B5CED4``) foi medida, por ela, em 21/08/2026. É por isso que a escolha dela
-  vence a tabela em toda parte desta aba.
+O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01, 25/09/2026. A tradução código → nome
+→ cor sai de ``docs/data/cores-do-dualsense.csv`` (os 28 modelos e as 10 zonas),
+lida por :func:`ler_a_tabela`. ``NOMES_DE_FABRICA`` e ``TONS`` continuam
+existindo com o mesmo nome e passam a ser LIDOS dali.
+
+**FATO SUBSTITUÍDO.** Aqui estavam duas tabelas DIGITADAS, de 21 códigos cada:
+os nomes e os tons, este aproximado de ``docs/data/cores-do-plastico.md``. O
+mapa dela tem 28. Os sete que faltavam (``13``, ``14``, ``15``, ``ZC``, ``ZD``,
+``ZE`` e ``ZF``, a linha HyperPop e as edições de jogo de 2025) saíam «Não sei»,
+sem cor, no cabo e no rádio: a pessoa que plugasse um deles via o produto
+dizer que não sabia que controle era. E três nomes divergiam do mapa
+(``God of War Ragnarok``, ``Spider-Man 2``, ``Icon Blue Limited Edition``), o
+que punha duas grafias do mesmo modelo na mesma tela, a do daemon e a da mesa.
+
+**O CÓDIGO QUE NEM O MAPA CONHECE** (uma edição que sair amanhã) continua
+saindo ``None`` em :func:`cor_do_codigo`, e o nome que a tela escreve é o do
+MODELO, pelo PID (:data:`MODELOS`): «DualSense» ou «DualSense Edge». Ver
+:func:`nome_do_aparelho`. Nada quebra por não achar o modelo.
+
+A procedência dos códigos continua sendo a de três fontes independentes
+(``dualshock-tools`` confirmado pelo mantenedor na issue #210,
+``nsfm/dualsense-ts`` e ``TechAntohere/Senshi``), e o grau de cada hexa está na
+coluna ``grau`` do CSV.
 
 Nada aqui toca a lightbar. Plástico é propriedade do aparelho, imutável, e serve
 para saber qual controle é qual; a cor da lightbar continua sendo dela e mora em
@@ -75,9 +89,12 @@ para saber qual controle é qual; a cor da lightbar continua sendo dela e mora e
 """
 from __future__ import annotations
 
+import csv
 import os
+import pathlib
 import threading
 import time
+import unicodedata
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -141,55 +158,52 @@ PARES_QUE_DESTROEM: dict[tuple[int, int], str] = {
 #: nunca escrever. Aqui ela nem chega perto de uma escrita — há trava.
 FAMILIA_DO_FIRMWARE = range(0xF0, 0xF8)
 
-#: Código → nome oficial de fábrica. Ver o cabeçalho para as três fontes.
-NOMES_DE_FABRICA: dict[str, str] = {
-    "00": "White",
-    "01": "Midnight Black",
-    "02": "Cosmic Red",
-    "03": "Nova Pink",
-    "04": "Galactic Purple",
-    "05": "Starlight Blue",
-    "06": "Grey Camouflage",
-    "07": "Volcanic Red",
-    "08": "Sterling Silver",
-    "09": "Cobalt Blue",
-    "10": "Chroma Teal",
-    "11": "Chroma Indigo",
-    "12": "Chroma Pearl",
-    "30": "30th Anniversary",
-    "Z1": "God of War Ragnarok",
-    "Z2": "Spider-Man 2",
-    "Z3": "Astro Bot",
-    "Z4": "Fortnite",
-    "Z6": "The Last of Us",
-    "ZA": "God of War 20th Anniversary",
-    "ZB": "Icon Blue Limited Edition",
+#: A raiz da árvore, a partir DESTE arquivo — o mesmo cálculo de
+#: ``interface/mesa_viva.RAIZ`` e ``integrations/canal_sem_imu._RAIZ``, e pela
+#: mesma razão medida em 30/08/2026: um literal apontaria para a árvore DELA, e
+#: um agente leria o mapa dela em vez do seu.
+_RAIZ = pathlib.Path(__file__).resolve().parents[3]
+
+#: O DONO DA TRADUÇÃO: o mapa dela das cores, 28 modelos e 10 zonas. Ver o
+#: cabeçalho, «UMA TABELA SÓ».
+TABELA_DAS_CORES = _RAIZ / "docs" / "data" / "cores-do-dualsense.csv"
+
+#: As zonas cujo hexa vira o ``tom`` do modelo, na ordem: a casca é o plástico
+#: que a pessoa vê de longe. Modelo com a casca ``SEM-HEX`` (camuflado,
+#: iridescente, arte) fica sem tom — e sem tom a borda é a neutra, nunca uma
+#: cor inventada.
+_ZONAS_DO_TOM = ("casca_esq", "casca_dir")
+
+#: Os modelos que o produto adota, pelo PID — e o nome GENÉRICO de cada um.
+#:
+#: É o nome que a tela escreve quando o código de fábrica não está no mapa (uma
+#: edição que a Sony lançar amanhã), quando o aparelho ainda não respondeu, ou
+#: quando não pode responder. A cena dela de 25/09/2026 é o aceite:
+#: *«aí ele pluga o controle dele e o app não funciona pq ele tá todo setado  (noqa-acento): dela
+#: pra funcionar só no meu pc»*.  (noqa-acento): citação literal dela
+#: «Não sei» não é nome de um controle que funciona.
+#:
+#: Os dois PIDs são os mesmos de ``core/evdev_reader.DUALSENSE_PIDS`` e do
+#: ``broker/hidraw_broker.PHYS_PRODUCTS``; a régua
+#: ``tests/unit/test_o_controle_nunca_visto_tem_nome_e_cor.py`` reprova quem
+#: divergir.
+MODELOS: dict[int, str] = {
+    0x0CE6: "DualSense",
+    0x0DF2: "DualSense Edge",
 }
 
-#: Código → hexa do plástico, de ``docs/data/cores-do-plastico.md``. Vinte das
-#: vinte e uma são aproximadas; só a ``05`` foi medida.
-TONS: dict[str, str] = {
-    "00": "#edeef0",
-    "01": "#00040d",
-    "02": "#da244b",
-    "03": "#ee7ea6",
-    "04": "#5f4b9b",
-    "05": "#b5ced4",
-    "06": "#7f8479",
-    "07": "#8c2b2e",
-    "08": "#a8adb3",
-    "09": "#2b4c7e",
-    "10": "#1e8e82",
-    "11": "#3b3e8c",
-    "12": "#e9dedc",
-    "30": "#c6c2b6",
-    "Z1": "#d9dee3",
-    "Z2": "#a8232b",
-    "Z3": "#e7eaee",
-    "Z4": "#ddd8ec",
-    "Z6": "#c3c6c2",
-    "ZA": "#cfcac2",
-    "ZB": "#1f4e9c",
+#: O nome de quem ainda não se sabe o PID: todo controle adotado pela mesa é da
+#: família DualSense (``core/evdev_reader.DUALSENSE_PIDS``).
+MODELO_GENERICO = MODELOS[0x0CE6]
+
+#: As GRAFIAS DE ANTES de 25/09/2026, quando a tabela era digitada. Elas só
+#: servem para achar a cor de uma DECLARAÇÃO gravada naquela época
+#: (``ControleDeclarado.cor`` é texto livre) — o nome que se escreve é o do
+#: mapa. A ``Z1`` não precisa estar aqui: :func:`cor_do_nome` compara sem
+#: acento.
+_GRAFIAS_DE_ANTES: dict[str, str] = {
+    "spider-man 2": "Z2",
+    "icon blue limited edition": "ZB",
 }
 
 #: O fundo sobre o qual a borda do card é vista: ``@bg`` do tema
@@ -220,17 +234,17 @@ _BUS_BLUETOOTH = 0x0005
 CABO = "cabo"
 RADIO = "rádio"
 
-#: VID e PID do DualSense. Um par errado aqui faria o módulo mandar o comando de
-#: fábrica da Sony para o aparelho de outro fabricante.
+#: O VID do DualSense. Os PIDs são as chaves de :data:`MODELOS`. Um par errado
+#: aqui faria o módulo mandar o comando de fábrica da Sony para o aparelho de
+#: outro fabricante.
 _VID_SONY = 0x054C
-_PID_DUALSENSE = 0x0CE6
 
-#: Identidade do NOSSO vpad no HID (``core/backend_pydualsense.py:152-154``). Ele
-#: forja VID/PID/bus de DualSense no cabo de propósito — é o que o faz o
-#: ``hid_playstation`` fazer bind nele —, então sem este filtro o módulo pediria o
-#: serial de fábrica à saída do próprio produto.
-_VPAD_PHYS = "hefesto-vpad"
-_VPAD_UNIQ_PREFIX = "02fe"
+# O NOSSO VPAD NÃO SE RECUSA MAIS AQUI POR UMA CÓPIA DA REGRA. Ele forja
+# VID/PID/bus de DualSense Edge no cabo (``0003:054C:0DF2``) — o mesmo par do
+# Edge físico, que entrou em 25/09/2026 —, e quem sabe separar os dois é o
+# broker, pela topologia e pelas marcas do vpad
+# (``broker/hidraw_broker._e_o_nosso_vpad``). Esta é a mesma pergunta, e ela
+# tem um dono só: ver :func:`_e_o_nosso_vpad`.
 
 
 class PedidoRecusadoError(Exception):
@@ -239,11 +253,18 @@ class PedidoRecusadoError(Exception):
 
 @dataclass(frozen=True)
 class CorDoPlastico:
-    """O que o aparelho respondeu, já traduzido. ``tom`` vazio = sem hexa."""
+    """O que o aparelho respondeu, já traduzido. ``tom`` vazio = sem hexa.
+
+    ``id`` é o ``id`` da linha do mapa (``white``, ``ghost-of-yotei``) — o
+    ``data-colorway`` com que o desenho se pinta. Vazio num dublê antigo, que
+    constrói só os três primeiros campos: quem pinta cai para a tradução por
+    código (``interface/mesa_viva.CORES``), que lê esta mesma tabela.
+    """
 
     codigo: str
     nome: str
     tom: str = ""
+    id: str = ""
 
 
 @dataclass(frozen=True)
@@ -272,12 +293,19 @@ class IdentidadeDeFabrica:
     * ``nao_pode`` — a trava recusou o pedido: repetir mandaria os mesmos bytes
       à mesma trava;
     * o resto é FALHA DE AGORA, e ``motivo`` diz qual.
+
+    ``modelo`` é o nome GENÉRICO do aparelho pelo PID do ``uevent``
+    («DualSense», «DualSense Edge»), e ele chega MESMO QUANDO A PERGUNTA FALHA:
+    o PID se lê do sysfs, sem mandar byte nenhum. ``None`` só quando nenhum nó
+    daquele endereço foi achado. Quem escreve o nome na tela é
+    :func:`nome_do_aparelho`.
     """
 
     serial: str | None = None
     cor: CorDoPlastico | None = None
     nao_pode: bool = False
     motivo: str = ""
+    modelo: str | None = None
 
     @property
     def respondeu(self) -> bool:
@@ -290,22 +318,83 @@ class IdentidadeDeFabrica:
 
 @dataclass(frozen=True)
 class AlvoDoControle:
-    """O nó a que perguntar, e por qual transporte a pergunta sai.
+    """O nó a que perguntar, por qual transporte a pergunta sai, e qual modelo.
 
     Os dois viajam juntos porque o ENVELOPE do pedido depende do transporte: no
     cabo o ``ioctl`` não leva assinatura, no rádio leva CRC-32. Devolver só o
     caminho obrigava quem manda a redescobrir o transporte lendo o ``uevent``
-    outra vez — duas leituras da mesma verdade é como elas se afastam.
+    outra vez — duas leituras da mesma verdade é como elas se afastam. O
+    ``modelo`` vem do MESMO ``HID_ID``, pela mesma razão.
     """
 
     caminho: str
     transporte: str = CABO
+    modelo: str = MODELO_GENERICO
 
 
 class _Pedidor(Protocol):
     """Assinatura do transporte: ``(caminho, pedido) -> resposta | None``."""
 
     def __call__(self, caminho: str, pedido: bytes) -> bytes | None: ...
+
+
+# ---------------------------------------------------------------------------
+# A tabela — o mapa dela, lido
+# ---------------------------------------------------------------------------
+
+
+def ler_a_tabela(caminho: str | os.PathLike[str] | None = None) -> dict[str, CorDoPlastico]:
+    """``{código: CorDoPlastico}`` dos modelos do mapa, na ordem do arquivo.
+
+    Uma entrada por CÓDIGO (o CSV tem uma linha por zona): o ``nome`` e o ``id``
+    são os da primeira linha do código, e o ``tom`` é o hexa da casca
+    (:data:`_ZONAS_DO_TOM`), minúsculo, ou ``""`` quando a casca é ``SEM-HEX``.
+
+    **NUNCA LEVANTA.** Sem o arquivo (um pacote instalado sem o ``docs/``), a
+    tabela sai VAZIA e todo aparelho cai no nome do modelo — «DualSense» —,
+    que é verdade e não derruba o daemon nem a janela. O ``caminho`` resolve
+    na CHAMADA, não no default: é o que deixa a régua medir a tabela vazia sem
+    tocar no disco de ninguém.
+    """
+    alvo = pathlib.Path(caminho) if caminho is not None else TABELA_DAS_CORES
+    try:
+        texto = alvo.read_text(encoding="utf-8")
+    except OSError as erro:
+        logger.warning("cor_do_plastico_sem_tabela", caminho=str(alvo), erro=str(erro))
+        return {}
+    linhas = [ln for ln in texto.splitlines() if ln.strip() and not ln.startswith("#")]
+    nomes: dict[str, tuple[str, str]] = {}
+    tons: dict[str, dict[str, str]] = {}
+    for linha in csv.DictReader(linhas):
+        codigo = (linha.get("codigo_da_cor") or "").strip().upper()
+        if not codigo:
+            continue
+        nomes.setdefault(
+            codigo, ((linha.get("id") or "").strip(), (linha.get("nome") or "").strip())
+        )
+        hexa = (linha.get("hex") or "").strip().lower()
+        if hexa:
+            tons.setdefault(codigo, {})[(linha.get("zona") or "").strip()] = hexa
+    tabela: dict[str, CorDoPlastico] = {}
+    for codigo, (ident, nome) in nomes.items():
+        zonas = tons.get(codigo, {})
+        tom = next((zonas[z] for z in _ZONAS_DO_TOM if zonas.get(z)), "")
+        tabela[codigo] = CorDoPlastico(codigo=codigo, nome=nome, tom=tom, id=ident)
+    return tabela
+
+
+#: A tabela lida UMA vez, na importação. O arquivo é versionado e só muda com o
+#: produto; relê-lo a cada controle seria disco a cada tique sem ganho nenhum.
+TABELA: dict[str, CorDoPlastico] = ler_a_tabela()
+
+#: Código → nome de fábrica, LIDO do mapa. O nome e a ordem ficam — quem lista
+#: as cores (``app/actions/external_controllers.cores_para_busca``) e o ensaio
+#: continuam lendo daqui.
+NOMES_DE_FABRICA: dict[str, str] = {codigo: cor.nome for codigo, cor in TABELA.items()}
+
+#: Código → hexa da casca, LIDO do mapa. Só entra quem tem hexa: modelo de casca
+#: ``SEM-HEX`` não tem tom, e a borda dele é a neutra.
+TONS: dict[str, str] = {codigo: cor.tom for codigo, cor in TABELA.items() if cor.tom}
 
 
 # ---------------------------------------------------------------------------
@@ -316,30 +405,52 @@ class _Pedidor(Protocol):
 def cor_do_codigo(codigo: str) -> CorDoPlastico | None:
     """A cor de um código de dois caracteres, ou ``None`` para código estranho.
 
-    ``None`` é resposta legítima e frequente: a tabela tem vinte e uma entradas e
-    a Sony fabrica edições novas sem avisar ninguém. Inventar um nome aqui poria
-    na tela uma cor que ninguém mediu.
+    ``None`` é resposta legítima: o mapa tem 28 modelos e a Sony fabrica edições
+    novas sem avisar ninguém. Inventar uma COR aqui poria na tela uma cor que
+    ninguém mediu — o NOME, quem dá é :func:`nome_do_aparelho`, pelo modelo.
     """
-    chave = (codigo or "").strip().upper()
-    nome = NOMES_DE_FABRICA.get(chave)
-    if nome is None:
-        return None
-    return CorDoPlastico(codigo=chave, nome=nome, tom=TONS.get(chave, ""))
+    return TABELA.get((codigo or "").strip().upper())
+
+
+def _sem_acento(texto: str) -> str:
+    decomposto = unicodedata.normalize("NFKD", texto)
+    return "".join(c for c in decomposto if not unicodedata.combining(c)).casefold()
 
 
 def cor_do_nome(nome: str) -> CorDoPlastico | None:
     """A cor pelo nome oficial de fábrica — o caminho da escolha dela.
 
     A tela grava o NOME (``ControleDeclarado.cor`` é texto livre, decisão C2), e
-    é por aqui que o nome gravado volta a ter hexa para pintar a borda.
+    é por aqui que o nome gravado volta a ter hexa para pintar a borda. Compara
+    sem caixa e sem acento, e aceita as grafias da tabela digitada de antes de
+    25/09/2026 (:data:`_GRAFIAS_DE_ANTES`) — uma declaração daquela época não
+    perde a borda porque o nome passou a vir do mapa.
     """
-    procurado = (nome or "").strip().casefold()
+    procurado = _sem_acento((nome or "").strip())
     if not procurado:
         return None
-    for codigo, oficial in NOMES_DE_FABRICA.items():
-        if oficial.casefold() == procurado:
-            return CorDoPlastico(codigo=codigo, nome=oficial, tom=TONS.get(codigo, ""))
-    return None
+    for cor in TABELA.values():
+        if _sem_acento(cor.nome) == procurado:
+            return cor
+    antigo = _GRAFIAS_DE_ANTES.get(procurado)
+    return TABELA.get(antigo) if antigo else None
+
+
+def nome_do_aparelho(cor: CorDoPlastico | None, modelo: str | None = None) -> str:
+    """O nome que a tela escreve para um controle: o do mapa, ou o do modelo.
+
+    O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01, 25/09/2026. Com a cor achada no
+    mapa, o nome é o dela (``Cosmic Red``, ``Ghost of Yōtei Limited Edition``) —
+    no DualSense e no Edge, que tem a cor perguntada do mesmo jeito. Sem ela
+    (código fora do mapa, pergunta que ainda não voltou, aparelho que não pode
+    responder), o nome é o do MODELO pelo PID, e sem PID o da família.
+
+    **NUNCA «Não sei».** Todo controle da mesa é um DualSense que funciona; o
+    que não se sabe é a edição, e o nome do modelo é verdade sem ela.
+    """
+    if cor is not None and cor.nome:
+        return cor.nome
+    return modelo or MODELO_GENERICO
 
 
 def cor_do_serial(serial: str) -> CorDoPlastico | None:
@@ -551,13 +662,15 @@ def _campos_do_uevent(texto: str) -> dict[str, str]:
     return campos
 
 
-def _transporte_do_dualsense(hid_id: str) -> str | None:
-    """``"cabo"``, ``"rádio"``, ou ``None`` se não é um DualSense.
+def _do_hid_id(hid_id: str) -> tuple[int, int] | None:
+    """``(barramento, PID)`` de um DualSense adotado, ou ``None``.
 
-    Era ``_e_dualsense_no_cabo`` e devolvia ``bool``, com o barramento USB
-    embutido na resposta — o primeiro dos três portões que recusavam o rádio. O
-    filtro que FICA é o de VID:PID: o comando é da família de fábrica da Sony, e
-    mandá-lo para o aparelho de outro fabricante é escrever às cegas.
+    O filtro de VID:PID é o que FICA de pé desde 02/09/2026: o comando é da
+    família de fábrica da Sony, e mandá-lo para o aparelho de outro fabricante é
+    escrever às cegas. Os PIDs aceitos são os de :data:`MODELOS` — e o Edge
+    (``0DF2``) ENTROU em 25/09/2026 (O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01):
+    até ali ele nunca tinha a cor perguntada, e a tela dizia «Não sei» sobre um
+    controle que o daemon adota, numera e acende como qualquer outro.
     """
     partes = hid_id.split(":")
     if len(partes) != 3:
@@ -566,13 +679,44 @@ def _transporte_do_dualsense(hid_id: str) -> str | None:
         barramento, vendor, product = (int(parte, 16) for parte in partes)
     except ValueError:
         return None
-    if vendor != _VID_SONY or product != _PID_DUALSENSE:
+    if vendor != _VID_SONY or product not in MODELOS:
         return None
-    if barramento == _BUS_USB:
+    return barramento, product
+
+
+def _transporte_do_dualsense(hid_id: str) -> str | None:
+    """``"cabo"``, ``"rádio"``, ou ``None`` se não é um DualSense (nem um Edge).
+
+    Era ``_e_dualsense_no_cabo`` e devolvia ``bool``, com o barramento USB
+    embutido na resposta — o primeiro dos três portões que recusavam o rádio.
+    O filtro de VID:PID mora em :func:`_do_hid_id`.
+    """
+    achado = _do_hid_id(hid_id)
+    if achado is None:
+        return None
+    if achado[0] == _BUS_USB:
         return CABO
-    if barramento == _BUS_BLUETOOTH:
+    if achado[0] == _BUS_BLUETOOTH:
         return RADIO
     return None
+
+
+def _e_o_nosso_vpad(campos: dict[str, str], pai: str, barramento: int) -> bool:
+    """O nó é o NOSSO vpad? A pergunta é do broker, e ele é o dono dela.
+
+    Até 25/09/2026 este módulo tinha uma CÓPIA da metade D2 (o ``phys`` exato e
+    o prefixo do ``uniq``) e recusava o Edge pelo PID, que é o que o tornava
+    seguro. Com o Edge aceito, o ``0003:054C:0DF2`` do vpad e o do Edge físico
+    no cabo são o MESMO par, e quem os separa é a regra inteira do broker: a
+    topologia (USB sob ``/misc/uhid/`` é forjado — D1) e as marcas do vpad (D2).
+    ``broker/hidraw_broker.py`` é stdlib pura e o pacote já o importa
+    (``profiles/manager.py``), então importar a regra custa nada e mata a cópia.
+    """
+    from hefesto_dualsense4unix.broker.hidraw_broker import (
+        _e_o_nosso_vpad as regra_do_broker,
+    )
+
+    return bool(regra_do_broker(campos, pai, barramento))
 
 
 def alvo_do_controle(
@@ -581,22 +725,31 @@ def alvo_do_controle(
     raiz: str = "/sys/class/hidraw",
     listar: Any = os.listdir,
     ler: Any = None,
+    resolver: Any = None,
 ) -> AlvoDoControle | None:
-    """O nó do DualSense cujo endereço é ``uniq``, **e por qual transporte**.
+    """O nó do DualSense cujo endereço é ``uniq``, **por qual transporte**, e qual modelo.
 
     ``raiz``, ``listar`` e ``ler`` entram por argumento com o default do sistema
     real (regra F4 de ``DECISOES-DA-EXECUCAO.md``, e o ``CANARIO-FS-01`` pega
     constante de módulo): é o que permite ao teste montar uma bancada falsa sem
     encostar em ``/sys``.
 
+    ``resolver`` é o ``realpath`` do pai HID, de onde sai a TOPOLOGIA do filtro
+    do vpad. **A árvore é uma só**: quem injeta o ``uevent`` (``ler``) injeta o
+    sysfs inteiro, e o default dele passa a ser o caminho como veio — senão a
+    régua de uma bancada falsa perguntaria a topologia ao ``/sys`` da máquina em
+    que roda, e o resultado mudaria com o que estivesse plugado nela.
+
     ``None`` — que é a resposta comum — quando não há aparelho com aquele
     endereço, quando ele não é um DualSense, ou quando o que casou é o nosso
     próprio vpad. **DOIS filtros, e eram TRÊS até 02/09/2026:**
 
-    * **VID:PID de DualSense**: o comando é da família de fábrica da Sony, e
-      mandá-lo para o aparelho de outro fabricante é escrever às cegas;
-    * **vpad**: ele forja VID/PID/bus de DualSense no cabo, então sem o filtro o
-      módulo pediria o serial à saída do próprio produto.
+    * **VID:PID de DualSense ou de DualSense Edge** (:func:`_do_hid_id`): o
+      comando é da família de fábrica da Sony, e mandá-lo para o aparelho de
+      outro fabricante é escrever às cegas;
+    * **vpad** (:func:`_e_o_nosso_vpad`, a regra do broker): ele forja
+      VID/PID/bus de DualSense Edge no cabo, então sem o filtro o módulo
+      pediria o serial à saída do próprio produto.
 
     **O FILTRO DE CABO SAIU — ``ONDA-CONEXOES-11``, 02/09/2026.** Ele exigia
     barramento USB e era NOSSO, não do aparelho. A razão dele já tinha caído em
@@ -610,12 +763,14 @@ def alvo_do_controle(
     hoje), e este arquivo não escreve que são quatro: duas provam que o APARELHO
     faz, não que toda unidade faz. Se um terceiro controle recusar por rádio, o
     achado é a ASSINATURA, não o filtro — e a leitura já devolve ``None`` sem
-    levantar, que é "Não sei" na tela.
+    levantar, que é o nome do modelo na tela (:func:`nome_do_aparelho`).
     """
     procurado = (uniq or "").replace(":", "").strip().lower()
     if not procurado:
         return None
     leitor = ler if ler is not None else _ler_texto
+    if resolver is None:
+        resolver = os.path.realpath if ler is None else (lambda caminho: caminho)
     try:
         nos = sorted(listar(raiz))
     except OSError:
@@ -629,14 +784,15 @@ def alvo_do_controle(
         endereco = campos.get("HID_UNIQ", "").replace(":", "").strip().lower()
         if endereco != procurado:
             continue
-        if campos.get("HID_PHYS", "") == _VPAD_PHYS or endereco.startswith(
-            _VPAD_UNIQ_PREFIX
-        ):
-            return None
+        achado = _do_hid_id(campos.get("HID_ID", ""))
         transporte = _transporte_do_dualsense(campos.get("HID_ID", ""))
-        if transporte is None:
+        if achado is None or transporte is None:
             return None
-        return AlvoDoControle(caminho=f"/dev/{no}", transporte=transporte)
+        if _e_o_nosso_vpad(campos, str(resolver(os.path.join(raiz, no, "device"))), achado[0]):
+            return None
+        return AlvoDoControle(
+            caminho=f"/dev/{no}", transporte=transporte, modelo=MODELOS[achado[1]]
+        )
     return None
 
 
@@ -770,13 +926,16 @@ def ler_identidade_pelo_cabo(
     listar: Any = os.listdir,
     ler: Any = None,
     perguntar: _Pedidor | None = None,
+    resolver: Any = None,
 ) -> IdentidadeDeFabrica:
     """Serial E cor do controle ``uniq``, lidos dele. Campos ``None`` = não sei.
 
     **Nunca levanta.** Sem aparelho, sem permissão, com firmware que não responde
-    ou com código fora da tabela, os dois campos saem ``None`` — e ``None`` vira
-    travessão na tela, que é resposta válida em toda esta casa. Se perguntar de
-    novo adianta, quem diz é ``definitiva`` (ver :class:`IdentidadeDeFabrica`).
+    ou com código fora do mapa, os dois campos saem ``None`` — e a tela escreve o
+    nome do MODELO no lugar (:func:`nome_do_aparelho`), que o ``modelo`` desta
+    resposta carrega sempre que o nó foi achado, até quando a pergunta falhou.
+    Se perguntar de novo adianta, quem diz é ``definitiva`` (ver
+    :class:`IdentidadeDeFabrica`).
 
     **É O MESMO CAMINHO DE SEMPRE, com o serial deixando de ser descartado.** O
     :func:`ler_pelo_cabo` passou a delegar aqui: um transporte só, uma trava só,
@@ -797,7 +956,7 @@ def ler_identidade_pelo_cabo(
     mexeria em ``interface/mesa_viva.py``, ``daemon/ipc_handlers.py`` e
     ``app/actions/config/secao_controles.py``, que são de outras frentes.
     """
-    alvo = alvo_do_controle(uniq, raiz=raiz, listar=listar, ler=ler)
+    alvo = alvo_do_controle(uniq, raiz=raiz, listar=listar, ler=ler, resolver=resolver)
     if alvo is None:
         # FALHA, e não «não pode», de propósito: o nó que ainda não nasceu e o
         # aparelho de outro fabricante chegam aqui iguais. Nenhum byte sai sem
@@ -820,7 +979,9 @@ def ler_identidade_pelo_cabo(
             caminho=alvo.caminho,
             transporte=alvo.transporte,
         )
-        return IdentidadeDeFabrica(nao_pode=True, motivo="a trava recusou o pedido")
+        return IdentidadeDeFabrica(
+            nao_pode=True, motivo="a trava recusou o pedido", modelo=alvo.modelo
+        )
     except Exception as erro:  # defensivo — a leitura jamais derruba a janela
         logger.debug(
             "cor_do_plastico_falhou",
@@ -828,19 +989,23 @@ def ler_identidade_pelo_cabo(
             transporte=alvo.transporte,
             erro=str(erro),
         )
-        return IdentidadeDeFabrica(motivo=f"a conversa levantou {type(erro).__name__}")
+        return IdentidadeDeFabrica(
+            motivo=f"a conversa levantou {type(erro).__name__}", modelo=alvo.modelo
+        )
     if not resposta:
         # A porta que não abriu e o `ioctl` que estourou chegam aqui iguais; o
         # log de `_perguntar_ao_hidraw` diz qual dos dois.
-        return IdentidadeDeFabrica(motivo="o aparelho não respondeu")
+        return IdentidadeDeFabrica(motivo="o aparelho não respondeu", modelo=alvo.modelo)
     serial = serial_de(resposta)
     if serial is None:
-        return IdentidadeDeFabrica(motivo="a resposta veio sem o eco do pedido")
-    # A COR PODE SER `None` COM O SERIAL PRESENTE, e isso não é defeito: a
-    # tabela tem vinte e uma entradas e a Sony fabrica edições novas sem avisar.
-    # Um serial legível com código fora da tabela é "sei qual aparelho é, não
-    # sei a cor dele" — duas respostas diferentes, e a tela as mostra diferente.
-    return IdentidadeDeFabrica(serial=serial, cor=cor_do_serial(serial))
+        return IdentidadeDeFabrica(
+            motivo="a resposta veio sem o eco do pedido", modelo=alvo.modelo
+        )
+    # A COR PODE SER `None` COM O SERIAL PRESENTE, e isso não é defeito: o
+    # mapa tem 28 modelos e a Sony fabrica edições novas sem avisar. Um serial
+    # legível com código fora do mapa é "sei qual aparelho é, não sei a cor
+    # dele" — e a tela escreve o nome do modelo, nunca «Não sei».
+    return IdentidadeDeFabrica(serial=serial, cor=cor_do_serial(serial), modelo=alvo.modelo)
 
 
 def ler_pelo_cabo(
@@ -850,6 +1015,7 @@ def ler_pelo_cabo(
     listar: Any = os.listdir,
     ler: Any = None,
     perguntar: _Pedidor | None = None,
+    resolver: Any = None,
 ) -> CorDoPlastico | None:
     """A cor do plástico do controle ``uniq``, lida dele. ``None`` = não sei.
 
@@ -859,7 +1025,7 @@ def ler_pelo_cabo(
     estrutura nova por quem não precisa dela.
     """
     return ler_identidade_pelo_cabo(
-        uniq, raiz=raiz, listar=listar, ler=ler, perguntar=perguntar
+        uniq, raiz=raiz, listar=listar, ler=ler, perguntar=perguntar, resolver=resolver
     ).cor
 
 

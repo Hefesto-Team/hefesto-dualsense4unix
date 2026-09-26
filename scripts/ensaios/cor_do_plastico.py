@@ -173,34 +173,39 @@ PARES_QUE_DESTROEM = {
     (12, 1): "GRAVA calibração de stick na memória não-volátil",
 }
 
-#: A tabela de cores. `dualshock-tools`, `ds5-controller.js`, confirmada pelo
-#: mantenedor na issue #210; concorda com `nsfm/dualsense-ts` e com
-#: `TechAntohere/Senshi`. Três fontes independentes.
-#: O **tom** de cada nome (hex, fonte e confiança) está em
-#: `docs/data/cores-do-plastico.md` — aqui mora só o nome.
-CORES = {
-    "00": "White",
-    "01": "Midnight Black",
-    "02": "Cosmic Red",
-    "03": "Nova Pink",
-    "04": "Galactic Purple",
-    "05": "Starlight Blue",
-    "06": "Grey Camouflage",
-    "07": "Volcanic Red",
-    "08": "Sterling Silver",
-    "09": "Cobalt Blue",
-    "10": "Chroma Teal",
-    "11": "Chroma Indigo",
-    "12": "Chroma Pearl",
-    "30": "30th Anniversary",
-    "Z1": "God of War Ragnarok",
-    "Z2": "Spider-Man 2",
-    "Z3": "Astro Bot",
-    "Z4": "Fortnite",
-    "Z6": "The Last of Us",
-    "ZA": "God of War 20th Anniversary",
-    "ZB": "Icon Blue Limited Edition",
-}
+#: A tabela de cores é o MAPA DELA, `docs/data/cores-do-dualsense.csv` — lido,
+#: e não copiado. O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01, 25/09/2026: aqui
+#: morava uma cópia DIGITADA de 21 códigos, gêmea da do produto, e o mapa tem
+#: 28; os sete do meio (13, 14, 15, ZC, ZD, ZE, ZF) saíam «DESCONHECIDA» do
+#: instrumento e «Não sei» da tela. O CSV está em todo checkout, então ler
+#: daqui continua rodando sem o pacote instalado — que era a razão da cópia.
+#: A procedência dos códigos é a de sempre (`dualshock-tools`,
+#: `ds5-controller.js`, confirmada pelo mantenedor na issue #210, e
+#: `nsfm/dualsense-ts` e `TechAntohere/Senshi`), e o grau de cada hexa está na
+#: coluna `grau` do CSV.
+_TABELA_DAS_CORES = os.path.join(
+    os.path.dirname(os.path.dirname(_AQUI)), "docs", "data", "cores-do-dualsense.csv"
+)
+
+
+def _ler_as_cores(caminho: str = _TABELA_DAS_CORES) -> dict[str, str]:
+    """``{código: nome}`` do mapa, na ordem dele. Vazio sem o arquivo."""
+    import csv
+
+    try:
+        with open(caminho, encoding="utf-8") as arquivo:
+            linhas = [ln for ln in arquivo if ln.strip() and not ln.startswith("#")]
+    except OSError:
+        return {}
+    fora: dict[str, str] = {}
+    for linha in csv.DictReader(linhas):
+        codigo = (linha.get("codigo_da_cor") or "").strip().upper()
+        if codigo:
+            fora.setdefault(codigo, (linha.get("nome") or "").strip())
+    return fora
+
+
+CORES = _ler_as_cores()
 
 #: Semente do CRC-32 dos feature reports por Bluetooth. `PS_FEATURE_CRC32_SEED`
 #: do `hid-playstation`, e `core/ds_output_report.py::BT_FEATURE_CRC_SEED`.

@@ -40,8 +40,11 @@ from hefesto_dualsense4unix.app.actions.base import numero_do_controle
 from hefesto_dualsense4unix.app.mesa import controles_conectados
 from hefesto_dualsense4unix.core.speaker_scale import percentual_do_volume
 from hefesto_dualsense4unix.integrations.cor_do_plastico import (
+    MODELO_GENERICO,
     AgendaDaPergunta,
+    CorDoPlastico,
     IdentidadeDeFabrica,
+    nome_do_aparelho,
 )
 from hefesto_dualsense4unix.utils import xdg_paths
 
@@ -211,35 +214,33 @@ def _via_do_transporte(transporte: object) -> str:
 # A COR DO PLÁSTICO — o código de fábrica vira o `colorway` do desenho
 # ---------------------------------------------------------------------------
 def _codigo_para_colorway() -> dict[str, tuple[str, str]]:
-    """`{código de fábrica: (slug do desenho, nome)}` do CSV das cores.
+    """`{código de fábrica: (slug do desenho, nome)}` do mapa das cores.
 
-    A JUNTA EXISTIA COMO DADO E NÃO EXISTIA COMO CÓDIGO: a primeira coluna do
-    `docs/data/cores-do-dualsense.csv` é o MESMO código que
-    `integrations/cor_do_plastico.NOMES_DE_FABRICA` indexa, e nenhuma linha de
-    `src/` lê esse CSV. Esta função é a costura, e ela mora aqui porque é a
-    tela que precisa do slug — o produto entrega `CorDoPlastico(codigo, nome,  (noqa-acento: assinatura citada, não prosa)
-    tom)`, e o desenho pinta por `data-colorway`.
+    **UM LEITOR SÓ DO CSV** — O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01,
+    25/09/2026. Esta função lia o `docs/data/cores-do-dualsense.csv` sozinha,
+    com um `split(",")` próprio, enquanto o produto traduzia o código por uma
+    tabela DIGITADA de 21: a tela sabia 28 modelos e o leitor do aparelho, 21.
+    Os sete do meio saíam «Não sei». Hoje quem lê o CSV é
+    `integrations/cor_do_plastico.ler_a_tabela`, e esta função só dá à tela a
+    forma que ela sempre teve.
     """
-    fora: dict[str, tuple[str, str]] = {}
-    with open(f"{RAIZ}/docs/data/cores-do-dualsense.csv", encoding="utf-8") as arq:
-        for bruta in arq:
-            if bruta.startswith("#") or not bruta.strip():
-                continue
-            campos = bruta.split(",")
-            if len(campos) < 3 or campos[0] == "codigo_da_cor":
-                continue
-            codigo = campos[0].strip()
-            if codigo:
-                fora.setdefault(codigo, (campos[1].strip(), campos[2].strip()))
-    return fora
+    from hefesto_dualsense4unix.integrations.cor_do_plastico import TABELA
+
+    return {codigo: (cor.id, cor.nome) for codigo, cor in TABELA.items()}
 
 
 CORES = _codigo_para_colorway()
 
-#: O que a linha do rótulo diz quando a cor não é legível. É "não sei", e é
-#: resposta válida — mas só a que o aparelho DEU (código fora da tabela) ou a de
-#: quem não pode responder fica para sempre; a falha de um instante volta a ser
-#: perguntada (`cor_do_plastico.AgendaDaPergunta`).
+#: A PALAVRA «NÃO SEI» DA TELA, e ela deixou de ser o nome de um controle.
+#:
+#: O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01, 25/09/2026. Era o que
+#: `mesa_do_estado` escrevia no lugar do nome quando a cor não era legível —
+#: e a cena dela é a de uma pessoa que pluga uma edição limitada e vê o produto
+#: dizer que não sabe que controle é aquele. O nome agora é o do MODELO
+#: (`cor_do_plastico.nome_do_aparelho`). A palavra continua aqui porque ela tem
+#: outro dono vivo: a luz de cor desconhecida da aba 02
+#: (`pacotes.NOME_SEM_LEITURA`, que a régua confere igual a esta), e quem ainda
+#: compara o nome com ela deixa de casar — que é o comportamento certo.
 COR_DESCONHECIDA = "Não sei"
 
 
@@ -265,6 +266,14 @@ class LeitorDeCor:
       (A-FITA-PERDEU-O-MODELO-E-A-COR-01).
 
     O `leitor` injetado fala o contrato da fonte: `uniq -> IdentidadeDeFabrica`.
+
+    **O MODELO FICA MESMO QUANDO A COR NÃO VEM** — 25/09/2026. A resposta traz
+    o nome do modelo pelo PID (`IdentidadeDeFabrica.modelo`), e ele é lido do
+    sysfs, sem byte nenhum ao aparelho: por isso chega até numa falha. Ele é
+    guardado à parte da cor (`_modelos`) e `conhecidos` o entrega como uma cor
+    SEM código, sem tom e sem desenho — só o nome. É o que faz um Edge com
+    código fora do mapa, ou com a pergunta falhando, se chamar «DualSense
+    Edge» e não «DualSense».
     """
 
     def __init__(
@@ -278,9 +287,21 @@ class LeitorDeCor:
         self._leitor = leitor
         self._agenda = agenda if agenda is not None else AgendaDaPergunta()
         self._cache: dict[str, Any] = {}
+        self._modelos: dict[str, str] = {}
 
     def conhecidos(self) -> dict[str, Any]:
-        return dict(self._cache)
+        """`{uniq: cor}` do que a tela sabe — a cor lida, ou só o nome do modelo.
+
+        A cor lida vence. Sem ela, quem tem o modelo guardado recebe
+        `CorDoPlastico(codigo="", nome=<modelo>)`: sem `id`, o desenho fica no
+        neutro, e o nome é o do aparelho. Quem não tem nem uma coisa nem outra
+        segue `None` (ou ausente), e `mesa_do_estado` escreve o nome da família.
+        """
+        fora = dict(self._cache)
+        for uniq, modelo in self._modelos.items():
+            if fora.get(uniq) is None:
+                fora[uniq] = CorDoPlastico(codigo="", nome=modelo)
+        return fora
 
     def pendentes(self, entradas: list[dict[str, Any]]) -> list[str]:
         """Quem perguntar AGORA — e cada um devolvido fica em voo até `perguntar`.
@@ -337,6 +358,10 @@ class LeitorDeCor:
             if achado.definitiva:
                 # A falha não escreve: ela não apaga o que já se sabia.
                 self._cache[uniq] = achado.cor
+            modelo = getattr(achado, "modelo", None)
+            if isinstance(modelo, str) and modelo:
+                # O modelo sai do sysfs, e chega até na falha: ele fica.
+                self._modelos[uniq] = modelo
             self._agenda.registrar(uniq, achado)
         return achado.cor
 
@@ -344,6 +369,9 @@ class LeitorDeCor:
         for uniq in list(self._cache):
             if uniq not in vivos:
                 del self._cache[uniq]
+        for uniq in list(self._modelos):
+            if uniq not in vivos:
+                del self._modelos[uniq]
         self._agenda.esquecer_ausentes(vivos)
 
 
@@ -483,11 +511,16 @@ def mesa_do_estado(
     for posicao, entrada in enumerate(conectados, start=1):
         uniq = str(entrada.get("uniq") or "")
         transporte = str(entrada.get("transport") or "").lower()
+        # O NOME NUNCA É «NÃO SEI» — O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01,
+        # 25/09/2026. Sem cor lida, o nome é o do MODELO (o que `conhecidos`
+        # guardou do sysfs) ou o da família, e o desenho fica no neutro: um
+        # controle que funciona tem nome, e a edição que não se sabe não o tira.
         cor = cores.get(uniq)
-        slug, nome = ("", COR_DESCONHECIDA)
+        slug, nome = "", MODELO_GENERICO
         if cor is not None:
-            slug, nome = CORES.get(getattr(cor, "codigo", ""), ("", getattr(cor, "nome", "")))  # (noqa-acento): nome de atributo
-            nome = nome or getattr(cor, "nome", COR_DESCONHECIDA)
+            de_fabrica = str(getattr(cor, "codigo", "") or "")  # (noqa-acento): nome de atributo
+            slug, nome = CORES.get(de_fabrica, (str(getattr(cor, "id", "") or ""), ""))
+            nome = nome or nome_do_aparelho(cor)
         fora.append(
             {
                 "pref": prefs[posicao - 1],

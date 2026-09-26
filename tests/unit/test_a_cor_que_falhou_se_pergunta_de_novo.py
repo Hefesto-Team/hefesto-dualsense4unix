@@ -222,7 +222,10 @@ def test_a_fita_ganha_modelo_e_borda_depois_da_nova_tentativa() -> None:
     leitor = mesa_viva.LeitorDeCor(leitor=falso, agenda=cp.AgendaDaPergunta(relogio=relogio))
 
     mesa = _tique(leitor, _estado())
-    assert mesa[0]["nome"] == mesa_viva.COR_DESCONHECIDA
+    # O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01 (25/09/2026): a falha não tira o
+    # NOME do controle — ele se chama pelo modelo, que o sysfs deu sem byte
+    # nenhum ao aparelho. «Não sei» deixou de ser nome; a cor continua sem vir.
+    assert mesa[0]["nome"] == cp.MODELO_GENERICO != mesa_viva.COR_DESCONHECIDA
     assert "--plastico" not in monta.fita(mesa=mesa), "a 1ª pergunta falhou"
 
     for _ in range(60):  # seis segundos de tique
