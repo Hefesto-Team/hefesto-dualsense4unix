@@ -72,6 +72,7 @@ from hefesto_dualsense4unix.integrations.entradas_do_gabinete import (
     VELOCIDADE_SUPERSPEED_MBPS,
 )
 from hefesto_dualsense4unix.integrations.mesa_de_radio import Adaptador
+from hefesto_dualsense4unix.utils.lugar import caminho_do_no
 from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
 
 #: Doze hex, que é a forma em que o serial USB de um TP-Link UB500 carrega o
@@ -832,6 +833,146 @@ def _endereco_normalizado(endereco: str) -> str:
     return _endereco_do_serial(endereco)
 
 
+# ---------------------------------------------------------------------------
+# O QUE O METAL DE UMA PORTA É — A-08-UM-MAPEAR-SO-01 (25/09/2026)
+# ---------------------------------------------------------------------------
+#
+# O pedido dela: *«carrega a informação que medimos»* — cada porta do mapa diz
+# se é USB 2.0 ou 3.0, de que controlador e de que hub ela pende, quantos -71
+# ela deu, e se o que está nela é o adaptador Bluetooth da placa ou um dongle.
+# Tudo isso é LEITURA do buraco, e por isso não vai para o ``maquina.json``: o
+# disco guarda o que só ela sabe (o número, o nome, o lugar no gabinete) e a
+# identidade do buraco (o lugar e os nós); o resto se lê de novo a cada pedido,
+# e um hub trocado de lugar nunca deixa no disco um «3.0» que já não é verdade.
+# A junção mora aqui porque é junção pura: quem lê o ``/sys`` é quem chama
+# (``entrada_a_entrada.ler_o_mapa``), com a raiz desviável.
+
+#: A resposta de «esta porta alcança SuperSpeed?», em chave de máquina.
+USB_3 = "3.0"
+USB_2 = "2.0"
+
+#: O adaptador Bluetooth encaixado na porta: o da PLACA (módulo interno num
+#: conector que ninguém alcança de fora — ``connect_type`` ``hardwired``) ou
+#: um DONGLE (qualquer outro encaixe). Chaves de máquina.
+BLUETOOTH_DA_PLACA = "placa"
+BLUETOOTH_DONGLE = "dongle"
+
+#: A tripla de classe do rádio Bluetooth — a mesma de
+#: ``_CLASSE_DO_MOTOR_POR_TRIPLA`` e de ``censo_do_barramento._especie``.
+_TRIPLA_DO_BLUETOOTH = ("e0", "01", "01")
+
+#: O ``connect_type`` do conector interno da placa.
+_ENCAIXE_INTERNO = "hardwired"
+
+
+@dataclass(frozen=True)
+class FatosDoBuraco:
+    """O que o ``/sys`` diz de UM buraco, cheio ou vazio — nada declarado.
+
+    ``usb`` é :data:`USB_3`, :data:`USB_2` ou ``""`` (não deu para saber).
+    ``hub`` é o nome do kernel do hub de que o buraco pende (``3-4``), ``""``
+    quando ele é do próprio computador. ``storm`` é ``None`` quando o -71 não
+    foi medido — que é diferente de zero.
+    """
+
+    usb: str = ""
+    controlador: str = ""
+    hub: str = ""
+    hub_produto: str = ""
+    encaixe: str = ""
+    ocupada: bool | None = None
+    aparelho: str = ""
+    especie: str = ""
+    produto: str = ""
+    e_dualsense: bool = False
+    bluetooth: str = ""
+    storm: int | None = None
+
+
+def fatos_do_buraco(
+    nos: Sequence[str],
+    entradas: Sequence[object],
+    censo: Censo,
+    controladores: Mapping[int, str],
+    *,
+    storm: Mapping[str, int] | None = None,
+) -> FatosDoBuraco:
+    """Os fatos medidos de um buraco — pelos NÓS dele, que existem vazios.
+
+    ``entradas`` são os ``entradas_do_gabinete.NoDeEntrada`` da leitura de
+    agora (tipados como ``object`` para este módulo não depender de quem lê
+    o ``/sys``); só os deste buraco contam. ``storm`` é ``{caminho do kernel:
+    quantos -71}`` do ``exame_da_mesa.storm_por_porta`` — a porta que o log
+    nomeia é o aparelho que estava no buraco, e o caminho do aparelho é o
+    ``caminho_do_no`` do nó.
+    """
+    meus = [e for e in entradas if getattr(e, "no", "") in set(nos)]
+    velocidades = [float(getattr(e, "velocidade_mbps", 0.0) or 0.0) for e in meus]
+    if any(v >= VELOCIDADE_SUPERSPEED_MBPS for v in velocidades):
+        usb = USB_3
+    elif velocidades and not all(v <= 0 for v in velocidades):
+        usb = USB_2
+    else:
+        usb = ""
+
+    # O lado 2.0 primeiro: é onde o DualSense e os dongles enumeram.
+    ordenados = sorted(
+        (no for no in nos if caminho_do_no(no)),
+        key=lambda no: int(caminho_do_no(no).partition("-")[0]),
+    )
+    controlador = ""
+    hub = ""
+    for no in ordenados:
+        busnum = int(caminho_do_no(no).partition("-")[0])
+        controlador = controlador or controladores.get(busnum, "")
+        dono = no.rpartition(_SUFIXO_DO_NO)[0]
+        if dono and not dono.startswith("usb") and not hub:
+            hub = dono
+    por_nome = {a.nome_do_kernel: a for a in censo.aparelhos}
+    hub_produto = por_nome[hub].produto.strip() if hub in por_nome else ""
+
+    estados = [str(getattr(e, "estado", "") or "") for e in meus]
+    dentro = next((str(getattr(e, "aparelho", "")) for e in meus if getattr(e, "aparelho", "")), "")
+    if dentro:
+        ocupada: bool | None = True
+    elif meus and all(estado == "not attached" for estado in estados):
+        ocupada = False
+    else:
+        ocupada = None
+    encaixe = next((str(getattr(e, "tipo_de_encaixe", "")) for e in meus
+                    if getattr(e, "tipo_de_encaixe", "")), "")
+
+    aparelho = por_nome.get(dentro)
+    bluetooth = ""
+    if aparelho is not None and (
+        aparelho.classe, aparelho.subclasse, aparelho.protocolo
+    ) == _TRIPLA_DO_BLUETOOTH:
+        interno = any(
+            getattr(e, "tipo_de_encaixe", "") == _ENCAIXE_INTERNO for e in meus
+        )
+        bluetooth = BLUETOOTH_DA_PLACA if interno else BLUETOOTH_DONGLE
+
+    medido: int | None = None
+    if storm is not None:
+        caminhos = {caminho_do_no(no) for no in nos} | ({dentro} if dentro else set())
+        medido = sum(storm.get(caminho, 0) for caminho in caminhos if caminho)
+
+    return FatosDoBuraco(
+        usb=usb,
+        controlador=controlador,
+        hub=hub,
+        hub_produto=hub_produto,
+        encaixe=encaixe,
+        ocupada=ocupada,
+        aparelho=dentro,
+        especie="" if aparelho is None else aparelho.especie,
+        produto="" if aparelho is None else aparelho.produto.strip(),
+        e_dualsense=aparelho is not None and aparelho.vid.lower() == "054c",
+        bluetooth=bluetooth,
+        storm=medido,
+    )
+
+
 def _serial_do_no(no: str) -> str:
     """O ``serial`` de um nó USB; ``""`` em qualquer erro — sysfs some sob a mão.
 
@@ -849,15 +990,21 @@ def _serial_do_no(no: str) -> str:
 
 
 __all__ = [
+    "BLUETOOTH_DA_PLACA",
+    "BLUETOOTH_DONGLE",
     "LACUNA_ESPECIE",
     "LACUNA_PAR",
     "LACUNA_POSICAO",
     "LACUNA_REGIAO",
     "LACUNA_VELOCIDADE",
+    "USB_2",
+    "USB_3",
     "Bancada",
+    "FatosDoBuraco",
     "Incoerencia",
     "Resumo",
     "caminho_de",
+    "fatos_do_buraco",
     "filhas_de",
     "incoerencias",
     "irmas_de",
