@@ -727,6 +727,56 @@ class TestOCaboAssume:
         assert {u: mesa.boneco_de(u) for u in UNIQS} == bonecos
         assert all(getattr(b, "flavor", None) == mascara for b in bonecos.values())
 
+    @pytest.mark.parametrize("diario_legivel", [True, False], ids=["com-diario", "sem-diario"])
+    @pytest.mark.parametrize(
+        ("quantos", "posicao"),
+        [(1, 0), (2, 1), (4, 0), (4, 3)],
+        ids=["1-jogador-P1", "2-jogadores-P2", "4-jogadores-P1", "4-jogadores-P4"],
+    )
+    def test_o_cabo_posto_de_novo_logo_depois_assume_de_novo(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+        quantos: int,
+        posicao: int,
+        diario_legivel: bool,
+    ) -> None:
+        """Conferência de 25/09: pôr, tirar e pôr de novo dentro do teto.
+
+        O teto de uma derrubada por controle a cada `TETO_POR_CONTROLE_S` é
+        contra o LAÇO (o rádio cai e o cabo não sobe). Com a troca que deu
+        certo ele não pode valer: ela ajeitou o cabo, e o controle ficaria no
+        rádio carregando — a queixa de 25/09 inteira, de volta.
+        """
+        mesa = montar(
+            monkeypatch,
+            tmp_path,
+            ("bt", "bt", "bt", "bt")[:quantos],
+            diario_legivel=diario_legivel,
+        )
+        alvo = UNIQS[posicao]
+        numeros = mesa.numeros()
+        plugar_o_cabo_e_esperar(mesa, alvo, tiques=6)
+        assert mesa.transporte_de(alvo) == "usb"
+        primeira_derrubada = mesa.relogio.t
+        inst = mesa.kernel.instancia(alvo, "usb")
+        assert inst is not None
+        mesa.kernel.desconectar(inst)  # ela tira o cabo
+        mesa.tique()
+        mesa.kernel.conectar(alvo, "bt")  # e o controle volta pelo pareamento
+        for _ in range(3):
+            mesa.tique()
+        assert mesa.transporte_de(alvo) == "bt"
+        # A régua só mede o teto se o segundo cabo cair DENTRO dele.
+        assert mesa.relogio.t - primeira_derrubada < oce.TETO_POR_CONTROLE_S
+        plugar_o_cabo_e_esperar(mesa, alvo, tiques=6)  # e põe de novo, logo depois
+
+        assert mesa.transporte_de(alvo) == "usb", (
+            "o cabo posto de novo dentro do teto deixou o controle no rádio carregando"
+        )
+        assert mesa.bluez.desconectados == [alvo, alvo]
+        assert mesa.numeros() == numeros
+
 
 @pytest.mark.usefixtures("config_isolado")
 class TestQuandoOCaboNaoAssume:
@@ -907,6 +957,18 @@ class TestOCaboEmEspera:
         vigia.derrubou(UNIQS[0], 0.0)
         de_novo = vigia.decidir(cabo, diario=diario, no_radio=no_radio, agora=10.0)
         assert de_novo.par is None and de_novo.desistir
+
+    def test_o_teto_sai_quando_o_cabo_assumiu(self) -> None:
+        vigia = oce.VigiaDoCabo()
+        cabo = oce.CaboEmEspera("0003:054C:0CE6.0032")
+        vigia.observar_os_cabos([cabo], 0.0)
+        diario = {cabo.instancia: UNIQS[0]}
+        no_radio: dict[str, str | None] = {UNIQS[0]: None}
+        vigia.derrubou(UNIQS[0], 0.0)
+        vigia.observar_quem_esta_no_cabo([UNIQS[1]])  # outro controle no cabo não solta
+        assert vigia.decidir(cabo, diario=diario, no_radio=no_radio, agora=10.0).desistir
+        vigia.observar_quem_esta_no_cabo([UNIQS[0]])  # a troca dele deu certo
+        assert vigia.decidir(cabo, diario=diario, no_radio=no_radio, agora=10.0).par == UNIQS[0]
 
 
 class TestAEnumeracaoPrefereOCabo:

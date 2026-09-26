@@ -540,16 +540,19 @@ async def vigiar_o_cabo_em_espera(
     vigia = vigia_do_cabo_de(daemon)
     agora = time.monotonic() if agora is None else float(agora)
     try:
+        mesa = [item for item in descrever() or () if item.get("connected") and item.get("uniq")]
         no_radio = {
             str(item["uniq"]): item.get("battery_state")
-            for item in descrever() or ()
-            if item.get("connected") and item.get("transport") == "bt" and item.get("uniq")
+            for item in mesa
+            if item.get("transport") == "bt"
         }
+        no_cabo = [str(item["uniq"]) for item in mesa if item.get("transport") == "usb"]
         cabos = oce.cabos_em_espera()
     except Exception as exc:
         logger.debug("o_cabo_em_espera_leitura_falhou", err=str(exc))
         return 0
     vigia.observar_a_carga(no_radio, agora)
+    vigia.observar_quem_esta_no_cabo(no_cabo)
     pendentes = vigia.observar_os_cabos(cabos, agora)
     if not pendentes:
         return 0

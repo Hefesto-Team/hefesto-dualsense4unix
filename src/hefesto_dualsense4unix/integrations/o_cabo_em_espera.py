@@ -417,6 +417,19 @@ class VigiaDoCabo:
     def derrubou(self, uniq: str, agora: float) -> None:
         self.derrubado_em[uniq] = agora
 
+    def observar_quem_esta_no_cabo(self, no_cabo: Iterable[str]) -> None:
+        """A troca que DEU CERTO solta o teto daquele controle.
+
+        O teto existe para o laço — o rádio derrubado e o cabo que não sobe. O
+        controle que aparece na mesa pelo cabo é a prova do contrário: a troca
+        assumiu, e o próximo cabo plugado nele é gesto novo dela, não laço.
+        Sem isto, tirar o cabo e pôr de novo dentro de dois minutos deixava o
+        controle no rádio carregando — a queixa de 25/09, de volta pela porta
+        da própria cura (conferência de 25/09/2026).
+        """
+        for uniq in no_cabo:
+            self.derrubado_em.pop(uniq, None)
+
     def primeira_vez(self, frase: str) -> bool:
         """``True`` só na primeira vez que a frase aparece — o diário não vira tapete."""
         if frase in self.avisados:
